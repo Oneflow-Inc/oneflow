@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_BALANCED_SPLITTER_H_
-#define ONEFLOW_BALANCED_SPLITTER_H_
+#ifndef ONEFLOW_COMMON_BALANCED_SPLITTER_H_
+#define ONEFLOW_COMMON_BALANCED_SPLITTER_H_
 
 #include <stdint.h>
 
@@ -30,4 +30,4 @@ class BalancedSplitter {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_BALANCED_SPLITTER_H_
+#endif // ONEFLOW_COMMON_BALANCED_SPLITTER_H_
