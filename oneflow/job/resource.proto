@@ -1,5 +1,4 @@
 syntax = "proto3";
-
 package oneflow;
 
 message DeviceVec {

@@ -1,0 +1,40 @@
+syntax = "proto3";
+package oneflow;
+
+message LayerNameSet {
+  repeated string name = 1;
+}
+
+message DeviceGroup {
+  required int32 begin_id = 1;
+  required int32 end_id = 2;
+}
+
+message MachineGroup {
+  required int32 begin_id = 1;
+  required int32 end_id = 2;
+}
+
+enum ParallelPolicy {
+  UnknownParallel = 0;
+  NaiveParallelOnSingleDevice = 1;     
+  DataParallelOnMultipleDevices = 2;   
+  ModelParallelOnMultipleDevices = 3;  
+  NaiveParallelOnSingleMachine = 4;   
+  DataParallelOnMultipleMachines = 5; 
+  ModelParallelOnMultipleMachines = 6;
+}
+
+message PlacementGroup {
+  required string name = 1;
+  required LayerNameSet layer_set = 2;
+  oneof device_or_machine {
+    DeviceGroup device_group = 3;
+    MachineGroup machine_group = 4;
+  }
+  required ParallelPolicy parallel_policy = 5;
+}
+
+message Strategy {
+  repeated PlacementGroup placement_group_vec = 1;
+}
