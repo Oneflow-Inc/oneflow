@@ -1,0 +1,9 @@
+set(ONEFLOW_LINKER_LIBS "")
+
+find_package(Glog REQUIRED)
+include_directories(SYSTEM ${GLOG_INCLUDE_DIRS})
+list(APPEND ONEFLOW_LINKER_LIBS ${GLOG_LIBRARIES})
+
+find_package(GTest REQUIRED)
+include_directories(SYSTEM ${GTEST_INCLUDE_DIRS})
+list(APPEND ONEFLOW_LINKER_LIBS ${GTEST_LIBRARIES})

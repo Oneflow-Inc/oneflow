@@ -5,6 +5,7 @@
 
 namespace oneflow {
 
+// For example
 // BalancedSplitter splitter(20, 6)
 // the result of splitter.at 0,1,2,3,4,5 is
 //                           4,4,3,3,3,3
@@ -13,13 +14,13 @@ class BalancedSplitter {
   BalancedSplitter() = default;
   BalancedSplitter(const BalancedSplitter&) = delete;
   BalancedSplitter(BalancedSplitter&&) = delete;
-  BalancedSplitter& operator(const BalancedSplitter&) = delete;
-  BalancedSplitter& operator(BalancedSplitter&&) = delete;
+  BalancedSplitter& operator = (const BalancedSplitter&) = delete;
+  BalancedSplitter& operator = (BalancedSplitter&&) = delete;
   ~BalancedSplitter() = default;
 
   void init(int64_t total_num, int64_t split_num);
 
-  void at(int64_t idx) const;
+  int64_t at(int64_t idx) const;
 
  private:
   int64_t minimum_guarantee_;
