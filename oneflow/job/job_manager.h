@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_JOB_JOB_MANAGER_H
-#define ONEFLOW_JOB_JOB_MANAGER_H
+#ifndef ONEFLOW_JOB_JOB_MANAGER_H_
+#define ONEFLOW_JOB_JOB_MANAGER_H_
 
 #include "job/job_conf.pb.h"
 
@@ -26,4 +26,4 @@ class JobManager {
 
 } // namespace oneflow
 
-#endif
+#endif // ONEFLOW_JOB_JOB_MANAGER_H_
