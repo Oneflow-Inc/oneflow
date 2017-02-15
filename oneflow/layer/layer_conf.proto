@@ -1,0 +1,40 @@
+syntax = "proto3";
+package oneflow;
+
+message ConstantModelParamInitializerConf {
+  float const_val = 1;
+}
+
+message UniformModelParamInitializerConf {
+  float min = 1;
+  float max = 2;
+}
+
+message GaussianModelParamInitializerConf {
+  float mean = 1;
+  float std = 2;
+  // The expected number of non-zero output weights for a given input
+  // set -1 means don't perform sparsification
+  int32 sparse = 3;
+}
+
+message ModelParamInitializerConf {
+  oneof conf_for_specified_initializer {
+    ConstantModelParamInitializerConf const_conf = 1;
+    UniformModelParamInitializerConf uniform_conf = 2;
+    GaussianModelParamInitializerConf gaussian_conf = 3;
+  }
+}
+
+message SplitLayerConf {
+  string in = 1;
+  repeated string out = 2;
+}
+
+message LayerConf {
+  string name = 1;
+  oneof conf_for_specified_layer {
+    // TODO: add other layers
+    SplitLayerConf split_layer_conf = 101;
+  }
+}
