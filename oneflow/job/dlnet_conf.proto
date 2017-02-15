@@ -1,9 +1,9 @@
-syntax = "proto2";
+syntax = "proto3";
 package oneflow;
 
 import "layer/layer_conf.proto";
 
 message DLNetConf {
-  required string name = 1;
+  string name = 1;
   repeated LayerConf layer_conf = 100;
 }

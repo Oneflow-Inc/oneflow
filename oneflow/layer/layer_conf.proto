@@ -1,21 +1,21 @@
-syntax = "proto2";
+syntax = "proto3";
 package oneflow;
 
 message ConstantModelParamInitializerConf {
-  required float const_val = 1;
+  float const_val = 1;
 }
 
 message UniformModelParamInitializerConf {
-  required float min = 1;
-  required float max = 2;
+  float min = 1;
+  float max = 2;
 }
 
 message GaussianModelParamInitializerConf {
-  required float mean = 1;
-  required float std = 2;
+  float mean = 1;
+  float std = 2;
   // The expected number of non-zero output weights for a given input
-  // the default -1 means don't perform sparsification
-  optional int32 sparse = 3 [default = -1];
+  // set -1 means don't perform sparsification
+  int32 sparse = 3;
 }
 
 message ModelParamInitializerConf {
@@ -27,12 +27,12 @@ message ModelParamInitializerConf {
 }
 
 message SplitLayerConf {
-  required string in = 1;
+  string in = 1;
   repeated string out = 2;
 }
 
 message LayerConf {
-  required string name = 1;
+  string name = 1;
   oneof conf_for_specified_layer {
     // TODO: add other layers
     SplitLayerConf split_layer_conf = 101;

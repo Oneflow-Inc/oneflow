@@ -1,9 +1,9 @@
-syntax = "proto2";
+syntax = "proto3";
 package oneflow;
 
 message Machine {
-  required string addr = 1; // domain name or ip
-  required string port = 2;
+  string addr = 1; // domain name or ip
+  string port = 2;
   repeated int32 device_vec = 3;
 }
 

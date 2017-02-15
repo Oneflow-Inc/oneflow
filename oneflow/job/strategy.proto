@@ -1,9 +1,9 @@
-syntax = "proto2";
+syntax = "proto3";
 package oneflow;
 
 message Section {
-  required int32 first_id = 1;
-  required int32 last_id = 2;
+  int32 first_id = 1;
+  int32 last_id = 2;
 }
 
 message DeviceGroup {
@@ -19,7 +19,7 @@ message ParallelConf {
     DataParallel = 0;
     ModelParallel = 1;
   }
-  required Policy policy = 1;
+  Policy policy = 1;
   oneof device_or_machine {
     DeviceGroup device_group = 2;
     MachineGroup machine_group = 3;
@@ -27,9 +27,9 @@ message ParallelConf {
 }
 
 message PlacementGroup {
-  required string name = 1;
+  string name = 1;
   repeated string layer_name_vec = 2;
-  optional ParallelConf parallel_conf = 3;
+  ParallelConf parallel_conf = 3;
 }
 
 message Strategy {
