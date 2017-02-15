@@ -1,4 +1,4 @@
-syntax = "proto3";
+syntax = "proto2";
 package oneflow;
 
 message ConstantModelParamInitializerConf {
@@ -20,9 +20,9 @@ message GaussianModelParamInitializerConf {
 
 message ModelParamInitializerConf {
   oneof conf_for_specified_initializer {
-    ConstantModelParamInitializerConf const_conf;
-    UniformModelParamInitializerConf uniform_conf;
-    GaussianModelParamInitializerConf gaussian_conf;
+    ConstantModelParamInitializerConf const_conf = 1;
+    UniformModelParamInitializerConf uniform_conf = 2;
+    GaussianModelParamInitializerConf gaussian_conf = 3;
   }
 }
 

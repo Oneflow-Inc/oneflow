@@ -1,7 +1,7 @@
-syntax = "proto3";
+syntax = "proto2";
 package oneflow;
 
-import "layer_conf.proto"
+import "layer/layer_conf.proto";
 
 message DLNetConf {
   required string name = 1;

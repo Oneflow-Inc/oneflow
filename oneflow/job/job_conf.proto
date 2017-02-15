@@ -1,15 +1,19 @@
-syntax = "proto3";
+syntax = "proto2";
 package oneflow;
 
+import "job/dlnet_conf.proto";
+import "job/resource.proto";
+import "job/strategy.proto";
+
 message JobUserConf {
-  required string train_dlnet_conf_filepath;
-  required string resource_filepath;
-  required string strategy_filepath;
+  required string train_dlnet_conf_filepath = 1;
+  required string resource_filepath = 2;
+  required string strategy_filepath = 3;
 }
 
 message JobSysConf {
-  required JobUserConf user_conf;
-  required DLNetConf train_dlnet_conf;
-  required Resource resource;
-  required Strategy strategy;
+  required JobUserConf user_conf = 1;
+  required DLNetConf train_dlnet_conf = 2;
+  required Resource resource = 3;
+  required Strategy strategy = 4;
 }

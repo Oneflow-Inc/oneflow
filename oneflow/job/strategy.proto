@@ -1,4 +1,4 @@
-syntax = "proto3";
+syntax = "proto2";
 package oneflow;
 
 message Section {
@@ -7,17 +7,17 @@ message Section {
 }
 
 message DeviceGroup {
-  repeated Section device_section_vec;
+  repeated Section device_section_vec = 1;
 }
 
 message MachineGroup {
-  repeated Section machine_section_vec;
+  repeated Section machine_section_vec = 1;
 }
 
 message ParallelConf {
   enum Policy {
-    DataParallel,
-    ModelParallel
+    DataParallel = 0;
+    ModelParallel = 1;
   }
   required Policy policy = 1;
   oneof device_or_machine {
