@@ -1,0 +1,15 @@
+syntax = "proto3";
+package oneflow;
+
+message JobUserConf {
+  required string train_dlnet_conf_filepath;
+  required string resource_filepath;
+  required string strategy_filepath;
+}
+
+message JobSysConf {
+  required JobUserConf user_conf;
+  required DLNetConf train_dlnet_conf;
+  required Resource resource;
+  required Strategy strategy;
+}

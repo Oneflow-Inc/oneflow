@@ -1,21 +1,24 @@
 syntax = "proto3";
 package oneflow;
 
+message ConstantModelParamInitializerConf {
+  required float const_val = 1;
+}
+
+message UniformModelParamInitializerConf {
+  required float min = 1;
+  required float max = 2;
+}
+
+message GaussianModelParamInitializerConf {
+  required float mean = 1;
+  required float std = 2;
+  // The expected number of non-zero output weights for a given input
+  // the default -1 means don't perform sparsification
+  optional int32 sparse = 3 [default = -1];
+}
+
 message ModelParamInitializerConf {
-  message ConstantModelParamInitializerConf {
-    required float const_val = 1;
-  }
-  message UniformModelParamInitializerConf {
-    required float min = 1;
-    required float max = 2;
-  }
-  message GaussianModelParamInitializerConf {
-    required float mean = 1;
-    required float std = 2;
-    // The expected number of non-zero output weights for a given input
-    // the default -1 means don't perform sparsification
-    optional int32 sparse = 3 [default = -1];
-  }
   oneof conf_for_specified_initializer {
     ConstantModelParamInitializerConf const_conf;
     UniformModelParamInitializerConf uniform_conf;
@@ -23,15 +26,15 @@ message ModelParamInitializerConf {
   }
 }
 
-message SigmoidLayerConf {
+message SplitLayerConf {
   required string in = 1;
-  required string out = 2;
+  repeated string out = 2;
 }
 
 message LayerConf {
   required string name = 1;
   oneof conf_for_specified_layer {
-    // TODO: other layer
-    SigmoidLayerConf sigmoid_layer_conf = 101;
+    // TODO: add other layers
+    SplitLayerConf split_layer_conf = 101;
   }
 }

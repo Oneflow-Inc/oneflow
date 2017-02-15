@@ -4,6 +4,6 @@ package oneflow;
 import "layer_conf.proto"
 
 message DLNetConf {
-  optional string name = 1;
+  required string name = 1;
   repeated LayerConf layer_conf = 100;
 }
