@@ -1,17 +1,16 @@
 #ifndef ONEFLOW_JOB_JOB_MANAGER_H_
 #define ONEFLOW_JOB_JOB_MANAGER_H_
 
+#include "common/util.h"
 #include "job/job_conf.pb.h"
 
 namespace oneflow {
 
 class JobManager {
  public:
+  DISALLOW_COPY_AND_MOVE(JobManager);
+
   JobManager() = default;
-  JobManager(const JobManager&) = delete;
-  JobManager(JobManager&&) = delete;
-  JobManager& operator = (const JobManager&) = delete;
-  JobManager& operator = (JobManager&&) = delete;
   ~JobManager() = default;
 
   void init(const JobUserConf& job_user_conf); // TODO: implement it

@@ -6,6 +6,7 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 enable_testing()
 set(oneflow_source_dir "${PROJECT_SOURCE_DIR}/oneflow")
+include_directories(${oneflow_source_dir})
 
 # dependencies
 

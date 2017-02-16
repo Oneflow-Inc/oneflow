@@ -6,16 +6,15 @@
 #include <set>
 #include <vector>
 #include <memory>
+#include "common/util.h"
 
 namespace oneflow {
 
 class DagNode {
  public:
+  DISALLOW_COPY_AND_MOVE(DagNode);
+
   DagNode() = default;
-  DagNode(const DagNode&) = delete;
-  DagNode(DagNode&&) = delete;
-  DagNode& operator = (const DagNode&) = delete;
-  DagNode& operator = (DagNode&&) = delete;
   virtual ~DagNode() = default;
 
   void init(const std::string& name);
@@ -44,11 +43,9 @@ class DagNode {
 template <typename Data>
 class DataNode : public DagNode {
  public:
+  DISALLOW_COPY_AND_MOVE(DataNode);
+
   DataNode() = default;
-  DataNode(const DataNode&) = delete;
-  DataNode(DataNode&&) = delete;
-  DataNode& operator = (const DataNode&) = delete;
-  DataNode& operator = (DataNode&&) = delete;
   ~DataNode() = default;
 
   void init(const std::string& name, const std::shared_ptr<Data>& data) {
@@ -66,11 +63,9 @@ class DataNode : public DagNode {
 template <typename Op>
 class OpNode : public DagNode {
  public:
+  DISALLOW_COPY_AND_MOVE(OpNode);
+
   OpNode() = default;
-  OpNode(const OpNode&) = delete;
-  OpNode(OpNode&&) = delete;
-  OpNode& operator = (const OpNode&) = delete;
-  OpNode& operator = (OpNode&&) = delete;
   ~OpNode() = default;
 
   void init(const std::string& name, const std::shared_ptr<Op>& op) {

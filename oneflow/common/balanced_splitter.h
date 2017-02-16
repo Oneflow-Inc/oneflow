@@ -2,6 +2,7 @@
 #define ONEFLOW_COMMON_BALANCED_SPLITTER_H_
 
 #include <stdint.h>
+#include "common/util.h"
 
 namespace oneflow {
 
@@ -11,11 +12,9 @@ namespace oneflow {
 //                           4,4,3,3,3,3
 class BalancedSplitter {
  public:
+  DISALLOW_COPY_AND_MOVE(BalancedSplitter);
+  
   BalancedSplitter() = default;
-  BalancedSplitter(const BalancedSplitter&) = delete;
-  BalancedSplitter(BalancedSplitter&&) = delete;
-  BalancedSplitter& operator = (const BalancedSplitter&) = delete;
-  BalancedSplitter& operator = (BalancedSplitter&&) = delete;
   ~BalancedSplitter() = default;
 
   void init(int64_t total_num, int64_t split_num);
