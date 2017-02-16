@@ -26,16 +26,16 @@ TEST(DagNode, add_remove_predecessor) {
   ASSERT_EQ(true, node_vec[3].AddPredecessor(&node_vec[2]));
   
   // check successors and predecessors
-  ASSERT_TRUE(is_equal(node_vec[0].successors(), {node_vec[1].node_id(),
+  ASSERT_TRUE(IsEqual(node_vec[0].successors(), {node_vec[1].node_id(),
                                                   node_vec[2].node_id()}));
-  ASSERT_TRUE(is_equal(node_vec[1].successors(), {node_vec[3].node_id()}));
-  ASSERT_TRUE(is_equal(node_vec[2].successors(), {node_vec[3].node_id()}));
-  ASSERT_TRUE(is_equal(node_vec[3].successors(), {}));
+  ASSERT_TRUE(IsEqual(node_vec[1].successors(), {node_vec[3].node_id()}));
+  ASSERT_TRUE(IsEqual(node_vec[2].successors(), {node_vec[3].node_id()}));
+  ASSERT_TRUE(IsEqual(node_vec[3].successors(), {}));
   
-  ASSERT_TRUE(is_equal(node_vec[0].predecessors(), {}));
-  ASSERT_TRUE(is_equal(node_vec[1].predecessors(), {node_vec[0].node_id()}));
-  ASSERT_TRUE(is_equal(node_vec[2].predecessors(), {node_vec[0].node_id()}));
-  ASSERT_TRUE(is_equal(node_vec[3].predecessors(), {node_vec[1].node_id(),
+  ASSERT_TRUE(IsEqual(node_vec[0].predecessors(), {}));
+  ASSERT_TRUE(IsEqual(node_vec[1].predecessors(), {node_vec[0].node_id()}));
+  ASSERT_TRUE(IsEqual(node_vec[2].predecessors(), {node_vec[0].node_id()}));
+  ASSERT_TRUE(IsEqual(node_vec[3].predecessors(), {node_vec[1].node_id(),
                                                     node_vec[2].node_id()}));
   
   // false add
@@ -49,15 +49,15 @@ TEST(DagNode, add_remove_predecessor) {
   ASSERT_EQ(true, node_vec[3].RemovePredecessor(&node_vec[2]));
   
   // check successors and predecessors
-  ASSERT_TRUE(is_equal(node_vec[0].successors(), {node_vec[2].node_id()}));
-  ASSERT_TRUE(is_equal(node_vec[1].successors(), {node_vec[3].node_id()}));
-  ASSERT_TRUE(is_equal(node_vec[2].successors(), {}));
-  ASSERT_TRUE(is_equal(node_vec[3].successors(), {}));
+  ASSERT_TRUE(IsEqual(node_vec[0].successors(), {node_vec[2].node_id()}));
+  ASSERT_TRUE(IsEqual(node_vec[1].successors(), {node_vec[3].node_id()}));
+  ASSERT_TRUE(IsEqual(node_vec[2].successors(), {}));
+  ASSERT_TRUE(IsEqual(node_vec[3].successors(), {}));
   
-  ASSERT_TRUE(is_equal(node_vec[0].predecessors(), {}));
-  ASSERT_TRUE(is_equal(node_vec[1].predecessors(), {}));
-  ASSERT_TRUE(is_equal(node_vec[2].predecessors(), {node_vec[0].node_id()}));
-  ASSERT_TRUE(is_equal(node_vec[3].predecessors(), {node_vec[1].node_id()}));
+  ASSERT_TRUE(IsEqual(node_vec[0].predecessors(), {}));
+  ASSERT_TRUE(IsEqual(node_vec[1].predecessors(), {}));
+  ASSERT_TRUE(IsEqual(node_vec[2].predecessors(), {node_vec[0].node_id()}));
+  ASSERT_TRUE(IsEqual(node_vec[3].predecessors(), {node_vec[1].node_id()}));
   
   // false remove
   ASSERT_EQ(false, node_vec[1].RemovePredecessor(&node_vec[0]));

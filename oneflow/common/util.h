@@ -17,17 +17,10 @@ namespace oneflow {
   DISALLOW_COPY(ClassName) \
   DISALLOW_MOVE(ClassName)
 
-template <typename T>
-bool is_equal(const std::set<T>& lhs, const std::set<T>& rhs) {
-  if (lhs.size() != rhs.size()) {
-    return false;
-  }
-  for (const T& lhs_elem : lhs) {
-    if (rhs.find(lhs_elem) == rhs.end()) {
-      return false;
-    }
-  }
-  return true;
+// we have to implement it to hack the glog/gtest macro
+template<typename T>
+bool IsEqual(const std::set<T>& lhs, const std::set<T>& rhs) {
+  return lhs == rhs;
 }
 
 } // namespace oneflow
