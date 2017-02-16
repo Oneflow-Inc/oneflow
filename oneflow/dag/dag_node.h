@@ -14,23 +14,25 @@ class DagNode {
  public:
   DISALLOW_COPY_AND_MOVE(DagNode);
 
-  DagNode() = default;
-  virtual ~DagNode() = default;
-
-  void init(const std::string& name);
-  
   int32_t node_id() const { return node_id_; }
   const std::string& node_name() const { return node_name_; }
 
-  // return false if it already existed
+  // return false if it has already been inserted
   bool AddPredecessor(DagNode* predecessor_ptr);
+  // return false if it has already been erased
   bool RemovePredecessor(DagNode* predecessor_ptr);
 
   const std::set<int32_t>& predecessors() const { return predecessors_; }
   const std::set<int32_t>& successors() const { return successors_; }
 
+ protected:
+  DagNode() = default;
+  virtual ~DagNode() = default;
+  
+  void init(const std::string& node_name);
+
  private:
-  const int32_t node_id_;
+  int32_t node_id_;
   std::string node_name_;
   
   // Use std::set instead of std::unordered_set to keep the increasing
@@ -48,13 +50,13 @@ class DataNode : public DagNode {
   DataNode() = default;
   ~DataNode() = default;
 
-  void init(const std::string& name, const std::shared_ptr<Data>& data) {
-    Base::init(name);
+  void init(const std::string& node_name, const std::shared_ptr<Data>& data) {
+    DagNode::init(node_name);
     data_ = data;
   }
 
   std::shared_ptr<const Data>& data() const { return data_; }
-  std::shared_ptr<Data>& mutable_data(); { return data_; }
+  std::shared_ptr<Data>& mutable_data() { return data_; }
 
  private:
   std::shared_ptr<Data> data_;
@@ -68,8 +70,8 @@ class OpNode : public DagNode {
   OpNode() = default;
   ~OpNode() = default;
 
-  void init(const std::string& name, const std::shared_ptr<Op>& op) {
-    Base::init(name);
+  void init(const std::string& node_name, const std::shared_ptr<Op>& op) {
+    DagNode::init(node_name);
     op_ = op;
   }
 
