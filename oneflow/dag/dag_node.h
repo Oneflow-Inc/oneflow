@@ -6,8 +6,6 @@
 #include <vector>
 #include <memory>
 #include "common/util.h"
-#include "dag/data_meta.h"
-#include "dag/op_meta.h"
 
 namespace oneflow {
 
