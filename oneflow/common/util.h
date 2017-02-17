@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_COMMON_UTIL_H
 #define ONEFLOW_COMMON_UTIL_H
 
-#include <set>
+#include <unordered_set>
 
 namespace oneflow {
 
@@ -19,7 +19,8 @@ namespace oneflow {
 
 // we have to implement it to hack the glog/gtest macro
 template<typename T>
-bool IsEqual(const std::set<T>& lhs, const std::set<T>& rhs) {
+bool IsEqual(const std::unordered_set<T>& lhs,
+             const std::unordered_set<T>& rhs) {
   return lhs == rhs;
 }
 

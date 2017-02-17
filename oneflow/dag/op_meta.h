@@ -9,7 +9,7 @@ class OpMeta {
 public:
   DISALLOW_COPY_AND_MOVE(OpMeta);
   OpMeta() = default;
-  ~OpMeta() = default;
+  virtual ~OpMeta() = default;
 private:
 }; 
 

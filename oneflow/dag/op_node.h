@@ -11,18 +11,15 @@ class OpNode : public DagNode {
   DISALLOW_COPY_AND_MOVE(OpNode);
 
   OpNode() = default;
-  ~OpNode() = default;
+  virtual ~OpNode() = default;
 
-  void init(std::shared_ptr<OpMeta> op_meta) {
+  void init() {
     DagNode::init();
-    op_meta_ = op_meta;
   }
 
-  std::shared_ptr<const OpMeta> op_meta() const { return op_meta_; }
-  std::shared_ptr<OpMeta> mutable_op_meta() { return op_meta_; }
+  virtual std::shared_ptr<const OpMeta> op_meta() const = 0;
  
  private:
-  std::shared_ptr<OpMeta> op_meta_;
 
 };
 

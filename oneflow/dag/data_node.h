@@ -9,22 +9,18 @@ namespace oneflow {
 class DataNode : public DagNode {
  public:
   DISALLOW_COPY_AND_MOVE(DataNode);
+  virtual ~DataNode() = default;
 
+  virtual std::shared_ptr<const DataMeta> data_meta() const = 0;
+ 
+ protected:
   DataNode() = default;
-  ~DataNode() = default;
-
-  void init(std::shared_ptr<DataMeta> data_meta) {
+  void init() {
     DagNode::init();
-    data_meta_ = data_meta;
   }
-
-  std::shared_ptr<const DataMeta> data_meta() const { 
-    return data_meta_;
-  }
-  std::shared_ptr<DataMeta> mutable_data_meta() { return data_meta_; }
 
  private:
-  std::shared_ptr<DataMeta> data_meta_;
+
 };
 
 } // namespace oneflow

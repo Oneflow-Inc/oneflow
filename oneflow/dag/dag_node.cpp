@@ -10,16 +10,16 @@ void DagNode::init() {
 }
 
 bool DagNode::AddPredecessor(DagNode* predecessor_ptr) {
-  bool pred_success = predecessor_ptr->successors_.insert(node_id_).second;
-  bool this_success = predecessors_.insert(predecessor_ptr->node_id()).second;
+  bool pred_success = predecessor_ptr->successors_.insert(this).second;
+  bool this_success = predecessors_.insert(predecessor_ptr).second;
   CHECK_EQ(pred_success, this_success)
     << "Either it has been inserted or not";
   return pred_success;
 }
 
 bool DagNode::RemovePredecessor(DagNode* predecessor_ptr) {
-  bool pred_success = predecessor_ptr->successors_.erase(node_id_);
-  bool this_success = predecessors_.erase(predecessor_ptr->node_id());
+  bool pred_success = predecessor_ptr->successors_.erase(this);
+  bool this_success = predecessors_.erase(predecessor_ptr);
   CHECK_EQ(pred_success, this_success)
     << "Either it has been erased or not";
   return pred_success;

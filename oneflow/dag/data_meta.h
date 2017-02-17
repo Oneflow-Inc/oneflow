@@ -9,7 +9,7 @@ class DataMeta {
 public:
   DISALLOW_COPY_AND_MOVE(DataMeta);
   DataMeta() = default;
-  ~DataMeta() = default;
+  virtual ~DataMeta() = default;
 private:
 };
 
