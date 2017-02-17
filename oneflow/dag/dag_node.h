@@ -15,7 +15,6 @@ class DagNode {
   DISALLOW_COPY_AND_MOVE(DagNode);
 
   int32_t node_id() const { return node_id_; }
-  const std::string& node_name() const { return node_name_; }
 
   // return false if it has already been inserted
   bool AddPredecessor(DagNode* predecessor_ptr);
@@ -29,11 +28,10 @@ class DagNode {
   DagNode() = default;
   virtual ~DagNode() = default;
   
-  void init(const std::string& node_name);
+  void init();
 
  private:
   int32_t node_id_;
-  std::string node_name_;
   
   // Use std::set instead of std::unordered_set to keep the increasing
   // order of node_id while traversing the DAG
@@ -50,8 +48,8 @@ class DataNode : public DagNode {
   DataNode() = default;
   ~DataNode() = default;
 
-  void init(const std::string& node_name, const std::shared_ptr<Data>& data) {
-    DagNode::init(node_name);
+  void init(const std::shared_ptr<Data>& data) {
+    DagNode::init();
     data_ = data;
   }
 
@@ -70,8 +68,8 @@ class OpNode : public DagNode {
   OpNode() = default;
   ~OpNode() = default;
 
-  void init(const std::string& node_name, const std::shared_ptr<Op>& op) {
-    DagNode::init(node_name);
+  void init(const std::shared_ptr<Op>& op) {
+    DagNode::init();
     op_ = op;
   }
 

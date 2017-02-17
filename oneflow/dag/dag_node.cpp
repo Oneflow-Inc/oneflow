@@ -4,10 +4,9 @@
 namespace oneflow {
 
 // be careful, this implemention is not thread-safe
-void DagNode::init(const std::string& node_name) {
+void DagNode::init() {
   static int32_t node_id_cnt = 0;
   node_id_ = node_id_cnt++;
-  node_name_ = node_name;
 }
 
 bool DagNode::AddPredecessor(DagNode* predecessor_ptr) {
