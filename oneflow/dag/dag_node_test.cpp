@@ -2,21 +2,23 @@
 #include <vector>
 #include "gtest/gtest.h"
 #include "common/util.h"
+#include "dag/data_node.h"
+#include "dag/op_node.h"
 
 namespace oneflow {
 
 TEST(DagNode, node_id_is_unique) {
   for (int32_t i = 0; i < 100; ++i) {
-    DataNode<int32_t> new_node;
-    new_node.init(std::make_shared<int> (0));
+    DataNode new_node;
+    new_node.init(std::make_shared<DataMeta> ());
     ASSERT_EQ(new_node.node_id(), i);
   }
 }
 
 TEST(DagNode, add_remove_predecessor) {
-  std::vector<DataNode<size_t>> node_vec(4);
+  std::vector<OpNode> node_vec(4);
   for (size_t i = 0; i < node_vec.size(); ++i) {
-    node_vec[i].init(std::make_shared<size_t> (i));
+    node_vec[i].init(std::make_shared<OpMeta> ());
   }
 
   // add: 0->1;0->2;1->3;2->3

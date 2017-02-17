@@ -7,6 +7,8 @@
 #include <vector>
 #include <memory>
 #include "common/util.h"
+#include "dag/data_meta.h"
+#include "dag/op_meta.h"
 
 namespace oneflow {
 
@@ -37,47 +39,6 @@ class DagNode {
   // order of node_id while traversing the DAG
   std::set<int32_t> predecessors_;
   std::set<int32_t> successors_;
-
-};
-
-template <typename Data>
-class DataNode : public DagNode {
- public:
-  DISALLOW_COPY_AND_MOVE(DataNode);
-
-  DataNode() = default;
-  ~DataNode() = default;
-
-  void init(const std::shared_ptr<Data>& data) {
-    DagNode::init();
-    data_ = data;
-  }
-
-  std::shared_ptr<const Data>& data() const { return data_; }
-  std::shared_ptr<Data>& mutable_data() { return data_; }
-
- private:
-  std::shared_ptr<Data> data_;
-};
-
-template <typename Op>
-class OpNode : public DagNode {
- public:
-  DISALLOW_COPY_AND_MOVE(OpNode);
-
-  OpNode() = default;
-  ~OpNode() = default;
-
-  void init(const std::shared_ptr<Op>& op) {
-    DagNode::init();
-    op_ = op;
-  }
-
-  std::shared_ptr<const Op>& op() const { return op_; }
-  std::shared_ptr<Op>& mutable_op() { return op_; }
- 
- private:
-  std::shared_ptr<Op> op_;
 
 };
 
