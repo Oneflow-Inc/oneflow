@@ -84,10 +84,12 @@ class Dag {
   ConstDagIterator cbegin() const {
     ConstDagIterator ret;
     ret.init((const_cast<Dag*>(this))->begin());
+    return ret;
   }
   ConstDagIterator cend() const {
     ConstDagIterator ret;
     ret.init((const_cast<Dag*>(this))->end());
+    return ret;
   }
 
  private:
