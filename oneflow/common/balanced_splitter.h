@@ -17,7 +17,7 @@ class BalancedSplitter {
   BalancedSplitter() = default;
   ~BalancedSplitter() = default;
 
-  void init(int64_t total_num, int64_t split_num);
+  void Init(int64_t total_num, int64_t split_num);
 
   int64_t at(int64_t idx) const;
 

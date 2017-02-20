@@ -15,7 +15,7 @@ class DagNode {
   virtual ~DagNode() = default;
   
   DagNode() = default;
-  void init();
+  void Init();
 
   int32_t node_id() const { return node_id_; }
 

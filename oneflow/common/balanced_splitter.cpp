@@ -3,7 +3,7 @@
 
 namespace oneflow {
 
-void BalancedSplitter::init(int64_t total_num, int64_t split_num) {
+void BalancedSplitter::Init(int64_t total_num, int64_t split_num) {
   CHECK_GE(total_num, split_num);
   CHECK_GT(split_num, 0);
   minimum_guarantee_ = total_num / split_num;

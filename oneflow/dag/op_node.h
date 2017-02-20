@@ -13,8 +13,8 @@ class OpNode : public DagNode {
 
  protected:
   OpNode() = default;
-  void init() {
-    DagNode::init();
+  void Init() {
+    DagNode::Init();
   }
  
  private:

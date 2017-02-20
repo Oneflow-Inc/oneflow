@@ -5,7 +5,7 @@ namespace oneflow {
 
 TEST(BalancedSplitter, split_20_to_6_part) {
   BalancedSplitter splitter;
-  splitter.init(20, 6);
+  splitter.Init(20, 6);
   ASSERT_EQ(splitter.at(0), 4);
   ASSERT_EQ(splitter.at(1), 4);
   ASSERT_EQ(splitter.at(2), 3);

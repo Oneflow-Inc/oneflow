@@ -4,7 +4,7 @@
 namespace oneflow {
 
 // be careful, this implemention is not thread-safe
-void DagNode::init() {
+void DagNode::Init() {
   static int32_t node_id_cnt = 0;
   node_id_ = node_id_cnt++;
 }

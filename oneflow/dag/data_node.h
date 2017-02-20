@@ -12,8 +12,8 @@ class DataNode : public DagNode {
  
  protected:
   DataNode() = default;
-  void init() {
-    DagNode::init();
+  void Init() {
+    DagNode::Init();
   }
 
  private:

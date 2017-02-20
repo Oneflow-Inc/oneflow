@@ -10,7 +10,7 @@ namespace oneflow {
 TEST(DagNode, node_id_is_unique) {
   for (int32_t i = 0; i < 100; ++i) {
     DagNode new_node;
-    new_node.init();
+    new_node.Init();
     ASSERT_EQ(new_node.node_id(), i);
   }
 }
@@ -18,7 +18,7 @@ TEST(DagNode, node_id_is_unique) {
 TEST(DagNode, add_remove_predecessor) {
   std::vector<DagNode> node_vec(4);
   for (size_t i = 0; i < node_vec.size(); ++i) {
-    node_vec[i].init();
+    node_vec[i].Init();
   }
 
   // add: 0->1;0->2;1->3;2->3

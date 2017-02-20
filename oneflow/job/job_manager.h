@@ -13,7 +13,7 @@ class JobManager {
   JobManager() = default;
   ~JobManager() = default;
 
-  void init(const JobUserConf& job_user_conf); // TODO: implement it
+  void Init(const JobUserConf& job_user_conf); // TODO: implement it
 
   void compile(); // TODO: implement it
   void run(); // TODO: implement it

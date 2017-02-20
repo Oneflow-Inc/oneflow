@@ -19,7 +19,7 @@ class Dag {
     DagIterator() = default;
     ~DagIterator() = default;
     
-    void init(DagNode* start_node) {
+    void Init(DagNode* start_node) {
       bfs_queue_ = std::make_shared<std::queue<DagNode*>> ();
       bfs_queue_->push(start_node);
     }
@@ -40,7 +40,7 @@ class Dag {
     ConstDagIterator() = default;
     ~ConstDagIterator() = default;
     
-    void init(DagIterator dag_iterator) {
+    void Init(DagIterator dag_iterator) {
       dag_iterator_ = dag_iterator;
     }
     
@@ -59,10 +59,10 @@ class Dag {
   Dag() = default;
   virtual ~Dag() = default;
 
-  void init(const std::string& dag_name) {
+  void Init(const std::string& dag_name) {
     dag_name_ = dag_name;
-    start_node_.init();
-    stop_node_.init();
+    start_node_.Init();
+    stop_node_.Init();
   }
 
   const std::string& dag_name() { return dag_name_; }
@@ -71,24 +71,24 @@ class Dag {
 
   DagIterator begin() {
     DagIterator ret;
-    ret.init(&start_node_);
+    ret.Init(&start_node_);
     ++ret;
     return ret;
   }
   DagIterator end() {
     DagIterator ret;
-    ret.init(&stop_node_);
+    ret.Init(&stop_node_);
     return ret;
   }
 
   ConstDagIterator cbegin() const {
     ConstDagIterator ret;
-    ret.init((const_cast<Dag*>(this))->begin());
+    ret.Init((const_cast<Dag*>(this))->begin());
     return ret;
   }
   ConstDagIterator cend() const {
     ConstDagIterator ret;
-    ret.init((const_cast<Dag*>(this))->end());
+    ret.Init((const_cast<Dag*>(this))->end());
     return ret;
   }
 
