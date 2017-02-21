@@ -4,6 +4,8 @@
 #include "dag/dag.h"
 #include "dag/logical_data_node.h"
 #include "dag/logical_op_node.h"
+#include "job/dlnet_conf.pb.h"
+#include "job/strategy.pb.h"
 
 namespace oneflow {
 

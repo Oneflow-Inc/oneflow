@@ -52,6 +52,7 @@ endforeach()
 
 # build object-cpp
 add_library(of_ccobj ${oneflow_object_cc})
+add_dependencies(of_ccobj of_protoobj)
 list(APPEND ONEFLOW_LINKER_LIBS of_ccobj)
 
 # build test
