@@ -25,8 +25,14 @@ void ConvolutionLayerDesc::Init(const LayerConf& layer_conf) {
   mutable_layer_name() = layer_conf.name();
   CHECK(layer_conf.has_convolution_layer_conf());
   layer_conf_ = layer_conf.convolution_layer_conf();
-  data_blob_desc_set_.Init(layer_name());
-  model_blob_desc_set_.Init(layer_name());
+  
+  auto data_ptr = new ConvolutionDataBlobDescSet();
+  data_ptr->Init(layer_name());
+  mutable_data_blob_desc_set().reset(data_ptr);
+
+  auto model_ptr = new ConvolutionModelBlobDescSet();
+  model_ptr->Init(layer_name());
+  mutable_model_blob_desc_set().reset(model_ptr);
 }
 
 } // namespace oneflow

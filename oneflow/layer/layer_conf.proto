@@ -36,11 +36,17 @@ message InnerProductLayerConf {
   string out = 2;
 }
 
+message LoaderLayerConf {
+  string data = 1;
+  string label = 2;
+}
+
 message LayerConf {
   string name = 1;
   oneof conf_for_specified_layer {
     // TODO: add other layers
     ConvolutionLayerConf convolution_layer_conf = 100;
     InnerProductLayerConf inner_product_layer_conf = 101;
+    LoaderLayerConf loader_layer_conf = 102;
   }
 }

@@ -136,18 +136,30 @@ class BaseLayerDesc {
   const std::string& layer_name() const {
     return layer_name_;
   }
+  const DataBlobDescSet& data_blob_desc_set() const {
+    return *(data_blob_desc_set_.get());
+  }
+  const ModelBlobDescSet& model_blob_desc_set() const {
+    return *(model_blob_desc_set_.get());
+  }
   
   virtual void Init(const LayerConf& layer_conf) = 0;
-  virtual const DataBlobDescSet* data_blob_desc_set() = 0;
-  virtual const ModelBlobDescSet* model_blob_desc_set() = 0;
  
  protected:
   std::string& mutable_layer_name() {
     return layer_name_;
   }
+  std::unique_ptr<DataBlobDescSet>& mutable_data_blob_desc_set() {
+    return data_blob_desc_set_;
+  }
+  std::unique_ptr<ModelBlobDescSet>& mutable_model_blob_desc_set() {
+    return model_blob_desc_set_;
+  }
  
  private:
   std::string layer_name_;
+  std::unique_ptr<DataBlobDescSet> data_blob_desc_set_;
+  std::unique_ptr<ModelBlobDescSet> model_blob_desc_set_;
 
 };
 

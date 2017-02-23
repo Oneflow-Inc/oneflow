@@ -45,19 +45,9 @@ class ConvolutionLayerDesc final : public BaseLayerDesc {
   ~ConvolutionLayerDesc() = default;
 
   void Init(const LayerConf& layer_conf) override;
-  
-  const DataBlobDescSet* data_blob_desc_set() override {
-    return &data_blob_desc_set_;
-  }
-
-  const ModelBlobDescSet* model_blob_desc_set() override {
-    return &model_blob_desc_set_;
-  }
 
  private:
   ConvolutionLayerConf layer_conf_;
-  ConvolutionDataBlobDescSet data_blob_desc_set_;
-  ConvolutionModelBlobDescSet model_blob_desc_set_;
 
 };
 

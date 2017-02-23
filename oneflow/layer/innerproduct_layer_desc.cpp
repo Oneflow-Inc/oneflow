@@ -23,8 +23,14 @@ void InnerProductLayerDesc::Init(const LayerConf& layer_conf) {
   mutable_layer_name() = layer_conf.name();
   CHECK(layer_conf.has_inner_product_layer_conf());
   layer_conf_ = layer_conf.inner_product_layer_conf();
-  data_blob_desc_set_.Init(layer_name());
-  model_blob_desc_set_.Init(layer_name());
+
+  auto data_ptr = new InnerProductDataBlobDescSet();
+  data_ptr->Init(layer_name());
+  mutable_data_blob_desc_set().reset(data_ptr);
+
+  auto model_ptr = new InnerProductModelBlobDescSet();
+  model_ptr->Init(layer_name());
+  mutable_model_blob_desc_set().reset(model_ptr);
 }
 
 } // namespace oneflow

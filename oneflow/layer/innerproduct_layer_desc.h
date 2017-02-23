@@ -45,18 +45,8 @@ class InnerProductLayerDesc final : public BaseLayerDesc {
 
   void Init(const LayerConf& layer_conf) override;
 
-  const DataBlobDescSet* data_blob_desc_set() override {
-    return &data_blob_desc_set_;
-  }
-
-  const ModelBlobDescSet* model_blob_desc_set() override {
-    return &model_blob_desc_set_;
-  }
-
  private:
   InnerProductLayerConf layer_conf_;
-  InnerProductDataBlobDescSet data_blob_desc_set_;
-  InnerProductModelBlobDescSet model_blob_desc_set_;
 
 };
 
