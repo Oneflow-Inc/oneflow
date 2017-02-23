@@ -24,6 +24,19 @@ bool IsEqual(const std::unordered_set<T>& lhs,
   return lhs == rhs;
 }
 
+enum class FloatType {
+  kFloat,
+  kDouble
+};
+
+inline size_t GetFloatByteSize(FloatType ft) {
+  if (ft == FloatType::kFloat) {
+    return 4;
+  } else {
+    return 8;
+  }
+}
+
 } // namespace oneflow
 
 #endif // ONEFLOW_COMMON_UTIL_H

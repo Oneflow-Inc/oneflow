@@ -1,8 +1,8 @@
 #ifndef ONEFLOW_BLOB_DESCRIPTOR_H_
 #define ONEFLOW_BLOB_DESCRIPTOR_H_
 
+#include "blob/shape.h"
 #include "common/util.h"
-#include "common/float_type.h"
 #include "memory/memory_context.h"
 
 namespace oneflow {
@@ -24,7 +24,7 @@ class BlobDescriptor {
   const Shape& shape() const { return shape_; }
   const MemoryContext& memory_context() const { return memory_context_; }
   size_t byte_size() const {
-    return shape_.elem_cnt() * GetFloatByteSize<float_type_>();
+    return shape_.elem_cnt() * GetFloatByteSize(float_type_);
   }
  
  private:

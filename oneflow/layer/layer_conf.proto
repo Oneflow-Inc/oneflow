@@ -26,15 +26,15 @@ message ModelParamInitializerConf {
   }
 }
 
-message SplitLayerConf {
+message InnerProductLayerConf {
   string in = 1;
-  repeated string out = 2;
+  string out = 2;
 }
 
 message LayerConf {
   string name = 1;
   oneof conf_for_specified_layer {
     // TODO: add other layers
-    SplitLayerConf split_layer_conf = 101;
+    InnerProductLayerConf inner_product_layer_conf = 100;
   }
 }
