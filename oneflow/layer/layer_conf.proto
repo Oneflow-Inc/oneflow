@@ -19,7 +19,7 @@ message GaussianModelParamInitializerConf {
 }
 
 message ModelParamInitializerConf {
-  oneof conf_for_specified_initializer {
+  oneof specified_type {
     ConstantModelParamInitializerConf const_conf = 1;
     UniformModelParamInitializerConf uniform_conf = 2;
     GaussianModelParamInitializerConf gaussian_conf = 3;
@@ -64,7 +64,7 @@ message MultinomialLogisticLossLayerConf {
 
 message LayerConf {
   string name = 1;
-  oneof conf_for_specified_layer {
+  oneof specified_type {
     // TODO: add other layers
     ConvolutionLayerConf convolution_layer_conf = 100;
     InnerProductLayerConf inner_product_layer_conf = 101;
