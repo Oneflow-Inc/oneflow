@@ -46,6 +46,11 @@ message PoolingLayerConf {
   string out = 2;
 }
 
+message ReluLayerConf {
+  string in = 1;
+  string out = 2;
+}
+
 message LayerConf {
   string name = 1;
   oneof conf_for_specified_layer {
@@ -54,5 +59,6 @@ message LayerConf {
     InnerProductLayerConf inner_product_layer_conf = 101;
     LoaderLayerConf loader_layer_conf = 102;
     PoolingLayerConf pooling_layer_conf = 103;
+    ReluLayerConf relu_layer_conf = 104;
   }
 }
