@@ -1,4 +1,5 @@
 #include "layer/multinomial_logistic_loss_layer.h"
+#include "glog/logging.h"
 
 namespace oneflow {
 
