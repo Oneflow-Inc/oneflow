@@ -41,6 +41,11 @@ message LoaderLayerConf {
   string label = 2;
 }
 
+message PoolingLayerConf {
+  string in = 1;
+  string out = 2;
+}
+
 message LayerConf {
   string name = 1;
   oneof conf_for_specified_layer {
@@ -48,5 +53,6 @@ message LayerConf {
     ConvolutionLayerConf convolution_layer_conf = 100;
     InnerProductLayerConf inner_product_layer_conf = 101;
     LoaderLayerConf loader_layer_conf = 102;
+    PoolingLayerConf pooling_layer_conf = 103;
   }
 }
