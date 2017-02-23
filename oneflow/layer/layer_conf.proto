@@ -56,6 +56,12 @@ message SoftmaxLayerConf {
   string out = 2;
 }
 
+message MultinomialLogisticLossLayerConf {
+  string data = 1;
+  string label = 2;
+  string loss = 3;
+};
+
 message LayerConf {
   string name = 1;
   oneof conf_for_specified_layer {
@@ -66,5 +72,6 @@ message LayerConf {
     PoolingLayerConf pooling_layer_conf = 103;
     ReluLayerConf relu_layer_conf = 104;
     SoftmaxLayerConf softmax_layer_conf = 105;
+    MultinomialLogisticLossLayerConf multinomial_logistic_loss_layer_conf = 106;
   }
 }
