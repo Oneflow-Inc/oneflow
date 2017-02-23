@@ -51,6 +51,11 @@ message ReluLayerConf {
   string out = 2;
 }
 
+message SoftmaxLayerConf {
+  string in = 1;
+  string out = 2;
+}
+
 message LayerConf {
   string name = 1;
   oneof conf_for_specified_layer {
@@ -60,5 +65,6 @@ message LayerConf {
     LoaderLayerConf loader_layer_conf = 102;
     PoolingLayerConf pooling_layer_conf = 103;
     ReluLayerConf relu_layer_conf = 104;
+    SoftmaxLayerConf softmax_layer_conf = 105;
   }
 }
