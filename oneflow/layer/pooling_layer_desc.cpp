@@ -5,8 +5,10 @@ namespace oneflow {
 
 void PoolingLayerDesc::Init(const LayerConf& layer_conf) {
   mutable_layer_name() = layer_conf.name();
+  
   CHECK(layer_conf.has_pooling_layer_conf());
-  layer_conf_ = layer_conf.pooling_layer_conf();
+  auto cnf_ptr = new PoolingLayerConf(layer_conf.pooling_layer_conf());
+  mutable_pb_layer_conf().reset(cnf_ptr);
 
   auto data_ptr = new PoolingDataBlobDescSet();
   data_ptr->Init(layer_name());

@@ -5,6 +5,7 @@
 #include <string>
 #include "blob/blob_descriptor.h"
 #include "layer/layer_conf.pb.h"
+#include "common/proto_io.h"
 
 namespace oneflow {
 
@@ -136,6 +137,9 @@ class BaseLayerDesc {
   const std::string& layer_name() const {
     return layer_name_;
   }
+  const PbMessage& pb_layer_conf() const {
+    return *(pb_layer_conf_.get());
+  }
   const DataBlobDescSet& data_blob_desc_set() const {
     return *(data_blob_desc_set_.get());
   }
@@ -149,6 +153,9 @@ class BaseLayerDesc {
   std::string& mutable_layer_name() {
     return layer_name_;
   }
+  std::unique_ptr<PbMessage>& mutable_pb_layer_conf() {
+    return pb_layer_conf_;
+  }
   std::unique_ptr<DataBlobDescSet>& mutable_data_blob_desc_set() {
     return data_blob_desc_set_;
   }
@@ -158,6 +165,7 @@ class BaseLayerDesc {
  
  private:
   std::string layer_name_;
+  std::unique_ptr<PbMessage> pb_layer_conf_;
   std::unique_ptr<DataBlobDescSet> data_blob_desc_set_;
   std::unique_ptr<ModelBlobDescSet> model_blob_desc_set_;
 

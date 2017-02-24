@@ -13,8 +13,8 @@ class LoaderDataBlobDescSet final : public DataBlobDescSet {
 
   void Init(const std::string& layer_name) {
     DataBlobDescSet::Init();
-    RegisterOutputBlobPptr(layer_name + ".data", &data_);
-    RegisterOutputBlobPptr(layer_name + ".label", &label_);
+    RegisterOutputBlobPptr(layer_name + "/data", &data_);
+    RegisterOutputBlobPptr(layer_name + "/label", &label_);
   }
 
  private:

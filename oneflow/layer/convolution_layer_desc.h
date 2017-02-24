@@ -47,7 +47,6 @@ class ConvolutionLayerDesc final : public BaseLayerDesc {
   void Init(const LayerConf& layer_conf) override;
 
  private:
-  ConvolutionLayerConf layer_conf_;
 
 };
 

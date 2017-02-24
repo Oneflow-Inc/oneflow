@@ -13,11 +13,11 @@ class PoolingDataBlobDescSet final : public DataBlobDescSet {
 
   void Init(const std::string& layer_name) {
     DataBlobDescSet::Init();
-    RegisterInputBlobPptr(layer_name + ".in", &in_);
-    RegisterInputDiffBlobPptr(layer_name + ".in_diff", &in_diff_);
-    RegisterOutputBlobPptr(layer_name + ".out", &out_);
-    RegisterOutputDiffBlobPptr(layer_name + ".out_diff", &out_diff_);
-    RegisterDataTmpBlobPptr(layer_name + ".idx", &idx_);
+    RegisterInputBlobPptr(layer_name + "/in", &in_);
+    RegisterInputDiffBlobPptr(layer_name + "/in_diff", &in_diff_);
+    RegisterOutputBlobPptr(layer_name + "/out", &out_);
+    RegisterOutputDiffBlobPptr(layer_name + "/out_diff", &out_diff_);
+    RegisterDataTmpBlobPptr(layer_name + "/idx", &idx_);
   }
 
  private:
