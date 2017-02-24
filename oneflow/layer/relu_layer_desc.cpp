@@ -1,7 +1,7 @@
 #include "layer/relu_layer_desc.h"
+#include "glog/logging.h"
 
 namespace oneflow {
-
 
 void ReluDataBlobDescSet::Init(const std::string& layer_name) {
   DataBlobDescSet::Init();

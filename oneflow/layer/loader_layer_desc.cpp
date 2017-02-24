@@ -1,4 +1,5 @@
 #include "layer/loader_layer_desc.h"
+#include "glog/logging.h"
 
 namespace oneflow {
 

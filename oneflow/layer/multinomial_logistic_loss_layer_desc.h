@@ -1,5 +1,5 @@
-#ifndef LAYER_MULTINOMIAL_LOGISTIC_LOSS_LAYER_H_
-#define LAYER_MULTINOMIAL_LOGISTIC_LOSS_LAYER_H_
+#ifndef LAYER_MULTINOMIAL_LOGISTIC_LOSS_LAYER_DESC_H_
+#define LAYER_MULTINOMIAL_LOGISTIC_LOSS_LAYER_DESC_H_
 
 #include "layer/base_layer_desc.h"
 
@@ -38,11 +38,11 @@ class MLLossModelBlobDescSet final : public ModelBlobDescSet {
 
 };
 
-class MultinomialLogisticLossLayer : public BaseLayerDesc {
+class MultinomialLogisticLossLayerDesc : public BaseLayerDesc {
  public:
-  DISALLOW_COPY_AND_MOVE(MultinomialLogisticLossLayer);
-  MultinomialLogisticLossLayer() = default;
-  ~MultinomialLogisticLossLayer() = default;
+  DISALLOW_COPY_AND_MOVE(MultinomialLogisticLossLayerDesc);
+  MultinomialLogisticLossLayerDesc() = default;
+  ~MultinomialLogisticLossLayerDesc() = default;
 
   void Init(const LayerConf& layer_conf) override;
 
@@ -53,4 +53,4 @@ class MultinomialLogisticLossLayer : public BaseLayerDesc {
 
 } // namespace oneflow
 
-#endif // LAYER_MULTINOMIAL_LOGISTIC_LOSS_LAYER_H_
+#endif // LAYER_MULTINOMIAL_LOGISTIC_LOSS_LAYER_DESC_H_

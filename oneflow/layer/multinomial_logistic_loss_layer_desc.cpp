@@ -1,4 +1,4 @@
-#include "layer/multinomial_logistic_loss_layer.h"
+#include "layer/multinomial_logistic_loss_layer_desc.h"
 #include "glog/logging.h"
 
 namespace oneflow {
@@ -14,7 +14,7 @@ void MLLossDataBlobDescSet::Init(const std::string& layer_name) {
   RegisterDataTmpBlobPptr(layer_name + ".loss_buffer", &loss_buffer_);
 }
 
-void MultinomialLogisticLossLayer::Init(const LayerConf& layer_conf) {
+void MultinomialLogisticLossLayerDesc::Init(const LayerConf& layer_conf) {
   mutable_layer_name() = layer_conf.name();
   CHECK(layer_conf.has_multinomial_logistic_loss_layer_conf());
   layer_conf_ = layer_conf.multinomial_logistic_loss_layer_conf();

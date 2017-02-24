@@ -1,7 +1,7 @@
 #ifndef LAYER_LOADER_LAYER_DESC_H_
 #define LAYER_LOADER_LAYER_DESC_H_
 
-#include "layer/base_layer_desc.cpp"
+#include "layer/base_layer_desc.h"
 
 namespace oneflow {
 
