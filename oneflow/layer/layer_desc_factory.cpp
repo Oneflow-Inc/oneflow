@@ -11,30 +11,30 @@
 namespace oneflow {
 
 // It is ugly now, maybe we can find one more elegant implemention ?
-std::shared_ptr<BaseLayerDesc> LayerDescFactory::ConstructLayerDesc(
+std::unique_ptr<BaseLayerDesc> LayerDescFactory::ConstructLayerDesc(
     const LayerConf& layer_conf) const {
-  std::shared_ptr<BaseLayerDesc> ret;
+  std::unique_ptr<BaseLayerDesc> ret;
   switch (layer_conf.specified_type_case()) {
     case LayerConf::kConvolutionLayerConf: {
-      ret = std::make_shared<ConvolutionLayerDesc> ();
+      ret.reset(new ConvolutionLayerDesc);
     }
     case LayerConf::kInnerProductLayerConf: {
-      ret = std::make_shared<InnerProductLayerDesc> ();
+      ret.reset(new InnerProductLayerDesc);
     }
     case LayerConf::kLoaderLayerConf: {
-      ret = std::make_shared<LoaderLayerDesc> ();
+      ret.reset(new LoaderLayerDesc);
     }
     case LayerConf::kPoolingLayerConf: {
-      ret = std::make_shared<PoolingLayerDesc> ();
+      ret.reset(new PoolingLayerDesc);
     }
     case LayerConf::kReluLayerConf: {
-      ret = std::make_shared<ReluLayerDesc> ();
+      ret.reset(new ReluLayerDesc);
     }
     case LayerConf::kSoftmaxLayerConf: {
-      ret = std::make_shared<SoftmaxLayerDesc> ();
+      ret.reset(new SoftmaxLayerDesc);
     }
     case LayerConf::kMultinomialLogisticLossLayerConf: {
-      ret = std::make_shared<MultinomialLogisticLossLayerDesc> ();
+      ret.reset(new MultinomialLogisticLossLayerDesc);
     }
     default: {
       LOG(FATAL) << "unknow layer";

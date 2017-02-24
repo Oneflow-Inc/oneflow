@@ -2,6 +2,7 @@
 #define ONEFLOW_LOGICAL_DATA_NODE_H_
 
 #include "dag/data_node.h"
+#include "blob/blob_descriptor.h"
 
 namespace oneflow {
 
@@ -13,9 +14,19 @@ class LogicalDataNode : public DataNode {
 
   void Init() {
     DataNode::Init();
+    // struct style
+  }
+  
+  const BlobDescriptor& blob_desc() const {
+    return blob_desc_;
+  }
+  BlobDescriptor& mutable_blob_desc() {
+    return blob_desc_;
   }
 
  private:
+  BlobDescriptor blob_desc_;
+
 };
 
 } // namespace oneflow

@@ -13,12 +13,8 @@ class BlobDescriptor {
   BlobDescriptor() = default;
   ~BlobDescriptor() = default;
   
-  void init(const Shape& rhs_shape,
-            const MemoryContext& rhs_memory_context,
-            FloatType rhs_float_type) {
-    shape_ = rhs_shape;
-    memory_context_ = rhs_memory_context;
-    float_type_ = rhs_float_type;
+  void Init() {
+    // struct style
   }
 
   const Shape& shape() const { return shape_; }
@@ -26,6 +22,11 @@ class BlobDescriptor {
   size_t byte_size() const {
     return shape_.elem_cnt() * GetFloatByteSize(float_type_);
   }
+
+  Shape& mutable_shape() { return shape_; }
+  MemoryContext& mutable_memory_context() { return memory_context_; }
+  FloatType& mutable_float_type() { return float_type_; }
+  
  
  private:
   Shape shape_;
