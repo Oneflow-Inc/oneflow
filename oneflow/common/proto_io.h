@@ -19,6 +19,9 @@ void ParseProtoFromTextFile(const std::string& file_path,
 void PrintProtoToTextFile(const PbMessage& proto,
                           const std::string& file_path);
 
+std::string GetStringValueFromPbMessage(const PbMessage& msg,
+                                        const std::string& key);
+
 } // namespace caffe
 
 #endif // ONEFLOW_PROTO_IO_H_

@@ -26,7 +26,6 @@ class BlobDescriptor {
   Shape& mutable_shape() { return shape_; }
   MemoryContext& mutable_memory_context() { return memory_context_; }
   FloatType& mutable_float_type() { return float_type_; }
-  
  
  private:
   Shape shape_;

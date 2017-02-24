@@ -42,4 +42,15 @@ bool Dag::DagIterator::operator != (const Dag::DagIterator& rhs) const {
   }
 }
 
+void Dag::ConnectStartAndStop() {
+  for (DagNode* node : data_op_node_vec_) {
+    if (node->predecessors().empty()) {
+      node->AddPredecessor(&start_node_);
+    }
+    if (node->successors().empty()) {
+      stop_node_.AddPredecessor(node);
+    }
+  }
+}
+
 } // namespace oneflow

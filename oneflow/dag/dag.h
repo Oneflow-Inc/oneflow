@@ -92,10 +92,32 @@ class Dag {
     return ret;
   }
 
+ protected:
+  void ConnectStartAndStop();
+
+  void RegisterDataNode(std::unique_ptr<DataNode> new_node) {
+    data_op_node_vec_.push_back(new_node.get());
+    data_node_vec_.push_back(std::move(new_node));
+  }
+  void RegisterOpNode(std::unique_ptr<OpNode> new_node) {
+    data_op_node_vec_.push_back(new_node.get());
+    op_node_vec_.push_back(std::move(new_node));
+  }
+
+  const std::vector<std::unique_ptr<OpNode>>& op_node_vec() const {
+    return op_node_vec_;
+  }
+
  private:
   std::string dag_name_;
   DagNode start_node_;
   DagNode stop_node_;
+
+  // In future we can implement a Iterator to replace the data_op_node_vec_
+  // which is redundancy
+  std::vector<DagNode*> data_op_node_vec_; 
+  std::vector<std::unique_ptr<DataNode>> data_node_vec_;
+  std::vector<std::unique_ptr<OpNode>> op_node_vec_;
 
 };
 

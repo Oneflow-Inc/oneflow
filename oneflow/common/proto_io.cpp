@@ -18,6 +18,9 @@ using google::protobuf::io::ZeroCopyInputStream;
 using google::protobuf::io::CodedInputStream;
 using google::protobuf::io::ZeroCopyOutputStream;
 using google::protobuf::io::CodedOutputStream;
+using google::protobuf::Descriptor;
+using google::protobuf::Reflection;
+using google::protobuf::FieldDescriptor;
 
 // string
 void ParseProtoFromString(const std::string& str, PbMessage* proto) {
@@ -41,6 +44,15 @@ void PrintProtoToTextFile(const PbMessage& proto,
   FileOutputStream output(fd);
   CHECK(google::protobuf::TextFormat::Print(proto, &output));
   close(fd);
+}
+
+std::string GetStringValueFromPbMessage(const PbMessage& msg,
+                                        const std::string& key) {
+  const Descriptor* d = msg.GetDescriptor();
+  const FieldDescriptor* fd = d->FindFieldByName(key);
+  CHECK_NOTNULL(fd);
+  const Reflection* r = msg.GetReflection();
+  return r->GetString(msg, fd);
 }
 
 } // namespace oneflow

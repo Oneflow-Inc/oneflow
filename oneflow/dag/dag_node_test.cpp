@@ -2,8 +2,7 @@
 #include <vector>
 #include "gtest/gtest.h"
 #include "common/util.h"
-#include "dag/data_node.h"
-#include "dag/op_node.h"
+#include "dag/dag_node.h"
 
 namespace oneflow {
 

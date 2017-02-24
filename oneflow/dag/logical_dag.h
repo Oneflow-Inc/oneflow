@@ -3,12 +3,57 @@
 
 #include <memory>
 #include "dag/dag.h"
-#include "dag/logical_data_node.h"
-#include "dag/logical_op_node.h"
+#include "layer/base_layer_desc.h"
 #include "job/dlnet_conf.pb.h"
 #include "job/strategy.pb.h"
 
 namespace oneflow {
+
+class LogicalDataNode : public DataNode {
+ public:
+  DISALLOW_COPY_AND_MOVE(LogicalDataNode);
+  LogicalDataNode() = default;
+  ~LogicalDataNode() = default;
+
+  void Init() {
+    DataNode::Init();
+    // struct style
+  }
+  
+ private:
+
+};
+
+class LogicalOpNode : public OpNode {
+ public:
+  DISALLOW_COPY_AND_MOVE(LogicalOpNode);
+  LogicalOpNode() = default;
+  ~LogicalOpNode() = default;
+
+  void Init() {
+    OpNode::Init();
+    // struct style
+  }
+
+  const BaseLayerDesc& layer_desc() const {
+    return *(layer_desc_.get());
+  }
+  const ParallelConf& parallel_conf() const {
+    return parallel_conf_;
+  }
+
+  std::unique_ptr<BaseLayerDesc>& mutable_layer_desc() {
+    return layer_desc_;
+  }
+  ParallelConf& mutable_parallel_conf() {
+    return parallel_conf_;
+  }
+
+ private:
+  std::unique_ptr<BaseLayerDesc> layer_desc_;
+  ParallelConf parallel_conf_;
+
+};
 
 class LogicalDag : public Dag {
  public:
@@ -22,24 +67,21 @@ class LogicalDag : public Dag {
 
  private:
   void BuildDagStruct(const DLNetConf& dl_net_conf);
-  void FillNodeWithPlacement(const Strategy& strategy_conf);
+  void FillNodeWithParallelConf(const Strategy& strategy_conf);
 
   LogicalDataNode* NewLogicalDataNode() {
-    std::unique_ptr<LogicalDataNode> new_node(new LogicalDataNode);
-    new_node->Init();
-    logical_data_node_vec_.push_back(std::move(new_node));
-    return logical_data_node_vec_.back().get();
+    LogicalDataNode* ret_ptr = new LogicalDataNode;
+    ret_ptr->Init();
+    RegisterDataNode(std::unique_ptr<LogicalDataNode> (ret_ptr));
+    return ret_ptr;
   }
 
   LogicalOpNode* NewLogicalOpNode() {
-    std::unique_ptr<LogicalOpNode> new_node(new LogicalOpNode);
-    new_node->Init();
-    logical_op_node_vec_.push_back(std::move(new_node));
-    return logical_op_node_vec_.back().get();
+    LogicalOpNode* ret_ptr = new LogicalOpNode;
+    ret_ptr->Init();
+    RegisterOpNode(std::unique_ptr<LogicalOpNode> (ret_ptr));
+    return ret_ptr;
   }
-
-  std::vector<std::unique_ptr<LogicalDataNode>> logical_data_node_vec_;
-  std::vector<std::unique_ptr<LogicalOpNode>> logical_op_node_vec_;
 
 };
 

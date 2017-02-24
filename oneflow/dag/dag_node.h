@@ -39,5 +39,36 @@ class DagNode {
 
 };
 
+class DataNode : public DagNode {
+ public:
+  DISALLOW_COPY_AND_MOVE(DataNode);
+  virtual ~DataNode() = default;
+ 
+ protected:
+  DataNode() = default;
+  void Init() {
+    DagNode::Init();
+  }
+
+ private:
+
+};
+
+class OpNode : public DagNode {
+ public:
+  DISALLOW_COPY_AND_MOVE(OpNode);
+
+  virtual ~OpNode() = default;
+
+ protected:
+  OpNode() = default;
+  void Init() {
+    DagNode::Init();
+  }
+ 
+ private:
+
+};
+
 } // namespace oneflow
 #endif  // ONEFLOW_DAG_DAG_NODE_H_
