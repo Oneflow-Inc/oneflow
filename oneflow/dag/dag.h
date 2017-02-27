@@ -67,7 +67,7 @@ class Dag {
     
     void Init(DagNode* stop_node) {
       bfs_queue_ = std::make_shared<std::queue<DagNode*>> ();
-      bfs_queue_->push(stop_node_);
+      bfs_queue_->push(stop_node);
     }
     
     DagNode& operator * ();
@@ -160,6 +160,10 @@ class Dag {
     ret.Init((const_cast<Dag*>(this))->rend());
     return ret;
   }
+  
+  const std::vector<std::unique_ptr<OpNode>>& op_node_vec() const {
+    return op_node_vec_;
+  }
 
  protected:
   void ConnectStartAndStop();
@@ -171,10 +175,6 @@ class Dag {
   void RegisterOpNode(std::unique_ptr<OpNode> new_node) {
     data_op_node_vec_.push_back(new_node.get());
     op_node_vec_.push_back(std::move(new_node));
-  }
-
-  const std::vector<std::unique_ptr<OpNode>>& op_node_vec() const {
-    return op_node_vec_;
   }
 
  private:

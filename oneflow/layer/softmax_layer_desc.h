@@ -41,6 +41,7 @@ class SoftmaxLayerDesc : public BaseLayerDesc {
   ~SoftmaxLayerDesc() = default;
 
   void Init(const LayerConf& layer_conf) override;
+  bool IsElemWise() const override { return false; }
 
  private:
   SoftmaxLayerConf layer_conf_;

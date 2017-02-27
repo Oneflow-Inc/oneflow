@@ -41,6 +41,7 @@ class ReluLayerDesc : public BaseLayerDesc {
   ~ReluLayerDesc() = default;
 
   void Init(const LayerConf& layer_conf) override;
+  bool IsElemWise() const override { return true; }
 
  private:
   ReluLayerConf layer_conf_;

@@ -44,6 +44,7 @@ class InnerProductLayerDesc final : public BaseLayerDesc {
   ~InnerProductLayerDesc() = default;
 
   void Init(const LayerConf& layer_conf) override;
+  bool IsElemWise() const override { return false; }
 
  private:
   InnerProductLayerConf layer_conf_;

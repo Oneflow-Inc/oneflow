@@ -41,6 +41,12 @@ class LogicalOpNode : public OpNode {
   const ParallelConf& parallel_conf() const {
     return parallel_conf_;
   }
+  const std::unordered_set<const LogicalOpNode*>& op_predecessors() const {
+    return op_predecessors_;
+  }
+  const std::unordered_set<const LogicalOpNode*>& op_successors() const {
+    return op_successors_;
+  }
 
   std::unique_ptr<BaseLayerDesc>& mutable_layer_desc() {
     return layer_desc_;
@@ -48,10 +54,18 @@ class LogicalOpNode : public OpNode {
   ParallelConf& mutable_parallel_conf() {
     return parallel_conf_;
   }
+  std::unordered_set<const LogicalOpNode*>& mutable_op_predecessors() {
+    return op_predecessors_;
+  }
+  std::unordered_set<const LogicalOpNode*>& mutable_op_successors() {
+    return op_successors_;
+  }
 
  private:
   std::unique_ptr<BaseLayerDesc> layer_desc_;
   ParallelConf parallel_conf_;
+  std::unordered_set<const LogicalOpNode*> op_predecessors_;
+  std::unordered_set<const LogicalOpNode*> op_successors_;
 
 };
 
@@ -68,6 +82,7 @@ class LogicalDag : public Dag {
  private:
   void BuildDagStruct(const DLNetConf& dl_net_conf);
   void FillNodeWithParallelConf(const Strategy& strategy_conf);
+  void ConnectLogicalOpNodePtr();
 
   LogicalDataNode* NewLogicalDataNode() {
     LogicalDataNode* ret_ptr = new LogicalDataNode;

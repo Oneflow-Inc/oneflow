@@ -148,6 +148,7 @@ class BaseLayerDesc {
   }
   
   virtual void Init(const LayerConf& layer_conf) = 0;
+  virtual bool IsElemWise() const = 0;
  
  protected:
   std::string& mutable_layer_name() {

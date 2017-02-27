@@ -45,6 +45,7 @@ class MultinomialLogisticLossLayerDesc : public BaseLayerDesc {
   ~MultinomialLogisticLossLayerDesc() = default;
 
   void Init(const LayerConf& layer_conf) override;
+  bool IsElemWise() const override { return false; }
 
  private:
   MultinomialLogisticLossLayerConf layer_conf_;
