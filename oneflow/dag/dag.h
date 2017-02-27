@@ -55,6 +55,32 @@ class Dag {
     DagIterator dag_iterator_;
   };
 
+  // Reverse Topologically ergodic all nodes except start_node_,stop_node_
+  class ReverseDagIterator {
+   public:
+    // DISALLOW_MOVE(ReverseDagIterator);
+    ReverseDagIterator(const ReverseDagIterator&);
+    ReverseDagIterator& operator = (const ReverseDagIterator&);
+    
+    ReverseDagIterator() = default;
+    ~ReverseDagIterator() = default;
+    
+    void Init(DagNode* stop_node) {
+      bfs_queue_ = std::make_shared<std::queue<DagNode*>> ();
+      bfs_queue_->push(stop_node_);
+    }
+    
+    DagNode& operator * ();
+    DagNode* operator -> ();
+    void operator ++ ();
+    
+    bool operator != (const ReverseDagIterator&) const;
+
+   private:
+    // we need to make light-object
+    std::shared_ptr<std::queue<DagNode*>> bfs_queue_;
+  };
+
   DISALLOW_COPY_AND_MOVE(Dag);
   Dag() = default;
   virtual ~Dag() = default;
@@ -89,6 +115,18 @@ class Dag {
   ConstDagIterator cend() const {
     ConstDagIterator ret;
     ret.Init((const_cast<Dag*>(this))->end());
+    return ret;
+  }
+
+  ReverseDagIterator rbegin() {
+    ReverseDagIterator ret;
+    ret.Init(&stop_node_);
+    ++ret;
+    return ret;
+  }
+  ReverseDagIterator rend() {
+    ReverseDagIterator ret;
+    ret.Init(&start_node_);
     return ret;
   }
 
