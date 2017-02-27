@@ -80,6 +80,26 @@ class Dag {
     // we need to make light-object
     std::shared_ptr<std::queue<DagNode*>> bfs_queue_;
   };
+  class ConstReverseDagIterator {
+   public:
+    // DISALLOW_COPY_AND_MOVE(ConstReverseDagIterator);
+    ConstReverseDagIterator() = default;
+    ~ConstReverseDagIterator() = default;
+    
+    void Init(ReverseDagIterator dag_iterator) {
+      dag_iterator_ = dag_iterator;
+    }
+    
+    const DagNode& operator * () { return *dag_iterator_; }
+    const DagNode* operator -> () { return &(*dag_iterator_); }
+    void operator ++ () { ++dag_iterator_; }
+    bool operator != (const ConstReverseDagIterator& rhs) const {
+      return dag_iterator_ != rhs.dag_iterator_;
+    }
+
+   private:
+    ReverseDagIterator dag_iterator_;
+  };
 
   DISALLOW_COPY_AND_MOVE(Dag);
   Dag() = default;
@@ -127,6 +147,17 @@ class Dag {
   ReverseDagIterator rend() {
     ReverseDagIterator ret;
     ret.Init(&start_node_);
+    return ret;
+  }
+  
+  ConstReverseDagIterator crbegin() const {
+    ConstReverseDagIterator ret;
+    ret.Init((const_cast<Dag*>(this))->rbegin());
+    return ret;
+  }
+  ConstReverseDagIterator crend() const {
+    ConstReverseDagIterator ret;
+    ret.Init((const_cast<Dag*>(this))->rend());
     return ret;
   }
 

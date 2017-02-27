@@ -3,7 +3,7 @@
 namespace oneflow {
 
 void SegmentDag::Init(const std::string& dag_name,
-                      const LogicalDag& logical_dag) {
+                      std::shared_ptr<const LogicalDag> logical_dag) {
   // TODO
 }
 

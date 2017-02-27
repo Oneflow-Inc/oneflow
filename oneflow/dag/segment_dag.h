@@ -55,7 +55,9 @@ class SegmentDag final : public Dag {
   SegmentDag() = default;
   ~SegmentDag() = default;
 
-  void Init(const std::string& dag_name, const LogicalDag& logical_dag);
+  // use shared_ptr to make sure logical_dag is alive
+  void Init(const std::string& dag_name,
+            std::shared_ptr<const LogicalDag> logical_dag);
 
  private:
 
