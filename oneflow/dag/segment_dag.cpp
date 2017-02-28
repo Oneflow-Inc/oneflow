@@ -102,7 +102,7 @@ void ModelMergeSegments(
     if (cur_op_node->layer_desc().IsElemWise() == false) {
       continue;
     }
-    if (cur_op_node->parallel_desc().policy() != ParallelDescriptor::kModelParallel) {
+    if (cur_op_node->parallel_desc().policy() != ParallelDesc::kModelParallel) {
       continue;
     }
     CHECK_EQ(cur_op_node->op_predecessors().size(), 1);
@@ -222,7 +222,7 @@ void DataMergeSegments(
   std::vector<const LogicalOpNode*> data_parallel_node;
   std::unordered_map<const LogicalOpNode*, bool> done;
   for (const auto& pair : *logical_opnode2seg_it) {
-    if (pair.first->parallel_desc().policy() == ParallelDescriptor::kDataParallel
+    if (pair.first->parallel_desc().policy() == ParallelDesc::kDataParallel
         && logical_dag->IsFirstNode(pair.first) == false) {
       data_parallel_node.push_back(pair.first);
       done[pair.first] = false;

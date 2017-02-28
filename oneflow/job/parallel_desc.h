@@ -1,20 +1,20 @@
-#ifndef ONEFLOW_JOB_PARALLEL_DESCRIPTOR_H_
-#define ONEFLOW_JOB_PARALLEL_DESCRIPTOR_H_
+#ifndef ONEFLOW_JOB_PARALLEL_DESC_H_
+#define ONEFLOW_JOB_PARALLEL_DESC_H_
 
 #include "common/util.h"
 #include "common/id_map.h"
 
 namespace oneflow {
 
-class ParallelDescriptor {
+class ParallelDesc {
  public:
   using ParallelPolicy = ParallelConf::Policy;
   static const ParallelPolicy kDataParallel = ParallelConf::DataParallel;
   static const ParallelPolicy kModelParallel = ParallelConf::ModelParallel;
 
-  // DISALLOW_COPY_AND_MOVE(ParallelDescriptor);
-  ParallelDescriptor() = default;
-  ~ParallelDescriptor() = default;
+  // DISALLOW_COPY_AND_MOVE(ParallelDesc);
+  ParallelDesc() = default;
+  ~ParallelDesc() = default;
 
   void Init(const ParallelConf& user_conf) {
     // TODO
@@ -28,12 +28,12 @@ class ParallelDescriptor {
     return device_set_;
   }
 
-  bool operator == (const ParallelDescriptor& rhs) const {
+  bool operator == (const ParallelDesc& rhs) const {
     return policy_ == rhs.policy_
         && machine_set_ == rhs.machine_set_
         && device_set_ == rhs.device_set_;
   }
-  bool operator != (const ParallelDescriptor& rhs) const {
+  bool operator != (const ParallelDesc& rhs) const {
     return !((*this) == rhs);
   }
   
@@ -45,4 +45,4 @@ class ParallelDescriptor {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_JOB_PARALLEL_DESCRIPTOR_H_
+#endif // ONEFLOW_JOB_PARALLEL_DESC_H_

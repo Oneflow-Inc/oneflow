@@ -33,7 +33,7 @@ class SegmentOpNode final : public OpNode {
   const std::vector<std::shared_ptr<const BaseLayerDesc>>& layer_desc_vec() const {
     return layer_desc_vec_;
   }
-  const ParallelDescriptor& parallel_desc() const {
+  const ParallelDesc& parallel_desc() const {
     return parallel_desc_;
   }
   const std::unordered_set<SegmentOpNode*>& op_predecessors() const {
@@ -46,7 +46,7 @@ class SegmentOpNode final : public OpNode {
   std::vector<std::shared_ptr<const BaseLayerDesc>>& mutable_layer_desc_vec() {
     return layer_desc_vec_;
   }
-  ParallelDescriptor& mutable_parallel_desc() {
+  ParallelDesc& mutable_parallel_desc() {
     return parallel_desc_;
   }
   std::unordered_set<SegmentOpNode*>& mutable_op_predecessors() {
@@ -58,7 +58,7 @@ class SegmentOpNode final : public OpNode {
 
  private:
   std::vector<std::shared_ptr<const BaseLayerDesc>> layer_desc_vec_;
-  ParallelDescriptor parallel_desc_;
+  ParallelDesc parallel_desc_;
   std::unordered_set<SegmentOpNode*> op_predecessors_;
   std::unordered_set<SegmentOpNode*> op_successors_;
 
