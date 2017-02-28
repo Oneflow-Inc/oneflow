@@ -33,20 +33,20 @@ class SegmentOpNode final : public OpNode {
   const std::vector<std::shared_ptr<const BaseLayerDesc>>& layer_desc_vec() const {
     return layer_desc_vec_;
   }
-  const ParallelConf& parallel_conf() const {
-    return parallel_conf_;
+  const ParallelDescriptor& parallel_desc() const {
+    return parallel_desc_;
   }
   
   std::vector<std::shared_ptr<const BaseLayerDesc>>& mutable_layer_desc_vec() {
     return layer_desc_vec_;
   }
-  ParallelConf& mutable_parallel_conf() {
-    return parallel_conf_;
+  ParallelDescriptor& mutable_parallel_desc() {
+    return parallel_desc_;
   }
 
  private:
   std::vector<std::shared_ptr<const BaseLayerDesc>> layer_desc_vec_;
-  ParallelConf parallel_conf_;
+  ParallelDescriptor parallel_desc_;
 
 };
 

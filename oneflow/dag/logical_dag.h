@@ -6,6 +6,7 @@
 #include "layer/base_layer_desc.h"
 #include "job/dlnet_conf.pb.h"
 #include "job/strategy.pb.h"
+#include "job/parallel_descriptor.h"
 
 namespace oneflow {
 
@@ -41,8 +42,8 @@ class LogicalOpNode : public OpNode {
   std::shared_ptr<const BaseLayerDesc> layer_desc_ptr() const {
     return layer_desc_ptr_;
   }
-  const ParallelConf& parallel_conf() const {
-    return parallel_conf_;
+  const ParallelDescriptor& parallel_desc() const {
+    return parallel_desc_;
   }
   const std::unordered_set<const LogicalOpNode*>& op_predecessors() const {
     return op_predecessors_;
@@ -54,8 +55,8 @@ class LogicalOpNode : public OpNode {
   std::shared_ptr<const BaseLayerDesc>& mutable_layer_desc_ptr() {
     return layer_desc_ptr_;
   }
-  ParallelConf& mutable_parallel_conf() {
-    return parallel_conf_;
+  ParallelDescriptor& mutable_parallel_desc() {
+    return parallel_desc_;
   }
   std::unordered_set<const LogicalOpNode*>& mutable_op_predecessors() {
     return op_predecessors_;
@@ -66,7 +67,7 @@ class LogicalOpNode : public OpNode {
 
  private:
   std::shared_ptr<const BaseLayerDesc> layer_desc_ptr_;
-  ParallelConf parallel_conf_;
+  ParallelDescriptor parallel_desc_;
   std::unordered_set<const LogicalOpNode*> op_predecessors_;
   std::unordered_set<const LogicalOpNode*> op_successors_;
 
@@ -84,7 +85,7 @@ class LogicalDag : public Dag {
 
  private:
   void BuildDagStruct(const DLNetConf& dl_net_conf);
-  void FillNodeWithParallelConf(const Strategy& strategy_conf);
+  void FillNodeWithParallelDesc(const Strategy& strategy_conf);
   void ConnectLogicalOpNodePtr();
 
   LogicalDataNode* NewLogicalDataNode() {

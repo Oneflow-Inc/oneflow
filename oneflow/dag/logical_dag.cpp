@@ -9,7 +9,7 @@ void LogicalDag::Init(const std::string& dag_name,
                       const Strategy& strategy_conf) {
   Dag::Init(dag_name);
   BuildDagStruct(dl_net_conf);
-  FillNodeWithParallelConf(strategy_conf);
+  FillNodeWithParallelDesc(strategy_conf);
 }
 
 // BlobNameInDag = LayerName/BlobNameInLayer
@@ -59,7 +59,7 @@ void LogicalDag::BuildDagStruct(const DLNetConf& dl_net_conf) {
   ConnectLogicalOpNodePtr();
 }
 
-void LogicalDag::FillNodeWithParallelConf(const Strategy& strategy_conf) {
+void LogicalDag::FillNodeWithParallelDesc(const Strategy& strategy_conf) {
   // This function only execute few times, so it is ok to declare it
   std::unordered_map<std::string, LogicalOpNode*> layer_name2op_node;
   for (const std::unique_ptr<OpNode>& op_node : op_node_vec()) {
@@ -75,7 +75,7 @@ void LogicalDag::FillNodeWithParallelConf(const Strategy& strategy_conf) {
       const std::string& layer_name = cur_group.layer_name_vec(li);
       auto it = layer_name2op_node.find(layer_name);
       CHECK(it != layer_name2op_node.end());
-      it->second->mutable_parallel_conf() = cur_group.parallel_conf();
+      it->second->mutable_parallel_desc().Init(cur_group.parallel_conf());
     }
   }
 }

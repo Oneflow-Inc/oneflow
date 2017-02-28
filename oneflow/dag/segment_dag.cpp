@@ -23,8 +23,8 @@ using SegmentIt = std::list<Segment>::iterator;
 void SetSegmentOpNodeWithSegmentIt(SegmentOpNode* seg_opnode,
                                    SegmentIt seg_it) {
   CHECK_EQ(seg_it->op_nodes.empty(), false);
-  seg_opnode->mutable_parallel_conf() =
-      seg_it->op_nodes.front()->parallel_conf();
+  seg_opnode->mutable_parallel_desc() =
+      seg_it->op_nodes.front()->parallel_desc();
   for (const LogicalOpNode* logical_opnode : seg_it->op_nodes) {
     seg_opnode->mutable_layer_desc_vec().push_back(
         logical_opnode->layer_desc_ptr());
@@ -102,14 +102,14 @@ void ModelMergeSegments(
     if (cur_op_node->layer_desc().IsElemWise() == false) {
       continue;
     }
-    if (cur_op_node->parallel_conf().policy() != ParallelConf::ModelParallel) {
+    if (cur_op_node->parallel_desc().policy() != ParallelDescriptor::kModelParallel) {
       continue;
     }
     CHECK_EQ(cur_op_node->op_predecessors().size(), 1);
     CHECK_EQ(cur_op_node->predecessors().size(), 1);
     const LogicalOpNode* pre_op_node =
         *(cur_op_node->op_predecessors().begin());
-    if (pre_op_node->parallel_conf() != cur_op_node->parallel_conf()) {
+    if (pre_op_node->parallel_desc() != cur_op_node->parallel_desc()) {
       continue;
     }
     // Get segment
@@ -197,7 +197,7 @@ void Traverse(const LogicalOpNode* seed_node,
     bool has_merged = false;
     for (const LogicalOpNode* node : data_parallel_node) {
       if (done->at(node)) { continue; }
-      if (seed_node->parallel_conf() != node->parallel_conf()) {
+      if (seed_node->parallel_desc() != node->parallel_desc()) {
         continue;
       }
       if (TryMergeWithConnect(seed_node, node, seg_list, logical_opnode2seg_it)
@@ -222,7 +222,7 @@ void DataMergeSegments(
   std::vector<const LogicalOpNode*> data_parallel_node;
   std::unordered_map<const LogicalOpNode*, bool> done;
   for (const auto& pair : *logical_opnode2seg_it) {
-    if (pair.first->parallel_conf().policy() == ParallelConf::DataParallel
+    if (pair.first->parallel_desc().policy() == ParallelDescriptor::kDataParallel
         && logical_dag->IsFirstNode(pair.first) == false) {
       data_parallel_node.push_back(pair.first);
       done[pair.first] = false;
