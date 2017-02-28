@@ -15,7 +15,7 @@ class LayerDescFactory {
     return obj;
   }
   
-  std::shared_ptr<BaseLayerDesc> ConstructLayerDesc(const LayerConf&) const;
+  std::unique_ptr<BaseLayerDesc> ConstructLayerDesc(const LayerConf&) const;
 
  private:
   LayerDescFactory() = default;
