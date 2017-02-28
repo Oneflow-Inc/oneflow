@@ -195,5 +195,28 @@ class Dag {
 
 };
 
+// if the OpNode have member: op_predecessors, op_successors
+// use this function
+template<typename DagType>
+void ConnectOpNodeExtraPtr(const DagType* dag) {
+  static_assert(std::is_base_of<Dag, DagType>::value, "wrong type");
+  using SpecifiedOpNodePtrType = typename DagType::OpNodePtrType;
+  for (const std::unique_ptr<OpNode>& op_node : dag->op_node_vec()) {
+    auto cur_node = of_dynamic_cast<SpecifiedOpNodePtrType> (op_node.get());
+    for (DagNode* data_pre_node : cur_node->predecessors()) {
+      for (DagNode* op_pre_node : data_pre_node->predecessors()) {
+        cur_node->mutable_op_predecessors().insert(
+            of_dynamic_cast<SpecifiedOpNodePtrType> (op_pre_node));
+      }
+    }
+    for (DagNode* data_next_node : cur_node->successors()) {
+      for (DagNode* op_next_node : data_next_node->successors()) {
+        cur_node->mutable_op_successors().insert(
+            of_dynamic_cast<SpecifiedOpNodePtrType> (op_next_node));
+      }
+    }
+  }
+}
+
 } // namespace oneflow
 #endif // ONEFLOW_DAG_DAG_H_

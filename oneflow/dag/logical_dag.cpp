@@ -56,7 +56,8 @@ void LogicalDag::BuildDagStruct(const DLNetConf& dl_net_conf) {
   blob_name_indag_of2ptr.clear();
   // Post Processing
   ConnectStartAndStop();
-  ConnectLogicalOpNodePtr();
+  //ConnectLogicalOpNodePtr();
+  ConnectOpNodeExtraPtr(this);
 }
 
 void LogicalDag::FillNodeWithParallelDesc(const Strategy& strategy_conf) {
@@ -80,6 +81,7 @@ void LogicalDag::FillNodeWithParallelDesc(const Strategy& strategy_conf) {
   }
 }
 
+/*
 void LogicalDag::ConnectLogicalOpNodePtr() {
   for (const std::unique_ptr<OpNode>& op_node : op_node_vec()) {
     auto cur_node = of_dynamic_cast<LogicalOpNode*> (op_node.get());
@@ -96,6 +98,6 @@ void LogicalDag::ConnectLogicalOpNodePtr() {
       }
     }
   }
-}
+}*/
 
 } // namespace oneflow

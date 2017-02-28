@@ -45,10 +45,10 @@ class LogicalOpNode : public OpNode {
   const ParallelDescriptor& parallel_desc() const {
     return parallel_desc_;
   }
-  const std::unordered_set<const LogicalOpNode*>& op_predecessors() const {
+  const std::unordered_set<LogicalOpNode*>& op_predecessors() const {
     return op_predecessors_;
   }
-  const std::unordered_set<const LogicalOpNode*>& op_successors() const {
+  const std::unordered_set<LogicalOpNode*>& op_successors() const {
     return op_successors_;
   }
 
@@ -58,23 +58,25 @@ class LogicalOpNode : public OpNode {
   ParallelDescriptor& mutable_parallel_desc() {
     return parallel_desc_;
   }
-  std::unordered_set<const LogicalOpNode*>& mutable_op_predecessors() {
+  std::unordered_set<LogicalOpNode*>& mutable_op_predecessors() {
     return op_predecessors_;
   }
-  std::unordered_set<const LogicalOpNode*>& mutable_op_successors() {
+  std::unordered_set<LogicalOpNode*>& mutable_op_successors() {
     return op_successors_;
   }
 
  private:
   std::shared_ptr<const BaseLayerDesc> layer_desc_ptr_;
   ParallelDescriptor parallel_desc_;
-  std::unordered_set<const LogicalOpNode*> op_predecessors_;
-  std::unordered_set<const LogicalOpNode*> op_successors_;
+  std::unordered_set<LogicalOpNode*> op_predecessors_;
+  std::unordered_set<LogicalOpNode*> op_successors_;
 
 };
 
 class LogicalDag : public Dag {
  public:
+  using OpNodePtrType = LogicalOpNode*;
+
   DISALLOW_COPY_AND_MOVE(LogicalDag);
   LogicalDag() = default;
   ~LogicalDag() = default;
@@ -86,7 +88,7 @@ class LogicalDag : public Dag {
  private:
   void BuildDagStruct(const DLNetConf& dl_net_conf);
   void FillNodeWithParallelDesc(const Strategy& strategy_conf);
-  void ConnectLogicalOpNodePtr();
+  //void ConnectLogicalOpNodePtr();
 
   LogicalDataNode* NewLogicalDataNode() {
     LogicalDataNode* ret_ptr = new LogicalDataNode;

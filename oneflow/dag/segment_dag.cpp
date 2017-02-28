@@ -288,6 +288,7 @@ void SegmentDag::Init(const std::string& dag_name,
   }
   // Post processing
   ConnectStartAndStop();
+  ConnectOpNodeExtraPtr(this);
 }
 
 } // namespace oneflow
