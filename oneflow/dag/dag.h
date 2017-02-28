@@ -164,6 +164,11 @@ class Dag {
   const std::vector<std::unique_ptr<OpNode>>& op_node_vec() const {
     return op_node_vec_;
   }
+  
+  bool IsFirstNode(const DagNode* node) const {
+    auto find_it = start_node_.successors().find(const_cast<DagNode*> (node));
+    return find_it != start_node_.successors().end();
+  }
 
  protected:
   void ConnectStartAndStop();

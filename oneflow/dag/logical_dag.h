@@ -36,7 +36,10 @@ class LogicalOpNode : public OpNode {
   }
 
   const BaseLayerDesc& layer_desc() const {
-    return *(layer_desc_.get());
+    return *(layer_desc_ptr_.get());
+  }
+  std::shared_ptr<const BaseLayerDesc> layer_desc_ptr() const {
+    return layer_desc_ptr_;
   }
   const ParallelConf& parallel_conf() const {
     return parallel_conf_;
@@ -48,8 +51,8 @@ class LogicalOpNode : public OpNode {
     return op_successors_;
   }
 
-  std::unique_ptr<BaseLayerDesc>& mutable_layer_desc() {
-    return layer_desc_;
+  std::shared_ptr<const BaseLayerDesc>& mutable_layer_desc_ptr() {
+    return layer_desc_ptr_;
   }
   ParallelConf& mutable_parallel_conf() {
     return parallel_conf_;
@@ -62,7 +65,7 @@ class LogicalOpNode : public OpNode {
   }
 
  private:
-  std::unique_ptr<BaseLayerDesc> layer_desc_;
+  std::shared_ptr<const BaseLayerDesc> layer_desc_ptr_;
   ParallelConf parallel_conf_;
   std::unordered_set<const LogicalOpNode*> op_predecessors_;
   std::unordered_set<const LogicalOpNode*> op_successors_;

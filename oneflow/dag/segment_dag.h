@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_DAG_SEGMENT_DAG_H_
 #define ONEFLOW_DAG_SEGMENT_DAG_H_
 
+#include <list>
 #include "dag/logical_dag.h"
 
 namespace oneflow {
@@ -29,14 +30,14 @@ class SegmentOpNode final : public OpNode {
     // struct style
   }
 
-  const std::vector<std::unique_ptr<BaseLayerDesc>>& layer_desc_vec() const {
+  const std::vector<std::shared_ptr<const BaseLayerDesc>>& layer_desc_vec() const {
     return layer_desc_vec_;
   }
   const ParallelConf& parallel_conf() const {
     return parallel_conf_;
   }
   
-  std::vector<std::unique_ptr<BaseLayerDesc>>& mutable_layer_desc_vec() {
+  std::vector<std::shared_ptr<const BaseLayerDesc>>& mutable_layer_desc_vec() {
     return layer_desc_vec_;
   }
   ParallelConf& mutable_parallel_conf() {
@@ -44,7 +45,7 @@ class SegmentOpNode final : public OpNode {
   }
 
  private:
-  std::vector<std::unique_ptr<BaseLayerDesc>> layer_desc_vec_;
+  std::vector<std::shared_ptr<const BaseLayerDesc>> layer_desc_vec_;
   ParallelConf parallel_conf_;
 
 };
@@ -60,6 +61,18 @@ class SegmentDag final : public Dag {
             std::shared_ptr<const LogicalDag> logical_dag);
 
  private:
+  SegmentDataNode* NewSegmentDataNode() {
+    SegmentDataNode* ret_ptr = new SegmentDataNode;
+    ret_ptr->Init();
+    RegisterDataNode(std::unique_ptr<SegmentDataNode> (ret_ptr));
+    return ret_ptr;
+  }
+  SegmentOpNode* NewSegmentOpNode() {
+    SegmentOpNode* ret_ptr = new SegmentOpNode;
+    ret_ptr->Init();
+    RegisterOpNode(std::unique_ptr<SegmentOpNode> (ret_ptr));
+    return ret_ptr;
+  }
 
 };
 

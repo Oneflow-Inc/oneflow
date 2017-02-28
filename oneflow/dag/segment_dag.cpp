@@ -4,28 +4,47 @@
 
 namespace oneflow {
 
+namespace {
+
 struct Segment {
-  // Main
+  // nodes belong to this Segment
   std::vector<const LogicalOpNode*> op_nodes;
-  // Attached Properties
+  // ancestors, descendants of op_nodes
   std::unordered_set<const LogicalOpNode*> ancestors;
   std::unordered_set<const LogicalOpNode*> descendants;
+  // ancestors_and_this = op_nodes + ancestors
+  // descendants_and_this = op_nodes + descendants
+  std::unordered_set<const LogicalOpNode*> ancestors_and_this;
+  std::unordered_set<const LogicalOpNode*> descendants_and_this;
 };
 
-static void InitSegments(
+using SegmentIt = std::list<Segment>::iterator;
+
+void SetSegmentOpNodeWithSegmentIt(SegmentOpNode* seg_opnode,
+                                   SegmentIt seg_it) {
+  CHECK_EQ(seg_it->op_nodes.empty(), false);
+  seg_opnode->mutable_parallel_conf() =
+      seg_it->op_nodes.front()->parallel_conf();
+  for (const LogicalOpNode* logical_opnode : seg_it->op_nodes) {
+    seg_opnode->mutable_layer_desc_vec().push_back(
+        logical_opnode->layer_desc_ptr());
+  }
+}
+
+void InitSegments(
     const LogicalDag* logical_dag,
-    std::list<Segment>* segment_list,
+    std::list<Segment>* seg_list,
     std::unordered_map<const LogicalOpNode*,
-                       std::list<Segment>::iterator>* opnode2segment) {
+                       SegmentIt>* logical_opnode2seg_it) {
   // Init one Segment with one OpNode
-  segment_list->clear();
-  opnode2segment->clear();
+  seg_list->clear();
+  logical_opnode2seg_it->clear();
   // Init layers
   for (const std::unique_ptr<OpNode>& op_node : logical_dag->op_node_vec()) {
     auto logical_opnode = of_dynamic_cast<const LogicalOpNode*>(op_node.get());
-    segment_list->emplace_back();
-    opnode2segment->insert({logical_opnode, --segment_list->end()});
-    Segment& cur_segment = segment_list->back();
+    seg_list->emplace_back();
+    logical_opnode2seg_it->insert({logical_opnode, --seg_list->end()});
+    Segment& cur_segment = seg_list->back();
     cur_segment.op_nodes = {logical_opnode};
   }
   // Init ancestors
@@ -35,14 +54,19 @@ static void InitSegments(
       continue;
     }
     auto cur_op_node = of_dynamic_cast<const LogicalOpNode*> (&(*it));
-    std::list<Segment>::iterator cur_segment = opnode2segment->at(cur_op_node);
+    SegmentIt cur_segment = logical_opnode2seg_it->at(cur_op_node);
     cur_segment->ancestors.clear();
     // each op predecessor
     for (const LogicalOpNode* op_predecessor : cur_op_node->op_predecessors()) {
-      std::list<Segment>::iterator pre_segment = opnode2segment->at(op_predecessor);
+      SegmentIt pre_segment = logical_opnode2seg_it->at(op_predecessor);
+      // ancestors
       cur_segment->ancestors.insert(pre_segment->ancestors.begin(),
                                     pre_segment->ancestors.end());
       cur_segment->ancestors.insert(op_predecessor);
+      // ancestors_and_this
+      cur_segment->ancestors_and_this = cur_segment->ancestors;
+      cur_segment->ancestors_and_this.insert(cur_segment->op_nodes.begin(),
+                                             cur_segment->op_nodes.end());
     }
   }
   // Init descendants
@@ -51,23 +75,28 @@ static void InitSegments(
       continue;
     }
     auto cur_op_node = of_dynamic_cast<const LogicalOpNode*> (&(*it));
-    std::list<Segment>::iterator cur_segment = opnode2segment->at(cur_op_node);
+    SegmentIt cur_segment = logical_opnode2seg_it->at(cur_op_node);
     cur_segment->descendants.clear();
     // each op successors
     for (const LogicalOpNode* op_successor : cur_op_node->op_successors()) {
-      std::list<Segment>::iterator next_segment = opnode2segment->at(op_successor);
+      SegmentIt next_segment = logical_opnode2seg_it->at(op_successor);
+      // descendants
       cur_segment->descendants.insert(next_segment->descendants.begin(),
                                       next_segment->descendants.end());
       cur_segment->descendants.insert(op_successor);
+      // descendants_and_this
+      cur_segment->descendants_and_this = cur_segment->descendants;
+      cur_segment->descendants_and_this.insert(cur_segment->op_nodes.begin(),
+                                               cur_segment->op_nodes.end());
     }
   }
 }
 
-static void ModelMergeSegments(
-    std::list<Segment>* segment_list,
+void ModelMergeSegments(
+    std::list<Segment>* seg_list,
     std::unordered_map<const LogicalOpNode*,
-                       std::list<Segment>::iterator>* opnode2segment) {
-  for (auto& pair : *opnode2segment) {
+                       SegmentIt>* logical_opnode2seg_it) {
+  for (auto& pair : *logical_opnode2seg_it) {
     // Get cur_op_node, pre_op_node
     const LogicalOpNode* cur_op_node = pair.first;
     if (cur_op_node->layer_desc().IsElemWise() == false) {
@@ -78,96 +107,103 @@ static void ModelMergeSegments(
     }
     CHECK_EQ(cur_op_node->op_predecessors().size(), 1);
     CHECK_EQ(cur_op_node->predecessors().size(), 1);
-    const LogicalOpNode* pre_op_node = *(cur_op_node->op_predecessors().begin());
+    const LogicalOpNode* pre_op_node =
+        *(cur_op_node->op_predecessors().begin());
     if (pre_op_node->parallel_conf() != cur_op_node->parallel_conf()) {
       continue;
     }
     // Get segment
-    std::list<Segment>::iterator pre_segment = opnode2segment->at(pre_op_node);
-    std::list<Segment>::iterator cur_segment = pair.second;
+    SegmentIt pre_segment = logical_opnode2seg_it->at(pre_op_node);
+    SegmentIt cur_segment = pair.second;
     // Merge
     pre_segment->op_nodes.insert(pre_segment->op_nodes.end(),
                                  cur_segment->op_nodes.begin(),
                                  cur_segment->op_nodes.end());
     for (const LogicalOpNode* node : cur_segment->op_nodes) {
       pre_segment->descendants.erase(node);
-      opnode2segment->at(node) = pre_segment;
+      logical_opnode2seg_it->at(node) = pre_segment;
     }
-    segment_list->erase(cur_segment);
+    seg_list->erase(cur_segment);
   }
 }
 
-bool TryMergeWithConnect(const LogicalOpNode* up_node,
-                         const LogicalOpNode* bottom_node,
-                         std::list<Segment>* segment_list,
-                         std::unordered_map<const LogicalOpNode*
-                                            std::list<Segment>::iterator>* opnode2segment) {
-  std::list<Segment>::iterator up_segment = opnode2segment.at(up_node);
-  std::list<Segment>::iterator bottom_segment = opnode2segment.at(bottom_node);
+bool TryMergeWithConnect(
+    const LogicalOpNode* up_node,
+    const LogicalOpNode* bottom_node,
+    std::list<Segment>* seg_list,
+    std::unordered_map<const LogicalOpNode*,
+                       SegmentIt>* logical_opnode2seg_it) {
+  // Get segment
+  SegmentIt up_seg = logical_opnode2seg_it->at(up_node);
+  SegmentIt bottom_seg = logical_opnode2seg_it->at(bottom_node);
   // if it can be merged
-  std::unordered_set<const LogicalOpNode*> up_ancestors_and_up(up_segment->ancestors);
-  up_ancestors_and_up.insert(up_segment->op_nodes.begin(), up_segment->op_nodes.end());
-  if (up_ancestors_and_up != rhs->ancestors) {
-    return false;
-  }
-  std::unordered_set<const LogicalOpNode*> bottom_descendants_and_bottom(bottom_segment->descendants);
-  bottom_descendants_and_bottom.insert(bottom_segment->op_nodes().begin(), bottom_segment->op_nodes().end());
-  if (bottom_descendants_and_bottom != up_segment->descendants) {
+  if (up_seg->ancestors_and_this != bottom_seg->ancestors
+      || bottom_seg->descendants_and_this != up_seg->descendants) {
     return false;
   }
   // Merge
-  up_segment->op_nodes.insert(up_segment->op_nodes.end(),
-                              bottom_segment->op_nodes.begin(),
-                              bottom_segment->op_nodes.end());
-  for (const LogicalOpNode* node : bottom_segment->op_nodes()) {
-    up_segment->descendants.erase(node);
-    opnode2segment.at(node) = up_segment;
+  if (up_seg->op_nodes.size() > bottom_seg->op_nodes.size()) {
+    for (const LogicalOpNode* node : bottom_seg->op_nodes) {
+      up_seg->op_nodes.push_back(node);
+      up_seg->descendants.erase(node);
+      logical_opnode2seg_it->at(node) = up_seg;
+    }
+    seg_list->erase(bottom_seg);
+  } else {
+    for (const LogicalOpNode* node : up_seg->op_nodes) {
+      bottom_seg->op_nodes.push_back(node);
+      bottom_seg->ancestors.erase(node);
+      logical_opnode2seg_it->at(node) = bottom_seg;
+    }
+    seg_list->erase(up_seg);
   }
-  segment_list.erase(bottom_segment);
   return true;
 }
 
-bool TryMergeWithoutConnect(const LogicalOpNode* lhs_node,
-                            const LogicalOpNode* rhs_node,
-                            std::list<Segment>* segment_list,
-                            std::unordered_map<const LogicalOpNode*
-                                               std::list<Segment>::iterator>* opnode2segment) {
-  std::list<Segment>::iterator lhs_segment = opnode2segment.at(lhs_node);
-  std::list<Segment>::iterator rhs_segment = opnode2segment.at(rhs_node);
+bool TryMergeWithoutConnect(
+    const LogicalOpNode* lhs_node,
+    const LogicalOpNode* rhs_node,
+    std::list<Segment>* seg_list,
+    std::unordered_map<const LogicalOpNode*,
+                       SegmentIt>* logical_opnode2seg_it) {
+  // Get segment
+  SegmentIt lhs_segment = logical_opnode2seg_it->at(lhs_node);
+  SegmentIt rhs_segment = logical_opnode2seg_it->at(rhs_node);
   // if it can be merged
   if (lhs_segment->ancestors != rhs_segment->ancestors
       || lhs_segment->descendants != rhs_segment->descendants) {
     return false;
   }
   // Merge
-  lhs_segment->op_nodes.insert(lhs_segment->op_nodes.end(),
-                               rhs_segment->op_nodes.begin(),
-                               rhs_segment->op_nodes.end());
-  for (const LogicalOpNode* node : rhs_segment->op_nodes()) {
-    opnode2segment.at(node) = lhs_segment;
+  // If this is bottleneck, we can optimze it by compare the size of lhs,rhs
+  for (const LogicalOpNode* node : rhs_segment->op_nodes) {
+    lhs_segment->op_nodes.push_back(node);
+    lhs_segment->ancestors_and_this.insert(node);
+    lhs_segment->descendants_and_this.insert(node);
+    logical_opnode2seg_it->at(node) = lhs_segment;
   }
-  segment_list.erase(rhs_segment);
+  seg_list->erase(rhs_segment);
   return true;
 }
 
-static void Traverse(const LogicalOpNode* seed_node,
-                     const std::vector<const LogicalOpNode*>& data_parallel_node,
-                     std::list<Segment>* segment_list,
-                     std::unordered_map<const LogicalOpNode*, bool>* done,
-                     std::unordered_map<const LogicalOpNode*,
-                                        std::list<Segment>::iterator>* opnode2segment) {
-  done[seed_node] = true;
+void Traverse(const LogicalOpNode* seed_node,
+              const std::vector<const LogicalOpNode*>& data_parallel_node,
+              std::list<Segment>* seg_list,
+              std::unordered_map<const LogicalOpNode*, bool>* done,
+              std::unordered_map<const LogicalOpNode*,
+                                 SegmentIt>* logical_opnode2seg_it) {
+  done->at(seed_node) = true;
   while (true) {
     bool has_merged = false;
     for (const LogicalOpNode* node : data_parallel_node) {
-      if (done[node]) { continue; }
+      if (done->at(node)) { continue; }
       if (seed_node->parallel_conf() != node->parallel_conf()) {
         continue;
       }
-      if (TryMergeWithConnect(seed_node, node)
-          || TryMergeWithConnect(node, seed_node)
-          || TryMergeWithoutConnect(seed_node, node)) {
-        done.at(node) = true;
+      if (TryMergeWithConnect(seed_node, node, seg_list, logical_opnode2seg_it)
+          || TryMergeWithConnect(node, seed_node, seg_list, logical_opnode2seg_it)
+          || TryMergeWithoutConnect(seed_node, node, seg_list, logical_opnode2seg_it)) {
+        done->at(node) = true;
         has_merged = true;
         break;
       }
@@ -178,54 +214,71 @@ static void Traverse(const LogicalOpNode* seed_node,
   }
 }
 
-static void DataMergeSegments(
+void DataMergeSegments(
     const LogicalDag* logical_dag,
-    std::list<Segment>* segment_list,
+    std::list<Segment>* seg_list,
     std::unordered_map<const LogicalOpNode*,
-                       std::list<Segment>::iterator>* opnode2segment) {
+                       SegmentIt>* logical_opnode2seg_it) {
   std::vector<const LogicalOpNode*> data_parallel_node;
   std::unordered_map<const LogicalOpNode*, bool> done;
-  for (const auto& pair : *opnode2segment) {
+  for (const auto& pair : *logical_opnode2seg_it) {
     if (pair.first->parallel_conf().policy() == ParallelConf::DataParallel
-        && logical_dag.IsFirstNode(pair.first) == false) {
+        && logical_dag->IsFirstNode(pair.first) == false) {
       data_parallel_node.push_back(pair.first);
       done[pair.first] = false;
     }
   }
   for (const LogicalOpNode* seed_node : data_parallel_node) {
-    if (done[seed_node] == false) {
-      Traverse(seed_node, data_parallel_node, &segment_list, &done, &opnode2segment);
+    if (done.at(seed_node) == false) {
+      Traverse(seed_node,
+               data_parallel_node,
+               seg_list,
+               &done,
+               logical_opnode2seg_it);
     }
   }
 }
 
+} // namespace
+
 void SegmentDag::Init(const std::string& dag_name,
                       std::shared_ptr<const LogicalDag> logical_dag) {
-  std::list<Segment> segment_list;
+  // Build Segment
+  std::list<Segment> seg_list;
   std::unordered_map<const LogicalOpNode*,
-                     std::list<Segment>::iterator> opnode2segment;
-  InitSegments(logical_dag.get(), &segment_list, &opnode2segment);
-  ModelMergeSegments(&segment_list, &opnode2segment);
-  DataMergeSegments(logical_dag.get(), &segment_list, &opnode2segment);
-  // Build Dag
-  // TODO: we should care the first node
-  std::unordered_map<std::list<Segment>::iterator, SegmentOpNode*> iter2segment_opnode;
-  std::unordered_map<SegmentOpNode*, std::unordered_set<SegmentOpNode*>> segment_op_node2pre;
-  for (auto iter = segment_list.begin(); iter != segment_list.end(); ++iter) {
-    SegmentOpNode* new_node = NewSegmentOpNode();
-    iter2segment_opnode[iter] = new_node;
-    segment_op_node2pre[new_node] = {};
+                     SegmentIt> logical_opnode2seg_it;
+  InitSegments(logical_dag.get(), &seg_list, &logical_opnode2seg_it);
+  ModelMergeSegments(&seg_list, &logical_opnode2seg_it);
+  DataMergeSegments(logical_dag.get(),
+                    &seg_list,
+                    &logical_opnode2seg_it);
+  // Init segment_op_nodes
+  auto seg_it_hash = [](const SegmentIt& seg_it) {
+    return std::hash<Segment*> ()(&(*seg_it));
+  };
+  std::unordered_map<SegmentIt, SegmentOpNode*, decltype(seg_it_hash)>
+      seg_it2seg_opnode(0, seg_it_hash);
+  std::unordered_map<SegmentOpNode*,
+                     std::unordered_set<SegmentOpNode*>> seg_op_node2pre;
+  for (auto seg_it = seg_list.begin(); seg_it != seg_list.end(); ++seg_it) {
+    SegmentOpNode* seg_opnode = NewSegmentOpNode();
+    seg_it2seg_opnode[seg_it] = seg_opnode;
+    seg_op_node2pre[seg_opnode] = {};
+    SetSegmentOpNodeWithSegmentIt(seg_opnode, seg_it);
   }
-  for (auto cur_segment = segment_list.begin(); cur_segment != segment_list.end(); ++cur_segment) {
-    SegmentOpNode* cur_segment_op_node = iter2segment_opnode.at(cur_segment);
-    for (const LogicalOpNode* cur_logical_op_node : cur_segment->op_nodes) {
-      for (const LogicalOpNode* pre_logical_op_node : cur_logical_op_node->op_predecessors()) {
-        SegmentOpNode* pre_segment_op_node = iter2segment_opnode.at(opnode2segment.at(pre_logical_op_node));
-        segment_op_node2pre.at(cur_segment_op_node).insert(pre_segment_op_node);
+  // Record the predecessor
+  for (auto seg_it = seg_list.begin(); seg_it != seg_list.end(); ++seg_it) {
+    SegmentOpNode* seg_opnode = seg_it2seg_opnode.at(seg_it);
+    for (const LogicalOpNode* logi_opnode : seg_it->op_nodes) {
+      for (auto pre_logi_opnode : logi_opnode->op_predecessors()) {
+        auto pre_seg_it = logical_opnode2seg_it.at(pre_logi_opnode);
+        auto pre_seg_opnode = seg_it2seg_opnode.at(pre_seg_it);
+        seg_op_node2pre.at(seg_opnode).insert(pre_seg_opnode);
       }
     }
   }
-  for (auto& pair : segment_op_node2pre) {
+  // Connect
+  for (auto& pair : seg_op_node2pre) {
     SegmentOpNode* cur_node = pair.first;
     for (SegmentOpNode* pre_node : pair.second) {
       SegmentDataNode* data_node_ptr = NewSegmentDataNode();
@@ -233,6 +286,7 @@ void SegmentDag::Init(const std::string& dag_name,
       data_node_ptr->AddPredecessor(pre_node);
     }
   }
+  // Post processing
   ConnectStartAndStop();
 }
 

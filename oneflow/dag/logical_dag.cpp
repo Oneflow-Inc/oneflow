@@ -30,7 +30,7 @@ void LogicalDag::BuildDagStruct(const DLNetConf& dl_net_conf) {
     const LayerConf& cur_layer_conf = dl_net_conf.layer_conf(layer_i);
     // Construct op node
     LogicalOpNode* cur_op_node = NewLogicalOpNode();
-    cur_op_node->mutable_layer_desc() =
+    cur_op_node->mutable_layer_desc_ptr() =
         LayerDescFactory::singleton().ConstructLayerDesc(cur_layer_conf);
     // Connect input data node
     for (const std::string& blob_name_in_dag_if
