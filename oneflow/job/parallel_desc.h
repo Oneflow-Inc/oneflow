@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_JOB_PARALLEL_DESC_H_
 #define ONEFLOW_JOB_PARALLEL_DESC_H_
 
+#include <unordered_map>
 #include "common/util.h"
 #include "common/id_map.h"
 
@@ -24,19 +25,20 @@ class ParallelDesc {
     // TODO
   }
   
-  Engine engine() const { return engine_; } 
   const ParallelPolicy& policy() const { return policy_; }
-  const std::unordered_set<MachineId>& machine_set() const {
-    return machine_set_;
+  const Engine& engine() const { return engine_; } 
+  const std::vector<MachineId>& machines() const {
+    return machine_vec_;
   }
-  const std::unordered_set<DeviceId>& device_set() const {
-    return device_set_;
+  const std::vector<DeviceId>& devices() const {
+    return device_vec_;
+  }
+  const std::vector<DeviceId>& devices_on_machine(MachineId machine_id) const {
+    return devices_on_machine_.at(machine_id);
   }
 
   bool operator == (const ParallelDesc& rhs) const {
-    return policy_ == rhs.policy_
-        && machine_set_ == rhs.machine_set_
-        && device_set_ == rhs.device_set_;
+    // TODO
   }
   bool operator != (const ParallelDesc& rhs) const {
     return !((*this) == rhs);
@@ -45,8 +47,11 @@ class ParallelDesc {
  private:
   ParallelPolicy policy_;
   Engine engine_;
-  std::unordered_set<MachineId> machine_set_;
-  std::unordered_set<DeviceId> device_set_;
+  // It is redundant for easy-using
+  std::vector<MachineId> machine_vec_;
+  std::vector<DeviceId> device_vec_;
+  std::unordered_map<MachineId, std::vector<DeviceId>> devices_on_machine_;
+
 };
 
 } // namespace oneflow
