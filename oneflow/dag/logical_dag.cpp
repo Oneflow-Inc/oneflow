@@ -76,7 +76,9 @@ void LogicalDag::FillNodeWithParallelDesc(const Strategy& strategy_conf) {
       const std::string& layer_name = cur_group.layer_name_vec(li);
       auto it = layer_name2op_node.find(layer_name);
       CHECK(it != layer_name2op_node.end());
-      it->second->mutable_parallel_desc().Init(cur_group.parallel_conf());
+      ParallelDesc* parallel_desc_raw_ptr = new ParallelDesc;
+      parallel_desc_raw_ptr->Init(cur_group.parallel_conf());
+      it->second->mutable_parallel_desc_ptr().reset(parallel_desc_raw_ptr);
     }
   }
 }

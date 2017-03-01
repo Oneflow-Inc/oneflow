@@ -23,8 +23,8 @@ using SegmentIt = std::list<Segment>::iterator;
 void SetSegmentOpNodeWithSegmentIt(SegmentOpNode* seg_opnode,
                                    SegmentIt seg_it) {
   CHECK_EQ(seg_it->op_nodes.empty(), false);
-  seg_opnode->mutable_parallel_desc() =
-      seg_it->op_nodes.front()->parallel_desc();
+  seg_opnode->mutable_parallel_desc_ptr() =
+      seg_it->op_nodes.front()->parallel_desc_ptr();
   for (const LogicalOpNode* logical_opnode : seg_it->op_nodes) {
     seg_opnode->mutable_layer_desc_vec().push_back(
         logical_opnode->layer_desc_ptr());

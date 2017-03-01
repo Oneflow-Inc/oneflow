@@ -33,7 +33,10 @@ class StageOpNode final : public OpNode {
     return layer_desc_vec_;
   }
   const ParallelDesc& parallel_desc() const {
-    return parallel_desc_;
+    return *parallel_desc_ptr_;
+  }
+  const std::shared_ptr<const ParallelDesc>& parallel_desc_ptr() const {
+    return parallel_desc_ptr_;
   }
   const MachineId& machine_id() const {
     return machine_id_;
@@ -42,8 +45,8 @@ class StageOpNode final : public OpNode {
   std::vector<std::shared_ptr<const BaseLayerDesc>>& mutable_layer_desc_vec() {
     return layer_desc_vec_;
   }
-  ParallelDesc& mutable_parallel_desc() {
-    return parallel_desc_;
+  std::shared_ptr<const ParallelDesc>& mutable_parallel_desc_ptr() {
+    return parallel_desc_ptr_;
   }
   MachineId& mutable_machine_id() {
     return machine_id_;
@@ -51,7 +54,7 @@ class StageOpNode final : public OpNode {
 
  private:
   std::vector<std::shared_ptr<const BaseLayerDesc>> layer_desc_vec_;
-  ParallelDesc parallel_desc_;
+  std::shared_ptr<const ParallelDesc> parallel_desc_ptr_;
   MachineId machine_id_;
 
 };

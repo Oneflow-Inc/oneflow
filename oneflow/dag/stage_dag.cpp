@@ -52,7 +52,7 @@ void StageDag::Init(const std::string& dag_name,
     for (MachineId machine_id : seg_opnode->parallel_desc().machines()) {
       StageOpNode* stage_opnode = NewStageOpNode();
       stage_opnode->mutable_layer_desc_vec() = seg_opnode->layer_desc_vec();
-      stage_opnode->mutable_parallel_desc() = seg_opnode->parallel_desc();
+      stage_opnode->mutable_parallel_desc_ptr() = seg_opnode->parallel_desc_ptr();
       stage_opnode->mutable_machine_id() = machine_id;
       seg2stages.at(seg_opnode).push_back(stage_opnode);
     }
