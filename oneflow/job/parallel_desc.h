@@ -11,6 +11,10 @@ class ParallelDesc {
   using ParallelPolicy = ParallelConf::Policy;
   static const ParallelPolicy kDataParallel = ParallelConf::DataParallel;
   static const ParallelPolicy kModelParallel = ParallelConf::ModelParallel;
+  enum class Engine {
+    kHost,
+    kDevice
+  };
 
   // DISALLOW_COPY_AND_MOVE(ParallelDesc);
   ParallelDesc() = default;
@@ -20,6 +24,7 @@ class ParallelDesc {
     // TODO
   }
   
+  Engine engine() const { return engine_; } 
   const ParallelPolicy& policy() const { return policy_; }
   const std::unordered_set<MachineId>& machine_set() const {
     return machine_set_;
@@ -39,6 +44,7 @@ class ParallelDesc {
   
  private:
   ParallelPolicy policy_;
+  Engine engine_;
   std::unordered_set<MachineId> machine_set_;
   std::unordered_set<DeviceId> device_set_;
 };
