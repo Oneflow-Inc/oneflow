@@ -40,8 +40,8 @@ void InitSegments(
   seg_list->clear();
   logical_opnode2seg_it->clear();
   // Init layers
-  for (const std::unique_ptr<OpNode>& op_node : logical_dag->op_node_vec()) {
-    auto logical_opnode = of_dynamic_cast<const LogicalOpNode*>(op_node.get());
+  for (const OpNode* op_node : logical_dag->op_node_vec()) {
+    auto logical_opnode = of_dynamic_cast<const LogicalOpNode*>(op_node);
     seg_list->emplace_back();
     logical_opnode2seg_it->insert({logical_opnode, --seg_list->end()});
     Segment& cur_segment = seg_list->back();
@@ -57,12 +57,13 @@ void InitSegments(
     SegmentIt cur_segment = logical_opnode2seg_it->at(cur_op_node);
     cur_segment->ancestors.clear();
     // each op predecessor
-    for (const LogicalOpNode* op_predecessor : cur_op_node->op_predecessors()) {
-      SegmentIt pre_segment = logical_opnode2seg_it->at(op_predecessor);
+    for (const OpNode* op_pre : cur_op_node->op_predecessors()) {
+      auto logi_op_pre = of_dynamic_cast<const LogicalOpNode*> (op_pre);
+      SegmentIt pre_segment = logical_opnode2seg_it->at(logi_op_pre);
       // ancestors
       cur_segment->ancestors.insert(pre_segment->ancestors.begin(),
                                     pre_segment->ancestors.end());
-      cur_segment->ancestors.insert(op_predecessor);
+      cur_segment->ancestors.insert(logi_op_pre);
       // ancestors_and_this
       cur_segment->ancestors_and_this = cur_segment->ancestors;
       cur_segment->ancestors_and_this.insert(cur_segment->op_nodes.begin(),
@@ -78,12 +79,13 @@ void InitSegments(
     SegmentIt cur_segment = logical_opnode2seg_it->at(cur_op_node);
     cur_segment->descendants.clear();
     // each op successors
-    for (const LogicalOpNode* op_successor : cur_op_node->op_successors()) {
-      SegmentIt next_segment = logical_opnode2seg_it->at(op_successor);
+    for (const OpNode* op_succ : cur_op_node->op_successors()) {
+      auto logi_op_succ = of_dynamic_cast<const LogicalOpNode*> (op_succ);
+      SegmentIt next_segment = logical_opnode2seg_it->at(logi_op_succ);
       // descendants
       cur_segment->descendants.insert(next_segment->descendants.begin(),
                                       next_segment->descendants.end());
-      cur_segment->descendants.insert(op_successor);
+      cur_segment->descendants.insert(logi_op_succ);
       // descendants_and_this
       cur_segment->descendants_and_this = cur_segment->descendants;
       cur_segment->descendants_and_this.insert(cur_segment->op_nodes.begin(),
@@ -107,8 +109,8 @@ void ModelMergeSegments(
     }
     CHECK_EQ(cur_op_node->op_predecessors().size(), 1);
     CHECK_EQ(cur_op_node->predecessors().size(), 1);
-    const LogicalOpNode* pre_op_node =
-        *(cur_op_node->op_predecessors().begin());
+    auto pre_op_node =
+        of_dynamic_cast<const LogicalOpNode*>(*(cur_op_node->op_predecessors().begin()));
     if (pre_op_node->parallel_desc() != cur_op_node->parallel_desc()) {
       continue;
     }
@@ -271,7 +273,7 @@ void SegmentDag::Init(const std::string& dag_name,
     SegmentOpNode* seg_opnode = seg_it2seg_opnode.at(seg_it);
     for (const LogicalOpNode* logi_opnode : seg_it->op_nodes) {
       for (auto pre_logi_opnode : logi_opnode->op_predecessors()) {
-        auto pre_seg_it = logical_opnode2seg_it.at(pre_logi_opnode);
+        auto pre_seg_it = logical_opnode2seg_it.at(of_dynamic_cast<const LogicalOpNode*>(pre_logi_opnode));
         auto pre_seg_opnode = seg_it2seg_opnode.at(pre_seg_it);
         seg_op_node2pre.at(seg_opnode).insert(pre_seg_opnode);
       }
@@ -288,7 +290,7 @@ void SegmentDag::Init(const std::string& dag_name,
   }
   // Post processing
   ConnectStartAndStop();
-  ConnectOpNodeExtraPtr(this);
+  ConnectOpNodeExtraPtr();
 }
 
 } // namespace oneflow

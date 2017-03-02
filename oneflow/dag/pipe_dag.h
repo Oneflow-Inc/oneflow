@@ -161,6 +161,7 @@ class PipeDag : public Dag {
     data_node->AddPredecessor(predecessor);
     successor->AddPredecessor(data_node);
   }
+  PipeDataNode* NewPipeDataNode();
   HostComputePon* NewHostComputePon();
   DeviceComputePon* NewDeviceComputePon();
   CopyHDPon* NewCopyHDPon();

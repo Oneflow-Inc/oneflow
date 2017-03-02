@@ -13,8 +13,8 @@ void PipeDag::Init(std::shared_ptr<const StageDag> stage_dag,
 void PipeDag::InitComputePons(const StageDag* stage_dag,
                               const IDMap& id_map,
                               Stage2PonsMap* stage2pons) {
-  for (const std::unique_ptr<OpNode>& opnode : stage_dag->op_node_vec()) {
-    auto stage_op = of_dynamic_cast<const StageOpNode*> (opnode.get());
+  for (const OpNode* opnode : stage_dag->op_node_vec()) {
+    auto stage_op = of_dynamic_cast<const StageOpNode*> (opnode);
     bool is_first_stage = stage_dag->IsFirstNode(stage_op);
     bool is_last_stage = stage_dag->IsLastNode(stage_op);
     if (stage_op->parallel_desc().engine() == ParallelDesc::Engine::kDevice) {
@@ -83,8 +83,8 @@ void PipeDag::Stage2HostComputePons(const StageOpNode* stage_op,
 void PipeDag::InitBoxingPons(const StageDag* stage_dag,
                              const IDMap& id_map,
                              Stage2PonsMap* stage2pons) {
-  for (const std::unique_ptr<OpNode>& opnode : stage_dag->op_node_vec()) {
-    auto stage_op = of_dynamic_cast<const StageOpNode*> (opnode.get());
+  for (const OpNode* opnode : stage_dag->op_node_vec()) {
+    auto stage_op = of_dynamic_cast<const StageOpNode*> (opnode);
     InitInboxingPon(stage_op, id_map, &(stage2pons->at(stage_op)));
     InitOutBoxingPon(stage_op, id_map, &(stage2pons->at(stage_op)));
   }
@@ -126,8 +126,8 @@ void PipeDag::InitOutBoxingPon(const StageOpNode* stage_op,
 
 void PipeDag::ConnectPons(const StageDag* stage_dag,
                           const Stage2PonsMap* stage2pons) {
-  for (const std::unique_ptr<OpNode>& opnode : stage_dag->op_node_vec()) {
-    auto cur_stage_op = of_dynamic_cast<const StageOpNode*> (opnode.get());
+  for (const OpNode* opnode : stage_dag->op_node_vec()) {
+    auto cur_stage_op = of_dynamic_cast<const StageOpNode*> (opnode);
     const PonsWithinStage& cur_pons = stage2pons->at(cur_stage_op);
     PipeOpNode* out_node = cur_pons.out_boxing_pon;
     if (out_node == nullptr) {

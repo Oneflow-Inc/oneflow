@@ -59,6 +59,20 @@ class OpNode : public DagNode {
   DISALLOW_COPY_AND_MOVE(OpNode);
 
   virtual ~OpNode() = default;
+  
+  const std::unordered_set<OpNode*>& op_predecessors() const {
+    return op_predecessors_;
+  }
+  const std::unordered_set<OpNode*>& op_successors() const {
+    return op_successors_;
+  }
+  
+  std::unordered_set<OpNode*>& mutable_op_predecessors() {
+    return op_predecessors_;
+  }
+  std::unordered_set<OpNode*>& mutable_op_successors() {
+    return op_successors_;
+  }
 
  protected:
   OpNode() = default;
@@ -67,6 +81,8 @@ class OpNode : public DagNode {
   }
  
  private:
+  std::unordered_set<OpNode*> op_predecessors_;
+  std::unordered_set<OpNode*> op_successors_;
 
 };
 

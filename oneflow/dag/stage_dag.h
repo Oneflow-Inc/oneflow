@@ -41,12 +41,6 @@ class StageOpNode final : public OpNode {
   const MachineId& machine_id() const {
     return machine_id_;
   }
-  const std::unordered_set<StageOpNode*>& op_predecessors() const {
-    return op_predecessors_;
-  }
-  const std::unordered_set<StageOpNode*>& op_successors() const {
-    return op_successors_;
-  }
   
   std::vector<std::shared_ptr<const BaseLayerDesc>>& mutable_layer_desc_vec() {
     return layer_desc_vec_;
@@ -57,20 +51,11 @@ class StageOpNode final : public OpNode {
   MachineId& mutable_machine_id() {
     return machine_id_;
   }
-  std::unordered_set<StageOpNode*>& mutable_op_predecessors() {
-    return op_predecessors_;
-  }
-  std::unordered_set<StageOpNode*>& mutable_op_successors() {
-    return op_successors_;
-  }
 
  private:
   std::vector<std::shared_ptr<const BaseLayerDesc>> layer_desc_vec_;
   std::shared_ptr<const ParallelDesc> parallel_desc_ptr_;
   MachineId machine_id_;
-
-  std::unordered_set<StageOpNode*> op_predecessors_;
-  std::unordered_set<StageOpNode*> op_successors_;
 
 };
 

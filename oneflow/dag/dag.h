@@ -126,7 +126,6 @@ class Dag {
     ret.Init(&stop_node_);
     return ret;
   }
-
   ConstDagIterator cbegin() const {
     ConstDagIterator ret;
     ret.Init((const_cast<Dag*>(this))->begin());
@@ -149,7 +148,6 @@ class Dag {
     ret.Init(&start_node_);
     return ret;
   }
-  
   ConstReverseDagIterator crbegin() const {
     ConstReverseDagIterator ret;
     ret.Init((const_cast<Dag*>(this))->rbegin());
@@ -161,7 +159,7 @@ class Dag {
     return ret;
   }
   
-  const std::vector<std::unique_ptr<OpNode>>& op_node_vec() const {
+  const std::vector<OpNode*>& op_node_vec() const {
     return op_node_vec_;
   }
   
@@ -176,14 +174,15 @@ class Dag {
 
  protected:
   void ConnectStartAndStop();
+  void ConnectOpNodeExtraPtr();
 
   void RegisterDataNode(std::unique_ptr<DataNode> new_node) {
-    data_op_node_vec_.push_back(new_node.get());
-    data_node_vec_.push_back(std::move(new_node));
+    data_node_vec_.push_back(new_node.get());
+    data_op_node_vec_.push_back(std::move(new_node));
   }
   void RegisterOpNode(std::unique_ptr<OpNode> new_node) {
-    data_op_node_vec_.push_back(new_node.get());
-    op_node_vec_.push_back(std::move(new_node));
+    op_node_vec_.push_back(new_node.get());
+    data_op_node_vec_.push_back(std::move(new_node));
   }
 
  private:
@@ -193,34 +192,12 @@ class Dag {
 
   // In future we can implement a Iterator to replace the data_op_node_vec_
   // which is redundancy
-  std::vector<DagNode*> data_op_node_vec_; 
-  std::vector<std::unique_ptr<DataNode>> data_node_vec_;
-  std::vector<std::unique_ptr<OpNode>> op_node_vec_;
+  std::vector<std::unique_ptr<DagNode>> data_op_node_vec_; 
+  std::vector<DataNode*> data_node_vec_;
+  std::vector<OpNode*> op_node_vec_;
 
 };
 
-// if the OpNode have member: op_predecessors, op_successors
-// use this function
-template<typename DagType>
-void ConnectOpNodeExtraPtr(const DagType* dag) {
-  static_assert(std::is_base_of<Dag, DagType>::value, "wrong type");
-  using SpecifiedOpNodePtrType = typename DagType::OpNodePtrType;
-  for (const std::unique_ptr<OpNode>& op_node : dag->op_node_vec()) {
-    auto cur_node = of_dynamic_cast<SpecifiedOpNodePtrType> (op_node.get());
-    for (DagNode* data_pre_node : cur_node->predecessors()) {
-      for (DagNode* op_pre_node : data_pre_node->predecessors()) {
-        cur_node->mutable_op_predecessors().insert(
-            of_dynamic_cast<SpecifiedOpNodePtrType> (op_pre_node));
-      }
-    }
-    for (DagNode* data_next_node : cur_node->successors()) {
-      for (DagNode* op_next_node : data_next_node->successors()) {
-        cur_node->mutable_op_successors().insert(
-            of_dynamic_cast<SpecifiedOpNodePtrType> (op_next_node));
-      }
-    }
-  }
-}
-
 } // namespace oneflow
+
 #endif // ONEFLOW_DAG_DAG_H_

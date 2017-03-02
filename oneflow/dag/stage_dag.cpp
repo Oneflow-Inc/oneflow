@@ -46,8 +46,8 @@ void StageDag::Init(const std::string& dag_name,
   // Init Stages
   std::unordered_map<const SegmentOpNode*,
                      std::vector<StageOpNode*>> seg2stages;
-  for (const std::unique_ptr<OpNode>& opnode : segment_dag->op_node_vec()) {
-    auto seg_opnode = of_dynamic_cast<const SegmentOpNode*> (opnode.get());
+  for (const OpNode* opnode : segment_dag->op_node_vec()) {
+    auto seg_opnode = of_dynamic_cast<const SegmentOpNode*> (opnode);
     seg2stages[seg_opnode] = {};
     for (MachineId machine_id : seg_opnode->parallel_desc().machines()) {
       StageOpNode* stage_opnode = NewStageOpNode();
@@ -64,17 +64,17 @@ void StageDag::Init(const std::string& dag_name,
     node->AddPredecessor(pre);
     next->AddPredecessor(node);
   };
-  for (const std::unique_ptr<OpNode>& opnode : segment_dag->op_node_vec()) {
-    auto cur_seg_op = of_dynamic_cast<const SegmentOpNode*> (opnode.get());
-    for (const SegmentOpNode* next_seg_op : cur_seg_op->op_successors()) {
+  for (const OpNode* opnode : segment_dag->op_node_vec()) {
+    auto cur_seg_op = of_dynamic_cast<const SegmentOpNode*> (opnode);
+    for (const OpNode* next_seg_op : cur_seg_op->op_successors()) {
       const std::vector<StageOpNode*>& cur_stages = seg2stages.at(cur_seg_op);
-      const std::vector<StageOpNode*>& next_stages = seg2stages.at(next_seg_op);
+      const std::vector<StageOpNode*>& next_stages = seg2stages.at(of_dynamic_cast<const SegmentOpNode*>(next_seg_op));
       ConnectRelatedStages(cur_stages, next_stages, connect_stage);
     }
   }
   // Post processing
   ConnectStartAndStop();
-  ConnectOpNodeExtraPtr(this);
+  ConnectOpNodeExtraPtr();
 }
 
 } // namespace oneflow

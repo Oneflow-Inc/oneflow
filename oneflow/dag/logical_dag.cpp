@@ -56,15 +56,14 @@ void LogicalDag::BuildDagStruct(const DLNetConf& dl_net_conf) {
   blob_name_indag_of2ptr.clear();
   // Post Processing
   ConnectStartAndStop();
-  //ConnectLogicalOpNodePtr();
-  ConnectOpNodeExtraPtr(this);
+  ConnectOpNodeExtraPtr();
 }
 
 void LogicalDag::FillNodeWithParallelDesc(const Strategy& strategy_conf) {
   // This function only execute few times, so it is ok to declare it
   std::unordered_map<std::string, LogicalOpNode*> layer_name2op_node;
-  for (const std::unique_ptr<OpNode>& op_node : op_node_vec()) {
-    auto logical_op_node_ptr = of_dynamic_cast<LogicalOpNode*> (op_node.get());
+  for (OpNode* op_node : op_node_vec()) {
+    auto logical_op_node_ptr = of_dynamic_cast<LogicalOpNode*> (op_node);
     std::string layer_name = logical_op_node_ptr->layer_desc().layer_name();
     bool emplace_success =
         layer_name2op_node.emplace(layer_name, logical_op_node_ptr).second;
@@ -82,24 +81,5 @@ void LogicalDag::FillNodeWithParallelDesc(const Strategy& strategy_conf) {
     }
   }
 }
-
-/*
-void LogicalDag::ConnectLogicalOpNodePtr() {
-  for (const std::unique_ptr<OpNode>& op_node : op_node_vec()) {
-    auto cur_node = of_dynamic_cast<LogicalOpNode*> (op_node.get());
-    for (const DagNode* data_pre_node : cur_node->predecessors()) {
-      for (const DagNode* op_pre_node : data_pre_node->predecessors()) {
-        cur_node->mutable_op_predecessors().insert(
-            of_dynamic_cast<const LogicalOpNode*> (op_pre_node));
-      }
-    }
-    for (const DagNode* data_next_node : cur_node->successors()) {
-      for (const DagNode* op_next_node : data_next_node->successors()) {
-        cur_node->mutable_op_successors().insert(
-            of_dynamic_cast<const LogicalOpNode*> (op_next_node));
-      }
-    }
-  }
-}*/
 
 } // namespace oneflow

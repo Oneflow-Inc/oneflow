@@ -48,12 +48,6 @@ class LogicalOpNode : public OpNode {
   const std::shared_ptr<const ParallelDesc>& parallel_desc_ptr() const {
     return parallel_desc_ptr_;
   }
-  const std::unordered_set<LogicalOpNode*>& op_predecessors() const {
-    return op_predecessors_;
-  }
-  const std::unordered_set<LogicalOpNode*>& op_successors() const {
-    return op_successors_;
-  }
 
   std::shared_ptr<const BaseLayerDesc>& mutable_layer_desc_ptr() {
     return layer_desc_ptr_;
@@ -61,18 +55,10 @@ class LogicalOpNode : public OpNode {
   std::shared_ptr<const ParallelDesc>& mutable_parallel_desc_ptr() {
     return parallel_desc_ptr_;
   }
-  std::unordered_set<LogicalOpNode*>& mutable_op_predecessors() {
-    return op_predecessors_;
-  }
-  std::unordered_set<LogicalOpNode*>& mutable_op_successors() {
-    return op_successors_;
-  }
 
  private:
   std::shared_ptr<const BaseLayerDesc> layer_desc_ptr_;
   std::shared_ptr<const ParallelDesc> parallel_desc_ptr_;
-  std::unordered_set<LogicalOpNode*> op_predecessors_;
-  std::unordered_set<LogicalOpNode*> op_successors_;
 
 };
 
