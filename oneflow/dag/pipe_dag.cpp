@@ -8,6 +8,8 @@ void PipeDag::Init(std::shared_ptr<const StageDag> stage_dag,
   InitComputePons(stage_dag.get(), id_map, &stage2pons);
   InitBoxingPons(stage_dag.get(), id_map, &stage2pons);
   ConnectPons(stage_dag.get(), &stage2pons);
+  ConnectStartAndStop();
+  ConnectOpNodeExtraPtr();
 }
 
 void PipeDag::InitComputePons(const StageDag* stage_dag,
