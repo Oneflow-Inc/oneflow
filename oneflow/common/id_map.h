@@ -6,7 +6,7 @@
 
 namespace oneflow {
 
-using DeviceLogicalId = int32_t;
+using DeviceGlobalId = int32_t;
 using DevicePhysicalId = int32_t;
 
 using MachineId = int32_t;
@@ -22,6 +22,18 @@ class IDMap {
 
   void Init(const Resource& resource) {
     // TODO
+  }
+  ThreadLocalId ThreadLocalIdFromDevicePhysicalId(DevicePhysicalId) const {
+    LOG(FATAL) << "TODO: implement it";
+    return ThreadLocalId();
+  }
+  ThreadLocalId data_thread_local_id() const {
+    LOG(FATAL) << "TODO: implement it";
+    return ThreadLocalId();
+  }
+  ThreadLocalId boxing_thread_local_id() const {
+    LOG(FATAL) << "TODO: implement it";
+    return ThreadLocalId();
   }
 
  private:

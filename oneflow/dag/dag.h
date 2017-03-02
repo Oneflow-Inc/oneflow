@@ -169,6 +169,10 @@ class Dag {
     auto find_it = start_node_.successors().find(const_cast<DagNode*> (node));
     return find_it != start_node_.successors().end();
   }
+  bool IsLastNode(const DagNode* node) const {
+    auto find_it = stop_node_.predecessors().find(const_cast<DagNode*> (node));
+    return find_it != stop_node_.predecessors().end();
+  }
 
  protected:
   void ConnectStartAndStop();

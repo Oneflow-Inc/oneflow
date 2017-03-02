@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include "common/util.h"
 #include "common/id_map.h"
+#include "job/strategy.pb.h"
 
 namespace oneflow {
 
@@ -30,10 +31,10 @@ class ParallelDesc {
   const std::vector<MachineId>& machines() const {
     return machine_vec_;
   }
-  const std::vector<DeviceLogicalId>& devices() const {
+  const std::vector<DeviceGlobalId>& devices() const {
     return device_vec_;
   }
-  const std::vector<DeviceLogicalId>& devices_on_machine(MachineId machine_id) const {
+  const std::vector<DevicePhysicalId>& devices_on_machine(MachineId machine_id) const {
     return devices_on_machine_.at(machine_id);
   }
 
@@ -47,10 +48,9 @@ class ParallelDesc {
  private:
   ParallelPolicy policy_;
   Engine engine_;
-  // It is redundant for easy-using
   std::vector<MachineId> machine_vec_;
-  std::vector<DeviceLogicalId> device_vec_;
-  std::unordered_map<MachineId, std::vector<DeviceLogicalId>> devices_on_machine_;
+  std::vector<DeviceGlobalId> device_vec_;
+  std::unordered_map<MachineId, std::vector<DevicePhysicalId>> devices_on_machine_;
 
 };
 
