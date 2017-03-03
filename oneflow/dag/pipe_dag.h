@@ -21,14 +21,14 @@ class PipeDataNode : public DagNode {
  private:
 };
 
-class PipeOpNode : public DagNode {
+class PipeOpNode : public OpNode {
  public:
   DISALLOW_COPY_AND_MOVE(PipeOpNode);
   PipeOpNode() = default;
   ~PipeOpNode() = default;
 
   void Init() {
-    DagNode::Init();
+    OpNode::Init();
     // struct style
   }
 
