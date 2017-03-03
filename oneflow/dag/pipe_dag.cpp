@@ -3,11 +3,15 @@
 namespace oneflow {
 
 void PipeDag::Init(std::shared_ptr<const StageDag> stage_dag,
-                   const IDMap& id_map) {
+                   const IDMap& id_map,
+                   bool need_bp) {
   Stage2PonsMap stage2pons;
   InitComputePons(stage_dag.get(), id_map, &stage2pons);
   InitBoxingPons(stage_dag.get(), id_map, &stage2pons);
   ConnectPons(stage_dag.get(), &stage2pons);
+  if (need_bp) {
+    GenerateBpNodes();
+  }
   ConnectStartAndStop();
   ConnectOpNodeExtraPtr();
 }
@@ -155,6 +159,10 @@ void PipeDag::ConnectPons(const StageDag* stage_dag,
       }
     }
   }
+}
+
+void PipeDag::GenerateBpNodes() {
+  // TODO
 }
 
 } // namespace oneflow

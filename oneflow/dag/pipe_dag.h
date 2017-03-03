@@ -200,6 +200,7 @@ class PipeDag : public Dag {
                         PonsWithinStage* pons_within_stage);
   void ConnectPons(const StageDag* stage_dag,
                    const Stage2PonsMap* stage2pons);
+  void GenerateBpNodes();
 
 };
 
