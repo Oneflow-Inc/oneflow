@@ -2,160 +2,159 @@
 
 namespace oneflow {
 
-void PipeDag::Init(std::shared_ptr<const StageDag> stage_dag,
+void PipeDag::Init(const StageDag* stage_dag,
                    const IDMap& id_map,
                    bool need_bp) {
-  Stage2PonsMap stage2pons;
-  InitComputePons(stage_dag.get(), id_map, &stage2pons);
-  InitBoxingPons(stage_dag.get(), id_map, &stage2pons);
-  ConnectPons(stage_dag.get(), &stage2pons);
+  Stage2PnsMap stage2pns;
+  InitComputePns(stage_dag, id_map, &stage2pns);
+  InitBoxingPns(stage_dag, id_map, &stage2pns);
+  ConnectPns(stage_dag, &stage2pns);
   if (need_bp) {
     GenerateBpNodes();
   }
   ConnectStartAndStop();
-  ConnectOpNodeExtraPtr();
 }
 
-void PipeDag::InitComputePons(const StageDag* stage_dag,
+void PipeDag::InitComputePns(const StageDag* stage_dag,
                               const IDMap& id_map,
-                              Stage2PonsMap* stage2pons) {
-  for (const OpNode* opnode : stage_dag->op_node_vec()) {
-    auto stage_op = of_dynamic_cast<const StageOpNode*> (opnode);
-    bool is_first_stage = stage_dag->IsFirstNode(stage_op);
-    bool is_last_stage = stage_dag->IsLastNode(stage_op);
-    if (stage_op->parallel_desc().engine() == ParallelDesc::Engine::kDevice) {
-      Stage2DeviceComputePons(stage_op,
+                              Stage2PnsMap* stage2pns) {
+  for (const std::unique_ptr<DagNode>& node : stage_dag->node_vec()) {
+    auto stage = of_dynamic_cast<const StageNode*> (node.get());
+    bool is_first_stage = stage_dag->IsFirstNode(stage);
+    bool is_last_stage = stage_dag->IsLastNode(stage);
+    if (stage->parallel_desc().engine() == ParallelDesc::Engine::kDevice) {
+      Stage2DeviceComputePns(stage,
                               id_map,
-                              &((*stage2pons)[stage_op]),
+                              &((*stage2pns)[stage]),
                               is_first_stage,
                               is_last_stage);
     } else {
-      Stage2HostComputePons(stage_op, id_map, &((*stage2pons)[stage_op]));
+      Stage2HostComputePns(stage, id_map, &((*stage2pns)[stage]));
     }
   }
 }
 
-void PipeDag::Stage2DeviceComputePons(const StageOpNode* stage_op,
+void PipeDag::Stage2DeviceComputePns(const StageNode* stage,
                                       const IDMap& id_map,
-                                      PonsWithinStage* pons_within_stage,
+                                      PnsWithinStage* pns_within_stage,
                                       bool is_first_stage,
                                       bool is_last_stage) {
-  MachineId machine_id = stage_op->machine_id();
-  for (auto device_physical_id : stage_op->parallel_desc().devices_on_machine(machine_id)) {
+  MachineId machine_id = stage->machine_id();
+  for (auto device_physical_id : stage->parallel_desc().devices_on_machine(machine_id)) {
     ThreadLocalId thread_local_id =
         id_map.ThreadLocalIdFromDevicePhysicalId(device_physical_id);
-    // compute_pon
-    DeviceComputePon* compute_pon = NewDeviceComputePon();
-    compute_pon->mutable_layer_desc_vec() = stage_op->layer_desc_vec();
-    compute_pon->mutable_parallel_desc_ptr() = stage_op->parallel_desc_ptr();
-    compute_pon->mutable_machine_id() = machine_id;
-    compute_pon->mutable_thread_local_id() = thread_local_id;
-    // compute_in_pon
+    // compute_pn
+    DeviceComputePn* compute_pn = NewDeviceComputePn();
+    compute_pn->mutable_layer_desc_vec() = stage->layer_desc_vec();
+    compute_pn->mutable_parallel_desc_ptr() = stage->parallel_desc_ptr();
+    compute_pn->mutable_machine_id() = machine_id;
+    compute_pn->mutable_thread_local_id() = thread_local_id;
+    // compute_in_pn
     if (!is_first_stage) {
-      CopyHDPon* compute_in_pon = NewCopyHDPon();
-      compute_in_pon->mutable_machine_id() = machine_id;
-      compute_in_pon->mutable_thread_local_id() = thread_local_id;
-      ConnectTwoOp(compute_in_pon, compute_pon);
-      pons_within_stage->compute_in_pons.push_back(compute_in_pon);
+      CopyHDPn* compute_in_pn = NewCopyHDPn();
+      compute_in_pn->mutable_machine_id() = machine_id;
+      compute_in_pn->mutable_thread_local_id() = thread_local_id;
+      ConnectTwoNode(compute_in_pn, compute_pn);
+      pns_within_stage->compute_in_pns.push_back(compute_in_pn);
     } else {
-      pons_within_stage->compute_in_pons.push_back(compute_pon);
+      pns_within_stage->compute_in_pns.push_back(compute_pn);
     }
-    // compute_out_pon
+    // compute_out_pn
     if (!is_last_stage) {
-      CopyHDPon* compute_out_pon = NewCopyHDPon();
-      compute_out_pon->mutable_machine_id() = machine_id;
-      compute_out_pon->mutable_thread_local_id() = thread_local_id;
-      ConnectTwoOp(compute_pon, compute_out_pon);
-      pons_within_stage->compute_out_pons.push_back(compute_out_pon);
+      CopyHDPn* compute_out_pn = NewCopyHDPn();
+      compute_out_pn->mutable_machine_id() = machine_id;
+      compute_out_pn->mutable_thread_local_id() = thread_local_id;
+      ConnectTwoNode(compute_pn, compute_out_pn);
+      pns_within_stage->compute_out_pns.push_back(compute_out_pn);
     } else {
-      pons_within_stage->compute_out_pons.push_back(compute_pon);
+      pns_within_stage->compute_out_pns.push_back(compute_pn);
     }
   }
 }
 
-void PipeDag::Stage2HostComputePons(const StageOpNode* stage_op,
+void PipeDag::Stage2HostComputePns(const StageNode* stage,
                                     const IDMap& id_map,
-                                    PonsWithinStage* pons_within_stage) {
-  HostComputePon* compute_pon = NewHostComputePon();
-  compute_pon->mutable_layer_desc_vec() = stage_op->layer_desc_vec();
-  compute_pon->mutable_parallel_desc_ptr() = stage_op->parallel_desc_ptr();
-  compute_pon->mutable_machine_id() = stage_op->machine_id();
+                                    PnsWithinStage* pns_within_stage) {
+  HostComputePn* compute_pn = NewHostComputePn();
+  compute_pn->mutable_layer_desc_vec() = stage->layer_desc_vec();
+  compute_pn->mutable_parallel_desc_ptr() = stage->parallel_desc_ptr();
+  compute_pn->mutable_machine_id() = stage->machine_id();
   // since we only support GPU now, it must be a data-layer
-  compute_pon->mutable_thread_local_id() = id_map.data_thread_local_id();
-  pons_within_stage->compute_in_pons.push_back(compute_pon);
-  pons_within_stage->compute_out_pons.push_back(compute_pon);
+  compute_pn->mutable_thread_local_id() = id_map.data_thread_local_id();
+  pns_within_stage->compute_in_pns.push_back(compute_pn);
+  pns_within_stage->compute_out_pns.push_back(compute_pn);
 }
 
-void PipeDag::InitBoxingPons(const StageDag* stage_dag,
+void PipeDag::InitBoxingPns(const StageDag* stage_dag,
                              const IDMap& id_map,
-                             Stage2PonsMap* stage2pons) {
-  for (const OpNode* opnode : stage_dag->op_node_vec()) {
-    auto stage_op = of_dynamic_cast<const StageOpNode*> (opnode);
-    InitInboxingPon(stage_op, id_map, &(stage2pons->at(stage_op)));
-    InitOutBoxingPon(stage_op, id_map, &(stage2pons->at(stage_op)));
+                             Stage2PnsMap* stage2pns) {
+  for (const std::unique_ptr<DagNode>& node : stage_dag->node_vec()) {
+    auto stage = of_dynamic_cast<const StageNode*> (node.get());
+    InitInboxingPn(stage, id_map, &(stage2pns->at(stage)));
+    InitOutBoxingPn(stage, id_map, &(stage2pns->at(stage)));
   }
 }
 
-void PipeDag::InitInboxingPon(const StageOpNode* stage_op,
+void PipeDag::InitInboxingPn(const StageNode* stage,
                               const IDMap& id_map,
-                              PonsWithinStage* pons_within_stage) {
-  pons_within_stage->in_boxing_pon = nullptr;
-  if (stage_op->predecessors().size() == 1
-      && pons_within_stage->compute_in_pons.size() == 1) {
+                              PnsWithinStage* pns_within_stage) {
+  pns_within_stage->in_boxing_pn = nullptr;
+  if (stage->predecessors().size() == 1
+      && pns_within_stage->compute_in_pns.size() == 1) {
     return;
   }
-  BoxingPon* boxing_pon = NewBoxingPon();
-  boxing_pon->mutable_machine_id() = stage_op->machine_id();
-  boxing_pon->mutable_thread_local_id() = id_map.boxing_thread_local_id();
-  for (PipeOpNode* compute_in_pon : pons_within_stage->compute_in_pons) {
-    ConnectTwoOp(boxing_pon, compute_in_pon);
+  BoxingPn* boxing_pn = NewBoxingPn();
+  boxing_pn->mutable_machine_id() = stage->machine_id();
+  boxing_pn->mutable_thread_local_id() = id_map.boxing_thread_local_id();
+  for (PipeNode* compute_in_pn : pns_within_stage->compute_in_pns) {
+    ConnectTwoNode(boxing_pn, compute_in_pn);
   }
-  pons_within_stage->in_boxing_pon = boxing_pon;
+  pns_within_stage->in_boxing_pn = boxing_pn;
 }
 
-void PipeDag::InitOutBoxingPon(const StageOpNode* stage_op,
+void PipeDag::InitOutBoxingPn(const StageNode* stage,
                                const IDMap& id_map,
-                               PonsWithinStage* pons_within_stage) {
-  pons_within_stage->out_boxing_pon = nullptr;
-  if (stage_op->successors().size() == 1
-      && pons_within_stage->compute_out_pons.size() == 1) {
+                               PnsWithinStage* pns_within_stage) {
+  pns_within_stage->out_boxing_pn = nullptr;
+  if (stage->successors().size() == 1
+      && pns_within_stage->compute_out_pns.size() == 1) {
     return;
   }
-  BoxingPon* boxing_pon = NewBoxingPon();
-  boxing_pon->mutable_machine_id() = stage_op->machine_id();
-  boxing_pon->mutable_thread_local_id() = id_map.boxing_thread_local_id();
-  for (PipeOpNode* compute_out_pon : pons_within_stage->compute_out_pons) {
-    ConnectTwoOp(compute_out_pon, boxing_pon);
+  BoxingPn* boxing_pn = NewBoxingPn();
+  boxing_pn->mutable_machine_id() = stage->machine_id();
+  boxing_pn->mutable_thread_local_id() = id_map.boxing_thread_local_id();
+  for (PipeNode* compute_out_pn : pns_within_stage->compute_out_pns) {
+    ConnectTwoNode(compute_out_pn, boxing_pn);
   }
-  pons_within_stage->out_boxing_pon = boxing_pon;
+  pns_within_stage->out_boxing_pn = boxing_pn;
 }
 
-void PipeDag::ConnectPons(const StageDag* stage_dag,
-                          const Stage2PonsMap* stage2pons) {
-  for (const OpNode* opnode : stage_dag->op_node_vec()) {
-    auto cur_stage_op = of_dynamic_cast<const StageOpNode*> (opnode);
-    const PonsWithinStage& cur_pons = stage2pons->at(cur_stage_op);
-    PipeOpNode* out_node = cur_pons.out_boxing_pon;
+void PipeDag::ConnectPns(const StageDag* stage_dag,
+                          const Stage2PnsMap* stage2pns) {
+  for (const std::unique_ptr<DagNode>& node : stage_dag->node_vec()) {
+    auto cur_stage = of_dynamic_cast<const StageNode*> (node.get());
+    const PnsWithinStage& cur_pns = stage2pns->at(cur_stage);
+    PipeNode* out_node = cur_pns.out_boxing_pn;
     if (out_node == nullptr) {
-      CHECK_EQ(cur_pons.compute_out_pons.size(), 1);
-      out_node = cur_pons.compute_out_pons[0];
+      CHECK_EQ(cur_pns.compute_out_pns.size(), 1);
+      out_node = cur_pns.compute_out_pns[0];
     }
-    for (const OpNode* next_op : cur_stage_op->op_successors()) {
-      auto next_stage_op = of_dynamic_cast<const StageOpNode*> (next_op);
-      const PonsWithinStage& next_pons = stage2pons->at(next_stage_op);
-      PipeOpNode* in_node = next_pons.in_boxing_pon;
+    for (const DagNode* next : cur_stage->successors()) {
+      auto next_stage = of_dynamic_cast<const StageNode*> (next);
+      const PnsWithinStage& next_pns = stage2pns->at(next_stage);
+      PipeNode* in_node = next_pns.in_boxing_pn;
       if (in_node == nullptr) {
-        CHECK_EQ(next_pons.compute_in_pons.size(), 1);
-        in_node = next_pons.compute_in_pons[0];
+        CHECK_EQ(next_pns.compute_in_pns.size(), 1);
+        in_node = next_pns.compute_in_pns[0];
       }
-      if (cur_stage_op->machine_id() == next_stage_op->machine_id()) {
-        ConnectTwoOp(out_node, in_node);
+      if (cur_stage->machine_id() == next_stage->machine_id()) {
+        ConnectTwoNode(out_node, in_node);
       } else {
-        CommNetPon* out_comm_net_node = NewCommNetPon();
-        CommNetPon* in_comm_net_node = NewCommNetPon();
-        ConnectTwoOp(out_node, out_comm_net_node);
-        ConnectTwoOp(out_comm_net_node, in_comm_net_node);
-        ConnectTwoOp(in_comm_net_node, in_node);
+        CommNetPn* out_comm_net_node = NewCommNetPn();
+        CommNetPn* in_comm_net_node = NewCommNetPn();
+        ConnectTwoNode(out_node, out_comm_net_node);
+        ConnectTwoNode(out_comm_net_node, in_comm_net_node);
+        ConnectTwoNode(in_comm_net_node, in_node);
       }
     }
   }

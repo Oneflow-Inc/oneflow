@@ -84,29 +84,12 @@ bool Dag::ReverseDagIterator::operator != (const Dag::ReverseDagIterator& rhs) c
 }
 
 void Dag::ConnectStartAndStop() {
-  for (const std::unique_ptr<DagNode>& node : data_op_node_vec_) {
+  for (const std::unique_ptr<DagNode>& node : node_vec_) {
     if (node->predecessors().empty()) {
-      node->AddPredecessor(&start_node_);
+      ConnectTwoNode(&start_node_, node.get());
     }
     if (node->successors().empty()) {
-      stop_node_.AddPredecessor(node.get());
-    }
-  }
-}
-
-void Dag::ConnectOpNodeExtraPtr() {
-  for (OpNode* cur_node : op_node_vec_) {
-    for (DagNode* data_pre_node : cur_node->predecessors()) {
-      for (DagNode* op_pre_node : data_pre_node->predecessors()) {
-        cur_node->mutable_op_predecessors().insert(
-            of_dynamic_cast<OpNode*> (op_pre_node));
-      }
-    }
-    for (DagNode* data_next_node : cur_node->successors()) {
-      for (DagNode* op_next_node : data_next_node->successors()) {
-        cur_node->mutable_op_successors().insert(
-            of_dynamic_cast<OpNode*> (op_next_node));
-      }
+      ConnectTwoNode(node.get(), &stop_node_);
     }
   }
 }

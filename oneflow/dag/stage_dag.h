@@ -5,27 +5,14 @@
 
 namespace oneflow {
 
-class StageDataNode final : public DataNode {
+class StageNode final : public DagNode {
  public:
-  DISALLOW_COPY_AND_MOVE(StageDataNode);
-  StageDataNode() = default;
-  ~StageDataNode() = default;
+  DISALLOW_COPY_AND_MOVE(StageNode);
+  StageNode() = default;
+  ~StageNode() = default;
 
   void Init() {
-    DataNode::Init();
-  }
-
- private:
-};
-
-class StageOpNode final : public OpNode {
- public:
-  DISALLOW_COPY_AND_MOVE(StageOpNode);
-  StageOpNode() = default;
-  ~StageOpNode() = default;
-
-  void Init() {
-    OpNode::Init();
+    DagNode::Init();
     // struct style
   }
 
@@ -61,8 +48,6 @@ class StageOpNode final : public OpNode {
 
 class StageDag final : public Dag {
  public:
-  using OpNodePtrType = StageOpNode*;
-
   DISALLOW_COPY_AND_MOVE(StageDag);
   StageDag() = default;
   ~StageDag() = default;
@@ -71,16 +56,10 @@ class StageDag final : public Dag {
             std::shared_ptr<const SegmentDag> segment_dag);
 
  private:
-  StageDataNode* NewStageDataNode() {
-    StageDataNode* ret_ptr = new StageDataNode;
+  StageNode* NewStageNode() {
+    StageNode* ret_ptr = new StageNode;
     ret_ptr->Init();
-    RegisterDataNode(std::unique_ptr<StageDataNode> (ret_ptr));
-    return ret_ptr;
-  }
-  StageOpNode* NewStageOpNode() {
-    StageOpNode* ret_ptr = new StageOpNode;
-    ret_ptr->Init();
-    RegisterOpNode(std::unique_ptr<StageOpNode> (ret_ptr));
+    RegisterNode(ret_ptr);
     return ret_ptr;
   }
 

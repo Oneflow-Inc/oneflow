@@ -10,47 +10,32 @@
 
 namespace oneflow {
 
-class LogicalDataNode : public DataNode {
+class LogicalNode : public DagNode {
  public:
-  DISALLOW_COPY_AND_MOVE(LogicalDataNode);
-  LogicalDataNode() = default;
-  ~LogicalDataNode() = default;
+  DISALLOW_COPY_AND_MOVE(LogicalNode);
+  LogicalNode() = default;
+  ~LogicalNode() = default;
 
   void Init() {
-    DataNode::Init();
-    // struct style
-  }
-  
- private:
-
-};
-
-class LogicalOpNode : public OpNode {
- public:
-  DISALLOW_COPY_AND_MOVE(LogicalOpNode);
-  LogicalOpNode() = default;
-  ~LogicalOpNode() = default;
-
-  void Init() {
-    OpNode::Init();
+    DagNode::Init();
     // struct style
   }
 
   const BaseLayerDesc& layer_desc() const {
-    return *(layer_desc_ptr_.get());
+    return *layer_desc_ptr_;
   }
   std::shared_ptr<const BaseLayerDesc> layer_desc_ptr() const {
     return layer_desc_ptr_;
   }
+  std::shared_ptr<const BaseLayerDesc>& mutable_layer_desc_ptr() {
+    return layer_desc_ptr_;
+  }
+
   const ParallelDesc& parallel_desc() const {
     return *parallel_desc_ptr_;
   }
-  const std::shared_ptr<const ParallelDesc>& parallel_desc_ptr() const {
+  std::shared_ptr<const ParallelDesc> parallel_desc_ptr() const {
     return parallel_desc_ptr_;
-  }
-
-  std::shared_ptr<const BaseLayerDesc>& mutable_layer_desc_ptr() {
-    return layer_desc_ptr_;
   }
   std::shared_ptr<const ParallelDesc>& mutable_parallel_desc_ptr() {
     return parallel_desc_ptr_;
@@ -64,32 +49,22 @@ class LogicalOpNode : public OpNode {
 
 class LogicalDag : public Dag {
  public:
-  using OpNodePtrType = LogicalOpNode*;
-
   DISALLOW_COPY_AND_MOVE(LogicalDag);
   LogicalDag() = default;
   ~LogicalDag() = default;
 
-  void Init(const std::string& dag_name,
-            const DLNetConf& dl_net_conf,
+  void Init(const DLNetConf& dl_net_conf,
             const Strategy& strategy_conf);
 
  private:
   void BuildDagStruct(const DLNetConf& dl_net_conf);
   void FillNodeWithParallelDesc(const Strategy& strategy_conf);
-  //void ConnectLogicalOpNodePtr();
+  //void ConnectLogicalNodePtr();
 
-  LogicalDataNode* NewLogicalDataNode() {
-    LogicalDataNode* ret_ptr = new LogicalDataNode;
+  LogicalNode* NewLogicalNode() {
+    LogicalNode* ret_ptr = new LogicalNode;
     ret_ptr->Init();
-    RegisterDataNode(std::unique_ptr<LogicalDataNode> (ret_ptr));
-    return ret_ptr;
-  }
-
-  LogicalOpNode* NewLogicalOpNode() {
-    LogicalOpNode* ret_ptr = new LogicalOpNode;
-    ret_ptr->Init();
-    RegisterOpNode(std::unique_ptr<LogicalOpNode> (ret_ptr));
+    RegisterNode(ret_ptr);
     return ret_ptr;
   }
 

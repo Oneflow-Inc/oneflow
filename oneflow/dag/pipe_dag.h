@@ -21,14 +21,14 @@ class PipeDataNode : public DagNode {
  private:
 };
 
-class PipeOpNode : public OpNode {
+class PipeNode : public DagNode {
  public:
-  DISALLOW_COPY_AND_MOVE(PipeOpNode);
-  PipeOpNode() = default;
-  ~PipeOpNode() = default;
+  DISALLOW_COPY_AND_MOVE(PipeNode);
+  PipeNode() = default;
+  ~PipeNode() = default;
 
   void Init() {
-    OpNode::Init();
+    DagNode::Init();
     // struct style
   }
 
@@ -44,15 +44,15 @@ class PipeOpNode : public OpNode {
 
 };
 
-// Pon: PipeOpNode
-class ComputePon : public PipeOpNode {
+// Pn: PipeNode
+class ComputePn : public PipeNode {
  public:
-  DISALLOW_COPY_AND_MOVE(ComputePon);
-  ComputePon() = default;
-  ~ComputePon() = default;
+  DISALLOW_COPY_AND_MOVE(ComputePn);
+  ComputePn() = default;
+  ~ComputePn() = default;
 
   void Init() {
-    PipeOpNode::Init();
+    PipeNode::Init();
   }
   
   const std::vector<std::shared_ptr<const BaseLayerDesc>>& layer_desc_vec() const {
@@ -78,69 +78,69 @@ class ComputePon : public PipeOpNode {
 
 };
 
-class HostComputePon : public ComputePon {
+class HostComputePn : public ComputePn {
  public:
-  DISALLOW_COPY_AND_MOVE(HostComputePon);
-  HostComputePon() = default;
-  ~HostComputePon() = default;
+  DISALLOW_COPY_AND_MOVE(HostComputePn);
+  HostComputePn() = default;
+  ~HostComputePn() = default;
 
   void Init() {
-    ComputePon::Init();
+    ComputePn::Init();
   }
 
  private:
 
 };
 
-class DeviceComputePon : public ComputePon {
+class DeviceComputePn : public ComputePn {
  public:
-  DISALLOW_COPY_AND_MOVE(DeviceComputePon);
-  DeviceComputePon() = default;
-  ~DeviceComputePon() = default;
+  DISALLOW_COPY_AND_MOVE(DeviceComputePn);
+  DeviceComputePn() = default;
+  ~DeviceComputePn() = default;
   
   void Init() {
-    ComputePon::Init();
+    ComputePn::Init();
   }
 
  private:
 };
 
 // HD: Host and Device
-class CopyHDPon : public PipeOpNode {
+class CopyHDPn : public PipeNode {
  public:
-  DISALLOW_COPY_AND_MOVE(CopyHDPon);
-  CopyHDPon() = default;
-  ~CopyHDPon() = default;
+  DISALLOW_COPY_AND_MOVE(CopyHDPn);
+  CopyHDPn() = default;
+  ~CopyHDPn() = default;
   
   void Init() {
-    PipeOpNode::Init();
+    PipeNode::Init();
   }
 
  private:
 };
 
-class BoxingPon : public PipeOpNode {
+class BoxingPn : public PipeNode {
  public:
-  DISALLOW_COPY_AND_MOVE(BoxingPon);
-  BoxingPon() = default;
-  ~BoxingPon() = default;
+  DISALLOW_COPY_AND_MOVE(BoxingPn);
+  BoxingPn() = default;
+  ~BoxingPn() = default;
   
   void Init() {
-    PipeOpNode::Init();
+    PipeNode::Init();
   }
 
  private:
 };
 
 // CommNet: Communication Network
-class CommNetPon : public PipeOpNode {
+class CommNetPn : public PipeNode {
  public:
-  DISALLOW_COPY_AND_MOVE(CommNetPon);
-  CommNetPon() = default;
-  ~CommNetPon() = default;
+  DISALLOW_COPY_AND_MOVE(CommNetPn);
+  CommNetPn() = default;
+  ~CommNetPn() = default;
 
   void Init() {
-    PipeOpNode::Init();
+    PipeNode::Init();
   }
 
  private:
@@ -152,54 +152,49 @@ class PipeDag : public Dag {
   PipeDag() = default;
   ~PipeDag() = default;
   
-  void Init(std::shared_ptr<const StageDag> stage_dag,
-            const IDMap& id_map);
+  void Init(const StageDag* stage_dag,
+            const IDMap& id_map,
+            bool need_bp);
 
  private:
-  void ConnectTwoOp(PipeOpNode* predecessor, PipeOpNode* successor) {
-    PipeDataNode* data_node = NewPipeDataNode();
-    data_node->AddPredecessor(predecessor);
-    successor->AddPredecessor(data_node);
-  }
-  PipeDataNode* NewPipeDataNode();
-  HostComputePon* NewHostComputePon();
-  DeviceComputePon* NewDeviceComputePon();
-  CopyHDPon* NewCopyHDPon();
-  BoxingPon* NewBoxingPon();
-  CommNetPon* NewCommNetPon();
-
-  struct PonsWithinStage {
-    std::vector<PipeOpNode*> compute_in_pons;
-    std::vector<PipeOpNode*> compute_out_pons;
-    BoxingPon* in_boxing_pon;
-    BoxingPon* out_boxing_pon;
+  struct PnsWithinStage {
+    std::vector<PipeNode*> compute_in_pns;
+    std::vector<PipeNode*> compute_out_pns;
+    BoxingPn* in_boxing_pn;
+    BoxingPn* out_boxing_pn;
   };
   
-  using Stage2PonsMap =
-    std::unordered_map<const StageOpNode*, PonsWithinStage>;
+  using Stage2PnsMap =
+    std::unordered_map<const StageNode*, PnsWithinStage>;
+  
+  HostComputePn* NewHostComputePn();
+  DeviceComputePn* NewDeviceComputePn();
+  CopyHDPn* NewCopyHDPn();
+  BoxingPn* NewBoxingPn();
+  CommNetPn* NewCommNetPn();
 
-  void InitComputePons(const StageDag* stage_dag,
-                       const IDMap& id_map,
-                       Stage2PonsMap* stage2pons);
-  void Stage2DeviceComputePons(const StageOpNode* stage_op,
-                               const IDMap& id_map,
-                               PonsWithinStage* pons_within_stage,
-                               bool is_first_stage,
-                               bool is_last_stage);
-  void Stage2HostComputePons(const StageOpNode* stage_op,
-                             const IDMap& id_map,
-                             PonsWithinStage* pons_within_stage);
-  void InitBoxingPons(const StageDag* stage_dag,
+  void InitComputePns(const StageDag* stage_dag,
                       const IDMap& id_map,
-                      Stage2PonsMap* stage2pons);
-  void InitInboxingPon(const StageOpNode* stage_op,
+                      Stage2PnsMap* stage2pons);
+  void Stage2DeviceComputePns(const StageNode* stage,
+                              const IDMap& id_map,
+                              PnsWithinStage* pons_within_stage,
+                              bool is_first_stage,
+                              bool is_last_stage);
+  void Stage2HostComputePns(const StageNode* stage,
+                            const IDMap& id_map,
+                            PnsWithinStage* pons_within_stage);
+  void InitBoxingPns(const StageDag* stage_dag,
+                     const IDMap& id_map,
+                     Stage2PnsMap* stage2pons);
+  void InitInboxingPn(const StageNode* stage,
+                      const IDMap& id_map,
+                      PnsWithinStage* pons_within_stage);
+  void InitOutBoxingPn(const StageNode* stage,
                        const IDMap& id_map,
-                       PonsWithinStage* pons_within_stage);
-  void InitOutBoxingPon(const StageOpNode* stage_op,
-                        const IDMap& id_map,
-                        PonsWithinStage* pons_within_stage);
-  void ConnectPons(const StageDag* stage_dag,
-                   const Stage2PonsMap* stage2pons);
+                       PnsWithinStage* pons_within_stage);
+  void ConnectPns(const StageDag* stage_dag,
+                  const Stage2PnsMap* stage2pons);
   void GenerateBpNodes();
 
 };

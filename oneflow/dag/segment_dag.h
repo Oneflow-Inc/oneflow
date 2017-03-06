@@ -6,42 +6,29 @@
 
 namespace oneflow {
 
-class SegmentDataNode final : public DataNode {
+class SegmentNode final : public DagNode {
  public:
-  DISALLOW_COPY_AND_MOVE(SegmentDataNode);
-  SegmentDataNode() = default;
-  ~SegmentDataNode() = default;
+  DISALLOW_COPY_AND_MOVE(SegmentNode);
+  SegmentNode() = default;
+  ~SegmentNode() = default;
 
   void Init() {
-    DataNode::Init();
-  }
-
- private:
-};
-
-class SegmentOpNode final : public OpNode {
- public:
-  DISALLOW_COPY_AND_MOVE(SegmentOpNode);
-  SegmentOpNode() = default;
-  ~SegmentOpNode() = default;
-
-  void Init() {
-    OpNode::Init();
+    DagNode::Init();
     // struct style
   }
 
   const std::vector<std::shared_ptr<const BaseLayerDesc>>& layer_desc_vec() const {
     return layer_desc_vec_;
   }
+  std::vector<std::shared_ptr<const BaseLayerDesc>>& mutable_layer_desc_vec() {
+    return layer_desc_vec_;
+  }
+
   const ParallelDesc& parallel_desc() const {
     return *parallel_desc_ptr_;
   }
   const std::shared_ptr<const ParallelDesc>& parallel_desc_ptr() const {
     return parallel_desc_ptr_;
-  }
-  
-  std::vector<std::shared_ptr<const BaseLayerDesc>>& mutable_layer_desc_vec() {
-    return layer_desc_vec_;
   }
   std::shared_ptr<const ParallelDesc>& mutable_parallel_desc_ptr() {
     return parallel_desc_ptr_;
@@ -55,27 +42,17 @@ class SegmentOpNode final : public OpNode {
 
 class SegmentDag final : public Dag {
  public:
-  using OpNodePtrType = SegmentOpNode*;
-
   DISALLOW_COPY_AND_MOVE(SegmentDag);
   SegmentDag() = default;
   ~SegmentDag() = default;
 
-  // use shared_ptr to make sure logical_dag is alive
-  void Init(const std::string& dag_name,
-            std::shared_ptr<const LogicalDag> logical_dag);
+  void Init(const LogicalDag* logical_dag);
 
  private:
-  SegmentDataNode* NewSegmentDataNode() {
-    SegmentDataNode* ret_ptr = new SegmentDataNode;
+  SegmentNode* NewSegmentNode() {
+    SegmentNode* ret_ptr = new SegmentNode;
     ret_ptr->Init();
-    RegisterDataNode(std::unique_ptr<SegmentDataNode> (ret_ptr));
-    return ret_ptr;
-  }
-  SegmentOpNode* NewSegmentOpNode() {
-    SegmentOpNode* ret_ptr = new SegmentOpNode;
-    ret_ptr->Init();
-    RegisterOpNode(std::unique_ptr<SegmentOpNode> (ret_ptr));
+    RegisterNode(ret_ptr);
     return ret_ptr;
   }
 

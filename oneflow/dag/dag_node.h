@@ -19,11 +19,6 @@ class DagNode {
 
   int32_t node_id() const { return node_id_; }
 
-  // return false if it has already been inserted
-  bool AddPredecessor(DagNode* predecessor_ptr);
-  // return false if it has already been erased
-  bool RemovePredecessor(DagNode* predecessor_ptr);
-
   const std::unordered_set<DagNode*>& predecessors() const {
     return predecessors_;
   }
@@ -32,6 +27,8 @@ class DagNode {
   }
 
  private:
+  friend bool ConnectTwoNode(DagNode* predecessor, DagNode* successor);
+
   int32_t node_id_;
   
   std::unordered_set<DagNode*> predecessors_;
@@ -39,52 +36,6 @@ class DagNode {
 
 };
 
-class DataNode : public DagNode {
- public:
-  DISALLOW_COPY_AND_MOVE(DataNode);
-  virtual ~DataNode() = default;
- 
- protected:
-  DataNode() = default;
-  void Init() {
-    DagNode::Init();
-  }
-
- private:
-
-};
-
-class OpNode : public DagNode {
- public:
-  DISALLOW_COPY_AND_MOVE(OpNode);
-
-  virtual ~OpNode() = default;
-  
-  const std::unordered_set<OpNode*>& op_predecessors() const {
-    return op_predecessors_;
-  }
-  const std::unordered_set<OpNode*>& op_successors() const {
-    return op_successors_;
-  }
-  
-  std::unordered_set<OpNode*>& mutable_op_predecessors() {
-    return op_predecessors_;
-  }
-  std::unordered_set<OpNode*>& mutable_op_successors() {
-    return op_successors_;
-  }
-
- protected:
-  OpNode() = default;
-  void Init() {
-    DagNode::Init();
-  }
- 
- private:
-  std::unordered_set<OpNode*> op_predecessors_;
-  std::unordered_set<OpNode*> op_successors_;
-
-};
-
 } // namespace oneflow
+
 #endif  // ONEFLOW_DAG_DAG_NODE_H_

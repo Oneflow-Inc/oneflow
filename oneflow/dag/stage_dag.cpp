@@ -4,30 +4,27 @@
 namespace oneflow {
 
 void OneToOneConnect( 
-    const std::vector<StageOpNode*>& cur_stages,
-    const std::vector<StageOpNode*>& next_stages,
-    std::function<void(StageOpNode*, StageOpNode*)> connect_stage) {
+    const std::vector<StageNode*>& cur_stages,
+    const std::vector<StageNode*>& next_stages) {
   size_t stage_num = cur_stages.size();
   for (size_t i = 0; i < cur_stages.size(); ++i) {
-    connect_stage(cur_stages[i], next_stages[i]);
+    ConnectTwoNode(cur_stages[i], next_stages[i]);
   }
 }
 
 void FullConnect(
-    const std::vector<StageOpNode*>& cur_stages,
-    const std::vector<StageOpNode*>& next_stages,
-    std::function<void(StageOpNode*, StageOpNode*)> connect_stage) {
-  for (StageOpNode* cur_stage_node : cur_stages) {
-    for (StageOpNode* next_stage_node : next_stages) {
-      connect_stage(cur_stage_node, next_stage_node);
+    const std::vector<StageNode*>& cur_stages,
+    const std::vector<StageNode*>& next_stages) {
+  for (StageNode* cur_stage_node : cur_stages) {
+    for (StageNode* next_stage_node : next_stages) {
+      ConnectTwoNode(cur_stage_node, next_stage_node);
     }
   }
 }
 
 void ConnectRelatedStages(
-    const std::vector<StageOpNode*>& cur_stages,
-    const std::vector<StageOpNode*>& next_stages,
-    std::function<void(StageOpNode*, StageOpNode*)> connect_stage) {
+    const std::vector<StageNode*>& cur_stages,
+    const std::vector<StageNode*>& next_stages) {
   CHECK_EQ(cur_stages.empty(), false);
   CHECK_EQ(next_stages.empty(), false);
   auto cur_parallel_policy = cur_stages.front()->parallel_desc().policy();
@@ -35,46 +32,39 @@ void ConnectRelatedStages(
   if (cur_parallel_policy == ParallelDesc::kDataParallel
       && next_parallel_policy == ParallelDesc::kDataParallel) {
     CHECK_EQ(cur_stages.size(), next_stages.size());
-    OneToOneConnect(cur_stages, next_stages, connect_stage);
+    OneToOneConnect(cur_stages, next_stages);
   } else {
-    FullConnect(cur_stages, next_stages, connect_stage);
+    FullConnect(cur_stages, next_stages);
   }
 }
 
 void StageDag::Init(const std::string& dag_name,
                     std::shared_ptr<const SegmentDag> segment_dag) {
   // Init Stages
-  std::unordered_map<const SegmentOpNode*,
-                     std::vector<StageOpNode*>> seg2stages;
-  for (const OpNode* opnode : segment_dag->op_node_vec()) {
-    auto seg_opnode = of_dynamic_cast<const SegmentOpNode*> (opnode);
-    seg2stages[seg_opnode] = {};
-    for (MachineId machine_id : seg_opnode->parallel_desc().machines()) {
-      StageOpNode* stage_opnode = NewStageOpNode();
-      stage_opnode->mutable_layer_desc_vec() = seg_opnode->layer_desc_vec();
-      stage_opnode->mutable_parallel_desc_ptr() = seg_opnode->parallel_desc_ptr();
-      stage_opnode->mutable_machine_id() = machine_id;
-      seg2stages.at(seg_opnode).push_back(stage_opnode);
+  std::unordered_map<const SegmentNode*,
+                     std::vector<StageNode*>> seg2stages;
+  for (const std::unique_ptr<DagNode>& node : segment_dag->node_vec()) {
+    auto seg_node = of_dynamic_cast<const SegmentNode*> (node.get());
+    seg2stages[seg_node] = {};
+    for (MachineId machine_id : seg_node->parallel_desc().machines()) {
+      StageNode* stage_node = NewStageNode();
+      stage_node->mutable_layer_desc_vec() = seg_node->layer_desc_vec();
+      stage_node->mutable_parallel_desc_ptr() = seg_node->parallel_desc_ptr();
+      stage_node->mutable_machine_id() = machine_id;
+      seg2stages.at(seg_node).push_back(stage_node);
     }
   }
   // Connect Stages
-  std::function<void(StageOpNode*, StageOpNode*)> connect_stage = [this](
-      StageOpNode* pre, StageOpNode* next) {
-    StageDataNode* node = this->NewStageDataNode();
-    node->AddPredecessor(pre);
-    next->AddPredecessor(node);
-  };
-  for (const OpNode* opnode : segment_dag->op_node_vec()) {
-    auto cur_seg_op = of_dynamic_cast<const SegmentOpNode*> (opnode);
-    for (const OpNode* next_seg_op : cur_seg_op->op_successors()) {
-      const std::vector<StageOpNode*>& cur_stages = seg2stages.at(cur_seg_op);
-      const std::vector<StageOpNode*>& next_stages = seg2stages.at(of_dynamic_cast<const SegmentOpNode*>(next_seg_op));
-      ConnectRelatedStages(cur_stages, next_stages, connect_stage);
+  for (const std::unique_ptr<DagNode>& node : segment_dag->node_vec()) {
+    auto cur_seg = of_dynamic_cast<const SegmentNode*> (node.get());
+    for (const DagNode* next_seg : cur_seg->successors()) {
+      const std::vector<StageNode*>& cur_stages = seg2stages.at(cur_seg);
+      const std::vector<StageNode*>& next_stages = seg2stages.at(of_dynamic_cast<const SegmentNode*>(next_seg));
+      ConnectRelatedStages(cur_stages, next_stages);
     }
   }
   // Post processing
   ConnectStartAndStop();
-  ConnectOpNodeExtraPtr();
 }
 
 } // namespace oneflow
