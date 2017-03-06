@@ -79,7 +79,7 @@ void TaskGraph::Stage2HostComputeTnds(const StageNode* stage,
   compute_tnd->mutable_op_vec() = stage->op_vec();
   compute_tnd->mutable_parallel_desc_ptr() = stage->parallel_desc_ptr();
   compute_tnd->mutable_machine_id() = stage->machine_id();
-  // since we only support GPU now, it must be a data-layer
+  // since we only support GPU now, it must be a data-op
   compute_tnd->mutable_thread_local_id() = id_map.data_thread_local_id();
   tnds_within_stage->compute_in_tnds.push_back(compute_tnd);
   tnds_within_stage->compute_out_tnds.push_back(compute_tnd);

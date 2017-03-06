@@ -162,26 +162,26 @@ class TaskGraph final : public Graph {
 
   void InitComputeTnds(const StageGraph* stage_dag,
                        const IDMap& id_map,
-                       Stage2TndsMap* stage2pons);
+                       Stage2TndsMap* stage2tnds);
   void Stage2DeviceComputeTnds(const StageNode* stage,
                                const IDMap& id_map,
-                               TndsWithinStage* pons_within_stage,
+                               TndsWithinStage* tnds_within_stage,
                                bool is_first_stage,
                                bool is_last_stage);
   void Stage2HostComputeTnds(const StageNode* stage,
                              const IDMap& id_map,
-                             TndsWithinStage* pons_within_stage);
+                             TndsWithinStage* tnds_within_stage);
   void InitBoxingTnds(const StageGraph* stage_dag,
                       const IDMap& id_map,
-                      Stage2TndsMap* stage2pons);
+                      Stage2TndsMap* stage2tnds);
   void InitInboxingTnd(const StageNode* stage,
                        const IDMap& id_map,
-                       TndsWithinStage* pons_within_stage);
+                       TndsWithinStage* tnds_within_stage);
   void InitOutBoxingTnd(const StageNode* stage,
                         const IDMap& id_map,
-                        TndsWithinStage* pons_within_stage);
+                        TndsWithinStage* tnds_within_stage);
   void ConnectTnds(const StageGraph* stage_dag,
-                   const Stage2TndsMap* stage2pons);
+                   const Stage2TndsMap* stage2tnds);
   void GenerateBpNodes();
 
 };
