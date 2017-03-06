@@ -178,7 +178,7 @@ class TaskGraph final : public Graph {
   CopyHDTnd* NewCopyHDTnd();
   BoxingTnd* NewBoxingTnd();
   CommNetTnd* NewCommNetTnd();
-
+  
   void InitComputeTnds(const StageGraph* stage_dag,
                        const IDMap& id_map,
                        Stage2TndsMap* stage2tnds);

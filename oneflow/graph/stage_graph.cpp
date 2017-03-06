@@ -65,7 +65,7 @@ void StageGraph::Init(const std::string& dag_name,
     }
   }
   // Post processing
-  ConnectStartAndStop();
+  UpdateStartAndStop();
 }
 
 } // namespace oneflow

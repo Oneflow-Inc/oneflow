@@ -61,7 +61,11 @@ bool Graph::ReverseGraphIterator::operator != (
   return false;
 }
 
-void Graph::ConnectStartAndStop() {
+void Graph::UpdateStartAndStop() {
+  start_node_.clear_predecessors();
+  start_node_.clear_successors();
+  stop_node_.clear_predecessors();
+  stop_node_.clear_successors();
   for (const std::unique_ptr<Node>& node : node_vec_) {
     if (node->predecessors().empty()) {
       ConnectTwoNode(&start_node_, node.get());

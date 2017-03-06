@@ -52,7 +52,7 @@ void LogicalGraph::BuildGraphStruct(const DLNetConf& dl_net_conf) {
   }
   blob_name_indag_of2node.clear();
   // Post Processing
-  ConnectStartAndStop();
+  UpdateStartAndStop();
 }
 
 void LogicalGraph::FillNodeWithParallelDesc(const Strategy& strategy_conf) {

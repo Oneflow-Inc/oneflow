@@ -283,7 +283,7 @@ void SegmentGraph::Init(const LogicalGraph* logical_dag) {
     }
   }
   // Post processing
-  ConnectStartAndStop();
+  UpdateStartAndStop();
 }
 
 } // namespace oneflow

@@ -26,6 +26,13 @@ class Node {
     return successors_;
   }
 
+  void clear_predecessors() {
+    predecessors_.clear();
+  }
+  void clear_successors() {
+    successors_.clear();
+  }
+
  private:
   friend bool ConnectTwoNode(Node* predecessor, Node* successor);
 

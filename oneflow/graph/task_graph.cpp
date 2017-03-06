@@ -9,7 +9,7 @@ void TaskGraph::Init(const StageGraph* stage_dag,
   InitComputeTnds(stage_dag, id_map, &stage2tnds);
   InitBoxingTnds(stage_dag, id_map, &stage2tnds);
   ConnectTnds(stage_dag, &stage2tnds);
-  ConnectStartAndStop();
+  UpdateStartAndStop();
   if (need_bp) {
     BuildBpStruct();
   }
@@ -222,6 +222,7 @@ void TaskGraph::BuildBpStruct() {
   std::vector<TaskNode*> turning_node_vec;
   GenerateRelatedBpNodes(add_fw_bp_pair, fw_node2bp_node, &turning_node_vec);
   BackwardConnect(fw_node2bp_node, bp_node2fw_node, turning_node_vec);
+  UpdateStartAndStop();
 }
 
 } // namespace oneflow

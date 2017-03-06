@@ -185,7 +185,7 @@ class Graph {
   }
 
  protected:
-  void ConnectStartAndStop();
+  void UpdateStartAndStop();
 
   void RegisterNode(Node* new_node) {
     node_vec_.emplace_back(new_node);
