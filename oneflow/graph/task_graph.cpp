@@ -9,10 +9,10 @@ void TaskGraph::Init(const StageGraph* stage_dag,
   InitComputeTnds(stage_dag, id_map, &stage2tnds);
   InitBoxingTnds(stage_dag, id_map, &stage2tnds);
   ConnectTnds(stage_dag, &stage2tnds);
-  if (need_bp) {
-    GenerateBpNodes();
-  }
   ConnectStartAndStop();
+  if (need_bp) {
+    BuildBpStruct();
+  }
 }
 
 void TaskGraph::InitComputeTnds(const StageGraph* stage_dag,
@@ -160,8 +160,68 @@ void TaskGraph::ConnectTnds(const StageGraph* stage_dag,
   }
 }
 
-void TaskGraph::GenerateBpNodes() {
-  // TODO
+void TaskGraph::GenerateRelatedBpNodes(
+    std::function<void(const TaskNode*, TaskNode*)> add_fw_bp_pair,
+    const std::unordered_map<const TaskNode*, TaskNode*>& fw_node2bp_node,
+    std::vector<TaskNode*> *turning_node_vec) {
+  for (auto node_it = begin(); node_it != end(); ++node_it) {
+    auto task_node = of_dynamic_cast<TaskNode*> (&(*node_it));
+    if (auto compute_tnd = dynamic_cast<ComputeTnd*> (task_node)) {
+      if (compute_tnd->HasOpWithOutDiff()) {
+        add_fw_bp_pair(task_node, task_node->ConstructBpNode());
+      } else {
+        if (compute_tnd->HasOpWithIndiff()) {
+          turning_node_vec->push_back(task_node);
+        }
+      }
+    } else {
+      for (Node* pred_node : task_node->predecessors()) {
+        if (fw_node2bp_node.find(of_dynamic_cast<TaskNode*> (pred_node)) !=
+            fw_node2bp_node.end()) {
+          add_fw_bp_pair(task_node, task_node->ConstructBpNode());
+        }
+      }
+    }
+  }
+}
+
+void TaskGraph::BackwardConnect(
+    const std::unordered_map<const TaskNode*, TaskNode*>& fw_node2bp_node,
+    const std::unordered_map<TaskNode*, const TaskNode*>& bp_node2fw_node,
+    const std::vector<TaskNode*>& turning_node_vec) {
+  std::queue<TaskNode*> bp_node_queue;
+  for (TaskNode* turning_node : turning_node_vec) {
+    for (Node* fw_pred_node : turning_node->predecessors()) {
+      TaskNode* bp_pred_node =
+          fw_node2bp_node.at(of_dynamic_cast<TaskNode*>(fw_pred_node));
+      ConnectTwoNode(turning_node, bp_pred_node);
+      bp_node_queue.push(bp_pred_node);
+    }
+  }
+  while (!bp_node_queue.empty()) {
+    TaskNode* bp_cur_node = bp_node_queue.front();
+    bp_node_queue.pop();
+    for (Node* fw_pred_node : bp_node2fw_node.at(bp_cur_node)->predecessors()) {
+      TaskNode* bp_pred_node =
+          fw_node2bp_node.at(of_dynamic_cast<TaskNode*>(fw_pred_node));
+      ConnectTwoNode(bp_cur_node, bp_pred_node);
+      bp_node_queue.push(bp_pred_node);
+    }
+  }
+}
+
+void TaskGraph::BuildBpStruct() {
+  std::unordered_map<const TaskNode*, TaskNode*> fw_node2bp_node;
+  std::unordered_map<TaskNode*, const TaskNode*> bp_node2fw_node;
+  std::function<void(const TaskNode*, TaskNode*)> add_fw_bp_pair =
+      [&fw_node2bp_node, &bp_node2fw_node]
+      (const TaskNode* fw_node, TaskNode* bp_node) {
+    fw_node2bp_node[fw_node] = bp_node;
+    bp_node2fw_node[bp_node] = fw_node;
+  };
+  std::vector<TaskNode*> turning_node_vec;
+  GenerateRelatedBpNodes(add_fw_bp_pair, fw_node2bp_node, &turning_node_vec);
+  BackwardConnect(fw_node2bp_node, bp_node2fw_node, turning_node_vec);
 }
 
 } // namespace oneflow

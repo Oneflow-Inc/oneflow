@@ -25,6 +25,8 @@ class TaskNode : public Node {
   MachineId& mutable_machine_id() { return machine_id_; }
   ThreadLocalId& mutable_thread_local_id() { return thread_local_id_; }
 
+  virtual TaskNode* ConstructBpNode() const = 0;
+
  private:
   MachineId machine_id_;
   ThreadLocalId thread_local_id_;
@@ -57,6 +59,23 @@ class ComputeTnd : public TaskNode {
   }
   std::shared_ptr<const ParallelDesc>& mutable_parallel_desc_ptr() {
     return parallel_desc_ptr_;
+  }
+
+  bool HasOpWithOutDiff() const {
+    for (std::shared_ptr<const Operator> op : op_vec_) {
+      if (! op->data_blob_desc_set().output_diff_blob_names().empty()) {
+        return true;
+      }
+    }
+    return false;
+  }
+  bool HasOpWithIndiff() const {
+    for (std::shared_ptr<const Operator> op : op_vec_) {
+      if (! op->data_blob_desc_set().input_diff_blob_names().empty()) {
+        return true;
+      }
+    }
+    return false;
   }
 
  private:
@@ -182,7 +201,15 @@ class TaskGraph final : public Graph {
                         TndsWithinStage* tnds_within_stage);
   void ConnectTnds(const StageGraph* stage_dag,
                    const Stage2TndsMap* stage2tnds);
-  void GenerateBpNodes();
+  void GenerateRelatedBpNodes(
+      std::function<void(const TaskNode*, TaskNode*)> add_fw_bp_pair,
+      const std::unordered_map<const TaskNode*, TaskNode*>& fw_node2bp_node,
+      std::vector<TaskNode*> *turning_node_vec);
+  void BackwardConnect(
+      const std::unordered_map<const TaskNode*, TaskNode*>& fw_node2bp_node,
+      const std::unordered_map<TaskNode*, const TaskNode*>& bp_node2fw_node,
+      const std::vector<TaskNode*>& turning_node_vec);
+  void BuildBpStruct();
 
 };
 
