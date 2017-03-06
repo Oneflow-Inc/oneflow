@@ -25,7 +25,19 @@ class TaskNode : public Node {
   MachineId& mutable_machine_id() { return machine_id_; }
   ThreadLocalId& mutable_thread_local_id() { return thread_local_id_; }
 
-  virtual TaskNode* ConstructBpNode() const = 0;
+  // Clone without Node's property
+  std::unique_ptr<TaskNode> CloneWithOnlyTaskProperty() const {
+    std::unique_ptr<TaskNode> new_node  = CreateSameTypeNode();
+    new_node->CopyWithOnlyTaskProperty(*this);
+    return new_node;
+  }
+
+  virtual std::unique_ptr<TaskNode> CreateSameTypeNode() const = 0;
+
+  void CopyWithOnlyTaskProperty(const TaskNode& rhs) {
+    machine_id_ = rhs.machine_id_;
+    thread_local_id_ = rhs.thread_local_id_;
+  }
 
  private:
   MachineId machine_id_;
@@ -77,6 +89,11 @@ class ComputeTnd : public TaskNode {
     }
     return false;
   }
+  void CopyWithOnlyTaskProperty(const ComputeTnd& rhs) {
+    TaskNode::CopyWithOnlyTaskProperty(rhs);
+    op_vec_ = rhs.op_vec_;
+    parallel_desc_ptr_ = rhs.parallel_desc_ptr_;
+  }
 
  private:
   std::vector<std::shared_ptr<const Operator>> op_vec_;
@@ -93,6 +110,16 @@ class HostComputeTnd final : public ComputeTnd {
   void Init() {
     ComputeTnd::Init();
   }
+  
+  std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
+    std::unique_ptr<TaskNode> new_node(new HostComputeTnd);
+    new_node->Init();
+    return new_node;
+  }
+
+  void CopyWithOnlyTaskProperty(const HostComputeTnd& rhs) {
+    ComputeTnd::CopyWithOnlyTaskProperty(rhs);
+  }
 
  private:
 
@@ -106,6 +133,15 @@ class DeviceComputeTnd final : public ComputeTnd {
   
   void Init() {
     ComputeTnd::Init();
+  }
+  std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
+    std::unique_ptr<TaskNode> new_node(new DeviceComputeTnd);
+    new_node->Init();
+    return new_node;
+  }
+ 
+  void CopyWithOnlyTaskProperty(const DeviceComputeTnd& rhs) {
+    ComputeTnd::CopyWithOnlyTaskProperty(rhs);
   }
 
  private:
@@ -122,6 +158,16 @@ class CopyHDTnd final : public TaskNode {
     TaskNode::Init();
   }
 
+  std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
+    std::unique_ptr<TaskNode> new_node(new CopyHDTnd);
+    new_node->Init();
+    return new_node;
+  }
+
+  void CopyWithOnlyTaskProperty(const CopyHDTnd& rhs) {
+    TaskNode::CopyWithOnlyTaskProperty(rhs);
+  }
+
  private:
 };
 
@@ -134,12 +180,22 @@ class BoxingTnd final : public TaskNode {
   void Init() {
     TaskNode::Init();
   }
+  
+  std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
+    std::unique_ptr<TaskNode> new_node(new BoxingTnd);
+    new_node->Init();
+    return new_node;
+  }
+
+  void CopyWithOnlyTaskProperty(const BoxingTnd& rhs) {
+    TaskNode::CopyWithOnlyTaskProperty(rhs);
+  }
 
  private:
 };
 
 // CommNet: Communication Network
-class CommNetTnd : public TaskNode {
+class CommNetTnd final : public TaskNode {
  public:
   DISALLOW_COPY_AND_MOVE(CommNetTnd);
   CommNetTnd() = default;
@@ -147,6 +203,16 @@ class CommNetTnd : public TaskNode {
 
   void Init() {
     TaskNode::Init();
+  }
+  
+  std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
+    std::unique_ptr<TaskNode> new_node(new CommNetTnd);
+    new_node->Init();
+    return new_node;
+  }
+
+  void CopyWithOnlyTaskProperty(const CommNetTnd& rhs) {
+    TaskNode::CopyWithOnlyTaskProperty(rhs);
   }
 
  private:
@@ -173,11 +239,21 @@ class TaskGraph final : public Graph {
   using Stage2TndsMap =
     std::unordered_map<const StageNode*, TndsWithinStage>;
   
-  HostComputeTnd* NewHostComputeTnd();
-  DeviceComputeTnd* NewDeviceComputeTnd();
-  CopyHDTnd* NewCopyHDTnd();
-  BoxingTnd* NewBoxingTnd();
-  CommNetTnd* NewCommNetTnd();
+  template<typename TaskNodeType>
+  TaskNodeType* NewTaskNode() {
+    static_assert(std::is_base_of<TaskNode, TaskNodeType>::value, "");
+    auto ret = new TaskNodeType;
+    ret->Init();
+    RegisterNode(ret);
+    return ret;
+  }
+
+  TaskNode* ConstructBpNode(TaskNode* fw_node) {
+    std::unique_ptr<TaskNode> node = fw_node->CloneWithOnlyTaskProperty();
+    TaskNode* ret = node.get();
+    RegisterNode(std::move(node));
+    return ret;
+  }
   
   void InitComputeTnds(const StageGraph* stage_dag,
                        const IDMap& id_map,

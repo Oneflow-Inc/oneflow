@@ -44,14 +44,14 @@ void TaskGraph::Stage2DeviceComputeTnds(const StageNode* stage,
     ThreadLocalId thread_local_id =
         id_map.ThreadLocalIdFromDevicePhysicalId(device_physical_id);
     // compute_tnd
-    DeviceComputeTnd* compute_tnd = NewDeviceComputeTnd();
+    DeviceComputeTnd* compute_tnd = NewTaskNode<DeviceComputeTnd> ();
     compute_tnd->mutable_op_vec() = stage->op_vec();
     compute_tnd->mutable_parallel_desc_ptr() = stage->parallel_desc_ptr();
     compute_tnd->mutable_machine_id() = machine_id;
     compute_tnd->mutable_thread_local_id() = thread_local_id;
     // compute_in_tnd
     if (!is_first_stage) {
-      CopyHDTnd* compute_in_tnd = NewCopyHDTnd();
+      CopyHDTnd* compute_in_tnd = NewTaskNode<CopyHDTnd> ();
       compute_in_tnd->mutable_machine_id() = machine_id;
       compute_in_tnd->mutable_thread_local_id() = thread_local_id;
       ConnectTwoNode(compute_in_tnd, compute_tnd);
@@ -61,7 +61,7 @@ void TaskGraph::Stage2DeviceComputeTnds(const StageNode* stage,
     }
     // compute_out_tnd
     if (!is_last_stage) {
-      CopyHDTnd* compute_out_tnd = NewCopyHDTnd();
+      CopyHDTnd* compute_out_tnd = NewTaskNode<CopyHDTnd> ();
       compute_out_tnd->mutable_machine_id() = machine_id;
       compute_out_tnd->mutable_thread_local_id() = thread_local_id;
       ConnectTwoNode(compute_tnd, compute_out_tnd);
@@ -75,7 +75,7 @@ void TaskGraph::Stage2DeviceComputeTnds(const StageNode* stage,
 void TaskGraph::Stage2HostComputeTnds(const StageNode* stage,
                                       const IDMap& id_map,
                                       TndsWithinStage* tnds_within_stage) {
-  HostComputeTnd* compute_tnd = NewHostComputeTnd();
+  HostComputeTnd* compute_tnd = NewTaskNode<HostComputeTnd> ();
   compute_tnd->mutable_op_vec() = stage->op_vec();
   compute_tnd->mutable_parallel_desc_ptr() = stage->parallel_desc_ptr();
   compute_tnd->mutable_machine_id() = stage->machine_id();
@@ -103,7 +103,7 @@ void TaskGraph::InitInboxingTnd(const StageNode* stage,
       && tnds_within_stage->compute_in_tnds.size() == 1) {
     return;
   }
-  BoxingTnd* boxing_tnd = NewBoxingTnd();
+  BoxingTnd* boxing_tnd = NewTaskNode<BoxingTnd> ();
   boxing_tnd->mutable_machine_id() = stage->machine_id();
   boxing_tnd->mutable_thread_local_id() = id_map.boxing_thread_local_id();
   for (TaskNode* compute_in_tnd : tnds_within_stage->compute_in_tnds) {
@@ -120,7 +120,7 @@ void TaskGraph::InitOutBoxingTnd(const StageNode* stage,
       && tnds_within_stage->compute_out_tnds.size() == 1) {
     return;
   }
-  BoxingTnd* boxing_tnd = NewBoxingTnd();
+  BoxingTnd* boxing_tnd = NewTaskNode<BoxingTnd> ();
   boxing_tnd->mutable_machine_id() = stage->machine_id();
   boxing_tnd->mutable_thread_local_id() = id_map.boxing_thread_local_id();
   for (TaskNode* compute_out_tnd : tnds_within_stage->compute_out_tnds) {
@@ -150,8 +150,8 @@ void TaskGraph::ConnectTnds(const StageGraph* stage_dag,
       if (cur_stage->machine_id() == next_stage->machine_id()) {
         ConnectTwoNode(out_node, in_node);
       } else {
-        CommNetTnd* out_comm_net_node = NewCommNetTnd();
-        CommNetTnd* in_comm_net_node = NewCommNetTnd();
+        CommNetTnd* out_comm_net_node = NewTaskNode<CommNetTnd> ();
+        CommNetTnd* in_comm_net_node = NewTaskNode<CommNetTnd> ();
         ConnectTwoNode(out_node, out_comm_net_node);
         ConnectTwoNode(out_comm_net_node, in_comm_net_node);
         ConnectTwoNode(in_comm_net_node, in_node);
@@ -168,7 +168,7 @@ void TaskGraph::GenerateRelatedBpNodes(
     auto task_node = of_dynamic_cast<TaskNode*> (&(*node_it));
     if (auto compute_tnd = dynamic_cast<ComputeTnd*> (task_node)) {
       if (compute_tnd->HasOpWithOutDiff()) {
-        add_fw_bp_pair(task_node, task_node->ConstructBpNode());
+        add_fw_bp_pair(task_node, ConstructBpNode(task_node));
       } else {
         if (compute_tnd->HasOpWithIndiff()) {
           turning_node_vec->push_back(task_node);
@@ -178,7 +178,7 @@ void TaskGraph::GenerateRelatedBpNodes(
       for (Node* pred_node : task_node->predecessors()) {
         if (fw_node2bp_node.find(of_dynamic_cast<TaskNode*> (pred_node)) !=
             fw_node2bp_node.end()) {
-          add_fw_bp_pair(task_node, task_node->ConstructBpNode());
+          add_fw_bp_pair(task_node, ConstructBpNode(task_node));
         }
       }
     }

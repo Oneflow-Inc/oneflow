@@ -190,6 +190,9 @@ class Graph {
   void RegisterNode(Node* new_node) {
     node_vec_.emplace_back(new_node);
   }
+  void RegisterNode(std::unique_ptr<Node>&& new_node) {
+    node_vec_.push_back(std::move(new_node));
+  }
 
  private:
   Node start_node_;
