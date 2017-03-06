@@ -1,0 +1,76 @@
+syntax = "proto3";
+package oneflow;
+
+message ConstantModelParamInitializerConf {
+  float const_val = 1;
+}
+
+message UniformModelParamInitializerConf {
+  float min = 1;
+  float max = 2;
+}
+
+message GaussianModelParamInitializerConf {
+  float mean = 1;
+  float std = 2;
+  // The expected number of non-zero output weights for a given input
+  // set -1 means don't perform sparsification
+  int32 sparse = 3;
+}
+
+message ModelParamInitializerConf {
+  oneof specified_type {
+    ConstantModelParamInitializerConf const_conf = 1;
+    UniformModelParamInitializerConf uniform_conf = 2;
+    GaussianModelParamInitializerConf gaussian_conf = 3;
+  }
+}
+
+message ConvolutionOpConf {
+  string in = 1;
+  string out = 2;
+}
+
+message InnerProductOpConf {
+  string in = 1;
+  string out = 2;
+}
+
+message LoaderOpConf {
+  string data = 1;
+  string label = 2;
+}
+
+message PoolingOpConf {
+  string in = 1;
+  string out = 2;
+}
+
+message ReluOpConf {
+  string in = 1;
+  string out = 2;
+}
+
+message SoftmaxOpConf {
+  string in = 1;
+  string out = 2;
+}
+
+message MultinomialLogisticLossOpConf {
+  string data = 1;
+  string label = 2;
+  string loss = 3;
+};
+
+message OperatorConf {
+  string name = 1;
+  oneof specified_type {
+    ConvolutionOpConf convolution_op_conf = 100;
+    InnerProductOpConf inner_product_op_conf = 101;
+    LoaderOpConf loader_op_conf = 102;
+    PoolingOpConf pooling_op_conf = 103;
+    ReluOpConf relu_op_conf = 104;
+    SoftmaxOpConf softmax_op_conf = 105;
+    MultinomialLogisticLossOpConf multinomial_logistic_loss_op_conf = 106;
+  }
+}

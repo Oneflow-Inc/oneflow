@@ -28,7 +28,7 @@ message ParallelConf {
 
 message PlacementGroup {
   string name = 1;
-  repeated string layer_name_vec = 2;
+  repeated string op_name_vec = 2;
   ParallelConf parallel_conf = 3;
 }
 

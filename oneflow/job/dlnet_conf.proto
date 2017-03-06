@@ -1,9 +1,9 @@
 syntax = "proto3";
 package oneflow;
 
-import "layer/layer_conf.proto";
+import "operator/op_conf.proto";
 
 message DLNetConf {
   string name = 1;
-  repeated LayerConf layer_conf = 100;
+  repeated OperatorConf op_conf = 100;
 }
