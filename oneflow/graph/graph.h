@@ -20,7 +20,7 @@ class Graph {
   Graph() = default;
   virtual ~Graph() = default;
 
-  void Init() {
+  virtual void Init() {
     start_node_.Init();
     stop_node_.Init();
   }
@@ -73,7 +73,7 @@ class Graph {
   std::vector<std::unique_ptr<Edge>> edge_vec_;
 };
 
-class Graph::GraphIterator {
+class Graph::GraphIterator final {
  public:
   // DISALLOW_MOVE(GraphIterator);
   GraphIterator(const GraphIterator& rhs) { (*this) = rhs; }
@@ -104,7 +104,7 @@ class Graph::GraphIterator {
   std::shared_ptr<std::queue<Node*>> bfs_queue_;
 };
 
-class Graph::ConstGraphIterator {
+class Graph::ConstGraphIterator final {
  public:
   // DISALLOW_COPY_AND_MOVE(ConstGraphIterator);
   ConstGraphIterator() = default;
@@ -125,7 +125,7 @@ class Graph::ConstGraphIterator {
   GraphIterator dag_iterator_;
 };
 
-class Graph::ReverseGraphIterator {
+class Graph::ReverseGraphIterator final {
  public:
   // DISALLOW_MOVE(ReverseGraphIterator);
   ReverseGraphIterator(const ReverseGraphIterator& rhs) {
@@ -158,7 +158,7 @@ class Graph::ReverseGraphIterator {
   std::shared_ptr<std::queue<Node*>> bfs_queue_;
 };
 
-class Graph::ConstReverseGraphIterator {
+class Graph::ConstReverseGraphIterator final {
  public:
   // DISALLOW_COPY_AND_MOVE(ConstReverseGraphIterator);
   ConstReverseGraphIterator() = default;

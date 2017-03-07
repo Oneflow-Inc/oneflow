@@ -14,7 +14,7 @@ class TaskNode : public Node {
   TaskNode() = default;
   virtual ~TaskNode() = default;
 
-  void Init() {
+  virtual void Init() {
     Node::Init();
     // struct style
   }
@@ -52,7 +52,7 @@ class ComputeTnd : public TaskNode {
   ComputeTnd() = default;
   virtual ~ComputeTnd() = default;
 
-  void Init() {
+  virtual void Init() {
     TaskNode::Init();
   }
   

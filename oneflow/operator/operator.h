@@ -15,7 +15,7 @@ class BlobDescSet {
   BlobDescSet() = default;
   virtual ~BlobDescSet() = default;
 
-  void Init() {
+  virtual void Init() {
     name_to_pptr_.clear();
   }
 
@@ -34,7 +34,7 @@ class DataBlobDescSet : public BlobDescSet {
   DataBlobDescSet() = default;
   virtual ~DataBlobDescSet() = default;
 
-  void Init();
+  virtual void Init();
 
   const std::vector<std::string>& input_blob_names() const {
     return input_blob_names_;
@@ -93,7 +93,7 @@ class ModelBlobDescSet : public BlobDescSet {
   ModelBlobDescSet() = default;
   virtual ~ModelBlobDescSet() = default;
 
-  void Init();
+  virtual void Init();
 
   const std::vector<std::string>& model_blob_names() const {
     return model_blob_names_;
