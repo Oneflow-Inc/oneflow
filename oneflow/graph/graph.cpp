@@ -3,6 +3,52 @@
 
 namespace oneflow {
 
+Graph::GraphIterator Graph::begin() {
+  GraphIterator ret;
+  ret.Init(&start_node_);
+  ++ret;
+  return ret;
+}
+Graph::GraphIterator Graph::end() {
+  GraphIterator ret;
+  ret.Init(&stop_node_);
+  return ret;
+}
+
+Graph::ConstGraphIterator Graph::cbegin() const {
+  ConstGraphIterator ret;
+  ret.Init((const_cast<Graph*>(this))->begin());
+  return ret;
+}
+Graph::ConstGraphIterator Graph::cend() const {
+  ConstGraphIterator ret;
+  ret.Init((const_cast<Graph*>(this))->end());
+  return ret;
+}
+
+Graph::ReverseGraphIterator Graph::rbegin() {
+  ReverseGraphIterator ret;
+  ret.Init(&stop_node_);
+  ++ret;
+  return ret;
+}
+Graph::ReverseGraphIterator Graph::rend() {
+  ReverseGraphIterator ret;
+  ret.Init(&start_node_);
+  return ret;
+}
+
+Graph::ConstReverseGraphIterator Graph::crbegin() const {
+  ConstReverseGraphIterator ret;
+  ret.Init((const_cast<Graph*>(this))->rbegin());
+  return ret;
+}
+Graph::ConstReverseGraphIterator Graph::crend() const {
+  ConstReverseGraphIterator ret;
+  ret.Init((const_cast<Graph*>(this))->rend());
+  return ret;
+}
+
 Node& Graph::GraphIterator::operator * () {
   CHECK_EQ(bfs_queue_->empty(), false);
   return *(bfs_queue_->front());
@@ -16,8 +62,8 @@ void Graph::GraphIterator::operator ++ () {
   CHECK_EQ(bfs_queue_->empty(), false);
   Node* cur_node = bfs_queue_->front();
   bfs_queue_->pop();
-  for (Node* successor : cur_node->successors()) {
-    bfs_queue_->push(successor);
+  for (Edge* out_edge : cur_node->out_edges()) {
+    bfs_queue_->push(out_edge->dst_node());
   }
 }
 
@@ -45,8 +91,8 @@ void Graph::ReverseGraphIterator::operator ++ () {
   CHECK_EQ(bfs_queue_->empty(), false);
   Node* cur_node = bfs_queue_->front();
   bfs_queue_->pop();
-  for (Node* predecessor : cur_node->predecessors()) {
-    bfs_queue_->push(predecessor);
+  for (Edge* in_edge : cur_node->in_edges()) {
+    bfs_queue_->push(in_edge->src_node());
   }
 }
 
@@ -62,16 +108,22 @@ bool Graph::ReverseGraphIterator::operator != (
 }
 
 void Graph::UpdateStartAndStop() {
-  start_node_.clear_predecessors();
-  start_node_.clear_successors();
-  stop_node_.clear_predecessors();
-  stop_node_.clear_successors();
+  start_node_.DisconnectAllEdges();
+  stop_node_.DisconnectAllEdges();
+  start_edge_vec_.clear();
+  stop_edge_vec_.clear();
   for (const std::unique_ptr<Node>& node : node_vec_) {
-    if (node->predecessors().empty()) {
-      ConnectTwoNode(&start_node_, node.get());
+    if (node->in_edges().empty()) {
+      Edge* start_edge = new Edge;
+      start_edge_vec_.emplace_back(start_edge);
+      start_edge->Init();
+      Connect(&start_node_, start_edge, node.get());
     }
-    if (node->successors().empty()) {
-      ConnectTwoNode(node.get(), &stop_node_);
+    if (node->out_edges().empty()) {
+      Edge* stop_edge = new Edge;
+      stop_edge_vec_.emplace_back(stop_edge);
+      stop_edge->Init();
+      Connect(node.get(), stop_edge, &stop_node_);
     }
   }
 }

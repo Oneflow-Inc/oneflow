@@ -9,37 +9,61 @@
 
 namespace oneflow {
 
+class Node;
+
+class Edge {
+ public:
+  DISALLOW_COPY_AND_MOVE(Edge);
+  Edge() = default;
+  virtual ~Edge() = default;
+
+  virtual void Init() {
+    src_node_ = nullptr;
+    dst_node_ = nullptr;
+  }
+
+  Node* src_node() const { return src_node_; }
+  Node* dst_node() const { return dst_node_; }
+
+ private:
+  friend void Connect(Node* src_node, Edge* edge, Node* dst_node);
+  friend void DisConnect(Edge* edge);
+  
+  Node* src_node_;
+  Node* dst_node_;
+
+};
+
 class Node {
  public:
   DISALLOW_COPY_AND_MOVE(Node);
+  Node() = default;
   virtual ~Node() = default;
   
-  Node() = default;
-  void Init();
+  virtual void Init();
 
   int32_t node_id() const { return node_id_; }
 
-  const std::unordered_set<Node*>& predecessors() const {
-    return predecessors_;
+  const std::unordered_set<Edge*>& in_edges() const {
+    return in_edges_;
   }
-  const std::unordered_set<Node*>& successors() const {
-    return successors_;
+  const std::unordered_set<Edge*>& out_edges() const {
+    return out_edges_;
   }
 
-  void clear_predecessors() {
-    predecessors_.clear();
-  }
-  void clear_successors() {
-    successors_.clear();
-  }
+  void DisconnectAllEdges();
+
+  bool HasSuccessor(const Node* succ_node) const;
+
+  bool HasPredecessor(const Node* pred_node) const;
 
  private:
-  friend bool ConnectTwoNode(Node* predecessor, Node* successor);
-
+  friend void Connect(Node* src_node, Edge* edge, Node* dst_node);
+  friend void DisConnect(Edge* edge);
   int32_t node_id_;
-  
-  std::unordered_set<Node*> predecessors_;
-  std::unordered_set<Node*> successors_;
+
+  std::unordered_set<Edge*> in_edges_;
+  std::unordered_set<Edge*> out_edges_;
 
 };
 

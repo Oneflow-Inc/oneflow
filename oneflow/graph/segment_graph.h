@@ -40,6 +40,19 @@ class SegmentNode final : public Node {
 
 };
 
+class SegmentEdge final : public Edge {
+ public:
+  DISALLOW_COPY_AND_MOVE(SegmentEdge);
+  SegmentEdge() = default;
+  ~SegmentEdge() = default;
+    
+  void Init() {
+    Edge::Init();
+  }
+
+ private:
+};
+
 class SegmentGraph final : public Graph {
  public:
   DISALLOW_COPY_AND_MOVE(SegmentGraph);
@@ -53,6 +66,12 @@ class SegmentGraph final : public Graph {
     SegmentNode* ret_ptr = new SegmentNode;
     ret_ptr->Init();
     RegisterNode(ret_ptr);
+    return ret_ptr;
+  }
+  SegmentEdge* NewSegmentEdge() {
+    SegmentEdge* ret_ptr = new SegmentEdge;
+    ret_ptr->Init();
+    RegisterEdge(ret_ptr);
     return ret_ptr;
   }
 

@@ -47,6 +47,19 @@ class LogicalNode final : public Node {
 
 };
 
+class LogicalEdge final : public Edge {
+ public:
+  DISALLOW_COPY_AND_MOVE(LogicalEdge);
+  LogicalEdge() = default;
+  ~LogicalEdge() = default;
+  
+  void Init() {
+    Edge::Init();
+  }
+
+ private:
+};
+
 class LogicalGraph final : public Graph {
  public:
   DISALLOW_COPY_AND_MOVE(LogicalGraph);
@@ -64,6 +77,12 @@ class LogicalGraph final : public Graph {
     LogicalNode* ret_ptr = new LogicalNode;
     ret_ptr->Init();
     RegisterNode(ret_ptr);
+    return ret_ptr;
+  }
+  LogicalEdge* NewLogicalEdge() {
+    LogicalEdge* ret_ptr = new LogicalEdge;
+    ret_ptr->Init();
+    RegisterEdge(ret_ptr);
     return ret_ptr;
   }
 

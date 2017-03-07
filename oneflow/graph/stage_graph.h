@@ -47,6 +47,19 @@ class StageNode final : public Node {
 
 };
 
+class StageEdge final : public Edge {
+ public:
+  DISALLOW_COPY_AND_MOVE(StageEdge);
+  StageEdge() = default;
+  ~StageEdge() = default;
+    
+  void Init() {
+    Edge::Init();
+  }
+    
+ private:
+};
+
 class StageGraph final : public Graph {
  public:
   DISALLOW_COPY_AND_MOVE(StageGraph);
@@ -61,6 +74,12 @@ class StageGraph final : public Graph {
     StageNode* ret_ptr = new StageNode;
     ret_ptr->Init();
     RegisterNode(ret_ptr);
+    return ret_ptr;
+  }
+  StageEdge* NewStageEdge() {
+    StageEdge* ret_ptr = new StageEdge;
+    ret_ptr->Init();
+    RegisterEdge(ret_ptr);
     return ret_ptr;
   }
 

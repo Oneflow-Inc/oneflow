@@ -40,7 +40,7 @@ void LogicalGraph::BuildGraphStruct(const DLNetConf& dl_net_conf) {
           GetStringValueFromPbMessage(cur_op_conf, blob_name_in_op);
       auto pre_node_it = blob_name_indag_of2node.find(blob_name_indag_of);
       CHECK(pre_node_it != blob_name_indag_of2node.end());
-      ConnectTwoNode(pre_node_it->second, cur_node);
+      Connect(pre_node_it->second, NewLogicalEdge(), cur_node);
     }
     // Construct output
     for (const std::string& blob_name_indag_of

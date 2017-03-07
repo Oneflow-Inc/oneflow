@@ -54,8 +54,8 @@ void InitSegments(
     SegmentIt cur_segment = logical_node2seg_it->at(cur_node);
     cur_segment->ancestors.clear();
     // each predecessor
-    for (const Node* pre : cur_node->predecessors()) {
-      auto logi_pre = of_dynamic_cast<const LogicalNode*> (pre);
+    for (const Edge* edge : cur_node->in_edges()) {
+      auto logi_pre = of_dynamic_cast<const LogicalNode*> (edge->src_node());
       SegmentIt pre_segment = logical_node2seg_it->at(logi_pre);
       // ancestors
       cur_segment->ancestors.insert(pre_segment->ancestors.begin(),
@@ -73,8 +73,8 @@ void InitSegments(
     SegmentIt cur_segment = logical_node2seg_it->at(cur_node);
     cur_segment->descendants.clear();
     // each successors
-    for (const Node* succ : cur_node->successors()) {
-      auto logi_succ = of_dynamic_cast<const LogicalNode*> (succ);
+    for (const Edge* edge : cur_node->out_edges()) {
+      auto logi_succ = of_dynamic_cast<const LogicalNode*> (edge->dst_node());
       SegmentIt next_segment = logical_node2seg_it->at(logi_succ);
       // descendants
       cur_segment->descendants.insert(next_segment->descendants.begin(),
@@ -101,11 +101,11 @@ void ModelMergeSegments(
     if (cur_node->parallel_desc().policy() != ParallelDesc::kModelParallel) {
       continue;
     }
-    CHECK_EQ(cur_node->predecessors().size(), 1);
-    CHECK_EQ(cur_node->predecessors().size(), 1);
+    CHECK_EQ(cur_node->in_edges().size(), 1);
+    CHECK_EQ(cur_node->in_edges().size(), 1);
     auto pre_node =
-        of_dynamic_cast<const LogicalNode*>(
-            *(cur_node->predecessors().begin()));
+        of_dynamic_cast<const LogicalNode*>
+            ((*(cur_node->in_edges().begin()))->src_node());
     if (pre_node->parallel_desc() != cur_node->parallel_desc()) {
       continue;
     }
@@ -266,10 +266,10 @@ void SegmentGraph::Init(const LogicalGraph* logical_dag) {
   for (auto seg_it = seg_list.begin(); seg_it != seg_list.end(); ++seg_it) {
     SegmentNode* seg_node = seg_it2seg_node.at(seg_it);
     for (const LogicalNode* logi_node : seg_it->nodes) {
-      for (auto pre_logi_node : logi_node->predecessors()) {
+      for (auto logi_in_edge : logi_node->in_edges()) {
         auto pre_seg_it =
             logical_node2seg_it.at(
-                of_dynamic_cast<const LogicalNode*>(pre_logi_node));
+                of_dynamic_cast<const LogicalNode*>(logi_in_edge->src_node()));
         auto pre_seg_node = seg_it2seg_node.at(pre_seg_it);
         seg_node2pre.at(seg_node).insert(pre_seg_node);
       }
@@ -279,7 +279,7 @@ void SegmentGraph::Init(const LogicalGraph* logical_dag) {
   for (auto& pair : seg_node2pre) {
     SegmentNode* cur_node = pair.first;
     for (SegmentNode* pre_node : pair.second) {
-      ConnectTwoNode(pre_node, cur_node);
+      Connect(pre_node, NewSegmentEdge(), cur_node);
     }
   }
   // Post processing

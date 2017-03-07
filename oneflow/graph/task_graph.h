@@ -218,6 +218,19 @@ class CommNetTnd final : public TaskNode {
  private:
 };
 
+class TaskEdge final : public Edge {
+ public:
+  DISALLOW_COPY_AND_MOVE(TaskEdge);
+  TaskEdge() = default;
+  ~TaskEdge() = default;
+  
+  void Init() {
+    Edge::Init();
+  }
+
+ private:
+};
+
 class TaskGraph final : public Graph {
  public:
   DISALLOW_COPY_AND_MOVE(TaskGraph);
@@ -242,9 +255,16 @@ class TaskGraph final : public Graph {
   template<typename TaskNodeType>
   TaskNodeType* NewTaskNode() {
     static_assert(std::is_base_of<TaskNode, TaskNodeType>::value, "");
-    auto ret = new TaskNodeType;
+    TaskNodeType* ret = new TaskNodeType;
     ret->Init();
     RegisterNode(ret);
+    return ret;
+  }
+
+  TaskEdge* NewTaskEdge() {
+    TaskEdge* ret = new TaskEdge;
+    ret->Init();
+    RegisterEdge(ret);
     return ret;
   }
 
