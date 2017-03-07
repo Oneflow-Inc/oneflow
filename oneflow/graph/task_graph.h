@@ -34,7 +34,7 @@ class TaskNode : public Node {
 
   virtual std::unique_ptr<TaskNode> CreateSameTypeNode() const = 0;
 
-  void CopyWithOnlyTaskProperty(const TaskNode& rhs) {
+  virtual void CopyWithOnlyTaskProperty(const TaskNode& rhs) {
     machine_id_ = rhs.machine_id_;
     thread_local_id_ = rhs.thread_local_id_;
   }
@@ -89,7 +89,7 @@ class ComputeTnd : public TaskNode {
     }
     return false;
   }
-  void CopyWithOnlyTaskProperty(const ComputeTnd& rhs) {
+  virtual void CopyWithOnlyTaskProperty(const ComputeTnd& rhs) {
     TaskNode::CopyWithOnlyTaskProperty(rhs);
     op_vec_ = rhs.op_vec_;
     parallel_desc_ptr_ = rhs.parallel_desc_ptr_;
