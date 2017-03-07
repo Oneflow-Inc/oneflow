@@ -66,8 +66,7 @@ class StageGraph final : public Graph {
   StageGraph() = default;
   ~StageGraph() = default;
 
-  void Init(const std::string& dag_name,
-            std::shared_ptr<const SegmentGraph> segment_dag);
+  void Init(std::shared_ptr<const SegmentGraph> segment_graph);
 
  private:
   StageNode* NewStageNode() {

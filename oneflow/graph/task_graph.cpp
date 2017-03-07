@@ -2,26 +2,26 @@
 
 namespace oneflow {
 
-void TaskGraph::Init(const StageGraph* stage_dag,
+void TaskGraph::Init(const StageGraph* stage_graph,
                      const IDMap& id_map,
                      bool need_bp) {
   Stage2TndsMap stage2tnds;
-  InitComputeTnds(stage_dag, id_map, &stage2tnds);
-  InitBoxingTnds(stage_dag, id_map, &stage2tnds);
-  ConnectTnds(stage_dag, &stage2tnds);
+  InitComputeTnds(stage_graph, id_map, &stage2tnds);
+  InitBoxingTnds(stage_graph, id_map, &stage2tnds);
+  ConnectTnds(stage_graph, &stage2tnds);
   UpdateStartAndStop();
   if (need_bp) {
     BuildBpStruct();
   }
 }
 
-void TaskGraph::InitComputeTnds(const StageGraph* stage_dag,
+void TaskGraph::InitComputeTnds(const StageGraph* stage_graph,
                                 const IDMap& id_map,
                                 Stage2TndsMap* stage2tnds) {
-  for (const std::unique_ptr<Node>& node : stage_dag->node_vec()) {
+  for (const std::unique_ptr<Node>& node : stage_graph->node_vec()) {
     auto stage = of_dynamic_cast<const StageNode*> (node.get());
-    bool is_first_stage = stage_dag->IsFirstNode(stage);
-    bool is_last_stage = stage_dag->IsLastNode(stage);
+    bool is_first_stage = stage_graph->IsFirstNode(stage);
+    bool is_last_stage = stage_graph->IsLastNode(stage);
     if (stage->parallel_desc().engine() == ParallelDesc::Engine::kDevice) {
       Stage2DeviceComputeTnds(stage,
                               id_map,
@@ -85,10 +85,10 @@ void TaskGraph::Stage2HostComputeTnds(const StageNode* stage,
   tnds_within_stage->compute_out_tnds.push_back(compute_tnd);
 }
 
-void TaskGraph::InitBoxingTnds(const StageGraph* stage_dag,
+void TaskGraph::InitBoxingTnds(const StageGraph* stage_graph,
                                const IDMap& id_map,
                                Stage2TndsMap* stage2tnds) {
-  for (const std::unique_ptr<Node>& node : stage_dag->node_vec()) {
+  for (const std::unique_ptr<Node>& node : stage_graph->node_vec()) {
     auto stage = of_dynamic_cast<const StageNode*> (node.get());
     InitInboxingTnd(stage, id_map, &(stage2tnds->at(stage)));
     InitOutBoxingTnd(stage, id_map, &(stage2tnds->at(stage)));
@@ -129,9 +129,9 @@ void TaskGraph::InitOutBoxingTnd(const StageNode* stage,
   tnds_within_stage->out_boxing_tnd = boxing_tnd;
 }
 
-void TaskGraph::ConnectTnds(const StageGraph* stage_dag,
+void TaskGraph::ConnectTnds(const StageGraph* stage_graph,
                             const Stage2TndsMap* stage2tnds) {
-  for (const std::unique_ptr<Node>& node : stage_dag->node_vec()) {
+  for (const std::unique_ptr<Node>& node : stage_graph->node_vec()) {
     auto cur_stage = of_dynamic_cast<const StageNode*> (node.get());
     const TndsWithinStage& cur_tnds = stage2tnds->at(cur_stage);
     TaskNode* out_node = cur_tnds.out_boxing_tnd;

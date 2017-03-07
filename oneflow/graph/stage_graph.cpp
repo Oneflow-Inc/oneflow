@@ -41,12 +41,12 @@ void ConnectRelatedStages(
   }
 }
 
-void StageGraph::Init(const std::string& dag_name,
-                    std::shared_ptr<const SegmentGraph> segment_dag) {
+void StageGraph::Init(std::shared_ptr<const SegmentGraph> segment_graph) {
+  Graph::Init();
   // Init Stages
   std::unordered_map<const SegmentNode*,
                      std::vector<StageNode*>> seg2stages;
-  for (const std::unique_ptr<Node>& node : segment_dag->node_vec()) {
+  for (const std::unique_ptr<Node>& node : segment_graph->node_vec()) {
     auto seg_node = of_dynamic_cast<const SegmentNode*> (node.get());
     seg2stages[seg_node] = {};
     for (MachineId machine_id : seg_node->parallel_desc().machines()) {
@@ -62,7 +62,7 @@ void StageGraph::Init(const std::string& dag_name,
       (StageNode* src_node, StageNode* dst_node) {
     Connect(src_node, this->NewStageEdge(), dst_node);
   };
-  for (const std::unique_ptr<Node>& node : segment_dag->node_vec()) {
+  for (const std::unique_ptr<Node>& node : segment_graph->node_vec()) {
     auto cur_seg = of_dynamic_cast<const SegmentNode*> (node.get());
     for (const Edge* edge : cur_seg->out_edges()) {
       const std::vector<StageNode*>& cur_stages = seg2stages.at(cur_seg);

@@ -110,19 +110,19 @@ class Graph::ConstGraphIterator final {
   ConstGraphIterator() = default;
   ~ConstGraphIterator() = default;
   
-  void Init(GraphIterator dag_iterator) {
-    dag_iterator_ = dag_iterator;
+  void Init(GraphIterator graph_iterator) {
+    graph_iterator_ = graph_iterator;
   }
   
-  const Node& operator * () { return *dag_iterator_; }
-  const Node* operator -> () { return &(*dag_iterator_); }
-  void operator ++ () { ++dag_iterator_; }
+  const Node& operator * () { return *graph_iterator_; }
+  const Node* operator -> () { return &(*graph_iterator_); }
+  void operator ++ () { ++graph_iterator_; }
   bool operator != (const ConstGraphIterator& rhs) const {
-    return dag_iterator_ != rhs.dag_iterator_;
+    return graph_iterator_ != rhs.graph_iterator_;
   }
 
  private:
-  GraphIterator dag_iterator_;
+  GraphIterator graph_iterator_;
 };
 
 class Graph::ReverseGraphIterator final {
@@ -164,19 +164,19 @@ class Graph::ConstReverseGraphIterator final {
   ConstReverseGraphIterator() = default;
   ~ConstReverseGraphIterator() = default;
   
-  void Init(ReverseGraphIterator dag_iterator) {
-    dag_iterator_ = dag_iterator;
+  void Init(ReverseGraphIterator graph_iterator) {
+    graph_iterator_ = graph_iterator;
   }
   
-  const Node& operator * () { return *dag_iterator_; }
-  const Node* operator -> () { return &(*dag_iterator_); }
-  void operator ++ () { ++dag_iterator_; }
+  const Node& operator * () { return *graph_iterator_; }
+  const Node* operator -> () { return &(*graph_iterator_); }
+  void operator ++ () { ++graph_iterator_; }
   bool operator != (const ConstReverseGraphIterator& rhs) const {
-    return dag_iterator_ != rhs.dag_iterator_;
+    return graph_iterator_ != rhs.graph_iterator_;
   }
 
  private:
-  ReverseGraphIterator dag_iterator_;
+  ReverseGraphIterator graph_iterator_;
 };
 
 } // namespace oneflow

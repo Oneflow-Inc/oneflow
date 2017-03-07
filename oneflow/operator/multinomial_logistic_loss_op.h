@@ -12,7 +12,7 @@ class MLLossDataBlobDescSet final : public DataBlobDescSet {
   MLLossDataBlobDescSet() = default;
   ~MLLossDataBlobDescSet() = default;
 
-  void Init(const std::string& op_name);
+  void Init();
 
  private:
   BlobDescriptor* data_;
@@ -30,7 +30,7 @@ class MLLossModelBlobDescSet final : public ModelBlobDescSet {
   MLLossModelBlobDescSet() = default;
   ~MLLossModelBlobDescSet() = default;
   
-  void Init(const std::string& op_name) {
+  void Init() {
     ModelBlobDescSet::Init();
   }
 

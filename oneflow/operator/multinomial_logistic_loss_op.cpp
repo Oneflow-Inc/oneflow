@@ -3,14 +3,14 @@
 
 namespace oneflow {
 
-void MLLossDataBlobDescSet::Init(const std::string& op_name) {
+void MLLossDataBlobDescSet::Init() {
   DataBlobDescSet::Init();
-  RegisterInputBlobPptr(op_name + "/data", &data_);
-  RegisterInputDiffBlobPptr(op_name + "/data_diff", &data_diff_);
-  RegisterInputBlobPptr(op_name + "/label", &label_);
-  RegisterInputDiffBlobPptr(op_name + "/label_diff", &label_diff_);
-  RegisterOutputBlobPptr(op_name + "/loss", &loss_);
-  RegisterDataTmpBlobPptr(op_name + "/loss_buffer", &loss_buffer_);
+  RegisterInputBlobPptr("data", &data_);
+  RegisterInputDiffBlobPptr("data_diff", &data_diff_);
+  RegisterInputBlobPptr("label", &label_);
+  RegisterInputDiffBlobPptr("label_diff", &label_diff_);
+  RegisterOutputBlobPptr("loss", &loss_);
+  RegisterDataTmpBlobPptr("loss_buffer", &loss_buffer_);
 }
 
 void MultinomialLogisticLossOp::Init(const OperatorConf& op_conf) {
@@ -23,11 +23,11 @@ void MultinomialLogisticLossOp::Init(const OperatorConf& op_conf) {
   mutable_pb_op_conf().reset(cnf_ptr);
 
   auto data_ptr = new MLLossDataBlobDescSet();
-  data_ptr->Init(op_name());
+  data_ptr->Init();
   mutable_data_blob_desc_set().reset(data_ptr);
 
   auto model_ptr = new MLLossModelBlobDescSet();
-  model_ptr->Init(op_name());
+  model_ptr->Init();
   mutable_model_blob_desc_set().reset(model_ptr);
 }
 

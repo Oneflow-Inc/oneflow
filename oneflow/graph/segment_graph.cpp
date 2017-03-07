@@ -32,7 +32,7 @@ void SetSegmentNodeWithSegmentIt(SegmentNode* seg_node,
 }
 
 void InitSegments(
-    const LogicalGraph* logical_dag,
+    const LogicalGraph* logical_graph,
     std::list<Segment>* seg_list,
     std::unordered_map<const LogicalNode*,
                        SegmentIt>* logical_node2seg_it) {
@@ -40,7 +40,7 @@ void InitSegments(
   seg_list->clear();
   logical_node2seg_it->clear();
   // Init ops
-  for (const std::unique_ptr<Node>& node : logical_dag->node_vec()) {
+  for (const std::unique_ptr<Node>& node : logical_graph->node_vec()) {
     auto logical_node = of_dynamic_cast<const LogicalNode*>(node.get());
     seg_list->emplace_back();
     logical_node2seg_it->insert({logical_node, --seg_list->end()});
@@ -48,7 +48,7 @@ void InitSegments(
     cur_segment.nodes = {logical_node};
   }
   // Init ancestors
-  for (auto it = logical_dag->cbegin(); it != logical_dag->cend(); ++it) {
+  for (auto it = logical_graph->cbegin(); it != logical_graph->cend(); ++it) {
     // Get correct ptr
     auto cur_node = of_dynamic_cast<const LogicalNode*> (&(*it));
     SegmentIt cur_segment = logical_node2seg_it->at(cur_node);
@@ -68,7 +68,7 @@ void InitSegments(
     }
   }
   // Init descendants
-  for (auto it = logical_dag->crbegin(); it != logical_dag->crend(); ++it) {
+  for (auto it = logical_graph->crbegin(); it != logical_graph->crend(); ++it) {
     auto cur_node = of_dynamic_cast<const LogicalNode*> (&(*it));
     SegmentIt cur_segment = logical_node2seg_it->at(cur_node);
     cur_segment->descendants.clear();
@@ -212,7 +212,7 @@ void Traverse(const LogicalNode* seed_node,
 }
 
 void DataMergeSegments(
-    const LogicalGraph* logical_dag,
+    const LogicalGraph* logical_graph,
     std::list<Segment>* seg_list,
     std::unordered_map<const LogicalNode*,
                        SegmentIt>* logical_node2seg_it) {
@@ -220,7 +220,7 @@ void DataMergeSegments(
   std::unordered_map<const LogicalNode*, bool> done;
   for (const auto& pair : *logical_node2seg_it) {
     if (pair.first->parallel_desc().policy() == ParallelDesc::kDataParallel
-        && logical_dag->IsFirstNode(pair.first) == false) {
+        && logical_graph->IsFirstNode(pair.first) == false) {
       data_parallel_node.push_back(pair.first);
       done[pair.first] = false;
     }
@@ -238,14 +238,14 @@ void DataMergeSegments(
 
 } // namespace
 
-void SegmentGraph::Init(const LogicalGraph* logical_dag) {
+void SegmentGraph::Init(const LogicalGraph* logical_graph) {
   // Build Segment
   std::list<Segment> seg_list;
   std::unordered_map<const LogicalNode*,
                      SegmentIt> logical_node2seg_it;
-  InitSegments(logical_dag, &seg_list, &logical_node2seg_it);
+  InitSegments(logical_graph, &seg_list, &logical_node2seg_it);
   ModelMergeSegments(&seg_list, &logical_node2seg_it);
-  DataMergeSegments(logical_dag,
+  DataMergeSegments(logical_graph,
                     &seg_list,
                     &logical_node2seg_it);
   // Init segment_nodes

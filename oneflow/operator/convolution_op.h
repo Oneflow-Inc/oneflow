@@ -11,7 +11,7 @@ class ConvolutionDataBlobDescSet final : public DataBlobDescSet {
   ConvolutionDataBlobDescSet() = default;
   ~ConvolutionDataBlobDescSet() = default;
 
-  void Init(const std::string& op_name);
+  void Init();
 
  private:
   BlobDescriptor* in_;
@@ -28,7 +28,7 @@ class ConvolutionModelBlobDescSet final : public ModelBlobDescSet {
   ConvolutionModelBlobDescSet() = default;
   ~ConvolutionModelBlobDescSet() = default;
 
-  void Init(const std::string& op_name);
+  void Init();
 
  private:
   BlobDescriptor* weight_;

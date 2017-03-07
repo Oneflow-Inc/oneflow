@@ -11,7 +11,7 @@ class ReluDataBlobDescSet final : public DataBlobDescSet {
   ReluDataBlobDescSet() = default;
   ~ReluDataBlobDescSet() = default;
 
-  void Init(const std::string& op_name);
+  void Init();
 
  private:
   BlobDescriptor* in_;
@@ -27,7 +27,7 @@ class ReluModelBlobDescSet final : public ModelBlobDescSet {
   ReluModelBlobDescSet() = default;
   ~ReluModelBlobDescSet() = default;
 
-  void Init(const std::string& op_name) {
+  void Init() {
     ModelBlobDescSet::Init();
   }
 

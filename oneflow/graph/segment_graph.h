@@ -59,7 +59,7 @@ class SegmentGraph final : public Graph {
   SegmentGraph() = default;
   ~SegmentGraph() = default;
 
-  void Init(const LogicalGraph* logical_dag);
+  void Init(const LogicalGraph* logical_graph);
 
  private:
   SegmentNode* NewSegmentNode() {

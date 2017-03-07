@@ -237,7 +237,7 @@ class TaskGraph final : public Graph {
   TaskGraph() = default;
   ~TaskGraph() = default;
   
-  void Init(const StageGraph* stage_dag,
+  void Init(const StageGraph* stage_graph,
             const IDMap& id_map,
             bool need_bp);
 
@@ -275,7 +275,7 @@ class TaskGraph final : public Graph {
     return ret;
   }
   
-  void InitComputeTnds(const StageGraph* stage_dag,
+  void InitComputeTnds(const StageGraph* stage_graph,
                        const IDMap& id_map,
                        Stage2TndsMap* stage2tnds);
   void Stage2DeviceComputeTnds(const StageNode* stage,
@@ -286,7 +286,7 @@ class TaskGraph final : public Graph {
   void Stage2HostComputeTnds(const StageNode* stage,
                              const IDMap& id_map,
                              TndsWithinStage* tnds_within_stage);
-  void InitBoxingTnds(const StageGraph* stage_dag,
+  void InitBoxingTnds(const StageGraph* stage_graph,
                       const IDMap& id_map,
                       Stage2TndsMap* stage2tnds);
   void InitInboxingTnd(const StageNode* stage,
@@ -295,7 +295,7 @@ class TaskGraph final : public Graph {
   void InitOutBoxingTnd(const StageNode* stage,
                         const IDMap& id_map,
                         TndsWithinStage* tnds_within_stage);
-  void ConnectTnds(const StageGraph* stage_dag,
+  void ConnectTnds(const StageGraph* stage_graph,
                    const Stage2TndsMap* stage2tnds);
   void GenerateRelatedBpNodes(
       std::function<void(const TaskNode*, TaskNode*)> add_fw_bp_pair,

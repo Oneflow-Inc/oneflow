@@ -11,7 +11,7 @@ class SoftmaxDataBlobDescSet final : public DataBlobDescSet {
   SoftmaxDataBlobDescSet() = default;
   ~SoftmaxDataBlobDescSet() = default;
 
-  void Init(const std::string& op_name);
+  void Init();
 
  private:
   BlobDescriptor* in_;
@@ -27,7 +27,7 @@ class SoftmaxModelBlobDescSet final : public ModelBlobDescSet {
   SoftmaxModelBlobDescSet() = default;
   ~SoftmaxModelBlobDescSet() = default;
 
-  void Init(const std::string& op_name) {
+  void Init() {
     ModelBlobDescSet::Init();
   }
 

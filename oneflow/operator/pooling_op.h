@@ -11,13 +11,13 @@ class PoolingDataBlobDescSet final : public DataBlobDescSet {
   PoolingDataBlobDescSet() = default;
   ~PoolingDataBlobDescSet() = default;
 
-  void Init(const std::string& op_name) {
+  void Init() {
     DataBlobDescSet::Init();
-    RegisterInputBlobPptr(op_name + "/in", &in_);
-    RegisterInputDiffBlobPptr(op_name + "/in_diff", &in_diff_);
-    RegisterOutputBlobPptr(op_name + "/out", &out_);
-    RegisterOutputDiffBlobPptr(op_name + "/out_diff", &out_diff_);
-    RegisterDataTmpBlobPptr(op_name + "/idx", &idx_);
+    RegisterInputBlobPptr("in", &in_);
+    RegisterInputDiffBlobPptr("in_diff", &in_diff_);
+    RegisterOutputBlobPptr("out", &out_);
+    RegisterOutputDiffBlobPptr("out_diff", &out_diff_);
+    RegisterDataTmpBlobPptr("idx", &idx_);
   }
 
  private:
@@ -35,7 +35,7 @@ class PoolingModelBlobDescSet final : public ModelBlobDescSet {
   PoolingModelBlobDescSet() = default;
   ~PoolingModelBlobDescSet() = default;
 
-  void Init(const std::string& op_name) {
+  void Init() {
     ModelBlobDescSet::Init();
   }
 

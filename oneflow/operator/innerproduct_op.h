@@ -11,7 +11,7 @@ class InnerProductDataBlobDescSet final : public DataBlobDescSet {
    InnerProductDataBlobDescSet() = default;
    ~InnerProductDataBlobDescSet() = default;
 
-   void Init(const std::string& op_name);
+   void Init();
 
  private:
    BlobDescriptor* in_;
@@ -26,7 +26,7 @@ class InnerProductModelBlobDescSet final : public ModelBlobDescSet {
   InnerProductModelBlobDescSet() = default;
   ~InnerProductModelBlobDescSet() = default;
   
-  void Init(const std::string& op_name);
+  void Init();
 
  private:
   BlobDescriptor* weight_;

@@ -11,10 +11,10 @@ class LoaderDataBlobDescSet final : public DataBlobDescSet {
   LoaderDataBlobDescSet() = default;
   ~LoaderDataBlobDescSet() = default;
 
-  void Init(const std::string& op_name) {
+  void Init() {
     DataBlobDescSet::Init();
-    RegisterOutputBlobPptr(op_name + "/data", &data_);
-    RegisterOutputBlobPptr(op_name + "/label", &label_);
+    RegisterOutputBlobPptr("data", &data_);
+    RegisterOutputBlobPptr("label", &label_);
   }
 
  private:
@@ -29,7 +29,7 @@ class LoaderModelBlobDescSet final : public ModelBlobDescSet {
   LoaderModelBlobDescSet() = default;
   ~LoaderModelBlobDescSet() = default;
 
-  void Init(const std::string& op_name) {
+  void Init() {
     ModelBlobDescSet::Init();
   }
 
