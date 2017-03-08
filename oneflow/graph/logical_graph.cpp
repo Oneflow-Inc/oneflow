@@ -16,19 +16,6 @@ void LogicalGraph::Init(const DLNetConf& dl_net_conf,
 // "BlobNameInGraphOf" means Blob is the output of op
 // "LogicalBlobName" = "BlobNameInGraphOf"
 
-static std::string BlobNameInGraph2BlobNameInOp(
-    const std::string& blob_name_in_graph) {
-  size_t slash_pos = blob_name_in_graph.find('/');
-  CHECK(slash_pos != std::string::npos);
-  return blob_name_in_graph.substr(slash_pos + 1);
-}
-
-static std::string BlobNameInOp2BlobNameInGraph(
-    const std::string& op_name,
-    const std::string blob_name_in_op) {
-  return op_name + "/" + blob_name_in_op;
-}
-
 void LogicalGraph::BuildGraphStruct(const DLNetConf& dl_net_conf) {
   std::unordered_map<std::string, LogicalNode*> logical_blob_name2node;
   // Process Op
@@ -39,19 +26,18 @@ void LogicalGraph::BuildGraphStruct(const DLNetConf& dl_net_conf) {
     cur_node->mutable_op_ptr() =
         OperatorFactory::singleton().ConstructOp(cur_op_conf);
     // Connect input node
-    for (const std::string& blob_name_in_op
+    for (const std::string& input_blob_name
         : cur_node->op().data_blob_desc_set().input_blob_names()) {
-      std::string logical_blob_name =
-          GetStringValueFromPbMessage(cur_op_conf, blob_name_in_op);
+      std::string logical_blob_name = 
+          cur_node->op().InputBlobName2LogicalBlobName(input_blob_name);
       LogicalNode* pred_node = logical_blob_name2node.at(logical_blob_name);
       Connect(pred_node, NewLogicalEdge(), cur_node);
     }
     // Construct output
-    for (const std::string& blob_name_in_op
+    for (const std::string& output_blob_name
         : cur_node->op().data_blob_desc_set().output_blob_names()) {
       std::string logical_blob_name =
-          BlobNameInOp2BlobNameInGraph(cur_node->op().op_name(),
-                                       blob_name_in_op);
+          cur_node->op().OutputBlobName2LogicalBlobName(output_blob_name);
       logical_blob_name2node.emplace(logical_blob_name, cur_node);
     }
   }

@@ -52,7 +52,6 @@ class PoolingOp final : public Operator {
   bool IsElemWise() const override { return false; }
 
  private:
-  PoolingOpConf op_conf_;
 
 };
 

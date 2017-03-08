@@ -48,7 +48,6 @@ class MultinomialLogisticLossOp : public Operator {
   bool IsElemWise() const override { return false; }
 
  private:
-  MultinomialLogisticLossOpConf op_conf_;
 
 };
 

@@ -44,7 +44,6 @@ class ReluOp final : public Operator {
   bool IsElemWise() const override { return true; }
 
  private:
-  ReluOpConf op_conf_;
 
 };
 

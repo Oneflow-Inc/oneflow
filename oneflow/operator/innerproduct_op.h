@@ -47,7 +47,6 @@ class InnerProductOp final : public Operator {
   bool IsElemWise() const override { return false; }
 
  private:
-  InnerProductOpConf op_conf_;
 
 };
 

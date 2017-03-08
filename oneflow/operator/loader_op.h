@@ -46,7 +46,6 @@ class LoaderOp final : public Operator {
   bool IsElemWise() const override { return false; }
 
  private:
-  LoaderOpConf op_conf_;
 
 };
 

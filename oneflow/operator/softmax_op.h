@@ -44,7 +44,6 @@ class SoftmaxOp : public Operator {
   bool IsElemWise() const override { return false; }
 
  private:
-  SoftmaxOpConf op_conf_;
 
 };
 

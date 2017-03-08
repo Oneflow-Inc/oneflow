@@ -147,6 +147,15 @@ class Operator {
   const ModelBlobDescSet& model_blob_desc_set() const {
     return *(model_blob_desc_set_.get());
   }
+
+  std::string InputBlobName2LogicalBlobName(
+      const std::string& input_blob_name) const {
+    return GetStringValueFromPbMessage(*pb_op_conf_, input_blob_name);
+  }
+  std::string OutputBlobName2LogicalBlobName(
+      const std::string& output_blob_name) const {
+    return op_name_ + "/" + output_blob_name;
+  }
   
   virtual void Init(const OperatorConf& op_conf) = 0;
   virtual bool IsElemWise() const = 0;
