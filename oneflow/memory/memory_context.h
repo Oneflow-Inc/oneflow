@@ -14,7 +14,8 @@ enum class MemoryType {
 
 struct MemoryContext {
   MemoryType mem_type;
-  DeviceGlobalId device_global_id;
+  MachineId machine_id;
+  DevicePhysicalId device_physical_id;
 };
 
 } // namespace oneflow

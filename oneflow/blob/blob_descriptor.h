@@ -19,7 +19,7 @@ class BlobDescriptor {
 
   const Shape& shape() const { return shape_; }
   const MemoryContext& memory_context() const { return memory_context_; }
-  size_t byte_size() const {
+  size_t ByteSize() const {
     return shape_.elem_cnt() * GetFloatByteSize(float_type_);
   }
 
