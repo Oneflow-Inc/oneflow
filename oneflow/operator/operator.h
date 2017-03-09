@@ -139,13 +139,13 @@ class Operator {
     return op_name_;
   }
   const PbMessage& pb_op_conf() const {
-    return *(pb_op_conf_.get());
+    return *pb_op_conf_;
   }
   const DataBlobDescSet& data_blob_desc_set() const {
-    return *(data_blob_desc_set_.get());
+    return *data_blob_desc_set_;
   }
   const ModelBlobDescSet& model_blob_desc_set() const {
-    return *(model_blob_desc_set_.get());
+    return *model_blob_desc_set_;
   }
 
   std::string InputBlobName2LogicalBlobName(
