@@ -7,7 +7,7 @@
 
 namespace oneflow {
 
-class BlobDescriptor {
+class BlobDescriptor final {
  public:
   DISALLOW_COPY_AND_MOVE(BlobDescriptor);
   BlobDescriptor() = default;
