@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class ComputeOpNode : OpNode {
+class ComputeOpNode : public OpNode {
  public:
   DISALLOW_COPY_AND_MOVE(ComputeOpNode);
   ComputeOpNode() = default;
@@ -13,14 +13,13 @@ class ComputeOpNode : OpNode {
 
   virtual void Init() {
     OpNode::Init();
-    // struct style
   }
 
  private:
 
 };
 
-class ComputeOpEdge : OpEdge {
+class ComputeOpEdge : public OpEdge {
  public:
   DISALLOW_COPY_AND_MOVE(ComputeOpEdge);
   ComputeOpEdge() = default;
@@ -37,7 +36,7 @@ class ComputeOperatorGraph : public OperatorGraph {
  public:
   DISALLOW_COPY_AND_MOVE(ComputeOperatorGraph);
   ComputeOperatorGraph() = default;
-  virtual ComputeOperatorGraph() = default;
+  virtual ~ComputeOperatorGraph() = default;
 
   virtual void Init() {
     OperatorGraph::Init();

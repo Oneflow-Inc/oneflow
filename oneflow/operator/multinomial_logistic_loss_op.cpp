@@ -3,14 +3,20 @@
 
 namespace oneflow {
 
-void MLLossDataBlobDescSet::Init() {
-  DataBlobDescSet::Init();
-  RegisterInputBlobPptr("data", &data_);
-  RegisterInputDiffBlobPptr("data_diff", &data_diff_);
-  RegisterInputBlobPptr("label", &label_);
-  RegisterInputDiffBlobPptr("label_diff", &label_diff_);
-  RegisterOutputBlobPptr("loss", &loss_);
-  RegisterDataTmpBlobPptr("loss_buffer", &loss_buffer_);
+namespace {
+
+void InitDataBlobNameSet(DataBlobNameSet& cur_set) {
+  cur_set.input_blob_names.push_back("data");
+  cur_set.input_diff_blob_names.push_back("data_diff");
+  cur_set.input_blob_names.push_back("label");
+  cur_set.input_diff_blob_names.push_back("label_diff");
+  cur_set.output_blob_names.push_back("loss");
+  cur_set.data_tmp_blob_names.push_back("loss_buffer");
+}
+
+void InitModelBlobNameSet(ModelBlobNameSet& cur_set) {
+}
+
 }
 
 void MultinomialLogisticLossOp::Init(const OperatorConf& op_conf) {
@@ -22,13 +28,8 @@ void MultinomialLogisticLossOp::Init(const OperatorConf& op_conf) {
           op_conf.multinomial_logistic_loss_op_conf());
   mutable_pb_op_conf().reset(cnf_ptr);
 
-  auto data_ptr = new MLLossDataBlobDescSet();
-  data_ptr->Init();
-  mutable_data_blob_desc_set().reset(data_ptr);
-
-  auto model_ptr = new MLLossModelBlobDescSet();
-  model_ptr->Init();
-  mutable_model_blob_desc_set().reset(model_ptr);
+  InitDataBlobNameSet(mutable_data_blob_name_set());
+  InitModelBlobNameSet(mutable_model_blob_name_set());
 }
 
 } // namespace oneflow

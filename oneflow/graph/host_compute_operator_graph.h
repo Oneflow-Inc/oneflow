@@ -2,6 +2,7 @@
 #define ONEFLOW_GRAPH_HOST_COMPUTE_OPERATOR_GRAPH_H_
 
 #include "graph/compute_operator_graph.h"
+#include "blob/blob_descriptor.h"
 
 namespace oneflow {
 
@@ -14,8 +15,16 @@ class HostCompOpNode final : public ComputeOpNode {
   void Init() {
     ComputeOpNode::Init();
   }
+  
+  std::shared_ptr<const Operator> op() const {
+    return op_;
+  }
+  std::shared_ptr<const Operator>& mutable_op() {
+    return op_;
+  }
 
  private:
+  std::shared_ptr<const Operator> op_;
 };
 
 class HostCompOpEdge final : public ComputeOpEdge {
@@ -28,7 +37,12 @@ class HostCompOpEdge final : public ComputeOpEdge {
     ComputeOpEdge::Init();
   }
 
+  void set_blob_desc_ptr(BlobDescriptor* new_blob_desc_ptr) {
+    blob_desc_ptr_ = new_blob_desc_ptr;
+  }
+
  private:
+  BlobDescriptor* blob_desc_ptr_;
 };
 
 class HostCompOperatorGraph final : public ComputeOperatorGraph {
@@ -37,51 +51,44 @@ class HostCompOperatorGraph final : public ComputeOperatorGraph {
   HostCompOperatorGraph() = default;
   ~HostCompOperatorGraph() = default;
 
-  void Init() {
+  void Init(const HostComputeTnd* task_node, bool job_has_bp) {
     ComputeOperatorGraph::Init();
+    task_node_ = task_node;
+    job_has_bp_ = job_has_bp;
   }
 
-  void FwBuildOperatorGraph(const TaskNode* task_node) {
-    // global map
-    std::unordered_map<std::string, BlobDescriptor> lbn2blob_desc;
-    std::unordered_map<std::string, HostCompOpNode*> lbn2producer;
-    std::unordered_map<std::string, HostCompOpNode*> external_lbn2consumer;
-    // Build From UserOp
-    for (std::shared_ptr<const Operator> op : task_node->op_vec()) {
-      HostCompOpNode* cur_node = NewHostCompOpNode();
-      cur_node->mutable_op() = op;
-      for (auto obn : op->data_blob_desc_set().output_blob_names()) {
-        std::string lbn = op->obn2lbn(obn);
-        lbn2producer[lbn] = cur_node;
-        lbn2blob_desc[lbn]->Init();
-      }
+  void FwBuildGraph() {
+    BuildFromUserOps();
+    if (job_has_bp_) {
+      AddCopyInOp();
     }
-    for (std::unique_ptr<Node>& base_node : node_vec()) {
-      auto cur_node = of_dynamic_cast<HostCompOpNode*>(base_node.get());
-      for (auto ibn : cur_node->op().data_blob_desc_set().input_blob_names()) {
-        std::string lbn = cur_node->op().ibn2lbn(ibn);
-        auto producer_node_it = lbn2producer.find(lbn);
-        if (producer_node_it != lbn2producer.end()) {
-          HostCompOpEdge* new_edge = NewHostCompOpEdge();
-          new_edge->set_blob_desc_ptr(&(lbn2blob_desc.at(lbn)));
-          Connect(producer_node_it->second, new_edge, cur_node);
-        } else {
-          external_lbn2consumer[lbn] = cur_node;
-        }
-      }
-    }
-    // AddCopyD2D
-    if (task_node->is_bp_node()) {
-      OperatorConf op_conf = ConstructCopyOpConf(CopyOpConf::CopyType::D2D, external_lbn2consumer);
-      std::shared_ptr<const Operator> op_ptr = OperatorFactory::singleton().ConstructOp(op_conf);
-
-    }
-    
-    // AddSplit
-    // UpdateStartAndStop();
+    AddCloneOp();
+    UpdateStartAndStop();
   }
 
  private:
+  void BuildFromUserOps();
+  void AddCopyInOp();
+  void AddCloneOp();
+
+
+  HostCompOpNode* NewHostCompOpNode() {
+    auto ret = new HostCompOpNode;
+    ret->Init();
+    RegisterNode(ret);
+    return ret;
+  }
+  HostCompOpEdge* NewHostCompOpEdge() {
+    auto ret = new HostCompOpEdge;
+    ret->Init();
+    RegisterEdge(ret);
+    return ret;
+  }
+
+  const HostComputeTnd* task_node_;
+  bool job_has_bp_;
+  std::unordered_map<std::string, HostCompOpNode*> input_lbn2consumer_;
+  std::unordered_map<std::string, BlobDescriptor> produced_lbn2blob_desc_;
 
 };
 

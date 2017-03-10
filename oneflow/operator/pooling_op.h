@@ -5,43 +5,6 @@
 
 namespace oneflow {
 
-class PoolingDataBlobDescSet final : public DataBlobDescSet {
- public:
-  DISALLOW_COPY_AND_MOVE(PoolingDataBlobDescSet);
-  PoolingDataBlobDescSet() = default;
-  ~PoolingDataBlobDescSet() = default;
-
-  void Init() {
-    DataBlobDescSet::Init();
-    RegisterInputBlobPptr("in", &in_);
-    RegisterInputDiffBlobPptr("in_diff", &in_diff_);
-    RegisterOutputBlobPptr("out", &out_);
-    RegisterOutputDiffBlobPptr("out_diff", &out_diff_);
-    RegisterDataTmpBlobPptr("idx", &idx_);
-  }
-
- private:
-  BlobDescriptor* in_;
-  BlobDescriptor* in_diff_;
-  BlobDescriptor* out_;
-  BlobDescriptor* out_diff_;
-  BlobDescriptor* idx_;
-
-};
-
-class PoolingModelBlobDescSet final : public ModelBlobDescSet {
- public:
-  DISALLOW_COPY_AND_MOVE(PoolingModelBlobDescSet);
-  PoolingModelBlobDescSet() = default;
-  ~PoolingModelBlobDescSet() = default;
-
-  void Init() {
-    ModelBlobDescSet::Init();
-  }
-
- private:
-};
-
 class PoolingOp final : public Operator {
  public:
   DISALLOW_COPY_AND_MOVE(PoolingOp);

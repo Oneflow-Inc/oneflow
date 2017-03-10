@@ -5,35 +5,6 @@
 
 namespace oneflow {
 
-class ReluDataBlobDescSet final : public DataBlobDescSet {
- public:
-  DISALLOW_COPY_AND_MOVE(ReluDataBlobDescSet);
-  ReluDataBlobDescSet() = default;
-  ~ReluDataBlobDescSet() = default;
-
-  void Init();
-
- private:
-  BlobDescriptor* in_;
-  BlobDescriptor* in_diff_;
-  BlobDescriptor* out_;
-  BlobDescriptor* out_diff_;
-
-};
-
-class ReluModelBlobDescSet final : public ModelBlobDescSet {
- public:
-  DISALLOW_COPY_AND_MOVE(ReluModelBlobDescSet);
-  ReluModelBlobDescSet() = default;
-  ~ReluModelBlobDescSet() = default;
-
-  void Init() {
-    ModelBlobDescSet::Init();
-  }
-
- private:
-};
-
 class ReluOp final : public Operator {
  public:
   DISALLOW_COPY_AND_MOVE(ReluOp);

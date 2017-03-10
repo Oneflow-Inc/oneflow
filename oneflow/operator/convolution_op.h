@@ -5,39 +5,6 @@
 
 namespace oneflow {
 
-class ConvolutionDataBlobDescSet final : public DataBlobDescSet {
- public:
-  DISALLOW_COPY_AND_MOVE(ConvolutionDataBlobDescSet);
-  ConvolutionDataBlobDescSet() = default;
-  ~ConvolutionDataBlobDescSet() = default;
-
-  void Init();
-
- private:
-  BlobDescriptor* in_;
-  BlobDescriptor* in_diff_;
-  BlobDescriptor* out_;
-  BlobDescriptor* out_diff_;
-  BlobDescriptor* col_buf_;
-
-};
-
-class ConvolutionModelBlobDescSet final : public ModelBlobDescSet {
- public:
-  DISALLOW_COPY_AND_MOVE(ConvolutionModelBlobDescSet);
-  ConvolutionModelBlobDescSet() = default;
-  ~ConvolutionModelBlobDescSet() = default;
-
-  void Init();
-
- private:
-  BlobDescriptor* weight_;
-  BlobDescriptor* weight_diff_;
-  BlobDescriptor* bias_;
-  BlobDescriptor* bias_diff_;
-  BlobDescriptor* bias_multiplier_;
-};
-
 class ConvolutionOp final : public Operator {
  public:
   DISALLOW_COPY_AND_MOVE(ConvolutionOp);

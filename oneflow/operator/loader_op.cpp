@@ -3,6 +3,18 @@
 
 namespace oneflow {
 
+namespace {
+
+void InitDataBlobNameSet(DataBlobNameSet& cur_set) {
+  cur_set.output_blob_names.push_back("data");
+  cur_set.output_blob_names.push_back("label");
+}
+
+void InitModelBlobNameSet(ModelBlobNameSet& cur_set) {
+}
+
+}
+
 void LoaderOp::Init(const OperatorConf& op_conf) {
   mutable_op_name() = op_conf.name();
   
@@ -10,13 +22,8 @@ void LoaderOp::Init(const OperatorConf& op_conf) {
   auto cnf_ptr = new LoaderOpConf(op_conf.loader_op_conf());
   mutable_pb_op_conf().reset(cnf_ptr);
   
-  auto data_ptr = new LoaderDataBlobDescSet();
-  data_ptr->Init();
-  mutable_data_blob_desc_set().reset(data_ptr);
-
-  auto model_ptr = new LoaderModelBlobDescSet();
-  model_ptr->Init();
-  mutable_model_blob_desc_set().reset(model_ptr);
+  InitDataBlobNameSet(mutable_data_blob_name_set());
+  InitModelBlobNameSet(mutable_model_blob_name_set());
 }
 
 } // namespace oneflow

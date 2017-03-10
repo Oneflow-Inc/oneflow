@@ -3,19 +3,23 @@
 
 namespace oneflow {
 
-void InnerProductDataBlobDescSet::Init() {
-  RegisterInputBlobPptr("in", &in_);
-  RegisterInputDiffBlobPptr("in_diff", &in_diff_);
-  RegisterOutputBlobPptr("out", &out_);
-  RegisterOutputDiffBlobPptr("out_diff", &out_diff_);
+namespace {
+
+void InitDataBlobNameSet(DataBlobNameSet& cur_set) {
+  cur_set.input_blob_names.push_back("in");
+  cur_set.input_diff_blob_names.push_back("in_diff");
+  cur_set.output_blob_names.push_back("out");
+  cur_set.output_diff_blob_names.push_back("out_diff");
 }
 
-void InnerProductModelBlobDescSet::Init() {
-  RegisterModelBlobPptr("weight", &weight_);
-  RegisterModelDiffBlobPptr("weight_diff", &weight_diff_);
-  RegisterModelBlobPptr("bias", &bias_);
-  RegisterModelDiffBlobPptr("bias_diff_", &bias_diff_);
-  RegisterModelTmpBlobPptr("bias_multiplier", &bias_multiplier_);
+void InitModelBlobNameSet(ModelBlobNameSet& cur_set) {
+  cur_set.model_blob_names.push_back("weight");
+  cur_set.model_diff_blob_names.push_back("weight_diff");
+  cur_set.model_blob_names.push_back("bias");
+  cur_set.model_diff_blob_names.push_back("bias_diff");
+  cur_set.model_tmp_blob_names.push_back("bias_multiplier");
+}
+
 }
 
 void InnerProductOp::Init(const OperatorConf& op_conf) {
@@ -25,14 +29,9 @@ void InnerProductOp::Init(const OperatorConf& op_conf) {
   auto cnf_ptr =
       new InnerProductOpConf(op_conf.inner_product_op_conf());
   mutable_pb_op_conf().reset(cnf_ptr);
-
-  auto data_ptr = new InnerProductDataBlobDescSet();
-  data_ptr->Init();
-  mutable_data_blob_desc_set().reset(data_ptr);
-
-  auto model_ptr = new InnerProductModelBlobDescSet();
-  model_ptr->Init();
-  mutable_model_blob_desc_set().reset(model_ptr);
+  
+  InitDataBlobNameSet(mutable_data_blob_name_set());
+  InitModelBlobNameSet(mutable_model_blob_name_set());
 }
 
 } // namespace oneflow

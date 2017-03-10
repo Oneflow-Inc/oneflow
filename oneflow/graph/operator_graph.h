@@ -1,9 +1,11 @@
 #ifndef ONEFLOW_GRAPH_OPERATOR_GRAPH_H_
 #define ONEFLOW_GRAPH_OPERATOR_GRAPH_H_
 
+#include "graph/task_graph.h"
+
 namespace oneflow {
 
-class OpNode : Node {
+class OpNode : public Node {
  public:
   DISALLOW_COPY_AND_MOVE(OpNode);
   OpNode() = default;
@@ -17,7 +19,7 @@ class OpNode : Node {
  private:
 };
 
-class OpEdge : Edge {
+class OpEdge : public Edge {
  public:
   DISALLOW_COPY_AND_MOVE(OpEdge);
   OpEdge() = default;
@@ -31,15 +33,15 @@ class OpEdge : Edge {
  private:
 };
 
-class OperatorGraph {
+class OperatorGraph : public Graph {
  public:
   DISALLOW_COPY_AND_MOVE(OperatorGraph);
   OperatorGraph() = default;
   virtual ~OperatorGraph() = default;
 
-  virtual void Init(); // TODO
-
-  virtual void BuildOperatorGraph(const TaskNode*) = 0;
+  virtual void Init() {
+    Graph::Init();
+  }
 
  private:
 };

@@ -27,14 +27,14 @@ void LogicalGraph::BuildGraphStruct(const DLNetConf& dl_net_conf) {
         OperatorFactory::singleton().ConstructOp(cur_op_conf);
     // Connect input node
     for (const std::string& input_blob_name
-        : cur_node->op().data_blob_desc_set().input_blob_names()) {
+        : cur_node->op().data_blob_name_set().input_blob_names) {
       std::string logical_blob_name = cur_node->op().ibn2lbn(input_blob_name);
       LogicalNode* pred_node = logical_blob_name2node.at(logical_blob_name);
       Connect(pred_node, NewLogicalEdge(), cur_node);
     }
     // Construct output
     for (const std::string& output_blob_name
-        : cur_node->op().data_blob_desc_set().output_blob_names()) {
+        : cur_node->op().data_blob_name_set().output_blob_names) {
       std::string logical_blob_name = cur_node->op().obn2lbn(output_blob_name);
       logical_blob_name2node.emplace(logical_blob_name, cur_node);
     }

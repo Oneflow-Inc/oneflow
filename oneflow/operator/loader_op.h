@@ -5,37 +5,6 @@
 
 namespace oneflow {
 
-class LoaderDataBlobDescSet final : public DataBlobDescSet {
- public:
-  DISALLOW_COPY_AND_MOVE(LoaderDataBlobDescSet);
-  LoaderDataBlobDescSet() = default;
-  ~LoaderDataBlobDescSet() = default;
-
-  void Init() {
-    DataBlobDescSet::Init();
-    RegisterOutputBlobPptr("data", &data_);
-    RegisterOutputBlobPptr("label", &label_);
-  }
-
- private:
-  BlobDescriptor* data_;
-  BlobDescriptor* label_;
-
-};
-
-class LoaderModelBlobDescSet final : public ModelBlobDescSet {
- public:
-  DISALLOW_COPY_AND_MOVE(LoaderModelBlobDescSet);
-  LoaderModelBlobDescSet() = default;
-  ~LoaderModelBlobDescSet() = default;
-
-  void Init() {
-    ModelBlobDescSet::Init();
-  }
-
- private:
-};
-
 class LoaderOp final : public Operator {
  public:
   DISALLOW_COPY_AND_MOVE(LoaderOp);

@@ -3,22 +3,24 @@
 
 namespace oneflow {
 
-void ConvolutionDataBlobDescSet::Init() {
-  DataBlobDescSet::Init();
-  RegisterInputBlobPptr("in", &in_);
-  RegisterInputDiffBlobPptr("in_diff", &in_diff_);
-  RegisterOutputBlobPptr("out", &out_);
-  RegisterOutputDiffBlobPptr("out_diff", &out_diff_);
-  RegisterDataTmpBlobPptr("col_buf", &col_buf_);
+namespace {
+
+void InitDataBlobNameSet(DataBlobNameSet& cur_set) {
+  cur_set.input_blob_names.push_back("in");
+  cur_set.input_diff_blob_names.push_back("in_diff");
+  cur_set.output_blob_names.push_back("out");
+  cur_set.output_diff_blob_names.push_back("out_diff");
+  cur_set.data_tmp_blob_names.push_back("col_buf");
 }
 
-void ConvolutionModelBlobDescSet::Init() {
-  ModelBlobDescSet::Init();
-  RegisterModelBlobPptr("weight", &weight_);
-  RegisterModelDiffBlobPptr("weight_diff", &weight_diff_);
-  RegisterModelBlobPptr("bias", &bias_);
-  RegisterModelDiffBlobPptr("bias_diff", &bias_diff_);
-  RegisterModelTmpBlobPptr("bias_multiplier", &bias_multiplier_);
+void InitModelBlobNameSet(ModelBlobNameSet& cur_set) {
+  cur_set.model_blob_names.push_back("weight");
+  cur_set.model_diff_blob_names.push_back("weight_diff");
+  cur_set.model_blob_names.push_back("bias");
+  cur_set.model_diff_blob_names.push_back("bias_diff");
+  cur_set.model_tmp_blob_names.push_back("bias_multiplier");
+}
+
 }
 
 void ConvolutionOp::Init(const OperatorConf& op_conf) {
@@ -28,13 +30,8 @@ void ConvolutionOp::Init(const OperatorConf& op_conf) {
   auto cnf_ptr = new ConvolutionOpConf(op_conf.convolution_op_conf());
   mutable_pb_op_conf().reset(cnf_ptr);
   
-  auto data_ptr = new ConvolutionDataBlobDescSet();
-  data_ptr->Init();
-  mutable_data_blob_desc_set().reset(data_ptr);
-
-  auto model_ptr = new ConvolutionModelBlobDescSet();
-  model_ptr->Init();
-  mutable_model_blob_desc_set().reset(model_ptr);
+  InitDataBlobNameSet(mutable_data_blob_name_set());
+  InitModelBlobNameSet(mutable_model_blob_name_set());
 }
 
 } // namespace oneflow

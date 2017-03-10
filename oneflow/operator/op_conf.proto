@@ -73,6 +73,11 @@ message CopyOpConf {
   repeated string logical_blob_names = 2;
 }
 
+message CloneOpConf {
+  string logical_blob_name = 1;
+  int32 clone_num = 2;
+}
+
 message OperatorConf {
   string name = 1;
   oneof specified_type {
@@ -84,5 +89,6 @@ message OperatorConf {
     SoftmaxOpConf softmax_op_conf = 105;
     MultinomialLogisticLossOpConf multinomial_logistic_loss_op_conf = 106;
     CopyOpConf copy_op_conf = 107;
+    CloneOpConf clone_op_conf = 108;
   }
 }

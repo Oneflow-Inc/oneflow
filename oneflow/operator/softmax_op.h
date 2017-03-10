@@ -5,35 +5,6 @@
 
 namespace oneflow {
 
-class SoftmaxDataBlobDescSet final : public DataBlobDescSet {
- public:
-  DISALLOW_COPY_AND_MOVE(SoftmaxDataBlobDescSet);
-  SoftmaxDataBlobDescSet() = default;
-  ~SoftmaxDataBlobDescSet() = default;
-
-  void Init();
-
- private:
-  BlobDescriptor* in_;
-  BlobDescriptor* in_diff_;
-  BlobDescriptor* out_;
-  BlobDescriptor* out_diff_;
-
-};
-
-class SoftmaxModelBlobDescSet final : public ModelBlobDescSet {
- public:
-  DISALLOW_COPY_AND_MOVE(SoftmaxModelBlobDescSet);
-  SoftmaxModelBlobDescSet() = default;
-  ~SoftmaxModelBlobDescSet() = default;
-
-  void Init() {
-    ModelBlobDescSet::Init();
-  }
-
- private:
-};
-
 class SoftmaxOp : public Operator {
  public:
   DISALLOW_COPY_AND_MOVE(SoftmaxOp);

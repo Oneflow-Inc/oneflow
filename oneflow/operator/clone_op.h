@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_OPERATOR_COPY_OP_H_
-#define ONEFLOW_OPERATOR_COPY_OP_H_
+#ifndef ONEFLOW_OPERATOR_CLONE_OP_H_
+#define ONEFLOW_OPERATOR_CLONE_OP_H_
 
 #include "operator/operator.h"
 
 namespace oneflow {
 
-class CopyOp final : public Operator {
+class CloneOp final : public Operator {
  public:
-  DISALLOW_COPY_AND_MOVE(CopyOp);
-  CopyOp() = default;
-  ~CopyOp() = default;
+  DISALLOW_COPY_AND_MOVE(CloneOp);
+  CloneOp() = default;
+  ~CloneOp() = default;
 
   void Init(const OperatorConf& op_conf) override;
 
@@ -26,4 +26,4 @@ class CopyOp final : public Operator {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_OPERATOR_COPY_OP_H_
+#endif // ONEFLOW_OPERATOR_CLONE_OP_H_

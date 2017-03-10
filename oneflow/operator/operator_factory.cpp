@@ -11,7 +11,7 @@
 namespace oneflow {
 
 // It is ugly now, maybe we can find one more elegant implemention ?
-std::shared_ptr<Operator> OperatorFactory::ConstructOp(
+std::shared_ptr<const Operator> OperatorFactory::ConstructOp(
     const OperatorConf& op_conf) const {
   std::shared_ptr<Operator> ret;
   switch (op_conf.specified_type_case()) {
