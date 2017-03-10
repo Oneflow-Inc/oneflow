@@ -45,7 +45,7 @@ class HostCompOperatorGraph final : public ComputeOperatorGraph {
     // global map
     std::unordered_map<std::string, BlobDescriptor> lbn2blob_desc;
     std::unordered_map<std::string, HostCompOpNode*> lbn2producer;
-    std::shared_ptr<Operator> 
+    std::unordered_map<std::string, HostCompOpNode*> external_lbn2consumer;
     // Build From UserOp
     for (std::shared_ptr<const Operator> op : task_node->op_vec()) {
       HostCompOpNode* cur_node = NewHostCompOpNode();
@@ -66,13 +66,16 @@ class HostCompOperatorGraph final : public ComputeOperatorGraph {
           new_edge->set_blob_desc_ptr(&(lbn2blob_desc.at(lbn)));
           Connect(producer_node_it->second, new_edge, cur_node);
         } else {
-          // TODO:
-          // It is not the blob produced by op in this Task
-          // we should find it in pre-task later
+          external_lbn2consumer[lbn] = cur_node;
         }
       }
     }
     // AddCopyD2D
+    if (task_node->is_bp_node()) {
+      OperatorConf op_conf = ConstructCopyOpConf(CopyOpConf::CopyType::D2D, external_lbn2consumer);
+      std::shared_ptr<const Operator> op_ptr = OperatorFactory::singleton().ConstructOp(op_conf);
+
+    }
     
     // AddSplit
     // UpdateStartAndStop();

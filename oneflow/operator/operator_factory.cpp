@@ -11,9 +11,9 @@
 namespace oneflow {
 
 // It is ugly now, maybe we can find one more elegant implemention ?
-std::unique_ptr<Operator> OperatorFactory::ConstructOp(
+std::shared_ptr<Operator> OperatorFactory::ConstructOp(
     const OperatorConf& op_conf) const {
-  std::unique_ptr<Operator> ret;
+  std::shared_ptr<Operator> ret;
   switch (op_conf.specified_type_case()) {
     case OperatorConf::kConvolutionOpConf: {
       ret.reset(new ConvolutionOp);
