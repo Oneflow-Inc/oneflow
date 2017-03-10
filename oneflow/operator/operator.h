@@ -151,10 +151,10 @@ class Operator {
   // IBN: InputBlobName
   // OBN: OutputBlobName
   // LBN: LogicalBlobName
-  std::string IBN2LBN(const std::string& input_blob_name) const {
+  virtual std::string ibn2lbn(const std::string& input_blob_name) const {
     return GetStringValueFromPbMessage(*pb_op_conf_, input_blob_name);
   }
-  std::string OBN2LBN(const std::string& output_blob_name) const {
+  virtual std::string obn2lbn(const std::string& output_blob_name) const {
     return op_name_ + "/" + output_blob_name;
   }
   

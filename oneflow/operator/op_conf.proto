@@ -60,7 +60,18 @@ message MultinomialLogisticLossOpConf {
   string data = 1;
   string label = 2;
   string loss = 3;
-};
+}
+
+message CopyOpConf {
+  enum CopyType {
+    H2D = 0;
+    D2H = 1;
+    D2D = 2;
+    H2H = 3;
+  }
+  CopyType copy_type = 1;
+  repeated string logical_blob_names = 2;
+}
 
 message OperatorConf {
   string name = 1;
@@ -72,5 +83,6 @@ message OperatorConf {
     ReluOpConf relu_op_conf = 104;
     SoftmaxOpConf softmax_op_conf = 105;
     MultinomialLogisticLossOpConf multinomial_logistic_loss_op_conf = 106;
+    CopyOpConf copy_op_conf = 107;
   }
 }
