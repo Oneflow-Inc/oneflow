@@ -1,0 +1,124 @@
+#include "task/task_op.h"
+#include <vector>
+#include <memory>
+#include <glog/logging.h>
+#include "common/common.h"
+#include "context/one.h"
+#include "thread/base_thread.h"
+#include "task/device_context.h"
+#include "task/task.h"
+#include "task/task_item.h"
+#include "task/task_param.h"
+#include "task/task_consequence.h"
+#include "task/task_param_creator.h"
+
+namespace caffe {
+template <typename Dtype>
+TaskOp<Dtype>::TaskOp(
+  Task<Dtype>* task,
+  std::shared_ptr<DeviceContext<Dtype>> device_context) :
+  task_(task),
+  device_context_(device_context), task_param_num_(10) {
+  // TODO(jiyuan): set the |task_param_num_|
+}
+
+template <typename Dtype>
+TaskOp<Dtype>::~TaskOp() { }
+
+template <typename Dtype>
+void TaskOp<Dtype>::Setup() {
+  task_param_creator_.reset(new TaskParamCreator<Dtype>(task_param_num_, task_));
+}
+
+template <typename Dtype>
+void TaskOp<Dtype>::Execute(TaskItem* task_item) {
+  // TODO(jiyuan): carefully handle with network task
+
+  // 1, Prepare execution environment based on task_item
+  auto& register_ids = task_item->register_ids();
+  auto& data_params = GetDataParams(register_ids);
+  auto& model_params = GetModelParams(register_ids);
+
+  // 2, Work on |task_item|, either Forward or Backward
+  // TODO(jiyuan): set cuda_stream if necessary
+  cudaStream_t cuda_stream;
+
+<<<<<<< HEAD
+  auto dst_register_id_ = task_item->dst_register_id();
+  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  auto register_group_id = id_map::task_local_id_from_register_id(dst_register_id_);
+  auto columnTable = task_->task_sm()->columnTable();
+  // NoUpdate: src:gradient dst:gradient  Update: src:gradient,model dst:model
+  bool modelupdate = columnTable[register_group_id];
+  // FP/BP if modelupdate, model update layer goes.
+
+
+=======
+  if (task_->is_forward()) {
+    Forward(data_params, model_params);
+  } else {
+    Backward(data_params, model_params);
+  }
+
+  // 3, Register or do OnComplete routine
+>>>>>>> users/v-kayin/tetris
+  auto style = task_->task_consequence()->style();
+  switch (style) {
+  case ConsequenceStyle::kSynchronous:
+    TaskConsequence<Dtype>::OnCompleteTaskItem(task_item);
+    break;
+  case ConsequenceStyle::kAsynchronousCallback:
+    // Add callback to the stream
+    CUDA_CHECK(cudaStreamAddCallback(cuda_stream,
+      TaskConsequence<Dtype>::Callback,
+      task_item, 0));
+    break;
+  case ConsequenceStyle::kAsynchronousMessage:
+    // TODO(jiyuan)
+    break;
+  default:
+    LOG(FATAL) << "Unknown ConsequenceStyle";
+    break;
+  }
+}
+
+template <typename Dtype>
+const std::vector<DataParam<Dtype>*>&
+TaskOp<Dtype>::GetDataParams(
+const std::vector<int64_t>& register_ids) const {
+  auto task_param = task_param_creator_->GetTaskParam(register_ids);
+  return task_param->data_params();
+}
+
+template <typename Dtype>
+const std::vector<ModelParam<Dtype>*>&
+TaskOp<Dtype>::GetModelParams(
+const std::vector<int64_t>& register_ids) const {
+  auto task_param = task_param_creator_->GetTaskParam(register_ids);
+  return task_param->model_params();
+}
+
+template <typename Dtype>
+void TaskOp<Dtype>::Forward(
+  const std::vector<DataParam<Dtype>* >& data_params,
+  const std::vector<ModelParam<Dtype>* >& model_params) {
+  auto& ordered_layers = task_param_creator_->ordered_layers();
+  int32_t layer_num = ordered_layers.size();
+  for (int32_t i = 0; i < layer_num; ++i) {
+    ordered_layers[i]->Forward(context_param_, data_params[i], model_params[i]);
+  }
+}
+
+template <typename Dtype>
+void TaskOp<Dtype>::Backward(
+  const std::vector<DataParam<Dtype>* >& data_params,
+  const std::vector<ModelParam<Dtype>* >& model_params) {
+  auto& ordered_layers = task_param_creator_->ordered_layers();
+  int32_t layer_num = ordered_layers.size();
+  for (int32_t i = 0; i < layer_num; ++i) {
+    ordered_layers[i]->Backward(context_param_, data_params[i], model_params[i]);
+  }
+}
+
+INSTANTIATE_CLASS(TaskOp);
+}
