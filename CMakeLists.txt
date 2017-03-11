@@ -29,15 +29,11 @@ include(FindGRPC)
 file(GLOB_RECURSE oneflow_protos RELATIVE ${oneflow_source_dir} "*.proto")
 PROTOBUF_GENERATE_CPP(GRPC_SRCS GRPC_HDRS ${oneflow_source_dir} ${oneflow_protos})
 
-set(GENERATED_PROTOBUF_PATH "${CMAKE_BINARY_DIR}/protos")
+set(GENERATED_PROTOBUF_PATH "${CMAKE_BINARY_DIR}/oneflow/proto")
 file(MAKE_DIRECTORY ${GENERATED_PROTOBUF_PATH})
 
-MESSAGE(STATUS "GRPC_SRCS = ${GRPC_SRCS}")
-MESSAGE(STATUS "GRPC_HDRS = ${GRPC_HDRS}")
 include_directories(${GENERATED_PROTOBUF_PATH})
 link_libraries(grpc++_unsecure grpc gpr ${Protobuf_LIBRARIES} ${GRPC_LIBRARIES})
-#ADD_EXECUTABLE(scheduler net/scheduler.cpp ${GENERATED_PROTOBUF_FILES})
-ADD_EXECUTABLE(scheduler src/net/scheduler.cpp ${GRPC_SRCS})
-#ADD_EXECUTABLE(worker net/worker.cpp ${GENERATED_PROTOBUF_FILES})
-ADD_EXECUTABLE(worker src/net/worker.cpp ${GRPC_SRCS})
+ADD_EXECUTABLE(scheduler oneflow/net/scheduler.cpp ${GRPC_SRCS})
+ADD_EXECUTABLE(worker oneflow/net/worker.cpp ${GRPC_SRCS})
 
