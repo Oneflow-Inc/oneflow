@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package lr;
+
+service comm{
+    rpc role_register(Role) returns (Status_all) {}
+    rpc get_rank(Role) returns (Rank) {}
+
+    rpc start_run(Worker_start) returns (Status_all) {}
+    rpc stop_run(Worker_stop) returns (Status_all) {}
+
+    rpc save_model(Model_save) returns (Status_all) {}
+    rpc load_model(Model_load) returns (Status_all) {}
+
+    rpc pull(Features) returns (Features) {}
+    rpc push(Features) returns (Features) {}
+}
+
+message Role{
+    string role_name = 1;
+    string ip = 2;
+}
+
+message Rank{
+    int32 rank = 1;
+}
+
+message Worker_start{
+    int32 start = 1;
+}
+message Worker_stop{
+    int32 stop = 1;
+}
+
+message Model_save{
+    int32 save = 1;
+}
+message Model_load{
+    int32 load = 1;
+}
+
+message Feature{
+    int64 fgid = 1;
+    int64 fid = 2;
+    float value = 3;
+}
+
+message Features{
+    repeated Feature sample = 1;
+}
+
+message Status_all {
+    string status = 1;
+}
