@@ -46,10 +46,38 @@ class StageNode final : public Node {
     return machine_id_;
   }
 
+  const std::vector<std::string>& input_lbns() const {
+    return *input_lbns_ptr_;
+  }
+  std::vector<std::string>& mutable_input_lbns() {
+    return *input_lbns_ptr_;
+  }
+  std::shared_ptr<std::vector<std::string>> input_lbns_ptr() const {
+    return input_lbns_ptr_;
+  }
+  std::shared_ptr<std::vector<std::string>>& mutable_input_lbns_ptr() {
+    return input_lbns_ptr_;
+  }
+  
+  const std::vector<std::string>& output_lbns() const {
+    return *output_lbns_ptr_;
+  }
+  std::vector<std::string>& mutable_output_lbns() {
+    return *output_lbns_ptr_;
+  }
+  std::shared_ptr<std::vector<std::string>> output_lbns_ptr() const {
+    return output_lbns_ptr_;
+  }
+  std::shared_ptr<std::vector<std::string>>& mutable_output_lbns_ptr() {
+    return output_lbns_ptr_;
+  }
+
  private:
   std::shared_ptr<std::vector<std::shared_ptr<const Operator>>> op_vec_ptr_;
   std::shared_ptr<const ParallelDesc> parallel_desc_ptr_;
   MachineId machine_id_;
+  std::shared_ptr<std::vector<std::string>> input_lbns_ptr_;
+  std::shared_ptr<std::vector<std::string>> output_lbns_ptr_;
 
 };
 

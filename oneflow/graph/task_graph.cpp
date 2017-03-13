@@ -50,6 +50,8 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
     comp_task_node->mutable_parallel_desc_ptr() = stage->parallel_desc_ptr();
     comp_task_node->mutable_machine_id() = machine_id;
     comp_task_node->mutable_thread_local_id() = thread_local_id;
+    comp_task_node->mutable_input_lbns_ptr() = stage->input_lbns_ptr();
+    comp_task_node->mutable_output_lbns_ptr() = stage->output_lbns_ptr();
     // comp_in_task_node
     if (!is_first_stage) {
       CopyHDTaskNode* comp_in_task_node = NewTaskNode<CopyHDTaskNode> ();
@@ -80,6 +82,8 @@ void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
   comp_task_node->mutable_op_vec_ptr() = stage->op_vec_ptr();
   comp_task_node->mutable_parallel_desc_ptr() = stage->parallel_desc_ptr();
   comp_task_node->mutable_machine_id() = stage->machine_id();
+  comp_task_node->mutable_input_lbns_ptr() = stage->input_lbns_ptr();
+  comp_task_node->mutable_output_lbns_ptr() = stage->output_lbns_ptr();
   // since we only support GPU now, it must be a data-op
   comp_task_node->mutable_thread_local_id() = id_map.data_thread_local_id();
   task_nodes_within_stage->comp_in_task_nodes.push_back(comp_task_node);

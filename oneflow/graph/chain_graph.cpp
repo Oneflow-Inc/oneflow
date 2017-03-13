@@ -285,6 +285,12 @@ void ChainGraph::Init(const LogicalGraph* logical_graph) {
   }
   // Post processing
   UpdateStartAndStop();
+  CollectInputAndOutputLbns();
+}
+
+void ChainGraph::CollectInputAndOutputLbns() {
+  // set input_lbns_ and output_lbns_
+  LOG(FATAL) << "TODO";
 }
 
 } // namespace oneflow

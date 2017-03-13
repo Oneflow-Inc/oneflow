@@ -76,6 +76,32 @@ class CompTaskNode : public TaskNode {
     return parallel_desc_ptr_;
   }
 
+  const std::vector<std::string>& input_lbns() const {
+    return *input_lbns_ptr_;
+  }
+  std::vector<std::string>& mutable_input_lbns() {
+    return *input_lbns_ptr_;
+  }
+  std::shared_ptr<std::vector<std::string>> input_lbns_ptr() const {
+    return input_lbns_ptr_;
+  }
+  std::shared_ptr<std::vector<std::string>>& mutable_input_lbns_ptr() {
+    return input_lbns_ptr_;
+  }
+  
+  const std::vector<std::string>& output_lbns() const {
+    return *output_lbns_ptr_;
+  }
+  std::vector<std::string>& mutable_output_lbns() {
+    return *output_lbns_ptr_;
+  }
+  std::shared_ptr<std::vector<std::string>> output_lbns_ptr() const {
+    return output_lbns_ptr_;
+  }
+  std::shared_ptr<std::vector<std::string>>& mutable_output_lbns_ptr() {
+    return output_lbns_ptr_;
+  }
+
   bool HasOpWithOutDiff() const;
   bool HasOpWithIndiff() const;
 
@@ -88,6 +114,8 @@ class CompTaskNode : public TaskNode {
  private:
   std::shared_ptr<std::vector<std::shared_ptr<const Operator>>> op_vec_ptr_;
   std::shared_ptr<const ParallelDesc> parallel_desc_ptr_;
+  std::shared_ptr<std::vector<std::string>> input_lbns_ptr_;
+  std::shared_ptr<std::vector<std::string>> output_lbns_ptr_;
 
 };
 

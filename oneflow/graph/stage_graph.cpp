@@ -54,6 +54,8 @@ void StageGraph::Init(std::shared_ptr<const ChainGraph> chain_graph) {
       stage_node->mutable_op_vec_ptr() = chain_node->op_vec_ptr();
       stage_node->mutable_parallel_desc_ptr() = chain_node->parallel_desc_ptr();
       stage_node->mutable_machine_id() = machine_id;
+      stage_node->mutable_input_lbns_ptr() = chain_node->input_lbns_ptr();
+      stage_node->mutable_output_lbns_ptr() = chain_node->output_lbns_ptr();
       chain2stages.at(chain_node).push_back(stage_node);
     }
   }
