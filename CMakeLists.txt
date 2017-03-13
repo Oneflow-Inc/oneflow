@@ -27,13 +27,15 @@ endif()
 #grpc
 include(FindGRPC)
 file(GLOB_RECURSE oneflow_protos RELATIVE ${oneflow_source_dir} "*.proto")
+#MESSAGE(STATUS "oneflow_protos = ${oneflow_protos}")
 PROTOBUF_GENERATE_CPP(GRPC_SRCS GRPC_HDRS ${oneflow_source_dir} ${oneflow_protos})
+#PROTOBUF_GENERATE_CPP(GRPC_SRCS GRPC_HDRS ${oneflow_source_dir} "oneflow_server.proto")
 
 set(GENERATED_PROTOBUF_PATH "${CMAKE_BINARY_DIR}/oneflow/proto")
 file(MAKE_DIRECTORY ${GENERATED_PROTOBUF_PATH})
 
 include_directories(${GENERATED_PROTOBUF_PATH})
 link_libraries(grpc++_unsecure grpc gpr ${Protobuf_LIBRARIES} ${GRPC_LIBRARIES})
-ADD_EXECUTABLE(scheduler oneflow/net/scheduler.cpp ${GRPC_SRCS})
-ADD_EXECUTABLE(worker oneflow/net/worker.cpp ${GRPC_SRCS})
-
+#ADD_EXECUTABLE(scheduler oneflow/net/scheduler.cpp ${GRPC_SRCS})
+#ADD_EXECUTABLE(worker oneflow/net/worker.cpp ${GRPC_SRCS})
+ADD_EXECUTABLE(server_lib oneflow/net/main.cc ${GRPC_SRCS})
