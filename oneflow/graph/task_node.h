@@ -42,12 +42,12 @@ class TaskNode : public Node {
 
 };
 
-// Tnd: TaskNode
-class ComputeTnd : public TaskNode {
+// TaskNode: TaskNode
+class CompTaskNode : public TaskNode {
  public:
-  DISALLOW_COPY_AND_MOVE(ComputeTnd);
-  ComputeTnd() = default;
-  virtual ~ComputeTnd() = default;
+  DISALLOW_COPY_AND_MOVE(CompTaskNode);
+  CompTaskNode() = default;
+  virtual ~CompTaskNode() = default;
 
   virtual void Init() {
     TaskNode::Init();
@@ -73,7 +73,7 @@ class ComputeTnd : public TaskNode {
   bool HasOpWithOutDiff() const;
   bool HasOpWithIndiff() const;
 
-  virtual void CopyWithOnlyTaskProperty(const ComputeTnd& rhs) {
+  virtual void CopyWithOnlyTaskProperty(const CompTaskNode& rhs) {
     TaskNode::CopyWithOnlyTaskProperty(rhs);
     op_vec_ = rhs.op_vec_;
     parallel_desc_ptr_ = rhs.parallel_desc_ptr_;
@@ -85,93 +85,93 @@ class ComputeTnd : public TaskNode {
 
 };
 
-class HostComputeTnd final : public ComputeTnd {
+class HostCompTaskNode final : public CompTaskNode {
  public:
-  DISALLOW_COPY_AND_MOVE(HostComputeTnd);
-  HostComputeTnd() = default;
-  ~HostComputeTnd() = default;
+  DISALLOW_COPY_AND_MOVE(HostCompTaskNode);
+  HostCompTaskNode() = default;
+  ~HostCompTaskNode() = default;
 
   void Init() {
-    ComputeTnd::Init();
+    CompTaskNode::Init();
   }
   
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    std::unique_ptr<TaskNode> new_node(new HostComputeTnd);
+    std::unique_ptr<TaskNode> new_node(new HostCompTaskNode);
     new_node->Init();
     return new_node;
   }
 
-  void CopyWithOnlyTaskProperty(const HostComputeTnd& rhs) {
-    ComputeTnd::CopyWithOnlyTaskProperty(rhs);
+  void CopyWithOnlyTaskProperty(const HostCompTaskNode& rhs) {
+    CompTaskNode::CopyWithOnlyTaskProperty(rhs);
   }
 
  private:
 
 };
 
-class DeviceComputeTnd final : public ComputeTnd {
+class DeviceCompTaskNode final : public CompTaskNode {
  public:
-  DISALLOW_COPY_AND_MOVE(DeviceComputeTnd);
-  DeviceComputeTnd() = default;
-  ~DeviceComputeTnd() = default;
+  DISALLOW_COPY_AND_MOVE(DeviceCompTaskNode);
+  DeviceCompTaskNode() = default;
+  ~DeviceCompTaskNode() = default;
   
   void Init() {
-    ComputeTnd::Init();
+    CompTaskNode::Init();
   }
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    std::unique_ptr<TaskNode> new_node(new DeviceComputeTnd);
+    std::unique_ptr<TaskNode> new_node(new DeviceCompTaskNode);
     new_node->Init();
     return new_node;
   }
  
-  void CopyWithOnlyTaskProperty(const DeviceComputeTnd& rhs) {
-    ComputeTnd::CopyWithOnlyTaskProperty(rhs);
+  void CopyWithOnlyTaskProperty(const DeviceCompTaskNode& rhs) {
+    CompTaskNode::CopyWithOnlyTaskProperty(rhs);
   }
 
  private:
 };
 
 // HD: Host and Device
-class CopyHDTnd final : public TaskNode {
+class CopyHDTaskNode final : public TaskNode {
  public:
-  DISALLOW_COPY_AND_MOVE(CopyHDTnd);
-  CopyHDTnd() = default;
-  ~CopyHDTnd() = default;
+  DISALLOW_COPY_AND_MOVE(CopyHDTaskNode);
+  CopyHDTaskNode() = default;
+  ~CopyHDTaskNode() = default;
   
   void Init() {
     TaskNode::Init();
   }
 
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    std::unique_ptr<TaskNode> new_node(new CopyHDTnd);
+    std::unique_ptr<TaskNode> new_node(new CopyHDTaskNode);
     new_node->Init();
     return new_node;
   }
 
-  void CopyWithOnlyTaskProperty(const CopyHDTnd& rhs) {
+  void CopyWithOnlyTaskProperty(const CopyHDTaskNode& rhs) {
     TaskNode::CopyWithOnlyTaskProperty(rhs);
   }
 
  private:
 };
 
-class BoxingTnd final : public TaskNode {
+class BoxingTaskNode final : public TaskNode {
  public:
-  DISALLOW_COPY_AND_MOVE(BoxingTnd);
-  BoxingTnd() = default;
-  ~BoxingTnd() = default;
+  DISALLOW_COPY_AND_MOVE(BoxingTaskNode);
+  BoxingTaskNode() = default;
+  ~BoxingTaskNode() = default;
   
   void Init() {
     TaskNode::Init();
   }
   
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    std::unique_ptr<TaskNode> new_node(new BoxingTnd);
+    std::unique_ptr<TaskNode> new_node(new BoxingTaskNode);
     new_node->Init();
     return new_node;
   }
 
-  void CopyWithOnlyTaskProperty(const BoxingTnd& rhs) {
+  void CopyWithOnlyTaskProperty(const BoxingTaskNode& rhs) {
     TaskNode::CopyWithOnlyTaskProperty(rhs);
   }
 
@@ -179,23 +179,23 @@ class BoxingTnd final : public TaskNode {
 };
 
 // CommNet: Communication Network
-class CommNetTnd final : public TaskNode {
+class CommNetTaskNode final : public TaskNode {
  public:
-  DISALLOW_COPY_AND_MOVE(CommNetTnd);
-  CommNetTnd() = default;
-  ~CommNetTnd() = default;
+  DISALLOW_COPY_AND_MOVE(CommNetTaskNode);
+  CommNetTaskNode() = default;
+  ~CommNetTaskNode() = default;
 
   void Init() {
     TaskNode::Init();
   }
   
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    std::unique_ptr<TaskNode> new_node(new CommNetTnd);
+    std::unique_ptr<TaskNode> new_node(new CommNetTaskNode);
     new_node->Init();
     return new_node;
   }
 
-  void CopyWithOnlyTaskProperty(const CommNetTnd& rhs) {
+  void CopyWithOnlyTaskProperty(const CommNetTaskNode& rhs) {
     TaskNode::CopyWithOnlyTaskProperty(rhs);
   }
 

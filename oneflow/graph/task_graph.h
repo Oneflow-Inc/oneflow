@@ -33,15 +33,15 @@ class TaskGraph final : public Graph {
             bool need_bp);
 
  private:
-  struct TndsWithinStage {
-    std::vector<TaskNode*> compute_in_tnds;
-    std::vector<TaskNode*> compute_out_tnds;
-    BoxingTnd* in_boxing_tnd;
-    BoxingTnd* out_boxing_tnd;
+  struct TaskNodesWithinStage {
+    std::vector<TaskNode*> comp_in_task_nodes;
+    std::vector<TaskNode*> comp_out_task_nodes;
+    BoxingTaskNode* in_boxing_task_node;
+    BoxingTaskNode* out_boxing_task_node;
   };
   
-  using Stage2TndsMap =
-    std::unordered_map<const StageNode*, TndsWithinStage>;
+  using Stage2TaskNodesMap =
+    std::unordered_map<const StageNode*, TaskNodesWithinStage>;
   
   template<typename TaskNodeType>
   TaskNodeType* NewTaskNode() {
@@ -66,28 +66,28 @@ class TaskGraph final : public Graph {
     return ret;
   }
   
-  void InitComputeTnds(const StageGraph* stage_graph,
-                       const IDMap& id_map,
-                       Stage2TndsMap* stage2tnds);
-  void Stage2DeviceComputeTnds(const StageNode* stage,
+  void InitCompTaskNodes(const StageGraph* stage_graph,
+                         const IDMap& id_map,
+                         Stage2TaskNodesMap* stage2task_nodes);
+  void Stage2DeviceCompTaskNodes(const StageNode* stage,
+                                 const IDMap& id_map,
+                                 TaskNodesWithinStage* task_nodes_within_stage,
+                                 bool is_first_stage,
+                                 bool is_last_stage);
+  void Stage2HostCompTaskNodes(const StageNode* stage,
                                const IDMap& id_map,
-                               TndsWithinStage* tnds_within_stage,
-                               bool is_first_stage,
-                               bool is_last_stage);
-  void Stage2HostComputeTnds(const StageNode* stage,
+                               TaskNodesWithinStage* task_nodes_within_stage);
+  void InitBoxingTaskNodes(const StageGraph* stage_graph,
+                           const IDMap& id_map,
+                           Stage2TaskNodesMap* stage2task_nodes);
+  void InitInboxingTaskNode(const StageNode* stage,
+                            const IDMap& id_map,
+                            TaskNodesWithinStage* task_nodes_within_stage);
+  void InitOutBoxingTaskNode(const StageNode* stage,
                              const IDMap& id_map,
-                             TndsWithinStage* tnds_within_stage);
-  void InitBoxingTnds(const StageGraph* stage_graph,
-                      const IDMap& id_map,
-                      Stage2TndsMap* stage2tnds);
-  void InitInboxingTnd(const StageNode* stage,
-                       const IDMap& id_map,
-                       TndsWithinStage* tnds_within_stage);
-  void InitOutBoxingTnd(const StageNode* stage,
-                        const IDMap& id_map,
-                        TndsWithinStage* tnds_within_stage);
-  void ConnectTnds(const StageGraph* stage_graph,
-                   const Stage2TndsMap* stage2tnds);
+                             TaskNodesWithinStage* task_nodes_within_stage);
+  void ConnectTaskNodes(const StageGraph* stage_graph,
+                        const Stage2TaskNodesMap* stage2task_nodes);
   void GenerateRelatedBpNodes(
       std::function<void(const TaskNode*, TaskNode*)> add_fw_bp_pair,
       const std::unordered_map<const TaskNode*, TaskNode*>& fw_node2bp_node,

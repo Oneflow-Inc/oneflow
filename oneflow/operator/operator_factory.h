@@ -22,6 +22,11 @@ class OperatorFactory final {
 
 };
 
+inline std::shared_ptr<const Operator> ConstructOpFromPbConf(
+    const OperatorConf pb_conf) {
+  return OperatorFactory::singleton().ConstructOp(pb_conf);
+}
+
 } // namespace oneflow
 
 #endif // ONEFLOW_OPERATOR_OPERATOR_FACTORY_H_

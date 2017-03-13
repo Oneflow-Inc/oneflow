@@ -22,15 +22,18 @@ class BlobDescriptor final {
   size_t ByteSize() const {
     return shape_.elem_cnt() * GetFloatByteSize(float_type_);
   }
+  const std::string& lbn() const { return lbn_; }
 
   Shape& mutable_shape() { return shape_; }
   MemoryContext& mutable_memory_context() { return memory_context_; }
   FloatType& mutable_float_type() { return float_type_; }
+  std::string& mutable_lbn() { return lbn_; }
  
  private:
   Shape shape_;
   MemoryContext memory_context_;
   FloatType float_type_;
+  std::string lbn_;
 
 };
 

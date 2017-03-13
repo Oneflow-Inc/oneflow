@@ -23,8 +23,7 @@ void LogicalGraph::BuildGraphStruct(const DLNetConf& dl_net_conf) {
     const OperatorConf& cur_op_conf = dl_net_conf.op_conf(op_i);
     // Construct cur node
     LogicalNode* cur_node = NewLogicalNode();
-    cur_node->mutable_op_ptr() =
-        OperatorFactory::singleton().ConstructOp(cur_op_conf);
+    cur_node->mutable_op_ptr() = ConstructOpFromPbConf(cur_op_conf);
     // Connect input node
     for (const std::string& input_blob_name
         : cur_node->op().data_blob_name_set().input_blob_names) {
