@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_GRAPH_STAGE_GRAPH_H_
 #define ONEFLOW_GRAPH_STAGE_GRAPH_H_
 
-#include "graph/segment_graph.h"
+#include "graph/chain_graph.h"
 
 namespace oneflow {
 
@@ -66,7 +66,7 @@ class StageGraph final : public Graph {
   StageGraph() = default;
   ~StageGraph() = default;
 
-  void Init(std::shared_ptr<const SegmentGraph> segment_graph);
+  void Init(std::shared_ptr<const ChainGraph> chain_graph);
 
  private:
   StageNode* NewStageNode() {

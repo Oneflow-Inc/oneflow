@@ -1,16 +1,16 @@
-#ifndef ONEFLOW_GRAPH_SEGMENT_GRAPH_H_
-#define ONEFLOW_GRAPH_SEGMENT_GRAPH_H_
+#ifndef ONEFLOW_GRAPH_CHAIN_GRAPH_H_
+#define ONEFLOW_GRAPH_CHAIN_GRAPH_H_
 
 #include <list>
 #include "graph/logical_graph.h"
 
 namespace oneflow {
 
-class SegmentNode final : public Node {
+class ChainNode final : public Node {
  public:
-  DISALLOW_COPY_AND_MOVE(SegmentNode);
-  SegmentNode() = default;
-  ~SegmentNode() = default;
+  DISALLOW_COPY_AND_MOVE(ChainNode);
+  ChainNode() = default;
+  ~ChainNode() = default;
 
   void Init() {
     Node::Init();
@@ -40,11 +40,11 @@ class SegmentNode final : public Node {
 
 };
 
-class SegmentEdge final : public Edge {
+class ChainEdge final : public Edge {
  public:
-  DISALLOW_COPY_AND_MOVE(SegmentEdge);
-  SegmentEdge() = default;
-  ~SegmentEdge() = default;
+  DISALLOW_COPY_AND_MOVE(ChainEdge);
+  ChainEdge() = default;
+  ~ChainEdge() = default;
     
   void Init() {
     Edge::Init();
@@ -53,23 +53,23 @@ class SegmentEdge final : public Edge {
  private:
 };
 
-class SegmentGraph final : public Graph {
+class ChainGraph final : public Graph {
  public:
-  DISALLOW_COPY_AND_MOVE(SegmentGraph);
-  SegmentGraph() = default;
-  ~SegmentGraph() = default;
+  DISALLOW_COPY_AND_MOVE(ChainGraph);
+  ChainGraph() = default;
+  ~ChainGraph() = default;
 
   void Init(const LogicalGraph* logical_graph);
 
  private:
-  SegmentNode* NewSegmentNode() {
-    SegmentNode* ret_ptr = new SegmentNode;
+  ChainNode* NewChainNode() {
+    ChainNode* ret_ptr = new ChainNode;
     ret_ptr->Init();
     RegisterNode(ret_ptr);
     return ret_ptr;
   }
-  SegmentEdge* NewSegmentEdge() {
-    SegmentEdge* ret_ptr = new SegmentEdge;
+  ChainEdge* NewChainEdge() {
+    ChainEdge* ret_ptr = new ChainEdge;
     ret_ptr->Init();
     RegisterEdge(ret_ptr);
     return ret_ptr;
@@ -79,4 +79,4 @@ class SegmentGraph final : public Graph {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_GRAPH_SEGMENT_GRAPH_H_
+#endif // ONEFLOW_GRAPH_CHAIN_GRAPH_H_

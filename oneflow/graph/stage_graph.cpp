@@ -41,20 +41,20 @@ void ConnectRelatedStages(
   }
 }
 
-void StageGraph::Init(std::shared_ptr<const SegmentGraph> segment_graph) {
+void StageGraph::Init(std::shared_ptr<const ChainGraph> chain_graph) {
   Graph::Init();
   // Init Stages
-  std::unordered_map<const SegmentNode*,
-                     std::vector<StageNode*>> seg2stages;
-  for (const std::unique_ptr<Node>& node : segment_graph->node_vec()) {
-    auto seg_node = of_dynamic_cast<const SegmentNode*> (node.get());
-    seg2stages[seg_node] = {};
-    for (MachineId machine_id : seg_node->parallel_desc().machines()) {
+  std::unordered_map<const ChainNode*,
+                     std::vector<StageNode*>> chain2stages;
+  for (const std::unique_ptr<Node>& node : chain_graph->node_vec()) {
+    auto chain_node = of_dynamic_cast<const ChainNode*> (node.get());
+    chain2stages[chain_node] = {};
+    for (MachineId machine_id : chain_node->parallel_desc().machines()) {
       StageNode* stage_node = NewStageNode();
-      stage_node->mutable_op_vec() = seg_node->op_vec();
-      stage_node->mutable_parallel_desc_ptr() = seg_node->parallel_desc_ptr();
+      stage_node->mutable_op_vec() = chain_node->op_vec();
+      stage_node->mutable_parallel_desc_ptr() = chain_node->parallel_desc_ptr();
       stage_node->mutable_machine_id() = machine_id;
-      seg2stages.at(seg_node).push_back(stage_node);
+      chain2stages.at(chain_node).push_back(stage_node);
     }
   }
   // Connect Stages
@@ -62,12 +62,12 @@ void StageGraph::Init(std::shared_ptr<const SegmentGraph> segment_graph) {
       (StageNode* src_node, StageNode* dst_node) {
     Connect(src_node, this->NewStageEdge(), dst_node);
   };
-  for (const std::unique_ptr<Node>& node : segment_graph->node_vec()) {
-    auto cur_seg = of_dynamic_cast<const SegmentNode*> (node.get());
-    for (const Edge* edge : cur_seg->out_edges()) {
-      const std::vector<StageNode*>& cur_stages = seg2stages.at(cur_seg);
+  for (const std::unique_ptr<Node>& node : chain_graph->node_vec()) {
+    auto cur_chain = of_dynamic_cast<const ChainNode*> (node.get());
+    for (const Edge* edge : cur_chain->out_edges()) {
+      const std::vector<StageNode*>& cur_stages = chain2stages.at(cur_chain);
       const std::vector<StageNode*>& next_stages =
-          seg2stages.at(of_dynamic_cast<const SegmentNode*>(edge->dst_node()));
+          chain2stages.at(of_dynamic_cast<const ChainNode*>(edge->dst_node()));
       ConnectRelatedStages(cur_stages, next_stages, ConnectTwoNode);
     }
   }
