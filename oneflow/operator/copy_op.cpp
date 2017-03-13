@@ -7,10 +7,8 @@ namespace {
 void InitDataBlobNameSet(
     DataBlobNameSet& cur_set,
     const google::protobuf::RepeatedPtrField<std::string>& lbns) {
-  for (const std::string& lbn : lbns) {
-    cur_set.input_blob_names.push_back(lbn);
-    cur_set.output_blob_names.push_back(lbn);
-  }
+  cur_set.input_blob_names.assign(lbns.begin(), lbns.end());
+  cur_set.output_blob_names.assign(lbns.begin(), lbns.end());
 }
 
 void InitModelBlobNameSet() {

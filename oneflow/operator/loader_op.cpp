@@ -13,7 +13,7 @@ void InitDataBlobNameSet(DataBlobNameSet& cur_set) {
 void InitModelBlobNameSet(ModelBlobNameSet& cur_set) {
 }
 
-}
+} // namespace
 
 void LoaderOp::Init(const OperatorConf& op_conf) {
   mutable_op_name() = op_conf.name();
