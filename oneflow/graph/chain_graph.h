@@ -18,10 +18,16 @@ class ChainNode final : public Node {
   }
 
   const std::vector<std::shared_ptr<const Operator>>& op_vec() const {
-    return op_vec_;
+    return *op_vec_ptr_;
   }
   std::vector<std::shared_ptr<const Operator>>& mutable_op_vec() {
-    return op_vec_;
+    return *op_vec_ptr_;
+  }
+  std::shared_ptr<std::vector<std::shared_ptr<const Operator>>> op_vec_ptr() const {
+    return op_vec_ptr_;
+  }
+  std::shared_ptr<std::vector<std::shared_ptr<const Operator>>>& mutable_op_vec_ptr() {
+    return op_vec_ptr_;
   }
 
   const ParallelDesc& parallel_desc() const {
@@ -35,7 +41,7 @@ class ChainNode final : public Node {
   }
 
  private:
-  std::vector<std::shared_ptr<const Operator>> op_vec_;
+  std::shared_ptr<std::vector<std::shared_ptr<const Operator>>> op_vec_ptr_;
   std::shared_ptr<const ParallelDesc> parallel_desc_ptr_;
 
 };

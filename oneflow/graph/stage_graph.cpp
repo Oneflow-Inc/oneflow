@@ -51,7 +51,7 @@ void StageGraph::Init(std::shared_ptr<const ChainGraph> chain_graph) {
     chain2stages[chain_node] = {};
     for (MachineId machine_id : chain_node->parallel_desc().machines()) {
       StageNode* stage_node = NewStageNode();
-      stage_node->mutable_op_vec() = chain_node->op_vec();
+      stage_node->mutable_op_vec_ptr() = chain_node->op_vec_ptr();
       stage_node->mutable_parallel_desc_ptr() = chain_node->parallel_desc_ptr();
       stage_node->mutable_machine_id() = machine_id;
       chain2stages.at(chain_node).push_back(stage_node);

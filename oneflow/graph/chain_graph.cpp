@@ -25,6 +25,7 @@ void SetChainNodeWithChainIt(ChainNode* chain_node,
   CHECK_EQ(chain_it->nodes.empty(), false);
   chain_node->mutable_parallel_desc_ptr() =
       chain_it->nodes.front()->parallel_desc_ptr();
+  chain_node->mutable_op_vec_ptr().reset(new std::vector<std::shared_ptr<const Operator>>);
   for (const LogicalNode* logical_node : chain_it->nodes) {
     chain_node->mutable_op_vec().push_back(
         logical_node->op_ptr());
