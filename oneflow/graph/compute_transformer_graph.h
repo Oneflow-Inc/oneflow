@@ -2,52 +2,71 @@
 #define ONEFLOW_GRAPH_COMPUTE_TRANSFORMER_GRAPH_H_
 
 #include "graph/transformer_graph.h"
+#include "operator/operator_factory.h"
 
 namespace oneflow {
 
-class ComputeTransformerNode : public TransformerNode {
+class CompTransfmNode : public TransfmNode {
  public:
-  DISALLOW_COPY_AND_MOVE(ComputeTransformerNode);
-  ComputeTransformerNode() = default;
-  virtual ~ComputeTransformerNode() = default;
+  DISALLOW_COPY_AND_MOVE(CompTransfmNode);
+  virtual ~CompTransfmNode() = default;
 
   virtual void Init() {
-    TransformerNode::Init();
+    TransfmNode::Init();
     // struct style
   }
+ protected:
+  CompTransfmNode() = default;
 
  private:
 
 };
 
-class ComputeTransformerEdge : public TransformerEdge {
+class CompTransfmEdge : public TransfmEdge {
  public:
-  DISALLOW_COPY_AND_MOVE(ComputeTransformerEdge);
-  ComputeTransformerEdge() = default;
-  virtual ~ComputeTransformerEdge() = default;
+  DISALLOW_COPY_AND_MOVE(CompTransfmEdge);
+  virtual ~CompTransfmEdge() = default;
 
   virtual void Init() {
-    TransformerEdge::Init();
+    TransfmEdge::Init();
     // struct style
   }
+ protected:
+  CompTransfmEdge() = default;
 
  private:
 };
 
-class ComputeTransformerGraph : public TransformerGraph {
+class CompTransfmGraph : public TransformerGraph {
  public:
-  DISALLOW_COPY_AND_MOVE(ComputeTransformerGraph);
-  ComputeTransformerGraph() = default;
-  virtual ~ComputeTransformerGraph() = default;
+  DISALLOW_COPY_AND_MOVE(CompTransfmGraph);
+  virtual ~CompTransfmGraph() = default;
 
-  virtual void Init() {
-    TransformerGraph::Init();
+  virtual void Init(const TaskNode* task_node, bool job_has_bp) override {
+    TransformerGraph::Init(task_node, job_has_bp);
     // struct style
+  }
+
+  virtual void FwBuildGraph() override {
+    FwBuildFromUserOps();
+    if (job_has_bp()) {
+      FwAddCopyInOp();
+    }
+    FwAddCloneOp();
+    UpdateStartAndStop();
   }
 
  protected:
+  virtual CopyOpConf::CopyType CopyInOpType() = 0;
 
  private:
+  CompTransfmGraph() = default;
+  void FwBuildFromUserOps();
+  void FwAddCopyInOp();
+  void FwAddCloneOp();
+
+  std::unordered_map<std::string, std::vector<CompTransfmNode*>> extern_in_lbn2consumers_;
+  std::unordered_map<std::string, std::unique_ptr<BlobDescriptor>> produced_lbn2blob_desc_;
 
 };
 
