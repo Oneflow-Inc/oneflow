@@ -7,11 +7,11 @@
 
 namespace oneflow {
 
-class BlobDescriptor final {
+class BlobDesc final {
  public:
-  DISALLOW_COPY_AND_MOVE(BlobDescriptor);
-  BlobDescriptor() = default;
-  ~BlobDescriptor() = default;
+  DISALLOW_COPY_AND_MOVE(BlobDesc);
+  BlobDesc() = default;
+  ~BlobDesc() = default;
   
   void Init() {
     // struct style
@@ -23,11 +23,17 @@ class BlobDescriptor final {
     return shape_.elem_cnt() * GetFloatByteSize(float_type_);
   }
   const std::string& lbn() const { return lbn_; }
+  const ParallelDesc& parallel_desc() const {
+    return *parallel_desc_ptr_;
+  }
 
   Shape& mutable_shape() { return shape_; }
   MemoryContext& mutable_memory_context() { return memory_context_; }
   FloatType& mutable_float_type() { return float_type_; }
   std::string& mutable_lbn() { return lbn_; }
+  std::shared_ptr<ParallelDesc>& mutable_parallel_desc_ptr_() {
+    return parallel_desc_ptr_;
+  }
  
  private:
   Shape shape_;

@@ -13,7 +13,6 @@ class TaskNode : public Node {
 
   virtual void Init() {
     Node::Init();
-    // struct style
   }
 
   const MachineId& machine_id() const { return machine_id_; }
@@ -39,6 +38,7 @@ class TaskNode : public Node {
   virtual void CopyWithOnlyTaskProperty(const TaskNode& rhs) {
     machine_id_ = rhs.machine_id_;
     thread_local_id_ = rhs.thread_local_id_;
+    is_fw_node_ = rhs.is_fw_node_;
   }
 
  private:
@@ -48,7 +48,6 @@ class TaskNode : public Node {
 
 };
 
-// TaskNode: TaskNode
 class CompTaskNode : public TaskNode {
  public:
   DISALLOW_COPY_AND_MOVE(CompTaskNode);
@@ -59,12 +58,6 @@ class CompTaskNode : public TaskNode {
     TaskNode::Init();
   }
   
-  const std::vector<std::shared_ptr<const Operator>>& op_vec() const {
-    return *op_vec_ptr_;
-  }
-  std::vector<std::shared_ptr<const Operator>>& mutable_op_vec() {
-    return *op_vec_ptr_;
-  }
   std::shared_ptr<std::vector<std::shared_ptr<const Operator>>> op_vec_ptr() const {
     return op_vec_ptr_;
   }
@@ -82,12 +75,6 @@ class CompTaskNode : public TaskNode {
     return parallel_desc_ptr_;
   }
 
-  const std::vector<std::string>& input_lbns() const {
-    return *input_lbns_ptr_;
-  }
-  std::vector<std::string>& mutable_input_lbns() {
-    return *input_lbns_ptr_;
-  }
   std::shared_ptr<std::vector<std::string>> input_lbns_ptr() const {
     return input_lbns_ptr_;
   }
@@ -95,12 +82,6 @@ class CompTaskNode : public TaskNode {
     return input_lbns_ptr_;
   }
   
-  const std::vector<std::string>& output_lbns() const {
-    return *output_lbns_ptr_;
-  }
-  std::vector<std::string>& mutable_output_lbns() {
-    return *output_lbns_ptr_;
-  }
   std::shared_ptr<std::vector<std::string>> output_lbns_ptr() const {
     return output_lbns_ptr_;
   }
@@ -120,10 +101,10 @@ class CompTaskNode : public TaskNode {
   }
 
  private:
-  std::shared_ptr<std::vector<std::shared_ptr<const Operator>>> op_vec_ptr_;
+  std::shared_ptr<const std::vector<std::shared_ptr<const Operator>>> op_vec_ptr_;
   std::shared_ptr<const ParallelDesc> parallel_desc_ptr_;
-  std::shared_ptr<std::vector<std::string>> input_lbns_ptr_;
-  std::shared_ptr<std::vector<std::string>> output_lbns_ptr_;
+  std::shared_ptr<const std::vector<std::string>> input_lbns_ptr_;
+  std::shared_ptr<const std::vector<std::string>> output_lbns_ptr_;
 
 };
 
