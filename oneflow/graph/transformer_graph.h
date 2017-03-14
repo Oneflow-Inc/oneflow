@@ -73,6 +73,8 @@ class TransformerGraph : public Graph {
  private:
   const TaskNode* task_node_;
   bool job_has_bp_;
+  std::unordered_map<std::string, std::vector<TransfmNode*>> extern_in_lbn2consumers_;
+  std::unordered_map<std::string, std::unique_ptr<BlobDescriptor>> produced_lbn2blob_desc_;
 
 };
 

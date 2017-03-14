@@ -65,9 +65,6 @@ class CompTransfmGraph : public TransformerGraph {
   void FwAddCopyInOp();
   void FwAddCloneOp();
 
-  std::unordered_map<std::string, std::vector<CompTransfmNode*>> extern_in_lbn2consumers_;
-  std::unordered_map<std::string, std::unique_ptr<BlobDescriptor>> produced_lbn2blob_desc_;
-
 };
 
 } // namespace oneflow

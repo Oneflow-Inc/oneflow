@@ -21,6 +21,11 @@ class TaskNode : public Node {
   
   MachineId& mutable_machine_id() { return machine_id_; }
   ThreadLocalId& mutable_thread_local_id() { return thread_local_id_; }
+  
+  bool IsFwNode() { return is_fw_node_; }
+  bool IsBpNode() { return !is_fw_node_; }
+  void SetFwNode() { is_fw_node_ = true; }
+  void SetBpNode() { is_fw_node_ = false; }
 
   // Clone without Node's property
   std::unique_ptr<TaskNode> CloneWithOnlyTaskProperty() const {
@@ -39,6 +44,7 @@ class TaskNode : public Node {
  private:
   MachineId machine_id_;
   ThreadLocalId thread_local_id_;
+  bool is_fw_node_;
 
 };
 
@@ -109,6 +115,8 @@ class CompTaskNode : public TaskNode {
     TaskNode::CopyWithOnlyTaskProperty(rhs);
     op_vec_ptr_ = rhs.op_vec_ptr_;
     parallel_desc_ptr_ = rhs.parallel_desc_ptr_;
+    input_lbns_ptr_ = rhs.input_lbns_ptr_;
+    output_lbns_ptr_ = rhs.output_lbns_ptr_;
   }
 
  private:
@@ -186,7 +194,26 @@ class CopyHDTaskNode final : public TaskNode {
     TaskNode::CopyWithOnlyTaskProperty(rhs);
   }
 
+  bool IsH2D() const {
+    return ((IsInCopy() && IsFwNode()) || (IsOutCopy() && IsBpNode()));
+  }
+
+  void SetInCopy() { is_in_copy_ = true; }
+  void SetOutCopy() { is_in_copy_ = false; }
+  
+  CompTaskNode* RelatedCompTaskNode() {
+    if ((IsInCopy() && IsFwNode()) || (IsOutCopy() && IsBpNode())) {
+      CHECK_EQ(out_edges().size(), 1);
+      return of_dynamic_cast<CompTaskNode*>((*(out_edges().begin()))->dst_node());
+    } else {
+      CHECK_EQ(in_edges().size(), 1);
+      return of_dynamic_cast<CompTaskNode*>((*(in_edges().begin()))->src_node());
+    }
+  }
+
  private:
+  bool is_in_copy_;
+
 };
 
 class BoxingTaskNode final : public TaskNode {
