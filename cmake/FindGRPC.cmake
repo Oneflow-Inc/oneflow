@@ -17,10 +17,10 @@ function(PROTOBUF_GENERATE_CPP SRCS HDRS ROOT_DIR)
     list(APPEND ${HDRS} "${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.pb.h")
     list(APPEND ${HDRS} "${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.grpc.pb.h")
 
-    MESSAGE(STATUS "ROOT_DIR = ${ROOT_DIR}; ABS_FIL = ${ABS_FIL}")
+    #MESSAGE(STATUS "ROOT_DIR = ${ROOT_DIR}; ABS_FIL = ${ABS_FIL}")
     #MESSAGE(STATUS "Protobuf_INCLUDE_DIRS = ${Protobuf_INCLUDE_DIRS}")
     MESSAGE(STATUS "REL_DIR = ${REL_DIR}")
-    MESSAGE(STATUS "CMAKE_CURRENT_BINARY_DIR = ${CMAKE_CURRENT_BINARY_DIR}")
+    #MESSAGE(STATUS "CMAKE_CURRENT_BINARY_DIR = ${CMAKE_CURRENT_BINARY_DIR}")
     MESSAGE(STATUS "PROJECT_SOURCE_DIR = ${PROJECT_SOURCE_DIR}")
     add_custom_command(
       OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.pb.cc"
@@ -28,13 +28,13 @@ function(PROTOBUF_GENERATE_CPP SRCS HDRS ROOT_DIR)
              "${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.pb.h"
              "${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.grpc.pb.h"
       COMMAND  ${PROTOBUF_PROTOC_EXECUTABLE}
-      ARGS "--proto_path=${PROJECT_SOURCE_DIR}/${REL_DIR}"
-           "--cpp_out=${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}" 
+      ARGS "--proto_path=${PROJECT_SOURCE_DIR}/${REL_DIR}/"
+           "--cpp_out=${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/" 
            -I ${Protobuf_INCLUDE_DIRS} -I ${PROJECT_SOURCE_DIR}
            "${ABS_FIL}"
       COMMAND ${PROTOBUF_PROTOC_EXECUTABLE}
-      ARGS "--proto_path=${PROJECT_SOURCE_DIR}/${REL_DIR}"
-           "--grpc_out=${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}"
+      ARGS "--proto_path=${PROJECT_SOURCE_DIR}/${REL_DIR}/"
+           "--grpc_out=${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/"
            "--plugin=protoc-gen-grpc=${GRPC_CPP_PLUGIN}"
            "${ABS_FIL}"
       DEPENDS ${ABS_FIL}
