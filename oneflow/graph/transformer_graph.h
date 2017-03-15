@@ -6,15 +6,41 @@
 
 namespace oneflow {
 
-class TransfmNode : public Node {
+class TransfmEdge final : public Edge {
+ public:
+  DISALLOW_COPY_AND_MOVE(TransfmEdge);
+  TransfmEdge() = default;
+  ~TransfmEdge() = default;
+
+  virtual void Init() {
+    Edge::Init();
+    lbns_.clear();
+    task_edge_ = nullptr;
+  }
+ 
+  const std::string& lbn() const { return lbn_; }
+  std::string& mutable_lbn() { return lbn_; }
+
+  const TaskEdge* task_edge() { return task_edge_; }
+  void set_task_edge(const TaskEdge* new_task_edge) {
+    task_edge_ = new_task_edge;
+  }
+
+ private:
+  std::string lbn_;
+  // It is used when it is a dangling edge
+  const TaskEdge* task_edge_;
+
+};
+
+class TransfmNode final : public Node {
  public:
   DISALLOW_COPY_AND_MOVE(TransfmNode);
   TransfmNode() = default;
-  virtual ~TransfmNode() = default;
+  ~TransfmNode() = default;
 
-  virtual void Init() {
+  void Init() {
     Node::Init();
-    // struct style
   }
   
   std::shared_ptr<const Operator> op() const {
@@ -26,24 +52,6 @@ class TransfmNode : public Node {
 
  private:
   std::shared_ptr<const Operator> op_;
-};
-
-class TransfmEdge : public Edge {
- public:
-  DISALLOW_COPY_AND_MOVE(TransfmEdge);
-  TransfmEdge() = default;
-  virtual ~TransfmEdge() = default;
-
-  virtual void Init() {
-    Edge::Init();
-    // struct style
-  }
- 
-  const std::vector<std::string>& lbns() const { return lbns_; }
-  std::vector<std::string>& mutable_lbns() { return lbns_; }
-
- private:
-  std::vector<std::string> lbns_;
 
 };
 
@@ -61,8 +69,14 @@ class TransformerGraph : public Graph {
   virtual void FwBuildGraph() = 0;
 
  protected:
-  virtual TransfmNode* NewTransfmNode() = 0;
-  virtual TransfmEdge* NewTransfmEdge() = 0;
+  TransfmNode* NewTransfmNode() {
+    LOG(FATAL) << "TODO";
+    return nullptr;
+  }
+  TransfmEdge* NewTransfmEdge() {
+    LOG(FATAL) << "TODO";
+    return nullptr;
+  }
 
   const TaskNode* task_node() { return task_node_; }
   bool job_has_bp() { return job_has_bp_; }
@@ -70,8 +84,6 @@ class TransformerGraph : public Graph {
  private:
   const TaskNode* task_node_;
   bool job_has_bp_;
-  std::unordered_map<std::string, std::vector<TransfmNode*>> extern_in_lbn2consumers_;
-  std::unordered_map<std::string, std::unique_ptr<BlobDesc>> produced_lbn2blob_desc_;
 
 };
 

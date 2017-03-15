@@ -6,37 +6,6 @@
 
 namespace oneflow {
 
-class CompTransfmNode : public TransfmNode {
- public:
-  DISALLOW_COPY_AND_MOVE(CompTransfmNode);
-  virtual ~CompTransfmNode() = default;
-
-  virtual void Init() {
-    TransfmNode::Init();
-    // struct style
-  }
- protected:
-  CompTransfmNode() = default;
-
- private:
-
-};
-
-class CompTransfmEdge : public TransfmEdge {
- public:
-  DISALLOW_COPY_AND_MOVE(CompTransfmEdge);
-  virtual ~CompTransfmEdge() = default;
-
-  virtual void Init() {
-    TransfmEdge::Init();
-    // struct style
-  }
- protected:
-  CompTransfmEdge() = default;
-
- private:
-};
-
 class CompTransfmGraph : public TransformerGraph {
  public:
   DISALLOW_COPY_AND_MOVE(CompTransfmGraph);
@@ -44,10 +13,11 @@ class CompTransfmGraph : public TransformerGraph {
 
   virtual void Init(const TaskNode* task_node, bool job_has_bp) override {
     TransformerGraph::Init(task_node, job_has_bp);
-    // struct style
   }
 
-  virtual void FwBuildGraph() override {
+  void FwBuildGraph() override {
+    std::unordered_map<std::string, TransfmNode*> lbn2producer;
+    std::unordered_map<std::string, std::vector<TransfmNode*>> extern_in_lbn2consumers;
     FwBuildFromUserOps();
     if (job_has_bp()) {
       FwAddCopyInOp();
@@ -61,9 +31,14 @@ class CompTransfmGraph : public TransformerGraph {
 
  private:
   CompTransfmGraph() = default;
+
+  // Funtions used in FwBuildGraph
   void FwBuildFromUserOps();
   void FwAddCopyInOp();
   void FwAddCloneOp();
+
+  Node dangling_in_edge_src_;
+  Node dangling_out_edge_dst_;
 
 };
 

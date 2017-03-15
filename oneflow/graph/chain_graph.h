@@ -47,7 +47,6 @@ class ChainNode final : public Node {
   std::vector<std::string>& mutable_output_lbns() {
     return output_lbns_;
   }
-  
 
  private:
   std::vector<std::shared_ptr<const Operator>> op_vec_;

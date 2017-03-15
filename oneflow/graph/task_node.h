@@ -40,7 +40,7 @@ class TaskNode : public Node {
 
   virtual std::unique_ptr<TaskNode> CreateSameTypeNode() const = 0;
 
-  virtual void CopyWithOnlyTaskProperty(const TaskNode& rhs) {
+  void CopyWithOnlyTaskProperty(const TaskNode& rhs) {
     stage_node_ = rhs.stage_node_;
     thread_local_id_ = rhs.thread_local_id_;
     is_fw_node_ = rhs.is_fw_node_;
@@ -66,7 +66,7 @@ class CompTaskNode : public TaskNode {
   bool HasOpWithOutDiff() const;
   bool HasOpWithIndiff() const;
 
-  virtual void CopyWithOnlyTaskProperty(const CompTaskNode& rhs) {
+  void CopyWithOnlyTaskProperty(const CompTaskNode& rhs) {
     TaskNode::CopyWithOnlyTaskProperty(rhs);
   }
 
@@ -210,7 +210,24 @@ class CommNetTaskNode final : public TaskNode {
     TaskNode::CopyWithOnlyTaskProperty(rhs);
   }
 
+  bool IsSender() const {
+    return (IsFwNode() && is_forward_sender_)
+        || (IsBpNode() && !is_forward_sender_);
+  }
+  bool IsReceiver() const {
+    return !IsSender();
+  }
+
+  void SetForwardSender() {
+    is_forward_sender_ = true;
+  }
+  void SetForwardReceiver() {
+    is_forward_sender_ = false;
+  }
+
  private:
+  bool is_forward_sender_;
+
 };
 
 } // namespace oneflow
