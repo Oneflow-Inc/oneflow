@@ -30,8 +30,8 @@ void ConnectRelatedStages(
     std::function<void(StageNode*, StageNode*)> ConnectTwoNode) {
   CHECK_EQ(cur_stages.empty(), false);
   CHECK_EQ(next_stages.empty(), false);
-  auto cur_parallel_policy = cur_stages.front()->parallel_desc().policy();
-  auto next_parallel_policy = next_stages.front()->parallel_desc().policy();
+  auto cur_parallel_policy = cur_stages.front()->chain_node()->parallel_desc().policy();
+  auto next_parallel_policy = next_stages.front()->chain_node()->parallel_desc().policy();
   if (cur_parallel_policy == ParallelDesc::kDataParallel
       && next_parallel_policy == ParallelDesc::kDataParallel) {
     CHECK_EQ(cur_stages.size(), next_stages.size());
@@ -51,11 +51,8 @@ void StageGraph::Init(std::shared_ptr<const ChainGraph> chain_graph) {
     chain2stages[chain_node] = {};
     for (MachineId machine_id : chain_node->parallel_desc().machines()) {
       StageNode* stage_node = NewStageNode();
-      stage_node->mutable_op_vec_ptr() = chain_node->op_vec_ptr();
-      stage_node->mutable_parallel_desc_ptr() = chain_node->parallel_desc_ptr();
       stage_node->mutable_machine_id() = machine_id;
-      stage_node->mutable_input_lbns_ptr() = chain_node->input_lbns_ptr();
-      stage_node->mutable_output_lbns_ptr() = chain_node->output_lbns_ptr();
+      stage_node->set_chain_node(chain_node);
       chain2stages.at(chain_node).push_back(stage_node);
     }
   }

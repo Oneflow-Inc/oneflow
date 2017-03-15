@@ -29,7 +29,7 @@ class TaskGraph final : public Graph {
   TaskGraph() = default;
   ~TaskGraph() = default;
   
-  void Init(const StageGraph* stage_graph,
+  void Init(std::shared_ptr<const StageGraph> stage_graph,
             const IDMap& id_map,
             bool need_bp);
 
@@ -62,6 +62,7 @@ class TaskGraph final : public Graph {
 
   TaskNode* ConstructBpNode(TaskNode* fw_node) {
     std::unique_ptr<TaskNode> node = fw_node->CloneWithOnlyTaskProperty();
+    node->SetBpNode();
     TaskNode* ret = node.get();
     RegisterNode(std::move(node));
     return ret;
@@ -98,6 +99,8 @@ class TaskGraph final : public Graph {
       const std::unordered_map<TaskNode*, const TaskNode*>& bp_node2fw_node,
       const std::vector<TaskNode*>& turning_node_vec);
   void BuildBpStruct();
+
+  std::shared_ptr<const StageGraph> stage_graph_;
 
 };
 

@@ -38,16 +38,13 @@ class TransfmEdge : public Edge {
     Edge::Init();
     // struct style
   }
-  
-  BlobDescriptor* blob_desc_ptr() const {
-    return blob_desc_ptr_;
-  }
-  void set_blob_desc_ptr(BlobDescriptor* new_blob_desc_ptr) {
-    blob_desc_ptr_ = new_blob_desc_ptr;
-  }
+ 
+  const std::vector<std::string>& lbns() const { return lbns_; }
+  std::vector<std::string>& mutable_lbns() { return lbns_; }
 
  private:
-  BlobDescriptor* blob_desc_ptr_;
+  std::vector<std::string> lbns_;
+
 };
 
 class TransformerGraph : public Graph {
@@ -65,7 +62,7 @@ class TransformerGraph : public Graph {
 
  protected:
   virtual TransfmNode* NewTransfmNode() = 0;
-  virtual TransfmEdge* NewTransfmEdge(BlobDescriptor*) = 0;
+  virtual TransfmEdge* NewTransfmEdge() = 0;
 
   const TaskNode* task_node() { return task_node_; }
   bool job_has_bp() { return job_has_bp_; }
@@ -74,7 +71,7 @@ class TransformerGraph : public Graph {
   const TaskNode* task_node_;
   bool job_has_bp_;
   std::unordered_map<std::string, std::vector<TransfmNode*>> extern_in_lbn2consumers_;
-  std::unordered_map<std::string, std::unique_ptr<BlobDescriptor>> produced_lbn2blob_desc_;
+  std::unordered_map<std::string, std::unique_ptr<BlobDesc>> produced_lbn2blob_desc_;
 
 };
 

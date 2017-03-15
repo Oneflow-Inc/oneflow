@@ -25,7 +25,6 @@ void SetChainNodeWithChainIt(ChainNode* chain_node,
   CHECK_EQ(chain_it->nodes.empty(), false);
   chain_node->mutable_parallel_desc_ptr() =
       chain_it->nodes.front()->parallel_desc_ptr();
-  chain_node->mutable_op_vec_ptr().reset(new std::vector<std::shared_ptr<const Operator>>);
   for (const LogicalNode* logical_node : chain_it->nodes) {
     chain_node->mutable_op_vec().push_back(
         logical_node->op_ptr());
@@ -239,14 +238,15 @@ void DataMergeChains(
 
 } // namespace
 
-void ChainGraph::Init(const LogicalGraph* logical_graph) {
+void ChainGraph::Init(std::shared_ptr<const LogicalGraph> logical_graph) {
+  logical_graph_ = logical_graph;
   // Build Chain
   std::list<Chain> chain_list;
   std::unordered_map<const LogicalNode*,
                      ChainIt> logical_node2chain_it;
-  InitChains(logical_graph, &chain_list, &logical_node2chain_it);
+  InitChains(logical_graph.get(), &chain_list, &logical_node2chain_it);
   ModelMergeChains(&chain_list, &logical_node2chain_it);
-  DataMergeChains(logical_graph,
+  DataMergeChains(logical_graph.get(),
                     &chain_list,
                     &logical_node2chain_it);
   // Init chain_nodes
@@ -289,7 +289,7 @@ void ChainGraph::Init(const LogicalGraph* logical_graph) {
 }
 
 void ChainGraph::CollectInputAndOutputLbns() {
-  // set input_lbns_ and output_lbns_
+  // set input_lbns_ and output_lbns_ for each node
   LOG(FATAL) << "TODO";
 }
 

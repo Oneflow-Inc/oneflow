@@ -14,15 +14,20 @@ class TaskNode : public Node {
   virtual void Init() {
     Node::Init();
   }
-
-  const MachineId& machine_id() const { return machine_id_; }
-  const ThreadLocalId& thread_local_id() const { return thread_local_id_; }
   
-  MachineId& mutable_machine_id() { return machine_id_; }
+  // Getters and Setters
+  const StageNode* stage_node() const {
+    return stage_node_;
+  }
+  void set_stage_node(const StageNode* new_stage_node) {
+    stage_node_ = new_stage_node;
+  }
+
+  const ThreadLocalId& thread_local_id() const { return thread_local_id_; }
   ThreadLocalId& mutable_thread_local_id() { return thread_local_id_; }
   
-  bool IsFwNode() { return is_fw_node_; }
-  bool IsBpNode() { return !is_fw_node_; }
+  bool IsFwNode() const { return is_fw_node_; }
+  bool IsBpNode() const { return !is_fw_node_; }
   void SetFwNode() { is_fw_node_ = true; }
   void SetBpNode() { is_fw_node_ = false; }
 
@@ -36,13 +41,13 @@ class TaskNode : public Node {
   virtual std::unique_ptr<TaskNode> CreateSameTypeNode() const = 0;
 
   virtual void CopyWithOnlyTaskProperty(const TaskNode& rhs) {
-    machine_id_ = rhs.machine_id_;
+    stage_node_ = rhs.stage_node_;
     thread_local_id_ = rhs.thread_local_id_;
     is_fw_node_ = rhs.is_fw_node_;
   }
 
  private:
-  MachineId machine_id_;
+  const StageNode* stage_node_;
   ThreadLocalId thread_local_id_;
   bool is_fw_node_;
 
@@ -58,53 +63,14 @@ class CompTaskNode : public TaskNode {
     TaskNode::Init();
   }
   
-  std::shared_ptr<std::vector<std::shared_ptr<const Operator>>> op_vec_ptr() const {
-    return op_vec_ptr_;
-  }
-  std::shared_ptr<std::vector<std::shared_ptr<const Operator>>>& mutable_op_vec_ptr() {
-    return op_vec_ptr_;
-  }
-
-  const ParallelDesc& parallel_desc() const {
-    return *parallel_desc_ptr_;
-  }
-  std::shared_ptr<const ParallelDesc> parallel_desc_ptr() const {
-    return parallel_desc_ptr_;
-  }
-  std::shared_ptr<const ParallelDesc>& mutable_parallel_desc_ptr() {
-    return parallel_desc_ptr_;
-  }
-
-  std::shared_ptr<std::vector<std::string>> input_lbns_ptr() const {
-    return input_lbns_ptr_;
-  }
-  std::shared_ptr<std::vector<std::string>>& mutable_input_lbns_ptr() {
-    return input_lbns_ptr_;
-  }
-  
-  std::shared_ptr<std::vector<std::string>> output_lbns_ptr() const {
-    return output_lbns_ptr_;
-  }
-  std::shared_ptr<std::vector<std::string>>& mutable_output_lbns_ptr() {
-    return output_lbns_ptr_;
-  }
-
   bool HasOpWithOutDiff() const;
   bool HasOpWithIndiff() const;
 
   virtual void CopyWithOnlyTaskProperty(const CompTaskNode& rhs) {
     TaskNode::CopyWithOnlyTaskProperty(rhs);
-    op_vec_ptr_ = rhs.op_vec_ptr_;
-    parallel_desc_ptr_ = rhs.parallel_desc_ptr_;
-    input_lbns_ptr_ = rhs.input_lbns_ptr_;
-    output_lbns_ptr_ = rhs.output_lbns_ptr_;
   }
 
  private:
-  std::shared_ptr<const std::vector<std::shared_ptr<const Operator>>> op_vec_ptr_;
-  std::shared_ptr<const ParallelDesc> parallel_desc_ptr_;
-  std::shared_ptr<const std::vector<std::string>> input_lbns_ptr_;
-  std::shared_ptr<const std::vector<std::string>> output_lbns_ptr_;
 
 };
 
@@ -173,24 +139,20 @@ class CopyHDTaskNode final : public TaskNode {
 
   void CopyWithOnlyTaskProperty(const CopyHDTaskNode& rhs) {
     TaskNode::CopyWithOnlyTaskProperty(rhs);
+    is_in_copy_ = rhs.is_in_copy_;
   }
 
   bool IsH2D() const {
     return ((IsInCopy() && IsFwNode()) || (IsOutCopy() && IsBpNode()));
   }
+  bool IsD2H() const {
+    return !IsH2D();
+  }
 
+  bool IsInCopy() const { return is_in_copy_; }
+  bool IsOutCopy() const { return !is_in_copy_; }
   void SetInCopy() { is_in_copy_ = true; }
   void SetOutCopy() { is_in_copy_ = false; }
-  
-  CompTaskNode* RelatedCompTaskNode() {
-    if ((IsInCopy() && IsFwNode()) || (IsOutCopy() && IsBpNode())) {
-      CHECK_EQ(out_edges().size(), 1);
-      return of_dynamic_cast<CompTaskNode*>((*(out_edges().begin()))->dst_node());
-    } else {
-      CHECK_EQ(in_edges().size(), 1);
-      return of_dynamic_cast<CompTaskNode*>((*(in_edges().begin()))->src_node());
-    }
-  }
 
  private:
   bool is_in_copy_;
@@ -215,9 +177,16 @@ class BoxingTaskNode final : public TaskNode {
 
   void CopyWithOnlyTaskProperty(const BoxingTaskNode& rhs) {
     TaskNode::CopyWithOnlyTaskProperty(rhs);
+    is_in_boxing_ = rhs.is_in_boxing_;
   }
 
+  bool IsInBoxing() const { return is_in_boxing_; }
+  bool IsOutBoxing() const { return !is_in_boxing_; }
+  void SetInBoxing() { is_in_boxing_ = true; }
+  void SetOutBoxing() { is_in_boxing_ = false; }
+
  private:
+  bool is_in_boxing_;
 };
 
 // CommNet: Communication Network

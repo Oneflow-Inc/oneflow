@@ -16,23 +16,6 @@ class StageNode final : public Node {
     // struct style
   }
 
-  std::shared_ptr<std::vector<std::shared_ptr<const Operator>>> op_vec_ptr() const {
-    return op_vec_ptr_;
-  }
-  std::shared_ptr<std::vector<std::shared_ptr<const Operator>>>& mutable_op_vec_ptr() {
-    return op_vec_ptr_;
-  }
-
-  const ParallelDesc& parallel_desc() const {
-    return *parallel_desc_ptr_;
-  }
-  std::shared_ptr<const ParallelDesc> parallel_desc_ptr() const {
-    return parallel_desc_ptr_;
-  }
-  std::shared_ptr<const ParallelDesc>& mutable_parallel_desc_ptr() {
-    return parallel_desc_ptr_;
-  }
-
   const MachineId& machine_id() const {
     return machine_id_;
   }
@@ -40,26 +23,16 @@ class StageNode final : public Node {
     return machine_id_;
   }
 
-  std::shared_ptr<const std::vector<std::string>> input_lbns_ptr() const {
-    return input_lbns_ptr_;
+  const ChainNode* chain_node() const {
+    return chain_node_;
   }
-  std::shared_ptr<const std::vector<std::string>>& mutable_input_lbns_ptr() {
-    return input_lbns_ptr_;
-  }
-  
-  std::shared_ptr<std::vector<std::string>> output_lbns_ptr() const {
-    return output_lbns_ptr_;
-  }
-  std::shared_ptr<std::vector<std::string>>& mutable_output_lbns_ptr() {
-    return output_lbns_ptr_;
+  void set_chain_node(const ChainNode* new_chain_node) {
+    chain_node_ = new_chain_node;
   }
 
  private:
-  std::shared_ptr<const std::vector<std::shared_ptr<const Operator>>> op_vec_ptr_;
-  std::shared_ptr<const ParallelDesc> parallel_desc_ptr_;
+  const ChainNode* chain_node_;
   MachineId machine_id_;
-  std::shared_ptr<const std::vector<std::string>> input_lbns_ptr_;
-  std::shared_ptr<const std::vector<std::string>> output_lbns_ptr_;
 
 };
 
@@ -97,6 +70,7 @@ class StageGraph final : public Graph {
     RegisterEdge(ret_ptr);
     return ret_ptr;
   }
+  std::shared_ptr<const ChainGraph> chain_graph_;
 
 };
 
