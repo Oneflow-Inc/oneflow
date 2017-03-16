@@ -27,12 +27,8 @@ class Edge {
 
  private:
   // only follows can write the src_node_ and dst_node_
-  class TransfmNode;
-  class TransfmEdge;
   friend void Connect(Node* src_node, Edge* edge, Node* dst_node);
   friend void DisConnect(Edge* edge);
-  friend void TransfmEdge::ConnectDanglingInEdges(TransfmEdge*);
-  friend void TransfmEdge::ConnectDanglingOutEdges(TransfmEdge*);
   
   Node* src_node_;
   Node* dst_node_;
@@ -61,6 +57,13 @@ class Node {
   bool HasSuccessor(const Node* succ_node) const;
 
   bool HasPredecessor(const Node* pred_node) const;
+
+  virtual bool IsEmptyIn() const {
+    return in_edges_.empty();
+  }
+  virtual bool IsEmptyOut() const {
+    return out_edges_.empty();
+  }
 
  private:
   friend void Connect(Node* src_node, Edge* edge, Node* dst_node);

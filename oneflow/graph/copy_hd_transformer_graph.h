@@ -2,34 +2,9 @@
 #define ONEFLOW_GRAPH_COPY_HD_TRANSFORMER_H_
 
 #include "graph/transformer_graph.h"
+#include "operator/operator_factory.h"
 
 namespace oneflow {
-
-class CopyHDTransfmNode final : public TransfmNode {
- public:
-  DISALLOW_COPY_AND_MOVE(CopyHDTransfmNode);
-  CopyHDTransfmNode() = default;
-  ~CopyHDTransfmNode() = default;
-
-  void Init() override {
-    TransfmNode::Init();
-  }
-
- private:
-};
-
-class CopyHDTransfmEdge final : public TransfmEdge {
- public:
-  DISALLOW_COPY_AND_MOVE(CopyHDTransfmEdge);
-  CopyHDTransfmEdge() = default;
-  ~CopyHDTransfmEdge() = default;
-
-  void Init() override {
-    TransfmEdge::Init();
-  }
-
- private:
-};
 
 class CopyHDTransfmGraph final : public TransformerGraph {
  public:

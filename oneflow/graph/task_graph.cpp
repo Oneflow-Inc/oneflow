@@ -2,13 +2,13 @@
 
 namespace oneflow {
 
-void TaskGraph::Init(const StageGraph* stage_graph,
+void TaskGraph::Init(std::shared_ptr<const StageGraph> stage_graph,
                      const IDMap& id_map,
                      bool need_bp) {
   Stage2TaskNodesMap stage2task_nodes;
-  InitCompTaskNodes(stage_graph, id_map, &stage2task_nodes);
-  InitBoxingTaskNodes(stage_graph, id_map, &stage2task_nodes);
-  ConnectTaskNodes(stage_graph, &stage2task_nodes);
+  InitCompTaskNodes(stage_graph.get(), id_map, &stage2task_nodes);
+  InitBoxingTaskNodes(stage_graph.get(), id_map, &stage2task_nodes);
+  ConnectTaskNodes(stage_graph.get(), &stage2task_nodes);
   UpdateStartAndStop();
   if (need_bp) {
     BuildBpStruct();

@@ -113,13 +113,13 @@ void Graph::UpdateStartAndStop() {
   start_edge_vec_.clear();
   stop_edge_vec_.clear();
   for (const std::unique_ptr<Node>& node : node_vec_) {
-    if (node->in_edges().empty()) {
+    if (node->IsEmptyIn()) {
       Edge* start_edge = new Edge;
       start_edge_vec_.emplace_back(start_edge);
       start_edge->Init();
       Connect(&start_node_, start_edge, node.get());
     }
-    if (node->out_edges().empty()) {
+    if (node->IsEmptyOut()) {
       Edge* stop_edge = new Edge;
       stop_edge_vec_.emplace_back(stop_edge);
       stop_edge->Init();

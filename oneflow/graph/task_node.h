@@ -149,6 +149,14 @@ class CopyHDTaskNode final : public TaskNode {
     return !IsH2D();
   }
 
+  const std::vector<std::string>& RelatedLbns() const {
+    if (IsInCopy()) {
+      return stage_node()->chain_node()->input_lbns();
+    } else {
+      return stage_node()->chain_node()->output_lbns();
+    }
+  }
+
   bool IsInCopy() const { return is_in_copy_; }
   bool IsOutCopy() const { return !is_in_copy_; }
   void SetInCopy() { is_in_copy_ = true; }

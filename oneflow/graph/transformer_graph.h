@@ -14,7 +14,6 @@ class TransfmEdge final : public Edge {
 
   virtual void Init() {
     Edge::Init();
-    lbns_.clear();
     task_edge_ = nullptr;
   }
  
@@ -50,6 +49,15 @@ class TransfmNode final : public Node {
     return op_;
   }
 
+  bool IsEmptyIn() const override {
+    LOG(FATAL) << "TODO";
+    return true;
+  }
+  bool IsEmptyOut() const override {
+    LOG(FATAL) << "TODO";
+    return true;
+  }
+
  private:
   std::shared_ptr<const Operator> op_;
 
@@ -64,6 +72,8 @@ class TransformerGraph : public Graph {
   virtual void Init(const TaskNode* task_node, bool job_has_bp) {
     task_node_ = task_node;
     job_has_bp_ = job_has_bp;
+    dangling_in_edge_src_.Init();
+    dangling_out_edge_dst_.Init();
   }
 
   virtual void FwBuildGraph() = 0;
@@ -73,17 +83,30 @@ class TransformerGraph : public Graph {
     LOG(FATAL) << "TODO";
     return nullptr;
   }
-  TransfmEdge* NewTransfmEdge() {
-    LOG(FATAL) << "TODO";
-    return nullptr;
+  TransfmEdge* NewTransfmEdge(const std::string& lbn) {
+    TransfmEdge* ret = new TransfmEdge;
+    ret->Init();
+    ret->mutable_lbn() = lbn;
+    RegisterEdge(ret);
+    return ret;
   }
 
   const TaskNode* task_node() { return task_node_; }
   bool job_has_bp() { return job_has_bp_; }
 
+  Node* dangling_in_edge_src() {
+    return &dangling_in_edge_src_;
+  }
+  Node* dangling_out_edge_dst() {
+    return &dangling_out_edge_dst_;
+  }
+
  private:
   const TaskNode* task_node_;
   bool job_has_bp_;
+  
+  Node dangling_in_edge_src_;
+  Node dangling_out_edge_dst_;
 
 };
 

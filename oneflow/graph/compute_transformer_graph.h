@@ -16,13 +16,14 @@ class CompTransfmGraph : public TransformerGraph {
   }
 
   void FwBuildGraph() override {
-    std::unordered_map<std::string, TransfmNode*> lbn2producer;
-    std::unordered_map<std::string, std::vector<TransfmNode*>> extern_in_lbn2consumers;
-    FwBuildFromUserOps();
+    Lbn2NodeMap lbn2producer;
+    Lbn2NodeVecMap extern_in_lbn2consumers;
+    FwBuildFromUserOps(&lbn2producer, &extern_in_lbn2consumers);
     if (job_has_bp()) {
-      FwAddCopyInOp();
+      FwAddCopyInOp(&extern_in_lbn2consumers);
     }
     FwAddCloneOp();
+    FwAddDanglingEdge(lbn2producer, extern_in_lbn2consumers);
     UpdateStartAndStop();
   }
 
@@ -33,12 +34,15 @@ class CompTransfmGraph : public TransformerGraph {
   CompTransfmGraph() = default;
 
   // Funtions used in FwBuildGraph
-  void FwBuildFromUserOps();
-  void FwAddCopyInOp();
+  using Lbn2NodeMap = std::unordered_map<std::string, TransfmNode*>;
+  using Lbn2NodeVecMap = std::unordered_map<std::string, std::vector<TransfmNode*>>;
+  void FwBuildFromUserOps(Lbn2NodeMap* lbn2producer,
+                          Lbn2NodeVecMap* extern_in_lbn2consumers);
+  void FwAddCopyInOp(Lbn2NodeVecMap* extern_in_lbn2consumers);
   void FwAddCloneOp();
+  void FwAddDanglingEdge(const Lbn2NodeMap& lbn2producer,
+                         const Lbn2NodeVecMap& extern_in_lbn2consumers);
 
-  Node dangling_in_edge_src_;
-  Node dangling_out_edge_dst_;
 
 };
 

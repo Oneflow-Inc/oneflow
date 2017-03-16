@@ -2,41 +2,42 @@
 
 namespace oneflow {
 
-void CompTransfmGraph::FwBuildFromUserOps() {
-  std::unordered_map<std::string, TransfmNode*> lbn2producer;
+void CompTransfmGraph::FwBuildFromUserOps(
+    Lbn2NodeMap* lbn2producer,
+    Lbn2NodeVecMap* extern_in_lbn2consumers) {
   for (std::shared_ptr<const Operator> op : task_node()->stage_node()->chain_node()->op_vec()) {
     TransfmNode* cur_node = NewTransfmNode();
     cur_node->mutable_op() = op;
     for (const std::string& obn : op->data_blob_name_set().output_blob_names) {
       std::string lbn = op->obn2lbn(obn);
-      lbn2producer[lbn] = cur_node;
+      lbn2producer->operator[](lbn) = cur_node;
     }
   }
   for (const std::unique_ptr<Node>& base_node : node_vec()) {
     auto cur_node = of_dynamic_cast<TransfmNode*>(base_node.get());
     for (auto ibn : cur_node->op()->data_blob_name_set().input_blob_names) {
       std::string lbn = cur_node->op()->ibn2lbn(ibn);
-      auto producer_node_it = lbn2producer.find(lbn);
-      if (producer_node_it != lbn2producer.end()) {
+      auto producer_node_it = lbn2producer->find(lbn);
+      if (producer_node_it != lbn2producer->end()) {
         Connect(producer_node_it->second,
                 NewTransfmEdge(lbn),
                 cur_node);
       } else {
-        extern_in_lbn2consumers_[lbn].push_back(cur_node);
+        extern_in_lbn2consumers->operator[](lbn).push_back(cur_node);
       }
     }
   }
 }
 
-void CompTransfmGraph::FwAddCopyInOp() {
+void CompTransfmGraph::FwAddCopyInOp(Lbn2NodeVecMap* extern_in_lbn2consumers) {
   // If only DataOp
-  if (extern_in_lbn2consumers.empty()) { return; }
+  if (extern_in_lbn2consumers->empty()) { return; }
   // Construct Copy Operator
   OperatorConf pb_op_conf;
   pb_op_conf.set_name("");
   pb_op_conf.mutable_copy_op_conf()->set_copy_type(CopyInOpType());
   pb_op_conf.mutable_copy_op_conf()->clear_logical_blob_names();
-  for (const auto& pair : extern_in_lbn2consumers) {
+  for (const auto& pair : *extern_in_lbn2consumers) {
     pb_op_conf.mutable_copy_op_conf()->add_logical_blob_names(pair.first);
   }
   std::shared_ptr<const Operator> copy_op = ConstructOpFromPbConf(pb_op_conf);
@@ -44,13 +45,13 @@ void CompTransfmGraph::FwAddCopyInOp() {
   TransfmNode* copy_node = NewTransfmNode();
   copy_node->mutable_op() = copy_op;
   // Connect CopyNode and OldConsumer
-  for (const auto& pair : extern_in_lbn2consumers) {
+  for (const auto& pair : *extern_in_lbn2consumers) {
     const std::string& lbn = pair.first;
     const std::vector<TransfmNode*>& old_consumers = pair.second;
     for (TransfmNode* old_consumer : old_consumers) {
       Connect(copy_node, NewTransfmEdge(lbn), old_consumer);
     }
-    extern_in_lbn2consumers.at(lbn) = {copy_node};
+    extern_in_lbn2consumers->at(lbn) = {copy_node};
   }
 }
 
@@ -87,15 +88,17 @@ void CompTransfmGraph::FwAddCloneOp() {
   }
 }
 
-void CompTransfmGraph::FwAddDanglingEdge() {
+void CompTransfmGraph::FwAddDanglingEdge(
+    const Lbn2NodeMap& lbn2producer,
+    const Lbn2NodeVecMap& extern_in_lbn2consumers) {
   // Add Dangling InEdge
   CHECK_EQ(task_node()->in_edges().size(), 1);
   for (const auto& pair : extern_in_lbn2consumers) {
     const std::string& lbn = pair.first;
     for (TransfmNode* consumer : pair.second) {
       TransfmEdge* new_edge = NewTransfmEdge(lbn);
-      new_edge->set_task_edge(task_node()->in_edges().front());
-      Connect(&dangling_in_edge_src_, new_edge, consumer);
+      new_edge->set_task_edge(of_dynamic_cast<const TaskEdge*>(*(task_node()->in_edges().begin())));
+      Connect(dangling_in_edge_src(), new_edge, consumer);
     }
   }
   // Add Dangling OutEdge
@@ -103,8 +106,8 @@ void CompTransfmGraph::FwAddDanglingEdge() {
   for (const auto& lbn : task_node()->stage_node()->chain_node()->output_lbns()) {
     TransfmNode* producer = lbn2producer.at(lbn);
     TransfmEdge* new_edge = NewTransfmEdge(lbn);
-    new_edge->set_task_edge(task_node()->out_edges().front());
-    Connect(producer, new_edge, &dangling_out_edge_dst_);
+    new_edge->set_task_edge(of_dynamic_cast<const TaskEdge*>(*(task_node()->out_edges().begin())));
+    Connect(producer, new_edge, dangling_out_edge_dst());
   }
 }
 
