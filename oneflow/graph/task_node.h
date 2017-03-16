@@ -34,16 +34,16 @@ class TaskNode : public Node {
   // Clone without Node's property
   std::unique_ptr<TaskNode> CloneWithOnlyTaskProperty() const {
     std::unique_ptr<TaskNode> new_node  = CreateSameTypeNode();
-    new_node->CopyWithOnlyTaskProperty(*this);
+    new_node->CopyWithOnlyTaskProperty(this);
     return new_node;
   }
 
   virtual std::unique_ptr<TaskNode> CreateSameTypeNode() const = 0;
 
-  void CopyWithOnlyTaskProperty(const TaskNode& rhs) {
-    stage_node_ = rhs.stage_node_;
-    thread_local_id_ = rhs.thread_local_id_;
-    is_fw_node_ = rhs.is_fw_node_;
+  virtual void CopyWithOnlyTaskProperty(const TaskNode* rhs) {
+    stage_node_ = rhs->stage_node_;
+    thread_local_id_ = rhs->thread_local_id_;
+    is_fw_node_ = rhs->is_fw_node_;
   }
 
  private:
@@ -66,7 +66,7 @@ class CompTaskNode : public TaskNode {
   bool HasOpWithOutDiff() const;
   bool HasOpWithIndiff() const;
 
-  void CopyWithOnlyTaskProperty(const CompTaskNode& rhs) {
+  virtual void CopyWithOnlyTaskProperty(const TaskNode* rhs) override {
     TaskNode::CopyWithOnlyTaskProperty(rhs);
   }
 
@@ -90,7 +90,7 @@ class HostCompTaskNode final : public CompTaskNode {
     return new_node;
   }
 
-  void CopyWithOnlyTaskProperty(const HostCompTaskNode& rhs) {
+  void CopyWithOnlyTaskProperty(const TaskNode* rhs) override {
     CompTaskNode::CopyWithOnlyTaskProperty(rhs);
   }
 
@@ -113,7 +113,7 @@ class DeviceCompTaskNode final : public CompTaskNode {
     return new_node;
   }
  
-  void CopyWithOnlyTaskProperty(const DeviceCompTaskNode& rhs) {
+  void CopyWithOnlyTaskProperty(const TaskNode* rhs) override {
     CompTaskNode::CopyWithOnlyTaskProperty(rhs);
   }
 
@@ -137,9 +137,9 @@ class CopyHDTaskNode final : public TaskNode {
     return new_node;
   }
 
-  void CopyWithOnlyTaskProperty(const CopyHDTaskNode& rhs) {
+  void CopyWithOnlyTaskProperty(const TaskNode* rhs) override {
     TaskNode::CopyWithOnlyTaskProperty(rhs);
-    is_fw_in_copy_ = rhs.is_fw_in_copy_;
+    is_fw_in_copy_ = of_dynamic_cast<const CopyHDTaskNode*>(rhs)->is_fw_in_copy_;
   }
 
   bool IsH2D() const {
@@ -183,9 +183,9 @@ class BoxingTaskNode final : public TaskNode {
     return new_node;
   }
 
-  void CopyWithOnlyTaskProperty(const BoxingTaskNode& rhs) {
+  void CopyWithOnlyTaskProperty(const TaskNode* rhs) override {
     TaskNode::CopyWithOnlyTaskProperty(rhs);
-    is_fw_in_boxing_ = rhs.is_fw_in_boxing_;
+    is_fw_in_boxing_ = of_dynamic_cast<const BoxingTaskNode*>(rhs)->is_fw_in_boxing_;
   }
 
   bool IsFwInBoxing() const { return is_fw_in_boxing_; }
@@ -214,9 +214,9 @@ class CommNetTaskNode final : public TaskNode {
     return new_node;
   }
 
-  void CopyWithOnlyTaskProperty(const CommNetTaskNode& rhs) {
+  void CopyWithOnlyTaskProperty(const TaskNode* rhs) override {
     TaskNode::CopyWithOnlyTaskProperty(rhs);
-    is_fw_sender_ = rhs.is_fw_sender_;
+    is_fw_sender_ = of_dynamic_cast<const CommNetTaskNode*>(rhs)->is_fw_sender_;
   }
 
   bool IsSender() const {

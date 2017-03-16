@@ -13,7 +13,7 @@ class HostCompTransfmGraph final : public CompTransfmGraph {
   ~HostCompTransfmGraph() = default;
 
   void Init(const TaskNode* task_node, bool job_has_bp) override {
-    ComputeTransformerGraph::Init(task_node, job_has_bp);
+    ComputeTransfmGraph::Init(task_node, job_has_bp);
   }
 
  private:

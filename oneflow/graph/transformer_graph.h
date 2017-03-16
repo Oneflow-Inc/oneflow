@@ -63,11 +63,11 @@ class TransfmNode final : public Node {
 
 };
 
-class TransformerGraph : public Graph {
+class TransfmGraph : public Graph {
  public:
-  DISALLOW_COPY_AND_MOVE(TransformerGraph);
-  TransformerGraph() = default;
-  virtual ~TransformerGraph() = default;
+  DISALLOW_COPY_AND_MOVE(TransfmGraph);
+  TransfmGraph() = default;
+  virtual ~TransfmGraph() = default;
 
   virtual void Init(const TaskNode* task_node, bool job_has_bp) {
     task_node_ = task_node;

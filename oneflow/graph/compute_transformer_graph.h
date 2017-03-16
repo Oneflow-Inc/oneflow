@@ -6,13 +6,13 @@
 
 namespace oneflow {
 
-class CompTransfmGraph : public TransformerGraph {
+class CompTransfmGraph : public TransfmGraph {
  public:
   DISALLOW_COPY_AND_MOVE(CompTransfmGraph);
   virtual ~CompTransfmGraph() = default;
 
   virtual void Init(const TaskNode* task_node, bool job_has_bp) override {
-    TransformerGraph::Init(task_node, job_has_bp);
+    TransfmGraph::Init(task_node, job_has_bp);
   }
 
   void FwBuildGraph() override {

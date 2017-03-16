@@ -3,14 +3,14 @@
 
 namespace oneflow {
 
-class DeviceCompTransfmGraph final : public ComputeTransformerGraph {
+class DeviceCompTransfmGraph final : public ComputeTransfmGraph {
  public:
   DISALLOW_COPY_AND_MOVE(DeviceCompTransfmGraph);
   DeviceCompTransfmGraph() = default;
   ~DeviceCompTransfmGraph() = default;
 
   void Init(const TaskNode* task_node, bool job_has_bp) override {
-    ComputeTransformerGraph::Init(task_node, job_has_bp);
+    ComputeTransfmGraph::Init(task_node, job_has_bp);
   }
 
  private:
