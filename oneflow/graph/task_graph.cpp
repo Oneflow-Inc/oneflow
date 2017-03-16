@@ -55,7 +55,7 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
       comp_in_task_node->set_stage_node(stage);
       comp_in_task_node->mutable_thread_local_id() = thread_local_id;
       comp_in_task_node->SetFwNode();
-      comp_in_task_node->SetInCopy();
+      comp_in_task_node->SetFwInCopy();
       Connect(comp_in_task_node, NewTaskEdge(), comp_task_node);
       task_nodes_within_stage->comp_in_task_nodes.push_back(comp_in_task_node);
     } else {
@@ -67,7 +67,7 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
       comp_out_task_node->set_stage_node(stage);
       comp_out_task_node->mutable_thread_local_id() = thread_local_id;
       comp_out_task_node->SetFwNode();
-      comp_out_task_node->SetOutCopy();
+      comp_out_task_node->SetFwOutCopy();
       Connect(comp_task_node, NewTaskEdge(), comp_out_task_node);
       task_nodes_within_stage->comp_out_task_nodes.push_back(comp_out_task_node);
     } else {
@@ -110,7 +110,7 @@ void TaskGraph::InitInboxingTaskNode(const StageNode* stage,
   boxing_task_node->set_stage_node(stage);
   boxing_task_node->mutable_thread_local_id() = id_map.boxing_thread_local_id();
   boxing_task_node->SetFwNode();
-  boxing_task_node->SetInBoxing();
+  boxing_task_node->SetFwInBoxing();
   for (TaskNode* comp_in_task_node : task_nodes_within_stage->comp_in_task_nodes) {
     Connect(boxing_task_node, NewTaskEdge(), comp_in_task_node);
   }
@@ -130,7 +130,7 @@ void TaskGraph::InitOutBoxingTaskNode(
   boxing_task_node->set_stage_node(stage);
   boxing_task_node->mutable_thread_local_id() = id_map.boxing_thread_local_id();
   boxing_task_node->SetFwNode();
-  boxing_task_node->SetOutBoxing();
+  boxing_task_node->SetFwOutBoxing();
   for (TaskNode* comp_out_task_node : task_nodes_within_stage->comp_out_task_nodes) {
     Connect(comp_out_task_node, NewTaskEdge(), boxing_task_node);
   }

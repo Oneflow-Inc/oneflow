@@ -139,31 +139,31 @@ class CopyHDTaskNode final : public TaskNode {
 
   void CopyWithOnlyTaskProperty(const CopyHDTaskNode& rhs) {
     TaskNode::CopyWithOnlyTaskProperty(rhs);
-    is_in_copy_ = rhs.is_in_copy_;
+    is_fw_in_copy_ = rhs.is_fw_in_copy_;
   }
 
   bool IsH2D() const {
-    return ((IsInCopy() && IsFwNode()) || (IsOutCopy() && IsBpNode()));
+    return ((IsFwInCopy() && IsFwNode()) || (IsFwOutCopy() && IsBpNode()));
   }
   bool IsD2H() const {
     return !IsH2D();
   }
 
   const std::vector<std::string>& RelatedLbns() const {
-    if (IsInCopy()) {
+    if (IsFwInCopy()) {
       return stage_node()->chain_node()->input_lbns();
     } else {
       return stage_node()->chain_node()->output_lbns();
     }
   }
 
-  bool IsInCopy() const { return is_in_copy_; }
-  bool IsOutCopy() const { return !is_in_copy_; }
-  void SetInCopy() { is_in_copy_ = true; }
-  void SetOutCopy() { is_in_copy_ = false; }
+  bool IsFwInCopy() const { return is_fw_in_copy_; }
+  bool IsFwOutCopy() const { return !is_fw_in_copy_; }
+  void SetFwInCopy() { is_fw_in_copy_ = true; }
+  void SetFwOutCopy() { is_fw_in_copy_ = false; }
 
  private:
-  bool is_in_copy_;
+  bool is_fw_in_copy_;
 
 };
 
@@ -185,16 +185,16 @@ class BoxingTaskNode final : public TaskNode {
 
   void CopyWithOnlyTaskProperty(const BoxingTaskNode& rhs) {
     TaskNode::CopyWithOnlyTaskProperty(rhs);
-    is_in_boxing_ = rhs.is_in_boxing_;
+    is_fw_in_boxing_ = rhs.is_fw_in_boxing_;
   }
 
-  bool IsInBoxing() const { return is_in_boxing_; }
-  bool IsOutBoxing() const { return !is_in_boxing_; }
-  void SetInBoxing() { is_in_boxing_ = true; }
-  void SetOutBoxing() { is_in_boxing_ = false; }
+  bool IsFwInBoxing() const { return is_fw_in_boxing_; }
+  bool IsFwOutBoxing() const { return !is_fw_in_boxing_; }
+  void SetFwInBoxing() { is_fw_in_boxing_ = true; }
+  void SetFwOutBoxing() { is_fw_in_boxing_ = false; }
 
  private:
-  bool is_in_boxing_;
+  bool is_fw_in_boxing_;
 };
 
 // CommNet: Communication Network
@@ -216,25 +216,26 @@ class CommNetTaskNode final : public TaskNode {
 
   void CopyWithOnlyTaskProperty(const CommNetTaskNode& rhs) {
     TaskNode::CopyWithOnlyTaskProperty(rhs);
+    is_fw_sender_ = rhs.is_fw_sender_;
   }
 
   bool IsSender() const {
-    return (IsFwNode() && is_forward_sender_)
-        || (IsBpNode() && !is_forward_sender_);
+    return (IsFwNode() && is_fw_sender_)
+        || (IsBpNode() && !is_fw_sender_);
   }
   bool IsReceiver() const {
     return !IsSender();
   }
 
-  void SetForwardSender() {
-    is_forward_sender_ = true;
+  void SetFwSender() {
+    is_fw_sender_ = true;
   }
-  void SetForwardReceiver() {
-    is_forward_sender_ = false;
+  void SetFwReceiver() {
+    is_fw_sender_ = false;
   }
 
  private:
-  bool is_forward_sender_;
+  bool is_fw_sender_;
 
 };
 
