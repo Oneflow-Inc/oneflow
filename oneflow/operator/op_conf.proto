@@ -1,31 +1,6 @@
 syntax = "proto3";
 package oneflow;
 
-message ConstantModelParamInitializerConf {
-  float const_val = 1;
-}
-
-message UniformModelParamInitializerConf {
-  float min = 1;
-  float max = 2;
-}
-
-message GaussianModelParamInitializerConf {
-  float mean = 1;
-  float std = 2;
-  // The expected number of non-zero output weights for a given input
-  // set -1 means don't perform sparsification
-  int32 sparse = 3;
-}
-
-message ModelParamInitializerConf {
-  oneof specified_type {
-    ConstantModelParamInitializerConf const_conf = 1;
-    UniformModelParamInitializerConf uniform_conf = 2;
-    GaussianModelParamInitializerConf gaussian_conf = 3;
-  }
-}
-
 message ConvolutionOpConf {
   string in = 1;
   string out = 2;
@@ -70,11 +45,11 @@ message CopyOpConf {
     H2H = 3;
   }
   CopyType copy_type = 1;
-  repeated string logical_blob_names = 2;
+  repeated string lbns = 2;
 }
 
 message CloneOpConf {
-  string logical_blob_name = 1;
+  string lbn = 1;
   int32 clone_num = 2;
 }
 

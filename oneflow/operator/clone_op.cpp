@@ -2,20 +2,17 @@
 
 namespace oneflow {
 
-namespace {
+void CloneOp::Init(const OperatorConf& op_conf) {
+  mutable_op_name() = op_conf.name();
 
-void InitDataBlobNameSet(
-    DataBlobNameSet& cur_set,
-    const std::string& logical_blob_name,
-    int32_t clone_num) {
-  cur_set.input_blob_names.push_back(logical_blob_name);
-  cur_set.output_blob_names.assign(clone_num, logical_blob_name);
-}
-
-void InitModelBlobNameSet() {
-  // do nothing
-}
-
+  CHECK(op_conf.has_clone_op_conf());
+  auto cnf = new CloneOpConf(op_conf.clone_op_conf());
+  mutable_pb_op_conf().reset(cnf);
+  
+  RegisterInputBlobName(cnf->lbn());
+  for (int32_t i = 0; i < cnf->clone_num(); ++i) {
+    RegisterOutputBlobName(cnf->lbn());
+  }
 }
 
 std::string CloneOp::ibn2lbn(const std::string& input_blob_name) const {
@@ -26,26 +23,13 @@ std::string CloneOp::obn2lbn(const std::string& output_blob_name) const {
 }
 
 std::string CloneOp::idbn2lbn(const std::string input_diff_blob_name) const {
-  LOG(FATAL) << "TODO";
+  LOG(FATAL) << "This Op doesn't have input_diff_blob_name";
   return "";
 }
+
 std::string CloneOp::odbn2lbn(const std::string output_diff_blob_name) const {
-  LOG(FATAL) << "TODO";
+  LOG(FATAL) << "This Op doesn't have output_diff_blob_name";
   return "";
 }
-
-void CloneOp::Init(const OperatorConf& op_conf) {
-  mutable_op_name() = op_conf.name();
-
-  CHECK(op_conf.has_clone_op_conf());
-  auto cnf_ptr = new CloneOpConf(op_conf.clone_op_conf());
-  mutable_pb_op_conf().reset(cnf_ptr);
-  
-  InitDataBlobNameSet(mutable_data_blob_name_set(),
-                      cnf_ptr->logical_blob_name(),
-                      cnf_ptr->clone_num());
-  InitModelBlobNameSet();
-}
-
 
 } // namespace oneflow

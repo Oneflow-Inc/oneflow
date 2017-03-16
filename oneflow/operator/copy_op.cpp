@@ -2,19 +2,17 @@
 
 namespace oneflow {
 
-namespace {
+void CopyOp::Init(const OperatorConf& op_conf) {
+  mutable_op_name() = op_conf.name();
 
-void InitDataBlobNameSet(
-    DataBlobNameSet& cur_set,
-    const google::protobuf::RepeatedPtrField<std::string>& lbns) {
-  cur_set.input_blob_names.assign(lbns.begin(), lbns.end());
-  cur_set.output_blob_names.assign(lbns.begin(), lbns.end());
-}
+  CHECK(op_conf.has_copy_op_conf());
+  auto cnf = new CopyOpConf(op_conf.copy_op_conf());
+  mutable_pb_op_conf().reset(cnf);
 
-void InitModelBlobNameSet() {
-  // do nothing
-}
-
+  for (const std::string& lbn : cnf->lbns()) {
+    RegisterInputBlobName(lbn);
+    RegisterOutputBlobName(lbn);
+  }
 }
 
 std::string CopyOp::ibn2lbn(const std::string& input_blob_name) const {
@@ -25,25 +23,13 @@ std::string CopyOp::obn2lbn(const std::string& output_blob_name) const {
 }
 
 std::string CopyOp::idbn2lbn(const std::string input_diff_blob_name) const {
-  LOG(FATAL) << "TODO";
+  LOG(FATAL) << "This Op doesn't have input_diff_blob_name";
   return "";
 }
+
 std::string CopyOp::odbn2lbn(const std::string output_diff_blob_name) const {
-  LOG(FATAL) << "TODO";
+  LOG(FATAL) << "This Op doesn't have output_diff_blob_name";
   return "";
 }
-
-void CopyOp::Init(const OperatorConf& op_conf) {
-  mutable_op_name() = op_conf.name();
-
-  CHECK(op_conf.has_copy_op_conf());
-  auto cnf_ptr = new CopyOpConf(op_conf.copy_op_conf());
-  mutable_pb_op_conf().reset(cnf_ptr);
-  
-  InitDataBlobNameSet(mutable_data_blob_name_set(),
-                      cnf_ptr->logical_blob_names());
-  InitModelBlobNameSet();
-}
-
 
 } // namespace oneflow

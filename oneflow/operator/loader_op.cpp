@@ -3,27 +3,25 @@
 
 namespace oneflow {
 
-namespace {
-
-void InitDataBlobNameSet(DataBlobNameSet& cur_set) {
-  cur_set.output_blob_names.push_back("data");
-  cur_set.output_blob_names.push_back("label");
-}
-
-void InitModelBlobNameSet(ModelBlobNameSet& cur_set) {
-}
-
-} // namespace
-
 void LoaderOp::Init(const OperatorConf& op_conf) {
   mutable_op_name() = op_conf.name();
   
   CHECK(op_conf.has_loader_op_conf());
-  auto cnf_ptr = new LoaderOpConf(op_conf.loader_op_conf());
-  mutable_pb_op_conf().reset(cnf_ptr);
-  
-  InitDataBlobNameSet(mutable_data_blob_name_set());
-  InitModelBlobNameSet(mutable_model_blob_name_set());
+  auto cnf = new LoaderOpConf(op_conf.loader_op_conf());
+  mutable_pb_op_conf().reset(cnf);
+ 
+  RegisterOutputBlobName("data");
+  RegisterOutputBlobName("label");
+}
+
+std::string LoaderOp::ibn2lbn(const std::string& input_blob_name) const {
+  LOG(FATAL) << "This Op doesn't have input_blob_name";
+  return "";
+}
+
+std::string LoaderOp::idbn2lbn(const std::string input_diff_blob_name) const {
+  LOG(FATAL) << "This Op doesn't have input_diff_blob_name";
+  return "";
 }
 
 } // namespace oneflow
