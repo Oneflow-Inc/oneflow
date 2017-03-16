@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package lr;
+package of;
 
 service comm{
     rpc role_register(Role) returns (Status_all) {}
