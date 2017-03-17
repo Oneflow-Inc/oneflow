@@ -4,7 +4,7 @@
 
 namespace oneflow {
 
-class GrpcWorkerCache : WorkerCacheInterface {
+class GrpcWorkerCache : public WorkerCacheInterface {
  public:
   GrpcWorkerCache(GrpcChannelCache* channel_cache) : channel_cache_(channel_cache){}
   ~GrpcWorkerCache(){}
