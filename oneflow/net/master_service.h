@@ -1,7 +1,7 @@
 #ifndef MASTER_SERVICE_H_
 #define MASTER_SERVICE_H_
 
-namespace grpc{
+namespace grpc {
 class ServerBuilder;
 }
 

@@ -3,6 +3,7 @@
 #include <string>
 
 #include <grpc++/grpc++.h>
+#include "async_service_interface.h"
 #include "worker_service.h"
 #include "oneflow.pb.h"
 #include "oneflow.grpc.pb.h"
@@ -16,9 +17,19 @@ using of::Rank;
 using of::Status_all;
 using of::comm;
 
-int main(int argc, char** argv){
-    grpc::CreateChannel("10.120.15.3:50061", grpc::InsecureChannelCredentials());
-    //std::string role_name("worker::10.120.15.5:50061");
+namespace oneflow{
 
-    return 0;
+class GrpcWorkerService : public AsyncServiceInterface{
+ public:
+  GrpcWorkerService(::grpc::ServerBuilder* builder){
+    builder->RegisterService(&worker_service_);  
+    cq_ = builder->AddCompletionQueue().release();
+  }
+    //grpc::CreateChannel("10.120.15.3:50061", grpc::InsecureChannelCredentials());
+
+  ::grpc::ServerCompletionQueue* cq_;
+  of::comm::AsyncService worker_service_;
+};
+
+
 }

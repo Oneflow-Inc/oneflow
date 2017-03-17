@@ -3,6 +3,7 @@
 #include <string>
 
 #include <grpc++/grpc++.h>
+#include "async_service_interface.h"
 #include "master_service.h"
 #include "oneflow.grpc.pb.h"
 
@@ -16,14 +17,18 @@ using of::Rank;
 using of::Status_all;
 using of::comm;
 
-void RunServer(){
-    std::string server_address("0.0.0.0:50061");
-    //lrServiceImpl service;
-    ServerBuilder builder;
-    builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
-    //builder.RegisterService(&service);
-    std::unique_ptr<Server> server(builder.BuildAndStart());
-    std::cout<<"Server listening on "<<server_address<<std::endl;
-    server->Wait();
-}
+namespace oneflow{
 
+class GrpcMasterService : public AsyncServiceInterface {
+ public:
+  GrpcMasterService(::grpc::ServerBuilder* builder){
+    builder->RegisterService(&master_service_);
+    cq_ = builder->AddCompletionQueue().release();
+  }
+
+ private:
+  ::grpc::ServerCompletionQueue* cq_;
+  of::comm::AsyncService master_service_;
+};
+
+}

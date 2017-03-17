@@ -16,8 +16,8 @@ int main(){
       confFile.close();
   }
   */
-  GrpcServer::NewServer();  
-  
+  oneflow::GrpcServer* server;
+  server->NewServer();  
   
   return 0;
 }

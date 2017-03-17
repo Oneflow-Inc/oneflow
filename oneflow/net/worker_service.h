@@ -1,11 +1,11 @@
 #ifndef WORKER_SERVICE_H_
 #define WORKER_SERVICE_H_
 
-namespace{
+namespace grpc {
 class ServerBuilder;
 }
 
-namespace oneflow{
+namespace oneflow {
 class AsyncServiceInterface;
 
 AsyncServiceInterface* NewGrpcWorkerService(::grpc::ServerBuilder* builder);
