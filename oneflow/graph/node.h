@@ -104,7 +104,7 @@ class Node {
     return false;
   }
 
-  bool HasPredecessor(const Node* pred_node) const {
+  bool HasPredecessor(const NodeType* pred_node) const {
     for (EdgeType* edge : in_edges_) {
       if (edge->src_node() == pred_node) {
         return true;

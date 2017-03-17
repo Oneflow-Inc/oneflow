@@ -7,8 +7,11 @@
 
 namespace oneflow {
 
+template<typename NodeType, typename EdgeType>
 class Graph {
  public:
+  static_assert(std::is_same<NodeType, typename EdgeType::NodeType>::value, "");
+  static_assert(std::is_same<EdgeType, typename NodeType::EdgeType>::value, "");
   // Topologically ergodic all nodes except start_node_,stop_node_
   class GraphIterator;
   class ConstGraphIterator;
@@ -25,8 +28,8 @@ class Graph {
     stop_node_.Init();
   }
 
-  const Node& start_node() const { return start_node_; }
-  const Node& stop_node() const { return stop_node_; }
+  const NodeType& start_node() const { return start_node_; }
+  const NodeType& stop_node() const { return stop_node_; }
 
   GraphIterator begin();
   GraphIterator end();
@@ -38,48 +41,59 @@ class Graph {
   ConstReverseGraphIterator crbegin() const;
   ConstReverseGraphIterator crend() const;
   
-  const std::vector<std::unique_ptr<Node>>& node_vec() const {
-    return node_vec_;
+  const std::unordered_set<std::unique_ptr<NodeType>>& nodes() const {
+    return nodes_;
   }
   
-  bool IsFirstNode(const Node* node) const {
+  bool IsFirstNode(const NodeType* node) const {
     return start_node_.HasSuccessor(node);
   }
-  bool IsLastNode(const Node* node) const {
+  bool IsLastNode(const NodeType* node) const {
     return stop_node_.HasPredecessor(node);
   }
 
  protected:
   void UpdateStartAndStop();
 
-  void RegisterNode(Node* new_node) {
-    node_vec_.emplace_back(new_node);
+  void RegisterNode(NodeType* new_node) {
+    nodes_.emplace_back(new_node);
   }
-  void RegisterNode(std::unique_ptr<Node>&& new_node) {
-    node_vec_.push_back(std::move(new_node));
+  void RegisterNode(std::unique_ptr<NodeType>&& new_node) {
+    nodes_.push_back(std::move(new_node));
   }
-  void RegisterEdge(Edge* new_edge) {
-    edge_vec_.emplace_back(new_edge);
+  void RegisterEdge(EdgeType* new_edge) {
+    edges_.emplace(new_edge);
+  }
+  void UnRegisterEdge(EdgeType* old_edge) {
+    for (auto it = edges_.begin(); it != edges_.end(); ++it) {
+      if (it->get() == old_edge) {
+        edges_.earse(it);
+        return;
+      }
+    }
+    LOG(FATAL) << "old edge not found";
   }
 
  private:
-  Node start_node_;
-  Node stop_node_;
-  std::vector<std::unique_ptr<Edge>> start_edge_vec_; // edges on start
-  std::vector<std::unique_ptr<Edge>> stop_edge_vec_; // edges on stop
+  NodeType start_node_;
+  NodeType stop_node_;
+  std::unordered_set<std::unique_ptr<EdgeType>> start_edges_;
+  std::unordered_set<std::unique_ptr<EdgeType>> stop_edges_;
   
   // manage the delete of nodes,edges that are not related to start,stop
-  std::vector<std::unique_ptr<Node>> node_vec_;
-  std::vector<std::unique_ptr<Edge>> edge_vec_;
+  std::unordered_set<std::unique_ptr<NodeType>> nodes_;
+  std::unordered_set<std::unique_ptr<EdgeType>> edges_;
 };
 
-class Graph::GraphIterator final {
+
+template<typename NodeType, typename EdgeType>
+class Graph<NodeType, EdgeType>::GraphIterator final {
  public:
-  // DISALLOW_MOVE(GraphIterator);
+  DISALLOW_MOVE(GraphIterator);
   GraphIterator(const GraphIterator& rhs) { (*this) = rhs; }
   GraphIterator& operator = (const GraphIterator& rhs) {
     if (this != &rhs) {
-      bfs_queue_ = std::make_shared<std::queue<Node*>> ();
+      bfs_queue_ = std::make_shared<std::queue<NodeType*>> ();
       *bfs_queue_ = *(rhs.bfs_queue_);
     }
     return *this;
@@ -88,23 +102,24 @@ class Graph::GraphIterator final {
   GraphIterator() = default;
   ~GraphIterator() = default;
   
-  void Init(Node* start_node) {
-    bfs_queue_ = std::make_shared<std::queue<Node*>> ();
+  void Init(NodeType* start_node) {
+    bfs_queue_ = std::make_shared<std::queue<NodeType*>> ();
     bfs_queue_->push(start_node);
   }
   
-  Node& operator * ();
-  Node* operator -> ();
+  NodeType& operator * ();
+  NodeType* operator -> ();
   void operator ++ ();
   
   bool operator != (const GraphIterator&) const;
 
  private:
   // we need to make light-object
-  std::shared_ptr<std::queue<Node*>> bfs_queue_;
+  std::shared_ptr<std::queue<NodeType*>> bfs_queue_;
 };
 
-class Graph::ConstGraphIterator final {
+template<typename NodeType, typename EdgeType>
+class Graph<NodeType, EdgeType>::ConstGraphIterator final {
  public:
   // DISALLOW_COPY_AND_MOVE(ConstGraphIterator);
   ConstGraphIterator() = default;
@@ -114,8 +129,8 @@ class Graph::ConstGraphIterator final {
     graph_iterator_ = graph_iterator;
   }
   
-  const Node& operator * () { return *graph_iterator_; }
-  const Node* operator -> () { return &(*graph_iterator_); }
+  const NodeType& operator * () { return *graph_iterator_; }
+  const NodeType* operator -> () { return &(*graph_iterator_); }
   void operator ++ () { ++graph_iterator_; }
   bool operator != (const ConstGraphIterator& rhs) const {
     return graph_iterator_ != rhs.graph_iterator_;
@@ -125,7 +140,8 @@ class Graph::ConstGraphIterator final {
   GraphIterator graph_iterator_;
 };
 
-class Graph::ReverseGraphIterator final {
+template<typename NodeType, typename EdgeType>
+class Graph<NodeType, EdgeType>::ReverseGraphIterator final {
  public:
   // DISALLOW_MOVE(ReverseGraphIterator);
   ReverseGraphIterator(const ReverseGraphIterator& rhs) {
@@ -133,7 +149,7 @@ class Graph::ReverseGraphIterator final {
   }
   ReverseGraphIterator& operator = (const ReverseGraphIterator& rhs) {
     if (this != &rhs) {
-      bfs_queue_ = std::make_shared<std::queue<Node*>> ();
+      bfs_queue_ = std::make_shared<std::queue<NodeType*>> ();
       *bfs_queue_ = *(rhs.bfs_queue_);
     }
     return *this;
@@ -142,23 +158,24 @@ class Graph::ReverseGraphIterator final {
   ReverseGraphIterator() = default;
   ~ReverseGraphIterator() = default;
   
-  void Init(Node* stop_node) {
-    bfs_queue_ = std::make_shared<std::queue<Node*>> ();
+  void Init(NodeType* stop_node) {
+    bfs_queue_ = std::make_shared<std::queue<NodeType*>> ();
     bfs_queue_->push(stop_node);
   }
   
-  Node& operator * ();
-  Node* operator -> ();
+  NodeType& operator * ();
+  NodeType* operator -> ();
   void operator ++ ();
   
   bool operator != (const ReverseGraphIterator&) const;
 
  private:
   // we need to make light-object
-  std::shared_ptr<std::queue<Node*>> bfs_queue_;
+  std::shared_ptr<std::queue<NodeType*>> bfs_queue_;
 };
 
-class Graph::ConstReverseGraphIterator final {
+template<typename NodeType, typename EdgeType>
+class Graph<NodeType, EdgeType>::ConstReverseGraphIterator final {
  public:
   // DISALLOW_COPY_AND_MOVE(ConstReverseGraphIterator);
   ConstReverseGraphIterator() = default;
@@ -168,8 +185,8 @@ class Graph::ConstReverseGraphIterator final {
     graph_iterator_ = graph_iterator;
   }
   
-  const Node& operator * () { return *graph_iterator_; }
-  const Node* operator -> () { return &(*graph_iterator_); }
+  const NodeType& operator * () { return *graph_iterator_; }
+  const NodeType* operator -> () { return &(*graph_iterator_); }
   void operator ++ () { ++graph_iterator_; }
   bool operator != (const ConstReverseGraphIterator& rhs) const {
     return graph_iterator_ != rhs.graph_iterator_;
@@ -178,6 +195,148 @@ class Graph::ConstReverseGraphIterator final {
  private:
   ReverseGraphIterator graph_iterator_;
 };
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::UpdateStartAndStop() {
+  start_node_.DisconnectAllEdges();
+  stop_node_.DisconnectAllEdges();
+  start_edges_.clear();
+  stop_edges_.clear();
+  for (const std::unique_ptr<NodeType>& node : nodes_) {
+    if (node->in_edges.empty()) {
+      EdgeType* start_edge = new EdgeType;
+      start_edges_.emplace_back(start_edge);
+      start_edge->Init();
+      Connect(&start_node_, start_edge, node.get());
+    }
+    if (node->out_edges.empty()) {
+      EdgeType* stop_edge = new EdgeType;
+      stop_edges_.emplace_back(stop_edge);
+      stop_edges_->Init();
+      Connect(node.get(), stop_edge, &stop_node_);
+    }
+  }
+}
+
+template<typename NodeType, typename EdgeType>
+auto Graph<NodeType, EdgeType>::begin() -> GraphIterator {
+  GraphIterator ret;
+  ret.Init(&start_node_);
+  ++ret;
+  return ret;
+}
+template<typename NodeType, typename EdgeType>
+auto Graph<NodeType, EdgeType>::end() -> GraphIterator {
+  GraphIterator ret;
+  ret.Init(&stop_node_);
+  return ret;
+}
+
+template<typename NodeType, typename EdgeType>
+auto Graph<NodeType, EdgeType>::cbegin() const -> ConstGraphIterator{
+  ConstGraphIterator ret;
+  ret.Init((const_cast<Graph*>(this))->begin());
+  return ret;
+}
+template<typename NodeType, typename EdgeType>
+auto Graph<NodeType, EdgeType>::cend() const -> ConstGraphIterator {
+  ConstGraphIterator ret;
+  ret.Init((const_cast<Graph*>(this))->end());
+  return ret;
+}
+
+template<typename NodeType, typename EdgeType>
+auto Graph<NodeType, EdgeType>::rbegin() -> ReverseGraphIterator {
+  ReverseGraphIterator ret;
+  ret.Init(&stop_node_);
+  ++ret;
+  return ret;
+}
+template<typename NodeType, typename EdgeType>
+auto Graph<NodeType, EdgeType>::rend() -> ReverseGraphIterator {
+  ReverseGraphIterator ret;
+  ret.Init(&start_node_);
+  return ret;
+}
+
+template<typename NodeType, typename EdgeType>
+auto Graph<NodeType, EdgeType>::crbegin() const -> ConstReverseGraphIterator {
+  ConstReverseGraphIterator ret;
+  ret.Init((const_cast<Graph*>(this))->rbegin());
+  return ret;
+}
+template<typename NodeType, typename EdgeType>
+auto Graph<NodeType, EdgeType>::crend() const -> ConstReverseGraphIterator {
+  ConstReverseGraphIterator ret;
+  ret.Init((const_cast<Graph*>(this))->rend());
+  return ret;
+}
+
+template<typename NodeType, typename EdgeType>
+NodeType& Graph<NodeType, EdgeType>::GraphIterator::operator * () {
+  CHECK_EQ(bfs_queue_->empty(), false);
+  return *(bfs_queue_->front());
+}
+
+template<typename NodeType, typename EdgeType>
+NodeType* Graph<NodeType, EdgeType>::GraphIterator::operator -> () {
+  return &(*(*this));
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::GraphIterator::operator ++ () {
+  CHECK_EQ(bfs_queue_->empty(), false);
+  NodeType* cur_node = bfs_queue_->front();
+  bfs_queue_->pop();
+  for (EdgeType* out_edge : cur_node->out_edges()) {
+    bfs_queue_->push(out_edge->dst_node());
+  }
+}
+
+template<typename NodeType, typename EdgeType>
+bool Graph<NodeType, EdgeType>::GraphIterator::operator != (
+    const Graph::GraphIterator& rhs) const {
+  if (bfs_queue_->empty() != rhs.bfs_queue_->empty()) {
+    return true;
+  }
+  if (bfs_queue_->empty() == false && rhs.bfs_queue_->empty() == false) {
+    return bfs_queue_->front() != rhs.bfs_queue_->front();
+  }
+  return false;
+}
+
+template<typename NodeType, typename EdgeType>
+NodeType& Graph<NodeType, EdgeType>::ReverseGraphIterator::operator * () {
+  CHECK_EQ(bfs_queue_->empty(), false);
+  return *(bfs_queue_->front());
+}
+
+template<typename NodeType, typename EdgeType>
+NodeType* Graph<NodeType, EdgeType>::ReverseGraphIterator::operator -> () {
+  return &(*(*this));
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::ReverseGraphIterator::operator ++ () {
+  CHECK_EQ(bfs_queue_->empty(), false);
+  NodeType* cur_node = bfs_queue_->front();
+  bfs_queue_->pop();
+  for (EdgeType* in_edge : cur_node->in_edges()) {
+    bfs_queue_->push(in_edge->src_node());
+  }
+}
+
+template<typename NodeType, typename EdgeType>
+bool Graph<NodeType, EdgeType>::ReverseGraphIterator::operator != (
+    const Graph::ReverseGraphIterator& rhs) const {
+  if (bfs_queue_->empty() != rhs.bfs_queue_->empty()) {
+    return true;
+  }
+  if (bfs_queue_->empty() == false && rhs.bfs_queue_->empty() == false) {
+    return bfs_queue_->front() != rhs.bfs_queue_->front();
+  }
+  return false;
+}
 
 } // namespace oneflow
 
