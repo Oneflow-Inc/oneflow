@@ -5,7 +5,9 @@
 
 namespace oneflow {
 
-class StageNode final : public Node {
+class StageEdge;
+
+class StageNode final : public Node<StageNode, StageEdge> {
  public:
   DISALLOW_COPY_AND_MOVE(StageNode);
   StageNode() = default;
@@ -13,7 +15,6 @@ class StageNode final : public Node {
 
   void Init() {
     Node::Init();
-    // struct style
   }
 
   const MachineId& machine_id() const {
@@ -36,7 +37,7 @@ class StageNode final : public Node {
 
 };
 
-class StageEdge final : public Edge {
+class StageEdge final : public Edge<StageNode, StageEdge> {
  public:
   DISALLOW_COPY_AND_MOVE(StageEdge);
   StageEdge() = default;
@@ -49,7 +50,7 @@ class StageEdge final : public Edge {
  private:
 };
 
-class StageGraph final : public Graph {
+class StageGraph final : public Graph<StageNode, StageEdge> {
  public:
   DISALLOW_COPY_AND_MOVE(StageGraph);
   StageGraph() = default;
@@ -58,18 +59,7 @@ class StageGraph final : public Graph {
   void Init(std::shared_ptr<const ChainGraph> chain_graph);
 
  private:
-  StageNode* NewStageNode() {
-    StageNode* ret_ptr = new StageNode;
-    ret_ptr->Init();
-    RegisterNode(ret_ptr);
-    return ret_ptr;
-  }
-  StageEdge* NewStageEdge() {
-    StageEdge* ret_ptr = new StageEdge;
-    ret_ptr->Init();
-    RegisterEdge(ret_ptr);
-    return ret_ptr;
-  }
+  // We need to make sure the chain_node is alive
   std::shared_ptr<const ChainGraph> chain_graph_;
 
 };

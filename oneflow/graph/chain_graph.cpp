@@ -227,6 +227,7 @@ void DataMergeChains(
 } // namespace
 
 void ChainGraph::Init(std::shared_ptr<const LogicalGraph> logical_graph) {
+  Graph::Init();
   // Build Chain
   std::list<Chain> chain_list;
   Logical2ChainItMap logical2chain_it;
