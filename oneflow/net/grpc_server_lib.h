@@ -3,6 +3,7 @@
 
 #include "grpc++/grpc++.h"
 #include "async_service_interface.h"
+#include "grpc_channel.h"
 
 namespace oneflow{
 
@@ -12,6 +13,7 @@ class GrpcServer{
   ~GrpcServer();
   
   int Init();
+  virtual ChannelCreationFunction GetChannelCreationFunction() const;
   void NewServer();
   AsyncServiceInterface* master_service_ = nullptr;
   AsyncServiceInterface* worker_service_ = nullptr;

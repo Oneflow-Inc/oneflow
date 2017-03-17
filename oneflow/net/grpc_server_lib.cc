@@ -3,9 +3,10 @@
 #include <string>
 #include <grpc++/grpc++.h>
 
+#include "grpc_channel.h"
 #include "grpc_server_lib.h"
-#include "master_service.h"
-#include "worker_service.h"
+#include "grpc_master_service.h"
+#include "grpc_worker_service.h"
 
 namespace oneflow{
 
@@ -21,6 +22,12 @@ int GrpcServer::Init(){
   master_service_ = NewGrpcMasterService(&builder);
   worker_service_ = NewGrpcWorkerService(&builder);
   server_ = builder.BuildAndStart();
+
+  std::unique_ptr<GrpcChannelCache> channel_cache(NewGrpcChannelCache(GetChannelCreationFunction()));
+}
+
+ChannelCreationFunction GrpcServer::GetChannelCreationFunction() const {
+  return NewHostPortGrpcChannel;
 }
 
 void GrpcServer::NewServer(){
