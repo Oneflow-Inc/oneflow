@@ -6,15 +6,16 @@
 
 namespace oneflow {
 
-class ChainNode final : public Node {
+class ChainEdge;
+
+class ChainNode final : public Node<ChainNode, ChainEdge> {
  public:
   DISALLOW_COPY_AND_MOVE(ChainNode);
   ChainNode() = default;
   ~ChainNode() = default;
 
   void Init() {
-    Node::Init();
-    // struct style
+    Node<ChainNode, ChainEdge>::Init();
   }
 
   const std::vector<std::shared_ptr<const Operator>>& op_vec() const {
@@ -56,20 +57,20 @@ class ChainNode final : public Node {
 
 };
 
-class ChainEdge final : public Edge {
+class ChainEdge final : public Edge<ChainNode, ChainEdge> {
  public:
   DISALLOW_COPY_AND_MOVE(ChainEdge);
   ChainEdge() = default;
   ~ChainEdge() = default;
     
   void Init() {
-    Edge::Init();
+    Edge<ChainNode, ChainEdge>::Init();
   }
 
  private:
 };
 
-class ChainGraph final : public Graph {
+class ChainGraph final : public Graph<ChainNode, ChainEdge> {
  public:
   DISALLOW_COPY_AND_MOVE(ChainGraph);
   ChainGraph() = default;
@@ -79,20 +80,6 @@ class ChainGraph final : public Graph {
 
  private:
   void CollectInputAndOutputLbns();
-  ChainNode* NewChainNode() {
-    ChainNode* ret_ptr = new ChainNode;
-    ret_ptr->Init();
-    RegisterNode(ret_ptr);
-    return ret_ptr;
-  }
-  ChainEdge* NewChainEdge() {
-    ChainEdge* ret_ptr = new ChainEdge;
-    ret_ptr->Init();
-    RegisterEdge(ret_ptr);
-    return ret_ptr;
-  }
-
-  std::shared_ptr<const LogicalGraph> logical_graph_;
 
 };
 

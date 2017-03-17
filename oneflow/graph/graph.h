@@ -103,7 +103,7 @@ class Graph {
 template<typename NodeType, typename EdgeType>
 class Graph<NodeType, EdgeType>::GraphIterator final {
  public:
-  DISALLOW_MOVE(GraphIterator);
+  // DISALLOW_MOVE(GraphIterator);
   GraphIterator(const GraphIterator& rhs) { (*this) = rhs; }
   GraphIterator& operator = (const GraphIterator& rhs) {
     if (this != &rhs) {
