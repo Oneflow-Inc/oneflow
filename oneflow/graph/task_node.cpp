@@ -12,7 +12,11 @@ std::unique_ptr<TaskNode> TaskNode::BuildAndConnectBpNode() {
   return bp_node;
 }
 
-void TaskNode::SetupWithFwNode(const TaskNode* fw_node) {
+std::unique_ptr<TaskNode> TaskNode::CreateSameTypeNode() const {
+  LOG(FATAL) << "insignificant";
+}
+
+void TaskNode::SetupWithFwNode(TaskNode* fw_node) {
   CHECK(IsBpNode());
   stage_node_ = fw_node->stage_node_;
   thread_local_id_ = fw_node->thread_local_id_;

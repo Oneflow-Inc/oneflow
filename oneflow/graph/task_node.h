@@ -39,25 +39,25 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   }
 
   // Get related fw/bp node
-  const TaskNode* GetFwNode() {
+  TaskNode* GetFwNode() {
     CHECK(IsBpNode());
     return related_fw_or_bp_node_;
   }
-  const TaskNode* GetBpNode() {
+  TaskNode* GetBpNode() {
     CHECK(IsFwNode());
     return related_fw_or_bp_node_;
   }
 
   // Functions about Build BP
   std::unique_ptr<TaskNode> BuildAndConnectBpNode();
-  virtual std::unique_ptr<TaskNode> CreateSameTypeNode() const = 0;
-  virtual void SetupWithFwNode(const TaskNode* fw_node);
+  virtual std::unique_ptr<TaskNode> CreateSameTypeNode() const;
+  virtual void SetupWithFwNode(TaskNode* fw_node);
 
  private:
   const StageNode* stage_node_;
   ThreadLocalId thread_local_id_;
   bool is_fw_node_;
-  const TaskNode* related_fw_or_bp_node_;
+  TaskNode* related_fw_or_bp_node_;
 
 };
 
@@ -87,7 +87,7 @@ class CompTaskNode : public TaskNode {
   bool HasOpWithOutDiff() const;
   bool HasOpWithIndiff() const;
 
-  virtual void SetupWithFwNode(const TaskNode* fw_node) override {
+  virtual void SetupWithFwNode(TaskNode* fw_node) override {
     TaskNode::SetupWithFwNode(fw_node);
   }
 
@@ -111,7 +111,7 @@ class HostCompTaskNode final : public CompTaskNode {
     return new_node;
   }
 
-  void SetupWithFwNode(const TaskNode* fw_node) override {
+  void SetupWithFwNode(TaskNode* fw_node) override {
     CompTaskNode::SetupWithFwNode(fw_node);
   }
 
@@ -134,7 +134,7 @@ class DeviceCompTaskNode final : public CompTaskNode {
     return new_node;
   }
 
-  void SetupWithFwNode(const TaskNode* fw_node) override {
+  void SetupWithFwNode(TaskNode* fw_node) override {
     CompTaskNode::SetupWithFwNode(fw_node);
   }
 
@@ -157,7 +157,7 @@ class CopyHDTaskNode final : public TaskNode {
     return new_node;
   }
 
-  void SetupWithFwNode(const TaskNode* fw_node) override {
+  void SetupWithFwNode(TaskNode* fw_node) override {
     TaskNode::SetupWithFwNode(fw_node);
     is_fw_in_copy_ =
         of_dynamic_cast<const CopyHDTaskNode*>(fw_node)->is_fw_in_copy_;
@@ -210,7 +210,7 @@ class BoxingTaskNode final : public TaskNode {
     return new_node;
   }
 
-  void SetupWithFwNode(const TaskNode* fw_node) override {
+  void SetupWithFwNode(TaskNode* fw_node) override {
     TaskNode::SetupWithFwNode(fw_node);
     is_fw_in_boxing_ =
         of_dynamic_cast<const BoxingTaskNode*>(fw_node)->is_fw_in_boxing_;
@@ -247,7 +247,7 @@ class CommNetTaskNode final : public TaskNode {
     return new_node;
   }
 
-  void SetupWithFwNode(const TaskNode* fw_node) override {
+  void SetupWithFwNode(TaskNode* fw_node) override {
     TaskNode::SetupWithFwNode(fw_node);
     is_fw_sender_ =
         of_dynamic_cast<const CommNetTaskNode*>(fw_node)->is_fw_sender_;
