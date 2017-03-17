@@ -3,6 +3,7 @@
 
 #include "grpc++/grpc++.h"
 #include "async_service_interface.h"
+#include "worker_env.h"
 #include "grpc_channel.h"
 
 namespace oneflow{
@@ -18,6 +19,7 @@ class GrpcServer{
   AsyncServiceInterface* master_service_ = nullptr;
   AsyncServiceInterface* worker_service_ = nullptr;
 
+  WorkerEnv worker_env_;
   std::unique_ptr<::grpc::Server> server_;
 };
 
