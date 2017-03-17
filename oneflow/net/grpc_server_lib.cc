@@ -3,6 +3,7 @@
 #include <string>
 #include <grpc++/grpc++.h>
 
+#include "master_env.h"
 #include "worker_env.h"
 #include "grpc_worker_cache.h"
 #include "grpc_channel.h"
@@ -27,6 +28,7 @@ int GrpcServer::Init(){
 
   std::unique_ptr<GrpcChannelCache> channel_cache(NewGrpcChannelCache(GetChannelCreationFunction()));
   worker_env_.worker_cache = NewGrpcWorkerCache(channel_cache.release());
+  master_env_.worker_cache = worker_env_.worker_cache;
 }
 
 ChannelCreationFunction GrpcServer::GetChannelCreationFunction() const {
