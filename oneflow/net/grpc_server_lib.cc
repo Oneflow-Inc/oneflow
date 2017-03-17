@@ -10,6 +10,7 @@
 #include "grpc_server_lib.h"
 #include "grpc_master_service.h"
 #include "grpc_worker_service.h"
+#include "master_session.h"
 
 namespace oneflow{
 
@@ -22,13 +23,16 @@ GrpcServer::~GrpcServer(){
 int GrpcServer::Init(){
   ::grpc::ServerBuilder builder;
   builder.AddListeningPort("0.0.0.0:50051", ::grpc::InsecureServerCredentials());
+  //master service and worker service use the same builder
   master_service_ = NewGrpcMasterService(&builder);
   worker_service_ = NewGrpcWorkerService(&builder);
   server_ = builder.BuildAndStart();
-
+  //master servie and woker service use the same channle_cache
   std::unique_ptr<GrpcChannelCache> channel_cache(NewGrpcChannelCache(GetChannelCreationFunction()));
   worker_env_.worker_cache = NewGrpcWorkerCache(channel_cache.release());
   master_env_.worker_cache = worker_env_.worker_cache;
+
+  master_env_.master_session_factory = NewMasterSession;
 }
 
 ChannelCreationFunction GrpcServer::GetChannelCreationFunction() const {
