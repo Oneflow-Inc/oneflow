@@ -16,7 +16,11 @@ GrpcServer::~GrpcServer(){
 }
 
 int GrpcServer::Init(){
-
+  ::grpc::ServerBuilder builder;
+  builder.AddListeningPort("0.0.0.0:50051", ::grpc::InsecureServerCredentials());
+  master_service_ = NewGrpcMasterService(&builder);
+  worker_service_ = NewGrpcWorkerService(&builder);
+  server_ = builder.BuildAndStart();
 }
 
 void GrpcServer::NewServer(){

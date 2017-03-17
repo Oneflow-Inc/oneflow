@@ -31,5 +31,8 @@ class GrpcWorkerService : public AsyncServiceInterface{
   of::comm::AsyncService worker_service_;
 };
 
+AsyncServiceInterface* NewGrpcWorkerService(::grpc::ServerBuilder* builder){
+  return new GrpcWorkerService(builder);
+}
 
 }

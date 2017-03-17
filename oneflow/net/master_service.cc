@@ -31,4 +31,8 @@ class GrpcMasterService : public AsyncServiceInterface {
   of::comm::AsyncService master_service_;
 };
 
+AsyncServiceInterface* NewGrpcMasterService(::grpc::ServerBuilder* builder){
+  return new GrpcMasterService(builder);
+}
+
 }
