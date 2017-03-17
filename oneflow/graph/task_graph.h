@@ -10,19 +10,6 @@
 
 namespace oneflow {
 
-class TaskEdge final : public Edge {
- public:
-  DISALLOW_COPY_AND_MOVE(TaskEdge);
-  TaskEdge() = default;
-  ~TaskEdge() = default;
-  
-  void Init() {
-    Edge::Init();
-  }
-
- private:
-};
-
 class TaskGraph final : public Graph {
  public:
   DISALLOW_COPY_AND_MOVE(TaskGraph);

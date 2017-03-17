@@ -5,7 +5,9 @@
 
 namespace oneflow {
 
-class TaskNode : public Node {
+class TaskEdge;
+
+class TaskNode : public Node<TaskNode, TaskEdge> {
  public:
   DISALLOW_COPY_AND_MOVE(TaskNode);
   TaskNode() = default;
@@ -14,43 +16,62 @@ class TaskNode : public Node {
   virtual void Init() {
     Node::Init();
   }
-  
-  // Getters and Setters
+
+  // Is fw or bp
+  bool IsFwNode() const { return is_fw_node_; }
+  bool IsBpNode() const { return !is_fw_node_; }
+  void SetFwNode() { is_fw_node_ = true; }
+
+  // stage_node_
   const StageNode* stage_node() const {
     return stage_node_;
   }
   void set_stage_node(const StageNode* new_stage_node) {
+    CHECK(IsFwNode());
     stage_node_ = new_stage_node;
   }
-
-  const ThreadLocalId& thread_local_id() const { return thread_local_id_; }
-  ThreadLocalId& mutable_thread_local_id() { return thread_local_id_; }
   
-  bool IsFwNode() const { return is_fw_node_; }
-  bool IsBpNode() const { return !is_fw_node_; }
-  void SetFwNode() { is_fw_node_ = true; }
-  void SetBpNode() { is_fw_node_ = false; }
-
-  // Clone without Node's property
-  std::unique_ptr<TaskNode> CloneWithOnlyTaskProperty() const {
-    std::unique_ptr<TaskNode> new_node  = CreateSameTypeNode();
-    new_node->CopyWithOnlyTaskProperty(this);
-    return new_node;
+  // thread_local_id_
+  const ThreadLocalId& thread_local_id() const { return thread_local_id_; }
+  ThreadLocalId& mutable_thread_local_id() {
+    CHECK(IsFwNode());
+    return thread_local_id_;
   }
 
+  // Get related fw/bp node
+  const TaskNode* GetFwNode() {
+    CHECK(IsBpNode());
+    return related_fw_or_bp_node_;
+  }
+  const TaskNode* GetBpNode() {
+    CHECK(IsFwNode());
+    return related_fw_or_bp_node_;
+  }
+
+  // Functions about Build BP
+  std::unique_ptr<TaskNode> BuildAndConnectBpNode();
   virtual std::unique_ptr<TaskNode> CreateSameTypeNode() const = 0;
-
-  virtual void CopyWithOnlyTaskProperty(const TaskNode* rhs) {
-    stage_node_ = rhs->stage_node_;
-    thread_local_id_ = rhs->thread_local_id_;
-    is_fw_node_ = rhs->is_fw_node_;
-  }
+  virtual void SetupWithFwNode(const TaskNode* fw_node);
 
  private:
   const StageNode* stage_node_;
   ThreadLocalId thread_local_id_;
   bool is_fw_node_;
+  const TaskNode* related_fw_or_bp_node_;
 
+};
+
+class TaskEdge final : public Edge<TaskNode, TaskEdge> {
+ public:
+  DISALLOW_COPY_AND_MOVE(TaskEdge);
+  TaskEdge() = default;
+  ~TaskEdge() = default;
+  
+  void Init() {
+    Edge::Init();
+  }
+
+ private:
 };
 
 class CompTaskNode : public TaskNode {
@@ -66,8 +87,8 @@ class CompTaskNode : public TaskNode {
   bool HasOpWithOutDiff() const;
   bool HasOpWithIndiff() const;
 
-  virtual void CopyWithOnlyTaskProperty(const TaskNode* rhs) override {
-    TaskNode::CopyWithOnlyTaskProperty(rhs);
+  virtual void SetupWithFwNode(const TaskNode* fw_node) override {
+    TaskNode::SetupWithFwNode(fw_node);
   }
 
  private:
@@ -90,8 +111,8 @@ class HostCompTaskNode final : public CompTaskNode {
     return new_node;
   }
 
-  void CopyWithOnlyTaskProperty(const TaskNode* rhs) override {
-    CompTaskNode::CopyWithOnlyTaskProperty(rhs);
+  void SetupWithFwNode(const TaskNode* fw_node) override {
+    CompTaskNode::SetupWithFwNode(fw_node);
   }
 
  private:
@@ -112,15 +133,14 @@ class DeviceCompTaskNode final : public CompTaskNode {
     new_node->Init();
     return new_node;
   }
- 
-  void CopyWithOnlyTaskProperty(const TaskNode* rhs) override {
-    CompTaskNode::CopyWithOnlyTaskProperty(rhs);
+
+  void SetupWithFwNode(const TaskNode* fw_node) override {
+    CompTaskNode::SetupWithFwNode(fw_node);
   }
 
  private:
 };
 
-// HD: Host and Device
 class CopyHDTaskNode final : public TaskNode {
  public:
   DISALLOW_COPY_AND_MOVE(CopyHDTaskNode);
@@ -137,9 +157,10 @@ class CopyHDTaskNode final : public TaskNode {
     return new_node;
   }
 
-  void CopyWithOnlyTaskProperty(const TaskNode* rhs) override {
-    TaskNode::CopyWithOnlyTaskProperty(rhs);
-    is_fw_in_copy_ = of_dynamic_cast<const CopyHDTaskNode*>(rhs)->is_fw_in_copy_;
+  void SetupWithFwNode(const TaskNode* fw_node) override {
+    TaskNode::SetupWithFwNode(fw_node);
+    is_fw_in_copy_ =
+        of_dynamic_cast<const CopyHDTaskNode*>(fw_node)->is_fw_in_copy_;
   }
 
   bool IsH2D() const {
@@ -159,8 +180,14 @@ class CopyHDTaskNode final : public TaskNode {
 
   bool IsFwInCopy() const { return is_fw_in_copy_; }
   bool IsFwOutCopy() const { return !is_fw_in_copy_; }
-  void SetFwInCopy() { is_fw_in_copy_ = true; }
-  void SetFwOutCopy() { is_fw_in_copy_ = false; }
+  void SetFwInCopy() {
+    CHECK(IsFwNode());
+    is_fw_in_copy_ = true;
+  }
+  void SetFwOutCopy() {
+    CHECK(IsFwNode());
+    is_fw_in_copy_ = false;
+  }
 
  private:
   bool is_fw_in_copy_;
@@ -183,21 +210,27 @@ class BoxingTaskNode final : public TaskNode {
     return new_node;
   }
 
-  void CopyWithOnlyTaskProperty(const TaskNode* rhs) override {
-    TaskNode::CopyWithOnlyTaskProperty(rhs);
-    is_fw_in_boxing_ = of_dynamic_cast<const BoxingTaskNode*>(rhs)->is_fw_in_boxing_;
+  void SetupWithFwNode(const TaskNode* fw_node) override {
+    TaskNode::SetupWithFwNode(fw_node);
+    is_fw_in_boxing_ =
+        of_dynamic_cast<const BoxingTaskNode*>(fw_node)->is_fw_in_boxing_;
   }
 
   bool IsFwInBoxing() const { return is_fw_in_boxing_; }
   bool IsFwOutBoxing() const { return !is_fw_in_boxing_; }
-  void SetFwInBoxing() { is_fw_in_boxing_ = true; }
-  void SetFwOutBoxing() { is_fw_in_boxing_ = false; }
+  void SetFwInBoxing() {
+    CHECK(IsFwNode());
+    is_fw_in_boxing_ = true;
+  }
+  void SetFwOutBoxing() {
+    CHECK(IsFwNode());
+    is_fw_in_boxing_ = false;
+  }
 
  private:
   bool is_fw_in_boxing_;
 };
 
-// CommNet: Communication Network
 class CommNetTaskNode final : public TaskNode {
  public:
   DISALLOW_COPY_AND_MOVE(CommNetTaskNode);
@@ -214,9 +247,10 @@ class CommNetTaskNode final : public TaskNode {
     return new_node;
   }
 
-  void CopyWithOnlyTaskProperty(const TaskNode* rhs) override {
-    TaskNode::CopyWithOnlyTaskProperty(rhs);
-    is_fw_sender_ = of_dynamic_cast<const CommNetTaskNode*>(rhs)->is_fw_sender_;
+  void SetupWithFwNode(const TaskNode* fw_node) override {
+    TaskNode::SetupWithFwNode(fw_node);
+    is_fw_sender_ =
+        of_dynamic_cast<const CommNetTaskNode*>(fw_node)->is_fw_sender_;
   }
 
   bool IsSender() const {
@@ -228,9 +262,11 @@ class CommNetTaskNode final : public TaskNode {
   }
 
   void SetFwSender() {
+    CHECK(IsFwNode());
     is_fw_sender_ = true;
   }
   void SetFwReceiver() {
+    CHECK(IsFwNode());
     is_fw_sender_ = false;
   }
 
