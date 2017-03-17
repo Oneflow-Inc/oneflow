@@ -10,8 +10,6 @@ namespace oneflow {
 template<typename NodeType, typename EdgeType>
 class Graph {
  public:
-  static_assert(std::is_same<NodeType, typename EdgeType::NodeType>::value, "");
-  static_assert(std::is_same<EdgeType, typename NodeType::EdgeType>::value, "");
   // Topologically ergodic all nodes except start_node_,stop_node_
   class GraphIterator;
   class ConstGraphIterator;
@@ -55,11 +53,12 @@ class Graph {
  protected:
   void UpdateStartAndStop();
 
+  // Register
   void RegisterNode(NodeType* new_node) {
-    nodes_.emplace_back(new_node);
+    nodes_.emplace(new_node);
   }
   void RegisterNode(std::unique_ptr<NodeType>&& new_node) {
-    nodes_.push_back(std::move(new_node));
+    nodes_.insert(std::move(new_node));
   }
   void RegisterEdge(EdgeType* new_edge) {
     edges_.emplace(new_edge);
@@ -72,6 +71,21 @@ class Graph {
       }
     }
     LOG(FATAL) << "old edge not found";
+  }
+  // New
+  NodeType* NewFinalNode() {
+    // In c++14, we can use std::is_final to check
+    NodeType* ret = new NodeType;
+    ret->Init();
+    RegisterNode(ret);
+    return ret;
+  }
+  EdgeType* NewFinalEdge() {
+    // In c++14, we can use std::is_final to check
+    EdgeType* ret = new EdgeType;
+    ret->Init();
+    RegisterEdge(ret);
+    return ret;
   }
 
  private:
@@ -203,16 +217,16 @@ void Graph<NodeType, EdgeType>::UpdateStartAndStop() {
   start_edges_.clear();
   stop_edges_.clear();
   for (const std::unique_ptr<NodeType>& node : nodes_) {
-    if (node->in_edges.empty()) {
+    if (node->in_edges().empty()) {
       EdgeType* start_edge = new EdgeType;
-      start_edges_.emplace_back(start_edge);
+      start_edges_.emplace(start_edge);
       start_edge->Init();
       Connect(&start_node_, start_edge, node.get());
     }
-    if (node->out_edges.empty()) {
+    if (node->out_edges().empty()) {
       EdgeType* stop_edge = new EdgeType;
-      stop_edges_.emplace_back(stop_edge);
-      stop_edges_->Init();
+      stop_edges_.emplace(stop_edge);
+      stop_edge->Init();
       Connect(node.get(), stop_edge, &stop_node_);
     }
   }

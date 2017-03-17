@@ -9,18 +9,18 @@
 
 namespace oneflow {
 
-template<typename DerivedEdge>
-void Connect(typename DerivedEdge::NodeType* src_node,
-             DerivedEdge* edge,
-             typename DerivedEdge::NodeType* dst_node) {
+template<typename NodeType, typename EdgeType>
+void Connect(NodeType* src_node,
+             EdgeType* edge,
+             NodeType* dst_node) {
   src_node->out_edges_.insert(edge);
   dst_node->in_edges_.insert(edge);
   edge->src_node_ = src_node;
   edge->dst_node_ = dst_node;
 }
 
-template<typename DerivedEdge>
-void DisConnect(DerivedEdge* edge) {
+template<typename EdgeType>
+void DisConnect(EdgeType* edge) {
   edge->src_node_->out_edges_.erase(edge);
   edge->dst_node_->in_edges_.erase(edge);
   edge->src_node_ = nullptr;
@@ -29,16 +29,12 @@ void DisConnect(DerivedEdge* edge) {
 
 int32_t NewNodeId();
 
-template<typename DerivedEdge>
+template<typename NodeType, typename EdgeType>
 class Edge {
  public:
   DISALLOW_COPY_AND_MOVE(Edge);
   Edge() = default;
   virtual ~Edge() = default;
-  
-  using NodeType = typename DerivedEdge::NodeType;
-  using EdgeType = typename NodeType::EdgeType;
-  static_assert(std::is_same<DerivedEdge, EdgeType>::value, "");
 
   virtual void Init() {
     src_node_ = nullptr;
@@ -49,9 +45,9 @@ class Edge {
   NodeType* dst_node() const { return dst_node_; }
 
  private:
-  friend void Connect<EdgeType>(NodeType* src_node,
-                                EdgeType* edge,
-                                NodeType* dst_node);
+  friend void Connect<NodeType, EdgeType>(NodeType* src_node,
+                                          EdgeType* edge,
+                                          NodeType* dst_node);
   friend void DisConnect<EdgeType>(EdgeType* edge);
   
   NodeType* src_node_;
@@ -60,16 +56,12 @@ class Edge {
 };
 
 
-template<typename DerivedNode>
+template<typename NodeType, typename EdgeType>
 class Node {
  public:
   DISALLOW_COPY_AND_MOVE(Node);
   Node() = default;
   virtual ~Node() = default;
-  
-  using EdgeType = typename DerivedNode::EdgeType;
-  using NodeType = typename EdgeType::NodeType;
-  static_assert(std::is_same<DerivedNode, NodeType>::value, "");
 
   virtual void Init() {
     node_id_ = NewNodeId();
@@ -114,9 +106,9 @@ class Node {
   }
 
  private:
-  friend void Connect<EdgeType>(NodeType* src_node,
-                                EdgeType* edge,
-                                NodeType* dst_node);
+  friend void Connect<NodeType, EdgeType>(NodeType* src_node,
+                                          EdgeType* edge,
+                                          NodeType* dst_node);
   friend void DisConnect<EdgeType>(EdgeType* edge);
 
   int32_t node_id_;

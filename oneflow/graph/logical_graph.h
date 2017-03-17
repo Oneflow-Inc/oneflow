@@ -10,15 +10,16 @@
 
 namespace oneflow {
 
-class LogicalNode final : public Node {
+class LogicalEdge;
+
+class LogicalNode final : public Node<LogicalNode, LogicalEdge> {
  public:
   DISALLOW_COPY_AND_MOVE(LogicalNode);
   LogicalNode() = default;
   ~LogicalNode() = default;
 
   void Init() {
-    Node::Init();
-    // struct style
+    Node<LogicalNode, LogicalEdge>::Init();
   }
 
   const Operator& op() const {
@@ -47,20 +48,20 @@ class LogicalNode final : public Node {
 
 };
 
-class LogicalEdge final : public Edge {
+class LogicalEdge final : public Edge<LogicalNode, LogicalEdge> {
  public:
   DISALLOW_COPY_AND_MOVE(LogicalEdge);
   LogicalEdge() = default;
   ~LogicalEdge() = default;
   
   void Init() {
-    Edge::Init();
+    Edge<LogicalNode, LogicalEdge>::Init();
   }
 
  private:
 };
 
-class LogicalGraph final : public Graph {
+class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
  public:
   DISALLOW_COPY_AND_MOVE(LogicalGraph);
   LogicalGraph() = default;
@@ -72,19 +73,6 @@ class LogicalGraph final : public Graph {
  private:
   void BuildGraphStruct(const DLNetConf& dl_net_conf);
   void FillNodeWithParallelDesc(const Strategy& strategy_conf);
-
-  LogicalNode* NewLogicalNode() {
-    LogicalNode* ret_ptr = new LogicalNode;
-    ret_ptr->Init();
-    RegisterNode(ret_ptr);
-    return ret_ptr;
-  }
-  LogicalEdge* NewLogicalEdge() {
-    LogicalEdge* ret_ptr = new LogicalEdge;
-    ret_ptr->Init();
-    RegisterEdge(ret_ptr);
-    return ret_ptr;
-  }
 
 };
 

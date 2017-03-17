@@ -11,45 +11,37 @@ void LogicalGraph::Init(const DLNetConf& dl_net_conf,
   FillNodeWithParallelDesc(strategy_conf);
 }
 
-// "BlobNameInGraph" = "OpName/BlobNameInOp"
-// "BlobNameInGraphIf" means Blob is the input of op
-// "BlobNameInGraphOf" means Blob is the output of op
-// "LogicalBlobName" = "BlobNameInGraphOf"
-
 void LogicalGraph::BuildGraphStruct(const DLNetConf& dl_net_conf) {
-  std::unordered_map<std::string, LogicalNode*> logical_blob_name2node;
+  std::unordered_map<std::string, LogicalNode*> lbn2node;
   // Process Op
   for (int op_i = 0; op_i < dl_net_conf.op_conf_size(); ++op_i) {
     const OperatorConf& cur_op_conf = dl_net_conf.op_conf(op_i);
     // Construct cur node
-    LogicalNode* cur_node = NewLogicalNode();
+    LogicalNode* cur_node = NewFinalNode();
     cur_node->mutable_op_ptr() = ConstructOpFromPbConf(cur_op_conf);
     // Connect input node
-    for (const std::string& input_blob_name
-        : cur_node->op().data_blob_name_set().input_blob_names) {
-      std::string logical_blob_name = cur_node->op().ibn2lbn(input_blob_name);
-      LogicalNode* pred_node = logical_blob_name2node.at(logical_blob_name);
-      Connect(pred_node, NewLogicalEdge(), cur_node);
+    for (const std::string& ibn : cur_node->op().input_blob_names()) {
+      std::string lbn = cur_node->op().ibn2lbn(ibn);
+      LogicalNode* pred_node = lbn2node.at(lbn);
+      Connect(pred_node, NewFinalEdge(), cur_node);
     }
     // Construct output
-    for (const std::string& output_blob_name
-        : cur_node->op().data_blob_name_set().output_blob_names) {
-      std::string logical_blob_name = cur_node->op().obn2lbn(output_blob_name);
-      logical_blob_name2node.emplace(logical_blob_name, cur_node);
+    for (const std::string& obn : cur_node->op().output_blob_names()) {
+      std::string lbn = cur_node->op().obn2lbn(obn);
+      lbn2node.emplace(lbn, cur_node);
     }
   }
-  logical_blob_name2node.clear();
+  lbn2node.clear();
   // Post Processing
   UpdateStartAndStop();
 }
 
 void LogicalGraph::FillNodeWithParallelDesc(const Strategy& strategy_conf) {
   std::unordered_map<std::string, LogicalNode*> op_name2node;
-  for (const std::unique_ptr<Node>& node : node_vec()) {
-    auto logical_node_ptr = of_dynamic_cast<LogicalNode*> (node.get());
-    std::string op_name = logical_node_ptr->op().op_name();
+  for (const std::unique_ptr<LogicalNode>& logical_node : nodes()) {
+    std::string op_name = logical_node->op().op_name();
     bool emplace_success =
-        op_name2node.emplace(op_name, logical_node_ptr).second;
+      op_name2node.emplace(op_name, logical_node.get()).second;
     CHECK_EQ(emplace_success, true);
   }
   for (int gid = 0; gid < strategy_conf.placement_group_vec_size(); ++gid) {
