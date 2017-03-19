@@ -4,9 +4,9 @@ namespace oneflow {
 
 namespace {
 
-void TaskConnect(TaskNode* src_node,
-                 TaskEdge* edge,
-                 TaskNode* dst_node) {
+inline void TaskConnect(TaskNode* src_node,
+                        TaskEdge* edge,
+                        TaskNode* dst_node) {
   Connect<TaskNode, TaskEdge>(src_node, edge, dst_node);
 }
 
