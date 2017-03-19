@@ -2,37 +2,30 @@
 #define ONEFLOW_GRAPH_TRANSFORMER_GRAPH_H_
 
 #include "graph/task_graph.h"
-#include "blob/blob_descriptor.h"
 
 namespace oneflow {
 
-class TransfmEdge final : public Edge {
+class TransfmNode;
+
+class TransfmEdge final : public Edge<TransfmNode, TransfmEdge> {
  public:
   DISALLOW_COPY_AND_MOVE(TransfmEdge);
   TransfmEdge() = default;
   ~TransfmEdge() = default;
 
-  virtual void Init() {
+  void Init() {
     Edge::Init();
-    task_edge_ = nullptr;
   }
  
   const std::string& lbn() const { return lbn_; }
   std::string& mutable_lbn() { return lbn_; }
 
-  const TaskEdge* task_edge() { return task_edge_; }
-  void set_task_edge(const TaskEdge* new_task_edge) {
-    task_edge_ = new_task_edge;
-  }
-
  private:
   std::string lbn_;
-  // It is used when it is a dangling edge
-  const TaskEdge* task_edge_;
 
 };
 
-class TransfmNode final : public Node {
+class TransfmNode final : public Node<TransfmNode, TransfmEdge> {
  public:
   DISALLOW_COPY_AND_MOVE(TransfmNode);
   TransfmNode() = default;
@@ -49,21 +42,28 @@ class TransfmNode final : public Node {
     return op_;
   }
 
-  bool IsEmptyIn() const override {
-    LOG(FATAL) << "TODO";
-    return true;
+  const std::vector<std::pair<std::string, TaskEdge*>>& in_task_edges() const {
+    return in_task_edges_;
   }
-  bool IsEmptyOut() const override {
-    LOG(FATAL) << "TODO";
-    return true;
+  std::vector<std::pair<std::string, TaskEdge*>>& in_task_edges() {
+    return in_task_edges_;
+  }
+
+  const std::vector<std::pair<std::string, TaskEdge*>>& out_task_edges() const {
+    return out_task_edges_;
+  }
+  std::vector<std::pair<std::string, TaskEdge*>>& out_task_edges() {
+    return out_task_edges_;
   }
 
  private:
   std::shared_ptr<const Operator> op_;
+  std::vector<std::pair<std::string, TaskEdge*>> in_task_edges_;
+  std::vector<std::pair<std::string, TaskEdge*>> out_task_edges_;
 
 };
 
-class TransfmGraph : public Graph {
+class TransfmGraph : public Graph<TransfmNode, TransfmEdge> {
  public:
   DISALLOW_COPY_AND_MOVE(TransfmGraph);
   TransfmGraph() = default;
@@ -72,41 +72,17 @@ class TransfmGraph : public Graph {
   virtual void Init(const TaskNode* task_node, bool job_has_bp) {
     task_node_ = task_node;
     job_has_bp_ = job_has_bp;
-    dangling_in_edge_src_.Init();
-    dangling_out_edge_dst_.Init();
   }
 
   virtual void FwBuildGraph() = 0;
 
  protected:
-  TransfmNode* NewTransfmNode() {
-    LOG(FATAL) << "TODO";
-    return nullptr;
-  }
-  TransfmEdge* NewTransfmEdge(const std::string& lbn) {
-    TransfmEdge* ret = new TransfmEdge;
-    ret->Init();
-    ret->mutable_lbn() = lbn;
-    RegisterEdge(ret);
-    return ret;
-  }
-
   const TaskNode* task_node() { return task_node_; }
   bool job_has_bp() { return job_has_bp_; }
-
-  Node* dangling_in_edge_src() {
-    return &dangling_in_edge_src_;
-  }
-  Node* dangling_out_edge_dst() {
-    return &dangling_out_edge_dst_;
-  }
 
  private:
   const TaskNode* task_node_;
   bool job_has_bp_;
-  
-  Node dangling_in_edge_src_;
-  Node dangling_out_edge_dst_;
 
 };
 

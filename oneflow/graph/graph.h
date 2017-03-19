@@ -64,6 +64,7 @@ class Graph {
     edges_.emplace(new_edge);
   }
   void UnRegisterEdge(EdgeType* old_edge) {
+    // It is a high-cost function, should not be called frequently
     for (auto it = edges_.begin(); it != edges_.end(); ++it) {
       if (it->get() == old_edge) {
         edges_.earse(it);

@@ -23,7 +23,7 @@ class CompTransfmGraph : public TransfmGraph {
       FwAddCopyInOp(&extern_in_lbn2consumers);
     }
     FwAddCloneOp();
-    FwAddDanglingEdge(lbn2producer, extern_in_lbn2consumers);
+    FwSetRelatedTaskEdges(lbn2producer, extern_in_lbn2consumers);
     UpdateStartAndStop();
   }
 
@@ -33,6 +33,12 @@ class CompTransfmGraph : public TransfmGraph {
  private:
   CompTransfmGraph() = default;
 
+  TransfmEdge* NewTransfmEdge(const std::string& lbn) {
+    TransfmEdge* ret = NewFinalEdge();
+    ret->mutable_lbn = lbn;
+    return ret;
+  }
+
   // Funtions used in FwBuildGraph
   using Lbn2NodeMap = std::unordered_map<std::string, TransfmNode*>;
   using Lbn2NodeVecMap = std::unordered_map<std::string, std::vector<TransfmNode*>>;
@@ -40,8 +46,8 @@ class CompTransfmGraph : public TransfmGraph {
                           Lbn2NodeVecMap* extern_in_lbn2consumers);
   void FwAddCopyInOp(Lbn2NodeVecMap* extern_in_lbn2consumers);
   void FwAddCloneOp();
-  void FwAddDanglingEdge(const Lbn2NodeMap& lbn2producer,
-                         const Lbn2NodeVecMap& extern_in_lbn2consumers);
+  void FwSetRelatedTaskEdges(const Lbn2NodeMap& lbn2producer,
+                             const Lbn2NodeVecMap& extern_in_lbn2consumers);
 
 
 };

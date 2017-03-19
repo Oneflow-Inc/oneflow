@@ -69,6 +69,13 @@ class Node {
 
   int32_t node_id() const { return node_id_; }
 
+  const EdgeType& FirstInEdge() const {
+    return **(in_edges_.begin());
+  }
+  const EdgeType& FirstOutEdge() const {
+    return **(out_edges_.begin());
+  }
+
   const std::unordered_set<EdgeType*>& in_edges() const {
     return in_edges_;
   }
