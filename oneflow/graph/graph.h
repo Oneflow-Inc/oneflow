@@ -67,7 +67,7 @@ class Graph {
     // It is a high-cost function, should not be called frequently
     for (auto it = edges_.begin(); it != edges_.end(); ++it) {
       if (it->get() == old_edge) {
-        edges_.earse(it);
+        edges_.erase(it);
         return;
       }
     }

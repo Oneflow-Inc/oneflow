@@ -35,7 +35,7 @@ class CompTransfmGraph : public TransfmGraph {
 
   TransfmEdge* NewTransfmEdge(const std::string& lbn) {
     TransfmEdge* ret = NewFinalEdge();
-    ret->mutable_lbn = lbn;
+    ret->mutable_lbn() = lbn;
     return ret;
   }
 

@@ -13,16 +13,16 @@ void CompTransfmGraph::FwBuildFromUserOps(
       (*lbn2producer)[lbn] = cur_node;
     }
   }
-  for (const std::unique_ptr<TransfmNode>& cur_node : node_vec()) {
+  for (const std::unique_ptr<TransfmNode>& cur_node : nodes()) {
     for (const std::string& ibn : cur_node->op()->input_blob_names()) {
       std::string lbn = cur_node->op()->ibn2lbn(ibn);
       auto producer_node_it = lbn2producer->find(lbn);
       if (producer_node_it != lbn2producer->end()) {
         Connect(producer_node_it->second,
                 NewTransfmEdge(lbn),
-                cur_node);
+                cur_node.get());
       } else {
-        (*extern_in_lbn2consumers)[lbn].push_back(cur_node);
+        (*extern_in_lbn2consumers)[lbn].push_back(cur_node.get());
       }
     }
   }
@@ -35,13 +35,13 @@ void CompTransfmGraph::FwAddCopyInOp(Lbn2NodeVecMap* extern_in_lbn2consumers) {
   OperatorConf pb_op_conf;
   pb_op_conf.set_name("");
   pb_op_conf.mutable_copy_op_conf()->set_copy_type(CopyInOpType());
-  pb_op_conf.mutable_copy_op_conf()->clear_logical_blob_names();
+  pb_op_conf.mutable_copy_op_conf()->clear_lbns();
   for (const auto& pair : *extern_in_lbn2consumers) {
-    pb_op_conf.mutable_copy_op_conf()->add_logical_blob_names(pair.first);
+    pb_op_conf.mutable_copy_op_conf()->add_lbns(pair.first);
   }
   std::shared_ptr<const Operator> copy_op = ConstructOpFromPbConf(pb_op_conf);
   // Construct Transformer Node
-  TransfmNode* copy_node = NewTransfmNode();
+  TransfmNode* copy_node = NewFinalNode();
   copy_node->mutable_op() = copy_op;
   // Connect CopyNode and OldConsumer
   for (const auto& pair : *extern_in_lbn2consumers) {
@@ -55,7 +55,7 @@ void CompTransfmGraph::FwAddCopyInOp(Lbn2NodeVecMap* extern_in_lbn2consumers) {
 }
 
 void CompTransfmGraph::FwAddCloneOp() {
-  for (const std::unique_ptr<TransfmNode>& cur_node : node_vec()) {
+  for (const std::unique_ptr<TransfmNode>& cur_node : nodes()) {
     std::unordered_map<std::string, std::vector<TransfmEdge*>> lbn2edges;
     for (TransfmEdge* edge : cur_node->out_edges()) {
       lbn2edges[edge->lbn()].push_back(edge);
@@ -67,16 +67,16 @@ void CompTransfmGraph::FwAddCloneOp() {
       // Construct clone op
       OperatorConf pb_op_conf;
       pb_op_conf.set_name("");
-      pb_op_conf.mutable_clone_op_conf()->mutable_logical_blob_name()->assign(lbn);
+      pb_op_conf.mutable_clone_op_conf()->mutable_lbn()->assign(lbn);
       pb_op_conf.mutable_clone_op_conf()->set_clone_num(edges.size());
       std::shared_ptr<const Operator> clone_op = ConstructOpFromPbConf(pb_op_conf);
       // Construct Transformer Node
       TransfmNode* clone_node = NewFinalNode();
       clone_node->mutable_op() = clone_op;
       // Update Edge
-      Connect(cur_node, NewTransfmEdge(lbn), clone_node);
+      Connect(cur_node.get(), NewTransfmEdge(lbn), clone_node);
       for (TransfmEdge* edge : edges) {
-        Node* dst_node = edge->dst_node();
+        TransfmNode* dst_node = edge->dst_node();
         DisConnect(edge);
         UnRegisterEdge(edge);
         Connect(clone_node, edge, dst_node);
@@ -93,14 +93,14 @@ void CompTransfmGraph::FwSetRelatedTaskEdges(
   for (const auto& pair : extern_in_lbn2consumers) {
     const std::string& lbn = pair.first;
     for (TransfmNode* consumer : pair.second) {
-      consumer.in_task_edges().emplace_back(lbn, task_node()->FirstInEdge());
+      consumer->in_task_edges().emplace_back(lbn, task_node()->FirstInEdge());
     }
   }
   // Out Task Edge
   CHECK_EQ(task_node()->out_edges().size(), 1);
   for (const auto& lbn : task_node()->stage_node()->chain_node()->output_lbns()) {
     TransfmNode* producer = lbn2producer.at(lbn);
-    producer.out_task_edges().emplace_back(lbn, task_node()->FirstOutEdge());
+    producer->out_task_edges().emplace_back(lbn, task_node()->FirstOutEdge());
   }
 }
 
