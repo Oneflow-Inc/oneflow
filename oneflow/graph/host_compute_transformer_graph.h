@@ -2,7 +2,6 @@
 #define ONEFLOW_GRAPH_HOST_COMPUTE_TRANSFORMER_GRAPH_H_
 
 #include "graph/compute_transformer_graph.h"
-#include "blob/blob_descriptor.h"
 
 namespace oneflow {
 

@@ -6,7 +6,6 @@
 #include "operator/operator.h"
 #include "job/parallel_desc.h"
 #include "common/id_map.h"
-#include "blob/blob_descriptor.h"
 
 namespace oneflow {
 
