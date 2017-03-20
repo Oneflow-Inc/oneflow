@@ -2,6 +2,7 @@
 #define ONEFLOW_GRAPH_TASK_NODE_H_
 
 #include "graph/stage_graph.h"
+#include "graph/transfm_graph.h"
 
 namespace oneflow {
 
@@ -22,6 +23,12 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   bool IsBpNode() const { return !is_fw_node_; }
   void SetFwNode() { is_fw_node_ = true; }
 
+  // chain_node
+
+  const ChainNode* chain_node() const {
+    return stage_node_->chain_node();
+  }
+
   // stage_node_
   const StageNode* stage_node() const {
     return stage_node_;
@@ -39,13 +46,19 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   }
 
   // Get related fw/bp node
-  TaskNode* GetFwNode() {
+  TaskNode* GetFwNode() const {
     CHECK(IsBpNode());
     return related_fw_or_bp_node_;
   }
-  TaskNode* GetBpNode() {
+  TaskNode* GetBpNode() const {
     CHECK(IsFwNode());
     return related_fw_or_bp_node_;
+  }
+
+  // transfm_graph_
+
+  const TransfmGraph& transfm_graph() const {
+    return *transfm_graph_ptr_;
   }
 
   // Functions about Build BP
@@ -58,6 +71,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   ThreadLocalId thread_local_id_;
   bool is_fw_node_;
   TaskNode* related_fw_or_bp_node_;
+  std::unique_ptr<TransfmGraph> transfm_graph_ptr_;
 
 };
 

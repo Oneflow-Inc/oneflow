@@ -1,9 +1,13 @@
-#ifndef ONEFLOW_GRAPH_TRANSFORMER_GRAPH_H_
-#define ONEFLOW_GRAPH_TRANSFORMER_GRAPH_H_
+#ifndef ONEFLOW_GRAPH_TRANSFM_GRAPH_H_
+#define ONEFLOW_GRAPH_TRANSFM_GRAPH_H_
 
-#include "graph/task_graph.h"
+#include "graph/graph.h"
+#include "operator/operator.h"
 
 namespace oneflow {
+
+class TaskNode;
+class TaskEdge;
 
 class TransfmNode;
 
@@ -45,14 +49,14 @@ class TransfmNode final : public Node<TransfmNode, TransfmEdge> {
   const std::vector<std::pair<std::string, TaskEdge*>>& in_task_edges() const {
     return in_task_edges_;
   }
-  std::vector<std::pair<std::string, TaskEdge*>>& in_task_edges() {
+  std::vector<std::pair<std::string, TaskEdge*>>& mutable_in_task_edges() {
     return in_task_edges_;
   }
 
   const std::vector<std::pair<std::string, TaskEdge*>>& out_task_edges() const {
     return out_task_edges_;
   }
-  std::vector<std::pair<std::string, TaskEdge*>>& out_task_edges() {
+  std::vector<std::pair<std::string, TaskEdge*>>& mutable_out_task_edges() {
     return out_task_edges_;
   }
 
@@ -75,6 +79,7 @@ class TransfmGraph : public Graph<TransfmNode, TransfmEdge> {
   }
 
   virtual void FwBuildGraph() = 0;
+  virtual void BpBuildGraph() = 0;
 
  protected:
   const TaskNode* task_node() { return task_node_; }
@@ -88,4 +93,4 @@ class TransfmGraph : public Graph<TransfmNode, TransfmEdge> {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_GRAPH_TRANSFORMER_GRAPH_H_
+#endif // ONEFLOW_GRAPH_TRANSFM_GRAPH_H_

@@ -1,8 +1,9 @@
 #ifndef ONEFLOW_GRAPH_COMPUTE_TRANSFORMER_GRAPH_H_
 #define ONEFLOW_GRAPH_COMPUTE_TRANSFORMER_GRAPH_H_
 
-#include "graph/transformer_graph.h"
+#include "graph/transfm_graph.h"
 #include "operator/operator_factory.h"
+#include "task_node.h"
 
 namespace oneflow {
 
@@ -11,21 +12,13 @@ class CompTransfmGraph : public TransfmGraph {
   DISALLOW_COPY_AND_MOVE(CompTransfmGraph);
   virtual ~CompTransfmGraph() = default;
 
-  virtual void Init(const TaskNode* task_node, bool job_has_bp) override {
+  virtual void Init(const TaskNode* task_node,
+                    bool job_has_bp) override {
     TransfmGraph::Init(task_node, job_has_bp);
   }
 
-  void FwBuildGraph() override {
-    Lbn2NodeMap lbn2producer;
-    Lbn2NodeVecMap extern_in_lbn2consumers;
-    FwBuildFromUserOps(&lbn2producer, &extern_in_lbn2consumers);
-    if (job_has_bp()) {
-      FwAddCopyInOp(&extern_in_lbn2consumers);
-    }
-    FwAddCloneOp();
-    FwSetRelatedTaskEdges(lbn2producer, extern_in_lbn2consumers);
-    UpdateStartAndStop();
-  }
+  void FwBuildGraph() override;
+  void BpBuildGraph() override;
 
  protected:
   virtual CopyOpConf::CopyType CopyInOpType() = 0;

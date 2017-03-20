@@ -10,8 +10,10 @@ void CloneOp::Init(const OperatorConf& op_conf) {
   mutable_pb_op_conf().reset(cnf);
   
   RegisterInputBlobName(cnf->lbn());
+  RegisterInputDiffBlobName(cnf->lbn());
   for (int32_t i = 0; i < cnf->clone_num(); ++i) {
     RegisterOutputBlobName(cnf->lbn());
+    RegisterOutputDiffBlobName(cnf->lbn());
   }
 }
 
@@ -23,13 +25,11 @@ std::string CloneOp::obn2lbn(const std::string& output_blob_name) const {
 }
 
 std::string CloneOp::idbn2lbn(const std::string input_diff_blob_name) const {
-  LOG(FATAL) << "This Op doesn't have input_diff_blob_name";
-  return "";
+  return input_diff_blob_name;
 }
 
 std::string CloneOp::odbn2lbn(const std::string output_diff_blob_name) const {
-  LOG(FATAL) << "This Op doesn't have output_diff_blob_name";
-  return "";
+  return output_diff_blob_name;
 }
 
 } // namespace oneflow

@@ -42,6 +42,9 @@ class Graph {
   const std::unordered_set<std::unique_ptr<NodeType>>& nodes() const {
     return nodes_;
   }
+  const std::unordered_set<std::unique_ptr<EdgeType>>& edges() const {
+    return edges_;
+  }
   
   bool IsFirstNode(const NodeType* node) const {
     return start_node_.HasSuccessor(node);
