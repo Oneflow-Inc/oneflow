@@ -69,10 +69,13 @@ class Node {
 
   int32_t node_id() const { return node_id_; }
 
-  EdgeType* FirstInEdge() const {
+
+  EdgeType* SoleInEdge() const {
+    CHECK_EQ(in_edges_.size(), 1);
     return *(in_edges_.begin());
   }
-  EdgeType* FirstOutEdge() const {
+  EdgeType* SoleOutEdge() const {
+    CHECK_EQ(out_edges_.size(), 1);
     return *(out_edges_.begin());
   }
 

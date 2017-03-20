@@ -120,25 +120,22 @@ void CompTransfmGraph::FwSetRelatedTaskEdges(
     const Lbn2NodeMap& lbn2producer,
     const Lbn2NodeVecMap& extern_in_lbn2consumers) {
   // In Task Edge
-  CHECK_EQ(task_node()->in_edges().size(), 1);
   for (const auto& pair : extern_in_lbn2consumers) {
     const std::string& lbn = pair.first;
     for (TransfmNode* consumer : pair.second) {
-      consumer->mutable_in_task_edges().emplace_back(lbn, task_node()->FirstInEdge());
+      consumer->mutable_in_task_edges().emplace_back(lbn, task_node()->SoleInEdge());
     }
   }
   // Out Task Edge
-  CHECK_EQ(task_node()->out_edges().size(), 1);
   for (const auto& lbn : task_node()->chain_node()->output_lbns()) {
     TransfmNode* producer = lbn2producer.at(lbn);
-    producer->mutable_out_task_edges().emplace_back(lbn, task_node()->FirstOutEdge());
+    producer->mutable_out_task_edges().emplace_back(lbn, task_node()->SoleOutEdge());
   }
 }
 
 void CompTransfmGraph::BpBuildGraph() {
   const TransfmGraph& fw_graph = task_node()->GetFwNode()->transfm_graph();
-  CHECK_EQ(fw_graph.start_node().out_edges().size(), 1); // CopyD2D/CopyH2H
-  const TransfmNode* cp_in_node = fw_graph.start_node().FirstOutEdge()->dst_node();
+  const TransfmNode* cp_in_node = fw_graph.start_node().SoleOutEdge()->dst_node();
   std::unordered_map<const TransfmNode*, TransfmNode*> fw_node2bp_node;
   // Copy Nodes
   for (const std::unique_ptr<TransfmNode>& fw_node : fw_graph.nodes()) {
@@ -164,7 +161,7 @@ void CompTransfmGraph::BpBuildGraph() {
     for (const auto& odbn : bp_node->op()->output_diff_blob_names()) {
       std::string lbn = bp_node->op()->odbn2lbn(odbn);
       if (found_lbns.find(lbn) == found_lbns.end()) {
-        bp_node->mutable_in_task_edges().emplace_back(lbn, task_node()->FirstInEdge());
+        bp_node->mutable_in_task_edges().emplace_back(lbn, task_node()->SoleInEdge());
       }
     }
   }
@@ -172,8 +169,24 @@ void CompTransfmGraph::BpBuildGraph() {
   for (TransfmEdge* edge : cp_in_node->out_edges()) {
     const std::string& lbn = edge->lbn();
     TransfmNode* bp_node = fw_node2bp_node.at(edge->dst_node());
-    bp_node->mutable_out_task_edges().emplace_back(lbn, task_node()->FirstOutEdge());
+    bp_node->mutable_out_task_edges().emplace_back(lbn, task_node()->SoleOutEdge());
   }
+}
+
+void CompTransfmGraph::SetProducedRegisterDesc() {
+  if (task_node()->IsFwNode()) {
+    FwSetProducedRegisterDesc();
+  } else {
+    BpSetProducedRegisterDesc();
+  }
+}
+
+void CompTransfmGraph::FwSetProducedRegisterDesc() {
+  LOG(FATAL) << "TODO";
+}
+
+void CompTransfmGraph::BpSetProducedRegisterDesc() {
+  LOG(FATAL) << "TODO";
 }
 
 } // namespace oneflow

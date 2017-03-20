@@ -19,6 +19,7 @@ class CompTransfmGraph : public TransfmGraph {
 
   void FwBuildGraph() override;
   void BpBuildGraph() override;
+  void SetProducedRegisterDesc() override;
 
  protected:
   virtual CopyOpConf::CopyType CopyInOpType() = 0;
@@ -42,6 +43,9 @@ class CompTransfmGraph : public TransfmGraph {
   void FwSetRelatedTaskEdges(const Lbn2NodeMap& lbn2producer,
                              const Lbn2NodeVecMap& extern_in_lbn2consumers);
 
+  // Produced RegisterDesc
+  void FwSetProducedRegisterDesc();
+  void BpSetProducedRegisterDesc();
 
 };
 

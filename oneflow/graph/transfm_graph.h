@@ -80,6 +80,7 @@ class TransfmGraph : public Graph<TransfmNode, TransfmEdge> {
 
   virtual void FwBuildGraph() = 0;
   virtual void BpBuildGraph() = 0;
+  virtual void SetProducedRegisterDesc() = 0;
 
  protected:
   const TaskNode* task_node() { return task_node_; }
