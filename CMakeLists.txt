@@ -10,23 +10,30 @@ include_directories(${oneflow_source_dir})
 
 #protobuf lib
 set(PROTOBUF_PROTOC_EXECUTABLE "/opt/oneflow/protobuf3/bin/protoc" CACHE FILEPATH "")
-set(Protobuf_INCLUDE_DIRS "/opt/oneflow/protobuf3/include" CACHE PATH "")
-set(Protobuf_LIBRARIES "/opt/oneflow/protobuf3/lib/libprotobuf.so" CACHE PATH "")
-include_directories(${Protobuf_INCLUDE_DIRS})
+set(PB_INCLUDE_DIRS "/opt/oneflow/protobuf3/include" CACHE PATH "")
+set(PB_LIBRARIES "/opt/oneflow/protobuf3/lib/libprotobuf.so" CACHE PATH "")
+include_directories(${PB_INCLUDE_DIRS})
+list(APPEND ONEFLOW_LINKER_LIBS ${PB_LIBRARIES})
 
 #glog lib
 include(FindGLOG)
-
+MESSAGE(STATUS "GLOG_INCLUDE_PATH = ${GLOG_INCLUDE_PATH}")
+MESSAGE(STATUS "GLOG_LIBRARY = ${GLOG_LIBRARY}")
+include_directories(SYSTEM ${GLOG_INCLUDE_PATH})
+list(APPEND ONEFLOW_LINKER_LIBS ${GLOG_LIBRARY})
+#gflags 
+include(FindGFLAG)
+MESSAGE(STATUS "GFLAGS_INCLUDE_PATH = ${GFLAGS_INCLUDE_DIR}")
+MESSAGE(STATUS "GFLAGS_LIBRARY = ${GFLAGS_LIBRARY}")
+include_directories(SYSTEM ${GFLAGS_INCLUDE_DIR})
+list(APPEND ONEFLOW_LINKER_LIBS ${GFLAGS_LIBRARY})
 #grpc lib
 find_program(GRPC_CPP_PLUGIN grpc_cpp_plugin)
 find_library(GRPC_LIBRARY NAMES grpc)
 find_library(GRPCPP_LIBRARY NAMES grpc++)
 find_library(GPR_LIBRARY NAMES gpr)
 set(GRPC_LIBRARIES ${GRPCPP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
-if(GRPC_LIBRARIES)
-    message(STATUS "Found GRPC: ${GRPC_LIBRARIES}; plugin - ${GRPC_CPP_PLUGIN}")
-endif()
-
+list(APPEND ONEFLOW_LINKER_LIBS ${GRPC_LIBRARIES})
 #grpc
 include(FindGRPC)
 file(GLOB_RECURSE oneflow_protos RELATIVE ${oneflow_source_dir} "*.proto")
@@ -38,15 +45,19 @@ list(APPEND ONEFLOW_LINKER_LIBS grpcobj)
 set(GENERATED_PROTOBUF_PATH "${CMAKE_BINARY_DIR}/oneflow/proto")
 file(MAKE_DIRECTORY ${GENERATED_PROTOBUF_PATH})
 include_directories(${GENERATED_PROTOBUF_PATH})
-
+#
+#
 include_directories(${oneflow_source_dir}/oneflow/net/)
+include_directories(${oneflow_source_dir}/oneflow/proto/)
+include_directories(${oneflow_source_dir}/oneflow/)
+include_directories(/usr/local/cuda/include)
 MESSAGE(STATUS "oneflow_source_dir = ${oneflow_source_dir}")
+#file(GLOB_RECURSE oneflow_all_cc "${oneflow_source_dir}/oneflow/*.cc" "${oneflow_source_dir}/oneflow/*.cpp")
 file(GLOB_RECURSE oneflow_all_cc "${oneflow_source_dir}/oneflow/net/*.cc")
-MESSAGE(STATUS "SRC_FILES = ${oneflow_all_cc}")
+#MESSAGE(STATUS "SRC_FILES = ${oneflow_all_cc}")
 add_library(srcobj ${oneflow_all_cc})
 add_dependencies(srcobj grpcobj)
 list(APPEND ONEFLOW_LINKER_LIBS srcobj)
-MESSAGE(STATUS "of_ccobj = ${of_ccobj}")
 
-link_libraries(grpc++_unsecure grpc gpr ${Protobuf_LIBRARIES} ${GRPC_LIBRARIES} ${ONEFLOW_LINKER_LIBS})
+link_libraries(grpc++_unsecure grpc gpr glog gflags ${ONEFLOW_LINKER_LIBS})
 ADD_EXECUTABLE(server_lib oneflow/main.cc ${GRPC_SRCS} ${oneflow_all_cc})

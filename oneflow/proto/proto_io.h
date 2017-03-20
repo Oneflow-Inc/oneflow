@@ -1,7 +1,7 @@
 #ifndef _PROTO_PROTO_IO_H_
 #define _PROTO_PROTO_IO_H_
 
-#include <io.h>
+#include <sys/io.h>
 #include <string>
 #include <glog/logging.h>
 

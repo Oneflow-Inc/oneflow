@@ -25,6 +25,8 @@ class GrpcMasterService : public AsyncServiceInterface {
     builder->RegisterService(&master_service_);
     cq_ = builder->AddCompletionQueue().release();
   }
+  
+  void HandleRPCsLoop() override {}
 
  private:
   ::grpc::ServerCompletionQueue* cq_;

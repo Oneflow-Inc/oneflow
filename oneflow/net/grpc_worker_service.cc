@@ -25,7 +25,8 @@ class GrpcWorkerService : public AsyncServiceInterface{
     builder->RegisterService(&worker_service_);  
     cq_ = builder->AddCompletionQueue().release();
   }
-    //grpc::CreateChannel("10.120.15.3:50061", grpc::InsecureChannelCredentials());
+
+  void HandleRPCsLoop() {}
 
   ::grpc::ServerCompletionQueue* cq_;
   of::comm::AsyncService worker_service_;

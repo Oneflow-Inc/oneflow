@@ -35,6 +35,11 @@ int GrpcServer::Init(){
   master_env_.master_session_factory = NewMasterSession;
 }
 
+int GrpcServer::Start(){
+  master_thread_.reset(env_->StartThread(ThreadOptions, "master_service", [this] {master_service_->HandleRPCsLoop();}));
+  worker_thread_.reset(env_->StartThread(ThreadOptions, "worker_service", [this] {worker_service_->HandleRPCsLoop();})); 
+}
+
 ChannelCreationFunction GrpcServer::GetChannelCreationFunction() const {
   return NewHostPortGrpcChannel;
 }
