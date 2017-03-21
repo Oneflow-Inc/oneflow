@@ -36,15 +36,17 @@ set(GRPC_LIBRARIES ${GRPCPP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
 list(APPEND ONEFLOW_LINKER_LIBS ${GRPC_LIBRARIES})
 #grpc
 include(FindGRPC)
+include(FindPROTOC)
 file(GLOB_RECURSE oneflow_protos RELATIVE ${oneflow_source_dir} "*.proto")
 MESSAGE(STATUS "oneflow_protos = ${oneflow_protos}")
+
 PROTOBUF_GENERATE_CPP(GRPC_SRCS GRPC_HDRS ${oneflow_source_dir} ${oneflow_protos})
 add_library(grpcobj ${GRPC_SRCS} ${GRPC_HDRS})
 list(APPEND ONEFLOW_LINKER_LIBS grpcobj)
 
-set(GENERATED_PROTOBUF_PATH "${CMAKE_BINARY_DIR}/oneflow/proto")
-file(MAKE_DIRECTORY ${GENERATED_PROTOBUF_PATH})
-include_directories(${GENERATED_PROTOBUF_PATH})
+set(GENERATED_GRPC_PATH "${CMAKE_BINARY_DIR}/oneflow/proto")
+file(MAKE_DIRECTORY ${GENERATED_GRPC_PATH})
+include_directories(${GENERATED_GRPC_PATH})
 #
 #
 include_directories(${oneflow_source_dir}/oneflow/net/)
