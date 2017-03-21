@@ -26,8 +26,8 @@ class GrpcServer{
   MasterEnv master_env_;
   WorkerEnv worker_env_;
   std::unique_ptr<::grpc::Server> server_;
-  std::unique_ptr<Thread> master_threads_;
-  std::unique_ptr<Thread> worker_threads_;
+  std::unique_ptr<Thread> master_thread_;
+  std::unique_ptr<Thread> worker_thread_;
 };
 
 }//end namespace oneflow

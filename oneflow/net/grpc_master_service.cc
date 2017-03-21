@@ -2,20 +2,15 @@
 #include <memory>
 #include <string>
 
-#include <grpc++/grpc++.h>
+#include "grpc++/alarm.h"
+#include "grpc++/server_builder.h"
+
 #include "async_service_interface.h"
 #include "grpc_master_service.h"
-#include "oneflow.grpc.pb.h"
-
-using grpc::Server;
-using grpc::ServerBuilder;
-using grpc::ServerContext;
-using grpc::Status;
-
-using of::Role;
-using of::Rank;
-using of::Status_all;
-using of::comm;
+#include "grpc_call.h"
+#include "grpc_master_service_impl.h"
+#include "master.pb.h"
+//#include "master.grpc.pb.h"
 
 namespace oneflow{
 
@@ -26,11 +21,33 @@ class GrpcMasterService : public AsyncServiceInterface {
     cq_ = builder->AddCompletionQueue().release();
   }
   
-  void HandleRPCsLoop() override {}
+  ~GrpcMasterService() {
+    delete cq_;
+  }
+  
+#define ENQUEUE_REQUEST(method, supports_cancel)                              \
+  do {                                                                        \
+    if (!is_shutdown_) {                                                      \
+      Call<GrpcMasterService, grpc::MasterService::AsyncService,              \
+           method##Request, method##Response>::                               \
+          EnqueueRequest(&master_service_, cq_,                               \
+                         &grpc::MasterService::AsyncService::Request##method, \
+                         &GrpcMasterService::method##Handler,                 \
+                         (supports_cancel));                                  \
+    }                                                                         \
+  } while (0)
+
+  void HandleRPCsLoop() override {
+    //ENQUEUE_REQUEST(role_register, true);
+  }
 
  private:
   ::grpc::ServerCompletionQueue* cq_;
-  of::comm::AsyncService master_service_;
+  grpc::MasterService::AsyncService master_service_;
+  bool is_shutdown_;
+
+   void RoleHandler(){}
+#undef ENQUEUE_REQUEST
 };
 
 AsyncServiceInterface* NewGrpcMasterService(::grpc::ServerBuilder* builder){
