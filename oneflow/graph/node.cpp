@@ -8,4 +8,9 @@ int32_t NewNodeId() {
   return node_id_cnt++;
 }
 
+int32_t NewEdgeId() {
+  static int32_t edge_id_cnt = 0;
+  return edge_id_cnt++;
+}
+
 } // namespace oneflow

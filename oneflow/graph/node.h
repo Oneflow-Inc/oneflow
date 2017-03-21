@@ -28,6 +28,7 @@ void DisConnect(EdgeType* edge) {
 }
 
 int32_t NewNodeId();
+int32_t NewEdgeId();
 
 template<typename NodeType, typename EdgeType>
 class Edge {
@@ -37,6 +38,7 @@ class Edge {
   virtual ~Edge() = default;
 
   virtual void Init() {
+    edge_id_ = NewEdgeId();
     src_node_ = nullptr;
     dst_node_ = nullptr;
   }
@@ -49,6 +51,8 @@ class Edge {
                                           EdgeType* edge,
                                           NodeType* dst_node);
   friend void DisConnect<EdgeType>(EdgeType* edge);
+  
+  int32_t edge_id_;
   
   NodeType* src_node_;
   NodeType* dst_node_;
