@@ -34,9 +34,9 @@ enum class FloatType {
 
 inline size_t GetFloatByteSize(FloatType ft) {
   if (ft == FloatType::kFloat) {
-    return 4;
+    return sizeof(float);
   } else {
-    return 8;
+    return sizeof(double);
   }
 }
 
