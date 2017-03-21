@@ -43,6 +43,8 @@ class Edge {
     dst_node_ = nullptr;
   }
 
+  int32_t edge_id() const { return edge_id_; }
+
   NodeType* src_node() const { return src_node_; }
   NodeType* dst_node() const { return dst_node_; }
 

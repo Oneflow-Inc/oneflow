@@ -1,4 +1,5 @@
 #include "graph/compute_transformer_graph.h"
+#include "graph/register_desc.h"
 #include "operator/clone_op.h"
 
 namespace oneflow {
@@ -182,7 +183,26 @@ void CompTransfmGraph::SetProducedRegisterDesc() {
 }
 
 void CompTransfmGraph::FwSetProducedRegisterDesc() {
-  LOG(FATAL) << "TODO";
+  RegisterDesc* register_desc = new RegisterDesc;
+  // blobs not used by succ_task
+  for (const std::unique_ptr<TransfmEdge>& cur_edge : edges()) {
+    register_desc->Add(cur_edge->pbn());
+  }
+  for (const std::unique_ptr<TransfmNode>& cur_node : nodes()) {
+    for (const std::string& dtbn : cur_node->op()->data_tmp_blob_names()) {
+      std::string pbn =
+          dtbn + "/data_tmp/" + std::to_string(cur_node->node_id());
+      register_desc->Add(pbn);
+    }
+  }
+  // blobs used by succ_task
+  for (const std::unique_ptr<TransfmNode>& cur_node : nodes()) {
+    for (auto& pair : cur_node->out_task_edges()) {
+      std::string lbn = pair.first;
+      std::string pbn = lbn + "/used_by_succ_task/" + std::to_string(cur_node->node_id());
+      register_desc->Add(pbn, lbn);
+    }
+  }
 }
 
 void CompTransfmGraph::BpSetProducedRegisterDesc() {

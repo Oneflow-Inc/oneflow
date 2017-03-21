@@ -24,8 +24,12 @@ class TransfmEdge final : public Edge<TransfmNode, TransfmEdge> {
   const std::string& lbn() const { return lbn_; }
   std::string& mutable_lbn() { return lbn_; }
 
+  const std::string& pbn() const { return pbn_; }
+  std::string& mutable_pbn() { return pbn_; }
+
  private:
   std::string lbn_;
+  std::string pbn_;
 
 };
 
