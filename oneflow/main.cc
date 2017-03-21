@@ -15,7 +15,7 @@
 #include "context/id_map.h"
 #include "memory/blob.h"
 */
-#include "grpc_server_lib.h"
+#include "server_lib.h"
 
 //DEFINE_string(solver, "",
 //  "The solver definition protocol buffer text file.");
@@ -30,8 +30,9 @@ int main(int argc, char* argv[]){
       confFile.close();
   }
   */
-  oneflow::GrpcServer* server;
-  server->NewServer();  
+  std::unique_ptr<oneflow::ServerInterface> server;
+  oneflow::NewServer(&server);
+  //server->Start();
   /*
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);

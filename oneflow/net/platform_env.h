@@ -1,5 +1,6 @@
 #ifndef PLATFORM_ENV_H_
 #define PLATFORM_ENV_H_
+#include <functional>
 
 namespace oneflow {
 
@@ -21,7 +22,11 @@ class EnvWrapper : public Env {
  public:
   Thread* StartThread(const ThreadOptions& thread_options,
                       const std::string& name,
-                      std::function<void()> fn) = 0;
+                      std::function<void()> fn) override {
+    return target_->StartThread(thread_options, name, fn);
+  }
+ private:
+  Env* target_;
 };
 
 class Thread {

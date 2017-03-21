@@ -7,18 +7,22 @@
 #include "worker_env.h"
 #include "grpc_channel.h"
 #include "platform_env.h"
+#include "server_lib.h"
 
 namespace oneflow{
 
-class GrpcServer{
- public:
+class GrpcServer : public ServerInterface{
+ protected:
   GrpcServer();
-  ~GrpcServer();
+ public:
+  //GrpcServer();
+  virtual ~GrpcServer();
   
-  int Init();
-  int Start();
+  void Init();
+  void Start() override;
+  void Join() override;
   virtual ChannelCreationFunction GetChannelCreationFunction() const;
-  void NewServer();
+  static void Create(std::unique_ptr<ServerInterface>* out_server);
   AsyncServiceInterface* master_service_ = nullptr;
   AsyncServiceInterface* worker_service_ = nullptr;
 
@@ -27,7 +31,7 @@ class GrpcServer{
   WorkerEnv worker_env_;
   std::unique_ptr<::grpc::Server> server_;
   std::unique_ptr<Thread> master_thread_;
-  std::unique_ptr<Thread> worker_thread_;
+  //std::unique_ptr<Thread> worker_thread_;
 };
 
 }//end namespace oneflow

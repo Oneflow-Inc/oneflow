@@ -38,15 +38,22 @@ class GrpcMasterService : public AsyncServiceInterface {
   } while (0)
 
   void HandleRPCsLoop() override {
-    //ENQUEUE_REQUEST(role_register, true);
+    ENQUEUE_REQUEST(CreateSession, true);
   }
 
+  template <class RequestMessage, class ResponseMessage>
+  using MasterCall = Call<GrpcMasterService, grpc::MasterService::AsyncService,
+                          RequestMessage, ResponseMessage>;
+
+  void CreateSessionHandler(
+      MasterCall<CreateSessionRequest, CreateSessionResponse>* call) {
+    ENQUEUE_REQUEST(CreateSession, true);
+  }
  private:
   ::grpc::ServerCompletionQueue* cq_;
   grpc::MasterService::AsyncService master_service_;
   bool is_shutdown_;
 
-   void RoleHandler(){}
 #undef ENQUEUE_REQUEST
 };
 

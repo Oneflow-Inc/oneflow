@@ -5,9 +5,10 @@ namespace oneflow{
 
 class AsyncServiceInterface{
  public:
-  virtual void HandleRPCsLoop() = 0; 
   virtual ~AsyncServiceInterface() {}
+  virtual void HandleRPCsLoop() = 0; 
   
 };
+
 }
 #endif
