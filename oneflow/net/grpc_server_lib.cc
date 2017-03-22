@@ -13,6 +13,7 @@
 #include "async_service_interface.h"
 //#include "grpc_worker_service.h"
 #include "master_session.h"
+#include "platform_env.h"
 
 namespace oneflow{
 
@@ -43,12 +44,12 @@ void GrpcServer::Init(){
 
 void GrpcServer::Start(){
   //if(master_service_ == nullptr) {std::cout<<"nullprt"<<std::endl;}
-  //master_service_.HandleRPCsLoop();
-  std::cout<<"start master service------"<<std::endl;
+  //master_service_->HandleRPCsLoop();
   //master_thread_.reset();
-  //master_thread_.reset(
-  //    env_->StartThread(ThreadOptions(), "master_service", [this] {std::cout<<"hi"<<std::endl;}));
-  //    env_->StartThread(ThreadOptions(), "master_service", [this] {master_service_->HandleRPCsLoop();}));
+  std::cout<<"start master service------"<<std::endl;
+  master_thread_.reset(
+      //StartThread(ThreadOptions(), "master_service", [this] {std::cout<<"hi"<<std::endl;});
+      StartThread(ThreadOptions(), "master_service", [this] {master_service_->HandleRPCsLoop();}));
   //worker_thread_.reset(
   //    env_->StartThread(ThreadOptions(), "worker_service", [this] {worker_service_->HandleRPCsLoop();})); 
 }
