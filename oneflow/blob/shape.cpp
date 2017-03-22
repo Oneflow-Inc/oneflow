@@ -3,7 +3,7 @@
 
 namespace oneflow {
 
-void Shape::init(const std::vector<int64_t>& shape_vec) {
+void Shape::Init(const std::vector<int64_t>& shape_vec) {
   shape_vec_ = shape_vec;
   UpdateElemCnt();
 }
@@ -27,7 +27,7 @@ int64_t Shape::CanonicalAxisIndex(int32_t axis_index) const {
   return (axis_index + NumAxes()) % NumAxes();
 }
 
-int64_t Shape::count(int32_t start_axis, int32_t end_axis) const {
+int64_t Shape::Count(int32_t start_axis, int32_t end_axis) const {
   CHECK_LE(start_axis, end_axis);
   CHECK_GE(start_axis, 0);
   CHECK_GE(end_axis, 0);
@@ -40,36 +40,36 @@ int64_t Shape::count(int32_t start_axis, int32_t end_axis) const {
   return count;
 }
 
-int64_t Shape::count(int32_t start_axis) const {
+int64_t Shape::Count(int32_t start_axis) const {
   return count(start_axis, NumAxes());
 }
 
-int64_t Shape::num() const {
+int64_t Shape::Num() const {
   CHECK_GE(shape_vec_.size(), 1);
   return shape_vec_[0];
 }
 
-int64_t Shape::dim() const{
+int64_t Shape::Dim() const{
   CHECK_EQ(shape_vec_.size(), 2);
   return shape_vec_[1];
 }
 
-int64_t Shape::channels() const {
+int64_t Shape::Channel() const {
   CHECK_EQ(4, shape_vec_.size());
   return shape_vec_[1];
 }
 
-int64_t Shape::height() const {
+int64_t Shape::Height() const {
   CHECK_EQ(4, shape_vec_.size());
   return shape_vec_[2];
 }
 
-int64_t Shape::width() const {
+int64_t Shape::Width() const {
   CHECK_EQ(4, shape_vec_.size());
   return shape_vec_[3];
 }
 
-int64_t Shape::offset(const int64_t n,
+int64_t Shape::Offset(const int64_t n,
                       const int64_t c,
                       const int64_t h,
                       const int64_t w) const {
