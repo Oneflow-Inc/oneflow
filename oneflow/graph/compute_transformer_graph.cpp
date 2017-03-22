@@ -183,7 +183,8 @@ void CompTransfmGraph::SetProducedRegisterDesc() {
 }
 
 void CompTransfmGraph::FwSetProducedRegisterDesc() {
-  std::unique_ptr<RegisterDesc> data_register(new RegisterDesc);
+  std::unique_ptr<RegisterDesc> data_register(new DisContigRegistDesc);
+  data_register->Init();
   // blobs not used by succ_task
   for (const std::unique_ptr<TransfmEdge>& cur_edge : edges()) {
     data_register->Add(cur_edge->pbn());
@@ -209,22 +210,36 @@ void CompTransfmGraph::FwSetProducedRegisterDesc() {
 }
 
 void CompTransfmGraph::BpSetProducedRegisterDesc() {
-  /*
-  std::unique_ptr<RegisterDesc> data_diff_register(new RegisterDesc);
-  std::unique_ptr<RegisterDesc> model_diff_register(new RegisterDesc);
-  std::unique_ptr<RegisterDesc> model_tmp_register(new RegisterDesc);
+  std::unique_ptr<RegisterDesc> data_diff_register(new DisContigRegistDesc);
+  std::unique_ptr<RegisterDesc> model_diff_register(new ContigRegistDesc);
+  std::unique_ptr<RegisterDesc> model_tmp_register(new DisContigRegistDesc);
+  data_diff_register->Init();
+  model_diff_register->Init();
+  model_tmp_register->Init();
   for (const std::unique_ptr<TransfmEdge>& cur_edge : edges()) {
     data_diff_register->Add(cur_edge->pbn());
   }
   for (const std::unique_ptr<TransfmNode>& cur_node : nodes()) {
     for (auto& pair : cur_node->out_task_edges()) {
       std::string lbn = pair.first;
-      std::string pbn = lbn + "/used_by_succ_task/" + std::to_string(cur_node->node_id());
+      std::string pbn = cur_node->lbn2pbn(lbn);
       data_diff_register->Add(pbn, lbn);
     }
-    for ( : cur_node->op()->model_diff_blob_names()) {
+    for (const std::string& mdbn : cur_node->op()->model_diff_blob_names()) {
+      std::string lbn = cur_node->op()->mdbn2lbn(mdbn);
+      std::string pbn = cur_node->lbn2pbn(lbn);
+      model_diff_register->Add(pbn, lbn);
     }
-  }*/
+    for (const std::string& mtbn : cur_node->op()->model_tmp_blob_names()) {
+      std::string lbn = cur_node->op()->mtbn2lbn(mtbn);
+      std::string pbn = cur_node->lbn2pbn(lbn);
+      model_tmp_register->Add(pbn, lbn);
+    }
+  }
+  task_node()->SoleOutEdge()->set_register_desc_ptr(data_diff_register.get());
+  AddProducedRegisterDesc("data_diff", std::move(data_diff_register));
+  AddProducedRegisterDesc("model_diff", std::move(model_diff_register));
+  AddProducedRegisterDesc("model_tmp", std::move(model_tmp_register));
 }
 
 } // namespace oneflow
