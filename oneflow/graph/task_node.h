@@ -2,10 +2,11 @@
 #define ONEFLOW_GRAPH_TASK_NODE_H_
 
 #include "graph/stage_graph.h"
-#include "graph/transfm_graph.h"
+#include "graph/register_desc.h"
 
 namespace oneflow {
 
+class TransfmGraph;
 class TaskEdge;
 
 class TaskNode : public Node<TaskNode, TaskEdge> {
@@ -55,10 +56,9 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
     return related_fw_or_bp_node_;
   }
 
-  // transfm_graph_
-
-  const TransfmGraph& transfm_graph() const {
-    return *transfm_graph_ptr_;
+  // transfm_graph
+  TransfmGraph* transfm_graph() const {
+    return transfm_graph_;
   }
 
   // Functions about Build BP
@@ -71,7 +71,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   ThreadLocalId thread_local_id_;
   bool is_fw_node_;
   TaskNode* related_fw_or_bp_node_;
-  std::unique_ptr<TransfmGraph> transfm_graph_ptr_;
+  TransfmGraph* transfm_graph_;
 
 };
 
@@ -85,7 +85,16 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
     Edge::Init();
   }
 
+  RegisterDesc& register_desc() const {
+    return *register_desc_ptr_;
+  }
+  void set_register_desc_ptr(RegisterDesc* new_ptr) {
+    register_desc_ptr_ = new_ptr;
+  }
+
  private:
+  RegisterDesc* register_desc_ptr_;
+
 };
 
 class CompTaskNode : public TaskNode {

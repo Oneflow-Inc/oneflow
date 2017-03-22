@@ -1,13 +1,10 @@
 #ifndef ONEFLOW_GRAPH_TRANSFM_GRAPH_H_
 #define ONEFLOW_GRAPH_TRANSFM_GRAPH_H_
 
-#include "graph/graph.h"
+#include "graph/task_graph.h"
 #include "operator/operator.h"
 
 namespace oneflow {
-
-class TaskNode;
-class TaskEdge;
 
 class TransfmNode;
 
@@ -89,10 +86,20 @@ class TransfmGraph : public Graph<TransfmNode, TransfmEdge> {
  protected:
   const TaskNode* task_node() { return task_node_; }
   bool job_has_bp() { return job_has_bp_; }
+  void AddProducedRegisterDesc(const std::string& register_desc_name,
+                               std::unique_ptr<RegisterDesc> register_desc_ptr) {
+    CHECK(produced_register_descs_.insert(std::make_pair(
+            register_desc_name,
+            std::move(register_desc_ptr))).second);
+  }
+  RegisterDesc& GetProducedRegisterDesc(const std::string& register_desc_name) {
+    return *(produced_register_descs_.at(register_desc_name));
+  }
 
  private:
   const TaskNode* task_node_;
   bool job_has_bp_;
+  std::unordered_map<std::string, std::unique_ptr<RegisterDesc>> produced_register_descs_; 
 
 };
 

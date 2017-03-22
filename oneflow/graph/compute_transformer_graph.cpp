@@ -135,18 +135,18 @@ void CompTransfmGraph::FwSetRelatedTaskEdges(
 }
 
 void CompTransfmGraph::BpBuildGraph() {
-  const TransfmGraph& fw_graph = task_node()->GetFwNode()->transfm_graph();
-  const TransfmNode* cp_in_node = fw_graph.start_node().SoleOutEdge()->dst_node();
+  const TransfmGraph* fw_graph = task_node()->GetFwNode()->transfm_graph();
+  const TransfmNode* cp_in_node = fw_graph->start_node().SoleOutEdge()->dst_node();
   std::unordered_map<const TransfmNode*, TransfmNode*> fw_node2bp_node;
   // Copy Nodes
-  for (const std::unique_ptr<TransfmNode>& fw_node : fw_graph.nodes()) {
+  for (const std::unique_ptr<TransfmNode>& fw_node : fw_graph->nodes()) {
     if (fw_node.get() == cp_in_node) { continue; }
     TransfmNode* bp_node = NewFinalNode();
     bp_node->mutable_op() = fw_node->op();
     fw_node2bp_node.emplace(fw_node.get(), bp_node);
   }
   // Copy Edges
-  for (const std::unique_ptr<TransfmEdge>& fw_edge : fw_graph.edges()) {
+  for (const std::unique_ptr<TransfmEdge>& fw_edge : fw_graph->edges()) {
     if (fw_edge->src_node() == cp_in_node) { continue; }
     Connect(fw_node2bp_node.at(fw_edge->dst_node()),
             NewTransfmEdge(fw_edge->lbn()),
@@ -183,7 +183,7 @@ void CompTransfmGraph::SetProducedRegisterDesc() {
 }
 
 void CompTransfmGraph::FwSetProducedRegisterDesc() {
-  RegisterDesc* register_desc = new RegisterDesc;
+  std::unique_ptr<RegisterDesc> register_desc(new RegisterDesc);
   // blobs not used by succ_task
   for (const std::unique_ptr<TransfmEdge>& cur_edge : edges()) {
     register_desc->Add(cur_edge->pbn());
@@ -203,6 +203,8 @@ void CompTransfmGraph::FwSetProducedRegisterDesc() {
       register_desc->Add(pbn, lbn);
     }
   }
+  //
+  AddProducedRegisterDesc("data", std::move(register_desc));
 }
 
 void CompTransfmGraph::BpSetProducedRegisterDesc() {
