@@ -13,14 +13,10 @@ class StageNode final : public Node<StageNode, StageEdge> {
   StageNode() = default;
   ~StageNode() = default;
 
-  void Init() {
-    Node::Init();
-  }
-
   const MachineId& machine_id() const {
     return machine_id_;
   }
-  MachineId& mutable_machine_id() {
+  MachineId& mut_machine_id() {
     return machine_id_;
   }
 
@@ -42,10 +38,6 @@ class StageEdge final : public Edge<StageNode, StageEdge> {
   OF_DISALLOW_COPY_AND_MOVE(StageEdge);
   StageEdge() = default;
   ~StageEdge() = default;
-    
-  void Init() {
-    Edge::Init();
-  }
     
  private:
 };

@@ -4,11 +4,11 @@
 namespace oneflow {
 
 void InnerProductOp::Init(const OperatorConf& op_conf) {
-  mutable_op_name() = op_conf.name();
+  mut_op_name() = op_conf.name();
   
   CHECK(op_conf.has_inner_product_op_conf());
   auto cnf = new InnerProductOpConf(op_conf.inner_product_op_conf());
-  mutable_pb_op_conf().reset(cnf);
+  mut_pb_op_conf().reset(cnf);
   
   RegisterInputBlobName("in");
   RegisterInputDiffBlobName(GenDiffBlobName("in"));

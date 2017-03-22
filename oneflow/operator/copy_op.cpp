@@ -3,11 +3,11 @@
 namespace oneflow {
 
 void CopyOp::Init(const OperatorConf& op_conf) {
-  mutable_op_name() = op_conf.name();
+  mut_op_name() = op_conf.name();
 
   CHECK(op_conf.has_copy_op_conf());
   auto cnf = new CopyOpConf(op_conf.copy_op_conf());
-  mutable_pb_op_conf().reset(cnf);
+  mut_pb_op_conf().reset(cnf);
 
   for (const std::string& lbn : cnf->lbns()) {
     RegisterInputBlobName("in/" + lbn);

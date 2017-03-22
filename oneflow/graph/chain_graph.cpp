@@ -24,10 +24,10 @@ using Logical2ChainItMap = std::unordered_map<const LogicalNode*, ChainIt>;
 void SetChainNodeWithChainIt(ChainNode* chain_node,
                              ChainIt chain_it) {
   CHECK_EQ(chain_it->nodes.empty(), false);
-  chain_node->mutable_parallel_desc_ptr() =
-      chain_it->nodes.front()->parallel_desc_ptr();
+  chain_node->mut_parallel_desc() =
+      chain_it->nodes.front()->parallel_desc();
   for (const LogicalNode* logical_node : chain_it->nodes) {
-    chain_node->mutable_op_vec().push_back(logical_node->op_ptr());
+    chain_node->mut_op_vec().push_back(logical_node->op());
   }
 }
 
@@ -89,10 +89,10 @@ void ModelMergeChains(
   for (auto& pair : *logical2chain_it) {
     // Get cur_node, pred_node
     const LogicalNode* cur_node = pair.first;
-    if (cur_node->op().IsElemWise() == false) {
+    if (cur_node->op()->IsElemWise() == false) {
       continue;
     }
-    if (cur_node->parallel_desc().policy() != ParallelDesc::kModelParallel) {
+    if (cur_node->parallel_desc()->policy() != ParallelDesc::kModelParallel) {
       continue;
     }
     CHECK_EQ(cur_node->in_edges().size(), 1);
@@ -207,7 +207,7 @@ void DataMergeChains(
   std::vector<const LogicalNode*> data_parallel_node;
   std::unordered_map<const LogicalNode*, bool> done;
   for (const auto& pair : *logical2chain_it) {
-    if (pair.first->parallel_desc().policy() == ParallelDesc::kDataParallel
+    if (pair.first->parallel_desc()->policy() == ParallelDesc::kDataParallel
         && !logical_graph.IsFirstNode(pair.first)) {
       data_parallel_node.push_back(pair.first);
       done[pair.first] = false;
@@ -227,7 +227,6 @@ void DataMergeChains(
 } // namespace
 
 void ChainGraph::Init(std::shared_ptr<const LogicalGraph> logical_graph) {
-  Graph::Init();
   // Build Chain
   std::list<Chain> chain_list;
   Logical2ChainItMap logical2chain_it;

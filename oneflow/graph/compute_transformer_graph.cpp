@@ -22,7 +22,7 @@ void CompTransfmGraph::FwBuildFromUserOps(
     Lbn2NodeVecMap* extern_in_lbn2consumers) {
   for (std::shared_ptr<const Operator> op : task_node()->chain_node()->op_vec()) {
     TransfmNode* cur_node = NewFinalNode();
-    cur_node->mutable_op() = op;
+    cur_node->mut_op() = op;
     for (const std::string& obn : op->output_blob_names()) {
       std::string lbn = op->obn2lbn(obn);
       (*lbn2producer)[lbn] = cur_node;
@@ -57,7 +57,7 @@ void CompTransfmGraph::FwAddCopyInOp(Lbn2NodeVecMap* extern_in_lbn2consumers) {
   std::shared_ptr<const Operator> copy_op = ConstructOpFromPbConf(pb_op_conf);
   // Construct Transformer Node
   TransfmNode* copy_node = NewFinalNode();
-  copy_node->mutable_op() = copy_op;
+  copy_node->mut_op() = copy_op;
   // Connect CopyNode and OldConsumer
   for (const auto& pair : *extern_in_lbn2consumers) {
     const std::string& lbn = pair.first;
@@ -105,7 +105,7 @@ void CompTransfmGraph::FwAddCloneOp() {
   // Add clone node
   for (const CloneInfo& clone_info : clone_info_vec) {
     TransfmNode* clone_node = NewFinalNode();
-    clone_node->mutable_op() = clone_info.clone_op;
+    clone_node->mut_op() = clone_info.clone_op;
     // Update Edge
     Connect(clone_info.pred_node, NewTransfmEdge(clone_info.lbn), clone_node);
     for (TransfmEdge* edge : clone_info.edges) {
@@ -123,13 +123,13 @@ void CompTransfmGraph::FwSetRelatedTaskEdges(
   for (const auto& pair : extern_in_lbn2consumers) {
     const std::string& lbn = pair.first;
     for (TransfmNode* consumer : pair.second) {
-      consumer->mutable_in_task_edges().emplace_back(lbn, task_node()->SoleInEdge());
+      consumer->mut_in_task_edges().emplace_back(lbn, task_node()->SoleInEdge());
     }
   }
   // Out Task Edge
   for (const auto& lbn : task_node()->chain_node()->output_lbns()) {
     TransfmNode* producer = lbn2producer.at(lbn);
-    producer->mutable_out_task_edges().emplace_back(lbn, task_node()->SoleOutEdge());
+    producer->mut_out_task_edges().emplace_back(lbn, task_node()->SoleOutEdge());
   }
 }
 
@@ -141,7 +141,7 @@ void CompTransfmGraph::BpBuildGraph() {
   for (const std::unique_ptr<TransfmNode>& fw_node : fw_graph->nodes()) {
     if (fw_node.get() == cp_in_node) { continue; }
     TransfmNode* bp_node = NewFinalNode();
-    bp_node->mutable_op() = fw_node->op();
+    bp_node->mut_op() = fw_node->op();
     fw_node2bp_node.emplace(fw_node.get(), bp_node);
   }
   // Copy Edges
@@ -161,7 +161,7 @@ void CompTransfmGraph::BpBuildGraph() {
     for (const auto& odbn : bp_node->op()->output_diff_blob_names()) {
       std::string lbn = bp_node->op()->odbn2lbn(odbn);
       if (found_lbns.find(lbn) == found_lbns.end()) {
-        bp_node->mutable_in_task_edges().emplace_back(lbn, task_node()->SoleInEdge());
+        bp_node->mut_in_task_edges().emplace_back(lbn, task_node()->SoleInEdge());
       }
     }
   }
@@ -169,7 +169,7 @@ void CompTransfmGraph::BpBuildGraph() {
   for (TransfmEdge* edge : cp_in_node->out_edges()) {
     const std::string& lbn = edge->lbn();
     TransfmNode* bp_node = fw_node2bp_node.at(edge->dst_node());
-    bp_node->mutable_out_task_edges().emplace_back(lbn, task_node()->SoleOutEdge());
+    bp_node->mut_out_task_edges().emplace_back(lbn, task_node()->SoleOutEdge());
   }
 }
 
@@ -204,7 +204,7 @@ void CompTransfmGraph::FwSetProducedRegisterDesc() {
     }
   }
   //
-  task_node()->SoleOutEdge()->set_register_desc_ptr(data_register.get());
+  task_node()->SoleOutEdge()->set_register_desc(data_register.get());
   AddProducedRegisterDesc("data", std::move(data_register));
 }
 
@@ -235,7 +235,7 @@ void CompTransfmGraph::BpSetProducedRegisterDesc() {
       model_tmp_register->Add(pbn, lbn);
     }
   }
-  task_node()->SoleOutEdge()->set_register_desc_ptr(data_diff_register.get());
+  task_node()->SoleOutEdge()->set_register_desc(data_diff_register.get());
   AddProducedRegisterDesc("data_diff", std::move(data_diff_register));
   AddProducedRegisterDesc("model_diff", std::move(model_diff_register));
   AddProducedRegisterDesc("model_tmp", std::move(model_tmp_register));

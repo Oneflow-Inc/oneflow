@@ -18,33 +18,23 @@ class LogicalNode final : public Node<LogicalNode, LogicalEdge> {
   LogicalNode() = default;
   ~LogicalNode() = default;
 
-  void Init() {
-    Node<LogicalNode, LogicalEdge>::Init();
+  std::shared_ptr<const Operator> op() const {
+    return op_;
+  }
+  std::shared_ptr<const Operator>& mut_op() {
+    return op_;
   }
 
-  const Operator& op() const {
-    return *op_ptr_;
+  std::shared_ptr<const ParallelDesc> parallel_desc() const {
+    return parallel_desc_;
   }
-  std::shared_ptr<const Operator> op_ptr() const {
-    return op_ptr_;
-  }
-  std::shared_ptr<const Operator>& mutable_op_ptr() {
-    return op_ptr_;
-  }
-
-  const ParallelDesc& parallel_desc() const {
-    return *parallel_desc_ptr_;
-  }
-  std::shared_ptr<const ParallelDesc> parallel_desc_ptr() const {
-    return parallel_desc_ptr_;
-  }
-  std::shared_ptr<const ParallelDesc>& mutable_parallel_desc_ptr() {
-    return parallel_desc_ptr_;
+  std::shared_ptr<const ParallelDesc>& mut_parallel_desc() {
+    return parallel_desc_;
   }
 
  private:
-  std::shared_ptr<const Operator> op_ptr_;
-  std::shared_ptr<const ParallelDesc> parallel_desc_ptr_;
+  std::shared_ptr<const Operator> op_;
+  std::shared_ptr<const ParallelDesc> parallel_desc_;
 
 };
 
@@ -53,10 +43,6 @@ class LogicalEdge final : public Edge<LogicalNode, LogicalEdge> {
   OF_DISALLOW_COPY_AND_MOVE(LogicalEdge);
   LogicalEdge() = default;
   ~LogicalEdge() = default;
-  
-  void Init() {
-    Edge<LogicalNode, LogicalEdge>::Init();
-  }
 
  private:
 };

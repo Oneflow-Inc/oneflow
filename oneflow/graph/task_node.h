@@ -15,10 +15,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   TaskNode() = default;
   virtual ~TaskNode() = default;
 
-  virtual void Init() {
-    Node::Init();
-  }
-
   // Is fw or bp
   bool IsFwNode() const { return is_fw_node_; }
   bool IsBpNode() const { return !is_fw_node_; }
@@ -41,7 +37,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   
   // thread_local_id_
   const ThreadLocalId& thread_local_id() const { return thread_local_id_; }
-  ThreadLocalId& mutable_thread_local_id() {
+  ThreadLocalId& mut_thread_local_id() {
     CHECK(IsFwNode());
     return thread_local_id_;
   }
@@ -81,19 +77,15 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
   TaskEdge() = default;
   ~TaskEdge() = default;
   
-  void Init() {
-    Edge::Init();
-  }
-
   RegisterDesc& register_desc() const {
-    return *register_desc_ptr_;
+    return *register_desc_;
   }
-  void set_register_desc_ptr(RegisterDesc* new_ptr) {
-    register_desc_ptr_ = new_ptr;
+  void set_register_desc(RegisterDesc* new_ptr) {
+    register_desc_ = new_ptr;
   }
 
  private:
-  RegisterDesc* register_desc_ptr_;
+  RegisterDesc* register_desc_;
 
 };
 
@@ -103,10 +95,6 @@ class CompTaskNode : public TaskNode {
   CompTaskNode() = default;
   virtual ~CompTaskNode() = default;
 
-  virtual void Init() {
-    TaskNode::Init();
-  }
-  
   bool HasOpWithOutDiff() const;
   bool HasOpWithIndiff() const;
 
@@ -124,13 +112,8 @@ class HostCompTaskNode final : public CompTaskNode {
   HostCompTaskNode() = default;
   ~HostCompTaskNode() = default;
 
-  void Init() {
-    CompTaskNode::Init();
-  }
-  
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     std::unique_ptr<TaskNode> new_node(new HostCompTaskNode);
-    new_node->Init();
     return new_node;
   }
 
@@ -148,12 +131,8 @@ class DeviceCompTaskNode final : public CompTaskNode {
   DeviceCompTaskNode() = default;
   ~DeviceCompTaskNode() = default;
   
-  void Init() {
-    CompTaskNode::Init();
-  }
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     std::unique_ptr<TaskNode> new_node(new DeviceCompTaskNode);
-    new_node->Init();
     return new_node;
   }
 
@@ -170,13 +149,8 @@ class CopyHDTaskNode final : public TaskNode {
   CopyHDTaskNode() = default;
   ~CopyHDTaskNode() = default;
   
-  void Init() {
-    TaskNode::Init();
-  }
-
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     std::unique_ptr<TaskNode> new_node(new CopyHDTaskNode);
-    new_node->Init();
     return new_node;
   }
 
@@ -223,13 +197,8 @@ class BoxingTaskNode final : public TaskNode {
   BoxingTaskNode() = default;
   ~BoxingTaskNode() = default;
   
-  void Init() {
-    TaskNode::Init();
-  }
-  
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     std::unique_ptr<TaskNode> new_node(new BoxingTaskNode);
-    new_node->Init();
     return new_node;
   }
 
@@ -260,13 +229,8 @@ class CommNetTaskNode final : public TaskNode {
   CommNetTaskNode() = default;
   ~CommNetTaskNode() = default;
 
-  void Init() {
-    TaskNode::Init();
-  }
-  
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     std::unique_ptr<TaskNode> new_node(new CommNetTaskNode);
-    new_node->Init();
     return new_node;
   }
 

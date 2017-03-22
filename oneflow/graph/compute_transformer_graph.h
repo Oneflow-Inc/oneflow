@@ -12,11 +12,6 @@ class CompTransfmGraph : public TransfmGraph {
   OF_DISALLOW_COPY_AND_MOVE(CompTransfmGraph);
   virtual ~CompTransfmGraph() = default;
 
-  virtual void Init(const TaskNode* task_node,
-                    bool job_has_bp) override {
-    TransfmGraph::Init(task_node, job_has_bp);
-  }
-
   void FwBuildGraph() override;
   void BpBuildGraph() override;
   void SetProducedRegisterDesc() override;
@@ -29,7 +24,7 @@ class CompTransfmGraph : public TransfmGraph {
 
   TransfmEdge* NewTransfmEdge(const std::string& lbn) {
     TransfmEdge* ret = NewFinalEdge();
-    ret->mutable_lbn() = lbn;
+    ret->mut_lbn() = lbn;
     return ret;
   }
 

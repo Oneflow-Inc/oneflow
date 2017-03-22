@@ -6,7 +6,6 @@ namespace oneflow {
 
 void LogicalGraph::Init(const DLNetConf& dl_net_conf,
                       const Strategy& strategy_conf) {
-  Graph::Init();
   BuildGraphStruct(dl_net_conf);
   FillNodeWithParallelDesc(strategy_conf);
 }
@@ -18,16 +17,16 @@ void LogicalGraph::BuildGraphStruct(const DLNetConf& dl_net_conf) {
     const OperatorConf& cur_op_conf = dl_net_conf.op_conf(op_i);
     // Construct cur node
     LogicalNode* cur_node = NewFinalNode();
-    cur_node->mutable_op_ptr() = ConstructOpFromPbConf(cur_op_conf);
+    cur_node->mut_op() = ConstructOpFromPbConf(cur_op_conf);
     // Connect input node
-    for (const std::string& ibn : cur_node->op().input_blob_names()) {
-      std::string lbn = cur_node->op().ibn2lbn(ibn);
+    for (const std::string& ibn : cur_node->op()->input_blob_names()) {
+      std::string lbn = cur_node->op()->ibn2lbn(ibn);
       LogicalNode* pred_node = lbn2node.at(lbn);
       Connect(pred_node, NewFinalEdge(), cur_node);
     }
     // Construct output
-    for (const std::string& obn : cur_node->op().output_blob_names()) {
-      std::string lbn = cur_node->op().obn2lbn(obn);
+    for (const std::string& obn : cur_node->op()->output_blob_names()) {
+      std::string lbn = cur_node->op()->obn2lbn(obn);
       lbn2node.emplace(lbn, cur_node);
     }
   }
@@ -39,7 +38,7 @@ void LogicalGraph::BuildGraphStruct(const DLNetConf& dl_net_conf) {
 void LogicalGraph::FillNodeWithParallelDesc(const Strategy& strategy_conf) {
   std::unordered_map<std::string, LogicalNode*> op_name2node;
   for (const std::unique_ptr<LogicalNode>& logical_node : nodes()) {
-    std::string op_name = logical_node->op().op_name();
+    std::string op_name = logical_node->op()->op_name();
     bool emplace_success =
       op_name2node.emplace(op_name, logical_node.get()).second;
     CHECK_EQ(emplace_success, true);
@@ -52,7 +51,7 @@ void LogicalGraph::FillNodeWithParallelDesc(const Strategy& strategy_conf) {
       CHECK(it != op_name2node.end());
       ParallelDesc* parallel_desc_raw_ptr = new ParallelDesc;
       parallel_desc_raw_ptr->Init(cur_group.parallel_conf());
-      it->second->mutable_parallel_desc_ptr().reset(parallel_desc_raw_ptr);
+      it->second->mut_parallel_desc().reset(parallel_desc_raw_ptr);
     }
   }
 }

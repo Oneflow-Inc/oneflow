@@ -31,7 +31,7 @@ void TaskGraph::InitCompTaskNodes(const StageGraph& stage_graph,
   for (const std::unique_ptr<StageNode>& stage : stage_graph.nodes()) {
     bool is_first_stage = stage_graph.IsFirstNode(stage.get());
     bool is_last_stage = stage_graph.IsLastNode(stage.get());
-    if (stage->chain_node()->parallel_desc().engine()
+    if (stage->chain_node()->parallel_desc()->engine()
             == ParallelDesc::Engine::kDevice) {
       Stage2DeviceCompTaskNodes(stage.get(),
                                 id_map,
@@ -53,19 +53,19 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
     bool is_first_stage,
     bool is_last_stage) {
   MachineId machine_id = stage->machine_id();
-  for (auto device_physical_id : stage->chain_node()->parallel_desc().devices_on_machine(machine_id)) {
+  for (auto device_physical_id : stage->chain_node()->parallel_desc()->devices_on_machine(machine_id)) {
     ThreadLocalId thread_local_id =
         id_map.ThreadLocalIdFromDevicePhysicalId(device_physical_id);
     // comp_task_node
     DeviceCompTaskNode* comp_task_node = NewTaskNode<DeviceCompTaskNode> ();
     comp_task_node->set_stage_node(stage);
-    comp_task_node->mutable_thread_local_id() = thread_local_id;
+    comp_task_node->mut_thread_local_id() = thread_local_id;
     comp_task_node->SetFwNode();
     // comp_in_task_node
     if (!is_first_stage) {
       CopyHDTaskNode* comp_in_task_node = NewTaskNode<CopyHDTaskNode> ();
       comp_in_task_node->set_stage_node(stage);
-      comp_in_task_node->mutable_thread_local_id() = thread_local_id;
+      comp_in_task_node->mut_thread_local_id() = thread_local_id;
       comp_in_task_node->SetFwNode();
       comp_in_task_node->SetFwInCopy();
       TaskConnect(comp_in_task_node, NewFinalEdge(), comp_task_node);
@@ -77,7 +77,7 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
     if (!is_last_stage) {
       CopyHDTaskNode* comp_out_task_node = NewTaskNode<CopyHDTaskNode> ();
       comp_out_task_node->set_stage_node(stage);
-      comp_out_task_node->mutable_thread_local_id() = thread_local_id;
+      comp_out_task_node->mut_thread_local_id() = thread_local_id;
       comp_out_task_node->SetFwNode();
       comp_out_task_node->SetFwOutCopy();
       TaskConnect(comp_task_node, NewFinalEdge(), comp_out_task_node);
@@ -95,7 +95,7 @@ void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
   comp_task_node->set_stage_node(stage);
   comp_task_node->SetFwNode();
   // since we only support GPU now, it must be a data-op
-  comp_task_node->mutable_thread_local_id() = id_map.data_thread_local_id();
+  comp_task_node->mut_thread_local_id() = id_map.data_thread_local_id();
   task_nodes_in_stage->comp_in_task_nodes.push_back(comp_task_node);
   task_nodes_in_stage->comp_out_task_nodes.push_back(comp_task_node);
 }
@@ -119,7 +119,7 @@ void TaskGraph::InitInboxingTaskNode(const StageNode* stage,
   }
   BoxingTaskNode* boxing_task_node = NewTaskNode<BoxingTaskNode> ();
   boxing_task_node->set_stage_node(stage);
-  boxing_task_node->mutable_thread_local_id() = id_map.boxing_thread_local_id();
+  boxing_task_node->mut_thread_local_id() = id_map.boxing_thread_local_id();
   boxing_task_node->SetFwNode();
   boxing_task_node->SetFwInBoxing();
   for (TaskNode* comp_in_task_node : task_nodes_in_stage->comp_in_task_nodes) {
@@ -139,7 +139,7 @@ void TaskGraph::InitOutBoxingTaskNode(
   }
   BoxingTaskNode* boxing_task_node = NewTaskNode<BoxingTaskNode> ();
   boxing_task_node->set_stage_node(stage);
-  boxing_task_node->mutable_thread_local_id() = id_map.boxing_thread_local_id();
+  boxing_task_node->mut_thread_local_id() = id_map.boxing_thread_local_id();
   boxing_task_node->SetFwNode();
   boxing_task_node->SetFwOutBoxing();
   for (TaskNode* comp_out_task_node : task_nodes_in_stage->comp_out_task_nodes) {

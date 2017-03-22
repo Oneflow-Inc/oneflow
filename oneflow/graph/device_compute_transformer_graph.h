@@ -9,10 +9,6 @@ class DeviceCompTransfmGraph final : public ComputeTransfmGraph {
   DeviceCompTransfmGraph() = default;
   ~DeviceCompTransfmGraph() = default;
 
-  void Init(const TaskNode* task_node, bool job_has_bp) override {
-    ComputeTransfmGraph::Init(task_node, job_has_bp);
-  }
-
  private:
   CopyOpConf::CopyType CopyInOpType() override {
     return CopyOpConf::D2D;

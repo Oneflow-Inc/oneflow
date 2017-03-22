@@ -38,10 +38,10 @@ class Graph {
   ConstReverseIterator crbegin() const;
   ConstReverseIterator crend() const;
   
-  const std::unordered_set<std::unique_ptr<NodeType>>& nodes() const {
+  const std::vector<std::unique_ptr<NodeType>>& nodes() const {
     return nodes_;
   }
-  const std::unordered_set<std::unique_ptr<EdgeType>>& edges() const {
+  const std::vector<std::unique_ptr<EdgeType>>& edges() const {
     return edges_;
   }
   
@@ -57,16 +57,16 @@ class Graph {
 
   // Register
   void RegisterNode(NodeType* new_node) {
-    nodes_.emplace(new_node);
+    nodes_.emplace_back(new_node);
   }
   void RegisterNode(std::unique_ptr<NodeType>&& new_node) {
-    nodes_.insert(std::move(new_node));
+    nodes_.push_back(std::move(new_node));
   }
   void RegisterEdge(EdgeType* new_edge) {
-    edges_.emplace(new_edge);
+    edges_.emplace_back(new_edge);
   }
   void RegisterEdge(std::unique_ptr<EdgeType>&& new_node) {
-    edges_.insert(std::move(new_node));
+    edges_.push_back(std::move(new_node));
   }
   // New
   NodeType* NewFinalNode() {
@@ -102,7 +102,7 @@ class Graph<NodeType, EdgeType>::Iterator final {
   ~Iterator() = default;
   
   void Init(NodeType* start_node) {
-    bfs_queue_.clear();
+    bfs_queue_ = std::queue<NodeType*> ();
     bfs_queue_.push(start_node);
   }
   
@@ -149,7 +149,7 @@ class Graph<NodeType, EdgeType>::ReverseIterator final {
   ~ReverseIterator() = default;
   
   void Init(NodeType* stop_node) {
-    bfs_queue_.clear();
+    bfs_queue_ = std::queue<NodeType*> ();
     bfs_queue_.push(stop_node);
   }
   
@@ -197,14 +197,12 @@ void Graph<NodeType, EdgeType>::UpdateStartAndStop() {
   for (const std::unique_ptr<NodeType>& node : nodes_) {
     if (node->in_edges().empty()) {
       EdgeType* start_edge = new EdgeType;
-      start_edges_.emplace(start_edge);
-      start_edge->Init();
+      start_edges_.emplace_back(start_edge);
       Connect(&start_node_, start_edge, node.get());
     }
     if (node->out_edges().empty()) {
       EdgeType* stop_edge = new EdgeType;
-      stop_edges_.emplace(stop_edge);
-      stop_edge->Init();
+      stop_edges_.emplace_back(stop_edge);
       Connect(node.get(), stop_edge, &stop_node_);
     }
   }
@@ -264,8 +262,8 @@ auto Graph<NodeType, EdgeType>::crend() const -> ConstReverseIterator {
 
 template<typename NodeType, typename EdgeType>
 NodeType& Graph<NodeType, EdgeType>::Iterator::operator * () {
-  CHECK_EQ(bfs_queue_->empty(), false);
-  return *(bfs_queue_->front());
+  CHECK_EQ(bfs_queue_.empty(), false);
+  return *(bfs_queue_.front());
 }
 
 template<typename NodeType, typename EdgeType>
@@ -275,11 +273,11 @@ NodeType* Graph<NodeType, EdgeType>::Iterator::operator -> () {
 
 template<typename NodeType, typename EdgeType>
 auto Graph<NodeType, EdgeType>::Iterator::operator ++ () -> Iterator& {
-  CHECK_EQ(bfs_queue_->empty(), false);
-  NodeType* cur_node = bfs_queue_->front();
-  bfs_queue_->pop();
+  CHECK_EQ(bfs_queue_.empty(), false);
+  NodeType* cur_node = bfs_queue_.front();
+  bfs_queue_.pop();
   for (EdgeType* out_edge : cur_node->out_edges()) {
-    bfs_queue_->push(out_edge->dst_node());
+    bfs_queue_.push(out_edge->dst_node());
   }
   return *this;
 }
@@ -287,19 +285,19 @@ auto Graph<NodeType, EdgeType>::Iterator::operator ++ () -> Iterator& {
 template<typename NodeType, typename EdgeType>
 bool Graph<NodeType, EdgeType>::Iterator::operator != (
     const Graph::Iterator& rhs) const {
-  if (bfs_queue_->empty() != rhs.bfs_queue_->empty()) {
+  if (bfs_queue_.empty() != rhs.bfs_queue_.empty()) {
     return true;
   }
-  if (bfs_queue_->empty() == false && rhs.bfs_queue_->empty() == false) {
-    return bfs_queue_->front() != rhs.bfs_queue_->front();
+  if (bfs_queue_.empty() == false && rhs.bfs_queue_.empty() == false) {
+    return bfs_queue_.front() != rhs.bfs_queue_.front();
   }
   return false;
 }
 
 template<typename NodeType, typename EdgeType>
 NodeType& Graph<NodeType, EdgeType>::ReverseIterator::operator * () {
-  CHECK_EQ(bfs_queue_->empty(), false);
-  return *(bfs_queue_->front());
+  CHECK_EQ(bfs_queue_.empty(), false);
+  return *(bfs_queue_.front());
 }
 
 template<typename NodeType, typename EdgeType>
@@ -309,11 +307,11 @@ NodeType* Graph<NodeType, EdgeType>::ReverseIterator::operator -> () {
 
 template<typename NodeType, typename EdgeType>
 auto Graph<NodeType, EdgeType>::ReverseIterator::operator ++ () -> ReverseIterator& {
-  CHECK_EQ(bfs_queue_->empty(), false);
-  NodeType* cur_node = bfs_queue_->front();
-  bfs_queue_->pop();
+  CHECK_EQ(bfs_queue_.empty(), false);
+  NodeType* cur_node = bfs_queue_.front();
+  bfs_queue_.pop();
   for (EdgeType* in_edge : cur_node->in_edges()) {
-    bfs_queue_->push(in_edge->src_node());
+    bfs_queue_.push(in_edge->src_node());
   }
   return *this;
 }
@@ -321,11 +319,11 @@ auto Graph<NodeType, EdgeType>::ReverseIterator::operator ++ () -> ReverseIterat
 template<typename NodeType, typename EdgeType>
 bool Graph<NodeType, EdgeType>::ReverseIterator::operator != (
     const Graph::ReverseIterator& rhs) const {
-  if (bfs_queue_->empty() != rhs.bfs_queue_->empty()) {
+  if (bfs_queue_.empty() != rhs.bfs_queue_.empty()) {
     return true;
   }
-  if (bfs_queue_->empty() == false && rhs.bfs_queue_->empty() == false) {
-    return bfs_queue_->front() != rhs.bfs_queue_->front();
+  if (bfs_queue_.empty() == false && rhs.bfs_queue_.empty() == false) {
+    return bfs_queue_.front() != rhs.bfs_queue_.front();
   }
   return false;
 }

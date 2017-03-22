@@ -32,8 +32,8 @@ void ConnectRelatedStages(
     std::function<void(StageNode*, StageNode*)> ConnectTwoNode) {
   CHECK_EQ(cur_stages.empty(), false);
   CHECK_EQ(succ_stages.empty(), false);
-  auto cur_policy = cur_stages.front()->chain_node()->parallel_desc().policy();
-  auto succ_policy = succ_stages.front()->chain_node()->parallel_desc().policy();
+  auto cur_policy = cur_stages.front()->chain_node()->parallel_desc()->policy();
+  auto succ_policy = succ_stages.front()->chain_node()->parallel_desc()->policy();
   if (cur_policy == ParallelDesc::kDataParallel
       && succ_policy == ParallelDesc::kDataParallel) {
     CHECK_EQ(cur_stages.size(), succ_stages.size());
@@ -46,16 +46,15 @@ void ConnectRelatedStages(
 }
 
 void StageGraph::Init(std::shared_ptr<const ChainGraph> chain_graph) {
-  Graph::Init();
   chain_graph_ = chain_graph;
   // Init Stages
   std::unordered_map<const ChainNode*,
                      std::vector<StageNode*>> chain2stages;
   for (const std::unique_ptr<ChainNode>& cur_chain : chain_graph->nodes()) {
     chain2stages[cur_chain.get()] = {};
-    for (MachineId machine_id : cur_chain->parallel_desc().machines()) {
+    for (MachineId machine_id : cur_chain->parallel_desc()->machines()) {
       StageNode* stage_node = NewFinalNode();
-      stage_node->mutable_machine_id() = machine_id;
+      stage_node->mut_machine_id() = machine_id;
       stage_node->set_chain_node(cur_chain.get());
       chain2stages.at(cur_chain.get()).push_back(stage_node);
     }

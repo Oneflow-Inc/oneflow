@@ -75,10 +75,10 @@ class Operator {
   #undef DEFINE_BLOB_NAMES_GETTER
  
  protected:
-  std::string& mutable_op_name() {
+  std::string& mut_op_name() {
     return op_name_;
   }
-  std::unique_ptr<PbMessage>& mutable_pb_op_conf() {
+  std::unique_ptr<PbMessage>& mut_pb_op_conf() {
     return pb_op_conf_;
   }
 

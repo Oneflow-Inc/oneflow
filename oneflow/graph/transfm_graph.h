@@ -14,12 +14,8 @@ class TransfmEdge final : public Edge<TransfmNode, TransfmEdge> {
   TransfmEdge() = default;
   ~TransfmEdge() = default;
 
-  void Init() {
-    Edge::Init();
-  }
- 
   const std::string& lbn() const { return lbn_; }
-  std::string& mutable_lbn() { return lbn_; }
+  std::string& mut_lbn() { return lbn_; }
 
   std::string pbn() const {
     return lbn2pbn(lbn_);
@@ -40,28 +36,24 @@ class TransfmNode final : public Node<TransfmNode, TransfmEdge> {
   TransfmNode() = default;
   ~TransfmNode() = default;
 
-  void Init() {
-    Node::Init();
-  }
-  
   std::shared_ptr<const Operator> op() const {
     return op_;
   }
-  std::shared_ptr<const Operator>& mutable_op() {
+  std::shared_ptr<const Operator>& mut_op() {
     return op_;
   }
 
   const std::vector<std::pair<std::string, TaskEdge*>>& in_task_edges() const {
     return in_task_edges_;
   }
-  std::vector<std::pair<std::string, TaskEdge*>>& mutable_in_task_edges() {
+  std::vector<std::pair<std::string, TaskEdge*>>& mut_in_task_edges() {
     return in_task_edges_;
   }
 
   const std::vector<std::pair<std::string, TaskEdge*>>& out_task_edges() const {
     return out_task_edges_;
   }
-  std::vector<std::pair<std::string, TaskEdge*>>& mutable_out_task_edges() {
+  std::vector<std::pair<std::string, TaskEdge*>>& mut_out_task_edges() {
     return out_task_edges_;
   }
 
@@ -82,7 +74,7 @@ class TransfmGraph : public Graph<TransfmNode, TransfmEdge> {
   TransfmGraph() = default;
   virtual ~TransfmGraph() = default;
 
-  virtual void Init(const TaskNode* task_node, bool job_has_bp) {
+  void Init(TaskNode* task_node, bool job_has_bp) {
     task_node_ = task_node;
     job_has_bp_ = job_has_bp;
   }
@@ -105,7 +97,7 @@ class TransfmGraph : public Graph<TransfmNode, TransfmEdge> {
   }
 
  private:
-  const TaskNode* task_node_;
+  TaskNode* task_node_;
   bool job_has_bp_;
   std::unordered_map<std::string, std::unique_ptr<RegisterDesc>> produced_register_descs_; 
 

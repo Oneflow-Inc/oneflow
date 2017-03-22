@@ -24,7 +24,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   TaskNodeType* NewTaskNode() {
     static_assert(std::is_base_of<TaskNode, TaskNodeType>::value, "");
     TaskNodeType* ret = new TaskNodeType;
-    ret->Init();
     RegisterNode(ret);
     return ret;
   }
