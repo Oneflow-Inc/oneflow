@@ -19,13 +19,13 @@ inline std::string GenUnDiffBlobName(const std::string& diff_blob_name) {
 
 class Operator {
  public:
-  DISALLOW_COPY_AND_MOVE(Operator);
+  OF_DISALLOW_COPY_AND_MOVE(Operator);
   Operator() = default;
   virtual ~Operator() = default;
 
   // logical_blob_name
   virtual std::string ibn2lbn(const std::string& input_blob_name) const {
-    return GetStringValueFromPbMessage(*pb_op_conf_, input_blob_name);
+    return GetValueFromPbMessage(*pb_op_conf_, input_blob_name);
   }
   virtual std::string obn2lbn(const std::string& output_blob_name) const {
     return op_name_ + "/" + output_blob_name;

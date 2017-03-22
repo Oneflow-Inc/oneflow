@@ -14,7 +14,7 @@ class LogicalEdge;
 
 class LogicalNode final : public Node<LogicalNode, LogicalEdge> {
  public:
-  DISALLOW_COPY_AND_MOVE(LogicalNode);
+  OF_DISALLOW_COPY_AND_MOVE(LogicalNode);
   LogicalNode() = default;
   ~LogicalNode() = default;
 
@@ -50,7 +50,7 @@ class LogicalNode final : public Node<LogicalNode, LogicalEdge> {
 
 class LogicalEdge final : public Edge<LogicalNode, LogicalEdge> {
  public:
-  DISALLOW_COPY_AND_MOVE(LogicalEdge);
+  OF_DISALLOW_COPY_AND_MOVE(LogicalEdge);
   LogicalEdge() = default;
   ~LogicalEdge() = default;
   
@@ -63,7 +63,7 @@ class LogicalEdge final : public Edge<LogicalNode, LogicalEdge> {
 
 class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
  public:
-  DISALLOW_COPY_AND_MOVE(LogicalGraph);
+  OF_DISALLOW_COPY_AND_MOVE(LogicalGraph);
   LogicalGraph() = default;
   ~LogicalGraph() = default;
 

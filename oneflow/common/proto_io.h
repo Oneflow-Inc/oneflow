@@ -19,8 +19,8 @@ void ParseProtoFromTextFile(const std::string& file_path,
 void PrintProtoToTextFile(const PbMessage& proto,
                           const std::string& file_path);
 
-std::string GetStringValueFromPbMessage(const PbMessage& msg,
-                                        const std::string& key);
+std::string GetValueFromPbMessage(const PbMessage& msg,
+                                  const std::string& key);
 
 } // namespace caffe
 

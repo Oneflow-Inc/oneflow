@@ -9,7 +9,7 @@ namespace oneflow {
 
 class Shape final {
  public:
-  // DISALLOW_COPY_AND_MOVE(Shape);
+  // OF_DISALLOW_COPY_AND_MOVE(Shape);
   Shape() = default;
   ~Shape() = default;
 
@@ -24,10 +24,10 @@ class Shape final {
   
   std::string ToString() const;
 
-  int64_t Shape(int32_t index) const {
+  int64_t shape(int32_t index) const {
     return shape_vec_[CanonicalAxisIndex(index)];
   }
-  void SetShape(int32_t index, int64_t val) {
+  void set_shape(int32_t index, int64_t val) {
     shape_vec_[CanonicalAxisIndex(index)] = val;
     UpdateElemCnt();
   }

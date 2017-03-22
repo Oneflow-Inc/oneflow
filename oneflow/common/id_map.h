@@ -14,9 +14,9 @@ using MachineId = int32_t;
 using ThreadGlobalId = int32_t;
 using ThreadLocalId = int32_t;
 
-class IDMap {
+class IDMap final {
  public:
-  DISALLOW_COPY_AND_MOVE(IDMap);
+  OF_DISALLOW_COPY_AND_MOVE(IDMap);
   IDMap() = default;
   ~IDMap() = default;
 

@@ -41,7 +41,7 @@ int64_t Shape::Count(int32_t start_axis, int32_t end_axis) const {
 }
 
 int64_t Shape::Count(int32_t start_axis) const {
-  return count(start_axis, NumAxes());
+  return Count(start_axis, NumAxes());
 }
 
 int64_t Shape::Num() const {
@@ -74,14 +74,14 @@ int64_t Shape::Offset(const int64_t n,
                       const int64_t h,
                       const int64_t w) const {
   CHECK_GE(n, 0);
-  CHECK_LT(n, num());
+  CHECK_LT(n, Num());
   CHECK_GE(c, 0);
-  CHECK_LT(c, channels());
+  CHECK_LT(c, Channel());
   CHECK_GE(h, 0);
-  CHECK_LT(h, height());
+  CHECK_LT(h, Height());
   CHECK_GE(w, 0);
-  CHECK_LT(w, width());
-  return ((n * channels() + c) * height() + h) * width() + w;
+  CHECK_LT(w, Width());
+  return ((n * Channel() + c) * Height() + h) * Width() + w;
 }
 
 void Shape::UpdateElemCnt() {

@@ -9,7 +9,7 @@ namespace oneflow {
 
 class CompTransfmGraph : public TransfmGraph {
  public:
-  DISALLOW_COPY_AND_MOVE(CompTransfmGraph);
+  OF_DISALLOW_COPY_AND_MOVE(CompTransfmGraph);
   virtual ~CompTransfmGraph() = default;
 
   virtual void Init(const TaskNode* task_node,

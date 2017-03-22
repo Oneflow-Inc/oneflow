@@ -7,7 +7,7 @@ namespace oneflow {
 
 class HostCompTransfmGraph final : public CompTransfmGraph {
  public:
-  DISALLOW_COPY_AND_MOVE(HostCompTransfmGraph);
+  OF_DISALLOW_COPY_AND_MOVE(HostCompTransfmGraph);
   HostCompTransfmGraph() = default;
   ~HostCompTransfmGraph() = default;
 

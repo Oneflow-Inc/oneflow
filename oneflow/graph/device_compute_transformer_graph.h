@@ -5,7 +5,7 @@ namespace oneflow {
 
 class DeviceCompTransfmGraph final : public ComputeTransfmGraph {
  public:
-  DISALLOW_COPY_AND_MOVE(DeviceCompTransfmGraph);
+  OF_DISALLOW_COPY_AND_MOVE(DeviceCompTransfmGraph);
   DeviceCompTransfmGraph() = default;
   ~DeviceCompTransfmGraph() = default;
 

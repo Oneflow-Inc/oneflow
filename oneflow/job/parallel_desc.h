@@ -18,7 +18,7 @@ class ParallelDesc {
     kDevice
   };
 
-  // DISALLOW_COPY_AND_MOVE(ParallelDesc);
+  // OF_DISALLOW_COPY_AND_MOVE(ParallelDesc);
   ParallelDesc() = default;
   ~ParallelDesc() = default;
 

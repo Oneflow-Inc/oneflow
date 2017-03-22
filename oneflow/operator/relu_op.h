@@ -7,7 +7,7 @@ namespace oneflow {
 
 class ReluOp final : public Operator {
  public:
-  DISALLOW_COPY_AND_MOVE(ReluOp);
+  OF_DISALLOW_COPY_AND_MOVE(ReluOp);
   ReluOp() = default;
   ~ReluOp() = default;
 

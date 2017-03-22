@@ -10,7 +10,7 @@ class TransfmNode;
 
 class TransfmEdge final : public Edge<TransfmNode, TransfmEdge> {
  public:
-  DISALLOW_COPY_AND_MOVE(TransfmEdge);
+  OF_DISALLOW_COPY_AND_MOVE(TransfmEdge);
   TransfmEdge() = default;
   ~TransfmEdge() = default;
 
@@ -36,7 +36,7 @@ class TransfmEdge final : public Edge<TransfmNode, TransfmEdge> {
 
 class TransfmNode final : public Node<TransfmNode, TransfmEdge> {
  public:
-  DISALLOW_COPY_AND_MOVE(TransfmNode);
+  OF_DISALLOW_COPY_AND_MOVE(TransfmNode);
   TransfmNode() = default;
   ~TransfmNode() = default;
 
@@ -78,7 +78,7 @@ class TransfmNode final : public Node<TransfmNode, TransfmEdge> {
 
 class TransfmGraph : public Graph<TransfmNode, TransfmEdge> {
  public:
-  DISALLOW_COPY_AND_MOVE(TransfmGraph);
+  OF_DISALLOW_COPY_AND_MOVE(TransfmGraph);
   TransfmGraph() = default;
   virtual ~TransfmGraph() = default;
 

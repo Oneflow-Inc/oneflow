@@ -7,7 +7,7 @@ namespace oneflow {
 
 class SoftmaxOp : public Operator {
  public:
-  DISALLOW_COPY_AND_MOVE(SoftmaxOp);
+  OF_DISALLOW_COPY_AND_MOVE(SoftmaxOp);
   SoftmaxOp() = default;
   ~SoftmaxOp() = default;
 

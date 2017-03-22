@@ -7,7 +7,7 @@ namespace oneflow {
 
 class CloneOp final : public Operator {
  public:
-  DISALLOW_COPY_AND_MOVE(CloneOp);
+  OF_DISALLOW_COPY_AND_MOVE(CloneOp);
   CloneOp() = default;
   ~CloneOp() = default;
 

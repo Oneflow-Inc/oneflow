@@ -8,7 +8,7 @@ namespace oneflow {
 
 class CopyHDTransfmGraph final : public TransfmGraph {
  public:
-  DISALLOW_COPY_AND_MOVE(CopyHDTransfmGraph);
+  OF_DISALLOW_COPY_AND_MOVE(CopyHDTransfmGraph);
   CopyHDTransfmGraph() = default;
   ~CopyHDTransfmGraph() = default;
 

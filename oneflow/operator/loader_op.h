@@ -7,7 +7,7 @@ namespace oneflow {
 
 class LoaderOp final : public Operator {
  public:
-  DISALLOW_COPY_AND_MOVE(LoaderOp);
+  OF_DISALLOW_COPY_AND_MOVE(LoaderOp);
   LoaderOp() = default;
   ~LoaderOp() = default;
   

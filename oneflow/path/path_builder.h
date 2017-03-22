@@ -8,7 +8,7 @@ namespace oneflow {
 
 class PathBuilder {
  public:
-  DISALLOW_COPY_AND_MOVE(PathBuilder);
+  OF_DISALLOW_COPY_AND_MOVE(PathBuilder);
   PathBuilder() = default;
   ~PathBuilder() = default;
 

@@ -7,7 +7,7 @@ namespace oneflow {
 
 class BoxingTransfmGraph final : public TransfmGraph {
  public:
-  DISALLOW_COPY_AND_MOVE(BoxingTransfmGraph);
+  OF_DISALLOW_COPY_AND_MOVE(BoxingTransfmGraph);
   BoxingTransfmGraph() = default;
   ~BoxingTransfmGraph() = default;
 

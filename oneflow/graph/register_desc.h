@@ -7,7 +7,7 @@ namespace oneflow {
 
 class RegisterDesc {
  public:
-  DISALLOW_COPY_AND_MOVE(RegisterDesc);
+  OF_DISALLOW_COPY_AND_MOVE(RegisterDesc);
   RegisterDesc() = default;
   ~RegisterDesc() = default;
 
@@ -29,7 +29,7 @@ class RegisterDesc {
 // Contiguous
 class ContigRegistDesc final : public RegisterDesc {
  public:
-  DISALLOW_COPY_AND_MOVE(ContigRegistDesc);
+  OF_DISALLOW_COPY_AND_MOVE(ContigRegistDesc);
   ContigRegistDesc() = default;
   ~ContigRegistDesc() = default;
 
@@ -41,7 +41,7 @@ class ContigRegistDesc final : public RegisterDesc {
 
 class DisContigRegistDesc final : public RegisterDesc {
  public:
-  DISALLOW_COPY_AND_MOVE(DisContigRegistDesc);
+  OF_DISALLOW_COPY_AND_MOVE(DisContigRegistDesc);
   DisContigRegistDesc() = default;
   ~DisContigRegistDesc() = default;
   

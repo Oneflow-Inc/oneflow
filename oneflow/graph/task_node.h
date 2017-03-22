@@ -11,7 +11,7 @@ class TaskEdge;
 
 class TaskNode : public Node<TaskNode, TaskEdge> {
  public:
-  DISALLOW_COPY_AND_MOVE(TaskNode);
+  OF_DISALLOW_COPY_AND_MOVE(TaskNode);
   TaskNode() = default;
   virtual ~TaskNode() = default;
 
@@ -77,7 +77,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
 class TaskEdge final : public Edge<TaskNode, TaskEdge> {
  public:
-  DISALLOW_COPY_AND_MOVE(TaskEdge);
+  OF_DISALLOW_COPY_AND_MOVE(TaskEdge);
   TaskEdge() = default;
   ~TaskEdge() = default;
   
@@ -99,7 +99,7 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
 
 class CompTaskNode : public TaskNode {
  public:
-  DISALLOW_COPY_AND_MOVE(CompTaskNode);
+  OF_DISALLOW_COPY_AND_MOVE(CompTaskNode);
   CompTaskNode() = default;
   virtual ~CompTaskNode() = default;
 
@@ -120,7 +120,7 @@ class CompTaskNode : public TaskNode {
 
 class HostCompTaskNode final : public CompTaskNode {
  public:
-  DISALLOW_COPY_AND_MOVE(HostCompTaskNode);
+  OF_DISALLOW_COPY_AND_MOVE(HostCompTaskNode);
   HostCompTaskNode() = default;
   ~HostCompTaskNode() = default;
 
@@ -144,7 +144,7 @@ class HostCompTaskNode final : public CompTaskNode {
 
 class DeviceCompTaskNode final : public CompTaskNode {
  public:
-  DISALLOW_COPY_AND_MOVE(DeviceCompTaskNode);
+  OF_DISALLOW_COPY_AND_MOVE(DeviceCompTaskNode);
   DeviceCompTaskNode() = default;
   ~DeviceCompTaskNode() = default;
   
@@ -166,7 +166,7 @@ class DeviceCompTaskNode final : public CompTaskNode {
 
 class CopyHDTaskNode final : public TaskNode {
  public:
-  DISALLOW_COPY_AND_MOVE(CopyHDTaskNode);
+  OF_DISALLOW_COPY_AND_MOVE(CopyHDTaskNode);
   CopyHDTaskNode() = default;
   ~CopyHDTaskNode() = default;
   
@@ -219,7 +219,7 @@ class CopyHDTaskNode final : public TaskNode {
 
 class BoxingTaskNode final : public TaskNode {
  public:
-  DISALLOW_COPY_AND_MOVE(BoxingTaskNode);
+  OF_DISALLOW_COPY_AND_MOVE(BoxingTaskNode);
   BoxingTaskNode() = default;
   ~BoxingTaskNode() = default;
   
@@ -256,7 +256,7 @@ class BoxingTaskNode final : public TaskNode {
 
 class CommNetTaskNode final : public TaskNode {
  public:
-  DISALLOW_COPY_AND_MOVE(CommNetTaskNode);
+  OF_DISALLOW_COPY_AND_MOVE(CommNetTaskNode);
   CommNetTaskNode() = default;
   ~CommNetTaskNode() = default;
 

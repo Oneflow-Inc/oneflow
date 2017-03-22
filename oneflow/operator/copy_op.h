@@ -7,7 +7,7 @@ namespace oneflow {
 
 class CopyOp final : public Operator {
  public:
-  DISALLOW_COPY_AND_MOVE(CopyOp);
+  OF_DISALLOW_COPY_AND_MOVE(CopyOp);
   CopyOp() = default;
   ~CopyOp() = default;
 

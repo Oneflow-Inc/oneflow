@@ -11,7 +11,7 @@ namespace oneflow {
 
 class TaskGraph final : public Graph<TaskNode, TaskEdge> {
  public:
-  DISALLOW_COPY_AND_MOVE(TaskGraph);
+  OF_DISALLOW_COPY_AND_MOVE(TaskGraph);
   TaskGraph() = default;
   ~TaskGraph() = default;
   

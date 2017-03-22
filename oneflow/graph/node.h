@@ -33,7 +33,7 @@ int32_t NewEdgeId();
 template<typename NodeType, typename EdgeType>
 class Edge {
  public:
-  DISALLOW_COPY_AND_MOVE(Edge);
+  OF_DISALLOW_COPY_AND_MOVE(Edge);
   Edge() = default;
   virtual ~Edge() = default;
 
@@ -65,7 +65,7 @@ class Edge {
 template<typename NodeType, typename EdgeType>
 class Node {
  public:
-  DISALLOW_COPY_AND_MOVE(Node);
+  OF_DISALLOW_COPY_AND_MOVE(Node);
   Node() = default;
   virtual ~Node() = default;
 

@@ -7,7 +7,7 @@ namespace oneflow {
 
 class PoolingOp final : public Operator {
  public:
-  DISALLOW_COPY_AND_MOVE(PoolingOp);
+  OF_DISALLOW_COPY_AND_MOVE(PoolingOp);
   PoolingOp() = default;
   ~PoolingOp() = default;
 

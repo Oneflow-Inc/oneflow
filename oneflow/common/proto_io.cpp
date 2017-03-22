@@ -46,8 +46,8 @@ void PrintProtoToTextFile(const PbMessage& proto,
   close(fd);
 }
 
-std::string GetStringValueFromPbMessage(const PbMessage& msg,
-                                        const std::string& key) {
+std::string GetValueFromPbMessage(const PbMessage& msg,
+                                  const std::string& key) {
   const Descriptor* d = msg.GetDescriptor();
   const FieldDescriptor* fd = d->FindFieldByName(key);
   CHECK_NOTNULL(fd);

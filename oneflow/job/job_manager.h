@@ -8,7 +8,7 @@ namespace oneflow {
 
 class JobManager {
  public:
-  DISALLOW_COPY_AND_MOVE(JobManager);
+  OF_DISALLOW_COPY_AND_MOVE(JobManager);
 
   JobManager() = default;
   ~JobManager() = default;

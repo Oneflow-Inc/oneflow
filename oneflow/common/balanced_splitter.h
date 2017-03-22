@@ -10,9 +10,9 @@ namespace oneflow {
 // BalancedSplitter splitter(20, 6)
 // the result of splitter.At 0,1,2,3,4,5 is
 //                           4,4,3,3,3,3
-class BalancedSplitter {
+class BalancedSplitter final {
  public:
-  DISALLOW_COPY_AND_MOVE(BalancedSplitter);
+  OF_DISALLOW_COPY_AND_MOVE(BalancedSplitter);
   
   BalancedSplitter() = default;
   ~BalancedSplitter() = default;

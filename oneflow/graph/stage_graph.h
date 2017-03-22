@@ -9,7 +9,7 @@ class StageEdge;
 
 class StageNode final : public Node<StageNode, StageEdge> {
  public:
-  DISALLOW_COPY_AND_MOVE(StageNode);
+  OF_DISALLOW_COPY_AND_MOVE(StageNode);
   StageNode() = default;
   ~StageNode() = default;
 
@@ -39,7 +39,7 @@ class StageNode final : public Node<StageNode, StageEdge> {
 
 class StageEdge final : public Edge<StageNode, StageEdge> {
  public:
-  DISALLOW_COPY_AND_MOVE(StageEdge);
+  OF_DISALLOW_COPY_AND_MOVE(StageEdge);
   StageEdge() = default;
   ~StageEdge() = default;
     
@@ -52,7 +52,7 @@ class StageEdge final : public Edge<StageNode, StageEdge> {
 
 class StageGraph final : public Graph<StageNode, StageEdge> {
  public:
-  DISALLOW_COPY_AND_MOVE(StageGraph);
+  OF_DISALLOW_COPY_AND_MOVE(StageGraph);
   StageGraph() = default;
   ~StageGraph() = default;
 

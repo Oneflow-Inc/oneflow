@@ -8,7 +8,7 @@ namespace oneflow {
 
 class OperatorFactory final {
  public:
-  DISALLOW_COPY_AND_MOVE(OperatorFactory);
+  OF_DISALLOW_COPY_AND_MOVE(OperatorFactory);
   ~OperatorFactory() = default;
   static const OperatorFactory& singleton() {
     static OperatorFactory obj;

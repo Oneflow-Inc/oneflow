@@ -10,7 +10,7 @@ class ChainEdge;
 
 class ChainNode final : public Node<ChainNode, ChainEdge> {
  public:
-  DISALLOW_COPY_AND_MOVE(ChainNode);
+  OF_DISALLOW_COPY_AND_MOVE(ChainNode);
   ChainNode() = default;
   ~ChainNode() = default;
 
@@ -59,7 +59,7 @@ class ChainNode final : public Node<ChainNode, ChainEdge> {
 
 class ChainEdge final : public Edge<ChainNode, ChainEdge> {
  public:
-  DISALLOW_COPY_AND_MOVE(ChainEdge);
+  OF_DISALLOW_COPY_AND_MOVE(ChainEdge);
   ChainEdge() = default;
   ~ChainEdge() = default;
     
@@ -72,7 +72,7 @@ class ChainEdge final : public Edge<ChainNode, ChainEdge> {
 
 class ChainGraph final : public Graph<ChainNode, ChainEdge> {
  public:
-  DISALLOW_COPY_AND_MOVE(ChainGraph);
+  OF_DISALLOW_COPY_AND_MOVE(ChainGraph);
   ChainGraph() = default;
   ~ChainGraph() = default;
 

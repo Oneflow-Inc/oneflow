@@ -17,7 +17,7 @@ class Graph {
   class ReverseGraphIterator;
   class ConstReverseGraphIterator;
 
-  DISALLOW_COPY_AND_MOVE(Graph);
+  OF_DISALLOW_COPY_AND_MOVE(Graph);
   Graph() = default;
   virtual ~Graph() = default;
 
@@ -139,7 +139,7 @@ class Graph<NodeType, EdgeType>::GraphIterator final {
 template<typename NodeType, typename EdgeType>
 class Graph<NodeType, EdgeType>::ConstGraphIterator final {
  public:
-  // DISALLOW_COPY_AND_MOVE(ConstGraphIterator);
+  // OF_DISALLOW_COPY_AND_MOVE(ConstGraphIterator);
   ConstGraphIterator() = default;
   ~ConstGraphIterator() = default;
   
@@ -195,7 +195,7 @@ class Graph<NodeType, EdgeType>::ReverseGraphIterator final {
 template<typename NodeType, typename EdgeType>
 class Graph<NodeType, EdgeType>::ConstReverseGraphIterator final {
  public:
-  // DISALLOW_COPY_AND_MOVE(ConstReverseGraphIterator);
+  // OF_DISALLOW_COPY_AND_MOVE(ConstReverseGraphIterator);
   ConstReverseGraphIterator() = default;
   ~ConstReverseGraphIterator() = default;
   
