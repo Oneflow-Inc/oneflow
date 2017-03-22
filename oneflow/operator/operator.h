@@ -30,11 +30,24 @@ class Operator {
   virtual std::string obn2lbn(const std::string& output_blob_name) const {
     return op_name_ + "/" + output_blob_name;
   }
-  virtual std::string idbn2lbn(const std::string input_diff_blob_name) const {
+  virtual std::string idbn2lbn(const std::string& input_diff_blob_name) const {
     return ibn2lbn(GenUnDiffBlobName(input_diff_blob_name));
   }
-  virtual std::string odbn2lbn(const std::string output_diff_blob_name) const {
+  virtual std::string odbn2lbn(const std::string& output_diff_blob_name) const {
     return obn2lbn(GenUnDiffBlobName(output_diff_blob_name));
+  }
+
+  std::string dtbn2lbn(const std::string& data_tmp_blob_name) const {
+    return op_name_ + "/" + data_tmp_blob_name;
+  }
+  std::string mtbn2lbn(const std::string& model_tmp_blob_name) const {
+    return op_name_ + "/" + model_tmp_blob_name;
+  }
+  std::string mbn2lbn(const std::string& model_blob_name) const {
+    return op_name_ + "/" + model_blob_name;
+  }
+  std::string mdbn2lbn(const std::string& model_diff_blob_name) const {
+    return op_name_ + "/" + model_diff_blob_name;
   }
   
   virtual void Init(const OperatorConf& op_conf) = 0;

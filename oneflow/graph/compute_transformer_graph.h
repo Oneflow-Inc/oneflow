@@ -30,7 +30,6 @@ class CompTransfmGraph : public TransfmGraph {
   TransfmEdge* NewTransfmEdge(const std::string& lbn) {
     TransfmEdge* ret = NewFinalEdge();
     ret->mutable_lbn() = lbn;
-    ret->mutable_pbn() = lbn + "/on_inner_edge/" + std::to_string(ret->edge_id());
     return ret;
   }
 

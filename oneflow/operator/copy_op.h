@@ -15,8 +15,8 @@ class CopyOp final : public Operator {
 
   std::string ibn2lbn(const std::string& input_blob_name) const override;
   std::string obn2lbn(const std::string& output_blob_name) const override;
-  std::string idbn2lbn(const std::string input_diff_blob_name) const override;
-  std::string odbn2lbn(const std::string output_diff_blob_name) const override;
+  std::string idbn2lbn(const std::string& input_diff_blob_name) const override;
+  std::string odbn2lbn(const std::string& output_diff_blob_name) const override;
 
   bool IsElemWise() const override { return false; }
 

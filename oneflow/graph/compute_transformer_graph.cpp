@@ -183,32 +183,48 @@ void CompTransfmGraph::SetProducedRegisterDesc() {
 }
 
 void CompTransfmGraph::FwSetProducedRegisterDesc() {
-  std::unique_ptr<RegisterDesc> register_desc(new RegisterDesc);
+  std::unique_ptr<RegisterDesc> data_register(new RegisterDesc);
   // blobs not used by succ_task
   for (const std::unique_ptr<TransfmEdge>& cur_edge : edges()) {
-    register_desc->Add(cur_edge->pbn());
+    data_register->Add(cur_edge->pbn());
   }
   for (const std::unique_ptr<TransfmNode>& cur_node : nodes()) {
     for (const std::string& dtbn : cur_node->op()->data_tmp_blob_names()) {
-      std::string pbn =
-          dtbn + "/data_tmp/" + std::to_string(cur_node->node_id());
-      register_desc->Add(pbn);
+      std::string lbn = cur_node->op()->dtbn2lbn(dtbn);
+      std::string pbn = cur_node->lbn2pbn(lbn);
+      data_register->Add(pbn);
     }
   }
   // blobs used by succ_task
   for (const std::unique_ptr<TransfmNode>& cur_node : nodes()) {
     for (auto& pair : cur_node->out_task_edges()) {
       std::string lbn = pair.first;
-      std::string pbn = lbn + "/used_by_succ_task/" + std::to_string(cur_node->node_id());
-      register_desc->Add(pbn, lbn);
+      std::string pbn = cur_node->lbn2pbn(lbn);
+      data_register->Add(pbn, lbn);
     }
   }
   //
-  AddProducedRegisterDesc("data", std::move(register_desc));
+  task_node()->SoleOutEdge()->set_register_desc_ptr(data_register.get());
+  AddProducedRegisterDesc("data", std::move(data_register));
 }
 
 void CompTransfmGraph::BpSetProducedRegisterDesc() {
-  LOG(FATAL) << "TODO";
+  /*
+  std::unique_ptr<RegisterDesc> data_diff_register(new RegisterDesc);
+  std::unique_ptr<RegisterDesc> model_diff_register(new RegisterDesc);
+  std::unique_ptr<RegisterDesc> model_tmp_register(new RegisterDesc);
+  for (const std::unique_ptr<TransfmEdge>& cur_edge : edges()) {
+    data_diff_register->Add(cur_edge->pbn());
+  }
+  for (const std::unique_ptr<TransfmNode>& cur_node : nodes()) {
+    for (auto& pair : cur_node->out_task_edges()) {
+      std::string lbn = pair.first;
+      std::string pbn = lbn + "/used_by_succ_task/" + std::to_string(cur_node->node_id());
+      data_diff_register->Add(pbn, lbn);
+    }
+    for ( : cur_node->op()->model_diff_blob_names()) {
+    }
+  }*/
 }
 
 } // namespace oneflow

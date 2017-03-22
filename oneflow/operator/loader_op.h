@@ -15,7 +15,7 @@ class LoaderOp final : public Operator {
   bool IsElemWise() const override { return false; }
   
   std::string ibn2lbn(const std::string& input_blob_name) const override;
-  std::string idbn2lbn(const std::string input_diff_blob_name) const override;
+  std::string idbn2lbn(const std::string& input_diff_blob_name) const override;
 
  private:
 

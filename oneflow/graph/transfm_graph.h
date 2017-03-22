@@ -21,12 +21,16 @@ class TransfmEdge final : public Edge<TransfmNode, TransfmEdge> {
   const std::string& lbn() const { return lbn_; }
   std::string& mutable_lbn() { return lbn_; }
 
-  const std::string& pbn() const { return pbn_; }
-  std::string& mutable_pbn() { return pbn_; }
+  std::string pbn() const {
+    return lbn2pbn(lbn_);
+  }
 
  private:
+  std::string lbn2pbn(const std::string& lbn) const {
+    return "edge_id_" + std::to_string(edge_id()) + "/" + lbn;
+  }
+
   std::string lbn_;
-  std::string pbn_;
 
 };
 
@@ -59,6 +63,10 @@ class TransfmNode final : public Node<TransfmNode, TransfmEdge> {
   }
   std::vector<std::pair<std::string, TaskEdge*>>& mutable_out_task_edges() {
     return out_task_edges_;
+  }
+
+  std::string lbn2pbn(const std::string& lbn) const {
+    return "node_id_" + std::to_string(node_id()) + "/" + lbn;
   }
 
  private:
