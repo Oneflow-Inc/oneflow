@@ -111,7 +111,6 @@ void CompTransfmGraph::FwAddCloneOp() {
     for (TransfmEdge* edge : clone_info.edges) {
       TransfmNode* dst_node = edge->dst_node();
       DisConnect(edge);
-      UnRegisterEdge(edge);
       Connect(clone_node, edge, dst_node);
     }
   }

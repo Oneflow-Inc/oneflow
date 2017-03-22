@@ -34,14 +34,12 @@ template<typename NodeType, typename EdgeType>
 class Edge {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Edge);
-  Edge() = default;
-  virtual ~Edge() = default;
-
-  virtual void Init() {
+  Edge() {
     edge_id_ = NewEdgeId();
     src_node_ = nullptr;
     dst_node_ = nullptr;
   }
+  virtual ~Edge() = default;
 
   int32_t edge_id() const { return edge_id_; }
 
@@ -61,21 +59,16 @@ class Edge {
 
 };
 
-
 template<typename NodeType, typename EdgeType>
 class Node {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Node);
-  Node() = default;
-  virtual ~Node() = default;
-
-  virtual void Init() {
+  Node() {
     node_id_ = NewNodeId();
   }
+  virtual ~Node() = default;
 
   int32_t node_id() const { return node_id_; }
-
-
   EdgeType* SoleInEdge() const {
     CHECK_EQ(in_edges_.size(), 1);
     return *(in_edges_.begin());
@@ -99,26 +92,6 @@ class Node {
     for (EdgeType* edge : out_edges_) {
       DisConnect(edge);
     }
-    CHECK(in_edges_.empty());
-    CHECK(out_edges_.empty());
-  }
-
-  bool HasSuccessor(const NodeType* succ_node) const {
-    for (EdgeType* edge : out_edges_) {
-      if (edge->dst_node() == succ_node) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  bool HasPredecessor(const NodeType* pred_node) const {
-    for (EdgeType* edge : in_edges_) {
-      if (edge->src_node() == pred_node) {
-        return true;
-      }
-    }
-    return false;
   }
 
  private:
