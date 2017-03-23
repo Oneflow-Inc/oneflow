@@ -256,7 +256,9 @@ void ChainGraph::Init(std::shared_ptr<const LogicalGraph> logical_graph) {
       for (auto logi_in_edge : logi_node->in_edges()) {
         auto pred_chain_it = logical2chain_it.at(logi_in_edge->src_node());
         auto pred_chain_node = chain_it2chain_node.at(pred_chain_it);
-        chain_node2pred.at(chain_node).insert(pred_chain_node);
+        if (pred_chain_node != chain_node) {
+          chain_node2pred.at(chain_node).insert(pred_chain_node);
+        }
       }
     }
   }
