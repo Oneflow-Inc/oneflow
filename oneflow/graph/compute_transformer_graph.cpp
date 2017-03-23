@@ -9,7 +9,7 @@ void CompTransfmGraph::FwBuildGraph() {
   Lbn2NodeMap lbn2producer;
   Lbn2NodeVecMap extern_in_lbn2consumers;
   FwBuildFromUserOps(&lbn2producer, &extern_in_lbn2consumers);
-  if (job_has_bp()) {
+  if (task_node()->GetBpNode() != nullptr) {
     FwAddCopyInOp(&extern_in_lbn2consumers);
   }
   FwAddCloneOp();

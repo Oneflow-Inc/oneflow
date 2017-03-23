@@ -12,7 +12,11 @@ class TaskEdge;
 class TaskNode : public Node<TaskNode, TaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TaskNode);
-  TaskNode() = default;
+  TaskNode() {
+    stage_node_ = nullptr;
+    related_fw_or_bp_node_ = nullptr;
+    transfm_graph_ = nullptr;
+  }
   virtual ~TaskNode() = default;
 
   // Is fw or bp
@@ -60,7 +64,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   // Functions about Build BP
   std::unique_ptr<TaskNode> BuildAndConnectBpNode();
   virtual std::unique_ptr<TaskNode> CreateSameTypeNode() const;
-  virtual void SetupWithFwNode(TaskNode* fw_node);
+  virtual void InitWithFwNode(TaskNode* fw_node);
 
  private:
   const StageNode* stage_node_;
@@ -77,8 +81,8 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
   TaskEdge() = default;
   ~TaskEdge() = default;
   
-  RegisterDesc& register_desc() const {
-    return *register_desc_;
+  RegisterDesc* register_desc() const {
+    return register_desc_;
   }
   void set_register_desc(RegisterDesc* new_ptr) {
     register_desc_ = new_ptr;
@@ -98,8 +102,8 @@ class CompTaskNode : public TaskNode {
   bool HasOpWithOutDiff() const;
   bool HasOpWithIndiff() const;
 
-  virtual void SetupWithFwNode(TaskNode* fw_node) override {
-    TaskNode::SetupWithFwNode(fw_node);
+  virtual void InitWithFwNode(TaskNode* fw_node) override {
+    TaskNode::InitWithFwNode(fw_node);
   }
 
  private:
@@ -113,12 +117,11 @@ class HostCompTaskNode final : public CompTaskNode {
   ~HostCompTaskNode() = default;
 
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    std::unique_ptr<TaskNode> new_node(new HostCompTaskNode);
-    return new_node;
+    return std::unique_ptr<TaskNode> (new HostCompTaskNode);
   }
 
-  void SetupWithFwNode(TaskNode* fw_node) override {
-    CompTaskNode::SetupWithFwNode(fw_node);
+  void InitWithFwNode(TaskNode* fw_node) override {
+    CompTaskNode::InitWithFwNode(fw_node);
   }
 
  private:
@@ -132,12 +135,11 @@ class DeviceCompTaskNode final : public CompTaskNode {
   ~DeviceCompTaskNode() = default;
   
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    std::unique_ptr<TaskNode> new_node(new DeviceCompTaskNode);
-    return new_node;
+    return std::unique_ptr<TaskNode> (new DeviceCompTaskNode);
   }
 
-  void SetupWithFwNode(TaskNode* fw_node) override {
-    CompTaskNode::SetupWithFwNode(fw_node);
+  void InitWithFwNode(TaskNode* fw_node) override {
+    CompTaskNode::InitWithFwNode(fw_node);
   }
 
  private:
@@ -150,12 +152,11 @@ class CopyHDTaskNode final : public TaskNode {
   ~CopyHDTaskNode() = default;
   
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    std::unique_ptr<TaskNode> new_node(new CopyHDTaskNode);
-    return new_node;
+    return std::unique_ptr<TaskNode> (new CopyHDTaskNode);
   }
 
-  void SetupWithFwNode(TaskNode* fw_node) override {
-    TaskNode::SetupWithFwNode(fw_node);
+  void InitWithFwNode(TaskNode* fw_node) override {
+    TaskNode::InitWithFwNode(fw_node);
     is_fw_in_copy_ =
         of_dynamic_cast<const CopyHDTaskNode*>(fw_node)->is_fw_in_copy_;
   }
@@ -198,12 +199,11 @@ class BoxingTaskNode final : public TaskNode {
   ~BoxingTaskNode() = default;
   
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    std::unique_ptr<TaskNode> new_node(new BoxingTaskNode);
-    return new_node;
+    return std::unique_ptr<TaskNode> (new BoxingTaskNode);
   }
 
-  void SetupWithFwNode(TaskNode* fw_node) override {
-    TaskNode::SetupWithFwNode(fw_node);
+  void InitWithFwNode(TaskNode* fw_node) override {
+    TaskNode::InitWithFwNode(fw_node);
     is_fw_in_boxing_ =
         of_dynamic_cast<const BoxingTaskNode*>(fw_node)->is_fw_in_boxing_;
   }
@@ -230,12 +230,11 @@ class CommNetTaskNode final : public TaskNode {
   ~CommNetTaskNode() = default;
 
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    std::unique_ptr<TaskNode> new_node(new CommNetTaskNode);
-    return new_node;
+    return std::unique_ptr<TaskNode> (new CommNetTaskNode);
   }
 
-  void SetupWithFwNode(TaskNode* fw_node) override {
-    TaskNode::SetupWithFwNode(fw_node);
+  void InitWithFwNode(TaskNode* fw_node) override {
+    TaskNode::InitWithFwNode(fw_node);
     is_fw_sender_ =
         of_dynamic_cast<const CommNetTaskNode*>(fw_node)->is_fw_sender_;
   }

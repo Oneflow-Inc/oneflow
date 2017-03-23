@@ -13,16 +13,18 @@ template<typename NodeType, typename EdgeType>
 void Connect(NodeType* src_node,
              EdgeType* edge,
              NodeType* dst_node) {
-  src_node->out_edges_.insert(edge);
-  dst_node->in_edges_.insert(edge);
+  CHECK(src_node->out_edges_.insert(edge).second);
+  CHECK(dst_node->in_edges_.insert(edge).second);
+  CHECK(edge->src_node_ == nullptr);
+  CHECK(edge->dst_node_ == nullptr);
   edge->src_node_ = src_node;
   edge->dst_node_ = dst_node;
 }
 
 template<typename EdgeType>
 void DisConnect(EdgeType* edge) {
-  edge->src_node_->out_edges_.erase(edge);
-  edge->dst_node_->in_edges_.erase(edge);
+  CHECK_EQ(edge->src_node_->out_edges_.erase(edge), 1);
+  CHECK_EQ(edge->dst_node_->in_edges_.erase(edge), 1);
   edge->src_node_ = nullptr;
   edge->dst_node_ = nullptr;
 }

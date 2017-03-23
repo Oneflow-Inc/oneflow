@@ -74,31 +74,35 @@ class TransfmGraph : public Graph<TransfmNode, TransfmEdge> {
   TransfmGraph() = default;
   virtual ~TransfmGraph() = default;
 
-  void Init(TaskNode* task_node, bool job_has_bp) {
+  void SetTask(TaskNode* task_node) {
     task_node_ = task_node;
-    job_has_bp_ = job_has_bp;
   }
-
-  virtual void FwBuildGraph() = 0;
-  virtual void BpBuildGraph() = 0;
+  void BuildGraph() {
+    if (task_node_->IsFwNode()) {
+      FwBuildGraph();
+    } else {
+      BpBuildGraph();
+    }
+  }
   virtual void SetProducedRegisterDesc() = 0;
 
  protected:
+  virtual void FwBuildGraph() = 0;
+  virtual void BpBuildGraph() = 0;
+  
   const TaskNode* task_node() { return task_node_; }
-  bool job_has_bp() { return job_has_bp_; }
-  void AddProducedRegisterDesc(const std::string& register_desc_name,
-                               std::unique_ptr<RegisterDesc> register_desc_ptr) {
-    CHECK(produced_register_descs_.insert(std::make_pair(
-            register_desc_name,
-            std::move(register_desc_ptr))).second);
+  void AddProducedRegisterDesc(
+      const std::string& register_desc_name,
+      std::unique_ptr<RegisterDesc> register_desc) {
+    auto pair = std::make_pair(register_desc_name, std::move(register_desc));
+    CHECK(produced_register_descs_.insert(std::move(pair)).second);
   }
-  RegisterDesc& GetProducedRegisterDesc(const std::string& register_desc_name) {
-    return *(produced_register_descs_.at(register_desc_name));
+  RegisterDesc* GetProducedRegisterDesc(const std::string& register_desc_name) {
+    return produced_register_descs_.at(register_desc_name).get();
   }
 
  private:
   TaskNode* task_node_;
-  bool job_has_bp_;
   std::unordered_map<std::string, std::unique_ptr<RegisterDesc>> produced_register_descs_; 
 
 };
