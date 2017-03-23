@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-std::shared_ptr<TaskGraph> BuildTaskGraph(const DLNetConf& dl_net_conf,
+std::unique_ptr<TaskGraph> BuildTaskGraph(const DLNetConf& dl_net_conf,
                                           const Strategy& strategy_conf,
                                           const IDMap& id_map,
                                           bool need_bp);

@@ -4,7 +4,7 @@ namespace oneflow {
 
 namespace {
 
-std::shared_ptr<TaskGraph> BuildTaskGraphWithoutTransfm(
+std::unique_ptr<TaskGraph> BuildTaskGraphWithoutTransfm(
     const DLNetConf& dl_net_conf,
     const Strategy& strategy_conf,
     const IDMap& id_map,
@@ -15,13 +15,13 @@ std::shared_ptr<TaskGraph> BuildTaskGraphWithoutTransfm(
   chain_graph->Init(logical_graph);
   auto stage_graph = std::make_shared<StageGraph>();
   stage_graph->Init(chain_graph);
-  auto task_graph = std::make_shared<TaskGraph>();
+  std::unique_ptr<TaskGraph> task_graph(new TaskGraph);
   task_graph->Init(stage_graph, id_map, need_bp);
   return task_graph;
 }
 
 void BuildTransfmGraph4TaskGraph(
-    std::shared_ptr<TaskGraph> task_graph) {
+    TaskGraph* task_graph) {
   for (const auto& task_node : task_graph->nodes()) {
     task_node->SetNewTransfmGraph();
   }
@@ -45,7 +45,7 @@ void BuildTransfmGraph4TaskGraph(
 
 }
 
-std::shared_ptr<TaskGraph> BuildTaskGraph(const DLNetConf& dl_net_conf,
+std::unique_ptr<TaskGraph> BuildTaskGraph(const DLNetConf& dl_net_conf,
                                           const Strategy& strategy_conf,
                                           const IDMap& id_map,
                                           bool need_bp) {
@@ -53,7 +53,7 @@ std::shared_ptr<TaskGraph> BuildTaskGraph(const DLNetConf& dl_net_conf,
                                                  strategy_conf,
                                                  id_map,
                                                  need_bp);
-  BuildTransfmGraph4TaskGraph(task_graph);
+  BuildTransfmGraph4TaskGraph(task_graph.get());
   return task_graph;
 }
 
