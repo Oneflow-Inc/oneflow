@@ -1,11 +1,14 @@
 #ifndef ONEFLOW_GRAPH_TRANSFM_GRAPH_H_
 #define ONEFLOW_GRAPH_TRANSFM_GRAPH_H_
 
-#include "graph/task_graph.h"
 #include "operator/operator.h"
+#include "graph/graph.h"
+#include "graph/register_desc.h"
 
 namespace oneflow {
 
+class TaskNode;
+class TaskEdge;
 class TransfmNode;
 
 class TransfmEdge final : public Edge<TransfmNode, TransfmEdge> {
@@ -74,24 +77,10 @@ class TransfmGraph : public Graph<TransfmNode, TransfmEdge> {
   TransfmGraph() = default;
   virtual ~TransfmGraph() = default;
 
-  void SetTask(TaskNode* task_node) {
-    task_node_ = task_node;
-  }
-  void BuildGraph() {
-    if (task_node_->IsFwNode()) {
-      FwBuildGraph();
-    } else {
-      BpBuildGraph();
-    }
-  }
+  void SetTask(TaskNode* task_node) { task_node_ = task_node; }
+  void BuildGraph();
   virtual void SetupProducedRegisterDesc() = 0;
-  void SubscribeRegisterDescInnerPath() {
-    for (TaskEdge* edge : task_node()->in_edges()) {
-      CHECK_NOTNULL(edge->register_desc());
-      edge->register_desc()->AddSubscriber(this);
-      subscribed_register_descs_.insert(edge->register_desc());
-    }
-  }
+  void SubscribeRegisterDescInnerPath();
 
  protected:
   virtual void FwBuildGraph() = 0;

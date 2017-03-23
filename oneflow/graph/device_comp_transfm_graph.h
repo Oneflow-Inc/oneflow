@@ -1,9 +1,11 @@
-#ifndef ONEFLOW_GRAPH_DEVICE_COMPUTE_TRANSFORMER_GRAPH_H_
-#define ONEFLOW_GRAPH_DEVICE_COMPUTE_TRANSFORMER_GRAPH_H_
+#ifndef ONEFLOW_GRAPH_DEVICE_COMP_TRANSFM_GRAPH_H_
+#define ONEFLOW_GRAPH_DEVICE_COMP_TRANSFM_GRAPH_H_
+
+#include "graph/comp_transfm_graph.h"
 
 namespace oneflow {
 
-class DeviceCompTransfmGraph final : public ComputeTransfmGraph {
+class DeviceCompTransfmGraph final : public CompTransfmGraph {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DeviceCompTransfmGraph);
   DeviceCompTransfmGraph() = default;
@@ -18,4 +20,4 @@ class DeviceCompTransfmGraph final : public ComputeTransfmGraph {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_GRAPH_DEVICE_COMPUTE_TRANSFORMER_GRAPH_H_
+#endif // ONEFLOW_GRAPH_DEVICE_COMP_TRANSFM_GRAPH_H_

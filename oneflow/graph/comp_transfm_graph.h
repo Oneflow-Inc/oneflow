@@ -1,9 +1,8 @@
-#ifndef ONEFLOW_GRAPH_COMPUTE_TRANSFORMER_GRAPH_H_
-#define ONEFLOW_GRAPH_COMPUTE_TRANSFORMER_GRAPH_H_
+#ifndef ONEFLOW_GRAPH_COMP_TRANSFM_GRAPH_H_
+#define ONEFLOW_GRAPH_COMP_TRANSFM_GRAPH_H_
 
 #include "graph/transfm_graph.h"
 #include "operator/operator_factory.h"
-#include "task_node.h"
 
 namespace oneflow {
 
@@ -16,10 +15,9 @@ class CompTransfmGraph : public TransfmGraph {
 
  protected:
   virtual CopyOpConf::CopyType CopyInOpType() = 0;
+  CompTransfmGraph() = default;
 
  private:
-  CompTransfmGraph() = default;
-  
   void FwBuildGraph() override;
   void BpBuildGraph() override;
 
@@ -47,4 +45,4 @@ class CompTransfmGraph : public TransfmGraph {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_GRAPH_COMPUTE_TRANSFORMER_GRAPH_H_
+#endif // ONEFLOW_GRAPH_COMP_TRANSFM_GRAPH_H_

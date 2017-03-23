@@ -2,76 +2,53 @@
 #define ONEFLOW_GRAPH_TASK_NODE_H_
 
 #include "graph/stage_graph.h"
+#include "graph/host_comp_transfm_graph.h"
+#include "graph/device_comp_transfm_graph.h"
+#include "graph/boxing_transfm_graph.h"
+#include "graph/copy_hd_transfm_graph.h"
+#include "graph/comm_net_transfm_graph.h"
 #include "graph/register_desc.h"
 
 namespace oneflow {
 
-class TransfmGraph;
 class TaskEdge;
 
 class TaskNode : public Node<TaskNode, TaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TaskNode);
-  TaskNode() {
-    stage_node_ = nullptr;
-    related_fw_or_bp_node_ = nullptr;
-    transfm_graph_ = nullptr;
-  }
+  TaskNode();
   virtual ~TaskNode() = default;
 
-  // Is fw or bp
+  // Getters
   bool IsFwNode() const { return is_fw_node_; }
   bool IsBpNode() const { return !is_fw_node_; }
-  void SetFwNode() { is_fw_node_ = true; }
-
-  // chain_node
-
-  const ChainNode* chain_node() const {
-    return stage_node_->chain_node();
-  }
-
-  // stage_node_
-  const StageNode* stage_node() const {
-    return stage_node_;
-  }
-  void set_stage_node(const StageNode* new_stage_node) {
-    CHECK(IsFwNode());
-    stage_node_ = new_stage_node;
-  }
-  
-  // thread_local_id_
+  const ChainNode* chain_node() const { return stage_node_->chain_node();}
+  const StageNode* stage_node() const { return stage_node_; }
   const ThreadLocalId& thread_local_id() const { return thread_local_id_; }
-  ThreadLocalId& mut_thread_local_id() {
-    CHECK(IsFwNode());
-    return thread_local_id_;
-  }
+  TransfmGraph* transfm_graph() const { return transfm_graph_.get(); }
+  TaskNode* GetFwNode() const;
+  TaskNode* GetBpNode() const;
+  
+  // Setters
+  void SetFwNode() { is_fw_node_ = true; }
+  void set_stage_node(const StageNode*);
+  ThreadLocalId& mut_thread_local_id();
 
-  // Get related fw/bp node
-  TaskNode* GetFwNode() const {
-    CHECK(IsBpNode());
-    return related_fw_or_bp_node_;
-  }
-  TaskNode* GetBpNode() const {
-    CHECK(IsFwNode());
-    return related_fw_or_bp_node_;
-  }
-
-  // transfm_graph
-  TransfmGraph* transfm_graph() const {
-    return transfm_graph_;
-  }
-
-  // Functions about Build BP
+  //
   std::unique_ptr<TaskNode> BuildAndConnectBpNode();
+  void SetNewTransfmGraph();
+ 
+ protected:
   virtual std::unique_ptr<TaskNode> CreateSameTypeNode() const;
   virtual void InitWithFwNode(TaskNode* fw_node);
+  virtual std::unique_ptr<TransfmGraph> CreateTransfmGraph() const;
 
  private:
   const StageNode* stage_node_;
   ThreadLocalId thread_local_id_;
   bool is_fw_node_;
   TaskNode* related_fw_or_bp_node_;
-  TransfmGraph* transfm_graph_;
+  std::unique_ptr<TransfmGraph> transfm_graph_;
 
 };
 
@@ -102,10 +79,10 @@ class CompTaskNode : public TaskNode {
   bool HasOpWithOutDiff() const;
   bool HasOpWithIndiff() const;
 
+ protected:
   virtual void InitWithFwNode(TaskNode* fw_node) override {
     TaskNode::InitWithFwNode(fw_node);
   }
-
  private:
 
 };
@@ -116,15 +93,16 @@ class HostCompTaskNode final : public CompTaskNode {
   HostCompTaskNode() = default;
   ~HostCompTaskNode() = default;
 
+ private:
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return std::unique_ptr<TaskNode> (new HostCompTaskNode);
   }
-
+  std::unique_ptr<TransfmGraph> CreateTransfmGraph() const override {
+    return std::unique_ptr<TransfmGraph> (new HostCompTransfmGraph);
+  }
   void InitWithFwNode(TaskNode* fw_node) override {
     CompTaskNode::InitWithFwNode(fw_node);
   }
-
- private:
 
 };
 
@@ -134,15 +112,17 @@ class DeviceCompTaskNode final : public CompTaskNode {
   DeviceCompTaskNode() = default;
   ~DeviceCompTaskNode() = default;
   
+ private:
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return std::unique_ptr<TaskNode> (new DeviceCompTaskNode);
   }
-
+  std::unique_ptr<TransfmGraph> CreateTransfmGraph() const override {
+    return std::unique_ptr<TransfmGraph> (new DeviceCompTransfmGraph);
+  }
   void InitWithFwNode(TaskNode* fw_node) override {
     CompTaskNode::InitWithFwNode(fw_node);
   }
 
- private:
 };
 
 class CopyHDTaskNode final : public TaskNode {
@@ -151,16 +131,6 @@ class CopyHDTaskNode final : public TaskNode {
   CopyHDTaskNode() = default;
   ~CopyHDTaskNode() = default;
   
-  std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    return std::unique_ptr<TaskNode> (new CopyHDTaskNode);
-  }
-
-  void InitWithFwNode(TaskNode* fw_node) override {
-    TaskNode::InitWithFwNode(fw_node);
-    is_fw_in_copy_ =
-        of_dynamic_cast<const CopyHDTaskNode*>(fw_node)->is_fw_in_copy_;
-  }
-
   bool IsH2D() const {
     return ((IsFwInCopy() && IsFwNode()) || (IsFwOutCopy() && IsBpNode()));
   }
@@ -168,26 +138,22 @@ class CopyHDTaskNode final : public TaskNode {
     return !IsH2D();
   }
 
-  const std::vector<std::string>& RelatedLbns() const {
-    if (IsFwInCopy()) {
-      return stage_node()->chain_node()->input_lbns();
-    } else {
-      return stage_node()->chain_node()->output_lbns();
-    }
-  }
+  const std::vector<std::string>& RelatedLbns() const;
 
   bool IsFwInCopy() const { return is_fw_in_copy_; }
   bool IsFwOutCopy() const { return !is_fw_in_copy_; }
-  void SetFwInCopy() {
-    CHECK(IsFwNode());
-    is_fw_in_copy_ = true;
-  }
-  void SetFwOutCopy() {
-    CHECK(IsFwNode());
-    is_fw_in_copy_ = false;
-  }
+  void SetFwInCopy();
+  void SetFwOutCopy();
 
  private:
+  std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
+    return std::unique_ptr<TaskNode> (new CopyHDTaskNode);
+  }
+  std::unique_ptr<TransfmGraph> CreateTransfmGraph() const override {
+    return std::unique_ptr<TransfmGraph> (new CopyHDTransfmGraph);
+  }
+  void InitWithFwNode(TaskNode* fw_node) override;
+
   bool is_fw_in_copy_;
 
 };
@@ -197,29 +163,21 @@ class BoxingTaskNode final : public TaskNode {
   OF_DISALLOW_COPY_AND_MOVE(BoxingTaskNode);
   BoxingTaskNode() = default;
   ~BoxingTaskNode() = default;
-  
-  std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    return std::unique_ptr<TaskNode> (new BoxingTaskNode);
-  }
-
-  void InitWithFwNode(TaskNode* fw_node) override {
-    TaskNode::InitWithFwNode(fw_node);
-    is_fw_in_boxing_ =
-        of_dynamic_cast<const BoxingTaskNode*>(fw_node)->is_fw_in_boxing_;
-  }
 
   bool IsFwInBoxing() const { return is_fw_in_boxing_; }
   bool IsFwOutBoxing() const { return !is_fw_in_boxing_; }
-  void SetFwInBoxing() {
-    CHECK(IsFwNode());
-    is_fw_in_boxing_ = true;
-  }
-  void SetFwOutBoxing() {
-    CHECK(IsFwNode());
-    is_fw_in_boxing_ = false;
-  }
+  void SetFwInBoxing();
+  void SetFwOutBoxing();
 
  private:
+  std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
+    return std::unique_ptr<TaskNode> (new BoxingTaskNode);
+  }
+  std::unique_ptr<TransfmGraph> CreateTransfmGraph() const override {
+    return std::unique_ptr<TransfmGraph> (new BoxingTransfmGraph);
+  }
+  void InitWithFwNode(TaskNode* fw_node) override;
+  
   bool is_fw_in_boxing_;
 };
 
@@ -228,16 +186,6 @@ class CommNetTaskNode final : public TaskNode {
   OF_DISALLOW_COPY_AND_MOVE(CommNetTaskNode);
   CommNetTaskNode() = default;
   ~CommNetTaskNode() = default;
-
-  std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    return std::unique_ptr<TaskNode> (new CommNetTaskNode);
-  }
-
-  void InitWithFwNode(TaskNode* fw_node) override {
-    TaskNode::InitWithFwNode(fw_node);
-    is_fw_sender_ =
-        of_dynamic_cast<const CommNetTaskNode*>(fw_node)->is_fw_sender_;
-  }
 
   bool IsSender() const {
     return (IsFwNode() && is_fw_sender_)
@@ -257,6 +205,18 @@ class CommNetTaskNode final : public TaskNode {
   }
 
  private:
+  std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
+    return std::unique_ptr<TaskNode> (new CommNetTaskNode);
+  }
+  std::unique_ptr<TransfmGraph> CreateTransfmGraph() const override {
+    return std::unique_ptr<TransfmGraph> (new CommNetTransfmGraph);
+  }
+  void InitWithFwNode(TaskNode* fw_node) override {
+    TaskNode::InitWithFwNode(fw_node);
+    is_fw_sender_ =
+        of_dynamic_cast<const CommNetTaskNode*>(fw_node)->is_fw_sender_;
+  }
+
   bool is_fw_sender_;
 
 };

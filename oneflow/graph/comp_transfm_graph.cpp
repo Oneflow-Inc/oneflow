@@ -1,6 +1,7 @@
-#include "graph/compute_transformer_graph.h"
+#include "graph/comp_transfm_graph.h"
 #include "graph/register_desc.h"
 #include "operator/clone_op.h"
+#include "graph/task_node.h"
 
 namespace oneflow {
 
