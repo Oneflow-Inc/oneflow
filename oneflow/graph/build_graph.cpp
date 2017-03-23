@@ -45,11 +45,10 @@ void BuildTransfmGraph4TaskGraph(
 
 }
 
-std::shared_ptr<TaskGraph> BuildTaskGraph(
-    const DLNetConf& dl_net_conf,
-    const Strategy& strategy_conf,
-    const IDMap& id_map,
-    bool need_bp) {
+std::shared_ptr<TaskGraph> BuildTaskGraph(const DLNetConf& dl_net_conf,
+                                          const Strategy& strategy_conf,
+                                          const IDMap& id_map,
+                                          bool need_bp) {
   auto task_graph = BuildTaskGraphWithoutTransfm(dl_net_conf,
                                                  strategy_conf,
                                                  id_map,
