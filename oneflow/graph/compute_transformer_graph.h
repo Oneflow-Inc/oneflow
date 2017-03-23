@@ -12,15 +12,16 @@ class CompTransfmGraph : public TransfmGraph {
   OF_DISALLOW_COPY_AND_MOVE(CompTransfmGraph);
   virtual ~CompTransfmGraph() = default;
 
-  void FwBuildGraph() override;
-  void BpBuildGraph() override;
-  void SetProducedRegisterDesc() override;
+  void SetupProducedRegisterDesc() override;
 
  protected:
   virtual CopyOpConf::CopyType CopyInOpType() = 0;
 
  private:
   CompTransfmGraph() = default;
+  
+  void FwBuildGraph() override;
+  void BpBuildGraph() override;
 
   TransfmEdge* NewTransfmEdge(const std::string& lbn) {
     TransfmEdge* ret = NewFinalEdge();
@@ -39,8 +40,8 @@ class CompTransfmGraph : public TransfmGraph {
                              const Lbn2NodeVecMap& extern_in_lbn2consumers);
 
   // Produced RegisterDesc
-  void FwSetProducedRegisterDesc();
-  void BpSetProducedRegisterDesc();
+  void FwSetupProducedRegisterDesc();
+  void BpSetupProducedRegisterDesc();
 
 };
 

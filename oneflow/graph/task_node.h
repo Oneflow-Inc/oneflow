@@ -78,7 +78,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 class TaskEdge final : public Edge<TaskNode, TaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TaskEdge);
-  TaskEdge() = default;
+  TaskEdge() { register_desc_ = nullptr; }
   ~TaskEdge() = default;
   
   RegisterDesc* register_desc() const {

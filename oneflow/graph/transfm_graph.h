@@ -84,7 +84,14 @@ class TransfmGraph : public Graph<TransfmNode, TransfmEdge> {
       BpBuildGraph();
     }
   }
-  virtual void SetProducedRegisterDesc() = 0;
+  virtual void SetupProducedRegisterDesc() = 0;
+  void SubscribeRegisterDescInnerPath() {
+    for (TaskEdge* edge : task_node()->in_edges()) {
+      CHECK_NOTNULL(edge->register_desc());
+      edge->register_desc()->AddSubscriber(this);
+      subscribed_register_descs_.insert(edge->register_desc());
+    }
+  }
 
  protected:
   virtual void FwBuildGraph() = 0;
@@ -104,6 +111,7 @@ class TransfmGraph : public Graph<TransfmNode, TransfmEdge> {
  private:
   TaskNode* task_node_;
   std::unordered_map<std::string, std::unique_ptr<RegisterDesc>> produced_register_descs_; 
+  std::unordered_set<RegisterDesc*> subscribed_register_descs_;
 
 };
 

@@ -173,15 +173,15 @@ void CompTransfmGraph::BpBuildGraph() {
   }
 }
 
-void CompTransfmGraph::SetProducedRegisterDesc() {
+void CompTransfmGraph::SetupProducedRegisterDesc() {
   if (task_node()->IsFwNode()) {
-    FwSetProducedRegisterDesc();
+    FwSetupProducedRegisterDesc();
   } else {
-    BpSetProducedRegisterDesc();
+    BpSetupProducedRegisterDesc();
   }
 }
 
-void CompTransfmGraph::FwSetProducedRegisterDesc() {
+void CompTransfmGraph::FwSetupProducedRegisterDesc() {
   std::unique_ptr<RegisterDesc> data_register(new DisContigRegistDesc);
   data_register->Init();
   // blobs not used by succ_task
@@ -208,7 +208,7 @@ void CompTransfmGraph::FwSetProducedRegisterDesc() {
   AddProducedRegisterDesc("data", std::move(data_register));
 }
 
-void CompTransfmGraph::BpSetProducedRegisterDesc() {
+void CompTransfmGraph::BpSetupProducedRegisterDesc() {
   std::unique_ptr<RegisterDesc> data_diff_register(new DisContigRegistDesc);
   std::unique_ptr<RegisterDesc> model_diff_register(new ContigRegistDesc);
   std::unique_ptr<RegisterDesc> model_tmp_register(new DisContigRegistDesc);

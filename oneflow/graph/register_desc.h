@@ -5,6 +5,8 @@
 
 namespace oneflow {
 
+class TransfmGraph;
+
 class RegisterDesc {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RegisterDesc);
@@ -15,6 +17,10 @@ class RegisterDesc {
     LOG(FATAL) << "TODO";
   }
   void Add(const std::string& pbn, const std::string& lbn) {
+    LOG(FATAL) << "TODO";
+  }
+
+  void AddSubscriber(TransfmGraph* transfm_graph) {
     LOG(FATAL) << "TODO";
   }
 
