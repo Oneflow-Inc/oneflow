@@ -17,7 +17,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   
   void Init(std::shared_ptr<const StageGraph> stage_graph,
             const IDMap& id_map,
-            bool job_need_bp);
+            bool need_bp);
 
  private:
   template<typename TaskNodeType>
