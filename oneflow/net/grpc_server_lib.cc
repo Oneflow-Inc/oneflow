@@ -46,12 +46,12 @@ void GrpcServer::Start(){
   //if(master_service_ == nullptr) {std::cout<<"nullprt"<<std::endl;}
   //master_service_->HandleRPCsLoop();
   //master_thread_.reset();
-  std::cout<<"start master service------"<<std::endl;
   master_thread_.reset(
-      //StartThread(ThreadOptions(), "master_service", [this] {std::cout<<"hi"<<std::endl;});
       StartThread(ThreadOptions(), "master_service", [this] {master_service_->HandleRPCsLoop();}));
-  //worker_thread_.reset(
-  //    env_->StartThread(ThreadOptions(), "worker_service", [this] {worker_service_->HandleRPCsLoop();})); 
+  std::cout<<"start master service------"<<std::endl;
+  worker_thread_.reset(
+      StartThread(ThreadOptions(), "worker_service", [this] {worker_service_->HandleRPCsLoop();})); 
+  std::cout<<"start worker service------"<<std::endl;
 }
 
 void GrpcServer::Join() {}
