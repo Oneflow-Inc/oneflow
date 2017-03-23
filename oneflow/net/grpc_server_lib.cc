@@ -11,7 +11,7 @@
 #include "grpc_server_lib.h"
 #include "grpc_master_service.h"
 #include "async_service_interface.h"
-//#include "grpc_worker_service.h"
+#include "grpc_worker_service.h"
 #include "master_session.h"
 #include "platform_env.h"
 
@@ -31,7 +31,7 @@ void GrpcServer::Init(){
   if(master_service_ == nullptr) std::cout<<"before nullptr---"<<std::endl;
   master_service_ = NewGrpcMasterService(&builder);
   if(master_service_ == nullptr) std::cout<<"after nullptr---"<<std::endl;
-  //worker_service_ = NewGrpcWorkerService(&builder);
+  worker_service_ = NewGrpcWorkerService(&builder);
   server_ = builder.BuildAndStart();
   //master servie and woker service use the same channle_cache
   std::unique_ptr<GrpcChannelCache> channel_cache(NewGrpcChannelCache(GetChannelCreationFunction()));

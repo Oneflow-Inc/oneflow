@@ -31,7 +31,7 @@ class GrpcServer : public ServerInterface{
   WorkerEnv worker_env_;
   std::unique_ptr<::grpc::Server> server_;
   std::unique_ptr<Thread> master_thread_;
-  //std::unique_ptr<Thread> worker_thread_;
+  std::unique_ptr<Thread> worker_thread_;
 };
 
 }//end namespace oneflow
