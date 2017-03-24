@@ -1,6 +1,7 @@
 # cmake configure
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.5)
 project(oneflow C CXX)
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
@@ -42,7 +43,7 @@ MESSAGE(STATUS "oneflow_protos = ${oneflow_protos}")
 PROTOBUF_GENERATE_CPP(PB_SRCS PB_HDRS ${oneflow_source_dir} ${oneflow_protos})
 add_library(pbobj ${PB_SRCS} ${PB_HDRS})
 list(APPEND ONEFLOW_LINKER_LIBS pbobj)
-set(GENERATED_PB_PATH "${CMAKE_BINARY_DIR}/oneflow/proto")
+set(GENERATED_PB_PATH "${CMAKE_BINARY_DIR}/oneflow/")
 file(MAKE_DIRECTORY ${GENERATED_PB_PATH})
 include_directories(${GENERATED_PB_PATH})
 #
@@ -54,18 +55,15 @@ include_directories(${GENERATED_PB_PATH})
 #set(GENERATED_GRPC_PATH "${CMAKE_BINARY_DIR}/oneflow/proto")
 #file(MAKE_DIRECTORY ${GENERATED_GRPC_PATH})
 #include_directories(${GENERATED_GRPC_PATH})
-#
-#
-include_directories(${oneflow_source_dir}/oneflow/net/)
-include_directories(${oneflow_source_dir}/oneflow/proto/)
+
+
 include_directories(${oneflow_source_dir}/oneflow/)
 include_directories(/usr/local/cuda/include)
 MESSAGE(STATUS "oneflow_source_dir = ${oneflow_source_dir}")
-#file(GLOB_RECURSE oneflow_all_cc "${oneflow_source_dir}/oneflow/*.cc" "${oneflow_source_dir}/oneflow/*.cpp")
 file(GLOB_RECURSE oneflow_all_cc "${oneflow_source_dir}/oneflow/net/*.cc")
-#MESSAGE(STATUS "SRC_FILES = ${oneflow_all_cc}")
+MESSAGE(STATUS "SRC_FILES = ${oneflow_all_cc}")
 add_library(srcobj ${oneflow_all_cc})
-add_dependencies(srcobj grpcobj)
+#add_dependencies(srcobj grpcobj)
 list(APPEND ONEFLOW_LINKER_LIBS srcobj)
 
 link_libraries(grpc++_unsecure grpc gpr glog gflags ${ONEFLOW_LINKER_LIBS})
