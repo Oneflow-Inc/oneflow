@@ -17,9 +17,16 @@
 */
 //#include "server_lib.h"
 #include "grpc_server_lib.h"
+//#include "public_session.h"
 
 //DEFINE_string(solver, "",
 //  "The solver definition protocol buffer text file.");
+
+//void Session_test(const Options* opts) {
+  
+
+//}
+
 
 int main(int argc, char* argv[]){
   /*
