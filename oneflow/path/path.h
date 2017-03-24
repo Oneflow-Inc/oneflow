@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_PATH_PATH_H_
 #define ONEFLOW_PATH_PATH_H_
 
-#include "graph/build_graph.h"
+#include "graph/task_graph.h"
 
 namespace oneflow {
 

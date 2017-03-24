@@ -12,10 +12,10 @@ inline void TaskConnect(TaskNode* src_node,
 
 }
 
-void Init(const DLNetConf& dl_net_conf,
-          const Strategy& strategy_conf,
-          const IDMap& id_map,
-          bool need_bp) {
+void TaskGraph::Init(const DLNetConf& dl_net_conf,
+                     const Strategy& strategy_conf,
+                     const IDMap& id_map,
+                     bool need_bp) {
   auto logical_graph = std::make_shared<LogicalGraph>();
   logical_graph->Init(dl_net_conf, strategy_conf);
   auto chain_graph = std::make_shared<ChainGraph>();
@@ -41,23 +41,23 @@ void TaskGraph::BuildWithoutTransfm(
 }
 
 void TaskGraph::BuildTransfm() {
-  for (const auto& task_node : task_graph->nodes()) {
+  for (const auto& task_node : nodes()) {
     task_node->SetNewTransfmGraph();
   }
-  for (const auto& task_node : task_graph->nodes()) {
+  for (const auto& task_node : nodes()) {
     if (task_node->IsFwNode()) {
       task_node->transfm_graph()->BuildGraph();
     }
   }
-  for (const auto& task_node : task_graph->nodes()) {
+  for (const auto& task_node : nodes()) {
     if (task_node->IsBpNode()) {
       task_node->transfm_graph()->BuildGraph();
     }
   }
-  for (const auto& task_node : task_graph->nodes()) {
+  for (const auto& task_node : nodes()) {
     task_node->transfm_graph()->SetupProducedRegisterDesc();
   }
-  for (const auto& task_node : task_graph->nodes()) {
+  for (const auto& task_node : nodes()) {
     task_node->transfm_graph()->SubscribeRegisterDescInnerPath();
   }
 }
