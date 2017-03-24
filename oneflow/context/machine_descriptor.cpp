@@ -1,5 +1,6 @@
 #include "context/machine_descriptor.h"
 #include "proto/oneflow.pb.h"
+#include <unistd.h>
 
 namespace oneflow {
 MachineDescriptor::MachineDescriptor(const oneflow::SolverProto& solver) {
@@ -8,9 +9,7 @@ MachineDescriptor::MachineDescriptor(const oneflow::SolverProto& solver) {
   CHECK(solver.has_machine_id());
   machine_id_ = solver.machine_id();
 
-  SYSTEM_INFO sysinfo;
-  GetSystemInfo(&sysinfo);
-  total_cpu_cores_ = (int32_t)(sysinfo.dwNumberOfProcessors);
+  total_cpu_cores_ = sysconf(_SC_NPROCESSORS_ONLN);
 
   MEMORYSTATUSEX memInfo;
   memInfo.dwLength = sizeof(MEMORYSTATUSEX);
