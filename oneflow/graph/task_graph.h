@@ -20,8 +20,10 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
             const IDMap& id_map,
             bool need_bp);
 
+  const StageGraph* stage_graph() const { return stage_graph_.get(); }
+
  private:
-  void BuildWithoutTransfm(std::shared_ptr<const StageGraph> stage_graph,
+  void BuildWithoutTransfm(std::unique_ptr<const StageGraph>&& stage_graph,
                            const IDMap& id_map,
                            bool need_bp);
   void BuildTransfm();
@@ -71,8 +73,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void BackwardConnect(const std::vector<TaskNode*>& turning_node_vec);
   void BuildBpStruct();
 
-  // We need to make sure the StageNode is alive
-  std::shared_ptr<const StageGraph> stage_graph_;
+  std::unique_ptr<const StageGraph> stage_graph_;
 
 };
 

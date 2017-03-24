@@ -11,6 +11,11 @@ class ModelLoadPath final : public Path {
   ModelLoadPath() = default;
   ~ModelLoadPath() = default;
 
+  void Build(const ChainNode* chain_in_data_path,
+             std::function<void(const CpsDesc&)> add_cps_desc) {
+    LOG(FATAL) << "TODO";
+  }
+
  private:
 };
 

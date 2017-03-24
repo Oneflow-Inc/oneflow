@@ -45,12 +45,12 @@ void ConnectRelatedStages(
 
 }
 
-void StageGraph::Init(std::shared_ptr<const ChainGraph> chain_graph) {
-  chain_graph_ = chain_graph;
+void StageGraph::Init(std::unique_ptr<const ChainGraph>&& chain_graph) {
+  chain_graph_ = std::move(chain_graph);
   // Init Stages
   std::unordered_map<const ChainNode*,
                      std::vector<StageNode*>> chain2stages;
-  for (const std::unique_ptr<ChainNode>& cur_chain : chain_graph->nodes()) {
+  for (const std::unique_ptr<ChainNode>& cur_chain : chain_graph_->nodes()) {
     chain2stages[cur_chain.get()] = {};
     for (MachineId machine_id : cur_chain->parallel_desc()->machines()) {
       StageNode* stage_node = NewFinalNode();
@@ -64,7 +64,7 @@ void StageGraph::Init(std::shared_ptr<const ChainGraph> chain_graph) {
       (StageNode* src_node, StageNode* dst_node) {
     Connect(src_node, this->NewFinalEdge(), dst_node);
   };
-  for (const std::unique_ptr<ChainNode>& cur_chain : chain_graph->nodes()) {
+  for (const std::unique_ptr<ChainNode>& cur_chain : chain_graph_->nodes()) {
     for (const ChainEdge* edge : cur_chain->out_edges()) {
       const std::vector<StageNode*>& cur_stages =
           chain2stages.at(cur_chain.get());

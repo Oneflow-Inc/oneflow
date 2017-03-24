@@ -18,6 +18,10 @@ class PathManager {
   void Init(const JobSysConf& job_sys_conf);
 
  private:
+  void ProcessCps(const CpsDesc& cps_desc) {
+    LOG(FATAL) << "TODO";
+  }
+
   std::unordered_map<std::string, std::unique_ptr<Path>> paths_;
 
 };

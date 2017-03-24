@@ -65,7 +65,7 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
   ChainGraph() = default;
   ~ChainGraph() = default;
 
-  void Init(std::shared_ptr<const LogicalGraph> logical_graph);
+  void Init(const LogicalGraph* logical_graph);
 
  private:
   void CollectInputAndOutputLbns();

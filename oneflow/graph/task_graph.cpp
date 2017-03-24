@@ -16,20 +16,21 @@ void TaskGraph::Init(const DLNetConf& dl_net_conf,
                      const Strategy& strategy_conf,
                      const IDMap& id_map,
                      bool need_bp) {
-  auto logical_graph = std::make_shared<LogicalGraph>();
+  std::unique_ptr<LogicalGraph> logical_graph(new LogicalGraph);
   logical_graph->Init(dl_net_conf, strategy_conf);
-  auto chain_graph = std::make_shared<ChainGraph>();
-  chain_graph->Init(logical_graph);
-  auto stage_graph = std::make_shared<StageGraph>();
-  stage_graph->Init(chain_graph);
-  BuildWithoutTransfm(stage_graph, id_map, need_bp);
+  std::unique_ptr<ChainGraph> chain_graph(new ChainGraph);
+  chain_graph->Init(logical_graph.get());
+  std::unique_ptr<StageGraph> stage_graph(new StageGraph);
+  stage_graph->Init(std::move(chain_graph));
+  BuildWithoutTransfm(std::move(stage_graph), id_map, need_bp);
   BuildTransfm();
 }
 
 void TaskGraph::BuildWithoutTransfm(
-    std::shared_ptr<const StageGraph> stage_graph,
+    std::unique_ptr<const StageGraph>&& stage_graph,
     const IDMap& id_map,
     bool job_need_bp) {
+  stage_graph_ = std::move(stage_graph);
   Stage2TaskNodesMap stage2task_nodes;
   InitCompTaskNodes(*stage_graph, id_map, &stage2task_nodes);
   InitBoxingTaskNodes(*stage_graph, id_map, &stage2task_nodes);

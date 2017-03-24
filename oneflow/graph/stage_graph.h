@@ -48,11 +48,12 @@ class StageGraph final : public Graph<StageNode, StageEdge> {
   StageGraph() = default;
   ~StageGraph() = default;
 
-  void Init(std::shared_ptr<const ChainGraph> chain_graph);
+  void Init(std::unique_ptr<const ChainGraph>&& chain_graph);
+
+  const ChainGraph* chain_graph() const { return chain_graph_.get(); }
 
  private:
-  // We need to make sure the chain_node is alive
-  std::shared_ptr<const ChainGraph> chain_graph_;
+  std::unique_ptr<const ChainGraph> chain_graph_;
 
 };
 
