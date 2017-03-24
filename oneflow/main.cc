@@ -44,6 +44,8 @@ int main(int argc, char* argv[]){
   //oneflow::NewServer(&server);
   oneflow::GrpcServer::Create(&server);
   server->Start();
+  
+  /*
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
   FLAGS_logtostderr = 1;
@@ -52,6 +54,6 @@ int main(int argc, char* argv[]){
   oneflow::ReadProtoFromTextFileOrDie(FLAGS_solver, &solver_param);
   oneflow::TheOne<Dtype>::InitResource(FLAGS_solver);
   oneflow::TheOne<Dtype>::InitJob2(solver_param); 
-  
+  */ 
   return 0;
 }
