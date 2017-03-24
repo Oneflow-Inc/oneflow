@@ -15,11 +15,17 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   TaskGraph() = default;
   ~TaskGraph() = default;
   
-  void Init(std::shared_ptr<const StageGraph> stage_graph,
+  void Init(const DLNetConf& dl_net_conf,
+            const Strategy& strategy_conf,
             const IDMap& id_map,
             bool need_bp);
 
  private:
+  void BuildWithoutTransfm(std::shared_ptr<const StageGraph> stage_graph,
+                           const IDMap& id_map,
+                           bool need_bp);
+  void BuildTransfm();
+
   template<typename TaskNodeType>
   TaskNodeType* NewTaskNode() {
     static_assert(std::is_base_of<TaskNode, TaskNodeType>::value, "");
