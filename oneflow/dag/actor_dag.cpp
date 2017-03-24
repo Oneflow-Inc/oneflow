@@ -100,7 +100,7 @@ void ActorDag<Dtype>::BackwardBuildDag() {
 template <typename Dtype>
 void ActorDag<Dtype>::ForwardAddActorNodes() {
   // For each pipe node in PipeDag, create an actor node in ActorDag.
-  auto& id_map = oneflow::TheOne<Dtype>::id_map();
+  auto&& id_map = oneflow::TheOne<Dtype>::id_map();
   DagIterator<PipeDag<Dtype>, true> dag_iterator(*pipe_dag_);
   for (dag_iterator.First(); !dag_iterator.IsDone(); dag_iterator.Next()) {
     auto current_node = dag_iterator.CurrentNode();
@@ -156,7 +156,7 @@ template <typename Dtype>
 void ActorDag<Dtype>::BackwardAddActorNodes() {
   // In reverse topological order, traverse the PipeDag and add an actor node
   // for each pipe node if the pipe node is required in backward pass.
-  auto& id_map = oneflow::TheOne<Dtype>::id_map();
+  auto&& id_map = oneflow::TheOne<Dtype>::id_map();
   DagReverseIterator<PipeDag<Dtype>, true> dag_iterator(*pipe_dag_);
   for (dag_iterator.First(); !dag_iterator.IsDone(); dag_iterator.Next()) {
     auto current_node = dag_iterator.CurrentNode();
@@ -298,7 +298,7 @@ OpNode<ActorMeta>* ActorDag<Dtype>::AddOpNode(
     int32_t task_id,
     TaskType type) {
   auto op_node = NewOpNode(actor_name);
-  auto& actor_meta = op_node->mutable_op();
+  auto&& actor_meta = op_node->mutable_op();
   actor_meta = std::make_shared<ActorMeta>();
   actor_meta->mutable_task_id() = task_id;
   actor_meta->mutable_task_type() = type;
@@ -314,7 +314,7 @@ template <typename Dtype>
 DataNode<EventMeta>* ActorDag<Dtype>::AddDataNode(
     const std::string& data_name) {
   auto data_node = NewDataNode(data_name);
-  auto& event_meta = data_node->mutable_data();
+  auto&& event_meta = data_node->mutable_data();
   event_meta = std::make_shared<EventMeta>();
   auto it = data_name_to_node_.find(data_name);
   CHECK(it == data_name_to_node_.end())

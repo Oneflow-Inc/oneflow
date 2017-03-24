@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <string>
 #include "dag/dag_node.h"
+#include "dag/node_meta.h"
 #include "dag/dag.h"
 #include "common/string_pair.h"
 #include "dag/boxing_info.h"

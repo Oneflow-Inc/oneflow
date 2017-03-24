@@ -1,8 +1,7 @@
 #include "dag/actor_dag_memory_allocator.h"
 #include "dag/actor_dag.h"
-#include "dag/actor_meta.h"
+#include "dag/node_meta.h"
 #include "dag/task_dag.h"
-#include "dag/layer_meta.h"
 #include "dag/dag_iterator.h"
 #include "common/shape.h"
 #include "layers/base_layer.h"
@@ -23,7 +22,7 @@ void ActorDagMemoryAllocator<Dtype>::Alloc(ActorDag<Dtype>* actor_dag) {
     auto current_node = dag_iterator.CurrentNode();
     if (current_node->Type() == NodeType::kOpNode) {
       auto actor_node
-        = dynamic_cast<OpNode<ActorMeta<Dtype>>*>(current_node);
+        = dynamic_cast<OpNode<ActorMeta>*>(current_node);
       CHECK_NOTNULL(actor_node);
       auto actor_meta = actor_node->op();
       auto actor_name = actor_node->node_name();
@@ -41,7 +40,7 @@ void ActorDagMemoryAllocator<Dtype>::Free(ActorDag<Dtype>* actor_dag) {
       /*auto actor_node
         = dynamic_cast<const OpNode<ActorMeta<Dtype>>*>(current_node);*/
       auto actor_node
-        = dynamic_cast<OpNode<ActorMeta<Dtype>>*>(current_node);
+        = dynamic_cast<OpNode<ActorMeta>*>(current_node);
       CHECK_NOTNULL(actor_node);
       auto actor_meta = actor_node->op();
       auto current_name = current_node->node_name();
@@ -52,7 +51,7 @@ void ActorDagMemoryAllocator<Dtype>::Free(ActorDag<Dtype>* actor_dag) {
 
 template <typename Dtype>
 void ActorDagMemoryAllocator<Dtype>::AllocMemoryForActorTask(
-  std::shared_ptr<ActorMeta<Dtype>>& actor_meta, 
+  std::shared_ptr<ActorMeta>& actor_meta, 
   const std::string& actor_name) {
   auto task_type = actor_meta->task_type();
   switch (task_type) {

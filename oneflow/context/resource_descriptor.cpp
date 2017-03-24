@@ -1,7 +1,7 @@
 #include "context/resource_descriptor.h"
 #include <glog/logging.h>
-#include "oneflow.pb.h"
-#include "proto_io.h"
+#include "proto/oneflow.pb.h"
+#include "proto/proto_io.h"
 
 namespace oneflow {
 ResourceDescriptor::ResourceDescriptor(const std::string& resource_name) :

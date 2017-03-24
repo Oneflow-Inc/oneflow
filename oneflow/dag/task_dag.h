@@ -24,6 +24,7 @@
 #include "dag/blob_info_manager.h"
 #include "dag/register_info_manager.h"
 #include "layers/base_layer.h"
+#include "layers/layer_factory.h"
 #include "memory/blob.h"
 #include <glog/logging.h>
 

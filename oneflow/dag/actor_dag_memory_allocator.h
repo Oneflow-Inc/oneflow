@@ -8,12 +8,13 @@
 #include "memory/memory_manager.h"
 #include "common/str_util.h"
 #include <glog/logging.h>
+#include "dag/node_meta.h"
 
 namespace oneflow {
 template <typename Dtype>
 class ActorDag;
 
-template <typename Dtype>
+//template <typename Dtype>
 class ActorMeta;
 
 template <typename Dtype>
@@ -35,7 +36,7 @@ class ActorDagMemoryAllocator {
 
  private:
   void AllocMemoryForActorTask(
-    std::shared_ptr<ActorMeta<Dtype>>& actor_meta,
+    std::shared_ptr<ActorMeta>& actor_meta,
     const std::string& actor_name);
 
   void AllocMemoryForDataTask(
@@ -46,7 +47,7 @@ class ActorDagMemoryAllocator {
     const std::string& actor_name);
 
   void FreeMemoryForActorTask(
-    std::shared_ptr<ActorMeta<Dtype>>& actor_meta,
+    std::shared_ptr<ActorMeta>& actor_meta,
     const std::string& actor_name);
 
   void FreeMemoryForDataTask(
