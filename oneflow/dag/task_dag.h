@@ -48,11 +48,17 @@ class TaskDag : public Dag<BlobMeta, LayerMeta<Dtype>> {
   friend class DagIterator<TaskDag<Dtype>, true>;
   friend class DagReverseIterator<TaskDag<Dtype>>;
   friend class DagReverseIterator<TaskDag<Dtype>, true>;
-  using Dag<BlobMeta, LayerMeta<Dtype>>::name;
+  using Dag<BlobMeta, LayerMeta<Dtype>>::name_;
   using Dag<BlobMeta, LayerMeta<Dtype>>::path_type_;
-  using Dag<BlobMeta, LayerMeta<Dtype>>::DNode;
-  using Dag<BlobMeta, LayerMeta<Dtype>>::ONode;
+  using DNode = DataNode<BlobMeta>;
+  using ONode = OpNode<LayerMeta<Dtype>>;
   using Dag<BlobMeta, LayerMeta<Dtype>>::Dag;
+  using Dag<BlobMeta, LayerMeta<Dtype>>::op_name_to_node_;
+  using Dag<BlobMeta, LayerMeta<Dtype>>::data_name_to_node_;
+  using Dag<BlobMeta, LayerMeta<Dtype>>::AddStartAndEndNodes;
+  using Dag<BlobMeta, LayerMeta<Dtype>>::PostProcessing;
+  using Dag<BlobMeta, LayerMeta<Dtype>>::NewDataNode;
+  using Dag<BlobMeta, LayerMeta<Dtype>>::GetDataNode;
  public:
   TaskDag(const DagBuilder<Dtype>& dag_builder,
     TaskType type,
@@ -316,7 +322,7 @@ TaskDag<Dtype>::TaskDag(const DagBuilder<Dtype>& dag_builder, TaskType type,
   bool is_forward)
   : dag_builder_(dag_builder), type_(type), task_id_(task_id),
     is_forward_(is_forward), is_placeholder_(false),
-    Dag(path_type, actor_name), is_h2d_(false), is_net_receiver_(false) { }
+    Dag<PathType, const std::string&>::Dag(path_type, actor_name), is_h2d_(false), is_net_receiver_(false) { }
 
 template <typename Dtype>
 TaskDag<Dtype>::~TaskDag() {}
@@ -344,9 +350,9 @@ void TaskDag<Dtype>::Build() {
   // 1, Build the DAG consisting of OpNodes and DataNodes; Register the kInput
   // and kOutput blobs to |blob_info_manager_|.
   if (is_forward_) {
-    BuildForward();
+    this->BuildForward();
   } else {
-    BuildBackward();
+    this->BuildBackward();
   }
   AddStartAndEndNodes();
   PostProcessing();
@@ -361,7 +367,7 @@ void TaskDag<Dtype>::BuildBackward() {
   // (1) The backward TaskDag share the same operators (i.e., layers) with the
   // forward TaskDag.
   // (2) The backward TaskDag has its own blobs distinct from the forward one.
-  auto& actor_dag = dag_builder_.actor_dag();
+  auto&& actor_dag = dag_builder_.actor_dag();
   auto forward_task_name = actor_dag->GetForwardTaskName(name_);
   auto forward_task_id = actor_dag->GetTaskID(forward_task_name);
   auto backward_task_id = actor_dag->GetTaskID(name_);
@@ -426,7 +432,7 @@ void TaskDag<Dtype>::BuildBackward() {
       // TODO(jiyuan): if the SplitLayer is for label-path, do not include them
       // in the backward TaskDag.
     }
-    AddEdges(op_node, input_nodes, output_nodes);
+    this->AddEdges(op_node, input_nodes, output_nodes);
   }
 }
 
@@ -435,12 +441,12 @@ OpNode<LayerMeta<Dtype>>* TaskDag<Dtype>::AddOpNode(
   const std::string& op_name,
   const std::string& op_type,
   const std::string& op_param_str) {
-  auto op_node = NewOpNode(op_name);
-  auto& layer_meta = op_node->mutable_op();
+  auto op_node = this->NewOpNode(op_name);
+  auto&& layer_meta = op_node->mutable_op();
   layer_meta = std::make_shared<LayerMeta<Dtype>>(op_type);
   layer_meta->mutable_param_str() = op_param_str;
 
-  auto& layer = layer_meta->mutable_layer();
+  auto&& layer = layer_meta->mutable_layer();
   layer = LayerRegistry<Dtype>::CreateLayer(op_type, op_name, op_param_str);
   layer->InitParam();
 
@@ -454,8 +460,8 @@ template <typename Dtype>
 OpNode<LayerMeta<Dtype>>* TaskDag<Dtype>::AddBackwardOpNode(
   const std::string& op_name,
   std::shared_ptr<LayerMeta<Dtype>> forward_layer_meta) {
-  auto op_node = NewOpNode(op_name);
-  auto& layer_meta = op_node->mutable_op();
+  auto op_node = this->NewOpNode(op_name);
+  auto&& layer_meta = op_node->mutable_op();
   layer_meta = forward_layer_meta;
   auto it = op_name_to_node_.find(op_name);
   CHECK(it == op_name_to_node_.end()) << "Duplicate op_name: " << op_name;
@@ -467,7 +473,7 @@ template <typename Dtype>
 DataNode<BlobMeta>* TaskDag<Dtype>::AddDataNode(const std::string& data_name) {
   auto data_node = NewDataNode(data_name);
   auto node_id = data_node->node_id();
-  auto& blob_meta = data_node->mutable_data();
+  auto&& blob_meta = data_node->mutable_data();
   blob_meta = std::make_shared<BlobMeta>(data_name);
   auto it = data_name_to_node_.find(data_name);
   CHECK(it == data_name_to_node_.end())
@@ -514,7 +520,7 @@ void TaskDag<Dtype>::BackwardSetup() {
     auto diff_name = current_node->node_name();
     auto diff_node = dynamic_cast<DNode*>(current_node);
     CHECK_NOTNULL(diff_node);
-    auto& diff_meta = diff_node->mutable_data();
+    auto&& diff_meta = diff_node->mutable_data();
     auto data_name = strings::get_data_blob_name(diff_name);
     auto data_node = forward_task_dag->GetDataNode(data_name);
     diff_meta->mutable_shape() = data_node->data()->shape();
@@ -565,7 +571,7 @@ void TaskDag<Dtype>::ForwardSetupInternal() {
 
 template <typename Dtype>
 void TaskDag<Dtype>::ForwardSetupDataNode(DNode* dnode) {
-  auto& blob_meta = dnode->data();
+  auto&& blob_meta = dnode->data();
   const Shape& shape = blob_meta->shape();
   DLOG(INFO) << "Node name: " << blob_meta->name();
   DLOG(INFO) << "Node shape: " << shape.shape_string();
@@ -574,7 +580,7 @@ void TaskDag<Dtype>::ForwardSetupDataNode(DNode* dnode) {
 template <typename Dtype>
 void TaskDag<Dtype>::ForwardSetupOpNode(ONode* onode) {
   auto &layer_meta = onode->op();
-  auto& layer = layer_meta->mutable_layer();
+  auto&& layer = layer_meta->mutable_layer();
   auto layer_name = onode->node_name();
 
   std::shared_ptr<DataParam<Dtype>> data_param(layer->CreateDataParam());
@@ -585,7 +591,7 @@ void TaskDag<Dtype>::ForwardSetupOpNode(ONode* onode) {
     auto layer_blob = strings::full_blob_name_in_layer(layer_name, input_var);
     auto task_blob = blob_info_manager_.task_blob_from_layer_blob(layer_blob);
     auto dnode = GetDataNode(task_blob);
-    auto& blob_meta = dnode->data();
+    auto&& blob_meta = dnode->data();
     data_param->SetShape(layer_blob, blob_meta->shape());
   }
 
@@ -598,7 +604,7 @@ void TaskDag<Dtype>::ForwardSetupOpNode(ONode* onode) {
     auto layer_blob = strings::full_blob_name_in_layer(layer_name, output_var);
     auto task_blob = blob_info_manager_.task_blob_from_layer_blob(layer_blob);
     auto dnode = GetDataNode(task_blob);
-    auto& blob_meta = dnode->mutable_data();
+    auto&& blob_meta = dnode->mutable_data();
     blob_meta->mutable_shape() = data_param->GetShape(layer_blob);
   }
 

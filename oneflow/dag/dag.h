@@ -13,6 +13,7 @@
 #include "common/str_util.h"
 #include "dag/dag_node.h"
 #include "path/base_path.h"
+#include "dag/dag_iterator.h"
 
 template <typename DAG, bool isconst = false>
 class DagIterator;
@@ -555,12 +556,14 @@ void Dag<Data, Op>::CalculateNodeDepth() {
     auto& successors = current_node->successors();
     if (predecessors.size() == 0) {
       // Set the depth of the start id to 0
-      index_to_depth.insert({current_id, 0});
-      depth_to_indices_.insert({0, {current_id}});
+      index_to_depth.insert(std::make_pair(current_id, 0));
+      std::unordered_set<int32_t> s_cid;
+      s_cid.insert(current_id);
+      depth_to_indices_.insert(std::make_pair(0, s_cid));
     } else {
       // Set the depth of current_node according to its deepest predecessor
       int32_t level = -1;
-      for (auto& predecessor_id : predecessors) {
+      for (auto&& predecessor_id : predecessors) {
         // auto predecessor_id = predecessor->node_id();
         CHECK(index_to_depth.count(predecessor_id) > 0);
         auto predecessor_level = index_to_depth[predecessor_id];
@@ -570,10 +573,12 @@ void Dag<Data, Op>::CalculateNodeDepth() {
       }
       CHECK(level != -1);
       ++level;
-      index_to_depth.insert({current_id, level});
+      index_to_depth.insert(std::make_pair(current_id, level));
       auto it = depth_to_indices_.find(level);
       if (it == depth_to_indices_.end()) {
-        depth_to_indices_.insert({level, {current_id}});
+        std::unordered_set<int32_t> s_cid;
+        s_cid.insert(current_id);
+        depth_to_indices_.insert(std::make_pair(level, s_cid));
       } else {
         it->second.insert(current_id);
       }
@@ -592,7 +597,7 @@ void Dag<Data, Op>::CollectAncestorAndDescendant() {
     if (current_node->Type() != NodeType::kOpNode) continue;
     std::unordered_set<std::string> ancestors_of_current_node;
     auto predecessors = GetPrecedingOpNodeNames(current_name);
-    for (auto& predecessor : predecessors) {
+    for (auto&& predecessor : predecessors) {
       auto ancestor_it = op_name_to_ancestors_.find(predecessor);
       if (ancestor_it != op_name_to_ancestors_.end()) {
         auto ancestors_of_predecessor = ancestor_it->second;
@@ -604,7 +609,7 @@ void Dag<Data, Op>::CollectAncestorAndDescendant() {
       // Add the predecessor
       ancestors_of_current_node.insert(predecessor);
     }
-    op_name_to_ancestors_.insert({ current_name, ancestors_of_current_node });
+    op_name_to_ancestors_.insert(std::make_pair(current_name, ancestors_of_current_node));
   }
 
   op_name_to_descendants_.clear();
@@ -616,19 +621,19 @@ void Dag<Data, Op>::CollectAncestorAndDescendant() {
     if (current_node->Type() != NodeType::kOpNode) continue;
     std::unordered_set<std::string> descendants_of_current_node;
     auto successors = GetSucceedingOpNodeNames(current_name);
-    for (auto& successor : successors) {
+    for (auto successor : successors) {
       auto descendant_it = op_name_to_descendants_.find(successor);
       if (descendant_it != op_name_to_descendants_.end()) {
         auto descendants_of_successor = descendant_it->second;
         // Add the successor's descendants
-        for (auto& descendant_of_successor : descendants_of_successor) {
+        for (auto&& descendant_of_successor : descendants_of_successor) {
           descendants_of_current_node.insert(descendant_of_successor);
         }
       }
       // Add the successor
       descendants_of_current_node.insert(successor);
     }
-    op_name_to_descendants_.insert({current_name, descendants_of_current_node});
+    op_name_to_descendants_.insert(std::make_pair(current_name, descendants_of_current_node));
   }
 }
 

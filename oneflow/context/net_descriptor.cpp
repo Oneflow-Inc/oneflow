@@ -1,5 +1,5 @@
 #include "context/net_descriptor.h"
-#include "proto_io.h"
+#include "proto/proto_io.h"
 
 namespace oneflow {
 NetDescriptor::NetDescriptor(const oneflow::NetParameter& net_param)
