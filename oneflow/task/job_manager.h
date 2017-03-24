@@ -19,7 +19,7 @@ change name NodeManager to NodeManager.
 (3) DeviceManager handles with the tasks on a particular device/thread of this
 machine.
 */
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 class ActorDag;
 template <typename Dtype>
@@ -115,5 +115,5 @@ class JobManager {
   JobManager(const JobManager& other) = delete;
   JobManager& operator=(const JobManager& other) = delete;
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _JOB_MANAGER_H_

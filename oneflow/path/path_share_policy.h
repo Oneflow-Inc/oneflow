@@ -12,7 +12,7 @@
 // During path building, each path needs to explicitly declare the sharing
 // details. Currently assume the task_name is unique across all paths. This can
 // be used in memory allocation, layer_blob_to_register_blob implementation.
-namespace caffe {
+namespace oneflow {
 
 // About placeholder
 // In kModelUpdatePath -> (kModel) -> kDataPath: neither producer or consumer is
@@ -63,21 +63,5 @@ struct PathSharingDescriptor {
   PathSharingDescriptor& operator=(const PathSharingDescriptor& other) = default;
 };
 
-//class PathSharePolicy {
-// public:
-//  PathSharePolicy() = default;
-//  ~PathSharePolicy() = default;
-//
-//  void AddSharingAsProducer(const PathSharingDescriptor& path_mapping_desc);
-//  void AddSharingAsConsumer(const PathSharingDescriptor& path_mapping_desc);
-//
-//  bool IsCrossPathProducer() const;
-//  bool IsCrossPathConsumer() const;
-//
-// private:
-//   std::vector<PathSharingDescriptor> sharings_as_consumer_;
-//   std::vector<PathSharingDescriptor> sharings_as_producer_;
-//};
-
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _PATH_PATH_SHARE_POLICY_H_

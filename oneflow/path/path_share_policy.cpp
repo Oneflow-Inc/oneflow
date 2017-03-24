@@ -1,7 +1,7 @@
 #include "path/path_share_policy.h"
 #include "common/str_util.h"
 
-namespace caffe {
+namespace oneflow {
 //void PathSharePolicy::AddSharingAsProducer(
 //  const PathSharingDescriptor& path_mapping_desc) {
 //  sharings_as_producer_.push_back(path_mapping_desc);
@@ -20,4 +20,4 @@ namespace caffe {
 //  return !sharings_as_producer_.empty();
 //}
 
-}  // namespace caffe
+}  // namespace oneflow

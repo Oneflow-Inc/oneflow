@@ -15,7 +15,7 @@
 // (3) a segment on multiple devices in data-parallelism way: a single
 // dag_builder will generate a set of model update task serving all the
 // data path tasks corresponding to the data path segment (essentially a PS)
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 class DataPath;
 
@@ -100,5 +100,5 @@ private:
   const std::string placeholder_layer_type_ = "Placeholder";
   const std::string placeholder_layer_name_ = "placeholder";
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _PATH_MODEL_UPDATE_PATH_H_

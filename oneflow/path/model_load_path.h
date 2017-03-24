@@ -3,7 +3,7 @@
 #include <memory>
 #include "path/base_path.h"
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 class DataPath;
 
@@ -45,12 +45,12 @@ private:
     Strategy* strategy);
 
   void SetLoadProto(const std::string& segment_name_in_data_path,
-    caffe::LoadPartialModelProto* loadpartialmodel_proto);
+    oneflow::LoadPartialModelProto* loadpartialmodel_proto);
 
   const std::string placeholder_layer_name_ = "placeholder";
   const std::string placeholder_type_name_ = "Placeholder";
   const std::string loadpartialmodel_layer_name_ = "loadpartialmodel";
   const std::string loadpartialmodel_type_name_ = "LoadPartialModel";
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _PATH_MODEL_LOAD_PATH_H_

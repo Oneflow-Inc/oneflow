@@ -10,7 +10,7 @@
 #include "path/path_type.h"
 #include "path/path_share_policy.h"
 
-namespace caffe {
+namespace oneflow {
 
 template <typename Dtype>
 class PathManager;
@@ -75,5 +75,5 @@ std::shared_ptr<TaskDag<Dtype>> BasePath<Dtype>::GetCrossPathTaskDag(
   return dag_builder->GetCrossPathTaskDag(sharing_detail, device_id);
 }
 
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _PATH_BASE_PATH_H_

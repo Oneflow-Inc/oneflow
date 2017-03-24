@@ -1,7 +1,7 @@
 #ifndef _PATH_PATH_TYPE_H_
 #define _PATH_PATH_TYPE_H_
 
-namespace caffe {
+namespace oneflow {
 enum class PathType {
   kDataPath = 0,
   kModelUpdatePath,
@@ -10,5 +10,5 @@ enum class PathType {
   kUnknownPath
 };
 
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _PATH_PATH_TYPE_H_

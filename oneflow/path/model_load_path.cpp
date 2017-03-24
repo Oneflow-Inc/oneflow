@@ -11,7 +11,7 @@
 #include "dag/dag_builder.h"
 #include "path/data_path.h"
 #include "layers/base_layer.h"
-#include "caffe.pb.h"
+#include "oneflow.pb.h"
 #include "context/one.h"
 #include "context/config_parser.h"
 #include "context/net_descriptor.h"
@@ -19,7 +19,7 @@
 #include "path/path_share_policy.h"
 #include "path/path_manager.h"
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 ModelLoadPath<Dtype>::ModelLoadPath(std::shared_ptr<DataPath<Dtype>> data_path,
   PathManager<Dtype>* path_manager)
@@ -64,7 +64,7 @@ void ModelLoadPath<Dtype>::BuildModelLoadDagsForSegment(
     net_name_in_model_load_path, &net_param);
   StrategyForModelLoadPath(segment_name_in_data_path, &strategy);
 
-  auto resource = caffe::TheOne<Dtype>::config_parser()->resource_descriptor();
+  auto resource = oneflow::TheOne<Dtype>::config_parser()->resource_descriptor();
   std::shared_ptr<NetDescriptor> net_descriptor(new NetDescriptor(net_param));
   std::shared_ptr<StrategyDescriptor> strategy_descriptor(
     new StrategyDescriptor(strategy, resource));
@@ -131,7 +131,7 @@ void ModelLoadPath<Dtype>::NetParameterForModelLoadPath(
 template <typename Dtype>
 void ModelLoadPath<Dtype>::SetLoadProto(
   const std::string& segment_name_in_data_path,
-  caffe::LoadPartialModelProto* loadpartialmodel_proto) {
+  oneflow::LoadPartialModelProto* loadpartialmodel_proto) {
   auto segment_dag_of_data_path = dag_builder_of_data_path()->segment_dag();
   auto segment_node
     = segment_dag_of_data_path->GetOpNode(segment_name_in_data_path);
@@ -172,7 +172,7 @@ void ModelLoadPath<Dtype>::StrategyForModelLoadPath(
   auto policy
     = segment_dag_of_data_path->ParallelPolicyOfSegment(segment_name_in_data_path);
 
-  auto load_machine_group = new caffe::MachineGroup();
+  auto load_machine_group = new oneflow::MachineGroup();
   // FIXME(jiyuan): temporally assume the model locates at the machine with id 0,
   // here, we need to set the correct machine id.
   load_machine_group->set_begin(0);
@@ -190,7 +190,7 @@ void ModelLoadPath<Dtype>::StrategyForModelLoadPath(
   CHECK_GT(device_num, 0);
   int32_t device_set_begin = device_set.front();
   int32_t device_set_end = device_set.back();
-  auto placeholder_device_group = new caffe::DeviceGroup();
+  auto placeholder_device_group = new oneflow::DeviceGroup();
   placeholder_device_group->set_begin(device_set_begin);
   placeholder_device_group->set_end(device_set_end);
 
@@ -202,4 +202,4 @@ void ModelLoadPath<Dtype>::StrategyForModelLoadPath(
 }
 
 INSTANTIATE_CLASS(ModelLoadPath);
-}  // namespace caffe
+}  // namespace oneflow

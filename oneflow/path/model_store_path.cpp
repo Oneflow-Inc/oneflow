@@ -1,7 +1,7 @@
 #include <unordered_map>
 #include <string>
 #include <vector>
-#include "caffe.pb.h"
+#include "oneflow.pb.h"
 #include "common/common.h"
 #include "context/config_parser.h"
 #include "context/net_descriptor.h"
@@ -22,7 +22,7 @@
 #include "path/path_share_policy.h"
 #include "path/path_manager.h"
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 ModelStorePath<Dtype>::ModelStorePath(std::shared_ptr<DataPath<Dtype>> data_path,
    PathManager<Dtype>* path_manager)
@@ -73,7 +73,7 @@ void ModelStorePath<Dtype>::BuildModelStoreDagsForSegment(
     net_name_in_model_store_path, &net_param);
   StrategyForModelStorePath(segment_name_in_data_path, &strategy);
 
-  auto resource = caffe::TheOne<Dtype>::config_parser()->resource_descriptor();
+  auto resource = oneflow::TheOne<Dtype>::config_parser()->resource_descriptor();
   std::shared_ptr<NetDescriptor> net_descriptor(new NetDescriptor(net_param));
   std::shared_ptr<StrategyDescriptor> strategy_descriptor(
     new StrategyDescriptor(strategy, resource));
@@ -138,7 +138,7 @@ void ModelStorePath<Dtype>::NetParameterForModelStorePath(
 
 template <typename Dtype>
 void ModelStorePath<Dtype>::SetStoreProto(
-  const std::string& segment_name_in_data_path, caffe::StoreProto* store_proto) {
+  const std::string& segment_name_in_data_path, oneflow::StoreProto* store_proto) {
 
   auto segment_dag_of_data_path = dag_builder_of_data_path()->segment_dag();
   auto segment_node
@@ -189,7 +189,7 @@ void ModelStorePath<Dtype>::StrategyForModelStorePath(
   CHECK_GT(device_num, 0);
   int32_t device_set_begin = device_set.front();
   int32_t device_set_end = device_set.back();
-  auto placeholder_device_group = new caffe::DeviceGroup();
+  auto placeholder_device_group = new oneflow::DeviceGroup();
   placeholder_device_group->set_begin(device_set_begin);
   placeholder_device_group->set_end(device_set_end);
 
@@ -200,7 +200,7 @@ void ModelStorePath<Dtype>::StrategyForModelStorePath(
   placeholder_placement_group->set_allocated_device_group(placeholder_device_group);
 
   // No need to set the device range
-  auto store_device_group = new caffe::DeviceGroup();
+  auto store_device_group = new oneflow::DeviceGroup();
 
   auto store_placement_group = strategy->add_placement_group();
   store_placement_group->set_name(store_layer_name_);
@@ -209,4 +209,4 @@ void ModelStorePath<Dtype>::StrategyForModelStorePath(
   store_placement_group->set_allocated_device_group(store_device_group);
 }
 INSTANTIATE_CLASS(ModelStorePath);
-}  // namespace caffe
+}  // namespace oneflow

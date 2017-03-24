@@ -40,7 +40,7 @@ bool ReadProtoFromTextFile(const char* filename, Message* proto) {
 }
 
 void WriteProtoToTextFile(const Message& proto, const char* filename) {
-  int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+  int fd = open(filename, O_RDONLY);
   FileOutputStream* output = new FileOutputStream(fd);
   CHECK(google::protobuf::TextFormat::Print(proto, output));
   delete output;
@@ -48,7 +48,7 @@ void WriteProtoToTextFile(const Message& proto, const char* filename) {
 }
 
 bool ReadProtoFromBinaryFile(const char* filename, Message* proto) {
-  int fd = open(filename, O_RDONLY | O_BINARY);
+  int fd = open(filename, O_RDONLY);
   CHECK_NE(fd, -1) << "File not found: " << filename;
   ZeroCopyInputStream* raw_input = new FileInputStream(fd);
   CodedInputStream* coded_input = new CodedInputStream(raw_input);

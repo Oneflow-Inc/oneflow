@@ -11,14 +11,14 @@
 #include "dag/dag_builder.h"
 #include "path/data_path.h"
 #include "layers/base_layer.h"
-#include "caffe.pb.h"
+#include "oneflow.pb.h"
 #include "context/one.h"
 #include "context/config_parser.h"
 #include "context/net_descriptor.h"
 #include "context/strategy_descriptor.h"
 #include "path/path_manager.h"
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 ModelUpdatePath<Dtype>::ModelUpdatePath(std::shared_ptr<DataPath<Dtype>> data_path,
   PathManager<Dtype>* path_manager)
@@ -134,7 +134,7 @@ void ModelUpdatePath<Dtype>::CreateModelUpdateDags(
       segment_name_in_data_path, &strategy);
     break;
   }
-  auto resource = caffe::TheOne<Dtype>::config_parser()->resource_descriptor();
+  auto resource = oneflow::TheOne<Dtype>::config_parser()->resource_descriptor();
   std::shared_ptr<NetDescriptor> net_descriptor(new NetDescriptor(net_param));
   std::shared_ptr<StrategyDescriptor>
     strategy_descriptor(new StrategyDescriptor(strategy, resource));
@@ -234,7 +234,7 @@ void ModelUpdatePath<Dtype>::StrategyForSingleDevice(
   placement_group->mutable_layer_set()->add_name(model_update_layer_name_);
   placement_group->set_parallel_policy(kNaiveParallelOnSingleDevice);
 
-  auto device_group = new caffe::DeviceGroup();
+  auto device_group = new oneflow::DeviceGroup();
   device_group->set_begin(device_set_begin);
   device_group->set_end(device_set_end);
   placement_group->set_allocated_device_group(device_group);
@@ -326,7 +326,7 @@ void ModelUpdatePath<Dtype>::StrategyForModelParallelOnMultipleDevices(
   placement_group->set_name(model_update_layer_name_);
   placement_group->mutable_layer_set()->add_name(model_update_layer_name_);
   placement_group->set_parallel_policy(kModelParallelOnMultipleDevices);
-  auto device_group = new caffe::DeviceGroup();
+  auto device_group = new oneflow::DeviceGroup();
   device_group->set_begin(device_set_begin);
   device_group->set_end(device_set_end);
   placement_group->set_allocated_device_group(device_group);
@@ -421,7 +421,7 @@ void ModelUpdatePath<Dtype>::StrategyForDataParallelOnMultipleDevice(
     = segment_dag_of_data_path->DeviceSetOfSegment(segment_name_in_data_path);
   int32_t device_set_begin = device_set.front();
   int32_t device_set_end = device_set.back();
-  auto placeholder_device_group = new caffe::DeviceGroup();
+  auto placeholder_device_group = new oneflow::DeviceGroup();
   placeholder_device_group->set_begin(device_set_begin);
   placeholder_device_group->set_end(device_set_end);
 
@@ -431,7 +431,7 @@ void ModelUpdatePath<Dtype>::StrategyForDataParallelOnMultipleDevice(
   placeholder_placement_group->set_parallel_policy(kDataParallelOnMultipleDevices);
   placeholder_placement_group->set_allocated_device_group(placeholder_device_group);
 
-  auto update_device_group = new caffe::DeviceGroup();
+  auto update_device_group = new oneflow::DeviceGroup();
   update_device_group->set_begin(device_set_begin);
   update_device_group->set_end(device_set_end);
 
@@ -443,4 +443,4 @@ void ModelUpdatePath<Dtype>::StrategyForDataParallelOnMultipleDevice(
 }
 
 INSTANTIATE_CLASS(ModelUpdatePath);
-}  // namespace caffe
+}  // namespace oneflow

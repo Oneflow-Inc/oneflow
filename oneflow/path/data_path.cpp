@@ -10,9 +10,9 @@
 #include "dag/dag_builder.h"
 #include "path/path_manager.h"
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
-DataPath<Dtype>::DataPath(const caffe::NetParameter& net_param,
+DataPath<Dtype>::DataPath(const oneflow::NetParameter& net_param,
     std::shared_ptr<StrategyDescriptor> strategy_descriptor,
     PathManager<Dtype>* path_manager)
     : net_param_(net_param), strategy_descriptor_(strategy_descriptor),
@@ -46,4 +46,4 @@ bool DataPath<Dtype>::is_train() const {
 }
 
 INSTANTIATE_CLASS(DataPath);
-}  // namespace caffe
+}  // namespace oneflow

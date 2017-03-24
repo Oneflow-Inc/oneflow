@@ -3,13 +3,13 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "caffe.pb.h"
+#include "oneflow.pb.h"
 #include "proto_io.h"
 #include "path/base_path.h"
 #include "dag/node_meta.h"
 #include "dag/dag_node.h"
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 class DataPath;
 class NetDescriptor;
@@ -51,12 +51,12 @@ private:
     Strategy* strategy);
 
   void SetStoreProto(const std::string& segment_name_in_data_path,
-    caffe::StoreProto* store_proto);
+    oneflow::StoreProto* store_proto);
 
   const std::string placeholder_layer_name_ = "placeholder";
   const std::string placeholder_type_name_ = "Placeholder";
   const std::string store_layer_name_ = "store";
   const std::string store_type_name_ = "Store";
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _PATH_MODEL_STORE_PATH_H_

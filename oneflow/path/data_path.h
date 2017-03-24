@@ -1,7 +1,7 @@
 #ifndef _PATH_DATA_PATH_H_
 #define _PATH_DATA_PATH_H_
 #include <memory>
-#include "caffe.pb.h"
+#include "oneflow.pb.h"
 #include "proto_io.h"
 #include "path/base_path.h"
 #include "common/task_type.h"
@@ -10,14 +10,14 @@
 User needs to specify the logical operations in a network (in the form of 
 NetParameter) and the parallelism strategy (in the form of StrategyDescriptor).
 */
-namespace caffe {
+namespace oneflow {
 class NetDescriptor;
 class StrategyDescriptor;
 
 template <typename Dtype>
 class DataPath : public BasePath<Dtype> {
 public:
-  DataPath(const caffe::NetParameter& net_param,
+  DataPath(const oneflow::NetParameter& net_param,
     std::shared_ptr<StrategyDescriptor> strategy_descriptor,
     PathManager<Dtype>* path_manager);
   virtual ~DataPath() {}
@@ -38,10 +38,10 @@ public:
 
 private:
   const std::string net_name_;
-  const caffe::NetParameter& net_param_;
+  const oneflow::NetParameter& net_param_;
   std::shared_ptr<StrategyDescriptor> strategy_descriptor_;
 
   bool is_train_{ true };
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _PATH_DATA_PATH_H_
