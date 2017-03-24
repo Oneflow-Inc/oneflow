@@ -11,10 +11,7 @@ MachineDescriptor::MachineDescriptor(const oneflow::SolverProto& solver) {
 
   total_cpu_cores_ = sysconf(_SC_NPROCESSORS_ONLN);
 
-  MEMORYSTATUSEX memInfo;
-  memInfo.dwLength = sizeof(MEMORYSTATUSEX);
-  GlobalMemoryStatusEx(&memInfo);
-  total_host_mem_ = (size_t)(memInfo.ullTotalPhys);
+  total_host_mem_ = sysconf(_SC_PHYS_PAGES);
 
   // All the installed devices, may including devices not allocated to current
   // job.
