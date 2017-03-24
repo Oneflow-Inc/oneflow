@@ -1,5 +1,5 @@
 #include "common/shape.h"
-namespace caffe {
+namespace oneflow {
 Shape::Shape(const BlobShape& proto_shape) {
   CHECK_EQ(proto_shape.dim_size(), 4)
     << "any shape must be in 4 dimensions";
@@ -29,4 +29,4 @@ Shape::Shape(int64_t num,
   count_ = num * dim;
 }
 
-}  // namespace caffe
+}  // namespace oneflow

@@ -10,7 +10,7 @@
 #include "context/one.h"
 #include "context/id_map.h"
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 PipeDag<Dtype>::PipeDag(
     std::shared_ptr<SegmentDag<Dtype>> segment_dag,
@@ -92,7 +92,7 @@ void PipeDag<Dtype>::SingleStageToSinglePipe(
   const std::string& stage_name,
   const std::string& segment_name,
   int32_t machine_id) {
-  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  auto& id_map = oneflow::TheOne<Dtype>::id_map();
   auto local_id = id_map->data_thread_local_id();
   auto pipe_name = build_pipe_name_with_local_id(
     compute_pipe_prefix_, stage_name, machine_id, local_id);
@@ -111,7 +111,7 @@ void PipeDag<Dtype>::SingleStageToMultiplePipes(
   const std::string& stage_name,
   const std::string& segment_name,
   int32_t machine_id) {
-  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  auto& id_map = oneflow::TheOne<Dtype>::id_map();
   auto device_num_each_machine = id_map->device_num_each_machine();
   // Here, we ensure the pipes are added according to the ascending order of
   // thread_id
@@ -143,7 +143,7 @@ void PipeDag<Dtype>::AddCopyPipeNodes() {
 template <typename Dtype>
 void PipeDag<Dtype>::AddCopyPipeNodeForComputePipe(
   const std::string& pipe_name) {
-  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  auto& id_map = oneflow::TheOne<Dtype>::id_map();
   auto stage_name = GetStageName(pipe_name);
   auto machine_id = stage_dag_->machine_id(stage_name);
   // For gradient generator pipe, only need out_copy
@@ -244,7 +244,7 @@ template <typename Dtype>
 void PipeDag<Dtype>::AddNetPipeNode(bool in, const std::string& from_stage_name,
   int32_t from_machine_id, const std::string& to_stage_name,
   int32_t to_machine_id) {
-  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  auto& id_map = oneflow::TheOne<Dtype>::id_map();
   auto local_id = id_map->net_thread_local_id();
   auto stage_machine_id = in ? to_machine_id : from_machine_id;
   auto thread_id
@@ -311,7 +311,7 @@ void PipeDag<Dtype>::ConnectNetPipeNodes() {
 
 template <typename Dtype>
 void PipeDag<Dtype>::AddBoxingPipeNodes() {
-  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  auto& id_map = oneflow::TheOne<Dtype>::id_map();
   DagIterator<StageDag<Dtype>, true> dag_iterator(*stage_dag_);
   for (dag_iterator.First(); !dag_iterator.IsDone(); dag_iterator.Next()) {
     auto current_node = dag_iterator.CurrentNode();
@@ -369,7 +369,7 @@ void PipeDag<Dtype>::AddBoxingPipeNodes() {
 
 template <typename Dtype>
 void PipeDag<Dtype>::AddBoxingInfos() {
-  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  auto& id_map = oneflow::TheOne<Dtype>::id_map();
   DagIterator<StageDag<Dtype>, true> dag_iterator(*stage_dag_);
   for (dag_iterator.First(); !dag_iterator.IsDone(); dag_iterator.Next()) {
     auto current_node = dag_iterator.CurrentNode();
@@ -703,7 +703,7 @@ OpNode<PipeMeta>* PipeDag<Dtype>::AddBoxingPipeNode(
     bool is_in,
     const std::string& stage_name,
     int32_t stage_machine_id) {
-  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  auto& id_map = oneflow::TheOne<Dtype>::id_map();
   auto local_id = id_map->boxing_thread_local_id();
   auto thread_id
     = id_map->thread_id_from_machine_and_local(stage_machine_id, local_id);
@@ -757,7 +757,7 @@ void PipeDag<Dtype>::NotSameMachineOutgoing(const std::string& stage_name,
   const std::string& successor_stage_name,
   int32_t successor_machine_id,
   const std::string& successor_segment_name) {
-  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  auto& id_map = oneflow::TheOne<Dtype>::id_map();
   // Get the data name's prefix
   auto envelope_names
     = segment_dag_->FindDataNodesInBetween(segment_name, successor_segment_name);
@@ -817,7 +817,7 @@ void PipeDag<Dtype>::SameMachineOutgoing(
   const std::string& successor_stage_name,
   int32_t successor_machine_id,
   const std::string& successor_segment_name) {
-  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  auto& id_map = oneflow::TheOne<Dtype>::id_map();
   // Get the data name's prefix
   auto envelope_names
     = segment_dag_->FindDataNodesInBetween(segment_name, successor_segment_name);
@@ -973,7 +973,7 @@ void PipeDag<Dtype>::NotSameMachineIncoming(
   const std::string& stage_name,
   int32_t stage_machine_id,
   const std::string& segment_name) {
-  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  auto& id_map = oneflow::TheOne<Dtype>::id_map();
   // Get the data name's prefix
   auto envelope_names
     = segment_dag_->FindDataNodesInBetween(predecessor_segment_name, segment_name);
@@ -1026,7 +1026,7 @@ void PipeDag<Dtype>::NotSameMachineIncoming(
 
 template <typename Dtype>
 void PipeDag<Dtype>::AddDataNodesWithoutSuccessors() {
-  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  auto& id_map = oneflow::TheOne<Dtype>::id_map();
   // Lookup the last data nodes of SegmentDag (i.e., the nodes precisely before
   // the End nodes)
   auto envelope_names_without_successor
@@ -1216,7 +1216,7 @@ std::string PipeDag<Dtype>::build_envelope_name_from_envelopes(
 template <typename Dtype>
 int32_t PipeDag<Dtype>::GetThreadLocalId(
   const std::string& pipe_name) const {
-  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  auto& id_map = oneflow::TheOne<Dtype>::id_map();
   auto pipe_node = GetOpNode(pipe_name);
   auto thread_id = pipe_node->op()->thread_id();
   return id_map->local_id_from_thread_id(thread_id);
@@ -1426,4 +1426,4 @@ std::string PipeDag<Dtype>::StageBoxingMap::GetOutBoxingFromStage(
 }
 
 INSTANTIATE_CLASS(PipeDag);
-}  // namespace caffe
+}  // namespace oneflow

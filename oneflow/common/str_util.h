@@ -2,7 +2,7 @@
 #define _COMMON_STR_UTIL_H_
 #include <string>
 #include <vector>
-namespace caffe {
+namespace oneflow {
 namespace strings {
 bool StartsWith(const std::string& source, const std::string& search_for);
 bool EndsWith(const std::string& source, const std::string& search_for);
@@ -14,5 +14,5 @@ std::string Join(const std::vector<std::string>& source,
 std::string RemoveSuffix(const std::string& source, const std::string& suffix);
 std::string RemovePrefix(const std::string& source, const std::string& prefix);
 }  // namespace strings
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _COMMON_STR_UTIL_H_

@@ -1,13 +1,13 @@
 #include "context/net_descriptor.h"
 #include "proto_io.h"
 
-namespace caffe {
-NetDescriptor::NetDescriptor(const caffe::NetParameter& net_param)
+namespace oneflow {
+NetDescriptor::NetDescriptor(const oneflow::NetParameter& net_param)
   : layer_num_(0) {
   net_name_ = net_param.name();
   layer_num_ = net_param.layer_size();
   for (int32_t id = 0; id < layer_num_; ++id) {
-    caffe::LayerProto layer_proto = net_param.layer(id);
+    oneflow::LayerProto layer_proto = net_param.layer(id);
     LayerInfo layer_info;
     layer_info.name = layer_proto.name();
     layer_info.type = layer_proto.type();
@@ -39,7 +39,7 @@ std::string NetDescriptor::layer_type(int32_t id) const {
 bool NetDescriptor::is_train() const {
   return is_train_;
 }
-caffe::LayerProto NetDescriptor::layer_proto(int32_t id) const {
+oneflow::LayerProto NetDescriptor::layer_proto(int32_t id) const {
   return layer_protos_[id];
 }
-}  // namespace caffe
+}  // namespace oneflow

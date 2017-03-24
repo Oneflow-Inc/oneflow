@@ -1,7 +1,7 @@
 #include "dag/blob_info_manager.h"
 #include <glog/logging.h>
 
-namespace caffe {
+namespace oneflow {
 void BlobInfoManager::RegisterBlob(const std::string& layer_blob,
   const std::string& task_blob, const std::string& logical_blob, bool is_input) {
   auto task_blob_it = layer_blob_to_task_blob_.find(layer_blob);
@@ -221,4 +221,4 @@ int64_t BlobInfoManager::group_id_of_task_blob(
   return group_id_it->second;
 }
 
-}  // namespace caffe
+}  // namespace oneflow

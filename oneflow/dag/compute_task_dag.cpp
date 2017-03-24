@@ -11,7 +11,7 @@
 #include "dag/dag_builder.h"
 #include "layers/base_layer.h"
 #include "layers/loader_layer.h"
-#include "caffe.pb.h"
+#include "oneflow.pb.h"
 #include "path/base_path.h"
 #include "path/data_path.h"
 #include "path/model_load_path.h"
@@ -20,7 +20,7 @@
 #include "dag/blob_info_manager.h"
 #include "layers/base_layer.h"
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 ComputeTaskDag<Dtype>::ComputeTaskDag(const DagBuilder<Dtype>& dag_builder,
   TaskType type, int32_t task_id, PathType path_type,
@@ -130,7 +130,7 @@ std::string ComputeTaskDag<Dtype>::RectifyProtoStrForModelParallelism(
   // to this layer for model-parallelism
   auto& device_set = placement_info.device_set();
   int32_t parallel_size = placement_info.device_set().size();
-  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  auto& id_map = oneflow::TheOne<Dtype>::id_map();
   int32_t thread_id = id_map->thread_id_from_task_id(task_id_);
   int32_t logical_id = id_map->logical_id_from_device_id(thread_id);
   // |device_set| keeps the logical_ids of all the devices allocated to this
@@ -581,7 +581,7 @@ void ComputeTaskDag<Dtype>::DataPathForwardAddProducedRegisterInfos() {
   RegisterType register_type{ RegisterType::kDataType };
   DeviceType device_type{ DeviceType::kGPU };
 
-  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  auto& id_map = oneflow::TheOne<Dtype>::id_map();
   int32_t group_local_id = id_map->new_group_local_id(task_id_);
   int64_t group_id
     = id_map->group_id_from_task_id_and_group_local_id(task_id_, group_local_id);
@@ -619,7 +619,7 @@ void ComputeTaskDag<Dtype>::ModelUpdatePathForwardAddProducedRegisterInfos() {
   RegisterType register_type{ RegisterType::kDataType };
   DeviceType device_type{ DeviceType::kGPU };
 
-  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  auto& id_map = oneflow::TheOne<Dtype>::id_map();
   int32_t group_local_id = id_map->new_group_local_id(task_id_);
   int64_t group_id
     = id_map->group_id_from_task_id_and_group_local_id(task_id_, group_local_id);
@@ -655,7 +655,7 @@ void ComputeTaskDag<Dtype>::ModelLoadPathForwardAddProducedRegisterInfos() {
   RegisterType register_type{ RegisterType::kDataType };
   DeviceType device_type{ DeviceType::kCPU };
 
-  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  auto& id_map = oneflow::TheOne<Dtype>::id_map();
   int32_t group_local_id = id_map->new_group_local_id(task_id_);
   int64_t group_id
     = id_map->group_id_from_task_id_and_group_local_id(task_id_, group_local_id);
@@ -684,7 +684,7 @@ void ComputeTaskDag<Dtype>::ModelStorePathForwardAddProducedRegisterInfos() {
 
 template <typename Dtype>
 void ComputeTaskDag<Dtype>::BackwardAddProducedRegisterInfos() {
-  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  auto& id_map = oneflow::TheOne<Dtype>::id_map();
   int32_t data_diff_local_id = id_map->new_group_local_id(task_id_);
   int64_t data_diff_group_id = id_map->group_id_from_task_id_and_group_local_id(
     task_id_, data_diff_local_id);
@@ -935,7 +935,7 @@ void ComputeTaskDag<Dtype>::ForwardSetupPrepareDataTask() {
   // ResourceDescriptor. The third approach is not that general but is the
   // simplest, we use (3) currently.
   auto& strategy_descriptor =
-    caffe::TheOne<Dtype>::config_parser()->strategy_descriptor();
+    oneflow::TheOne<Dtype>::config_parser()->strategy_descriptor();
   int32_t device_num_per_data_provider
     = strategy_descriptor->device_num_per_data_provider();
 
@@ -979,4 +979,4 @@ ComputeTaskDag<Dtype>::GetOutputLogicalBlobs() const {
 }
 
 INSTANTIATE_CLASS(ComputeTaskDag);
-}  // namespace caffe
+}  // namespace oneflow

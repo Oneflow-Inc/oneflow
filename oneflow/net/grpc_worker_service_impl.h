@@ -26,8 +26,8 @@ limitations under the License.
 #include "grpc++/impl/codegen/sync_stream.h"
 #include "grpc++/support/byte_buffer.h"
 
-#include "grpc_serialization_traits.h"
-#include "worker.pb.h"
+#include "net/grpc_serialization_traits.h"
+#include "proto/worker.pb.h"
 
 // Contains potentially large GraphDef.
 TF_GRPC_ALLOW_UNLIMITED_MESSAGE_SIZE(oneflow::RegisterGraphRequest);

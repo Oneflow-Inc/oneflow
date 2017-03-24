@@ -6,7 +6,19 @@
 #include <cstdint>
 #include "dag/register_info.h"
 
-namespace caffe {
+namespace std {
+  template<>
+  struct hash<oneflow::RegisterType>{
+    typedef oneflow::RegisterType argument_type;
+    typedef size_t result_type;
+    result_type operator () (const argument_type& x) const{
+      using type = typename std::underlying_type<argument_type>::type;
+      return std::hash<type>()(static_cast<type>(x));
+    }
+  };
+}
+
+namespace oneflow {
 class RegisterInfoManager {
 public:
   using GroupIDConsumerIDMap = std::unordered_map<int64_t, std::vector<int32_t>>;
@@ -58,7 +70,7 @@ private:
   std::unordered_map<int64_t, RegisterInfo> produced_group_id_to_register_info_;
   std::unordered_map<int64_t, int32_t> produced_group_id_to_group_size_;
   GroupIDConsumerIDMap group_id_to_consumer_ids_;
-
+  
   // RegisterInfo produced by current TaskDag.
   // (1) For non-kBoxingTask
   std::unordered_map<RegisterType, int64_t> register_type_to_produced_group_id_;
@@ -83,5 +95,5 @@ private:
   RegisterInfoManager(const RegisterInfoManager& other) = delete;
   RegisterInfoManager& operator=(const RegisterInfoManager& other) = delete;
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _REGISTER_INFO_MANAGER_H_

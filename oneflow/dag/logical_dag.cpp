@@ -19,7 +19,7 @@
 #include "layers/layer_factory.h"
 #include "proto_io.h"
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 LogicalDag<Dtype>::LogicalDag(std::shared_ptr<NetDescriptor> net_descriptor,
   PathType path_type, const std::string& name) : Dag(path_type, name),
@@ -230,7 +230,7 @@ bool LogicalDag<Dtype>::GetDagBlobNeedsBP(const LayerBlobTriples& triples) const
 //    auto loader_layer = dynamic_pointer_cast<LoaderLayer<Dtype>>(layer);
 //    CHECK_NOTNULL(loader_layer.get());
 //    auto& strategy_descriptor
-//      = caffe::TheOne<Dtype>::config_parser()->strategy_descriptor();
+//      = oneflow::TheOne<Dtype>::config_parser()->strategy_descriptor();
 //    auto max_data_parallel_num = strategy_descriptor->max_data_parallel_num();
 //    loader_layer->SetBatchSize(max_data_parallel_num);
 //  }
@@ -279,7 +279,7 @@ OpNode<LayerMeta<Dtype>>* LogicalDag<Dtype>::AddOpNode(
   layer_meta = std::make_shared<LayerMeta<Dtype>>(op_type);
   std::string& param_str = layer_meta->mutable_param_str();
 
-  // NOTE(jiyuan): the variable name in caffe.proto should be the lower
+  // NOTE(jiyuan): the variable name in oneflow.proto should be the lower
   // correspondence of its type name, plus "_proto"
   std::string field_name;
   field_name.resize(op_type.length());
@@ -450,4 +450,4 @@ LogicalDag<Dtype>::DagBlobToLayerBlobs::GetTriples(const std::string& dag_blob) 
 }
 
 INSTANTIATE_CLASS(LogicalDag);
-}  // namespace caffe
+}  // namespace oneflow

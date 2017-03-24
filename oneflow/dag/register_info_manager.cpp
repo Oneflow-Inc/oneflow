@@ -1,7 +1,7 @@
 #include "dag/register_info_manager.h"
 #include <glog/logging.h>
 
-namespace caffe {
+namespace oneflow {
 
 void RegisterInfoManager::AddProducedRegisterInfoForNonBoxingTask(
   const RegisterInfo& register_info) {
@@ -155,4 +155,4 @@ RegisterInfo RegisterInfoManager::CompleteProducedRegisterInfoCrossPath(
   return produced_register_info;
 }
 
-}  // namespace caffe
+}  // namespace oneflow

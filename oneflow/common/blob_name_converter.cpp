@@ -4,7 +4,7 @@
 #include <glog/logging.h>
 #include "common/str_util.h"
 
-namespace caffe {
+namespace oneflow {
 namespace strings {
 const std::string kSuffixOfDiff = "_diff";
 std::string get_diff_blob_name(const std::string& data_blob_name) {
@@ -52,4 +52,4 @@ std::string remove_prefix_of_blob_variable_name(const std::string& blob_var_name
   return blob_var_name.substr(pos + 1);
 }
 }  // end namespace strings
-}  // end namespace caffe
+}  // end namespace oneflow

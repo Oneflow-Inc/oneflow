@@ -5,7 +5,7 @@
 #include "dag/dag_iterator.h"
 #include "dag/logical_dag.h"
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 ClusteringDag<Dtype>::ClusteringDag(
   const LogicalDag<Dtype>& logical_dag,

@@ -4,11 +4,11 @@
 #include <vector>
 #include <string>
 #include <glog/logging.h>
-#include "caffe.pb.h"
+#include "proto/oneflow.pb.h"
 
-// NOTE(jiyuan): basically borrow from caffe blob.hpp, functions have exactly
+// NOTE(jiyuan): basically borrow from oneflow blob.hpp, functions have exactly
 // the same meaning.
-namespace caffe {
+namespace oneflow {
 class Shape {
  public:
   Shape() : count_(0) {}
@@ -163,5 +163,5 @@ inline void Shape::Reshape(const std::vector<int64_t>& shape) {
     count_ *= dim;
   }
 }
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _COMMON_SHAPE_H_

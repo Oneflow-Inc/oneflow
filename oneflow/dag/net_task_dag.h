@@ -3,7 +3,7 @@
 #include <string>
 #include "dag/task_dag.h"
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 class NetTaskDag : public TaskDag<Dtype> {
  public:
@@ -19,6 +19,7 @@ class NetTaskDag : public TaskDag<Dtype> {
  private:
   bool forward_is_sender_;
   std::string envelope_name_;
+  using BlobFilter = std::function<bool(const std::string&)>;
   const BlobFilter is_envelope_ = [](const std::string& blob_var) {
     return strings::Contains(blob_var, "envelope");
   };
@@ -43,5 +44,5 @@ class NetTaskDag : public TaskDag<Dtype> {
   NetTaskDag(const NetTaskDag& other) = delete;
   NetTaskDag operator=(const NetTaskDag& other) = delete;
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _NET_TASK_DAG_H_

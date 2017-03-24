@@ -1,13 +1,13 @@
 #include "context/strategy_descriptor.h"
 #include <glog/logging.h>
-#include "caffe.pb.h"
+#include "oneflow.pb.h"
 #include "proto_io.h"
 #include "context/resource_descriptor.h"
 #include <string>
 #include <vector>
 
-namespace caffe {
-StrategyDescriptor::StrategyDescriptor(const caffe::Strategy& strategy,
+namespace oneflow {
+StrategyDescriptor::StrategyDescriptor(const oneflow::Strategy& strategy,
   std::shared_ptr<ResourceDescriptor> resource_descriptor)
   : resource_descriptor_(resource_descriptor) {
   Init(strategy);
@@ -112,7 +112,7 @@ void StrategyDescriptor::set_piece_size_each_device(
   piece_size_each_device_ = piece_size_each_device;
 }
 
-void StrategyDescriptor::Init(const caffe::Strategy& strategy) {
+void StrategyDescriptor::Init(const oneflow::Strategy& strategy) {
   group_num_ = strategy.placement_group_size();
   for (int32_t gid = 0; gid < group_num_; ++gid) {
     InitOneGroup(strategy, gid);
@@ -123,7 +123,7 @@ void StrategyDescriptor::Init(const caffe::Strategy& strategy) {
 }
 
 void StrategyDescriptor::InitOneGroup(
-  const caffe::Strategy& strategy, int32_t group_id) {
+  const oneflow::Strategy& strategy, int32_t group_id) {
   auto& placement_group = strategy.placement_group(group_id);
   PlacementGroupInfo placement_group_info;
   placement_group_info.set_name(placement_group.name());
@@ -219,4 +219,4 @@ void StrategyDescriptor::update_placement_info_with_device_group(int32_t id,
     begin, end, parallel_policy, resource_descriptor_->device_num_per_machine());
 }
 
-}  // namespace caffe
+}  // namespace oneflow

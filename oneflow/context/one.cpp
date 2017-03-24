@@ -19,14 +19,14 @@
 #include "context/config_parser.h"
 #include "context/resource_descriptor.h"
 #include "context/net_descriptor.h"
-#include "thread/comm_bus.h"
-#include "thread/base_thread.h"
+//#include "thread/comm_bus.h"
+//#include "thread/base_thread.h"
 #include "task/job_manager.h"
 #include "task/node_manager.h"
-// #include "path/path_share_policy.h"
+//#include "path/path_share_policy.h"
 #include "path/path_manager.h"
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 std::unique_ptr<TheOne<Dtype>> TheOne<Dtype>::singleton_;
 
@@ -71,8 +71,8 @@ void TheOne<Dtype>::InitResource(const std::string& solver_name) {
 template <typename Dtype>
 void TheOne<Dtype>::InitJob(const SolverProto& param) {
   CHECK(param.has_train_net());
-  caffe::NetParameter net_param;
-  caffe::ReadProtoFromTextFileOrDie(param.train_net(), &net_param);
+  oneflow::NetParameter net_param;
+  oneflow::ReadProtoFromTextFileOrDie(param.train_net(), &net_param);
 
   //logic_dag_.reset(new LogicalDag<Dtype>(config_parser_->net_descriptor(),
   //  PathType::kDataPath));
@@ -114,6 +114,8 @@ void TheOne<Dtype>::InitJob2(const SolverProto& param) {
   path_manager_.reset(new PathManager<Dtype>());
   path_manager_->Initialize(param);
 }
+
+/*
 template <typename Dtype>
 void TheOne<Dtype>::InitThread() {
 #if 0
@@ -165,5 +167,7 @@ void TheOne<Dtype>::InitNetwork() {
 
   instance->Barrier();
 }
-INSTANTIATE_CLASS(TheOne);
-}  // namespace caffe
+
+*/
+//INSTANTIATE_CLASS(TheOne);
+}  // namespace oneflow

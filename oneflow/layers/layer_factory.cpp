@@ -2,9 +2,9 @@
 
 #include "layers/base_layer.h"
 #include "layers/layer_factory.h"
-#include "caffe.pb.h"
+#include "oneflow.pb.h"
 
-namespace caffe {
+namespace oneflow {
 
 #if 0
 // Get convolution layer according to engine.
@@ -169,4 +169,4 @@ REGISTER_LAYER_CREATOR(TanH, GetTanHLayer);
 #endif
 // Layers that use their constructor as their default creator should be
 // registered in their corresponding cpp files. Do not register them here.
-}  // namespace caffe
+}  // namespace oneflow

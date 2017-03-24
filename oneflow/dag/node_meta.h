@@ -6,7 +6,7 @@
 #include "common/task_type.h"
 #include "context/placement_info.h"
 
-namespace caffe {
+namespace oneflow {
 // Hold the name and the shape of a data blob
 class BlobMeta {
 public:
@@ -161,5 +161,5 @@ class EventMeta {
    int32_t forward_receiver_id_{ -1 };
    int32_t backward_receiver_id_{ -1 };
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _DAG_NODE_META_H_

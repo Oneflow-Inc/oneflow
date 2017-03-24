@@ -44,7 +44,7 @@
 #include <memory>
 #include <glog/logging.h>
 
-namespace caffe {
+namespace oneflow {
 
 template <typename Dtype>
 class BaseLayer;
@@ -122,5 +122,5 @@ class LayerRegisterer {
   }                                                                            \
   REGISTER_LAYER_CREATOR(type, Creator_##type##Layer)
 
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _LAYERS_LAYER_FACTORY_H_

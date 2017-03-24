@@ -4,10 +4,10 @@
 #include <string>
 #include <vector>
 #include "layers/base_layer.h"
-#include "caffe.pb.h"
+#include "oneflow.pb.h"
 #include "proto_io.h"
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 class LoaderData : public DataParam<Dtype> {
 public:
@@ -62,5 +62,5 @@ private:
   LoaderLayer(const LoaderLayer& other) = delete;
   LoaderLayer& operator=(const LoaderLayer& other) = delete;
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _LAYERS_LOADER_LAYER_H_

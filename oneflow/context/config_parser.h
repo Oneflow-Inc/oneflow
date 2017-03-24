@@ -2,7 +2,7 @@
 #define _CONTEXT_CONFIG_PARSER_H_
 #include <memory>
 #include <string>
-namespace caffe {
+namespace oneflow {
 
 class SolverDescriptor;
 class MachineDescriptor;
@@ -54,5 +54,5 @@ private:
   ConfigParser(const ConfigParser& other) = delete;
   ConfigParser& operator=(const ConfigParser& other) = delete;
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _CONTEXT_CONFIG_PARSER_H_

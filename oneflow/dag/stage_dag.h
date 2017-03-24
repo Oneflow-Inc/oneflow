@@ -6,6 +6,7 @@
 #include <unordered_set>
 #include "dag/dag_node.h"
 #include "dag/dag.h"
+#include "dag/dag_iterator.h"
 #include "common/string_pair.h"
 /*
 StageDag expands SegmentDag, it describes a machine-level connection. 
@@ -24,16 +25,18 @@ forward propagation or in the back-propagation. A stage resides on exactly one
 machine, however, multiple stages may share the same machine.
 */
 
-namespace caffe {
+namespace oneflow {
 class EnvelopeMeta;
 
 class StageMeta;
 
+/*
 template <typename DAG, bool isconst = false>
 class DagIterator;
 
 template <typename DAG, bool isconst = false>
 class DagReverseIterator;
+*/
 
 template <typename Dtype>
 class LogicalDag;
@@ -141,5 +144,5 @@ private:
   StageDag(const StageDag& other) = delete;
   StageDag& operator=(const StageDag& other) = delete;
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _DAG_STAGE_DAG_H_

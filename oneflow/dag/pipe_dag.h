@@ -45,18 +45,20 @@ in the future.
 In summary, the major challenge of building PipeDag is how to properly insert
 net pipe and boxing pipe.
 */
-namespace caffe {
+namespace oneflow {
 enum class TaskType;
 
 class EnvelopeMeta;
 
 class PipeMeta;
 
+/*
 template <typename DAG, bool isconst = false>
 class DagIterator;
 
 template <typename DAG, bool isconst = false>
 class DagReverseIterator;
+*/
 
 template <typename Dtype>
 class SegmentDag;
@@ -346,5 +348,5 @@ private:
   PipeDag(const PipeDag& other) = delete;
   PipeDag& operator=(const PipeDag& other) = delete;
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _DAG_PIPE_DAG_H_

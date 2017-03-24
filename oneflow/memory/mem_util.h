@@ -1,7 +1,7 @@
 #ifndef _MEM_UTIL_H_
 #define _MEM_UTIL_H_
 #include <cstdint>
-namespace caffe {
+namespace oneflow {
 int32_t Log2Floor(uint32_t n);
 int32_t Log2Floor(uint64_t n);
 int32_t Log2Ceiling(uint32_t n);
@@ -12,5 +12,5 @@ int32_t Log2Ceiling64(uint64_t n);
 // We require the value |alignment| is multiples of 256.
 // Borrow the idea and implementation from TensorFlow
 size_t AlignSize(size_t bytes, size_t alignment = 256);
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _MEM_UTIL_H_

@@ -1,6 +1,6 @@
 #include "memory/mem_util.h"
 #include <glog/logging.h>
-namespace caffe {
+namespace oneflow {
 // Return floor(log2(n)) for positive integer n.  Returns -1 if n == 0.
 int32_t Log2Floor(uint32_t n) {
   if (n == 0) return -1;
@@ -52,4 +52,4 @@ size_t AlignSize(size_t bytes, size_t alignment) {
   size_t max_waste = 1uLL << (Log2Ceiling64(alignment));
   return (bytes + max_waste) & (~(max_waste - 1));
 }
-}  // namespace caffe
+}  // namespace oneflow

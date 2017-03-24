@@ -16,7 +16,7 @@
 #include "dag/node_meta.h"
 #include "dag/dag_node.h"
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 ActorDag<Dtype>::ActorDag(
     std::shared_ptr<LogicalDag<Dtype>> logical_dag,
@@ -100,7 +100,7 @@ void ActorDag<Dtype>::BackwardBuildDag() {
 template <typename Dtype>
 void ActorDag<Dtype>::ForwardAddActorNodes() {
   // For each pipe node in PipeDag, create an actor node in ActorDag.
-  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  auto& id_map = oneflow::TheOne<Dtype>::id_map();
   DagIterator<PipeDag<Dtype>, true> dag_iterator(*pipe_dag_);
   for (dag_iterator.First(); !dag_iterator.IsDone(); dag_iterator.Next()) {
     auto current_node = dag_iterator.CurrentNode();
@@ -156,7 +156,7 @@ template <typename Dtype>
 void ActorDag<Dtype>::BackwardAddActorNodes() {
   // In reverse topological order, traverse the PipeDag and add an actor node
   // for each pipe node if the pipe node is required in backward pass.
-  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  auto& id_map = oneflow::TheOne<Dtype>::id_map();
   DagReverseIterator<PipeDag<Dtype>, true> dag_iterator(*pipe_dag_);
   for (dag_iterator.First(); !dag_iterator.IsDone(); dag_iterator.Next()) {
     auto current_node = dag_iterator.CurrentNode();
@@ -302,7 +302,7 @@ OpNode<ActorMeta>* ActorDag<Dtype>::AddOpNode(
   actor_meta = std::make_shared<ActorMeta>();
   actor_meta->mutable_task_id() = task_id;
   actor_meta->mutable_task_type() = type;
-  bool is_forward = caffe::strings::StartsWith(actor_name, forward_prefix_);
+  bool is_forward = oneflow::strings::StartsWith(actor_name, forward_prefix_);
   actor_meta->mutable_is_forward() = is_forward;
   auto it = op_name_to_node_.find(actor_name);
   CHECK(it == op_name_to_node_.end()) << "Duplicate op_name: " << actor_name;
@@ -505,4 +505,4 @@ std::string ActorDag<Dtype>::GetFirstDescendantComputeNodeName(
 }
 
 INSTANTIATE_CLASS(ActorDag);
-}  // namespace caffe
+}  // namespace oneflow

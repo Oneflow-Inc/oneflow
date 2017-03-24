@@ -13,7 +13,7 @@ ClusteringDag could cluster some operator nodes in an |LogicalDag| according to
 some user-defined criteria. It supports two types of merging, non-iterative and 
 iterative.
 */
-namespace caffe {
+namespace oneflow {
 class BlobMeta;
 
 class ClusteringMeta;
@@ -100,5 +100,5 @@ private:
   ClusteringDag(const ClusteringDag& other) = delete;
   ClusteringDag& operator=(const ClusteringDag& other) = delete;
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _DAG_CLUSTERING_DAG_H_

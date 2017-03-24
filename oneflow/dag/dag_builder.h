@@ -25,7 +25,7 @@ the name, the task_id), and the topology among actors. We create a TaskDag for
 each actor to perform the real function of each actor. You could get the TaskDag
 if you know its |task_id| with the function |GetTaskDag(int32_t task_id)|.
 */
-namespace caffe {
+namespace oneflow {
 class NetDescriptor;
 
 class StrategyDescriptor;
@@ -147,5 +147,5 @@ private:
   void BuildBackwardTaskDags();
   void BuildForwardTaskDagsOfType(TaskType expected_task_type);
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _DAG_DAG_BUILDER_H_

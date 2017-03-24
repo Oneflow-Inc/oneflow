@@ -15,7 +15,7 @@
 // TODO(Chongin): Currently there're some redundancy between codes for 
 // different task's memory allocation. To be refined later.
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 void ActorDagMemoryAllocator<Dtype>::Alloc(ActorDag<Dtype>* actor_dag) {
   DagIterator<ActorDag<Dtype>, false> dag_iterator(*actor_dag);
@@ -241,4 +241,4 @@ void ActorDagMemoryAllocator<Dtype>::FreeMemoryForComputeTask(
 }
 
 INSTANTIATE_CLASS(ActorDagMemoryAllocator);
-}  // namespace caffe
+}  // namespace oneflow

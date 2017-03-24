@@ -8,7 +8,7 @@
 #include "device/device_alternate.h"
 #include "memory/blob_copydetail.h"
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 Blob<Dtype>::Blob():
   own_memory_(false), data_ptr_(nullptr),
@@ -38,7 +38,7 @@ Blob<Dtype>::Blob(const Shape& shape, MemoryType type,
   : shape_(shape), type_(type), own_memory_(true),
   device_id_(device_id),
   device_local_id_(-2) {
-  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  auto& id_map = oneflow::TheOne<Dtype>::id_map();
   // FIXME(jiyuan): not depend on idmap
   // device_local_id_
   //   = id_map->local_id_from_device_id(device_id_);
@@ -190,4 +190,4 @@ bool Blob<Dtype>::Deserialize(
       proto, this->mutable_data() + offset);
 }
 INSTANTIATE_CLASS(Blob);
-}  // namespace caffe
+}  // namespace oneflow

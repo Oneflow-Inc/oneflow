@@ -1,7 +1,7 @@
 #include "dag/boxing_info.h"
 #include <glog/logging.h>
 
-namespace caffe {
+namespace oneflow {
 void BoxingInfoElement::SetInputs(
   const std::vector<std::string>& inputs) {
   in_num_ = inputs.size();
@@ -201,4 +201,4 @@ BoxingInfo& BoxingInfoMap::GetBoxingInfo(
   return boxing_info_it->second;
 }
 
-}  // namespace caffe
+}  // namespace oneflow

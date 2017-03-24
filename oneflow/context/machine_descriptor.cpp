@@ -1,6 +1,5 @@
 #include "context/machine_descriptor.h"
-#include "oneflow.pb.h"
-#include <Windows.h>
+#include "proto/oneflow.pb.h"
 
 namespace oneflow {
 MachineDescriptor::MachineDescriptor(const oneflow::SolverProto& solver) {

@@ -7,11 +7,11 @@
 #include "context/strategy_descriptor.h"
 #include "context/config_parser.h"
 
-namespace caffe {
+namespace oneflow {
 IDMap::IDMap(std::shared_ptr<ConfigParser> config)
   : config_parser_(config) {
-  auto& resource_descriptor = config_parser_->resource_descriptor();
-  auto& strategy_descriptor = config_parser_->strategy_descriptor();
+  auto&& resource_descriptor = config_parser_->resource_descriptor();
+  auto&& strategy_descriptor = config_parser_->strategy_descriptor();
 
   machine_num_ = resource_descriptor->machine_num();
   CHECK_GT(machine_num_, 0);
@@ -128,7 +128,7 @@ int32_t IDMap::physical_id_from_local_id(int32_t local_id)
 
 int32_t IDMap::local_id_from_physical_id(int32_t physical_id) const {
   int32_t machine_id = config_parser_->machine_descriptor()->machine_id();
-  auto& resource_descriptor = config_parser_->resource_descriptor();
+  auto&& resource_descriptor = config_parser_->resource_descriptor();
   return resource_descriptor->local_from_physical(machine_id, physical_id);
 }
 
@@ -296,4 +296,4 @@ int32_t IDMap::new_register_local_id(int64_t group_id) {
   return register_local_id;
 }
 
-}  // namespace caffe
+}  // namespace oneflow

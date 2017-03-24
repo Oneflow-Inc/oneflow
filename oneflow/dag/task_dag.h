@@ -14,6 +14,7 @@
 #include "context/strategy_descriptor.h"
 #include "context/config_parser.h"
 #include "context/id_map.h"
+#include "dag/dag_node.h"
 #include "dag/dag.h"
 #include "dag/actor_dag.h"
 #include "dag/node_meta.h"
@@ -30,7 +31,7 @@
 #include "task/job_manager.h"
 
 // A DAG consists of layers inside a particular task.
-namespace caffe {
+namespace oneflow {
 class BlobMeta;
 
 template <typename Dtype>
@@ -47,6 +48,11 @@ class TaskDag : public Dag<BlobMeta, LayerMeta<Dtype>> {
   friend class DagIterator<TaskDag<Dtype>, true>;
   friend class DagReverseIterator<TaskDag<Dtype>>;
   friend class DagReverseIterator<TaskDag<Dtype>, true>;
+  using Dag<BlobMeta, LayerMeta<Dtype>>::name;
+  using Dag<BlobMeta, LayerMeta<Dtype>>::path_type_;
+  using Dag<BlobMeta, LayerMeta<Dtype>>::DNode;
+  using Dag<BlobMeta, LayerMeta<Dtype>>::ONode;
+  using Dag<BlobMeta, LayerMeta<Dtype>>::Dag;
  public:
   TaskDag(const DagBuilder<Dtype>& dag_builder,
     TaskType type,
@@ -59,7 +65,7 @@ class TaskDag : public Dag<BlobMeta, LayerMeta<Dtype>> {
   TaskType task_type() const { return type_; }
   int32_t task_id() const { return task_id_; }
   PathType path_type() const { return path_type_; }
-  const std::string& actor_name() const { return name_; }
+  const std::string& actor_name() const { return this->name_; }
   bool is_forward() const { return is_forward_;  }
   bool is_h2d() const { CHECK(type_ == TaskType::kCopyTask); return is_h2d_; }
   bool is_net_receiver() const {
@@ -519,7 +525,7 @@ void TaskDag<Dtype>::BackwardSetup() {
 
 template <typename Dtype>
 void TaskDag<Dtype>::ForwardSetupPrepare() {
-  auto id_map = caffe::TheOne<Dtype>::id_map();
+  auto id_map = oneflow::TheOne<Dtype>::id_map();
   auto actor_dag = dag_builder_.actor_dag();
   auto input_task_blobs = blob_info_manager_.input_task_blobs();
 
@@ -806,5 +812,5 @@ RegisterInfo TaskDag<Dtype>::CompleteProducedRegisterInfoCrossPath(
     my_register_type, other_register_info);
 }
 
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _DAG_TASK_DAG_H_

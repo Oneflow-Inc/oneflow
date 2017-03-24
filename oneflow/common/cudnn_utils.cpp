@@ -2,7 +2,7 @@
 
 #include "common/cudnn_utils.h"
 
-namespace caffe {
+namespace oneflow {
   namespace cudnn {
 
     float dataType<float>::oneval = 1.0;

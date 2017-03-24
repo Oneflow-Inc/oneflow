@@ -16,7 +16,7 @@
 #include "path/base_path.h"
 #include "path/path_type.h"
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 DagBuilder<Dtype>::DagBuilder(const std::string& net_name,
   BasePath<Dtype>* path,
@@ -210,7 +210,7 @@ void DagBuilder<Dtype>::AddTaskDag(int32_t task_id,
   unordered_task_id_to_dag_.insert({ task_id, task_dag });
   task_name_to_dag_.insert({ task_name, task_dag });
 
-  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  auto& id_map = oneflow::TheOne<Dtype>::id_map();
   int32_t thread_id = id_map->thread_id_from_task_id(task_id);
   int32_t machine_id = id_map->machine_id_from_thread_id(thread_id);
   int32_t thread_local_id = id_map->thread_local_id_from_task_id(task_id);
@@ -322,7 +322,7 @@ void DagBuilder<Dtype>::SetupTaskDags() {
 
 template <typename Dtype>
 void DagBuilder<Dtype>::BuildSegmentTaskMap() {
-  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  auto& id_map = oneflow::TheOne<Dtype>::id_map();
   auto compute_segments = segment_dag_->GetComputeSegments();
   for (auto& compute_segment : compute_segments) {
     auto device_set = segment_dag_->DeviceSetOfSegment(compute_segment);
@@ -405,4 +405,4 @@ std::shared_ptr<TaskDag<Dtype>> DagBuilder<Dtype>::GetCrossPathTaskDag(
   }
 }
 INSTANTIATE_CLASS(DagBuilder);
-}  // namespace caffe
+}  // namespace oneflow

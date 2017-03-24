@@ -6,7 +6,7 @@
 #include <memory>
 #include <unordered_map>
 #include <cstdint>
-#include "caffe.pb.h"
+#include "proto/oneflow.pb.h"
 #include <glog/logging.h>
 /*
 PlacementInfo is a property of an operator(i.e., layer, operator node in DAG) in 
@@ -14,7 +14,7 @@ a computation network. It describes on which devices a particular operator will
 be executed, and what parallelization policy will be used (i.e., either data-
 parallel, or model-parallel).
 */
-namespace caffe {
+namespace oneflow {
 class PlacementInfo {
 public:
   PlacementInfo();
@@ -66,5 +66,5 @@ private:
   std::vector<std::string> layer_set_;
   PlacementInfo placement_info_;
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _CONTEXT_PLACEMENT_INFO_H_

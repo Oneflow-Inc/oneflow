@@ -3,7 +3,7 @@
 #include <vector>
 #include <string>
 #include <cstdint>
-namespace caffe {
+namespace oneflow {
 namespace strings {
 // The following two functions define the rules for conversion between a data 
 // blob's name and its corresponding diff blob's name (if it has).

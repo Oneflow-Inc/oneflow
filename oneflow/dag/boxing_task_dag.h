@@ -5,7 +5,7 @@
 #include "dag/task_dag.h"
 #include "dag/boxing_info.h"
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 class BoxingTaskDag : public TaskDag<Dtype> {
  public:
@@ -55,5 +55,5 @@ class BoxingTaskDag : public TaskDag<Dtype> {
   BoxingTaskDag(const BoxingTaskDag& other) = delete;
   BoxingTaskDag operator=(const BoxingTaskDag& other) = delete;
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _BOXING_TASK_DAG_H_

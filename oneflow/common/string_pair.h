@@ -4,7 +4,7 @@
 #include <functional>
 // See http://en.cppreference.com/w/cpp/utility/hash
 // http://stackoverflow.com/questions/17016175/c-unordered-map-using-a-custom-class-type-as-the-key
-namespace caffe {
+namespace oneflow {
 struct StringPair {
   StringPair() {}
   StringPair(const std::string& first_name, const std::string& second_name)
@@ -15,11 +15,11 @@ struct StringPair {
   std::string first;
   std::string second;
 };
-}  // caffe
+}  // oneflow
 namespace std {
 template <>
-struct hash<caffe::StringPair> {
-  typedef caffe::StringPair argument_type;
+struct hash<oneflow::StringPair> {
+  typedef oneflow::StringPair argument_type;
   typedef std::size_t result_type;
   result_type operator()(argument_type const& s) const {
     result_type const h1(std::hash<std::string>()(s.first));

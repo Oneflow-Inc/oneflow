@@ -12,18 +12,20 @@
 ActorDag consists of a forward Dag (basically cloned from PipeDag) and a 
 backward Dag (if necessary).
 */
-namespace caffe {
+namespace oneflow {
 enum class TaskType;
 
 class EventMeta;
 
 class ActorMeta;
 
+/*
 template <typename DAG, bool isconst = false>
 class DagIterator;
 
 template <typename DAG, bool isconst = false>
 class DagReverseIterator;
+*/
 
 template <typename Dtype>
 class LogicalDag;
@@ -157,5 +159,5 @@ private:
     ActorDag(const ActorDag& other) = delete;
     ActorDag& operator=(const ActorDag& other) = delete;
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _DAG_ACTOR_DAG_H_

@@ -5,7 +5,7 @@
 #include <cudnn.h>
 
 #include "common/common.h"
-#include "caffe.pb.h"
+#include "proto/oneflow.pb.h"
 
 #define CUDNN_VERSION_MIN(major, minor, patch) \
   (CUDNN_VERSION >= (major * 1000 + minor * 100 + patch))
@@ -45,7 +45,7 @@ return "CUDNN_STATUS_LICENSE_ERROR";
 return "Unknown cudnn status";
 }
 */
-namespace caffe {
+namespace oneflow {
 namespace cudnn {
   template <typename Dtype> class dataType;
   template<> class dataType<float>  {
@@ -122,10 +122,10 @@ namespace cudnn {
       LOG(FATAL) << "Unknown pooling method.";
     }
     CUDNN_CHECK(cudnnCreatePoolingDescriptor(pool_desc));
-    CUDNN_CHECK(cudnnSetPooling2dDescriptor(*pool_desc, *mode, h, w,
-      pad_h, pad_w, stride_h, stride_w));
+    //CUDNN_CHECK(cudnnSetPooling2dDescriptor(*pool_desc, *mode, h, w,
+    //  pad_h, pad_w, stride_h, stride_w));
   }
 }  // namespace cudnn
-}  // namespace caffe
+}  // namespace oneflow
 //#endif  // USE_CUDNN
 #endif  //_UTIL_CUDNN_H_

@@ -5,7 +5,7 @@
 #include <vector>
 #include <array>
 
-namespace caffe {
+namespace oneflow {
 
 enum class DeviceType {
   kCPU = 0,
@@ -46,5 +46,5 @@ class MemoryManager {
 
   static MemoryManager* Get();
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _MEMORY_MEMORY_MANAGER_H_

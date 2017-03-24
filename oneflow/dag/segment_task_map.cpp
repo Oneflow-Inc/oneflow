@@ -1,7 +1,7 @@
 #include "dag/segment_task_map.h"
 #include <glog/logging.h>
 
-namespace caffe {
+namespace oneflow {
 
 void SegmentTaskMap::AddSegmentForwardTaskPair(const std::string& segment_name,
   int32_t device_id, const std::string& forward_task) {
@@ -52,4 +52,4 @@ std::vector<int32_t> SegmentTaskMap::GetDeviceIDs(
 
 
 
-}  // namespace caffe
+}  // namespace oneflow

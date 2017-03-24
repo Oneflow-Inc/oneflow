@@ -8,16 +8,19 @@
 #include "dag/dag.h"
 #include "common/string_pair.h"
 #include "context/placement_info.h"
-namespace caffe {
+
+namespace oneflow {
 class EnvelopeMeta;
 
 class SegmentMeta;
 
+/*
 template <typename DAG, bool isconst = false>
 class DagIterator;
 
 template <typename DAG, bool isconst = false>
 class DagReverseIterator;
+*/
 
 template <typename Dtype>
 class LogicalDag;
@@ -112,5 +115,5 @@ private:
   SegmentDag(const SegmentDag& other) = delete;
   SegmentDag& operator=(const SegmentDag& other) = delete;
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _DAG_SEGMENT_DAG_H_

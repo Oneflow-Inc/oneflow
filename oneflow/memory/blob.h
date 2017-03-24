@@ -5,12 +5,12 @@
 #include "common/common.h"
 #include "common/shape.h"
 #include "memory/memory_manager.h"
-#include "caffe.pb.h"
+#include "proto/oneflow.pb.h"
 #include <functional>
 #include <google/protobuf/repeated_field.h>
 #include <type_traits>
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 class Blob {
  public:
@@ -126,5 +126,5 @@ inline void Blob<Dtype>::set_data_ptr(void* ptr, bool is_own) {
 }
 
 
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _MEMORY_BLOB_H_

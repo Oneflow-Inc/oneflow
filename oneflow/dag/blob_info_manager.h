@@ -7,7 +7,7 @@
 #include <unordered_set>
 #include "common/shape.h"
 
-namespace caffe {
+namespace oneflow {
 class BlobInfoManager {
 public:
   BlobInfoManager() = default;
@@ -117,5 +117,5 @@ private:
   BlobInfoManager(const BlobInfoManager& other) = delete;
   BlobInfoManager& operator=(const BlobInfoManager& other) = delete;
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _BLOB_INFO_MANAGER_H_

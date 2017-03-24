@@ -7,7 +7,7 @@
 #include "memory/blob.h"
 #include "context/one.h"
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 void LoaderLayer<Dtype>::InitParamFromProto() {
   CHECK(param_ == nullptr);

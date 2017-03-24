@@ -8,7 +8,7 @@
 #include <unordered_set>
 #include <glog/logging.h>
 
-namespace caffe {
+namespace oneflow {
 namespace strings {
 
 bool StartsWith(const std::string& source, const std::string& search_for) {
@@ -74,4 +74,4 @@ bool has_diff_correspondence(const std::vector<std::string>& blob_names,
 }
 
 }  // namespace strings
-}  // namespace caffe
+}  // namespace oneflow

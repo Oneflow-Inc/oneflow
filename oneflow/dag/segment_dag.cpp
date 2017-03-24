@@ -10,7 +10,7 @@
 #include "layers/base_layer.h"
 #include "common/string_pair.h"
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 SegmentDag<Dtype>::SegmentDag(
   std::shared_ptr<LogicalDag<Dtype>> logical_dag, PathType path_type,
@@ -670,4 +670,4 @@ std::string SegmentDag<Dtype>::build_segment_name(
   return segment_name;
 }
 INSTANTIATE_CLASS(SegmentDag);
-}  // namespace caffe
+}  // namespace oneflow

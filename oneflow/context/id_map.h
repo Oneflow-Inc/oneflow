@@ -5,9 +5,9 @@
 #include <vector>
 #include <unordered_map>
 #include <memory>
-#include "caffe.pb.h"
+#include "proto/oneflow.pb.h"
 
-namespace caffe {
+namespace oneflow {
 /*
 Each device has several identities. Either |logical_id| or |device_id| can uniquely
 indicate a device in all the available devices on all the allocated machines.
@@ -188,5 +188,5 @@ class IDMap {
   IDMap& operator=(const IDMap& other) = delete;
 };
 
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _CONTEXT_ID_MAP_H_

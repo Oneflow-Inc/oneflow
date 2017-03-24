@@ -8,7 +8,7 @@
 /*
 Actually cover kDataTask and kComputeTask
 */
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 class ComputeTaskDag : public TaskDag<Dtype> {
  public:
@@ -103,5 +103,5 @@ private:
   ComputeTaskDag(const ComputeTaskDag& other) = delete;
   ComputeTaskDag operator=(const ComputeTaskDag& other) = delete;
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _COMPUTE_TASK_DAG_H_

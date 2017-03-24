@@ -2,12 +2,12 @@
 #define GRPC_SERVER_H_
 
 #include "grpc++/grpc++.h"
-#include "async_service_interface.h"
-#include "master_env.h"
-#include "worker_env.h"
-#include "grpc_channel.h"
-#include "platform_env.h"
-#include "server_lib.h"
+#include "net/async_service_interface.h"
+#include "net/master_env.h"
+#include "net/worker_env.h"
+#include "net/grpc_channel.h"
+#include "net/platform_env.h"
+#include "net/server_lib.h"
 
 namespace oneflow{
 

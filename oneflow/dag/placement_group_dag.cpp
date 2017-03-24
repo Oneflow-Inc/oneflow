@@ -12,7 +12,7 @@
 #include "context/strategy_descriptor.h"
 #include "layers/base_layer.h"
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 PlacementGroupDag<Dtype>::PlacementGroupDag(
   std::shared_ptr<LogicalDag<Dtype>> logical_dag,
@@ -363,4 +363,4 @@ std::vector<std::string> PlacementGroupDag<Dtype>::GetLayerNamesInGroup(
   return layer_set;
 }
 INSTANTIATE_CLASS(PlacementGroupDag);
-}  // namespace caffe
+}  // namespace oneflow

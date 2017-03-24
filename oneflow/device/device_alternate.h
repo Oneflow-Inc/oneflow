@@ -41,14 +41,14 @@
   do { \
     cublasStatus_t status = condition; \
     CHECK_EQ(status, CUBLAS_STATUS_SUCCESS) << " " \
-      << caffe::cublasGetErrorString(status); \
+      << oneflow::cublasGetErrorString(status); \
   } while (0)
 
 #define CURAND_CHECK(condition) \
   do { \
     curandStatus_t status = condition; \
     CHECK_EQ(status, CURAND_STATUS_SUCCESS) << " " \
-      << caffe::curandGetErrorString(status); \
+      << oneflow::curandGetErrorString(status); \
   } while (0)
 
 // CUDA: grid stride looping
@@ -78,17 +78,17 @@ inline int CAFFE_GET_BLOCKS(const int N) {
 do {\
 	curandStatus_t status = condition; \
 	CHECK_EQ(status, CURAND_STATUS_SUCCESS) << " " \
-	<< caffe::curandGetErrorString(status); \
+	<< oneflow::curandGetErrorString(status); \
 } while (0)
 
 
-namespace caffe {
+namespace oneflow {
 // CUDA: library error reporting.
 const char* cublasGetErrorString(cublasStatus_t error);
 const char* curandGetErrorString(curandStatus_t error);
 
 // NOTE(jiyuan): Adapted from CUDA V6.5 sample code "helper_cuda.h"
 int32_t _ConvertSMVer2Cores(int32_t major, int32_t minor);
-}  // namespace caffe
+}  // namespace oneflow
 
 #endif  // _DEVICE_DEVICE_ALTERNATE_H_

@@ -7,6 +7,8 @@
 #include "dag/dag_node.h"
 #include "dag/dag.h"
 #include "context/placement_info.h"
+#include "dag/dag_builder.cpp"
+#include "dag/dag_iterator.h"
 /*
 PlacementGroupDag
 It is used to specify the binding relation between layers in LogicalDag and
@@ -23,16 +25,18 @@ policy;
 inferred from other neighboring PlacementGroup's PlacementInfo;
 (6) The PlacementGroupDag will fill the PlacementInfo of each layer in LogicalDag;
 */
-namespace caffe {
+namespace oneflow {
 class BlobMeta;
 
 class PlacementGroupMeta;
 
+/*
 template<typename DAG, bool isconst = false>
 class DagIterator;
 
-template<typename DAG, bool isconst = false>
+template<typename DAG, bool isconst = false> 
 class DagReverseIterator;
+*/
 
 template <typename Dtype>
 class LogicalDag;
@@ -105,5 +109,5 @@ class PlacementGroupDag : public Dag<BlobMeta, PlacementGroupMeta> {
     PlacementGroupDag(const PlacementGroupDag& other) = delete;
     PlacementGroupDag& operator=(const PlacementGroupDag& other) = delete;
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _DAG_PLACEMENT_GROUP_DAG_H_

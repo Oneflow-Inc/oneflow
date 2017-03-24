@@ -1,23 +1,23 @@
 #include "context/config_parser.h"
 #include <unordered_map>
 #include <glog/logging.h>
-#include "caffe.pb.h"
-#include "proto_io.h"
+#include "proto/oneflow.pb.h"
+#include "proto/proto_io.h"
 #include "context/solver_descriptor.h"
 #include "context/machine_descriptor.h"
 #include "context/net_descriptor.h"
 #include "context/resource_descriptor.h"
 #include "context/strategy_descriptor.h"
 
-namespace caffe {
+namespace oneflow {
 ConfigParser::ConfigParser(const std::string& solver_name)
   : machine_descriptor_(nullptr),
     net_descriptor_(nullptr),
     resource_descriptor_(nullptr),
     strategy_descriptor_(nullptr) {
 
-  caffe::SolverProto solver;
-  caffe::ReadProtoFromTextFileOrDie(solver_name, &solver);
+  oneflow::SolverProto solver;
+  oneflow::ReadProtoFromTextFileOrDie(solver_name, &solver);
 
   CHECK(solver.has_machine_id());
   machine_descriptor_.reset(new MachineDescriptor(solver));
@@ -26,8 +26,8 @@ ConfigParser::ConfigParser(const std::string& solver_name)
 
   CHECK(solver.has_train_net());
   std::string train_net_name = solver.train_net();
-  caffe::NetParameter net_param;
-  caffe::ReadProtoFromTextFileOrDie(train_net_name, &net_param);
+  oneflow::NetParameter net_param;
+  oneflow::ReadProtoFromTextFileOrDie(train_net_name, &net_param);
   net_descriptor_.reset(new NetDescriptor(net_param));
 
   CHECK(solver.has_resource());
@@ -36,8 +36,8 @@ ConfigParser::ConfigParser(const std::string& solver_name)
 
   CHECK(solver.has_strategy());
   std::string strategy_name = solver.strategy();
-  caffe::Strategy strategy;
-  caffe::ReadProtoFromTextFileOrDie(strategy_name, &strategy);
+  oneflow::Strategy strategy;
+  oneflow::ReadProtoFromTextFileOrDie(strategy_name, &strategy);
   strategy_descriptor_.reset(
     new StrategyDescriptor(strategy, resource_descriptor_));
 }

@@ -7,7 +7,7 @@
 #include <memory>
 #include <glog/logging.h>
 
-namespace caffe {
+namespace oneflow {
 
 enum class NodeType {
   kUnknown = 0,
@@ -130,5 +130,5 @@ inline std::shared_ptr<Op>& OpNode<Op>::mutable_op() {
   return op_;
 }
 
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _DAG_DAG_NODE_H_

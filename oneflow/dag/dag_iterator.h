@@ -2,7 +2,7 @@
 #define _DAG_DAG_ITERATOR_H_
 #include <unordered_map>
 #include <queue>
-namespace caffe {
+namespace oneflow {
 
 class DagNode;
 
@@ -192,5 +192,5 @@ void DagReverseIterator<DAG, isconst>::ProcessCurrentNodePredecessors() {
     }
   }
 }
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _DAG_DAG_ITERATOR_H_

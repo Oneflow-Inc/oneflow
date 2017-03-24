@@ -1,6 +1,6 @@
 #ifndef _DAG_TASK_TYPE_H_
 #define _DAG_TASK_TYPE_H_
-namespace caffe {
+namespace oneflow {
 enum class TaskType {
   kUnknownTask = 0,
   kDataTask,
@@ -9,5 +9,5 @@ enum class TaskType {
   kNetTask,
   kComputeTask
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _DAG_TASK_TYPE_H_

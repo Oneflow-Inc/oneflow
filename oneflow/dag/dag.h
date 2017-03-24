@@ -20,7 +20,7 @@ class DagIterator;
 template <typename DAG, bool isconst = false>
 class DagReverseIterator;
 
-namespace caffe {
+namespace oneflow {
 template<typename Data, typename Op>
 class Dag {
   friend class DagIterator<Dag<Data, Op>>;
@@ -883,5 +883,5 @@ std::vector<std::string> Dag<Data, Op>::GetLastOpNames() const {
   return op_names;
 }
 
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _DAG_DAG_H_

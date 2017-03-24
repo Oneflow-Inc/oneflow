@@ -15,7 +15,7 @@
 #include "layers/base_layer.h"
 #include "layers/layer_factory.h"
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 NetTaskDag<Dtype>::NetTaskDag(const DagBuilder<Dtype>& dag_builder,
   TaskType type, int32_t task_id, PathType path_type,
@@ -184,7 +184,7 @@ void NetTaskDag<Dtype>::AddProducedRegisterInfos() {
   auto op_meta = op_node->op();
   auto layer = op_meta->layer();
 
-  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  auto& id_map = oneflow::TheOne<Dtype>::id_map();
   int32_t group_local_id = id_map->new_group_local_id(task_id_);
   int64_t group_id
     = id_map->group_id_from_task_id_and_group_local_id(task_id_, group_local_id);
@@ -325,4 +325,4 @@ void NetTaskDag<Dtype>::ForwardSetupInNetTask() {
 }
 
 INSTANTIATE_CLASS(NetTaskDag);
-}  // namespace caffe
+}  // namespace oneflow

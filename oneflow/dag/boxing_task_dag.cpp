@@ -12,7 +12,7 @@
 #include "layers/layer_factory.h"
 #include "task/job_manager.h"
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 BoxingTaskDag<Dtype>::BoxingTaskDag(const DagBuilder<Dtype>& dag_builder,
   TaskType type, int32_t task_id, PathType path_type,
@@ -224,7 +224,7 @@ void BoxingTaskDag<Dtype>::UpdateRegisterInfo(
   RegisterType register_type{ RegisterType::kDataType };
   DeviceType device_type{ DeviceType::kCPU };
 
-  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  auto& id_map = oneflow::TheOne<Dtype>::id_map();
   auto register_infos_it
     = register_infos->find(second_segment);
   if (register_infos_it == register_infos->end()) {
@@ -458,4 +458,4 @@ std::string BoxingTaskDag<Dtype>::build_layer_name(const std::string& pipe_name,
   return strings::Join({ pipe_name, blob_name }, "_");
 }
 INSTANTIATE_CLASS(BoxingTaskDag);
-}  // namespace caffe
+}  // namespace oneflow

@@ -1,7 +1,7 @@
 #include "context/placement_info.h"
 #include "common/stl_util.h"
 
-namespace caffe {
+namespace oneflow {
 PlacementInfo::PlacementInfo() : parallel_policy_(kUnknownParallel) {
 }
 
@@ -95,4 +95,4 @@ void PlacementGroupInfo::InitPlacementInfoWithMachineGroup(
   placement_info_.InitWithMachineGroup(begin, end, parallel_policy);
 }
 
-}  // namespace caffe
+}  // namespace oneflow

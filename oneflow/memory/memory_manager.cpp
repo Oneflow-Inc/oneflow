@@ -8,7 +8,7 @@
 #include "memory/gpu_device_memory.h"
 #include "memory/cuda_pinned_memory.h"
 
-namespace caffe {
+namespace oneflow {
 class MemoryManagerImpl : public MemoryManager {
  public:
   Handle Alloc(size_t size, Context ctx) override;
@@ -91,4 +91,4 @@ MemoryManager* MemoryManager::Get() {
   static std::shared_ptr<MemoryManager> inst(new MemoryManagerImpl());
   return inst.get();
 }
-}  // namespace caffe
+}  // namespace oneflow

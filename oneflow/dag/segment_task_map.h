@@ -3,7 +3,7 @@
 #include <unordered_map>
 #include <string>
 #include <cstdint>
-namespace caffe {
+namespace oneflow {
 // A compute segment may be instantiated on multiple devices. On each device, 
 // there is a TaskDag corresponding to this segment.
 
@@ -30,5 +30,5 @@ private:
   std::unordered_map<std::string, std::unordered_map<int32_t, std::string>>
     segment_to_backward_task_pair_;
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _DAG_SEGMENT_TASK_MAP_H_

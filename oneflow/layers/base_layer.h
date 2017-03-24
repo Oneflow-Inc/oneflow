@@ -13,7 +13,7 @@
 #include "layers/layer_util.h"
 #include "device/device_alternate.h"
 #include "common/cudnn_utils.h"
-namespace caffe {
+namespace oneflow {
 
 struct ContextParam {
   cublasHandle_t cublas_handle;

@@ -35,7 +35,6 @@ find_library(GRPCPP_LIBRARY NAMES grpc++)
 find_library(GPR_LIBRARY NAMES gpr)
 set(GRPC_LIBRARIES ${GRPCPP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
 list(APPEND ONEFLOW_LINKER_LIBS ${GRPC_LIBRARIES})
-
 #protobuf
 include(FindPROTOC)
 file(GLOB_RECURSE oneflow_protos RELATIVE ${oneflow_source_dir} "*.proto")
@@ -46,7 +45,7 @@ list(APPEND ONEFLOW_LINKER_LIBS pbobj)
 set(GENERATED_PB_PATH "${CMAKE_BINARY_DIR}/oneflow/")
 file(MAKE_DIRECTORY ${GENERATED_PB_PATH})
 include_directories(${GENERATED_PB_PATH})
-#
+
 #grpc
 #include(FindGRPC)
 #GRPC_GENERATE_CPP(GRPC_SRCS GRPC_HDRS ${oneflow_source_dir} ${oneflow_protos})
@@ -56,15 +55,16 @@ include_directories(${GENERATED_PB_PATH})
 #file(MAKE_DIRECTORY ${GENERATED_GRPC_PATH})
 #include_directories(${GENERATED_GRPC_PATH})
 
-
 include_directories(${oneflow_source_dir}/oneflow/)
 include_directories(/usr/local/cuda/include)
 MESSAGE(STATUS "oneflow_source_dir = ${oneflow_source_dir}")
-file(GLOB_RECURSE oneflow_all_cc "${oneflow_source_dir}/oneflow/net/*.cc")
+file(GLOB_RECURSE oneflow_all_cc "${oneflow_source_dir}/oneflow/*.cpp")
 MESSAGE(STATUS "SRC_FILES = ${oneflow_all_cc}")
 add_library(srcobj ${oneflow_all_cc})
 #add_dependencies(srcobj grpcobj)
 list(APPEND ONEFLOW_LINKER_LIBS srcobj)
 
+
 link_libraries(grpc++_unsecure grpc gpr glog gflags ${ONEFLOW_LINKER_LIBS})
+#ADD_EXECUTABLE(server_lib oneflow/main.cc oneflow/proto/proto_io.cpp oneflow/context/one.cpp oneflow/context/resource_descriptor.cpp oneflow/task/node_manager.cpp ${GRPC_SRCS} ${oneflow_all_cc})
 ADD_EXECUTABLE(server_lib oneflow/main.cc ${GRPC_SRCS} ${oneflow_all_cc})

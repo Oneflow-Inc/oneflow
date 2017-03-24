@@ -2,10 +2,10 @@
 #define _CONTEXT_ONE_H_
 #include <memory>
 #include <string>
-#include "caffe.pb.h"
-#include "proto_io.h"
+#include "proto/oneflow.pb.h"
+#include "proto/proto_io.h"
 
-namespace caffe {
+namespace oneflow {
 class ConfigParser;
 class IDMap;
 template <typename Dtype>
@@ -99,5 +99,5 @@ inline std::shared_ptr<PathManager<Dtype>> TheOne<Dtype>::path_manager() {
   return Get().path_manager_;
 }
 
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _CONTEXT_ONE_H_

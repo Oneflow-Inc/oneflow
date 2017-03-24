@@ -10,7 +10,7 @@
 /*
 Contain all the required info needed for creating a new register.
 */
-namespace caffe {
+namespace oneflow {
 enum class RegisterType {
   kDataType = 0,
   kDataDiffType,
@@ -101,5 +101,5 @@ class RegisterInfo {
   int64_t aligned_memory_needed_;
   int64_t total_elem_num_;
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _REGISTER_INFO_H_

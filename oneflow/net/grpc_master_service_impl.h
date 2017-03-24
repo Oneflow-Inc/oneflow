@@ -25,8 +25,8 @@ limitations under the License.
 #include "grpc++/impl/codegen/stub_options.h"
 #include "grpc++/impl/codegen/sync_stream.h"
 
-#include "grpc_serialization_traits.h"
-#include "master.pb.h"
+#include "net/grpc_serialization_traits.h"
+#include "proto/master.pb.h"
 
 // Contains potentially large GraphDef.
 TF_GRPC_ALLOW_UNLIMITED_MESSAGE_SIZE(oneflow::CreateSessionRequest);

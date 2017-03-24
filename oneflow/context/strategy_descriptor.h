@@ -5,17 +5,17 @@
 #include <memory>
 #include <unordered_map>
 #include <cstdint>
-#include "caffe.pb.h"
+#include "proto/oneflow.pb.h"
 #include <glog/logging.h>
 #include "context/placement_info.h"
 /*
 Parsed content from strategy proto.
 */
-namespace caffe {
+namespace oneflow {
 class ResourceDescriptor;
 class StrategyDescriptor {
  public:
-  StrategyDescriptor(const caffe::Strategy& strategy,
+  StrategyDescriptor(const oneflow::Strategy& strategy,
     std::shared_ptr<ResourceDescriptor> resource_descriptor);
   ~StrategyDescriptor();
 
@@ -71,8 +71,8 @@ class StrategyDescriptor {
 
   int32_t pipeline_depth_{ 1 };
 
-  void Init(const caffe::Strategy& strategy);
-  void InitOneGroup(const caffe::Strategy& strategy, int32_t group_id);
+  void Init(const oneflow::Strategy& strategy);
+  void InitOneGroup(const oneflow::Strategy& strategy, int32_t group_id);
   void ParsePlacementInfo(const PlacementGroup& placement_group,
     PlacementGroupInfo *placement_group_info);
   void HandleDeviceGroup(const PlacementGroup& placement_group,
@@ -83,5 +83,5 @@ class StrategyDescriptor {
   StrategyDescriptor(const StrategyDescriptor& other) = delete;
   StrategyDescriptor& operator=(const StrategyDescriptor& other) = delete;
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _CONTEXT_STRATEGY_DESCRIPTOR_H_

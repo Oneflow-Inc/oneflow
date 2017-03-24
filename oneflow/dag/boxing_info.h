@@ -4,7 +4,7 @@
 #include <string>
 #include <cstdint>
 #include "common/string_pair.h"
-namespace caffe {
+namespace oneflow {
 using SegmentSegmentPair = StringPair;
 class BoxingInfoElement {
 public:
@@ -113,5 +113,5 @@ private:
   std::unordered_map<std::string, BoxingInfo> boxing_to_info_;
 };
 
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _DAG_BOXING_INFO_

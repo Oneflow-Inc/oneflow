@@ -1,6 +1,6 @@
 #include "device/device_alternate.h"
 
-namespace caffe {
+namespace oneflow {
 const char* cublasGetErrorString(cublasStatus_t error) {
   switch (error) {
   case CUBLAS_STATUS_SUCCESS:
@@ -102,4 +102,4 @@ int32_t _ConvertSMVer2Cores(int32_t major, int32_t minor) {
     nGpuArchCoresPerSM[index - 1].Cores);
   return nGpuArchCoresPerSM[index - 1].Cores;
 }
-}  // namespace caffe
+}  // namespace oneflow

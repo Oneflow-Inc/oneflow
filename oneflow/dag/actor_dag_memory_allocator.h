@@ -9,7 +9,7 @@
 #include "common/str_util.h"
 #include <glog/logging.h>
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 class ActorDag;
 
@@ -76,5 +76,5 @@ class ActorDagMemoryAllocator {
   std::unordered_map<std::string, MemoryManager::Handle> name_to_mem_handle_;
   std::unordered_map<std::string, TaskMemMapType> name_to_comp_task_mem_;
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _DAG_ACTOR_DAG_MEMORY_ALLOCATOR_H_

@@ -9,7 +9,7 @@
 #include "context/id_map.h"
 #include "context/one.h"
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 StageDag<Dtype>::StageDag(
   std::shared_ptr<LogicalDag<Dtype>> logical_dag,
@@ -429,4 +429,4 @@ std::vector<std::string> StageDag<Dtype>::StageSegmentMap::StagesFromSegment(
 }
 
 INSTANTIATE_CLASS(StageDag);
-}  // namespace caffe
+}  // namespace oneflow

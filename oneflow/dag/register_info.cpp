@@ -5,7 +5,7 @@
 #include "memory/mem_util.h"
 #include "memory/memory_manager.h"
 
-namespace caffe {
+namespace oneflow {
 RegisterInfo::RegisterInfo()
   : RegisterInfo(RegisterType::kDataType, DeviceType::kCPU, -1, false) {
 }
@@ -171,4 +171,4 @@ void RegisterInfo::Finalize() {
   }
   is_finalized_ = true;
 }
-}  // namespace caffe
+}  // namespace oneflow

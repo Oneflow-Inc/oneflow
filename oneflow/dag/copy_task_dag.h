@@ -4,7 +4,7 @@
 #include <cstdint>
 #include "dag/task_dag.h"
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 class CopyTaskDag : public TaskDag<Dtype> {
  public:
@@ -40,5 +40,5 @@ class CopyTaskDag : public TaskDag<Dtype> {
   CopyTaskDag(const CopyTaskDag& other) = delete;
   CopyTaskDag operator=(const CopyTaskDag& other) = delete;
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _COPY_TASK_DAG_H_

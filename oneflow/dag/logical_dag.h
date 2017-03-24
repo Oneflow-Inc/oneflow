@@ -10,8 +10,9 @@
 #include "dag/dag_node.h"
 #include "dag/dag.h"
 #include "layers/layer_factory.h"
-#include "caffe.pb.h"
+#include "proto/oneflow.pb.h"
 #include "context/placement_info.h"
+#include "dag/dag_iterator.h"
 
 /*
 A DAG consists of a set layers specified by users through external config file.
@@ -20,7 +21,7 @@ The layers MUST be declared in a topological sorting order. In other words,
 while declaring a new layer, all its predecessors should have been declared
 before this new layer.
 */
-namespace caffe {
+namespace oneflow {
 class BlobMeta;
 
 template <typename Dtype>
@@ -28,11 +29,13 @@ class LayerMeta;
 
 class NetDescriptor;
 
+/*
 template <typename DAG, bool isconst = false>
 class DagIterator;
 
 template <typename DAG, bool isconst = false>
 class DagReverseIterator;
+*/
 
 template <typename Dtype>
 class LogicalDag : public Dag<BlobMeta, LayerMeta<Dtype>> {
@@ -134,5 +137,5 @@ private:
   LogicalDag(const LogicalDag& other) = delete;
   LogicalDag& operator=(const LogicalDag& other) = delete;
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _DAG_LOGIC_DAG_H_
