@@ -20,6 +20,10 @@ class LogicalDag;
 template <typename Dtype>
 class ModelStorePath : public BasePath<Dtype> {
 public:
+  using BasePath<Dtype>::dag_builder_dict_;
+  using BasePath<Dtype>::path_manager_;
+
+
   ModelStorePath(std::shared_ptr<DataPath<Dtype>> data_path,
     PathManager<Dtype>* path_manager);
   virtual ~ModelStorePath() {}

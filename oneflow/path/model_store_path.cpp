@@ -1,7 +1,7 @@
 #include <unordered_map>
 #include <string>
 #include <vector>
-#include "oneflow.pb.h"
+#include "proto/oneflow.pb.h"
 #include "common/common.h"
 #include "context/config_parser.h"
 #include "context/net_descriptor.h"
@@ -26,7 +26,7 @@ namespace oneflow {
 template <typename Dtype>
 ModelStorePath<Dtype>::ModelStorePath(std::shared_ptr<DataPath<Dtype>> data_path,
    PathManager<Dtype>* path_manager)
-  : BasePath(PathType::kModelStorePath, path_manager), data_path_(data_path),
+  : BasePath<Dtype>::BasePath(PathType::kModelStorePath, path_manager), data_path_(data_path),
     is_train_(data_path_->is_train()), index_(0), seekpos_(0) {
 }
 
@@ -208,5 +208,5 @@ void ModelStorePath<Dtype>::StrategyForModelStorePath(
   store_placement_group->mutable_layer_set()->add_name(store_layer_name_);
   store_placement_group->set_allocated_device_group(store_device_group);
 }
-INSTANTIATE_CLASS(ModelStorePath);
+//INSTANTIATE_CLASS(ModelStorePath);
 }  // namespace oneflow
