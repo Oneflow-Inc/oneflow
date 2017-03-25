@@ -17,6 +17,10 @@ class StrategyDescriptor;
 template <typename Dtype>
 class DataPath : public BasePath<Dtype> {
 public:
+  using BasePath<Dtype>::dag_builder_dict_;
+  using BasePath<Dtype>::GetDagBuilder;
+
+
   DataPath(const oneflow::NetParameter& net_param,
     std::shared_ptr<StrategyDescriptor> strategy_descriptor,
     PathManager<Dtype>* path_manager);

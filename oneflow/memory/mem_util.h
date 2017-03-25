@@ -1,5 +1,6 @@
 #ifndef _MEM_UTIL_H_
 #define _MEM_UTIL_H_
+#include <stdio.h>
 #include <cstdint>
 namespace oneflow {
 int32_t Log2Floor(uint32_t n);
