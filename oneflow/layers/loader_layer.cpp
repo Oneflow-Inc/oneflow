@@ -58,7 +58,7 @@ void LoaderLayer<Dtype>::Backward(const ContextParam& ctx,
   GET_CONCRETE_POINTER(LoaderModel, model, model_param);
   // Use ctx, data and model
 }
-INSTANTIATE_LAYER_FUNCS(LoaderLayer);
-INSTANTIATE_CLASS(LoaderLayer);
-REGISTER_LAYER_CLASS(Loader);
+//INSTANTIATE_LAYER_FUNCS(LoaderLayer);
+//INSTANTIATE_CLASS(LoaderLayer);
+//REGISTER_LAYER_CLASS(Loader);
 }

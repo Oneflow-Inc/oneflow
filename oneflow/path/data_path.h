@@ -1,8 +1,8 @@
 #ifndef _PATH_DATA_PATH_H_
 #define _PATH_DATA_PATH_H_
 #include <memory>
-#include "oneflow.pb.h"
-#include "proto_io.h"
+#include "proto/oneflow.pb.h"
+#include "proto/proto_io.h"
 #include "path/base_path.h"
 #include "common/task_type.h"
 

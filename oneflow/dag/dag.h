@@ -104,7 +104,7 @@ class Dag {
     const std::string& second) const;
   void RemoveNodeFromDag(int32_t node_id);
 
- protected:
+ //protected:
   PathType path_type_;
   DagNode* start_;
   int32_t start_id_;

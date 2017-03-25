@@ -14,6 +14,13 @@ enum class DeviceType {
   kUnknown
 };
 
+enum class MemoryType {
+  kHostPageableMemory = 0,
+  kHostPinnedMemory,
+  kDeviceMemory,
+  kUnknown
+};
+
 // Memory Manager is used for global memory allocation
 class MemoryManager {
  public:

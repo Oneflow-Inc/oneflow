@@ -11,7 +11,7 @@
 #include "dag/dag_builder.h"
 #include "layers/base_layer.h"
 #include "layers/loader_layer.h"
-#include "oneflow.pb.h"
+#include "proto/oneflow.pb.h"
 #include "path/base_path.h"
 #include "path/data_path.h"
 #include "path/model_load_path.h"
@@ -24,7 +24,7 @@ namespace oneflow {
 template <typename Dtype>
 ComputeTaskDag<Dtype>::ComputeTaskDag(const DagBuilder<Dtype>& dag_builder,
   TaskType type, int32_t task_id, PathType path_type,
-  const std::string& actor_name, bool is_forward) : TaskDag(
+  const std::string& actor_name, bool is_forward) : TaskDag<Dtype>::TaskDag(
   dag_builder, type, task_id, path_type, actor_name, is_forward) {
 }
 template <typename Dtype>
@@ -80,7 +80,7 @@ void ComputeTaskDag<Dtype>::BuildFromLayer(const std::string& layer_name) {
   // TaskDag and LogicalDag do not share the same layer object
   auto op_node = AddOpNode(layer_name, layer_type, layer_param_str);
   auto layer = op_node->op()->layer();
-
+ 
   std::vector<DNode*> input_nodes;
   auto input_vars = layer->GetInputVars();
   for (auto input_var : input_vars) {
@@ -934,7 +934,7 @@ void ComputeTaskDag<Dtype>::ForwardSetupPrepareDataTask() {
   // max_data_parallel_num in StrategyDescriptor and the machine_num in
   // ResourceDescriptor. The third approach is not that general but is the
   // simplest, we use (3) currently.
-  auto& strategy_descriptor =
+  auto&& strategy_descriptor =
     oneflow::TheOne<Dtype>::config_parser()->strategy_descriptor();
   int32_t device_num_per_data_provider
     = strategy_descriptor->device_num_per_data_provider();
@@ -948,7 +948,7 @@ void ComputeTaskDag<Dtype>::ForwardSetupPrepareDataTask() {
   int32_t piece_size_each_data_provider
     = piece_size_each_device * device_num_per_data_provider;
 
-  auto loader_layers = GetFirstOpNames();
+  auto loader_layers = this->GetFirstOpNames();
   CHECK_EQ(loader_layers.size(), 1);
   auto loader_node = GetOpNode(loader_layers[0]);
   auto &loader_meta = loader_node->op();
@@ -978,5 +978,4 @@ ComputeTaskDag<Dtype>::GetOutputLogicalBlobs() const {
   return segment_dag->GetOutputBlobs(segment_name);
 }
 
-INSTANTIATE_CLASS(ComputeTaskDag);
 }  // namespace oneflow

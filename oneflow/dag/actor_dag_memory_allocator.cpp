@@ -56,11 +56,11 @@ void ActorDagMemoryAllocator<Dtype>::AllocMemoryForActorTask(
   auto task_type = actor_meta->task_type();
   switch (task_type) {
     case TaskType::kDataTask: {
-      AllocMemoryForDataTask(actor_meta->mutable_dag(), actor_name);
+      AllocMemoryForDataTask(actor_meta->mutable_task_type(), actor_name);
       break;
     }
     case TaskType::kComputeTask: {
-      AllocMemoryForComputeTask(actor_meta->mutable_dag(), actor_name);
+      AllocMemoryForComputeTask(actor_meta->mutable_task_type(), actor_name);
       break;
     }
   }
@@ -111,7 +111,7 @@ void ActorDagMemoryAllocator<Dtype>::AllocMemoryForDataTask(
   MemoryManager::Context ctx;
   // TODO(Chonglin): Unify MemoryManager::Context::Device and MemoryType
   // LoaderLayer should be run on CPU
-  ctx.dev_type = MemoryManager::Context::kCPU;
+  //ctx.dev_type = MemoryManager::Context::kCPU;
   // Just set dev_id to 0 as it's on CPU
   ctx.dev_id = 0;
   MemoryManager::Handle handle = MemoryManager::Get()->Alloc(
@@ -179,7 +179,7 @@ void ActorDagMemoryAllocator<Dtype>::AllocMemoryForComputeTask(
   // Allocate memory from  memory manager
   MemoryManager::Context ctx;
   // TODO(Chonglin): Unify MemoryManager::Context::Device and MemoryType
-  ctx.dev_type = MemoryManager::Context::kGPU;
+  //ctx.dev_type = MemoryManager::Context::kGPU;
   ctx.dev_id = GetLocalDeviceID(actor_name);
   MemoryManager::Handle handle = MemoryManager::Get()->Alloc(
     task_memory_needed * size_of_dtype,
@@ -204,16 +204,16 @@ void ActorDagMemoryAllocator<Dtype>::AllocMemoryForComputeTask(
 
 template <typename Dtype>
 void ActorDagMemoryAllocator<Dtype>::FreeMemoryForActorTask(
-  std::shared_ptr<ActorMeta<Dtype>>& actor_meta,
+  std::shared_ptr<ActorMeta>& actor_meta,
   const std::string& actor_name) {
   auto task_type = actor_meta->task_type();
   switch (task_type) {
     case TaskType::kDataTask: {
-      FreeMemoryForDataTask(actor_meta->mutable_dag(), actor_name);
+      FreeMemoryForDataTask(actor_meta->mutable_task_type(), actor_name);
       break;
     }
     case TaskType::kComputeTask: {
-      FreeMemoryForComputeTask(actor_meta->mutable_dag(), actor_name);
+      FreeMemoryForComputeTask(actor_meta->mutable_task_type(), actor_name);
       break;
     }
   }
@@ -239,5 +239,4 @@ void ActorDagMemoryAllocator<Dtype>::FreeMemoryForComputeTask(
   MemoryManager::Get()->Free(handle);
 }
 
-INSTANTIATE_CLASS(ActorDagMemoryAllocator);
 }  // namespace oneflow

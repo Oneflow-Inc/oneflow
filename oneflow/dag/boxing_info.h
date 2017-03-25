@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <string>
 #include <cstdint>
+#include <vector>
 #include "common/string_pair.h"
 namespace oneflow {
 using SegmentSegmentPair = StringPair;

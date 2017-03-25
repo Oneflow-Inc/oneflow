@@ -17,13 +17,13 @@ namespace oneflow {
 class BlobMeta;
 
 class ClusteringMeta;
-
+/*
 template <typename DAG, bool isconst = false>
 class DagIterator;
 
 template <typename DAG, bool isconst = false>
 class DagReverseIterator;
-
+*/
 template <typename Dtype>
 class LogicalDag;
 

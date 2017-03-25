@@ -504,5 +504,4 @@ std::string ActorDag<Dtype>::GetFirstDescendantComputeNodeName(
   return "";
 }
 
-INSTANTIATE_CLASS(ActorDag);
 }  // namespace oneflow

@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 #include "layers/base_layer.h"
-#include "oneflow.pb.h"
-#include "proto_io.h"
+#include "proto/oneflow.pb.h"
+#include "proto/proto_io.h"
 
 namespace oneflow {
 template <typename Dtype>
@@ -39,11 +39,13 @@ public:
 template <typename Dtype>
 class LoaderLayer : public BaseLayer<Dtype> {
 public:
+  using BaseLayer<Dtype>::param_;
+  using BaseLayer<Dtype>::layer_name_;
   explicit LoaderLayer(const std::string& layer_name,
-    const std::string& proto_param) : BaseLayer(layer_name, proto_param) {}
+    const std::string& proto_param) : BaseLayer<Dtype>::BaseLayer(layer_name, proto_param) {}
 
   void SetPieceSize(int32_t piece_size) {
-    GET_CONCRETE_POINTER(LoaderParam, param, param_);
+    GET_CONCRETE_POINTER(LoaderParam, param, this->param_);
     param->piece_size_ = piece_size;
   }
   DataParam<Dtype>* CreateDataParam() const override {

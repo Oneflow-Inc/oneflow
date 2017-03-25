@@ -8,6 +8,7 @@
 namespace oneflow {
 template <typename Dtype>
 class BoxingTaskDag : public TaskDag<Dtype> {
+ using TaskDag<Dtype>::name_;
  public:
   BoxingTaskDag(const DagBuilder<Dtype>& dag_builder, TaskType type,
     int32_t task_id, PathType path_type, const std::string& actor_name,

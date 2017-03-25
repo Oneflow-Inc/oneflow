@@ -12,7 +12,7 @@
   CHECK_EQ(this->name_to_blob_ptr_.count(blob_##blob_variable), 0);            \
   CHECK_EQ(this->name_to_blob_ptr_.insert(                                     \
                 {blob_##blob_variable, blob_variable}).second, true);          \
-  blob_names_.push_back(blob_##blob_variable)
+  this->blob_names_.push_back(blob_##blob_variable)
 
 #define REGISTER_ARRAY_BLOB(layer_name, prefix, variable_suffix, index)           \
   CHECK(!layer_name.empty());                                                     \
@@ -54,11 +54,11 @@
   std::string prefix_of_##blob_variable = "data/";                                              \
   REGISTER_BLOB(layer_name, prefix_of_##blob_variable, blob_variable);                          \
   std::string prefix_##blob_variable = prefix_of_##blob_variable + #blob_variable;              \
-  if (blob_type == BlobType::kInput) { input_vars_.push_back(prefix_##blob_variable); }         \
-  if (blob_type == BlobType::kOutput) { output_vars_.push_back(prefix_##blob_variable); }       \
-  if (blob_type == BlobType::kOther) { other_vars_.push_back(prefix_##blob_variable); }         \
-  if (blob_type == BlobType::kInDiff) { input_diffs_.push_back(prefix_##blob_variable); }       \
-  if (blob_type == BlobType::kOutDiff) { output_diffs_.push_back(prefix_##blob_variable); }
+  if (blob_type == BlobType::kInput) { this->input_vars_.push_back(prefix_##blob_variable); }         \
+  if (blob_type == BlobType::kOutput) { this->output_vars_.push_back(prefix_##blob_variable); }       \
+  if (blob_type == BlobType::kOther) { this->other_vars_.push_back(prefix_##blob_variable); }         \
+  if (blob_type == BlobType::kInDiff) { this->input_diffs_.push_back(prefix_##blob_variable); }       \
+  if (blob_type == BlobType::kOutDiff) { this->output_diffs_.push_back(prefix_##blob_variable); }
 
 #define DATA_REGISTER_ARRAY_BLOB(layer_name, blob_variable, index, blob_type)                               \
   {                                                                                                         \

@@ -3,8 +3,8 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "oneflow.pb.h"
-#include "proto_io.h"
+#include "proto/oneflow.pb.h"
+#include "proto/proto_io.h"
 #include "path/base_path.h"
 #include "dag/node_meta.h"
 #include "dag/dag_node.h"

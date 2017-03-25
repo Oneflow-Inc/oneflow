@@ -16,7 +16,7 @@ namespace oneflow {
 template <typename Dtype>
 BoxingTaskDag<Dtype>::BoxingTaskDag(const DagBuilder<Dtype>& dag_builder,
   TaskType type, int32_t task_id, PathType path_type,
-  const std::string& actor_name, bool is_forward) : TaskDag(
+  const std::string& actor_name, bool is_forward) : TaskDag<Dtype>::TaskDag(
   dag_builder, type, task_id, path_type, actor_name, is_forward) {}
 
 template <typename Dtype>
@@ -44,10 +44,10 @@ BoxingTaskDag<Dtype>::~BoxingTaskDag() {}
 
 template <typename Dtype>
 void BoxingTaskDag<Dtype>::BuildForward() {
-  auto actor_dag = dag_builder_.actor_dag();
-  auto segment_dag = dag_builder_.segment_dag();
-  auto boxing_pipe_name = actor_dag->GetPipeNameFromActor(name_);
-  auto actor_boxing_info = actor_dag->GetForwardBoxingInfo(name_);
+  auto actor_dag = this->dag_builder_.actor_dag();
+  auto segment_dag = this->dag_builder_.segment_dag();
+  auto boxing_pipe_name = actor_dag->GetPipeNameFromActor(this->name_);
+  auto actor_boxing_info = actor_dag->GetForwardBoxingInfo(this->name_);
   auto segment_pairs = actor_boxing_info.GetSegmentPairs();
 
   // The boxing layers are added segment-segment-pair-wise. The boxing layers 
@@ -75,7 +75,7 @@ void BoxingTaskDag<Dtype>::AddLayerForLogicalBlob(
   const BoxingInfoElement& boxing_info_elem,
   const std::string& logical_blob) {
   const std::string forward_in_boxing_prefix = "forward_in_boxing";
-  bool is_in_boxing = strings::StartsWith(name_, forward_in_boxing_prefix);
+  bool is_in_boxing = strings::StartsWith(this->name_, forward_in_boxing_prefix);
 
   std::string layer_type = "Boxing";
   std::string layer_name = build_layer_name(boxing_pipe_name, logical_blob);
@@ -86,7 +86,7 @@ void BoxingTaskDag<Dtype>::AddLayerForLogicalBlob(
     &boxing_proto);
   std::string proto_str = boxing_proto.DebugString();
 
-  auto layer_node = AddOpNode(layer_name, layer_type, proto_str);
+  auto layer_node = this->AddOpNode(layer_name, layer_type, proto_str);
   auto layer = layer_node->op()->layer();
 
   std::vector<DataNode<BlobMeta>*> input_nodes;
@@ -97,8 +97,8 @@ void BoxingTaskDag<Dtype>::AddLayerForLogicalBlob(
   for (auto input_var : input_vars) {
     auto layer_blob = strings::full_blob_name_in_layer(layer_name, input_var);
     auto task_blob = strings::full_blob_name_in_dag(logical_blob, input_var);
-    blob_info_manager_.RegisterBlob(layer_blob, task_blob, logical_blob, true);
-    input_nodes.push_back(AddDataNode(task_blob));
+    this->blob_info_manager_.RegisterBlob(layer_blob, task_blob, logical_blob, true);
+    input_nodes.push_back(this->AddDataNode(task_blob));
   }
 
   auto output_vars = layer->GetOutputVars();
@@ -106,8 +106,8 @@ void BoxingTaskDag<Dtype>::AddLayerForLogicalBlob(
   for (auto output_var : output_vars) {
     auto layer_blob = strings::full_blob_name_in_layer(layer_name, output_var);
     auto task_blob = strings::full_blob_name_in_dag(logical_blob, output_var);
-    blob_info_manager_.RegisterBlob(layer_blob, task_blob, logical_blob, false);
-    output_nodes.push_back(AddDataNode(task_blob));
+    this->blob_info_manager_.RegisterBlob(layer_blob, task_blob, logical_blob, false);
+    output_nodes.push_back(this->AddDataNode(task_blob));
   }
   for (auto& input_node : input_nodes) {
     layer_node->AddParent(input_node);
@@ -130,7 +130,7 @@ void BoxingTaskDag<Dtype>::SetBoxingProtoValue(bool is_in_boxing,
 
   auto first_segment = segment_pair.first;
   auto second_segment = segment_pair.second;
-  auto segment_dag = dag_builder_.segment_dag();
+  auto segment_dag = this->dag_builder_.segment_dag();
   auto first_segment_node = segment_dag->GetOpNode(first_segment);
   auto first_parallel_policy
     = first_segment_node->op()->placement_info().parallel_policy();
@@ -224,7 +224,7 @@ void BoxingTaskDag<Dtype>::UpdateRegisterInfo(
   RegisterType register_type{ RegisterType::kDataType };
   DeviceType device_type{ DeviceType::kCPU };
 
-  auto& id_map = oneflow::TheOne<Dtype>::id_map();
+  auto&& id_map = oneflow::TheOne<Dtype>::id_map();
   auto register_infos_it
     = register_infos->find(second_segment);
   if (register_infos_it == register_infos->end()) {
@@ -235,13 +235,13 @@ void BoxingTaskDag<Dtype>::UpdateRegisterInfo(
       register_info_vec[i].set_register_type(register_type);
       register_info_vec[i].set_device_type(device_type);
       register_info_vec[i].set_network(false);
-      int32_t group_local_id = id_map->new_group_local_id(task_id_);
+      int32_t group_local_id = id_map->new_group_local_id(this->task_id_);
       int64_t group_id = id_map->group_id_from_task_id_and_group_local_id(
-        task_id_, group_local_id);
+        this->task_id_, group_local_id);
       register_info_vec[i].set_group_id(group_id);
     }
     register_info_vec[idx].AddEmptyBlob(task_blob, envelope_flag);
-    blob_info_manager_.AddProducedBlobToRegister(
+    this->blob_info_manager_.AddProducedBlobToRegister(
       layer_blob, register_info_vec[idx].group_id());
     register_infos->insert({ second_segment, register_info_vec });
   } else {
@@ -249,14 +249,14 @@ void BoxingTaskDag<Dtype>::UpdateRegisterInfo(
     auto& register_info_vec = register_infos_it->second;
     CHECK(register_info_vec.size() == output_num);
     register_info_vec[idx].AddEmptyBlob(task_blob, envelope_flag);
-    blob_info_manager_.AddProducedBlobToRegister(
+    this->blob_info_manager_.AddProducedBlobToRegister(
       layer_blob, register_info_vec[idx].group_id());
   }
 }
 
 template <typename Dtype>
 void BoxingTaskDag<Dtype>::RegisterNonInputOutputBlobs() {
-  for (auto& op_name_node_pair : op_name_to_node_) {
+  for (auto& op_name_node_pair : this->op_name_to_node_) {
     auto op_name = op_name_node_pair.first;
     auto op_node = op_name_node_pair.second;
     auto op_meta = op_node->op();
@@ -270,7 +270,7 @@ void BoxingTaskDag<Dtype>::RegisterNonInputOutputBlobs() {
       auto layer_blob = strings::full_blob_name_in_layer(op_name, other_var);
       auto task_blob = layer_blob;
       auto logical_blob = layer_blob;
-      blob_info_manager_.RegisterBlob(
+      this->blob_info_manager_.RegisterBlob(
         layer_blob, task_blob, logical_blob, false);
     }
   }
@@ -282,16 +282,16 @@ void BoxingTaskDag<Dtype>::AddProducedRegisterInfos() {
   std::unordered_map<std::string, std::vector<RegisterInfo>>
     consumer_segment_to_produced_register_infos;
 
-  auto segment_dag = dag_builder_.segment_dag();
-  auto actor_dag = dag_builder_.actor_dag();
+  auto segment_dag = this->dag_builder_.segment_dag();
+  auto actor_dag = this->dag_builder_.actor_dag();
   BoxingInfo actor_boxing_info(false);
-  if (is_forward_) {
-    actor_boxing_info = actor_dag->GetForwardBoxingInfo(name_);
+  if (this->is_forward_) {
+    actor_boxing_info = actor_dag->GetForwardBoxingInfo(this->name_);
   } else {
-    auto forward_name = actor_dag->GetForwardTaskName(name_);
+    auto forward_name = actor_dag->GetForwardTaskName(this->name_);
     actor_boxing_info = actor_dag->GetForwardBoxingInfo(forward_name);
   }
-  auto pipe_name = actor_dag->GetPipeNameFromActor(name_);
+  auto pipe_name = actor_dag->GetPipeNameFromActor(this->name_);
 
   // While building BoxingTaskDag, we create a layer for each blob in SegmentDag.
   // This layer will generate several output vars for the blob of SegmentDag. we
@@ -311,7 +311,7 @@ void BoxingTaskDag<Dtype>::AddProducedRegisterInfos() {
   // (2) "pipe_blob_name1/1/out" and "pipe_blob_name2/1/out"
   // (3) "pipe_blob_name1/2/out" and "pipe_blob_name2/2/out"
 
-  for (auto& op_name_node_pair : op_name_to_node_) {
+  for (auto& op_name_node_pair : this->op_name_to_node_) {
     auto op_name = op_name_node_pair.first;
     auto op_node = op_name_node_pair.second;
     auto op_meta = op_node->op();
@@ -326,14 +326,14 @@ void BoxingTaskDag<Dtype>::AddProducedRegisterInfos() {
 
     auto boxing_info_elem = actor_boxing_info.GetBoxingInfoElement(segment_pair);
 
-    if (is_forward_) {
+    if (this->is_forward_) {
       auto output_vars = layer->GetOutputVars();
       int32_t output_num = output_vars.size();
       CHECK(output_num == boxing_info_elem.out_num());
       int32_t idx = 0;
       for (auto& output_var : output_vars) {
         auto layer_blob = strings::full_blob_name_in_layer(op_name, output_var);
-        auto task_blob = task_blob_from_layer_blob(layer_blob);
+        auto task_blob = this->task_blob_from_layer_blob(layer_blob);
         UpdateRegisterInfo(layer_blob, task_blob, second_segment, idx,
           output_num, &consumer_segment_to_produced_register_infos);
         ++idx;
@@ -345,7 +345,7 @@ void BoxingTaskDag<Dtype>::AddProducedRegisterInfos() {
       int32_t idx = 0;
       for (auto& input_var : input_vars) {
         auto layer_blob = strings::full_blob_name_in_layer(op_name, input_var);
-        auto task_blob = task_blob_from_layer_blob(layer_blob);
+        auto task_blob = this->task_blob_from_layer_blob(layer_blob);
         UpdateRegisterInfo(layer_blob, task_blob, first_segment, idx, input_num,
           &consumer_segment_to_produced_register_infos);
         ++idx;
@@ -357,7 +357,7 @@ void BoxingTaskDag<Dtype>::AddProducedRegisterInfos() {
     auto consumer_segment = segment_infos_pair.first;
     auto& register_infos = segment_infos_pair.second;
     for (auto& register_info : register_infos) {
-      register_info_manager_.AddProducedRegisterInfoForBoxingTask(
+      this->register_info_manager_.AddProducedRegisterInfoForBoxingTask(
         register_info, consumer_segment);
     }
   }
@@ -367,18 +367,18 @@ template <typename Dtype>
 void BoxingTaskDag<Dtype>::AddConsumedRegisterInfosInPath() {
   // In forward pass, input_vars is from preceding task.
   // In backward pass, output_vars is from preceding task.
-  auto actor_dag = dag_builder_.actor_dag();
-  auto segment_dag = dag_builder_.segment_dag();
+  auto actor_dag = this->dag_builder_.actor_dag();
+  auto segment_dag = this->dag_builder_.segment_dag();
   BoxingInfo actor_boxing_info(false);  // By default, not in_boxing
-  if (is_forward_) {
-    actor_boxing_info = actor_dag->GetForwardBoxingInfo(name_);
+  if (this->is_forward_) {
+    actor_boxing_info = actor_dag->GetForwardBoxingInfo(this->name_);
   } else {
-    auto forward_name = actor_dag->GetForwardTaskName(name_);
+    auto forward_name = actor_dag->GetForwardTaskName(this->name_);
     actor_boxing_info = actor_dag->GetForwardBoxingInfo(forward_name);
   }
-  auto pipe_name = actor_dag->GetPipeNameFromActor(name_);
+  auto pipe_name = actor_dag->GetPipeNameFromActor(this->name_);
 
-  for (auto& op_name_node_pair : op_name_to_node_) {
+  for (auto& op_name_node_pair : this->op_name_to_node_) {
     auto op_name = op_name_node_pair.first;
     auto op_node = op_name_node_pair.second;
     auto op_meta = op_node->op();
@@ -392,7 +392,7 @@ void BoxingTaskDag<Dtype>::AddConsumedRegisterInfosInPath() {
       = actor_boxing_info.GetBoxingInfoElement(segment_pair);
     std::vector<std::string> blob_vars;
     std::vector<std::string> forward_producer_names;
-    if (is_forward_) {
+    if (this->is_forward_) {
       blob_vars = layer->GetInputVars();
       forward_producer_names = boxing_info_element.GetOrderedInputs();
     } else {
@@ -403,20 +403,20 @@ void BoxingTaskDag<Dtype>::AddConsumedRegisterInfosInPath() {
     int32_t producer_num = forward_producer_names.size();
     for (int32_t order = 0; order < producer_num; ++order) {
       std::string producer_name;
-      if (is_forward_) {
+      if (this->is_forward_) {
         producer_name = forward_producer_names[order];
       } else {
         producer_name
           = actor_dag->GetBackwardTaskName(forward_producer_names[order]);
       }
       auto producer_task_id = actor_dag->GetTaskID(producer_name);
-      auto producer_task_dag = dag_builder_.GetTaskDag(producer_task_id);
+      auto producer_task_dag = this->dag_builder_.GetTaskDag(producer_task_id);
       int64_t group_id
-        = producer_task_dag->GetImmediateProducedGroupIdInPath(name_);
-      register_info_manager_.AddConsumedGroupId(group_id);
-      producer_task_dag->RegisterConsumer(task_id_, group_id);
-      AddBlobsToConsumedRegisterInfo(op_name, { blob_vars[order] },
-        producer_task_dag, group_id, null_filter_);
+        = producer_task_dag->GetImmediateProducedGroupIdInPath(this->name_);
+      this->register_info_manager_.AddConsumedGroupId(group_id);
+      producer_task_dag->RegisterConsumer(this->task_id_, group_id);
+      this->AddBlobsToConsumedRegisterInfo(op_name, { blob_vars[order] },
+        producer_task_dag, group_id, this->null_filter_);
     }
   }
 }
@@ -424,21 +424,21 @@ void BoxingTaskDag<Dtype>::AddConsumedRegisterInfosInPath() {
 template <typename Dtype>
 int64_t BoxingTaskDag<Dtype>::GetImmediateProducedGroupIdInPath(
   const std::string& consumer_name) const {
-  auto actor_dag = dag_builder_.actor_dag();
+  auto actor_dag = this->dag_builder_.actor_dag();
 
   BoxingInfo actor_boxing_info(false);
   std::string consumer_segment;
   SingleSideBoxingInfoElement single_side_info;
   int32_t order;
-  if (is_forward_) {
-    actor_boxing_info = actor_dag->GetForwardBoxingInfo(name_);
+  if (this->is_forward_) {
+    actor_boxing_info = actor_dag->GetForwardBoxingInfo(this->name_);
     consumer_segment
       = actor_boxing_info.SecondSegmentFromActorName(consumer_name);
     single_side_info
       = actor_boxing_info.GetSingleSideInfoFromSecondSegment(consumer_segment);
     order = single_side_info.GetOpOrder(consumer_name);
   } else {
-    auto forward_name = actor_dag->GetForwardTaskName(name_);
+    auto forward_name = actor_dag->GetForwardTaskName(this->name_);
     auto forward_producer_name = actor_dag->GetForwardTaskName(consumer_name);
     actor_boxing_info = actor_dag->GetForwardBoxingInfo(forward_name);
     consumer_segment
@@ -448,7 +448,7 @@ int64_t BoxingTaskDag<Dtype>::GetImmediateProducedGroupIdInPath(
     order = single_side_info.GetOpOrder(forward_producer_name);
   }
 
-  return register_info_manager_.GetProducedGroupIdForBoxingTask(
+  return this->register_info_manager_.GetProducedGroupIdForBoxingTask(
     consumer_segment, order);
 }
 
@@ -457,5 +457,5 @@ std::string BoxingTaskDag<Dtype>::build_layer_name(const std::string& pipe_name,
   const std::string& blob_name) const {
   return strings::Join({ pipe_name, blob_name }, "_");
 }
-INSTANTIATE_CLASS(BoxingTaskDag);
+//INSTANTIATE_CLASS(BoxingTaskDag);
 }  // namespace oneflow

@@ -45,6 +45,7 @@ class DagBuilder;
 
 template <typename Dtype>
 class TaskDag : public Dag<BlobMeta, LayerMeta<Dtype>> {
+ public:
   friend class DagIterator<TaskDag<Dtype>>;
   friend class DagIterator<TaskDag<Dtype>, true>;
   friend class DagReverseIterator<TaskDag<Dtype>>;
@@ -60,7 +61,6 @@ class TaskDag : public Dag<BlobMeta, LayerMeta<Dtype>> {
   using Dag<BlobMeta, LayerMeta<Dtype>>::PostProcessing;
   using Dag<BlobMeta, LayerMeta<Dtype>>::NewDataNode;
   using Dag<BlobMeta, LayerMeta<Dtype>>::GetDataNode;
- public:
   TaskDag(const DagBuilder<Dtype>& dag_builder,
     TaskType type,
     int32_t task_id,
