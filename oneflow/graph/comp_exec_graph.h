@@ -1,35 +1,35 @@
-#ifndef ONEFLOW_GRAPH_COMP_TRANSFM_GRAPH_H_
-#define ONEFLOW_GRAPH_COMP_TRANSFM_GRAPH_H_
+#ifndef ONEFLOW_GRAPH_COMP_EXEC_GRAPH_H_
+#define ONEFLOW_GRAPH_COMP_EXEC_GRAPH_H_
 
-#include "graph/transfm_graph.h"
+#include "graph/exec_graph.h"
 #include "operator/operator_factory.h"
 
 namespace oneflow {
 
-class CompTransfmGraph : public TransfmGraph {
+class CompExecGraph : public ExecGraph {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CompTransfmGraph);
-  virtual ~CompTransfmGraph() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CompExecGraph);
+  virtual ~CompExecGraph() = default;
 
   void SetupProducedRegisterDesc() override;
 
  protected:
   virtual CopyOpConf::CopyType CopyInOpType() = 0;
-  CompTransfmGraph() = default;
+  CompExecGraph() = default;
 
  private:
   void FwBuildGraph() override;
   void BpBuildGraph() override;
 
-  TransfmEdge* NewTransfmEdge(const std::string& lbn) {
-    TransfmEdge* ret = NewFinalEdge();
+  ExecEdge* NewExecEdge(const std::string& lbn) {
+    ExecEdge* ret = NewFinalEdge();
     ret->mut_lbn() = lbn;
     return ret;
   }
 
   // Funtions used in FwBuildGraph
-  using Lbn2NodeMap = std::unordered_map<std::string, TransfmNode*>;
-  using Lbn2NodeVecMap = std::unordered_map<std::string, std::vector<TransfmNode*>>;
+  using Lbn2NodeMap = std::unordered_map<std::string, ExecNode*>;
+  using Lbn2NodeVecMap = std::unordered_map<std::string, std::vector<ExecNode*>>;
   void FwBuildFromUserOps(Lbn2NodeMap* lbn2producer,
                           Lbn2NodeVecMap* extern_in_lbn2consumers);
   void FwAddCopyInOp(Lbn2NodeVecMap* extern_in_lbn2consumers);
@@ -45,4 +45,4 @@ class CompTransfmGraph : public TransfmGraph {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_GRAPH_COMP_TRANSFM_GRAPH_H_
+#endif // ONEFLOW_GRAPH_COMP_EXEC_GRAPH_H_

@@ -1,9 +1,9 @@
-#include "graph/transfm_graph.h"
+#include "graph/exec_graph.h"
 #include "graph/task_node.h"
 
 namespace oneflow {
 
-void TransfmGraph::BuildGraph() {
+void ExecGraph::BuildGraph() {
   if (task_node_->IsFwNode()) {
     FwBuildGraph();
   } else {
@@ -11,7 +11,7 @@ void TransfmGraph::BuildGraph() {
   }
 }
 
-void TransfmGraph::SubscribeRegisterDescInnerPath() {
+void ExecGraph::SubscribeRegisterDescInnerPath() {
   for (TaskEdge* edge : task_node()->in_edges()) {
     CHECK_NOTNULL(edge->register_desc());
     edge->register_desc()->AddSubscriber(this);

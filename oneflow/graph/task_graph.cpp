@@ -22,11 +22,11 @@ void TaskGraph::Init(const DLNetConf& dl_net_conf,
   chain_graph->Init(logical_graph.get());
   std::unique_ptr<StageGraph> stage_graph(new StageGraph);
   stage_graph->Init(std::move(chain_graph));
-  BuildWithoutTransfm(std::move(stage_graph), id_map, need_bp);
-  BuildTransfm();
+  BuildWithoutExecGraph(std::move(stage_graph), id_map, need_bp);
+  BuildExecGraph();
 }
 
-void TaskGraph::BuildWithoutTransfm(
+void TaskGraph::BuildWithoutExecGraph(
     std::unique_ptr<const StageGraph>&& stage_graph,
     const IDMap& id_map,
     bool job_need_bp) {
@@ -41,25 +41,25 @@ void TaskGraph::BuildWithoutTransfm(
   }
 }
 
-void TaskGraph::BuildTransfm() {
+void TaskGraph::BuildExecGraph() {
   for (const auto& task_node : nodes()) {
-    task_node->SetNewTransfmGraph();
+    task_node->SetNewExecGraph();
   }
   for (const auto& task_node : nodes()) {
     if (task_node->IsFwNode()) {
-      task_node->transfm_graph()->BuildGraph();
+      task_node->exec_graph()->BuildGraph();
     }
   }
   for (const auto& task_node : nodes()) {
     if (task_node->IsBpNode()) {
-      task_node->transfm_graph()->BuildGraph();
+      task_node->exec_graph()->BuildGraph();
     }
   }
   for (const auto& task_node : nodes()) {
-    task_node->transfm_graph()->SetupProducedRegisterDesc();
+    task_node->exec_graph()->SetupProducedRegisterDesc();
   }
   for (const auto& task_node : nodes()) {
-    task_node->transfm_graph()->SubscribeRegisterDescInnerPath();
+    task_node->exec_graph()->SubscribeRegisterDescInnerPath();
   }
 }
 

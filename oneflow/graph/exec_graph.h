@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_GRAPH_TRANSFM_GRAPH_H_
-#define ONEFLOW_GRAPH_TRANSFM_GRAPH_H_
+#ifndef ONEFLOW_GRAPH_EXEC_GRAPH_H_
+#define ONEFLOW_GRAPH_EXEC_GRAPH_H_
 
 #include "operator/operator.h"
 #include "graph/graph.h"
@@ -9,13 +9,13 @@ namespace oneflow {
 
 class TaskNode;
 class TaskEdge;
-class TransfmNode;
+class ExecNode;
 
-class TransfmEdge final : public Edge<TransfmNode, TransfmEdge> {
+class ExecEdge final : public Edge<ExecNode, ExecEdge> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(TransfmEdge);
-  TransfmEdge() = default;
-  ~TransfmEdge() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ExecEdge);
+  ExecEdge() = default;
+  ~ExecEdge() = default;
 
   const std::string& lbn() const { return lbn_; }
   std::string& mut_lbn() { return lbn_; }
@@ -33,11 +33,11 @@ class TransfmEdge final : public Edge<TransfmNode, TransfmEdge> {
 
 };
 
-class TransfmNode final : public Node<TransfmNode, TransfmEdge> {
+class ExecNode final : public Node<ExecNode, ExecEdge> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(TransfmNode);
-  TransfmNode() = default;
-  ~TransfmNode() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ExecNode);
+  ExecNode() = default;
+  ~ExecNode() = default;
 
   std::shared_ptr<const Operator> op() const {
     return op_;
@@ -71,13 +71,13 @@ class TransfmNode final : public Node<TransfmNode, TransfmEdge> {
 
 };
 
-class TransfmGraph : public Graph<TransfmNode, TransfmEdge> {
+class ExecGraph : public Graph<ExecNode, ExecEdge> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(TransfmGraph);
-  TransfmGraph() = default;
-  virtual ~TransfmGraph() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ExecGraph);
+  ExecGraph() = default;
+  virtual ~ExecGraph() = default;
 
-  void SetTask(TaskNode* task_node) { task_node_ = task_node; }
+  void set_task_node(TaskNode* task_node) { task_node_ = task_node; }
   void BuildGraph();
   virtual void SetupProducedRegisterDesc() = 0;
   void SubscribeRegisterDescInnerPath();
@@ -106,4 +106,4 @@ class TransfmGraph : public Graph<TransfmNode, TransfmEdge> {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_GRAPH_TRANSFM_GRAPH_H_
+#endif // ONEFLOW_GRAPH_EXEC_GRAPH_H_

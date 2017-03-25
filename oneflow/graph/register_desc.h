@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class TransfmGraph;
+class ExecGraph;
 
 class RegisterDesc {
  public:
@@ -20,7 +20,7 @@ class RegisterDesc {
     LOG(FATAL) << "TODO";
   }
 
-  void AddSubscriber(TransfmGraph* transfm_graph) {
+  void AddSubscriber(ExecGraph* exec_graph) {
     LOG(FATAL) << "TODO";
   }
 

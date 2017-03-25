@@ -2,11 +2,11 @@
 #define ONEFLOW_GRAPH_TASK_NODE_H_
 
 #include "graph/stage_graph.h"
-#include "graph/host_comp_transfm_graph.h"
-#include "graph/device_comp_transfm_graph.h"
-#include "graph/boxing_transfm_graph.h"
-#include "graph/copy_hd_transfm_graph.h"
-#include "graph/comm_net_transfm_graph.h"
+#include "graph/host_comp_exec_graph.h"
+#include "graph/device_comp_exec_graph.h"
+#include "graph/boxing_exec_graph.h"
+#include "graph/copy_hd_exec_graph.h"
+#include "graph/comm_net_exec_graph.h"
 #include "graph/register_desc.h"
 
 namespace oneflow {
@@ -25,7 +25,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   const ChainNode* chain_node() const { return stage_node_->chain_node();}
   const StageNode* stage_node() const { return stage_node_; }
   const ThreadLocalId& thread_local_id() const { return thread_local_id_; }
-  TransfmGraph* transfm_graph() const { return transfm_graph_.get(); }
+  ExecGraph* exec_graph() const { return exec_graph_.get(); }
   TaskNode* GetFwNode() const;
   TaskNode* GetBpNode() const;
   
@@ -36,19 +36,19 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   //
   std::unique_ptr<TaskNode> BuildAndConnectBpNode();
-  void SetNewTransfmGraph();
+  void SetNewExecGraph();
  
  protected:
   virtual std::unique_ptr<TaskNode> CreateSameTypeNode() const;
   virtual void InitWithFwNode(TaskNode* fw_node);
-  virtual std::unique_ptr<TransfmGraph> CreateTransfmGraph() const;
+  virtual std::unique_ptr<ExecGraph> CreateExecGraph() const;
 
  private:
   const StageNode* stage_node_;
   ThreadLocalId thread_local_id_;
   bool is_fw_node_;
   TaskNode* related_fw_or_bp_node_;
-  std::unique_ptr<TransfmGraph> transfm_graph_;
+  std::unique_ptr<ExecGraph> exec_graph_;
 
 };
 
@@ -97,8 +97,8 @@ class HostCompTaskNode final : public CompTaskNode {
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return std::unique_ptr<TaskNode> (new HostCompTaskNode);
   }
-  std::unique_ptr<TransfmGraph> CreateTransfmGraph() const override {
-    return std::unique_ptr<TransfmGraph> (new HostCompTransfmGraph);
+  std::unique_ptr<ExecGraph> CreateExecGraph() const override {
+    return std::unique_ptr<ExecGraph> (new HostCompExecGraph);
   }
   void InitWithFwNode(TaskNode* fw_node) override {
     CompTaskNode::InitWithFwNode(fw_node);
@@ -116,8 +116,8 @@ class DeviceCompTaskNode final : public CompTaskNode {
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return std::unique_ptr<TaskNode> (new DeviceCompTaskNode);
   }
-  std::unique_ptr<TransfmGraph> CreateTransfmGraph() const override {
-    return std::unique_ptr<TransfmGraph> (new DeviceCompTransfmGraph);
+  std::unique_ptr<ExecGraph> CreateExecGraph() const override {
+    return std::unique_ptr<ExecGraph> (new DeviceCompExecGraph);
   }
   void InitWithFwNode(TaskNode* fw_node) override {
     CompTaskNode::InitWithFwNode(fw_node);
@@ -149,8 +149,8 @@ class CopyHDTaskNode final : public TaskNode {
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return std::unique_ptr<TaskNode> (new CopyHDTaskNode);
   }
-  std::unique_ptr<TransfmGraph> CreateTransfmGraph() const override {
-    return std::unique_ptr<TransfmGraph> (new CopyHDTransfmGraph);
+  std::unique_ptr<ExecGraph> CreateExecGraph() const override {
+    return std::unique_ptr<ExecGraph> (new CopyHDExecGraph);
   }
   void InitWithFwNode(TaskNode* fw_node) override;
 
@@ -173,8 +173,8 @@ class BoxingTaskNode final : public TaskNode {
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return std::unique_ptr<TaskNode> (new BoxingTaskNode);
   }
-  std::unique_ptr<TransfmGraph> CreateTransfmGraph() const override {
-    return std::unique_ptr<TransfmGraph> (new BoxingTransfmGraph);
+  std::unique_ptr<ExecGraph> CreateExecGraph() const override {
+    return std::unique_ptr<ExecGraph> (new BoxingExecGraph);
   }
   void InitWithFwNode(TaskNode* fw_node) override;
   
@@ -208,8 +208,8 @@ class CommNetTaskNode final : public TaskNode {
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return std::unique_ptr<TaskNode> (new CommNetTaskNode);
   }
-  std::unique_ptr<TransfmGraph> CreateTransfmGraph() const override {
-    return std::unique_ptr<TransfmGraph> (new CommNetTransfmGraph);
+  std::unique_ptr<ExecGraph> CreateExecGraph() const override {
+    return std::unique_ptr<ExecGraph> (new CommNetExecGraph);
   }
   void InitWithFwNode(TaskNode* fw_node) override {
     TaskNode::InitWithFwNode(fw_node);

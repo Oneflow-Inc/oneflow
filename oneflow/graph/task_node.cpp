@@ -7,7 +7,7 @@ namespace oneflow {
 TaskNode::TaskNode() {
   stage_node_ = nullptr;
   related_fw_or_bp_node_ = nullptr;
-  transfm_graph_ = nullptr;
+  exec_graph_ = nullptr;
 }
 
 TaskNode* TaskNode::GetFwNode() const {
@@ -38,9 +38,9 @@ std::unique_ptr<TaskNode> TaskNode::BuildAndConnectBpNode() {
   return bp_node;
 }
 
-void TaskNode::SetNewTransfmGraph() {
-  transfm_graph_ = CreateTransfmGraph();
-  transfm_graph_->SetTask(this);
+void TaskNode::SetNewExecGraph() {
+  exec_graph_ = CreateExecGraph();
+  exec_graph_->set_task_node(this);
 }
 
 std::unique_ptr<TaskNode> TaskNode::CreateSameTypeNode() const {

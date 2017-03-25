@@ -23,10 +23,10 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   const StageGraph* stage_graph() const { return stage_graph_.get(); }
 
  private:
-  void BuildWithoutTransfm(std::unique_ptr<const StageGraph>&& stage_graph,
-                           const IDMap& id_map,
-                           bool need_bp);
-  void BuildTransfm();
+  void BuildWithoutExecGraph(std::unique_ptr<const StageGraph>&& stage_graph,
+                             const IDMap& id_map,
+                             bool need_bp);
+  void BuildExecGraph();
 
   template<typename TaskNodeType>
   TaskNodeType* NewTaskNode() {
