@@ -73,7 +73,7 @@ void PipeDag<Dtype>::ExpandStageToPipes() {
     auto segment_name = stage_node_ptr->op()->segment_name();
     auto segment_node = segment_dag_->GetOpNode(segment_name);
     auto segment_meta = segment_node->op();
-    auto& placement_info = segment_meta->placement_info();
+    auto&& placement_info = segment_meta->placement_info();
     auto parallel_policy = placement_info.parallel_policy();
     if (parallel_policy == kNaiveParallelOnSingleMachine
       || parallel_policy == kDataParallelOnMultipleMachines
@@ -92,7 +92,7 @@ void PipeDag<Dtype>::SingleStageToSinglePipe(
   const std::string& stage_name,
   const std::string& segment_name,
   int32_t machine_id) {
-  auto& id_map = oneflow::TheOne<Dtype>::id_map();
+  auto&& id_map = oneflow::TheOne<Dtype>::id_map();
   auto local_id = id_map->data_thread_local_id();
   auto pipe_name = build_pipe_name_with_local_id(
     compute_pipe_prefix_, stage_name, machine_id, local_id);
@@ -111,7 +111,7 @@ void PipeDag<Dtype>::SingleStageToMultiplePipes(
   const std::string& stage_name,
   const std::string& segment_name,
   int32_t machine_id) {
-  auto& id_map = oneflow::TheOne<Dtype>::id_map();
+  auto&& id_map = oneflow::TheOne<Dtype>::id_map();
   auto device_num_each_machine = id_map->device_num_each_machine();
   // Here, we ensure the pipes are added according to the ascending order of
   // thread_id
@@ -143,7 +143,7 @@ void PipeDag<Dtype>::AddCopyPipeNodes() {
 template <typename Dtype>
 void PipeDag<Dtype>::AddCopyPipeNodeForComputePipe(
   const std::string& pipe_name) {
-  auto& id_map = oneflow::TheOne<Dtype>::id_map();
+  auto&& id_map = oneflow::TheOne<Dtype>::id_map();
   auto stage_name = GetStageName(pipe_name);
   auto machine_id = stage_dag_->machine_id(stage_name);
   // For gradient generator pipe, only need out_copy
@@ -244,7 +244,7 @@ template <typename Dtype>
 void PipeDag<Dtype>::AddNetPipeNode(bool in, const std::string& from_stage_name,
   int32_t from_machine_id, const std::string& to_stage_name,
   int32_t to_machine_id) {
-  auto& id_map = oneflow::TheOne<Dtype>::id_map();
+  auto&& id_map = oneflow::TheOne<Dtype>::id_map();
   auto local_id = id_map->net_thread_local_id();
   auto stage_machine_id = in ? to_machine_id : from_machine_id;
   auto thread_id
@@ -311,7 +311,7 @@ void PipeDag<Dtype>::ConnectNetPipeNodes() {
 
 template <typename Dtype>
 void PipeDag<Dtype>::AddBoxingPipeNodes() {
-  auto& id_map = oneflow::TheOne<Dtype>::id_map();
+  auto&& id_map = oneflow::TheOne<Dtype>::id_map();
   DagIterator<StageDag<Dtype>, true> dag_iterator(*stage_dag_);
   for (dag_iterator.First(); !dag_iterator.IsDone(); dag_iterator.Next()) {
     auto current_node = dag_iterator.CurrentNode();
@@ -369,7 +369,7 @@ void PipeDag<Dtype>::AddBoxingPipeNodes() {
 
 template <typename Dtype>
 void PipeDag<Dtype>::AddBoxingInfos() {
-  auto& id_map = oneflow::TheOne<Dtype>::id_map();
+  auto&& id_map = oneflow::TheOne<Dtype>::id_map();
   DagIterator<StageDag<Dtype>, true> dag_iterator(*stage_dag_);
   for (dag_iterator.First(); !dag_iterator.IsDone(); dag_iterator.Next()) {
     auto current_node = dag_iterator.CurrentNode();
@@ -703,7 +703,7 @@ OpNode<PipeMeta>* PipeDag<Dtype>::AddBoxingPipeNode(
     bool is_in,
     const std::string& stage_name,
     int32_t stage_machine_id) {
-  auto& id_map = oneflow::TheOne<Dtype>::id_map();
+  auto&& id_map = oneflow::TheOne<Dtype>::id_map();
   auto local_id = id_map->boxing_thread_local_id();
   auto thread_id
     = id_map->thread_id_from_machine_and_local(stage_machine_id, local_id);
@@ -757,7 +757,7 @@ void PipeDag<Dtype>::NotSameMachineOutgoing(const std::string& stage_name,
   const std::string& successor_stage_name,
   int32_t successor_machine_id,
   const std::string& successor_segment_name) {
-  auto& id_map = oneflow::TheOne<Dtype>::id_map();
+  auto&& id_map = oneflow::TheOne<Dtype>::id_map();
   // Get the data name's prefix
   auto envelope_names
     = segment_dag_->FindDataNodesInBetween(segment_name, successor_segment_name);
@@ -802,9 +802,9 @@ void PipeDag<Dtype>::NotSameMachineOutgoing(const std::string& stage_name,
     AddEdges(data_node, inputs, outputs);
 
     // Update the boxing_info of the out_boxing node
-    auto& boxing_info = boxing_info_map_.GetBoxingInfo(boxing_name);
+    auto&& boxing_info = boxing_info_map_.GetBoxingInfo(boxing_name);
     SegmentSegmentPair segment_pair{ segment_name, successor_segment_name };
-    auto& boxing_info_elem = boxing_info.GetBoxingInfoElement(segment_pair);
+    auto&& boxing_info_elem = boxing_info.GetBoxingInfoElement(segment_pair);
     boxing_info_elem.UpdateOutput(successor_stage_name, out_net_name);
   }
 }
@@ -817,7 +817,7 @@ void PipeDag<Dtype>::SameMachineOutgoing(
   const std::string& successor_stage_name,
   int32_t successor_machine_id,
   const std::string& successor_segment_name) {
-  auto& id_map = oneflow::TheOne<Dtype>::id_map();
+  auto&& id_map = oneflow::TheOne<Dtype>::id_map();
   // Get the data name's prefix
   auto envelope_names
     = segment_dag_->FindDataNodesInBetween(segment_name, successor_segment_name);
@@ -898,9 +898,9 @@ void PipeDag<Dtype>::SameMachineOutgoing(
       std::vector<ONode*> outputs{ boxing_node };
       AddEdges(data_node, inputs, outputs);
 
-      auto& boxing_info = boxing_info_map_.GetBoxingInfo(out_boxing_name);
+      auto&& boxing_info = boxing_info_map_.GetBoxingInfo(out_boxing_name);
       SegmentSegmentPair segment_pair{ segment_name, successor_segment_name };
-      auto& boxing_info_elem = boxing_info.GetBoxingInfoElement(segment_pair);
+      auto&& boxing_info_elem = boxing_info.GetBoxingInfoElement(segment_pair);
       CHECK(!boxing_info_elem.pipe_to_pipe());
       boxing_info_elem.UpdateOutput(successor_stage_name, delegate_pipe_name);
     } else {
@@ -919,15 +919,15 @@ void PipeDag<Dtype>::SameMachineOutgoing(
 
       // Update the outputs of out_boxing
       SegmentSegmentPair segment_pair{ segment_name, successor_segment_name };
-      auto& out_boxing_info = boxing_info_map_.GetBoxingInfo(out_boxing_name);
-      auto& out_boxing_info_elem
+      auto&& out_boxing_info = boxing_info_map_.GetBoxingInfo(out_boxing_name);
+      auto&& out_boxing_info_elem
         = out_boxing_info.GetBoxingInfoElement(segment_pair);
       CHECK(!out_boxing_info_elem.pipe_to_pipe());
       out_boxing_info_elem.UpdateOutput(successor_stage_name, in_boxing_name);
 
       // Update the inputs of in_boxing
-      auto& in_boxing_info = boxing_info_map_.GetBoxingInfo(in_boxing_name);
-      auto& in_boxing_info_elem
+      auto&& in_boxing_info = boxing_info_map_.GetBoxingInfo(in_boxing_name);
+      auto&& in_boxing_info_elem
         = in_boxing_info.GetBoxingInfoElement(segment_pair);
       CHECK(!in_boxing_info_elem.pipe_to_pipe());
       in_boxing_info_elem.UpdateInput(stage_name, out_boxing_name);
@@ -973,7 +973,7 @@ void PipeDag<Dtype>::NotSameMachineIncoming(
   const std::string& stage_name,
   int32_t stage_machine_id,
   const std::string& segment_name) {
-  auto& id_map = oneflow::TheOne<Dtype>::id_map();
+  auto&& id_map = oneflow::TheOne<Dtype>::id_map();
   // Get the data name's prefix
   auto envelope_names
     = segment_dag_->FindDataNodesInBetween(predecessor_segment_name, segment_name);
@@ -1017,16 +1017,16 @@ void PipeDag<Dtype>::NotSameMachineIncoming(
     AddEdges(data_node, inputs, outputs);
 
     // Update the boxing_info of the in_boxing node
-    auto& boxing_info = boxing_info_map_.GetBoxingInfo(boxing_name);
+    auto&& boxing_info = boxing_info_map_.GetBoxingInfo(boxing_name);
     SegmentSegmentPair segment_pair{ predecessor_segment_name, segment_name };
-    auto& boxing_info_elem = boxing_info.GetBoxingInfoElement(segment_pair);
+    auto&& boxing_info_elem = boxing_info.GetBoxingInfoElement(segment_pair);
     boxing_info_elem.UpdateInput(predecessor_stage_name, in_net_name);
   }
 }
 
 template <typename Dtype>
 void PipeDag<Dtype>::AddDataNodesWithoutSuccessors() {
-  auto& id_map = oneflow::TheOne<Dtype>::id_map();
+  auto&& id_map = oneflow::TheOne<Dtype>::id_map();
   // Lookup the last data nodes of SegmentDag (i.e., the nodes precisely before
   // the End nodes)
   auto envelope_names_without_successor
@@ -1067,7 +1067,7 @@ OpNode<PipeMeta>* PipeDag<Dtype>::AddOpNode(const std::string& pipe_name,
   int32_t thread_id,
   TaskType type) {
   auto op_node = NewOpNode(pipe_name);
-  auto& pipe_meta = op_node->mutable_op();
+  auto&& pipe_meta = op_node->mutable_op();
   pipe_meta = std::make_shared<PipeMeta>();
   pipe_meta->mutable_thread_id() = thread_id;
   pipe_meta->mutable_task_type() = type;
@@ -1093,7 +1093,7 @@ template <typename Dtype>
 DataNode<EnvelopeMeta>* PipeDag<Dtype>::AddDataNode(
     const std::string& data_name) {
   auto data_node = NewDataNode(data_name);
-  auto& envelope_meta = data_node->mutable_data();
+  auto&& envelope_meta = data_node->mutable_data();
   envelope_meta = std::make_shared<EnvelopeMeta>();
   // TODO(jiyuan): fill in the blob_names
   auto it = data_name_to_node_.find(data_name);
@@ -1216,7 +1216,7 @@ std::string PipeDag<Dtype>::build_envelope_name_from_envelopes(
 template <typename Dtype>
 int32_t PipeDag<Dtype>::GetThreadLocalId(
   const std::string& pipe_name) const {
-  auto& id_map = oneflow::TheOne<Dtype>::id_map();
+  auto&& id_map = oneflow::TheOne<Dtype>::id_map();
   auto pipe_node = GetOpNode(pipe_name);
   auto thread_id = pipe_node->op()->thread_id();
   return id_map->local_id_from_thread_id(thread_id);
