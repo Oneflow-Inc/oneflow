@@ -44,6 +44,21 @@ class LogicalDag : public Dag<BlobMeta, LayerMeta<Dtype>> {
   friend class DagReverseIterator<LogicalDag<Dtype>>;
   friend class DagReverseIterator<LogicalDag<Dtype>, true>;
  public:
+  using Dag<BlobMeta, LayerMeta<Dtype>>::name_;
+  using Dag<BlobMeta, LayerMeta<Dtype>>::path_type_;
+  using DNode = DataNode<BlobMeta>;
+  using ONode = OpNode<LayerMeta<Dtype>>;
+  using Dag<BlobMeta, LayerMeta<Dtype>>::Dag;
+  using Dag<BlobMeta, LayerMeta<Dtype>>::op_name_to_node_;
+  using Dag<BlobMeta, LayerMeta<Dtype>>::data_name_to_node_;
+  using Dag<BlobMeta, LayerMeta<Dtype>>::AddStartAndEndNodes;
+  using Dag<BlobMeta, LayerMeta<Dtype>>::PostProcessing;
+  using Dag<BlobMeta, LayerMeta<Dtype>>::NewDataNode;
+  using Dag<BlobMeta, LayerMeta<Dtype>>::NewOpNode;
+  using Dag<BlobMeta, LayerMeta<Dtype>>::GetOpNode;
+  using Dag<BlobMeta, LayerMeta<Dtype>>::GetDataNode;
+ 
+
   LogicalDag(std::shared_ptr<NetDescriptor> net_descriptor, PathType path_type,
     const std::string& name = "logical_dag");
   ~LogicalDag();

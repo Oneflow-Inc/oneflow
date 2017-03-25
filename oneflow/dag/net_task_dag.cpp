@@ -19,7 +19,7 @@ namespace oneflow {
 template <typename Dtype>
 NetTaskDag<Dtype>::NetTaskDag(const DagBuilder<Dtype>& dag_builder,
   TaskType type, int32_t task_id, PathType path_type,
-  const std::string& actor_name, bool is_forward) : TaskDag(
+  const std::string& actor_name, bool is_forward) : TaskDag<Dtype>::TaskDag(
   dag_builder, type, task_id, path_type, actor_name, is_forward) {
   forward_is_sender_ = strings::Contains(actor_name, "out_net");
   is_net_receiver_ = (is_forward_ && !forward_is_sender_)
@@ -184,7 +184,7 @@ void NetTaskDag<Dtype>::AddProducedRegisterInfos() {
   auto op_meta = op_node->op();
   auto layer = op_meta->layer();
 
-  auto& id_map = oneflow::TheOne<Dtype>::id_map();
+  auto&& id_map = oneflow::TheOne<Dtype>::id_map();
   int32_t group_local_id = id_map->new_group_local_id(task_id_);
   int64_t group_id
     = id_map->group_id_from_task_id_and_group_local_id(task_id_, group_local_id);
@@ -324,5 +324,5 @@ void NetTaskDag<Dtype>::ForwardSetupInNetTask() {
   //}
 }
 
-INSTANTIATE_CLASS(NetTaskDag);
+//INSTANTIATE_CLASS(NetTaskDag);
 }  // namespace oneflow

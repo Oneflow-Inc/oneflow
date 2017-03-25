@@ -17,12 +17,12 @@
 #include "layers/base_layer.h"
 #include "layers/loader_layer.h"
 #include "layers/layer_factory.h"
-#include "proto_io.h"
+#include "proto/proto_io.h"
 
 namespace oneflow {
 template <typename Dtype>
 LogicalDag<Dtype>::LogicalDag(std::shared_ptr<NetDescriptor> net_descriptor,
-  PathType path_type, const std::string& name) : Dag(path_type, name),
+  PathType path_type, const std::string& name) : Dag<PathType, const std::string&>::Dag(path_type, name),
   net_descriptor_(net_descriptor) {
   Build();
   // Setup();
@@ -449,5 +449,5 @@ LogicalDag<Dtype>::DagBlobToLayerBlobs::GetTriples(const std::string& dag_blob) 
   return triple_it->second;
 }
 
-INSTANTIATE_CLASS(LogicalDag);
+//INSTANTIATE_CLASS(LogicalDag);
 }  // namespace oneflow

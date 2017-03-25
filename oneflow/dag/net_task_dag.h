@@ -7,6 +7,39 @@ namespace oneflow {
 template <typename Dtype>
 class NetTaskDag : public TaskDag<Dtype> {
  public:
+  using TaskDag<Dtype>::GetOpNode;
+  using TaskDag<Dtype>::GetDataNode;
+  using TaskDag<Dtype>::AddOpNode;
+  using TaskDag<Dtype>::name_;
+  using TaskDag<Dtype>::dag_builder_;
+  using TaskDag<Dtype>::type_;
+  using TaskDag<Dtype>::AddBlobsToConsumedRegisterInfoCrossPath;
+  using TaskDag<Dtype>::AddEdges;
+
+  using DNode = DataNode<BlobMeta>;
+
+  using TaskDag<Dtype>::task_id_;
+  using TaskDag<Dtype>::is_h2d_;
+  using TaskDag<Dtype>::is_forward_;
+  using TaskDag<Dtype>::data_name_to_node_;
+  using TaskDag<Dtype>::is_placeholder_;
+  using TaskDag<Dtype>::is_net_receiver_;
+  using TaskDag<Dtype>::AddBlobsToConsumedRegisterInfo;
+  using TaskDag<Dtype>::AddBlobsToProducedRegisterInfo;
+  using TaskDag<Dtype>::AddDataNode;
+
+
+  using TaskDag<Dtype>::path_type_;
+  using TaskDag<Dtype>::blob_info_manager_;
+  using TaskDag<Dtype>::register_info_manager_;
+  using TaskDag<Dtype>::null_filter_;
+  using TaskDag<Dtype>::op_name_to_node_;
+  using TaskDag<Dtype>::GetFirstOpNames;
+  using TaskDag<Dtype>::GetImmediateProducerNamesInPath;
+
+
+
+
   NetTaskDag(const DagBuilder<Dtype>& path, TaskType type,
     int32_t task_id, PathType path_type, const std::string& actor_name,
     bool is_forward);
