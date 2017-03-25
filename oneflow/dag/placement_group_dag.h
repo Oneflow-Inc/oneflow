@@ -7,7 +7,6 @@
 #include "dag/dag_node.h"
 #include "dag/dag.h"
 #include "context/placement_info.h"
-#include "dag/dag_builder.cpp"
 #include "dag/dag_iterator.h"
 /*
 PlacementGroupDag
