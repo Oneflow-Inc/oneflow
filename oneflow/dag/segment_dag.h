@@ -4,6 +4,9 @@
 #include <memory>
 #include <unordered_set>
 #include <unordered_map>
+#include <gflags/gflags.h>
+#include <glog/logging.h>
+#include <gtest/gtest.h>
 #include "dag/dag_node.h"
 #include "dag/dag.h"
 #include "common/string_pair.h"

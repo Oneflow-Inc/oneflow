@@ -147,7 +147,7 @@ RegisterInfo RegisterInfoManager::CompleteProducedRegisterInfoCrossPath(
     produced_register_info.AddEmptyBlob(blob_name, EnvelopeFlag::kOutEnvelope);
   }
 
-  auto& envelope_blobs = consumed_register_info.GetEnvelopeNames();
+  auto&& envelope_blobs = consumed_register_info.GetEnvelopeNames();
   for (auto& blob_name : envelope_blobs) {
     produced_register_info.AddEmptyBlob(blob_name, EnvelopeFlag::kOnEnvelope);
   }

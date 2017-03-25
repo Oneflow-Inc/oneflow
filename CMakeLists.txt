@@ -16,6 +16,12 @@ set(PB_LIBRARIES "/opt/oneflow/protobuf3/lib/libprotobuf.so" CACHE PATH "")
 include_directories(${PB_INCLUDE_DIRS})
 list(APPEND ONEFLOW_LINKER_LIBS ${PB_LIBRARIES})
 
+#gtest
+enable_testing()
+find_package(GTest)
+include_directories(SYSTEM ${GTEST_INCLUDE_DIRS})
+list(APPEND ONEFLOW_LINKER_LIBS ${GTEST_LIBRARIES})
+
 #glog lib
 include(FindGLOG)
 MESSAGE(STATUS "GLOG_INCLUDE_PATH = ${GLOG_INCLUDE_PATH}")

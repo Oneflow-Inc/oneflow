@@ -416,7 +416,7 @@ void SegmentDag<Dtype>::CloneDataNodes() {
         // This layer has no succeeding layer
         auto blobs_no_successor
           = logical_dag_->GetSucceedingDataNodeNames(layer_name);
-        CHECK(blobs_no_successor.size(), 1);
+        //CHECK(blobs_no_successor.size(), 1);
         auto segment_to_blobs_it
           = segment_to_blobs_no_successor.find(segment_name);
         if (segment_to_blobs_it == segment_to_blobs_no_successor.end()) {
@@ -428,7 +428,7 @@ void SegmentDag<Dtype>::CloneDataNodes() {
       } else {
         // This layer has succeeding layer
         for (auto& successor : successors) {
-          CHECK(layer_name_to_segment_name_.count(layer_name) > 0);
+          //CHECK(layer_name_to_segment_name_.count(layer_name) > 0);
           auto successor_segment
             = layer_name_to_segment_name_[successor];
           if (successor_segment != segment_name) {
