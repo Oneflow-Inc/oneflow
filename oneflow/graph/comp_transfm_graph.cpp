@@ -15,7 +15,7 @@ void CompTransfmGraph::FwBuildGraph() {
   }
   FwAddCloneOp();
   FwSetRelatedTaskEdges(lbn2producer, extern_in_lbn2consumers);
-  UpdateStartAndStop();
+  UpdateSourceAndSink();
 }
 
 void CompTransfmGraph::FwBuildFromUserOps(
@@ -136,7 +136,7 @@ void CompTransfmGraph::FwSetRelatedTaskEdges(
 
 void CompTransfmGraph::BpBuildGraph() {
   const TransfmGraph* fw_graph = task_node()->GetFwNode()->transfm_graph();
-  const TransfmNode* cp_in_node = fw_graph->start_node().SoleOutEdge()->dst_node();
+  const TransfmNode* cp_in_node = fw_graph->source_node().SoleOutEdge()->dst_node();
   std::unordered_map<const TransfmNode*, TransfmNode*> fw_node2bp_node;
   // Copy Nodes
   for (const std::unique_ptr<TransfmNode>& fw_node : fw_graph->nodes()) {

@@ -270,7 +270,7 @@ void ChainGraph::Init(const LogicalGraph* logical_graph) {
     }
   }
   // Post processing
-  UpdateStartAndStop();
+  UpdateSourceAndSink();
   CollectInputAndOutputLbns();
 }
 

@@ -32,7 +32,7 @@ void LogicalGraph::BuildGraphStruct(const DLNetConf& dl_net_conf) {
   }
   lbn2node.clear();
   // Post Processing
-  UpdateStartAndStop();
+  UpdateSourceAndSink();
 }
 
 void LogicalGraph::FillNodeWithParallelDesc(const Strategy& strategy_conf) {

@@ -35,7 +35,7 @@ void TaskGraph::BuildWithoutTransfm(
   InitCompTaskNodes(*stage_graph, id_map, &stage2task_nodes);
   InitBoxingTaskNodes(*stage_graph, id_map, &stage2task_nodes);
   ConnectTaskNodes(*stage_graph, &stage2task_nodes);
-  UpdateStartAndStop();
+  UpdateSourceAndSink();
   if (job_need_bp) {
     BuildBpStruct();
   }
@@ -222,7 +222,7 @@ void TaskGraph::BuildBpStruct() {
   std::vector<TaskNode*> turning_node_vec;
   GenerateRelatedBpNodes(&turning_node_vec);
   BackwardConnect(turning_node_vec);
-  UpdateStartAndStop();
+  UpdateSourceAndSink();
 }
 
 void TaskGraph::GenerateRelatedBpNodes(

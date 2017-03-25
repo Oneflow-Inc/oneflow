@@ -74,7 +74,7 @@ void StageGraph::Init(std::unique_ptr<const ChainGraph>&& chain_graph) {
     }
   }
   // Post processing
-  UpdateStartAndStop();
+  UpdateSourceAndSink();
 }
 
 } // namespace oneflow
