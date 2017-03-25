@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <string>
 #include <cstdint>
+#include <vector>
 namespace oneflow {
 // A compute segment may be instantiated on multiple devices. On each device, 
 // there is a TaskDag corresponding to this segment.
