@@ -11,7 +11,7 @@
 #include "path/model_load_path.h"
 #include "path/model_store_path.h"
 
-namespace caffe {
+namespace oneflow {
 template <typename Dtype>
 void PathManager<Dtype>::Initialize(const SolverProto& param) {
   Build(param);
@@ -21,9 +21,9 @@ void PathManager<Dtype>::Initialize(const SolverProto& param) {
 
 template <typename Dtype>
 void PathManager<Dtype>::Build(const SolverProto& param) {
-  auto config_parser = caffe::TheOne<Dtype>::config_parser();
-  caffe::NetParameter net_param;
-  caffe::ReadProtoFromTextFileOrDie(param.train_net(), &net_param);
+  auto config_parser = oneflow::TheOne<Dtype>::config_parser();
+  oneflow::NetParameter net_param;
+  oneflow::ReadProtoFromTextFileOrDie(param.train_net(), &net_param);
 
   // There exist dependencies among various path objects. The paths are created
   // in a particular order, such that if path A is depended on by path B, path A
@@ -170,5 +170,5 @@ std::shared_ptr<BasePath<Dtype>> PathManager<Dtype>::GetPath(PathType type) cons
   return path_it->second;
 }
 
-INSTANTIATE_CLASS(PathManager);
-}  // namespace caffe
+//INSTANTIATE_CLASS(PathManager);
+}  // namespace oneflow
