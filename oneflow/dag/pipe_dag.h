@@ -76,6 +76,8 @@ class PipeDag : public Dag<EnvelopeMeta, PipeMeta> {
   friend class DagReverseIterator<PipeDag<Dtype>>;
   friend class DagReverseIterator<PipeDag<Dtype>, true>;
 public:
+
+
   PipeDag(
     std::shared_ptr<SegmentDag<Dtype>> segment_dag,
     std::shared_ptr<StageDag<Dtype>> stage_dag,
