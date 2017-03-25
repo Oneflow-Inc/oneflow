@@ -1,6 +1,7 @@
 #ifndef _JOB_MANAGER_H_
 #define _JOB_MANAGER_H_
 #include <vector>
+#include <cmath>
 #include <string>
 #include <memory>
 #include <map>

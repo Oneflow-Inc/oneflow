@@ -105,7 +105,7 @@ void JobManager<Dtype>::AddTaskDag(int32_t task_id,
   unordered_task_id_to_dag_.insert({ task_id, task_dag });
   task_name_to_dag_.insert({ task_name, task_dag });
 
-  auto& id_map = oneflow::TheOne<Dtype>::id_map();
+  auto&& id_map = oneflow::TheOne<Dtype>::id_map();
   int32_t thread_id = id_map->thread_id_from_task_id(task_id);
   int32_t machine_id = id_map->machine_id_from_thread_id(thread_id);
   int32_t thread_local_id = id_map->thread_local_id_from_task_id(task_id);
@@ -230,17 +230,17 @@ void JobManager<Dtype>::GetMemoryQuota() {
   // exactly the same hardware spec with othrs. This enable us to infer the
   // available resources of the whole cluster more conveniently.
   // TODO(jiyuan): remove this assumption one day.
-  auto& machine_descriptor
+  auto&& machine_descriptor
     = oneflow::TheOne<Dtype>::config_parser()->machine_descriptor();
   int32_t current_machine_id = machine_descriptor->machine_id();
   size_t current_host_memory_quota = machine_descriptor->total_host_mem();
   auto device_count = machine_descriptor->device_count();
   CHECK_GT(device_count, 0);
   // Assume all the other devices have the same spec as the first device
-  auto& device_descriptor = machine_descriptor->device_descriptor(0);
+  auto&& device_descriptor = machine_descriptor->device_descriptor(0);
   size_t device_global_mem_quota = device_descriptor->total_global_mem();
 
-  auto& id_map = oneflow::TheOne<Dtype>::id_map();
+  auto&& id_map = oneflow::TheOne<Dtype>::id_map();
   for (auto& machine_thread_task : all_task_dags_) {
     auto& machine_id = machine_thread_task.first;
     auto& thread_task_dags = machine_thread_task.second;
@@ -302,7 +302,7 @@ void JobManager<Dtype>::SetMemoryPolicy() {
 }
 template <typename Dtype>
 void JobManager<Dtype>::ForwardPieceSize(int32_t piece_size) {
-  auto& strategy_descriptor
+  auto&& strategy_descriptor
     = oneflow::TheOne<Dtype>::config_parser()->strategy_descriptor();
   strategy_descriptor->set_piece_size_each_device(piece_size);
   SetupTaskDags(actor_dag_);
@@ -372,7 +372,7 @@ template <typename Dtype>
 void JobManager<Dtype>::GetMemoryNeed() {
   host_memory_need_.clear();
   device_memory_need_.clear();
-  auto& id_map = oneflow::TheOne<Dtype>::id_map();
+  auto&& id_map = oneflow::TheOne<Dtype>::id_map();
   for (auto& machine_memory_usage : machine_memory_usage_) {
     auto machine_id = machine_memory_usage.first;
     auto memory_usage = machine_memory_usage.second;

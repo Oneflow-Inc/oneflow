@@ -22,7 +22,7 @@
 //#include "thread/comm_bus.h"
 //#include "thread/base_thread.h"
 #include "task/job_manager.h"
-#include "task/node_manager.h"
+//#include "task/node_manager.h"
 //#include "path/path_share_policy.h"
 #include "path/path_manager.h"
 

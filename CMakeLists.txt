@@ -67,6 +67,7 @@ MESSAGE(STATUS "oneflow_source_dir = ${oneflow_source_dir}")
 file(GLOB_RECURSE oneflow_all_cc "${oneflow_source_dir}/oneflow/*.cpp")
 MESSAGE(STATUS "SRC_FILES = ${oneflow_all_cc}")
 add_library(srcobj ${oneflow_all_cc})
+MESSAGE(STATUS "srcobj = ${srcobj}")
 #add_dependencies(srcobj grpcobj)
 list(APPEND ONEFLOW_LINKER_LIBS srcobj)
 
