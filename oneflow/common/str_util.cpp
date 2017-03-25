@@ -32,9 +32,11 @@ bool Contains(const std::string& source, const std::string& search_for) {
 std::vector<std::string> Split(const std::string& source,
   const std::string& delim) {
   std::regex re(delim);
-  std::sregex_token_iterator begin{ source.begin(), source.end(), re, -1 };
-  std::sregex_token_iterator end;
-  return {begin, end};
+  //std::sregex_token_iterator begin{ source.begin(), source.end(), re, -1 };
+  //std::sregex_token_iterator end;
+  std::vector<std::string> tmp;
+  //return {begin, end};
+  return tmp;
 }
 
 std::string Join(const std::vector<std::string>& source,
