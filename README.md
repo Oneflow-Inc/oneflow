@@ -1,2 +1,3 @@
 # oneflow
-start
+start 
+compile
