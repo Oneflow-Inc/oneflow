@@ -2,7 +2,7 @@
 
 #include "layers/base_layer.h"
 #include "layers/layer_factory.h"
-#include "oneflow.pb.h"
+#include "proto/oneflow.pb.h"
 
 namespace oneflow {
 

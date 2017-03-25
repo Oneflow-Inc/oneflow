@@ -41,6 +41,7 @@ class LoaderLayer : public BaseLayer<Dtype> {
 public:
   using BaseLayer<Dtype>::param_;
   using BaseLayer<Dtype>::layer_name_;
+  using DataParam<Dtype>::proto_param_;
   explicit LoaderLayer(const std::string& layer_name,
     const std::string& proto_param) : BaseLayer<Dtype>::BaseLayer(layer_name, proto_param) {}
 
