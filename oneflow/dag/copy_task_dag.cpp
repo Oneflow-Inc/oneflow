@@ -17,7 +17,7 @@ namespace oneflow {
 template <typename Dtype>
 CopyTaskDag<Dtype>::CopyTaskDag(const DagBuilder<Dtype>& dag_builder,
   TaskType type, int32_t task_id, PathType path_type,
-  const std::string& actor_name, bool is_forward) : TaskDag(
+  const std::string& actor_name, bool is_forward) : TaskDag<Dtype>::TaskDag(
   dag_builder, type, task_id, path_type, actor_name, is_forward) {
 }
 template <typename Dtype>
@@ -325,5 +325,4 @@ RegisterInfo CopyTaskDag<Dtype>::ReplaceProducedRegisterInfoCrossPath(
   return register_info;
 }
 
-INSTANTIATE_CLASS(CopyTaskDag);
 }  // namespace oneflow
