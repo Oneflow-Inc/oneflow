@@ -11,7 +11,7 @@
 #include "dag/dag_builder.h"
 #include "path/data_path.h"
 #include "layers/base_layer.h"
-#include "oneflow.pb.h"
+#include "proto/oneflow.pb.h"
 #include "context/one.h"
 #include "context/config_parser.h"
 #include "context/net_descriptor.h"
@@ -23,7 +23,7 @@ namespace oneflow {
 template <typename Dtype>
 ModelLoadPath<Dtype>::ModelLoadPath(std::shared_ptr<DataPath<Dtype>> data_path,
   PathManager<Dtype>* path_manager)
-  : BasePath(PathType::kModelLoadPath, path_manager), data_path_(data_path),
+  : BasePath<Dtype>::BasePath(PathType::kModelLoadPath, path_manager), data_path_(data_path),
     index_(0) {}
 
 template <typename Dtype>
@@ -201,5 +201,5 @@ void ModelLoadPath<Dtype>::StrategyForModelLoadPath(
   placeholder_placement_group->set_allocated_device_group(placeholder_device_group);
 }
 
-INSTANTIATE_CLASS(ModelLoadPath);
+//INSTANTIATE_CLASS(ModelLoadPath);
 }  // namespace oneflow

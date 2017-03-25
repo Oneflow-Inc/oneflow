@@ -19,6 +19,11 @@ class Strategy;
 template <typename Dtype>
 class ModelLoadPath : public BasePath<Dtype> {
 public:
+  using BasePath<Dtype>::dag_builder_dict_;
+  using BasePath<Dtype>::path_manager_;
+  
+
+
   ModelLoadPath(std::shared_ptr<DataPath<Dtype>> data_path,
     PathManager<Dtype>* path_manager);
   virtual ~ModelLoadPath() {}
