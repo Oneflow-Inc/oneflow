@@ -7,6 +7,9 @@
 #include <map>
 #include <unordered_map>
 #include "common/task_type.h"
+#include "dag/task_dag.h"
+#include "context/config_parser.h"
+#include "dag/dag_builder.h"
 #include "task/memory_usage.h"
 #include "dag/register_info.h"
 #include "path/base_path.h"
@@ -25,6 +28,8 @@ template <typename Dtype>
 class ActorDag;
 template <typename Dtype>
 class TaskDag;
+template <typename Dtype>
+class DagBuilder;
 
 template <typename Dtype>
 class JobManager {

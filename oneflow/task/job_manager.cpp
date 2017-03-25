@@ -12,6 +12,7 @@
 #include "dag/boxing_task_dag.h"
 #include "dag/net_task_dag.h"
 #include "dag/dag_iterator.h"
+#include "dag/dag_builder.h"
 #include "context/one.h"
 #include "context/id_map.h"
 #include "context/config_parser.h"
@@ -470,5 +471,5 @@ JobManager<Dtype>::GetTaskDagsOfMachine(int32_t machine_id) const {
   CHECK(machine_it != all_task_dags_.end());
   return machine_it->second;
 }
-INSTANTIATE_CLASS(JobManager);
+//INSTANTIATE_CLASS(JobManager);
 }  // namespace oneflow
