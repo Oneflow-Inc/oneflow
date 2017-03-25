@@ -11,7 +11,7 @@
 #include "dag/dag_builder.h"
 #include "path/data_path.h"
 #include "layers/base_layer.h"
-#include "oneflow.pb.h"
+#include "proto/oneflow.pb.h"
 #include "context/one.h"
 #include "context/config_parser.h"
 #include "context/net_descriptor.h"
@@ -22,7 +22,7 @@ namespace oneflow {
 template <typename Dtype>
 ModelUpdatePath<Dtype>::ModelUpdatePath(std::shared_ptr<DataPath<Dtype>> data_path,
   PathManager<Dtype>* path_manager)
-  : BasePath(PathType::kModelUpdatePath, path_manager), data_path_(data_path),
+  : BasePath<Dtype>::BasePath(PathType::kModelUpdatePath, path_manager), data_path_(data_path),
     is_train_(data_path_->is_train()) {
 }
 
@@ -442,5 +442,5 @@ void ModelUpdatePath<Dtype>::StrategyForDataParallelOnMultipleDevice(
   update_placement_group->set_allocated_device_group(update_device_group);
 }
 
-INSTANTIATE_CLASS(ModelUpdatePath);
+//INSTANTIATE_CLASS(ModelUpdatePath);
 }  // namespace oneflow

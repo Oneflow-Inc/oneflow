@@ -31,6 +31,11 @@ class Strategy;
 template <typename Dtype>
 class ModelUpdatePath : public BasePath<Dtype> {
 public:
+  using BasePath<Dtype>::dag_builder_dict_;
+  using BasePath<Dtype>::path_manager_;
+
+
+
   ModelUpdatePath(std::shared_ptr<DataPath<Dtype>> data_path,
     PathManager<Dtype>* path_manager);
   virtual ~ModelUpdatePath() {}
