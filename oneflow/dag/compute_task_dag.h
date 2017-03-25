@@ -20,8 +20,10 @@ class ComputeTaskDag : public TaskDag<Dtype> {
   using TaskDag<Dtype>::type_;
   using TaskDag<Dtype>::AddBlobsToConsumedRegisterInfoCrossPath;
   using TaskDag<Dtype>::AddEdges;
-  using TaskDag<Dtype>::DNode;
+  //using TaskDag<Dtype>::DNode;
  
+  using DNode = DataNode<BlobMeta>;
+
   using TaskDag<Dtype>::task_id_;
   using TaskDag<Dtype>::is_forward_;
   using TaskDag<Dtype>::data_name_to_node_;
