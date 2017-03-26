@@ -22,7 +22,7 @@
 //#include "public_session.h"
 
 
-DEFINE_string(solver, "",
+DEFINE_string(solver, "/home/xiaoshu/dl_sys/oneflow/oneflow/proto/lenet_solver_light.prototxt",
   "The solver definition protocol buffer text file.");
 
 //void Session_test(const Options* opts) {
@@ -41,16 +41,18 @@ int main(int argc, char* argv[]){
       confFile.close();
   }
   */
+//server start
   std::unique_ptr<oneflow::ServerInterface> server;
   //oneflow::NewServer(&server);
   oneflow::GrpcServer::Create(&server);
   server->Start();
-
+// graph compile
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
   FLAGS_logtostderr = 1;
   using Dtype = float;
   oneflow::SolverProto solver_param;
+  std::cout<<"FLAGS_solver = "<<FLAGS_solver<<std::endl;
   oneflow::ReadProtoFromTextFileOrDie(FLAGS_solver, &solver_param);
   
   oneflow::TheOne<Dtype>::InitResource(FLAGS_solver);
