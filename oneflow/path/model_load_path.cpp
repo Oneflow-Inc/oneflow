@@ -201,5 +201,5 @@ void ModelLoadPath<Dtype>::StrategyForModelLoadPath(
   placeholder_placement_group->set_allocated_device_group(placeholder_device_group);
 }
 
-//INSTANTIATE_CLASS(ModelLoadPath);
+INSTANTIATE_CLASS(ModelLoadPath);
 }  // namespace oneflow

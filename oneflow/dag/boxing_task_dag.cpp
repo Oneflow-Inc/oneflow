@@ -457,5 +457,5 @@ std::string BoxingTaskDag<Dtype>::build_layer_name(const std::string& pipe_name,
   const std::string& blob_name) const {
   return strings::Join({ pipe_name, blob_name }, "_");
 }
-//INSTANTIATE_CLASS(BoxingTaskDag);
+INSTANTIATE_CLASS(BoxingTaskDag);
 }  // namespace oneflow

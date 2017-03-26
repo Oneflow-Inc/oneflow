@@ -5,7 +5,9 @@
 #include "proto/oneflow.pb.h"
 #include "proto/proto_io.h"
 
+
 namespace oneflow {
+
 class ConfigParser;
 class IDMap;
 template <typename Dtype>
@@ -55,6 +57,7 @@ class TheOne {
   TheOne(const TheOne& other) = delete;
   TheOne& operator=(const TheOne& other) = delete;
 };
+
 
 template <typename Dtype>
 inline TheOne<Dtype>& TheOne<Dtype>::Get() {

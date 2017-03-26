@@ -354,6 +354,7 @@ public:
     param_->AllocateEmptyBlobs();
   }
 
+
   // Step 4:
   // Do the initialization if we know input data's shape (in |data_param|).
   // It must infer the output data's shape (in data_param) and the internal

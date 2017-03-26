@@ -170,5 +170,5 @@ std::shared_ptr<BasePath<Dtype>> PathManager<Dtype>::GetPath(PathType type) cons
   return path_it->second;
 }
 
-//INSTANTIATE_CLASS(PathManager);
+INSTANTIATE_CLASS(PathManager);
 }  // namespace oneflow

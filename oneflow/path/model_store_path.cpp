@@ -208,5 +208,5 @@ void ModelStorePath<Dtype>::StrategyForModelStorePath(
   store_placement_group->mutable_layer_set()->add_name(store_layer_name_);
   store_placement_group->set_allocated_device_group(store_device_group);
 }
-//INSTANTIATE_CLASS(ModelStorePath);
+INSTANTIATE_CLASS(ModelStorePath);
 }  // namespace oneflow

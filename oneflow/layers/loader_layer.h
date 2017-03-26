@@ -9,6 +9,9 @@
 
 namespace oneflow {
 template <typename Dtype>
+class DataParam;
+
+template <typename Dtype>
 class LoaderData : public DataParam<Dtype> {
 public:
   Blob<Dtype>* data{ nullptr };
@@ -41,9 +44,9 @@ class LoaderLayer : public BaseLayer<Dtype> {
 public:
   using BaseLayer<Dtype>::param_;
   using BaseLayer<Dtype>::layer_name_;
-  using DataParam<Dtype>::proto_param_;
+  using BaseLayer<Dtype>::proto_param_;
   explicit LoaderLayer(const std::string& layer_name,
-    const std::string& proto_param) : BaseLayer<Dtype>::BaseLayer(layer_name, proto_param) {}
+    const std::string& proto_param) : BaseLayer<Dtype>(layer_name, proto_param) {}
 
   void SetPieceSize(int32_t piece_size) {
     GET_CONCRETE_POINTER(LoaderParam, param, this->param_);

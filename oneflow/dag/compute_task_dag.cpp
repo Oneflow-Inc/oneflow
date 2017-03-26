@@ -128,9 +128,9 @@ std::string ComputeTaskDag<Dtype>::RectifyProtoStrForModelParallelism(
 
   // Figure out the index of device's logical id in the all devices allocated
   // to this layer for model-parallelism
-  auto& device_set = placement_info.device_set();
+  auto&& device_set = placement_info.device_set();
   int32_t parallel_size = placement_info.device_set().size();
-  auto& id_map = oneflow::TheOne<Dtype>::id_map();
+  auto&& id_map = oneflow::TheOne<Dtype>::id_map();
   int32_t thread_id = id_map->thread_id_from_task_id(task_id_);
   int32_t logical_id = id_map->logical_id_from_device_id(thread_id);
   // |device_set| keeps the logical_ids of all the devices allocated to this
@@ -391,7 +391,7 @@ void ComputeTaskDag<Dtype>::BuildBackward() {
   // layers, instead, directly uses the layers in forward TaskDag.
   // (2) The backward TaskDag has its own blobs distinct from the forward
   // TaskDag.
-  auto& actor_dag = dag_builder_.actor_dag();
+  auto&& actor_dag = dag_builder_.actor_dag();
   auto forward_task_name = actor_dag->GetForwardTaskName(name_);
   auto forward_task_id = actor_dag->GetTaskID(forward_task_name);
   auto backward_task_id = actor_dag->GetTaskID(name_);
@@ -581,7 +581,7 @@ void ComputeTaskDag<Dtype>::DataPathForwardAddProducedRegisterInfos() {
   RegisterType register_type{ RegisterType::kDataType };
   DeviceType device_type{ DeviceType::kGPU };
 
-  auto& id_map = oneflow::TheOne<Dtype>::id_map();
+  auto&& id_map = oneflow::TheOne<Dtype>::id_map();
   int32_t group_local_id = id_map->new_group_local_id(task_id_);
   int64_t group_id
     = id_map->group_id_from_task_id_and_group_local_id(task_id_, group_local_id);
@@ -619,7 +619,7 @@ void ComputeTaskDag<Dtype>::ModelUpdatePathForwardAddProducedRegisterInfos() {
   RegisterType register_type{ RegisterType::kDataType };
   DeviceType device_type{ DeviceType::kGPU };
 
-  auto& id_map = oneflow::TheOne<Dtype>::id_map();
+  auto&& id_map = oneflow::TheOne<Dtype>::id_map();
   int32_t group_local_id = id_map->new_group_local_id(task_id_);
   int64_t group_id
     = id_map->group_id_from_task_id_and_group_local_id(task_id_, group_local_id);
@@ -655,7 +655,7 @@ void ComputeTaskDag<Dtype>::ModelLoadPathForwardAddProducedRegisterInfos() {
   RegisterType register_type{ RegisterType::kDataType };
   DeviceType device_type{ DeviceType::kCPU };
 
-  auto& id_map = oneflow::TheOne<Dtype>::id_map();
+  auto&& id_map = oneflow::TheOne<Dtype>::id_map();
   int32_t group_local_id = id_map->new_group_local_id(task_id_);
   int64_t group_id
     = id_map->group_id_from_task_id_and_group_local_id(task_id_, group_local_id);
@@ -684,7 +684,7 @@ void ComputeTaskDag<Dtype>::ModelStorePathForwardAddProducedRegisterInfos() {
 
 template <typename Dtype>
 void ComputeTaskDag<Dtype>::BackwardAddProducedRegisterInfos() {
-  auto& id_map = oneflow::TheOne<Dtype>::id_map();
+  auto&& id_map = oneflow::TheOne<Dtype>::id_map();
   int32_t data_diff_local_id = id_map->new_group_local_id(task_id_);
   int64_t data_diff_group_id = id_map->group_id_from_task_id_and_group_local_id(
     task_id_, data_diff_local_id);
@@ -977,5 +977,5 @@ ComputeTaskDag<Dtype>::GetOutputLogicalBlobs() const {
   auto segment_name = actor_dag->GetSegmentNameFromActor(name_);
   return segment_dag->GetOutputBlobs(segment_name);
 }
-
+INSTANTIATE_CLASS(ComputeTaskDag);
 }  // namespace oneflow

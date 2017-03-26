@@ -324,5 +324,5 @@ void NetTaskDag<Dtype>::ForwardSetupInNetTask() {
   //}
 }
 
-//INSTANTIATE_CLASS(NetTaskDag);
+INSTANTIATE_CLASS(NetTaskDag);
 }  // namespace oneflow

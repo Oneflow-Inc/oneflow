@@ -442,5 +442,5 @@ void ModelUpdatePath<Dtype>::StrategyForDataParallelOnMultipleDevice(
   update_placement_group->set_allocated_device_group(update_device_group);
 }
 
-//INSTANTIATE_CLASS(ModelUpdatePath);
+INSTANTIATE_CLASS(ModelUpdatePath);
 }  // namespace oneflow

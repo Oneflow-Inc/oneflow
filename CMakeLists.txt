@@ -73,10 +73,10 @@ include_directories(/usr/local/cuda/include)
 MESSAGE(STATUS "oneflow_source_dir = ${oneflow_source_dir}")
 file(GLOB_RECURSE oneflow_all_cc "${oneflow_source_dir}/oneflow/*.cpp")
 MESSAGE(STATUS "SRC_FILES = ${oneflow_all_cc}")
-add_library(srcobj ${oneflow_all_cc} ${oneflow_all_cc})
+add_library(srcobj ${oneflow_all_cc})
 #add_dependencies(srcobj grpcobj)
 list(APPEND ONEFLOW_LINKER_LIBS srcobj)
 
 
 link_libraries(grpc++_unsecure grpc gpr glog gflags ${ONEFLOW_LINKER_LIBS}) 
-ADD_EXECUTABLE(server_lib oneflow/main.cc ${GRPC_SRCS} ${oneflow_all_cc})
+ADD_EXECUTABLE(server_lib oneflow/main.cc ${PB_SRCS} ${oneflow_all_cc})

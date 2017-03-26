@@ -404,5 +404,5 @@ std::shared_ptr<TaskDag<Dtype>> DagBuilder<Dtype>::GetCrossPathTaskDag(
     return GetTaskDagByName(producers[0]);
   }
 }
-//INSTANTIATE_CLASS(DagBuilder);
+INSTANTIATE_CLASS(DagBuilder);
 }  // namespace oneflow

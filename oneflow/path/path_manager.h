@@ -8,21 +8,19 @@
 #include "proto/oneflow.pb.h"
 #include "proto/proto_io.h"
 
+namespace std {
+  template<>
+  struct hash<oneflow::PathType>{
+    typedef oneflow::PathType argument_type;
+    typedef size_t result_type;
+    result_type operator () (const argument_type& x) const{
+      using type = typename std::underlying_type<argument_type>::type;
+      return std::hash<type>()(static_cast<type>(x));
+    }
+  };
+}
+
 namespace oneflow {
-/*
-PathManager holds a set of BasePath objects and coordinates the interaction
-between BasePath objects.
-
-Each BasePath object holds one or several DagBuilder objects, each of which 
-builds and initialize a few TaskDags who collaborate together to perform a 
-sub-job.
-
-If there exist dependencies among paths, special attentional need to be paid to
-initialize the internal content of the paths. Generally, we firstly Build the 
-graphs. Secondly, we Connect the graphs from different paths. Finally, we Setup
-the graphs in all the paths.
-*/
-
 template <typename Dtype>
 class PathManager {
 public:

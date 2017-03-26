@@ -323,7 +323,7 @@ TaskDag<Dtype>::TaskDag(const DagBuilder<Dtype>& dag_builder, TaskType type,
   bool is_forward)
   : dag_builder_(dag_builder), type_(type), task_id_(task_id),
     is_forward_(is_forward), is_placeholder_(false),
-    Dag<PathType, const std::string&>::Dag(path_type, actor_name), is_h2d_(false), is_net_receiver_(false) { }
+    Dag<BlobMeta, LayerMeta<Dtype>>(path_type, actor_name), is_h2d_(false), is_net_receiver_(false) { }
 
 template <typename Dtype>
 TaskDag<Dtype>::~TaskDag() {}

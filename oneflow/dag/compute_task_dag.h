@@ -15,6 +15,10 @@ class ComputeTaskDag : public TaskDag<Dtype> {
   using TaskDag<Dtype>::GetOpNode;
   using TaskDag<Dtype>::GetDataNode;
   using TaskDag<Dtype>::AddOpNode;
+  using TaskDag<Dtype>::AddDataNode;
+  using TaskDag<Dtype>::GetSucceedingOpNodeNamesOfDataNode;
+  using TaskDag<Dtype>::AddBackwardOpNode;
+  using TaskDag<Dtype>::AddBlobsToConsumedRegisterInfo;
   using TaskDag<Dtype>::name_;
   using TaskDag<Dtype>::dag_builder_;
   using TaskDag<Dtype>::type_;
@@ -22,6 +26,8 @@ class ComputeTaskDag : public TaskDag<Dtype> {
   using TaskDag<Dtype>::AddEdges;
  
   using DNode = DataNode<BlobMeta>;
+  using TaskDag<Dtype>::IsFirstOpNode;
+  using TaskDag<Dtype>::AddBlobsToProducedRegisterInfo;
 
   using TaskDag<Dtype>::task_id_;
   using TaskDag<Dtype>::is_forward_;

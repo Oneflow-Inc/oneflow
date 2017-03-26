@@ -21,6 +21,7 @@
 #include "net/grpc_server_lib.h"
 //#include "public_session.h"
 
+
 DEFINE_string(solver, "",
   "The solver definition protocol buffer text file.");
 
@@ -44,16 +45,16 @@ int main(int argc, char* argv[]){
   //oneflow::NewServer(&server);
   oneflow::GrpcServer::Create(&server);
   server->Start();
-  
-  /*
+
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
   FLAGS_logtostderr = 1;
   using Dtype = float;
   oneflow::SolverProto solver_param;
   oneflow::ReadProtoFromTextFileOrDie(FLAGS_solver, &solver_param);
+  
   oneflow::TheOne<Dtype>::InitResource(FLAGS_solver);
   oneflow::TheOne<Dtype>::InitJob2(solver_param); 
-  */ 
   return 0;
 }
+

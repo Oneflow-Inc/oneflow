@@ -44,6 +44,9 @@ class LogicalDag : public Dag<BlobMeta, LayerMeta<Dtype>> {
   friend class DagReverseIterator<LogicalDag<Dtype>>;
   friend class DagReverseIterator<LogicalDag<Dtype>, true>;
  public:
+  using Dag<BlobMeta, LayerMeta<Dtype>>::PrintDag;
+  using Dag<BlobMeta, LayerMeta<Dtype>>::AddEdges;
+
   using Dag<BlobMeta, LayerMeta<Dtype>>::name_;
   using Dag<BlobMeta, LayerMeta<Dtype>>::path_type_;
   using DNode = DataNode<BlobMeta>;

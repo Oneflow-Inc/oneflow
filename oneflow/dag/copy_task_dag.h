@@ -15,7 +15,11 @@ class CopyTaskDag : public TaskDag<Dtype> {
   using TaskDag<Dtype>::dag_builder_;
   using TaskDag<Dtype>::type_;
   using TaskDag<Dtype>::AddBlobsToConsumedRegisterInfoCrossPath;
+  using TaskDag<Dtype>::AddBlobsToConsumedRegisterInfo;
   using TaskDag<Dtype>::AddEdges;
+  using TaskDag<Dtype>::AddBlobsToProducedRegisterInfo;
+  using TaskDag<Dtype>::task_blob_from_layer_blob;
+  using TaskDag<Dtype>::AddDataNode;
 
   using DNode = DataNode<BlobMeta>;
 

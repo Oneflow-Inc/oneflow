@@ -45,5 +45,5 @@ bool DataPath<Dtype>::is_train() const {
   return is_train_;
 }
 
-//INSTANTIATE_CLASS(DataPath);
+INSTANTIATE_CLASS(DataPath);
 }  // namespace oneflow
