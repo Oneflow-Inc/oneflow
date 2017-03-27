@@ -15,7 +15,7 @@ StageDag<Dtype>::StageDag(
   std::shared_ptr<LogicalDag<Dtype>> logical_dag,
   std::shared_ptr<SegmentDag<Dtype>> segment_dag, PathType path_type,
   const std::string& name)
-   : Dag(path_type, name), logical_dag_(logical_dag),
+   : Dag<EnvelopeMeta, StageMeta>(path_type, name), logical_dag_(logical_dag),
    segment_dag_(segment_dag) {
   Build();
   PrintDag(name_);
