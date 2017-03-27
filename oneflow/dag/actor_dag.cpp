@@ -25,7 +25,7 @@ ActorDag<Dtype>::ActorDag(
     std::shared_ptr<PipeDag<Dtype>> pipe_dag,
     PathType path_type,
     const std::string& name)
-  : Dag(path_type, name), logical_dag_(logical_dag), segment_dag_(segment_dag),
+  : Dag<EventMeta, ActorMeta>(path_type, name), logical_dag_(logical_dag), segment_dag_(segment_dag),
   stage_dag_(stage_dag), pipe_dag_(pipe_dag), has_BP_(false) {
   Build();
   PrintDag(name_, true);
