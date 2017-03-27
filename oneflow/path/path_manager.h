@@ -12,12 +12,18 @@ namespace oneflow {
 class PathManager {
  public:
   OF_DISALLOW_COPY_AND_MOVE(PathManager);
-  PathManager() = default;
   ~PathManager() = default;
+
+  static PathManager& Singleton() {
+    static PathManager obj;
+    return obj;
+  }
 
   void Init(const JobSysConf& job_sys_conf);
 
  private:
+  PathManager() = default;
+  
   void ProcessCps(const CpsDesc& cps_desc) {
     LOG(FATAL) << "TODO";
   }

@@ -3,14 +3,11 @@
 namespace oneflow {
 
 void PathManager::Init(const JobSysConf& job_sys_conf) {
-  // id map
-  IDMap id_map;
-  id_map.Init(job_sys_conf.resource());
+  IDManager::Singleton().Init(job_sys_conf.resource());
   // build data path
   std::unique_ptr<DataPath> data_path(new DataPath);
   data_path->Build(job_sys_conf.train_dlnet_conf(),
                    job_sys_conf.strategy(),
-                   id_map,
                    true); // TODO
   paths_.insert(std::make_pair("data", std::move(data_path)));
   // build model path

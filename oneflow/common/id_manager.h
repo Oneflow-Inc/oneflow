@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_COMMON_ID_MAP_H_
-#define ONEFLOW_COMMON_ID_MAP_H_
+#ifndef ONEFLOW_COMMON_ID_MANAGER_H_
+#define ONEFLOW_COMMON_ID_MANAGER_H_
 
 #include "common/util.h"
 #include "job/resource.pb.h"
@@ -14,11 +14,15 @@ using MachineId = int32_t;
 using ThreadGlobalId = int32_t;
 using ThreadLocalId = int32_t;
 
-class IDMap final {
+class IDManager final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(IDMap);
-  IDMap() = default;
-  ~IDMap() = default;
+  OF_DISALLOW_COPY_AND_MOVE(IDManager);
+  ~IDManager() = default;
+
+  static IDManager& Singleton() {
+    static IDManager obj;
+    return obj;
+  }
 
   void Init(const Resource& resource) {
     // TODO
@@ -37,9 +41,10 @@ class IDMap final {
   }
 
  private:
+  IDManager() = default;
 
 };
 
 } // namespace oneflow
 
-#endif // ONEFLOW_COMMON_ID_MAP_H_
+#endif // ONEFLOW_COMMON_ID_MANAGER_H_

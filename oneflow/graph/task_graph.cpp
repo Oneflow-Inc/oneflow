@@ -16,7 +16,6 @@ inline void TaskConnect(TaskNode* src_node,
 
 void TaskGraph::Init(const DLNetConf& dl_net_conf,
                      const Strategy& strategy_conf,
-                     const IDMap& id_map,
                      bool need_bp) {
   std::unique_ptr<LogicalGraph> logical_graph(new LogicalGraph);
   logical_graph->Init(dl_net_conf, strategy_conf);
@@ -25,16 +24,15 @@ void TaskGraph::Init(const DLNetConf& dl_net_conf,
   auto stage_graph_raw_ptr = new StageGraph;
   stage_graph_raw_ptr->Init(std::move(chain_graph));
   stage_graph_.reset(stage_graph_raw_ptr);
-  BuildWithoutExecGraph(id_map, need_bp);
+  BuildWithoutExecGraph(need_bp);
   BuildExecGraph();
 }
 
 void TaskGraph::BuildWithoutExecGraph(
-    const IDMap& id_map,
     bool need_bp) {
   Stage2TaskNodesMap stage2task_nodes;
-  InitCompTaskNodes(id_map, &stage2task_nodes);
-  InitBoxingTaskNodes(id_map, &stage2task_nodes);
+  InitCompTaskNodes(&stage2task_nodes);
+  InitBoxingTaskNodes(&stage2task_nodes);
   ConnectTaskNodes(&stage2task_nodes);
   UpdateSourceAndSink();
   if (need_bp) {
@@ -48,21 +46,18 @@ void TaskGraph::BuildExecGraph() {
   }
 }
 
-void TaskGraph::InitCompTaskNodes(const IDMap& id_map,
-                                  Stage2TaskNodesMap* stage2task_nodes) {
+void TaskGraph::InitCompTaskNodes(Stage2TaskNodesMap* stage2task_nodes) {
   for (const std::unique_ptr<StageNode>& stage : stage_graph_->nodes()) {
     bool is_first_stage = stage_graph_->IsFirstNode(stage.get());
     bool is_last_stage = stage_graph_->IsLastNode(stage.get());
     if (stage->chain_node()->parallel_desc()->engine()
             == ParallelDesc::Engine::kDevice) {
       Stage2DeviceCompTaskNodes(stage.get(),
-                                id_map,
                                 &((*stage2task_nodes)[stage.get()]),
                                 is_first_stage,
                                 is_last_stage);
     } else {
       Stage2HostCompTaskNodes(stage.get(),
-                              id_map,
                               &((*stage2task_nodes)[stage.get()]));
     }
   }
@@ -70,7 +65,6 @@ void TaskGraph::InitCompTaskNodes(const IDMap& id_map,
 
 void TaskGraph::Stage2DeviceCompTaskNodes(
     const StageNode* stage,
-    const IDMap& id_map,
     TaskNodesInStage* task_nodes_in_stage,
     bool is_first_stage,
     bool is_last_stage) {
@@ -78,7 +72,7 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
   for (auto device_physical_id :
       stage->chain_node()->parallel_desc()->devices_on_machine(machine_id)) {
     ThreadLocalId thread_local_id =
-        id_map.ThreadLocalIdFromDevicePhysicalId(device_physical_id);
+        IDManager::Singleton().ThreadLocalIdFromDevicePhysicalId(device_physical_id);
     // comp_task_node
     DeviceCompTaskNode* comp_task_node = NewTaskNode<DeviceCompTaskNode> ();
     comp_task_node->set_stage_node(stage);
@@ -112,27 +106,24 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
 }
 
 void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
-                                        const IDMap& id_map,
                                         TaskNodesInStage* task_nodes_in_stage) {
   HostCompTaskNode* comp_task_node = NewTaskNode<HostCompTaskNode> ();
   comp_task_node->set_stage_node(stage);
   comp_task_node->SetFwNode();
   // since we only support GPU now, it must be a data-op
-  comp_task_node->mut_thread_local_id() = id_map.data_thread_local_id();
+  comp_task_node->mut_thread_local_id() = IDManager::Singleton().data_thread_local_id();
   task_nodes_in_stage->comp_in_task_nodes.push_back(comp_task_node);
   task_nodes_in_stage->comp_out_task_nodes.push_back(comp_task_node);
 }
 
-void TaskGraph::InitBoxingTaskNodes(const IDMap& id_map,
-                                    Stage2TaskNodesMap* stage2task_nodes) {
+void TaskGraph::InitBoxingTaskNodes(Stage2TaskNodesMap* stage2task_nodes) {
   for (const std::unique_ptr<StageNode>& stage : stage_graph_->nodes()) {
-    InitInboxingTaskNode(stage.get(), id_map, &(stage2task_nodes->at(stage.get())));
-    InitOutBoxingTaskNode(stage.get(), id_map, &(stage2task_nodes->at(stage.get())));
+    InitInboxingTaskNode(stage.get(), &(stage2task_nodes->at(stage.get())));
+    InitOutBoxingTaskNode(stage.get(), &(stage2task_nodes->at(stage.get())));
   }
 }
 
 void TaskGraph::InitInboxingTaskNode(const StageNode* stage,
-                                     const IDMap& id_map,
                                      TaskNodesInStage* task_nodes_in_stage) {
   task_nodes_in_stage->in_boxing_task_node = nullptr;
   if (stage->in_edges().size() == 1
@@ -141,7 +132,7 @@ void TaskGraph::InitInboxingTaskNode(const StageNode* stage,
   }
   BoxingTaskNode* boxing_task_node = NewTaskNode<BoxingTaskNode> ();
   boxing_task_node->set_stage_node(stage);
-  boxing_task_node->mut_thread_local_id() = id_map.boxing_thread_local_id();
+  boxing_task_node->mut_thread_local_id() = IDManager::Singleton().boxing_thread_local_id();
   boxing_task_node->SetFwNode();
   boxing_task_node->SetFwInBoxing();
   for (TaskNode* comp_in_task_node : task_nodes_in_stage->comp_in_task_nodes) {
@@ -152,7 +143,6 @@ void TaskGraph::InitInboxingTaskNode(const StageNode* stage,
 
 void TaskGraph::InitOutBoxingTaskNode(
     const StageNode* stage,
-    const IDMap& id_map,
     TaskNodesInStage* task_nodes_in_stage) {
   task_nodes_in_stage->out_boxing_task_node = nullptr;
   if (stage->out_edges().size() == 1
@@ -161,7 +151,7 @@ void TaskGraph::InitOutBoxingTaskNode(
   }
   BoxingTaskNode* boxing_task_node = NewTaskNode<BoxingTaskNode> ();
   boxing_task_node->set_stage_node(stage);
-  boxing_task_node->mut_thread_local_id() = id_map.boxing_thread_local_id();
+  boxing_task_node->mut_thread_local_id() = IDManager::Singleton().boxing_thread_local_id();
   boxing_task_node->SetFwNode();
   boxing_task_node->SetFwOutBoxing();
   for (TaskNode* comp_out_task_node : task_nodes_in_stage->comp_out_task_nodes) {

@@ -3,7 +3,7 @@
 
 #include <unordered_map>
 #include "common/util.h"
-#include "common/id_map.h"
+#include "common/id_manager.h"
 #include "job/strategy.pb.h"
 
 namespace oneflow {

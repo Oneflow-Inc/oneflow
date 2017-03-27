@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_MEMORY_MEMORY_CONTEXT_H_
 #define ONEFLOW_MEMORY_MEMORY_CONTEXT_H_
 
-#include "common/id_map.h"
+#include "common/id_manager.h"
 
 namespace oneflow {
 
