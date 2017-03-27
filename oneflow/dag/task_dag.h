@@ -54,7 +54,7 @@ class TaskDag : public Dag<BlobMeta, LayerMeta<Dtype>> {
   using Dag<BlobMeta, LayerMeta<Dtype>>::path_type_;
   using DNode = DataNode<BlobMeta>;
   using ONode = OpNode<LayerMeta<Dtype>>;
-  using Dag<BlobMeta, LayerMeta<Dtype>>::Dag;
+  //using Dag<BlobMeta, LayerMeta<Dtype>>::Dag;
   using Dag<BlobMeta, LayerMeta<Dtype>>::op_name_to_node_;
   using Dag<BlobMeta, LayerMeta<Dtype>>::data_name_to_node_;
   using Dag<BlobMeta, LayerMeta<Dtype>>::AddStartAndEndNodes;
