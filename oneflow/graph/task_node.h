@@ -51,7 +51,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   }
 
   void SubscribeRegisterDescInnerPath() {
-    LOG(FATAL) << "TODO";
+    for (const TaskEdge* edge : in_edges()) {
+      edge->register_desc()->AddSubscriber(this);
+      subscribed_register_descs_.insert(edge->register_desc());
+    }
   }
 
  private:
