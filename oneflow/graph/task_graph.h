@@ -2,7 +2,8 @@
 #define ONEFLOW_GRAPH_TASK_GRAPH_H_
 
 #include "graph/stage_graph.h"
-#include "graph/task_node.h"
+#include "graph/boxing_task_node.h"
+#include "graph/copy_hd_task_node.h"
 #include "operator/operator.h"
 #include "job/parallel_desc.h"
 #include "common/id_map.h"
@@ -23,9 +24,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   const StageGraph* stage_graph() const { return stage_graph_.get(); }
 
  private:
-  void BuildWithoutExecGraph(std::unique_ptr<const StageGraph>&& stage_graph,
-                             const IDMap& id_map,
-                             bool need_bp);
+  void BuildWithoutExecGraph(const IDMap& id_map, bool need_bp);
   void BuildExecGraph();
 
   template<typename TaskNodeType>
@@ -47,8 +46,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   using Stage2TaskNodesMap =
       std::unordered_map<const StageNode*, TaskNodesInStage>;
 
-  void InitCompTaskNodes(const StageGraph& stage_graph,
-                         const IDMap& id_map,
+  void InitCompTaskNodes(const IDMap& id_map,
                          Stage2TaskNodesMap* stage2task_nodes);
   void Stage2DeviceCompTaskNodes(const StageNode* stage,
                                  const IDMap& id_map,
@@ -58,8 +56,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void Stage2HostCompTaskNodes(const StageNode* stage,
                                const IDMap& id_map,
                                TaskNodesInStage* task_nodes_in_stage);
-  void InitBoxingTaskNodes(const StageGraph& stage_graph,
-                           const IDMap& id_map,
+  void InitBoxingTaskNodes(const IDMap& id_map,
                            Stage2TaskNodesMap* stage2task_nodes);
   void InitInboxingTaskNode(const StageNode* stage,
                             const IDMap& id_map,
@@ -67,8 +64,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void InitOutBoxingTaskNode(const StageNode* stage,
                              const IDMap& id_map,
                              TaskNodesInStage* task_nodes_in_stage);
-  void ConnectTaskNodes(const StageGraph& stage_graph,
-                        const Stage2TaskNodesMap* stage2task_nodes);
+  void ConnectTaskNodes(const Stage2TaskNodesMap* stage2task_nodes);
   void GenerateRelatedBpNodes(std::vector<TaskNode*> *turning_node_vec);
   void BackwardConnect(const std::vector<TaskNode*>& turning_node_vec);
   void BuildBpStruct();

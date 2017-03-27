@@ -7,8 +7,6 @@
 
 namespace oneflow {
 
-class TaskNode;
-class TaskEdge;
 class ExecNode;
 
 class ExecEdge final : public Edge<ExecNode, ExecEdge> {
@@ -20,9 +18,7 @@ class ExecEdge final : public Edge<ExecNode, ExecEdge> {
   const std::string& lbn() const { return lbn_; }
   std::string& mut_lbn() { return lbn_; }
 
-  std::string pbn() const {
-    return lbn2pbn(lbn_);
-  }
+  std::string pbn() const { return lbn2pbn(lbn_); }
 
  private:
   std::string lbn2pbn(const std::string& lbn) const {
@@ -39,35 +35,24 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   ExecNode() = default;
   ~ExecNode() = default;
 
-  std::shared_ptr<const Operator> op() const {
-    return op_;
-  }
-  std::shared_ptr<const Operator>& mut_op() {
-    return op_;
-  }
-
-  const std::vector<std::pair<std::string, TaskEdge*>>& in_task_edges() const {
-    return in_task_edges_;
-  }
-  std::vector<std::pair<std::string, TaskEdge*>>& mut_in_task_edges() {
-    return in_task_edges_;
-  }
-
-  const std::vector<std::pair<std::string, TaskEdge*>>& out_task_edges() const {
-    return out_task_edges_;
-  }
-  std::vector<std::pair<std::string, TaskEdge*>>& mut_out_task_edges() {
-    return out_task_edges_;
-  }
+  std::shared_ptr<const Operator> op() const { return op_; }
+  std::shared_ptr<const Operator>& mut_op() { return op_; }
 
   std::string lbn2pbn(const std::string& lbn) const {
     return "node_id_" + std::to_string(node_id()) + "/" + lbn;
   }
 
+  void AddConsumedLbnRegiPair(const std::string& lbn, RegisterDesc* register_desc);
+  void AddProducedLbnRegiPair(const std::string& lbn, RegisterDesc* register_desc);
+
+  const std::unordered_map<std::string, RegisterDesc*>& produced_lbn2register_desc() const {
+    return produced_lbn2register_desc_;
+  }
+
  private:
   std::shared_ptr<const Operator> op_;
-  std::vector<std::pair<std::string, TaskEdge*>> in_task_edges_;
-  std::vector<std::pair<std::string, TaskEdge*>> out_task_edges_;
+  std::unordered_map<std::string, RegisterDesc*> comsumed_lbn2register_desc_;
+  std::unordered_map<std::string, RegisterDesc*> produced_lbn2register_desc_;
 
 };
 
@@ -77,30 +62,14 @@ class ExecGraph : public Graph<ExecNode, ExecEdge> {
   ExecGraph() = default;
   virtual ~ExecGraph() = default;
 
-  void set_task_node(TaskNode* task_node) { task_node_ = task_node; }
-  void BuildGraph();
-  virtual void SetupProducedRegisterDesc() = 0;
-  void SubscribeRegisterDescInnerPath();
-
- protected:
-  virtual void FwBuildGraph() = 0;
-  virtual void BpBuildGraph() = 0;
-  
-  const TaskNode* task_node() { return task_node_; }
-  void AddProducedRegisterDesc(
-      const std::string& register_desc_name,
-      std::unique_ptr<RegisterDesc> register_desc) {
-    auto pair = std::make_pair(register_desc_name, std::move(register_desc));
-    CHECK(produced_register_descs_.insert(std::move(pair)).second);
+  ExecNode* NewExecNode() {
+    LOG(FATAL) << "TODO";
   }
-  RegisterDesc* GetProducedRegisterDesc(const std::string& register_desc_name) {
-    return produced_register_descs_.at(register_desc_name).get();
+  ExecEdge* NewExecEdge(const std::string& lbn) {
+    LOG(FATAL) << "TODO";
   }
 
  private:
-  TaskNode* task_node_;
-  std::unordered_map<std::string, std::unique_ptr<RegisterDesc>> produced_register_descs_; 
-  std::unordered_set<RegisterDesc*> subscribed_register_descs_;
 
 };
 

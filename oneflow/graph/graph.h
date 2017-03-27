@@ -51,10 +51,10 @@ class Graph {
   bool IsLastNode(const NodeType* node) const {
     return node->SoleOutEdge()->dst_node() == &sink_node_;
   }
-
- protected:
+  
   void UpdateSourceAndSink();
 
+ protected:
   // Register
   void RegisterNode(NodeType* new_node) {
     nodes_.emplace_back(new_node);

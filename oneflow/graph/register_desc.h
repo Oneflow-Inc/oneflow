@@ -10,8 +10,10 @@ class ExecGraph;
 class RegisterDesc {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RegisterDesc);
-  RegisterDesc() = default;
-  ~RegisterDesc() = default;
+  RegisterDesc() {
+    LOG(FATAL) << "TODO";
+  }
+  virtual ~RegisterDesc() = default;
 
   void Add(const std::string& pbn) {
     LOG(FATAL) << "TODO";
@@ -24,10 +26,6 @@ class RegisterDesc {
     LOG(FATAL) << "TODO";
   }
 
-  virtual void Init() {
-    LOG(FATAL) << "TODO";
-  }
-
  private:
 
 };
@@ -36,25 +34,21 @@ class RegisterDesc {
 class ContigRegistDesc final : public RegisterDesc {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ContigRegistDesc);
-  ContigRegistDesc() = default;
-  ~ContigRegistDesc() = default;
-
-  void Init() override {
+  ContigRegistDesc() {
     LOG(FATAL) << "TODO";
   }
+  ~ContigRegistDesc() = default;
 
 };
 
 class DisContigRegistDesc final : public RegisterDesc {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DisContigRegistDesc);
-  DisContigRegistDesc() = default;
-  ~DisContigRegistDesc() = default;
-  
-  void Init() override {
+  DisContigRegistDesc() {
     LOG(FATAL) << "TODO";
   }
-
+  ~DisContigRegistDesc() = default;
+  
 };
 
 } // namespace oneflow

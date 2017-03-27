@@ -2,11 +2,7 @@
 #define ONEFLOW_GRAPH_TASK_NODE_H_
 
 #include "graph/stage_graph.h"
-#include "graph/host_comp_exec_graph.h"
-#include "graph/device_comp_exec_graph.h"
-#include "graph/boxing_exec_graph.h"
-#include "graph/copy_hd_exec_graph.h"
-#include "graph/comm_net_exec_graph.h"
+#include "graph/exec_graph.h"
 #include "graph/register_desc.h"
 
 namespace oneflow {
@@ -22,12 +18,12 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   // Getters
   bool IsFwNode() const { return is_fw_node_; }
   bool IsBpNode() const { return !is_fw_node_; }
+  TaskNode* GetFwNode() const;
+  TaskNode* GetBpNode() const;
   const ChainNode* chain_node() const { return stage_node_->chain_node();}
   const StageNode* stage_node() const { return stage_node_; }
   const ThreadLocalId& thread_local_id() const { return thread_local_id_; }
-  ExecGraph* exec_graph() const { return exec_graph_.get(); }
-  TaskNode* GetFwNode() const;
-  TaskNode* GetBpNode() const;
+  const ExecGraph& exec_graph() const { return exec_graph_; }
   
   // Setters
   void SetFwNode() { is_fw_node_ = true; }
@@ -36,19 +32,39 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   //
   std::unique_ptr<TaskNode> BuildAndConnectBpNode();
-  void SetNewExecGraph();
+  virtual void BuildExecGraphAndSetRegisterDescs();
  
  protected:
   virtual std::unique_ptr<TaskNode> CreateSameTypeNode() const;
   virtual void InitWithFwNode(TaskNode* fw_node);
-  virtual std::unique_ptr<ExecGraph> CreateExecGraph() const;
+
+  ExecGraph& mut_exec_graph() { return exec_graph_; }
+  
+  void AddProducedRegisterDesc(
+      const std::string& register_desc_name,
+      std::unique_ptr<RegisterDesc> register_desc) {
+    auto pair = std::make_pair(register_desc_name, std::move(register_desc));
+    CHECK(produced_register_descs_.insert(std::move(pair)).second);
+  }
+  RegisterDesc* GetProducedRegisterDesc(const std::string& register_desc_name) {
+    return produced_register_descs_.at(register_desc_name).get();
+  }
+
+  void SubscribeRegisterDescInnerPath() {
+    LOG(FATAL) << "TODO";
+  }
 
  private:
+  // In task_graph level
   const StageNode* stage_node_;
   ThreadLocalId thread_local_id_;
   bool is_fw_node_;
   TaskNode* related_fw_or_bp_node_;
-  std::unique_ptr<ExecGraph> exec_graph_;
+  // In task level
+  ExecGraph exec_graph_;
+  std::unordered_map<std::string,
+                     std::unique_ptr<RegisterDesc>> produced_register_descs_; 
+  std::unordered_set<RegisterDesc*> subscribed_register_descs_;
 
 };
 
@@ -67,157 +83,6 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
 
  private:
   RegisterDesc* register_desc_;
-
-};
-
-class CompTaskNode : public TaskNode {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CompTaskNode);
-  CompTaskNode() = default;
-  virtual ~CompTaskNode() = default;
-
-  bool HasOpWithOutDiff() const;
-  bool HasOpWithIndiff() const;
-
- protected:
-  virtual void InitWithFwNode(TaskNode* fw_node) override {
-    TaskNode::InitWithFwNode(fw_node);
-  }
- private:
-
-};
-
-class HostCompTaskNode final : public CompTaskNode {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(HostCompTaskNode);
-  HostCompTaskNode() = default;
-  ~HostCompTaskNode() = default;
-
- private:
-  std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    return std::unique_ptr<TaskNode> (new HostCompTaskNode);
-  }
-  std::unique_ptr<ExecGraph> CreateExecGraph() const override {
-    return std::unique_ptr<ExecGraph> (new HostCompExecGraph);
-  }
-  void InitWithFwNode(TaskNode* fw_node) override {
-    CompTaskNode::InitWithFwNode(fw_node);
-  }
-
-};
-
-class DeviceCompTaskNode final : public CompTaskNode {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(DeviceCompTaskNode);
-  DeviceCompTaskNode() = default;
-  ~DeviceCompTaskNode() = default;
-  
- private:
-  std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    return std::unique_ptr<TaskNode> (new DeviceCompTaskNode);
-  }
-  std::unique_ptr<ExecGraph> CreateExecGraph() const override {
-    return std::unique_ptr<ExecGraph> (new DeviceCompExecGraph);
-  }
-  void InitWithFwNode(TaskNode* fw_node) override {
-    CompTaskNode::InitWithFwNode(fw_node);
-  }
-
-};
-
-class CopyHDTaskNode final : public TaskNode {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CopyHDTaskNode);
-  CopyHDTaskNode() = default;
-  ~CopyHDTaskNode() = default;
-  
-  bool IsH2D() const {
-    return ((IsFwInCopy() && IsFwNode()) || (IsFwOutCopy() && IsBpNode()));
-  }
-  bool IsD2H() const {
-    return !IsH2D();
-  }
-
-  const std::vector<std::string>& RelatedLbns() const;
-
-  bool IsFwInCopy() const { return is_fw_in_copy_; }
-  bool IsFwOutCopy() const { return !is_fw_in_copy_; }
-  void SetFwInCopy();
-  void SetFwOutCopy();
-
- private:
-  std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    return std::unique_ptr<TaskNode> (new CopyHDTaskNode);
-  }
-  std::unique_ptr<ExecGraph> CreateExecGraph() const override {
-    return std::unique_ptr<ExecGraph> (new CopyHDExecGraph);
-  }
-  void InitWithFwNode(TaskNode* fw_node) override;
-
-  bool is_fw_in_copy_;
-
-};
-
-class BoxingTaskNode final : public TaskNode {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(BoxingTaskNode);
-  BoxingTaskNode() = default;
-  ~BoxingTaskNode() = default;
-
-  bool IsFwInBoxing() const { return is_fw_in_boxing_; }
-  bool IsFwOutBoxing() const { return !is_fw_in_boxing_; }
-  void SetFwInBoxing();
-  void SetFwOutBoxing();
-
- private:
-  std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    return std::unique_ptr<TaskNode> (new BoxingTaskNode);
-  }
-  std::unique_ptr<ExecGraph> CreateExecGraph() const override {
-    return std::unique_ptr<ExecGraph> (new BoxingExecGraph);
-  }
-  void InitWithFwNode(TaskNode* fw_node) override;
-  
-  bool is_fw_in_boxing_;
-};
-
-class CommNetTaskNode final : public TaskNode {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CommNetTaskNode);
-  CommNetTaskNode() = default;
-  ~CommNetTaskNode() = default;
-
-  bool IsSender() const {
-    return (IsFwNode() && is_fw_sender_)
-        || (IsBpNode() && !is_fw_sender_);
-  }
-  bool IsReceiver() const {
-    return !IsSender();
-  }
-
-  void SetFwSender() {
-    CHECK(IsFwNode());
-    is_fw_sender_ = true;
-  }
-  void SetFwReceiver() {
-    CHECK(IsFwNode());
-    is_fw_sender_ = false;
-  }
-
- private:
-  std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    return std::unique_ptr<TaskNode> (new CommNetTaskNode);
-  }
-  std::unique_ptr<ExecGraph> CreateExecGraph() const override {
-    return std::unique_ptr<ExecGraph> (new CommNetExecGraph);
-  }
-  void InitWithFwNode(TaskNode* fw_node) override {
-    TaskNode::InitWithFwNode(fw_node);
-    is_fw_sender_ =
-        of_dynamic_cast<const CommNetTaskNode*>(fw_node)->is_fw_sender_;
-  }
-
-  bool is_fw_sender_;
 
 };
 

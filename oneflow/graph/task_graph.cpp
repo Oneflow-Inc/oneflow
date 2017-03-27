@@ -1,4 +1,6 @@
 #include "graph/task_graph.h"
+#include "graph/comp_task_node.h"
+#include "graph/comm_net_task_node.h"
 
 namespace oneflow {
 
@@ -20,55 +22,37 @@ void TaskGraph::Init(const DLNetConf& dl_net_conf,
   logical_graph->Init(dl_net_conf, strategy_conf);
   std::unique_ptr<ChainGraph> chain_graph(new ChainGraph);
   chain_graph->Init(logical_graph.get());
-  std::unique_ptr<StageGraph> stage_graph(new StageGraph);
-  stage_graph->Init(std::move(chain_graph));
-  BuildWithoutExecGraph(std::move(stage_graph), id_map, need_bp);
+  auto stage_graph_raw_ptr = new StageGraph;
+  stage_graph_raw_ptr->Init(std::move(chain_graph));
+  stage_graph_.reset(stage_graph_raw_ptr);
+  BuildWithoutExecGraph(id_map, need_bp);
   BuildExecGraph();
 }
 
 void TaskGraph::BuildWithoutExecGraph(
-    std::unique_ptr<const StageGraph>&& stage_graph,
     const IDMap& id_map,
-    bool job_need_bp) {
-  stage_graph_ = std::move(stage_graph);
+    bool need_bp) {
   Stage2TaskNodesMap stage2task_nodes;
-  InitCompTaskNodes(*stage_graph, id_map, &stage2task_nodes);
-  InitBoxingTaskNodes(*stage_graph, id_map, &stage2task_nodes);
-  ConnectTaskNodes(*stage_graph, &stage2task_nodes);
+  InitCompTaskNodes(id_map, &stage2task_nodes);
+  InitBoxingTaskNodes(id_map, &stage2task_nodes);
+  ConnectTaskNodes(&stage2task_nodes);
   UpdateSourceAndSink();
-  if (job_need_bp) {
+  if (need_bp) {
     BuildBpStruct();
   }
 }
 
 void TaskGraph::BuildExecGraph() {
-  for (const auto& task_node : nodes()) {
-    task_node->SetNewExecGraph();
-  }
-  for (const auto& task_node : nodes()) {
-    if (task_node->IsFwNode()) {
-      task_node->exec_graph()->BuildGraph();
-    }
-  }
-  for (const auto& task_node : nodes()) {
-    if (task_node->IsBpNode()) {
-      task_node->exec_graph()->BuildGraph();
-    }
-  }
-  for (const auto& task_node : nodes()) {
-    task_node->exec_graph()->SetupProducedRegisterDesc();
-  }
-  for (const auto& task_node : nodes()) {
-    task_node->exec_graph()->SubscribeRegisterDescInnerPath();
+  for (TaskNode& task_node : *this) {
+    task_node.BuildExecGraphAndSetRegisterDescs();
   }
 }
 
-void TaskGraph::InitCompTaskNodes(const StageGraph& stage_graph,
-                                  const IDMap& id_map,
+void TaskGraph::InitCompTaskNodes(const IDMap& id_map,
                                   Stage2TaskNodesMap* stage2task_nodes) {
-  for (const std::unique_ptr<StageNode>& stage : stage_graph.nodes()) {
-    bool is_first_stage = stage_graph.IsFirstNode(stage.get());
-    bool is_last_stage = stage_graph.IsLastNode(stage.get());
+  for (const std::unique_ptr<StageNode>& stage : stage_graph_->nodes()) {
+    bool is_first_stage = stage_graph_->IsFirstNode(stage.get());
+    bool is_last_stage = stage_graph_->IsLastNode(stage.get());
     if (stage->chain_node()->parallel_desc()->engine()
             == ParallelDesc::Engine::kDevice) {
       Stage2DeviceCompTaskNodes(stage.get(),
@@ -91,7 +75,8 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
     bool is_first_stage,
     bool is_last_stage) {
   MachineId machine_id = stage->machine_id();
-  for (auto device_physical_id : stage->chain_node()->parallel_desc()->devices_on_machine(machine_id)) {
+  for (auto device_physical_id :
+      stage->chain_node()->parallel_desc()->devices_on_machine(machine_id)) {
     ThreadLocalId thread_local_id =
         id_map.ThreadLocalIdFromDevicePhysicalId(device_physical_id);
     // comp_task_node
@@ -138,10 +123,9 @@ void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
   task_nodes_in_stage->comp_out_task_nodes.push_back(comp_task_node);
 }
 
-void TaskGraph::InitBoxingTaskNodes(const StageGraph& stage_graph,
-                                    const IDMap& id_map,
+void TaskGraph::InitBoxingTaskNodes(const IDMap& id_map,
                                     Stage2TaskNodesMap* stage2task_nodes) {
-  for (const std::unique_ptr<StageNode>& stage : stage_graph.nodes()) {
+  for (const std::unique_ptr<StageNode>& stage : stage_graph_->nodes()) {
     InitInboxingTaskNode(stage.get(), id_map, &(stage2task_nodes->at(stage.get())));
     InitOutBoxingTaskNode(stage.get(), id_map, &(stage2task_nodes->at(stage.get())));
   }
@@ -187,9 +171,8 @@ void TaskGraph::InitOutBoxingTaskNode(
 }
 
 void TaskGraph::ConnectTaskNodes(
-    const StageGraph& stage_graph,
     const Stage2TaskNodesMap* stage2task_nodes) {
-  for (const std::unique_ptr<StageNode>& cur_stage : stage_graph.nodes()) {
+  for (const std::unique_ptr<StageNode>& cur_stage : stage_graph_->nodes()) {
     const TaskNodesInStage& cur_task_nodes = stage2task_nodes->at(cur_stage.get());
     TaskNode* out_node = cur_task_nodes.out_boxing_task_node;
     if (out_node == nullptr) {
