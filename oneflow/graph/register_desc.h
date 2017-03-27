@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class ExecGraph;
+class TaskNode;
 
 class RegisterDesc {
  public:
@@ -22,7 +22,7 @@ class RegisterDesc {
     LOG(FATAL) << "TODO";
   }
 
-  void AddSubscriber(ExecGraph* exec_graph) {
+  void AddSubscriber(TaskNode* task_node) {
     LOG(FATAL) << "TODO";
   }
 

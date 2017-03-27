@@ -6,6 +6,7 @@
 #include <vector>
 #include <memory>
 #include "common/util.h"
+#include "common/id_manager.h"
 
 namespace oneflow {
 
@@ -29,15 +30,12 @@ void DisConnect(EdgeType* edge) {
   edge->dst_node_ = nullptr;
 }
 
-int32_t NewNodeId();
-int32_t NewEdgeId();
-
 template<typename NodeType, typename EdgeType>
 class Edge {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Edge);
   Edge() {
-    edge_id_ = NewEdgeId();
+    edge_id_ = IDManager::Singleton().NewEdgeId();
     src_node_ = nullptr;
     dst_node_ = nullptr;
   }
@@ -66,7 +64,7 @@ class Node {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Node);
   Node() {
-    node_id_ = NewNodeId();
+    node_id_ = IDManager::Singleton().NewNodeId();
   }
   virtual ~Node() = default;
 

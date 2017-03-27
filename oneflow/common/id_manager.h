@@ -40,6 +40,9 @@ class IDManager final {
     return ThreadLocalId();
   }
 
+  int32_t NewNodeId();
+  int32_t NewEdgeId();
+
  private:
   IDManager() = default;
 

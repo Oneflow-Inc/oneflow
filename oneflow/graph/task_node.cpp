@@ -46,4 +46,11 @@ void TaskNode::InitWithFwNode(TaskNode* fw_node) {
   related_fw_or_bp_node_ = fw_node;
 }
 
+void TaskNode::SubscribeRegisterDescInnerPath() {
+  for (const TaskEdge* edge : in_edges()) {
+    edge->register_desc()->AddSubscriber(this);
+    subscribed_register_descs_.insert(edge->register_desc());
+  }
+}
+
 } // namespace oneflow

@@ -50,12 +50,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
     return produced_register_descs_.at(register_desc_name).get();
   }
 
-  void SubscribeRegisterDescInnerPath() {
-    for (const TaskEdge* edge : in_edges()) {
-      edge->register_desc()->AddSubscriber(this);
-      subscribed_register_descs_.insert(edge->register_desc());
-    }
-  }
+  void SubscribeRegisterDescInnerPath();
 
  private:
   // In task_graph level
