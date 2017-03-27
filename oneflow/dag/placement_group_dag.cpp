@@ -18,7 +18,7 @@ PlacementGroupDag<Dtype>::PlacementGroupDag(
   std::shared_ptr<LogicalDag<Dtype>> logical_dag,
   std::shared_ptr<StrategyDescriptor> strategy_descriptor,
   PathType path_type, const std::string& name)
-  : Dag(path_type, name), strategy_descriptor_(strategy_descriptor),
+  : Dag<BlobMeta, PlacementGroupMeta>(path_type, name), strategy_descriptor_(strategy_descriptor),
   logical_dag_(logical_dag) {
   VerifyPreConditions();
   Build();
