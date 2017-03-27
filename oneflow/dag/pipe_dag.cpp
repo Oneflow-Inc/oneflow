@@ -17,7 +17,7 @@ PipeDag<Dtype>::PipeDag(
     std::shared_ptr<StageDag<Dtype>> stage_dag,
     PathType path_type,
     const std::string& name) :
-  Dag(path_type, name),
+  Dag<EnvelopeMeta, PipeMeta>(path_type, name),
   segment_dag_(segment_dag),
   stage_dag_(stage_dag) {
   Build();
