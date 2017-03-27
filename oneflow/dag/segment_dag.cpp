@@ -15,7 +15,7 @@ template <typename Dtype>
 SegmentDag<Dtype>::SegmentDag(
   std::shared_ptr<LogicalDag<Dtype>> logical_dag, PathType path_type,
   const std::string& name) :
-  Dag(path_type, name), logical_dag_(logical_dag) {}
+  Dag<EnvelopeMeta, SegmentMeta>(path_type, name), logical_dag_(logical_dag) {}
 
 template <typename Dtype>
 void SegmentDag<Dtype>::Build() {
