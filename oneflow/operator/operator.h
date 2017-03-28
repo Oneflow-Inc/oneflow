@@ -28,7 +28,7 @@ class Operator {
     return GetValueFromPbMessage(*pb_op_conf_, input_blob_name);
   }
   virtual std::string obn2lbn(const std::string& output_blob_name) const {
-    return op_name_ + "/" + output_blob_name;
+    return op_name_ + "/" + GetValueFromPbMessage(*pb_op_conf_, output_blob_name);
   }
   virtual std::string idbn2lbn(const std::string& input_diff_blob_name) const {
     return ibn2lbn(GenUnDiffBlobName(input_diff_blob_name));
