@@ -2,9 +2,8 @@
 #include <memory>
 #include <string>
 
-//#include "grpc_worker_service_impl.h"
-
 #include <grpc++/grpc++.h>
+
 #include "grpc++/server_builder.h"
 
 #include "net/async_service_interface.h"
@@ -25,6 +24,13 @@ class GrpcWorkerService : public AsyncServiceInterface{
 
   ~GrpcWorkerService() {
     delete cq_;
+  }
+  
+  void Shutdown() override {
+    if(is_shutdown_){
+      shutdown_alarm_ = 
+          new ::grpc::Alarm(cq_, gpr_now(GPR_CLOCK_MONOTONIC), nullptr);      
+    }
   }
 
 #define  ENQUEUE_REQUEST(method, supports_cancel)                              \
@@ -47,6 +53,7 @@ class GrpcWorkerService : public AsyncServiceInterface{
   ::grpc::ServerCompletionQueue* cq_;
   grpc::WorkerService::AsyncService worker_service_;
   bool is_shutdown_;
+  ::grpc::Alarm* shutdown_alarm_;
 
   template <class RequestMessage, class ResponseMessage>
   using WorkerCall = Call<GrpcWorkerService, grpc::WorkerService::AsyncService,

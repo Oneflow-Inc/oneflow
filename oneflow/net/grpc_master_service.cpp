@@ -24,6 +24,13 @@ class GrpcMasterService : public AsyncServiceInterface {
   ~GrpcMasterService() {
     delete cq_;
   }
+
+  void Shutdown() override {
+    if(is_shutdown_) {
+      shutdown_alarm_ = 
+          new ::grpc::Alarm(cq_, gpr_now(GPR_CLOCK_MONOTONIC), nullptr);
+    }
+  }
   
 #define ENQUEUE_REQUEST(method, supports_cancel)                              \
   do {                                                                        \
@@ -78,6 +85,7 @@ class GrpcMasterService : public AsyncServiceInterface {
   ::grpc::ServerCompletionQueue* cq_;
   grpc::MasterService::AsyncService master_service_;
   bool is_shutdown_;
+  ::grpc::Alarm* shutdown_alarm_;
 
 #undef ENQUEUE_REQUEST
 };

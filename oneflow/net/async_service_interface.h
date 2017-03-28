@@ -7,6 +7,7 @@ class AsyncServiceInterface{
  public:
   virtual ~AsyncServiceInterface() {}
   virtual void HandleRPCsLoop() = 0; 
+  virtual void Shutdown() = 0;
   
 };
 
