@@ -42,6 +42,7 @@ bool LogicalDag<Dtype>::DagBlobNeedsBP(const std::string& dag_blob) const {
 template <typename Dtype>
 void LogicalDag<Dtype>::Build() {
   int32_t layer_num = net_descriptor_->layer_num();
+  std::cout<<"layer_num = "<<layer_num<<std::endl;
   for (auto layer_id = 0; layer_id < layer_num; ++layer_id) {
     ProcessLayer(layer_id);
   }
@@ -54,11 +55,14 @@ void LogicalDag<Dtype>::Build() {
 
 template <typename Dtype>
 void LogicalDag<Dtype>::ProcessLayer(int32_t layer_id) {
+  std::cout<<"layer_id = "<<layer_id<<std::endl;
   LayerProto layer_proto = net_descriptor_->layer_proto(layer_id);
   auto& message = LayerParameterIntegrityCheck(layer_proto);
-
+  
   std::string op_name = layer_proto.name();
   std::string op_type = layer_proto.type();
+  std::cout<<"ProcessLayer: op_name = "<<op_name<<std::endl;
+  std::cout<<"ProcessLayer: op_type = "<<op_type<<std::endl;
   auto op_node = AddOpNode(op_name, op_type, layer_proto);
 
   auto op_meta = op_node->op();

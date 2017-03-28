@@ -6,6 +6,7 @@
 #include "context/resource_descriptor.h"
 #include "context/strategy_descriptor.h"
 #include "context/config_parser.h"
+#include <iostream>
 
 namespace oneflow {
 IDMap::IDMap(std::shared_ptr<ConfigParser> config)

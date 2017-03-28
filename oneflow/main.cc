@@ -16,20 +16,16 @@
 #include "context/id_map.h"
 #include "memory/blob.h"
 
-
 //#include "server_lib.h"
 #include "net/grpc_server_lib.h"
 //#include "public_session.h"
-
 
 DEFINE_string(solver, "/home/xiaoshu/dl_sys/oneflow/oneflow/proto/lenet_solver_light.prototxt",
   "The solver definition protocol buffer text file.");
 
 //void Session_test(const Options* opts) {
-  
 
 //}
-
 
 int main(int argc, char* argv[]){
   /*
@@ -41,12 +37,12 @@ int main(int argc, char* argv[]){
       confFile.close();
   }
   */
-//server start
+  //server start
   std::unique_ptr<oneflow::ServerInterface> server;
-  //oneflow::NewServer(&server);
   oneflow::GrpcServer::Create(&server);
   server->Start();
-// graph compile
+  // graph compile
+  /*
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
   FLAGS_logtostderr = 1;
@@ -57,6 +53,7 @@ int main(int argc, char* argv[]){
   
   oneflow::TheOne<Dtype>::InitResource(FLAGS_solver);
   oneflow::TheOne<Dtype>::InitJob2(solver_param); 
+  */
   return 0;
 }
 

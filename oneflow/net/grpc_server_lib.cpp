@@ -19,8 +19,8 @@ namespace oneflow{
 
 GrpcServer::GrpcServer(){}
 GrpcServer::~GrpcServer(){
-  //delete master_service_;
-  //delete worker_service_;
+  delete master_service_;
+  delete worker_service_;
 }
 
 void GrpcServer::Init(){
@@ -28,24 +28,19 @@ void GrpcServer::Init(){
   ::grpc::ServerBuilder builder;
   builder.AddListeningPort("0.0.0.0:50051", ::grpc::InsecureServerCredentials());
   //master service and worker service use the same builder
-  if(master_service_ == nullptr) std::cout<<"before nullptr---"<<std::endl;
   master_service_ = NewGrpcMasterService(&builder);
-  if(master_service_ == nullptr) std::cout<<"after nullptr---"<<std::endl;
   worker_service_ = NewGrpcWorkerService(&builder);
   server_ = builder.BuildAndStart();
   //master servie and woker service use the same channle_cache
   std::unique_ptr<GrpcChannelCache> channel_cache(NewGrpcChannelCache(GetChannelCreationFunction()));
   worker_env_.worker_cache = NewGrpcWorkerCache(channel_cache.release());
   master_env_.worker_cache = worker_env_.worker_cache;
-
+  //master service use MasterSession;
   master_env_.master_session_factory = NewMasterSession;
   std::cout<<"Init end------"<<std::endl;
 }
 
 void GrpcServer::Start(){
-  //if(master_service_ == nullptr) {std::cout<<"nullprt"<<std::endl;}
-  //master_service_->HandleRPCsLoop();
-  //master_thread_.reset();
   master_thread_.reset(
       StartThread(ThreadOptions(), "master_service", [this] {master_service_->HandleRPCsLoop();}));
   std::cout<<"start master service------"<<std::endl;
@@ -76,6 +71,7 @@ class GrpcServerFactory : public ServerFactory {
     GrpcServer::Create(out_server);
   }
 };
-}
 
-}
+}//end namespace
+
+}//end namespace oneflow

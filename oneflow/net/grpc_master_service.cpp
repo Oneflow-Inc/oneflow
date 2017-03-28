@@ -49,6 +49,31 @@ class GrpcMasterService : public AsyncServiceInterface {
       MasterCall<CreateSessionRequest, CreateSessionResponse>* call) {
     ENQUEUE_REQUEST(CreateSession, true);
   }
+
+  void ExtendSessionHandler(
+      MasterCall<ExtendSessionRequest, ExtendSessionResponse>* call) {
+    ENQUEUE_REQUEST(ExtendSession, false);
+  }
+
+  void RunStepHandler(
+      MasterCall<RunStepRequest, RunStepResponse>* call) {
+    ENQUEUE_REQUEST(RunStep, true);
+  }
+  
+  void CloseSessionHandler(
+      MasterCall<CloseSessionRequest, CloseSessionResponse>* call){
+    ENQUEUE_REQUEST(CloseSession, false);
+  }
+
+  void ListDevicesHandler(
+      MasterCall<ListDevicesRequest, ListDevicesResponse>* call) {
+    ENQUEUE_REQUEST(ListDevices, false);
+  } 
+
+  void ResetHandler(MasterCall<ResetRequest, ResetResponse>* call) {
+    ENQUEUE_REQUEST(Reset, false);
+  }
+ 
  private:
   ::grpc::ServerCompletionQueue* cq_;
   grpc::MasterService::AsyncService master_service_;

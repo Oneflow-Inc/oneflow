@@ -30,7 +30,7 @@ void PrintProtoToString(const Message& proto, std::string* str) {
   CHECK(google::protobuf::TextFormat::PrintToString(proto, str));
 }
 bool ReadProtoFromTextFile(const char* filename, Message* proto) {
-  std::cout<<"filename = "<<filename<<std::endl;
+  //std::cout<<"filename = "<<filename<<std::endl;
   int fd = open(filename, O_RDONLY);
   CHECK_NE(fd, -1) << "File not found: " << filename;
   FileInputStream* input = new FileInputStream(fd);
