@@ -53,10 +53,36 @@ class GrpcWorkerService : public AsyncServiceInterface{
                           RequestMessage, ResponseMessage>;
 
   void GetStatusHandler(WorkerCall<GetStatusRequest, GetStatusResponse>* call) {
-    std::cout<<"hello, I am worker"<<std::endl;
     ENQUEUE_REQUEST(GetStatus, false);
   }
 
+  void CleanupAllHandler(WorkerCall<CleanupAllRequest, CleanupAllResponse>* call) {
+    ENQUEUE_REQUEST(CleanupAll, false);
+  }
+ 
+  void RegisterGraphHandler(WorkerCall<RegisterGraphRequest, RegisterGraphResponse>* call) {
+    ENQUEUE_REQUEST(RegisterGraph, false);
+  }
+
+  void DeregisterGraphHandler(WorkerCall<DeregisterGraphRequest, DeregisterGraphResponse>* call) {
+    ENQUEUE_REQUEST(DeregisterGraph, false);
+  }
+
+  void RunGraphHandler(WorkerCall<RunGraphRequest, RunGraphResponse>* call) {
+    ENQUEUE_REQUEST(RunGraph, true);
+  }
+
+  void CleanupGraphHandler(WorkerCall<CleanupGraphRequest, CleanupGraphResponse>* call) {
+    ENQUEUE_REQUEST(CleanupGraph, false);
+  }
+ 
+  void LoggingHandler(WorkerCall<LoggingRequest, LoggingResponse>* call) {
+    ENQUEUE_REQUEST(Logging, false);
+  }
+
+  void TracingHandler(WorkerCall<TracingRequest, TracingResponse>* call) {
+    ENQUEUE_REQUEST(Tracing, false);
+  }
 };
 
 AsyncServiceInterface* NewGrpcWorkerService(::grpc::ServerBuilder* builder){
