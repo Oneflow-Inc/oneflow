@@ -19,6 +19,7 @@ namespace oneflow{
 
 GrpcServer::GrpcServer(ServerDef& server_def) : 
     server_def_(server_def){}
+
 GrpcServer::~GrpcServer(){
   delete master_service_;
   delete worker_service_;
@@ -48,6 +49,12 @@ void GrpcServer::Start(){
   worker_thread_.reset(
       StartThread(ThreadOptions(), "worker_service", [this] {worker_service_->HandleRPCsLoop();})); 
   std::cout<<"start worker service------"<<std::endl;
+}
+
+void GrpcServer::Stop() {
+  server_->Shutdown();
+  master_service_->Shutdown();
+  worker_service_->Shutdown();
 }
 
 void GrpcServer::Join() {}

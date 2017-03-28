@@ -56,7 +56,6 @@ class GrpcMasterService : public AsyncServiceInterface {
       MasterCall<CreateSessionRequest, CreateSessionResponse>* call) {
     ENQUEUE_REQUEST(CreateSession, true);
   }
-
   void ExtendSessionHandler(
       MasterCall<ExtendSessionRequest, ExtendSessionResponse>* call) {
     ENQUEUE_REQUEST(ExtendSession, false);
@@ -80,7 +79,6 @@ class GrpcMasterService : public AsyncServiceInterface {
   void ResetHandler(MasterCall<ResetRequest, ResetResponse>* call) {
     ENQUEUE_REQUEST(Reset, false);
   }
- 
  private:
   ::grpc::ServerCompletionQueue* cq_;
   grpc::MasterService::AsyncService master_service_;

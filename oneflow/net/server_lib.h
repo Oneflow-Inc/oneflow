@@ -35,6 +35,9 @@ class ServerInterface {
   // Returns a target string that can be used to connect to this server using
   // `tensorflow::NewSession()`.
   //virtual const std::string target() const = 0;
+  
+
+  virtual void Stop() = 0;
 
  private:
 };

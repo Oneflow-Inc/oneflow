@@ -20,6 +20,7 @@ class GrpcServer : public ServerInterface{
   
   void Init();
   void Start() override;
+  void Stop();
   void Join() override;
   virtual ChannelCreationFunction GetChannelCreationFunction() const;
   static void Create(ServerDef& server_def, std::unique_ptr<ServerInterface>* out_server);

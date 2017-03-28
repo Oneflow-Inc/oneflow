@@ -23,22 +23,27 @@
 DEFINE_string(solver, "/home/xiaoshu/dl_sys/oneflow/oneflow/proto/lenet_solver_light.prototxt",
   "The solver definition protocol buffer text file.");
 
+DEFINE_string(ofcluster, "/home/xiaoshu/dl_sys/oneflow/oneflow/proto/ofcluster.txt", "");
+
 //void Session_test(const Options* opts) {
 
 //}
 
 int main(int argc, char* argv[]){
+  //define server
   oneflow::ServerDef server_def;
   {
-    std::ifstream confFile("tfcluster.txt");
+    std::ifstream confFile(FLAGS_ofcluster);
     google::protobuf::io::IstreamInputStream in(&confFile);
     if(!google::protobuf::TextFormat::Parse(&in, &server_def))
       confFile.close();
+    std::cout<<"cluster name = "<<server_def.job_name()<<std::endl;
   }
   //server start
   std::unique_ptr<oneflow::ServerInterface> server;
   oneflow::GrpcServer::Create(server_def, &server);
   server->Start();
+  server->Stop();
   // graph compile
   /*
   gflags::ParseCommandLineFlags(&argc, &argv, true);
