@@ -16,9 +16,7 @@ class BoxingTaskNode final : public TaskNode {
   void SetFwInBoxing();
   void SetFwOutBoxing();
 
-  void BuildExecGraphAndSetRegisterDescs() override {
-    LOG(FATAL) << "TODO";
-  }
+  void BuildExecGraphAndSetRegisterDescs() override;
 
  private:
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {

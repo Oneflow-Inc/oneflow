@@ -51,8 +51,8 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
 
  private:
   std::shared_ptr<const Operator> op_;
-  std::unordered_map<std::string, RegisterDesc*> comsumed_lbn2register_desc_;
-  std::unordered_map<std::string, RegisterDesc*> produced_lbn2register_desc_;
+  std::vector<std::pair<std::string, RegisterDesc*>> consumed_lbn_regi_pairs_;
+  std::vector<std::pair<std::string, RegisterDesc*>> produced_lbn_regi_pairs_;
 
 };
 

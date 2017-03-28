@@ -18,4 +18,8 @@ void BoxingTaskNode::InitWithFwNode(TaskNode* fw_node) {
       of_dynamic_cast<BoxingTaskNode*>(fw_node)->is_fw_in_boxing_;
 }
 
+void BoxingTaskNode::BuildExecGraphAndSetRegisterDescs() {
+  LOG(FATAL) << "TODO";
+}
+
 } // namespace oneflow
