@@ -170,19 +170,18 @@ void CompTaskNode::FwSetRegisterPtrs4ExecNodes(
 void CompTaskNode::FwSetProducedRegisterDescs() {
   RegisterDesc* data_register = SoleOutEdge()->register_desc();
   for (const std::unique_ptr<ExecEdge>& cur_edge : exec_graph().edges()) {
-    data_register->Add(cur_edge->pbn());
+    data_register->AddPbn(cur_edge->pbn());
   }
   for (const std::unique_ptr<ExecNode>& cur_node : exec_graph().nodes()) {
     for (const std::string& dtbn : cur_node->op()->data_tmp_blob_names()) {
       std::string lbn = cur_node->op()->dtbn2lbn(dtbn);
       std::string pbn = cur_node->lbn2pbn(lbn);
-      data_register->Add(pbn);
+      data_register->AddPbn(pbn);
     }
     for (const auto& pair : cur_node->produced_lbn_regi_pairs()) {
       CHECK_EQ(data_register, pair.second);
       const std::string& lbn = pair.first;
-      std::string pbn = cur_node->lbn2pbn(lbn);
-      data_register->Add(pbn, lbn);
+      data_register->AddLbn(lbn);
     }
   }
 }
@@ -251,24 +250,22 @@ void CompTaskNode::BpSetProducedRegisterDescs() {
   std::unique_ptr<RegisterDesc> model_tmp_register(new DisContigRegistDesc);
   RegisterDesc* data_diff_register = SoleOutEdge()->register_desc();
   for (const std::unique_ptr<ExecEdge>& cur_edge : exec_graph().edges()) {
-    data_diff_register->Add(cur_edge->pbn());
+    data_diff_register->AddPbn(cur_edge->pbn());
   }
   for (const std::unique_ptr<ExecNode>& cur_node : exec_graph().nodes()) {
     for (const std::string& mdbn : cur_node->op()->model_diff_blob_names()) {
       std::string lbn = cur_node->op()->mdbn2lbn(mdbn);
-      std::string pbn = cur_node->lbn2pbn(lbn);
-      model_diff_register->Add(pbn, lbn);
+      model_diff_register->AddLbn(lbn);
     }
     for (const std::string& mtbn : cur_node->op()->model_tmp_blob_names()) {
       std::string lbn = cur_node->op()->mtbn2lbn(mtbn);
       std::string pbn = cur_node->lbn2pbn(lbn);
-      model_tmp_register->Add(pbn, lbn);
+      model_tmp_register->AddPbn(pbn);
     }
     for (const auto& pair : cur_node->produced_lbn_regi_pairs()) {
       CHECK_EQ(data_diff_register, pair.second);
       const std::string& lbn = pair.first;
-      std::string pbn = cur_node->lbn2pbn(lbn);
-      data_diff_register->Add(pbn, lbn);
+      data_diff_register->AddLbn(lbn);
     }
   }
   AddProducedRegisterDesc("model_diff", std::move(model_diff_register));

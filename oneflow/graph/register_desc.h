@@ -15,10 +15,12 @@ class RegisterDesc {
   }
   virtual ~RegisterDesc() = default;
 
-  void Add(const std::string& pbn) {
+  // Pbn means that no other task need it
+  // Lbn means that there are other tasks who need this blob
+  void AddPbn(const std::string& pbn) {
     LOG(FATAL) << "TODO";
   }
-  void Add(const std::string& pbn, const std::string& lbn) {
+  void AddLbn(const std::string& lbn) {
     LOG(FATAL) << "TODO";
   }
 
