@@ -45,8 +45,8 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   void AddConsumedLbnRegiPair(const std::string& lbn, RegisterDesc* register_desc);
   void AddProducedLbnRegiPair(const std::string& lbn, RegisterDesc* register_desc);
 
-  const std::unordered_map<std::string, RegisterDesc*>& produced_lbn2register_desc() const {
-    return produced_lbn2register_desc_;
+  const std::vector<std::pair<std::string, RegisterDesc*>>& produced_lbn_regi_pairs() const {
+    return produced_lbn_regi_pairs_;
   }
 
  private:

@@ -52,11 +52,17 @@ void StageGraph::Init(std::unique_ptr<const ChainGraph>&& chain_graph) {
                      std::vector<StageNode*>> chain2stages;
   for (const std::unique_ptr<ChainNode>& cur_chain : chain_graph_->nodes()) {
     chain2stages[cur_chain.get()] = {};
+    int32_t device_num_each_machine = -1;
     for (MachineId machine_id : cur_chain->parallel_desc()->machines()) {
       StageNode* stage_node = NewFinalNode();
       stage_node->mut_machine_id() = machine_id;
       stage_node->set_chain_node(cur_chain.get());
       chain2stages.at(cur_chain.get()).push_back(stage_node);
+      if (device_num_each_machine == -1) {
+        device_num_each_machine = cur_chain->parallel_desc()->devices_on_machine(machine_id).size();
+      } else {
+        CHECK_EQ(device_num_each_machine, cur_chain->parallel_desc()->devices_on_machine(machine_id).size());
+      }
     }
   }
   // Connect Stages

@@ -178,7 +178,7 @@ void CompTaskNode::FwSetProducedRegisterDescs() {
       std::string pbn = cur_node->lbn2pbn(lbn);
       data_register->Add(pbn);
     }
-    for (const auto& pair : cur_node->produced_lbn2register_desc()) {
+    for (const auto& pair : cur_node->produced_lbn_regi_pairs()) {
       CHECK_EQ(data_register, pair.second);
       const std::string& lbn = pair.first;
       std::string pbn = cur_node->lbn2pbn(lbn);
@@ -264,7 +264,7 @@ void CompTaskNode::BpSetProducedRegisterDescs() {
       std::string pbn = cur_node->lbn2pbn(lbn);
       model_tmp_register->Add(pbn, lbn);
     }
-    for (const auto& pair : cur_node->produced_lbn2register_desc()) {
+    for (const auto& pair : cur_node->produced_lbn_regi_pairs()) {
       CHECK_EQ(data_diff_register, pair.second);
       const std::string& lbn = pair.first;
       std::string pbn = cur_node->lbn2pbn(lbn);
