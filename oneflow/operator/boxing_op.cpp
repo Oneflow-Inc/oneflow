@@ -9,7 +9,6 @@ void BoxingOp::Init(const OperatorConf& op_conf) {
   auto cnf = new BoxingOpConf(op_conf.boxing_op_conf());
   mut_pb_op_conf().reset(cnf);
 
-  cnf->lbn();
   int32_t in_num = 0;
   if (cnf->in_box_conf_case() == BoxingOpConf::kConcatInBoxConf) {
     CHECK(cnf->has_concat_in_box_conf());
@@ -32,6 +31,7 @@ void BoxingOp::Init(const OperatorConf& op_conf) {
   for (int32_t i = 0; i < out_num; ++i) {
     RegisterOutputBlobName(cnf->lbn() + "/out_" + std::to_string(i));
   }
+  RegisterDataTmpBlobName("middle");
 }
 
 std::string BoxingOp::ibn2lbn(const std::string& input_blob_name) const {
