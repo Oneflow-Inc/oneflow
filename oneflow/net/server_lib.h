@@ -2,6 +2,7 @@
 #define THIRD_PARTY_TENSORFLOW_CORE_DISTRIBUTED_RUNTIME_SERVER_LIB_H_
 
 #include <memory>
+#include "proto/oneflow_server.pb.h"
 
 namespace oneflow {
 
@@ -43,7 +44,7 @@ class ServerFactory {
   // Creates a new server based on the given `server_def`, and stores
   // it in `*out_server`. Returns OK on success, otherwise returns an
   // error.
-  virtual void NewServer(std::unique_ptr<ServerInterface>* out_server) = 0;
+  virtual void NewServer(const ServerDef& server_def, std::unique_ptr<ServerInterface>* out_server) = 0;
 
   // Returns true if and only if this factory can create a server
   // based on the given `server_def`.
@@ -65,7 +66,7 @@ class ServerFactory {
 
 // Creates a server based on the given `server_def`, and stores it in
 // `*out_server`. Returns OK on success, otherwise returns an error.
-void NewServer(std::unique_ptr<ServerInterface>* out_server);
+void NewServer(const ServerDef& server_def, std::unique_ptr<ServerInterface>* out_server);
 
 }  // namespace tensorflow
 

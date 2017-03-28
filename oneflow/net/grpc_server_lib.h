@@ -13,7 +13,7 @@ namespace oneflow{
 
 class GrpcServer : public ServerInterface{
  protected:
-  GrpcServer();
+  GrpcServer(ServerDef& server_def);
  public:
   //GrpcServer();
   virtual ~GrpcServer();
@@ -22,7 +22,7 @@ class GrpcServer : public ServerInterface{
   void Start() override;
   void Join() override;
   virtual ChannelCreationFunction GetChannelCreationFunction() const;
-  static void Create(std::unique_ptr<ServerInterface>* out_server);
+  static void Create(ServerDef& server_def, std::unique_ptr<ServerInterface>* out_server);
   AsyncServiceInterface* master_service_ = nullptr;
   AsyncServiceInterface* worker_service_ = nullptr;
 
@@ -32,6 +32,7 @@ class GrpcServer : public ServerInterface{
   std::unique_ptr<::grpc::Server> server_;
   std::unique_ptr<Thread> master_thread_;
   std::unique_ptr<Thread> worker_thread_;
+  ServerDef server_def_;
 };
 
 }//end namespace oneflow

@@ -17,7 +17,8 @@
 
 namespace oneflow{
 
-GrpcServer::GrpcServer(){}
+GrpcServer::GrpcServer(ServerDef& server_def) : 
+    server_def_(server_def){}
 GrpcServer::~GrpcServer(){
   delete master_service_;
   delete worker_service_;
@@ -55,9 +56,9 @@ ChannelCreationFunction GrpcServer::GetChannelCreationFunction() const {
   return NewHostPortGrpcChannel;
 }
 
-void GrpcServer::Create(std::unique_ptr<ServerInterface>* out_server) {
+void GrpcServer::Create(ServerDef& server_def,std::unique_ptr<ServerInterface>* out_server) {
   std::cout<<"create GrpcServer"<<std::endl;
-  std::unique_ptr<GrpcServer> ret(new GrpcServer());
+  std::unique_ptr<GrpcServer> ret(new GrpcServer(server_def));
   ret->Init();
   *out_server = std::move(ret);
 }
@@ -66,9 +67,8 @@ namespace {
 
 class GrpcServerFactory : public ServerFactory {
  public:
-  void NewServer(std::unique_ptr<ServerInterface>* out_server) override {
-    std::cout<<"new server"<<std::endl;
-    GrpcServer::Create(out_server);
+  void NewServer(ServerDef& server_def, std::unique_ptr<ServerInterface>* out_server) {
+    GrpcServer::Create(server_def, out_server);
   }
 };
 

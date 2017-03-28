@@ -44,12 +44,12 @@ void ServerFactory::GetFactory(ServerFactory** out_factory) {
 
 // Creates a server based on the given `server_def`, and stores it in
 // `*out_server`. Returns OK on success, otherwise returns an error.
-void NewServer(std::unique_ptr<ServerInterface>* out_server) {
+void NewServer(const ServerDef& server_def, std::unique_ptr<ServerInterface>* out_server) {
   std::cout<<"new server in server_lib.cc"<<std::endl;
   ServerFactory* factory;
   ServerFactory::GetFactory(&factory);
   std::cout<<"get factory in server_lib.cc"<<std::endl;
-  factory->NewServer(out_server);
+  factory->NewServer(server_def, out_server);
   std::cout<<"hi"<<std::endl;
 }
 

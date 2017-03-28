@@ -16,9 +16,9 @@
 #include "context/id_map.h"
 #include "memory/blob.h"
 
-//#include "server_lib.h"
 #include "net/grpc_server_lib.h"
 //#include "public_session.h"
+#include "proto/oneflow_server.pb.h"
 
 DEFINE_string(solver, "/home/xiaoshu/dl_sys/oneflow/oneflow/proto/lenet_solver_light.prototxt",
   "The solver definition protocol buffer text file.");
@@ -28,18 +28,16 @@ DEFINE_string(solver, "/home/xiaoshu/dl_sys/oneflow/oneflow/proto/lenet_solver_l
 //}
 
 int main(int argc, char* argv[]){
-  /*
-  ServerDef server_def;
+  oneflow::ServerDef server_def;
   {
     std::ifstream confFile("tfcluster.txt");
     google::protobuf::io::IstreamInputStream in(&confFile);
     if(!google::protobuf::TextFormat::Parse(&in, &server_def))
       confFile.close();
   }
-  */
   //server start
   std::unique_ptr<oneflow::ServerInterface> server;
-  oneflow::GrpcServer::Create(&server);
+  oneflow::GrpcServer::Create(server_def, &server);
   server->Start();
   // graph compile
   /*
