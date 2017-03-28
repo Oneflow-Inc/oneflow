@@ -14,8 +14,6 @@ class CompTaskNode : public TaskNode {
   bool HasOpWithOutDiff() const;
   bool HasOpWithIndiff() const;
 
-  void BuildExecGraphAndSetRegisterDescs() override;
-
  protected:
   virtual void InitWithFwNode(TaskNode* fw_node) override {
     TaskNode::InitWithFwNode(fw_node);
@@ -25,7 +23,7 @@ class CompTaskNode : public TaskNode {
  private:
   using Lbn2NodeMap = std::unordered_map<std::string, ExecNode*>;
   using Lbn2NodeVecMap = std::unordered_map<std::string, std::vector<ExecNode*>>;
-  void FwBuildExecGraphAndSetProducedRegisterDescs();
+  void FwBuildExecGraphAndSetProducedRegisterDescs() override;
   void FwBuildFromUserOps(
       Lbn2NodeMap* lbn2producer,
       Lbn2NodeVecMap* extern_in_lbn2consumers);
@@ -36,7 +34,7 @@ class CompTaskNode : public TaskNode {
       const Lbn2NodeMap& lbn2producer,
       const Lbn2NodeVecMap& extern_in_lbn2consumers);
   void FwSetProducedRegisterDescs();
-  void BpBuildExecGraphAndSetProducedRegisterDescs();
+  void BpBuildExecGraphAndSetProducedRegisterDescs() override;
   void BpBuildExecGraph(
       const ExecGraph& fw_graph,
       const ExecNode* cp_in_node,

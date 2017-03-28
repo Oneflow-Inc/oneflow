@@ -32,7 +32,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   //
   std::unique_ptr<TaskNode> BuildAndConnectBpNode();
-  virtual void BuildExecGraphAndSetRegisterDescs();
+  void BuildExecGraphAndSetRegisterDescs();
  
  protected:
   virtual std::unique_ptr<TaskNode> CreateSameTypeNode() const;
@@ -50,6 +50,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
     return produced_register_descs_.at(register_desc_name).get();
   }
 
+  virtual void FwBuildExecGraphAndSetProducedRegisterDescs();
+  virtual void BpBuildExecGraphAndSetProducedRegisterDescs();
   void SubscribeRegisterDescInnerPath();
 
  private:

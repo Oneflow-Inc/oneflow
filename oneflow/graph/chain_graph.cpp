@@ -92,7 +92,7 @@ void ModelMergeChains(
     if (cur_node->op()->IsElemWise() == false) {
       continue;
     }
-    if (cur_node->parallel_desc()->policy() != ParallelDesc::kModelParallel) {
+    if (cur_node->parallel_desc()->policy() != kModelParallel) {
       continue;
     }
     CHECK_EQ(cur_node->in_edges().size(), 1);
@@ -207,7 +207,7 @@ void DataMergeChains(
   std::vector<const LogicalNode*> data_parallel_node;
   std::unordered_map<const LogicalNode*, bool> done;
   for (const auto& pair : *logical2chain_it) {
-    if (pair.first->parallel_desc()->policy() == ParallelDesc::kDataParallel
+    if (pair.first->parallel_desc()->policy() == kDataParallel
         && !logical_graph.IsFirstNode(pair.first)) {
       data_parallel_node.push_back(pair.first);
       done[pair.first] = false;

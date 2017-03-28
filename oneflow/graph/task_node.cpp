@@ -35,6 +35,15 @@ std::unique_ptr<TaskNode> TaskNode::BuildAndConnectBpNode() {
   return bp_node;
 }
 
+void TaskNode::BuildExecGraphAndSetRegisterDescs() {
+  if (IsFwNode()) {
+    FwBuildExecGraphAndSetProducedRegisterDescs();
+  } else {
+    BpBuildExecGraphAndSetProducedRegisterDescs();
+  }
+  SubscribeRegisterDescInnerPath();
+}
+
 std::unique_ptr<TaskNode> TaskNode::CreateSameTypeNode() const {
   LOG(FATAL) << "insignificant";
 }

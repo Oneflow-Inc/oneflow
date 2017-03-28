@@ -22,15 +22,6 @@ bool CompTaskNode::HasOpWithIndiff() const {
   return false;
 }
 
-void CompTaskNode::BuildExecGraphAndSetRegisterDescs() {
-  if (IsFwNode()) {
-    FwBuildExecGraphAndSetProducedRegisterDescs();
-  } else {
-    BpBuildExecGraphAndSetProducedRegisterDescs();
-  }
-  SubscribeRegisterDescInnerPath();
-}
-
 void CompTaskNode::FwBuildExecGraphAndSetProducedRegisterDescs() {
   Lbn2NodeMap lbn2producer;
   Lbn2NodeVecMap extern_in_lbn2consumers;

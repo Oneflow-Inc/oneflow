@@ -27,11 +27,11 @@ class CommNetTaskNode final : public TaskNode {
     CHECK(IsFwNode());
     is_fw_sender_ = false;
   }
-  void BuildExecGraphAndSetRegisterDescs() override {
-    LOG(FATAL) << "TODO";
-  }
 
  private:
+  void FwBuildExecGraphAndSetProducedRegisterDescs() override;
+  void BpBuildExecGraphAndSetProducedRegisterDescs() override;
+
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return std::unique_ptr<TaskNode> (new CommNetTaskNode);
   }

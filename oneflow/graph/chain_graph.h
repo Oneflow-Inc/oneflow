@@ -72,6 +72,8 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
 
 };
 
+std::vector<std::string> FindLbnsBetween(const ChainNode*, const ChainNode*);
+
 } // namespace oneflow
 
 #endif // ONEFLOW_GRAPH_CHAIN_GRAPH_H_

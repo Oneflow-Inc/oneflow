@@ -16,9 +16,38 @@ class BoxingTaskNode final : public TaskNode {
   void SetFwInBoxing();
   void SetFwOutBoxing();
 
-  void BuildExecGraphAndSetRegisterDescs() override;
-
  private:
+  using Chain2EdgesPair =
+      std::pair<const ChainNode*, std::vector<const TaskEdge*>>;
+  using Chain2EdgesMap =
+      std::unordered_map<const ChainNode*, std::vector<const TaskEdge*>>;
+
+  void FwBuildExecGraphAndSetProducedRegisterDescs() override;
+  void FwSetOutEdgeRegisterPtr();
+  void FwInitChain2EdgesMaps(Chain2EdgesMap* chain2in_edges,
+                                             Chain2EdgesMap* chain2out_edges);
+  void FwBuildChainPair(const Chain2EdgesPair& in_pair,
+                                        const Chain2EdgesPair& out_pair);
+  void FwBuildEdgesPairDataData(
+      const std::vector<const TaskEdge*>& in_edges,
+      const std::vector<const TaskEdge*>& out_edges,
+      const std::string& lbn);
+  void FwBuildEdgesPairDataModel(
+      const std::vector<const TaskEdge*>& in_edges,
+      const std::vector<const TaskEdge*>& out_edges,
+      const std::string& lbn);
+  void FwBuildEdgesPairModelData(
+      const std::vector<const TaskEdge*>& in_edges,
+      const std::vector<const TaskEdge*>& out_edges,
+      const std::string& lbn);
+  void FwBuildEdgesPairModelModel(
+      const std::vector<const TaskEdge*>& in_edges,
+      const std::vector<const TaskEdge*>& out_edges,
+      const std::string& lbn);
+  void BpBuildExecGraphAndSetProducedRegisterDescs() override {
+    LOG(FATAL) << "TODO";
+  }
+
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return std::unique_ptr<TaskNode> (new BoxingTaskNode);
   }

@@ -25,11 +25,9 @@ class CopyHDTaskNode final : public TaskNode {
   
   const std::vector<std::string>& CopiedLbns() const;
   
-  void BuildExecGraphAndSetRegisterDescs() override {
-    LOG(FATAL) << "TODO";
-  }
-
  private:
+  void FwBuildExecGraphAndSetProducedRegisterDescs() override;
+  void BpBuildExecGraphAndSetProducedRegisterDescs() override;
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return std::unique_ptr<TaskNode> (new CopyHDTaskNode);
   }

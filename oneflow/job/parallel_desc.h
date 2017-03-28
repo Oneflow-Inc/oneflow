@@ -10,9 +10,7 @@ namespace oneflow {
 
 class ParallelDesc {
  public:
-  using ParallelPolicy = ParallelConf::Policy;
-  static const ParallelPolicy kDataParallel = ParallelConf::DataParallel;
-  static const ParallelPolicy kModelParallel = ParallelConf::ModelParallel;
+  using Policy = ParallelConf::Policy;
   enum class Engine {
     kHost,
     kDevice
@@ -26,7 +24,7 @@ class ParallelDesc {
     // TODO
   }
   
-  const ParallelPolicy& policy() const { return policy_; }
+  const Policy& policy() const { return policy_; }
   const Engine& engine() const { return engine_; } 
   const std::vector<MachineId>& machines() const {
     return machine_vec_;
@@ -46,13 +44,16 @@ class ParallelDesc {
   }
   
  private:
-  ParallelPolicy policy_;
+  Policy policy_;
   Engine engine_;
   std::vector<MachineId> machine_vec_;
   std::vector<DeviceGlobalId> device_vec_;
   std::unordered_map<MachineId, std::vector<DevicePhysicalId>> devices_on_machine_;
 
 };
+
+static const ParallelDesc::Policy kDataParallel = ParallelConf::DataParallel;
+static const ParallelDesc::Policy kModelParallel = ParallelConf::ModelParallel;
 
 } // namespace oneflow
 
