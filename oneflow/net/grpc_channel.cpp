@@ -1,8 +1,21 @@
 #include "net/grpc_channel.h"
 
 #include "grpc++/create_channel.h"
+#include "re2/re2.h"
 
 namespace oneflow {
+
+namespace {
+  RE2* kHostPortRE = new RE2("([^:/]+):(\\d+)");
+}
+
+void GrpcChannelSpec::AddHostPortsJob(const std::string& job_id,
+                                      std::vector<std::string>& host_ports,
+                                      int tasks_per_replica) {
+  if(!job_ids_.insert(job_id).second) {
+    return;
+  }
+}
 
 SharedGrpcChannelPtr NewHostPortGrpcChannel(const std::string& target){
   ::grpc::ChannelArguments args;

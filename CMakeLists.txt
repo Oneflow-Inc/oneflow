@@ -10,6 +10,10 @@ set(oneflow_source_dir "${PROJECT_SOURCE_DIR}")
 include_directories(${oneflow_source_dir})
 set(ONEFLOW_LINKER_LIBS "")
 
+#re2
+set(RE2_LIB "/usr/local/lib/libre2.so")
+list(APPEND ONEFLOW_LINKER_LIBS ${RE2_LIB})
+
 #cuda
 set(CUDA_INCLUDE_PATH "/usr/local/cuda/include")
 set(CUDA_LIBRARIES "/usr/local/cuda/lib64/libcudart.so")
@@ -70,6 +74,7 @@ file(MAKE_DIRECTORY ${GENERATED_PB_PATH})
 
 include_directories(${oneflow_source_dir}/oneflow/)
 include_directories(/usr/local/cuda/include)
+include_directories(/usr/local/include)#RE
 MESSAGE(STATUS "oneflow_source_dir = ${oneflow_source_dir}")
 file(GLOB_RECURSE oneflow_all_cc "${oneflow_source_dir}/oneflow/net/*.cpp")
 MESSAGE(STATUS "SRC_FILES = ${oneflow_all_cc}")

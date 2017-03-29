@@ -34,6 +34,24 @@ void GrpcServer::Init(){
   worker_service_ = NewGrpcWorkerService(&builder);
   server_ = builder.BuildAndStart();
   //master servie and woker service use the same channle_cache
+  GrpcChannelSpec channel_spec;
+  for(auto& job : server_def_.cluster().job()) {
+    int max_task_id = -1;
+    for(auto& task : job.tasks()){
+      max_task_id = std::max(max_task_id, task.first);
+    }
+    std::vector<std::string> host_ports(max_task_id + 1);
+    for(auto& task : job.tasks()) {
+      if(job.name() == server_def_.job_name() &&
+         task.first == server_def_.task_index()) {
+        host_ports[task.first] = task.second;
+      }
+      else {
+        host_ports[task.first] = task.second;
+      }
+    }
+    channel_spec.AddHostPortsJob(job.name(), host_ports, host_ports.size());
+  }
   std::unique_ptr<GrpcChannelCache> channel_cache(NewGrpcChannelCache(GetChannelCreationFunction()));
   worker_env_.worker_cache = NewGrpcWorkerCache(channel_cache.release());
   master_env_.worker_cache = worker_env_.worker_cache;

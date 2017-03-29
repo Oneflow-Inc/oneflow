@@ -7,6 +7,21 @@
 
 namespace oneflow{
 
+class GrpcChannelSpec {
+ public:
+  struct HostPortsJob {
+    std::string job_id;
+    std::vector<std::string> host_ports;
+    int tasks_per_replica;
+  };
+  void AddHostPortsJob(const std::string& job_id,
+ 		       std::vector<std::string>& host_ports,
+		       int tasks_per_replica);
+ private:
+  std::vector<HostPortsJob> host_ports_jobs_;
+  std::set<std::string> job_ids_;
+};
+
 class GrpcChannelCache {
  public:
   virtual ~GrpcChannelCache(){}
