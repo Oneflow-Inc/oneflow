@@ -68,7 +68,7 @@ void BoxingTaskNode::FwInitChain2EdgesMaps(Chain2EdgesMap* chain2in_edges,
 
 namespace {
 
-std::shared_ptr<const Operator> FwBuildBoxingOpDataData(
+std::shared_ptr<Operator> FwBuildBoxingOpDataData(
     const std::string& lbn,
     bool is_fw_in_boxing) {
   OperatorConf op_conf;
@@ -84,7 +84,7 @@ std::shared_ptr<const Operator> FwBuildBoxingOpDataData(
   return ConstructOpFromPbConf(op_conf);
 }
 
-std::shared_ptr<const Operator> FwBuildBoxingOpDataModel(
+std::shared_ptr<Operator> FwBuildBoxingOpDataModel(
     const std::string& lbn,
     bool is_fw_in_boxing) {
   OperatorConf op_conf;
@@ -99,13 +99,13 @@ std::shared_ptr<const Operator> FwBuildBoxingOpDataModel(
   return ConstructOpFromPbConf(op_conf);
 }
 
-std::shared_ptr<const Operator> FwBuildBoxingOpModelData(
+std::shared_ptr<Operator> FwBuildBoxingOpModelData(
     const std::string& lbn,
     bool is_fw_in_boxing) {
   LOG(FATAL) << "TODO";
 }
 
-std::shared_ptr<const Operator> FwBuildBoxingOpModelModel(
+std::shared_ptr<Operator> FwBuildBoxingOpModelModel(
     const std::string& lbn,
     bool is_fw_in_boxing) {
   LOG(FATAL) << "TODO";
@@ -124,7 +124,7 @@ void BoxingTaskNode::FwBuildChainPair(const Chain2EdgesPair& in_pair,
 
   Policy in_policy = in_chain->parallel_desc()->policy();
   Policy out_policy = out_chain->parallel_desc()->policy();
-  std::shared_ptr<const Operator> (*FwBuildBoxingOp)(const std::string&, bool);
+  std::shared_ptr<Operator> (*FwBuildBoxingOp)(const std::string&, bool);
 
   if (in_policy == kDataParallel && out_policy == kDataParallel) {
     FwBuildBoxingOp = &FwBuildBoxingOpDataData;
@@ -139,7 +139,7 @@ void BoxingTaskNode::FwBuildChainPair(const Chain2EdgesPair& in_pair,
   std::vector<std::string> lbns = FindLbnsBetween(in_chain, out_chain);
   for (const std::string& lbn : lbns) {
     ExecNode* boxing_node = mut_exec_graph().NewExecNode();
-    std::shared_ptr<const Operator> op = FwBuildBoxingOp(lbn, IsFwInBoxing());
+    std::shared_ptr<Operator> op = FwBuildBoxingOp(lbn, IsFwInBoxing());
     boxing_node->mut_op() = op;
     // TODO: maybe we need sort
     for (const TaskEdge* edge : in_edges) {

@@ -39,7 +39,7 @@ void CompTaskNode::FwBuildExecGraphAndSetProducedRegisterDescs() {
 void CompTaskNode::FwBuildFromUserOps(
     Lbn2NodeMap* lbn2producer,
     Lbn2NodeVecMap* extern_in_lbn2consumers) {
-  for (std::shared_ptr<const Operator> op : chain_node()->op_vec()) {
+  for (std::shared_ptr<Operator> op : chain_node()->op_vec()) {
     ExecNode* cur_node = mut_exec_graph().NewExecNode();
     cur_node->mut_op() = op;
     for (const std::string& obn : op->output_blob_names()) {
@@ -73,7 +73,7 @@ void CompTaskNode::FwAddCopyInOp(Lbn2NodeVecMap* extern_in_lbn2consumers) {
   for (const auto& pair : *extern_in_lbn2consumers) {
     pb_op_conf.mutable_copy_op_conf()->add_lbns(pair.first);
   }
-  std::shared_ptr<const Operator> copy_op = ConstructOpFromPbConf(pb_op_conf);
+  std::shared_ptr<Operator> copy_op = ConstructOpFromPbConf(pb_op_conf);
   // Construct Exec Node
   ExecNode* copy_node = mut_exec_graph().NewExecNode();
   copy_node->mut_op() = copy_op;
@@ -91,7 +91,7 @@ void CompTaskNode::FwAddCopyInOp(Lbn2NodeVecMap* extern_in_lbn2consumers) {
 void CompTaskNode::FwAddCloneOp() {
   struct CloneInfo {
     std::string lbn;
-    std::shared_ptr<const Operator> clone_op;
+    std::shared_ptr<Operator> clone_op;
     ExecNode* pred_node;
     std::vector<ExecEdge*> edges;
   };
@@ -111,7 +111,7 @@ void CompTaskNode::FwAddCloneOp() {
       pb_op_conf.set_name("");
       pb_op_conf.mutable_clone_op_conf()->mutable_lbn()->assign(lbn);
       pb_op_conf.mutable_clone_op_conf()->set_clone_num(edges.size());
-      std::shared_ptr<const Operator> clone_op = ConstructOpFromPbConf(pb_op_conf);
+      std::shared_ptr<Operator> clone_op = ConstructOpFromPbConf(pb_op_conf);
       // Set clone_info
       CloneInfo clone_info;
       clone_info.lbn = lbn;
