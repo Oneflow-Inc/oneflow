@@ -15,6 +15,19 @@ void GrpcChannelSpec::AddHostPortsJob(const std::string& job_id,
   if(!job_ids_.insert(job_id).second) {
     return;
   }
+  HostPortsJob job;
+  job.job_id = job_id;
+  for (auto& host_port : host_ports) {
+    std::string host;
+    int port;
+    if (!RE2::FullMatch(host_port, *kHostPortRE, &host, &port)) {
+      return;
+    }
+    job.host_ports = host_ports;
+    job.tasks_per_replica = tasks_per_replica;
+    host_ports_jobs_.push_back(job);
+  }
+
 }
 
 SharedGrpcChannelPtr NewHostPortGrpcChannel(const std::string& target){
