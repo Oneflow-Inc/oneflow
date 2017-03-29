@@ -52,7 +52,7 @@ void GrpcServer::Init(){
     }
     channel_spec.AddHostPortsJob(job.name(), host_ports, host_ports.size());
   }
-  std::unique_ptr<GrpcChannelCache> channel_cache(NewGrpcChannelCache(GetChannelCreationFunction()));
+  std::unique_ptr<GrpcChannelCache> channel_cache(NewGrpcChannelCache(channel_spec, GetChannelCreationFunction()));
   worker_env_.worker_cache = NewGrpcWorkerCache(channel_cache.release());
   master_env_.worker_cache = worker_env_.worker_cache;
   //master service use MasterSession;
