@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_GRAPH_STAGE_GRAPH_H_
 #define ONEFLOW_GRAPH_STAGE_GRAPH_H_
 
+#include "common/range.h"
 #include "graph/chain_graph.h"
 
 namespace oneflow {
@@ -27,9 +28,17 @@ class StageNode final : public Node<StageNode, StageEdge> {
     chain_node_ = new_chain_node;
   }
 
+  const Range& parallel_range() const {
+    return parallel_range_;
+  }
+  Range& mut_parallel_range() {
+    return parallel_range_;
+  }
+
  private:
   const ChainNode* chain_node_;
   MachineId machine_id_;
+  Range parallel_range_;
 
 };
 

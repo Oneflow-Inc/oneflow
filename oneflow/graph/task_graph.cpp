@@ -69,6 +69,7 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
     bool is_first_stage,
     bool is_last_stage) {
   MachineId machine_id = stage->machine_id();
+  int32_t parallel_id = stage->parallel_range().begin;
   for (auto device_physical_id :
       stage->chain_node()->parallel_desc()->devices_on_machine(machine_id)) {
     ThreadLocalId thread_local_id =
@@ -78,6 +79,7 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
     comp_task_node->set_stage_node(stage);
     comp_task_node->mut_thread_local_id() = thread_local_id;
     comp_task_node->SetFwNode();
+    comp_task_node->set_parallel_id(parallel_id++);
     // comp_in_task_node
     if (!is_first_stage) {
       CopyHDTaskNode* comp_in_task_node = NewTaskNode<CopyHDTaskNode> ();
@@ -103,6 +105,7 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
       task_nodes_in_stage->comp_out_task_nodes.push_back(comp_task_node);
     }
   }
+  CHECK_EQ(parallel_id, stage->parallel_range().end);
 }
 
 void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,

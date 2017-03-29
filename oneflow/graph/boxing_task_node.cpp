@@ -18,7 +18,7 @@ void BoxingTaskNode::InitWithFwNode(TaskNode* fw_node) {
   is_fw_in_boxing_ =
       of_dynamic_cast<BoxingTaskNode*>(fw_node)->is_fw_in_boxing_;
 }
-
+/* TODO
 void BoxingTaskNode::FwBuildExecGraphAndSetProducedRegisterDescs() {
   FwSetOutEdgeRegisterPtr();
   Chain2EdgesMap chain2in_edges;
@@ -29,6 +29,7 @@ void BoxingTaskNode::FwBuildExecGraphAndSetProducedRegisterDescs() {
       FwBuildChainPair(in_pair, out_pair);
     }
   }
+  FwSetProducedRegister();
   mut_exec_graph().UpdateSourceAndSink();
 }
 
@@ -46,6 +47,18 @@ void BoxingTaskNode::FwInitChain2EdgesMaps(Chain2EdgesMap* chain2in_edges,
   for (TaskEdge* edge : in_edges()) {
     const ChainNode* chain = edge->src_node()->chain_node();
     (*chain2in_edges)[chain].push_back(edge);
+  }
+  for (auto& pair : *chain2in_edges) {
+    std::vector<const TaskEdge*>& edges = pair.second;
+    std::sort(edges.begin(), edges.end(), [](const TaskEdge* lhs,
+                                             const TaskEdge* rhs) {
+      const StageNode* lhs_stage = lhs->src_node()->stage_node();
+      const StageNode* rhs_stage = rhs->src_node()->stage_node();
+      if (lhs_stage != rhs_stage) {
+        return lhs_stage->idx_in_chain() < rhs_stage->idx_in_chain();
+      }
+
+    });
   }
   for (TaskEdge* edge : out_edges()) {
     const ChainNode* chain = edge->dst_node()->chain_node();
@@ -74,13 +87,24 @@ std::shared_ptr<const Operator> FwBuildBoxingOpDataData(
 std::shared_ptr<const Operator> FwBuildBoxingOpDataModel(
     const std::string& lbn,
     bool is_fw_in_boxing) {
-  LOG(FATAL) << "TODO";
+  OperatorConf op_conf;
+  op_conf.set_name("");
+  BoxingOpConf* boxing_op_conf = op_conf.mutable_boxing_op_conf();
+  boxing_op_conf->set_lbn(lbn);
+  ConcatBoxConf* concat_in_conf = boxing_op_conf->mutable_concat_in_box_conf();
+  CloneBoxConf* clone_out_conf = boxing_op_conf->mutable_clone_out_box_conf();
+  concat_in_conf->set_axis(0);
+  concat_in_conf->clear_proportion();
+  clone_out_conf->set_out_num(0);
+  return ConstructOpFromPbConf(op_conf);
 }
+
 std::shared_ptr<const Operator> FwBuildBoxingOpModelData(
     const std::string& lbn,
     bool is_fw_in_boxing) {
   LOG(FATAL) << "TODO";
 }
+
 std::shared_ptr<const Operator> FwBuildBoxingOpModelModel(
     const std::string& lbn,
     bool is_fw_in_boxing) {
@@ -92,8 +116,6 @@ std::shared_ptr<const Operator> FwBuildBoxingOpModelModel(
 void BoxingTaskNode::FwBuildChainPair(const Chain2EdgesPair& in_pair,
                                       const Chain2EdgesPair& out_pair) {
   using Policy = ParallelDesc::Policy;
-  using std::placeholders::_1;
-  using std::placeholders::_2;
   
   const ChainNode* in_chain = in_pair.first;
   const std::vector<const TaskEdge*>& in_edges = in_pair.second;
@@ -119,6 +141,7 @@ void BoxingTaskNode::FwBuildChainPair(const Chain2EdgesPair& in_pair,
     ExecNode* boxing_node = mut_exec_graph().NewExecNode();
     std::shared_ptr<const Operator> op = FwBuildBoxingOp(lbn, IsFwInBoxing());
     boxing_node->mut_op() = op;
+    // TODO: maybe we need sort
     for (const TaskEdge* edge : in_edges) {
       boxing_node->AddConsumedLbnRegiPair(lbn, edge->register_desc());
     }
@@ -128,4 +151,21 @@ void BoxingTaskNode::FwBuildChainPair(const Chain2EdgesPair& in_pair,
   }
 }
 
+void BoxingTaskNode::FwSetProducedRegister() {
+  std::unique_ptr<RegisterDesc> boxing_middle_register(new DisContigRegistDesc);
+  for (const std::unique_ptr<ExecNode>& node : exec_graph().nodes()) {
+    for (const auto& pair : node->produced_lbn_regi_pairs()) {
+      const std:string& lbn = pair.first;
+      RegisterDesc* register_desc = pair.second;
+      register_desc->AddLbn(lbn);
+    }
+    for (const std::string& dtbn : node->op()->data_tmp_blob_names()) {
+      std::string lbn = node->op()->dtbn2lbn();
+      std::string pbn = node->lbn2pbn(lbn);
+      boxing_middle_register->AddPbn(pbn);
+    }
+  }
+  AddProducedRegisterDesc(std::move(boxing_middle_register));
+}
+*/
 } // namespace oneflow

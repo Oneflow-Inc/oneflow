@@ -10,10 +10,20 @@ void StageGraph::Init(std::unique_ptr<const ChainGraph>&& chain_graph) {
                      std::vector<StageNode*>> chain2stages;
   for (const std::unique_ptr<ChainNode>& cur_chain : chain_graph_->nodes()) {
     chain2stages[cur_chain.get()] = {};
-    for (MachineId machine_id : cur_chain->parallel_desc()->machines()) {
+    auto parallel_desc = cur_chain->parallel_desc();
+    int32_t range_idx = 0;
+    for (MachineId machine_id : parallel_desc->machines()) {
       StageNode* stage_node = NewFinalNode();
       stage_node->mut_machine_id() = machine_id;
       stage_node->set_chain_node(cur_chain.get());
+      stage_node->mut_parallel_range().begin = range_idx;
+      if (parallel_desc->engine() == ParallelDesc::Engine::kDevice) {
+        range_idx += parallel_desc->devices_on_machine(machine_id).size();
+      } else {
+        CHECK(chain_graph_->IsFirstNode(cur_chain.get()));
+        range_idx += 1;
+      }
+      stage_node->mut_parallel_range().end = range_idx;
       chain2stages.at(cur_chain.get()).push_back(stage_node);
     }
   }

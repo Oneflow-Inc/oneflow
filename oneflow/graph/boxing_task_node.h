@@ -22,12 +22,9 @@ class BoxingTaskNode final : public TaskNode {
   using Chain2EdgesMap =
       std::unordered_map<const ChainNode*, std::vector<const TaskEdge*>>;
 
-  void FwBuildExecGraphAndSetProducedRegisterDescs() override;
-  void FwSetOutEdgeRegisterPtr();
-  void FwInitChain2EdgesMaps(Chain2EdgesMap* chain2in_edges,
-                                             Chain2EdgesMap* chain2out_edges);
-  void FwBuildChainPair(const Chain2EdgesPair& in_pair,
-                                        const Chain2EdgesPair& out_pair);
+  void FwBuildExecGraphAndSetProducedRegisterDescs() override {
+    LOG(FATAL) << "TODO";
+  }
   void BpBuildExecGraphAndSetProducedRegisterDescs() override {
     LOG(FATAL) << "TODO";
   }
