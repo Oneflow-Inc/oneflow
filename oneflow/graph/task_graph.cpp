@@ -1,6 +1,8 @@
 #include "graph/task_graph.h"
 #include "graph/comp_task_node.h"
 #include "graph/comm_net_task_node.h"
+#include "graph/in_boxing_task_node.h"
+#include "graph/out_boxing_task_node.h"
 
 namespace oneflow {
 
@@ -133,11 +135,10 @@ void TaskGraph::InitInboxingTaskNode(const StageNode* stage,
       && task_nodes_in_stage->comp_in_task_nodes.size() == 1) {
     return;
   }
-  BoxingTaskNode* boxing_task_node = NewTaskNode<BoxingTaskNode> ();
+  InBoxingTaskNode* boxing_task_node = NewTaskNode<InBoxingTaskNode> ();
   boxing_task_node->set_stage_node(stage);
   boxing_task_node->mut_thread_local_id() = IDManager::Singleton().boxing_thread_local_id();
   boxing_task_node->SetFwNode();
-  boxing_task_node->SetFwInBoxing();
   for (TaskNode* comp_in_task_node : task_nodes_in_stage->comp_in_task_nodes) {
     TaskConnect(boxing_task_node, NewFinalEdge(), comp_in_task_node);
   }
@@ -152,11 +153,10 @@ void TaskGraph::InitOutBoxingTaskNode(
       && task_nodes_in_stage->comp_out_task_nodes.size() == 1) {
     return;
   }
-  BoxingTaskNode* boxing_task_node = NewTaskNode<BoxingTaskNode> ();
+  OutBoxingTaskNode* boxing_task_node = NewTaskNode<OutBoxingTaskNode> ();
   boxing_task_node->set_stage_node(stage);
   boxing_task_node->mut_thread_local_id() = IDManager::Singleton().boxing_thread_local_id();
   boxing_task_node->SetFwNode();
-  boxing_task_node->SetFwOutBoxing();
   for (TaskNode* comp_out_task_node : task_nodes_in_stage->comp_out_task_nodes) {
     TaskConnect(comp_out_task_node, NewFinalEdge(), boxing_task_node);
   }
