@@ -28,22 +28,6 @@ class BoxingTaskNode final : public TaskNode {
                                              Chain2EdgesMap* chain2out_edges);
   void FwBuildChainPair(const Chain2EdgesPair& in_pair,
                                         const Chain2EdgesPair& out_pair);
-  void FwBuildEdgesPairDataData(
-      const std::vector<const TaskEdge*>& in_edges,
-      const std::vector<const TaskEdge*>& out_edges,
-      const std::string& lbn);
-  void FwBuildEdgesPairDataModel(
-      const std::vector<const TaskEdge*>& in_edges,
-      const std::vector<const TaskEdge*>& out_edges,
-      const std::string& lbn);
-  void FwBuildEdgesPairModelData(
-      const std::vector<const TaskEdge*>& in_edges,
-      const std::vector<const TaskEdge*>& out_edges,
-      const std::string& lbn);
-  void FwBuildEdgesPairModelModel(
-      const std::vector<const TaskEdge*>& in_edges,
-      const std::vector<const TaskEdge*>& out_edges,
-      const std::string& lbn);
   void BpBuildExecGraphAndSetProducedRegisterDescs() override {
     LOG(FATAL) << "TODO";
   }
