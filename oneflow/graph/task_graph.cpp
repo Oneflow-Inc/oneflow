@@ -230,18 +230,24 @@ void TaskGraph::BackwardConnect(
     const std::vector<TaskNode*>& turning_node_vec) {
   std::queue<TaskNode*> bp_node_queue;
   for (TaskNode* turning_node : turning_node_vec) {
-    for (TaskEdge* edge : turning_node->in_edges()) {
-      TaskNode* bp_pred_node = edge->src_node()->GetBpNode();
-      TaskConnect(turning_node, NewFinalEdge(), bp_pred_node);
+    for (TaskEdge* fw_edge : turning_node->in_edges()) {
+      TaskNode* bp_pred_node = fw_edge->src_node()->GetBpNode();
+      TaskEdge* bp_edge = NewFinalEdge();
+      TaskConnect(turning_node, bp_edge, bp_pred_node);
+      fw_edge->set_related_fwbp_edge(bp_edge);
+      bp_edge->set_related_fwbp_edge(fw_edge);
       bp_node_queue.push(bp_pred_node);
     }
   }
   while (!bp_node_queue.empty()) {
     TaskNode* bp_cur_node = bp_node_queue.front();
     bp_node_queue.pop();
-    for (TaskEdge* edge : bp_cur_node->GetFwNode()->in_edges()) {
-      TaskNode* bp_pred_node = edge->src_node()->GetBpNode();
-      TaskConnect(bp_cur_node, NewFinalEdge(), bp_pred_node);
+    for (TaskEdge* fw_edge : bp_cur_node->GetFwNode()->in_edges()) {
+      TaskNode* bp_pred_node = fw_edge->src_node()->GetBpNode();
+      TaskEdge* bp_edge = NewFinalEdge();
+      fw_edge->set_related_fwbp_edge(bp_edge);
+      bp_edge->set_related_fwbp_edge(fw_edge);
+      TaskConnect(bp_cur_node, bp_edge, bp_pred_node);
       bp_node_queue.push(bp_pred_node);
     }
   }

@@ -65,7 +65,7 @@ const CompTaskNode* GetSuccCompTaskNode(const TaskEdge* edge) {
 }
 
 void InBoxingTaskNode::FwBuildExecGraphAndSetProducedRegisterDescs() {
-  FwSetOutEdgeRegisterPtr();
+  SetOutEdgeRegisterPtr();
   Chain2EdgesMap chain2sorted_in_edges;
   FwInitChain2SortedInEdgesMaps(&chain2sorted_in_edges);
   std::vector<const TaskEdge*> sorted_out_edges;
@@ -77,7 +77,7 @@ void InBoxingTaskNode::FwBuildExecGraphAndSetProducedRegisterDescs() {
   mut_exec_graph().UpdateSourceAndSink();
 }
 
-void InBoxingTaskNode::FwSetOutEdgeRegisterPtr() {
+void InBoxingTaskNode::SetOutEdgeRegisterPtr() {
   for (TaskEdge* edge : out_edges()) {
     std::string name = "boxing_out_" + std::to_string(edge->edge_id());
     std::unique_ptr<RegisterDesc> register_desc(new DisContigRegistDesc);
@@ -174,6 +174,10 @@ void InBoxingTaskNode::FwSetProducedRegister() {
     boxing_middle_register->AddPbn(edge->pbn());
   }
   AddProducedRegisterDesc("boxing_middle", std::move(boxing_middle_register));
+}
+
+void InBoxingTaskNode::BpBuildExecGraphAndSetProducedRegisterDescs() {
+  TODO();
 }
 
 } // namespace oneflow

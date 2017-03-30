@@ -71,7 +71,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 class TaskEdge final : public Edge<TaskNode, TaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TaskEdge);
-  TaskEdge() { register_desc_ = nullptr; }
+  TaskEdge() {
+    register_desc_ = nullptr;
+    related_fwbp_edge_ = nullptr;
+  }
   ~TaskEdge() = default;
   
   RegisterDesc* register_desc() const {
@@ -81,8 +84,16 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
     register_desc_ = new_ptr;
   }
 
+  TaskEdge* related_fwbp_edge() const {
+    return related_fwbp_edge_;
+  }
+  void set_related_fwbp_edge(TaskEdge* new_val) {
+    related_fwbp_edge_ = new_val;
+  }
+
  private:
   RegisterDesc* register_desc_;
+  TaskEdge* related_fwbp_edge_;
 
 };
 
