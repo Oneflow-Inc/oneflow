@@ -132,7 +132,7 @@ void CompTaskNode::FwAddCloneOp() {
 
 void CompTaskNode::FwSetOutEdgeRegisterPtr() {
   std::unique_ptr<RegisterDesc> data_register(new DisContigRegistDesc);
-  SoleOutEdge()->set_register_desc(data_register.get());
+  BindProducedRegisterAndOutEdge(data_register.get(), SoleOutEdge());
   AddProducedRegisterDesc("data", std::move(data_register));
 }
 
@@ -202,7 +202,7 @@ void CompTaskNode::BpBuildExecGraph(
 
 void CompTaskNode::BpSetOutEdgeRegisterPtr() {
   std::unique_ptr<RegisterDesc> data_diff_register(new DisContigRegistDesc);
-  SoleOutEdge()->set_register_desc(data_diff_register.get());
+  BindProducedRegisterAndOutEdge(data_diff_register.get(), SoleOutEdge());
   AddProducedRegisterDesc("data_diff", std::move(data_diff_register));
 }
 

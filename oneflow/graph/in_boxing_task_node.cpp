@@ -81,7 +81,7 @@ void InBoxingTaskNode::SetOutEdgeRegisterPtr() {
   for (TaskEdge* edge : out_edges()) {
     std::string name = "boxing_out_" + std::to_string(edge->edge_id());
     std::unique_ptr<RegisterDesc> register_desc(new DisContigRegistDesc);
-    edge->set_register_desc(register_desc.get());
+    BindProducedRegisterAndOutEdge(register_desc.get(), edge);
     AddProducedRegisterDesc(name, std::move(register_desc));
   }
 }

@@ -55,6 +55,21 @@ void TaskNode::InitWithFwNode(TaskNode* fw_node) {
   related_fw_or_bp_node_ = fw_node;
 }
 
+void TaskNode::BindProducedRegisterAndOutEdge(RegisterDesc* regi,
+                                              const TaskEdge* edge) {
+  CHECK(produced_register2out_edge.emplace(regi, edge).second);
+  CHECK(out_edge2produced_register.emplace(edge, regi).second);
+}
+
+const TaskEdge* TaskNode::GetOutEdge4ProducedRegister(RegisterDesc* regi) const {
+  return produced_register2out_edge.at(regi);
+}
+
+RegisterDesc* TaskNode::GetProducedRegister4OutEdge(const TaskEdge* edge) const {
+  return out_edge2produced_register.at(edge);
+}
+
+
 void TaskNode::SubscribeRegisterDescInnerPath() {
   for (const TaskEdge* edge : in_edges()) {
     edge->register_desc()->AddSubscriber(this);

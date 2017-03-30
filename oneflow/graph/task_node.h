@@ -33,6 +33,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   //
   std::unique_ptr<TaskNode> BuildAndConnectBpNode();
   void BuildExecGraphAndSetRegisterDescs();
+  const TaskEdge* GetOutEdge4ProducedRegister(RegisterDesc*) const;
+  RegisterDesc* GetProducedRegister4OutEdge(const TaskEdge*) const;
  
  protected:
   virtual std::unique_ptr<TaskNode> CreateSameTypeNode() const;
@@ -40,6 +42,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   ExecGraph& mut_exec_graph() { return exec_graph_; }
   
+  void BindProducedRegisterAndOutEdge(RegisterDesc*, const TaskEdge*);
+
   void AddProducedRegisterDesc(
       const std::string& register_desc_name,
       std::unique_ptr<RegisterDesc> register_desc) {
@@ -64,7 +68,9 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   ExecGraph exec_graph_;
   std::unordered_map<std::string,
                      std::unique_ptr<RegisterDesc>> produced_register_descs_; 
-  std::unordered_set<RegisterDesc*> subscribed_register_descs_;
+  std::unordered_set<const RegisterDesc*> subscribed_register_descs_;
+  std::unordered_map<RegisterDesc*, const TaskEdge*> produced_register2out_edge;
+  std::unordered_map<const TaskEdge*, RegisterDesc*> out_edge2produced_register;
 
 };
 
@@ -72,17 +78,9 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TaskEdge);
   TaskEdge() {
-    register_desc_ = nullptr;
     related_fwbp_edge_ = nullptr;
   }
   ~TaskEdge() = default;
-  
-  RegisterDesc* register_desc() const {
-    return register_desc_;
-  }
-  void set_register_desc(RegisterDesc* new_ptr) {
-    register_desc_ = new_ptr;
-  }
 
   TaskEdge* related_fwbp_edge() const {
     return related_fwbp_edge_;
@@ -91,8 +89,11 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
     related_fwbp_edge_ = new_val;
   }
 
+  RegisterDesc* register_desc() const {
+    return src_node()->GetProducedRegister4OutEdge(this);
+  }
+
  private:
-  RegisterDesc* register_desc_;
   TaskEdge* related_fwbp_edge_;
 
 };
