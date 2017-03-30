@@ -20,6 +20,12 @@ namespace oneflow {
   OF_DISALLOW_COPY(ClassName) \
   OF_DISALLOW_MOVE(ClassName)
 
+#define UNEXPECTED_RUN() \
+  LOG(FATAL) << "Unexpected Run";
+
+#define TODO() \
+  LOG(FATAL) << "TODO";
+
 template<typename Target, typename Source>
 inline Target of_dynamic_cast(Source arg) {
   Target ret = dynamic_cast<Target> (arg);

@@ -12,17 +12,17 @@ class OutBoxingTaskNode final : public BoxingTaskNode {
   ~OutBoxingTaskNode() = default;
 
  private:
-  void FwBuildExecGraphAndSetProducedRegisterDescs() override {
-    LOG(FATAL) << "TODO";
-  }
-  void BpBuildExecGraphAndSetProducedRegisterDescs() override {
-    LOG(FATAL) << "TODO";
-  }
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return std::unique_ptr<TaskNode> (new OutBoxingTaskNode);
   }
   void InitWithFwNode(TaskNode* fw_node) override {
     BoxingTaskNode::InitWithFwNode(fw_node);
+  }
+  void FwBuildExecGraphAndSetProducedRegisterDescs() override {
+    TODO();
+  }
+  void BpBuildExecGraphAndSetProducedRegisterDescs() override {
+    TODO();
   }
 
 };

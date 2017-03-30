@@ -12,13 +12,13 @@ void StageGraph::Init(std::unique_ptr<const ChainGraph>&& chain_graph) {
     chain2stages[cur_chain.get()] = {};
     auto parallel_desc = cur_chain->parallel_desc();
     int32_t range_idx = 0;
-    for (MachineId machine_id : parallel_desc->machines()) {
+    for (MachineId machine_id : parallel_desc->sorted_machines()) {
       StageNode* stage_node = NewFinalNode();
       stage_node->mut_machine_id() = machine_id;
       stage_node->set_chain_node(cur_chain.get());
       stage_node->mut_parallel_range().begin = range_idx;
       if (parallel_desc->engine() == ParallelDesc::Engine::kDevice) {
-        range_idx += parallel_desc->devices_on_machine(machine_id).size();
+        range_idx += parallel_desc->sorted_devices_on_machine(machine_id).size();
       } else {
         CHECK(chain_graph_->IsFirstNode(cur_chain.get()));
         range_idx += 1;

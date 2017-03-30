@@ -12,17 +12,27 @@ class InBoxingTaskNode final : public BoxingTaskNode {
   ~InBoxingTaskNode() = default;
 
  private:
-  void FwBuildExecGraphAndSetProducedRegisterDescs() override {
-    LOG(FATAL) << "TODO";
-  }
-  void BpBuildExecGraphAndSetProducedRegisterDescs() override {
-    LOG(FATAL) << "TODO";
-  }
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return std::unique_ptr<TaskNode> (new InBoxingTaskNode);
   }
   void InitWithFwNode(TaskNode* fw_node) override {
     BoxingTaskNode::InitWithFwNode(fw_node);
+  }
+
+  using ChainEdgesPair =
+      std::pair<const ChainNode*, std::vector<const TaskEdge*>>;
+  using Chain2EdgesMap =
+      std::unordered_map<const ChainNode*, std::vector<const TaskEdge*>>;
+  void FwBuildExecGraphAndSetProducedRegisterDescs() override;
+  void FwSetOutEdgeRegisterPtr();
+  void FwInitChain2SortedInEdgesMaps(Chain2EdgesMap* chain2sorted_in_edges);
+  void FwInitSortedOutEdges(std::vector<const TaskEdge*>* sorted_out_edges);
+  void FwBuildChainSortedEdgesPair(
+      const ChainEdgesPair& chain_sorted_in_edges,
+      const std::vector<const TaskEdge*>& sorted_out_edges);
+  void FwSetProducedRegister();
+  void BpBuildExecGraphAndSetProducedRegisterDescs() override {
+    TODO();
   }
 
 };
