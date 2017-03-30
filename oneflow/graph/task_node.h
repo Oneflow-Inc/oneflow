@@ -47,6 +47,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void AddProducedRegisterDesc(
       const std::string& register_desc_name,
       std::unique_ptr<RegisterDesc> register_desc) {
+    register_desc->SetProducer(this);
     auto pair = std::make_pair(register_desc_name, std::move(register_desc));
     CHECK(produced_register_descs_.insert(std::move(pair)).second);
   }
@@ -97,6 +98,10 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
   TaskEdge* related_fwbp_edge_;
 
 };
+
+inline const TaskEdge* GetRelatedTaskEdge4Register(RegisterDesc* regi) {
+  return regi->GetProducer()->GetOutEdge4ProducedRegister(regi);
+}
 
 } // namespace oneflow
 

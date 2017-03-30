@@ -45,6 +45,9 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   void AddConsumedLbnRegiPair(const std::string& lbn, RegisterDesc* register_desc);
   void AddProducedLbnRegiPair(const std::string& lbn, RegisterDesc* register_desc);
 
+  const std::vector<std::pair<std::string, RegisterDesc*>>& consumed_lbn_regi_pairs() const {
+    return consumed_lbn_regi_pairs_;
+  }
   const std::vector<std::pair<std::string, RegisterDesc*>>& produced_lbn_regi_pairs() const {
     return produced_lbn_regi_pairs_;
   }

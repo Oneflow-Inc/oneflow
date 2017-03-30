@@ -30,7 +30,7 @@ class InBoxingTaskNode final : public BoxingTaskNode {
   void FwBuildChainSortedEdgesPair(
       const ChainEdgesPair& chain_sorted_in_edges,
       const std::vector<const TaskEdge*>& sorted_out_edges);
-  void FwSetProducedRegister();
+  void SetProducedRegister();
   void BpBuildExecGraphAndSetProducedRegisterDescs() override;
 
 };

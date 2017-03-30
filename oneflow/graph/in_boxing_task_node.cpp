@@ -73,7 +73,7 @@ void InBoxingTaskNode::FwBuildExecGraphAndSetProducedRegisterDescs() {
   for (const ChainEdgesPair& chain_sorted_in_edges : chain2sorted_in_edges) {
     FwBuildChainSortedEdgesPair(chain_sorted_in_edges, sorted_out_edges);
   }
-  FwSetProducedRegister();
+  SetProducedRegister();
   mut_exec_graph().UpdateSourceAndSink();
 }
 
@@ -161,7 +161,7 @@ void InBoxingTaskNode::FwBuildChainSortedEdgesPair(
   }
 }
 
-void InBoxingTaskNode::FwSetProducedRegister() {
+void InBoxingTaskNode::SetProducedRegister() {
   for (const std::unique_ptr<ExecNode>& node : exec_graph().nodes()) {
     for (const auto& pair : node->produced_lbn_regi_pairs()) {
       const std::string& lbn = pair.first;
@@ -176,8 +176,40 @@ void InBoxingTaskNode::FwSetProducedRegister() {
   AddProducedRegisterDesc("boxing_middle", std::move(boxing_middle_register));
 }
 
+namespace {
+
+RegisterDesc* GetBpRegisterFromFwRegister(RegisterDesc* fw_register) {
+  const TaskEdge* fw_edge = GetRelatedTaskEdge4Register(fw_register);
+  const TaskEdge* bp_edge = fw_edge->related_fwbp_edge();
+  return bp_edge->register_desc();
+}
+
+}
+
 void InBoxingTaskNode::BpBuildExecGraphAndSetProducedRegisterDescs() {
-  TODO();
+  SetOutEdgeRegisterPtr();
+  const ExecGraph& fw_exec_graph = GetFwNode()->exec_graph();
+  std::unordered_map<const ExecNode*, ExecNode*> fw_node2bp_node;
+  for (const std::unique_ptr<ExecNode>& fw_node: fw_exec_graph.nodes()) {
+    ExecNode* bp_node = mut_exec_graph().NewExecNode();
+    CHECK(fw_node2bp_node.emplace(fw_node.get(), bp_node).second);
+    bp_node->mut_op() = fw_node->op();
+    for (const auto& fw_pair : fw_node->consumed_lbn_regi_pairs()) {
+      RegisterDesc* bp_register = GetBpRegisterFromFwRegister(fw_pair.second);
+      bp_node->AddProducedLbnRegiPair(fw_pair.first, bp_register);
+    }
+    for (const auto& fw_pair : fw_node->produced_lbn_regi_pairs()) {
+      RegisterDesc* bp_register = GetBpRegisterFromFwRegister(fw_pair.second);
+      bp_node->AddConsumedLbnRegiPair(fw_pair.first, bp_register);
+    }
+  }
+  for (const std::unique_ptr<ExecEdge>& fw_edge : fw_exec_graph.edges()) {
+    Connect(fw_node2bp_node.at(fw_edge->dst_node()),
+            mut_exec_graph().NewExecEdge(fw_edge->lbn()),
+            fw_node2bp_node.at(fw_edge->src_node()));
+  }
+  mut_exec_graph().UpdateSourceAndSink();
+  SetProducedRegister();
 }
 
 } // namespace oneflow
