@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_GRAPH_BOXING_TASK_NODE_H_
 #define ONEFLOW_GRAPH_BOXING_TASK_NODE_H_
 
-#include "graph/task_node.h"
+#include "graph/comp_task_node.h"
 
 namespace oneflow {
 
@@ -16,12 +16,8 @@ class BoxingTaskNode : public TaskNode {
     TaskNode::InitWithFwNode(fw_node);
   }
   
-  using OpPair = std::pair<std::shared_ptr<Operator>, std::shared_ptr<Operator>>;
-  static OpPair FwBuildBoxingOpDataData();
-  static OpPair FwBuildBoxingOpDataModel();
-  static OpPair FwBuildBoxingOpModelData();
-  static OpPair FwBuildBoxingOpModelModel();
-  
+  using ChainEdgesPair =
+      std::pair<const ChainNode*, std::vector<const TaskEdge*>>;
   using Chain2EdgesMap =
       std::unordered_map<const ChainNode*, std::vector<const TaskEdge*>>;
   void SetOutEdgeRegisterPtr();
@@ -30,6 +26,15 @@ class BoxingTaskNode : public TaskNode {
       const std::unordered_set<TaskEdge*>& (TaskNode::*in_out_edges)() const,
       TaskNode* (TaskEdge::*src_dst_node)() const,
       TaskEdge* (TaskNode::*SoleEdge)() const);
+  void FwSortEdgesInnerStage(
+      std::vector<const TaskEdge*>* edges_to_be_sorted,
+      TaskNode* (TaskEdge::*src_dst_node)() const,
+      TaskEdge* (TaskNode::*SoleEdge)() const);
+  void FwBuildChainSortedEdgesPair(
+      const ChainEdgesPair& chain_sorted_in_edges,
+      const ChainEdgesPair& chain_sorted_out_edges);
+  void SetProducedRegister();
+  void BpBuildExecGraphAndSetProducedRegisterDescs() override;
 
  private:
   

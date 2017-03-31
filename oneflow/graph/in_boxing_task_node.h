@@ -19,16 +19,7 @@ class InBoxingTaskNode final : public BoxingTaskNode {
     BoxingTaskNode::InitWithFwNode(fw_node);
   }
 
-  using ChainEdgesPair =
-      std::pair<const ChainNode*, std::vector<const TaskEdge*>>;
   void FwBuildExecGraphAndSetProducedRegisterDescs() override;
-  void SetOutEdgeRegisterPtr();
-  void FwInitSortedOutEdges(std::vector<const TaskEdge*>* sorted_out_edges);
-  void FwBuildChainSortedEdgesPair(
-      const ChainEdgesPair& chain_sorted_in_edges,
-      const std::vector<const TaskEdge*>& sorted_out_edges);
-  void SetProducedRegister();
-  void BpBuildExecGraphAndSetProducedRegisterDescs() override;
 
 };
 
