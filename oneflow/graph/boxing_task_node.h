@@ -20,7 +20,6 @@ class BoxingTaskNode : public TaskNode {
       std::pair<const ChainNode*, std::vector<const TaskEdge*>>;
   using Chain2EdgesMap =
       std::unordered_map<const ChainNode*, std::vector<const TaskEdge*>>;
-  void SetOutEdgeRegisterPtr();
   void FwInitChain2SortedEdgesMaps(
       Chain2EdgesMap* chain2sorted_edges,
       const std::unordered_set<TaskEdge*>& (TaskNode::*in_out_edges)() const,
@@ -33,10 +32,14 @@ class BoxingTaskNode : public TaskNode {
   void FwBuildChainSortedEdgesPair(
       const ChainEdgesPair& chain_sorted_in_edges,
       const ChainEdgesPair& chain_sorted_out_edges);
-  void SetProducedRegister();
-  void BpBuildExecGraphAndSetProducedRegisterDescs() override;
+  virtual void FwBuildExecGraph() = 0;
 
  private:
+  void FwBuildExecGraphAndSetProducedRegisterDescs() override;
+  void BpBuildExecGraphAndSetProducedRegisterDescs() override;
+  
+  void SetOutEdgeRegisterPtr();
+  void SetProducedRegister();
   
 };
 

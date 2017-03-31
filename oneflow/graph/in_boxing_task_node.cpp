@@ -5,8 +5,7 @@
 
 namespace oneflow {
 
-void InBoxingTaskNode::FwBuildExecGraphAndSetProducedRegisterDescs() {
-  SetOutEdgeRegisterPtr();
+void InBoxingTaskNode::FwBuildExecGraph() {
   Chain2EdgesMap chain2sorted_in_edges;
   FwInitChain2SortedEdgesMaps(&chain2sorted_in_edges, 
                               &TaskNode::in_edges,
@@ -21,7 +20,6 @@ void InBoxingTaskNode::FwBuildExecGraphAndSetProducedRegisterDescs() {
   for (const ChainEdgesPair& chain_sorted_in_edges : chain2sorted_in_edges) {
     FwBuildChainSortedEdgesPair(chain_sorted_in_edges, chain_sorted_out_edges);
   }
-  SetProducedRegister();
   mut_exec_graph().UpdateSourceAndSink();
 }
 

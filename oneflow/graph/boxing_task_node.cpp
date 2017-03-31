@@ -55,6 +55,12 @@ OpPair FwBuildBoxingOpModelModel() {
 
 }
 
+void BoxingTaskNode::FwBuildExecGraphAndSetProducedRegisterDescs() {
+  SetOutEdgeRegisterPtr();
+  FwBuildExecGraph();
+  SetProducedRegister();
+}
+
 void BoxingTaskNode::SetOutEdgeRegisterPtr() {
   for (TaskEdge* edge : out_edges()) {
     std::string name = "boxing_out_" + std::to_string(edge->edge_id());

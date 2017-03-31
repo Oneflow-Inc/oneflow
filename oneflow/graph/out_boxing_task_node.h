@@ -18,7 +18,7 @@ class OutBoxingTaskNode final : public BoxingTaskNode {
   void InitWithFwNode(TaskNode* fw_node) override {
     BoxingTaskNode::InitWithFwNode(fw_node);
   }
-  void FwBuildExecGraphAndSetProducedRegisterDescs() override;
+  void FwBuildExecGraph() override;
 
 };
 
