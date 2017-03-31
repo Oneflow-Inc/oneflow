@@ -21,11 +21,8 @@ class InBoxingTaskNode final : public BoxingTaskNode {
 
   using ChainEdgesPair =
       std::pair<const ChainNode*, std::vector<const TaskEdge*>>;
-  using Chain2EdgesMap =
-      std::unordered_map<const ChainNode*, std::vector<const TaskEdge*>>;
   void FwBuildExecGraphAndSetProducedRegisterDescs() override;
   void SetOutEdgeRegisterPtr();
-  void FwInitChain2SortedInEdgesMaps(Chain2EdgesMap* chain2sorted_in_edges);
   void FwInitSortedOutEdges(std::vector<const TaskEdge*>* sorted_out_edges);
   void FwBuildChainSortedEdgesPair(
       const ChainEdgesPair& chain_sorted_in_edges,

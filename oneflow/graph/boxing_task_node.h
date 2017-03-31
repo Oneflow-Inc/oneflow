@@ -15,6 +15,22 @@ class BoxingTaskNode : public TaskNode {
   virtual void InitWithFwNode(TaskNode* fw_node) override {
     TaskNode::InitWithFwNode(fw_node);
   }
+  
+  using OpPair = std::pair<std::shared_ptr<Operator>, std::shared_ptr<Operator>>;
+  static OpPair FwBuildBoxingOpDataData();
+  static OpPair FwBuildBoxingOpDataModel();
+  static OpPair FwBuildBoxingOpModelData();
+  static OpPair FwBuildBoxingOpModelModel();
+  
+  using Chain2EdgesMap =
+      std::unordered_map<const ChainNode*, std::vector<const TaskEdge*>>;
+  void SetOutEdgeRegisterPtr();
+  void FwInitChain2SortedEdgesMaps(
+      Chain2EdgesMap* chain2sorted_edges,
+      const std::unordered_set<TaskEdge*>& (TaskNode::*in_out_edges)() const,
+      TaskNode* (TaskEdge::*src_dst_node)() const,
+      TaskEdge* (TaskNode::*SoleEdge)() const);
+
  private:
   
 };

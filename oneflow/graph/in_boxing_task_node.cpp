@@ -7,52 +7,6 @@ namespace oneflow {
 
 namespace {
 
-using OpPair = std::pair<std::shared_ptr<Operator>, std::shared_ptr<Operator>>;
-
-OpPair FwBuildBoxingOpDataData() {
-  OperatorConf first_op_conf;
-  first_op_conf.set_name("");
-  first_op_conf.mutable_concat_op_conf()->set_axis(0);
-  OperatorConf second_op_conf;
-  second_op_conf.set_name("");
-  second_op_conf.mutable_split_op_conf()->set_axis(0);
-  return {ConstructOpFromPbConf(first_op_conf),
-          ConstructOpFromPbConf(second_op_conf)};
-}
-
-OpPair FwBuildBoxingOpDataModel() {
-  OperatorConf first_op_conf;
-  first_op_conf.set_name("");
-  first_op_conf.mutable_concat_op_conf()->set_axis(0);
-  OperatorConf second_op_conf;
-  second_op_conf.set_name("");
-  second_op_conf.mutable_clone_op_conf();
-  return {ConstructOpFromPbConf(first_op_conf),
-          ConstructOpFromPbConf(second_op_conf)};
-}
-
-OpPair FwBuildBoxingOpModelData() {
-  OperatorConf first_op_conf;
-  first_op_conf.set_name("");
-  first_op_conf.mutable_concat_op_conf()->set_axis(1);
-  OperatorConf second_op_conf;
-  second_op_conf.set_name("");
-  second_op_conf.mutable_split_op_conf()->set_axis(0);
-  return {ConstructOpFromPbConf(first_op_conf),
-          ConstructOpFromPbConf(second_op_conf)};
-}
-
-OpPair FwBuildBoxingOpModelModel() {
-  OperatorConf first_op_conf;
-  first_op_conf.set_name("");
-  first_op_conf.mutable_concat_op_conf()->set_axis(1);
-  OperatorConf second_op_conf;
-  second_op_conf.set_name("");
-  second_op_conf.mutable_clone_op_conf();
-  return {ConstructOpFromPbConf(first_op_conf),
-          ConstructOpFromPbConf(second_op_conf)};
-}
-
 const CompTaskNode* GetSuccCompTaskNode(const TaskEdge* edge) {
   const TaskNode* node = edge->dst_node();
   const CompTaskNode* ret = nullptr;
@@ -67,7 +21,10 @@ const CompTaskNode* GetSuccCompTaskNode(const TaskEdge* edge) {
 void InBoxingTaskNode::FwBuildExecGraphAndSetProducedRegisterDescs() {
   SetOutEdgeRegisterPtr();
   Chain2EdgesMap chain2sorted_in_edges;
-  FwInitChain2SortedInEdgesMaps(&chain2sorted_in_edges);
+  FwInitChain2SortedEdgesMaps(&chain2sorted_in_edges, 
+                              &TaskNode::in_edges,
+                              &TaskEdge::src_node,
+                              &TaskNode::SoleInEdge);
   std::vector<const TaskEdge*> sorted_out_edges;
   FwInitSortedOutEdges(&sorted_out_edges);
   for (const ChainEdgesPair& chain_sorted_in_edges : chain2sorted_in_edges) {
@@ -75,39 +32,6 @@ void InBoxingTaskNode::FwBuildExecGraphAndSetProducedRegisterDescs() {
   }
   SetProducedRegister();
   mut_exec_graph().UpdateSourceAndSink();
-}
-
-void InBoxingTaskNode::SetOutEdgeRegisterPtr() {
-  for (TaskEdge* edge : out_edges()) {
-    std::string name = "boxing_out_" + std::to_string(edge->edge_id());
-    std::unique_ptr<RegisterDesc> register_desc(new DisContigRegistDesc);
-    BindProducedRegisterAndOutEdge(register_desc.get(), edge);
-    AddProducedRegisterDesc(name, std::move(register_desc));
-  }
-}
-
-void InBoxingTaskNode::FwInitChain2SortedInEdgesMaps(
-    Chain2EdgesMap* chain2sorted_in_edges) {
-  std::unordered_map<const TaskEdge*, const StageNode*> edge2stage;
-  for (const TaskEdge* edge : in_edges()) {
-    const TaskNode* pred_node = edge->src_node();
-    while (pred_node->chain_node() == chain_node()) {
-      pred_node = pred_node->SoleInEdge()->src_node();
-    }
-    (*chain2sorted_in_edges)[pred_node->chain_node()].push_back(edge);
-    edge2stage[edge] = pred_node->stage_node();
-  }
-  for (auto& pair : *chain2sorted_in_edges) {
-    std::vector<const TaskEdge*>& edges = pair.second;
-    std::sort(edges.begin(), edges.end(), [&edge2stage](const TaskEdge* lhs,
-                                                        const TaskEdge* rhs) {
-      const StageNode* lhs_stage = edge2stage.at(lhs);
-      const StageNode* rhs_stage = edge2stage.at(rhs);
-      CHECK(lhs_stage->chain_node() == rhs_stage->chain_node());
-      return lhs_stage->parallel_range().begin <
-             rhs_stage->parallel_range().begin;
-    });
-  }
 }
 
 void InBoxingTaskNode::FwInitSortedOutEdges(
@@ -172,7 +96,7 @@ void InBoxingTaskNode::SetProducedRegister() {
 
 namespace {
 
-RegisterDesc* GetBpRegisterFromFwRegister(RegisterDesc* fw_register) {
+inline RegisterDesc* GetBpRegisterFromFwRegister(RegisterDesc* fw_register) {
   const TaskEdge* fw_edge = GetRelatedTaskEdge(fw_register);
   const TaskEdge* bp_edge = fw_edge->related_fwbp_edge();
   return GetRelatedRegister(bp_edge);
