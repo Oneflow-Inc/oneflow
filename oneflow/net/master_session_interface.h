@@ -6,6 +6,8 @@ namespace oneflow {
 class MasterSessionInterface {
  public:
   MasterSessionInterface(){}
+  virtual void Create() = 0;
+
 }; 
 
 }

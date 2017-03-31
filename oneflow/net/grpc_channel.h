@@ -17,6 +17,9 @@ class GrpcChannelSpec {
   void AddHostPortsJob(const std::string& job_id,
  		       std::vector<std::string>& host_ports,
 		       int tasks_per_replica);
+  const std::vector<HostPortsJob>& host_ports_jobs() const {
+    return host_ports_jobs_;
+  }
  private:
   std::vector<HostPortsJob> host_ports_jobs_;
   std::set<std::string> job_ids_;
@@ -32,8 +35,10 @@ typedef std::function<SharedGrpcChannelPtr(std::string)> ChannelCreationFunction
 
 SharedGrpcChannelPtr NewHostPortGrpcChannel(const std::string& target);
 
-GrpcChannelCache* NewGrpcChannelCache(ChannelCreationFunction channel_function);
-GrpcChannelCache* NewHostPortsGrpcChannelCache(ChannelCreationFunction channel_function);
+GrpcChannelCache* NewGrpcChannelCache(const GrpcChannelSpec& spec, ChannelCreationFunction channel_function);
+GrpcChannelCache* NewHostPortsGrpcChannelCache(
+    const std::string& id, const std::vector<std::string>& host_ports,
+    int tasks_per_replica, ChannelCreationFunction channel_function);
 
 }
 #endif

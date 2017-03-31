@@ -77,8 +77,9 @@ include_directories(/usr/local/cuda/include)
 include_directories(/usr/local/include)#RE
 MESSAGE(STATUS "oneflow_source_dir = ${oneflow_source_dir}")
 file(GLOB_RECURSE oneflow_all_cc "${oneflow_source_dir}/oneflow/net/*.cpp")
+file(GLOB_RECURSE oneflow_all_cc1 "${oneflow_source_dir}/oneflow/common_runtime/*.cpp")
 MESSAGE(STATUS "SRC_FILES = ${oneflow_all_cc}")
-add_library(srcobj ${oneflow_all_cc})
+add_library(srcobj ${oneflow_all_cc} ${oneflow_all_cc1})
 #add_dependencies(srcobj grpcobj)
 list(APPEND ONEFLOW_LINKER_LIBS srcobj)
 
