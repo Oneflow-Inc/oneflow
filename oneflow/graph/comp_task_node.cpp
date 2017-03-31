@@ -164,12 +164,8 @@ void CompTaskNode::FwSetProducedRegisterDescs() {
       std::string pbn = cur_node->lbn2pbn(lbn);
       data_register->AddPbn(pbn);
     }
-    for (const auto& pair : cur_node->produced_lbn_regi_pairs()) {
-      CHECK_EQ(data_register, pair.second);
-      const std::string& lbn = pair.first;
-      data_register->AddLbn(lbn);
-    }
   }
+  AddInPathLbn2ProducedRegister();
 }
 
 void CompTaskNode::BpBuildExecGraphAndSetProducedRegisterDescs() {
@@ -248,12 +244,8 @@ void CompTaskNode::BpSetProducedRegisterDescs() {
       std::string pbn = cur_node->lbn2pbn(lbn);
       model_tmp_register->AddPbn(pbn);
     }
-    for (const auto& pair : cur_node->produced_lbn_regi_pairs()) {
-      CHECK_EQ(data_diff_register, pair.second);
-      const std::string& lbn = pair.first;
-      data_diff_register->AddLbn(lbn);
-    }
   }
+  AddInPathLbn2ProducedRegister();
   AddProducedRegisterDesc("model_diff", std::move(model_diff_register));
   AddProducedRegisterDesc("model_tmp", std::move(model_tmp_register));
 }

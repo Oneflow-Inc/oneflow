@@ -162,13 +162,7 @@ void InBoxingTaskNode::FwBuildChainSortedEdgesPair(
 }
 
 void InBoxingTaskNode::SetProducedRegister() {
-  for (const std::unique_ptr<ExecNode>& node : exec_graph().nodes()) {
-    for (const auto& pair : node->produced_lbn_regi_pairs()) {
-      const std::string& lbn = pair.first;
-      RegisterDesc* register_desc = pair.second;
-      register_desc->AddLbn(lbn);
-    }
-  }
+  AddInPathLbn2ProducedRegister();
   std::unique_ptr<RegisterDesc> boxing_middle_register(new DisContigRegistDesc);
   for (const std::unique_ptr<ExecEdge>& edge : exec_graph().edges()) {
     boxing_middle_register->AddPbn(edge->pbn());

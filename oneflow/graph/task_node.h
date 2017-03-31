@@ -57,9 +57,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
     return produced_register_descs_.at(register_desc_name).get();
   }
 
-  virtual void FwBuildExecGraphAndSetProducedRegisterDescs();
-  virtual void BpBuildExecGraphAndSetProducedRegisterDescs();
+  virtual void FwBuildExecGraphAndSetProducedRegisterDescs() { UNEXPECTED_RUN(); }
+  virtual void BpBuildExecGraphAndSetProducedRegisterDescs() { UNEXPECTED_RUN(); }
   void SubscribeRegisterDescInnerPath();
+  void AddInPathLbn2ProducedRegister();
 
  private:
   // In task_graph level
