@@ -33,6 +33,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   //
   std::unique_ptr<TaskNode> BuildAndConnectBpNode();
   void BuildExecGraphAndSetRegisterDescs();
+
+  // 
   const TaskEdge* GetOutEdge4ProducedRegister(RegisterDesc*) const;
   RegisterDesc* GetProducedRegister4OutEdge(const TaskEdge*) const;
  
@@ -90,16 +92,16 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
     related_fwbp_edge_ = new_val;
   }
 
-  RegisterDesc* register_desc() const {
-    return src_node()->GetProducedRegister4OutEdge(this);
-  }
-
  private:
   TaskEdge* related_fwbp_edge_;
 
 };
 
-inline const TaskEdge* GetRelatedTaskEdge4Register(RegisterDesc* regi) {
+inline RegisterDesc* GetRelatedRegister(const TaskEdge* edge) {
+  return edge->src_node()->GetProducedRegister4OutEdge(edge);
+}
+
+inline const TaskEdge* GetRelatedTaskEdge(RegisterDesc* regi) {
   return regi->GetProducer()->GetOutEdge4ProducedRegister(regi);
 }
 

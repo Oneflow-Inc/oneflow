@@ -72,8 +72,9 @@ RegisterDesc* TaskNode::GetProducedRegister4OutEdge(const TaskEdge* edge) const 
 
 void TaskNode::SubscribeRegisterDescInnerPath() {
   for (const TaskEdge* edge : in_edges()) {
-    edge->register_desc()->AddSubscriber(this);
-    subscribed_register_descs_.insert(edge->register_desc());
+    RegisterDesc* regi =  GetRelatedRegister(edge);
+    regi->AddSubscriber(this);
+    subscribed_register_descs_.insert(regi);
   }
 }
 

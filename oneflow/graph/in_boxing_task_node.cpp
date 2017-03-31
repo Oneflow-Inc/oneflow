@@ -148,13 +148,13 @@ void InBoxingTaskNode::FwBuildChainSortedEdgesPair(
     ExecNode* first_node = mut_exec_graph().NewExecNode();
     first_node->mut_op() = op_pair.first;
     for (const TaskEdge* edge : sorted_in_edges) {
-      first_node->AddConsumedLbnRegiPair(lbn, edge->register_desc());
+      first_node->AddConsumedLbnRegiPair(lbn, GetRelatedRegister(edge));
     }
     // Second Node
     ExecNode* second_node = mut_exec_graph().NewExecNode();
     second_node->mut_op() = op_pair.second;
     for (const TaskEdge* edge : sorted_out_edges) {
-      second_node->AddProducedLbnRegiPair(lbn, edge->register_desc());
+      second_node->AddProducedLbnRegiPair(lbn, GetRelatedRegister(edge));
     }
     // Connect
     Connect(first_node, mut_exec_graph().NewExecEdge(lbn), second_node);
@@ -179,9 +179,9 @@ void InBoxingTaskNode::SetProducedRegister() {
 namespace {
 
 RegisterDesc* GetBpRegisterFromFwRegister(RegisterDesc* fw_register) {
-  const TaskEdge* fw_edge = GetRelatedTaskEdge4Register(fw_register);
+  const TaskEdge* fw_edge = GetRelatedTaskEdge(fw_register);
   const TaskEdge* bp_edge = fw_edge->related_fwbp_edge();
-  return bp_edge->register_desc();
+  return GetRelatedRegister(bp_edge);
 }
 
 }

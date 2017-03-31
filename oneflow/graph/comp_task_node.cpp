@@ -143,18 +143,18 @@ void CompTaskNode::FwSetRegisterPtrs4ExecNodes(
   for (const auto& pair : extern_in_lbn2consumers) {
     const std::string& lbn = pair.first;
     for (ExecNode* consumer : pair.second) {
-      consumer->AddConsumedLbnRegiPair(lbn, SoleInEdge()->register_desc());
+      consumer->AddConsumedLbnRegiPair(lbn, GetRelatedRegister(SoleInEdge()));
     }
   }
   // Out Register Desc
   for (const auto& lbn : chain_node()->output_lbns()) {
     ExecNode* producer = lbn2producer.at(lbn);
-    producer->AddProducedLbnRegiPair(lbn, SoleOutEdge()->register_desc());
+    producer->AddProducedLbnRegiPair(lbn, GetRelatedRegister(SoleOutEdge()));
   }
 }
 
 void CompTaskNode::FwSetProducedRegisterDescs() {
-  RegisterDesc* data_register = SoleOutEdge()->register_desc();
+  RegisterDesc* data_register = GetRelatedRegister(SoleOutEdge());
   for (const std::unique_ptr<ExecEdge>& cur_edge : exec_graph().edges()) {
     data_register->AddPbn(cur_edge->pbn());
   }
@@ -219,7 +219,7 @@ void CompTaskNode::BpSetRegisterDescPtrs4Nodes(
     for (const auto& odbn : bp_node->op()->output_diff_blob_names()) {
       std::string lbn = bp_node->op()->odbn2lbn(odbn);
       if (found_lbns.find(lbn) == found_lbns.end()) {
-        bp_node->AddConsumedLbnRegiPair(lbn, SoleInEdge()->register_desc());
+        bp_node->AddConsumedLbnRegiPair(lbn, GetRelatedRegister(SoleInEdge()));
       }
     }
   }
@@ -227,14 +227,14 @@ void CompTaskNode::BpSetRegisterDescPtrs4Nodes(
   for (ExecEdge* edge : cp_in_node->out_edges()) {
     const std::string& lbn = edge->lbn();
     ExecNode* bp_node = fw_node2bp_node.at(edge->dst_node());
-    bp_node->AddProducedLbnRegiPair(lbn, SoleOutEdge()->register_desc());
+    bp_node->AddProducedLbnRegiPair(lbn, GetRelatedRegister(SoleOutEdge()));
   }
 }
 
 void CompTaskNode::BpSetProducedRegisterDescs() {
   std::unique_ptr<RegisterDesc> model_diff_register(new ContigRegistDesc);
   std::unique_ptr<RegisterDesc> model_tmp_register(new DisContigRegistDesc);
-  RegisterDesc* data_diff_register = SoleOutEdge()->register_desc();
+  RegisterDesc* data_diff_register = GetRelatedRegister(SoleOutEdge());
   for (const std::unique_ptr<ExecEdge>& cur_edge : exec_graph().edges()) {
     data_diff_register->AddPbn(cur_edge->pbn());
   }
