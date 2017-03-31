@@ -17,11 +17,11 @@ class ParallelDesc {
   };
 
   // OF_DISALLOW_COPY_AND_MOVE(ParallelDesc);
-  ParallelDesc() = default;
+  ParallelDesc() = delete;
   ~ParallelDesc() = default;
 
-  void Init(const ParallelConf& user_conf) {
-    // TODO
+  ParallelDesc(const ParallelConf& user_conf) {
+    TODO();
   }
   
   const Policy& policy() const { return policy_; }
@@ -37,7 +37,7 @@ class ParallelDesc {
   }
 
   bool operator == (const ParallelDesc& rhs) const {
-    // TODO
+    TODO();
   }
   bool operator != (const ParallelDesc& rhs) const {
     return !((*this) == rhs);

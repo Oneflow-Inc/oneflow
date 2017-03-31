@@ -4,8 +4,8 @@
 
 namespace oneflow {
 
-void LogicalGraph::Init(const DLNetConf& dl_net_conf,
-                      const Strategy& strategy_conf) {
+LogicalGraph::LogicalGraph(const DLNetConf& dl_net_conf,
+                           const Strategy& strategy_conf) {
   BuildGraphStruct(dl_net_conf);
   FillNodeWithParallelDesc(strategy_conf);
 }
@@ -49,8 +49,7 @@ void LogicalGraph::FillNodeWithParallelDesc(const Strategy& strategy_conf) {
       const std::string& op_name = cur_group.op_name_vec(li);
       auto it = op_name2node.find(op_name);
       CHECK(it != op_name2node.end());
-      ParallelDesc* parallel_desc_raw_ptr = new ParallelDesc;
-      parallel_desc_raw_ptr->Init(cur_group.parallel_conf());
+      auto parallel_desc_raw_ptr = new ParallelDesc(cur_group.parallel_conf());
       it->second->mut_parallel_desc().reset(parallel_desc_raw_ptr);
     }
   }

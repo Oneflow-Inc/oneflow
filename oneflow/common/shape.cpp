@@ -1,12 +1,6 @@
-#include "blob/shape.h"
-#include "glog/logging.h"
+#include "common/shape.h"
 
 namespace oneflow {
-
-void Shape::Init(const std::vector<int64_t>& shape_vec) {
-  shape_vec_ = shape_vec;
-  UpdateElemCnt();
-}
 
 std::string Shape::ToString() const {
   std::ostringstream stream;

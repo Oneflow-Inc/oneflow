@@ -62,10 +62,10 @@ class ChainEdge final : public Edge<ChainNode, ChainEdge> {
 class ChainGraph final : public Graph<ChainNode, ChainEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ChainGraph);
-  ChainGraph() = default;
+  ChainGraph() = delete;
   ~ChainGraph() = default;
 
-  void Init(const LogicalGraph* logical_graph);
+  ChainGraph(const LogicalGraph* logical_graph);
 
  private:
   void CollectInputAndOutputLbns();

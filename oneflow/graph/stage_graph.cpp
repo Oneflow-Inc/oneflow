@@ -3,7 +3,7 @@
 
 namespace oneflow {
 
-void StageGraph::Init(std::unique_ptr<const ChainGraph>&& chain_graph) {
+StageGraph::StageGraph(std::unique_ptr<const ChainGraph>&& chain_graph) {
   chain_graph_ = std::move(chain_graph);
   // Init Stages
   std::unordered_map<const ChainNode*,

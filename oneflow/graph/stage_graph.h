@@ -54,10 +54,10 @@ class StageEdge final : public Edge<StageNode, StageEdge> {
 class StageGraph final : public Graph<StageNode, StageEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StageGraph);
-  StageGraph() = default;
+  StageGraph() = delete;
   ~StageGraph() = default;
 
-  void Init(std::unique_ptr<const ChainGraph>&& chain_graph);
+  StageGraph(std::unique_ptr<const ChainGraph>&& chain_graph);
 
   const ChainGraph* chain_graph() const { return chain_graph_.get(); }
 

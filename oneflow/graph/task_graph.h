@@ -13,10 +13,10 @@ namespace oneflow {
 class TaskGraph final : public Graph<TaskNode, TaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TaskGraph);
-  TaskGraph() = default;
+  TaskGraph() = delete;
   ~TaskGraph() = default;
   
-  void Init(const DLNetConf& dl_net_conf,
+  TaskGraph(const DLNetConf& dl_net_conf,
             const Strategy& strategy_conf,
             bool need_bp);
 

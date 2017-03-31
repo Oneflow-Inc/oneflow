@@ -16,16 +16,12 @@ inline void TaskConnect(TaskNode* src_node,
 
 }
 
-void TaskGraph::Init(const DLNetConf& dl_net_conf,
+TaskGraph::TaskGraph(const DLNetConf& dl_net_conf,
                      const Strategy& strategy_conf,
                      bool need_bp) {
-  std::unique_ptr<LogicalGraph> logical_graph(new LogicalGraph);
-  logical_graph->Init(dl_net_conf, strategy_conf);
-  std::unique_ptr<ChainGraph> chain_graph(new ChainGraph);
-  chain_graph->Init(logical_graph.get());
-  auto stage_graph_raw_ptr = new StageGraph;
-  stage_graph_raw_ptr->Init(std::move(chain_graph));
-  stage_graph_.reset(stage_graph_raw_ptr);
+  std::unique_ptr<LogicalGraph> logical_graph(new LogicalGraph(dl_net_conf, strategy_conf));
+  std::unique_ptr<ChainGraph> chain_graph(new ChainGraph(logical_graph.get()));
+  stage_graph_.reset(new StageGraph(std::move(chain_graph)));
   BuildWithoutExecGraph(need_bp);
   BuildExecGraph();
 }

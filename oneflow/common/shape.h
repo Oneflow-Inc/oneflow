@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_BLOB_SHAPE_VEC_H_
-#define ONEFLOW_BLOB_SHAPE_VEC_H_
+#ifndef ONEFLOW_COMMON_SHAPE_VEC_H_
+#define ONEFLOW_COMMON_SHAPE_VEC_H_
 
 #include <vector>
 #include <string>
@@ -10,10 +10,12 @@ namespace oneflow {
 class Shape final {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(Shape);
-  Shape() = default;
+  Shape() : elem_cnt_(0) {}
   ~Shape() = default;
 
-  void Init(const std::vector<int64_t>& shape_vec);
+  Shape(const std::vector<int64_t>& shape_vec) : shape_vec_(shape_vec) {
+    UpdateElemCnt();
+  }
   
   bool operator == (const Shape& rhs) const {
     return shape_vec_ == rhs.shape_vec_;
@@ -59,4 +61,4 @@ class Shape final {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_BLOB_SHAPE_VEC_H_
+#endif // ONEFLOW_COMMON_SHAPE_VEC_H_

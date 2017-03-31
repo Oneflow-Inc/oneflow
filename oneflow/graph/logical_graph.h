@@ -50,11 +50,11 @@ class LogicalEdge final : public Edge<LogicalNode, LogicalEdge> {
 class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LogicalGraph);
-  LogicalGraph() = default;
+  LogicalGraph() = delete;
   ~LogicalGraph() = default;
 
-  void Init(const DLNetConf& dl_net_conf,
-            const Strategy& strategy_conf);
+  LogicalGraph(const DLNetConf& dl_net_conf,
+               const Strategy& strategy_conf);
 
  private:
   void BuildGraphStruct(const DLNetConf& dl_net_conf);
