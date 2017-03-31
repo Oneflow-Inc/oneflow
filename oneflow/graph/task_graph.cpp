@@ -71,7 +71,7 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
     bool is_first_stage,
     bool is_last_stage) {
   MachineId machine_id = stage->machine_id();
-  int32_t parallel_id = stage->parallel_range().begin;
+  int32_t parallel_id = stage->parallel_range().begin();
   for (auto device_physical_id :
       stage->chain_node()->parallel_desc()->sorted_devices_on_machine(machine_id)) {
     ThreadLocalId thread_local_id =
@@ -107,7 +107,7 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
       task_nodes_in_stage->comp_out_task_nodes.push_back(comp_task_node);
     }
   }
-  CHECK_EQ(parallel_id, stage->parallel_range().end);
+  CHECK_EQ(parallel_id, stage->parallel_range().end());
 }
 
 void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
@@ -116,9 +116,9 @@ void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
   comp_task_node->set_stage_node(stage);
   comp_task_node->SetFwNode();
   // since we only support GPU now, it must be a data-op
-  int32_t parallel_id = stage->parallel_range().begin;
+  int32_t parallel_id = stage->parallel_range().begin();
   comp_task_node->set_parallel_id(parallel_id++);
-  CHECK_EQ(parallel_id, stage->parallel_range().end);
+  CHECK_EQ(parallel_id, stage->parallel_range().end());
   comp_task_node->mut_thread_local_id() = IDManager::Singleton().data_thread_local_id();
   task_nodes_in_stage->comp_in_task_nodes.push_back(comp_task_node);
   task_nodes_in_stage->comp_out_task_nodes.push_back(comp_task_node);

@@ -93,8 +93,8 @@ void BoxingTaskNode::FwInitChain2SortedEdgesMaps(
       const StageNode* lhs_stage = edge2stage.at(lhs);
       const StageNode* rhs_stage = edge2stage.at(rhs);
       CHECK(lhs_stage->chain_node() == rhs_stage->chain_node());
-      return lhs_stage->parallel_range().begin <
-             rhs_stage->parallel_range().begin;
+      return lhs_stage->parallel_range().begin() <
+             rhs_stage->parallel_range().begin();
     });
   }
 }
