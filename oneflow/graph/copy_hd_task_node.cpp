@@ -41,17 +41,11 @@ void CopyHDTaskNode::FwBuildExecGraphAndSetProducedRegisterDescs() {
   std::unique_ptr<RegisterDesc> data_register(new DisContigRegistDesc);
   SoleOutEdge()->set_register_desc(data_register.get());
   AddProducedRegisterDesc("copy", std::move(data_register));
-
-  if (IsFwInCopy()) {
-    for (const std::string& lbn : chain_node()->input_lbns()) {
-      copy_node->AddProducedLbnRegiPair(lbn, SoleOutEdge()->register_desc());
-      SoleOutEdge()->register_desc()->AddLbn(lbn);
-    }
-  } else {
-    for (const std::string& lbn : chain_node()->output_lbns()) {
-      copy_node->AddProducedLbnRegiPair(lbn, SoleOutEdge()->register_desc());
-      SoleOutEdge()->register_desc()->AddLbn(lbn);
-    }
+  const std::vector<std::string>& lbns
+          = IsFwInCopy() ? chain_node()->input_lbns() :  chain_node()->output_lbns();
+  for (const std::string& lbn : lbns) {
+    copy_node->AddProducedLbnRegiPair(lbn, SoleOutEdge()->register_desc());
+    SoleOutEdge()->register_desc()->AddLbn(lbn);
   }
 }
 
@@ -66,17 +60,11 @@ void CopyHDTaskNode::BpBuildExecGraphAndSetProducedRegisterDescs() {
   std::unique_ptr<RegisterDesc> data_register(new DisContigRegistDesc);
   SoleOutEdge()->set_register_desc(data_register.get());
   AddProducedRegisterDesc("copy", std::move(data_register));
-
-  if (IsFwInCopy()) {
-    for (const std::string& lbn : chain_node()->input_lbns()) {
-      copy_node->AddProducedLbnRegiPair(lbn, SoleOutEdge()->register_desc());
-      SoleOutEdge()->register_desc()->AddLbn(lbn);
-    }
-  } else {
-    for (const std::string& lbn : chain_node()->output_lbns()) {
-      copy_node->AddProducedLbnRegiPair(lbn, SoleOutEdge()->register_desc());
-      SoleOutEdge()->register_desc()->AddLbn(lbn);
-    }
+  const std::vector<std::string>& lbns
+          = IsFwInCopy() ? chain_node()->input_lbns() :  chain_node()->output_lbns();
+  for (const std::string& lbn : lbns) {
+    copy_node->AddProducedLbnRegiPair(lbn, SoleOutEdge()->register_desc());
+    SoleOutEdge()->register_desc()->AddLbn(lbn);
   }
 }
 
