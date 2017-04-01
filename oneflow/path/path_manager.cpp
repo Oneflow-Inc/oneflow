@@ -29,7 +29,7 @@ void PathManager::Init(const JobSysConf& job_sys_conf) {
   }
   // processs cross path subscribe
   for (const CrossPathSubscribeDesc& cps_desc : cps_desc_vec) {
-    ProcessCps(cps_desc);
+    ProcessCpsDesc(cps_desc);
   }
 }
 
