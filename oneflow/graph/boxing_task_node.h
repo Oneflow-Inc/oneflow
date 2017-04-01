@@ -38,7 +38,7 @@ class BoxingTaskNode : public TaskNode {
   void FwBuildExecGraphAndSetProducedRegisterDescs() override;
   void BpBuildExecGraphAndSetProducedRegisterDescs() override;
   
-  void SetOutEdgeRegisterPtr();
+  void BindOutEdgeAndRegister();
   void SetProducedRegister();
   
 };

@@ -56,12 +56,12 @@ OpPair FwBuildBoxingOpModelModel() {
 }
 
 void BoxingTaskNode::FwBuildExecGraphAndSetProducedRegisterDescs() {
-  SetOutEdgeRegisterPtr();
+  BindOutEdgeAndRegister();
   FwBuildExecGraph();
   SetProducedRegister();
 }
 
-void BoxingTaskNode::SetOutEdgeRegisterPtr() {
+void BoxingTaskNode::BindOutEdgeAndRegister() {
   for (TaskEdge* edge : out_edges()) {
     std::string name = "boxing_out_" + std::to_string(edge->edge_id());
     std::unique_ptr<RegisterDesc> register_desc(new DisContigRegistDesc);
@@ -182,7 +182,7 @@ inline RegisterDesc* GetBpRegisterFromFwRegister(RegisterDesc* fw_register) {
 }
 
 void BoxingTaskNode::BpBuildExecGraphAndSetProducedRegisterDescs() {
-  SetOutEdgeRegisterPtr();
+  BindOutEdgeAndRegister();
   const ExecGraph& fw_exec_graph = GetFwNode()->exec_graph();
   std::unordered_map<const ExecNode*, ExecNode*> fw_node2bp_node;
   for (const std::unique_ptr<ExecNode>& fw_node: fw_exec_graph.nodes()) {

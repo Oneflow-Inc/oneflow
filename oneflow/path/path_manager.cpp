@@ -11,8 +11,8 @@ void PathManager::Init(const JobSysConf& job_sys_conf) {
                    true); // TODO
   paths_.insert(std::make_pair("data", std::move(data_path)));
   // build model path
-  std::vector<CpsDesc> cps_desc_vec;
-  auto add_cps_desc = [&cps_desc_vec](const CpsDesc& cps_desc) {
+  std::vector<CrossPathSubscribeDesc> cps_desc_vec;
+  auto add_cps_desc = [&cps_desc_vec](const CrossPathSubscribeDesc& cps_desc) {
     cps_desc_vec.push_back(cps_desc);
   };
   for (const auto& chain : paths_.at("data")->chain_graph()->nodes()) {
@@ -28,7 +28,7 @@ void PathManager::Init(const JobSysConf& job_sys_conf) {
     paths_.insert(std::make_pair("", std::move(model_save_path)));
   }
   // processs cross path subscribe
-  for (const CpsDesc& cps_desc : cps_desc_vec) {
+  for (const CrossPathSubscribeDesc& cps_desc : cps_desc_vec) {
     ProcessCps(cps_desc);
   }
 }

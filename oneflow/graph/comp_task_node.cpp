@@ -31,7 +31,7 @@ void CompTaskNode::FwBuildExecGraphAndSetProducedRegisterDescs() {
   }
   FwAddCloneOp();
   mut_exec_graph().UpdateSourceAndSink();
-  FwSetOutEdgeRegisterPtr();
+  FwBindOutEdgeAndRegister();
   FwSetRegisterPtrs4ExecNodes(lbn2producer, extern_in_lbn2consumers);
   FwSetProducedRegisterDescs();
 }
@@ -130,7 +130,7 @@ void CompTaskNode::FwAddCloneOp() {
   }
 }
 
-void CompTaskNode::FwSetOutEdgeRegisterPtr() {
+void CompTaskNode::FwBindOutEdgeAndRegister() {
   std::unique_ptr<RegisterDesc> data_register(new DisContigRegistDesc);
   BindProducedRegisterAndOutEdge(data_register.get(), SoleOutEdge());
   AddProducedRegisterDesc("data", std::move(data_register));
@@ -173,7 +173,7 @@ void CompTaskNode::BpBuildExecGraphAndSetProducedRegisterDescs() {
   const ExecNode* cp_in_node = fw_graph.source_node().SoleOutEdge()->dst_node();
   std::unordered_map<const ExecNode*, ExecNode*> fw_node2bp_node;
   BpBuildExecGraph(fw_graph, cp_in_node, &fw_node2bp_node);
-  BpSetOutEdgeRegisterPtr();
+  BpBindOutEdgeAndRegister();
   BpSetRegisterDescPtrs4Nodes(cp_in_node, fw_node2bp_node);
   BpSetProducedRegisterDescs();
 }
@@ -196,7 +196,7 @@ void CompTaskNode::BpBuildExecGraph(
   }
 }
 
-void CompTaskNode::BpSetOutEdgeRegisterPtr() {
+void CompTaskNode::BpBindOutEdgeAndRegister() {
   std::unique_ptr<RegisterDesc> data_diff_register(new DisContigRegistDesc);
   BindProducedRegisterAndOutEdge(data_diff_register.get(), SoleOutEdge());
   AddProducedRegisterDesc("data_diff", std::move(data_diff_register));

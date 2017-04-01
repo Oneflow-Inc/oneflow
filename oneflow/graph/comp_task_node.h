@@ -36,7 +36,7 @@ class CompTaskNode : public TaskNode {
       Lbn2NodeVecMap* extern_in_lbn2consumers);
   void FwAddCopyInOp(Lbn2NodeVecMap* extern_in_lbn2consumers);
   void FwAddCloneOp();
-  void FwSetOutEdgeRegisterPtr();
+  void FwBindOutEdgeAndRegister();
   void FwSetRegisterPtrs4ExecNodes(
       const Lbn2NodeMap& lbn2producer,
       const Lbn2NodeVecMap& extern_in_lbn2consumers);
@@ -46,7 +46,7 @@ class CompTaskNode : public TaskNode {
       const ExecGraph& fw_graph,
       const ExecNode* cp_in_node,
       std::unordered_map<const ExecNode*, ExecNode*>* fw_node2bp_node);
-  void BpSetOutEdgeRegisterPtr();
+  void BpBindOutEdgeAndRegister();
   void BpSetRegisterDescPtrs4Nodes(
       const ExecNode* cp_in_node,
       const std::unordered_map<const ExecNode*, ExecNode*>& fw_node2bp_node);

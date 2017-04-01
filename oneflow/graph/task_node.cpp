@@ -45,7 +45,7 @@ void TaskNode::BuildExecGraphAndSetRegisterDescs() {
 }
 
 std::unique_ptr<TaskNode> TaskNode::CreateSameTypeNode() const {
-  LOG(FATAL) << "insignificant";
+  UNEXPECTED_RUN();
 }
 
 void TaskNode::InitWithFwNode(TaskNode* fw_node) {

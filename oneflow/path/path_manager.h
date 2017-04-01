@@ -24,7 +24,7 @@ class PathManager {
  private:
   PathManager() = default;
   
-  void ProcessCps(const CpsDesc& cps_desc) {
+  void ProcessCps(const CrossPathSubscribeDesc& cps_desc) {
     LOG(FATAL) << "TODO";
   }
 
