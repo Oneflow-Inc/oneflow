@@ -32,20 +32,20 @@ void CopyHDTaskNode::FwBuildExecGraphAndSetProducedRegisterDescs() {
   pb_op_conf.set_name("");
   pb_op_conf.mutable_copy_op_conf()->set_copy_type(IsH2D() ? CopyOpConf::H2D : CopyOpConf::D2H);
 
-  std::shared_ptr<const Operator> copy_op = ConstructOpFromPbConf(pb_op_conf);
+  std::shared_ptr<Operator> copy_op = ConstructOpFromPbConf(pb_op_conf);
 
   ExecNode* copy_node = mut_exec_graph().NewExecNode();
   copy_node->mut_op() = copy_op;
   mut_exec_graph().UpdateSourceAndSink();
 
   std::unique_ptr<RegisterDesc> data_register(new DisContigRegistDesc);
-  SoleOutEdge()->set_register_desc(data_register.get());
+  BindProducedRegisterAndOutEdge(data_register.get(), SoleOutEdge());
   AddProducedRegisterDesc("copy", std::move(data_register));
   const std::vector<std::string>& lbns
           = IsFwInCopy() ? chain_node()->input_lbns() :  chain_node()->output_lbns();
   for (const std::string& lbn : lbns) {
-    copy_node->AddProducedLbnRegiPair(lbn, SoleOutEdge()->register_desc());
-    SoleOutEdge()->register_desc()->AddLbn(lbn);
+    copy_node->AddProducedLbnRegiPair(lbn, GetRelatedRegister(SoleOutEdge()));
+    GetRelatedRegister(SoleOutEdge())->AddLbn(lbn);
   }
 }
 
@@ -58,13 +58,13 @@ void CopyHDTaskNode::BpBuildExecGraphAndSetProducedRegisterDescs() {
   mut_exec_graph().UpdateSourceAndSink();
 
   std::unique_ptr<RegisterDesc> data_register(new DisContigRegistDesc);
-  SoleOutEdge()->set_register_desc(data_register.get());
+  BindProducedRegisterAndOutEdge(data_register.get(), SoleOutEdge());
   AddProducedRegisterDesc("copy", std::move(data_register));
   const std::vector<std::string>& lbns
           = IsFwInCopy() ? chain_node()->input_lbns() :  chain_node()->output_lbns();
   for (const std::string& lbn : lbns) {
-    copy_node->AddProducedLbnRegiPair(lbn, SoleOutEdge()->register_desc());
-    SoleOutEdge()->register_desc()->AddLbn(lbn);
+    copy_node->AddProducedLbnRegiPair(lbn, GetRelatedRegister(SoleOutEdge()));
+    GetRelatedRegister(SoleOutEdge())->AddLbn(lbn);
   }
 }
 
