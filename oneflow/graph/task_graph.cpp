@@ -1,6 +1,8 @@
 #include "graph/task_graph.h"
 #include "graph/comp_task_node.h"
 #include "graph/comm_net_task_node.h"
+#include "graph/in_boxing_task_node.h"
+#include "graph/out_boxing_task_node.h"
 
 namespace oneflow {
 
@@ -69,8 +71,9 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
     bool is_first_stage,
     bool is_last_stage) {
   MachineId machine_id = stage->machine_id();
+  int32_t parallel_id = stage->parallel_range().begin;
   for (auto device_physical_id :
-      stage->chain_node()->parallel_desc()->devices_on_machine(machine_id)) {
+      stage->chain_node()->parallel_desc()->sorted_devices_on_machine(machine_id)) {
     ThreadLocalId thread_local_id =
         IDManager::Singleton().ThreadLocalIdFromDevicePhysicalId(device_physical_id);
     // comp_task_node
@@ -78,6 +81,7 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
     comp_task_node->set_stage_node(stage);
     comp_task_node->mut_thread_local_id() = thread_local_id;
     comp_task_node->SetFwNode();
+    comp_task_node->set_parallel_id(parallel_id++);
     // comp_in_task_node
     if (!is_first_stage) {
       CopyHDTaskNode* comp_in_task_node = NewTaskNode<CopyHDTaskNode> ();
@@ -103,6 +107,7 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
       task_nodes_in_stage->comp_out_task_nodes.push_back(comp_task_node);
     }
   }
+  CHECK_EQ(parallel_id, stage->parallel_range().end);
 }
 
 void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
@@ -111,6 +116,9 @@ void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
   comp_task_node->set_stage_node(stage);
   comp_task_node->SetFwNode();
   // since we only support GPU now, it must be a data-op
+  int32_t parallel_id = stage->parallel_range().begin;
+  comp_task_node->set_parallel_id(parallel_id++);
+  CHECK_EQ(parallel_id, stage->parallel_range().end);
   comp_task_node->mut_thread_local_id() = IDManager::Singleton().data_thread_local_id();
   task_nodes_in_stage->comp_in_task_nodes.push_back(comp_task_node);
   task_nodes_in_stage->comp_out_task_nodes.push_back(comp_task_node);
@@ -130,11 +138,10 @@ void TaskGraph::InitInboxingTaskNode(const StageNode* stage,
       && task_nodes_in_stage->comp_in_task_nodes.size() == 1) {
     return;
   }
-  BoxingTaskNode* boxing_task_node = NewTaskNode<BoxingTaskNode> ();
+  InBoxingTaskNode* boxing_task_node = NewTaskNode<InBoxingTaskNode> ();
   boxing_task_node->set_stage_node(stage);
   boxing_task_node->mut_thread_local_id() = IDManager::Singleton().boxing_thread_local_id();
   boxing_task_node->SetFwNode();
-  boxing_task_node->SetFwInBoxing();
   for (TaskNode* comp_in_task_node : task_nodes_in_stage->comp_in_task_nodes) {
     TaskConnect(boxing_task_node, NewFinalEdge(), comp_in_task_node);
   }
@@ -149,11 +156,10 @@ void TaskGraph::InitOutBoxingTaskNode(
       && task_nodes_in_stage->comp_out_task_nodes.size() == 1) {
     return;
   }
-  BoxingTaskNode* boxing_task_node = NewTaskNode<BoxingTaskNode> ();
+  OutBoxingTaskNode* boxing_task_node = NewTaskNode<OutBoxingTaskNode> ();
   boxing_task_node->set_stage_node(stage);
   boxing_task_node->mut_thread_local_id() = IDManager::Singleton().boxing_thread_local_id();
   boxing_task_node->SetFwNode();
-  boxing_task_node->SetFwOutBoxing();
   for (TaskNode* comp_out_task_node : task_nodes_in_stage->comp_out_task_nodes) {
     TaskConnect(comp_out_task_node, NewFinalEdge(), boxing_task_node);
   }
@@ -224,18 +230,24 @@ void TaskGraph::BackwardConnect(
     const std::vector<TaskNode*>& turning_node_vec) {
   std::queue<TaskNode*> bp_node_queue;
   for (TaskNode* turning_node : turning_node_vec) {
-    for (TaskEdge* edge : turning_node->in_edges()) {
-      TaskNode* bp_pred_node = edge->src_node()->GetBpNode();
-      TaskConnect(turning_node, NewFinalEdge(), bp_pred_node);
+    for (TaskEdge* fw_edge : turning_node->in_edges()) {
+      TaskNode* bp_pred_node = fw_edge->src_node()->GetBpNode();
+      TaskEdge* bp_edge = NewFinalEdge();
+      TaskConnect(turning_node, bp_edge, bp_pred_node);
+      fw_edge->set_related_fwbp_edge(bp_edge);
+      bp_edge->set_related_fwbp_edge(fw_edge);
       bp_node_queue.push(bp_pred_node);
     }
   }
   while (!bp_node_queue.empty()) {
     TaskNode* bp_cur_node = bp_node_queue.front();
     bp_node_queue.pop();
-    for (TaskEdge* edge : bp_cur_node->GetFwNode()->in_edges()) {
-      TaskNode* bp_pred_node = edge->src_node()->GetBpNode();
-      TaskConnect(bp_cur_node, NewFinalEdge(), bp_pred_node);
+    for (TaskEdge* fw_edge : bp_cur_node->GetFwNode()->in_edges()) {
+      TaskNode* bp_pred_node = fw_edge->src_node()->GetBpNode();
+      TaskEdge* bp_edge = NewFinalEdge();
+      fw_edge->set_related_fwbp_edge(bp_edge);
+      bp_edge->set_related_fwbp_edge(fw_edge);
+      TaskConnect(bp_cur_node, bp_edge, bp_pred_node);
       bp_node_queue.push(bp_pred_node);
     }
   }

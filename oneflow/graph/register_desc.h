@@ -24,6 +24,12 @@ class RegisterDesc {
     LOG(FATAL) << "TODO";
   }
 
+  const TaskNode* GetProducer() const {
+    TODO();
+  }
+  void SetProducer(const TaskNode*) {
+    TODO();
+  }
   void AddSubscriber(TaskNode* task_node) {
     LOG(FATAL) << "TODO";
   }

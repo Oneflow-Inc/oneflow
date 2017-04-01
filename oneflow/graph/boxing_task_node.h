@@ -5,39 +5,34 @@
 
 namespace oneflow {
 
-class BoxingTaskNode final : public TaskNode {
+class BoxingTaskNode : public TaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BoxingTaskNode);
   BoxingTaskNode() = default;
-  ~BoxingTaskNode() = default;
+  virtual ~BoxingTaskNode() = default;
 
-  bool IsFwInBoxing() const { return is_fw_in_boxing_; }
-  bool IsFwOutBoxing() const { return !is_fw_in_boxing_; }
-  void SetFwInBoxing();
-  void SetFwOutBoxing();
-
- private:
-  using Chain2EdgesPair =
-      std::pair<const ChainNode*, std::vector<const TaskEdge*>>;
+ protected:
+  virtual void InitWithFwNode(TaskNode* fw_node) override {
+    TaskNode::InitWithFwNode(fw_node);
+  }
+  
+  using OpPair = std::pair<std::shared_ptr<Operator>, std::shared_ptr<Operator>>;
+  static OpPair FwBuildBoxingOpDataData();
+  static OpPair FwBuildBoxingOpDataModel();
+  static OpPair FwBuildBoxingOpModelData();
+  static OpPair FwBuildBoxingOpModelModel();
+  
   using Chain2EdgesMap =
       std::unordered_map<const ChainNode*, std::vector<const TaskEdge*>>;
+  void SetOutEdgeRegisterPtr();
+  void FwInitChain2SortedEdgesMaps(
+      Chain2EdgesMap* chain2sorted_edges,
+      const std::unordered_set<TaskEdge*>& (TaskNode::*in_out_edges)() const,
+      TaskNode* (TaskEdge::*src_dst_node)() const,
+      TaskEdge* (TaskNode::*SoleEdge)() const);
 
-  void FwBuildExecGraphAndSetProducedRegisterDescs() override;
-  void FwSetOutEdgeRegisterPtr();
-  void FwInitChain2EdgesMaps(Chain2EdgesMap* chain2in_edges,
-                                             Chain2EdgesMap* chain2out_edges);
-  void FwBuildChainPair(const Chain2EdgesPair& in_pair,
-                                        const Chain2EdgesPair& out_pair);
-  void BpBuildExecGraphAndSetProducedRegisterDescs() override {
-    LOG(FATAL) << "TODO";
-  }
-
-  std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    return std::unique_ptr<TaskNode> (new BoxingTaskNode);
-  }
-  void InitWithFwNode(TaskNode* fw_node) override;
+ private:
   
-  bool is_fw_in_boxing_;
 };
 
 } // namespace oneflow

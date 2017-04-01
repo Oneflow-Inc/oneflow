@@ -39,7 +39,7 @@ void CompTaskNode::FwBuildExecGraphAndSetProducedRegisterDescs() {
 void CompTaskNode::FwBuildFromUserOps(
     Lbn2NodeMap* lbn2producer,
     Lbn2NodeVecMap* extern_in_lbn2consumers) {
-  for (std::shared_ptr<const Operator> op : chain_node()->op_vec()) {
+  for (std::shared_ptr<Operator> op : chain_node()->op_vec()) {
     ExecNode* cur_node = mut_exec_graph().NewExecNode();
     cur_node->mut_op() = op;
     for (const std::string& obn : op->output_blob_names()) {
@@ -69,11 +69,7 @@ void CompTaskNode::FwAddCopyInOp(Lbn2NodeVecMap* extern_in_lbn2consumers) {
   OperatorConf pb_op_conf;
   pb_op_conf.set_name("");
   pb_op_conf.mutable_copy_op_conf()->set_copy_type(CopyInOpType());
-  pb_op_conf.mutable_copy_op_conf()->clear_lbns();
-  for (const auto& pair : *extern_in_lbn2consumers) {
-    pb_op_conf.mutable_copy_op_conf()->add_lbns(pair.first);
-  }
-  std::shared_ptr<const Operator> copy_op = ConstructOpFromPbConf(pb_op_conf);
+  std::shared_ptr<Operator> copy_op = ConstructOpFromPbConf(pb_op_conf);
   // Construct Exec Node
   ExecNode* copy_node = mut_exec_graph().NewExecNode();
   copy_node->mut_op() = copy_op;
@@ -91,7 +87,7 @@ void CompTaskNode::FwAddCopyInOp(Lbn2NodeVecMap* extern_in_lbn2consumers) {
 void CompTaskNode::FwAddCloneOp() {
   struct CloneInfo {
     std::string lbn;
-    std::shared_ptr<const Operator> clone_op;
+    std::shared_ptr<Operator> clone_op;
     ExecNode* pred_node;
     std::vector<ExecEdge*> edges;
   };
@@ -109,9 +105,8 @@ void CompTaskNode::FwAddCloneOp() {
       // Construct clone op
       OperatorConf pb_op_conf;
       pb_op_conf.set_name("");
-      pb_op_conf.mutable_clone_op_conf()->mutable_lbn()->assign(lbn);
-      pb_op_conf.mutable_clone_op_conf()->set_clone_num(edges.size());
-      std::shared_ptr<const Operator> clone_op = ConstructOpFromPbConf(pb_op_conf);
+      pb_op_conf.mutable_clone_op_conf();
+      std::shared_ptr<Operator> clone_op = ConstructOpFromPbConf(pb_op_conf);
       // Set clone_info
       CloneInfo clone_info;
       clone_info.lbn = lbn;
@@ -137,7 +132,7 @@ void CompTaskNode::FwAddCloneOp() {
 
 void CompTaskNode::FwSetOutEdgeRegisterPtr() {
   std::unique_ptr<RegisterDesc> data_register(new DisContigRegistDesc);
-  SoleOutEdge()->set_register_desc(data_register.get());
+  BindProducedRegisterAndOutEdge(data_register.get(), SoleOutEdge());
   AddProducedRegisterDesc("data", std::move(data_register));
 }
 
@@ -148,18 +143,18 @@ void CompTaskNode::FwSetRegisterPtrs4ExecNodes(
   for (const auto& pair : extern_in_lbn2consumers) {
     const std::string& lbn = pair.first;
     for (ExecNode* consumer : pair.second) {
-      consumer->AddConsumedLbnRegiPair(lbn, SoleInEdge()->register_desc());
+      consumer->AddConsumedLbnRegiPair(lbn, GetRelatedRegister(SoleInEdge()));
     }
   }
   // Out Register Desc
   for (const auto& lbn : chain_node()->output_lbns()) {
     ExecNode* producer = lbn2producer.at(lbn);
-    producer->AddProducedLbnRegiPair(lbn, SoleOutEdge()->register_desc());
+    producer->AddProducedLbnRegiPair(lbn, GetRelatedRegister(SoleOutEdge()));
   }
 }
 
 void CompTaskNode::FwSetProducedRegisterDescs() {
-  RegisterDesc* data_register = SoleOutEdge()->register_desc();
+  RegisterDesc* data_register = GetRelatedRegister(SoleOutEdge());
   for (const std::unique_ptr<ExecEdge>& cur_edge : exec_graph().edges()) {
     data_register->AddPbn(cur_edge->pbn());
   }
@@ -169,12 +164,8 @@ void CompTaskNode::FwSetProducedRegisterDescs() {
       std::string pbn = cur_node->lbn2pbn(lbn);
       data_register->AddPbn(pbn);
     }
-    for (const auto& pair : cur_node->produced_lbn_regi_pairs()) {
-      CHECK_EQ(data_register, pair.second);
-      const std::string& lbn = pair.first;
-      data_register->AddLbn(lbn);
-    }
   }
+  AddInPathLbn2ProducedRegister();
 }
 
 void CompTaskNode::BpBuildExecGraphAndSetProducedRegisterDescs() {
@@ -207,7 +198,7 @@ void CompTaskNode::BpBuildExecGraph(
 
 void CompTaskNode::BpSetOutEdgeRegisterPtr() {
   std::unique_ptr<RegisterDesc> data_diff_register(new DisContigRegistDesc);
-  SoleOutEdge()->set_register_desc(data_diff_register.get());
+  BindProducedRegisterAndOutEdge(data_diff_register.get(), SoleOutEdge());
   AddProducedRegisterDesc("data_diff", std::move(data_diff_register));
 }
 
@@ -224,7 +215,7 @@ void CompTaskNode::BpSetRegisterDescPtrs4Nodes(
     for (const auto& odbn : bp_node->op()->output_diff_blob_names()) {
       std::string lbn = bp_node->op()->odbn2lbn(odbn);
       if (found_lbns.find(lbn) == found_lbns.end()) {
-        bp_node->AddConsumedLbnRegiPair(lbn, SoleInEdge()->register_desc());
+        bp_node->AddConsumedLbnRegiPair(lbn, GetRelatedRegister(SoleInEdge()));
       }
     }
   }
@@ -232,14 +223,14 @@ void CompTaskNode::BpSetRegisterDescPtrs4Nodes(
   for (ExecEdge* edge : cp_in_node->out_edges()) {
     const std::string& lbn = edge->lbn();
     ExecNode* bp_node = fw_node2bp_node.at(edge->dst_node());
-    bp_node->AddProducedLbnRegiPair(lbn, SoleOutEdge()->register_desc());
+    bp_node->AddProducedLbnRegiPair(lbn, GetRelatedRegister(SoleOutEdge()));
   }
 }
 
 void CompTaskNode::BpSetProducedRegisterDescs() {
   std::unique_ptr<RegisterDesc> model_diff_register(new ContigRegistDesc);
   std::unique_ptr<RegisterDesc> model_tmp_register(new DisContigRegistDesc);
-  RegisterDesc* data_diff_register = SoleOutEdge()->register_desc();
+  RegisterDesc* data_diff_register = GetRelatedRegister(SoleOutEdge());
   for (const std::unique_ptr<ExecEdge>& cur_edge : exec_graph().edges()) {
     data_diff_register->AddPbn(cur_edge->pbn());
   }
@@ -253,12 +244,8 @@ void CompTaskNode::BpSetProducedRegisterDescs() {
       std::string pbn = cur_node->lbn2pbn(lbn);
       model_tmp_register->AddPbn(pbn);
     }
-    for (const auto& pair : cur_node->produced_lbn_regi_pairs()) {
-      CHECK_EQ(data_diff_register, pair.second);
-      const std::string& lbn = pair.first;
-      data_diff_register->AddLbn(lbn);
-    }
   }
+  AddInPathLbn2ProducedRegister();
   AddProducedRegisterDesc("model_diff", std::move(model_diff_register));
   AddProducedRegisterDesc("model_tmp", std::move(model_tmp_register));
 }

@@ -33,6 +33,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   //
   std::unique_ptr<TaskNode> BuildAndConnectBpNode();
   void BuildExecGraphAndSetRegisterDescs();
+
+  // 
+  const TaskEdge* GetOutEdge4ProducedRegister(RegisterDesc*) const;
+  RegisterDesc* GetProducedRegister4OutEdge(const TaskEdge*) const;
  
  protected:
   virtual std::unique_ptr<TaskNode> CreateSameTypeNode() const;
@@ -40,9 +44,12 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   ExecGraph& mut_exec_graph() { return exec_graph_; }
   
+  void BindProducedRegisterAndOutEdge(RegisterDesc*, const TaskEdge*);
+
   void AddProducedRegisterDesc(
       const std::string& register_desc_name,
       std::unique_ptr<RegisterDesc> register_desc) {
+    register_desc->SetProducer(this);
     auto pair = std::make_pair(register_desc_name, std::move(register_desc));
     CHECK(produced_register_descs_.insert(std::move(pair)).second);
   }
@@ -50,9 +57,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
     return produced_register_descs_.at(register_desc_name).get();
   }
 
-  virtual void FwBuildExecGraphAndSetProducedRegisterDescs();
-  virtual void BpBuildExecGraphAndSetProducedRegisterDescs();
+  virtual void FwBuildExecGraphAndSetProducedRegisterDescs() { UNEXPECTED_RUN(); }
+  virtual void BpBuildExecGraphAndSetProducedRegisterDescs() { UNEXPECTED_RUN(); }
   void SubscribeRegisterDescInnerPath();
+  void AddInPathLbn2ProducedRegister();
 
  private:
   // In task_graph level
@@ -64,27 +72,39 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   ExecGraph exec_graph_;
   std::unordered_map<std::string,
                      std::unique_ptr<RegisterDesc>> produced_register_descs_; 
-  std::unordered_set<RegisterDesc*> subscribed_register_descs_;
+  std::unordered_set<const RegisterDesc*> subscribed_register_descs_;
+  std::unordered_map<RegisterDesc*, const TaskEdge*> produced_register2out_edge;
+  std::unordered_map<const TaskEdge*, RegisterDesc*> out_edge2produced_register;
 
 };
 
 class TaskEdge final : public Edge<TaskNode, TaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TaskEdge);
-  TaskEdge() { register_desc_ = nullptr; }
-  ~TaskEdge() = default;
-  
-  RegisterDesc* register_desc() const {
-    return register_desc_;
+  TaskEdge() {
+    related_fwbp_edge_ = nullptr;
   }
-  void set_register_desc(RegisterDesc* new_ptr) {
-    register_desc_ = new_ptr;
+  ~TaskEdge() = default;
+
+  TaskEdge* related_fwbp_edge() const {
+    return related_fwbp_edge_;
+  }
+  void set_related_fwbp_edge(TaskEdge* new_val) {
+    related_fwbp_edge_ = new_val;
   }
 
  private:
-  RegisterDesc* register_desc_;
+  TaskEdge* related_fwbp_edge_;
 
 };
+
+inline RegisterDesc* GetRelatedRegister(const TaskEdge* edge) {
+  return edge->src_node()->GetProducedRegister4OutEdge(edge);
+}
+
+inline const TaskEdge* GetRelatedTaskEdge(RegisterDesc* regi) {
+  return regi->GetProducer()->GetOutEdge4ProducedRegister(regi);
+}
 
 } // namespace oneflow
 

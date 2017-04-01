@@ -55,10 +55,36 @@ void TaskNode::InitWithFwNode(TaskNode* fw_node) {
   related_fw_or_bp_node_ = fw_node;
 }
 
+void TaskNode::BindProducedRegisterAndOutEdge(RegisterDesc* regi,
+                                              const TaskEdge* edge) {
+  CHECK(produced_register2out_edge.emplace(regi, edge).second);
+  CHECK(out_edge2produced_register.emplace(edge, regi).second);
+}
+
+const TaskEdge* TaskNode::GetOutEdge4ProducedRegister(RegisterDesc* regi) const {
+  return produced_register2out_edge.at(regi);
+}
+
+RegisterDesc* TaskNode::GetProducedRegister4OutEdge(const TaskEdge* edge) const {
+  return out_edge2produced_register.at(edge);
+}
+
+
 void TaskNode::SubscribeRegisterDescInnerPath() {
   for (const TaskEdge* edge : in_edges()) {
-    edge->register_desc()->AddSubscriber(this);
-    subscribed_register_descs_.insert(edge->register_desc());
+    RegisterDesc* regi =  GetRelatedRegister(edge);
+    regi->AddSubscriber(this);
+    subscribed_register_descs_.insert(regi);
+  }
+}
+
+void TaskNode::AddInPathLbn2ProducedRegister() {
+  for (const std::unique_ptr<ExecNode>& node : exec_graph_.nodes()) {
+    for (const auto& pair : node->produced_lbn_regi_pairs()) {
+      const std::string& lbn = pair.first;
+      RegisterDesc* register_desc = pair.second;
+      register_desc->AddLbn(lbn);
+    }
   }
 }
 

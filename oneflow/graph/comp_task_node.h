@@ -11,6 +11,13 @@ class CompTaskNode : public TaskNode {
   CompTaskNode() = default;
   virtual ~CompTaskNode() = default;
 
+  int32_t parallel_id() const {
+    return parallel_id_;
+  }
+  void set_parallel_id(int32_t parallel_id) {
+    parallel_id_ = parallel_id;
+  }
+
   bool HasOpWithOutDiff() const;
   bool HasOpWithIndiff() const;
 
@@ -44,6 +51,8 @@ class CompTaskNode : public TaskNode {
       const ExecNode* cp_in_node,
       const std::unordered_map<const ExecNode*, ExecNode*>& fw_node2bp_node);
   void BpSetProducedRegisterDescs();
+
+  int32_t parallel_id_;
 
 };
 
