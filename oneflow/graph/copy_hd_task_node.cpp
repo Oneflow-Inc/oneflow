@@ -42,9 +42,16 @@ void CopyHDTaskNode::FwBuildExecGraphAndSetProducedRegisterDescs() {
   SoleOutEdge()->set_register_desc(data_register.get());
   AddProducedRegisterDesc("copy", std::move(data_register));
 
-  for (auto& lbn : chain_node()->input_lbns()) {
-    copy_node->AddProducedLbnRegiPair(lbn, SoleOutEdge()->register_desc());
-    SoleOutEdge()->register_desc()->AddLbn(lbn);
+  if (IsFwInCopy()) {
+    for (const std::string& lbn : chain_node()->input_lbns()) {
+      copy_node->AddProducedLbnRegiPair(lbn, SoleOutEdge()->register_desc());
+      SoleOutEdge()->register_desc()->AddLbn(lbn);
+    }
+  } else {
+    for (const std::string& lbn : chain_node()->output_lbns()) {
+      copy_node->AddProducedLbnRegiPair(lbn, SoleOutEdge()->register_desc());
+      SoleOutEdge()->register_desc()->AddLbn(lbn);
+    }
   }
 }
 
@@ -60,9 +67,16 @@ void CopyHDTaskNode::BpBuildExecGraphAndSetProducedRegisterDescs() {
   SoleOutEdge()->set_register_desc(data_register.get());
   AddProducedRegisterDesc("copy", std::move(data_register));
 
-  for (auto& lbn : chain_node()->input_lbns()) {
-    copy_node->AddProducedLbnRegiPair(lbn, SoleOutEdge()->register_desc());
-    SoleOutEdge()->register_desc()->AddLbn(lbn);
+  if (IsFwInCopy()) {
+    for (const std::string& lbn : chain_node()->input_lbns()) {
+      copy_node->AddProducedLbnRegiPair(lbn, SoleOutEdge()->register_desc());
+      SoleOutEdge()->register_desc()->AddLbn(lbn);
+    }
+  } else {
+    for (const std::string& lbn : chain_node()->output_lbns()) {
+      copy_node->AddProducedLbnRegiPair(lbn, SoleOutEdge()->register_desc());
+      SoleOutEdge()->register_desc()->AddLbn(lbn);
+    }
   }
 }
 
