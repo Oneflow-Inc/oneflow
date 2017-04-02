@@ -28,6 +28,7 @@ class CopyHDTaskNode final : public TaskNode {
  private:
   void FwBuildExecGraphAndSetProducedRegisterDescs() override;
   void BpBuildExecGraphAndSetProducedRegisterDescs() override;
+  void BindOutEdgeAndRegister();
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return std::unique_ptr<TaskNode> (new CopyHDTaskNode);
   }
