@@ -23,7 +23,7 @@ void CopyHDTaskNode::InitWithFwNode(TaskNode* fw_node) {
   is_fw_in_copy_ = of_dynamic_cast<CopyHDTaskNode*>(fw_node)->is_fw_in_copy_;
 }
 
-void CopyHDTaskNode::FwBuildExecGraphAndSetProducedRegisterDescs() {
+void CopyHDTaskNode::FwBuildExecGraphAndSetProducedRegisters(Path* path) {
   BindOutEdgeAndRegister();
   // Construct Op
   OperatorConf pb_op_conf;
@@ -41,7 +41,7 @@ void CopyHDTaskNode::FwBuildExecGraphAndSetProducedRegisterDescs() {
   AddInPathLbn2ProducedRegister();
 }
 
-void CopyHDTaskNode::BpBuildExecGraphAndSetProducedRegisterDescs() {
+void CopyHDTaskNode::BpBuildExecGraphAndSetProducedRegisters(Path* path) {
   BindOutEdgeAndRegister();
   // Get Fw Copy Node
   const ExecGraph& fw_graph = GetFwNode()->exec_graph();

@@ -7,6 +7,7 @@
 
 namespace oneflow {
 
+class Path;
 class TaskEdge;
 
 class TaskNode : public Node<TaskNode, TaskEdge> {
@@ -30,9 +31,11 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void set_stage_node(const StageNode*);
   ThreadLocalId& mut_thread_local_id();
 
-  //
+  // return bp_node
   std::unique_ptr<TaskNode> BuildAndConnectBpNode();
-  void BuildExecGraphAndSetRegisterDescs();
+  
+  //
+  void BuildExecGraphAndSetRegisters(Path* path);
 
   // 
   const TaskEdge* GetOutEdge4ProducedRegister(RegisterDesc*) const;
@@ -57,8 +60,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
     return produced_register_descs_.at(register_desc_name).get();
   }
 
-  virtual void FwBuildExecGraphAndSetProducedRegisterDescs() { UNEXPECTED_RUN(); }
-  virtual void BpBuildExecGraphAndSetProducedRegisterDescs() { UNEXPECTED_RUN(); }
+  virtual void FwBuildExecGraphAndSetProducedRegisters(Path*) { UNEXPECTED_RUN(); }
+  virtual void BpBuildExecGraphAndSetProducedRegisters(Path*) { UNEXPECTED_RUN(); }
   void SubscribeRegisterDescInnerPath();
   void AddInPathLbn2ProducedRegister();
 

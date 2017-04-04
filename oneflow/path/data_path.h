@@ -14,7 +14,7 @@ class DataPath final : public Path {
   void Build(const DLNetConf& dl_net_conf,
              const Strategy& strategy_conf,
              bool need_bp) {
-    mut_task_graph().reset(new TaskGraph(dl_net_conf, strategy_conf, need_bp));
+    mut_task_graph().reset(new TaskGraph(dl_net_conf, strategy_conf, need_bp, this));
   }
 
  private:

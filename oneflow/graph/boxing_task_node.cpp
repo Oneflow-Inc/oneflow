@@ -55,7 +55,7 @@ OpPair FwBuildBoxingOpModelModel() {
 
 }
 
-void BoxingTaskNode::FwBuildExecGraphAndSetProducedRegisterDescs() {
+void BoxingTaskNode::FwBuildExecGraphAndSetProducedRegisters(Path* path) {
   BindOutEdgeAndRegister();
   FwBuildExecGraph();
   SetProducedRegister();
@@ -181,7 +181,7 @@ inline RegisterDesc* GetBpRegisterFromFwRegister(RegisterDesc* fw_register) {
 
 }
 
-void BoxingTaskNode::BpBuildExecGraphAndSetProducedRegisterDescs() {
+void BoxingTaskNode::BpBuildExecGraphAndSetProducedRegisters(Path* path) {
   BindOutEdgeAndRegister();
   const ExecGraph& fw_exec_graph = GetFwNode()->exec_graph();
   std::unordered_map<const ExecNode*, ExecNode*> fw_node2bp_node;
