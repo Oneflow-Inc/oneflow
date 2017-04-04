@@ -11,8 +11,7 @@ class ModelSavePath final : public Path {
   ModelSavePath() = default;
   ~ModelSavePath() = default;
 
-  void Build(const ChainNode* chain_in_data_path,
-             std::function<void(const CrossPathSubscribeDesc&)> add_cps_desc) {
+  void Build(const ChainNode* chain_in_data_path) {
     LOG(FATAL) << "TODO";
   }
 

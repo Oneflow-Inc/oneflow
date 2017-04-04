@@ -23,12 +23,11 @@ class PathManager {
 
  private:
   PathManager() = default;
-  
-  void ProcessCpsDesc(const CrossPathSubscribeDesc& cps_desc) {
-    LOG(FATAL) << "TODO";
-  }
 
-  std::unordered_map<std::string, std::unique_ptr<Path>> paths_;
+  std::unique_ptr<DataPath> data_path_;
+  std::unordered_map<const ChainNode*, std::unique_ptr<ModelUpdatePath>> model_update_paths_;
+  std::unordered_map<const ChainNode*, std::unique_ptr<ModelLoadPath>> model_load_paths_;
+  std::unordered_map<const ChainNode*, std::unique_ptr<ModelSavePath>> model_save_paths_;
 
 };
 

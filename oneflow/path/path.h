@@ -2,7 +2,6 @@
 #define ONEFLOW_PATH_PATH_H_
 
 #include "graph/task_graph.h"
-#include "path/cross_path_subscribe_desc.h"
 
 namespace oneflow {
 
