@@ -23,6 +23,9 @@ class Path {
     return faker2mccoy_;
   }
 
+  typedef void (CompTaskNode::*CompTaskNodeMemFunc)(Path*);
+  virtual CompTaskNodeMemFunc MemFunc4FwBuildExecAndProducedRegisters() const;
+
  protected:
   std::unique_ptr<TaskGraph>& mut_task_graph() { return task_graph_; }
   void AddFakerMccoyPair(CompTaskNode* faker, CompTaskNode* mccoy) {

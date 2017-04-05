@@ -1,6 +1,7 @@
 #include "graph/comp_task_node.h"
 #include "operator/operator_factory.h"
 #include "operator/clone_op.h"
+#include "path/path.h"
 
 namespace oneflow {
 
@@ -23,6 +24,10 @@ bool CompTaskNode::HasOpWithIndiff() const {
 }
 
 void CompTaskNode::FwBuildExecAndProducedRegisters(Path* path) {
+  (this->*(path->MemFunc4FwBuildExecAndProducedRegisters()))(path);
+}
+
+void CompTaskNode::DataFwBuildExecAndProducedRegisters(Path* path) {
   Lbn2NodeMap lbn2producer;
   Lbn2NodeVecMap extern_in_lbn2consumers;
   FwBuildFromUserOps(&lbn2producer, &extern_in_lbn2consumers);
@@ -34,6 +39,18 @@ void CompTaskNode::FwBuildExecAndProducedRegisters(Path* path) {
   FwBindOutEdgeAndRegister();
   FwSetRegisterPtrs4ExecNodes(lbn2producer, extern_in_lbn2consumers);
   FwSetProducedRegisterDescs();
+}
+
+void CompTaskNode::ModelUpdateFwBuildExecAndProducedRegisters(Path*) {
+  TODO();
+}
+
+void CompTaskNode::ModelLoadFwBuildExecAndProducedRegisters(Path*) {
+  TODO();
+}
+
+void CompTaskNode::ModelSaveFwBuildExecAndProducedRegisters(Path*) {
+  TODO();
 }
 
 void CompTaskNode::FwBuildFromUserOps(

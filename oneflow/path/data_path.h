@@ -10,6 +10,10 @@ class DataPath final : public Path {
   OF_DISALLOW_COPY_AND_MOVE(DataPath);
   DataPath() = default;
   ~DataPath() = default;
+  
+  CompTaskNodeMemFunc MemFunc4FwBuildExecAndProducedRegisters() const override {
+    return &CompTaskNode::DataFwBuildExecAndProducedRegisters;
+  }
 
   void Build(const DLNetConf& dl_net_conf,
              const Strategy& strategy_conf,

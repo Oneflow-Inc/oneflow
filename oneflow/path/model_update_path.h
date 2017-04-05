@@ -10,6 +10,10 @@ class ModelUpdatePath final : public Path {
   OF_DISALLOW_COPY_AND_MOVE(ModelUpdatePath);
   ModelUpdatePath() = default;
   ~ModelUpdatePath() = default;
+  
+  CompTaskNodeMemFunc MemFunc4FwBuildExecAndProducedRegisters() const override {
+    return &CompTaskNode::ModelUpdateFwBuildExecAndProducedRegisters;
+  }
 
   void Build(
       const ChainNode* data_chain,

@@ -24,6 +24,11 @@ class CompTaskNode : public TaskNode {
 
   bool IsFaker() const { return chain_node()->IsFaker(); }
 
+  void DataFwBuildExecAndProducedRegisters(Path*);
+  void ModelUpdateFwBuildExecAndProducedRegisters(Path*);
+  void ModelLoadFwBuildExecAndProducedRegisters(Path*);
+  void ModelSaveFwBuildExecAndProducedRegisters(Path*);
+
  protected:
   virtual void InitWithFwNode(TaskNode* fw_node) override {
     TaskNode::InitWithFwNode(fw_node);
