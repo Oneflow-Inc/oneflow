@@ -24,6 +24,8 @@ class ParallelDesc {
     TODO();
   }
   
+  Policy& mut_policy() { return policy_; }
+  
   const Policy& policy() const { return policy_; }
   const Engine& engine() const { return engine_; } 
   const std::vector<MachineId>& sorted_machines() const {

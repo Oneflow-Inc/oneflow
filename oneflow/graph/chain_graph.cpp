@@ -226,6 +226,14 @@ void DataMergeChains(
 
 } // namespace
 
+std::string ChainNode::ConcatedOpsName() const {
+  std::stringstream ss;
+  for (auto op : op_vec_) {
+    ss << op->op_name() << "_";
+  }
+  return ss.str();
+}
+
 ChainGraph::ChainGraph(const LogicalGraph* logical_graph) {
   // Build Chain
   std::list<Chain> chain_list;

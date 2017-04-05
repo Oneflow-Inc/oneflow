@@ -21,11 +21,13 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   TaskGraph(const DLNetConf& dl_net_conf,
             const Strategy& strategy_conf,
             bool need_bp);
+  TaskGraph(std::unique_ptr<ChainGraph>&& chain_graph, bool need_bp);
 
   const StageGraph* stage_graph() const { return stage_graph_.get(); }
 
  private:
-  void BuildWithoutExecGraph(bool need_bp);
+  void BuildFromChainGph(std::unique_ptr<ChainGraph>&& chain_gph, bool need_bp);
+  void BuildGraph(bool need_bp);
 
   template<typename TaskNodeType>
   TaskNodeType* NewTaskNode() {

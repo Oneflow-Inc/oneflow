@@ -14,6 +14,8 @@ class ChainNode final : public Node<ChainNode, ChainEdge> {
   ChainNode() = default;
   ~ChainNode() = default;
 
+  std::string ConcatedOpsName() const;
+
   const std::vector<std::shared_ptr<Operator>>& op_vec() const {
     return op_vec_;
   }

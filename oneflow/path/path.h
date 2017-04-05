@@ -2,6 +2,7 @@
 #define ONEFLOW_PATH_PATH_H_
 
 #include "graph/task_graph.h"
+#include "operator/operator_factory.h"
 
 namespace oneflow {
 

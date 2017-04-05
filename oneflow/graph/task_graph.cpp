@@ -21,11 +21,21 @@ TaskGraph::TaskGraph(const DLNetConf& dl_net_conf,
                      bool need_bp) {
   std::unique_ptr<LogicalGraph> logical_graph(new LogicalGraph(dl_net_conf, strategy_conf));
   std::unique_ptr<ChainGraph> chain_graph(new ChainGraph(logical_graph.get()));
-  stage_graph_.reset(new StageGraph(std::move(chain_graph)));
-  BuildWithoutExecGraph(need_bp);
+  BuildFromChainGph(std::move(chain_graph), need_bp);
 }
 
-void TaskGraph::BuildWithoutExecGraph(
+TaskGraph::TaskGraph(std::unique_ptr<ChainGraph>&& chain_graph, bool need_bp) {
+  BuildFromChainGph(std::move(chain_graph), need_bp);
+}
+
+void TaskGraph::BuildFromChainGph(
+    std::unique_ptr<ChainGraph>&& chain_graph,
+    bool need_bp) {
+  stage_graph_.reset(new StageGraph(std::move(chain_graph)));
+  BuildGraph(need_bp);
+}
+
+void TaskGraph::BuildGraph(
     bool need_bp) {
   Stage2TaskNodesMap stage2task_nodes;
   InitCompTaskNodes(&stage2task_nodes);
