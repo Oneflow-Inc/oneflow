@@ -13,7 +13,14 @@ void ModelUpdatePath::Build(
   for (const auto& pair : faker2mccoy()) {
     CompTaskNode* update_node = parallel_id2update_node.at(pair.first->parallel_id());
     TaskNode* fw_comp_node = pair.second->GetFwNode();
-    fw_comp_node->Subscribe(update_node->GetProducedRegisterDesc("model"));
+    RegisterDesc* model_register = update_node->GetProducedRegisterDesc("model");
+    fw_comp_node->Subscribe(model_register);
+    for (const std::unique_ptr<ExecNode>& exec_node : fw_comp_node->exec_graph().nodes()) {
+      for (const std::string& mbn : exec_node->op()->model_blob_names()) {
+        std::string lbn = exec_node->op()->mbn2lbn(mbn);
+        exec_node->AddConsumedLbnRegiPair(lbn, model_register);
+      }
+    }
   }
 }
 
