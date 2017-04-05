@@ -146,13 +146,13 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
   for (const std::string& lbn : lbns) {
     OpPair op_pair = FwBuildBoxingOp();
     // First Node
-    ExecNode* first_node = mut_exec_graph().NewExecNode();
+    ExecNode* first_node = mut_exec_graph().NewFinalNode();
     first_node->mut_op() = op_pair.first;
     for (const TaskEdge* edge : sorted_in_edges) {
       first_node->AddConsumedLbnRegiPair(lbn, GetRelatedRegister(edge));
     }
     // Second Node
-    ExecNode* second_node = mut_exec_graph().NewExecNode();
+    ExecNode* second_node = mut_exec_graph().NewFinalNode();
     second_node->mut_op() = op_pair.second;
     for (const TaskEdge* edge : sorted_out_edges) {
       second_node->AddProducedLbnRegiPair(lbn, GetRelatedRegister(edge));
@@ -186,7 +186,7 @@ void BoxingTaskNode::BpBuildExecAndProducedRegisters(Path* path) {
   const ExecGraph& fw_exec_graph = GetFwNode()->exec_graph();
   std::unordered_map<const ExecNode*, ExecNode*> fw_node2bp_node;
   for (const std::unique_ptr<ExecNode>& fw_node: fw_exec_graph.nodes()) {
-    ExecNode* bp_node = mut_exec_graph().NewExecNode();
+    ExecNode* bp_node = mut_exec_graph().NewFinalNode();
     CHECK(fw_node2bp_node.emplace(fw_node.get(), bp_node).second);
     bp_node->mut_op() = fw_node->op();
     for (const auto& fw_pair : fw_node->consumed_lbn_regi_pairs()) {

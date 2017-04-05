@@ -31,7 +31,7 @@ void CopyHDTaskNode::FwBuildExecAndProducedRegisters(Path* path) {
   pb_op_conf.mutable_copy_op_conf()->set_copy_type(IsH2D() ? CopyOpConf::H2D : CopyOpConf::D2H);
   std::shared_ptr<Operator> copy_op = ConstructOpFromPbConf(pb_op_conf);
   // Set ExecNode
-  ExecNode* copy_node = mut_exec_graph().NewExecNode();
+  ExecNode* copy_node = mut_exec_graph().NewFinalNode();
   copy_node->mut_op() = copy_op;
   for (const std::string& lbn : CopiedLbns()) {
     copy_node->AddProducedLbnRegiPair(lbn, GetRelatedRegister(SoleOutEdge()));
@@ -47,7 +47,7 @@ void CopyHDTaskNode::BpBuildExecAndProducedRegisters(Path* path) {
   const ExecGraph& fw_graph = GetFwNode()->exec_graph();
   const ExecNode* fw_copy_node = fw_graph.source_node().SoleOutEdge()->dst_node();
   // Set Bp Copy Node
-  ExecNode* bp_copy_node = mut_exec_graph().NewExecNode();
+  ExecNode* bp_copy_node = mut_exec_graph().NewFinalNode();
   bp_copy_node->mut_op() = fw_copy_node->op();
   for (const std::string& lbn : CopiedLbns()) {
     bp_copy_node->AddProducedLbnRegiPair(lbn, GetRelatedRegister(SoleOutEdge()));

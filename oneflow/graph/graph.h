@@ -53,6 +53,20 @@ class Graph {
   }
   
   void UpdateSourceAndSink();
+  
+  // New
+  NodeType* NewFinalNode() {
+    // In c++14, we can use std::is_final to check
+    NodeType* ret = new NodeType;
+    RegisterNode(ret);
+    return ret;
+  }
+  EdgeType* NewFinalEdge() {
+    // In c++14, we can use std::is_final to check
+    EdgeType* ret = new EdgeType;
+    RegisterEdge(ret);
+    return ret;
+  }
 
  protected:
   // Register
@@ -67,19 +81,6 @@ class Graph {
   }
   void RegisterEdge(std::unique_ptr<EdgeType>&& new_node) {
     edges_.push_back(std::move(new_node));
-  }
-  // New
-  NodeType* NewFinalNode() {
-    // In c++14, we can use std::is_final to check
-    NodeType* ret = new NodeType;
-    RegisterNode(ret);
-    return ret;
-  }
-  EdgeType* NewFinalEdge() {
-    // In c++14, we can use std::is_final to check
-    EdgeType* ret = new EdgeType;
-    RegisterEdge(ret);
-    return ret;
   }
 
  private:

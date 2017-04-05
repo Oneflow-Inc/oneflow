@@ -64,12 +64,9 @@ class ExecGraph : public Graph<ExecNode, ExecEdge> {
   OF_DISALLOW_COPY_AND_MOVE(ExecGraph);
   ExecGraph() = default;
   virtual ~ExecGraph() = default;
-
-  ExecNode* NewExecNode() {
-    LOG(FATAL) << "TODO";
-  }
+  
   ExecEdge* NewExecEdge(const std::string& lbn) {
-    LOG(FATAL) << "TODO";
+    TODO();
   }
 
  private:

@@ -40,7 +40,7 @@ void CompTaskNode::FwBuildFromUserOps(
     Lbn2NodeMap* lbn2producer,
     Lbn2NodeVecMap* extern_in_lbn2consumers) {
   for (std::shared_ptr<Operator> op : chain_node()->op_vec()) {
-    ExecNode* cur_node = mut_exec_graph().NewExecNode();
+    ExecNode* cur_node = mut_exec_graph().NewFinalNode();
     cur_node->mut_op() = op;
     for (const std::string& obn : op->output_blob_names()) {
       std::string lbn = op->obn2lbn(obn);
@@ -71,7 +71,7 @@ void CompTaskNode::FwAddCopyInOp(Lbn2NodeVecMap* extern_in_lbn2consumers) {
   pb_op_conf.mutable_copy_op_conf()->set_copy_type(CopyInOpType());
   std::shared_ptr<Operator> copy_op = ConstructOpFromPbConf(pb_op_conf);
   // Construct Exec Node
-  ExecNode* copy_node = mut_exec_graph().NewExecNode();
+  ExecNode* copy_node = mut_exec_graph().NewFinalNode();
   copy_node->mut_op() = copy_op;
   // Connect CopyNode and OldConsumer
   for (const auto& pair : *extern_in_lbn2consumers) {
@@ -118,7 +118,7 @@ void CompTaskNode::FwAddCloneOp() {
   }
   // Add clone node
   for (const CloneInfo& clone_info : clone_info_vec) {
-    ExecNode* clone_node = mut_exec_graph().NewExecNode();
+    ExecNode* clone_node = mut_exec_graph().NewFinalNode();
     clone_node->mut_op() = clone_info.clone_op;
     // Update Edge
     Connect(clone_info.pred_node, mut_exec_graph().NewExecEdge(clone_info.lbn), clone_node);
@@ -184,7 +184,7 @@ void CompTaskNode::BpBuildExecGraph(
     std::unordered_map<const ExecNode*, ExecNode*>* fw_node2bp_node) {
   for (const std::unique_ptr<ExecNode>& fw_node : fw_graph.nodes()) {
     if (fw_node.get() == cp_in_node) { continue; }
-    ExecNode* bp_node = mut_exec_graph().NewExecNode();
+    ExecNode* bp_node = mut_exec_graph().NewFinalNode();
     bp_node->mut_op() = fw_node->op();
     fw_node2bp_node->emplace(fw_node.get(), bp_node);
   }
