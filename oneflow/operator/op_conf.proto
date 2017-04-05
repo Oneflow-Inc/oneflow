@@ -58,6 +58,9 @@ message SplitOpConf {
   int32 axis = 1;
 }
 
+message ModelUpdateOpConf {
+}
+
 message OperatorConf {
   string name = 1;
   oneof specified_type {
@@ -72,5 +75,6 @@ message OperatorConf {
     CloneOpConf clone_op_conf = 108;
     ConcatOpConf concat_op_conf = 109;
     SplitOpConf split_op_conf = 110;
+    ModelUpdateOpConf model_update_op_conf = 111;
   }
 }

@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class ReluOp final : public Operator {
+class ReluOp final : public UserOperator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ReluOp);
   ReluOp() = default;

@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class InnerProductOp final : public Operator {
+class InnerProductOp final : public UserOperator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(InnerProductOp);
   InnerProductOp() = default;

@@ -14,14 +14,4 @@ void LoaderOp::Init(const OperatorConf& op_conf) {
   RegisterOutputBlobName("label");
 }
 
-std::string LoaderOp::ibn2lbn(const std::string& input_blob_name) const {
-  LOG(FATAL) << "This Op doesn't have input_blob_name";
-  return "";
-}
-
-std::string LoaderOp::idbn2lbn(const std::string& input_diff_blob_name) const {
-  LOG(FATAL) << "This Op doesn't have input_diff_blob_name";
-  return "";
-}
-
 } // namespace oneflow

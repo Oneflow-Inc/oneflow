@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class ConvolutionOp final : public Operator {
+class ConvolutionOp final : public UserOperator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvolutionOp);
   ConvolutionOp() = default;

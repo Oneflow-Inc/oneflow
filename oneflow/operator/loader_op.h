@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class LoaderOp final : public Operator {
+class LoaderOp final : public UserOperator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LoaderOp);
   LoaderOp() = default;
@@ -13,9 +13,6 @@ class LoaderOp final : public Operator {
   
   void Init(const OperatorConf& op_conf) override;
   bool IsElemWise() const override { return false; }
-  
-  std::string ibn2lbn(const std::string& input_blob_name) const override;
-  std::string idbn2lbn(const std::string& input_diff_blob_name) const override;
 
  private:
 
