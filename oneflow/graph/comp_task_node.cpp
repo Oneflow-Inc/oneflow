@@ -22,7 +22,7 @@ bool CompTaskNode::HasOpWithIndiff() const {
   return false;
 }
 
-void CompTaskNode::FwBuildExecGraphAndSetProducedRegisters(Path* path) {
+void CompTaskNode::FwBuildExecAndProducedRegisters(Path* path) {
   Lbn2NodeMap lbn2producer;
   Lbn2NodeVecMap extern_in_lbn2consumers;
   FwBuildFromUserOps(&lbn2producer, &extern_in_lbn2consumers);
@@ -168,7 +168,7 @@ void CompTaskNode::FwSetProducedRegisterDescs() {
   AddInPathLbn2ProducedRegister();
 }
 
-void CompTaskNode::BpBuildExecGraphAndSetProducedRegisters(Path* path) {
+void CompTaskNode::BpBuildExecAndProducedRegisters(Path* path) {
   const ExecGraph& fw_graph = GetFwNode()->exec_graph();
   const ExecNode* cp_in_node = fw_graph.source_node().SoleOutEdge()->dst_node();
   std::unordered_map<const ExecNode*, ExecNode*> fw_node2bp_node;

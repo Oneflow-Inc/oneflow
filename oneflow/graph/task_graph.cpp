@@ -18,13 +18,11 @@ inline void TaskConnect(TaskNode* src_node,
 
 TaskGraph::TaskGraph(const DLNetConf& dl_net_conf,
                      const Strategy& strategy_conf,
-                     bool need_bp,
-                     Path* path) {
+                     bool need_bp) {
   std::unique_ptr<LogicalGraph> logical_graph(new LogicalGraph(dl_net_conf, strategy_conf));
   std::unique_ptr<ChainGraph> chain_graph(new ChainGraph(logical_graph.get()));
   stage_graph_.reset(new StageGraph(std::move(chain_graph)));
   BuildWithoutExecGraph(need_bp);
-  BuildExecGraphAndSetRegisters(path);
 }
 
 void TaskGraph::BuildWithoutExecGraph(
@@ -36,12 +34,6 @@ void TaskGraph::BuildWithoutExecGraph(
   UpdateSourceAndSink();
   if (need_bp) {
     BuildBpStruct();
-  }
-}
-
-void TaskGraph::BuildExecGraphAndSetRegisters(Path* path) {
-  for (TaskNode& task_node : *this) {
-    task_node.BuildExecGraphAndSetRegisters(path);
   }
 }
 

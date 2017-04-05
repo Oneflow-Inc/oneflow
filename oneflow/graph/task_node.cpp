@@ -35,11 +35,11 @@ std::unique_ptr<TaskNode> TaskNode::BuildAndConnectBpNode() {
   return bp_node;
 }
 
-void TaskNode::BuildExecGraphAndSetRegisters(Path* path) {
+void TaskNode::BuildExecAndProducedRegistersAndSubscribeInPath(Path* path) {
   if (IsFwNode()) {
-    FwBuildExecGraphAndSetProducedRegisters(path);
+    FwBuildExecAndProducedRegisters(path);
   } else {
-    BpBuildExecGraphAndSetProducedRegisters(path);
+    BpBuildExecAndProducedRegisters(path);
   }
   SubscribeRegisterDescInnerPath();
 }

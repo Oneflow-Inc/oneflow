@@ -20,14 +20,12 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   
   TaskGraph(const DLNetConf& dl_net_conf,
             const Strategy& strategy_conf,
-            bool need_bp,
-            Path* path);
+            bool need_bp);
 
   const StageGraph* stage_graph() const { return stage_graph_.get(); }
 
  private:
   void BuildWithoutExecGraph(bool need_bp);
-  void BuildExecGraphAndSetRegisters(Path* path);
 
   template<typename TaskNodeType>
   TaskNodeType* NewTaskNode() {

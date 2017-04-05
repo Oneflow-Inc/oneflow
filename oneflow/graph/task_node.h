@@ -35,7 +35,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   std::unique_ptr<TaskNode> BuildAndConnectBpNode();
   
   //
-  void BuildExecGraphAndSetRegisters(Path* path);
+  void BuildExecAndProducedRegistersAndSubscribeInPath(Path* path);
 
   // 
   const TaskEdge* GetOutEdge4ProducedRegister(RegisterDesc*) const;
@@ -60,8 +60,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
     return produced_register_descs_.at(register_desc_name).get();
   }
 
-  virtual void FwBuildExecGraphAndSetProducedRegisters(Path*) { UNEXPECTED_RUN(); }
-  virtual void BpBuildExecGraphAndSetProducedRegisters(Path*) { UNEXPECTED_RUN(); }
+  virtual void FwBuildExecAndProducedRegisters(Path*) { UNEXPECTED_RUN(); }
+  virtual void BpBuildExecAndProducedRegisters(Path*) { UNEXPECTED_RUN(); }
   void SubscribeRegisterDescInnerPath();
   void AddInPathLbn2ProducedRegister();
 
