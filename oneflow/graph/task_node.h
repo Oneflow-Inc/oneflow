@@ -36,6 +36,13 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   
   //
   void BuildExecAndProducedRegistersAndSubscribeInPath(Path* path);
+  void Subscribe(RegisterDesc* regi) {
+    regi->AddSubscriber(this);
+    CHECK(subscribed_register_descs_.insert(regi).second);
+  }
+  RegisterDesc* GetProducedRegisterDesc(const std::string& register_desc_name) {
+    return produced_register_descs_.at(register_desc_name).get();
+  }
 
   // 
   const TaskEdge* GetOutEdge4ProducedRegister(RegisterDesc*) const;
@@ -55,9 +62,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
     register_desc->SetProducer(this);
     auto pair = std::make_pair(register_desc_name, std::move(register_desc));
     CHECK(produced_register_descs_.insert(std::move(pair)).second);
-  }
-  RegisterDesc* GetProducedRegisterDesc(const std::string& register_desc_name) {
-    return produced_register_descs_.at(register_desc_name).get();
   }
 
   virtual void FwBuildExecAndProducedRegisters(Path*) { UNEXPECTED_RUN(); }

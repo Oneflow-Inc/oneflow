@@ -6,11 +6,15 @@ void ModelUpdatePath::Build(
     const ChainNode* data_chain,
     const std::vector<CompTaskNode*>& sorted_comptasks4data_chain) {
   BuildTaskGraph(data_chain);
-  InitFaker2DataMap(sorted_comptasks4data_chain);
-  TODO();
-  // BuildFakerMap
-  // ProducedRegister SubscribeRegister
-  // data_path subscribe model_register
+  std::unordered_map<int32_t, CompTaskNode*> parallel_id2update_node;
+  InitFaker2MccoyMapAndParallelIdUpdateMap(sorted_comptasks4data_chain,
+                                           &parallel_id2update_node);
+  BuildExecAndProducedRegistersAndSubscribeInPath(mut_task_graph().get(), this);
+  for (const auto& pair : faker2mccoy()) {
+    CompTaskNode* update_node = parallel_id2update_node.at(pair.first->parallel_id());
+    TaskNode* fw_comp_node = pair.second->GetFwNode();
+    fw_comp_node->Subscribe(update_node->GetProducedRegisterDesc("model"));
+  }
 }
 
 void ModelUpdatePath::BuildTaskGraph(const ChainNode* data_chain) {
@@ -39,23 +43,25 @@ void ModelUpdatePath::BuildTaskGraph(const ChainNode* data_chain) {
   mut_task_graph().reset(new TaskGraph(std::move(chain_gph), false));
 }
 
-void ModelUpdatePath::InitFaker2DataMap(
-    const std::vector<CompTaskNode*>& sorted_comptasks4data_chain) {
+void ModelUpdatePath::InitFaker2MccoyMapAndParallelIdUpdateMap(
+    const std::vector<CompTaskNode*>& sorted_comptasks4data_chain,
+    std::unordered_map<int32_t, CompTaskNode*>* parallel_id2update_node) {
   std::vector<CompTaskNode*> comptasks4faker_chain;
   for (const std::unique_ptr<TaskNode>& node : task_graph()->nodes()) {
     CompTaskNode* comp_node = nullptr;
     if (comp_node = dynamic_cast<CompTaskNode*>(node.get()), !comp_node) {
       continue;
     }
-    if (comp_node->chain_node()->op_vec().empty()) {
+    if (comp_node->IsFaker()) {
       comptasks4faker_chain.push_back(comp_node);
+    } else {
+      parallel_id2update_node->emplace(comp_node->parallel_id(), comp_node);
     }
   }
   SortByParallelId(&comptasks4faker_chain);
   CHECK_EQ(comptasks4faker_chain.size(), sorted_comptasks4data_chain.size());
   for (size_t i = 0; i < comptasks4faker_chain.size(); ++i) {
-    CHECK(faker2data.emplace(comptasks4faker_chain[i],
-                             sorted_comptasks4data_chain[i]).second);
+    AddFakerMccoyPair(comptasks4faker_chain[i], sorted_comptasks4data_chain[i]);
   }
 }
 

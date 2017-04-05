@@ -19,11 +19,19 @@ class Path {
     return task_graph_->stage_graph()->chain_graph();
   }
 
+  const std::unordered_map<CompTaskNode*, CompTaskNode*>& faker2mccoy() const {
+    return faker2mccoy_;
+  }
+
  protected:
   std::unique_ptr<TaskGraph>& mut_task_graph() { return task_graph_; }
+  void AddFakerMccoyPair(CompTaskNode* faker, CompTaskNode* mccoy) {
+    CHECK(faker2mccoy_.emplace(faker, mccoy).second);
+  }
 
  private:
   std::unique_ptr<TaskGraph> task_graph_;
+  std::unordered_map<CompTaskNode*, CompTaskNode*> faker2mccoy_;
 
 };
 

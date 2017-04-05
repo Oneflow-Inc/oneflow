@@ -22,6 +22,8 @@ class CompTaskNode : public TaskNode {
   bool HasOpWithOutDiff() const;
   bool HasOpWithIndiff() const;
 
+  bool IsFaker() const { return chain_node()->IsFaker(); }
+
  protected:
   virtual void InitWithFwNode(TaskNode* fw_node) override {
     TaskNode::InitWithFwNode(fw_node);

@@ -44,6 +44,8 @@ class ChainNode final : public Node<ChainNode, ChainEdge> {
     return output_lbns_;
   }
 
+  bool IsFaker() const { return op_vec_.empty(); }
+
  private:
   std::vector<std::shared_ptr<Operator>> op_vec_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
