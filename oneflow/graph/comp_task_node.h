@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_GRAPH_COMP_TASK_NODE_H_
 #define ONEFLOW_GRAPH_COMP_TASK_NODE_H_
 
+#include <algorithm>
 #include "graph/task_node.h"
 
 namespace oneflow {
@@ -55,6 +56,13 @@ class CompTaskNode : public TaskNode {
   int32_t parallel_id_;
 
 };
+
+inline void SortByParallelId(std::vector<CompTaskNode*>* comp_node_vec) {
+  std::sort(comp_node_vec->begin(), comp_node_vec->end(), []
+      (const CompTaskNode* lhs, const CompTaskNode* rhs) {
+    return lhs->parallel_id() < rhs->parallel_id();
+  });
+}
 
 class HostCompTaskNode final : public CompTaskNode {
  public:

@@ -11,10 +11,16 @@ class ModelUpdatePath final : public Path {
   ModelUpdatePath() = default;
   ~ModelUpdatePath() = default;
 
-  void Build(const ChainNode* chain_in_data_path);
+  void Build(
+      const ChainNode* data_chain,
+      const std::vector<CompTaskNode*>& sorted_comptasks4data_chain);
 
  private:
-  void BuildTaskGraph(const ChainNode* chain_in_data_path);
+  void BuildTaskGraph(const ChainNode* data_chain);
+  void InitFaker2DataMap(
+      const std::vector<CompTaskNode*>& sorted_comptasks4data_chain);
+  
+  std::unordered_map<CompTaskNode*, CompTaskNode*> faker2data;
 
 };
 
