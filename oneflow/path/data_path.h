@@ -15,9 +15,7 @@ class DataPath final : public Path {
              const Strategy& strategy_conf,
              bool need_bp) {
     mut_task_graph().reset(new TaskGraph(dl_net_conf, strategy_conf, need_bp));
-    for (TaskNode& node : *task_graph()) {
-      node.BuildExecAndProducedRegistersAndSubscribeInPath(this);
-    }
+    BuildExecAndProducedRegistersAndSubscribeInPath(mut_task_graph().get(), this);
   }
 
  private:

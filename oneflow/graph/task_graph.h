@@ -67,6 +67,13 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
 };
 
+inline void BuildExecAndProducedRegistersAndSubscribeInPath(TaskGraph* gph,
+                                                            Path* path) {
+  for (TaskNode& node : *gph) {
+    node.BuildExecAndProducedRegistersAndSubscribeInPath(path);
+  }
+}
+
 } // namespace oneflow
 
 #endif // ONEFLOW_GRAPH_TASK_GRAPH_H_

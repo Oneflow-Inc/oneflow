@@ -11,11 +11,11 @@ class ModelUpdatePath final : public Path {
   ModelUpdatePath() = default;
   ~ModelUpdatePath() = default;
 
-  void Build(const ChainNode* chain_in_data_path) {
-    LOG(FATAL) << "TODO";
-  }
+  void Build(const ChainNode* chain_in_data_path);
 
  private:
+  void BuildTaskGraph(const ChainNode* chain_in_data_path);
+
 };
 
 } // namespace oneflow
