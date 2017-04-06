@@ -9,7 +9,7 @@ void ModelUpdatePath::Build(
   std::unordered_map<int32_t, CompTaskNode*> parallel_id2update_node;
   InitFaker2MccoyMapAndParallelIdUpdateMap(sorted_comptasks4data_chain,
                                            &parallel_id2update_node);
-  BuildExecAndProducedRegistersAndSubscribeInPath(mut_task_graph().get(), this);
+  BuildExecAndProducedRegistersAndSubscribeInPath();
   for (const auto& pair : faker2mccoy()) {
     CompTaskNode* update_node = parallel_id2update_node.at(pair.first->parallel_id());
     TaskNode* fw_comp_node = pair.second->GetFwNode();

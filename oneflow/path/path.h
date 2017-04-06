@@ -31,6 +31,11 @@ class Path {
   void AddFakerMccoyPair(CompTaskNode* faker, CompTaskNode* mccoy) {
     CHECK(faker2mccoy_.emplace(faker, mccoy).second);
   }
+  void BuildExecAndProducedRegistersAndSubscribeInPath() {
+    for (TaskNode& node : *task_graph_) {
+      node.BuildExecAndProducedRegistersAndSubscribeInPath(this);
+    }
+  }
 
  private:
   std::unique_ptr<TaskGraph> task_graph_;
