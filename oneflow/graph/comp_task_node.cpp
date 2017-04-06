@@ -41,7 +41,13 @@ void CompTaskNode::DataFwBuildExecAndProducedRegisters(Path* path) {
   FwSetProducedRegisterDescs();
 }
 
-void CompTaskNode::ModelUpdateFwBuildExecAndProducedRegisters(Path*) {
+void CompTaskNode::ModelUpdateFwBuildExecAndProducedRegisters(Path* path) {
+  if (IsFaker()) {
+    CompTaskNode* mccoy = path->faker2mccoy().at(this);
+    RegisterDesc* regi = mccoy->GetProducedRegisterDesc("model_diff");
+    BindProducedRegisterAndOutEdge(regi, SoleOutEdge());
+    return;
+  }
   TODO();
 }
 
