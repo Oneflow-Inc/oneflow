@@ -24,7 +24,9 @@ class Path {
   }
 
   typedef void (CompTaskNode::*CompTaskNodeMemFunc)(Path*);
-  virtual CompTaskNodeMemFunc MemFunc4FwBuildExecAndProducedRegisters() const;
+  virtual CompTaskNodeMemFunc MemFunc4FwBuildExecAndProducedRegisters() const = 0;
+
+  virtual const ChainNode* GetDataChain() const = 0;
 
  protected:
   std::unique_ptr<TaskGraph>& mut_task_graph() { return task_graph_; }

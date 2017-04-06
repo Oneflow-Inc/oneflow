@@ -5,6 +5,7 @@ namespace oneflow {
 void ModelUpdatePath::Build(
     const ChainNode* data_chain,
     const std::vector<CompTaskNode*>& sorted_comptasks4data_chain) {
+  set_data_chain(data_chain);
   BuildTaskGraph(data_chain);
   std::unordered_map<int32_t, CompTaskNode*> parallel_id2update_node;
   InitFaker2MccoyMapAndParallelIdUpdateMap(sorted_comptasks4data_chain,

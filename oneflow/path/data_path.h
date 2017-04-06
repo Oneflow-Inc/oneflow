@@ -15,6 +15,8 @@ class DataPath final : public Path {
     return &CompTaskNode::DataFwBuildExecAndProducedRegisters;
   }
 
+  const ChainNode* GetDataChain() const override { return nullptr; }
+
   void Build(const DLNetConf& dl_net_conf,
              const Strategy& strategy_conf,
              bool need_bp) {

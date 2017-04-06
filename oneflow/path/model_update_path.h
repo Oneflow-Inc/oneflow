@@ -1,11 +1,11 @@
 #ifndef ONEFLOW_PATH_MODEL_UPDATE_PATH_H_
 #define ONEFLOW_PATH_MODEL_UPDATE_PATH_H_
 
-#include "path/path.h"
+#include "path/model_path.h"
 
 namespace oneflow {
 
-class ModelUpdatePath final : public Path {
+class ModelUpdatePath final : public ModelPath {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ModelUpdatePath);
   ModelUpdatePath() = default;
