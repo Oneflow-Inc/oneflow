@@ -29,7 +29,7 @@ void CopyHDTaskNode::FwBuildExecAndProducedRegisters(Path* path) {
   OperatorConf pb_op_conf;
   pb_op_conf.set_name("");
   pb_op_conf.mutable_copy_op_conf()->set_copy_type(IsH2D() ? CopyOpConf::H2D : CopyOpConf::D2H);
-  std::shared_ptr<Operator> copy_op = ConstructOpFromPbConf(pb_op_conf);
+  std::shared_ptr<const Operator> copy_op = ConstructOpFromPbConf(pb_op_conf);
   // Set ExecNode
   ExecNode* copy_node = mut_exec_graph().NewFinalNode();
   copy_node->mut_op() = copy_op;

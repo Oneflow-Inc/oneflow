@@ -15,14 +15,14 @@ class OperatorFactory final {
     return obj;
   }
   
-  std::shared_ptr<Operator> ConstructOp(const OperatorConf&) const;
+  std::shared_ptr<const Operator> ConstructOp(const OperatorConf&) const;
 
  private:
   OperatorFactory() = default;
 
 };
 
-inline std::shared_ptr<Operator> ConstructOpFromPbConf(
+inline std::shared_ptr<const Operator> ConstructOpFromPbConf(
     const OperatorConf pb_conf) {
   return OperatorFactory::singleton().ConstructOp(pb_conf);
 }

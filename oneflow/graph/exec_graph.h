@@ -35,8 +35,8 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   ExecNode() = default;
   ~ExecNode() = default;
 
-  std::shared_ptr<Operator> op() const { return op_; }
-  std::shared_ptr<Operator>& mut_op() { return op_; }
+  std::shared_ptr<const Operator> op() const { return op_; }
+  std::shared_ptr<const Operator>& mut_op() { return op_; }
 
   std::string lbn2pbn(const std::string& lbn) const {
     return "node_id_" + std::to_string(node_id()) + "/" + lbn;
@@ -53,7 +53,7 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   }
 
  private:
-  std::shared_ptr<Operator> op_;
+  std::shared_ptr<const Operator> op_;
   std::vector<std::pair<std::string, RegisterDesc*>> consumed_lbn_regi_pairs_;
   std::vector<std::pair<std::string, RegisterDesc*>> produced_lbn_regi_pairs_;
 

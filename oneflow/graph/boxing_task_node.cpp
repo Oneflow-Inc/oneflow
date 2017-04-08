@@ -7,7 +7,7 @@ namespace oneflow {
 
 namespace {
 
-using OpPair = std::pair<std::shared_ptr<Operator>, std::shared_ptr<Operator>>;
+using OpPair = std::pair<std::shared_ptr<const Operator>, std::shared_ptr<const Operator>>;
 
 OpPair FwBuildBoxingOpDataData() {
   OperatorConf first_op_conf;

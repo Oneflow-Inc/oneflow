@@ -30,7 +30,7 @@ void ModelUpdatePath::BuildTaskGraph(const ChainNode* data_chain) {
   OperatorConf op_conf;
   op_conf.set_name("model_update_" + data_chain->ConcatedOpsName());
   op_conf.mutable_model_update_op_conf();
-  std::shared_ptr<Operator> model_update_op = ConstructOpFromPbConf(op_conf);
+  std::shared_ptr<const Operator> model_update_op = ConstructOpFromPbConf(op_conf);
   // Useful vars
   std::shared_ptr<const ParallelDesc> parallel_desc_data = data_chain->parallel_desc();
   std::unique_ptr<ChainGraph> chain_gph(new ChainGraph);

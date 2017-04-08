@@ -16,10 +16,10 @@ class ChainNode final : public Node<ChainNode, ChainEdge> {
 
   std::string ConcatedOpsName() const;
 
-  const std::vector<std::shared_ptr<Operator>>& op_vec() const {
+  const std::vector<std::shared_ptr<const Operator>>& op_vec() const {
     return op_vec_;
   }
-  std::vector<std::shared_ptr<Operator>>& mut_op_vec() {
+  std::vector<std::shared_ptr<const Operator>>& mut_op_vec() {
     return op_vec_;
   }
 
@@ -47,7 +47,7 @@ class ChainNode final : public Node<ChainNode, ChainEdge> {
   bool IsFaker() const { return op_vec_.empty(); }
 
  private:
-  std::vector<std::shared_ptr<Operator>> op_vec_;
+  std::vector<std::shared_ptr<const Operator>> op_vec_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
   std::vector<std::string> input_lbns_;
   std::vector<std::string> output_lbns_;
