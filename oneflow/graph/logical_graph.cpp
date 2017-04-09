@@ -11,7 +11,7 @@ LogicalGraph::LogicalGraph(const DLNetConf& dl_net_conf,
 }
 
 void LogicalGraph::BuildGraphStruct(const DLNetConf& dl_net_conf) {
-  std::unordered_map<std::string, LogicalNode*> lbn2node;
+  HashMap<std::string, LogicalNode*> lbn2node;
   // Process Op
   for (int op_i = 0; op_i < dl_net_conf.op_conf_size(); ++op_i) {
     const OperatorConf& cur_op_conf = dl_net_conf.op_conf(op_i);
@@ -36,7 +36,7 @@ void LogicalGraph::BuildGraphStruct(const DLNetConf& dl_net_conf) {
 }
 
 void LogicalGraph::FillNodeWithParallelDesc(const Strategy& strategy_conf) {
-  std::unordered_map<std::string, LogicalNode*> op_name2node;
+  HashMap<std::string, LogicalNode*> op_name2node;
   for (const std::unique_ptr<LogicalNode>& logical_node : nodes()) {
     std::string op_name = logical_node->op()->op_name();
     bool emplace_success =

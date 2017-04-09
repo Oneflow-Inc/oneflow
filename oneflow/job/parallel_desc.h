@@ -1,7 +1,6 @@
 #ifndef ONEFLOW_JOB_PARALLEL_DESC_H_
 #define ONEFLOW_JOB_PARALLEL_DESC_H_
 
-#include <unordered_map>
 #include "common/util.h"
 #include "common/id_manager.h"
 #include "job/strategy.pb.h"
@@ -50,7 +49,7 @@ class ParallelDesc {
   Engine engine_;
   std::vector<MachineId> sorted_machine_vec_;
   std::vector<DeviceGlobalId> sorted_device_vec_;
-  std::unordered_map<MachineId, std::vector<DevicePhysicalId>> sorted_devices_on_machine_;
+  HashMap<MachineId, std::vector<DevicePhysicalId>> sorted_devices_on_machine_;
 
 };
 

@@ -42,13 +42,15 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
     return "node_id_" + std::to_string(node_id()) + "/" + lbn;
   }
 
-  void AddConsumedLbnRegiPair(const std::string& lbn, RegisterDesc* register_desc);
-  void AddProducedLbnRegiPair(const std::string& lbn, RegisterDesc* register_desc);
+  void AddConsumedLbnRegiPair(const std::string& lbn, RegisterDesc* regi);
+  void AddProducedLbnRegiPair(const std::string& lbn, RegisterDesc* regi);
 
-  const std::vector<std::pair<std::string, RegisterDesc*>>& consumed_lbn_regi_pairs() const {
+  const std::vector<std::pair<std::string, RegisterDesc*>>&
+  consumed_lbn_regi_pairs() const {
     return consumed_lbn_regi_pairs_;
   }
-  const std::vector<std::pair<std::string, RegisterDesc*>>& produced_lbn_regi_pairs() const {
+  const std::vector<std::pair<std::string, RegisterDesc*>>&
+  produced_lbn_regi_pairs() const {
     return produced_lbn_regi_pairs_;
   }
 

@@ -17,7 +17,7 @@ void OutBoxingTaskNode::FwBuildExecGraph() {
   for (const ChainEdgesPair& chain_sorted_out_edges : chain2sorted_out_edges) {
     FwBuildChainSortedEdgesPair(chain_sorted_in_edges, chain_sorted_out_edges);
   }
-  mut_exec_graph().UpdateSourceAndSink();
+  mut_exec_gph().UpdateSourceAndSink();
 }
 
 } // namespace oneflow

@@ -19,7 +19,7 @@ struct Chain {
 };
 
 using ChainIt = std::list<Chain>::iterator;
-using Logical2ChainItMap = std::unordered_map<const LogicalNode*, ChainIt>;
+using Logical2ChainItMap = HashMap<const LogicalNode*, ChainIt>;
 
 void SetChainNodeWithChainIt(ChainNode* chain_node,
                              ChainIt chain_it) {
@@ -32,21 +32,21 @@ void SetChainNodeWithChainIt(ChainNode* chain_node,
 }
 
 void InitChains(
-    const LogicalGraph& logi_graph,
+    const LogicalGraph& logi_gph,
     std::list<Chain>* chain_list,
     Logical2ChainItMap* logical2chain_it) {
   // Init one Chain with one Node
   chain_list->clear();
   logical2chain_it->clear();
   // Init ops
-  for (const std::unique_ptr<LogicalNode>& node : logi_graph.nodes()) {
+  for (const std::unique_ptr<LogicalNode>& node : logi_gph.nodes()) {
     chain_list->emplace_back();
     logical2chain_it->insert({node.get(), --chain_list->end()});
     Chain& cur_chainment = chain_list->back();
     cur_chainment.nodes = {node.get()};
   }
   // Init ancestors
-  for (auto node = logi_graph.cbegin(); node != logi_graph.cend(); ++node) {
+  for (auto node = logi_gph.cbegin(); node != logi_gph.cend(); ++node) {
     ChainIt cur_chain = logical2chain_it->at(&(*node));
     cur_chain->ancestors.clear();
     // each predecessor
@@ -64,7 +64,7 @@ void InitChains(
     }
   }
   // Init descendants
-  for (auto node = logi_graph.crbegin(); node != logi_graph.crend(); ++node) {
+  for (auto node = logi_gph.crbegin(); node != logi_gph.crend(); ++node) {
     ChainIt cur_chain = logical2chain_it->at(&(*node));
     cur_chain->descendants.clear();
     // each successors
@@ -96,7 +96,7 @@ void ModelMergeChains(
       continue;
     }
     CHECK_EQ(cur_node->in_edges().size(), 1);
-    const LogicalNode* pred_node = (*(cur_node->in_edges().begin()))->src_node();
+    const LogicalNode* pred_node = cur_node->SoleInEdge()->src_node();
     if (pred_node->parallel_desc() != cur_node->parallel_desc()) {
       continue;
     }
@@ -176,7 +176,7 @@ bool TryMergeWithoutConnect(
 void Traverse(const LogicalNode* seed_node,
               const std::vector<const LogicalNode*>& data_parallel_node,
               std::list<Chain>* chain_list,
-              std::unordered_map<const LogicalNode*, bool>* done,
+              HashMap<const LogicalNode*, bool>* done,
               Logical2ChainItMap* logical2chain_it) {
   done->at(seed_node) = true;
   while (true) {
@@ -201,14 +201,14 @@ void Traverse(const LogicalNode* seed_node,
 }
 
 void DataMergeChains(
-    const LogicalGraph& logical_graph,
+    const LogicalGraph& logical_gph,
     std::list<Chain>* chain_list,
     Logical2ChainItMap* logical2chain_it) {
   std::vector<const LogicalNode*> data_parallel_node;
-  std::unordered_map<const LogicalNode*, bool> done;
+  HashMap<const LogicalNode*, bool> done;
   for (const auto& pair : *logical2chain_it) {
     if (pair.first->parallel_desc()->policy() == kDataParallel
-        && !logical_graph.IsFirstNode(pair.first)) {
+        && !logical_gph.IsFirstNode(pair.first)) {
       data_parallel_node.push_back(pair.first);
       done[pair.first] = false;
     }
@@ -234,22 +234,22 @@ std::string ChainNode::ConcatedOpsName() const {
   return ss.str();
 }
 
-ChainGraph::ChainGraph(const LogicalGraph* logical_graph) {
+ChainGraph::ChainGraph(const LogicalGraph* logical_gph) {
   // Build Chain
   std::list<Chain> chain_list;
   Logical2ChainItMap logical2chain_it;
-  InitChains(*logical_graph, &chain_list, &logical2chain_it);
+  InitChains(*logical_gph, &chain_list, &logical2chain_it);
   ModelMergeChains(&chain_list, &logical2chain_it);
-  DataMergeChains(*logical_graph,
+  DataMergeChains(*logical_gph,
                   &chain_list,
                   &logical2chain_it);
   // Init chain_nodes
   auto hash_chain_it = [](const ChainIt& chain_it) {
     return std::hash<Chain*> ()(&(*chain_it));
   };
-  std::unordered_map<ChainIt, ChainNode*, decltype(hash_chain_it)>
+  HashMap<ChainIt, ChainNode*, decltype(hash_chain_it)>
       chain_it2chain_node(0, hash_chain_it);
-  std::unordered_map<ChainNode*,
+  HashMap<ChainNode*,
                      std::unordered_set<ChainNode*>> chain_node2pred;
   for (auto chain_it = chain_list.begin(); chain_it != chain_list.end(); ++chain_it) {
     ChainNode* chain_node = NewFinalNode();

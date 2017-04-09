@@ -19,7 +19,7 @@ class BoxingTaskNode : public TaskNode {
   using ChainEdgesPair =
       std::pair<const ChainNode*, std::vector<const TaskEdge*>>;
   using Chain2EdgesMap =
-      std::unordered_map<const ChainNode*, std::vector<const TaskEdge*>>;
+      HashMap<const ChainNode*, std::vector<const TaskEdge*>>;
   void FwInitChain2SortedEdgesMaps(
       Chain2EdgesMap* chain2sorted_edges,
       const std::unordered_set<TaskEdge*>& (TaskNode::*in_out_edges)() const,

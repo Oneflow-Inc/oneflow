@@ -21,9 +21,9 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   TaskGraph(const DLNetConf& dl_net_conf,
             const Strategy& strategy_conf,
             bool need_bp);
-  TaskGraph(std::unique_ptr<ChainGraph>&& chain_graph, bool need_bp);
+  TaskGraph(std::unique_ptr<ChainGraph>&& chain_gph, bool need_bp);
 
-  const StageGraph* stage_graph() const { return stage_graph_.get(); }
+  const StageGraph* stage_gph() const { return stage_gph_.get(); }
 
  private:
   void BuildFromChainGph(std::unique_ptr<ChainGraph>&& chain_gph, bool need_bp);
@@ -46,7 +46,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   };
   
   using Stage2TaskNodesMap =
-      std::unordered_map<const StageNode*, TaskNodesInStage>;
+      HashMap<const StageNode*, TaskNodesInStage>;
 
   void InitCompTaskNodes(Stage2TaskNodesMap* stage2task_nodes);
   void Stage2DeviceCompTaskNodes(const StageNode* stage,
@@ -65,7 +65,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void BackwardConnect(const std::vector<TaskNode*>& turning_node_vec);
   void BuildBpStruct();
 
-  std::unique_ptr<const StageGraph> stage_graph_;
+  std::unique_ptr<const StageGraph> stage_gph_;
 
 };
 

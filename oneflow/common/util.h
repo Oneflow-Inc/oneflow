@@ -43,6 +43,9 @@ inline bool operator != (const google::protobuf::MessageLite& lhs,
   return !(lhs == rhs);
 }
 
+template<typename KeyType, typename ValType>
+using HashMap = std::unordered_map<KeyType, ValType>;
+
 } // namespace oneflow
 
 #endif // ONEFLOW_COMMON_UTIL_H

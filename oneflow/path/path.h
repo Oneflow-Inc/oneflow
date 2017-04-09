@@ -12,16 +12,10 @@ class Path {
   Path() = default;
   virtual ~Path() = default;
 
-  TaskGraph* task_graph() {
-    return task_graph_.get();
-  }
-  const ChainGraph* chain_graph() const {
-    return task_graph_->stage_graph()->chain_graph();
-  }
+  TaskGraph* task_gph() { return task_gph_.get(); }
+  const ChainGraph* chain_gph() const;
 
-  const std::unordered_map<CompTaskNode*, CompTaskNode*>& faker2mccoy() const {
-    return faker2mccoy_;
-  }
+  virtual CompTaskNode* Faker2Mccoy(CompTaskNode*) const;
 
   typedef void (CompTaskNode::*CompTaskNodeMemFunc)(Path*);
   virtual CompTaskNodeMemFunc Func4FwBuildExecAndProducedRegisters() const = 0;
@@ -29,21 +23,23 @@ class Path {
   virtual const ChainNode* GetDataChain() const = 0;
 
  protected:
-  std::unique_ptr<TaskGraph>& mut_task_graph() { return task_graph_; }
-  void AddFakerMccoyPair(CompTaskNode* faker, CompTaskNode* mccoy) {
-    CHECK(faker2mccoy_.emplace(faker, mccoy).second);
-  }
-  void BuildExecAndProducedRegistersAndSubscribeInPath() {
-    for (TaskNode& node : *task_graph_) {
-      node.BuildExecAndProducedRegistersAndSubscribeInPath(this);
-    }
-  }
+  std::unique_ptr<TaskGraph>& mut_task_gph() { return task_gph_; }
+  void BuildExecAndProducedRegistersAndSubscribeInPath();
 
  private:
-  std::unique_ptr<TaskGraph> task_graph_;
-  std::unordered_map<CompTaskNode*, CompTaskNode*> faker2mccoy_;
+  std::unique_ptr<TaskGraph> task_gph_;
 
 };
+
+inline const ChainGraph* Path::chain_gph() const {
+  return task_gph_->stage_gph()->chain_gph();
+}
+
+inline void Path::BuildExecAndProducedRegistersAndSubscribeInPath() {
+  for (TaskNode& node : *task_gph_) {
+    node.BuildExecAndProducedRegistersAndSubscribeInPath(this);
+  }
+}
 
 } // namespace oneflow
 

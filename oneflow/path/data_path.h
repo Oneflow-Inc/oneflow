@@ -10,22 +10,28 @@ class DataPath final : public Path {
   OF_DISALLOW_COPY_AND_MOVE(DataPath);
   DataPath() = default;
   ~DataPath() = default;
-  
+ 
+  CompTaskNode* Faker2Mccoy(CompTaskNode*) const override { UNEXPECTED_RUN(); }
+
   CompTaskNodeMemFunc Func4FwBuildExecAndProducedRegisters() const override {
     return &CompTaskNode::DataFwBuildExecAndProducedRegisters;
   }
 
-  const ChainNode* GetDataChain() const override { return nullptr; }
+  const ChainNode* GetDataChain() const override { UNEXPECTED_RUN(); }
 
   void Build(const DLNetConf& dl_net_conf,
              const Strategy& strategy_conf,
-             bool need_bp) {
-    mut_task_graph().reset(new TaskGraph(dl_net_conf, strategy_conf, need_bp));
-    BuildExecAndProducedRegistersAndSubscribeInPath();
-  }
+             bool need_bp);
 
  private:
 };
+
+void DataPath::Build(const DLNetConf& dl_net_conf,
+                     const Strategy& strategy_conf,
+                     bool need_bp) {
+  mut_task_gph().reset(new TaskGraph(dl_net_conf, strategy_conf, need_bp));
+  BuildExecAndProducedRegistersAndSubscribeInPath();
+}
 
 } // namespace oneflow
 

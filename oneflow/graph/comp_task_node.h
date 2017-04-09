@@ -32,8 +32,8 @@ class CompTaskNode : public TaskNode {
   virtual CopyOpConf::CopyType CopyInOpType() = 0;
 
  private:
-  using Lbn2NodeMap = std::unordered_map<std::string, ExecNode*>;
-  using Lbn2NodeVecMap = std::unordered_map<std::string, std::vector<ExecNode*>>;
+  using Lbn2NodeMap = HashMap<std::string, ExecNode*>;
+  using Lbn2NodeVecMap = HashMap<std::string, std::vector<ExecNode*>>;
   void FwBuildExecAndProducedRegisters(Path*) override;
   void FwBuildFromUserOps(
       Lbn2NodeMap* lbn2producer,
@@ -47,13 +47,13 @@ class CompTaskNode : public TaskNode {
   void FwSetProducedRegisterDescs();
   void BpBuildExecAndProducedRegisters(Path*) override;
   void BpBuildExecGraph(
-      const ExecGraph& fw_graph,
+      const ExecGraph& fw_gph,
       const ExecNode* cp_in_node,
-      std::unordered_map<const ExecNode*, ExecNode*>* fw_node2bp_node);
+      HashMap<const ExecNode*, ExecNode*>* fw_node2bp_node);
   void BpBindOutEdgeAndRegister();
   void BpSetRegisterDescPtrs4Nodes(
       const ExecNode* cp_in_node,
-      const std::unordered_map<const ExecNode*, ExecNode*>& fw_node2bp_node);
+      const HashMap<const ExecNode*, ExecNode*>& fw_node2bp_node);
   void BpSetProducedRegisterDescs();
 
   int32_t parallel_id_;

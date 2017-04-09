@@ -78,7 +78,7 @@ void TaskNode::SubscribeRegisterDescInnerPath() {
 }
 
 void TaskNode::AddInPathLbn2ProducedRegister() {
-  for (const std::unique_ptr<ExecNode>& node : exec_graph_.nodes()) {
+  for (const std::unique_ptr<ExecNode>& node : exec_gph_.nodes()) {
     for (const auto& pair : node->produced_lbn_regi_pairs()) {
       const std::string& lbn = pair.first;
       RegisterDesc* register_desc = pair.second;

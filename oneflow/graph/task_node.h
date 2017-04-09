@@ -24,7 +24,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   const ChainNode* chain_node() const { return stage_node_->chain_node();}
   const StageNode* stage_node() const { return stage_node_; }
   const ThreadLocalId& thread_local_id() const { return thread_local_id_; }
-  const ExecGraph& exec_graph() const { return exec_graph_; }
+  const ExecGraph& exec_gph() const { return exec_gph_; }
   
   // Setters
   void SetFwNode() { is_fw_node_ = true; }
@@ -52,7 +52,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual std::unique_ptr<TaskNode> CreateSameTypeNode() const;
   virtual void InitWithFwNode(TaskNode* fw_node);
 
-  ExecGraph& mut_exec_graph() { return exec_graph_; }
+  ExecGraph& mut_exec_gph() { return exec_gph_; }
   
   void BindProducedRegisterAndOutEdge(RegisterDesc*, const TaskEdge*);
 
@@ -70,18 +70,18 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void AddInPathLbn2ProducedRegister();
 
  private:
-  // In task_graph level
+  // In task_gph level
   const StageNode* stage_node_;
   ThreadLocalId thread_local_id_;
   bool is_fw_node_;
   TaskNode* related_fw_or_bp_node_;
   // In task level
-  ExecGraph exec_graph_;
-  std::unordered_map<std::string,
+  ExecGraph exec_gph_;
+  HashMap<std::string,
                      std::unique_ptr<RegisterDesc>> produced_register_descs_; 
   std::unordered_set<const RegisterDesc*> subscribed_register_descs_;
-  std::unordered_map<RegisterDesc*, const TaskEdge*> produced_register2out_edge;
-  std::unordered_map<const TaskEdge*, RegisterDesc*> out_edge2produced_register;
+  HashMap<RegisterDesc*, const TaskEdge*> produced_register2out_edge;
+  HashMap<const TaskEdge*, RegisterDesc*> out_edge2produced_register;
 
 };
 

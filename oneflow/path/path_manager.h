@@ -22,12 +22,16 @@ class PathManager {
   void Init(const JobSysConf& job_sys_conf);
 
  private:
+  template<typename ValType>
+  using ChainAsKeyMap = HashMap<const ChainNode*, ValType>;
+
   PathManager() = default;
 
   std::unique_ptr<DataPath> data_path_;
-  std::unordered_map<const ChainNode*, std::unique_ptr<ModelUpdatePath>> model_update_paths_;
-  std::unordered_map<const ChainNode*, std::unique_ptr<ModelLoadPath>> model_load_paths_;
-  std::unordered_map<const ChainNode*, std::unique_ptr<ModelSavePath>> model_save_paths_;
+
+  ChainAsKeyMap<std::unique_ptr<ModelUpdatePath>> model_update_paths_;
+  ChainAsKeyMap<std::unique_ptr<ModelLoadPath>> model_load_paths_;
+  ChainAsKeyMap<std::unique_ptr<ModelSavePath>> model_save_paths_;
 
 };
 

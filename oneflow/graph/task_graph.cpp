@@ -19,19 +19,20 @@ inline void TaskConnect(TaskNode* src_node,
 TaskGraph::TaskGraph(const DLNetConf& dl_net_conf,
                      const Strategy& strategy_conf,
                      bool need_bp) {
-  std::unique_ptr<LogicalGraph> logical_graph(new LogicalGraph(dl_net_conf, strategy_conf));
-  std::unique_ptr<ChainGraph> chain_graph(new ChainGraph(logical_graph.get()));
-  BuildFromChainGph(std::move(chain_graph), need_bp);
+  std::unique_ptr<LogicalGraph>
+      logical_gph(new LogicalGraph(dl_net_conf, strategy_conf));
+  std::unique_ptr<ChainGraph> chain_gph(new ChainGraph(logical_gph.get()));
+  BuildFromChainGph(std::move(chain_gph), need_bp);
 }
 
-TaskGraph::TaskGraph(std::unique_ptr<ChainGraph>&& chain_graph, bool need_bp) {
-  BuildFromChainGph(std::move(chain_graph), need_bp);
+TaskGraph::TaskGraph(std::unique_ptr<ChainGraph>&& chain_gph, bool need_bp) {
+  BuildFromChainGph(std::move(chain_gph), need_bp);
 }
 
 void TaskGraph::BuildFromChainGph(
-    std::unique_ptr<ChainGraph>&& chain_graph,
+    std::unique_ptr<ChainGraph>&& chain_gph,
     bool need_bp) {
-  stage_graph_.reset(new StageGraph(std::move(chain_graph)));
+  stage_gph_.reset(new StageGraph(std::move(chain_gph)));
   BuildGraph(need_bp);
 }
 
@@ -48,9 +49,9 @@ void TaskGraph::BuildGraph(
 }
 
 void TaskGraph::InitCompTaskNodes(Stage2TaskNodesMap* stage2task_nodes) {
-  for (const std::unique_ptr<StageNode>& stage : stage_graph_->nodes()) {
-    bool is_first_stage = stage_graph_->IsFirstNode(stage.get());
-    bool is_last_stage = stage_graph_->IsLastNode(stage.get());
+  for (const std::unique_ptr<StageNode>& stage : stage_gph_->nodes()) {
+    bool is_first_stage = stage_gph_->IsFirstNode(stage.get());
+    bool is_last_stage = stage_gph_->IsLastNode(stage.get());
     if (stage->chain_node()->parallel_desc()->engine()
             == ParallelDesc::Engine::kDevice) {
       Stage2DeviceCompTaskNodes(stage.get(),
@@ -71,10 +72,10 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
     bool is_last_stage) {
   MachineId machine_id = stage->machine_id();
   int32_t parallel_id = stage->parallel_range().begin();
-  for (auto device_physical_id :
+  for (auto device_phy_id :
       stage->chain_node()->parallel_desc()->sorted_devices_on_machine(machine_id)) {
     ThreadLocalId thread_local_id =
-        IDManager::Singleton().ThreadLocalIdFromDevicePhysicalId(device_physical_id);
+        IDManager::Singleton().ThreadLocalIdFromDevicePhysicalId(device_phy_id);
     // comp_task_node
     DeviceCompTaskNode* comp_task_node = NewTaskNode<DeviceCompTaskNode> ();
     comp_task_node->set_stage_node(stage);
@@ -124,7 +125,7 @@ void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
 }
 
 void TaskGraph::InitBoxingTaskNodes(Stage2TaskNodesMap* stage2task_nodes) {
-  for (const std::unique_ptr<StageNode>& stage : stage_graph_->nodes()) {
+  for (const std::unique_ptr<StageNode>& stage : stage_gph_->nodes()) {
     InitInboxingTaskNode(stage.get(), &(stage2task_nodes->at(stage.get())));
     InitOutBoxingTaskNode(stage.get(), &(stage2task_nodes->at(stage.get())));
   }
@@ -167,7 +168,7 @@ void TaskGraph::InitOutBoxingTaskNode(
 
 void TaskGraph::ConnectTaskNodes(
     const Stage2TaskNodesMap* stage2task_nodes) {
-  for (const std::unique_ptr<StageNode>& cur_stage : stage_graph_->nodes()) {
+  for (const std::unique_ptr<StageNode>& cur_stage : stage_gph_->nodes()) {
     const TaskNodesInStage& cur_task_nodes = stage2task_nodes->at(cur_stage.get());
     TaskNode* out_node = cur_task_nodes.out_boxing_task_node;
     if (out_node == nullptr) {

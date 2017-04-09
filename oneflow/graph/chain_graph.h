@@ -69,7 +69,7 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
   ChainGraph() = default;
   ~ChainGraph() = default;
 
-  ChainGraph(const LogicalGraph* logical_graph);
+  ChainGraph(const LogicalGraph* logical_gph);
 
  private:
   void CollectInputAndOutputLbns();

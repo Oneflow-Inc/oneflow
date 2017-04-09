@@ -1,7 +1,6 @@
 #ifndef ONEFLOW_OPERATOR_OP_H_
 #define ONEFLOW_OPERATOR_OP_H_
 
-#include <unordered_map>
 #include <string>
 #include "operator/op_conf.pb.h"
 #include "common/proto_io.h"
