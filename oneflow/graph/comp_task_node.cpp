@@ -48,7 +48,19 @@ void CompTaskNode::ModelUpdateFwBuildExecAndProducedRegisters(Path* path) {
     BindProducedRegisterAndOutEdge(regi, SoleOutEdge());
     return;
   }
-  TODO();
+  std::unique_ptr<RegisterDesc> model_register(new ContigRegistDesc);
+  ExecNode* exec_node = mut_exec_graph().NewFinalNode();
+  exec_node->mut_op() = chain_node()->op_vec().front();
+  mut_exec_graph().UpdateSourceAndSink();
+  for (std::shared_ptr<const Operator> op : path->GetDataChain()->op_vec()) {
+    for (const std::string& mbn : op->model_blob_names()) {
+      std::string lbn = op->mbn2lbn(mbn);
+      exec_node->AddConsumedLbnRegiPair(lbn, GetRelatedRegister(SoleInEdge()));
+      exec_node->AddProducedLbnRegiPair(lbn, model_register.get());
+    }
+  }
+  AddProducedRegisterDesc("model", std::move(model_register));
+  AddInPathLbn2ProducedRegister();
 }
 
 void CompTaskNode::ModelLoadFwBuildExecAndProducedRegisters(Path*) {
