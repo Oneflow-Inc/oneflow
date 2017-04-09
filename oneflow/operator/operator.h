@@ -137,7 +137,7 @@ class UserOperator : public Operator {
     return op_name() + "/" + model_blob_name;
   }
   std::string mdbn2lbn(const std::string& model_diff_blob_name) const override {
-    return op_name() + "/" + model_diff_blob_name;
+    return mbn2lbn(GenUnDiffBlobName(model_diff_blob_name));
   }
 
 };
