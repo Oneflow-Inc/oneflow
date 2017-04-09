@@ -28,9 +28,9 @@ void PathManager::Init(const JobSysConf& job_sys_conf) {
     update_path->Build(chain, data_chain2sorted_bp_comp_tasks.at(chain));
     load_path->Build(chain);
     save_path->Build(chain);
-    update_paths_.insert(std::make_pair(chain.get(), std::move(update_path)));
-    load_paths_.insert(std::make_pair(chain.get(), std::move(load_path)));
-    save_paths_.insert(std::make_pair(chain.get(), std::move(save_path)));
+    model_update_paths_.insert(std::make_pair(chain, std::move(update_path)));
+    model_load_paths_.insert(std::make_pair(chain, std::move(load_path)));
+    model_save_paths_.insert(std::make_pair(chain, std::move(save_path)));
   }
 }
 

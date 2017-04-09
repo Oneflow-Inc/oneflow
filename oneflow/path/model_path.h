@@ -12,7 +12,7 @@ class ModelPath : public Path {
   virtual ~ModelPath() = default;
 
   const ChainNode* GetDataChain() const override { return data_chain_; }
-  const CompTaskNode* Faker2Mccoy(CompTaskNode* faker) const override;
+  CompTaskNode* Faker2Mccoy(CompTaskNode* faker) const override;
 
  protected:
   void set_data_chain(const ChainNode* data_chain);
@@ -25,7 +25,7 @@ class ModelPath : public Path {
 
 };
 
-inline const CompTaskNode* ModelPath::faker2mccoy(CompTaskNode* faker) const {
+inline CompTaskNode* ModelPath::Faker2Mccoy(CompTaskNode* faker) const {
   return faker2mccoy_.at(faker);
 }
 
