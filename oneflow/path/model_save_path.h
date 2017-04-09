@@ -11,7 +11,7 @@ class ModelSavePath final : public ModelPath {
   ModelSavePath() = default;
   ~ModelSavePath() = default;
   
-  CompTaskNodeMemFunc MemFunc4FwBuildExecAndProducedRegisters() const override {
+  CompTaskNodeMemFunc Func4FwBuildExecAndProducedRegisters() const override {
     return &CompTaskNode::ModelSaveFwBuildExecAndProducedRegisters;
   }
 

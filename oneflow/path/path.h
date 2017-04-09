@@ -24,7 +24,7 @@ class Path {
   }
 
   typedef void (CompTaskNode::*CompTaskNodeMemFunc)(Path*);
-  virtual CompTaskNodeMemFunc MemFunc4FwBuildExecAndProducedRegisters() const = 0;
+  virtual CompTaskNodeMemFunc Func4FwBuildExecAndProducedRegisters() const = 0;
 
   virtual const ChainNode* GetDataChain() const = 0;
 

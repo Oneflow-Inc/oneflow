@@ -11,7 +11,7 @@ class DataPath final : public Path {
   DataPath() = default;
   ~DataPath() = default;
   
-  CompTaskNodeMemFunc MemFunc4FwBuildExecAndProducedRegisters() const override {
+  CompTaskNodeMemFunc Func4FwBuildExecAndProducedRegisters() const override {
     return &CompTaskNode::DataFwBuildExecAndProducedRegisters;
   }
 

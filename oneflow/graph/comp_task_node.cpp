@@ -24,7 +24,7 @@ bool CompTaskNode::HasOpWithIndiff() const {
 }
 
 void CompTaskNode::FwBuildExecAndProducedRegisters(Path* path) {
-  (this->*(path->MemFunc4FwBuildExecAndProducedRegisters()))(path);
+  (this->*(path->Func4FwBuildExecAndProducedRegisters()))(path);
 }
 
 void CompTaskNode::DataFwBuildExecAndProducedRegisters(Path* path) {
