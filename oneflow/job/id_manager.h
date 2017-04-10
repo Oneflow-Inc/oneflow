@@ -45,7 +45,7 @@ class IDMgr final {
 
   int32_t NewNodeId();
   int32_t NewEdgeId();
-  int32_t NewRegisterDescId();
+  int32_t NewRegiDescId();
 
  private:
   IDMgr() = default;

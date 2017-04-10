@@ -60,9 +60,9 @@ void CopyHDTaskNode::BpBuildExecAndProducedRegisters(Path* path) {
 }
 
 void CopyHDTaskNode::BindOutEdgeAndRegister() {
-  std::unique_ptr<RegisterDesc> register_desc(new DisContigRegistDesc);
-  BindProducedRegisterAndOutEdge(register_desc.get(), SoleOutEdge());
-  AddProducedRegisterDesc("cp_out", std::move(register_desc));
+  std::unique_ptr<RegiDesc> regi_desc(new DisContigRegiDesc);
+  BindProducedRegisterAndOutEdge(regi_desc.get(), SoleOutEdge());
+  AddProducedRegiDesc("cp_out", std::move(regi_desc));
 }
 
 } // namespace oneflow

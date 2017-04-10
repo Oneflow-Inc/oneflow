@@ -38,17 +38,17 @@ void CompTaskNode::DataFwBuildExecAndProducedRegisters(Path* path) {
   mut_exec_gph().UpdateSourceAndSink();
   FwBindOutEdgeAndRegister();
   FwSetRegisterPtrs4ExecNodes(lbn2producer, extern_in_lbn2consumers);
-  FwSetProducedRegisterDescs();
+  FwSetProducedRegiDescs();
 }
 
 void CompTaskNode::ModelUpdateFwBuildExecAndProducedRegisters(Path* path) {
   if (IsFaker()) {
     CompTaskNode* mccoy = path->Faker2Mccoy(this);
-    RegisterDesc* regi = mccoy->GetProducedRegisterDesc("model_diff");
+    RegiDesc* regi = mccoy->GetProducedRegiDesc("model_diff");
     BindProducedRegisterAndOutEdge(regi, SoleOutEdge());
     return;
   }
-  std::unique_ptr<RegisterDesc> model_register(new ContigRegistDesc);
+  std::unique_ptr<RegiDesc> model_register(new ContigRegiDesc);
   ExecNode* exec_node = mut_exec_gph().NewFinalNode();
   exec_node->mut_op() = chain_node()->op_vec().front();
   mut_exec_gph().UpdateSourceAndSink();
@@ -59,7 +59,7 @@ void CompTaskNode::ModelUpdateFwBuildExecAndProducedRegisters(Path* path) {
       exec_node->AddProducedLbnRegiPair(lbn, model_register.get());
     }
   }
-  AddProducedRegisterDesc("model", std::move(model_register));
+  AddProducedRegiDesc("model", std::move(model_register));
   AddInPathLbn2ProducedRegister();
 }
 
@@ -168,9 +168,9 @@ void CompTaskNode::FwAddCloneOp() {
 }
 
 void CompTaskNode::FwBindOutEdgeAndRegister() {
-  std::unique_ptr<RegisterDesc> data_register(new DisContigRegistDesc);
+  std::unique_ptr<RegiDesc> data_register(new DisContigRegiDesc);
   BindProducedRegisterAndOutEdge(data_register.get(), SoleOutEdge());
-  AddProducedRegisterDesc("data", std::move(data_register));
+  AddProducedRegiDesc("data", std::move(data_register));
 }
 
 void CompTaskNode::FwSetRegisterPtrs4ExecNodes(
@@ -190,8 +190,8 @@ void CompTaskNode::FwSetRegisterPtrs4ExecNodes(
   }
 }
 
-void CompTaskNode::FwSetProducedRegisterDescs() {
-  RegisterDesc* data_register = GetRelatedRegister(SoleOutEdge());
+void CompTaskNode::FwSetProducedRegiDescs() {
+  RegiDesc* data_register = GetRelatedRegister(SoleOutEdge());
   for (const std::unique_ptr<ExecEdge>& cur_edge : exec_gph().edges()) {
     data_register->AddPbn(cur_edge->pbn());
   }
@@ -211,8 +211,8 @@ void CompTaskNode::BpBuildExecAndProducedRegisters(Path* path) {
   HashMap<const ExecNode*, ExecNode*> fw_node2bp_node;
   BpBuildExecGraph(fw_gph, cp_in_node, &fw_node2bp_node);
   BpBindOutEdgeAndRegister();
-  BpSetRegisterDescPtrs4Nodes(cp_in_node, fw_node2bp_node);
-  BpSetProducedRegisterDescs();
+  BpSetRegiDescPtrs4Nodes(cp_in_node, fw_node2bp_node);
+  BpSetProducedRegiDescs();
 }
 
 void CompTaskNode::BpBuildExecGraph(
@@ -234,12 +234,12 @@ void CompTaskNode::BpBuildExecGraph(
 }
 
 void CompTaskNode::BpBindOutEdgeAndRegister() {
-  std::unique_ptr<RegisterDesc> data_diff_register(new DisContigRegistDesc);
+  std::unique_ptr<RegiDesc> data_diff_register(new DisContigRegiDesc);
   BindProducedRegisterAndOutEdge(data_diff_register.get(), SoleOutEdge());
-  AddProducedRegisterDesc("data_diff", std::move(data_diff_register));
+  AddProducedRegiDesc("data_diff", std::move(data_diff_register));
 }
 
-void CompTaskNode::BpSetRegisterDescPtrs4Nodes(
+void CompTaskNode::BpSetRegiDescPtrs4Nodes(
     const ExecNode* cp_in_node,
     const HashMap<const ExecNode*, ExecNode*>& fw_node2bp_node) {
   // Set in register_desc
@@ -264,10 +264,10 @@ void CompTaskNode::BpSetRegisterDescPtrs4Nodes(
   }
 }
 
-void CompTaskNode::BpSetProducedRegisterDescs() {
-  std::unique_ptr<RegisterDesc> model_diff_register(new ContigRegistDesc);
-  std::unique_ptr<RegisterDesc> model_tmp_register(new DisContigRegistDesc);
-  RegisterDesc* data_diff_register = GetRelatedRegister(SoleOutEdge());
+void CompTaskNode::BpSetProducedRegiDescs() {
+  std::unique_ptr<RegiDesc> model_diff_register(new ContigRegiDesc);
+  std::unique_ptr<RegiDesc> model_tmp_register(new DisContigRegiDesc);
+  RegiDesc* data_diff_register = GetRelatedRegister(SoleOutEdge());
   for (const std::unique_ptr<ExecEdge>& cur_edge : exec_gph().edges()) {
     data_diff_register->AddPbn(cur_edge->pbn());
   }
@@ -283,8 +283,8 @@ void CompTaskNode::BpSetProducedRegisterDescs() {
     }
   }
   AddInPathLbn2ProducedRegister();
-  AddProducedRegisterDesc("model_diff", std::move(model_diff_register));
-  AddProducedRegisterDesc("model_tmp", std::move(model_tmp_register));
+  AddProducedRegiDesc("model_diff", std::move(model_diff_register));
+  AddProducedRegiDesc("model_tmp", std::move(model_tmp_register));
 }
 
 } // namespace oneflow

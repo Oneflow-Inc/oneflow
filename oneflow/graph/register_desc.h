@@ -8,11 +8,13 @@ namespace oneflow {
 
 class TaskNode;
 
-class RegisterDesc {
+// Regi : Register
+
+class RegiDesc {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(RegisterDesc);
-  RegisterDesc();
-  virtual ~RegisterDesc() = default;
+  OF_DISALLOW_COPY_AND_MOVE(RegiDesc);
+  RegiDesc();
+  virtual ~RegiDesc() = default;
 
   //
   const TaskNode* GetProducer() const { return producer_; }
@@ -44,7 +46,7 @@ class RegisterDesc {
   }
 
  private:
-  int32_t register_desc_id_;
+  int32_t regi_desc_id_;
   const TaskNode* producer_;
   std::unordered_set<const TaskNode*> subscribers_;
   // Pbn means that no other task need it
@@ -55,19 +57,19 @@ class RegisterDesc {
 };
 
 // Contiguous
-class ContigRegistDesc final : public RegisterDesc {
+class ContigRegiDesc final : public RegiDesc {
  public:
-  static const char* kLogicalAllBlobName;
+  static const char* kAllLbn;
 
-  OF_DISALLOW_COPY_AND_MOVE(ContigRegistDesc);
-  ContigRegistDesc() = default;
-  ~ContigRegistDesc() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ContigRegiDesc);
+  ContigRegiDesc() = default;
+  ~ContigRegiDesc() = default;
   
   Shape GetLbnShape(const std::string& lbn) const override {
-    if (lbn == kLogicalAllBlobName) {
+    if (lbn == kAllLbn) {
       return ComputeShape4AllLbn();
     } else {
-      return RegisterDesc::GetLbnShape(lbn);
+      return RegiDesc::GetLbnShape(lbn);
     }
   }
  private:
@@ -75,11 +77,11 @@ class ContigRegistDesc final : public RegisterDesc {
 
 };
 
-class DisContigRegistDesc final : public RegisterDesc {
+class DisContigRegiDesc final : public RegiDesc {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(DisContigRegistDesc);
-  DisContigRegistDesc() = default;
-  ~DisContigRegistDesc() = default;
+  OF_DISALLOW_COPY_AND_MOVE(DisContigRegiDesc);
+  DisContigRegiDesc() = default;
+  ~DisContigRegiDesc() = default;
   
 };
 

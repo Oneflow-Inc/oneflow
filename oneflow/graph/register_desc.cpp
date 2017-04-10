@@ -3,14 +3,14 @@
 
 namespace oneflow {
 
-RegisterDesc::RegisterDesc() {
-  register_desc_id_ = IDMgr::Singleton().NewRegisterDescId();
+RegiDesc::RegiDesc() {
+  regi_desc_id_ = IDMgr::Singleton().NewRegiDescId();
   producer_ = nullptr;
 }
 
-const char* ContigRegistDesc::kLogicalAllBlobName = "OfReservedLogicalAllBlobName";
+const char* ContigRegiDesc::kAllLbn = "OfReservedAllLbn";
 
-Shape ContigRegistDesc::ComputeShape4AllLbn() const {
+Shape ContigRegiDesc::ComputeShape4AllLbn() const {
   TODO();
 }
 

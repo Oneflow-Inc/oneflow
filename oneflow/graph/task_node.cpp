@@ -36,7 +36,7 @@ std::unique_ptr<TaskNode> TaskNode::BuildAndConnectBpNode() {
 }
 
 void TaskNode::BuildExecAndProducedRegistersAndSubscribeInPath(Path* path) {
-  SubscribeRegisterDescInnerPath();
+  SubscribeRegiDescInnerPath();
   if (IsFwNode()) {
     FwBuildExecAndProducedRegisters(path);
   } else {
@@ -55,24 +55,24 @@ void TaskNode::InitWithFwNode(TaskNode* fw_node) {
   related_fw_or_bp_node_ = fw_node;
 }
 
-void TaskNode::BindProducedRegisterAndOutEdge(RegisterDesc* regi,
+void TaskNode::BindProducedRegisterAndOutEdge(RegiDesc* regi,
                                               const TaskEdge* edge) {
   CHECK(produced_register2out_edge.emplace(regi, edge).second);
   CHECK(out_edge2produced_register.emplace(edge, regi).second);
 }
 
-const TaskEdge* TaskNode::GetOutEdge4ProducedRegister(RegisterDesc* regi) const {
+const TaskEdge* TaskNode::GetOutEdge4ProducedRegister(RegiDesc* regi) const {
   return produced_register2out_edge.at(regi);
 }
 
-RegisterDesc* TaskNode::GetProducedRegister4OutEdge(const TaskEdge* edge) const {
+RegiDesc* TaskNode::GetProducedRegister4OutEdge(const TaskEdge* edge) const {
   return out_edge2produced_register.at(edge);
 }
 
 
-void TaskNode::SubscribeRegisterDescInnerPath() {
+void TaskNode::SubscribeRegiDescInnerPath() {
   for (const TaskEdge* edge : in_edges()) {
-    RegisterDesc* regi =  GetRelatedRegister(edge);
+    RegiDesc* regi =  GetRelatedRegister(edge);
     Subscribe(regi);
   }
 }
@@ -81,7 +81,7 @@ void TaskNode::AddInPathLbn2ProducedRegister() {
   for (const std::unique_ptr<ExecNode>& node : exec_gph_.nodes()) {
     for (const auto& pair : node->produced_lbn_regi_pairs()) {
       const std::string& lbn = pair.first;
-      RegisterDesc* register_desc = pair.second;
+      RegiDesc* register_desc = pair.second;
       register_desc->AddLbn(lbn);
     }
   }

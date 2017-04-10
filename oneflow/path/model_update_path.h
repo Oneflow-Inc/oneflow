@@ -24,6 +24,11 @@ class ModelUpdatePath final : public ModelPath {
   void InitFaker2MccoyMapAndParallelIdUpdateMap(
       const std::vector<CompTaskNode*>& sorted_bp_comptasks4data_chain,
       HashMap<int32_t, CompTaskNode*>* parallel_id2update_node);
+  void SubscribeCrossPathWithoutFaker(
+      const std::vector<CompTaskNode*>& sorted_bp_comptasks4data_chain,
+      const HashMap<int32_t, CompTaskNode*>& parallel_id2update_node);
+  void SubscribeCrossPathWithFaker(
+      const HashMap<int32_t, CompTaskNode*>& parallel_id2update_node);
 
 };
 

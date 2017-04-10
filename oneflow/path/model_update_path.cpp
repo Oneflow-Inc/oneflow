@@ -2,6 +2,21 @@
 
 namespace oneflow {
 
+namespace {
+
+void AddConsumedModelLbnRegi4FwExecGraph(
+    const ExecGraph& exec_gph,
+    RegiDesc* model_regi) {
+  for (const auto& exec_node : exec_gph.nodes()) {
+    for (const std::string& mbn : exec_node->op()->model_blob_names()) {
+      std::string lbn = exec_node->op()->mbn2lbn(mbn);
+      exec_node->AddConsumedLbnRegiPair(lbn, model_regi);
+    }
+  }
+}
+
+}
+
 void ModelUpdatePath::Build(
     const ChainNode* data_chain,
     const std::vector<CompTaskNode*>& sorted_bp_comptasks4data_chain) {
@@ -11,19 +26,11 @@ void ModelUpdatePath::Build(
   InitFaker2MccoyMapAndParallelIdUpdateMap(sorted_bp_comptasks4data_chain,
                                            &parallel_id2update_node);
   BuildExecAndProducedRegistersAndSubscribeInPath();
-  // Let FwCompTaskNode in DataPath Subscribe the ModelRegister
-  for (const auto& pair : faker2mccoy()) {
-    int32_t parallel_id = pair.first->parallel_id();
-    CompTaskNode* update_node = parallel_id2update_node.at(parallel_id);
-    TaskNode* fw_comp_node = pair.second->GetFwNode();
-    RegisterDesc* model_regi = update_node->GetProducedRegisterDesc("model");
-    fw_comp_node->Subscribe(model_regi);
-    for (const auto& exec_node : fw_comp_node->exec_gph().nodes()) {
-      for (const std::string& mbn : exec_node->op()->model_blob_names()) {
-        std::string lbn = exec_node->op()->mbn2lbn(mbn);
-        exec_node->AddConsumedLbnRegiPair(lbn, model_regi);
-      }
-    }
+  if (faker2mccoy().empty()) {
+    SubscribeCrossPathWithoutFaker(sorted_bp_comptasks4data_chain,
+                                   parallel_id2update_node);
+  } else {
+    SubscribeCrossPathWithFaker(parallel_id2update_node);
   }
 }
 
@@ -47,6 +54,8 @@ void ModelUpdatePath::BuildTaskGraph(const ChainNode* data_chain) {
     ChainNode* faker_chain = chain_gph->NewFinalNode();
     faker_chain->mut_op_vec().clear();
     faker_chain->mut_parallel_desc() = parallel_desc4data_chain;
+    faker_chain->mut_output_lbns() = {ContigRegiDesc::kAllLbn};
+    model_update_chain->mut_input_lbns() = {ContigRegiDesc::kAllLbn};
     Connect(faker_chain, chain_gph->NewFinalEdge(), model_update_chain);
   }
   // 
@@ -71,6 +80,39 @@ void ModelUpdatePath::InitFaker2MccoyMapAndParallelIdUpdateMap(
   for (size_t i = 0; i < comptasks4faker_chain.size(); ++i) {
     AddFakerMccoyPair(comptasks4faker_chain[i],
                       sorted_bp_comptasks4data_chain[i]);
+  }
+}
+
+void ModelUpdatePath::SubscribeCrossPathWithoutFaker(
+    const std::vector<CompTaskNode*>& sorted_bp_comptasks4data_chain,
+    const HashMap<int32_t, CompTaskNode*>& parallel_id2update_node) {
+  for (CompTaskNode* bp_task_node : sorted_bp_comptasks4data_chain) {
+    // Useful Vars
+    int32_t parallel_id = bp_task_node->parallel_id();
+    CompTaskNode* update_task_node = parallel_id2update_node.at(parallel_id);
+    TaskNode* fw_task_node = bp_task_node->GetFwNode();
+    ExecNode* update_exec_node = update_task_node->exec_gph().SoleNode();
+    RegiDesc* model_diff_regi = bp_task_node->GetProducedRegiDesc("model_diff");
+    RegiDesc* model_regi = update_task_node->GetProducedRegiDesc("model");
+    // update_node Subscribe ModelDiffRegister
+    update_task_node->Subscribe(model_diff_regi);
+    update_exec_node->AddConsumedLbnRegiPair(ContigRegiDesc::kAllLbn,
+                                             model_diff_regi);
+    // fw_node Subscribe ModelRegister
+    fw_task_node->Subscribe(model_regi);
+    AddConsumedModelLbnRegi4FwExecGraph(fw_task_node->exec_gph(), model_regi);
+  }
+}
+
+void ModelUpdatePath::SubscribeCrossPathWithFaker(
+    const HashMap<int32_t, CompTaskNode*>& parallel_id2update_node) {
+  for (const auto& pair : faker2mccoy()) {
+    int32_t parallel_id = pair.first->parallel_id();
+    CompTaskNode* update_node = parallel_id2update_node.at(parallel_id);
+    TaskNode* fw_comp_node = pair.second->GetFwNode();
+    RegiDesc* model_regi = update_node->GetProducedRegiDesc("model");
+    fw_comp_node->Subscribe(model_regi);
+    AddConsumedModelLbnRegi4FwExecGraph(fw_comp_node->exec_gph(), model_regi);
   }
 }
 

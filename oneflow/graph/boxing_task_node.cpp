@@ -65,9 +65,9 @@ void BoxingTaskNode::FwBuildExecAndProducedRegisters(Path* path) {
 void BoxingTaskNode::BindOutEdgeAndRegister() {
   for (TaskEdge* edge : out_edges()) {
     std::string name = "boxing_out_" + std::to_string(edge->edge_id());
-    std::unique_ptr<RegisterDesc> register_desc(new DisContigRegistDesc);
-    BindProducedRegisterAndOutEdge(register_desc.get(), edge);
-    AddProducedRegisterDesc(name, std::move(register_desc));
+    std::unique_ptr<RegiDesc> regi_desc(new DisContigRegiDesc);
+    BindProducedRegisterAndOutEdge(regi_desc.get(), edge);
+    AddProducedRegiDesc(name, std::move(regi_desc));
   }
 }
 
@@ -165,16 +165,16 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
 
 void BoxingTaskNode::SetProducedRegister() {
   AddInPathLbn2ProducedRegister();
-  std::unique_ptr<RegisterDesc> boxing_middle_register(new DisContigRegistDesc);
+  std::unique_ptr<RegiDesc> boxing_middle_register(new DisContigRegiDesc);
   for (const std::unique_ptr<ExecEdge>& edge : exec_gph().edges()) {
     boxing_middle_register->AddPbn(edge->pbn());
   }
-  AddProducedRegisterDesc("boxing_middle", std::move(boxing_middle_register));
+  AddProducedRegiDesc("boxing_middle", std::move(boxing_middle_register));
 }
 
 namespace {
 
-inline RegisterDesc* GetBpRegisterFromFwRegister(RegisterDesc* fw_register) {
+inline RegiDesc* GetBpRegisterFromFwRegister(RegiDesc* fw_register) {
   const TaskEdge* fw_edge = GetRelatedTaskEdge(fw_register);
   const TaskEdge* bp_edge = fw_edge->related_fwbp_edge();
   return GetRelatedRegister(bp_edge);
@@ -191,11 +191,11 @@ void BoxingTaskNode::BpBuildExecAndProducedRegisters(Path* path) {
     CHECK(fw_node2bp_node.emplace(fw_node.get(), bp_node).second);
     bp_node->mut_op() = fw_node->op();
     for (const auto& fw_pair : fw_node->consumed_lbn_regi_pairs()) {
-      RegisterDesc* bp_register = GetBpRegisterFromFwRegister(fw_pair.second);
+      RegiDesc* bp_register = GetBpRegisterFromFwRegister(fw_pair.second);
       bp_node->AddProducedLbnRegiPair(fw_pair.first, bp_register);
     }
     for (const auto& fw_pair : fw_node->produced_lbn_regi_pairs()) {
-      RegisterDesc* bp_register = GetBpRegisterFromFwRegister(fw_pair.second);
+      RegiDesc* bp_register = GetBpRegisterFromFwRegister(fw_pair.second);
       bp_node->AddConsumedLbnRegiPair(fw_pair.first, bp_register);
     }
   }

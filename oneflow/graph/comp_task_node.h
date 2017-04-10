@@ -44,17 +44,17 @@ class CompTaskNode : public TaskNode {
   void FwSetRegisterPtrs4ExecNodes(
       const Lbn2NodeMap& lbn2producer,
       const Lbn2NodeVecMap& extern_in_lbn2consumers);
-  void FwSetProducedRegisterDescs();
+  void FwSetProducedRegiDescs();
   void BpBuildExecAndProducedRegisters(Path*) override;
   void BpBuildExecGraph(
       const ExecGraph& fw_gph,
       const ExecNode* cp_in_node,
       HashMap<const ExecNode*, ExecNode*>* fw_node2bp_node);
   void BpBindOutEdgeAndRegister();
-  void BpSetRegisterDescPtrs4Nodes(
+  void BpSetRegiDescPtrs4Nodes(
       const ExecNode* cp_in_node,
       const HashMap<const ExecNode*, ExecNode*>& fw_node2bp_node);
-  void BpSetProducedRegisterDescs();
+  void BpSetProducedRegiDescs();
 
   int32_t parallel_id_;
 
