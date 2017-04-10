@@ -2,7 +2,7 @@
 #include "glog/logging.h"
 #include "operator/convolution_op.h"
 #include "operator/innerproduct_op.h"
-#include "operator/loader_op.h"
+#include "operator/data_loader_op.h"
 #include "operator/multinomial_logistic_loss_op.h"
 #include "operator/relu_op.h"
 #include "operator/softmax_op.h"

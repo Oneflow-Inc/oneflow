@@ -1,5 +1,5 @@
-#ifndef OPERATOR_LOADER_OP_H_
-#define OPERATOR_LOADER_OP_H_
+#ifndef OPERATOR_DATA_LOADER_OP_H_
+#define OPERATOR_DATA_LOADER_OP_H_
 
 #include "operator/operator.h"
 
@@ -20,4 +20,4 @@ class LoaderOp final : public UserOperator {
 
 } // namespace oneflow
 
-#endif // OPERATOR_LOADER_OP_H_
+#endif // OPERATOR_DATA_LOADER_OP_H_
