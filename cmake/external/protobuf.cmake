@@ -1,5 +1,9 @@
 include (ExternalProject)
 
+set(PROTOBUF_INCLUDE_DIR ${THIRD_PARTY_DIR}/protobuf/include)
+set(PROTOBUF_LIBRARY_DIR ${THIRD_PARTY_DIR}/protobuf/lib)
+set(PROTOBUF_BINARY_DIR ${THIRD_PARTY_DIR}/protobuf/bin)
+
 set(PROTOBUF_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/src)
 set(PROTOBUF_URL https://github.com/mrry/protobuf.git)  # Includes MSVC fix.
 set(PROTOBUF_TAG 1d2c7b6c7376f396c8c7dd9b6afd2d4f83f3cb05)
@@ -18,7 +22,6 @@ ExternalProject_Add(protobuf
     DEPENDS zlib
     GIT_REPOSITORY ${PROTOBUF_URL}
     GIT_TAG ${PROTOBUF_TAG}
-    DOWNLOAD_DIR "${DOWNLOAD_LOCATION}"
     BUILD_IN_SOURCE 1
     SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf
     CONFIGURE_COMMAND ${CMAKE_COMMAND} cmake/
@@ -33,3 +36,5 @@ ExternalProject_Add(protobuf
         -DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON
         -DZLIB_ROOT:STRING=${ZLIB_INSTALL}
 )
+
+

@@ -17,7 +17,6 @@ ExternalProject_Add(googletest
     PREFIX googletest
     GIT_REPOSITORY ${googletest_URL}
     GIT_TAG ${googletest_TAG}
-    DOWNLOAD_DIR "${DOWNLOAD_LOCATION}"
     BUILD_IN_SOURCE 1
     #PATCH_COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/patches/grpc/CMakeLists.txt ${GRPC_BUILD}
     INSTALL_COMMAND ""
