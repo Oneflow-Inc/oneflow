@@ -9,13 +9,13 @@
 
 namespace oneflow {
 
-class PathManager {
+class PathMgr {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(PathManager);
-  ~PathManager() = default;
+  OF_DISALLOW_COPY_AND_MOVE(PathMgr);
+  ~PathMgr() = default;
 
-  static PathManager& Singleton() {
-    static PathManager obj;
+  static PathMgr& Singleton() {
+    static PathMgr obj;
     return obj;
   }
 
@@ -25,7 +25,7 @@ class PathManager {
   template<typename ValType>
   using ChainAsKeyMap = HashMap<const ChainNode*, ValType>;
 
-  PathManager() = default;
+  PathMgr() = default;
 
   std::unique_ptr<DataPath> data_path_;
 

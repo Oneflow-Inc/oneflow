@@ -74,7 +74,7 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
   for (auto device_phy_id :
       stage->chain_node()->parallel_desc()->sorted_devices_on_machine(machine_id)) {
     ThrdLocId thread_local_id =
-        IDManager::Singleton().ThrdLocId4DevicePhyId(device_phy_id);
+        IDMgr::Singleton().ThrdLocId4DevicePhyId(device_phy_id);
     // comp_task_node
     DeviceCompTaskNode* comp_task_node = NewTaskNode<DeviceCompTaskNode> ();
     comp_task_node->set_stage_node(stage);
@@ -118,7 +118,7 @@ void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
   int32_t parallel_id = stage->parallel_range().begin();
   comp_task_node->set_parallel_id(parallel_id++);
   CHECK_EQ(parallel_id, stage->parallel_range().end());
-  comp_task_node->mut_thread_local_id() = IDManager::Singleton().DataThrdLocId();
+  comp_task_node->mut_thread_local_id() = IDMgr::Singleton().DataThrdLocId();
   task_nodes_in_stage->comp_in_task_nodes.push_back(comp_task_node);
   task_nodes_in_stage->comp_out_task_nodes.push_back(comp_task_node);
 }
@@ -139,7 +139,7 @@ void TaskGraph::InitInboxingTaskNode(const StageNode* stage,
   }
   InBoxingTaskNode* boxing_task_node = NewTaskNode<InBoxingTaskNode> ();
   boxing_task_node->set_stage_node(stage);
-  boxing_task_node->mut_thread_local_id() = IDManager::Singleton().BoxingThrdLocId();
+  boxing_task_node->mut_thread_local_id() = IDMgr::Singleton().BoxingThrdLocId();
   boxing_task_node->SetFwNode();
   for (TaskNode* comp_in_task_node : task_nodes_in_stage->comp_in_task_nodes) {
     TaskConnect(boxing_task_node, NewFinalEdge(), comp_in_task_node);
@@ -157,7 +157,7 @@ void TaskGraph::InitOutBoxingTaskNode(
   }
   OutBoxingTaskNode* boxing_task_node = NewTaskNode<OutBoxingTaskNode> ();
   boxing_task_node->set_stage_node(stage);
-  boxing_task_node->mut_thread_local_id() = IDManager::Singleton().BoxingThrdLocId();
+  boxing_task_node->mut_thread_local_id() = IDMgr::Singleton().BoxingThrdLocId();
   boxing_task_node->SetFwNode();
   for (TaskNode* comp_out_task_node : task_nodes_in_stage->comp_out_task_nodes) {
     TaskConnect(comp_out_task_node, NewFinalEdge(), boxing_task_node);

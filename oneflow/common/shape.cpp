@@ -80,8 +80,8 @@ int64_t Shape::Offset(const int64_t n,
 
 void Shape::UpdateElemCnt() {
   elem_cnt_ = 1;
-  for (auto dim : shape_vec_) {
-    elem_cnt_ *= dim;
+  for (auto s : shape_vec_) {
+    elem_cnt_ *= s;
   }
 }
 

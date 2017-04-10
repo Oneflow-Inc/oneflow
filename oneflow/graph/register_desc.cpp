@@ -4,7 +4,7 @@
 namespace oneflow {
 
 RegisterDesc::RegisterDesc() {
-  register_desc_id_ = IDManager::Singleton().NewRegisterDescId();
+  register_desc_id_ = IDMgr::Singleton().NewRegisterDescId();
   producer_ = nullptr;
 }
 

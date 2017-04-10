@@ -19,13 +19,13 @@ using MachineId = int32_t;
 using ThrdGloId = int32_t;
 using ThrdLocId = int32_t;
 
-class IDManager final {
+class IDMgr final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(IDManager);
-  ~IDManager() = default;
+  OF_DISALLOW_COPY_AND_MOVE(IDMgr);
+  ~IDMgr() = default;
 
-  static IDManager& Singleton() {
-    static IDManager obj;
+  static IDMgr& Singleton() {
+    static IDMgr obj;
     return obj;
   }
 
@@ -48,7 +48,7 @@ class IDManager final {
   int32_t NewRegisterDescId();
 
  private:
-  IDManager() = default;
+  IDMgr() = default;
 
 };
 

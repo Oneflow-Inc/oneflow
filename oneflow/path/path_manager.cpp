@@ -2,8 +2,8 @@
 
 namespace oneflow {
 
-void PathManager::Init(const JobSysConf& job_sys_conf) {
-  IDManager::Singleton().Init(job_sys_conf.resource());
+void PathMgr::Init(const JobSysConf& job_sys_conf) {
+  IDMgr::Singleton().Init(job_sys_conf.resource());
   // build data path
   data_path_.reset(new DataPath);
   data_path_->Build(job_sys_conf.train_dlnet_conf(),
