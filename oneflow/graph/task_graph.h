@@ -6,7 +6,7 @@
 #include "graph/copy_hd_task_node.h"
 #include "operator/operator.h"
 #include "job/parallel_desc.h"
-#include "common/id_manager.h"
+#include "job/id_manager.h"
 
 namespace oneflow {
 

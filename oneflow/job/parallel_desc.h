@@ -2,7 +2,7 @@
 #define ONEFLOW_JOB_PARALLEL_DESC_H_
 
 #include "common/util.h"
-#include "common/id_manager.h"
+#include "job/id_manager.h"
 #include "job/strategy.pb.h"
 
 namespace oneflow {

@@ -6,7 +6,7 @@
 #include <vector>
 #include <memory>
 #include "common/util.h"
-#include "common/id_manager.h"
+#include "job/id_manager.h"
 
 namespace oneflow {
 
