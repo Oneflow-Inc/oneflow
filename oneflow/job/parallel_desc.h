@@ -9,34 +9,27 @@ namespace oneflow {
 
 class ParallelDesc {
  public:
-  using Policy = ParallelConf::Policy;
-  enum class Engine {
-    kHost,
-    kDevice
-  };
-
   // OF_DISALLOW_COPY_AND_MOVE(ParallelDesc);
   ParallelDesc() = delete;
   ~ParallelDesc() = default;
 
-  ParallelDesc(const ParallelConf& user_conf) {
-    TODO();
-  }
+  ParallelDesc(const ParallelConf& user_conf);
   
-  Policy& mut_policy() { return policy_; }
-  
-  const Policy& policy() const { return policy_; }
-  const Engine& engine() const { return engine_; } 
+  // Getters
+  const ParallelPolicy& policy() const { return policy_; }
+  const DeviceType& device_type() const { return device_type_; } 
   const std::vector<MachineId>& sorted_machines() const {
     return sorted_machine_vec_;
   }
-  const std::vector<DeviceGlobalId>& sorted_devices() const {
+  const std::vector<DeviceGloId>& sorted_devices() const {
     return sorted_device_vec_;
   }
-  const std::vector<DevicePhysicalId>& sorted_devices_on_machine(MachineId machine_id) const {
+  const std::vector<DevicePhyId>& sorted_devices_on_machine(MachineId machine_id) const {
     return sorted_devices_on_machine_.at(machine_id);
   }
 
+  //
+  ParallelPolicy& mut_policy() { return policy_; }
   bool operator == (const ParallelDesc& rhs) const {
     TODO();
   }
@@ -45,16 +38,13 @@ class ParallelDesc {
   }
   
  private:
-  Policy policy_;
-  Engine engine_;
+  ParallelPolicy policy_;
+  DeviceType device_type_;
   std::vector<MachineId> sorted_machine_vec_;
-  std::vector<DeviceGlobalId> sorted_device_vec_;
-  HashMap<MachineId, std::vector<DevicePhysicalId>> sorted_devices_on_machine_;
+  std::vector<DeviceGloId> sorted_device_vec_;
+  HashMap<MachineId, std::vector<DevicePhyId>> sorted_devices_on_machine_;
 
 };
-
-static const ParallelDesc::Policy kDataParallel = ParallelConf::DataParallel;
-static const ParallelDesc::Policy kModelParallel = ParallelConf::ModelParallel;
 
 } // namespace oneflow
 

@@ -6,13 +6,18 @@
 
 namespace oneflow {
 
-using DeviceGlobalId = int32_t;
-using DevicePhysicalId = int32_t;
+// Glo  : Global
+// Phy  : Physical
+// Loc  : Local
+// Thrd : Thread
+
+using DeviceGloId = int32_t;
+using DevicePhyId = int32_t;
 
 using MachineId = int32_t;
 
-using ThreadGlobalId = int32_t;
-using ThreadLocalId = int32_t;
+using ThrdGloId = int32_t;
+using ThrdLocId = int32_t;
 
 class IDManager final {
  public:
@@ -25,19 +30,17 @@ class IDManager final {
   }
 
   void Init(const Resource& resource) {
-    // TODO
+    TODO();
   }
-  ThreadLocalId ThreadLocalIdFromDevicePhysicalId(DevicePhysicalId) const {
-    LOG(FATAL) << "TODO: implement it";
-    return ThreadLocalId();
+
+  ThrdLocId ThrdLocId4DevicePhyId(DevicePhyId) const {
+    TODO();
   }
-  ThreadLocalId data_thread_local_id() const {
-    LOG(FATAL) << "TODO: implement it";
-    return ThreadLocalId();
+  ThrdLocId DataThrdLocId() const {
+    TODO();
   }
-  ThreadLocalId boxing_thread_local_id() const {
-    LOG(FATAL) << "TODO: implement it";
-    return ThreadLocalId();
+  ThrdLocId BoxingThrdLocId() const {
+    TODO();
   }
 
   int32_t NewNodeId();

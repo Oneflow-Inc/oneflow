@@ -20,7 +20,7 @@ void TaskNode::set_stage_node(const StageNode* new_stage_node) {
   CHECK(IsFwNode());
   stage_node_ = new_stage_node;
 }
-ThreadLocalId& TaskNode::mut_thread_local_id() {
+ThrdLocId& TaskNode::mut_thread_local_id() {
   CHECK(IsFwNode());
   return thread_local_id_;
 }

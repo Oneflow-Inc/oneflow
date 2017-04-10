@@ -17,7 +17,7 @@ StageGraph::StageGraph(std::unique_ptr<const ChainGraph>&& chain_gph) {
       stage_node->mut_machine_id() = machine_id;
       stage_node->set_chain_node(cur_chain.get());
       stage_node->mut_parallel_range().mut_begin() = range_idx;
-      if (parallel_desc->engine() == ParallelDesc::Engine::kDevice) {
+      if (parallel_desc->device_type() == kGPU) {
         range_idx += parallel_desc->sorted_devices_on_machine(machine_id).size();
       } else {
         CHECK(chain_gph_->IsFirstNode(cur_chain.get()));

@@ -130,8 +130,8 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
   const ChainNode* out_chain = chain_sorted_out_edges.first;
   const auto& sorted_out_edges = chain_sorted_out_edges.second;
 
-  ParallelDesc::Policy in_policy = in_chain->parallel_desc()->policy();
-  ParallelDesc::Policy out_policy = out_chain->parallel_desc()->policy();
+  ParallelPolicy in_policy = in_chain->parallel_desc()->policy();
+  ParallelPolicy out_policy = out_chain->parallel_desc()->policy();
   OpPair (*FwBuildBoxingOp)();
   if (in_policy == kDataParallel && out_policy == kDataParallel) {
     FwBuildBoxingOp = &FwBuildBoxingOpDataData;

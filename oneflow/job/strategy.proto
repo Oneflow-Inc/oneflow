@@ -6,32 +6,22 @@ message Section {
   int32 last_id = 2;
 }
 
-message DeviceGroup {
-  repeated Section device_section_vec = 1;
-}
-
-message MachineGroup {
-  repeated Section machine_section_vec = 1;
+enum ParallelPolicy {
+  kDataParallel = 0;
+  kModelParallel = 1;
 }
 
 message ParallelConf {
-  enum Policy {
-    DataParallel = 0;
-    ModelParallel = 1;
-  }
-  Policy policy = 1;
-  oneof device_or_machine {
-    DeviceGroup device_group = 2;
-    MachineGroup machine_group = 3;
-  }
+  ParallelPolicy policy = 1;
+  repeated Section devices = 2;
 }
 
 message PlacementGroup {
   string name = 1;
-  repeated string op_name_vec = 2;
+  repeated string op_names = 2;
   ParallelConf parallel_conf = 3;
 }
 
 message Strategy {
-  repeated PlacementGroup placement_group_vec = 1;
+  repeated PlacementGroup placement_groups = 1;
 }

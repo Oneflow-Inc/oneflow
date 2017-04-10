@@ -6,7 +6,13 @@ message Machine {
   string port = 2;
 }
 
+enum DeviceType {
+  kCPU = 0;
+  kGPU = 1;
+}
+
 message Resource {
-  repeated Machine machine_vec = 1;
+  repeated Machine machines = 1;
   int32 device_num_per_machine = 2;
+  DeviceType device_type = 3;
 }
