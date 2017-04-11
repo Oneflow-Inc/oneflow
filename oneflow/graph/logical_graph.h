@@ -32,6 +32,8 @@ class LogicalNode final : public Node<LogicalNode, LogicalEdge> {
     return parallel_desc_;
   }
 
+  bool IsLossNode() const { return op_->IsLossOp(); }
+
  private:
   std::shared_ptr<const Operator> op_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;

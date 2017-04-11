@@ -21,11 +21,9 @@ struct Chain {
 using ChainIt = std::list<Chain>::iterator;
 using Logical2ChainItMap = HashMap<const LogicalNode*, ChainIt>;
 
-void SetChainNodeWithChainIt(ChainNode* chain_node,
-                             ChainIt chain_it) {
-  CHECK_EQ(chain_it->nodes.empty(), false);
-  chain_node->mut_parallel_desc() =
-      chain_it->nodes.front()->parallel_desc();
+void SetChainNodeWithChainIt(ChainNode* chain_node, ChainIt chain_it) {
+  CHECK(!chain_it->nodes.empty());
+  chain_node->mut_parallel_desc() = chain_it->nodes.front()->parallel_desc();
   for (const LogicalNode* logical_node : chain_it->nodes) {
     chain_node->mut_op_vec().push_back(logical_node->op());
   }
@@ -35,15 +33,14 @@ void InitChains(
     const LogicalGraph& logi_gph,
     std::list<Chain>* chain_list,
     Logical2ChainItMap* logical2chain_it) {
-  // Init one Chain with one Node
   chain_list->clear();
   logical2chain_it->clear();
-  // Init ops
   for (const std::unique_ptr<LogicalNode>& node : logi_gph.nodes()) {
+    // Init one Chain with one Node
     chain_list->emplace_back();
     logical2chain_it->insert({node.get(), --chain_list->end()});
-    Chain& cur_chainment = chain_list->back();
-    cur_chainment.nodes = {node.get()};
+    Chain& cur_chain = chain_list->back();
+    cur_chain.nodes = {node.get()};
   }
   // Init ancestors
   for (auto node = logi_gph.cbegin(); node != logi_gph.cend(); ++node) {
@@ -89,17 +86,10 @@ void ModelMergeChains(
   for (auto& pair : *logical2chain_it) {
     // Get cur_node, pred_node
     const LogicalNode* cur_node = pair.first;
-    if (cur_node->op()->IsElemWise() == false) {
-      continue;
-    }
-    if (cur_node->parallel_desc()->policy() != kModelParallel) {
-      continue;
-    }
-    CHECK_EQ(cur_node->in_edges().size(), 1);
+    if (cur_node->op()->IsElemWise() == false) { continue; }
+    if (cur_node->parallel_desc()->policy() != kModelParallel) { continue; }
     const LogicalNode* pred_node = cur_node->SoleInEdge()->src_node();
-    if (pred_node->parallel_desc() != cur_node->parallel_desc()) {
-      continue;
-    }
+    CHECK(pred_node->parallel_desc() == cur_node->parallel_desc());
     // Get chain
     ChainIt pred_chain = logical2chain_it->at(pred_node);
     ChainIt cur_chain = pair.second;
@@ -155,14 +145,12 @@ bool TryMergeWithoutConnect(
   // Get chain
   ChainIt lhs_chain = logical2chain_it->at(lhs_node);
   ChainIt rhs_chain = logical2chain_it->at(rhs_node);
-  // if it can be merged
+  // if it cannot be merged
   if (lhs_chain->ancestors != rhs_chain->ancestors
       || lhs_chain->descendants != rhs_chain->descendants) {
     return false;
   }
   // Merge
-  // TODO:
-  // If this is bottleneck, we can optimze it by compare the size of lhs,rhs
   for (const LogicalNode* node : rhs_chain->nodes) {
     lhs_chain->nodes.push_back(node);
     lhs_chain->ancestors_and_this.insert(node);
@@ -206,21 +194,21 @@ void DataMergeChains(
     Logical2ChainItMap* logical2chain_it) {
   std::vector<const LogicalNode*> data_parallel_node;
   HashMap<const LogicalNode*, bool> done;
-  for (const auto& pair : *logical2chain_it) {
-    if (pair.first->parallel_desc()->policy() == kDataParallel
-        && !logical_gph.IsFirstNode(pair.first)) {
-      data_parallel_node.push_back(pair.first);
-      done[pair.first] = false;
-    }
+  for (const auto& pair : *logical2chain_it) {c
+    const LogicalNode* cur_logi_node = pair.first;
+    if (cur_logi_node->parallel_desc()->policy() != kDataParallel) { continue; }
+    if (logical_gph.IsFirstNode(cur_logi_node)) { continue; }
+    if (cur_logi_node->IsLossNode()) { continue; }
+    data_parallel_node.push_back(cur_logi_node);
+    done[cur_logi_node] = false;
   }
   for (const LogicalNode* seed_node : data_parallel_node) {
-    if (done.at(seed_node) == false) {
-      Traverse(seed_node,
-               data_parallel_node,
-               chain_list,
-               &done,
-               logical2chain_it);
-    }
+    if (done.at(seed_node)) { continue; }
+    Traverse(seed_node,
+             data_parallel_node,
+             chain_list,
+             &done,
+             logical2chain_it);
   }
 }
 
@@ -228,8 +216,9 @@ void DataMergeChains(
 
 std::string ChainNode::ConcatedOpsName() const {
   std::stringstream ss;
+  ss << "ConcatedOpsName";
   for (auto op : op_vec_) {
-    ss << op->op_name() << "_";
+    ss << "_" << op->op_name();
   }
   return ss.str();
 }
@@ -240,17 +229,14 @@ ChainGraph::ChainGraph(const LogicalGraph* logical_gph) {
   Logical2ChainItMap logical2chain_it;
   InitChains(*logical_gph, &chain_list, &logical2chain_it);
   ModelMergeChains(&chain_list, &logical2chain_it);
-  DataMergeChains(*logical_gph,
-                  &chain_list,
-                  &logical2chain_it);
+  DataMergeChains(*logical_gph, &chain_list, &logical2chain_it);
   // Init chain_nodes
-  auto hash_chain_it = [](const ChainIt& chain_it) {
+  auto HashChainIt = [](const ChainIt& chain_it) {
     return std::hash<Chain*> ()(&(*chain_it));
   };
-  HashMap<ChainIt, ChainNode*, decltype(hash_chain_it)>
-      chain_it2chain_node(0, hash_chain_it);
-  HashMap<ChainNode*,
-                     std::unordered_set<ChainNode*>> chain_node2pred;
+  HashMap<ChainIt, ChainNode*, decltype(HashChainIt)>
+      chain_it2chain_node(0, HashChainIt);
+  HashMap<ChainNode*, std::unordered_set<ChainNode*>> chain_node2pred;
   for (auto chain_it = chain_list.begin(); chain_it != chain_list.end(); ++chain_it) {
     ChainNode* chain_node = NewFinalNode();
     chain_it2chain_node[chain_it] = chain_node;
@@ -279,12 +265,16 @@ ChainGraph::ChainGraph(const LogicalGraph* logical_gph) {
   }
   // Post processing
   UpdateSourceAndSink();
-  CollectInputAndOutputLbns();
+  SetInOutLbn4AllChainNodeInDataPath();
 }
 
-void ChainGraph::CollectInputAndOutputLbns() {
-  // set input_lbns_ and output_lbns_ for each node
-  LOG(FATAL) << "TODO";
+void ChainGraph::SetInOutLbn4AllChainNodeInDataPath() {
+  TODO();
 }
+
+std::vector<std::string> FindLbnsBetween(const ChainNode*, const ChainNode*) {
+  TODO();
+}
+
 
 } // namespace oneflow
