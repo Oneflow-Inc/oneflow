@@ -21,9 +21,6 @@ class ParallelDesc {
   const std::vector<MachineId>& sorted_machines() const {
     return sorted_machine_vec_;
   }
-  const std::vector<DeviceGloId>& sorted_devices() const {
-    return sorted_device_vec_;
-  }
   const std::vector<DevicePhyId>& sorted_devices_on_machine(MachineId machine_id) const {
     return sorted_devices_on_machine_.at(machine_id);
   }
@@ -41,7 +38,6 @@ class ParallelDesc {
   ParallelPolicy policy_;
   DeviceType device_type_;
   std::vector<MachineId> sorted_machine_vec_;
-  std::vector<DeviceGloId> sorted_device_vec_;
   HashMap<MachineId, std::vector<DevicePhyId>> sorted_devices_on_machine_;
 
 };

@@ -6,12 +6,10 @@
 
 namespace oneflow {
 
-// Glo  : Global
 // Phy  : Physical
 // Loc  : Local
 // Thrd : Thread
 
-using DeviceGloId = int32_t;
 using DevicePhyId = int32_t;
 
 using MachineId = int32_t;
