@@ -140,7 +140,7 @@ void CompTaskNode::FwAddCloneOp() {
       // Construct clone op
       OperatorConf pb_op_conf;
       pb_op_conf.set_name("");
-      pb_op_conf.mutable_clone_op_conf();
+      pb_op_conf.mutable_clone_op_conf()->set_out_num(edges.size());
       auto clone_op = ConstructOpFromPbConf(pb_op_conf);
       // Set clone_info
       CloneInfo clone_info;

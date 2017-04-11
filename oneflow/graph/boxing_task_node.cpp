@@ -10,46 +10,52 @@ namespace {
 using OpPair =
   std::pair<std::shared_ptr<const Operator>, std::shared_ptr<const Operator>>;
 
-OpPair FwBuildBoxingOpDataData() {
+OpPair FwBuildBoxingOpDataData(size_t in_num, size_t out_num) {
   OperatorConf first_op_conf;
   first_op_conf.set_name("");
   first_op_conf.mutable_concat_op_conf()->set_axis(0);
+  first_op_conf.mutable_concat_op_conf()->set_in_num(in_num);
   OperatorConf second_op_conf;
   second_op_conf.set_name("");
   second_op_conf.mutable_split_op_conf()->set_axis(0);
+  second_op_conf.mutable_split_op_conf()->set_out_num(out_num);
   return {ConstructOpFromPbConf(first_op_conf),
           ConstructOpFromPbConf(second_op_conf)};
 }
 
-OpPair FwBuildBoxingOpDataModel() {
+OpPair FwBuildBoxingOpDataModel(size_t in_num, size_t out_num) {
   OperatorConf first_op_conf;
   first_op_conf.set_name("");
   first_op_conf.mutable_concat_op_conf()->set_axis(0);
+  first_op_conf.mutable_concat_op_conf()->set_in_num(in_num);
   OperatorConf second_op_conf;
   second_op_conf.set_name("");
-  second_op_conf.mutable_clone_op_conf();
+  second_op_conf.mutable_clone_op_conf()->set_out_num(out_num);
   return {ConstructOpFromPbConf(first_op_conf),
           ConstructOpFromPbConf(second_op_conf)};
 }
 
-OpPair FwBuildBoxingOpModelData() {
+OpPair FwBuildBoxingOpModelData(size_t in_num, size_t out_num) {
   OperatorConf first_op_conf;
   first_op_conf.set_name("");
   first_op_conf.mutable_concat_op_conf()->set_axis(1);
+  first_op_conf.mutable_concat_op_conf()->set_in_num(in_num);
   OperatorConf second_op_conf;
   second_op_conf.set_name("");
   second_op_conf.mutable_split_op_conf()->set_axis(0);
+  second_op_conf.mutable_split_op_conf()->set_out_num(out_num);
   return {ConstructOpFromPbConf(first_op_conf),
           ConstructOpFromPbConf(second_op_conf)};
 }
 
-OpPair FwBuildBoxingOpModelModel() {
+OpPair FwBuildBoxingOpModelModel(size_t in_num, size_t out_num) {
   OperatorConf first_op_conf;
   first_op_conf.set_name("");
   first_op_conf.mutable_concat_op_conf()->set_axis(1);
+  first_op_conf.mutable_concat_op_conf()->set_in_num(in_num);
   OperatorConf second_op_conf;
   second_op_conf.set_name("");
-  second_op_conf.mutable_clone_op_conf();
+  second_op_conf.mutable_clone_op_conf()->set_out_num(out_num);
   return {ConstructOpFromPbConf(first_op_conf),
           ConstructOpFromPbConf(second_op_conf)};
 }
@@ -132,7 +138,7 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
 
   ParallelPolicy in_policy = in_chain->parallel_desc()->policy();
   ParallelPolicy out_policy = out_chain->parallel_desc()->policy();
-  OpPair (*FwBuildBoxingOp)();
+  OpPair (*FwBuildBoxingOp)(size_t in_num, size_t out_num);
   if (in_policy == kDataParallel && out_policy == kDataParallel) {
     FwBuildBoxingOp = &FwBuildBoxingOpDataData;
   } else if (in_policy == kDataParallel && out_policy == kModelParallel) {
@@ -145,7 +151,7 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
 
   std::vector<std::string> lbns = FindLbnsBetween(in_chain, out_chain);
   for (const std::string& lbn : lbns) {
-    OpPair op_pair = FwBuildBoxingOp();
+    OpPair op_pair = FwBuildBoxingOp(sorted_in_edges.size(), sorted_out_edges.size());
     // First Node
     ExecNode* first_node = mut_exec_gph().NewFinalNode();
     first_node->mut_op() = op_pair.first;

@@ -48,14 +48,17 @@ message CopyOpConf {
 }
 
 message CloneOpConf {
+  int32 out_num = 1;
 }
 
 message ConcatOpConf {
   int32 axis = 1;
+  int32 in_num = 2;
 }
 
 message SplitOpConf {
   int32 axis = 1;
+  int32 out_num = 2;
 }
 
 message ModelUpdateOpConf {
