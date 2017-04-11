@@ -13,7 +13,7 @@ if(WIN32)
       ${gflags_LIB_DIR}/${CMAKE_BUILD_TYPE}/gflags_static.lib)
 else()
   set(gflags_STATIC_LIBRARIES
-      ${gflags_LIB_DIR}/gflags.a)
+      ${gflags_LIB_DIR}/libgflags.a)
 endif()
 
 ExternalProject_Add(gflags

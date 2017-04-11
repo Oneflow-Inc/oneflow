@@ -11,7 +11,7 @@ if(WIN32)
       ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog/${CMAKE_BUILD_TYPE}/glog.lib)
 else()
   set(glog_STATIC_LIBRARIES
-      ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog/${CMAKE_BUILD_TYPE}/glog.a)
+      ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog/libglog.a)
 endif()
 
 set (GLOG_PUBLIC_H
@@ -34,6 +34,7 @@ ExternalProject_Add(glog
         -DBUILD_SHARED_LIBS:BOOL=OFF
         -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
         -DCMAKE_CXX_FLAGS_RELEASE:STRING=${CMAKE_CXX_FLAGS_RELEASE}
+        -DBUILD_TESTING:BOOL=OFF
 )
 
 add_custom_target(glog_create_header_dir
