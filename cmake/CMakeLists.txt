@@ -175,7 +175,7 @@ endforeach()
 
 # build object-cpp
 add_library(of_ccobj ${oneflow_object_cc} ${oneflow_all_h})
-add_dependencies(of_ccobj of_protoobj)
+add_dependencies(of_ccobj of_protoobj oneflow_EXTERNAL_DEPENDENCIES)
 list(APPEND ONEFLOW_LINKER_LIBS of_ccobj)
 
 # build test
