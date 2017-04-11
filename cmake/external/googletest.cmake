@@ -5,16 +5,20 @@ set(GOOGLETEST_LIBRARY_DIR ${THIRD_PARTY_DIR}/googletest/lib)
 
 set(googletest_SRC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googletest/include)
 set(googletest_URL https://github.com/google/googletest.git)
-#set(googletest_BUILD ${CMAKE_CURRENT_BINARY_DIR}/googletest/)
 set(googletest_TAG ec44c6c1675c25b9827aacd08c02433cccde7780)
 
 if(WIN32)
-  set(googletest_STATIC_LIBRARIES
-      ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googletest/${CMAKE_BUILD_TYPE}/gtest.lib)
+    set(GOOGLETEST_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googletest/${CMAKE_BUILD_TYPE})
+    set(GOOGLETEST_LIBRARY_NAMES gtest.lib)
 else()
-  set(googletest_STATIC_LIBRARIES
-      ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googletest/libgtest.a)
+    set(GOOGLETEST_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googletest)
+    set(GOOGLETEST_LIBRARY_NAMES libgtest.a)
 endif()
+
+foreach(LIBRARY_NAME ${GOOGLETEST_LIBRARY_NAMES})
+    list(APPEND GOOGLETEST_STATIC_LIBRARIES ${GOOGLETEST_LIBRARY_DIR}/${LIBRARY_NAME})
+    list(APPEND GOOGLETEST_BUILD_STATIC_LIBRARIES ${GOOGLETEST_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
+endforeach()
 
 ExternalProject_Add(googletest
     PREFIX googletest
@@ -42,5 +46,5 @@ add_custom_target(googletest_create_library_dir
   DEPENDS googletest)
 
 add_custom_target(googletest_copy_libs_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${googletest_STATIC_LIBRARIES} ${GOOGLETEST_LIBRARY_DIR}
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GOOGLETEST_BUILD_STATIC_LIBRARIES} ${GOOGLETEST_LIBRARY_DIR}
   DEPENDS googletest_create_library_dir)

@@ -7,12 +7,17 @@ set(glog_URL https://github.com/google/glog.git)
 set(glog_TAG da816ea70645e463aa04f9564544939fa327d5a7)
 
 if(WIN32)
-  set(glog_STATIC_LIBRARIES
-      ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog/${CMAKE_BUILD_TYPE}/glog.lib)
+    set(GLOG_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog/${CMAKE_BUILD_TYPE})
+    set(GLOG_LIBRARY_NAMES glog.lib)
 else()
-  set(glog_STATIC_LIBRARIES
-      ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog/libglog.a)
+    set(GLOG_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog)
+    set(GLOG_LIBRARY_NAMES libglog.a)
 endif()
+
+foreach(LIBRARY_NAME ${GLOG_LIBRARY_NAMES})
+    list(APPEND GLOG_STATIC_LIBRARIES ${GLOG_LIBRARY_DIR}/${LIBRARY_NAME})
+    list(APPEND GLOG_BUILD_STATIC_LIBRARIES ${GLOG_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
+endforeach()
 
 set (GLOG_PUBLIC_H
   ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog/config.h
@@ -54,5 +59,5 @@ add_custom_target(glog_create_library_dir
   DEPENDS glog)
 
 add_custom_target(glog_copy_libs_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${glog_STATIC_LIBRARIES} ${GLOG_LIBRARY_DIR}
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GLOG_BUILD_STATIC_LIBRARIES} ${GLOG_LIBRARY_DIR}
   DEPENDS glog_create_library_dir)

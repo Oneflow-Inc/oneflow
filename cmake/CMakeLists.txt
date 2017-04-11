@@ -10,7 +10,6 @@ set(CMAKE_CXX_STANDARD 14)
 # Actual source is the ../ directory
 get_filename_component(oneflow_source_dir ${oneflow_SOURCE_DIR} PATH)
 
-
 message(STATUS "oneflow_source_dir: ${oneflow_source_dir}")
 
 # Options
@@ -42,7 +41,7 @@ function(SHOW_VARIABLES)
   endforeach()
 endfunction()
 
-SHOW_VARIABLES()
+#SHOW_VARIABLES()
 
 # External dependencies
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/external)
@@ -58,10 +57,18 @@ set(THIRD_PARTY_DIR "${CMAKE_CURRENT_BINARY_DIR}/third_party"
 mark_as_advanced(THIRD_PARTY_DIR)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+if(WIN32)
+  add_definitions(-DNOMINMAX -D_WIN32_WINNT=0x0A00 -DLANG_CXX11 -DCOMPILER_MSVC -D__VERSION__=\"MSVC\")
+  add_definitions(-DWIN32 -DOS_WIN -D_MBCS -DWIN64 -DWIN32_LEAN_AND_MEAN -DNOGDI -DPLATFORM_WINDOWS)
+  add_definitions(/bigobj /nologo /EHsc /GF /FC /MP /Gm-)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+endif()
 
 if(WIN32)
   message(STATUS "Build on Windows")
 endif()
+
+
 
 include(zlib)
 include(protobuf)
@@ -70,6 +77,40 @@ include(glog)
 include(gflags)
 include(grpc)
 
+set(oneflow_EXTERNAL_LIBRARIES
+    ${ZLIB_STATIC_LIBRARIES}
+    ${GFLAGS_STATIC_LIBRARIES}
+    ${GLOG_STATIC_LIBRARIES}
+    ${GOOGLETEST_STATIC_LIBRARIES}
+    ${PROTOBUF_STATIC_LIBRARIES}
+    ${GRPC_STATIC_LIBRARIES}
+)
 
+set(oneflow_EXTERNAL_DEPENDENCIES
+    zlib_copy_headers_to_destination
+    zlib_copy_libs_to_destination
+    gflags_copy_headers_to_destination
+    gflags_copy_libs_to_destination
+    glog_copy_headers_to_destination
+    glog_copy_libs_to_destination
+    googletest_copy_headers_to_destination
+    googletest_copy_libs_to_destination
+    protobuf_copy_headers_to_destination
+    protobuf_copy_libs_to_destination
+    protobuf_copy_binary_to_destination
+    grpc_copy_headers_to_destination
+    grpc_copy_libs_to_destination
+)
 
-
+include_directories(
+    # Source and generated code.
+    ${oneflow_source_dir}
+    #${CMAKE_CURRENT_BINARY_DIR}
+    # External dependencies.
+    ${ZLIB_INCLUDE_DIR}
+    ${GFLAGS_INCLUDE_DIR}
+    ${GLOG_INCLUDE_DIR}
+    ${GOOGLETEST_INCLUDE_DIR}
+    ${PROTOBUF_INCLUDE_DIRS}
+    ${GRPC_INCLUDE_DIR}
+)

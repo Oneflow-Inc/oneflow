@@ -9,13 +9,22 @@ set(PROTOBUF_URL https://github.com/mrry/protobuf.git)  # Includes MSVC fix.
 set(PROTOBUF_TAG 1d2c7b6c7376f396c8c7dd9b6afd2d4f83f3cb05)
 
 if(WIN32)
-  set(protobuf_STATIC_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/${CMAKE_BUILD_TYPE}/libprotobufd.lib)
-  set(PROTOBUF_PROTOC_EXECUTABLE ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/${CMAKE_BUILD_TYPE}/protoc.exe)
-  set(PROTOBUF_ADDITIONAL_CMAKE_OPTIONS	-Dprotobuf_MSVC_STATIC_RUNTIME:BOOL=ON -A x64)
+    set(PROTOBUF_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/${CMAKE_BUILD_TYPE})
+    set(PROTOBUF_LIBRARY_NAMES libprotobufd.lib)
+    set(PROTOC_EXECUTABLE_NAME protoc.exe)
 else()
-  set(protobuf_STATIC_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/libprotobuf.a)
-  set(PROTOBUF_PROTOC_EXECUTABLE ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/protoc)
+    set(PROTOBUF_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf)
+    set(PROTOBUF_LIBRARY_NAMES libprotobuf.a)
+    set(PROTOC_EXECUTABLE_NAME protoc)
 endif()
+
+foreach(LIBRARY_NAME ${PROTOBUF_LIBRARY_NAMES})
+    list(APPEND PROTOBUF_STATIC_LIBRARIES ${PROTOBUF_LIBRARY_DIR}/${LIBRARY_NAME})
+    list(APPEND PROTOBUF_BUILD_STATIC_LIBRARIES ${PROTOBUF_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
+endforeach()
+
+set(PROTOBUF_BUILD_PROTOC_EXECUTABLE ${PROTOBUF_BUILD_LIBRARY_DIR}/${PROTOC_EXECUTABLE_NAME})
+set(PROTOBUF_PROTOC ${PROTOBUF_BINARY_DIR}/${PROTOC_EXECUTABLE_NAME})
 
 ExternalProject_Add(protobuf
     PREFIX protobuf
@@ -52,7 +61,7 @@ add_custom_target(protobuf_create_library_dir
   DEPENDS protobuf)
 
 add_custom_target(protobuf_copy_libs_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${protobuf_STATIC_LIBRARIES} ${PROTOBUF_LIBRARY_DIR}
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROTOBUF_BUILD_STATIC_LIBRARIES} ${PROTOBUF_LIBRARY_DIR}
   DEPENDS protobuf_create_library_dir)
 
 # pub protoc binary in the 'THIRD_PARTY_DIR'
@@ -61,5 +70,5 @@ add_custom_target(protobuf_create_binary_dir
   DEPENDS protobuf)
 
 add_custom_target(protobuf_copy_binary_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROTOBUF_PROTOC_EXECUTABLE} ${PROTOBUF_BINARY_DIR}
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROTOBUF_BUILD_PROTOC_EXECUTABLE} ${PROTOBUF_BINARY_DIR}
   DEPENDS protobuf_create_binary_dir)

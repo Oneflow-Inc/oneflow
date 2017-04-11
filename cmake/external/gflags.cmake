@@ -9,12 +9,17 @@ set(gflags_URL https://github.com/gflags/gflags.git)
 set(gflags_TAG 9314597d4b742ed6f95665241345e590a0f5759b)
 
 if(WIN32)
-  set(gflags_STATIC_LIBRARIES
-      ${gflags_LIB_DIR}/${CMAKE_BUILD_TYPE}/gflags_static.lib)
+    set(GFLAGS_BUILD_LIBRARY_DIR ${gflags_LIB_DIR}/${CMAKE_BUILD_TYPE})
+    set(GFLAGS_LIBRARY_NAMES gflags_static.lib)
 else()
-  set(gflags_STATIC_LIBRARIES
-      ${gflags_LIB_DIR}/libgflags.a)
+    set(GFLAGS_BUILD_LIBRARY_DIR ${gflags_LIB_DIR})
+    set(GFLAGS_LIBRARY_NAMES libgflags.a)
 endif()
+
+foreach(LIBRARY_NAME ${GFLAGS_LIBRARY_NAMES})
+    list(APPEND GFLAGS_STATIC_LIBRARIES ${GFLAGS_LIBRARY_DIR}/${LIBRARY_NAME})
+    list(APPEND GFLAGS_BUILD_STATIC_LIBRARIES ${GFLAGS_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
+endforeach()
 
 ExternalProject_Add(gflags
     PREFIX gflags
@@ -41,5 +46,5 @@ add_custom_target(gflags_create_library_dir
   DEPENDS gflags)
 
 add_custom_target(gflags_copy_libs_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${gflags_STATIC_LIBRARIES} ${GFLAGS_LIBRARY_DIR}
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GFLAGS_BUILD_STATIC_LIBRARIES} ${GFLAGS_LIBRARY_DIR}
   DEPENDS gflags_create_library_dir)

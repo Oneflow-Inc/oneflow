@@ -8,16 +8,21 @@ set(GRPC_URL https://github.com/yuanms2/grpc.git)
 set(GRPC_TAG e0db46e140405f0f94f03c9a55b302e39a514c48)
 
 if(WIN32)
-  set(grpc_STATIC_LIBRARIES
-      ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/${CMAKE_BUILD_TYPE}/grpc++_unsecure.lib
-      ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/${CMAKE_BUILD_TYPE}/grpc_unsecure.lib
-      ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/${CMAKE_BUILD_TYPE}/gpr.lib)
+    set(GRPC_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/${CMAKE_BUILD_TYPE})
+    set(GRPC_LIBRARY_NAMES gpr.lib
+      grpc_unsecure.lib
+      grpc++_unsecure.lib)
 else()
-  set(grpc_STATIC_LIBRARIES
-      ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/libgrpc++_unsecure.a
-      ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/libgrpc_unsecure.a
-      ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/libgpr.a)
+    set(GRPC_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc)
+    set(GRPC_LIBRARY_NAMES libgpr.a
+      libgrpc_unsecure.a
+      libgrpc++_unsecure.a)
 endif()
+
+foreach(LIBRARY_NAME ${GRPC_LIBRARY_NAMES})
+    list(APPEND GRPC_STATIC_LIBRARIES ${GRPC_LIBRARY_DIR}/${LIBRARY_NAME})
+    list(APPEND GRPC_BUILD_STATIC_LIBRARIES ${GRPC_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
+endforeach()
 
 ExternalProject_Add(grpc
     PREFIX grpc
@@ -51,5 +56,5 @@ add_custom_target(grpc_create_library_dir
   DEPENDS grpc)
 
 add_custom_target(grpc_copy_libs_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${grpc_STATIC_LIBRARIES} ${GRPC_LIBRARY_DIR}
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GRPC_BUILD_STATIC_LIBRARIES} ${GRPC_LIBRARY_DIR}
   DEPENDS grpc_create_library_dir)
