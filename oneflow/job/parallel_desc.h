@@ -22,6 +22,8 @@ class ParallelDesc {
     return sorted_machine_vec_;
   }
   const std::vector<DevicePhyId>& sorted_devices_on_machine(MachineId machine_id) const {
+    // If this is used to describe the disk_loader
+    // the return shouble be empty
     return sorted_devices_on_machine_.at(machine_id);
   }
 

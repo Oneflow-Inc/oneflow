@@ -24,6 +24,6 @@ message Resource {
 // "machine_xxx:1"
 // "machine_xxx:2"
 // "machine_xxx:3"
-// "machine_xxx:data_load"
+// "machine_xxx:disk_loader"
 // 
 // "machine_xxx:0-2" means {"machine_xxx:0", "machine_xxx:1", "machine_xxx:2"}
