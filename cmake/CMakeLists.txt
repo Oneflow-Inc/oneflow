@@ -20,7 +20,9 @@ option(oneflow_VERBOSE "Enable for verbose output" OFF)
 
 
 if (NOT WIN32)
-  # find_package(Threads)
+  # Threads: defines CMAKE_THREAD_LIBS_INIT and adds -pthread compile option
+  # for targets that link ${CMAKE_THREAD_LIBS_INIT}
+  find_package(Threads)
 endif()
 
 # Force to link static cxx runtime library
@@ -68,6 +70,8 @@ if(WIN32)
   add_definitions(-DWIN32 -DOS_WIN -D_MBCS -DWIN64 -DWIN32_LEAN_AND_MEAN -DNOGDI -DPLATFORM_WINDOWS)
   add_definitions(/bigobj /nologo /EHsc /GF /FC /MP /Gm-)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+else()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 endif()
 
 if(WIN32)
@@ -85,13 +89,13 @@ include(grpc)
 
 set(oneflow_EXTERNAL_LIBRARIES
     ${ZLIB_STATIC_LIBRARIES}
-    ${GFLAGS_STATIC_LIBRARIES}
     ${GLOG_STATIC_LIBRARIES}
+    ${GFLAGS_STATIC_LIBRARIES}
     ${GOOGLETEST_STATIC_LIBRARIES}
     ${PROTOBUF_STATIC_LIBRARIES}
     ${GRPC_STATIC_LIBRARIES}
 )
-list(APPEND ONEFLOW_LINKER_LIBS ${oneflow_EXTERNAL_LIBRARIES})
+# list(APPEND ONEFLOW_LINKER_LIBS ${oneflow_EXTERNAL_LIBRARIES})
 
 set(oneflow_EXTERNAL_DEPENDENCIES
     zlib_copy_headers_to_destination
@@ -128,6 +132,7 @@ include(proto2cpp)
 file(GLOB_RECURSE oneflow_protos
      RELATIVE ${oneflow_src_dir}
      "${oneflow_src_dir}/*.proto")
+
 RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
                                ${oneflow_src_dir}
                                ${oneflow_protos})
@@ -179,11 +184,13 @@ add_library(of_ccobj ${oneflow_object_cc} ${oneflow_all_h})
 add_dependencies(of_ccobj of_protoobj)
 list(APPEND ONEFLOW_LINKER_LIBS of_ccobj)
 
+message(STATUS ${ONEFLOW_LINKER_LIBS})
+
 # build test
 foreach(cc ${oneflow_test_cc})
   get_filename_component(test_name ${cc} NAME_WE)
   string(CONCAT test_exe_name ${test_name} exe)
   add_executable(${test_exe_name} ${cc})
-  target_link_libraries(${test_exe_name} ${ONEFLOW_LINKER_LIBS})
+  target_link_libraries(${test_exe_name} PUBLIC ${ONEFLOW_LINKER_LIBS} ${oneflow_EXTERNAL_LIBRARIES})
   add_test(NAME ${test_name} COMMAND ${test_exe_name})
 endforeach()
