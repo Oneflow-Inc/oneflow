@@ -194,7 +194,7 @@ void DataMergeChains(
     Logical2ChainItMap* logical2chain_it) {
   std::vector<const LogicalNode*> data_parallel_node;
   HashMap<const LogicalNode*, bool> done;
-  for (const auto& pair : *logical2chain_it) {c
+  for (const auto& pair : *logical2chain_it) {
     const LogicalNode* cur_logi_node = pair.first;
     if (cur_logi_node->parallel_desc()->policy() != kDataParallel) { continue; }
     if (logical_gph.IsFirstNode(cur_logi_node)) { continue; }
