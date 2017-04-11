@@ -136,6 +136,7 @@ include_directories(${PROJECT_BINARY_DIR})
 #SHOW_VARIABLES()
 
 add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
+add_dependencies(of_protoobj ${oneflow_EXTERNAL_DEPENDENCIES})
 list(APPEND ONEFLOW_LINKER_LIBS of_protoobj)
 
 # find all h,object-cpp,test-cpp
@@ -175,7 +176,7 @@ endforeach()
 
 # build object-cpp
 add_library(of_ccobj ${oneflow_object_cc} ${oneflow_all_h})
-add_dependencies(of_ccobj of_protoobj oneflow_EXTERNAL_DEPENDENCIES)
+add_dependencies(of_ccobj of_protoobj)
 list(APPEND ONEFLOW_LINKER_LIBS of_ccobj)
 
 # build test
