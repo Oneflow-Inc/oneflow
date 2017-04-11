@@ -38,10 +38,8 @@ void LogicalGraph::BuildGraphStruct(const DLNetConf& dl_net_conf) {
 void LogicalGraph::FillNodeWithParallelDesc(const Strategy& strategy_conf) {
   HashMap<std::string, LogicalNode*> op_name2node;
   for (const std::unique_ptr<LogicalNode>& logical_node : nodes()) {
-    std::string op_name = logical_node->op()->op_name();
-    bool emplace_success =
-      op_name2node.emplace(op_name, logical_node.get()).second;
-    CHECK_EQ(emplace_success, true);
+    const std::string& op_name = logical_node->op()->op_name();
+    CHECK(op_name2node.emplace(op_name, logical_node.get()).second);
   }
   for (int gid = 0; gid < strategy_conf.placement_groups_size(); ++gid) {
     const PlacementGroup& cur_group = strategy_conf.placement_groups(gid);
