@@ -17,9 +17,10 @@ class ModelSaveOp final : public SysOperator {
     CHECK(op_conf.has_model_save_op_conf());
     auto cnf = new ModelSaveOp(op_conf.model_save_op_conf());
     mut_pb_op_conf().reset(cnf);
+
+    EnrollInputBn("model");
   }
   void InferBlobDesc4ObAndDtbFromIb() const override { TODO(); }
-  void InferBlobDesc4MbAndMtb() const override { TODO(); }
 
  private:
 };

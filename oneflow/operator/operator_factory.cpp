@@ -23,8 +23,8 @@ std::shared_ptr<const Operator> OperatorFactory::ConstructOp(
       ret.reset(new InnerProductOp);
       break;
     }
-    case OperatorConf::kLoaderOpConf: {
-      ret.reset(new LoaderOp);
+    case OperatorConf::kDataLoaderOpConf: {
+      ret.reset(new DataLoaderOp);
       break;
     }
     case OperatorConf::kPoolingOpConf: {

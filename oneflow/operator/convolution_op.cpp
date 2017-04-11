@@ -11,15 +11,11 @@ void ConvolutionOp::Init(const OperatorConf& op_conf) {
   mut_pb_op_conf().reset(cnf);
   
   EnrollInputBn("in");
-  EnrollInputDiffBn(GenDiffBn("in"));
   EnrollOutputBn("out");
-  EnrollOutputDiffBn(GenDiffBn("out"));
   EnrollDataTmpBn("col_buf");
   
   EnrollModelBn("weight");
-  EnrollModelDiffBn(GenDiffBn("weight"));
   EnrollModelBn("bias");
-  EnrollModelDiffBn(GenDiffBn("bias"));
   EnrollModelTmpBn("bias_multiplier");
 }
 

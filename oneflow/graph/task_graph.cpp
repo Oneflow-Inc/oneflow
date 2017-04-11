@@ -207,12 +207,10 @@ void TaskGraph::GenerateRelatedBpNodes(
     std::vector<TaskNode*> *turning_node_vec) {
   for (auto task_node = begin(); task_node != end(); ++task_node) {
     if (auto comp_task_node = dynamic_cast<CompTaskNode*> (&(*task_node))) {
-      if (comp_task_node->HasOpWithOutDiff()) {
+      if (! comp_task_node->IsLossNode()) {
         comp_task_node->BuildAndConnectBpNode();
       } else {
-        if (comp_task_node->HasOpWithIndiff()) {
-          turning_node_vec->push_back(&(*task_node));
-        }
+        turning_node_vec->push_back(&(*task_node));
       }
     } else {
       for (TaskEdge* edge : task_node->in_edges()) {

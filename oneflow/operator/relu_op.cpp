@@ -11,9 +11,7 @@ void ReluOp::Init(const OperatorConf& op_conf) {
   mut_pb_op_conf().reset(cnf);
 
   EnrollInputBn("in");
-  EnrollInputDiffBn(GenDiffBn("in"));
   EnrollOutputBn("out");
-  EnrollOutputDiffBn(GenDiffBn("out"));
 }
 
 } // namespace oneflow

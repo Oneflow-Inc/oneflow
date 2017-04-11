@@ -5,24 +5,6 @@
 
 namespace oneflow {
 
-bool CompTaskNode::HasOpWithOutDiff() const {
-  for (auto op : chain_node()->op_vec()) {
-    if (! op->output_diff_bns().empty()) {
-      return true;
-    }
-  }
-  return false;
-}
-
-bool CompTaskNode::HasOpWithIndiff() const {
-  for (auto op : chain_node()->op_vec()) {
-    if (! op->input_diff_bns().empty()) {
-      return true;
-    }
-  }
-  return false;
-}
-
 void CompTaskNode::FwBuildExecAndProducedRegsts(Path* path) {
   (this->*(path->Func4FwBuildExecAndProducedRegsts()))(path);
 }
@@ -249,8 +231,8 @@ void CompTaskNode::BpSetRegstDescPtrs4Nodes(
     for (ExecEdge* edge : bp_node->in_edges()) {
       found_lbns.insert(edge->lbn());
     }
-    for (const auto& odbn : bp_node->op()->output_diff_bns()) {
-      std::string lbn = bp_node->op()->odbn2lbn(odbn);
+    for (const auto& obn : bp_node->op()->output_bns()) {
+      std::string lbn = bp_node->op()->obn2lbn(obn);
       if (found_lbns.find(lbn) == found_lbns.end()) {
         bp_node->AddConsumedLbnRegstPair(lbn, GetRelatedRegst(SoleInEdge()));
       }
@@ -272,8 +254,8 @@ void CompTaskNode::BpSetProducedRegstDescs() {
     data_diff_regst->EnrollWithPbnAndLbn(cur_edge->pbn(), cur_edge->lbn());
   }
   for (const std::unique_ptr<ExecNode>& cur_node : exec_gph().nodes()) {
-    for (const std::string& mdbn : cur_node->op()->model_diff_bns()) {
-      std::string lbn = cur_node->op()->mdbn2lbn(mdbn);
+    for (const std::string& mbn : cur_node->op()->model_bns()) {
+      std::string lbn = cur_node->op()->mbn2lbn(mbn);
       model_diff_regst->EnrollWithLbn(lbn);
     }
     for (const std::string& mtbn : cur_node->op()->model_tmp_bns()) {

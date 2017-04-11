@@ -5,16 +5,15 @@
 
 namespace oneflow {
 
-class LoaderOp final : public UserOperator {
+class DataLoaderOp final : public SysOperator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(LoaderOp);
-  LoaderOp() = default;
-  ~LoaderOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(DataLoaderOp);
+  DataLoaderOp() = default;
+  ~DataLoaderOp() = default;
   
   void Init(const OperatorConf& op_conf) override;
-  bool IsElemWise() const override { return false; }
+
   void InferBlobDesc4ObAndDtbFromIb() const override { TODO(); }
-  void InferBlobDesc4MbAndMtb() const override { TODO(); }
 
  private:
 

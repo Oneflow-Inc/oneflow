@@ -12,9 +12,7 @@ void MultinomialLogisticLossOp::Init(const OperatorConf& op_conf) {
   mut_pb_op_conf().reset(cnf);
 
   EnrollInputBn("data");
-  EnrollInputDiffBn(GenDiffBn("data"));
   EnrollInputBn("label");
-  EnrollInputDiffBn(GenDiffBn("label"));
   EnrollOutputBn("loss");
   EnrollDataTmpBn("loss_buffer");
 }

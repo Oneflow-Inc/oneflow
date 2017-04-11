@@ -9,10 +9,8 @@
 
 namespace oneflow {
 
-// bn : blob name
-
-std::string GenDiffBn(const std::string& bn);
-std::string GenUnDiffBn(const std::string& diff_bn);
+// bn  : blob name
+// lbn : logical blob name
 
 class Operator {
  public:
@@ -20,18 +18,17 @@ class Operator {
   Operator() = default;
   virtual ~Operator() = default;
   
+  // 
   virtual void Init(const OperatorConf& op_conf) = 0;
-  virtual bool IsElemWise() const = 0;
+  virtual bool IsElemWise() const { return false; }
+  virtual bool IsLossOp() const { return false; }
 
-  // lbn : LogicalBlobName 
+  // 
   std::string dtbn2lbn(const std::string& data_tmp_bn) const;
-  virtual std::string ibn2lbn(const std::string& input_bn) const;
-  virtual std::string obn2lbn(const std::string& output_bn) const;
-  virtual std::string idbn2lbn(const std::string& input_diff_bn) const;
-  virtual std::string odbn2lbn(const std::string& output_diff_bn) const;
-  virtual std::string mtbn2lbn(const std::string& model_tmp_bn) const;
-  virtual std::string mbn2lbn(const std::string& model_bn) const;
-  virtual std::string mdbn2lbn(const std::string& model_diff_bn) const;
+  virtual std::string ibn2lbn(const std::string& input_bn) const = 0;
+  virtual std::string obn2lbn(const std::string& output_bn) const = 0;
+  virtual std::string mtbn2lbn(const std::string& model_tmp_bn) const = 0;
+  virtual std::string mbn2lbn(const std::string& model_bn) const = 0;
   
   // Getters
   const std::string& op_name() const { return op_name_; }
@@ -46,11 +43,8 @@ class Operator {
 
   DEFINE_BLOB_NAMES_GETTER(data_tmp_bns);
   DEFINE_BLOB_NAMES_GETTER(input_bns);
-  DEFINE_BLOB_NAMES_GETTER(input_diff_bns);
   DEFINE_BLOB_NAMES_GETTER(output_bns);
-  DEFINE_BLOB_NAMES_GETTER(output_diff_bns);
   DEFINE_BLOB_NAMES_GETTER(model_bns);
-  DEFINE_BLOB_NAMES_GETTER(model_diff_bns);
   DEFINE_BLOB_NAMES_GETTER(model_tmp_bns);
   
   #undef DEFINE_BLOB_NAMES_GETTER
@@ -59,8 +53,8 @@ class Operator {
   BlobDesc* GetBlobDescPtr(const std::string& bn_in_op) const;
   void SetBlobDescPtr(const std::string& bn_in_op, BlobDesc* ptr);
   void SetNull4AllBlobDescPtr();
-  virtual void InferBlobDesc4ObAndDtbFromIb() const;
-  virtual void InferBlobDesc4MbAndMtb() const;
+  virtual void InferBlobDesc4ObAndDtbFromIb() const = 0;
+  virtual void InferBlobDesc4MbAndMtb() const = 0;
 
  protected:
   std::string& mut_op_name() { return op_name_; }
@@ -69,13 +63,10 @@ class Operator {
   // enroll data blobs
   void EnrollDataTmpBn(const std::string& dtbn);
   void EnrollInputBn(const std::string& ibn);
-  void EnrollInputDiffBn(const std::string& idbn);
   void EnrollOutputBn(const std::string& obn);
-  void EnrollOutputDiffBn(const std::string& odbn);
   
   // enroll model blobs
   void EnrollModelBn(const std::string& mbn);
-  void EnrollModelDiffBn(const std::string& mdbn);
   void EnrollModelTmpBn(const std::string& mtbn);
 
  private:
@@ -83,14 +74,9 @@ class Operator {
   std::unique_ptr<PbMessage> pb_op_conf_;
 
   std::vector<std::string> data_tmp_bns_;
-  
   std::vector<std::string> input_bns_;
-  std::vector<std::string> input_diff_bns_;
   std::vector<std::string> output_bns_;
-  std::vector<std::string> output_diff_bns_;
-  
   std::vector<std::string> model_bns_;
-  std::vector<std::string> model_diff_bns_;
   std::vector<std::string> model_tmp_bns_;
 
   HashMap<std::string, BlobDesc*> bn_in_op2blob_desc_ptr_;
@@ -105,11 +91,8 @@ class UserOperator : public Operator {
 
   std::string ibn2lbn(const std::string& input_bn) const override;
   std::string obn2lbn(const std::string& output_bn) const override;
-  std::string idbn2lbn(const std::string& input_diff_bn) const override;
-  std::string odbn2lbn(const std::string& output_diff_bn) const override;
   std::string mtbn2lbn(const std::string& model_tmp_bn) const override;
   std::string mbn2lbn(const std::string& model_bn) const override;
-  std::string mdbn2lbn(const std::string& model_diff_bn) const override;
 
 };
 
@@ -126,15 +109,12 @@ class SysOperator : public Operator {
   
   SET_UNEXPECTED(ibn2lbn);
   SET_UNEXPECTED(obn2lbn);
-  SET_UNEXPECTED(idbn2lbn);
-  SET_UNEXPECTED(odbn2lbn);
   SET_UNEXPECTED(mtbn2lbn);
   SET_UNEXPECTED(mbn2lbn);
-  SET_UNEXPECTED(mdbn2lbn);
 
   #undef SET_UNEXPECTED
   
-  bool IsElemWise() const override { return false; }
+  void InferBlobDesc4MbAndMtb() const override { UNEXPECTED_RUN(); }
 
  private:
 };
