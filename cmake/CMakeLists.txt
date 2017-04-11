@@ -24,6 +24,7 @@ endif()
 # Force to link static cxx runtime library
 if (MSVC)
   foreach(flag_var
+      CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
       CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
       CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
     if(${flag_var} MATCHES "/MD")
@@ -64,8 +65,11 @@ endif()
 
 include(zlib)
 include(protobuf)
-#include(grpc)
-#include(googletest)
+include(googletest)
+include(glog)
+include(gflags)
+include(grpc)
+
 
 
 
