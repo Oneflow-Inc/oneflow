@@ -19,13 +19,13 @@ void LogicalGraph::BuildGraphStruct(const DLNetConf& dl_net_conf) {
     LogicalNode* cur_node = NewFinalNode();
     cur_node->mut_op() = ConstructOpFromPbConf(cur_op_conf);
     // Connect input node
-    for (const std::string& ibn : cur_node->op()->input_blob_names()) {
+    for (const std::string& ibn : cur_node->op()->input_bns()) {
       std::string lbn = cur_node->op()->ibn2lbn(ibn);
       LogicalNode* pred_node = lbn2node.at(lbn);
       Connect(pred_node, NewFinalEdge(), cur_node);
     }
     // Construct output
-    for (const std::string& obn : cur_node->op()->output_blob_names()) {
+    for (const std::string& obn : cur_node->op()->output_bns()) {
       std::string lbn = cur_node->op()->obn2lbn(obn);
       lbn2node.emplace(lbn, cur_node);
     }

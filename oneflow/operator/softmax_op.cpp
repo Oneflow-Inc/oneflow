@@ -10,10 +10,10 @@ void SoftmaxOp::Init(const OperatorConf& op_conf) {
   auto cnf = new SoftmaxOpConf(op_conf.softmax_op_conf());
   mut_pb_op_conf().reset(cnf);
 
-  RegisterInputBlobName("in");
-  RegisterInputDiffBlobName(GenDiffBlobName("in"));
-  RegisterOutputBlobName("out");
-  RegisterOutputDiffBlobName(GenDiffBlobName("out"));
+  EnrollInputBn("in");
+  EnrollInputDiffBn(GenDiffBn("in"));
+  EnrollOutputBn("out");
+  EnrollOutputDiffBn(GenDiffBn("out"));
 }
 
 } // namespace oneflow

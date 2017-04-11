@@ -11,8 +11,8 @@ class ModelUpdatePath final : public ModelPath {
   ModelUpdatePath() = default;
   ~ModelUpdatePath() = default;
   
-  CompTaskNodeMemFunc Func4FwBuildExecAndProducedRegisters() const override {
-    return &CompTaskNode::ModelUpdateFwBuildExecAndProducedRegisters;
+  CompTaskNodeMemFunc Func4FwBuildExecAndProducedRegsts() const override {
+    return &CompTaskNode::ModelUpdateFwBuildExecAndProducedRegsts;
   }
 
   void Build(

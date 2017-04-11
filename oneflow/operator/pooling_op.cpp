@@ -10,11 +10,11 @@ void PoolingOp::Init(const OperatorConf& op_conf) {
   auto cnf = new PoolingOpConf(op_conf.pooling_op_conf());
   mut_pb_op_conf().reset(cnf);
 
-  RegisterInputBlobName("in");
-  RegisterInputDiffBlobName(GenDiffBlobName("in"));
-  RegisterOutputBlobName("out");
-  RegisterOutputDiffBlobName(GenDiffBlobName("out"));
-  RegisterDataTmpBlobName("idx");
+  EnrollInputBn("in");
+  EnrollInputDiffBn(GenDiffBn("in"));
+  EnrollOutputBn("out");
+  EnrollOutputDiffBn(GenDiffBn("out"));
+  EnrollDataTmpBn("idx");
 }
 
 } // namespace oneflow

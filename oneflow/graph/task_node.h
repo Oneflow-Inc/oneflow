@@ -35,18 +35,18 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   std::unique_ptr<TaskNode> BuildAndConnectBpNode();
   
   //
-  void BuildExecAndProducedRegistersAndSubscribeInPath(Path* path);
-  void Subscribe(RegiDesc* regi) {
-    regi->AddSubscriber(this);
-    CHECK(subscribed_regi_descs_.insert(regi).second);
+  void BuildExecAndProducedRegstsAndSubscribeInPath(Path* path);
+  void Subscribe(RegstDesc* regst) {
+    regst->AddSubscriber(this);
+    CHECK(subscribed_regst_descs_.insert(regst).second);
   }
-  RegiDesc* GetProducedRegiDesc(const std::string& regi_desc_name) {
-    return produced_regi_descs_.at(regi_desc_name).get();
+  RegstDesc* GetProducedRegstDesc(const std::string& regst_desc_name) {
+    return produced_regst_descs_.at(regst_desc_name).get();
   }
 
   // 
-  const TaskEdge* GetOutEdge4ProducedRegister(RegiDesc*) const;
-  RegiDesc* GetProducedRegister4OutEdge(const TaskEdge*) const;
+  const TaskEdge* GetOutEdge4ProducedRegst(RegstDesc*) const;
+  RegstDesc* GetProducedRegst4OutEdge(const TaskEdge*) const;
  
  protected:
   virtual std::unique_ptr<TaskNode> CreateSameTypeNode() const;
@@ -54,20 +54,20 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   ExecGraph& mut_exec_gph() { return exec_gph_; }
   
-  void BindProducedRegisterAndOutEdge(RegiDesc*, const TaskEdge*);
+  void BindProducedRegstAndOutEdge(RegstDesc*, const TaskEdge*);
 
-  void AddProducedRegiDesc(
-      const std::string& regi_desc_name,
-      std::unique_ptr<RegiDesc> regi_desc) {
-    regi_desc->SetProducer(this);
-    auto pair = std::make_pair(regi_desc_name, std::move(regi_desc));
-    CHECK(produced_regi_descs_.insert(std::move(pair)).second);
+  void AddProducedRegstDesc(
+      const std::string& regst_desc_name,
+      std::unique_ptr<RegstDesc> regst_desc) {
+    regst_desc->SetProducer(this);
+    auto pair = std::make_pair(regst_desc_name, std::move(regst_desc));
+    CHECK(produced_regst_descs_.insert(std::move(pair)).second);
   }
 
-  virtual void FwBuildExecAndProducedRegisters(Path*) { UNEXPECTED_RUN(); }
-  virtual void BpBuildExecAndProducedRegisters(Path*) { UNEXPECTED_RUN(); }
-  void SubscribeRegiDescInnerPath();
-  void AddInPathLbn2ProducedRegister();
+  virtual void FwBuildExecAndProducedRegsts(Path*) { UNEXPECTED_RUN(); }
+  virtual void BpBuildExecAndProducedRegsts(Path*) { UNEXPECTED_RUN(); }
+  void SubscribeRegstDescInnerPath();
+  void AddInPathLbn2ProducedRegst();
 
  private:
   // In task_gph level
@@ -77,11 +77,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   TaskNode* related_fw_or_bp_node_;
   // In task level
   ExecGraph exec_gph_;
-  HashMap<std::string,
-                     std::unique_ptr<RegiDesc>> produced_regi_descs_; 
-  std::unordered_set<const RegiDesc*> subscribed_regi_descs_;
-  HashMap<RegiDesc*, const TaskEdge*> produced_register2out_edge;
-  HashMap<const TaskEdge*, RegiDesc*> out_edge2produced_register;
+  HashMap<std::string, std::unique_ptr<RegstDesc>> produced_regst_descs_; 
+  std::unordered_set<const RegstDesc*> subscribed_regst_descs_;
+  HashMap<RegstDesc*, const TaskEdge*> produced_regst2out_edge;
+  HashMap<const TaskEdge*, RegstDesc*> out_edge2produced_regst;
 
 };
 
@@ -105,12 +104,12 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
 
 };
 
-inline RegiDesc* GetRelatedRegister(const TaskEdge* edge) {
-  return edge->src_node()->GetProducedRegister4OutEdge(edge);
+inline RegstDesc* GetRelatedRegst(const TaskEdge* edge) {
+  return edge->src_node()->GetProducedRegst4OutEdge(edge);
 }
 
-inline const TaskEdge* GetRelatedTaskEdge(RegiDesc* regi) {
-  return regi->GetProducer()->GetOutEdge4ProducedRegister(regi);
+inline const TaskEdge* GetRelatedTaskEdge(RegstDesc* regst) {
+  return regst->GetProducer()->GetOutEdge4ProducedRegst(regst);
 }
 
 } // namespace oneflow

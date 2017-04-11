@@ -3,18 +3,19 @@
 
 #include "common/util.h"
 #include "common/shape.h"
+#include "blob/blob_desc.h"
 
 namespace oneflow {
 
 class TaskNode;
 
-// Regi : Register
+// Regst : Register
 
-class RegiDesc {
+class RegstDesc {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(RegiDesc);
-  RegiDesc();
-  virtual ~RegiDesc() = default;
+  OF_DISALLOW_COPY_AND_MOVE(RegstDesc);
+  RegstDesc();
+  virtual ~RegstDesc() = default;
 
   //
   const TaskNode* GetProducer() const { return producer_; }
@@ -24,64 +25,55 @@ class RegiDesc {
   }
 
   //
-  void AddPbn(const std::string& pbn) {
-    CHECK(pbn2shape_.emplace(pbn, Shape()).second);
-  }
-  void AddLbn(const std::string& lbn) {
-    CHECK(lbn2shape_.emplace(lbn, Shape()).second);
-  }
+  void EnrollWithPbnAndLbn(const std::string& pbn, const std::string& lbn);
+  void EnrollWithLbn(const std::string& lbn);
 
   //
   Shape& MutPbnShape(const std::string& pbn) {
-    return pbn2shape_.at(pbn);
+    return pbn2blob_desc_.at(pbn)->mut_shape();
   }
   Shape& MutLbnShape(const std::string& lbn) {
-    return lbn2shape_.at(lbn);
+    return lbn2blob_desc_.at(lbn)->mut_shape();
   }
+
   const Shape& GetPbnShape(const std::string& pbn) const {
-    return pbn2shape_.at(pbn);
+    return pbn2blob_desc_.at(pbn)->mut_shape();
   }
   virtual Shape GetLbnShape(const std::string& lbn) const {
-    return lbn2shape_.at(lbn);
+    return lbn2blob_desc_.at(lbn)->mut_shape();
   }
 
  private:
-  int32_t regi_desc_id_;
+  int32_t regst_desc_id_;
   const TaskNode* producer_;
   std::unordered_set<const TaskNode*> subscribers_;
-  // Pbn means that no other task need it
-  // Lbn means that there are other tasks who need this blob
-  HashMap<std::string, Shape> pbn2shape_;
-  HashMap<std::string, Shape> lbn2shape_;
+  
+  HashMap<std::string, std::unique_ptr<BlobDesc>> pbn2blob_desc_;
+  HashMap<std::string, std::unique_ptr<BlobDesc>> lbn2blob_desc_;
 
 };
 
 // Contiguous
-class ContigRegiDesc final : public RegiDesc {
+class ContigRegstDesc final : public RegstDesc {
  public:
   static const char* kAllLbn;
 
-  OF_DISALLOW_COPY_AND_MOVE(ContigRegiDesc);
-  ContigRegiDesc() = default;
-  ~ContigRegiDesc() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ContigRegstDesc);
+  ContigRegstDesc() = default;
+  ~ContigRegstDesc() = default;
   
-  Shape GetLbnShape(const std::string& lbn) const override {
-    if (lbn == kAllLbn) {
-      return ComputeShape4AllLbn();
-    } else {
-      return RegiDesc::GetLbnShape(lbn);
-    }
-  }
+  Shape GetLbnShape(const std::string& lbn) const override;
+
  private:
   Shape ComputeShape4AllLbn() const;
 
 };
 
-class DisContigRegiDesc final : public RegiDesc {
+class DisContigRegstDesc final : public RegstDesc {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(DisContigRegiDesc);
-  DisContigRegiDesc() = default;
-  ~DisContigRegiDesc() = default;
+  OF_DISALLOW_COPY_AND_MOVE(DisContigRegstDesc);
+  DisContigRegstDesc() = default;
+  ~DisContigRegstDesc() = default;
   
 };
 

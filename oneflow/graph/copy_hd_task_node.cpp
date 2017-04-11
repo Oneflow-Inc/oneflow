@@ -23,8 +23,8 @@ void CopyHDTaskNode::InitWithFwNode(TaskNode* fw_node) {
   is_fw_in_copy_ = of_dynamic_cast<CopyHDTaskNode*>(fw_node)->is_fw_in_copy_;
 }
 
-void CopyHDTaskNode::FwBuildExecAndProducedRegisters(Path* path) {
-  BindOutEdgeAndRegister();
+void CopyHDTaskNode::FwBuildExecAndProducedRegsts(Path* path) {
+  BindOutEdgeAndRegst();
   // Construct Op
   OperatorConf pb_op_conf;
   pb_op_conf.set_name("");
@@ -35,15 +35,15 @@ void CopyHDTaskNode::FwBuildExecAndProducedRegisters(Path* path) {
   ExecNode* copy_node = mut_exec_gph().NewFinalNode();
   copy_node->mut_op() = copy_op;
   for (const std::string& lbn : CopiedLbns()) {
-    copy_node->AddProducedLbnRegiPair(lbn, GetRelatedRegister(SoleOutEdge()));
+    copy_node->AddProducedLbnRegstPair(lbn, GetRelatedRegst(SoleOutEdge()));
   }
   // 
   mut_exec_gph().UpdateSourceAndSink();
-  AddInPathLbn2ProducedRegister();
+  AddInPathLbn2ProducedRegst();
 }
 
-void CopyHDTaskNode::BpBuildExecAndProducedRegisters(Path* path) {
-  BindOutEdgeAndRegister();
+void CopyHDTaskNode::BpBuildExecAndProducedRegsts(Path* path) {
+  BindOutEdgeAndRegst();
   // Get Fw Copy Node
   const ExecGraph& fw_gph = GetFwNode()->exec_gph();
   const ExecNode* fw_copy_node = fw_gph.source_node().SoleOutEdge()->dst_node();
@@ -51,18 +51,18 @@ void CopyHDTaskNode::BpBuildExecAndProducedRegisters(Path* path) {
   ExecNode* bp_copy_node = mut_exec_gph().NewFinalNode();
   bp_copy_node->mut_op() = fw_copy_node->op();
   for (const std::string& lbn : CopiedLbns()) {
-    bp_copy_node->AddProducedLbnRegiPair(lbn,
-                                         GetRelatedRegister(SoleOutEdge()));
+    bp_copy_node->AddProducedLbnRegstPair(lbn,
+                                         GetRelatedRegst(SoleOutEdge()));
   }
   // 
   mut_exec_gph().UpdateSourceAndSink();
-  AddInPathLbn2ProducedRegister();
+  AddInPathLbn2ProducedRegst();
 }
 
-void CopyHDTaskNode::BindOutEdgeAndRegister() {
-  std::unique_ptr<RegiDesc> regi_desc(new DisContigRegiDesc);
-  BindProducedRegisterAndOutEdge(regi_desc.get(), SoleOutEdge());
-  AddProducedRegiDesc("cp_out", std::move(regi_desc));
+void CopyHDTaskNode::BindOutEdgeAndRegst() {
+  std::unique_ptr<RegstDesc> regst_desc(new DisContigRegstDesc);
+  BindProducedRegstAndOutEdge(regst_desc.get(), SoleOutEdge());
+  AddProducedRegstDesc("cp_out", std::move(regst_desc));
 }
 
 } // namespace oneflow

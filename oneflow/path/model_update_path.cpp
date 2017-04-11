@@ -4,13 +4,13 @@ namespace oneflow {
 
 namespace {
 
-void AddConsumedModelLbnRegi4FwExecGraph(
+void AddConsumedModelLbnRegst4FwExecGraph(
     const ExecGraph& exec_gph,
-    RegiDesc* model_regi) {
+    RegstDesc* model_regst) {
   for (const auto& exec_node : exec_gph.nodes()) {
-    for (const std::string& mbn : exec_node->op()->model_blob_names()) {
+    for (const std::string& mbn : exec_node->op()->model_bns()) {
       std::string lbn = exec_node->op()->mbn2lbn(mbn);
-      exec_node->AddConsumedLbnRegiPair(lbn, model_regi);
+      exec_node->AddConsumedLbnRegstPair(lbn, model_regst);
     }
   }
 }
@@ -25,7 +25,7 @@ void ModelUpdatePath::Build(
   HashMap<int32_t, CompTaskNode*> parallel_id2update_node;
   InitFaker2MccoyMapAndParallelIdUpdateMap(sorted_bp_comptasks4data_chain,
                                            &parallel_id2update_node);
-  BuildExecAndProducedRegistersAndSubscribeInPath();
+  BuildExecAndProducedRegstsAndSubscribeInPath();
   if (faker2mccoy().empty()) {
     SubscribeCrossPathWithoutFaker(sorted_bp_comptasks4data_chain,
                                    parallel_id2update_node);
@@ -54,8 +54,8 @@ void ModelUpdatePath::BuildTaskGraph(const ChainNode* data_chain) {
     ChainNode* faker_chain = chain_gph->NewFinalNode();
     faker_chain->mut_op_vec().clear();
     faker_chain->mut_parallel_desc() = parallel_desc4data_chain;
-    faker_chain->mut_output_lbns() = {ContigRegiDesc::kAllLbn};
-    model_update_chain->mut_input_lbns() = {ContigRegiDesc::kAllLbn};
+    faker_chain->mut_output_lbns() = {ContigRegstDesc::kAllLbn};
+    model_update_chain->mut_input_lbns() = {ContigRegstDesc::kAllLbn};
     Connect(faker_chain, chain_gph->NewFinalEdge(), model_update_chain);
   }
   // 
@@ -92,15 +92,15 @@ void ModelUpdatePath::SubscribeCrossPathWithoutFaker(
     CompTaskNode* update_task_node = parallel_id2update_node.at(parallel_id);
     TaskNode* fw_task_node = bp_task_node->GetFwNode();
     ExecNode* update_exec_node = update_task_node->exec_gph().SoleNode();
-    RegiDesc* model_diff_regi = bp_task_node->GetProducedRegiDesc("model_diff");
-    RegiDesc* model_regi = update_task_node->GetProducedRegiDesc("model");
-    // update_node Subscribe ModelDiffRegister
-    update_task_node->Subscribe(model_diff_regi);
-    update_exec_node->AddConsumedLbnRegiPair(ContigRegiDesc::kAllLbn,
-                                             model_diff_regi);
-    // fw_node Subscribe ModelRegister
-    fw_task_node->Subscribe(model_regi);
-    AddConsumedModelLbnRegi4FwExecGraph(fw_task_node->exec_gph(), model_regi);
+    RegstDesc* model_diff_regst = bp_task_node->GetProducedRegstDesc("model_diff");
+    RegstDesc* model_regst = update_task_node->GetProducedRegstDesc("model");
+    // update_node Subscribe ModelDiffRegst
+    update_task_node->Subscribe(model_diff_regst);
+    update_exec_node->AddConsumedLbnRegstPair(ContigRegstDesc::kAllLbn,
+                                             model_diff_regst);
+    // fw_node Subscribe ModelRegst
+    fw_task_node->Subscribe(model_regst);
+    AddConsumedModelLbnRegst4FwExecGraph(fw_task_node->exec_gph(), model_regst);
   }
 }
 
@@ -110,9 +110,9 @@ void ModelUpdatePath::SubscribeCrossPathWithFaker(
     int32_t parallel_id = pair.first->parallel_id();
     CompTaskNode* update_node = parallel_id2update_node.at(parallel_id);
     TaskNode* fw_comp_node = pair.second->GetFwNode();
-    RegiDesc* model_regi = update_node->GetProducedRegiDesc("model");
-    fw_comp_node->Subscribe(model_regi);
-    AddConsumedModelLbnRegi4FwExecGraph(fw_comp_node->exec_gph(), model_regi);
+    RegstDesc* model_regst = update_node->GetProducedRegstDesc("model");
+    fw_comp_node->Subscribe(model_regst);
+    AddConsumedModelLbnRegst4FwExecGraph(fw_comp_node->exec_gph(), model_regst);
   }
 }
 

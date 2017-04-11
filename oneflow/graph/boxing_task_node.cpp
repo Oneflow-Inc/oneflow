@@ -62,18 +62,18 @@ OpPair FwBuildBoxingOpModelModel(size_t in_num, size_t out_num) {
 
 }
 
-void BoxingTaskNode::FwBuildExecAndProducedRegisters(Path* path) {
-  BindOutEdgeAndRegister();
+void BoxingTaskNode::FwBuildExecAndProducedRegsts(Path* path) {
+  BindOutEdgeAndRegst();
   FwBuildExecGraph();
-  SetProducedRegister();
+  SetProducedRegst();
 }
 
-void BoxingTaskNode::BindOutEdgeAndRegister() {
+void BoxingTaskNode::BindOutEdgeAndRegst() {
   for (TaskEdge* edge : out_edges()) {
     std::string name = "boxing_out_" + std::to_string(edge->edge_id());
-    std::unique_ptr<RegiDesc> regi_desc(new DisContigRegiDesc);
-    BindProducedRegisterAndOutEdge(regi_desc.get(), edge);
-    AddProducedRegiDesc(name, std::move(regi_desc));
+    std::unique_ptr<RegstDesc> regst_desc(new DisContigRegstDesc);
+    BindProducedRegstAndOutEdge(regst_desc.get(), edge);
+    AddProducedRegstDesc(name, std::move(regst_desc));
   }
 }
 
@@ -156,53 +156,53 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
     ExecNode* first_node = mut_exec_gph().NewFinalNode();
     first_node->mut_op() = op_pair.first;
     for (const TaskEdge* edge : sorted_in_edges) {
-      first_node->AddConsumedLbnRegiPair(lbn, GetRelatedRegister(edge));
+      first_node->AddConsumedLbnRegstPair(lbn, GetRelatedRegst(edge));
     }
     // Second Node
     ExecNode* second_node = mut_exec_gph().NewFinalNode();
     second_node->mut_op() = op_pair.second;
     for (const TaskEdge* edge : sorted_out_edges) {
-      second_node->AddProducedLbnRegiPair(lbn, GetRelatedRegister(edge));
+      second_node->AddProducedLbnRegstPair(lbn, GetRelatedRegst(edge));
     }
     // Connect
     Connect(first_node, mut_exec_gph().NewExecEdge(lbn), second_node);
   }
 }
 
-void BoxingTaskNode::SetProducedRegister() {
-  AddInPathLbn2ProducedRegister();
-  std::unique_ptr<RegiDesc> boxing_middle_register(new DisContigRegiDesc);
+void BoxingTaskNode::SetProducedRegst() {
+  AddInPathLbn2ProducedRegst();
+  std::unique_ptr<RegstDesc> boxing_middle_regst(new DisContigRegstDesc);
   for (const std::unique_ptr<ExecEdge>& edge : exec_gph().edges()) {
-    boxing_middle_register->AddPbn(edge->pbn());
+    boxing_middle_regst->EnrollWithPbnAndLbn(edge->pbn(), edge->lbn());
   }
-  AddProducedRegiDesc("boxing_middle", std::move(boxing_middle_register));
+  AddProducedRegstDesc("boxing_middle", std::move(boxing_middle_regst));
 }
 
 namespace {
 
-inline RegiDesc* GetBpRegisterFromFwRegister(RegiDesc* fw_register) {
-  const TaskEdge* fw_edge = GetRelatedTaskEdge(fw_register);
+inline RegstDesc* GetBpRegstFromFwRegst(RegstDesc* fw_regst) {
+  const TaskEdge* fw_edge = GetRelatedTaskEdge(fw_regst);
   const TaskEdge* bp_edge = fw_edge->related_fwbp_edge();
-  return GetRelatedRegister(bp_edge);
+  return GetRelatedRegst(bp_edge);
 }
 
 }
 
-void BoxingTaskNode::BpBuildExecAndProducedRegisters(Path* path) {
-  BindOutEdgeAndRegister();
+void BoxingTaskNode::BpBuildExecAndProducedRegsts(Path* path) {
+  BindOutEdgeAndRegst();
   const ExecGraph& fw_exec_gph = GetFwNode()->exec_gph();
   HashMap<const ExecNode*, ExecNode*> fw_node2bp_node;
   for (const std::unique_ptr<ExecNode>& fw_node: fw_exec_gph.nodes()) {
     ExecNode* bp_node = mut_exec_gph().NewFinalNode();
     CHECK(fw_node2bp_node.emplace(fw_node.get(), bp_node).second);
     bp_node->mut_op() = fw_node->op();
-    for (const auto& fw_pair : fw_node->consumed_lbn_regi_pairs()) {
-      RegiDesc* bp_register = GetBpRegisterFromFwRegister(fw_pair.second);
-      bp_node->AddProducedLbnRegiPair(fw_pair.first, bp_register);
+    for (const auto& fw_pair : fw_node->consumed_lbn_regst_pairs()) {
+      RegstDesc* bp_regst = GetBpRegstFromFwRegst(fw_pair.second);
+      bp_node->AddProducedLbnRegstPair(fw_pair.first, bp_regst);
     }
-    for (const auto& fw_pair : fw_node->produced_lbn_regi_pairs()) {
-      RegiDesc* bp_register = GetBpRegisterFromFwRegister(fw_pair.second);
-      bp_node->AddConsumedLbnRegiPair(fw_pair.first, bp_register);
+    for (const auto& fw_pair : fw_node->produced_lbn_regst_pairs()) {
+      RegstDesc* bp_regst = GetBpRegstFromFwRegst(fw_pair.second);
+      bp_node->AddConsumedLbnRegstPair(fw_pair.first, bp_regst);
     }
   }
   for (const std::unique_ptr<ExecEdge>& fw_edge : fw_exec_gph.edges()) {
@@ -211,7 +211,7 @@ void BoxingTaskNode::BpBuildExecAndProducedRegisters(Path* path) {
             fw_node2bp_node.at(fw_edge->src_node()));
   }
   mut_exec_gph().UpdateSourceAndSink();
-  SetProducedRegister();
+  SetProducedRegst();
 }
 
 } // namespace oneflow

@@ -20,10 +20,10 @@ class CompTaskNode : public TaskNode {
 
   bool IsFaker() const { return chain_node()->IsFaker(); }
 
-  void DataFwBuildExecAndProducedRegisters(Path*);
-  void ModelUpdateFwBuildExecAndProducedRegisters(Path*);
-  void ModelLoadFwBuildExecAndProducedRegisters(Path*);
-  void ModelSaveFwBuildExecAndProducedRegisters(Path*);
+  void DataFwBuildExecAndProducedRegsts(Path*);
+  void ModelUpdateFwBuildExecAndProducedRegsts(Path*);
+  void ModelLoadFwBuildExecAndProducedRegsts(Path*);
+  void ModelSaveFwBuildExecAndProducedRegsts(Path*);
 
  protected:
   virtual void InitWithFwNode(TaskNode* fw_node) override {
@@ -34,27 +34,27 @@ class CompTaskNode : public TaskNode {
  private:
   using Lbn2NodeMap = HashMap<std::string, ExecNode*>;
   using Lbn2NodeVecMap = HashMap<std::string, std::vector<ExecNode*>>;
-  void FwBuildExecAndProducedRegisters(Path*) override;
+  void FwBuildExecAndProducedRegsts(Path*) override;
   void FwBuildFromUserOps(
       Lbn2NodeMap* lbn2producer,
       Lbn2NodeVecMap* extern_in_lbn2consumers);
   void FwAddCopyInOp(Lbn2NodeVecMap* extern_in_lbn2consumers);
   void FwAddCloneOp();
-  void FwBindOutEdgeAndRegister();
-  void FwSetRegisterPtrs4ExecNodes(
+  void FwBindOutEdgeAndRegst();
+  void FwSetRegstPtrs4ExecNodes(
       const Lbn2NodeMap& lbn2producer,
       const Lbn2NodeVecMap& extern_in_lbn2consumers);
-  void FwSetProducedRegiDescs();
-  void BpBuildExecAndProducedRegisters(Path*) override;
+  void FwSetProducedRegstDescs();
+  void BpBuildExecAndProducedRegsts(Path*) override;
   void BpBuildExecGraph(
       const ExecGraph& fw_gph,
       const ExecNode* cp_in_node,
       HashMap<const ExecNode*, ExecNode*>* fw_node2bp_node);
-  void BpBindOutEdgeAndRegister();
-  void BpSetRegiDescPtrs4Nodes(
+  void BpBindOutEdgeAndRegst();
+  void BpSetRegstDescPtrs4Nodes(
       const ExecNode* cp_in_node,
       const HashMap<const ExecNode*, ExecNode*>& fw_node2bp_node);
-  void BpSetProducedRegiDescs();
+  void BpSetProducedRegstDescs();
 
   int32_t parallel_id_;
 

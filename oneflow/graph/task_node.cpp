@@ -35,12 +35,12 @@ std::unique_ptr<TaskNode> TaskNode::BuildAndConnectBpNode() {
   return bp_node;
 }
 
-void TaskNode::BuildExecAndProducedRegistersAndSubscribeInPath(Path* path) {
-  SubscribeRegiDescInnerPath();
+void TaskNode::BuildExecAndProducedRegstsAndSubscribeInPath(Path* path) {
+  SubscribeRegstDescInnerPath();
   if (IsFwNode()) {
-    FwBuildExecAndProducedRegisters(path);
+    FwBuildExecAndProducedRegsts(path);
   } else {
-    BpBuildExecAndProducedRegisters(path);
+    BpBuildExecAndProducedRegsts(path);
   }
 }
 
@@ -55,34 +55,34 @@ void TaskNode::InitWithFwNode(TaskNode* fw_node) {
   related_fw_or_bp_node_ = fw_node;
 }
 
-void TaskNode::BindProducedRegisterAndOutEdge(RegiDesc* regi,
+void TaskNode::BindProducedRegstAndOutEdge(RegstDesc* regst,
                                               const TaskEdge* edge) {
-  CHECK(produced_register2out_edge.emplace(regi, edge).second);
-  CHECK(out_edge2produced_register.emplace(edge, regi).second);
+  CHECK(produced_regst2out_edge.emplace(regst, edge).second);
+  CHECK(out_edge2produced_regst.emplace(edge, regst).second);
 }
 
-const TaskEdge* TaskNode::GetOutEdge4ProducedRegister(RegiDesc* regi) const {
-  return produced_register2out_edge.at(regi);
+const TaskEdge* TaskNode::GetOutEdge4ProducedRegst(RegstDesc* regst) const {
+  return produced_regst2out_edge.at(regst);
 }
 
-RegiDesc* TaskNode::GetProducedRegister4OutEdge(const TaskEdge* edge) const {
-  return out_edge2produced_register.at(edge);
+RegstDesc* TaskNode::GetProducedRegst4OutEdge(const TaskEdge* edge) const {
+  return out_edge2produced_regst.at(edge);
 }
 
 
-void TaskNode::SubscribeRegiDescInnerPath() {
+void TaskNode::SubscribeRegstDescInnerPath() {
   for (const TaskEdge* edge : in_edges()) {
-    RegiDesc* regi =  GetRelatedRegister(edge);
-    Subscribe(regi);
+    RegstDesc* regst =  GetRelatedRegst(edge);
+    Subscribe(regst);
   }
 }
 
-void TaskNode::AddInPathLbn2ProducedRegister() {
+void TaskNode::AddInPathLbn2ProducedRegst() {
   for (const std::unique_ptr<ExecNode>& node : exec_gph_.nodes()) {
-    for (const auto& pair : node->produced_lbn_regi_pairs()) {
+    for (const auto& pair : node->produced_lbn_regst_pairs()) {
       const std::string& lbn = pair.first;
-      RegiDesc* register_desc = pair.second;
-      register_desc->AddLbn(lbn);
+      RegstDesc* regst_desc = pair.second;
+      regst_desc->EnrollWithLbn(lbn);
     }
   }
 }

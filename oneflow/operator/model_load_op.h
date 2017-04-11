@@ -18,6 +18,8 @@ class ModelLoadOp final : public SysOperator {
     auto cnf = new ModelLoadOp(op_conf.model_load_op_conf());
     mut_pb_op_conf().reset(cnf);
   }
+  void InferBlobDesc4ObAndDtbFromIb() const override { TODO(); }
+  void InferBlobDesc4MbAndMtb() const override { TODO(); }
 
  private:
 };

@@ -22,7 +22,7 @@ class ExecEdge final : public Edge<ExecNode, ExecEdge> {
 
  private:
   std::string lbn2pbn(const std::string& lbn) const {
-    return "edge_id_" + std::to_string(edge_id()) + "/" + lbn;
+    return "edge_" + std::to_string(edge_id()) + "/" + lbn;
   }
 
   std::string lbn_;
@@ -39,25 +39,25 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   std::shared_ptr<const Operator>& mut_op() { return op_; }
 
   std::string lbn2pbn(const std::string& lbn) const {
-    return "node_id_" + std::to_string(node_id()) + "/" + lbn;
+    return "node_" + std::to_string(node_id()) + "/" + lbn;
   }
 
-  void AddConsumedLbnRegiPair(const std::string& lbn, RegiDesc* regi);
-  void AddProducedLbnRegiPair(const std::string& lbn, RegiDesc* regi);
+  void AddConsumedLbnRegstPair(const std::string& lbn, RegstDesc* regst);
+  void AddProducedLbnRegstPair(const std::string& lbn, RegstDesc* regst);
 
-  const std::vector<std::pair<std::string, RegiDesc*>>&
-  consumed_lbn_regi_pairs() const {
-    return consumed_lbn_regi_pairs_;
+  const std::vector<std::pair<std::string, RegstDesc*>>&
+  consumed_lbn_regst_pairs() const {
+    return consumed_lbn_regst_pairs_;
   }
-  const std::vector<std::pair<std::string, RegiDesc*>>&
-  produced_lbn_regi_pairs() const {
-    return produced_lbn_regi_pairs_;
+  const std::vector<std::pair<std::string, RegstDesc*>>&
+  produced_lbn_regst_pairs() const {
+    return produced_lbn_regst_pairs_;
   }
 
  private:
   std::shared_ptr<const Operator> op_;
-  std::vector<std::pair<std::string, RegiDesc*>> consumed_lbn_regi_pairs_;
-  std::vector<std::pair<std::string, RegiDesc*>> produced_lbn_regi_pairs_;
+  std::vector<std::pair<std::string, RegstDesc*>> consumed_lbn_regst_pairs_;
+  std::vector<std::pair<std::string, RegstDesc*>> produced_lbn_regst_pairs_;
 
 };
 
