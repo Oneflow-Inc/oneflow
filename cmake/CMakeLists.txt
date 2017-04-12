@@ -13,11 +13,11 @@ set(oneflow_src_dir ${oneflow_root_dir}/oneflow)
 
 message(STATUS "oneflow_root_dir: ${oneflow_root_dir}")
 message(STATUS "oneflow_SOURCE_DIR: ${oneflow_SOURCE_DIR}")
+message(STATUS "oneflow_source_dir: ${oneflow_source_dir}")
 message(STATUS "oneflow_src_dir: ${oneflow_src_dir}")
 
 # Options
 option(oneflow_VERBOSE "Enable for verbose output" OFF)
-
 
 if (NOT WIN32)
   # Threads: defines CMAKE_THREAD_LIBS_INIT and adds -pthread compile option
@@ -95,7 +95,6 @@ set(oneflow_EXTERNAL_LIBRARIES
     ${PROTOBUF_STATIC_LIBRARIES}
     ${GRPC_STATIC_LIBRARIES}
 )
-# list(APPEND ONEFLOW_LINKER_LIBS ${oneflow_EXTERNAL_LIBRARIES})
 
 set(oneflow_EXTERNAL_DEPENDENCIES
     zlib_copy_headers_to_destination
@@ -116,7 +115,6 @@ set(oneflow_EXTERNAL_DEPENDENCIES
 include_directories(
     # Source and generated code.
     ${oneflow_src_dir}
-    #${CMAKE_CURRENT_BINARY_DIR}
     # External dependencies.
     ${ZLIB_INCLUDE_DIR}
     ${GFLAGS_INCLUDE_DIR}
@@ -138,53 +136,70 @@ RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
                                ${oneflow_protos})
 include_directories(${PROJECT_BINARY_DIR})
 
-#SHOW_VARIABLES()
-
 add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
 add_dependencies(of_protoobj ${oneflow_EXTERNAL_DEPENDENCIES})
 list(APPEND ONEFLOW_LINKER_LIBS of_protoobj)
 
 # find all h,object-cpp,test-cpp
+#FindFilesMatch(oneflow_all_h "${oneflow_src_dir}/*.h")
+#FindFilesMatch(oneflow_all_cc "${oneflow_src_dir}/*.cpp")
+FindFilesMatch(oneflow_test_cc "${oneflow_src_dir}/*_test.cpp")
 
-function(FindFilesMatch found_files expr)
-  file(GLOB_RECURSE ${found_files} ${expr})
-  foreach(file_i ${${found_files}})
-    file(RELATIVE_PATH relative_path ${oneflow_src_dir} ${file_i})
-    string(SUBSTRING ${relative_path} 0 2 relative_path_prefix)
-    if(${relative_path_prefix} STREQUAL ..)
-      list(REMOVE_ITEM ${found_files} ${file_i})
-    endif()
-  endforeach()
-  set(${found_files} ${${found_files}} PARENT_SCOPE)
-endfunction()
+#foreach(cc ${oneflow_all_cc})
+#  get_filename_component(cc_name_we ${cc} NAME_WE)
+#  STR_ENDSWITH(${cc_name_we} _test is_test_cc)
+#  if(${is_test_cc})
+#    list(APPEND oneflow_test_cc ${cc})
+# else()
+#    list(APPEND oneflow_object_cc ${cc})
+#  endif()
+#endforeach()
 
-FindFilesMatch(oneflow_all_h "${oneflow_src_dir}/*.h")
-FindFilesMatch(oneflow_all_cc "${oneflow_src_dir}/*.cpp")
+file(GLOB common_src    "${oneflow_src_dir}/common/*")
+file(GLOB graph_src     "${oneflow_src_dir}/graph/*")
+file(GLOB job_src       "${oneflow_src_dir}/job/*")
+file(GLOB memory_src    "${oneflow_src_dir}/memory/*")
+file(GLOB operator_src  "${oneflow_src_dir}/operator/*")
+file(GLOB path_src      "${oneflow_src_dir}/path/*")
 
-foreach(cc ${oneflow_all_cc})
-  get_filename_component(cc_name_we ${cc} NAME_WE)
-  STR_ENDSWITH(${cc_name_we} _test is_test_cc)
-  if(${is_test_cc})
-    list(APPEND oneflow_test_cc ${cc})
-  else()
-    list(APPEND oneflow_object_cc ${cc})
-  endif()
-endforeach()
-
-# source_group
-
-SUBDIRLIST(subdir_list ${oneflow_src_dir})
-foreach(subdir_name ${subdir_list})
-  set(subdir_path "${oneflow_source_dir}/${subdir_name}")
-  oneflow_source_group("${subdir_name}" GLOB "${subdir_path}/*")
-endforeach()
+# remove _test.cpp files
+remove_test_cpp(common_src)
+remove_test_cpp(graph_src)
+remove_test_cpp(job_src)
+remove_test_cpp(memory_src)
+remove_test_cpp(operator_src)
+remove_test_cpp(path_src)
 
 # build object-cpp
-add_library(of_ccobj ${oneflow_object_cc} ${oneflow_all_h})
+add_library(of_ccobj 
+  ${common_src}
+  ${graph_src}
+  ${job_src}
+  ${memory_src}
+  ${operator_src}
+  ${path_src})
+
 add_dependencies(of_ccobj of_protoobj)
+
+# add filters for Visual Studio Project
+source_group("common"     FILES  ${common_src})
+source_group("graph"      FILES  ${graph_src})
+source_group("job"        FILES  ${job_src})
+source_group("memory"     FILES  ${memory_src})
+source_group("operator"   FILES  ${operator_src})
+source_group("path"       FILES  ${path_src})
+
+# source_group
+#SUBDIRLIST(subdir_list ${oneflow_src_dir})
+#foreach(subdir_name ${subdir_list})
+  #message(STATUS ${subdir_name})
+  #set(subdir_path "${oneflow_src_dir}/${subdir_name}")
+  #oneflow_source_group("${subdir_name}" GLOB "${subdir_path}/*.h")
+#endforeach()
+
 list(APPEND ONEFLOW_LINKER_LIBS of_ccobj)
 
-message(STATUS ${ONEFLOW_LINKER_LIBS})
+# message(STATUS ${ONEFLOW_LINKER_LIBS})
 
 # build test
 foreach(cc ${oneflow_test_cc})
