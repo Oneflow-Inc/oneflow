@@ -23,13 +23,13 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   TaskNode* GetBpNode() const;
   const ChainNode* chain_node() const { return stage_node_->chain_node();}
   const StageNode* stage_node() const { return stage_node_; }
-  const ThrdLocId& thread_local_id() const { return thread_local_id_; }
+  const ThrdLocId& thrd_loc_id() const { return thrd_loc_id_; }
   const ExecGraph& exec_gph() const { return exec_gph_; }
   
   // Setters
   void SetFwNode() { is_fw_node_ = true; }
   void set_stage_node(const StageNode*);
-  ThrdLocId& mut_thread_local_id();
+  ThrdLocId& mut_thrd_loc_id();
 
   // return bp_node
   std::unique_ptr<TaskNode> BuildAndConnectBpNode();
@@ -72,7 +72,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
  private:
   // In task_gph level
   const StageNode* stage_node_;
-  ThrdLocId thread_local_id_;
+  ThrdLocId thrd_loc_id_;
   bool is_fw_node_;
   TaskNode* related_fw_or_bp_node_;
   // In task level

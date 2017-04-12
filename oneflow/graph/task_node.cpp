@@ -20,9 +20,9 @@ void TaskNode::set_stage_node(const StageNode* new_stage_node) {
   CHECK(IsFwNode());
   stage_node_ = new_stage_node;
 }
-ThrdLocId& TaskNode::mut_thread_local_id() {
+ThrdLocId& TaskNode::mut_thrd_loc_id() {
   CHECK(IsFwNode());
-  return thread_local_id_;
+  return thrd_loc_id_;
 }
 
 std::unique_ptr<TaskNode> TaskNode::BuildAndConnectBpNode() {
@@ -50,7 +50,7 @@ std::unique_ptr<TaskNode> TaskNode::CreateSameTypeNode() const {
 
 void TaskNode::InitWithFwNode(TaskNode* fw_node) {
   stage_node_ = fw_node->stage_node_;
-  thread_local_id_ = fw_node->thread_local_id_;
+  thrd_loc_id_ = fw_node->thrd_loc_id_;
   is_fw_node_ = false;
   related_fw_or_bp_node_ = fw_node;
 }

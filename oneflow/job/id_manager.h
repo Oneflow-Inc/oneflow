@@ -34,10 +34,13 @@ class IDMgr final {
   ThrdLocId ThrdLocId4DevicePhyId(DevicePhyId) const {
     TODO();
   }
-  ThrdLocId DataThrdLocId() const {
+  ThrdLocId DiskThrdLocId() const {
     TODO();
   }
   ThrdLocId BoxingThrdLocId() const {
+    TODO();
+  }
+  ThrdLocId CommNetThrdLocId() const {
     TODO();
   }
 

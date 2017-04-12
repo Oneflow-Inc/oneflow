@@ -35,6 +35,10 @@ class StageNode final : public Node<StageNode, StageEdge> {
     return parallel_range_;
   }
 
+  const std::vector<DevicePhyId>& SortedDevices() const {
+    return chain_node_->parallel_desc()->sorted_devices_on_machine(machine_id_);
+  }
+
  private:
   const ChainNode* chain_node_;
   MachineId machine_id_;
