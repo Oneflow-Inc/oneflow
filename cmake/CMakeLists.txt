@@ -37,8 +37,7 @@ if (MSVC)
   endforeach(flag_var)
 endif (MSVC)
 
-# [CLEANUP] Remove when done
-# For debugging
+# [CLEANUP] Remove when done, For debugging
 function(SHOW_VARIABLES)
   get_cmake_property(_variableNames VARIABLES)
   foreach(_variableName ${_variableNames})
@@ -46,18 +45,9 @@ function(SHOW_VARIABLES)
   endforeach()
 endfunction()
 
-
-
 # External dependencies
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/external)
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/utils)
-
-
-
-# Location where external projects will be downloaded
-#set(DOWNLOAD_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/downloads"
-#  CACHE PATH "Location where external projects will be downloaded.")
-#mark_as_advanced(DOWNLOAD_LOCATION)
 
 # Location where third party headers and libs will be put
 set(THIRD_PARTY_DIR "${CMAKE_CURRENT_BINARY_DIR}/third_party"
@@ -127,82 +117,49 @@ include_directories(
 include(util)
 include(proto2cpp)
 
-file(GLOB_RECURSE oneflow_protos
-     RELATIVE ${oneflow_src_dir}
-     "${oneflow_src_dir}/*.proto")
+SUBDIRLIST(subdir_list ${oneflow_src_dir})
+foreach(subdir ${subdir_list})
+  file(GLOB subdir_headers    "${oneflow_src_dir}/${subdir}/*.h")
+  file(GLOB subdir_cpps       "${oneflow_src_dir}/${subdir}/*.cpp")
+  file(GLOB subdir_test_cpps  "${oneflow_src_dir}/${subdir}/*_test.cpp")
+  file(GLOB subdir_protos     "${oneflow_src_dir}/${subdir}/*.proto")
+  # Remove *_test.cpp from ${subdir_cpps}
+  foreach(test_cpp ${subdir_test_cpps})
+    list(REMOVE_ITEM subdir_cpps ${test_cpp})
+  endforeach()
 
+  source_group(${subdir} FILES ${subdir_headers} ${subdir_cpps})
+  list(APPEND of_all_ccobj ${subdir_headers} ${subdir_cpps} ${subdir_protos})
+  list(APPEND of_all_protos ${subdir_protos})
+  list(APPEND of_all_test ${subdir_test_cpps})
+endforeach()
+source_group("proto" FILES ${of_all_protos})
+
+# Get the relative path of all protos, used by RELATIVE_PROTOBUF_GENERATE_CPP function
+foreach(proto_name ${of_all_protos})
+  file(RELATIVE_PATH proto_rel_name ${oneflow_src_dir} ${proto_name})
+  list(APPEND of_all_rel_protos ${proto_rel_name})
+endforeach()
+
+# proto obj lib
 RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
                                ${oneflow_src_dir}
-                               ${oneflow_protos})
-include_directories(${PROJECT_BINARY_DIR})
+                               ${of_all_rel_protos})
 
 add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
 add_dependencies(of_protoobj ${oneflow_EXTERNAL_DEPENDENCIES})
 list(APPEND ONEFLOW_LINKER_LIBS of_protoobj)
 
-# find all h,object-cpp,test-cpp
-#FindFilesMatch(oneflow_all_h "${oneflow_src_dir}/*.h")
-#FindFilesMatch(oneflow_all_cc "${oneflow_src_dir}/*.cpp")
-FindFilesMatch(oneflow_test_cc "${oneflow_src_dir}/*_test.cpp")
+# cc obj lib
+include_directories(${PROJECT_BINARY_DIR})
 
-#foreach(cc ${oneflow_all_cc})
-#  get_filename_component(cc_name_we ${cc} NAME_WE)
-#  STR_ENDSWITH(${cc_name_we} _test is_test_cc)
-#  if(${is_test_cc})
-#    list(APPEND oneflow_test_cc ${cc})
-# else()
-#    list(APPEND oneflow_object_cc ${cc})
-#  endif()
-#endforeach()
-
-file(GLOB common_src    "${oneflow_src_dir}/common/*")
-file(GLOB graph_src     "${oneflow_src_dir}/graph/*")
-file(GLOB job_src       "${oneflow_src_dir}/job/*")
-file(GLOB memory_src    "${oneflow_src_dir}/memory/*")
-file(GLOB operator_src  "${oneflow_src_dir}/operator/*")
-file(GLOB path_src      "${oneflow_src_dir}/path/*")
-
-# remove _test.cpp files
-remove_test_cpp(common_src)
-remove_test_cpp(graph_src)
-remove_test_cpp(job_src)
-remove_test_cpp(memory_src)
-remove_test_cpp(operator_src)
-remove_test_cpp(path_src)
-
-# build object-cpp
-add_library(of_ccobj 
-  ${common_src}
-  ${graph_src}
-  ${job_src}
-  ${memory_src}
-  ${operator_src}
-  ${path_src})
-
+add_library(of_ccobj ${of_all_ccobj})
 add_dependencies(of_ccobj of_protoobj)
-
-# add filters for Visual Studio Project
-source_group("common"     FILES  ${common_src})
-source_group("graph"      FILES  ${graph_src})
-source_group("job"        FILES  ${job_src})
-source_group("memory"     FILES  ${memory_src})
-source_group("operator"   FILES  ${operator_src})
-source_group("path"       FILES  ${path_src})
-
-# source_group
-#SUBDIRLIST(subdir_list ${oneflow_src_dir})
-#foreach(subdir_name ${subdir_list})
-  #message(STATUS ${subdir_name})
-  #set(subdir_path "${oneflow_src_dir}/${subdir_name}")
-  #oneflow_source_group("${subdir_name}" GLOB "${subdir_path}/*.h")
-#endforeach()
-
 list(APPEND ONEFLOW_LINKER_LIBS of_ccobj)
 
-# message(STATUS ${ONEFLOW_LINKER_LIBS})
 
 # build test
-foreach(cc ${oneflow_test_cc})
+foreach(cc ${of_all_test})
   get_filename_component(test_name ${cc} NAME_WE)
   string(CONCAT test_exe_name ${test_name} exe)
   add_executable(${test_exe_name} ${cc})
