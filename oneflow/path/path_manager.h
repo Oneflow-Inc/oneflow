@@ -9,26 +9,29 @@
 
 namespace oneflow {
 
-class PathManager {
+class PathMgr {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(PathManager);
-  ~PathManager() = default;
+  OF_DISALLOW_COPY_AND_MOVE(PathMgr);
+  ~PathMgr() = default;
 
-  static PathManager& Singleton() {
-    static PathManager obj;
+  static PathMgr& Singleton() {
+    static PathMgr obj;
     return obj;
   }
 
   void Init(const JobSysConf& job_sys_conf);
 
  private:
-  PathManager() = default;
-  
-  void ProcessCps(const CpsDesc& cps_desc) {
-    LOG(FATAL) << "TODO";
-  }
+  template<typename ValType>
+  using ChainAsKeyMap = HashMap<const ChainNode*, ValType>;
 
-  std::unordered_map<std::string, std::unique_ptr<Path>> paths_;
+  PathMgr() = default;
+
+  std::unique_ptr<DataPath> data_path_;
+
+  ChainAsKeyMap<std::unique_ptr<ModelUpdatePath>> model_update_paths_;
+  ChainAsKeyMap<std::unique_ptr<ModelLoadPath>> model_load_paths_;
+  ChainAsKeyMap<std::unique_ptr<ModelSavePath>> model_save_paths_;
 
 };
 

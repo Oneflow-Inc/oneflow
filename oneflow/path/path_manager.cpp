@@ -2,34 +2,35 @@
 
 namespace oneflow {
 
-void PathManager::Init(const JobSysConf& job_sys_conf) {
-  IDManager::Singleton().Init(job_sys_conf.resource());
+void PathMgr::Init(const JobSysConf& job_sys_conf) {
+  IDMgr::Singleton().Init(job_sys_conf.resource());
   // build data path
-  std::unique_ptr<DataPath> data_path(new DataPath);
-  data_path->Build(job_sys_conf.train_dlnet_conf(),
-                   job_sys_conf.strategy(),
-                   true); // TODO
-  paths_.insert(std::make_pair("data", std::move(data_path)));
-  // build model path
-  std::vector<CpsDesc> cps_desc_vec;
-  auto add_cps_desc = [&cps_desc_vec](const CpsDesc& cps_desc) {
-    cps_desc_vec.push_back(cps_desc);
-  };
-  for (const auto& chain : paths_.at("data")->chain_graph()->nodes()) {
-    std::unique_ptr<ModelUpdatePath> model_update_path(new ModelUpdatePath);
-    std::unique_ptr<ModelLoadPath> model_load_path(new ModelLoadPath);
-    std::unique_ptr<ModelSavePath> model_save_path(new ModelSavePath);
-    model_update_path->Build(chain.get(), add_cps_desc);
-    model_load_path->Build(chain.get(), add_cps_desc);
-    model_save_path->Build(chain.get(), add_cps_desc);
-    // TODO: name
-    paths_.insert(std::make_pair("", std::move(model_update_path)));
-    paths_.insert(std::make_pair("", std::move(model_load_path)));
-    paths_.insert(std::make_pair("", std::move(model_save_path)));
+  data_path_.reset(new DataPath);
+  data_path_->Build(job_sys_conf.train_dlnet_conf(),
+                    job_sys_conf.strategy(),
+                    true);
+  // init data_chain2sorted_bp_comp_tasks
+  ChainAsKeyMap<std::vector<CompTaskNode*>> data_chain2sorted_bp_comp_tasks;
+  for (const auto& node : data_path_->task_gph()->nodes()) {
+    auto bp_node = dynamic_cast<CompTaskNode*>(node.get());
+    if (!bp_node || bp_node->IsFwNode()) { continue; }
+    data_chain2sorted_bp_comp_tasks[bp_node->chain_node()].push_back(bp_node);
   }
-  // processs cross path subscribe
-  for (const CpsDesc& cps_desc : cps_desc_vec) {
-    ProcessCps(cps_desc);
+  for (auto& pair : data_chain2sorted_bp_comp_tasks) {
+    SortByParallelId(&(pair.second));
+  }
+  // build model path
+  for (const auto& chain_uptr : data_path_->chain_gph()->nodes()) {
+    const ChainNode* chain = chain_uptr.get();
+    std::unique_ptr<ModelUpdatePath> update_path(new ModelUpdatePath);
+    std::unique_ptr<ModelLoadPath> load_path(new ModelLoadPath);
+    std::unique_ptr<ModelSavePath> save_path(new ModelSavePath);
+    update_path->Build(chain, data_chain2sorted_bp_comp_tasks.at(chain));
+    load_path->Build(chain);
+    save_path->Build(chain);
+    model_update_paths_.insert(std::make_pair(chain, std::move(update_path)));
+    model_load_paths_.insert(std::make_pair(chain, std::move(load_path)));
+    model_save_paths_.insert(std::make_pair(chain, std::move(save_path)));
   }
 }
 

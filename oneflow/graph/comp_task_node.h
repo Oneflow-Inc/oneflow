@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_GRAPH_COMP_TASK_NODE_H_
 #define ONEFLOW_GRAPH_COMP_TASK_NODE_H_
 
+#include <algorithm>
 #include "graph/task_node.h"
 
 namespace oneflow {
@@ -11,8 +12,17 @@ class CompTaskNode : public TaskNode {
   CompTaskNode() = default;
   virtual ~CompTaskNode() = default;
 
-  bool HasOpWithOutDiff() const;
-  bool HasOpWithIndiff() const;
+  int32_t parallel_id() const { return parallel_id_; }
+  void set_parallel_id(int32_t parallel_id) { parallel_id_ = parallel_id; }
+
+  bool IsLossNode() const { TODO(); }
+
+  bool IsFaker() const { return chain_node()->IsFaker(); }
+
+  void DataFwBuildExecAndProducedRegsts(Path*);
+  void ModelUpdateFwBuildExecAndProducedRegsts(Path*);
+  void ModelLoadFwBuildExecAndProducedRegsts(Path*);
+  void ModelSaveFwBuildExecAndProducedRegsts(Path*);
 
  protected:
   virtual void InitWithFwNode(TaskNode* fw_node) override {
@@ -21,31 +31,40 @@ class CompTaskNode : public TaskNode {
   virtual CopyOpConf::CopyType CopyInOpType() = 0;
 
  private:
-  using Lbn2NodeMap = std::unordered_map<std::string, ExecNode*>;
-  using Lbn2NodeVecMap = std::unordered_map<std::string, std::vector<ExecNode*>>;
-  void FwBuildExecGraphAndSetProducedRegisterDescs() override;
+  using Lbn2NodeMap = HashMap<std::string, ExecNode*>;
+  using Lbn2NodeVecMap = HashMap<std::string, std::vector<ExecNode*>>;
+  void FwBuildExecAndProducedRegsts(Path*) override;
   void FwBuildFromUserOps(
       Lbn2NodeMap* lbn2producer,
       Lbn2NodeVecMap* extern_in_lbn2consumers);
   void FwAddCopyInOp(Lbn2NodeVecMap* extern_in_lbn2consumers);
   void FwAddCloneOp();
-  void FwSetOutEdgeRegisterPtr();
-  void FwSetRegisterPtrs4ExecNodes(
+  void FwBindOutEdgeAndRegst();
+  void FwSetRegstPtrs4ExecNodes(
       const Lbn2NodeMap& lbn2producer,
       const Lbn2NodeVecMap& extern_in_lbn2consumers);
-  void FwSetProducedRegisterDescs();
-  void BpBuildExecGraphAndSetProducedRegisterDescs() override;
+  void FwSetProducedRegstDescs();
+  void BpBuildExecAndProducedRegsts(Path*) override;
   void BpBuildExecGraph(
-      const ExecGraph& fw_graph,
+      const ExecGraph& fw_gph,
       const ExecNode* cp_in_node,
-      std::unordered_map<const ExecNode*, ExecNode*>* fw_node2bp_node);
-  void BpSetOutEdgeRegisterPtr();
-  void BpSetRegisterDescPtrs4Nodes(
+      HashMap<const ExecNode*, ExecNode*>* fw_node2bp_node);
+  void BpBindOutEdgeAndRegst();
+  void BpSetRegstDescPtrs4Nodes(
       const ExecNode* cp_in_node,
-      const std::unordered_map<const ExecNode*, ExecNode*>& fw_node2bp_node);
-  void BpSetProducedRegisterDescs();
+      const HashMap<const ExecNode*, ExecNode*>& fw_node2bp_node);
+  void BpSetProducedRegstDescs();
+
+  int32_t parallel_id_;
 
 };
+
+inline void SortByParallelId(std::vector<CompTaskNode*>* comp_node_vec) {
+  std::sort(comp_node_vec->begin(), comp_node_vec->end(), []
+      (const CompTaskNode* lhs, const CompTaskNode* rhs) {
+    return lhs->parallel_id() < rhs->parallel_id();
+  });
+}
 
 class HostCompTaskNode final : public CompTaskNode {
  public:

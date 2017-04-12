@@ -1,43 +1,46 @@
 #ifndef ONEFLOW_GRAPH_BOXING_TASK_NODE_H_
 #define ONEFLOW_GRAPH_BOXING_TASK_NODE_H_
 
-#include "graph/task_node.h"
+#include "graph/comp_task_node.h"
 
 namespace oneflow {
 
-class BoxingTaskNode final : public TaskNode {
+class BoxingTaskNode : public TaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BoxingTaskNode);
   BoxingTaskNode() = default;
-  ~BoxingTaskNode() = default;
+  virtual ~BoxingTaskNode() = default;
 
-  bool IsFwInBoxing() const { return is_fw_in_boxing_; }
-  bool IsFwOutBoxing() const { return !is_fw_in_boxing_; }
-  void SetFwInBoxing();
-  void SetFwOutBoxing();
-
- private:
-  using Chain2EdgesPair =
+ protected:
+  virtual void InitWithFwNode(TaskNode* fw_node) override {
+    TaskNode::InitWithFwNode(fw_node);
+  }
+  
+  using ChainEdgesPair =
       std::pair<const ChainNode*, std::vector<const TaskEdge*>>;
   using Chain2EdgesMap =
-      std::unordered_map<const ChainNode*, std::vector<const TaskEdge*>>;
+      HashMap<const ChainNode*, std::vector<const TaskEdge*>>;
+  void FwInitChain2SortedEdgesMaps(
+      Chain2EdgesMap* chain2sorted_edges,
+      const std::unordered_set<TaskEdge*>& (TaskNode::*in_out_edges)() const,
+      TaskNode* (TaskEdge::*src_dst_node)() const,
+      TaskEdge* (TaskNode::*SoleEdge)() const);
+  void FwSortEdgesInnerStage(
+      std::vector<const TaskEdge*>* edges_to_be_sorted,
+      TaskNode* (TaskEdge::*src_dst_node)() const,
+      TaskEdge* (TaskNode::*SoleEdge)() const);
+  void FwBuildChainSortedEdgesPair(
+      const ChainEdgesPair& chain_sorted_in_edges,
+      const ChainEdgesPair& chain_sorted_out_edges);
+  virtual void FwBuildExecGraph() = 0;
 
-  void FwBuildExecGraphAndSetProducedRegisterDescs() override;
-  void FwSetOutEdgeRegisterPtr();
-  void FwInitChain2EdgesMaps(Chain2EdgesMap* chain2in_edges,
-                                             Chain2EdgesMap* chain2out_edges);
-  void FwBuildChainPair(const Chain2EdgesPair& in_pair,
-                                        const Chain2EdgesPair& out_pair);
-  void BpBuildExecGraphAndSetProducedRegisterDescs() override {
-    LOG(FATAL) << "TODO";
-  }
-
-  std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    return std::unique_ptr<TaskNode> (new BoxingTaskNode);
-  }
-  void InitWithFwNode(TaskNode* fw_node) override;
+ private:
+  void FwBuildExecAndProducedRegsts(Path*) override;
+  void BpBuildExecAndProducedRegsts(Path*) override;
   
-  bool is_fw_in_boxing_;
+  void BindOutEdgeAndRegst();
+  void SetProducedRegst();
+  
 };
 
 } // namespace oneflow

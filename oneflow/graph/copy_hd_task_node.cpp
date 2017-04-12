@@ -5,11 +5,7 @@
 namespace oneflow {
 
 const std::vector<std::string>& CopyHDTaskNode::CopiedLbns() const {
-  if (IsFwInCopy()) {
-    return chain_node()->input_lbns();
-  } else {
-    return chain_node()->output_lbns();
-  }
+  return IsFwInCopy() ? chain_node()->input_lbns() : chain_node()->output_lbns();
 }
 
 void CopyHDTaskNode::SetFwInCopy() {
@@ -27,45 +23,46 @@ void CopyHDTaskNode::InitWithFwNode(TaskNode* fw_node) {
   is_fw_in_copy_ = of_dynamic_cast<CopyHDTaskNode*>(fw_node)->is_fw_in_copy_;
 }
 
-void CopyHDTaskNode::FwBuildExecGraphAndSetProducedRegisterDescs() {
+void CopyHDTaskNode::FwBuildExecAndProducedRegsts(Path* path) {
+  BindOutEdgeAndRegst();
+  // Construct Op
   OperatorConf pb_op_conf;
   pb_op_conf.set_name("");
-  pb_op_conf.mutable_copy_op_conf()->set_copy_type(IsH2D() ? CopyOpConf::H2D : CopyOpConf::D2H);
-
+  pb_op_conf.mutable_copy_op_conf()->set_copy_type(IsH2D() ? CopyOpConf::H2D :
+                                                             CopyOpConf::D2H);
   std::shared_ptr<const Operator> copy_op = ConstructOpFromPbConf(pb_op_conf);
-
-  ExecNode* copy_node = mut_exec_graph().NewExecNode();
+  // Set ExecNode
+  ExecNode* copy_node = mut_exec_gph().NewFinalNode();
   copy_node->mut_op() = copy_op;
-  mut_exec_graph().UpdateSourceAndSink();
-
-  std::unique_ptr<RegisterDesc> data_register(new DisContigRegistDesc);
-  SoleOutEdge()->set_register_desc(data_register.get());
-  AddProducedRegisterDesc("copy", std::move(data_register));
-  const std::vector<std::string>& lbns
-          = IsFwInCopy() ? chain_node()->input_lbns() :  chain_node()->output_lbns();
-  for (const std::string& lbn : lbns) {
-    copy_node->AddProducedLbnRegiPair(lbn, SoleOutEdge()->register_desc());
-    SoleOutEdge()->register_desc()->AddLbn(lbn);
+  for (const std::string& lbn : CopiedLbns()) {
+    copy_node->AddProducedLbnRegstPair(lbn, GetRelatedRegst(SoleOutEdge()));
   }
+  // 
+  mut_exec_gph().UpdateSourceAndSink();
+  AddInPathLbn2ProducedRegst();
 }
 
-void CopyHDTaskNode::BpBuildExecGraphAndSetProducedRegisterDescs() {
-  const ExecGraph& fw_graph = GetFwNode()->exec_graph();
-  const ExecNode* cp_in_node = fw_graph.source_node().SoleOutEdge()->dst_node();
-
-  ExecNode* copy_node = mut_exec_graph().NewExecNode();
-  copy_node->mut_op() = cp_in_node->op();
-  mut_exec_graph().UpdateSourceAndSink();
-
-  std::unique_ptr<RegisterDesc> data_register(new DisContigRegistDesc);
-  SoleOutEdge()->set_register_desc(data_register.get());
-  AddProducedRegisterDesc("copy", std::move(data_register));
-  const std::vector<std::string>& lbns
-          = IsFwInCopy() ? chain_node()->input_lbns() :  chain_node()->output_lbns();
-  for (const std::string& lbn : lbns) {
-    copy_node->AddProducedLbnRegiPair(lbn, SoleOutEdge()->register_desc());
-    SoleOutEdge()->register_desc()->AddLbn(lbn);
+void CopyHDTaskNode::BpBuildExecAndProducedRegsts(Path* path) {
+  BindOutEdgeAndRegst();
+  // Get Fw Copy Node
+  const ExecGraph& fw_gph = GetFwNode()->exec_gph();
+  const ExecNode* fw_copy_node = fw_gph.source_node().SoleOutEdge()->dst_node();
+  // Set Bp Copy Node
+  ExecNode* bp_copy_node = mut_exec_gph().NewFinalNode();
+  bp_copy_node->mut_op() = fw_copy_node->op();
+  for (const std::string& lbn : CopiedLbns()) {
+    bp_copy_node->AddProducedLbnRegstPair(lbn,
+                                         GetRelatedRegst(SoleOutEdge()));
   }
+  // 
+  mut_exec_gph().UpdateSourceAndSink();
+  AddInPathLbn2ProducedRegst();
+}
+
+void CopyHDTaskNode::BindOutEdgeAndRegst() {
+  std::unique_ptr<RegstDesc> regst_desc(new DisContigRegstDesc);
+  BindProducedRegstAndOutEdge(regst_desc.get(), SoleOutEdge());
+  AddProducedRegstDesc("cp_out", std::move(regst_desc));
 }
 
 } // namespace oneflow

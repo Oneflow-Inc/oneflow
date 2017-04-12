@@ -5,20 +5,14 @@
 
 namespace oneflow {
 
-class CopyOp final : public Operator {
+class CopyOp final : public SysOperator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CopyOp);
   CopyOp() = default;
   ~CopyOp() = default;
 
   void Init(const OperatorConf& op_conf) override;
-
-  std::string ibn2lbn(const std::string& input_blob_name) const override;
-  std::string obn2lbn(const std::string& output_blob_name) const override;
-  std::string idbn2lbn(const std::string& input_diff_blob_name) const override;
-  std::string odbn2lbn(const std::string& output_diff_blob_name) const override;
-
-  bool IsElemWise() const override { return false; }
+  void InferBlobDesc4ObAndDtbFromIb() const override { TODO(); }
 
  private:
 

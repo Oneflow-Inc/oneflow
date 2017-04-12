@@ -14,6 +14,8 @@ class ChainNode final : public Node<ChainNode, ChainEdge> {
   ChainNode() = default;
   ~ChainNode() = default;
 
+  std::string ConcatedOpsName() const;
+
   const std::vector<std::shared_ptr<const Operator>>& op_vec() const {
     return op_vec_;
   }
@@ -42,6 +44,15 @@ class ChainNode final : public Node<ChainNode, ChainEdge> {
     return output_lbns_;
   }
 
+  bool IsFaker() const { return op_vec_.empty(); }
+
+  bool IsLossNode() const {
+    if (op_vec_.size() == 1) {
+      return op_vec_.front()->IsLossOp();
+    }
+    return false;
+  }
+
  private:
   std::vector<std::shared_ptr<const Operator>> op_vec_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
@@ -65,10 +76,10 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
   ChainGraph() = default;
   ~ChainGraph() = default;
 
-  void Init(const LogicalGraph* logical_graph);
+  ChainGraph(const LogicalGraph* logical_gph);
 
  private:
-  void CollectInputAndOutputLbns();
+  void SetInOutLbn4AllChainNodeInDataPath();
 
 };
 

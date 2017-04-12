@@ -6,31 +6,34 @@
 #include "graph/copy_hd_task_node.h"
 #include "operator/operator.h"
 #include "job/parallel_desc.h"
-#include "common/id_manager.h"
+#include "job/id_manager.h"
 
 namespace oneflow {
+
+class Path;
 
 class TaskGraph final : public Graph<TaskNode, TaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TaskGraph);
-  TaskGraph() = default;
+  TaskGraph() = delete;
   ~TaskGraph() = default;
   
-  void Init(const DLNetConf& dl_net_conf,
+  TaskGraph(const DLNetConf& dl_net_conf,
             const Strategy& strategy_conf,
             bool need_bp);
+  TaskGraph(std::unique_ptr<ChainGraph>&& chain_gph, bool need_bp);
 
-  const StageGraph* stage_graph() const { return stage_graph_.get(); }
+  const StageGraph* stage_gph() const { return stage_gph_.get(); }
 
  private:
-  void BuildWithoutExecGraph(bool need_bp);
-  void BuildExecGraph();
+  void BuildFromChainGph(std::unique_ptr<ChainGraph>&& chain_gph, bool need_bp);
+  void BuildGraph(bool need_bp);
 
   template<typename TaskNodeType>
   TaskNodeType* NewTaskNode() {
     static_assert(std::is_base_of<TaskNode, TaskNodeType>::value, "");
     TaskNodeType* ret = new TaskNodeType;
-    RegisterNode(ret);
+    EnrollNode(ret);
     return ret;
   }
 
@@ -43,7 +46,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   };
   
   using Stage2TaskNodesMap =
-      std::unordered_map<const StageNode*, TaskNodesInStage>;
+      HashMap<const StageNode*, TaskNodesInStage>;
 
   void InitCompTaskNodes(Stage2TaskNodesMap* stage2task_nodes);
   void Stage2DeviceCompTaskNodes(const StageNode* stage,
@@ -62,7 +65,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void BackwardConnect(const std::vector<TaskNode*>& turning_node_vec);
   void BuildBpStruct();
 
-  std::unique_ptr<const StageGraph> stage_graph_;
+  std::unique_ptr<const StageGraph> stage_gph_;
 
 };
 
