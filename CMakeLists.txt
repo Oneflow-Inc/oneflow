@@ -8,8 +8,9 @@ project(oneflow C CXX)
 set(CMAKE_CXX_STANDARD 14)
 
 # Actual source is the ../ directory
-get_filename_component(oneflow_root_dir ${oneflow_SOURCE_DIR} PATH)
-set(oneflow_src_dir ${oneflow_root_dir}/oneflow)
+#get_filename_component(oneflow_root_dir ${oneflow_SOURCE_DIR} PATH)
+set(oneflow_src_dir ${oneflow_SOURCE_DIR}/oneflow)
+set(oneflow_cmake_dir ${oneflow_SOURCE_DIR}/cmake)
 
 message(STATUS "oneflow_root_dir: ${oneflow_root_dir}")
 message(STATUS "oneflow_SOURCE_DIR: ${oneflow_SOURCE_DIR}")
@@ -46,8 +47,8 @@ function(SHOW_VARIABLES)
 endfunction()
 
 # External dependencies
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/external)
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/utils)
+set(CMAKE_MODULE_PATH ${oneflow_cmake_dir}/external)
+list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir}/utils)
 
 # Location where third party headers and libs will be put
 set(THIRD_PARTY_DIR "${CMAKE_CURRENT_BINARY_DIR}/third_party"

@@ -1,5 +1,4 @@
 # oneflow
-cd cmake  
 mkdir build  
 cd build  
 
