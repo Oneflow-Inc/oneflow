@@ -15,17 +15,23 @@ class ExecEdge final : public Edge<ExecNode, ExecEdge> {
   ExecEdge() = default;
   ~ExecEdge() = default;
 
+  // Getters
   const std::string& lbn() const { return lbn_; }
-  std::string& mut_lbn() { return lbn_; }
+  const std::string& pbn() const { return pbn_; }
+  const std::string& ibn() const { return ibn_; }
+  const std::string& obn() const { return obn_; }
 
-  std::string pbn() const { return lbn2pbn(lbn_); }
+  // Setters
+  void set_lbn(const std::string& lbn);
+  std::string& mut_ibn() { return ibn_; }
+  std::string& mut_obn() { return obn_; }
 
  private:
-  std::string lbn2pbn(const std::string& lbn) const {
-    return "edge_" + std::to_string(edge_id()) + "/" + lbn;
-  }
-
+  // various names for one blob
   std::string lbn_;
+  std::string pbn_;
+  std::string ibn_; // in dst_node::op
+  std::string obn_; // in src_node::op
 
 };
 
@@ -38,34 +44,42 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   std::shared_ptr<const Operator> op() const { return op_; }
   std::shared_ptr<const Operator>& mut_op() { return op_; }
 
-  std::string lbn2pbn(const std::string& lbn) const {
-    return "node_" + std::to_string(node_id()) + "/" + lbn;
+  // Add pair
+  void AddDtbnRegstPair(const std::string& dtbn, RegstDesc* regst);
+  void AddIbnRegstPair(const std::string& ibn, RegstDesc* regst);
+  void AddObnRegstPair(const std::string& obn, RegstDesc* regst);
+  void AddMbnRegstPair(const std::string& mbn, RegstDesc* regst);
+  void AddMtbnRegstPair(const std::string& mtbn, RegstDesc* regst);
+
+  // Get Pairs
+  #define DEFINE_PAIRS_GETTER(getter) \
+  const std::vector<std::pair<std::string, RegstDesc*>>& getter() const { \
+    return getter##_; \
   }
 
-  void AddConsumedLbnRegstPair(const std::string& lbn, RegstDesc* regst);
-  void AddProducedLbnRegstPair(const std::string& lbn, RegstDesc* regst);
+  DEFINE_PAIRS_GETTER(dtbn_regst_pairs);
+  DEFINE_PAIRS_GETTER(ibn_regst_pairs);
+  DEFINE_PAIRS_GETTER(obn_regst_pairs);
+  DEFINE_PAIRS_GETTER(mbn_regst_pairs);
+  DEFINE_PAIRS_GETTER(mtbn_regst_pairs);
 
-  const std::vector<std::pair<std::string, RegstDesc*>>&
-  consumed_lbn_regst_pairs() const {
-    return consumed_lbn_regst_pairs_;
-  }
-  const std::vector<std::pair<std::string, RegstDesc*>>&
-  produced_lbn_regst_pairs() const {
-    return produced_lbn_regst_pairs_;
-  }
+  #undef DEFINE_PAIRS_GETTER
 
  private:
   std::shared_ptr<const Operator> op_;
-  std::vector<std::pair<std::string, RegstDesc*>> consumed_lbn_regst_pairs_;
-  std::vector<std::pair<std::string, RegstDesc*>> produced_lbn_regst_pairs_;
+  std::vector<std::pair<std::string, RegstDesc*>> dtbn_regst_pairs_;
+  std::vector<std::pair<std::string, RegstDesc*>> ibn_regst_pairs_;
+  std::vector<std::pair<std::string, RegstDesc*>> obn_regst_pairs_;
+  std::vector<std::pair<std::string, RegstDesc*>> mbn_regst_pairs_;
+  std::vector<std::pair<std::string, RegstDesc*>> mtbn_regst_pairs_;
 
 };
 
-class ExecGraph : public Graph<ExecNode, ExecEdge> {
+class ExecGraph final : public Graph<ExecNode, ExecEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ExecGraph);
   ExecGraph() = default;
-  virtual ~ExecGraph() = default;
+  ~ExecGraph() = default;
 
   ExecNode* SoleNode() const {
     TODO();
