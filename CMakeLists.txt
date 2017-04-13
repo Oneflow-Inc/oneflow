@@ -156,5 +156,3 @@ foreach(cc ${of_all_test})
   add_test(NAME ${test_name} COMMAND ${test_exe_name})
 endforeach()
 
-# SHOW_VARIABLES()
-message(STATUS "Generator: ${CMAKE_GENERATOR}")
