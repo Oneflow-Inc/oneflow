@@ -36,13 +36,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   
   //
   void BuildExecAndProducedRegstsAndSubscribeInPath(Path* path);
-  void Subscribe(RegstDesc* regst) {
-    regst->AddSubscriber(this);
-    CHECK(subscribed_regst_descs_.insert(regst).second);
-  }
-  RegstDesc* GetProducedRegstDesc(const std::string& regst_desc_name) {
-    return produced_regst_descs_.at(regst_desc_name).get();
-  }
+  void Subscribe(RegstDesc* regst);
+  RegstDesc* GetProducedRegstDesc(const std::string& regst_desc_name);
 
   // 
   const TaskEdge* GetOutEdge4ProducedRegst(RegstDesc*) const;
@@ -56,16 +51,12 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   
   void BindProducedRegstAndOutEdge(RegstDesc*, const TaskEdge*);
 
-  void AddProducedRegstDesc(
-      const std::string& regst_desc_name,
-      std::unique_ptr<RegstDesc> regst_desc) {
-    regst_desc->SetProducer(this);
-    auto pair = std::make_pair(regst_desc_name, std::move(regst_desc));
-    CHECK(produced_regst_descs_.insert(std::move(pair)).second);
-  }
+  void AddProducedRegstDesc(const std::string& regst_desc_name,
+                            std::unique_ptr<RegstDesc>&& regst_desc);
 
   virtual void FwBuildExecAndProducedRegsts(Path*) { UNEXPECTED_RUN(); }
   virtual void BpBuildExecAndProducedRegsts(Path*) { UNEXPECTED_RUN(); }
+
   void SubscribeRegstDescInnerPath();
   void AddInPathLbn2ProducedRegst();
 
@@ -77,8 +68,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   TaskNode* related_fw_or_bp_node_;
   // In task level
   ExecGraph exec_gph_;
+
   HashMap<std::string, std::unique_ptr<RegstDesc>> produced_regst_descs_; 
   std::unordered_set<const RegstDesc*> subscribed_regst_descs_;
+
   HashMap<RegstDesc*, const TaskEdge*> produced_regst2out_edge;
   HashMap<const TaskEdge*, RegstDesc*> out_edge2produced_regst;
 

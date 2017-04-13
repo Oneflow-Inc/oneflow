@@ -44,6 +44,23 @@ void TaskNode::BuildExecAndProducedRegstsAndSubscribeInPath(Path* path) {
   }
 }
 
+void TaskNode::Subscribe(RegstDesc* regst) {
+  regst->AddSubscriber(this);
+  CHECK(subscribed_regst_descs_.insert(regst).second);
+}
+
+RegstDesc* TaskNode::GetProducedRegstDesc(const std::string& regst_desc_name) {
+  return produced_regst_descs_.at(regst_desc_name).get();
+}
+
+const TaskEdge* TaskNode::GetOutEdge4ProducedRegst(RegstDesc* regst) const {
+  return produced_regst2out_edge.at(regst);
+}
+
+RegstDesc* TaskNode::GetProducedRegst4OutEdge(const TaskEdge* edge) const {
+  return out_edge2produced_regst.at(edge);
+}
+
 std::unique_ptr<TaskNode> TaskNode::CreateSameTypeNode() const {
   UNEXPECTED_RUN();
 }
@@ -56,19 +73,18 @@ void TaskNode::InitWithFwNode(TaskNode* fw_node) {
 }
 
 void TaskNode::BindProducedRegstAndOutEdge(RegstDesc* regst,
-                                              const TaskEdge* edge) {
+                                           const TaskEdge* edge) {
   CHECK(produced_regst2out_edge.emplace(regst, edge).second);
   CHECK(out_edge2produced_regst.emplace(edge, regst).second);
 }
 
-const TaskEdge* TaskNode::GetOutEdge4ProducedRegst(RegstDesc* regst) const {
-  return produced_regst2out_edge.at(regst);
+void TaskNode::AddProducedRegstDesc(
+    const std::string& regst_desc_name,
+    std::unique_ptr<RegstDesc>&& regst_desc) {
+  regst_desc->SetProducer(this);
+  auto pair = std::make_pair(regst_desc_name, std::move(regst_desc));
+  CHECK(produced_regst_descs_.insert(std::move(pair)).second);
 }
-
-RegstDesc* TaskNode::GetProducedRegst4OutEdge(const TaskEdge* edge) const {
-  return out_edge2produced_regst.at(edge);
-}
-
 
 void TaskNode::SubscribeRegstDescInnerPath() {
   for (const TaskEdge* edge : in_edges()) {
