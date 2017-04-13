@@ -158,3 +158,5 @@ endforeach()
 
 # SHOW_VARIABLES()
 message(STATUS "Generator: ${CMAKE_GENERATOR}")
+message(STATUS "APPLE: ${APPLE}")
+message(STATUS "WIN32: ${WIN32}")
