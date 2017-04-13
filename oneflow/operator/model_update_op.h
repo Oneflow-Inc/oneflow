@@ -21,7 +21,8 @@ class ModelUpdateOp final : public SysOperator {
     EnrollInputBn("model_diffs");
     EnrollOutputBn("model");
   }
-  void InferBlobDesc4ObAndDtbFromIb() const override { TODO(); }
+  void InferShape4ObAndDtbFromIb() const override { TODO(); }
+  void InferShape4IbAndDtbFromOb() const override { TODO(); }
 
  private:
 };

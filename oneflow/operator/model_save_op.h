@@ -20,7 +20,8 @@ class ModelSaveOp final : public SysOperator {
 
     EnrollInputBn("model");
   }
-  void InferBlobDesc4ObAndDtbFromIb() const override { TODO(); }
+  void InferShape4ObAndDtbFromIb() const override { TODO(); }
+  void InferShape4IbAndDtbFromOb() const override { TODO(); }
 
  private:
 };

@@ -45,21 +45,24 @@ message CopyOpConf {
     H2H = 3;
   }
   CopyType copy_type = 1;
-  int32 copied_num = 2;
+  repeated string copied_lbns = 2;
 }
 
 message CloneOpConf {
   int32 out_num = 1;
+  string lbn = 2;
 }
 
 message ConcatOpConf {
   int32 axis = 1;
   int32 in_num = 2;
+  string lbn = 3;
 }
 
 message SplitOpConf {
   int32 axis = 1;
   int32 out_num = 2;
+  string lbn = 3;
 }
 
 message ModelUpdateOpConf {

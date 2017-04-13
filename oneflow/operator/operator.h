@@ -17,13 +17,13 @@ class Operator {
   OF_DISALLOW_COPY_AND_MOVE(Operator);
   Operator() = default;
   virtual ~Operator() = default;
-  
+
   // 
   virtual void Init(const OperatorConf& op_conf) = 0;
   virtual bool IsElemWise() const { return false; }
   virtual bool IsLossOp() const { return false; }
 
-  // 
+  // bn_in_op2lbn
   std::string dtbn2lbn(const std::string& data_tmp_bn) const;
   virtual std::string ibn2lbn(const std::string& input_bn) const = 0;
   virtual std::string obn2lbn(const std::string& output_bn) const = 0;
@@ -32,9 +32,7 @@ class Operator {
   
   // Getters
   const std::string& op_name() const { return op_name_; }
-  std::string GetValueFromPbOpConf(const std::string& k) const {
-    return GetValueFromPbMessage(*pb_op_conf_, k);
-  }
+  std::string GetValueFromPbOpConf(const std::string& k) const;
 
   #define DEFINE_BLOB_NAMES_GETTER(getter_name) \
   const std::vector<std::string>& getter_name() const { \
@@ -49,12 +47,13 @@ class Operator {
   
   #undef DEFINE_BLOB_NAMES_GETTER
 
-  // Functions used to inference BlobDesc
-  BlobDesc* GetBlobDescPtr(const std::string& bn_in_op) const;
-  void SetBlobDescPtr(const std::string& bn_in_op, BlobDesc* ptr);
-  void SetNull4AllBlobDescPtr();
-  virtual void InferBlobDesc4ObAndDtbFromIb() const = 0;
-  virtual void InferBlobDesc4MbAndMtb() const = 0;
+  // Functions used to inference Shape
+  Shape* GetShapePtr(const std::string& bn_in_op) const;
+  void SetShapePtr(const std::string& bn_in_op, Shape* ptr) const;
+  void SetNull4AllShapePtr() const;
+  virtual void InferShape4ObAndDtbFromIb() const = 0;
+  virtual void InferShape4IbAndDtbFromOb() const = 0;
+  virtual void InferShape4MbAndMtb() const = 0;
 
  protected:
   std::string& mut_op_name() { return op_name_; }
@@ -73,13 +72,14 @@ class Operator {
   std::string op_name_;
   std::unique_ptr<PbMessage> pb_op_conf_;
 
+  // blob name in op
   std::vector<std::string> data_tmp_bns_;
   std::vector<std::string> input_bns_;
   std::vector<std::string> output_bns_;
   std::vector<std::string> model_bns_;
   std::vector<std::string> model_tmp_bns_;
 
-  HashMap<std::string, BlobDesc*> bn_in_op2blob_desc_ptr_;
+  mutable HashMap<std::string, Shape*> bn_in_op2shape_ptr_;
 
 };
 
@@ -103,7 +103,7 @@ class SysOperator : public Operator {
   virtual ~SysOperator() = default;
   
   #define SET_UNEXPECTED(func_name) \
-  std::string func_name(const std::string&) const override { \
+  virtual std::string func_name(const std::string&) const override { \
     UNEXPECTED_RUN(); \
   }
   
@@ -114,7 +114,7 @@ class SysOperator : public Operator {
 
   #undef SET_UNEXPECTED
   
-  void InferBlobDesc4MbAndMtb() const override { UNEXPECTED_RUN(); }
+  void InferShape4MbAndMtb() const override { UNEXPECTED_RUN(); }
 
  private:
 };
