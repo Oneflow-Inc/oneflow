@@ -269,7 +269,7 @@ auto Graph<NodeType, EdgeType>::Iterator::operator ++ () -> Iterator& {
 
 template<typename NodeType, typename EdgeType>
 bool Graph<NodeType, EdgeType>::Iterator::operator != (
-    const typename Graph<NodeType, EdgeType>::Iterator& rhs) const {
+    const Iterator& rhs) const {
   if (bfs_queue_.empty() != rhs.bfs_queue_.empty()) {
     return true;
   }
@@ -303,7 +303,7 @@ auto Graph<NodeType, EdgeType>::ReverseIterator::operator ++ () -> ReverseIterat
 
 template<typename NodeType, typename EdgeType>
 bool Graph<NodeType, EdgeType>::ReverseIterator::operator != (
-    const typename Graph<NodeType, EdgeType>::ReverseIterator& rhs) const {
+    const ReverseIterator& rhs) const {
   if (bfs_queue_.empty() != rhs.bfs_queue_.empty()) {
     return true;
   }

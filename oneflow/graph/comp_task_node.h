@@ -59,12 +59,7 @@ class CompTaskNode : public TaskNode {
 
 };
 
-inline void SortByParallelId(std::vector<CompTaskNode*>* comp_node_vec) {
-  std::sort(comp_node_vec->begin(), comp_node_vec->end(), []
-      (const CompTaskNode* lhs, const CompTaskNode* rhs) {
-    return lhs->parallel_id() < rhs->parallel_id();
-  });
-}
+void SortByParallelId(std::vector<CompTaskNode*>* comp_node_vec);
 
 class HostCompTaskNode final : public CompTaskNode {
  public:

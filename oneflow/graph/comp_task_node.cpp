@@ -269,4 +269,11 @@ void CompTaskNode::BpSetProducedRegstDescs() {
   AddProducedRegstDesc("model_tmp", std::move(model_tmp_regst));
 }
 
+void SortByParallelId(std::vector<CompTaskNode*>* comp_node_vec) {
+  std::sort(comp_node_vec->begin(), comp_node_vec->end(), []
+      (const CompTaskNode* lhs, const CompTaskNode* rhs) {
+    return lhs->parallel_id() < rhs->parallel_id();
+  });
+}
+
 } // namespace oneflow
