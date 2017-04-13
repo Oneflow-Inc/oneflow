@@ -58,7 +58,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void BpBuildExecAndProducedRegsts(Path*) { UNEXPECTED_RUN(); }
 
   void SubscribeRegstDescInnerPath();
-  void AddInPathLbn2ProducedRegst();
 
  private:
   // In task_gph level

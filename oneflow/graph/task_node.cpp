@@ -93,14 +93,4 @@ void TaskNode::SubscribeRegstDescInnerPath() {
   }
 }
 
-void TaskNode::AddInPathLbn2ProducedRegst() {
-  for (const std::unique_ptr<ExecNode>& node : exec_gph_.nodes()) {
-    for (const auto& pair : node->produced_lbn_regst_pairs()) {
-      const std::string& lbn = pair.first;
-      RegstDesc* regst_desc = pair.second;
-      regst_desc->EnrollWithLbn(lbn);
-    }
-  }
-}
-
 } // namespace oneflow
