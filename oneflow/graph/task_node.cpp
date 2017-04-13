@@ -20,9 +20,9 @@ void TaskNode::set_stage_node(const StageNode* new_stage_node) {
   CHECK(IsFwNode());
   stage_node_ = new_stage_node;
 }
-ThreadLocalId& TaskNode::mut_thread_local_id() {
+ThrdLocId& TaskNode::mut_thrd_loc_id() {
   CHECK(IsFwNode());
-  return thread_local_id_;
+  return thrd_loc_id_;
 }
 
 std::unique_ptr<TaskNode> TaskNode::BuildAndConnectBpNode() {
@@ -35,30 +35,55 @@ std::unique_ptr<TaskNode> TaskNode::BuildAndConnectBpNode() {
   return bp_node;
 }
 
-void TaskNode::BuildExecGraphAndSetRegisterDescs() {
+void TaskNode::BuildExecAndProducedRegstsAndSubscribeInPath(Path* path) {
+  SubscribeRegstDescInnerPath();
   if (IsFwNode()) {
-    FwBuildExecGraphAndSetProducedRegisterDescs();
+    FwBuildExecAndProducedRegsts(path);
   } else {
-    BpBuildExecGraphAndSetProducedRegisterDescs();
+    BpBuildExecAndProducedRegsts(path);
   }
-  SubscribeRegisterDescInnerPath();
 }
 
 std::unique_ptr<TaskNode> TaskNode::CreateSameTypeNode() const {
-  LOG(FATAL) << "insignificant";
+  UNEXPECTED_RUN();
 }
 
 void TaskNode::InitWithFwNode(TaskNode* fw_node) {
   stage_node_ = fw_node->stage_node_;
-  thread_local_id_ = fw_node->thread_local_id_;
+  thrd_loc_id_ = fw_node->thrd_loc_id_;
   is_fw_node_ = false;
   related_fw_or_bp_node_ = fw_node;
 }
 
-void TaskNode::SubscribeRegisterDescInnerPath() {
+void TaskNode::BindProducedRegstAndOutEdge(RegstDesc* regst,
+                                              const TaskEdge* edge) {
+  CHECK(produced_regst2out_edge.emplace(regst, edge).second);
+  CHECK(out_edge2produced_regst.emplace(edge, regst).second);
+}
+
+const TaskEdge* TaskNode::GetOutEdge4ProducedRegst(RegstDesc* regst) const {
+  return produced_regst2out_edge.at(regst);
+}
+
+RegstDesc* TaskNode::GetProducedRegst4OutEdge(const TaskEdge* edge) const {
+  return out_edge2produced_regst.at(edge);
+}
+
+
+void TaskNode::SubscribeRegstDescInnerPath() {
   for (const TaskEdge* edge : in_edges()) {
-    edge->register_desc()->AddSubscriber(this);
-    subscribed_register_descs_.insert(edge->register_desc());
+    RegstDesc* regst =  GetRelatedRegst(edge);
+    Subscribe(regst);
+  }
+}
+
+void TaskNode::AddInPathLbn2ProducedRegst() {
+  for (const std::unique_ptr<ExecNode>& node : exec_gph_.nodes()) {
+    for (const auto& pair : node->produced_lbn_regst_pairs()) {
+      const std::string& lbn = pair.first;
+      RegstDesc* regst_desc = pair.second;
+      regst_desc->EnrollWithLbn(lbn);
+    }
   }
 }
 

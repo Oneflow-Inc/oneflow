@@ -10,10 +10,8 @@ void ReluOp::Init(const OperatorConf& op_conf) {
   auto cnf = new ReluOpConf(op_conf.relu_op_conf());
   mut_pb_op_conf().reset(cnf);
 
-  RegisterInputBlobName("in");
-  RegisterInputDiffBlobName(GenDiffBlobName("in"));
-  RegisterOutputBlobName("out");
-  RegisterOutputDiffBlobName(GenDiffBlobName("out"));
+  EnrollInputBn("in");
+  EnrollOutputBn("out");
 }
 
 } // namespace oneflow

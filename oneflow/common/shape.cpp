@@ -1,12 +1,6 @@
-#include "blob/shape.h"
-#include "glog/logging.h"
+#include "common/shape.h"
 
 namespace oneflow {
-
-void Shape::Init(const std::vector<int64_t>& shape_vec) {
-  shape_vec_ = shape_vec;
-  UpdateElemCnt();
-}
 
 std::string Shape::ToString() const {
   std::ostringstream stream;
@@ -86,8 +80,8 @@ int64_t Shape::Offset(const int64_t n,
 
 void Shape::UpdateElemCnt() {
   elem_cnt_ = 1;
-  for (auto dim : shape_vec_) {
-    elem_cnt_ *= dim;
+  for (auto s : shape_vec_) {
+    elem_cnt_ *= s;
   }
 }
 

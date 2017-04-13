@@ -5,14 +5,16 @@
 
 namespace oneflow {
 
-class InnerProductOp final : public Operator {
+class InnerProductOp final : public UserOperator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(InnerProductOp);
   InnerProductOp() = default;
   ~InnerProductOp() = default;
 
   void Init(const OperatorConf& op_conf) override;
-  bool IsElemWise() const override { return false; }
+
+  void InferBlobDesc4ObAndDtbFromIb() const override { TODO(); }
+  void InferBlobDesc4MbAndMtb() const override { TODO(); }
 
  private:
 

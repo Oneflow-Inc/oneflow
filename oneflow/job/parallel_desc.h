@@ -1,59 +1,48 @@
 #ifndef ONEFLOW_JOB_PARALLEL_DESC_H_
 #define ONEFLOW_JOB_PARALLEL_DESC_H_
 
-#include <unordered_map>
 #include "common/util.h"
-#include "common/id_manager.h"
+#include "job/id_manager.h"
 #include "job/strategy.pb.h"
 
 namespace oneflow {
 
 class ParallelDesc {
  public:
-  using Policy = ParallelConf::Policy;
-  enum class Engine {
-    kHost,
-    kDevice
-  };
-
   // OF_DISALLOW_COPY_AND_MOVE(ParallelDesc);
-  ParallelDesc() = default;
+  ParallelDesc() = delete;
   ~ParallelDesc() = default;
 
-  void Init(const ParallelConf& user_conf) {
-    // TODO
-  }
+  ParallelDesc(const ParallelConf& user_conf);
   
-  const Policy& policy() const { return policy_; }
-  const Engine& engine() const { return engine_; } 
-  const std::vector<MachineId>& machines() const {
-    return machine_vec_;
+  // Getters
+  const ParallelPolicy& policy() const { return policy_; }
+  const DeviceType& device_type() const { return device_type_; } 
+  const std::vector<MachineId>& sorted_machines() const {
+    return sorted_machine_vec_;
   }
-  const std::vector<DeviceGlobalId>& devices() const {
-    return device_vec_;
-  }
-  const std::vector<DevicePhysicalId>& devices_on_machine(MachineId machine_id) const {
-    return devices_on_machine_.at(machine_id);
+  const std::vector<DevicePhyId>& sorted_devices_on_machine(MachineId machine_id) const {
+    // If this is used to describe the disk_loader
+    // the return shouble be empty
+    return sorted_devices_on_machine_.at(machine_id);
   }
 
+  //
+  ParallelPolicy& mut_policy() { return policy_; }
   bool operator == (const ParallelDesc& rhs) const {
-    // TODO
+    TODO();
   }
   bool operator != (const ParallelDesc& rhs) const {
     return !((*this) == rhs);
   }
   
  private:
-  Policy policy_;
-  Engine engine_;
-  std::vector<MachineId> machine_vec_;
-  std::vector<DeviceGlobalId> device_vec_;
-  std::unordered_map<MachineId, std::vector<DevicePhysicalId>> devices_on_machine_;
+  ParallelPolicy policy_;
+  DeviceType device_type_;
+  std::vector<MachineId> sorted_machine_vec_;
+  HashMap<MachineId, std::vector<DevicePhyId>> sorted_devices_on_machine_;
 
 };
-
-static const ParallelDesc::Policy kDataParallel = ParallelConf::DataParallel;
-static const ParallelDesc::Policy kModelParallel = ParallelConf::ModelParallel;
 
 } // namespace oneflow
 

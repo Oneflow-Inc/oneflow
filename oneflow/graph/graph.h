@@ -53,33 +53,34 @@ class Graph {
   }
   
   void UpdateSourceAndSink();
-
- protected:
-  // Register
-  void RegisterNode(NodeType* new_node) {
-    nodes_.emplace_back(new_node);
-  }
-  void RegisterNode(std::unique_ptr<NodeType>&& new_node) {
-    nodes_.push_back(std::move(new_node));
-  }
-  void RegisterEdge(EdgeType* new_edge) {
-    edges_.emplace_back(new_edge);
-  }
-  void RegisterEdge(std::unique_ptr<EdgeType>&& new_node) {
-    edges_.push_back(std::move(new_node));
-  }
+  
   // New
   NodeType* NewFinalNode() {
     // In c++14, we can use std::is_final to check
     NodeType* ret = new NodeType;
-    RegisterNode(ret);
+    EnrollNode(ret);
     return ret;
   }
   EdgeType* NewFinalEdge() {
     // In c++14, we can use std::is_final to check
     EdgeType* ret = new EdgeType;
-    RegisterEdge(ret);
+    EnrollEdge(ret);
     return ret;
+  }
+
+ protected:
+  // Enroll
+  void EnrollNode(NodeType* new_node) {
+    nodes_.emplace_back(new_node);
+  }
+  void EnrollNode(std::unique_ptr<NodeType>&& new_node) {
+    nodes_.push_back(std::move(new_node));
+  }
+  void EnrollEdge(EdgeType* new_edge) {
+    edges_.emplace_back(new_edge);
+  }
+  void EnrollEdge(std::unique_ptr<EdgeType>&& new_node) {
+    edges_.push_back(std::move(new_node));
   }
 
  private:
@@ -101,8 +102,7 @@ class Graph<NodeType, EdgeType>::Iterator final {
   Iterator() = default;
   ~Iterator() = default;
   
-  void Init(NodeType* source_node) {
-    bfs_queue_ = std::queue<NodeType*> ();
+  Iterator(NodeType* source_node) {
     bfs_queue_.push(source_node);
   }
   
@@ -123,7 +123,7 @@ class Graph<NodeType, EdgeType>::ConstIterator final {
   ConstIterator() = default;
   ~ConstIterator() = default;
   
-  void Init(const Iterator& graph_iterator) {
+  ConstIterator(const Iterator& graph_iterator) {
     graph_iterator_ = graph_iterator;
   }
   
@@ -148,8 +148,7 @@ class Graph<NodeType, EdgeType>::ReverseIterator final {
   ReverseIterator() = default;
   ~ReverseIterator() = default;
   
-  void Init(NodeType* sink_node) {
-    bfs_queue_ = std::queue<NodeType*> ();
+  ReverseIterator(NodeType* sink_node) {
     bfs_queue_.push(sink_node);
   }
   
@@ -170,7 +169,7 @@ class Graph<NodeType, EdgeType>::ConstReverseIterator final {
   ConstReverseIterator() = default;
   ~ConstReverseIterator() = default;
   
-  void Init(const ReverseIterator& graph_iterator) {
+  ConstReverseIterator(const ReverseIterator& graph_iterator) {
     graph_iterator_ = graph_iterator;
   }
   
@@ -210,54 +209,40 @@ void Graph<NodeType, EdgeType>::UpdateSourceAndSink() {
 
 template<typename NodeType, typename EdgeType>
 auto Graph<NodeType, EdgeType>::begin() -> Iterator {
-  Iterator ret;
-  ret.Init(&source_node_);
+  Iterator ret(&source_node_);
   return ++ret;
 }
 template<typename NodeType, typename EdgeType>
 auto Graph<NodeType, EdgeType>::end() -> Iterator {
-  Iterator ret;
-  ret.Init(&sink_node_);
-  return ret;
+  return Iterator(&sink_node_);
 }
 
 template<typename NodeType, typename EdgeType>
 auto Graph<NodeType, EdgeType>::cbegin() const -> ConstIterator{
-  ConstIterator ret;
-  ret.Init((const_cast<Graph*>(this))->begin());
-  return ret;
+  return ConstIterator((const_cast<Graph*>(this))->begin());
 }
 template<typename NodeType, typename EdgeType>
 auto Graph<NodeType, EdgeType>::cend() const -> ConstIterator {
-  ConstIterator ret;
-  ret.Init((const_cast<Graph*>(this))->end());
-  return ret;
+  return ConstIterator((const_cast<Graph*>(this))->end());
 }
 
 template<typename NodeType, typename EdgeType>
 auto Graph<NodeType, EdgeType>::rbegin() -> ReverseIterator {
-  ReverseIterator ret;
-  ret.Init(&sink_node_);
+  ReverseIterator ret(&sink_node_);
   return ++ret;
 }
 template<typename NodeType, typename EdgeType>
 auto Graph<NodeType, EdgeType>::rend() -> ReverseIterator {
-  ReverseIterator ret;
-  ret.Init(&source_node_);
-  return ret;
+  return ReverseIterator(&source_node_);
 }
 
 template<typename NodeType, typename EdgeType>
 auto Graph<NodeType, EdgeType>::crbegin() const -> ConstReverseIterator {
-  ConstReverseIterator ret;
-  ret.Init((const_cast<Graph*>(this))->rbegin());
-  return ret;
+  return ConstReverseIterator((const_cast<Graph*>(this))->rbegin());
 }
 template<typename NodeType, typename EdgeType>
 auto Graph<NodeType, EdgeType>::crend() const -> ConstReverseIterator {
-  ConstReverseIterator ret;
-  ret.Init((const_cast<Graph*>(this))->rend());
-  return ret;
+  return ConstReverseIterator((const_cast<Graph*>(this))->rend());
 }
 
 template<typename NodeType, typename EdgeType>
@@ -284,7 +269,7 @@ auto Graph<NodeType, EdgeType>::Iterator::operator ++ () -> Iterator& {
 
 template<typename NodeType, typename EdgeType>
 bool Graph<NodeType, EdgeType>::Iterator::operator != (
-    const Graph::Iterator& rhs) const {
+    const typename Graph<NodeType, EdgeType>::Iterator& rhs) const {
   if (bfs_queue_.empty() != rhs.bfs_queue_.empty()) {
     return true;
   }
@@ -318,7 +303,7 @@ auto Graph<NodeType, EdgeType>::ReverseIterator::operator ++ () -> ReverseIterat
 
 template<typename NodeType, typename EdgeType>
 bool Graph<NodeType, EdgeType>::ReverseIterator::operator != (
-    const Graph::ReverseIterator& rhs) const {
+    const typename Graph<NodeType, EdgeType>::ReverseIterator& rhs) const {
   if (bfs_queue_.empty() != rhs.bfs_queue_.empty()) {
     return true;
   }

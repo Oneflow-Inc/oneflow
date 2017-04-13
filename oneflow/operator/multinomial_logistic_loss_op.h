@@ -7,14 +7,17 @@ namespace oneflow {
 
 // MLLoss = MultinomialLogisticLoss
 
-class MultinomialLogisticLossOp : public Operator {
+class MultinomialLogisticLossOp : public UserOperator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MultinomialLogisticLossOp);
   MultinomialLogisticLossOp() = default;
   ~MultinomialLogisticLossOp() = default;
 
   void Init(const OperatorConf& op_conf) override;
-  bool IsElemWise() const override { return false; }
+  bool IsLossOp() const override { return true; }
+  
+  void InferBlobDesc4ObAndDtbFromIb() const override { TODO(); }
+  void InferBlobDesc4MbAndMtb() const override { TODO(); }
 
  private:
 

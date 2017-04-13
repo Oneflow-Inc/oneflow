@@ -5,14 +5,16 @@
 
 namespace oneflow {
 
-class SoftmaxOp : public Operator {
+class SoftmaxOp : public UserOperator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SoftmaxOp);
   SoftmaxOp() = default;
   ~SoftmaxOp() = default;
 
   void Init(const OperatorConf& op_conf) override;
-  bool IsElemWise() const override { return false; }
+
+  void InferBlobDesc4ObAndDtbFromIb() const override { TODO(); }
+  void InferBlobDesc4MbAndMtb() const override { TODO(); }
 
  private:
 

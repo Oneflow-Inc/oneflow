@@ -1,18 +1,21 @@
 #ifndef ONEFLOW_PATH_MODEL_SAVE_PATH_H_
 #define ONEFLOW_PATH_MODEL_SAVE_PATH_H_
 
-#include "path/path.h"
+#include "path/model_path.h"
 
 namespace oneflow {
 
-class ModelSavePath final : public Path {
+class ModelSavePath final : public ModelPath {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ModelSavePath);
   ModelSavePath() = default;
   ~ModelSavePath() = default;
+  
+  CompTaskNodeMemFunc Func4FwBuildExecAndProducedRegsts() const override {
+    return &CompTaskNode::ModelSaveFwBuildExecAndProducedRegsts;
+  }
 
-  void Build(const ChainNode* chain_in_data_path,
-             std::function<void(const CpsDesc&)> add_cps_desc) {
+  void Build(const ChainNode* chain_in_data_path) {
     LOG(FATAL) << "TODO";
   }
 

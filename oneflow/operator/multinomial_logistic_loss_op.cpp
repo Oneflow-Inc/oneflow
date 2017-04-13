@@ -11,12 +11,10 @@ void MultinomialLogisticLossOp::Init(const OperatorConf& op_conf) {
     op_conf.multinomial_logistic_loss_op_conf());
   mut_pb_op_conf().reset(cnf);
 
-  RegisterInputBlobName("data");
-  RegisterInputDiffBlobName(GenDiffBlobName("data"));
-  RegisterInputBlobName("label");
-  RegisterInputDiffBlobName(GenDiffBlobName("label"));
-  RegisterOutputBlobName("loss");
-  RegisterDataTmpBlobName("loss_buffer");
+  EnrollInputBn("data");
+  EnrollInputBn("label");
+  EnrollOutputBn("loss");
+  EnrollDataTmpBn("loss_buffer");
 }
 
 } // namespace oneflow
