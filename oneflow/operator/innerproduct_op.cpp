@@ -10,16 +10,12 @@ void InnerProductOp::Init(const OperatorConf& op_conf) {
   auto cnf = new InnerProductOpConf(op_conf.inner_product_op_conf());
   mut_pb_op_conf().reset(cnf);
   
-  RegisterInputBlobName("in");
-  RegisterInputDiffBlobName(GenDiffBlobName("in"));
-  RegisterOutputBlobName("out");
-  RegisterOutputDiffBlobName(GenDiffBlobName("out"));
+  EnrollInputBn("in");
+  EnrollOutputBn("out");
   
-  RegisterModelBlobName("weight");
-  RegisterModelDiffBlobName(GenDiffBlobName("weight"));
-  RegisterModelBlobName("bias");
-  RegisterModelDiffBlobName(GenDiffBlobName("bias"));
-  RegisterModelTmpBlobName("bias_multiplier");
+  EnrollModelBn("weight");
+  EnrollModelBn("bias");
+  EnrollModelTmpBn("bias_multiplier");
 }
 
 } // namespace oneflow

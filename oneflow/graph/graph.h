@@ -58,28 +58,28 @@ class Graph {
   NodeType* NewFinalNode() {
     // In c++14, we can use std::is_final to check
     NodeType* ret = new NodeType;
-    RegisterNode(ret);
+    EnrollNode(ret);
     return ret;
   }
   EdgeType* NewFinalEdge() {
     // In c++14, we can use std::is_final to check
     EdgeType* ret = new EdgeType;
-    RegisterEdge(ret);
+    EnrollEdge(ret);
     return ret;
   }
 
  protected:
-  // Register
-  void RegisterNode(NodeType* new_node) {
+  // Enroll
+  void EnrollNode(NodeType* new_node) {
     nodes_.emplace_back(new_node);
   }
-  void RegisterNode(std::unique_ptr<NodeType>&& new_node) {
+  void EnrollNode(std::unique_ptr<NodeType>&& new_node) {
     nodes_.push_back(std::move(new_node));
   }
-  void RegisterEdge(EdgeType* new_edge) {
+  void EnrollEdge(EdgeType* new_edge) {
     edges_.emplace_back(new_edge);
   }
-  void RegisterEdge(std::unique_ptr<EdgeType>&& new_node) {
+  void EnrollEdge(std::unique_ptr<EdgeType>&& new_node) {
     edges_.push_back(std::move(new_node));
   }
 

@@ -6,7 +6,7 @@
 #include <vector>
 #include <memory>
 #include "common/util.h"
-#include "common/id_manager.h"
+#include "job/id_manager.h"
 
 namespace oneflow {
 
@@ -35,7 +35,7 @@ class Edge {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Edge);
   Edge() {
-    edge_id_ = IDManager::Singleton().NewEdgeId();
+    edge_id_ = IDMgr::Singleton().NewEdgeId();
     src_node_ = nullptr;
     dst_node_ = nullptr;
   }
@@ -64,7 +64,7 @@ class Node {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Node);
   Node() {
-    node_id_ = IDManager::Singleton().NewNodeId();
+    node_id_ = IDMgr::Singleton().NewNodeId();
   }
   virtual ~Node() = default;
 

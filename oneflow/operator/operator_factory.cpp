@@ -2,7 +2,7 @@
 #include "glog/logging.h"
 #include "operator/convolution_op.h"
 #include "operator/innerproduct_op.h"
-#include "operator/loader_op.h"
+#include "operator/data_loader_op.h"
 #include "operator/multinomial_logistic_loss_op.h"
 #include "operator/relu_op.h"
 #include "operator/softmax_op.h"
@@ -11,7 +11,7 @@
 namespace oneflow {
 
 // It is ugly now, maybe we can find one more elegant implemention ?
-std::shared_ptr<Operator> OperatorFactory::ConstructOp(
+std::shared_ptr<const Operator> OperatorFactory::ConstructOp(
     const OperatorConf& op_conf) const {
   std::shared_ptr<Operator> ret;
   switch (op_conf.specified_type_case()) {
@@ -23,8 +23,8 @@ std::shared_ptr<Operator> OperatorFactory::ConstructOp(
       ret.reset(new InnerProductOp);
       break;
     }
-    case OperatorConf::kLoaderOpConf: {
-      ret.reset(new LoaderOp);
+    case OperatorConf::kDataLoaderOpConf: {
+      ret.reset(new DataLoaderOp);
       break;
     }
     case OperatorConf::kPoolingOpConf: {

@@ -12,6 +12,7 @@ class CopyOp final : public SysOperator {
   ~CopyOp() = default;
 
   void Init(const OperatorConf& op_conf) override;
+  void InferBlobDesc4ObAndDtbFromIb() const override { TODO(); }
 
  private:
 

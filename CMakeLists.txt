@@ -12,11 +12,6 @@ set(CMAKE_CXX_STANDARD 14)
 set(oneflow_src_dir ${oneflow_SOURCE_DIR}/oneflow)
 set(oneflow_cmake_dir ${oneflow_SOURCE_DIR}/cmake)
 
-message(STATUS "oneflow_root_dir: ${oneflow_root_dir}")
-message(STATUS "oneflow_SOURCE_DIR: ${oneflow_SOURCE_DIR}")
-message(STATUS "oneflow_source_dir: ${oneflow_source_dir}")
-message(STATUS "oneflow_src_dir: ${oneflow_src_dir}")
-
 # Options
 option(oneflow_VERBOSE "Enable for verbose output" OFF)
 
@@ -135,6 +130,7 @@ foreach(subdir ${subdir_list})
   list(APPEND of_all_test ${subdir_test_cpps})
 endforeach()
 source_group("proto" FILES ${of_all_protos})
+# find all h,object-cpp,test-cpp
 
 # Get the relative path of all protos, used by RELATIVE_PROTOBUF_GENERATE_CPP function
 foreach(proto_name ${of_all_protos})
@@ -155,6 +151,15 @@ list(APPEND ONEFLOW_LINKER_LIBS of_protoobj)
 include_directories(${PROJECT_BINARY_DIR})
 
 add_library(of_ccobj ${of_all_ccobj})
+
+SUBDIRLIST(subdir_list ${oneflow_source_dir})
+foreach(subdir_name ${subdir_list})
+  set(subdir_path "${oneflow_source_dir}/${subdir_name}")
+  oneflow_source_group("${subdir_name}" GLOB "${subdir_path}/*")
+endforeach()
+
+# build object-cpp
+add_library(of_ccobj ${oneflow_object_cc} ${oneflow_all_h})
 add_dependencies(of_ccobj of_protoobj)
 list(APPEND ONEFLOW_LINKER_LIBS of_ccobj)
 

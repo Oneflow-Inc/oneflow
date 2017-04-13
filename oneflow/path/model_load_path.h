@@ -11,8 +11,8 @@ class ModelLoadPath final : public ModelPath {
   ModelLoadPath() = default;
   ~ModelLoadPath() = default;
   
-  CompTaskNodeMemFunc MemFunc4FwBuildExecAndProducedRegisters() const override {
-    return &CompTaskNode::ModelLoadFwBuildExecAndProducedRegisters;
+  CompTaskNodeMemFunc Func4FwBuildExecAndProducedRegsts() const override {
+    return &CompTaskNode::ModelLoadFwBuildExecAndProducedRegsts;
   }
 
   void Build(const ChainNode* chain_in_data_path) {

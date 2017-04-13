@@ -14,7 +14,10 @@ class MultinomialLogisticLossOp : public UserOperator {
   ~MultinomialLogisticLossOp() = default;
 
   void Init(const OperatorConf& op_conf) override;
-  bool IsElemWise() const override { return false; }
+  bool IsLossOp() const override { return true; }
+  
+  void InferBlobDesc4ObAndDtbFromIb() const override { TODO(); }
+  void InferBlobDesc4MbAndMtb() const override { TODO(); }
 
  private:
 

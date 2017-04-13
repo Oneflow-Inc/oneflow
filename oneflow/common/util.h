@@ -2,6 +2,7 @@
 #define ONEFLOW_COMMON_UTIL_H
 
 #include <unordered_set>
+#include <unordered_map>
 #include "glog/logging.h"
 #include "google/protobuf/message.h"
 #include "google/protobuf/descriptor.h"
@@ -42,6 +43,9 @@ inline bool operator != (const google::protobuf::MessageLite& lhs,
                          const google::protobuf::MessageLite& rhs) {
   return !(lhs == rhs);
 }
+
+template<typename Key, typename T, typename Hash = std::hash<Key>>
+using HashMap = std::unordered_map<Key, T, Hash>;
 
 } // namespace oneflow
 

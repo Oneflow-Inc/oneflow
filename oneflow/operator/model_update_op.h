@@ -17,7 +17,11 @@ class ModelUpdateOp final : public SysOperator {
     CHECK(op_conf.has_model_update_op_conf());
     auto cnf = new ModelUpdateOp(op_conf.model_update_op_conf());
     mut_pb_op_conf().reset(cnf);
+
+    EnrollInputBn("model_diffs");
+    EnrollOutputBn("model");
   }
+  void InferBlobDesc4ObAndDtbFromIb() const override { TODO(); }
 
  private:
 };

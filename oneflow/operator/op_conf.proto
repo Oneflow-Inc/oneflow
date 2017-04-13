@@ -11,7 +11,7 @@ message InnerProductOpConf {
   string out = 2;
 }
 
-message LoaderOpConf {
+message DataLoaderOpConf {
   string data = 1;
   string label = 2;
 }
@@ -45,20 +45,30 @@ message CopyOpConf {
     H2H = 3;
   }
   CopyType copy_type = 1;
+  int32 copied_num = 2;
 }
 
 message CloneOpConf {
+  int32 out_num = 1;
 }
 
 message ConcatOpConf {
   int32 axis = 1;
+  int32 in_num = 2;
 }
 
 message SplitOpConf {
   int32 axis = 1;
+  int32 out_num = 2;
 }
 
 message ModelUpdateOpConf {
+}
+
+message ModelLoadOpConf {
+}
+
+message ModelSaveOpConf {
 }
 
 message OperatorConf {
@@ -66,7 +76,7 @@ message OperatorConf {
   oneof specified_type {
     ConvolutionOpConf convolution_op_conf = 100;
     InnerProductOpConf inner_product_op_conf = 101;
-    LoaderOpConf loader_op_conf = 102;
+    DataLoaderOpConf data_loader_op_conf = 102;
     PoolingOpConf pooling_op_conf = 103;
     ReluOpConf relu_op_conf = 104;
     SoftmaxOpConf softmax_op_conf = 105;
@@ -76,5 +86,7 @@ message OperatorConf {
     ConcatOpConf concat_op_conf = 109;
     SplitOpConf split_op_conf = 110;
     ModelUpdateOpConf model_update_op_conf = 111;
+    ModelLoadOpConf model_load_op_conf = 112;
+    ModelSaveOpConf model_save_op_conf = 113;
   }
 }

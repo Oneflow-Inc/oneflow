@@ -35,6 +35,10 @@ class StageNode final : public Node<StageNode, StageEdge> {
     return parallel_range_;
   }
 
+  const std::vector<DevicePhyId>& SortedDevices() const {
+    return chain_node_->parallel_desc()->sorted_devices_on_machine(machine_id_);
+  }
+
  private:
   const ChainNode* chain_node_;
   MachineId machine_id_;
@@ -57,12 +61,12 @@ class StageGraph final : public Graph<StageNode, StageEdge> {
   StageGraph() = delete;
   ~StageGraph() = default;
 
-  StageGraph(std::unique_ptr<const ChainGraph>&& chain_graph);
+  StageGraph(std::unique_ptr<const ChainGraph>&& chain_gph);
 
-  const ChainGraph* chain_graph() const { return chain_graph_.get(); }
+  const ChainGraph* chain_gph() const { return chain_gph_.get(); }
 
  private:
-  std::unique_ptr<const ChainGraph> chain_graph_;
+  std::unique_ptr<const ChainGraph> chain_gph_;
 
 };
 

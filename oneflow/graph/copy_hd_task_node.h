@@ -26,9 +26,9 @@ class CopyHDTaskNode final : public TaskNode {
   const std::vector<std::string>& CopiedLbns() const;
   
  private:
-  void FwBuildExecAndProducedRegisters(Path*) override;
-  void BpBuildExecAndProducedRegisters(Path*) override;
-  void BindOutEdgeAndRegister();
+  void FwBuildExecAndProducedRegsts(Path*) override;
+  void BpBuildExecAndProducedRegsts(Path*) override;
+  void BindOutEdgeAndRegst();
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return std::unique_ptr<TaskNode> (new CopyHDTaskNode);
   }

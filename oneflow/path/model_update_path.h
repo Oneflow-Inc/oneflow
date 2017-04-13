@@ -11,19 +11,24 @@ class ModelUpdatePath final : public ModelPath {
   ModelUpdatePath() = default;
   ~ModelUpdatePath() = default;
   
-  CompTaskNodeMemFunc MemFunc4FwBuildExecAndProducedRegisters() const override {
-    return &CompTaskNode::ModelUpdateFwBuildExecAndProducedRegisters;
+  CompTaskNodeMemFunc Func4FwBuildExecAndProducedRegsts() const override {
+    return &CompTaskNode::ModelUpdateFwBuildExecAndProducedRegsts;
   }
 
   void Build(
       const ChainNode* data_chain,
-      const std::vector<CompTaskNode*>& sorted_comptasks4data_chain);
+      const std::vector<CompTaskNode*>& sorted_bp_comptasks4data_chain);
 
  private:
   void BuildTaskGraph(const ChainNode* data_chain);
   void InitFaker2MccoyMapAndParallelIdUpdateMap(
-      const std::vector<CompTaskNode*>& sorted_comptasks4data_chain,
-      std::unordered_map<int32_t, CompTaskNode*>* parallel_id2update_node);
+      const std::vector<CompTaskNode*>& sorted_bp_comptasks4data_chain,
+      HashMap<int32_t, CompTaskNode*>* parallel_id2update_node);
+  void SubscribeCrossPathWithoutFaker(
+      const std::vector<CompTaskNode*>& sorted_bp_comptasks4data_chain,
+      const HashMap<int32_t, CompTaskNode*>& parallel_id2update_node);
+  void SubscribeCrossPathWithFaker(
+      const HashMap<int32_t, CompTaskNode*>& parallel_id2update_node);
 
 };
 
