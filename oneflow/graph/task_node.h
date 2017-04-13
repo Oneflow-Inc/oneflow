@@ -51,8 +51,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   
   void BindProducedRegstAndOutEdge(RegstDesc*, const TaskEdge*);
 
-  void AddProducedRegstDesc(const std::string& regst_desc_name,
-                            std::unique_ptr<RegstDesc>&& regst_desc);
+  void EnrollProducedRegstDesc(const std::string& regst_desc_name,
+                               std::unique_ptr<RegstDesc>&& regst_desc);
 
   virtual void FwBuildExecAndProducedRegsts(Path*) { UNEXPECTED_RUN(); }
   virtual void BpBuildExecAndProducedRegsts(Path*) { UNEXPECTED_RUN(); }

@@ -78,7 +78,7 @@ void TaskNode::BindProducedRegstAndOutEdge(RegstDesc* regst,
   CHECK(out_edge2produced_regst.emplace(edge, regst).second);
 }
 
-void TaskNode::AddProducedRegstDesc(
+void TaskNode::EnrollProducedRegstDesc(
     const std::string& regst_desc_name,
     std::unique_ptr<RegstDesc>&& regst_desc) {
   regst_desc->SetProducer(this);

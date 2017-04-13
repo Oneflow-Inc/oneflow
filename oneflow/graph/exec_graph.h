@@ -18,20 +18,20 @@ class ExecEdge final : public Edge<ExecNode, ExecEdge> {
   // Getters
   const std::string& lbn() const { return lbn_; }
   const std::string& pbn() const { return pbn_; }
-  const std::string& ibn() const { return ibn_; }
-  const std::string& obn() const { return obn_; }
+  const std::string& src_bn() const { return src_bn_; }
+  const std::string& dst_bn() const { return dst_bn_; }
 
   // Setters
   void set_lbn(const std::string& lbn);
-  std::string& mut_ibn() { return ibn_; }
-  std::string& mut_obn() { return obn_; }
+  std::string& mut_src_bn() { return src_bn_; }
+  std::string& mut_dst_bn() { return dst_bn_; }
 
  private:
   // various names for one blob
   std::string lbn_;
   std::string pbn_;
-  std::string ibn_; // in dst_node::op
-  std::string obn_; // in src_node::op
+  std::string src_bn_;
+  std::string dst_bn_;
 
 };
 
