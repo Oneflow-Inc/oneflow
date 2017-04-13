@@ -1,6 +1,8 @@
 #ifndef ONEFLOW_PROTO_IO_H_
 #define ONEFLOW_PROTO_IO_H_
-
+#ifdef _MSC_VER
+#include <io.h>
+#endif
 #include <string>
 #include "google/protobuf/message.h"
 #include "google/protobuf/descriptor.h"
