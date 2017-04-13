@@ -12,7 +12,7 @@ if(WIN32)
     set(GRPC_LIBRARY_NAMES gpr.lib
       grpc_unsecure.lib
       grpc++_unsecure.lib)
-elseif(APPLE and (${CMAKE_GENERATOR} STREQUAL "Xcode"))
+elseif(APPLE AND ("${CMAKE_GENERATOR}" STREQUAL "Xcode"))
     set(GRPC_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/${CMAKE_BUILD_TYPE})
     set(GRPC_LIBRARY_NAMES libgpr.a
       libgrpc_unsecure.a
