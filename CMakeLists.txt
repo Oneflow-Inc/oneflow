@@ -60,12 +60,6 @@ else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 endif()
 
-if(WIN32)
-  message(STATUS "Build on Windows")
-endif()
-
-
-
 include(zlib)
 include(protobuf)
 include(googletest)
@@ -161,3 +155,6 @@ foreach(cc ${of_all_test})
   target_link_libraries(${test_exe_name} PUBLIC ${ONEFLOW_LINKER_LIBS} ${oneflow_EXTERNAL_LIBRARIES})
   add_test(NAME ${test_name} COMMAND ${test_exe_name})
 endforeach()
+
+# SHOW_VARIABLES()
+message(STATUS "Generator: ${CMAKE_GENERATOR}")
