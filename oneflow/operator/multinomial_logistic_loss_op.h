@@ -17,7 +17,7 @@ class MultinomialLogisticLossOp : public UserOperator {
   bool IsLossOp() const override { return true; }
   
   void InferShape4ObAndDtbFromIb() const override { TODO(); }
-  void InferShape4MbAndMtb() const override { TODO(); }
+  void InferShape4Mtb() const override { TODO(); }
 
  private:
 

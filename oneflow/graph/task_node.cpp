@@ -88,8 +88,7 @@ void TaskNode::EnrollProducedRegstDesc(
 
 void TaskNode::SubscribeRegstDescInnerPath() {
   for (const TaskEdge* edge : in_edges()) {
-    RegstDesc* regst =  GetRelatedRegst(edge);
-    Subscribe(regst);
+    Subscribe(GetRelatedRegst(edge));
   }
 }
 

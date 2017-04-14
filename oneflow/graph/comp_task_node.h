@@ -43,8 +43,6 @@ class CompTaskNode : public TaskNode {
       Lbn2NodeObnMap* lbn2producer,
       Lbn2NodeIbnVecMap* extern_in_lbn2consumers);
   void FwAddCopyInOp(Lbn2NodeIbnVecMap* extern_in_lbn2consumers);
-  void FwAddCloneOp();
-  void FwBindOutEdgeAndRegst();
   void FwSetProducedRegstDescs(
       const Lbn2NodeObnMap& lbn2producer,
       const Lbn2NodeIbnVecMap& extern_in_lbn2consumers);

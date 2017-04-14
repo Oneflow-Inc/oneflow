@@ -24,15 +24,16 @@ void CompTaskNode::DataFwBuildExecAndProducedRegsts(Path* path) {
   if (GetBpNode() != nullptr) {
     FwAddCopyInOp(&extern_in_lbn2consumers);
   }
-  FwAddCloneOp();
   mut_exec_gph().UpdateSourceAndSink();
+  // data regst
   std::unique_ptr<RegstDesc> data_regst(new DisContigRegstDesc);
   BindProducedRegstAndOutEdge(data_regst.get(), SoleOutEdge());
   EnrollProducedRegstDesc("data", std::move(data_regst));
+  FwSetDataRegstDesc(lbn2producer, extern_in_lbn2consumers);
+  // model_tmp regst
   std::unique_ptr<RegstDesc> model_tmp_regst(new DisContigRegstDesc);
   EnrollProducedRegstDesc("model_tmp", std::move(model_tmp_regst));
   FwSetModelTmpRegstDesc();
-  FwSetDataRegstDesc(lbn2producer, extern_in_lbn2consumers);
 }
 
 void CompTaskNode::ModelUpdateFwBuildExecAndProducedRegsts(Path* path) {
@@ -125,52 +126,6 @@ void CompTaskNode::FwAddCopyInOp(Lbn2NodeIbnVecMap* extern_in_lbn2consumers) {
   }
 }
 
-void CompTaskNode::FwAddCloneOp() {
-  std::vector<CloneInfo> clone_info_vec;
-  CollectCloneInfoVec(&clone_info_vec);
-  for (const CloneInfo& clone_info : clone_info_vec) {
-    AddOneCloneNode(clone_info);
-  }
-}
-
-void CompTaskNode::FwCollectCloneInfoVec(
-    std::vector<CloneInfo>* clone_info_vec) {
-}
-
-void CompTaskNode::FwAddOneCloneNode(const CloneInfo& clone_info) {
-  ExecNode* clone_node = mut_exec_gph().NewFinalNode();
-  clone_node->mut_op() = clone_info.clone_op;
-  // InEdge
-  ExecEdge* in_edge = mut_exec_gph().NewExecEdge();
-  in_edge->set_lbn(clone_info.lbn);
-  in_edge->mut_dst_bn() = clone_node->op()->SoleIbn();
-  in_edge->mut_src_bn() = clone_info.edges().front()->obn();
-  Connect(clone_info.pred_node, in_edge, clone_node);
-  // OutEdge
-  CHECK_EQ(clone_node->op()->output_bns().size(), clone_info.edges.size());
-  for (size_t i = 0; i < clone_info.edges.size(); ++i) {
-    const std::string& obn = clone_node->op()->output_bns().at(i);
-    ExecEdge* out_edge = clone_info.edges.at(i);
-    ExecNode* dst_node = out_edge->dst_node();
-    DisConnect(out_edge);
-    out_edge->mut_src_bn() = obn;
-    Connect(clone_node, out_edge, dst_node);
-  }
-}
-
-void CompTaskNode::FwSetModelTmpRegstDesc() {
-  RegstDesc* model_tmp_regst = GetProducedRegstDesc("model_tmp");
-  for (const std::unique_ptr<ExecNode>& node : exec_gph().nodes()) {
-    for (const std::string& mtbn : node->op()->model_tmp_bns()) {
-      std::string lbn = node->op()->mtbn2lbn(mtbn);
-      Shape* ptr = model_tmp_regst->EnrollWithLbn(lbn);
-      node->op()->SetShapePtr(mtbn, ptr);
-      node->BindBnInOpAndRegst(mtbn, model_tmp_regst);
-    }
-    node->op()->InferShape4Mtb();
-  }
-}
-
 void CompTaskNode::FwSetDataRegstDesc(
     const Lbn2NodeObnMap& lbn2producer,
     const Lbn2NodeIbnVecMap& extern_in_lbn2consumers) {
@@ -219,6 +174,19 @@ void CompTaskNode::FwSetDataRegstDesc(
   // Inference Shape
   for (const ExecNode& node : exec_gph()) {
     node->op()->InferShape4ObAndDtbFromIb();
+  }
+}
+
+void CompTaskNode::FwSetModelTmpRegstDesc() {
+  RegstDesc* model_tmp_regst = GetProducedRegstDesc("model_tmp");
+  for (const std::unique_ptr<ExecNode>& node : exec_gph().nodes()) {
+    for (const std::string& mtbn : node->op()->model_tmp_bns()) {
+      std::string lbn = node->op()->mtbn2lbn(mtbn);
+      Shape* ptr = model_tmp_regst->EnrollWithLbn(lbn);
+      node->op()->SetShapePtr(mtbn, ptr);
+      node->BindBnInOpAndRegst(mtbn, model_tmp_regst);
+    }
+    node->op()->InferShape4Mtb();
   }
 }
 

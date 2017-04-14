@@ -28,11 +28,15 @@ class Operator {
   std::string idbn2lbn(const std::string& input_diff_bn) const;
   std::string odbn2lbn(const std::string& output_diff_bn) const;
   std::string mdbn2lbn(const std::string& model_diff_bn) const;
+  std::string ibn2lbn(const std::string& input_bn) const;
 
-  virtual std::string ibn2lbn(const std::string& input_bn) const = 0;
   virtual std::string obn2lbn(const std::string& output_bn) const = 0;
   virtual std::string mtbn2lbn(const std::string& model_tmp_bn) const = 0;
   virtual std::string mbn2lbn(const std::string& model_bn) const = 0;
+
+  void AddSpecialIbn2Lbn(const std::string& ibn, const std::string& lbn) {
+    CHECK(special_ibn2lbn_.emplace(ibn, lbn).second);
+  }
   
   // Getters
   const std::string& op_name() const { return op_name_; }
@@ -58,11 +62,12 @@ class Operator {
   void SetShapePtr(const std::string& bn_in_op, Shape* ptr) const;
   void SetNull4AllShapePtr() const;
   virtual void InferShape4ObAndDtbFromIb() const = 0;
-  virtual void InferShape4MbAndMtb() const = 0;
+  virtual void InferShape4Mtb() const = 0;
 
  protected:
   std::string& mut_op_name() { return op_name_; }
   std::unique_ptr<PbMessage>& mut_pb_op_conf() { return pb_op_conf_; }
+  virtual std::string normal_ibn2lbn(const std::string& input_bn) const = 0;
   
   // enroll data blobs
   void EnrollDataTmpBn(const std::string& dtbn);
@@ -81,6 +86,8 @@ class Operator {
 
   std::string op_name_;
   std::unique_ptr<PbMessage> pb_op_conf_;
+
+  std::unordered_map<std::string, std::string> special_ibn2lbn_;
 
   // blob name in op
   std::vector<std::string> data_tmp_bns_;
@@ -102,7 +109,7 @@ class UserOperator : public Operator {
   UserOperator() = default;
   virtual ~UserOperator() = default;
 
-  std::string ibn2lbn(const std::string& input_bn) const override;
+  std::string normal_ibn2lbn(const std::string& input_bn) const override;
   std::string obn2lbn(const std::string& output_bn) const override;
   std::string mtbn2lbn(const std::string& model_tmp_bn) const override;
   std::string mbn2lbn(const std::string& model_bn) const override;
@@ -120,14 +127,14 @@ class SysOperator : public Operator {
     UNEXPECTED_RUN(); \
   }
   
-  SET_UNEXPECTED(ibn2lbn);
+  SET_UNEXPECTED(normal_ibn2lbn);
   SET_UNEXPECTED(obn2lbn);
   SET_UNEXPECTED(mtbn2lbn);
   SET_UNEXPECTED(mbn2lbn);
 
   #undef SET_UNEXPECTED
   
-  void InferShape4MbAndMtb() const override { UNEXPECTED_RUN(); }
+  void InferShape4Mtb() const override { UNEXPECTED_RUN(); }
 
  private:
 };

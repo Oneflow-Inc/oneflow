@@ -14,7 +14,7 @@ class ConcatOp final : public SysOperator {
   void Init(const OperatorConf& op_conf) override;
   void InferShape4ObAndDtbFromIb() const override { TODO(); }
   
-  std::string ibn2lbn(const std::string& input_bn) const override {
+  std::string normal_ibn2lbn(const std::string& input_bn) const override {
     return GetValueFromPbOpConf("lbn");
   }
   std::string obn2lbn(const std::string& output_bn) const override {

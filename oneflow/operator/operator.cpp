@@ -27,6 +27,14 @@ std::string Operator::odbn2lbn(const std::string& output_diff_bn) const {
 std::string Operator::mdbn2lbn(const std::string& model_diff_bn) const {
   return mbn2lbn(GenUnDiffBn(model_diff_bn));
 }
+std::string Operator::ibn2lbn(const std::string& input_bn) const {
+  auto it = special_ibn2lbn_.find(input_bn);
+  if (it == special_ibn2lbn_.end()) {
+    return normal_ibn2lbn(input_bn);
+  } else {
+    return it->second;
+  }
+}
 
 std::string Operator::GetValueFromPbOpConf(const std::string& k) const {
   return GetValueFromPbMessage(*pb_op_conf_, k);
@@ -79,7 +87,7 @@ void Operator::EnrollBn(std::vector<std::string>* bn_vec,
   CHECK(bn_in_op2shape_ptr_.emplace(bn, nullptr).second);
 }
 
-std::string UserOperator::ibn2lbn(const std::string& input_bn) const {
+std::string UserOperator::normal_ibn2lbn(const std::string& input_bn) const {
   return GetValueFromPbOpConf(input_bn);
 }
 std::string UserOperator::obn2lbn(const std::string& output_bn) const {
