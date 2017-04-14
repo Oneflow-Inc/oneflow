@@ -32,28 +32,33 @@ class CompTaskNode : public TaskNode {
 
  private:
   void SubscribeRegstDescInnerPath() override;
+
   //
-  using Lbn2NodeObnMap =
+  using Lbn2NodeBnMap =
       HashMap<std::string, std::pair<ExecNode*, std::string>>;
-  using Lbn2NodeIbnVecMap =
-      HashMap<std::string, std::vector<std::pair<ExecNode*, std::string>>>;
 
   void FwBuildExecAndProducedRegsts(Path*) override;
   void FwBuildFromUserOps(
-      Lbn2NodeObnMap* lbn2producer,
-      Lbn2NodeIbnVecMap* extern_in_lbn2consumers);
-  void FwAddCopyInOp(Lbn2NodeIbnVecMap* extern_in_lbn2consumers);
-  void FwSetProducedRegstDescs(
-      const Lbn2NodeObnMap& lbn2producer,
-      const Lbn2NodeIbnVecMap& extern_in_lbn2consumers);
+      Lbn2NodeBnMap* lbn2producer,
+      Lbn2NodeBnMap* extern_in_lbn2consumer);
+  void FwAddCopyInOp(Lbn2NodeBnMap* extern_in_lbn2consumer);
+  void FwSetDataRegstDesc(
+      const Lbn2NodeBnMap& lbn2producer,
+      const Lbn2NodeBnMap& extern_in_lbn2consumer);
+  void FwSetModelTmpRegstDesc();
+
+
   void BpBuildExecAndProducedRegsts(Path*) override;
   void BpBuildExecGraph(
       const ExecGraph& fw_gph,
       const ExecNode* cp_in_node,
-      HashMap<const ExecNode*, ExecNode*>* fw_node2bp_node);
-  void BpSetProducedRegstDescs(
+      HashMap<const ExecNode*, ExecNode*>* fw_node2bp_node,
+      HashMap<ExecEdge*, const ExecEdge*>* bp_edge2fw_edge);
+  void BpSetDataDiffRegst(
       const ExecNode* cp_in_node,
-      const HashMap<const ExecNode*, ExecNode*>& fw_node2bp_node);
+      const HashMap<const ExecNode*, ExecNode*>& fw_node2bp_node,
+      const HashMap<ExecEdge*, const ExecEdge*>& bp_edge2fw_edge);
+  void BpSetModelDiffRegst();
 
   int32_t parallel_id_;
 

@@ -14,6 +14,7 @@ class ConvolutionOp final : public UserOperator {
   void Init(const OperatorConf& op_conf) override;
   void InferShape4ObAndDtbFromIb() const override { TODO(); }
   void InferShape4Mtb() const override { TODO(); }
+  void InferShape4Mdb() const override { TODO(); }
 
  private:
 

@@ -18,6 +18,7 @@ class MultinomialLogisticLossOp : public UserOperator {
   
   void InferShape4ObAndDtbFromIb() const override { TODO(); }
   void InferShape4Mtb() const override { TODO(); }
+  void InferShape4Mdb() const override { TODO(); }
 
  private:
 

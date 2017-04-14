@@ -17,7 +17,6 @@ class ExecEdge final : public Edge<ExecNode, ExecEdge> {
 
   // Getters
   const std::string& lbn() const { return lbn_; }
-  const std::string& pbn() const { return pbn_; }
   const std::string& src_bn() const { return src_bn_; }
   const std::string& dst_bn() const { return dst_bn_; }
 
@@ -29,7 +28,6 @@ class ExecEdge final : public Edge<ExecNode, ExecEdge> {
  private:
   // various names for one blob
   std::string lbn_;
-  std::string pbn_;
   std::string src_bn_;
   std::string dst_bn_;
 
@@ -64,10 +62,6 @@ class ExecGraph final : public Graph<ExecNode, ExecEdge> {
   ~ExecGraph() = default;
 
   ExecNode* SoleNode() const {
-    TODO();
-  }
-
-  ExecEdge* NewExecEdge(const std::string& lbn) {
     TODO();
   }
 

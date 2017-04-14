@@ -53,6 +53,7 @@ class Operator {
   DEFINE_BLOB_NAMES_GETTER(output_bns);
   DEFINE_BLOB_NAMES_GETTER(output_diff_bns);
   DEFINE_BLOB_NAMES_GETTER(model_bns);
+  DEFINE_BLOB_NAMES_GETTER(model_diff_bns);
   DEFINE_BLOB_NAMES_GETTER(model_tmp_bns);
   
   #undef DEFINE_BLOB_NAMES_GETTER
@@ -63,6 +64,7 @@ class Operator {
   void SetNull4AllShapePtr() const;
   virtual void InferShape4ObAndDtbFromIb() const = 0;
   virtual void InferShape4Mtb() const = 0;
+  virtual void InferShape4Mdb() const = 0;
 
  protected:
   std::string& mut_op_name() { return op_name_; }
@@ -135,9 +137,13 @@ class SysOperator : public Operator {
   #undef SET_UNEXPECTED
   
   void InferShape4Mtb() const override { UNEXPECTED_RUN(); }
+  void InferShape4Mdb() const override { UNEXPECTED_RUN(); }
 
  private:
 };
+
+std::string GenDiffBn(const std::string& bn);
+std::string GenUnDiffBn(const std::string& diff_bn);
 
 } // namespace oneflow
 

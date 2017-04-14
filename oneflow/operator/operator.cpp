@@ -2,18 +2,14 @@
 
 namespace oneflow {
 
-namespace {
-
-inline std::string GenDiffBn(const std::string& bn) {
+std::string GenDiffBn(const std::string& bn) {
   return bn + "_diff";
 }
 
-inline std::string GenUnDiffBn(const std::string& diff_bn) {
+std::string GenUnDiffBn(const std::string& diff_bn) {
   CHECK_STREQ(diff_bn.substr(diff_bn.size() - 5).c_str(), "_diff");
   return diff_bn.substr(0, diff_bn.size() - 5);
 }
-
-} // namespace
 
 std::string Operator::dtbn2lbn(const std::string& data_tmp_bn) const {
   return op_name_ + "/" + data_tmp_bn;
