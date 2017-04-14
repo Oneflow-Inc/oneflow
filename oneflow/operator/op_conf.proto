@@ -51,6 +51,7 @@ message CopyOpConf {
 message CloneOpConf {
   int32 out_num = 1;
   string lbn = 2;
+  bool is_boxing = 3;
 }
 
 message ConcatOpConf {

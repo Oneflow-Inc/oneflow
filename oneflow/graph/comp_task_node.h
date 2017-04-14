@@ -31,16 +31,12 @@ class CompTaskNode : public TaskNode {
   virtual CopyOpConf::CopyType CopyInOpType() = 0;
 
  private:
+  void SubscribeRegstDescInnerPath() override;
+  //
   using Lbn2NodeObnMap =
       HashMap<std::string, std::pair<ExecNode*, std::string>>;
   using Lbn2NodeIbnVecMap =
       HashMap<std::string, std::vector<std::pair<ExecNode*, std::string>>>;
-  struct CloneInfo {
-    std::string lbn;
-    std::shared_ptr<const Operator> clone_op;
-    ExecNode* pred_node;
-    std::vector<ExecEdge*> edges;
-  };
 
   void FwBuildExecAndProducedRegsts(Path*) override;
   void FwBuildFromUserOps(
@@ -48,8 +44,6 @@ class CompTaskNode : public TaskNode {
       Lbn2NodeIbnVecMap* extern_in_lbn2consumers);
   void FwAddCopyInOp(Lbn2NodeIbnVecMap* extern_in_lbn2consumers);
   void FwAddCloneOp();
-  void FwCollectCloneInfoVec(std::vector<CloneInfo>* clone_info_vec);
-  void FwAddOneCloneNode(const CloneInfo& clone_info);
   void FwBindOutEdgeAndRegst();
   void FwSetProducedRegstDescs(
       const Lbn2NodeObnMap& lbn2producer,

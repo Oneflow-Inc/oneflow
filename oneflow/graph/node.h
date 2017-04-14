@@ -69,6 +69,7 @@ class Node {
   virtual ~Node() = default;
 
   int32_t node_id() const { return node_id_; }
+  std::string node_id_str() const { return std::to_string(node_id_); }
   EdgeType* SoleInEdge() const {
     CHECK_EQ(in_edges_.size(), 1);
     return *(in_edges_.begin());

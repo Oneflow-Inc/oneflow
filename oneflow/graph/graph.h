@@ -46,9 +46,11 @@ class Graph {
   }
   
   bool IsFirstNode(const NodeType* node) const {
+    if (node->in_edges().size() != 1) { return false; }
     return node->SoleInEdge()->src_node() == &source_node_;
   }
   bool IsLastNode(const NodeType* node) const {
+    if (node->out_edges().size() != 1) { return false; }
     return node->SoleOutEdge()->dst_node() == &sink_node_;
   }
   

@@ -57,7 +57,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void FwBuildExecAndProducedRegsts(Path*) { UNEXPECTED_RUN(); }
   virtual void BpBuildExecAndProducedRegsts(Path*) { UNEXPECTED_RUN(); }
 
-  void SubscribeRegstDescInnerPath();
+  virtual void SubscribeRegstDescInnerPath();
 
  private:
   // In task_gph level

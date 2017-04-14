@@ -13,17 +13,20 @@ class CloneOp final : public SysOperator {
 
   void Init(const OperatorConf& op_conf) override;
   void InferShape4ObAndDtbFromIb() const override { TODO(); }
-  void InferShape4IbAndDtbFromOb() const override { TODO(); }
   
   std::string ibn2lbn(const std::string& input_bn) const override {
     return GetValueFromPbOpConf("lbn");
   }
-
   std::string obn2lbn(const std::string& output_bn) const override {
-    return GetValueFromPbOpConf("lbn");
+    if (is_boxing_) {
+      return GetValueFromPbOpConf("lbn");
+    } else {
+      return op_name() + "/" + output_bn;
+    }
   }
 
  private:
+  bool is_boxing_;
 
 };
 

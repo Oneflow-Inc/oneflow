@@ -14,7 +14,6 @@ class DataLoaderOp final : public SysOperator {
   void Init(const OperatorConf& op_conf) override;
 
   void InferShape4ObAndDtbFromIb() const override { TODO(); }
-  void InferShape4IbAndDtbFromOb() const override { TODO(); }
 
  private:
 

@@ -44,34 +44,16 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   std::shared_ptr<const Operator> op() const { return op_; }
   std::shared_ptr<const Operator>& mut_op() { return op_; }
 
-  // Add pair
-  void AddDtbnRegstPair(const std::string& dtbn, RegstDesc* regst);
-  void AddIbnRegstPair(const std::string& ibn, RegstDesc* regst);
-  void AddObnRegstPair(const std::string& obn, RegstDesc* regst);
-  void AddMbnRegstPair(const std::string& mbn, RegstDesc* regst);
-  void AddMtbnRegstPair(const std::string& mtbn, RegstDesc* regst);
-
-  // Get Pairs
-  #define DEFINE_PAIRS_GETTER(getter) \
-  const std::vector<std::pair<std::string, RegstDesc*>>& getter() const { \
-    return getter##_; \
+  void BindBnInOpAndRegst(const std::string& bn_in_op, RegstDesc* regst) {
+    CHECK(bn_in_op2regst.emplace(bn_in_op, regst).second);
   }
-
-  DEFINE_PAIRS_GETTER(dtbn_regst_pairs);
-  DEFINE_PAIRS_GETTER(ibn_regst_pairs);
-  DEFINE_PAIRS_GETTER(obn_regst_pairs);
-  DEFINE_PAIRS_GETTER(mbn_regst_pairs);
-  DEFINE_PAIRS_GETTER(mtbn_regst_pairs);
-
-  #undef DEFINE_PAIRS_GETTER
+  RegstDesc* GetRegstFromBnInOp(const std::string& bn_in_op) {
+    return bn_in_op2regst.at(bn_in_op);
+  }
 
  private:
   std::shared_ptr<const Operator> op_;
-  std::vector<std::pair<std::string, RegstDesc*>> dtbn_regst_pairs_;
-  std::vector<std::pair<std::string, RegstDesc*>> ibn_regst_pairs_;
-  std::vector<std::pair<std::string, RegstDesc*>> obn_regst_pairs_;
-  std::vector<std::pair<std::string, RegstDesc*>> mbn_regst_pairs_;
-  std::vector<std::pair<std::string, RegstDesc*>> mtbn_regst_pairs_;
+  HashMap<std::string, RegstDesc*> bn_in_op2regst;
 
 };
 

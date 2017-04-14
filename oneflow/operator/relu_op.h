@@ -15,7 +15,6 @@ class ReluOp final : public UserOperator {
   bool IsElemWise() const override { return true; }
 
   void InferShape4ObAndDtbFromIb() const override { TODO(); }
-  void InferShape4IbAndDtbFromOb() const override { TODO(); }
   void InferShape4MbAndMtb() const override { TODO(); }
 
  private:

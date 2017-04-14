@@ -18,11 +18,10 @@ class ModelUpdateOp final : public SysOperator {
     auto cnf = new ModelUpdateOp(op_conf.model_update_op_conf());
     mut_pb_op_conf().reset(cnf);
 
-    EnrollInputBn("model_diffs");
-    EnrollOutputBn("model");
+    EnrollInputBn("model_diffs", false);
+    EnrollOutputBn("model", false);
   }
   void InferShape4ObAndDtbFromIb() const override { TODO(); }
-  void InferShape4IbAndDtbFromOb() const override { TODO(); }
 
  private:
 };

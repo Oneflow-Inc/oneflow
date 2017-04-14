@@ -59,8 +59,23 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
                const Strategy& strategy_conf);
 
  private:
-  void BuildGraphStruct(const DLNetConf& dl_net_conf);
+  void NaiveBuildGraphStruct(
+      const DLNetConf& dl_net_conf,
+      HashMap<LogicalEdge*, std::string>* edge2lbn);
   void FillNodeWithParallelDesc(const Strategy& strategy_conf);
+
+  struct CloneInfo {
+    std::shared_ptr<const Operator> clone_op;
+    LogicalNode* pred_node;
+    std::vector<LogicalEdge*> edges;
+  };
+  void AddCloneNodes(
+      const HashMap<LogicalEdge*, std::string>& edge2lbn);
+  void CollectCloneInfos(
+      std::vector<CloneInfo>* clone_infos,
+      const HashMap<LogicalEdge*, std::string>& edge2lbn);
+  void AddOneCloneNode(const CloneInfo& clone_info);
+
 
 };
 

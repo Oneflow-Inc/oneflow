@@ -18,10 +18,9 @@ class ModelLoadOp final : public SysOperator {
     auto cnf = new ModelLoadOp(op_conf.model_load_op_conf());
     mut_pb_op_conf().reset(cnf);
 
-    EnrollOutputBn("model");
+    EnrollOutputBn("model", false);
   }
   void InferShape4ObAndDtbFromIb() const override { TODO(); }
-  void InferShape4IbAndDtbFromOb() const override { TODO(); }
 
  private:
 };

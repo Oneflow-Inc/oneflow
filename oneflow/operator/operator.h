@@ -25,6 +25,10 @@ class Operator {
 
   // bn_in_op2lbn
   std::string dtbn2lbn(const std::string& data_tmp_bn) const;
+  std::string idbn2lbn(const std::string& input_diff_bn) const;
+  std::string odbn2lbn(const std::string& output_diff_bn) const;
+  std::string mdbn2lbn(const std::string& model_diff_bn) const;
+
   virtual std::string ibn2lbn(const std::string& input_bn) const = 0;
   virtual std::string obn2lbn(const std::string& output_bn) const = 0;
   virtual std::string mtbn2lbn(const std::string& model_tmp_bn) const = 0;
@@ -41,7 +45,9 @@ class Operator {
 
   DEFINE_BLOB_NAMES_GETTER(data_tmp_bns);
   DEFINE_BLOB_NAMES_GETTER(input_bns);
+  DEFINE_BLOB_NAMES_GETTER(input_diff_bns);
   DEFINE_BLOB_NAMES_GETTER(output_bns);
+  DEFINE_BLOB_NAMES_GETTER(output_diff_bns);
   DEFINE_BLOB_NAMES_GETTER(model_bns);
   DEFINE_BLOB_NAMES_GETTER(model_tmp_bns);
   
@@ -52,7 +58,6 @@ class Operator {
   void SetShapePtr(const std::string& bn_in_op, Shape* ptr) const;
   void SetNull4AllShapePtr() const;
   virtual void InferShape4ObAndDtbFromIb() const = 0;
-  virtual void InferShape4IbAndDtbFromOb() const = 0;
   virtual void InferShape4MbAndMtb() const = 0;
 
  protected:
@@ -61,22 +66,30 @@ class Operator {
   
   // enroll data blobs
   void EnrollDataTmpBn(const std::string& dtbn);
-  void EnrollInputBn(const std::string& ibn);
-  void EnrollOutputBn(const std::string& obn);
+  void EnrollInputBn(const std::string& ibn, bool has_diff);
+  void EnrollOutputBn(const std::string& obn, bool has_diff);
+
+  void EnrollInputBn(const std::string& ibn) { EnrollInputBn(ibn, true); }
+  void EnrollOutputBn(const std::string& obn) { EnrollOutputBn(obn, true); }
   
   // enroll model blobs
   void EnrollModelBn(const std::string& mbn);
   void EnrollModelTmpBn(const std::string& mtbn);
 
  private:
+  void EnrollBn(std::vector<std::string>* bn_vec, const std::string& bn);
+
   std::string op_name_;
   std::unique_ptr<PbMessage> pb_op_conf_;
 
   // blob name in op
   std::vector<std::string> data_tmp_bns_;
   std::vector<std::string> input_bns_;
+  std::vector<std::string> input_diff_bns_;
   std::vector<std::string> output_bns_;
+  std::vector<std::string> output_diff_bns_;
   std::vector<std::string> model_bns_;
+  std::vector<std::string> model_diff_bns_;
   std::vector<std::string> model_tmp_bns_;
 
   mutable HashMap<std::string, Shape*> bn_in_op2shape_ptr_;
