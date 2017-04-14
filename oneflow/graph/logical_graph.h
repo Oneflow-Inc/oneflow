@@ -18,10 +18,10 @@ class LogicalNode final : public Node<LogicalNode, LogicalEdge> {
   LogicalNode() = default;
   ~LogicalNode() = default;
 
-  std::shared_ptr<const Operator> op() const {
+  std::shared_ptr<Operator> op() const {
     return op_;
   }
-  std::shared_ptr<const Operator>& mut_op() {
+  std::shared_ptr<Operator>& mut_op() {
     return op_;
   }
 
@@ -35,7 +35,7 @@ class LogicalNode final : public Node<LogicalNode, LogicalEdge> {
   bool IsLossNode() const { return op_->IsLossOp(); }
 
  private:
-  std::shared_ptr<const Operator> op_;
+  std::shared_ptr<Operator> op_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
 
 };
@@ -61,20 +61,24 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
  private:
   void NaiveBuildGraphStruct(
       const DLNetConf& dl_net_conf,
-      HashMap<LogicalEdge*, std::string>* edge2lbn);
+      HashMap<LogicalEdge*, std::string>* edge2lbn,
+      HashMap<LogicalEdge*, std::string>* edge2ibn);
   void FillNodeWithParallelDesc(const Strategy& strategy_conf);
 
   struct CloneInfo {
-    std::shared_ptr<const Operator> clone_op;
+    std::shared_ptr<Operator> clone_op;
     LogicalNode* pred_node;
     std::vector<LogicalEdge*> edges;
   };
   void AddCloneNodes(
-      const HashMap<LogicalEdge*, std::string>& edge2lbn);
+      const HashMap<LogicalEdge*, std::string>& edge2lbn,
+      const HashMap<LogicalEdge*, std::string>& edge2ibn);
   void CollectCloneInfos(
       std::vector<CloneInfo>* clone_infos,
       const HashMap<LogicalEdge*, std::string>& edge2lbn);
-  void AddOneCloneNode(const CloneInfo& clone_info);
+  void AddOneCloneNode(
+      const CloneInfo& clone_info,
+      const HashMap<LogicalEdge*, std::string>& edge2ibn);
 
 
 };
