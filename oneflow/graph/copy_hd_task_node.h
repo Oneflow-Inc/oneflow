@@ -26,13 +26,13 @@ class CopyHDTaskNode final : public TaskNode {
   const std::vector<std::string>& CopiedLbns() const;
   
  private:
-  void FwBuildExecAndProducedRegsts(Path*) override;
-  void BpBuildExecAndProducedRegsts(Path*) override;
-  void BindOutEdgeAndRegst();
+  void InitWithFwNode(TaskNode* fw_node) override;
+
+  void FwBuildExecAndProducedRegsts(Path*) override { TODO(); }
+  void BpBuildExecAndProducedRegsts(Path*) override { TODO(); }
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return std::unique_ptr<TaskNode> (new CopyHDTaskNode);
   }
-  void InitWithFwNode(TaskNode* fw_node) override;
 
   bool is_fw_in_copy_;
 

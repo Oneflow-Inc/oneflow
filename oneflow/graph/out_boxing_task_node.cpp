@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-void OutBoxingTaskNode::FwBuildExecGraph() {
+void OutBoxingTaskNode::FwVirtualBuild() {
   Chain2EdgesMap chain2sorted_out_edges;
   FwInitChain2SortedEdgesMaps(&chain2sorted_out_edges,
                               &TaskNode::out_edges,

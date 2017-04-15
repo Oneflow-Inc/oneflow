@@ -32,14 +32,13 @@ class BoxingTaskNode : public TaskNode {
   void FwBuildChainSortedEdgesPair(
       const ChainEdgesPair& chain_sorted_in_edges,
       const ChainEdgesPair& chain_sorted_out_edges);
-  virtual void FwBuildExecGraph() = 0;
+  virtual void FwVirtualBuild() = 0;
 
  private:
   void FwBuildExecAndProducedRegsts(Path*) override;
   void BpBuildExecAndProducedRegsts(Path*) override;
   
-  void BindOutEdgeAndRegst();
-  void SetProducedRegst();
+  void EnrollAllRegstAndBindRelatedEdge();
   
 };
 

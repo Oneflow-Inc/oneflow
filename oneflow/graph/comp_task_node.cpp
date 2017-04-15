@@ -238,7 +238,7 @@ void CompTaskNode::BpSetDataDiffRegst(
   // blobs on edge 
   for (const std::unique_ptr<ExecEdge>& edge : exec_gph().edges()) {
     Shape* ptr = in_diff_regst->EnrollLbn(edge->lbn());
-    *ptr = *(out_regst->GetMutShapePtr(edge->lbn()));
+    *ptr = out_regst->GetShape(edge->lbn());
     edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), in_diff_regst);
     edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(), in_diff_regst);
   }
@@ -258,7 +258,7 @@ void CompTaskNode::BpSetDataDiffRegst(
   for (ExecEdge* edge : cp_in_node->out_edges()) {
     ExecNode* bp_node = fw_node2bp_node.at(edge->dst_node());
     Shape* ptr = in_diff_regst->EnrollLbn(edge->lbn());
-    *ptr = *(out_regst->GetMutShapePtr(edge->lbn()));
+    *ptr = out_regst->GetShape(edge->lbn());
     bp_node->BindBnInOpAndRegst(GenDiffBn(edge->dst_bn()), in_diff_regst);
   }
   // tmp blobs

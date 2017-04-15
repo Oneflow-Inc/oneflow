@@ -18,7 +18,7 @@ class InBoxingTaskNode final : public BoxingTaskNode {
   void InitWithFwNode(TaskNode* fw_node) override {
     BoxingTaskNode::InitWithFwNode(fw_node);
   }
-  void FwBuildExecGraph() override;
+  void FwVirtualBuild() override;
 
 };
 
