@@ -18,15 +18,10 @@ class CloneOp final : public SysOperator {
     return GetValueFromPbOpConf("lbn");
   }
   std::string obn2lbn(const std::string& output_bn) const override {
-    if (is_boxing_) {
-      return GetValueFromPbOpConf("lbn");
-    } else {
-      return op_name() + "/" + output_bn;
-    }
+    return op_name() + "/" + output_bn;
   }
 
  private:
-  bool is_boxing_;
 
 };
 

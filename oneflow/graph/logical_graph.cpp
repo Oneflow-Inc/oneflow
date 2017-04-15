@@ -89,7 +89,6 @@ void LogicalGraph::CollectCloneInfos(
       pb_op_conf.set_name("clone_" + lbn + "_" + cur_node->node_id_str());
       pb_op_conf.mutable_clone_op_conf()->set_out_num(edges.size());
       pb_op_conf.mutable_clone_op_conf()->set_lbn(lbn);
-      pb_op_conf.mutable_clone_op_conf()->set_is_boxing(false);
       auto clone_op = ConstructOpFromPbConf(pb_op_conf);
       // Set clone_info
       CloneInfo clone_info;

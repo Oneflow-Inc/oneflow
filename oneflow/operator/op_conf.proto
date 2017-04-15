@@ -51,19 +51,28 @@ message CopyOpConf {
 message CloneOpConf {
   int32 out_num = 1;
   string lbn = 2;
-  bool is_boxing = 3;
 }
 
-message ConcatOpConf {
+message BoxConcatConf {
   int32 axis = 1;
+}
+
+message BoxSplitConf {
+  int32 axis = 1;
+}
+
+message BoxCloneConf {
+}
+
+message BoxingOpConf {
+  string lbn = 1;
   int32 in_num = 2;
-  string lbn = 3;
-}
-
-message SplitOpConf {
-  int32 axis = 1;
-  int32 out_num = 2;
-  string lbn = 3;
+  int32 out_num = 3;
+  BoxConcatConf concat_box = 4;
+  oneof out_box {
+    BoxSplitConf split_box = 5;
+    BoxCloneConf clone_box = 6;
+  }
 }
 
 message ModelUpdateOpConf {
@@ -87,10 +96,9 @@ message OperatorConf {
     MultinomialLogisticLossOpConf multinomial_logistic_loss_op_conf = 106;
     CopyOpConf copy_op_conf = 107;
     CloneOpConf clone_op_conf = 108;
-    ConcatOpConf concat_op_conf = 109;
-    SplitOpConf split_op_conf = 110;
-    ModelUpdateOpConf model_update_op_conf = 111;
-    ModelLoadOpConf model_load_op_conf = 112;
-    ModelSaveOpConf model_save_op_conf = 113;
+    BoxingOpConf boxing_op_conf = 109;
+    ModelUpdateOpConf model_update_op_conf = 110;
+    ModelLoadOpConf model_load_op_conf = 111;
+    ModelSaveOpConf model_save_op_conf = 112;
   }
 }
