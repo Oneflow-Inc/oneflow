@@ -24,6 +24,8 @@ class RegstDesc {
     CHECK(subscribers_.insert(task_node).second);
   }
 
+  void CopyLbnAndShape(const RegstDesc*) { TODO(); }
+
   Shape* EnrollLbn(const std::string& lbn) { TODO(); }
   const Shape& GetShape(const std::string& lbn) { TODO(); }
   Shape* GetMutShapePtr(const std::string& lbn) { TODO(); }

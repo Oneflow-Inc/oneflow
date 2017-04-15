@@ -7,7 +7,7 @@
 
 namespace oneflow {
 
-class Path;
+class TaskGraph;
 class TaskEdge;
 
 class TaskNode : public Node<TaskNode, TaskEdge> {
@@ -35,8 +35,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   std::unique_ptr<TaskNode> BuildAndConnectBpNode();
   
   //
-  void BuildExecAndProducedRegstsAndSubscribeInPath(Path* path);
-  void Subscribe(RegstDesc* regst);
+  void BuildExecAndProducedRegsts(TaskGraph*);
   RegstDesc* GetProducedRegstDesc(const std::string& regst_desc_name);
 
   // 
@@ -54,10 +53,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void EnrollProducedRegstDesc(const std::string& regst_desc_name,
                                std::unique_ptr<RegstDesc>&& regst_desc);
 
-  virtual void FwBuildExecAndProducedRegsts(Path*) { UNEXPECTED_RUN(); }
-  virtual void BpBuildExecAndProducedRegsts(Path*) { UNEXPECTED_RUN(); }
-
-  virtual void SubscribeRegstDescInnerPath();
+  virtual void FwBuildExecAndProducedRegsts(TaskGraph*) { UNEXPECTED_RUN(); }
+  virtual void BpBuildExecAndProducedRegsts(TaskGraph*) { UNEXPECTED_RUN(); }
 
  private:
   // In task_gph level
@@ -69,7 +66,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   ExecGraph exec_gph_;
 
   HashMap<std::string, std::unique_ptr<RegstDesc>> produced_regst_descs_; 
-  std::unordered_set<const RegstDesc*> subscribed_regst_descs_;
 
   HashMap<RegstDesc*, const TaskEdge*> produced_regst2out_edge;
   HashMap<const TaskEdge*, RegstDesc*> out_edge2produced_regst;

@@ -35,8 +35,8 @@ class BoxingTaskNode : public TaskNode {
   virtual void FwVirtualBuild() = 0;
 
  private:
-  void FwBuildExecAndProducedRegsts(Path*) override;
-  void BpBuildExecAndProducedRegsts(Path*) override;
+  void FwBuildExecAndProducedRegsts(TaskGraph*) override;
+  void BpBuildExecAndProducedRegsts(TaskGraph*) override;
   
   void EnrollAllRegstAndBindRelatedEdge();
   

@@ -10,24 +10,31 @@
 
 namespace oneflow {
 
-class Path;
-
-class TaskGraph final : public Graph<TaskNode, TaskEdge> {
+class TaskGraph : public Graph<TaskNode, TaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TaskGraph);
-  TaskGraph() = delete;
-  ~TaskGraph() = default;
+  virtual ~TaskGraph() = default;
   
-  TaskGraph(const DLNetConf& dl_net_conf,
-            const Strategy& strategy_conf,
-            bool need_bp);
-  TaskGraph(std::unique_ptr<ChainGraph>&& chain_gph, bool need_bp);
-
   const StageGraph* stage_gph() const { return stage_gph_.get(); }
+  const ChainGraph* chain_gph() const { return stage_gph_->chain_gph(); }
+  const HashMap<CompTaskNode*, CompTaskNode*>& faker2mccoy() {
+    return faker2mccoy_;
+  }
+
+  void BuildExecAndProducedRegsts();
+  
+  typedef void (CompTaskNode::*CompTaskNodeMemFunc)(TaskGraph*);
+  virtual CompTaskNodeMemFunc Func4FwBuildExecAndProducedRegsts() const = 0;
+
+ protected:
+  TaskGraph() = default;
+  void BuildFromChainGph(std::unique_ptr<ChainGraph>&& chain_gph, bool need_bp);
+  void EnrollFakerMccoy(CompTaskNode* faker, CompTaskNode* mccoy) {
+    CHECK(faker2mccoy_.emplace(faker, mccoy).second);
+  }
 
  private:
-  void BuildFromChainGph(std::unique_ptr<ChainGraph>&& chain_gph, bool need_bp);
-  void BuildGraph(bool need_bp);
+  void BuildFromStageGph(bool need_bp);
 
   template<typename TaskNodeType>
   TaskNodeType* NewTaskNode() {
@@ -66,6 +73,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void BuildBpStruct();
 
   std::unique_ptr<const StageGraph> stage_gph_;
+  HashMap<CompTaskNode*, CompTaskNode*> faker2mccoy_;
+  
 
 };
 

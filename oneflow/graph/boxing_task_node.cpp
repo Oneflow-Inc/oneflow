@@ -29,7 +29,7 @@ void FwCompleteBoxOpConfModelModel(BoxingOpConf* conf) {
 
 } // namespace
 
-void BoxingTaskNode::FwBuildExecAndProducedRegsts(Path* path) {
+void BoxingTaskNode::FwBuildExecAndProducedRegsts(TaskGraph* gph) {
   EnrollAllRegstAndBindRelatedEdge();
   FwVirtualBuild();
 }
@@ -165,7 +165,7 @@ inline RegstDesc* GetBpRegstFromFwRegst(RegstDesc* fw_regst) {
 
 }
 
-void BoxingTaskNode::BpBuildExecAndProducedRegsts(Path* path) {
+void BoxingTaskNode::BpBuildExecAndProducedRegsts(TaskGraph*) {
   EnrollAllRegstAndBindRelatedEdge();
   const ExecGraph& fw_exec_gph = GetFwNode()->exec_gph();
   HashMap<const ExecNode*, ExecNode*> fw_node2bp_node;

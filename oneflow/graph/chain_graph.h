@@ -79,7 +79,7 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
   ChainGraph(const LogicalGraph* logical_gph);
 
  private:
-  void SetInOutLbn4AllChainNodeInDataPath();
+  void SetInOutLbn4AllChainNodeInDataTaskGraph();
 
 };
 

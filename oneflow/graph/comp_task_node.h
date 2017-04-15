@@ -19,10 +19,10 @@ class CompTaskNode : public TaskNode {
 
   bool IsFaker() const { return chain_node()->IsFaker(); }
 
-  void DataFwBuildExecAndProducedRegsts(Path*);
-  void ModelUpdateFwBuildExecAndProducedRegsts(Path*);
-  void ModelLoadFwBuildExecAndProducedRegsts(Path*);
-  void ModelSaveFwBuildExecAndProducedRegsts(Path*);
+  void DataFwBuildExecAndProducedRegsts(TaskGraph*);
+  void MdUpdtFwBuildExecAndProducedRegsts(TaskGraph*);
+  void MdLoadFwBuildExecAndProducedRegsts(TaskGraph*);
+  void MdSaveFwBuildExecAndProducedRegsts(TaskGraph*);
 
  protected:
   virtual void InitWithFwNode(TaskNode* fw_node) override {
@@ -31,13 +31,10 @@ class CompTaskNode : public TaskNode {
   virtual CopyOpConf::CopyType CopyInOpType() = 0;
 
  private:
-  void SubscribeRegstDescInnerPath() override;
-
-  //
   using Lbn2NodeBnMap =
       HashMap<std::string, std::pair<ExecNode*, std::string>>;
 
-  void FwBuildExecAndProducedRegsts(Path*) override;
+  void FwBuildExecAndProducedRegsts(TaskGraph*) override;
   void FwBuildFromUserOps(
       Lbn2NodeBnMap* lbn2producer,
       Lbn2NodeBnMap* extern_in_lbn2consumer);
@@ -47,8 +44,7 @@ class CompTaskNode : public TaskNode {
       const Lbn2NodeBnMap& extern_in_lbn2consumer);
   void FwSetModelTmpRegstDesc();
 
-
-  void BpBuildExecAndProducedRegsts(Path*) override;
+  void BpBuildExecAndProducedRegsts(TaskGraph*) override;
   void BpBuildExecGraph(
       const ExecGraph& fw_gph,
       const ExecNode* cp_in_node,

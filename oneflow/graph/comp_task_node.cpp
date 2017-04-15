@@ -1,23 +1,15 @@
 #include "graph/comp_task_node.h"
+#include "graph/task_graph.h"
 #include "operator/operator_factory.h"
 #include "operator/clone_op.h"
-#include "path/path.h"
 
 namespace oneflow {
 
-void CompTaskNode::SubscribeRegstDescInnerPath() {
-  if (IsFwNode()) { return; }
-  TaskNode* fw_node = GetFwNode();
-  Subscribe(fw_node->GetProducedRegstDesc("data"));
-  Subscribe(fw_node->GetProducedRegstDesc("model_tmp"));
-  TaskNode::SubscribeRegstDescInnerPath();
+void CompTaskNode::FwBuildExecAndProducedRegsts(TaskGraph* gph) {
+  (this->*(gph->Func4FwBuildExecAndProducedRegsts()))(gph);
 }
 
-void CompTaskNode::FwBuildExecAndProducedRegsts(Path* path) {
-  (this->*(path->Func4FwBuildExecAndProducedRegsts()))(path);
-}
-
-void CompTaskNode::DataFwBuildExecAndProducedRegsts(Path* path) {
+void CompTaskNode::DataFwBuildExecAndProducedRegsts(TaskGraph*) {
   Lbn2NodeBnMap lbn2producer;
   Lbn2NodeBnMap extern_in_lbn2consumer;
   FwBuildFromUserOps(&lbn2producer, &extern_in_lbn2consumer);
@@ -36,35 +28,30 @@ void CompTaskNode::DataFwBuildExecAndProducedRegsts(Path* path) {
   FwSetModelTmpRegstDesc();
 }
 
-void CompTaskNode::ModelUpdateFwBuildExecAndProducedRegsts(Path* path) {
-  TODO();
-  /*if (IsFaker()) {
-    CompTaskNode* mccoy = path->Faker2Mccoy(this);
+void CompTaskNode::MdUpdtFwBuildExecAndProducedRegsts(TaskGraph* gph) {
+  if (IsFaker()) {
+    CompTaskNode* mccoy = gph->faker2mccoy().at(this);
     RegstDesc* regst = mccoy->GetProducedRegstDesc("model_diff");
     BindProducedRegstAndOutEdge(regst, SoleOutEdge());
     return;
   }
   std::unique_ptr<RegstDesc> model_regst(new ContigRegstDesc);
+  EnrollProducedRegstDesc("model", std::move(model_regst));
   ExecNode* exec_node = mut_exec_gph().NewFinalNode();
+  CHECK_EQ(chain_node()->op_vec().size(), 1);
   exec_node->mut_op() = chain_node()->op_vec().front();
   mut_exec_gph().UpdateSourceAndSink();
-  for (std::shared_ptr<const Operator> op : path->GetDataChain()->op_vec()) {
-    for (const std::string& mbn : op->model_bns()) {
-      std::string lbn = op->mbn2lbn(mbn);
-      exec_node->AddConsumedLbnRegstPair(lbn, GetRelatedRegst(SoleInEdge()));
-      exec_node->AddProducedLbnRegstPair(lbn, model_regst.get());
-    }
-  }
-  EnrollProducedRegstDesc("model", std::move(model_regst));
-  AddInPathLbn2ProducedRegst();
-  */
+  // It is too difficult to do all things in this function
+  // We need the MdUpdtTaskGraph to do follows
+  //   BindBnInOpAndRegst
+  //   set the shape Of model_regst
 }
 
-void CompTaskNode::ModelLoadFwBuildExecAndProducedRegsts(Path*) {
+void CompTaskNode::MdLoadFwBuildExecAndProducedRegsts(TaskGraph*) {
   TODO();
 }
 
-void CompTaskNode::ModelSaveFwBuildExecAndProducedRegsts(Path*) {
+void CompTaskNode::MdSaveFwBuildExecAndProducedRegsts(TaskGraph*) {
   TODO();
 }
 
@@ -185,7 +172,7 @@ void CompTaskNode::FwSetModelTmpRegstDesc() {
   }
 }
 
-void CompTaskNode::BpBuildExecAndProducedRegsts(Path* path) {
+void CompTaskNode::BpBuildExecAndProducedRegsts(TaskGraph*) {
   const ExecGraph& fw_gph = GetFwNode()->exec_gph();
   const ExecNode* cp_in_node = fw_gph.source_node().SoleOutEdge()->dst_node();
   HashMap<const ExecNode*, ExecNode*> fw_node2bp_node;

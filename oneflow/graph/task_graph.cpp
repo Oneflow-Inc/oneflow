@@ -16,27 +16,20 @@ inline void TaskConnect(TaskNode* src_node,
 
 }
 
-TaskGraph::TaskGraph(const DLNetConf& dl_net_conf,
-                     const Strategy& strategy_conf,
-                     bool need_bp) {
-  std::unique_ptr<LogicalGraph>
-      logical_gph(new LogicalGraph(dl_net_conf, strategy_conf));
-  std::unique_ptr<ChainGraph> chain_gph(new ChainGraph(logical_gph.get()));
-  BuildFromChainGph(std::move(chain_gph), need_bp);
-}
-
-TaskGraph::TaskGraph(std::unique_ptr<ChainGraph>&& chain_gph, bool need_bp) {
-  BuildFromChainGph(std::move(chain_gph), need_bp);
+void TaskGraph::BuildExecAndProducedRegsts() {
+  for (TaskNode& node : *this) {
+    node.BuildExecAndProducedRegsts(this);
+  }
 }
 
 void TaskGraph::BuildFromChainGph(
     std::unique_ptr<ChainGraph>&& chain_gph,
     bool need_bp) {
   stage_gph_.reset(new StageGraph(std::move(chain_gph)));
-  BuildGraph(need_bp);
+  BuildFromStageGph(need_bp);
 }
 
-void TaskGraph::BuildGraph(bool need_bp) {
+void TaskGraph::BuildFromStageGph(bool need_bp) {
   Stage2TaskNodesMap stage2task_nodes;
   InitCompTaskNodes(&stage2task_nodes);
   InitBoxingTaskNodes(&stage2task_nodes);

@@ -265,10 +265,10 @@ ChainGraph::ChainGraph(const LogicalGraph* logical_gph) {
   }
   // Post processing
   UpdateSourceAndSink();
-  SetInOutLbn4AllChainNodeInDataPath();
+  SetInOutLbn4AllChainNodeInDataTaskGraph();
 }
 
-void ChainGraph::SetInOutLbn4AllChainNodeInDataPath() {
+void ChainGraph::SetInOutLbn4AllChainNodeInDataTaskGraph() {
   TODO();
 }
 

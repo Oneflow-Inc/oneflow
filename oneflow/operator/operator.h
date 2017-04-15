@@ -42,6 +42,13 @@ class Operator {
   const std::string& op_name() const { return op_name_; }
   std::string GetValueFromPbOpConf(const std::string& k) const;
 
+  const std::string& SoleIbn() const {
+    return *(input_bns_.begin());
+  }
+  const std::string& SoleObn() const {
+    return *(output_bns_.begin());
+  }
+
   #define DEFINE_BLOB_NAMES_GETTER(getter_name) \
   const std::vector<std::string>& getter_name() const { \
     return getter_name##_; \

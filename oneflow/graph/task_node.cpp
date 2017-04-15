@@ -35,18 +35,12 @@ std::unique_ptr<TaskNode> TaskNode::BuildAndConnectBpNode() {
   return bp_node;
 }
 
-void TaskNode::BuildExecAndProducedRegstsAndSubscribeInPath(Path* path) {
-  SubscribeRegstDescInnerPath();
+void TaskNode::BuildExecAndProducedRegsts(TaskGraph* gph) {
   if (IsFwNode()) {
-    FwBuildExecAndProducedRegsts(path);
+    FwBuildExecAndProducedRegsts(gph);
   } else {
-    BpBuildExecAndProducedRegsts(path);
+    BpBuildExecAndProducedRegsts(gph);
   }
-}
-
-void TaskNode::Subscribe(RegstDesc* regst) {
-  regst->AddSubscriber(this);
-  CHECK(subscribed_regst_descs_.insert(regst).second);
 }
 
 RegstDesc* TaskNode::GetProducedRegstDesc(const std::string& regst_desc_name) {
@@ -84,12 +78,6 @@ void TaskNode::EnrollProducedRegstDesc(
   regst_desc->SetProducer(this);
   auto pair = std::make_pair(regst_desc_name, std::move(regst_desc));
   CHECK(produced_regst_descs_.insert(std::move(pair)).second);
-}
-
-void TaskNode::SubscribeRegstDescInnerPath() {
-  for (const TaskEdge* edge : in_edges()) {
-    Subscribe(GetRelatedRegst(edge));
-  }
 }
 
 } // namespace oneflow

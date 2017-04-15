@@ -21,7 +21,15 @@ class ModelUpdateOp final : public SysOperator {
     EnrollInputBn("model_diffs", false);
     EnrollOutputBn("model", false);
   }
-  void InferShape4ObAndDtbFromIb() const override { TODO(); }
+
+  std::string normal_ibn2lbn(const std::string& input_bn) const override {
+    return ContigRegstDesc::kAllLbn;
+  }
+  std::string obn2lbn(const std::string& output_bn) const override {
+    return ContigRegstDesc::kAllLbn;
+  }
+
+  void InferShape4ObAndDtbFromIb() const override { UNEXPECTED_RUN(); }
 
  private:
 };

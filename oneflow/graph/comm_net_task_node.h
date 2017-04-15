@@ -29,8 +29,8 @@ class CommNetTaskNode final : public TaskNode {
   }
 
  private:
-  void FwBuildExecAndProducedRegsts(Path*) override;
-  void BpBuildExecAndProducedRegsts(Path*) override;
+  void FwBuildExecAndProducedRegsts(TaskGraph*) override;
+  void BpBuildExecAndProducedRegsts(TaskGraph*) override;
 
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return std::unique_ptr<TaskNode> (new CommNetTaskNode);
