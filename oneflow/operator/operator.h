@@ -3,9 +3,9 @@
 
 #include <string>
 #include "operator/op_conf.pb.h"
+#include "common/shape.h"
 #include "common/proto_io.h"
 #include "common/util.h"
-#include "blob/blob_desc.h"
 
 namespace oneflow {
 
