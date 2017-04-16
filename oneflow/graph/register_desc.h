@@ -3,7 +3,6 @@
 
 #include "common/util.h"
 #include "common/shape.h"
-#include "blob/blob_desc.h"
 
 namespace oneflow {
 
