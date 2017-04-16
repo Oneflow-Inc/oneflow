@@ -1,0 +1,104 @@
+syntax = "proto3";
+package oneflow;
+
+message ConvolutionOpConf {
+  string in = 1;
+  string out = 2;
+}
+
+message InnerProductOpConf {
+  string in = 1;
+  string out = 2;
+}
+
+message DataLoaderOpConf {
+  string data = 1;
+  string label = 2;
+}
+
+message PoolingOpConf {
+  string in = 1;
+  string out = 2;
+}
+
+message ReluOpConf {
+  string in = 1;
+  string out = 2;
+}
+
+message SoftmaxOpConf {
+  string in = 1;
+  string out = 2;
+}
+
+message MultinomialLogisticLossOpConf {
+  string data = 1;
+  string label = 2;
+  string loss = 3;
+}
+
+message CopyOpConf {
+  enum CopyType {
+    H2D = 0;
+    D2H = 1;
+    D2D = 2;
+    H2H = 3;
+  }
+  CopyType copy_type = 1;
+  repeated string copied_lbns = 2;
+}
+
+message CloneOpConf {
+  int32 out_num = 1;
+  string lbn = 2;
+}
+
+message BoxConcatConf {
+  int32 axis = 1;
+}
+
+message BoxSplitConf {
+  int32 axis = 1;
+}
+
+message BoxCloneConf {
+}
+
+message BoxingOpConf {
+  string lbn = 1;
+  int32 in_num = 2;
+  int32 out_num = 3;
+  BoxConcatConf concat_box = 4;
+  oneof out_box {
+    BoxSplitConf split_box = 5;
+    BoxCloneConf clone_box = 6;
+  }
+}
+
+message ModelUpdateOpConf {
+}
+
+message ModelLoadOpConf {
+}
+
+message ModelSaveOpConf {
+}
+
+message OperatorConf {
+  string name = 1;
+  oneof specified_type {
+    ConvolutionOpConf convolution_op_conf = 100;
+    InnerProductOpConf inner_product_op_conf = 101;
+    DataLoaderOpConf data_loader_op_conf = 102;
+    PoolingOpConf pooling_op_conf = 103;
+    ReluOpConf relu_op_conf = 104;
+    SoftmaxOpConf softmax_op_conf = 105;
+    MultinomialLogisticLossOpConf multinomial_logistic_loss_op_conf = 106;
+    CopyOpConf copy_op_conf = 107;
+    CloneOpConf clone_op_conf = 108;
+    BoxingOpConf boxing_op_conf = 109;
+    ModelUpdateOpConf model_update_op_conf = 110;
+    ModelLoadOpConf model_load_op_conf = 111;
+    ModelSaveOpConf model_save_op_conf = 112;
+  }
+}
