@@ -19,8 +19,8 @@
 #include "context/config_parser.h"
 #include "context/resource_descriptor.h"
 #include "context/net_descriptor.h"
-//#include "thread/comm_bus.h"
-//#include "thread/base_thread.h"
+#include "thread/comm_bus.h"
+#include "thread/base_thread.h"
 #include "task/job_manager.h"
 //#include "task/node_manager.h"
 // #include "path/path_share_policy.h"
@@ -82,6 +82,23 @@ void TheOne<Dtype>::InitJob2(const SolverProto& param) {
   CHECK(param.has_train_net());
   path_manager_.reset(new PathManager<Dtype>());
   path_manager_->Initialize(param);
+}
+
+template <typename Dtype>
+void TheOne<Dtype>::InitThread() {
+  auto machine_descriptor = config_parser_->machine_descriptor();
+  comm_bus_.reset(new CommBus<Dtype>(machine_descriptor->total_thread_num()));
+  comm_bus_->Init();
+
+  std::vector<BaseThread<Dtype>*> thread_vec_;
+  int32_t thread_local_id = 0;
+  int32_t thread_id_size = machine_descriptor->device_thread_num();
+
+  for(; thread_local_id < thread_id_size; ++thread_local_id) {
+    BaseThread<Dtype>* device_thread 
+      = new BaseThread<Dtype>(comm_bus_->GetQueue(thread_local_id));
+    thread_vec_.push_back(device_thread);
+  }
 }
 
 INSTANTIATE_CLASS(TheOne);

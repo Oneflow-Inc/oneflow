@@ -45,7 +45,6 @@ int main(int argc, char* argv[]){
   server->Start();
   server->Stop();
   // graph compile
-  /*
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
   FLAGS_logtostderr = 1;
@@ -56,7 +55,8 @@ int main(int argc, char* argv[]){
   
   oneflow::TheOne<Dtype>::InitResource(FLAGS_solver);
   oneflow::TheOne<Dtype>::InitJob2(solver_param); 
-  */
+
+  oneflow::TheOne<Dtype>::InitThread();
   return 0;
 }
 

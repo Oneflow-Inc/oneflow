@@ -3,7 +3,7 @@
 #include <glog/logging.h>
 #include <cstdint>
 
-namespace caffe {
+namespace oneflow {
 enum class MessageType {
   kUnknown = 0,
   kConsumed,
@@ -109,5 +109,5 @@ inline bool EventMessage::is_model() const {
 //  CHECK(model_id_ != -1);
 //  return model_id_;
 //}
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _EVENT_MESSAGE_H_

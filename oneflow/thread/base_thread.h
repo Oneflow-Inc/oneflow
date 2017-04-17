@@ -6,7 +6,7 @@
 #include "thread/mt_queue.h"
 #include "thread/comm_bus.h"
 
-namespace caffe {
+namespace oneflow {
 class DeviceDescriptor;
 
 template <typename Dtype>
@@ -30,5 +30,5 @@ class BaseThread {
 
     virtual void ThreadMain();
 };
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _BASE_THREAD_H_

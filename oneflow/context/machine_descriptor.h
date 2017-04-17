@@ -21,6 +21,8 @@ public:
 
   int32_t machine_id() const;
   int32_t total_cpu_cores() const;
+  int32_t total_thread_num() const;
+  int32_t device_thread_num() const;
   size_t total_host_mem() const;
   // Return the number of GPU devices installed on this machine, may be larger 
   // than the number of devices allocated to this job. To get the number of 
@@ -34,6 +36,8 @@ public:
 private:
   int32_t machine_id_;
   int32_t total_cpu_cores_;
+  int32_t total_thread_num_;
+  int32_t device_thread_num_;
   size_t total_host_mem_;
   int32_t device_count_;
   int32_t driver_version_;

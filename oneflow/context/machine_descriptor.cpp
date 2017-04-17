@@ -33,11 +33,17 @@ int32_t MachineDescriptor::machine_id() const {
 int32_t MachineDescriptor::total_cpu_cores() const {
   return total_cpu_cores_;
 }
+int32_t MachineDescriptor::total_thread_num() const {
+  return total_thread_num_;
+}
 size_t MachineDescriptor::total_host_mem() const {
   return total_host_mem_;
 }
 int32_t MachineDescriptor::device_count() const {
   return device_count_;
+}
+int32_t MachineDescriptor::device_thread_num() const {
+  return device_thread_num_;
 }
 int32_t MachineDescriptor::driver_version() const {
   return driver_version_;

@@ -8,7 +8,7 @@
 #include "net/network.h"
 #include "net/network_message.h"
 
-namespace caffe {
+namespace oneflow {
 using MessageQueue = std::shared_ptr<MtQueue<MsgPtr>>;
 
 template <typename Dtype>
@@ -58,7 +58,8 @@ void CommBus<Dtype>::Init() {
 template <typename Dtype>
 void CommBus<Dtype>::SendMessage(MsgPtr msg) {
   // Get destination machine and thread's id from msg
-  auto& id_map = caffe::TheOne<Dtype>::id_map();
+  /*
+  auto&& id_map = oneflow::TheOne<Dtype>::id_map();
   int32_t from_task_id = msg->from_task_id();
   int32_t to_task_id = msg->to_task_id();
   int32_t src_machine_id = id_map->machine_id_from_task_id(from_task_id);
@@ -69,6 +70,7 @@ void CommBus<Dtype>::SendMessage(MsgPtr msg) {
   } else {
     SendInterNodeMessage(src_machine_id, dst_machine_id, msg);
   }
+  */
 }
 
 template <typename Dtype>
@@ -95,5 +97,5 @@ MessageQueue CommBus<Dtype>::GetQueue(int32_t thread_local_id) const {
   return queues_[thread_local_id];
 }
 
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _COMM_BUS_H_

@@ -5,7 +5,7 @@
 #include <mutex>
 #include <condition_variable>
 // Defines a concurrent queue.
-namespace caffe {
+namespace oneflow {
 template <typename T>
 class MtQueue {
   public:
@@ -91,5 +91,5 @@ void MtQueue<T>::Exit() {
   exit_ = true;
   empty_condition_.notify_all();
 }
-}  // namespace caffe
+}  // namespace oneflow
 #endif  // _MT_QUEUE_H_
