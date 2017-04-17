@@ -1,0 +1,10 @@
+
+set(CMAKE_BUILD_TYPE "" CACHE STRING "Initial cache" FORCE)
+set(CMAKE_CXX_FLAGS_DEBUG "-g" CACHE STRING "Initial cache" FORCE)
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG" CACHE STRING "Initial cache" FORCE)
+set(CMAKE_C_FLAGS_DEBUG "-g" CACHE STRING "Initial cache" FORCE)
+set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG" CACHE STRING "Initial cache" FORCE)
+set(CMAKE_VERBOSE_MAKEFILE "OFF" CACHE BOOL "Initial cache" FORCE)
+set(PROTOBUF_INCLUDE_DIRS "/home/xiaoshu/dl_sys/oneflow/cmake/protobuf/src/protobuf/src" CACHE STRING "Initial cache" FORCE)
+set(PROTOBUF_LIBRARIES "" CACHE STRING "Initial cache" FORCE)
+set(ZLIB_ROOT "/home/xiaoshu/dl_sys/oneflow/cmake/zlib/install" CACHE STRING "Initial cache" FORCE)

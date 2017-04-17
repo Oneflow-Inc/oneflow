@@ -1,0 +1,13 @@
+# Target labels
+ gflags
+# Source files and their labels
+/home/xiaoshu/dl_sys/oneflow/cmake/CMakeFiles/gflags
+/home/xiaoshu/dl_sys/oneflow/cmake/CMakeFiles/gflags.rule
+/home/xiaoshu/dl_sys/oneflow/cmake/CMakeFiles/gflags-complete.rule
+/home/xiaoshu/dl_sys/oneflow/cmake/gflags/src/gflags-stamp/gflags-install.rule
+/home/xiaoshu/dl_sys/oneflow/cmake/gflags/src/gflags-stamp/gflags-mkdir.rule
+/home/xiaoshu/dl_sys/oneflow/cmake/gflags/src/gflags-stamp/gflags-download.rule
+/home/xiaoshu/dl_sys/oneflow/cmake/gflags/src/gflags-stamp/gflags-update.rule
+/home/xiaoshu/dl_sys/oneflow/cmake/gflags/src/gflags-stamp/gflags-patch.rule
+/home/xiaoshu/dl_sys/oneflow/cmake/gflags/src/gflags-stamp/gflags-configure.rule
+/home/xiaoshu/dl_sys/oneflow/cmake/gflags/src/gflags-stamp/gflags-build.rule

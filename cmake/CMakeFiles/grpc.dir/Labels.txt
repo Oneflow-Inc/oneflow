@@ -1,0 +1,13 @@
+# Target labels
+ grpc
+# Source files and their labels
+/home/xiaoshu/dl_sys/oneflow/cmake/CMakeFiles/grpc
+/home/xiaoshu/dl_sys/oneflow/cmake/CMakeFiles/grpc.rule
+/home/xiaoshu/dl_sys/oneflow/cmake/CMakeFiles/grpc-complete.rule
+/home/xiaoshu/dl_sys/oneflow/cmake/grpc/src/grpc-stamp/grpc-install.rule
+/home/xiaoshu/dl_sys/oneflow/cmake/grpc/src/grpc-stamp/grpc-mkdir.rule
+/home/xiaoshu/dl_sys/oneflow/cmake/grpc/src/grpc-stamp/grpc-download.rule
+/home/xiaoshu/dl_sys/oneflow/cmake/grpc/src/grpc-stamp/grpc-update.rule
+/home/xiaoshu/dl_sys/oneflow/cmake/grpc/src/grpc-stamp/grpc-patch.rule
+/home/xiaoshu/dl_sys/oneflow/cmake/grpc/src/grpc-stamp/grpc-configure.rule
+/home/xiaoshu/dl_sys/oneflow/cmake/grpc/src/grpc-stamp/grpc-build.rule

@@ -1,11 +1,11 @@
-#ifndef ONEFLOW_CONTEXT_ID_MAP_H_
-#define ONEFLOW_CONTEXT_ID_MAP_H_
+#ifndef _CONTEXT_ID_MAP_H_
+#define _CONTEXT_ID_MAP_H_
 #include <glog/logging.h>
 #include <cstdint>
 #include <vector>
 #include <unordered_map>
 #include <memory>
-// #include "caffe.pb.h"
+#include "proto/oneflow.pb.h"
 
 namespace oneflow {
 /*
@@ -69,8 +69,7 @@ class IDMap {
   };
 
  public:
-  // explicit IDMap(std::shared_ptr<ConfigParser> config);
-  IDMap();
+  explicit IDMap(std::shared_ptr<ConfigParser> config);
   ~IDMap();
 
   int32_t machine_num() const;
@@ -190,4 +189,4 @@ class IDMap {
 };
 
 }  // namespace oneflow
-#endif  // ONEFLOW_CONTEXT_ID_MAP_H_
+#endif  // _CONTEXT_ID_MAP_H_

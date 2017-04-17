@@ -1,0 +1,51 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/home/xiaoshu/dl_sys/oneflow/cmake/CMakeFiles/grpc"
+		},
+		
+		{
+			"file" : "/home/xiaoshu/dl_sys/oneflow/cmake/CMakeFiles/grpc.rule"
+		},
+		
+		{
+			"file" : "/home/xiaoshu/dl_sys/oneflow/cmake/CMakeFiles/grpc-complete.rule"
+		},
+		
+		{
+			"file" : "/home/xiaoshu/dl_sys/oneflow/cmake/grpc/src/grpc-stamp/grpc-install.rule"
+		},
+		
+		{
+			"file" : "/home/xiaoshu/dl_sys/oneflow/cmake/grpc/src/grpc-stamp/grpc-mkdir.rule"
+		},
+		
+		{
+			"file" : "/home/xiaoshu/dl_sys/oneflow/cmake/grpc/src/grpc-stamp/grpc-download.rule"
+		},
+		
+		{
+			"file" : "/home/xiaoshu/dl_sys/oneflow/cmake/grpc/src/grpc-stamp/grpc-update.rule"
+		},
+		
+		{
+			"file" : "/home/xiaoshu/dl_sys/oneflow/cmake/grpc/src/grpc-stamp/grpc-patch.rule"
+		},
+		
+		{
+			"file" : "/home/xiaoshu/dl_sys/oneflow/cmake/grpc/src/grpc-stamp/grpc-configure.rule"
+		},
+		
+		{
+			"file" : "/home/xiaoshu/dl_sys/oneflow/cmake/grpc/src/grpc-stamp/grpc-build.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "grpc" ],
+		"name" : "grpc"
+	}
+}

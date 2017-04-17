@@ -1,0 +1,23 @@
+cluster {
+  job {
+    name: "ps"
+    tasks {
+      key: 0
+      value: "127.0.0.1:10000"
+    }
+  }
+  job {
+    name: "worker"
+    tasks {
+      key: 0
+      value: "127.0.0.1:10001"
+    }
+    tasks {
+      key: 1
+      value: "127.0.0.1:10002"
+    }
+  }
+}
+job_name: "ps"
+task_index: 0
+protocol: "grpc"

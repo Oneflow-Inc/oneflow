@@ -1,0 +1,51 @@
+
+{
+	"sources" : 
+	[
+		
+		{
+			"file" : "/home/xiaoshu/dl_sys/oneflow/cmake/CMakeFiles/googletest"
+		},
+		
+		{
+			"file" : "/home/xiaoshu/dl_sys/oneflow/cmake/CMakeFiles/googletest.rule"
+		},
+		
+		{
+			"file" : "/home/xiaoshu/dl_sys/oneflow/cmake/CMakeFiles/googletest-complete.rule"
+		},
+		
+		{
+			"file" : "/home/xiaoshu/dl_sys/oneflow/cmake/googletest/src/googletest-stamp/googletest-install.rule"
+		},
+		
+		{
+			"file" : "/home/xiaoshu/dl_sys/oneflow/cmake/googletest/src/googletest-stamp/googletest-mkdir.rule"
+		},
+		
+		{
+			"file" : "/home/xiaoshu/dl_sys/oneflow/cmake/googletest/src/googletest-stamp/googletest-download.rule"
+		},
+		
+		{
+			"file" : "/home/xiaoshu/dl_sys/oneflow/cmake/googletest/src/googletest-stamp/googletest-update.rule"
+		},
+		
+		{
+			"file" : "/home/xiaoshu/dl_sys/oneflow/cmake/googletest/src/googletest-stamp/googletest-patch.rule"
+		},
+		
+		{
+			"file" : "/home/xiaoshu/dl_sys/oneflow/cmake/googletest/src/googletest-stamp/googletest-configure.rule"
+		},
+		
+		{
+			"file" : "/home/xiaoshu/dl_sys/oneflow/cmake/googletest/src/googletest-stamp/googletest-build.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : [ "googletest" ],
+		"name" : "googletest"
+	}
+}

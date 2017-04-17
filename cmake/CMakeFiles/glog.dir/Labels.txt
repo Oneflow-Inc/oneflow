@@ -1,0 +1,13 @@
+# Target labels
+ glog
+# Source files and their labels
+/home/xiaoshu/dl_sys/oneflow/cmake/CMakeFiles/glog
+/home/xiaoshu/dl_sys/oneflow/cmake/CMakeFiles/glog.rule
+/home/xiaoshu/dl_sys/oneflow/cmake/CMakeFiles/glog-complete.rule
+/home/xiaoshu/dl_sys/oneflow/cmake/glog/src/glog-stamp/glog-install.rule
+/home/xiaoshu/dl_sys/oneflow/cmake/glog/src/glog-stamp/glog-mkdir.rule
+/home/xiaoshu/dl_sys/oneflow/cmake/glog/src/glog-stamp/glog-download.rule
+/home/xiaoshu/dl_sys/oneflow/cmake/glog/src/glog-stamp/glog-update.rule
+/home/xiaoshu/dl_sys/oneflow/cmake/glog/src/glog-stamp/glog-patch.rule
+/home/xiaoshu/dl_sys/oneflow/cmake/glog/src/glog-stamp/glog-configure.rule
+/home/xiaoshu/dl_sys/oneflow/cmake/glog/src/glog-stamp/glog-build.rule

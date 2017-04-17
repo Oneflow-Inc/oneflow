@@ -1,0 +1,55 @@
+placement_group {
+  name: "data"
+  layer_set {
+    name: "mnist"
+  }
+}
+placement_group {
+  name: "conv"
+  layer_set {
+    name: "conv1"
+    name: "pool1"
+    name: "conv2"
+    name: "pool2"
+  }
+  device_group {
+    begin: 0
+    end: 11
+  }
+  parallel_policy: kDataParallelOnMultipleDevices
+}
+placement_group {
+  name: "fullc1"
+  layer_set {
+    name: "ip1"
+    name: "relu1"
+  }
+  device_group {
+    begin: 0
+    end: 11
+  }
+  parallel_policy: kModelParallelOnMultipleDevices
+}
+placement_group {
+  name: "fullc2"
+  layer_set {
+    name: "ip2"
+  }
+  device_group {
+    begin: 0
+    end: 11
+  }
+  parallel_policy: kModelParallelOnMultipleDevices
+}
+placement_group {
+  name: "softmax"
+  layer_set {
+    name: "softmax"
+  }
+}
+placement_group {
+  name: "loss"
+  layer_set {
+    name: "loss"
+  }
+}

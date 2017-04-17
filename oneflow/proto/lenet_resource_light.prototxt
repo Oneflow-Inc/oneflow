@@ -1,0 +1,30 @@
+machine {
+  name: "msrascr010"
+  port: "1000"
+  device_set {
+    device_id: 1
+    device_id: 3
+    device_id: 5
+    device_id: 7
+  }
+}
+machine {
+  name: "msrascr011"
+  port: "1000"
+  device_set {
+    device_id: 1
+    device_id: 3
+    device_id: 5
+    device_id: 7
+  }
+}
+machine {
+  name: "msrascr012"
+  port: "1000"
+  device_set {
+    device_id: 1
+    device_id: 3
+    device_id: 5
+    device_id: 7
+  }
+}

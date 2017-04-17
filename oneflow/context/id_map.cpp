@@ -2,46 +2,45 @@
 #include <utility>
 #include <glog/logging.h>
 #include "context/id_map.h"
-// #include "context/machine_descriptor.h"
-// #include "context/resource_descriptor.h"
-// #include "context/strategy_descriptor.h"
-// #include "context/config_parser.h"
+#include "context/machine_descriptor.h"
+#include "context/resource_descriptor.h"
+#include "context/strategy_descriptor.h"
+#include "context/config_parser.h"
+#include <iostream>
 
 namespace oneflow {
-//IDMap::IDMap(std::shared_ptr<ConfigParser> config)
-//  : config_parser_(config) {
-//  auto& resource_descriptor = config_parser_->resource_descriptor();
-//  auto& strategy_descriptor = config_parser_->strategy_descriptor();
-//
-//  machine_num_ = resource_descriptor->machine_num();
-//  CHECK_GT(machine_num_, 0);
-//
-//  device_num_each_machine_ = resource_descriptor->device_num_per_machine();
-//  CHECK_GT(device_num_each_machine_, 0);
-//  total_device_num_ = resource_descriptor->total_device_num();
-//
-//  data_thread_local_id_ = device_num_each_machine_;  // a single data thread
-//  boxing_thread_local_id_ = data_thread_local_id_ + 1; // a single data thread
-//  net_thread_local_id_ = boxing_thread_local_id_ + 1;
-//
-//  int32_t logical_id = 0;
-//  for (int32_t machine_id = 0; machine_id < machine_num_; ++machine_id) {
-//    auto device_ids = resource_descriptor->machine_device_ids(machine_id);
-//    for (int32_t local_id = 0; local_id < device_num_each_machine_; ++local_id) {
-//      DeviceInfo device_info;
-//      device_info.logical_id = logical_id;
-//      device_info.machine_id = machine_id;
-//      device_info.local_id = local_id;
-//      device_info.physical_id = device_ids[local_id];
-//      device_info.device_id
-//        = device_id_from_machine_and_local(machine_id, local_id);
-//      devices_info_.push_back(device_info);
-//      device2logical_.insert({device_info.device_id, logical_id});
-//      ++logical_id;
-//    }
-//  }
-//}
-IDMap::IDMap() {
+IDMap::IDMap(std::shared_ptr<ConfigParser> config)
+  : config_parser_(config) {
+  auto&& resource_descriptor = config_parser_->resource_descriptor();
+  auto&& strategy_descriptor = config_parser_->strategy_descriptor();
+
+  machine_num_ = resource_descriptor->machine_num();
+  CHECK_GT(machine_num_, 0);
+
+  device_num_each_machine_ = resource_descriptor->device_num_per_machine();
+  CHECK_GT(device_num_each_machine_, 0);
+  total_device_num_ = resource_descriptor->total_device_num();
+
+  data_thread_local_id_ = device_num_each_machine_;  // a single data thread
+  boxing_thread_local_id_ = data_thread_local_id_ + 1; // a single data thread
+  net_thread_local_id_ = boxing_thread_local_id_ + 1;
+
+  int32_t logical_id = 0;
+  for (int32_t machine_id = 0; machine_id < machine_num_; ++machine_id) {
+    auto device_ids = resource_descriptor->machine_device_ids(machine_id);
+    for (int32_t local_id = 0; local_id < device_num_each_machine_; ++local_id) {
+      DeviceInfo device_info;
+      device_info.logical_id = logical_id;
+      device_info.machine_id = machine_id;
+      device_info.local_id = local_id;
+      device_info.physical_id = device_ids[local_id];
+      device_info.device_id
+        = device_id_from_machine_and_local(machine_id, local_id);
+      devices_info_.push_back(device_info);
+      device2logical_.insert({device_info.device_id, logical_id});
+      ++logical_id;
+    }
+  }
 }
 IDMap::~IDMap() {
 }
@@ -121,21 +120,17 @@ int32_t IDMap::device_id_from_machine_and_local(
 
 int32_t IDMap::physical_id_from_local_id(int32_t local_id)
   const {
-  //CHECK_GE(local_id, 0);
-  //CHECK_LT(local_id, device_num_each_machine_);
-  //int32_t machine_id = config_parser_->machine_descriptor()->machine_id();
-  //int32_t device_id = device_id_from_machine_and_local(machine_id, local_id);
-  //return physical_id_from_device_id(device_id);
-  LOG(FATAL) << "Unimplemented";
-  return 0;
+  CHECK_GE(local_id, 0);
+  CHECK_LT(local_id, device_num_each_machine_);
+  int32_t machine_id = config_parser_->machine_descriptor()->machine_id();
+  int32_t device_id = device_id_from_machine_and_local(machine_id, local_id);
+  return physical_id_from_device_id(device_id);
 }
 
 int32_t IDMap::local_id_from_physical_id(int32_t physical_id) const {
-  //int32_t machine_id = config_parser_->machine_descriptor()->machine_id();
-  //auto& resource_descriptor = config_parser_->resource_descriptor();
-  //return resource_descriptor->local_from_physical(machine_id, physical_id);
-  LOG(FATAL) << "Unimplemented";
-  return 0;
+  int32_t machine_id = config_parser_->machine_descriptor()->machine_id();
+  auto&& resource_descriptor = config_parser_->resource_descriptor();
+  return resource_descriptor->local_from_physical(machine_id, physical_id);
 }
 
 int32_t IDMap::thread_id_from_machine_and_local(
