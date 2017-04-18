@@ -3,21 +3,26 @@
 // #include "context/one.h"
 #include "context/id_map.h"
 #include "runtime/comm_bus.h"
+#include "context/config_parser.h"
 // #include "task/device_manager.h"
 // #include "task/task.h"
 
 namespace oneflow {
-
-NetThread::NetThread(MessageQueue message_queue) :
-  BaseThread(message_queue) {
+template <typename Dtype>
+NetThread<Dtype>::NetThread(MessageQueue message_queue) :
+  BaseThread<Dtype>(message_queue) {
 }
-NetThread::~NetThread() {
+template <typename Dtype>
+NetThread<Dtype>::~NetThread() {
 }
 
-void NetThread::ThreadMain() {
+template <typename Dtype>
+void NetThread<Dtype>::ThreadMain() {
   MsgPtr msg;
   // auto& comm_bus = caffe::TheOne<Dtype>::comm_bus();
   // auto& id_map = caffe::TheOne<Dtype>::id_map();
+  std::shared_ptr<ConfigParser> config = new ConfigParser("");
+  
   while (true) {
     if (message_queue_->TryPop(msg)) {
       int32_t to_task_id = msg->to_task_id();
@@ -25,7 +30,7 @@ void NetThread::ThreadMain() {
       // task->ProcessMessage(msg);
     }
     if (net_message_queue_->TryPop(msg)) {
-      std::shared_ptr<IDMap> id_map(new IDMap());  // FIXME(jiyuan)
+      std::shared_ptr<IDMap> id_map(new IDMap(config));  // FIXME(jiyuan)
       int32_t to_task_id = msg->to_task_id();
       int32_t to_thread_id = id_map->thread_id_from_task_id(to_task_id);
       if (to_thread_id != thread_id_) {

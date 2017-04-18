@@ -6,7 +6,7 @@
 #include <memory>
 #include <functional>
 #include "common/task_type.h"
-#include "thread/event_message.h"
+#include "runtime/event_message.h"
 
 /*
 Task is a wrapper of some sub-classes, facilitating the task execution:

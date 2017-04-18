@@ -4,7 +4,6 @@
 #include <unordered_map>
 
 #include "device/device_alternate.h"
-#include "layers/base_layer.h"
 #include "common/task_type.h"
 
 /*

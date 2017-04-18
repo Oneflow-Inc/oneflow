@@ -6,8 +6,8 @@
 #include "network/network_message_queue.h"
 
 namespace oneflow {
-
-class NetThread : public BaseThread {
+template <typename Dtype>
+class NetThread : public BaseThread<Dtype> {
   public:
     NetThread(MessageQueue message_queue);
     virtual ~NetThread();
@@ -16,7 +16,9 @@ class NetThread : public BaseThread {
     NetThread& operator=(const NetThread& other) = delete;
 
   private:
+    MessageQueue message_queue_;
     std::shared_ptr<NetworkMessageQueue> net_message_queue_;
+    int32_t thread_id_;
     void ThreadMain() override;
 };
 }  // namespace oneflow

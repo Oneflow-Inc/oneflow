@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <memory>
 #include "proto/oneflow.pb.h"
+#include "context/config_parser.h"
 
 namespace oneflow {
 /*
@@ -57,7 +58,7 @@ containing the residing machine's id.
 // For example, register_id may need int64_t, maybe we declare a RegisterIdType
 // as the type of register_id.
 
-class ConfigParser;
+//class ConfigParser;
 
 class IDMap {
   struct DeviceInfo {

@@ -9,9 +9,12 @@
 #include "network/network.h"
 #include "network/network_message.h"
 
+
 namespace oneflow {
 using MessageQueue = std::shared_ptr<MtQueue<MsgPtr>>;
+class ConfigParser;
 
+template <typename Dtype>
 class CommBus {
  public:
     explicit CommBus(int32_t thread_num_each_client);
@@ -37,24 +40,29 @@ class CommBus {
     CommBus& operator=(const CommBus& other) = delete;
 };
 
-CommBus::CommBus(int32_t thread_num_each_client)
+template <typename Dtype>
+CommBus<Dtype>::CommBus(int32_t thread_num_each_client)
   : thread_num_each_client_(thread_num_each_client) {
 }
 
-CommBus::~CommBus() {
+template <typename Dtype>
+CommBus<Dtype>::~CommBus() {
 }
 
-void CommBus::Init() {
+template <typename Dtype>
+void CommBus<Dtype>::Init() {
   network_ = GetNdspiRDMAInstance();  // Used for inter-node messaging
   for (int32_t i = 0; i < thread_num_each_client_; ++i) {
     queues_.emplace_back(new MtQueue<MsgPtr>());
   }
 }
 
-void CommBus::SendMessage(MsgPtr msg) {
+template <typename Dtype>
+void CommBus<Dtype>::SendMessage(MsgPtr msg) {
   // Get destination machine and thread's id from msg
   // auto& id_map = caffe::TheOne<Dtype>::id_map();
-  std::shared_ptr<IDMap> id_map(new IDMap());  //FIXME(jiyuan)
+  std::shared_ptr<ConfigParser> config = new ConfigParser("");
+  std::shared_ptr<IDMap> id_map(new IDMap(config));  //FIXME(jiyuan)
   int32_t from_task_id = msg->from_task_id();
   int32_t to_task_id = msg->to_task_id();
   int32_t src_machine_id = id_map->machine_id_from_task_id(from_task_id);
@@ -67,12 +75,14 @@ void CommBus::SendMessage(MsgPtr msg) {
   }
 }
 
-void CommBus::SendIntraNodeMessage(int32_t dst_thread_local_id,
+template <typename Dtype>
+void CommBus<Dtype>::SendIntraNodeMessage(int32_t dst_thread_local_id,
   MsgPtr msg) {
     queues_[dst_thread_local_id]->Push(msg);
 }
 
-void CommBus::SendInterNodeMessage(int32_t src_machine_id,
+template <typename Dtype>
+void CommBus<Dtype>::SendInterNodeMessage(int32_t src_machine_id,
   int32_t dst_machine_id, MsgPtr msg) {
   NetworkMessage net_msg;
   net_msg.type = NetworkMessageType::MSG_TYPE_REQUEST_ACK;
@@ -82,7 +92,8 @@ void CommBus::SendInterNodeMessage(int32_t src_machine_id,
   network_->Send(net_msg);
 }
 
-MessageQueue CommBus::GetQueue(int32_t thread_local_id) const {
+template <typename Dtype>
+MessageQueue CommBus<Dtype>::GetQueue(int32_t thread_local_id) const {
   CHECK_GE(thread_local_id, 0);
   CHECK_LT(thread_local_id, static_cast<int32_t>(queues_.size()));
   return queues_[thread_local_id];
