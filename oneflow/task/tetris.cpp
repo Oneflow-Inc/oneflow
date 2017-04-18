@@ -16,20 +16,17 @@
 
 namespace oneflow {
 // TetrisFIFOColumn
-template <typename T>
-bool TetrisFIFOColumn<T>::Ready() const {
+bool TetrisFIFOColumn::Ready() const {
   return !column_.empty();
 }
 
-template <typename T>
-void TetrisFIFOColumn<T>::Push(T element, int64_t element_id) {
+void TetrisFIFOColumn::Push(int64_t element, int64_t element_id) {
   column_.push(std::make_pair(element, element_id));
 }
 
-template <typename T>
-std::vector<std::pair<T, int64_t>> TetrisFIFOColumn<T>::Pop() {
+std::vector<std::pair<int64_t, int64_t>> TetrisFIFOColumn::Pop() {
   CHECK(!column_.empty());
-  std::vector<std::pair<T, int64_t>> items;
+  std::vector<std::pair<int64_t, int64_t>> items;
   auto item = column_.front();
   items.push_back(item);
   column_.pop();
@@ -38,13 +35,11 @@ std::vector<std::pair<T, int64_t>> TetrisFIFOColumn<T>::Pop() {
 
 
 // TetrisIDColumn
-template <typename T>
-bool TetrisIDColumn<T>::Ready() const {
+bool TetrisIDColumn::Ready() const {
   return !ready_ids_.empty();
 }
 
-template <typename T>
-void TetrisIDColumn<T>::Push(T element, int64_t element_id) {
+void TetrisIDColumn::Push(int64_t element, int64_t element_id) {
   column_[element_id].push_back(element);
   CHECK(column_[element_id].size() <= column_width_)
     << "Tetris simple ID column " << col_id_ << "'s width is limited to "
@@ -54,14 +49,13 @@ void TetrisIDColumn<T>::Push(T element, int64_t element_id) {
   }
 }
 
-template <typename T>
-std::vector<std::pair<T, int64_t>> TetrisIDColumn<T>::Pop() {
+std::vector<std::pair<int64_t, int64_t>> TetrisIDColumn::Pop() {
   CHECK(!ready_ids_.empty());
   int64_t id = ready_ids_.front();
   ready_ids_.pop();
   auto& elements = column_[id];
   CHECK(elements.size() == column_width_);
-  std::vector<std::pair<T, int64_t>> items;
+  std::vector<std::pair<int64_t, int64_t>> items;
   for (auto element : elements) {
     items.push_back(std::make_pair(element, id));
   }
@@ -70,8 +64,7 @@ std::vector<std::pair<T, int64_t>> TetrisIDColumn<T>::Pop() {
 }
 
 // TetrisSSPColumn
-template <typename T>
-bool TetrisSSPColumn<T>::Ready() const {
+bool TetrisSSPColumn::Ready() const {
   if (data_.empty() || model_.empty()) {
     return false;
   }
@@ -82,8 +75,7 @@ bool TetrisSSPColumn<T>::Ready() const {
   }
 }
 
-template <typename T>
-void TetrisSSPColumn<T>::erase_model(T model) {
+void TetrisSSPColumn::erase_model(int64_t model) {
   auto it = model_to_version_.find(model);
   CHECK(it != model_to_version_.end());
   auto model_id = it->second;
@@ -103,8 +95,7 @@ void TetrisSSPColumn<T>::erase_model(T model) {
   comm_bus->SendMessage(model_ack_msg);
 }
 
-template <typename T>
-void TetrisSSPColumn<T>::Push(T element, int64_t element_id) {
+void TetrisSSPColumn::Push(int64_t element, int64_t element_id) {
   // auto& node_manager = caffe::TheOne<Dtype>::node_manager();
   // bool is_model = node_manager->is_in_model_path(element);  // FIXME(jiyuan)
   bool is_model = false;
@@ -150,10 +141,9 @@ void TetrisSSPColumn<T>::Push(T element, int64_t element_id) {
   }
 }
 
-template <typename T>
-std::vector<std::pair<T, int64_t>> TetrisSSPColumn<T>::Pop() {
+std::vector<std::pair<int64_t, int64_t>> TetrisSSPColumn::Pop() {
   CHECK(Ready());
-  std::vector<std::pair<T, int64_t>> items;
+  std::vector<std::pair<int64_t, int64_t>> items;
   // Data
   auto data = data_.top();
   data_.pop();
@@ -162,7 +152,7 @@ std::vector<std::pair<T, int64_t>> TetrisSSPColumn<T>::Pop() {
   auto newest_model = model_.find(newest_);
   CHECK(newest_model != model_.end())
     << "unexpected error in TetrisSSPColumn";
-  std::pair<T, int64_t> model(newest_model->first, newest_);
+  std::pair<int64_t, int64_t> model(newest_model->first, newest_);
   newest_model->second.second++;
 
   items.push_back(data);
@@ -171,22 +161,19 @@ std::vector<std::pair<T, int64_t>> TetrisSSPColumn<T>::Pop() {
 }
 
 // TetrisRefCountColumn
-template <typename T>
-bool TetrisRefCountColumn<T>::Ready() const {
+bool TetrisRefCountColumn::Ready() const {
   return !avaliable_.empty();
 }
 
-template <typename T>
-void TetrisRefCountColumn<T>::Push(T element, int64_t element_id) {
+void TetrisRefCountColumn::Push(int64_t element, int64_t element_id) {
   ref_count_[element]++;
   CHECK_LE(ref_count_[element], ref_num_);
   if (ref_count_[element] == ref_num_) avaliable_.push(element);
 }
 
-template <typename T>
-std::vector<std::pair<T, int64_t>> TetrisRefCountColumn<T>::Pop() {
+std::vector<std::pair<int64_t, int64_t>> TetrisRefCountColumn::Pop() {
   CHECK(Ready());
-  std::vector<std::pair<T, int64_t>> items;
+  std::vector<std::pair<int64_t, int64_t>> items;
   auto item = avaliable_.front();
   items.push_back({ item, -1 });
   ref_count_.erase(item);
@@ -196,8 +183,7 @@ std::vector<std::pair<T, int64_t>> TetrisRefCountColumn<T>::Pop() {
 
 
 // Tetris
-template <typename T>
-bool Tetris<T>::Ready() const {
+bool Tetris::Ready() const {
   for (auto kv : columns_) {
     if (!kv.second->Ready()) {
       return false;
@@ -206,34 +192,25 @@ bool Tetris<T>::Ready() const {
   return true;
 }
 
-template <typename T>
-void Tetris<T>::Push(int32_t col_id, T element, int64_t element_id) {
+void Tetris::Push(int32_t col_id, int64_t element, int64_t element_id) {
   auto it = columns_.find(col_id);
   CHECK(it != columns_.end()) << "Column " << col_id << "does not exist.";
   it->second->Push(element, element_id);
 }
 
-template <typename T>
-std::unordered_map<int32_t, std::vector<std::pair<T, int64_t>>>
-    Tetris<T>::Pop() {
-  std::unordered_map<int32_t, std::vector<std::pair<T, int64_t>>> items;
+std::unordered_map<int32_t, std::vector<std::pair<int64_t, int64_t>>>
+    Tetris::Pop() {
+  std::unordered_map<int32_t, std::vector<std::pair<int64_t, int64_t>>> items;
   for (auto kv : columns_) {
     items[kv.first] = kv.second->Pop();
   }
   return items;
 }
 
-template <typename T>
-void Tetris<T>::Add(std::shared_ptr<TetrisColumn<T>> child) {
+void Tetris::Add(std::shared_ptr<TetrisColumn> child) {
   CHECK(columns_.find(child->col_id()) == columns_.end()) << "Column named"
     << child->col_id() << "already exist.";
   columns_[child->col_id()] = child;
 }
 
-// Instantiate tetris class with int64_t specifications (used for register id).
-template class TetrisFIFOColumn<int64_t>;
-template class TetrisIDColumn<int64_t>;
-template class TetrisSSPColumn<int64_t>;
-template class TetrisRefCountColumn<int64_t>;
-template class Tetris<int64_t>;
 }  // namespace oneflow

@@ -34,7 +34,7 @@ class TaskFSM {
   std::vector<int64_t> produced_group_ids_;
   std::vector<int64_t> consumed_group_ids_;
 
-  Tetris<int64_t> tetris_;
+  Tetris tetris_;
   const int32_t source_col_id_{ -1 };
   std::unordered_map<int64_t, int32_t> group_id_to_col_id_;
 
