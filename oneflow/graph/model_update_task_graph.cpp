@@ -32,8 +32,8 @@ void MdUpdtTaskGraph::BuildTaskGraph(const ChainNode* data_chain) {
     ChainNode* faker_chain = chain_gph->NewFinalNode();
     faker_chain->mut_op_vec().clear();
     faker_chain->mut_parallel_desc() = data_chain->parallel_desc();
-    faker_chain->mut_output_lbns() = {ContigRegstDesc::kAllLbn};
-    updt_chain->mut_input_lbns() = {ContigRegstDesc::kAllLbn};
+    faker_chain->mut_output_lbns() = {RegstDesc::kAllLbn};
+    updt_chain->mut_input_lbns() = {RegstDesc::kAllLbn};
     Connect(faker_chain, chain_gph->NewFinalEdge(), updt_chain);
   }
   //
@@ -72,7 +72,7 @@ void MdUpdtTaskGraph::CompleteUpdateTaskAndFwTask(
     RegstDesc* model_diff_regst = bp_task->GetProducedRegstDesc("model_diff");
     RegstDesc* model_regst = update_task->GetProducedRegstDesc("model");
     // complete update task
-    model_regst->CopyLbnAndShape(model_diff_regst);
+    model_regst->CopyLbn2ShapeMap(model_diff_regst);
     ExecNode* update_exec = update_task->exec_gph().SoleNode();
     const std::string& ibn = update_exec->op()->SoleIbn();
     if (update_task->in_edges().empty()) {

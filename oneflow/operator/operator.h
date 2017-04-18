@@ -43,9 +43,11 @@ class Operator {
   std::string GetValueFromPbOpConf(const std::string& k) const;
 
   const std::string& SoleIbn() const {
+    CHECK_EQ(input_bns_.size(), 1);
     return *(input_bns_.begin());
   }
   const std::string& SoleObn() const {
+    CHECK_EQ(output_bns_.size(), 1);
     return *(output_bns_.begin());
   }
 
