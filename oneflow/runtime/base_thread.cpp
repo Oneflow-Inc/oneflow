@@ -2,9 +2,9 @@
 // #include "common/common.h"
 // #include "context/machine_descriptor.h"
 // #include "device/device_descriptor.h"
-// #include "task/device_manager.h"
+#include "task/device_manager.h"
 // #include "task/device_context.h"
-// #include "task/task.h"
+#include "task/task.h"
 
 namespace oneflow {
 BaseThread::BaseThread(MessageQueue message_queue) :
@@ -43,8 +43,8 @@ void BaseThread::ThreadMain() {
       break;
     }
     int32_t to_task_id = msg->to_task_id();
-    // std::shared_ptr<Task<Dtype>> task = device_manager_->GetTask(to_task_id);
-    // task->ProcessMessage(msg);
+    std::shared_ptr<Task> task = device_manager_->GetTask(to_task_id);
+    task->ProcessMessage(msg);
   }
 }
 }  // namespace oneflow

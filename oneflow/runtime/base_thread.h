@@ -9,8 +9,7 @@
 namespace oneflow {
 // class DeviceDescriptor;
 
-// template <typename Dtype>
-// class DeviceManager;
+class DeviceManager;
 
 class BaseThread {
   public:
@@ -25,7 +24,7 @@ class BaseThread {
     MessageQueue message_queue_;
     int32_t thread_id_;
     std::unique_ptr<std::thread> thread_;
-    // std::shared_ptr<DeviceManager<Dtype>> device_manager_;
+    std::shared_ptr<DeviceManager> device_manager_;
 
     virtual void ThreadMain();
 };
