@@ -72,7 +72,7 @@ void MdUpdtTaskGraph::CompleteUpdateTaskAndFwTask(
     RegstDesc* model_diff_regst = bp_task->GetProducedRegstDesc("model_diff");
     RegstDesc* model_regst = update_task->GetProducedRegstDesc("model");
     // complete update task
-    model_regst->CopyLbnAndShape(model_diff_regst);
+    model_regst->CopyLbn2ShapeMap(model_diff_regst);
     ExecNode* update_exec = update_task->exec_gph().SoleNode();
     const std::string& ibn = update_exec->op()->SoleIbn();
     if (update_task->in_edges().empty()) {

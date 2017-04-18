@@ -6,9 +6,10 @@
 
 namespace oneflow {
 
-class TaskNode;
+// Regst  : Register
+// Contig : Contiguous
 
-// Regst : Register
+class TaskNode;
 
 class RegstDesc {
  public:
@@ -16,32 +17,28 @@ class RegstDesc {
   RegstDesc();
   virtual ~RegstDesc() = default;
 
-  //
+  // Producer
   const TaskNode* GetProducer() const { return producer_; }
   void SetProducer(const TaskNode* task_node) { producer_ = task_node; }
-  void AddSubscriber(const TaskNode* task_node) {
-    CHECK(subscribers_.insert(task_node).second);
-  }
 
-  void CopyLbnAndShape(const RegstDesc*) { TODO(); }
-
-  Shape* EnrollLbn(const std::string& lbn) { TODO(); }
-  const Shape& GetShape(const std::string& lbn) { TODO(); }
-  Shape* GetMutShapePtr(const std::string& lbn) { TODO(); }
+  // Lbn and Shape
+  void CopyLbn2ShapeMap(const RegstDesc*);
+  Shape* EnrollLbn(const std::string& lbn);
+  const Shape& GetShape(const std::string& lbn);
+  Shape* GetMutShapePtr(const std::string& lbn);
+  
+  static const char* kAllLbn;
 
  private:
   int32_t regst_desc_id_;
   const TaskNode* producer_;
-  std::unordered_set<const TaskNode*> subscribers_;
   
   HashMap<std::string, std::unique_ptr<Shape>> lbn2shape_;
 
 };
 
-// Contiguous
 class ContigRegstDesc final : public RegstDesc {
  public:
-  static const char* kAllLbn;
 
   OF_DISALLOW_COPY_AND_MOVE(ContigRegstDesc);
   ContigRegstDesc() = default;
