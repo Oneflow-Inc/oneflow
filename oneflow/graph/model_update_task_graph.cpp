@@ -32,8 +32,8 @@ void MdUpdtTaskGraph::BuildTaskGraph(const ChainNode* data_chain) {
     ChainNode* faker_chain = chain_gph->NewFinalNode();
     faker_chain->mut_op_vec().clear();
     faker_chain->mut_parallel_desc() = data_chain->parallel_desc();
-    faker_chain->mut_output_lbns() = {ContigRegstDesc::kAllLbn};
-    updt_chain->mut_input_lbns() = {ContigRegstDesc::kAllLbn};
+    faker_chain->mut_output_lbns() = {RegstDesc::kAllLbn};
+    updt_chain->mut_input_lbns() = {RegstDesc::kAllLbn};
     Connect(faker_chain, chain_gph->NewFinalEdge(), updt_chain);
   }
   //

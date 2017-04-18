@@ -23,10 +23,10 @@ class ModelUpdateOp final : public SysOperator {
   }
 
   std::string normal_ibn2lbn(const std::string& input_bn) const override {
-    return ContigRegstDesc::kAllLbn;
+    return RegstDesc::kAllLbn;
   }
   std::string obn2lbn(const std::string& output_bn) const override {
-    return ContigRegstDesc::kAllLbn;
+    return RegstDesc::kAllLbn;
   }
 
   void InferShape4ObAndDtbFromIb() const override { UNEXPECTED_RUN(); }
