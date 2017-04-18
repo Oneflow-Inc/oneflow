@@ -4,7 +4,7 @@
 // #include "device/device_descriptor.h"
 #include "task/device_manager.h"
 // #include "task/device_context.h"
-// #include "task/task.h"
+#include "task/task.h"
 
 namespace oneflow {
 template <typename Dtype>
@@ -50,7 +50,7 @@ void BaseThread<Dtype>::ThreadMain() {
     }
     int32_t to_task_id = msg->to_task_id();
     std::shared_ptr<Task<Dtype>> task = device_manager_->GetTask(to_task_id);
-    // task->ProcessMessage(msg);
+    task->ProcessMessage(msg);
   }
 }
 }  // namespace oneflow

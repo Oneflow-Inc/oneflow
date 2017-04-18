@@ -36,8 +36,6 @@ as sending a message to another particular task.
 */
 
 namespace oneflow {
-template <typename Dtype>
-class TaskDag;
 
 template <typename Dtype>
 class TaskOp;
@@ -57,15 +55,14 @@ class DeviceContext;
 template <typename Dtype>
 class Task {
  public:
-  Task(std::shared_ptr<DeviceContext<Dtype>> device_context,
-    std::shared_ptr<TaskDag<Dtype>> task_dag);
+  Task(std::shared_ptr<DeviceContext<Dtype>> device_context);
   ~Task();
 
   void Setup();
   void Release();
   void ProcessMessage(MsgPtr message);
 
-  std::shared_ptr<TaskDag<Dtype>> task_dag() const;
+  //FixMe xiaoshu
   std::shared_ptr<TaskFSM<Dtype>> task_fsm() const;
   std::shared_ptr<TaskConsequence<Dtype>> task_consequence() const;
   std::shared_ptr<TaskOp<Dtype>> task_op() const;
@@ -87,7 +84,6 @@ class Task {
   bool is_net_receiver_;   // Valid only if task_type_ == TaskType::kNetTask
   std::shared_ptr<DeviceContext<Dtype>> device_context_;
 
-  std::shared_ptr<TaskDag<Dtype>> task_dag_;
   std::shared_ptr<TaskFSM<Dtype>> task_fsm_;
   std::shared_ptr<TaskConsequence<Dtype>> task_consequence_;
   std::shared_ptr<TaskOp<Dtype>> task_op_;
