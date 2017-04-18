@@ -2,6 +2,7 @@
 #define ONEFLOW_JOB_JOB_DESC_H_
 
 #include "common/util.h"
+#include "job/job_conf.pb.h"
 
 namespace oneflow {
 
@@ -14,6 +15,10 @@ class JobDesc final {
     static JobDesc obj;
     return obj;
   }
+  
+  const DLNetConf& train_dlnet_conf() const { TODO(); }
+  const Resource& resource() const { TODO(); }
+  const Strategy& strategy() const { TODO(); }
 
   const std::string& MdLoadMachine() { TODO(); }
   const std::string& MdSaveMachine() { TODO(); }
