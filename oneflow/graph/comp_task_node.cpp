@@ -57,6 +57,9 @@ void CompTaskNode::MdLoadFwBuildExecAndProducedRegsts(TaskGraph* gph) {
   auto model_regst = make_unique<ContigRegstDesc> ();
   exec_node->BindBnInOpAndRegst(exec_node->op()->SoleObn(), model_regst.get());
   BindProducedRegstAndOutEdge(model_regst.get(), SoleOutEdge());
+  Shape* shape_ptr = model_regst->EnrollLbn(RegstDesc::kAllLbn);
+  exec_node->op()->SetShapePtr(exec_node->op()->SoleObn(), shape_ptr);
+  exec_node->op()->InferShape4ObAndDtbFromIb();
   EnrollProducedRegstDesc("model_regst", std::move(model_regst));
 }
 
