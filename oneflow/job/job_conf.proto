@@ -10,10 +10,3 @@ message JobUserConf {
   string resource_filepath = 2;
   string strategy_filepath = 3;
 }
-
-message JobSysConf {
-  JobUserConf user_conf = 1;
-  DLNetConf train_dlnet_conf = 2;
-  Resource resource = 3;
-  Strategy strategy = 4;
-}

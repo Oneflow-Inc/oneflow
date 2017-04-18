@@ -2,10 +2,10 @@
 
 namespace oneflow {
 
-void TaskGraphMgr::Init(const JobSysConf& job_sys_conf) {
-  IDMgr::Singleton().Init(job_sys_conf.resource());
-  data_task_gph_.reset(new DataTaskGraph(job_sys_conf.train_dlnet_conf(),
-                                         job_sys_conf.strategy(),
+void TaskGraphMgr::Init(const JobDesc& job_desc) {
+  IDMgr::Singleton().Init(job_desc.resource());
+  data_task_gph_.reset(new DataTaskGraph(job_desc.train_dlnet_conf(),
+                                         job_desc.strategy(),
                                          true));
   // model_graph
   ChainAsKeyMap<std::vector<CompTaskNode*>> data_chain2sorted_bp_comp_tasks;
