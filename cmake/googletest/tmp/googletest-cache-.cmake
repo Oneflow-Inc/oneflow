@@ -1,4 +1,0 @@
-
-set(CMAKE_BUILD_TYPE "" CACHE STRING "Initial cache" FORCE)
-set(BUILD_GMOCK "OFF" CACHE BOOL "Initial cache" FORCE)
-set(BUILD_GTEST "ON" CACHE BOOL "Initial cache" FORCE)

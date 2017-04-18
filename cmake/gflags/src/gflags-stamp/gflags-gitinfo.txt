@@ -1,3 +1,0 @@
-repository='https://github.com/gflags/gflags.git'
-module=''
-tag=''

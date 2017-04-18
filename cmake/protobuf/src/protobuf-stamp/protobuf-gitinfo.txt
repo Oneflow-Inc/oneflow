@@ -1,3 +1,0 @@
-repository='https://github.com/mrry/protobuf.git'
-module=''
-tag=''

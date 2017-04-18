@@ -1,1 +1,0 @@
-cmd='/usr/local/bin/cmake;-C/home/xiaoshu/dl_sys/oneflow/cmake/gflags/tmp/gflags-cache-$<CONFIG>.cmake;-GUnix Makefiles;/home/xiaoshu/dl_sys/oneflow/cmake/gflags/src/gflags'

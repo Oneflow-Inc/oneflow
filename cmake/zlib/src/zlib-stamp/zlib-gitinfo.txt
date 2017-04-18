@@ -1,3 +1,0 @@
-repository='https://github.com/madler/zlib'
-module=''
-tag=''

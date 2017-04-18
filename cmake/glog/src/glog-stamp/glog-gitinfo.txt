@@ -1,3 +1,0 @@
-repository='https://github.com/google/glog.git'
-module=''
-tag=''
