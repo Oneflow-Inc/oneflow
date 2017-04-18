@@ -234,7 +234,6 @@ void Tetris<T>::Add(std::shared_ptr<TetrisColumn<T>> child) {
 template class TetrisFIFOColumn<int64_t>;
 template class TetrisIDColumn<int64_t>;
 template class TetrisSSPColumn<int64_t>;
-template class TetrisSSPColumn<int64_t>;
 template class TetrisRefCountColumn<int64_t>;
 template class Tetris<int64_t>;
 }  // namespace oneflow
