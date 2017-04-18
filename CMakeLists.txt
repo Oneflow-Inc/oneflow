@@ -4,6 +4,11 @@ cmake_minimum_required(VERSION 3.5)
 # Project
 project(oneflow C CXX)
 enable_testing()
+
+# Please set '-Doneflow_DOWNLOAD_THIRD_PARTY=ON' for the first time for you set up
+# the dev environment 
+option(oneflow_DOWNLOAD_THIRD_PARTY "Download and build all third party codes" OFF)
+
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(oneflow_src_dir ${PROJECT_SOURCE_DIR}/oneflow)
@@ -56,13 +61,16 @@ RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
 
 add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(of_protoobj ${oneflow_third_party_libs})
-add_dependencies(of_protoobj ${oneflow_third_party_dependencies})
-
+if (oneflow_DOWNLOAD_THIRD_PARTY)
+  # Force to download and build all the third party codes
+  add_dependencies(of_protoobj ${oneflow_third_party_dependencies})
+endif()
 # cc obj lib
 include_directories(${oneflow_src_dir})
 include_directories(${PROJECT_BINARY_DIR})
 add_library(of_ccobj ${of_all_obj_cc})
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})
+
 add_dependencies(of_ccobj of_protoobj)
 
 # build test
