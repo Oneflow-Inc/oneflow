@@ -66,7 +66,7 @@ class TetrisIDColumn :public TetrisColumn<T> {
   std::queue<int64_t> ready_ids_;
 };
 
-template <typename T, typename Dtype>
+template <typename T>
 class TetrisSSPColumn :public TetrisColumn<T> {
  public:
   TetrisSSPColumn(int32_t col_id, int32_t staleness, int64_t task_id) :
