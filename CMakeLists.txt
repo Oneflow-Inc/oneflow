@@ -58,12 +58,6 @@ add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(of_protoobj ${oneflow_third_party_libs})
 add_dependencies(of_protoobj ${oneflow_third_party_dependencies})
 
-#cuda
-set(CUDA_INCLUDE_PATH "/usr/local/cuda/include")
-set(CUDA_LIBRARIES "/usr/local/cuda/lib64/libcudart.so")
-include_directories(${CUDA_INCLUDE_PATH})
-list(APPEND oneflow_third_party_libs ${CUDA_LIBRARIES})
-
 # cc obj lib
 include_directories(${oneflow_src_dir})
 include_directories(${PROJECT_BINARY_DIR})

@@ -19,6 +19,7 @@ include(googletest)
 include(glog)
 include(gflags)
 include(grpc)
+include(cuda)
 
 set(oneflow_third_party_libs
     ${CMAKE_THREAD_LIBS_INIT}
@@ -28,6 +29,7 @@ set(oneflow_third_party_libs
     ${GOOGLETEST_STATIC_LIBRARIES}
     ${PROTOBUF_STATIC_LIBRARIES}
     ${GRPC_STATIC_LIBRARIES}
+    ${CUDA_LIBRARIES}
 )
 
 set(oneflow_third_party_dependencies
@@ -53,4 +55,5 @@ include_directories(
     ${GOOGLETEST_INCLUDE_DIR}
     ${PROTOBUF_INCLUDE_DIR}
     ${GRPC_INCLUDE_DIR}
+    ${CUDA_INCLUDE_DIR}
 )
