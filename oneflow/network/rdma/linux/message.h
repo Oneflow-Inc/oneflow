@@ -21,7 +21,7 @@ public:
 private:
     NetworkMessage net_msg_;
     NetworkMemory* net_memory_;
-}
+};
 
 } // namespace oneflow
 
