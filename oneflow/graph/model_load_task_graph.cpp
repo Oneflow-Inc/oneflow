@@ -14,7 +14,7 @@ void SetModelLoadChain(ChainNode* model_load_chain) {
   // model load parallel_conf
   ParallelConf pr_conf;
   pr_conf.set_policy(kDataParallel);
-  pr_conf.add_devices(JobDesc::Singleton().MdLoadMachine() + "/disk_loader");
+  pr_conf.add_devices(JobDesc::Singleton().MdLoadMachine() + "/disk");
   model_load_chain->mut_parallel_desc().reset(new ParallelDesc(pr_conf));
   // output
   model_load_chain->mut_output_lbns() = {RegstDesc::kAllLbn};

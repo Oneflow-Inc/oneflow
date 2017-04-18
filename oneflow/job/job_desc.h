@@ -16,6 +16,7 @@ class JobDesc final {
   }
 
   const std::string& MdLoadMachine() { TODO(); }
+  const std::string& MdSaveMachine() { TODO(); }
 
  private:
   JobDesc() = default;

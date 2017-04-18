@@ -63,8 +63,18 @@ void CompTaskNode::MdLoadFwBuildExecAndProducedRegsts(TaskGraph* gph) {
   EnrollProducedRegstDesc("model_regst", std::move(model_regst));
 }
 
-void CompTaskNode::MdSaveFwBuildExecAndProducedRegsts(TaskGraph*) {
-  TODO();
+void CompTaskNode::MdSaveFwBuildExecAndProducedRegsts(TaskGraph* gph) {
+  if (IsFaker()) {
+    CompTaskNode* update_task = gph->faker2mccoy().at(this);
+    RegstDesc* model_regst = update_task->GetProducedRegstDesc("model");
+    BindProducedRegstAndOutEdge(model_regst, SoleOutEdge());
+    return;
+  }
+  ExecNode* exec_node = mut_exec_gph().NewFinalNode();
+  exec_node->mut_op() = chain_node()->SoleOp();
+  mut_exec_gph().UpdateSourceAndSink();
+  const std::string& ibn = exec_node->op()->SoleIbn();
+  exec_node->BindBnInOpAndRegst(ibn, GetRelatedRegst(SoleInEdge()));
 }
 
 void CompTaskNode::FwBuildFromUserOps(

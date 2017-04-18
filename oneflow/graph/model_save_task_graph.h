@@ -11,15 +11,18 @@ class MdSaveTaskGraph final : public TaskGraph {
   MdSaveTaskGraph() = delete;
   ~MdSaveTaskGraph() = default;
 
-  MdSaveTaskGraph(const ChainNode*) {
-    TODO();
-  }
+  MdSaveTaskGraph(
+      const ChainNode* update_chain,
+      const std::vector<CompTaskNode*>& sorted_update_tasks);
 
   CompTaskNodeMemFunc Func4FwBuildExecAndProducedRegsts() const override {
     return &CompTaskNode::MdSaveFwBuildExecAndProducedRegsts;
   }
 
  private:
+    void BuildTaskGraph(const ChainNode* update_chain);
+    void InitFaker2Mccoy(
+        const std::vector<CompTaskNode*>& sorted_updt_tasks);
 };
 
 } // namespace oneflow

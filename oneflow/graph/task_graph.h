@@ -8,6 +8,7 @@
 #include "operator/operator_factory.h"
 #include "job/parallel_desc.h"
 #include "job/id_manager.h"
+#include "job/job_desc.h"
 
 namespace oneflow {
 
