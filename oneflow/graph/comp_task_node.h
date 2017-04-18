@@ -70,7 +70,7 @@ class HostCompTaskNode final : public CompTaskNode {
 
  private:
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    return std::unique_ptr<TaskNode> (new HostCompTaskNode);
+    return make_unique<HostCompTaskNode> ();
   }
   void InitWithFwNode(TaskNode* fw_node) override {
     CompTaskNode::InitWithFwNode(fw_node);
@@ -89,7 +89,7 @@ class DeviceCompTaskNode final : public CompTaskNode {
   
  private:
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    return std::unique_ptr<TaskNode> (new DeviceCompTaskNode);
+    return make_unique<DeviceCompTaskNode> ();
   }
   void InitWithFwNode(TaskNode* fw_node) override {
     CompTaskNode::InitWithFwNode(fw_node);

@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_GRAPH_MODEL_LOAD_TASK_GRAPH_H_
 #define ONEFLOW_GRAPH_MODEL_LOAD_TASK_GRAPH_H_
 
-#include "graph/task_graph.h"
+#include "graph/model_update_task_graph.h"
 
 namespace oneflow {
 
@@ -15,11 +15,11 @@ class MdLoadTaskGraph final : public TaskGraph {
     return &CompTaskNode::MdLoadFwBuildExecAndProducedRegsts;
   }
 
-  MdLoadTaskGraph(const ChainNode*) {
-    TODO();
-  }
+  MdLoadTaskGraph(const MdUpdtTaskGraph* md_updt_gph);
 
  private:
+  void BuildTaskGraph(const ChainNode* update_chain);
+  void InitFaker2Mccoy(const MdUpdtTaskGraph* md_updt_gph);
 };
 
 } // namespace oneflow

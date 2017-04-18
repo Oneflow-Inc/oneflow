@@ -33,7 +33,7 @@ class CommNetTaskNode final : public TaskNode {
   void BpBuildExecAndProducedRegsts(TaskGraph*) override { TODO(); }
 
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    return std::unique_ptr<TaskNode> (new CommNetTaskNode);
+    return make_unique<CommNetTaskNode> ();
   }
   void InitWithFwNode(TaskNode* fw_node) override {
     TaskNode::InitWithFwNode(fw_node);

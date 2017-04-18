@@ -21,7 +21,7 @@ void MdUpdtTaskGraph::BuildTaskGraph(const ChainNode* data_chain) {
   op_conf.mutable_model_update_op_conf();
   auto model_update_op = ConstructOpFromPbConf(op_conf);
   // ModelUpdateChain
-  std::unique_ptr<ChainGraph> chain_gph(new ChainGraph);
+  auto chain_gph = make_unique<ChainGraph> ();
   ChainNode* updt_chain = chain_gph->NewFinalNode();
   updt_chain->mut_op_vec() = {model_update_op};
   auto parallel_desc4updt = new ParallelDesc(*(data_chain->parallel_desc()));
@@ -74,7 +74,7 @@ void MdUpdtTaskGraph::CompleteUpdateTaskAndFwTask(
     // complete update task
     model_regst->CopyLbn2ShapeMap(model_diff_regst);
     ExecNode* update_exec = update_task->exec_gph().SoleNode();
-    const std::string& ibn = update_exec->op()->SoleIbn();
+    const std::string ibn = "model_diffs";
     if (update_task->in_edges().empty()) {
       update_exec->BindBnInOpAndRegst(ibn, model_diff_regst);
     } else {

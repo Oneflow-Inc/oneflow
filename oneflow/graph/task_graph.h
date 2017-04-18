@@ -5,6 +5,7 @@
 #include "graph/boxing_task_node.h"
 #include "graph/copy_hd_task_node.h"
 #include "operator/operator.h"
+#include "operator/operator_factory.h"
 #include "job/parallel_desc.h"
 #include "job/id_manager.h"
 

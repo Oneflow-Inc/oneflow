@@ -106,6 +106,7 @@ class Operator {
   std::vector<std::string> input_diff_bns_;
   std::vector<std::string> output_bns_;
   std::vector<std::string> output_diff_bns_;
+
   std::vector<std::string> model_bns_;
   std::vector<std::string> model_diff_bns_;
   std::vector<std::string> model_tmp_bns_;

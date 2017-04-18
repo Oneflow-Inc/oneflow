@@ -19,6 +19,7 @@ class ModelUpdateOp final : public SysOperator {
     mut_pb_op_conf().reset(cnf);
 
     EnrollInputBn("model_diffs", false);
+    EnrollInputBn("model_init", false);
     EnrollOutputBn("model", false);
   }
 

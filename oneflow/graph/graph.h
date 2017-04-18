@@ -53,6 +53,10 @@ class Graph {
     if (node->out_edges().size() != 1) { return false; }
     return node->SoleOutEdge()->dst_node() == &sink_node_;
   }
+  NodeType* SoleLastNode() const {
+    CHECK_EQ(sink_node_.in_edges().size(), 1);
+    return (*(sink_node_.in_edges().begin()))->src_node();
+  }
   
   void UpdateSourceAndSink();
   
