@@ -15,11 +15,15 @@ class MdLoadTaskGraph final : public TaskGraph {
     return &CompTaskNode::MdLoadFwBuildExecAndProducedRegsts;
   }
 
-  MdLoadTaskGraph(const MdUpdtTaskGraph* md_updt_gph);
+  MdLoadTaskGraph(
+      const ChainNode* update_chain,
+      const std::vector<CompTaskNode*>& sorted_update_tasks);
 
  private:
   void BuildTaskGraph(const ChainNode* update_chain);
-  void InitFaker2Mccoy(const MdUpdtTaskGraph* md_updt_gph);
+  void InitFaker2Mccoy(
+      const std::vector<CompTaskNode*>& sorted_update_tasks);
+
 };
 
 } // namespace oneflow

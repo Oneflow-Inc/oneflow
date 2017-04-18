@@ -7,7 +7,7 @@ void TaskGraphMgr::Init(const JobSysConf& job_sys_conf) {
   data_task_gph_.reset(new DataTaskGraph(job_sys_conf.train_dlnet_conf(),
                                          job_sys_conf.strategy(),
                                          true));
-  // model_update_task_graph
+  // model_graph
   ChainAsKeyMap<std::vector<CompTaskNode*>> data_chain2sorted_bp_comp_tasks;
   for (const auto& node : data_task_gph_->nodes()) {
     auto bp_node = dynamic_cast<CompTaskNode*>(node.get());
@@ -18,11 +18,15 @@ void TaskGraphMgr::Init(const JobSysConf& job_sys_conf) {
     SortByParallelId(&(pair.second));
   }
   for (const auto& data_chain : data_task_gph_->chain_gph()->nodes()) {
+    // model update
     auto md_updt_gph = make_unique<MdUpdtTaskGraph> (
         data_chain.get(),
         data_chain2sorted_bp_comp_tasks.at(data_chain.get()));
-    auto md_load_gph = make_unique<MdLoadTaskGraph> (md_updt_gph.get());
-    md_updt_task_gphs_.emplace(data_chain.get(), std::move(md_updt_gph));
+    ChainNode* updt_chain = md_updt_gph->chain_gph()->SoleLastNode();
+    auto sorted_updt_tasks = md_updt_gph->SortedTasksInChain(updt_chain);
+    // model load
+    auto md_load_gph =
+        make_unique<MdLoadTaskGraph> (updt_chain, sorted_updt_tasks);
   }
 }
 

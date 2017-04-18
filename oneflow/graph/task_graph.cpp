@@ -22,6 +22,18 @@ void TaskGraph::BuildExecAndProducedRegsts() {
   }
 }
 
+std::vector<CompTaskNode*> TaskGraph::SortedTasksInChain(
+    const ChainNode* chain) const {
+  std::vector<CompTaskNode*> ret;
+  for (const auto& node : nodes()) {
+    auto comp_node = dynamic_cast<CompTaskNode*> (node.get());
+    if (comp_node && comp_node->chain_node() == chain) {
+      ret.push_back(comp_node);
+    }
+  }
+  return ret;
+}
+
 void TaskGraph::BuildFromChainGph(
     std::unique_ptr<ChainGraph>&& chain_gph,
     bool need_bp) {

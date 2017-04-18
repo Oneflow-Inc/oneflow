@@ -22,9 +22,11 @@ void SetModelLoadChain(ChainNode* model_load_chain) {
 
 } // namespace
 
-MdLoadTaskGraph::MdLoadTaskGraph(const MdUpdtTaskGraph* md_updt_gph) {
-  BuildTaskGraph(md_updt_gph->chain_gph()->SoleLastNode());
-  InitFaker2Mccoy(md_updt_gph);
+MdLoadTaskGraph::MdLoadTaskGraph(
+    const ChainNode* update_chain,
+    const std::vector<CompTaskNode*>& sorted_update_tasks) {
+  BuildTaskGraph(update_chain);
+  InitFaker2Mccoy(sorted_update_tasks);
   BuildExecAndProducedRegsts();
 }
 
@@ -41,21 +43,9 @@ void MdLoadTaskGraph::BuildTaskGraph(const ChainNode* update_chain) {
   BuildFromChainGph(std::move(chain_gph), false);
 }
 
-void MdLoadTaskGraph::InitFaker2Mccoy(const MdUpdtTaskGraph* md_updt_gph) {
-  std::vector<CompTaskNode*> sorted_update_tasks;
-  for (const auto& node : md_updt_gph->nodes()) {
-    auto comp_node = dynamic_cast<CompTaskNode*> (node.get());
-    if (comp_node == nullptr || comp_node->IsFaker()) { continue; }
-    sorted_update_tasks.push_back(comp_node);
-  }
-  SortByParallelId(&sorted_update_tasks);
-  std::vector<CompTaskNode*> sorted_faker_tasks;
-  for (const auto& node : nodes()) {
-    auto comp_node = dynamic_cast<CompTaskNode*> (node.get());
-    if (comp_node == nullptr || !comp_node->IsFaker()) { continue; }
-    sorted_faker_tasks.push_back(comp_node);
-  }
-  SortByParallelId(&sorted_faker_tasks);
+void MdLoadTaskGraph::InitFaker2Mccoy(
+    const std::vector<CompTaskNode*>& sorted_update_tasks) {
+  auto sorted_faker_tasks = SortedTasksInChain(chain_gph()->SoleLastNode());
   CHECK_EQ(sorted_update_tasks.size(), sorted_faker_tasks.size());
   for (size_t i = 0; i < sorted_update_tasks.size(); ++i) {
     EnrollFakerMccoy(sorted_faker_tasks[i], sorted_update_tasks[i]);

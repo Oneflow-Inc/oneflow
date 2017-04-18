@@ -27,6 +27,8 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   typedef void (CompTaskNode::*CompTaskNodeMemFunc)(TaskGraph*);
   virtual CompTaskNodeMemFunc Func4FwBuildExecAndProducedRegsts() const = 0;
 
+  std::vector<CompTaskNode*> SortedTasksInChain(const ChainNode*) const;
+
  protected:
   TaskGraph() = default;
   void BuildFromChainGph(std::unique_ptr<ChainGraph>&& chain_gph, bool need_bp);
