@@ -61,18 +61,18 @@ RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
 
 add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(of_protoobj ${oneflow_third_party_libs})
-add_dependencies(of_protoobj ${oneflow_third_party_dependencies})
-
+if (oneflow_DOWNLOAD_THIRD_PARTY)
+  # Force to download and build all the third party codes
+  add_dependencies(of_protoobj ${oneflow_third_party_dependencies})
+endif()
 # cc obj lib
 include_directories(${oneflow_src_dir})
 include_directories(${PROJECT_BINARY_DIR})
 add_library(of_ccobj ${of_all_obj_cc})
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})
 
-if (oneflow_DOWNLOAD_THIRD_PARTY)
-  # Force to download and build all the third party codes
-  add_dependencies(of_ccobj of_protoobj)
-endif()
+add_dependencies(of_ccobj of_protoobj)
+
 # build test
 foreach(cc ${of_all_test_cc})
   get_filename_component(test_name ${cc} NAME_WE)
