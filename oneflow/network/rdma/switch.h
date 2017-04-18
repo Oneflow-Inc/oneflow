@@ -1,11 +1,11 @@
-#ifndef ONEFLOW_NETWORK_RDMA_SYSTEM_COMPATIBLE_H_
-#define ONEFLOW_NETWORK_RDMA_SYSTEM_COMPATIBLE_H_
+#ifndef ONEFLOW_NETWORK_RDMA_SWITCH_H_
+#define ONEFLOW_NETWORK_RDMA_SWITCH_H_
 
 #ifdef WIN32
-#include "windows/common.h"
+#include "network/rdma/windows/interface.h"
 #else
-#include "linux/common.h"
+#include "network/rdma/linux/interface.h"
 #endif
 
 
-#endif // ONEFLOW_NETWORK_RDMA_SYSTEM_COMPATIBLE_H_
+#endif // ONEFLOW_NETWORK_RDMA_SWITCH_H_

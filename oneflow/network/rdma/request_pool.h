@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <memory>
 #include "network/rdma/message_pool.h"
-//#include "network/rdma/registered_network_message.h" // move message to system/common.h
+//#include "network/rdma/registered_network_message.h" // move message to system/message.h
 #include "network/rdma/switch.h"
 
 
@@ -13,7 +13,7 @@ namespace oneflow{
 
 class RegisteredNetworkMessage;
 
-/* move request to system/common.h
+/* move request to system/request.h
 struct Request {
     bool is_send;
     int32_t time_stamp;

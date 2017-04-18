@@ -3,8 +3,7 @@
 
 #include <queue>
 #include "network/network.h"
-#include "network/rdma/memory.h" // 
-//#include "network/rdma/registered_network_message.h" // move message to platform/common.h
+//#include "network/rdma/registered_network_message.h" // move message to platform/message.h
 #include "network/rdma/switch.h"
 
 namespace oneflow {
