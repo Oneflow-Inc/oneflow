@@ -2,5 +2,5 @@ syntax = "proto3";
 package oneflow;
 
 message ShapeProto {
-  repeated uint64 shapes = 1;
+  repeated int64 shapes = 1;
 }

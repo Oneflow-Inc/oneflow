@@ -30,7 +30,7 @@ class RegstDesc {
   static const char* kAllLbn;
 
  private:
-  int64_t regst_desc_id_;
+  uint64_t regst_desc_id_;
   const TaskNode* producer_;
   
   HashMap<std::string, std::unique_ptr<Shape>> lbn2shape_;
