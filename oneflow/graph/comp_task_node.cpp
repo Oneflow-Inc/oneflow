@@ -13,9 +13,6 @@ void CompTaskNode::DataFwBuildExecAndProducedRegsts(TaskGraph*) {
   Lbn2NodeBnMap lbn2producer;
   Lbn2NodeBnMap extern_in_lbn2consumer;
   FwBuildFromUserOps(&lbn2producer, &extern_in_lbn2consumer);
-  if (GetBpNode() != nullptr) {
-    FwAddCopyInOp(&extern_in_lbn2consumer);
-  }
   mut_exec_gph().UpdateSourceAndSink();
   // data regst
   auto data_regst = make_unique<DisContigRegstDesc> ();
@@ -106,35 +103,6 @@ void CompTaskNode::FwBuildFromUserOps(
   }
 }
 
-void CompTaskNode::FwAddCopyInOp(Lbn2NodeBnMap* extern_in_lbn2consumer) {
-  if (extern_in_lbn2consumer->empty()) { return; }
-  // Construct Copy Operator
-  OperatorConf pb_op_conf;
-  pb_op_conf.set_name("copy_in_" + std::to_string(node_id()));
-  pb_op_conf.mutable_copy_op_conf()->set_copy_type(CopyInOpType());
-  for (const auto& pair : *extern_in_lbn2consumer) {
-    pb_op_conf.mutable_copy_op_conf()->add_copied_lbns(pair.first);
-  }
-  std::shared_ptr<const Operator> copy_op = ConstructOpFromPbConf(pb_op_conf);
-  // Construct Exec Node
-  ExecNode* copy_node = mut_exec_gph().NewFinalNode();
-  copy_node->mut_op() = copy_op;
-  // Connect CopyNode and OldConsumer
-  for (const std::string& obn : copy_node->op()->output_bns()) {
-    std::string lbn = copy_node->op()->obn2lbn(obn);
-    const auto& old_consumer = extern_in_lbn2consumer->at(lbn);
-    ExecEdge* edge = mut_exec_gph().NewFinalEdge();
-    edge->set_lbn(lbn);
-    edge->mut_dst_bn() = old_consumer.second;
-    edge->mut_src_bn() = obn;
-    Connect(copy_node, edge, old_consumer.first);
-  }
-  for (const std::string& ibn : copy_node->op()->input_bns()) {
-    std::string lbn = copy_node->op()->ibn2lbn(ibn);
-    extern_in_lbn2consumer->at(lbn) = {copy_node, ibn};
-  }
-}
-
 void CompTaskNode::FwSetDataRegstDesc(
     const Lbn2NodeBnMap& lbn2producer,
     const Lbn2NodeBnMap& extern_in_lbn2consumer) {
@@ -196,15 +164,14 @@ void CompTaskNode::FwSetModelTmpRegstDesc() {
 
 void CompTaskNode::BpBuildExecAndProducedRegsts(TaskGraph*) {
   const ExecGraph& fw_gph = GetFwNode()->exec_gph();
-  const ExecNode* cp_in_node = fw_gph.source_node().SoleOutEdge()->dst_node();
   HashMap<const ExecNode*, ExecNode*> fw_node2bp_node;
   HashMap<ExecEdge*, const ExecEdge*> bp_edge2fw_edge;
-  BpBuildExecGraph(fw_gph, cp_in_node, &fw_node2bp_node, &bp_edge2fw_edge);
+  BpBuildExecGraph(fw_gph, &fw_node2bp_node, &bp_edge2fw_edge);
   //
   auto data_diff_regst = make_unique<DisContigRegstDesc> ();
   BindProducedRegstAndOutEdge(data_diff_regst.get(), SoleOutEdge());
   EnrollProducedRegstDesc("data_diff", std::move(data_diff_regst));
-  BpSetDataDiffRegst(cp_in_node, fw_node2bp_node, bp_edge2fw_edge);
+  BpSetDataDiffRegst(fw_node2bp_node, bp_edge2fw_edge);
   //
   auto model_diff_regst = make_unique<ContigRegstDesc> ();
   EnrollProducedRegstDesc("model_diff", std::move(model_diff_regst));
@@ -213,17 +180,14 @@ void CompTaskNode::BpBuildExecAndProducedRegsts(TaskGraph*) {
 
 void CompTaskNode::BpBuildExecGraph(
     const ExecGraph& fw_gph,
-    const ExecNode* cp_in_node,
     HashMap<const ExecNode*, ExecNode*>* fw_node2bp_node,
     HashMap<ExecEdge*, const ExecEdge*>* bp_edge2fw_edge) {
   for (const std::unique_ptr<ExecNode>& fw_node : fw_gph.nodes()) {
-    if (fw_node.get() == cp_in_node) { continue; }
     ExecNode* bp_node = mut_exec_gph().NewFinalNode();
     bp_node->mut_op() = fw_node->op();
-    fw_node2bp_node->emplace(fw_node.get(), bp_node);
+    CHECK(fw_node2bp_node->emplace(fw_node.get(), bp_node).second);
   }
   for (const std::unique_ptr<ExecEdge>& fw_edge : fw_gph.edges()) {
-    if (fw_edge->src_node() == cp_in_node) { continue; }
     ExecEdge* bp_edge = mut_exec_gph().NewFinalEdge();
     bp_edge->set_lbn(fw_edge->lbn());
     bp_edge->mut_src_bn() = GenDiffBn(fw_edge->dst_bn());
@@ -236,12 +200,12 @@ void CompTaskNode::BpBuildExecGraph(
 }
 
 void CompTaskNode::BpSetDataDiffRegst(
-    const ExecNode* cp_in_node,
     const HashMap<const ExecNode*, ExecNode*>& fw_node2bp_node,
     const HashMap<ExecEdge*, const ExecEdge*>& bp_edge2fw_edge) {
   // Regsts
   RegstDesc* in_diff_regst = GetRelatedRegst(SoleOutEdge());
   RegstDesc* out_diff_regst = GetRelatedRegst(SoleInEdge());
+  RegstDesc* in_regst = GetRelatedRegst(GetFwNode()->SoleInEdge());
   RegstDesc* out_regst = GetRelatedRegst(GetFwNode()->SoleOutEdge());
   RegstDesc* model_tmp_regst = GetFwNode()->GetProducedRegstDesc("model_tmp");
   // blobs on edge 
@@ -257,18 +221,25 @@ void CompTaskNode::BpSetDataDiffRegst(
     for (ExecEdge* edge : bp_node->in_edges()) {
       found_bns.insert(edge->dst_bn());
     }
-    for (const auto& odbn : bp_node->op()->output_diff_bns()) {
+    for (const std::string& odbn : bp_node->op()->output_diff_bns()) {
       if (found_bns.find(odbn) != found_bns.end()) { continue; }
       std::string lbn = bp_node->op()->odbn2lbn(odbn);
       bp_node->BindBnInOpAndRegst(odbn, out_diff_regst);
     }
   }
   // extern in_diff blobs
-  for (ExecEdge* edge : cp_in_node->out_edges()) {
-    ExecNode* bp_node = fw_node2bp_node.at(edge->dst_node());
-    Shape* ptr = in_diff_regst->EnrollLbn(edge->lbn());
-    *ptr = out_regst->GetShape(edge->lbn());
-    bp_node->BindBnInOpAndRegst(GenDiffBn(edge->dst_bn()), in_diff_regst);
+  for (const auto& bp_node : exec_gph().nodes()) {
+    std::unordered_set<std::string> found_bns;
+    for (ExecEdge* edge : bp_node->out_edges()) {
+      found_bns.insert(edge->src_bn());
+    }
+    for (const std::string& idbn : bp_node->op()->input_diff_bns()) {
+      if (found_bns.find(idbn) != found_bns.end()) { continue; }
+      std::string lbn = bp_node->op()->idbn2lbn(idbn);
+      Shape* ptr = in_diff_regst->EnrollLbn(lbn);
+      *ptr = in_regst->GetShape(lbn);
+      bp_node->BindBnInOpAndRegst(idbn, in_diff_regst);
+    }
   }
   // tmp blobs
   for (const std::unique_ptr<ExecNode>& node : exec_gph().nodes()) {

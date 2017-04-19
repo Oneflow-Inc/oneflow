@@ -41,8 +41,6 @@ message CopyOpConf {
   enum CopyType {
     H2D = 0;
     D2H = 1;
-    D2D = 2;
-    H2H = 3;
   }
   CopyType copy_type = 1;
   repeated string copied_lbns = 2;

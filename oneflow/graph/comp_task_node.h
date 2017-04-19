@@ -28,7 +28,6 @@ class CompTaskNode : public TaskNode {
   virtual void InitWithFwNode(TaskNode* fw_node) override {
     TaskNode::InitWithFwNode(fw_node);
   }
-  virtual CopyOpConf::CopyType CopyInOpType() = 0;
 
  private:
   using Lbn2NodeBnMap =
@@ -38,7 +37,6 @@ class CompTaskNode : public TaskNode {
   void FwBuildFromUserOps(
       Lbn2NodeBnMap* lbn2producer,
       Lbn2NodeBnMap* extern_in_lbn2consumer);
-  void FwAddCopyInOp(Lbn2NodeBnMap* extern_in_lbn2consumer);
   void FwSetDataRegstDesc(
       const Lbn2NodeBnMap& lbn2producer,
       const Lbn2NodeBnMap& extern_in_lbn2consumer);
@@ -47,11 +45,9 @@ class CompTaskNode : public TaskNode {
   void BpBuildExecAndProducedRegsts(TaskGraph*) override;
   void BpBuildExecGraph(
       const ExecGraph& fw_gph,
-      const ExecNode* cp_in_node,
       HashMap<const ExecNode*, ExecNode*>* fw_node2bp_node,
       HashMap<ExecEdge*, const ExecEdge*>* bp_edge2fw_edge);
   void BpSetDataDiffRegst(
-      const ExecNode* cp_in_node,
       const HashMap<const ExecNode*, ExecNode*>& fw_node2bp_node,
       const HashMap<ExecEdge*, const ExecEdge*>& bp_edge2fw_edge);
   void BpSetModelDiffRegst();
@@ -75,9 +71,6 @@ class HostCompTaskNode final : public CompTaskNode {
   void InitWithFwNode(TaskNode* fw_node) override {
     CompTaskNode::InitWithFwNode(fw_node);
   }
-  CopyOpConf::CopyType CopyInOpType() override {
-    return CopyOpConf::H2H;
-  }
 
 };
 
@@ -93,9 +86,6 @@ class DeviceCompTaskNode final : public CompTaskNode {
   }
   void InitWithFwNode(TaskNode* fw_node) override {
     CompTaskNode::InitWithFwNode(fw_node);
-  }
-  CopyOpConf::CopyType CopyInOpType() override {
-    return CopyOpConf::D2D;
   }
 
 };
