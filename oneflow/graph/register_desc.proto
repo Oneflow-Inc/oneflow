@@ -8,5 +8,5 @@ message RegstDescProto  {
   uint64 producer_task_id = 2;
   repeated uint64 subscriber_task_ids = 3;
   map<string, ShapeProto> lbn2shape = 4;
-  uint64 register_num = 5;
+  int64 register_num = 5;
 }

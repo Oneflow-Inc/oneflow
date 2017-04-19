@@ -23,10 +23,10 @@ class MdUpdtTaskGraph final : public TaskGraph {
    void BuildTaskGraph(const ChainNode* data_chain);
    void InitFaker2MccoyAndParallelId2UpdtMap(
        const std::vector<CompTaskNode*>& sorted_bp_comptasks4data_chain,
-       HashMap<int64_t, CompTaskNode*>* parallel_id2updt);
+       HashMap<uint64_t, CompTaskNode*>* parallel_id2updt);
    void CompleteUpdateTaskAndFwTask(
        const std::vector<CompTaskNode*>& sorted_bp_comptasks4data_chain,
-       const HashMap<int64_t, CompTaskNode*>& parallel_id2updt);
+       const HashMap<uint64_t, CompTaskNode*>& parallel_id2updt);
 };
 
 } // namespace oneflow

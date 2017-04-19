@@ -18,10 +18,10 @@ class ParallelDesc {
   // Getters
   const ParallelPolicy& policy() const { return policy_; }
   const DeviceType& device_type() const { return device_type_; } 
-  const std::vector<int64_t>& sorted_machine_ids() const {
+  const std::vector<uint64_t>& sorted_machine_ids() const {
     return sorted_machine_ids_;
   }
-  const std::vector<int64_t>& sorted_device_phy_ids(int64_t machine_id) const {
+  const std::vector<uint64_t>& sorted_device_phy_ids(int64_t machine_id) const {
     // If this is used to describe the disk
     // the return shouble be empty
     return machine_id2sorted_device_phy_ids_.at(machine_id);
@@ -39,8 +39,8 @@ class ParallelDesc {
  private:
   ParallelPolicy policy_;
   DeviceType device_type_;
-  std::vector<int64_t> sorted_machine_ids_;
-  HashMap<int64_t, std::vector<int64_t>> machine_id2sorted_device_phy_ids_;
+  std::vector<uint64_t> sorted_machine_ids_;
+  HashMap<uint64_t, std::vector<uint64_t>> machine_id2sorted_device_phy_ids_;
 
 };
 

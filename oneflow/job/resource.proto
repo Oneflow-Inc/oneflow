@@ -14,7 +14,7 @@ enum DeviceType {
 
 message Resource {
   repeated Machine machines = 1;
-  uint64 device_num_per_machine = 2;
+  int64 device_num_per_machine = 2;
   DeviceType device_type = 3;
 }
 
