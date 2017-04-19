@@ -15,6 +15,8 @@ class JobDesc final {
     static JobDesc obj;
     return obj;
   }
+
+  void Init(const JobUserConf&) { TODO(); }
   
   const DLNetConf& train_dlnet_conf() const { TODO(); }
   const Resource& resource() const { TODO(); }

@@ -3,19 +3,9 @@
 
 #include "common/util.h"
 #include "job/resource.pb.h"
+#include "job/id_manager.pb.h"
 
 namespace oneflow {
-
-// Phy  : Physical
-// Loc  : Local
-// Thrd : Thread
-
-using DevicePhyId = int32_t;
-
-using MachineId = int32_t;
-
-using ThrdGloId = int32_t;
-using ThrdLocId = int32_t;
 
 class IDMgr final {
  public:
@@ -27,26 +17,28 @@ class IDMgr final {
     return obj;
   }
 
-  void Init(const Resource& resource) {
+  void InitFromResource(const Resource&) {
     TODO();
   }
 
-  ThrdLocId ThrdLocId4DevicePhyId(DevicePhyId) const {
-    TODO();
-  }
-  ThrdLocId DiskThrdLocId() const {
-    TODO();
-  }
-  ThrdLocId BoxingThrdLocId() const {
-    TODO();
-  }
-  ThrdLocId CommNetThrdLocId() const {
+  void InitFromProto(const IDMgrProto&) {
     TODO();
   }
 
-  int32_t NewNodeId();
-  int32_t NewEdgeId();
-  int32_t NewRegstDescId();
+  IDMgrProto ToProto() {
+    TODO();
+  }
+
+  // Compile
+  uint64_t ThrdLocId4DevicePhyId(uint64_t) const { TODO(); }
+  uint64_t DiskThrdLocId() const { TODO(); }
+  uint64_t BoxingThrdLocId() const { TODO(); }
+  uint64_t CommNetThrdLocId() const { TODO(); }
+
+  uint64_t NewTaskId(uint64_t machine_id, uint64_t thrd_local_id) const { TODO(); }
+  uint64_t NewRegstDescId(uint64_t producer_task_id) const { TODO(); }
+
+  // Runtime
 
  private:
   IDMgr() = default;

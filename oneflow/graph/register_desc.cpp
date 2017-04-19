@@ -4,7 +4,7 @@
 namespace oneflow {
 
 RegstDesc::RegstDesc() {
-  regst_desc_id_ = IDMgr::Singleton().NewRegstDescId();
+  regst_desc_id_ = 0; // TODO
   producer_ = nullptr;
 }
 

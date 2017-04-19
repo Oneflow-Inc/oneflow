@@ -11,19 +11,19 @@ std::string Shape::ToString() const {
   return oss.str();
 }
 
-int64_t Shape::Count(int32_t start_axis, int32_t end_axis) const {
+int64_t Shape::Count(int64_t start_axis, int64_t end_axis) const {
   CHECK(0 <= start_axis && start_axis <= end_axis && end_axis <= NumAxes())
       << "[start_axis:" << start_axis
       << "][end_axis:" << end_axis
       << "][num_axes:" << NumAxes() << "]";
   int64_t cnt = 1;
-  for (int32_t i = start_axis; i < end_axis; ++i) {
+  for (int64_t i = start_axis; i < end_axis; ++i) {
     cnt *= At(i);
   }
   return cnt;
 }
 
-int64_t Shape::CanonicalAxisIndex(int32_t axis_index) const {
+int64_t Shape::CanonicalAxisIndex(int64_t axis_index) const {
   CHECK_GE(axis_index, -NumAxes());
   CHECK_LT(axis_index, NumAxes());
   return (axis_index + NumAxes()) % NumAxes();

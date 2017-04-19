@@ -9,11 +9,11 @@ void BoxingOp::Init(const OperatorConf& op_conf) {
   auto cnf = new BoxingOpConf(op_conf.boxing_op_conf());
   mut_pb_op_conf().reset(cnf);
 
-  for (int32_t i = 0; i < cnf->in_num(); ++i) {
+  for (int64_t i = 0; i < cnf->in_num(); ++i) {
     EnrollInputBn("in_" + std::to_string(i));
   }
   EnrollDataTmpBn("middle");
-  for (int32_t i = 0; i < cnf->out_num(); ++i) {
+  for (int64_t i = 0; i < cnf->out_num(); ++i) {
     EnrollOutputBn("out_" + std::to_string(i));
   }
 }

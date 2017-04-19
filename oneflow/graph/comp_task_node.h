@@ -12,8 +12,8 @@ class CompTaskNode : public TaskNode {
   CompTaskNode() = default;
   virtual ~CompTaskNode() = default;
 
-  int32_t parallel_id() const { return parallel_id_; }
-  void set_parallel_id(int32_t parallel_id) { parallel_id_ = parallel_id; }
+  int64_t parallel_id() const { return parallel_id_; }
+  void set_parallel_id(int64_t parallel_id) { parallel_id_ = parallel_id; }
 
   bool IsLossNode() const { TODO(); }
 
@@ -28,7 +28,6 @@ class CompTaskNode : public TaskNode {
   virtual void InitWithFwNode(TaskNode* fw_node) override {
     TaskNode::InitWithFwNode(fw_node);
   }
-  virtual CopyOpConf::CopyType CopyInOpType() = 0;
 
  private:
   using Lbn2NodeBnMap =
@@ -38,7 +37,6 @@ class CompTaskNode : public TaskNode {
   void FwBuildFromUserOps(
       Lbn2NodeBnMap* lbn2producer,
       Lbn2NodeBnMap* extern_in_lbn2consumer);
-  void FwAddCopyInOp(Lbn2NodeBnMap* extern_in_lbn2consumer);
   void FwSetDataRegstDesc(
       const Lbn2NodeBnMap& lbn2producer,
       const Lbn2NodeBnMap& extern_in_lbn2consumer);
@@ -47,16 +45,14 @@ class CompTaskNode : public TaskNode {
   void BpBuildExecAndProducedRegsts(TaskGraph*) override;
   void BpBuildExecGraph(
       const ExecGraph& fw_gph,
-      const ExecNode* cp_in_node,
       HashMap<const ExecNode*, ExecNode*>* fw_node2bp_node,
       HashMap<ExecEdge*, const ExecEdge*>* bp_edge2fw_edge);
   void BpSetDataDiffRegst(
-      const ExecNode* cp_in_node,
       const HashMap<const ExecNode*, ExecNode*>& fw_node2bp_node,
       const HashMap<ExecEdge*, const ExecEdge*>& bp_edge2fw_edge);
   void BpSetModelDiffRegst();
 
-  int32_t parallel_id_;
+  int64_t parallel_id_;
 
 };
 
@@ -75,9 +71,6 @@ class HostCompTaskNode final : public CompTaskNode {
   void InitWithFwNode(TaskNode* fw_node) override {
     CompTaskNode::InitWithFwNode(fw_node);
   }
-  CopyOpConf::CopyType CopyInOpType() override {
-    return CopyOpConf::H2H;
-  }
 
 };
 
@@ -93,9 +86,6 @@ class DeviceCompTaskNode final : public CompTaskNode {
   }
   void InitWithFwNode(TaskNode* fw_node) override {
     CompTaskNode::InitWithFwNode(fw_node);
-  }
-  CopyOpConf::CopyType CopyInOpType() override {
-    return CopyOpConf::D2D;
   }
 
 };

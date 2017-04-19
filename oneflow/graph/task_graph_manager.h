@@ -19,7 +19,7 @@ class TaskGraphMgr {
     return obj;
   }
 
-  void Init(const JobDesc& job_desc);
+  void Init();
 
  private:
   template<typename ValType>

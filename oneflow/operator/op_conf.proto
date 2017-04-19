@@ -41,24 +41,22 @@ message CopyOpConf {
   enum CopyType {
     H2D = 0;
     D2H = 1;
-    D2D = 2;
-    H2H = 3;
   }
   CopyType copy_type = 1;
   repeated string copied_lbns = 2;
 }
 
 message CloneOpConf {
-  int32 out_num = 1;
+  uint64 out_num = 1;
   string lbn = 2;
 }
 
 message BoxConcatConf {
-  int32 axis = 1;
+  uint64 axis = 1;
 }
 
 message BoxSplitConf {
-  int32 axis = 1;
+  uint64 axis = 1;
 }
 
 message BoxCloneConf {
@@ -66,8 +64,8 @@ message BoxCloneConf {
 
 message BoxingOpConf {
   string lbn = 1;
-  int32 in_num = 2;
-  int32 out_num = 3;
+  uint64 in_num = 2;
+  uint64 out_num = 3;
   BoxConcatConf concat_box = 4;
   oneof out_box {
     BoxSplitConf split_box = 5;
