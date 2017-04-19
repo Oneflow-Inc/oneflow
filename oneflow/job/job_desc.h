@@ -3,6 +3,7 @@
 
 #include "common/util.h"
 #include "job/job_conf.pb.h"
+#include "job/job_desc.pb.h"
 
 namespace oneflow {
 
@@ -16,7 +17,10 @@ class JobDesc final {
     return obj;
   }
 
-  void Init(const JobUserConf&) { TODO(); }
+  void InitFromJobUserConf(const JobUserConf&) { TODO(); }
+  void InitFromProto(const JobDescProto&) { TODO(); }
+
+  JobDescProto ToProto() const { TODO(); }
   
   const DLNetConf& train_dlnet_conf() const { TODO(); }
   const Resource& resource() const { TODO(); }
