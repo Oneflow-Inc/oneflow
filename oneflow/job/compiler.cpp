@@ -10,7 +10,7 @@ int main(int argc, char** argv) {
   oneflow::JobUserConf job_user_conf;
   ParseProtoFromTextFile(FLAGS_job_user_conf_filepath, &job_user_conf);
   oneflow::JobDesc::Singleton().Init(job_user_conf);
-  oneflow::IDMgr::Singleton().Init();
+  oneflow::IDMgr::Singleton().InitFromResource(oneflow::JobDesc::Singleton().resource());
   oneflow::TaskGraphMgr::Singleton().Init();
   return 0;
 }

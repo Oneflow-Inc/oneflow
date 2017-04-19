@@ -13,14 +13,14 @@ enum TaskType {
 
 message TaskProto {
   // common
-  int64 id = 1;
+  uint64 id = 1;
   TaskType type = 2;
-  int64 machine_id = 3;
-  int64 thrd_local_id = 4;
+  uint64 machine_id = 3;
+  uint64 thrd_local_id = 4;
   bool is_forward = 5;
   ExecGraphProto exec_graph = 6;
-  repeated int64 produced_regst_desc_ids = 7;
-  repeated int64 subscribed_regst_desc_ids = 8;
+  repeated uint64 produced_regst_desc_ids = 7;
+  repeated uint64 subscribed_regst_desc_ids = 8;
   // for CompTask
-  int64 parallel_id = 1000;
+  uint64 parallel_id = 1000;
 }
