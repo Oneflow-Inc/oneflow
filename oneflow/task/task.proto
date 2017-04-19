@@ -8,8 +8,7 @@ enum TaskType {
   DeviceCompTask = 1;
   CopyHdTask = 2;
   CommNetTask = 3;
-  InBoxingTask = 4;
-  OutBoxingTask = 5;
+  BoxingTask = 4;
 }
 
 message TaskProto {
