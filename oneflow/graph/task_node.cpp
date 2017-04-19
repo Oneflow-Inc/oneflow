@@ -20,7 +20,7 @@ void TaskNode::set_stage_node(const StageNode* new_stage_node) {
   CHECK(IsFwNode());
   stage_node_ = new_stage_node;
 }
-ThrdLocId& TaskNode::mut_thrd_loc_id() {
+int64_t& TaskNode::mut_thrd_loc_id() {
   CHECK(IsFwNode());
   return thrd_loc_id_;
 }

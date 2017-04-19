@@ -12,8 +12,8 @@ class CompTaskNode : public TaskNode {
   CompTaskNode() = default;
   virtual ~CompTaskNode() = default;
 
-  int32_t parallel_id() const { return parallel_id_; }
-  void set_parallel_id(int32_t parallel_id) { parallel_id_ = parallel_id; }
+  int64_t parallel_id() const { return parallel_id_; }
+  void set_parallel_id(int64_t parallel_id) { parallel_id_ = parallel_id; }
 
   bool IsLossNode() const { TODO(); }
 
@@ -56,7 +56,7 @@ class CompTaskNode : public TaskNode {
       const HashMap<ExecEdge*, const ExecEdge*>& bp_edge2fw_edge);
   void BpSetModelDiffRegst();
 
-  int32_t parallel_id_;
+  int64_t parallel_id_;
 
 };
 

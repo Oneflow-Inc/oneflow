@@ -7,7 +7,7 @@ MdUpdtTaskGraph::MdUpdtTaskGraph(
     const ChainNode* data_chain,
     const std::vector<CompTaskNode*>& sorted_bp_comptasks4data_chain) {
   BuildTaskGraph(data_chain);
-  HashMap<int32_t, CompTaskNode*> parallel_id2updt;
+  HashMap<int64_t, CompTaskNode*> parallel_id2updt;
   InitFaker2MccoyAndParallelId2UpdtMap(sorted_bp_comptasks4data_chain,
                                        &parallel_id2updt);
   BuildExecAndProducedRegsts();
@@ -42,7 +42,7 @@ void MdUpdtTaskGraph::BuildTaskGraph(const ChainNode* data_chain) {
 
 void MdUpdtTaskGraph::InitFaker2MccoyAndParallelId2UpdtMap(
     const std::vector<CompTaskNode*>& sorted_bp_comptasks4data_chain,
-    HashMap<int32_t, CompTaskNode*>* parallel_id2updt) {
+    HashMap<int64_t, CompTaskNode*>* parallel_id2updt) {
   std::vector<CompTaskNode*> comptasks4faker_chain;
   for (const std::unique_ptr<TaskNode>& node : nodes()) {
     CompTaskNode* comp_node = dynamic_cast<CompTaskNode*> (node.get());
@@ -63,10 +63,10 @@ void MdUpdtTaskGraph::InitFaker2MccoyAndParallelId2UpdtMap(
 
 void MdUpdtTaskGraph::CompleteUpdateTaskAndFwTask(
     const std::vector<CompTaskNode*>& sorted_bp_comptasks4data_chain,
-    const HashMap<int32_t, CompTaskNode*>& parallel_id2updt) {
+    const HashMap<int64_t, CompTaskNode*>& parallel_id2updt) {
   for (CompTaskNode* bp_task : sorted_bp_comptasks4data_chain) {
     // useful vars
-    int32_t parallel_id = bp_task->parallel_id();
+    int64_t parallel_id = bp_task->parallel_id();
     CompTaskNode* update_task = parallel_id2updt.at(parallel_id);
     TaskNode* fw_task = bp_task->GetFwNode();
     RegstDesc* model_diff_regst = bp_task->GetProducedRegstDesc("model_diff");

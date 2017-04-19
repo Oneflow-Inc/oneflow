@@ -73,9 +73,9 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
     TaskNodesInStage* task_nodes_in_stage,
     bool is_first_stage,
     bool is_last_stage) {
-  int32_t parallel_idx = stage->parallel_range().begin();
-  for (auto device_phy_id : stage->SortedDevices()) {
-    ThrdLocId thread_local_id =
+  int64_t parallel_idx = stage->parallel_range().begin();
+  for (auto device_phy_id : stage->SortedDevicePhyIds()) {
+    int64_t thread_local_id =
         IDMgr::Singleton().ThrdLocId4DevicePhyId(device_phy_id);
     // comp_task_node
     DeviceCompTaskNode* comp_task_node = NewTaskNode<DeviceCompTaskNode> ();
@@ -113,19 +113,19 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
 
 void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
                                         TaskNodesInStage* task_nodes_in_stage) {
-  int32_t parallel_begin = stage->parallel_range().begin();
-  int32_t parallel_end = stage->parallel_range().end();
-  int32_t parallel_idx = parallel_begin;
+  int64_t parallel_begin = stage->parallel_range().begin();
+  int64_t parallel_end = stage->parallel_range().end();
+  int64_t parallel_idx = parallel_begin;
   while (parallel_idx < parallel_end) {
     HostCompTaskNode* comp_task_node = NewTaskNode<HostCompTaskNode> ();
     comp_task_node->set_stage_node(stage);
     comp_task_node->SetFwNode();
     comp_task_node->set_parallel_id(parallel_idx++);
     // Set comp_task_node::thread_local_id
-    if (stage->SortedDevices().empty()) {
+    if (stage->SortedDevicePhyIds().empty()) {
       comp_task_node->mut_thrd_loc_id() = IDMgr::Singleton().DiskThrdLocId();
     } else {
-      auto device_id = stage->SortedDevices().at(parallel_idx - parallel_begin);
+      auto device_id = stage->SortedDevicePhyIds().at(parallel_idx - parallel_begin);
       comp_task_node->mut_thrd_loc_id() =
           IDMgr::Singleton().ThrdLocId4DevicePhyId(device_id);
     }

@@ -49,16 +49,16 @@ message CopyOpConf {
 }
 
 message CloneOpConf {
-  int32 out_num = 1;
+  int64 out_num = 1;
   string lbn = 2;
 }
 
 message BoxConcatConf {
-  int32 axis = 1;
+  int64 axis = 1;
 }
 
 message BoxSplitConf {
-  int32 axis = 1;
+  int64 axis = 1;
 }
 
 message BoxCloneConf {
@@ -66,8 +66,8 @@ message BoxCloneConf {
 
 message BoxingOpConf {
   string lbn = 1;
-  int32 in_num = 2;
-  int32 out_num = 3;
+  int64 in_num = 2;
+  int64 out_num = 3;
   BoxConcatConf concat_box = 4;
   oneof out_box {
     BoxSplitConf split_box = 5;

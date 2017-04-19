@@ -6,17 +6,6 @@
 
 namespace oneflow {
 
-// Phy  : Physical
-// Loc  : Local
-// Thrd : Thread
-
-using DevicePhyId = int32_t;
-
-using MachineId = int32_t;
-
-using ThrdGloId = int32_t;
-using ThrdLocId = int32_t;
-
 class IDMgr final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IDMgr);
@@ -31,22 +20,14 @@ class IDMgr final {
     TODO();
   }
 
-  ThrdLocId ThrdLocId4DevicePhyId(DevicePhyId) const {
-    TODO();
-  }
-  ThrdLocId DiskThrdLocId() const {
-    TODO();
-  }
-  ThrdLocId BoxingThrdLocId() const {
-    TODO();
-  }
-  ThrdLocId CommNetThrdLocId() const {
-    TODO();
-  }
+  int64_t ThrdLocId4DevicePhyId(int64_t) const { TODO(); }
+  int64_t DiskThrdLocId() const { TODO(); }
+  int64_t BoxingThrdLocId() const { TODO(); }
+  int64_t CommNetThrdLocId() const { TODO(); }
 
-  int32_t NewNodeId();
-  int32_t NewEdgeId();
-  int32_t NewRegstDescId();
+  int64_t NewNodeId() const;
+  int64_t NewEdgeId() const;
+  int64_t NewRegstDescId() const;
 
  private:
   IDMgr() = default;
