@@ -28,6 +28,9 @@ include(util)
 include(proto2cpp)
 include(third_party)
 
+# main cpp
+list(APPEND of_main_cc ${oneflow_src_dir}/job/compiler.cpp)
+
 # source_group
 SUBDIRLIST(subdir_list ${oneflow_src_dir})
 foreach(subdir ${subdir_list})
@@ -37,6 +40,9 @@ foreach(subdir ${subdir_list})
   file(GLOB subdir_protos     "${oneflow_src_dir}/${subdir}/*.proto")
   foreach(test_cpp ${subdir_test_cpps})
     list(REMOVE_ITEM subdir_obj_cpps ${test_cpp})
+  endforeach()
+  foreach(main_cpp ${of_main_cc})
+    list(REMOVE_ITEM subdir_obj_cpps ${main_cpp})
   endforeach()
   source_group(${subdir} FILES ${subdir_headers} ${subdir_obj_cpps} {subdir_protos})
   list(APPEND of_all_obj_cc ${subdir_headers} ${subdir_obj_cpps})
@@ -64,6 +70,13 @@ include_directories(${PROJECT_BINARY_DIR})
 add_library(of_ccobj ${of_all_obj_cc})
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})
 add_dependencies(of_ccobj of_protoobj)
+
+# build main
+foreach(cc ${of_main_cc})
+  get_filename_component(main_name ${cc} NAME_WE)
+  add_executable(${main_name} ${cc})
+  target_link_libraries(${main_name} PUBLIC of_protoobj of_ccobj ${oneflow_third_party_libs})
+endforeach()
 
 # build test
 foreach(cc ${of_all_test_cc})

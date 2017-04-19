@@ -16,7 +16,7 @@ class IDMgr final {
     return obj;
   }
 
-  void Init(const Resource& resource) {
+  void Init() {
     TODO();
   }
 
@@ -25,9 +25,9 @@ class IDMgr final {
   int64_t BoxingThrdLocId() const { TODO(); }
   int64_t CommNetThrdLocId() const { TODO(); }
 
-  int64_t NewNodeId() const;
-  int64_t NewEdgeId() const;
-  int64_t NewRegstDescId() const;
+  int64_t NewNodeId() const { TODO(); }
+  int64_t NewEdgeId() const { TODO(); }
+  int64_t NewRegstDescId() const { TODO(); }
 
  private:
   IDMgr() = default;
