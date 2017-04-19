@@ -19,6 +19,8 @@ class IDMgr final {
   void Init(const Resource& resource) {
     TODO();
   }
+  
+  int64_t MachineName2MachineID(const std::string& machine) const { TODO(); }
 
   int64_t ThrdLocId4DevicePhyId(int64_t) const { TODO(); }
   int64_t DiskThrdLocId() const { TODO(); }
