@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <memory>
 #include "network/rdma/message_pool.h"
-//#include "network/rdma/registered_network_message.h" // move message to system/message.h
 #include "network/rdma/switch.h"
 
 
