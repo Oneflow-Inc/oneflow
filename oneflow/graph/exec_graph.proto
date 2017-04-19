@@ -1,0 +1,13 @@
+syntax = "proto3";
+package oneflow;
+
+message ExecNodeProto {
+  int64 id = 1;
+  string op_name = 2;
+  map<string, int64> bn_in_op2regst_desc_id = 3;
+  repeated int64 predecessor_ids = 4;
+}
+
+message ExecGraphProto {
+  repeated ExecNodeProto exec_nodes = 1;
+}

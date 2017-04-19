@@ -1,0 +1,13 @@
+syntax = "proto3";
+package oneflow;
+
+import "operator/operator.proto";
+import "graph/register_desc.proto";
+import "task/task.proto";
+
+message OfElf {
+  repeated TaskProto tasks = 1;
+  repeated RegstDescProto regst_descs = 2;
+  int64 regst_num = 3;
+  repeated OperatorProto operators = 4;
+}
