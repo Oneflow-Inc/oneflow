@@ -8,25 +8,22 @@
 
 namespace oneflow {
 
-// move struct connection to system/common.h
-
 class ConnectionPool {
 public:
-    ConnectionPool();
-    ~ConnectionPool();
+    ConnectionPool() = default;
+    ~ConnectionPool() = default;
 
     void AddConnection(int32_t peer_rank, Connection* conn);
     void CleanConnection(int32_t peer_rank);
     Connection* GetConnection(int32_t peer_rank) const;
 
 private:
-    // Mapping peer_rank to connections
+    int32_t connNum_;
     std::unordered_map<int32_t, Connection*> connection_dict_;
     ConnectionPool(const ConnectionPool& other) = delete;
     Connection& operator=(const ConnectionPool& other) = delete;
 };
 
 } // namespace oneflow
-
 
 #endif // ONEFLOW_NETWORK_RDMA_CONNECTION_POOL_H_
