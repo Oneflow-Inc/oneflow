@@ -6,8 +6,7 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
   device_type_ = JobDesc::Singleton().resource().device_type();
   
   // add a machine id to set, and add a device id to the map[machine_id]' vector
-  for (int64_t i = 0; i < user_conf.devices_size(); i ++)
-  {
+  for (int64_t i = 0; i < user_conf.devices_size(); i ++){
     std::string device_name = user_conf.devices(i);
     int64_t delimiter_pos = device_name.find(":");
     CHECK(delimiter_pos != std::string::npos);
@@ -23,9 +22,7 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
     uint64_t device_id = 0;
     try {
       device_id = std::stoll(device_id_str);
-    }
-    catch (std::exception& e)
-    {
+    } catch (std::exception& e){
       LOG(FATAL) << "error input:" << device_name << " (device id is not a integer or 'disk')";
     }
     machine_id2sorted_device_phy_ids_[machine_id].push_back(device_id);	
@@ -34,8 +31,7 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
   // Duplicate  and sort the container by ascending order
   std::sort(sorted_machine_ids_.begin(), sorted_machine_ids_.end());
   sorted_machine_ids_.erase(std::unique(sorted_machine_ids_.begin(), sorted_machine_ids_.end()), sorted_machine_ids_.end());
-  for (auto it = machine_id2sorted_device_phy_ids_.begin(); it != machine_id2sorted_device_phy_ids_.end(); ++it)
-  {
+  for (auto it = machine_id2sorted_device_phy_ids_.begin(); it != machine_id2sorted_device_phy_ids_.end(); ++it){
     int64_t device_ids_size_before_duplicate = it->second.size();
     std::sort( it->second.begin(),it->second.end() );
     it->second.erase(std::unique(it->second.begin(),it->second.end()),it->second.end());
