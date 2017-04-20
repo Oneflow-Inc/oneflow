@@ -15,31 +15,31 @@ std::shared_ptr<Operator> OperatorFactory::ConstructOp(
     const OperatorConf& op_conf) const {
   std::shared_ptr<Operator> ret;
   switch (op_conf.specified_type_case()) {
-    case OperatorConf::kConvolutionOpConf: {
+    case OperatorConf::kConvolutionConf: {
       ret.reset(new ConvolutionOp);
       break;
     }
-    case OperatorConf::kInnerProductOpConf: {
+    case OperatorConf::kInnerProductConf: {
       ret.reset(new InnerProductOp);
       break;
     }
-    case OperatorConf::kDataLoaderOpConf: {
+    case OperatorConf::kDataLoaderConf: {
       ret.reset(new DataLoaderOp);
       break;
     }
-    case OperatorConf::kPoolingOpConf: {
+    case OperatorConf::kPoolingConf: {
       ret.reset(new PoolingOp);
       break;
     }
-    case OperatorConf::kReluOpConf: {
+    case OperatorConf::kReluConf: {
       ret.reset(new ReluOp);
       break;
     }
-    case OperatorConf::kSoftmaxOpConf: {
+    case OperatorConf::kSoftmaxConf: {
       ret.reset(new SoftmaxOp);
       break;
     }
-    case OperatorConf::kMultinomialLogisticLossOpConf: {
+    case OperatorConf::kMultinomialLogisticLossConf: {
       ret.reset(new MultinomialLogisticLossOp);
       break;
     }

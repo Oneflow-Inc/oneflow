@@ -9,12 +9,12 @@ void SetModelLoadChain(ChainNode* model_load_chain) {
   // model load op
   OperatorConf op_conf;
   op_conf.set_name("");
-  op_conf.mutable_model_load_op_conf();
+  op_conf.mutable_model_load_conf();
   model_load_chain->mut_op_vec() = {ConstructOpFromPbConf(op_conf)};
   // model load parallel_conf
   ParallelConf pr_conf;
   pr_conf.set_policy(kDataParallel);
-  pr_conf.add_devices(JobDesc::Singleton().MdLoadMachine() + "/disk");
+  pr_conf.add_devices(JobDesc::Singleton().md_load_machine() + "/disk");
   model_load_chain->mut_parallel_desc().reset(new ParallelDesc(pr_conf));
   // output
   model_load_chain->mut_output_lbns() = {RegstDesc::kAllLbn};

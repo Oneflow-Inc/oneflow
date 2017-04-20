@@ -6,8 +6,8 @@ namespace oneflow {
 void PoolingOp::Init(const OperatorConf& op_conf) {
   mut_op_name() = op_conf.name();
   
-  CHECK(op_conf.has_pooling_op_conf());
-  auto cnf = new PoolingOpConf(op_conf.pooling_op_conf());
+  CHECK(op_conf.has_pooling_conf());
+  auto cnf = new PoolingOpConf(op_conf.pooling_conf());
   mut_pb_op_conf().reset(cnf);
 
   EnrollInputBn("in");
