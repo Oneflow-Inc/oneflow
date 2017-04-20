@@ -14,10 +14,10 @@ class StageNode final : public Node<StageNode, StageEdge> {
   StageNode() = default;
   ~StageNode() = default;
 
-  const int64_t& machine_id() const {
+  const uint64_t& machine_id() const {
     return machine_id_;
   }
-  int64_t& mut_machine_id() {
+  uint64_t& mut_machine_id() {
     return machine_id_;
   }
 
@@ -35,13 +35,13 @@ class StageNode final : public Node<StageNode, StageEdge> {
     return parallel_range_;
   }
 
-  const std::vector<int64_t>& SortedDevicePhyIds() const {
+  const std::vector<uint64_t>& SortedDevicePhyIds() const {
     return chain_node_->parallel_desc()->sorted_device_phy_ids(machine_id_);
   }
 
  private:
   const ChainNode* chain_node_;
-  int64_t machine_id_;
+  uint64_t machine_id_;
   Range parallel_range_;
 
 };

@@ -3,6 +3,7 @@
 
 #include "common/util.h"
 #include "job/resource.pb.h"
+#include "job/id_manager.pb.h"
 
 namespace oneflow {
 
@@ -16,20 +17,30 @@ class IDMgr final {
     return obj;
   }
 
-  void Init(const Resource& resource) {
+  void InitFromResource(const Resource&) {
     TODO();
   }
   
   uint64_t MachineID4MachineName(const std::string& machine) const { TODO(); }
 
-  int64_t ThrdLocId4DevicePhyId(int64_t) const { TODO(); }
-  int64_t DiskThrdLocId() const { TODO(); }
-  int64_t BoxingThrdLocId() const { TODO(); }
-  int64_t CommNetThrdLocId() const { TODO(); }
+  void InitFromProto(const IDMgrProto&) {
+    TODO();
+  }
 
-  int64_t NewNodeId() const;
-  int64_t NewEdgeId() const;
-  int64_t NewRegstDescId() const;
+  IDMgrProto ToProto() {
+    TODO();
+  }
+
+  // Compile
+  uint64_t ThrdLocId4DevicePhyId(uint64_t) const { TODO(); }
+  uint64_t DiskThrdLocId() const { TODO(); }
+  uint64_t BoxingThrdLocId() const { TODO(); }
+  uint64_t CommNetThrdLocId() const { TODO(); }
+
+  uint64_t NewTaskId(uint64_t machine_id, uint64_t thrd_local_id) const { TODO(); }
+  uint64_t NewRegstDescId(uint64_t producer_task_id) const { TODO(); }
+
+  // Runtime
 
  private:
   IDMgr() = default;

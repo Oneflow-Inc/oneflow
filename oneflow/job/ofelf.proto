@@ -2,11 +2,15 @@ syntax = "proto3";
 package oneflow;
 
 import "operator/operator.proto";
-import "graph/register_desc.proto";
+import "register/register_desc.proto";
 import "task/task.proto";
+import "job/id_manager.proto";
+import "job/job_desc.proto";
 
 message OfElf {
   repeated TaskProto tasks = 1;
   repeated RegstDescProto regst_descs = 2;
-  repeated OperatorProto operators = 4;
+  repeated OperatorProto operators = 3;
+  IDMgrProto id_mgr = 4;
+  JobDescProto job_desc = 5;
 }

@@ -10,8 +10,8 @@ StageGraph::StageGraph(std::unique_ptr<const ChainGraph>&& chain_gph) {
   for (const std::unique_ptr<ChainNode>& cur_chain : chain_gph_->nodes()) {
     chain2stages[cur_chain.get()] = {};
     auto parallel_desc = cur_chain->parallel_desc();
-    int64_t range_idx = 0;
-    for (int64_t machine_id : parallel_desc->sorted_machine_ids()) {
+    uint64_t range_idx = 0;
+    for (uint64_t machine_id : parallel_desc->sorted_machine_ids()) {
       StageNode* stage_node = NewFinalNode();
       stage_node->mut_machine_id() = machine_id;
       stage_node->set_chain_node(cur_chain.get());

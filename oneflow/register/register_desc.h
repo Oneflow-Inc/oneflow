@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_GRAPH_REGISTER_DESC_H_
-#define ONEFLOW_GRAPH_REGISTER_DESC_H_
+#ifndef ONEFLOW_REGISTER_REGISTER_DESC_H_
+#define ONEFLOW_REGISTER_REGISTER_DESC_H_
 
 #include "common/util.h"
 #include "common/shape.h"
@@ -17,6 +17,9 @@ class RegstDesc {
   RegstDesc();
   virtual ~RegstDesc() = default;
 
+  // regst_desc_id
+  uint64_t regst_desc_id() const { return regst_desc_id_; }
+  void set_regst_desc_id(uint64_t val) { regst_desc_id_ = val; }
   // Producer
   const TaskNode* GetProducer() const { return producer_; }
   void SetProducer(const TaskNode* task_node) { producer_ = task_node; }
@@ -30,7 +33,7 @@ class RegstDesc {
   static const char* kAllLbn;
 
  private:
-  int64_t regst_desc_id_;
+  uint64_t regst_desc_id_;
   const TaskNode* producer_;
   
   HashMap<std::string, std::unique_ptr<Shape>> lbn2shape_;
@@ -58,4 +61,4 @@ class DisContigRegstDesc final : public RegstDesc {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_GRAPH_REGISTER_DESC_H_
+#endif // ONEFLOW_REGISTER_REGISTER_DESC_H_

@@ -73,9 +73,9 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
     TaskNodesInStage* task_nodes_in_stage,
     bool is_first_stage,
     bool is_last_stage) {
-  int64_t parallel_idx = stage->parallel_range().begin();
+  uint64_t parallel_idx = stage->parallel_range().begin();
   for (auto device_phy_id : stage->SortedDevicePhyIds()) {
-    int64_t thread_local_id =
+    uint64_t thread_local_id =
         IDMgr::Singleton().ThrdLocId4DevicePhyId(device_phy_id);
     // comp_task_node
     DeviceCompTaskNode* comp_task_node = NewTaskNode<DeviceCompTaskNode> ();
@@ -83,6 +83,7 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
     comp_task_node->mut_thrd_loc_id() = thread_local_id;
     comp_task_node->SetFwNode();
     comp_task_node->set_parallel_id(parallel_idx++);
+    comp_task_node->set_task_id();
     // comp_in_task_node
     if (!is_first_stage) {
       CopyHDTaskNode* comp_in_task_node = NewTaskNode<CopyHDTaskNode> ();
@@ -90,6 +91,7 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
       comp_in_task_node->mut_thrd_loc_id() = thread_local_id;
       comp_in_task_node->SetFwNode();
       comp_in_task_node->SetFwInCopy();
+      comp_in_task_node->set_task_id();
       TaskConnect(comp_in_task_node, NewFinalEdge(), comp_task_node);
       task_nodes_in_stage->comp_in_task_nodes.push_back(comp_in_task_node);
     } else {
@@ -102,6 +104,7 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
       comp_out_task_node->mut_thrd_loc_id() = thread_local_id;
       comp_out_task_node->SetFwNode();
       comp_out_task_node->SetFwOutCopy();
+      comp_out_task_node->set_task_id();
       TaskConnect(comp_task_node, NewFinalEdge(), comp_out_task_node);
       task_nodes_in_stage->comp_out_task_nodes.push_back(comp_out_task_node);
     } else {
@@ -113,14 +116,15 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
 
 void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
                                         TaskNodesInStage* task_nodes_in_stage) {
-  int64_t parallel_begin = stage->parallel_range().begin();
-  int64_t parallel_end = stage->parallel_range().end();
-  int64_t parallel_idx = parallel_begin;
+  uint64_t parallel_begin = stage->parallel_range().begin();
+  uint64_t parallel_end = stage->parallel_range().end();
+  uint64_t parallel_idx = parallel_begin;
   while (parallel_idx < parallel_end) {
     HostCompTaskNode* comp_task_node = NewTaskNode<HostCompTaskNode> ();
     comp_task_node->set_stage_node(stage);
     comp_task_node->SetFwNode();
     comp_task_node->set_parallel_id(parallel_idx++);
+    comp_task_node->set_task_id();
     // Set comp_task_node::thread_local_id
     if (stage->SortedDevicePhyIds().empty()) {
       comp_task_node->mut_thrd_loc_id() = IDMgr::Singleton().DiskThrdLocId();
@@ -153,6 +157,7 @@ void TaskGraph::InitInboxingTaskNode(const StageNode* stage,
   boxing_task->set_stage_node(stage);
   boxing_task->mut_thrd_loc_id() = IDMgr::Singleton().BoxingThrdLocId();
   boxing_task->SetFwNode();
+  boxing_task->set_task_id();
   for (TaskNode* comp_in_task : task_nodes_in_stage->comp_in_task_nodes) {
     TaskConnect(boxing_task, NewFinalEdge(), comp_in_task);
   }
@@ -171,6 +176,7 @@ void TaskGraph::InitOutBoxingTaskNode(
   boxing_task->set_stage_node(stage);
   boxing_task->mut_thrd_loc_id() = IDMgr::Singleton().BoxingThrdLocId();
   boxing_task->SetFwNode();
+  boxing_task->set_task_id();
   for (TaskNode* comp_out_task : task_nodes_in_stage->comp_out_task_nodes) {
     TaskConnect(comp_out_task, NewFinalEdge(), boxing_task);
   }
@@ -204,12 +210,14 @@ void TaskGraph::ConnectTaskNodes(
       out_comm_net_node->mut_thrd_loc_id() =
           IDMgr::Singleton().CommNetThrdLocId();
       out_comm_net_node->SetFwSender();
+      out_comm_net_node->set_task_id();
       CommNetTaskNode* in_comm_net_node = NewTaskNode<CommNetTaskNode> ();
       in_comm_net_node->SetFwNode();
       in_comm_net_node->set_stage_node(succ_stage);
       in_comm_net_node->mut_thrd_loc_id() =
           IDMgr::Singleton().CommNetThrdLocId();
       in_comm_net_node->SetFwReceiver();
+      in_comm_net_node->set_task_id();
       TaskConnect(out_node, NewFinalEdge(), out_comm_net_node);
       TaskConnect(out_comm_net_node, NewFinalEdge(), in_comm_net_node);
       TaskConnect(in_comm_net_node, NewFinalEdge(), in_node);
