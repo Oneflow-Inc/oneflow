@@ -1,0 +1,5 @@
+train_dlnet_conf_filepath: "/home/willzhang/oneflow/prototxt/google_net.prototxt"
+resource_filepath: "/home/willzhang/oneflow/prototxt/resource.prototxt"
+strategy_filepath: "/home/willzhang/oneflow/prototxt/strategy.prototxt"
+model_load_machine: "centos-0"
+model_save_machine: "centos-0"

@@ -1,0 +1,33 @@
+machine {
+  addr: ""
+  port: ""
+  name: "centos-0"
+}
+
+machine {
+  addr: ""
+  port: ""
+  name: "centos-1"
+}
+
+machine {
+  addr: ""
+  port: ""
+  name: "centos-2"
+}
+
+machine {
+  addr: ""
+  port: ""
+  name: "centos-3"
+}
+
+machine {
+  addr: ""
+  port: ""
+  name: "centos-4"
+}
+
+device_num_per_machine: 4
+
+device_type: kGPU
