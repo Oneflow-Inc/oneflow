@@ -6,6 +6,7 @@
 #include "common/shape.h"
 #include "common/proto_io.h"
 #include "common/util.h"
+#include "operator/operator.pb.h"
 
 namespace oneflow {
 
@@ -22,6 +23,46 @@ class Operator {
   virtual void Init(const OperatorConf& op_conf) = 0;
   virtual bool IsElemWise() const { return false; }
   virtual bool IsLossOp() const { return false; }
+  //
+  inline void TransToVec(std::vector<std::string>& vec, const google::protobuf::RepeatedPtrField<std::string>& rpf) {
+    vec.clear();
+    int size = rpf.size();
+    for (int i=0; i < size; ++i) {
+      vec.push_back(rpf.Get(i));
+    }
+  }
+  inline void TransToMap(std::unordered_map<std::string, std::string>& map, const google::protobuf::Map<std::string, std::string>& gmap) {
+    map.clear();
+    for (auto mp: gmap){
+      map.insert(std::make_pair(mp.first, mp.second));
+    }
+  }
+  //
+  virtual void OperatorFromOperatorProto(const OperatorProto& operatorproto) {
+    op_name_ = operatorproto.name();
+    TODO();//pb_op_conf_
+    TransToMap(special_ibn2lbn_, operatorproto.special_ibn2lbn());
+    
+    //repeated string data_tmp_bns = 4
+    TransToVec(data_tmp_bns_, operatorproto.data_tmp_bns());
+    //repeated string input_bns = 5
+    TransToVec(input_bns_, operatorproto.input_bns());
+    //repeated string input_diff_bns = 6;
+    TransToVec(input_diff_bns_, operatorproto.input_diff_bns());
+    //repeated string output_bns = 7
+    TransToVec(output_bns_, operatorproto.output_bns());
+    //repeated string output_diff_bns = 8
+    TransToVec(output_diff_bns_, operatorproto.output_diff_bns());
+    //repeated string model_bns = 9
+    TransToVec(model_bns_, operatorproto.model_bns());
+    //repeated string model_diff_bns = 10
+    TransToVec(model_diff_bns_, operatorproto.model_diff_bns());
+    //repeated string model_tmp_bns = 11
+    TransToVec(model_tmp_bns_, operatorproto.model_tmp_bns());
+  }
+  virtual OperatorProto ToOperatorProto() {
+    TODO();
+  }
 
   // bn_in_op2lbn
   std::string dtbn2lbn(const std::string& data_tmp_bn) const;
