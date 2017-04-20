@@ -9,7 +9,7 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
   for (int64_t i = 0; i < user_conf.devices_size(); i ++){
     std::string device_name = user_conf.devices(i);
     int64_t delimiter_pos = device_name.find(":");
-    CHECK(delimiter_pos != std::string::npos);
+    CHECK_NE(delimiter_pos,std::string::npos);
 
     std::string machine_name = device_name.substr(0, delimiter_pos);
     std::string device_id_str = device_name.substr(delimiter_pos,std::string::npos);
@@ -35,7 +35,7 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
     int64_t device_ids_size_before_duplicate = it->second.size();
     std::sort( it->second.begin(),it->second.end() );
     it->second.erase(std::unique(it->second.begin(),it->second.end()),it->second.end());
-    CHECK(device_ids_size_before_duplicate == it->second.size());
+    CHECK_EQ(device_ids_size_before_duplicate,it->second.size());
   }
 }
 
