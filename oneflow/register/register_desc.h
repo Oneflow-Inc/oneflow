@@ -17,6 +17,9 @@ class RegstDesc {
   RegstDesc();
   virtual ~RegstDesc() = default;
 
+  // regst_desc_id
+  uint64_t regst_desc_id() const { return regst_desc_id_; }
+  void set_regst_desc_id(uint64_t val) { regst_desc_id_ = val; }
   // Producer
   const TaskNode* GetProducer() const { return producer_; }
   void SetProducer(const TaskNode* task_node) { producer_ = task_node; }

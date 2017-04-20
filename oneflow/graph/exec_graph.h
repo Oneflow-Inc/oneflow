@@ -3,7 +3,7 @@
 
 #include "operator/operator.h"
 #include "graph/graph.h"
-#include "graph/register_desc.h"
+#include "register/register_desc.h"
 
 namespace oneflow {
 
