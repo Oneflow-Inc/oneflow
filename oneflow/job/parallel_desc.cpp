@@ -9,10 +9,10 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
   for (int64_t i = 0; i < user_conf.devices_size(); i ++){
     std::string device_name = user_conf.devices(i);
     int64_t delimiter_pos = device_name.find(":");
-    CHECK_NE(delimiter_pos,std::string::npos);
+    CHECK_NE(delimiter_pos, std::string::npos);
 
     std::string machine_name = device_name.substr(0, delimiter_pos);
-    std::string device_id_str = device_name.substr(delimiter_pos,std::string::npos);
+    std::string device_id_str = device_name.substr(delimiter_pos, std::string::npos);
     uint64_t machine_id = IDMgr::Singleton().MachineID4MachineName(machine_name);
     sorted_machine_ids_.push_back(machine_id);
 
@@ -33,9 +33,9 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
   sorted_machine_ids_.erase(std::unique(sorted_machine_ids_.begin(), sorted_machine_ids_.end()), sorted_machine_ids_.end());
   for (auto it = machine_id2sorted_device_phy_ids_.begin(); it != machine_id2sorted_device_phy_ids_.end(); ++it){
     int64_t device_ids_size_before_duplicate = it->second.size();
-    std::sort( it->second.begin(),it->second.end() );
-    it->second.erase(std::unique(it->second.begin(),it->second.end()),it->second.end());
-    CHECK_EQ(device_ids_size_before_duplicate,it->second.size());
+    std::sort(it->second.begin(), it->second.end());
+    it->second.erase(std::unique(it->second.begin(), it->second.end()), it->second.end());
+    CHECK_EQ(device_ids_size_before_duplicate, it->second.size());
   }
 }
 
