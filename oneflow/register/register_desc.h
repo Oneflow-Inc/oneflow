@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_GRAPH_REGISTER_DESC_H_
-#define ONEFLOW_GRAPH_REGISTER_DESC_H_
+#ifndef ONEFLOW_REGISTER_REGISTER_DESC_H_
+#define ONEFLOW_REGISTER_REGISTER_DESC_H_
 
 #include "common/util.h"
 #include "common/shape.h"
@@ -61,4 +61,4 @@ class DisContigRegstDesc final : public RegstDesc {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_GRAPH_REGISTER_DESC_H_
+#endif // ONEFLOW_REGISTER_REGISTER_DESC_H_
