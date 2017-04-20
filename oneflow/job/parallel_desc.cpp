@@ -6,8 +6,8 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
   device_type_ = JobDesc::Singleton().resource().device_type();
   
   // add a machine id to set, and add a device id to the map[machine_id]' vector
-  for (int64_t i = 0; i < user_conf.devices_size(); i ++){
-    std::string device_name = user_conf.devices(i);
+  for (int64_t i = 0; i < user_conf.devices_size(); ++i){
+    const std::string& device_name = user_conf.devices(i);
     int64_t delimiter_pos = device_name.find(":");
     CHECK_NE(delimiter_pos, std::string::npos);
 
