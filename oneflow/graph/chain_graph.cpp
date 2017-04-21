@@ -271,58 +271,61 @@ ChainGraph::ChainGraph(const LogicalGraph* logical_gph) {
 void ChainGraph::SetInOutLbn4AllChainNodeInDataTaskGraph() {
 
   // get all input_lbns_ of every chain node
-  for (auto&& node : (*this)) {
-    ChainNode& cur_node = node;
+  for (ChainNode& cur_node : (*this)) {
 
     // get all ops_output_lbns in one chain node
     std::unordered_set<std::string> ops_output_lbns;
-    for (auto&& op : cur_node.op_vec()) {
-      for (auto&& bn : op->output_bns()){
+    for (auto& op : cur_node.op_vec()) {
+      for (const std::string& bn : op->output_bns()){
         ops_output_lbns.insert(op->obn2lbn(bn));
       }
     }
 
-    // for each op_input_lbn, if not exist in the ops_output_lbns, then the op_input_lbn is the input_lbn of the chain node
+    // for each op_input_lbn, 
+    //   if not exist in the ops_output_lbns
+    //   then the op_input_lbn is the input_lbn of the chain node
     std::unordered_set<std::string> chain_node_input_lbns;
-    for (auto&& op : cur_node.op_vec()) {
-      for (auto&& bn : op->input_bns()) {
+    for (auto& op : cur_node.op_vec()) {
+      for (const std::string& bn : op->input_bns()) {
         std::string op_input_lbn = op->ibn2lbn(bn);
         if (ops_output_lbns.count(op_input_lbn) == 0) {
           chain_node_input_lbns.insert(op_input_lbn);
         }
       }
     }
-    std::copy(chain_node_input_lbns.begin(), chain_node_input_lbns.end(), std::back_inserter(cur_node.mut_input_lbns()));
+    std::copy(chain_node_input_lbns.begin(), 
+              chain_node_input_lbns.end(), 
+              std::back_inserter(cur_node.mut_input_lbns()));
   }
 
   // get all output_lbns_ of every chain node
-  // the output_lbns_ of one chain node is the sum input_lbns_ of it's child node
-  for (auto&& node : (*this)) {
-    ChainNode& cur_node = node;
+  // the output_lbns_ of one chain node is the sum input_lbns of it's child node
+  for (ChainNode& cur_node : (*this)) {  
     std::unordered_set<std::string> chain_node_output_lbns;
-    for (auto&& out_edge : cur_node.out_edges()) {
+    for (ChainEdge* out_edge : cur_node.out_edges()) {
       ChainNode* child_node = (out_edge)->dst_node();
-      for (auto&& bn : child_node->input_lbns()) {
-        chain_node_output_lbns.insert(bn);
-      }
+      chain_node_output_lbns.insert(child_node->input_lbns().begin(), 
+                                    child_node->input_lbns().end());
     }
-    std::copy(chain_node_output_lbns.begin(), chain_node_output_lbns.end(), std::back_inserter(cur_node.mut_output_lbns()));
+    std::copy(chain_node_output_lbns.begin(), 
+              chain_node_output_lbns.end(), 
+              std::back_inserter(cur_node.mut_output_lbns()));
   }
 }
 
-std::vector<std::string> FindLbnsBetween(const ChainNode* father_node, const ChainNode* child_node) {
-  int64_t matching_lbns_num = 0;
+std::vector<std::string> FindLbnsBetween(const ChainNode* father_node, 
+                                         const ChainNode* child_node) {
   std::vector<std::string> matching_lbns;
-  for (auto&& father_node_output_lbn : father_node->output_lbns()) {
-    for (auto&& child_node_input_lbn : child_node->input_lbns()) { 
-      if (father_node_output_lbn == child_node_input_lbn) {
-        matching_lbns_num++;
-        matching_lbns.push_back(father_node_output_lbn);
-        break;
-      }
+  for (const std::string& father_node_output_lbn : father_node->output_lbns()) {
+    for (const std::string& child_node_input_lbn : child_node->input_lbns()) { 
+      if (father_node_output_lbn != child_node_input_lbn) {
+        continue;
+      }        
+      matching_lbns.push_back(father_node_output_lbn);
+      break;
     }
   }
-  CHECK_NE(matching_lbns_num, 0);
+  CHECK_NE(matching_lbns.size(), 0);
   return matching_lbns;
 }
 
