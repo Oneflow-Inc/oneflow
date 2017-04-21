@@ -30,7 +30,7 @@ MdSaveTaskGraph::MdSaveTaskGraph(
 }
 
 void MdSaveTaskGraph::BuildTaskGraph(const ChainNode* update_chain) {
-  auto chain_gph = make_unique<ChainGraph> ();
+  auto chain_gph = of_make_unique<ChainGraph> ();
   // faker
   ChainNode* faker_chain = chain_gph->NewFinalNode();
   faker_chain->mut_parallel_desc() = update_chain->parallel_desc();
