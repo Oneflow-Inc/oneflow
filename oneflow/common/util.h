@@ -3,6 +3,7 @@
 
 #include <unordered_set>
 #include <unordered_map>
+#include <algorithm>
 #include "glog/logging.h"
 #include "google/protobuf/message.h"
 #include "google/protobuf/descriptor.h"
@@ -50,6 +51,23 @@ using HashMap = std::unordered_map<Key, T, Hash>;
 template<typename T, typename... Args>
 std::unique_ptr<T> make_unique(Args&&... args) {
   return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
+
+template<typename T>
+void SortAndRemoveDuplication(std::vector<T>* vec) {
+  std::sort(vec->begin(), vec->end());
+  auto unique_it = std::unique(vec->begin(), vec->end());
+  vec->erase(unique_it, vec->end());
+}
+
+inline unsigned long long StoullOrDie(const std::string& s) {
+  unsigned long long ret = 0;
+  try {
+    ret = std::stoull(s);
+  } catch (std::exception& e){
+    LOG(FATAL) << "Error: " << s;
+  }
+  return ret;
 }
 
 } // namespace oneflow

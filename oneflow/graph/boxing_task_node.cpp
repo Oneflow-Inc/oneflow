@@ -120,7 +120,7 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
     // Construct Op
     OperatorConf op_conf;
     op_conf.set_name("TODO");
-    BoxingOpConf* box_conf = op_conf.mutable_boxing_op_conf();
+    BoxingOpConf* box_conf = op_conf.mutable_boxing_conf();
     box_conf->set_lbn(lbn);
     box_conf->set_in_num(sorted_in_edges.size());
     box_conf->set_out_num(sorted_out_edges.size());

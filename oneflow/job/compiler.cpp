@@ -1,16 +1,23 @@
 #include "gflags/gflags.h"
+#include "glog/logging.h"
 #include "job/id_manager.h"
 #include "graph/task_graph_manager.h"
 #include "job/job_conf.pb.h"
 
-DEFINE_string(job_user_conf_filepath, "", "");
+using oneflow::JobConf;
+using oneflow::JobDesc;
+using oneflow::IDMgr;
+using oneflow::TaskGraphMgr;
+
+DEFINE_string(job_conf_filepath, "", "");
 
 int main(int argc, char** argv) {
-  gflags::ParseCommandLineFlags(&argc, &argv, true);
-  oneflow::JobUserConf job_user_conf;
-  ParseProtoFromTextFile(FLAGS_job_user_conf_filepath, &job_user_conf);
-  oneflow::JobDesc::Singleton().InitFromJobUserConf(job_user_conf);
-  oneflow::IDMgr::Singleton().InitFromResource(oneflow::JobDesc::Singleton().resource());
-  oneflow::TaskGraphMgr::Singleton().Init();
+  google::InitGoogleLogging(argv[0]);
+  google::ParseCommandLineFlags(&argc, &argv, true);
+  JobConf job_conf;
+  ParseProtoFromTextFile(FLAGS_job_conf_filepath, &job_conf);
+  JobDesc::Singleton().InitFromJobConf(job_conf);
+  IDMgr::Singleton().InitFromResource(JobDesc::Singleton().resource());
+  TaskGraphMgr::Singleton().Init();
   return 0;
 }
