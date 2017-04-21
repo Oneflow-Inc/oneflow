@@ -271,25 +271,22 @@ ChainGraph::ChainGraph(const LogicalGraph* logical_gph) {
 void ChainGraph::SetInOutLbn4AllChainNodeInDataTaskGraph() {
 
   // get all input_lbns_ of every chain node
-  for (Iterator node_it = begin(); node_it != end(); ++node_it) {
-    ChainNode& cur_node = *node_it;
+  for (auto&& node : (*this)) {
+    ChainNode& cur_node = node;
 
     // get all ops_output_lbns in one chain node
     std::unordered_set<std::string> ops_output_lbns;
-    const std::vector<std::shared_ptr<const Operator>>& op_vec = cur_node.op_vec();
-    for (auto op_it = op_vec.begin(); op_it != op_vec.end() ; ++op_it) {
-      std::vector<std::string>& op_output_bns = (*op_it)->output_bns;
-      for (auto bn_it = op_output_bns.begin(); bn_it != op_output_bns.end(); ++bn_it) {
-        ops_output_lbns.insert((*op_it)->obn2lbn(*bn_it));
+    for (auto&& op : cur_node.op_vec()) {
+      for (auto&& bn : op->output_bns()){
+        ops_output_lbns.insert(op->obn2lbn(bn));
       }
     }
 
     // for each op_input_lbn, if not exist in the ops_output_lbns, then the op_input_lbn is the input_lbn of the chain node
     std::unordered_set<std::string> chain_node_input_lbns;
-    for (auto op_it = op_vec.begin(); op_it != op_vec.end(); ++op_it) {
-      std::vector<std::string> op_input_bns = (*op_it)->input_bns;
-      for (auto bn_it = op_input_bns.begin(); bn_it != op_input_bns.end(); ++bn_it) {
-        std::string op_input_lbn = (*op_it)->ibn2lbn(*bn_it);
+    for (auto&& op : cur_node.op_vec()) {
+      for (auto&& bn : op->input_bns()) {
+        std::string op_input_lbn = op->ibn2lbn(bn);
         if (ops_output_lbns.count(op_input_lbn) == 0) {
           chain_node_input_lbns.insert(op_input_lbn);
         }
@@ -300,15 +297,13 @@ void ChainGraph::SetInOutLbn4AllChainNodeInDataTaskGraph() {
 
   // get all output_lbns_ of every chain node
   // the output_lbns_ of one chain node is the sum input_lbns_ of it's child node
-  for (Iterator node_it = begin(); node_it != end(); ++node_it) {
-    ChainNode& cur_node = *node_it;
-    
+  for (auto&& node : (*this)) {
+    ChainNode& cur_node = node;
     std::unordered_set<std::string> chain_node_output_lbns;
-    for (auto out_edge_it = cur_node.out_edges().begin(); out_edge_it != cur_node.out_edges().end(); ++out_edge_it) {
-      ChainNode* child_node = (*out_edge_it)->dst_node();
-
-      for (auto bn_it = child_node->input_lbns().begin(); bn_it < child_node->input_lbns().end(); ++bn_it) {
-        chain_node_output_lbns.insert(*bn_it);
+    for (auto&& out_edge : cur_node.out_edges()) {
+      ChainNode* child_node = (out_edge)->dst_node();
+      for (auto&& bn : child_node->input_lbns()) {
+        chain_node_output_lbns.insert(bn);
       }
     }
     std::copy(chain_node_output_lbns.begin(), chain_node_output_lbns.end(), std::back_inserter(cur_node.mut_output_lbns()));
@@ -318,11 +313,11 @@ void ChainGraph::SetInOutLbn4AllChainNodeInDataTaskGraph() {
 std::vector<std::string> FindLbnsBetween(const ChainNode* father_node, const ChainNode* child_node) {
   int64_t matching_lbns_num = 0;
   std::vector<std::string> matching_lbns;
-  for (auto father_node_it = father_node->output_lbns().begin(); father_node_it != father_node->output_lbns().end(); ++father_node_it) {
-    for (auto child_node_it = child_node->output_lbns().begin(); child_node_it != child_node->output_lbns().end(); ++child_node_it) {
-      if (*father_node_it == *child_node_it) {
+  for (auto&& father_node_output_lbn : father_node->output_lbns()) {
+    for (auto&& child_node_input_lbn : child_node->input_lbns()) { 
+      if (father_node_output_lbn == child_node_input_lbn) {
         matching_lbns_num++;
-        matching_lbns.push_back(*father_node_it);
+        matching_lbns.push_back(father_node_output_lbn);
         break;
       }
     }
