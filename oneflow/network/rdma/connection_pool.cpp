@@ -2,10 +2,11 @@
 
 namespace oneflow {
 
-void ConnectionPool::AddConnection(uint64_t peer_machine_id, Connection* conn) {
+void ConnectionPool::AddConnection(uint64_t peer_machine_id, 
+                                   Connection* conn) {
     conn->BuildConnection(peer_machine_id);
     connection_dict_.insert({ peer_machine_id, conn });
-    connNum++;
+    conn_num_++;
 }
 
 void ConnectionPool::CleanConnection(uint64_t peer_machine_id) {
@@ -13,7 +14,7 @@ void ConnectionPool::CleanConnection(uint64_t peer_machine_id) {
     if (conn != nullptr) {
         conn->DestroyConnection();
         delete conn;
-        connNum--;
+        conn_num_--;
     }
 }
 

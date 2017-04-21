@@ -18,7 +18,7 @@ public:
     Connection* GetConnection(uint64_t peer_machine_id) const;
 
 private:
-    int32_t connNum_;
+    int32_t conn_num_;
     std::unordered_map<int32_t, Connection*> connection_dict_;
     ConnectionPool(const ConnectionPool& other) = delete;
     Connection& operator=(const ConnectionPool& other) = delete;
