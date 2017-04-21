@@ -11,7 +11,8 @@ class PoolingOp final : public UserOperator {
   PoolingOp() = default;
   ~PoolingOp() = default;
 
-  void Init(const OperatorConf& op_conf) override;
+  std::string GetValueFromPbOpConf(const std::string& k) const override;
+  void InitFromOpConf(const OperatorConf& op_conf) override;
 
   void InferShape4ObAndDtbFromIb() const override { TODO(); }
   void InferShape4Mtb() const override { TODO(); }

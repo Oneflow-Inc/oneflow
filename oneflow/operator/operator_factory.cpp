@@ -48,7 +48,7 @@ std::shared_ptr<Operator> OperatorFactory::ConstructOp(
       break;
     }
   }
-  ret->Init(op_conf);
+  ret->InitFromOpConf(op_conf);
   return ret;
 }
 

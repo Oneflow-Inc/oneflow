@@ -3,13 +3,9 @@
 
 namespace oneflow {
 
-void MultinomialLogisticLossOp::Init(const OperatorConf& op_conf) {
-  mut_op_name() = op_conf.name();
-  
+void MultinomialLogisticLossOp::InitFromOpConf(const OperatorConf& op_conf) {
   CHECK(op_conf.has_multinomial_logistic_loss_op_conf());
-  auto cnf = new MultinomialLogisticLossOpConf(
-    op_conf.multinomial_logistic_loss_op_conf());
-  mut_pb_op_conf().reset(cnf);
+  mut_op_conf() = op_conf;
 
   EnrollInputBn("data");
   EnrollInputBn("label");
@@ -17,4 +13,7 @@ void MultinomialLogisticLossOp::Init(const OperatorConf& op_conf) {
   EnrollDataTmpBn("loss_buffer");
 }
 
+std::string MultinomialLogisticLossOp::GetValueFromPbOpConf(const std::string& k) const {
+  return GetValueFromPbMessage(op_conf().multinomial_logistic_loss_op_conf(), k);
+}
 } // namespace oneflow

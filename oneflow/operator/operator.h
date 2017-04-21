@@ -19,51 +19,14 @@ class Operator {
   Operator() = default;
   virtual ~Operator() = default;
 
-  // 
-  virtual void Init(const OperatorConf& op_conf) = 0;
+  //
+  virtual void InitFromOpConf(const OperatorConf& op_conf) = 0;
   virtual bool IsElemWise() const { return false; }
   virtual bool IsLossOp() const { return false; }
   //
-  inline void TransToVec(std::vector<std::string>& vec, const google::protobuf::RepeatedPtrField<std::string>& rpf) {
-    vec.clear();
-    int size = rpf.size();
-    for (int i=0; i < size; ++i) {
-      vec.push_back(rpf.Get(i));
-    }
-  }
-  inline void TransToMap(std::unordered_map<std::string, std::string>& map, const google::protobuf::Map<std::string, std::string>& gmap) {
-    map.clear();
-    for (auto mp: gmap){
-      map.insert(std::make_pair(mp.first, mp.second));
-    }
-  }
-  //
-  virtual void OperatorFromOperatorProto(const OperatorProto& operatorproto) {
-    op_name_ = operatorproto.name();
-    TODO();//pb_op_conf_
-    TransToMap(special_ibn2lbn_, operatorproto.special_ibn2lbn());
-    
-    //repeated string data_tmp_bns = 4
-    TransToVec(data_tmp_bns_, operatorproto.data_tmp_bns());
-    //repeated string input_bns = 5
-    TransToVec(input_bns_, operatorproto.input_bns());
-    //repeated string input_diff_bns = 6;
-    TransToVec(input_diff_bns_, operatorproto.input_diff_bns());
-    //repeated string output_bns = 7
-    TransToVec(output_bns_, operatorproto.output_bns());
-    //repeated string output_diff_bns = 8
-    TransToVec(output_diff_bns_, operatorproto.output_diff_bns());
-    //repeated string model_bns = 9
-    TransToVec(model_bns_, operatorproto.model_bns());
-    //repeated string model_diff_bns = 10
-    TransToVec(model_diff_bns_, operatorproto.model_diff_bns());
-    //repeated string model_tmp_bns = 11
-    TransToVec(model_tmp_bns_, operatorproto.model_tmp_bns());
-  }
-  virtual OperatorProto ToOperatorProto() {
-    TODO();
-  }
-
+  virtual void OperatorFromOperatorProto(const OperatorProto& operatorproto);
+  virtual OperatorProto ToOperatorProto();
+  
   // bn_in_op2lbn
   std::string dtbn2lbn(const std::string& data_tmp_bn) const;
   std::string idbn2lbn(const std::string& input_diff_bn) const;
@@ -80,9 +43,10 @@ class Operator {
   }
   
   // Getters
-  const std::string& op_name() const { return op_name_; }
-  std::string GetValueFromPbOpConf(const std::string& k) const;
-
+  virtual const std::string& op_name() const { return op_conf_.OperatorConf::name(); }
+  virtual const OperatorConf& op_conf() const { return op_conf_; }
+  virtual std::string GetValueFromPbOpConf(const std::string& k) const = 0;
+  
   const std::string& SoleIbn() const {
     CHECK_EQ(input_bns_.size(), 1);
     return *(input_bns_.begin());
@@ -117,8 +81,9 @@ class Operator {
   virtual void InferShape4Mdb() const = 0;
 
  protected:
-  std::string& mut_op_name() { return op_name_; }
-  std::unique_ptr<PbMessage>& mut_pb_op_conf() { return pb_op_conf_; }
+  OperatorConf& mut_op_conf() {
+    return op_conf_;
+  }
   virtual std::string normal_ibn2lbn(const std::string& input_bn) const = 0;
   
   // enroll data blobs
@@ -136,10 +101,9 @@ class Operator {
  private:
   void EnrollBn(std::vector<std::string>* bn_vec, const std::string& bn);
 
-  std::string op_name_;
-  std::unique_ptr<PbMessage> pb_op_conf_;
+  OperatorConf op_conf_;
 
-  std::unordered_map<std::string, std::string> special_ibn2lbn_;
+  HashMap<std::string, std::string> special_ibn2lbn_;
 
   // blob name in op
   std::vector<std::string> data_tmp_bns_;

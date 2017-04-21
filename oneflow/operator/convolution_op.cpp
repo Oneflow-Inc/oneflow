@@ -3,12 +3,9 @@
 
 namespace oneflow {
 
-void ConvolutionOp::Init(const OperatorConf& op_conf) {
-  mut_op_name() = op_conf.name();
-  
+void ConvolutionOp::InitFromOpConf(const OperatorConf& op_conf) {
   CHECK(op_conf.has_convolution_op_conf());
-  auto cnf = new ConvolutionOpConf(op_conf.convolution_op_conf());
-  mut_pb_op_conf().reset(cnf);
+  mut_op_conf() = op_conf;
   
   EnrollInputBn("in");
   EnrollOutputBn("out");
@@ -19,4 +16,7 @@ void ConvolutionOp::Init(const OperatorConf& op_conf) {
   EnrollModelTmpBn("bias_multiplier");
 }
 
+std::string ConvolutionOp::GetValueFromPbOpConf(const std::string& k) const {
+  return GetValueFromPbMessage(op_conf().convolution_op_conf(), k);
+}
 } // namespace oneflow
