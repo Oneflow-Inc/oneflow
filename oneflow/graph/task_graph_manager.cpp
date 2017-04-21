@@ -19,16 +19,16 @@ void TaskGraphMgr::Init() {
   }
   for (const auto& data_chain : data_task_gph_->chain_gph()->nodes()) {
     // model update
-    auto md_updt_gph = make_unique<MdUpdtTaskGraph> (
+    auto md_updt_gph = of_make_unique<MdUpdtTaskGraph> (
         data_chain.get(),
         data_chain2sorted_bp_comp_tasks.at(data_chain.get()));
     ChainNode* updt_chain = md_updt_gph->chain_gph()->SoleLastNode();
     auto sorted_updt_tasks = md_updt_gph->SortedTasksInChain(updt_chain);
     // model load save
     auto md_load_gph =
-        make_unique<MdLoadTaskGraph> (updt_chain, sorted_updt_tasks);
+        of_make_unique<MdLoadTaskGraph> (updt_chain, sorted_updt_tasks);
     auto md_save_gph =
-        make_unique<MdSaveTaskGraph> (updt_chain, sorted_updt_tasks);
+        of_make_unique<MdSaveTaskGraph> (updt_chain, sorted_updt_tasks);
   }
 }
 

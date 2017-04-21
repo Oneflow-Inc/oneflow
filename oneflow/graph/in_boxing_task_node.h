@@ -13,7 +13,7 @@ class InBoxingTaskNode final : public BoxingTaskNode {
 
  private:
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    return make_unique<InBoxingTaskNode> ();
+    return of_make_unique<InBoxingTaskNode> ();
   }
   void InitWithFwNode(TaskNode* fw_node) override {
     BoxingTaskNode::InitWithFwNode(fw_node);
