@@ -9,6 +9,9 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(oneflow_src_dir ${PROJECT_SOURCE_DIR}/oneflow)
 set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
 
+# option
+option(download_third_party "Download and build all third party codes" OFF)
+
 # Force to link static cxx runtime library
 if (MSVC)
   foreach(flag_var
@@ -62,7 +65,9 @@ RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
 
 add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(of_protoobj ${oneflow_third_party_libs})
-add_dependencies(of_protoobj ${oneflow_third_party_dependencies})
+if (download_third_party)
+  add_dependencies(of_protoobj ${oneflow_third_party_dependencies})
+endif()
 
 # cc obj lib
 include_directories(${oneflow_src_dir})

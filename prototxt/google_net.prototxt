@@ -1,0 +1,217 @@
+name: "GoogleNet"
+
+op_conf {
+  name: "mnist"
+  data_loader_conf {
+    data: "data"
+    label: "label"
+  }
+}
+
+op_conf {
+  name: "conv1"
+  convolution_conf {
+    in: "mnist/data"
+    out: "out"
+  }
+}
+
+op_conf {
+  name: "pool1"
+  pooling_conf {
+    in: "conv1/out"
+    out: "out"
+  }
+}
+
+op_conf {
+  name: "conv2_1x1"
+  convolution_conf {
+    in: "pool1/out"
+    out: "out"
+  }
+}
+
+op_conf {
+  name: "conv2_1x3"
+  convolution_conf {
+    in: "pool1/out"
+    out: "out"
+  }
+}
+
+op_conf {
+  name: "conv2_1x5"
+  convolution_conf {
+    in: "pool1/out"
+    out: "out"
+  }
+}
+
+op_conf {
+  name: "conv2_3x3"
+  convolution_conf {
+    in: "conv2_1x3/out"
+    out: "out"
+  }
+}
+
+op_conf {
+  name: "conv2_5x5"
+  convolution_conf {
+    in: "conv2_1x5/out"
+    out: "out"
+  }
+}
+
+op_conf {
+  name: "concat2"
+  concat_conf {
+    in: "conv2_1x1/out"
+    in: "conv2_3x3/out"
+    in: "conv2_5x5/out"
+    out: "out"
+    axis: 1
+  }
+}
+
+op_conf {
+  name: "ip1"
+  innerproduct_conf {
+    in: "concat2/out"
+    out: "out"
+  }
+}
+
+op_conf {
+  name: "relu1"
+  relu_conf {
+    in: "ip1/out"
+    out: "out"
+  }
+}
+
+op_conf {
+  name: "ip2"
+  innerproduct_conf {
+    in: "relu1/out"
+    out: "out"
+  }
+}
+
+op_conf {
+  name: "softmax1"
+  softmax_conf {
+    in: "ip2/out"
+    out: "out"
+  }
+}
+
+op_conf {
+  name: "loss1"
+  multinomial_logistic_loss_conf {
+    data: "softmax1/out"
+    label: "mnist/label"
+    loss: "loss"
+  }
+}
+
+op_conf {
+  name: "pool2"
+  pooling_conf {
+    in: "concat2/out"
+    out: "out"
+  }
+}
+
+op_conf {
+  name: "conv3_1x1"
+  convolution_conf {
+    in: "pool2/out"
+    out: "out"
+  }
+}
+
+op_conf {
+  name: "conv3_1x3"
+  convolution_conf {
+    in: "pool2/out"
+    out: "out"
+  }
+}
+
+op_conf {
+  name: "conv3_1x5"
+  convolution_conf {
+    in: "pool2/out"
+    out: "out"
+  }
+}
+
+op_conf {
+  name: "conv3_3x3"
+  convolution_conf {
+    in: "conv3_1x3/out"
+    out: "out"
+  }
+}
+
+op_conf {
+  name: "conv3_5x5"
+  convolution_conf {
+    in: "conv3_1x5/out"
+    out: "out"
+  }
+}
+
+op_conf {
+  name: "concat3"
+  concat_conf {
+    in: "conv3_1x1/out"
+    in: "conv3_3x3/out"
+    in: "conv3_5x5/out"
+    out: "out"
+    axis: 1
+  }
+}
+
+op_conf {
+  name: "ip3"
+  innerproduct_conf {
+    in: "concat3/out"
+    out: "out"
+  }
+}
+
+op_conf {
+  name: "relu3"
+  relu_conf {
+    in: "ip3/out"
+    out: "out"
+  }
+}
+
+op_conf {
+  name: "ip4"
+  innerproduct_conf {
+    in: "relu3/out"
+    out: "out"
+  }
+}
+
+op_conf {
+  name: "softmax2"
+  softmax_conf {
+    in: "ip4/out"
+    out: "out"
+  }
+}
+
+op_conf {
+  name: "loss2"
+  multinomial_logistic_loss_conf {
+    data: "softmax2/out"
+    label: "mnist/label"
+    loss: "loss"
+  }
+}

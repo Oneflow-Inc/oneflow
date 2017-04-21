@@ -18,7 +18,7 @@ void MdUpdtTaskGraph::BuildTaskGraph(const ChainNode* data_chain) {
   // Construct ModelUpdateOp
   OperatorConf op_conf;
   op_conf.set_name("model_update_" + data_chain->ConcatedOpsName());
-  op_conf.mutable_model_update_op_conf();
+  op_conf.mutable_model_update_conf();
   auto model_update_op = ConstructOpFromPbConf(op_conf);
   // ModelUpdateChain
   auto chain_gph = make_unique<ChainGraph> ();

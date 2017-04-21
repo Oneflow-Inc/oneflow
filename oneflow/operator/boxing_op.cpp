@@ -5,8 +5,8 @@ namespace oneflow {
 void BoxingOp::Init(const OperatorConf& op_conf) {
   mut_op_name() = op_conf.name();
 
-  CHECK(op_conf.has_boxing_op_conf());
-  auto cnf = new BoxingOpConf(op_conf.boxing_op_conf());
+  CHECK(op_conf.has_boxing_conf());
+  auto cnf = new BoxingOpConf(op_conf.boxing_conf());
   mut_pb_op_conf().reset(cnf);
 
   for (int64_t i = 0; i < cnf->in_num(); ++i) {
