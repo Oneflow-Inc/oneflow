@@ -50,10 +50,10 @@ void LogicalGraph::FillNodeWithParallelDesc(const Strategy& strategy_conf) {
     const std::string& op_name = logical_node->op()->op_name();
     CHECK(op_name2node.emplace(op_name, logical_node.get()).second);
   }
-  for (int gid = 0; gid < strategy_conf.placement_groups_size(); ++gid) {
-    const PlacementGroup& cur_group = strategy_conf.placement_groups(gid);
-    for (int li = 0; li < cur_group.op_names_size(); ++li) {
-      const std::string& op_name = cur_group.op_names(li);
+  for (int gid = 0; gid < strategy_conf.placement_group_size(); ++gid) {
+    const PlacementGroup& cur_group = strategy_conf.placement_group(gid);
+    for (int li = 0; li < cur_group.op_set().op_name_size(); ++li) {
+      const std::string& op_name = cur_group.op_set().op_name(li);
       auto it = op_name2node.find(op_name);
       CHECK(it != op_name2node.end());
       auto parallel_desc_raw_ptr = new ParallelDesc(cur_group.parallel_conf());

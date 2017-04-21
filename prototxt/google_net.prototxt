@@ -41,17 +41,17 @@ op_conf {
 }
 
 op_conf {
-  name: "conv2_3x3"
+  name: "conv2_1x5"
   convolution_conf {
-    in: "conv2_1x3/out"
+    in: "pool1/out"
     out: "out"
   }
 }
 
 op_conf {
-  name: "conv2_1x5"
+  name: "conv2_3x3"
   convolution_conf {
-    in: "pool1/out"
+    in: "conv2_1x3/out"
     out: "out"
   }
 }
@@ -76,7 +76,7 @@ op_conf {
 }
 
 op_conf {
-  name: "ip1_1"
+  name: "ip1"
   innerproduct_conf {
     in: "concat2/out"
     out: "out"
@@ -84,33 +84,33 @@ op_conf {
 }
 
 op_conf {
-  name: "relu1_1"
+  name: "relu1"
   relu_conf {
-    in: "ip1_1/out"
+    in: "ip1/out"
     out: "out"
   }
 }
 
 op_conf {
-  name: "ip2_1"
+  name: "ip2"
   innerproduct_conf {
-    in: "relu1_1/out"
+    in: "relu1/out"
     out: "out"
   }
 }
 
 op_conf {
-  name: "softmax_1"
+  name: "softmax1"
   softmax_conf {
-    in: "ip2_1/out"
+    in: "ip2/out"
     out: "out"
   }
 }
 
 op_conf {
-  name: "loss_1"
+  name: "loss1"
   multinomial_logistic_loss_conf {
-    data: "softmax_1/out"
+    data: "softmax1/out"
     label: "mnist/label"
     loss: "loss"
   }
@@ -141,17 +141,17 @@ op_conf {
 }
 
 op_conf {
-  name: "conv3_3x3"
+  name: "conv3_1x5"
   convolution_conf {
-    in: "conv3_1x3/out"
+    in: "pool2/out"
     out: "out"
   }
 }
 
 op_conf {
-  name: "conv3_1x5"
+  name: "conv3_3x3"
   convolution_conf {
-    in: "pool2/out"
+    in: "conv3_1x3/out"
     out: "out"
   }
 }
@@ -176,7 +176,7 @@ op_conf {
 }
 
 op_conf {
-  name: "ip1"
+  name: "ip3"
   innerproduct_conf {
     in: "concat3/out"
     out: "out"
@@ -184,33 +184,33 @@ op_conf {
 }
 
 op_conf {
-  name: "relu1"
+  name: "relu3"
   relu_conf {
-    in: "ip1/out"
+    in: "ip3/out"
     out: "out"
   }
 }
 
 op_conf {
-  name: "ip2"
+  name: "ip4"
   innerproduct_conf {
-    in: "relu1/out"
+    in: "relu3/out"
     out: "out"
   }
 }
 
 op_conf {
-  name: "softmax"
+  name: "softmax2"
   softmax_conf {
-    in: "ip2/out"
+    in: "ip4/out"
     out: "out"
   }
 }
 
 op_conf {
-  name: "loss"
+  name: "loss2"
   multinomial_logistic_loss_conf {
-    data: "softmax/out"
+    data: "softmax2/out"
     label: "mnist/label"
     loss: "loss"
   }

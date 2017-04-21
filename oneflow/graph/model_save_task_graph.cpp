@@ -13,7 +13,7 @@ void SetModelSaveChain(ChainNode* model_save_chain) {
   // model save parallel_conf
   ParallelConf pr_conf;
   pr_conf.set_policy(kDataParallel);
-  pr_conf.add_devices(JobDesc::Singleton().md_save_machine() + "/disk");
+  pr_conf.mutable_device_set()->add_device_name(JobDesc::Singleton().md_save_machine() + "/disk");
   model_save_chain->mut_parallel_desc().reset(new ParallelDesc(pr_conf));
   // output
   model_save_chain->mut_input_lbns() = {RegstDesc::kAllLbn};
