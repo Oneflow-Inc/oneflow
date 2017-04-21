@@ -3,7 +3,7 @@
 
 #include <queue>
 #include "network/network.h"
-#include "network/rdma/switch.h"
+#include "network/rdma/agency.h"
 
 namespace oneflow {
 

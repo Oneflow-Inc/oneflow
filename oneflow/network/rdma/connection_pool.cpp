@@ -2,14 +2,14 @@
 
 namespace oneflow {
 
-void ConnectionPool::AddConnection(int32_t peer_rank, Connection* conn) {
-    conn->BuildConnection(peer_rank);
-    connection_dict_.insert({ peer_rank, conn });
+void ConnectionPool::AddConnection(uint64_t peer_machine_id, Connection* conn) {
+    conn->BuildConnection(peer_machine_id);
+    connection_dict_.insert({ peer_machine_id, conn });
     connNum++;
 }
 
-void ConnectionPool::CleanConnection(int32_t peer_rank) {
-    Connection* conn = GetConnection(peer_rank);
+void ConnectionPool::CleanConnection(uint64_t peer_machine_id) {
+    Connection* conn = GetConnection(peer_machine_id);
     if (conn != nullptr) {
         conn->DestroyConnection();
         delete conn;
@@ -17,8 +17,8 @@ void ConnectionPool::CleanConnection(int32_t peer_rank) {
     }
 }
 
-Connection* ConnectionPool::GetConnection(peer_rank) const {
-    auto conn_it = connection_dict_.find(peer_rank);
+Connection* ConnectionPool::GetConnection(uint64_t peer_machine_id) const {
+    auto conn_it = connection_dict_.find(peer_machine_id);
     if (conn_it != connection_dict_.end()) {
         Connection* conn = conn_it->second;
         return conn;

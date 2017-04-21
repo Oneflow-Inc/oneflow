@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <cstdint>
 #include <memory>
-#include "network/rdma/switch.h"
+#include "network/rdma/agency.h"
 
 namespace oneflow {
 
@@ -13,9 +13,9 @@ public:
     ConnectionPool() = default;
     ~ConnectionPool() = default;
 
-    void AddConnection(int32_t peer_rank, Connection* conn);
-    void CleanConnection(int32_t peer_rank);
-    Connection* GetConnection(int32_t peer_rank) const;
+    void AddConnection(uint64_t peer_machine_id, Connection* conn);
+    void CleanConnection(uint64_t peer_machine_id);
+    Connection* GetConnection(uint64_t peer_machine_id) const;
 
 private:
     int32_t connNum_;

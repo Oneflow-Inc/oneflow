@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <memory>
 #include "network/rdma/message_pool.h"
-#include "network/rdma/switch.h"
+#include "network/rdma/agency.h"
 
 
 namespace oneflow{
