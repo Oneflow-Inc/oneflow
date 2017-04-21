@@ -93,7 +93,7 @@ message OperatorConf {
   string name = 1;
   oneof specified_type {
     ConvolutionOpConf convolution_conf = 100;
-    InnerProductOpConf inner_product_conf = 101;
+    InnerProductOpConf innerproduct_conf = 101;
     DataLoaderOpConf data_loader_conf = 102;
     PoolingOpConf pooling_conf = 103;
     ReluOpConf relu_conf = 104;

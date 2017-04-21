@@ -61,10 +61,6 @@ class ExecGraph final : public Graph<ExecNode, ExecEdge> {
   ExecGraph() = default;
   ~ExecGraph() = default;
 
-  ExecNode* SoleNode() const {
-    TODO();
-  }
-
  private:
 
 };

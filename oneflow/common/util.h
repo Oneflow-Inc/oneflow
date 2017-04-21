@@ -70,6 +70,11 @@ inline unsigned long long StoullOrDie(const std::string& s) {
   return ret;
 }
 
+inline std::string NewUniqueId() {
+  static uint64_t id = 0;
+  return std::to_string(id++);
+}
+
 } // namespace oneflow
 
 #endif // ONEFLOW_COMMON_UTIL_H

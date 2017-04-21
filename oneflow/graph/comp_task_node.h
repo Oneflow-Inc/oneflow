@@ -15,7 +15,7 @@ class CompTaskNode : public TaskNode {
   uint64_t parallel_id() const { return parallel_id_; }
   void set_parallel_id(uint64_t parallel_id) { parallel_id_ = parallel_id; }
 
-  bool IsLossNode() const { TODO(); }
+  bool IsLossNode() const { return chain_node()->IsLossNode(); }
 
   bool IsFaker() const { return chain_node()->IsFaker(); }
 

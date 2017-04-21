@@ -30,12 +30,15 @@ void DisConnect(EdgeType* edge) {
   edge->dst_node_ = nullptr;
 }
 
+uint64_t NewNodeId();
+uint64_t NewEdgeId();
+
 template<typename NodeType, typename EdgeType>
 class Edge {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Edge);
   Edge() {
-    edge_id_ = 0; // TODO
+    edge_id_ = NewEdgeId();
     src_node_ = nullptr;
     dst_node_ = nullptr;
   }
@@ -65,7 +68,7 @@ class Node {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Node);
   Node() {
-    node_id_ = 0; // TODO
+    node_id_ = NewNodeId();
   }
   virtual ~Node() = default;
 

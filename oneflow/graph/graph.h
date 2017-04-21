@@ -61,6 +61,10 @@ class Graph {
     CHECK_EQ(sink_node_.in_edges().size(), 1);
     return (*(sink_node_.in_edges().begin()))->src_node();
   }
+  NodeType* SoleNode() const {
+    CHECK_EQ(nodes_.size(), 1);
+    return nodes_.front().get();
+  }
   
   void UpdateSourceAndSink();
   
