@@ -19,7 +19,7 @@ std::shared_ptr<Operator> OperatorFactory::ConstructOp(
       ret.reset(new ConvolutionOp);
       break;
     }
-    case OperatorConf::kInnerProductConf: {
+    case OperatorConf::kInnerproductConf: {
       ret.reset(new InnerProductOp);
       break;
     }

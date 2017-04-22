@@ -49,7 +49,7 @@ template<typename Key, typename T, typename Hash = std::hash<Key>>
 using HashMap = std::unordered_map<Key, T, Hash>;
 
 template<typename T, typename... Args>
-std::unique_ptr<T> make_unique(Args&&... args) {
+std::unique_ptr<T> of_make_unique(Args&&... args) {
   return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
 }
 
@@ -68,6 +68,11 @@ inline unsigned long long StoullOrDie(const std::string& s) {
     LOG(FATAL) << "Error: " << s;
   }
   return ret;
+}
+
+inline std::string NewUniqueId() {
+  static uint64_t id = 0;
+  return std::to_string(id++);
 }
 
 } // namespace oneflow

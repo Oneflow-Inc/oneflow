@@ -31,7 +31,7 @@ MdLoadTaskGraph::MdLoadTaskGraph(
 }
 
 void MdLoadTaskGraph::BuildTaskGraph(const ChainNode* update_chain) {
-  auto chain_gph = make_unique<ChainGraph> ();
+  auto chain_gph = of_make_unique<ChainGraph> ();
   ChainNode* load_chain = chain_gph->NewFinalNode();
   SetModelLoadChain(load_chain);
   ChainNode* faker_chain = chain_gph->NewFinalNode();

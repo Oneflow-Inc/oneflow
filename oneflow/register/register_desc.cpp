@@ -10,7 +10,7 @@ RegstDesc::RegstDesc() {
 void RegstDesc::CopyLbn2ShapeMap(const RegstDesc* rhs) {
   for (const auto& pair : rhs->lbn2shape_) {
     const std::string& lbn = pair.first;
-    auto shape = make_unique<Shape> (*(pair.second));
+    auto shape = of_make_unique<Shape> (*(pair.second));
     CHECK(lbn2shape_.emplace(lbn, std::move(shape)).second);
   }
 }
