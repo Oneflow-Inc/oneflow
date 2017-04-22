@@ -21,15 +21,8 @@ class IDMgr final {
     TODO();
   }
 
-  void InitFromProto(const IDMgrProto&) {
-    TODO();
-  }
-
-  IDMgrProto ToProto() {
-    TODO();
-  }
-
   // Compile
+  uint64_t MachineID4MachineName(const std::string& machine) const { TODO(); }
   uint64_t ThrdLocId4DevicePhyId(uint64_t) const { TODO(); }
   uint64_t DiskThrdLocId() const { TODO(); }
   uint64_t BoxingThrdLocId() const { TODO(); }

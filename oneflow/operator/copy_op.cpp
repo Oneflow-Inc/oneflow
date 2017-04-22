@@ -5,7 +5,6 @@ namespace oneflow {
 void CopyOp::InitFromOpConf(const OperatorConf& op_conf) {
   CHECK(op_conf.has_copy_op_conf());
   mut_op_conf() = op_conf;
-
   for (int64_t i = 0; i < op_conf.copy_op_conf().copied_lbns_size(); ++i) {
     std::string ibn = "in_" + std::to_string(i);
     EnrollInputBn(ibn);

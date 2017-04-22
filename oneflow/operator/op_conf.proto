@@ -37,6 +37,12 @@ message MultinomialLogisticLossOpConf {
   string loss = 3;
 }
 
+message ConcatOpConf {
+  repeated string in = 1;
+  string out = 2;
+  int64 axis = 3;
+}
+
 message CopyOpConf {
   enum CopyType {
     H2D = 0;
@@ -45,6 +51,7 @@ message CopyOpConf {
   CopyType copy_type = 1;
   repeated string copied_lbns = 2;
 }
+
 
 message CloneOpConf {
   int64 out_num = 1;
@@ -85,18 +92,19 @@ message ModelSaveOpConf {
 message OperatorConf {
   string name = 1;
   oneof specified_type {
-    ConvolutionOpConf convolution_op_conf = 100;
-    InnerProductOpConf inner_product_op_conf = 101;
-    DataLoaderOpConf data_loader_op_conf = 102;
-    PoolingOpConf pooling_op_conf = 103;
-    ReluOpConf relu_op_conf = 104;
-    SoftmaxOpConf softmax_op_conf = 105;
-    MultinomialLogisticLossOpConf multinomial_logistic_loss_op_conf = 106;
-    CopyOpConf copy_op_conf = 107;
-    CloneOpConf clone_op_conf = 108;
-    BoxingOpConf boxing_op_conf = 109;
-    ModelUpdateOpConf model_update_op_conf = 110;
-    ModelLoadOpConf model_load_op_conf = 111;
-    ModelSaveOpConf model_save_op_conf = 112;
+    ConvolutionOpConf convolution_conf = 100;
+    InnerProductOpConf innerproduct_conf = 101;
+    DataLoaderOpConf data_loader_conf = 102;
+    PoolingOpConf pooling_conf = 103;
+    ReluOpConf relu_conf = 104;
+    SoftmaxOpConf softmax_conf = 105;
+    MultinomialLogisticLossOpConf multinomial_logistic_loss_conf = 106;
+    CopyOpConf copy_conf = 107;
+    CloneOpConf clone_conf = 108;
+    BoxingOpConf boxing_conf = 109;
+    ModelUpdateOpConf model_update_conf = 110;
+    ModelLoadOpConf model_load_conf = 111;
+    ModelSaveOpConf model_save_conf = 112;
+    ConcatOpConf concat_conf = 113;
   }
 }

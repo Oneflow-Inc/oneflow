@@ -15,7 +15,7 @@ void InnerProductOp::InitFromOpConf(const OperatorConf& op_conf) {
   EnrollModelTmpBn("bias_multiplier");
 }
 
-  std::string InnerProductOp::GetValueFromPbOpConf(const std::string& k) const {
-    return GetValueFromPbMessage(op_conf().inner_product_op_conf(), k);
-  }
+std::string InnerProductOp::GetValueFromPbOpConf(const std::string& k) const {
+  return GetValueFromPbMessage(op_conf().inner_product_op_conf(), k);
+}
 } // namespace oneflow

@@ -1,17 +1,16 @@
-#include "graph/register_desc.h"
+#include "register/register_desc.h"
 #include "job/id_manager.h"
 
 namespace oneflow {
 
 RegstDesc::RegstDesc() {
-  regst_desc_id_ = 0; // TODO
   producer_ = nullptr;
 }
 
 void RegstDesc::CopyLbn2ShapeMap(const RegstDesc* rhs) {
   for (const auto& pair : rhs->lbn2shape_) {
     const std::string& lbn = pair.first;
-    auto shape = make_unique<Shape> (*(pair.second));
+    auto shape = of_make_unique<Shape> (*(pair.second));
     CHECK(lbn2shape_.emplace(lbn, std::move(shape)).second);
   }
 }

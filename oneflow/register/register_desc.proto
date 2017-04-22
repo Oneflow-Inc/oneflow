@@ -4,7 +4,7 @@ package oneflow;
 import "common/shape.proto";
 
 message RegstDescProto  {
-  uint64 id = 1;
+  uint64 regst_desc_id = 1;
   uint64 producer_task_id = 2;
   repeated uint64 subscriber_task_ids = 3;
   map<string, ShapeProto> lbn2shape = 4;

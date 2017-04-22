@@ -4,6 +4,8 @@
 #include "common/util.h"
 #include "job/id_manager.h"
 #include "job/strategy.pb.h"
+#include "job/job_desc.h"
+#include <exception>
 
 namespace oneflow {
 
@@ -30,7 +32,10 @@ class ParallelDesc {
   //
   ParallelPolicy& mut_policy() { return policy_; }
   bool operator == (const ParallelDesc& rhs) const {
-    TODO();
+	  return policy_ == rhs.policy_ 
+		  && device_type_ == rhs.device_type_ 
+		  && sorted_machine_ids_ == rhs.sorted_machine_ids_ 
+		  && machine_id2sorted_device_phy_ids_ == rhs.machine_id2sorted_device_phy_ids_;
   }
   bool operator != (const ParallelDesc& rhs) const {
     return !((*this) == rhs);

@@ -37,11 +37,11 @@ void BoxingTaskNode::FwBuildExecAndProducedRegsts(TaskGraph* gph) {
 void BoxingTaskNode::EnrollAllRegstAndBindRelatedEdge() {
   for (TaskEdge* edge : out_edges()) {
     std::string name = "boxing_out_" + edge->edge_id_str();
-    auto regst_desc = make_unique<DisContigRegstDesc> ();
+    auto regst_desc = of_make_unique<DisContigRegstDesc> ();
     BindProducedRegstAndOutEdge(regst_desc.get(), edge);
     EnrollProducedRegstDesc(name, std::move(regst_desc));
   }
-  auto regst_desc = make_unique<DisContigRegstDesc> ();
+  auto regst_desc = of_make_unique<DisContigRegstDesc> ();
   EnrollProducedRegstDesc("middle", std::move(regst_desc));
 }
 
@@ -119,8 +119,8 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
   for (const std::string& lbn : lbns) {
     // Construct Op
     OperatorConf op_conf;
-    op_conf.set_name("TODO");
-    BoxingOpConf* box_conf = op_conf.mutable_boxing_op_conf();
+    op_conf.set_name("boxing_op_" + NewUniqueId());
+    BoxingOpConf* box_conf = op_conf.mutable_boxing_conf();
     box_conf->set_lbn(lbn);
     box_conf->set_in_num(sorted_in_edges.size());
     box_conf->set_out_num(sorted_out_edges.size());

@@ -39,7 +39,7 @@ std::shared_ptr<Operator> OperatorFactory::ConstructOp(
       ret.reset(new SoftmaxOp);
       break;
     }
-    case OperatorConf::kMultinomialLogisticLossOpConf: {
+    case OperatorConf::: {
       ret.reset(new MultinomialLogisticLossOp);
       break;
     }

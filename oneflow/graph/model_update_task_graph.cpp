@@ -18,10 +18,10 @@ void MdUpdtTaskGraph::BuildTaskGraph(const ChainNode* data_chain) {
   // Construct ModelUpdateOp
   OperatorConf op_conf;
   op_conf.set_name("model_update_" + data_chain->ConcatedOpsName());
-  op_conf.mutable_model_update_op_conf();
+  op_conf.mutable_model_update_conf();
   auto model_update_op = ConstructOpFromPbConf(op_conf);
   // ModelUpdateChain
-  auto chain_gph = make_unique<ChainGraph> ();
+  auto chain_gph = of_make_unique<ChainGraph> ();
   ChainNode* updt_chain = chain_gph->NewFinalNode();
   updt_chain->mut_op_vec() = {model_update_op};
   auto parallel_desc4updt = new ParallelDesc(*(data_chain->parallel_desc()));

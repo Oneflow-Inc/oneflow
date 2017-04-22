@@ -31,7 +31,7 @@ class CopyHDTaskNode final : public TaskNode {
   void FwBuildExecAndProducedRegsts(TaskGraph*) override { TODO(); }
   void BpBuildExecAndProducedRegsts(TaskGraph*) override { TODO(); }
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    return make_unique<CopyHDTaskNode> ();
+    return of_make_unique<CopyHDTaskNode> ();
   }
 
   bool is_fw_in_copy_;

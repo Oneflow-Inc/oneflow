@@ -3,7 +3,7 @@
 
 #include "operator/operator.h"
 #include "graph/graph.h"
-#include "graph/register_desc.h"
+#include "register/register_desc.h"
 
 namespace oneflow {
 
@@ -60,10 +60,6 @@ class ExecGraph final : public Graph<ExecNode, ExecEdge> {
   OF_DISALLOW_COPY_AND_MOVE(ExecGraph);
   ExecGraph() = default;
   ~ExecGraph() = default;
-
-  ExecNode* SoleNode() const {
-    TODO();
-  }
 
  private:
 

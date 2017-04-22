@@ -15,12 +15,12 @@ void CompTaskNode::DataFwBuildExecAndProducedRegsts(TaskGraph*) {
   FwBuildFromUserOps(&lbn2producer, &extern_in_lbn2consumer);
   mut_exec_gph().UpdateSourceAndSink();
   // data regst
-  auto data_regst = make_unique<DisContigRegstDesc> ();
+  auto data_regst = of_make_unique<DisContigRegstDesc> ();
   BindProducedRegstAndOutEdge(data_regst.get(), SoleOutEdge());
   EnrollProducedRegstDesc("data", std::move(data_regst));
   FwSetDataRegstDesc(lbn2producer, extern_in_lbn2consumer);
   // model_tmp regst
-  auto model_tmp_regst = make_unique<DisContigRegstDesc> ();
+  auto model_tmp_regst = of_make_unique<DisContigRegstDesc> ();
   EnrollProducedRegstDesc("model_tmp", std::move(model_tmp_regst));
   FwSetModelTmpRegstDesc();
 }
@@ -32,7 +32,7 @@ void CompTaskNode::MdUpdtFwBuildExecAndProducedRegsts(TaskGraph* gph) {
     BindProducedRegstAndOutEdge(regst, SoleOutEdge());
     return;
   }
-  auto model_regst = make_unique<ContigRegstDesc> ();
+  auto model_regst = of_make_unique<ContigRegstDesc> ();
   EnrollProducedRegstDesc("model", std::move(model_regst));
   ExecNode* exec_node = mut_exec_gph().NewFinalNode();
   exec_node->mut_op() = chain_node()->SoleOp();
@@ -51,7 +51,7 @@ void CompTaskNode::MdLoadFwBuildExecAndProducedRegsts(TaskGraph* gph) {
   ExecNode* exec_node = mut_exec_gph().NewFinalNode();
   exec_node->mut_op() = chain_node()->SoleOp();
   mut_exec_gph().UpdateSourceAndSink();
-  auto model_regst = make_unique<ContigRegstDesc> ();
+  auto model_regst = of_make_unique<ContigRegstDesc> ();
   exec_node->BindBnInOpAndRegst(exec_node->op()->SoleObn(), model_regst.get());
   BindProducedRegstAndOutEdge(model_regst.get(), SoleOutEdge());
   Shape* shape_ptr = model_regst->EnrollLbn(RegstDesc::kAllLbn);
@@ -168,12 +168,12 @@ void CompTaskNode::BpBuildExecAndProducedRegsts(TaskGraph*) {
   HashMap<ExecEdge*, const ExecEdge*> bp_edge2fw_edge;
   BpBuildExecGraph(fw_gph, &fw_node2bp_node, &bp_edge2fw_edge);
   //
-  auto data_diff_regst = make_unique<DisContigRegstDesc> ();
+  auto data_diff_regst = of_make_unique<DisContigRegstDesc> ();
   BindProducedRegstAndOutEdge(data_diff_regst.get(), SoleOutEdge());
   EnrollProducedRegstDesc("data_diff", std::move(data_diff_regst));
   BpSetDataDiffRegst(fw_node2bp_node, bp_edge2fw_edge);
   //
-  auto model_diff_regst = make_unique<ContigRegstDesc> ();
+  auto model_diff_regst = of_make_unique<ContigRegstDesc> ();
   EnrollProducedRegstDesc("model_diff", std::move(model_diff_regst));
   BpSetModelDiffRegst();
 }
