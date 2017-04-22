@@ -10,7 +10,6 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
     const std::string& device_name = user_conf.device_set().device_name(i);
     int64_t delimiter_pos = device_name.rfind(":");
     CHECK_NE(delimiter_pos, std::string::npos);
-
     std::string machine_name = device_name.substr(0, delimiter_pos);
     std::string device_id_str = device_name.substr(delimiter_pos);
     uint64_t machine_id =
@@ -33,7 +32,6 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
         machine_id2sorted_device_phy_ids_[machine_id].push_back(i);
       }
     }
-
   }
   SortAndRemoveDuplication(&sorted_machine_ids_);
   for (auto&pair : machine_id2sorted_device_phy_ids_) {
