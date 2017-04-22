@@ -10,44 +10,27 @@
 
 namespace oneflow {
 
-// It is ugly now, maybe we can find one more elegant implemention ?
-std::shared_ptr<Operator> OperatorFactory::ConstructOp(
+std::shared_ptr<Operator> OpFactory::ConstructOp(
     const OperatorConf& op_conf) const {
+  static HashMap<int, std::function<Operator*()>>
+  op_type2new_op_func = {
+    {OperatorConf::kConvolutionConf, []() { return new ConvolutionOp; } },
+    {OperatorConf::kInnerproductConf, []() { return new ConvolutionOp; } },
+    {OperatorConf::kDataLoaderConf, []() { return new ConvolutionOp; } },
+    {OperatorConf::kPoolingConf, []() { return new ConvolutionOp; } },
+    {OperatorConf::kReluConf, []() { return new ConvolutionOp; } },
+    {OperatorConf::kSoftmaxConf, []() { return new ConvolutionOp; } },
+    {OperatorConf::kMultinomialLogisticLossConf, []() { return new ConvolutionOp; } },
+    {OperatorConf::kCopyConf, []() { return new ConvolutionOp; } },
+    {OperatorConf::kCloneConf, []() { return new ConvolutionOp; } },
+    {OperatorConf::kBoxingConf, []() { return new ConvolutionOp; } },
+    {OperatorConf::kModelUpdateConf, []() { return new ConvolutionOp; } },
+    {OperatorConf::kModelLoadConf, []() { return new ConvolutionOp; } },
+    {OperatorConf::kModelSaveConf, []() { return new ConvolutionOp; } },
+    {OperatorConf::kConcatConf, []() { return new ConvolutionOp; } },
+  };
   std::shared_ptr<Operator> ret;
-  switch (op_conf.specified_type_case()) {
-    case OperatorConf::kConvolutionConf: {
-      ret.reset(new ConvolutionOp);
-      break;
-    }
-    case OperatorConf::kInnerproductConf: {
-      ret.reset(new InnerProductOp);
-      break;
-    }
-    case OperatorConf::kDataLoaderConf: {
-      ret.reset(new DataLoaderOp);
-      break;
-    }
-    case OperatorConf::kPoolingConf: {
-      ret.reset(new PoolingOp);
-      break;
-    }
-    case OperatorConf::kReluConf: {
-      ret.reset(new ReluOp);
-      break;
-    }
-    case OperatorConf::kSoftmaxConf: {
-      ret.reset(new SoftmaxOp);
-      break;
-    }
-    case OperatorConf::kMultinomialLogisticLossConf: {
-      ret.reset(new MultinomialLogisticLossOp);
-      break;
-    }
-    default: {
-      LOG(FATAL) << "unknow op";
-      break;
-    }
-  }
+  ret.reset(op_type2new_op_func.at(op_conf.specified_type_case())());
   ret->Init(op_conf);
   return ret;
 }
