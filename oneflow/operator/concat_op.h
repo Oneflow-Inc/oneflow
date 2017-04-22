@@ -13,7 +13,9 @@ class ConcatOp final : public UserOperator {
 
   void Init(const OperatorConf& op_conf) override;
 
-  std::string normal_ibn2lbn(const std::string& input_bn) const override { TODO(); }
+  std::string normal_ibn2lbn(const std::string& input_bn) const override {
+    return ibn2lbn_.at(input_bn);
+  }
 
   void InferShape4ObAndDtbFromIb() const override { TODO(); }
   void InferShape4Mtb(ParallelPolicy, uint64_t parallel_id) const override {
@@ -24,6 +26,8 @@ class ConcatOp final : public UserOperator {
   }
 
  private:
+  std::unordered_map<std::string, std::string> ibn2lbn_;
+
 };
 
 } // namespace oneflow

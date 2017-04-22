@@ -10,7 +10,9 @@ void ConcatOp::Init(const OperatorConf& op_conf) {
   mut_pb_op_conf().reset(cnf);
 
   for (int i = 0; i < cnf->in_size(); ++i) {
-    EnrollInputBn("in_" + std::to_string(i));
+    std::string ibn = "in_" + std::to_string(i);
+    EnrollInputBn(ibn);
+    CHECK(ibn2lbn_.emplace(ibn, cnf->in(i)).second);
   }
   EnrollOutputBn("out");
 }
