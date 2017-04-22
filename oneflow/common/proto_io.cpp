@@ -55,36 +55,4 @@ std::string GetValueFromPbMessage(const PbMessage& msg,
   return r->GetString(msg, fd);
 }
 
-void PbRepeatedPtrField2Vec(const google::protobuf::RepeatedPtrField<std::string>& rpf,
-                            std::vector<std::string>& vec) {
-  vec.clear();
-  int size = rpf.size();
-  for (int i = 0; i < size; ++i) {
-    vec.push_back(rpf.Get(i));
-  }
-}
-
-void GPMap2HashMap(const google::protobuf::Map<std::string, std::string>& gmap,
-                   HashMap<std::string, std::string>& map) {
-  map.clear();
-  for (auto mp: gmap){
-    map.insert(std::make_pair(mp.first, mp.second));
-  }
-}
-
-google::protobuf::RepeatedPtrField<std::string> Vec2PbRepeatedPtrField(const std::vector<std::string>& vec) {
-  google::protobuf::RepeatedPtrField<std::string> rpf;
-  for (auto i = 0; i < vec.size(); ++i) {
-    rpf.Add()->assign(vec[i]);
-  }
-  return rpf;
-}
-  
-google::protobuf::Map<std::string, std::string> HashMap2GPMap(HashMap<std::string, std::string>& map) {
-  google::protobuf::Map<std::string, std::string> gmap;
-  for (auto mp: map) {
-    gmap.insert(google::protobuf::MapPair<std::string, std::string>(mp.first, mp.second));
-  }
-  return gmap;
-}
 } // namespace oneflow

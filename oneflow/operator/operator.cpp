@@ -2,41 +2,33 @@
 
 namespace oneflow {
   
-void Operator::OperatorFromOperatorProto(const OperatorProto& operatorproto) {
-  op_conf_ = operatorproto.user_conf();
+void Operator::OperatorFromOperatorProto(const OperatorProto& op_proto) {
+  op_conf_ = op_proto.user_conf();
   
-  GPMap2HashMap(operatorproto.special_ibn2lbn(), special_ibn2lbn_);
-  //repeated string data_tmp_bns = 4
-  PbRepeatedPtrField2Vec(operatorproto.data_tmp_bns(), data_tmp_bns_);
-  //repeated string input_bns = 5
-  PbRepeatedPtrField2Vec(operatorproto.input_bns(), input_bns_);
-  //repeated string input_diff_bns = 6;
-  PbRepeatedPtrField2Vec(operatorproto.input_diff_bns(), input_diff_bns_);
-  //repeated string output_bns = 7
-  PbRepeatedPtrField2Vec(operatorproto.output_bns(), output_bns_);
-  //repeated string output_diff_bns = 8
-  PbRepeatedPtrField2Vec(operatorproto.output_diff_bns(), output_diff_bns_);
-  //repeated string model_bns = 9
-  PbRepeatedPtrField2Vec(operatorproto.model_bns(), model_bns_);
-  //repeated string model_diff_bns = 10
-  PbRepeatedPtrField2Vec(operatorproto.model_diff_bns(), model_diff_bns_);
-  //repeated string model_tmp_bns = 11
-  PbRepeatedPtrField2Vec(operatorproto.model_tmp_bns(), model_tmp_bns_);
+  GPMap2HashMap(op_proto.special_ibn2lbn(), special_ibn2lbn_);
+  PbRepeatedPtrField2Vec(op_proto.data_tmp_bns(), data_tmp_bns_);
+  PbRepeatedPtrField2Vec(op_proto.input_bns(), input_bns_);
+  PbRepeatedPtrField2Vec(op_proto.input_diff_bns(), input_diff_bns_);
+  PbRepeatedPtrField2Vec(op_proto.output_bns(), output_bns_);
+  PbRepeatedPtrField2Vec(op_proto.output_diff_bns(), output_diff_bns_);
+  PbRepeatedPtrField2Vec(op_proto.model_bns(), model_bns_);
+  PbRepeatedPtrField2Vec(op_proto.model_diff_bns(), model_diff_bns_);
+  PbRepeatedPtrField2Vec(op_proto.model_tmp_bns(), model_tmp_bns_);
 }
 
 OperatorProto Operator::ToOperatorProto() {
-  OperatorProto operatorproto;
-  *(operatorproto.mutable_user_conf()) = op_conf_;
-  *(operatorproto.mutable_special_ibn2lbn()) = HashMap2GPMap(special_ibn2lbn_);
-  *(operatorproto.mutable_data_tmp_bns()) = Vec2PbRepeatedPtrField(data_tmp_bns_);
-  *(operatorproto.mutable_input_bns()) = Vec2PbRepeatedPtrField(input_bns_);
-  *(operatorproto.mutable_input_diff_bns()) = Vec2PbRepeatedPtrField(input_diff_bns_);
-  *(operatorproto.mutable_output_bns()) = Vec2PbRepeatedPtrField(output_bns_);
-  *(operatorproto.mutable_output_diff_bns()) = Vec2PbRepeatedPtrField(output_diff_bns_);
-  *(operatorproto.mutable_model_bns()) = Vec2PbRepeatedPtrField(model_bns_);
-  *(operatorproto.mutable_model_diff_bns()) = Vec2PbRepeatedPtrField(model_diff_bns_);
-  *(operatorproto.mutable_model_tmp_bns()) = Vec2PbRepeatedPtrField(model_tmp_bns_);
-  return operatorproto;
+  OperatorProto op_proto;
+  *(op_proto.mutable_user_conf()) = op_conf_;
+  *(op_proto.mutable_special_ibn2lbn()) = HashMap2GPMap(special_ibn2lbn_);
+  *(op_proto.mutable_data_tmp_bns()) = Vec2PbRepeatedPtrField(data_tmp_bns_);
+  *(op_proto.mutable_input_bns()) = Vec2PbRepeatedPtrField(input_bns_);
+  *(op_proto.mutable_input_diff_bns()) = Vec2PbRepeatedPtrField(input_diff_bns_);
+  *(op_proto.mutable_output_bns()) = Vec2PbRepeatedPtrField(output_bns_);
+  *(op_proto.mutable_output_diff_bns()) = Vec2PbRepeatedPtrField(output_diff_bns_);
+  *(op_proto.mutable_model_bns()) = Vec2PbRepeatedPtrField(model_bns_);
+  *(op_proto.mutable_model_diff_bns()) = Vec2PbRepeatedPtrField(model_diff_bns_);
+  *(op_proto.mutable_model_tmp_bns()) = Vec2PbRepeatedPtrField(model_tmp_bns_);
+  return op_proto;
 }
 
 std::string GenDiffBn(const std::string& bn) {
@@ -49,8 +41,7 @@ std::string GenUnDiffBn(const std::string& diff_bn) {
 }
 
 std::string Operator::dtbn2lbn(const std::string& data_tmp_bn) const {
-//  return op_name_ + "/" + data_tmp_bn;
-  TODO();
+  return op_name_ + "/" + data_tmp_bn;
 }
 std::string Operator::idbn2lbn(const std::string& input_diff_bn) const {
   return ibn2lbn(GenUnDiffBn(input_diff_bn));
