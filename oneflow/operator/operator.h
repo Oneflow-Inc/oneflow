@@ -3,6 +3,7 @@
 
 #include <string>
 #include "operator/op_conf.pb.h"
+#include "job/strategy.pb.h"
 #include "common/shape.h"
 #include "common/proto_io.h"
 #include "common/util.h"
@@ -72,8 +73,8 @@ class Operator {
   void SetShapePtr(const std::string& bn_in_op, Shape* ptr) const;
   void SetNull4AllShapePtr() const;
   virtual void InferShape4ObAndDtbFromIb() const = 0;
-  virtual void InferShape4Mtb() const = 0;
-  virtual void InferShape4Mdb() const = 0;
+  virtual void InferShape4Mtb(ParallelPolicy, uint64_t parallel_id) const = 0;
+  virtual void InferShape4Mdb(ParallelPolicy, uint64_t parallel_id) const = 0;
 
  protected:
   std::string& mut_op_name() { return op_name_; }
@@ -146,8 +147,12 @@ class SysOperator : public Operator {
 
   #undef SET_UNEXPECTED
   
-  void InferShape4Mtb() const override { UNEXPECTED_RUN(); }
-  void InferShape4Mdb() const override { UNEXPECTED_RUN(); }
+  void InferShape4Mtb(ParallelPolicy, uint64_t parallel_id) const override {
+    UNEXPECTED_RUN();
+  }
+  void InferShape4Mdb(ParallelPolicy, uint64_t parallel_id) const override {
+    UNEXPECTED_RUN();
+  }
 
  private:
 };
