@@ -3,6 +3,7 @@
 namespace oneflow {
 
 void TaskGraphMgr::Init() {
+  LOG(INFO) << "Build Data";
   data_task_gph_.reset(new DataTaskGraph(
         JobDesc::Singleton().train_dlnet_conf(),
         JobDesc::Singleton().strategy(),

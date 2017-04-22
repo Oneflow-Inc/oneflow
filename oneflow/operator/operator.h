@@ -25,7 +25,7 @@ class Operator {
   virtual bool IsElemWise() const { return false; }
   virtual bool IsLossOp() const { return false; }
   //
-  virtual void OperatorFromOperatorProto(const OperatorProto& operatorproto);
+  virtual void InitFromOperatorProto(const OperatorProto& operatorproto);
   virtual OperatorProto ToOperatorProto();
   
   // bn_in_op2lbn

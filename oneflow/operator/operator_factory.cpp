@@ -1,4 +1,5 @@
 #include "operator/operator_factory.h"
+#include <functional>
 #include "glog/logging.h"
 #include "operator/convolution_op.h"
 #include "operator/innerproduct_op.h"

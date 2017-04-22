@@ -12,7 +12,7 @@ set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
 # option
 option(download_third_party "Download and build all third party codes" OFF)
 
-# Force to link static cxx runtime library
+# Different set for different platform
 if (MSVC)
   foreach(flag_var
       CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
@@ -22,6 +22,10 @@ if (MSVC)
       string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
     endif()
   endforeach()
+endif()
+
+if (UNIX)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wno-sign-compare")
 endif()
 
 # Modules

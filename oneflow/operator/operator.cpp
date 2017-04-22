@@ -2,7 +2,7 @@
 
 namespace oneflow {
   
-void Operator::OperatorFromOperatorProto(const OperatorProto& op_proto) {
+void Operator::InitFromOperatorProto(const OperatorProto& op_proto) {
   op_conf_ = op_proto.user_conf();
   
   GPMap2HashMap(op_proto.special_ibn2lbn(), special_ibn2lbn_);

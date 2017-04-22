@@ -17,9 +17,9 @@ void CopyOp::InitFromOpConf(const OperatorConf& op_conf) {
 std::string CopyOp::GetValueFromPbOpConf(const std::string& k) const {
   return GetValueFromPbMessage(op_conf().copy_conf(), k);
 }
-void CopyOp::OperatorFromOperatorProto(const OperatorProto& operatorproto) {
+void CopyOp::InitFromOperatorProto(const OperatorProto& operatorproto) {
   CHECK(operatorproto.has_copy_op());
-  Operator::OperatorFromOperatorProto(operatorproto);
+  Operator::InitFromOperatorProto(operatorproto);
   GPMap2HashMap(operatorproto.copy_op().ibn2lbn(), ibn2lbn_);
   GPMap2HashMap(operatorproto.copy_op().obn2lbn(), obn2lbn_);
 }

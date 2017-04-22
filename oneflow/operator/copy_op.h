@@ -12,7 +12,7 @@ class CopyOp final : public SysOperator {
   ~CopyOp() = default;
 
   void InitFromOpConf(const OperatorConf& op_conf) override;
-  void OperatorFromOperatorProto(const OperatorProto& operatorproto) override;
+  void InitFromOperatorProto(const OperatorProto& operatorproto) override;
   OperatorProto ToOperatorProto() override;
   void InferShape4ObAndDtbFromIb() const override { TODO(); }
   std::string GetValueFromPbOpConf(const std::string& k) const override;
