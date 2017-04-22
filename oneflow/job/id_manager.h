@@ -3,7 +3,6 @@
 
 #include "common/util.h"
 #include "job/resource.pb.h"
-#include "job/id_manager.pb.h"
 
 namespace oneflow {
 
