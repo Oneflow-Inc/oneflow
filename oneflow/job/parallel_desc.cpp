@@ -11,7 +11,7 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
     int64_t delimiter_pos = device_name.rfind(":");
     CHECK_NE(delimiter_pos, std::string::npos);
     std::string machine_name = device_name.substr(0, delimiter_pos);
-    std::string device_id_str = device_name.substr(delimiter_pos);
+    std::string device_id_str = device_name.substr(delimiter_pos + 1);
     uint64_t machine_id =
         IDMgr::Singleton().MachineID4MachineName(machine_name);
     sorted_machine_ids_.push_back(machine_id);
