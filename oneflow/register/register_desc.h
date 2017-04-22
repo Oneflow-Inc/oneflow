@@ -42,7 +42,6 @@ class RegstDesc {
 
 class ContigRegstDesc final : public RegstDesc {
  public:
-
   OF_DISALLOW_COPY_AND_MOVE(ContigRegstDesc);
   ContigRegstDesc() = default;
   ~ContigRegstDesc() = default;

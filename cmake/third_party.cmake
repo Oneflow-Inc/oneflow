@@ -10,6 +10,7 @@ if(WIN32)
   add_definitions(-DNOMINMAX -D_WIN32_WINNT=0x0A00 -DLANG_CXX11 -DCOMPILER_MSVC -D__VERSION__=\"MSVC\")
   add_definitions(-DWIN32 -DOS_WIN -D_MBCS -DWIN64 -DWIN32_LEAN_AND_MEAN -DNOGDI -DPLATFORM_WINDOWS)
   add_definitions(/bigobj /nologo /EHsc /GF /FC /MP /Gm-)
+  add_definitions(-DGOOGLE_GLOG_DLL_DECL=)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 endif()
 
@@ -29,6 +30,11 @@ set(oneflow_third_party_libs
     ${PROTOBUF_STATIC_LIBRARIES}
     ${GRPC_STATIC_LIBRARIES}
 )
+
+if(WIN32)
+  # static gflags lib requires "PathMatchSpecA" defined in "ShLwApi.Lib"
+  list(APPEND oneflow_third_party_libs "ShLwApi.Lib")
+endif()
 
 set(oneflow_third_party_dependencies
   zlib_copy_headers_to_destination

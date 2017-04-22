@@ -16,8 +16,12 @@ class ConcatOp final : public UserOperator {
   std::string normal_ibn2lbn(const std::string& input_bn) const override { TODO(); }
 
   void InferShape4ObAndDtbFromIb() const override { TODO(); }
-  void InferShape4Mtb() const override { TODO(); }
-  void InferShape4Mdb() const override { TODO(); }
+  void InferShape4Mtb(ParallelPolicy, uint64_t parallel_id) const override {
+    TODO();
+  }
+  void InferShape4Mdb(ParallelPolicy, uint64_t parallel_id) const override {
+    TODO();
+  }
 
  private:
 };
