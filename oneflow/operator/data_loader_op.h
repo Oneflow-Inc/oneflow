@@ -17,6 +17,10 @@ class DataLoaderOp final : public SysOperator {
   
   void InferShape4ObAndDtbFromIb() const override { TODO(); }
 
+  std::string obn2lbn(const std::string& output_bn) const override {
+    return op_name() + "/" + GetValueFromPbOpConf(output_bn);
+  }
+
  private:
 
 };

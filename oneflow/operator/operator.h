@@ -140,15 +140,16 @@ class SysOperator : public Operator {
   SysOperator() = default;
   virtual ~SysOperator() = default;
   
-  #define SET_UNEXPECTED(func_name) \
+  #define SET_INSIGNIFICANT(func_name) \
   virtual std::string func_name(const std::string&) const override { \
-    UNEXPECTED_RUN(); \
+    LOG(FATAL) << #func_name << " is insignificant for " \
+               << typeid(*this).name(); \
   }
   
-  SET_UNEXPECTED(normal_ibn2lbn);
-  SET_UNEXPECTED(obn2lbn);
-  SET_UNEXPECTED(mtbn2lbn);
-  SET_UNEXPECTED(mbn2lbn);
+  SET_INSIGNIFICANT(normal_ibn2lbn);
+  SET_INSIGNIFICANT(obn2lbn);
+  SET_INSIGNIFICANT(mtbn2lbn);
+  SET_INSIGNIFICANT(mbn2lbn);
 
   #undef SET_UNEXPECTED
   
