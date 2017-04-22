@@ -4,7 +4,7 @@
 namespace oneflow {
 
 void ReluOp::InitFromOpConf(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_relu_op_conf());
+  CHECK(op_conf.has_relu_conf());
   mut_op_conf() = op_conf;
 
   EnrollInputBn("in");
@@ -12,6 +12,6 @@ void ReluOp::InitFromOpConf(const OperatorConf& op_conf) {
 }
 
 std::string ReluOp::GetValueFromPbOpConf(const std::string& k) const {
-  return GetValueFromPbMessage(op_conf().relu_op_conf(), k);
+  return GetValueFromPbMessage(op_conf().relu_conf(), k);
 }
 } // namespace oneflow

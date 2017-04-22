@@ -4,7 +4,7 @@
 namespace oneflow {
 
 void ConvolutionOp::InitFromOpConf(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_convolution_op_conf());
+  CHECK(op_conf.has_convolution_conf());
   mut_op_conf() = op_conf;
   
   EnrollInputBn("in");
@@ -17,6 +17,6 @@ void ConvolutionOp::InitFromOpConf(const OperatorConf& op_conf) {
 }
 
 std::string ConvolutionOp::GetValueFromPbOpConf(const std::string& k) const {
-  return GetValueFromPbMessage(op_conf().convolution_op_conf(), k);
+  return GetValueFromPbMessage(op_conf().convolution_conf(), k);
 }
 } // namespace oneflow

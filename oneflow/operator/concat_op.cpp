@@ -2,17 +2,17 @@
 
 namespace oneflow {
 
-void ConcatOp::Init(const OperatorConf& op_conf) {
-  mut_op_name() = op_conf.name();
-
+void ConcatOp::InitFromOpConf(const OperatorConf& op_conf) {
   CHECK(op_conf.has_concat_conf());
-  auto cnf = new ConcatOpConf(op_conf.concat_conf());
-  mut_pb_op_conf().reset(cnf);
+  mut_op_conf() = op_conf;
 
-  for (int i = 0; i < cnf->in_size(); ++i) {
+  for (int i = 0; i < op_conf.concat_conf().in_size(); ++i) {
     EnrollInputBn("in_" + std::to_string(i));
   }
   EnrollOutputBn("out");
+}
+std::string ConcatOp::GetValueFromPbOpConf(const std::string& k) const {
+  return GetValueFromPbMessage(op_conf().concat_conf(), k);
 }
 
 } // namespace oneflow

@@ -4,7 +4,7 @@
 namespace oneflow {
 
 void PoolingOp::InitFromOpConf(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_pooling_op_conf());
+  CHECK(op_conf.has_pooling_conf());
   mut_op_conf() = op_conf;
 
   EnrollInputBn("in");
@@ -13,6 +13,6 @@ void PoolingOp::InitFromOpConf(const OperatorConf& op_conf) {
 }
 
 std::string PoolingOp::GetValueFromPbOpConf(const std::string& k) const {
-  return GetValueFromPbMessage(op_conf().pooling_op_conf(), k);
+  return GetValueFromPbMessage(op_conf().pooling_conf(), k);
 }
 } // namespace oneflow

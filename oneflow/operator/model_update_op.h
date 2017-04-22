@@ -2,7 +2,8 @@
 #define ONEFLOW_OPERATOR_MODEL_UPDATE_OP_H_
 
 #include "operator/operator.h"
-#include "graph/register_desc.h"
+#include "register/register_desc.h"
+
 namespace oneflow {
 
 class ModelUpdateOp final : public SysOperator {

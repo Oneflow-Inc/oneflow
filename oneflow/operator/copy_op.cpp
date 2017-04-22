@@ -3,19 +3,19 @@
 namespace oneflow {
 
 void CopyOp::InitFromOpConf(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_copy_op_conf());
+  CHECK(op_conf.has_copy_conf());
   mut_op_conf() = op_conf;
-  for (int64_t i = 0; i < op_conf.copy_op_conf().copied_lbns_size(); ++i) {
+  for (int64_t i = 0; i < op_conf.copy_conf().copied_lbns_size(); ++i) {
     std::string ibn = "in_" + std::to_string(i);
     EnrollInputBn(ibn);
-    CHECK(ibn2lbn_.emplace(ibn, op_conf.copy_op_conf().copied_lbns(i)).second);
+    CHECK(ibn2lbn_.emplace(ibn, op_conf.copy_conf().copied_lbns(i)).second);
     std::string obn = "out_" + std::to_string(i);
     EnrollOutputBn(obn);
-    CHECK(obn2lbn_.emplace(obn, op_conf.copy_op_conf().copied_lbns(i)).second);
+    CHECK(obn2lbn_.emplace(obn, op_conf.copy_conf().copied_lbns(i)).second);
   }
 }
 std::string CopyOp::GetValueFromPbOpConf(const std::string& k) const {
-  return GetValueFromPbMessage(op_conf().copy_op_conf(), k);
+  return GetValueFromPbMessage(op_conf().copy_conf(), k);
 }
 void CopyOp::OperatorFromOperatorProto(const OperatorProto& operatorproto) {
   CHECK(operatorproto.has_copy_op());

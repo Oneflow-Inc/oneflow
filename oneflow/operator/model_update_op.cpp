@@ -4,7 +4,7 @@
 namespace oneflow {
 
 void ModelUpdateOp::InitFromOpConf(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_model_update_op_conf());
+  CHECK(op_conf.has_model_update_conf());
   mut_op_conf() = op_conf;
   
   EnrollInputBn("model_diffs", false);
@@ -13,6 +13,6 @@ void ModelUpdateOp::InitFromOpConf(const OperatorConf& op_conf) {
 }
 
 std::string ModelUpdateOp::GetValueFromPbOpConf(const std::string& k) const {
-  return GetValueFromPbMessage(op_conf().model_update_op_conf(), k);
+  return GetValueFromPbMessage(op_conf().model_update_conf(), k);
 }
 }

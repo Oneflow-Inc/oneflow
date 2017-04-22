@@ -11,10 +11,10 @@ class ConcatOp final : public UserOperator {
   ConcatOp() = default;
   ~ConcatOp() = default;
 
-  void Init(const OperatorConf& op_conf) override;
+  void InitFromOpConf(const OperatorConf& op_conf) override;
 
   std::string normal_ibn2lbn(const std::string& input_bn) const override { TODO(); }
-
+  std::string GetValueFromPbOpConf(const std::string& k) const override;
   void InferShape4ObAndDtbFromIb() const override { TODO(); }
   void InferShape4Mtb(ParallelPolicy, uint64_t parallel_id) const override {
     TODO();

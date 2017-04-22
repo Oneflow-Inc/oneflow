@@ -41,7 +41,7 @@ std::string GenUnDiffBn(const std::string& diff_bn) {
 }
 
 std::string Operator::dtbn2lbn(const std::string& data_tmp_bn) const {
-  return op_name_ + "/" + data_tmp_bn;
+  return op_name() + "/" + data_tmp_bn;
 }
 std::string Operator::idbn2lbn(const std::string& input_diff_bn) const {
   return ibn2lbn(GenUnDiffBn(input_diff_bn));
