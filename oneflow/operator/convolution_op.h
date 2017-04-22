@@ -13,8 +13,12 @@ class ConvolutionOp final : public UserOperator {
 
   void Init(const OperatorConf& op_conf) override;
   void InferShape4ObAndDtbFromIb() const override { TODO(); }
-  void InferShape4Mtb() const override { TODO(); }
-  void InferShape4Mdb() const override { TODO(); }
+  void InferShape4Mtb(ParallelPolicy, uint64_t parallel_id) const override {
+    TODO();
+  }
+  void InferShape4Mdb(ParallelPolicy, uint64_t parallel_id) const override {
+    TODO();
+  }
 
  private:
 
