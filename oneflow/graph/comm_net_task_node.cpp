@@ -4,22 +4,22 @@
 
 namespace oneflow {
 
-void BuildExecAndProducedRegstsForCopy(TaskGraph* gph) {
-  auto out_regst = make_unique<DisContigRegstDesc> ();
+void CommNetTaskNode::BuildExecAndProducedRegstsForNetCopy(TaskGraph* gph){
+  auto out_regst = of_make_unique<DisContigRegstDesc> ();
   BindProducedRegstAndOutEdge(out_regst.get(), SoleOutEdge());
   EnrollProducedRegstDesc("net_copy", std::move(out_regst));
   RegstDesc* in_regst = GetRelatedRegst(SoleInEdge());
-  out_regst.CopyLbn2ShapeMap(in_regst);
+  GetProducedRegstDesc("net_copy")->CopyLbn2ShapeMap(in_regst);
   // There no op conf for net task yet
   TODO();
 }
 
 void CommNetTaskNode::FwBuildExecAndProducedRegsts(TaskGraph* gph) {
-  BuildExecAndProducedRegstsFroCopy(gph);
+  BuildExecAndProducedRegstsForNetCopy(gph);
 }
 
 void CommNetTaskNode::BpBuildExecAndProducedRegsts(TaskGraph* gph) {
-  BuildExecAndProducedRegstsFroCopy(gph);
+  BuildExecAndProducedRegstsForNetCopy(gph);
 }
 
 } // namespace oneflow

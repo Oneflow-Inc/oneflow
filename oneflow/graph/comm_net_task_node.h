@@ -29,6 +29,7 @@ class CommNetTaskNode final : public TaskNode {
   }
 
  private:
+  void BuildExecAndProducedRegstsForNetCopy(TaskGraph*);
   void FwBuildExecAndProducedRegsts(TaskGraph*) override;
   void BpBuildExecAndProducedRegsts(TaskGraph*) override;
 
