@@ -11,8 +11,9 @@ class ConvolutionOp final : public UserOperator {
   ConvolutionOp() = default;
   ~ConvolutionOp() = default;
 
-  void Init(const OperatorConf& op_conf) override;
+  void InitFromOpConf(const OperatorConf& op_conf) override;
   void InferShape4ObAndDtbFromIb() const override { TODO(); }
+  std::string GetValueFromPbOpConf(const std::string& k) const override;
   void InferShape4Mtb(ParallelPolicy, uint64_t parallel_id) const override {
     TODO();
   }

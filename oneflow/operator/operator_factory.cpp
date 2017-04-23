@@ -20,7 +20,7 @@ namespace oneflow {
 
 std::shared_ptr<Operator> OpFactory::ConstructOp(
     const OperatorConf& op_conf) const {
-  static HashMap<int, std::function<Operator*()>>
+  static const HashMap<int, std::function<Operator*()>>
   op_type2new_op_func = {
     {OperatorConf::kConvolutionConf, []() { return new ConvolutionOp; }},
     {OperatorConf::kInnerproductConf, []() { return new InnerProductOp; }},
@@ -39,7 +39,7 @@ std::shared_ptr<Operator> OpFactory::ConstructOp(
   };
   std::shared_ptr<Operator> ret;
   ret.reset(op_type2new_op_func.at(op_conf.specified_type_case())());
-  ret->Init(op_conf);
+  ret->InitFromOpConf(op_conf);
   return ret;
 }
 

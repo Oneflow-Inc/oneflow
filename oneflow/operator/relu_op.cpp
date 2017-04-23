@@ -3,15 +3,15 @@
 
 namespace oneflow {
 
-void ReluOp::Init(const OperatorConf& op_conf) {
-  mut_op_name() = op_conf.name();
-  
+void ReluOp::InitFromOpConf(const OperatorConf& op_conf) {
   CHECK(op_conf.has_relu_conf());
-  auto cnf = new ReluOpConf(op_conf.relu_conf());
-  mut_pb_op_conf().reset(cnf);
+  mut_op_conf() = op_conf;
 
   EnrollInputBn("in");
   EnrollOutputBn("out");
 }
 
+std::string ReluOp::GetValueFromPbOpConf(const std::string& k) const {
+  return GetValueFromPbMessage(op_conf().relu_conf(), k);
+}
 } // namespace oneflow

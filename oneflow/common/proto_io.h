@@ -4,6 +4,9 @@
 #include <io.h>
 #endif
 #include <string>
+#include "common/util.h"
+#include "operator/op_conf.pb.h"
+#include "operator/operator.pb.h"
 #include "google/protobuf/message.h"
 #include "google/protobuf/descriptor.h"
 
@@ -23,7 +26,27 @@ void PrintProtoToTextFile(const PbMessage& proto,
 
 std::string GetValueFromPbMessage(const PbMessage& msg,
                                   const std::string& key);
+  
+inline void PbRepeatedPtrField2Vec(const google::protobuf::RepeatedPtrField<std::string>& rpf,
+                                   std::vector<std::string>& vec) {
+  vec.assign(rpf.begin(), rpf.end());
+}
 
+inline void GPMap2HashMap(const google::protobuf::Map<std::string, std::string>& gmap, 
+                          HashMap<std::string, std::string>& map ) {
+  map.clear();
+  map.insert(gmap.begin(), gmap.end());
+}
+  
+inline google::protobuf::RepeatedPtrField<std::string> Vec2PbRepeatedPtrField (
+    const std::vector<std::string>& vec) {
+  return google::protobuf::RepeatedPtrField<std::string>(vec.begin(), vec.end());
+}
+
+inline google::protobuf::Map<std::string, std::string> HashMap2GPMap( 
+    HashMap<std::string, std::string>& map) {
+  return google::protobuf::Map<std::string, std::string>(map.begin(), map.end());
+}
 } // namespace caffe
 
 #endif // ONEFLOW_PROTO_IO_H_

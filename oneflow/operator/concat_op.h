@@ -11,8 +11,9 @@ class ConcatOp final : public UserOperator {
   ConcatOp() = default;
   ~ConcatOp() = default;
 
-  void Init(const OperatorConf& op_conf) override;
+  void InitFromOpConf(const OperatorConf& op_conf) override;
 
+  std::string GetValueFromPbOpConf(const std::string& k) const override;
   std::string normal_ibn2lbn(const std::string& input_bn) const override {
     return ibn2lbn_.at(input_bn);
   }

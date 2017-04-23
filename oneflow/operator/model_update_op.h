@@ -12,17 +12,8 @@ class ModelUpdateOp final : public SysOperator {
   ModelUpdateOp() = default;
   ~ModelUpdateOp() = default;
 
-  void Init(const OperatorConf& op_conf) override {
-    mut_op_name() = op_conf.name();
-    
-    CHECK(op_conf.has_model_update_conf());
-    auto cnf = new ModelUpdateOpConf(op_conf.model_update_conf());
-    mut_pb_op_conf().reset(cnf);
-
-    EnrollInputBn("model_diffs", false);
-    EnrollInputBn("model_init", false);
-    EnrollOutputBn("model", false);
-  }
+  std::string GetValueFromPbOpConf(const std::string& k) const override;
+  void InitFromOpConf(const OperatorConf& op_conf) override;
 
   std::string normal_ibn2lbn(const std::string& input_bn) const override {
     return RegstDesc::kAllLbn;

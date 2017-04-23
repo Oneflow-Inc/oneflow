@@ -2,17 +2,16 @@
 
 namespace oneflow {
 
-void CloneOp::Init(const OperatorConf& op_conf) {
-  mut_op_name() = op_conf.name();
-
+void CloneOp::InitFromOpConf(const OperatorConf& op_conf) {
   CHECK(op_conf.has_clone_conf());
-  auto cnf = new CloneOpConf(op_conf.clone_conf());
-  mut_pb_op_conf().reset(cnf);
-
+  mut_op_conf() = op_conf;
+  
   EnrollInputBn("in");
-  for (int64_t i = 0; i < cnf->out_num(); ++i) {
+  for (int64_t i = 0; i < op_conf.clone_conf().out_num(); ++i) {
     EnrollOutputBn("out_" + std::to_string(i));
   }
 }
-
+std::string CloneOp::GetValueFromPbOpConf(const std::string& k) const {
+  return GetValueFromPbMessage(op_conf().clone_conf(), k);
+}
 } // namespace oneflow
