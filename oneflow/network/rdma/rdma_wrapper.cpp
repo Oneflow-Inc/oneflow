@@ -146,60 +146,274 @@ bool RdmaWrapper::PollRecvQueue(NetworkResult* result) {
 }
 
 bool RdmaWrapper::PollSendQueue(NetworkResult* result) {
+    // CHECK result
+    // Result r;
 
+    uint32_t len = send_cq_->GetResults(&r, 1);
+    if (len == 0)
+        return false;
 
+    // CHECK
+    
+    // NET_SEND_OK? NET_SEND_ACK?
+    switch (r.RequestType) {
+        case REQUEST_TYPE::RequestTypeSend: {
+            result->type = NetworkResultType::NET_SEND_OK;
+            // The context is the message timestamp in Send request.
+            // The network object does not have additional information 
+            // to convey to outside caller, it just recycle the 
+            // registered_message used in sending out.
+            int32_t time_stamp = *(static_cast<int32_t*>(r.RequestContext));
+            Request* request = request_pool_->GetRequest(time_stamp);
+            // CHECK(request)
+            request_pool_->ReleaseRequest(time_stamp);
+            break;
+                                            
+        }
+        case REQUEST_TYPE::RequestTypeRead: {
+            result->type = NetworkResultType::NET_ERAD_OK;
+            // The context is the message timestamp in Read request.
+            // The network object needs to convey the information about 
+            // "what data have been read" to external caller.
+            int32_t time_stamp = *(static_cast<int32_t*>(r.RequestContext));
+            Request* request = request_pool_->GetRequest(time_stamp);
+
+            result->net_msg = request->registered_message->msg();
+            request_pool_->ReleaseRequest(time_stamp);
+            break;
+        }
+        default:
+            //
+    }
+
+    return true;
 }
 
 void RdmaWrapper::PostRecvRequest(uint64_t peer_machine_id) {
+    Connection* conn = connection_pool_->GetConnection(peer_machine_id);
 
+    Request* receive_request = request_pool_->AllocRequest(false);
 
+    // TODO()
+    // HRESULT hr = conn->queue_pair->Receive(
+    //     &receive_request->time_stamp, 
+    //     static_cast<const ND2_SGE*> (
+    //         receive_request->registered_message->net_memory()->sge()),
+    //     1);
+    // CHECK
 }
 
 void RdmaWrapper::RePostRecvRequest(uint64_t peer_machine_id, 
                                     int32_t time_stamp) {
+    Connection* conn = connection_pool_->GetConnection(peer_machine_id);
 
+    Request* receive_request = request_pool_->UpdateTimeStampAndReuse(time_stamp);
+
+    // TODO()
+    // HRESULT hr = conn->queue_pair->Receive(
+    //     &receive_request->time_stamp, 
+    //     static_cast<const ND2_SGE*> (
+    //         receive_request->registered_message->net_memory()->sge()),
+    //     1);
+    // CHECK
 
 }
 
 const MemoryDescriptor& RdmaWrapper::GetMemoryDescriptor(
         int64_t register_id) const {
-
+    auto mem_descriptor_it = register_id_to_mem_descriptor_.find(register_id);
+    // CHECK
+    return mem_descriptor_it->second;
 }
 
 
 
 void RdmaWrapper::CreateCompletionQueues() {
-
+    // CreateCompletionQueue for send request queue and recv request queue.
 
 }
 
 void RdmaWrapper::StartListen() {
+    // HRESULT hr = adapter_->CreateListener(...)
+
+    sockaddr_in my_sock = GetAddress(
+            net_topology_.all_nodes[my_machine_id_].address.c_str(),
+            net_topology_.all_nodes[my_machine_id_].port);
+    listener_->Bind(
+            reinterpret_cast<const sockaddr*>(&my_sock), 
+            sizeof(sockaddr_in));
+
+    // Start listening for incoming connection requests
+    // argument BAKLOG: The maximum number of pending connection requests
+    // to maintain for th elisten request. 
+    // Set to zero to indicate no limit.
+    listener_->Listen(0); // not sure whether 0(no limit) is OK
 
 
 }
 
 void RdmaWrapper::EstablishConnection() {
+    // Connect to neighboring nodes with larger rank actively
+    // For node with small rank, the connection will fail until its peer with 
+    // larger rank has established its own active connections
+    for (auto peer_machine_id : net_topology_.all_nodes[my_machine_id_].neighbors) {
+        if (peer_machine_id > my_machine_id) {
+            while (!TryConnectTo(peer_machine_id)) {
+                // If connection failed, wait and retry again.
+                Sleep(2000);
+            }
+            CompleteConnectionTo(peer_machine_id);
+            for (int k = 0; k < kPrePostRecvNumber; ++k) {
+                PostRecvRequest(peer_machine_id);
+            }
+        }
+    }
 
-
+    // Only if this node has established all the active connections, can it start
+    // to listen and wait for the connections from peer nodes with smaller rank.
+    for (auto peer_machine_id : net_topology_.all_nodes[my_machine_id_].neighbors) {
+        if (peer_machine_id < my_machine_id) { // peer_machine_id means nothing here, just counting.
+            int src_machine_id = WaitForConnectionFrom();
+            // connecting with src_machine_id
+            for (int k = 0; k < kPrePostRecvNumber; ++k) {
+                PostRecvRequest(src_machine_id);
+            }
+        }
+    }
 }
 
+// Need moved to Class Connection
 Connection* RdmaWrapper::NewConnection() {
+    Connection* conn = new Connection();
+    // conn->ov.hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 
+    // adapter_->CreateConnector(
+    //         IID_IND2Connector,
+    //         overlapped_file_,
+    //         reinterpret_cast<void**>(&conn->connector));
+    
+    // adapter_->CreateQueuePair(
+    //         IID_IND2Connector,
+    //         recv_cq_,
+    //         send_cq_,
+    //         NULL,
+    //         // just all set them as maximum value, need to be set
+    //         // according to our application protocal carefully.
+    //         adapter_info_.MaxRecvQueueDepth,
+    //         adapter_info_.MaxSendQueueDepth,
+    //         1, // adapter_info_.MaxRecvSge,
+    //         adapter_info_.MaxSendSge,
+    //         adapter_info_.MaxInlineDataSize,
+    //         reinterpret_cast<void**>(&conn->queue_pair));
 
+    return conn;
 }
+
+
 
 bool RdmaWrapper::TryConnectTo(uint64_t peer_machine_id) {
+    Connection* conn = NewConnection();
+    connection_pool_->AddConnection(peer_machine_id, conn);
 
+    sockaddr_in my_sock, peer_sock;
+    my_sock = GetAddress(
+            net_topology_.all_nodes[my_machine_id_].address.c_str(),
+            net_topology_.all_nodes[my_machine_id_].port);
 
+    conn->connector->Bind(
+            reinterpret_cast<const sockaddr*>(&my_sock),
+            sizeof(my_sock));
+
+    peer_sock = GetAddress(
+            net_topology_.all_nodes[peer_machine_id].address.c_str(),
+            net_topology_.all_nodes[peer_machine_id].port);
+
+    // Pre-post Receive Request before connect
+    PostRecvRequest(peer_machine_id);
+
+    /* HRESULT hr = */
+    conn->connector->Connect(
+            conn->queue_pair,
+            reinterpret_cast<const sockaddr*>(&peer_sock),
+            sizeof(peer_sock),
+            0,      // 0, since we do not support Read??
+            0,      // 0, since we do not support Read??
+            &my_machine_id_, // Send the active side machine id as private data
+                             // to tell the passive side who is the sender.
+            sizeof(int32_t), // TODO(), what size
+            &conn->ov);
+
+    /*
+    if (hr == ND_PENDING) {
+        hr = conn->connector->GetOverlappedResult(&conn->ov, TRUE);
+    }
+
+    if (hr != ND_SUCCESS) {
+        // Failed to connect to peer_machine_id.
+
+        // If failed, clean the connection.
+        connection_pool_->CleanConnection(peer_machine_id);
+        return false;
+    }
+    */
+
+    // established with peer_machine_id.
+    return true;
 }
 
 void RdmaWrapper::CompleteConnectionTo(uint64_t peer_machine_id) {
-
-
+    Connection* conn = connection_pool_->GetConnection(peer_machine_id);
+    hr = conn->connector->CompleteConnect(&conn->ov);
+    if (hr == ND_PENDING) {
+        hr = conn->connector->GetOverlappedResult(&conn->ov, TRUE);
+    }
 }
 
 // TODO()
 // int32_t WaitForConnectionFrom()
+
+/* 
+  int32_t RdmaWrapper::WaitForConnectionFrom() {
+  Connection* conn = NewConnection(); 
+  HRESULT hr = listener_->GetConnectionRequest(conn->connector, &conn->ov);
+  if (hr == ND_PENDING) {
+    hr = listener_->GetOverlappedResult(&conn->ov, TRUE);
+  }
+
+  // CHECK(!FAILED(hr)) << "Failed to GetConnectionRequest\n";
+  // LOG(INFO) << "Get connection request done\n";
+
+  int32_t peer_rank;
+  ULONG size = sizeof(peer_rank);
+  // Get src rank from the private data
+  hr = conn->connector->GetPrivateData(&peer_rank, &size);
+  // LOG(INFO) << "peer rank = " << peer_rank << " size = " << size  << "\n";
+  // NOTE(feiga): remove this CHECK, since I can't make it pass :(
+  // NOTE(feiga): The author of NDSPI says it's normal for this check failed
+  //              So just ignore it.
+  // CHECK(!FAILED(hr)) << Failed to get private data. hr = " << hr << "\n";
+
+  connection_pool_->AddConnection(peer_rank, conn);
+
+  // Pre-post receive request
+  PostReceiveRequest(peer_rank);
+
+  hr = conn->connector->Accept(conn->queue_pair,
+    0,      // Zero. We don't allow Read
+    0,      // Zero. We don't allow Read
+    NULL,   // TODO(feiga): Add private data? // Credit information?
+    0,
+    &conn->ov
+    );
+  if (hr == ND_PENDING) {
+    hr = conn->connector->GetOverlappedResult(&conn->ov, TRUE);
+  }
+  // CHECK(!FAILED(hr)) << "Failed to accept\n";
+  // LOG(INFO) << "Accept done\n";
+  return peer_rank;
+}
+
+*/
 
 void RdmaWrapper::Finalize() { }
 
