@@ -42,6 +42,7 @@ void TaskGraph::BuildFromChainGph(
 }
 
 void TaskGraph::BuildFromStageGph(bool need_bp) {
+  LOG(INFO) << "Build StageGraph...";
   Stage2TaskNodesMap stage2task_nodes;
   InitCompTaskNodes(&stage2task_nodes);
   InitBoxingTaskNodes(&stage2task_nodes);

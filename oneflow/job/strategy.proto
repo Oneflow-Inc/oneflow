@@ -6,17 +6,24 @@ enum ParallelPolicy {
   kModelParallel = 1;
 }
 
+message DeviceSet {
+  repeated string device_name = 1;
+}
+
 message ParallelConf {
   ParallelPolicy policy = 1;
-  repeated string devices = 2;
+  DeviceSet device_set = 2;
+}
+
+message OpNameSet {
+  repeated string op_name = 1;
 }
 
 message PlacementGroup {
-  string name = 1;
-  repeated string op_names = 2;
-  ParallelConf parallel_conf = 3;
+  OpNameSet op_set = 1;
+  ParallelConf parallel_conf = 2;
 }
 
 message Strategy {
-  repeated PlacementGroup placement_groups = 1;
+  repeated PlacementGroup placement_group = 1;
 }

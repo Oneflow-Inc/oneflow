@@ -13,6 +13,10 @@ class Range final {
 
   Range(int64_t begin, int64_t end) : begin_(begin), end_(end) {}
 
+  bool operator == (const Range& rhs) const {
+    return begin_ == rhs.begin_ && end_ == rhs.end_;
+  }
+
   int64_t begin() const { return begin_; }
   int64_t end() const { return end_; }
   

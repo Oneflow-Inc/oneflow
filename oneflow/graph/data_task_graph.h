@@ -14,8 +14,10 @@ class DataTaskGraph final : public TaskGraph {
   DataTaskGraph(const DLNetConf& dl_net_conf,
                 const Strategy& strategy_conf,
                 bool need_bp) {
+    LOG(INFO) << "Build LogicalGraph...";
     LogicalGraph logical_gph(dl_net_conf, strategy_conf);
-    auto chain_gph = make_unique<ChainGraph> (&logical_gph);
+    LOG(INFO) << "Build ChainGraph...";
+    auto chain_gph = of_make_unique<ChainGraph> (&logical_gph);
     BuildFromChainGph(std::move(chain_gph), need_bp);
   }
 
