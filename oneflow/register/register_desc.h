@@ -29,6 +29,10 @@ class RegstDesc {
   Shape* EnrollLbn(const std::string& lbn);
   const Shape& GetShape(const std::string& lbn);
   Shape* GetMutShapePtr(const std::string& lbn);
+
+  const HashMap<std::string, std::unique_ptr<Shape>>& GetLbn2ShapeMap() const {
+    return lbn2shape_;
+  }
   
   static const char* kAllLbn;
 
@@ -42,7 +46,6 @@ class RegstDesc {
 
 class ContigRegstDesc final : public RegstDesc {
  public:
-
   OF_DISALLOW_COPY_AND_MOVE(ContigRegstDesc);
   ContigRegstDesc() = default;
   ~ContigRegstDesc() = default;

@@ -4,6 +4,45 @@
 
 namespace oneflow {
 
+void BuildExecAndProducedRegstsForCopy(TaskGraph* gph) {
+  OperatorConf op_conf;
+  op_conf.set_name("copy_" + NewUniqueId());
+  CopyOpConf* copy_conf = op_conf.mutable_copy_op_conf();
+  copy_conf->set_copy_type(
+      IsH2D() ? oneflow::CopyOpConf::H2D : oneflow::CopyOpConf::D2H);
+  for(std::string& lbn : CopiedLbns()){
+    copy_conf->add_copied_lbns(lbn);
+  }
+  RegstDesc* in_regst = GetRelatedRegst(SoleInEdge());
+  if(copy_conf->copied_lbns_size() == 1 
+      && copy_conf->copied_lbns(0) == RegstDesc::kAllLbn){
+    copy_conf->clear_copied_lbns();
+    for(auto& pair : in_regst->GetLbn2ShapeMap()){
+      copy_conf->add_copied_lbns(pair.first);
+    }
+  }
+  ExecNode* node = mut_exec_graph().NewFinalNode();
+  node->mut_op() = ConstructOpFromPbConf(op_conf);
+
+  auto out_regst = make_unique<DisContigRegstDesc> ();
+  BindProducedRegstAndOutEdge(out_regst.get(), SoleOutEdge());
+  EnrollProducedRegstDesc("copy", std::move(out_regst));
+  for(std::string ibn : node->op()->input_bns()){
+    std::string lbn = node->op()->ibn2lbn(ibn);
+    Shape* shape_ptr = in_regst->GetMutShapePtr(lbn);
+    node->op()->SetShapePtr(ibn, shape_ptr);
+    node.AddBnInOpAndRegst(ibn, in_regst);
+  }
+  for(std::string obn : node->op()->output_bns()){
+    std::string lbn = node->op()->obn2lbn(obn);
+    Shape* shape_ptr = GetProducedRegst("copy")->EnrollLbn(lbn);
+    node->op()->SetShapePtr(obn, shape_ptr);
+    node.AddBnInOpAndRegst(obn, GetProducedRegst("copy"));
+  }
+  node->op()->InferShape4ObAndDtbFromIb();
+  mut_exec_graph().UpdateSourceAndSink();
+}
+
 void CopyHDTaskNode::SetFwInCopy() {
   CHECK(IsFwNode());
   is_fw_in_copy_ = true;
@@ -21,6 +60,14 @@ const std::vector<std::string>& CopyHDTaskNode::CopiedLbns() const {
 void CopyHDTaskNode::InitWithFwNode(TaskNode* fw_node) {
   TaskNode::InitWithFwNode(fw_node);
   is_fw_in_copy_ = of_dynamic_cast<CopyHDTaskNode*>(fw_node)->is_fw_in_copy_;
+}
+
+void CopyHDTaskNode::FwBuildExecAndProducedRegsts(TaskGraph* gph) {
+  BuildExecAndProducedRegstsFroCopy(gph);
+}
+
+void CopyHDTaskNode::BpBuildExecAndProducedRegsts(TaskGraph* gph) {
+  BuildExecAndProducedRegstsFroCopy(gph);
 }
 
 } // namespace oneflow
