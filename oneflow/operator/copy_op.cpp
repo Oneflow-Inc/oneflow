@@ -20,15 +20,15 @@ std::string CopyOp::GetValueFromPbOpConf(const std::string& k) const {
 void CopyOp::InitFromOperatorProto(const OperatorProto& operatorproto) {
   CHECK(operatorproto.has_copy_op());
   Operator::InitFromOperatorProto(operatorproto);
-  GPMap2HashMap(operatorproto.copy_op().ibn2lbn(), ibn2lbn_);
-  GPMap2HashMap(operatorproto.copy_op().obn2lbn(), obn2lbn_);
+  ibn2lbn_ = PbMap2HashMap(operatorproto.copy_op().ibn2lbn());
+  obn2lbn_ = PbMap2HashMap(operatorproto.copy_op().obn2lbn());
 }
 
 OperatorProto CopyOp::ToOperatorProto() {
   OperatorProto operatorproto = Operator::ToOperatorProto();
   CopyOpProto copyopproto;
-  *(copyopproto.mutable_ibn2lbn()) = HashMap2GPMap(ibn2lbn_);
-  *(copyopproto.mutable_obn2lbn()) = HashMap2GPMap(obn2lbn_);
+  *(copyopproto.mutable_ibn2lbn()) = HashMap2PbMap(ibn2lbn_);
+  *(copyopproto.mutable_obn2lbn()) = HashMap2PbMap(obn2lbn_);
   *(operatorproto.mutable_copy_op()) = copyopproto;
   return operatorproto;
 }

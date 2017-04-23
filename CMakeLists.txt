@@ -10,7 +10,7 @@ set(oneflow_src_dir ${PROJECT_SOURCE_DIR}/oneflow)
 set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
 
 # option
-option(download_third_party "Download and build all third party codes" OFF)
+option(DOWNLOAD_THIRD_PARTY "Download and build all third party codes" OFF)
 
 # Different set for different platform
 if (MSVC)
@@ -69,7 +69,7 @@ RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
 
 add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(of_protoobj ${oneflow_third_party_libs})
-if (download_third_party)
+if (DOWNLOAD_THIRD_PARTY)
   add_dependencies(of_protoobj ${oneflow_third_party_dependencies})
 endif()
 
@@ -84,7 +84,7 @@ add_dependencies(of_ccobj of_protoobj)
 foreach(cc ${of_main_cc})
   get_filename_component(main_name ${cc} NAME_WE)
   add_executable(${main_name} ${cc})
-  target_link_libraries(${main_name} PUBLIC of_protoobj of_ccobj ${oneflow_third_party_libs})
+  target_link_libraries(${main_name} PUBLIC of_ccobj of_protoobj ${oneflow_third_party_libs})
 endforeach()
 
 # build test
@@ -92,6 +92,6 @@ foreach(cc ${of_all_test_cc})
   get_filename_component(test_name ${cc} NAME_WE)
   string(CONCAT test_exe_name ${test_name} exe)
   add_executable(${test_exe_name} ${cc})
-  target_link_libraries(${test_exe_name} PUBLIC of_protoobj of_ccobj ${oneflow_third_party_libs})
+  target_link_libraries(${test_exe_name} PUBLIC of_ccobj of_protoobj ${oneflow_third_party_libs})
   add_test(NAME ${test_name} COMMAND ${test_exe_name})
 endforeach()
