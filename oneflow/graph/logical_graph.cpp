@@ -1,4 +1,5 @@
 #include "graph/logical_graph.h"
+#include <iostream>
 #include "glog/logging.h"
 #include "operator/operator_factory.h"
 
@@ -79,6 +80,7 @@ void LogicalGraph::CollectCloneInfos(
     std::vector<CloneInfo>* clone_infos,
     const HashMap<LogicalEdge*, std::string>& edge2lbn) {
   for (const std::unique_ptr<LogicalNode>& cur_node : nodes()) {
+    if (IsLastNode(cur_node.get())) { continue; }
     HashMap<std::string, std::vector<LogicalEdge*>> lbn2edges;
     for (LogicalEdge* edge : cur_node->out_edges()) {
       lbn2edges[edge2lbn.at(edge)].push_back(edge);
