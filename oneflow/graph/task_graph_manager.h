@@ -22,16 +22,9 @@ class TaskGraphMgr {
   void Init();
 
  private:
-  template<typename ValType>
-  using ChainAsKeyMap = HashMap<const ChainNode*, ValType>;
-
   TaskGraphMgr() = default;
 
-  std::unique_ptr<DataTaskGraph> data_task_gph_;
-
-  ChainAsKeyMap<std::unique_ptr<MdUpdtTaskGraph>> md_updt_task_gphs_;
-  ChainAsKeyMap<std::unique_ptr<MdLoadTaskGraph>> md_load_task_gphs_;
-  ChainAsKeyMap<std::unique_ptr<MdSaveTaskGraph>> md_save_task_gphs_;
+  std::vector<std::unique_ptr<TaskGraph>> task_gphs_;
 
 };
 

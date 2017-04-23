@@ -45,7 +45,7 @@ void MdLoadTaskGraph::BuildTaskGraph(const ChainNode* update_chain) {
 
 void MdLoadTaskGraph::InitFaker2Mccoy(
     const std::vector<CompTaskNode*>& sorted_update_tasks) {
-  auto sorted_faker_tasks = SortedTasksInChain(chain_gph()->SoleLastNode());
+  auto sorted_faker_tasks = SortedCompTasksInChain(chain_gph()->SoleLastNode());
   CHECK_EQ(sorted_update_tasks.size(), sorted_faker_tasks.size());
   for (size_t i = 0; i < sorted_update_tasks.size(); ++i) {
     EnrollFakerMccoy(sorted_faker_tasks[i], sorted_update_tasks[i]);

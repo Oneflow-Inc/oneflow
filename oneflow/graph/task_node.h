@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_GRAPH_TASK_NODE_H_
 #define ONEFLOW_GRAPH_TASK_NODE_H_
 
+#include "task/task.pb.h"
 #include "graph/stage_graph.h"
 #include "graph/exec_graph.h"
 #include "register/register_desc.h"
@@ -43,6 +44,9 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   // 
   const TaskEdge* GetOutEdge4ProducedRegst(RegstDesc*) const;
   RegstDesc* GetProducedRegst4OutEdge(const TaskEdge*) const;
+
+  //
+  virtual TaskProto ToProto() const { TODO(); }
  
  protected:
   virtual std::unique_ptr<TaskNode> CreateSameTypeNode() const;

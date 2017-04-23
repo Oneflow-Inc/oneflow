@@ -28,7 +28,7 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   typedef void (CompTaskNode::*CompTaskNodeMemFunc)(TaskGraph*);
   virtual CompTaskNodeMemFunc Func4FwBuildExecAndProducedRegsts() const = 0;
 
-  std::vector<CompTaskNode*> SortedTasksInChain(const ChainNode*) const;
+  std::vector<CompTaskNode*> SortedCompTasksInChain(const ChainNode*) const;
 
  protected:
   TaskGraph() = default;

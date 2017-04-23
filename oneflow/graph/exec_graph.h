@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_GRAPH_EXEC_GRAPH_H_
 #define ONEFLOW_GRAPH_EXEC_GRAPH_H_
 
+#include "graph/exec_graph.pb.h"
 #include "operator/operator.h"
 #include "graph/graph.h"
 #include "register/register_desc.h"
@@ -60,6 +61,10 @@ class ExecGraph final : public Graph<ExecNode, ExecEdge> {
   OF_DISALLOW_COPY_AND_MOVE(ExecGraph);
   ExecGraph() = default;
   ~ExecGraph() = default;
+
+  ExecGraphProto ToProto() const {
+    TODO();
+  }
 
  private:
 

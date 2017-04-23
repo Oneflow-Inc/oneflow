@@ -6,28 +6,28 @@ void Operator::InitFromOperatorProto(const OperatorProto& op_proto) {
   op_conf_ = op_proto.user_conf();
   
   special_ibn2lbn_ = PbMap2HashMap(op_proto.special_ibn2lbn());
-  data_tmp_bns_ = PbRepeatedPtrField2Vec(op_proto.data_tmp_bns());
-  input_bns_ = PbRepeatedPtrField2Vec(op_proto.input_bns());
-  input_diff_bns_ = PbRepeatedPtrField2Vec(op_proto.input_diff_bns());
-  output_bns_ = PbRepeatedPtrField2Vec(op_proto.output_bns());
-  output_diff_bns_ = PbRepeatedPtrField2Vec(op_proto.output_diff_bns());
-  model_bns_ = PbRepeatedPtrField2Vec(op_proto.model_bns());
-  model_diff_bns_ = PbRepeatedPtrField2Vec(op_proto.model_diff_bns());
-  model_tmp_bns_ = PbRepeatedPtrField2Vec(op_proto.model_tmp_bns());
+  data_tmp_bns_ = PbVec2StdVec(op_proto.data_tmp_bns());
+  input_bns_ = PbVec2StdVec(op_proto.input_bns());
+  input_diff_bns_ = PbVec2StdVec(op_proto.input_diff_bns());
+  output_bns_ = PbVec2StdVec(op_proto.output_bns());
+  output_diff_bns_ = PbVec2StdVec(op_proto.output_diff_bns());
+  model_bns_ = PbVec2StdVec(op_proto.model_bns());
+  model_diff_bns_ = PbVec2StdVec(op_proto.model_diff_bns());
+  model_tmp_bns_ = PbVec2StdVec(op_proto.model_tmp_bns());
 }
 
 OperatorProto Operator::ToOperatorProto() {
   OperatorProto op_proto;
   *(op_proto.mutable_user_conf()) = op_conf_;
   *(op_proto.mutable_special_ibn2lbn()) = HashMap2PbMap(special_ibn2lbn_);
-  *(op_proto.mutable_data_tmp_bns()) = Vec2PbRepeatedPtrField(data_tmp_bns_);
-  *(op_proto.mutable_input_bns()) = Vec2PbRepeatedPtrField(input_bns_);
-  *(op_proto.mutable_input_diff_bns()) = Vec2PbRepeatedPtrField(input_diff_bns_);
-  *(op_proto.mutable_output_bns()) = Vec2PbRepeatedPtrField(output_bns_);
-  *(op_proto.mutable_output_diff_bns()) = Vec2PbRepeatedPtrField(output_diff_bns_);
-  *(op_proto.mutable_model_bns()) = Vec2PbRepeatedPtrField(model_bns_);
-  *(op_proto.mutable_model_diff_bns()) = Vec2PbRepeatedPtrField(model_diff_bns_);
-  *(op_proto.mutable_model_tmp_bns()) = Vec2PbRepeatedPtrField(model_tmp_bns_);
+  *(op_proto.mutable_data_tmp_bns()) = StdVec2PbVec(data_tmp_bns_);
+  *(op_proto.mutable_input_bns()) = StdVec2PbVec(input_bns_);
+  *(op_proto.mutable_input_diff_bns()) = StdVec2PbVec(input_diff_bns_);
+  *(op_proto.mutable_output_bns()) = StdVec2PbVec(output_bns_);
+  *(op_proto.mutable_output_diff_bns()) = StdVec2PbVec(output_diff_bns_);
+  *(op_proto.mutable_model_bns()) = StdVec2PbVec(model_bns_);
+  *(op_proto.mutable_model_diff_bns()) = StdVec2PbVec(model_diff_bns_);
+  *(op_proto.mutable_model_tmp_bns()) = StdVec2PbVec(model_tmp_bns_);
   return op_proto;
 }
 

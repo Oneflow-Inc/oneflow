@@ -14,6 +14,8 @@
 namespace oneflow {
 
 using PbMessage = google::protobuf::Message;
+template<typename T>
+using PbVector = google::protobuf::RepeatedPtrField<T>;
 
 // Prototxt <-> String
 void ParseProtoFromString(const std::string& str, PbMessage* proto);
@@ -29,14 +31,14 @@ void PrintProtoToTextFile(const PbMessage& proto,
 std::string GetValueFromPbMessage(const PbMessage& msg,
                                   const std::string& key);
  
-// RepeatedPtrField <-> Vector 
-inline std::vector<std::string> PbRepeatedPtrField2Vec(
-    const google::protobuf::RepeatedPtrField<std::string>& rpf) {
+// PbVector <-> std::vector 
+inline std::vector<std::string> PbVec2StdVec(
+    const PbVector<std::string>& rpf) {
   return std::vector<std::string> (rpf.begin(), rpf.end());
 }
-inline google::protobuf::RepeatedPtrField<std::string> Vec2PbRepeatedPtrField (
+inline PbVector<std::string> StdVec2PbVec (
     const std::vector<std::string>& vec) {
-  using RetType = google::protobuf::RepeatedPtrField<std::string>;
+  using RetType = PbVector<std::string>;
   return RetType(vec.begin(), vec.end());
 }
 

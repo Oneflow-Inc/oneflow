@@ -22,7 +22,7 @@ void TaskGraph::BuildExecAndProducedRegsts() {
   }
 }
 
-std::vector<CompTaskNode*> TaskGraph::SortedTasksInChain(
+std::vector<CompTaskNode*> TaskGraph::SortedCompTasksInChain(
     const ChainNode* chain) const {
   std::vector<CompTaskNode*> ret;
   for (const auto& node : nodes()) {
