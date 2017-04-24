@@ -36,11 +36,17 @@ void RdmaWrapper::Init(uint64_t my_machine_id,
     connection_pool_.reset(new ConnectionPool());
 
     //NdspiV2Open();
-    
+    sockaddr_in sin = GetAddress(); // TODO()
+    InitRdmaDevice();
+    InitRdmaAdapter();
+
+
     CreateCompletionQueues();
     StartListen();
     EstablishConnection();
 }
+
+void 
 
 // |msg| contains src machine_id and dst machine_id 
 bool RdmaWrapper::Send(const NetworkMessage& msg) {
@@ -95,10 +101,6 @@ void RdmaWrapper::Read(MemoryDescriptor* src, NetworkMemory* dst) {
     //         0);
 
     // CHECK
-}
-
-void RdmaWrapper::Barrier() {
-    //TODO() OneFlowWin
 }
 
 NetworkMemory* RdmaWrapper::NewNetworkMemory() {
@@ -414,8 +416,6 @@ void RdmaWrapper::CompleteConnectionTo(uint64_t peer_machine_id) {
 }
 
 */
-
-void RdmaWrapper::Finalize() { }
 
 } // namespace oneflow
 
