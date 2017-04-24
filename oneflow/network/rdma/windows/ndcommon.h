@@ -18,7 +18,7 @@
 #include <new>
 #include <sal.h>
 
-#include <ndsupport.h>
+#include "ndsupport.h"
 #include <ndstatus.h>
 
 

@@ -3,15 +3,15 @@
 
 namespace oneflow {
 
-void DataLoaderOp::Init(const OperatorConf& op_conf) {
-  mut_op_name() = op_conf.name();
-  
-  CHECK(op_conf.has_data_loader_op_conf());
-  auto cnf = new DataLoaderOpConf(op_conf.data_loader_op_conf());
-  mut_pb_op_conf().reset(cnf);
+void DataLoaderOp::InitFromOpConf(const OperatorConf& op_conf) {
+  CHECK(op_conf.has_data_loader_conf());
+  mut_op_conf() = op_conf;
  
   EnrollOutputBn("data", false);
   EnrollOutputBn("label", false);
 }
 
+std::string DataLoaderOp::GetValueFromPbOpConf(const std::string& k) const {
+  return GetValueFromPbMessage(op_conf().data_loader_conf(), k);
+}
 } // namespace oneflow

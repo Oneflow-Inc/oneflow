@@ -20,9 +20,14 @@ void TaskNode::set_stage_node(const StageNode* new_stage_node) {
   CHECK(IsFwNode());
   stage_node_ = new_stage_node;
 }
-ThrdLocId& TaskNode::mut_thrd_loc_id() {
+uint64_t& TaskNode::mut_thrd_loc_id() {
   CHECK(IsFwNode());
   return thrd_loc_id_;
+}
+
+void TaskNode::set_task_id() {
+  uint64_t machine_id = stage_node_->machine_id();
+  task_id_ = IDMgr::Singleton().NewTaskId(machine_id, thrd_loc_id_);
 }
 
 std::unique_ptr<TaskNode> TaskNode::BuildAndConnectBpNode() {
@@ -76,6 +81,7 @@ void TaskNode::EnrollProducedRegstDesc(
     const std::string& regst_desc_name,
     std::unique_ptr<RegstDesc>&& regst_desc) {
   regst_desc->SetProducer(this);
+  regst_desc->set_regst_desc_id(IDMgr::Singleton().NewRegstDescId(task_id_));
   auto pair = std::make_pair(regst_desc_name, std::move(regst_desc));
   CHECK(produced_regst_descs_.insert(std::move(pair)).second);
 }

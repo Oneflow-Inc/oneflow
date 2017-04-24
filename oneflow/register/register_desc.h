@@ -1,14 +1,15 @@
-#ifndef ONEFLOW_GRAPH_REGISTER_DESC_H_
-#define ONEFLOW_GRAPH_REGISTER_DESC_H_
+#ifndef ONEFLOW_REGISTER_REGISTER_DESC_H_
+#define ONEFLOW_REGISTER_REGISTER_DESC_H_
 
 #include "common/util.h"
 #include "common/shape.h"
 
 namespace oneflow {
 
-class TaskNode;
+// Regst  : Register
+// Contig : Contiguous
 
-// Regst : Register
+class TaskNode;
 
 class RegstDesc {
  public:
@@ -16,33 +17,31 @@ class RegstDesc {
   RegstDesc();
   virtual ~RegstDesc() = default;
 
-  //
+  // regst_desc_id
+  uint64_t regst_desc_id() const { return regst_desc_id_; }
+  void set_regst_desc_id(uint64_t val) { regst_desc_id_ = val; }
+  // Producer
   const TaskNode* GetProducer() const { return producer_; }
   void SetProducer(const TaskNode* task_node) { producer_ = task_node; }
-  void AddSubscriber(const TaskNode* task_node) {
-    CHECK(subscribers_.insert(task_node).second);
-  }
 
-  void CopyLbnAndShape(const RegstDesc*) { TODO(); }
-
-  Shape* EnrollLbn(const std::string& lbn) { TODO(); }
-  const Shape& GetShape(const std::string& lbn) { TODO(); }
-  Shape* GetMutShapePtr(const std::string& lbn) { TODO(); }
+  // Lbn and Shape
+  void CopyLbn2ShapeMap(const RegstDesc*);
+  Shape* EnrollLbn(const std::string& lbn);
+  const Shape& GetShape(const std::string& lbn);
+  Shape* GetMutShapePtr(const std::string& lbn);
+  
+  static const char* kAllLbn;
 
  private:
-  int32_t regst_desc_id_;
+  uint64_t regst_desc_id_;
   const TaskNode* producer_;
-  std::unordered_set<const TaskNode*> subscribers_;
   
   HashMap<std::string, std::unique_ptr<Shape>> lbn2shape_;
 
 };
 
-// Contiguous
 class ContigRegstDesc final : public RegstDesc {
  public:
-  static const char* kAllLbn;
-
   OF_DISALLOW_COPY_AND_MOVE(ContigRegstDesc);
   ContigRegstDesc() = default;
   ~ContigRegstDesc() = default;
@@ -61,4 +60,4 @@ class DisContigRegstDesc final : public RegstDesc {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_GRAPH_REGISTER_DESC_H_
+#endif // ONEFLOW_REGISTER_REGISTER_DESC_H_

@@ -1,9 +1,10 @@
 #ifndef ONEFLOW_GRAPH_EXEC_GRAPH_H_
 #define ONEFLOW_GRAPH_EXEC_GRAPH_H_
 
+#include "graph/exec_graph.pb.h"
 #include "operator/operator.h"
 #include "graph/graph.h"
-#include "graph/register_desc.h"
+#include "register/register_desc.h"
 
 namespace oneflow {
 
@@ -61,7 +62,7 @@ class ExecGraph final : public Graph<ExecNode, ExecEdge> {
   ExecGraph() = default;
   ~ExecGraph() = default;
 
-  ExecNode* SoleNode() const {
+  ExecGraphProto ToProto() const {
     TODO();
   }
 
