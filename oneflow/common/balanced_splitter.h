@@ -3,27 +3,30 @@
 
 #include <stdint.h>
 #include "common/util.h"
+#include "common/range.h"
 
 namespace oneflow {
 
 // For example
 // BalancedSplitter splitter(20, 6)
-// the result of splitter.At 0,1,2,3,4,5 is
-//                           4,4,3,3,3,3
+// the result of splitter.At
+//     0    [0, 4)
+//     1    [4, 8)
+//     2    [8, 11)
+//     3    [11, 14)
+//     4    [14, 17)
+//     5    [17, 20)
 class BalancedSplitter final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BalancedSplitter);
-  
-  BalancedSplitter() = default;
+  // OF_DISALLOW_COPY_AND_MOVE(BalancedSplitter);
+  BalancedSplitter() = delete;
   ~BalancedSplitter() = default;
 
-  void Init(int64_t total_num, int64_t split_num);
+  BalancedSplitter(int64_t total_num, int64_t split_num);
 
-  int64_t At(int64_t idx) const;
+  Range At(int64_t idx) const;
 
  private:
-  int64_t minimum_guarantee_;
-  int64_t threshold_;
 
 };
 

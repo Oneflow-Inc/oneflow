@@ -1,9 +1,10 @@
 #ifndef ONEFLOW_GRAPH_TASK_NODE_H_
 #define ONEFLOW_GRAPH_TASK_NODE_H_
 
+#include "task/task.pb.h"
 #include "graph/stage_graph.h"
 #include "graph/exec_graph.h"
-#include "graph/register_desc.h"
+#include "register/register_desc.h"
 
 namespace oneflow {
 
@@ -23,13 +24,15 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   TaskNode* GetBpNode() const;
   const ChainNode* chain_node() const { return stage_node_->chain_node();}
   const StageNode* stage_node() const { return stage_node_; }
-  const ThrdLocId& thrd_loc_id() const { return thrd_loc_id_; }
+  const uint64_t& thrd_loc_id() const { return thrd_loc_id_; }
   const ExecGraph& exec_gph() const { return exec_gph_; }
+  uint64_t task_id() const { return task_id_; }
   
   // Setters
   void SetFwNode() { is_fw_node_ = true; }
   void set_stage_node(const StageNode*);
-  ThrdLocId& mut_thrd_loc_id();
+  uint64_t& mut_thrd_loc_id();
+  void set_task_id();
 
   // return bp_node
   std::unique_ptr<TaskNode> BuildAndConnectBpNode();
@@ -41,6 +44,9 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   // 
   const TaskEdge* GetOutEdge4ProducedRegst(RegstDesc*) const;
   RegstDesc* GetProducedRegst4OutEdge(const TaskEdge*) const;
+
+  //
+  virtual TaskProto ToProto() const { TODO(); }
  
  protected:
   virtual std::unique_ptr<TaskNode> CreateSameTypeNode() const;
@@ -59,9 +65,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
  private:
   // In task_gph level
   const StageNode* stage_node_;
-  ThrdLocId thrd_loc_id_;
+  uint64_t thrd_loc_id_;
   bool is_fw_node_;
   TaskNode* related_fw_or_bp_node_;
+  uint64_t task_id_;
   // In task level
   ExecGraph exec_gph_;
 

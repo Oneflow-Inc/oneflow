@@ -4,14 +4,13 @@
 namespace oneflow {
 
 TEST(BalancedSplitter, split_20_to_6_part) {
-  BalancedSplitter splitter;
-  splitter.Init(20, 6);
-  ASSERT_EQ(splitter.At(0), 4);
-  ASSERT_EQ(splitter.At(1), 4);
-  ASSERT_EQ(splitter.At(2), 3);
-  ASSERT_EQ(splitter.At(3), 3);
-  ASSERT_EQ(splitter.At(4), 3);
-  ASSERT_EQ(splitter.At(5), 3);
+  BalancedSplitter splitter(20, 6);
+  ASSERT_TRUE(splitter.At(0) == Range(0, 4));
+  ASSERT_TRUE(splitter.At(1) == Range(4, 8));
+  ASSERT_TRUE(splitter.At(2) == Range(8, 11));
+  ASSERT_TRUE(splitter.At(3) == Range(11, 14));
+  ASSERT_TRUE(splitter.At(4) == Range(14, 17));
+  ASSERT_TRUE(splitter.At(5) == Range(17, 20));
 }
 
 } // namespace oneflow

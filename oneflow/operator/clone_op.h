@@ -11,8 +11,9 @@ class CloneOp final : public SysOperator {
   CloneOp() = default;
   ~CloneOp() = default;
 
-  void Init(const OperatorConf& op_conf) override;
+  void InitFromOpConf(const OperatorConf& op_conf) override;
   void InferShape4ObAndDtbFromIb() const override { TODO(); }
+  std::string GetValueFromPbOpConf(const std::string& k) const override;
   
   std::string normal_ibn2lbn(const std::string& input_bn) const override {
     return GetValueFromPbOpConf("lbn");

@@ -16,6 +16,10 @@ class ChainNode final : public Node<ChainNode, ChainEdge> {
 
   std::string ConcatedOpsName() const;
 
+  std::shared_ptr<const Operator> SoleOp() const {
+    CHECK_EQ(op_vec_.size(), 1);
+    return op_vec_.front();
+  }
   const std::vector<std::shared_ptr<const Operator>>& op_vec() const {
     return op_vec_;
   }

@@ -1,4 +1,5 @@
 #include "graph/logical_graph.h"
+#include <iostream>
 #include "glog/logging.h"
 #include "operator/operator_factory.h"
 
@@ -17,6 +18,7 @@ void LogicalGraph::NaiveBuildGraphStruct(
     const DLNetConf& dl_net_conf,
     HashMap<LogicalEdge*, std::string>* edge2lbn,
     HashMap<LogicalEdge*, std::string>* edge2ibn) {
+  LOG(INFO) << "NaiveBuildGraphStruct";
   HashMap<std::string, LogicalNode*> lbn2producer;
   // Process Op
   for (int op_i = 0; op_i < dl_net_conf.op_conf_size(); ++op_i) {
@@ -45,15 +47,16 @@ void LogicalGraph::NaiveBuildGraphStruct(
 }
 
 void LogicalGraph::FillNodeWithParallelDesc(const Strategy& strategy_conf) {
+  LOG(INFO) << "FillNodeWithParallelDesc";
   HashMap<std::string, LogicalNode*> op_name2node;
   for (const std::unique_ptr<LogicalNode>& logical_node : nodes()) {
     const std::string& op_name = logical_node->op()->op_name();
     CHECK(op_name2node.emplace(op_name, logical_node.get()).second);
   }
-  for (int gid = 0; gid < strategy_conf.placement_groups_size(); ++gid) {
-    const PlacementGroup& cur_group = strategy_conf.placement_groups(gid);
-    for (int li = 0; li < cur_group.op_names_size(); ++li) {
-      const std::string& op_name = cur_group.op_names(li);
+  for (int gid = 0; gid < strategy_conf.placement_group_size(); ++gid) {
+    const PlacementGroup& cur_group = strategy_conf.placement_group(gid);
+    for (int li = 0; li < cur_group.op_set().op_name_size(); ++li) {
+      const std::string& op_name = cur_group.op_set().op_name(li);
       auto it = op_name2node.find(op_name);
       CHECK(it != op_name2node.end());
       auto parallel_desc_raw_ptr = new ParallelDesc(cur_group.parallel_conf());
@@ -65,6 +68,7 @@ void LogicalGraph::FillNodeWithParallelDesc(const Strategy& strategy_conf) {
 void LogicalGraph::AddCloneNodes(
     const HashMap<LogicalEdge*, std::string>& edge2lbn,
     const HashMap<LogicalEdge*, std::string>& edge2ibn) {
+  LOG(INFO) << "AddCloneNodes";
   std::vector<CloneInfo> clone_infos;
   CollectCloneInfos(&clone_infos, edge2lbn);
   for (const CloneInfo& clone_info : clone_infos) {
@@ -76,6 +80,7 @@ void LogicalGraph::CollectCloneInfos(
     std::vector<CloneInfo>* clone_infos,
     const HashMap<LogicalEdge*, std::string>& edge2lbn) {
   for (const std::unique_ptr<LogicalNode>& cur_node : nodes()) {
+    if (IsLastNode(cur_node.get())) { continue; }
     HashMap<std::string, std::vector<LogicalEdge*>> lbn2edges;
     for (LogicalEdge* edge : cur_node->out_edges()) {
       lbn2edges[edge2lbn.at(edge)].push_back(edge);
@@ -87,8 +92,8 @@ void LogicalGraph::CollectCloneInfos(
       // Construct clone op
       OperatorConf pb_op_conf;
       pb_op_conf.set_name("clone_" + lbn + "_" + cur_node->node_id_str());
-      pb_op_conf.mutable_clone_op_conf()->set_out_num(edges.size());
-      pb_op_conf.mutable_clone_op_conf()->set_lbn(lbn);
+      pb_op_conf.mutable_clone_conf()->set_out_num(edges.size());
+      pb_op_conf.mutable_clone_conf()->set_lbn(lbn);
       auto clone_op = ConstructOpFromPbConf(pb_op_conf);
       // Set clone_info
       CloneInfo clone_info;

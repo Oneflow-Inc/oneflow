@@ -1,0 +1,27 @@
+syntax = "proto3";
+package oneflow;
+import "operator/op_conf.proto";
+
+message CopyOpProto {
+  map<string, string> ibn2lbn = 1;
+  map<string, string> obn2lbn = 2;
+}
+
+message OperatorProto {
+  OperatorConf user_conf = 1;
+  map<string, string> special_ibn2lbn = 3;
+
+  repeated string data_tmp_bns = 4;
+  repeated string input_bns = 5;
+  repeated string input_diff_bns = 6;
+  repeated string output_bns = 7;
+  repeated string output_diff_bns = 8;
+
+  repeated string model_bns = 9;
+  repeated string model_diff_bns = 10;
+  repeated string model_tmp_bns = 11;
+  
+  oneof specified_op_proto {
+    CopyOpProto copy_op = 100;
+  }
+}

@@ -8,18 +8,11 @@ namespace oneflow {
 class ModelLoadOp final : public SysOperator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ModelLoadOp);
-  ModelLoadOp() default;
+  ModelLoadOp() = default;
   ~ModelLoadOp() = default;
 
-  void Init(const OperatorConf& op_conf) override {
-    mut_op_name() = op_conf.name();
-    
-    CHECK(op_conf.has_model_load_op_conf());
-    auto cnf = new ModelLoadOp(op_conf.model_load_op_conf());
-    mut_pb_op_conf().reset(cnf);
-
-    EnrollOutputBn("model", false);
-  }
+  std::string GetValueFromPbOpConf(const std::string& k) const override;
+  void InitFromOpConf(const OperatorConf& op_conf) override;
   void InferShape4ObAndDtbFromIb() const override { TODO(); }
 
  private:

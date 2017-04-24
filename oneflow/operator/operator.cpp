@@ -1,6 +1,35 @@
 #include "operator/operator.h"
 
 namespace oneflow {
+  
+void Operator::InitFromOperatorProto(const OperatorProto& op_proto) {
+  op_conf_ = op_proto.user_conf();
+  
+  special_ibn2lbn_ = PbMap2HashMap(op_proto.special_ibn2lbn());
+  data_tmp_bns_ = PbVec2StdVec(op_proto.data_tmp_bns());
+  input_bns_ = PbVec2StdVec(op_proto.input_bns());
+  input_diff_bns_ = PbVec2StdVec(op_proto.input_diff_bns());
+  output_bns_ = PbVec2StdVec(op_proto.output_bns());
+  output_diff_bns_ = PbVec2StdVec(op_proto.output_diff_bns());
+  model_bns_ = PbVec2StdVec(op_proto.model_bns());
+  model_diff_bns_ = PbVec2StdVec(op_proto.model_diff_bns());
+  model_tmp_bns_ = PbVec2StdVec(op_proto.model_tmp_bns());
+}
+
+OperatorProto Operator::ToOperatorProto() {
+  OperatorProto op_proto;
+  *(op_proto.mutable_user_conf()) = op_conf_;
+  *(op_proto.mutable_special_ibn2lbn()) = HashMap2PbMap(special_ibn2lbn_);
+  *(op_proto.mutable_data_tmp_bns()) = StdVec2PbVec(data_tmp_bns_);
+  *(op_proto.mutable_input_bns()) = StdVec2PbVec(input_bns_);
+  *(op_proto.mutable_input_diff_bns()) = StdVec2PbVec(input_diff_bns_);
+  *(op_proto.mutable_output_bns()) = StdVec2PbVec(output_bns_);
+  *(op_proto.mutable_output_diff_bns()) = StdVec2PbVec(output_diff_bns_);
+  *(op_proto.mutable_model_bns()) = StdVec2PbVec(model_bns_);
+  *(op_proto.mutable_model_diff_bns()) = StdVec2PbVec(model_diff_bns_);
+  *(op_proto.mutable_model_tmp_bns()) = StdVec2PbVec(model_tmp_bns_);
+  return op_proto;
+}
 
 std::string GenDiffBn(const std::string& bn) {
   return bn + "_diff";
@@ -12,7 +41,7 @@ std::string GenUnDiffBn(const std::string& diff_bn) {
 }
 
 std::string Operator::dtbn2lbn(const std::string& data_tmp_bn) const {
-  return op_name_ + "/" + data_tmp_bn;
+  return op_name() + "/" + data_tmp_bn;
 }
 std::string Operator::idbn2lbn(const std::string& input_diff_bn) const {
   return ibn2lbn(GenUnDiffBn(input_diff_bn));
@@ -30,10 +59,6 @@ std::string Operator::ibn2lbn(const std::string& input_bn) const {
   } else {
     return it->second;
   }
-}
-
-std::string Operator::GetValueFromPbOpConf(const std::string& k) const {
-  return GetValueFromPbMessage(*pb_op_conf_, k);
 }
 
 Shape* Operator::GetShapePtr(const std::string& bn_in_op) const {

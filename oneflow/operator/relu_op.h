@@ -11,12 +11,17 @@ class ReluOp final : public UserOperator {
   ReluOp() = default;
   ~ReluOp() = default;
 
-  void Init(const OperatorConf& op_conf) override;
+  std::string GetValueFromPbOpConf(const std::string& k) const override;
+  void InitFromOpConf(const OperatorConf& op_conf) override;
   bool IsElemWise() const override { return true; }
 
   void InferShape4ObAndDtbFromIb() const override { TODO(); }
-  void InferShape4Mtb() const override { TODO(); }
-  void InferShape4Mdb() const override { TODO(); }
+  void InferShape4Mtb(ParallelPolicy, uint64_t parallel_id) const override {
+    TODO();
+  }
+  void InferShape4Mdb(ParallelPolicy, uint64_t parallel_id) const override {
+    TODO();
+  }
 
  private:
 

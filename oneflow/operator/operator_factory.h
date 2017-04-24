@@ -6,25 +6,25 @@
 
 namespace oneflow {
 
-class OperatorFactory final {
+class OpFactory final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(OperatorFactory);
-  ~OperatorFactory() = default;
-  static const OperatorFactory& singleton() {
-    static OperatorFactory obj;
+  OF_DISALLOW_COPY_AND_MOVE(OpFactory);
+  ~OpFactory() = default;
+  static OpFactory& Singleton() {
+    static OpFactory obj;
     return obj;
   }
   
   std::shared_ptr<Operator> ConstructOp(const OperatorConf&) const;
 
  private:
-  OperatorFactory() = default;
+  OpFactory() = default;
 
 };
 
 inline std::shared_ptr<Operator> ConstructOpFromPbConf(
-    const OperatorConf pb_conf) {
-  return OperatorFactory::singleton().ConstructOp(pb_conf);
+    const OperatorConf& pb_conf) {
+  return OpFactory::Singleton().ConstructOp(pb_conf);
 }
 
 } // namespace oneflow

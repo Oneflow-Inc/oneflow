@@ -1,0 +1,26 @@
+syntax = "proto3";
+package oneflow;
+
+import "graph/exec_graph.proto";
+
+enum TaskType {
+  HostCompTask = 0;
+  DeviceCompTask = 1;
+  CopyHdTask = 2;
+  CommNetTask = 3;
+  BoxingTask = 4;
+}
+
+message TaskProto {
+  // common
+  uint64 id = 1;
+  TaskType type = 2;
+  uint64 machine_id = 3;
+  uint64 thrd_local_id = 4;
+  bool is_forward = 5;
+  ExecGraphProto exec_graph = 6;
+  repeated uint64 produced_regst_desc_ids = 7;
+  repeated uint64 subscribed_regst_desc_ids = 8;
+  // for CompTask
+  uint64 parallel_id = 1000;
+}
