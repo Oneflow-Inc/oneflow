@@ -59,7 +59,7 @@ int Connection::OnEvent(struct rdma_cm_event *event)
 
 
 
-int Connection::BuildConnection(struct rdma_cm_id* id)
+int Connection::BuildConnection(uint64_t peer_machine_id) // struct rdma_cm_id* id
 {
     //if peer_machine_id_ != -1 
     //    re build connection

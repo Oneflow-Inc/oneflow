@@ -18,14 +18,15 @@ struct Context {
     struct ibv_comp_channel *comp_channel;
 
     pthread_t cq_poller_thread;
-}
+};
 
 class Connection {
 public:
-    Connection();
-    ~Connection();
+    Connection() = default;
+    ~Connection() = default;
     Connection(uint64_t peer_machine_id);
-    void BuildConnection(uint64_t peer_machine_id);
+    int BuildConnection(uint64_t peer_machine_id);
+    void DestroyConnection();
 
 private:
     uint64_t peer_machine_id_;
@@ -42,11 +43,12 @@ private:
     struct Context *s_ctx;
 
     // map peer_rank to rdma_cm_id
-    void BuildConnection(struct rdma_cm_id* id);
+    //void BuildConnection(struct rdma_cm_id* id);
     void BuildContext(struct ibv_context* verbs);
     void BuildQPAttr(struct ibv_qp_init_attr* queue_pair_attr);
     void BuildParams(struct rdma_comm_param* params);
-    DestroyConnection();
+   
+    //void BuildConnection(uint64_t peer_machine_id);//
     
     // void RegisterMemory();
     // void PostReceiver();

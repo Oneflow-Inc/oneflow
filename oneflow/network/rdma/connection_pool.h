@@ -8,6 +8,8 @@
 
 namespace oneflow {
 
+class Connection;
+
 class ConnectionPool {
 public:
     ConnectionPool() = default;
