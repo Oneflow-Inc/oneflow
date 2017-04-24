@@ -22,8 +22,8 @@ struct Context {
 
 class Connection {
 public:
-    Connection() = default;
-    ~Connection() = default;
+    Connection();
+    ~Connection();
     Connection(uint64_t peer_machine_id);
     int BuildConnection(uint64_t peer_machine_id);
     void DestroyConnection();
@@ -47,7 +47,10 @@ private:
     void BuildContext(struct ibv_context* verbs);
     void BuildQPAttr(struct ibv_qp_init_attr* queue_pair_attr);
     void BuildParams(struct rdma_comm_param* params);
-   
+    
+    int OnEvent(struct rdma_cm_event* event);
+    void RegisterMemory();
+
     //void BuildConnection(uint64_t peer_machine_id);//
     
     // void RegisterMemory();
