@@ -11,14 +11,14 @@ namespace oneflow {
 template <typename MessageType>
 class MessagePool {
 public:
-    explicit MessagePool(int32_t initial_size);
-    ~MessagePool();
+  explicit MessagePool(int32_t initial_size);
+  ~MessagePool();
 
-    MessageType* Alloc();
-    void Free(MessageType* buffer);
+  MessageType* Alloc();
+  void Free(MessageType* buffer);
 
 private:
-    std::queue<MessageType*> empty_buffer_;
+  std::queue<MessageType*> empty_buffer_;
 };
 
 
