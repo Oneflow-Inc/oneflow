@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include "network/network.h"
 #include "network/network_memory.h"
-#include "network/rdma/switch.h"
+#include "network/rdma/agency.h"
 #include "network/rdma/connection_pool.h"
 #include "network/rdma/message_pool.h"
 #include "network/rdma/request_pool.h"
@@ -21,13 +21,13 @@ class RequestPool;
 
 class RdmaWrapper : public Network {
 public:
-    void Init(uint64_t my_machine_id, const NetworkTopology& net_topo) override;
+    void Init(uint64_t my_machine_id, const NetworkTopology& net_topo);// override;
     void Finalize() override;
     void Barrier() override;
     NetworkMemory* NewNetworkMemory() override;
 
     bool Send(const NetworkMessage& msg) override;
-    bool Read(MemoryDescriptor* src, NetworkMemory* dst) override;
+    void Read(MemoryDescriptor* src, NetworkMemory* dst);// override; return bool;
     void RegisterEventMessage(MsgPtr event_msg) override;
     bool Poll(NetworkResult* result) override;
 
@@ -87,7 +87,7 @@ private:
     // As passive side, prepare for others' connect
     int32_t WaitForConnectionFrom();
 
-    {
+    //{
     // TODO()
     // NdspiV2 specific adatper and information
     // IND2Adapter* adapter_;
@@ -100,7 +100,7 @@ private:
     //IND2CompletionQueue* init_cq_;  // initiator cq
     //IND2CompletionQueue* recv_cq_;  // receive   cq
 
-    }
+    //}
     // Network topology information
     uint64_t my_machine_id_;
     NetworkTopology net_topology_;

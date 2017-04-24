@@ -43,6 +43,7 @@ void Connection::ReBuildConnection(uint64_t peer_machine_id)
 
 int Connection::OnEvent(struct rdma_cm_event *event)
 {
+/*
     int r = 0;
     if (event->event == RDMA_CM_EVENT_CONNECT_REQUEST) {
         r = BuildConnection(event->id);
@@ -55,12 +56,14 @@ int Connection::OnEvent(struct rdma_cm_event *event)
     }
 
     return r;
+*/  return 0;
 }
 
 
 
-int Connection::BuildConnection(struct rdma_cm_id* id)
+int Connection::BuildConnection(uint64_t peer_machine_id) // struct rdma_cm_id* id
 {
+/*
     //if peer_machine_id_ != -1 
     //    re build connection
     struct ibv_qp_init_attr qp_attr;
@@ -81,10 +84,12 @@ int Connection::BuildConnection(struct rdma_cm_id* id)
     rdma_accept(id, &cm_params);
     
     return 0;
+*/return 0;
 }
 
 void Connection::BuildContext(struct ibv_context *verbs)
 {
+    /*
     if (s_ctx_) {
         if (s_ctx_->ctx != verbs) {
             die("cannot handle events in more than one context.");
@@ -100,12 +105,18 @@ void Connection::BuildContext(struct ibv_context *verbs)
     ibv_req_notify_cq(s_ctx_->cq, 0);
 
     pthread_create(&s_ctx_->cq_poller_thread, NULL, poll_cq, NULL); // need update
+*/
 }
 
-//void* poll_cq(void* ctx);
+//TODO()
+void* poll_cq(void* ctx)
+{
+
+}
 
 void Connection::BuildQPAttr(struct ibv_qp_init_attr* qp_attr)
 {
+    /*
     memset(qp_attr, 0, sizeof(*qp_attr));
 
     qp_attr->send_cq = s_ctx_->cq;
@@ -116,28 +127,31 @@ void Connection::BuildQPAttr(struct ibv_qp_init_attr* qp_attr)
     qp_attr->cap.max_recv_wr = 10; //
     qp_attr->cap.max_send_sge = 1; // 
     qp_attr->cap.max_recv_sge = 1; // 
-
+*/
 }
 
 void Connection::RegisterMemory()
 {
+    /*
     send_mr_ = ibv_reg_mr(s_ctx->pd, send_region_, BUFFER_SIZE, 
                           IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
     
     recv_mr_ = ibv_reg_mr(s_ctx->pd, recv_region_, BUFFER_SIZE, 
                           IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
+*/
 }
 
 
 
 void Connection::DestroyConnection()
 {
-    rdma_destroy_qp(id);
+/*    rdma_destroy_qp(id);
 
     ibv_dereg_mr(send_mr_);
     ibv_dereg_mr(recv_mr_);
 
     peer_machine_id_ = -1;
+*/
 }
 
 

@@ -10,7 +10,7 @@
 
 namespace oneflow{
 
-class RegisteredNetworkMessage;
+class Message;
 
 /* move request to system/request.h
 struct Request {
@@ -43,7 +43,7 @@ public:
 private:
     int32_t sequence_number_;
     std::unordered_map<int32_t, Request*> request_dict_;
-    std::shared_ptr<MessagePool<RegisteredNetworkMessage>> msg_pool_;
+    std::shared_ptr<MessagePool<Message>> msg_pool_;
     static const int32_t kBufferSize = 64;
 
     int32_t new_time_stamp();
