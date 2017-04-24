@@ -13,10 +13,10 @@ class Connection {
 public: 
     Connection();
     ~Connection();
-    Connection(int32_t peer_rank);
+    Connection(uint64_t peer_machine_id);
 
 private:
-    int32_t peer_rank_ = { -1 };
+    uint64_t peer_machine_id_ = { -1 };
 
     IND2Connector* connector_;
     IND2QueuePair* queue_pair_;
