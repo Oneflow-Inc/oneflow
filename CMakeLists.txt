@@ -53,6 +53,16 @@ foreach(subdir ${subdir_list})
   file(GLOB subdir_protos     "${oneflow_src_dir}/${subdir}/*.proto")
 
   if(${subdir} STREQUAL "network")
+    file(GLOB network_rdma_headers     "${oneflow_src_dir}/network/rdma/*.h")
+    file(GLOB network_rdma_obj_cpps    "${oneflow_src_dir}/network/rdma/*.cpp")
+    file(GLOB network_rdma_test_cpps   "${oneflow_src_dir}/network/rdma/*_test.cpp")
+    file(GLOB network_rdma_protos      "${oneflow_src_dir}/network/rdma/*.proto")
+
+    list(APPEND subdir_headers   ${network_rdma_headers})
+    list(APPEND subdir_obj_cpps  ${network_rdma_obj_cpps})
+    list(APPEND subdir_test_cpps ${network_rdma_test_cpps})
+    list(APPEND subdir_protos    ${network_rdma_protos})
+
     file(GLOB network_platform_headers     "${oneflow_src_dir}/network/rdma/${oneflow_platform}/*.h")
     file(GLOB network_platform_obj_cpps    "${oneflow_src_dir}/network/rdma/${oneflow_platform}/*.cpp")
     file(GLOB network_platform_test_cpps   "${oneflow_src_dir}/network/rdma/${oneflow_platform}/*_test.cpp")

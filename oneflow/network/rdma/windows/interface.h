@@ -2,8 +2,6 @@
 #define ONEFLOW_NETWORK_RDMA_WINDOWS_INTERFACE_H_
 
 #include "network/rdma/windows/ndcommon.h"
-#include "network/rdma/windows/ndshim.h"
-#include "network/rdma/windows/ndutil.h"
 #include "network/rdma/windows/ndsupport.h"
 #include "network/rdma/windows/connection.h"
 #include "network/rdma/windows/memory.h"

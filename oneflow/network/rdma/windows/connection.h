@@ -17,7 +17,7 @@ public:
     Connection(uint64_t peer_machine_id);
 
 private:
-    uint64_t peer_machine_id_ = { -1 };
+    uint64_t peer_machine_id_ = { 0 };
 
     IND2Connector* connector_;
     IND2QueuePair* queue_pair_;
