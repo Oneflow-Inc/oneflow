@@ -4,7 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <unistd.h>
+// #include <unistd.h>
+#include <cstdint>
 #include "network/rdma/windows/ndsupport.h"
 
 namespace oneflow {

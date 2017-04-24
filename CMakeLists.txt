@@ -38,6 +38,12 @@ include(third_party)
 # main cpp
 list(APPEND of_main_cc ${oneflow_src_dir}/job/compiler.cpp)
 
+if(WIN32)
+  set(oneflow_platform "windows")
+else()
+  set(oneflow_platform "linux")
+endif()
+
 # source_group
 SUBDIRLIST(subdir_list ${oneflow_src_dir})
 foreach(subdir ${subdir_list})
@@ -45,6 +51,19 @@ foreach(subdir ${subdir_list})
   file(GLOB subdir_obj_cpps   "${oneflow_src_dir}/${subdir}/*.cpp")
   file(GLOB subdir_test_cpps  "${oneflow_src_dir}/${subdir}/*_test.cpp")
   file(GLOB subdir_protos     "${oneflow_src_dir}/${subdir}/*.proto")
+
+  if(${subdir} STREQUAL "network")
+    file(GLOB network_platform_headers     "${oneflow_src_dir}/network/rdma/${oneflow_platform}/*.h")
+    file(GLOB network_platform_obj_cpps    "${oneflow_src_dir}/network/rdma/${oneflow_platform}/*.cpp")
+    file(GLOB network_platform_test_cpps   "${oneflow_src_dir}/network/rdma/${oneflow_platform}/*_test.cpp")
+    file(GLOB network_platform_protos      "${oneflow_src_dir}/network/rdma/${oneflow_platform}/*.proto")
+
+    list(APPEND subdir_headers   ${network_platform_headers})
+    list(APPEND subdir_obj_cpps  ${network_platform_obj_cpps})
+    list(APPEND subdir_test_cpps ${network_platform_test_cpps})
+    list(APPEND subdir_protos    ${network_platform_protos})
+  endif()
+
   foreach(test_cpp ${subdir_test_cpps})
     list(REMOVE_ITEM subdir_obj_cpps ${test_cpp})
   endforeach()
@@ -55,6 +74,9 @@ foreach(subdir ${subdir_list})
   list(APPEND of_all_obj_cc ${subdir_headers} ${subdir_obj_cpps})
   list(APPEND of_all_proto ${subdir_protos})
   list(APPEND of_all_test_cc ${subdir_test_cpps})
+
+  message(STATUS "${subdir}: " ${subdir_headers})
+
 endforeach()
 
 # proto obj lib
