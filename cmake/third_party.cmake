@@ -21,6 +21,10 @@ include(glog)
 include(gflags)
 include(grpc)
 
+if(WIN32)
+  include(netdirect)
+endif()
+
 set(oneflow_third_party_libs
     ${CMAKE_THREAD_LIBS_INIT}
     ${ZLIB_STATIC_LIBRARIES}
@@ -60,3 +64,8 @@ include_directories(
     ${PROTOBUF_INCLUDE_DIR}
     ${GRPC_INCLUDE_DIR}
 )
+
+if(WIN32)
+  list(APPEND oneflow_third_party_dependencies netdirect)
+  include_directories(${NETDIRECT_INCLUDE_DIR})
+endif()

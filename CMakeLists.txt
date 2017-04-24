@@ -75,7 +75,7 @@ foreach(subdir ${subdir_list})
   list(APPEND of_all_proto ${subdir_protos})
   list(APPEND of_all_test_cc ${subdir_test_cpps})
 
-  message(STATUS "${subdir}: " ${subdir_headers})
+  # message(STATUS "${subdir}: " ${subdir_headers})
 
 endforeach()
 
