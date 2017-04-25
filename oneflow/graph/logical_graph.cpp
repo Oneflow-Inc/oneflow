@@ -91,7 +91,7 @@ void LogicalGraph::CollectCloneInfos(
       if (edges.size() <= 1) { continue; }
       // Construct clone op
       OperatorConf pb_op_conf;
-      pb_op_conf.set_name("clone_" + lbn + "_" + cur_node->node_id_str());
+      pb_op_conf.set_name("clone_" + lbn);
       pb_op_conf.mutable_clone_conf()->set_out_num(edges.size());
       pb_op_conf.mutable_clone_conf()->set_lbn(lbn);
       auto clone_op = ConstructOpFromPbConf(pb_op_conf);

@@ -2,6 +2,7 @@
 #define ONEFLOW_GRAPH_GRAPH_H_
 
 #include <iostream>
+#include <fstream>
 #include <queue>
 #include "graph/node.h"
 
@@ -10,10 +11,10 @@ namespace oneflow {
 template<typename NodeType, typename EdgeType>
 class Graph {
  public:
-  // Topologically ergodic all nodes except source_node_,sink_node_
+  // (Topologically)/(Reverse Topologically) ergodic all nodes
+  // except source_node_,sink_node_
   class Iterator;
   class ConstIterator;
-  // Reverse Topologically ergodic all nodes except source_node_,sink_node_
   class ReverseIterator;
   class ConstReverseIterator;
 
@@ -21,9 +22,7 @@ class Graph {
   Graph() = default;
   virtual ~Graph() = default;
 
-  const NodeType& source_node() const { return source_node_; }
-  const NodeType& sink_node() const { return sink_node_; }
-
+  // begin, end
   Iterator begin();
   Iterator end();
   ConstIterator begin() const { return cbegin(); }
@@ -38,13 +37,15 @@ class Graph {
   ConstReverseIterator crbegin() const;
   ConstReverseIterator crend() const;
   
+  // Getters
+  const NodeType& source_node() const { return source_node_; }
+  const NodeType& sink_node() const { return sink_node_; }
   const std::vector<std::unique_ptr<NodeType>>& nodes() const {
     return nodes_;
   }
   const std::vector<std::unique_ptr<EdgeType>>& edges() const {
     return edges_;
   }
-  
   bool IsFirstNode(const NodeType* node) const {
     if (node->in_edges().size() != 1) { return false; }
     return node->SoleInEdge()->src_node() == &source_node_;
@@ -66,9 +67,8 @@ class Graph {
     return nodes_.front().get();
   }
   
+  // Setters
   void UpdateSourceAndSink();
-  
-  // New
   NodeType* NewFinalNode() {
     // In c++14, we can use std::is_final to check
     NodeType* ret = new NodeType;
@@ -81,6 +81,10 @@ class Graph {
     EnrollEdge(ret);
     return ret;
   }
+
+  // ToDot
+  virtual std::string ToDotString() const;
+  void ToDotFile(const char* dot_filepath) const;
 
  protected:
   // Enroll
@@ -204,6 +208,30 @@ class Graph<NodeType, EdgeType>::ConstReverseIterator final {
  private:
   ReverseIterator graph_iterator_;
 };
+
+template<typename NodeType, typename EdgeType>
+std::string Graph<NodeType, EdgeType>::ToDotString() const {
+  std::stringstream ss;
+  ss << "digraph {" << std::endl;
+  for (const auto& edge : edges_) {
+    ss << "\"" << edge->src_node()->VisualStr() << "\" -> "
+       << "\"" << edge->dst_node()->VisualStr() << "\""
+       << "[label=\"" << edge->VisualStr() << "\"];"
+       << std::endl;
+  }
+  ss << "}" << std::endl;
+  return ss.str();
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::ToDotFile(const char* dot_filepath) const {
+  std::fstream fs(dot_filepath, std::fstream::out);
+  CHECK(fs.good()) << "failed to open " << dot_filepath;
+  fs << ToDotString();
+  CHECK(fs.good()) << "failed to write " << dot_filepath;
+  fs.close();
+  LOG(INFO) << "Successful: " << dot_filepath;
+}
 
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::UpdateSourceAndSink() {

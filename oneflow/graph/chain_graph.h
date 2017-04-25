@@ -56,6 +56,8 @@ class ChainNode final : public Node<ChainNode, ChainEdge> {
     }
     return false;
   }
+  
+  std::string VisualStr() const { TODO(); }
 
  private:
   std::vector<std::shared_ptr<const Operator>> op_vec_;

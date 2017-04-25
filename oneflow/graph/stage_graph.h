@@ -39,6 +39,8 @@ class StageNode final : public Node<StageNode, StageEdge> {
     return chain_node_->parallel_desc()->sorted_device_phy_ids(machine_id_);
   }
 
+  std::string VisualStr() const { TODO(); }
+
  private:
   const ChainNode* chain_node_;
   uint64_t machine_id_;

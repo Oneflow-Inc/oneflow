@@ -16,6 +16,8 @@ class DataTaskGraph final : public TaskGraph {
                 bool need_bp) {
     LOG(INFO) << "Build LogicalGraph...";
     LogicalGraph logical_gph(dl_net_conf, strategy_conf);
+    std::string log_dir = std::getenv("GLOG_log_dir");
+    logical_gph.ToDotFile((log_dir + "/logical.dot").c_str());
     LOG(INFO) << "Build ChainGraph...";
     auto chain_gph = of_make_unique<ChainGraph> (&logical_gph);
     BuildFromChainGph(std::move(chain_gph), need_bp);

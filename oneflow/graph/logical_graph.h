@@ -34,6 +34,8 @@ class LogicalNode final : public Node<LogicalNode, LogicalEdge> {
 
   bool IsLossNode() const { return op_->IsLossOp(); }
 
+  std::string VisualStr() const override { return op_->op_name(); }
+
  private:
   std::shared_ptr<Operator> op_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;

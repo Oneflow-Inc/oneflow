@@ -10,6 +10,7 @@ using oneflow::IDMgr;
 using oneflow::TaskGraphMgr;
 
 DEFINE_string(job_conf_filepath, "", "");
+//DEFINE_string(log_dir, "", "");
 
 int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);

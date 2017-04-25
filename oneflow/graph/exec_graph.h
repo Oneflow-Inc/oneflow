@@ -49,6 +49,8 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   RegstDesc* GetRegstFromBnInOp(const std::string& bn_in_op) {
     return bn_in_op2regst.at(bn_in_op);
   }
+  
+  std::string VisualStr() const { TODO(); }
 
  private:
   std::shared_ptr<const Operator> op_;

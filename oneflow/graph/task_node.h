@@ -47,6 +47,9 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   //
   virtual TaskProto ToProto() const { TODO(); }
+  
+  //
+  std::string VisualStr() const { TODO(); }
  
  protected:
   virtual std::unique_ptr<TaskNode> CreateSameTypeNode() const;
