@@ -91,7 +91,7 @@ void ModelMergeChains(
     if (cur_node->op()->IsElemWise() == false) { continue; }
     if (cur_node->parallel_desc()->policy() != kModelParallel) { continue; }
     const LogicalNode* pred_node = cur_node->SoleInEdge()->src_node();
-    CHECK(pred_node->parallel_desc() == cur_node->parallel_desc())
+    CHECK(*(pred_node->parallel_desc()) == *(cur_node->parallel_desc()))
         << "the ParallelConf of "
         << "\"" << pred_node->op()->op_name() << "\" "
         << "and "
