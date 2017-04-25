@@ -21,13 +21,15 @@ class RequestPool;
 
 class RdmaWrapper : public Network {
 public:
-  void Init(uint64_t my_machine_id, const NetworkTopology& net_topo);// override;
+  void Init(uint64_t my_machine_id, const NetworkTopology& net_topo) override;
   void Finalize() override;
   void Barrier() override;
-  NetworkMemory* NewNetworkMemory() override;
 
+  NetworkMemory* NewNetworkMemory() override;
+  
   bool Send(const NetworkMessage& msg) override;
-  void Read(MemoryDescriptor* src, NetworkMemory* dst);// override; return bool;
+  bool Read(MemoryDescriptor* remote_memory_descriptor, 
+            NetworkMemory* local_memory) override; //return bool;
   void RegisterEventMessage(MsgPtr event_msg) override;
   bool Poll(NetworkResult* result) override;
 
@@ -52,10 +54,11 @@ private:
   // connecting to |peer_rank|, just updating its time_stamp to a new value.
   void RePostRecvRequest(uint64_t peer_machine_id, int32_t time_stamp);
     
-  // TODO(jiyuan): estimate the pre-post number
-  static const int kPrePostRecvNumber = 16;
+  const MemoryDescriptor& GetMemoryDescriptor(int64_t register_id) const;
   
   // Init NDSPI environment, create |adapter_|.
+  void InitRdmaDevice();
+  void InitRdmaAdapter();
   //void NdspiV2Open();TODO()
   // Create the initiator completion queue and receiver completion queue
   void CreateCompletionQueues();
@@ -77,6 +80,8 @@ private:
   void StartListen();
   // All the active sides connect to the passive sides
   void EstablishConnection();
+
+  // FIXME(shiyuan): Need moved to Class Connection
   Connection* NewConnection();
   
   // As active side, try to connect to others;
@@ -85,7 +90,7 @@ private:
   void CompleteConnectionTo(uint64_t peer_machine_id);
   
   // As passive side, prepare for others' connect
-  int32_t WaitForConnectionFrom();
+  int32_t WaitForConnection();
 
   //{
   // TODO()
@@ -102,6 +107,10 @@ private:
 
   //}
   // Network topology information
+
+  // TODO(jiyuan): estimate the pre-post number
+  static const int kPrePostRecvNumber = 16;
+  
   uint64_t my_machine_id_;
   NetworkTopology net_topology_;
   
@@ -112,7 +121,6 @@ private:
   
   // FIXME(jiyuan): build the dict of MemoryDescriptor
   std::unordered_map<int64_t, MemoryDescriptor> register_id_to_mem_descriptor_;
-  const MemoryDescriptor& GetMemoryDescriptor(int64_t register_id) const;
 
 };
 
