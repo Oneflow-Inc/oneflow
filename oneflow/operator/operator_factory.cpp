@@ -18,8 +18,9 @@
 
 namespace oneflow {
 
-std::shared_ptr<Operator> OpFactory::ConstructOp(
-    const OperatorConf& op_conf) const {
+namespace {
+
+std::shared_ptr<Operator> NewOp(OperatorConf::OpTypeCase op_type_case) {
   static const HashMap<int, std::function<Operator*()>>
   op_type2new_op_func = {
     {OperatorConf::kConvolutionConf, []() { return new ConvolutionOp; }},
@@ -38,8 +39,23 @@ std::shared_ptr<Operator> OpFactory::ConstructOp(
     {OperatorConf::kConcatConf, []() { return new ConcatOp; }},
   };
   std::shared_ptr<Operator> ret;
-  ret.reset(op_type2new_op_func.at(op_conf.specified_type_case())());
+  ret.reset(op_type2new_op_func.at(op_type_case)());
+  return ret;
+}
+
+}
+
+std::shared_ptr<Operator> OpFactory::ConstructOp(
+    const OperatorConf& op_conf) const {
+  std::shared_ptr<Operator> ret = NewOp(op_conf.op_type_case());
   ret->InitFromOpConf(op_conf);
+  return ret;
+}
+
+std::shared_ptr<Operator> OpFactory::ConstructOp(
+    const OperatorProto& op_proto) const {
+  std::shared_ptr<Operator> ret = NewOp(op_proto.user_conf().op_type_case());
+  ret->InitFromOperatorProto(op_proto);
   return ret;
 }
 

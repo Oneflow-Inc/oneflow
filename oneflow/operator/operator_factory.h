@@ -16,6 +16,7 @@ class OpFactory final {
   }
   
   std::shared_ptr<Operator> ConstructOp(const OperatorConf&) const;
+  std::shared_ptr<Operator> ConstructOp(const OperatorProto&) const;
 
  private:
   OpFactory() = default;

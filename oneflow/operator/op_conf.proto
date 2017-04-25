@@ -91,7 +91,7 @@ message ModelSaveOpConf {
 
 message OperatorConf {
   string name = 1;
-  oneof specified_type {
+  oneof op_type {
     ConvolutionOpConf convolution_conf = 100;
     InnerProductOpConf innerproduct_conf = 101;
     DataLoaderOpConf data_loader_conf = 102;
