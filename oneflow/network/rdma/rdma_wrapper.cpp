@@ -36,13 +36,10 @@ void RdmaWrapper::Init(uint64_t my_machine_id,
   connection_pool_.reset(new ConnectionPool());
 
   //NdspiV2Open();
-  sockaddr_in sin = GetAddress(); // TODO(shiyuan)
-  InitRdmaDevice();
-  InitRdmaAdapter();
+  rdma_manager_ = new RdmaManager();
+  rdma_manager_->sin = GetAddress(); // TODO(shiyuan)
+  rdma_manager_->Init();
 
-
-  CreateCompletionQueues();
-  StartListen();
   EstablishConnection();
 }
 
@@ -138,7 +135,8 @@ bool RdmaWrapper::Poll(NetworkResult* result) {
 // result->net_msg, having result->type == NetworkResultType::NET_RECEIVE_MSG.
 bool RdmaWrapper::PollRecvQueue(NetworkResult* result) {
   // Result r;
-  uint32_t len = recv_cq_->GetResults(&r, 1);
+  // TODO(shiyuan) len = rdma_manager_->GetRecvCqResults(&r, 1);
+  uint32_t len = rdma_manager_->recv_cq_->GetResults(&r, 1);
   if (len == 0)
     return false;
 
@@ -163,9 +161,9 @@ bool RdmaWrapper::PollRecvQueue(NetworkResult* result) {
 
 bool RdmaWrapper::PollSendQueue(NetworkResult* result) {
   // CHECK result
-  // HResult hr;
-
-  uint32_t len = send_cq_->GetResults(&hr, 1);
+  // HRESULT hr;
+  // TODO(shiyuan) len = rdma_manager_->GetSendCqResults(&r, 1);
+  uint32_t len = rdma_manager_->send_cq_->GetResults(&hr, 1);
   if (len == 0)
     return false;
 
@@ -210,7 +208,7 @@ void RdmaWrapper::PostRecvRequest(uint64_t peer_machine_id) {
 
   Request* receive_request = request_pool_->AllocRequest(false);
 
-  // TODO(shiyuan)
+  // TODO(shiyuan) add PostToRecvRequestQueue to Class Connection
   conn->PostToRecvRequestQueue(
       &receive_request->time_stamp, 
       static_cast<const ND2_SGE*> (
@@ -240,42 +238,6 @@ const MemoryDescriptor& RdmaWrapper::GetMemoryDescriptor(
   auto mem_descriptor_it = register_id_to_mem_descriptor_.find(register_id);
   // CHECK
   return mem_descriptor_it->second;
-}
-
-// TODO(shiyuan)
-void RdmaWrapper::InitRdmaDevice() {
-
-
-}
-
-// TODO(shiyuan)
-void RdmaWrapper::InitRdmaAdapter() {
-
-
-}
-
-void RdmaWrapper::CreateCompletionQueues() {
-  // CreateCompletionQueue for send request queue and recv request queue.
-
-}
-
-void RdmaWrapper::StartListen() {
-  // HRESULT hr = adapter_->CreateListener(...)
-
-  sockaddr_in my_sock = GetAddress(
-      net_topology_.all_nodes[my_machine_id_].address.c_str(),
-      net_topology_.all_nodes[my_machine_id_].port);
-  listener_->Bind(
-      reinterpret_cast<const sockaddr*>(&my_sock), 
-      sizeof(sockaddr_in));
-
-  // Start listening for incoming connection requests
-  // argument BAKLOG: The maximum number of pending connection requests
-  // to maintain for th elisten request. 
-  // Set to zero to indicate no limit.
-  listener_->Listen(0); // not sure whether 0(no limit) is OK
-
-
 }
 
 void RdmaWrapper::EstablishConnection() {
@@ -311,13 +273,28 @@ void RdmaWrapper::EstablishConnection() {
 // TODO(shiyuan): Need moved to Class Connection
 Connection* RdmaWrapper::NewConnection() {
   Connection* conn = new Connection();
+  // TODO(shiyuan): add CreateEvent in Class Connection;
+  //                conn->CreateEvent(NULL, FALSE, FALSE, NULL);
+  //                CreateEvent(, , , ) {
+  //                  ov.hEvent = CreateEvent(, , , );
+  //                }
   // conn->ov.hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 
+  // TODO(shiyuan): add CreateConnector in RdmaManager
+  //                rdma_manager_->CreateConnector(, , , );
+  //                CreateConnector(, , , ) {
+  //                  adapter_->CreateConnector(, , , );
+  //                }
   // adapter_->CreateConnector(
   //         IID_IND2Connector,
   //         overlapped_file_,
   //         reinterpret_cast<void**>(&conn->connector));
-    
+
+  // TODO(shiyuan): add CreateQueuePair in RdmaManager
+  //                rdma_manager_->CreateQueuePair(, , , );
+  //                CreateQueuePair(, , , ) {
+  //                  adapter_->CreateQueuePair(, , , );
+  //                }
   // adapter_->CreateQueuePair(
   //         IID_IND2Connector,
   //         recv_cq_,
@@ -346,6 +323,11 @@ bool RdmaWrapper::TryConnectTo(uint64_t peer_machine_id) {
       net_topology_.all_nodes[my_machine_id_].address.c_str(),
       net_topology_.all_nodes[my_machine_id_].port);
 
+  //TODO(shiyuan): add Bind to Class Connection
+  //               conn->Bind(, , );
+  //               Bind(, , ) {
+  //                 connector->Bind(, , );
+  //               }
   conn->connector->Bind(
       reinterpret_cast<const sockaddr*>(&my_sock),
       sizeof(my_sock));
@@ -358,6 +340,11 @@ bool RdmaWrapper::TryConnectTo(uint64_t peer_machine_id) {
   PostRecvRequest(peer_machine_id);
 
   /* HRESULT hr = */
+  // TODO(shiyuan): add Connect to Class Connection
+  //                conn->Connect(, , );
+  //                Connect(, , ) {
+  //                  connector->Connect(, , );
+  //                }
   conn->connector->Connect(
       conn->queue_pair,
       reinterpret_cast<const sockaddr*>(&peer_sock),
@@ -369,7 +356,7 @@ bool RdmaWrapper::TryConnectTo(uint64_t peer_machine_id) {
       sizeof(int32_t), // TODO(), what size
       &conn->ov);
 
-  /*
+  // TODO(shiyuan)
   if (hr == ND_PENDING) {
     hr = conn->connector->GetOverlappedResult(&conn->ov, TRUE);
   }
@@ -381,7 +368,6 @@ bool RdmaWrapper::TryConnectTo(uint64_t peer_machine_id) {
     connection_pool_->CleanConnection(peer_machine_id);
     return false;
   }
-  */
 
   // established with peer_machine_id.
   return true;
@@ -389,20 +375,16 @@ bool RdmaWrapper::TryConnectTo(uint64_t peer_machine_id) {
 
 void RdmaWrapper::CompleteConnectionTo(uint64_t peer_machine_id) {
   Connection* conn = connection_pool_->GetConnection(peer_machine_id);
+  // TODO(shiyuan)
   hr = conn->connector->CompleteConnect(&conn->ov);
+  // TODO(shiyuan)
   if (hr == ND_PENDING) {
     hr = conn->connector->GetOverlappedResult(&conn->ov, TRUE);
   }
 }
 
-// TODO()
-int32_t RdmaWrapper::WaitForConnection() {
-
-
-}
-
-/* 
-  int32_t RdmaWrapper::WaitForConnectionFrom() {
+// TODO(shiyuan)
+uint64_t RdmaWrapper::WaitForConnection() {
   Connection* conn = NewConnection(); 
   HRESULT hr = listener_->GetConnectionRequest(conn->connector, &conn->ov);
   if (hr == ND_PENDING) {
@@ -412,10 +394,10 @@ int32_t RdmaWrapper::WaitForConnection() {
   // CHECK(!FAILED(hr)) << "Failed to GetConnectionRequest\n";
   // LOG(INFO) << "Get connection request done\n";
 
-  int32_t peer_rank;
-  ULONG size = sizeof(peer_rank);
+  uint64_t peer_machine_id;
+  uint64_t size = sizeof(peer_machine_id);
   // Get src rank from the private data
-  hr = conn->connector->GetPrivateData(&peer_rank, &size);
+  hr = conn->connector->GetPrivateData(&peer_machine_id, &size);
   // LOG(INFO) << "peer rank = " << peer_rank << " size = " << size  << "\n";
   // NOTE(feiga): remove this CHECK, since I can't make it pass :(
   // NOTE(feiga): The author of NDSPI says it's normal for this check failed
@@ -442,7 +424,6 @@ int32_t RdmaWrapper::WaitForConnection() {
   return peer_rank;
 }
 
-*/
 
 } // namespace oneflow
 

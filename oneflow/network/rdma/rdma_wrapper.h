@@ -56,12 +56,6 @@ private:
     
   const MemoryDescriptor& GetMemoryDescriptor(int64_t register_id) const;
   
-  // Init NDSPI environment, create |adapter_|.
-  void InitRdmaDevice();
-  void InitRdmaAdapter();
-  //void NdspiV2Open();TODO()
-  // Create the initiator completion queue and receiver completion queue
-  void CreateCompletionQueues();
   
   // Connection establishment routine
   // NDSPI connection establishment follows an active/passive model, where 
@@ -77,7 +71,7 @@ private:
   // actively
   
   // As passive side, create |listener_|, bind it and start listening
-  void StartListen();
+  // void StartListen();
   // All the active sides connect to the passive sides
   void EstablishConnection();
 
@@ -102,15 +96,16 @@ private:
   // IND2Listener* listener_;
   
   // Shared completion queue by all connections
-  //IND2CompletionQueue* init_cq_;  // initiator cq
-  //IND2CompletionQueue* recv_cq_;  // receive   cq
+  // IND2CompletionQueue* init_cq_;  // initiator cq
+  // IND2CompletionQueue* recv_cq_;  // receive   cq
 
   //}
   // Network topology information
 
   // TODO(jiyuan): estimate the pre-post number
   static const int kPrePostRecvNumber = 16;
-  
+ 
+  RdmaManager* rdma_manager_; 
   uint64_t my_machine_id_;
   NetworkTopology net_topology_;
   
