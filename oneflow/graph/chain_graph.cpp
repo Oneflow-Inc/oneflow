@@ -124,7 +124,7 @@ void ModelMergeChains(
     if (cur_node->op()->IsElemWise() == false) { continue; }
     if (cur_node->parallel_desc()->policy() != kModelParallel) { continue; }
     const LogicalNode* pred_node = cur_node->SoleInEdge()->src_node();
-    CHECK(*(pred_node->parallel_desc()) == *(cur_node->parallel_desc()))
+    CHECK(pred_node->parallel_desc()->Equal(cur_node->parallel_desc().get()))
         << "the ParallelConf of "
         << "\"" << pred_node->op()->op_name() << "\" "
         << "and "
@@ -201,31 +201,38 @@ bool TryMergeWithoutConnect(
   return true;
 }
 
-void Traverse(const LogicalNode* seed_node,
-              const std::vector<const LogicalNode*>& data_parallel_node,
-              std::list<Chain>* chain_list,
-              HashMap<const LogicalNode*, bool>* done,
-              Logical2ChainItMap* logical2chain_it) {
-  done->at(seed_node) = true;
-  while (true) {
-    bool has_merged = false;
-    for (const LogicalNode* node : data_parallel_node) {
-      if (done->at(node)) { continue; }
-      if (seed_node->parallel_desc() != node->parallel_desc()) {
-        continue;
+bool TryDataMerge(
+    const LogicalNode* outer,
+    const LogicalNode* inner,
+    std::list<Chain>* chain_list,
+    Logical2ChainItMap* logical2chain_it) {
+  if (outer->parallel_desc()->Equal(inner->parallel_desc().get()) == false) {
+    return false;
+  }
+  if (TryMergeWithoutConnect(outer, inner, chain_list, logical2chain_it)
+      || TryMergeWithConnect(outer, inner, chain_list, logical2chain_it)
+      || TryMergeWithConnect(inner, outer, chain_list, logical2chain_it)) {
+    return true;
+  }
+  return false;
+}
+
+bool DoOneDataMerge(
+    const std::vector<const LogicalNode*>& data_parallel_node,
+    std::list<Chain>* chain_list,
+    Logical2ChainItMap* logical2chain_it) {
+  for (const LogicalNode* outer : data_parallel_node) {
+    for (const LogicalNode* inner : data_parallel_node) {
+      if (outer == inner) { continue; }
+      ChainIt outer_it = logical2chain_it->at(outer);
+      ChainIt inner_it = logical2chain_it->at(inner);
+      if (outer_it == inner_it) { continue; }
+      if (TryDataMerge(outer, inner, chain_list, logical2chain_it)) {
+        return true;
       }
-      if (TryMergeWithConnect(seed_node, node, chain_list, logical2chain_it)
-          || TryMergeWithConnect(node, seed_node, chain_list, logical2chain_it)
-          || TryMergeWithoutConnect(seed_node, node, chain_list, logical2chain_it)) {
-        done->at(node) = true;
-        has_merged = true;
-        break;
-      }
-    }
-    if (has_merged == false) {
-      break;
     }
   }
+  return false;
 }
 
 void DataMergeChains(
@@ -233,22 +240,14 @@ void DataMergeChains(
     std::list<Chain>* chain_list,
     Logical2ChainItMap* logical2chain_it) {
   std::vector<const LogicalNode*> data_parallel_node;
-  HashMap<const LogicalNode*, bool> done;
   for (const auto& pair : *logical2chain_it) {
     const LogicalNode* cur_logi_node = pair.first;
     if (cur_logi_node->parallel_desc()->policy() != kDataParallel) { continue; }
     if (logical_gph.IsFirstNode(cur_logi_node)) { continue; }
     if (cur_logi_node->IsLossNode()) { continue; }
     data_parallel_node.push_back(cur_logi_node);
-    done[cur_logi_node] = false;
   }
-  for (const LogicalNode* seed_node : data_parallel_node) {
-    if (done.at(seed_node)) { continue; }
-    Traverse(seed_node,
-             data_parallel_node,
-             chain_list,
-             &done,
-             logical2chain_it);
+  while (DoOneDataMerge(data_parallel_node, chain_list, logical2chain_it)) {
   }
 }
 

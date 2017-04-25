@@ -31,14 +31,14 @@ class ParallelDesc {
 
   //
   ParallelPolicy& mut_policy() { return policy_; }
-  bool operator == (const ParallelDesc& rhs) const {
+  bool Equal(const ParallelDesc& rhs) const {
 	  return policy_ == rhs.policy_ 
 		  && device_type_ == rhs.device_type_ 
 		  && sorted_machine_ids_ == rhs.sorted_machine_ids_ 
 		  && machine_id2sorted_device_phy_ids_ == rhs.machine_id2sorted_device_phy_ids_;
   }
-  bool operator != (const ParallelDesc& rhs) const {
-    return !((*this) == rhs);
+  bool Equal(const ParallelDesc* rhs) const {
+    return Equal(*rhs);
   }
 
   std::string VisualStr() const;
