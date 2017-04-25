@@ -10,6 +10,8 @@ class CloneOp final : public SysOperator {
   OF_DISALLOW_COPY_AND_MOVE(CloneOp);
   CloneOp() = default;
   ~CloneOp() = default;
+  
+  bool IsElemWise() const override { return true; }
 
   void InitFromOpConf(const OperatorConf& op_conf) override;
   void InferShape4ObAndDtbFromIb() const override { TODO(); }

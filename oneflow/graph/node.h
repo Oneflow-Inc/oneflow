@@ -50,7 +50,7 @@ class Edge {
   NodeType* src_node() const { return src_node_; }
   NodeType* dst_node() const { return dst_node_; }
 
-  virtual std::string VisualStr() const { return ""; }
+  virtual std::string VisualStr() const { return "TODO"; }
 
  private:
   friend void Connect<NodeType, EdgeType>(NodeType* src_node,
@@ -101,7 +101,7 @@ class Node {
     }
   }
   
-  virtual std::string VisualStr() const { return ""; }
+  virtual std::string VisualStr() const { return "TODO"; }
 
  private:
   friend void Connect<NodeType, EdgeType>(NodeType* src_node,

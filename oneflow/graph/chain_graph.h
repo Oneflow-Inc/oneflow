@@ -51,10 +51,7 @@ class ChainNode final : public Node<ChainNode, ChainEdge> {
   bool IsFaker() const { return op_vec_.empty(); }
 
   bool IsLossNode() const {
-    if (op_vec_.size() == 1) {
-      return op_vec_.front()->IsLossOp();
-    }
-    return false;
+    return op_vec_.size() == 1 && op_vec_.front()->IsLossOp();
   }
   
   std::string VisualStr() const { TODO(); }

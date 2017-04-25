@@ -18,6 +18,35 @@ struct Chain {
   std::unordered_set<const LogicalNode*> descendants_and_this;
 };
 
+void DebugPrintChain(const Chain& chain) {
+  std::cerr << "nodes";
+  for (const LogicalNode* logical_node : chain.nodes) {
+    std::cerr << "_\"" << logical_node->VisualStr() << "\"";
+  }
+  std::cerr << std::endl;
+  std::cerr << "ancestors";
+  for (const LogicalNode* logical_node : chain.ancestors) {
+    std::cerr << "_\"" << logical_node->VisualStr() << "\"";
+  }
+  std::cerr << std::endl;
+  std::cerr << "descendants";
+  for (const LogicalNode* logical_node : chain.descendants) {
+    std::cerr << "_\"" << logical_node->VisualStr() << "\"";
+  }
+  std::cerr << std::endl;
+  std::cerr << "ancestors_and_this";
+  for (const LogicalNode* logical_node : chain.ancestors_and_this) {
+    std::cerr << "_\"" << logical_node->VisualStr() << "\"";
+  }
+  std::cerr << std::endl;
+  std::cerr << "descendants_and_this";
+  for (const LogicalNode* logical_node : chain.descendants_and_this) {
+    std::cerr << "_\"" << logical_node->VisualStr() << "\"";
+  }
+  std::cerr << std::endl;
+  std::cerr << std::endl;
+}
+
 using ChainIt = std::list<Chain>::iterator;
 using Logical2ChainItMap = HashMap<const LogicalNode*, ChainIt>;
 
@@ -44,9 +73,12 @@ void InitChains(
   }
   // Init ancestors
   for (auto node = logi_gph.cbegin(); node != logi_gph.cend(); ++node) {
-    if (logi_gph.IsFirstNode(&(*node))) { continue; }
     ChainIt cur_chain = logical2chain_it->at(&(*node));
     cur_chain->ancestors.clear();
+    cur_chain->ancestors_and_this.clear();
+    cur_chain->ancestors_and_this.insert(cur_chain->nodes.begin(),
+                                         cur_chain->nodes.end());
+    if (logi_gph.IsFirstNode(&(*node))) { continue; }
     // each predecessor
     for (const LogicalEdge* edge : node->in_edges()) {
       LogicalNode* pred_node = edge->src_node();
@@ -55,17 +87,19 @@ void InitChains(
       cur_chain->ancestors.insert(pred_chain->ancestors.begin(),
                                   pred_chain->ancestors.end());
       cur_chain->ancestors.insert(pred_node);
-      // ancestors_and_this
-      cur_chain->ancestors_and_this = cur_chain->ancestors;
-      cur_chain->ancestors_and_this.insert(cur_chain->nodes.begin(),
-                                           cur_chain->nodes.end());
     }
+    // ancestors_and_this
+    cur_chain->ancestors_and_this.insert(cur_chain->ancestors.begin(),
+                                         cur_chain->ancestors.end());
   }
   // Init descendants
   for (auto node = logi_gph.crbegin(); node != logi_gph.crend(); ++node) {
-    if (logi_gph.IsLastNode(&(*node))) { continue; }
     ChainIt cur_chain = logical2chain_it->at(&(*node));
     cur_chain->descendants.clear();
+    cur_chain->descendants_and_this.clear();
+    cur_chain->descendants_and_this.insert(cur_chain->nodes.begin(),
+                                           cur_chain->nodes.end());
+    if (logi_gph.IsLastNode(&(*node))) { continue; }
     // each successors
     for (const LogicalEdge* edge : node->out_edges()) {
       LogicalNode* succ_node = edge->dst_node();
@@ -75,10 +109,9 @@ void InitChains(
                                     succ_chain->descendants.end());
       cur_chain->descendants.insert(succ_node);
       // descendants_and_this
-      cur_chain->descendants_and_this = cur_chain->descendants;
-      cur_chain->descendants_and_this.insert(cur_chain->nodes.begin(),
-                                             cur_chain->nodes.end());
     }
+    cur_chain->descendants_and_this.insert(cur_chain->descendants.begin(),
+                                           cur_chain->descendants.end());
   }
 }
 
