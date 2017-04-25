@@ -9,6 +9,9 @@ namespace oneflow{
 class RdmaManager {
 
 public:
+  IND2Adapter* adapter_;
+  sockaddr_in sin;
+
   RdmaManager();
   ~RdmaManager();
 
@@ -17,9 +20,7 @@ public:
 
 private:
   // NdspiV2 specific adatper and information
-  IND2Adapter* adapter_;
   ND2_ADAPTER_INFO adapter_info_;
-  sockaddr_in sin;
   HANDLE overlapped_file_;
     
   IND2Listener* listener_;
