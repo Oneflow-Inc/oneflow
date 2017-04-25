@@ -110,6 +110,7 @@ void LogicalGraph::AddOneCloneNode(
     const HashMap<LogicalEdge*, std::string>& edge2ibn) {
   LogicalNode* clone_node = NewFinalNode();
   clone_node->mut_op() = clone_info.clone_op;
+  clone_node->mut_parallel_desc() = clone_info.pred_node->parallel_desc();
   Connect(clone_info.pred_node, NewFinalEdge(), clone_node);
   CHECK_EQ(clone_node->op()->output_bns().size(), clone_info.edges.size());
   for (size_t i = 0; i < clone_info.edges.size(); ++i) {

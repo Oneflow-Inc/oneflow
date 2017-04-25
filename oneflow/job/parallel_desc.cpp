@@ -18,7 +18,7 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
     // if the device_name format is "machine_xxx:0-3", add device_id {0,1,2,3}
     int64_t to_symbol_pos = device_id_str.rfind("-");
     if (device_id_str == "disk") {
-      continue;
+      machine_id2sorted_device_phy_ids_[machine_id] = {};
     } else if (to_symbol_pos == std::string::npos) {
       uint64_t device_id = StoullOrDie(device_id_str);
       machine_id2sorted_device_phy_ids_[machine_id].push_back(device_id);	
@@ -37,6 +37,32 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
   for (auto&pair : machine_id2sorted_device_phy_ids_) {
     SortAndRemoveDuplication(&(pair.second));
   }
+}
+
+std::string ParallelDesc::VisualStr() const {
+  std::stringstream ss;
+  ss << "{policy:";
+  if (policy_ == kDataParallel) {
+    ss << "DataParallel";
+  } else {
+    ss << "ModelParallel";
+  }
+  ss << "}{device_type:";
+  if (device_type_ == kGPU) {
+    ss << "GPU";
+  } else {
+    ss << "CPU";
+  }
+  ss << "}{machine_id2sorted_device_phy_ids:";
+  for (uint64_t machine_id : sorted_machine_ids_) {
+    ss << "{" << machine_id << ":[";
+    for (uint64_t device_phy_id : machine_id2sorted_device_phy_ids_.at(machine_id)) {
+      ss << device_phy_id << ",";
+    }
+    ss << "]}";
+  }
+  ss << "}";
+  return ss.str();
 }
 
 } // namespace oneflow

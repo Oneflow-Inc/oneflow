@@ -40,6 +40,8 @@ class ParallelDesc {
   bool operator != (const ParallelDesc& rhs) const {
     return !((*this) == rhs);
   }
+
+  std::string VisualStr() const;
   
  private:
   ParallelPolicy policy_;

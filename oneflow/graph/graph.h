@@ -122,7 +122,6 @@ class Graph<NodeType, EdgeType>::Iterator final {
   
   Iterator(NodeType* source_node) {
     bfs_queue_.push(source_node);
-    node_visited4bfs_.insert(source_node);
   }
   
   NodeType& operator * ();
@@ -133,7 +132,7 @@ class Graph<NodeType, EdgeType>::Iterator final {
 
  private:
   std::queue<NodeType*> bfs_queue_;
-  std::unordered_set<NodeType*> node_visited4bfs_;
+  HashMap<NodeType*, int32_t> visited_cnt_;
 };
 
 template<typename NodeType, typename EdgeType>
@@ -170,7 +169,6 @@ class Graph<NodeType, EdgeType>::ReverseIterator final {
   
   ReverseIterator(NodeType* sink_node) {
     bfs_queue_.push(sink_node);
-    node_visited4bfs_.insert(sink_node);
   }
   
   NodeType& operator * ();
@@ -181,7 +179,7 @@ class Graph<NodeType, EdgeType>::ReverseIterator final {
 
  private:
   std::queue<NodeType*> bfs_queue_;
-  std::unordered_set<NodeType*> node_visited4bfs_;
+  HashMap<NodeType*, int32_t > visited_cnt_;
 };
 
 template<typename NodeType, typename EdgeType>
@@ -309,7 +307,8 @@ auto Graph<NodeType, EdgeType>::Iterator::operator ++ () -> Iterator& {
   bfs_queue_.pop();
   for (EdgeType* out_edge : cur_node->out_edges()) {
     NodeType* dst_node = out_edge->dst_node();
-    if (node_visited4bfs_.insert(dst_node).second == true) {
+    visited_cnt_[dst_node] += 1;
+    if (visited_cnt_.at(dst_node) == dst_node->in_edges().size()) {
        bfs_queue_.push(dst_node);
     }
   }
@@ -346,7 +345,8 @@ auto Graph<NodeType, EdgeType>::ReverseIterator::operator ++ () -> ReverseIterat
   bfs_queue_.pop();
   for (EdgeType* in_edge : cur_node->in_edges()) {
     NodeType* src_node = in_edge->src_node();
-    if (node_visited4bfs_.insert(src_node).second == true) {
+    visited_cnt_[src_node] += 1;
+    if (visited_cnt_.at(src_node) == src_node->out_edges().size()) {
       bfs_queue_.push(src_node);
     }
   }

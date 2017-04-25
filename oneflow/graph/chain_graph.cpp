@@ -44,6 +44,7 @@ void InitChains(
   }
   // Init ancestors
   for (auto node = logi_gph.cbegin(); node != logi_gph.cend(); ++node) {
+    if (logi_gph.IsFirstNode(&(*node))) { continue; }
     ChainIt cur_chain = logical2chain_it->at(&(*node));
     cur_chain->ancestors.clear();
     // each predecessor
@@ -62,6 +63,7 @@ void InitChains(
   }
   // Init descendants
   for (auto node = logi_gph.crbegin(); node != logi_gph.crend(); ++node) {
+    if (logi_gph.IsLastNode(&(*node))) { continue; }
     ChainIt cur_chain = logical2chain_it->at(&(*node));
     cur_chain->descendants.clear();
     // each successors
@@ -89,7 +91,12 @@ void ModelMergeChains(
     if (cur_node->op()->IsElemWise() == false) { continue; }
     if (cur_node->parallel_desc()->policy() != kModelParallel) { continue; }
     const LogicalNode* pred_node = cur_node->SoleInEdge()->src_node();
-    CHECK(pred_node->parallel_desc() == cur_node->parallel_desc());
+    CHECK(pred_node->parallel_desc() == cur_node->parallel_desc())
+        << "the ParallelConf of "
+        << "\"" << pred_node->op()->op_name() << "\" "
+        << "and "
+        << "\"" << cur_node->op()->op_name() << "\" "
+        << "should be the same";
     // Get chain
     ChainIt pred_chain = logical2chain_it->at(pred_node);
     ChainIt cur_chain = pair.second;
