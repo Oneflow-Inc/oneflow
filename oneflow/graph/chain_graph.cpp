@@ -162,6 +162,7 @@ bool TryMergeWithConnect(
   if (up_chain->nodes.size() > bottom_chain->nodes.size()) {
     for (const LogicalNode* node : bottom_chain->nodes) {
       up_chain->nodes.push_back(node);
+      up_chain->ancestors_and_this.insert(node);
       up_chain->descendants.erase(node);
       logical2chain_it->at(node) = up_chain;
     }
@@ -169,6 +170,7 @@ bool TryMergeWithConnect(
   } else {
     for (const LogicalNode* node : up_chain->nodes) {
       bottom_chain->nodes.push_back(node);
+      bottom_chain->descendants_and_this.insert(node);
       bottom_chain->ancestors.erase(node);
       logical2chain_it->at(node) = bottom_chain;
     }
@@ -202,16 +204,17 @@ bool TryMergeWithoutConnect(
 }
 
 bool TryDataMerge(
-    const LogicalNode* outer,
-    const LogicalNode* inner,
+    const LogicalNode* first,
+    const LogicalNode* second,
     std::list<Chain>* chain_list,
     Logical2ChainItMap* logical2chain_it) {
-  if (outer->parallel_desc()->Equal(inner->parallel_desc().get()) == false) {
+  if (first->parallel_desc()->Equal(second->parallel_desc().get()) == false) {
     return false;
   }
-  if (TryMergeWithoutConnect(outer, inner, chain_list, logical2chain_it)
-      || TryMergeWithConnect(outer, inner, chain_list, logical2chain_it)
-      || TryMergeWithConnect(inner, outer, chain_list, logical2chain_it)) {
+  if (TryMergeWithoutConnect(first, second, chain_list, logical2chain_it)
+      || TryMergeWithConnect(first, second, chain_list, logical2chain_it)
+      || TryMergeWithConnect(second, first, chain_list, logical2chain_it)) {
+    LOG(INFO) << first->VisualStr() << "\t" << second->VisualStr();
     return true;
   }
   return false;
@@ -221,13 +224,13 @@ bool DoOneDataMerge(
     const std::vector<const LogicalNode*>& data_parallel_node,
     std::list<Chain>* chain_list,
     Logical2ChainItMap* logical2chain_it) {
-  for (const LogicalNode* outer : data_parallel_node) {
-    for (const LogicalNode* inner : data_parallel_node) {
-      if (outer == inner) { continue; }
-      ChainIt outer_it = logical2chain_it->at(outer);
-      ChainIt inner_it = logical2chain_it->at(inner);
-      if (outer_it == inner_it) { continue; }
-      if (TryDataMerge(outer, inner, chain_list, logical2chain_it)) {
+  for (const LogicalNode* first : data_parallel_node) {
+    for (const LogicalNode* second : data_parallel_node) {
+      if (first == second) { continue; }
+      ChainIt first_it = logical2chain_it->at(first);
+      ChainIt second_it = logical2chain_it->at(second);
+      if (first_it == second_it) { continue; }
+      if (TryDataMerge(first, second, chain_list, logical2chain_it)) {
         return true;
       }
     }
