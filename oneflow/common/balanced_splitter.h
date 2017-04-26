@@ -27,8 +27,8 @@ class BalancedSplitter final {
   Range At(int64_t idx) const;
 
  private:
-   int64_t range_per_size_;
-   int64_t change_point_;
+   int64_t size_per_range_;
+   int64_t change_pos_;
    int64_t split_num_;
 };
 
