@@ -25,6 +25,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   const ChainNode* chain_node() const { return stage_node_->chain_node();}
   const StageNode* stage_node() const { return stage_node_; }
   const uint64_t& thrd_loc_id() const { return thrd_loc_id_; }
+  std::string thrd_loc_id_str() const { return std::to_string(thrd_loc_id_); }
   const ExecGraph& exec_gph() const { return exec_gph_; }
   uint64_t task_id() const { return task_id_; }
   
@@ -49,7 +50,13 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual TaskProto ToProto() const { TODO(); }
   
   //
-  std::string VisualStr() const { TODO(); }
+  std::string VisualStr() const override {
+    std::stringstream ss;
+    ss << stage_node_->machine_id_str() << ":"
+       << thrd_loc_id_str() << "\\n"
+       << chain_node()->VisualStr();
+    return ss.str();
+  }
  
  protected:
   virtual std::unique_ptr<TaskNode> CreateSameTypeNode() const;

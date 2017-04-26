@@ -42,12 +42,13 @@ void TaskGraph::BuildFromChainGph(
 }
 
 void TaskGraph::BuildFromStageGph(bool need_bp) {
-  LOG(INFO) << "Build TaskGraph...";
+  LOG(INFO) << "Build FwTaskGraph...";
   Stage2TaskNodesMap stage2task_nodes;
   InitCompTaskNodes(&stage2task_nodes);
   InitBoxingTaskNodes(&stage2task_nodes);
-  ConnectTaskNodes(&stage2task_nodes);
+  ConnectBoxingTaskNodes(&stage2task_nodes);
   UpdateSourceAndSink();
+  ToDotFile(LogDir() + "/fw_task_graph.dot");
   if (need_bp) {
     BuildBpStruct();
   }
@@ -55,13 +56,9 @@ void TaskGraph::BuildFromStageGph(bool need_bp) {
 
 void TaskGraph::InitCompTaskNodes(Stage2TaskNodesMap* stage2task_nodes) {
   for (const std::unique_ptr<StageNode>& stage : stage_gph_->nodes()) {
-    bool is_source_stage = stage->in_edges().empty();
-    bool is_sink_stage = stage->out_edges().empty();
     if (stage->chain_node()->parallel_desc()->device_type() == kGPU) {
       Stage2DeviceCompTaskNodes(stage.get(),
-                                &((*stage2task_nodes)[stage.get()]),
-                                is_source_stage,
-                                is_sink_stage);
+                                &((*stage2task_nodes)[stage.get()]));
     } else {
       Stage2HostCompTaskNodes(stage.get(),
                               &((*stage2task_nodes)[stage.get()]));
@@ -71,9 +68,7 @@ void TaskGraph::InitCompTaskNodes(Stage2TaskNodesMap* stage2task_nodes) {
 
 void TaskGraph::Stage2DeviceCompTaskNodes(
     const StageNode* stage,
-    TaskNodesInStage* task_nodes_in_stage,
-    bool is_source_stage,
-    bool is_sink_stage) {
+    TaskNodesInStage* task_nodes_in_stage) {
   uint64_t parallel_idx = stage->parallel_range().begin();
   for (auto device_phy_id : stage->SortedDevicePhyIds()) {
     uint64_t thread_local_id =
@@ -86,7 +81,7 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
     comp_task_node->set_parallel_id(parallel_idx++);
     comp_task_node->set_task_id();
     // comp_in_task_node
-    if (!is_source_stage) {
+    if (!stage->in_edges().empty()) {
       CopyHDTaskNode* comp_in_task_node = NewTaskNode<CopyHDTaskNode> ();
       comp_in_task_node->SetFwNode();
       comp_in_task_node->set_stage_node(stage);
@@ -99,7 +94,7 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
       task_nodes_in_stage->comp_in_task_nodes.push_back(comp_task_node);
     }
     // comp_out_task_node
-    if (!is_sink_stage) {
+    if (!stage->out_edges().empty()) {
       CopyHDTaskNode* comp_out_task_node = NewTaskNode<CopyHDTaskNode> ();
       comp_out_task_node->SetFwNode();
       comp_out_task_node->set_stage_node(stage);
@@ -184,7 +179,7 @@ void TaskGraph::InitOutBoxingTaskNode(
   task_nodes_in_stage->out_boxing_task_node = boxing_task;
 }
 
-void TaskGraph::ConnectTaskNodes(
+void TaskGraph::ConnectBoxingTaskNodes(
     const Stage2TaskNodesMap* stage2task_nodes) {
   for (const std::unique_ptr<StageNode>& cur_stage : stage_gph_->nodes()) {
     const TaskNodesInStage& cur_tasks = stage2task_nodes->at(cur_stage.get());
@@ -227,6 +222,7 @@ void TaskGraph::ConnectTaskNodes(
 }
 
 void TaskGraph::BuildBpStruct() {
+  LOG(INFO) << "Build BpTaskGraph...";
   std::vector<TaskNode*> turning_node_vec;
   GenerateRelatedBpNodes(&turning_node_vec);
   BackwardConnect(turning_node_vec);

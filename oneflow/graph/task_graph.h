@@ -61,9 +61,7 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
 
   void InitCompTaskNodes(Stage2TaskNodesMap* stage2task_nodes);
   void Stage2DeviceCompTaskNodes(const StageNode* stage,
-                                 TaskNodesInStage* task_nodes_in_stage,
-                                 bool is_first_stage,
-                                 bool is_last_stage);
+                                 TaskNodesInStage* task_nodes_in_stage);
   void Stage2HostCompTaskNodes(const StageNode* stage,
                                TaskNodesInStage* task_nodes_in_stage);
   void InitBoxingTaskNodes(Stage2TaskNodesMap* stage2task_nodes);
@@ -71,7 +69,7 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
                             TaskNodesInStage* task_nodes_in_stage);
   void InitOutBoxingTaskNode(const StageNode* stage,
                              TaskNodesInStage* task_nodes_in_stage);
-  void ConnectTaskNodes(const Stage2TaskNodesMap* stage2task_nodes);
+  void ConnectBoxingTaskNodes(const Stage2TaskNodesMap* stage2task_nodes);
   void GenerateRelatedBpNodes(std::vector<TaskNode*> *turning_node_vec);
   void BackwardConnect(const std::vector<TaskNode*>& turning_node_vec);
   void BuildBpStruct();
