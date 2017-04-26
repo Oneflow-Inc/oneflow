@@ -34,7 +34,7 @@ void CompTaskNode::MdUpdtFwBuildExecAndProducedRegsts(TaskGraph* gph) {
   }
   auto model_regst = of_make_unique<ContigRegstDesc> ();
   EnrollProducedRegstDesc("model", std::move(model_regst));
-  ExecNode* exec_node = mut_exec_gph().NewFinalNode();
+  ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = chain_node()->SoleOp();
   mut_exec_gph().UpdateSourceAndSink();
   // PostProcessing in ModelUpdateTaskGraph will complete the work
@@ -48,7 +48,7 @@ void CompTaskNode::MdLoadFwBuildExecAndProducedRegsts(TaskGraph* gph) {
     exec_node->BindBnInOpAndRegst("model_init", GetRelatedRegst(SoleInEdge()));
     return;
   }
-  ExecNode* exec_node = mut_exec_gph().NewFinalNode();
+  ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = chain_node()->SoleOp();
   mut_exec_gph().UpdateSourceAndSink();
   auto model_regst = of_make_unique<ContigRegstDesc> ();
@@ -67,7 +67,7 @@ void CompTaskNode::MdSaveFwBuildExecAndProducedRegsts(TaskGraph* gph) {
     BindProducedRegstAndOutEdge(model_regst, SoleOutEdge());
     return;
   }
-  ExecNode* exec_node = mut_exec_gph().NewFinalNode();
+  ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = chain_node()->SoleOp();
   mut_exec_gph().UpdateSourceAndSink();
   const std::string& ibn = exec_node->op()->SoleIbn();
@@ -78,7 +78,7 @@ void CompTaskNode::FwBuildFromUserOps(
     Lbn2NodeBnMap* lbn2producer,
     Lbn2NodeBnMap* extern_in_lbn2consumer) {
   for (std::shared_ptr<const Operator> op : chain_node()->op_vec()) {
-    ExecNode* cur_node = mut_exec_gph().NewFinalNode();
+    ExecNode* cur_node = mut_exec_gph().NewNode();
     cur_node->mut_op() = op;
     for (const std::string& obn : op->output_bns()) {
       std::string lbn = op->obn2lbn(obn);
@@ -90,7 +90,7 @@ void CompTaskNode::FwBuildFromUserOps(
       std::string lbn = cur_node->op()->ibn2lbn(ibn);
       auto producer_it = lbn2producer->find(lbn);
       if (producer_it != lbn2producer->end()) {
-        ExecEdge* edge = mut_exec_gph().NewFinalEdge();
+        ExecEdge* edge = mut_exec_gph().NewEdge();
         edge->set_lbn(lbn);
         edge->mut_src_bn() = producer_it->second.second;
         edge->mut_dst_bn() = ibn;
@@ -184,12 +184,12 @@ void CompTaskNode::BpBuildExecGraph(
     HashMap<const ExecNode*, ExecNode*>* fw_node2bp_node,
     HashMap<ExecEdge*, const ExecEdge*>* bp_edge2fw_edge) {
   for (const std::unique_ptr<ExecNode>& fw_node : fw_gph.nodes()) {
-    ExecNode* bp_node = mut_exec_gph().NewFinalNode();
+    ExecNode* bp_node = mut_exec_gph().NewNode();
     bp_node->mut_op() = fw_node->op();
     CHECK(fw_node2bp_node->emplace(fw_node.get(), bp_node).second);
   }
   for (const std::unique_ptr<ExecEdge>& fw_edge : fw_gph.edges()) {
-    ExecEdge* bp_edge = mut_exec_gph().NewFinalEdge();
+    ExecEdge* bp_edge = mut_exec_gph().NewEdge();
     bp_edge->set_lbn(fw_edge->lbn());
     bp_edge->mut_src_bn() = GenDiffBn(fw_edge->dst_bn());
     bp_edge->mut_dst_bn() = GenDiffBn(fw_edge->src_bn());

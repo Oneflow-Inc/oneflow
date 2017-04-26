@@ -32,20 +32,20 @@ MdLoadTaskGraph::MdLoadTaskGraph(
 
 void MdLoadTaskGraph::BuildTaskGraph(const ChainNode* update_chain) {
   auto chain_gph = of_make_unique<ChainGraph> ();
-  ChainNode* load_chain = chain_gph->NewFinalNode();
+  ChainNode* load_chain = chain_gph->NewNode();
   SetModelLoadChain(load_chain);
-  ChainNode* faker_chain = chain_gph->NewFinalNode();
+  ChainNode* faker_chain = chain_gph->NewNode();
   faker_chain->mut_op_vec() = {};
   faker_chain->mut_parallel_desc() = update_chain->parallel_desc();
   faker_chain->mut_input_lbns() = {RegstDesc::kAllLbn};
-  Connect(load_chain, chain_gph->NewFinalEdge(), faker_chain);
+  Connect(load_chain, chain_gph->NewEdge(), faker_chain);
   chain_gph->UpdateSourceAndSink();
   BuildFromChainGph(std::move(chain_gph), false);
 }
 
 void MdLoadTaskGraph::InitFaker2Mccoy(
     const std::vector<CompTaskNode*>& sorted_update_tasks) {
-  auto sorted_faker_tasks = SortedCompTasksInChain(chain_gph()->SoleLastNode());
+  auto sorted_faker_tasks = SortedCompTasksInChain(chain_gph()->SoleSinkNode());
   CHECK_EQ(sorted_update_tasks.size(), sorted_faker_tasks.size());
   for (size_t i = 0; i < sorted_update_tasks.size(); ++i) {
     EnrollFakerMccoy(sorted_faker_tasks[i], sorted_update_tasks[i]);

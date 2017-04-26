@@ -125,7 +125,7 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
     box_conf->set_in_num(sorted_in_edges.size());
     box_conf->set_out_num(sorted_out_edges.size());
     CompleteBoxOp(box_conf);
-    ExecNode* node = mut_exec_gph().NewFinalNode();
+    ExecNode* node = mut_exec_gph().NewNode();
     node->mut_op() = ConstructOpFromPbConf(op_conf);
     // ibn
     for (size_t i = 0; i < sorted_in_edges.size(); ++i) {
@@ -170,7 +170,7 @@ void BoxingTaskNode::BpBuildExecAndProducedRegsts(TaskGraph*) {
   const ExecGraph& fw_exec_gph = GetFwNode()->exec_gph();
   HashMap<const ExecNode*, ExecNode*> fw_node2bp_node;
   for (const std::unique_ptr<ExecNode>& fw_node: fw_exec_gph.nodes()) {
-    ExecNode* bp_node = mut_exec_gph().NewFinalNode();
+    ExecNode* bp_node = mut_exec_gph().NewNode();
     bp_node->mut_op() = fw_node->op();
     // in_diff
     for (const std::string& ibn : fw_node->op()->input_bns()) {

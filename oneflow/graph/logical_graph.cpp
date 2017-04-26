@@ -24,13 +24,13 @@ void LogicalGraph::NaiveBuildGraphStruct(
   for (int op_i = 0; op_i < dl_net_conf.op_conf_size(); ++op_i) {
     const OperatorConf& cur_op_conf = dl_net_conf.op_conf(op_i);
     // Construct cur node
-    LogicalNode* cur_node = NewFinalNode();
+    LogicalNode* cur_node = NewNode();
     cur_node->mut_op() = ConstructOpFromPbConf(cur_op_conf);
     // Connect input node
     for (const std::string& ibn : cur_node->op()->input_bns()) {
       std::string lbn = cur_node->op()->ibn2lbn(ibn);
       LogicalNode* pred_node = lbn2producer.at(lbn);
-      LogicalEdge* edge = NewFinalEdge();
+      LogicalEdge* edge = NewEdge();
       CHECK(edge2lbn->emplace(edge, lbn).second);
       CHECK(edge2ibn->emplace(edge, ibn).second);
       Connect(pred_node, edge, cur_node);
@@ -78,7 +78,6 @@ void LogicalGraph::CollectCloneInfos(
     std::vector<CloneInfo>* clone_infos,
     const HashMap<LogicalEdge*, std::string>& edge2lbn) {
   for (const std::unique_ptr<LogicalNode>& cur_node : nodes()) {
-    if (IsLastNode(cur_node.get())) { continue; }
     HashMap<std::string, std::vector<LogicalEdge*>> lbn2edges;
     for (LogicalEdge* edge : cur_node->out_edges()) {
       lbn2edges[edge2lbn.at(edge)].push_back(edge);
@@ -106,10 +105,10 @@ void LogicalGraph::CollectCloneInfos(
 void LogicalGraph::AddOneCloneNode(
     const CloneInfo& clone_info,
     const HashMap<LogicalEdge*, std::string>& edge2ibn) {
-  LogicalNode* clone_node = NewFinalNode();
+  LogicalNode* clone_node = NewNode();
   clone_node->mut_op() = clone_info.clone_op;
   clone_node->mut_parallel_desc() = clone_info.pred_node->parallel_desc();
-  Connect(clone_info.pred_node, NewFinalEdge(), clone_node);
+  Connect(clone_info.pred_node, NewEdge(), clone_node);
   CHECK_EQ(clone_node->op()->output_bns().size(), clone_info.edges.size());
   for (size_t i = 0; i < clone_info.edges.size(); ++i) {
     const std::string& obn = clone_node->op()->output_bns().at(i);

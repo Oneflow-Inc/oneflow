@@ -49,7 +49,6 @@ void InitChains(
     cur_chain->ancestors_and_this.clear();
     cur_chain->ancestors_and_this.insert(cur_chain->nodes.begin(),
                                          cur_chain->nodes.end());
-    if (logi_gph.IsFirstNode(&(*node))) { continue; }
     // each predecessor
     for (const LogicalEdge* edge : node->in_edges()) {
       LogicalNode* pred_node = edge->src_node();
@@ -70,7 +69,6 @@ void InitChains(
     cur_chain->descendants_and_this.clear();
     cur_chain->descendants_and_this.insert(cur_chain->nodes.begin(),
                                            cur_chain->nodes.end());
-    if (logi_gph.IsLastNode(&(*node))) { continue; }
     // each successors
     for (const LogicalEdge* edge : node->out_edges()) {
       LogicalNode* succ_node = edge->dst_node();
@@ -216,7 +214,6 @@ void DataMergeChains(
   for (const auto& pair : *logical2chain_it) {
     const LogicalNode* cur_logi_node = pair.first;
     if (cur_logi_node->parallel_desc()->policy() != kDataParallel) { continue; }
-    if (logical_gph.IsFirstNode(cur_logi_node)) { continue; }
     if (cur_logi_node->IsLossNode()) { continue; }
     data_parallel_node.push_back(cur_logi_node);
   }
@@ -250,7 +247,7 @@ ChainGraph::ChainGraph(const LogicalGraph* logical_gph) {
       chain_it2chain_node(0, HashChainIt);
   HashMap<ChainNode*, std::unordered_set<ChainNode*>> chain_node2pred;
   for (auto chain_it = chain_list.begin(); chain_it != chain_list.end(); ++chain_it) {
-    ChainNode* chain_node = NewFinalNode();
+    ChainNode* chain_node = NewNode();
     chain_it2chain_node[chain_it] = chain_node;
     chain_node2pred[chain_node] = {};
     SetChainNodeWithChainIt(chain_node, chain_it);
@@ -259,7 +256,6 @@ ChainGraph::ChainGraph(const LogicalGraph* logical_gph) {
   for (auto chain_it = chain_list.begin(); chain_it != chain_list.end(); ++chain_it) {
     ChainNode* chain_node = chain_it2chain_node.at(chain_it);
     for (const LogicalNode* logi_node : chain_it->nodes) {
-      if (logical_gph->IsFirstNode(logi_node)) { continue; }
       for (auto logi_in_edge : logi_node->in_edges()) {
         auto pred_chain_it = logical2chain_it.at(logi_in_edge->src_node());
         auto pred_chain_node = chain_it2chain_node.at(pred_chain_it);
@@ -273,7 +269,7 @@ ChainGraph::ChainGraph(const LogicalGraph* logical_gph) {
   for (auto& pair : chain_node2pred) {
     ChainNode* cur_node = pair.first;
     for (ChainNode* pred_node : pair.second) {
-      Connect(pred_node, NewFinalEdge(), cur_node);
+      Connect(pred_node, NewEdge(), cur_node);
     }
   }
   // Post processing

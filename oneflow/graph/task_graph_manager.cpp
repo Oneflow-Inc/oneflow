@@ -28,7 +28,7 @@ void TaskGraphMgr::Init() {
     auto md_updt_gph = new MdUpdtTaskGraph(
         data_chain.get(),
         data_chain2sorted_bp_comp_tasks.at(data_chain.get()));
-    ChainNode* updt_chain = md_updt_gph->chain_gph()->SoleLastNode();
+    ChainNode* updt_chain = md_updt_gph->chain_gph()->SoleSinkNode();
     auto sorted_updt_tasks = md_updt_gph->SortedCompTasksInChain(updt_chain);
     // model load save
     auto md_load_gph = new MdLoadTaskGraph(updt_chain, sorted_updt_tasks);

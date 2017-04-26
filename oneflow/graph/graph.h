@@ -12,7 +12,6 @@ template<typename NodeType, typename EdgeType>
 class Graph {
  public:
   // (Topologically)/(Reverse Topologically) ergodic all nodes
-  // except source_node_,sink_node_
   class Iterator;
   class ConstIterator;
   class ReverseIterator;
@@ -23,44 +22,30 @@ class Graph {
   virtual ~Graph() = default;
 
   // begin, end
-  Iterator begin();
-  Iterator end();
+  Iterator begin() { return Iterator(source_nodes_); }
+  Iterator end() { return Iterator(std::unordered_set<NodeType*> ()); }
   ConstIterator begin() const { return cbegin(); }
   ConstIterator end() const { return cend(); }
   ConstIterator cbegin() const;
   ConstIterator cend() const;
 
-  ReverseIterator rbegin();
-  ReverseIterator rend();
+  ReverseIterator rbegin() { return ReverseIterator(sink_nodes_); }
+  ReverseIterator rend() { return ReverseIterator(std::unordered_set<NodeType*> ()); }
   ConstReverseIterator rbegin() const { return crbegin(); }
   ConstReverseIterator rend() const { return crend(); }
   ConstReverseIterator crbegin() const;
   ConstReverseIterator crend() const;
   
   // Getters
-  const NodeType& source_node() const { return source_node_; }
-  const NodeType& sink_node() const { return sink_node_; }
-  const std::vector<std::unique_ptr<NodeType>>& nodes() const {
-    return nodes_;
+  const std::vector<std::unique_ptr<NodeType>>& nodes() const { return nodes_; }
+  const std::vector<std::unique_ptr<EdgeType>>& edges() const { return edges_; }
+  NodeType* SoleSourceNode() const {
+    CHECK_EQ(source_nodes_.size(), 1);
+    return *(source_nodes_.begin());
   }
-  const std::vector<std::unique_ptr<EdgeType>>& edges() const {
-    return edges_;
-  }
-  bool IsFirstNode(const NodeType* node) const {
-    if (node->in_edges().size() != 1) { return false; }
-    return node->SoleInEdge()->src_node() == &source_node_;
-  }
-  bool IsLastNode(const NodeType* node) const {
-    if (node->out_edges().size() != 1) { return false; }
-    return node->SoleOutEdge()->dst_node() == &sink_node_;
-  }
-  NodeType* SoleFirstNode() const {
-    CHECK_EQ(source_node_.out_edges().size(), 1);
-    return (*(source_node_.out_edges().begin()))->dst_node();
-  }
-  NodeType* SoleLastNode() const {
-    CHECK_EQ(sink_node_.in_edges().size(), 1);
-    return (*(sink_node_.in_edges().begin()))->src_node();
+  NodeType* SoleSinkNode() const {
+    CHECK_EQ(sink_nodes_.size(), 1);
+    return *(sink_nodes_.begin());
   }
   NodeType* SoleNode() const {
     CHECK_EQ(nodes_.size(), 1);
@@ -68,19 +53,17 @@ class Graph {
   }
   
   // Setters
-  void UpdateSourceAndSink();
-  NodeType* NewFinalNode() {
-    // In c++14, we can use std::is_final to check
+  NodeType* NewNode() {
     NodeType* ret = new NodeType;
     EnrollNode(ret);
     return ret;
   }
-  EdgeType* NewFinalEdge() {
-    // In c++14, we can use std::is_final to check
+  EdgeType* NewEdge() {
     EdgeType* ret = new EdgeType;
     EnrollEdge(ret);
     return ret;
   }
+  void UpdateSourceAndSink();
 
   // ToDot
   virtual std::string ToDotString() const;
@@ -97,17 +80,15 @@ class Graph {
   void EnrollEdge(EdgeType* new_edge) {
     edges_.emplace_back(new_edge);
   }
-  void EnrollEdge(std::unique_ptr<EdgeType>&& new_node) {
-    edges_.push_back(std::move(new_node));
+  void EnrollEdge(std::unique_ptr<EdgeType>&& new_edge) {
+    edges_.push_back(std::move(new_edge));
   }
 
  private:
-  NodeType source_node_;
-  NodeType sink_node_;
-  std::vector<std::unique_ptr<EdgeType>> source_edges_;
-  std::vector<std::unique_ptr<EdgeType>> sink_edges_;
+  std::unordered_set<NodeType*> source_nodes_;
+  std::unordered_set<NodeType*> sink_nodes_;
   
-  // manage nodes,edges that are not related to source,sink
+  // manage delete of all nodes, edges
   std::vector<std::unique_ptr<NodeType>> nodes_;
   std::vector<std::unique_ptr<EdgeType>> edges_;
 };
@@ -120,8 +101,10 @@ class Graph<NodeType, EdgeType>::Iterator final {
   Iterator() = default;
   ~Iterator() = default;
   
-  Iterator(NodeType* source_node) {
-    bfs_queue_.push(source_node);
+  Iterator(const std::unordered_set<NodeType*>& source_nodes) {
+    for (NodeType* node : source_nodes) {
+      bfs_queue_.push(node);
+    }
   }
   
   NodeType& operator * ();
@@ -167,8 +150,10 @@ class Graph<NodeType, EdgeType>::ReverseIterator final {
   ReverseIterator() = default;
   ~ReverseIterator() = default;
   
-  ReverseIterator(NodeType* sink_node) {
-    bfs_queue_.push(sink_node);
+  ReverseIterator(const std::unordered_set<NodeType*>& sink_nodes) {
+    for (NodeType* node : sink_nodes) {
+      bfs_queue_.push(node);
+    }
   }
   
   NodeType& operator * ();
@@ -233,32 +218,14 @@ void Graph<NodeType, EdgeType>::ToDotFile(const std::string& dot_filepath) const
 
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::UpdateSourceAndSink() {
-  source_node_.DisconnectAllEdges();
-  sink_node_.DisconnectAllEdges();
-  source_edges_.clear();
-  sink_edges_.clear();
   for (const std::unique_ptr<NodeType>& node : nodes_) {
     if (node->in_edges().empty()) {
-      EdgeType* source_edge = new EdgeType;
-      source_edges_.emplace_back(source_edge);
-      Connect(&source_node_, source_edge, node.get());
+      source_nodes_.insert(node.get());
     }
     if (node->out_edges().empty()) {
-      EdgeType* sink_edge = new EdgeType;
-      sink_edges_.emplace_back(sink_edge);
-      Connect(node.get(), sink_edge, &sink_node_);
+      sink_nodes_.insert(node.get());
     }
   }
-}
-
-template<typename NodeType, typename EdgeType>
-auto Graph<NodeType, EdgeType>::begin() -> Iterator {
-  Iterator ret(&source_node_);
-  return ++ret;
-}
-template<typename NodeType, typename EdgeType>
-auto Graph<NodeType, EdgeType>::end() -> Iterator {
-  return Iterator(&sink_node_);
 }
 
 template<typename NodeType, typename EdgeType>
@@ -268,16 +235,6 @@ auto Graph<NodeType, EdgeType>::cbegin() const -> ConstIterator{
 template<typename NodeType, typename EdgeType>
 auto Graph<NodeType, EdgeType>::cend() const -> ConstIterator {
   return ConstIterator((const_cast<Graph*>(this))->end());
-}
-
-template<typename NodeType, typename EdgeType>
-auto Graph<NodeType, EdgeType>::rbegin() -> ReverseIterator {
-  ReverseIterator ret(&sink_node_);
-  return ++ret;
-}
-template<typename NodeType, typename EdgeType>
-auto Graph<NodeType, EdgeType>::rend() -> ReverseIterator {
-  return ReverseIterator(&source_node_);
 }
 
 template<typename NodeType, typename EdgeType>
@@ -291,7 +248,6 @@ auto Graph<NodeType, EdgeType>::crend() const -> ConstReverseIterator {
 
 template<typename NodeType, typename EdgeType>
 NodeType& Graph<NodeType, EdgeType>::Iterator::operator * () {
-  CHECK_EQ(bfs_queue_.empty(), false);
   return *(bfs_queue_.front());
 }
 
@@ -302,7 +258,6 @@ NodeType* Graph<NodeType, EdgeType>::Iterator::operator -> () {
 
 template<typename NodeType, typename EdgeType>
 auto Graph<NodeType, EdgeType>::Iterator::operator ++ () -> Iterator& {
-  CHECK_EQ(bfs_queue_.empty(), false);
   NodeType* cur_node = bfs_queue_.front();
   bfs_queue_.pop();
   for (EdgeType* out_edge : cur_node->out_edges()) {
@@ -315,21 +270,26 @@ auto Graph<NodeType, EdgeType>::Iterator::operator ++ () -> Iterator& {
   return *this;
 }
 
-template<typename NodeType, typename EdgeType>
-bool Graph<NodeType, EdgeType>::Iterator::operator != (
-    const Iterator& rhs) const {
-  if (bfs_queue_.empty() != rhs.bfs_queue_.empty()) {
+template<typename NodeType>
+bool IsNotEqual4BfsQueue(const std::queue<NodeType*>& lhs,
+                         const std::queue<NodeType*>& rhs) {
+  if (lhs.empty() != rhs.empty()) {
     return true;
   }
-  if (bfs_queue_.empty() == false && rhs.bfs_queue_.empty() == false) {
-    return bfs_queue_.front() != rhs.bfs_queue_.front();
+  if (lhs.empty() == false && rhs.empty() == false) {
+    return lhs.front() != rhs.front();
   }
   return false;
 }
 
 template<typename NodeType, typename EdgeType>
+bool Graph<NodeType, EdgeType>::Iterator::operator != (
+    const Iterator& rhs) const {
+  return IsNotEqual4BfsQueue(bfs_queue_, rhs.bfs_queue_);
+}
+
+template<typename NodeType, typename EdgeType>
 NodeType& Graph<NodeType, EdgeType>::ReverseIterator::operator * () {
-  CHECK_EQ(bfs_queue_.empty(), false);
   return *(bfs_queue_.front());
 }
 
@@ -340,7 +300,6 @@ NodeType* Graph<NodeType, EdgeType>::ReverseIterator::operator -> () {
 
 template<typename NodeType, typename EdgeType>
 auto Graph<NodeType, EdgeType>::ReverseIterator::operator ++ () -> ReverseIterator& {
-  CHECK_EQ(bfs_queue_.empty(), false);
   NodeType* cur_node = bfs_queue_.front();
   bfs_queue_.pop();
   for (EdgeType* in_edge : cur_node->in_edges()) {
@@ -356,13 +315,7 @@ auto Graph<NodeType, EdgeType>::ReverseIterator::operator ++ () -> ReverseIterat
 template<typename NodeType, typename EdgeType>
 bool Graph<NodeType, EdgeType>::ReverseIterator::operator != (
     const ReverseIterator& rhs) const {
-  if (bfs_queue_.empty() != rhs.bfs_queue_.empty()) {
-    return true;
-  }
-  if (bfs_queue_.empty() == false && rhs.bfs_queue_.empty() == false) {
-    return bfs_queue_.front() != rhs.bfs_queue_.front();
-  }
-  return false;
+  return IsNotEqual4BfsQueue(bfs_queue_, rhs.bfs_queue_);
 }
 
 } // namespace oneflow
