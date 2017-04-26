@@ -279,7 +279,7 @@ ChainGraph::ChainGraph(const LogicalGraph* logical_gph) {
   // Post processing
   UpdateSourceAndSink();
   SetInOutLbn4AllChainNodeInDataTaskGraph();
-  ToDotFile(LogDir() + "/chain.dot");
+  ToDotFile(LogDir() + "/chain_graph.dot");
 }
 
 void ChainGraph::SetInOutLbn4AllChainNodeInDataTaskGraph() {
