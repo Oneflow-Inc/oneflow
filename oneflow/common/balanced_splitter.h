@@ -27,7 +27,9 @@ class BalancedSplitter final {
   Range At(int64_t idx) const;
 
  private:
-   std::vector<Range> splited_ranges_;
+   int64_t range_per_size_;
+   int64_t change_point_;
+   int64_t split_num_;
 };
 
 } // namespace oneflow
