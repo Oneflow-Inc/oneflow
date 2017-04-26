@@ -18,35 +18,6 @@ struct Chain {
   std::unordered_set<const LogicalNode*> descendants_and_this;
 };
 
-void DebugPrintChain(const Chain& chain) {
-  std::cerr << "nodes";
-  for (const LogicalNode* logical_node : chain.nodes) {
-    std::cerr << "_\"" << logical_node->VisualStr() << "\"";
-  }
-  std::cerr << std::endl;
-  std::cerr << "ancestors";
-  for (const LogicalNode* logical_node : chain.ancestors) {
-    std::cerr << "_\"" << logical_node->VisualStr() << "\"";
-  }
-  std::cerr << std::endl;
-  std::cerr << "descendants";
-  for (const LogicalNode* logical_node : chain.descendants) {
-    std::cerr << "_\"" << logical_node->VisualStr() << "\"";
-  }
-  std::cerr << std::endl;
-  std::cerr << "ancestors_and_this";
-  for (const LogicalNode* logical_node : chain.ancestors_and_this) {
-    std::cerr << "_\"" << logical_node->VisualStr() << "\"";
-  }
-  std::cerr << std::endl;
-  std::cerr << "descendants_and_this";
-  for (const LogicalNode* logical_node : chain.descendants_and_this) {
-    std::cerr << "_\"" << logical_node->VisualStr() << "\"";
-  }
-  std::cerr << std::endl;
-  std::cerr << std::endl;
-}
-
 using ChainIt = std::list<Chain>::iterator;
 using Logical2ChainItMap = HashMap<const LogicalNode*, ChainIt>;
 
@@ -214,7 +185,6 @@ bool TryDataMerge(
   if (TryMergeWithoutConnect(first, second, chain_list, logical2chain_it)
       || TryMergeWithConnect(first, second, chain_list, logical2chain_it)
       || TryMergeWithConnect(second, first, chain_list, logical2chain_it)) {
-    LOG(INFO) << first->VisualStr() << "\t" << second->VisualStr();
     return true;
   }
   return false;
@@ -258,14 +228,14 @@ void DataMergeChains(
 
 std::string ChainNode::ConcatedOpsName() const {
   std::stringstream ss;
-  ss << "ConcatedOpsName";
   for (auto op : op_vec_) {
-    ss << "_" << op->op_name();
+    ss << "\\n" << op->op_name();
   }
-  return ss.str();
+  return ss.str().substr(2);
 }
 
 ChainGraph::ChainGraph(const LogicalGraph* logical_gph) {
+  LOG(INFO) << "Build ChainGraph...";
   // Build Chain
   std::list<Chain> chain_list;
   Logical2ChainItMap logical2chain_it;
@@ -289,6 +259,7 @@ ChainGraph::ChainGraph(const LogicalGraph* logical_gph) {
   for (auto chain_it = chain_list.begin(); chain_it != chain_list.end(); ++chain_it) {
     ChainNode* chain_node = chain_it2chain_node.at(chain_it);
     for (const LogicalNode* logi_node : chain_it->nodes) {
+      if (logical_gph->IsFirstNode(logi_node)) { continue; }
       for (auto logi_in_edge : logi_node->in_edges()) {
         auto pred_chain_it = logical2chain_it.at(logi_in_edge->src_node());
         auto pred_chain_node = chain_it2chain_node.at(pred_chain_it);
@@ -308,56 +279,53 @@ ChainGraph::ChainGraph(const LogicalGraph* logical_gph) {
   // Post processing
   UpdateSourceAndSink();
   SetInOutLbn4AllChainNodeInDataTaskGraph();
+  ToDotFile(LogDir() + "/chain.dot");
 }
 
 void ChainGraph::SetInOutLbn4AllChainNodeInDataTaskGraph() {
-  // get all input_lbns_ of every chain node
-  for (ChainNode& cur_node : (*this)) {
-    // get all ops_output_lbns in one chain node
-    std::unordered_set<std::string> ops_output_lbns;
-    for (auto& op : cur_node.op_vec()) {
-      for (const std::string& bn : op->output_bns()){
-        ops_output_lbns.insert(op->obn2lbn(bn));
+  HashMap<ChainNode*, std::unordered_set<std::string>> chain2produced_lbns;
+  // Init chain2produced_lbns and Set InputLbns
+  for (const auto& cur_node : nodes()) {
+    auto& produced_lbns = chain2produced_lbns[cur_node.get()];
+    for (std::shared_ptr<const Operator> op : cur_node->op_vec()) {
+      for (const std::string& obn : op->output_bns()) {
+        std::string lbn = op->obn2lbn(obn);
+        produced_lbns.insert(lbn);
       }
     }
-    // for each op_input_lbn, 
-    //   if not exist in the ops_output_lbns
-    //   then the op_input_lbn is the input_lbn of the chain node
-    std::unordered_set<std::string> chain_node_input_lbns;
-    for (auto& op : cur_node.op_vec()) {
-      for (const std::string& bn : op->input_bns()) {
-        std::string op_input_lbn = op->ibn2lbn(bn);
-        if (ops_output_lbns.count(op_input_lbn) == 0) {
-          chain_node_input_lbns.insert(op_input_lbn);
+    for (std::shared_ptr<const Operator> op : cur_node->op_vec()) {
+      for (const std::string& ibn : op->input_bns()) {
+        std::string lbn = op->ibn2lbn(ibn);
+        if (produced_lbns.find(lbn) == produced_lbns.end()) {
+          cur_node->mut_input_lbns().push_back(lbn);
         }
       }
     }
-    cur_node.mut_input_lbns().assign(chain_node_input_lbns.begin(), 
-                                     chain_node_input_lbns.end());
+    SortAndRemoveDuplication(&(cur_node->mut_input_lbns()));
   }
-  // get all output_lbns_ of every chain node
-  // the output_lbns_ of one chain node is the sum input_lbns of it's child node
-  for (ChainNode& cur_node : (*this)) {  
-    std::unordered_set<std::string> chain_node_output_lbns;
-    for (ChainEdge* out_edge : cur_node.out_edges()) {
-      ChainNode* child_node = (out_edge)->dst_node();
-      chain_node_output_lbns.insert(child_node->input_lbns().begin(), 
-                                    child_node->input_lbns().end());
+  // Set OutputLbns
+  for (const auto& cur_node : nodes()) {
+    const auto& produced_lbns = chain2produced_lbns.at(cur_node.get());
+    for (ChainEdge* out_edge : cur_node->out_edges()) {
+      for (const std::string& lbn : out_edge->dst_node()->input_lbns()) {
+        if (produced_lbns.find(lbn) != produced_lbns.end()) {
+          cur_node->mut_output_lbns().push_back(lbn);
+        }
+      }
     }
-    cur_node.mut_output_lbns().assign(chain_node_output_lbns.begin(), 
-                                      chain_node_output_lbns.end());
+    SortAndRemoveDuplication(&(cur_node->mut_output_lbns()));
   }
 }
 
-std::vector<std::string> FindLbnsBetween(const ChainNode* pred_node, 
-                                         const ChainNode* succ_node) {
+std::vector<std::string> FindLbnsBetween(const ChainNode* src_node, 
+                                         const ChainNode* dst_node) {
   std::vector<std::string> matching_lbns;
-  for (const std::string& pred_node_output_lbn : pred_node->output_lbns()) {
-    for (const std::string& succ_node_input_lbn : succ_node->input_lbns()) { 
-      if (pred_node_output_lbn != succ_node_input_lbn) {
+  for (const std::string& src_node_output_lbn : src_node->output_lbns()) {
+    for (const std::string& dst_node_input_lbn : dst_node->input_lbns()) { 
+      if (src_node_output_lbn != dst_node_input_lbn) {
         continue;
       }        
-      matching_lbns.push_back(pred_node_output_lbn);
+      matching_lbns.push_back(src_node_output_lbn);
       break;
     }
   }
@@ -365,5 +333,13 @@ std::vector<std::string> FindLbnsBetween(const ChainNode* pred_node,
   return matching_lbns;
 }
 
+std::string ChainEdge::VisualStr() const {
+  std::vector<std::string> lbns = FindLbnsBetween(src_node(), dst_node());
+  std::stringstream ss;
+  for (const std::string& lbn : lbns) {
+    ss << "\\n" << lbn;
+  }
+  return ss.str().substr(2);
+}
 
 } // namespace oneflow

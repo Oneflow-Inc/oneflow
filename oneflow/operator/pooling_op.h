@@ -10,6 +10,8 @@ class PoolingOp final : public UserOperator {
   OF_DISALLOW_COPY_AND_MOVE(PoolingOp);
   PoolingOp() = default;
   ~PoolingOp() = default;
+  
+  bool IsElemWise() const override { return true; }
 
   std::string GetValueFromPbOpConf(const std::string& k) const override;
   void InitFromOpConf(const OperatorConf& op_conf) override;

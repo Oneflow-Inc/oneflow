@@ -5,7 +5,7 @@ namespace oneflow {
 void TaskGraphMgr::Init() {
   // data graph
   task_gphs_.clear();
-  LOG(INFO) << "Build Data";
+  LOG(INFO) << "Build DataTaskGraph";
   auto data_task_gph = new DataTaskGraph(
         JobDesc::Singleton().train_dlnet_conf(),
         JobDesc::Singleton().strategy(),

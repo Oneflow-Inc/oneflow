@@ -75,6 +75,11 @@ inline std::string NewUniqueId() {
   return std::to_string(id++);
 }
 
+inline std::string LogDir() {
+  static std::string log_dir = std::getenv("GLOG_log_dir");
+  return log_dir;
+}
+
 } // namespace oneflow
 
 #endif // ONEFLOW_COMMON_UTIL_H

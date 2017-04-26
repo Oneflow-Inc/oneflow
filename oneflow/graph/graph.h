@@ -84,7 +84,7 @@ class Graph {
 
   // ToDot
   virtual std::string ToDotString() const;
-  void ToDotFile(const char* dot_filepath) const;
+  void ToDotFile(const std::string& dot_filepath) const;
 
  protected:
   // Enroll
@@ -222,13 +222,13 @@ std::string Graph<NodeType, EdgeType>::ToDotString() const {
 }
 
 template<typename NodeType, typename EdgeType>
-void Graph<NodeType, EdgeType>::ToDotFile(const char* dot_filepath) const {
-  std::fstream fs(dot_filepath, std::fstream::out);
+void Graph<NodeType, EdgeType>::ToDotFile(const std::string& dot_filepath) const {
+  std::fstream fs(dot_filepath.c_str(), std::fstream::out);
   CHECK(fs.good()) << "failed to open " << dot_filepath;
   fs << ToDotString();
   CHECK(fs.good()) << "failed to write " << dot_filepath;
   fs.close();
-  LOG(INFO) << "Successful: " << dot_filepath;
+  LOG(INFO) << "Done: " << dot_filepath;
 }
 
 template<typename NodeType, typename EdgeType>

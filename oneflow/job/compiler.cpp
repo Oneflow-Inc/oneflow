@@ -16,7 +16,6 @@ int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, true);
   LOG(INFO) << "Compiler Starting Up...";
-  LOG(INFO) << "Read JobConf...";
   JobConf job_conf;
   ParseProtoFromTextFile(FLAGS_job_conf_filepath, &job_conf);
   JobDesc::Singleton().InitFromJobConf(job_conf);

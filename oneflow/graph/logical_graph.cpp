@@ -7,6 +7,7 @@ namespace oneflow {
 
 LogicalGraph::LogicalGraph(const DLNetConf& dl_net_conf,
                            const Strategy& strategy_conf) {
+  LOG(INFO) << "Build LogicalGraph...";
   HashMap<LogicalEdge*, std::string> edge2lbn;
   HashMap<LogicalEdge*, std::string> edge2ibn;
   NaiveBuildGraphStruct(dl_net_conf, &edge2lbn, &edge2ibn);
@@ -18,7 +19,6 @@ void LogicalGraph::NaiveBuildGraphStruct(
     const DLNetConf& dl_net_conf,
     HashMap<LogicalEdge*, std::string>* edge2lbn,
     HashMap<LogicalEdge*, std::string>* edge2ibn) {
-  LOG(INFO) << "NaiveBuildGraphStruct";
   HashMap<std::string, LogicalNode*> lbn2producer;
   // Process Op
   for (int op_i = 0; op_i < dl_net_conf.op_conf_size(); ++op_i) {
@@ -47,7 +47,6 @@ void LogicalGraph::NaiveBuildGraphStruct(
 }
 
 void LogicalGraph::FillNodeWithParallelDesc(const Strategy& strategy_conf) {
-  LOG(INFO) << "FillNodeWithParallelDesc";
   HashMap<std::string, LogicalNode*> op_name2node;
   for (const std::unique_ptr<LogicalNode>& logical_node : nodes()) {
     const std::string& op_name = logical_node->op()->op_name();
@@ -68,7 +67,6 @@ void LogicalGraph::FillNodeWithParallelDesc(const Strategy& strategy_conf) {
 void LogicalGraph::AddCloneNodes(
     const HashMap<LogicalEdge*, std::string>& edge2lbn,
     const HashMap<LogicalEdge*, std::string>& edge2ibn) {
-  LOG(INFO) << "AddCloneNodes";
   std::vector<CloneInfo> clone_infos;
   CollectCloneInfos(&clone_infos, edge2lbn);
   for (const CloneInfo& clone_info : clone_infos) {

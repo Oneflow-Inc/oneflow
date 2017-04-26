@@ -54,7 +54,7 @@ class ChainNode final : public Node<ChainNode, ChainEdge> {
     return op_vec_.size() == 1 && op_vec_.front()->IsLossOp();
   }
   
-  std::string VisualStr() const { TODO(); }
+  std::string VisualStr() const { return ConcatedOpsName(); }
 
  private:
   std::vector<std::shared_ptr<const Operator>> op_vec_;
@@ -69,6 +69,8 @@ class ChainEdge final : public Edge<ChainNode, ChainEdge> {
   OF_DISALLOW_COPY_AND_MOVE(ChainEdge);
   ChainEdge() = default;
   ~ChainEdge() = default;
+
+  std::string VisualStr() const override;
 
  private:
 };

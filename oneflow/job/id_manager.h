@@ -17,6 +17,7 @@ class IDMgr final {
   }
 
   void InitFromResource(const Resource& resource) {
+    LOG(INFO) << "Init IDManager...";
     machine_num_ = resource.machine_size();
     device_num_per_machine_ = resource.device_num_per_machine();
     for (uint64_t i = 0; i < machine_num_; ++i) {
