@@ -27,6 +27,10 @@ class CommNetTaskNode final : public TaskNode {
     CHECK(IsFwNode());
     is_fw_sender_ = false;
   }
+  
+  std::string VisualStr() const override {
+    return "CommNet_" + node_id_str();
+  }
 
  private:
   void FwBuildExecAndProducedRegsts(TaskGraph*) override { TODO(); }

@@ -49,15 +49,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   //
   virtual TaskProto ToProto() const { TODO(); }
   
-  //
-  std::string VisualStr() const override {
-    std::stringstream ss;
-    ss << stage_node_->machine_id_str() << ":"
-       << thrd_loc_id_str() << "\\n"
-       << chain_node()->VisualStr();
-    return ss.str();
-  }
- 
  protected:
   virtual std::unique_ptr<TaskNode> CreateSameTypeNode() const;
   virtual void InitWithFwNode(TaskNode* fw_node);

@@ -107,7 +107,7 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
       task_nodes_in_stage->comp_out_task_nodes.push_back(comp_task_node);
     }
   }
-  CHECK_EQ(parallel_idx, stage->parallel_range().end());
+  CHECK_EQ(parallel_idx, stage->parallel_range().end()) << stage->chain_node()->VisualStr();
 }
 
 void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
@@ -145,6 +145,9 @@ void TaskGraph::InitBoxingTaskNodes(Stage2TaskNodesMap* stage2task_nodes) {
 void TaskGraph::InitInboxingTaskNode(const StageNode* stage,
                                      TaskNodesInStage* task_nodes_in_stage) {
   task_nodes_in_stage->in_boxing_task_node = nullptr;
+  if (stage->in_edges().empty()) {
+    return;
+  }
   if (stage->in_edges().size() == 1
       && task_nodes_in_stage->comp_in_task_nodes.size() == 1) {
     return;
@@ -164,6 +167,9 @@ void TaskGraph::InitOutBoxingTaskNode(
     const StageNode* stage,
     TaskNodesInStage* task_nodes_in_stage) {
   task_nodes_in_stage->out_boxing_task_node = nullptr;
+  if (stage->out_edges().empty()) {
+    return;
+  }
   if (stage->out_edges().size() == 1
       && task_nodes_in_stage->comp_out_task_nodes.size() == 1) {
     return;
@@ -182,6 +188,7 @@ void TaskGraph::InitOutBoxingTaskNode(
 void TaskGraph::ConnectBoxingTaskNodes(
     const Stage2TaskNodesMap* stage2task_nodes) {
   for (const std::unique_ptr<StageNode>& cur_stage : stage_gph_->nodes()) {
+    if (cur_stage->out_edges().empty()) { continue; }
     const TaskNodesInStage& cur_tasks = stage2task_nodes->at(cur_stage.get());
     TaskNode* out_node = cur_tasks.out_boxing_task_node;
     if (out_node == nullptr) {
