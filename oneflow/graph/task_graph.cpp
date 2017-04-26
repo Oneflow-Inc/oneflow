@@ -42,7 +42,7 @@ void TaskGraph::BuildFromChainGph(
 }
 
 void TaskGraph::BuildFromStageGph(bool need_bp) {
-  LOG(INFO) << "Build StageGraph...";
+  LOG(INFO) << "Build TaskGraph...";
   Stage2TaskNodesMap stage2task_nodes;
   InitCompTaskNodes(&stage2task_nodes);
   InitBoxingTaskNodes(&stage2task_nodes);
@@ -80,17 +80,17 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
         IDMgr::Singleton().ThrdLocId4DevicePhyId(device_phy_id);
     // comp_task_node
     DeviceCompTaskNode* comp_task_node = NewTaskNode<DeviceCompTaskNode> ();
+    comp_task_node->SetFwNode();
     comp_task_node->set_stage_node(stage);
     comp_task_node->mut_thrd_loc_id() = thread_local_id;
-    comp_task_node->SetFwNode();
     comp_task_node->set_parallel_id(parallel_idx++);
     comp_task_node->set_task_id();
     // comp_in_task_node
     if (!is_first_stage) {
       CopyHDTaskNode* comp_in_task_node = NewTaskNode<CopyHDTaskNode> ();
+      comp_in_task_node->SetFwNode();
       comp_in_task_node->set_stage_node(stage);
       comp_in_task_node->mut_thrd_loc_id() = thread_local_id;
-      comp_in_task_node->SetFwNode();
       comp_in_task_node->SetFwInCopy();
       comp_in_task_node->set_task_id();
       TaskConnect(comp_in_task_node, NewFinalEdge(), comp_task_node);
@@ -101,9 +101,9 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
     // comp_out_task_node
     if (!is_last_stage) {
       CopyHDTaskNode* comp_out_task_node = NewTaskNode<CopyHDTaskNode> ();
+      comp_out_task_node->SetFwNode();
       comp_out_task_node->set_stage_node(stage);
       comp_out_task_node->mut_thrd_loc_id() = thread_local_id;
-      comp_out_task_node->SetFwNode();
       comp_out_task_node->SetFwOutCopy();
       comp_out_task_node->set_task_id();
       TaskConnect(comp_task_node, NewFinalEdge(), comp_out_task_node);
@@ -122,8 +122,8 @@ void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
   uint64_t parallel_idx = parallel_begin;
   while (parallel_idx < parallel_end) {
     HostCompTaskNode* comp_task_node = NewTaskNode<HostCompTaskNode> ();
-    comp_task_node->set_stage_node(stage);
     comp_task_node->SetFwNode();
+    comp_task_node->set_stage_node(stage);
     comp_task_node->set_parallel_id(parallel_idx++);
     comp_task_node->set_task_id();
     // Set comp_task_node::thread_local_id
@@ -155,9 +155,9 @@ void TaskGraph::InitInboxingTaskNode(const StageNode* stage,
     return;
   }
   InBoxingTaskNode* boxing_task = NewTaskNode<InBoxingTaskNode> ();
+  boxing_task->SetFwNode();
   boxing_task->set_stage_node(stage);
   boxing_task->mut_thrd_loc_id() = IDMgr::Singleton().BoxingThrdLocId();
-  boxing_task->SetFwNode();
   boxing_task->set_task_id();
   for (TaskNode* comp_in_task : task_nodes_in_stage->comp_in_task_nodes) {
     TaskConnect(boxing_task, NewFinalEdge(), comp_in_task);
@@ -174,9 +174,9 @@ void TaskGraph::InitOutBoxingTaskNode(
     return;
   }
   OutBoxingTaskNode* boxing_task = NewTaskNode<OutBoxingTaskNode> ();
+  boxing_task->SetFwNode();
   boxing_task->set_stage_node(stage);
   boxing_task->mut_thrd_loc_id() = IDMgr::Singleton().BoxingThrdLocId();
-  boxing_task->SetFwNode();
   boxing_task->set_task_id();
   for (TaskNode* comp_out_task : task_nodes_in_stage->comp_out_task_nodes) {
     TaskConnect(comp_out_task, NewFinalEdge(), boxing_task);
