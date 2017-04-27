@@ -27,6 +27,7 @@ void CopyHDTaskNode::BuildExecAndProducedRegstsForCopy(TaskGraph* gph){
   auto out_regst = of_make_unique<DisContigRegstDesc> ();
   BindProducedRegstAndOutEdge(out_regst.get(), SoleOutEdge());
   EnrollProducedRegstDesc("copy", std::move(out_regst));
+
   for(std::string ibn : node->op()->input_bns()){
     std::string lbn = node->op()->ibn2lbn(ibn);
     Shape* shape_ptr = in_regst->GetMutShapePtr(lbn);
@@ -35,9 +36,9 @@ void CopyHDTaskNode::BuildExecAndProducedRegstsForCopy(TaskGraph* gph){
   }
   for(std::string obn : node->op()->output_bns()){
     std::string lbn = node->op()->obn2lbn(obn);
-    Shape* shape_ptr = GetProducedRegstDesc("copy")->EnrollLbn(lbn);
+    Shape* shape_ptr = out_regst->EnrollLbn(lbn);
     node->op()->SetShapePtr(obn, shape_ptr);
-    node->BindBnInOpAndRegst(obn, GetProducedRegstDesc("copy"));
+    node->BindBnInOpAndRegst(obn, out_regst.get());
   }
   node->op()->InferShape4ObAndDtbFromIb();
   mut_exec_gph().UpdateSourceAndSink();
