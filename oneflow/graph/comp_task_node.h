@@ -26,7 +26,9 @@ class CompTaskNode : public TaskNode {
   
   std::string VisualStr() const override {
     std::stringstream ss;
-    ss << "Compute:" << stage_node()->machine_id_str() << ":"
+    ss << TaskNode::VisualStr() 
+       << "Compute_" << node_id_str() << ":"
+       << stage_node()->machine_id_str() << ":"
        << thrd_loc_id_str() << "\\n"
        << chain_node()->VisualStr();
     return ss.str();

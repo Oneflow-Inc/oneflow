@@ -29,7 +29,7 @@ class CommNetTaskNode final : public TaskNode {
   }
   
   std::string VisualStr() const override {
-    return "CommNet_" + node_id_str();
+    return TaskNode::VisualStr() + "CommNet_" + node_id_str();
   }
 
  private:

@@ -12,7 +12,7 @@ class BoxingTaskNode : public TaskNode {
   virtual ~BoxingTaskNode() = default;
   
   std::string VisualStr() const override {
-    return "Boxing_" + node_id_str();
+    return TaskNode::VisualStr() + "Boxing_" + node_id_str();
   }
 
  protected:

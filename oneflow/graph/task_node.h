@@ -48,9 +48,16 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   //
   virtual TaskProto ToProto() const { TODO(); }
+
+  virtual std::string VisualStr() const override {
+    std::stringstream ss;
+    ss << (is_fw_node_ ? "Fw" : "Bp");
+    ss << node_id_str() << "_";
+    return ss.str();
+  }
   
  protected:
-  virtual std::unique_ptr<TaskNode> CreateSameTypeNode() const;
+  virtual std::unique_ptr<TaskNode> CreateSameTypeNode() const = 0;
   virtual void InitWithFwNode(TaskNode* fw_node);
 
   ExecGraph& mut_exec_gph() { return exec_gph_; }
