@@ -16,7 +16,7 @@ class TestNode final : public Node<TestNode, TestEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TestNode);
   TestNode(uint64_t node_id_) {
-   test_node_id_ = node_id_;
+    test_node_id_ = node_id_;
   }
   ~TestNode() = default;
 
@@ -40,16 +40,16 @@ class TestGraph final : public Graph<TestNode, TestEdge> {
   TestGraph() = delete;
   ~TestGraph() = default;
 
-  TestGraph(const std::vector<std::vector<uint64_t>>  graph_conf) {
+  TestGraph(const std::vector<std::vector<uint64_t>>& graph_conf) {
     std::vector<TestNode*> node_id2node;
-    for (uint64_t i = 0; i < graph_conf.size(); ++i) {
+    for (size_t i = 0; i < graph_conf.size(); ++i) {
       TestNode* cur_node = new TestNode(i);
       EnrollNode(cur_node);
       node_id2node.push_back(cur_node);
     }
-    for (uint64_t i = 0; i < graph_conf.size(); ++i) {
+    for (size_t i = 0; i < graph_conf.size(); ++i) {
       TestNode* src_node = node_id2node[i];
-      for (uint64_t j = 0; j < graph_conf[i].size(); ++j) {
+      for (size_t j = 0; j < graph_conf[i].size(); ++j) {
         TestEdge* edge = NewEdge();
         TestNode* dst_node = node_id2node[graph_conf[i][j]];
         Connect(src_node, edge, dst_node);
@@ -59,16 +59,16 @@ class TestGraph final : public Graph<TestNode, TestEdge> {
   }
 };
 
-typedef std::pair<uint64_t, uint64_t> NodePair;
+using NodeIdPair = std::pair<uint64_t, uint64_t>;
 
 void DoOneTestGraph(const TestGraph& test_graph,
-                    const std::vector<std::vector<uint64_t>>  graph_conf) {
+                    const std::vector<std::vector<uint64_t>>& graph_conf) {
   uint64_t node_num = graph_conf.size();
   // 1. Determines whether the traversal result satisfies the topological order
   std::vector<uint64_t> topo_array;
   HashMap<uint64_t, uint64_t> node_id2order;
-  auto NodePairHash = [](const NodePair& val) { return val.first ^ val.second; };
-  std::unordered_set<NodePair, 
+  auto NodePairHash = [](const NodeIdPair& val) { return val.first ^ val.second; };
+  std::unordered_set<NodeIdPair,
                      decltype(NodePairHash)> edges_node_pair(10, NodePairHash);
   uint64_t order = 0;
   for (auto it = test_graph.cbegin(); it != test_graph.cend(); ++it) {
