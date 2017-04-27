@@ -1,5 +1,5 @@
 #include "graph/copy_hd_task_node.h"
-#include "operator/operator_factory.h"
+#include "operator/operator_manager.h"
 #include "operator/copy_op.h"
 
 namespace oneflow {

@@ -1,5 +1,5 @@
 #include "graph/model_update_task_graph.h"
-#include "operator/operator_factory.h"
+#include "operator/operator_manager.h"
 
 namespace oneflow {
 
@@ -19,7 +19,7 @@ void MdUpdtTaskGraph::BuildTaskGraph(const ChainNode* data_chain) {
   OperatorConf op_conf;
   op_conf.set_name("model_update_" + data_chain->ConcatedOpsName());
   op_conf.mutable_model_update_conf();
-  auto model_update_op = ConstructOpFromPbConf(op_conf);
+  auto model_update_op = OpMgr::Singleton().ConstructOp(op_conf);
   // ModelUpdateChain
   auto chain_gph = of_make_unique<ChainGraph> ();
   ChainNode* updt_chain = chain_gph->NewNode();

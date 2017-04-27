@@ -9,7 +9,7 @@ void SetModelSaveChain(ChainNode* model_save_chain) {
   OperatorConf op_conf;
   op_conf.set_name("");
   op_conf.mutable_model_save_conf();
-  model_save_chain->mut_op_vec() = {ConstructOpFromPbConf(op_conf)};
+  model_save_chain->mut_op_vec() = {OpMgr::Singleton().ConstructOp(op_conf)};
   // model save parallel_conf
   ParallelConf pr_conf;
   pr_conf.set_policy(kDataParallel);
