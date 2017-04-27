@@ -1,14 +1,95 @@
 syntax = "proto3";
 package oneflow;
 
+message FillerParameter {
+  // The filler type.
+  string type = 1;
+  float value = 2; // the value in constant filler
+  float min = 3; // the min value in uniform filler
+  float max = 4; // the max value in uniform filler
+  float mean = 5; // the mean value in Gaussian filler
+  float std = 6; // the std value in Gaussian filler
+  // The expected number of non-zero output weights for a given input in
+  // Gaussian filler -- the default -1 means don't perform sparsification.
+  int32 sparse = 7;
+  // Normalize the filler variance by fan_in, fan_out, or their average.
+  // Applies to 'xavier' and 'msra' fillers.
+  enum VarianceNorm {
+    FAN_IN = 0;
+    FAN_OUT = 1;
+    AVERAGE = 2;
+  }
+  VarianceNorm variance_norm = 8;
+}
+
 message ConvolutionOpConf {
   string in = 1;
   string out = 2;
+
+  uint32 num_output = 3; // The number of outputs for the layer
+  bool bias_term = 4; // whether to have bias terms
+
+  // Pad, kernel size, and stride are all given as a single value for equal
+  // dimensions in all spatial dimensions, or once per spatial dimension.
+  repeated uint32 pad = 5; // The padding size; defaults to 0
+  repeated uint32 kernel_size = 6; // The kernel size
+  repeated uint32 stride = 7; // The stride; defaults to 1
+  // Factor used to dilate the kernel, (implicitly) zero-filling the resulting
+  // holes. (Kernel dilation is sometimes referred to by its use in the
+  // algorithme ид trous from Holschneider et al. 1987.)
+  repeated uint32 dilation = 8; // The dilation; defaults to 1
+
+  // For 2D convolution only, the *_h and *_w versions may also be used to
+  // specify both spatial dimensions.
+  uint32 pad_h = 9; // The padding height (2D only)
+  uint32 pad_w = 10; // The padding width (2D only)
+  uint32 kernel_h = 11; // The kernel height (2D only)
+  uint32 kernel_w = 12; // The kernel width (2D only)
+  uint32 stride_h = 13; // The stride height (2D only)
+  uint32 stride_w = 14; // The stride width (2D only)
+
+  uint32 group = 15; // The group size for group conv
+
+  FillerParameter weight_filler = 16; // The filler for the weight
+  FillerParameter bias_filler = 17; // The filler for the bias
+
+  // The axis to interpret as "channels" when performing convolution.
+  // Preceding dimensions are treated as independent inputs;
+  // succeeding dimensions are treated as "spatial".
+  // With (N, C, H, W) inputs, and axis == 1 (the default), we perform
+  // N independent 2D convolutions, sliding C-channel (or (C/g)-channels, for
+  // groups g>1) filters across the spatial axes (H, W) of the input.
+  // With (N, C, D, H, W) inputs, and axis == 1, we perform
+  // N independent 3D convolutions, sliding (C/g)-channels
+  // filters across the spatial axes (D, H, W) of the input.
+  int32 axis = 18;
+
+  // Whether to force use of the general ND convolution, even if a specific
+  // implementation for blobs of the appropriate number of spatial dimensions
+  // is available. (Currently, there is only a 2D-specific convolution
+  // implementation; for input blobs with num_axes != 2, this option is
+  // ignored and the ND implementation will be used.)
+  bool force_nd_im2col = 19;
 }
 
 message InnerProductOpConf {
   string in = 1;
   string out = 2;
+
+  uint32 num_output = 3; // The number of outputs for the layer
+  bool bias_term = 4; // whether to have bias terms
+  FillerParameter weight_filler = 5; // The filler for the weight
+  FillerParameter bias_filler = 6; // The filler for the bias
+
+  // The first axis to be lumped into a single inner product computation;
+  // all preceding axes are retained in the output.
+  // May be negative to index from the end (e.g., -1 for the last axis).
+  int32 axis = 7;
+  // Specify whether to transpose the weight matrix or not.
+  // If transpose == true, any operations will be performed on the transpose
+  // of the weight matrix. The weight matrix itself is not going to be transposed
+  // but rather the transfer flag of operations will be toggled accordingly.
+  bool transpose = 8;
 }
 
 message DataLoaderOpConf {
@@ -19,6 +100,27 @@ message DataLoaderOpConf {
 message PoolingOpConf {
   string in = 1;
   string out = 2;
+
+  enum PoolMethod {
+    MAX = 0;
+    AVE = 1;
+    STOCHASTIC = 2;
+  }
+  PoolMethod pool = 3; // The pooling method
+  // Pad, kernel size, and stride are all given as a single value for equal
+  // dimensions in height and width or as Y, X pairs.
+  uint32 pad = 4; // The padding size (equal in Y, X)
+  uint32 pad_h = 5; // The padding height
+  uint32 pad_w = 6; // The padding width
+  uint32 kernel_size = 7; // The kernel size (square)
+  uint32 kernel_h = 8; // The kernel height
+  uint32 kernel_w = 9; // The kernel width
+  uint32 stride = 10; // The stride (equal in Y, X)
+  uint32 stride_h = 11; // The stride height
+  uint32 stride_w = 12; // The stride width
+  // If global_pooling then it will pool over the size of the bottom by doing
+  // kernel_h = bottom->height and kernel_w = bottom->width
+  bool global_pooling = 13;
 }
 
 message ReluOpConf {
@@ -29,6 +131,7 @@ message ReluOpConf {
 message SoftmaxOpConf {
   string in = 1;
   string out = 2;
+  int32 axis = 3;
 }
 
 message MultinomialLogisticLossOpConf {
@@ -41,6 +144,7 @@ message ConcatOpConf {
   repeated string in = 1;
   string out = 2;
   int64 axis = 3;
+  uint32 concat_dim = 4;
 }
 
 message CopyOpConf {
