@@ -40,7 +40,8 @@ void MdLoadTaskGraph::BuildTaskGraph(const ChainNode* update_chain) {
   faker_chain->mut_input_lbns() = {RegstDesc::kAllLbn};
   Connect(load_chain, chain_gph->NewEdge(), faker_chain);
   chain_gph->UpdateSourceAndSink();
-  BuildFromChainGph(std::move(chain_gph), false);
+  chain_gph->ToDotFile(LogDir() + "/model_load_chain_graph.dot");
+  BuildFromChainGph(std::move(chain_gph), false, LogDir() + "/model_load_");
 }
 
 void MdLoadTaskGraph::InitFaker2Mccoy(

@@ -14,10 +14,9 @@ class DataTaskGraph final : public TaskGraph {
   DataTaskGraph(const DLNetConf& dl_net_conf,
                 const Strategy& strategy_conf,
                 bool need_bp) {
-    LogicalGraph logical_gph(dl_net_conf, strategy_conf);
-    logical_gph.ToDotFile(LogDir() + "/logical_graph.dot");
-    auto chain_gph = of_make_unique<ChainGraph> (&logical_gph);
-    BuildFromChainGph(std::move(chain_gph), need_bp);
+    LogicalGraph logical_gph(dl_net_conf, strategy_conf, LogDir() + "/logical_graph.dot");
+    auto chain_gph = of_make_unique<ChainGraph> (&logical_gph, LogDir() + "/data_chain_graph.dot");
+    BuildFromChainGph(std::move(chain_gph), need_bp, LogDir() + "/data_");
   }
 
   CompTaskNodeMemFunc Func4FwBuildExecAndProducedRegsts() const override {

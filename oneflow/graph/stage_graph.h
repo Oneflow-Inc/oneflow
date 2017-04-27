@@ -68,7 +68,8 @@ class StageGraph final : public Graph<StageNode, StageEdge> {
   StageGraph() = delete;
   ~StageGraph() = default;
 
-  StageGraph(std::unique_ptr<const ChainGraph>&& chain_gph);
+  StageGraph(std::unique_ptr<const ChainGraph>&& chain_gph,
+             const std::string& dot_filepath);
 
   const ChainGraph* chain_gph() const { return chain_gph_.get(); }
 

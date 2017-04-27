@@ -32,13 +32,16 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
 
  protected:
   TaskGraph() = default;
-  void BuildFromChainGph(std::unique_ptr<ChainGraph>&& chain_gph, bool need_bp);
+  void BuildFromChainGph(std::unique_ptr<ChainGraph>&& chain_gph,
+                         bool need_bp,
+                         const std::string& dot_filepath_prefix);
   void EnrollFakerMccoy(CompTaskNode* faker, CompTaskNode* mccoy) {
     CHECK(faker2mccoy_.emplace(faker, mccoy).second);
   }
 
  private:
-  void BuildFromStageGph(bool need_bp);
+  void BuildFromStageGph(bool need_bp,
+                         const std::string& dot_filepath_prefix);
 
   template<typename TaskNodeType>
   TaskNodeType* NewTaskNode() {

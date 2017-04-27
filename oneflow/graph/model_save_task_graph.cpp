@@ -41,7 +41,8 @@ void MdSaveTaskGraph::BuildTaskGraph(const ChainNode* update_chain) {
   // Connect
   Connect(faker_chain, chain_gph->NewEdge(), save_chain);
   chain_gph->UpdateSourceAndSink();
-  BuildFromChainGph(std::move(chain_gph), false);
+  chain_gph->ToDotFile(LogDir() + "/model_save_chain_graph.dot");
+  BuildFromChainGph(std::move(chain_gph), false, LogDir() + "/model_save_");
 }
 
 void MdSaveTaskGraph::InitFaker2Mccoy(
