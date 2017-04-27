@@ -29,7 +29,7 @@ class RegstDesc {
   Shape* EnrollLbn(const std::string& lbn);
   const Shape& GetShape(const std::string& lbn);
   Shape* GetMutShapePtr(const std::string& lbn);
-  
+
   static const char* kAllLbn;
 
  private:
