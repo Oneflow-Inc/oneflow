@@ -1,5 +1,4 @@
 #include "operator/operator_manager.h"
-#include <functional>
 #include "glog/logging.h"
 
 namespace oneflow {
