@@ -20,9 +20,6 @@ void CommNetTaskNode::BuildExecAndProducedRegstsForNetCopy(TaskGraph* gph){
   node->mut_op() = ConstructOpFromPbConf(op_conf);
 
   node->BindBnInOpAndRegst(node->op()->SoleIbn(), in_regst);
-
-  Shape* shape_ptr = out_regst->EnrollLbn(RegstDesc::kAllLbn);
-  node->op()->SetShapePtr(node->op()->SoleObn(), shape_ptr);
   node->BindBnInOpAndRegst(node->op()->SoleObn(), out_regst.get());
   
   mut_exec_gph().UpdateSourceAndSink();
