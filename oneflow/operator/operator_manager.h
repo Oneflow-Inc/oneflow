@@ -2,6 +2,7 @@
 #define ONEFLOW_OPERATOR_OPERATOR_MANAGER_H_
 
 #include <iostream>
+#include <functional>
 #include "operator/operator.h"
 #include "operator/op_conf.pb.h"
 
