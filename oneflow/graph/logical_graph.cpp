@@ -6,13 +6,15 @@
 namespace oneflow {
 
 LogicalGraph::LogicalGraph(const DLNetConf& dl_net_conf,
-                           const Strategy& strategy_conf) {
+                           const Strategy& strategy_conf,
+                           const std::string& dot_filepath) {
   LOG(INFO) << "Build LogicalGraph...";
   HashMap<LogicalEdge*, std::string> edge2lbn;
   HashMap<LogicalEdge*, std::string> edge2ibn;
   NaiveBuildGraphStruct(dl_net_conf, &edge2lbn, &edge2ibn);
   FillNodeWithParallelDesc(strategy_conf);
   AddCloneNodes(edge2lbn, edge2ibn);
+  ToDotFile(dot_filepath);
 }
 
 void LogicalGraph::NaiveBuildGraphStruct(

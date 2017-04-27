@@ -58,7 +58,8 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   ~LogicalGraph() = default;
 
   LogicalGraph(const DLNetConf& dl_net_conf,
-               const Strategy& strategy_conf);
+               const Strategy& strategy_conf,
+               const std::string& dot_filepath);
 
  private:
   void NaiveBuildGraphStruct(

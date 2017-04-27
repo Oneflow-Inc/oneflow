@@ -231,7 +231,8 @@ std::string ChainNode::ConcatedOpsName() const {
   return ss.str().substr(2);
 }
 
-ChainGraph::ChainGraph(const LogicalGraph* logical_gph) {
+ChainGraph::ChainGraph(const LogicalGraph* logical_gph,
+                       const std::string& dot_filepath) {
   LOG(INFO) << "Build ChainGraph...";
   // Build Chain
   std::list<Chain> chain_list;
@@ -275,7 +276,7 @@ ChainGraph::ChainGraph(const LogicalGraph* logical_gph) {
   // Post processing
   UpdateSourceAndSink();
   SetInOutLbn4AllChainNodeInDataTaskGraph();
-  ToDotFile(LogDir() + "/chain_graph.dot");
+  ToDotFile(dot_filepath);
 }
 
 void ChainGraph::SetInOutLbn4AllChainNodeInDataTaskGraph() {
