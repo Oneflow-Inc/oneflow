@@ -1,17 +1,28 @@
 syntax = "proto3";
 package oneflow;
 
+message ConstantFillerConf {
+  float value = 1;
+}
+
+message UniformFillerConf {
+  float min = 1;
+  float max = 2;
+}
+
+message GaussianFillerConf {
+  float mean = 1;
+  float std = 2;
+  // The expected number of non-zero output weights for a given input
+  int32 sparse = 3;
+}
+
 message FillerConf {
-  // The filler type.
-  string type = 1;
-  float value = 2; // the value in constant filler
-  float min = 3; // the min value in uniform filler
-  float max = 4; // the max value in uniform filler
-  float mean = 5; // the mean value in Gaussian filler
-  float std = 6; // the std value in Gaussian filler
-  // The expected number of non-zero output weights for a given input in
-  // Gaussian filler -- the default -1 means don't perform sparsification.
-  int32 sparse = 7;
+  oneof type {
+    ConstantFillerConf constant_conf = 1;
+    UniformFillerConf uniform_conf = 2;
+    GaussianFillerConf gaussian_conf = 3;
+  }
   // Normalize the filler variance by fan_in, fan_out, or their average.
   // Applies to 'xavier' and 'msra' fillers.
   enum VarianceNorm {
@@ -19,7 +30,7 @@ message FillerConf {
     FAN_OUT = 1;
     AVERAGE = 2;
   }
-  VarianceNorm variance_norm = 8;
+  VarianceNorm variance_norm = 4;
 }
 
 message ConvolutionOpConf {
