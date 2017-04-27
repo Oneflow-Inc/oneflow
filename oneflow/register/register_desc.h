@@ -30,10 +30,6 @@ class RegstDesc {
   const Shape& GetShape(const std::string& lbn);
   Shape* GetMutShapePtr(const std::string& lbn);
 
-  const HashMap<std::string, std::unique_ptr<Shape>>& GetLbn2ShapeMap() const {
-    return lbn2shape_;
-  }
-  
   static const char* kAllLbn;
 
  private:
