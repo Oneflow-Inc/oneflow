@@ -38,6 +38,7 @@ void CopyHDTaskNode::BuildExecAndProducedRegstsForCopy(TaskGraph* gph){
     node->op()->SetShapePtr(obn, shape_ptr);
     node->BindBnInOpAndRegst(obn, out_regst.get());
   }
+  node->op()->InferShape4ObAndDtbFromIb();
   mut_exec_gph().UpdateSourceAndSink();
 }
 

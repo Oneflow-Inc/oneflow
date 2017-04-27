@@ -2,6 +2,7 @@
 #define ONEFLOW_OPERATOR_COMM_NET_OP_H_
 
 #include "operator/operator.h"
+#include "register/register_desc.h"
 
 namespace oneflow {
 
@@ -14,8 +15,8 @@ class CommNetOp final : public SysOperator {
   void InitFromOpConf(const OperatorConf& op_conf) override;
   std::string GetValueFromPbOpConf(const std::string& k) const override;
   
+  std::string normal_ibn2lbn(const std::string& input_bn) const override;
   std::string obn2lbn(const std::string& output_bn) const override;
-  std::string ibn2lbn(const std::string& input_bn) const override;
 
  private:
 };
