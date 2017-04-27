@@ -218,6 +218,8 @@ void Graph<NodeType, EdgeType>::ToDotFile(const std::string& dot_filepath) const
 
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::UpdateSourceAndSink() {
+  source_nodes_.clear();
+  sink_nodes_.clear();
   for (const std::unique_ptr<NodeType>& node : nodes_) {
     if (node->in_edges().empty()) {
       source_nodes_.insert(node.get());

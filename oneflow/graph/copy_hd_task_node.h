@@ -25,6 +25,10 @@ class CopyHDTaskNode final : public TaskNode {
   
   const std::vector<std::string>& CopiedLbns() const;
   
+  std::string VisualStr() const override {
+    return TaskNode::VisualStr() + "CopyHD_" + node_id_str();
+  }
+  
  private:
   void InitWithFwNode(TaskNode* fw_node) override;
 

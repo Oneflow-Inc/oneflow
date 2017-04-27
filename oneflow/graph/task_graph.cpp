@@ -42,12 +42,13 @@ void TaskGraph::BuildFromChainGph(
 }
 
 void TaskGraph::BuildFromStageGph(bool need_bp) {
-  LOG(INFO) << "Build TaskGraph...";
+  LOG(INFO) << "Build FwTaskGraph...";
   Stage2TaskNodesMap stage2task_nodes;
   InitCompTaskNodes(&stage2task_nodes);
   InitBoxingTaskNodes(&stage2task_nodes);
-  ConnectTaskNodes(&stage2task_nodes);
+  ConnectBoxingTaskNodes(&stage2task_nodes);
   UpdateSourceAndSink();
+  ToDotFile(LogDir() + "/fw_task_graph.dot");
   if (need_bp) {
     BuildBpStruct();
   }
@@ -55,13 +56,9 @@ void TaskGraph::BuildFromStageGph(bool need_bp) {
 
 void TaskGraph::InitCompTaskNodes(Stage2TaskNodesMap* stage2task_nodes) {
   for (const std::unique_ptr<StageNode>& stage : stage_gph_->nodes()) {
-    bool is_source_stage = stage->in_edges().empty();
-    bool is_sink_stage = stage->out_edges().empty();
     if (stage->chain_node()->parallel_desc()->device_type() == kGPU) {
       Stage2DeviceCompTaskNodes(stage.get(),
-                                &((*stage2task_nodes)[stage.get()]),
-                                is_source_stage,
-                                is_sink_stage);
+                                &((*stage2task_nodes)[stage.get()]));
     } else {
       Stage2HostCompTaskNodes(stage.get(),
                               &((*stage2task_nodes)[stage.get()]));
@@ -71,9 +68,7 @@ void TaskGraph::InitCompTaskNodes(Stage2TaskNodesMap* stage2task_nodes) {
 
 void TaskGraph::Stage2DeviceCompTaskNodes(
     const StageNode* stage,
-    TaskNodesInStage* task_nodes_in_stage,
-    bool is_source_stage,
-    bool is_sink_stage) {
+    TaskNodesInStage* task_nodes_in_stage) {
   uint64_t parallel_idx = stage->parallel_range().begin();
   for (auto device_phy_id : stage->SortedDevicePhyIds()) {
     uint64_t thread_local_id =
@@ -86,7 +81,7 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
     comp_task_node->set_parallel_id(parallel_idx++);
     comp_task_node->set_task_id();
     // comp_in_task_node
-    if (!is_source_stage) {
+    if (!stage->in_edges().empty()) {
       CopyHDTaskNode* comp_in_task_node = NewTaskNode<CopyHDTaskNode> ();
       comp_in_task_node->SetFwNode();
       comp_in_task_node->set_stage_node(stage);
@@ -99,7 +94,7 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
       task_nodes_in_stage->comp_in_task_nodes.push_back(comp_task_node);
     }
     // comp_out_task_node
-    if (!is_sink_stage) {
+    if (!stage->out_edges().empty()) {
       CopyHDTaskNode* comp_out_task_node = NewTaskNode<CopyHDTaskNode> ();
       comp_out_task_node->SetFwNode();
       comp_out_task_node->set_stage_node(stage);
@@ -112,7 +107,7 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
       task_nodes_in_stage->comp_out_task_nodes.push_back(comp_task_node);
     }
   }
-  CHECK_EQ(parallel_idx, stage->parallel_range().end());
+  CHECK_EQ(parallel_idx, stage->parallel_range().end()) << stage->chain_node()->VisualStr();
 }
 
 void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
@@ -150,6 +145,9 @@ void TaskGraph::InitBoxingTaskNodes(Stage2TaskNodesMap* stage2task_nodes) {
 void TaskGraph::InitInboxingTaskNode(const StageNode* stage,
                                      TaskNodesInStage* task_nodes_in_stage) {
   task_nodes_in_stage->in_boxing_task_node = nullptr;
+  if (stage->in_edges().empty()) {
+    return;
+  }
   if (stage->in_edges().size() == 1
       && task_nodes_in_stage->comp_in_task_nodes.size() == 1) {
     return;
@@ -169,6 +167,9 @@ void TaskGraph::InitOutBoxingTaskNode(
     const StageNode* stage,
     TaskNodesInStage* task_nodes_in_stage) {
   task_nodes_in_stage->out_boxing_task_node = nullptr;
+  if (stage->out_edges().empty()) {
+    return;
+  }
   if (stage->out_edges().size() == 1
       && task_nodes_in_stage->comp_out_task_nodes.size() == 1) {
     return;
@@ -184,9 +185,10 @@ void TaskGraph::InitOutBoxingTaskNode(
   task_nodes_in_stage->out_boxing_task_node = boxing_task;
 }
 
-void TaskGraph::ConnectTaskNodes(
+void TaskGraph::ConnectBoxingTaskNodes(
     const Stage2TaskNodesMap* stage2task_nodes) {
   for (const std::unique_ptr<StageNode>& cur_stage : stage_gph_->nodes()) {
+    if (cur_stage->out_edges().empty()) { continue; }
     const TaskNodesInStage& cur_tasks = stage2task_nodes->at(cur_stage.get());
     TaskNode* out_node = cur_tasks.out_boxing_task_node;
     if (out_node == nullptr) {
@@ -227,25 +229,29 @@ void TaskGraph::ConnectTaskNodes(
 }
 
 void TaskGraph::BuildBpStruct() {
-  std::vector<TaskNode*> turning_node_vec;
-  GenerateRelatedBpNodes(&turning_node_vec);
-  BackwardConnect(turning_node_vec);
+  LOG(INFO) << "Build BpTaskGraph...";
+  std::vector<TaskNode*> loss_node_vec;
+  GenerateRelatedBpNodes(&loss_node_vec);
+  BackwardConnect(loss_node_vec);
   UpdateSourceAndSink();
+  ToDotFile(LogDir() + "/bp_task_graph.dot");
 }
 
 void TaskGraph::GenerateRelatedBpNodes(
-    std::vector<TaskNode*> *turning_node_vec) {
+    std::vector<TaskNode*> *loss_node_vec) {
   for (auto task_node = begin(); task_node != end(); ++task_node) {
     if (auto comp_task_node = dynamic_cast<CompTaskNode*> (&(*task_node))) {
-      if (!comp_task_node->IsLossNode()) {
-        comp_task_node->BuildAndConnectBpNode();
+      if (comp_task_node->IsLossNode()) {
+        loss_node_vec->push_back(&(*task_node));
       } else {
-        turning_node_vec->push_back(&(*task_node));
+        if (!comp_task_node->chain_node()->in_edges().empty()) {
+          EnrollNode(comp_task_node->BuildAndConnectBpNode());
+        }
       }
     } else {
       for (TaskEdge* edge : task_node->in_edges()) {
         if (edge->src_node()->GetBpNode() != nullptr) {
-          task_node->BuildAndConnectBpNode();
+          EnrollNode(task_node->BuildAndConnectBpNode());
           break;
         }
       }
@@ -254,16 +260,24 @@ void TaskGraph::GenerateRelatedBpNodes(
 }
 
 void TaskGraph::BackwardConnect(
-    const std::vector<TaskNode*>& turning_node_vec) {
+    const std::vector<TaskNode*>& loss_node_vec) {
   std::queue<TaskNode*> bp_node_queue;
-  for (TaskNode* turning_node : turning_node_vec) {
-    for (TaskEdge* fw_edge : turning_node->in_edges()) {
+  std::unordered_set<TaskNode*> has_been_enqueued;
+  auto TryEnqueue = [&bp_node_queue, &has_been_enqueued](TaskNode* node) {
+    if (has_been_enqueued.find(node) == has_been_enqueued.end()) {
+      bp_node_queue.push(node);
+      has_been_enqueued.insert(node);
+    }
+  };
+  for (TaskNode* loss_node : loss_node_vec) {
+    for (TaskEdge* fw_edge : loss_node->in_edges()) {
       TaskNode* bp_pred_node = fw_edge->src_node()->GetBpNode();
+      if (bp_pred_node == nullptr) { continue; }
       TaskEdge* bp_edge = NewEdge();
-      TaskConnect(turning_node, bp_edge, bp_pred_node);
+      TaskConnect(loss_node, bp_edge, bp_pred_node);
       fw_edge->set_related_fwbp_edge(bp_edge);
       bp_edge->set_related_fwbp_edge(fw_edge);
-      bp_node_queue.push(bp_pred_node);
+      TryEnqueue(bp_pred_node);
     }
   }
   while (!bp_node_queue.empty()) {
@@ -271,11 +285,12 @@ void TaskGraph::BackwardConnect(
     bp_node_queue.pop();
     for (TaskEdge* fw_edge : bp_cur_node->GetFwNode()->in_edges()) {
       TaskNode* bp_pred_node = fw_edge->src_node()->GetBpNode();
+      if (bp_pred_node == nullptr) { continue; }
       TaskEdge* bp_edge = NewEdge();
+      TaskConnect(bp_cur_node, bp_edge, bp_pred_node);
       fw_edge->set_related_fwbp_edge(bp_edge);
       bp_edge->set_related_fwbp_edge(fw_edge);
-      TaskConnect(bp_cur_node, bp_edge, bp_pred_node);
-      bp_node_queue.push(bp_pred_node);
+      TryEnqueue(bp_pred_node);
     }
   }
 }

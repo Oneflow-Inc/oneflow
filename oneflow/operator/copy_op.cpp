@@ -1,4 +1,5 @@
 #include "operator/copy_op.h"
+#include "operator/operator_manager.h"
 
 namespace oneflow {
 
@@ -32,4 +33,7 @@ OperatorProto CopyOp::ToOperatorProto() {
   *(operatorproto.mutable_copy_op()) = copyopproto;
   return operatorproto;
 }
+
+REGISTER_OP(OperatorConf::kCopyConf, CopyOp);
+
 } // namespace oneflow

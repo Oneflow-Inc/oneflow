@@ -19,6 +19,7 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
     int64_t to_symbol_pos = device_id_str.rfind("-");
     if (device_id_str == "disk") {
       machine_id2sorted_device_phy_ids_[machine_id] = {};
+      device_type_ = DeviceType::kCPU;
     } else if (to_symbol_pos == std::string::npos) {
       uint64_t device_id = StoullOrDie(device_id_str);
       machine_id2sorted_device_phy_ids_[machine_id].push_back(device_id);	

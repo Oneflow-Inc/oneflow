@@ -23,6 +23,16 @@ class CompTaskNode : public TaskNode {
   void MdUpdtFwBuildExecAndProducedRegsts(TaskGraph*);
   void MdLoadFwBuildExecAndProducedRegsts(TaskGraph*);
   void MdSaveFwBuildExecAndProducedRegsts(TaskGraph*);
+  
+  std::string VisualStr() const override {
+    std::stringstream ss;
+    ss << TaskNode::VisualStr() 
+       << "Compute_" << node_id_str() << ":"
+       << stage_node()->machine_id_str() << ":"
+       << thrd_loc_id_str() << "\\n"
+       << chain_node()->VisualStr();
+    return ss.str();
+  }
 
  protected:
   virtual void InitWithFwNode(TaskNode* fw_node) override {

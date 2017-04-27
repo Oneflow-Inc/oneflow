@@ -22,7 +22,7 @@ StageGraph::StageGraph(std::unique_ptr<const ChainGraph>&& chain_gph) {
       if (device_num == 0) {
         device_num = 1; // DiskLoader
       }
-      range_idx += parallel_desc->sorted_device_phy_ids(machine_id).size();
+      range_idx += device_num;
       stage_node->mut_parallel_range().mut_end() = range_idx;
       chain2stages.at(cur_chain.get()).push_back(stage_node);
     }

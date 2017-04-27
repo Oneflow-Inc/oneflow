@@ -1,5 +1,6 @@
 #include "operator/convolution_op.h"
 #include "glog/logging.h"
+#include "operator/operator_manager.h"
 
 namespace oneflow {
 
@@ -19,4 +20,7 @@ void ConvolutionOp::InitFromOpConf(const OperatorConf& op_conf) {
 std::string ConvolutionOp::GetValueFromPbOpConf(const std::string& k) const {
   return GetValueFromPbMessage(op_conf().convolution_conf(), k);
 }
+
+REGISTER_OP(OperatorConf::kConvolutionConf, ConvolutionOp);
+
 } // namespace oneflow

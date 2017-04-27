@@ -1,7 +1,7 @@
 #include "graph/logical_graph.h"
 #include <iostream>
 #include "glog/logging.h"
-#include "operator/operator_factory.h"
+#include "operator/operator_manager.h"
 
 namespace oneflow {
 
@@ -25,7 +25,7 @@ void LogicalGraph::NaiveBuildGraphStruct(
     const OperatorConf& cur_op_conf = dl_net_conf.op_conf(op_i);
     // Construct cur node
     LogicalNode* cur_node = NewNode();
-    cur_node->mut_op() = ConstructOpFromPbConf(cur_op_conf);
+    cur_node->mut_op() = OpMgr::Singleton().ConstructOp(cur_op_conf);
     // Connect input node
     for (const std::string& ibn : cur_node->op()->input_bns()) {
       std::string lbn = cur_node->op()->ibn2lbn(ibn);
@@ -91,7 +91,7 @@ void LogicalGraph::CollectCloneInfos(
       pb_op_conf.set_name("clone_" + lbn);
       pb_op_conf.mutable_clone_conf()->set_out_num(edges.size());
       pb_op_conf.mutable_clone_conf()->set_lbn(lbn);
-      auto clone_op = ConstructOpFromPbConf(pb_op_conf);
+      auto clone_op = OpMgr::Singleton().ConstructOp(pb_op_conf);
       // Set clone_info
       CloneInfo clone_info;
       clone_info.clone_op = clone_op;

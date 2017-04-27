@@ -1,6 +1,6 @@
 #include "graph/boxing_task_node.h"
 #include <algorithm>
-#include "operator/operator_factory.h"
+#include "operator/operator_manager.h"
 #include "graph/comp_task_node.h"
 
 namespace oneflow {
@@ -126,7 +126,7 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
     box_conf->set_out_num(sorted_out_edges.size());
     CompleteBoxOp(box_conf);
     ExecNode* node = mut_exec_gph().NewNode();
-    node->mut_op() = ConstructOpFromPbConf(op_conf);
+    node->mut_op() = OpMgr::Singleton().ConstructOp(op_conf);
     // ibn
     for (size_t i = 0; i < sorted_in_edges.size(); ++i) {
       RegstDesc* in_regst = GetRelatedRegst(sorted_in_edges.at(i));

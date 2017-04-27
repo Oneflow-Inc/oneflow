@@ -1,5 +1,6 @@
 #include "operator/data_loader_op.h"
 #include "glog/logging.h"
+#include "operator/operator_manager.h"
 
 namespace oneflow {
 
@@ -14,4 +15,7 @@ void DataLoaderOp::InitFromOpConf(const OperatorConf& op_conf) {
 std::string DataLoaderOp::GetValueFromPbOpConf(const std::string& k) const {
   return GetValueFromPbMessage(op_conf().data_loader_conf(), k);
 }
+
+REGISTER_OP(OperatorConf::kDataLoaderConf, DataLoaderOp);
+
 } // namespace oneflow

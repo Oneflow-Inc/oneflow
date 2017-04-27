@@ -14,6 +14,9 @@ class StageNode final : public Node<StageNode, StageEdge> {
   StageNode() = default;
   ~StageNode() = default;
 
+  std::string machine_id_str() const {
+    return std::to_string(machine_id_);
+  }
   const uint64_t& machine_id() const {
     return machine_id_;
   }
@@ -40,7 +43,7 @@ class StageNode final : public Node<StageNode, StageEdge> {
   }
 
   std::string VisualStr() const override {
-    return std::to_string(machine_id_) + "\\n" + chain_node_->VisualStr();
+    return machine_id_str() + "\\n" + chain_node_->VisualStr();
   }
 
  private:

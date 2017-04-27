@@ -10,6 +10,10 @@ class BoxingTaskNode : public TaskNode {
   OF_DISALLOW_COPY_AND_MOVE(BoxingTaskNode);
   BoxingTaskNode() = default;
   virtual ~BoxingTaskNode() = default;
+  
+  std::string VisualStr() const override {
+    return TaskNode::VisualStr() + "Boxing_" + node_id_str();
+  }
 
  protected:
   virtual void InitWithFwNode(TaskNode* fw_node) override {

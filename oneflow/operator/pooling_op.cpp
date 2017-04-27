@@ -1,5 +1,6 @@
 #include "operator/pooling_op.h"
 #include "glog/logging.h"
+#include "operator/operator_manager.h"
 
 namespace oneflow {
 
@@ -15,4 +16,7 @@ void PoolingOp::InitFromOpConf(const OperatorConf& op_conf) {
 std::string PoolingOp::GetValueFromPbOpConf(const std::string& k) const {
   return GetValueFromPbMessage(op_conf().pooling_conf(), k);
 }
+
+REGISTER_OP(OperatorConf::kPoolingConf, PoolingOp);
+
 } // namespace oneflow
