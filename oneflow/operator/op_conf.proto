@@ -89,6 +89,9 @@ message ModelLoadOpConf {
 message ModelSaveOpConf {
 }
 
+message CommNetOpConf {
+}
+
 message OperatorConf {
   string name = 1;
   oneof specified_type {
@@ -106,5 +109,6 @@ message OperatorConf {
     ModelLoadOpConf model_load_conf = 111;
     ModelSaveOpConf model_save_conf = 112;
     ConcatOpConf concat_conf = 113;
+    CommNetOpConf comm_net_conf = 114;
   }
 }
