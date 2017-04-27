@@ -18,10 +18,11 @@ void CopyHDTaskNode::BuildExecAndProducedRegstsForCopy(TaskGraph* gph){
     copy_conf->add_copied_lbns(lbn);
   }
   RegstDesc* in_regst = GetRelatedRegst(SoleInEdge());
+  bool get_kalllbn = false;
   if(copy_conf->copied_lbns_size() == 1 
       && copy_conf->copied_lbns(0) == RegstDesc::kAllLbn){
-    copy_conf->clear_copied_lbns();
     out_regst->CopyLbn2ShapeMap(in_regst);
+    get_kalllbn = true;
   }
   ExecNode* node = mut_exec_gph().NewFinalNode();
   node->mut_op() = ConstructOpFromPbConf(op_conf);
@@ -38,7 +39,9 @@ void CopyHDTaskNode::BuildExecAndProducedRegstsForCopy(TaskGraph* gph){
     node->op()->SetShapePtr(obn, shape_ptr);
     node->BindBnInOpAndRegst(obn, out_regst.get());
   }
-  node->op()->InferShape4ObAndDtbFromIb();
+  if(!get_kalllbn){
+    node->op()->InferShape4ObAndDtbFromIb();
+  }
   mut_exec_gph().UpdateSourceAndSink();
 }
 
