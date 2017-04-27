@@ -34,7 +34,12 @@ void CopyHDTaskNode::BuildExecAndProducedRegstsForCopy(TaskGraph* gph){
   }
   for(std::string obn : node->op()->output_bns()){
     std::string lbn = node->op()->obn2lbn(obn);
-    Shape* shape_ptr = out_regst->EnrollLbn(lbn);
+    Shape* shape_ptr = nullptr;
+    if(!get_kalllbn){
+      shape_ptr = out_regst->EnrollLbn(lbn);
+    } else {
+      shape_ptr = out_regst->GetMutShapePtr(lbn);
+    }
     node->op()->SetShapePtr(obn, shape_ptr);
     node->BindBnInOpAndRegst(obn, out_regst.get());
   }

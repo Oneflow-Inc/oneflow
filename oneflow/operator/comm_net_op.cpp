@@ -1,4 +1,5 @@
 #include "operator/comm_net_op.h"
+#include "operator/operator_manager.h"
 
 namespace oneflow {
 
@@ -20,4 +21,6 @@ std::string CommNetOp::normal_ibn2lbn(const std::string& input_bn) const {
 std::string CommNetOp::GetValueFromPbOpConf(const std::string& k) const {
   return GetValueFromPbMessage(op_conf().comm_net_conf(), k);
 }
+REGISTER_OP(OperatorConf::kCommNetConf, CommNetOp);
+
 } // namespace oneflow
