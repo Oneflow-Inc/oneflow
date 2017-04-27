@@ -1,5 +1,6 @@
 #include "operator/innerproduct_op.h"
 #include "glog/logging.h"
+#include "operator/operator_factory.h"
 
 namespace oneflow {
 
@@ -18,4 +19,7 @@ void InnerProductOp::InitFromOpConf(const OperatorConf& op_conf) {
 std::string InnerProductOp::GetValueFromPbOpConf(const std::string& k) const {
   return GetValueFromPbMessage(op_conf().innerproduct_conf(), k);
 }
+
+REGISTER_OP(OperatorConf::kInnerproductConf, InnerProductOp);
+
 } // namespace oneflow

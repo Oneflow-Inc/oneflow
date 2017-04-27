@@ -1,4 +1,5 @@
 #include "operator/boxing_op.h"
+#include "operator/operator_factory.h"
 
 namespace oneflow {
 
@@ -25,4 +26,7 @@ std::string BoxingOp::obn2lbn(const std::string& output_bn) const {
 std::string BoxingOp::GetValueFromPbOpConf(const std::string& k) const {
   return GetValueFromPbMessage(op_conf().boxing_conf(), k);
 }
+
+REGISTER_OP(OperatorConf::kBoxingConf, BoxingOp);
+
 } // namespace oneflow

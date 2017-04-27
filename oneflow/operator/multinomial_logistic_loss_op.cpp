@@ -1,5 +1,6 @@
 #include "operator/multinomial_logistic_loss_op.h"
 #include "glog/logging.h"
+#include "operator/operator_factory.h"
 
 namespace oneflow {
 
@@ -16,5 +17,7 @@ void MultinomialLogisticLossOp::InitFromOpConf(const OperatorConf& op_conf) {
 std::string MultinomialLogisticLossOp::GetValueFromPbOpConf(const std::string& k) const {
   return GetValueFromPbMessage(op_conf().multinomial_logistic_loss_conf(), k);
 }
+
+REGISTER_OP(OperatorConf::kMultinomialLogisticLossConf, MultinomialLogisticLossOp);
 
 } // namespace oneflow

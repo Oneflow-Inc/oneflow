@@ -1,5 +1,6 @@
 #include "operator/model_load_op.h"
 #include "glog/logging.h"
+#include "operator/operator_factory.h"
 
 namespace oneflow {
   
@@ -12,4 +13,7 @@ void ModelLoadOp::InitFromOpConf(const OperatorConf& op_conf) {
 std::string ModelLoadOp::GetValueFromPbOpConf(const std::string& k) const {
   return GetValueFromPbMessage(op_conf().model_load_conf(), k);
 }
+
+REGISTER_OP(OperatorConf::kModelLoadConf, ModelLoadOp);
+
 }

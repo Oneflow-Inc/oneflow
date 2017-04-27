@@ -1,4 +1,5 @@
 #include "operator/concat_op.h"
+#include "operator/operator_factory.h"
 
 namespace oneflow {
 
@@ -16,5 +17,7 @@ void ConcatOp::InitFromOpConf(const OperatorConf& op_conf) {
 std::string ConcatOp::GetValueFromPbOpConf(const std::string& k) const {
   return GetValueFromPbMessage(op_conf().concat_conf(), k);
 }
+
+REGISTER_OP(OperatorConf::kConcatConf, ConcatOp);
 
 } // namespace oneflow
