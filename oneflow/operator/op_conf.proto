@@ -43,6 +43,14 @@ message ConcatOpConf {
   int64 axis = 3;
 }
 
+message CommNetOpConf {
+  enum CommNetType {
+    SENDER = 0;
+    RECEIVER = 1;
+  }
+  CommNetType comm_net_type = 1;
+}
+
 message CopyOpConf {
   enum CopyType {
     H2D = 0;
@@ -87,9 +95,6 @@ message ModelLoadOpConf {
 }
 
 message ModelSaveOpConf {
-}
-
-message CommNetOpConf {
 }
 
 message OperatorConf {

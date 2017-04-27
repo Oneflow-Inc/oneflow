@@ -7,11 +7,26 @@ namespace oneflow {
 void CommNetTaskNode::BuildExecAndProducedRegstsForNetCopy(TaskGraph* gph){
   auto out_regst = of_make_unique<DisContigRegstDesc> ();
   BindProducedRegstAndOutEdge(out_regst.get(), SoleOutEdge());
-  EnrollProducedRegstDesc("net_copy", std::move(out_regst));
+  EnrollProducedRegstDesc("comm_net", std::move(out_regst));
   RegstDesc* in_regst = GetRelatedRegst(SoleInEdge());
-  GetProducedRegstDesc("net_copy")->CopyLbn2ShapeMap(in_regst);
-  // There no op conf for net task yet
-  TODO();
+  out_regst->CopyLbn2ShapeMap(in_regst);
+
+  OperatorConf op_conf;
+  op_conf.set_name("comm_net_" + NewUniqueId());
+  CommNetOpConf* comm_net_conf = op_conf.mutable_comm_net_conf();
+  comm_net_conf->set_comm_net_type(
+      IsSender() ? CommNetOpConf::SENDER : CommNetOpConf::RECEIVER);
+  ExecNode* node = mut_exec_gph().NewFinalNode();
+  node->mut_op() = ConstructOpFromPbConf(op_conf);
+
+  node->BindBnInOpAndRegst(node->op()->SoleIbn(), in_regst);
+
+  Shape* shape_ptr = out_regst->EnrollLbn(RegstDesc::kAllLbn);
+  node->op()->SetShapePtr(node->op()->SoleObn(), shape_ptr);
+  node->BindBnInOpAndRegst(node->op()->SoleObn(), out_regst.get());
+
+  node->op()->InferShape4ObAndDtbFromIb();
+  mut_exec_gph().UpdateSourceAndSink();
 }
 
 void CommNetTaskNode::FwBuildExecAndProducedRegsts(TaskGraph* gph) {

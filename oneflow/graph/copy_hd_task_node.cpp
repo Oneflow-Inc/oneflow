@@ -9,7 +9,7 @@ void CopyHDTaskNode::BuildExecAndProducedRegstsForCopy(TaskGraph* gph){
   op_conf.set_name("copy_" + NewUniqueId());
   CopyOpConf* copy_conf = op_conf.mutable_copy_conf();
   copy_conf->set_copy_type(
-      IsH2D() ? oneflow::CopyOpConf::H2D : oneflow::CopyOpConf::D2H);
+      IsH2D() ? CopyOpConf::H2D : CopyOpConf::D2H);
   for(std::string lbn : CopiedLbns()){
     copy_conf->add_copied_lbns(lbn);
   }
