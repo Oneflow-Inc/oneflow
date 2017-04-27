@@ -80,7 +80,12 @@ add_library(of_ccobj ${of_all_obj_cc})
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})
 add_dependencies(of_ccobj of_protoobj)
 
-set(of_libs -Wl,--whole-archive of_ccobj of_protoobj -Wl,--no-whole-archive)
+if(APPLE)
+  set(of_libs -Wl,-all_load of_ccobj of_protoobj -Wl,-noall_load)
+else()
+  set(of_libs -Wl,--whole-archive of_ccobj of_protoobj -Wl,--no-whole-archive)
+endif()
+
 
 # build main
 foreach(cc ${of_main_cc})
