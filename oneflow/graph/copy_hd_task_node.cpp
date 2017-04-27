@@ -7,7 +7,6 @@ namespace oneflow {
 void CopyHDTaskNode::BuildExecAndProducedRegstsForCopy(TaskGraph* gph){
   auto out_regst = of_make_unique<DisContigRegstDesc> ();
   BindProducedRegstAndOutEdge(out_regst.get(), SoleOutEdge());
-  EnrollProducedRegstDesc("copy", std::move(out_regst));
 
   OperatorConf op_conf;
   op_conf.set_name("copy_" + NewUniqueId());
@@ -43,6 +42,7 @@ void CopyHDTaskNode::BuildExecAndProducedRegstsForCopy(TaskGraph* gph){
     node->op()->InferShape4ObAndDtbFromIb();
   }
   mut_exec_gph().UpdateSourceAndSink();
+  EnrollProducedRegstDesc("copy", std::move(out_regst));
 }
 
 void CopyHDTaskNode::SetFwInCopy() {

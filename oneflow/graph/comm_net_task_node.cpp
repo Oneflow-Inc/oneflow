@@ -7,7 +7,6 @@ namespace oneflow {
 void CommNetTaskNode::BuildExecAndProducedRegstsForNetCopy(TaskGraph* gph){
   auto out_regst = of_make_unique<DisContigRegstDesc> ();
   BindProducedRegstAndOutEdge(out_regst.get(), SoleOutEdge());
-  EnrollProducedRegstDesc("comm_net", std::move(out_regst));
   RegstDesc* in_regst = GetRelatedRegst(SoleInEdge());
   out_regst->CopyLbn2ShapeMap(in_regst);
 
@@ -23,6 +22,7 @@ void CommNetTaskNode::BuildExecAndProducedRegstsForNetCopy(TaskGraph* gph){
   node->BindBnInOpAndRegst(node->op()->SoleObn(), out_regst.get());
   
   mut_exec_gph().UpdateSourceAndSink();
+  EnrollProducedRegstDesc("comm_net", std::move(out_regst));
 }
 
 void CommNetTaskNode::FwBuildExecAndProducedRegsts(TaskGraph* gph) {
