@@ -1,7 +1,7 @@
 syntax = "proto3";
 package oneflow;
 
-message FillerParameter {
+message FillerConf {
   // The filler type.
   string type = 1;
   float value = 2; // the value in constant filler
@@ -26,8 +26,8 @@ message ConvolutionOpConf {
   string in = 1;
   string out = 2;
 
-  uint32 num_output = 3; // The number of outputs for the layer
-  bool bias_term = 4; // whether to have bias terms
+  uint32 out_num = 3; // The number of outputs for the layer
+  bool has_bias_term = 4; // whether to have bias terms
 
   // Pad, kernel size, and stride are all given as a single value for equal
   // dimensions in all spatial dimensions, or once per spatial dimension.
@@ -50,8 +50,8 @@ message ConvolutionOpConf {
 
   uint32 group = 15; // The group size for group conv
 
-  FillerParameter weight_filler = 16; // The filler for the weight
-  FillerParameter bias_filler = 17; // The filler for the bias
+  FillerConf weight_filler = 16; // The filler for the weight
+  FillerConf bias_filler = 17; // The filler for the bias
 
   // The axis to interpret as "channels" when performing convolution.
   // Preceding dimensions are treated as independent inputs;
@@ -76,10 +76,10 @@ message InnerProductOpConf {
   string in = 1;
   string out = 2;
 
-  uint32 num_output = 3; // The number of outputs for the layer
-  bool bias_term = 4; // whether to have bias terms
-  FillerParameter weight_filler = 5; // The filler for the weight
-  FillerParameter bias_filler = 6; // The filler for the bias
+  uint32 out_num = 3; // The number of outputs for the layer
+  bool has_bias_term = 4; // whether to have bias terms
+  FillerConf weight_filler = 5; // The filler for the weight
+  FillerConf bias_filler = 6; // The filler for the bias
 
   // The first axis to be lumped into a single inner product computation;
   // all preceding axes are retained in the output.
@@ -143,8 +143,7 @@ message MultinomialLogisticLossOpConf {
 message ConcatOpConf {
   repeated string in = 1;
   string out = 2;
-  int64 axis = 3;
-  uint32 concat_dim = 4;
+  int32 axis = 3;
 }
 
 message CopyOpConf {
@@ -158,16 +157,16 @@ message CopyOpConf {
 
 
 message CloneOpConf {
-  int64 out_num = 1;
+  uint32 out_num = 1;
   string lbn = 2;
 }
 
 message BoxConcatConf {
-  int64 axis = 1;
+  int32 axis = 1;
 }
 
 message BoxSplitConf {
-  int64 axis = 1;
+  int32 axis = 1;
 }
 
 message BoxCloneConf {
@@ -175,8 +174,8 @@ message BoxCloneConf {
 
 message BoxingOpConf {
   string lbn = 1;
-  int64 in_num = 2;
-  int64 out_num = 3;
+  uint32 in_num = 2;
+  uint32 out_num = 3;
   BoxConcatConf concat_box = 4;
   oneof out_box {
     BoxSplitConf split_box = 5;
