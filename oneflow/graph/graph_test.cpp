@@ -1,5 +1,4 @@
 #include "graph.h"
-#include "node.h"
 #include <vector>
 #include <map>
 #include <unordered_set>
@@ -7,6 +6,7 @@
 #include <memory>
 #include "gtest/gtest.h"
 #include "common/util.h"
+#include "node.h"
 
 namespace oneflow {
 
@@ -20,7 +20,7 @@ class TestNode final : public Node<TestNode, TestEdge> {
   }
   ~TestNode() = default;
 
-  uint64_t test_node_id() { return test_node_id_; }
+  uint64_t test_node_id() const { return test_node_id_; }
  private:
   uint64_t test_node_id_;
 };
@@ -40,14 +40,14 @@ class TestGraph final : public Graph<TestNode, TestEdge> {
   TestGraph() = delete;
   ~TestGraph() = default;
 
-  TestGraph(const std::vector<uint64_t> graph_conf[], uint64_t node_num) {
+  TestGraph(const std::vector<std::vector<uint64_t>>  graph_conf) {
     std::vector<TestNode*> node_id2node;
-    for (uint64_t i = 0; i < node_num; ++i) {
+    for (uint64_t i = 0; i < graph_conf.size(); ++i) {
       TestNode* cur_node = new TestNode(i);
       EnrollNode(cur_node);
       node_id2node.push_back(cur_node);
     }
-    for (uint64_t i = 0; i < node_num; ++i) {
+    for (uint64_t i = 0; i < graph_conf.size(); ++i) {
       TestNode* src_node = node_id2node[i];
       for (uint64_t j = 0; j < graph_conf[i].size(); ++j) {
         TestEdge* edge = NewEdge();
@@ -59,36 +59,34 @@ class TestGraph final : public Graph<TestNode, TestEdge> {
   }
 };
 
-struct NodePairHash {
-  std::size_t operator()(const std::pair<uint64_t,uint64_t> &val) const {
-    return val.first ^ val.second;
-  }
-};
+typedef std::pair<uint64_t, uint64_t> NodePair;
 
-void DoOneTestGraph(TestGraph& test_graph,
-                    const std::vector<uint64_t> graph_conf[],
-                    uint64_t node_num) {
+void DoOneTestGraph(const TestGraph& test_graph,
+                    const std::vector<std::vector<uint64_t>>  graph_conf) {
+  uint64_t node_num = graph_conf.size();
   // 1. Determines whether the traversal result satisfies the topological order
   std::vector<uint64_t> topo_array;
   HashMap<uint64_t, uint64_t> node_id2order;
-  std::unordered_set<std::pair<uint64_t, uint64_t>, NodePairHash> edges_node_pair;
+  auto NodePairHash = [](const NodePair& val) { return val.first ^ val.second; };
+  std::unordered_set<NodePair, 
+                     decltype(NodePairHash)> edges_node_pair(10, NodePairHash);
   uint64_t order = 0;
-  for (TestGraph::Iterator it = test_graph.begin(); it != test_graph.end(); ++it) {
-    topo_array.push_back((*it).test_node_id());
-    node_id2order.emplace((*it).test_node_id(), order);
-    order++;
+  for (auto it = test_graph.cbegin(); it != test_graph.cend(); ++it) {
+    topo_array.push_back(it->test_node_id());
+    node_id2order.emplace(it->test_node_id(), order);
+    ++order;
   }
   ASSERT_EQ(topo_array.size(), node_num);
   // method : 
   // judge every edge <u,v>
   // the node u's order in topo_array is smaller than node v
   uint64_t edge_num = 0;
-  for (uint64_t src_node_id = 0; src_node_id < node_num; src_node_id++) {
+  for (uint64_t src_node_id = 0; src_node_id < node_num; ++src_node_id) {
     uint64_t src_node_order = node_id2order.at(src_node_id);
     for (uint64_t dst_node_id : graph_conf[src_node_id]) {
       uint64_t dst_node_order = node_id2order.at(dst_node_id);
       ASSERT_LT(src_node_order, dst_node_order);
-      edge_num++;
+      ++edge_num;
       edges_node_pair.insert(std::make_pair(src_node_id, dst_node_id));
     }
   }
@@ -111,15 +109,18 @@ void DoOneTestGraph(TestGraph& test_graph,
 }
 
 TEST(TestGraph, test_graph_node_num_7) {
-  std::vector<uint64_t> graph_conf[7];
+  std::vector<std::vector<uint64_t>> graph_conf;
+  for (uint64_t i = 0; i < 7; ++i) {
+    graph_conf.push_back(std::vector<uint64_t>());
+  }
   graph_conf[2].push_back(1);
   graph_conf[2].push_back(0);
   graph_conf[2].push_back(3);
   graph_conf[1].push_back(0);
   graph_conf[0].push_back(4);
   graph_conf[5].push_back(6);
-  TestGraph test_graph(graph_conf, 7);
-  DoOneTestGraph(test_graph, graph_conf, 7);
+  TestGraph test_graph(graph_conf);
+  DoOneTestGraph(test_graph, graph_conf);
 }
 
 }// namespace oneflow
