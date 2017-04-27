@@ -1,5 +1,5 @@
 #include "graph/comm_net_task_node.h"
-#include "operator/operator_factory.h"
+#include "operator/operator_manager.h"
 #include "operator/copy_op.h"
 
 namespace oneflow {
@@ -15,8 +15,8 @@ void CommNetTaskNode::BuildExecAndProducedRegstsForNetCopy(TaskGraph* gph){
   CommNetOpConf* comm_net_conf = op_conf.mutable_comm_net_conf();
   comm_net_conf->set_comm_net_type(
       IsSender() ? CommNetOpConf::SENDER : CommNetOpConf::RECEIVER);
-  ExecNode* node = mut_exec_gph().NewFinalNode();
-  node->mut_op() = ConstructOpFromPbConf(op_conf);
+  ExecNode* node = mut_exec_gph().NewNode();
+  node->mut_op() = OpMgr::Singleton().ConstructOp(op_conf);
 
   node->BindBnInOpAndRegst(node->op()->SoleIbn(), in_regst);
   node->BindBnInOpAndRegst(node->op()->SoleObn(), out_regst.get());

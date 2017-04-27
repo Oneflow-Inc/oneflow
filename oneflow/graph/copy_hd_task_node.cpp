@@ -23,8 +23,8 @@ void CopyHDTaskNode::BuildExecAndProducedRegstsForCopy(TaskGraph* gph){
     out_regst->CopyLbn2ShapeMap(in_regst);
     get_kalllbn = true;
   }
-  ExecNode* node = mut_exec_gph().NewFinalNode();
-  node->mut_op() = ConstructOpFromPbConf(op_conf);
+  ExecNode* node = mut_exec_gph().NewNode();
+  node->mut_op() = OpMgr::Singleton().ConstructOp(op_conf);
 
   for(std::string ibn : node->op()->input_bns()){
     std::string lbn = node->op()->ibn2lbn(ibn);
