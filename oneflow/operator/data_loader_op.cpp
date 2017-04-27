@@ -1,6 +1,6 @@
 #include "operator/data_loader_op.h"
 #include "glog/logging.h"
-#include "operator/operator_factory.h"
+#include "operator/operator_manager.h"
 
 namespace oneflow {
 

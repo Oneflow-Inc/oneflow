@@ -10,6 +10,7 @@ void TaskGraphMgr::Init() {
         JobDesc::Singleton().train_dlnet_conf(),
         JobDesc::Singleton().strategy(),
         true);
+  LOG(FATAL) << "checkpoint";
   task_gphs_.emplace_back(data_task_gph);
   // construct data_chain2sorted_bp_comp_tasks
   HashMap<const ChainNode*, std::vector<CompTaskNode*>>

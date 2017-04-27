@@ -1,5 +1,5 @@
 #include "operator/boxing_op.h"
-#include "operator/operator_factory.h"
+#include "operator/operator_manager.h"
 
 namespace oneflow {
 

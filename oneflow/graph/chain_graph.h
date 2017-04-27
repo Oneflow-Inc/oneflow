@@ -81,7 +81,8 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
   ChainGraph() = default;
   ~ChainGraph() = default;
 
-  ChainGraph(const LogicalGraph* logical_gph);
+  ChainGraph(const LogicalGraph* logical_gph,
+             const std::string& dot_filepath);
 
  private:
   void SetInOutLbn4AllChainNodeInDataTaskGraph();

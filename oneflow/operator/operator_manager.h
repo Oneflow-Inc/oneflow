@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_OPERATOR_OPERATOR_FACTORY_H_
-#define ONEFLOW_OPERATOR_OPERATOR_FACTORY_H_
+#ifndef ONEFLOW_OPERATOR_OPERATOR_MANAGER_H_
+#define ONEFLOW_OPERATOR_OPERATOR_MANAGER_H_
 
 #include <iostream>
 #include "operator/operator.h"
@@ -7,13 +7,13 @@
 
 namespace oneflow {
 
-class OpFactory final {
+class OpMgr final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(OpFactory);
-  ~OpFactory() = default;
+  OF_DISALLOW_COPY_AND_MOVE(OpMgr);
+  ~OpMgr() = default;
   
-  static OpFactory& Singleton() {
-    static OpFactory obj;
+  static OpMgr& Singleton() {
+    static OpMgr obj;
     return obj;
   }
   
@@ -24,7 +24,7 @@ class OpFactory final {
   template<OperatorConf::OpTypeCase op_type_case, typename OpType>
   friend struct OpRegister;
 
-  OpFactory() = default;
+  OpMgr() = default;
   static HashMap<int, std::function<std::shared_ptr<Operator>()>>& OpTypeCase2Creator();
 
 };
@@ -32,7 +32,7 @@ class OpFactory final {
 template<OperatorConf::OpTypeCase op_type_case, typename OpType>
 struct OpRegister {
   OpRegister() {
-    OpFactory::OpTypeCase2Creator().emplace(op_type_case, []() {
+    OpMgr::OpTypeCase2Creator().emplace(op_type_case, []() {
       return std::make_shared<OpType> ();;
     });
   }
@@ -41,11 +41,6 @@ struct OpRegister {
 #define REGISTER_OP(OpTypeCase, OpType) \
   static OpRegister<OpTypeCase, OpType> g_##OpType##_register_var;
 
-inline std::shared_ptr<Operator> ConstructOpFromPbConf(
-    const OperatorConf& pb_conf) {
-  return OpFactory::Singleton().ConstructOp(pb_conf);
-}
-
 } // namespace oneflow
 
-#endif // ONEFLOW_OPERATOR_OPERATOR_FACTORY_H_
+#endif // ONEFLOW_OPERATOR_OPERATOR_MANAGER_H_

@@ -10,7 +10,7 @@ void SetModelLoadChain(ChainNode* model_load_chain) {
   OperatorConf op_conf;
   op_conf.set_name("");
   op_conf.mutable_model_load_conf();
-  model_load_chain->mut_op_vec() = {ConstructOpFromPbConf(op_conf)};
+  model_load_chain->mut_op_vec() = {OpMgr::Singleton().ConstructOp(op_conf)};
   // model load parallel_conf
   ParallelConf pr_conf;
   pr_conf.set_policy(kDataParallel);
@@ -40,7 +40,8 @@ void MdLoadTaskGraph::BuildTaskGraph(const ChainNode* update_chain) {
   faker_chain->mut_input_lbns() = {RegstDesc::kAllLbn};
   Connect(load_chain, chain_gph->NewEdge(), faker_chain);
   chain_gph->UpdateSourceAndSink();
-  BuildFromChainGph(std::move(chain_gph), false);
+  chain_gph->ToDotFile(LogDir() + "/model_load_chain_graph.dot");
+  BuildFromChainGph(std::move(chain_gph), false, LogDir() + "/model_load_");
 }
 
 void MdLoadTaskGraph::InitFaker2Mccoy(

@@ -36,21 +36,25 @@ std::vector<CompTaskNode*> TaskGraph::SortedCompTasksInChain(
 
 void TaskGraph::BuildFromChainGph(
     std::unique_ptr<ChainGraph>&& chain_gph,
-    bool need_bp) {
-  stage_gph_.reset(new StageGraph(std::move(chain_gph)));
-  BuildFromStageGph(need_bp);
+    bool need_bp,
+    const std::string& dot_filepath_prefix) {
+  stage_gph_.reset(new StageGraph(std::move(chain_gph),
+                   dot_filepath_prefix + "stage_graph.dot"));
+  BuildFromStageGph(need_bp, dot_filepath_prefix);
 }
 
-void TaskGraph::BuildFromStageGph(bool need_bp) {
+void TaskGraph::BuildFromStageGph(bool need_bp,
+                                  const std::string& dot_filepath_prefix) {
   LOG(INFO) << "Build FwTaskGraph...";
   Stage2TaskNodesMap stage2task_nodes;
   InitCompTaskNodes(&stage2task_nodes);
   InitBoxingTaskNodes(&stage2task_nodes);
   ConnectBoxingTaskNodes(&stage2task_nodes);
   UpdateSourceAndSink();
-  ToDotFile(LogDir() + "/fw_task_graph.dot");
+  ToDotFile(dot_filepath_prefix + "fw_task_graph.dot");
   if (need_bp) {
     BuildBpStruct();
+    ToDotFile(dot_filepath_prefix + "bp_task_graph.dot");
   }
 }
 
@@ -234,7 +238,6 @@ void TaskGraph::BuildBpStruct() {
   GenerateRelatedBpNodes(&loss_node_vec);
   BackwardConnect(loss_node_vec);
   UpdateSourceAndSink();
-  ToDotFile(LogDir() + "/bp_task_graph.dot");
 }
 
 void TaskGraph::GenerateRelatedBpNodes(

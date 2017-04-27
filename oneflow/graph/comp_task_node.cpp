@@ -1,6 +1,6 @@
 #include "graph/comp_task_node.h"
 #include "graph/task_graph.h"
-#include "operator/operator_factory.h"
+#include "operator/operator_manager.h"
 #include "operator/clone_op.h"
 
 namespace oneflow {
