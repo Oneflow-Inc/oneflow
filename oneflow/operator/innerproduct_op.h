@@ -15,10 +15,10 @@ class InnerProductOp final : public UserOperator {
   std::string GetValueFromPbOpConf(const std::string& k) const override;
   
   void InferShape4ObAndDtbFromIb() const override { TODO(); }
-  void InferShape4Mtb(ParallelPolicy, uint64_t parallel_id) const override {
+  void InferShape4ModelTmpBlob(ParallelPolicy, uint64_t parallel_id) const override {
     TODO();
   }
-  void InferShape4Mdb(ParallelPolicy, uint64_t parallel_id) const override {
+  void InferShape4ModelDiffBlob(ParallelPolicy, uint64_t parallel_id) const override {
     TODO();
   }
 

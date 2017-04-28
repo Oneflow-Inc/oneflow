@@ -158,7 +158,7 @@ void CompTaskNode::FwSetModelTmpRegstDesc() {
       node->op()->SetShapePtr(mtbn, ptr);
       node->BindBnInOpAndRegst(mtbn, model_tmp_regst);
     }
-    node->op()->InferShape4Mtb(chain_node()->parallel_desc()->policy(),
+    node->op()->InferShape4ModelTmpBlob(chain_node()->parallel_desc()->policy(),
                                parallel_id());
   }
 }
@@ -264,7 +264,7 @@ void CompTaskNode::BpSetModelDiffRegst() {
       cur_node->op()->SetShapePtr(mdbn, ptr);
       cur_node->BindBnInOpAndRegst(mdbn, model_diff_regst);
     }
-    cur_node->op()->InferShape4Mdb(chain_node()->parallel_desc()->policy(),
+    cur_node->op()->InferShape4ModelDiffBlob(chain_node()->parallel_desc()->policy(),
                                    parallel_id());
   }
 }
