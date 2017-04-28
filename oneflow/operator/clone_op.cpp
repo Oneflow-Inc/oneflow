@@ -16,6 +16,14 @@ std::string CloneOp::GetValueFromPbOpConf(const std::string& k) const {
   return GetValueFromPbMessage(op_conf().clone_conf(), k);
 }
 
+void CloneOp::InferShape4ObAndDtbFromIb() const {
+  Shape* input_shape_ptr = GetShapePtr(SoleIbn());
+  const std::vector<int64_t>& input_dim_vec = input_shape_ptr->dim_vec();
+  for(std::string obn : output_bns()){
+    *GetShapePtr(obn) = Shape(input_dim_vec);
+  }
+}
+
 REGISTER_OP(OperatorConf::kCloneConf, CloneOp);
 
 } // namespace oneflow

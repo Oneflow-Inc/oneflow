@@ -12,7 +12,7 @@ class Shape final {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(Shape);
   Shape() : elem_cnt_(0) {}
-  Shape(const std::vector<int64_t>& dim_vec);
+  explicit Shape(const std::vector<int64_t>& dim_vec);
   Shape(const ShapeProto& shape_proto);
   ~Shape() = default;
   
