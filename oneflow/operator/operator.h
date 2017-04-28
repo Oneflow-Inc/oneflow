@@ -81,7 +81,7 @@ class Operator {
   virtual void InferShape4ModelTmpBlob(ParallelPolicy policy,
                                        uint64_t parallel_id) const = 0;
   virtual void InferShape4ModelDiffBlob(ParallelPolicy policy,
-                                       uint64_t parallel_id) const = 0;
+                                        uint64_t parallel_id) const = 0;
 
  protected:
   OperatorConf& mut_op_conf() {
