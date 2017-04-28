@@ -2,7 +2,26 @@
 
 namespace oneflow {
 
-RdmaManager::RdmaManager() {}
+namespace {
+
+sockaddr_in GetAddress(const char* addr, int port) {
+  sockaddr_in sock = sockaddr_in();
+  std::memset(&sock, 0, sizeof(sockaddr_in));
+  inet_pton(AF_INET, addr, &sock.sin_addr);
+  sock.sin_family = AF_INET;
+  sock.sin_port = htons(static_cast<u_short>(port));
+  return sock;
+}
+
+} // namespace 
+
+RdmaManager::RdmaManager(const char* addr, int port) {  
+  my_sock_ = GetAddress(addr, port);
+  adapter_ = NULL;
+  listener_ = NULL;
+  send_cq_ = NULL;
+  recv_cq_ = NULL;
+}
 
 RdmaManager::~RdmaManager() {
   Destroy();
@@ -13,24 +32,27 @@ bool RdmaManager::Init() {
 }
 
 bool RdmaManager::InitAdapter() {
+  // NdspiV2Open
   HRESULT hr = NdStartup();
-
-  hr = NdOpenV2Adapter(reinterpret_cast<const sockaddr*>(&sin), 
-                       sizeof(sin), 
+  // CHECK hr
+  hr = NdOpenV2Adapter(reinterpret_cast<const sockaddr*>(&my_sock_), 
+                       sizeof(my_sock_),
                        &adapter_);
-  // CHECK
+  // CHECK hr
 
   hr = adapter_->CreateOverlappedFile(&overlapped_file_);
-  // CHECK
+  // CHECK hr
   
   uint64_t info_size = sizeof(adapter_info_);
   adapter_info.InfoVersion = ND_VERSION_2;
   hr = adapter_->Query(&adapter_info_, &info_size);
-  // CHECK
+  // CHECK hr
   return true;
 }
 
 bool RdmaManager::InitEnv() {
+
+  // Create Send Completion Queue and Recv Completion Queue
   HRESULT hr;
   hr = adapter_->CreateCompletionQueue(
       IID_IND2CompletionQueue,
@@ -50,16 +72,15 @@ bool RdmaManager::InitEnv() {
       reinterpret_cast<void**>(&recv_cq_));
   // CHECK(!FAILED(hr)) << "Failed to create recv completion queue\n";
 
+  // StartListen
   hr = adapter_->CreateListener(
       IID_IND2Listener,
       overlapped_file_,
       reinterpret_cast<void**>(&listener_));
   // CHECK(!FAILED(hr)) << "Failed to create listener\n";
 
-  sockaddr_in my_sock = sin;
-
   hr = listener_->Bind(
-      reinterpret_cast<const sockaddr*>(&my_sock),
+      reinterpret_cast<const sockaddr*>(&my_sock_),
       sizeof(sockaddr_in));
   // CHECK(!FAILED(hr)) << "Failed to bind\n";
 
@@ -73,14 +94,10 @@ bool RdmaManager::InitEnv() {
 }
 
 bool RdmaManager::Destroy() {
-  delete adapter_;
-  delete adapter_info_;
-  delete sin;
-  delete overlapped_file_;
-  delete listener_;
-  delete send_cq_;
-  delete recv_cq_;
-
+  send_cq_->Release();
+  recv_cq_->Release();
+  listener_->Release();
+  adapter_->Release();
   return true;
 }
 
