@@ -11,9 +11,7 @@ TEST(CloneOp, clone_4x3_3_times) {
   op_conf.mutable_clone_conf()->set_lbn("clone_test_lbn");
   auto clone_op = OpMgr::Singleton().ConstructOp(op_conf);
 
-  std::vector<int64_t> shape_vec;
-  shape_vec.push_back(4);
-  shape_vec.push_back(3);
+  std::vector<int64_t> shape_vec = {4, 3};
   clone_op->SetShapePtr(clone_op->SoleIbn(), new Shape(shape_vec));
   for(std::string obn : clone_op->output_bns()){
     clone_op->SetShapePtr(obn, new Shape);

@@ -18,9 +18,9 @@ std::string CloneOp::GetValueFromPbOpConf(const std::string& k) const {
 
 void CloneOp::InferShape4ObAndDtbFromIb() const {
   Shape* input_shape_ptr = GetShapePtr(SoleIbn());
-  std::vector<int64_t> input_dim_vec = input_shape_ptr->dim_vec();
+  const std::vector<int64_t>& input_dim_vec = input_shape_ptr->dim_vec();
   for(std::string obn : output_bns()){
-    *GetShapePtr(obn) = input_dim_vec;
+    *GetShapePtr(obn) = Shape(input_dim_vec);
   }
 }
 
