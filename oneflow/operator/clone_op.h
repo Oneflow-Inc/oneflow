@@ -14,7 +14,7 @@ class CloneOp final : public SysOperator {
   bool IsElemWise() const override { return true; }
 
   void InitFromOpConf(const OperatorConf& op_conf) override;
-  void InferShape4ObAndDtbFromIb() const override { TODO(); }
+  void InferShape4ObAndDtbFromIb() const override;
   std::string GetValueFromPbOpConf(const std::string& k) const override;
   
   std::string normal_ibn2lbn(const std::string& input_bn) const override {
