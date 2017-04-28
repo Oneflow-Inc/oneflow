@@ -1,6 +1,8 @@
 syntax = "proto3";
 package oneflow;
 
+import "common/shape.proto";
+
 message ConstantFillerConf {
   float value = 1;
 }
@@ -100,12 +102,15 @@ message InnerProductOpConf {
   // If transpose == true, any operations will be performed on the transpose
   // of the weight matrix. The weight matrix itself is not going to be transposed
   // but rather the transfer flag of operations will be toggled accordingly.
-  bool transpose = 8;
+  bool need_transpose = 8;
 }
 
 message DataLoaderOpConf {
   string data = 1;
-  string label = 2;
+  ShapeProto data_shape = 2;
+  string label = 3;
+  ShapeProto label_shape = 4;
+  uint32 batch_size = 5;
 }
 
 message PoolingOpConf {
