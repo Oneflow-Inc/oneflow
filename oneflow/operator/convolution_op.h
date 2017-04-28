@@ -14,10 +14,12 @@ class ConvolutionOp final : public UserOperator {
   void InitFromOpConf(const OperatorConf& op_conf) override;
   void InferShape4ObAndDtbFromIb() const override { TODO(); }
   std::string GetValueFromPbOpConf(const std::string& k) const override;
-  void InferShape4Mtb(ParallelPolicy, uint64_t parallel_id) const override {
+  void InferShape4ModelTmpBlob(ParallelPolicy policy,
+                               uint64_t parallel_id) const override {
     TODO();
   }
-  void InferShape4Mdb(ParallelPolicy, uint64_t parallel_id) const override {
+  void InferShape4ModelDiffBlob(ParallelPolicy policy,
+                                uint64_t parallel_id) const override {
     TODO();
   }
 

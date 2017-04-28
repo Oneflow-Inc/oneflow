@@ -78,8 +78,10 @@ class Operator {
   void SetShapePtr(const std::string& bn_in_op, Shape* ptr) const;
   void SetNull4AllShapePtr() const;
   virtual void InferShape4ObAndDtbFromIb() const = 0;
-  virtual void InferShape4Mtb(ParallelPolicy, uint64_t parallel_id) const = 0;
-  virtual void InferShape4Mdb(ParallelPolicy, uint64_t parallel_id) const = 0;
+  virtual void InferShape4ModelTmpBlob(ParallelPolicy policy,
+                                       uint64_t parallel_id) const = 0;
+  virtual void InferShape4ModelDiffBlob(ParallelPolicy policy,
+                                        uint64_t parallel_id) const = 0;
 
  protected:
   OperatorConf& mut_op_conf() {
@@ -153,10 +155,12 @@ class SysOperator : public Operator {
 
   #undef SET_UNEXPECTED
   
-  void InferShape4Mtb(ParallelPolicy, uint64_t parallel_id) const override {
+  void InferShape4ModelTmpBlob(ParallelPolicy policy,
+                               uint64_t parallel_id) const override {
     UNEXPECTED_RUN();
   }
-  void InferShape4Mdb(ParallelPolicy, uint64_t parallel_id) const override {
+  void InferShape4ModelDiffBlob(ParallelPolicy policy,
+                                uint64_t parallel_id) const override {
     UNEXPECTED_RUN();
   }
 
