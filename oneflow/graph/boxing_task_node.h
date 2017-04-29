@@ -12,7 +12,7 @@ class BoxingTaskNode : public TaskNode {
   virtual ~BoxingTaskNode() = default;
   
   std::string VisualStr() const override {
-    return TaskNode::VisualStr() + "Boxing_" + node_id_str();
+    return TaskNode::VisualStr() + "Boxing";
   }
 
  protected:
@@ -39,8 +39,10 @@ class BoxingTaskNode : public TaskNode {
   virtual void FwVirtualBuild() = 0;
 
  private:
-  void FwBuildExecAndProducedRegsts(TaskGraph*) override;
-  void BpBuildExecAndProducedRegsts(TaskGraph*) override;
+  void FwBuildExecAndEnrollLbn2Regsts(TaskGraph*) override;
+  void FwInferShape4LbnInProducedRegsts(TaskGraph*) override;
+  void BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) override;
+  void BpInferShape4LbnInProducedRegsts(TaskGraph*) override;
   
   void EnrollAllRegstAndBindRelatedEdge();
   

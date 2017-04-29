@@ -29,13 +29,17 @@ class CommNetTaskNode final : public TaskNode {
   }
   
   std::string VisualStr() const override {
-    return TaskNode::VisualStr() + "CommNet_" + node_id_str();
+    return TaskNode::VisualStr() + "CommNet";
   }
 
  private:
-  void BuildExecAndProducedRegstsForNetCopy(TaskGraph*);
-  void FwBuildExecAndProducedRegsts(TaskGraph*) override;
-  void BpBuildExecAndProducedRegsts(TaskGraph*) override;
+  void CommNetBuildExecAndEnrollLbn2Regsts(TaskGraph*);
+  void CommNetInferShape4LbnInProducedRegsts();
+  
+  void FwBuildExecAndEnrollLbn2Regsts(TaskGraph*) override;
+  void FwInferShape4LbnInProducedRegsts(TaskGraph*) override;
+  void BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) override;
+  void BpInferShape4LbnInProducedRegsts(TaskGraph*) override;
 
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return of_make_unique<CommNetTaskNode> ();

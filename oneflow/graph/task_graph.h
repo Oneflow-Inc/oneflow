@@ -17,18 +17,21 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   OF_DISALLOW_COPY_AND_MOVE(TaskGraph);
   virtual ~TaskGraph() = default;
   
+  // Getters
   const StageGraph* stage_gph() const { return stage_gph_.get(); }
   const ChainGraph* chain_gph() const { return stage_gph_->chain_gph(); }
   const HashMap<CompTaskNode*, CompTaskNode*>& faker2mccoy() {
     return faker2mccoy_;
   }
-
-  void BuildExecAndProducedRegsts();
-  
-  typedef void (CompTaskNode::*CompTaskNodeMemFunc)(TaskGraph*);
-  virtual CompTaskNodeMemFunc Func4FwBuildExecAndProducedRegsts() const = 0;
-
   std::vector<CompTaskNode*> SortedCompTasksInChain(const ChainNode*) const;
+
+  // Build Exec And Set Produced Registers
+  void BuildExecAndEnrollLbn2Regsts();
+  void InferShape4LbnInProducedRegsts();
+  
+  using CompTaskNodeMemFunc = void (CompTaskNode::*)(TaskGraph*);
+  virtual CompTaskNodeMemFunc Func4FwBuildExecAndEnrollLbn2Regsts() const = 0;
+  virtual CompTaskNodeMemFunc Func4FwInferShape4LbnInProducedRegsts() const = 0;
 
  protected:
   TaskGraph() = default;

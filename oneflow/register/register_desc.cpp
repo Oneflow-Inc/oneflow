@@ -7,11 +7,19 @@ RegstDesc::RegstDesc() {
   producer_ = nullptr;
 }
 
-void RegstDesc::CopyLbn2ShapeMap(const RegstDesc* rhs) {
+void RegstDesc::CopyLbnFrom(const RegstDesc* rhs) {
+  lbn2shape_.clear();
   for (const auto& pair : rhs->lbn2shape_) {
     const std::string& lbn = pair.first;
-    auto shape = of_make_unique<Shape> (*(pair.second));
+    auto shape = of_make_unique<Shape> ();
     CHECK(lbn2shape_.emplace(lbn, std::move(shape)).second);
+  }
+}
+
+void RegstDesc::CopyShapeFrom(const RegstDesc* rhs) {
+  for (const auto& pair : lbn2shape_) {
+    const std::string& lbn = pair.first;
+    *(lbn2shape_.at(lbn)) = rhs->GetShape(lbn);
   }
 }
 

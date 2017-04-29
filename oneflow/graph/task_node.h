@@ -4,7 +4,7 @@
 #include "task/task.pb.h"
 #include "graph/stage_graph.h"
 #include "graph/exec_graph.h"
-#include "register/register_desc.h"
+#include "register/register_desc_manager.h"
 
 namespace oneflow {
 
@@ -39,7 +39,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   std::unique_ptr<TaskNode> BuildAndConnectBpNode();
   
   //
-  void BuildExecAndProducedRegsts(TaskGraph*);
+  void BuildExecAndEnrollLbn2Regsts(TaskGraph*);
+  void InferShape4LbnInProducedRegsts(TaskGraph*);
   RegstDesc* GetProducedRegstDesc(const std::string& regst_desc_name);
 
   // 
@@ -67,8 +68,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void EnrollProducedRegstDesc(const std::string& regst_desc_name,
                                std::unique_ptr<RegstDesc>&& regst_desc);
 
-  virtual void FwBuildExecAndProducedRegsts(TaskGraph*) { UNEXPECTED_RUN(); }
-  virtual void BpBuildExecAndProducedRegsts(TaskGraph*) { UNEXPECTED_RUN(); }
+  virtual void FwBuildExecAndEnrollLbn2Regsts(TaskGraph*) { UNEXPECTED_RUN(); }
+  virtual void BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) { UNEXPECTED_RUN(); }
+  virtual void FwInferShape4LbnInProducedRegsts(TaskGraph*) { UNEXPECTED_RUN(); }
+  virtual void BpInferShape4LbnInProducedRegsts(TaskGraph*) { UNEXPECTED_RUN(); }
 
  private:
   // In task_gph level

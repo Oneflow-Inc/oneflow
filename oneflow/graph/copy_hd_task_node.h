@@ -23,21 +23,23 @@ class CopyHDTaskNode final : public TaskNode {
   void SetFwInCopy();
   void SetFwOutCopy();
   
-  const std::vector<std::string>& CopiedLbns() const;
-  
   std::string VisualStr() const override {
-    return TaskNode::VisualStr() + "CopyHD_" + node_id_str();
+    return TaskNode::VisualStr() + "CopyHD";
   }
   
  private:
   void InitWithFwNode(TaskNode* fw_node) override;
-
-  void BuildExecAndProducedRegstsForCopy(TaskGraph*);
-  void FwBuildExecAndProducedRegsts(TaskGraph*) override;
-  void BpBuildExecAndProducedRegsts(TaskGraph*) override;
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return of_make_unique<CopyHDTaskNode> ();
   }
+
+  void FwBuildExecAndEnrollLbn2Regsts(TaskGraph*) override;
+  void FwInferShape4LbnInProducedRegsts(TaskGraph*) override;
+  void BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) override;
+  void BpInferShape4LbnInProducedRegsts(TaskGraph*) override;
+
+  void CopyHdBuildExecAndEnrollLbn2Regsts();
+  void CopyHdInferShape4LbnInProducedRegsts();
 
   bool is_fw_in_copy_;
 

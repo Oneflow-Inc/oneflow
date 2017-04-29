@@ -12,55 +12,60 @@ class CompTaskNode : public TaskNode {
   CompTaskNode() = default;
   virtual ~CompTaskNode() = default;
 
+  // Getters and Setters
   uint64_t parallel_id() const { return parallel_id_; }
   void set_parallel_id(uint64_t parallel_id) { parallel_id_ = parallel_id; }
-
   bool IsLossNode() const { return chain_node()->IsLossNode(); }
-
   bool IsFaker() const { return chain_node()->IsFaker(); }
+  std::string VisualStr() const override;
 
-  void DataFwBuildExecAndProducedRegsts(TaskGraph*);
-  void MdUpdtFwBuildExecAndProducedRegsts(TaskGraph*);
-  void MdLoadFwBuildExecAndProducedRegsts(TaskGraph*);
-  void MdSaveFwBuildExecAndProducedRegsts(TaskGraph*);
+  // Build Exec and Set Produced Regsts
+  void DataFwBuildExecAndEnrollLbn2Regsts(TaskGraph*);
+  void DataFwInferShape4LbnInProducedRegsts(TaskGraph*);
   
-  std::string VisualStr() const override {
-    std::stringstream ss;
-    ss << TaskNode::VisualStr() 
-       << "Compute_" << node_id_str() << ":"
-       << stage_node()->machine_id_str() << ":"
-       << thrd_loc_id_str() << "\\n"
-       << chain_node()->VisualStr();
-    return ss.str();
-  }
+  void MdUpdtFwBuildExecAndEnrollLbn2Regsts(TaskGraph*);
+  void MdUpdtFwInferShape4LbnInProducedRegsts(TaskGraph*);
+  
+  void MdLoadFwBuildExecAndEnrollLbn2Regsts(TaskGraph*);
+  void MdLoadFwInferShape4LbnInProducedRegsts(TaskGraph*);
+  
+  void MdSaveFwBuildExecAndEnrollLbn2Regsts(TaskGraph*);
+  void MdSaveFwInferShape4LbnInProducedRegsts(TaskGraph*);
 
  protected:
   virtual void InitWithFwNode(TaskNode* fw_node) override {
     TaskNode::InitWithFwNode(fw_node);
+    parallel_id_ = of_dynamic_cast<CompTaskNode*> (fw_node)->parallel_id_;
   }
 
  private:
   using Lbn2NodeBnMap =
       HashMap<std::string, std::pair<ExecNode*, std::string>>;
 
-  void FwBuildExecAndProducedRegsts(TaskGraph*) override;
+  void FwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) override {
+    (this->*(gph->Func4FwBuildExecAndEnrollLbn2Regsts()))(gph);
+  }
+  void FwInferShape4LbnInProducedRegsts(TaskGraph* gph) override {
+    (this->*(gph->Func4FwInferShape4LbnInProducedRegsts()))(gph);
+  }
   void FwBuildFromUserOps(
       Lbn2NodeBnMap* lbn2producer,
       Lbn2NodeBnMap* extern_in_lbn2consumer);
-  void FwSetDataRegstDesc(
-      const Lbn2NodeBnMap& lbn2producer,
+  void FwSetExecNodeFromInRegst(
       const Lbn2NodeBnMap& extern_in_lbn2consumer);
-  void FwSetModelTmpRegstDesc();
+  void FwEnrollLbn2OutRegst(const Lbn2NodeBnMap& lbn2producer);
+  void FwEnrollLbn2ActivationRegst();
+  void FwEnrollLbn2TmpRegsts();
 
-  void BpBuildExecAndProducedRegsts(TaskGraph*) override;
+  void BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) override;
+  void BpInferShape4LbnInProducedRegsts(TaskGraph*) override;
   void BpBuildExecGraph(
       const ExecGraph& fw_gph,
       HashMap<const ExecNode*, ExecNode*>* fw_node2bp_node,
       HashMap<ExecEdge*, const ExecEdge*>* bp_edge2fw_edge);
-  void BpSetDataDiffRegst(
+  void BpEnrollLbn2ProducedRegst(
       const HashMap<const ExecNode*, ExecNode*>& fw_node2bp_node,
       const HashMap<ExecEdge*, const ExecEdge*>& bp_edge2fw_edge);
-  void BpSetModelDiffRegst();
 
   uint64_t parallel_id_;
 

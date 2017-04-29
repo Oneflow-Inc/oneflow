@@ -8,28 +8,28 @@ namespace oneflow {
 namespace {
 
 void FwCompleteBoxOpConfDataData(BoxingOpConf* conf) {
-  conf->mutable_concat_box()->set_axis(0);
-  conf->mutable_split_box()->set_axis(0);
+  conf->mutable_concat_box()->set_type(BoxConcatConf::kData);
+  conf->mutable_data_split_box();
 }
 
 void FwCompleteBoxOpConfDataModel(BoxingOpConf* conf) {
-  conf->mutable_concat_box()->set_axis(0);
+  conf->mutable_concat_box()->set_type(BoxConcatConf::kData);
   conf->mutable_clone_box();
 }
 
 void FwCompleteBoxOpConfModelData(BoxingOpConf* conf) {
-  conf->mutable_concat_box()->set_axis(1);
-  conf->mutable_split_box()->set_axis(0);
+  conf->mutable_concat_box()->set_type(BoxConcatConf::kModel);
+  conf->mutable_data_split_box();
 }
 
 void FwCompleteBoxOpConfModelModel(BoxingOpConf* conf) {
-  conf->mutable_concat_box()->set_axis(1);
+  conf->mutable_concat_box()->set_type(BoxConcatConf::kModel);
   conf->mutable_clone_box();
 }
 
 } // namespace
 
-void BoxingTaskNode::FwBuildExecAndProducedRegsts(TaskGraph* gph) {
+void BoxingTaskNode::FwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   EnrollAllRegstAndBindRelatedEdge();
   FwVirtualBuild();
 }
@@ -37,11 +37,11 @@ void BoxingTaskNode::FwBuildExecAndProducedRegsts(TaskGraph* gph) {
 void BoxingTaskNode::EnrollAllRegstAndBindRelatedEdge() {
   for (TaskEdge* edge : out_edges()) {
     std::string name = "boxing_out_" + edge->edge_id_str();
-    auto regst_desc = of_make_unique<DisContigRegstDesc> ();
+    auto regst_desc = RegstDescMgr::Singleton().CreateRegisterDesc();
     BindProducedRegstAndOutEdge(regst_desc.get(), edge);
     EnrollProducedRegstDesc(name, std::move(regst_desc));
   }
-  auto regst_desc = of_make_unique<DisContigRegstDesc> ();
+  auto regst_desc = RegstDescMgr::Singleton().CreateRegisterDesc();
   EnrollProducedRegstDesc("middle", std::move(regst_desc));
 }
 
@@ -133,7 +133,7 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
       const std::string& ibn = node->op()->input_bns().at(i);
       std::string lbn = node->op()->ibn2lbn(ibn);
       Shape* ptr = in_regst->GetMutShapePtr(lbn);
-      node->op()->SetShapePtr(ibn, ptr);
+      node->BindBnInOpAndShapePtr(ibn, ptr);
       node->BindBnInOpAndRegst(ibn, in_regst);
     }
     // obn
@@ -142,16 +142,22 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
       const std::string& obn = node->op()->output_bns().at(i);
       std::string lbn = node->op()->obn2lbn(obn);
       Shape* ptr = out_regst->EnrollLbn(lbn);
-      node->op()->SetShapePtr(obn, ptr);
+      node->BindBnInOpAndShapePtr(obn, ptr);
       node->BindBnInOpAndRegst(obn, out_regst);
     }
     // dtbn
     for (const std::string& dtbn : node->op()->data_tmp_bns()) {
       std::string lbn = node->op()->dtbn2lbn(dtbn);
       Shape* ptr = middle_regst->EnrollLbn(lbn);
-      node->op()->SetShapePtr(dtbn, ptr);
+      node->BindBnInOpAndShapePtr(dtbn, ptr);
+      node->BindBnInOpAndRegst(dtbn, middle_regst);
     }
-    node->op()->InferShape4ObAndDtbFromIb();
+  }
+}
+
+void BoxingTaskNode::FwInferShape4LbnInProducedRegsts(TaskGraph*) {
+  for (const auto& exec_node : exec_gph().nodes()) {
+    exec_node->op()->InferShape4ObAndDtbFromIb(exec_node->BnInOp2ShapePtr());
   }
 }
 
@@ -165,10 +171,9 @@ inline RegstDesc* GetBpRegstFromFwRegst(RegstDesc* fw_regst) {
 
 }
 
-void BoxingTaskNode::BpBuildExecAndProducedRegsts(TaskGraph*) {
+void BoxingTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   EnrollAllRegstAndBindRelatedEdge();
   const ExecGraph& fw_exec_gph = GetFwNode()->exec_gph();
-  HashMap<const ExecNode*, ExecNode*> fw_node2bp_node;
   for (const std::unique_ptr<ExecNode>& fw_node: fw_exec_gph.nodes()) {
     ExecNode* bp_node = mut_exec_gph().NewNode();
     bp_node->mut_op() = fw_node->op();
@@ -178,8 +183,7 @@ void BoxingTaskNode::BpBuildExecAndProducedRegsts(TaskGraph*) {
       std::string lbn = fw_node->op()->ibn2lbn(ibn);
       RegstDesc* in_regst = fw_node->GetRegstFromBnInOp(ibn);
       RegstDesc* in_diff_regst = GetBpRegstFromFwRegst(in_regst);
-      Shape* in_diff_shape_ptr = in_diff_regst->EnrollLbn(lbn);
-      *in_diff_shape_ptr = in_regst->GetShape(lbn);
+      in_diff_regst->EnrollLbn(lbn);
       bp_node->BindBnInOpAndRegst(idbn, in_diff_regst);
     }
     // out_diff
@@ -195,12 +199,22 @@ void BoxingTaskNode::BpBuildExecAndProducedRegsts(TaskGraph*) {
       std::string lbn = fw_node->op()->dtbn2lbn(dtbn);
       RegstDesc* fw_middle_regst = GetFwNode()->GetProducedRegstDesc("middle");
       RegstDesc* bp_middle_regst = GetProducedRegstDesc("middle");
-      Shape* ptr = bp_middle_regst->EnrollLbn(lbn);
-      *ptr = fw_middle_regst->GetShape(lbn);
+      bp_middle_regst->EnrollLbn(lbn);
       bp_node->BindBnInOpAndRegst(dtbn, bp_middle_regst);
     }
   }
   mut_exec_gph().UpdateSourceAndSink();
+}
+  
+void BoxingTaskNode::BpInferShape4LbnInProducedRegsts(TaskGraph*) {
+  for (TaskEdge* fw_in_edge : GetFwNode()->in_edges()) {
+    RegstDesc* in_regst = GetRelatedRegst(fw_in_edge);
+    RegstDesc* in_diff_regst = GetBpRegstFromFwRegst(in_regst);
+    in_diff_regst->CopyShapeFrom(in_regst);
+  }
+  RegstDesc* fw_middle_regst = GetFwNode()->GetProducedRegstDesc("middle");
+  RegstDesc* bp_middle_regst = GetProducedRegstDesc("middle");
+  bp_middle_regst->CopyShapeFrom(fw_middle_regst);
 }
 
 } // namespace oneflow

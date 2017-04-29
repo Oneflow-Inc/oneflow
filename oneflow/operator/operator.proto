@@ -1,11 +1,7 @@
 syntax = "proto3";
 package oneflow;
-import "operator/op_conf.proto";
 
-message CopyOpProto {
-  map<string, string> ibn2lbn = 1;
-  map<string, string> obn2lbn = 2;
-}
+import "operator/op_conf.proto";
 
 message OperatorProto {
   OperatorConf user_conf = 1;
@@ -22,6 +18,5 @@ message OperatorProto {
   repeated string model_tmp_bns = 11;
   
   oneof specified_op_proto {
-    CopyOpProto copy_op = 100;
   }
 }

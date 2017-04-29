@@ -11,11 +11,11 @@ namespace oneflow {
 
 class TaskNode;
 
-class RegstDesc {
+class RegstDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RegstDesc);
   RegstDesc();
-  virtual ~RegstDesc() = default;
+  ~RegstDesc() = default;
 
   // regst_desc_id
   uint64_t regst_desc_id() const { return regst_desc_id_; }
@@ -25,7 +25,8 @@ class RegstDesc {
   void SetProducer(const TaskNode* task_node) { producer_ = task_node; }
 
   // Lbn and Shape
-  void CopyLbn2ShapeMap(const RegstDesc*);
+  void CopyLbnFrom(const RegstDesc*);
+  void CopyShapeFrom(const RegstDesc*);
   Shape* EnrollLbn(const std::string& lbn);
   const Shape& GetShape(const std::string& lbn);
   Shape* GetMutShapePtr(const std::string& lbn);
@@ -38,24 +39,6 @@ class RegstDesc {
   
   HashMap<std::string, std::unique_ptr<Shape>> lbn2shape_;
 
-};
-
-class ContigRegstDesc final : public RegstDesc {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(ContigRegstDesc);
-  ContigRegstDesc() = default;
-  ~ContigRegstDesc() = default;
-
- private:
-
-};
-
-class DisContigRegstDesc final : public RegstDesc {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(DisContigRegstDesc);
-  DisContigRegstDesc() = default;
-  ~DisContigRegstDesc() = default;
-  
 };
 
 } // namespace oneflow

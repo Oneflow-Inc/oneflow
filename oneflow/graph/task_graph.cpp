@@ -16,9 +16,15 @@ inline void TaskConnect(TaskNode* src_node,
 
 }
 
-void TaskGraph::BuildExecAndProducedRegsts() {
+void TaskGraph::BuildExecAndEnrollLbn2Regsts() {
   for (TaskNode& node : *this) {
-    node.BuildExecAndProducedRegsts(this);
+    node.BuildExecAndEnrollLbn2Regsts(this);
+  }
+}
+
+void TaskGraph::InferShape4LbnInProducedRegsts() {
+  for (TaskNode& node : *this) {
+    node.InferShape4LbnInProducedRegsts(this);
   }
 }
 

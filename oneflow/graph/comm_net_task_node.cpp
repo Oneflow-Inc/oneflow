@@ -4,11 +4,11 @@
 
 namespace oneflow {
 
-void CommNetTaskNode::BuildExecAndProducedRegstsForNetCopy(TaskGraph* gph){
-  auto out_regst = of_make_unique<DisContigRegstDesc> ();
+void CommNetTaskNode::CommNetBuildExecAndEnrollLbn2Regsts() {
+  auto out_regst = RegstDescMgr::Singleton().CreateRegisterDesc();
   BindProducedRegstAndOutEdge(out_regst.get(), SoleOutEdge());
   RegstDesc* in_regst = GetRelatedRegst(SoleInEdge());
-  out_regst->CopyLbn2ShapeMap(in_regst);
+  out_regst->CopyLbnFrom(in_regst);
 
   OperatorConf op_conf;
   op_conf.set_name("comm_net_" + NewUniqueId());
@@ -22,15 +22,29 @@ void CommNetTaskNode::BuildExecAndProducedRegstsForNetCopy(TaskGraph* gph){
   node->BindBnInOpAndRegst(node->op()->SoleObn(), out_regst.get());
   
   mut_exec_gph().UpdateSourceAndSink();
-  EnrollProducedRegstDesc("comm_net", std::move(out_regst));
+  EnrollProducedRegstDesc("out", std::move(out_regst));
 }
 
-void CommNetTaskNode::FwBuildExecAndProducedRegsts(TaskGraph* gph) {
-  BuildExecAndProducedRegstsForNetCopy(gph);
+void CommNetTaskNode::CommNetInferShape4LbnInProducedRegsts() {
+  RegstDesc* in_regst = GetRelatedRegst(SoleInEdge());
+  RegstDesc* out_regst = GetRelatedRegst(SoleOutEdge());
+  out_regst->CopyShapeFrom(in_regst);
 }
 
-void CommNetTaskNode::BpBuildExecAndProducedRegsts(TaskGraph* gph) {
-  BuildExecAndProducedRegstsForNetCopy(gph);
+void FwBuildExecAndEnrollLbn2Regsts(TaskGraph*) override {
+  return CommNetBuildExecAndEnrollLbn2Regsts();
+}
+
+void FwInferShape4LbnInProducedRegsts(TaskGraph*) override {
+  return CommNetInferShape4LbnInProducedRegsts();
+}
+
+void BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) override {
+  return CommNetBuildExecAndEnrollLbn2Regsts();
+}
+
+void BpInferShape4LbnInProducedRegsts(TaskGraph*) override {
+  return CommNetInferShape4LbnInProducedRegsts();
 }
 
 } // namespace oneflow

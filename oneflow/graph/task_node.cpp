@@ -40,11 +40,19 @@ std::unique_ptr<TaskNode> TaskNode::BuildAndConnectBpNode() {
   return bp_node;
 }
 
-void TaskNode::BuildExecAndProducedRegsts(TaskGraph* gph) {
+void TaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   if (IsFwNode()) {
-    FwBuildExecAndProducedRegsts(gph);
+    FwBuildExecAndEnrollLbn2Regsts(gph);
   } else {
-    BpBuildExecAndProducedRegsts(gph);
+    BpBuildExecAndEnrollLbn2Regsts(gph);
+  }
+}
+
+void TaskNode::InferShape4LbnInProducedRegsts(TaskGraph* gph) {
+  if (IsFwNode()) {
+    FwInferShape4LbnInProducedRegsts();
+  } else {
+    BpInferShape4LbnInProducedRegsts();
   }
 }
 
