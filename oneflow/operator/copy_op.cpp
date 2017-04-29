@@ -34,6 +34,15 @@ OperatorProto CopyOp::ToOperatorProto() {
   return operatorproto;
 }
 
+void CopyOp::InferShape4ObAndDtbFromIb() const {
+  CHECK_EQ(output_bns().size(), input_bns().size());
+  for(int i = 0;i < output_bns().size();i ++){
+    std::string obn = output_bns().at(i);
+    std::string ibn = input_bns().at(i);
+    *GetShapePtr(obn) = *GetShapePtr(ibn);
+  }
+}
+
 REGISTER_OP(OperatorConf::kCopyConf, CopyOp);
 
 } // namespace oneflow
