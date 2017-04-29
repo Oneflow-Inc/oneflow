@@ -19,9 +19,13 @@ class MultinomialLogisticLossOp : public UserOperator {
   
   void InferShape4ObAndDtbFromIb() const override;
   void InferShape4ModelTmpBlob(ParallelPolicy policy,
-      uint64_t parallel_id) const override;
+      uint64_t parallel_id) const override {
+    UNEXPECTED_RUN();
+  }
   void InferShape4ModelDiffBlob(ParallelPolicy policy, 
-      uint64_t parallel_id) const override;
+      uint64_t parallel_id) const override {
+    UNEXPECTED_RUN();
+  }
 
  private:
 

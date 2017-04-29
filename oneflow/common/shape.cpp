@@ -44,4 +44,9 @@ void Shape::UpdateElemCnt() {
   }
 }
 
+std::ostream& operator<< (std::ostream& out, const Shape& shape){
+  out << shape.ToString();
+  return out;
+}
+
 } // namespace oneflow
