@@ -22,8 +22,8 @@ void ConcatOp::InferShape4ObAndDtbFromIb() const {
   std::vector<int64_t> vec = GetShapePtr(input_bns().at(0))->dim_vec();
   int axis = op_conf().concat_conf().axis();
   for (int i = 1; i < input_bns().size(); ++i) {
-    Shape* in_shape_tmp = GetShapePtr(input_bns()[i]);
-    for (int j = 0; j < in_shape_tmp->NumAxes(); ++j) {
+    Shape* in_shape_tmp = GetShapePtr(input_bns().at(i));
+    for (int64_t j = 0; j < in_shape_tmp->NumAxes(); ++j) {
       if (j == axis) {
         vec[j] += in_shape_tmp->At(j);
       } else {

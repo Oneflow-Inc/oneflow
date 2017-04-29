@@ -22,7 +22,7 @@ TEST(SoftmaxOp, softmax_3x4x5) {
   Shape* output_shape_ptr = softmax_op->GetShapePtr(softmax_op->SoleObn());
   
   ASSERT_EQ(output_shape_ptr->NumAxes(), input_shape_ptr->NumAxes() - 1);
-  for (int i = 0; i < input_shape_ptr->NumAxes(); ++i) {
+  for (int64_t i = 0; i < input_shape_ptr->NumAxes(); ++i) {
     if (i == 1) continue;
     ASSERT_EQ(output_shape_ptr->At(i > 1 ? i - 1 : i), input_shape_ptr->At(i));
   }
