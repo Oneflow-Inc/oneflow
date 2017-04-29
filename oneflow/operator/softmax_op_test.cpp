@@ -21,10 +21,10 @@ TEST(SoftmaxOp, softmax_3x4x5) {
   Shape* input_shape_ptr = softmax_op->GetShapePtr(softmax_op->SoleIbn());
   Shape* output_shape_ptr = softmax_op->GetShapePtr(softmax_op->SoleObn());
   
-  ASSERT_TRUE(output_shape_ptr->NumAxes() == input_shape_ptr->NumAxes() - 1);
+  ASSERT_EQ(output_shape_ptr->NumAxes(), input_shape_ptr->NumAxes() - 1);
   for (int i = 0; i < input_shape_ptr->NumAxes(); ++i) {
     if (i == 1) continue;
-    ASSERT_TRUE(output_shape_ptr->At(i>1?i-1:i) == input_shape_ptr->At(i));
+    ASSERT_EQ(output_shape_ptr->At(i>1?i-1:i), input_shape_ptr->At(i));
   }
 }
 
