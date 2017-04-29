@@ -17,19 +17,27 @@ public:
   Connection(uint64_t peer_machine_id);
 
 private:
-  uint64_t peer_machine_id_ = { -1 };
+  uint64_t peer_machine_id_{ -1 };
 
   IND2Connector* connector_;
   IND2QueuePair* queue_pair_;
   OVERLAPPED ov_;
 
-  //map peer_rank to id
+  // prepare for connect
+  // set up parameters
+  void BuildContext();
+  void BuildParams();
 
-  //void BuildConnection();
-  //void BuildContext();
-  //void BuildParams();
-  ///
-  //
+  // connect to and connected
+  void TryConnectTo();
+  void CompleteConnectionTo();
+  void WaitForConnection();
+
+  //void PostRecvRequest(); TODO(shiyuan) Not necessarily at this level
+
+  // destroy connect
+  void DestroyConnection();
+
 };
 
 } // namespace oneflow
