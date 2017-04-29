@@ -93,6 +93,51 @@ bool RdmaManager::InitEnv() {
   return true;
 }
 
+bool RdmaManager::CreateConnector(Connection* conn) {
+  return adapter_->CreateConnector(
+      IID_IND2Connector,
+      overlapped_file_,
+      reinterpret_cast<void**>(&conn->connector));
+}
+
+bool RdmaManager::CreateQueuePair(Connection* conn) {
+  return adapter_->CreateQueuePair(
+      IID_IND2Connector,
+      recv_cq_,
+      send_cq_,
+      NULL,
+      // just all set them as maximum value, need to be set
+      // according to our application protocal carefully.
+      adapter_info_.MaxRecvQueueDepth,
+      adapter_info_.MaxSendQueueDepth,
+      1, // adapter_info_.MaxRecvSge,
+      adapter_info_.MaxSendSge,
+      adapter_info_.MaxInlineDataSize,
+      reinterpret_cast<void**>(&conn->queue_pair));
+}
+
+uint64_t RdmaManager::WaitForConnection() {
+  uint64_t peer_machine_id;
+  uint64_t size = sizeof(peer_machine_id);
+  HRESULT hr = listener_->GetConnectionRequest(connector, &ov);
+  if (hr == ND_PENDING) {
+    hr = listener_->GetOverlappedResult(&ov, true);
+  }
+  // CHECK(!FAILED(hr)) << "Failed to GetConnectionRequest\n";
+  // LOG(INFO) << "Get connection request done\n";
+  //
+
+  // Get src rank from the private data
+  hr = connector->GetPrivateData(&peer_machine_id, &size);
+  // LOG(INFO) << "peer_machine_id = " << peer_machine_id << " size = " << size << "\n";
+  // NOTE(feiga): The author of NDSPI says it's normal for this check failed
+  //              So just ignore it.
+  // CHECK(!FAILED(hr)) << "Failed to get private data. hr = " << hr << "\n";
+
+  return peer_machine_id;
+}
+
+
 bool RdmaManager::Destroy() {
   send_cq_->Release();
   recv_cq_->Release();
@@ -100,7 +145,6 @@ bool RdmaManager::Destroy() {
   adapter_->Release();
   return true;
 }
-
 
 } // namespace oneflow
 
