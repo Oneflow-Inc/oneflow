@@ -22,7 +22,7 @@ TEST(ConcatOp, concat_two_3x3) {
   concat_op->InferShape4ObAndDtbFromIb();
 
   Shape* output_shape_ptr = concat_op->GetShapePtr(concat_op->SoleObn());
-  int concat_sum = 0;
+  int64_t concat_sum = 0;
   for(std::string ibn : concat_op->input_bns()) {
     ASSERT_EQ(output_shape_ptr->At(0), concat_op->GetShapePtr(ibn)->At(0));
     concat_sum += concat_op->GetShapePtr(ibn)->At(1);
