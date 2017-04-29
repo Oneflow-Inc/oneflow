@@ -18,4 +18,11 @@ std::string ReluOp::GetValueFromPbOpConf(const std::string& k) const {
 
 REGISTER_OP(OperatorConf::kReluConf, ReluOp);
 
+void ReluOp::InferShape4ObAndDtbFromIb() const {
+  Shape* output_shape_ptr = GetShapePtr(SoleObn());
+  Shape* input_shape_ptr = GetShapePtr(SoleIbn());
+  const std::vector<int64_t>& input_shape_dim_vec = input_shape_ptr->dim_vec();
+  *output_shape_ptr = Shape(input_shape_dim_vec);
+}
+
 } // namespace oneflow
