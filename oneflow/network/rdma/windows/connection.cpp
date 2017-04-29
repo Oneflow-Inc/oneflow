@@ -22,14 +22,16 @@ Connection::~Connection()
 
 }
 
-void Connection::TryConnectTo()
-{
-  HRESULT hr;
-  hr = connector_->Bind(reinterpret_cast<const sockaddr*>(&my_sock), 
-                        sizeof(my_sock));
+bool Connection::Bind() {
+  // TODO(shiyuan) add init of my_sock and peer_sock in Connection::Init
+  return connector_->Bind(reinterpret_cast<const sockaddr*>(&my_sock), 
+      sizeof(my_sock));
   // CHECK(!FAILED(hr)) << "Connector bind failed.\n"
-  
-  hr = connector_->Connect(
+} 
+
+bool Connection::TryConnectTo()
+{
+  HRESULT hr = connector_->Connect(
       queue_pair_,
       reinterpret_cast<const sockaddr*>(&peer_sock),
       sizeof(peer_sock),
@@ -46,8 +48,10 @@ void Connection::TryConnectTo()
 
   if (hr != ND_SUCCESS) {
     // hr = connector_->CleanConnection(peer_rank);
+    return false;
   }
 
+  return true;
 }
 
 void Connection::CompleteConnectionTo()
