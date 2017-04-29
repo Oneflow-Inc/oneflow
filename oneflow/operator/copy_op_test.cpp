@@ -38,8 +38,8 @@ TEST(CopyOp, copy_3_3x4_shape) {
         copy_op->input_bns().at(i));
     Shape* output_shape_ptr = copy_op->GetShapePtr(
         copy_op->output_bns().at(i));
-    ASSERT_TRUE(*input_shape_ptr == *output_shape_ptr);
-    ASSERT_TRUE(input_shape_ptr != output_shape_ptr);
+    ASSERT_EQ(*input_shape_ptr, *output_shape_ptr);
+    ASSERT_NE(input_shape_ptr, output_shape_ptr);
   }
 
 }
