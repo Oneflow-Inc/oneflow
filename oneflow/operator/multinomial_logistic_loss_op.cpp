@@ -20,14 +20,17 @@ std::string MultinomialLogisticLossOp::GetValueFromPbOpConf(
 }
 
 void MultinomialLogisticLossOp::InferShape4ObAndDtbFromIb() const {
-}
+  CHECK_EQ(input_bns().size(), 2);
+  CHECK_EQ(data_tmp_bns().size(), 1);
+  Shape* data_shape_ptr = GetShapePtr(input_bns().at(0));
+  Shape* label_shape_ptr = GetShapePtr(input_bns().at(1));
 
-void MultinomialLogisticLossOp::InferShape4ModelTmpBlob(ParallelPolicy policy,
-    uint64_t parallel_id) const {
-}
+  Shape* loss_shape_ptr = GetShapePtr(SoleObn());
+  Shape* loss_buffer_shape_ptr = GetShapePtr(data_tmp_bns().at(0));
 
-void MultinomialLogisticLossOp::InferShape4ModelDiffBlob(ParallelPolicy policy,
-    uint64_t parallel_id) const {
+  CHECK_EQ(*data_shape_ptr, *label_shape_ptr);
+  *loss_shape_ptr = *data_shape_ptr;
+  *loss_buffer_shape_ptr = *data_shape_ptr;
 }
 
 REGISTER_OP(OperatorConf::kMultinomialLogisticLossConf, 
