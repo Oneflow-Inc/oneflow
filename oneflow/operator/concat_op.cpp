@@ -18,6 +18,25 @@ std::string ConcatOp::GetValueFromPbOpConf(const std::string& k) const {
   return GetValueFromPbMessage(op_conf().concat_conf(), k);
 }
 
+void ConcatOp::InferShape4ObAndDtbFromIb() const {
+  std::vector<int64_t> vec;
+  int axis = op_conf().concat_conf().axis();
+  for (int i = 0; i < input_bns().size(); ++i) {
+    Shape* in_shape_tmp = GetShapePtr(input_bns()[i]);
+    if (i == 0) {
+      vec = in_shape_tmp->dim_vec();
+    } else {
+      for (int j = 0; j < in_shape_tmp->NumAxes(); ++j) {
+        if (j == axis) {
+          vec[j] += in_shape_tmp->At(j);
+        } else {
+          CHECK_EQ(vec[j], in_shape_tmp->At(j));
+        }
+      }
+    }
+  }
+  *GetShapePtr(SoleObn()) = Shape(vec);
+}
 REGISTER_OP(OperatorConf::kConcatConf, ConcatOp);
 
 } // namespace oneflow
