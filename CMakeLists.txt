@@ -78,7 +78,6 @@ include_directories(${oneflow_src_dir})
 include_directories(${PROJECT_BINARY_DIR})
 add_library(of_ccobj ${of_all_obj_cc})
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})
-
 add_dependencies(of_ccobj of_protoobj)
 
 if(APPLE)
