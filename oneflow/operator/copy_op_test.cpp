@@ -14,24 +14,24 @@ TEST(CopyOp, copy_3_3x4_shape) {
   for(std::string lbn : copied_lbns){
     copy_conf->add_copied_lbns(lbn);
   }
-  copy_op = OpMgr::Singleton().ConstructOp(op_conf);
+  auto copy_op = OpMgr::Singleton().ConstructOp(op_conf);
 
   std::vector<int64_t> shape_vec = {3, 4};
-  for(std::string ibn : node->op()->input_bns()){
+  for(std::string ibn : copy_op->input_bns()){
     copy_op->SetShapePtr(ibn, new Shape(shape_vec));
   }
-
   for(std::string obn : copy_op->output_bns()){
-    clone_op->SetShapePtr(obn, new Shape);
+    copy_op->SetShapePtr(obn, new Shape);
   }
-
   copy_op->InferShape4ObAndDtbFromIb();
 
-  for(int i = 0;i < output_bns().size();i ++){
-    Shape* input_shape_ptr = copy_op->GetShapePtr(input_bns().at(i));
-    Shape* output_shape_ptr = copy_op->GetShapePtr(output_bns().at(i));
-    ASSERT_TRUE(*input_shape_ptr == *out_shape_ptr);
-    ASSERT_TRUE(input_shape_ptr != out_shape_ptr);
+  for(int i = 0;i < copy_op->output_bns().size();i ++){
+    Shape* input_shape_ptr = copy_op->GetShapePtr(
+        copy_op->input_bns().at(i));
+    Shape* output_shape_ptr = copy_op->GetShapePtr(
+        copy_op->output_bns().at(i));
+    ASSERT_TRUE(*input_shape_ptr == *output_shape_ptr);
+    ASSERT_TRUE(input_shape_ptr != output_shape_ptr);
   }
 
 }
