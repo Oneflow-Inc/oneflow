@@ -1,6 +1,7 @@
 #include "operator/copy_op.h"
 #include "operator/operator_manager.h"
 #include "gtest/gtest.h"
+#include <random>
 
 namespace oneflow {
 
@@ -16,8 +17,15 @@ TEST(CopyOp, copy_3_3x4_shape) {
   }
   auto copy_op = OpMgr::Singleton().ConstructOp(op_conf);
 
-  std::vector<int64_t> shape_vec = {3, 4};
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<> dis(3, 10);
   for(std::string ibn : copy_op->input_bns()){
+    std::vector<int64_t> shape_vec;
+    int len = dis(gen);
+    for(int i = 0;i < len; i ++){
+      shape_vec.push_back(dis(gen));
+    }
     copy_op->SetShapePtr(ibn, new Shape(shape_vec));
   }
   for(std::string obn : copy_op->output_bns()){
