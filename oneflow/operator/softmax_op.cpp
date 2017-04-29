@@ -15,7 +15,12 @@ void SoftmaxOp::InitFromOpConf(const OperatorConf& op_conf) {
 std::string SoftmaxOp::GetValueFromPbOpConf(const std::string& k) const {
   return GetValueFromPbMessage(op_conf().softmax_conf(), k);
 }
-
+void SoftmaxOp::InferShape4ObAndDtbFromIb() const {
+  std::vector<int64_t> vec = GetShapePtr(SoleIbn())->dim_vec();
+  CHECK_GT(vec.size(), 1);
+  vec.erase(vec.begin() + op_conf().softmax_conf().axis());
+  *GetShapePtr(SoleObn()) = Shape(vec);
+}
 REGISTER_OP(OperatorConf::kSoftmaxConf, SoftmaxOp);
 
 } // namespace oneflow
