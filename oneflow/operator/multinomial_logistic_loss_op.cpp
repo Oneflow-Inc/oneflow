@@ -14,10 +14,23 @@ void MultinomialLogisticLossOp::InitFromOpConf(const OperatorConf& op_conf) {
   EnrollDataTmpBn("loss_buffer");
 }
 
-std::string MultinomialLogisticLossOp::GetValueFromPbOpConf(const std::string& k) const {
+std::string MultinomialLogisticLossOp::GetValueFromPbOpConf(
+    const std::string& k) const {
   return GetValueFromPbMessage(op_conf().multinomial_logistic_loss_conf(), k);
 }
 
-REGISTER_OP(OperatorConf::kMultinomialLogisticLossConf, MultinomialLogisticLossOp);
+void MultinomialLogisticLossOp::InferShape4ObAndDtbFromIb() const {
+}
+
+void MultinomialLogisticLossOp::InferShape4ModelTmpBlob(ParallelPolicy policy,
+    uint64_t parallel_id) const {
+}
+
+void MultinomialLogisticLossOp::InferShape4ModelDiffBlob(ParallelPolicy policy,
+    uint64_t parallel_id) const {
+}
+
+REGISTER_OP(OperatorConf::kMultinomialLogisticLossConf, 
+    MultinomialLogisticLossOp);
 
 } // namespace oneflow
