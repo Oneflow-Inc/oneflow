@@ -23,7 +23,7 @@ TEST(CopyOp, copy_3_3x4_shape) {
   for(std::string ibn : copy_op->input_bns()){
     std::vector<int64_t> shape_vec;
     int len = dis(gen);
-    for(int i = 0;i < len; i ++){
+    for(size_t i = 0;i < len;++ i){
       shape_vec.push_back(dis(gen));
     }
     copy_op->SetShapePtr(ibn, new Shape(shape_vec));
@@ -33,7 +33,7 @@ TEST(CopyOp, copy_3_3x4_shape) {
   }
   copy_op->InferShape4ObAndDtbFromIb();
 
-  for(int i = 0;i < copy_op->output_bns().size();i ++){
+  for(size_t i = 0;i < copy_op->output_bns().size();++ i){
     Shape* input_shape_ptr = copy_op->GetShapePtr(
         copy_op->input_bns().at(i));
     Shape* output_shape_ptr = copy_op->GetShapePtr(
