@@ -82,10 +82,12 @@ add_dependencies(of_ccobj of_protoobj)
 
 if(APPLE)
   set(of_libs -Wl,-all_load of_ccobj of_protoobj -Wl,-noall_load)
-else()
+elseif(UNIX)
   set(of_libs -Wl,--whole-archive of_ccobj of_protoobj -Wl,--no-whole-archive)
+elseif(WIN32)
+  set(of_libs of_ccobj of_protoobj)
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:of_ccobj") 
 endif()
-
 
 # build main
 foreach(cc ${of_main_cc})

@@ -21,8 +21,8 @@ TEST(CloneOp, clone_4x3_3_times) {
 
   Shape* input_shape_ptr = clone_op->GetShapePtr(clone_op->SoleIbn());
   for(std::string obn : clone_op->output_bns()){
-    ASSERT_TRUE(*input_shape_ptr == *(clone_op->GetShapePtr(obn)));
-    ASSERT_TRUE(input_shape_ptr != clone_op->GetShapePtr(obn));
+    ASSERT_EQ(*input_shape_ptr, *(clone_op->GetShapePtr(obn)));
+    ASSERT_NE(input_shape_ptr, clone_op->GetShapePtr(obn));
   }
 
 }

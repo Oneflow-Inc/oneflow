@@ -17,15 +17,11 @@ class MultinomialLogisticLossOp : public UserOperator {
   void InitFromOpConf(const OperatorConf& op_conf) override;
   bool IsLossOp() const override { return true; }
   
-  void InferShape4ObAndDtbFromIb() const override { TODO(); }
+  void InferShape4ObAndDtbFromIb() const override;
   void InferShape4ModelTmpBlob(ParallelPolicy policy,
-                               uint64_t parallel_id) const override {
-    TODO();
-  }
-  void InferShape4ModelDiffBlob(ParallelPolicy policy,
-                                uint64_t parallel_id) const override {
-    TODO();
-  }
+      uint64_t parallel_id) const override;
+  void InferShape4ModelDiffBlob(ParallelPolicy policy, 
+      uint64_t parallel_id) const override;
 
  private:
 
