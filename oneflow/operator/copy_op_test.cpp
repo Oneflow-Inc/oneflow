@@ -38,7 +38,7 @@ TEST(CopyOp, copy_3_3x4_shape) {
   for(std::string obn : copy_op->output_bns()){
     bn_in_op2shape_ptr[obn] = new Shape;
   }
-  copy_op->InferShape4FwBlobs(GetShapePtr4BnInOp, kDataParallel, 10, 2);
+  copy_op->InferShape4FwBlobs(GetShapePtr4BnInOp, kDataParallel, 2, 10);
 
   for(size_t i = 0;i < copy_op->output_bns().size();++ i){
     Shape* input_shape_ptr = GetShapePtr4BnInOp(copy_op->input_bns().at(i));
