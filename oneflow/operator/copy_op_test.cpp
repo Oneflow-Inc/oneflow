@@ -5,6 +5,12 @@
 
 namespace oneflow {
 
+HaspMap<std::string, Shape*> bn_in_op2shape_ptr;
+
+Shape* GetShape4BnInOp(const std::string& bn){
+  return bn_in_op2shape_ptr[bn];
+}
+
 TEST(CopyOp, copy_3_3x4_shape) {
   OperatorConf op_conf;
   op_conf.set_name("copy_test");
@@ -17,6 +23,7 @@ TEST(CopyOp, copy_3_3x4_shape) {
   }
   auto copy_op = OpMgr::Singleton().ConstructOp(op_conf);
 
+  bn_in_op2shape_ptr.clear();
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_int_distribution<> dis(3, 10);
@@ -26,18 +33,16 @@ TEST(CopyOp, copy_3_3x4_shape) {
     for(size_t i = 0;i < len;++ i){
       shape_vec.push_back(dis(gen));
     }
-    copy_op->SetShapePtr(ibn, new Shape(shape_vec));
+    bn_in_op2shape_ptr[ibn] = new Shape(shape_vec);
   }
   for(std::string obn : copy_op->output_bns()){
-    copy_op->SetShapePtr(obn, new Shape);
+    bn_in_op2shape_ptr[obn] = new Shape;
   }
-  copy_op->InferShape4ObAndDtbFromIb();
+  copy_op->InferShape4FwBlobs(GetShape4BnInOp, kDataParallel, 10, 2);
 
   for(size_t i = 0;i < copy_op->output_bns().size();++ i){
-    Shape* input_shape_ptr = copy_op->GetShapePtr(
-        copy_op->input_bns().at(i));
-    Shape* output_shape_ptr = copy_op->GetShapePtr(
-        copy_op->output_bns().at(i));
+    Shape* input_shape_ptr = GetShapePtr4BnInOp(copy_op->input_bns().at(i));
+    Shape* output_shape_ptr = GetShapePtr4BnInOp(copy_op->output_bns().at(i));
     ASSERT_EQ(*input_shape_ptr, *output_shape_ptr);
     ASSERT_NE(input_shape_ptr, output_shape_ptr);
   }

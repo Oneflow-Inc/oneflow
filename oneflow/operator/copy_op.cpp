@@ -34,12 +34,16 @@ OperatorProto CopyOp::ToOperatorProto() {
   return operatorproto;
 }
 
-void CopyOp::InferShape4ObAndDtbFromIb() const {
+void CopyOp::InferShape4FwBlobs(
+    std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+    ParallelPolicy policy,
+    uint64_t parallel_id,
+    uint64_t parallel_size) const {
   CHECK_EQ(output_bns().size(), input_bns().size());
   for(size_t i = 0;i < output_bns().size();++ i){
     std::string obn = output_bns().at(i);
     std::string ibn = input_bns().at(i);
-    *GetShapePtr(obn) = *GetShapePtr(ibn);
+    *GetShapePtr4BnInOp(obn) = *GetShapePtr4BnInOp(ibn);
   }
 }
 

@@ -16,10 +16,14 @@ std::string CloneOp::GetValueFromPbOpConf(const std::string& k) const {
   return GetValueFromPbMessage(op_conf().clone_conf(), k);
 }
 
-void CloneOp::InferShape4ObAndDtbFromIb() const {
-  Shape* input_shape_ptr = GetShapePtr(SoleIbn());
+void InferShape4FwBlobs(
+    std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+    ParallelPolicy policy,
+    uint64_t parallel_id,
+    uint64_t parallel_size) const {
+  Shape* input_shape_ptr = GetShapePtr4BnInOp(SoleIbn());
   for(std::string obn : output_bns()){
-    *GetShapePtr(obn) = *input_shape_ptr;
+    *GetShapePtr4BnInOp(obn) = *input_shape_ptr;
   }
 }
 
