@@ -16,8 +16,6 @@ std::string ReluOp::GetValueFromPbOpConf(const std::string& k) const {
   return GetValueFromPbMessage(op_conf().relu_conf(), k);
 }
 
-REGISTER_OP(OperatorConf::kReluConf, ReluOp);
-
 void ReluOp::InferShape4FwBlobs(
     std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
     ParallelPolicy policy,
@@ -28,5 +26,7 @@ void ReluOp::InferShape4FwBlobs(
   const std::vector<int64_t>& input_shape_dim_vec = input_shape_ptr->dim_vec();
   *output_shape_ptr = Shape(input_shape_dim_vec);
 }
+
+REGISTER_OP(OperatorConf::kReluConf, ReluOp);
 
 } // namespace oneflow
