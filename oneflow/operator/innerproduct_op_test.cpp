@@ -6,7 +6,7 @@ namespace oneflow {
 
 HaspMap<std::string, Shape*> bn_in_op2shape_ptr;
 
-Shape* GetShape4BnInOp(const std::string& bn){
+Shape* GetShapePtr4BnInOp(const std::string& bn){
   return bn_in_op2shape_ptr[bn];
 }
 
@@ -27,7 +27,7 @@ TEST(InnerProductOp, modelparallel_innerproduct) {
   bn_in_op2shape_ptr[ip_op->model_bns().at(1)] = new Shape;
   bn_in_op2shape_ptr[ip_op->model_tmp_bns().at(0)] = new Shape;
 
-  ip_op->InferShape4FwBlobs(GetShape4BnInOp, kModelparallel, 10, 3);
+  ip_op->InferShape4FwBlobs(GetShapePtr4BnInOp, kModelparallel, 10, 3);
 
   BalancedSplitter splitter(10, 4);
   int out_num = splitter.At(3).size();
@@ -65,7 +65,7 @@ TEST(InnerProductOp, dataparallel_innerproduct) {
   bn_in_op2shape_ptr[ip_op->model_bns().at(1)] = new Shape;
   bn_in_op2shape_ptr[ip_op->model_tmp_bns().at(0)] = new Shape;
 
-  ip_op->InferShape4FwBlobs(GetShape4BnInOp, kDataparallel, 10, 3);
+  ip_op->InferShape4FwBlobs(GetShapePtr4BnInOp, kDataparallel, 10, 3);
 
   Shape* in_shape_ptr = GetShapePtr4BnInOp(ip_op->SoleIbn());
   Shape* out_shape_ptr = GetShapePtr4BnInOp(ip_op->SoleObn());
