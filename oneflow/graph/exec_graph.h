@@ -49,20 +49,12 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   RegstDesc* GetRegstFromBnInOp(const std::string& bn_in_op) {
     return bn_in_op2regst_.at(bn_in_op);
   }
-
-  void BindBnInOpAndShapePtr(const std::string& bn_in_op, Shape* shape_ptr) {
-    CHECK(bn_in_op2shape_ptr_.emplace(bn_in_op, shape_ptr).second);
-  }
-  const HashMap<std::string, Shape*>& BnInOp2ShapePtr() const {
-    return bn_in_op2shape_ptr_;
-  }
   
   std::string VisualStr() const { TODO(); }
 
  private:
   std::shared_ptr<const Operator> op_;
   HashMap<std::string, RegstDesc*> bn_in_op2regst_;
-  HashMap<std::string, Shape*> bn_in_op2shape_ptr_;
 
 };
 

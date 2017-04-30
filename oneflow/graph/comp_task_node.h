@@ -22,13 +22,10 @@ class CompTaskNode : public TaskNode {
   // Build Exec and Set Produced Regsts
   void DataFwBuildExecAndEnrollLbn2Regsts(TaskGraph*);
   void DataFwInferShape4LbnInProducedRegsts(TaskGraph*);
-  
   void MdUpdtFwBuildExecAndEnrollLbn2Regsts(TaskGraph*);
   void MdUpdtFwInferShape4LbnInProducedRegsts(TaskGraph*);
-  
   void MdLoadFwBuildExecAndEnrollLbn2Regsts(TaskGraph*);
   void MdLoadFwInferShape4LbnInProducedRegsts(TaskGraph*);
-  
   void MdSaveFwBuildExecAndEnrollLbn2Regsts(TaskGraph*);
   void MdSaveFwInferShape4LbnInProducedRegsts(TaskGraph*);
 
@@ -41,6 +38,21 @@ class CompTaskNode : public TaskNode {
  private:
   using Lbn2NodeBnMap =
       HashMap<std::string, std::pair<ExecNode*, std::string>>;
+  
+  void BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) override {
+    if (IsFwNode()) {
+      return FwBuildExecAndEnrollLbn2Regsts(gph);
+    } else {
+      return BpBuildExecAndEnrollLbn2Regsts(gph);
+    }
+  }
+  void InferShape4LbnInProducedRegsts(TaskGraph* gph) override {
+    if (IsFwNode()) {
+      return FwInferShape4LbnInProducedRegsts(gph);
+    } else {
+      return BpInferShape4LbnInProducedRegsts(gph);
+    }
+  }
 
   void FwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) override {
     (this->*(gph->Func4FwBuildExecAndEnrollLbn2Regsts()))(gph);
@@ -55,7 +67,7 @@ class CompTaskNode : public TaskNode {
       const Lbn2NodeBnMap& extern_in_lbn2consumer);
   void FwEnrollLbn2OutRegst(const Lbn2NodeBnMap& lbn2producer);
   void FwEnrollLbn2ActivationRegst();
-  void FwEnrollLbn2TmpRegsts();
+  void FwEnrollLbn2ModelAndTmpRegsts();
 
   void BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) override;
   void BpInferShape4LbnInProducedRegsts(TaskGraph*) override;

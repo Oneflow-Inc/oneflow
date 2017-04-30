@@ -40,24 +40,13 @@ std::unique_ptr<TaskNode> TaskNode::BuildAndConnectBpNode() {
   return bp_node;
 }
 
-void TaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
-  if (IsFwNode()) {
-    FwBuildExecAndEnrollLbn2Regsts(gph);
-  } else {
-    BpBuildExecAndEnrollLbn2Regsts(gph);
-  }
-}
-
-void TaskNode::InferShape4LbnInProducedRegsts(TaskGraph* gph) {
-  if (IsFwNode()) {
-    FwInferShape4LbnInProducedRegsts();
-  } else {
-    BpInferShape4LbnInProducedRegsts();
-  }
-}
-
 RegstDesc* TaskNode::GetProducedRegstDesc(const std::string& regst_desc_name) {
   return produced_regst_descs_.at(regst_desc_name).get();
+}
+
+void TaskNode::TakeOverRegstDesc(TaskNode* rhs,
+                                 const std::string& regst_desc_name) {
+  TODO();
 }
 
 const TaskEdge* TaskNode::GetOutEdge4ProducedRegst(RegstDesc* regst) const {

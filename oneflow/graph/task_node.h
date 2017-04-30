@@ -41,7 +41,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   //
   void BuildExecAndEnrollLbn2Regsts(TaskGraph*);
   void InferShape4LbnInProducedRegsts(TaskGraph*);
+  
+  //
   RegstDesc* GetProducedRegstDesc(const std::string& regst_desc_name);
+  void TakeOverRegstDesc(TaskNode* rhs, const std::string& regst_desc_name);
 
   // 
   const TaskEdge* GetOutEdge4ProducedRegst(RegstDesc*) const;
@@ -49,7 +52,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   //
   virtual TaskProto ToProto() const { TODO(); }
-
   virtual std::string VisualStr() const override {
     std::stringstream ss;
     ss << (is_fw_node_ ? "Fw" : "Bp");
@@ -67,11 +69,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   void EnrollProducedRegstDesc(const std::string& regst_desc_name,
                                std::unique_ptr<RegstDesc>&& regst_desc);
-
-  virtual void FwBuildExecAndEnrollLbn2Regsts(TaskGraph*) { UNEXPECTED_RUN(); }
-  virtual void BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) { UNEXPECTED_RUN(); }
-  virtual void FwInferShape4LbnInProducedRegsts(TaskGraph*) { UNEXPECTED_RUN(); }
-  virtual void BpInferShape4LbnInProducedRegsts(TaskGraph*) { UNEXPECTED_RUN(); }
 
  private:
   // In task_gph level
