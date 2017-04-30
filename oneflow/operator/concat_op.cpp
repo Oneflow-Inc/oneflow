@@ -18,19 +18,24 @@ std::string ConcatOp::GetValueFromPbOpConf(const std::string& k) const {
   return GetValueFromPbMessage(op_conf().concat_conf(), k);
 }
 
-void ConcatOp::InferShape4ObAndDtbFromIb() const {
-  std::vector<int64_t> vec = GetShapePtr(input_bns().at(0))->dim_vec();
+void ConcatOp::InferShape4FwBlobs(
+    std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+    ParallelPolicy policy,
+    uint64_t parallel_id,
+    uint64_t parallel_size) const {
+  std::vector<int64_t> vec = GetShapePtr4BnInOp(input_bns().at(0))->dim_vec();
   for (std::size_t i = 1; i < input_bns().size(); ++i) {
-    Shape* in_shape_tmp = GetShapePtr(input_bns().at(i));
+    Shape* in_shape_tmp = GetShapePtr4BnInOp(input_bns().at(i));
     for (int64_t j = 0; j < in_shape_tmp->NumAxes(); ++j) {
-      if (j == op_conf().concat_conf().axis()) {
+      int32_t axis = op_conf().concat_conf().axis();
+      if (j == axis || j - axis == in_shape_tmp->NumAxes()) {
         vec[j] += in_shape_tmp->At(j);
       } else {
         CHECK_EQ(vec[j], in_shape_tmp->At(j));
       }
     }
   }
-  *GetShapePtr(SoleObn()) = Shape(vec);
+  *GetShapePtr4BnInOp(SoleObn()) = Shape(vec);
 }
 
 REGISTER_OP(OperatorConf::kConcatConf, ConcatOp);

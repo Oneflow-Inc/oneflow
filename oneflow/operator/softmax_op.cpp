@@ -15,11 +15,16 @@ void SoftmaxOp::InitFromOpConf(const OperatorConf& op_conf) {
 std::string SoftmaxOp::GetValueFromPbOpConf(const std::string& k) const {
   return GetValueFromPbMessage(op_conf().softmax_conf(), k);
 }
-void SoftmaxOp::InferShape4ObAndDtbFromIb() const {
-  std::vector<int64_t> vec = GetShapePtr(SoleIbn())->dim_vec();
+void SoftmaxOp::InferShape4FwBlobs(
+    std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+    ParallelPolicy policy,
+    uint64_t parallel_id,
+    uint64_t parallel_size) const {
+  std::vector<int64_t> vec = GetShapePtr4BnInOp(SoleIbn())->dim_vec();
   CHECK_GT(vec.size(), 1);
-  vec.erase(vec.begin() + op_conf().softmax_conf().axis());
-  *GetShapePtr(SoleObn()) = Shape(vec);
+  int32_t axis = (op_conf().softmax_conf().axis() + vec.size()) % vec.size();
+  vec.erase(vec.begin() + axis);
+  *GetShapePtr4BnInOp(SoleObn()) = Shape(vec);
 }
 REGISTER_OP(OperatorConf::kSoftmaxConf, SoftmaxOp);
 
