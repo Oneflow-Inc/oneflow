@@ -16,7 +16,7 @@ std::string CloneOp::GetValueFromPbOpConf(const std::string& k) const {
   return GetValueFromPbMessage(op_conf().clone_conf(), k);
 }
 
-void InferShape4FwBlobs(
+void CloneOp::InferShape4FwBlobs(
     std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
     ParallelPolicy policy,
     uint64_t parallel_id,
