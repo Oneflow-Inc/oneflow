@@ -24,28 +24,18 @@ class Operator {
   virtual void InitFromOpConf(const OperatorConf& op_conf) = 0;
   virtual bool IsElemWise() const { return false; }
   virtual bool IsLossOp() const { return false; }
+  
   //
   virtual void InitFromOperatorProto(const OperatorProto& operatorproto);
   virtual OperatorProto ToOperatorProto();
   
-  // bn_in_op2lbn
-  std::string dtbn2lbn(const std::string& data_tmp_bn) const;
-  std::string idbn2lbn(const std::string& input_diff_bn) const;
-  std::string odbn2lbn(const std::string& output_diff_bn) const;
-  std::string mdbn2lbn(const std::string& model_diff_bn) const;
-  std::string ibn2lbn(const std::string& input_bn) const;
-
-  virtual std::string obn2lbn(const std::string& output_bn) const = 0;
-  virtual std::string mtbn2lbn(const std::string& model_tmp_bn) const = 0;
-  virtual std::string mbn2lbn(const std::string& model_bn) const = 0;
-
-  void AddSpecialIbn2Lbn(const std::string& ibn, const std::string& lbn) {
-    CHECK(special_ibn2lbn_.emplace(ibn, lbn).second);
-  }
+  // bn_in_op <-> lbn
+  void GetLbn4BnInOp(const std::string& bn_in_op) const;
+  void ModifyLbn4BnInOp(const std::string& bn_in_op, const std::string& lbn);
   
   // Getters
-  virtual const std::string& op_name() const { return op_conf_.OperatorConf::name(); }
-  virtual const OperatorConf& op_conf() const { return op_conf_; }
+  const std::string& op_name() const { return op_conf_.name(); }
+  const OperatorConf& op_conf() const { return op_conf_; }
   virtual std::string GetValueFromPbOpConf(const std::string& k) const = 0;
   
   const std::string& SoleIbn() const {
@@ -82,10 +72,12 @@ class Operator {
       uint64_t parallel_size) const = 0;
 
  protected:
-  OperatorConf& mut_op_conf() {
-    return op_conf_;
-  }
-  virtual std::string normal_ibn2lbn(const std::string& input_bn) const = 0;
+  virtual std::string ibn2lbn(const std::string& input_bn) const = 0;
+  virtual std::string obn2lbn(const std::string& output_bn) const = 0;
+  virtual std::string mtbn2lbn(const std::string& model_tmp_bn) const = 0;
+  virtual std::string mbn2lbn(const std::string& model_bn) const = 0;
+
+  OperatorConf& mut_op_conf() { return op_conf_; }
   
   // enroll data blobs
   void EnrollDataTmpBn(const std::string& dtbn);
@@ -100,11 +92,9 @@ class Operator {
   void EnrollModelTmpBn(const std::string& mtbn);
 
  private:
-  void EnrollBn(std::vector<std::string>* bn_vec, const std::string& bn);
-
+  std::string dtbn2lbn(const std::string& data_tmp_bn) const;
+  
   OperatorConf op_conf_;
-
-  HashMap<std::string, std::string> special_ibn2lbn_;
 
   // blob name in op
   std::vector<std::string> data_tmp_bns_;
@@ -117,6 +107,9 @@ class Operator {
   std::vector<std::string> model_diff_bns_;
   std::vector<std::string> model_tmp_bns_;
 
+  // 
+  HashMap<std::string, std::string> bn_in_op2lbn_;
+
 };
 
 class UserOperator : public Operator {
@@ -125,7 +118,7 @@ class UserOperator : public Operator {
   UserOperator() = default;
   virtual ~UserOperator() = default;
 
-  std::string normal_ibn2lbn(const std::string& input_bn) const override;
+  std::string ibn2lbn(const std::string& input_bn) const override;
   std::string obn2lbn(const std::string& output_bn) const override;
   std::string mtbn2lbn(const std::string& model_tmp_bn) const override;
   std::string mbn2lbn(const std::string& model_bn) const override;
@@ -144,12 +137,12 @@ class SysOperator : public Operator {
                << typeid(*this).name(); \
   }
   
-  SET_INSIGNIFICANT(normal_ibn2lbn);
+  SET_INSIGNIFICANT(ibn2lbn);
   SET_INSIGNIFICANT(obn2lbn);
   SET_INSIGNIFICANT(mtbn2lbn);
   SET_INSIGNIFICANT(mbn2lbn);
 
-  #undef SET_UNEXPECTED
+  #undef SET_INSIGNIFICANT
   
   virtual void InferShape4FwBlobs(
       const HashMap<std::string, Shape*>& bn_in_op2shape_ptr,
