@@ -14,7 +14,7 @@ TEST(ReluOp, relu_3x5x4) {
   op_conf.mutable_relu_conf()->set_out("relu_out");
   auto relu_op = OpMgr::Singleton().ConstructOp(op_conf);
   TestShapeFactory shape_factory = TestShapeFactory();
-  std::vector<int64_t> shape_vec = { 3, 5, 4 };
+  std::vector<int64_t> shape_vec = {3, 5, 4};
   shape_factory.add_bn_shape_ptr(relu_op->SoleIbn(), new Shape(shape_vec));
   shape_factory.add_bn_shape_ptr(relu_op->SoleObn(), new Shape);
   auto fp = std::bind(&TestShapeFactory::bn2ShapePtr,
