@@ -3,7 +3,8 @@
 namespace oneflow {
   
 void Operator::InitFromOperatorProto(const OperatorProto& op_proto) {
-  op_conf_ = op_proto.user_conf();
+  TODO();
+  /*op_conf_ = op_proto.user_conf();
   
   special_ibn2lbn_ = PbMap2HashMap(op_proto.special_ibn2lbn());
   data_tmp_bns_ = PbVec2StdVec(op_proto.data_tmp_bns());
@@ -14,9 +15,12 @@ void Operator::InitFromOperatorProto(const OperatorProto& op_proto) {
   model_bns_ = PbVec2StdVec(op_proto.model_bns());
   model_diff_bns_ = PbVec2StdVec(op_proto.model_diff_bns());
   model_tmp_bns_ = PbVec2StdVec(op_proto.model_tmp_bns());
+  */
 }
 
 OperatorProto Operator::ToOperatorProto() {
+  TODO();
+  /*
   OperatorProto op_proto;
   *(op_proto.mutable_user_conf()) = op_conf_;
   *(op_proto.mutable_special_ibn2lbn()) = HashMap2PbMap(special_ibn2lbn_);
@@ -29,6 +33,79 @@ OperatorProto Operator::ToOperatorProto() {
   *(op_proto.mutable_model_diff_bns()) = StdVec2PbVec(model_diff_bns_);
   *(op_proto.mutable_model_tmp_bns()) = StdVec2PbVec(model_tmp_bns_);
   return op_proto;
+  */
+}
+
+void GetLbn4BnInOp(const std::string& bn_in_op) const {
+  return bn_in_op2lbn_.at(bn_in_op);
+}
+
+void Operator::ModifyLbn4BnInOp(
+    const std::string& bn_in_op,
+    const std::string& lbn) {
+  auto it = bn_in_op2lbn_.find(bn_in_op);
+  it->second = lbn;
+}
+
+void Operator::EnrollDataTmpBn(const std::string& dtbn) {
+  data_tmp_bns_.push_back(dtbn);
+  CHECK(bn_in_op2lbn_.emplace(dtbn, dtbn2lbn(dtbn)).second);
+}
+
+void Operator::EnrollInputBn(const std::string& ibn, bool has_diff) {
+  std::string lbn = ibn2lbn(ibn);
+  input_bns_.push_back(ibn);
+  CHECK(bn_in_op2lbn_.emplace(ibn, lbn));
+  if (has_diff) {
+    std::string idbn = GenDiffBn(ibn);
+    input_diff_bns_.push_back(idbn);
+    CHECK(bn_in_op2lbn_.emplace(idbn, lbn));
+  }
+}
+
+void Operator::EnrollOutputBn(const std::string& obn, bool has_diff) {
+  std::string lbn = obn2lbn(obn);
+  output_bns_.push_back(obn);
+  CHECK(bn_in_op2lbn_.emplace(obn, lbn));
+  if (has_diff) {
+    std::string odbn = GenDiffBn(obn);
+    output_diff_bns_.push_back(odbn);
+    CHECK(bn_in_op2lbn_.emplace(odbn, lbn));
+  }
+}
+
+void Operator::EnrollModelBn(const std::string& mbn) {
+  std::string lbn = mbn2lbn(mbn);
+  model_bns_.push_back(mbn);
+  CHECK(bn_in_op2lbn_.emplace(mbn, lbn).second);
+  std::string mdbn = GenDiffBn(mbn);
+  model_diff_bns_.push_back(mdbn);
+  CHECK(bn_in_op2lbn_.emplace(mdbn, lbn));
+}
+
+void Operator::EnrollModelTmpBn(const std::string& mtbn) {
+  model_tmp_bns_.push_back(mtbn);
+  CHECK(bn_in_op2lbn_.emplace(mtbn, mtbn2lbn(mtbn)));
+}
+
+std::string Operator::dtbn2lbn(const std::string& data_tmp_bn) const {
+  return op_name() + "/" + data_tmp_bn;
+}
+
+std::string UserOperator::ibn2lbn(const std::string& input_bn) const {
+  return GetValueFromPbOpConf(input_bn);
+}
+
+std::string UserOperator::obn2lbn(const std::string& output_bn) const {
+  return op_name() + "/" + GetValueFromPbOpConf(output_bn);
+}
+
+std::string UserOperator::mtbn2lbn(const std::string& model_tmp_bn) const {
+  return op_name() + "/" + model_tmp_bn;
+}
+
+std::string UserOperator::mbn2lbn(const std::string& model_bn) const {
+  return op_name() + "/" + model_bn;
 }
 
 std::string GenDiffBn(const std::string& bn) {
@@ -38,87 +115,6 @@ std::string GenDiffBn(const std::string& bn) {
 std::string GenUnDiffBn(const std::string& diff_bn) {
   CHECK_STREQ(diff_bn.substr(diff_bn.size() - 5).c_str(), "_diff");
   return diff_bn.substr(0, diff_bn.size() - 5);
-}
-
-std::string Operator::dtbn2lbn(const std::string& data_tmp_bn) const {
-  return op_name() + "/" + data_tmp_bn;
-}
-std::string Operator::idbn2lbn(const std::string& input_diff_bn) const {
-  return ibn2lbn(GenUnDiffBn(input_diff_bn));
-}
-std::string Operator::odbn2lbn(const std::string& output_diff_bn) const {
-  return obn2lbn(GenUnDiffBn(output_diff_bn));
-}
-std::string Operator::mdbn2lbn(const std::string& model_diff_bn) const {
-  return mbn2lbn(GenUnDiffBn(model_diff_bn));
-}
-std::string Operator::ibn2lbn(const std::string& input_bn) const {
-  auto it = special_ibn2lbn_.find(input_bn);
-  if (it == special_ibn2lbn_.end()) {
-    return normal_ibn2lbn(input_bn);
-  } else {
-    return it->second;
-  }
-}
-
-Shape* Operator::GetShapePtr(const std::string& bn_in_op) const {
-  return bn_in_op2shape_ptr_.at(bn_in_op);
-}
-
-void Operator::SetShapePtr(const std::string& bn_in_op, Shape* ptr) const {
-  bn_in_op2shape_ptr_.at(bn_in_op) = ptr;
-}
-
-void Operator::SetNull4AllShapePtr() const {
-  for (auto& pair : bn_in_op2shape_ptr_) {
-    pair.second = nullptr;
-  }
-}
-
-void Operator::EnrollDataTmpBn(const std::string& dtbn) {
-  EnrollBn(&data_tmp_bns_, dtbn);
-}
-
-void Operator::EnrollInputBn(const std::string& ibn, bool has_diff) {
-  EnrollBn(&input_bns_, ibn);
-  if (has_diff) {
-    EnrollBn(&input_diff_bns_, GenDiffBn(ibn));
-  }
-}
-
-void Operator::EnrollOutputBn(const std::string& obn, bool has_diff) {
-  EnrollBn(&output_bns_, obn);
-  if (has_diff) {
-    EnrollBn(&output_diff_bns_, GenDiffBn(obn));
-  }
-}
-
-void Operator::EnrollModelBn(const std::string& mbn) {
-  EnrollBn(&model_bns_, mbn);
-  EnrollBn(&model_diff_bns_, GenDiffBn(mbn));
-}
-
-void Operator::EnrollModelTmpBn(const std::string& mtbn) {
-  EnrollBn(&model_tmp_bns_, mtbn);
-}
-
-void Operator::EnrollBn(std::vector<std::string>* bn_vec,
-                        const std::string& bn) {
-  bn_vec->push_back(bn);
-  CHECK(bn_in_op2shape_ptr_.emplace(bn, nullptr).second);
-}
-
-std::string UserOperator::normal_ibn2lbn(const std::string& input_bn) const {
-  return GetValueFromPbOpConf(input_bn);
-}
-std::string UserOperator::obn2lbn(const std::string& output_bn) const {
-  return op_name() + "/" + GetValueFromPbOpConf(output_bn);
-}
-std::string UserOperator::mtbn2lbn(const std::string& model_tmp_bn) const {
-  return op_name() + "/" + model_tmp_bn;
-}
-std::string UserOperator::mbn2lbn(const std::string& model_bn) const {
-  return op_name() + "/" + model_bn;
 }
 
 } // namespace oneflow
