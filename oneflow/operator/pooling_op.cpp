@@ -20,9 +20,13 @@ std::string PoolingOp::GetValueFromPbOpConf(const std::string& k) const {
 
 REGISTER_OP(OperatorConf::kPoolingConf, PoolingOp);
 
-void PoolingOp::InferShape4ObAndDtbFromIb() const {
-  Shape* output_shape_ptr = GetShapePtr(SoleObn());
-  Shape* input_shape_ptr = GetShapePtr(SoleIbn());
+void PoolingOp::InferShape4FwBlobs(
+    std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+    ParallelPolicy policy,
+    uint64_t parallel_id,
+    uint64_t parallel_size) const {
+  Shape* output_shape_ptr = GetShapePtr4BnInOp(SoleObn());
+  Shape* input_shape_ptr = GetShapePtr4BnInOp(SoleIbn());
   const PoolingOpConf& pooling_conf = op_conf().pooling_conf();
   auto pad_pair = CheckDimPara(pooling_conf.pad(),
                                pooling_conf.pad_h(), pooling_conf.pad_w());
@@ -49,7 +53,7 @@ void PoolingOp::InferShape4ObAndDtbFromIb() const {
       (input_shape_ptr->At(3) + 2 * pad_w - kernel_w) / stride_w + 1);
   *output_shape_ptr = Shape(output_shape_dim_vec);
   CHECK_EQ(data_tmp_bns().size(), 1);
-  Shape* data_tmp_shape_ptr = GetShapePtr(*(data_tmp_bns().begin()));
+  Shape* data_tmp_shape_ptr = GetShapePtr4BnInOp(*(data_tmp_bns().begin()));
   *data_tmp_shape_ptr = Shape(output_shape_dim_vec);
 }
 

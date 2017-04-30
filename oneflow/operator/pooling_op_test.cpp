@@ -1,6 +1,7 @@
 #include "operator/pooling_op.h"
 #include "gtest/gtest.h"
 #include "operator/operator_manager.h"
+#include "operator/op_util.h"
 
 namespace oneflow {
 
@@ -15,22 +16,25 @@ TEST(PoolingOp, pool_100x64x11x11) {
   PoolingOpConf* pooling_conf = op_conf.mutable_pooling_conf();
   pooling_conf->set_in("pooling_in");
   pooling_conf->set_out("pooling_out");
-  pooling_conf->set_pool(PoolingOpConf_PoolMethod_MAX);
+  pooling_conf->set_pool(PoolingOpConf::MAX);
   pooling_conf->set_pad(1);
   pooling_conf->set_kernel_size(2);
   pooling_conf->set_stride(2);
-
   auto pooling_op = OpMgr::Singleton().ConstructOp(op_conf);
   std::vector<int64_t> input_shape_vec = { 100, 64, 11, 11 };
-  pooling_op->SetShapePtr(pooling_op->SoleIbn(), new Shape(input_shape_vec));
-  pooling_op->SetShapePtr(pooling_op->SoleObn(), new Shape);
-  pooling_op->SetShapePtr(*(pooling_op->data_tmp_bns().begin()), new Shape);
+  TestShapeFactory shape_factory = TestShapeFactory();
+  shape_factory.add_bn_shape_ptr(pooling_op->SoleIbn(), new Shape(input_shape_vec));
+  shape_factory.add_bn_shape_ptr(pooling_op->SoleObn(), new Shape);
+  shape_factory.add_bn_shape_ptr(*(pooling_op->data_tmp_bns().begin()), new Shape);
+  auto fp = std::bind(&TestShapeFactory::bn2ShapePtr,
+                      &shape_factory,
+                      std::placeholders::_1);
   // do infer shape
-  pooling_op->InferShape4ObAndDtbFromIb();
+  pooling_op->InferShape4FwBlobs(fp, kDataParallel, 0, 1);
   // test
-  Shape* input_shape_ptr = pooling_op->GetShapePtr(pooling_op->SoleIbn());
-  Shape* output_shape_ptr = pooling_op->GetShapePtr(pooling_op->SoleObn());
-  Shape* data_tmp_shape_ptr = pooling_op->GetShapePtr(
+  Shape* input_shape_ptr = shape_factory.bn2ShapePtr(pooling_op->SoleIbn());
+  Shape* output_shape_ptr = shape_factory.bn2ShapePtr(pooling_op->SoleObn());
+  Shape* data_tmp_shape_ptr = shape_factory.bn2ShapePtr(
       (*pooling_op->data_tmp_bns().begin()));
   // n * c * h_o * w_o
   // where h_o = (h_i + 2 * pad_h - kernel_h) / stride_h + 1 and w_o likewise.
