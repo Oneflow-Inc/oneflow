@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <iostream>
 #include "common/util.h"
 #include "common/shape.pb.h"
 
@@ -38,6 +39,8 @@ class Shape final {
   int64_t elem_cnt_;
 
 };
+
+std::ostream& operator<< (std::ostream& out, const Shape& shape);
 
 inline Shape::Shape(const std::vector<int64_t>& dim_vec) :
     dim_vec_(dim_vec) {

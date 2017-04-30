@@ -1,4 +1,4 @@
-#include "graph.h"
+#include "graph/graph.h"
 #include <vector>
 #include <map>
 #include <unordered_set>
@@ -6,7 +6,7 @@
 #include <memory>
 #include "gtest/gtest.h"
 #include "common/util.h"
-#include "node.h"
+#include "graph/node.h"
 
 namespace oneflow {
 
