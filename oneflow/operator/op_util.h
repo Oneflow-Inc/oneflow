@@ -6,9 +6,7 @@
 #include "common/shape.h"
 #include "common/util.h"
 
-
 namespace oneflow {
-
 
 // check the parameter which user set in convolution layer and pooling layer
 // is legal and return h and w
@@ -20,12 +18,12 @@ namespace oneflow {
 //  (val_h, val_w)
 // if user both set the val and (val_h, val_w), a LOG(FATAL) will be called
 // else return the real val_h and val_w
-std::pair<uint32_t, uint32_t> CheckDimPara4CnnAndPooling(uint32_t val, uint32_t val_h, 
-                                           uint32_t val_w) {
-  if (val != 0 && (val_h != 0 || val_w != 0) && (val != val_h || val != val_w)) {
-    LOG(FATAL) << "don't set parameter both 'val' and ('val_h','val_w')"
-      << " in convolution_conf or pooling_conf ";
-  }
+std::pair<uint32_t, uint32_t> CheckDimPara4CnnAndPooling(uint32_t val,
+                                                         uint32_t val_h,
+                                                         uint32_t val_w) {
+  CHECK(val != 0 && (val_h != 0 || val_w != 0) && (val != val_h || val != val_w))
+    << "don't set parameter both 'val' and ('val_h','val_w')"
+    << " in convolution_conf or pooling_conf ";
   if (val != 0) {
     return {val, val};
   }
