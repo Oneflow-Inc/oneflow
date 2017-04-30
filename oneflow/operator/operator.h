@@ -76,9 +76,10 @@ class Operator {
   // Read: shape of input_blobs
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, model_tmp_blobs
   virtual void InferShape4FwBlobs(
-      const HashMap<std::string, Shape*>& bn_in_op2shape_ptr,
+      std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
       ParallelPolicy policy,
-      uint64_t parallel_id) const = 0;
+      uint64_t parallel_id,
+      uint64_t parallel_size) const = 0;
 
  protected:
   OperatorConf& mut_op_conf() {
