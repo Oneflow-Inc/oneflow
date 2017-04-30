@@ -38,20 +38,21 @@ void CompTaskNode::DataFwBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   FwSetExecNodeFromInRegst(extern_in_lbn2consumer);
   FwEnrollLbn2OutRegst(lbn2producer);
   FwEnrollLbn2ActivationRegst();
-  FwEnrollLbn2ModelAndTmpRegsts();
+  FwEnrollLbn2ModelAndTmpRegsts(); // model model_tmp data_tmp
 }
 
 void CompTaskNode::DataFwInferShape4LbnInProducedRegsts() {
   for (const ExecNode& node : exec_gph()) {
-    auto GetShapePtr4BnInOp = [](const std::string& bn_in_op) {
+    auto GetShapePtr4BnInOp = [&node](const std::string& bn_in_op) {
       RegstDesc* regst = node->GetRegstFromBnInOp(bn_in_op);
-      node->op()->
-
+      const std::string& lbn = node->op()->GetLbn4BnInOp(bn_in_op);
+      return regst->GetMutShapePtr(lbn);
     };
-    node.op()->InferShape4ObAndDtbFromIb(node.BnInOp2ShapePtr());
-    node.op()->InferShape4ModelTmpBlob(node.BnInOp2ShapePtr(),
-                                       chain_node()->parallel_desc()->policy(),
-                                       parallel_id());
+    node.op()->InferShape4FwBlobs(
+        GetShapePtr4BnInOp,
+        chain_node()->parallel_desc()->policy(),
+        parallel_id(),
+        chain_node()->parallel_desc()->parallel_size());
   }
 }
 
@@ -235,12 +236,7 @@ void CompTaskNode::BpInferShape4LbnInProducedRegsts(TaskGraph*) {
   in_diff_regst->CopyShapeFrom(in_regst);
   // model_diff_regst
   RegstDesc* model_diff_regst = GetProducedRegstDesc("model_diff");
-  for (const std::unique_ptr<ExecNode>& cur_node : exec_gph().nodes()) {
-    cur_node->op()->InferShape4ModelDiffBlob(
-        cur_node->BnInOp2ShapePtr(),
-        chain_node()->parallel_desc()->policy(),
-        parallel_id());
-  }
+  model_diff_regst->CopyShapeFrom();
   // activation_diff_regst
   RegstDesc* activation_diff_regst = GetProducedRegstDesc("activation_diff");
   RegstDesc* activation_regst = GetFwNode()->GetProducedRegstDesc("activation");
@@ -324,8 +320,7 @@ void CompTaskNode::BpEnrollLbn2ProducedRegst(
     }
     for (const std::string& mdbn : cur_node->op()->model_diff_bns()) {
       std::string lbn = cur_node->op()->mdbn2lbn(mdbn);
-      Shape* ptr = model_diff_regst->EnrollLbn(lbn);
-      cur_node->BindBnInOpAndShapePtr(mdbn, ptr);
+      model_diff_regst->EnrollLbn(lbn);
       cur_node->BindBnInOpAndRegst(mdbn, model_diff_regst);
     }
   }

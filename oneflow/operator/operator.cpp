@@ -36,7 +36,7 @@ OperatorProto Operator::ToOperatorProto() {
   */
 }
 
-void GetLbn4BnInOp(const std::string& bn_in_op) const {
+const std::string& GetLbn4BnInOp(const std::string& bn_in_op) const {
   return bn_in_op2lbn_.at(bn_in_op);
 }
 

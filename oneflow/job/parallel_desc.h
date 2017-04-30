@@ -28,6 +28,7 @@ class ParallelDesc {
     // the return should be empty
     return machine_id2sorted_device_phy_ids_.at(machine_id);
   }
+  uint64_t parallel_size() const { TODO(); }
 
   //
   ParallelPolicy& mut_policy() { return policy_; }

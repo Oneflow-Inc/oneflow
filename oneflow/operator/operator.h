@@ -30,7 +30,7 @@ class Operator {
   virtual OperatorProto ToOperatorProto();
   
   // bn_in_op <-> lbn
-  void GetLbn4BnInOp(const std::string& bn_in_op) const;
+  const std::string& GetLbn4BnInOp(const std::string& bn_in_op) const;
   void ModifyLbn4BnInOp(const std::string& bn_in_op, const std::string& lbn);
   
   // Getters
