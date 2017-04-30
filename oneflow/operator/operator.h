@@ -152,9 +152,10 @@ class SysOperator : public Operator {
   #undef SET_UNEXPECTED
   
   virtual void InferShape4FwBlobs(
-      const HashMap<std::string, Shape*>& bn_in_op2shape_ptr,
+      std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
       ParallelPolicy policy,
-      uint64_t parallel_id) const override {
+      uint64_t parallel_id,
+      uint64_t parallel_size) const override {
     UNEXPECTED_RUN();
   }
   
