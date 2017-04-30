@@ -73,15 +73,13 @@ class Operator {
   
   #undef DEFINE_BLOB_NAMES_GETTER
 
-  // Functions used to inference Shape
-  Shape* GetShapePtr(const std::string& bn_in_op) const;
-  void SetShapePtr(const std::string& bn_in_op, Shape* ptr) const;
-  void SetNull4AllShapePtr() const;
-  virtual void InferShape4ObAndDtbFromIb() const = 0;
-  virtual void InferShape4ModelTmpBlob(ParallelPolicy policy,
-                                       uint64_t parallel_id) const = 0;
-  virtual void InferShape4ModelDiffBlob(ParallelPolicy policy,
-                                        uint64_t parallel_id) const = 0;
+  // Read: shape of input_blobs
+  // Write: shape of output_blobs, model_blobs, data_tmp_blobs, model_tmp_blobs
+  virtual void InferShape4FwBlobs(
+      std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+      ParallelPolicy policy,
+      uint64_t parallel_id,
+      uint64_t parallel_size) const = 0;
 
  protected:
   OperatorConf& mut_op_conf() {
@@ -119,8 +117,6 @@ class Operator {
   std::vector<std::string> model_diff_bns_;
   std::vector<std::string> model_tmp_bns_;
 
-  mutable HashMap<std::string, Shape*> bn_in_op2shape_ptr_;
-
 };
 
 class UserOperator : public Operator {
@@ -155,15 +151,13 @@ class SysOperator : public Operator {
 
   #undef SET_UNEXPECTED
   
-  void InferShape4ModelTmpBlob(ParallelPolicy policy,
-                               uint64_t parallel_id) const override {
+  virtual void InferShape4FwBlobs(
+      const HashMap<std::string, Shape*>& bn_in_op2shape_ptr,
+      ParallelPolicy policy,
+      uint64_t parallel_id) const override {
     UNEXPECTED_RUN();
   }
-  void InferShape4ModelDiffBlob(ParallelPolicy policy,
-                                uint64_t parallel_id) const override {
-    UNEXPECTED_RUN();
-  }
-
+  
  private:
 };
 
