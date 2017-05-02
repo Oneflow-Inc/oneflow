@@ -126,7 +126,7 @@ bool RdmaManager::CreateQueuePair(Connection* conn) {
 // FIXME(shiyuan) bug
 uint64_t RdmaManager::WaitForConnection(Connection* conn) {
   uint64_t peer_machine_id;
-  uint64_t size = sizeof(peer_machine_id);
+  ULONG size = sizeof(peer_machine_id);
   HRESULT hr = listener_->GetConnectionRequest(conn->connector, &conn->ov);
   if (hr == ND_PENDING) {
     hr = listener_->GetOverlappedResult(&conn->ov, true);
@@ -136,7 +136,7 @@ uint64_t RdmaManager::WaitForConnection(Connection* conn) {
   //
 
   // Get src rank from the private data
-  hr = connector->GetPrivateData(&peer_machine_id, &size);
+  hr = conn->connector->GetPrivateData(&peer_machine_id, &size);
   // LOG(INFO) << "peer_machine_id = " << peer_machine_id << " size = " << size << "\n";
   // NOTE(feiga): The author of NDSPI says it's normal for this check failed
   //              So just ignore it.
