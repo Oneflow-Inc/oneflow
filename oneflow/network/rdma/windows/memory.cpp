@@ -1,4 +1,5 @@
 #include "memory.h"
+#include "interface.h"
 
 namespace oneflow {
 
@@ -9,7 +10,7 @@ Memory::Memory(IND2MemoryRegion* memory_region) {
 // Register as ND memory region
 void Memory::Register() {
   OVERLAPPED ov;
-  ov.hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+  ov.hEvent = CreateEvent(NULL, false, false, NULL);
 
   HRESULT hr = memory_region_->Register(
       memory_,
@@ -32,7 +33,7 @@ void Memory::Register() {
   descriptor_.address = (UINT64)memory_;
   descriptor_.remote_token = memory_region_->GetRemoteToken();
 
-  registered = true;
+  registered_ = true;
   CloseHandle(ov.hEvent);
 }
 
@@ -47,8 +48,8 @@ void Memory::Unregister() {
   CloseHandle(ov.hEvent);
 }
 
-const void* Memory::sge() const {
+/*const void* Memory::sge() const {
   return &sge_;
-}
+}*/
 
 } // namespace oneflow

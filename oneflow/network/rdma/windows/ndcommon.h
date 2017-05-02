@@ -19,7 +19,7 @@
 #include <sal.h>
 
 #include "ndsupport.h"
-#include <ndstatus.h>
+#include "ndstatus.h"
 
 
 class Timer

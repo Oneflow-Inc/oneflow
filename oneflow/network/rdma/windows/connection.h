@@ -7,8 +7,11 @@
 // #include <unistd.h>
 #include <cstdint>
 #include "network/rdma/windows/ndsupport.h"
+#include "interface.h"
 
 namespace oneflow {
+
+class Request;
 
 class Connection {
  public: 
@@ -16,30 +19,34 @@ class Connection {
   ~Connection();
   Connection(uint64_t peer_machine_id);
 
- private:
-  uint64_t peer_machine_id_{ -1 };
+  void PostToRecvRequestQueue(Request* receive_request);
 
-  IND2Connector* connector_;
-  IND2QueuePair* queue_pair_;
-  OVERLAPPED ov_;
+  bool Bind();
+  // connect to and connected
+  bool TryConnectTo();
+  void CompleteConnectionTo();
+  // void WaitForConnection();
+  void AcceptConnect();
+ 
+  void DestroyConnection();
 
 
-  void Bind();
+  IND2Connector* connector;
+  IND2QueuePair* queue_pair;
+  OVERLAPPED ov;
+private:
+  uint64_t my_machine_id_;
+  uint64_t peer_machine_id_{ 0 }; // TODO(shiyuan)
+  
+  sockaddr_in my_sock_, peer_sock_;
+
 
   // prepare for connect
   // set up parameters
   // void BuildContext();
   // void BuildParams();
 
-  // connect to and connected
-  void TryConnectTo();
-  void CompleteConnectionTo();
-  void WaitForConnection();
-  void AcceptConnect();
-
-  void PostToRecvRequestQueue(Request* receive_request);
   // destroy connect
-  void DestroyConnection();
 
 };
 

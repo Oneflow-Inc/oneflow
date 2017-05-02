@@ -3,15 +3,15 @@
 
 namespace oneflow {
 
-RequestPool::RequestPool() : sequence_num (0) {
+RequestPool::RequestPool() : sequence_number_ (0) {
   msg_pool_.reset(new MessagePool<Message>(kBufferSize));
 }
 
 RequestPool::~RequestPool() {
   for (auto& pair : request_dict_) {
     // Firstly, release the |registered_message| of this request.
-    delete pair.second->registered_message;
-    pair.second->registered_message = nullptr;
+    delete pair.second->rdma_msg;
+    pair.second->rdma_msg = nullptr;
     // Secondly, release the request itself.
     delete pair.second;
   }
@@ -24,7 +24,7 @@ Request* RequestPool::AllocRequest(bool is_send) {
   Request* request = new Request();
   request->time_stamp = time_stamp;
   request->is_send = is_send;
-  request->registered_message = msg_pool_->Alloc();
+  request->rdma_msg = msg_pool_->Alloc();
   request_dict_.insert({ time_stamp, request });
   return request;
 }
@@ -32,7 +32,7 @@ Request* RequestPool::AllocRequest(bool is_send) {
 void RequestPool::ReleaseRequest(int32_t time_stamp) {
   auto request = GetRequest(time_stamp);
   // Return the registered message to |msg_pool_|
-  msg_pool_->Free(request->registered_message);
+  msg_pool_->Free(request->rdma_msg);
   // Destroy the Request object
   delete request;
   // Erase the pair indexed by |time_stamp|

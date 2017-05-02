@@ -17,7 +17,7 @@ struct NetworkTopology {
     int32_t id;
     std::string address;
     int32_t port;
-    std::unordered_set<int32_t> neighbors;
+    std::unordered_set<uint64_t> neighbors;
   };
   std::vector<Node> all_nodes;
 };

@@ -26,7 +26,7 @@ class RdmaWrapper : public Network {
   NetworkMemory* NewNetworkMemory() override;
   
   bool Send(const NetworkMessage& msg) override;
-  bool Read(MemoryDescriptor* remote_memory_descriptor, 
+  void Read(MemoryDescriptor* remote_memory_descriptor, 
             NetworkMemory* local_memory) override; //return bool;
   void RegisterEventMessage(MsgPtr event_msg) override;
   bool Poll(NetworkResult* result) override;

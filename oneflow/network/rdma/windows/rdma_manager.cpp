@@ -1,6 +1,17 @@
-#include "rdma_manager.h"
+#include "network/rdma/windows/rdma_manager.h"
+
+#include <string.h>
+#include "ndsupport.h"
+#include "ndsupport.cpp"
+
+
+#include "interface.h"
+#include "network/rdma/windows/connection.h"
 
 namespace oneflow {
+
+// class Connection;
+
 
 namespace {
 
@@ -15,13 +26,14 @@ sockaddr_in GetAddress(const char* addr, int port) {
 
 } // namespace 
 
-RdmaManager::RdmaManager(const char* addr, int port) {  
-  my_sock_ = GetAddress(addr, port);
+
+/*RdmaManager::RdmaManager(const char* addr, int32_t port) {  
+  my_sock = GetAddress(addr, port);
   adapter_ = NULL;
   listener_ = NULL;
   send_cq_ = NULL;
   recv_cq_ = NULL;
-}
+}*/
 
 RdmaManager::~RdmaManager() {
   Destroy();
@@ -35,16 +47,16 @@ bool RdmaManager::InitAdapter() {
   // NdspiV2Open
   HRESULT hr = NdStartup();
   // CHECK hr
-  hr = NdOpenV2Adapter(reinterpret_cast<const sockaddr*>(&my_sock_), 
-                       sizeof(my_sock_),
+  hr = NdOpenV2Adapter(reinterpret_cast<const sockaddr*>(&my_sock), 
+                       sizeof(my_sock),
                        &adapter_);
   // CHECK hr
 
   hr = adapter_->CreateOverlappedFile(&overlapped_file_);
   // CHECK hr
   
-  uint64_t info_size = sizeof(adapter_info_);
-  adapter_info.InfoVersion = ND_VERSION_2;
+  ULONG info_size = sizeof(adapter_info_);
+  adapter_info_.InfoVersion = ND_VERSION_2;
   hr = adapter_->Query(&adapter_info_, &info_size);
   // CHECK hr
   return true;
@@ -66,7 +78,7 @@ bool RdmaManager::InitEnv() {
   hr = adapter_->CreateCompletionQueue(
       IID_IND2CompletionQueue,
       overlapped_file_,
-      adapter_info_.MaxCompletionQueueDepth.
+      adapter_info_.MaxCompletionQueueDepth,
       0,
       0,
       reinterpret_cast<void**>(&recv_cq_));
@@ -80,7 +92,7 @@ bool RdmaManager::InitEnv() {
   // CHECK(!FAILED(hr)) << "Failed to create listener\n";
 
   hr = listener_->Bind(
-      reinterpret_cast<const sockaddr*>(&my_sock_),
+      reinterpret_cast<const sockaddr*>(&my_sock),
       sizeof(sockaddr_in));
   // CHECK(!FAILED(hr)) << "Failed to bind\n";
 
@@ -108,20 +120,26 @@ bool RdmaManager::CreateQueuePair(Connection* conn) {
       NULL,
       // just all set them as maximum value, need to be set
       // according to our application protocal carefully.
-      adapter_info_.MaxRecvQueueDepth,
-      adapter_info_.MaxSendQueueDepth,
+      adapter_info_.MaxReceiveQueueDepth,
+      adapter_info_.MaxInitiatorQueueDepth,
       1, // adapter_info_.MaxRecvSge,
-      adapter_info_.MaxSendSge,
+      adapter_info_.MaxInitiatorSge,
       adapter_info_.MaxInlineDataSize,
       reinterpret_cast<void**>(&conn->queue_pair));
 }
 
 uint64_t RdmaManager::WaitForConnection() {
+	return 0;
+}
+
+// TODO(shiyuan)
+/*uint64_t RdmaManager::WaitForConnection() {
+  
   uint64_t peer_machine_id;
-  uint64_t size = sizeof(peer_machine_id);
-  HRESULT hr = listener_->GetConnectionRequest(connector, &ov);
+  /*uint64_t size = sizeof(peer_machine_id);
+  HRESULT hr = listener_->GetConnectionRequest(conn->connector, &conn->ov);
   if (hr == ND_PENDING) {
-    hr = listener_->GetOverlappedResult(&ov, true);
+    hr = listener_->GetOverlappedResult(&conn->ov, true);
   }
   // CHECK(!FAILED(hr)) << "Failed to GetConnectionRequest\n";
   // LOG(INFO) << "Get connection request done\n";
@@ -133,9 +151,9 @@ uint64_t RdmaManager::WaitForConnection() {
   // NOTE(feiga): The author of NDSPI says it's normal for this check failed
   //              So just ignore it.
   // CHECK(!FAILED(hr)) << "Failed to get private data. hr = " << hr << "\n";
-
+  
   return peer_machine_id;
-}
+}*/
 
 
 bool RdmaManager::Destroy() {
@@ -146,5 +164,5 @@ bool RdmaManager::Destroy() {
   return true;
 }
 
-} // namespace oneflow
+} // namespace oneflow 
 

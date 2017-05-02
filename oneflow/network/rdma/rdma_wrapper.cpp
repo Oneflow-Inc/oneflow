@@ -1,10 +1,8 @@
 #include "rdma_wrapper.h"
 
 #include <vector>
-/* Windows header file.
- * #include <ws2tcpip.h>
- * #include <iphlpapa.h>
- */
+#include <ws2tcpip.h>
+//#include <iphlpapa.h>
 
 #include "network/network.h"
 #include "network/rdma/agency.h"
@@ -21,8 +19,8 @@ namespace {
 sockaddr_in GetAddress(const uint64_t* machine_id, int port) {
   sockaddr_in addr = sockaddr_in();
   std::memset(&addr, 0, sizeof(sockaddr_in));
-  //TODO(shiyuan) get address by machine_id.
-  inet_pton(AF_INET, url, &addr.sin_addr);
+  // TODO(shiyuan) get address by machine_id.
+  // inet_pton(AF_INET, address, &addr.sin_addr); // TODO(shiyuan)
   addr.sin_family = AF_INET;
   addr.sin_port = htons(static_cast<u_short>(port));
   return addr;
@@ -35,7 +33,7 @@ RdmaWrapper::RdmaWrapper() {
 }
 
 RdmaWrapper::~RdmaWrapper() {
-  rdma_manager_.Release(); //TODO(shiyuan): Add this function to RdmaManager
+  rdma_manager_->Release(); //TODO(shiyuan): Add this function to RdmaManager
 }
 
 void RdmaWrapper::Init(uint64_t my_machine_id, 
@@ -48,7 +46,7 @@ void RdmaWrapper::Init(uint64_t my_machine_id,
 
   //NdspiV2Open();
   rdma_manager_ = new RdmaManager();
-  rdma_manager_->sin = GetAddress(); // TODO(shiyuan)
+  // rdma_manager_->my_sock = GetAddress(my_machine_id); // TODO(shiyuan)
   rdma_manager_->Init();
 
   EstablishConnection();
@@ -57,7 +55,7 @@ void RdmaWrapper::Init(uint64_t my_machine_id,
 void RdmaWrapper::InitConnections() {
   Connection* conn;
   for (auto peer_machine_id : net_topology_.all_nodes[my_machine_id_].neighbors) {
-    conn = NewConnection(peer_machine_id);
+    conn = NewConnection();
     connection_pool_->AddConnection(peer_machine_id, conn);
   }
 }
@@ -80,7 +78,7 @@ NetworkMemory* RdmaWrapper::NewNetworkMemory() {
   // new MemoryRegion
 
   // mv new memory_region to Memory
-  Memory* memory = new Memory(memory_region);
+  Memory* memory = new Memory();
   return memory;
 }
 
@@ -95,7 +93,7 @@ bool RdmaWrapper::Send(const NetworkMessage& msg) {
   // check(send_request)
 
   // 2. Get network message buffer, copy the message.
-  send_request->registered_message->mutable_msg() = msg;
+  send_request->rdma_msg->mutable_msg() = msg;
 
   // NOTE(feiga): The last flag of Send, NO_OP_FLAG_SILENT_SUCCESS means the 
   // successful sending will not generate an event in completion queue.
@@ -117,18 +115,18 @@ bool RdmaWrapper::Send(const NetworkMessage& msg) {
 
 void RdmaWrapper::Read(MemoryDescriptor* remote_memory_descriptor, 
                        NetworkMemory* local_memory) {
-  Connection* conn = connection_pool_->GetConnection(src->my_machine_id);
+  Connection* conn = connection_pool_->GetConnection(remote_memory_descriptor->machine_id);
   // CHECK
 
   Request* read_request = request_pool_->AllocRequest(true);
   // CHECK
 
   // Memorize the Request object for the most recently issued Read verb.
-  time_stamp_of_last_read_request = read_request->time_stamp;
+  time_stamp_of_last_read_request_ = read_request->time_stamp;
   // The read_request->registered_message->mutable_msg() will be set in 
   // |RegisterEventMessage|.
 
-  Memory* dst_memory = reinterpret_cast<Memory*>(dst);
+  Memory* dst_memory = reinterpret_cast<Memory*>(local_memory);
     
   // HRESULT hr = conn->queue_pair->Read(&read_request->time_stamp,
   //         static_cast<const ND2_SGE*>(dst_memory->sge()),
@@ -143,7 +141,7 @@ void RdmaWrapper::Read(MemoryDescriptor* remote_memory_descriptor,
 void RdmaWrapper::RegisterEventMessage(MsgPtr event_msg) {
   Request* last_read_request = request_pool_->GetRequest(
       time_stamp_of_last_read_request_);
-  last_read_request->registered_message->multable_msg().event_msg = (*event_msg);
+  last_read_request->rdma_msg->mutable_msg().event_msg = (*event_msg);
 }
 
 bool RdmaWrapper::Poll(NetworkResult* result) {
@@ -154,8 +152,10 @@ bool RdmaWrapper::Poll(NetworkResult* result) {
 // result->net_msg, having result->type == NetworkResultType::NET_RECEIVE_MSG.
 bool RdmaWrapper::PollRecvQueue(NetworkResult* result) {
   // Result r;
+  ND2_RESULT nd2_result;
   // TODO(shiyuan) len = rdma_manager_->GetRecvCqResults(&r, 1);
-  uint32_t len = rdma_manager_->recv_cq_->GetResults(&r, 1);
+  // uint32_t len = rdma_manager_->recv_cq_->GetResults(&r, 1);
+	uint32_t len = 1; // FIXME(shiyuan)
   if (len == 0)
     return false;
 
@@ -164,59 +164,59 @@ bool RdmaWrapper::PollRecvQueue(NetworkResult* result) {
 
   result->type = NetworkResultType::NET_RECEIVE_MSG;
   // The context is the message timestamp in Recv Request.
-  int32_t time_stamp = *(static_cast<int32_t*>(r.RequestContext));
+  int32_t time_stamp = *(static_cast<int32_t*>(nd2_result.RequestContext));
   Request* request = request_pool_->GetRequest(time_stamp);
   // CHECK request
 
-  result->net_msg = request->registered_message->msg();
+  result->net_msg = request->rdma_msg->msg();
 
   // Equivalent to:
   //  request_pool_->ReleaseRequest(time_stamp);
   //  PostReceiveRequest(result->net_msg.src_rank);
   // but is more efficient
-  ReRecvRequest(result->net_msg.src_rank, time_stamp);
+  RePostRecvRequest(result->net_msg.src_machine_id, time_stamp);
   return true;
 }
 
 bool RdmaWrapper::PollSendQueue(NetworkResult* result) {
   // CHECK result
-  // HRESULT hr;
+  // HRESULT hr; // FIXME(shiyuan)
+  ND2_RESULT nd2_result;
   // TODO(shiyuan) len = rdma_manager_->GetSendCqResults(&r, 1);
-  uint32_t len = rdma_manager_->send_cq_->GetResults(&hr, 1);
+  // uint32_t len = rdma_manager_->send_cq_->GetResults(&hr, 1);
+  uint32_t len = 1; // FIXME(shiyuan)
   if (len == 0)
     return false;
 
   // CHECK
     
   // NET_SEND_OK? NET_SEND_ACK?
-  switch (hr.RequestType) {
-    case REQUEST_TYPE::RequestTypeSend: {
+  switch (nd2_result.RequestType) {
+    case ND2_REQUEST_TYPE::Nd2RequestTypeSend: {
       result->type = NetworkResultType::NET_SEND_OK;
       // The context is the message timestamp in Send request.
       // The network object does not have additional information 
       // to convey to outside caller, it just recycle the 
       // registered_message used in sending out.
-      int32_t time_stamp = *(static_cast<int32_t*>(hr.RequestContext));
+      int32_t time_stamp = *(static_cast<int32_t*>(nd2_result.RequestContext));
       Request* request = request_pool_->GetRequest(time_stamp);
       // CHECK(request)
       request_pool_->ReleaseRequest(time_stamp);
       break;
                                             
     }
-    case REQUEST_TYPE::RequestTypeRead: {
+    case ND2_REQUEST_TYPE::Nd2RequestTypeRead: {
       result->type = NetworkResultType::NET_READ_OK;
       // The context is the message timestamp in Read request.
       // The network object needs to convey the information about 
       // "what data have been read" to external caller.
-      int32_t time_stamp = *(static_cast<int32_t*>(hr.RequestContext));
+      int32_t time_stamp = *(static_cast<int32_t*>(nd2_result.RequestContext));
       Request* request = request_pool_->GetRequest(time_stamp);
 
-      result->net_msg = request->registered_message->msg();
+      result->net_msg = request->rdma_msg->msg();
       request_pool_->ReleaseRequest(time_stamp);
       break;
     }
-    default:
-            //
   }
 
   return true;
@@ -244,9 +244,9 @@ void RdmaWrapper::EstablishConnection() {
   // For node with small rank, the connection will fail until its peer with 
   // larger rank has established its own active connections
   Connection* conn = NULL;
-  Request* request = NULL;
+  Request* receive_request = NULL;
   for (auto peer_machine_id : net_topology_.all_nodes[my_machine_id_].neighbors) {
-    if (peer_machine_id > my_machine_id) {
+    if (peer_machine_id > my_machine_id_) {
       conn = connection_pool_->GetConnection(peer_machine_id);
       conn->Bind();
       receive_request = request_pool_->AllocRequest(false);
@@ -267,9 +267,9 @@ void RdmaWrapper::EstablishConnection() {
   // Only if this node has established all the active connections, can it start
   // to listen and wait for the connections from peer nodes with smaller rank.
   for (auto peer_machine_id : net_topology_.all_nodes[my_machine_id_].neighbors) {
-    if (peer_machine_id < my_machine_id) { // peer_machine_id means nothing here, just counting.
+    if (peer_machine_id < my_machine_id_) { // peer_machine_id means nothing here, just counting.
       // connecting with src_machine_id
-      int src_machine_id = rdma_manager_->WaitForConnection();
+      uint64_t src_machine_id = rdma_manager_->WaitForConnection();
       conn = connection_pool_->GetConnection(src_machine_id);
       // Pre-post Receive issue before connect
       receive_request = request_pool_->AllocRequest(false);

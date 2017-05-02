@@ -12,6 +12,7 @@ class Memory : public NetworkMemory {
   using NetworkMemory::size_;
   using NetworkMemory::descriptor_;
 
+  Memory() = default;
   explicit Memory(IND2MemoryRegion* memory_region);
 
   void Register() override;

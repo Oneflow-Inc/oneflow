@@ -1,4 +1,6 @@
 #include "connection.h"
+#include "ndspi.h"
+#include "interface.h"
 
 namespace oneflow {
 
@@ -8,12 +10,12 @@ Connection::Connection(uint64_t peer_machine_id)
 {
   peer_machine_id_ = peer_machine_id;
 
-  connector_ = NULL;
-  queue_pair_ = NULL;
+  connector = NULL;
+  queue_pair = NULL;
   // recv_region_; // GetMemory
 
   // TODO(shiyuan) 
-  ov_.hEvent = CreateEvent(NULL, false, false, NULL);
+  ov.hEvent = CreateEvent(NULL, false, false, NULL);
 
 }
 
@@ -24,17 +26,17 @@ Connection::~Connection()
 
 bool Connection::Bind() {
   // TODO(shiyuan) add init of my_sock and peer_sock in Connection::Init
-  return connector_->Bind(reinterpret_cast<const sockaddr*>(&my_sock), 
-      sizeof(my_sock));
+  return connector->Bind(reinterpret_cast<const sockaddr*>(&my_sock_), 
+      sizeof(my_sock_));
   // CHECK(!FAILED(hr)) << "Connector bind failed.\n"
 } 
 
 bool Connection::TryConnectTo()
 {
-  HRESULT hr = connector_->Connect(
-      queue_pair_,
-      reinterpret_cast<const sockaddr*>(&peer_sock),
-      sizeof(peer_sock),
+  HRESULT hr = connector->Connect(
+      queue_pair,
+      reinterpret_cast<const sockaddr*>(&peer_sock_),
+      sizeof(peer_sock_),
       0,         // TODO(shiyuan): 0 indicate we do not support Read, right here?
       0,         // TODO(shiyuan): 0 indicate we do not support Read, right here?
       &my_machine_id_,  // Send the active side machine id as private data to tell
@@ -43,7 +45,7 @@ bool Connection::TryConnectTo()
       &ov);
   
   if (hr == ND_PENDING) {
-    hr = connector_->GetOverlappedResult(&ov, TRUE);
+    hr = connector->GetOverlappedResult(&ov, true);
   }
 
   if (hr != ND_SUCCESS) {
@@ -56,9 +58,10 @@ bool Connection::TryConnectTo()
 
 void Connection::CompleteConnectionTo()
 {
-  connector_->CompleteConnect(&ov);
-  if (hr == ND_PENDIND) {
-    hr = connector_->GetOverlappedResult(&ov, TRUE);
+	HRESULT hr;
+  connector->CompleteConnect(&ov);
+  if (hr == ND_PENDING) {
+    hr = connector->GetOverlappedResult(&ov, true);
   }
   // CHECK(!FAILED(hr)) << "Failed to complete connection\n";
 }
@@ -80,10 +83,10 @@ void Connection::AcceptConnect()
 
 void Connection::PostToRecvRequestQueue(Request* receive_request)
 {
-  queue_pair_->Receive(
+  queue_pair->Receive(
       &receive_request->time_stamp,
       static_cast<const ND2_SGE*> (
-          receive_request->registered_message->net_memory()->sge()),
+          receive_request->rdma_msg->net_memory()->sge()),
       1);
 }
 

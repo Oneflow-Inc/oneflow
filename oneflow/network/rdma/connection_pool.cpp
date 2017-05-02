@@ -8,7 +8,7 @@ namespace oneflow {
 
 void ConnectionPool::AddConnection(uint64_t peer_machine_id, 
                                    Connection* conn) {
-  conn->BuildConnection(peer_machine_id);
+  // TODO(shiyuan) conn->BuildConnection(peer_machine_id);
   connection_dict_.insert({ peer_machine_id, conn });
   conn_num_++;
 }

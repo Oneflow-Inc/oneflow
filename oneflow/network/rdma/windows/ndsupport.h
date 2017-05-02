@@ -13,7 +13,7 @@
 #ifndef _NETDIRECT_H_
 #define _NETDIRECT_H_
 
-#include <ndspi.h>
+#include "ndspi.h"
 
 
 #ifdef __cplusplus
