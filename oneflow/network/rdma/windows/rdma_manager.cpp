@@ -145,6 +145,17 @@ uint64_t RdmaManager::WaitForConnection(Connection* conn) {
   return peer_machine_id;
 }
 
+Memory* RdmaManager::NewNetworkMemory() {
+  IND2MemoryRegion* memory_region = NULL;
+  HRESULT hr = adapter_->CreateMemoryRegion(
+      IID_IND2MemoryRegion,
+      overlapped_file_,
+      reinterpret_cast<void**>(&memory_region));
+  
+  Memory* memory = new Memory(memory_region);
+  return memory;
+}
+
 bool RdmaManager::Destroy() {
   send_cq_->Release();
   recv_cq_->Release();

@@ -27,6 +27,8 @@ class RdmaManager {
   bool CreateQueuePair(Connection* conn);
   // uint64_t WaitForConnection();
 
+  Memory* NewNetworkMemory();
+
  private:
   // NdspiV2 specific adatper and information
   IND2Adapter* adapter_;

@@ -74,12 +74,8 @@ void Barrier() {
 
 // TODO(shiyuan)
 NetworkMemory* RdmaWrapper::NewNetworkMemory() {
-  // TODO(shiyuan) OneFlowWin
-  // new MemoryRegion
-
-  // mv new memory_region to Memory
-  Memory* memory = new Memory();  // TODO(shiyuan)
-  return memory;
+  // TODO(shiyuan)
+  return rdma_manager_->NewNetworkMemory();
 }
 
 // |msg| contains src machine_id and dst machine_id
