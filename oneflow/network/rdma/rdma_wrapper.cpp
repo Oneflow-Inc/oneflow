@@ -1,6 +1,6 @@
 #include "network/rdma/rdma_wrapper.h"
 
-#include <ws2tcpip.h>
+#include <ws2tcpip.h> // TODO(shiyuan)
 #include <vector>
 // #include <iphlpapa.h>
 
@@ -33,7 +33,7 @@ RdmaWrapper::RdmaWrapper() {
 }
 
 RdmaWrapper::~RdmaWrapper() {
-  rdma_manager_->Release();  // TODO(shiyuan): Add this function to RdmaManager
+  rdma_manager_->Destroy();
 }
 
 void RdmaWrapper::Init(uint64_t my_machine_id,
@@ -293,4 +293,3 @@ Connection* RdmaWrapper::NewConnection() {
 }
 
 }  // namespace oneflow
-

@@ -27,7 +27,7 @@ class RdmaWrapper : public Network {
 
   bool Send(const NetworkMessage& msg) override;
   void Read(MemoryDescriptor* remote_memory_descriptor,
-            NetworkMemory* local_memory) override;  // return bool;
+            NetworkMemory* local_memory) override;
   void RegisterEventMessage(MsgPtr event_msg) override;
   bool Poll(NetworkResult* result) override;
 
@@ -82,20 +82,6 @@ class RdmaWrapper : public Network {
   // As passive side, prepare for others' connect
   // int32_t WaitForConnection();
 
-  // {
-  // TODO(shiyuan)
-  // NdspiV2 specific adatper and information
-  // IND2Adapter* adapter_;
-  // ND2_ADAPTER_INFO adapter_info_;
-  // HANDLE overlapped_file_;
-
-  // IND2Listener* listener_;
-
-  // Shared completion queue by all connections
-  // IND2CompletionQueue* init_cq_;  // initiator cq
-  // IND2CompletionQueue* recv_cq_;  // receive   cq
-
-  // }
   // Network topology information
 
   // TODO(jiyuan): estimate the pre-post number
