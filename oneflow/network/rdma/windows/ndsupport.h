@@ -89,6 +89,13 @@ NdOpenV1Adapter(
   _Deref_out_ INDAdapter** ppIAdapter
   );
 
+HRESULT ND_HELPER_API
+NdOpenV2Adapter(
+  __in_bcount(cbAddress) const struct sockaddr* pAddress,
+  __in SIZE_T cbAddress,
+  __deref_out IND2Adapter** ppIAdapter
+);
+
 #ifdef __cplusplus
 }
 #endif  // __cplusplus

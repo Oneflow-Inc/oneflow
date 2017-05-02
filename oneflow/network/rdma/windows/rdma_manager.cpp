@@ -1,7 +1,12 @@
 #include "network/rdma/windows/rdma_manager.h"
 
 #include <string.h>
+<<<<<<< HEAD
 #include "network/rdma/windows/ndsupport.h"
+=======
+#include "ndsupport.h"
+// #include "ndsupport.cpp"
+>>>>>>> ec39de0bc42466564b6574802767e10165e4be4f
 
 
 #include "network/rdma/windows/interface.h"
