@@ -1,9 +1,10 @@
 #include "network/rdma/request_pool.h"
 
+#include <limits>
 
 namespace oneflow {
 
-RequestPool::RequestPool() : sequence_number_ (0) {
+RequestPool::RequestPool() : sequence_number_(0) {
   msg_pool_.reset(new MessagePool<Message>(kBufferSize));
 }
 
@@ -62,4 +63,4 @@ int32_t RequestPool::new_time_stamp() {
   return time_stamp;
 }
 
-} // namespace oneflow
+}  // namespace oneflow

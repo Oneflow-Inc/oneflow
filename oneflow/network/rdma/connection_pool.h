@@ -1,6 +1,8 @@
 #ifndef ONEFLOW_NETWORK_RDMA_CONNECTION_POOL_H_
 #define ONEFLOW_NETWORK_RDMA_CONNECTION_POOL_H_
 
+#include <unordered_map>
+
 #include "network/rdma/agency.h"
 
 namespace oneflow {
@@ -21,6 +23,6 @@ class ConnectionPool {
   Connection& operator=(const ConnectionPool& other) = delete;
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_NETWORK_RDMA_CONNECTION_POOL_H_
+#endif  // ONEFLOW_NETWORK_RDMA_CONNECTION_POOL_H_

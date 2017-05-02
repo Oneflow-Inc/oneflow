@@ -40,4 +40,4 @@ void MessagePool<MessageType>::Free(MessageType* buffer) {
   if (buffer != nullptr) empty_buffer_.push(buffer);
 }
 
-} // namespace oneflow
+}  // namespace oneflow

@@ -21,10 +21,9 @@ class Message {
  private:
   NetworkMessage net_msg_;
   NetworkMemory* net_memory_;
-
 };
 
-} //namespace oneflow
+}  // namespace oneflow
 
 
-#endif // ONEFLOW_NETWORK_RDMA_WINDOWS_MESSAGE_H_
+#endif  // ONEFLOW_NETWORK_RDMA_WINDOWS_MESSAGE_H_

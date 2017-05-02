@@ -1,11 +1,10 @@
 #include "network/rdma/windows/rdma_manager.h"
 
 #include <string.h>
-#include "ndsupport.h"
-#include "ndsupport.cpp"
+#include "network/rdma/windows/ndsupport.h"
 
 
-#include "interface.h"
+#include "network/rdma/windows/interface.h"
 #include "network/rdma/windows/connection.h"
 
 namespace oneflow {
@@ -24,7 +23,7 @@ sockaddr_in GetAddress(const char* addr, int port) {
   return sock;
 }
 
-} // namespace 
+}  // namespace
 
 
 /*RdmaManager::RdmaManager(const char* addr, int32_t port) {  
@@ -47,14 +46,14 @@ bool RdmaManager::InitAdapter() {
   // NdspiV2Open
   HRESULT hr = NdStartup();
   // CHECK hr
-  hr = NdOpenV2Adapter(reinterpret_cast<const sockaddr*>(&my_sock), 
+  hr = NdOpenV2Adapter(reinterpret_cast<const sockaddr*>(&my_sock),
                        sizeof(my_sock),
                        &adapter_);
   // CHECK hr
 
   hr = adapter_->CreateOverlappedFile(&overlapped_file_);
   // CHECK hr
-  
+
   ULONG info_size = sizeof(adapter_info_);
   adapter_info_.InfoVersion = ND_VERSION_2;
   hr = adapter_->Query(&adapter_info_, &info_size);
@@ -63,15 +62,14 @@ bool RdmaManager::InitAdapter() {
 }
 
 bool RdmaManager::InitEnv() {
-
   // Create Send Completion Queue and Recv Completion Queue
   HRESULT hr;
   hr = adapter_->CreateCompletionQueue(
       IID_IND2CompletionQueue,
       overlapped_file_,
-      adapter_info_.MaxCompletionQueueDepth, // use max depth as default
-      0, // not specify processor group
-      0, // not specify affinity
+      adapter_info_.MaxCompletionQueueDepth,  // use max depth as default
+      0,  // not specify processor group
+      0,  // not specify affinity
       reinterpret_cast<void**>(&send_cq_));
   // CHECK(!FAILED(hr)) << "Failed to create send completion queue\n";
 
@@ -97,8 +95,8 @@ bool RdmaManager::InitEnv() {
   // CHECK(!FAILED(hr)) << "Failed to bind\n";
 
   // Start listening for incoming connection requests
-  // argument BACKLOG: The maximum number of pending connection requests 
-  // to maintain for the listen request. Set to zero to indicate no limit. 
+  // argument BACKLOG: The maximum number of pending connection requests
+  // to maintain for the listen request. Set to zero to indicate no limit.
   hr = listener_->Listen(0);  // NOTE(feiga): not sure whether 0(no limit) is OK
   // CHECK(!FAILED(hr)) << "Failed to Listen\n";
 
@@ -122,14 +120,14 @@ bool RdmaManager::CreateQueuePair(Connection* conn) {
       // according to our application protocal carefully.
       adapter_info_.MaxReceiveQueueDepth,
       adapter_info_.MaxInitiatorQueueDepth,
-      1, // adapter_info_.MaxRecvSge,
+      1,  // adapter_info_.MaxRecvSge,
       adapter_info_.MaxInitiatorSge,
       adapter_info_.MaxInlineDataSize,
       reinterpret_cast<void**>(&conn->queue_pair));
 }
 
 uint64_t RdmaManager::WaitForConnection() {
-	return 0;
+  return 0;
 }
 
 // TODO(shiyuan)
@@ -155,7 +153,6 @@ uint64_t RdmaManager::WaitForConnection() {
   return peer_machine_id;
 }*/
 
-
 bool RdmaManager::Destroy() {
   send_cq_->Release();
   recv_cq_->Release();
@@ -164,5 +161,4 @@ bool RdmaManager::Destroy() {
   return true;
 }
 
-} // namespace oneflow 
-
+}  // namespace oneflow

@@ -1,5 +1,5 @@
-#include "memory.h"
-#include "interface.h"
+#include "network/rdma/windows/memory.h"
+#include "network/rdma/windows/interface.h"
 
 namespace oneflow {
 
@@ -15,12 +15,12 @@ void Memory::Register() {
   HRESULT hr = memory_region_->Register(
       memory_,
       size_,
-      ND_MR_FLAG_ALLOW_REMOTE_WRITE, 
+      ND_MR_FLAG_ALLOW_REMOTE_WRITE,
       // TODO(feiga): add argument to decide the flag
       // TODO(shiyuan): add local_read, local_write, and remote read access authority
       &ov);
   // TODO(jiyuan): for message, it should allow read.
-  
+
   if (hr == ND_PENDING) {
     hr = memory_region_->GetOverlappedResult(&ov, TRUE);
   }
@@ -52,4 +52,4 @@ void Memory::Unregister() {
   return &sge_;
 }*/
 
-} // namespace oneflow
+}  // namespace oneflow

@@ -24,4 +24,4 @@ class MessagePool {
 
 }  // namespace oneflow
 
-#endif // ONEFLOW_NETWORK_RDMA_MESSAGE_POOL_H_
+#endif  // ONEFLOW_NETWORK_RDMA_MESSAGE_POOL_H_

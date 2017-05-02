@@ -27,6 +27,6 @@ class Memory : public NetworkMemory {
   void operator=(const Memory&) = delete;
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_NETWORK_RDMA_WINDOWS_MEMORY_H_
+#endif  // ONEFLOW_NETWORK_RDMA_WINDOWS_MEMORY_H_

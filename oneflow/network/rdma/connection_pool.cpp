@@ -6,9 +6,8 @@
 
 namespace oneflow {
 
-void ConnectionPool::AddConnection(uint64_t peer_machine_id, 
+void ConnectionPool::AddConnection(uint64_t peer_machine_id,
                                    Connection* conn) {
-  // TODO(shiyuan) conn->BuildConnection(peer_machine_id);
   connection_dict_.insert({ peer_machine_id, conn });
   conn_num_++;
 }
@@ -27,11 +26,9 @@ Connection* ConnectionPool::GetConnection(uint64_t peer_machine_id) const {
   if (conn_it != connection_dict_.end()) {
     Connection* conn = conn_it->second;
     return conn;
-  }
-  else {
+  } else {
      return NULL;
   }
-	//return nullptr;
 }
 
-} // namespace oneflow
+}  // namespace oneflow

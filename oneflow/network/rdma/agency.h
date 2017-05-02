@@ -7,5 +7,4 @@
 #include "network/rdma/linux/interface.h"
 #endif
 
-
-#endif // ONEFLOW_NETWORK_RDMA_AGENCY_H_
+#endif  // ONEFLOW_NETWORK_RDMA_AGENCY_H_
