@@ -76,8 +76,8 @@ void CommBus::SendInterNodeMessage(int32_t src_machine_id,
   int32_t dst_machine_id, MsgPtr msg) {
   NetworkMessage net_msg;
   net_msg.type = NetworkMessageType::MSG_TYPE_REQUEST_ACK;
-  net_msg.src_rank = src_machine_id;
-  net_msg.dst_rank = dst_machine_id;
+  net_msg.src_machine_id = src_machine_id;
+  net_msg.dst_machine_id = dst_machine_id;
   net_msg.event_msg = *msg;
   network_->Send(net_msg);
 }
