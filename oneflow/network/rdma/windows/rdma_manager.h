@@ -20,7 +20,6 @@ class RdmaManager {
   bool Init();
   bool Destroy();
 
-  bool Release();
   uint64_t WaitForConnection();
 
   sockaddr_in my_sock;

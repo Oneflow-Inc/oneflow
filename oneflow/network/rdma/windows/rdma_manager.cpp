@@ -1,21 +1,13 @@
 #include "network/rdma/windows/rdma_manager.h"
 
 #include <string.h>
-<<<<<<< HEAD
 #include "network/rdma/windows/ndsupport.h"
-=======
 #include "ndsupport.h"
-// #include "ndsupport.cpp"
->>>>>>> ec39de0bc42466564b6574802767e10165e4be4f
-
 
 #include "network/rdma/windows/interface.h"
 #include "network/rdma/windows/connection.h"
 
 namespace oneflow {
-
-// class Connection;
-
 
 namespace {
 
@@ -31,13 +23,13 @@ sockaddr_in GetAddress(const char* addr, int port) {
 }  // namespace
 
 
-/*RdmaManager::RdmaManager(const char* addr, int32_t port) {  
+RdmaManager::RdmaManager(const char* addr, int32_t port) {  
   my_sock = GetAddress(addr, port);
   adapter_ = NULL;
   listener_ = NULL;
   send_cq_ = NULL;
   recv_cq_ = NULL;
-}*/
+}
 
 RdmaManager::~RdmaManager() {
   Destroy();
