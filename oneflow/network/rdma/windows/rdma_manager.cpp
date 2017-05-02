@@ -2,7 +2,7 @@
 
 #include <string.h>
 #include "ndsupport.h"
-#include "ndsupport.cpp"
+// #include "ndsupport.cpp"
 
 
 #include "interface.h"
