@@ -1,5 +1,7 @@
 #include "network/rdma/message_pool.h"
 
+#include "network/network.h"
+
 namespace oneflow {
 
 template <typename MessageType>

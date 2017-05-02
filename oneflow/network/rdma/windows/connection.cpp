@@ -78,7 +78,7 @@ void Connection::AcceptConnect()
   // LOG(INFO) << "Accept done\n";
 }
 
-void Connection::PostToRecvRequestQueue(Request* receive_request) // TODO(shiyuan) parameter pass
+void Connection::PostToRecvRequestQueue(Request* receive_request)
 {
   queue_pair_->Receive(
       &receive_request->time_stamp,

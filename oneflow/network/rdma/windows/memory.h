@@ -7,7 +7,7 @@
 namespace oneflow {
 
 class Memory : public NetworkMemory {
-public:
+ public:
   using NetworkMemory::memory_;
   using NetworkMemory::size_;
   using NetworkMemory::descriptor_;
@@ -19,7 +19,7 @@ public:
 
   const void* sge() const override { return &sge_; }
 
-private:
+ private:
   ND2_SGE sge_;
   IND2MemoryRegion* memory_region_;
   Memory(const Memory&) = delete;

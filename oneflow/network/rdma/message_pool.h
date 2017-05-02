@@ -2,7 +2,7 @@
 #define ONEFLOW_NETWORK_RDMA_MESSAGE_POOL_H_
 
 #include <queue>
-#include "network/network.h"
+
 #include "network/rdma/agency.h"
 
 namespace oneflow {
@@ -10,14 +10,14 @@ namespace oneflow {
 // Not thread-safe
 template <typename MessageType>
 class MessagePool {
-public:
+ public:
   explicit MessagePool(int32_t initial_size);
   ~MessagePool();
 
   MessageType* Alloc();
   void Free(MessageType* buffer);
 
-private:
+ private:
   std::queue<MessageType*> empty_buffer_;
 };
 

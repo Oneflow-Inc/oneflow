@@ -1,17 +1,12 @@
 #ifndef ONEFLOW_NETWORK_RDMA_CONNECTION_POOL_H_
 #define ONEFLOW_NETWORK_RDMA_CONNECTION_POOL_H_
 
-#include <unordered_map>
-#include <cstdint>
-#include <memory>
 #include "network/rdma/agency.h"
 
 namespace oneflow {
 
-class Connection;
-
 class ConnectionPool {
-public:
+ public:
   ConnectionPool() = default;
   ~ConnectionPool() = default;
 
@@ -19,7 +14,7 @@ public:
   void CleanConnection(uint64_t peer_machine_id);
   Connection* GetConnection(uint64_t peer_machine_id) const;
 
-private:
+ private:
   int32_t conn_num_;
   std::unordered_map<int32_t, Connection*> connection_dict_;
   ConnectionPool(const ConnectionPool& other) = delete;

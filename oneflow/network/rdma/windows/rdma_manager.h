@@ -8,14 +8,14 @@ namespace oneflow{
 
 class RdmaManager {
 
-public:
+ public:
   RdmaManager();
   ~RdmaManager();
 
   bool Init();
   bool Destroy();
 
-private:
+ private:
   sockaddr_in my_sock_;
   
   // NdspiV2 specific adatper and information
@@ -32,6 +32,10 @@ private:
 
   bool InitAdapter();
   bool InitEnv();
+  bool CreateConnector(Connection* conn);
+  bool CreateQueuePair(Connection* conn);
+  uint64_t WaitForConnection();
+
 };
 
 } // namespace oneflow

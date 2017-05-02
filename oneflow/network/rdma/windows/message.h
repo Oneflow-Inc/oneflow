@@ -10,7 +10,7 @@ namespace oneflow {
 class Memory;
 
 class Message {
-public:
+ public:
   Message();
   ~Message();
 
@@ -18,7 +18,7 @@ public:
   NetworkMessage& mutable_msg() { return net_msg_; }
   NetworkMemory* net_memory() { return net_memory_; }
 
-private:
+ private:
   NetworkMessage net_msg_;
   NetworkMemory* net_memory_;
 

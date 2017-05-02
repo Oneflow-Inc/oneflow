@@ -1,5 +1,9 @@
 #include "network/rdma/connection_pool.h"
 
+#include <cstdint>
+#include <memory>
+#include <unordered_map>
+
 namespace oneflow {
 
 void ConnectionPool::AddConnection(uint64_t peer_machine_id, 

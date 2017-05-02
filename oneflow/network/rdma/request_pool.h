@@ -10,8 +10,6 @@
 
 namespace oneflow{
 
-class Message;
-
 /* move request to system/request.h
 struct Request {
   bool is_send;
@@ -21,7 +19,7 @@ struct Request {
 */
 
 class RequestPool {
-public:
+ public:
   RequestPool();
   ~RequestPool();
 
@@ -40,7 +38,7 @@ public:
   // needs update, while other properties do not change.
   Request* UpdateTimeStampAndReuse(int32_t time_stamp);
 
-private:
+ private:
   int32_t sequence_number_;
   std::unordered_map<int32_t, Request*> request_dict_;
   std::shared_ptr<MessagePool<Message>> msg_pool_;

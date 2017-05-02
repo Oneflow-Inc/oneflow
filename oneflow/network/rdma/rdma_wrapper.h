@@ -13,17 +13,15 @@
 
 namespace oneflow {
 
-class Connection;
-
-class ConnectionPool;
-
-class RequestPool;
-
 class RdmaWrapper : public Network {
-public:
+ public:
+  RdmaWrapper();
+  ~RdmaWrapper();
+
   void Init(uint64_t my_machine_id, const NetworkTopology& net_topo) override;
   void Finalize() override;
   void Barrier() override;
+  void InitConnections();
 
   NetworkMemory* NewNetworkMemory() override;
   
@@ -33,7 +31,7 @@ public:
   void RegisterEventMessage(MsgPtr event_msg) override;
   bool Poll(NetworkResult* result) override;
 
-private:
+ private:
   // |result| is owned by the caller, and the received message will be held in 
   // result->net_msg, having result->type == NetworkResultType::NET_RECEIVE_MSG.
   bool PollRecvQueue(NetworkResult* result); 
@@ -49,7 +47,7 @@ private:
   bool PollSendQueue(NetworkResult* result);
   
   // Post a new Request object to the receiving queue connecting to |peer_rank|
-  void PostRecvRequest(uint64_t peer_machine_id);
+  // void PostRecvRequest(uint64_t peer_machine_id);
   // Re-post the Request object indexed by |time_stamp| to the receive queue
   // connecting to |peer_rank|, just updating its time_stamp to a new value.
   void RePostRecvRequest(uint64_t peer_machine_id, int32_t time_stamp);
@@ -75,16 +73,15 @@ private:
   // All the active sides connect to the passive sides
   void EstablishConnection();
 
-  // FIXME(shiyuan): Need moved to Class Connection
   Connection* NewConnection();
   
   // As active side, try to connect to others;
   // return true if successfully, false if failed
-  bool TryConnectTo(uint64_t peer_machine_id);
-  void CompleteConnectionTo(uint64_t peer_machine_id);
+  // bool TryConnectTo(uint64_t peer_machine_id);
+  // void CompleteConnectionTo(uint64_t peer_machine_id);
   
   // As passive side, prepare for others' connect
-  int32_t WaitForConnection();
+  // int32_t WaitForConnection();
 
   //{
   // TODO()
