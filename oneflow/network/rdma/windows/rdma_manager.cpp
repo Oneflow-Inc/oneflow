@@ -123,15 +123,10 @@ bool RdmaManager::CreateQueuePair(Connection* conn) {
       reinterpret_cast<void**>(&conn->queue_pair));
 }
 
-uint64_t RdmaManager::WaitForConnection() {
-  return 0;
-}
-
-// TODO(shiyuan)
-/*uint64_t RdmaManager::WaitForConnection() {
-  
+// FIXME(shiyuan) bug
+uint64_t RdmaManager::WaitForConnection(Connection* conn) {
   uint64_t peer_machine_id;
-  /*uint64_t size = sizeof(peer_machine_id);
+  uint64_t size = sizeof(peer_machine_id);
   HRESULT hr = listener_->GetConnectionRequest(conn->connector, &conn->ov);
   if (hr == ND_PENDING) {
     hr = listener_->GetOverlappedResult(&conn->ov, true);
@@ -148,7 +143,7 @@ uint64_t RdmaManager::WaitForConnection() {
   // CHECK(!FAILED(hr)) << "Failed to get private data. hr = " << hr << "\n";
   
   return peer_machine_id;
-}*/
+}
 
 bool RdmaManager::Destroy() {
   send_cq_->Release();

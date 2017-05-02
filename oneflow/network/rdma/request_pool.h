@@ -10,14 +10,6 @@
 
 namespace oneflow {
 
-/* move request to system/request.h
-struct Request {
-  bool is_send;
-  int32_t time_stamp;
-  RegisteredNetworkMessage* registered_message;
-};
-*/
-
 class RequestPool {
  public:
   RequestPool();
@@ -51,6 +43,5 @@ class RequestPool {
 };
 
 }  // namespace oneflow
-
 
 #endif  // ONEFLOW_NETWORK_RDMA_REQUEST_POOL_H_

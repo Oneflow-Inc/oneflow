@@ -265,11 +265,13 @@ void RdmaWrapper::EstablishConnection() {
 
   // Only if this node has established all the active connections, can it start
   // to listen and wait for the connections from peer nodes with smaller rank.
+  Connection* temp_conn = NULL;
+  temp_conn = NewConnection();
   for (auto peer_machine_id : net_topology_.all_nodes[my_machine_id_].neighbors) {
     // peer_machine_id means nothing here, just counting.
     if (peer_machine_id < my_machine_id_) {
       // connecting with src_machine_id
-      uint64_t src_machine_id = rdma_manager_->WaitForConnection();
+      uint64_t src_machine_id = rdma_manager_->WaitForConnection(temp_conn);
       conn = connection_pool_->GetConnection(src_machine_id);
       // Pre-post Receive issue before connect
       receive_request = request_pool_->AllocRequest(false);
