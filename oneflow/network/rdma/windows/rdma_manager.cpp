@@ -23,7 +23,7 @@ sockaddr_in GetAddress(const char* addr, int port) {
 }  // namespace
 
 
-RdmaManager::RdmaManager(const char* addr, int32_t port) {  
+RdmaManager::RdmaManager(const char* addr, int32_t port) {
   my_sock = GetAddress(addr, port);
   adapter_ = NULL;
   listener_ = NULL;
@@ -141,7 +141,7 @@ uint64_t RdmaManager::WaitForConnection(Connection* conn) {
   // NOTE(feiga): The author of NDSPI says it's normal for this check failed
   //              So just ignore it.
   // CHECK(!FAILED(hr)) << "Failed to get private data. hr = " << hr << "\n";
-  
+
   return peer_machine_id;
 }
 
@@ -151,9 +151,59 @@ Memory* RdmaManager::NewNetworkMemory() {
       IID_IND2MemoryRegion,
       overlapped_file_,
       reinterpret_cast<void**>(&memory_region));
-  
+
   Memory* memory = new Memory(memory_region);
   return memory;
+}
+
+// |result| is owned by the caller, and the received message will be held in
+// result->net_msg, having result->type == NetworkResultType::NET_RECEIVE_MSG.
+int32_t RdmaManager::PollRecvQueue(NetworkResult* result) {
+  ND2_RESULT nd2_result;
+  uint32_t len = recv_cq_->GetResults(&nd2_result, 1);
+  if (len == 0)
+    return -1;
+
+  // CHECK
+  // CHECK
+
+  result->type = NetworkResultType::NET_RECEIVE_MSG;
+  // The context is the message timestamp in Recv Request.
+  int32_t time_stamp = *(static_cast<int32_t*>(nd2_result.RequestContext));
+  return time_stamp;
+}
+
+// TODO(shiyuan) should mv PollSendQueue to Class RdmaManager
+int32_t RdmaManager::PollSendQueue(NetworkResult* result) {
+  // CHECK result
+  // HRESULT hr; // FIXME(shiyuan)
+  ND2_RESULT nd2_result;
+  uint32_t len = send_cq_->GetResults(&nd2_result, 1);
+  if (len == 0)
+    return -1;
+
+  // CHECK
+
+  // NET_SEND_OK? NET_SEND_ACK?
+  switch (nd2_result.RequestType) {
+    case ND2_REQUEST_TYPE::Nd2RequestTypeSend: {
+      result->type = NetworkResultType::NET_SEND_OK;
+      // The context is the message timestamp in Send request.
+      // The network object does not have additional information
+      // to convey to outside caller, it just recycle the
+      // registered_message used in sending out.
+      int32_t time_stamp = *(static_cast<int32_t*>(nd2_result.RequestContext));
+      return time_stamp;
+    }
+    case ND2_REQUEST_TYPE::Nd2RequestTypeRead: {
+      result->type = NetworkResultType::NET_READ_OK;
+      // The context is the message timestamp in Read request.
+      // The network object needs to convey the information about
+      // "what data have been read" to external caller.
+      int32_t time_stamp = *(static_cast<int32_t*>(nd2_result.RequestContext));
+      return time_stamp;
+    }
+  }
 }
 
 bool RdmaManager::Destroy() {

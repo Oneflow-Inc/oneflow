@@ -8,6 +8,8 @@
 #include <cstdint>
 #include "network/rdma/windows/ndsupport.h"
 #include "network/rdma/windows/interface.h"
+#include "network/network_memory.h"
+
 
 namespace oneflow {
 

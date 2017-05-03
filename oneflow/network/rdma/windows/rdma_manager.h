@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <ndspi.h>
 #include "network/rdma/windows/interface.h"
+#include "network\network_message.h"
 
 namespace oneflow {
 
@@ -28,6 +29,8 @@ class RdmaManager {
   bool CreateQueuePair(Connection* conn);
   // uint64_t WaitForConnection();
 
+  int32_t PollRecvQueue(NetworkResult* result);
+  int32_t PollSendQueue(NetworkResult* result);
   Memory* NewNetworkMemory();
 
  private:

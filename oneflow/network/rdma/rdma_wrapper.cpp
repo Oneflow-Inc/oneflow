@@ -1,6 +1,6 @@
 #include "network/rdma/rdma_wrapper.h"
 
-#include <ws2tcpip.h> // TODO(shiyuan)
+#include <ws2tcpip.h>  // TODO(shiyuan)
 #include <vector>
 // #include <iphlpapa.h>
 
@@ -83,7 +83,7 @@ bool RdmaWrapper::Send(const NetworkMessage& msg) {
   // buffer of message.
 
   conn->PostSendRequest(send_request);  // TODO(shiyuan) add send method to Connection
-  //CHECK(!FAILED(result)) << "Failed to send\n";
+  // CHECK(!FAILED(result)) << "Failed to send\n";
 
   return true;  // TODO(shiyuan) return the result
 }
@@ -138,24 +138,12 @@ Connection* RdmaWrapper::NewConnection() {
   return conn;
 }
 
-// TODO(shiyuan) should mv PollRecvQueue to Class RdmaManager
 // |result| is owned by the caller, and the received message will be held in
 // result->net_msg, having result->type == NetworkResultType::NET_RECEIVE_MSG.
 bool RdmaWrapper::PollRecvQueue(NetworkResult* result) {
-  // Result r;
-  ND2_RESULT nd2_result;
-  // TODO(shiyuan) len = rdma_manager_->GetRecvCqResults(&r, 1);
-  // uint32_t len = rdma_manager_->recv_cq_->GetResults(&r, 1);
-  uint32_t len = 1;  // FIXME(shiyuan)
-  if (len == 0)
+  int32_t time_stamp = rdma_manager_->PollRecvQueue(result);
+  if (time_stamp == -1)
     return false;
-
-  // CHECK
-  // CHECK
-
-  result->type = NetworkResultType::NET_RECEIVE_MSG;
-  // The context is the message timestamp in Recv Request.
-  int32_t time_stamp = *(static_cast<int32_t*>(nd2_result.RequestContext));
   Request* request = request_pool_->GetRequest(time_stamp);
   // CHECK request
 
@@ -171,45 +159,13 @@ bool RdmaWrapper::PollRecvQueue(NetworkResult* result) {
 
 // TODO(shiyuan) should mv PollSendQueue to Class RdmaManager
 bool RdmaWrapper::PollSendQueue(NetworkResult* result) {
-  // CHECK result
-  // HRESULT hr; // FIXME(shiyuan)
-  ND2_RESULT nd2_result;
-  // TODO(shiyuan) len = rdma_manager_->GetSendCqResults(&r, 1);
-  // uint32_t len = rdma_manager_->send_cq_->GetResults(&hr, 1);
-  uint32_t len = 1;  // FIXME(shiyuan)
-  if (len == 0)
+  int32_t time_stamp = rdma_manager_->PollSendQueue(result);
+  if (time_stamp == -1)
     return false;
+  Request* request = request_pool_->GetRequest(time_stamp);
 
-  // CHECK
-
-  // NET_SEND_OK? NET_SEND_ACK?
-  switch (nd2_result.RequestType) {
-    case ND2_REQUEST_TYPE::Nd2RequestTypeSend: {
-      result->type = NetworkResultType::NET_SEND_OK;
-      // The context is the message timestamp in Send request.
-      // The network object does not have additional information
-      // to convey to outside caller, it just recycle the
-      // registered_message used in sending out.
-      int32_t time_stamp = *(static_cast<int32_t*>(nd2_result.RequestContext));
-      Request* request = request_pool_->GetRequest(time_stamp);
-      // CHECK(request)
-      request_pool_->ReleaseRequest(time_stamp);
-      break;
-    }
-    case ND2_REQUEST_TYPE::Nd2RequestTypeRead: {
-      result->type = NetworkResultType::NET_READ_OK;
-      // The context is the message timestamp in Read request.
-      // The network object needs to convey the information about
-      // "what data have been read" to external caller.
-      int32_t time_stamp = *(static_cast<int32_t*>(nd2_result.RequestContext));
-      Request* request = request_pool_->GetRequest(time_stamp);
-
-      result->net_msg = request->rdma_msg->msg();
-      request_pool_->ReleaseRequest(time_stamp);
-      break;
-    }
-  }
-
+  result->net_msg = request->rdma_msg->msg();
+  request_pool_->ReleaseRequest(time_stamp);
   return true;
 }
 
