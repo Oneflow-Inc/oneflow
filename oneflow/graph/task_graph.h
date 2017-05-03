@@ -3,7 +3,7 @@
 
 #include "graph/stage_graph.h"
 #include "graph/boxing_task_node.h"
-#include "graph/copy_hd_task_node.h"
+#include "graph/copy_task_node.h"
 #include "operator/operator.h"
 #include "operator/operator_manager.h"
 #include "job/parallel_desc.h"

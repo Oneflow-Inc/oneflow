@@ -1,6 +1,7 @@
 #include "graph/boxing_task_node.h"
 #include <algorithm>
 #include "operator/operator_manager.h"
+#include "operator/boxing_op.h"
 #include "graph/comp_task_node.h"
 
 namespace oneflow {
@@ -8,22 +9,22 @@ namespace oneflow {
 namespace {
 
 void FwCompleteBoxOpConfDataData(BoxingOpConf* conf) {
-  conf->mutable_concat_box()->set_type(BoxConcatConf::kData);
+  conf->mutable_concat_box()->set_axis(gDataConcatInitAxis);
   conf->mutable_data_split_box();
 }
 
 void FwCompleteBoxOpConfDataModel(BoxingOpConf* conf) {
-  conf->mutable_concat_box()->set_type(BoxConcatConf::kData);
+  conf->mutable_concat_box()->set_axis(gDataConcatInitAxis);
   conf->mutable_clone_box();
 }
 
 void FwCompleteBoxOpConfModelData(BoxingOpConf* conf) {
-  conf->mutable_concat_box()->set_type(BoxConcatConf::kModel);
+  conf->mutable_concat_box()->set_axis(gModelConcatInitAxis);
   conf->mutable_data_split_box();
 }
 
 void FwCompleteBoxOpConfModelModel(BoxingOpConf* conf) {
-  conf->mutable_concat_box()->set_type(BoxConcatConf::kModel);
+  conf->mutable_concat_box()->set_axis(gModelConcatInitAxis);
   conf->mutable_clone_box();
 }
 
@@ -137,13 +138,13 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
     for (size_t i = 0; i < sorted_out_edges.size(); ++i) {
       RegstDesc* out_regst = GetRelatedRegst(sorted_out_edges.at(i));
       const std::string& obn = node->op()->output_bns().at(i);
-      std::string lbn = node->op()->obn2lbn(obn);
+      std::string lbn = node->op()->Lbn4BnInOp(obn);
       out_regst->EnrollLbn(lbn);
       node->BindBnInOpAndRegst(obn, out_regst);
     }
     // dtbn
     for (const std::string& dtbn : node->op()->data_tmp_bns()) {
-      std::string lbn = node->op()->dtbn2lbn(dtbn);
+      std::string lbn = node->op()->Lbn4BnInOp(dtbn);
       middle_regst->EnrollLbn(lbn);
       node->BindBnInOpAndRegst(dtbn, middle_regst);
     }
@@ -155,8 +156,8 @@ void BoxingTaskNode::FwInferShape4LbnInProducedRegsts(TaskGraph*) {
     exec_node->op()->InferShape4FwBlobs(
         exec_node->GetMutShapePtr4BnInOpFunc(),
         chain_node()->parallel_desc()->policy(),
-        parallel_id(),
-        chain_node()->parallel_desc()->parallel_num());
+        0,
+        0);
   }
 }
 
@@ -179,7 +180,7 @@ void BoxingTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
     // in_diff
     for (const std::string& ibn : fw_node->op()->input_bns()) {
       std::string idbn = GenDiffBn(ibn);
-      std::string lbn = fw_node->op()->ibn2lbn(ibn);
+      std::string lbn = fw_node->op()->Lbn4BnInOp(ibn);
       RegstDesc* in_regst = fw_node->GetRegstFromBnInOp(ibn);
       RegstDesc* in_diff_regst = GetBpRegstFromFwRegst(in_regst);
       in_diff_regst->EnrollLbn(lbn);
@@ -188,14 +189,14 @@ void BoxingTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
     // out_diff
     for (const std::string& obn : fw_node->op()->output_bns()) {
       std::string odbn = GenDiffBn(obn);
-      std::string lbn = fw_node->op()->obn2lbn(obn);
+      std::string lbn = fw_node->op()->Lbn4BnInOp(obn);
       RegstDesc* out_regst = fw_node->GetRegstFromBnInOp(obn);
       RegstDesc* out_diff_regst = GetBpRegstFromFwRegst(out_regst);
       bp_node->BindBnInOpAndRegst(odbn, out_diff_regst);
     }
     // data tmp
     for (const std::string& dtbn : fw_node->op()->data_tmp_bns()) {
-      std::string lbn = fw_node->op()->dtbn2lbn(dtbn);
+      std::string lbn = fw_node->op()->Lbn4BnInOp(dtbn);
       RegstDesc* bp_middle_regst = GetProducedRegstDesc("middle");
       bp_middle_regst->EnrollLbn(lbn);
       bp_node->BindBnInOpAndRegst(dtbn, bp_middle_regst);

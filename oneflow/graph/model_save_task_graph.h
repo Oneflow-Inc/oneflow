@@ -15,8 +15,11 @@ class MdSaveTaskGraph final : public TaskGraph {
       const ChainNode* update_chain,
       const std::vector<CompTaskNode*>& sorted_update_tasks);
 
-  CompTaskNodeMemFunc Func4FwBuildExecAndProducedRegsts() const override {
-    return &CompTaskNode::MdSaveFwBuildExecAndProducedRegsts;
+  CompTaskNodeMemFunc Func4FwBuildExecAndEnrollLbn2Regsts() const override {
+    return &CompTaskNode::MdSaveFwBuildExecAndEnrollLbn2Regsts;
+  }
+  CompTaskNodeMemFunc Func4FwInferShape4LbnInProducedRegsts() const override {
+    return &CompTaskNode::MdSaveFwInferShape4LbnInProducedRegsts;
   }
 
  private:

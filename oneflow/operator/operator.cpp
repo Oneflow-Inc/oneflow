@@ -30,7 +30,7 @@ OperatorProto Operator::ToOperatorProto() {
   return op_proto;
 }
 
-const std::string& GetLbn4BnInOp(const std::string& bn_in_op) const {
+const std::string& Operator::Lbn4BnInOp(const std::string& bn_in_op) const {
   return bn_in_op2lbn_.at(bn_in_op);
 }
 
@@ -48,22 +48,22 @@ void Operator::EnrollDataTmpBn(const std::string& dtbn) {
 void Operator::EnrollInputBn(const std::string& ibn, bool has_diff) {
   std::string lbn = ibn2lbn(ibn);
   input_bns_.push_back(ibn);
-  CHECK(bn_in_op2lbn_.emplace(ibn, lbn));
+  CHECK(bn_in_op2lbn_.emplace(ibn, lbn).second);
   if (has_diff) {
     std::string idbn = GenDiffBn(ibn);
     input_diff_bns_.push_back(idbn);
-    CHECK(bn_in_op2lbn_.emplace(idbn, lbn));
+    CHECK(bn_in_op2lbn_.emplace(idbn, lbn).second);
   }
 }
 
 void Operator::EnrollOutputBn(const std::string& obn, bool has_diff) {
   std::string lbn = obn2lbn(obn);
   output_bns_.push_back(obn);
-  CHECK(bn_in_op2lbn_.emplace(obn, lbn));
+  CHECK(bn_in_op2lbn_.emplace(obn, lbn).second);
   if (has_diff) {
     std::string odbn = GenDiffBn(obn);
     output_diff_bns_.push_back(odbn);
-    CHECK(bn_in_op2lbn_.emplace(odbn, lbn));
+    CHECK(bn_in_op2lbn_.emplace(odbn, lbn).second);
   }
 }
 
@@ -73,12 +73,12 @@ void Operator::EnrollModelBn(const std::string& mbn) {
   CHECK(bn_in_op2lbn_.emplace(mbn, lbn).second);
   std::string mdbn = GenDiffBn(mbn);
   model_diff_bns_.push_back(mdbn);
-  CHECK(bn_in_op2lbn_.emplace(mdbn, lbn));
+  CHECK(bn_in_op2lbn_.emplace(mdbn, lbn).second);
 }
 
 void Operator::EnrollModelTmpBn(const std::string& mtbn) {
   model_tmp_bns_.push_back(mtbn);
-  CHECK(bn_in_op2lbn_.emplace(mtbn, mtbn2lbn(mtbn)));
+  CHECK(bn_in_op2lbn_.emplace(mtbn, mtbn2lbn(mtbn)).second);
 }
 
 std::string Operator::dtbn2lbn(const std::string& data_tmp_bn) const {

@@ -2,6 +2,7 @@
 #define ONEFLOW_OPERATOR_COPY_HD_OP_H_
 
 #include "operator/operator.h"
+#include "register/register_desc.h"
 
 namespace oneflow {
 
@@ -14,16 +15,14 @@ class CopyHdOp final : public SysOperator {
   void InitFromOpConf(const OperatorConf& op_conf) override;
   std::string GetValueFromPbOpConf(const std::string& k) const override;
   
-  void InferShape4ObAndDtbFromIb() const override { UNEXPECTED_RUN(); }
-  
-  std::string normal_ibn2lbn(const std::string& input_bn) const override {
+ private:
+  std::string ibn2lbn(const std::string& input_bn) const override {
     return RegstDesc::kAllLbn;
   }
   std::string obn2lbn(const std::string& output_bn) const override {
     return RegstDesc::kAllLbn;
   }
 
- private:
 
 };
 

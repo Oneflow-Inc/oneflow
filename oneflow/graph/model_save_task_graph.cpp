@@ -26,7 +26,7 @@ MdSaveTaskGraph::MdSaveTaskGraph(
     const std::vector<CompTaskNode*>& sorted_updt_tasks) {
   BuildTaskGraph(update_chain);
   InitFaker2Mccoy(sorted_updt_tasks);
-  BuildExecAndProducedRegsts();
+  BuildExecAndEnrollLbn2Regsts();
 }
 
 void MdSaveTaskGraph::BuildTaskGraph(const ChainNode* update_chain) {

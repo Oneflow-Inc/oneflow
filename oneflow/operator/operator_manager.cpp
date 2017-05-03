@@ -18,7 +18,7 @@ std::shared_ptr<Operator> OpMgr::ConstructOp(
 
 std::shared_ptr<Operator> OpMgr::ConstructOp(
     const OperatorProto& op_proto) const {
-  auto ret = OpTypeCase2Creator().at(op_proto.user_conf().op_type_case())();
+  auto ret = OpTypeCase2Creator().at(op_proto.op_conf().op_type_case())();
   ret->InitFromOperatorProto(op_proto);
   return ret;
 }

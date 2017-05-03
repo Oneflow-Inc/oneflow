@@ -11,8 +11,11 @@ class MdLoadTaskGraph final : public TaskGraph {
   MdLoadTaskGraph() = delete;
   ~MdLoadTaskGraph() = default;
 
-  CompTaskNodeMemFunc Func4FwBuildExecAndProducedRegsts() const override {
-    return &CompTaskNode::MdLoadFwBuildExecAndProducedRegsts;
+  CompTaskNodeMemFunc Func4FwBuildExecAndEnrollLbn2Regsts() const override {
+    return &CompTaskNode::MdLoadFwBuildExecAndEnrollLbn2Regsts;
+  }
+  CompTaskNodeMemFunc Func4FwInferShape4LbnInProducedRegsts() const override {
+    return &CompTaskNode::MdLoadFwInferShape4LbnInProducedRegsts;
   }
 
   MdLoadTaskGraph(

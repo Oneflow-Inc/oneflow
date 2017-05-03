@@ -47,7 +47,7 @@ RegstDesc* TaskNode::GetProducedRegstDesc(const std::string& regst_desc_name) {
 void TaskNode::TakeOverRegstDesc(TaskNode* rhs,
                                  const std::string& regst_desc_name) {
   std::unique_ptr<RegstDesc> this_regst;
-  rhs_regst_it = rhs->produced_regst_descs_.find(regst_desc_name);
+  auto rhs_regst_it = rhs->produced_regst_descs_.find(regst_desc_name);
   this_regst.swap(rhs_regst_it->second);
   rhs->produced_regst_descs_.erase(rhs_regst_it);
   CHECK(rhs->forwarded_regst_descs_.emplace(regst_desc_name,

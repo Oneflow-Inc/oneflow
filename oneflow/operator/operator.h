@@ -30,7 +30,7 @@ class Operator {
   OperatorProto ToOperatorProto();
   
   // bn_in_op <-> lbn
-  const std::string& GetLbn4BnInOp(const std::string& bn_in_op) const;
+  const std::string& Lbn4BnInOp(const std::string& bn_in_op) const;
   void ModifyLbn4BnInOp(const std::string& bn_in_op, const std::string& lbn);
   
   // Getters
@@ -42,9 +42,17 @@ class Operator {
     CHECK_EQ(input_bns_.size(), 1);
     return *(input_bns_.begin());
   }
+  const std::string& SoleIdbn() const {
+    CHECK_EQ(input_diff_bns_.size(), 1);
+    return *(input_diff_bns_.begin());
+  }
   const std::string& SoleObn() const {
     CHECK_EQ(output_bns_.size(), 1);
     return *(output_bns_.begin());
+  }
+  const std::string& SoleOdbn() const {
+    CHECK_EQ(output_diff_bns_.size(), 1);
+    return *(output_diff_bns_.begin());
   }
 
   #define DEFINE_BLOB_NAMES_GETTER(getter_name) \

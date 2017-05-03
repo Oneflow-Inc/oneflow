@@ -15,8 +15,8 @@ class CopyTaskNode : public TaskNode {
   virtual std::shared_ptr<const Operator> ConstructOp() const = 0;
 
  private:
-  void BuildExecAndEnrollLbn2Regsts();
-  void InferShape4LbnInProducedRegsts();
+  void BuildExecAndEnrollLbn2Regsts(TaskGraph*) override;
+  void InferShape4LbnInProducedRegsts(TaskGraph*) override;
 
 };
 

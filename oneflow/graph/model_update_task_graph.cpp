@@ -10,7 +10,7 @@ MdUpdtTaskGraph::MdUpdtTaskGraph(
   HashMap<uint64_t, CompTaskNode*> parallel_id2updt;
   InitFaker2MccoyAndParallelId2UpdtMap(sorted_bp_comptasks4data_chain,
                                        &parallel_id2updt);
-  BuildExecAndProducedRegsts();
+  BuildExecAndEnrollLbn2Regsts();
   CompleteUpdateTaskAndFwTask(sorted_bp_comptasks4data_chain, parallel_id2updt);
 }
 
@@ -73,7 +73,7 @@ void MdUpdtTaskGraph::CompleteUpdateTaskAndFwTask(
     RegstDesc* model_diff_regst = bp_task->GetProducedRegstDesc("model_diff");
     RegstDesc* model_regst = update_task->GetProducedRegstDesc("model");
     // complete update task
-    model_regst->CopyLbn2ShapeMap(model_diff_regst);
+    model_regst->CopyLbnFrom(model_diff_regst);
     ExecNode* update_exec = update_task->exec_gph().SoleNode();
     const std::string ibn = "model_diffs";
     if (update_task->in_edges().empty()) {

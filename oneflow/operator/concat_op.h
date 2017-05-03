@@ -14,17 +14,18 @@ class ConcatOp final : public UserOperator {
   void InitFromOpConf(const OperatorConf& op_conf) override;
 
   std::string GetValueFromPbOpConf(const std::string& k) const override;
-  std::string normal_ibn2lbn(const std::string& input_bn) const override {
+
+  void InferShape4FwBlobs(
+      std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+      ParallelPolicy policy,
+      uint64_t parallel_id,
+      uint64_t parallel_num) const override;
+
+ private:
+  std::string ibn2lbn(const std::string& input_bn) const override {
     return ibn2lbn_.at(input_bn);
   }
 
-  void InferShape4ObAndDtbFromIb() const override;
-  void InferShape4ModelTmpBlob(ParallelPolicy policy,
-                               uint64_t parallel_id) const override {}
-  void InferShape4ModelDiffBlob(ParallelPolicy policy,
-                                uint64_t parallel_id) const override {}
-
- private:
   std::unordered_map<std::string, std::string> ibn2lbn_;
 
 };

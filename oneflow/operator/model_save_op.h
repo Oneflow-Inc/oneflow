@@ -11,9 +11,8 @@ class ModelSaveOp final : public SysOperator {
   ModelSaveOp() = default;
   ~ModelSaveOp() = default;
 
-  std::string GetValueFromPbOpConf(const std::string& k) const override;
   void InitFromOpConf(const OperatorConf& op_conf) override;
-  void InferShape4ObAndDtbFromIb() const override { TODO(); }
+  std::string GetValueFromPbOpConf(const std::string& k) const override;
 
  private:
 };

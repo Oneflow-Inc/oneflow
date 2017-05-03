@@ -1,9 +1,11 @@
 #include "graph/copy_task_node.h"
-#include "operator/copy_op.h"
+#include "operator/copy_hd_op.h"
+#include "operator/comm_net_op.h"
+#include "operator/operator_manager.h"
 
 namespace oneflow {
 
-void CopyHDTaskNode::BuildExecAndEnrollLbn2Regsts(){
+void CopyTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph*){
   auto out_regst = RegstDescMgr::Singleton().CreateRegisterDesc();
   BindProducedRegstAndOutEdge(out_regst.get(), SoleOutEdge());
   RegstDesc* in_regst = GetRelatedRegst(SoleInEdge());
@@ -24,7 +26,7 @@ void CopyHDTaskNode::BuildExecAndEnrollLbn2Regsts(){
   EnrollProducedRegstDesc("copy", std::move(out_regst));
 }
 
-void CopyHDTaskNode::InferShape4LbnInProducedRegsts() {
+void CopyTaskNode::InferShape4LbnInProducedRegsts(TaskGraph*) {
   RegstDesc* in_regst = GetRelatedRegst(SoleInEdge());
   RegstDesc* out_regst = GetRelatedRegst(SoleOutEdge());
   out_regst->CopyShapeFrom(in_regst);

@@ -12,19 +12,17 @@ class ModelUpdateOp final : public SysOperator {
   ModelUpdateOp() = default;
   ~ModelUpdateOp() = default;
 
-  std::string GetValueFromPbOpConf(const std::string& k) const override;
   void InitFromOpConf(const OperatorConf& op_conf) override;
+  std::string GetValueFromPbOpConf(const std::string& k) const override;
 
-  std::string normal_ibn2lbn(const std::string& input_bn) const override {
+ private:
+  std::string ibn2lbn(const std::string& input_bn) const override {
     return RegstDesc::kAllLbn;
   }
   std::string obn2lbn(const std::string& output_bn) const override {
     return RegstDesc::kAllLbn;
   }
 
-  void InferShape4ObAndDtbFromIb() const override { UNEXPECTED_RUN(); }
-
- private:
 };
 
 } // namespace oneflow

@@ -42,13 +42,13 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void BuildExecAndEnrollLbn2Regsts(TaskGraph*) = 0;
   virtual void InferShape4LbnInProducedRegsts(TaskGraph*) = 0;
 
-  #define OVERRIDE_IF_FW_BP_FOR_FUNC(func_name)
-  void func_name(TaskGraph* gph) override {
-    if (IsFwNode()) {
-      return Fw##func_name(gph);
-    } else {
-      return Bp##func_name(gph);
-    }
+  #define OVERRIDE_IF_FW_BP_FOR_FUNC(func_name) \
+  void func_name(TaskGraph* gph) override { \
+    if (IsFwNode()) { \
+      return Fw##func_name (gph); \
+    } else { \
+      return Bp##func_name (gph); \
+    } \
   }
   
   //

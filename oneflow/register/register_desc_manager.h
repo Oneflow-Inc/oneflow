@@ -8,14 +8,19 @@ namespace oneflow {
 class RegstDescMgr final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RegstDescMgr);
-  RegstDescMgr() = default;
   ~RegstDescMgr() = default;
+
+  static RegstDescMgr& Singleton() {
+    static RegstDescMgr obj;
+    return obj;
+  }
 
   std::unique_ptr<RegstDesc> CreateRegisterDesc() {
     return of_make_unique<RegstDesc> ();
   }
 
  private:
+  RegstDescMgr() = default;
 };
 
 } // namespace oneflow

@@ -32,7 +32,7 @@ class CompTaskNode : public TaskNode {
  protected:
   virtual void InitWithFwNode(TaskNode* fw_node) override {
     TaskNode::InitWithFwNode(fw_node);
-    fw_comp_code = of_dynamic_cast<CompTaskNode*> (fw_node);
+    auto fw_comp_code = of_dynamic_cast<CompTaskNode*> (fw_node);
     parallel_id_ = fw_comp_code->parallel_id_;
   }
 
@@ -43,12 +43,8 @@ class CompTaskNode : public TaskNode {
   OVERRIDE_IF_FW_BP_FOR_FUNC(BuildExecAndEnrollLbn2Regsts);
   OVERRIDE_IF_FW_BP_FOR_FUNC(InferShape4LbnInProducedRegsts);
 
-  void FwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) override {
-    (this->*(gph->Func4FwBuildExecAndEnrollLbn2Regsts()))(gph);
-  }
-  void FwInferShape4LbnInProducedRegsts(TaskGraph* gph) override {
-    (this->*(gph->Func4FwInferShape4LbnInProducedRegsts()))(gph);
-  }
+  void FwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph);
+  void FwInferShape4LbnInProducedRegsts(TaskGraph* gph);
   void FwBuildFromUserOps(
       Lbn2NodeBnMap* lbn2producer,
       Lbn2NodeBnMap* extern_in_lbn2consumer);
@@ -58,8 +54,8 @@ class CompTaskNode : public TaskNode {
   void FwEnrollLbn2ActivationRegst();
   void FwEnrollLbn2ModelAndTmpRegsts();
 
-  void BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) override;
-  void BpInferShape4LbnInProducedRegsts(TaskGraph*) override;
+  void BpBuildExecAndEnrollLbn2Regsts(TaskGraph*);
+  void BpInferShape4LbnInProducedRegsts(TaskGraph*);
   void BpBuildExecGraph(
       const ExecGraph& fw_gph,
       HashMap<const ExecNode*, ExecNode*>* fw_node2bp_node,

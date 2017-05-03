@@ -14,6 +14,6 @@ std::string CopyHdOp::GetValueFromPbOpConf(const std::string& k) const {
   return GetValueFromPbMessage(op_conf().copy_hd_conf(), k);
 }
 
-REGISTER_OP(OperatorConf::kCopyConf, CopyHdOp);
+REGISTER_OP(OperatorConf::kCopyHdConf, CopyHdOp);
 
 } // namespace oneflow

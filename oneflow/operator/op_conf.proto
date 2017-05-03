@@ -134,9 +134,6 @@ message PoolingOpConf {
   uint32 stride = 10; // The stride (equal in Y, X)
   uint32 stride_h = 11; // The stride height
   uint32 stride_w = 12; // The stride width
-  // If global_pooling then it will pool over the size of the bottom by doing
-  // kernel_h = bottom->height and kernel_w = bottom->width
-  bool global_pooling = 13;
 }
 
 message ReluOpConf {
@@ -167,7 +164,7 @@ message CommNetOpConf {
     kSender = 0;
     kReceiver = 1;
   }
-  CommNetType type = 1;
+  Type type = 1;
 }
 
 message CopyHdOpConf {
@@ -175,7 +172,7 @@ message CopyHdOpConf {
     H2D = 0;
     D2H = 1;
   }
-  CopyHdType type = 1;
+  Type type = 1;
 }
 
 
