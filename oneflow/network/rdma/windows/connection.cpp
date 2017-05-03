@@ -1,5 +1,5 @@
 #include "network/rdma/windows/connection.h"
-#include "ndspi.h"  // TODO(shiyuan)
+#include <ndspi.h>
 #include "network/rdma/windows/interface.h"
 
 namespace oneflow {
@@ -11,8 +11,6 @@ Connection::Connection(uint64_t peer_machine_id) {
 
   connector = NULL;
   queue_pair = NULL;
-  // recv_region_; // GetMemory
-
   // TODO(shiyuan)
   ov.hEvent = CreateEvent(NULL, false, false, NULL);
 }
@@ -73,6 +71,10 @@ void Connection::AcceptConnect() {
   // CHECK(!FAILED(hr)) << "Failed to accept\n";
   // LOG(INFO) << "Accept done\n";
 }
+
+void DestroyConnection() {
+}
+
 void Connection::PostSendRequest(Request* send_request) {
   queue_pair->Send(
       &send_request->time_stamp,
@@ -101,9 +103,6 @@ void Connection::PostReadRequest(
       remote_memory_descriptor->address,
       remote_memory_descriptor->remote_token,
       0);  // TODO(shiyuan) parameters
-}
-
-void DestroyConnection() {
 }
 
 }  // namespace oneflow

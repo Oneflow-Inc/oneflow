@@ -19,14 +19,8 @@ class Memory;
 class Connection {
  public:
   Connection();
-  ~Connection();
   explicit Connection(uint64_t peer_machine_id);
-
-  void PostSendRequest(Request* send_request);
-  void PostRecvRequest(Request* recv_request);
-  void PostReadRequest(Request* read_request,
-                       MemoryDescriptor* remote_memory_descriptor,
-                       Memory* dst_memory);
+  ~Connection();
 
   bool Bind();
   // connect to and connected
@@ -37,6 +31,12 @@ class Connection {
 
   void DestroyConnection();
 
+  void PostSendRequest(Request* send_request);
+  void PostRecvRequest(Request* recv_request);
+  void PostReadRequest(Request* read_request,
+                       MemoryDescriptor* remote_memory_descriptor,
+                       Memory* dst_memory);
+
   IND2Connector* connector;
   IND2QueuePair* queue_pair;
   OVERLAPPED ov;
@@ -46,13 +46,6 @@ class Connection {
   uint64_t peer_machine_id_{ 0 };  // TODO(shiyuan)
 
   sockaddr_in my_sock_, peer_sock_;
-
-  // prepare for connect
-  // set up parameters
-  // void BuildContext();
-  // void BuildParams();
-
-  // destroy connect
 };
 
 }  // namespace oneflow
