@@ -7,7 +7,6 @@
 namespace oneflow {
 
 TEST(PoolingOp, pool_100x64x11x11) {
-  /*
   // create pooling_op with input shape 100x64x11x11
   // PoolMethod = MAX
   // pad_h = pad_w = 1
@@ -24,21 +23,19 @@ TEST(PoolingOp, pool_100x64x11x11) {
   pooling_conf->set_stride(2);
   auto pooling_op = OpMgr::Singleton().ConstructOp(op_conf);
   std::vector<int64_t> input_shape_vec = {100, 64, 11, 11};
-  TestShapeFactory shape_factory = TestShapeFactory();
-  shape_factory.add_bn_shape_ptr(pooling_op->SoleIbn(),
-                                 new Shape(input_shape_vec));
-  shape_factory.add_bn_shape_ptr(pooling_op->SoleObn(), new Shape);
-  shape_factory.add_bn_shape_ptr(*(pooling_op->data_tmp_bns().begin()),
-                                 new Shape);
-  auto fp = std::bind(&TestShapeFactory::bn2ShapePtr,
-                      &shape_factory,
-                      std::placeholders::_1);
+  HashMap<std::string, Shape*> bn2ShapePtr{
+    {pooling_op->SoleIbn(), new Shape(input_shape_vec)},
+    {pooling_op->SoleObn(), new Shape},
+    {*(pooling_op->data_tmp_bns().begin()), new Shape}};
+  auto fp = [bn2ShapePtr](const std::string& bn) {
+    return bn2ShapePtr.at(bn);
+  };
   // do infer shape
   pooling_op->InferShape4FwBlobs(fp, kDataParallel, 0, 1);
   // test
-  Shape* input_shape_ptr = shape_factory.bn2ShapePtr(pooling_op->SoleIbn());
-  Shape* output_shape_ptr = shape_factory.bn2ShapePtr(pooling_op->SoleObn());
-  Shape* data_tmp_shape_ptr = shape_factory.bn2ShapePtr(
+  Shape* input_shape_ptr = bn2ShapePtr.at(pooling_op->SoleIbn());
+  Shape* output_shape_ptr = bn2ShapePtr.at(pooling_op->SoleObn());
+  Shape* data_tmp_shape_ptr = bn2ShapePtr.at(
       (*pooling_op->data_tmp_bns().begin()));
   // n * c * h_o * w_o
   // where h_o = (h_i + 2 * pad_h - kernel_h) / stride_h + 1 and w_o likewise.
@@ -50,8 +47,6 @@ TEST(PoolingOp, pool_100x64x11x11) {
   ASSERT_EQ(*output_shape_ptr, Shape(output_shape_vec));
   ASSERT_EQ(*data_tmp_shape_ptr, *output_shape_ptr);
   ASSERT_NE(data_tmp_shape_ptr, output_shape_ptr);
-  */
-  TODO();
 }
 
 }  // namespace oneflow
