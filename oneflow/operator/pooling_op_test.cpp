@@ -27,7 +27,7 @@ TEST(PoolingOp, pool_100x64x11x11) {
       {pooling_op->SoleIbn(), new Shape(input_shape_vec)},
       {pooling_op->SoleObn(), new Shape},
       {*(pooling_op->data_tmp_bns().begin()), new Shape}};
-  auto fp = [bn2ShapePtr](const std::string& bn) {
+  auto fp = [&bn2ShapePtr](const std::string& bn) {
     return bn2ShapePtr.at(bn);
   };
   // do infer shape

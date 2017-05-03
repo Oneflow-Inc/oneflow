@@ -17,7 +17,7 @@ TEST(ReluOp, relu_3x5x4) {
   HashMap<std::string, Shape*> bn2ShapePtr {
       {relu_op->SoleIbn(), new Shape(input_shape_vec)},
       {relu_op->SoleObn(), new Shape}};
-  auto fp = [bn2ShapePtr](const std::string& bn) {
+  auto fp = [&bn2ShapePtr](const std::string& bn) {
     return bn2ShapePtr.at(bn);
   };
   // do infer shape
