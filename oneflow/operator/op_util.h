@@ -1,4 +1,8 @@
+#ifndef ONEFLOW_OPERATOR_OP_UTIL_H_
+#define ONEFLOW_OPERATOR_OP_UTIL_H_
+
 #include <stdint.h>
+#include <string>
 #include <utility>
 #include <functional>
 #include "glog/logging.h"
@@ -21,7 +25,8 @@ namespace oneflow {
 std::pair<uint32_t, uint32_t> CheckDimPara4CnnAndPooling(uint32_t val,
                                                          uint32_t val_h,
                                                          uint32_t val_w) {
-  CHECK(val != 0 && (val_h != 0 || val_w != 0) && (val != val_h || val != val_w))
+  CHECK(val != 0 && (val_h != 0 || val_w != 0)
+        && (val != val_h || val != val_w))
     << "don't set parameter both 'val' and ('val_h','val_w')"
     << " in convolution_conf or pooling_conf ";
   if (val != 0) {
@@ -32,20 +37,22 @@ std::pair<uint32_t, uint32_t> CheckDimPara4CnnAndPooling(uint32_t val,
 
 class TestShapeFactory {
  public:
-   TestShapeFactory() = default;
-   ~TestShapeFactory() = default;
+  TestShapeFactory() = default;
+  ~TestShapeFactory() = default;
 
-   Shape* bn2ShapePtr(const std::string& bn) {
-     CHECK_NE(bn2shape_ptr_.find(bn), bn2shape_ptr_.end());
-     return bn2shape_ptr_.at(bn);
-   }
+  Shape* bn2ShapePtr(const std::string& bn) {
+    CHECK_NE(bn2shape_ptr_.find(bn), bn2shape_ptr_.end());
+    return bn2shape_ptr_.at(bn);
+  }
 
-   void add_bn_shape_ptr(const std::string& bn, Shape* shape_ptr) {
-     bn2shape_ptr_.emplace(bn,shape_ptr);
-   }
+  void add_bn_shape_ptr(const std::string& bn, Shape* shape_ptr) {
+    bn2shape_ptr_.emplace(bn, shape_ptr);
+  }
 
  private:
   HashMap<std::string, Shape*> bn2shape_ptr_;
 };
 
-} // namespace oneflow
+}  // namespace oneflow
+
+#endif  // ONEFLOW_OPERATOR_OP_UTIL_H_

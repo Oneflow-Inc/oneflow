@@ -1,5 +1,5 @@
 #include "relu_op.h"
-#include <functional>
+#include <vector>
 #include "gtest/gtest.h"
 #include "operator/operator_manager.h"
 #include "operator/op_util.h"
@@ -14,11 +14,10 @@ TEST(ReluOp, relu_3x5x4) {
   op_conf.mutable_relu_conf()->set_out("relu_out");
   auto relu_op = OpMgr::Singleton().ConstructOp(op_conf);
   TestShapeFactory shape_factory = TestShapeFactory();
-  std::vector<int64_t> shape_vec = {3, 5, 4};
+  std::vector<int64_t> shape_vec = { 3, 5, 4 };
   shape_factory.add_bn_shape_ptr(relu_op->SoleIbn(), new Shape(shape_vec));
   shape_factory.add_bn_shape_ptr(relu_op->SoleObn(), new Shape);
-  auto fp = std::bind(&TestShapeFactory::bn2ShapePtr,
-                      &shape_factory,
+  auto fp = std::bind(&TestShapeFactory::bn2ShapePtr, &shape_factory,
                       std::placeholders::_1);
   // do infer shape
   relu_op->InferShape4FwBlobs(fp, kDataParallel, 0, 1);
@@ -29,7 +28,7 @@ TEST(ReluOp, relu_3x5x4) {
   ASSERT_NE(input_shape_ptr, output_shape_ptr);
 }
 
-}// namespace oneflow
+}  // namespace oneflow
 
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
