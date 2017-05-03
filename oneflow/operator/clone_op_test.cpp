@@ -1,5 +1,6 @@
 #include "operator/clone_op.h"
 #include "operator/operator_manager.h"
+#include "operator/op_util.h"
 #include "gtest/gtest.h"
 
 namespace oneflow {
@@ -11,18 +12,21 @@ TEST(CloneOp, clone_4x3_3_times) {
   op_conf.mutable_clone_conf()->set_lbn("clone_test_lbn");
   auto clone_op = OpMgr::Singleton().ConstructOp(op_conf);
 
+  TestShapeFactory shape_manager = TestShapeFactory();
   std::vector<int64_t> shape_vec = {4, 3};
-  clone_op->SetShapePtr(clone_op->SoleIbn(), new Shape(shape_vec));
+  shape_manager.add_bn_shape_ptr(clone_op->SoleIbn(), new Shape(shape_vec));
   for(std::string obn : clone_op->output_bns()){
-    clone_op->SetShapePtr(obn, new Shape);
+    shape_manager.add_bn_shape_ptr(obn, new Shape);
   }
 
-  clone_op->InferShape4ObAndDtbFromIb();
+  auto fp = std::bind(&TestShapeFactory::bn2ShapePtr, 
+      &shape_manager, std::placeholders::_1)
+  clone_op->InferShape4FwBlobs(fp, kDataParallel, 3, 10);
 
-  Shape* input_shape_ptr = clone_op->GetShapePtr(clone_op->SoleIbn());
+  Shape* input_shape_ptr = shape_manager.bn2ShapePtr(clone_op->SoleIbn());
   for(std::string obn : clone_op->output_bns()){
-    ASSERT_EQ(*input_shape_ptr, *(clone_op->GetShapePtr(obn)));
-    ASSERT_NE(input_shape_ptr, clone_op->GetShapePtr(obn));
+    ASSERT_EQ(*input_shape_ptr, *shape_manager.bn2ShapePtr(obn));
+    ASSERT_NE(input_shape_ptr, shape_manager.bn2ShapePtr(obn));
   }
 
 }

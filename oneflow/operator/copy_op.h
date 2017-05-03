@@ -14,7 +14,11 @@ class CopyOp final : public SysOperator {
   void InitFromOpConf(const OperatorConf& op_conf) override;
   void InitFromOperatorProto(const OperatorProto& operatorproto) override;
   OperatorProto ToOperatorProto() override;
-  void InferShape4ObAndDtbFromIb() const override;
+  void InferShape4FwBlobs(
+      std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+      ParallelPolicy policy,
+      uint64_t parallel_id,
+      uint64_t parallel_size) const override;
   std::string GetValueFromPbOpConf(const std::string& k) const override;
   
   std::string normal_ibn2lbn(const std::string& input_bn) const override {
