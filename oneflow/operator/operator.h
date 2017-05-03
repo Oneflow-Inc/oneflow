@@ -25,9 +25,9 @@ class Operator {
   virtual bool IsElemWise() const { return false; }
   virtual bool IsLossOp() const { return false; }
   
-  //
-  virtual void InitFromOperatorProto(const OperatorProto& operatorproto);
-  virtual OperatorProto ToOperatorProto();
+  // this <-> OpProto
+  void InitFromOperatorProto(const OperatorProto& operatorproto);
+  OperatorProto ToOperatorProto();
   
   // bn_in_op <-> lbn
   const std::string& GetLbn4BnInOp(const std::string& bn_in_op) const;
@@ -69,7 +69,7 @@ class Operator {
       std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
       ParallelPolicy policy,
       uint64_t parallel_id,
-      uint64_t parallel_size) const = 0;
+      uint64_t parallel_num) const = 0;
 
  protected:
   virtual std::string ibn2lbn(const std::string& input_bn) const = 0;
@@ -95,6 +95,7 @@ class Operator {
   std::string dtbn2lbn(const std::string& data_tmp_bn) const;
   
   OperatorConf op_conf_;
+  HashMap<std::string, std::string> bn_in_op2lbn_;
 
   // blob name in op
   std::vector<std::string> data_tmp_bns_;
@@ -106,9 +107,6 @@ class Operator {
   std::vector<std::string> model_bns_;
   std::vector<std::string> model_diff_bns_;
   std::vector<std::string> model_tmp_bns_;
-
-  // 
-  HashMap<std::string, std::string> bn_in_op2lbn_;
 
 };
 
