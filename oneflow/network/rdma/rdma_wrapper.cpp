@@ -53,8 +53,7 @@ void RdmaWrapper::Init(uint64_t my_machine_id,
   EstablishConnection();
 }
 
-void Finalize() {
-}
+void Finalize() {}
 
 // TODO(shiyuan)
 void Barrier() {
@@ -83,7 +82,7 @@ bool RdmaWrapper::Send(const NetworkMessage& msg) {
   // NOTE(jiyuan): We need to know the completion event of Send to recycle the
   // buffer of message.
 
-  conn->PostToSendRequestQueue(send_request);  // TODO(shiyuan) add send method to Connection
+  conn->PostSendRequest(send_request);  // TODO(shiyuan) add send method to Connection
   //CHECK(!FAILED(result)) << "Failed to send\n";
 
   return true;  // TODO(shiyuan) return the result
@@ -105,7 +104,7 @@ void RdmaWrapper::Read(MemoryDescriptor* remote_memory_descriptor,
 
   Memory* dst_memory = reinterpret_cast<Memory*>(local_memory);
 
-  conn->PostToReadRequestQueue(read_request,
+  conn->PostReadRequest(read_request,
                                remote_memory_descriptor,
                                dst_memory);
   // CHECK
@@ -139,6 +138,7 @@ Connection* RdmaWrapper::NewConnection() {
   return conn;
 }
 
+// TODO(shiyuan) should mv PollRecvQueue to Class RdmaManager
 // |result| is owned by the caller, and the received message will be held in
 // result->net_msg, having result->type == NetworkResultType::NET_RECEIVE_MSG.
 bool RdmaWrapper::PollRecvQueue(NetworkResult* result) {
@@ -169,6 +169,7 @@ bool RdmaWrapper::PollRecvQueue(NetworkResult* result) {
   return true;
 }
 
+// TODO(shiyuan) should mv PollSendQueue to Class RdmaManager
 bool RdmaWrapper::PollSendQueue(NetworkResult* result) {
   // CHECK result
   // HRESULT hr; // FIXME(shiyuan)
@@ -218,7 +219,7 @@ void RdmaWrapper::RePostRecvRequest(uint64_t peer_machine_id,
 
   Request* receive_request = request_pool_->UpdateTimeStampAndReuse(time_stamp);
 
-  conn->PostToRecvRequestQueue(receive_request);
+  conn->PostRecvRequest(receive_request);
 }
 
 const MemoryDescriptor& RdmaWrapper::GetMemoryDescriptor(
@@ -239,7 +240,7 @@ void RdmaWrapper::EstablishConnection() {
       conn = connection_pool_->GetConnection(peer_machine_id);
       conn->Bind();
       receive_request = request_pool_->AllocRequest(false);
-      conn->PostToRecvRequestQueue(receive_request);
+      conn->PostRecvRequest(receive_request);
       while (conn->TryConnectTo()) {
         // If connection failed, wait and retry again.
         Sleep(2000);
@@ -248,7 +249,7 @@ void RdmaWrapper::EstablishConnection() {
 
       for (int k = 0; k < kPrePostRecvNumber; ++k) {
         receive_request = request_pool_->AllocRequest(false);
-        conn->PostToRecvRequestQueue(receive_request);
+        conn->PostRecvRequest(receive_request);
       }
     }
   }
@@ -265,11 +266,11 @@ void RdmaWrapper::EstablishConnection() {
       conn = connection_pool_->GetConnection(src_machine_id);
       // Pre-post Receive issue before connect
       receive_request = request_pool_->AllocRequest(false);
-      conn->PostToRecvRequestQueue(receive_request);
+      conn->PostRecvRequest(receive_request);
       conn->AcceptConnect();
       for (int k = 0; k < kPrePostRecvNumber; ++k) {
         receive_request = request_pool_->AllocRequest(false);
-        conn->PostToRecvRequestQueue(receive_request);
+        conn->PostRecvRequest(receive_request);
       }
     }
   }

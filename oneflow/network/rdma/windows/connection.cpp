@@ -73,7 +73,7 @@ void Connection::AcceptConnect() {
   // CHECK(!FAILED(hr)) << "Failed to accept\n";
   // LOG(INFO) << "Accept done\n";
 }
-void Connection::PostToSendRequestQueue(Request* send_request) {
+void Connection::PostSendRequest(Request* send_request) {
   queue_pair->Send(
       &send_request->time_stamp,
       static_cast<const ND2_SGE*>(
@@ -82,7 +82,7 @@ void Connection::PostToSendRequestQueue(Request* send_request) {
       0);  // TODO(shiyuan) this flag should be mod for generate an event in cq
 }
 
-void Connection::PostToRecvRequestQueue(Request* recv_request) {
+void Connection::PostRecvRequest(Request* recv_request) {
   queue_pair->Receive(
       &recv_request->time_stamp,
       static_cast<const ND2_SGE*>(
@@ -90,7 +90,7 @@ void Connection::PostToRecvRequestQueue(Request* recv_request) {
       1);
 }
 
-void Connection::PostToReadRequestQueue(
+void Connection::PostReadRequest(
     Request* read_request,
     MemoryDescriptor* remote_memory_descriptor,
     Memory* dst_memory) {

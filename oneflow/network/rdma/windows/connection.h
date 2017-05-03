@@ -20,11 +20,11 @@ class Connection {
   ~Connection();
   explicit Connection(uint64_t peer_machine_id);
 
-  void PostToSendRequestQueue(Request* send_request);
-  void PostToRecvRequestQueue(Request* recv_request);
-  void PostToReadRequestQueue(Request* read_request,
-                              MemoryDescriptor* remote_memory_descriptor,
-                              Memory* dst_memory);
+  void PostSendRequest(Request* send_request);
+  void PostRecvRequest(Request* recv_request);
+  void PostReadRequest(Request* read_request,
+                       MemoryDescriptor* remote_memory_descriptor,
+                       Memory* dst_memory);
 
   bool Bind();
   // connect to and connected
