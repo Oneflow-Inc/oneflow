@@ -24,9 +24,9 @@ TEST(PoolingOp, pool_100x64x11x11) {
   auto pooling_op = OpMgr::Singleton().ConstructOp(op_conf);
   std::vector<int64_t> input_shape_vec = {100, 64, 11, 11};
   HashMap<std::string, Shape*> bn2ShapePtr{
-    {pooling_op->SoleIbn(), new Shape(input_shape_vec)},
-    {pooling_op->SoleObn(), new Shape},
-    {*(pooling_op->data_tmp_bns().begin()), new Shape}};
+      {pooling_op->SoleIbn(), new Shape(input_shape_vec)},
+      {pooling_op->SoleObn(), new Shape},
+      {*(pooling_op->data_tmp_bns().begin()), new Shape}};
   auto fp = [bn2ShapePtr](const std::string& bn) {
     return bn2ShapePtr.at(bn);
   };
