@@ -10,8 +10,8 @@ void ModelSaveOp::InitFromOpConf(const OperatorConf& op_conf) {
   EnrollInputBn("model", false);
 }
 
-std::string ModelSaveOp::GetValueFromPbOpConf(const std::string& k) const {
-  return GetValueFromPbMessage(op_conf().model_save_conf(), k);
+const PbMessage& ModelSaveOp::GetSpecialConf() const {
+  return op_conf().model_save_conf();
 }
 
 REGISTER_OP(OperatorConf::kModelSaveConf, ModelSaveOp);

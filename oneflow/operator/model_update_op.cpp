@@ -13,8 +13,8 @@ void ModelUpdateOp::InitFromOpConf(const OperatorConf& op_conf) {
   EnrollOutputBn("model", false);
 }
 
-std::string ModelUpdateOp::GetValueFromPbOpConf(const std::string& k) const {
-  return GetValueFromPbMessage(op_conf().model_update_conf(), k);
+const PbMessage& ModelUpdateOp::GetSpecialConf() const {
+  return op_conf().model_update_conf();
 }
 
 REGISTER_OP(OperatorConf::kModelUpdateConf, ModelUpdateOp);

@@ -14,7 +14,7 @@ class CloneOp final : public SysOperator {
   bool IsElemWise() const override { return true; }
 
   void InitFromOpConf(const OperatorConf& op_conf) override;
-  std::string GetValueFromPbOpConf(const std::string& k) const override;
+  const PbMessage& GetSpecialConf() const override;
   void InferShape4FwBlobs(
       std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
       ParallelPolicy policy,
@@ -23,7 +23,7 @@ class CloneOp final : public SysOperator {
   
  private:
   std::string ibn2lbn(const std::string& input_bn) const override {
-    return GetValueFromPbOpConf("lbn");
+    return GetStringFromSpecialConf("lbn");
   }
   std::string obn2lbn(const std::string& output_bn) const override {
     return op_name() + "/" + output_bn;

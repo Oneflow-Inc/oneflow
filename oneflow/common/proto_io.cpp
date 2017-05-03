@@ -46,13 +46,20 @@ void PrintProtoToTextFile(const PbMessage& proto,
   close(fd);
 }
 
-std::string GetValueFromPbMessage(const PbMessage& msg,
-                                  const std::string& key) {
-  const Descriptor* d = msg.GetDescriptor();
-  const FieldDescriptor* fd = d->FindFieldByName(key);
-  CHECK_NOTNULL(fd);
-  const Reflection* r = msg.GetReflection();
-  return r->GetString(msg, fd);
+#define DEFINE_GET_VAL_FROM_PBMESSAGE(ret_type, func_name) \
+ret_type Get##func_name##FromPbMessage(const PbMessage& msg, \
+                                       const std::string& field_name) { \
+  const Descriptor* d = msg.GetDescriptor(); \
+  const FieldDescriptor* fd = d->FindFieldByName(field_name); \
+  CHECK_NOTNULL(fd); \
+  const Reflection* r = msg.GetReflection(); \
+  return r->Get##func_name (msg, fd); \
 }
+
+DEFINE_GET_VAL_FROM_PBMESSAGE(std::string, String);
+DEFINE_GET_VAL_FROM_PBMESSAGE(int32_t, Int32);
+DEFINE_GET_VAL_FROM_PBMESSAGE(uint32_t, UInt32);
+DEFINE_GET_VAL_FROM_PBMESSAGE(int64_t, Int64);
+DEFINE_GET_VAL_FROM_PBMESSAGE(uint64_t, UInt64);
 
 } // namespace oneflow

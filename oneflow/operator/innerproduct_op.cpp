@@ -17,8 +17,8 @@ void InnerProductOp::InitFromOpConf(const OperatorConf& op_conf) {
   EnrollModelTmpBn("bias_multiplier");
 }
 
-std::string InnerProductOp::GetValueFromPbOpConf(const std::string& k) const {
-  return GetValueFromPbMessage(op_conf().innerproduct_conf(), k);
+const PbMessage& InnerProductOp::GetSpecialConf() const {
+  return op_conf().innerproduct_conf();
 }
 
 void InnerProductOp::InferShape4FwBlobs(
@@ -29,7 +29,7 @@ void InnerProductOp::InferShape4FwBlobs(
   TODO();
   /*
   Shape* in_shape_ptr = GetShapePtr4BnInOp(SoleIbn());
-  uint32_t out_num = GetValueFromPbOpConf("out_num");
+  uint32_t out_num = GetSpecialConf("out_num");
   if(policy == kModelParallel){
     BalancedSplitter splitter(out_num, parallel_num);
     out_num = splitter.At(parallel_id).size();

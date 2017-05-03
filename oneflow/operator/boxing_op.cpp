@@ -16,16 +16,16 @@ void BoxingOp::InitFromOpConf(const OperatorConf& op_conf) {
   }
 }
 
-std::string BoxingOp::GetValueFromPbOpConf(const std::string& k) const {
-  return GetValueFromPbMessage(op_conf().boxing_conf(), k);
+const PbMessage& BoxingOp::GetSpecialConf() const {
+  return op_conf().boxing_conf();
 }
 
 std::string BoxingOp::ibn2lbn(const std::string& input_bn) const {
-  return GetValueFromPbOpConf("lbn");
+  return GetStringFromSpecialConf("lbn");
 }
 
 std::string BoxingOp::obn2lbn(const std::string& output_bn) const {
-  return GetValueFromPbOpConf("lbn");
+  return GetStringFromSpecialConf("lbn");
 }
 
 REGISTER_OP(OperatorConf::kBoxingConf, BoxingOp);

@@ -12,7 +12,7 @@ class ConvolutionOp final : public UserOperator {
   ~ConvolutionOp() = default;
 
   void InitFromOpConf(const OperatorConf& op_conf) override;
-  std::string GetValueFromPbOpConf(const std::string& k) const override;
+  const PbMessage& GetSpecialConf() const override;
   void InferShape4FwBlobs(
       std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
       ParallelPolicy policy,

@@ -10,8 +10,8 @@ void ModelLoadOp::InitFromOpConf(const OperatorConf& op_conf) {
   EnrollOutputBn("model", false);
 }
 
-std::string ModelLoadOp::GetValueFromPbOpConf(const std::string& k) const {
-  return GetValueFromPbMessage(op_conf().model_load_conf(), k);
+const PbMessage& ModelLoadOp::GetSpecialConf() const {
+  return op_conf().model_load_conf();
 }
 
 REGISTER_OP(OperatorConf::kModelLoadConf, ModelLoadOp);

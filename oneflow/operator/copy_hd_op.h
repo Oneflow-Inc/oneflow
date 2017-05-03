@@ -13,7 +13,7 @@ class CopyHdOp final : public SysOperator {
   ~CopyHdOp() = default;
 
   void InitFromOpConf(const OperatorConf& op_conf) override;
-  std::string GetValueFromPbOpConf(const std::string& k) const override;
+  const PbMessage& GetSpecialConf() const override;
   
  private:
   std::string ibn2lbn(const std::string& input_bn) const override {

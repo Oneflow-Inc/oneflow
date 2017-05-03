@@ -15,8 +15,8 @@ void PoolingOp::InitFromOpConf(const OperatorConf& op_conf) {
   EnrollDataTmpBn("idx");
 }
 
-std::string PoolingOp::GetValueFromPbOpConf(const std::string& k) const {
-  return GetValueFromPbMessage(op_conf().pooling_conf(), k);
+const PbMessage& PoolingOp::GetSpecialConf() const {
+  return op_conf().pooling_conf();
 }
 
 void PoolingOp::InferShape4FwBlobs(

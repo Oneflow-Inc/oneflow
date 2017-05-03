@@ -10,8 +10,8 @@ void CopyHdOp::InitFromOpConf(const OperatorConf& op_conf) {
   EnrollOutputBn("out");
 }
 
-std::string CopyHdOp::GetValueFromPbOpConf(const std::string& k) const {
-  return GetValueFromPbMessage(op_conf().copy_hd_conf(), k);
+const PbMessage& CopyHdOp::GetSpecialConf() const {
+  return op_conf().copy_hd_conf();
 }
 
 REGISTER_OP(OperatorConf::kCopyHdConf, CopyHdOp);

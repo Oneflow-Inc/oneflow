@@ -15,8 +15,8 @@ void ConcatOp::InitFromOpConf(const OperatorConf& op_conf) {
   EnrollOutputBn("out");
 }
 
-std::string ConcatOp::GetValueFromPbOpConf(const std::string& k) const {
-  return GetValueFromPbMessage(op_conf().concat_conf(), k);
+const PbMessage& ConcatOp::GetSpecialConf() const {
+  return op_conf().concat_conf();
 }
 
 void ConcatOp::InferShape4FwBlobs(

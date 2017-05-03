@@ -13,8 +13,8 @@ void CloneOp::InitFromOpConf(const OperatorConf& op_conf) {
   }
 }
 
-std::string CloneOp::GetValueFromPbOpConf(const std::string& k) const {
-  return GetValueFromPbMessage(op_conf().clone_conf(), k);
+const PbMessage& CloneOp::GetSpecialConf() const {
+  return op_conf().clone_conf();
 }
 
 void CloneOp::InferShape4FwBlobs(

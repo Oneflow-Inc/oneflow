@@ -12,7 +12,7 @@ class ModelSaveOp final : public SysOperator {
   ~ModelSaveOp() = default;
 
   void InitFromOpConf(const OperatorConf& op_conf) override;
-  std::string GetValueFromPbOpConf(const std::string& k) const override;
+  const PbMessage& GetSpecialConf() const override;
 
  private:
 };

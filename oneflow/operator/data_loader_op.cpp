@@ -12,8 +12,8 @@ void DataLoaderOp::InitFromOpConf(const OperatorConf& op_conf) {
   EnrollOutputBn("label", false);
 }
 
-std::string DataLoaderOp::GetValueFromPbOpConf(const std::string& k) const {
-  return GetValueFromPbMessage(op_conf().data_loader_conf(), k);
+const PbMessage& DataLoaderOp::GetSpecialConf() const {
+  return op_conf().data_loader_conf();
 }
 
 REGISTER_OP(OperatorConf::kDataLoaderConf, DataLoaderOp);

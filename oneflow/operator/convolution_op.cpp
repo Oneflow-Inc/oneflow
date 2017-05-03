@@ -18,8 +18,8 @@ void ConvolutionOp::InitFromOpConf(const OperatorConf& op_conf) {
   EnrollModelTmpBn("bias_multiplier");
 }
 
-std::string ConvolutionOp::GetValueFromPbOpConf(const std::string& k) const {
-  return GetValueFromPbMessage(op_conf().convolution_conf(), k);
+const PbMessage& ConvolutionOp::GetSpecialConf() const {
+  return op_conf().convolution_conf();
 }
 
 void ConvolutionOp::InferShape4FwBlobs(

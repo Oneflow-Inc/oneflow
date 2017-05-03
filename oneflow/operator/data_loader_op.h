@@ -12,11 +12,11 @@ class DataLoaderOp final : public SysOperator {
   ~DataLoaderOp() = default;
   
   void InitFromOpConf(const OperatorConf& op_conf) override;
-  std::string GetValueFromPbOpConf(const std::string& k) const override;
+  const PbMessage& GetSpecialConf() const override;
   
  private:
   std::string obn2lbn(const std::string& output_bn) const override {
-    return op_name() + "/" + GetValueFromPbOpConf(output_bn);
+    return op_name() + "/" + GetStringFromSpecialConf(output_bn);
   }
 
 };

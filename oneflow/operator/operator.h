@@ -36,24 +36,27 @@ class Operator {
   // Getters
   const std::string& op_name() const { return op_conf_.name(); }
   const OperatorConf& op_conf() const { return op_conf_; }
-  virtual std::string GetValueFromPbOpConf(const std::string& k) const = 0;
+  virtual const PbMessage& GetSpecialConf() const = 0;
+
+  #define DEFINE_GET_VAL_FROM_SPECIAL_CONF(ret_type, func_name) \
+  ret_type Get##func_name##FromSpecialConf( \
+      const std::string& field_name) const { \
+    const PbMessage& special_conf = GetSpecialConf(); \
+    return Get##func_name##FromPbMessage(special_conf, field_name); \
+  }
+
+  DEFINE_GET_VAL_FROM_SPECIAL_CONF(std::string, String);
+  DEFINE_GET_VAL_FROM_SPECIAL_CONF(int32_t, Int32);
+  DEFINE_GET_VAL_FROM_SPECIAL_CONF(uint32_t, UInt32);
+  DEFINE_GET_VAL_FROM_SPECIAL_CONF(int64_t, Int64);
+  DEFINE_GET_VAL_FROM_SPECIAL_CONF(uint64_t, UInt64);
+
+  #undef DEFINE_GET_VAL_FROM_SPECIAL_CONF
   
-  const std::string& SoleIbn() const {
-    CHECK_EQ(input_bns_.size(), 1);
-    return *(input_bns_.begin());
-  }
-  const std::string& SoleIdbn() const {
-    CHECK_EQ(input_diff_bns_.size(), 1);
-    return *(input_diff_bns_.begin());
-  }
-  const std::string& SoleObn() const {
-    CHECK_EQ(output_bns_.size(), 1);
-    return *(output_bns_.begin());
-  }
-  const std::string& SoleOdbn() const {
-    CHECK_EQ(output_diff_bns_.size(), 1);
-    return *(output_diff_bns_.begin());
-  }
+  const std::string& SoleIbn() const;
+  const std::string& SoleIdbn() const;
+  const std::string& SoleObn() const;
+  const std::string& SoleOdbn() const;
 
   #define DEFINE_BLOB_NAMES_GETTER(getter_name) \
   const std::vector<std::string>& getter_name() const { \

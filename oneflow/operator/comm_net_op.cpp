@@ -10,8 +10,8 @@ void CommNetOp::InitFromOpConf(const OperatorConf& op_conf) {
   EnrollOutputBn("comm_net_out");
 }
 
-std::string CommNetOp::GetValueFromPbOpConf(const std::string& k) const {
-  return GetValueFromPbMessage(op_conf().comm_net_conf(), k);
+const PbMessage& CommNetOp::GetSpecialConf() const {
+  return op_conf().comm_net_conf();
 }
 
 std::string CommNetOp::obn2lbn(const std::string& output_bn) const {

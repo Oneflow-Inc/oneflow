@@ -13,7 +13,7 @@ class ReluOp final : public UserOperator {
   ~ReluOp() = default;
 
   void InitFromOpConf(const OperatorConf& op_conf) override;
-  std::string GetValueFromPbOpConf(const std::string& k) const override;
+  const PbMessage& GetSpecialConf() const override;
   bool IsElemWise() const override { return true; }
 
   void InferShape4FwBlobs(

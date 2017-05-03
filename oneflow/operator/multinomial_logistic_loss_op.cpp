@@ -14,9 +14,8 @@ void MultinomialLogisticLossOp::InitFromOpConf(const OperatorConf& op_conf) {
   EnrollDataTmpBn("loss_buffer");
 }
 
-std::string MultinomialLogisticLossOp::GetValueFromPbOpConf(
-    const std::string& k) const {
-  return GetValueFromPbMessage(op_conf().multinomial_logistic_loss_conf(), k);
+const PbMessage& MultinomialLogisticLossOp::GetSpecialConf() const {
+  return op_conf().multinomial_logistic_loss_conf();
 }
 
 void MultinomialLogisticLossOp::InferShape4FwBlobs(

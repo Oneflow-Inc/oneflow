@@ -27,9 +27,19 @@ void ParseProtoFromTextFile(const std::string& file_path,
 void PrintProtoToTextFile(const PbMessage& proto,
                           const std::string& file_path);
 
-//
-std::string GetValueFromPbMessage(const PbMessage& msg,
-                                  const std::string& key);
+// Get From PbMessage
+
+#define DECLARE_GET_VAL_FROM_PBMESSAGE(ret_type, func_name) \
+ret_type Get##func_name##FromPbMessage(const PbMessage& msg, \
+                                       const std::string& field_name);
+
+DECLARE_GET_VAL_FROM_PBMESSAGE(std::string, String);
+DECLARE_GET_VAL_FROM_PBMESSAGE(int32_t, Int32);
+DECLARE_GET_VAL_FROM_PBMESSAGE(uint32_t, UInt32);
+DECLARE_GET_VAL_FROM_PBMESSAGE(int64_t, Int64);
+DECLARE_GET_VAL_FROM_PBMESSAGE(uint64_t, UInt64);
+
+#undef DECLARE_GET_VAL_FROM_PBMESSAGE
  
 // PbVector <-> std::vector 
 inline std::vector<std::string> PbVec2StdVec(

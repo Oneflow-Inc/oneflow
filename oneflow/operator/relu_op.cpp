@@ -13,8 +13,8 @@ void ReluOp::InitFromOpConf(const OperatorConf& op_conf) {
   EnrollOutputBn("out");
 }
 
-std::string ReluOp::GetValueFromPbOpConf(const std::string& k) const {
-  return GetValueFromPbMessage(op_conf().relu_conf(), k);
+const PbMessage& ReluOp::GetSpecialConf() const {
+  return op_conf().relu_conf();
 }
 
 void ReluOp::InferShape4FwBlobs(

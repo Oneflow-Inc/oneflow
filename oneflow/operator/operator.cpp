@@ -40,6 +40,23 @@ void Operator::ModifyLbn4BnInOp(
   bn_in_op2lbn_.at(bn_in_op) = lbn;
 }
 
+const std::string& Operator::SoleIbn() const {
+  CHECK_EQ(input_bns_.size(), 1);
+  return *(input_bns_.begin());
+}
+const std::string& Operator::SoleIdbn() const {
+  CHECK_EQ(input_diff_bns_.size(), 1);
+  return *(input_diff_bns_.begin());
+}
+const std::string& Operator::SoleObn() const {
+  CHECK_EQ(output_bns_.size(), 1);
+  return *(output_bns_.begin());
+}
+const std::string& Operator::SoleOdbn() const {
+  CHECK_EQ(output_diff_bns_.size(), 1);
+  return *(output_diff_bns_.begin());
+}
+
 void Operator::EnrollDataTmpBn(const std::string& dtbn) {
   data_tmp_bns_.push_back(dtbn);
   CHECK(bn_in_op2lbn_.emplace(dtbn, dtbn2lbn(dtbn)).second);
@@ -86,11 +103,11 @@ std::string Operator::dtbn2lbn(const std::string& data_tmp_bn) const {
 }
 
 std::string UserOperator::ibn2lbn(const std::string& input_bn) const {
-  return GetValueFromPbOpConf(input_bn);
+  return GetStringFromSpecialConf(input_bn);
 }
 
 std::string UserOperator::obn2lbn(const std::string& output_bn) const {
-  return op_name() + "/" + GetValueFromPbOpConf(output_bn);
+  return op_name() + "/" + GetStringFromSpecialConf(output_bn);
 }
 
 std::string UserOperator::mtbn2lbn(const std::string& model_tmp_bn) const {

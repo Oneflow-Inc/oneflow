@@ -12,8 +12,8 @@ void SoftmaxOp::InitFromOpConf(const OperatorConf& op_conf) {
   EnrollOutputBn("out");
 }
 
-std::string SoftmaxOp::GetValueFromPbOpConf(const std::string& k) const {
-  return GetValueFromPbMessage(op_conf().softmax_conf(), k);
+const PbMessage& SoftmaxOp::GetSpecialConf() const {
+  return op_conf().softmax_conf();
 }
 
 void SoftmaxOp::InferShape4FwBlobs(
