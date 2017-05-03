@@ -28,7 +28,7 @@ public:
   void DestroyConnection();
 
 private:
-  uint64_t peer_machine_id_;
+  uint64_t peer_machine_id_ = { -1 };
   
   struct rdma_cm_id* id_;
   struct ibv_qp* queue_pair_;
@@ -41,8 +41,7 @@ private:
   
   struct Context *s_ctx;
 
-  // map peer_rank to rdma_cm_id
-  void BuildConnection(struct rdma_cm_id* id);
+  void BuildConnection();
   void BuildContext(struct ibv_context* verbs);
   void BuildQPAttr(struct ibv_qp_init_attr* queue_pair_attr);
   void BuildParams(struct rdma_comm_param* params);
