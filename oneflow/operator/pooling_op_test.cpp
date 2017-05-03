@@ -23,19 +23,19 @@ TEST(PoolingOp, pool_100x64x11x11) {
   pooling_conf->set_stride(2);
   auto pooling_op = OpMgr::Singleton().ConstructOp(op_conf);
   std::vector<int64_t> input_shape_vec = {100, 64, 11, 11};
-  HashMap<std::string, Shape*> bn2ShapePtr{
+  HashMap<std::string, Shape*> bn2shape_ptr{
       {pooling_op->SoleIbn(), new Shape(input_shape_vec)},
       {pooling_op->SoleObn(), new Shape},
       {*(pooling_op->data_tmp_bns().begin()), new Shape}};
-  auto fp = [&bn2ShapePtr](const std::string& bn) {
-    return bn2ShapePtr.at(bn);
+  auto fp = [&bn2shape_ptr](const std::string& bn) {
+    return bn2shape_ptr.at(bn);
   };
   // do infer shape
   pooling_op->InferShape4FwBlobs(fp, kDataParallel, 0, 1);
   // test
-  Shape* input_shape_ptr = bn2ShapePtr.at(pooling_op->SoleIbn());
-  Shape* output_shape_ptr = bn2ShapePtr.at(pooling_op->SoleObn());
-  Shape* data_tmp_shape_ptr = bn2ShapePtr.at(
+  Shape* input_shape_ptr = bn2shape_ptr.at(pooling_op->SoleIbn());
+  Shape* output_shape_ptr = bn2shape_ptr.at(pooling_op->SoleObn());
+  Shape* data_tmp_shape_ptr = bn2shape_ptr.at(
       (*pooling_op->data_tmp_bns().begin()));
   // n * c * h_o * w_o
   // where h_o = (h_i + 2 * pad_h - kernel_h) / stride_h + 1 and w_o likewise.

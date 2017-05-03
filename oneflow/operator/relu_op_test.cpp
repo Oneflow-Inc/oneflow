@@ -14,17 +14,17 @@ TEST(ReluOp, relu_3x5x4) {
   op_conf.mutable_relu_conf()->set_out("relu_out");
   auto relu_op = OpMgr::Singleton().ConstructOp(op_conf);
   std::vector<int64_t> input_shape_vec = { 3, 5, 4 };
-  HashMap<std::string, Shape*> bn2ShapePtr {
+  HashMap<std::string, Shape*> bn2shape_ptr {
       {relu_op->SoleIbn(), new Shape(input_shape_vec)},
       {relu_op->SoleObn(), new Shape}};
-  auto fp = [&bn2ShapePtr](const std::string& bn) {
-    return bn2ShapePtr.at(bn);
+  auto fp = [&bn2shape_ptr](const std::string& bn) {
+    return bn2shape_ptr.at(bn);
   };
   // do infer shape
   relu_op->InferShape4FwBlobs(fp, kDataParallel, 0, 1);
   // test
-  Shape* input_shape_ptr = bn2ShapePtr.at(relu_op->SoleIbn());
-  Shape* output_shape_ptr = bn2ShapePtr.at(relu_op->SoleObn());
+  Shape* input_shape_ptr = bn2shape_ptr.at(relu_op->SoleIbn());
+  Shape* output_shape_ptr = bn2shape_ptr.at(relu_op->SoleObn());
   ASSERT_EQ(*input_shape_ptr, *output_shape_ptr);
   ASSERT_NE(input_shape_ptr, output_shape_ptr);
 }
