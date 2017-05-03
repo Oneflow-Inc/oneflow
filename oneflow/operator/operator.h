@@ -115,7 +115,8 @@ class UserOperator : public Operator {
   OF_DISALLOW_COPY_AND_MOVE(UserOperator);
   UserOperator() = default;
   virtual ~UserOperator() = default;
-
+ 
+ private:
   std::string ibn2lbn(const std::string& input_bn) const override;
   std::string obn2lbn(const std::string& output_bn) const override;
   std::string mtbn2lbn(const std::string& model_tmp_bn) const override;
@@ -129,6 +130,15 @@ class SysOperator : public Operator {
   SysOperator() = default;
   virtual ~SysOperator() = default;
   
+  virtual void InferShape4FwBlobs(
+      std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+      ParallelPolicy policy,
+      uint64_t parallel_id,
+      uint64_t parallel_num) const override {
+    UNEXPECTED_RUN();
+  }
+
+ private:
   #define SET_INSIGNIFICANT(func_name) \
   virtual std::string func_name(const std::string&) const override { \
     LOG(FATAL) << #func_name << " is insignificant for " \
@@ -142,14 +152,6 @@ class SysOperator : public Operator {
 
   #undef SET_INSIGNIFICANT
   
-  virtual void InferShape4FwBlobs(
-      const HashMap<std::string, Shape*>& bn_in_op2shape_ptr,
-      ParallelPolicy policy,
-      uint64_t parallel_id) const override {
-    UNEXPECTED_RUN();
-  }
-  
- private:
 };
 
 std::string GenDiffBn(const std::string& bn);

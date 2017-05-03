@@ -163,15 +163,15 @@ message ConcatOpConf {
 }
 
 message CommNetOpConf {
-  enum CommNetType {
-    SENDER = 0;
-    RECEIVER = 1;
+  enum Type {
+    kSender = 0;
+    kReceiver = 1;
   }
-  CommNetType comm_net_type = 1;
+  CommNetType type = 1;
 }
 
 message CopyHdOpConf {
-  enum CopyHdType {
+  enum Type {
     H2D = 0;
     D2H = 1;
   }
@@ -185,11 +185,7 @@ message CloneOpConf {
 }
 
 message BoxConcatConf {
-  enum ConcatType {
-    kData = 0;
-    kModel = 1;
-  };
-  ConcatType type = 1;
+  int32 axis = 1;
 }
 
 message BoxDataSplitConf {

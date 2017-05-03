@@ -39,10 +39,13 @@ class BoxingTaskNode : public TaskNode {
   virtual void FwVirtualBuild() = 0;
 
  private:
-  void FwBuildExecAndEnrollLbn2Regsts(TaskGraph*) override;
-  void FwInferShape4LbnInProducedRegsts(TaskGraph*) override;
-  void BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) override;
-  void BpInferShape4LbnInProducedRegsts(TaskGraph*) override;
+  OVERRIDE_IF_FW_BP_FOR_FUNC(BuildExecAndEnrollLbn2Regsts);
+  OVERRIDE_IF_FW_BP_FOR_FUNC(InferShape4LbnInProducedRegsts);
+
+  void FwBuildExecAndEnrollLbn2Regsts();
+  void FwInferShape4LbnInProducedRegsts();
+  void BpBuildExecAndEnrollLbn2Regsts();
+  void BpInferShape4LbnInProducedRegsts();
   
   void EnrollAllRegstAndBindRelatedEdge();
   

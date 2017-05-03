@@ -131,9 +131,6 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
     for (size_t i = 0; i < sorted_in_edges.size(); ++i) {
       RegstDesc* in_regst = GetRelatedRegst(sorted_in_edges.at(i));
       const std::string& ibn = node->op()->input_bns().at(i);
-      std::string lbn = node->op()->ibn2lbn(ibn);
-      Shape* ptr = in_regst->GetMutShapePtr(lbn);
-      node->BindBnInOpAndShapePtr(ibn, ptr);
       node->BindBnInOpAndRegst(ibn, in_regst);
     }
     // obn
@@ -141,15 +138,13 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
       RegstDesc* out_regst = GetRelatedRegst(sorted_out_edges.at(i));
       const std::string& obn = node->op()->output_bns().at(i);
       std::string lbn = node->op()->obn2lbn(obn);
-      Shape* ptr = out_regst->EnrollLbn(lbn);
-      node->BindBnInOpAndShapePtr(obn, ptr);
+      out_regst->EnrollLbn(lbn);
       node->BindBnInOpAndRegst(obn, out_regst);
     }
     // dtbn
     for (const std::string& dtbn : node->op()->data_tmp_bns()) {
       std::string lbn = node->op()->dtbn2lbn(dtbn);
-      Shape* ptr = middle_regst->EnrollLbn(lbn);
-      node->BindBnInOpAndShapePtr(dtbn, ptr);
+      middle_regst->EnrollLbn(lbn);
       node->BindBnInOpAndRegst(dtbn, middle_regst);
     }
   }
@@ -157,7 +152,11 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
 
 void BoxingTaskNode::FwInferShape4LbnInProducedRegsts(TaskGraph*) {
   for (const auto& exec_node : exec_gph().nodes()) {
-    exec_node->op()->InferShape4ObAndDtbFromIb(exec_node->BnInOp2ShapePtr());
+    exec_node->op()->InferShape4FwBlobs(
+        exec_node->GetMutShapePtr4BnInOpFunc(),
+        chain_node()->parallel_desc()->policy(),
+        parallel_id(),
+        chain_node()->parallel_desc()->parallel_num());
   }
 }
 
@@ -197,7 +196,6 @@ void BoxingTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
     // data tmp
     for (const std::string& dtbn : fw_node->op()->data_tmp_bns()) {
       std::string lbn = fw_node->op()->dtbn2lbn(dtbn);
-      RegstDesc* fw_middle_regst = GetFwNode()->GetProducedRegstDesc("middle");
       RegstDesc* bp_middle_regst = GetProducedRegstDesc("middle");
       bp_middle_regst->EnrollLbn(lbn);
       bp_node->BindBnInOpAndRegst(dtbn, bp_middle_regst);

@@ -43,13 +43,8 @@ void CompTaskNode::DataFwBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
 
 void CompTaskNode::DataFwInferShape4LbnInProducedRegsts() {
   for (const ExecNode& node : exec_gph()) {
-    auto GetShapePtr4BnInOp = [&node](const std::string& bn_in_op) {
-      RegstDesc* regst = node->GetRegstFromBnInOp(bn_in_op);
-      const std::string& lbn = node->op()->GetLbn4BnInOp(bn_in_op);
-      return regst->GetMutShapePtr(lbn);
-    };
     node.op()->InferShape4FwBlobs(
-        GetShapePtr4BnInOp,
+        node->GetMutShapePtr4BnInOpFunc(),
         chain_node()->parallel_desc()->policy(),
         parallel_id(),
         chain_node()->parallel_desc()->parallel_num());

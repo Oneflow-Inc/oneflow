@@ -40,20 +40,8 @@ class CompTaskNode : public TaskNode {
   using Lbn2NodeBnMap =
       HashMap<std::string, std::pair<ExecNode*, std::string>>;
   
-  void BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) override {
-    if (IsFwNode()) {
-      return FwBuildExecAndEnrollLbn2Regsts(gph);
-    } else {
-      return BpBuildExecAndEnrollLbn2Regsts(gph);
-    }
-  }
-  void InferShape4LbnInProducedRegsts(TaskGraph* gph) override {
-    if (IsFwNode()) {
-      return FwInferShape4LbnInProducedRegsts(gph);
-    } else {
-      return BpInferShape4LbnInProducedRegsts(gph);
-    }
-  }
+  OVERRIDE_IF_FW_BP_FOR_FUNC(BuildExecAndEnrollLbn2Regsts);
+  OVERRIDE_IF_FW_BP_FOR_FUNC(InferShape4LbnInProducedRegsts);
 
   void FwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) override {
     (this->*(gph->Func4FwBuildExecAndEnrollLbn2Regsts()))(gph);
