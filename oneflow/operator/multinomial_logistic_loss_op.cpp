@@ -1,3 +1,4 @@
+#include <string>
 #include "operator/multinomial_logistic_loss_op.h"
 #include "glog/logging.h"
 #include "operator/operator_manager.h"
@@ -36,7 +37,7 @@ void MultinomialLogisticLossOp::InferShape4FwBlobs(
   *loss_buffer_shape_ptr = *data_shape_ptr;
 }
 
-REGISTER_OP(OperatorConf::kMultinomialLogisticLossConf, 
+REGISTER_OP(OperatorConf::kMultinomialLogisticLossConf,
     MultinomialLogisticLossOp);
 
-} // namespace oneflow
+}  // namespace oneflow

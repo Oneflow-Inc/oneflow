@@ -1,3 +1,6 @@
+#include <utility>
+#include <string>
+#include <vector>
 #include "operator/multinomial_logistic_loss_op.h"
 #include "operator/operator_manager.h"
 #include "gtest/gtest.h"
@@ -15,13 +18,13 @@ TEST(MultinomialLogisticLossOp, test_loss_op) {
 
   HashMap<std::string, Shape*> bn2shape_ptr;
   std::vector<int64_t> shape_vec = {500, 10};
-  for(std::string ibn : loss_op->input_bns()){
+  for (std::string ibn : loss_op->input_bns()) {
     bn2shape_ptr.insert(std::make_pair(ibn, new Shape(shape_vec)));
   }
-  for(std::string obn : loss_op->output_bns()){
+  for (std::string obn : loss_op->output_bns()) {
     bn2shape_ptr.insert(std::make_pair(obn, new Shape));
   }
-  for(std::string dtbn : loss_op->data_tmp_bns()){
+  for (std::string dtbn : loss_op->data_tmp_bns()) {
     bn2shape_ptr.insert(std::make_pair(dtbn, new Shape));
   }
   auto fp = [&bn2shape_ptr](const std::string& bn) {
@@ -38,7 +41,7 @@ TEST(MultinomialLogisticLossOp, test_loss_op) {
   ASSERT_EQ(*loss_buffer_shape_ptr, *data_shape_ptr);
 }
 
-} // namespace oneflow
+}  // namespace oneflow
 
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);

@@ -1,3 +1,5 @@
+#include <string>
+#include <vector>
 #include "operator/innerproduct_op.h"
 #include "operator/operator_manager.h"
 #include "gtest/gtest.h"
@@ -39,7 +41,7 @@ TEST(InnerProductOp, modelparallel_innerproduct) {
   CHECK_EQ(*weight_shape_ptr, Shape({out_num, 3*256*256, 1, 1}));
   Shape* bias_shape_ptr = bn2shape_ptr.at(ip_op->model_bns().at(1));
   CHECK_EQ(*bias_shape_ptr, Shape({1, out_num, 1, 1}));
-  Shape* bias_multiplier_shape_ptr = 
+  Shape* bias_multiplier_shape_ptr =
     bn2shape_ptr.at(ip_op->model_tmp_bns().at(0));
   CHECK_EQ(*bias_multiplier_shape_ptr, Shape({1000, 1, 1, 1}));
 }
@@ -73,13 +75,13 @@ TEST(InnerProductOp, dataparallel_innerproduct) {
   CHECK_EQ(*weight_shape_ptr, Shape({40, 3*256*256, 1, 1}));
   Shape* bias_shape_ptr = bn2shape_ptr.at(ip_op->model_bns().at(1));
   CHECK_EQ(*bias_shape_ptr, Shape({1, 40, 1, 1}));
-  Shape* bias_multiplier_shape_ptr = 
+  Shape* bias_multiplier_shape_ptr =
     bn2shape_ptr.at(ip_op->model_tmp_bns().at(0));
   CHECK_EQ(*bias_multiplier_shape_ptr, Shape({1000, 1, 1, 1}));
 }
 
 
-} // namespace oneflow
+}  // namespace oneflow
 
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);

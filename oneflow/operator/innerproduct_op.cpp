@@ -1,3 +1,5 @@
+#include <string>
+#include <vector>
 #include "operator/innerproduct_op.h"
 #include "glog/logging.h"
 #include "operator/operator_manager.h"
@@ -8,10 +10,10 @@ namespace oneflow {
 void InnerProductOp::InitFromOpConf(const OperatorConf& op_conf) {
   CHECK(op_conf.has_innerproduct_conf());
   mut_op_conf() = op_conf;
-  
+
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  
+
   EnrollModelBn("weight");
   EnrollModelBn("bias");
   EnrollModelTmpBn("bias_multiplier");
@@ -28,7 +30,7 @@ void InnerProductOp::InferShape4FwBlobs(
     uint64_t parallel_num) const {
   Shape* in_shape_ptr = GetShapePtr4BnInOp(SoleIbn());
   uint32_t out_num = GetUInt32FromSpecialConf("out_num");
-  if(policy == kModelParallel){
+  if (policy == kModelParallel) {
     BalancedSplitter splitter(out_num, parallel_num);
     out_num = splitter.At(parallel_id).size();
   }
@@ -38,12 +40,12 @@ void InnerProductOp::InferShape4FwBlobs(
   Shape* out_shape_ptr = GetShapePtr4BnInOp(SoleObn());
   *out_shape_ptr = *in_shape_ptr;
   out_shape_ptr->Set(axis, out_num);
-  if(axis < 0){
-    for(int32_t i = axis + 1; i < 0; ++i) {
+  if (axis < 0) {
+    for (int32_t i = axis + 1; i < 0; ++i) {
       out_shape_ptr->Set(i, 1);
     }
   } else {
-    for(int32_t i = axis + 1; i < out_shape_ptr->NumAxes(); ++i){
+    for (int32_t i = axis + 1; i < out_shape_ptr->NumAxes(); ++i) {
       out_shape_ptr->Set(i, 1);
     }
   }
@@ -69,4 +71,4 @@ void InnerProductOp::InferShape4FwBlobs(
 
 REGISTER_OP(OperatorConf::kInnerproductConf, InnerProductOp);
 
-} // namespace oneflow
+}  // namespace oneflow
