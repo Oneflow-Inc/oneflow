@@ -33,7 +33,6 @@ TEST(PoolingOp, pool_100x64x11x11) {
   // do infer shape
   pooling_op->InferShape4FwBlobs(fp, kDataParallel, 0, 1);
   // test
-  Shape* input_shape_ptr = bn2shape_ptr.at(pooling_op->SoleIbn());
   Shape* output_shape_ptr = bn2shape_ptr.at(pooling_op->SoleObn());
   Shape* data_tmp_shape_ptr = bn2shape_ptr.at(
       (*pooling_op->data_tmp_bns().begin()));
