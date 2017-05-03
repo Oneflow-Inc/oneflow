@@ -44,17 +44,25 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   std::shared_ptr<const Operator>& mut_op() { return op_; }
 
   void BindBnInOpAndRegst(const std::string& bn_in_op, RegstDesc* regst) {
-    CHECK(bn_in_op2regst.emplace(bn_in_op, regst).second);
+    CHECK(bn_in_op2regst_.emplace(bn_in_op, regst).second);
   }
-  RegstDesc* GetRegstFromBnInOp(const std::string& bn_in_op) {
-    return bn_in_op2regst.at(bn_in_op);
+  RegstDesc* GetRegstFromBnInOp(const std::string& bn_in_op) const {
+    return bn_in_op2regst_.at(bn_in_op);
+  }
+
+  std::function<Shape*(const std::string&)> GetMutShapePtr4BnInOpFunc() const {
+    return [this](const std::string& bn_in_op) {
+      RegstDesc* regst = this->GetRegstFromBnInOp(bn_in_op);
+      const std::string& lbn = this->op()->Lbn4BnInOp(bn_in_op);
+      return regst->GetMutShapePtr(lbn);
+    };
   }
   
   std::string VisualStr() const { TODO(); }
 
  private:
   std::shared_ptr<const Operator> op_;
-  HashMap<std::string, RegstDesc*> bn_in_op2regst;
+  HashMap<std::string, RegstDesc*> bn_in_op2regst_;
 
 };
 

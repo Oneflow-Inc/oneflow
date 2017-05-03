@@ -4,7 +4,7 @@
 #include "task/task.pb.h"
 #include "graph/stage_graph.h"
 #include "graph/exec_graph.h"
-#include "register/register_desc.h"
+#include "register/register_desc_manager.h"
 
 namespace oneflow {
 
@@ -39,8 +39,22 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   std::unique_ptr<TaskNode> BuildAndConnectBpNode();
   
   //
-  void BuildExecAndProducedRegsts(TaskGraph*);
+  virtual void BuildExecAndEnrollLbn2Regsts(TaskGraph*) = 0;
+  virtual void InferShape4LbnInProducedRegsts(TaskGraph*) = 0;
+
+  #define OVERRIDE_IF_FW_BP_FOR_FUNC(func_name) \
+  void func_name(TaskGraph* gph) override { \
+    if (IsFwNode()) { \
+      return Fw##func_name (gph); \
+    } else { \
+      return Bp##func_name (gph); \
+    } \
+  }
+  
+  //
   RegstDesc* GetProducedRegstDesc(const std::string& regst_desc_name);
+  void TakeOverRegstDesc(TaskNode* rhs, const std::string& regst_desc_name);
+  const RegstDesc* ForwardedRegstDesc(const std::string& regst_desc_name) const;
 
   // 
   const TaskEdge* GetOutEdge4ProducedRegst(RegstDesc*) const;
@@ -48,7 +62,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   //
   virtual TaskProto ToProto() const { TODO(); }
-
   virtual std::string VisualStr() const override {
     std::stringstream ss;
     ss << (is_fw_node_ ? "Fw" : "Bp");
@@ -67,9 +80,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void EnrollProducedRegstDesc(const std::string& regst_desc_name,
                                std::unique_ptr<RegstDesc>&& regst_desc);
 
-  virtual void FwBuildExecAndProducedRegsts(TaskGraph*) { UNEXPECTED_RUN(); }
-  virtual void BpBuildExecAndProducedRegsts(TaskGraph*) { UNEXPECTED_RUN(); }
-
  private:
   // In task_gph level
   const StageNode* stage_node_;
@@ -80,7 +90,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   // In task level
   ExecGraph exec_gph_;
 
-  HashMap<std::string, std::unique_ptr<RegstDesc>> produced_regst_descs_; 
+  HashMap<std::string, std::unique_ptr<RegstDesc>> produced_regst_descs_;
+  HashMap<std::string, const RegstDesc*> forwarded_regst_descs_;
 
   HashMap<RegstDesc*, const TaskEdge*> produced_regst2out_edge;
   HashMap<const TaskEdge*, RegstDesc*> out_edge2produced_regst;

@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_OPERATOR_RELU_OP_H_
 #define ONEFLOW_OPERATOR_RELU_OP_H_
 
+#include <string>
 #include "operator/operator.h"
 
 namespace oneflow {
@@ -11,20 +12,19 @@ class ReluOp final : public UserOperator {
   ReluOp() = default;
   ~ReluOp() = default;
 
-  std::string GetValueFromPbOpConf(const std::string& k) const override;
   void InitFromOpConf(const OperatorConf& op_conf) override;
+  std::string GetValueFromPbOpConf(const std::string& k) const override;
   bool IsElemWise() const override { return true; }
 
-  void InferShape4ObAndDtbFromIb() const override;
-  void InferShape4ModelTmpBlob(ParallelPolicy policy,
-                               uint64_t parallel_id) const override { }
-  void InferShape4ModelDiffBlob(ParallelPolicy policy,
-                                uint64_t parallel_id) const override { }
+  void InferShape4FwBlobs(
+      std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+      ParallelPolicy policy,
+      uint64_t parallel_id,
+      uint64_t parallel_num) const override;
 
  private:
-
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_OPERATOR_RELU_OP_H_
+#endif  // ONEFLOW_OPERATOR_RELU_OP_H_

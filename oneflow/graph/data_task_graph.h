@@ -19,8 +19,11 @@ class DataTaskGraph final : public TaskGraph {
     BuildFromChainGph(std::move(chain_gph), need_bp, LogDir() + "/data_");
   }
 
-  CompTaskNodeMemFunc Func4FwBuildExecAndProducedRegsts() const override {
-    return &CompTaskNode::DataFwBuildExecAndProducedRegsts;
+  CompTaskNodeMemFunc Func4FwBuildExecAndEnrollLbn2Regsts() const override {
+    return &CompTaskNode::DataFwBuildExecAndEnrollLbn2Regsts;
+  }
+  CompTaskNodeMemFunc Func4FwInferShape4LbnInProducedRegsts() const override {
+    return &CompTaskNode::DataFwInferShape4LbnInProducedRegsts;
   }
 
  private:

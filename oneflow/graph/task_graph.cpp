@@ -1,6 +1,6 @@
 #include "graph/task_graph.h"
 #include "graph/comp_task_node.h"
-#include "graph/comm_net_task_node.h"
+#include "graph/copy_task_node.h"
 #include "graph/in_boxing_task_node.h"
 #include "graph/out_boxing_task_node.h"
 
@@ -16,9 +16,15 @@ inline void TaskConnect(TaskNode* src_node,
 
 }
 
-void TaskGraph::BuildExecAndProducedRegsts() {
+void TaskGraph::BuildExecAndEnrollLbn2Regsts() {
   for (TaskNode& node : *this) {
-    node.BuildExecAndProducedRegsts(this);
+    node.BuildExecAndEnrollLbn2Regsts(this);
+  }
+}
+
+void TaskGraph::InferShape4LbnInProducedRegsts() {
+  for (TaskNode& node : *this) {
+    node.InferShape4LbnInProducedRegsts(this);
   }
 }
 

@@ -286,13 +286,13 @@ void ChainGraph::SetInOutLbn4AllChainNodeInDataTaskGraph() {
     auto& produced_lbns = chain2produced_lbns[cur_node.get()];
     for (std::shared_ptr<const Operator> op : cur_node->op_vec()) {
       for (const std::string& obn : op->output_bns()) {
-        std::string lbn = op->obn2lbn(obn);
+        std::string lbn = op->Lbn4BnInOp(obn);
         produced_lbns.insert(lbn);
       }
     }
     for (std::shared_ptr<const Operator> op : cur_node->op_vec()) {
       for (const std::string& ibn : op->input_bns()) {
-        std::string lbn = op->ibn2lbn(ibn);
+        std::string lbn = op->Lbn4BnInOp(ibn);
         if (produced_lbns.find(lbn) == produced_lbns.end()) {
           cur_node->mut_input_lbns().push_back(lbn);
         }

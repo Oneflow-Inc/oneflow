@@ -134,9 +134,6 @@ message PoolingOpConf {
   uint32 stride = 10; // The stride (equal in Y, X)
   uint32 stride_h = 11; // The stride height
   uint32 stride_w = 12; // The stride width
-  // If global_pooling then it will pool over the size of the bottom by doing
-  // kernel_h = bottom->height and kernel_w = bottom->width
-  bool global_pooling = 13;
 }
 
 message ReluOpConf {
@@ -163,20 +160,19 @@ message ConcatOpConf {
 }
 
 message CommNetOpConf {
-  enum CommNetType {
-    SENDER = 0;
-    RECEIVER = 1;
+  enum Type {
+    kSender = 0;
+    kReceiver = 1;
   }
-  CommNetType comm_net_type = 1;
+  Type type = 1;
 }
 
-message CopyOpConf {
-  enum CopyType {
+message CopyHdOpConf {
+  enum Type {
     H2D = 0;
     D2H = 1;
   }
-  CopyType copy_type = 1;
-  repeated string copied_lbns = 2;
+  Type type = 1;
 }
 
 
@@ -189,8 +185,7 @@ message BoxConcatConf {
   int32 axis = 1;
 }
 
-message BoxSplitConf {
-  int32 axis = 1;
+message BoxDataSplitConf {
 }
 
 message BoxCloneConf {
@@ -202,7 +197,7 @@ message BoxingOpConf {
   uint32 out_num = 3;
   BoxConcatConf concat_box = 4;
   oneof out_box {
-    BoxSplitConf split_box = 5;
+    BoxDataSplitConf data_split_box = 5;
     BoxCloneConf clone_box = 6;
   }
 }
@@ -226,7 +221,7 @@ message OperatorConf {
     ReluOpConf relu_conf = 104;
     SoftmaxOpConf softmax_conf = 105;
     MultinomialLogisticLossOpConf multinomial_logistic_loss_conf = 106;
-    CopyOpConf copy_conf = 107;
+    CopyHdOpConf copy_hd_conf = 107;
     CloneOpConf clone_conf = 108;
     BoxingOpConf boxing_conf = 109;
     ModelUpdateOpConf model_update_conf = 110;

@@ -40,16 +40,25 @@ std::unique_ptr<TaskNode> TaskNode::BuildAndConnectBpNode() {
   return bp_node;
 }
 
-void TaskNode::BuildExecAndProducedRegsts(TaskGraph* gph) {
-  if (IsFwNode()) {
-    FwBuildExecAndProducedRegsts(gph);
-  } else {
-    BpBuildExecAndProducedRegsts(gph);
-  }
-}
-
 RegstDesc* TaskNode::GetProducedRegstDesc(const std::string& regst_desc_name) {
   return produced_regst_descs_.at(regst_desc_name).get();
+}
+
+void TaskNode::TakeOverRegstDesc(TaskNode* rhs,
+                                 const std::string& regst_desc_name) {
+  std::unique_ptr<RegstDesc> this_regst;
+  auto rhs_regst_it = rhs->produced_regst_descs_.find(regst_desc_name);
+  this_regst.swap(rhs_regst_it->second);
+  rhs->produced_regst_descs_.erase(rhs_regst_it);
+  CHECK(rhs->forwarded_regst_descs_.emplace(regst_desc_name,
+                                            this_regst.get()).second);
+  CHECK(produced_regst_descs_.emplace(regst_desc_name,
+                                      std::move(this_regst)).second);
+}
+
+const RegstDesc* TaskNode::ForwardedRegstDesc(
+    const std::string& regst_desc_name) const {
+  return forwarded_regst_descs_.at(regst_desc_name);
 }
 
 const TaskEdge* TaskNode::GetOutEdge4ProducedRegst(RegstDesc* regst) const {
@@ -60,15 +69,12 @@ RegstDesc* TaskNode::GetProducedRegst4OutEdge(const TaskEdge* edge) const {
   return out_edge2produced_regst.at(edge);
 }
 
-std::unique_ptr<TaskNode> TaskNode::CreateSameTypeNode() const {
-  UNEXPECTED_RUN();
-}
-
 void TaskNode::InitWithFwNode(TaskNode* fw_node) {
   stage_node_ = fw_node->stage_node_;
   thrd_loc_id_ = fw_node->thrd_loc_id_;
   is_fw_node_ = false;
   related_fw_or_bp_node_ = fw_node;
+  set_task_id();
 }
 
 void TaskNode::BindProducedRegstAndOutEdge(RegstDesc* regst,
@@ -82,8 +88,7 @@ void TaskNode::EnrollProducedRegstDesc(
     std::unique_ptr<RegstDesc>&& regst_desc) {
   regst_desc->SetProducer(this);
   regst_desc->set_regst_desc_id(IDMgr::Singleton().NewRegstDescId(task_id_));
-  auto pair = std::make_pair(regst_desc_name, std::move(regst_desc));
-  CHECK(produced_regst_descs_.insert(std::move(pair)).second);
+  CHECK(produced_regst_descs_.emplace(regst_desc_name, std::move(regst_desc)).second);
 }
 
 } // namespace oneflow

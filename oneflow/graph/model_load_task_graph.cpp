@@ -27,7 +27,7 @@ MdLoadTaskGraph::MdLoadTaskGraph(
     const std::vector<CompTaskNode*>& sorted_update_tasks) {
   BuildTaskGraph(update_chain);
   InitFaker2Mccoy(sorted_update_tasks);
-  BuildExecAndProducedRegsts();
+  BuildExecAndEnrollLbn2Regsts();
 }
 
 void MdLoadTaskGraph::BuildTaskGraph(const ChainNode* update_chain) {
