@@ -82,7 +82,7 @@ bool RdmaWrapper::Send(const NetworkMessage& msg) {
   // NOTE(jiyuan): We need to know the completion event of Send to recycle the
   // buffer of message.
 
-  conn->PostSendRequest(send_request);  // TODO(shiyuan) add send method to Connection
+  conn->PostSendRequest(send_request);
   // CHECK(!FAILED(result)) << "Failed to send\n";
 
   return true;  // TODO(shiyuan) return the result
@@ -157,7 +157,6 @@ bool RdmaWrapper::PollRecvQueue(NetworkResult* result) {
   return true;
 }
 
-// TODO(shiyuan) should mv PollSendQueue to Class RdmaManager
 bool RdmaWrapper::PollSendQueue(NetworkResult* result) {
   int32_t time_stamp = rdma_manager_->PollSendQueue(result);
   if (time_stamp == -1)
