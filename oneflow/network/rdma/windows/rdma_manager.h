@@ -4,12 +4,13 @@
 // #include "network/rdma/windows/connection.h"
 
 #include <stdint.h>
-#include "ndspi.h"
+#include <ndspi.h>
 #include "network/rdma/windows/interface.h"
 
 namespace oneflow {
 
 class Connection;
+class Memory;
 
 class RdmaManager {
  public:
@@ -20,7 +21,7 @@ class RdmaManager {
   bool Init();
   bool Destroy();
 
-  uint64_t WaitForConnection();
+  uint64_t WaitForConnection(Connection* conn);
 
   sockaddr_in my_sock;
   bool CreateConnector(Connection* conn);

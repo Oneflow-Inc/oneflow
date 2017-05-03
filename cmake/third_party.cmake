@@ -54,6 +54,7 @@ set(oneflow_third_party_dependencies
   protobuf_copy_binary_to_destination
   grpc_copy_headers_to_destination
   grpc_copy_libs_to_destination
+  network_copy_headers_to_destination
 )
 
 include_directories(
