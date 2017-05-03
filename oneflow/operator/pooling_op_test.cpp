@@ -1,4 +1,5 @@
 #include "operator/pooling_op.h"
+#include <vector>
 #include "gtest/gtest.h"
 #include "operator/operator_manager.h"
 #include "operator/op_util.h"
@@ -23,9 +24,11 @@ TEST(PoolingOp, pool_100x64x11x11) {
   auto pooling_op = OpMgr::Singleton().ConstructOp(op_conf);
   std::vector<int64_t> input_shape_vec = {100, 64, 11, 11};
   TestShapeFactory shape_factory = TestShapeFactory();
-  shape_factory.add_bn_shape_ptr(pooling_op->SoleIbn(), new Shape(input_shape_vec));
+  shape_factory.add_bn_shape_ptr(pooling_op->SoleIbn(),
+                                 new Shape(input_shape_vec));
   shape_factory.add_bn_shape_ptr(pooling_op->SoleObn(), new Shape);
-  shape_factory.add_bn_shape_ptr(*(pooling_op->data_tmp_bns().begin()), new Shape);
+  shape_factory.add_bn_shape_ptr(*(pooling_op->data_tmp_bns().begin()),
+                                 new Shape);
   auto fp = std::bind(&TestShapeFactory::bn2ShapePtr,
                       &shape_factory,
                       std::placeholders::_1);
@@ -41,14 +44,14 @@ TEST(PoolingOp, pool_100x64x11x11) {
   // n = 100
   // c = 64
   // h_o = (11 + 2 * 1 - 3) / 2 + 1 = 6
-  // w_o = (11 + 2 * 1 - 3) / 2 + 1 = 6 
+  // w_o = (11 + 2 * 1 - 3) / 2 + 1 = 6
   std::vector<int64_t> output_shape_vec = {100, 64, 6, 6};
   ASSERT_EQ(*output_shape_ptr, Shape(output_shape_vec));
   ASSERT_EQ(*data_tmp_shape_ptr, *output_shape_ptr);
   ASSERT_NE(data_tmp_shape_ptr, output_shape_ptr);
 }
 
-}// namespace oneflow
+}  // namespace oneflow
 
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);

@@ -1,4 +1,5 @@
 #include "operator/relu_op.h"
+#include <vector>
 #include "glog/logging.h"
 #include "operator/operator_manager.h"
 
@@ -29,4 +30,4 @@ void ReluOp::InferShape4FwBlobs(
 
 REGISTER_OP(OperatorConf::kReluConf, ReluOp);
 
-} // namespace oneflow
+}  // namespace oneflow

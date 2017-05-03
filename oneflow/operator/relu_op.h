@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_OPERATOR_RELU_OP_H_
 #define ONEFLOW_OPERATOR_RELU_OP_H_
 
+#include <string>
 #include "operator/operator.h"
 
 namespace oneflow {
@@ -22,9 +23,8 @@ class ReluOp final : public UserOperator {
       uint64_t parallel_size) const override;
 
  private:
-
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_OPERATOR_RELU_OP_H_
+#endif  // ONEFLOW_OPERATOR_RELU_OP_H_

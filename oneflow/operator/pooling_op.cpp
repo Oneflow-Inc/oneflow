@@ -1,4 +1,5 @@
 #include "operator/pooling_op.h"
+#include <vector>
 #include "glog/logging.h"
 #include "operator/operator_manager.h"
 #include "operator/op_util.h"
@@ -27,17 +28,17 @@ void PoolingOp::InferShape4FwBlobs(
   Shape* input_shape_ptr = GetShapePtr4BnInOp(SoleIbn());
   const PoolingOpConf& pooling_conf = op_conf().pooling_conf();
   auto pad_pair = CheckDimPara4CnnAndPooling(pooling_conf.pad(),
-                                             pooling_conf.pad_h(), 
+                                             pooling_conf.pad_h(),
                                              pooling_conf.pad_w());
   uint32_t pad_h = pad_pair.first;
   uint32_t pad_w = pad_pair.second;
   auto kernel_pair = CheckDimPara4CnnAndPooling(pooling_conf.kernel_size(),
-                                                pooling_conf.kernel_h(), 
+                                                pooling_conf.kernel_h(),
                                                 pooling_conf.kernel_w());
   uint32_t kernel_h = kernel_pair.first;
   uint32_t kernel_w = kernel_pair.second;
   auto stride_pair = CheckDimPara4CnnAndPooling(pooling_conf.stride(),
-                                                pooling_conf.stride_h(), 
+                                                pooling_conf.stride_h(),
                                                 pooling_conf.stride_w());
   uint32_t stride_h = stride_pair.first;
   uint32_t stride_w = stride_pair.second;
@@ -56,4 +57,4 @@ void PoolingOp::InferShape4FwBlobs(
 
 REGISTER_OP(OperatorConf::kPoolingConf, PoolingOp);
 
-} // namespace oneflow
+}  // namespace oneflow
