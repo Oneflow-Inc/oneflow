@@ -27,7 +27,7 @@ class RegstDesc final {
   // Lbn and Shape
   void CopyLbnFrom(const RegstDesc*);
   void CopyShapeFrom(const RegstDesc*);
-  Shape* EnrollLbn(const std::string& lbn);
+  void EnrollLbn(const std::string& lbn);
   const Shape& GetShape(const std::string& lbn);
   Shape* GetMutShapePtr(const std::string& lbn);
 

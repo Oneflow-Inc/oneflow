@@ -39,12 +39,13 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   std::unique_ptr<TaskNode> BuildAndConnectBpNode();
   
   //
-  void BuildExecAndEnrollLbn2Regsts(TaskGraph*);
-  void InferShape4LbnInProducedRegsts(TaskGraph*);
+  virtual void BuildExecAndEnrollLbn2Regsts(TaskGraph*) = 0;
+  virtual void InferShape4LbnInProducedRegsts(TaskGraph*) = 0;
   
   //
   RegstDesc* GetProducedRegstDesc(const std::string& regst_desc_name);
   void TakeOverRegstDesc(TaskNode* rhs, const std::string& regst_desc_name);
+  const RegstDesc* ForwardedRegstDesc(const std::string& regst_desc_name) const;
 
   // 
   const TaskEdge* GetOutEdge4ProducedRegst(RegstDesc*) const;
@@ -80,7 +81,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   // In task level
   ExecGraph exec_gph_;
 
-  HashMap<std::string, std::unique_ptr<RegstDesc>> produced_regst_descs_; 
+  HashMap<std::string, std::unique_ptr<RegstDesc>> produced_regst_descs_;
+  HashMap<std::string, const RegstDesc*> forwarded_regst_descs_;
 
   HashMap<RegstDesc*, const TaskEdge*> produced_regst2out_edge;
   HashMap<const TaskEdge*, RegstDesc*> out_edge2produced_regst;

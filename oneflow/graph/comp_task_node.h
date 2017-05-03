@@ -9,7 +9,7 @@ namespace oneflow {
 class CompTaskNode : public TaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CompTaskNode);
-  CompTaskNode() = default;
+  CompTaskNode() {}
   virtual ~CompTaskNode() = default;
 
   // Getters and Setters
@@ -32,7 +32,8 @@ class CompTaskNode : public TaskNode {
  protected:
   virtual void InitWithFwNode(TaskNode* fw_node) override {
     TaskNode::InitWithFwNode(fw_node);
-    parallel_id_ = of_dynamic_cast<CompTaskNode*> (fw_node)->parallel_id_;
+    fw_comp_code = of_dynamic_cast<CompTaskNode*> (fw_node);
+    parallel_id_ = fw_comp_code->parallel_id_;
   }
 
  private:
