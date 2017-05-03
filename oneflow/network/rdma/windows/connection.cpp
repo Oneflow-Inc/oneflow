@@ -73,13 +73,34 @@ void Connection::AcceptConnect() {
   // CHECK(!FAILED(hr)) << "Failed to accept\n";
   // LOG(INFO) << "Accept done\n";
 }
+void Connection::PostToSendRequestQueue(Request* send_request) {
+  queue_pair->Send(
+      &send_request->time_stamp,
+      static_cast<const ND2_SGE*>(
+          send_request->rdma_msg->net_memory()->sge()),
+      1,
+      0);  // TODO(shiyuan) this flag should be mod for generate an event in cq
+}
 
-void Connection::PostToRecvRequestQueue(Request* receive_request) {
+void Connection::PostToRecvRequestQueue(Request* recv_request) {
   queue_pair->Receive(
-      &receive_request->time_stamp,
-      static_cast<const ND2_SGE*> (
-          receive_request->rdma_msg->net_memory()->sge()),
+      &recv_request->time_stamp,
+      static_cast<const ND2_SGE*>(
+          recv_request->rdma_msg->net_memory()->sge()),
       1);
+}
+
+void Connection::PostToReadRequestQueue(
+    Request* read_request,
+    MemoryDescriptor* remote_memory_descriptor,
+    Memory* dst_memory) {
+  queue_pair->Read(
+      &read_request->time_stamp,
+      static_cast<const ND2_SGE*>(dst_memory->sge()),
+      1,
+      remote_memory_descriptor->address,
+      remote_memory_descriptor->remote_token,
+      0);  // TODO(shiyuan) parameters
 }
 
 void DestroyConnection() {

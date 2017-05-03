@@ -21,7 +21,6 @@ class RdmaWrapper : public Network {
   void Init(uint64_t my_machine_id, const NetworkTopology& net_topo) override;
   void Finalize() override;
   void Barrier() override;
-  void InitConnections();
 
   NetworkMemory* NewNetworkMemory() override;
 
@@ -32,6 +31,9 @@ class RdmaWrapper : public Network {
   bool Poll(NetworkResult* result) override;
 
  private:
+  void InitConnections();
+  Connection* NewConnection();
+
   // |result| is owned by the caller, and the received message will be held in
   // result->net_msg, having result->type == NetworkResultType::NET_RECEIVE_MSG.
   bool PollRecvQueue(NetworkResult* result);
@@ -72,8 +74,6 @@ class RdmaWrapper : public Network {
   // All the active sides connect to the passive sides
   void EstablishConnection();
 
-  Connection* NewConnection();
-
   // As active side, try to connect to others;
   // return true if successfully, false if failed
   // bool TryConnectTo(uint64_t peer_machine_id);
@@ -81,8 +81,6 @@ class RdmaWrapper : public Network {
 
   // As passive side, prepare for others' connect
   // int32_t WaitForConnection();
-
-  // Network topology information
 
   // TODO(jiyuan): estimate the pre-post number
   static const int kPrePostRecvNumber = 16;

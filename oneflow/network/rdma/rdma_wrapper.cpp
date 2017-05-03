@@ -30,6 +30,9 @@ sockaddr_in GetAddress(const uint64_t* machine_id, int port) {
 
 RdmaWrapper::RdmaWrapper() {
   rdma_manager_ = NULL;
+  request_pool_.reset(new RequestPool());
+  connection_pool_.reset(new ConnectionPool());
+  rdma_manager_ = new RdmaManager();
 }
 
 RdmaWrapper::~RdmaWrapper() {
@@ -40,41 +43,24 @@ void RdmaWrapper::Init(uint64_t my_machine_id,
                        const NetworkTopology& net_topo) {
   my_machine_id_ = my_machine_id;
   net_topology_ = net_topo;
-  request_pool_.reset(new RequestPool());
-  connection_pool_.reset(new ConnectionPool());
+
   InitConnections();
 
   // NdspiV2Open();
-  rdma_manager_ = new RdmaManager();
   // rdma_manager_->my_sock = GetAddress(my_machine_id);  // TODO(shiyuan)
   rdma_manager_->Init();
 
   EstablishConnection();
 }
 
-void RdmaWrapper::InitConnections() {
-  Connection* conn;
-  for (auto peer_machine_id : net_topology_.all_nodes[my_machine_id_].neighbors) {
-    conn = NewConnection();
-    connection_pool_->AddConnection(peer_machine_id, conn);
-  }
-}
-
-// TODO(shiyuan)
 void Finalize() {
-
-
 }
 
 // TODO(shiyuan)
 void Barrier() {
-
-
 }
 
-// TODO(shiyuan)
 NetworkMemory* RdmaWrapper::NewNetworkMemory() {
-  // TODO(shiyuan)
   return rdma_manager_->NewNetworkMemory();
 }
 
@@ -84,7 +70,7 @@ bool RdmaWrapper::Send(const NetworkMessage& msg) {
   Connection* conn = connection_pool_->GetConnection(dst_machine_id);
 
   // 1. New network request, generating timestamp, get message memory
-  // from message pool.
+  //    from message pool.
   Request* send_request = request_pool_->AllocRequest(true);
   // check(send_request)
 
@@ -97,16 +83,10 @@ bool RdmaWrapper::Send(const NetworkMessage& msg) {
   // NOTE(jiyuan): We need to know the completion event of Send to recycle the
   // buffer of message.
 
-  // HRESULT hr = conn->queue_pair->Send(
-  //         &send_request->time_stamp,
-  //         static_cast<const ND2_SGE*>(
-  //                 send_request->registered_message->net_memory()->sge()),
-  //         1,
-  //         0);
+  conn->PostToSendRequestQueue(send_request);  // TODO(shiyuan) add send method to Connection
+  //CHECK(!FAILED(result)) << "Failed to send\n";
 
-  // CHECK(!FAILED(hr)) << "Failed to send\n";
-
-  return true;
+  return true;  // TODO(shiyuan) return the result
 }
 
 void RdmaWrapper::Read(MemoryDescriptor* remote_memory_descriptor,
@@ -125,16 +105,13 @@ void RdmaWrapper::Read(MemoryDescriptor* remote_memory_descriptor,
 
   Memory* dst_memory = reinterpret_cast<Memory*>(local_memory);
 
-  // HRESULT hr = conn->queue_pair->Read(&read_request->time_stamp,
-  //         static_cast<const ND2_SGE*>(dst_memory->sge()),
-  //         1,
-  //         src->address,
-  //         src->remote_token,
-  //         0);
-
+  conn->PostToReadRequestQueue(read_request,
+                               remote_memory_descriptor,
+                               dst_memory);
   // CHECK
 }
 
+// TODO(shiyuan)
 void RdmaWrapper::RegisterEventMessage(MsgPtr event_msg) {
   Request* last_read_request = request_pool_->GetRequest(
       time_stamp_of_last_read_request_);
@@ -143,6 +120,23 @@ void RdmaWrapper::RegisterEventMessage(MsgPtr event_msg) {
 
 bool RdmaWrapper::Poll(NetworkResult* result) {
   return PollRecvQueue(result) || PollSendQueue(result);
+}
+
+void RdmaWrapper::InitConnections() {
+  Connection* conn;
+  for (auto peer_machine_id : net_topology_.all_nodes[my_machine_id_].neighbors) {
+    conn = NewConnection();
+    connection_pool_->AddConnection(peer_machine_id, conn);
+  }
+}
+
+Connection* RdmaWrapper::NewConnection() {
+  Connection* conn = new Connection();
+
+  rdma_manager_->CreateConnector(conn);
+  rdma_manager_->CreateQueuePair(conn);
+
+  return conn;
 }
 
 // |result| is owned by the caller, and the received message will be held in
@@ -279,15 +273,6 @@ void RdmaWrapper::EstablishConnection() {
       }
     }
   }
-}
-
-Connection* RdmaWrapper::NewConnection() {
-  Connection* conn = new Connection();
-
-  rdma_manager_->CreateConnector(conn);
-  rdma_manager_->CreateQueuePair(conn);
-
-  return conn;
 }
 
 }  // namespace oneflow

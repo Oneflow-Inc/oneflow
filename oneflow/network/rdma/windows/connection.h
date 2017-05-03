@@ -12,6 +12,7 @@
 namespace oneflow {
 
 class Request;
+class Memory;
 
 class Connection {
  public:
@@ -19,7 +20,11 @@ class Connection {
   ~Connection();
   explicit Connection(uint64_t peer_machine_id);
 
-  void PostToRecvRequestQueue(Request* receive_request);
+  void PostToSendRequestQueue(Request* send_request);
+  void PostToRecvRequestQueue(Request* recv_request);
+  void PostToReadRequestQueue(Request* read_request,
+                              MemoryDescriptor* remote_memory_descriptor,
+                              Memory* dst_memory);
 
   bool Bind();
   // connect to and connected
