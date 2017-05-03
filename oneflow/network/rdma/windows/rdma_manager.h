@@ -15,25 +15,28 @@ class Memory;
 
 class RdmaManager {
  public:
-  RdmaManager();
-  ~RdmaManager();
   RdmaManager(const char* addr, int port);
+  ~RdmaManager();
 
   bool Init();
   bool Destroy();
 
-  uint64_t WaitForConnection(Connection* conn);
-
-  sockaddr_in my_sock;
   bool CreateConnector(Connection* conn);
   bool CreateQueuePair(Connection* conn);
-  // uint64_t WaitForConnection();
 
+  Memory* NewNetworkMemory();
+  
+  uint64_t WaitForConnection(Connection* conn);
+  
   int32_t PollRecvQueue(NetworkResult* result);
   int32_t PollSendQueue(NetworkResult* result);
-  Memory* NewNetworkMemory();
+
+  sockaddr_in my_sock;
 
  private:
+  bool InitAdapter();
+  bool InitEnv();
+  
   // NdspiV2 specific adatper and information
   IND2Adapter* adapter_;
   ND2_ADAPTER_INFO adapter_info_;
@@ -45,9 +48,6 @@ class RdmaManager {
 
   // Listener
   IND2Listener* listener_;
-
-  bool InitAdapter();
-  bool InitEnv();
 };
 
 }  // namespace oneflow
