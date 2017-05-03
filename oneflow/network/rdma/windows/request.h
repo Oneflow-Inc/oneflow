@@ -16,6 +16,6 @@ class Request {
  private:
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_NETWORK_RDMA_WINDOWS_REQUEST_H_
+#endif  // ONEFLOW_NETWORK_RDMA_WINDOWS_REQUEST_H_

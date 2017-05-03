@@ -29,4 +29,4 @@ class Memory : public NetworkMemory {
 
 }  // namespace oneflow
 
-#endif // ONEFLOW_NETWORK_RDMA_WINDOWS_MEMORY_H_
+#endif  // ONEFLOW_NETWORK_RDMA_WINDOWS_MEMORY_H_

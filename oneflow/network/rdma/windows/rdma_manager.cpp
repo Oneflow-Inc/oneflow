@@ -1,17 +1,13 @@
 #include "network/rdma/windows/rdma_manager.h"
 
 #include <string.h>
+#include "network/rdma/windows/ndsupport.h"
 #include "ndsupport.h"
-// #include "ndsupport.cpp"
 
-
-#include "interface.h"
+#include "network/rdma/windows/interface.h"
 #include "network/rdma/windows/connection.h"
 
 namespace oneflow {
-
-// class Connection;
-
 
 namespace {
 
@@ -24,16 +20,16 @@ sockaddr_in GetAddress(const char* addr, int port) {
   return sock;
 }
 
-} // namespace 
+}  // namespace
 
 
-/*RdmaManager::RdmaManager(const char* addr, int32_t port) {  
+RdmaManager::RdmaManager(const char* addr, int32_t port) {  
   my_sock = GetAddress(addr, port);
   adapter_ = NULL;
   listener_ = NULL;
   send_cq_ = NULL;
   recv_cq_ = NULL;
-}*/
+}
 
 RdmaManager::~RdmaManager() {
   Destroy();
@@ -47,14 +43,14 @@ bool RdmaManager::InitAdapter() {
   // NdspiV2Open
   HRESULT hr = NdStartup();
   // CHECK hr
-  hr = NdOpenV2Adapter(reinterpret_cast<const sockaddr*>(&my_sock), 
+  hr = NdOpenV2Adapter(reinterpret_cast<const sockaddr*>(&my_sock),
                        sizeof(my_sock),
                        &adapter_);
   // CHECK hr
 
   hr = adapter_->CreateOverlappedFile(&overlapped_file_);
   // CHECK hr
-  
+
   ULONG info_size = sizeof(adapter_info_);
   adapter_info_.InfoVersion = ND_VERSION_2;
   hr = adapter_->Query(&adapter_info_, &info_size);
@@ -63,15 +59,14 @@ bool RdmaManager::InitAdapter() {
 }
 
 bool RdmaManager::InitEnv() {
-
   // Create Send Completion Queue and Recv Completion Queue
   HRESULT hr;
   hr = adapter_->CreateCompletionQueue(
       IID_IND2CompletionQueue,
       overlapped_file_,
-      adapter_info_.MaxCompletionQueueDepth, // use max depth as default
-      0, // not specify processor group
-      0, // not specify affinity
+      adapter_info_.MaxCompletionQueueDepth,  // use max depth as default
+      0,  // not specify processor group
+      0,  // not specify affinity
       reinterpret_cast<void**>(&send_cq_));
   // CHECK(!FAILED(hr)) << "Failed to create send completion queue\n";
 
@@ -97,8 +92,8 @@ bool RdmaManager::InitEnv() {
   // CHECK(!FAILED(hr)) << "Failed to bind\n";
 
   // Start listening for incoming connection requests
-  // argument BACKLOG: The maximum number of pending connection requests 
-  // to maintain for the listen request. Set to zero to indicate no limit. 
+  // argument BACKLOG: The maximum number of pending connection requests
+  // to maintain for the listen request. Set to zero to indicate no limit.
   hr = listener_->Listen(0);  // NOTE(feiga): not sure whether 0(no limit) is OK
   // CHECK(!FAILED(hr)) << "Failed to Listen\n";
 
@@ -122,21 +117,16 @@ bool RdmaManager::CreateQueuePair(Connection* conn) {
       // according to our application protocal carefully.
       adapter_info_.MaxReceiveQueueDepth,
       adapter_info_.MaxInitiatorQueueDepth,
-      1, // adapter_info_.MaxRecvSge,
+      1,  // adapter_info_.MaxRecvSge,
       adapter_info_.MaxInitiatorSge,
       adapter_info_.MaxInlineDataSize,
       reinterpret_cast<void**>(&conn->queue_pair));
 }
 
-uint64_t RdmaManager::WaitForConnection() {
-	return 0;
-}
-
-// TODO(shiyuan)
-/*uint64_t RdmaManager::WaitForConnection() {
-  
+// FIXME(shiyuan) bug
+uint64_t RdmaManager::WaitForConnection(Connection* conn) {
   uint64_t peer_machine_id;
-  /*uint64_t size = sizeof(peer_machine_id);
+  ULONG size = sizeof(peer_machine_id);
   HRESULT hr = listener_->GetConnectionRequest(conn->connector, &conn->ov);
   if (hr == ND_PENDING) {
     hr = listener_->GetOverlappedResult(&conn->ov, true);
@@ -146,15 +136,25 @@ uint64_t RdmaManager::WaitForConnection() {
   //
 
   // Get src rank from the private data
-  hr = connector->GetPrivateData(&peer_machine_id, &size);
+  hr = conn->connector->GetPrivateData(&peer_machine_id, &size);
   // LOG(INFO) << "peer_machine_id = " << peer_machine_id << " size = " << size << "\n";
   // NOTE(feiga): The author of NDSPI says it's normal for this check failed
   //              So just ignore it.
   // CHECK(!FAILED(hr)) << "Failed to get private data. hr = " << hr << "\n";
   
   return peer_machine_id;
-}*/
+}
 
+Memory* RdmaManager::NewNetworkMemory() {
+  IND2MemoryRegion* memory_region = NULL;
+  HRESULT hr = adapter_->CreateMemoryRegion(
+      IID_IND2MemoryRegion,
+      overlapped_file_,
+      reinterpret_cast<void**>(&memory_region));
+  
+  Memory* memory = new Memory(memory_region);
+  return memory;
+}
 
 bool RdmaManager::Destroy() {
   send_cq_->Release();
@@ -164,5 +164,4 @@ bool RdmaManager::Destroy() {
   return true;
 }
 
-} // namespace oneflow 
-
+}  // namespace oneflow

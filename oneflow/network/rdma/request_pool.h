@@ -8,15 +8,7 @@
 #include "network/rdma/agency.h"
 
 
-namespace oneflow{
-
-/* move request to system/request.h
-struct Request {
-  bool is_send;
-  int32_t time_stamp;
-  RegisteredNetworkMessage* registered_message;
-};
-*/
+namespace oneflow {
 
 class RequestPool {
  public:
@@ -33,7 +25,7 @@ class RequestPool {
   // Get the Request object indexed by |time_stamp|.
   Request* GetRequest(int32_t time_stamp) const;
 
-  // Update and reuse the Request object indexed by |time_stamp|, to avoid 
+  // Update and reuse the Request object indexed by |time_stamp|, to avoid
   // unnecessary object destroy and creation. It is useful when only time_stamp
   // needs update, while other properties do not change.
   Request* UpdateTimeStampAndReuse(int32_t time_stamp);
@@ -50,7 +42,6 @@ class RequestPool {
   RequestPool& operator=(const RequestPool& other) = delete;
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-
-#endif // ONEFLOW_NETWORK_RDMA_REQUEST_POOL_H_
+#endif  // ONEFLOW_NETWORK_RDMA_REQUEST_POOL_H_
