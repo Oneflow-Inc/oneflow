@@ -4,8 +4,8 @@
 // #include "network/rdma/windows/connection.h"
 
 #include <stdint.h>
-#include "ndspi.h"
-#include "interface.h"
+#include <ndspi.h>
+#include "network/rdma/windows/interface.h"
 
 namespace oneflow{
 
