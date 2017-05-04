@@ -23,11 +23,9 @@ void TaskGraphMgr::Init() {
     SortByParallelId(&(pair.second));
   }
   // model graph
-  for (const auto& data_chain : data_task_gph->chain_gph()->nodes()) {
+  for (const auto& pair : data_chain2sorted_bp_comp_tasks) {
     // model update
-    auto md_updt_gph = new MdUpdtTaskGraph(
-        data_chain.get(),
-        data_chain2sorted_bp_comp_tasks.at(data_chain.get()));
+    auto md_updt_gph = new MdUpdtTaskGraph(pair.first, pair.second);
     LOG(FATAL) << "checkpoint";
     ChainNode* updt_chain = md_updt_gph->chain_gph()->SoleSinkNode();
     auto sorted_updt_tasks = md_updt_gph->SortedCompTasksInChain(updt_chain);

@@ -37,8 +37,10 @@ void MdUpdtTaskGraph::BuildTaskGraph(const ChainNode* data_chain) {
     Connect(faker_chain, chain_gph->NewEdge(), updt_chain);
   }
   //
-  chain_gph->ToDotFile(LogDir() + "/model_update_chain_graph.dot");
-  BuildFromChainGph(std::move(chain_gph), false, LogDir() + "/model_update_");
+  std::string dot_filepath_prefix =
+      LogDir() + "/model_update_" + data_chain->node_id_str() + "_";
+  chain_gph->ToDotFile(dot_filepath_prefix + "chain_graph.dot");
+  BuildFromChainGph(std::move(chain_gph), false, dot_filepath_prefix);
 }
 
 void MdUpdtTaskGraph::InitFaker2MccoyAndParallelId2UpdtMap(
