@@ -52,22 +52,17 @@ void CompTaskNode::DataFwInferShape4LbnInProducedRegsts(TaskGraph*) {
 }
 
 void CompTaskNode::MdUpdtFwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
-  TODO();
-  /*
   if (IsFaker()) {
     CompTaskNode* mccoy = gph->faker2mccoy().at(this);
     RegstDesc* regst = mccoy->GetProducedRegstDesc("model_diff");
     BindProducedRegstAndOutEdge(regst, SoleOutEdge());
     return;
   }
-  auto model_regst = of_make_unique<ContigRegstDesc> ();
-  EnrollProducedRegstDesc("model", std::move(model_regst));
   ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = chain_node()->SoleOp();
   mut_exec_gph().UpdateSourceAndSink();
   // PostProcessing in ModelUpdateTaskGraph will complete the work
   // which should be implemented in this function 
-  */
 }
 
 void CompTaskNode::MdUpdtFwInferShape4LbnInProducedRegsts(TaskGraph* gph) {

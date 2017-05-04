@@ -25,8 +25,6 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   }
   std::vector<CompTaskNode*> SortedCompTasksInChain(const ChainNode*) const;
 
-  // Build Exec And Set Produced Registers
-  void BuildExecAndEnrollLbn2Regsts();
   void InferShape4LbnInProducedRegsts();
   
   using CompTaskNodeMemFunc = void (CompTaskNode::*)(TaskGraph*);
@@ -41,6 +39,7 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   void EnrollFakerMccoy(CompTaskNode* faker, CompTaskNode* mccoy) {
     CHECK(faker2mccoy_.emplace(faker, mccoy).second);
   }
+  void BuildExecAndEnrollLbn2Regsts();
 
  private:
   void BuildFromStageGph(bool need_bp,

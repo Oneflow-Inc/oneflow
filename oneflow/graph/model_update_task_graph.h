@@ -27,7 +27,7 @@ class MdUpdtTaskGraph final : public TaskGraph {
    void InitFaker2MccoyAndParallelId2UpdtMap(
        const std::vector<CompTaskNode*>& sorted_bp_comptasks4data_chain,
        HashMap<uint64_t, CompTaskNode*>* parallel_id2updt);
-   void CompleteUpdateTaskAndFwTask(
+   void CompleteUpdateTask(
        const std::vector<CompTaskNode*>& sorted_bp_comptasks4data_chain,
        const HashMap<uint64_t, CompTaskNode*>& parallel_id2updt);
 };
