@@ -114,11 +114,11 @@ message PoolingOpConf {
     STOCHASTIC = 2;
   }
   PoolMethod pool = 3; // The pooling method
-  // Pad, kernel size, and stride are all given as a single value for equal
-  // dimensions in height and width or as Y, X pairs.
-  repeated uint32 pad = 4; // The padding size (equal in Y, X)
-  repeated uint32 kernel_size = 7; // The kernel size (square)
-  repeated uint32 stride = 10; // The stride (equal in Y, X)
+  // Pad, kernel size, and stride are all given as a repeated value
+  // dimensions in height and width or 3D
+  repeated uint32 pad = 4; // The padding size {H, W} or {D, H, W}
+  repeated uint32 kernel_size = 7; // The kernel size
+  repeated uint32 stride = 10; // The stride
 }
 
 message ReluOpConf {
