@@ -57,7 +57,10 @@ void MdUpdtTaskGraph::InitFaker2MccoyAndParallelId2UpdtMap(
     }
   }
   SortByParallelId(&comptasks4faker_chain);
-  CHECK_EQ(comptasks4faker_chain.size(), sorted_bp_comptasks4data_chain.size());
+  if (chain_gph()->nodes().size() == 2) {
+    CHECK_EQ(comptasks4faker_chain.size(),
+             sorted_bp_comptasks4data_chain.size());
+  }
   for (size_t i = 0; i < comptasks4faker_chain.size(); ++i) {
     EnrollFakerMccoy(comptasks4faker_chain[i],
                      sorted_bp_comptasks4data_chain[i]);
