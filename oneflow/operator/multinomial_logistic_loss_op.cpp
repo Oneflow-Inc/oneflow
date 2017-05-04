@@ -24,8 +24,8 @@ void MultinomialLogisticLossOp::InferShape4FwBlobs(
     ParallelPolicy policy,
     uint64_t parallel_id,
     uint64_t parallel_num) const {
-  *GetShapePtr4BnInOp(SoleObn()) = Shape({1, 1, 1, 1});
-  *GetShapePtr4BnInOp(data_tmp_bns().at(0)) = Shape({1, 1, 1, 1});
+  *GetShapePtr4BnInOp(SoleObn()) = Shape({1});
+  *GetShapePtr4BnInOp(SoleDtbn()) = Shape({1});
 }
 
 REGISTER_OP(OperatorConf::kMultinomialLogisticLossConf,
