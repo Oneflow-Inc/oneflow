@@ -66,4 +66,12 @@ std::string ParallelDesc::VisualStr() const {
   return ss.str();
 }
 
+uint64_t ParallelDesc::parallel_num() const {
+  uint64_t parallel_num = 0;
+  for (auto const& pair : machine_id2sorted_device_phy_ids_) {
+    parallel_num += pair.second.size();
+  }
+  return parallel_num;
+}
+
 } // namespace oneflow
