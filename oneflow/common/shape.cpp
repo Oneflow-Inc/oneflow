@@ -1,19 +1,17 @@
 #include "common/shape.h"
+#include "common/proto_io.h"
 
 namespace oneflow {
 
 Shape::Shape(const ShapeProto& shape_proto) {
-  for (int64_t dim : shape_proto.dim()) {
-    dim_vec_.push_back(dim);
-  }
+  dim_vec_.assign(shape_proto.dim().begin(), shape_proto.dim().end());
   UpdateElemCnt();
 }
 
 ShapeProto Shape::ToProto() const {
   ShapeProto shape_proto;
-  for (int64_t dim : dim_vec_) {
-    shape_proto.add_dim(dim);
-  }
+  using PbDimVec = google::protobuf::RepeatedField<google::protobuf::int64>;
+  *shape_proto.mutable_dim() = PbDimVec(dim_vec_.begin(), dim_vec_.end());
   return shape_proto;
 }
 
@@ -54,7 +52,7 @@ void Shape::UpdateElemCnt() {
   }
 }
 
-std::ostream& operator<< (std::ostream& out, const Shape& shape){
+std::ostream& operator<< (std::ostream& out, const Shape& shape) {
   out << shape.ToString();
   return out;
 }
