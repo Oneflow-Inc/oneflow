@@ -29,7 +29,7 @@ TEST(PoolingOp, pool_100x64x11x11) {
   HashMap<std::string, Shape*> bn2shape_ptr{
       {pooling_op->SoleIbn(), new Shape(input_shape_vec)},
       {pooling_op->SoleObn(), new Shape},
-      {*(pooling_op->data_tmp_bns().begin()), new Shape}};
+      {pooling_op->SoleDtbn(), new Shape}};
   auto fp = [&bn2shape_ptr](const std::string& bn) {
     return bn2shape_ptr.at(bn);
   };
@@ -37,8 +37,7 @@ TEST(PoolingOp, pool_100x64x11x11) {
   pooling_op->InferShape4FwBlobs(fp, kDataParallel, 0, 1);
   // test
   Shape* output_shape_ptr = bn2shape_ptr.at(pooling_op->SoleObn());
-  Shape* data_tmp_shape_ptr = bn2shape_ptr.at(
-      (*pooling_op->data_tmp_bns().begin()));
+  Shape* data_tmp_shape_ptr = bn2shape_ptr.at(pooling_op->SoleDtbn());
   // n * c * h_o * w_o
   // where h_o = (h_i + 2 * pad_h - kernel_h) / stride_h + 1 and w_o likewise.
   // n = 100
