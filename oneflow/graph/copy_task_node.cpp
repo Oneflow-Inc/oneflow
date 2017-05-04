@@ -1,6 +1,6 @@
 #include "graph/copy_task_node.h"
 #include "operator/copy_hd_op.h"
-#include "operator/comm_net_op.h"
+#include "operator/copy_comm_net_op.h"
 #include "operator/operator_manager.h"
 
 namespace oneflow {
@@ -50,22 +50,22 @@ std::shared_ptr<const Operator> CopyHDTaskNode::ConstructOp() const {
   return OpMgr::Singleton().ConstructOp(op_conf);
 }
 
-void CommNetTaskNode::SetFwSender() {
+void CopyCommNetTaskNode::SetFwSender() {
   CHECK(IsFwNode());
   is_fw_sender_ = true;
 }
 
-void CommNetTaskNode::SetFwReceiver() {
+void CopyCommNetTaskNode::SetFwReceiver() {
   CHECK(IsFwNode());
   is_fw_sender_ = false;
 }
 
-std::shared_ptr<const Operator> CommNetTaskNode::ConstructOp() const {
+std::shared_ptr<const Operator> CopyCommNetTaskNode::ConstructOp() const {
   OperatorConf op_conf;
   op_conf.set_name("comm_net_" + NewUniqueId());
-  CommNetOpConf* comm_net_conf = op_conf.mutable_comm_net_conf();
+  CopyCommNetOpConf* comm_net_conf = op_conf.mutable_copy_comm_net_conf();
   comm_net_conf->set_type(
-      IsSender() ? CommNetOpConf::kSender : CommNetOpConf::kReceiver);
+      IsSender() ? CopyCommNetOpConf::kSender : CopyCommNetOpConf::kReceiver);
   return OpMgr::Singleton().ConstructOp(op_conf);
 }
 

@@ -144,7 +144,7 @@ message ConcatOpConf {
   int32 axis = 3;
 }
 
-message CommNetOpConf {
+message CopyCommNetOpConf {
   enum Type {
     kSender = 0;
     kReceiver = 1;
@@ -212,6 +212,6 @@ message OperatorConf {
     ModelLoadOpConf model_load_conf = 111;
     ModelSaveOpConf model_save_conf = 112;
     ConcatOpConf concat_conf = 113;
-    CommNetOpConf comm_net_conf = 114;
+    CopyCommNetOpConf copy_comm_net_conf = 114;
   }
 }

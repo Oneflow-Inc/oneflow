@@ -57,11 +57,11 @@ class CopyHDTaskNode final : public CopyTaskNode {
 
 };
 
-class CommNetTaskNode final : public CopyTaskNode {
+class CopyCommNetTaskNode final : public CopyTaskNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CommNetTaskNode);
-  CommNetTaskNode() = default;
-  ~CommNetTaskNode() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CopyCommNetTaskNode);
+  CopyCommNetTaskNode() = default;
+  ~CopyCommNetTaskNode() = default;
 
   bool IsSender() const {
     return (IsFwNode() && is_fw_sender_)
@@ -81,11 +81,11 @@ class CommNetTaskNode final : public CopyTaskNode {
  private:
   std::shared_ptr<const Operator> ConstructOp() const override;
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    return of_make_unique<CommNetTaskNode> ();
+    return of_make_unique<CopyCommNetTaskNode> ();
   }
   void InitWithFwNode(TaskNode* fw_node) override {
     TaskNode::InitWithFwNode(fw_node);
-    is_fw_sender_ = of_dynamic_cast<CommNetTaskNode*>(fw_node)->is_fw_sender_;
+    is_fw_sender_ = of_dynamic_cast<CopyCommNetTaskNode*>(fw_node)->is_fw_sender_;
   }
 
   bool is_fw_sender_;

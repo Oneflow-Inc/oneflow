@@ -1,16 +1,16 @@
-#ifndef ONEFLOW_OPERATOR_COMM_NET_OP_H_
-#define ONEFLOW_OPERATOR_COMM_NET_OP_H_
+#ifndef ONEFLOW_OPERATOR_COPY_COMM_NET_OP_H_
+#define ONEFLOW_OPERATOR_COPY_COMM_NET_OP_H_
 
 #include "operator/operator.h"
 #include "register/register_desc.h"
 
 namespace oneflow {
 
-class CommNetOp final : public SysOperator {
+class CopyCommNetOp final : public SysOperator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CommNetOp);
-  CommNetOp() = default;
-  ~CommNetOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CopyCommNetOp);
+  CopyCommNetOp() = default;
+  ~CopyCommNetOp() = default;
 
   void InitFromOpConf(const OperatorConf& op_conf) override;
   const PbMessage& GetSpecialConf() const override;
@@ -23,4 +23,4 @@ class CommNetOp final : public SysOperator {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_OPERATOR_Comm_Net_OP_H_
+#endif // ONEFLOW_OPERATOR_COPY_COMM_NET_OP_H_
