@@ -1,5 +1,7 @@
 #include "graph/comp_task_node.h"
-#include "graph/task_graph.h"
+#include "graph/model_update_task_graph.h"
+#include "graph/model_save_task_graph.h"
+#include "graph/model_load_task_graph.h"
 #include "operator/operator_manager.h"
 #include "operator/clone_op.h"
 
@@ -52,17 +54,28 @@ void CompTaskNode::DataFwInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
 }
 
 void CompTaskNode::MdUpdtFwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
+  auto md_updt_gph = of_dynamic_cast<MdUpdtTaskGraph*> (gph);
+  CompTaskNode* bp_task = md_updt_gph->GetBpTaskFromParallelId(parallel_id());
+  RegstDesc* model_diff_regst = bp_task->GetProducedRegstDesc("model_diff");
   if (IsFaker()) {
-    CompTaskNode* mccoy = gph->faker2mccoy().at(this);
-    RegstDesc* regst = mccoy->GetProducedRegstDesc("model_diff");
-    BindProducedRegstAndOutEdge(regst, SoleOutEdge());
+    BindProducedRegstAndOutEdge(model_diff_regst, SoleOutEdge());
     return;
   }
+  TaskNode* fw_task = bp_task->GetFwNode();
+  TakeOverRegstDesc(fw_task, "model");
+  TakeOverRegstDesc(fw_task, "model_tmp");
+  RegstDesc* model_regst = GetProducedRegstDesc("model");
+
   ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = chain_node()->SoleOp();
+  const std::string ibn = "model_diffs";
+  if (in_edges().empty()) {
+    exec_node->BindBnInOpAndRegst(ibn, model_diff_regst);
+  } else {
+    exec_node->BindBnInOpAndRegst(ibn, GetRelatedRegst(SoleInEdge()));
+  }
+  exec_node->BindBnInOpAndRegst(exec_node->op()->SoleObn(), model_regst);
   mut_exec_gph().UpdateSourceAndSink();
-  // PostProcessing in ModelUpdateTaskGraph will complete the work
-  // which should be implemented in this function 
 }
 
 void CompTaskNode::MdUpdtFwInferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
@@ -70,7 +83,6 @@ void CompTaskNode::MdUpdtFwInferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
 }
 
 void CompTaskNode::MdLoadFwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
-  TODO();
   /*
   if (IsFaker()) {
     CompTaskNode* update_task = gph->faker2mccoy().at(this);
@@ -81,6 +93,7 @@ void CompTaskNode::MdLoadFwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = chain_node()->SoleOp();
   mut_exec_gph().UpdateSourceAndSink();
+  
   auto model_regst = of_make_unique<ContigRegstDesc> ();
   exec_node->BindBnInOpAndRegst(exec_node->op()->SoleObn(), model_regst.get());
   BindProducedRegstAndOutEdge(model_regst.get(), SoleOutEdge());
@@ -89,6 +102,7 @@ void CompTaskNode::MdLoadFwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   exec_node->op()->InferShape4ObAndDtbFromIb();
   EnrollProducedRegstDesc("model_regst", std::move(model_regst));
   */
+  TODO();
 }
 
 void CompTaskNode::MdLoadFwInferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {

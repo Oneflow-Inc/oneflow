@@ -22,14 +22,15 @@ class MdUpdtTaskGraph final : public TaskGraph {
     return &CompTaskNode::MdUpdtFwInferShapeOfBlobsInProducedRegsts;
   }
 
+  CompTaskNode* GetBpTaskFromParallelId(uint64_t parallel_id) const {
+    return parallel_id2bp_task_.at(parallel_id);
+  }
+
  private:
    void BuildTaskGraph(const ChainNode* data_chain);
-   void InitFaker2MccoyAndParallelId2UpdtMap(
-       const std::vector<CompTaskNode*>& sorted_bp_comptasks4data_chain,
-       HashMap<uint64_t, CompTaskNode*>* parallel_id2updt);
-   void CompleteUpdateTask(
-       const std::vector<CompTaskNode*>& sorted_bp_comptasks4data_chain,
-       const HashMap<uint64_t, CompTaskNode*>& parallel_id2updt);
+
+   HashMap<uint64_t, CompTaskNode*> parallel_id2bp_task_;
+
 };
 
 } // namespace oneflow
