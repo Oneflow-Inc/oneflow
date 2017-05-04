@@ -28,7 +28,7 @@ class ParallelDesc {
     // the return should be empty
     return machine_id2sorted_device_phy_ids_.at(machine_id);
   }
-  uint64_t parallel_num() const { TODO(); }
+  uint64_t parallel_num() const { return parallel_num_; }
 
   //
   ParallelPolicy& mut_policy() { return policy_; }
@@ -49,7 +49,7 @@ class ParallelDesc {
   DeviceType device_type_;
   std::vector<uint64_t> sorted_machine_ids_;
   HashMap<uint64_t, std::vector<uint64_t>> machine_id2sorted_device_phy_ids_;
-
+  uint64_t parallel_num_;
 };
 
 } // namespace oneflow

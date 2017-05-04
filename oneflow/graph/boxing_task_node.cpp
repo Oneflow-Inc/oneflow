@@ -9,22 +9,22 @@ namespace oneflow {
 namespace {
 
 void FwCompleteBoxOpConfDataData(BoxingOpConf* conf) {
-  conf->mutable_concat_box()->set_axis(gDataConcatInitAxis);
+  conf->mutable_concat_box()->set_axis(0);
   conf->mutable_data_split_box();
 }
 
 void FwCompleteBoxOpConfDataModel(BoxingOpConf* conf) {
-  conf->mutable_concat_box()->set_axis(gDataConcatInitAxis);
+  conf->mutable_concat_box()->set_axis(0);
   conf->mutable_clone_box();
 }
 
 void FwCompleteBoxOpConfModelData(BoxingOpConf* conf) {
-  conf->mutable_concat_box()->set_axis(gModelConcatInitAxis);
+  conf->mutable_concat_box()->set_axis(1);
   conf->mutable_data_split_box();
 }
 
 void FwCompleteBoxOpConfModelModel(BoxingOpConf* conf) {
-  conf->mutable_concat_box()->set_axis(gModelConcatInitAxis);
+  conf->mutable_concat_box()->set_axis(1);
   conf->mutable_clone_box();
 }
 
@@ -151,7 +151,7 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
   }
 }
 
-void BoxingTaskNode::FwInferShape4LbnInProducedRegsts(TaskGraph*) {
+void BoxingTaskNode::FwInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
   for (const auto& exec_node : exec_gph().nodes()) {
     exec_node->op()->InferShape4FwBlobs(
         exec_node->GetMutShapePtr4BnInOpFunc(),
@@ -205,7 +205,7 @@ void BoxingTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   mut_exec_gph().UpdateSourceAndSink();
 }
   
-void BoxingTaskNode::BpInferShape4LbnInProducedRegsts(TaskGraph*) {
+void BoxingTaskNode::BpInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
   for (TaskEdge* fw_in_edge : GetFwNode()->in_edges()) {
     RegstDesc* in_regst = GetRelatedRegst(fw_in_edge);
     RegstDesc* in_diff_regst = GetBpRegstFromFwRegst(in_regst);

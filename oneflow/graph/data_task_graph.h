@@ -17,13 +17,14 @@ class DataTaskGraph final : public TaskGraph {
     LogicalGraph logical_gph(dl_net_conf, strategy_conf, LogDir() + "/logical_graph.dot");
     auto chain_gph = of_make_unique<ChainGraph> (&logical_gph, LogDir() + "/data_chain_graph.dot");
     BuildFromChainGph(std::move(chain_gph), need_bp, LogDir() + "/data_");
+    BuildExecAndEnrollLbn2Regsts();
   }
 
   CompTaskNodeMemFunc Func4FwBuildExecAndEnrollLbn2Regsts() const override {
     return &CompTaskNode::DataFwBuildExecAndEnrollLbn2Regsts;
   }
-  CompTaskNodeMemFunc Func4FwInferShape4LbnInProducedRegsts() const override {
-    return &CompTaskNode::DataFwInferShape4LbnInProducedRegsts;
+  CompTaskNodeMemFunc Func4FwInferShapeOfBlobsInProducedRegsts() const override {
+    return &CompTaskNode::DataFwInferShapeOfBlobsInProducedRegsts;
   }
 
  private:

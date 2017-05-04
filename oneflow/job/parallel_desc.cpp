@@ -38,6 +38,10 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
   for (auto&pair : machine_id2sorted_device_phy_ids_) {
     SortAndRemoveDuplication(&(pair.second));
   }
+  parallel_num_ = 0;
+  for (auto const& pair : machine_id2sorted_device_phy_ids_) {
+    parallel_num_ += pair.second.size();
+  }
 }
 
 std::string ParallelDesc::VisualStr() const {

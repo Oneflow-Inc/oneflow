@@ -119,6 +119,7 @@ void LogicalGraph::AddOneCloneNode(
     const std::string& ibn = edge2ibn.at(edge);
     LogicalNode* dst_node = edge->dst_node();
     dst_node->mut_op()->ModifyLbn4BnInOp(ibn, lbn);
+    dst_node->mut_op()->ModifyLbn4BnInOp(GenDiffBn(ibn), lbn);
     DisConnect(edge);
     Connect(clone_node, edge, dst_node);
   }

@@ -52,15 +52,6 @@ message ConvolutionOpConf {
   // algorithme ид trous from Holschneider et al. 1987.)
   repeated uint32 dilation = 8; // The dilation; defaults to 1
 
-  // For 2D convolution only, the *_h and *_w versions may also be used to
-  // specify both spatial dimensions.
-  uint32 pad_h = 9; // The padding height (2D only)
-  uint32 pad_w = 10; // The padding width (2D only)
-  uint32 kernel_h = 11; // The kernel height (2D only)
-  uint32 kernel_w = 12; // The kernel width (2D only)
-  uint32 stride_h = 13; // The stride height (2D only)
-  uint32 stride_w = 14; // The stride width (2D only)
-
   uint32 group = 15; // The group size for group conv
 
   FillerConf weight_filler = 16; // The filler for the weight
@@ -123,17 +114,11 @@ message PoolingOpConf {
     STOCHASTIC = 2;
   }
   PoolMethod pool = 3; // The pooling method
-  // Pad, kernel size, and stride are all given as a single value for equal
-  // dimensions in height and width or as Y, X pairs.
-  uint32 pad = 4; // The padding size (equal in Y, X)
-  uint32 pad_h = 5; // The padding height
-  uint32 pad_w = 6; // The padding width
-  uint32 kernel_size = 7; // The kernel size (square)
-  uint32 kernel_h = 8; // The kernel height
-  uint32 kernel_w = 9; // The kernel width
-  uint32 stride = 10; // The stride (equal in Y, X)
-  uint32 stride_h = 11; // The stride height
-  uint32 stride_w = 12; // The stride width
+  // Pad, kernel size, and stride are all given as a repeated value
+  // dimensions in height and width or 3D
+  repeated uint32 pad = 4; // The padding size {H, W} or {D, H, W}
+  repeated uint32 kernel_size = 7; // The kernel size
+  repeated uint32 stride = 10; // The stride
 }
 
 message ReluOpConf {
@@ -159,7 +144,7 @@ message ConcatOpConf {
   int32 axis = 3;
 }
 
-message CommNetOpConf {
+message CopyCommNetOpConf {
   enum Type {
     kSender = 0;
     kReceiver = 1;
@@ -174,7 +159,6 @@ message CopyHdOpConf {
   }
   Type type = 1;
 }
-
 
 message CloneOpConf {
   uint32 out_num = 1;
@@ -228,6 +212,6 @@ message OperatorConf {
     ModelLoadOpConf model_load_conf = 111;
     ModelSaveOpConf model_save_conf = 112;
     ConcatOpConf concat_conf = 113;
-    CommNetOpConf comm_net_conf = 114;
+    CopyCommNetOpConf copy_comm_net_conf = 114;
   }
 }

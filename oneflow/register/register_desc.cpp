@@ -25,7 +25,7 @@ void RegstDesc::CopyShapeFrom(const RegstDesc* rhs) {
 
 void RegstDesc::EnrollLbn(const std::string& lbn) {
   std::unique_ptr<Shape> ptr(new Shape);
-  CHECK(lbn2shape_.emplace(lbn, std::move(ptr)).second);
+  CHECK(lbn2shape_.emplace(lbn, std::move(ptr)).second) << lbn;
 }
 
 const Shape& RegstDesc::GetShape(const std::string& lbn) const {

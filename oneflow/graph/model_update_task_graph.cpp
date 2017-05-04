@@ -11,7 +11,7 @@ MdUpdtTaskGraph::MdUpdtTaskGraph(
   InitFaker2MccoyAndParallelId2UpdtMap(sorted_bp_comptasks4data_chain,
                                        &parallel_id2updt);
   BuildExecAndEnrollLbn2Regsts();
-  CompleteUpdateTaskAndFwTask(sorted_bp_comptasks4data_chain, parallel_id2updt);
+  CompleteUpdateTask(sorted_bp_comptasks4data_chain, parallel_id2updt);
 }
 
 void MdUpdtTaskGraph::BuildTaskGraph(const ChainNode* data_chain) {
@@ -37,8 +37,11 @@ void MdUpdtTaskGraph::BuildTaskGraph(const ChainNode* data_chain) {
     Connect(faker_chain, chain_gph->NewEdge(), updt_chain);
   }
   //
-  chain_gph->ToDotFile(LogDir() + "/model_update_chain_graph.dot");
-  BuildFromChainGph(std::move(chain_gph), false, LogDir() + "/model_update_");
+  chain_gph->UpdateSourceAndSink();
+  std::string dot_filepath_prefix =
+      LogDir() + "/model_update_" + data_chain->node_id_str() + "_";
+  chain_gph->ToDotFile(dot_filepath_prefix + "chain_graph.dot");
+  BuildFromChainGph(std::move(chain_gph), false, dot_filepath_prefix);
 }
 
 void MdUpdtTaskGraph::InitFaker2MccoyAndParallelId2UpdtMap(
@@ -55,14 +58,17 @@ void MdUpdtTaskGraph::InitFaker2MccoyAndParallelId2UpdtMap(
     }
   }
   SortByParallelId(&comptasks4faker_chain);
-  CHECK_EQ(comptasks4faker_chain.size(), sorted_bp_comptasks4data_chain.size());
+  if (chain_gph()->nodes().size() == 2) {
+    CHECK_EQ(comptasks4faker_chain.size(),
+             sorted_bp_comptasks4data_chain.size());
+  }
   for (size_t i = 0; i < comptasks4faker_chain.size(); ++i) {
     EnrollFakerMccoy(comptasks4faker_chain[i],
                      sorted_bp_comptasks4data_chain[i]);
   }
 }
 
-void MdUpdtTaskGraph::CompleteUpdateTaskAndFwTask(
+void MdUpdtTaskGraph::CompleteUpdateTask(
     const std::vector<CompTaskNode*>& sorted_bp_comptasks4data_chain,
     const HashMap<uint64_t, CompTaskNode*>& parallel_id2updt) {
   for (CompTaskNode* bp_task : sorted_bp_comptasks4data_chain) {
@@ -70,10 +76,11 @@ void MdUpdtTaskGraph::CompleteUpdateTaskAndFwTask(
     uint64_t parallel_id = bp_task->parallel_id();
     CompTaskNode* update_task = parallel_id2updt.at(parallel_id);
     TaskNode* fw_task = bp_task->GetFwNode();
+    update_task->TakeOverRegstDesc(fw_task, "model");
+    update_task->TakeOverRegstDesc(fw_task, "model_tmp");
     RegstDesc* model_diff_regst = bp_task->GetProducedRegstDesc("model_diff");
     RegstDesc* model_regst = update_task->GetProducedRegstDesc("model");
     // complete update task
-    model_regst->CopyLbnFrom(model_diff_regst);
     ExecNode* update_exec = update_task->exec_gph().SoleNode();
     const std::string ibn = "model_diffs";
     if (update_task->in_edges().empty()) {
@@ -83,12 +90,6 @@ void MdUpdtTaskGraph::CompleteUpdateTaskAndFwTask(
           ibn, GetRelatedRegst(update_task->SoleInEdge()));
     }
     update_exec->BindBnInOpAndRegst(update_exec->op()->SoleObn(), model_regst);
-    // complete fw task
-    for (const auto& exec_node : fw_task->exec_gph().nodes()) {
-      for (const std::string& mbn : exec_node->op()->model_bns()) {
-        exec_node->BindBnInOpAndRegst(mbn, model_regst);
-      }
-    }
   }
 }
 

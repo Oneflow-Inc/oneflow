@@ -228,7 +228,11 @@ std::string ChainNode::ConcatedOpsName() const {
   for (auto op : op_vec_) {
     ss << "\\n" << op->op_name();
   }
-  return ss.str().substr(2);
+  if (!op_vec_.empty()) {
+    return ss.str().substr(2);
+  } else {
+    return node_id_str();
+  }
 }
 
 ChainGraph::ChainGraph(const LogicalGraph* logical_gph,

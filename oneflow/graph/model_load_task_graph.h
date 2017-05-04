@@ -14,8 +14,8 @@ class MdLoadTaskGraph final : public TaskGraph {
   CompTaskNodeMemFunc Func4FwBuildExecAndEnrollLbn2Regsts() const override {
     return &CompTaskNode::MdLoadFwBuildExecAndEnrollLbn2Regsts;
   }
-  CompTaskNodeMemFunc Func4FwInferShape4LbnInProducedRegsts() const override {
-    return &CompTaskNode::MdLoadFwInferShape4LbnInProducedRegsts;
+  CompTaskNodeMemFunc Func4FwInferShapeOfBlobsInProducedRegsts() const override {
+    return &CompTaskNode::MdLoadFwInferShapeOfBlobsInProducedRegsts;
   }
 
   MdLoadTaskGraph(

@@ -5,9 +5,6 @@
 
 namespace oneflow {
 
-const int32_t gDataConcatInitAxis = -1;
-const int32_t gModelConcatInitAxis = -2;
-
 class BoxingOp final : public SysOperator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BoxingOp);
@@ -16,6 +13,12 @@ class BoxingOp final : public SysOperator {
 
   void InitFromOpConf(const OperatorConf& op_conf) override;
   const PbMessage& GetSpecialConf() const override;
+
+  void InferShape4FwBlobs(
+      std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+      ParallelPolicy policy,
+      uint64_t parallel_id,
+      uint64_t parallel_num) const override;
   
  private:
   std::string ibn2lbn(const std::string& input_bn) const override;

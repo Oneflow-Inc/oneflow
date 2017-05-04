@@ -18,8 +18,8 @@ class MdUpdtTaskGraph final : public TaskGraph {
   CompTaskNodeMemFunc Func4FwBuildExecAndEnrollLbn2Regsts() const override {
     return &CompTaskNode::MdUpdtFwBuildExecAndEnrollLbn2Regsts;
   }
-  CompTaskNodeMemFunc Func4FwInferShape4LbnInProducedRegsts() const override {
-    return &CompTaskNode::MdUpdtFwInferShape4LbnInProducedRegsts;
+  CompTaskNodeMemFunc Func4FwInferShapeOfBlobsInProducedRegsts() const override {
+    return &CompTaskNode::MdUpdtFwInferShapeOfBlobsInProducedRegsts;
   }
 
  private:
@@ -27,7 +27,7 @@ class MdUpdtTaskGraph final : public TaskGraph {
    void InitFaker2MccoyAndParallelId2UpdtMap(
        const std::vector<CompTaskNode*>& sorted_bp_comptasks4data_chain,
        HashMap<uint64_t, CompTaskNode*>* parallel_id2updt);
-   void CompleteUpdateTaskAndFwTask(
+   void CompleteUpdateTask(
        const std::vector<CompTaskNode*>& sorted_bp_comptasks4data_chain,
        const HashMap<uint64_t, CompTaskNode*>& parallel_id2updt);
 };
