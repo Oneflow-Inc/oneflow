@@ -5,7 +5,7 @@
 namespace oneflow {
 
 TEST(ConcatOp, concat_two_3x3) {
-  /*
+  //create op
   OperatorConf op_conf;
   op_conf.set_name("concat_test");
   op_conf.mutable_concat_conf()->add_in("concat/in0");
@@ -15,25 +15,18 @@ TEST(ConcatOp, concat_two_3x3) {
   auto concat_op = OpMgr::Singleton().ConstructOp(op_conf);
 
   std::vector<int64_t> shape_vec = {3, 3};
-  TestShapeFactory shape_factory = TestShapeFactory();
-  shape_factory.add_bn_shape_ptr(concat_op->SoleObn(), new Shape);
-  for(std::string ibn : concat_op->input_bns()) {
-    shape_factory.add_bn_shape_ptr(ibn, new Shape(shape_vec));
-  }
-  auto fp = std::bind(&TestShapeFactory::bn2ShapePtr,
-                      &shape_factory,
-                      std::placeholders::_1);
+  HashMap<std::string, Shape*> bn2shape_ptr {
+      {concat_op->input_bns().at(0), new Shape(shape_vec)},
+      {concat_op->input_bns().at(1), new Shape(shape_vec)},
+      {concat_op->SoleObn(), new Shape}};
+  auto fp = [&bn2shape_ptr](const std::string& bn) {
+    return bn2shape_ptr.at(bn);
+  };
+  //infershape
   concat_op->InferShape4FwBlobs(fp, kDataParallel, 0, 1);
-
-  Shape* output_shape_ptr = shape_factory.bn2ShapePtr(concat_op->SoleObn);
-  int64_t concat_sum = 0;
-  for(std::string ibn : concat_op->input_bns()) {
-    ASSERT_EQ(output_shape_ptr->At(0), shape_factory.bn2ShapePtr(ibn)->At(0));
-    concat_sum += shape_factory.bn2ShapePtr(ibn)->At(1);
-  }
-  ASSERT_EQ(output_shape_ptr->At(1), concat_sum);
-  */
-  TODO();
+  //test
+  Shape* output_shape_ptr = fp(concat_op->SoleObn());
+  ASSERT_EQ(*output_shape_ptr, Shape({3, 6}));
 }
 
 } // namespace oneflow
