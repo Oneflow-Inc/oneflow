@@ -16,14 +16,10 @@ TEST(MultinomialLogisticLossOp, test_loss_op) {
   op_conf.mutable_multinomial_logistic_loss_conf()->set_loss("loss");
   auto loss_op = OpMgr::Singleton().ConstructOp(op_conf);
 
-  HashMap<std::string, Shape*> bn2shape_ptr;
-  std::vector<int64_t> shape_vec = {500, 10};
-  for (std::string ibn : loss_op->input_bns()) {
-    bn2shape_ptr.emplace(ibn, new Shape(shape_vec));
-  }
-  for (std::string obn : loss_op->output_bns()) {
-    bn2shape_ptr.emplace(obn, new Shape);
-  }
+  HashMap<std::string, Shape*> bn2shape_ptr{
+    {loss_op->input_bns().at(0), new Shape({500, 3*256*256*256, 1, 1})},
+    {loss_op->input_bns().at(1), new Shape({500, 1, 1, 1})},
+    {loss_op->SoleObn(), new Shape}};
   for (std::string dtbn : loss_op->data_tmp_bns()) {
     bn2shape_ptr.emplace(dtbn, new Shape);
   }
@@ -33,12 +29,11 @@ TEST(MultinomialLogisticLossOp, test_loss_op) {
 
   loss_op-> InferShape4FwBlobs(fp, kDataParallel, 2, 10);
 
-  Shape* data_shape_ptr = bn2shape_ptr.at(loss_op->input_bns().at(0));
   Shape* loss_shape_ptr = bn2shape_ptr.at(loss_op->SoleObn());
   Shape* loss_buffer_shape_ptr = bn2shape_ptr.at(
       loss_op->data_tmp_bns().at(0));
-  ASSERT_EQ(*loss_shape_ptr, *data_shape_ptr);
-  ASSERT_EQ(*loss_buffer_shape_ptr, *data_shape_ptr);
+  ASSERT_EQ(*loss_shape_ptr, Shape({1, 1, 1, 1}));
+  ASSERT_EQ(*loss_buffer_shape_ptr, Shape({1, 1, 1, 1}));
 }
 
 }  // namespace oneflow
