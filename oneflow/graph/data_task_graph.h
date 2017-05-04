@@ -23,8 +23,8 @@ class DataTaskGraph final : public TaskGraph {
   CompTaskNodeMemFunc Func4FwBuildExecAndEnrollLbn2Regsts() const override {
     return &CompTaskNode::DataFwBuildExecAndEnrollLbn2Regsts;
   }
-  CompTaskNodeMemFunc Func4FwInferShape4LbnInProducedRegsts() const override {
-    return &CompTaskNode::DataFwInferShape4LbnInProducedRegsts;
+  CompTaskNodeMemFunc Func4FwInferShapeOfBlobsInProducedRegsts() const override {
+    return &CompTaskNode::DataFwInferShapeOfBlobsInProducedRegsts;
   }
 
  private:

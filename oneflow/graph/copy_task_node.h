@@ -16,7 +16,7 @@ class CopyTaskNode : public TaskNode {
 
  private:
   void BuildExecAndEnrollLbn2Regsts(TaskGraph*) override;
-  void InferShape4LbnInProducedRegsts(TaskGraph*) override;
+  void InferShapeOfBlobsInProducedRegsts(TaskGraph*) override;
 
 };
 

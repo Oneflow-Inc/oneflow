@@ -22,9 +22,9 @@ void TaskGraph::BuildExecAndEnrollLbn2Regsts() {
   }
 }
 
-void TaskGraph::InferShape4LbnInProducedRegsts() {
+void TaskGraph::InferShapeOfBlobsInProducedRegsts() {
   for (TaskNode& node : *this) {
-    node.InferShape4LbnInProducedRegsts(this);
+    node.InferShapeOfBlobsInProducedRegsts(this);
   }
 }
 

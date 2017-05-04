@@ -41,7 +41,7 @@ void CompTaskNode::DataFwBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   FwEnrollLbn2ModelAndTmpRegsts(); // model model_tmp data_tmp
 }
 
-void CompTaskNode::DataFwInferShape4LbnInProducedRegsts(TaskGraph*) {
+void CompTaskNode::DataFwInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
   for (const ExecNode& node : exec_gph()) {
     node.op()->InferShape4FwBlobs(
         node.GetMutShapePtr4BnInOpFunc(),
@@ -65,7 +65,7 @@ void CompTaskNode::MdUpdtFwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   // which should be implemented in this function 
 }
 
-void CompTaskNode::MdUpdtFwInferShape4LbnInProducedRegsts(TaskGraph* gph) {
+void CompTaskNode::MdUpdtFwInferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
   TODO();
 }
 
@@ -91,7 +91,7 @@ void CompTaskNode::MdLoadFwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   */
 }
 
-void CompTaskNode::MdLoadFwInferShape4LbnInProducedRegsts(TaskGraph* gph) {
+void CompTaskNode::MdLoadFwInferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
   TODO();
 }
 
@@ -112,7 +112,7 @@ void CompTaskNode::MdSaveFwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   */
 }
 
-void CompTaskNode::MdSaveFwInferShape4LbnInProducedRegsts(TaskGraph* gph) {
+void CompTaskNode::MdSaveFwInferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
   TODO();
 }
 
@@ -120,8 +120,8 @@ void CompTaskNode::FwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   (this->*(gph->Func4FwBuildExecAndEnrollLbn2Regsts()))(gph);
 }
 
-void CompTaskNode::FwInferShape4LbnInProducedRegsts(TaskGraph* gph) {
-  (this->*(gph->Func4FwInferShape4LbnInProducedRegsts()))(gph);
+void CompTaskNode::FwInferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
+  (this->*(gph->Func4FwInferShapeOfBlobsInProducedRegsts()))(gph);
 }
 
 void CompTaskNode::FwBuildFromUserOps(
@@ -228,7 +228,7 @@ void CompTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   BpEnrollLbn2ProducedRegst();
 }
 
-void CompTaskNode::BpInferShape4LbnInProducedRegsts(TaskGraph*) {
+void CompTaskNode::BpInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
   // in_diff_regst
   RegstDesc* in_diff_regst = GetRelatedRegst(SoleOutEdge());
   RegstDesc* in_regst = GetRelatedRegst(GetFwNode()->SoleInEdge());

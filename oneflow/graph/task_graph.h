@@ -25,11 +25,11 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   }
   std::vector<CompTaskNode*> SortedCompTasksInChain(const ChainNode*) const;
 
-  void InferShape4LbnInProducedRegsts();
+  void InferShapeOfBlobsInProducedRegsts();
   
   using CompTaskNodeMemFunc = void (CompTaskNode::*)(TaskGraph*);
   virtual CompTaskNodeMemFunc Func4FwBuildExecAndEnrollLbn2Regsts() const = 0;
-  virtual CompTaskNodeMemFunc Func4FwInferShape4LbnInProducedRegsts() const = 0;
+  virtual CompTaskNodeMemFunc Func4FwInferShapeOfBlobsInProducedRegsts() const = 0;
 
  protected:
   TaskGraph() = default;

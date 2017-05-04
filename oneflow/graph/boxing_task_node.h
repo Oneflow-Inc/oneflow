@@ -40,12 +40,12 @@ class BoxingTaskNode : public TaskNode {
 
  private:
   OVERRIDE_IF_FW_BP_FOR_FUNC(BuildExecAndEnrollLbn2Regsts);
-  OVERRIDE_IF_FW_BP_FOR_FUNC(InferShape4LbnInProducedRegsts);
+  OVERRIDE_IF_FW_BP_FOR_FUNC(InferShapeOfBlobsInProducedRegsts);
 
   void FwBuildExecAndEnrollLbn2Regsts(TaskGraph*);
-  void FwInferShape4LbnInProducedRegsts(TaskGraph*);
+  void FwInferShapeOfBlobsInProducedRegsts(TaskGraph*);
   void BpBuildExecAndEnrollLbn2Regsts(TaskGraph*);
-  void BpInferShape4LbnInProducedRegsts(TaskGraph*);
+  void BpInferShapeOfBlobsInProducedRegsts(TaskGraph*);
   
   void EnrollAllRegstAndBindRelatedEdge();
   

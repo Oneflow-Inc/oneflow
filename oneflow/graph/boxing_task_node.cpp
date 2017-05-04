@@ -151,7 +151,7 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
   }
 }
 
-void BoxingTaskNode::FwInferShape4LbnInProducedRegsts(TaskGraph*) {
+void BoxingTaskNode::FwInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
   for (const auto& exec_node : exec_gph().nodes()) {
     exec_node->op()->InferShape4FwBlobs(
         exec_node->GetMutShapePtr4BnInOpFunc(),
@@ -205,7 +205,7 @@ void BoxingTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   mut_exec_gph().UpdateSourceAndSink();
 }
   
-void BoxingTaskNode::BpInferShape4LbnInProducedRegsts(TaskGraph*) {
+void BoxingTaskNode::BpInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
   for (TaskEdge* fw_in_edge : GetFwNode()->in_edges()) {
     RegstDesc* in_regst = GetRelatedRegst(fw_in_edge);
     RegstDesc* in_diff_regst = GetBpRegstFromFwRegst(in_regst);

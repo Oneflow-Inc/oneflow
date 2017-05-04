@@ -26,7 +26,7 @@ void CopyTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph*){
   EnrollProducedRegstDesc("copy", std::move(out_regst));
 }
 
-void CopyTaskNode::InferShape4LbnInProducedRegsts(TaskGraph*) {
+void CopyTaskNode::InferShapeOfBlobsInProducedRegsts(TaskGraph*) {
   RegstDesc* in_regst = GetRelatedRegst(SoleInEdge());
   RegstDesc* out_regst = GetRelatedRegst(SoleOutEdge());
   out_regst->CopyShapeFrom(in_regst);

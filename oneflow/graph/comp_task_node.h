@@ -21,13 +21,13 @@ class CompTaskNode : public TaskNode {
 
   // Build Exec and Set Produced Regsts
   void DataFwBuildExecAndEnrollLbn2Regsts(TaskGraph*);
-  void DataFwInferShape4LbnInProducedRegsts(TaskGraph*);
+  void DataFwInferShapeOfBlobsInProducedRegsts(TaskGraph*);
   void MdUpdtFwBuildExecAndEnrollLbn2Regsts(TaskGraph*);
-  void MdUpdtFwInferShape4LbnInProducedRegsts(TaskGraph*);
+  void MdUpdtFwInferShapeOfBlobsInProducedRegsts(TaskGraph*);
   void MdLoadFwBuildExecAndEnrollLbn2Regsts(TaskGraph*);
-  void MdLoadFwInferShape4LbnInProducedRegsts(TaskGraph*);
+  void MdLoadFwInferShapeOfBlobsInProducedRegsts(TaskGraph*);
   void MdSaveFwBuildExecAndEnrollLbn2Regsts(TaskGraph*);
-  void MdSaveFwInferShape4LbnInProducedRegsts(TaskGraph*);
+  void MdSaveFwInferShapeOfBlobsInProducedRegsts(TaskGraph*);
 
  protected:
   virtual void InitWithFwNode(TaskNode* fw_node) override {
@@ -41,10 +41,10 @@ class CompTaskNode : public TaskNode {
       HashMap<std::string, std::pair<ExecNode*, std::string>>;
   
   OVERRIDE_IF_FW_BP_FOR_FUNC(BuildExecAndEnrollLbn2Regsts);
-  OVERRIDE_IF_FW_BP_FOR_FUNC(InferShape4LbnInProducedRegsts);
+  OVERRIDE_IF_FW_BP_FOR_FUNC(InferShapeOfBlobsInProducedRegsts);
 
   void FwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph);
-  void FwInferShape4LbnInProducedRegsts(TaskGraph* gph);
+  void FwInferShapeOfBlobsInProducedRegsts(TaskGraph* gph);
   void FwBuildFromUserOps(
       Lbn2NodeBnMap* lbn2producer,
       Lbn2NodeBnMap* extern_in_lbn2consumer);
@@ -55,7 +55,7 @@ class CompTaskNode : public TaskNode {
   void FwEnrollLbn2ModelAndTmpRegsts();
 
   void BpBuildExecAndEnrollLbn2Regsts(TaskGraph*);
-  void BpInferShape4LbnInProducedRegsts(TaskGraph*);
+  void BpInferShapeOfBlobsInProducedRegsts(TaskGraph*);
   void BpBuildExecGraph(
       const ExecGraph& fw_gph,
       HashMap<const ExecNode*, ExecNode*>* fw_node2bp_node,
