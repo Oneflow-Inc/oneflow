@@ -3,11 +3,18 @@
 namespace oneflow {
 
 Shape::Shape(const ShapeProto& shape_proto) {
-  TODO();
+  for (int64_t dim : shape_proto.dim()) {
+    dim_vec_.push_back(dim);
+  }
+  UpdateElemCnt();
 }
 
 ShapeProto Shape::ToProto() const {
-  TODO();
+  ShapeProto shape_proto;
+  for (int64_t dim : dim_vec_) {
+    shape_proto.add_dim(dim);
+  }
+  return shape_proto;
 }
 
 std::string Shape::ToString() const {
@@ -41,6 +48,9 @@ void Shape::UpdateElemCnt() {
   elem_cnt_ = 1;
   for (int64_t s : dim_vec_) {
     elem_cnt_ *= s;
+  }
+  if (dim_vec_.size() == 0) {
+    elem_cnt_ = 0;
   }
 }
 
