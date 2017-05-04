@@ -18,9 +18,12 @@ TEST(PoolingOp, pool_100x64x11x11) {
   pooling_conf->set_in("pooling_in");
   pooling_conf->set_out("pooling_out");
   pooling_conf->set_pool(PoolingOpConf::MAX);
-  pooling_conf->set_pad(1);
-  pooling_conf->set_kernel_size(2);
-  pooling_conf->set_stride(2);
+  pooling_conf->add_pad(1);
+  pooling_conf->add_pad(1);
+  pooling_conf->add_kernel_size(2);
+  pooling_conf->add_kernel_size(2);
+  pooling_conf->add_stride(2);
+  pooling_conf->add_stride(2);
   auto pooling_op = OpMgr::Singleton().ConstructOp(op_conf);
   std::vector<int64_t> input_shape_vec = {100, 64, 11, 11};
   HashMap<std::string, Shape*> bn2shape_ptr{

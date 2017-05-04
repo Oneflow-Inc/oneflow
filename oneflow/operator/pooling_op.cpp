@@ -27,28 +27,20 @@ void PoolingOp::InferShape4FwBlobs(
   Shape* output_shape_ptr = GetShapePtr4BnInOp(SoleObn());
   Shape* input_shape_ptr = GetShapePtr4BnInOp(SoleIbn());
   const PoolingOpConf& pooling_conf = op_conf().pooling_conf();
-  auto pad_pair = CheckDimPara4CnnOrPooling(pooling_conf.pad(),
-                                            pooling_conf.pad_h(),
-                                            pooling_conf.pad_w());
-  uint32_t pad_h = pad_pair.first;
-  uint32_t pad_w = pad_pair.second;
-  auto kernel_pair = CheckDimPara4CnnOrPooling(pooling_conf.kernel_size(),
-                                               pooling_conf.kernel_h(),
-                                               pooling_conf.kernel_w());
-  uint32_t kernel_h = kernel_pair.first;
-  uint32_t kernel_w = kernel_pair.second;
-  auto stride_pair = CheckDimPara4CnnOrPooling(pooling_conf.stride(),
-                                               pooling_conf.stride_h(),
-                                               pooling_conf.stride_w());
-  uint32_t stride_h = stride_pair.first;
-  uint32_t stride_w = stride_pair.second;
-  // the input shape must be NxCxHxW
-  CHECK_EQ(input_shape_ptr->NumAxes(), 4);
+  const auto& pad_vec = pooling_conf.pad();
+  const auto& kernel_size_vec = pooling_conf.kernel_size();
+  const auto& stride_vec = pooling_conf.stride();
   std::vector<int64_t> output_shape_dim_vec = {
       input_shape_ptr->At(0),
-      input_shape_ptr->At(1),
-      (input_shape_ptr->At(2) + 2 * pad_h - kernel_h) / stride_h + 1,
-      (input_shape_ptr->At(3) + 2 * pad_w - kernel_w) / stride_w + 1};
+      input_shape_ptr->At(1)};
+  CHECK_EQ(input_shape_ptr->NumAxes() - 2, pad_vec.size());
+  CHECK_EQ(pad_vec.size(), kernel_size_vec.size());
+  CHECK_EQ(pad_vec.size(), stride_vec.size());
+  for (size_t i = 0; i < pad_vec.size(); i++) {
+    int64_t input_val = input_shape_ptr->At(i + 2);
+    output_shape_dim_vec.push_back(
+      (input_val + 2 * pad_vec[i] - kernel_size_vec[i]) / stride_vec[i] + 1);
+  }
   *output_shape_ptr = Shape(output_shape_dim_vec);
   CHECK_EQ(data_tmp_bns().size(), 1);
   Shape* data_tmp_shape_ptr = GetShapePtr4BnInOp(*(data_tmp_bns().begin()));
