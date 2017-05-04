@@ -14,7 +14,6 @@ TEST(InnerProductOp, modelparallel_innerproduct) {
   op_conf.mutable_innerproduct_conf()->set_in("ip_in");
   op_conf.mutable_innerproduct_conf()->set_out("ip_out");
   op_conf.mutable_innerproduct_conf()->set_out_num(40);
-  op_conf.mutable_innerproduct_conf()->set_axis(1);
   auto ip_op = OpMgr::Singleton().ConstructOp(op_conf);
 
   std::vector<int64_t> shape_vec = {1000, 3, 256, 256};
@@ -51,7 +50,6 @@ TEST(InnerProductOp, dataparallel_innerproduct) {
   op_conf.mutable_innerproduct_conf()->set_in("ip_in");
   op_conf.mutable_innerproduct_conf()->set_out("ip_out");
   op_conf.mutable_innerproduct_conf()->set_out_num(40);
-  op_conf.mutable_innerproduct_conf()->set_axis(1);
   auto ip_op = OpMgr::Singleton().ConstructOp(op_conf);
 
   std::vector<int64_t> shape_vec = {1000, 3, 256, 256};

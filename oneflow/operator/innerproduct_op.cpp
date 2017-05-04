@@ -34,20 +34,13 @@ void InnerProductOp::InferShape4FwBlobs(
     BalancedSplitter splitter(out_num, parallel_num);
     out_num = splitter.At(parallel_id).size();
   }
-  int32_t axis = GetInt32FromSpecialConf("axis");
 
   // output bn
   Shape* out_shape_ptr = GetShapePtr4BnInOp(SoleObn());
   *out_shape_ptr = *in_shape_ptr;
-  out_shape_ptr->Set(axis, out_num);
-  if (axis < 0) {
-    for (int32_t i = axis + 1; i < 0; ++i) {
-      out_shape_ptr->Set(i, 1);
-    }
-  } else {
-    for (int32_t i = axis + 1; i < out_shape_ptr->NumAxes(); ++i) {
-      out_shape_ptr->Set(i, 1);
-    }
+  out_shape_ptr->Set(1, out_num);
+  for (int32_t i = 2; i < out_shape_ptr->NumAxes(); ++i) {
+    out_shape_ptr->Set(i, 1);
   }
 
   // model bn
@@ -56,7 +49,7 @@ void InnerProductOp::InferShape4FwBlobs(
   Shape* bias_shape_ptr = GetShapePtr4BnInOp(model_bns().at(1));
   *weight_shape_ptr = Shape(std::vector<int64_t>(in_shape_ptr->NumAxes(), 1));
   weight_shape_ptr->Set(0, out_num);
-  weight_shape_ptr->Set(1, in_shape_ptr->Count(axis));
+  weight_shape_ptr->Set(1, in_shape_ptr->Count(1));
 
   *bias_shape_ptr = Shape(std::vector<int64_t>(in_shape_ptr->NumAxes(), 1));
   bias_shape_ptr->Set(1, out_num);
