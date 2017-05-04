@@ -8,7 +8,6 @@
 
 namespace oneflow {
 
-
 TEST(InnerProductOp, modelparallel_innerproduct) {
   OperatorConf op_conf;
   op_conf.set_name("modelparallel_ip_test");

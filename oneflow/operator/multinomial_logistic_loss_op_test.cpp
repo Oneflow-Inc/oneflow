@@ -19,13 +19,13 @@ TEST(MultinomialLogisticLossOp, test_loss_op) {
   HashMap<std::string, Shape*> bn2shape_ptr;
   std::vector<int64_t> shape_vec = {500, 10};
   for (std::string ibn : loss_op->input_bns()) {
-    bn2shape_ptr.insert(std::make_pair(ibn, new Shape(shape_vec)));
+    bn2shape_ptr.emplace(ibn, new Shape(shape_vec));
   }
   for (std::string obn : loss_op->output_bns()) {
-    bn2shape_ptr.insert(std::make_pair(obn, new Shape));
+    bn2shape_ptr.emplace(obn, new Shape);
   }
   for (std::string dtbn : loss_op->data_tmp_bns()) {
-    bn2shape_ptr.insert(std::make_pair(dtbn, new Shape));
+    bn2shape_ptr.emplace(dtbn, new Shape);
   }
   auto fp = [&bn2shape_ptr](const std::string& bn) {
     return bn2shape_ptr.at(bn);

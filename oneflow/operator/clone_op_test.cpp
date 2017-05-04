@@ -15,12 +15,10 @@ TEST(CloneOp, clone_4x3_3_times) {
   op_conf.mutable_clone_conf()->set_lbn("clone_test_lbn");
   auto clone_op = OpMgr::Singleton().ConstructOp(op_conf);
 
-  HashMap<std::string, Shape*> bn2shape_ptr;
-  std::vector<int64_t> shape_vec = {4, 3};
-  bn2shape_ptr.insert(
-      std::make_pair(clone_op->SoleIbn(), new Shape(shape_vec)));
+  HashMap<std::string, Shape*> bn2shape_ptr{
+    {clone_op->SoleIbn(), new Shape({4, 3})}};
   for (std::string obn : clone_op->output_bns()) {
-    bn2shape_ptr.insert(std::make_pair(obn, new Shape));
+    bn2shape_ptr.emplace(obn, new Shape);
   }
   auto fp = [&bn2shape_ptr](const std::string& bn) {
     return bn2shape_ptr.at(bn);
