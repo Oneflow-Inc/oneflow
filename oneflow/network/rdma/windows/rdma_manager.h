@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <ndspi.h>
 #include "network/rdma/windows/interface.h"
-#include "network\network_message.h"
+#include "network/network_message.h"
 
 namespace oneflow {
 
@@ -15,19 +15,19 @@ class Memory;
 
 class RdmaManager {
  public:
-  RdmaManager(const char* addr, int port);
+  RdmaManager();
   ~RdmaManager();
 
-  bool Init();
+  bool Init(const char* addr, int port);
   bool Destroy();
 
   bool CreateConnector(Connection* conn);
   bool CreateQueuePair(Connection* conn);
 
   Memory* NewNetworkMemory();
-  
+
   uint64_t WaitForConnection(Connection* conn);
-  
+
   int32_t PollRecvQueue(NetworkResult* result);
   int32_t PollSendQueue(NetworkResult* result);
 
@@ -36,7 +36,7 @@ class RdmaManager {
  private:
   bool InitAdapter();
   bool InitEnv();
-  
+
   // NdspiV2 specific adatper and information
   IND2Adapter* adapter_;
   ND2_ADAPTER_INFO adapter_info_;

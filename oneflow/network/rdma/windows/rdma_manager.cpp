@@ -11,7 +11,7 @@ namespace oneflow {
 
 namespace {
 
-sockaddr_in GetAddress(const char* addr, int port) {
+sockaddr_in GetSocket(const char* addr, int port) {
   sockaddr_in sock = sockaddr_in();
   std::memset(&sock, 0, sizeof(sockaddr_in));
   inet_pton(AF_INET, addr, &sock.sin_addr);
@@ -22,8 +22,7 @@ sockaddr_in GetAddress(const char* addr, int port) {
 
 }  // namespace
 
-RdmaManager::RdmaManager(const char* addr, int32_t port) {
-  my_sock = GetAddress(addr, port);
+RdmaManager::RdmaManager() {
   adapter_ = NULL;
   listener_ = NULL;
   send_cq_ = NULL;
@@ -34,7 +33,8 @@ RdmaManager::~RdmaManager() {
   Destroy();
 }
 
-bool RdmaManager::Init() {
+bool RdmaManager::Init(const char* addr, int port) {
+  my_sock = GetSocket(addr, port);
   return InitAdapter() && InitEnv();
 }
 
@@ -94,7 +94,8 @@ uint64_t RdmaManager::WaitForConnection(Connection* conn) {
 
   // Get src rank from the private data
   hr = conn->connector->GetPrivateData(&peer_machine_id, &size);
-  // LOG(INFO) << "peer_machine_id = " << peer_machine_id << " size = " << size << "\n";
+  // LOG(INFO) << "peer_machine_id = " << peer_machine_id << " size = " << size
+  //           << "\n";
   // NOTE(feiga): The author of NDSPI says it's normal for this check failed
   //              So just ignore it.
   // CHECK(!FAILED(hr)) << "Failed to get private data. hr = " << hr << "\n";

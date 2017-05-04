@@ -48,7 +48,9 @@ void RdmaWrapper::Init(uint64_t my_machine_id,
 
   // NdspiV2Open();
   // rdma_manager_->my_sock = GetAddress(my_machine_id);  // TODO(shiyuan)
-  rdma_manager_->Init();
+  char* addr;
+  // TODO(shiyuan) Get the address by my_machine_id_.
+  rdma_manager_->Init(addr, port_);
 
   EstablishConnection();
 }
@@ -66,17 +68,18 @@ void RdmaWrapper::Barrier() {
   // message. Only when all the Barrier message received, it send Barrier
   // message to its all predecessors (neighbours whose id < i) machines.
   // After Send Barrier Message OK, it then wait for the ReplyBarrier message
-  // from the predecessors. When all ReplyBarrier received, it then send 
+  // from the predecessors. When all ReplyBarrier received, it then send
   // ReplyBarrier to its all successor. After sending OK, the Barrier finish.
 
   int32_t num_predecessors = 0;
   int32_t num_successors = 0;
-  for (auto neighbor : net_topology_.all_nodes[my_machine_id_].neighbors) {
-    if (neighbor < my_machine_id_)
+  for (auto peer_machine_id : net_topology_.all_nodes[my_machine_id_].neighbors) {
+    if (peer_machine_id < my_machine_id_)
       ++num_predecessors;
-    if (neighbor > my_machine_id_)
+    if (peer_machine_id > my_machine_id_)
       ++num_successors;
   }
+
   // 1. Wait for all the successor machines' barrier message
   NetworkResult result;
   for (int32_t i = 0; i < num_successors; ++i) {
@@ -94,9 +97,9 @@ void RdmaWrapper::Barrier() {
   NetworkMessage barrier_msg;
   barrier_msg.src_machine_id = my_machine_id_;
   barrier_msg.type = NetworkMessageType::MSG_TYPE_BARRIER;
-  for (auto neighbor : net_topology_.all_nodes[my_machine_id_].neighbors) {
-    if (neighbor < my_machine_id_) {
-      barrier_msg.dst_machine_id = neighbor;
+  for (auto peer_machine_id : net_topology_.all_nodes[my_machine_id_].neighbors) {
+    if (peer_machine_id < my_machine_id_) {
+      barrier_msg.dst_machine_id = peer_machine_id;
       Send(barrier_msg);
       while (!PollSendQueue(&result))
         Sleep(1000);
@@ -120,9 +123,9 @@ void RdmaWrapper::Barrier() {
   NetworkMessage reply_barrier_msg;
   reply_barrier_msg.src_machine_id = my_machine_id_;
   reply_barrier_msg.type == NetworkMessageType::MSG_TYPE_REPLY_BARRIER;
-  for (auto neighbor : net_topology_.all_nodes[my_machine_id_].neighbors) {
-    if (neighbor > my_machine_id_) {
-      reply_barrier_msg.dst_machine_id = neighbor;
+  for (auto peer_machine_id : net_topology_.all_nodes[my_machine_id_].neighbors) {
+    if (peer_machine_id > my_machine_id_) {
+      reply_barrier_msg.dst_machine_id = peer_machine_id;
       Send(reply_barrier_msg);
       while (!PollSendQueue(&result))
         Sleep(1000);

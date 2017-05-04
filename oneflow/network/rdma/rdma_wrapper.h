@@ -87,6 +87,7 @@ class RdmaWrapper : public Network {
 
   RdmaManager* rdma_manager_;
   uint64_t my_machine_id_;
+  int port_ = 0;
   NetworkTopology net_topology_;
 
   std::shared_ptr<RequestPool> request_pool_;
