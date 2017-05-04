@@ -52,8 +52,7 @@ void BoxingOp::InferShape4FwBlobs(
       }
     }
   }
-  CHECK_EQ(data_tmp_bns().size(), 1);
-  *GetShapePtr4BnInOp(data_tmp_bns()[0]) = Shape(data_tmp_blob_shape_vec);
+  *GetShapePtr4BnInOp(SoleDtbn()) = Shape(data_tmp_blob_shape_vec);
   auto out_box_case = boxing_conf.out_box_case();
   CHECK_NE(out_box_case, BoxingOpConf::OUT_BOX_NOT_SET);
   if (out_box_case == BoxingOpConf::kDataSplitBox) {

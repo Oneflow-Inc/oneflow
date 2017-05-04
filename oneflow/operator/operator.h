@@ -57,6 +57,7 @@ class Operator {
   const std::string& SoleIdbn() const;
   const std::string& SoleObn() const;
   const std::string& SoleOdbn() const;
+  const std::string& SoleDtbn() const;
 
   #define DEFINE_BLOB_NAMES_GETTER(getter_name) \
   const std::vector<std::string>& getter_name() const { \

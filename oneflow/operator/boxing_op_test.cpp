@@ -28,7 +28,7 @@ TEST(BoxingOp, box_4_10x5x6x6) {
     {boxing_op->input_bns()[1], new Shape(input_shape_vec2)},
     {boxing_op->input_bns()[2], new Shape(input_shape_vec2)},
     {boxing_op->input_bns()[3], new Shape(input_shape_vec2)},
-    {boxing_op->data_tmp_bns()[0], new Shape},
+    {boxing_op->SoleDtbn(), new Shape},
     {boxing_op->output_bns()[0], new Shape},
     {boxing_op->output_bns()[1], new Shape},
     {boxing_op->output_bns()[2], new Shape},
@@ -40,7 +40,7 @@ TEST(BoxingOp, box_4_10x5x6x6) {
   boxing_op->InferShape4FwBlobs(fp, kModelParallel, 0, 1);
   // test
   // data_tmp_shape is {10, 17, 6, 6}, and the 17 = 5 + 4 + 4 + 4
-  Shape* data_tmp_shape_ptr = bn2shape_ptr.at(boxing_op->data_tmp_bns()[0]);
+  Shape* data_tmp_shape_ptr = bn2shape_ptr.at(boxing_op->SoleDtbn());
   std::vector<int64_t> data_temp_shape_vec = {10, 17, 6, 6};
   ASSERT_EQ(*data_tmp_shape_ptr, Shape(data_temp_shape_vec));
   // output_shape is :
@@ -49,7 +49,7 @@ TEST(BoxingOp, box_4_10x5x6x6) {
   // out3 {3, 17, 6, 6}
   for (size_t i = 0; i < boxing_op->output_bns().size(); ++i) {
     Shape* output_shape_ptr = bn2shape_ptr.at(boxing_op->output_bns()[i]);
-    std::vector<int64_t> output_shape_vec = { 3, 17, 6, 6 };
+    std::vector<int64_t> output_shape_vec = {3, 17, 6, 6};
     if (i == 0) {
       output_shape_vec[0] = 4;
     }
