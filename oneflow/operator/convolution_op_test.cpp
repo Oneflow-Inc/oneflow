@@ -32,7 +32,6 @@ TEST(ConvolutionOp, TestForInferShape4FwBlobs) {
   //infershape
   convolution_op->InferShape4FwBlobs(fp, kDataParallel, 0, 1);
   //test
-  Shape* input_shape_ptr = fp(convolution_op->SoleIbn());
   Shape* output_shape_ptr = fp(convolution_op->SoleObn());
   Shape* colbuf_shape_ptr = fp(convolution_op->data_tmp_bns().at(0));
   Shape* weight_shape_ptr = fp(convolution_op->model_bns().at(0));
