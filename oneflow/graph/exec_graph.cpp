@@ -11,8 +11,7 @@ ExecNodeProto ExecNode::ToProto() const {
   exnode.set_op_name(op_->op_name());
   HashMap<std::string, int64_t> bn2id;
   for (auto bn_regst: bn_in_op2regst_) {
-    bn2id.emplace(bn_regst.first, 
-                                   bn_regst.second->regst_desc_id());
+    bn2id.emplace(bn_regst.first, bn_regst.second->regst_desc_id());
   }
   using RetType = google::protobuf::Map<std::string, google::protobuf::uint64>;
   *(exnode.mutable_bn_in_op2regst_desc_id()) = RetType(bn2id.begin(),
