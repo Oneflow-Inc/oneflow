@@ -9,7 +9,7 @@ void MultinomialLogisticLossOp::InitFromOpConf(const OperatorConf& op_conf) {
   CHECK(op_conf.has_multinomial_logistic_loss_conf());
   mut_op_conf() = op_conf;
 
-  EnrollInputBn("data");
+  EnrollInputBn("prediction");
   EnrollInputBn("label");
   EnrollOutputBn("loss", false);
   EnrollDataTmpBn("loss_buffer");

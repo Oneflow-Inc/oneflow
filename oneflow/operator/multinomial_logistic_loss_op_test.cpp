@@ -11,7 +11,8 @@ namespace oneflow {
 TEST(MultinomialLogisticLossOp, test_loss_op) {
   OperatorConf op_conf;
   op_conf.set_name("multinomial_logistic_loss_op_test");
-  op_conf.mutable_multinomial_logistic_loss_conf()->set_data("data");
+  op_conf.mutable_multinomial_logistic_loss_conf()
+    ->set_prediction("prediction");
   op_conf.mutable_multinomial_logistic_loss_conf()->set_label("label");
   op_conf.mutable_multinomial_logistic_loss_conf()->set_loss("loss");
   auto loss_op = OpMgr::Singleton().ConstructOp(op_conf);

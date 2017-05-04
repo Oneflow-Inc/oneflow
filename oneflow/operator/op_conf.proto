@@ -148,7 +148,7 @@ message SoftmaxOpConf {
 }
 
 message MultinomialLogisticLossOpConf {
-  string data = 1;
+  string prediction = 1;
   string label = 2;
   string loss = 3;
 }
