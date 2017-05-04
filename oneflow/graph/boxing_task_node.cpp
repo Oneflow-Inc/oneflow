@@ -9,22 +9,22 @@ namespace oneflow {
 namespace {
 
 void FwCompleteBoxOpConfDataData(BoxingOpConf* conf) {
-  conf->mutable_concat_box()->set_axis(gDataConcatInitAxis);
+  conf->mutable_concat_box()->set_axis(0);
   conf->mutable_data_split_box();
 }
 
 void FwCompleteBoxOpConfDataModel(BoxingOpConf* conf) {
-  conf->mutable_concat_box()->set_axis(gDataConcatInitAxis);
+  conf->mutable_concat_box()->set_axis(0);
   conf->mutable_clone_box();
 }
 
 void FwCompleteBoxOpConfModelData(BoxingOpConf* conf) {
-  conf->mutable_concat_box()->set_axis(gModelConcatInitAxis);
+  conf->mutable_concat_box()->set_axis(1);
   conf->mutable_data_split_box();
 }
 
 void FwCompleteBoxOpConfModelModel(BoxingOpConf* conf) {
-  conf->mutable_concat_box()->set_axis(gModelConcatInitAxis);
+  conf->mutable_concat_box()->set_axis(1);
   conf->mutable_clone_box();
 }
 

@@ -56,6 +56,10 @@ const std::string& Operator::SoleOdbn() const {
   CHECK_EQ(output_diff_bns_.size(), 1);
   return *(output_diff_bns_.begin());
 }
+const std::string& Operator::SoleDtbn() const {
+  CHECK_EQ(data_tmp_bns_.size(), 1);
+  return *(data_tmp_bns_.begin());
+}
 
 void Operator::EnrollDataTmpBn(const std::string& dtbn) {
   data_tmp_bns_.push_back(dtbn);

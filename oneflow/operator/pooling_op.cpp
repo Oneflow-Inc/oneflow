@@ -42,8 +42,7 @@ void PoolingOp::InferShape4FwBlobs(
       (input_val + 2 * pad_vec[i] - kernel_size_vec[i]) / stride_vec[i] + 1);
   }
   *output_shape_ptr = Shape(output_shape_dim_vec);
-  CHECK_EQ(data_tmp_bns().size(), 1);
-  Shape* data_tmp_shape_ptr = GetShapePtr4BnInOp(*(data_tmp_bns().begin()));
+  Shape* data_tmp_shape_ptr = GetShapePtr4BnInOp(SoleDtbn());
   *data_tmp_shape_ptr = Shape(output_shape_dim_vec);
 }
 
