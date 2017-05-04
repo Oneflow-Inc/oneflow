@@ -38,6 +38,10 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
   for (auto&pair : machine_id2sorted_device_phy_ids_) {
     SortAndRemoveDuplication(&(pair.second));
   }
+  parallel_num_ = 0;
+  for (auto const& pair : machine_id2sorted_device_phy_ids_) {
+    parallel_num_ += pair.second.size();
+  }
 }
 
 std::string ParallelDesc::VisualStr() const {
@@ -64,14 +68,6 @@ std::string ParallelDesc::VisualStr() const {
   }
   ss << "}";
   return ss.str();
-}
-
-uint64_t ParallelDesc::parallel_num() const {
-  uint64_t parallel_num = 0;
-  for (auto const& pair : machine_id2sorted_device_phy_ids_) {
-    parallel_num += pair.second.size();
-  }
-  return parallel_num;
 }
 
 } // namespace oneflow
