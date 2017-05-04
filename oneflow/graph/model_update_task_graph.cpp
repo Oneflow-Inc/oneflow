@@ -37,6 +37,7 @@ void MdUpdtTaskGraph::BuildTaskGraph(const ChainNode* data_chain) {
     Connect(faker_chain, chain_gph->NewEdge(), updt_chain);
   }
   //
+  chain_gph->UpdateSourceAndSink();
   std::string dot_filepath_prefix =
       LogDir() + "/model_update_" + data_chain->node_id_str() + "_";
   chain_gph->ToDotFile(dot_filepath_prefix + "chain_graph.dot");

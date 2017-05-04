@@ -39,6 +39,13 @@ class Graph {
   // Getters
   const std::vector<std::unique_ptr<NodeType>>& nodes() const { return nodes_; }
   const std::vector<std::unique_ptr<EdgeType>>& edges() const { return edges_; }
+  const std::unordered_set<NodeType*>& source_nodes() const {
+    return source_nodes_;
+  }
+  const std::unordered_set<NodeType*>& sink_nodes() const {
+    return sink_nodes_;
+  }
+
   NodeType* SoleSourceNode() const {
     CHECK_EQ(source_nodes_.size(), 1);
     return *(source_nodes_.begin());
@@ -196,6 +203,9 @@ template<typename NodeType, typename EdgeType>
 std::string Graph<NodeType, EdgeType>::ToDotString() const {
   std::stringstream ss;
   ss << "digraph {" << std::endl;
+  for (const auto& node : nodes_) {
+    ss << "\"" << node->VisualStr() << "\"" << std::endl;
+  }
   for (const auto& edge : edges_) {
     ss << "\"" << edge->src_node()->VisualStr() << "\" -> "
        << "\"" << edge->dst_node()->VisualStr() << "\""
