@@ -47,11 +47,13 @@ void MdSaveTaskGraph::BuildTaskGraph(const ChainNode* update_chain) {
 
 void MdSaveTaskGraph::InitFaker2Mccoy(
     const std::vector<CompTaskNode*>& sorted_updt_tasks) {
+  TODO();
+  /*
   auto sorted_faker_tasks = SortedCompTasksInChain(chain_gph()->SoleSourceNode());
   CHECK_EQ(sorted_updt_tasks.size(), sorted_faker_tasks.size());
   for (size_t i = 0; i < sorted_updt_tasks.size(); ++i) {
     EnrollFakerMccoy(sorted_faker_tasks[i], sorted_updt_tasks[i]);
-  }
+  }*/
 }
 
 } // namespace oneflow

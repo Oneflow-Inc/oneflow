@@ -20,9 +20,6 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   // Getters
   const StageGraph* stage_gph() const { return stage_gph_.get(); }
   const ChainGraph* chain_gph() const { return stage_gph_->chain_gph(); }
-  const HashMap<CompTaskNode*, CompTaskNode*>& faker2mccoy() {
-    return faker2mccoy_;
-  }
   std::vector<CompTaskNode*> SortedCompTasksInChain(const ChainNode*) const;
 
   void InferShapeOfBlobsInProducedRegsts();
@@ -36,9 +33,6 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   void BuildFromChainGph(std::unique_ptr<ChainGraph>&& chain_gph,
                          bool need_bp,
                          const std::string& dot_filepath_prefix);
-  void EnrollFakerMccoy(CompTaskNode* faker, CompTaskNode* mccoy) {
-    CHECK(faker2mccoy_.emplace(faker, mccoy).second);
-  }
   void BuildExecAndEnrollLbn2Regsts();
 
  private:
@@ -80,7 +74,6 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   void BuildBpStruct();
 
   std::unique_ptr<const StageGraph> stage_gph_;
-  HashMap<CompTaskNode*, CompTaskNode*> faker2mccoy_;
   
 
 };
