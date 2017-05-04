@@ -22,7 +22,6 @@ sockaddr_in GetAddress(const char* addr, int port) {
 
 }  // namespace
 
-
 RdmaManager::RdmaManager(const char* addr, int32_t port) {
   my_sock = GetAddress(addr, port);
   adapter_ = NULL;
@@ -122,14 +121,10 @@ int32_t RdmaManager::PollRecvQueue(NetworkResult* result) {
 
 // TODO(shiyuan) should mv PollSendQueue to Class RdmaManager
 int32_t RdmaManager::PollSendQueue(NetworkResult* result) {
-  // CHECK result
-  // HRESULT hr; // FIXME(shiyuan)
   ND2_RESULT nd2_result;
   uint32_t len = send_cq_->GetResults(&nd2_result, 1);
   if (len == 0)
     return -1;
-
-  // CHECK
 
   // NET_SEND_OK? NET_SEND_ACK?
   switch (nd2_result.RequestType) {
