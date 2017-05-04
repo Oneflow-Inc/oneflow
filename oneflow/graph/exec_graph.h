@@ -59,6 +59,8 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   }
   
   std::string VisualStr() const { TODO(); }
+  
+  ExecNodeProto ToProto() const;
 
  private:
   std::shared_ptr<const Operator> op_;
@@ -72,9 +74,7 @@ class ExecGraph final : public Graph<ExecNode, ExecEdge> {
   ExecGraph() = default;
   ~ExecGraph() = default;
 
-  ExecGraphProto ToProto() const {
-    TODO();
-  }
+  ExecGraphProto ToProto() const;
 
  private:
 
