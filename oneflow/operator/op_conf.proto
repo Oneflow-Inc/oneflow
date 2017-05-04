@@ -175,7 +175,6 @@ message CopyHdOpConf {
   Type type = 1;
 }
 
-
 message CloneOpConf {
   uint32 out_num = 1;
   string lbn = 2;

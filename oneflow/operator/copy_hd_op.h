@@ -23,7 +23,6 @@ class CopyHdOp final : public SysOperator {
     return RegstDesc::kAllLbn;
   }
 
-
 };
 
 } // namespace oneflow

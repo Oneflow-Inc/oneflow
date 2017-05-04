@@ -71,14 +71,8 @@ class CommNetTaskNode final : public CopyTaskNode {
     return !IsSender();
   }
 
-  void SetFwSender() {
-    CHECK(IsFwNode());
-    is_fw_sender_ = true;
-  }
-  void SetFwReceiver() {
-    CHECK(IsFwNode());
-    is_fw_sender_ = false;
-  }
+  void SetFwSender();
+  void SetFwReceiver();
   
   std::string VisualStr() const override {
     return TaskNode::VisualStr() + "CommNet";

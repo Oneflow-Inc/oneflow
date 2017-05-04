@@ -50,6 +50,16 @@ std::shared_ptr<const Operator> CopyHDTaskNode::ConstructOp() const {
   return OpMgr::Singleton().ConstructOp(op_conf);
 }
 
+void CommNetTaskNode::SetFwSender() {
+  CHECK(IsFwNode());
+  is_fw_sender_ = true;
+}
+
+void CommNetTaskNode::SetFwReceiver() {
+  CHECK(IsFwNode());
+  is_fw_sender_ = false;
+}
+
 std::shared_ptr<const Operator> CommNetTaskNode::ConstructOp() const {
   OperatorConf op_conf;
   op_conf.set_name("comm_net_" + NewUniqueId());
