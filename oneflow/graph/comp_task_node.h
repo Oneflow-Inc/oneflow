@@ -60,9 +60,11 @@ class CompTaskNode : public TaskNode {
       const ExecGraph& fw_gph,
       HashMap<const ExecNode*, ExecNode*>* fw_node2bp_node,
       HashMap<ExecEdge*, const ExecEdge*>* bp_edge2fw_edge);
-  void BpEnrollLbn2ProducedRegst(
-      const HashMap<const ExecNode*, ExecNode*>& fw_node2bp_node,
-      const HashMap<ExecEdge*, const ExecEdge*>& bp_edge2fw_edge);
+  void BpEnrollLbn2ProducedRegst();
+  void BpEnrollLbn2ActivationDiffRegst();
+  void BpSetExecNodeFromOutDiffRegst();
+  void BpEnrollLbn2InDiffRegst();
+  void BpEnrollLbn2ModelDiffRegst();
 
   uint64_t parallel_id_;
 
