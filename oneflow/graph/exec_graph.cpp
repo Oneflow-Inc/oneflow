@@ -9,14 +9,12 @@ ExecNodeProto ExecNode::ToProto() const {
   ExecNodeProto exnode;
   exnode.set_id(node_id());
   exnode.set_op_name(op_->op_name());
-  HashMap<std::string, int64_t> bn2id;
+  using RetType = google::protobuf::MapPair<std::string, google::protobuf::uint64>;
   for (auto bn_regst: bn_in_op2regst_) {
-    bn2id.emplace(bn_regst.first, bn_regst.second->regst_desc_id());
+    auto gmap_pair =  RetType(bn_regst.first, bn_regst.second->regst_desc_id());
+    exnode.mutable_bn_in_op2regst_desc_id()->insert(gmap_pair);
   }
-  using RetType = google::protobuf::Map<std::string, google::protobuf::uint64>;
-  *(exnode.mutable_bn_in_op2regst_desc_id()) = RetType(bn2id.begin(),
-                                                       bn2id.end());
-  for (auto edge: in_edges()) {
+  for (ExecEdge* edge: in_edges()) {
     exnode.add_predecessor_ids(edge->src_node()->node_id());
   }
   return exnode;
@@ -24,8 +22,8 @@ ExecNodeProto ExecNode::ToProto() const {
 
 ExecGraphProto ExecGraph::ToProto() const {
   ExecGraphProto exgraph;
-  for (std::size_t i = 0; i < nodes().size(); ++i) {
-    *(exgraph.add_exec_nodes()) = nodes().at(i)->ToProto();
+  for (const std::unique_ptr<ExecNode>& node: nodes()) {
+    *(exgraph.add_exec_nodes()) = node->ToProto();
   }
   return exgraph;
 }
