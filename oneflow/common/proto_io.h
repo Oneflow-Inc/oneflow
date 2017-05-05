@@ -14,8 +14,11 @@
 namespace oneflow {
 
 using PbMessage = google::protobuf::Message;
+using Pbuint64 = google::protobuf::uint64;
 template<typename T>
 using PbVector = google::protobuf::RepeatedPtrField<T>;
+template<typename T1, typename T2>
+using PbMapPair = google::protobuf::MapPair<T1, T2>;
 
 // Prototxt <-> String
 void ParseProtoFromString(const std::string& str, PbMessage* proto);

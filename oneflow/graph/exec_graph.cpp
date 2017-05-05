@@ -9,9 +9,9 @@ ExecNodeProto ExecNode::ToProto() const {
   ExecNodeProto exnode;
   exnode.set_id(node_id());
   exnode.set_op_name(op_->op_name());
-  using RetType = google::protobuf::MapPair<std::string, google::protobuf::uint64>;
-  for (auto bn_regst: bn_in_op2regst_) {
-    auto gmap_pair =  RetType(bn_regst.first, bn_regst.second->regst_desc_id());
+  for (const std::pair<std::string, RegstDesc*>& bn_regst: bn_in_op2regst_) {
+    PbMapPair<std::string, Pbuint64> gmap_pair(bn_regst.first, 
+                                               bn_regst.second->regst_desc_id());
     exnode.mutable_bn_in_op2regst_desc_id()->insert(gmap_pair);
   }
   for (ExecEdge* edge: in_edges()) {
