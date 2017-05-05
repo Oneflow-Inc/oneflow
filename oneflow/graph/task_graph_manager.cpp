@@ -24,17 +24,21 @@ void TaskGraphMgr::Init() {
   }
   // model graph
   for (const auto& pair : data_chain2sorted_bp_comp_tasks) {
+    const std::string dot_path_prefix = LogDir() + "/" + NewUniqueId() + "_";
+    ParallelPolicy policy = pair.first->parallel_desc()->policy();
     // model update
-    auto md_updt_gph = new MdUpdtTaskGraph(pair.first, pair.second);
-    LOG(FATAL) << "checkpoint";
-    ChainNode* updt_chain = md_updt_gph->chain_gph()->SoleSinkNode();
-    auto sorted_updt_tasks = md_updt_gph->SortedCompTasksInChain(updt_chain);
+    auto updt_gph = new MdUpdtTaskGraph(
+        pair.first, pair.second, dot_path_prefix + "model_update_");
+    ChainNode* updt_chain = updt_gph->chain_gph()->SoleSinkNode();
+    auto sorted_updt_tasks = updt_gph->SortedCompTasksInChain(updt_chain);
     // model load save
-    auto md_load_gph = new MdLoadTaskGraph(updt_chain, sorted_updt_tasks);
-    auto md_save_gph = new MdSaveTaskGraph(updt_chain, sorted_updt_tasks);
-    task_gphs_.emplace_back(md_updt_gph);
-    task_gphs_.emplace_back(md_load_gph);
-    task_gphs_.emplace_back(md_save_gph);
+    auto load_gph = new MdLoadTaskGraph(
+        updt_chain, sorted_updt_tasks, policy, dot_path_prefix + "model_load_");
+    LOG(FATAL) << "checkpoint";
+    auto save_gph = new MdSaveTaskGraph(updt_chain, sorted_updt_tasks);
+    task_gphs_.emplace_back(updt_gph);
+    task_gphs_.emplace_back(load_gph);
+    task_gphs_.emplace_back(save_gph);
   }
 }
 

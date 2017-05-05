@@ -20,12 +20,20 @@ class MdLoadTaskGraph final : public TaskGraph {
 
   MdLoadTaskGraph(
       const ChainNode* update_chain,
-      const std::vector<CompTaskNode*>& sorted_update_tasks);
+      const std::vector<CompTaskNode*>& sorted_update_tasks,
+      ParallelPolicy policy,
+      const std::string& dot_path_prefix);
+
+  const HashMap<uint64_t, CompTaskNode*>& parallel_id2updt_task() const {
+    return parallel_id2updt_task_;
+  }
+  ParallelPolicy policy() const { return policy_; }
 
  private:
-  void BuildTaskGraph(const ChainNode* update_chain);
-  void InitFaker2Mccoy(
-      const std::vector<CompTaskNode*>& sorted_update_tasks);
+  void BuildTaskGraph(const ChainNode* update_chain,
+                      const std::string& dot_path_prefix);
+  HashMap<uint64_t, CompTaskNode*> parallel_id2updt_task_;
+  ParallelPolicy policy_;
 
 };
 

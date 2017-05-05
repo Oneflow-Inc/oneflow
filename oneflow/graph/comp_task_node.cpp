@@ -79,14 +79,14 @@ void CompTaskNode::MdUpdtFwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
 }
 
 void CompTaskNode::MdUpdtFwInferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
-  TODO();
+  // do nothing
 }
 
 void CompTaskNode::MdLoadFwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
-  /*
+  auto md_load_gph = of_dynamic_cast<MdLoadTaskGraph*> (gph);
   if (IsFaker()) {
-    CompTaskNode* update_task = gph->faker2mccoy().at(this);
-    ExecNode* exec_node = update_task->exec_gph().SoleNode();
+    CompTaskNode* updt = md_load_gph->parallel_id2updt_task().at(parallel_id());
+    ExecNode* exec_node = updt->exec_gph().SoleNode();
     exec_node->BindBnInOpAndRegst("model_init", GetRelatedRegst(SoleInEdge()));
     return;
   }
@@ -94,19 +94,32 @@ void CompTaskNode::MdLoadFwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   exec_node->mut_op() = chain_node()->SoleOp();
   mut_exec_gph().UpdateSourceAndSink();
   
-  auto model_regst = of_make_unique<ContigRegstDesc> ();
+  auto model_regst = RegstDescMgr::Singleton().CreateRegisterDesc();
   exec_node->BindBnInOpAndRegst(exec_node->op()->SoleObn(), model_regst.get());
   BindProducedRegstAndOutEdge(model_regst.get(), SoleOutEdge());
-  Shape* shape_ptr = model_regst->EnrollLbn(RegstDesc::kAllLbn);
-  exec_node->op()->SetShapePtr(exec_node->op()->SoleObn(), shape_ptr);
-  exec_node->op()->InferShape4ObAndDtbFromIb();
-  EnrollProducedRegstDesc("model_regst", std::move(model_regst));
-  */
-  TODO();
+  CompTaskNode* update_0 = md_load_gph->parallel_id2updt_task().at(0);
+  model_regst->CopyLbnFrom(update_0->GetProducedRegstDesc("model"));
+  EnrollProducedRegstDesc("model", std::move(model_regst));
 }
 
 void CompTaskNode::MdLoadFwInferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
-  TODO();
+  if (IsFaker()) { return; }
+  auto md_load_gph = of_dynamic_cast<MdLoadTaskGraph*> (gph);
+  RegstDesc* this_model = GetProducedRegstDesc("model");
+  if (md_load_gph->policy() == kDataParallel) {
+    CompTaskNode* update_0 = md_load_gph->parallel_id2updt_task().at(0);
+    this_model->CopyShapeFrom(update_0->GetProducedRegstDesc("model"));
+    return;
+  }
+  for (const auto& pair : this_model->mut_lbn2shape()) {
+    const std::string& lbn = pair.first;
+    Shape* this_lbn_shape_ptr = pair.second.get();
+    int64_t cnt = 0;
+    for (const auto& pair : md_load_gph->parallel_id2updt_task()) {
+      cnt += pair.second->GetProducedRegstDesc("model")->GetShape(lbn).elem_cnt();
+    }
+    *this_lbn_shape_ptr = Shape({cnt});
+  }
 }
 
 void CompTaskNode::MdSaveFwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {

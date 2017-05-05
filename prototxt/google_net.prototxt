@@ -110,7 +110,7 @@ op_conf {
 op_conf {
   name: "loss1"
   multinomial_logistic_loss_conf {
-    data: "softmax1/out"
+    prediction: "softmax1/out"
     label: "mnist/label"
     loss: "loss"
   }
@@ -210,7 +210,7 @@ op_conf {
 op_conf {
   name: "loss2"
   multinomial_logistic_loss_conf {
-    data: "softmax2/out"
+    prediction: "softmax2/out"
     label: "mnist/label"
     loss: "loss"
   }

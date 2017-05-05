@@ -30,6 +30,9 @@ class RegstDesc final {
   void EnrollLbn(const std::string& lbn);
   const Shape& GetShape(const std::string& lbn) const;
   Shape* GetMutShapePtr(const std::string& lbn);
+  HashMap<std::string, std::unique_ptr<Shape>>& mut_lbn2shape() {
+    return lbn2shape_;
+  }
 
   static const char* kAllLbn;
 

@@ -2,6 +2,7 @@
 #define ONEFLOW_OPERATOR_MODEL_LOAD_OP_H_
 
 #include "operator/operator.h"
+#include "register/register_desc.h"
 
 namespace oneflow {
 
@@ -15,6 +16,10 @@ class ModelLoadOp final : public SysOperator {
   const PbMessage& GetSpecialConf() const override;
 
  private:
+  std::string obn2lbn(const std::string&) const override {
+    return RegstDesc::kAllLbn;
+  }
+
 };
 
 } // namespace oneflow

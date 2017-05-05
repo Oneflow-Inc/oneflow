@@ -15,7 +15,7 @@ void SetModelLoadChain(ChainNode* model_load_chain) {
   ParallelConf pr_conf;
   pr_conf.set_policy(kDataParallel);
   pr_conf.mutable_device_set()->add_device_name(
-      JobDesc::Singleton().md_load_machine() + "/disk");
+      JobDesc::Singleton().md_load_machine() + ":disk");
   model_load_chain->mut_parallel_desc().reset(new ParallelDesc(pr_conf));
   // output
   model_load_chain->mut_output_lbns() = {RegstDesc::kAllLbn};
@@ -25,13 +25,20 @@ void SetModelLoadChain(ChainNode* model_load_chain) {
 
 MdLoadTaskGraph::MdLoadTaskGraph(
     const ChainNode* update_chain,
-    const std::vector<CompTaskNode*>& sorted_update_tasks) {
-  BuildTaskGraph(update_chain);
-  InitFaker2Mccoy(sorted_update_tasks);
+    const std::vector<CompTaskNode*>& sorted_update_tasks,
+    ParallelPolicy policy,
+    const std::string& dot_path_prefix) {
+  policy_ = policy;
+  BuildTaskGraph(update_chain, dot_path_prefix);
+  for (CompTaskNode* update_task : sorted_update_tasks) {
+    CHECK(parallel_id2updt_task_.emplace(
+          update_task->parallel_id(), update_task).second);
+  }
   BuildExecAndEnrollLbn2Regsts();
 }
 
-void MdLoadTaskGraph::BuildTaskGraph(const ChainNode* update_chain) {
+void MdLoadTaskGraph::BuildTaskGraph(const ChainNode* update_chain,
+                                     const std::string& dot_path_prefix) {
   auto chain_gph = of_make_unique<ChainGraph> ();
   ChainNode* load_chain = chain_gph->NewNode();
   SetModelLoadChain(load_chain);
@@ -41,20 +48,8 @@ void MdLoadTaskGraph::BuildTaskGraph(const ChainNode* update_chain) {
   faker_chain->mut_input_lbns() = {RegstDesc::kAllLbn};
   Connect(load_chain, chain_gph->NewEdge(), faker_chain);
   chain_gph->UpdateSourceAndSink();
-  std::string dot_filepath_prefix =
-      LogDir() + "/model_load_" + update_chain->node_id_str() + "_";
-  chain_gph->ToDotFile(dot_filepath_prefix + "chain_graph.dot");
-  BuildFromChainGph(std::move(chain_gph), false, dot_filepath_prefix);
-}
-
-void MdLoadTaskGraph::InitFaker2Mccoy(
-    const std::vector<CompTaskNode*>& sorted_update_tasks) {
-  /*auto sorted_faker_tasks = SortedCompTasksInChain(chain_gph()->SoleSinkNode());
-  CHECK_EQ(sorted_update_tasks.size(), sorted_faker_tasks.size());
-  for (size_t i = 0; i < sorted_update_tasks.size(); ++i) {
-    EnrollFakerMccoy(sorted_faker_tasks[i], sorted_update_tasks[i]);
-  }*/
-  TODO();
+  chain_gph->ToDotFile(dot_path_prefix + "chain_graph.dot");
+  BuildFromChainGph(std::move(chain_gph), false, dot_path_prefix);
 }
 
 } // namespace oneflow
