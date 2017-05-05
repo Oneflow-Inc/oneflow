@@ -12,18 +12,13 @@ public:
   using NetworkMemory::size_;
   using NetworkMemory::descriptor_;
 
-  explicit Memory(ibv_mr* memory_region) {
-    memory_region_ = memory_region;
-  }
+  Memory() = default;
+  explicit Memory(ibv_mr* memory_region);
 
   //Register as RDMA memory region
-  void Register() override {
-    
-  }
+  void Register() override;
 
-  void Unregister() override {
-
-  }
+  void Unregister() override;
 
   const void* sge() const override { return &sge_; }
 
