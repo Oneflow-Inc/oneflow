@@ -18,7 +18,7 @@ class ConnectionPool {
 
  private:
   int32_t conn_num_;
-  std::unordered_map<int32_t, Connection*> connection_dict_;
+  std::unordered_map<uint64_t, Connection*> connection_dict_;
   ConnectionPool(const ConnectionPool& other) = delete;
   Connection& operator=(const ConnectionPool& other) = delete;
 };
