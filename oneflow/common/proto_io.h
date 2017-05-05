@@ -43,15 +43,17 @@ DECLARE_GET_VAL_FROM_PBMESSAGE(uint64_t, UInt64);
 
 #undef DECLARE_GET_VAL_FROM_PBMESSAGE
 
-#define REDEFINE_PBTYPE(type, name) \
+// Alias PbType
+
+#define ALIAS_PB_TYPE(type, name) \
 using Pb##name = google::protobuf::type; \
 
-REDEFINE_PBTYPE(int32, Int32);
-REDEFINE_PBTYPE(int64, Int64);
-REDEFINE_PBTYPE(uint32, UInt32);
-REDEFINE_PBTYPE(uint64, UInt64);
+ALIAS_PB_TYPE(int32, Int32);
+ALIAS_PB_TYPE(int64, Int64);
+ALIAS_PB_TYPE(uint32, UInt32);
+ALIAS_PB_TYPE(uint64, UInt64);
 
-#undef REDEFINE_PBTYPE
+#undef ALIAS_PB_TYPE
 
 // PbVector <-> std::vector 
 inline std::vector<std::string> PbVec2StdVec(
