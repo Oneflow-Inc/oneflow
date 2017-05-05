@@ -81,7 +81,7 @@ target_link_libraries(of_ccobj ${oneflow_third_party_libs})
 add_dependencies(of_ccobj of_protoobj)
 
 if(APPLE)
-  set(of_libs -Wl,-all_load of_ccobj of_protoobj -Wl,-noall_load)
+  set(of_libs -Wl,-force_load of_ccobj of_protoobj)
 elseif(UNIX)
   set(of_libs -Wl,--whole-archive of_ccobj of_protoobj -Wl,--no-whole-archive)
 elseif(WIN32)
