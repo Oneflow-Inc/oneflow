@@ -14,7 +14,6 @@
 namespace oneflow {
 
 using PbMessage = google::protobuf::Message;
-using Pbuint64 = google::protobuf::uint64;
 template<typename T>
 using PbVector = google::protobuf::RepeatedPtrField<T>;
 template<typename T1, typename T2>
@@ -43,7 +42,17 @@ DECLARE_GET_VAL_FROM_PBMESSAGE(int64_t, Int64);
 DECLARE_GET_VAL_FROM_PBMESSAGE(uint64_t, UInt64);
 
 #undef DECLARE_GET_VAL_FROM_PBMESSAGE
- 
+
+#define REDEFINE_PBTYPE(type, name) \
+using Pb##name = google::protobuf::type; \
+
+REDEFINE_PBTYPE(int32, Int32);
+REDEFINE_PBTYPE(int64, Int64);
+REDEFINE_PBTYPE(uint32, UInt32);
+REDEFINE_PBTYPE(uint64, UInt64);
+
+#undef REDEFINE_PBTYPE
+
 // PbVector <-> std::vector 
 inline std::vector<std::string> PbVec2StdVec(
     const PbVector<std::string>& rpf) {

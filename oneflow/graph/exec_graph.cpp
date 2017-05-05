@@ -10,7 +10,7 @@ ExecNodeProto ExecNode::ToProto() const {
   exnode.set_id(node_id());
   exnode.set_op_name(op_->op_name());
   for (const std::pair<std::string, RegstDesc*>& bn_regst: bn_in_op2regst_) {
-    PbMapPair<std::string, Pbuint64> gmap_pair(bn_regst.first, 
+    PbMapPair<std::string, PbUInt64> gmap_pair(bn_regst.first, 
                                                bn_regst.second->regst_desc_id());
     exnode.mutable_bn_in_op2regst_desc_id()->insert(gmap_pair);
   }
