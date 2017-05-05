@@ -16,6 +16,8 @@ namespace oneflow {
 using PbMessage = google::protobuf::Message;
 template<typename T>
 using PbVector = google::protobuf::RepeatedPtrField<T>;
+template<typename T1, typename T2>
+using PbMapPair = google::protobuf::MapPair<T1, T2>;
 
 // Prototxt <-> String
 void ParseProtoFromString(const std::string& str, PbMessage* proto);
@@ -40,7 +42,19 @@ DECLARE_GET_VAL_FROM_PBMESSAGE(int64_t, Int64);
 DECLARE_GET_VAL_FROM_PBMESSAGE(uint64_t, UInt64);
 
 #undef DECLARE_GET_VAL_FROM_PBMESSAGE
- 
+
+// Alias PbType
+
+#define ALIAS_PB_TYPE(type, name) \
+using Pb##name = google::protobuf::type; \
+
+ALIAS_PB_TYPE(int32, Int32);
+ALIAS_PB_TYPE(int64, Int64);
+ALIAS_PB_TYPE(uint32, UInt32);
+ALIAS_PB_TYPE(uint64, UInt64);
+
+#undef ALIAS_PB_TYPE
+
 // PbVector <-> std::vector 
 inline std::vector<std::string> PbVec2StdVec(
     const PbVector<std::string>& rpf) {
