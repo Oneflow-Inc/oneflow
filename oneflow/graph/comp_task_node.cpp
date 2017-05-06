@@ -22,20 +22,24 @@ void CompTaskNode::DataFwBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   Lbn2NodeBnMap extern_in_lbn2consumer;
   FwBuildFromUserOps(&lbn2producer, &extern_in_lbn2consumer);
   mut_exec_gph().UpdateSourceAndSink();
-  // produced regsts
-  auto out_regst = RegstDescMgr::Singleton().CreateRegisterDesc();
+  // out regst
+  if (!out_edges().empty()) {
+    auto out_regst = RegstDescMgr::Singleton().CreateRegisterDesc();
+    BindProducedRegstAndOutEdge(out_regst.get(), SoleOutEdge());
+    EnrollProducedRegstDesc("out", std::move(out_regst));
+  }
+  // the other produced regsts
   auto activation_regst = RegstDescMgr::Singleton().CreateRegisterDesc();
   auto data_tmp_regst = RegstDescMgr::Singleton().CreateRegisterDesc();
   auto model_tmp_regst = RegstDescMgr::Singleton().CreateRegisterDesc();
   auto model_regst = RegstDescMgr::Singleton().CreateRegisterDesc();
-  // Bind Out Edge
-  BindProducedRegstAndOutEdge(out_regst.get(), SoleOutEdge());
+  auto log_regst = RegstDescMgr::Singleton().CreateRegisterDesc();
   // EnrollProducedRegstDesc
-  EnrollProducedRegstDesc("out", std::move(out_regst));
   EnrollProducedRegstDesc("activation", std::move(activation_regst));
   EnrollProducedRegstDesc("data_tmp", std::move(data_tmp_regst));
   EnrollProducedRegstDesc("model_tmp", std::move(model_tmp_regst));
   EnrollProducedRegstDesc("model", std::move(model_regst));
+  EnrollProducedRegstDesc("log", std::move(log_regst));
   // Enroll Lbn
   FwSetExecNodeFromInRegst(extern_in_lbn2consumer);
   FwEnrollLbn2OutRegst(lbn2producer);
@@ -190,6 +194,35 @@ void CompTaskNode::FwSetExecNodeFromInRegst(
 }
 
 void CompTaskNode::FwEnrollLbn2OutRegst(const Lbn2NodeBnMap& lbn2producer) {
+  if (IsLossNode()) {
+    FwEnrollLbn2OutRegstWhenLoss();
+  } else {
+    FwEnrollLbn2OutRegstWhenNotLoss(lbn2producer);
+  }
+}
+
+void CompTaskNode::FwEnrollLbn2OutRegstWhenLoss() {
+  ExecNode* exec_node = exec_gph().SoleNode();
+  // log regst
+  RegstDesc* log_regst = GetProducedRegstDesc("log");
+  for (const std::string& obn : exec_node->op()->output_bns()) {
+    log_regst->EnrollLbn(exec_node->op()->Lbn4BnInOp(obn));
+    exec_node->BindBnInOpAndRegst(obn, log_regst);
+  }
+  // out regst
+  if (!out_edges().empty()) {
+    RegstDesc* out_regst = GetRelatedRegst(SoleOutEdge());
+    for (const std::string& idbn : exec_node->op()->input_diff_bns()) {
+      std::string lbn = exec_node->op()->Lbn4BnInOp(idbn);
+      out_regst->EnrollLbn(lbn);
+      exec_node->BindBnInOpAndRegst(idbn, out_regst);
+    }
+  }
+}
+
+void CompTaskNode::FwEnrollLbn2OutRegstWhenNotLoss(
+    const Lbn2NodeBnMap& lbn2producer) {
+  if (out_edges().empty()) { return; }
   RegstDesc* out_regst = GetRelatedRegst(SoleOutEdge());
   for (const std::string& lbn : chain_node()->output_lbns()) {
     const std::pair<ExecNode*, std::string>& producer = lbn2producer.at(lbn);
@@ -255,7 +288,7 @@ void CompTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
 
 void CompTaskNode::BpInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
   // in_diff_regst
-  RegstDesc* in_diff_regst = GetRelatedRegst(SoleOutEdge());
+  RegstDesc* in_diff_regst = GetProducedRegstDesc("in_diff");
   RegstDesc* in_regst = GetRelatedRegst(GetFwNode()->SoleInEdge());
   in_diff_regst->CopyShapeFrom(in_regst);
   // model_diff_regst

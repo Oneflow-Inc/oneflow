@@ -56,6 +56,8 @@ class CompTaskNode : public TaskNode {
   void FwSetExecNodeFromInRegst(
       const Lbn2NodeBnMap& extern_in_lbn2consumer);
   void FwEnrollLbn2OutRegst(const Lbn2NodeBnMap& lbn2producer);
+  void FwEnrollLbn2OutRegstWhenLoss();
+  void FwEnrollLbn2OutRegstWhenNotLoss(const Lbn2NodeBnMap& lbn2producer);
   void FwEnrollLbn2ActivationRegst();
   void FwEnrollLbn2ModelAndTmpRegsts();
 

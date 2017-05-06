@@ -52,8 +52,10 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   }
 
   std::function<Shape*(const std::string&)> GetMutShapePtr4BnInOpFunc() const {
-    return [this](const std::string& bn_in_op) {
-      RegstDesc* regst = this->GetRegstFromBnInOp(bn_in_op);
+    return [this](const std::string& bn_in_op) -> Shape* {
+      auto it = this->bn_in_op2regst_.find(bn_in_op);
+      if (it == this->bn_in_op2regst_.end()) { return nullptr; }
+      RegstDesc* regst = it->second;
       const std::string& lbn = this->op()->Lbn4BnInOp(bn_in_op);
       return regst->GetMutShapePtr(lbn);
     };
