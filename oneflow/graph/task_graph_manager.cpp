@@ -49,6 +49,15 @@ void TaskGraphMgr::Init() {
     ordered_task_gphs_.emplace_back(load_gph);
     ordered_task_gphs_.emplace_back(save_gph);
   }
+  // all exec_graph 2 dot
+  for (const auto& task_gph : ordered_task_gphs_) {
+    for (const auto& task_node : task_gph->nodes()) {
+      std::string file_path = LogDir() + "/exec_";
+      file_path = file_path + typeid(*task_node).name() + "_";
+      file_path += task_node->node_id_str() + ".dot";
+      task_node->exec_gph().ToDotFile(file_path);
+    }
+  }
 }
 
 void TaskGraphMgr::InferShape4Regsts() {
