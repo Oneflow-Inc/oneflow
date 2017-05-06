@@ -25,15 +25,12 @@ void SetModelLoadChain(ChainNode* model_load_chain) {
 
 MdLoadTaskGraph::MdLoadTaskGraph(
     const ChainNode* update_chain,
-    const std::vector<CompTaskNode*>& sorted_update_tasks,
+    const HashMap<uint64_t, CompTaskNode*>& parallel_id2updt_task,
     ParallelPolicy policy,
     const std::string& dot_path_prefix) {
-  policy_ = policy;
+  mut_policy() = policy;
   BuildTaskGraph(update_chain, dot_path_prefix);
-  for (CompTaskNode* update_task : sorted_update_tasks) {
-    CHECK(parallel_id2updt_task_.emplace(
-          update_task->parallel_id(), update_task).second);
-  }
+  mut_parallel_id2updt_task() = parallel_id2updt_task;
   BuildExecAndEnrollLbn2Regsts();
 }
 

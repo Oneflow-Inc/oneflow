@@ -1,11 +1,11 @@
 #ifndef ONEFLOW_GRAPH_MODEL_SAVE_TASK_GRAPH_H_
 #define ONEFLOW_GRAPH_MODEL_SAVE_TASK_GRAPH_H_
 
-#include "graph/task_graph.h"
+#include "graph/model_load_save_task_graph.h"
 
 namespace oneflow {
 
-class MdSaveTaskGraph final : public TaskGraph {
+class MdSaveTaskGraph final : public MdLoadSaveTaskGraph {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MdSaveTaskGraph);
   MdSaveTaskGraph() = delete;
@@ -13,7 +13,9 @@ class MdSaveTaskGraph final : public TaskGraph {
 
   MdSaveTaskGraph(
       const ChainNode* update_chain,
-      const std::vector<CompTaskNode*>& sorted_update_tasks);
+      const HashMap<uint64_t, CompTaskNode*>& parallel_id2updt_task,
+      ParallelPolicy policy,
+      const std::string& dot_path_prefix);
 
   CompTaskNodeMemFunc Func4FwBuildExecAndEnrollLbn2Regsts() const override {
     return &CompTaskNode::MdSaveFwBuildExecAndEnrollLbn2Regsts;
@@ -23,9 +25,9 @@ class MdSaveTaskGraph final : public TaskGraph {
   }
 
  private:
-    void BuildTaskGraph(const ChainNode* update_chain);
-    void InitFaker2Mccoy(
-        const std::vector<CompTaskNode*>& sorted_updt_tasks);
+  void BuildTaskGraph(const ChainNode* update_chain,
+                      const std::string& dot_path_prefix);
+
 };
 
 } // namespace oneflow

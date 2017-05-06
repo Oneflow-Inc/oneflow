@@ -2,6 +2,7 @@
 #define ONEFLOW_OPERATOR_MODEL_SAVE_OP_H_
 
 #include "operator/operator.h"
+#include "register/register_desc.h"
 
 namespace oneflow {
 
@@ -15,6 +16,10 @@ class ModelSaveOp final : public SysOperator {
   const PbMessage& GetSpecialConf() const override;
 
  private:
+  std::string ibn2lbn(const std::string& ibn) const override {
+    return RegstDesc::kAllLbn;
+  }
+
 };
 
 } // namespace oneflow

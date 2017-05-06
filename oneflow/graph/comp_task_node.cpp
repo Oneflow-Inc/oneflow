@@ -123,11 +123,10 @@ void CompTaskNode::MdLoadFwInferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
 }
 
 void CompTaskNode::MdSaveFwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
-  TODO();
-  /*
+  auto md_save_gph = of_dynamic_cast<MdSaveTaskGraph*> (gph);
   if (IsFaker()) {
-    CompTaskNode* update_task = gph->faker2mccoy().at(this);
-    RegstDesc* model_regst = update_task->GetProducedRegstDesc("model");
+    CompTaskNode* updt = md_save_gph->parallel_id2updt_task().at(parallel_id());
+    RegstDesc* model_regst = updt->GetProducedRegstDesc("model");
     BindProducedRegstAndOutEdge(model_regst, SoleOutEdge());
     return;
   }
@@ -136,11 +135,10 @@ void CompTaskNode::MdSaveFwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   mut_exec_gph().UpdateSourceAndSink();
   const std::string& ibn = exec_node->op()->SoleIbn();
   exec_node->BindBnInOpAndRegst(ibn, GetRelatedRegst(SoleInEdge()));
-  */
 }
 
 void CompTaskNode::MdSaveFwInferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
-  TODO();
+  // do nothing
 }
 
 void CompTaskNode::FwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
