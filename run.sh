@@ -6,7 +6,7 @@ if [ $1 = "--withdot" ]
 then
   for dot_file in `ls ./log/*.dot`
   do
-    #echo "process ${dot_file}"
+    echo "process ${dot_file}"
     dot -Tpng -O $dot_file
   done
 fi
