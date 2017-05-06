@@ -20,11 +20,12 @@ class TaskGraphMgr {
   }
 
   void Init();
+  void InferShape4Regsts();
 
  private:
   TaskGraphMgr() = default;
 
-  std::vector<std::unique_ptr<TaskGraph>> task_gphs_;
+  std::vector<std::unique_ptr<TaskGraph>> ordered_task_gphs_;
 
 };
 

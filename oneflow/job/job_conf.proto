@@ -11,4 +11,5 @@ message JobConf {
   string strategy_filepath = 3;
   string model_load_machine = 4;
   string model_save_machine = 5;
+  uint32 batch_size = 6;
 }

@@ -10,6 +10,7 @@ void JobDesc::InitFromJobConf(const JobConf& conf) {
   ParseProtoFromTextFile(conf.strategy_filepath(), &strategy_);
   md_load_machine_ = conf.model_load_machine();
   md_save_machine_ = conf.model_save_machine();
+  piece_size_ = 0;
 }
 
 void JobDesc::InitFromProto(const JobDescProto&) {

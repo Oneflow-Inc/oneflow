@@ -97,11 +97,9 @@ message InnerProductOpConf {
 }
 
 message DataLoaderOpConf {
-  string data = 1;
-  ShapeProto data_shape = 2;
+  string feature = 1;
+  ShapeProto shape_of_one_feature_ins = 2;
   string label = 3;
-  ShapeProto label_shape = 4;
-  uint32 batch_size = 5;
 }
 
 message PoolingOpConf {
