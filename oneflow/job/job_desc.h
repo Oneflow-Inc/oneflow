@@ -29,6 +29,9 @@ class JobDesc final {
   const std::string& md_load_machine() { return md_load_machine_; }
   const std::string& md_save_machine() { return md_save_machine_; }
 
+  uint32_t piece_size() const { return piece_size_; }
+  void set_piece_size(uint32_t val) { piece_size_ = val; }
+
  private:
   JobDesc() = default;
 
@@ -37,6 +40,7 @@ class JobDesc final {
   Strategy strategy_;
   std::string md_load_machine_;
   std::string md_save_machine_;
+  uint32_t piece_size_;
 
 };
 

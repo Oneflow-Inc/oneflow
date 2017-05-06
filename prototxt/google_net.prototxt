@@ -3,7 +3,11 @@ name: "GoogleNet"
 op_conf {
   name: "mnist"
   data_loader_conf {
-    data: "data"
+    feature: "feature"
+    shape_of_one_feature_ins {
+      dim: 28
+      dim: 28
+    }
     label: "label"
   }
 }
@@ -11,7 +15,7 @@ op_conf {
 op_conf {
   name: "conv1"
   convolution_conf {
-    in: "mnist/data"
+    in: "mnist/feature"
     out: "out"
   }
 }

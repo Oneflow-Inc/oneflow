@@ -21,6 +21,9 @@ int main(int argc, char** argv) {
   JobDesc::Singleton().InitFromJobConf(job_conf);
   IDMgr::Singleton().InitFromResource(JobDesc::Singleton().resource());
   TaskGraphMgr::Singleton().Init();
+  // Debug
+  JobDesc::Singleton().set_piece_size(50);
+  TaskGraphMgr::Singleton().InferShape4Regsts();
   LOG(INFO) << "Compiler Shutting Down...";
   return 0;
 }

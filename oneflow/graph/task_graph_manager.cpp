@@ -3,14 +3,14 @@
 namespace oneflow {
 
 void TaskGraphMgr::Init() {
+  ordered_task_gphs_.clear();
   // data graph
-  task_gphs_.clear();
   LOG(INFO) << "Build DataTaskGraph";
   auto data_task_gph = new DataTaskGraph(
         JobDesc::Singleton().train_dlnet_conf(),
         JobDesc::Singleton().strategy(),
         true);
-  task_gphs_.emplace_back(data_task_gph);
+  ordered_task_gphs_.emplace_back(data_task_gph);
   // construct data_chain2sorted_bp_comp_tasks
   HashMap<const ChainNode*, std::vector<CompTaskNode*>>
       data_chain2sorted_bp_comp_tasks;
@@ -43,9 +43,15 @@ void TaskGraphMgr::Init() {
     auto save_gph = new MdSaveTaskGraph(
         updt_chain, parallel_id2updt_task, policy,
         dot_path_prefix + "model_save_");
-    task_gphs_.emplace_back(updt_gph);
-    task_gphs_.emplace_back(load_gph);
-    task_gphs_.emplace_back(save_gph);
+    ordered_task_gphs_.emplace_back(updt_gph);
+    ordered_task_gphs_.emplace_back(load_gph);
+    ordered_task_gphs_.emplace_back(save_gph);
+  }
+}
+
+void TaskGraphMgr::InferShape4Regsts() {
+  for (auto& task_gph : ordered_task_gphs_) {
+    task_gph->InferShapeOfBlobsInProducedRegsts();
   }
 }
 
