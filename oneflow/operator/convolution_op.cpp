@@ -49,8 +49,8 @@ void ConvolutionOp::InferShape4FwBlobs(
   Shape* weight = GetShapePtr4BnInOp(model_bns().at(0));
   Shape* bias  = GetShapePtr4BnInOp(model_bns().at(1));
   Shape* biasmult_shape_ptr = GetShapePtr4BnInOp(model_tmp_bns().at(0));
-  *weight = Shape({c_o, c_i * kernel_size});
-  *bias = Shape({c_o});
+  *weight = Shape({1, c_o, c_i * kernel_size});
+  *bias = Shape({1, c_o});
   *biasmult_shape_ptr = Shape({output_size});
 }
 
