@@ -19,7 +19,7 @@ TEST(MultinomialLogisticLossOp, test_loss_op) {
 
   HashMap<std::string, Shape*> bn2shape_ptr{
     {loss_op->input_bns().at(0), new Shape({500, 3*256*256*256, 1, 1})},
-    {loss_op->input_bns().at(1), new Shape({500, 3*256*256*256, 1, 1})},
+    {loss_op->input_bns().at(1), new Shape({500, 1, 1, 1})},
     {loss_op->input_diff_bns().at(0), new Shape},
     {loss_op->input_diff_bns().at(1), new Shape},
     {loss_op->SoleObn(), new Shape},
