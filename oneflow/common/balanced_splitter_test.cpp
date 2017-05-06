@@ -13,6 +13,13 @@ TEST(BalancedSplitter, split_20_to_6_part) {
   ASSERT_TRUE(splitter.At(5) == Range(17, 20));
 }
 
+TEST(BalancedSplitter, split_2_to_3_part) {
+  BalancedSplitter splitter(2, 3);
+  ASSERT_TRUE(splitter.At(0) == Range(0, 1));
+  ASSERT_TRUE(splitter.At(1) == Range(1, 2));
+  ASSERT_TRUE(splitter.At(2) == Range(2, 2));
+}
+
 } // namespace oneflow
 
 int main(int argc, char **argv) {

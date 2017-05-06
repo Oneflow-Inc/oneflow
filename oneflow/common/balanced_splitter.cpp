@@ -4,7 +4,6 @@
 namespace oneflow {
 
 BalancedSplitter::BalancedSplitter(int64_t total_num, int64_t split_num) {
-  CHECK_GE(total_num, split_num);
   size_per_range_ = total_num / split_num;
   change_pos_ = total_num % split_num;
   split_num_ = split_num;
