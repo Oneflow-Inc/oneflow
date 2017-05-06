@@ -49,6 +49,8 @@ void TaskNode::TakeOverRegstDesc(TaskNode* rhs,
   std::unique_ptr<RegstDesc> this_regst;
   auto rhs_regst_it = rhs->produced_regst_descs_.find(regst_desc_name);
   this_regst.swap(rhs_regst_it->second);
+  this_regst->SetProducer(this);
+  this_regst->set_regst_desc_id(IDMgr::Singleton().NewRegstDescId(task_id_));
   rhs->produced_regst_descs_.erase(rhs_regst_it);
   CHECK(rhs->forwarded_regst_descs_.emplace(regst_desc_name,
                                             this_regst.get()).second);
@@ -89,6 +91,24 @@ void TaskNode::EnrollProducedRegstDesc(
   regst_desc->SetProducer(this);
   regst_desc->set_regst_desc_id(IDMgr::Singleton().NewRegstDescId(task_id_));
   CHECK(produced_regst_descs_.emplace(regst_desc_name, std::move(regst_desc)).second);
+}
+
+TaskProto TaskNode::ToProto() const {
+  TaskProto task_proto;
+  task_proto.set_id(task_id_);
+  task_proto.set_machine_id(stage_node_->machine_id());
+  task_proto.set_thrd_local_id(thrd_loc_id_);
+  task_proto.set_is_forward(is_fw_node_);
+  *task_proto.mutable_exec_graph() = exec_gph_.ToProto();
+  for (const auto& pair : produced_regst_descs_) {
+    task_proto.mutable_produced_regst_desc_ids()->Add(
+        pair.second->regst_desc_id());
+  }
+  for (const auto& pair : subscribed_regst_descs_) {
+    task_proto.mutable_subscribed_regst_desc_ids()->Add(
+        pair.second->regst_desc_id());
+  }
+  return task_proto;
 }
 
 } // namespace oneflow

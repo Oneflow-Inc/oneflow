@@ -24,7 +24,9 @@ void TaskGraphMgr::Init() {
   }
   // model graph
   for (const auto& pair : data_chain2sorted_bp_comp_tasks) {
-    const std::string dot_path_prefix = LogDir() + "/" + NewUniqueId() + "_";
+    std::string chain_tag = pair.first->op_vec().front()->op_name();
+    str_replace(&chain_tag, '/', '_');
+    const std::string dot_path_prefix = LogDir() + "/" + chain_tag + "_";
     ParallelPolicy policy = pair.first->parallel_desc()->policy();
     // model update
     auto updt_gph = new MdUpdtTaskGraph(
@@ -46,6 +48,15 @@ void TaskGraphMgr::Init() {
     ordered_task_gphs_.emplace_back(updt_gph);
     ordered_task_gphs_.emplace_back(load_gph);
     ordered_task_gphs_.emplace_back(save_gph);
+  }
+  // all exec_graph 2 dot
+  for (const auto& task_gph : ordered_task_gphs_) {
+    for (const auto& task_node : task_gph->nodes()) {
+      std::string file_path = LogDir() + "/exec_";
+      file_path = file_path + typeid(*task_node).name() + "_";
+      file_path += task_node->node_id_str() + ".dot";
+      task_node->exec_gph().ToDotFile(file_path);
+    }
   }
 }
 

@@ -81,6 +81,14 @@ inline std::string LogDir() {
   return log_dir;
 }
 
+inline void str_replace(std::string* str, char old_ch, char new_ch) {
+  for (size_t i = 0; i < str->size(); ++i) {
+    if (str->at(i) == old_ch) {
+      str->at(i) = new_ch;
+    }
+  }
+}
+
 } // namespace oneflow
 
 #endif // ONEFLOW_COMMON_UTIL_H

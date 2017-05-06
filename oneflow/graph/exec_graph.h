@@ -59,7 +59,7 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
     };
   }
   
-  std::string VisualStr() const { TODO(); }
+  std::string VisualStr() const { return op_->op_name(); }
   
   ExecNodeProto ToProto() const;
 
