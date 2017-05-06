@@ -36,6 +36,7 @@ void ConcatOp::InferShape4FwBlobs(
       }
     }
   }
+  CHECK_EQ(vec.size(), GetShapePtr4BnInOp(input_bns().at(0))->NumAxes());
   *GetShapePtr4BnInOp(SoleObn()) = Shape(vec);
 }
 
