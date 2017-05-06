@@ -37,29 +37,19 @@ void InnerProductOp::InferShape4FwBlobs(
 
   // output bn
   Shape* out_shape_ptr = GetShapePtr4BnInOp(SoleObn());
-  *out_shape_ptr = *in_shape_ptr;
-  out_shape_ptr->Set(1, out_num);
-  for (int32_t i = 2; i < out_shape_ptr->NumAxes(); ++i) {
-    out_shape_ptr->Set(i, 1);
-  }
+  *out_shape_ptr = Shape({in_shape_ptr->At(0), out_num});
 
   // model bn
   CHECK_EQ(model_bns().size(), 2);
   Shape* weight_shape_ptr = GetShapePtr4BnInOp(model_bns().at(0));
   Shape* bias_shape_ptr = GetShapePtr4BnInOp(model_bns().at(1));
-  *weight_shape_ptr = Shape(std::vector<int64_t>(in_shape_ptr->NumAxes(), 1));
-  weight_shape_ptr->Set(0, out_num);
-  weight_shape_ptr->Set(1, in_shape_ptr->Count(1));
-
-  *bias_shape_ptr = Shape(std::vector<int64_t>(in_shape_ptr->NumAxes(), 1));
-  bias_shape_ptr->Set(1, out_num);
+  *weight_shape_ptr = Shape({1, out_num, in_shape_ptr->Count(1)});
+  *bias_shape_ptr = Shape({1, 1, out_num});
 
   // model tmp bn
   CHECK_EQ(model_tmp_bns().size(), 1);
   Shape* bias_multiplier_shape_ptr = GetShapePtr4BnInOp(model_tmp_bns().at(0));
-  *bias_multiplier_shape_ptr = Shape(
-      std::vector<int64_t>(bias_shape_ptr->NumAxes(), 1));
-  bias_multiplier_shape_ptr->Set(0, in_shape_ptr->At(0));
+  *bias_multiplier_shape_ptr = Shape({1, in_shape_ptr->At(0), 1});
 }
 
 REGISTER_OP(OperatorConf::kInnerproductConf, InnerProductOp);
