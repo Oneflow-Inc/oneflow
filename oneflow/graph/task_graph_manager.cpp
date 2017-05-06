@@ -24,7 +24,9 @@ void TaskGraphMgr::Init() {
   }
   // model graph
   for (const auto& pair : data_chain2sorted_bp_comp_tasks) {
-    const std::string dot_path_prefix = LogDir() + "/" + NewUniqueId() + "_";
+    std::string chain_tag = pair.first->op_vec().front()->op_name();
+    str_replace(&chain_tag, '/', '_');
+    const std::string dot_path_prefix = LogDir() + "/" + chain_tag + "_";
     ParallelPolicy policy = pair.first->parallel_desc()->policy();
     // model update
     auto updt_gph = new MdUpdtTaskGraph(
