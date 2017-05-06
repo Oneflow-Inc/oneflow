@@ -18,6 +18,11 @@ class CompTaskNode : public TaskNode {
   bool IsLossNode() const { return chain_node()->IsLossNode(); }
   bool IsFaker() const { return chain_node()->IsFaker(); }
   std::string VisualStr() const override;
+  virtual TaskProto ToProto() const override {
+    TaskProto task_proto = TaskNode::ToProto();
+    task_proto.set_parallel_id(parallel_id_);
+    return task_proto;
+  }
 
   // Build Exec and Set Produced Regsts
   void DataFwBuildExecAndEnrollLbn2Regsts(TaskGraph*);
@@ -78,6 +83,12 @@ class HostCompTaskNode final : public CompTaskNode {
   HostCompTaskNode() = default;
   ~HostCompTaskNode() = default;
 
+  TaskProto ToProto() const override {
+    TaskProto task_proto = CompTaskNode::ToProto();
+    task_proto.set_type(TaskType::HostCompTask);
+    return task_proto;
+  }
+
  private:
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return of_make_unique<HostCompTaskNode> ();
@@ -94,6 +105,12 @@ class DeviceCompTaskNode final : public CompTaskNode {
   DeviceCompTaskNode() = default;
   ~DeviceCompTaskNode() = default;
   
+  TaskProto ToProto() const override {
+    TaskProto task_proto = CompTaskNode::ToProto();
+    task_proto.set_type(TaskType::DeviceCompTask);
+    return task_proto;
+  };
+
  private:
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return of_make_unique<DeviceCompTaskNode> ();

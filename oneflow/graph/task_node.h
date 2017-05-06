@@ -62,7 +62,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   RegstDesc* GetProducedRegst4OutEdge(const TaskEdge*) const;
 
   //
-  virtual TaskProto ToProto() const { TODO(); }
+  virtual TaskProto ToProto() const;
   virtual std::string VisualStr() const override {
     std::stringstream ss;
     ss << (is_fw_node_ ? "Fw" : "Bp");
@@ -92,6 +92,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   ExecGraph exec_gph_;
 
   HashMap<std::string, std::unique_ptr<RegstDesc>> produced_regst_descs_;
+  HashMap<std::string, std::unique_ptr<RegstDesc>> subscribed_regst_descs_;
   HashMap<std::string, const RegstDesc*> forwarded_regst_descs_;
 
   HashMap<RegstDesc*, const TaskEdge*> produced_regst2out_edge;
