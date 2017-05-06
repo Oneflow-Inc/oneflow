@@ -38,11 +38,11 @@ TEST(MultinomialLogisticLossOp, test_loss_op) {
   Shape* prediction_diff_shape_ptr = 
     bn2shape_ptr.at(loss_op->input_diff_bns().at(0));
   ASSERT_EQ(*prediction_diff_shape_ptr, 
-      *bn2shape_ptr.at(loss_op->input_bns().at(0)));
+            *bn2shape_ptr.at(loss_op->input_bns().at(0)));
   Shape* label_diff_shape_ptr = 
     bn2shape_ptr.at(loss_op->input_diff_bns().at(1));
   ASSERT_EQ(*label_diff_shape_ptr, 
-      *bn2shape_ptr.at(loss_op->input_bns().at(1)));
+            *bn2shape_ptr.at(loss_op->input_bns().at(1)));
 }
 
 }  // namespace oneflow

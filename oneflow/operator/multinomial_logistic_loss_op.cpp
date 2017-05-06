@@ -26,7 +26,7 @@ void MultinomialLogisticLossOp::InferShape4FwBlobs(
     uint64_t parallel_num) const {
   *GetShapePtr4BnInOp(SoleObn()) = Shape({1});
   *GetShapePtr4BnInOp(SoleDtbn()) = Shape({1});
-  for (size_t i = 0;i < input_diff_bns().size();++ i) {
+  for (size_t i = 0;i < input_diff_bns().size(); ++i) {
     Shape* input_diff_shape_ptr = GetShapePtr4BnInOp(input_diff_bns().at(i));
     if (input_diff_shape_ptr != nullptr) {
       *input_diff_shape_ptr = *GetShapePtr4BnInOp(input_bns().at(i));
