@@ -43,7 +43,6 @@ void TaskGraphMgr::Init() {
     auto save_gph = new MdSaveTaskGraph(
         updt_chain, parallel_id2updt_task, policy,
         dot_path_prefix + "model_save_");
-    LOG(FATAL) << "checkpoint";
     task_gphs_.emplace_back(updt_gph);
     task_gphs_.emplace_back(load_gph);
     task_gphs_.emplace_back(save_gph);
