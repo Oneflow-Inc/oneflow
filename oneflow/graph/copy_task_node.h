@@ -42,6 +42,12 @@ class CopyHDTaskNode final : public CopyTaskNode {
     return TaskNode::VisualStr() + "CopyHD";
   }
   
+  TaskProto ToProto() const override {
+    TaskProto task_proto = TaskNode::ToProto();
+    task_proto.set_type(TaskType::CopyHdTask);
+    return task_proto;
+  };
+
  private:
   std::shared_ptr<const Operator> ConstructOp() const override;
 
@@ -77,6 +83,12 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
   std::string VisualStr() const override {
     return TaskNode::VisualStr() + "CommNet";
   }
+
+  TaskProto ToProto() const override {
+    TaskProto task_proto = TaskNode::ToProto();
+    task_proto.set_type(TaskType::CommNetTask);
+    return task_proto;
+  };
 
  private:
   std::shared_ptr<const Operator> ConstructOp() const override;
