@@ -33,6 +33,9 @@ class RegstDesc final {
   HashMap<std::string, std::unique_ptr<Shape>>& mut_lbn2shape() {
     return lbn2shape_;
   }
+  const HashMap<std::string, std::unique_ptr<Shape>>& lbn2shape() const {
+    return lbn2shape_;
+  }
 
   static const char* kAllLbn;
 

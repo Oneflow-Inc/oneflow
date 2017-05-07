@@ -97,11 +97,12 @@ void BoxingTaskNode::FwSortEdgesInnerStage(
 void BoxingTaskNode::FwBuildChainSortedEdgesPair(
     const ChainEdgesPair& chain_sorted_in_edges,
     const ChainEdgesPair& chain_sorted_out_edges) {
+  // useful vars
   const ChainNode* in_chain = chain_sorted_in_edges.first;
   const auto& sorted_in_edges = chain_sorted_in_edges.second;
   const ChainNode* out_chain = chain_sorted_out_edges.first;
   const auto& sorted_out_edges = chain_sorted_out_edges.second;
-
+  // 4 case
   ParallelPolicy in_policy = in_chain->parallel_desc()->policy();
   ParallelPolicy out_policy = out_chain->parallel_desc()->policy();
   void (*CompleteBoxOp)(BoxingOpConf*);
@@ -114,20 +115,35 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
   } else {
     CompleteBoxOp = &FwCompleteBoxOpConfModelModel;
   }
-
-  RegstDesc* middle_regst = GetProducedRegstDesc("middle");
-  std::vector<std::string> lbns = FindLbnsBetween(in_chain, out_chain);
-  for (const std::string& lbn : lbns) {
-    // Construct Op
+  // func 4 construct boxing_op in this node
+  auto ConstructBoxingOp = [in_num = sorted_in_edges.size(),
+                            out_num = sorted_out_edges.size(),
+                            &CompleteBoxOp]
+                           (const std::string& lbn) {
     OperatorConf op_conf;
     op_conf.set_name("boxing_op_" + NewUniqueId());
     BoxingOpConf* box_conf = op_conf.mutable_boxing_conf();
     box_conf->set_lbn(lbn);
-    box_conf->set_in_num(sorted_in_edges.size());
-    box_conf->set_out_num(sorted_out_edges.size());
+    box_conf->set_in_num(in_num);
+    box_conf->set_out_num(out_num);
     CompleteBoxOp(box_conf);
+    return OpMgr::Singleton().ConstructOp(op_conf);
+  };
+  // lbns
+  std::vector<std::string> lbns = FindLbnsBetween(in_chain, out_chain);
+  if (lbns.at(0) == RegstDesc::kAllLbn) {
+    CHECK_EQ(lbns.size(), 1);
+    lbns.clear();
+    RegstDesc* in_regst_0 = GetRelatedRegst(sorted_in_edges.at(0));
+    for (const auto& pair : in_regst_0->lbn2shape()) {
+      lbns.push_back(pair.first);
+    }
+  }
+  // Enroll Lbn
+  RegstDesc* middle_regst = GetProducedRegstDesc("middle");
+  for (const std::string& lbn : lbns) {
     ExecNode* node = mut_exec_gph().NewNode();
-    node->mut_op() = OpMgr::Singleton().ConstructOp(op_conf);
+    node->mut_op() = ConstructBoxingOp(lbn);
     // ibn
     for (size_t i = 0; i < sorted_in_edges.size(); ++i) {
       RegstDesc* in_regst = GetRelatedRegst(sorted_in_edges.at(i));
@@ -138,14 +154,12 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
     for (size_t i = 0; i < sorted_out_edges.size(); ++i) {
       RegstDesc* out_regst = GetRelatedRegst(sorted_out_edges.at(i));
       const std::string& obn = node->op()->output_bns().at(i);
-      std::string lbn = node->op()->Lbn4BnInOp(obn);
       out_regst->EnrollLbn(lbn);
       node->BindBnInOpAndRegst(obn, out_regst);
     }
     // dtbn
     for (const std::string& dtbn : node->op()->data_tmp_bns()) {
-      std::string lbn = node->op()->Lbn4BnInOp(dtbn);
-      middle_regst->EnrollLbn(lbn);
+      middle_regst->EnrollLbn(node->op()->Lbn4BnInOp(dtbn));
       node->BindBnInOpAndRegst(dtbn, middle_regst);
     }
   }

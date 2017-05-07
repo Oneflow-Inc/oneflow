@@ -48,6 +48,7 @@ void TaskNode::TakeOverRegstDesc(TaskNode* rhs,
                                  const std::string& regst_desc_name) {
   std::unique_ptr<RegstDesc> this_regst;
   auto rhs_regst_it = rhs->produced_regst_descs_.find(regst_desc_name);
+  CHECK_EQ(produced_regst2out_edge.count(rhs_regst_it->second.get()), 0);
   this_regst.swap(rhs_regst_it->second);
   this_regst->SetProducer(this);
   this_regst->set_regst_desc_id(IDMgr::Singleton().NewRegstDescId(task_id_));
