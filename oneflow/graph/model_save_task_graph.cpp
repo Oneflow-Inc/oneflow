@@ -23,10 +23,12 @@ void SetModelSaveChain(ChainNode* model_save_chain) {
 } // namespace
 
 MdSaveTaskGraph::MdSaveTaskGraph(
+    const std::string& name,
     const ChainNode* update_chain,
     const HashMap<uint64_t, CompTaskNode*>& parallel_id2updt_task,
     ParallelPolicy policy,
     const std::string& dot_path_prefix) {
+  mut_name() = name;
   mut_policy() = policy;
   mut_parallel_id2updt_task() = parallel_id2updt_task;
   BuildTaskGraph(update_chain, dot_path_prefix);

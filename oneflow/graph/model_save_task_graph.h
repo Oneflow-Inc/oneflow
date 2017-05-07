@@ -12,6 +12,7 @@ class MdSaveTaskGraph final : public MdLoadSaveTaskGraph {
   ~MdSaveTaskGraph() = default;
 
   MdSaveTaskGraph(
+      const std::string& name,
       const ChainNode* update_chain,
       const HashMap<uint64_t, CompTaskNode*>& parallel_id2updt_task,
       ParallelPolicy policy,

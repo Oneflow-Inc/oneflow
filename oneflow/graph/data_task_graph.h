@@ -11,9 +11,11 @@ class DataTaskGraph final : public TaskGraph {
   DataTaskGraph() = delete;
   ~DataTaskGraph() = default;
   
-  DataTaskGraph(const DLNetConf& dl_net_conf,
+  DataTaskGraph(const std::string& name,
+                const DLNetConf& dl_net_conf,
                 const Strategy& strategy_conf,
                 bool need_bp) {
+    mut_name() = name;
     LogicalGraph logical_gph(dl_net_conf, strategy_conf, LogDir() + "/logical_graph.dot");
     auto chain_gph = of_make_unique<ChainGraph> (&logical_gph, LogDir() + "/data_chain_graph.dot");
     BuildFromChainGph(std::move(chain_gph), need_bp, LogDir() + "/data_");

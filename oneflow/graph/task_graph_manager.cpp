@@ -7,6 +7,7 @@ void TaskGraphMgr::Init() {
   // data graph
   LOG(INFO) << "Build DataTaskGraph";
   auto data_task_gph = new DataTaskGraph(
+        "data",
         JobDesc::Singleton().train_dlnet_conf(),
         JobDesc::Singleton().strategy(),
         true);
@@ -30,6 +31,7 @@ void TaskGraphMgr::Init() {
     ParallelPolicy policy = pair.first->parallel_desc()->policy();
     // model update
     auto updt_gph = new MdUpdtTaskGraph(
+        "md_updt_" + chain_tag,
         pair.first, pair.second, dot_path_prefix + "model_update_");
     ChainNode* updt_chain = updt_gph->chain_gph()->SoleSinkNode();
     auto sorted_updt_tasks = updt_gph->SortedCompTasksInChain(updt_chain);
@@ -40,9 +42,11 @@ void TaskGraphMgr::Init() {
     }
     // model load save
     auto load_gph = new MdLoadTaskGraph(
+        "md_load_" + chain_tag,
         updt_chain, parallel_id2updt_task, policy,
         dot_path_prefix + "model_load_");
     auto save_gph = new MdSaveTaskGraph(
+        "md_save_" + chain_tag,
         updt_chain, parallel_id2updt_task, policy,
         dot_path_prefix + "model_save_");
     ordered_task_gphs_.emplace_back(updt_gph);
@@ -63,6 +67,7 @@ void TaskGraphMgr::Init() {
 void TaskGraphMgr::InferShape4Regsts() {
   for (auto& task_gph : ordered_task_gphs_) {
     task_gph->InferShapeOfBlobsInProducedRegsts();
+    break; // TODO: delete it
   }
 }
 

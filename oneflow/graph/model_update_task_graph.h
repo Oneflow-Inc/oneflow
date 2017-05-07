@@ -12,6 +12,7 @@ class MdUpdtTaskGraph final : public TaskGraph {
   ~MdUpdtTaskGraph() = default;
 
   MdUpdtTaskGraph(
+      const std::string& name,
       const ChainNode* data_chain,
       const std::vector<CompTaskNode*>& sorted_bp_comptasks4data_chain,
       const std::string& dot_path_prefix);

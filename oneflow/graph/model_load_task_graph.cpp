@@ -24,10 +24,12 @@ void SetModelLoadChain(ChainNode* model_load_chain) {
 } // namespace
 
 MdLoadTaskGraph::MdLoadTaskGraph(
+    const std::string& name,
     const ChainNode* update_chain,
     const HashMap<uint64_t, CompTaskNode*>& parallel_id2updt_task,
     ParallelPolicy policy,
     const std::string& dot_path_prefix) {
+  mut_name() = name;
   mut_policy() = policy;
   BuildTaskGraph(update_chain, dot_path_prefix);
   mut_parallel_id2updt_task() = parallel_id2updt_task;

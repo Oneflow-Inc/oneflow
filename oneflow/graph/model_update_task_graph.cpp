@@ -4,9 +4,11 @@
 namespace oneflow {
 
 MdUpdtTaskGraph::MdUpdtTaskGraph(
+    const std::string& name,
     const ChainNode* data_chain,
     const std::vector<CompTaskNode*>& sorted_bp_comptasks4data_chain,
     const std::string& dot_path_prefix) {
+  mut_name() = name;
   BuildTaskGraph(data_chain, dot_path_prefix);
   for (CompTaskNode* bp_task : sorted_bp_comptasks4data_chain) {
     CHECK(parallel_id2bp_task_.emplace(bp_task->parallel_id(), bp_task).second);

@@ -28,12 +28,16 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   virtual CompTaskNodeMemFunc Func4FwBuildExecAndEnrollLbn2Regsts() const = 0;
   virtual CompTaskNodeMemFunc Func4FwInferShapeOfBlobsInProducedRegsts() const = 0;
 
+  const std::string& name() const { return name_; }
+
  protected:
   TaskGraph() = default;
   void BuildFromChainGph(std::unique_ptr<ChainGraph>&& chain_gph,
                          bool need_bp,
                          const std::string& dot_filepath_prefix);
   void BuildExecAndEnrollLbn2Regsts();
+
+  std::string& mut_name() { return name_; }
 
  private:
   void BuildFromStageGph(bool need_bp,
@@ -74,7 +78,7 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   void BuildBpStruct();
 
   std::unique_ptr<const StageGraph> stage_gph_;
-  
+  std::string name_; 
 
 };
 
