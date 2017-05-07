@@ -37,6 +37,16 @@ class RegstDesc final {
     return lbn2shape_;
   }
 
+  std::string DebugString() const {
+    std::stringstream ss;
+    ss << "{";
+    for (const auto& pair : lbn2shape_) {
+      ss << "{" << pair.first << ":" << pair.second->ToString() << "}"; 
+    }
+    ss << "}";
+    return ss.str();
+  }
+
   static const char* kAllLbn;
 
  private:

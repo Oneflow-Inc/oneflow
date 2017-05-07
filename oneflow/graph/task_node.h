@@ -69,6 +69,15 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
     ss << node_id_str() << "_";
     return ss.str();
   }
+  std::string DebugString() const {
+    std::stringstream ss;
+    ss << "{" << node_id_str() << "\t";
+    for (const auto& pair : produced_regst_descs_) {
+      ss << "{" << pair.first << ":" << pair.second->DebugString() << "}"; 
+    }
+    ss << "}";
+    return ss.str();
+  }
   
  protected:
   virtual std::unique_ptr<TaskNode> CreateSameTypeNode() const = 0;

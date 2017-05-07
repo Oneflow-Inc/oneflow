@@ -56,7 +56,6 @@ placement_group {
     op_name: "relu1"
     op_name: "ip2"
     op_name: "softmax1"
-    op_name: "loss1"
   }
   parallel_conf {
     policy: kModelParallel
@@ -76,6 +75,7 @@ placement_group {
     op_name: "relu3"
     op_name: "ip4"
     op_name: "softmax2"
+    op_name: "loss1"
     op_name: "loss2"
   }
   parallel_conf {

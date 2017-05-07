@@ -17,10 +17,11 @@ ShapeProto Shape::ToProto() const {
 
 std::string Shape::ToString() const {
   std::stringstream ss;
+  ss << "{";
   for (int64_t dim : dim_vec_) {
-    ss << dim << " ";
+    ss << dim << ",";
   }
-  ss << "(" << elem_cnt_ << ")";
+  ss << "(" << elem_cnt_ << ")}";
   return ss.str();
 }
 

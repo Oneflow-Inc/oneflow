@@ -28,7 +28,7 @@ void DataLoaderOp::InferShape4FwBlobs(
   // feature shape
   Shape feature_shape_of_one_ins(op_conf->shape_of_one_feature_ins());
   std::vector<int64_t> feature_shape = {piece_size};
-  feature_shape.insert(feature_shape.begin(),
+  feature_shape.insert(feature_shape.end(),
                        feature_shape_of_one_ins.dim_vec().begin(),
                        feature_shape_of_one_ins.dim_vec().end());
   *GetShapePtr4BnInOp("feature") = Shape(feature_shape);
