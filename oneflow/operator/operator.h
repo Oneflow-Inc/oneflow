@@ -3,9 +3,11 @@
 
 #include <string>
 #include "operator/op_conf.pb.h"
+#include "job/strategy.pb.h"
 #include "common/shape.h"
 #include "common/proto_io.h"
 #include "common/util.h"
+#include "operator/operator.pb.h"
 
 namespace oneflow {
 
@@ -18,11 +20,14 @@ class Operator {
   Operator() = default;
   virtual ~Operator() = default;
 
-  // 
-  virtual void Init(const OperatorConf& op_conf) = 0;
+  //
+  virtual void InitFromOpConf(const OperatorConf& op_conf) = 0;
   virtual bool IsElemWise() const { return false; }
   virtual bool IsLossOp() const { return false; }
-
+  //
+  virtual void InitFromOperatorProto(const OperatorProto& operatorproto);
+  virtual OperatorProto ToOperatorProto();
+  
   // bn_in_op2lbn
   std::string dtbn2lbn(const std::string& data_tmp_bn) const;
   std::string idbn2lbn(const std::string& input_diff_bn) const;
@@ -39,9 +44,10 @@ class Operator {
   }
   
   // Getters
-  const std::string& op_name() const { return op_name_; }
-  std::string GetValueFromPbOpConf(const std::string& k) const;
-
+  virtual const std::string& op_name() const { return op_conf_.OperatorConf::name(); }
+  virtual const OperatorConf& op_conf() const { return op_conf_; }
+  virtual std::string GetValueFromPbOpConf(const std::string& k) const = 0;
+  
   const std::string& SoleIbn() const {
     CHECK_EQ(input_bns_.size(), 1);
     return *(input_bns_.begin());
@@ -72,12 +78,13 @@ class Operator {
   void SetShapePtr(const std::string& bn_in_op, Shape* ptr) const;
   void SetNull4AllShapePtr() const;
   virtual void InferShape4ObAndDtbFromIb() const = 0;
-  virtual void InferShape4Mtb() const = 0;
-  virtual void InferShape4Mdb() const = 0;
+  virtual void InferShape4Mtb(ParallelPolicy, uint64_t parallel_id) const = 0;
+  virtual void InferShape4Mdb(ParallelPolicy, uint64_t parallel_id) const = 0;
 
  protected:
-  std::string& mut_op_name() { return op_name_; }
-  std::unique_ptr<PbMessage>& mut_pb_op_conf() { return pb_op_conf_; }
+  OperatorConf& mut_op_conf() {
+    return op_conf_;
+  }
   virtual std::string normal_ibn2lbn(const std::string& input_bn) const = 0;
   
   // enroll data blobs
@@ -95,10 +102,9 @@ class Operator {
  private:
   void EnrollBn(std::vector<std::string>* bn_vec, const std::string& bn);
 
-  std::string op_name_;
-  std::unique_ptr<PbMessage> pb_op_conf_;
+  OperatorConf op_conf_;
 
-  std::unordered_map<std::string, std::string> special_ibn2lbn_;
+  HashMap<std::string, std::string> special_ibn2lbn_;
 
   // blob name in op
   std::vector<std::string> data_tmp_bns_;
@@ -106,6 +112,7 @@ class Operator {
   std::vector<std::string> input_diff_bns_;
   std::vector<std::string> output_bns_;
   std::vector<std::string> output_diff_bns_;
+
   std::vector<std::string> model_bns_;
   std::vector<std::string> model_diff_bns_;
   std::vector<std::string> model_tmp_bns_;
@@ -133,20 +140,25 @@ class SysOperator : public Operator {
   SysOperator() = default;
   virtual ~SysOperator() = default;
   
-  #define SET_UNEXPECTED(func_name) \
+  #define SET_INSIGNIFICANT(func_name) \
   virtual std::string func_name(const std::string&) const override { \
-    UNEXPECTED_RUN(); \
+    LOG(FATAL) << #func_name << " is insignificant for " \
+               << typeid(*this).name(); \
   }
   
-  SET_UNEXPECTED(normal_ibn2lbn);
-  SET_UNEXPECTED(obn2lbn);
-  SET_UNEXPECTED(mtbn2lbn);
-  SET_UNEXPECTED(mbn2lbn);
+  SET_INSIGNIFICANT(normal_ibn2lbn);
+  SET_INSIGNIFICANT(obn2lbn);
+  SET_INSIGNIFICANT(mtbn2lbn);
+  SET_INSIGNIFICANT(mbn2lbn);
 
   #undef SET_UNEXPECTED
   
-  void InferShape4Mtb() const override { UNEXPECTED_RUN(); }
-  void InferShape4Mdb() const override { UNEXPECTED_RUN(); }
+  void InferShape4Mtb(ParallelPolicy, uint64_t parallel_id) const override {
+    UNEXPECTED_RUN();
+  }
+  void InferShape4Mdb(ParallelPolicy, uint64_t parallel_id) const override {
+    UNEXPECTED_RUN();
+  }
 
  private:
 };

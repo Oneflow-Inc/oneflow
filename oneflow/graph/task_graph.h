@@ -5,8 +5,10 @@
 #include "graph/boxing_task_node.h"
 #include "graph/copy_hd_task_node.h"
 #include "operator/operator.h"
+#include "operator/operator_factory.h"
 #include "job/parallel_desc.h"
 #include "job/id_manager.h"
+#include "job/job_desc.h"
 
 namespace oneflow {
 
@@ -25,6 +27,8 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   
   typedef void (CompTaskNode::*CompTaskNodeMemFunc)(TaskGraph*);
   virtual CompTaskNodeMemFunc Func4FwBuildExecAndProducedRegsts() const = 0;
+
+  std::vector<CompTaskNode*> SortedCompTasksInChain(const ChainNode*) const;
 
  protected:
   TaskGraph() = default;

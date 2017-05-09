@@ -53,6 +53,18 @@ class Graph {
     if (node->out_edges().size() != 1) { return false; }
     return node->SoleOutEdge()->dst_node() == &sink_node_;
   }
+  NodeType* SoleFirstNode() const {
+    CHECK_EQ(source_node_.out_edges().size(), 1);
+    return (*(source_node_.out_edges().begin()))->dst_node();
+  }
+  NodeType* SoleLastNode() const {
+    CHECK_EQ(sink_node_.in_edges().size(), 1);
+    return (*(sink_node_.in_edges().begin()))->src_node();
+  }
+  NodeType* SoleNode() const {
+    CHECK_EQ(nodes_.size(), 1);
+    return nodes_.front().get();
+  }
   
   void UpdateSourceAndSink();
   
@@ -106,6 +118,7 @@ class Graph<NodeType, EdgeType>::Iterator final {
   
   Iterator(NodeType* source_node) {
     bfs_queue_.push(source_node);
+    node_visited4bfs_.insert(source_node);
   }
   
   NodeType& operator * ();
@@ -116,6 +129,7 @@ class Graph<NodeType, EdgeType>::Iterator final {
 
  private:
   std::queue<NodeType*> bfs_queue_;
+  std::unordered_set<NodeType*> node_visited4bfs_;
 };
 
 template<typename NodeType, typename EdgeType>
@@ -152,6 +166,7 @@ class Graph<NodeType, EdgeType>::ReverseIterator final {
   
   ReverseIterator(NodeType* sink_node) {
     bfs_queue_.push(sink_node);
+    node_visited4bfs_.insert(sink_node);
   }
   
   NodeType& operator * ();
@@ -162,6 +177,7 @@ class Graph<NodeType, EdgeType>::ReverseIterator final {
 
  private:
   std::queue<NodeType*> bfs_queue_;
+  std::unordered_set<NodeType*> node_visited4bfs_;
 };
 
 template<typename NodeType, typename EdgeType>
@@ -264,7 +280,10 @@ auto Graph<NodeType, EdgeType>::Iterator::operator ++ () -> Iterator& {
   NodeType* cur_node = bfs_queue_.front();
   bfs_queue_.pop();
   for (EdgeType* out_edge : cur_node->out_edges()) {
-    bfs_queue_.push(out_edge->dst_node());
+    NodeType* dst_node = out_edge->dst_node();
+    if (node_visited4bfs_.insert(dst_node).second == true) {
+       bfs_queue_.push(dst_node);
+    }
   }
   return *this;
 }
@@ -298,7 +317,10 @@ auto Graph<NodeType, EdgeType>::ReverseIterator::operator ++ () -> ReverseIterat
   NodeType* cur_node = bfs_queue_.front();
   bfs_queue_.pop();
   for (EdgeType* in_edge : cur_node->in_edges()) {
-    bfs_queue_.push(in_edge->src_node());
+    NodeType* src_node = in_edge->src_node();
+    if (node_visited4bfs_.insert(src_node).second == true) {
+      bfs_queue_.push(src_node);
+    }
   }
   return *this;
 }

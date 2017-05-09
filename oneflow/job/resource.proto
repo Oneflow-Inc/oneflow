@@ -13,8 +13,8 @@ enum DeviceType {
 }
 
 message Resource {
-  repeated Machine machines = 1;
-  int32 device_num_per_machine = 2;
+  repeated Machine machine = 1;
+  int64 device_num_per_machine = 2;
   DeviceType device_type = 3;
 }
 
@@ -24,6 +24,6 @@ message Resource {
 // "machine_xxx:1"
 // "machine_xxx:2"
 // "machine_xxx:3"
-// "machine_xxx:disk_loader"
+// "machine_xxx:disk"
 // 
 // "machine_xxx:0-2" means {"machine_xxx:0", "machine_xxx:1", "machine_xxx:2"}

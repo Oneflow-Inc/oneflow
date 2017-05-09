@@ -30,18 +30,21 @@ void DisConnect(EdgeType* edge) {
   edge->dst_node_ = nullptr;
 }
 
+uint64_t NewNodeId();
+uint64_t NewEdgeId();
+
 template<typename NodeType, typename EdgeType>
 class Edge {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Edge);
   Edge() {
-    edge_id_ = IDMgr::Singleton().NewEdgeId();
+    edge_id_ = NewEdgeId();
     src_node_ = nullptr;
     dst_node_ = nullptr;
   }
   virtual ~Edge() = default;
 
-  int32_t edge_id() const { return edge_id_; }
+  uint64_t edge_id() const { return edge_id_; }
   std::string edge_id_str() const { return std::to_string(edge_id_); }
 
   NodeType* src_node() const { return src_node_; }
@@ -53,7 +56,7 @@ class Edge {
                                           NodeType* dst_node);
   friend void DisConnect<EdgeType>(EdgeType* edge);
   
-  int32_t edge_id_;
+  uint64_t edge_id_;
   
   NodeType* src_node_;
   NodeType* dst_node_;
@@ -65,11 +68,11 @@ class Node {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Node);
   Node() {
-    node_id_ = IDMgr::Singleton().NewNodeId();
+    node_id_ = NewNodeId();
   }
   virtual ~Node() = default;
 
-  int32_t node_id() const { return node_id_; }
+  uint64_t node_id() const { return node_id_; }
   std::string node_id_str() const { return std::to_string(node_id_); }
   EdgeType* SoleInEdge() const {
     CHECK_EQ(in_edges_.size(), 1);
@@ -102,7 +105,7 @@ class Node {
                                           NodeType* dst_node);
   friend void DisConnect<EdgeType>(EdgeType* edge);
 
-  int32_t node_id_;
+  uint64_t node_id_;
 
   std::unordered_set<EdgeType*> in_edges_;
   std::unordered_set<EdgeType*> out_edges_;

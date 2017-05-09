@@ -269,11 +269,58 @@ ChainGraph::ChainGraph(const LogicalGraph* logical_gph) {
 }
 
 void ChainGraph::SetInOutLbn4AllChainNodeInDataTaskGraph() {
-  TODO();
+  // get all input_lbns_ of every chain node
+  for (ChainNode& cur_node : (*this)) {
+    // get all ops_output_lbns in one chain node
+    std::unordered_set<std::string> ops_output_lbns;
+    for (auto& op : cur_node.op_vec()) {
+      for (const std::string& bn : op->output_bns()){
+        ops_output_lbns.insert(op->obn2lbn(bn));
+      }
+    }
+    // for each op_input_lbn, 
+    //   if not exist in the ops_output_lbns
+    //   then the op_input_lbn is the input_lbn of the chain node
+    std::unordered_set<std::string> chain_node_input_lbns;
+    for (auto& op : cur_node.op_vec()) {
+      for (const std::string& bn : op->input_bns()) {
+        std::string op_input_lbn = op->ibn2lbn(bn);
+        if (ops_output_lbns.count(op_input_lbn) == 0) {
+          chain_node_input_lbns.insert(op_input_lbn);
+        }
+      }
+    }
+    cur_node.mut_input_lbns().assign(chain_node_input_lbns.begin(), 
+                                     chain_node_input_lbns.end());
+  }
+  // get all output_lbns_ of every chain node
+  // the output_lbns_ of one chain node is the sum input_lbns of it's child node
+  for (ChainNode& cur_node : (*this)) {  
+    std::unordered_set<std::string> chain_node_output_lbns;
+    for (ChainEdge* out_edge : cur_node.out_edges()) {
+      ChainNode* child_node = (out_edge)->dst_node();
+      chain_node_output_lbns.insert(child_node->input_lbns().begin(), 
+                                    child_node->input_lbns().end());
+    }
+    cur_node.mut_output_lbns().assign(chain_node_output_lbns.begin(), 
+                                      chain_node_output_lbns.end());
+  }
 }
 
-std::vector<std::string> FindLbnsBetween(const ChainNode*, const ChainNode*) {
-  TODO();
+std::vector<std::string> FindLbnsBetween(const ChainNode* pred_node, 
+                                         const ChainNode* succ_node) {
+  std::vector<std::string> matching_lbns;
+  for (const std::string& pred_node_output_lbn : pred_node->output_lbns()) {
+    for (const std::string& succ_node_input_lbn : succ_node->input_lbns()) { 
+      if (pred_node_output_lbn != succ_node_input_lbn) {
+        continue;
+      }        
+      matching_lbns.push_back(pred_node_output_lbn);
+      break;
+    }
+  }
+  CHECK_NE(matching_lbns.size(), 0);
+  return matching_lbns;
 }
 
 

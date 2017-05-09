@@ -2,25 +2,18 @@
 #define ONEFLOW_OPERATOR_MODEL_UPDATE_OP_H_
 
 #include "operator/operator.h"
+#include "register/register_desc.h"
 
 namespace oneflow {
 
 class ModelUpdateOp final : public SysOperator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ModelUpdateOp);
-  ModelUpdateOp() default;
+  ModelUpdateOp() = default;
   ~ModelUpdateOp() = default;
 
-  void Init(const OperatorConf& op_conf) override {
-    mut_op_name() = op_conf.name();
-    
-    CHECK(op_conf.has_model_update_op_conf());
-    auto cnf = new ModelUpdateOp(op_conf.model_update_op_conf());
-    mut_pb_op_conf().reset(cnf);
-
-    EnrollInputBn("model_diffs", false);
-    EnrollOutputBn("model", false);
-  }
+  std::string GetValueFromPbOpConf(const std::string& k) const override;
+  void InitFromOpConf(const OperatorConf& op_conf) override;
 
   std::string normal_ibn2lbn(const std::string& input_bn) const override {
     return RegstDesc::kAllLbn;
