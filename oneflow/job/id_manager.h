@@ -30,25 +30,20 @@ class IDMgr final {
   uint64_t MachineID4MachineName(const std::string& machine_name) const {
     return machine_name2machine_id_.at(machine_name);
   }
-  uint64_t ThrdLocId4DevicePhyId(uint64_t device_phy_id) const { 
+  uint64_t ThrdLocId4DevicePhyId(uint64_t device_phy_id) const {
     return device_phy_id;
   }
-  uint64_t DiskThrdLocId() const {
-    return device_num_per_machine_;
-  }
-  uint64_t BoxingThrdLocId() const {
-    return device_num_per_machine_ + 1;
-  }
-  uint64_t CommNetThrdLocId() const { 
-    return device_num_per_machine_ + 2;
-  }
+  uint64_t DiskThrdLocId() const { return device_num_per_machine_; }
+  uint64_t BoxingThrdLocId() const { return device_num_per_machine_ + 1; }
+  uint64_t CommNetThrdLocId() const { return device_num_per_machine_ + 2; }
 
   uint64_t NewTaskId(uint64_t machine_id, uint64_t thrd_local_id) {
-    uint64_t thrd_id = machine_id & thrd_local_id;
-    return thrd_id & (thread_id2num_of_tasks_[thrd_id]++ << 28);
+    uint64_t thrd_id = (machine_id | (thrd_local_id << 48));
+    return thrd_id | ((thread_id2num_of_tasks_[thrd_id]++) << 28);
   }
   uint64_t NewRegstDescId(uint64_t producer_task_id) {
-    return producer_task_id & (task_id2num_of_register_desc_[producer_task_id]++ << 16);
+    return producer_task_id |
+           ((task_id2num_of_register_desc_[producer_task_id]++) << 16);
   }
 
   // Runtime
@@ -60,9 +55,8 @@ class IDMgr final {
   HashMap<uint64_t, uint64_t> thread_id2num_of_tasks_;
   HashMap<uint64_t, uint64_t> task_id2num_of_register_desc_;
   HashMap<std::string, uint64_t> machine_name2machine_id_;
-
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_JOB_ID_MANAGER_H_
+#endif  // ONEFLOW_JOB_ID_MANAGER_H_
