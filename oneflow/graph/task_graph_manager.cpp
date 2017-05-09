@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-void TaskGraphMgr::Init() {
+void TaskGraphMgr::BuildGraphs() {
   ordered_task_gphs_.clear();
   // data graph
   LOG(INFO) << "Build DataTaskGraph...";
@@ -27,7 +27,7 @@ void TaskGraphMgr::Init() {
   for (const auto& pair : data_chain2sorted_bp_comp_tasks) {
     std::string chain_tag = pair.first->op_vec().front()->op_name();
     str_replace(&chain_tag, '/', '_');
-    const std::string dot_path_prefix = LogDir() + "/" + chain_tag + "_";
+    const std::string dot_path_prefix = DotDir() + "/model/" + chain_tag + "_";
     ParallelPolicy policy = pair.first->parallel_desc()->policy();
     // model update
     LOG(INFO) << "Build MdUpdtTaskGraph... for " << chain_tag;
@@ -59,7 +59,7 @@ void TaskGraphMgr::Init() {
   // all exec_graph 2 dot
   for (const auto& task_gph : ordered_task_gphs_) {
     for (const auto& task_node : task_gph->nodes()) {
-      std::string file_path = LogDir() + "/exec_";
+      std::string file_path = DotDir() + "/exec/";
       file_path = file_path + typeid(*task_node).name() + "_";
       file_path += task_node->node_id_str() + ".dot";
       task_node->exec_gph().ToDotFile(file_path);

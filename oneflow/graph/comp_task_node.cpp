@@ -293,7 +293,7 @@ void CompTaskNode::BpInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
   in_diff_regst->CopyShapeFrom(in_regst);
   // model_diff_regst
   RegstDesc* model_diff_regst = GetProducedRegstDesc("model_diff");
-  model_diff_regst->CopyShapeFrom(GetFwNode()->ForwardedRegstDesc("model"));
+  model_diff_regst->CopyShapeFrom(GetFwNode()->exec_gph().RelatedModelRegst());
   // activation_diff_regst
   RegstDesc* activation_diff_regst = GetProducedRegstDesc("activation_diff");
   RegstDesc* activation_regst = GetFwNode()->GetProducedRegstDesc("activation");

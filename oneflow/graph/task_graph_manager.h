@@ -19,7 +19,7 @@ class TaskGraphMgr {
     return obj;
   }
 
-  void Init();
+  void BuildGraphs();
   void InferShape4Regsts();
 
  private:

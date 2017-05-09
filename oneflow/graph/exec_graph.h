@@ -50,6 +50,9 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   RegstDesc* GetRegstFromBnInOp(const std::string& bn_in_op) const {
     return bn_in_op2regst_.at(bn_in_op);
   }
+  const HashMap<std::string, RegstDesc*>& bn_in_op2regst() const {
+    return bn_in_op2regst_;
+  }
 
   std::function<Shape*(const std::string&)> GetMutShapePtr4BnInOpFunc() const {
     return [this](const std::string& bn_in_op) -> Shape* {
@@ -76,6 +79,8 @@ class ExecGraph final : public Graph<ExecNode, ExecEdge> {
   OF_DISALLOW_COPY_AND_MOVE(ExecGraph);
   ExecGraph() = default;
   ~ExecGraph() = default;
+  
+  RegstDesc* RelatedModelRegst() const;
 
   ExecGraphProto ToProto() const;
 

@@ -19,6 +19,15 @@ ExecNodeProto ExecNode::ToProto() const {
   return exnode;
 }
 
+RegstDesc* ExecGraph::RelatedModelRegst() const {
+  for (const auto& exec_node : nodes()) {
+    for (const std::string& mbn : exec_node->op()->model_bns()) {
+      return exec_node->GetRegstFromBnInOp(mbn);
+    }
+  }
+  return nullptr;
+}
+
 ExecGraphProto ExecGraph::ToProto() const {
   ExecGraphProto exgraph;
   for (const std::unique_ptr<ExecNode>& node: nodes()) {
