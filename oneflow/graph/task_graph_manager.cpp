@@ -5,7 +5,7 @@ namespace oneflow {
 void TaskGraphMgr::Init() {
   ordered_task_gphs_.clear();
   // data graph
-  LOG(INFO) << "Build DataTaskGraph";
+  LOG(INFO) << "Build DataTaskGraph...";
   auto data_task_gph = new DataTaskGraph(
         "data",
         JobDesc::Singleton().train_dlnet_conf(),
@@ -30,6 +30,7 @@ void TaskGraphMgr::Init() {
     const std::string dot_path_prefix = LogDir() + "/" + chain_tag + "_";
     ParallelPolicy policy = pair.first->parallel_desc()->policy();
     // model update
+    LOG(INFO) << "Build MdUpdtTaskGraph... for " << chain_tag;
     auto updt_gph = new MdUpdtTaskGraph(
         "md_updt_" + chain_tag,
         pair.first, pair.second, dot_path_prefix + "model_update_");
@@ -41,10 +42,12 @@ void TaskGraphMgr::Init() {
             update_task->parallel_id(), update_task).second);
     }
     // model load save
+    LOG(INFO) << "Build MdLoadTaskGraph... for " << chain_tag;
     auto load_gph = new MdLoadTaskGraph(
         "md_load_" + chain_tag,
         updt_chain, parallel_id2updt_task, policy,
         dot_path_prefix + "model_load_");
+    LOG(INFO) << "Build MdSaveTaskGraph... for " << chain_tag;
     auto save_gph = new MdSaveTaskGraph(
         "md_save_" + chain_tag,
         updt_chain, parallel_id2updt_task, policy,
@@ -66,6 +69,7 @@ void TaskGraphMgr::Init() {
 
 void TaskGraphMgr::InferShape4Regsts() {
   for (auto& task_gph : ordered_task_gphs_) {
+    LOG(INFO) << "InferShape... for " << task_gph->name();
     task_gph->InferShapeOfBlobsInProducedRegsts();
   }
 }

@@ -223,7 +223,6 @@ void Graph<NodeType, EdgeType>::ToDotFile(const std::string& dot_filepath) const
   fs << ToDotString();
   CHECK(fs.good()) << "failed to write " << dot_filepath;
   fs.close();
-  LOG(INFO) << "Done: " << dot_filepath;
 }
 
 template<typename NodeType, typename EdgeType>
