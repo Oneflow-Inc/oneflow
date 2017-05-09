@@ -22,7 +22,7 @@ class JobDesc final {
   void ToProto(JobDescProto*) const;
   
   // Getters
-  const DLNetConf& train_dlnet_conf() const { return train_dl_net_conf_; }
+  const DLNetConf& train_dlnet_conf() const { return train_dlnet_conf_; }
   const Resource& resource() const { return resource_; }
   const Strategy& strategy() const { return strategy_; }
 
@@ -35,11 +35,12 @@ class JobDesc final {
  private:
   JobDesc() = default;
 
-  DLNetConf train_dl_net_conf_;
+  DLNetConf train_dlnet_conf_;
   Resource resource_;
   Strategy strategy_;
   std::string md_load_machine_;
   std::string md_save_machine_;
+  uint32_t batch_size_;
   uint32_t piece_size_;
 
 };

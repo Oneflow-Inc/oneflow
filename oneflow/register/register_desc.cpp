@@ -1,10 +1,13 @@
 #include "register/register_desc.h"
 #include "job/id_manager.h"
+#include "common/proto_io.h"
+#include "graph/task_node.h"
 
 namespace oneflow {
 
 RegstDesc::RegstDesc() {
   producer_ = nullptr;
+  register_num_ = 0; // TODO
 }
 
 void RegstDesc::CopyLbnFrom(const RegstDesc* rhs) {
@@ -36,6 +39,15 @@ Shape* RegstDesc::GetMutShapePtr(const std::string& lbn) {
   return lbn2shape_.at(lbn).get();
 }
 
+HashMap<std::string, std::unique_ptr<Shape>>& RegstDesc::mut_lbn2shape() {
+  return lbn2shape_;
+}
+
+const HashMap<std::string, std::unique_ptr<Shape>>&
+RegstDesc::lbn2shape() const {
+  return lbn2shape_;
+}
+
 std::string RegstDesc::DebugStr() const {
   std::stringstream ss;
   ss << "{";
@@ -46,13 +58,15 @@ std::string RegstDesc::DebugStr() const {
   return ss.str();
 }
 
-HashMap<std::string, std::unique_ptr<Shape>>& RegstDesc::mut_lbn2shape() {
-  return lbn2shape_;
-}
-
-const HashMap<std::string, std::unique_ptr<Shape>>&
-RegstDesc::lbn2shape() const {
-  return lbn2shape_;
+void RegstDesc::ToProto(RegstDescProto* ret) const {
+  ret->set_regst_desc_id(regst_desc_id_);
+  ret->set_producer_task_id(producer_->task_id());
+  for (const auto& pair : lbn2shape_) {
+    PbMapPair<std::string, ShapeProto> pb_pair(pair.first);
+    pair.second->ToProto(&(pb_pair.second));
+    ret->mutable_lbn2shape()->insert(pb_pair);
+  }
+  ret->set_register_num(register_num_);
 }
 
 const char* RegstDesc::kAllLbn = "OfReservedAllLbn";

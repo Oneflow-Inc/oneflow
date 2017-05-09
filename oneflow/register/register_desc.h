@@ -3,6 +3,7 @@
 
 #include "common/util.h"
 #include "common/shape.h"
+#include "register/register_desc.pb.h"
 
 namespace oneflow {
 
@@ -35,6 +36,8 @@ class RegstDesc final {
 
   std::string DebugStr() const;
 
+  void ToProto(RegstDescProto*) const;
+
   static const char* kAllLbn;
 
  private:
@@ -42,6 +45,7 @@ class RegstDesc final {
   const TaskNode* producer_;
   
   HashMap<std::string, std::unique_ptr<Shape>> lbn2shape_;
+  int64_t register_num_;
 
 };
 

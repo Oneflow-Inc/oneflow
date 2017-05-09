@@ -74,4 +74,13 @@ void TaskGraphMgr::InferShape4Regsts() {
   }
 }
 
+void TaskGraphMgr::AllTaskNodesToProto(PbRpf<TaskProto>* ret) {
+  ret->Clear();
+  for (const auto& task_gph : ordered_task_gphs_) {
+    for (const auto& task_node : task_gph->nodes()) {
+      task_node->ToProto(ret->Add());
+    }
+  }
+}
+
 } // namespace oneflow

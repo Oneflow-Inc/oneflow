@@ -21,6 +21,7 @@ class TaskGraphMgr {
 
   void BuildGraphs();
   void InferShape4Regsts();
+  void AllTaskNodesToProto(PbRpf<TaskProto>*);
 
  private:
   TaskGraphMgr() = default;

@@ -1,5 +1,16 @@
 syntax = "proto3";
 package oneflow;
 
+import "job/dlnet_conf.proto";
+import "job/resource.proto";
+import "job/strategy.proto";
+
 message JobDescProto {
+  DLNetConf train_dlnet_conf = 1;
+  Resource resource = 2;
+  Strategy strategy = 3;
+  string model_load_machine = 4;
+  string model_save_machine = 5;
+  uint32 batch_size = 6;
+  uint32 piece_size = 7;
 }

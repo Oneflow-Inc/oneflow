@@ -16,11 +16,22 @@ class RegstDescMgr final {
   }
 
   std::unique_ptr<RegstDesc> CreateRegisterDesc() {
-    return of_make_unique<RegstDesc> ();
+    auto ret = of_make_unique<RegstDesc> ();
+    regst_descs_.push_back(ret.get());
+    return ret;
+  }
+
+  void AllRegstsToProto(PbRpf<RegstDescProto>* ret) {
+    ret->Clear();
+    for (RegstDesc* regst : regst_descs_) {
+      regst->ToProto(ret->Add());
+    }
   }
 
  private:
   RegstDescMgr() = default;
+  std::list<RegstDesc*> regst_descs_;
+
 };
 
 } // namespace oneflow
