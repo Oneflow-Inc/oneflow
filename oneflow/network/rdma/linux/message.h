@@ -11,16 +11,16 @@ class Memory;
 
 class Message {
 public:
-    Message();
-    ~Message();
+  Message();
+  ~Message();
 
-    const NetworkMessage& msg() const { return net_msg_; }
-    NetworkMessage& mutable_msg() { return net_msg_; }
-    NetworkMemory* net_memory() { return net_memory_; }
+  const NetworkMessage& msg() const { return net_msg_; }
+  NetworkMessage& mutable_msg() { return net_msg_; }
+  NetworkMemory* net_memory() { return net_memory_; }
 
 private:
-    NetworkMessage net_msg_;
-    NetworkMemory* net_memory_;
+  NetworkMessage net_msg_;
+  NetworkMemory* net_memory_;
 };
 
 } // namespace oneflow

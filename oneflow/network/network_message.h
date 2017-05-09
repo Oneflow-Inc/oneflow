@@ -17,8 +17,8 @@ enum class NetworkMessageType {
 struct NetworkMessage {
   // required
   NetworkMessageType type;
-  int32_t src_rank;
-  int32_t dst_rank;
+  uint64_t src_machine_id;
+  uint64_t dst_machine_id;
 
   // Request/ack EventMessage between send/recv actors for MSG_TYPE_READ_OK or
   // MSG_TYPE_ACK_CONSUMED

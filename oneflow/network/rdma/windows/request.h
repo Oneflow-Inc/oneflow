@@ -9,14 +9,13 @@
 namespace oneflow {
 
 class Request {
-public:
-
-private:
-    bool is_send_;
-    int32_t time_stamp_;
-    Message* rdma_msg_;
+ public:
+  Message* rdma_msg;
+  int32_t time_stamp;
+  bool is_send;
+ private:
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_NETWORK_RDMA_WINDOWS_REQUEST_H_
+#endif  // ONEFLOW_NETWORK_RDMA_WINDOWS_REQUEST_H_

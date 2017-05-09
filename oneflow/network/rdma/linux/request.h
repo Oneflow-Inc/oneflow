@@ -12,9 +12,9 @@ class Request {
 public:
 
 private:
-    bool is_send_;
-    int32_t time_stamp_;
-    Message* rdma_msg_;
+  bool is_send_;
+  int32_t time_stamp_;
+  Message* rdma_msg_;
 };
 } // namespace oneflow
 

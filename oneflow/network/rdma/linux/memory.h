@@ -8,30 +8,25 @@ namespace oneflow{
 
 class Memory : public NetworkMemory {
 public:
-    using NetworkMemory::memory_;
-    using NetworkMemory::size_;
-    using NetworkMemory::descriptor_;
+  using NetworkMemory::memory_;
+  using NetworkMemory::size_;
+  using NetworkMemory::descriptor_;
 
-    explicit Memory(ibv_mr* memory_region) {
-        memory_region_ = memory_region;
-    }
+  Memory() = default;
+  explicit Memory(ibv_mr* memory_region);
 
-    //Register as RDMA memory region
-    void Register() override {
-        
-    }
+  //Register as RDMA memory region
+  void Register() override;
 
-    void Unregister() override {
+  void Unregister() override;
 
-    }
-
-    const void* sge() const override { return &sge_; }
+  const void* sge() const override { return &sge_; }
 
 private:
-    ibv_sge sge_;
-    ibv_mr* memory_region_;
-    Memory(const Memory&) = delete;
-    void operator=(const Memory&) = delete;
+  ibv_sge sge_;
+  ibv_mr* memory_region_;
+  Memory(const Memory&) = delete;
+  void operator=(const Memory&) = delete;
 };
 
 } // namespace oneflow

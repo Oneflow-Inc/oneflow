@@ -49,7 +49,7 @@ class Network {
 public:
   // Init the network environment and connect with each other based on the
   // network topo. Suppose net_topo is a connected graph
-  virtual void Init(int32_t my_rank, const NetworkTopology& net_topo) = 0;
+  virtual void Init(uint64_t my_machine_id, const NetworkTopology& net_topo) = 0;
 
   virtual void Finalize() = 0;
 

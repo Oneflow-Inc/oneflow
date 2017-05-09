@@ -10,21 +10,20 @@ namespace oneflow {
 class Memory;
 
 class Message {
-public:
-    Message();
-    ~Message();
+ public:
+  Message();
+  ~Message();
 
-    const NetworkMessage& msg() const { return net_msg_; }
-    NetworkMessage& mutable_msg() { return net_msg_; }
-    NetworkMemory* net_memory() { return net_memory_; }
+  const NetworkMessage& msg() const { return net_msg_; }
+  NetworkMessage& mutable_msg() { return net_msg_; }
+  NetworkMemory* net_memory() { return net_memory_; }
 
-private:
-    NetworkMessage net_msg_;
-    NetworkMemory* net_memory_;
-
+ private:
+  NetworkMessage net_msg_;
+  NetworkMemory* net_memory_;
 };
 
-} //namespace oneflow
+}  // namespace oneflow
 
 
-#endif // ONEFLOW_NETWORK_RDMA_WINDOWS_MESSAGE_H_
+#endif  // ONEFLOW_NETWORK_RDMA_WINDOWS_MESSAGE_H_
