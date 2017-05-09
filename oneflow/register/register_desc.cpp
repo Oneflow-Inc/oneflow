@@ -46,6 +46,15 @@ std::string RegstDesc::DebugStr() const {
   return ss.str();
 }
 
+HashMap<std::string, std::unique_ptr<Shape>>& RegstDesc::mut_lbn2shape() {
+  return lbn2shape_;
+}
+
+const HashMap<std::string, std::unique_ptr<Shape>>&
+RegstDesc::lbn2shape() const {
+  return lbn2shape_;
+}
+
 const char* RegstDesc::kAllLbn = "OfReservedAllLbn";
 
 } // namespace oneflow
