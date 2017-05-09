@@ -10,16 +10,31 @@ OpMgr::OpTypeCase2Creator() {
 }
 
 std::shared_ptr<Operator> OpMgr::ConstructOp(
-    const OperatorConf& op_conf) const {
+    const OperatorConf& op_conf) {
   auto ret = OpTypeCase2Creator().at(op_conf.op_type_case())();
   ret->InitFromOpConf(op_conf);
+  op_list_.emplace_back(ret);
   return ret;
 }
 
 std::shared_ptr<Operator> OpMgr::ConstructOp(
-    const OperatorProto& op_proto) const {
+    const OperatorProto& op_proto) {
   auto ret = OpTypeCase2Creator().at(op_proto.op_conf().op_type_case())();
-  ret->InitFromOperatorProto(op_proto);
+  ret->InitFromProto(op_proto);
+  return ret;
+}
+
+PbVector<OperatorProto> OpMgr::ToProto4AllOp() {
+  PbVector<OperatorProto> ret;
+  for (auto it = op_list_.begin(); it != op_list_.end();) {
+    if (std::shared_ptr<const Operator> op = it->lock()) {
+      *(ret.Add()) = op->ToProto();
+      ++it;
+    } else {
+      auto cur_it = it++;
+      op_list_.erase(cur_it);
+    }
+  }
   return ret;
 }
 

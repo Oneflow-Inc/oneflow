@@ -2,7 +2,7 @@
 
 namespace oneflow {
   
-void Operator::InitFromOperatorProto(const OperatorProto& op_proto) {
+void Operator::InitFromProto(const OperatorProto& op_proto) {
   op_conf_ = op_proto.op_conf();
   bn_in_op2lbn_ = PbMap2HashMap(op_proto.bn_in_op2lbn());
   data_tmp_bns_ = PbVec2StdVec(op_proto.data_tmp_bns());
@@ -15,7 +15,7 @@ void Operator::InitFromOperatorProto(const OperatorProto& op_proto) {
   model_tmp_bns_ = PbVec2StdVec(op_proto.model_tmp_bns());
 }
 
-OperatorProto Operator::ToOperatorProto() {
+OperatorProto Operator::ToProto() const {
   OperatorProto op_proto;
   *(op_proto.mutable_op_conf()) = op_conf_;
   *(op_proto.mutable_bn_in_op2lbn()) = HashMap2PbMap(bn_in_op2lbn_);

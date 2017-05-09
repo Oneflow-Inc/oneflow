@@ -8,6 +8,7 @@ using oneflow::JobConf;
 using oneflow::JobDesc;
 using oneflow::IDMgr;
 using oneflow::TaskGraphMgr;
+using oneflow::OpMgr;
 
 DEFINE_string(job_conf_filepath, "", "");
 
@@ -23,6 +24,7 @@ int main(int argc, char** argv) {
   // Debug
   JobDesc::Singleton().set_piece_size(50);
   TaskGraphMgr::Singleton().InferShape4Regsts();
+  OpMgr::Singleton().ToProto4AllOp();
   LOG(INFO) << "Compiler Shutting Down...";
   return 0;
 }

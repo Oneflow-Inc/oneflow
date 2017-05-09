@@ -26,8 +26,8 @@ class Operator {
   virtual bool IsLossOp() const { return false; }
   
   // this <-> OpProto
-  void InitFromOperatorProto(const OperatorProto& operatorproto);
-  OperatorProto ToOperatorProto();
+  void InitFromProto(const OperatorProto& operatorproto);
+  OperatorProto ToProto() const;
   
   // bn_in_op <-> lbn
   const std::string& Lbn4BnInOp(const std::string& bn_in_op) const;

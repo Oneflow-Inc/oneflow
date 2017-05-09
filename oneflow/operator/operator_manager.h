@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <functional>
+#include <list>
 #include "operator/operator.h"
 #include "operator/op_conf.pb.h"
 
@@ -18,15 +19,20 @@ class OpMgr final {
     return obj;
   }
   
-  std::shared_ptr<Operator> ConstructOp(const OperatorConf&) const;
-  std::shared_ptr<Operator> ConstructOp(const OperatorProto&) const;
+  std::shared_ptr<Operator> ConstructOp(const OperatorConf&);
+  std::shared_ptr<Operator> ConstructOp(const OperatorProto&);
+
+  PbVector<OperatorProto> ToProto4AllOp();
 
  private:
   template<OperatorConf::OpTypeCase op_type_case, typename OpType>
   friend struct OpRegister;
 
   OpMgr() = default;
-  static HashMap<int, std::function<std::shared_ptr<Operator>()>>& OpTypeCase2Creator();
+  static HashMap<int, std::function<std::shared_ptr<Operator>()>>&
+  OpTypeCase2Creator();
+
+  std::list<std::weak_ptr<const Operator>> op_list_;
 
 };
 
