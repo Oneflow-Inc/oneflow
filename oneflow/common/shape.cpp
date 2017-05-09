@@ -15,7 +15,7 @@ ShapeProto Shape::ToProto() const {
   return shape_proto;
 }
 
-std::string Shape::DebugString() const {
+std::string Shape::DebugStr() const {
   std::stringstream ss;
   ss << "{";
   for (int64_t dim : dim_vec_) {
@@ -54,7 +54,7 @@ void Shape::UpdateElemCnt() {
 }
 
 std::ostream& operator<< (std::ostream& out, const Shape& shape) {
-  out << shape.DebugString();
+  out << shape.DebugStr();
   return out;
 }
 

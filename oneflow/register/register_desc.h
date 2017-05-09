@@ -37,7 +37,7 @@ class RegstDesc final {
     return lbn2shape_;
   }
 
-  std::string DebugString() const;
+  std::string DebugStr() const;
 
   static const char* kAllLbn;
 

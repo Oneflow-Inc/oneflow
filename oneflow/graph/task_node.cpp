@@ -48,7 +48,7 @@ void TaskNode::TakeOverRegstDesc(TaskNode* rhs,
                                  const std::string& regst_desc_name) {
   std::unique_ptr<RegstDesc> this_regst;
   auto rhs_regst_it = rhs->produced_regst_descs_.find(regst_desc_name);
-  CHECK_EQ(produced_regst2out_edge.count(rhs_regst_it->second.get()), 0);
+  CHECK_EQ(produced_regst2out_edge_.count(rhs_regst_it->second.get()), 0);
   this_regst.swap(rhs_regst_it->second);
   this_regst->SetProducer(this);
   this_regst->set_regst_desc_id(IDMgr::Singleton().NewRegstDescId(task_id_));
@@ -65,11 +65,11 @@ const RegstDesc* TaskNode::ForwardedRegstDesc(
 }
 
 const TaskEdge* TaskNode::GetOutEdge4ProducedRegst(RegstDesc* regst) const {
-  return produced_regst2out_edge.at(regst);
+  return produced_regst2out_edge_.at(regst);
 }
 
 RegstDesc* TaskNode::GetProducedRegst4OutEdge(const TaskEdge* edge) const {
-  return out_edge2produced_regst.at(edge);
+  return out_edge2produced_regst_.at(edge);
 }
 
 void TaskNode::InitWithFwNode(TaskNode* fw_node) {
@@ -82,8 +82,8 @@ void TaskNode::InitWithFwNode(TaskNode* fw_node) {
 
 void TaskNode::BindProducedRegstAndOutEdge(RegstDesc* regst,
                                            const TaskEdge* edge) {
-  CHECK(produced_regst2out_edge.emplace(regst, edge).second);
-  CHECK(out_edge2produced_regst.emplace(edge, regst).second);
+  CHECK(produced_regst2out_edge_.emplace(regst, edge).second);
+  CHECK(out_edge2produced_regst_.emplace(edge, regst).second);
 }
 
 void TaskNode::EnrollProducedRegstDesc(
@@ -110,6 +110,23 @@ TaskProto TaskNode::ToProto() const {
         pair.second->regst_desc_id());
   }
   return task_proto;
+}
+
+std::string TaskNode::VisualStr() const {
+  std::stringstream ss;
+  ss << (is_fw_node_ ? "Fw" : "Bp");
+  ss << node_id_str() << "_";
+  return ss.str();
+}
+
+std::string TaskNode::DebugStr() const {
+  std::stringstream ss;
+  ss << "{" << node_id_str() << "\t";
+  for (const auto& pair : produced_regst_descs_) {
+    ss << "{" << pair.first << ":" << pair.second->DebugStr() << "}"; 
+  }
+  ss << "}";
+  return ss.str();
 }
 
 } // namespace oneflow

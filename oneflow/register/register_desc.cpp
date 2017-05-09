@@ -36,11 +36,11 @@ Shape* RegstDesc::GetMutShapePtr(const std::string& lbn) {
   return lbn2shape_.at(lbn).get();
 }
 
-std::string RegstDesc::DebugString() const {
+std::string RegstDesc::DebugStr() const {
   std::stringstream ss;
   ss << "{";
   for (const auto& pair : lbn2shape_) {
-    ss << "{" << pair.first << ":" << pair.second->DebugString() << "}"; 
+    ss << "{" << pair.first << ":" << pair.second->DebugStr() << "}"; 
   }
   ss << "}";
   return ss.str();
