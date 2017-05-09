@@ -19,7 +19,7 @@ class JobDesc final {
 
   void InitFromJobConf(const JobConf&);
   void InitFromProto(const JobDescProto&);
-  JobDescProto ToProto() const;
+  void ToProto(JobDescProto*) const;
   
   // Getters
   const DLNetConf& train_dlnet_conf() const { return train_dl_net_conf_; }

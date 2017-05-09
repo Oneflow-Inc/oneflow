@@ -22,7 +22,7 @@ class OpMgr final {
   std::shared_ptr<Operator> ConstructOp(const OperatorConf&);
   std::shared_ptr<Operator> ConstructOp(const OperatorProto&);
 
-  PbVector<OperatorProto> ToProto4AllOp();
+  void AllOpToProto(PbRpf<OperatorProto>*);
 
  private:
   template<OperatorConf::OpTypeCase op_type_case, typename OpType>

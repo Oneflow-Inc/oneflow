@@ -18,10 +18,9 @@ class CompTaskNode : public TaskNode {
   bool IsLossNode() const { return chain_node()->IsLossNode(); }
   bool IsFaker() const { return chain_node()->IsFaker(); }
   std::string VisualStr() const override;
-  virtual TaskProto ToProto() const override {
-    TaskProto task_proto = TaskNode::ToProto();
-    task_proto.set_parallel_id(parallel_id_);
-    return task_proto;
+  virtual void ToProto(TaskProto* ret) const override {
+    TaskNode::ToProto(ret);
+    ret->set_parallel_id(parallel_id_);
   }
 
   // Build Exec and Set Produced Regsts
@@ -85,10 +84,9 @@ class HostCompTaskNode final : public CompTaskNode {
   HostCompTaskNode() = default;
   ~HostCompTaskNode() = default;
 
-  TaskProto ToProto() const override {
-    TaskProto task_proto = CompTaskNode::ToProto();
-    task_proto.set_type(TaskType::HostCompTask);
-    return task_proto;
+  void ToProto(TaskProto* ret) const override {
+    CompTaskNode::ToProto(ret);
+    ret->set_type(TaskType::HostCompTask);
   }
 
  private:
@@ -107,10 +105,9 @@ class DeviceCompTaskNode final : public CompTaskNode {
   DeviceCompTaskNode() = default;
   ~DeviceCompTaskNode() = default;
   
-  TaskProto ToProto() const override {
-    TaskProto task_proto = CompTaskNode::ToProto();
-    task_proto.set_type(TaskType::DeviceCompTask);
-    return task_proto;
+  void ToProto(TaskProto* ret) const override {
+    CompTaskNode::ToProto(ret);
+    ret->set_type(TaskType::DeviceCompTask);
   };
 
  private:

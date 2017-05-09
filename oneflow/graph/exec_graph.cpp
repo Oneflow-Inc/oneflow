@@ -5,18 +5,17 @@ namespace oneflow {
 void ExecEdge::set_lbn(const std::string& lbn) {
   lbn_ = lbn;
 }
-ExecNodeProto ExecNode::ToProto() const {
-  ExecNodeProto exnode;
-  exnode.set_id(node_id());
-  exnode.set_op_name(op_->op_name());
+
+void ExecNode::ToProto(ExecNodeProto* ret) const {
+  ret->set_id(node_id());
+  ret->set_op_name(op_->op_name());
   for (const std::pair<std::string, RegstDesc*>& bn_regst: bn_in_op2regst_) {
-    exnode.mutable_bn_in_op2regst_desc_id()->insert({
+    ret->mutable_bn_in_op2regst_desc_id()->insert({
         bn_regst.first, bn_regst.second->regst_desc_id()});
   }
   for (ExecEdge* edge: in_edges()) {
-    exnode.add_predecessor_ids(edge->src_node()->node_id());
+    ret->add_predecessor_ids(edge->src_node()->node_id());
   }
-  return exnode;
 }
 
 RegstDesc* ExecGraph::RelatedModelRegst() const {
@@ -28,12 +27,10 @@ RegstDesc* ExecGraph::RelatedModelRegst() const {
   return nullptr;
 }
 
-ExecGraphProto ExecGraph::ToProto() const {
-  ExecGraphProto exgraph;
+void ExecGraph::ToProto(ExecGraphProto* ret) const {
   for (const std::unique_ptr<ExecNode>& node: nodes()) {
-    *(exgraph.add_exec_nodes()) = node->ToProto();
+    node->ToProto(ret->add_exec_nodes());
   }
-  return exgraph;
 }
 
 } // namespace oneflow

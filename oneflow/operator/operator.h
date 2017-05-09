@@ -27,7 +27,7 @@ class Operator {
   
   // this <-> OpProto
   void InitFromProto(const OperatorProto& operatorproto);
-  OperatorProto ToProto() const;
+  void ToProto(OperatorProto* ret) const;
   
   // bn_in_op <-> lbn
   const std::string& Lbn4BnInOp(const std::string& bn_in_op) const;

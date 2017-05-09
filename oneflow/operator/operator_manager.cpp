@@ -24,18 +24,17 @@ std::shared_ptr<Operator> OpMgr::ConstructOp(
   return ret;
 }
 
-PbVector<OperatorProto> OpMgr::ToProto4AllOp() {
-  PbVector<OperatorProto> ret;
+void OpMgr::AllOpToProto(PbRpf<OperatorProto>* ret) {
+  ret->Clear();
   for (auto it = op_list_.begin(); it != op_list_.end();) {
     if (std::shared_ptr<const Operator> op = it->lock()) {
-      *(ret.Add()) = op->ToProto();
+      op->ToProto(ret->Add());
       ++it;
     } else {
       auto cur_it = it++;
       op_list_.erase(cur_it);
     }
   }
-  return ret;
 }
 
 } // namespace oneflow

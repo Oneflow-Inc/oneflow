@@ -66,7 +66,7 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   
   std::string VisualStr() const { return op_->op_name(); }
   
-  ExecNodeProto ToProto() const;
+  void ToProto(ExecNodeProto* ret) const;
 
  private:
   std::shared_ptr<const Operator> op_;
@@ -82,7 +82,7 @@ class ExecGraph final : public Graph<ExecNode, ExecEdge> {
   
   RegstDesc* RelatedModelRegst() const;
 
-  ExecGraphProto ToProto() const;
+  void ToProto(ExecGraphProto* ret) const;
 
  private:
 

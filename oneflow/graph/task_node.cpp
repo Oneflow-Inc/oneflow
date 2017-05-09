@@ -87,15 +87,14 @@ void TaskNode::EnrollProducedRegstDesc(
   CHECK(produced_regst_descs_.emplace(regst_desc_name, std::move(regst_desc)).second);
 }
 
-TaskProto TaskNode::ToProto() const {
-  TaskProto task_proto;
-  task_proto.set_id(task_id_);
-  task_proto.set_machine_id(stage_node_->machine_id());
-  task_proto.set_thrd_local_id(thrd_loc_id_);
-  task_proto.set_is_forward(is_fw_node_);
-  *task_proto.mutable_exec_graph() = exec_gph_.ToProto();
+void TaskNode::ToProto(TaskProto* ret) const {
+  ret->set_id(task_id_);
+  ret->set_machine_id(stage_node_->machine_id());
+  ret->set_thrd_local_id(thrd_loc_id_);
+  ret->set_is_forward(is_fw_node_);
+  exec_gph_.ToProto(ret->mutable_exec_graph());
   for (const auto& pair : produced_regst_descs_) {
-    task_proto.mutable_produced_regst_desc_ids()->Add(
+    ret->mutable_produced_regst_desc_ids()->Add(
         pair.second->regst_desc_id());
   }
   // subscribed_regsts
@@ -108,9 +107,8 @@ TaskProto TaskNode::ToProto() const {
     }
   }
   for (RegstDesc* regst : subscribed_regsts) {
-    task_proto.mutable_subscribed_regst_desc_ids()->Add(regst->regst_desc_id());
+    ret->mutable_subscribed_regst_desc_ids()->Add(regst->regst_desc_id());
   }
-  return task_proto;
 }
 
 std::string TaskNode::VisualStr() const {

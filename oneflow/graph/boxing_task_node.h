@@ -15,10 +15,9 @@ class BoxingTaskNode : public TaskNode {
     return TaskNode::VisualStr() + "Boxing";
   }
 
-  TaskProto ToProto() const override {
-    TaskProto task_proto = TaskNode::ToProto();
-    task_proto.set_type(TaskType::BoxingTask);
-    return task_proto;
+  void ToProto(TaskProto* ret) const override {
+    TaskNode::ToProto(ret);
+    ret->set_type(TaskType::BoxingTask);
   };
 
  protected:

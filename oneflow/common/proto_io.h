@@ -15,7 +15,9 @@ namespace oneflow {
 
 using PbMessage = google::protobuf::Message;
 template<typename T>
-using PbVector = google::protobuf::RepeatedPtrField<T>;
+using PbRf = google::protobuf::RepeatedField<T>;
+template<typename T>
+using PbRpf = google::protobuf::RepeatedPtrField<T>;
 template<typename T1, typename T2>
 using PbMapPair = google::protobuf::MapPair<T1, T2>;
 
@@ -55,14 +57,14 @@ ALIAS_PB_TYPE(uint64, UInt64);
 
 #undef ALIAS_PB_TYPE
 
-// PbVector <-> std::vector 
+// PbRpf <-> std::vector 
 inline std::vector<std::string> PbVec2StdVec(
-    const PbVector<std::string>& rpf) {
+    const PbRpf<std::string>& rpf) {
   return std::vector<std::string> (rpf.begin(), rpf.end());
 }
-inline PbVector<std::string> StdVec2PbVec (
+inline PbRpf<std::string> StdVec2PbVec (
     const std::vector<std::string>& vec) {
-  using RetType = PbVector<std::string>;
+  using RetType = PbRpf<std::string>;
   return RetType(vec.begin(), vec.end());
 }
 

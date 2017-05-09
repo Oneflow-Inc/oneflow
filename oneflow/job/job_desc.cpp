@@ -17,7 +17,7 @@ void JobDesc::InitFromProto(const JobDescProto&) {
   TODO();
 }
 
-JobDescProto JobDesc::ToProto() const {
+void JobDesc::ToProto(JobDescProto*) const {
   TODO();
 }
 

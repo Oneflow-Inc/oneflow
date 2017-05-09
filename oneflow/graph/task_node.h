@@ -61,7 +61,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   RegstDesc* GetProducedRegst4OutEdge(const TaskEdge*) const;
 
   //
-  virtual TaskProto ToProto() const;
+  virtual void ToProto(TaskProto*) const;
   virtual std::string VisualStr() const override;
   std::string DebugStr() const;
   

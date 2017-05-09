@@ -42,10 +42,9 @@ class CopyHDTaskNode final : public CopyTaskNode {
     return TaskNode::VisualStr() + "CopyHD";
   }
   
-  TaskProto ToProto() const override {
-    TaskProto task_proto = TaskNode::ToProto();
-    task_proto.set_type(TaskType::CopyHdTask);
-    return task_proto;
+  void ToProto(TaskProto* ret) const override {
+    TaskNode::ToProto(ret);
+    ret->set_type(TaskType::CopyHdTask);
   };
 
  private:
@@ -84,10 +83,9 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
     return TaskNode::VisualStr() + "CommNet";
   }
 
-  TaskProto ToProto() const override {
-    TaskProto task_proto = TaskNode::ToProto();
-    task_proto.set_type(TaskType::CommNetTask);
-    return task_proto;
+  void ToProto(TaskProto* ret) const override {
+    TaskNode::ToProto(ret);
+    ret->set_type(TaskType::CommNetTask);
   };
 
  private:

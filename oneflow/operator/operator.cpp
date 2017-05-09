@@ -15,19 +15,17 @@ void Operator::InitFromProto(const OperatorProto& op_proto) {
   model_tmp_bns_ = PbVec2StdVec(op_proto.model_tmp_bns());
 }
 
-OperatorProto Operator::ToProto() const {
-  OperatorProto op_proto;
-  *(op_proto.mutable_op_conf()) = op_conf_;
-  *(op_proto.mutable_bn_in_op2lbn()) = HashMap2PbMap(bn_in_op2lbn_);
-  *(op_proto.mutable_data_tmp_bns()) = StdVec2PbVec(data_tmp_bns_);
-  *(op_proto.mutable_input_bns()) = StdVec2PbVec(input_bns_);
-  *(op_proto.mutable_input_diff_bns()) = StdVec2PbVec(input_diff_bns_);
-  *(op_proto.mutable_output_bns()) = StdVec2PbVec(output_bns_);
-  *(op_proto.mutable_output_diff_bns()) = StdVec2PbVec(output_diff_bns_);
-  *(op_proto.mutable_model_bns()) = StdVec2PbVec(model_bns_);
-  *(op_proto.mutable_model_diff_bns()) = StdVec2PbVec(model_diff_bns_);
-  *(op_proto.mutable_model_tmp_bns()) = StdVec2PbVec(model_tmp_bns_);
-  return op_proto;
+void Operator::ToProto(OperatorProto* ret) const {
+  *(ret->mutable_op_conf()) = op_conf_;
+  *(ret->mutable_bn_in_op2lbn()) = HashMap2PbMap(bn_in_op2lbn_);
+  *(ret->mutable_data_tmp_bns()) = StdVec2PbVec(data_tmp_bns_);
+  *(ret->mutable_input_bns()) = StdVec2PbVec(input_bns_);
+  *(ret->mutable_input_diff_bns()) = StdVec2PbVec(input_diff_bns_);
+  *(ret->mutable_output_bns()) = StdVec2PbVec(output_bns_);
+  *(ret->mutable_output_diff_bns()) = StdVec2PbVec(output_diff_bns_);
+  *(ret->mutable_model_bns()) = StdVec2PbVec(model_bns_);
+  *(ret->mutable_model_diff_bns()) = StdVec2PbVec(model_diff_bns_);
+  *(ret->mutable_model_tmp_bns()) = StdVec2PbVec(model_tmp_bns_);
 }
 
 const std::string& Operator::Lbn4BnInOp(const std::string& bn_in_op) const {

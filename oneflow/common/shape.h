@@ -20,7 +20,7 @@ class Shape final {
   bool operator == (const Shape& rhs) const;
   std::string DebugStr() const;
 
-  ShapeProto ToProto() const;
+  void ToProto(ShapeProto*) const;
 
   // Getters and Setters
   const std::vector<int64_t>& dim_vec() const { return dim_vec_; }

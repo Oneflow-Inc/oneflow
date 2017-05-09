@@ -8,11 +8,8 @@ Shape::Shape(const ShapeProto& shape_proto) {
   UpdateElemCnt();
 }
 
-ShapeProto Shape::ToProto() const {
-  ShapeProto shape_proto;
-  using PbDimVec = google::protobuf::RepeatedField<google::protobuf::int64>;
-  *shape_proto.mutable_dim() = PbDimVec(dim_vec_.begin(), dim_vec_.end());
-  return shape_proto;
+void Shape::ToProto(ShapeProto* ret) const {
+  *(ret->mutable_dim()) = PbRf<PbInt64> (dim_vec_.begin(), dim_vec_.end());
 }
 
 std::string Shape::DebugStr() const {
