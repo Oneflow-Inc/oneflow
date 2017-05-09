@@ -49,7 +49,7 @@ void InnerProductOp::InferShape4FwBlobs(
   // model tmp bn
   CHECK_EQ(model_tmp_bns().size(), 1);
   Shape* bias_multiplier_shape_ptr = GetShapePtr4BnInOp(model_tmp_bns().at(0));
-  *bias_multiplier_shape_ptr = Shape({1, in_shape_ptr->At(0), 1});
+  *bias_multiplier_shape_ptr = Shape({in_shape_ptr->At(0), 1});
 }
 
 REGISTER_OP(OperatorConf::kInnerproductConf, InnerProductOp);
