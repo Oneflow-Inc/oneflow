@@ -60,8 +60,6 @@ void TaskGraphMgr::BuildGraphs() {
   for (const auto& task_gph : ordered_task_gphs_) {
     for (const auto& task_node : task_gph->nodes()) {
       std::string file_path = DotDir() + "/exec/";
-      file_path = file_path + typeid(*task_node).name() + "_";
-      str_replace(&file_path, ' ', '_');
       file_path += task_node->node_id_str() + ".dot";
       task_node->exec_gph().ToDotFile(file_path);
     }
