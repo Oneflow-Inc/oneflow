@@ -67,10 +67,6 @@ void TaskGraphMgr::Init() {
 void TaskGraphMgr::InferShape4Regsts() {
   for (auto& task_gph : ordered_task_gphs_) {
     task_gph->InferShapeOfBlobsInProducedRegsts();
-    for (TaskNode& node : *task_gph) {
-      LOG(ERROR) << node.DebugString();
-    }
-    break; // TODO: delete it
   }
 }
 

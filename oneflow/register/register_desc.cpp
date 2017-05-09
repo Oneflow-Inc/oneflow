@@ -36,6 +36,16 @@ Shape* RegstDesc::GetMutShapePtr(const std::string& lbn) {
   return lbn2shape_.at(lbn).get();
 }
 
+std::string RegstDesc::DebugString() const {
+  std::stringstream ss;
+  ss << "{";
+  for (const auto& pair : lbn2shape_) {
+    ss << "{" << pair.first << ":" << pair.second->DebugString() << "}"; 
+  }
+  ss << "}";
+  return ss.str();
+}
+
 const char* RegstDesc::kAllLbn = "OfReservedAllLbn";
 
 } // namespace oneflow

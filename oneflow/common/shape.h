@@ -18,7 +18,7 @@ class Shape final {
   ~Shape() = default;
   
   bool operator == (const Shape& rhs) const;
-  std::string ToString() const;
+  std::string DebugString() const;
 
   ShapeProto ToProto() const;
 
