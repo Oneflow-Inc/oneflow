@@ -93,6 +93,18 @@ inline void str_replace(std::string* str, char old_ch, char new_ch) {
   }
 }
 
+template<typename K, typename V>
+void EraseIf(HashMap<K, V>* hash_map,
+             std::function<bool(typename HashMap<K, V>::iterator)> cond) {
+  for (auto it = hash_map->begin(); it != hash_map->end();) {
+    if (cond(it)) {
+      hash_map->erase(it++);
+    } else {
+      ++it;
+    }
+  }
+}
+
 } // namespace oneflow
 
 #endif // ONEFLOW_COMMON_UTIL_H

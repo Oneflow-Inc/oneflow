@@ -53,16 +53,9 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   const HashMap<std::string, RegstDesc*>& bn_in_op2regst() const {
     return bn_in_op2regst_;
   }
+  void UnBindRegstsWithZeroBlobSize();
 
-  std::function<Shape*(const std::string&)> GetMutShapePtr4BnInOpFunc() const {
-    return [this](const std::string& bn_in_op) -> Shape* {
-      auto it = this->bn_in_op2regst_.find(bn_in_op);
-      if (it == this->bn_in_op2regst_.end()) { return nullptr; }
-      RegstDesc* regst = it->second;
-      const std::string& lbn = this->op()->Lbn4BnInOp(bn_in_op);
-      return regst->GetMutShapePtr(lbn);
-    };
-  }
+  std::function<Shape*(const std::string&)> GetMutShapePtr4BnInOpFunc() const;
   
   std::string VisualStr() const { return op_->op_name(); }
   

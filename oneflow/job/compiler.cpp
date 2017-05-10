@@ -6,6 +6,7 @@
 #include "graph/model_save_task_graph.h"
 #include "graph/model_update_task_graph.h"
 #include "graph/data_task_graph.h"
+#include "register/register_desc.h"
 #include "job/job_conf.pb.h"
 #include "job/ofelf.pb.h"
 
@@ -28,8 +29,8 @@ class Compiler final {
   void RunFunc4EachTaskNode(std::function<void(TaskNode*)> func);
   
   void BuildGraphs();
-  void RemoveRegstsWithoutBlob();
   void InferShape4Regsts();
+  void EraseMeaningLessNodesAndRegsts();
   
   std::vector<std::unique_ptr<TaskGraph>> ordered_task_gphs_;
 
@@ -48,12 +49,17 @@ void Compiler::Compile(const JobConf& job_conf,
                        const std::string& elf_filepath) {
   JobDesc::Singleton().InitFromJobConf(job_conf);
   IDMgr::Singleton().InitFromResource(JobDesc::Singleton().resource());
+
   BuildGraphs();
-  RunFunc4EachTaskNode([](TaskNode* node) { node->RemoveRegstsWithoutBlob(); });
+  RunFunc4EachTaskNode([](TaskNode* node) { node->EraseProducedEmptyRegsts(); });
+
   InferShape4Regsts();
+  EraseMeaningLessNodesAndRegsts();
   OfElf elf;
   RunFunc4EachTaskNode([&elf](TaskNode* node) {
-    node->ToProto(elf.mutable_task()->Add());
+    if (!node->produced_regst_descs().empty()) {
+      node->ToProto(elf.mutable_task()->Add());
+    }
   });
   OpMgr::Singleton().AllOpToProto(elf.mutable_op());
   JobDesc::Singleton().ToProto(elf.mutable_job_desc());
@@ -125,6 +131,18 @@ void Compiler::InferShape4Regsts() {
     LOG(INFO) << "InferShape... for " << task_gph->name();
     task_gph->InferShapeOfBlobsInProducedRegsts();
   }
+}
+
+void Compiler::EraseMeaningLessNodesAndRegsts() {
+  RunFunc4EachTaskNode([](TaskNode* task_node) {
+    for (const auto& exec_node : task_node->exec_gph().nodes()) {
+      exec_node->UnBindRegstsWithZeroBlobSize();
+    }
+  });
+  RunFunc4EachTaskNode([](TaskNode* task_node) {
+    task_node->EraseZeroSizeBlobInProducedRegsts();
+    task_node->EraseProducedEmptyRegsts();
+  });
 }
 
 } // namespace oneflow

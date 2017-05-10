@@ -31,8 +31,7 @@ void OpMgr::AllOpToProto(PbRpf<OperatorProto>* ret) {
       op->ToProto(ret->Add());
       ++it;
     } else {
-      auto cur_it = it++;
-      op_list_.erase(cur_it);
+      op_list_.erase(it++);
     }
   }
 }

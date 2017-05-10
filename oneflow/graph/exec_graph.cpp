@@ -6,6 +6,29 @@ void ExecEdge::set_lbn(const std::string& lbn) {
   lbn_ = lbn;
 }
 
+void ExecNode::UnBindRegstsWithZeroBlobSize() {
+  EraseIf<std::string, RegstDesc*>(&bn_in_op2regst_, [this]
+      (HashMap<std::string, RegstDesc*>::iterator it) {
+    const std::string& lbn = this->op_->Lbn4BnInOp(it->first);
+    if (lbn == RegstDesc::kAllLbn) {
+      return it->second->CompElemCntOfAllBlob() == 0;
+    } else {
+      return it->second->GetShape(lbn).elem_cnt() == 0;
+    }
+  });
+}
+
+std::function<Shape*(const std::string&)>
+ExecNode::GetMutShapePtr4BnInOpFunc() const {
+  return [this](const std::string& bn_in_op) -> Shape* {
+    auto it = this->bn_in_op2regst_.find(bn_in_op);
+    if (it == this->bn_in_op2regst_.end()) { return nullptr; }
+    RegstDesc* regst = it->second;
+    const std::string& lbn = this->op()->Lbn4BnInOp(bn_in_op);
+    return regst->GetMutShapePtr(lbn);
+  };
+}
+
 void ExecNode::ToProto(ExecNodeProto* ret) const {
   ret->set_id(node_id());
   ret->set_op_name(op_->op_name());
@@ -29,7 +52,9 @@ RegstDesc* ExecGraph::RelatedModelRegst() const {
 
 void ExecGraph::ToProto(ExecGraphProto* ret) const {
   for (const std::unique_ptr<ExecNode>& node: nodes()) {
-    node->ToProto(ret->add_exec_node());
+    if (!node->bn_in_op2regst().empty()) {
+      node->ToProto(ret->add_exec_node());
+    }
   }
 }
 

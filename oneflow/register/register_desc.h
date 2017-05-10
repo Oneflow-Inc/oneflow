@@ -34,6 +34,10 @@ class RegstDesc final {
   HashMap<std::string, std::unique_ptr<Shape>>& mut_lbn2shape();
   const HashMap<std::string, std::unique_ptr<Shape>>& lbn2shape() const;
 
+  void EraseZeroSizeBlob();
+  
+  int64_t CompElemCntOfAllBlob() const;
+
   std::string DebugStr() const;
 
   void ToProto(RegstDescProto*) const;

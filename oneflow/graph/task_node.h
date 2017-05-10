@@ -54,7 +54,11 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   //
   RegstDesc* GetProducedRegstDesc(const std::string& regst_desc_name);
   void TakeOverRegstDesc(TaskNode* rhs, const std::string& regst_desc_name);
-  void RemoveRegstsWithoutBlob();
+  void EraseProducedEmptyRegsts();
+  void EraseZeroSizeBlobInProducedRegsts();
+  
+  const HashMap<std::string, std::unique_ptr<RegstDesc>>&
+  produced_regst_descs() const { return produced_regst_descs_; }
 
   // 
   const TaskEdge* GetOutEdge4ProducedRegst(RegstDesc*) const;

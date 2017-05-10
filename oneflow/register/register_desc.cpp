@@ -48,6 +48,21 @@ RegstDesc::lbn2shape() const {
   return lbn2shape_;
 }
 
+void RegstDesc::EraseZeroSizeBlob() {
+  EraseIf<std::string, std::unique_ptr<Shape>>(&lbn2shape_, []
+      (HashMap<std::string, std::unique_ptr<Shape>>::iterator it) {
+    return it->second->elem_cnt() == 0;
+  });
+}
+
+int64_t RegstDesc::CompElemCntOfAllBlob() const {
+  int64_t sum = 0;
+  for (const auto& pair : lbn2shape_) {
+    sum += pair.second->elem_cnt();
+  }
+  return sum;
+}
+
 std::string RegstDesc::DebugStr() const {
   std::stringstream ss;
   ss << "{";

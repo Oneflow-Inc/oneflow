@@ -62,15 +62,16 @@ void TaskNode::TakeOverRegstDesc(TaskNode* rhs,
                                       std::move(this_regst)).second);
 }
 
-void TaskNode::RemoveRegstsWithoutBlob() {
-  for (auto it = produced_regst_descs_.begin();
-            it != produced_regst_descs_.end();) {
-    if (it->second->lbn2shape().empty()) {
-      auto cur_it = it++;
-      produced_regst_descs_.erase(cur_it);
-    } else {
-      ++it;
-    }
+void TaskNode::EraseProducedEmptyRegsts() {
+  EraseIf<std::string, std::unique_ptr<RegstDesc>>(&produced_regst_descs_, []
+      (HashMap<std::string, std::unique_ptr<RegstDesc>>::iterator it) {
+    return it->second->lbn2shape().empty();
+  });
+}
+
+void TaskNode::EraseZeroSizeBlobInProducedRegsts() {
+  for (const auto& pair : produced_regst_descs_) {
+    pair.second->EraseZeroSizeBlob();
   }
 }
 
