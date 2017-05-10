@@ -17,12 +17,11 @@ class GrpcServer {
     GrpcServer();
     ~GrpcServer();
 
-    void Init_topology(Topology& topology);
-    void Start_service();
-    void Init_Context();
+    void InitTopology(Topology topology, std::string& FilePath);
+    void StartService();
+    void InitContext();
 
-  private:
-
+    std::vector<std::string> vec_;
 
 };
 

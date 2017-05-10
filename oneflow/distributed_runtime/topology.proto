@@ -1,11 +1,13 @@
 
 syntax = "proto3";
+package oneflow;
 
 import "distributed_runtime/resource.proto";
 
+
 message ConnectPair {
-  Node src = 1;
-  Node dst = 2;
+  string src = 1;
+  string dst = 2;
 }
 
 message Topology {
