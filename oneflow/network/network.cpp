@@ -1,5 +1,5 @@
 #include "network/network.h"
-#include "network/rdma/rdma_wrapper.h"
+//#include "network/rdma/rdma_wrapper.h"
 
 #include <vector>
 #include <string>
@@ -10,10 +10,10 @@
 namespace oneflow {
 
 Network* GetNdspiRDMAInstance() {
-  static RdmaWrapper instance;
-  return &instance;
-  LOG(FATAL) << "Unimplemented";
-  //return nullptr;
+  //static RdmaWrapper instance;
+  //return &instance;
+  //LOG(FATAL) << "Unimplemented";
+  return nullptr;
 }
 
 }  // namespace oneflow
