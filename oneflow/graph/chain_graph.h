@@ -55,6 +55,8 @@ class ChainNode final : public Node<ChainNode, ChainEdge> {
   }
   
   std::string VisualStr() const { return ConcatedOpsName(); }
+  
+  bool HasOpWithModelOrModelTmpBlob() const;
 
  private:
   std::vector<std::shared_ptr<const Operator>> op_vec_;
@@ -63,6 +65,7 @@ class ChainNode final : public Node<ChainNode, ChainEdge> {
   std::vector<std::string> output_lbns_;
 
 };
+
 
 class ChainEdge final : public Edge<ChainNode, ChainEdge> {
  public:

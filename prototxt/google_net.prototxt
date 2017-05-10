@@ -1,6 +1,6 @@
 name: "GoogleNet"
 
-op_conf {
+op {
   name: "mnist"
   data_loader_conf {
     feature: "feature"
@@ -13,7 +13,7 @@ op_conf {
   }
 }
 
-op_conf {
+op {
   name: "conv1"
   convolution_conf {
     in: "mnist/feature"
@@ -28,7 +28,7 @@ op_conf {
   }
 }
 
-op_conf {
+op {
   name: "pool1"
   pooling_conf {
     in: "conv1/out"
@@ -43,7 +43,7 @@ op_conf {
   }
 }
 
-op_conf {
+op {
   name: "conv2_1x1"
   convolution_conf {
     in: "pool1/out"
@@ -58,7 +58,7 @@ op_conf {
   }
 }
 
-op_conf {
+op {
   name: "conv2_1x3"
   convolution_conf {
     in: "pool1/out"
@@ -73,7 +73,7 @@ op_conf {
   }
 }
 
-op_conf {
+op {
   name: "conv2_1x5"
   convolution_conf {
     in: "pool1/out"
@@ -88,7 +88,7 @@ op_conf {
   }
 }
 
-op_conf {
+op {
   name: "conv2_3x3"
   convolution_conf {
     in: "conv2_1x3/out"
@@ -103,7 +103,7 @@ op_conf {
   }
 }
 
-op_conf {
+op {
   name: "conv2_5x5"
   convolution_conf {
     in: "conv2_1x5/out"
@@ -118,7 +118,7 @@ op_conf {
   }
 }
 
-op_conf {
+op {
   name: "concat2"
   concat_conf {
     in: "conv2_1x1/out"
@@ -129,7 +129,7 @@ op_conf {
   }
 }
 
-op_conf {
+op {
   name: "ip1"
   innerproduct_conf {
     in: "concat2/out"
@@ -138,7 +138,7 @@ op_conf {
   }
 }
 
-op_conf {
+op {
   name: "relu1"
   relu_conf {
     in: "ip1/out"
@@ -146,7 +146,7 @@ op_conf {
   }
 }
 
-op_conf {
+op {
   name: "ip2"
   innerproduct_conf {
     in: "relu1/out"
@@ -155,7 +155,7 @@ op_conf {
   }
 }
 
-op_conf {
+op {
   name: "softmax1"
   softmax_conf {
     in: "ip2/out"
@@ -163,7 +163,7 @@ op_conf {
   }
 }
 
-op_conf {
+op {
   name: "loss1"
   multinomial_logistic_loss_conf {
     prediction: "softmax1/out"
@@ -172,7 +172,7 @@ op_conf {
   }
 }
 
-op_conf {
+op {
   name: "pool2"
   pooling_conf {
     in: "concat2/out"
@@ -187,7 +187,7 @@ op_conf {
   }
 }
 
-op_conf {
+op {
   name: "conv3_1x1"
   convolution_conf {
     in: "pool2/out"
@@ -202,7 +202,7 @@ op_conf {
   }
 }
 
-op_conf {
+op {
   name: "conv3_1x3"
   convolution_conf {
     in: "pool2/out"
@@ -217,7 +217,7 @@ op_conf {
   }
 }
 
-op_conf {
+op {
   name: "conv3_1x5"
   convolution_conf {
     in: "pool2/out"
@@ -232,7 +232,7 @@ op_conf {
   }
 }
 
-op_conf {
+op {
   name: "conv3_3x3"
   convolution_conf {
     in: "conv3_1x3/out"
@@ -247,7 +247,7 @@ op_conf {
   }
 }
 
-op_conf {
+op {
   name: "conv3_5x5"
   convolution_conf {
     in: "conv3_1x5/out"
@@ -262,7 +262,7 @@ op_conf {
   }
 }
 
-op_conf {
+op {
   name: "concat3"
   concat_conf {
     in: "conv3_1x1/out"
@@ -273,7 +273,7 @@ op_conf {
   }
 }
 
-op_conf {
+op {
   name: "ip3"
   innerproduct_conf {
     in: "concat3/out"
@@ -282,7 +282,7 @@ op_conf {
   }
 }
 
-op_conf {
+op {
   name: "relu3"
   relu_conf {
     in: "ip3/out"
@@ -290,7 +290,7 @@ op_conf {
   }
 }
 
-op_conf {
+op {
   name: "ip4"
   innerproduct_conf {
     in: "relu3/out"
@@ -299,7 +299,7 @@ op_conf {
   }
 }
 
-op_conf {
+op {
   name: "softmax2"
   softmax_conf {
     in: "ip4/out"
@@ -307,7 +307,7 @@ op_conf {
   }
 }
 
-op_conf {
+op {
   name: "loss2"
   multinomial_logistic_loss_conf {
     prediction: "softmax2/out"

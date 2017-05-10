@@ -6,7 +6,7 @@
 namespace oneflow {
 
 void CopyTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph*){
-  auto out_regst = RegstDescMgr::Singleton().CreateRegisterDesc();
+  auto out_regst = of_make_unique<RegstDesc> ();
   BindProducedRegstAndOutEdge(out_regst.get(), SoleOutEdge());
   RegstDesc* in_regst = GetRelatedRegst(SoleInEdge());
   out_regst->CopyLbnFrom(in_regst);

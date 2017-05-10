@@ -7,8 +7,7 @@ import "task/task.proto";
 import "job/job_desc.proto";
 
 message OfElf {
-  repeated TaskProto tasks = 1;
-  repeated RegstDescProto regst_descs = 2;
-  repeated OperatorProto operators = 3;
+  repeated TaskProto task = 1;
+  repeated OperatorProto op = 3;
   JobDescProto job_desc = 4;
 }

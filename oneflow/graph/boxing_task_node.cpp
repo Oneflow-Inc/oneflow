@@ -38,11 +38,11 @@ void BoxingTaskNode::FwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
 void BoxingTaskNode::EnrollAllRegstAndBindRelatedEdge() {
   for (TaskEdge* edge : out_edges()) {
     std::string name = "boxing_out_" + edge->edge_id_str();
-    auto regst_desc = RegstDescMgr::Singleton().CreateRegisterDesc();
+    auto regst_desc = of_make_unique<RegstDesc> ();
     BindProducedRegstAndOutEdge(regst_desc.get(), edge);
     EnrollProducedRegstDesc(name, std::move(regst_desc));
   }
-  auto regst_desc = RegstDescMgr::Singleton().CreateRegisterDesc();
+  auto regst_desc = of_make_unique<RegstDesc> ();
   EnrollProducedRegstDesc("middle", std::move(regst_desc));
 }
 

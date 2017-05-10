@@ -41,7 +41,12 @@ std::unique_ptr<TaskNode> TaskNode::BuildAndConnectBpNode() {
 }
 
 RegstDesc* TaskNode::GetProducedRegstDesc(const std::string& regst_desc_name) {
-  return produced_regst_descs_.at(regst_desc_name).get();
+  auto it = produced_regst_descs_.find(regst_desc_name);
+  if (it == produced_regst_descs_.end()) {
+    return nullptr;
+  } else {
+    return it->second.get();
+  }
 }
 
 void TaskNode::TakeOverRegstDesc(TaskNode* rhs,
@@ -55,6 +60,18 @@ void TaskNode::TakeOverRegstDesc(TaskNode* rhs,
   rhs->produced_regst_descs_.erase(rhs_regst_it);
   CHECK(produced_regst_descs_.emplace(regst_desc_name,
                                       std::move(this_regst)).second);
+}
+
+void TaskNode::RemoveRegstsWithoutBlob() {
+  for (auto it = produced_regst_descs_.begin();
+            it != produced_regst_descs_.end();) {
+    if (it->second->lbn2shape().empty()) {
+      auto cur_it = it++;
+      produced_regst_descs_.erase(cur_it);
+    } else {
+      ++it;
+    }
+  }
 }
 
 const TaskEdge* TaskNode::GetOutEdge4ProducedRegst(RegstDesc* regst) const {
@@ -94,20 +111,7 @@ void TaskNode::ToProto(TaskProto* ret) const {
   ret->set_is_forward(is_fw_node_);
   exec_gph_.ToProto(ret->mutable_exec_graph());
   for (const auto& pair : produced_regst_descs_) {
-    ret->mutable_produced_regst_desc_ids()->Add(
-        pair.second->regst_desc_id());
-  }
-  // subscribed_regsts
-  std::unordered_set<RegstDesc*> subscribed_regsts;
-  for (const auto& exec_node : exec_gph().nodes()) {
-    for (const auto& pair : exec_node->bn_in_op2regst()) {
-      RegstDesc* related_regst = pair.second;
-      if (related_regst->GetProducer() == this) { continue; }
-      subscribed_regsts.insert(related_regst);
-    }
-  }
-  for (RegstDesc* regst : subscribed_regsts) {
-    ret->mutable_subscribed_regst_desc_ids()->Add(regst->regst_desc_id());
+    pair.second->ToProto(ret->mutable_produced_regst_desc()->Add());
   }
 }
 

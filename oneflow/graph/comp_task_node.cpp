@@ -24,16 +24,16 @@ void CompTaskNode::DataFwBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   mut_exec_gph().UpdateSourceAndSink();
   // out regst
   if (!out_edges().empty()) {
-    auto out_regst = RegstDescMgr::Singleton().CreateRegisterDesc();
+    auto out_regst = of_make_unique<RegstDesc> ();
     BindProducedRegstAndOutEdge(out_regst.get(), SoleOutEdge());
     EnrollProducedRegstDesc("out", std::move(out_regst));
   }
   // the other produced regsts
-  auto activation_regst = RegstDescMgr::Singleton().CreateRegisterDesc();
-  auto data_tmp_regst = RegstDescMgr::Singleton().CreateRegisterDesc();
-  auto model_tmp_regst = RegstDescMgr::Singleton().CreateRegisterDesc();
-  auto model_regst = RegstDescMgr::Singleton().CreateRegisterDesc();
-  auto log_regst = RegstDescMgr::Singleton().CreateRegisterDesc();
+  auto activation_regst = of_make_unique<RegstDesc> ();
+  auto data_tmp_regst = of_make_unique<RegstDesc> ();
+  auto model_tmp_regst = of_make_unique<RegstDesc> ();
+  auto model_regst = of_make_unique<RegstDesc> ();
+  auto log_regst = of_make_unique<RegstDesc> ();
   // EnrollProducedRegstDesc
   EnrollProducedRegstDesc("activation", std::move(activation_regst));
   EnrollProducedRegstDesc("data_tmp", std::move(data_tmp_regst));
@@ -98,7 +98,7 @@ void CompTaskNode::MdLoadFwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   exec_node->mut_op() = chain_node()->SoleOp();
   mut_exec_gph().UpdateSourceAndSink();
   
-  auto model_regst = RegstDescMgr::Singleton().CreateRegisterDesc();
+  auto model_regst = of_make_unique<RegstDesc> ();
   exec_node->BindBnInOpAndRegst(exec_node->op()->SoleObn(), model_regst.get());
   BindProducedRegstAndOutEdge(model_regst.get(), SoleOutEdge());
   CompTaskNode* update_0 = md_load_gph->parallel_id2updt_task().at(0);
@@ -271,9 +271,9 @@ void CompTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   HashMap<ExecEdge*, const ExecEdge*> bp_edge2fw_edge;
   BpBuildExecGraph(fw_gph, &fw_node2bp_node, &bp_edge2fw_edge);
   // Produced registers
-  auto in_diff_regst = RegstDescMgr::Singleton().CreateRegisterDesc();
-  auto model_diff_regst = RegstDescMgr::Singleton().CreateRegisterDesc();
-  auto activation_diff_regst = RegstDescMgr::Singleton().CreateRegisterDesc();
+  auto in_diff_regst = of_make_unique<RegstDesc> ();
+  auto model_diff_regst = of_make_unique<RegstDesc> ();
+  auto activation_diff_regst = of_make_unique<RegstDesc> ();
   // Bind out edge
   if (!out_edges().empty()) {
     BindProducedRegstAndOutEdge(in_diff_regst.get(), SoleOutEdge());
@@ -292,12 +292,14 @@ void CompTaskNode::BpInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
   RegstDesc* in_regst = GetRelatedRegst(GetFwNode()->SoleInEdge());
   in_diff_regst->CopyShapeFrom(in_regst);
   // model_diff_regst
-  RegstDesc* model_diff_regst = GetProducedRegstDesc("model_diff");
-  model_diff_regst->CopyShapeFrom(GetFwNode()->exec_gph().RelatedModelRegst());
+  if (RegstDesc* md_diff_regst = GetProducedRegstDesc("model_diff")) {
+    md_diff_regst->CopyShapeFrom(GetFwNode()->exec_gph().RelatedModelRegst());
+  }
   // activation_diff_regst
-  RegstDesc* activation_diff_regst = GetProducedRegstDesc("activation_diff");
-  RegstDesc* activation_regst = GetFwNode()->GetProducedRegstDesc("activation");
-  activation_diff_regst->CopyShapeFrom(activation_regst);
+  if (RegstDesc* acti_diff_regst = GetProducedRegstDesc("activation_diff")) {
+    RegstDesc* acti_regst = GetFwNode()->GetProducedRegstDesc("activation");
+    acti_diff_regst->CopyShapeFrom(acti_regst);
+  }
 }
 
 void CompTaskNode::BpBuildExecGraph(

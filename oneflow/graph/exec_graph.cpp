@@ -14,7 +14,7 @@ void ExecNode::ToProto(ExecNodeProto* ret) const {
         bn_regst.first, bn_regst.second->regst_desc_id()});
   }
   for (ExecEdge* edge: in_edges()) {
-    ret->add_predecessor_ids(edge->src_node()->node_id());
+    ret->add_predecessor_id(edge->src_node()->node_id());
   }
 }
 
@@ -29,7 +29,7 @@ RegstDesc* ExecGraph::RelatedModelRegst() const {
 
 void ExecGraph::ToProto(ExecGraphProto* ret) const {
   for (const std::unique_ptr<ExecNode>& node: nodes()) {
-    node->ToProto(ret->add_exec_nodes());
+    node->ToProto(ret->add_exec_node());
   }
 }
 

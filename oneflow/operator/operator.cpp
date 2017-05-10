@@ -5,27 +5,27 @@ namespace oneflow {
 void Operator::InitFromProto(const OperatorProto& op_proto) {
   op_conf_ = op_proto.op_conf();
   bn_in_op2lbn_ = PbMap2HashMap(op_proto.bn_in_op2lbn());
-  data_tmp_bns_ = PbVec2StdVec(op_proto.data_tmp_bns());
-  input_bns_ = PbVec2StdVec(op_proto.input_bns());
-  input_diff_bns_ = PbVec2StdVec(op_proto.input_diff_bns());
-  output_bns_ = PbVec2StdVec(op_proto.output_bns());
-  output_diff_bns_ = PbVec2StdVec(op_proto.output_diff_bns());
-  model_bns_ = PbVec2StdVec(op_proto.model_bns());
-  model_diff_bns_ = PbVec2StdVec(op_proto.model_diff_bns());
-  model_tmp_bns_ = PbVec2StdVec(op_proto.model_tmp_bns());
+  data_tmp_bns_ = PbVec2StdVec(op_proto.data_tmp_bn());
+  input_bns_ = PbVec2StdVec(op_proto.input_bn());
+  input_diff_bns_ = PbVec2StdVec(op_proto.input_diff_bn());
+  output_bns_ = PbVec2StdVec(op_proto.output_bn());
+  output_diff_bns_ = PbVec2StdVec(op_proto.output_diff_bn());
+  model_bns_ = PbVec2StdVec(op_proto.model_bn());
+  model_diff_bns_ = PbVec2StdVec(op_proto.model_diff_bn());
+  model_tmp_bns_ = PbVec2StdVec(op_proto.model_tmp_bn());
 }
 
 void Operator::ToProto(OperatorProto* ret) const {
   *(ret->mutable_op_conf()) = op_conf_;
   *(ret->mutable_bn_in_op2lbn()) = HashMap2PbMap(bn_in_op2lbn_);
-  *(ret->mutable_data_tmp_bns()) = StdVec2PbVec(data_tmp_bns_);
-  *(ret->mutable_input_bns()) = StdVec2PbVec(input_bns_);
-  *(ret->mutable_input_diff_bns()) = StdVec2PbVec(input_diff_bns_);
-  *(ret->mutable_output_bns()) = StdVec2PbVec(output_bns_);
-  *(ret->mutable_output_diff_bns()) = StdVec2PbVec(output_diff_bns_);
-  *(ret->mutable_model_bns()) = StdVec2PbVec(model_bns_);
-  *(ret->mutable_model_diff_bns()) = StdVec2PbVec(model_diff_bns_);
-  *(ret->mutable_model_tmp_bns()) = StdVec2PbVec(model_tmp_bns_);
+  *(ret->mutable_data_tmp_bn()) = StdVec2PbVec(data_tmp_bns_);
+  *(ret->mutable_input_bn()) = StdVec2PbVec(input_bns_);
+  *(ret->mutable_input_diff_bn()) = StdVec2PbVec(input_diff_bns_);
+  *(ret->mutable_output_bn()) = StdVec2PbVec(output_bns_);
+  *(ret->mutable_output_diff_bn()) = StdVec2PbVec(output_diff_bns_);
+  *(ret->mutable_model_bn()) = StdVec2PbVec(model_bns_);
+  *(ret->mutable_model_diff_bn()) = StdVec2PbVec(model_diff_bns_);
+  *(ret->mutable_model_tmp_bn()) = StdVec2PbVec(model_tmp_bns_);
 }
 
 const std::string& Operator::Lbn4BnInOp(const std::string& bn_in_op) const {

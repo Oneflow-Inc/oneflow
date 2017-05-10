@@ -5,9 +5,9 @@ message ExecNodeProto {
   uint64 id = 1;
   string op_name = 2;
   map<string, uint64> bn_in_op2regst_desc_id = 3;
-  repeated uint64 predecessor_ids = 4;
+  repeated uint64 predecessor_id = 4;
 }
 
 message ExecGraphProto {
-  repeated ExecNodeProto exec_nodes = 1;
+  repeated ExecNodeProto exec_node = 1;
 }

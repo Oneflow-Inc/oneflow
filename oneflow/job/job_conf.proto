@@ -8,4 +8,5 @@ message JobConf {
   string model_load_machine = 4;
   string model_save_machine = 5;
   uint32 batch_size = 6;
+  uint32 piece_size = 7;
 }

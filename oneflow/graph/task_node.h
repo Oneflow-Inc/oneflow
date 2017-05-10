@@ -4,7 +4,6 @@
 #include "task/task.pb.h"
 #include "graph/stage_graph.h"
 #include "graph/exec_graph.h"
-#include "register/register_desc_manager.h"
 
 namespace oneflow {
 
@@ -55,6 +54,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   //
   RegstDesc* GetProducedRegstDesc(const std::string& regst_desc_name);
   void TakeOverRegstDesc(TaskNode* rhs, const std::string& regst_desc_name);
+  void RemoveRegstsWithoutBlob();
 
   // 
   const TaskEdge* GetOutEdge4ProducedRegst(RegstDesc*) const;

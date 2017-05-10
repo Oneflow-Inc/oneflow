@@ -7,7 +7,7 @@ namespace oneflow {
 
 RegstDesc::RegstDesc() {
   producer_ = nullptr;
-  register_num_ = 0; // TODO
+  register_num_ = 5; // TODO
 }
 
 void RegstDesc::CopyLbnFrom(const RegstDesc* rhs) {

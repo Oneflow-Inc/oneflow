@@ -235,6 +235,15 @@ std::string ChainNode::ConcatedOpsName() const {
   }
 }
 
+bool ChainNode::HasOpWithModelOrModelTmpBlob() const {
+  for (std::shared_ptr<const Operator> op : op_vec_) {
+    if (!op->model_bns().empty() || !op->model_tmp_bns().empty()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 ChainGraph::ChainGraph(const LogicalGraph* logical_gph,
                        const std::string& dot_filepath) {
   LOG(INFO) << "Build ChainGraph...";

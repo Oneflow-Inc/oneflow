@@ -11,7 +11,7 @@ void JobDesc::InitFromJobConf(const JobConf& conf) {
   md_load_machine_ = conf.model_load_machine();
   md_save_machine_ = conf.model_save_machine();
   batch_size_ = conf.batch_size();
-  piece_size_ = 0; // TODO
+  piece_size_ = conf.piece_size();
 }
 
 void JobDesc::InitFromProto(const JobDescProto& proto) {

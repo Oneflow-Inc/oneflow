@@ -23,8 +23,8 @@ void LogicalGraph::NaiveBuildGraphStruct(
     HashMap<LogicalEdge*, std::string>* edge2ibn) {
   HashMap<std::string, LogicalNode*> lbn2producer;
   // Process Op
-  for (int op_i = 0; op_i < dl_net_conf.op_conf_size(); ++op_i) {
-    const OperatorConf& cur_op_conf = dl_net_conf.op_conf(op_i);
+  for (int op_i = 0; op_i < dl_net_conf.op_size(); ++op_i) {
+    const OperatorConf& cur_op_conf = dl_net_conf.op(op_i);
     // Construct cur node
     LogicalNode* cur_node = NewNode();
     cur_node->mut_op() = OpMgr::Singleton().ConstructOp(cur_op_conf);
