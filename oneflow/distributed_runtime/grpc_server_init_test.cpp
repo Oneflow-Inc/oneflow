@@ -21,9 +21,6 @@ TEST(GrpcServer, test) {
   //std::shared_ptr<GrpcServer> grpc_sever_(new GrpcServer());
   GrpcServer* grpc_sever_(new GrpcServer());
   grpc_sever_->InitTopology(topology, FLAGS_topology);
-  //for(auto& v : grpc_sever_->vec_){
-  //  std::cout<<v<<std::endl;
-  //}
   EXPECT_EQ(grpc_sever_->vec_[0], "1");
   EXPECT_EQ(grpc_sever_->vec_[1], "2");
 }
