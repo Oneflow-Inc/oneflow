@@ -2,7 +2,7 @@
 syntax = "proto3";
 package oneflow;
 
-import "distributed_runtime/resource.proto";
+import "distributed_runtime/machine_list.proto";
 
 
 message ConnectPair {

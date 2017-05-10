@@ -2,12 +2,12 @@ syntax = "proto3";
 package oneflow;
 
 message Node {
-  int32 id = 1;
+  string id = 1;
   string name = 2;
   string ip = 3;
   string port = 4;
 }
 
-message ResourceList {
+message MachineList {
   repeated Node machine_list= 1;
 }

@@ -19,17 +19,33 @@ namespace oneflow {
 GrpcServer::GrpcServer() {}
 GrpcServer::~GrpcServer() {}
 
-void GrpcServer::InitTopology(oneflow::Topology topology, std::string& FilePath) {
-  {
-    std::ifstream confFile(FilePath);
-    google::protobuf::io::IstreamInputStream in(&confFile);
-    if(!google::protobuf::TextFormat::Parse(&in, &topology)) {
-      confFile.close();
-    }
-    for(auto& pair : topology.pair()){
-      vec_.push_back(pair.dst());
-    }
+void GrpcServer::InitTopology(oneflow::Topology topology, std::string& TopologyFilePath, oneflow::MachineList machine, std::string& MachineListFilePath ) {
+  std::ifstream topologyFile(TopologyFilePath);
+  google::protobuf::io::IstreamInputStream inTopologyFile(&topologyFile);
+  if(!google::protobuf::TextFormat::Parse(&inTopologyFile, &topology)) {
+    topologyFile.close();
   }
+
+  for(auto& pair : topology.pair()){
+    vec_.push_back(pair.dst());
+    pair_map_.insert({pair.src(), pair.dst()});
+  }
+  
+  std::ifstream resourceFile(MachineListFilePath);
+  google::protobuf::io::IstreamInputStream inResourceFile(&resourceFile);
+  if(!google::protobuf::TextFormat::Parse(&inResourceFile, &machine)) {
+    resourceFile.close();
+  }
+
+  for(auto& m : machine.machine_list()) {
+    machine_desc md;
+    md.id = m.id();
+    md.name = m.name();
+    md.ip = m.ip();
+    md.port = m.port(); 
+    machine_list_.insert({md.id, md});
+  }
+
 }
 
 void GrpcServer::StartService() {
