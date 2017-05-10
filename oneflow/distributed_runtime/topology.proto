@@ -1,0 +1,13 @@
+
+syntax = "proto3";
+
+import "distributed_runtime/resource.proto";
+
+message ConnectPair {
+  Node src = 1;
+  Node dst = 2;
+}
+
+message Topology {
+  repeated ConnectPair pair = 1;
+}

@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+message Node {
+  int32 id = 1;
+  string name = 2;
+  string ip = 3;
+  string port = 4;
+}
+
+message ResourceList {
+  repeated Node machine_list= 1;
+}
