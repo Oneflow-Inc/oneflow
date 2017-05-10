@@ -46,6 +46,14 @@ void GrpcServer::InitTopology(oneflow::Topology topology, std::string& TopologyF
     machine_list_.insert({md.id, md});
   }
 
+  CreateChannelCache(); 
+
+}
+
+void GrpcServer::CreateChannelCache() {
+  for(auto& pair : pair_map_){
+   
+  }
 }
 
 void GrpcServer::StartService() {

@@ -28,6 +28,8 @@ TEST(GrpcServer, test) {
   EXPECT_EQ(grpc_sever_->vec_[1], "2");
 
   bool tmp = (grpc_sever_->machine_list_.find("0") != grpc_sever_->machine_list_.end());
+  auto iter = grpc_sever_->machine_list_.find("0");
+  std::cout<<iter->second.ip<<std::endl;
   EXPECT_EQ(tmp, true);
  
 }
