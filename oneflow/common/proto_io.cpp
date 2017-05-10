@@ -1,6 +1,5 @@
 #include "common/proto_io.h"
 #include <stdint.h>
-#include <fcntl.h>
 #include <algorithm>
 #include <fstream>
 #include <string>
@@ -12,8 +11,8 @@
 
 namespace oneflow {
 
-using google::protobuf::io::FileInputStream;
-using google::protobuf::io::FileOutputStream;
+using google::protobuf::io::IstreamInputStream;
+using google::protobuf::io::OstreamOutputStream;
 using google::protobuf::io::ZeroCopyInputStream;
 using google::protobuf::io::CodedInputStream;
 using google::protobuf::io::ZeroCopyOutputStream;
@@ -32,18 +31,18 @@ void PrintProtoToString(const PbMessage& proto, std::string* str) {
 
 // txt file
 void ParseProtoFromTextFile(const std::string& file_path, PbMessage* proto) {
-  int fd = open(file_path.c_str(), O_RDONLY);
-  CHECK_NE(fd, -1) << "File not found: " << file_path;
-  FileInputStream input(fd);
+  std::ifstream in_stream(file_path.c_str(), std::ifstream::in);
+  IstreamInputStream input(&in_stream);
   CHECK(google::protobuf::TextFormat::Parse(&input, proto));
-  close(fd);
+  in_stream.close();
 }
 void PrintProtoToTextFile(const PbMessage& proto,
                           const std::string& file_path) {
-  int fd = open(file_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
-  FileOutputStream output(fd);
+  std::ofstream out_stream(
+    file_path.c_str(), std::ofstream::out | std::ofstream::trunc);
+  OstreamOutputStream output(&out_stream);
   CHECK(google::protobuf::TextFormat::Print(proto, &output));
-  close(fd);
+  out_stream.close();
 }
 
 #define DEFINE_GET_VAL_FROM_PBMESSAGE(ret_type, func_name) \
