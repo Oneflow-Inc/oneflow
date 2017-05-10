@@ -74,21 +74,22 @@ void Compiler::BuildGraphs() {
         "data",
         JobDesc::Singleton().train_dlnet_conf(),
         JobDesc::Singleton().strategy(),
-        true);
+        JobDesc::Singleton().is_train());
   ordered_task_gphs_.emplace_back(data_task_gph);
-  // construct data_chain2sorted_bp_comp_tasks
+  // construct data_chain2sorted_fw_comp_tasks
   HashMap<const ChainNode*, std::vector<CompTaskNode*>>
-      data_chain2sorted_bp_comp_tasks;
+      data_chain2sorted_fw_comp_tasks;
   for (const auto& node : data_task_gph->nodes()) {
-    auto bp_node = dynamic_cast<CompTaskNode*>(node.get());
-    if (bp_node == nullptr || bp_node->IsFwNode()) { continue; }
-    data_chain2sorted_bp_comp_tasks[bp_node->chain_node()].push_back(bp_node);
+    auto fw_node = dynamic_cast<CompTaskNode*>(node.get());
+    if (fw_node == nullptr || fw_node->IsBpNode()
+                           || fw_node->IsLossNode()) { continue; }
+    data_chain2sorted_fw_comp_tasks[fw_node->chain_node()].push_back(fw_node);
   }
-  for (auto& pair : data_chain2sorted_bp_comp_tasks) {
+  for (auto& pair : data_chain2sorted_fw_comp_tasks) {
     SortByParallelId(&(pair.second));
   }
   // model graph
-  for (const auto& pair : data_chain2sorted_bp_comp_tasks) {
+  for (const auto& pair : data_chain2sorted_fw_comp_tasks) {
     if (pair.first->HasOpWithModelOrModelTmpBlob() == false) { continue; } 
     std::string chain_tag = pair.first->op_vec().front()->op_name();
     str_replace(&chain_tag, '/', '_');
@@ -105,19 +106,21 @@ void Compiler::BuildGraphs() {
       CHECK(parallel_id2updt_task.emplace(
             update_task->parallel_id(), update_task).second);
     }
+    ordered_task_gphs_.emplace_back(updt_gph);
     LOG(INFO) << "Build MdLoadTaskGraph... for " << chain_tag;
     auto load_gph = new MdLoadTaskGraph(
         "md_load_" + chain_tag,
         updt_chain, parallel_id2updt_task, policy,
         dot_path_prefix + "model_load_");
-    LOG(INFO) << "Build MdSaveTaskGraph... for " << chain_tag;
-    auto save_gph = new MdSaveTaskGraph(
-        "md_save_" + chain_tag,
-        updt_chain, parallel_id2updt_task, policy,
-        dot_path_prefix + "model_save_");
-    ordered_task_gphs_.emplace_back(updt_gph);
     ordered_task_gphs_.emplace_back(load_gph);
-    ordered_task_gphs_.emplace_back(save_gph);
+    if (JobDesc::Singleton().is_train()) {
+      LOG(INFO) << "Build MdSaveTaskGraph... for " << chain_tag;
+      auto save_gph = new MdSaveTaskGraph(
+          "md_save_" + chain_tag,
+          updt_chain, parallel_id2updt_task, policy,
+          dot_path_prefix + "model_save_");
+      ordered_task_gphs_.emplace_back(save_gph);
+    }
   }
   // all exec_graph 2 dot
   RunFunc4EachTaskNode([](TaskNode* node) {

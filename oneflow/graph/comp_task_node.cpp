@@ -59,13 +59,16 @@ void CompTaskNode::DataFwInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
 
 void CompTaskNode::MdUpdtFwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   auto md_updt_gph = of_dynamic_cast<MdUpdtTaskGraph*> (gph);
-  CompTaskNode* bp_task = md_updt_gph->GetBpTaskFromParallelId(parallel_id());
-  RegstDesc* model_diff_regst = bp_task->GetProducedRegstDesc("model_diff");
+  CompTaskNode* fw_task = md_updt_gph->GetFwTaskFromParallelId(parallel_id());
+  TaskNode* bp_task = fw_task->GetBpNode();
+  RegstDesc* model_diff_regst = nullptr;
+  if (bp_task != nullptr) {
+    model_diff_regst = bp_task->GetProducedRegstDesc("model_diff");
+  }
   if (IsFaker()) {
     BindProducedRegstAndOutEdge(model_diff_regst, SoleOutEdge());
     return;
   }
-  TaskNode* fw_task = bp_task->GetFwNode();
   TakeOverRegstDesc(fw_task, "model");
   TakeOverRegstDesc(fw_task, "model_tmp");
   RegstDesc* model_regst = GetProducedRegstDesc("model");
@@ -74,7 +77,9 @@ void CompTaskNode::MdUpdtFwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   exec_node->mut_op() = chain_node()->SoleOp();
   const std::string ibn = "model_diffs";
   if (in_edges().empty()) {
-    exec_node->BindBnInOpAndRegst(ibn, model_diff_regst);
+    if (model_diff_regst) {
+      exec_node->BindBnInOpAndRegst(ibn, model_diff_regst);
+    }
   } else {
     exec_node->BindBnInOpAndRegst(ibn, GetRelatedRegst(SoleInEdge()));
   }

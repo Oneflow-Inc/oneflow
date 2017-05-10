@@ -14,7 +14,7 @@ class MdUpdtTaskGraph final : public TaskGraph {
   MdUpdtTaskGraph(
       const std::string& name,
       const ChainNode* data_chain,
-      const std::vector<CompTaskNode*>& sorted_bp_comptasks4data_chain,
+      const std::vector<CompTaskNode*>& sorted_fw_comptasks4data_chain,
       const std::string& dot_path_prefix);
   
   CompTaskNodeMemFunc Func4FwBuildExecAndEnrollLbn2Regsts() const override {
@@ -24,15 +24,15 @@ class MdUpdtTaskGraph final : public TaskGraph {
     return &CompTaskNode::MdUpdtFwInferShapeOfBlobsInProducedRegsts;
   }
 
-  CompTaskNode* GetBpTaskFromParallelId(uint64_t parallel_id) const {
-    return parallel_id2bp_task_.at(parallel_id);
+  CompTaskNode* GetFwTaskFromParallelId(uint64_t parallel_id) const {
+    return parallel_id2fw_task_.at(parallel_id);
   }
 
  private:
    void BuildTaskGraph(const ChainNode* data_chain,
                        const std::string& dot_path_prefix);
 
-   HashMap<uint64_t, CompTaskNode*> parallel_id2bp_task_;
+   HashMap<uint64_t, CompTaskNode*> parallel_id2fw_task_;
 
 };
 

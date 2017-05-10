@@ -6,12 +6,12 @@ namespace oneflow {
 MdUpdtTaskGraph::MdUpdtTaskGraph(
     const std::string& name,
     const ChainNode* data_chain,
-    const std::vector<CompTaskNode*>& sorted_bp_comptasks4data_chain,
+    const std::vector<CompTaskNode*>& sorted_fw_comptasks4data_chain,
     const std::string& dot_path_prefix) {
   mut_name() = name;
   BuildTaskGraph(data_chain, dot_path_prefix);
-  for (CompTaskNode* bp_task : sorted_bp_comptasks4data_chain) {
-    CHECK(parallel_id2bp_task_.emplace(bp_task->parallel_id(), bp_task).second);
+  for (CompTaskNode* fw_task : sorted_fw_comptasks4data_chain) {
+    CHECK(parallel_id2fw_task_.emplace(fw_task->parallel_id(), fw_task).second);
   }
   BuildExecAndEnrollLbn2Regsts();
 }
@@ -31,7 +31,8 @@ void MdUpdtTaskGraph::BuildTaskGraph(const ChainNode* data_chain,
   parallel_desc4updt->mut_policy() = kModelParallel;
   updt_chain->mut_parallel_desc().reset(parallel_desc4updt);
   // FakerChain
-  if (data_chain->parallel_desc()->policy() == kDataParallel) {
+  if (data_chain->parallel_desc()->policy() == kDataParallel
+      && JobDesc::Singleton().is_train()) {
     ChainNode* faker_chain = chain_gph->NewNode();
     faker_chain->mut_op_vec().clear();
     faker_chain->mut_parallel_desc() = data_chain->parallel_desc();

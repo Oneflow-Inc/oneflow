@@ -13,4 +13,5 @@ message JobDescProto {
   string model_save_machine = 5;
   uint32 batch_size = 6;
   uint32 piece_size = 7;
+  bool is_train = 8;
 }
