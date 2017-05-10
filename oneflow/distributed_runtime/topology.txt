@@ -1,8 +1,8 @@
-ConnectPair {
+pair {
   src: "0"
   dst: "1"
 }
-ConnectPair {
+pair {
   src: "0"
   dst: "2"
 }
