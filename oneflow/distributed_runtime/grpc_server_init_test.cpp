@@ -12,7 +12,7 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
-DEFINE_string(topology, "/home/xiaoshu/dl_sys/oneflow/oneflow/distribut    ed_runtime/topology.txt", "");
+DEFINE_string(topology, "/home/xiaoshu/dl_sys/oneflow/oneflow/distributed_runtime/topology.txt", "");
 
 namespace oneflow {
 
