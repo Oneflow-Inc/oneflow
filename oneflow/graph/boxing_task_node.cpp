@@ -116,16 +116,13 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
     CompleteBoxOp = &FwCompleteBoxOpConfModelModel;
   }
   // func 4 construct boxing_op in this node
-  auto ConstructBoxingOp = [in_num = sorted_in_edges.size(),
-                            out_num = sorted_out_edges.size(),
-                            &CompleteBoxOp]
-                           (const std::string& lbn) {
+  auto ConstructBoxingOp = [&](const std::string& lbn) {
     OperatorConf op_conf;
     op_conf.set_name("boxing_op_" + NewUniqueId());
     BoxingOpConf* box_conf = op_conf.mutable_boxing_conf();
     box_conf->set_lbn(lbn);
-    box_conf->set_in_num(in_num);
-    box_conf->set_out_num(out_num);
+    box_conf->set_in_num(sorted_in_edges.size());
+    box_conf->set_out_num(sorted_out_edges.size());
     CompleteBoxOp(box_conf);
     return OpMgr::Singleton().ConstructOp(op_conf);
   };
