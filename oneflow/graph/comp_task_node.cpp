@@ -349,7 +349,6 @@ void CompTaskNode::BpSetExecNodeFromOutDiffRegst() {
     }
     for (const std::string& odbn : bp_node->op()->output_diff_bns()) {
       if (found_bns.find(odbn) != found_bns.end()) { continue; }
-      std::string lbn = bp_node->op()->Lbn4BnInOp(odbn);
       bp_node->BindBnInOpAndRegst(odbn, out_diff_regst);
     }
   }
