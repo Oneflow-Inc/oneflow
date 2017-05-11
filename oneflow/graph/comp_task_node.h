@@ -62,10 +62,7 @@ class CompTaskNode : public TaskNode {
 
   void BpBuildExecAndEnrollLbn2Regsts(TaskGraph*);
   void BpInferShapeOfBlobsInProducedRegsts(TaskGraph*);
-  void BpBuildExecGraph(
-      const ExecGraph& fw_gph,
-      HashMap<const ExecNode*, ExecNode*>* fw_node2bp_node,
-      HashMap<ExecEdge*, const ExecEdge*>* bp_edge2fw_edge);
+  void BpBuildExecGraph();
   void BpEnrollLbn2ProducedRegst();
   void BpEnrollLbn2ActivationDiffRegst();
   void BpSetExecNodeFromOutDiffRegst();
