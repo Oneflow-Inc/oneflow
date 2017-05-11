@@ -110,7 +110,7 @@ void TaskNode::ToProto(TaskProto* ret) const {
   ret->set_machine_id(stage_node_->machine_id());
   ret->set_thrd_local_id(thrd_loc_id_);
   ret->set_is_forward(is_fw_node_);
-  exec_gph_.ToProto(ret->mutable_exec_graph());
+  exec_gph_.ToExecSequence(ret->mutable_exec_sequence());
   for (const auto& pair : produced_regst_descs_) {
     pair.second->ToProto(ret->mutable_produced_regst_desc()->Add());
   }

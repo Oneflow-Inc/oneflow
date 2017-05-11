@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_GRAPH_EXEC_GRAPH_H_
 #define ONEFLOW_GRAPH_EXEC_GRAPH_H_
 
-#include "graph/exec_graph.pb.h"
+#include "graph/exec_sequence.pb.h"
 #include "operator/operator.h"
 #include "graph/graph.h"
 #include "register/register_desc.h"
@@ -75,7 +75,7 @@ class ExecGraph final : public Graph<ExecNode, ExecEdge> {
   
   RegstDesc* RelatedModelRegst() const;
 
-  void ToProto(ExecGraphProto* ret) const;
+  void ToExecSequence(ExecSequence* ret) const;
 
  private:
 

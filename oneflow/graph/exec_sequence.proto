@@ -2,12 +2,10 @@ syntax = "proto3";
 package oneflow;
 
 message ExecNodeProto {
-  uint64 id = 1;
   string op_name = 2;
   map<string, uint64> bn_in_op2regst_desc_id = 3;
-  repeated uint64 predecessor_id = 4;
 }
 
-message ExecGraphProto {
+message ExecSequence {
   repeated ExecNodeProto exec_node = 1;
 }
