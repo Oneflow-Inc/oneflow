@@ -51,6 +51,12 @@ class IDMgr final {
   }
 
   // Runtime
+  uint64_t MachineId4ActorId(uint64_t actor_id) {
+    TODO();
+  }
+  uint64_t ThrdLocId4ActorId(uint64_t actor_id) {
+    TODO();
+  }
 
  private:
   IDMgr() = default;
