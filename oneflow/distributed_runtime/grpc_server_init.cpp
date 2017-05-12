@@ -16,6 +16,8 @@
 
 namespace oneflow {
 
+using grpc::ServerBuilder;
+
 GrpcServer::GrpcServer() {}
 GrpcServer::~GrpcServer() {}
 
@@ -75,6 +77,10 @@ void GrpcServer::CreateChannelCache() {
 }//end CreateChannelCache
 
 void GrpcServer::StartService() {
+  std::string server_address("0.0.0.0:50051");
+  ::grpc::ServerBuilder builder;
+  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+  service_ = new GrpcInitService(&builder);
 
 }
 

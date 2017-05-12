@@ -4,7 +4,7 @@ package oneflow;
 
 import "distributed_runtime/machine_list.proto";
 
-service init {
+service InitService {
   rpc exchange_machine_id(Node) returns (Node) {}
   rpc exchange_rdma_address(rdma_addr) returns (rdma_addr) {}
   rpc exchange_memory_desc(mem_desc) returns (mem_desc) {}
@@ -12,9 +12,9 @@ service init {
 }
 
 message rdma_addr {
-
+  int32 addr = 1;
 }
 
 message mem_desc {
-
+  int32 md = 1;
 }

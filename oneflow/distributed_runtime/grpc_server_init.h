@@ -8,6 +8,8 @@
 #ifndef GRPC_SERVER_INIT_H
 #define GRPC_SERVER_INIT_H
 
+#include "distributed_runtime/grpc_init_service.h"
+
 #include "grpc++/grpc++.h"
 
 #include "distributed_runtime/topology.pb.h"
@@ -41,6 +43,8 @@ class GrpcServer {
     std::map<std::string, machine_desc> machine_list_;
 
     std::map<std::string, std::shared_ptr<::grpc::Channel>> channel_map_;
+
+    GrpcInitService* service_ = nullptr;
 
 };
 
