@@ -1,7 +1,7 @@
 syntax = "proto3";
 package oneflow;
 
-import "graph/exec_graph.proto";
+import "graph/exec_sequence.proto";
 import "register/register_desc.proto";
 
 enum TaskType {
@@ -19,7 +19,7 @@ message TaskProto {
   uint64 machine_id = 3;
   uint64 thrd_local_id = 4;
   bool is_forward = 5;
-  ExecGraphProto exec_graph = 6;
+  ExecSequence exec_sequence = 6;
   repeated RegstDescProto produced_regst_desc = 7;
   // for CompTask
   uint64 parallel_id = 1000;

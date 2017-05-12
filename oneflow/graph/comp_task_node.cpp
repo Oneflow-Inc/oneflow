@@ -271,10 +271,7 @@ void CompTaskNode::FwEnrollLbn2ModelAndTmpRegsts() {
 }
 
 void CompTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
-  const ExecGraph& fw_gph = GetFwNode()->exec_gph();
-  HashMap<const ExecNode*, ExecNode*> fw_node2bp_node;
-  HashMap<ExecEdge*, const ExecEdge*> bp_edge2fw_edge;
-  BpBuildExecGraph(fw_gph, &fw_node2bp_node, &bp_edge2fw_edge);
+  BpBuildExecGraph();
   // Produced registers
   auto in_diff_regst = of_make_unique<RegstDesc> ();
   auto model_diff_regst = of_make_unique<RegstDesc> ();
@@ -307,24 +304,22 @@ void CompTaskNode::BpInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
   }
 }
 
-void CompTaskNode::BpBuildExecGraph(
-    const ExecGraph& fw_gph,
-    HashMap<const ExecNode*, ExecNode*>* fw_node2bp_node,
-    HashMap<ExecEdge*, const ExecEdge*>* bp_edge2fw_edge) {
+void CompTaskNode::BpBuildExecGraph() {
+  const ExecGraph& fw_gph = GetFwNode()->exec_gph();
+  HashMap<const ExecNode*, ExecNode*> fw_node2bp_node;
   for (const std::unique_ptr<ExecNode>& fw_node : fw_gph.nodes()) {
     ExecNode* bp_node = mut_exec_gph().NewNode();
     bp_node->mut_op() = fw_node->op();
-    CHECK(fw_node2bp_node->emplace(fw_node.get(), bp_node).second);
+    CHECK(fw_node2bp_node.emplace(fw_node.get(), bp_node).second);
   }
   for (const std::unique_ptr<ExecEdge>& fw_edge : fw_gph.edges()) {
     ExecEdge* bp_edge = mut_exec_gph().NewEdge();
     bp_edge->set_lbn(fw_edge->lbn());
     bp_edge->mut_src_bn() = GenDiffBn(fw_edge->dst_bn());
     bp_edge->mut_dst_bn() = GenDiffBn(fw_edge->src_bn());
-    Connect(fw_node2bp_node->at(fw_edge->dst_node()),
+    Connect(fw_node2bp_node.at(fw_edge->dst_node()),
             bp_edge,
-            fw_node2bp_node->at(fw_edge->src_node()));
-    CHECK(bp_edge2fw_edge->emplace(bp_edge, fw_edge.get()).second);
+            fw_node2bp_node.at(fw_edge->src_node()));
   }
 }
 
@@ -354,7 +349,6 @@ void CompTaskNode::BpSetExecNodeFromOutDiffRegst() {
     }
     for (const std::string& odbn : bp_node->op()->output_diff_bns()) {
       if (found_bns.find(odbn) != found_bns.end()) { continue; }
-      std::string lbn = bp_node->op()->Lbn4BnInOp(odbn);
       bp_node->BindBnInOpAndRegst(odbn, out_diff_regst);
     }
   }
