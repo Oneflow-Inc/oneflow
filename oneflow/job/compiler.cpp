@@ -64,8 +64,6 @@ void Compiler::Compile(const JobConf& job_conf,
   OpMgr::Singleton().AllOpToProto(elf.mutable_op());
   JobDesc::Singleton().ToProto(elf.mutable_job_desc());
   PrintProtoToTextFile(elf, elf_filepath);
-  OfElf elf2;
-  ParseProtoFromTextFile(elf_filepath, &elf2);
 }
 
 void Compiler::BuildGraphs() {
