@@ -21,16 +21,12 @@ function(RELATIVE_GRPC_GENERATE_CPP SRCS HDRS ROOT_DIR)
     list(APPEND ${SRCS} "${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.grpc.pb.cc")
     list(APPEND ${HDRS} "${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.grpc.pb.h")
 
-    #Message(STATUS "-------${ABS_FIL}")
-    #Message(STATUS "-------${PROJECT_SOURCE_DIR}/oneflow/${REL_DIR}/")
-
     add_custom_command(
       OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.grpc.pb.cc"
              "${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.grpc.pb.h"
       COMMAND  ${PROTOBUF_PROTOC_EXECUTABLE}
-      #ARGS --cpp_out  ${CMAKE_CURRENT_BINARY_DIR} -I ${ROOT_DIR} ${ABS_FIL} -I ${PROTOBUF_INCLUDE_DIR} -I ${oneflow_src_dir}
-      ARGS "--proto_path=${oneflow_src_dir}/${REL_DIR}/"
-           "--grpc_out=${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/"
+      ARGS "--proto_path=${oneflow_src_dir}"
+           "--grpc_out=${CMAKE_CURRENT_BINARY_DIR}/"
            "--plugin=protoc-gen-grpc=${GRPC_CPP_PLUGIN}"
            "${ABS_FIL}"
       DEPENDS ${ABS_FIL}
