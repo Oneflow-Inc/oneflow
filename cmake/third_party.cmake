@@ -2,6 +2,11 @@ set(THIRD_PARTY_DIR "${CMAKE_BINARY_DIR}/third_party"
   CACHE PATH "Location where third party headers and libs will be put.")
 mark_as_advanced(THIRD_PARTY_DIR)
 
+find_library(GRPC_LIBRARY NAMES grpc)
+find_library(GRPCPP_LIBRARY NAMES grpc++)
+find_library(GPR_LIBRARY NAMES gpr)
+set(GRPC_LIBRARIES ${GRPCPP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
+
 if (NOT WIN32)
   find_package(Threads)
 endif()
@@ -33,6 +38,7 @@ set(oneflow_third_party_libs
     ${GOOGLETEST_STATIC_LIBRARIES}
     ${PROTOBUF_STATIC_LIBRARIES}
     ${GRPC_STATIC_LIBRARIES}
+    ${GRPC_LIBRARIES}
 )
 
 if(WIN32)
