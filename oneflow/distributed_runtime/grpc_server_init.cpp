@@ -52,9 +52,27 @@ void GrpcServer::InitTopology(oneflow::Topology topology, std::string& TopologyF
 
 void GrpcServer::CreateChannelCache() {
   for(auto& pair : pair_map_){
-   
-  }
-}
+    std::string src = pair.first;
+    std::string dst = pair.second;
+    machine_desc src_mdesc = machine_list_[src];
+    std::string src_ip = src_mdesc.ip;
+    std::string src_port = src_mdesc.port;
+    std::string src_ip_port = src_ip + ":" + src_port;
+
+    machine_desc dst_mdesc = machine_list_[dst];
+    std::string dst_ip = dst_mdesc.ip;
+    std::string dst_port = dst_mdesc.port;
+    std::string dst_ip_port = dst_ip + ":" + dst_port;
+
+    std::shared_ptr<grpc::Channel> to_dst_channel = 
+      grpc::CreateChannel(dst_ip_port, grpc::InsecureChannelCredentials());
+    channel_map_.insert({src, to_dst_channel}); 
+
+    std::shared_ptr<grpc::Channel> to_src_channel = 
+      grpc::CreateChannel(src_ip_port, grpc::InsecureChannelCredentials());
+    channel_map_.insert({dst, to_src_channel});
+  }//end for
+}//end CreateChannelCache
 
 void GrpcServer::StartService() {
 

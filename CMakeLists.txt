@@ -33,6 +33,7 @@ list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir}/third_party)
 list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir})
 include(util)
 include(proto2cpp)
+include(proto2grpc)
 include(third_party)
 
 # main cpp
@@ -92,12 +93,27 @@ foreach(proto_name ${of_all_proto})
   list(APPEND of_all_rel_protos ${proto_rel_name})
 endforeach()
 
+#Message(STATUS "oneflow_src_dir = ${oneflow_src_dir}")
+#Message(STATUS "of_all_proto = ${of_all_proto}")
+#Message(STATUS "proto_rel_name = ${proto_rel_name}")
+
 RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
                                ${oneflow_src_dir}
                                ${of_all_rel_protos})
 
 add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(of_protoobj ${oneflow_third_party_libs})
+
+#grpc obj lib
+list(APPEND proto2grpc_rel_name distributed_runtime/oneflow_init.proto distributed_runtime/machine_list.proto)
+Message (STATUS "proto2grpc_rel_name = ${proto2grpc_rel_name}")
+RELATIVE_GRPC_GENERATE_CPP(GRPC_SRCS GRPC_HDRS
+                           ${oneflow_src_dir}
+                           ${proto2grpc_rel_name})
+
+add_library(of_grpcobj ${GRPC_SRCS} ${GRPC_HDRS})
+target_link_libraries(of_grpcobj ${oneflow_third_party_libs})
+
 if (DOWNLOAD_THIRD_PARTY)
   add_dependencies(of_protoobj ${oneflow_third_party_dependencies})
 endif()
@@ -107,13 +123,13 @@ include_directories(${oneflow_src_dir})
 include_directories(${PROJECT_BINARY_DIR})
 add_library(of_ccobj ${of_all_obj_cc})
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})
-add_dependencies(of_ccobj of_protoobj)
+add_dependencies(of_ccobj of_protoobj of_grpcobj)
 
 # build main
 foreach(cc ${of_main_cc})
   get_filename_component(main_name ${cc} NAME_WE)
   add_executable(${main_name} ${cc})
-  target_link_libraries(${main_name} PUBLIC of_ccobj of_protoobj ${oneflow_third_party_libs})
+  target_link_libraries(${main_name} PUBLIC of_ccobj of_protoobj of_grpcobj ${oneflow_third_party_libs})
 endforeach()
 
 # build test
@@ -121,6 +137,6 @@ foreach(cc ${of_all_test_cc})
   get_filename_component(test_name ${cc} NAME_WE)
   string(CONCAT test_exe_name ${test_name} exe)
   add_executable(${test_exe_name} ${cc})
-  target_link_libraries(${test_exe_name} PUBLIC of_ccobj of_protoobj ${oneflow_third_party_libs})
+  target_link_libraries(${test_exe_name} PUBLIC of_ccobj of_protoobj of_grpcobj ${oneflow_third_party_libs})
   add_test(NAME ${test_name} COMMAND ${test_exe_name})
 endforeach()

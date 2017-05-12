@@ -8,14 +8,15 @@
 #ifndef GRPC_SERVER_INIT_H
 #define GRPC_SERVER_INIT_H
 
-#include <grpc++/grpc++.h>
+#include "grpc++/grpc++.h"
 
 #include "distributed_runtime/topology.pb.h"
 #include "distributed_runtime/machine_list.pb.h"
 
+using ::grpc::Channel;
+
 namespace oneflow {
 
-using ::grpc::Channel;
 
 class GrpcServer {
   public:
@@ -39,7 +40,7 @@ class GrpcServer {
     };
     std::map<std::string, machine_desc> machine_list_;
 
-    std::map<std::string, ::grpc::Channel> channel_map_;
+    std::map<std::string, std::shared_ptr<::grpc::Channel>> channel_map_;
 
 };
 
