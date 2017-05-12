@@ -32,16 +32,18 @@ void PrintProtoToString(const PbMessage& proto, std::string* str) {
 // txt file
 void ParseProtoFromTextFile(const std::string& file_path, PbMessage* proto) {
   std::ifstream in_stream(file_path.c_str(), std::ifstream::in);
-  IstreamInputStream input(&in_stream);
-  CHECK(google::protobuf::TextFormat::Parse(&input, proto));
+  IstreamInputStream* input = new IstreamInputStream(&in_stream);
+  CHECK(google::protobuf::TextFormat::Parse(input, proto));
+  delete input;
   in_stream.close();
 }
 void PrintProtoToTextFile(const PbMessage& proto,
                           const std::string& file_path) {
   std::ofstream out_stream(
     file_path.c_str(), std::ofstream::out | std::ofstream::trunc);
-  OstreamOutputStream output(&out_stream);
-  CHECK(google::protobuf::TextFormat::Print(proto, &output));
+  OstreamOutputStream* output = new OstreamOutputStream(&out_stream);
+  CHECK(google::protobuf::TextFormat::Print(proto, output));
+  delete output;
   out_stream.close();
 }
 
