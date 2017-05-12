@@ -29,3 +29,5 @@ private:
 };
 
 }  // namespace enn
+
+#endif  // ONEFLOW_COMMON_BLOCKING_QUEUE_H_
