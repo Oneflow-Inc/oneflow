@@ -3,24 +3,29 @@
 
 namespace oneflow {
 
-HashMap<int, std::function<std::shared_ptr<Operator>()>>&
-OpMgr::OpTypeCase2Creator() {
-  static HashMap<int, std::function<std::shared_ptr<Operator>()>> obj;
+namespace {
+
+HashMap<int, std::function<Operator*()>>& OpTypeCase2Creator() {
+  static HashMap<int, std::function<Operator*()>> obj;
   return obj;
+}
+
+}
+
+void AddOpCreator(OperatorConf::OpTypeCase op_type_case,
+                  std::function<Operator*()> creator) {
+  CHECK(OpTypeCase2Creator().emplace(op_type_case, creator).second);
+}
+
+Operator* CreateOp(OperatorConf::OpTypeCase op_type_case) {
+  return OpTypeCase2Creator().at(op_type_case)();
 }
 
 std::shared_ptr<Operator> OpMgr::ConstructOp(
     const OperatorConf& op_conf) {
-  auto ret = OpTypeCase2Creator().at(op_conf.op_type_case())();
+  std::shared_ptr<Operator> ret(CreateOp(op_conf.op_type_case()));
   ret->InitFromOpConf(op_conf);
   op_list_.emplace_back(ret);
-  return ret;
-}
-
-std::shared_ptr<Operator> OpMgr::ConstructOp(
-    const OperatorProto& op_proto) {
-  auto ret = OpTypeCase2Creator().at(op_proto.op_conf().op_type_case())();
-  ret->InitFromProto(op_proto);
   return ret;
 }
 
