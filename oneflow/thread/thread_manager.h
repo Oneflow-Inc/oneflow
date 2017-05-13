@@ -6,7 +6,7 @@
 
 namespace oneflow {
 
-class ThreadMgr {
+class ThreadMgr final {
 public:
   OF_DISALLOW_COPY_AND_MOVE(ThreadMgr);
   ~ThreadMgr() = default;
