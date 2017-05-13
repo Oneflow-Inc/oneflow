@@ -21,8 +21,8 @@ public:
   BlockingQueue() = default;
   ~BlockingQueue() = default;
 
-  bool Write(const Message& msg);
-  bool Read(Message* msg);
+  int Write(const Message& msg);
+  int Read(Message* msg);
   void Close();
 
 private:
@@ -31,7 +31,6 @@ private:
   std::condition_variable write_cond_;
   std::condition_variable read_cond_;
   bool is_closed_;
-  HashMap<uint64_t, int> test;
 };
 
 }  // namespace oneflow

@@ -2,16 +2,16 @@
 
 namespace oneflow {
 
-bool BlockingQueue::Write(const Message& msg) {
+int BlockingQueue::Write(const Message& msg) {
   std::unique_lock<std::mutex> lck(mtx_);
   write_cond_.wait(lck, [this]() { return is_closed_ == true; });
   CHECK_NE(is_closed_, false);
   msgs_.emplace(msg);
   read_cond_.notify_one();
-  return true;
+  return 0;
 }
 
-bool BlockingQueue::Read(Message* msg) {
+int BlockingQueue::Read(Message* msg) {
   std::unique_lock<std::mutex> lck(mtx_);
   read_cond_.wait(lck, [this](){ 
       return !msgs_.empty() || is_closed_ == true; });
@@ -19,7 +19,7 @@ bool BlockingQueue::Read(Message* msg) {
   *msg = msgs_.front();
   msgs_.pop();
   write_cond_.notify_one();
-  return true;
+  return 0;
 }
 
 void BlockingQueue::Close() {
