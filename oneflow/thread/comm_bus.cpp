@@ -3,6 +3,9 @@
 
 namespace oneflow {
 
+// TODO(liuguo): get machine_id of curr machine
+uint64_t this_machine_id = 0;
+
 void CommBus::InsertThrdLocIdMsgQPair(
     uint64_t thrd_loc_id, BlockingQueue* msg_queue) {
   CHECK(thrd_loc_id2msg_queue_.emplace(thrd_loc_id, msg_queue).second);

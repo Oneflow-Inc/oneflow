@@ -5,9 +5,6 @@
 
 namespace oneflow {
 
-// TODO(liuguo): get machine_id of curr machine
-uint64_t this_machine_id;
-
 class CommBus final {
 public:
   OF_DISALLOW_COPY_AND_MOVE(CommBus);
