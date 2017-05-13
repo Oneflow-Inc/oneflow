@@ -48,7 +48,7 @@ class IDMgr final {
 
   // Runtime
   uint64_t MachineId4ActorId(uint64_t actor_id) {
-    return actor_id & (1<<29 - 1);
+    return actor_id & ((1<<29) - 1);
   }
   uint64_t ThrdLocId4ActorId(uint64_t actor_id) {
     return actor_id >> 48;
