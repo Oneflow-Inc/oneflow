@@ -18,9 +18,9 @@ class Kernel {
 
   virtual void InitFromOpProto(const OperatorProto& op_proto) = 0;
   virtual void Forward(
-      std::function<Blob<Dtype>*(const std::string bn_in_op)>) = 0;
+      std::function<Blob<Dtype>*(const std::string& bn_in_op)>) = 0;
   virtual void Backward(
-      std::function<Blob<Dtype>*(const std::string bn_in_op)>) = 0;
+      std::function<Blob<Dtype>*(const std::string& bn_in_op)>) = 0;
  private:
   std::unique_ptr<Operator> op_;
 };

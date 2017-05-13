@@ -12,13 +12,13 @@ class ConvolutionKernel<DeviceType::kCPU, Dtype> final : public Kernel<Dtype> {
   ConvolutionKernel() = default;
   ~ConvolutionKernel() = default;
 
-  void InitFromOpProto(const OperatorProto& op_proto) { TODO() };
+  void InitFromOpProto(const OperatorProto& op_proto) override { TODO() };
   void Forward(
-      std::function<Blob<Dtype>*(const std::string bn_in_op)>) {
+      std::function<Blob<Dtype>*(const std::string& bn_in_op)>) override {
     TODO()
   };
   void Backward(
-      std::function<Blob<Dtype>*(const std::string bn_in_op)>) {
+      std::function<Blob<Dtype>*(const std::string& bn_in_op)>) override {
     TODO()
   };
 };
