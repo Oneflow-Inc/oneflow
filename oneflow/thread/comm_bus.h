@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_THREAD_COMM_BUS_H_
 #define ONEFLOW_THREAD_COMM_BUS_H_
 
-#include "comm/blocking_queue.h"
+#include "common/blocking_queue.h"
 
 namespace enn {
 
