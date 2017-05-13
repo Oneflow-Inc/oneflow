@@ -23,6 +23,11 @@ class MemoryMgr final {
   MemoryMgr();
   ~MemoryMgr() = default;
   
+  static MemoryMgr& Singleton() {
+    static MemoryMgr obj;
+    return obj;
+  }
+
   std::pair<Dptr*, std::function<void(Dptr*)>> AllocateMem(
       MemoryCase mem_cas,std::size_t size) {
     switch(mem_cas.type) {
