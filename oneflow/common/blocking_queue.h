@@ -10,7 +10,7 @@ namespace enn {
 // TODO(liuguo): delete this line after Message is implement
 class Message;
 
-class BlockingQueue {
+class BlockingQueue final {
 public:
   OF_DISALLOW_COPY_AND_MOVE(BlockingQueue);
   BlockingQueue() = default;
