@@ -67,7 +67,8 @@ class MemoryMgr final {
       }
     } 
   }
-}; // namespace oneflow
+};
 
-}
+} // namespace oneflow
+
 #endif // ONEFLOW_MEMORY_MEMORY_MANAGER_H_
