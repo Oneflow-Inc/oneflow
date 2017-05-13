@@ -19,7 +19,6 @@ struct MemoryCase {
 class MemoryMgr final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MemoryMgr);
-  MemoryMgr();
   ~MemoryMgr() = default;
   
   static MemoryMgr& Singleton() {
@@ -28,8 +27,8 @@ class MemoryMgr final {
   }
 
   std::pair<void*, std::function<void(void*)>> AllocateMem(
-      MemoryCase mem_cas,std::size_t size) {
-    switch(mem_cas.type) {
+      MemoryCase mem_case,std::size_t size) {
+    switch(mem_case.type) {
       case MemoryType::kHostPageableMemory: {
         dptr = malloc(size);
         CHECK_NE(dptr, NULL);
@@ -40,17 +39,19 @@ class MemoryMgr final {
         break;
       }
       case MemoryType::kDeviceGPUMemory: {
-        CHECK_EQ(cudaSetDevice(mem_cas.device_id), 0);
+        CHECK_EQ(cudaSetDevice(mem_case.device_id), 0);
         CHECK_EQ(cudaMalloc(&dptr, size), 0);
         break;
       }
     }
-    return {dptr, std::bind(&MemoryMgr::DeallocateMem, this, _1, mem_cas)};
+    return {dptr, std::bind(&MemoryMgr::DeallocateMem, this, _1, mem_case)};
   }
 
  private:
-  void DeallocateMem(void* dptr, MemoryCase mem_cas) {
-    switch(mem_cas.type) {
+  MemoryMgr();
+  
+  void DeallocateMem(void* dptr, MemoryCase mem_case) {
+    switch(mem_case.type) {
       case MemoryType::kHostPageableMemory: {
         free(dptr);
         break;
@@ -60,13 +61,13 @@ class MemoryMgr final {
         break;
       }
       case MemoryType::kDeviceGPUMemory: {
-        CHECK_EQ(cudaSetDevice(mem_cas.device_id), 0);
+        CHECK_EQ(cudaSetDevice(mem_case.device_id), 0);
         CHECK_EQ(cudaFree(&dptr), 0);
         break;
       }
     } 
   }
-};
+}; // namespace oneflow
 
 }
-#endif
+#endif // ONEFLOW_MEMORY_MEMORY_MANAGER_H_
