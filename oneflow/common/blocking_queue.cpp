@@ -1,6 +1,6 @@
 #include "common/blocking_queue.h"
 
-namespace enn {
+namespace oneflow {
 
 bool BlockingQueue::Write(const Message& msg) {
   std::unique_lock<std::mutex> lck(mtx_);
@@ -28,4 +28,4 @@ void BlockingQueue::Close() {
   read_cond_.notify_all();
 }
 
-}  // namespace enn
+}  // namespace oneflow

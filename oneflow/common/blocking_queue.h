@@ -7,10 +7,13 @@
 #include "common/util.h"
 //#include "actor/message.h"
 
-namespace enn {
+namespace oneflow {
 
 // TODO(liuguo): delete this line after Message is implement
-class Message;
+class Message {
+  public:
+    uint64_t to_actor_id() const { return 0;}
+};
 
 class BlockingQueue final {
 public:
@@ -28,8 +31,9 @@ private:
   std::condition_variable write_cond_;
   std::condition_variable read_cond_;
   bool is_closed_;
+  HashMap<uint64_t, int> test;
 };
 
-}  // namespace enn
+}  // namespace oneflow
 
 #endif  // ONEFLOW_COMMON_BLOCKING_QUEUE_H_
