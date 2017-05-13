@@ -11,13 +11,13 @@ namespace oneflow {
 class Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Kernel);
-  Kernel() = default;
-  ~Kernel() = default;
+  virtual ~Kernel() = default;
 
   virtual void InitFromOpProto(const OperatorProto& op_proto) = 0;
   virtual void Forward(std::function<void()>) = 0;
   virtual void Backward(std::function<void()>) = 0;
-
+ protected:
+  Kernel() = default;
  private:
   std::unique_ptr<Operator> op_;
 };

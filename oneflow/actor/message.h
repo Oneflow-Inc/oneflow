@@ -6,7 +6,7 @@
 namespace oneflow {
 
 struct Message {
-  uint64_t to_actor_id;
+  uint64_t dis_actor_id;
   uint64_t register_id;
 };
 

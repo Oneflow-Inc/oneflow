@@ -10,8 +10,9 @@ template<typename Dtype>
 class Blob {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
-  Blob() : data_(data), shape_(shape), delete_func_(delete_func) {}
-  ~Blob() {delete_func_(data_)}
+  Blob(Dtype* data, Shape shape_, std::function<void(Dtype*)> deleter)
+    : data_(data), shape_(shape), deleter_(deleter) {}
+  ~Blob() {deleter_(data_)}
 
   Dtype* mut_data() { return data_; }
   Shape& mut_shape() { return shape_; }
@@ -20,7 +21,7 @@ class Blob {
  private:
   Dtype* data_;
   Shape shape_;
-  std::function<void(Dtype*)> delete_func_;
+  std::function<void(Dtype*)> deleter_;
 };
 
 }  // namespace oneflow

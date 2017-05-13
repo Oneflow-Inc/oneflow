@@ -5,12 +5,13 @@
 #include <memory>
 #include <string>
 #include "common/util.h"
+#include "common/proto_io.h"
 #include "kernel/kernel.h"
 #include "job/ofelf.pb.h"
 
 namespace oneflow {
 
-class KernelMgr {
+class KernelMgr final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelMgr);
   ~KernelMgr() = default;
@@ -20,24 +21,22 @@ class KernelMgr {
     return obj;
   }
 
-  const Kernel* OpName2Kernel(const std::string op_name) {
-    CHECK_NE(op_name2Kernel_ptr_.find(op_name), op_name2Kernel_ptr_.end());
-    return op_name2Kernel_ptr_.at(op_name).get();
+  const Kernel* GetKernelFromOpName(const std::string& op_name) {
+    return op_name2kernel_ptr_.at(op_name).get();
   }
 
-  using OpProtos = google::protobuf::RepeatedPtrField<oneflow::OperatorProto>&;
-  void InitFromOpProtos(const OpProtos op_protos) {
-    for (auto op_proto : op_protos) {
-      const std::string op_name = op_proto.op_conf().name();
+  void InitFromOpProtos(const PbRpf<OperatorProto>& op_protos) {
+    for (const OperatorProto& op_proto : op_protos) {
+      const std::string& op_name = op_proto.op_conf().name();
       std::unique_ptr<Kernel> kernel_ptr = std::make_unique<Kernel>();
       kernel_ptr->InitFromOpProto(op_proto);
-      CHECK(op_name2Kernel_ptr_.emplace(op_name, std::move(kernel_ptr)).second);
+      CHECK(op_name2kernel_ptr_.emplace(op_name, std::move(kernel_ptr)).second);
     }
   }
 
  private:
   KernelMgr() = default;
-  HashMap<const std::string, std::unique_ptr<Kernel>> op_name2Kernel_ptr_;
+  HashMap<const std::string, std::unique_ptr<Kernel>> op_name2kernel_ptr_;
 };
 
 }  // namespace oneflow
