@@ -3,7 +3,7 @@
 
 #include "common/blocking_queue.h"
 
-namespace enn {
+namespace oneflow {
 
 // TODO(liuguo): get machine_id of curr machine
 uint64_t this_machine_id;
@@ -30,6 +30,6 @@ private:
 
 };
 
-}
+}  // namespace oneflow
 
 #endif  // ONEFLOW_THREAD_COMM_BUS_H_
