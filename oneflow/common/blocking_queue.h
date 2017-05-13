@@ -2,8 +2,10 @@
 #define ONEFLOW_COMMON_BLOCKING_QUEUE_H_
 
 #include <queue>
+#include <mutex>
+#include <condition_variable>
 #include "common/util.h"
-#include "actor/message.h"
+//#include "actor/message.h"
 
 namespace enn {
 
