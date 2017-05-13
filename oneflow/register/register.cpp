@@ -5,6 +5,7 @@ namespace oneflow {
 void Regst::ProduceDone() {
   ++cnt_;
   CHECK_EQ(cnt_, 0);
+  cnt = consumer_ids_.size();
   Message m;
   m.register_id = id_;
   for (uint64_t consumer_id : consumer_ids_) {
