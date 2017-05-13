@@ -21,6 +21,8 @@ include(glog)
 include(gflags)
 include(grpc)
 
+find_package(CUDA REQUIRED)
+
 set(oneflow_third_party_libs
     ${CMAKE_THREAD_LIBS_INIT}
     ${ZLIB_STATIC_LIBRARIES}
