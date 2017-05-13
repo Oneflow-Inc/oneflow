@@ -20,28 +20,25 @@ class OpMgr final {
   }
   
   std::shared_ptr<Operator> ConstructOp(const OperatorConf&);
-  std::shared_ptr<Operator> ConstructOp(const OperatorProto&);
 
   void AllOpToProto(PbRpf<OperatorProto>*);
 
  private:
-  template<OperatorConf::OpTypeCase op_type_case, typename OpType>
-  friend struct OpRegister;
-
   OpMgr() = default;
-  static HashMap<int, std::function<std::shared_ptr<Operator>()>>&
-  OpTypeCase2Creator();
 
   std::list<std::weak_ptr<const Operator>> op_list_;
 
 };
 
+void AddOpCreator(OperatorConf::OpTypeCase op_type_case,
+                  std::function<Operator*()> creator);
+
+Operator* CreateOp(OperatorConf::OpTypeCase op_type_case);
+
 template<OperatorConf::OpTypeCase op_type_case, typename OpType>
 struct OpRegister {
   OpRegister() {
-    OpMgr::OpTypeCase2Creator().emplace(op_type_case, []() {
-      return std::make_shared<OpType> ();;
-    });
+    AddOpCreator(op_type_case, []() { return new OpType; });
   }
 };
 
