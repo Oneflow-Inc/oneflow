@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_THREAD_COMM_BUS_H_
 #define ONEFLOW_THREAD_COMM_BUS_H_
 
-#include "common/blocking_queue.h"
+#include "common/blocking_channel.h"
 
 namespace oneflow {
 
@@ -15,7 +15,8 @@ public:
     return obj;
   }
 
-  void InsertThrdLocIdMsgQPair(uint64_t thrd_loc_id, BlockingQueue* msg_queue);
+  void InsertThrdLocIdMsgQPair(
+      uint64_t thrd_loc_id, BlockingChannel<Message>* msg_queue);
 
   void SendMsg(const Message& msg);
 
@@ -23,7 +24,7 @@ private:
   void SendMsg(const Message& msg, uint64_t thrd_loc_id);
 
   CommBus() = default;
-  HashMap<uint64_t, BlockingQueue*> thrd_loc_id2msg_queue_;
+  HashMap<uint64_t, BlockingChannel<Message>*> thrd_loc_id2msg_queue_;
 
 };
 

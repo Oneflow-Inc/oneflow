@@ -2,7 +2,7 @@
 #define ONEFLOW_THREAD_THREAD_H_
 
 #include "common/util.h"
-#include "common/blocking_queue.h"
+#include "common/blocking_channel.h"
 #include "task/task.pb.h"
 
 namespace oneflow {
@@ -30,11 +30,11 @@ public:
     return id2actor_ptr_.at(actor_id).get();
   }
 
-  BlockingQueue& GetMsgQueue() { return msg_queue_; }
+  BlockingChannel<Message>& GetMsgQueue() { return msg_queue_; }
 
 private:
   uint64_t thrd_loc_id_;
-  BlockingQueue msg_queue_;
+  BlockingChannel<Message> msg_queue_;
   HashMap<uint64_t, std::unique_ptr<Actor>> id2actor_ptr_;
 };
 
