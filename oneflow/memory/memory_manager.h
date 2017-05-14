@@ -18,13 +18,13 @@ struct MemoryCase {
   int32_t device_id;
 };
 
-class MemoryMgr final {
+class MemoryAllocator final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(MemoryMgr);
-  ~MemoryMgr() = default;
+  OF_DISALLOW_COPY_AND_MOVE(MemoryAllocator);
+  ~MemoryAllocator() = default;
   
-  static MemoryMgr& Singleton() {
-    static MemoryMgr obj;
+  static MemoryAllocator& Singleton() {
+    static MemoryAllocator obj;
     return obj;
   }
 
@@ -32,7 +32,7 @@ class MemoryMgr final {
       MemoryCase mem_case, std::size_t size);
 
  private:
-  MemoryMgr();
+  MemoryAllocator();
   void Deallocate(void* dptr, MemoryCase mem_case);
 
 };
