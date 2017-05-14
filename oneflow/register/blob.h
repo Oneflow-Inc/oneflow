@@ -6,26 +6,25 @@
 
 namespace oneflow {
 
-template<typename Dtype>
 class Blob {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
-  Blob(Dtype dptr, Shape shape_, std::function<void(Dtype)> deleter)
+  Blob(void* dptr, Shape shape, std::function<void(void*)> deleter)
     : dptr_(dptr), shape_(shape), deleter_(deleter) {}
-  ~Blob() {deleter_(dptr_)}
+  ~Blob() { deleter_(dptr_); }
 
-  Dtype* mut_dptr() { return dptr_; }
+  void* mut_dptr() { return dptr_; }
   const Shape& shape() { return shape_; }
 
-  // The Dtype must be double or float
-  static_assert(
-      std::is_same<Dtype, double>::value || std::is_same<Dtype, float>::value,
-      "The Dtype is not double or float!");
+  //// The void must be double or float
+  //static_assert(
+  //    std::is_same<void, double>::value || std::is_same<void, float>::value,
+  //    "The void is not double or float!");
 
  private:
-  Dtype* dptr_ ;
+  void* dptr_ ;
   Shape shape_;
-  std::function<void(Dtype)> deleter_;
+  std::function<void(void*)> deleter_;
 };
 
 }  // namespace oneflow

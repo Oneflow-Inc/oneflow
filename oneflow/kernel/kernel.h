@@ -5,24 +5,28 @@
 #include <functional>
 #include "register/blob.h"
 #include "operator/operator.h"
+#include "operator/operator_manager.h"
 #include "operator/operator.pb.h"
 
 namespace oneflow {
 
-template<typename Dtype>
 class Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Kernel);
   Kernel() = default;
   virtual ~Kernel() = default;
 
-  virtual void InitFromOpProto(const OperatorProto& op_proto) = 0;
+  void InitFromOpProto(const OperatorProto& op_proto) {
+    Operator* op = CreateOp(op_proto.op_conf().op_type_case());
+    op->InitFromProto(op_proto);
+    op_.reset(op);
+  }
   virtual void Forward(
-      std::function<Blob<Dtype>*(const std::string& bn_in_op)>) = 0;
+      std::function<Blob*(const std::string& bn_in_op)>) = 0;
   virtual void Backward(
-      std::function<Blob<Dtype>*(const std::string& bn_in_op)>) = 0;
+      std::function<Blob*(const std::string& bn_in_op)>) = 0;
  private:
-  std::unique_ptr<Operator> op_;
+  std::unique_ptr<const Operator> op_;
 };
 
 }  // namespace oneflow

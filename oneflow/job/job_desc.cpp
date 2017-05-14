@@ -13,6 +13,7 @@ void JobDesc::InitFromJobConf(const JobConf& conf) {
   batch_size_ = conf.batch_size();
   piece_size_ = conf.piece_size();
   is_train_ = conf.is_train();
+  floating_point_type_ = conf.floating_point_type();
 }
 
 void JobDesc::InitFromProto(const JobDescProto& proto) {
@@ -24,6 +25,7 @@ void JobDesc::InitFromProto(const JobDescProto& proto) {
   batch_size_ = proto.batch_size();
   piece_size_ = proto.piece_size();
   is_train_ = proto.is_train();
+  floating_point_type_ = proto.floating_point_type();
 }
 
 void JobDesc::ToProto(JobDescProto* proto) const {
@@ -35,6 +37,7 @@ void JobDesc::ToProto(JobDescProto* proto) const {
   proto->set_batch_size(batch_size_);
   proto->set_piece_size(piece_size_);
   proto->set_is_train(is_train_);
+  proto->set_floating_point_type(floating_point_type_);
 }
 
 } // namespace oneflow
