@@ -222,6 +222,7 @@ void BoxingTaskNode::BpInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
     RegstDesc* in_diff_regst = GetBpRegstFromFwRegst(in_regst);
     in_diff_regst->CopyShapeFrom(in_regst);
   }
+
   RegstDesc* fw_middle_regst = GetFwNode()->GetProducedRegstDesc("middle");
   RegstDesc* bp_middle_regst = GetProducedRegstDesc("middle");
   bp_middle_regst->CopyShapeFrom(fw_middle_regst);
