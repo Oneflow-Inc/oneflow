@@ -3,6 +3,8 @@
 
 #include <memory>
 #include <functional>
+#include "job/resource.pb.h"
+#include "job/job_conf.pb.h"
 #include "register/blob.h"
 #include "operator/operator.h"
 #include "operator/operator_manager.h"
@@ -28,6 +30,13 @@ class Kernel {
  private:
   std::unique_ptr<const Operator> op_;
 };
+
+#define INSTANTIATE_KERNEL_CLASS(classname) \
+  char gInstantiationGuard##classname; \
+  template class classname<DeviceType::kCPU, FloatingPointType::kFloat>; \
+  template class classname<DeviceType::kCPU, FloatingPointType::kDouble>; \
+  template class classname<DeviceType::kGPU, FloatingPointType::kFloat>; \
+  template class classname<DeviceType::kGPU, FloatingPointType::kDouble>; \
 
 }  // namespace oneflow
 

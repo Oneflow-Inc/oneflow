@@ -16,11 +16,6 @@ class Blob {
   void* mut_dptr() { return dptr_; }
   const Shape& shape() { return shape_; }
 
-  //// The void must be double or float
-  //static_assert(
-  //    std::is_same<void, double>::value || std::is_same<void, float>::value,
-  //    "The void is not double or float!");
-
  private:
   void* dptr_ ;
   Shape shape_;
