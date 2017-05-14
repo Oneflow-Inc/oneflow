@@ -5,9 +5,13 @@ import "operator/operator.proto";
 import "register/register_desc.proto";
 import "actor/task.proto";
 import "job/job_desc.proto";
+import "job/resource.proto";
+import "job/strategy.proto";
 
 message OfElf {
   repeated TaskProto task = 1;
   repeated OperatorProto op = 3;
   JobDescProto job_desc = 4;
+  map<string, DeviceType> op_name2device_type = 5;
+  map<uint64, OpNameSet> machine_id2op_name_set = 6;
 }
