@@ -19,7 +19,7 @@ void ConvolutionKernel<DeviceType::kGPU, floating_point_type>::Backward(
 
 ConvolutionKernel<DeviceType::kGPU, FloatingPointType::kFloat> x;
 
-// REGISTER_GPU_KERNEL(OperatorConf::kConvolutionConf,
-//                           ConvolutionKernel);
+REGISTER_GPU_KERNEL(OperatorConf::kConvolutionConf,
+                           ConvolutionKernel);
 
 }  // namespace oneflow

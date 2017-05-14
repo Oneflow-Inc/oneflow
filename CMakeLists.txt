@@ -8,6 +8,10 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(oneflow_src_dir ${PROJECT_SOURCE_DIR}/oneflow)
 set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
+if (WIN32)
+else()
+  list(APPEND CUDA_NVCC_FLAGS "-std=c++11")
+endif()
 
 # option
 option(DOWNLOAD_THIRD_PARTY "Download and build all third party codes" OFF)
