@@ -16,8 +16,11 @@ std::pair<void*, std::function<void(void*)>> MemoryMgr::Allocate(
       break;
     }
     case MemoryType::kDeviceGPUMemory: {
+      int32_t current_device_id;
+      CHECK_EQ(cudaGetDevice(&current_device_id), 0);
       CHECK_EQ(cudaSetDevice(mem_case.device_id), 0);
       CHECK_EQ(cudaMalloc(&dptr, size), 0);
+      CHECK_EQ(cudaSetDevice(current_device_id), 0);
       break;
     }
   }
@@ -36,8 +39,11 @@ void MemoryMgr::Deallocate(void* dptr, MemoryCase mem_case) {
       break;
     }
     case MemoryType::kDeviceGPUMemory: {
+      int32_t current_device_id;
+      CHECK_EQ(cudaGetDevice(&current_device_id), 0);
       CHECK_EQ(cudaSetDevice(mem_case.device_id), 0);
       CHECK_EQ(cudaFree(&dptr), 0);
+      CHECK_EQ(cudaSetDevice(current_device_id), 0);
       break;
     }
   } 
