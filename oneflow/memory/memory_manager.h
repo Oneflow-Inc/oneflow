@@ -2,6 +2,7 @@
 #define ONEFLOW_MEMORY_MEMORY_MANAGER_H_
 
 #include "cuda.h"
+#include "cuda_runtime.h"
 #include "common/util.h"
 
 namespace oneflow {
@@ -27,12 +28,12 @@ class MemoryMgr final {
     return obj;
   }
 
-  std::pair<void*, std::function<void(void*)>> AllocateMem(
+  std::pair<void*, std::function<void(void*)>> Allocate(
       MemoryCase mem_case, std::size_t size);
 
  private:
   MemoryMgr();
-  void DeallocateMem(void* dptr, MemoryCase mem_case);
+  void Deallocate(void* dptr, MemoryCase mem_case);
 
 };
 

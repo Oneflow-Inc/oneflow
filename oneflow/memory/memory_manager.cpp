@@ -2,12 +2,13 @@
 
 namespace oneflow {
 
-std::pair<void*, std::function<void(void*)>> MemoryMgr::AllocateMem(
+std::pair<void*, std::function<void(void*)>> MemoryMgr::Allocate(
     MemoryCase mem_case,std::size_t size) {
+  void* dptr = nullptr;
   switch(mem_case.type) {
     case MemoryType::kHostPageableMemory: {
       dptr = malloc(size);
-      CHECK_NE(dptr, NULL);
+      CHECK(dptr != nullptr);
       break;
     }
     case MemoryType::kHostPinnedMemory: {
@@ -20,10 +21,11 @@ std::pair<void*, std::function<void(void*)>> MemoryMgr::AllocateMem(
       break;
     }
   }
-  return {dptr, std::bind(&MemoryMgr::DeallocateMem, this, _1, mem_case)};
+  return {dptr, std::bind(&MemoryMgr::Deallocate,
+                          this, std::placeholders::_1, mem_case)};
 }
 
-void MemoryMgr::DeallocateMem(void* dptr, MemoryCase mem_case) {
+void MemoryMgr::Deallocate(void* dptr, MemoryCase mem_case) {
   switch(mem_case.type) {
     case MemoryType::kHostPageableMemory: {
       free(dptr);
