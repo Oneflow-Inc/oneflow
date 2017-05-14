@@ -2,6 +2,7 @@
 #define ONEFLOW_MEMORY_MEMORY_MANAGER_H_
 
 #include "cuda.h"
+#include "cuda_runtime.h"
 #include "common/util.h"
 
 namespace oneflow {
