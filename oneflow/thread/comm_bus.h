@@ -5,6 +5,11 @@
 
 namespace oneflow {
 
+struct Message {
+  uint64_t dst_actor_id;
+  uint64_t register_id;
+};
+
 class CommBus final {
 public:
   OF_DISALLOW_COPY_AND_MOVE(CommBus);

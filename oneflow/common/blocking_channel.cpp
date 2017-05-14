@@ -2,7 +2,8 @@
 
 namespace oneflow {
 
-int BlockingChannel::Write(const T& val) {
+template<typename T>
+int BlockingChannel<T>::Write(const T& val) {
   std::unique_lock<std::mutex> lck(mtx_);
   write_cond_.wait(lck);
   CHECK_NE(is_closed_, true);
@@ -11,7 +12,8 @@ int BlockingChannel::Write(const T& val) {
   return 0;
 }
 
-int BlockingChannel::Read(T* val) {
+template<typename T>
+int BlockingChannel<T>::Read(T* val) {
   std::unique_lock<std::mutex> lck(mtx_);
   read_cond_.wait(lck, [this](){ 
       return !this->vals_.empty() || this->is_closed_; });
@@ -22,7 +24,8 @@ int BlockingChannel::Read(T* val) {
   return 0;
 }
 
-void BlockingChannel::Close() {
+template<typename T>
+void BlockingChannel<T>::Close() {
   std::unique_lock<std::mutex> lck(mtx_);
   is_closed_ = true;
   write_cond_.notify_all();

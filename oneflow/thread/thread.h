@@ -4,6 +4,7 @@
 #include "common/util.h"
 #include "common/blocking_channel.h"
 #include "task/task.pb.h"
+#include "thread/comm_bus.h"
 
 namespace oneflow {
 
