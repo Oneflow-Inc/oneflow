@@ -14,14 +14,13 @@ class Regst final {
   Regst();
   ~Regst() = default;
   
-  friend class RegstMgr;
-
   void ProduceDone();
   void ConsumeDone();
 
   Blob* GetBlobFromLbn(const std::string& lbn);
 
  private:
+  friend class RegstMgr;
   uint64_t id_;
   int32_t cnt_;
   uint64_t producer_id_;

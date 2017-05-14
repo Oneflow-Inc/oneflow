@@ -47,7 +47,7 @@ class IDMgr final {
   }
 
   // Runtime
-  uint64_t TaskId2ActorId(uint64_t task_id) {
+  uint64_t GetActorIdFromTaskId(uint64_t task_id) {
     return task_id;
   }
   uint64_t NewRegstId(uint64_t regst_desc_id) {
