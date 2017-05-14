@@ -4,7 +4,7 @@
 #include "common/util.h"
 #include "common/blocking_channel.h"
 #include "task/task.pb.h"
-#include "thread/comm_bus.h"
+#include "thread/actor_msg_bus.h"
 
 namespace oneflow {
 
@@ -19,7 +19,10 @@ class Thread {
 public:
   OF_DISALLOW_COPY_AND_MOVE(Thread);
   Thread() = default;
-  virtual ~Thread() = default;
+  virtual ~Thread() = {
+    msg_queue_.Close();
+    id2actor_ptr_.clear();
+  }
 
   uint64_t thrd_loc_id() const { return thrd_loc_id_; }
   void set_thrd_loc_id(uint64_t thrd_loc_id) {
@@ -31,11 +34,13 @@ public:
     return id2actor_ptr_.at(actor_id).get();
   }
 
-  BlockingChannel<Message>& GetMsgQueue() { return msg_queue_; }
+  BlockingChannel<ActorMsg>& GetMsgQueue() { return msg_queue_; }
+
+  void join();
 
 private:
   uint64_t thrd_loc_id_;
-  BlockingChannel<Message> msg_queue_;
+  BlockingChannel<ActorMsg> msg_queue_;
   HashMap<uint64_t, std::unique_ptr<Actor>> id2actor_ptr_;
 };
 

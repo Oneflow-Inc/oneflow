@@ -1,13 +1,8 @@
+#include <thread>
 #include "common/blocking_channel.h"
 #include "gtest/gtest.h"
 
 namespace oneflow {
-
-void write() {
-
-}
-
-void read() {}
 
 TEST(BlockingChannel, blocking_channel_2_writer_3_reader_test) {
 }
