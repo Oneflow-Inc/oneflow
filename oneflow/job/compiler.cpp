@@ -26,7 +26,8 @@ class Compiler final {
 
  private:
   Compiler() = default;
-  void RunFunc4EachTaskNode(std::function<void(TaskNode*)> func);
+  void ForEachChainNode(std::function<void(ChainNode*)> func);
+  void ForEachTaskNode(std::function<void(TaskNode*)> func);
   
   void BuildGraphs();
   void InferShape4Regsts();
@@ -36,7 +37,15 @@ class Compiler final {
 
 };
 
-void Compiler::RunFunc4EachTaskNode(std::function<void(TaskNode*)> func) {
+void Compiler::ForEachChainNode(std::function<void(ChainNode*)> func) {
+  for (const auto& task_gph : ordered_task_gphs_) {
+    for (const auto& chain_node : task_gph->chain_gph()->nodes()) {
+      func(chain_node.get());
+    }
+  }
+}
+
+void Compiler::ForEachTaskNode(std::function<void(TaskNode*)> func) {
   for (const auto& task_gph : ordered_task_gphs_) {
     for (const auto& task_node : task_gph->nodes()) {
       func(task_node.get());
@@ -51,18 +60,24 @@ void Compiler::Compile(const JobConf& job_conf,
   IDMgr::Singleton().InitFromResource(JobDesc::Singleton().resource());
 
   BuildGraphs();
-  RunFunc4EachTaskNode([](TaskNode* node) { node->EraseProducedEmptyRegsts(); });
+  ForEachTaskNode([](TaskNode* node) { node->EraseProducedEmptyRegsts(); });
 
   InferShape4Regsts();
   EraseMeaningLessNodesAndRegsts();
   OfElf elf;
-  RunFunc4EachTaskNode([&elf](TaskNode* node) {
+  ForEachTaskNode([&elf](TaskNode* node) {
     if (!node->produced_regst_descs().empty()) {
       node->ToProto(elf.mutable_task()->Add());
     }
   });
   OpMgr::Singleton().AllOpToProto(elf.mutable_op());
   JobDesc::Singleton().ToProto(elf.mutable_job_desc());
+  ForEachChainNode([&elf](ChainNode* node) {
+    for (std::shared_ptr<const Operator> op : node->op_vec()) {
+      CHECK(elf.mutable_op_name2device_type()->insert(
+          {op->op_name(), node->parallel_desc()->device_type()}).second);
+    }
+  });
   PrintProtoToTextFile(elf, elf_filepath);
 }
 
@@ -123,7 +138,7 @@ void Compiler::BuildGraphs() {
     }
   }
   // all exec_graph 2 dot
-  RunFunc4EachTaskNode([](TaskNode* node) {
+  ForEachTaskNode([](TaskNode* node) {
     std::string file_path = DotDir() + "/exec/" + node->node_id_str() + ".dot";
     node->exec_gph().ToDotFile(file_path);
   });
@@ -137,12 +152,12 @@ void Compiler::InferShape4Regsts() {
 }
 
 void Compiler::EraseMeaningLessNodesAndRegsts() {
-  RunFunc4EachTaskNode([](TaskNode* task_node) {
+  ForEachTaskNode([](TaskNode* task_node) {
     for (const auto& exec_node : task_node->exec_gph().nodes()) {
       exec_node->UnBindRegstsWithZeroBlobSize();
     }
   });
-  RunFunc4EachTaskNode([](TaskNode* task_node) {
+  ForEachTaskNode([](TaskNode* task_node) {
     task_node->EraseZeroSizeBlobInProducedRegsts();
     task_node->EraseProducedEmptyRegsts();
   });
