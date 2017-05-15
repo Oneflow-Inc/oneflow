@@ -112,7 +112,7 @@ RELATIVE_GRPC_GENERATE_CPP(GRPC_SRCS GRPC_HDRS
                            ${proto2grpc_rel_name})
 
 add_library(of_grpcobj ${GRPC_SRCS} ${GRPC_HDRS})
-target_link_libraries(of_grpcobj ${oneflow_third_party_libs})
+target_link_libraries(of_grpcobj ${of_protoobj} ${oneflow_third_party_libs})
 
 if (DOWNLOAD_THIRD_PARTY)
   add_dependencies(of_protoobj ${oneflow_third_party_dependencies})
