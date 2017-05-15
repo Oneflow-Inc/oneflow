@@ -41,7 +41,6 @@ class InitService GRPC_FINAL {
         virtual ::grpc::Status exchange_memory_desc(::grpc::ClientContext* context,
                                                     const ::oneflow::mem_desc& request,
                                                     ::oneflow::mem_desc* response) = 0;
-
     };
 
     class Stub GRPC_FINAL : public StubInterface {
@@ -60,7 +59,7 @@ class InitService GRPC_FINAL {
         const ::grpc::RpcMethod rpcmethod_exchange_memory_desc_;
     }; 
 
-    static std::unique_str<Stub> NewStub(
+    static std::unique_ptr<Stub> NewStub(
         const std::shared_ptr< ::grpc::ChannelInterface>& channel,
         const ::grpc::StubOptions& options = ::grpc::StubOptions());
   
@@ -82,9 +81,6 @@ class InitService GRPC_FINAL {
           ::grpc::Service::RequestAsyncUnary(1, context, request, response, new_call_cq, notification_cq, tag);
         }
     };
-
-
-
 };
 
 }
