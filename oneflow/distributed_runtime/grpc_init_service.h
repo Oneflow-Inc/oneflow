@@ -24,7 +24,7 @@ class GrpcInitService {
 
     std::unique_ptr<::grpc::ServerCompletionQueue> cq_;
 
-    oneflow::InitService::AsyncService init_service_;
+    oneflow::InitService::AsyncService service_;
     
 };
 

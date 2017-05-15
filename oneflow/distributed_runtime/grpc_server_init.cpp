@@ -82,7 +82,8 @@ void GrpcServer::StartService() {
   builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
   service_ = new GrpcInitService(&builder);
   server_ = builder.BuildAndStart();
-
+  
+  service_->HandleRPCsLoop();
 }
 
 void GrpcServer::InitContext() {

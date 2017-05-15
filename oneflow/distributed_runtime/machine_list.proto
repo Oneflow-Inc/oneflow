@@ -4,11 +4,12 @@ package oneflow;
 
 message Node {
   string id = 1;
-  string name = 2;
+  string address = 2;
   string ip = 3;
   string port = 4;
+  string name = 5;
 }
 
 message MachineList {
-  repeated Node machine_list= 1;
+  repeated Node machine_list = 1;
 }
