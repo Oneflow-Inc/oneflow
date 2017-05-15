@@ -116,6 +116,7 @@ target_link_libraries(of_grpcobj ${oneflow_third_party_libs})
 
 if (DOWNLOAD_THIRD_PARTY)
   add_dependencies(of_protoobj ${oneflow_third_party_dependencies})
+  add_dependencies(of_grpcobj ${oneflow_third_party_dependencies})
 endif()
 
 # cc obj lib
