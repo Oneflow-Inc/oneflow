@@ -53,7 +53,18 @@ class InitService GRPC_FINAL {
        ::grpc::Status exchange_memory_desc(::grpc::ClientContext* context,
                                           const ::oneflow::mem_desc& request,
                                           ::oneflow::mem_desc* response) GRPC_OVERRIDE;
+
+     private:
+       std::shared_ptr<::grpc::ChannelInterface> channel_;
+       const ::grpc::RpcMethod rpcmethod_exchange_machine_id_;
+       const ::grpc::RpcMethod rpcmethod_exchange_memory_desc_;
    } 
+
+   static std::unique_str<Stub> NewStub(
+       const std::shared_ptr< ::grpc::ChannelInterface>& channel,
+       const ::grpc::StubOptions& options = ::grpc::StubOptions());
+  
+
 
 };
 
