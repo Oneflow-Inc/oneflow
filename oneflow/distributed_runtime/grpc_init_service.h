@@ -12,7 +12,7 @@
 #include "distributed_runtime/oneflow_init.grpc.pb.h"
 
 namespace oneflow {
-  
+ 
 using ::grpc::ServerBuilder;
 
 class GrpcInitService {

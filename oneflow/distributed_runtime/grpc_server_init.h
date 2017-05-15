@@ -16,6 +16,7 @@
 #include "distributed_runtime/machine_list.pb.h"
 
 using ::grpc::Channel;
+using ::grpc::Server;
 
 namespace oneflow {
 
@@ -45,6 +46,7 @@ class GrpcServer {
     std::map<std::string, std::shared_ptr<::grpc::Channel>> channel_map_;
 
     GrpcInitService* service_ = nullptr;
+    std::unique_ptr<::grpc::Server> server_;
 
 };
 

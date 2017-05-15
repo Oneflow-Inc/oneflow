@@ -9,7 +9,6 @@
 
 namespace oneflow {
 
-
 GrpcInitService::GrpcInitService(::grpc::ServerBuilder* builder) {
   builder->RegisterService(&init_service_);
   cq_ = builder->AddCompletionQueue();
