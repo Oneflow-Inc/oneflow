@@ -44,7 +44,16 @@ class InitService GRPC_FINAL {
 
     };
 
-    
+   class Stub GRPC_FINAL : public StubInterface {
+     public:
+       Stub(const std::shared_ptr<::grpc::ChannelInterface>& channel);
+       ::grpc::Status exchange_machine_id(::grpc::ClientContext* context,
+                                          const ::oneflow::Node& request,
+                                          ::oneflow::Node* response) GRPC_OVERRIDE;
+       ::grpc::Status exchange_memory_desc(::grpc::ClientContext* context,
+                                          const ::oneflow::mem_desc& request,
+                                          ::oneflow::mem_desc* response) GRPC_OVERRIDE;
+   } 
 
 };
 
