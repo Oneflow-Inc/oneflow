@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_GRAPH_TASK_NODE_H_
 #define ONEFLOW_GRAPH_TASK_NODE_H_
 
-#include "task/task.pb.h"
+#include "actor/task.pb.h"
 #include "graph/stage_graph.h"
 #include "graph/exec_graph.h"
 
