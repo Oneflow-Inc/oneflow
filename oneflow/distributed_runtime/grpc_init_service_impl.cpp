@@ -35,21 +35,21 @@ std::unique_ptr<InitService::Stub> InitService::NewStub(
 InitService::Stub::Stub(
     const std::shared_ptr<::grpc::ChannelInterface>& channel)
     : channel_(channel),
-      rpcmethod_exchange_machine_id_(InitService_method_names[0], 
+      rpcmethod_ExchangeMachineInfo_(InitService_method_names[0], 
                                      ::grpc::RpcMethod::NORMAL_RPC, channel),
-      rpcmethod_exchange_memory_desc_(InitService_method_names[1], 
+      rpcmethod_ExchangeMemoryDesc_(InitService_method_names[1], 
                                       ::grpc::RpcMethod::NORMAL_RPC, channel) {}
 
-::grpc::Status InitService::Stub::exchange_machine_id(
+::grpc::Status InitService::Stub::ExchangeMachineInfo(
     ::grpc::ClientContext* context, const ::oneflow::Node& request, 
     ::oneflow::Node* response) {
-  return ::grpc::BlockingUnaryCall(channel_.get(), rpcmethod_exchange_machine_id_, context, request, response);
+  return ::grpc::BlockingUnaryCall(channel_.get(), rpcmethod_ExchangeMachineInfo_, context, request, response);
 }
 
-::grpc::Status InitService::Stub::exchange_memory_desc(
-    ::grpc::ClientContext* context, const ::oneflow::mem_desc& request, 
-    ::oneflow::mem_desc* response) {
-  return ::grpc::BlockingUnaryCall(channel_.get(), rpcmethod_exchange_memory_desc_, context, request, response);
+::grpc::Status InitService::Stub::ExchangeMemoryDesc(
+    ::grpc::ClientContext* context, const ::oneflow::MemDesc& request, 
+    ::oneflow::MemDesc* response) {
+  return ::grpc::BlockingUnaryCall(channel_.get(), rpcmethod_ExchangeMemoryDesc_, context, request, response);
 }  
 
 InitService::Service::Service() {
