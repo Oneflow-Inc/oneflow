@@ -5,8 +5,8 @@ package oneflow;
 import "distributed_runtime/machine_list.proto";
 
 service InitService {
-  rpc exchange_machine_id(Node) returns (Node) {}
-  rpc exchange_memory_desc(mem_desc) returns (mem_desc) {}
+  rpc exchange_machine_id(Node) returns (Node);
+  rpc exchange_memory_desc(mem_desc) returns (mem_desc);
 }
 
 message mem_desc {
