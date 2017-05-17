@@ -2,17 +2,17 @@ syntax = "proto3";
 
 package oneflow;
 
-//import "distributed_runtime/machine_list.proto";
-
 service InitService {
   rpc ExchangeMachineInfo(ExchangeMachineInfoRequest) returns (ExchangeMachineInfoResponse);
   rpc ExchangeMemoryDesc(ExchangeMemoryDescRequest) returns (ExchangeMemoryDescResponse);
+
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+  rpc ReadData(ReadDataRequest) returns (ReadDataResponse);
 }
 
 message ExchangeMachineInfoRequest {
   int32 tmp = 1;
 }
-
 message ExchangeMachineInfoResponse {
   int32 tmp = 1;
 }
@@ -20,8 +20,22 @@ message ExchangeMachineInfoResponse {
 message ExchangeMemoryDescRequest {
   int32 tmp = 1;
 }
-
 message ExchangeMemoryDescResponse {
   int32 tmp = 1;
 }
+
+message SendMessageRequest {
+  int32 tmp = 1;
+}
+message SendMessageResponse {
+  int32 tmp =1;
+}
+
+message ReadDataRequest {
+  int32 tmp = 1;
+}
+message ReadDataResponse {
+  int32 tmp = 1;
+}
+
 
