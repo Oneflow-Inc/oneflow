@@ -16,6 +16,6 @@ void ConvolutionKernel<DeviceType::kCPU, floating_point_type>::Backward(
 }
 
 REGISTER_KERNEL(OperatorConf::kConvolutionConf, ConvolutionKernel);
-INSTANTIATE_KERNEL_CLASS(ConvolutionKernel);
+INSTANTIATE_CPU_KERNEL_CLASS(ConvolutionKernel);
 
 }  // namespace oneflow

@@ -34,12 +34,14 @@ class Kernel {
   std::unique_ptr<const Operator> op_;
 };
 
-#define INSTANTIATE_KERNEL_CLASS(classname) \
-  char gInstantiationGuard##classname; \
+#define INSTANTIATE_CPU_KERNEL_CLASS(classname) \
+  char gInstantiationGuardCPU##classname; \
   template class classname<DeviceType::kCPU, FloatingPointType::kFloat>; \
-  template class classname<DeviceType::kCPU, FloatingPointType::kDouble>; \
+  template class classname<DeviceType::kCPU, FloatingPointType::kDouble>;
+#define INSTANTIATE_GPU_KERNEL_CLASS(classname) \
+  char gInstantiationGuardGPU##classname; \
   template class classname<DeviceType::kGPU, FloatingPointType::kFloat>; \
-  template class classname<DeviceType::kGPU, FloatingPointType::kDouble>; \
+  template class classname<DeviceType::kGPU, FloatingPointType::kDouble>;
 
 }  // namespace oneflow
 

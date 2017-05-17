@@ -15,4 +15,6 @@ void ConvolutionKernel<DeviceType::kGPU, floating_point_type>::Backward(
   TODO();
 }
 
+INSTANTIATE_GPU_KERNEL_CLASS(ConvolutionKernel);
+
 }  // namespace oneflow
