@@ -14,7 +14,8 @@ class Blob {
   ~Blob() { deleter_(dptr_); }
 
   void* mut_dptr() { return dptr_; }
-  const Shape& shape() { return shape_; }
+  const void* dptr() const { return dptr_; }
+  const Shape& shape() const { return shape_; }
 
  private:
   void* dptr_ ;

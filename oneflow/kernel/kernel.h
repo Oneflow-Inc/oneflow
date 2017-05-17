@@ -15,7 +15,6 @@ namespace oneflow {
 class Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Kernel);
-  Kernel() = default;
   virtual ~Kernel() = default;
 
   void InitFromOpProto(const OperatorProto& op_proto) {
@@ -24,12 +23,12 @@ class Kernel {
     op_.reset(op);
   }
   // for Forward / Bp Calculation in FwExecGragh node and BpExecGragh node
-  // through bn_in_op2Blob function get the input blob and output blob
+  // through bn_in_op2blob_ptr function get the input blob and output blob
   // the Kernel will using the input blob calculate the result and fill output
-  virtual void Forward(
-      std::function<Blob*(const std::string& bn_in_op)>) = 0;
-  virtual void Backward(
-      std::function<Blob*(const std::string& bn_in_op)>) = 0;
+  virtual void Forward(std::function<Blob*(const std::string& )>) = 0;
+  virtual void Backward(std::function<Blob*(const std::string& )>) = 0;
+ protected:
+  Kernel() = default;
  private:
   std::unique_ptr<const Operator> op_;
 };

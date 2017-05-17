@@ -30,7 +30,7 @@ class KernelMgr final {
 
  private:
   KernelMgr() = default;
-  HashMap<std::string, std::unique_ptr<Kernel>> op_name2kernel_ptr_;
+  HashMap<std::string, std::unique_ptr<const Kernel>> op_name2kernel_ptr_;
 };
 
 void AddCpuFloatKernelCreator(OperatorConf::OpTypeCase op_type_case,

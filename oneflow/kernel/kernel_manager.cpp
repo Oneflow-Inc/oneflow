@@ -5,29 +5,22 @@ namespace oneflow {
 
 namespace {
 
-HashMap<int, std::function<Kernel*()>>& TypeCase2CpuFloatKernelCreator() {
-  static HashMap<int, std::function<Kernel*()>> obj;
-  return obj;
+#define DEFINE_STATIC_CASE2KERNEL_MAP(DeviceType,FloatingPointType) \
+HashMap<int, std::function<Kernel*()>>& TypeCase2##DeviceType####FloatingPointType##KernelCreator() { \
+  static HashMap<int, std::function<Kernel*()>> obj; \
+  return obj; \
 }
 
-HashMap<int, std::function<Kernel*()>>& TypeCase2GpuFloatKernelCreator() {
-  static HashMap<int, std::function<Kernel*()>> obj;
-  return obj;
-}
+DEFINE_STATIC_CASE2KERNEL_MAP(Cpu, Float);
+DEFINE_STATIC_CASE2KERNEL_MAP(Gpu, Float);
+DEFINE_STATIC_CASE2KERNEL_MAP(Cpu, Double);
+DEFINE_STATIC_CASE2KERNEL_MAP(Gpu, Double);
 
-HashMap<int, std::function<Kernel*()>>& TypeCase2CpuDoubleKernelCreator() {
-  static HashMap<int, std::function<Kernel*()>> obj;
-  return obj;
-}
-
-HashMap<int, std::function<Kernel*()>>& TypeCase2GpuDoubleKernelCreator() {
-  static HashMap<int, std::function<Kernel*()>> obj;
-  return obj;
-}
+#undef DEFINE_STATIC_CASE2KERNEL_MAP
 
 Kernel* CreateKernel(OperatorConf::OpTypeCase op_type_case,
-  DeviceType device_type,
-  FloatingPointType floating_point_type) {
+                     DeviceType device_type,
+                     FloatingPointType floating_point_type) {
   if (device_type == DeviceType::kCPU) {
     if (floating_point_type == FloatingPointType::kFloat) {
       return TypeCase2CpuFloatKernelCreator().at(op_type_case)();
@@ -55,31 +48,30 @@ Kernel* CreateKernel(OperatorConf::OpTypeCase op_type_case,
 }  // namespace
 
 void AddCpuFloatKernelCreator(OperatorConf::OpTypeCase op_type_case,
-                         std::function<Kernel*()> creator ) {
+                              std::function<Kernel*()> creator ) {
   CHECK(TypeCase2CpuFloatKernelCreator().emplace(op_type_case, creator).second);
 }
 
 void AddGpuFloatKernelCreator(OperatorConf::OpTypeCase op_type_case,
-                         std::function<Kernel*()> creator) {
+                              std::function<Kernel*()> creator) {
   CHECK(TypeCase2GpuFloatKernelCreator().emplace(op_type_case, creator).second);
 }
 
 void AddCpuDoubleKernelCreator(OperatorConf::OpTypeCase op_type_case,
-  std::function<Kernel*()> creator) {
+                               std::function<Kernel*()> creator) {
   CHECK(TypeCase2CpuDoubleKernelCreator().emplace(op_type_case, creator).second);
 }
 
 void AddGpuDoubleKernelCreator(OperatorConf::OpTypeCase op_type_case,
-  std::function<Kernel*()> creator) {
+                               std::function<Kernel*()> creator) {
   CHECK(TypeCase2GpuDoubleKernelCreator().emplace(op_type_case, creator).second);
 }
 
-void KernelMgr::InitFromELF(const OfElf& of_Elf) {
-  const PbRpf<OperatorProto>& op_protos = of_Elf.op();
+void KernelMgr::InitFromELF(const OfElf& of_elf) {
   FloatingPointType floating_point_type = JobDesc::Singleton().floating_point_type();
-  for (const OperatorProto& op_proto : op_protos) {
+  for (const OperatorProto& op_proto : of_elf.op()) {
     const std::string& op_name = op_proto.op_conf().name();
-    DeviceType device_type = of_Elf.op_name2device_type().at(op_name);
+    DeviceType device_type = of_elf.op_name2device_type().at(op_name);
     std::unique_ptr<Kernel> kernel_ptr(CreateKernel(
       op_proto.op_conf().op_type_case(),
       device_type,
