@@ -36,22 +36,22 @@ class InitService GRPC_FINAL {
       public:
         virtual ~StubInterface() {}
         virtual ::grpc::Status ExchangeMachineInfo(::grpc::ClientContext* context,
-                                                   const ::oneflow::Node& request,
-                                                   ::oneflow::Node* response) = 0;
+                                                   const ::oneflow::ExchangeMachineInfoRequest& request,
+                                                   ::oneflow::ExchangeMachineInfoResponse* response) = 0;
         virtual ::grpc::Status ExchangeMemoryDesc(::grpc::ClientContext* context,
-                                                    const ::oneflow::MemDesc& request,
-                                                    ::oneflow::MemDesc* response) = 0;
+                                                    const ::oneflow::ExchangeMemoryDescRequest& request,
+                                                    ::oneflow::ExchangeMemoryDescResponse* response) = 0;
     };
 
     class Stub GRPC_FINAL : public StubInterface {
       public:
         Stub(const std::shared_ptr<::grpc::ChannelInterface>& channel);
         ::grpc::Status ExchangeMachineInfo(::grpc::ClientContext* context,
-                                          const ::oneflow::Node& request,
-                                          ::oneflow::Node* response) GRPC_OVERRIDE;
+                                          const ::oneflow::ExchangeMachineInfoRequest& request,
+                                          ::oneflow::ExchangeMachineInfoResponse* response) GRPC_OVERRIDE;
         ::grpc::Status ExchangeMemoryDesc(::grpc::ClientContext* context,
-                                          const ::oneflow::MemDesc& request,
-                                          ::oneflow::MemDesc* response) GRPC_OVERRIDE;
+                                          const ::oneflow::ExchangeMemoryDescRequest& request,
+                                          ::oneflow::ExchangeMemoryDescResponse* response) GRPC_OVERRIDE;
 
       private:
         std::shared_ptr<::grpc::ChannelInterface> channel_;
@@ -68,15 +68,15 @@ class InitService GRPC_FINAL {
         Service();
         virtual ~Service();
 
-        void RequestExchangeMachineInfo(::grpc::ServerContext* context, ::oneflow::Node* request,
-            ::grpc::ServerAsyncResponseWriter< ::oneflow::Node>* response,
+        void RequestExchangeMachineInfo(::grpc::ServerContext* context, ::oneflow::ExchangeMachineInfoRequest* request,
+            ::grpc::ServerAsyncResponseWriter< ::oneflow::ExchangeMachineInfoResponse>* response,
             ::grpc::CompletionQueue* new_call_cq,
             ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
           ::grpc::Service::RequestAsyncUnary(0, context, request, response, new_call_cq, notification_cq, tag);
         }
 
-        void RequestExchangeMemoryDesc(::grpc::ServerContext* context, ::oneflow::MemDesc* request,
-            ::grpc::ServerAsyncResponseWriter< ::oneflow::MemDesc>* response, ::grpc::CompletionQueue* new_call_cq,
+        void RequestExchangeMemoryDesc(::grpc::ServerContext* context, ::oneflow::ExchangeMemoryDescRequest* request,
+            ::grpc::ServerAsyncResponseWriter< ::oneflow::ExchangeMemoryDescResponse>* response, ::grpc::CompletionQueue* new_call_cq,
             ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
           ::grpc::Service::RequestAsyncUnary(1, context, request, response, new_call_cq, notification_cq, tag);
         }
