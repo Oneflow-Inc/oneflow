@@ -110,7 +110,6 @@ class Node {
   friend void DisConnect<EdgeType>(EdgeType* edge);
 
   uint64_t node_id_;
-
   std::unordered_set<EdgeType*> in_edges_;
   std::unordered_set<EdgeType*> out_edges_;
 
