@@ -1,25 +1,22 @@
-/*
- * grpc_remote_worker.h
- * Copyright (C) 2017 xiaoshu <2012wxs@gmail.com>
- *
- * Distributed under terms of the MIT license.
- */
-
 #ifndef GRPC_REMOTE_WORKER_H
 #define GRPC_REMOTE_WORKER_H
 
 #include "grpc++/grpc++.h"
-#include "distributed_runtime/worker_service.pb.h"
 
+#include "distributed_runtime/grpc_worker_service_impl.h"
+#include "distributed_runtime/worker_service.pb.h"
 
 namespace oneflow {
 
 class GrpcRemoteWorker {
   public:
-    GrpcRemoteWorker(::grpc::Channel channel,
+    GrpcRemoteWorker(std::shared_ptr<::grpc::Channel> channel,
                      ::grpc::CompletionQueue* completion_queue)
     : channel_(channel),
-      cq_(completion_queue) {}
+      cq_(completion_queue),
+      getmachinedesc_(Method(GrpcWorkerMethod::kGetMachineDesc)),
+      getmemorydesc_(Method(GrpcWorkerMethod::kGetMemoryDesc)) {}
+
     ~GrpcRemoteWorker() {}
 
     void GetMachineDescAsync(GetMachineDescRequest* request,
@@ -32,14 +29,14 @@ class GrpcRemoteWorker {
       IssueRequest(request, response, getmemorydesc_);
     }
 
-
   private:
-
     template <class RequestMessage, class ResponseMessage>
-    class RPCState final {
+    class RPCState {
       public:
-        RPCState(::grpc::CompletionQueue* cq, const ::grpc::RpcMethod& method, const RequestMessage& request)
+        RPCState(::grpc::ChannelInterface* channel, ::grpc::CompletionQueue* cq, 
+                 const ::grpc::RpcMethod& method, const RequestMessage& request)
           : reader_(channel, cq, method, context_, request) {}
+
         ~RPCState() {}
 
         void StartRPC(ResponseMessage* response) {
@@ -47,7 +44,7 @@ class GrpcRemoteWorker {
         }
 
       private:
-        ::grpc::ClientContext context_;
+        ::grpc::ClientContext* context_;
         ::grpc::ClientAsyncResponseReader<ResponseMessage> reader_;
         ::grpc::Status status_;
     };
@@ -56,12 +53,16 @@ class GrpcRemoteWorker {
     void IssueRequest(const RequestMessage* request, ResponseMessage* response,
                       const ::grpc::RpcMethod& method) {
       auto state = new RPCState<RequestMessage, ResponseMessage>(
-          cq_, method, *request);
+          channel_.get(), cq_, method, *request);
       state->StartRPC(response);
-    
+    }//IssueRequest
+
+    ::grpc::RpcMethod Method(GrpcWorkerMethod id) {
+      return ::grpc::RpcMethod(GrpcWorkerMethodName(id), ::grpc::RpcMethod::NORMAL_RPC, channel_);
     }
 
-    ::grpc::Channel channel_;
+    std::shared_ptr<::grpc::Channel> channel_;
+    ::grpc::CompletionQueue* cq_;
 
     const ::grpc::RpcMethod getmachinedesc_;
     const ::grpc::RpcMethod getmemorydesc_;

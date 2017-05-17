@@ -36,6 +36,8 @@ enum class GrpcWorkerMethod {
 static const int kGrpcNumWorkerMethods = 
   static_cast<int>(GrpcWorkerMethod::kGetMemoryDesc) + 1;
 
+const char* GrpcWorkerMethodName(GrpcWorkerMethod id);
+
 namespace grpc{
 
 class WorkerService GRPC_FINAL {
