@@ -49,7 +49,7 @@ class GrpcInitService {
 
     std::unique_ptr<::grpc::ServerCompletionQueue> cq_;
 
-    oneflow::grpc::InitService::Service service_;
+    grpc::InitService::Service service_;
 
   private:
     template <class RequestMessage, class ResponseMessage>
