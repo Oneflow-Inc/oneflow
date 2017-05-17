@@ -21,8 +21,8 @@ namespace oneflow {
 namespace grpc {
 
 static const char* InitService_method_names[] = {
-  "/oneflow.InitService/exchange_machine_id",
-  "/oneflow.InitService/exchange_memory_desc",
+  "/oneflow.InitService/ExchangeMachineInfo",
+  "/oneflow.InitService/ExchangeMemoryDesc",
 };
 
 std::unique_ptr<InitService::Stub> InitService::NewStub(
@@ -41,14 +41,14 @@ InitService::Stub::Stub(
                                       ::grpc::RpcMethod::NORMAL_RPC, channel) {}
 
 ::grpc::Status InitService::Stub::ExchangeMachineInfo(
-    ::grpc::ClientContext* context, const ::oneflow::Node& request, 
-    ::oneflow::Node* response) {
+    ::grpc::ClientContext* context, const ::oneflow::ExchangeMachineInfoRequest& request, 
+    ::oneflow::ExchangeMachineInfoResponse* response) {
   return ::grpc::BlockingUnaryCall(channel_.get(), rpcmethod_ExchangeMachineInfo_, context, request, response);
 }
 
 ::grpc::Status InitService::Stub::ExchangeMemoryDesc(
-    ::grpc::ClientContext* context, const ::oneflow::MemDesc& request, 
-    ::oneflow::MemDesc* response) {
+    ::grpc::ClientContext* context, const ::oneflow::ExchangeMemoryDescRequest& request, 
+    ::oneflow::ExchangeMemoryDescResponse* response) {
   return ::grpc::BlockingUnaryCall(channel_.get(), rpcmethod_ExchangeMemoryDesc_, context, request, response);
 }  
 
@@ -60,6 +60,8 @@ InitService::Service::Service() {
     ::grpc::Service::MarkMethodAsync(i);
   }
 }
+
+InitService::Service::~Service() {}
 
 }//namespace grpc
 

@@ -2,13 +2,26 @@ syntax = "proto3";
 
 package oneflow;
 
-import "distributed_runtime/machine_list.proto";
+//import "distributed_runtime/machine_list.proto";
 
 service InitService {
-  rpc ExchangeMachineInfo(Node) returns (Node);
-  rpc ExchangeMemoryDesc(MemDesc) returns (MemDesc);
+  rpc ExchangeMachineInfo(ExchangeMachineInfoRequest) returns (ExchangeMachineInfoResponse);
+  rpc ExchangeMemoryDesc(ExchangeMemoryDescRequest) returns (ExchangeMemoryDescResponse);
 }
 
-message MemDesc {
-  int32 md = 1;
+message ExchangeMachineInfoRequest {
+  int32 tmp = 1;
 }
+
+message ExchangeMachineInfoResponse {
+  int32 tmp = 1;
+}
+
+message ExchangeMemoryDescRequest {
+  int32 tmp = 1;
+}
+
+message ExchangeMemoryDescResponse {
+  int32 tmp = 1;
+}
+
