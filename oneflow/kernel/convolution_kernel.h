@@ -34,8 +34,6 @@ class ConvolutionKernel<DeviceType::kGPU, floating_point_type> final : public Ke
   void Backward(std::function<Blob*(const std::string& bn_in_op)>) override;
 };
 
-REGISTER_KERNEL(OperatorConf::kConvolutionConf, ConvolutionKernel);
-INSTANTIATE_KERNEL_CLASS(ConvolutionKernel);
 
 }  // namespace oneflow
 

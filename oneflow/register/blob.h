@@ -9,7 +9,7 @@ namespace oneflow {
 class Blob {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
-  Blob(void* dptr, Shape shape, std::function<void(void*)> deleter)
+  Blob(void* dptr,const Shape& shape,const std::function<void(void*)>& deleter)
     : dptr_(dptr), shape_(shape), deleter_(deleter) {}
   ~Blob() { deleter_(dptr_); }
 

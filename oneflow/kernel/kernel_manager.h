@@ -12,10 +12,6 @@
 
 namespace oneflow {
 
-Kernel* CreateKernel(OperatorConf::OpTypeCase op_type_case,
-  DeviceType device_type,
-  FloatingPointType floating_point_type);
-
 class KernelMgr final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelMgr);
@@ -30,20 +26,7 @@ class KernelMgr final {
     return op_name2kernel_ptr_.at(op_name).get();
   }
 
-  void InitFromELF(const OfElf& of_Elf) {
-    const PbRpf<OperatorProto>& op_protos = of_Elf.op();
-    FloatingPointType floating_point_type = JobDesc::Singleton().floating_point_type();
-    for (const OperatorProto& op_proto : op_protos) {
-      const std::string& op_name = op_proto.op_conf().name();
-      DeviceType device_type = of_Elf.op_name2device_type().at(op_name);
-      std::unique_ptr<Kernel> kernel_ptr(CreateKernel(
-          op_proto.op_conf().op_type_case(),
-          device_type,
-          floating_point_type));
-      kernel_ptr->InitFromOpProto(op_proto);
-      CHECK(op_name2kernel_ptr_.emplace(op_name, std::move(kernel_ptr)).second);
-    }
-  }
+  void InitFromELF(const OfElf& of_Elf);
 
  private:
   KernelMgr() = default;
