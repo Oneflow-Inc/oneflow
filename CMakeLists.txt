@@ -10,7 +10,7 @@ set(oneflow_src_dir ${PROJECT_SOURCE_DIR}/oneflow)
 set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
 if (WIN32)
 else()
-  list(APPEND CUDA_NVCC_FLAGS "-std=c++11")
+  list(APPEND CUDA_NVCC_FLAGS "-std=c++11 -w")
 endif()
 
 # option
@@ -41,6 +41,7 @@ include(third_party)
 
 # main cpp
 list(APPEND of_main_cc ${oneflow_src_dir}/job/compiler.cpp)
+list(APPEND of_main_cc ${oneflow_src_dir}/job/runtime.cpp)
 
 # source_group
 SUBDIRLIST(subdir_list ${oneflow_src_dir})

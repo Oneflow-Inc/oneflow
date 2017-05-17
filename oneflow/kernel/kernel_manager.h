@@ -5,7 +5,7 @@
 #include <memory>
 #include <string>
 #include "common/util.h"
-#include "common/proto_io.h"
+#include "common/protobuf.h"
 #include "kernel/kernel.h"
 #include "job/ofelf.pb.h"
 #include "job/job_desc.h"

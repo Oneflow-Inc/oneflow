@@ -1,6 +1,6 @@
 #include "register/register_desc.h"
 #include "job/id_manager.h"
-#include "common/proto_io.h"
+#include "common/protobuf.h"
 #include "graph/task_node.h"
 
 namespace oneflow {

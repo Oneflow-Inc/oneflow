@@ -1,7 +1,7 @@
 #include "gflags/gflags.h"
 #include "glog/logging.h"
 #include "job/id_manager.h"
-#include "common/proto_io.h"
+#include "common/protobuf.h"
 #include "graph/model_load_task_graph.h"
 #include "graph/model_save_task_graph.h"
 #include "graph/model_update_task_graph.h"

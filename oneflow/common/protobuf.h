@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_PROTO_IO_H_
-#define ONEFLOW_PROTO_IO_H_
+#ifndef ONEFLOW_COMMON_PROTOBUF_H_
+#define ONEFLOW_COMMON_PROTOBUF_H_
 
 #ifdef _MSC_VER
 #include <io.h>
@@ -81,4 +81,4 @@ inline google::protobuf::Map<std::string, std::string> HashMap2PbMap(
 
 } // namespace caffe
 
-#endif // ONEFLOW_PROTO_IO_H_
+#endif // ONEFLOW_COMMON_PROTOBUF_H_
