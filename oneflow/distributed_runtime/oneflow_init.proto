@@ -2,25 +2,25 @@ syntax = "proto3";
 
 package oneflow;
 
-service InitService {
-  rpc ExchangeMachineInfo(ExchangeMachineInfoRequest) returns (ExchangeMachineInfoResponse);
-  rpc ExchangeMemoryDesc(ExchangeMemoryDescRequest) returns (ExchangeMemoryDescResponse);
+service WorkerService {
+  rpc GetNeighbourMachineDesc(GetNeighbourMachineDescRequest) returns (GetNeighbourMachineDescResponse);
+  rpc GetNeighbourMemoryDesc(GetNeighbourMemoryDescRequest) returns (GetNeighbourMemoryDescResponse);
 
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
   rpc ReadData(ReadDataRequest) returns (ReadDataResponse);
 }
 
-message ExchangeMachineInfoRequest {
+message GetNeighbourMachineDescRequest {
   int32 tmp = 1;
 }
-message ExchangeMachineInfoResponse {
+message GetNeighbourMachineDescResponse {
   int32 tmp = 1;
 }
 
-message ExchangeMemoryDescRequest {
+message GetNeighbourMemoryDescRequest {
   int32 tmp = 1;
 }
-message ExchangeMemoryDescResponse {
+message GetNeighbourMemoryDescResponse {
   int32 tmp = 1;
 }
 
