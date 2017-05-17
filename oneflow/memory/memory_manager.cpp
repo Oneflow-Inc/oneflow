@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-std::pair<void*, std::function<void(void*)>> MemoryMgr::Allocate(
+std::pair<void*, std::function<void(void*)>> MemoryAllocator::Allocate(
     MemoryCase mem_case,std::size_t size) {
   void* dptr = nullptr;
   switch(mem_case.type) {
@@ -16,16 +16,19 @@ std::pair<void*, std::function<void(void*)>> MemoryMgr::Allocate(
       break;
     }
     case MemoryType::kDeviceGPUMemory: {
+      int32_t current_device_id;
+      CHECK_EQ(cudaGetDevice(&current_device_id), 0);
       CHECK_EQ(cudaSetDevice(mem_case.device_id), 0);
       CHECK_EQ(cudaMalloc(&dptr, size), 0);
+      CHECK_EQ(cudaSetDevice(current_device_id), 0);
       break;
     }
   }
-  return {dptr, std::bind(&MemoryMgr::Deallocate,
+  return {dptr, std::bind(&MemoryAllocator::Deallocate,
                           this, std::placeholders::_1, mem_case)};
 }
 
-void MemoryMgr::Deallocate(void* dptr, MemoryCase mem_case) {
+void MemoryAllocator::Deallocate(void* dptr, MemoryCase mem_case) {
   switch(mem_case.type) {
     case MemoryType::kHostPageableMemory: {
       free(dptr);
@@ -36,8 +39,11 @@ void MemoryMgr::Deallocate(void* dptr, MemoryCase mem_case) {
       break;
     }
     case MemoryType::kDeviceGPUMemory: {
+      int32_t current_device_id;
+      CHECK_EQ(cudaGetDevice(&current_device_id), 0);
       CHECK_EQ(cudaSetDevice(mem_case.device_id), 0);
       CHECK_EQ(cudaFree(&dptr), 0);
+      CHECK_EQ(cudaSetDevice(current_device_id), 0);
       break;
     }
   } 

@@ -1,7 +1,6 @@
 #include "operator/convolution_op.h"
 #include "glog/logging.h"
 #include "operator/operator_manager.h"
-#include "operator/op_util.h"
 
 namespace oneflow {
 
