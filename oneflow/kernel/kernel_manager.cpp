@@ -73,9 +73,9 @@ void KernelMgr::InitFromELF(const OfElf& of_elf) {
     const std::string& op_name = op_proto.op_conf().name();
     DeviceType device_type = of_elf.op_name2device_type().at(op_name);
     std::unique_ptr<Kernel> kernel_ptr(CreateKernel(
-      op_proto.op_conf().op_type_case(),
-      device_type,
-      floating_point_type));
+        op_proto.op_conf().op_type_case(),
+        device_type,
+        floating_point_type));
     kernel_ptr->InitFromOpProto(op_proto);
     CHECK(op_name2kernel_ptr_.emplace(op_name, std::move(kernel_ptr)).second);
   }

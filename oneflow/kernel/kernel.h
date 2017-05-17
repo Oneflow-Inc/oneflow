@@ -25,8 +25,8 @@ class Kernel {
   // for Forward / Bp Calculation in FwExecGragh node and BpExecGragh node
   // through bn_in_op2blob_ptr function get the input blob and output blob
   // the Kernel will using the input blob calculate the result and fill output
-  virtual void Forward(std::function<Blob*(const std::string& )>) = 0;
-  virtual void Backward(std::function<Blob*(const std::string& )>) = 0;
+  virtual void Forward(std::function<Blob*(const std::string&)>) = 0;
+  virtual void Backward(std::function<Blob*(const std::string&)>) = 0;
  protected:
   Kernel() = default;
  private:
