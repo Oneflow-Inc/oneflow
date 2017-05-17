@@ -10,6 +10,8 @@
 
 #include <grpc++/grpc++.h>
 #include "distributed_runtime/oneflow_init.grpc.pb.h"
+#include "distributed_runtime/grpc_call.h"
+#include "distributed_runtime/grpc_init_service_impl.h"
 
 namespace oneflow {
  
@@ -24,20 +26,18 @@ class GrpcInitService {
 
     std::unique_ptr<::grpc::ServerCompletionQueue> cq_;
 
-    oneflow::InitService::AsyncService service_;
+    oneflow::InitService::Service service_;
 
   private:
     template <class RequestMessage, class ResponseMessage>
-    using ServiceCall = Call<GrpcInitService, grpc::InitService::AsyncService,
+    using ServiceCall = Call<GrpcInitService, grpc::InitService::Service,
                              RequestMessage, ResponseMessage>;
 
-    void ExchangeMachineInfoHandler(ServiceCall<ExchangeMachineInfoRequest,
-                                                ExchangeMachineInfoReponse>* call) {
+    void ExchangeMachineInfoHandler(ServiceCall<Node, Node>* call) {
       //TODO[xiaoshu]
     }
 
-    void ExchangeMemoryDesc(ServiceCall<ExchangeMemoryDescRequest,
-                                        ExchangeMemoryDescReponse>* call) {
+    void ExchangeMemoryDesc(ServiceCall<MemDesc, MemDesc>* call) {
       //TODO[xiaoshu]
     }
     

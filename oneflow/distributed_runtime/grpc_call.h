@@ -19,11 +19,11 @@ class UntypedCall {
   public:
     virtual ~UntypedCall() {}
 
-    virtual RequestReceived(Service* service) = 0;
+    virtual void RequestReceived(Service* service) = 0;
 
     class Tag {
       public:
-        enum Callback {kRequestReceived};
+        enum Callback {kRequestReceived, kReponseSent};
         Tag(UntypedCall* call, Callback cb) : call_(call), callback_(cb) {}
 
         void OnCompleted(Service* service) {
@@ -92,6 +92,7 @@ class Call : public UntypedCall<Service> {
   
     typedef typename UntypedCall<Service>::Tag Tag;
     Tag request_received_tag_{this, Tag::kRequestReceived};
+    Tag response_sent_tag_{this, Tag::kResponseSent};
 
 };
  
