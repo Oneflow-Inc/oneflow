@@ -8,7 +8,7 @@
 #ifndef GRPC_SERVER_INIT_H
 #define GRPC_SERVER_INIT_H
 
-#include "distributed_runtime/grpc_init_service.h"
+#include "distributed_runtime/grpc_worker_service.h"
 
 #include "grpc++/grpc++.h"
 
@@ -45,7 +45,7 @@ class GrpcServer {
 
     std::map<std::string, std::shared_ptr<::grpc::Channel>> channel_map_;
 
-    GrpcInitService* service_ = nullptr;
+    GrpcWorkerService* worker_service_ = nullptr;
     std::unique_ptr<::grpc::Server> server_;
 
 };

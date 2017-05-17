@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package oneflow;
+
+service WorkerService {
+  rpc GetNeighbourMachineDesc(GetMachineDescRequest) returns (GetMachineDescResponse);
+  rpc GetNeighbourMemoryDesc(GetMemoryDescRequest) returns (GetMemoryDescResponse);
+
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+  rpc ReadData(ReadDataRequest) returns (ReadDataResponse);
+}
+
+message GetMachineDescRequest {
+  int32 tmp = 1;
+}
+message GetMachineDescResponse {
+  int32 tmp = 1;
+}
+
+message GetMemoryDescRequest {
+  int32 tmp = 1;
+}
+message GetMemoryDescResponse {
+  int32 tmp = 1;
+}
+
+message SendMessageRequest {
+  int32 tmp = 1;
+}
+message SendMessageResponse {
+  int32 tmp =1;
+}
+
+message ReadDataRequest {
+  int32 tmp = 1;
+}
+message ReadDataResponse {
+  int32 tmp = 1;
+}
+
+

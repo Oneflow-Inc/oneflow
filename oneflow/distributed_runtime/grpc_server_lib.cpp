@@ -5,7 +5,7 @@
  * Distributed under terms of the MIT license.
  */
 
-#include "distributed_runtime/grpc_server_init.h"
+#include "distributed_runtime/grpc_server_lib.h"
 
 #include <iostream>
 #include <fstream>
@@ -80,10 +80,10 @@ void GrpcServer::StartService() {
   std::string server_address("0.0.0.0:50051");
   ::grpc::ServerBuilder builder;
   builder.AddListeningPort(server_address, ::grpc::InsecureServerCredentials());
-  service_ = new GrpcInitService(&builder);
+  worker_service_ = new GrpcWorkerService(&builder);
   server_ = builder.BuildAndStart();
   
-  service_->HandleRPCsLoop();
+  worker_service_->HandleRPCsLoop();
 }
 
 void GrpcServer::InitContext() {

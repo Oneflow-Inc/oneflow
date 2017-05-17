@@ -9,61 +9,62 @@
 #define GRPC_SERVER_SERVICE_H
 
 #include <grpc++/grpc++.h>
-#include "distributed_runtime/oneflow_init.grpc.pb.h"
-#include "distributed_runtime/oneflow_init.pb.h"
+
+#include "distributed_runtime/worker_service.pb.h"
 #include "distributed_runtime/grpc_call.h"
-#include "distributed_runtime/grpc_init_service_impl.h"
+#include "distributed_runtime/grpc_worker_service_impl.h"
 
 namespace oneflow {
  
 using ::grpc::ServerBuilder;
 
-class GrpcInitService {
+class GrpcWorkerService {
   public:
-    GrpcInitService(::grpc::ServerBuilder* builder) {
-      builder->RegisterService(&service_);
+    GrpcWorkerService(::grpc::ServerBuilder* builder) {
+      builder->RegisterService(&worker_service_);
       cq_ = builder->AddCompletionQueue();
     }
 
-    ~GrpcInitService() {}
+    ~GrpcWorkerService() {}
 
 #define ENQUEUE_REQUEST(method)                                           \
   do {                                                                    \
-      Call<GrpcInitService, grpc::InitService::Service,                   \
+      Call<GrpcWorkerService, grpc::WorkerService::AsyncService,          \
            method##Request, method##Response>::                           \
-      EnqueueRequest(&service_, cq_.get(),                         \
-                     &grpc::InitService::Service::Request##method,        \
-                     &GrpcInitService::method##Handler);                  \
+      EnqueueRequestForMethod(                                            \
+          &worker_service_, cq_.get(),                                    \
+          static_cast<int>(GrpcWorkerMethod::k##method),            \
+          &GrpcWorkerService::method##Handler);                           \
   } while (0)
 
 
     void HandleRPCsLoop() {
-      ENQUEUE_REQUEST(ExchangeMachineInfo);
+      ENQUEUE_REQUEST(GetMachineDesc);
       void* tag;
       bool ok;
       while(cq_->Next(&tag, &ok)) {
-        UntypedCall<GrpcInitService>::Tag* callback_tag =
-          static_cast<UntypedCall<GrpcInitService>::Tag*>(tag);
+        UntypedCall<GrpcWorkerService>::Tag* callback_tag =
+          static_cast<UntypedCall<GrpcWorkerService>::Tag*>(tag);
         if(callback_tag) callback_tag->OnCompleted(this);
       }//while
     }
 
     std::unique_ptr<::grpc::ServerCompletionQueue> cq_;
 
-    grpc::InitService::Service service_;
+    grpc::WorkerService::AsyncService worker_service_;
 
   private:
     template <class RequestMessage, class ResponseMessage>
-    using ServiceCall = Call<GrpcInitService, grpc::InitService::Service,
+    using WorkerCall = Call<GrpcWorkerService, grpc::WorkerService::AsyncService,
                              RequestMessage, ResponseMessage>;
 
-    void ExchangeMachineInfoHandler(ServiceCall<ExchangeMachineInfoRequest,
-                                                ExchangeMachineInfoResponse>* call) {
+    void GetMachineDescHandler(WorkerCall<GetMachineDescRequest,
+                                                GetMachineDescResponse>* call) {
       //TODO[xiaoshu]
     }
 
-    void ExchangeMemoryDesc(ServiceCall<ExchangeMemoryDescRequest, 
-                                        ExchangeMemoryDescResponse>* call) {
+    void GetMemoryDescHandler(WorkerCall<GetMemoryDescRequest, 
+                                        GetMemoryDescResponse>* call) {
       //TODO[xiaoshu]
     }
     

@@ -5,7 +5,7 @@
  * Distributed under terms of the MIT license.
  */
 
-#include "distributed_runtime/grpc_server_init.h"
+#include "distributed_runtime/grpc_server_lib.h"
 
 //#include "distributed_runtime/topology.pb.h"
 //#include "distributed_runtime/resource.pb.h"
