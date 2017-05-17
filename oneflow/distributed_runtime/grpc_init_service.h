@@ -24,6 +24,7 @@ class GrpcInitService {
       builder->RegisterService(&service_);
       cq_ = builder->AddCompletionQueue();
     }
+
     ~GrpcInitService() {}
 
 #define ENQUEUE_REQUEST(method)                                           \

@@ -61,6 +61,8 @@ InitService::Service::Service() {
   }
 }
 
+InitService::Service::~Service() {}
+
 }//namespace grpc
 
 }//namespace oneflow
