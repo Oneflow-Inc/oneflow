@@ -27,9 +27,14 @@ GrpcInitService::~GrpcInitService() {}
 
 void GrpcInitService::HandleRPCsLoop() {
 
-}
-
-
+  void* tag;
+  bool ok;
+  while(cq_->Next(&tag, &ok)) {
+    UntypedCall<GrpcInitService>::Tag* callback_tag =
+      static_cast<UntypedCall<GrpcInitService>::Tag*>(tag);
+    if(callback_tag) callback_tag->OnCompleted(this, ok);
+  }//while
+}//HandleRPCsLoop
 
 }
 
