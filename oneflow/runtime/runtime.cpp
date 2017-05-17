@@ -1,7 +1,7 @@
 #include "gflags/gflags.h"
 #include "glog/logging.h"
-#include "job/id_manager.h"
-#include "job/ofelf.pb.h"
+#include "common/id_manager.h"
+#include "common/ofelf.pb.h"
 #include "common/protobuf.h"
 
 namespace oneflow {

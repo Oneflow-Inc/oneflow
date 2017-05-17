@@ -3,8 +3,8 @@
 
 #include "kernel/kernel.h"
 #include "kernel/kernel_manager.h"
-#include "job/resource.pb.h"
-#include "job/job_conf.pb.h"
+#include "conf/resource.pb.h"
+#include "conf/job_conf.pb.h"
 
 namespace oneflow {
 

@@ -7,8 +7,8 @@
 #include "common/util.h"
 #include "common/protobuf.h"
 #include "kernel/kernel.h"
-#include "job/ofelf.pb.h"
-#include "job/job_desc.h"
+#include "common/ofelf.pb.h"
+#include "common/job_desc.h"
 
 namespace oneflow {
 

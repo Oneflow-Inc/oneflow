@@ -40,8 +40,8 @@ include(proto2cpp)
 include(third_party)
 
 # main cpp
-list(APPEND of_main_cc ${oneflow_src_dir}/job/compiler.cpp)
-list(APPEND of_main_cc ${oneflow_src_dir}/job/runtime.cpp)
+list(APPEND of_main_cc ${oneflow_src_dir}/compiler/compiler.cpp)
+list(APPEND of_main_cc ${oneflow_src_dir}/runtime/runtime.cpp)
 
 # source_group
 SUBDIRLIST(subdir_list ${oneflow_src_dir})

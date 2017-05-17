@@ -1,14 +1,14 @@
 #include "gflags/gflags.h"
 #include "glog/logging.h"
-#include "job/id_manager.h"
+#include "common/id_manager.h"
 #include "common/protobuf.h"
 #include "graph/model_load_task_graph.h"
 #include "graph/model_save_task_graph.h"
 #include "graph/model_update_task_graph.h"
 #include "graph/data_task_graph.h"
 #include "register/register_desc.h"
-#include "job/job_conf.pb.h"
-#include "job/ofelf.pb.h"
+#include "conf/job_conf.pb.h"
+#include "common/ofelf.pb.h"
 
 namespace oneflow {
 

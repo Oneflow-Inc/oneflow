@@ -1,9 +1,9 @@
-#ifndef ONEFLOW_JOB_JOB_DESC_H_
-#define ONEFLOW_JOB_JOB_DESC_H_
+#ifndef ONEFLOW_COMMON_JOB_DESC_H_
+#define ONEFLOW_COMMON_JOB_DESC_H_
 
 #include "common/util.h"
-#include "job/job_conf.pb.h"
-#include "job/job_desc.pb.h"
+#include "conf/job_conf.pb.h"
+#include "common/job_desc.pb.h"
 
 namespace oneflow {
 
@@ -52,4 +52,4 @@ class JobDesc final {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_JOB_JOB_DESC_H_
+#endif // ONEFLOW_COMMON_JOB_DESC_H_

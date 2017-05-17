@@ -1,9 +1,13 @@
-#ifndef ONEFLOW_JOB_RUNTIME_INFO_H_
-#define ONEFLOW_JOB_RUNTIME_INFO_H_
+#ifndef ONEFLOW_RUNTIME_RUNTIME_INFO_H_
+#define ONEFLOW_RUNTIME_RUNTIME_INFO_H_
 
 #include "common/util.h"
 
 namespace oneflow {
+
+enum class RuntimeState {
+  kLoadModel
+};
 
 class RuntimeInfo final {
  public:
@@ -16,14 +20,16 @@ class RuntimeInfo final {
   }
 
   uint64_t machine_id() const { return machine_id_; }
+  RuntimeState state() const { return state_; }
 
  private:
   RuntimeInfo() = default;
 
   uint64_t machine_id_;
+  RuntimeState state_;
 
 };
 
 } // namespace oneflow
 
-#endif // ONEFLOW_JOB_RUNTIME_INFO_H_
+#endif // ONEFLOW_RUNTIME_RUNTIME_INFO_H_

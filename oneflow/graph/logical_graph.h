@@ -4,9 +4,9 @@
 #include <memory>
 #include "graph/graph.h"
 #include "operator/operator.h"
-#include "job/dlnet_conf.pb.h"
-#include "job/strategy.pb.h"
-#include "job/parallel_desc.h"
+#include "conf/dlnet_conf.pb.h"
+#include "conf/strategy.pb.h"
+#include "compiler/parallel_desc.h"
 
 namespace oneflow {
 

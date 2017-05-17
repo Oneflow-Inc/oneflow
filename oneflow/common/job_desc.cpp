@@ -1,4 +1,4 @@
-#include "job/job_desc.h"
+#include "common/job_desc.h"
 #include "common/protobuf.h"
 
 namespace oneflow {

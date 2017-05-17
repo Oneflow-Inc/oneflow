@@ -1,5 +1,5 @@
 #include "graph/model_load_task_graph.h"
-#include "job/job_desc.h"
+#include "common/job_desc.h"
 
 namespace oneflow {
 

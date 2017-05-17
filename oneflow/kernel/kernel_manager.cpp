@@ -1,5 +1,5 @@
 #include "kernel/kernel_manager.h"
-#include "job/job_desc.h"
+#include "common/job_desc.h"
 
 namespace oneflow {
 
