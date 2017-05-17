@@ -74,7 +74,7 @@ void KernelMgr::InitFromELF(const OfElf& of_elf) {
   const PbRpf<std::string>& op_names_rpf =
       of_elf.machine_id2op_name_set().at(this_machine_id).op_name();
   std::unordered_set<std::string> op_name_set(op_names_rpf.begin(),
-                                               op_names_rpf.end());
+                                              op_names_rpf.end());
   for (const OperatorProto& op_proto : of_elf.op()) {
     const std::string& op_name = op_proto.op_conf().name();
     if (op_name_set.find(op_name) == op_name_set.end()) {
