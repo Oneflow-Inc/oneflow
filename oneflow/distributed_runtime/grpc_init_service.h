@@ -25,6 +25,21 @@ class GrpcInitService {
     std::unique_ptr<::grpc::ServerCompletionQueue> cq_;
 
     oneflow::InitService::AsyncService service_;
+
+  private:
+    template <class RequestMessage, class ResponseMessage>
+    using ServiceCall = Call<GrpcInitService, grpc::InitService::AsyncService,
+                             RequestMessage, ResponseMessage>;
+
+    void ExchangeMachineInfoHandler(ServiceCall<ExchangeMachineInfoRequest,
+                                                ExchangeMachineInfoReponse>* call) {
+      //TODO[xiaoshu]
+    }
+
+    void ExchangeMemoryDesc(ServiceCall<ExchangeMemoryDescRequest,
+                                        ExchangeMemoryDescReponse>* call) {
+      //TODO[xiaoshu]
+    }
     
 };
 

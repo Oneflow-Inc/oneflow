@@ -16,11 +16,25 @@ GrpcInitService::GrpcInitService(::grpc::ServerBuilder* builder) {
 
 GrpcInitService::~GrpcInitService() {}
 
+#define ENQUEUE_REQUEST(method, supports_cancel)                          \
+  do {                                                                    \
+    Call<GrpcInitService, grpc::InitService::Service,                     \
+      method##Request, method##Response>::                                \
+        EnqueueRequest(&master_service_, cq_.get(),                       \
+                       &grpc::InitService::Service::Request##method,      \
+                       &GrpcInitService::method##Handler);                \
+  } while (0)
+
 void GrpcInitService::HandleRPCsLoop() {
 
-}
-
-
+  void* tag;
+  bool ok;
+  while(cq_->Next(&tag, &ok)) {
+    UntypedCall<GrpcInitService>::Tag* callback_tag =
+      static_cast<UntypedCall<GrpcInitService>::Tag*>(tag);
+    if(callback_tag) callback_tag->OnCompleted(this, ok);
+  }//while
+}//HandleRPCsLoop
 
 }
 

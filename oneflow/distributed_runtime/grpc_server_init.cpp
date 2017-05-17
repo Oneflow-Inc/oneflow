@@ -16,7 +16,7 @@
 
 namespace oneflow {
 
-using grpc::ServerBuilder;
+using ::grpc::ServerBuilder;
 
 GrpcServer::GrpcServer() {}
 GrpcServer::~GrpcServer() {}
@@ -66,12 +66,12 @@ void GrpcServer::CreateChannelCache() {
     std::string dst_port = dst_mdesc.port;
     std::string dst_ip_port = dst_ip + ":" + dst_port;
 
-    std::shared_ptr<grpc::Channel> to_dst_channel = 
-      grpc::CreateChannel(dst_ip_port, grpc::InsecureChannelCredentials());
+    std::shared_ptr<::grpc::Channel> to_dst_channel = 
+      ::grpc::CreateChannel(dst_ip_port, ::grpc::InsecureChannelCredentials());
     channel_map_.insert({src, to_dst_channel}); 
 
-    std::shared_ptr<grpc::Channel> to_src_channel = 
-      grpc::CreateChannel(src_ip_port, grpc::InsecureChannelCredentials());
+    std::shared_ptr<::grpc::Channel> to_src_channel = 
+      ::grpc::CreateChannel(src_ip_port, ::grpc::InsecureChannelCredentials());
     channel_map_.insert({dst, to_src_channel});
   }//end for
 }//end CreateChannelCache
@@ -79,7 +79,7 @@ void GrpcServer::CreateChannelCache() {
 void GrpcServer::StartService() {
   std::string server_address("0.0.0.0:50051");
   ::grpc::ServerBuilder builder;
-  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+  builder.AddListeningPort(server_address, ::grpc::InsecureServerCredentials());
   service_ = new GrpcInitService(&builder);
   server_ = builder.BuildAndStart();
   
