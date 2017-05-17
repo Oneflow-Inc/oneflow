@@ -8,6 +8,8 @@
 
 namespace oneflow {
 
+typedef std::function<void()> Callback;
+
 class GrpcRemoteWorker {
   public:
     GrpcRemoteWorker(std::shared_ptr<::grpc::Channel> channel,
@@ -43,10 +45,16 @@ class GrpcRemoteWorker {
           reader_.Finish(response, &status_, this);
         }
 
+        void OnCompleted(bool ok) {
+          if(ok) done_(status_);//will be called in grpc_worker_cache.h
+        }
+
       private:
         ::grpc::ClientContext* context_;
         ::grpc::ClientAsyncResponseReader<ResponseMessage> reader_;
         ::grpc::Status status_;
+        Callback done_;
+
     };
 
     template <class RequestMessage, class ResponseMessage>
