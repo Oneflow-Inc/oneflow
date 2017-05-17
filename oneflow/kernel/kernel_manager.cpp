@@ -1,5 +1,6 @@
 #include "kernel/kernel_manager.h"
 #include "common/job_desc.h"
+#include "runtime/runtime_info.h"
 
 namespace oneflow {
 
@@ -69,8 +70,16 @@ void AddGpuDoubleKernelCreator(OperatorConf::OpTypeCase op_type_case,
 
 void KernelMgr::InitFromELF(const OfElf& of_elf) {
   FloatingPointType floating_point_type = JobDesc::Singleton().floating_point_type();
+  uint64_t this_machine_id = RuntimeInfo::Singleton().this_machine_id();
+  const PbRpf<std::string>& op_names_rpf =
+      of_elf.machine_id2op_name_set().at(this_machine_id).op_name();
+  std::unordered_set<std::string> op_names_set(op_names_rpf.begin(),
+                                               op_names_rpf.end());
   for (const OperatorProto& op_proto : of_elf.op()) {
     const std::string& op_name = op_proto.op_conf().name();
+    if (op_names_set.find(op_name) == op_names_set.end()) {
+      continue;
+    }
     DeviceType device_type = of_elf.op_name2device_type().at(op_name);
     std::unique_ptr<Kernel> kernel_ptr(CreateKernel(
         op_proto.op_conf().op_type_case(),

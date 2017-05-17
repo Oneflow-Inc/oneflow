@@ -19,13 +19,13 @@ class RuntimeInfo final {
     return obj;
   }
 
-  uint64_t machine_id() const { return machine_id_; }
+  uint64_t this_machine_id() const { return this_machine_id_; }
   RuntimeState state() const { return state_; }
 
  private:
   RuntimeInfo() = default;
 
-  uint64_t machine_id_;
+  uint64_t this_machine_id_;
   RuntimeState state_;
 
 };
