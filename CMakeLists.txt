@@ -106,7 +106,6 @@ target_link_libraries(of_protoobj ${oneflow_third_party_libs})
 
 #grpc obj lib
 list(APPEND proto2grpc_rel_name distributed_runtime/oneflow_init.proto)
-Message (STATUS "proto2grpc_rel_name = ${proto2grpc_rel_name}")
 RELATIVE_GRPC_GENERATE_CPP(GRPC_SRCS GRPC_HDRS
                            ${oneflow_src_dir}
                            ${proto2grpc_rel_name})
