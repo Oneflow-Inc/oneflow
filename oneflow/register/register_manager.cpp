@@ -13,7 +13,7 @@ void RegstMgr::InitFromProto(const OfElf& ofelf) {
       for (int64_t i = 0; i < regstdesc.register_num(); ++i) {
         auto regst = of_make_unique<Regst>();
         regst->id_ = IDMgr::Singleton().NewRegstId(regst_desc_id);
-        regst->cnt_ = 0;
+        regst->cnt_.store(0);
         regst->producer_id_ = actor_id;
         for (const auto& mpair : regstdesc.lbn2shape()) {
           regst->lbn2blob_.emplace(mpair.first, new Blob());

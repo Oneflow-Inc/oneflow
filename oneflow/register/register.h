@@ -11,7 +11,6 @@ namespace oneflow {
 class Regst final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Regst);
-  Regst();
   ~Regst() = default;
   
   void ProduceDone();
@@ -21,8 +20,9 @@ class Regst final {
 
  private:
   friend class RegstMgr;
+  Regst();
   uint64_t id_;
-  int32_t cnt_;
+  std::atomic<int32_t> cnt_;
   uint64_t producer_id_;
   std::vector<uint64_t> consumer_ids_;
   HashMap<std::string, std::unique_ptr<Blob>> lbn2blob_;
