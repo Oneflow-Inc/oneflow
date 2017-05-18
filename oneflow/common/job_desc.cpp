@@ -17,6 +17,7 @@ void JobDesc::InitFromJobConf(const JobConf& conf) {
 }
 
 void JobDesc::InitFromProto(const JobDescProto& proto) {
+  LOG(INFO) << "Init JobDesc from Proto";
   train_dlnet_conf_ = proto.train_dlnet_conf();
   resource_ = proto.resource();
   strategy_ = proto.strategy();
