@@ -4,7 +4,7 @@ namespace oneflow {
 
 void Regst::ProduceDone() {
   CHECK_EQ(cnt_.load(), 0);
-  cnt_.store(consumer_ids_.size());
+  cnt_ = consumer_ids_.size();
   ActorMsg m;
   m.register_id = id_;
   for (uint64_t consumer_id : consumer_ids_) {

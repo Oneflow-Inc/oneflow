@@ -1,13 +1,11 @@
 #ifndef ONEFLOW_REGISTER_REGISTER_MANAGER_H_
 #define ONEFLOW_REGISTER_REGISTER_MANAGER_H_
 
-#include "register/register_desc.pb.h"
 #include "register/register.h"
 #include "common/util.h"
 #include "job/id_manager.h"
 #include "job/ofelf.pb.h"
-#include "task/task.pb.h"
-#include "graph/exec_sequence.pb.h"
+#include "memory/memory_manager.h"
 
 namespace oneflow {
 
@@ -24,7 +22,15 @@ class RegstMgr final {
   Regst* GetRegstFromRegstID(uint64_t regst_id) {
     return regst_id2regst_.at(regst_id).get();
   }
+  
   void InitFromProto(const OfElf& ofelf);
+  
+  void NewRegstFromRegstDesc(
+      uint64_t producer_id,
+      const RegstDescProto& regstdesc,
+      std::size_t sizeof_floating,
+      HashMap<uint64_t, HashSet<uint64_t>> actor_id2produced_regst_desc_id,
+      HashMap<uint64_t, std::vector<uint64_t>> regst_desc_id2regst_ids);
 
  private:
   RegstMgr();

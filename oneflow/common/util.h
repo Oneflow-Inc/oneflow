@@ -49,6 +49,9 @@ inline bool operator != (const google::protobuf::MessageLite& lhs,
 template<typename Key, typename T, typename Hash = std::hash<Key>>
 using HashMap = std::unordered_map<Key, T, Hash>;
 
+template<typename Key, typename Hash = std::hash<Key>>
+using HashSet = std::unordered_set<Key, Hash>;
+
 template<typename T, typename... Args>
 std::unique_ptr<T> of_make_unique(Args&&... args) {
   return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
