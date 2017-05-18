@@ -26,14 +26,18 @@ void CallFromReceiverThread(std::vector<int>* visit,
 
 TEST(Channel, 30sender40receiver) {
   Channel<int> channel;
-  std::vector<int> visit;
   std::vector<std::thread> senders;
   std::vector<std::thread> receivers;
   int sender_num = 30;
   int receiver_num = 40;
   int range_num = 200;
-  for (int i = 0; i < range_num; ++i) {
-    visit.push_back(0);
+  std::vector<std::vector<int>> visits;
+  for (int i = 0; i < receiver_num; ++i) {
+    std::vector<int> visit_i;
+    for (int j = 0; j < range_num; j++) {
+      visit_i.push_back(0);
+    }
+    visits.push_back(visit_i);
   }
   for (int i = 0; i < sender_num; ++i) {
     senders.push_back(std::thread(CallFromSenderThread,
@@ -42,7 +46,7 @@ TEST(Channel, 30sender40receiver) {
   }
   for (int i = 0; i < receiver_num; ++i) {
     receivers.push_back(std::thread(CallFromReceiverThread,
-                                    &visit,
+                                    &visits[i],
                                     &channel));
   }
   for (std::thread& this_thread : senders) {
@@ -53,7 +57,11 @@ TEST(Channel, 30sender40receiver) {
     this_thread.join();
   }
   channel.CloseReceiveEnd();
-  for (int visit_count : visit) {
+  for (int i = 0; i < range_num; ++i) {
+    int visit_count = 0;
+    for (int j = 0; j < receiver_num; j++) {
+      visit_count += visits[j][i];
+    }
     ASSERT_EQ(visit_count, sender_num);
   }
 }
