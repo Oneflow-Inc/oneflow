@@ -6,8 +6,8 @@ void RegstMgr::NewRegstFromRegstDesc(
     uint64_t producer_id,
     const RegstDescProto& regstdesc,
     std::size_t sizeof_floating,
-    HashMap<uint64_t, HashSet<uint64_t>> actor_id2produced_regst_desc_id,
-    HashMap<uint64_t, std::vector<uint64_t>> regst_desc_id2regst_ids) {
+    HashMap<uint64_t, HashSet<uint64_t>>& actor_id2produced_regst_desc_id,
+    HashMap<uint64_t, std::vector<uint64_t>>& regst_desc_id2regst_ids) {
   uint64_t regst_desc_id = regstdesc.regst_desc_id();
   for (int64_t i = 0; i < regstdesc.register_num(); ++i) {
     auto regst = of_make_unique<Regst>();
