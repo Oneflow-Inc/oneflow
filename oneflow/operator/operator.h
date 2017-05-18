@@ -3,9 +3,9 @@
 
 #include <string>
 #include "operator/op_conf.pb.h"
-#include "job/strategy.pb.h"
+#include "conf/strategy.pb.h"
 #include "common/shape.h"
-#include "common/proto_io.h"
+#include "common/protobuf.h"
 #include "common/util.h"
 #include "operator/operator.pb.h"
 

@@ -122,14 +122,14 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
 
 void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
                                         TaskNodesInStage* task_nodes_in_stage) {
-  uint64_t parallel_begin = stage->parallel_range().begin();
-  uint64_t parallel_end = stage->parallel_range().end();
+  const uint64_t parallel_begin = stage->parallel_range().begin();
+  const uint64_t parallel_end = stage->parallel_range().end();
   uint64_t parallel_idx = parallel_begin;
   while (parallel_idx < parallel_end) {
     HostCompTaskNode* comp_task_node = NewTaskNode<HostCompTaskNode> ();
     comp_task_node->SetFwNode();
     comp_task_node->set_stage_node(stage);
-    comp_task_node->set_parallel_id(parallel_idx++);
+    comp_task_node->set_parallel_id(parallel_idx);
     comp_task_node->set_task_id();
     // Set comp_task_node::thread_local_id
     if (stage->SortedDevicePhyIds().empty()) {
@@ -142,6 +142,7 @@ void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
     // 
     task_nodes_in_stage->comp_in_task_nodes.push_back(comp_task_node);
     task_nodes_in_stage->comp_out_task_nodes.push_back(comp_task_node);
+    parallel_idx += 1;
   }
 }
 

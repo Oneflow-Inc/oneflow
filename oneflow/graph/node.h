@@ -6,7 +6,7 @@
 #include <vector>
 #include <memory>
 #include "common/util.h"
-#include "job/id_manager.h"
+#include "common/id_manager.h"
 
 namespace oneflow {
 
@@ -110,7 +110,6 @@ class Node {
   friend void DisConnect<EdgeType>(EdgeType* edge);
 
   uint64_t node_id_;
-
   std::unordered_set<EdgeType*> in_edges_;
   std::unordered_set<EdgeType*> out_edges_;
 

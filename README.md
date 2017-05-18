@@ -19,8 +19,14 @@ make
 
 ### 1.2 Windows
 
+if first cmake:
 ```
-cmake .. -A x64 -DCMAKE_BUILD_TYPE=Debug  
+cmake .. -A x64 -DCMAKE_BUILD_TYPE=Debug -DDOWNLOAD_THIRD_PARTY=ON
+MSBuild /p:Configuration=Debug ALL_BUILD.vcxproj  
+```
+else:
+```
+cmake .. -A x64 -DCMAKE_BUILD_TYPE=Debug -DDOWNLOAD_THIRD_PARTY=OFF
 MSBuild /p:Configuration=Debug ALL_BUILD.vcxproj  
 ```
 

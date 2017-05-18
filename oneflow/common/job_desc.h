@@ -1,9 +1,9 @@
-#ifndef ONEFLOW_JOB_JOB_DESC_H_
-#define ONEFLOW_JOB_JOB_DESC_H_
+#ifndef ONEFLOW_COMMON_JOB_DESC_H_
+#define ONEFLOW_COMMON_JOB_DESC_H_
 
 #include "common/util.h"
-#include "job/job_conf.pb.h"
-#include "job/job_desc.pb.h"
+#include "conf/job_conf.pb.h"
+#include "common/job_desc.pb.h"
 
 namespace oneflow {
 
@@ -25,7 +25,9 @@ class JobDesc final {
   const DLNetConf& train_dlnet_conf() const { return train_dlnet_conf_; }
   const Resource& resource() const { return resource_; }
   const Strategy& strategy() const { return strategy_; }
-
+  const FloatingPointType& floating_point_type() const { 
+    return floating_point_type_; 
+  }
   const std::string& md_load_machine() { return md_load_machine_; }
   const std::string& md_save_machine() { return md_save_machine_; }
   bool is_train() const { return is_train_; }
@@ -44,9 +46,10 @@ class JobDesc final {
   uint32_t batch_size_;
   uint32_t piece_size_;
   bool is_train_;
+  FloatingPointType floating_point_type_;
 
 };
 
 } // namespace oneflow
 
-#endif // ONEFLOW_JOB_JOB_DESC_H_
+#endif // ONEFLOW_COMMON_JOB_DESC_H_

@@ -2,7 +2,6 @@
 #include <vector>
 #include "gtest/gtest.h"
 #include "operator/operator_manager.h"
-#include "operator/op_util.h"
 
 namespace oneflow {
 
