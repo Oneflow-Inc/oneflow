@@ -24,20 +24,21 @@ void CallFromReceiverThread(std::vector<int>* visit,
 }
 
 
-TEST(Channel, 3sender4receiver) {
+TEST(Channel, 30sender40receiver) {
   Channel<int> channel;
   std::vector<int> visit;
   std::vector<std::thread> senders;
   std::vector<std::thread> receivers;
-  int sender_num = 3;
-  int receiver_num = 4;
-  for (int i = 0; i < 5; ++i) {
+  int sender_num = 30;
+  int receiver_num = 40;
+  int range_num = 200;
+  for (int i = 0; i < range_num; ++i) {
     visit.push_back(0);
   }
   for (int i = 0; i < sender_num; ++i) {
     senders.push_back(std::thread(CallFromSenderThread,
-                            &channel,
-                            Range(0, 5)));
+                                  &channel,
+                                  Range(0, range_num)));
   }
   for (int i = 0; i < receiver_num; ++i) {
     receivers.push_back(std::thread(CallFromReceiverThread,

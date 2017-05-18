@@ -11,7 +11,7 @@
 namespace oneflow {
 
 template<typename T>
-class Channel {
+class Channel final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Channel);
   Channel() : is_send_closed_(false), is_receive_closed_(false) {}
@@ -29,18 +29,10 @@ class Channel {
   int Receive(T* item);
 
   // close the channel's send end, the thread can't send item to the channel
-  void CloseSendEnd() {
-    std::unique_lock<std::mutex> lock(mutex_);
-    is_send_closed_ = true;
-    cond_.notify_all();
-  }
+  void CloseSendEnd();
 
   // close the channel's receive end , the thread can't receive item from channel
-  void CloseReceiveEnd() {
-    std::unique_lock<std::mutex> lock(mutex_);
-    is_receive_closed_ = true;
-    cond_.notify_all();
-  }
+  void CloseReceiveEnd();
 
  private:
   std::queue<T> val_;
@@ -71,6 +63,20 @@ int Channel<T>::Receive(T* item) {
   *item = val_.front();
   val_.pop();
   return 0;
+}
+
+template<typename T>
+void Channel<T>::CloseSendEnd() {
+  std::unique_lock<std::mutex> lock(mutex_);
+  is_send_closed_ = true;
+  cond_.notify_all();
+}
+
+template<typename T>
+void Channel<T>::CloseReceiveEnd() {
+  std::unique_lock<std::mutex> lock(mutex_);
+  is_receive_closed_ = true;
+  cond_.notify_all();
 }
 
 }  // namespace oneflow
