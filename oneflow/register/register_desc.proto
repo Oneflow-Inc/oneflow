@@ -4,21 +4,9 @@ package oneflow;
 import "common/shape.proto";
 import "memory/memory_case.proto";
 
-enum MemoryType {
-  kHostPageableMemory = 0;
-  kHostPinnedMemory = 1;
-  kDeviceGPUMemory = 2;
-}
-
-message MemoryCase {
-  MemoryType type = 1;
-  int32 device_id = 2;
-}
-
 message RegstDescProto  {
   uint64 regst_desc_id = 1;
   uint64 producer_task_id = 2;
-  MemoryCase mem_case = 3;
   map<string, ShapeProto> lbn2shape = 4;
   int64 register_num = 5;
   MemoryCase mem_case = 6;

@@ -11,4 +11,4 @@ then
   done
 fi
 
-GLOG_logtostderr=0 GLOG_log_dir=./log ./runtime -elf_filepath=./elf -this_machine_name="centos-0"
+GLOG_logtostderr=1 GLOG_log_dir=./log ./elf_runner -elf_filepath=./elf -this_machine_name="centos-0"
