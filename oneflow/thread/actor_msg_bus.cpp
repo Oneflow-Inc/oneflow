@@ -11,7 +11,7 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
   if (dst_machine_id == RuntimeInfo::Singleton().this_machine_id()) {
     uint64_t thrd_loc_id = 
       IDMgr::Singleton().ThrdLocId4ActorId(msg.dst_actor_id());
-    ThreadMgr::Singleton().GetMsgChannelPtr4ThrdWithThrdLocId(thrd_loc_id)->Send(msg);
+    ThreadMgr::Singleton().GetMsgChanFromThrdLocId(thrd_loc_id)->Send(msg);
   } else {
     TODO();
   }

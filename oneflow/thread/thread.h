@@ -10,10 +10,10 @@
 
 namespace oneflow {
 
-class Thread {
+class Thread final {
 public:
   OF_DISALLOW_COPY_AND_MOVE(Thread);
-  Thread(): thread_([this]() {this->PollMsgChannel(); }) {};
+  Thread(): thread_([this]() { this->PollMsgChannel(); }) {};
   virtual ~Thread();
 
   uint64_t thrd_loc_id() const { return thrd_loc_id_; }
@@ -22,9 +22,6 @@ public:
   }
 
   void AddActor(const TaskProto& actor_proto);
-  Actor* GetActorPtr4Id(uint64_t actor_id) {
-    return id2actor_ptr_.at(actor_id).get();
-  }
 
   Channel<ActorMsg>* GetMsgChannelPtr() { return &msg_channel_; }
 

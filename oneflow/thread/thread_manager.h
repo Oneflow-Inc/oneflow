@@ -20,10 +20,9 @@ public:
 
   void InitFromProto(const PbRpf<TaskProto>& tasks);
 
-  void Join();
+  void JoinAllThreads();
 
-  Channel<ActorMsg>* 
-    GetMsgChannelPtr4ThrdWithThrdLocId(uint64_t thrd_loc_id);
+  Channel<ActorMsg>* GetMsgChanFromThrdLocId(uint64_t thrd_loc_id);
 
 private:
   ThreadMgr() = default;

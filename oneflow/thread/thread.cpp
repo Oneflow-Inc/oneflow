@@ -4,7 +4,6 @@ namespace oneflow {
 
 Thread::~Thread() {
   Join();
-  id2actor_ptr_.clear();
 }
 
 void Thread::AddActor(const TaskProto& actor_proto) {

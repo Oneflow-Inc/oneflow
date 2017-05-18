@@ -4,8 +4,7 @@
 
 namespace oneflow{
 
-Channel<ActorMsg>* ThreadMgr::GetMsgChannelPtr4ThrdWithThrdLocId(
-    uint64_t thrd_loc_id) {
+Channel<ActorMsg>* ThreadMgr::GetMsgChanFromThrdLocId(uint64_t thrd_loc_id) {
   return thrd_loc_id2thread_.at(thrd_loc_id)->GetMsgChannelPtr();
 }
 
@@ -24,15 +23,14 @@ void ThreadMgr::InitFromProto(const PbRpf<TaskProto>& tasks) {
   }
 }
 
-void ThreadMgr::Join() {
+void ThreadMgr::JoinAllThreads() {
   for (auto& pair : thrd_loc_id2thread_) {
     pair.second->Join();
   }
 }
 
 ThreadMgr::~ThreadMgr() {
-  Join();
-  thrd_loc_id2thread_.clear();
+  JoinAllThreads();
 }
 
 }  // namespace oneflow
