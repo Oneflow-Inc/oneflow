@@ -82,7 +82,7 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
   uint64_t parallel_idx = stage->parallel_range().begin();
   for (auto device_phy_id : stage->SortedDevicePhyIds()) {
     uint64_t thread_local_id =
-        IDMgr::Singleton().ThrdLocId4DevicePhyId(device_phy_id);
+        IDMgr::Singleton().ThrdLocId4DevPhyId(device_phy_id);
     // comp_task_node
     DeviceCompTaskNode* comp_task_node = NewTaskNode<DeviceCompTaskNode> ();
     comp_task_node->SetFwNode();
@@ -137,7 +137,7 @@ void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
     } else {
       auto device_id = stage->SortedDevicePhyIds().at(parallel_idx - parallel_begin);
       comp_task_node->mut_thrd_loc_id() =
-          IDMgr::Singleton().ThrdLocId4DevicePhyId(device_id);
+          IDMgr::Singleton().ThrdLocId4DevPhyId(device_id);
     }
     // 
     task_nodes_in_stage->comp_in_task_nodes.push_back(comp_task_node);

@@ -30,8 +30,12 @@ class IDMgr final {
   uint64_t MachineID4MachineName(const std::string& machine_name) const {
     return machine_name2machine_id_.at(machine_name);
   }
-  uint64_t ThrdLocId4DevicePhyId(uint64_t device_phy_id) const {
+  uint64_t ThrdLocId4DevPhyId(uint64_t device_phy_id) const {
     return device_phy_id;
+  }
+  uint64_t DevPhyId4ThrdLocId(uint64_t thrd_loc_id) const {
+    CHECK_LT(thrd_loc_id, device_num_per_machine_);
+    return thrd_loc_id;
   }
   uint64_t DiskThrdLocId() const { return device_num_per_machine_; }
   uint64_t BoxingThrdLocId() const { return device_num_per_machine_ + 1; }

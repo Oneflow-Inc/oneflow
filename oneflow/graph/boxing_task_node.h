@@ -54,6 +54,13 @@ class BoxingTaskNode : public TaskNode {
   
   void EnrollAllRegstAndBindRelatedEdge();
   
+  MemoryCase InferMemCase4ProducedRegst() const override {
+    MemoryCase ret;
+    ret.set_type(kHostPinnedMemory);
+    ret.set_device_id(0);
+    return ret;
+  }
+  
 };
 
 } // namespace oneflow

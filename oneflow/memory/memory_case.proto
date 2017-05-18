@@ -1,0 +1,13 @@
+syntax = "proto3";
+package oneflow;
+
+enum MemoryType {
+  kHostPageableMemory = 0;
+  kHostPinnedMemory = 1;
+  kDeviceGPUMemory = 2;
+};
+
+message MemoryCase {
+  MemoryType type = 1;
+  int32 device_id = 2;
+};

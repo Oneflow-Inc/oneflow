@@ -3,6 +3,8 @@
 #include "common/id_manager.h"
 #include "common/ofelf.pb.h"
 #include "common/protobuf.h"
+#include "common/job_desc.h"
+#include "runtime/runtime_info.h"
 
 namespace oneflow {
 
@@ -17,6 +19,9 @@ class Runtime final {
   }
 
   void Run(const OfElf& elf, const std::string& this_machine_name) {
+    JobDesc::Singleton().InitFromProto(elf.job_desc());
+    IDMgr::Singleton().InitFromResource(JobDesc::Singleton().resource());
+    RuntimeInfo::Singleton().set_this_machine_name(this_machine_name);
     TODO();
   }
 
