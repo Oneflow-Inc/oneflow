@@ -9,16 +9,19 @@ void RegstMgr::InitFromProto(const OfElf& ofelf) {
   for (const TaskProto& taskproto : ofelf.task()) {
     uint64_t actor_id = IDMgr::Singleton().TaskId2ActorId(taskproto.id());
     for (const RegstDescProto& regstdesc : taskproto.produced_regst_desc()) {
-      auto regst = of_make_unique<Regst>();
-      regst->id_ = IDMgr::Singleton().NewRegstId(regstdesc.regst_desc_id());
-      regst->cnt_ = 0;
-      regst->producer_id_ = actor_id;
-      for (const auto& mpair : regstdesc.lbn2shape()) {
-        regst->lbn2blob_.emplace(mpair.first, new Blob());
+      uint64_t regst_desc_id = regstdesc.regst_desc_id();
+      for (int64_t i = 0; i < regstdesc.register_num(); ++i) {
+        auto regst = of_make_unique<Regst>();
+        regst->id_ = IDMgr::Singleton().NewRegstId(regst_desc_id);
+        regst->cnt_.store(0);
+        regst->producer_id_ = actor_id;
+        for (const auto& mpair : regstdesc.lbn2shape()) {
+          regst->lbn2blob_.emplace(mpair.first, new Blob());
+        }
+        regst_id2regst_.emplace(regst->id_, std::move(regst));
+        actor_id2produced_regst_desc_id[actor_id].insert(regst_desc_id);
+        regst_desc_id2regst_ids[regst_desc_id].push_back(regst->id_);
       }
-      regst_id2regst_.emplace(regst->id_, std::move(regst));
-      actor_id2produced_regst_desc_id[actor_id].insert(regstdesc.regst_desc_id());
-      regst_desc_id2regst_ids[regstdesc.regst_desc_id()].push_back(regst->id_);
     }
   }
   //for consumer_ids, lbn2blob

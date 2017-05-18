@@ -14,7 +14,6 @@ namespace oneflow {
 class RegstMgr final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RegstMgr);
-  RegstMgr();
   ~RegstMgr() = default;
 
   static RegstMgr& Singleton() {
@@ -28,6 +27,7 @@ class RegstMgr final {
   void InitFromProto(const OfElf& ofelf);
 
  private:
+  RegstMgr();
   HashMap<uint64_t, std::unique_ptr<Regst>> regst_id2regst_;
 
 };
