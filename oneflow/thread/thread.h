@@ -13,7 +13,7 @@ namespace oneflow {
 class Thread {
 public:
   OF_DISALLOW_COPY_AND_MOVE(Thread);
-  Thread(): thread_([this]() {this->ProcessMsgQueue(); }) {};
+  Thread(): thread_([this]() {this->PollMsgChannel(); }) {};
   virtual ~Thread();
 
   uint64_t thrd_loc_id() const { return thrd_loc_id_; }
@@ -26,16 +26,16 @@ public:
     return id2actor_ptr_.at(actor_id).get();
   }
 
-  BlockingChannel<ActorMsg>& GetMsgQueue() { return msg_queue_; }
+  BlockingChannel<ActorMsg>* GetMsgChannelPtr() { return &msg_channel_; }
 
   void Join();
 
 private:
-  void ProcessMsgQueue();
+  void PollMsgChannel();
 
   std::thread thread_;
   uint64_t thrd_loc_id_;
-  BlockingChannel<ActorMsg> msg_queue_;
+  BlockingChannel<ActorMsg> msg_channel_;
   HashMap<uint64_t, std::unique_ptr<Actor>> id2actor_ptr_;
 };
 

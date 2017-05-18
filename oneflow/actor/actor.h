@@ -15,7 +15,7 @@ class Actor {
   virtual void Init(const TaskProto&);
   virtual void ProcessMsg(const ActorMsg&);
 
-  uint64_t actor_id();
+  uint64_t actor_id() const;
 
  protected:
   Actor() = default;

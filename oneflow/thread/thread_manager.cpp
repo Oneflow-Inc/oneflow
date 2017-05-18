@@ -4,8 +4,9 @@
 
 namespace oneflow{
 
-BlockingChannel<ActorMsg>& ThreadMgr::GetMsgQ4ThrdWithThrdLocId(uint64_t thrd_loc_id) {
-  return thrd_loc_id2thread_.at(thrd_loc_id)->GetMsgQueue();
+BlockingChannel<ActorMsg>* ThreadMgr::GetMsgChannelPtr4ThrdWithThrdLocId(
+    uint64_t thrd_loc_id) {
+  return thrd_loc_id2thread_.at(thrd_loc_id)->GetMsgChannelPtr();
 }
 
 void ThreadMgr::InitFromProto(const PbRpf<TaskProto>& tasks) {
@@ -31,9 +32,6 @@ void ThreadMgr::Join() {
 
 ThreadMgr::~ThreadMgr() {
   Join();
-  for (auto& pair : thrd_loc_id2thread_) {
-    pair.second = nullptr;
-  }
   thrd_loc_id2thread_.clear();
 }
 

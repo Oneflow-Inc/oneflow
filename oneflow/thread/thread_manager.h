@@ -22,7 +22,8 @@ public:
 
   void Join();
 
-  BlockingChannel<ActorMsg>& GetMsgQ4ThrdWithThrdLocId(uint64_t thrd_loc_id);
+  BlockingChannel<ActorMsg>* 
+    GetMsgChannelPtr4ThrdWithThrdLocId(uint64_t thrd_loc_id);
 
 private:
   ThreadMgr() = default;
