@@ -3,6 +3,7 @@
 
 #include "common/util.h"
 #include "actor/task.pb.h"
+#include "actor/actor_message.pb.h"
 
 namespace oneflow {
 
@@ -13,6 +14,8 @@ class Actor {
 
   virtual void Init(const TaskProto&);
   virtual void ProcessMsg(const ActorMsg&);
+
+  uint64_t actor_id();
 
  protected:
   Actor() = default;
