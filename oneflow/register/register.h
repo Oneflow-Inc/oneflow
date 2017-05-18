@@ -21,8 +21,9 @@ class Regst final {
  private:
   friend class RegstMgr;
   Regst();
+  std::mutex mtx_;
   uint64_t id_;
-  std::atomic<int32_t> cnt_;
+  int32_t cnt_;
   uint64_t producer_id_;
   std::vector<uint64_t> consumer_ids_;
   HashMap<std::string, std::unique_ptr<Blob>> lbn2blob_;

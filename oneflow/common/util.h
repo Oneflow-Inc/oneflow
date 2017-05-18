@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <functional>
 #include <algorithm>
+#include <mutex>
 #include "glog/logging.h"
 #include "google/protobuf/message.h"
 #include "google/protobuf/descriptor.h"
