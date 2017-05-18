@@ -8,13 +8,13 @@
 
 namespace oneflow {
 
-class Runtime final {
+class ElfRunner final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Runtime);
-  ~Runtime() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ElfRunner);
+  ~ElfRunner() = default;
 
-  static Runtime& Singleton() {
-    static Runtime obj;
+  static ElfRunner& Singleton() {
+    static ElfRunner obj;
     return obj;
   }
 
@@ -26,7 +26,7 @@ class Runtime final {
   }
 
  private:
-  Runtime() = default;
+  ElfRunner() = default;
 
 };
 
@@ -38,10 +38,10 @@ DEFINE_string(this_machine_name, "", "");
 int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, true);
-  LOG(INFO) << "Runtime Starting Up...";
+  LOG(INFO) << "ElfRunner Starting Up...";
   oneflow::OfElf elf;
   oneflow::ParseProtoFromTextFile(FLAGS_elf_filepath, &elf);
-  oneflow::Runtime::Singleton().Run(elf, FLAGS_this_machine_name);
-  LOG(INFO) << "Runtime Shutting Down...";
+  oneflow::ElfRunner::Singleton().Run(elf, FLAGS_this_machine_name);
+  LOG(INFO) << "ElfRunner Shutting Down...";
   return 0;
 }

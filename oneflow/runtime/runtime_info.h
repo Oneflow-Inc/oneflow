@@ -3,12 +3,9 @@
 
 #include "common/util.h"
 #include "common/id_manager.h"
+#include "runtime/runtime_state.pb.h"
 
 namespace oneflow {
-
-enum class RuntimeState {
-  kLoadModel
-};
 
 class RuntimeInfo final {
  public:
