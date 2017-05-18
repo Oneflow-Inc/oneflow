@@ -3,9 +3,10 @@
 
 #include "register/register.h"
 #include "common/util.h"
-#include "job/id_manager.h"
-#include "job/ofelf.pb.h"
+#include "common/id_manager.h"
+#include "common/ofelf.pb.h"
 #include "memory/memory_manager.h"
+#include "runtime/runtime_info.h"
 
 namespace oneflow {
 

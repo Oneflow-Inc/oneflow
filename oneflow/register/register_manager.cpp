@@ -41,6 +41,7 @@ void RegstMgr::InitFromProto(const OfElf& ofelf) {
     sizeof_floating = sizeof(double);
   }
   for (const TaskProto& taskproto : ofelf.task()) {
+    if (taskproto.machine_id() != RuntimeInfo::Singleton().machine_id()) { continue; }
     uint64_t actor_id = IDMgr::Singleton().TaskId2ActorId(taskproto.id());
     for (const RegstDescProto& regstdesc : taskproto.produced_regst_desc()) {
       NewRegstFromRegstDesc(actor_id, 
@@ -52,6 +53,7 @@ void RegstMgr::InitFromProto(const OfElf& ofelf) {
   }
   //for consumer_ids, lbn2blob
   for (const TaskProto& taskproto : ofelf.task()) {
+    if (taskproto.machine_id() != RuntimeInfo::Singleton().machine_id()) { continue; }
     uint64_t actor_id = IDMgr::Singleton().TaskId2ActorId(taskproto.id());
     HashSet<uint64_t> processed_consumer;
     for (const ExecNodeProto& execnode: taskproto.exec_sequence().exec_node()) {

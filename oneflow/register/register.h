@@ -2,8 +2,8 @@
 #define ONEFLOW_REGISTER_REGISTER_H_
 
 #include "register/blob.h"
-#include "job/message.h"
-#include "thred/commbus.h"
+#include "actor/actor_message.pb.h"
+#include "thread/actor_msg_bus.h"
 #include "common/util.h"
 
 namespace oneflow {
