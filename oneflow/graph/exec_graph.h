@@ -5,7 +5,7 @@
 #include "operator/operator.h"
 #include "graph/graph.h"
 #include "register/register_desc.h"
-#include "common/proto_io.h"
+#include "common/protobuf.h"
 
 namespace oneflow {
 

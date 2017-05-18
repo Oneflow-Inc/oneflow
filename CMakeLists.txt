@@ -8,6 +8,10 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(oneflow_src_dir ${PROJECT_SOURCE_DIR}/oneflow)
 set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
+if (WIN32)
+else()
+  list(APPEND CUDA_NVCC_FLAGS "-std=c++11 -w")
+endif()
 
 # option
 option(DOWNLOAD_THIRD_PARTY "Download and build all third party codes" OFF)
@@ -36,7 +40,8 @@ include(proto2cpp)
 include(third_party)
 
 # main cpp
-list(APPEND of_main_cc ${oneflow_src_dir}/job/compiler.cpp)
+list(APPEND of_main_cc ${oneflow_src_dir}/compiler/compiler.cpp)
+list(APPEND of_main_cc ${oneflow_src_dir}/runtime/runtime.cpp)
 
 # source_group
 SUBDIRLIST(subdir_list ${oneflow_src_dir})

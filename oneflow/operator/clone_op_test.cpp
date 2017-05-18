@@ -3,7 +3,6 @@
 #include <vector>
 #include "operator/clone_op.h"
 #include "operator/operator_manager.h"
-#include "operator/op_util.h"
 #include "gtest/gtest.h"
 
 namespace oneflow {

@@ -1,8 +1,8 @@
-#ifndef ONEFLOW_JOB_ID_MANAGER_H_
-#define ONEFLOW_JOB_ID_MANAGER_H_
+#ifndef ONEFLOW_COMMON_ID_MANAGER_H_
+#define ONEFLOW_COMMON_ID_MANAGER_H_
 
 #include "common/util.h"
-#include "job/resource.pb.h"
+#include "conf/resource.pb.h"
 
 namespace oneflow {
 
@@ -65,4 +65,4 @@ class IDMgr final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_JOB_ID_MANAGER_H_
+#endif  // ONEFLOW_COMMON_ID_MANAGER_H_

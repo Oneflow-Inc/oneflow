@@ -1,5 +1,5 @@
 #include "common/shape.h"
-#include "common/proto_io.h"
+#include "common/protobuf.h"
 
 namespace oneflow {
 

@@ -1,9 +1,10 @@
 syntax = "proto3";
 package oneflow;
 
-import "job/dlnet_conf.proto";
-import "job/resource.proto";
-import "job/strategy.proto";
+import "conf/dlnet_conf.proto";
+import "conf/resource.proto";
+import "conf/strategy.proto";
+import "conf/job_conf.proto";
 
 message JobDescProto {
   DLNetConf train_dlnet_conf = 1;
@@ -14,4 +15,5 @@ message JobDescProto {
   uint32 batch_size = 6;
   uint32 piece_size = 7;
   bool is_train = 8;
+  FloatingPointType floating_point_type = 9;
 }

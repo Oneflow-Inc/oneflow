@@ -1,5 +1,9 @@
 syntax = "proto3";
 package oneflow;
+enum FloatingPointType {
+  kFloat = 0;
+  kDouble = 1;
+}
 
 message JobConf {
   string train_dlnet_conf_filepath = 1;
@@ -10,4 +14,5 @@ message JobConf {
   uint32 batch_size = 6;
   uint32 piece_size = 7;
   bool is_train = 8;
+  FloatingPointType floating_point_type = 9;
 }
