@@ -80,6 +80,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void EnrollProducedRegstDesc(const std::string& regst_desc_name,
                                std::unique_ptr<RegstDesc>&& regst_desc);
 
+  virtual MemoryCase InferMemCase4ProducedRegst() const = 0;
+
  private:
   // In task_gph level
   const StageNode* stage_node_;

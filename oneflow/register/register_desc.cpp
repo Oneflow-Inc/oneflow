@@ -82,6 +82,7 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
     ret->mutable_lbn2shape()->insert(pb_pair);
   }
   ret->set_register_num(register_num_);
+  (*(ret->mutable_mem_case())) = mem_case_;
 }
 
 const char* RegstDesc::kAllLbn = "OfReservedAllLbn";

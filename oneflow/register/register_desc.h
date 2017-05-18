@@ -24,6 +24,9 @@ class RegstDesc final {
   // Producer
   const TaskNode* GetProducer() const { return producer_; }
   void SetProducer(const TaskNode* task_node) { producer_ = task_node; }
+  // Memory Case
+  const MemoryCase& mem_case() const { return mem_case_; }
+  void set_mem_case(const MemoryCase& val) { mem_case_ = val; } 
 
   // Lbn and Shape
   void CopyLbnFrom(const RegstDesc*);
@@ -50,6 +53,7 @@ class RegstDesc final {
   
   HashMap<std::string, std::unique_ptr<Shape>> lbn2shape_;
   int64_t register_num_;
+  MemoryCase mem_case_;
 
 };
 
