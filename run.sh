@@ -10,3 +10,5 @@ then
     dot -Tpng -O $dot_file
   done
 fi
+
+GLOG_logtostderr=0 GLOG_log_dir=./log ./runtime -elf_filepath=./elf -this_machine_name="centos-0"
