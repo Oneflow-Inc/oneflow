@@ -36,8 +36,7 @@ void RegstMgr::InitFromProto(const OfElf& ofelf) {
   std::size_t sizeof_floating;
   if (ofelf.job_desc().floating_point_type() == kFloat) {
     sizeof_floating = sizeof(float);
-  }
-  else {
+  } else {
     sizeof_floating = sizeof(double);
   }
   for (const TaskProto& taskproto : ofelf.task()) {

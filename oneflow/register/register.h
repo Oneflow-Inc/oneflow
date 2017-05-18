@@ -29,5 +29,6 @@ class Regst final {
   HashMap<std::string, std::unique_ptr<Blob>> lbn2blob_;
 };
 
-}
-#endif
+} // namespace oneflow
+
+#endif // ONEFLOW_REGISTER_REGISTER_H_
