@@ -18,7 +18,7 @@ void Regst::ProduceDone() {
 void Regst::ConsumeDone() {
   mtx_.lock();
   --cnt_;
-  if (cnt_.load() == 0) {
+  if (cnt_ == 0) {
     ActorMsg m;
     m.register_id = id_;
     m.to_actor_id = producer_id_;
