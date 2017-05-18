@@ -20,10 +20,7 @@ public:
   void SendMsg(const ActorMsg& msg);
 
 private:
-  void SendMsg(const ActorMsg& msg, uint64_t thrd_loc_id);
-
   ActorMsgBus() = default;
-
 };
 
 }  // namespace oneflow

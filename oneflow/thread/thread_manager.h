@@ -3,7 +3,7 @@
 
 #include "thread/thread.h"
 #include "thread/actor_msg_bus.h"
-#include "common/blocking_channel.h"
+#include "common/channel.h"
 #include "common/protobuf.h"
 
 namespace oneflow {
@@ -22,7 +22,7 @@ public:
 
   void Join();
 
-  BlockingChannel<ActorMsg>* 
+  Channel<ActorMsg>* 
     GetMsgChannelPtr4ThrdWithThrdLocId(uint64_t thrd_loc_id);
 
 private:

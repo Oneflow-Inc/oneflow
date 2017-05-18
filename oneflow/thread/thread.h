@@ -3,7 +3,7 @@
 
 #include <thread>
 #include "common/util.h"
-#include "common/blocking_channel.h"
+#include "common/channel.h"
 #include "actor/task.pb.h"
 #include "actor/actor.h"
 #include "thread/actor_msg_bus.h"
@@ -26,7 +26,7 @@ public:
     return id2actor_ptr_.at(actor_id).get();
   }
 
-  BlockingChannel<ActorMsg>* GetMsgChannelPtr() { return &msg_channel_; }
+  Channel<ActorMsg>* GetMsgChannelPtr() { return &msg_channel_; }
 
   void Join();
 
@@ -35,7 +35,7 @@ private:
 
   std::thread thread_;
   uint64_t thrd_loc_id_;
-  BlockingChannel<ActorMsg> msg_channel_;
+  Channel<ActorMsg> msg_channel_;
   HashMap<uint64_t, std::unique_ptr<Actor>> id2actor_ptr_;
 };
 

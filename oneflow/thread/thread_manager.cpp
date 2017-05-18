@@ -4,7 +4,7 @@
 
 namespace oneflow{
 
-BlockingChannel<ActorMsg>* ThreadMgr::GetMsgChannelPtr4ThrdWithThrdLocId(
+Channel<ActorMsg>* ThreadMgr::GetMsgChannelPtr4ThrdWithThrdLocId(
     uint64_t thrd_loc_id) {
   return thrd_loc_id2thread_.at(thrd_loc_id)->GetMsgChannelPtr();
 }
