@@ -1,28 +1,20 @@
 #ifndef ONEFLOW_THREAD_THREAD_H_
 #define ONEFLOW_THREAD_THREAD_H_
 
+#include <thread>
 #include "common/util.h"
 #include "common/blocking_channel.h"
-#include "task/task.pb.h"
+#include "actor/task.pb.h"
+#include "actor/actor.h"
 #include "thread/actor_msg_bus.h"
 
 namespace oneflow {
 
-// TODO(liuguo): use real Actor class
-class Actor {
-  public:
-    Actor(const TaskProto& proto) {}
-    uint64_t actor_id() { return 0; }
-};
-
 class Thread {
 public:
   OF_DISALLOW_COPY_AND_MOVE(Thread);
-  Thread() = default;
-  virtual ~Thread() = {
-    msg_queue_.Close();
-    id2actor_ptr_.clear();
-  }
+  Thread(): thread_([this]() {this->ProcessMsgQueue(); }) {};
+  virtual ~Thread();
 
   uint64_t thrd_loc_id() const { return thrd_loc_id_; }
   void set_thrd_loc_id(uint64_t thrd_loc_id) {
@@ -36,9 +28,12 @@ public:
 
   BlockingChannel<ActorMsg>& GetMsgQueue() { return msg_queue_; }
 
-  void join();
+  void Join();
 
 private:
+  void ProcessMsgQueue();
+
+  std::thread thread_;
   uint64_t thrd_loc_id_;
   BlockingChannel<ActorMsg> msg_queue_;
   HashMap<uint64_t, std::unique_ptr<Actor>> id2actor_ptr_;
