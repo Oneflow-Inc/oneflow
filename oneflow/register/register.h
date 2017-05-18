@@ -16,7 +16,7 @@ class Regst final {
   void ProduceDone();
   void ConsumeDone();
 
-  Blob* GetBlobFromLbn(const std::string& lbn);
+  Blob* GetBlobPtrFromLbn(const std::string& lbn);
 
  private:
   friend class RegstMgr;

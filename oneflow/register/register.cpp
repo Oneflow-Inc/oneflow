@@ -3,10 +3,10 @@
 namespace oneflow {
 
 void Regst::ProduceDone() {
-  mtx_.lock():
+  std::unique_lock<std::mutex> lock(mtx_);
   CHECK_EQ(cnt_, 0);
   cnt_ = consumer_ids_.size();
-  mtx_.unlock();
+  lock.unlock();
   ActorMsg m;
   m.register_id = id_;
   for (uint64_t consumer_id : consumer_ids_) {
@@ -16,7 +16,7 @@ void Regst::ProduceDone() {
 }
 
 void Regst::ConsumeDone() {
-  mtx_.lock();
+  std::unique_lock<std::mutex> lock(mtx_);
   --cnt_;
   if (cnt_ == 0) {
     ActorMsg m;
@@ -24,10 +24,10 @@ void Regst::ConsumeDone() {
     m.to_actor_id = producer_id_;
     ActorMsgBus::Singleton().SendMsg(m);
   }
-  mtx_.unlock();
+  lock.unlock();
 }
 
-Blob* Regst::GetBlobFromLbn(const std::string& lbn) {
+Blob* Regst::GetBlobPtrFromLbn(const std::string& lbn) {
   return lbn2blob_.at(lbn).get();
 }
 
