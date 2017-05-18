@@ -6,18 +6,20 @@
 
 namespace oneflow {
 
-
 void CallFromSenderThread(Channel<int>* channel, Range range) {
   for (int i = range.begin(); i < range.end(); ++i) {
-    channel->Send(i);
+    if (channel->Send(i) == -1) {
+      break;
+    }
   }
 }
 
 void CallFromReceiverThread(std::vector<int>* visit,
                             Channel<int>* channel) {
-  int i = -1;
-  while (channel->Receive(std::ref(i))) {
-    ++visit->at(i);
+  int num = -1;
+  int* num_ptr = &num;
+  while (channel->Receive(num_ptr) == 0) {
+    ++visit->at(*num_ptr);
   }
 }
 
