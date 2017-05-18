@@ -5,13 +5,14 @@
 #include <condition_variable>
 #include <atomic>
 #include <queue>
-#include <common/util.h>
+#include "glog/logging.h"
+#include "common/util.h"
 
 namespace oneflow {
 
 template<typename T>
 class Channel {
-public:
+ public:
   OF_DISALLOW_COPY_AND_MOVE(Channel);
   Channel() : is_send_closed_(false), is_receive_closed_(false) {}
   ~Channel() = default;
@@ -28,6 +29,7 @@ public:
   void CloseSendEnd() {
     std::unique_lock<std::mutex> lock(mutex_);
     is_send_closed_ = true;
+    cond_.notify_all();
   }
 
   // close the channel's receive end , the thread can't receive item from channel
@@ -35,9 +37,9 @@ public:
     std::unique_lock<std::mutex> lock(mutex_);
     is_receive_closed_ = true;
     cond_.notify_all();
-  };
+  }
 
-private:
+ private:
   std::queue<T> val_;
   mutable std::mutex mutex_;
   bool is_send_closed_;
@@ -58,11 +60,8 @@ void Channel<T>::Send(const T& item) {
 template<typename T>
 bool Channel<T>::Receive(T& item) {
   std::unique_lock<std::mutex> lock(mutex_);
-  if (is_receive_closed_) {
-    return false;
-  }
-  cond_.wait(lock, [this]() { return !val_.empty() || is_receive_closed_; });
-  if (val_.empty()) {
+  cond_.wait(lock, [this]() { return !val_.empty() || is_receive_closed_ || is_send_closed_; });
+  if (val_.empty() || is_receive_closed_) {
     return false;
   }
   item = val_.front();
