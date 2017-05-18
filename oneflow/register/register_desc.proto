@@ -2,6 +2,7 @@ syntax = "proto3";
 package oneflow;
 
 import "common/shape.proto";
+import "memory/memory_case.proto";
 
 enum MemoryType {
   kHostPageableMemory = 0;
@@ -20,4 +21,5 @@ message RegstDescProto  {
   MemoryCase mem_case = 3;
   map<string, ShapeProto> lbn2shape = 4;
   int64 register_num = 5;
+  MemoryCase mem_case = 6;
 }
