@@ -143,11 +143,6 @@ message ConcatOpConf {
 }
 
 message CopyCommNetOpConf {
-  enum Type {
-    kSender = 0;
-    kReceiver = 1;
-  }
-  Type type = 1;
 }
 
 message CopyHdOpConf {

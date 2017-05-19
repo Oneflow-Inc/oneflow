@@ -57,7 +57,6 @@ void TaskNode::TakeOverRegstDesc(TaskNode* rhs,
   this_regst.swap(rhs_regst_it->second);
   this_regst->SetProducer(this);
   this_regst->set_regst_desc_id(IDMgr::Singleton().NewRegstDescId(task_id_));
-  CHECK(this_regst->mem_case() == InferMemCase4ProducedRegst());
   rhs->produced_regst_descs_.erase(rhs_regst_it);
   CHECK(produced_regst_descs_.emplace(regst_desc_name,
                                       std::move(this_regst)).second);
@@ -103,7 +102,6 @@ void TaskNode::EnrollProducedRegstDesc(
     std::unique_ptr<RegstDesc>&& regst_desc) {
   regst_desc->SetProducer(this);
   regst_desc->set_regst_desc_id(IDMgr::Singleton().NewRegstDescId(task_id_));
-  regst_desc->set_mem_case(InferMemCase4ProducedRegst());
   CHECK(produced_regst_descs_.emplace(regst_desc_name, std::move(regst_desc)).second);
 }
 
