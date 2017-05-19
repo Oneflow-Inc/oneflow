@@ -22,7 +22,7 @@ class MemoryAllocator final {
       MemoryCase mem_case, std::size_t size);
 
  private:
-  MemoryAllocator();
+  MemoryAllocator() = default;
   void Deallocate(char* dptr, MemoryCase mem_case);
 
 };

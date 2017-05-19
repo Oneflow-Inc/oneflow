@@ -3,7 +3,7 @@
 
 #include "register/blob.h"
 #include "actor/actor_message.pb.h"
-#include "thread/actor_msg_bus.h"
+#include "actor/actor_msg_bus.h"
 #include "common/util.h"
 
 namespace oneflow {
@@ -20,7 +20,7 @@ class Regst final {
 
  private:
   friend class RegstMgr;
-  Regst();
+  Regst() = default;
   mutable std::mutex mtx_;
   uint64_t id_;
   int32_t cnt_;

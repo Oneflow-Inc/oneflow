@@ -6,7 +6,7 @@ std::pair<char*, std::function<void()>> MemoryAllocator::Allocate(
     MemoryCase mem_case,std::size_t size) {
   char* dptr = nullptr;
   if (mem_case.has_host_pageable_mem()) {
-    dptr = malloc(size);
+    dptr = (char*) malloc (size);
     CHECK(dptr != nullptr);
   } else if (mem_case.has_host_pageable_mem()) {
     CHECK_EQ(cudaMallocHost(&dptr, size), 0);

@@ -10,7 +10,7 @@ void RegstMgr::NewRegstFromRegstDesc(
     HashMap<uint64_t, std::vector<uint64_t>>& regst_desc_id2regst_ids) {
   uint64_t regst_desc_id = regstdesc.regst_desc_id();
   for (int64_t i = 0; i < regstdesc.register_num(); ++i) {
-    auto regst = of_make_unique<Regst>();
+    std::unique_ptr<Regst> regst(new Regst());
     regst->id_ = IDMgr::Singleton().NewRegstId(regst_desc_id);
     regst->cnt_ = 0;
     regst->producer_id_ = producer_id;
@@ -26,10 +26,10 @@ void RegstMgr::NewRegstFromRegstDesc(
     for (const auto& mpair : regstdesc.lbn2shape()) {
       Shape shape(mpair.second);
       dptr += shape.elem_cnt() * sizeof_floating;
-      regst->lbn2blob_.emplace(mpair.first, new Blob(dptr, shape));
+      regst->lbn2blob_.emplace(mpair.first, of_make_unique<Blob>(dptr, shape));
     }
     regst_id2regst_.emplace(regst->id_, std::move(regst));
-    actor_id2produced_regst_desc_id[actor_id].insert(regst_desc_id);
+    actor_id2produced_regst_desc_id[producer_id].insert(regst_desc_id);
     regst_desc_id2regst_ids[regst_desc_id].push_back(regst->id_);
   }
 }
@@ -45,8 +45,8 @@ void RegstMgr::InitFromProto(const OfElf& ofelf) {
     sizeof_floating = sizeof(double);
   }
   for (const TaskProto& taskproto : ofelf.task()) {
-    if (taskproto.machine_id() != RuntimeInfo::Singleton().machine_id()) { continue; }
-    uint64_t actor_id = IDMgr::Singleton().TaskId2ActorId(taskproto.id());
+    if (taskproto.machine_id() != RuntimeInfo::Singleton().this_machine_id()) { continue; }
+    uint64_t actor_id = IDMgr::Singleton().GetActorIdFromTaskId(taskproto.id());
     for (const RegstDescProto& regstdesc : taskproto.produced_regst_desc()) {
       NewRegstFromRegstDesc(actor_id, 
                             regstdesc, 
@@ -57,8 +57,8 @@ void RegstMgr::InitFromProto(const OfElf& ofelf) {
   }
   //for consumer_ids, lbn2blob
   for (const TaskProto& taskproto : ofelf.task()) {
-    if (taskproto.machine_id() != RuntimeInfo::Singleton().machine_id()) { continue; }
-    uint64_t actor_id = IDMgr::Singleton().TaskId2ActorId(taskproto.id());
+    if (taskproto.machine_id() != RuntimeInfo::Singleton().this_machine_id()) { continue; }
+    uint64_t actor_id = IDMgr::Singleton().GetActorIdFromTaskId(taskproto.id());
     HashSet<uint64_t> processed_consumer;
     for (const ExecNodeProto& execnode: taskproto.exec_sequence().exec_node()) {
       for (const auto& mpair : execnode.bn_in_op2regst_desc_id()) {
