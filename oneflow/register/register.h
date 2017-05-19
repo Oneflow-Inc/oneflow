@@ -21,7 +21,7 @@ class Regst final {
  private:
   friend class RegstMgr;
   Regst();
-  std::mutex mtx_;
+  mutable std::mutex mtx_;
   uint64_t id_;
   int32_t cnt_;
   uint64_t producer_id_;
