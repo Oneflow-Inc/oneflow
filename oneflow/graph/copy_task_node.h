@@ -57,17 +57,6 @@ class CopyHDTaskNode final : public CopyTaskNode {
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return of_make_unique<CopyHDTaskNode> ();
   }
-  MemoryCase InferMemCase4ProducedRegst() const override {
-    MemoryCase ret;
-    if (IsH2D()) {
-      ret.set_type(kDeviceGPUMemory);
-      ret.set_device_id(IDMgr::Singleton().DevPhyId4ThrdLocId(thrd_loc_id()));
-    } else {
-      ret.set_type(kHostPinnedMemory);
-      ret.set_device_id(0);
-    }
-    return ret;
-  }
 
   bool is_fw_in_copy_;
 
@@ -79,17 +68,6 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
   CopyCommNetTaskNode() = default;
   ~CopyCommNetTaskNode() = default;
 
-  bool IsSender() const {
-    return (IsFwNode() && is_fw_sender_)
-        || (IsBpNode() && !is_fw_sender_);
-  }
-  bool IsReceiver() const {
-    return !IsSender();
-  }
-
-  void SetFwSender();
-  void SetFwReceiver();
-  
   std::string VisualStr() const override {
     return TaskNode::VisualStr() + "CommNet";
   }
@@ -106,16 +84,7 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
   }
   void InitWithFwNode(TaskNode* fw_node) override {
     TaskNode::InitWithFwNode(fw_node);
-    is_fw_sender_ = of_dynamic_cast<CopyCommNetTaskNode*>(fw_node)->is_fw_sender_;
   }
-  MemoryCase InferMemCase4ProducedRegst() const override {
-    MemoryCase ret;
-    ret.set_type(kHostPinnedMemory);
-    ret.set_device_id(0);
-    return ret;
-  }
-
-  bool is_fw_sender_;
 
 };
 

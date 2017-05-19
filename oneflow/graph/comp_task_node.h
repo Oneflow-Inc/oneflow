@@ -93,12 +93,6 @@ class HostCompTaskNode final : public CompTaskNode {
   void InitWithFwNode(TaskNode* fw_node) override {
     CompTaskNode::InitWithFwNode(fw_node);
   }
-  MemoryCase InferMemCase4ProducedRegst() const override {
-    MemoryCase ret;
-    ret.set_type(kHostPinnedMemory);
-    ret.set_device_id(0);
-    return ret;
-  }
 
 };
 
@@ -119,12 +113,6 @@ class DeviceCompTaskNode final : public CompTaskNode {
   }
   void InitWithFwNode(TaskNode* fw_node) override {
     CompTaskNode::InitWithFwNode(fw_node);
-  }
-  MemoryCase InferMemCase4ProducedRegst() const override {
-    MemoryCase ret;
-    ret.set_type(kDeviceGPUMemory);
-    ret.set_device_id(IDMgr::Singleton().DevPhyId4ThrdLocId(thrd_loc_id()));
-    return ret;
   }
 
 };
