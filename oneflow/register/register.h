@@ -11,11 +11,10 @@ namespace oneflow {
 class Regst final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Regst);
-  ~Regst() = default;
+  ~Regst() {
+    deleter_();
+  }
   
-  void ProduceDone();
-  void ConsumeDone();
-
   Blob* GetBlobPtrFromLbn(const std::string& lbn);
 
  private:

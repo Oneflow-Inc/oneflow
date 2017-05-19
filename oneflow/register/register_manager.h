@@ -5,7 +5,7 @@
 #include "common/util.h"
 #include "common/id_manager.h"
 #include "common/ofelf.pb.h"
-#include "memory/memory_manager.h"
+#include "memory/memory_allocator.h"
 #include "runtime/runtime_info.h"
 
 namespace oneflow {
@@ -27,7 +27,7 @@ class RegstMgr final {
   void InitFromProto(const OfElf& ofelf);
   
  private:
-  RegstMgr();
+  RegstMgr() = default;
   void NewRegstFromRegstDesc(
       uint64_t producer_id,
       const RegstDescProto& regstdesc,

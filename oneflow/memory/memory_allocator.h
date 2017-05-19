@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_MEMORY_MEMORY_MANAGER_H_
-#define ONEFLOW_MEMORY_MEMORY_MANAGER_H_
+#ifndef ONEFLOW_MEMORY_MEMORY_ALLOCATOR_H_
+#define ONEFLOW_MEMORY_MEMORY_ALLOCATOR_H_
 
 #include "memory/memory_case.pb.h"
 #include "cuda.h"
@@ -29,4 +29,4 @@ class MemoryAllocator final {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_MEMORY_MEMORY_MANAGER_H_
+#endif // ONEFLOW_MEMORY_MEMORY_ALLOCATOR_H_

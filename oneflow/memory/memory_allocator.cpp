@@ -1,4 +1,4 @@
-#include "memory/memory_manager.h"
+#include "memory/memory_allocator.h"
 
 namespace oneflow {
 
@@ -8,7 +8,7 @@ std::pair<char*, std::function<void()>> MemoryAllocator::Allocate(
   if (mem_case.has_host_pageable_mem()) {
     dptr = (char*) malloc (size);
     CHECK(dptr != nullptr);
-  } else if (mem_case.has_host_pageable_mem()) {
+  } else if (mem_case.has_cuda_pinned_mem()) {
     CHECK_EQ(cudaMallocHost(&dptr, size), 0);
   } else if (mem_case.has_rdma_pinned_mem()) {
     TODO();
@@ -25,7 +25,7 @@ std::pair<char*, std::function<void()>> MemoryAllocator::Allocate(
 void MemoryAllocator::Deallocate(char* dptr, MemoryCase mem_case) {
   if (mem_case.has_host_pageable_mem()) {
     free(dptr);
-  } else if (mem_case.has_host_pageable_mem()) {
+  } else if (mem_case.has_cuda_pinned_mem()) {
     CHECK_EQ(cudaFreeHost(&dptr), 0);
   } else if (mem_case.has_rdma_pinned_mem()) {
     TODO();
