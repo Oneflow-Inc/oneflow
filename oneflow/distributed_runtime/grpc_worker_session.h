@@ -12,6 +12,7 @@
 
 #include "distributed_runtime/grpc_session.h"
 #include "distributed_runtime/worker_service.pb.h"
+#include "distributed_runtime/grpc_remote_worker.h"
 
 namespace oneflow {
 
@@ -24,6 +25,7 @@ class GrpcWorkerSession : public GrpcSession {
     //void SendMessage();
     //void ReadData();
     
+  GrpcRemoteWorker* remote_worker;
   private:
    
 };

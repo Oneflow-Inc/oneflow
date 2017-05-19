@@ -6,7 +6,6 @@
  */
 
 #include "distributed_runtime/grpc_worker_session.h"
-#include "distributed_runtime/grpc_remote_worker.h"
 
 namespace oneflow {
 
@@ -27,14 +26,25 @@ void GrpcWorkerSession::GetMachineDesc() {
     //TODO
     //get info from response that back from server
   };
-  GrpcRemoteWorker* remote_worker;
   remote_worker->GetMachineDescAsync(&req, &resp, cb);
   
 
 }
 
 void GrpcWorkerSession::GetMemoryDesc() {
-
+  oneflow::MemoryDesc memory_desc;
+  memory_desc.set_machine_id(0);
+  memory_desc.set_memory_address(555);
+  memory_desc.set_remoted_token(666);
+  oneflow::GetMemoryDescRequest req;
+  req.set_allocated_memory_desc(&memory_desc);
+  
+  oneflow::GetMemoryDescResponse resp;
+  auto cb = [] () {
+    //TODO
+    //get info from response that back from server
+  };
+  remote_worker->GetMemoryDescAsync(&req, &resp, cb); 
 }
 
 }
