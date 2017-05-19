@@ -36,8 +36,12 @@ void Worker::GetMemoryDesc(GetMemoryDescRequest* request,
   memory_desc_.memory_address = request->memory_desc().memory_address();
   memory_desc_.remote_token = request->memory_desc().remoted_token();
 
-
-  //get message from request
+  oneflow::MemoryDesc memory_desc_for_resp;
+  memory_desc_file_path = "./memory_desc.txt";
+  ParseToProto(memory_desc_for_resp, memory_desc_file_path);
+  response->mutable_memory_desc()->set_machine_id(memory_desc_for_resp.machine_id());
+  response->mutable_memory_desc()->set_memory_address(memory_desc_for_resp.memory_address());
+  response->mutable_memory_desc()->set_remoted_token(memory_desc_for_resp.remoted_token());
 }
 
 void Worker::SendMessage(SendMessageRequest* request,

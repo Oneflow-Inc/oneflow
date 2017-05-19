@@ -1,0 +1,5 @@
+{
+  machine_id: 0
+  memory_address: 111111
+  remoted_token: 222222
+}
