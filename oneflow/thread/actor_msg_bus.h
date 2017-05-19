@@ -8,7 +8,7 @@
 namespace oneflow {
 
 class ActorMsgBus final {
-public:
+ public:
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgBus);
   ~ActorMsgBus() = default;
 
@@ -19,7 +19,7 @@ public:
 
   void SendMsg(const ActorMsg& msg);
 
-private:
+ private:
   ActorMsgBus() = default;
 };
 

@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_THREAD_THREAD_MANAGER_H_
 #define ONEFLOW_THREAD_THREAD_MANAGER_H_
 
+#include <memory>
 #include "thread/thread.h"
 #include "thread/actor_msg_bus.h"
 #include "common/channel.h"
@@ -9,7 +10,7 @@
 namespace oneflow {
 
 class ThreadMgr final {
-public:
+ public:
   OF_DISALLOW_COPY_AND_MOVE(ThreadMgr);
   ~ThreadMgr();
 
@@ -24,7 +25,7 @@ public:
 
   Channel<ActorMsg>* GetMsgChanFromThrdLocId(uint64_t thrd_loc_id);
 
-private:
+ private:
   ThreadMgr() = default;
 
   HashMap<uint64_t, std::unique_ptr<Thread>> thrd_loc_id2thread_;

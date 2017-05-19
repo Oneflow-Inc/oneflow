@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_THREAD_THREAD_H_
 #define ONEFLOW_THREAD_THREAD_H_
 
+#include <memory>
 #include <thread>
 #include "common/util.h"
 #include "common/channel.h"
@@ -11,10 +12,10 @@
 namespace oneflow {
 
 class Thread final {
-public:
+ public:
   OF_DISALLOW_COPY_AND_MOVE(Thread);
-  Thread(): thread_([this]() { this->PollMsgChannel(); }) {};
-  virtual ~Thread();
+  Thread(): thread_([this]() { this->PollMsgChannel(); }) {}
+  ~Thread();
 
   uint64_t thrd_loc_id() const { return thrd_loc_id_; }
   void set_thrd_loc_id(uint64_t thrd_loc_id) {
@@ -27,7 +28,7 @@ public:
 
   void Join();
 
-private:
+ private:
   void PollMsgChannel();
 
   std::thread thread_;
