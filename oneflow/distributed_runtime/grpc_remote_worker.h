@@ -26,23 +26,27 @@ class GrpcRemoteWorker {
     ~GrpcRemoteWorker() {}
 
     void GetMachineDescAsync(GetMachineDescRequest* request,
-                             GetMachineDescResponse* response) {
-      IssueRequest(request, response, getmachinedesc_);
+                             GetMachineDescResponse* response,
+                             Callback done) {
+      IssueRequest(request, response, getmachinedesc_, std::move(done));
     }
 
     void GetMemoryDescAsync(GetMemoryDescRequest* request,
-                            GetMemoryDescResponse* response) {
-      IssueRequest(request, response, getmemorydesc_);
+                            GetMemoryDescResponse* response,
+                            Callback done) {
+      IssueRequest(request, response, getmemorydesc_, std::move(done));
     }
 
     void SendMessageAsync(SendMessageRequest* request,
-                          SendMessageResponse* response) {
-      IssueRequest(request, response, sendmessage_);
+                          SendMessageResponse* response,
+                          Callback done) {
+      IssueRequest(request, response, sendmessage_, std::move(done));
     }
 
     void ReadDataAsync(ReadDataRequest* request,
-                       ReadDataResponse* response) {
-      IssueRequest(request, response, readdata_);
+                       ReadDataResponse* response,
+                       Callback done) {
+      IssueRequest(request, response, readdata_, std::move(done));
     }
 
   private:
@@ -50,8 +54,10 @@ class GrpcRemoteWorker {
     class RPCState {
       public:
         RPCState(::grpc::ChannelInterface* channel, ::grpc::CompletionQueue* cq, 
-                 const ::grpc::RpcMethod& method, const RequestMessage& request)
-          : reader_(channel, cq, method, context_, request) {}
+                 const ::grpc::RpcMethod& method, const RequestMessage& request,
+                 Callback done)
+          : reader_(channel, cq, method, context_, request),
+            done_(done) {}
 
         ~RPCState() {}
 
@@ -73,9 +79,9 @@ class GrpcRemoteWorker {
 
     template <class RequestMessage, class ResponseMessage>
     void IssueRequest(const RequestMessage* request, ResponseMessage* response,
-                      const ::grpc::RpcMethod& method) {
+                      const ::grpc::RpcMethod& method, Callback done) {
       auto state = new RPCState<RequestMessage, ResponseMessage>(
-          channel_.get(), cq_, method, *request);
+          channel_.get(), cq_, method, *request, std::move(done));
       state->StartRPC(response);
     }//IssueRequest
 
