@@ -10,9 +10,11 @@
 
 #include <grpc++/grpc++.h>
 
+
 #include "distributed_runtime/worker_service.pb.h"
 #include "distributed_runtime/grpc_call.h"
 #include "distributed_runtime/grpc_worker_service_impl.h"
+#include "distributed_runtime/worker.h"
 
 namespace oneflow {
  
@@ -53,6 +55,9 @@ class GrpcWorkerService {
 
     grpc::WorkerService::AsyncService worker_service_;
 
+    Worker* wi_;
+    ::grpc::Status status;
+
   private:
     template <class RequestMessage, class ResponseMessage>
     using WorkerCall = Call<GrpcWorkerService, grpc::WorkerService::AsyncService,
@@ -61,11 +66,14 @@ class GrpcWorkerService {
     void GetMachineDescHandler(WorkerCall<GetMachineDescRequest,
                                                 GetMachineDescResponse>* call) {
       //TODO[xiaoshu]
+      wi_->GetMachineDesc(&call->request, &call->response);
+      call->SendResponse(status);
     }
 
     void GetMemoryDescHandler(WorkerCall<GetMemoryDescRequest, 
                                         GetMemoryDescResponse>* call) {
       //TODO[xiaoshu]
+      
     }
     
 };

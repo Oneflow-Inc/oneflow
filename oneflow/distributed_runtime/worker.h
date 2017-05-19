@@ -17,12 +17,13 @@ class Worker {
     Worker();
     ~Worker() {};
 
-    void GetMachineDesc(const GetMachineDescRequest* request,
-                        const GetMachineDescResponse* response);
+    void GetMachineDesc(GetMachineDescRequest* request,
+                        GetMachineDescResponse* response);
 
-    void GetMemoryDescHandler(const GetMemoryDescRequest* request,
-                              const GetMemoryDescResponse* response);
+    void GetMemoryDescHandler(GetMemoryDescRequest* request,
+                              GetMemoryDescResponse* response);
 };
+
 
 }
 #endif /* !WORKER_H */
