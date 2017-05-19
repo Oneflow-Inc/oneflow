@@ -12,11 +12,10 @@ bool GrpcWorker::Send(const NetworkMessage& msg) {
   
   oneflow::NetworkMessageRpc network_message;
   network_message.set_network_message_type(0);   
-  network_message.set_allocated_event_message(event_message);
+  network_message.set_allocated_event_message(&event_message);
 
   oneflow::SendMessageRequest req;
-  req.set_network_message(network_message);
-
+  req.set_allocated_network_message(&network_message);
 
   return true;
 }
