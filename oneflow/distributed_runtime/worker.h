@@ -29,6 +29,22 @@ class Worker {
 
     void ReadData(ReadDataRequest* request,
                   ReadDataResponse* response);
+
+  private:
+    struct machine_desc {
+      int32_t machine_id;
+      std::string ip;
+      int32_t port;
+    };
+    machine_desc machine_desc_;
+
+    struct memory_desc {
+      int64_t machine_id;
+      int64_t memory_address;
+      int64_t remote_token;
+    };
+    memory_desc memory_desc_;
+
 };
 
 
