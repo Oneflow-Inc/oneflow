@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package oneflow;
 
-import "distributed_runtime/message.proto";
+import "distributed_runtime/worker.proto";
 
 service WorkerService {
   rpc GetMachineDesc(GetMachineDescRequest) returns (GetMachineDescResponse);
@@ -13,25 +13,17 @@ service WorkerService {
 }
 
 message GetMachineDescRequest {
-  int32 machine_id = 1;
-  string ip = 2;
-  int32 port = 3;
+  MachineDesc machine_desc = 1;
 }
 message GetMachineDescResponse {
-  int32 machine_id = 1;
-  string ip = 2;
-  int32 port = 3;
+  MachineDesc machine_desc = 1;
 }
 
 message GetMemoryDescRequest {
-  uint64 machine_id = 1;
-  uint64 memory_address = 2;
-  uint64 remote_token = 3;
+  MemoryDesc memory_desc = 1;
 }
 message GetMemoryDescResponse {
-  uint64 machine_id = 1;
-  uint64 memory_address = 2;
-  uint64 remote_token = 3;
+  MemoryDesc memory_desc = 1;
 }
 
 message SendMessageRequest {
