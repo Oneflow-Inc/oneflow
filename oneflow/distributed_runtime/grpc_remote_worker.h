@@ -2,6 +2,7 @@
 #define GRPC_REMOTE_WORKER_H
 
 #include "grpc++/grpc++.h"
+#include "distributed_runtime/worker.h"
 
 #include "distributed_runtime/grpc_worker_service_impl.h"
 #include "distributed_runtime/worker_service.pb.h"

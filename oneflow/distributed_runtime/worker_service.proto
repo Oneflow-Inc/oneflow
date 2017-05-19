@@ -3,8 +3,8 @@ syntax = "proto3";
 package oneflow;
 
 service WorkerService {
-  rpc GetNeighbourMachineDesc(GetMachineDescRequest) returns (GetMachineDescResponse);
-  rpc GetNeighbourMemoryDesc(GetMemoryDescRequest) returns (GetMemoryDescResponse);
+  rpc GetMachineDesc(GetMachineDescRequest) returns (GetMachineDescResponse);
+  rpc GetMemoryDesc(GetMemoryDescRequest) returns (GetMemoryDescResponse);
 
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
   rpc ReadData(ReadDataRequest) returns (ReadDataResponse);
