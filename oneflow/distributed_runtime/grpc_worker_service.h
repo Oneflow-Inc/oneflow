@@ -42,6 +42,7 @@ class GrpcWorkerService {
 
     void HandleRPCsLoop() {
       ENQUEUE_REQUEST(GetMachineDesc);
+      ENQUEUE_REQUEST(GetMemoryDesc);
       void* tag;
       bool ok;
       while(cq_->Next(&tag, &ok)) {
@@ -71,11 +72,23 @@ class GrpcWorkerService {
     }
 
     void GetMemoryDescHandler(WorkerCall<GetMemoryDescRequest, 
-                                        GetMemoryDescResponse>* call) {
+                                         GetMemoryDescResponse>* call) {
       //TODO[xiaoshu]
       wi_->GetMemoryDesc(&call->request, &call->response);
+      call->SendResponse(status);
     }
     
+    void SendMessageHandler(WorkerCall<SendMessageRequest,
+                                       SendMessageResponse>* call) {
+      //TODO[xiaoshu]
+      //call function in networker/grpc/worker.h 
+    }
+
+    void ReadDataHandler(WorkerCall<ReadDataRequest, 
+                                    ReadDataResponse>* call) {
+      //TODO
+      //call function in networker/grpc/worker.h
+    }
 };
 
 }
