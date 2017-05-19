@@ -28,7 +28,9 @@ void Worker::GetMachineDesc(GetMachineDescRequest* request,
 void Worker::GetMemoryDesc(GetMemoryDescRequest* request,
                            GetMemoryDescResponse* response) {
   //TODO
-
+  memory_desc_.machine_id = request->memory_desc().machine_id();
+  memory_desc_.memory_address = request->memory_desc().memory_address();
+  memory_desc_.remote_token = request->memory_desc().remoted_token();
   //get message from request
 }
 
