@@ -4,21 +4,19 @@ package oneflow;
 message HostPageableMemory {
 }
 
-message CudaPinnedMemory {
+message HostPinnedMemory {
+  bool need_cuda = 1;
+  bool need_rdma = 2;
 }
 
-message RdmaPinnedMemory {
-}
-
-message GpuMemory {
+message DeviceCudaMemory {
   int32 device_id = 1;
 }
 
 message MemoryCase {
   oneof case {
     HostPageableMemory host_pageable_mem = 1;
-    CudaPinnedMemory cuda_pinned_mem = 2;
-    RdmaPinnedMemory rdma_pinned_mem = 3;
-    GpuMemory gpu_mem = 4;
+    HostPinnedMemory host_pinned_mem = 2;
+    DeviceCudaMemory device_cuda_mem = 3;
   }
 }
