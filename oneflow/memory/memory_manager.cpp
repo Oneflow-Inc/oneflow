@@ -2,50 +2,39 @@
 
 namespace oneflow {
 
-std::pair<void*, std::function<void(void*)>> MemoryAllocator::Allocate(
+std::pair<char*, std::function<void()>> MemoryAllocator::Allocate(
     MemoryCase mem_case,std::size_t size) {
-  void* dptr = nullptr;
-  switch(mem_case.type) {
-    case MemoryType::kHostPageableMemory: {
-      dptr = malloc(size);
-      CHECK(dptr != nullptr);
-      break;
-    }
-    case MemoryType::kHostPinnedMemory: {
-      CHECK_EQ(cudaMallocHost(&dptr, size), 0);
-      break;
-    }
-    case MemoryType::kDeviceGPUMemory: {
-      int32_t current_device_id;
-      CHECK_EQ(cudaGetDevice(&current_device_id), 0);
-      CHECK_EQ(cudaSetDevice(mem_case.device_id), 0);
-      CHECK_EQ(cudaMalloc(&dptr, size), 0);
-      CHECK_EQ(cudaSetDevice(current_device_id), 0);
-      break;
-    }
+  char* dptr = nullptr;
+  if (mem_case.has_host_pageable_mem()) {
+    dptr = malloc(size);
+    CHECK(dptr != nullptr);
+  } else if (mem_case.has_host_pageable_mem()) {
+    CHECK_EQ(cudaMallocHost(&dptr, size), 0);
+  } else if (mem_case.has_rdma_pinned_mem()) {
+    TODO();
+  } else if (mem_case.has_gpu_mem()) {
+    int32_t current_device_id;
+    CHECK_EQ(cudaGetDevice(&current_device_id), 0);
+    CHECK_EQ(cudaSetDevice(mem_case.gpu_mem().device_id()), 0);
+    CHECK_EQ(cudaMalloc(&dptr, size), 0);
+    CHECK_EQ(cudaSetDevice(current_device_id), 0);
   }
-  return {dptr, std::bind(&MemoryAllocator::Deallocate,
-                          this, std::placeholders::_1, mem_case)};
+  return {dptr, std::bind(&MemoryAllocator::Deallocate, this, dptr, mem_case)};
 }
 
-void MemoryAllocator::Deallocate(void* dptr, MemoryCase mem_case) {
-  switch(mem_case.type) {
-    case MemoryType::kHostPageableMemory: {
-      free(dptr);
-      break;
-    }
-    case MemoryType::kHostPinnedMemory: {
-      CHECK_EQ(cudaFreeHost(&dptr), 0);
-      break;
-    }
-    case MemoryType::kDeviceGPUMemory: {
-      int32_t current_device_id;
-      CHECK_EQ(cudaGetDevice(&current_device_id), 0);
-      CHECK_EQ(cudaSetDevice(mem_case.device_id), 0);
-      CHECK_EQ(cudaFree(&dptr), 0);
-      CHECK_EQ(cudaSetDevice(current_device_id), 0);
-      break;
-    }
+void MemoryAllocator::Deallocate(char* dptr, MemoryCase mem_case) {
+  if (mem_case.has_host_pageable_mem()) {
+    free(dptr);
+  } else if (mem_case.has_host_pageable_mem()) {
+    CHECK_EQ(cudaFreeHost(&dptr), 0);
+  } else if (mem_case.has_rdma_pinned_mem()) {
+    TODO();
+  } else if (mem_case.has_gpu_mem()) {
+    int32_t current_device_id;
+    CHECK_EQ(cudaGetDevice(&current_device_id), 0);
+    CHECK_EQ(cudaSetDevice(mem_case.gpu_mem().device_id()), 0);
+    CHECK_EQ(cudaFree(&dptr), 0);
+    CHECK_EQ(cudaSetDevice(current_device_id), 0);
   } 
 }
 

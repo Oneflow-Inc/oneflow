@@ -1,22 +1,12 @@
 #ifndef ONEFLOW_MEMORY_MEMORY_MANAGER_H_
 #define ONEFLOW_MEMORY_MEMORY_MANAGER_H_
 
+#include "memory/memory_case.pb.h"
 #include "cuda.h"
 #include "cuda_runtime.h"
 #include "common/util.h"
 
 namespace oneflow {
-
-enum class MemoryType {
-  kHostPageableMemory = 0,
-  kHostPinnedMemory,
-  kDeviceGPUMemory
-};
-
-struct MemoryCase {
-  MemoryType type;
-  int32_t device_id;
-};
 
 class MemoryAllocator final {
  public:
@@ -28,12 +18,12 @@ class MemoryAllocator final {
     return obj;
   }
 
-  std::pair<void*, std::function<void(void*)>> Allocate(
+  std::pair<char*, std::function<void()>> Allocate(
       MemoryCase mem_case, std::size_t size);
 
  private:
   MemoryAllocator();
-  void Deallocate(void* dptr, MemoryCase mem_case);
+  void Deallocate(char* dptr, MemoryCase mem_case);
 
 };
 

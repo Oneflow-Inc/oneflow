@@ -26,6 +26,7 @@ class Regst final {
   int32_t cnt_;
   uint64_t producer_id_;
   std::vector<uint64_t> consumer_ids_;
+  std::function<void()> deleter_;
   HashMap<std::string, std::unique_ptr<Blob>> lbn2blob_;
 };
 

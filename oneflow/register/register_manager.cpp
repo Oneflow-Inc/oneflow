@@ -14,14 +14,19 @@ void RegstMgr::NewRegstFromRegstDesc(
     regst->id_ = IDMgr::Singleton().NewRegstId(regst_desc_id);
     regst->cnt_ = 0;
     regst->producer_id_ = producer_id;
+    std::size_t regst_size = 0;
     for (const auto& mpair : regstdesc.lbn2shape()) {
       Shape shape(mpair.second);
-      MemoryCase mem_case;
-      mem_case.type = MemoryType(regstdesc.mem_case().type());
-      mem_case.device_id = regstdesc.mem_case().device_id();
-      std::size_t mem_size = shape.elem_cnt() * sizeof_floating;
-      auto mem_info = MemoryAllocator::Singleton().Allocate(mem_case, mem_size);
-      regst->lbn2blob_.emplace(mpair.first, new Blob(mem_info.first, shape, mem_info.second));
+      regst_size += shape.elem_cnt() * sizeof_floating;
+    }
+    auto mem_info = MemoryAllocator::Singleton().Allocate(regstdesc.mem_case(), 
+                                                          regst_size);
+    regst->deleter_ = mem_info.second;
+    char* dptr = mem_info.first;
+    for (const auto& mpair : regstdesc.lbn2shape()) {
+      Shape shape(mpair.second);
+      dptr += shape.elem_cnt() * sizeof_floating;
+      regst->lbn2blob_.emplace(mpair.first, new Blob(dptr, shape));
     }
     regst_id2regst_.emplace(regst->id_, std::move(regst));
     actor_id2produced_regst_desc_id[actor_id].insert(regst_desc_id);
