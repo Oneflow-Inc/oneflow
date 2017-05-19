@@ -16,10 +16,10 @@ void Worker::GetMachineDesc(GetMachineDescRequest* request,
   response->set_tmp(1);
 }
 
-//void Worker::GetMemoryDesc(GetMemoryDescRequest* request,
-//                           GetMemoryDescResponse* response) {
-//  response->set_tmp(2);
-//}
+void Worker::GetMemoryDesc(GetMemoryDescRequest* request,
+                           GetMemoryDescResponse* response) {
+  response->set_tmp(2);
+}
 
 
 }

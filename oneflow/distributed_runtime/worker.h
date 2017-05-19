@@ -20,7 +20,7 @@ class Worker {
     void GetMachineDesc(GetMachineDescRequest* request,
                         GetMachineDescResponse* response);
 
-    void GetMemoryDescHandler(GetMemoryDescRequest* request,
+    void GetMemoryDesc(GetMemoryDescRequest* request,
                               GetMemoryDescResponse* response);
 };
 

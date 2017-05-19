@@ -73,7 +73,7 @@ class GrpcWorkerService {
     void GetMemoryDescHandler(WorkerCall<GetMemoryDescRequest, 
                                         GetMemoryDescResponse>* call) {
       //TODO[xiaoshu]
-      
+      wi_->GetMemoryDesc(&call->request, &call->response);
     }
     
 };
