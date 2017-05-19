@@ -47,13 +47,16 @@ void Worker::GetMemoryDesc(GetMemoryDescRequest* request,
 void Worker::SendMessage(SendMessageRequest* request,
                  SendMessageResponse* response) {
   //TODO
-  //get message from request 
+  //parse requeset
+  //transfer it to dst thread message queue
+  //respone is empty
 }
 
 void Worker::ReadData(ReadDataRequest* request,
               ReadDataResponse* response) {
   //TODO
-  //fill data in respone
+  //parse requeset get piece id
+  //fill response based on piece id 
   
 }
 
