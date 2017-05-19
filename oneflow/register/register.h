@@ -20,9 +20,7 @@ class Regst final {
  private:
   friend class RegstMgr;
   Regst() = default;
-  mutable std::mutex mtx_;
   uint64_t id_;
-  int32_t cnt_;
   uint64_t producer_id_;
   std::vector<uint64_t> consumer_ids_;
   std::function<void()> deleter_;

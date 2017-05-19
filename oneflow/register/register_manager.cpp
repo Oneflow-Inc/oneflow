@@ -12,7 +12,6 @@ void RegstMgr::NewRegstFromRegstDesc(
   for (int64_t i = 0; i < regstdesc.register_num(); ++i) {
     std::unique_ptr<Regst> regst(new Regst());
     regst->id_ = IDMgr::Singleton().NewRegstId(regst_desc_id);
-    regst->cnt_ = 0;
     regst->producer_id_ = producer_id;
     std::size_t regst_size = 0;
     for (const auto& mpair : regstdesc.lbn2shape()) {
