@@ -7,8 +7,6 @@
 
 #include "distributed_runtime/worker.h"
 #include "distributed_runtime/worker.pb.h"
-#include <google/protobuf/io/zero_copy_stream_impl.h>
-#include <google/protobuf/text_format.h>
 
 namespace oneflow {
 
@@ -34,16 +32,21 @@ void Worker::GetMemoryDesc(GetMemoryDescRequest* request,
   //get message from request
 }
 
-void SendMessage(SendMessageRequest* request,
+void Worker::SendMessage(SendMessageRequest* request,
                  SendMessageResponse* response) {
   //TODO
   //get message from request 
 }
 
-void ReadData(ReadDataRequest* request,
+void Worker::ReadData(ReadDataRequest* request,
               ReadDataResponse* response) {
   //TODO
   //fill data in respone
+  
+}
+
+template <typename ProtoMessage>
+void Worker::ParseToProto(ProtoMessage& proto_type, std::string& file_name) {
   
 }
 

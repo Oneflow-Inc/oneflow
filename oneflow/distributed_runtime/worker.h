@@ -11,6 +11,9 @@
 #include "distributed_runtime/worker_service.pb.h"
 #include "network/grpc/grpc_worker.h"
 
+#include <google/protobuf/text_format.h>
+#include <google/protobuf/io/zero_copy_stream_impl.h>
+
 namespace oneflow {
 
 class Worker {
@@ -30,6 +33,9 @@ class Worker {
     void ReadData(ReadDataRequest* request,
                   ReadDataResponse* response);
 
+    template <typename ProtoMessage>
+    void ParseToProto(ProtoMessage& proto_type, std::string& file_name);
+
   private:
     struct machine_desc {
       int32_t machine_id;
@@ -44,6 +50,9 @@ class Worker {
       int64_t remote_token;
     };
     memory_desc memory_desc_;
+
+    std::string machine_desc_file_path;
+    std::string memory_desc_file_path; 
 
 };
 
