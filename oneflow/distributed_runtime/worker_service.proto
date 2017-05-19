@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package oneflow;
 
+import "distributed_runtime/message.proto";
+
 service WorkerService {
   rpc GetMachineDesc(GetMachineDescRequest) returns (GetMachineDescResponse);
   rpc GetMemoryDesc(GetMemoryDescRequest) returns (GetMemoryDescResponse);
@@ -33,10 +35,9 @@ message GetMemoryDescResponse {
 }
 
 message SendMessageRequest {
-  int32 tmp = 1;
+  NetworkMessageRpc network_message = 1;
 }
 message SendMessageResponse {
-  int32 tmp =1;
 }
 
 message ReadDataRequest {
