@@ -24,8 +24,8 @@ void RegstMgr::NewRegstFromRegstDesc(
     char* dptr = mem_info.first;
     for (const auto& mpair : regstdesc.lbn2shape()) {
       Shape shape(mpair.second);
-      dptr += shape.elem_cnt() * sizeof_floating;
       regst->lbn2blob_.emplace(mpair.first, of_make_unique<Blob>(dptr, shape));
+      dptr += shape.elem_cnt() * sizeof_floating;
     }
     regst_id2regst_.emplace(regst->id_, std::move(regst));
     actor_id2produced_regst_desc_id[producer_id].insert(regst_desc_id);
