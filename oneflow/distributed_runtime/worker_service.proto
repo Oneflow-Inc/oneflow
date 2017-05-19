@@ -11,17 +11,25 @@ service WorkerService {
 }
 
 message GetMachineDescRequest {
-  int32 tmp = 1;
+  int32 id = 1;
+  string ip = 2;
+  int32 port = 3;
 }
 message GetMachineDescResponse {
-  int32 tmp = 1;
+  int32 id = 1;
+  string ip = 2;
+  int32 port = 3;
 }
 
 message GetMemoryDescRequest {
-  int32 tmp = 1;
+  uint64 machine_id = 1;
+  uint64 address = 2;
+  uint64 remote_token = 3;
 }
 message GetMemoryDescResponse {
-  int32 tmp = 1;
+  uint64 machine_id = 1;
+  uint64 address = 2;
+  uint64 remote_token = 3;
 }
 
 message SendMessageRequest {

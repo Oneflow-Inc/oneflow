@@ -15,21 +15,18 @@ void Worker::GetMachineDesc(GetMachineDescRequest* request,
                        GetMachineDescResponse* response) {
   //TODO
   //get message from request.
-  response->set_tmp(1);
 }
 
 void Worker::GetMemoryDesc(GetMemoryDescRequest* request,
                            GetMemoryDescResponse* response) {
   //TODO
   //get message from request
-  response->set_tmp(2);
 }
 
 void SendMessage(SendMessageRequest* request,
                  SendMessageResponse* response) {
   //TODO
   //get message from request 
-  response->set_tmp(3);
 }
 
 void ReadData(ReadDataRequest* request,
