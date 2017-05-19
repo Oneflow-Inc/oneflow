@@ -21,6 +21,14 @@ void GrpcWorkerSession::GetMachineDesc() {
 
   oneflow::GetMachineDescRequest req;
   req.set_allocated_machine_desc(&machine_desc);
+
+  oneflow::GetMachineDescResponse resp;
+  auto cb = [] () {
+    //TODO
+    //get info from response that back from server
+  };
+  GrpcRemoteWorker* remote_worker;
+  remote_worker->GetMachineDescAsync(&req, &resp, cb);
   
 
 }
