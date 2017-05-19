@@ -9,6 +9,7 @@
 #define WORKER_H
 
 #include "distributed_runtime/worker_service.pb.h"
+#include "network/grpc/grpc_worker.h"
 
 namespace oneflow {
 
@@ -24,7 +25,8 @@ class Worker {
                               GetMemoryDescResponse* response);
 
     void SendMessage(SendMessageRequest* request,
-                     SendMessageResponse* response);
+                    SendMessageResponse* response);
+
     void ReadData(ReadDataRequest* request,
                   ReadDataResponse* response);
 };

@@ -13,24 +13,29 @@ Worker::Worker() {}
 
 void Worker::GetMachineDesc(GetMachineDescRequest* request,
                        GetMachineDescResponse* response) {
+  //TODO
+  //get message from request.
   response->set_tmp(1);
 }
 
 void Worker::GetMemoryDesc(GetMemoryDescRequest* request,
                            GetMemoryDescResponse* response) {
+  //TODO
+  //get message from request
   response->set_tmp(2);
 }
 
 void SendMessage(SendMessageRequest* request,
                  SendMessageResponse* response) {
   //TODO
-  //call function in network/grpc/grpc_worker.cc
+  //get message from request 
+  //and fill response integer 1
 }
 
 void ReadData(ReadDataRequest* request,
               ReadDataResponse* response) {
   //TODO
-  //call function in network/grpc/grpc_worker.cc
+  //fill data in respone
 }
 
 }
