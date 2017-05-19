@@ -66,7 +66,7 @@ class GrpcRemoteWorker {
         }
 
         void OnCompleted(bool ok) {
-          if(ok) done_(status_);//will be called in grpc_worker_cache.h
+          if(ok) done_();//will be called in grpc_worker_cache.h
         }
 
       private:
