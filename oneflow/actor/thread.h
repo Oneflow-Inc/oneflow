@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_THREAD_THREAD_H_
-#define ONEFLOW_THREAD_THREAD_H_
+#ifndef ONEFLOW_ACTOR_THREAD_H_
+#define ONEFLOW_ACTOR_THREAD_H_
 
 #include <memory>
 #include <thread>
@@ -7,7 +7,7 @@
 #include "common/channel.h"
 #include "actor/task.pb.h"
 #include "actor/actor.h"
-#include "thread/actor_msg_bus.h"
+#include "actor/actor_msg_bus.h"
 
 namespace oneflow {
 
@@ -39,4 +39,4 @@ class Thread final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_THREAD_THREAD_H_
+#endif  // ONEFLOW_ACTOR_THREAD_H_

@@ -1,6 +1,6 @@
-#include "thread/thread_manager.h"
+#include "actor/thread_manager.h"
 #include <utility>
-#include "thread/actor_msg_bus.h"
+#include "actor/actor_msg_bus.h"
 #include "runtime/runtime_info.h"
 
 namespace oneflow {

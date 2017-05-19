@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_THREAD_ACTOR_MSG_BUS_H_
-#define ONEFLOW_THREAD_ACTOR_MSG_BUS_H_
+#ifndef ONEFLOW_ACTOR_ACTOR_MSG_BUS_H_
+#define ONEFLOW_ACTOR_ACTOR_MSG_BUS_H_
 
 #include <stdint.h>
 #include "common/util.h"
@@ -25,4 +25,4 @@ class ActorMsgBus final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_THREAD_ACTOR_MSG_BUS_H_
+#endif  // ONEFLOW_ACTOR_ACTOR_MSG_BUS_H_
