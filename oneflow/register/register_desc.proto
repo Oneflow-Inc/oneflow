@@ -9,5 +9,4 @@ message RegstDescProto  {
   uint64 producer_task_id = 2;
   map<string, ShapeProto> lbn2shape = 4;
   int64 register_num = 5;
-  MemoryCase mem_case = 6;
 }
