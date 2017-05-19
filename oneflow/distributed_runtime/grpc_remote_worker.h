@@ -18,7 +18,10 @@ class GrpcRemoteWorker {
     : channel_(channel),
       cq_(completion_queue),
       getmachinedesc_(Method(GrpcWorkerMethod::kGetMachineDesc)),
-      getmemorydesc_(Method(GrpcWorkerMethod::kGetMemoryDesc)) {}
+      getmemorydesc_(Method(GrpcWorkerMethod::kGetMemoryDesc)),
+      sendmessage_(Method(GrpcWorkerMethod::kSendMessage)), 
+      readdata_(Method(GrpcWorkerMethod::kReadData)){}
+
 
     ~GrpcRemoteWorker() {}
 
@@ -75,6 +78,8 @@ class GrpcRemoteWorker {
 
     const ::grpc::RpcMethod getmachinedesc_;
     const ::grpc::RpcMethod getmemorydesc_;
+    const ::grpc::RpcMethod sendmessage_;
+    const ::grpc::RpcMethod readdata_;
 };
 
 

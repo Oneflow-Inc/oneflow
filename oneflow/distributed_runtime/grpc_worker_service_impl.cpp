@@ -24,6 +24,10 @@ const char* GrpcWorkerMethodName(GrpcWorkerMethod id) {
       return "/oneflow.WorkerService/GetMachineDesc";
     case GrpcWorkerMethod::kGetMemoryDesc:
       return "/oneflow.WorkerService/GetMemoryDesc";
+    case GrpcWorkerMethod::kSendMessage:
+      return "/oneflow.WorkerService/SendMessage";
+    case GrpcWorkerMethod::kReadData:
+      return "/oneflow.WorkerService/ReadData";
   }
 }
 

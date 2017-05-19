@@ -29,12 +29,14 @@ void SendMessage(SendMessageRequest* request,
                  SendMessageResponse* response) {
   //TODO
   //get message from request 
+  response->set_tmp(3);
 }
 
 void ReadData(ReadDataRequest* request,
               ReadDataResponse* response) {
   //TODO
   //fill data in respone
+  
 }
 
 }

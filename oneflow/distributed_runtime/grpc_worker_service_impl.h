@@ -32,9 +32,11 @@ namespace oneflow {
 enum class GrpcWorkerMethod {
   kGetMachineDesc,
   kGetMemoryDesc,
+  kSendMessage,
+  kReadData
 };
 static const int kGrpcNumWorkerMethods = 
-  static_cast<int>(GrpcWorkerMethod::kGetMemoryDesc) + 1;
+  static_cast<int>(GrpcWorkerMethod::kReadData) + 1;
 
 const char* GrpcWorkerMethodName(GrpcWorkerMethod id);
 
