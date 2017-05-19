@@ -80,14 +80,14 @@ class GrpcWorkerService {
     
     void SendMessageHandler(WorkerCall<SendMessageRequest,
                                        SendMessageResponse>* call) {
-      //TODO[xiaoshu]
-      //call function in networker/grpc/worker.h 
+      wi_->SendMessage(&call->request, &call->response);
+      call->SendResponse(status);
     }
 
     void ReadDataHandler(WorkerCall<ReadDataRequest, 
                                     ReadDataResponse>* call) {
-      //TODO
-      //call function in networker/grpc/worker.h
+      wi_->ReadData(&call->request, &call->response);
+      call->SendResponse(status);
     }
 };
 
