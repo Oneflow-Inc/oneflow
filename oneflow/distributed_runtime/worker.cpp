@@ -18,23 +18,25 @@ Worker::Worker() {}
 
 void Worker::GetMachineDesc(GetMachineDescRequest* request,
                        GetMachineDescResponse* response) {
-  //TODO
-
    machine_desc_.machine_id = request->machine_desc().machine_id();
    machine_desc_.ip = request->machine_desc().ip();
    machine_desc_.port = request->machine_desc().port();
+
    oneflow::MachineDesc machine_desc_for_response;
-   machine_desc_file_path = "./machie_desc.txt";
+   machine_desc_file_path = "./machine_desc.txt";
    ParseToProto(machine_desc_for_response, machine_desc_file_path);
-  //get message from request.
+   response->mutable_machine_desc()->set_machine_id(machine_desc_for_response.machine_id());
+   response->mutable_machine_desc()->set_ip(machine_desc_for_response.ip());
+   response->mutable_machine_desc()->set_port(machine_desc_for_response.port());
 }
 
 void Worker::GetMemoryDesc(GetMemoryDescRequest* request,
                            GetMemoryDescResponse* response) {
-  //TODO
   memory_desc_.machine_id = request->memory_desc().machine_id();
   memory_desc_.memory_address = request->memory_desc().memory_address();
   memory_desc_.remote_token = request->memory_desc().remoted_token();
+
+
   //get message from request
 }
 
