@@ -35,6 +35,16 @@ class GrpcRemoteWorker {
       IssueRequest(request, response, getmemorydesc_);
     }
 
+    void SendMessageAsync(SendMessageRequest* request,
+                          SendMessageResponse* response) {
+      IssueRequest(request, response, sendmessage_);
+    }
+
+    void ReadDataAsync(ReadDataRequest* request,
+                       ReadDataResponse* response) {
+      IssueRequest(request, response, readdata_);
+    }
+
   private:
     template <class RequestMessage, class ResponseMessage>
     class RPCState {
