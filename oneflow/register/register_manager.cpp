@@ -19,7 +19,7 @@ void RegstMgr::NewRegstFromRegstDesc(
       Shape shape(mpair.second);
       regst_size += shape.elem_cnt() * sizeof_floating;
     }
-    auto mem_info = MemoryAllocator::Singleton().Allocate(regstdesc.mem_case(), 
+    auto mem_info = MemoryAllocator::Singleton().Allocate(MemoryCase(),
                                                           regst_size);
     regst->deleter_ = mem_info.second;
     char* dptr = mem_info.first;

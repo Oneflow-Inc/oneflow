@@ -5,6 +5,7 @@
 #include "common/protobuf.h"
 #include "common/job_desc.h"
 #include "runtime/runtime_info.h"
+#include "register/register_manager.h"
 
 namespace oneflow {
 
@@ -22,6 +23,7 @@ class ElfRunner final {
     JobDesc::Singleton().InitFromProto(elf.job_desc());
     IDMgr::Singleton().InitFromResource(JobDesc::Singleton().resource());
     RuntimeInfo::Singleton().set_this_machine_name(this_machine_name);
+    RegstMgr::Singleton().InitFromProto(elf);
     TODO();
   }
 
