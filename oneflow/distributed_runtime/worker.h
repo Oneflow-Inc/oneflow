@@ -9,7 +9,6 @@
 #define WORKER_H
 
 #include "distributed_runtime/worker_service.pb.h"
-#include "network/grpc/grpc_worker.h"
 
 #include <google/protobuf/text_format.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
