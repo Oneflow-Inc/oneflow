@@ -7,6 +7,7 @@ GrpcWorker::~GrpcWorker() {}
 
 
 bool GrpcWorker::Send(const NetworkMessage& msg) {
+  //oneflow::NetworkMessageRpc should filled by msg
   oneflow:EventMessageRpc event_message;
   event_message.set_envent_message_type(0);
   
