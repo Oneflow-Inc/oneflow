@@ -21,6 +21,17 @@ void Worker::GetMemoryDesc(GetMemoryDescRequest* request,
   response->set_tmp(2);
 }
 
+void SendMessage(SendMessageRequest* request,
+                 SendMessageResponse* response) {
+  //TODO
+  //call function in network/grpc/grpc_worker.cc
+}
+
+void ReadData(ReadDataRequest* request,
+              ReadDataResponse* response) {
+  //TODO
+  //call function in network/grpc/grpc_worker.cc
+}
 
 }
 

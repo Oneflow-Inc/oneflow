@@ -22,6 +22,11 @@ class Worker {
 
     void GetMemoryDesc(GetMemoryDescRequest* request,
                               GetMemoryDescResponse* response);
+
+    void SendMessage(SendMessageRequest* request,
+                     SendMessageResponse* response);
+    void ReadData(ReadDataRequest* request,
+                  ReadDataResponse* response);
 };
 
 
