@@ -6,6 +6,10 @@
  */
 
 #include "distributed_runtime/worker.h"
+
+#include <iostream>
+#include <fstream>
+
 #include "distributed_runtime/worker.pb.h"
 
 namespace oneflow {
@@ -19,7 +23,9 @@ void Worker::GetMachineDesc(GetMachineDescRequest* request,
    machine_desc_.machine_id = request->machine_desc().machine_id();
    machine_desc_.ip = request->machine_desc().ip();
    machine_desc_.port = request->machine_desc().port();
-
+   oneflow::MachineDesc machine_desc_for_response;
+   machine_desc_file_path = "./machie_desc.txt";
+   ParseToProto(machine_desc_for_response, machine_desc_file_path);
   //get message from request.
 }
 
@@ -47,8 +53,13 @@ void Worker::ReadData(ReadDataRequest* request,
 
 template <typename ProtoMessage>
 void Worker::ParseToProto(ProtoMessage& proto_type, std::string& file_name) {
+  std::ifstream input_file(file_name); 
+  google::protobuf::io::IstreamInputStream proto_file(&input_file);
+  if(!google::protobuf::TextFormat::Parse(&proto_file, &proto_type)) {
+    input_file.close();
+  }//end if
   
-}
+}//end Parsetoproto
 
 }
 
