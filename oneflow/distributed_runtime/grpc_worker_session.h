@@ -18,8 +18,8 @@ class GrpcWorkerSession : public GrpcSession {
     ~GrpcWorkerSession();
     void GetMachineDesc();
     void GetMemoryDesc();
-    void SendMessage();
-    void ReadData();
+    //void SendMessage();
+    //void ReadData();
 };
 
 
