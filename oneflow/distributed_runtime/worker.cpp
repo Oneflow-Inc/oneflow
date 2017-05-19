@@ -29,7 +29,6 @@ void SendMessage(SendMessageRequest* request,
                  SendMessageResponse* response) {
   //TODO
   //get message from request 
-  //and fill response integer 1
 }
 
 void ReadData(ReadDataRequest* request,
