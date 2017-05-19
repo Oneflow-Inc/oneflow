@@ -50,22 +50,10 @@ std::shared_ptr<const Operator> CopyHDTaskNode::ConstructOp() const {
   return OpMgr::Singleton().ConstructOp(op_conf);
 }
 
-void CopyCommNetTaskNode::SetFwSender() {
-  CHECK(IsFwNode());
-  is_fw_sender_ = true;
-}
-
-void CopyCommNetTaskNode::SetFwReceiver() {
-  CHECK(IsFwNode());
-  is_fw_sender_ = false;
-}
-
 std::shared_ptr<const Operator> CopyCommNetTaskNode::ConstructOp() const {
   OperatorConf op_conf;
   op_conf.set_name("comm_net_" + NewUniqueId());
-  CopyCommNetOpConf* comm_net_conf = op_conf.mutable_copy_comm_net_conf();
-  comm_net_conf->set_type(
-      IsSender() ? CopyCommNetOpConf::kSender : CopyCommNetOpConf::kReceiver);
+  op_conf.mutable_copy_comm_net_conf();
   return OpMgr::Singleton().ConstructOp(op_conf);
 }
 
