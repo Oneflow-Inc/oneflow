@@ -8,6 +8,7 @@ GrpcWorker::~GrpcWorker() {}
 
 bool GrpcWorker::Send(const NetworkMessage& msg) {
   //oneflow::NetworkMessageRpc should filled by msg
+  //just fill message and send the request, no callback fucntion
   oneflow:EventMessageRpc event_message;
   event_message.set_envent_message_type(0);
   
@@ -22,7 +23,9 @@ bool GrpcWorker::Send(const NetworkMessage& msg) {
 }
 
 void GrpcWorker::Read(MemoryDescriptor* src, NetworkMemory* dst) {
-
+  //TODO
+  //fill pieceid etc
+  //pass callback function for procecc response data
 }
 
 }
