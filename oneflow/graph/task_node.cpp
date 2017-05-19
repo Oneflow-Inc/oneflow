@@ -51,6 +51,9 @@ RegstDesc* TaskNode::GetProducedRegstDesc(const std::string& regst_desc_name) {
 
 void TaskNode::TakeOverRegstDesc(TaskNode* rhs,
                                  const std::string& regst_desc_name) {
+  CHECK(typeid(*this) == typeid(*rhs));
+  CHECK_EQ(stage_node_->machine_id(), rhs->stage_node_->machine_id());
+  CHECK_EQ(thrd_loc_id_, rhs->thrd_loc_id_);
   std::unique_ptr<RegstDesc> this_regst;
   auto rhs_regst_it = rhs->produced_regst_descs_.find(regst_desc_name);
   CHECK_EQ(produced_regst2out_edge_.count(rhs_regst_it->second.get()), 0);
