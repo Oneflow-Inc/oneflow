@@ -3,22 +3,22 @@
 ### 1.1 Linux 
 
 ```
-./build_third_party.sh
-./build_oneflow.sh
+./build.sh third_party
+./build.sh
 ```
 
 ### 1.2 Windows
 
 ```
-./build_third_party.bat
-./build_oneflow.bat
+./build.bat third_party
+./build.bat
 ```
 
 ### 1.3 Mac with Xcode
 
 ```
-./build_third_party_xcode.sh
-./build_oneflow_xcode.sh
+./build_xcode.sh third_party
+./build_xcode.sh
 ```
 
 ## 2. Compile GoogleNet
