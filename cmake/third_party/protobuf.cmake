@@ -31,11 +31,14 @@ endforeach()
 set(PROTOBUF_BUILD_PROTOC_EXECUTABLE ${PROTOBUF_BUILD_LIBRARY_DIR}/${PROTOC_EXECUTABLE_NAME})
 set(PROTOBUF_PROTOC_EXECUTABLE ${PROTOBUF_BINARY_DIR}/${PROTOC_EXECUTABLE_NAME})
 
+if (PREPARE_THIRD_PARTY)
+
 ExternalProject_Add(protobuf
     PREFIX protobuf
     DEPENDS zlib
     GIT_REPOSITORY ${PROTOBUF_URL}
     GIT_TAG ${PROTOBUF_TAG}
+    UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
     SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf
     CONFIGURE_COMMAND ${CMAKE_COMMAND} cmake/
@@ -77,3 +80,5 @@ add_custom_target(protobuf_create_binary_dir
 add_custom_target(protobuf_copy_binary_to_destination
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROTOBUF_BUILD_PROTOC_EXECUTABLE} ${PROTOBUF_BINARY_DIR}
   DEPENDS protobuf_create_binary_dir)
+
+endif(PREPARE_THIRD_PARTY)

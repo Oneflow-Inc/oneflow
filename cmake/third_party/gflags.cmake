@@ -24,10 +24,13 @@ foreach(LIBRARY_NAME ${GFLAGS_LIBRARY_NAMES})
     list(APPEND GFLAGS_BUILD_STATIC_LIBRARIES ${GFLAGS_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
 endforeach()
 
+if (PREPARE_THIRD_PARTY)
+  
 ExternalProject_Add(gflags
     PREFIX gflags
     GIT_REPOSITORY ${gflags_URL}
     GIT_TAG ${gflags_TAG}
+    UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
     INSTALL_COMMAND ""
     CMAKE_CACHE_ARGS
@@ -51,3 +54,5 @@ add_custom_target(gflags_create_library_dir
 add_custom_target(gflags_copy_libs_to_destination
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GFLAGS_BUILD_STATIC_LIBRARIES} ${GFLAGS_LIBRARY_DIR}
   DEPENDS gflags_create_library_dir)
+
+endif(PREPARE_THIRD_PARTY)

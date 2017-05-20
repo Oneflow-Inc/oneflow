@@ -23,10 +23,13 @@ foreach(LIBRARY_NAME ${GOOGLETEST_LIBRARY_NAMES})
     list(APPEND GOOGLETEST_BUILD_STATIC_LIBRARIES ${GOOGLETEST_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
 endforeach()
 
+if(PREPARE_THIRD_PARTY)
+
 ExternalProject_Add(googletest
     PREFIX googletest
     GIT_REPOSITORY ${googletest_URL}
     GIT_TAG ${googletest_TAG}
+    UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
     INSTALL_COMMAND ""
     CMAKE_CACHE_ARGS
@@ -51,3 +54,5 @@ add_custom_target(googletest_create_library_dir
 add_custom_target(googletest_copy_libs_to_destination
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GOOGLETEST_BUILD_STATIC_LIBRARIES} ${GOOGLETEST_LIBRARY_DIR}
   DEPENDS googletest_create_library_dir)
+
+endif(PREPARE_THIRD_PARTY)

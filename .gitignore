@@ -1,1 +1,4 @@
-build
+build_oneflow
+build_third_party
+third_party
+

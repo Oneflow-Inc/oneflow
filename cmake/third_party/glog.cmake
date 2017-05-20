@@ -31,10 +31,13 @@ set (GLOG_PUBLIC_H
   ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog/src/glog/log_severity.h
 )
 
+if(PREPARE_THIRD_PARTY)
+
 ExternalProject_Add(glog
     PREFIX glog
     GIT_REPOSITORY ${glog_URL}
     GIT_TAG ${glog_TAG}
+    UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
     INSTALL_COMMAND ""
     CMAKE_CACHE_ARGS
@@ -66,3 +69,5 @@ add_custom_target(glog_create_library_dir
 add_custom_target(glog_copy_libs_to_destination
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GLOG_BUILD_STATIC_LIBRARIES} ${GLOG_LIBRARY_DIR}
   DEPENDS glog_create_library_dir)
+
+endif(PREPARE_THIRD_PARTY)

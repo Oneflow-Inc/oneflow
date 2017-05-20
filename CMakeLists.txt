@@ -6,15 +6,26 @@ project(oneflow C CXX)
 enable_testing()
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+if (WIN32)
+  set(CMAKE_BUILD_TYPE Debug)
+endif()
+
 set(oneflow_src_dir ${PROJECT_SOURCE_DIR}/oneflow)
 set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
+
 if (WIN32)
 else()
   list(APPEND CUDA_NVCC_FLAGS "-std=c++11 -w")
 endif()
 
-# option
-option(DOWNLOAD_THIRD_PARTY "Download and build all third party codes" OFF)
+option(PREPARE_THIRD_PARTY "Whether include the third party codes in the solution" OFF)
+
+
+set(THIRD_PARTY_DIR "${PROJECT_SOURCE_DIR}/third_party")
+if (NOT EXISTS ${THIRD_PARTY_DIR})
+  message(FATAL_ERROR "Please set third party directory by: -DTHIRD_PARTY_DIR=/your/third_party/path")
+endif()
 
 # Different set for different platform
 if (MSVC)
@@ -76,9 +87,6 @@ RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
 
 cuda_add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(of_protoobj ${oneflow_third_party_libs})
-if (DOWNLOAD_THIRD_PARTY)
-  add_dependencies(of_protoobj ${oneflow_third_party_dependencies})
-endif()
 
 # cc obj lib
 include_directories(${oneflow_src_dir})
