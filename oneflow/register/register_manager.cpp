@@ -5,14 +5,30 @@ namespace oneflow {
 namespace {
 
 MemoryCase InferMemoryCaseFromTaskType(const TaskType& producer_type, 
-                                       const HashSet<int>& subscriber_types) {
-  TODO();
+                                       const HashSet<int>& subscriber_types
+                                       uint64_t device_id) {
+  MemoryCase mem_case;
+  if (producer_type == DeviceCompTask) {
+    mem_case.mutable_device_cuda_mem()->set_device_id(device_id);
+  } else if (producer_type == HostCompTask or producer_type == BoxingTask) {
+    mem_case.set_has_host_pageable_mem();
+    if (subscriber_types.find(CommNetTask) != subscriber_types.end()) {
+      mem_case.mutable_host_pinned_mem()->set_need_rdma(true);
+    }
+    if ()
+  } else if (producer_type == CommNetTask) {
+    TODO();
+  } else if (producer_type == CopyHdTask) {
+    TODO();
+  }
+  return mem_case;
 }
 
 }
 
 void RegstMgr::NewRegstFromRegstDesc(
     uint64_t producer_id,
+    uint64_t device_id,
     const TaskType& producer_type,
     const RegstDescProto& regstdesc,
     std::size_t sizeof_floating,
@@ -29,7 +45,9 @@ void RegstMgr::NewRegstFromRegstDesc(
       Shape shape(mpair.second);
       regst_size += shape.elem_cnt() * sizeof_floating;
     }
-    MemoryCase mem_case = InferMemoryCaseFromTaskType(producer_type, subscriber_types);
+    MemoryCase mem_case = InferMemoryCaseFromTaskType(producer_type, 
+                                                      subscriber_types, 
+                                                      device_id);
     auto mem_info = MemoryAllocator::Singleton().Allocate(mem_case, regst_size);
     regst->deleter_ = mem_info.second;
     char* dptr = mem_info.first;
@@ -84,9 +102,11 @@ void RegstMgr::InitFromProto(const OfElf& ofelf) {
   for (const TaskProto& taskproto : ofelf.task()) {
     if (taskproto.machine_id() != RuntimeInfo::Singleton().this_machine_id()) { continue; }
     uint64_t actor_id = IDMgr::Singleton().GetActorIdFromTaskId(taskproto.id());
+    uint64_t device_id = IDMgr::Singleton().DevPhyId4ThrdLocId(taskproto.device_id());
     for (const RegstDescProto& regstdesc : taskproto.produced_regst_desc()) {
       uint64_t regst_desc_id = regstdesc.regst_desc_id();
       NewRegstFromRegstDesc(actor_id,
+                            device_id,
                             taskproto.type(),
                             regstdesc, 
                             sizeof_floating, 
