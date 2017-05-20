@@ -44,13 +44,13 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   std::shared_ptr<const Operator> op() const { return op_; }
   std::shared_ptr<const Operator>& mut_op() { return op_; }
 
-  void BindBnInOpAndRegst(const std::string& bn_in_op, RegstDesc* regst) {
+  void BindBnInOpAndRegst(const std::string& bn_in_op, std::weak_ptr<RegstDesc> regst) {
     CHECK(bn_in_op2regst_.emplace(bn_in_op, regst).second);
   }
-  RegstDesc* GetRegstFromBnInOp(const std::string& bn_in_op) const {
-    return bn_in_op2regst_.at(bn_in_op);
+  std::shared_ptr<RegstDesc> GetRegstFromBnInOp(const std::string& bn_in_op) const {
+    return bn_in_op2regst_.at(bn_in_op).lock();
   }
-  const HashMap<std::string, RegstDesc*>& bn_in_op2regst() const {
+  const HashMap<std::string, std::weak_ptr<RegstDesc>>& bn_in_op2regst() const {
     return bn_in_op2regst_;
   }
   void UnBindRegstsWithZeroBlobSize();
@@ -63,7 +63,7 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
 
  private:
   std::shared_ptr<const Operator> op_;
-  HashMap<std::string, RegstDesc*> bn_in_op2regst_;
+  HashMap<std::string, std::weak_ptr<RegstDesc>> bn_in_op2regst_;
 
 };
 
@@ -73,7 +73,7 @@ class ExecGraph final : public Graph<ExecNode, ExecEdge> {
   ExecGraph() = default;
   ~ExecGraph() = default;
   
-  RegstDesc* RelatedModelRegst() const;
+  std::shared_ptr<RegstDesc> RelatedModelRegst() const;
 
   void ToExecSequence(ExecSequence* ret) const;
 

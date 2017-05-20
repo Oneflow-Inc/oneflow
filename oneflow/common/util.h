@@ -42,6 +42,11 @@ inline bool operator == (const google::protobuf::MessageLite& lhs,
   return lhs.SerializeAsString() == rhs.SerializeAsString();
 }
 
+template<typename T>
+bool operator == (const std::weak_ptr<T>& lhs, const std::weak_ptr<T>& rhs) {
+  return lhs.lock().get() == rhs.lock().get();
+}
+
 inline bool operator != (const google::protobuf::MessageLite& lhs,
                          const google::protobuf::MessageLite& rhs) {
   return !(lhs == rhs);

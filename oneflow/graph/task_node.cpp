@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-TaskNode::TaskNode() {
+TaskNode::TaskNode() : produced_regst2out_edge_(10, [](const std::weak_ptr<RegstDesc>& v) { return std::hash<void*>() (v.lock().get()); }) {
   stage_node_ = nullptr;
   related_fw_or_bp_node_ = nullptr;
 }
@@ -40,12 +40,12 @@ std::unique_ptr<TaskNode> TaskNode::BuildAndConnectBpNode() {
   return bp_node;
 }
 
-RegstDesc* TaskNode::GetProducedRegstDesc(const std::string& regst_desc_name) {
+std::shared_ptr<RegstDesc> TaskNode::GetProducedRegstDesc(const std::string& regst_desc_name) {
   auto it = produced_regst_descs_.find(regst_desc_name);
   if (it == produced_regst_descs_.end()) {
     return nullptr;
   } else {
-    return it->second.get();
+    return it->second;
   }
 }
 
@@ -54,9 +54,9 @@ void TaskNode::TakeOverRegstDesc(TaskNode* rhs,
   CHECK(typeid(*this) == typeid(*rhs));
   CHECK_EQ(stage_node_->machine_id(), rhs->stage_node_->machine_id());
   CHECK_EQ(thrd_loc_id_, rhs->thrd_loc_id_);
-  std::unique_ptr<RegstDesc> this_regst;
+  std::shared_ptr<RegstDesc> this_regst;
   auto rhs_regst_it = rhs->produced_regst_descs_.find(regst_desc_name);
-  CHECK_EQ(produced_regst2out_edge_.count(rhs_regst_it->second.get()), 0);
+  CHECK_EQ(produced_regst2out_edge_.count(rhs_regst_it->second), 0);
   this_regst.swap(rhs_regst_it->second);
   this_regst->SetProducer(this);
   this_regst->set_regst_desc_id(IDMgr::Singleton().NewRegstDescId(task_id_));
@@ -66,8 +66,8 @@ void TaskNode::TakeOverRegstDesc(TaskNode* rhs,
 }
 
 void TaskNode::EraseProducedEmptyRegsts() {
-  EraseIf<std::string, std::unique_ptr<RegstDesc>>(&produced_regst_descs_, []
-      (HashMap<std::string, std::unique_ptr<RegstDesc>>::iterator it) {
+  EraseIf<std::string, std::shared_ptr<RegstDesc>>(&produced_regst_descs_, []
+      (HashMap<std::string, std::shared_ptr<RegstDesc>>::iterator it) {
     return it->second->lbn2shape().empty();
   });
 }
@@ -78,12 +78,12 @@ void TaskNode::EraseZeroSizeBlobInProducedRegsts() {
   }
 }
 
-const TaskEdge* TaskNode::GetOutEdge4ProducedRegst(RegstDesc* regst) const {
+const TaskEdge* TaskNode::GetOutEdge4ProducedRegst(std::weak_ptr<RegstDesc> regst) const {
   return produced_regst2out_edge_.at(regst);
 }
 
-RegstDesc* TaskNode::GetProducedRegst4OutEdge(const TaskEdge* edge) const {
-  return out_edge2produced_regst_.at(edge);
+std::shared_ptr<RegstDesc> TaskNode::GetProducedRegst4OutEdge(const TaskEdge* edge) const {
+  return out_edge2produced_regst_.at(edge).lock();
 }
 
 void TaskNode::InitWithFwNode(TaskNode* fw_node) {
@@ -94,7 +94,7 @@ void TaskNode::InitWithFwNode(TaskNode* fw_node) {
   set_task_id();
 }
 
-void TaskNode::BindProducedRegstAndOutEdge(RegstDesc* regst,
+void TaskNode::BindProducedRegstAndOutEdge(std::weak_ptr<RegstDesc> regst,
                                            const TaskEdge* edge) {
   CHECK(produced_regst2out_edge_.emplace(regst, edge).second);
   CHECK(out_edge2produced_regst_.emplace(edge, regst).second);
@@ -102,7 +102,7 @@ void TaskNode::BindProducedRegstAndOutEdge(RegstDesc* regst,
 
 void TaskNode::EnrollProducedRegstDesc(
     const std::string& regst_desc_name,
-    std::unique_ptr<RegstDesc>&& regst_desc) {
+    std::shared_ptr<RegstDesc>&& regst_desc) {
   regst_desc->SetProducer(this);
   regst_desc->set_regst_desc_id(IDMgr::Singleton().NewRegstDescId(task_id_));
   CHECK(produced_regst_descs_.emplace(regst_desc_name, std::move(regst_desc)).second);
