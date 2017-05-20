@@ -48,10 +48,11 @@ include(util)
 include(proto2cpp)
 include(third_party)
 
-if (NOT BUILD_THIRD_PARTY)
-  include(oneflow)
-else()
+if (BUILD_THIRD_PARTY)
   add_custom_target(prepare_oneflow_third_party ALL
   DEPENDS ${oneflow_third_party_dependencies})
+  set(BUILD_THIRD_PARTY OFF CACHE BOOL "" FORCE)
+else()
+  include(oneflow)
 endif()
 
