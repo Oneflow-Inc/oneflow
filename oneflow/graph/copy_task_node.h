@@ -45,6 +45,7 @@ class CopyHDTaskNode final : public CopyTaskNode {
   void ToProto(TaskProto* ret) const override {
     TaskNode::ToProto(ret);
     ret->set_type(TaskType::CopyHdTask);
+    ret->set_is_h2d(IsH2D());
   };
 
  private:
@@ -74,7 +75,7 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
 
   void ToProto(TaskProto* ret) const override {
     TaskNode::ToProto(ret);
-    ret->set_type(TaskType::CommNetTask);
+    ret->set_type(TaskType::CopyCommNetTask);
   };
 
  private:
