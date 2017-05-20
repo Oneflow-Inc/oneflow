@@ -1,39 +1,25 @@
 # Oneflow
 
-## 1. Build
-
-For all platform, do
-
-```txt
-mkdir build && cd build
-```
-
 ### 1.1 Linux 
 
 ```
-cmake -DDOWNLOAD_THIRD_PARTY=ON ..  
-make
-cmake -DDOWNLOAD_THIRD_PARTY=OFF ..
-make
+./build_third_party.sh
+./build_oneflow.sh
 ```
 
 ### 1.2 Windows
 
 if first cmake:
 ```
-cmake .. -A x64 -DCMAKE_BUILD_TYPE=Debug -DDOWNLOAD_THIRD_PARTY=ON
-MSBuild /p:Configuration=Debug ALL_BUILD.vcxproj  
-```
-else:
-```
-cmake .. -A x64 -DCMAKE_BUILD_TYPE=Debug -DDOWNLOAD_THIRD_PARTY=OFF
-MSBuild /p:Configuration=Debug ALL_BUILD.vcxproj  
+./build_third_party.bat
+./build_oneflow.bat
 ```
 
 ### 1.3 Mac with Xcode
 
 ```
-cmake .. -G Xcode -DCMAKE_BUILD_TYPE=Debug 
+./build_third_party_xcode.sh
+./build_oneflow_xcode.sh
 ```
 
 ## 2. Compile GoogleNet
