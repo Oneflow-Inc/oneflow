@@ -85,6 +85,8 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
   }
   void InitWithFwNode(TaskNode* fw_node) override {
     TaskNode::InitWithFwNode(fw_node);
+    set_stage_node(fw_node->SoleInEdge()->src_node()->stage_node());
+    set_task_id();
   }
 
 };

@@ -218,15 +218,15 @@ void TaskGraph::ConnectBoxingTaskNodes(
         TaskConnect(out_node, NewEdge(), in_node);
         continue;
       }
-      CopyCommNetTaskNode* in_comm_net_node = NewTaskNode<CopyCommNetTaskNode> ();
-      in_comm_net_node->SetFwNode();
-      in_comm_net_node->set_stage_node(succ_stage);
-      in_comm_net_node->mut_thrd_loc_id() =
+      CopyCommNetTaskNode* comm_net_node = NewTaskNode<CopyCommNetTaskNode> ();
+      comm_net_node->SetFwNode();
+      comm_net_node->set_stage_node(succ_stage);
+      comm_net_node->mut_thrd_loc_id() =
           IDMgr::Singleton().CommNetThrdLocId();
-      in_comm_net_node->set_task_id();
+      comm_net_node->set_task_id();
 
-      TaskConnect(out_node, NewEdge(), in_comm_net_node);
-      TaskConnect(in_comm_net_node, NewEdge(), in_node);
+      TaskConnect(out_node, NewEdge(), comm_net_node);
+      TaskConnect(comm_net_node, NewEdge(), in_node);
     }
   }
 }
