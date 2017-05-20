@@ -10,6 +10,10 @@ RegstDesc::RegstDesc() {
   register_num_ = 5; // TODO
 }
 
+void RegstDesc::AddSubscriber(const TaskNode* new_subscriber) {
+  CHECK(subscribers_.insert(new_subscriber).second);
+}
+
 void RegstDesc::CopyLbnFrom(const RegstDesc* rhs) {
   lbn2shape_.clear();
   for (const auto& pair : rhs->lbn2shape_) {

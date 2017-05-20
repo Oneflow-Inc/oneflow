@@ -24,6 +24,8 @@ class RegstDesc final {
   // Producer
   const TaskNode* GetProducer() const { return producer_; }
   void SetProducer(const TaskNode* task_node) { producer_ = task_node; }
+  const HashSet<const TaskNode*>& subscribers() const { return subscribers_; }
+  void AddSubscriber(const TaskNode*);
 
   // Lbn and Shape
   void CopyLbnFrom(const RegstDesc*);
@@ -34,19 +36,18 @@ class RegstDesc final {
   HashMap<std::string, std::unique_ptr<Shape>>& mut_lbn2shape();
   const HashMap<std::string, std::unique_ptr<Shape>>& lbn2shape() const;
 
+  //
   void EraseZeroSizeBlob();
-  
   int64_t CompElemCntOfAllBlob() const;
-
   std::string DebugStr() const;
-
   void ToProto(RegstDescProto*) const;
-
+  
   static const char* kAllLbn;
 
  private:
   uint64_t regst_desc_id_;
   const TaskNode* producer_;
+  HashSet<const TaskNode*> subscribers_;
   
   HashMap<std::string, std::unique_ptr<Shape>> lbn2shape_;
   int64_t register_num_;
