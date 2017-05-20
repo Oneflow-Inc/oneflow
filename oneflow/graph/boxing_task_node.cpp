@@ -36,14 +36,16 @@ void BoxingTaskNode::FwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
 }
 
 void BoxingTaskNode::EnrollAllRegstAndBindRelatedEdge() {
+  for (TaskEdge* edge : in_edges()) {
+    std::string name = "boxing_in_" + edge->edge_id_str();
+    SubscribeRegstDesc(name, GetRelatedRegst(edge));
+  }
   for (TaskEdge* edge : out_edges()) {
     std::string name = "boxing_out_" + edge->edge_id_str();
-    auto regst_desc = std::make_shared<RegstDesc> ();
+    auto regst_desc = NewProducedRegstDesc(name);
     BindProducedRegstAndOutEdge(regst_desc, edge);
-    EnrollProducedRegstDesc(name, std::move(regst_desc));
   }
-  auto regst_desc = std::make_shared<RegstDesc> ();
-  EnrollProducedRegstDesc("middle", std::move(regst_desc));
+  NewProducedRegstDesc("middle");
 }
 
 void BoxingTaskNode::FwInitChain2SortedEdgesMaps(
@@ -131,25 +133,25 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
   if (lbns.at(0) == RegstDesc::kAllLbn) {
     CHECK_EQ(lbns.size(), 1);
     lbns.clear();
-    std::shared_ptr<RegstDesc> in_regst_0 = GetRelatedRegst(sorted_in_edges.at(0));
+    auto in_regst_0 = GetRelatedRegst(sorted_in_edges.at(0));
     for (const auto& pair : in_regst_0->lbn2shape()) {
       lbns.push_back(pair.first);
     }
   }
   // Enroll Lbn
-  std::shared_ptr<RegstDesc> middle_regst = GetProducedRegstDesc("middle");
+  auto middle_regst = GetProducedRegstDesc("middle");
   for (const std::string& lbn : lbns) {
     ExecNode* node = mut_exec_gph().NewNode();
     node->mut_op() = ConstructBoxingOp(lbn);
     // ibn
     for (size_t i = 0; i < sorted_in_edges.size(); ++i) {
-      std::shared_ptr<RegstDesc> in_regst = GetRelatedRegst(sorted_in_edges.at(i));
+      auto in_regst = GetRelatedRegst(sorted_in_edges.at(i));
       const std::string& ibn = node->op()->input_bns().at(i);
       node->BindBnInOpAndRegst(ibn, in_regst);
     }
     // obn
     for (size_t i = 0; i < sorted_out_edges.size(); ++i) {
-      std::shared_ptr<RegstDesc> out_regst = GetRelatedRegst(sorted_out_edges.at(i));
+      auto out_regst = GetRelatedRegst(sorted_out_edges.at(i));
       const std::string& obn = node->op()->output_bns().at(i);
       out_regst->EnrollLbn(lbn);
       node->BindBnInOpAndRegst(obn, out_regst);
@@ -174,7 +176,8 @@ void BoxingTaskNode::FwInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
 
 namespace {
 
-inline std::shared_ptr<RegstDesc> GetBpRegstFromFwRegst(std::shared_ptr<RegstDesc> fw_regst) {
+std::shared_ptr<RegstDesc> GetBpRegstFromFwRegst(
+    std::shared_ptr<RegstDesc> fw_regst) {
   const TaskEdge* fw_edge = GetRelatedTaskEdge(fw_regst);
   const TaskEdge* bp_edge = fw_edge->related_fwbp_edge();
   return GetRelatedRegst(bp_edge);
@@ -192,8 +195,8 @@ void BoxingTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
     for (const std::string& ibn : fw_node->op()->input_bns()) {
       std::string idbn = GenDiffBn(ibn);
       std::string lbn = fw_node->op()->Lbn4BnInOp(ibn);
-      std::shared_ptr<RegstDesc> in_regst = fw_node->GetRegstFromBnInOp(ibn);
-      std::shared_ptr<RegstDesc> in_diff_regst = GetBpRegstFromFwRegst(in_regst);
+      auto in_regst = fw_node->GetRegstFromBnInOp(ibn);
+      auto in_diff_regst = GetBpRegstFromFwRegst(in_regst);
       in_diff_regst->EnrollLbn(lbn);
       bp_node->BindBnInOpAndRegst(idbn, in_diff_regst);
     }
@@ -201,14 +204,14 @@ void BoxingTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
     for (const std::string& obn : fw_node->op()->output_bns()) {
       std::string odbn = GenDiffBn(obn);
       std::string lbn = fw_node->op()->Lbn4BnInOp(obn);
-      std::shared_ptr<RegstDesc> out_regst = fw_node->GetRegstFromBnInOp(obn);
-      std::shared_ptr<RegstDesc> out_diff_regst = GetBpRegstFromFwRegst(out_regst);
+      auto out_regst = fw_node->GetRegstFromBnInOp(obn);
+      auto out_diff_regst = GetBpRegstFromFwRegst(out_regst);
       bp_node->BindBnInOpAndRegst(odbn, out_diff_regst);
     }
     // data tmp
     for (const std::string& dtbn : fw_node->op()->data_tmp_bns()) {
       std::string lbn = fw_node->op()->Lbn4BnInOp(dtbn);
-      std::shared_ptr<RegstDesc> bp_middle_regst = GetProducedRegstDesc("middle");
+      auto bp_middle_regst = GetProducedRegstDesc("middle");
       bp_middle_regst->EnrollLbn(lbn);
       bp_node->BindBnInOpAndRegst(dtbn, bp_middle_regst);
     }
@@ -218,12 +221,12 @@ void BoxingTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   
 void BoxingTaskNode::BpInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
   for (TaskEdge* fw_in_edge : GetFwNode()->in_edges()) {
-    std::shared_ptr<RegstDesc> in_regst = GetRelatedRegst(fw_in_edge);
-    std::shared_ptr<RegstDesc> in_diff_regst = GetBpRegstFromFwRegst(in_regst);
+    auto in_regst = GetRelatedRegst(fw_in_edge);
+    auto in_diff_regst = GetBpRegstFromFwRegst(in_regst);
     in_diff_regst->CopyShapeFrom(in_regst.get());
   }
-  std::shared_ptr<RegstDesc> fw_middle_regst = GetFwNode()->GetProducedRegstDesc("middle");
-    std::shared_ptr<RegstDesc> bp_middle_regst = GetProducedRegstDesc("middle");
+  auto fw_middle_regst = GetFwNode()->GetProducedRegstDesc("middle");
+    auto bp_middle_regst = GetProducedRegstDesc("middle");
   bp_middle_regst->CopyShapeFrom(fw_middle_regst.get());
 }
 

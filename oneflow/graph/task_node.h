@@ -52,7 +52,12 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   }
   
   //
-  std::shared_ptr<RegstDesc> GetProducedRegstDesc(const std::string& regst_desc_name);
+  std::shared_ptr<RegstDesc> GetProducedRegstDesc(
+      const std::string& regst_desc_name);
+  std::shared_ptr<RegstDesc> GetSubscribedRegstDesc(
+      const std::string& regst_desc_name) {
+    return subscribed_regst_descs_.at(regst_desc_name).lock();
+  }
   void TakeOverRegstDesc(TaskNode* rhs, const std::string& regst_desc_name);
   void EraseProducedEmptyRegsts();
   void EraseZeroSizeBlobInProducedRegsts();
@@ -77,8 +82,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   
   void BindProducedRegstAndOutEdge(std::weak_ptr<RegstDesc>, const TaskEdge*);
 
-  void EnrollProducedRegstDesc(const std::string& regst_desc_name,
-                               std::shared_ptr<RegstDesc>&& regst_desc);
+  std::shared_ptr<RegstDesc> NewProducedRegstDesc(
+      const std::string& regst_desc_name);
+  void SubscribeRegstDesc(const std::string& regst_desc_name,
+                          std::shared_ptr<RegstDesc> regst_desc);
 
  private:
   // In task_gph level
@@ -94,7 +101,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   HashMap<std::string, std::weak_ptr<RegstDesc>> subscribed_regst_descs_;
 
   HashMap<std::weak_ptr<RegstDesc>, const TaskEdge*,
-          std::function<size_t(const std::weak_ptr<RegstDesc>&)>> produced_regst2out_edge_;
+          std::function<size_t(const std::weak_ptr<RegstDesc>&)>>
+  produced_regst2out_edge_;
   HashMap<const TaskEdge*, std::weak_ptr<RegstDesc>> out_edge2produced_regst_;
 
 };

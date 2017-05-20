@@ -37,15 +37,6 @@ void ExecNode::ToProto(ExecNodeProto* ret) const {
   }
 }
 
-std::shared_ptr<RegstDesc> ExecGraph::RelatedModelRegst() const {
-  for (const auto& exec_node : nodes()) {
-    for (const std::string& mbn : exec_node->op()->model_bns()) {
-      return exec_node->GetRegstFromBnInOp(mbn);
-    }
-  }
-  return nullptr;
-}
-
 void ExecGraph::ToExecSequence(ExecSequence* ret) const {
   for (const ExecNode& node: *this) {
     if (!node.bn_in_op2regst().empty()) {

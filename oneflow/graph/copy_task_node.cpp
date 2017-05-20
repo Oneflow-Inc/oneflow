@@ -6,9 +6,10 @@
 namespace oneflow {
 
 void CopyTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph*){
-  auto out_regst = std::make_shared<RegstDesc> ();
+  auto out_regst = NewProducedRegstDesc("copy_out");
   BindProducedRegstAndOutEdge(out_regst, SoleOutEdge());
   std::shared_ptr<RegstDesc> in_regst = GetRelatedRegst(SoleInEdge());
+  SubscribeRegstDesc("copy_in", in_regst);
   out_regst->CopyLbnFrom(in_regst.get());
   
   ExecNode* node = mut_exec_gph().NewNode();
@@ -23,7 +24,6 @@ void CopyTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph*){
   }
   
   mut_exec_gph().UpdateSourceAndSink();
-  EnrollProducedRegstDesc("copy", std::move(out_regst));
 }
 
 void CopyTaskNode::InferShapeOfBlobsInProducedRegsts(TaskGraph*) {

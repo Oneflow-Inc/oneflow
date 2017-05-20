@@ -73,8 +73,6 @@ class ExecGraph final : public Graph<ExecNode, ExecEdge> {
   ExecGraph() = default;
   ~ExecGraph() = default;
   
-  std::shared_ptr<RegstDesc> RelatedModelRegst() const;
-
   void ToExecSequence(ExecSequence* ret) const;
 
  private:
