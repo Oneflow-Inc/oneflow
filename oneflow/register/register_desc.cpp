@@ -80,6 +80,9 @@ std::string RegstDesc::DebugStr() const {
 void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_regst_desc_id(regst_desc_id_);
   ret->set_producer_task_id(producer_->task_id());
+  for (const TaskNode* subscriber : subscribers_) {
+    ret->add_subscriber_task_id(subscriber->task_id());
+  }
   for (const auto& pair : lbn2shape_) {
     PbMapPair<std::string, ShapeProto> pb_pair(pair.first);
     pair.second->ToProto(&(pb_pair.second));

@@ -124,7 +124,17 @@ void TaskNode::ToProto(TaskProto* ret) const {
   ret->set_is_forward(is_fw_node_);
   exec_gph_.ToExecSequence(ret->mutable_exec_sequence());
   for (const auto& pair : produced_regst_descs_) {
-    pair.second->ToProto(ret->mutable_produced_regst_desc()->Add());
+    RegstDescProto regst_desc_proto;
+    pair.second->ToProto(&regst_desc_proto);
+    CHECK(ret->mutable_produced_regst_desc()->insert(
+          {pair.first, regst_desc_proto}).second);
+  }
+  for (const auto& pair : subscribed_regst_descs_) {
+    auto regst_desc = pair.second.lock();
+    if (regst_desc) {
+      CHECK(ret->mutable_subscribed_regst_desc_id()->insert(
+          {pair.first, regst_desc->regst_desc_id()}).second);
+    }
   }
 }
 
