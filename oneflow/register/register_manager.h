@@ -30,11 +30,12 @@ class RegstMgr final {
   RegstMgr() = default;
   void NewRegstFromRegstDesc(
       uint64_t producer_id,
-      const TaskType& producer_type,
+      uint64_t device_id,
+      const std::pair<int, bool>& producer_type,
       const RegstDescProto& regstdesc,
       std::size_t sizeof_floating,
       const std::vector<uint64_t>& subscriber_ids,
-      const HashSet<int>& subscriber_types);
+      const HashSet<std::pair<int, bool>, pair_hash>& subscriber_types);
   
   HashMap<uint64_t, std::unique_ptr<Regst>> regst_id2regst_;
 };
