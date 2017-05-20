@@ -1,6 +1,5 @@
-rm -rf build_oneflow
-mkdir build_oneflow
-cd ./build_oneflow
+mkdir build
+cd ./build
 cmake ..
 make -j
 cd ..

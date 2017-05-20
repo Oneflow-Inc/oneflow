@@ -24,7 +24,7 @@ foreach(LIBRARY_NAME ${GFLAGS_LIBRARY_NAMES})
     list(APPEND GFLAGS_BUILD_STATIC_LIBRARIES ${GFLAGS_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
 endforeach()
 
-if (PREPARE_THIRD_PARTY)
+if (BUILD_THIRD_PARTY)
   
 ExternalProject_Add(gflags
     PREFIX gflags
@@ -55,4 +55,4 @@ add_custom_target(gflags_copy_libs_to_destination
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GFLAGS_BUILD_STATIC_LIBRARIES} ${GFLAGS_LIBRARY_DIR}
   DEPENDS gflags_create_library_dir)
 
-endif(PREPARE_THIRD_PARTY)
+endif(BUILD_THIRD_PARTY)

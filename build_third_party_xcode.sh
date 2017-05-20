@@ -1,7 +1,8 @@
-rm -rf build_third_party
-mkdir build_third_party
-cd ./build_third_party
-cmake ../cmake/third_party -G Xcode -DCMAKE_BUILD_TYPE=Debug
+rm -rf build
+mkdir build
+cd ./build
+cmake .. -G Xcode -DCMAKE_BUILD_TYPE=Debug -DBUILD_THIRD_PARTY=ON
 make -j
+rm CMakeCache.txt
 cd ..
 

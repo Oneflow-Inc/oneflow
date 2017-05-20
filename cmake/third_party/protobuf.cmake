@@ -31,7 +31,7 @@ endforeach()
 set(PROTOBUF_BUILD_PROTOC_EXECUTABLE ${PROTOBUF_BUILD_LIBRARY_DIR}/${PROTOC_EXECUTABLE_NAME})
 set(PROTOBUF_PROTOC_EXECUTABLE ${PROTOBUF_BINARY_DIR}/${PROTOC_EXECUTABLE_NAME})
 
-if (PREPARE_THIRD_PARTY)
+if (BUILD_THIRD_PARTY)
 
 ExternalProject_Add(protobuf
     PREFIX protobuf
@@ -81,4 +81,4 @@ add_custom_target(protobuf_copy_binary_to_destination
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROTOBUF_BUILD_PROTOC_EXECUTABLE} ${PROTOBUF_BINARY_DIR}
   DEPENDS protobuf_create_binary_dir)
 
-endif(PREPARE_THIRD_PARTY)
+endif(BUILD_THIRD_PARTY)
