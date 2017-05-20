@@ -9,7 +9,6 @@
 
 ### 1.2 Windows
 
-if first cmake:
 ```
 ./build_third_party.bat
 ./build_oneflow.bat
