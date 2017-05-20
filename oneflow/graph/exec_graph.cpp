@@ -6,18 +6,6 @@ void ExecEdge::set_lbn(const std::string& lbn) {
   lbn_ = lbn;
 }
 
-void ExecNode::UnBindRegstsWithZeroBlobSize() {
-  EraseIf<std::string, std::weak_ptr<RegstDesc>>(&bn_in_op2regst_, [this]
-      (HashMap<std::string, std::weak_ptr<RegstDesc>>::iterator it) {
-    const std::string& lbn = this->op_->Lbn4BnInOp(it->first);
-    if (lbn == RegstDesc::kAllLbn) {
-      return it->second.lock()->CompElemCntOfAllBlob() == 0;
-    } else {
-      return it->second.lock()->GetShape(lbn).elem_cnt() == 0;
-    }
-  });
-}
-
 std::function<Shape*(const std::string&)>
 ExecNode::GetMutShapePtr4BnInOpFunc() const {
   return [this](const std::string& bn_in_op) -> Shape* {

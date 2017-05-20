@@ -69,8 +69,6 @@ void Compiler::Compile(const JobConf& job_conf,
   IDMgr::Singleton().InitFromResource(JobDesc::Singleton().resource());
 
   BuildGraphs();
-  ForEachTaskNode([](TaskNode* node) { node->EraseProducedEmptyRegsts(); });
-
   InferShape4Regsts();
   EraseMeaningLessNodesAndRegsts();
   OfElf elf;
@@ -167,11 +165,6 @@ void Compiler::InferShape4Regsts() {
 }
 
 void Compiler::EraseMeaningLessNodesAndRegsts() {
-  ForEachTaskNode([](TaskNode* task_node) {
-    for (const auto& exec_node : task_node->exec_gph().nodes()) {
-      exec_node->UnBindRegstsWithZeroBlobSize();
-    }
-  });
   ForEachTaskNode([](TaskNode* task_node) {
     task_node->EraseZeroSizeBlobInProducedRegsts();
     task_node->EraseProducedEmptyRegsts();

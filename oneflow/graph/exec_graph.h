@@ -53,7 +53,6 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   const HashMap<std::string, std::weak_ptr<RegstDesc>>& bn_in_op2regst() const {
     return bn_in_op2regst_;
   }
-  void UnBindRegstsWithZeroBlobSize();
 
   std::function<Shape*(const std::string&)> GetMutShapePtr4BnInOpFunc() const;
   
