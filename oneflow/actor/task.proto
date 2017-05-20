@@ -8,7 +8,7 @@ enum TaskType {
   HostCompTask = 0;
   DeviceCompTask = 1;
   CopyHdTask = 2;
-  CommNetTask = 3;
+  CopyCommNetTask = 3;
   BoxingTask = 4;
 }
 
@@ -21,6 +21,7 @@ message TaskProto {
   bool is_forward = 5;
   ExecSequence exec_sequence = 6;
   repeated RegstDescProto produced_regst_desc = 7;
-  // for CompTask
-  uint64 parallel_id = 1000;
+  // for
+  uint64 parallel_id = 1000; // for CompTask
+  bool is_h2d = 1001; // for CopyHDTask
 }

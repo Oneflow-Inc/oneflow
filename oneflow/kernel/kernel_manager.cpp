@@ -6,8 +6,8 @@ namespace oneflow {
 
 namespace {
 
-#define DEFINE_STATIC_CASE2KERNEL_MAP(DeviceType,FloatingPointType) \
-HashMap<int, std::function<Kernel*()>>& TypeCase2##DeviceType####FloatingPointType##KernelCreator() { \
+#define DEFINE_STATIC_CASE2KERNEL_MAP(DeviceType, FloatingPointType) \
+HashMap<int, std::function<Kernel*()>>& TypeCase2##DeviceType##FloatingPointType##KernelCreator() { \
   static HashMap<int, std::function<Kernel*()>> obj; \
   return obj; \
 }

@@ -6,4 +6,4 @@ machine {
 
 device_num_per_machine: 4
 
-device_type: kCPU
+device_type: kGPU
