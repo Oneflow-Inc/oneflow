@@ -1,6 +1,10 @@
+set -e
+
 rm -rf ./log ./core.*
 mkdir log && mkdir log/dot && mkdir log/dot/data && mkdir log/dot/model && mkdir "log/dot/exec"
-GLOG_logtostderr=0 GLOG_log_dir=./log ./compiler -job_conf_filepath=../prototxt/job_conf.prototxt -elf_filepath=./elf
+GLOG_logtostderr=0 GLOG_log_dir=./log ./compiler -job_conf_filepath=../prototxt/multi_machine_job.prototxt -elf_filepath=./elf
+
+exit 0
 
 if [ "$1" = "--withdot" ]
 then
