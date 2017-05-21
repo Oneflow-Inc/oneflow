@@ -1,5 +1,5 @@
 # main cpp
-list(APPEND of_main_cc ${oneflow_src_dir}/compiler/compiler.cpp)
+list(APPEND of_main_cc ${oneflow_src_dir}/compile/compiler.cpp)
 list(APPEND of_main_cc ${oneflow_src_dir}/runtime/elf_runner.cpp)
 
 # source_group
