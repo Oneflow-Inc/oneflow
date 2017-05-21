@@ -41,6 +41,7 @@ class RegstDesc final {
   int64_t CompElemCntOfAllBlob() const;
   std::string DebugStr() const;
   void ToProto(RegstDescProto*) const;
+  MemoryCase InferMemCase() const;
   
   static const char* kAllLbn;
 

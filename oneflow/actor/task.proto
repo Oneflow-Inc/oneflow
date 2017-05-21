@@ -24,5 +24,4 @@ message TaskProto {
   map<string, uint64> subscribed_regst_desc_id = 8;
   // for
   uint64 parallel_id = 1000; // for CompTask
-  bool is_h2d = 1001; // for CopyHDTask
 }

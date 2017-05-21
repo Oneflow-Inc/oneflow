@@ -119,6 +119,7 @@ void TaskNode::SubscribeRegstDesc(const std::string& regst_desc_name,
 
 void TaskNode::ToProto(TaskProto* ret) const {
   ret->set_id(task_id_);
+  ret->set_type(task_type());
   ret->set_machine_id(stage_node_->machine_id());
   ret->set_thrd_local_id(thrd_loc_id_);
   ret->set_is_forward(is_fw_node_);

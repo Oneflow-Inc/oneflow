@@ -4,10 +4,11 @@ package oneflow;
 import "common/shape.proto";
 import "memory/memory_case.proto";
 
-message RegstDescProto  {
+message RegstDescProto {
   uint64 regst_desc_id = 1;
   uint64 producer_task_id = 2;
   repeated uint64 subscriber_task_id = 3;
   map<string, ShapeProto> lbn2shape = 4;
   int64 register_num = 5;
+  MemoryCase mem_case = 6;
 }

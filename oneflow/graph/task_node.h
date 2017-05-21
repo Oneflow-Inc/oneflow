@@ -72,6 +72,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   //
   virtual void ToProto(TaskProto*) const;
   virtual std::string VisualStr() const override;
+  virtual TaskType task_type() const = 0;
   std::string DebugStr() const;
   
  protected:
