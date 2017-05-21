@@ -40,8 +40,11 @@ void GrpcWorkerSession::GetMemoryDesc() {
   req.set_allocated_memory_desc(&memory_desc);
   
   oneflow::GetMemoryDescResponse resp;
-  auto cb = [] () {
-    //TODO
+  auto cb = [resp] () {
+    oneflow::MemoryDesc memory_desc_resp;
+    memory_desc_resp.set_machine_id(resp.memory_desc().machine_id());
+    memory_desc_resp.set_memory_address(resp.memory_desc().memory_address());
+    memory_desc_resp.set_remoted_token(resp.memory_desc().remoted_token());
     //get info from response that back from server
   };
   remote_worker->GetMemoryDescAsync(&req, &resp, cb); 
