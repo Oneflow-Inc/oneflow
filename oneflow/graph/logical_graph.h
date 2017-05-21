@@ -6,7 +6,7 @@
 #include "operator/operator.h"
 #include "conf/dlnet_conf.pb.h"
 #include "conf/strategy.pb.h"
-#include "compiler/parallel_desc.h"
+#include "compile/parallel_desc.h"
 
 namespace oneflow {
 
