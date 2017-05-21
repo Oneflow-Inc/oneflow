@@ -19,6 +19,12 @@ bool GrpcWorker::Send(const NetworkMessage& msg) {
   oneflow::SendMessageRequest req;
   req.set_allocated_network_message(&network_message);
 
+  oneflow::SendMessageResponse resp;
+  auto cb = [] {
+    //TODO
+    //todo something or do nothing
+  };
+  remote_worker->SendMessageAsync(&req, &resp, cb);
   return true;
 }
 
