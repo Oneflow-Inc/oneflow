@@ -93,7 +93,8 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
 }
 
 MemoryCase RegstDesc::InferMemCase() const {
-  TODO();
+  // TODO
+  return MemoryCase();
 }
 
 const char* RegstDesc::kAllLbn = "OfReservedAllLbn";

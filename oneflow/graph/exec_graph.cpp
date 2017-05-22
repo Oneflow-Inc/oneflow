@@ -20,8 +20,11 @@ ExecNode::GetMutShapePtr4BnInOpFunc() const {
 void ExecNode::ToProto(ExecNodeProto* ret) const {
   ret->set_op_name(op_->op_name());
   for (const auto& bn_regst: bn_in_op2regst_) {
-    ret->mutable_bn_in_op2regst_desc_id()->insert({
-        bn_regst.first, bn_regst.second.lock()->regst_desc_id()});
+    auto regst = bn_regst.second.lock();
+    if (regst) {
+      ret->mutable_bn_in_op2regst_desc_id()->insert({
+          bn_regst.first, regst->regst_desc_id()});
+    }
   }
 }
 

@@ -271,8 +271,8 @@ void CompTaskNode::FwEnrollLbn2ModelAndTmpRegsts() {
 void CompTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   BpBuildExecGraph();
   // New produced registers
+  auto in_diff_regst = NewProducedRegstDesc("in_diff");
   if (!out_edges().empty()) {
-    auto in_diff_regst = NewProducedRegstDesc("in_diff");
     BindProducedRegstAndOutEdge(in_diff_regst, SoleOutEdge());
   }
   NewProducedRegstDesc("model_diff");
