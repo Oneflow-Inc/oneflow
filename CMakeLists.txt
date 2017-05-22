@@ -102,7 +102,9 @@ RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
                                ${of_all_rel_protos})
 
 add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
-target_link_libraries(of_protoobj ${oneflow_third_party_libs})
+if (DOWNLOAD_THIRD_PARTY)
+  add_dependencies(of_protoobj ${oneflow_third_party_dependencies})
+endif()
 
 #grpc obj lib
 list(APPEND proto2grpc_rel_name distributed_runtime/worker_service.proto)
@@ -111,25 +113,21 @@ RELATIVE_GRPC_GENERATE_CPP(GRPC_SRCS GRPC_HDRS
                            ${proto2grpc_rel_name})
 
 add_library(of_grpcobj ${GRPC_SRCS} ${GRPC_HDRS})
-target_link_libraries(of_grpcobj ${of_protoobj} ${oneflow_third_party_libs})
+add_dependencies(of_grpcobj of_protoobj)
 
-if (DOWNLOAD_THIRD_PARTY)
-  add_dependencies(of_protoobj ${oneflow_third_party_dependencies})
-  add_dependencies(of_grpcobj ${oneflow_third_party_dependencies})
-endif()
+
 
 # cc obj lib
 include_directories(${oneflow_src_dir})
 include_directories(${PROJECT_BINARY_DIR})
 add_library(of_ccobj ${of_all_obj_cc})
-target_link_libraries(of_ccobj ${oneflow_third_party_libs})
-add_dependencies(of_ccobj of_protoobj of_grpcobj)
+add_dependencies(of_ccobj of_grpcobj)
 
 # build main
 foreach(cc ${of_main_cc})
   get_filename_component(main_name ${cc} NAME_WE)
   add_executable(${main_name} ${cc})
-  target_link_libraries(${main_name} PUBLIC of_ccobj of_protoobj of_grpcobj ${oneflow_third_party_libs})
+  target_link_libraries(${main_name} PUBLIC of_ccobj of_grpcobj of_protoobj ${oneflow_third_party_libs})
 endforeach()
 
 # build test
@@ -137,6 +135,6 @@ foreach(cc ${of_all_test_cc})
   get_filename_component(test_name ${cc} NAME_WE)
   string(CONCAT test_exe_name ${test_name} exe)
   add_executable(${test_exe_name} ${cc})
-  target_link_libraries(${test_exe_name} PUBLIC of_ccobj of_protoobj of_grpcobj ${oneflow_third_party_libs})
+  target_link_libraries(${test_exe_name} PUBLIC of_ccobj of_grpcobj of_protoobj ${oneflow_third_party_libs})
   add_test(NAME ${test_name} COMMAND ${test_exe_name})
 endforeach()
