@@ -76,7 +76,6 @@ class Graph {
   virtual std::string ToDotString() const;
   void ToDotFile(const std::string& dot_filepath) const;
 
- protected:
   // Enroll
   void EnrollNode(NodeType* new_node) {
     nodes_.emplace_back(new_node);

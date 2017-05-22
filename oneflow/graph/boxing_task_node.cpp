@@ -180,6 +180,7 @@ std::shared_ptr<RegstDesc> GetBpRegstFromFwRegst(
     std::shared_ptr<RegstDesc> fw_regst) {
   const TaskEdge* fw_edge = GetRelatedTaskEdge(fw_regst);
   const TaskEdge* bp_edge = fw_edge->related_fwbp_edge();
+  if (bp_edge == nullptr) { return nullptr; }
   return GetRelatedRegst(bp_edge);
 }
 
@@ -189,17 +190,23 @@ void BoxingTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   EnrollAllRegstAndBindRelatedEdge();
   const ExecGraph& fw_exec_gph = GetFwNode()->exec_gph();
   for (const std::unique_ptr<ExecNode>& fw_node: fw_exec_gph.nodes()) {
-    ExecNode* bp_node = mut_exec_gph().NewNode();
+    std::unique_ptr<ExecNode> bp_node(new ExecNode);
     bp_node->mut_op() = fw_node->op();
+    bool need_enroll = true;
     // in_diff
     for (const std::string& ibn : fw_node->op()->input_bns()) {
       std::string idbn = GenDiffBn(ibn);
       std::string lbn = fw_node->op()->Lbn4BnInOp(ibn);
       auto in_regst = fw_node->GetRegstFromBnInOp(ibn);
       auto in_diff_regst = GetBpRegstFromFwRegst(in_regst);
+      if (!in_diff_regst) {
+        need_enroll = false;
+        break;
+      }
       in_diff_regst->EnrollLbn(lbn);
       bp_node->BindBnInOpAndRegst(idbn, in_diff_regst);
     }
+    if (need_enroll == false) { continue; }
     // out_diff
     for (const std::string& obn : fw_node->op()->output_bns()) {
       std::string odbn = GenDiffBn(obn);
@@ -215,6 +222,7 @@ void BoxingTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
       bp_middle_regst->EnrollLbn(lbn);
       bp_node->BindBnInOpAndRegst(dtbn, bp_middle_regst);
     }
+    mut_exec_gph().EnrollNode(std::move(bp_node));
   }
   mut_exec_gph().UpdateSourceAndSink();
 }
@@ -222,8 +230,9 @@ void BoxingTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
 void BoxingTaskNode::BpInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
   for (TaskEdge* fw_in_edge : GetFwNode()->in_edges()) {
     auto in_regst = GetRelatedRegst(fw_in_edge);
-    auto in_diff_regst = GetBpRegstFromFwRegst(in_regst);
-    in_diff_regst->CopyShapeFrom(in_regst.get());
+    if (auto in_diff_regst = GetBpRegstFromFwRegst(in_regst)) {
+      in_diff_regst->CopyShapeFrom(in_regst.get());
+    }
   }
   auto fw_middle_regst = GetFwNode()->GetProducedRegstDesc("middle");
     auto bp_middle_regst = GetProducedRegstDesc("middle");

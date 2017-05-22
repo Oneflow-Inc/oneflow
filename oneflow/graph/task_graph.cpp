@@ -245,17 +245,17 @@ void TaskGraph::GenerateRelatedBpNodes(
     if (auto comp_task_node = dynamic_cast<CompTaskNode*> (&(*task_node))) {
       if (comp_task_node->IsLossNode()) {
         loss_node_vec->push_back(&(*task_node));
-      } else {
-        if (!comp_task_node->chain_node()->in_edges().empty()) {
-          EnrollNode(comp_task_node->BuildAndConnectBpNode());
-        }
+        continue;
       }
-    } else {
-      for (TaskEdge* edge : task_node->in_edges()) {
-        if (edge->src_node()->GetBpNode() != nullptr) {
-          EnrollNode(task_node->BuildAndConnectBpNode());
-          break;
-        }
+      if (comp_task_node->chain_node()->HasOpWithModelOrModelTmpBlob()) {
+        EnrollNode(comp_task_node->BuildAndConnectBpNode());
+        continue;
+      }
+    }
+    for (TaskEdge* edge : task_node->in_edges()) {
+      if (edge->src_node()->GetBpNode() != nullptr) {
+        EnrollNode(task_node->BuildAndConnectBpNode());
+        break;
       }
     }
   }
