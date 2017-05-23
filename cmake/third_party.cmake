@@ -1,17 +1,5 @@
-set(THIRD_PARTY_DIR "${CMAKE_BINARY_DIR}/third_party"
-  CACHE PATH "Location where third party headers and libs will be put.")
-mark_as_advanced(THIRD_PARTY_DIR)
-
 if (NOT WIN32)
   find_package(Threads)
-endif()
-
-if(WIN32)
-  add_definitions(-DNOMINMAX -D_WIN32_WINNT=0x0A00 -DLANG_CXX11 -DCOMPILER_MSVC -D__VERSION__=\"MSVC\")
-  add_definitions(-DWIN32 -DOS_WIN -D_MBCS -DWIN64 -DWIN32_LEAN_AND_MEAN -DNOGDI -DPLATFORM_WINDOWS)
-  add_definitions(/bigobj /nologo /EHsc /GF /FC /MP /Gm-)
-  add_definitions(-DGOOGLE_GLOG_DLL_DECL=)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 endif()
 
 include(zlib)

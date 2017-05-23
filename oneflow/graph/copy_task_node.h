@@ -44,8 +44,6 @@ class CopyHDTaskNode final : public CopyTaskNode {
   
   void ToProto(TaskProto* ret) const override {
     TaskNode::ToProto(ret);
-    ret->set_type(TaskType::CopyHdTask);
-    ret->set_is_h2d(IsH2D());
   };
 
  private:
@@ -58,6 +56,7 @@ class CopyHDTaskNode final : public CopyTaskNode {
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return of_make_unique<CopyHDTaskNode> ();
   }
+  TaskType task_type() const override { return CopyHdTask; }
 
   bool is_fw_in_copy_;
 
@@ -75,7 +74,6 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
 
   void ToProto(TaskProto* ret) const override {
     TaskNode::ToProto(ret);
-    ret->set_type(TaskType::CopyCommNetTask);
   };
 
  private:
@@ -88,6 +86,7 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
     set_stage_node(fw_node->SoleInEdge()->src_node()->stage_node());
     set_task_id();
   }
+  TaskType task_type() const override { return CopyCommNetTask; }
 
 };
 

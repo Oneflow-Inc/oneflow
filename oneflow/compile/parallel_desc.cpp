@@ -1,4 +1,4 @@
-#include "compiler/parallel_desc.h"
+#include "compile/parallel_desc.h"
 #include <algorithm>
 
 namespace oneflow {

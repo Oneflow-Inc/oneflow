@@ -80,6 +80,8 @@ void RegstMgr::NewRegstFromRegstDesc(
 
 void RegstMgr::InitFromProto(const OfElf& ofelf) {
   HashSet<uint64_t> regst_desc_idsinmachine;
+  /*
+  //Init all regst for id, cnt, producer_id, lbn2blob
   HashMap<uint64_t, HashSet<uint64_t>> actor_id2produced_regst_desc_id;
   HashMap<uint64_t, std::vector<uint64_t>> regst_desc_id2subscriber_ids;
   HashMap<uint64_t, HashSet<std::pair<int, bool>, pair_hash>> regst_desc_id2subscriber_types;
@@ -133,6 +135,8 @@ void RegstMgr::InitFromProto(const OfElf& ofelf) {
                             regst_desc_id2subscriber_types.at(regst_desc_id));
     }
   }
+  }*/
+  TODO();
 }
 
 }

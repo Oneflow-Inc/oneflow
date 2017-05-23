@@ -47,6 +47,11 @@ inline bool operator != (const google::protobuf::MessageLite& lhs,
   return !(lhs == rhs);
 }
 
+template<typename T>
+bool operator == (const std::weak_ptr<T>& lhs, const std::weak_ptr<T>& rhs) {
+  return lhs.lock().get() == rhs.lock().get();
+}
+
 template<typename Key, typename T, typename Hash = std::hash<Key>>
 using HashMap = std::unordered_map<Key, T, Hash>;
 

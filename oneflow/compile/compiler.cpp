@@ -31,8 +31,10 @@ class Compiler final {
   void ForEachTaskNode(std::function<void(TaskNode*)> func);
   
   void BuildGraphs();
+  void BuildModelGraphs(const std::pair<const ChainNode*, std::vector<CompTaskNode*>>&);
   void InferShape4Regsts();
   void EraseMeaningLessNodesAndRegsts();
+  void GenElfFile(const std::string& elf_filepath);
   
   std::vector<std::unique_ptr<TaskGraph>> ordered_task_gphs_;
 
@@ -69,31 +71,9 @@ void Compiler::Compile(const JobConf& job_conf,
   IDMgr::Singleton().InitFromResource(JobDesc::Singleton().resource());
 
   BuildGraphs();
-  ForEachTaskNode([](TaskNode* node) { node->EraseProducedEmptyRegsts(); });
-
   InferShape4Regsts();
   EraseMeaningLessNodesAndRegsts();
-  OfElf elf;
-  ForEachTaskNode([&elf](TaskNode* node) {
-    if (!node->produced_regst_descs().empty()) {
-      node->ToProto(elf.mutable_task()->Add());
-    }
-  });
-  OpMgr::Singleton().AllOpToProto(elf.mutable_op());
-  JobDesc::Singleton().ToProto(elf.mutable_job_desc());
-  ForEachChainNode([&elf](ChainNode* node) {
-    for (std::shared_ptr<const Operator> op : node->op_vec()) {
-      CHECK(elf.mutable_op_name2device_type()->insert(
-          {op->op_name(), node->parallel_desc()->device_type()}).second);
-    }
-  });
-  ForEachStageNode([&elf](StageNode* node) {
-    auto pbmap = elf.mutable_machine_id2op_name_set();
-    for (std::shared_ptr<const Operator> op : node->chain_node()->op_vec()) {
-      (*pbmap)[node->machine_id()].add_op_name(op->op_name());
-    }
-  });
-  PrintProtoToTextFile(elf, elf_filepath);
+  GenElfFile(elf_filepath);
 }
 
 void Compiler::BuildGraphs() {
@@ -120,43 +100,48 @@ void Compiler::BuildGraphs() {
   }
   // model graph
   for (const auto& pair : data_chain2sorted_fw_comp_tasks) {
-    if (pair.first->HasOpWithModelOrModelTmpBlob() == false) { continue; } 
-    std::string chain_tag = pair.first->op_vec().front()->op_name();
-    str_replace(&chain_tag, '/', '_');
-    const std::string dot_path_prefix = DotDir() + "/model/" + chain_tag + "_";
-    ParallelPolicy policy = pair.first->parallel_desc()->policy();
-    LOG(INFO) << "Build MdUpdtTaskGraph... for " << chain_tag;
-    auto updt_gph = new MdUpdtTaskGraph(
-        "md_updt_" + chain_tag,
-        pair.first, pair.second, dot_path_prefix + "model_update_");
-    ChainNode* updt_chain = updt_gph->chain_gph()->SoleSinkNode();
-    auto sorted_updt_tasks = updt_gph->SortedCompTasksInChain(updt_chain);
-    HashMap<uint64_t, CompTaskNode*> parallel_id2updt_task;
-    for (CompTaskNode* update_task : sorted_updt_tasks) {
-      CHECK(parallel_id2updt_task.emplace(
-            update_task->parallel_id(), update_task).second);
-    }
-    ordered_task_gphs_.emplace_back(updt_gph);
-    LOG(INFO) << "Build MdLoadTaskGraph... for " << chain_tag;
-    auto load_gph = new MdLoadTaskGraph(
-        "md_load_" + chain_tag,
-        updt_chain, parallel_id2updt_task, policy,
-        dot_path_prefix + "model_load_");
-    ordered_task_gphs_.emplace_back(load_gph);
-    if (JobDesc::Singleton().is_train()) {
-      LOG(INFO) << "Build MdSaveTaskGraph... for " << chain_tag;
-      auto save_gph = new MdSaveTaskGraph(
-          "md_save_" + chain_tag,
-          updt_chain, parallel_id2updt_task, policy,
-          dot_path_prefix + "model_save_");
-      ordered_task_gphs_.emplace_back(save_gph);
-    }
+    BuildModelGraphs(pair);
   }
   // all exec_graph 2 dot
   ForEachTaskNode([](TaskNode* node) {
     std::string file_path = DotDir() + "/exec/" + node->node_id_str() + ".dot";
     node->exec_gph().ToDotFile(file_path);
   });
+}
+
+void Compiler::BuildModelGraphs(
+    const std::pair<const ChainNode*, std::vector<CompTaskNode*>>& pair) {
+  if (pair.first->HasOpWithModelOrModelTmpBlob() == false) { return; } 
+  std::string chain_tag = pair.first->op_vec().front()->op_name();
+  str_replace(&chain_tag, '/', '_');
+  const std::string dot_path_prefix = DotDir() + "/model/" + chain_tag + "_";
+  ParallelPolicy policy = pair.first->parallel_desc()->policy();
+  LOG(INFO) << "Build MdUpdtTaskGraph... for " << chain_tag;
+  auto updt_gph = new MdUpdtTaskGraph(
+      "md_updt_" + chain_tag,
+      pair.first, pair.second, dot_path_prefix + "model_update_");
+  ChainNode* updt_chain = updt_gph->chain_gph()->SoleSinkNode();
+  auto sorted_updt_tasks = updt_gph->SortedCompTasksInChain(updt_chain);
+  HashMap<uint64_t, CompTaskNode*> parallel_id2updt_task;
+  for (CompTaskNode* update_task : sorted_updt_tasks) {
+    CHECK(parallel_id2updt_task.emplace(
+          update_task->parallel_id(), update_task).second);
+  }
+  ordered_task_gphs_.emplace_back(updt_gph);
+  LOG(INFO) << "Build MdLoadTaskGraph... for " << chain_tag;
+  auto load_gph = new MdLoadTaskGraph(
+      "md_load_" + chain_tag,
+      updt_chain, parallel_id2updt_task, policy,
+      dot_path_prefix + "model_load_");
+  ordered_task_gphs_.emplace_back(load_gph);
+  if (JobDesc::Singleton().is_train()) {
+    LOG(INFO) << "Build MdSaveTaskGraph... for " << chain_tag;
+    auto save_gph = new MdSaveTaskGraph(
+        "md_save_" + chain_tag,
+        updt_chain, parallel_id2updt_task, policy,
+        dot_path_prefix + "model_save_");
+    ordered_task_gphs_.emplace_back(save_gph);
+  }
 }
 
 void Compiler::InferShape4Regsts() {
@@ -168,14 +153,33 @@ void Compiler::InferShape4Regsts() {
 
 void Compiler::EraseMeaningLessNodesAndRegsts() {
   ForEachTaskNode([](TaskNode* task_node) {
-    for (const auto& exec_node : task_node->exec_gph().nodes()) {
-      exec_node->UnBindRegstsWithZeroBlobSize();
-    }
-  });
-  ForEachTaskNode([](TaskNode* task_node) {
     task_node->EraseZeroSizeBlobInProducedRegsts();
     task_node->EraseProducedEmptyRegsts();
   });
+}
+
+void Compiler::GenElfFile(const std::string& elf_filepath) {
+  OfElf elf;
+  ForEachTaskNode([&elf](TaskNode* node) {
+    if (!node->produced_regst_descs().empty()) {
+      node->ToProto(elf.mutable_task()->Add());
+    }
+  });
+  OpMgr::Singleton().AllOpToProto(elf.mutable_op());
+  JobDesc::Singleton().ToProto(elf.mutable_job_desc());
+  ForEachChainNode([&elf](ChainNode* node) {
+    for (std::shared_ptr<const Operator> op : node->op_vec()) {
+      CHECK(elf.mutable_op_name2device_type()->insert(
+          {op->op_name(), node->parallel_desc()->device_type()}).second);
+    }
+  });
+  ForEachStageNode([&elf](StageNode* node) {
+    auto pbmap = elf.mutable_machine_id2op_name_set();
+    for (std::shared_ptr<const Operator> op : node->chain_node()->op_vec()) {
+      (*pbmap)[node->machine_id()].add_op_name(op->op_name());
+    }
+  });
+  PrintProtoToTextFile(elf, elf_filepath);
 }
 
 } // namespace oneflow
