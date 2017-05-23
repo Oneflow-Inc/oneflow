@@ -93,8 +93,42 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
 }
 
 MemoryCase RegstDesc::InferMemCase() const {
-  // TODO
-  return MemoryCase();
+  MemoryCase mem_case;
+  uint64_t device_id = IDMgr::Singleton().DevPhyId4ThrdLocId(thrd_loc_id_);
+  if (producer_->task_type() == DeviceCompTask) {
+    mem_case.mutable_device_cuda_mem()->set_device_id(device_id);
+  } else if (producer_->task_type() == HostCompTask || 
+             producer_->task_type() == BoxingTask) {
+    mem_case.mutable_host_pageable_mem();
+    for (const TaskNode* subscriber : subscribers_) {
+      if (subscriber->task_type() == CopyCommNetTask) {
+        mem_case.mutable_host_pinned_mem()->set_need_rdma(true);
+      }
+      if (subscriber->task_type() == CopyHdTask && subscriber->IsH2D()) {
+        mem_case.mutable_host_pinned_mem()->set_need_cuda(true);
+      }
+    }
+  } else if (producer_->task_type() == CopyCommNetTask) {
+    mem_case.mutable_host_pinned_mem()->set_need_rdma(true);
+    for (const TaskNode* subscriber : subscribers_) {
+      if (subscriber->task_type() == CopyHdTask && subscriber->IsH2D()) {
+        mem_case.mutable_host_pinned_mem()->set_need_cuda(true);
+      }
+    }
+  } else if (producer_->task_type() == CopyHdTask) {
+    if (producer_->IsH2D()) {
+      mem_case.mutable_device_cuda_mem()->set_device_id(device_id);
+    }
+    else {
+      mem_case.mutable_host_pinned_mem()->set_need_cuda(true);
+      for (const TaskNode* subscriber : subscribers_) {
+        if (subscriber->task_type() == CopyCommNetTask) {
+          mem_case.mutable_host_pinned_mem()->set_need_rdma(true);
+        }
+      }
+    }
+  }
+  return mem_case;
 }
 
 const char* RegstDesc::kAllLbn = "OfReservedAllLbn";
