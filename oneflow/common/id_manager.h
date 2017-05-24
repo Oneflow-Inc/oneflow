@@ -22,7 +22,7 @@ class IDMgr final {
     device_num_per_machine_ = resource.device_num_per_machine();
     for (uint64_t i = 0; i < machine_num_; ++i) {
       const std::string& machine_name = resource.machine(i).name();
-      CHECK(machine_name2machine_id_.emplace(machine_name, i).second);
+      CHECK(machine_name2machine_id_.emplace(machine_name, i << 52).second);
     }
   }
 
@@ -42,7 +42,7 @@ class IDMgr final {
   uint64_t CommNetThrdLocId() const { return device_num_per_machine_ + 2; }
 
   uint64_t NewTaskId(uint64_t machine_id, uint64_t thrd_local_id) {
-    uint64_t thrd_id = (machine_id | (thrd_local_id << 48));
+    uint64_t thrd_id = (machine_id | (thrd_local_id << 44));
     return thrd_id | ((thread_id2num_of_tasks_[thrd_id]++) << 28);
   }
   uint64_t NewRegstDescId(uint64_t producer_task_id) {
@@ -55,13 +55,13 @@ class IDMgr final {
     return task_id;
   }
   uint64_t NewRegstId(uint64_t regst_desc_id) {
-    TODO();
+    return regst_desc_id | regst_desc_id2num_of_register_[regst_desc_id]++;
   }
   uint64_t MachineId4ActorId(uint64_t actor_id) {
-    TODO();
+    return actor_id >> 52 << 52;
   }
   uint64_t ThrdLocId4ActorId(uint64_t actor_id) {
-    TODO();
+    return actor_id << 12 >> 56;
   }
 
  private:
@@ -71,6 +71,7 @@ class IDMgr final {
   HashMap<uint64_t, uint64_t> thread_id2num_of_tasks_;
   HashMap<uint64_t, uint64_t> task_id2num_of_register_desc_;
   HashMap<std::string, uint64_t> machine_name2machine_id_;
+  HashMap<uint64_t, uint64_t> regst_desc_id2num_of_register_;
 };
 
 }  // namespace oneflow
