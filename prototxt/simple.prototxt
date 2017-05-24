@@ -1,0 +1,33 @@
+name: "SimpleNet"
+
+op {
+  name: "mnist"
+  data_loader_conf {
+    feature: "feature"
+    shape_of_one_feature_ins {
+      dim: 1
+      dim: 28
+      dim: 28
+    }
+    label: "label"
+  }
+}
+
+
+op {
+  name: "softmax"
+  softmax_conf {
+    in: "mnist/feature"
+    out: "out"
+  }
+}
+
+op {
+  name: "loss"
+  multinomial_logistic_loss_conf {
+    prediction: "softmax/out"
+    label: "mnist/label"
+    loss: "loss"
+  }
+}
+

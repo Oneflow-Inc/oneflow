@@ -1,0 +1,39 @@
+placement_group {
+  op_set {
+    op_name: "mnist"
+  }
+  parallel_conf {
+    policy: kDataParallel
+    device_set {
+      device_name: "centos-0:disk"
+      device_name: "centos-1:disk"
+    }
+  }
+}
+
+
+placement_group {
+  op_set {
+    op_name: "softmax"
+  }
+  parallel_conf {
+    policy: kModelParallel
+    device_set {
+      device_name: "centos-0:0-3"
+      device_name: "centos-1:0-3"
+    }
+  }
+}
+
+placement_group {
+  op_set {
+    op_name: "loss"
+  }
+  parallel_conf {
+    policy: kDataParallel
+    device_set {
+      device_name: "centos-0:0-3"
+      device_name: "centos-1:0-3"
+    }
+  }
+}
