@@ -1,0 +1,24 @@
+syntax = "proto3";
+package oneflow;
+
+message HostPageableMemory {
+}
+
+message CudaPinnedMemory {
+}
+
+message RdmaPinnedMemory {
+}
+
+message GpuMemory {
+  int32 device_id = 1;
+}
+
+message MemoryCase {
+  oneof case {
+    HostPageableMemory host_pageable_mem = 1;
+    CudaPinnedMemory cuda_pinned_mem = 2;
+    RdmaPinnedMemory rdma_pinned_mem = 3;
+    GpuMemory gpu_mem = 4;
+  }
+}

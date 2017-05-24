@@ -17,7 +17,6 @@ class BoxingTaskNode : public TaskNode {
 
   void ToProto(TaskProto* ret) const override {
     TaskNode::ToProto(ret);
-    ret->set_type(TaskType::BoxingTask);
   };
 
  protected:
@@ -53,6 +52,7 @@ class BoxingTaskNode : public TaskNode {
   void BpInferShapeOfBlobsInProducedRegsts(TaskGraph*);
   
   void EnrollAllRegstAndBindRelatedEdge();
+  TaskType task_type() const override { return BoxingTask; }
   
 };
 

@@ -1,19 +1,30 @@
 # Minimum CMake required
 cmake_minimum_required(VERSION 3.5)
 
+option(BUILD_THIRD_PARTY "Build third party or oneflow" OFF)
+
 # Project
-project(oneflow C CXX)
+if (BUILD_THIRD_PARTY)
+  project(third_party C CXX)
+else()
+  project(oneflow C CXX)
+endif()
+
 enable_testing()
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 set(oneflow_src_dir ${PROJECT_SOURCE_DIR}/oneflow)
 set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
 
-# option
-option(DOWNLOAD_THIRD_PARTY "Download and build all third party codes" OFF)
+if (WIN32)
+  set(CMAKE_BUILD_TYPE Debug)
+  add_definitions(-DNOMINMAX -D_WIN32_WINNT=0x0A00 -DLANG_CXX11 -DCOMPILER_MSVC -D__VERSION__=\"MSVC\")
+  add_definitions(-DWIN32 -DOS_WIN -D_MBCS -DWIN64 -DWIN32_LEAN_AND_MEAN -DNOGDI -DPLATFORM_WINDOWS)
+  add_definitions(/bigobj /nologo /EHsc /GF /FC /MP /Gm-)
+  add_definitions(-DGOOGLE_GLOG_DLL_DECL=)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 
-# Different set for different platform
-if (MSVC)
   foreach(flag_var
       CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
       CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
@@ -22,11 +33,13 @@ if (MSVC)
       string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
     endif()
   endforeach()
-endif()
-
-if (UNIX)
+else()
+  list(APPEND CUDA_NVCC_FLAGS "-std=c++11 -w")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wno-sign-compare")
 endif()
+
+set(THIRD_PARTY_DIR "${PROJECT_SOURCE_DIR}/third_party"
+  CACHE PATH "Where the third party headers and libs are put")
 
 # Modules
 list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir}/third_party)
@@ -35,72 +48,11 @@ include(util)
 include(proto2cpp)
 include(third_party)
 
-# main cpp
-list(APPEND of_main_cc ${oneflow_src_dir}/job/compiler.cpp)
-
-# source_group
-SUBDIRLIST(subdir_list ${oneflow_src_dir})
-foreach(subdir ${subdir_list})
-  file(GLOB subdir_headers    "${oneflow_src_dir}/${subdir}/*.h")
-  file(GLOB subdir_obj_cpps   "${oneflow_src_dir}/${subdir}/*.cpp")
-  file(GLOB subdir_test_cpps  "${oneflow_src_dir}/${subdir}/*_test.cpp")
-  file(GLOB subdir_protos     "${oneflow_src_dir}/${subdir}/*.proto")
-  foreach(test_cpp ${subdir_test_cpps})
-    list(REMOVE_ITEM subdir_obj_cpps ${test_cpp})
-  endforeach()
-  foreach(main_cpp ${of_main_cc})
-    list(REMOVE_ITEM subdir_obj_cpps ${main_cpp})
-  endforeach()
-  source_group(${subdir} FILES ${subdir_headers} ${subdir_obj_cpps} {subdir_protos})
-  list(APPEND of_all_obj_cc ${subdir_headers} ${subdir_obj_cpps})
-  list(APPEND of_all_proto ${subdir_protos})
-  list(APPEND of_all_test_cc ${subdir_test_cpps})
-endforeach()
-
-# proto obj lib
-foreach(proto_name ${of_all_proto})
-  file(RELATIVE_PATH proto_rel_name ${oneflow_src_dir} ${proto_name})
-  list(APPEND of_all_rel_protos ${proto_rel_name})
-endforeach()
-
-RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
-                               ${oneflow_src_dir}
-                               ${of_all_rel_protos})
-
-add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
-target_link_libraries(of_protoobj ${oneflow_third_party_libs})
-if (DOWNLOAD_THIRD_PARTY)
-  add_dependencies(of_protoobj ${oneflow_third_party_dependencies})
+if (BUILD_THIRD_PARTY)
+  add_custom_target(prepare_oneflow_third_party ALL
+  DEPENDS ${oneflow_third_party_dependencies})
+  set(BUILD_THIRD_PARTY OFF CACHE BOOL "" FORCE)
+else()
+  include(oneflow)
 endif()
 
-# cc obj lib
-include_directories(${oneflow_src_dir})
-include_directories(${PROJECT_BINARY_DIR})
-add_library(of_ccobj ${of_all_obj_cc})
-target_link_libraries(of_ccobj ${oneflow_third_party_libs})
-add_dependencies(of_ccobj of_protoobj)
-
-if(APPLE)
-  set(of_libs -Wl,-force_load of_ccobj of_protoobj)
-elseif(UNIX)
-  set(of_libs -Wl,--whole-archive of_ccobj of_protoobj -Wl,--no-whole-archive)
-elseif(WIN32)
-  set(of_libs of_ccobj of_protoobj)
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:of_ccobj") 
-endif()
-
-# build main
-foreach(cc ${of_main_cc})
-  get_filename_component(main_name ${cc} NAME_WE)
-  add_executable(${main_name} ${cc})
-  target_link_libraries(${main_name} PUBLIC ${of_libs} ${oneflow_third_party_libs})
-endforeach()
-
-# build test
-foreach(cc ${of_all_test_cc})
-  get_filename_component(test_name ${cc} NAME_WE)
-  string(CONCAT test_exe_name ${test_name} exe)
-  add_executable(${test_exe_name} ${cc})
-  target_link_libraries(${test_exe_name} PUBLIC ${of_libs} ${oneflow_third_party_libs})
-  add_test(NAME ${test_name} COMMAND ${test_exe_name})
-endforeach()

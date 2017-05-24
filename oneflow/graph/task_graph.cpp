@@ -82,7 +82,7 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
   uint64_t parallel_idx = stage->parallel_range().begin();
   for (auto device_phy_id : stage->SortedDevicePhyIds()) {
     uint64_t thread_local_id =
-        IDMgr::Singleton().ThrdLocId4DevicePhyId(device_phy_id);
+        IDMgr::Singleton().ThrdLocId4DevPhyId(device_phy_id);
     // comp_task_node
     DeviceCompTaskNode* comp_task_node = NewTaskNode<DeviceCompTaskNode> ();
     comp_task_node->SetFwNode();
@@ -122,14 +122,14 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
 
 void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
                                         TaskNodesInStage* task_nodes_in_stage) {
-  uint64_t parallel_begin = stage->parallel_range().begin();
-  uint64_t parallel_end = stage->parallel_range().end();
+  const uint64_t parallel_begin = stage->parallel_range().begin();
+  const uint64_t parallel_end = stage->parallel_range().end();
   uint64_t parallel_idx = parallel_begin;
   while (parallel_idx < parallel_end) {
     HostCompTaskNode* comp_task_node = NewTaskNode<HostCompTaskNode> ();
     comp_task_node->SetFwNode();
     comp_task_node->set_stage_node(stage);
-    comp_task_node->set_parallel_id(parallel_idx++);
+    comp_task_node->set_parallel_id(parallel_idx);
     comp_task_node->set_task_id();
     // Set comp_task_node::thread_local_id
     if (stage->SortedDevicePhyIds().empty()) {
@@ -137,11 +137,12 @@ void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
     } else {
       auto device_id = stage->SortedDevicePhyIds().at(parallel_idx - parallel_begin);
       comp_task_node->mut_thrd_loc_id() =
-          IDMgr::Singleton().ThrdLocId4DevicePhyId(device_id);
+          IDMgr::Singleton().ThrdLocId4DevPhyId(device_id);
     }
     // 
     task_nodes_in_stage->comp_in_task_nodes.push_back(comp_task_node);
     task_nodes_in_stage->comp_out_task_nodes.push_back(comp_task_node);
+    parallel_idx += 1;
   }
 }
 
@@ -217,23 +218,15 @@ void TaskGraph::ConnectBoxingTaskNodes(
         TaskConnect(out_node, NewEdge(), in_node);
         continue;
       }
-      CopyCommNetTaskNode* out_comm_net_node = NewTaskNode<CopyCommNetTaskNode> ();
-      out_comm_net_node->SetFwNode();
-      out_comm_net_node->set_stage_node(cur_stage.get());
-      out_comm_net_node->mut_thrd_loc_id() =
+      CopyCommNetTaskNode* comm_net_node = NewTaskNode<CopyCommNetTaskNode> ();
+      comm_net_node->SetFwNode();
+      comm_net_node->set_stage_node(succ_stage);
+      comm_net_node->mut_thrd_loc_id() =
           IDMgr::Singleton().CommNetThrdLocId();
-      out_comm_net_node->SetFwSender();
-      out_comm_net_node->set_task_id();
-      CopyCommNetTaskNode* in_comm_net_node = NewTaskNode<CopyCommNetTaskNode> ();
-      in_comm_net_node->SetFwNode();
-      in_comm_net_node->set_stage_node(succ_stage);
-      in_comm_net_node->mut_thrd_loc_id() =
-          IDMgr::Singleton().CommNetThrdLocId();
-      in_comm_net_node->SetFwReceiver();
-      in_comm_net_node->set_task_id();
-      TaskConnect(out_node, NewEdge(), out_comm_net_node);
-      TaskConnect(out_comm_net_node, NewEdge(), in_comm_net_node);
-      TaskConnect(in_comm_net_node, NewEdge(), in_node);
+      comm_net_node->set_task_id();
+
+      TaskConnect(out_node, NewEdge(), comm_net_node);
+      TaskConnect(comm_net_node, NewEdge(), in_node);
     }
   }
 }
@@ -252,17 +245,17 @@ void TaskGraph::GenerateRelatedBpNodes(
     if (auto comp_task_node = dynamic_cast<CompTaskNode*> (&(*task_node))) {
       if (comp_task_node->IsLossNode()) {
         loss_node_vec->push_back(&(*task_node));
-      } else {
-        if (!comp_task_node->chain_node()->in_edges().empty()) {
-          EnrollNode(comp_task_node->BuildAndConnectBpNode());
-        }
+        continue;
       }
-    } else {
-      for (TaskEdge* edge : task_node->in_edges()) {
-        if (edge->src_node()->GetBpNode() != nullptr) {
-          EnrollNode(task_node->BuildAndConnectBpNode());
-          break;
-        }
+      if (comp_task_node->chain_node()->HasOpWithModelOrModelTmpBlob()) {
+        EnrollNode(comp_task_node->BuildAndConnectBpNode());
+        continue;
+      }
+    }
+    for (TaskEdge* edge : task_node->in_edges()) {
+      if (edge->src_node()->GetBpNode() != nullptr) {
+        EnrollNode(task_node->BuildAndConnectBpNode());
+        break;
       }
     }
   }

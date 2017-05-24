@@ -44,7 +44,6 @@ class CopyHDTaskNode final : public CopyTaskNode {
   
   void ToProto(TaskProto* ret) const override {
     TaskNode::ToProto(ret);
-    ret->set_type(TaskType::CopyHdTask);
   };
 
  private:
@@ -57,6 +56,7 @@ class CopyHDTaskNode final : public CopyTaskNode {
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return of_make_unique<CopyHDTaskNode> ();
   }
+  TaskType task_type() const override { return CopyHdTask; }
 
   bool is_fw_in_copy_;
 
@@ -68,24 +68,12 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
   CopyCommNetTaskNode() = default;
   ~CopyCommNetTaskNode() = default;
 
-  bool IsSender() const {
-    return (IsFwNode() && is_fw_sender_)
-        || (IsBpNode() && !is_fw_sender_);
-  }
-  bool IsReceiver() const {
-    return !IsSender();
-  }
-
-  void SetFwSender();
-  void SetFwReceiver();
-  
   std::string VisualStr() const override {
     return TaskNode::VisualStr() + "CommNet";
   }
 
   void ToProto(TaskProto* ret) const override {
     TaskNode::ToProto(ret);
-    ret->set_type(TaskType::CommNetTask);
   };
 
  private:
@@ -95,10 +83,10 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
   }
   void InitWithFwNode(TaskNode* fw_node) override {
     TaskNode::InitWithFwNode(fw_node);
-    is_fw_sender_ = of_dynamic_cast<CopyCommNetTaskNode*>(fw_node)->is_fw_sender_;
+    set_stage_node(fw_node->SoleInEdge()->src_node()->stage_node());
+    set_task_id();
   }
-
-  bool is_fw_sender_;
+  TaskType task_type() const override { return CopyCommNetTask; }
 
 };
 

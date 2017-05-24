@@ -1,0 +1,16 @@
+syntax = "proto3";
+package oneflow;
+
+import "operator/operator.proto";
+import "actor/task.proto";
+import "common/job_desc.proto";
+import "conf/resource.proto";
+import "conf/strategy.proto";
+
+message OfElf {
+  repeated TaskProto task = 1;
+  repeated OperatorProto op = 3;
+  JobDescProto job_desc = 4;
+  map<string, DeviceType> op_name2device_type = 5;
+  map<uint64, OpNameSet> machine_id2op_name_set = 6;
+}

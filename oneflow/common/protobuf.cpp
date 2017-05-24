@@ -1,4 +1,4 @@
-#include "common/proto_io.h"
+#include "common/protobuf.h"
 #include <stdint.h>
 #include <algorithm>
 #include <fstream>

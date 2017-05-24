@@ -1,10 +1,10 @@
-#ifndef ONEFLOW_JOB_PARALLEL_DESC_H_
-#define ONEFLOW_JOB_PARALLEL_DESC_H_
+#ifndef ONEFLOW_COMPILE_PARALLEL_DESC_H_
+#define ONEFLOW_COMPILE_PARALLEL_DESC_H_
 
 #include "common/util.h"
-#include "job/id_manager.h"
-#include "job/strategy.pb.h"
-#include "job/job_desc.h"
+#include "common/id_manager.h"
+#include "conf/strategy.pb.h"
+#include "common/job_desc.h"
 #include <exception>
 
 namespace oneflow {
@@ -54,4 +54,4 @@ class ParallelDesc {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_JOB_PARALLEL_DESC_H_
+#endif // ONEFLOW_COMPILE_PARALLEL_DESC_H_

@@ -20,7 +20,6 @@ class ConvolutionOp final : public UserOperator {
       uint64_t parallel_num) const override;
 
  private:
-
 };
 
 } // namespace oneflow

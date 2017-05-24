@@ -83,7 +83,6 @@ class HostCompTaskNode final : public CompTaskNode {
 
   void ToProto(TaskProto* ret) const override {
     CompTaskNode::ToProto(ret);
-    ret->set_type(TaskType::HostCompTask);
   }
 
  private:
@@ -93,6 +92,7 @@ class HostCompTaskNode final : public CompTaskNode {
   void InitWithFwNode(TaskNode* fw_node) override {
     CompTaskNode::InitWithFwNode(fw_node);
   }
+  TaskType task_type() const override { return HostCompTask; }
 
 };
 
@@ -104,7 +104,6 @@ class DeviceCompTaskNode final : public CompTaskNode {
   
   void ToProto(TaskProto* ret) const override {
     CompTaskNode::ToProto(ret);
-    ret->set_type(TaskType::DeviceCompTask);
   };
 
  private:
@@ -114,6 +113,7 @@ class DeviceCompTaskNode final : public CompTaskNode {
   void InitWithFwNode(TaskNode* fw_node) override {
     CompTaskNode::InitWithFwNode(fw_node);
   }
+  TaskType task_type() const override { return DeviceCompTask; }
 
 };
 

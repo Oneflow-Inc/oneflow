@@ -1,0 +1,80 @@
+placement_group {
+  op_set {
+    op_name: "mnist"
+  }
+  parallel_conf {
+    policy: kDataParallel
+    device_set {
+      device_name: "centos-0:disk"
+    }
+  }
+}
+
+placement_group {
+  op_set {
+    op_name: "conv1"
+    op_name: "pool1"
+    op_name: "conv2_1x1"
+    op_name: "conv2_1x3"
+    op_name: "conv2_1x5"
+    op_name: "conv2_3x3"
+    op_name: "conv2_5x5"
+    op_name: "concat2"
+    op_name: "pool2"
+  }
+  parallel_conf {
+    policy: kDataParallel
+    device_set {
+      device_name: "centos-0:0-1"
+    }
+  }
+}
+
+placement_group {
+  op_set {
+    op_name: "conv3_1x1"
+    op_name: "conv3_1x3"
+    op_name: "conv3_1x5"
+    op_name: "conv3_3x3"
+    op_name: "conv3_5x5"
+    op_name: "concat3"
+  }
+  parallel_conf {
+    policy: kDataParallel
+    device_set {
+      device_name: "centos-0:2-3"
+    }
+  }
+}
+
+placement_group {
+  op_set {
+    op_name: "ip1"
+    op_name: "relu1"
+    op_name: "ip2"
+    op_name: "softmax1"
+  }
+  parallel_conf {
+    policy: kModelParallel
+    device_set {
+      device_name: "centos-0:0-3"
+    }
+  }
+}
+
+placement_group {
+  op_set {
+    op_name: "ip3"
+    op_name: "relu3"
+    op_name: "ip4"
+    op_name: "softmax2"
+    op_name: "loss1"
+    op_name: "loss2"
+  }
+  parallel_conf {
+    policy: kDataParallel
+    device_set {
+      device_name: "centos-0:0-3"
+    }
+  }
+}

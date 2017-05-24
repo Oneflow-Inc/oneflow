@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_GRAPH_TASK_NODE_H_
 #define ONEFLOW_GRAPH_TASK_NODE_H_
 
-#include "task/task.pb.h"
+#include "actor/task.pb.h"
 #include "graph/stage_graph.h"
 #include "graph/exec_graph.h"
 
@@ -52,21 +52,27 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   }
   
   //
-  RegstDesc* GetProducedRegstDesc(const std::string& regst_desc_name);
+  std::shared_ptr<RegstDesc> GetProducedRegstDesc(
+      const std::string& regst_desc_name);
+  std::shared_ptr<RegstDesc> GetSubscribedRegstDesc(
+      const std::string& regst_desc_name) {
+    return subscribed_regst_descs_.at(regst_desc_name).lock();
+  }
   void TakeOverRegstDesc(TaskNode* rhs, const std::string& regst_desc_name);
   void EraseProducedEmptyRegsts();
   void EraseZeroSizeBlobInProducedRegsts();
   
-  const HashMap<std::string, std::unique_ptr<RegstDesc>>&
+  const HashMap<std::string, std::shared_ptr<RegstDesc>>&
   produced_regst_descs() const { return produced_regst_descs_; }
 
   // 
-  const TaskEdge* GetOutEdge4ProducedRegst(RegstDesc*) const;
-  RegstDesc* GetProducedRegst4OutEdge(const TaskEdge*) const;
+  const TaskEdge* GetOutEdge4ProducedRegst(std::weak_ptr<RegstDesc>) const;
+  std::shared_ptr<RegstDesc> GetProducedRegst4OutEdge(const TaskEdge*) const;
 
   //
   virtual void ToProto(TaskProto*) const;
   virtual std::string VisualStr() const override;
+  virtual TaskType task_type() const = 0;
   std::string DebugStr() const;
   
  protected:
@@ -75,10 +81,12 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   ExecGraph& mut_exec_gph() { return exec_gph_; }
   
-  void BindProducedRegstAndOutEdge(RegstDesc*, const TaskEdge*);
+  void BindProducedRegstAndOutEdge(std::weak_ptr<RegstDesc>, const TaskEdge*);
 
-  void EnrollProducedRegstDesc(const std::string& regst_desc_name,
-                               std::unique_ptr<RegstDesc>&& regst_desc);
+  std::shared_ptr<RegstDesc> NewProducedRegstDesc(
+      const std::string& regst_desc_name);
+  void SubscribeRegstDesc(const std::string& regst_desc_name,
+                          std::shared_ptr<RegstDesc> regst_desc);
 
  private:
   // In task_gph level
@@ -90,10 +98,13 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   // In task level
   ExecGraph exec_gph_;
 
-  HashMap<std::string, std::unique_ptr<RegstDesc>> produced_regst_descs_;
+  HashMap<std::string, std::shared_ptr<RegstDesc>> produced_regst_descs_;
+  HashMap<std::string, std::weak_ptr<RegstDesc>> subscribed_regst_descs_;
 
-  HashMap<RegstDesc*, const TaskEdge*> produced_regst2out_edge_;
-  HashMap<const TaskEdge*, RegstDesc*> out_edge2produced_regst_;
+  HashMap<std::weak_ptr<RegstDesc>, const TaskEdge*,
+          std::function<size_t(const std::weak_ptr<RegstDesc>&)>>
+  produced_regst2out_edge_;
+  HashMap<const TaskEdge*, std::weak_ptr<RegstDesc>> out_edge2produced_regst_;
 
 };
 
@@ -117,12 +128,12 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
 
 };
 
-inline RegstDesc* GetRelatedRegst(const TaskEdge* edge) {
+inline std::shared_ptr<RegstDesc> GetRelatedRegst(const TaskEdge* edge) {
   return edge->src_node()->GetProducedRegst4OutEdge(edge);
 }
 
-inline const TaskEdge* GetRelatedTaskEdge(RegstDesc* regst) {
-  return regst->GetProducer()->GetOutEdge4ProducedRegst(regst);
+inline const TaskEdge* GetRelatedTaskEdge(std::weak_ptr<RegstDesc> regst) {
+  return regst.lock()->GetProducer()->GetOutEdge4ProducedRegst(regst);
 }
 
 } // namespace oneflow

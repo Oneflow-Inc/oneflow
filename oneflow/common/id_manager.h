@@ -1,8 +1,8 @@
-#ifndef ONEFLOW_JOB_ID_MANAGER_H_
-#define ONEFLOW_JOB_ID_MANAGER_H_
+#ifndef ONEFLOW_COMMON_ID_MANAGER_H_
+#define ONEFLOW_COMMON_ID_MANAGER_H_
 
 #include "common/util.h"
-#include "job/resource.pb.h"
+#include "conf/resource.pb.h"
 
 namespace oneflow {
 
@@ -30,8 +30,12 @@ class IDMgr final {
   uint64_t MachineID4MachineName(const std::string& machine_name) const {
     return machine_name2machine_id_.at(machine_name);
   }
-  uint64_t ThrdLocId4DevicePhyId(uint64_t device_phy_id) const {
+  uint64_t ThrdLocId4DevPhyId(uint64_t device_phy_id) const {
     return device_phy_id;
+  }
+  uint64_t DevPhyId4ThrdLocId(uint64_t thrd_loc_id) const {
+    CHECK_LT(thrd_loc_id, device_num_per_machine_);
+    return thrd_loc_id;
   }
   uint64_t DiskThrdLocId() const { return device_num_per_machine_; }
   uint64_t BoxingThrdLocId() const { return device_num_per_machine_ + 1; }
@@ -47,6 +51,18 @@ class IDMgr final {
   }
 
   // Runtime
+  uint64_t GetActorIdFromTaskId(uint64_t task_id) {
+    return task_id;
+  }
+  uint64_t NewRegstId(uint64_t regst_desc_id) {
+    TODO();
+  }
+  uint64_t MachineId4ActorId(uint64_t actor_id) {
+    TODO();
+  }
+  uint64_t ThrdLocId4ActorId(uint64_t actor_id) {
+    TODO();
+  }
 
  private:
   IDMgr() = default;
@@ -59,4 +75,4 @@ class IDMgr final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_JOB_ID_MANAGER_H_
+#endif  // ONEFLOW_COMMON_ID_MANAGER_H_

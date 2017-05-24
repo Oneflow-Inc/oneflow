@@ -6,30 +6,30 @@
 namespace oneflow {
 
 void CopyTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph*){
-  auto out_regst = of_make_unique<RegstDesc> ();
-  BindProducedRegstAndOutEdge(out_regst.get(), SoleOutEdge());
-  RegstDesc* in_regst = GetRelatedRegst(SoleInEdge());
-  out_regst->CopyLbnFrom(in_regst);
+  auto out_regst = NewProducedRegstDesc("copy_out");
+  BindProducedRegstAndOutEdge(out_regst, SoleOutEdge());
+  std::shared_ptr<RegstDesc> in_regst = GetRelatedRegst(SoleInEdge());
+  SubscribeRegstDesc("copy_in", in_regst);
+  out_regst->CopyLbnFrom(in_regst.get());
   
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = ConstructOp();
   
   if (IsFwNode()) {
     node->BindBnInOpAndRegst(node->op()->SoleIbn(), in_regst);
-    node->BindBnInOpAndRegst(node->op()->SoleObn(), out_regst.get());
+    node->BindBnInOpAndRegst(node->op()->SoleObn(), out_regst);
   } else {
     node->BindBnInOpAndRegst(node->op()->SoleOdbn(), in_regst);
-    node->BindBnInOpAndRegst(node->op()->SoleIdbn(), out_regst.get());
+    node->BindBnInOpAndRegst(node->op()->SoleIdbn(), out_regst);
   }
   
   mut_exec_gph().UpdateSourceAndSink();
-  EnrollProducedRegstDesc("copy", std::move(out_regst));
 }
 
 void CopyTaskNode::InferShapeOfBlobsInProducedRegsts(TaskGraph*) {
-  RegstDesc* in_regst = GetRelatedRegst(SoleInEdge());
-  RegstDesc* out_regst = GetRelatedRegst(SoleOutEdge());
-  out_regst->CopyShapeFrom(in_regst);
+  std::shared_ptr<RegstDesc> in_regst = GetRelatedRegst(SoleInEdge());
+  std::shared_ptr<RegstDesc> out_regst = GetRelatedRegst(SoleOutEdge());
+  out_regst->CopyShapeFrom(in_regst.get());
 }
 
 void CopyHDTaskNode::SetFwInCopy() {
@@ -50,22 +50,10 @@ std::shared_ptr<const Operator> CopyHDTaskNode::ConstructOp() const {
   return OpMgr::Singleton().ConstructOp(op_conf);
 }
 
-void CopyCommNetTaskNode::SetFwSender() {
-  CHECK(IsFwNode());
-  is_fw_sender_ = true;
-}
-
-void CopyCommNetTaskNode::SetFwReceiver() {
-  CHECK(IsFwNode());
-  is_fw_sender_ = false;
-}
-
 std::shared_ptr<const Operator> CopyCommNetTaskNode::ConstructOp() const {
   OperatorConf op_conf;
   op_conf.set_name("comm_net_" + NewUniqueId());
-  CopyCommNetOpConf* comm_net_conf = op_conf.mutable_copy_comm_net_conf();
-  comm_net_conf->set_type(
-      IsSender() ? CopyCommNetOpConf::kSender : CopyCommNetOpConf::kReceiver);
+  op_conf.mutable_copy_comm_net_conf();
   return OpMgr::Singleton().ConstructOp(op_conf);
 }
 
