@@ -1,7 +1,6 @@
 #include "graph/comp_task_node.h"
 #include "graph/model_update_task_graph.h"
 #include "graph/model_save_task_graph.h"
-#include "graph/model_load_task_graph.h"
 #include "operator/operator_manager.h"
 #include "operator/clone_op.h"
 
@@ -64,6 +63,12 @@ void CompTaskNode::MdUpdtFwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   TakeOverRegstDesc(fw_task, "model");
   TakeOverRegstDesc(fw_task, "model_tmp");
   auto model_regst = GetProducedRegstDesc("model");
+  if (chain_node()->parallel_desc()->device_type() == kGPU) {
+    auto model_load_buf_regst = NewProducedRegstDesc("model_load_buf");
+    model_load_buf_regst->CopyLbnFrom(model_regst.get());
+  } else {
+    CHECK(chain_node()->parallel_desc()->device_type() == kCPU);
+  }
 
   ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = chain_node()->SoleOp();
@@ -82,67 +87,30 @@ void CompTaskNode::MdUpdtFwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
 }
 
 void CompTaskNode::MdUpdtFwInferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
-  // do nothing
-}
-
-void CompTaskNode::MdLoadFwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
-  auto md_load_gph = of_dynamic_cast<MdLoadTaskGraph*> (gph);
-  if (IsFaker()) {
-    CompTaskNode* updt = md_load_gph->parallel_id2updt_task().at(parallel_id());
-    ExecNode* exec_node = updt->exec_gph().SoleNode();
-    exec_node->BindBnInOpAndRegst("model_init", GetRelatedRegst(SoleInEdge()));
-    updt->SubscribeRegstDesc("model_init", GetRelatedRegst(SoleInEdge()));
-    return;
-  }
-  ExecNode* exec_node = mut_exec_gph().NewNode();
-  exec_node->mut_op() = chain_node()->SoleOp();
-  mut_exec_gph().UpdateSourceAndSink();
-  
-  auto model_regst = NewProducedRegstDesc("model");
-  exec_node->BindBnInOpAndRegst(exec_node->op()->SoleObn(), model_regst);
-  BindProducedRegstAndOutEdge(model_regst, SoleOutEdge());
-  CompTaskNode* update_0 = md_load_gph->parallel_id2updt_task().at(0);
-  model_regst->CopyLbnFrom(update_0->GetProducedRegstDesc("model").get());
-}
-
-void CompTaskNode::MdLoadFwInferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
-  if (IsFaker()) { return; }
-  auto md_load_gph = of_dynamic_cast<MdLoadTaskGraph*> (gph);
-  std::shared_ptr<RegstDesc> this_model = GetProducedRegstDesc("model");
-  if (md_load_gph->policy() == kDataParallel) {
-    CompTaskNode* update_0 = md_load_gph->parallel_id2updt_task().at(0);
-    this_model->CopyShapeFrom(update_0->GetProducedRegstDesc("model").get());
-    return;
-  }
-  for (const auto& pair : this_model->mut_lbn2shape()) {
-    const std::string& lbn = pair.first;
-    Shape* this_lbn_shape_ptr = pair.second.get();
-    int64_t cnt = 0;
-    for (const auto& pair : md_load_gph->parallel_id2updt_task()) {
-      cnt += pair.second->GetProducedRegstDesc("model")->GetShape(lbn).elem_cnt();
-    }
-    *this_lbn_shape_ptr = Shape({cnt});
+  if (auto model_load_buf_regst = GetProducedRegstDesc("model_load_buf")) {
+    auto model_regst = GetProducedRegstDesc("model");
+    model_load_buf_regst->CopyShapeFrom(model_regst.get());
   }
 }
 
 void CompTaskNode::MdSaveFwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   auto md_save_gph = of_dynamic_cast<MdSaveTaskGraph*> (gph);
-  if (IsFaker()) {
-    CompTaskNode* updt = md_save_gph->parallel_id2updt_task().at(parallel_id());
-    auto model_regst = updt->GetProducedRegstDesc("model");
-    BindProducedRegstAndOutEdge(model_regst, SoleOutEdge());
-    return;
+  CompTaskNode* updt = md_save_gph->parallel_id2updt_task().at(parallel_id());
+  auto model_regst = updt->GetProducedRegstDesc("model");
+  SubscribeRegstDesc("model", model_regst);
+  if (updt->chain_node()->parallel_desc()->device_type() == kGPU) {
+    auto model_save_buf_regst = NewProducedRegstDesc("model_save_buf");
+    model_save_buf_regst->CopyLbnFrom(model_regst.get());
+  } else {
+    CHECK(chain_node()->parallel_desc()->device_type() == kCPU);
   }
-  ExecNode* exec_node = mut_exec_gph().NewNode();
-  exec_node->mut_op() = chain_node()->SoleOp();
-  mut_exec_gph().UpdateSourceAndSink();
-  const std::string& ibn = exec_node->op()->SoleIbn();
-  exec_node->BindBnInOpAndRegst(ibn, GetRelatedRegst(SoleInEdge()));
-  SubscribeRegstDesc(ibn, GetRelatedRegst(SoleInEdge()));
 }
 
 void CompTaskNode::MdSaveFwInferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
-  // do nothing
+  if (auto model_save_buf_regst = GetProducedRegstDesc("model_save_buf")) {
+    auto model_regst = GetSubscribedRegstDesc("model");
+    model_save_buf_regst->CopyShapeFrom(model_regst.get());
+  }
 }
 
 void CompTaskNode::FwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {

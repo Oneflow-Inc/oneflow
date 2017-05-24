@@ -2,7 +2,6 @@
 #include "glog/logging.h"
 #include "common/id_manager.h"
 #include "common/protobuf.h"
-#include "graph/model_load_task_graph.h"
 #include "graph/model_save_task_graph.h"
 #include "graph/model_update_task_graph.h"
 #include "graph/data_task_graph.h"
@@ -128,12 +127,6 @@ void Compiler::BuildModelGraphs(
           update_task->parallel_id(), update_task).second);
   }
   ordered_task_gphs_.emplace_back(updt_gph);
-  LOG(INFO) << "Build MdLoadTaskGraph... for " << chain_tag;
-  auto load_gph = new MdLoadTaskGraph(
-      "md_load_" + chain_tag,
-      updt_chain, parallel_id2updt_task, policy,
-      dot_path_prefix + "model_load_");
-  ordered_task_gphs_.emplace_back(load_gph);
   if (JobDesc::Singleton().is_train()) {
     LOG(INFO) << "Build MdSaveTaskGraph... for " << chain_tag;
     auto save_gph = new MdSaveTaskGraph(
