@@ -16,6 +16,10 @@ std::string CompTaskNode::VisualStr() const {
   return ss.str();
 }
 
+std::string CompTaskNode::device_name() const {
+  TODO();
+}
+
 void CompTaskNode::DataFwBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   Lbn2NodeBnMap lbn2producer;
   Lbn2NodeBnMap extern_in_lbn2consumer;
@@ -56,7 +60,7 @@ void CompTaskNode::MdUpdtFwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   if (bp_task != nullptr) {
     model_diff_regst = bp_task->GetProducedRegstDesc("model_diff");
   }
-  if (IsFaker()) {
+  if (chain_node()->op_vec().empty()) {
     BindProducedRegstAndOutEdge(model_diff_regst, SoleOutEdge());
     return;
   }
@@ -95,22 +99,19 @@ void CompTaskNode::MdUpdtFwInferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
 
 void CompTaskNode::MdSaveFwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   auto md_save_gph = of_dynamic_cast<MdSaveTaskGraph*> (gph);
-  CompTaskNode* updt = md_save_gph->parallel_id2updt_task().at(parallel_id());
-  auto model_regst = updt->GetProducedRegstDesc("model");
-  SubscribeRegstDesc("model", model_regst);
-  if (updt->chain_node()->parallel_desc()->device_type() == kGPU) {
-    auto model_save_buf_regst = NewProducedRegstDesc("model_save_buf");
-    model_save_buf_regst->CopyLbnFrom(model_regst.get());
+  CompTaskNode* updt_task = md_save_gph->update_task();
+  if (in_edges().empty()) {
+    BindProducedRegstAndOutEdge(updt_task->GetProducedRegstDesc("model"),
+                                SoleOutEdge());
+  } else if (out_edges().empty()) {
+    SubscribeRegstDesc("model", GetRelatedRegst(SoleInEdge()));
   } else {
-    CHECK(chain_node()->parallel_desc()->device_type() == kCPU);
+    UNEXPECTED_RUN();
   }
 }
 
 void CompTaskNode::MdSaveFwInferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
-  if (auto model_save_buf_regst = GetProducedRegstDesc("model_save_buf")) {
-    auto model_regst = GetSubscribedRegstDesc("model");
-    model_save_buf_regst->CopyShapeFrom(model_regst.get());
-  }
+  // do nothing
 }
 
 void CompTaskNode::FwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {

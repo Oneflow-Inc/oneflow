@@ -11,12 +11,9 @@ class MdSaveTaskGraph final : public TaskGraph {
   MdSaveTaskGraph() = delete;
   ~MdSaveTaskGraph() = default;
 
-  MdSaveTaskGraph(
-      const std::string& name,
-      const ChainNode* update_chain,
-      const HashMap<uint64_t, CompTaskNode*>& parallel_id2updt_task,
-      ParallelPolicy data_chain_policy,
-      const std::string& dot_path_prefix);
+  MdSaveTaskGraph(const std::string& name,
+                  CompTaskNode* update_task,
+                  const std::string& dot_path_prefix);
 
   CompTaskNodeMemFunc Func4FwBuildExecAndEnrollLbn2Regsts() const override {
     return &CompTaskNode::MdSaveFwBuildExecAndEnrollLbn2Regsts;
@@ -25,16 +22,12 @@ class MdSaveTaskGraph final : public TaskGraph {
     return &CompTaskNode::MdSaveFwInferShapeOfBlobsInProducedRegsts;
   }
 
-  const HashMap<uint64_t, CompTaskNode*>& parallel_id2updt_task() const {
-    return parallel_id2updt_task_;
-  }
+  CompTaskNode* update_task() const { return update_task_; }
 
  private:
-  void BuildTaskGraph(const ChainNode* update_chain,
-                      const std::string& dot_path_prefix);
-  
-  ParallelPolicy data_chain_policy_;
-  HashMap<uint64_t, CompTaskNode*> parallel_id2updt_task_;
+  void BuildTaskGraph(const std::string& dot_path_prefix);
+
+  CompTaskNode* update_task_;
 
 };
 

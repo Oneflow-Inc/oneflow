@@ -52,6 +52,8 @@ class ParallelDesc {
   uint64_t parallel_num_;
 };
 
+std::string GetMachineNameFromDeviceName(const std::string& device_name);
+
 } // namespace oneflow
 
 #endif // ONEFLOW_COMPILE_PARALLEL_DESC_H_

@@ -2,24 +2,32 @@
 
 namespace oneflow {
 
-MdSaveTaskGraph::MdSaveTaskGraph(
-    const std::string& name,
-    const ChainNode* update_chain,
-    const HashMap<uint64_t, CompTaskNode*>& parallel_id2updt_task,
-    ParallelPolicy data_chain_policy,
-    const std::string& dot_path_prefix) {
+MdSaveTaskGraph::MdSaveTaskGraph(const std::string& name,
+                                 CompTaskNode* update_task,
+                                 const std::string& dot_path_prefix) {
   mut_name() = name;
-  data_chain_policy_ = data_chain_policy;
-  parallel_id2updt_task_ = parallel_id2updt_task;
-  BuildTaskGraph(update_chain, dot_path_prefix);
+  update_task_ = update_task;
+  BuildTaskGraph(dot_path_prefix);
   BuildExecAndEnrollLbn2Regsts();
 }
 
-void MdSaveTaskGraph::BuildTaskGraph(const ChainNode* update_chain,
-                                     const std::string& dot_path_prefix) {
+void MdSaveTaskGraph::BuildTaskGraph(const std::string& dot_path_prefix) {
   auto chain_gph = of_make_unique<ChainGraph> ();
+  // faker
+  ChainNode* faker_chain = chain_gph->NewNode();
+  ParallelConf faker_pr_conf;
+  faker_pr_conf.set_policy(kDataParallel);
+  faker_pr_conf.mutable_device_set()->add_device_name(update_task_->device_name());
+  faker_chain->mut_parallel_desc().reset(new ParallelDesc(faker_pr_conf));
+  faker_chain->mut_output_lbns() = {RegstDesc::kAllLbn};
+  // save
   ChainNode* save_chain = chain_gph->NewNode();
-  save_chain->mut_parallel_desc() = update_chain->parallel_desc();
+  std::string machine_name = GetMachineNameFromDeviceName(update_task_->device_name());
+  ParallelConf save_pr_conf;
+  save_pr_conf.set_policy(kDataParallel);
+  save_pr_conf.mutable_device_set()->add_device_name(machine_name + ":disk");
+  save_chain->mut_parallel_desc().reset(new ParallelDesc(save_pr_conf));
+  save_chain->mut_input_lbns() = {RegstDesc::kAllLbn};
   //
   chain_gph->UpdateSourceAndSink();
   chain_gph->ToDotFile(dot_path_prefix + "chain_graph.dot");

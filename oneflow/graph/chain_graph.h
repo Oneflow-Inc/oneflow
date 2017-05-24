@@ -48,8 +48,6 @@ class ChainNode final : public Node<ChainNode, ChainEdge> {
     return output_lbns_;
   }
 
-  bool IsFaker() const { return op_vec_.empty(); }
-
   bool IsLossNode() const {
     return op_vec_.size() == 1 && op_vec_.front()->IsLossOp();
   }

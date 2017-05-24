@@ -119,21 +119,19 @@ void Compiler::BuildModelGraphs(
   auto updt_gph = new MdUpdtTaskGraph(
       "md_updt_" + chain_tag,
       pair.first, pair.second, dot_path_prefix + "model_update_");
-  ChainNode* updt_chain = updt_gph->chain_gph()->SoleSinkNode();
-  auto sorted_updt_tasks = updt_gph->SortedCompTasksInChain(updt_chain);
-  HashMap<uint64_t, CompTaskNode*> parallel_id2updt_task;
-  for (CompTaskNode* update_task : sorted_updt_tasks) {
-    CHECK(parallel_id2updt_task.emplace(
-          update_task->parallel_id(), update_task).second);
-  }
   ordered_task_gphs_.emplace_back(updt_gph);
   if (JobDesc::Singleton().is_train()) {
     LOG(INFO) << "Build MdSaveTaskGraph... for " << chain_tag;
-    auto save_gph = new MdSaveTaskGraph(
-        "md_save_" + chain_tag,
-        updt_chain, parallel_id2updt_task, policy,
-        dot_path_prefix + "model_save_");
-    ordered_task_gphs_.emplace_back(save_gph);
+    ChainNode* updt_chain = updt_gph->chain_gph()->SoleSinkNode();
+    auto updt_tasks = updt_gph->SortedCompTasksInChain(updt_chain);
+    if (policy == kDataParallel) { updt_tasks = {updt_tasks.front()}; }
+    for (CompTaskNode* update_task : updt_tasks) {
+      auto save_gph = new MdSaveTaskGraph(
+          "md_save_" + update_task->node_id_str(),
+          update_task,
+          dot_path_prefix + "model_save_" + update_task->node_id_str() + "_");
+      ordered_task_gphs_.emplace_back(save_gph);
+    }
   }
 }
 
