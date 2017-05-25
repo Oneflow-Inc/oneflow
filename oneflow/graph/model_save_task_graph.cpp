@@ -2,6 +2,8 @@
 
 namespace oneflow {
 
+class MdSaveCompTaskNode;
+
 MdSaveTaskGraph::MdSaveTaskGraph(const std::string& name,
                                  CompTaskNode* update_task,
                                  const std::string& dot_path_prefix) {
@@ -31,7 +33,7 @@ void MdSaveTaskGraph::BuildTaskGraph(const std::string& dot_path_prefix) {
   //
   chain_gph->UpdateSourceAndSink();
   chain_gph->ToDotFile(dot_path_prefix + "chain_graph.dot");
-  BuildFromChainGph(std::move(chain_gph), false, dot_path_prefix);
+  BuildFromChainGph<MdSaveCompTaskNode>(std::move(chain_gph), false, dot_path_prefix);
 }
 
 } // namespace oneflow

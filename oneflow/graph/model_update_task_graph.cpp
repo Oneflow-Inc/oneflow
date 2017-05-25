@@ -3,6 +3,8 @@
 
 namespace oneflow {
 
+class MdUpdtCompTaskNode;
+
 MdUpdtTaskGraph::MdUpdtTaskGraph(
     const std::string& name,
     const ChainNode* data_chain,
@@ -43,7 +45,7 @@ void MdUpdtTaskGraph::BuildTaskGraph(const ChainNode* data_chain,
   //
   chain_gph->UpdateSourceAndSink();
   chain_gph->ToDotFile(dot_path_prefix + "chain_graph.dot");
-  BuildFromChainGph(std::move(chain_gph), false, dot_path_prefix);
+  BuildFromChainGph<MdUpdtCompTaskNode>(std::move(chain_gph), false, dot_path_prefix);
 }
 
 } // namespace oneflow
