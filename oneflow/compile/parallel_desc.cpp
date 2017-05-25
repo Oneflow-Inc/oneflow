@@ -70,4 +70,8 @@ std::string ParallelDesc::VisualStr() const {
   return ss.str();
 }
 
+std::string GetMachineNameFromDeviceName(const std::string& device_name) {
+  TODO();
+}
+
 } // namespace oneflow
