@@ -50,6 +50,16 @@ std::shared_ptr<RegstDesc> TaskNode::GetProducedRegstDesc(
   }
 }
 
+std::shared_ptr<RegstDesc> TaskNode::GetSubscribedRegstDesc(
+    const std::string& regst_desc_name) const {
+  auto it = subscribed_regst_descs_.find(regst_desc_name);
+  if (it == subscribed_regst_descs_.end()) {
+    return nullptr;
+  } else {
+    return it->second.lock();
+  }
+}
+
 void TaskNode::TakeOverRegstDesc(TaskNode* rhs,
                                  const std::string& regst_desc_name) {
   CHECK_EQ(stage_node_->machine_id(), rhs->stage_node_->machine_id());

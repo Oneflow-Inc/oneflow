@@ -14,6 +14,10 @@ class MdSaveCompTaskNode final : public CompTaskNode {
  private:
   void BuildExecAndEnrollLbn2Regsts(TaskGraph* gph);
   void InferShapeOfBlobsInProducedRegsts(TaskGraph* gph);
+  bool IsMeaningLess() const override {
+    return !GetSubscribedRegstDesc("model");
+  }
+
   TaskType task_type() const override {
     return kMdSaveCompTask;
   }

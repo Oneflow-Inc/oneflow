@@ -28,6 +28,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   const ExecGraph& exec_gph() const { return exec_gph_; }
   uint64_t task_id() const { return task_id_; }
   std::string task_id_str() const { return std::to_string(task_id_); }
+  virtual bool IsMeaningLess() const { return produced_regst_descs_.empty(); }
   
   // Setters
   void SetFwNode() { is_fw_node_ = true; }
@@ -55,9 +56,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   std::shared_ptr<RegstDesc> GetProducedRegstDesc(
       const std::string& regst_desc_name);
   std::shared_ptr<RegstDesc> GetSubscribedRegstDesc(
-      const std::string& regst_desc_name) {
-    return subscribed_regst_descs_.at(regst_desc_name).lock();
-  }
+      const std::string& regst_desc_name) const;
   void TakeOverRegstDesc(TaskNode* rhs, const std::string& regst_desc_name);
   void EraseProducedEmptyRegsts();
   void EraseZeroSizeBlobInProducedRegsts();

@@ -33,7 +33,7 @@ class Compiler final {
   void BuildGraphs();
   void BuildModelGraphs(const std::pair<const ChainNode*, std::vector<CompTaskNode*>>&);
   void InferShape4Regsts();
-  void EraseMeaningLessNodesAndRegsts();
+  void EraseMeaningLessRegsts();
   void GenElfFile(const std::string& elf_filepath);
   
   std::vector<std::unique_ptr<TaskGraph>> ordered_task_gphs_;
@@ -73,7 +73,7 @@ void Compiler::Compile(const JobConf& job_conf,
 
   BuildGraphs();
   InferShape4Regsts();
-  EraseMeaningLessNodesAndRegsts();
+  EraseMeaningLessRegsts();
   GenElfFile(elf_filepath);
 }
 
@@ -144,7 +144,7 @@ void Compiler::InferShape4Regsts() {
   }
 }
 
-void Compiler::EraseMeaningLessNodesAndRegsts() {
+void Compiler::EraseMeaningLessRegsts() {
   ForEachTaskNode([](TaskNode* task_node) {
     task_node->EraseZeroSizeBlobInProducedRegsts();
     task_node->EraseProducedEmptyRegsts();
@@ -154,8 +154,7 @@ void Compiler::EraseMeaningLessNodesAndRegsts() {
 void Compiler::GenElfFile(const std::string& elf_filepath) {
   OfElf elf;
   ForEachTaskNode([&elf](TaskNode* node) {
-    if (!node->produced_regst_descs().empty()
-        || dynamic_cast<MdSaveCompTaskNode*> (node)) {
+    if (!node->IsMeaningLess()) {
       node->ToProto(elf.mutable_task()->Add());
     }
   });
