@@ -25,9 +25,8 @@ class IDMgr final {
     CHECK_LT(device_num_per_machine_, (1 << device_id_bit_num_) - 3);
     for (uint64_t i = 0; i < machine_num_; ++i) {
       const std::string& machine_name = resource.machine(i).name();
-      const uint64_t machine_id = i;
-      CHECK(machine_name2machine_id_.emplace(machine_name, machine_id).second);
-      CHECK(machine_id2machine_name_.emplace(machine_id, machine_name).second);
+      CHECK(machine_name2machine_id_.emplace(machine_name, i).second);
+      CHECK(machine_id2machine_name_.emplace(i, machine_name).second);
     }
   }
 
@@ -75,10 +74,10 @@ class IDMgr final {
     return regst_desc_id | regst_desc_id2num_of_register_[regst_desc_id]++;
   }
   uint64_t MachineId4ActorId(uint64_t actor_id) {
-    return actor_id >> 64 - machine_id_bit_num_;
+    return actor_id >> (64 - machine_id_bit_num_);
   }
   uint64_t ThrdLocId4ActorId(uint64_t actor_id) {
-    return actor_id << machine_id_bit_num_ >> (64 - device_id_bit_num_);
+    return (actor_id << machine_id_bit_num_) >> (64 - device_id_bit_num_);
   }
 
  private:
