@@ -68,6 +68,7 @@ void Compiler::ForEachTaskNode(std::function<void(TaskNode*)> func) {
 void Compiler::Compile(const JobConf& job_conf,
                        const std::string& elf_filepath) {
   JobDesc::Singleton().InitFromJobConf(job_conf);
+  JobDesc::Singleton().set_piece_size(50);
   IDMgr::Singleton().InitFromResource(JobDesc::Singleton().resource());
 
   BuildGraphs();
