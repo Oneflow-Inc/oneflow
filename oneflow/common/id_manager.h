@@ -25,7 +25,7 @@ class IDMgr final {
     CHECK_LT(device_num_per_machine_, (1 << device_id_bit_num_) - 3);
     for (uint64_t i = 0; i < machine_num_; ++i) {
       const std::string& machine_name = resource.machine(i).name();
-      const uint64_t machine_id = i << (64 - machine_id_bit_num_);
+      const uint64_t machine_id = i;
       CHECK(machine_name2machine_id_.emplace(machine_name, machine_id).second);
       CHECK(machine_id2machine_name_.emplace(machine_id, machine_name).second);
     }
@@ -50,8 +50,10 @@ class IDMgr final {
   uint64_t CommNetThrdLocId() const { return device_num_per_machine_ + 2; }
 
   uint64_t NewTaskId(uint64_t machine_id, uint64_t thrd_local_id) {
-    uint64_t thrd_id = (machine_id | (thrd_local_id << 
-        (task_id_bit_num_ + regst_desc_id_bit_num_ + register_id_bit_num_)));
+    uint64_t machine_id64bit = machine_id << (64 - machine_id_bit_num_);
+    uint64_t device_id64bit = thrd_local_id <<
+        (task_id_bit_num_ + regst_desc_id_bit_num_ + register_id_bit_num_);
+    uint64_t thrd_id = machine_id64bit | device_id64bit;
     CHECK_LT(thread_id2num_of_tasks_[thrd_id], (1 << task_id_bit_num_) - 1);
     return thrd_id | ((thread_id2num_of_tasks_[thrd_id]++) << 
         (regst_desc_id_bit_num_ + register_id_bit_num_));
@@ -73,8 +75,7 @@ class IDMgr final {
     return regst_desc_id | regst_desc_id2num_of_register_[regst_desc_id]++;
   }
   uint64_t MachineId4ActorId(uint64_t actor_id) {
-    uint64_t bit_num_after_machine = 64 - machine_id_bit_num_;
-    return actor_id >> bit_num_after_machine << bit_num_after_machine;
+    return actor_id >> 64 - machine_id_bit_num_;
   }
   uint64_t ThrdLocId4ActorId(uint64_t actor_id) {
     return actor_id << machine_id_bit_num_ >> (64 - device_id_bit_num_);
@@ -86,6 +87,7 @@ class IDMgr final {
   uint64_t device_num_per_machine_;
   HashMap<uint64_t, uint64_t> thread_id2num_of_tasks_;
   HashMap<uint64_t, uint64_t> task_id2num_of_register_desc_;
+  // machine_id is like {0, 1, 2, 3, ...}
   HashMap<std::string, uint64_t> machine_name2machine_id_;
   HashMap<uint64_t, std::string> machine_id2machine_name_;
   HashMap<uint64_t, uint64_t> regst_desc_id2num_of_register_;
