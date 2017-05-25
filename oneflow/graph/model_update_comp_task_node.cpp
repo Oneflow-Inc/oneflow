@@ -19,12 +19,6 @@ void MdUpdtCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   TakeOverRegstDesc(fw_task, "model");
   TakeOverRegstDesc(fw_task, "model_tmp");
   auto model_regst = GetProducedRegstDesc("model");
-  if (chain_node()->parallel_desc()->device_type() == kGPU) {
-    auto model_load_buf_regst = NewProducedRegstDesc("model_load_buf");
-    model_load_buf_regst->CopyLbnFrom(model_regst.get());
-  } else {
-    CHECK(chain_node()->parallel_desc()->device_type() == kCPU);
-  }
 
   ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = chain_node()->SoleOp();
@@ -44,10 +38,6 @@ void MdUpdtCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
 
 void MdUpdtCompTaskNode::InferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
   CHECK(IsFwNode());
-  if (auto model_load_buf_regst = GetProducedRegstDesc("model_load_buf")) {
-    auto model_regst = GetProducedRegstDesc("model");
-    model_load_buf_regst->CopyShapeFrom(model_regst.get());
-  }
 }
 
 } // namespace oneflow

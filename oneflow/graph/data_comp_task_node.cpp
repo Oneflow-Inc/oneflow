@@ -204,6 +204,7 @@ void DataCompTaskNode::BpBuildExecGraph() {
             bp_edge,
             fw_node2bp_node.at(fw_edge->src_node()));
   }
+  mut_exec_gph().UpdateSourceAndSink();
 }
 
 void DataCompTaskNode::BpEnrollLbn2ProducedRegst() {

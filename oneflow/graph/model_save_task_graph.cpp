@@ -32,6 +32,7 @@ void MdSaveTaskGraph::BuildTaskGraph(const std::string& dot_path_prefix) {
   save_chain->mut_parallel_desc().reset(new ParallelDesc(save_pr_conf));
   save_chain->mut_input_lbns() = {RegstDesc::kAllLbn};
   //
+  Connect(faker_chain, chain_gph->NewEdge(), save_chain);
   chain_gph->UpdateSourceAndSink();
   chain_gph->ToDotFile(dot_path_prefix + "chain_graph.dot");
   BuildFromChainGph<MdSaveCompTaskNode>(std::move(chain_gph), false, dot_path_prefix);

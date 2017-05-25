@@ -2,6 +2,7 @@
 #include "glog/logging.h"
 #include "common/id_manager.h"
 #include "common/protobuf.h"
+#include "graph/model_save_comp_task_node.h"
 #include "graph/model_save_task_graph.h"
 #include "graph/model_update_task_graph.h"
 #include "graph/data_task_graph.h"
@@ -152,7 +153,8 @@ void Compiler::EraseMeaningLessNodesAndRegsts() {
 void Compiler::GenElfFile(const std::string& elf_filepath) {
   OfElf elf;
   ForEachTaskNode([&elf](TaskNode* node) {
-    if (!node->produced_regst_descs().empty()) {
+    if (!node->produced_regst_descs().empty()
+        || dynamic_cast<MdSaveCompTaskNode*> (node)) {
       node->ToProto(elf.mutable_task()->Add());
     }
   });

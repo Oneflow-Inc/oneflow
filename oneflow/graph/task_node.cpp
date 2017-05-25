@@ -52,7 +52,6 @@ std::shared_ptr<RegstDesc> TaskNode::GetProducedRegstDesc(
 
 void TaskNode::TakeOverRegstDesc(TaskNode* rhs,
                                  const std::string& regst_desc_name) {
-  CHECK(typeid(*this) == typeid(*rhs));
   CHECK_EQ(stage_node_->machine_id(), rhs->stage_node_->machine_id());
   CHECK_EQ(thrd_loc_id_, rhs->thrd_loc_id_);
   std::shared_ptr<RegstDesc> this_regst;
