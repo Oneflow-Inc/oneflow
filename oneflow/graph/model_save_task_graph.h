@@ -15,13 +15,6 @@ class MdSaveTaskGraph final : public TaskGraph {
                   CompTaskNode* update_task,
                   const std::string& dot_path_prefix);
 
-  CompTaskNodeMemFunc Func4FwBuildExecAndEnrollLbn2Regsts() const override {
-    return &CompTaskNode::MdSaveFwBuildExecAndEnrollLbn2Regsts;
-  }
-  CompTaskNodeMemFunc Func4FwInferShapeOfBlobsInProducedRegsts() const override {
-    return &CompTaskNode::MdSaveFwInferShapeOfBlobsInProducedRegsts;
-  }
-
   CompTaskNode* update_task() const { return update_task_; }
 
  private:

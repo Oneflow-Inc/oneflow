@@ -24,14 +24,12 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
 
   void InferShapeOfBlobsInProducedRegsts();
   
-  using CompTaskNodeMemFunc = void (CompTaskNode::*)(TaskGraph*);
-  virtual CompTaskNodeMemFunc Func4FwBuildExecAndEnrollLbn2Regsts() const = 0;
-  virtual CompTaskNodeMemFunc Func4FwInferShapeOfBlobsInProducedRegsts() const = 0;
-
   const std::string& name() const { return name_; }
 
  protected:
   TaskGraph() = default;
+
+  template<typename CompTaskNodeType>
   void BuildFromChainGph(std::unique_ptr<ChainGraph>&& chain_gph,
                          bool need_bp,
                          const std::string& dot_filepath_prefix);
@@ -40,6 +38,7 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   std::string& mut_name() { return name_; }
 
  private:
+  template<typename CompTaskNodeType>
   void BuildFromStageGph(bool need_bp,
                          const std::string& dot_filepath_prefix);
 
@@ -62,9 +61,12 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   using Stage2TaskNodesMap =
       HashMap<const StageNode*, TaskNodesInStage>;
 
+  template<typename TaskNodeType>
   void InitCompTaskNodes(Stage2TaskNodesMap* stage2task_nodes);
+  template<typename TaskNodeType>
   void Stage2DeviceCompTaskNodes(const StageNode* stage,
                                  TaskNodesInStage* task_nodes_in_stage);
+  template<typename TaskNodeType>
   void Stage2HostCompTaskNodes(const StageNode* stage,
                                TaskNodesInStage* task_nodes_in_stage);
   void InitBoxingTaskNodes(Stage2TaskNodesMap* stage2task_nodes);
