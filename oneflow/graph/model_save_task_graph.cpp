@@ -23,7 +23,7 @@ void MdSaveTaskGraph::BuildTaskGraph(const std::string& dot_path_prefix) {
   // save
   ChainNode* save_chain = chain_gph->NewNode();
   std::string machine_name = 
-      GetMachineNameAndDevIdStrFromDeviceName(update_task_->device_name()).at(0);
+      GetMachineNameFromDeviceName(update_task_->device_name());
   ParallelConf save_pr_conf;
   save_pr_conf.set_policy(kDataParallel);
   save_pr_conf.mutable_device_set()->add_device_name(machine_name + ":disk");
