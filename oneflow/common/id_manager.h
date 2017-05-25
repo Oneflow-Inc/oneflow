@@ -89,7 +89,7 @@ class IDMgr final {
   //    machine | device | task | regst_desc | regst
   //      12    |   8    |  16  |     12     |   16
   static const uint64_t machine_id_bit_num_ = 12;
-  static const uint64_t device_id_bit_num_ = 9;
+  static const uint64_t device_id_bit_num_ = 8;
   static const uint64_t task_id_bit_num_ = 16;
   static const uint64_t regst_desc_id_bit_num_ = 12;
   static const uint64_t register_id_bit_num_ = 16;
