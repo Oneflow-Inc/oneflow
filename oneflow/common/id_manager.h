@@ -31,7 +31,7 @@ class IDMgr final {
   uint64_t MachineID4MachineName(const std::string& machine_name) const {
     return machine_name2machine_id_.at(machine_name);
   }
-  uint64_t MachineName4MachineId(const uint64_t machine_id) const {
+  std::string MachineName4MachineId(uint64_t machine_id) const {
     return machine_id2machine_name_.at(machine_id);
   }
   uint64_t ThrdLocId4DevPhyId(uint64_t device_phy_id) const {

@@ -8,10 +8,10 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
   device_type_ = JobDesc::Singleton().resource().device_type();
   for (int64_t i = 0; i < user_conf.device_set().device_name_size(); ++i){
     const std::string& device_name = user_conf.device_set().device_name(i);
-    int64_t delimiter_pos = device_name.rfind(":");
-    CHECK_NE(delimiter_pos, std::string::npos);
-    std::string machine_name = device_name.substr(0, delimiter_pos);
-    std::string device_id_str = device_name.substr(delimiter_pos + 1);
+    std::vector<std::string> machine_name_device_id = 
+        GetMachineNameAndDevIdStrFromDeviceName(device_name);
+    std::string machine_name = machine_name_device_id.at(0);
+    std::string device_id_str = machine_name_device_id.at(1);
     uint64_t machine_id =
         IDMgr::Singleton().MachineID4MachineName(machine_name);
     sorted_machine_ids_.push_back(machine_id);
@@ -70,8 +70,14 @@ std::string ParallelDesc::VisualStr() const {
   return ss.str();
 }
 
-std::string GetMachineNameFromDeviceName(const std::string& device_name) {
-  TODO();
+std::vector<std::string> 
+GetMachineNameAndDevIdStrFromDeviceName(const std::string& device_name) {
+  std::vector<std::string> machine_name_and_device_id;
+  int64_t delimiter_pos = device_name.rfind(":");
+  CHECK_NE(delimiter_pos, std::string::npos);
+  machine_name_and_device_id.push_back(device_name.substr(0, delimiter_pos));
+  machine_name_and_device_id.push_back(device_name.substr(delimiter_pos + 1));
+  return machine_name_and_device_id;
 }
 
 } // namespace oneflow
