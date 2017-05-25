@@ -25,10 +25,9 @@ class IDMgr final {
     CHECK_LT(device_num_per_machine_, (1 << device_id_bit_num_) - 3);
     for (uint64_t i = 0; i < machine_num_; ++i) {
       const std::string& machine_name = resource.machine(i).name();
-      CHECK(machine_name2machine_id_.emplace(
-          machine_name, i << (64 - machine_id_bit_num_)).second);
-      CHECK(machine_id2machine_name_.emplace(
-          i << (64 - machine_id_bit_num_), machine_name).second);
+      const uint64_t machine_id = i << (64 - machine_id_bit_num_);
+      CHECK(machine_name2machine_id_.emplace(machine_name, machine_id).second);
+      CHECK(machine_id2machine_name_.emplace(machine_id, machine_name).second);
     }
   }
 
