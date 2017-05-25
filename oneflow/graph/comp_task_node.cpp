@@ -3,6 +3,7 @@
 #include "graph/model_save_task_graph.h"
 #include "operator/operator_manager.h"
 #include "operator/clone_op.h"
+#include "common/id_manager.h"
 
 namespace oneflow {
 
@@ -17,7 +18,9 @@ std::string CompTaskNode::VisualStr() const {
 }
 
 std::string CompTaskNode::device_name() const {
-  TODO();
+  return IDMgr::Singleton().MachineName4MachineId(stage_node()->machine_id())
+      + ":"
+      + std::to_string(IDMgr::Singleton().DevPhyId4ThrdLocId(thrd_loc_id()));
 }
 
 void SortByParallelId(std::vector<CompTaskNode*>* comp_node_vec) {

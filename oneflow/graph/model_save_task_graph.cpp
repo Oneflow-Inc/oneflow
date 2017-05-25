@@ -24,7 +24,8 @@ void MdSaveTaskGraph::BuildTaskGraph(const std::string& dot_path_prefix) {
   faker_chain->mut_output_lbns() = {RegstDesc::kAllLbn};
   // save
   ChainNode* save_chain = chain_gph->NewNode();
-  std::string machine_name = GetMachineNameFromDeviceName(update_task_->device_name());
+  std::string machine_name = 
+      GetMachineNameFromDeviceName(update_task_->device_name());
   ParallelConf save_pr_conf;
   save_pr_conf.set_policy(kDataParallel);
   save_pr_conf.mutable_device_set()->add_device_name(machine_name + ":disk");

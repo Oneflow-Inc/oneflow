@@ -25,14 +25,18 @@ class IDMgr final {
     CHECK_LT(device_num_per_machine_, (1 << device_id_bit_num_) - 3);
     for (uint64_t i = 0; i < machine_num_; ++i) {
       const std::string& machine_name = resource.machine(i).name();
-      CHECK(machine_name2machine_id_.emplace(
-          machine_name, i << (64 - machine_id_bit_num_)).second);
+      const uint64_t machine_id = i << (64 - machine_id_bit_num_);
+      CHECK(machine_name2machine_id_.emplace(machine_name, machine_id).second);
+      CHECK(machine_id2machine_name_.emplace(machine_id, machine_name).second);
     }
   }
 
   // Compile
   uint64_t MachineID4MachineName(const std::string& machine_name) const {
     return machine_name2machine_id_.at(machine_name);
+  }
+  std::string MachineName4MachineId(uint64_t machine_id) const {
+    return machine_id2machine_name_.at(machine_id);
   }
   uint64_t ThrdLocId4DevPhyId(uint64_t device_phy_id) const {
     return device_phy_id;
@@ -83,6 +87,7 @@ class IDMgr final {
   HashMap<uint64_t, uint64_t> thread_id2num_of_tasks_;
   HashMap<uint64_t, uint64_t> task_id2num_of_register_desc_;
   HashMap<std::string, uint64_t> machine_name2machine_id_;
+  HashMap<uint64_t, std::string> machine_id2machine_name_;
   HashMap<uint64_t, uint64_t> regst_desc_id2num_of_register_;
 
   //  64 bit id design:
