@@ -23,8 +23,6 @@ class ThreadMgr final {
 
   void JoinAllThreads();
 
-  void Reserve(size_t n);
-
  private:
   ThreadMgr();
 
