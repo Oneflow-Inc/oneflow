@@ -9,7 +9,7 @@ class GpuThread final : public Thread {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GpuThread);
   GpuThread() = delete;
-  ~GpuThread();
+  ~GpuThread() = default;
   
   GpuThread(int device_phy_id);
 
