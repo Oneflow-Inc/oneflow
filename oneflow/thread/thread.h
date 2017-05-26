@@ -5,7 +5,6 @@
 #include <thread>
 #include "common/util.h"
 #include "common/channel.h"
-#include "common/device_context.h"
 #include "actor/task.pb.h"
 #include "actor/actor.h"
 #include "actor/actor_msg_bus.h"
@@ -26,7 +25,6 @@ class Thread {
  protected:
   Thread() = default;
   std::thread& mut_thread() { return thread_; }
-  DeviceContext& mut_device_ctx() { return device_ctx_; }
   void PollMsgChannel();
 
  private:
@@ -34,7 +32,6 @@ class Thread {
   std::thread thread_;
   Channel<ActorMsg> msg_channel_;
   HashMap<uint64_t, std::unique_ptr<Actor>> id2actor_ptr_;
-  DeviceContext device_ctx_;
 
 };
 
