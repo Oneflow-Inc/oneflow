@@ -28,7 +28,9 @@ ThreadMgr::ThreadMgr() {
     threads_.push_back(std::move(of_make_unique<GpuThread>(dev_phy_id)));
   }
   // cpu thread - 3 (disk, boxing, commnet)
-  threads_.push_back(std::move(of_make_unique<CpuThread>()));
+  for (int i = 0;i < 3; ++i) {
+    threads_.push_back(std::move(of_make_unique<CpuThread>()));
+  }
 }
 
 }  // namespace oneflow
