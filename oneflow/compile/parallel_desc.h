@@ -24,7 +24,7 @@ class ParallelDesc {
     return sorted_machine_ids_;
   }
   const std::vector<uint64_t>& sorted_device_phy_ids(int64_t machine_id) const {
-    // If this is used to describe the disk
+    // If this is used to describe the persistence
     // the return should be empty
     return machine_id2sorted_device_phy_ids_.at(machine_id);
   }

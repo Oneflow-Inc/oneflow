@@ -33,7 +33,7 @@ ThreadMgr::ThreadMgr() {
       threads_.push_back(std::move(of_make_unique<CpuThread>()));
     }
   }
-  // cpu thread - for disk
+  // cpu thread - for persistence
   threads_.push_back(std::move(of_make_unique<CpuThread>()));
   // cpu thread - for boxing
   threads_.push_back(std::move(of_make_unique<CpuThread>()));

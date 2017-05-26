@@ -21,7 +21,7 @@ class IDMgr final {
     machine_num_ = resource.machine_size();
     CHECK_LT(machine_num_, 1 << machine_id_bit_num_);
     device_num_per_machine_ = resource.device_num_per_machine();
-    // reserve 3 number of device_id for disk_, boxing_ and commnet_ ThrdLocId
+    // reserve 3 number of device_id for persistence_, boxing_ and commnet_ ThrdLocId
     CHECK_LT(device_num_per_machine_, (1 << device_id_bit_num_) - 3);
     for (uint64_t i = 0; i < machine_num_; ++i) {
       const std::string& machine_name = resource.machine(i).name();
@@ -44,7 +44,7 @@ class IDMgr final {
     CHECK_LT(thrd_loc_id, device_num_per_machine_);
     return thrd_loc_id;
   }
-  uint64_t DiskThrdLocId() const { return device_num_per_machine_; }
+  uint64_t PersistenceThrdLocId() const { return device_num_per_machine_; }
   uint64_t BoxingThrdLocId() const { return device_num_per_machine_ + 1; }
   uint64_t CommNetThrdLocId() const { return device_num_per_machine_ + 2; }
 

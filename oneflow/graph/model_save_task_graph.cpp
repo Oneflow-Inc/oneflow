@@ -28,7 +28,7 @@ void MdSaveTaskGraph::BuildTaskGraph(const std::string& dot_path_prefix) {
       GetMachineNameFromDeviceName(update_task_->device_name());
   ParallelConf save_pr_conf;
   save_pr_conf.set_policy(kDataParallel);
-  save_pr_conf.mutable_device_set()->add_device_name(machine_name + ":disk");
+  save_pr_conf.mutable_device_set()->add_device_name(machine_name + ":persistence");
   save_chain->mut_parallel_desc().reset(new ParallelDesc(save_pr_conf));
   save_chain->mut_input_lbns() = {RegstDesc::kAllLbn};
   //

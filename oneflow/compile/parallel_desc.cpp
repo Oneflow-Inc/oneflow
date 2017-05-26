@@ -25,7 +25,7 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
     sorted_machine_ids_.push_back(machine_id);
     // if the device_name format is "machine_xxx:0-3", add device_id {0,1,2,3}
     int64_t to_symbol_pos = device_id_str.rfind("-");
-    if (device_id_str == "disk") {
+    if (device_id_str == "persistence") {
       machine_id2sorted_device_phy_ids_[machine_id] = {};
       device_type_ = DeviceType::kCPU;
     } else if (to_symbol_pos == std::string::npos) {
