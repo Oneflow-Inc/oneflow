@@ -1,8 +1,8 @@
-#ifndef ONEFLOW_ACTOR_THREAD_MANAGER_H_
-#define ONEFLOW_ACTOR_THREAD_MANAGER_H_
+#ifndef ONEFLOW_THREAD_THREAD_MANAGER_H_
+#define ONEFLOW_THREAD_THREAD_MANAGER_H_
 
 #include <memory>
-#include "actor/thread.h"
+#include "thread/thread.h"
 #include "actor/actor_msg_bus.h"
 #include "common/channel.h"
 #include "common/protobuf.h"
@@ -18,19 +18,17 @@ class ThreadMgr final {
     static ThreadMgr obj;
     return obj;
   }
-
-  void InitFromProto(const PbRpf<TaskProto>& tasks);
+  
+  Thread* GetThrd(uint64_t thrd_loc_id);
 
   void JoinAllThreads();
 
-  Channel<ActorMsg>* GetMsgChanFromThrdLocId(uint64_t thrd_loc_id);
-
  private:
-  ThreadMgr() = default;
+  ThreadMgr();
 
   HashMap<uint64_t, std::unique_ptr<Thread>> thrd_loc_id2thread_;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_ACTOR_THREAD_MANAGER_H_
+#endif  // ONEFLOW_THREAD_THREAD_MANAGER_H_

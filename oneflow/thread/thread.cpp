@@ -1,4 +1,4 @@
-#include "actor/thread.h"
+#include "thread/thread.h"
 
 namespace oneflow {
 
@@ -6,8 +6,12 @@ Thread::~Thread() {
   Join();
 }
 
-void Thread::AddActor(const TaskProto& actor_proto) {
+void Thread::AddActor(const TaskProto&) {
   TODO();
+}
+
+void Thread::Join() {
+  thread_.join();
 }
 
 void Thread::PollMsgChannel() {
@@ -15,10 +19,6 @@ void Thread::PollMsgChannel() {
   while (msg_channel_.Receive(&msg) == 0) {
     id2actor_ptr_.at(msg.dst_actor_id())->ProcessMsg(msg);
   }
-}
-
-void Thread::Join() {
-  thread_.join();
 }
 
 }  // namespace oneflow
