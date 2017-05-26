@@ -26,7 +26,7 @@ class ThreadMgr final {
  private:
   ThreadMgr();
 
-  HashMap<uint64_t, std::unique_ptr<Thread>> thrd_loc_id2thread_;
+  std::vector<std::unique_ptr<Thread>> threads_;
 };
 
 }  // namespace oneflow
