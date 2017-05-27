@@ -4,6 +4,7 @@ package oneflow;
 enum ParallelPolicy {
   kDataParallel = 0;
   kModelParallel = 1;
+  kFakerMdUpdt = 2;
 }
 
 message DeviceSet {
