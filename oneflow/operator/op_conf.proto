@@ -162,6 +162,9 @@ message BoxConcatConf {
   int32 axis = 1;
 }
 
+message BoxAddConf {
+}
+
 message BoxDataSplitConf {
 }
 
@@ -172,10 +175,13 @@ message BoxingOpConf {
   string lbn = 1;
   uint32 in_num = 2;
   uint32 out_num = 3;
-  BoxConcatConf concat_box = 4;
+  oneof in_box {
+    BoxConcatConf concat_box = 4;
+    BoxAddConf add_box = 5;
+  }
   oneof out_box {
-    BoxDataSplitConf data_split_box = 5;
-    BoxCloneConf clone_box = 6;
+    BoxDataSplitConf data_split_box = 6;
+    BoxCloneConf clone_box = 7;
   }
 }
 
