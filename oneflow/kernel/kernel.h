@@ -33,6 +33,8 @@ class Kernel {
   std::unique_ptr<const Operator> op_;
 };
 
+using KernelWardFunc = void (Kernel::*)(std::function<Blob*(const std::string&)>);
+
 #define INSTANTIATE_CPU_KERNEL_CLASS(classname) \
   char gInstantiationGuardCPU##classname; \
   template class classname<DeviceType::kCPU, FloatingPointType::kFloat>; \
