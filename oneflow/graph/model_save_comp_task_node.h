@@ -11,6 +11,15 @@ class MdSaveCompTaskNode final : public CompTaskNode {
   MdSaveCompTaskNode() = default;
   ~MdSaveCompTaskNode() = default;
 
+  void set_model_save_comp_parallel_id(uint64_t parallel_id) {
+    model_save_comp_parallel_id_ = parallel_id;
+  }
+
+  virtual void ToProto(TaskProto* ret) const override {
+    TaskNode::ToProto(ret);
+    ret->set_parallel_id(model_save_comp_parallel_id_);
+  }
+
  private:
   void BuildExecAndEnrollLbn2Regsts(TaskGraph* gph);
   void InferShapeOfBlobsInProducedRegsts(TaskGraph* gph);
@@ -25,7 +34,7 @@ class MdSaveCompTaskNode final : public CompTaskNode {
     return of_make_unique<MdSaveCompTaskNode> ();
   }
 
-  uint64_t mode_save_comp_parallel_id;
+  uint64_t model_save_comp_parallel_id_;
 
 };
 

@@ -200,7 +200,7 @@ message OperatorConf {
     CloneOpConf clone_conf = 108;
     BoxingOpConf boxing_conf = 109;
     ModelUpdateOpConf model_update_conf = 110;
-    ModelSaveOpConf model_save_conf = 110;
+    ModelSaveOpConf model_save_conf = 111;
     ConcatOpConf concat_conf = 113;
     CopyCommNetOpConf copy_comm_net_conf = 114;
   }

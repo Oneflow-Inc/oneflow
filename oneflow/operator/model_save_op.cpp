@@ -7,7 +7,7 @@ namespace oneflow {
 void ModelSaveOp::InitFromOpConf(const OperatorConf& op_conf) {
   CHECK(op_conf.has_model_save_conf());
   mut_op_conf() = op_conf;
-  for (const std::string& lbn : op_conf.lbns()) {
+  for (const std::string& lbn : op_conf.model_save_conf().lbns()) {
     EnrollInputBn("in_" + lbn);
   }
 }
