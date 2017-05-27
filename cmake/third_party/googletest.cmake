@@ -36,6 +36,7 @@ ExternalProject_Add(googletest
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
         -DBUILD_GMOCK:BOOL=OFF
         -DBUILD_GTEST:BOOL=ON
+        -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
         #-Dgtest_force_shared_crt:BOOL=ON  #default value is OFF
 )
 
