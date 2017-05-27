@@ -25,6 +25,8 @@ class MdSaveCompTaskNode final : public CompTaskNode {
     return of_make_unique<MdSaveCompTaskNode> ();
   }
 
+  uint64_t mode_save_comp_parallel_id;
+
 };
 
 } // namespace oneflow
