@@ -4,7 +4,7 @@ set(TENSORFLOW_INCLUDE_DIR ${THIRD_PARTY_DIR}/tensorflow/include)
 set(TENSORFLOW_LIBRARY_DIR ${THIRD_PARTY_DIR}/tensorflow/lib)
 
 set(TENSORFLOW_URL https://github.com/Oneflow-Inc/tensorflow.git)
-set(TENSORFLOW_TAG b72043f2c3b4a2af0223de4bc0312f5908a464d3)
+set(TENSORFLOW_TAG 71d873dd3514220b8ef2c3608d292aeeb50ec3a5)
 
 if(WIN32)
     set(TENSORFLOW_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googletest/${CMAKE_BUILD_TYPE})
@@ -67,5 +67,7 @@ ExternalProject_Add(tensorflow
         -Dprotobuf_STATIC_LIBRARIES:STRING=${PROTOBUF_STATIC_LIBRARIES}
         -DPROTOBUF_PROTOC_EXECUTABLE:STRING=${PROTOBUF_PROTOC_EXECUTABLE}
         )
+
+
 
 endif(BUILD_THIRD_PARTY)
