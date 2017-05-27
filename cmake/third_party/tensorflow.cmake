@@ -4,7 +4,7 @@ set(TENSORFLOW_INCLUDE_DIR ${THIRD_PARTY_DIR}/tensorflow/include)
 set(TENSORFLOW_LIBRARY_DIR ${THIRD_PARTY_DIR}/tensorflow/lib)
 
 set(TENSORFLOW_URL https://github.com/Oneflow-Inc/tensorflow.git)
-set(TENSORFLOW_TAG d4ff1d338020e7c7f82f1387385d6525693560f0)
+set(TENSORFLOW_TAG b72043f2c3b4a2af0223de4bc0312f5908a464d3)
 
 if(WIN32)
     set(TENSORFLOW_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googletest/${CMAKE_BUILD_TYPE})
