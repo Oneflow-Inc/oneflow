@@ -5,7 +5,7 @@ placement_group {
   parallel_conf {
     policy: kDataParallel
     device_set {
-      device_name: "centos-0:disk"
+      device_name: "centos-0:persistence"
     }
   }
 }

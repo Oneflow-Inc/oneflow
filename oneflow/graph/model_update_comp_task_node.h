@@ -12,8 +12,8 @@ class MdUpdtCompTaskNode final : public CompTaskNode {
   ~MdUpdtCompTaskNode() = default;
 
  private:
-  void BuildExecAndEnrollLbn2Regsts(TaskGraph* gph);
-  void InferShapeOfBlobsInProducedRegsts(TaskGraph* gph);
+  void BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) override;
+  void InferShapeOfBlobsInProducedRegsts(TaskGraph* gph) override;
   TaskType task_type() const override {
     return kMdUpdtCompTask;
   }

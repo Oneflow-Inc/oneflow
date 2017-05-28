@@ -5,6 +5,7 @@
 #include "actor/actor_message.pb.h"
 #include "actor/actor_msg_bus.h"
 #include "common/util.h"
+#include "register/runtime_register_desc.h"
 
 namespace oneflow {
 
@@ -20,9 +21,9 @@ class Regst final {
  private:
   friend class RegstMgr;
   Regst() = default;
-  uint64_t id_;
-  uint64_t producer_id_;
-  std::vector<uint64_t> consumer_ids_;
+
+  std::shared_ptr<const RtRegstDesc> regst_desc_;
+  uint64_t regst_id_;
   std::function<void()> deleter_;
   HashMap<std::string, std::unique_ptr<Blob>> lbn2blob_;
 };

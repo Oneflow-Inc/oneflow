@@ -28,17 +28,17 @@ ThreadMgr::ThreadMgr() {
   threads_.reserve(dev_num_per_machine + 3);
   for (uint64_t dev_phy_id = 0; dev_phy_id < dev_num_per_machine; ++dev_phy_id){
     if (device_type == kGPU) {
-      threads_.push_back(std::move(of_make_unique<GpuThread>(dev_phy_id)));
+      threads_.push_back(of_make_unique<GpuThread>(dev_phy_id));
     } else {
-      threads_.push_back(std::move(of_make_unique<CpuThread>()));
+      threads_.push_back(of_make_unique<CpuThread>());
     }
   }
   // cpu thread - for persistence
-  threads_.push_back(std::move(of_make_unique<CpuThread>()));
+  threads_.push_back(of_make_unique<CpuThread>());
   // cpu thread - for boxing
-  threads_.push_back(std::move(of_make_unique<CpuThread>()));
+  threads_.push_back(of_make_unique<CpuThread>());
   // cpu thread - for commnet
-  threads_.push_back(std::move(of_make_unique<CpuThread>()));
+  threads_.push_back(of_make_unique<CpuThread>());
 }
 
 }  // namespace oneflow
