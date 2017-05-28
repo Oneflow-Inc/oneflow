@@ -17,6 +17,12 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(oneflow_src_dir ${PROJECT_SOURCE_DIR}/oneflow)
 set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
 
+if (NOT WIN32)
+  # Threads: defines CMAKE_THREAD_LIBS_INIT and adds -pthread compile option
+  # for targets that link ${CMAKE_THREAD_LIBS_INIT}.
+  find_package (Threads)
+endif()
+
 if (WIN32)
   set(CMAKE_BUILD_TYPE Debug)
   add_definitions(-DNOMINMAX -D_WIN32_WINNT=0x0A00 -DLANG_CXX11 -DCOMPILER_MSVC -D__VERSION__=\"MSVC\")
@@ -38,7 +44,7 @@ if (WIN32)
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /D_ITERATOR_DEBUG_LEVEL=0")
 else()
   list(APPEND CUDA_NVCC_FLAGS "-std=c++11 -w")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wno-sign-compare")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ldl -g -Wall -Wno-sign-compare")
 endif()
 
 set(THIRD_PARTY_DIR "${PROJECT_SOURCE_DIR}/third_party"
@@ -57,5 +63,6 @@ if (BUILD_THIRD_PARTY)
   set(BUILD_THIRD_PARTY OFF CACHE BOOL "" FORCE)
 else()
   include(oneflow)
+  include(tf_tests)
 endif()
 
