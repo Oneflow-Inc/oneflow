@@ -13,6 +13,7 @@ include(tensorflow)
 find_package(CUDA REQUIRED)
 
 set(oneflow_third_party_libs
+    ${tensorflow_STATIC_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
     ${ZLIB_STATIC_LIBRARIES}
     ${GLOG_STATIC_LIBRARIES}
@@ -20,7 +21,6 @@ set(oneflow_third_party_libs
     ${GOOGLETEST_STATIC_LIBRARIES}
     ${PROTOBUF_STATIC_LIBRARIES}
     ${GRPC_STATIC_LIBRARIES}
-    ${tensorflow_STATIC_LIBRARIES}
     ${gif_STATIC_LIBRARIES}
     ${farmhash_STATIC_LIBRARIES}
     ${highwayhash_STATIC_LIBRARIES}

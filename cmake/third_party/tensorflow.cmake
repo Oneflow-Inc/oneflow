@@ -36,7 +36,7 @@ set(PNG_INCLUDE_DIR ${THIRD_PARTY_DIR}/png/include)
 set(PNG_LIBRARY_DIR ${THIRD_PARTY_DIR}/png/lib)
 set(PNG_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/tensorflow/src/tensorflow/png/install/lib)
 
-set(JSONCPP_BUILD_INCLUDE ${CMAKE_CURRENT_BINARY_DIR}/tensorflow/src/tensorflow/jsoncpp/src/jsoncpp/include/json)
+set(JSONCPP_BUILD_INCLUDE ${CMAKE_CURRENT_BINARY_DIR}/tensorflow/src/tensorflow/jsoncpp/src/jsoncpp)
 set(JSONCPP_INCLUDE_DIR ${THIRD_PARTY_DIR}/jsoncpp/include)
 set(JSONCPP_LIBRARY_DIR ${THIRD_PARTY_DIR}/jsoncpp/lib)
 
