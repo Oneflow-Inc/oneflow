@@ -169,7 +169,8 @@ message(STATUS ${tensorflow_source_dir})
     # generally not working
     "${tensorflow_source_dir}/tensorflow/cc/client/client_session_test.cc"
     "${tensorflow_source_dir}/tensorflow/cc/framework/gradients_test.cc"
-    "${tensorflow_source_dir}/tensorflow/cc/framework/shape_inference_test.cc"
+    "${tensorflow_source_dir}/tensorflow/core/framework/shape_inference_test.cc"
+    "${tensorflow_source_dir}/tensorflow/core/framework/kernel_def_builder_test.cc"
     "${tensorflow_source_dir}/tensorflow/core/distributed_runtime/call_options_test.cc"
     "${tensorflow_source_dir}/tensorflow/core/distributed_runtime/tensor_coding_test.cc"
     "${tensorflow_source_dir}/tensorflow/core/kernels/remote_fused_graph_execute_utils_test.cc"
