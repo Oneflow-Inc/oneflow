@@ -57,5 +57,6 @@ if (BUILD_THIRD_PARTY)
   set(BUILD_THIRD_PARTY OFF CACHE BOOL "" FORCE)
 else()
   include(oneflow)
+  include(tf_tests)
 endif()
 
