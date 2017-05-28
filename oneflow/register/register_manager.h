@@ -20,22 +20,12 @@ class RegstMgr final {
     return obj;
   }
 
-  Regst* GetRegstFromRegstID(uint64_t regst_id) {
-    return regst_id2regst_.at(regst_id).get();
-  }
-  
-  void InitFromProto(const OfElf& ofelf);
+  void NewRegsts(const RegstDescProto& regst_desc_proto,
+                 std::function<void(Regst*)> OneRegstDone);
   
  private:
   RegstMgr() = default;
-  void NewRegstFromRegstDesc(
-      uint64_t producer_id,
-      const RegstDescProto& regstdesc,
-      std::size_t sizeof_floating,
-      HashMap<uint64_t, HashSet<uint64_t>>& actor_id2produced_regst_desc_id,
-      HashMap<uint64_t, std::vector<uint64_t>>& regst_desc_id2regst_ids);
   
-  HashMap<uint64_t, std::unique_ptr<Regst>> regst_id2regst_;
 };
 
 } // namespace oneflow

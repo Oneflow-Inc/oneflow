@@ -23,7 +23,6 @@ class ElfRunner final {
     JobDesc::Singleton().InitFromProto(elf.job_desc());
     IDMgr::Singleton().InitFromResource(JobDesc::Singleton().resource());
     RuntimeInfo::Singleton().set_this_machine_name(this_machine_name);
-    RegstMgr::Singleton().InitFromProto(elf);
     TODO();
   }
 
