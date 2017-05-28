@@ -1,8 +1,7 @@
 #include "graph/model_save_task_graph.h"
+#include "graph/model_save_comp_task_node.h"
 
 namespace oneflow {
-
-class MdSaveCompTaskNode;
 
 MdSaveTaskGraph::MdSaveTaskGraph(const std::string& name,
                                  CompTaskNode* update_task,
@@ -11,6 +10,12 @@ MdSaveTaskGraph::MdSaveTaskGraph(const std::string& name,
   update_task_ = update_task;
   BuildTaskGraph(dot_path_prefix);
   BuildExecAndEnrollLbn2Regsts();
+  for (const auto& node : nodes()) {
+    auto model_save_comp_task_node = dynamic_cast<MdSaveCompTaskNode*>(node.get());
+    if (model_save_comp_task_node != nullptr) {
+      model_save_comp_task_node->set_model_save_comp_parallel_id(update_task->parallel_id());
+    }
+  }
 }
 
 void MdSaveTaskGraph::BuildTaskGraph(const std::string& dot_path_prefix) {
