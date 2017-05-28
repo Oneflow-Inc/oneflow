@@ -14,6 +14,9 @@
 # ==============================================================================
 enable_testing()
 
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/tmp)
+set(ENV{TMPDIR} ${CMAKE_CURRENT_BINARY_DIR}/tmp)
+
 #
 # get a temp path for test data
 #

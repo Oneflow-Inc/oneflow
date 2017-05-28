@@ -17,6 +17,12 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(oneflow_src_dir ${PROJECT_SOURCE_DIR}/oneflow)
 set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
 
+if (NOT WIN32)
+  # Threads: defines CMAKE_THREAD_LIBS_INIT and adds -pthread compile option
+  # for targets that link ${CMAKE_THREAD_LIBS_INIT}.
+  find_package (Threads)
+endif()
+
 if (WIN32)
   set(CMAKE_BUILD_TYPE Debug)
   add_definitions(-DNOMINMAX -D_WIN32_WINNT=0x0A00 -DLANG_CXX11 -DCOMPILER_MSVC -D__VERSION__=\"MSVC\")
