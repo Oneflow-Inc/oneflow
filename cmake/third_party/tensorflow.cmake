@@ -4,7 +4,7 @@ option(tensorflow_BUILD_CC_TESTS "Build cc unit tests " ON)
 option(tensorflow_ENABLE_GPU "Enable GPU support" OFF)
 
 set(TENSORFLOW_URL https://github.com/Oneflow-Inc/tensorflow.git)
-set(TENSORFLOW_TAG 71d873dd3514220b8ef2c3608d292aeeb50ec3a5)
+set(TENSORFLOW_TAG 60222b9bcc29ab47337db5dbb6c0102f8b9c2212)
 
 set(TENSORFLOW_BUILD_INCLUDE ${CMAKE_CURRENT_BINARY_DIR}/tensorflow/src/tensorflow/tensorflow)
 set(TENSORFLOW_INCLUDE_DIR ${THIRD_PARTY_DIR}/tensorflow/include)
@@ -55,10 +55,10 @@ if(WIN32)
     set(TENSORFLOW_LIBRARY_NAME "tensorflow.lib")
 
 
-    set(GIF_LIBRARY_NAME "giflib.lib")
+    set(GIF_LIBRARY_NAME "gif.lib")
     set(FARMHASH_LIBRARY_NAME "farmhash.lib")
     set(HIGHWAYHASH_LIBRARY_NAME "highwayhash.lib")
-    set(JPEG_LIBRARY_NAME "libjpeg.lib")
+    set(JPEG_LIBRARY_NAME "jpeg.lib")
     set(PNG_LIBRARY_NAME "libpng12_staticd.lib")
 
     set(JSONCPP_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/tensorflow/src/tensorflow/jsoncpp/src/jsoncpp/src/lib_json/${CMAKE_BUILD_TYPE})

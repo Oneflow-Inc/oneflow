@@ -11,7 +11,7 @@ if "%~1" == "third_party" (
   	rem mkdir build
     cd ./build
     cmake .. -A x64
-    msbuild /p:Configuration=Debug ALL_BUILD.vcxproj
+    msbuild /p:Configuration=Debug compiler.vcxproj
     cd ..
   	)
   )

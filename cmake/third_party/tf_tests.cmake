@@ -139,11 +139,26 @@ message(STATUS ${tensorflow_source_dir})
 
   # include all test
   file(GLOB_RECURSE tf_test_src_simple
-    "${tensorflow_source_dir}/tensorflow/cc/*_test.cc"
-    "${tensorflow_source_dir}/tensorflow/python/*_test.cc"
+    #"${tensorflow_source_dir}/tensorflow/cc/*_test.cc"
+    #"${tensorflow_source_dir}/tensorflow/python/*_test.cc"
     "${tensorflow_source_dir}/tensorflow/core/*_test.cc"
-    "${tensorflow_source_dir}/tensorflow/user_ops/*_test.cc"
-    "${tensorflow_source_dir}/tensorflow/contrib/rnn/*_test.cc"
+    #"${tensorflow_source_dir}/tensorflow/user_ops/*_test.cc"
+    #"${tensorflow_source_dir}/tensorflow/contrib/rnn/*_test.cc"
+  )
+
+    file(GLOB_RECURSE tf_test_src_core_exclude
+    #"${tensorflow_source_dir}/tensorflow/cc/*_test.cc"
+    #"${tensorflow_source_dir}/tensorflow/python/*_test.cc"
+    "${tensorflow_source_dir}/tensorflow/core/debug/*_test.cc"
+    "${tensorflow_source_dir}/tensorflow/core/common_runtime/*_test.cc"
+    "${tensorflow_source_dir}/tensorflow/core/distributed_runtime/*_test.cc"
+    "${tensorflow_source_dir}/tensorflow/core/grappler/*_test.cc"
+    "${tensorflow_source_dir}/tensorflow/core/graph/*_test.cc"
+    "${tensorflow_source_dir}/tensorflow/core/kernels/*_test.cc"
+    "${tensorflow_source_dir}/tensorflow/core/ops/*_test.cc"
+    "${tensorflow_source_dir}/tensorflow/core/user_ops/*_test.cc"
+    #"${tensorflow_source_dir}/tensorflow/user_ops/*_test.cc"
+    #"${tensorflow_source_dir}/tensorflow/contrib/rnn/*_test.cc"
   )
 
   # exclude the ones we don't want
@@ -151,6 +166,7 @@ message(STATUS ${tensorflow_source_dir})
     # generally not working
     "${tensorflow_source_dir}/tensorflow/cc/client/client_session_test.cc"
     "${tensorflow_source_dir}/tensorflow/cc/framework/gradients_test.cc"
+    "${tensorflow_source_dir}/tensorflow/cc/framework/shape_inference_test.cc"
     "${tensorflow_source_dir}/tensorflow/core/distributed_runtime/call_options_test.cc"
     "${tensorflow_source_dir}/tensorflow/core/distributed_runtime/tensor_coding_test.cc"
     "${tensorflow_source_dir}/tensorflow/core/kernels/remote_fused_graph_execute_utils_test.cc"
@@ -171,8 +187,7 @@ message(STATUS ${tensorflow_source_dir})
     )
   endif()
 
-  if (WIN32)
-    set(tf_test_src_simple_exclude
+  set(tf_test_src_simple_exclude
       ${tf_test_src_simple_exclude}
       # generally excluded
       "${tensorflow_source_dir}/tensorflow/contrib/ffmpeg/default/ffmpeg_lib_test.cc"
@@ -188,8 +203,9 @@ message(STATUS ${tensorflow_source_dir})
       "${tensorflow_source_dir}/tensorflow/core/kernels/quantize_op_test.cc"
       "${tensorflow_source_dir}/tensorflow/core/lib/strings/str_util_test.cc"
       "${tensorflow_source_dir}/tensorflow/core/lib/strings/numbers_test.cc"
+      "${tensorflow_source_dir}/tensorflow/core/lib/gtl/optional_test.cc"
       "${tensorflow_source_dir}/tensorflow/core/lib/monitoring/collection_registry_test.cc"
-      "${tensorflow_source_dir}/tensorflow/core/platform/file_system_test.cc"
+      #"${tensorflow_source_dir}/tensorflow/core/platform/file_system_test.cc"
       "${tensorflow_source_dir}/tensorflow/contrib/cudnn_rnn/cudnn_rnn_ops_test.cc"
       "${tensorflow_source_dir}/tensorflow/contrib/rnn/ops/gru_ops_test.cc" # status 5
       "${tensorflow_source_dir}/tensorflow/contrib/rnn/ops/lstm_ops_test.cc" # status 5
@@ -212,6 +228,7 @@ message(STATUS ${tensorflow_source_dir})
       "${tensorflow_source_dir}/tensorflow/core/platform/cloud/http_request_test.cc"
       "${tensorflow_source_dir}/tensorflow/core/platform/cloud/oauth_client_test.cc"
       "${tensorflow_source_dir}/tensorflow/core/platform/cloud/retrying_file_system_test.cc"
+      "${tensorflow_source_dir}/tensorflow/core/platform/cloud/retrying_utils_test.cc"
       "${tensorflow_source_dir}/tensorflow/core/platform/cloud/time_util_test.cc"
       "${tensorflow_source_dir}/tensorflow/core/platform/hadoop/hadoop_file_system_test.cc"
       "${tensorflow_source_dir}/tensorflow/core/platform/profile_utils/cpu_utils_test.cc"
@@ -234,8 +251,7 @@ message(STATUS ${tensorflow_source_dir})
       "${tensorflow_source_dir}/tensorflow/contrib/session_bundle/signature_test.cc"
       "${tensorflow_source_dir}/tensorflow/contrib/tensor_forest/core/ops/training_ops_test.cc"
       "${tensorflow_source_dir}/tensorflow/contrib/tensor_forest/core/ops/tree_utils_test.cc"
-    )
-  endif()
+  )
 
   # Tests for saved_model require data, so need to treat them separately.
   file(GLOB tf_cc_saved_model_test_srcs
@@ -245,6 +261,7 @@ message(STATUS ${tensorflow_source_dir})
   list(REMOVE_ITEM tf_test_src_simple
     ${tf_test_src_simple_exclude}
     ${tf_cc_saved_model_test_srcs}
+    ${tf_test_src_core_exclude}
   )
 
   set(tf_test_lib tf_test_lib)
