@@ -11,13 +11,13 @@ class MdSaveCompTaskNode final : public CompTaskNode {
   MdSaveCompTaskNode() = default;
   ~MdSaveCompTaskNode() = default;
 
-  void set_model_save_comp_parallel_id(uint64_t parallel_id) {
-    model_save_comp_parallel_id_ = parallel_id;
+  void set_related_update_task_parallel_id(uint64_t parallel_id) {
+    related_update_task_parallel_id_ = parallel_id;
   }
 
-  virtual void ToProto(TaskProto* ret) const override {
+  void ToProto(TaskProto* ret) const override {
     TaskNode::ToProto(ret);
-    ret->set_parallel_id(model_save_comp_parallel_id_);
+    ret->set_parallel_id(related_update_task_parallel_id_);
   }
 
  private:
@@ -34,7 +34,7 @@ class MdSaveCompTaskNode final : public CompTaskNode {
     return of_make_unique<MdSaveCompTaskNode> ();
   }
 
-  uint64_t model_save_comp_parallel_id_;
+  uint64_t related_update_task_parallel_id_;
 
 };
 

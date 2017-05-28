@@ -10,12 +10,6 @@ MdSaveTaskGraph::MdSaveTaskGraph(const std::string& name,
   update_task_ = update_task;
   BuildTaskGraph(dot_path_prefix);
   BuildExecAndEnrollLbn2Regsts();
-  for (const auto& node : nodes()) {
-    auto model_save_comp_task_node = dynamic_cast<MdSaveCompTaskNode*>(node.get());
-    if (model_save_comp_task_node != nullptr) {
-      model_save_comp_task_node->set_model_save_comp_parallel_id(update_task->parallel_id());
-    }
-  }
 }
 
 void MdSaveTaskGraph::BuildTaskGraph(const std::string& dot_path_prefix) {
@@ -41,6 +35,13 @@ void MdSaveTaskGraph::BuildTaskGraph(const std::string& dot_path_prefix) {
   chain_gph->UpdateSourceAndSink();
   chain_gph->ToDotFile(dot_path_prefix + "chain_graph.dot");
   BuildFromChainGph<MdSaveCompTaskNode>(std::move(chain_gph), false, dot_path_prefix);
+  for (const auto& node : nodes()) {
+    auto model_save_comp_task_node = 
+        dynamic_cast<MdSaveCompTaskNode*>(node.get());
+    if (model_save_comp_task_node != nullptr) {
+      model_save_comp_task_node->set_related_update_task_parallel_id(update_task_->parallel_id());
+    }
+  }
 }
 
 } // namespace oneflow

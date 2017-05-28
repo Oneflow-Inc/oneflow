@@ -14,7 +14,7 @@ void MdSaveCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
     SubscribeRegstDesc("model", GetRelatedRegst(SoleInEdge()));
 
     OperatorConf op_conf;
-    op_conf.set_name("model_save_op");
+    op_conf.set_name("model_save_op" + updt_task->node_id_str());
     op_conf.mutable_model_save_conf();
     for (const auto& pair : GetRelatedRegst(SoleInEdge())->lbn2shape()) {
       op_conf.mutable_model_save_conf()->add_lbns(pair.first);
