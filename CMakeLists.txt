@@ -38,7 +38,7 @@ if (WIN32)
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /D_ITERATOR_DEBUG_LEVEL=0")
 else()
   list(APPEND CUDA_NVCC_FLAGS "-std=c++11 -w")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ldl -g -Wall -Wno-sign-compare")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wno-sign-compare")
 endif()
 
 set(THIRD_PARTY_DIR "${PROJECT_SOURCE_DIR}/third_party"

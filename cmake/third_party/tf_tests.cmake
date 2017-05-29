@@ -74,7 +74,7 @@ function(AddTest)
   endif(_AT_DEPENDS)
 
   add_executable(${_AT_TARGET} ${_AT_SOURCES} ${_AT_OBJECTS})
-  target_link_libraries(${_AT_TARGET} ${_AT_LIBS})
+  target_link_libraries(${_AT_TARGET} ${_AT_LIBS} ${CMAKE_DL_LIBS})
 
   GetTestRunPath(testdir ${_AT_TARGET})
   set(tempdir "${testdir}/tmp")
@@ -110,7 +110,6 @@ if (tensorflow_BUILD_CC_TESTS)
   # tf_test_src_simple to your needs
   #
 
-message(STATUS ${tensorflow_source_dir})
   # cc tests wrapper
   set(tf_src_testlib
     "${tensorflow_source_dir}/tensorflow/cc/framework/testutil.cc"
