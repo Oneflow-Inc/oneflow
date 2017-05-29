@@ -1,6 +1,6 @@
 include (ExternalProject)
 
-option(tensorflow_BUILD_CC_TESTS "Build cc unit tests " ON)
+option(tensorflow_BUILD_CC_TESTS "Build cc unit tests " OFF)
 option(tensorflow_ENABLE_GPU "Enable GPU support" OFF)
 
 set(TENSORFLOW_URL https://github.com/Oneflow-Inc/tensorflow.git)
