@@ -38,6 +38,7 @@ set(PNG_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/tensorflow/src/tensorflow/
 
 set(JSONCPP_BUILD_INCLUDE ${CMAKE_CURRENT_BINARY_DIR}/tensorflow/src/tensorflow/jsoncpp/src/jsoncpp)
 set(JSONCPP_INCLUDE_DIR ${THIRD_PARTY_DIR}/jsoncpp/include)
+set(JSONCPP_INCLUDE_SUBDIR "include/json")
 set(JSONCPP_LIBRARY_DIR ${THIRD_PARTY_DIR}/jsoncpp/lib)
 
 set(THIRD_PARTY_EIGEN3_DIR ${THIRD_PARTY_DIR}/eigen3)
@@ -250,10 +251,10 @@ add_custom_target(png_copy_libs_to_destination
     DEPENDS png_create_library_dir)
 
 add_custom_target(jsoncpp_create_header_dir
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${JSONCPP_INCLUDE_DIR}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${JSONCPP_INCLUDE_DIR}/${JSONCPP_INCLUDE_SUBDIR}
     DEPENDS tensorflow)
 add_custom_target(jsoncpp_copy_headers_to_destination
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${JSONCPP_BUILD_INCLUDE} ${JSONCPP_INCLUDE_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${JSONCPP_BUILD_INCLUDE}/${JSONCPP_INCLUDE_SUBDIR} ${JSONCPP_INCLUDE_DIR}/${JSONCPP_INCLUDE_SUBDIR}
     DEPENDS jsoncpp_create_header_dir)
 
 
