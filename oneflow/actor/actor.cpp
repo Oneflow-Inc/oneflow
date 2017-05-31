@@ -18,7 +18,7 @@ void Actor::Init(const TaskProto& task_proto) {
     ExecKernel ek;
     ek.kernel = KernelMgr::Singleton().GetKernelFromOpName(node.op_name());
     ek.bn_in_op2regst_desc_id = PbMap2HashMap(node.bn_in_op2regst_desc_id());
-    exec_kernel_vec_.push_back(ek);
+    exec_kernel_vec_.push_back(std::move(ek));
   }
 }
 
