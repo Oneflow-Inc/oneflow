@@ -11,7 +11,7 @@ void BoxingActor::ProcessMsg(const ActorMsg& actor_msg) {
   TODO();
 }
 
-REGISTER_ACTOR(TaskType::kBoxingTask, true, BoxingActor);
-REGISTER_ACTOR(TaskType::kBoxingTask, false, BoxingActor);
+REGISTER_ACTOR(kBoxingTask, true, BoxingActor);
+REGISTER_ACTOR(kBoxingTask, false, BoxingActor);
 
 }  // namespace oneflow

@@ -11,7 +11,7 @@ void CopyHdActor::ProcessMsg(const ActorMsg& actor_msg) {
   TODO();
 }
 
-REGISTER_ACTOR(TaskType::kCopyHdTask, true, CopyHdActor);
-REGISTER_ACTOR(TaskType::kCopyHdTask, false, CopyHdActor);
+REGISTER_ACTOR(kCopyHdTask, true, CopyHdActor);
+REGISTER_ACTOR(kCopyHdTask, false, CopyHdActor);
 
 }  // namespace oneflow

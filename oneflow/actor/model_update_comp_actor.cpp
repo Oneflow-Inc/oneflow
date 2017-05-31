@@ -11,6 +11,6 @@ void MdUpdtCompActor::ProcessMsg(const ActorMsg& actor_msg) {
   TODO();
 }
 
-REGISTER_ACTOR(TaskType::kMdUpdtCompTask, true, MdUpdtCompActor);
+REGISTER_ACTOR(kMdUpdtCompTask, true, MdUpdtCompActor);
 
 }  // namespace oneflow

@@ -11,6 +11,6 @@ void BpDataCompActor::ProcessMsg(const ActorMsg& actor_msg) {
   TODO();
 }
 
-REGISTER_ACTOR(TaskType::kDataCompTask, false, BpDataCompActor);
+REGISTER_ACTOR(kDataCompTask, false, BpDataCompActor);
 
 }  // namespace oneflow

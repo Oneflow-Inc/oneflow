@@ -11,6 +11,6 @@ void FwDataCompActor::ProcessMsg(const ActorMsg& actor_msg) {
   TODO();
 }
 
-REGISTER_ACTOR(TaskType::kDataCompTask, true, FwDataCompActor);
+REGISTER_ACTOR(kDataCompTask, true, FwDataCompActor);
 
 }  // namespace oneflow

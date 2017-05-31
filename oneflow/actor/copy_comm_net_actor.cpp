@@ -11,7 +11,7 @@ void CopyCommNetActor::ProcessMsg(const ActorMsg& actor_msg) {
   TODO();
 }
 
-REGISTER_ACTOR(TaskType::kCopyCommNetTask, true, CopyCommNetActor);
-REGISTER_ACTOR(TaskType::kCopyCommNetTask, false, CopyCommNetActor);
+REGISTER_ACTOR(kCopyCommNetTask, true, CopyCommNetActor);
+REGISTER_ACTOR(kCopyCommNetTask, false, CopyCommNetActor);
 
 }  // namespace oneflow
