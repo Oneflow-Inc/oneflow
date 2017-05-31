@@ -15,10 +15,7 @@ class Regst final {
   }
   
   Blob* GetBlobPtrFromLbn(const std::string& lbn);
-  uint64_t piece_id() const { return piece_id_; }
     
-  void set_piece_id(uint64_t piece_id) { piece_id_ = piece_id; }
-
  private:
   friend class RegstMgr;
   Regst() = default;
@@ -27,7 +24,6 @@ class Regst final {
   uint64_t regst_id_;
   std::function<void()> deleter_;
   HashMap<std::string, std::unique_ptr<Blob>> lbn2blob_;
-  uint64_t piece_id_;
 };
 
 } // namespace oneflow
