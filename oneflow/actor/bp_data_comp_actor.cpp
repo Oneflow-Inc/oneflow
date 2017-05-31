@@ -1,5 +1,5 @@
 #include "actor/bp_data_comp_actor.h"
-#include "actor/actor_register.h"
+#include "actor/actor_registry.h"
 
 namespace oneflow {
 
