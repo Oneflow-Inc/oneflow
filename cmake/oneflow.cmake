@@ -4,7 +4,7 @@ list(APPEND of_main_cc ${oneflow_src_dir}/runtime/elf_runner.cpp)
 
 if(WIN32)
   set(oneflow_platform "windows")
-  list(APPEND oneflow_platflorm_excludes "linux")
+  list(APPEND oneflow_platform_excludes "linux")
 else()
   set(oneflow_platform "linux")
   list(APPEND oneflow_platform_excludes "windows")
