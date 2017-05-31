@@ -25,15 +25,21 @@ class Kernel {
   // for Forward / Bp Calculation in FwExecGragh node and BpExecGragh node
   // through bn_in_op2blob_ptr function get the input blob and output blob
   // the Kernel will using the input blob calculate the result and fill output
-  virtual void Forward(std::function<Blob*(const std::string&)>) = 0;
-  virtual void Backward(std::function<Blob*(const std::string&)>) = 0;
+  virtual void Forward(std::function<Blob*(const std::string&)>) const = 0;
+  virtual void Backward(std::function<Blob*(const std::string&)>) const = 0;
+
+  //
+  const std::string& GetLbnFromBnInOp(const std::string& bn_in_op) const {
+    return op_->Lbn4BnInOp(bn_in_op);
+  }
+
  protected:
   Kernel() = default;
  private:
   std::unique_ptr<const Operator> op_;
 };
 
-using KernelWardFunc = void (Kernel::*)(std::function<Blob*(const std::string&)>);
+using KernelWardFunc = void (Kernel::*)(std::function<Blob*(const std::string&)>) const;
 
 #define INSTANTIATE_CPU_KERNEL_CLASS(classname) \
   char gInstantiationGuardCPU##classname; \

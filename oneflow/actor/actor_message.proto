@@ -1,7 +1,0 @@
-syntax = "proto3";
-package oneflow;
-
-message ActorMsg {
-  uint64 dst_actor_id = 1;
-  uint64 register_id = 2;
-}

@@ -5,13 +5,13 @@ namespace oneflow {
 
 template<FloatingPointType floating_point_type>
 void ConvolutionKernel<DeviceType::kCPU, floating_point_type>::Forward(
-    std::function<Blob*(const std::string&)> bn_in_op2blob_ptr) {
+    std::function<Blob*(const std::string&)> bn_in_op2blob_ptr) const {
   TODO();
 }
 
 template<FloatingPointType floating_point_type>
 void ConvolutionKernel<DeviceType::kCPU, floating_point_type>::Backward(
-  std::function<Blob*(const std::string&)> bn_in_op2blob_ptr) {
+  std::function<Blob*(const std::string&)> bn_in_op2blob_ptr) const {
   TODO();
 }
 
