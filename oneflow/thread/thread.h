@@ -5,7 +5,7 @@
 #include <thread>
 #include "common/util.h"
 #include "common/channel.h"
-#include "actor/task.pb.h"
+#include "common/task.pb.h"
 #include "actor/actor.h"
 #include "actor/actor_msg_bus.h"
 

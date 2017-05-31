@@ -3,7 +3,7 @@
 
 #include "common/util.h"
 #include "kernel/kernel.h"
-#include "actor/task.pb.h"
+#include "common/task.pb.h"
 #include "actor/actor_message.pb.h"
 
 namespace oneflow {
@@ -33,7 +33,6 @@ class Actor {
   uint64_t actor_id_;
   std::vector<ExecKernel> exec_kernel_vec_;
   std::unordered_map<uint64_t, std::string> regst_desc_id2regst_desc_name_;
-  // Init at subclass
   KernelWardFunc ward_func_;
 
 };
