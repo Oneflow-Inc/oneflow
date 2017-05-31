@@ -38,6 +38,7 @@ target_link_libraries(of_protoobj ${oneflow_third_party_libs})
 
 # cc obj lib
 include_directories(${oneflow_src_dir})
+include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
 cuda_add_library(of_ccobj ${of_all_obj_cc})
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})
