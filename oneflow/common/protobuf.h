@@ -69,12 +69,13 @@ inline PbRpf<std::string> StdVec2PbVec (
 }
 
 // ProtoMap <-> HashMap
-inline HashMap<std::string, std::string> PbMap2HashMap(
-    const google::protobuf::Map<std::string, std::string>& pb_map) {
-  return HashMap<std::string, std::string> (pb_map.begin(), pb_map.end());
+template<typename K, typename V>
+HashMap<K, V> PbMap2HashMap(const google::protobuf::Map<K, V>& pb_map) {
+  return HashMap<K, V> (pb_map.begin(), pb_map.end());
 }
-inline google::protobuf::Map<std::string, std::string> HashMap2PbMap( 
-    const HashMap<std::string, std::string>& hash_map) {
+
+template<typename K, typename V>
+google::protobuf::Map<K, V> HashMap2PbMap(const HashMap<K, V>& hash_map) {
   using RetType = google::protobuf::Map<std::string, std::string>;
   return RetType(hash_map.begin(), hash_map.end());
 }

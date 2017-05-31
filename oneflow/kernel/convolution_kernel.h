@@ -19,8 +19,8 @@ class ConvolutionKernel<DeviceType::kCPU, floating_point_type> final : public Ke
   ConvolutionKernel() = default;
   ~ConvolutionKernel() = default;
 
-  void Forward(std::function<Blob*(const std::string&)>) override;
-  void Backward(std::function<Blob*(const std::string&)>) override;
+  void Forward(std::function<Blob*(const std::string&)>) const override;
+  void Backward(std::function<Blob*(const std::string&)>) const override;
 };
 
 template<FloatingPointType floating_point_type>
@@ -30,8 +30,8 @@ class ConvolutionKernel<DeviceType::kGPU, floating_point_type> final : public Ke
   ConvolutionKernel() = default;
   ~ConvolutionKernel() = default;
 
-  void Forward(std::function<Blob*(const std::string&)>) override;
-  void Backward(std::function<Blob*(const std::string&)>) override;
+  void Forward(std::function<Blob*(const std::string&)>) const override;
+  void Backward(std::function<Blob*(const std::string&)>) const override;
 };
 
 }  // namespace oneflow
