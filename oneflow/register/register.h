@@ -2,8 +2,6 @@
 #define ONEFLOW_REGISTER_REGISTER_H_
 
 #include "register/blob.h"
-#include "actor/actor_message.pb.h"
-#include "actor/actor_msg_bus.h"
 #include "common/util.h"
 #include "register/runtime_register_desc.h"
 

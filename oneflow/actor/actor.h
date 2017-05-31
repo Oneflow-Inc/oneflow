@@ -4,7 +4,7 @@
 #include "common/util.h"
 #include "kernel/kernel.h"
 #include "common/task.pb.h"
-#include "actor/actor_message.pb.h"
+#include "actor/actor_message.h"
 #include "register/register.h"
 
 namespace oneflow {
