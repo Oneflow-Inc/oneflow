@@ -1,0 +1,17 @@
+#include "actor/model_save_comp_actor.h"
+#include "actor/actor_register.h"
+
+namespace oneflow {
+
+void MdSaveCompActor::Init(const TaskProto& task_proto) {
+  TODO();
+}
+
+void MdSaveCompActor::ProcessMsg(const ActorMsg& actor_msg) {
+  TODO();
+}
+
+REGISTER_ACTOR(TaskType::kMdSaveCompTask, true, MdSaveCompActor);
+REGISTER_ACTOR(TaskType::kMdSaveCompTask, false, MdSaveCompActor);
+
+}  // namespace oneflow

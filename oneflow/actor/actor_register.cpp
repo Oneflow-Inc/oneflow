@@ -7,9 +7,7 @@ namespace {
 
 struct pair_hash {
   std::size_t operator () (const std::pair<int, bool> &p) const {
-    auto h1 = std::hash<int>{}(p.first);
-    auto h2 = std::hash<bool>{}(p.second);
-    return (h1 << 1) | h2;
+    return std::hash<int>{}((p.first << 1) | ((int)p.second));
   }
 };
 

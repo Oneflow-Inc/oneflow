@@ -8,18 +8,18 @@ namespace oneflow {
 
 std::shared_ptr<Actor> ConstructActor(const TaskProto&);
 
-void AddActorCreator(TaskType task_type, bool is_forward, 
+void AddActorCreator(TaskType task_type, bool is_forward,
                      std::function<Actor*()> creator);
 
 template<TaskType task_type, bool is_forward, typename ActorType>
 struct ActorRegister {
   ActorRegister() {
-    AddActorCreator(task_type, is_forward, []() { return new ActorType });
+    AddActorCreator(task_type, is_forward, []() { return new ActorType; });
   }
 };
 
 #define REGISTER_ACTOR(TaskType, IsForward, ActorType) \
-  static ActorRegister<TaskType, IsForward, ActorType) g_##ActorType##_register_var;
+  static ActorRegister<TaskType, IsForward, ActorType> g_##ActorType##_##IsForward##_register_var;
 
 }  // namespace oneflow
 
