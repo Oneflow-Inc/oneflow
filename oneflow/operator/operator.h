@@ -7,6 +7,7 @@
 #include "common/shape.h"
 #include "common/protobuf.h"
 #include "common/util.h"
+#include "common/keyword.h"
 #include "operator/operator.pb.h"
 
 namespace oneflow {

@@ -40,8 +40,8 @@ void MdUpdtTaskGraph::BuildTaskGraph(const ChainNode* data_chain,
     auto parallel_desc4faker = new ParallelDesc(*(data_chain->parallel_desc()));
     parallel_desc4faker->mut_policy() = kFakerMdUpdt;
     faker_chain->mut_parallel_desc().reset(parallel_desc4faker);
-    faker_chain->mut_output_lbns() = {RegstDesc::kAllLbn};
-    updt_chain->mut_input_lbns() = {RegstDesc::kAllLbn};
+    faker_chain->mut_output_lbns() = {kBaledBlobName};
+    updt_chain->mut_input_lbns() = {kBaledBlobName};
     Connect(faker_chain, chain_gph->NewEdge(), updt_chain);
   }
   //

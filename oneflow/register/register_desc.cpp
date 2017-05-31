@@ -97,6 +97,4 @@ MemoryCase RegstDesc::InferMemCase() const {
   return MemoryCase();
 }
 
-const char* RegstDesc::kAllLbn = "OfReservedAllLbn";
-
 } // namespace oneflow

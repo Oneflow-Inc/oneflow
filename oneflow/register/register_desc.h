@@ -43,8 +43,6 @@ class RegstDesc final {
   void ToProto(RegstDescProto*) const;
   MemoryCase InferMemCase() const;
   
-  static const char* kAllLbn;
-
  private:
   uint64_t regst_desc_id_;
   const TaskNode* producer_;
