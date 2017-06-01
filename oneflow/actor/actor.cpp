@@ -26,6 +26,13 @@ void Actor::Init(const TaskProto& task_proto) {
       produced_regst_vec_.emplace_back(regst);
     });
   }
+  // name2regst_desc_id_
+  for (const auto& pair : task_proto.produced_regst_desc()) {
+    CHECK(name2regst_desc_id_.emplace(pair.first, pair.second.regst_desc_id()).second);
+  }
+  for (const auto& pair : task_proto.subscribed_regst_desc_id()) {
+    CHECK(name2regst_desc_id_.emplace(pair.first, pair.second).second);
+  }
 }
 
 void Actor::WardKernel(std::function<Regst*(uint64_t)> GetRegstFromRegstDescId) {
