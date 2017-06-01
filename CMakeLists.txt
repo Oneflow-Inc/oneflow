@@ -49,6 +49,7 @@ list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir}/third_party)
 list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir})
 include(util)
 include(proto2cpp)
+include(proto2grpc)
 include(third_party)
 
 if (BUILD_THIRD_PARTY)
