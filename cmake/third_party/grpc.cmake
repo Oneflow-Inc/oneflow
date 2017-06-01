@@ -2,6 +2,8 @@ include (ExternalProject)
 
 set(GRPC_INCLUDE_DIR ${THIRD_PARTY_DIR}/grpc/include)
 set(GRPC_LIBRARY_DIR ${THIRD_PARTY_DIR}/grpc/lib)
+set(GRPC_BINARY_DIR  ${THIRD_PARTY_DIR}/grpc/bin)
+
 
 set(GRPC_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/include)
 set(GRPC_URL https://github.com/yuanms2/grpc.git)
