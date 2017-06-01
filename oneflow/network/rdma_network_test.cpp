@@ -11,7 +11,17 @@
 using namespace oneflow;
 using namespace std;
 
+DEFINE_int32(my_machine_id, 0, "local machine id");
+DEFINE_int32(peer_machine_id, 1, "peer machine id");
+DEFINE_int32(transfer_size, 1024, "transfer data size");
+DEFINE_int32(transfer_times, 1, "transfer data times");
+
 int main(int argc, char** argv) {
+  google::InitGoogleLogging((const char *)argv[0]);
+  
+  gflags::SetUsageMessage("Usage: ./rdma_network_test");
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
+
   cout << "Network Starting Up..." << endl;
   Network* net = oneflow::GetRdmaInstance();
   cout << "Create Rdma Instance Success." << endl;
@@ -28,8 +38,8 @@ int main(int argc, char** argv) {
   net_topo.all_nodes[1].neighbors.insert(0);
 
   // modify here manually
-  uint64_t my_machine_id = 1;
-  uint64_t peer_machine_id = 0;
+  uint64_t my_machine_id = FLAGS_my_machine_id;
+  uint64_t peer_machine_id = FLAGS_peer_machine_id;
 
   net->Init(my_machine_id, net_topo);
   cout << "Net Init Success." << endl;
@@ -68,7 +78,7 @@ int main(int argc, char** argv) {
 
   // useful for my_machine_id == 0
   NetworkMemory* dst_memory = net->NewNetworkMemory();
-  char dst_buffer[BUFFER_SIZE];
+  char dst_buffer[FLAGS_transfer_size];
   dst_memory->Reset(dst_buffer, BUFFER_SIZE, my_machine_id);
   dst_memory->Register();
   MemoryDescriptor* remote_memory_descriptor = new MemoryDescriptor();
@@ -76,7 +86,7 @@ int main(int argc, char** argv) {
 
   // useful for my_machine_id == 1
   NetworkMemory* src_memory = net->NewNetworkMemory();
-  char src_buffer[BUFFER_SIZE] = "hello from peer machine!";
+  char src_buffer[FLAGS_transfer_size];
   src_memory->Reset(src_buffer, BUFFER_SIZE, my_machine_id);
   src_memory->Register();
   // send memory descriptor to peer
@@ -93,8 +103,8 @@ int main(int argc, char** argv) {
   // useful for all machine
   for (int i = 0; i < 5; ++i) {
     while (!net->Poll(&result)) {
-      //sleep(1);
-      cout << "Poll result false" << endl;
+      // sleep(1);
+      // cout << "Poll result false" << endl;
     }
     if (result.type == NetworkResultType::NET_SEND_OK) {
       printf("send ok\n");
@@ -111,12 +121,14 @@ int main(int argc, char** argv) {
       }
     }
     else if (result.type == NetworkResultType::NET_READ_OK) {
-      cout << "READ OK, Get memory: " << dst_buffer << endl;
+      cout << "READ OK, Get memory size: " << sizeof(dst_buffer) << endl;
     }
   }
 
   cout << "Network Shutting Down..." << endl;
   int a;
   cin >> a;
+  gflags::ShutDownCommandLineFlags();
+  google::ShutdownGoogleLogging();
   return 0;
 }
