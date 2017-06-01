@@ -101,7 +101,8 @@ int main(int argc, char** argv) {
   }
   
   // useful for all machine
-  for (int i = 0; i < 5; ++i) {
+  int i = 0;
+  while (i < FLAGS_transfer_times) {
     while (!net->Poll(&result)) {
       // sleep(1);
       // cout << "Poll result false" << endl;
@@ -119,17 +120,31 @@ int main(int argc, char** argv) {
         net->Read(remote_memory_descriptor, dst_memory);
         printf("async read issued\n");
       }
+      else if (result.net_msg.type == NetworkMessageType::MSG_TYPE_REQUEST_ACK) {
+        printf("Send next memory descriptor\n");
+        NetworkMessage memory_msg;
+        memory_msg.type = NetworkMessageType::MSG_TYPE_REMOTE_MEMORY_DESCRIPTOR;
+        memory_msg.src_machine_id = my_machine_id;
+        memory_msg.dst_machine_id = peer_machine_id;
+        memory_msg.address = src_memory->memory_discriptor().address;
+        memory_msg.token = src_memory->memory_discriptor().remote_token;
+        net->Send(memory_msg);
+      }
     }
     else if (result.type == NetworkResultType::NET_READ_OK) {
-      cout << "READ OK." << endl;
+      cout << "READ OK. TIMES: " << i << endl;
+      NetworkMessage read_ok_msg;
+      read_ok_msg.type = NetworkMessageType::MSG_TYPE_REQUEST_ACK;
+      read_ok_msg.src_machine_id = my_machine_id;
+      read_ok_msg.dst_machine_id = peer_machine_id;
+      net->Send(read_ok_msg);
+      ++i;
     }
   }
 
   cout << "Network Shutting Down..." << endl;
   delete []src_buffer;
   delete []dst_buffer;
-  int a;
-  cin >> a;
   gflags::ShutDownCommandLineFlags();
   google::ShutdownGoogleLogging();
   return 0;
