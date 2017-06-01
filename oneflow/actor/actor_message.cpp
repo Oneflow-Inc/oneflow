@@ -3,7 +3,9 @@
 namespace oneflow {
 
 ActorMsg::ActorMsg() {
-  TODO();
+  dst_actor_id_ = std::numeric_limits<uint64_t>::max();
+  piece_id_ = std::numeric_limits<uint64_t>::max();
+  regst_ = nullptr;
 }
 
 } // namespace oneflow
