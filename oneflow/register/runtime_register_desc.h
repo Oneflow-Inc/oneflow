@@ -15,12 +15,10 @@ class RtRegstDesc {
 
   RtRegstDesc(const RegstDescProto&) { TODO(); }
 
-  // TODO: Add Getter
-
  private:
   uint64_t regst_desc_id_;
-  uint64_t producer_task_id_;
-  std::vector<uint64_t> subscribers_task_id_;
+  uint64_t producer_actor_id_;
+  std::vector<uint64_t> subscribers_actor_id_;
   std::unordered_map<std::string, std::unique_ptr<Shape>> lbn2shape_;
   int64_t register_num_;
   MemoryCase mem_case_;
