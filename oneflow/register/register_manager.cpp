@@ -4,9 +4,6 @@ namespace oneflow {
 
 void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
                std::function<void(Regst*)> OneRegstDone) {
-  // One RegstDesc means Multi Regst
-  // All Regst has a shared_ptr point to the same RtRegstDesc obj
-  // Call OneRegstDone for each regst
   std::shared_ptr<RtRegstDesc> runtime_regst_desc(new RtRegstDesc(regst_desc_proto));
   for (size_t i = 0; i < regst_desc_proto.register_num(); ++i) {
     Regst* regst = new Regst;
