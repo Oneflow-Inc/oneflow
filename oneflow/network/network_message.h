@@ -2,7 +2,7 @@
 #define ONEFLOW_NETWORK_NETWORK_MESSAGE_H_
 #include <cstdint>
 //#include "runtime/event_message.h"
-#include "actor/actor_message.pb.h"
+#include "actor/actor_message.h"
 
 namespace oneflow {
 typedef std::shared_ptr<ActorMsg> MsgPtr;

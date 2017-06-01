@@ -5,7 +5,7 @@
 #include <string>
 #include <memory>
 #include <unordered_map>
-#include "actor/actor_message.pb.h"
+#include "actor/actor_message.h"
 #include "network/network_message.h"
 #include "network/network_topology.h"
 
