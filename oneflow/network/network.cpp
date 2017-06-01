@@ -1,0 +1,20 @@
+#include "network/network.h"
+
+#include <glog/logging.h>
+#include <vector>
+#include <string>
+#include <memory>
+// #include "common/common.h"
+
+#include "network/rdma/rdma_network.h"
+
+namespace oneflow {
+
+Network* GetRdmaInstance() {
+  static RdmaNetwork instance;
+  return &instance;
+  LOG(FATAL) << "Unimplemented";
+  return nullptr;
+}
+
+}  // namespace oneflow
