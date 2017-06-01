@@ -78,16 +78,16 @@ int main(int argc, char** argv) {
 
   // useful for my_machine_id == 0
   NetworkMemory* dst_memory = net->NewNetworkMemory();
-  char dst_buffer[FLAGS_transfer_size];
-  dst_memory->Reset(dst_buffer, BUFFER_SIZE, my_machine_id);
+  char* dst_buffer = new char[FLAGS_transfer_size];
+  dst_memory->Reset(dst_buffer, FLAGS_transfer_size, my_machine_id);
   dst_memory->Register();
   MemoryDescriptor* remote_memory_descriptor = new MemoryDescriptor();
   remote_memory_descriptor->address = 0;
 
   // useful for my_machine_id == 1
   NetworkMemory* src_memory = net->NewNetworkMemory();
-  char src_buffer[FLAGS_transfer_size];
-  src_memory->Reset(src_buffer, BUFFER_SIZE, my_machine_id);
+  char* src_buffer = new char[FLAGS_transfer_size];
+  src_memory->Reset(src_buffer, FLAGS_transfer_size, my_machine_id);
   src_memory->Register();
   // send memory descriptor to peer
   if (my_machine_id == 1) {
@@ -121,11 +121,13 @@ int main(int argc, char** argv) {
       }
     }
     else if (result.type == NetworkResultType::NET_READ_OK) {
-      cout << "READ OK, Get memory size: " << sizeof(dst_buffer) << endl;
+      cout << "READ OK." << endl;
     }
   }
 
   cout << "Network Shutting Down..." << endl;
+  delete []src_buffer;
+  delete []dst_buffer;
   int a;
   cin >> a;
   gflags::ShutDownCommandLineFlags();
