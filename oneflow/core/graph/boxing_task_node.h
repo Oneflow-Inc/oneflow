@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_GRAPH_BOXING_TASK_NODE_H_
-#define ONEFLOW_GRAPH_BOXING_TASK_NODE_H_
+#ifndef ONEFLOW_CORE_GRAPH_BOXING_TASK_NODE_H_
+#define ONEFLOW_CORE_GRAPH_BOXING_TASK_NODE_H_
 
 #include "oneflow/core/graph/comp_task_node.h"
 
@@ -58,4 +58,4 @@ class BoxingTaskNode : public TaskNode {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_GRAPH_BOXING_TASK_NODE_H_
+#endif // ONEFLOW_CORE_GRAPH_BOXING_TASK_NODE_H_

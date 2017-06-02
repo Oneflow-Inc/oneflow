@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_OPERATOR_RELU_OP_H_
-#define ONEFLOW_OPERATOR_RELU_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_RELU_OP_H_
+#define ONEFLOW_CORE_OPERATOR_RELU_OP_H_
 
 #include <string>
 #include "oneflow/core/operator/operator.h"
@@ -27,4 +27,4 @@ class ReluOp final : public UserOperator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_OPERATOR_RELU_OP_H_
+#endif // ONEFLOW_CORE_OPERATOR_RELU_OP_H_

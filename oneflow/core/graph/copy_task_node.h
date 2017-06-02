@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_COPY_TASK_NODE_H_
-#define ONEFLOW_COPY_TASK_NODE_H_
+#ifndef ONEFLOW_CORE_COPY_TASK_NODE_H_
+#define ONEFLOW_CORE_COPY_TASK_NODE_H_
 
 #include "oneflow/core/graph/task_node.h"
 
@@ -92,4 +92,4 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_COPY_TASK_NODE_H_
+#endif // ONEFLOW_CORE_COPY_TASK_NODE_H_

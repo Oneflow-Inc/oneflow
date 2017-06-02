@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_OPERATOR_OPERATOR_MANAGER_H_
-#define ONEFLOW_OPERATOR_OPERATOR_MANAGER_H_
+#ifndef ONEFLOW_CORE_OPERATOR_OPERATOR_MANAGER_H_
+#define ONEFLOW_CORE_OPERATOR_OPERATOR_MANAGER_H_
 
 #include <iostream>
 #include <functional>
@@ -47,4 +47,4 @@ struct OpRegister {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_OPERATOR_OPERATOR_MANAGER_H_
+#endif // ONEFLOW_CORE_OPERATOR_OPERATOR_MANAGER_H_
