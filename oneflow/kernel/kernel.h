@@ -3,12 +3,12 @@
 
 #include <memory>
 #include <functional>
-#include "conf/resource.pb.h"
-#include "conf/job_conf.pb.h"
-#include "register/blob.h"
-#include "operator/operator.h"
-#include "operator/operator_manager.h"
-#include "operator/operator.pb.h"
+#include "oneflow/conf/resource.pb.h"
+#include "oneflow/conf/job_conf.pb.h"
+#include "oneflow/register/blob.h"
+#include "oneflow/operator/operator.h"
+#include "oneflow/operator/operator_manager.h"
+#include "oneflow/operator/operator.pb.h"
 
 namespace oneflow {
 

@@ -1,8 +1,8 @@
 #ifndef ONEFLOW_ACTOR_ACTOR_REGISTRY_H_
 #define ONEFLOW_ACTOR_ACTOR_REGISTRY_H_
 
-#include "actor/actor.h"
-#include "common/task.pb.h"
+#include "oneflow/actor/actor.h"
+#include "oneflow/common/task.pb.h"
 
 namespace oneflow {
 

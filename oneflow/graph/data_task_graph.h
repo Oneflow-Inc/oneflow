@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_GRAPH_DATA_TASK_GRAPH_H_
 #define ONEFLOW_GRAPH_DATA_TASK_GRAPH_H_
 
-#include "graph/task_graph.h"
+#include "oneflow/graph/task_graph.h"
 
 namespace oneflow {
 

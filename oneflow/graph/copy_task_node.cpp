@@ -1,7 +1,7 @@
-#include "graph/copy_task_node.h"
-#include "operator/copy_hd_op.h"
-#include "operator/copy_comm_net_op.h"
-#include "operator/operator_manager.h"
+#include "oneflow/graph/copy_task_node.h"
+#include "oneflow/operator/copy_hd_op.h"
+#include "oneflow/operator/copy_comm_net_op.h"
+#include "oneflow/operator/operator_manager.h"
 
 namespace oneflow {
 

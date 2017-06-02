@@ -1,8 +1,8 @@
 #ifndef ONEFLOW_COMMON_ID_MANAGER_H_
 #define ONEFLOW_COMMON_ID_MANAGER_H_
 
-#include "common/util.h"
-#include "conf/resource.pb.h"
+#include "oneflow/common/util.h"
+#include "oneflow/conf/resource.pb.h"
 
 namespace oneflow {
 

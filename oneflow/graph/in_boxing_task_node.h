@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_GRAPH_IN_BOXING_TASK_NODE_H_
 #define ONEFLOW_GRAPH_IN_BOXING_TASK_NODE_H_
 
-#include "graph/boxing_task_node.h"
+#include "oneflow/graph/boxing_task_node.h"
 
 namespace oneflow {
 

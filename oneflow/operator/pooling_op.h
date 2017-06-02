@@ -2,7 +2,7 @@
 #define ONEFLOW_OPERATOR_POOLING_OP_H_
 
 #include <string>
-#include "operator/operator.h"
+#include "oneflow/operator/operator.h"
 
 namespace oneflow {
 

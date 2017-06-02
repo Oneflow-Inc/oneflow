@@ -2,13 +2,13 @@
 #define ONEFLOW_ACTOR_ACTOR_H_
 
 #include <queue>
-#include "common/util.h"
-#include "kernel/kernel.h"
-#include "common/task.pb.h"
-#include "actor/actor_message.h"
-#include "actor/actor_msg_bus.h"
-#include "register/register.h"
-#include "register/register_manager.h"
+#include "oneflow/common/util.h"
+#include "oneflow/kernel/kernel.h"
+#include "oneflow/common/task.pb.h"
+#include "oneflow/actor/actor_message.h"
+#include "oneflow/actor/actor_msg_bus.h"
+#include "oneflow/register/register.h"
+#include "oneflow/register/register_manager.h"
 
 namespace oneflow {
 

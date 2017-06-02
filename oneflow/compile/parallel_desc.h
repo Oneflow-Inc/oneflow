@@ -1,10 +1,10 @@
 #ifndef ONEFLOW_COMPILE_PARALLEL_DESC_H_
 #define ONEFLOW_COMPILE_PARALLEL_DESC_H_
 
-#include "common/util.h"
-#include "common/id_manager.h"
-#include "conf/strategy.pb.h"
-#include "common/job_desc.h"
+#include "oneflow/common/util.h"
+#include "oneflow/common/id_manager.h"
+#include "oneflow/conf/strategy.pb.h"
+#include "oneflow/common/job_desc.h"
 #include <exception>
 
 namespace oneflow {

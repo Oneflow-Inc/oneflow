@@ -1,7 +1,7 @@
 syntax = "proto3";
 package oneflow;
 
-import "operator/op_conf.proto";
+import "oneflow/operator/op_conf.proto";
 
 message DLNetConf {
   string name = 1;

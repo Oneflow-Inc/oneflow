@@ -2,7 +2,7 @@
 #define ONEFLOW_GRAPH_CHAIN_GRAPH_H_
 
 #include <list>
-#include "graph/logical_graph.h"
+#include "oneflow/graph/logical_graph.h"
 
 namespace oneflow {
 

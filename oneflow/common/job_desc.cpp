@@ -1,5 +1,5 @@
-#include "common/job_desc.h"
-#include "common/protobuf.h"
+#include "oneflow/common/job_desc.h"
+#include "oneflow/common/protobuf.h"
 
 namespace oneflow {
 

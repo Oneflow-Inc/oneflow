@@ -4,8 +4,8 @@
 #include <iostream>
 #include <functional>
 #include <list>
-#include "operator/operator.h"
-#include "operator/op_conf.pb.h"
+#include "oneflow/operator/operator.h"
+#include "oneflow/operator/op_conf.pb.h"
 
 namespace oneflow {
 

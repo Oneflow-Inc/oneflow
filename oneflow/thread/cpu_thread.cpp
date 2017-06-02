@@ -1,4 +1,4 @@
-#include "thread/cpu_thread.h"
+#include "oneflow/thread/cpu_thread.h"
 
 namespace oneflow {
 

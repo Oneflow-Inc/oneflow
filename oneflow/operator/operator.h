@@ -2,13 +2,13 @@
 #define ONEFLOW_OPERATOR_OP_H_
 
 #include <string>
-#include "operator/op_conf.pb.h"
-#include "conf/strategy.pb.h"
-#include "common/shape.h"
-#include "common/protobuf.h"
-#include "common/util.h"
-#include "common/keyword.h"
-#include "operator/operator.pb.h"
+#include "oneflow/operator/op_conf.pb.h"
+#include "oneflow/conf/strategy.pb.h"
+#include "oneflow/common/shape.h"
+#include "oneflow/common/protobuf.h"
+#include "oneflow/common/util.h"
+#include "oneflow/common/keyword.h"
+#include "oneflow/operator/operator.pb.h"
 
 namespace oneflow {
 

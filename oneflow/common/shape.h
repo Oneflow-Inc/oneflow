@@ -4,8 +4,8 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#include "common/util.h"
-#include "common/shape.pb.h"
+#include "oneflow/common/util.h"
+#include "oneflow/common/shape.pb.h"
 
 namespace oneflow {
 

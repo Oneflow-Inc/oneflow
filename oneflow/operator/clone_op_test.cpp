@@ -1,8 +1,8 @@
 #include <utility>
 #include <string>
 #include <vector>
-#include "operator/clone_op.h"
-#include "operator/operator_manager.h"
+#include "oneflow/operator/clone_op.h"
+#include "oneflow/operator/operator_manager.h"
 #include "gtest/gtest.h"
 
 namespace oneflow {

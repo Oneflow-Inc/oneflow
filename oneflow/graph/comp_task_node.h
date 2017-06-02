@@ -2,7 +2,7 @@
 #define ONEFLOW_GRAPH_COMP_TASK_NODE_H_
 
 #include <algorithm>
-#include "graph/task_node.h"
+#include "oneflow/graph/task_node.h"
 
 namespace oneflow {
 

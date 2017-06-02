@@ -1,8 +1,8 @@
-#include "operator/boxing_op.h"
+#include "oneflow/operator/boxing_op.h"
 #include <string>
 #include <vector>
-#include "operator/operator_manager.h"
-#include "common/balanced_splitter.h"
+#include "oneflow/operator/operator_manager.h"
+#include "oneflow/common/balanced_splitter.h"
 
 namespace oneflow {
 

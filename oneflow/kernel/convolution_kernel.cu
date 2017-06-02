@@ -1,4 +1,4 @@
-#include "kernel/convolution_kernel.h"
+#include "oneflow/kernel/convolution_kernel.h"
 #include <string>
 
 namespace oneflow {

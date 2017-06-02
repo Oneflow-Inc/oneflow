@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_GRAPH_DATA_COMP_TASK_NODE_H_
 #define ONEFLOW_GRAPH_DATA_COMP_TASK_NODE_H_
 
-#include "graph/comp_task_node.h"
+#include "oneflow/graph/comp_task_node.h"
 
 namespace oneflow {
 

@@ -1,11 +1,11 @@
 #include "gflags/gflags.h"
 #include "glog/logging.h"
-#include "common/id_manager.h"
-#include "common/ofelf.pb.h"
-#include "common/protobuf.h"
-#include "common/job_desc.h"
-#include "runtime/runtime_info.h"
-#include "register/register_manager.h"
+#include "oneflow/common/id_manager.h"
+#include "oneflow/common/ofelf.pb.h"
+#include "oneflow/common/protobuf.h"
+#include "oneflow/common/job_desc.h"
+#include "oneflow/runtime/runtime_info.h"
+#include "oneflow/register/register_manager.h"
 
 namespace oneflow {
 

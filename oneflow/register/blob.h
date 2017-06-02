@@ -2,7 +2,7 @@
 #define ONEFLOW_REGISTER_BLOB_H_
 
 #include <functional>
-#include "common/shape.h"
+#include "oneflow/common/shape.h"
 
 namespace oneflow {
 

@@ -1,5 +1,5 @@
-#include "actor/model_save_comp_actor.h"
-#include "actor/actor_registry.h"
+#include "oneflow/actor/model_save_comp_actor.h"
+#include "oneflow/actor/actor_registry.h"
 
 namespace oneflow {
 

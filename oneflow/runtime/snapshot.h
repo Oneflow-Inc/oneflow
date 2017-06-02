@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_RUNTIME_SNAPSHOT_H_
 #define ONEFLOW_RUNTIME_SNAPSHOT_H_
 
-#include "common/util.h"
+#include "oneflow/common/util.h"
 
 namespace oneflow {
 

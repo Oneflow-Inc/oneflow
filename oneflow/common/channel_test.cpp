@@ -1,8 +1,8 @@
-#include "common/channel.h"
+#include "oneflow/common/channel.h"
 #include <thread>
 #include <vector>
 #include "gtest/gtest.h"
-#include "common/range.h"
+#include "oneflow/common/range.h"
 
 namespace oneflow {
 

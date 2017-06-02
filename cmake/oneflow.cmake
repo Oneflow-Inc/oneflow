@@ -1,16 +1,16 @@
 # main cpp
-list(APPEND of_main_cc ${oneflow_src_dir}/compile/compiler.cpp)
-list(APPEND of_main_cc ${oneflow_src_dir}/runtime/elf_runner.cpp)
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/compile/compiler.cpp)
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/runtime/elf_runner.cpp)
 
 # source_group
-SUBDIRLIST(subdir_list ${oneflow_src_dir})
+SUBDIRLIST(subdir_list ${PROJECT_SOURCE_DIR}/oneflow)
 foreach(subdir ${subdir_list})
-  file(GLOB subdir_headers    "${oneflow_src_dir}/${subdir}/*.h")
-  file(GLOB subdir_cuda_headers    "${oneflow_src_dir}/${subdir}/*.cuh")
-  file(GLOB subdir_obj_cpps   "${oneflow_src_dir}/${subdir}/*.cpp")
-  file(GLOB subdir_obj_cus   "${oneflow_src_dir}/${subdir}/*.cu")
-  file(GLOB subdir_test_cpps  "${oneflow_src_dir}/${subdir}/*_test.cpp")
-  file(GLOB subdir_protos     "${oneflow_src_dir}/${subdir}/*.proto")
+  file(GLOB subdir_headers    "${PROJECT_SOURCE_DIR}/oneflow/${subdir}/*.h")
+  file(GLOB subdir_cuda_headers    "${PROJECT_SOURCE_DIR}/oneflow/${subdir}/*.cuh")
+  file(GLOB subdir_obj_cpps   "${PROJECT_SOURCE_DIR}/oneflow/${subdir}/*.cpp")
+  file(GLOB subdir_obj_cus   "${PROJECT_SOURCE_DIR}/oneflow/${subdir}/*.cu")
+  file(GLOB subdir_test_cpps  "${PROJECT_SOURCE_DIR}/oneflow/${subdir}/*_test.cpp")
+  file(GLOB subdir_protos     "${PROJECT_SOURCE_DIR}/oneflow/${subdir}/*.proto")
   foreach(test_cpp ${subdir_test_cpps})
     list(REMOVE_ITEM subdir_obj_cpps ${test_cpp})
   endforeach()
@@ -25,19 +25,18 @@ endforeach()
 
 # proto obj lib
 foreach(proto_name ${of_all_proto})
-  file(RELATIVE_PATH proto_rel_name ${oneflow_src_dir} ${proto_name})
+  file(RELATIVE_PATH proto_rel_name ${PROJECT_SOURCE_DIR} ${proto_name})
   list(APPEND of_all_rel_protos ${proto_rel_name})
 endforeach()
 
 RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
-                               ${oneflow_src_dir}
+                               ${PROJECT_SOURCE_DIR}
                                ${of_all_rel_protos})
 
 cuda_add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(of_protoobj ${oneflow_third_party_libs})
 
 # cc obj lib
-include_directories(${oneflow_src_dir})
 include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
 cuda_add_library(of_ccobj ${of_all_obj_cc})

@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_ACTOR_MODEL_SAVE_COMP_ACTOR_H_
 #define ONEFLOW_ACTOR_MODEL_SAVE_COMP_ACTOR_H_
 
-#include "actor/actor.h"
+#include "oneflow/actor/actor.h"
 
 namespace oneflow {
 

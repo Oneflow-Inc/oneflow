@@ -1,9 +1,9 @@
 #ifndef ONEFLOW_REGISTER_REGISTER_DESC_H_
 #define ONEFLOW_REGISTER_REGISTER_DESC_H_
 
-#include "common/util.h"
-#include "common/shape.h"
-#include "register/register_desc.pb.h"
+#include "oneflow/common/util.h"
+#include "oneflow/common/shape.h"
+#include "oneflow/register/register_desc.pb.h"
 
 namespace oneflow {
 

@@ -1,9 +1,9 @@
 #ifndef ONEFLOW_RUNTIME_RUNTIME_INFO_H_
 #define ONEFLOW_RUNTIME_RUNTIME_INFO_H_
 
-#include "common/util.h"
-#include "common/id_manager.h"
-#include "runtime/runtime_state.pb.h"
+#include "oneflow/common/util.h"
+#include "oneflow/common/id_manager.h"
+#include "oneflow/runtime/runtime_state.pb.h"
 
 namespace oneflow {
 

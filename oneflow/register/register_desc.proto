@@ -1,8 +1,8 @@
 syntax = "proto3";
 package oneflow;
 
-import "common/shape.proto";
-import "memory/memory_case.proto";
+import "oneflow/common/shape.proto";
+import "oneflow/memory/memory_case.proto";
 
 message RegstDescProto {
   uint64 regst_desc_id = 1;

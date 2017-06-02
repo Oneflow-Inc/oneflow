@@ -1,7 +1,7 @@
-#include "graph/logical_graph.h"
+#include "oneflow/graph/logical_graph.h"
 #include <iostream>
 #include "glog/logging.h"
-#include "operator/operator_manager.h"
+#include "oneflow/operator/operator_manager.h"
 
 namespace oneflow {
 

@@ -1,5 +1,5 @@
-#include "actor/copy_comm_net_actor.h"
-#include "actor/actor_registry.h"
+#include "oneflow/actor/copy_comm_net_actor.h"
+#include "oneflow/actor/actor_registry.h"
 
 namespace oneflow {
 

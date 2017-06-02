@@ -1,5 +1,5 @@
-#include "actor/actor.h"
-#include "kernel/kernel_manager.h"
+#include "oneflow/actor/actor.h"
+#include "oneflow/kernel/kernel_manager.h"
 
 namespace oneflow {
 

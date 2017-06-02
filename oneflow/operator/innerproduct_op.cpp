@@ -1,9 +1,9 @@
 #include <string>
 #include <vector>
-#include "operator/innerproduct_op.h"
+#include "oneflow/operator/innerproduct_op.h"
 #include "glog/logging.h"
-#include "operator/operator_manager.h"
-#include "common/balanced_splitter.h"
+#include "oneflow/operator/operator_manager.h"
+#include "oneflow/common/balanced_splitter.h"
 
 namespace oneflow {
 

@@ -1,9 +1,9 @@
 #ifndef ONEFLOW_REGISTER_REGISTER_H_
 #define ONEFLOW_REGISTER_REGISTER_H_
 
-#include "register/blob.h"
-#include "common/util.h"
-#include "register/runtime_register_desc.h"
+#include "oneflow/register/blob.h"
+#include "oneflow/common/util.h"
+#include "oneflow/register/runtime_register_desc.h"
 
 namespace oneflow {
 

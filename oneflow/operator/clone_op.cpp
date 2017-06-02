@@ -1,6 +1,6 @@
 #include <string>
-#include "operator/clone_op.h"
-#include "operator/operator_manager.h"
+#include "oneflow/operator/clone_op.h"
+#include "oneflow/operator/operator_manager.h"
 
 namespace oneflow {
 

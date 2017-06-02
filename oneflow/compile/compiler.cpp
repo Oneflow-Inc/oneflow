@@ -1,14 +1,14 @@
 #include "gflags/gflags.h"
 #include "glog/logging.h"
-#include "common/id_manager.h"
-#include "common/protobuf.h"
-#include "graph/model_save_comp_task_node.h"
-#include "graph/model_save_task_graph.h"
-#include "graph/model_update_task_graph.h"
-#include "graph/data_task_graph.h"
-#include "register/register_desc.h"
-#include "conf/job_conf.pb.h"
-#include "common/ofelf.pb.h"
+#include "oneflow/common/id_manager.h"
+#include "oneflow/common/protobuf.h"
+#include "oneflow/graph/model_save_comp_task_node.h"
+#include "oneflow/graph/model_save_task_graph.h"
+#include "oneflow/graph/model_update_task_graph.h"
+#include "oneflow/graph/data_task_graph.h"
+#include "oneflow/register/register_desc.h"
+#include "oneflow/conf/job_conf.pb.h"
+#include "oneflow/common/ofelf.pb.h"
 
 namespace oneflow {
 

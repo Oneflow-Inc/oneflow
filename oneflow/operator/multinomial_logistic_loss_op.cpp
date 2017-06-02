@@ -1,7 +1,7 @@
 #include <string>
-#include "operator/multinomial_logistic_loss_op.h"
+#include "oneflow/operator/multinomial_logistic_loss_op.h"
 #include "glog/logging.h"
-#include "operator/operator_manager.h"
+#include "oneflow/operator/operator_manager.h"
 
 namespace oneflow {
 

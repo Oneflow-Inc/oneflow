@@ -1,7 +1,7 @@
 #ifndef OPERATOR_DATA_LOADER_OP_H_
 #define OPERATOR_DATA_LOADER_OP_H_
 
-#include "operator/operator.h"
+#include "oneflow/operator/operator.h"
 
 namespace oneflow {
 

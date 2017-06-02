@@ -1,5 +1,5 @@
-#include "operator/concat_op.h"
-#include "operator/operator_manager.h"
+#include "oneflow/operator/concat_op.h"
+#include "oneflow/operator/operator_manager.h"
 #include "gtest/gtest.h"
 
 namespace oneflow {

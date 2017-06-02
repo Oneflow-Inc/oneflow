@@ -1,14 +1,14 @@
 #ifndef ONEFLOW_GRAPH_TASK_GRAPH_H_
 #define ONEFLOW_GRAPH_TASK_GRAPH_H_
 
-#include "graph/stage_graph.h"
-#include "graph/boxing_task_node.h"
-#include "graph/copy_task_node.h"
-#include "operator/operator.h"
-#include "operator/operator_manager.h"
-#include "compile/parallel_desc.h"
-#include "common/id_manager.h"
-#include "common/job_desc.h"
+#include "oneflow/graph/stage_graph.h"
+#include "oneflow/graph/boxing_task_node.h"
+#include "oneflow/graph/copy_task_node.h"
+#include "oneflow/operator/operator.h"
+#include "oneflow/operator/operator_manager.h"
+#include "oneflow/compile/parallel_desc.h"
+#include "oneflow/common/id_manager.h"
+#include "oneflow/common/job_desc.h"
 
 namespace oneflow {
 

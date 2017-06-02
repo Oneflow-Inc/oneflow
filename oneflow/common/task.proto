@@ -1,8 +1,8 @@
 syntax = "proto3";
 package oneflow;
 
-import "graph/exec_sequence.proto";
-import "register/register_desc.proto";
+import "oneflow/graph/exec_sequence.proto";
+import "oneflow/register/register_desc.proto";
 
 enum TaskType {
   kInvalidTaskType = 0;

@@ -1,12 +1,12 @@
 #ifndef ONEFLOW_REGISTER_REGISTER_MANAGER_H_
 #define ONEFLOW_REGISTER_REGISTER_MANAGER_H_
 
-#include "register/register.h"
-#include "common/util.h"
-#include "common/id_manager.h"
-#include "common/ofelf.pb.h"
-#include "memory/memory_allocator.h"
-#include "runtime/runtime_info.h"
+#include "oneflow/register/register.h"
+#include "oneflow/common/util.h"
+#include "oneflow/common/id_manager.h"
+#include "oneflow/common/ofelf.pb.h"
+#include "oneflow/memory/memory_allocator.h"
+#include "oneflow/runtime/runtime_info.h"
 
 namespace oneflow {
 

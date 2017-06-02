@@ -1,7 +1,7 @@
-#include "operator/pooling_op.h"
+#include "oneflow/operator/pooling_op.h"
 #include <vector>
 #include "glog/logging.h"
-#include "operator/operator_manager.h"
+#include "oneflow/operator/operator_manager.h"
 
 namespace oneflow {
 

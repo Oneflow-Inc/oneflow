@@ -1,8 +1,8 @@
 #ifndef ONEFLOW_GRAPH_STAGE_GRAPH_H_
 #define ONEFLOW_GRAPH_STAGE_GRAPH_H_
 
-#include "common/range.h"
-#include "graph/chain_graph.h"
+#include "oneflow/common/range.h"
+#include "oneflow/graph/chain_graph.h"
 
 namespace oneflow {
 

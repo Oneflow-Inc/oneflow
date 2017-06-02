@@ -1,9 +1,9 @@
-#include "graph/comp_task_node.h"
-#include "graph/model_update_task_graph.h"
-#include "graph/model_save_task_graph.h"
-#include "operator/operator_manager.h"
-#include "operator/clone_op.h"
-#include "common/id_manager.h"
+#include "oneflow/graph/comp_task_node.h"
+#include "oneflow/graph/model_update_task_graph.h"
+#include "oneflow/graph/model_save_task_graph.h"
+#include "oneflow/operator/operator_manager.h"
+#include "oneflow/operator/clone_op.h"
+#include "oneflow/common/id_manager.h"
 
 namespace oneflow {
 

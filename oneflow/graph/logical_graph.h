@@ -2,11 +2,11 @@
 #define ONEFLOW_GRAPH_LOGICAL_GRAPH_H_
 
 #include <memory>
-#include "graph/graph.h"
-#include "operator/operator.h"
-#include "conf/dlnet_conf.pb.h"
-#include "conf/strategy.pb.h"
-#include "compile/parallel_desc.h"
+#include "oneflow/graph/graph.h"
+#include "oneflow/operator/operator.h"
+#include "oneflow/conf/dlnet_conf.pb.h"
+#include "oneflow/conf/strategy.pb.h"
+#include "oneflow/compile/parallel_desc.h"
 
 namespace oneflow {
 

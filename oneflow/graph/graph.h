@@ -4,7 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <queue>
-#include "graph/node.h"
+#include "oneflow/graph/node.h"
 
 namespace oneflow {
 

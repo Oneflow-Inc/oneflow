@@ -1,5 +1,5 @@
-#include "graph/model_update_task_graph.h"
-#include "operator/operator_manager.h"
+#include "oneflow/graph/model_update_task_graph.h"
+#include "oneflow/operator/operator_manager.h"
 
 namespace oneflow {
 

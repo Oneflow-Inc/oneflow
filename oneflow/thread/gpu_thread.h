@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_THREAD_GPU_THREAD_H_
 #define ONEFLOW_THREAD_GPU_THREAD_H_
 
-#include "thread/thread.h"
+#include "oneflow/thread/thread.h"
 
 namespace oneflow {
 

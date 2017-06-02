@@ -1,5 +1,5 @@
-#include "actor/fw_data_comp_actor.h"
-#include "actor/actor_registry.h"
+#include "oneflow/actor/fw_data_comp_actor.h"
+#include "oneflow/actor/actor_registry.h"
 
 namespace oneflow {
 

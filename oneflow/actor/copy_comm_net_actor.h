@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_ACTOR_COPY_COMM_NET_ACTOR_H_
 #define ONEFLOW_ACTOR_COPY_COMM_NET_ACTOR_H_
 
-#include "actor/actor.h"
+#include "oneflow/actor/actor.h"
 
 namespace oneflow {
 

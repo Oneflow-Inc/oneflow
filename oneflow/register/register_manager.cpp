@@ -1,4 +1,4 @@
-#include "register/register_manager.h"
+#include "oneflow/register/register_manager.h"
 
 namespace oneflow {
 

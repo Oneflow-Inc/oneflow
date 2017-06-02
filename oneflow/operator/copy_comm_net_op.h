@@ -1,8 +1,8 @@
 #ifndef ONEFLOW_OPERATOR_COPY_COMM_NET_OP_H_
 #define ONEFLOW_OPERATOR_COPY_COMM_NET_OP_H_
 
-#include "operator/operator.h"
-#include "register/register_desc.h"
+#include "oneflow/operator/operator.h"
+#include "oneflow/register/register_desc.h"
 
 namespace oneflow {
 

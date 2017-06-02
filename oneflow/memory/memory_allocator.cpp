@@ -1,4 +1,4 @@
-#include "memory/memory_allocator.h"
+#include "oneflow/memory/memory_allocator.h"
 
 namespace oneflow {
 

@@ -1,7 +1,7 @@
-#include "operator/pooling_op.h"
+#include "oneflow/operator/pooling_op.h"
 #include <vector>
 #include "gtest/gtest.h"
-#include "operator/operator_manager.h"
+#include "oneflow/operator/operator_manager.h"
 
 namespace oneflow {
 

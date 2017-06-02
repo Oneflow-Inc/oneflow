@@ -1,7 +1,7 @@
-#include "operator/data_loader_op.h"
+#include "oneflow/operator/data_loader_op.h"
 #include "glog/logging.h"
-#include "operator/operator_manager.h"
-#include "common/job_desc.h"
+#include "oneflow/operator/operator_manager.h"
+#include "oneflow/common/job_desc.h"
 
 namespace oneflow {
 

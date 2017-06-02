@@ -1,7 +1,7 @@
-#include "register/register_desc.h"
-#include "common/id_manager.h"
-#include "common/protobuf.h"
-#include "graph/task_node.h"
+#include "oneflow/register/register_desc.h"
+#include "oneflow/common/id_manager.h"
+#include "oneflow/common/protobuf.h"
+#include "oneflow/graph/task_node.h"
 
 namespace oneflow {
 

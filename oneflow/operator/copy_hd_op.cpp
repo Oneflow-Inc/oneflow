@@ -1,5 +1,5 @@
-#include "operator/copy_hd_op.h"
-#include "operator/operator_manager.h"
+#include "oneflow/operator/copy_hd_op.h"
+#include "oneflow/operator/operator_manager.h"
 
 namespace oneflow {
 

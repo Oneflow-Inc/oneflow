@@ -1,11 +1,11 @@
 #ifndef ONEFLOW_GRAPH_EXEC_GRAPH_H_
 #define ONEFLOW_GRAPH_EXEC_GRAPH_H_
 
-#include "graph/exec_sequence.pb.h"
-#include "operator/operator.h"
-#include "graph/graph.h"
-#include "register/register_desc.h"
-#include "common/protobuf.h"
+#include "oneflow/graph/exec_sequence.pb.h"
+#include "oneflow/operator/operator.h"
+#include "oneflow/graph/graph.h"
+#include "oneflow/register/register_desc.h"
+#include "oneflow/common/protobuf.h"
 
 namespace oneflow {
 

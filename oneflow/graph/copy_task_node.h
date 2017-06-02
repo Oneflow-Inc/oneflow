@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_COPY_TASK_NODE_H_
 #define ONEFLOW_COPY_TASK_NODE_H_
 
-#include "graph/task_node.h"
+#include "oneflow/graph/task_node.h"
 
 namespace oneflow {
 

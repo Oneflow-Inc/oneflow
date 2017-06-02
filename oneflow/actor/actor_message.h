@@ -1,8 +1,8 @@
 #ifndef ONEFLOW_ACTOR_ACTOR_MESSAGE_H_
 #define ONEFLOW_ACTOR_ACTOR_MESSAGE_H_
 
-#include "common/util.h"
-#include "register/register.h"
+#include "oneflow/common/util.h"
+#include "oneflow/register/register.h"
 
 namespace oneflow {
 

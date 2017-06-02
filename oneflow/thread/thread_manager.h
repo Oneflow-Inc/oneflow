@@ -2,10 +2,10 @@
 #define ONEFLOW_THREAD_THREAD_MANAGER_H_
 
 #include <memory>
-#include "thread/thread.h"
-#include "actor/actor_msg_bus.h"
-#include "common/channel.h"
-#include "common/protobuf.h"
+#include "oneflow/thread/thread.h"
+#include "oneflow/actor/actor_msg_bus.h"
+#include "oneflow/common/channel.h"
+#include "oneflow/common/protobuf.h"
 
 namespace oneflow {
 

@@ -1,10 +1,10 @@
 syntax = "proto3";
 package oneflow;
 
-import "conf/dlnet_conf.proto";
-import "conf/resource.proto";
-import "conf/strategy.proto";
-import "conf/job_conf.proto";
+import "oneflow/conf/dlnet_conf.proto";
+import "oneflow/conf/resource.proto";
+import "oneflow/conf/strategy.proto";
+import "oneflow/conf/job_conf.proto";
 
 message JobDescProto {
   DLNetConf train_dlnet_conf = 1;

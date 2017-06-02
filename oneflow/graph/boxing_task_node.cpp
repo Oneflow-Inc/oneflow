@@ -1,8 +1,8 @@
-#include "graph/boxing_task_node.h"
+#include "oneflow/graph/boxing_task_node.h"
 #include <algorithm>
-#include "operator/operator_manager.h"
-#include "operator/boxing_op.h"
-#include "graph/comp_task_node.h"
+#include "oneflow/operator/operator_manager.h"
+#include "oneflow/operator/boxing_op.h"
+#include "oneflow/graph/comp_task_node.h"
 
 namespace oneflow {
 

@@ -1,8 +1,8 @@
 #include <utility>
 #include <string>
 #include <vector>
-#include "operator/multinomial_logistic_loss_op.h"
-#include "operator/operator_manager.h"
+#include "oneflow/operator/multinomial_logistic_loss_op.h"
+#include "oneflow/operator/operator_manager.h"
 #include "gtest/gtest.h"
 
 namespace oneflow {

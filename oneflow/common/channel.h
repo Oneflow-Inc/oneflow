@@ -6,7 +6,7 @@
 #include <atomic>
 #include <queue>
 #include "glog/logging.h"
-#include "common/util.h"
+#include "oneflow/common/util.h"
 
 namespace oneflow {
 

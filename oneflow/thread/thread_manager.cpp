@@ -1,7 +1,7 @@
-#include "thread/thread_manager.h"
-#include "thread/gpu_thread.h"
-#include "thread/cpu_thread.h"
-#include  "common/job_desc.h"
+#include "oneflow/thread/thread_manager.h"
+#include "oneflow/thread/gpu_thread.h"
+#include "oneflow/thread/cpu_thread.h"
+#include "oneflow/common/job_desc.h"
 #include <utility>
 
 namespace oneflow {

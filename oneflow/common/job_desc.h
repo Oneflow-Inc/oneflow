@@ -1,9 +1,9 @@
 #ifndef ONEFLOW_COMMON_JOB_DESC_H_
 #define ONEFLOW_COMMON_JOB_DESC_H_
 
-#include "common/util.h"
-#include "conf/job_conf.pb.h"
-#include "common/job_desc.pb.h"
+#include "oneflow/common/util.h"
+#include "oneflow/conf/job_conf.pb.h"
+#include "oneflow/common/job_desc.pb.h"
 
 namespace oneflow {
 

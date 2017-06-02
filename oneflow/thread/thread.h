@@ -3,11 +3,11 @@
 
 #include <memory>
 #include <thread>
-#include "common/util.h"
-#include "common/channel.h"
-#include "common/task.pb.h"
-#include "actor/actor.h"
-#include "actor/actor_msg_bus.h"
+#include "oneflow/common/util.h"
+#include "oneflow/common/channel.h"
+#include "oneflow/common/task.pb.h"
+#include "oneflow/actor/actor.h"
+#include "oneflow/actor/actor_msg_bus.h"
 
 namespace oneflow {
 

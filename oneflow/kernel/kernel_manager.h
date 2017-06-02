@@ -4,11 +4,11 @@
 #include <utility>
 #include <memory>
 #include <string>
-#include "common/util.h"
-#include "common/protobuf.h"
-#include "kernel/kernel.h"
-#include "common/ofelf.pb.h"
-#include "common/job_desc.h"
+#include "oneflow/common/util.h"
+#include "oneflow/common/protobuf.h"
+#include "oneflow/kernel/kernel.h"
+#include "oneflow/common/ofelf.pb.h"
+#include "oneflow/common/job_desc.h"
 
 namespace oneflow {
 

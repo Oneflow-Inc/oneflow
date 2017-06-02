@@ -5,9 +5,9 @@
 #include <unordered_set>
 #include <vector>
 #include <memory>
-#include "common/util.h"
-#include "common/id_manager.h"
-#include "common/keyword.h"
+#include "oneflow/common/util.h"
+#include "oneflow/common/id_manager.h"
+#include "oneflow/common/keyword.h"
 
 namespace oneflow {
 

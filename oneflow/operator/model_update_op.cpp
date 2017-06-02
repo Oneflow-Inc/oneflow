@@ -1,6 +1,6 @@
-#include "operator/model_update_op.h"
+#include "oneflow/operator/model_update_op.h"
 #include "glog/logging.h"
-#include "operator/operator_manager.h"
+#include "oneflow/operator/operator_manager.h"
 
 namespace oneflow {
 

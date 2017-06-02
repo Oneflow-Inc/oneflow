@@ -1,9 +1,9 @@
 #ifndef ONEFLOW_GRAPH_TASK_NODE_H_
 #define ONEFLOW_GRAPH_TASK_NODE_H_
 
-#include "common/task.pb.h"
-#include "graph/stage_graph.h"
-#include "graph/exec_graph.h"
+#include "oneflow/common/task.pb.h"
+#include "oneflow/graph/stage_graph.h"
+#include "oneflow/graph/exec_graph.h"
 
 namespace oneflow {
 

@@ -1,5 +1,5 @@
-#include "operator/convolution_op.h"
-#include "operator/operator_manager.h"
+#include "oneflow/operator/convolution_op.h"
+#include "oneflow/operator/operator_manager.h"
 #include "gtest/gtest.h"
 
 namespace oneflow {

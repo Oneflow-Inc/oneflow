@@ -2,8 +2,8 @@
 #define ONEFLOW_COMMON_BALANCED_SPLITTER_H_
 
 #include <stdint.h>
-#include "common/util.h"
-#include "common/range.h"
+#include "oneflow/common/util.h"
+#include "oneflow/common/range.h"
 
 namespace oneflow {
 

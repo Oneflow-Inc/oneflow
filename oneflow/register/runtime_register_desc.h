@@ -1,9 +1,9 @@
 #ifndef ONEFLOW_REGISTER_RUNTIME_REGISTER_DESC_H_
 #define ONEFLOW_REGISTER_RUNTIME_REGISTER_DESC_H_
 
-#include "common/util.h"
-#include "memory/memory_case.pb.h"
-#include "register/register_desc.pb.h"
+#include "oneflow/common/util.h"
+#include "oneflow/memory/memory_case.pb.h"
+#include "oneflow/register/register_desc.pb.h"
 
 namespace oneflow {
 

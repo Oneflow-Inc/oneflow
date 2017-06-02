@@ -1,10 +1,10 @@
 #ifndef ONEFLOW_KERNEL_CONVOLUTION_KERNEL_H_
 #define ONEFLOW_KERNEL_CONVOLUTION_KERNEL_H_
 
-#include "kernel/kernel.h"
-#include "kernel/kernel_manager.h"
-#include "conf/resource.pb.h"
-#include "conf/job_conf.pb.h"
+#include "oneflow/kernel/kernel.h"
+#include "oneflow/kernel/kernel_manager.h"
+#include "oneflow/conf/resource.pb.h"
+#include "oneflow/conf/job_conf.pb.h"
 
 namespace oneflow {
 

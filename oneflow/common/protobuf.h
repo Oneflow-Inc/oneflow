@@ -5,9 +5,9 @@
 #include <io.h>
 #endif
 #include <string>
-#include "common/util.h"
-#include "operator/op_conf.pb.h"
-#include "operator/operator.pb.h"
+#include "oneflow/common/util.h"
+#include "oneflow/operator/op_conf.pb.h"
+#include "oneflow/operator/operator.pb.h"
 #include "google/protobuf/message.h"
 #include "google/protobuf/descriptor.h"
 

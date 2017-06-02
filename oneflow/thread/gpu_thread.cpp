@@ -1,4 +1,4 @@
-#include "thread/gpu_thread.h"
+#include "oneflow/thread/gpu_thread.h"
 #include "cuda_runtime.h"
 
 namespace oneflow {

@@ -2,8 +2,8 @@
 #define ONEFLOW_ACTOR_ACTOR_MSG_BUS_H_
 
 #include <stdint.h>
-#include "common/util.h"
-#include "actor/actor_message.h"
+#include "oneflow/common/util.h"
+#include "oneflow/actor/actor_message.h"
 
 namespace oneflow {
 

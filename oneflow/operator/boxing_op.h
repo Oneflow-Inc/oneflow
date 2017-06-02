@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_OPERATOR_BOXING_OP_H_
 #define ONEFLOW_OPERATOR_BOXING_OP_H_
 
-#include "operator/operator.h"
+#include "oneflow/operator/operator.h"
 
 namespace oneflow {
 

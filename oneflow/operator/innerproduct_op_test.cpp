@@ -1,10 +1,10 @@
 #include <string>
 #include <vector>
-#include "operator/innerproduct_op.h"
-#include "operator/operator_manager.h"
+#include "oneflow/operator/innerproduct_op.h"
+#include "oneflow/operator/operator_manager.h"
 #include "gtest/gtest.h"
-#include "common/balanced_splitter.h"
-#include "register/register_desc.h"
+#include "oneflow/common/balanced_splitter.h"
+#include "oneflow/register/register_desc.h"
 
 namespace oneflow {
 
