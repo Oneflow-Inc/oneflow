@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_COMMON_ID_MANAGER_H_
-#define ONEFLOW_COMMON_ID_MANAGER_H_
+#ifndef ONEFLOW_CORE_COMMON_ID_MANAGER_H_
+#define ONEFLOW_CORE_COMMON_ID_MANAGER_H_
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/conf/resource.pb.h"
@@ -104,4 +104,4 @@ class IDMgr final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_COMMON_ID_MANAGER_H_
+#endif // ONEFLOW_CORE_COMMON_ID_MANAGER_H_

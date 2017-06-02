@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_REGISTER_BLOB_H_
-#define ONEFLOW_REGISTER_BLOB_H_
+#ifndef ONEFLOW_CORE_REGISTER_BLOB_H_
+#define ONEFLOW_CORE_REGISTER_BLOB_H_
 
 #include <functional>
 #include "oneflow/core/common/shape.h"
@@ -24,4 +24,4 @@ class Blob {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_REGISTER_BLOB_H_
+#endif // ONEFLOW_CORE_REGISTER_BLOB_H_

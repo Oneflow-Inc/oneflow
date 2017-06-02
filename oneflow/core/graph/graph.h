@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_GRAPH_GRAPH_H_
-#define ONEFLOW_GRAPH_GRAPH_H_
+#ifndef ONEFLOW_CORE_GRAPH_GRAPH_H_
+#define ONEFLOW_CORE_GRAPH_GRAPH_H_
 
 #include <iostream>
 #include <fstream>
@@ -330,4 +330,4 @@ bool Graph<NodeType, EdgeType>::ReverseIterator::operator != (
 
 } // namespace oneflow
 
-#endif // ONEFLOW_GRAPH_GRAPH_H_
+#endif // ONEFLOW_CORE_GRAPH_GRAPH_H_

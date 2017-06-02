@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_ACTOR_BOXING_ACTOR_H_
-#define ONEFLOW_ACTOR_BOXING_ACTOR_H_
+#ifndef ONEFLOW_CORE_ACTOR_BOXING_ACTOR_H_
+#define ONEFLOW_CORE_ACTOR_BOXING_ACTOR_H_
 
 #include "oneflow/core/actor/actor.h"
 
@@ -32,4 +32,4 @@ class BoxingActor final : public Actor {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_ACTOR_BOXING_ACTOR_H_
+#endif // ONEFLOW_CORE_ACTOR_BOXING_ACTOR_H_

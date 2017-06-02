@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_GRAPH_TASK_GRAPH_H_
-#define ONEFLOW_GRAPH_TASK_GRAPH_H_
+#ifndef ONEFLOW_CORE_GRAPH_TASK_GRAPH_H_
+#define ONEFLOW_CORE_GRAPH_TASK_GRAPH_H_
 
 #include "oneflow/core/graph/stage_graph.h"
 #include "oneflow/core/graph/boxing_task_node.h"
@@ -86,4 +86,4 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_GRAPH_TASK_GRAPH_H_
+#endif // ONEFLOW_CORE_GRAPH_TASK_GRAPH_H_

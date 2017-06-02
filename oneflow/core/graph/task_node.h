@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_GRAPH_TASK_NODE_H_
-#define ONEFLOW_GRAPH_TASK_NODE_H_
+#ifndef ONEFLOW_CORE_GRAPH_TASK_NODE_H_
+#define ONEFLOW_CORE_GRAPH_TASK_NODE_H_
 
 #include "oneflow/core/common/task.pb.h"
 #include "oneflow/core/graph/stage_graph.h"
@@ -137,4 +137,4 @@ inline const TaskEdge* GetRelatedTaskEdge(std::weak_ptr<RegstDesc> regst) {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_GRAPH_TASK_NODE_H_
+#endif // ONEFLOW_CORE_GRAPH_TASK_NODE_H_

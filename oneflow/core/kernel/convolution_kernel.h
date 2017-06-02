@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_KERNEL_CONVOLUTION_KERNEL_H_
-#define ONEFLOW_KERNEL_CONVOLUTION_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_CONVOLUTION_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_CONVOLUTION_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_manager.h"
@@ -36,4 +36,4 @@ class ConvolutionKernel<DeviceType::kGPU, floating_point_type> final : public Ke
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_KERNEL_CONVOLUTION_KERNEL_H_
+#endif // ONEFLOW_CORE_KERNEL_CONVOLUTION_KERNEL_H_

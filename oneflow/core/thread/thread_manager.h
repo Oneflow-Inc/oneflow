@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_THREAD_THREAD_MANAGER_H_
-#define ONEFLOW_THREAD_THREAD_MANAGER_H_
+#ifndef ONEFLOW_CORE_THREAD_THREAD_MANAGER_H_
+#define ONEFLOW_CORE_THREAD_THREAD_MANAGER_H_
 
 #include <memory>
 #include "oneflow/core/thread/thread.h"
@@ -31,4 +31,4 @@ class ThreadMgr final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_THREAD_THREAD_MANAGER_H_
+#endif // ONEFLOW_CORE_THREAD_THREAD_MANAGER_H_

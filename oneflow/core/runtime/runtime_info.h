@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_RUNTIME_RUNTIME_INFO_H_
-#define ONEFLOW_RUNTIME_RUNTIME_INFO_H_
+#ifndef ONEFLOW_CORE_RUNTIME_RUNTIME_INFO_H_
+#define ONEFLOW_CORE_RUNTIME_RUNTIME_INFO_H_
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/id_manager.h"
@@ -38,4 +38,4 @@ class RuntimeInfo final {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_RUNTIME_RUNTIME_INFO_H_
+#endif // ONEFLOW_CORE_RUNTIME_RUNTIME_INFO_H_

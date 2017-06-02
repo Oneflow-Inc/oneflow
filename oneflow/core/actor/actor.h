@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_ACTOR_ACTOR_H_
-#define ONEFLOW_ACTOR_ACTOR_H_
+#ifndef ONEFLOW_CORE_ACTOR_ACTOR_H_
+#define ONEFLOW_CORE_ACTOR_ACTOR_H_
 
 #include <queue>
 #include "oneflow/core/common/util.h"
@@ -48,4 +48,4 @@ class Actor {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_ACTOR_ACTOR_H_
+#endif // ONEFLOW_CORE_ACTOR_ACTOR_H_
