@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_GRAPH_STAGE_GRAPH_H_
-#define ONEFLOW_GRAPH_STAGE_GRAPH_H_
+#ifndef ONEFLOW_CORE_GRAPH_STAGE_GRAPH_H_
+#define ONEFLOW_CORE_GRAPH_STAGE_GRAPH_H_
 
 #include "oneflow/core/common/range.h"
 #include "oneflow/core/graph/chain_graph.h"
@@ -80,4 +80,4 @@ class StageGraph final : public Graph<StageNode, StageEdge> {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_GRAPH_STAGE_GRAPH_H_
+#endif // ONEFLOW_CORE_GRAPH_STAGE_GRAPH_H_

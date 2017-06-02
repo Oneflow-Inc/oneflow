@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_GRAPH_MODEL_SAVE_TASK_GRAPH_H_
-#define ONEFLOW_GRAPH_MODEL_SAVE_TASK_GRAPH_H_
+#ifndef ONEFLOW_CORE_GRAPH_MODEL_SAVE_TASK_GRAPH_H_
+#define ONEFLOW_CORE_GRAPH_MODEL_SAVE_TASK_GRAPH_H_
 
 #include "oneflow/core/graph/task_graph.h"
 
@@ -26,4 +26,4 @@ class MdSaveTaskGraph final : public TaskGraph {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_GRAPH_MODEL_SAVE_TASK_GRAPH_H_
+#endif // ONEFLOW_CORE_GRAPH_MODEL_SAVE_TASK_GRAPH_H_

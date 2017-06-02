@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_THREAD_THREAD_H_
-#define ONEFLOW_THREAD_THREAD_H_
+#ifndef ONEFLOW_CORE_THREAD_THREAD_H_
+#define ONEFLOW_CORE_THREAD_THREAD_H_
 
 #include <memory>
 #include <thread>
@@ -37,4 +37,4 @@ class Thread {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_THREAD_THREAD_H_
+#endif // ONEFLOW_CORE_THREAD_THREAD_H_

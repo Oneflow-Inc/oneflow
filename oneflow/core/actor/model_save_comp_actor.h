@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_ACTOR_MODEL_SAVE_COMP_ACTOR_H_
-#define ONEFLOW_ACTOR_MODEL_SAVE_COMP_ACTOR_H_
+#ifndef ONEFLOW_CORE_ACTOR_MODEL_SAVE_COMP_ACTOR_H_
+#define ONEFLOW_CORE_ACTOR_MODEL_SAVE_COMP_ACTOR_H_
 
 #include "oneflow/core/actor/actor.h"
 
@@ -20,4 +20,4 @@ private:
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_ACTOR_MODEL_SAVE_COMP_ACTOR_H_
+#endif // ONEFLOW_CORE_ACTOR_MODEL_SAVE_COMP_ACTOR_H_

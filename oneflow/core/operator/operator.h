@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_OPERATOR_OP_H_
-#define ONEFLOW_OPERATOR_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_OP_H_
+#define ONEFLOW_CORE_OPERATOR_OP_H_
 
 #include <string>
 #include "oneflow/core/operator/op_conf.pb.h"
@@ -172,4 +172,4 @@ std::string GenUnDiffBn(const std::string& diff_bn);
 
 } // namespace oneflow
 
-#endif // ONEFLOW_OPERATOR_OP_H_
+#endif // ONEFLOW_CORE_OPERATOR_OP_H_

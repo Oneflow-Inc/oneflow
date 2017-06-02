@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_ACTOR_ACTOR_MESSAGE_H_
-#define ONEFLOW_ACTOR_ACTOR_MESSAGE_H_
+#ifndef ONEFLOW_CORE_ACTOR_ACTOR_MESSAGE_H_
+#define ONEFLOW_CORE_ACTOR_ACTOR_MESSAGE_H_
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/register/register.h"
@@ -32,4 +32,4 @@ class ActorMsg final {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_ACTOR_ACTOR_MESSAGE_H_
+#endif // ONEFLOW_CORE_ACTOR_ACTOR_MESSAGE_H_
