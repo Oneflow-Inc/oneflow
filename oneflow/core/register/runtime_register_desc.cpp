@@ -16,7 +16,7 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& regst_desc_proto) {
   }
 
   for (const auto& pair : regst_desc_proto.lbn2shape()) {
-    lbn2shape_.emplace(pair.first, of_make_unique<Shape>(pair.second));
+    CHECK(lbn2shape_.emplace(pair.first, of_make_unique<Shape>(pair.second)).second);
   }
   mem_case_ = regst_desc_proto.mem_case();
 }
