@@ -58,12 +58,6 @@ using HashMap = std::unordered_map<Key, T, Hash>;
 template<typename Key, typename Hash = std::hash<Key>>
 using HashSet = std::unordered_set<Key, Hash>;
 
-struct pair_hash {
-  inline int operator()(const std::pair<int, bool>& v) const {
-    return v.first + 10 * v.second;
-  }
-};
-
 template<typename T, typename... Args>
 std::unique_ptr<T> of_make_unique(Args&&... args) {
   return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
