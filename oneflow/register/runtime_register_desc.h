@@ -23,7 +23,6 @@ class RtRegstDesc {
     register_num_ = regst_desc_proto.register_num();
 
     const auto& subscriber = regst_desc_proto.subscriber_task_id();
-    //subscribers_actor_id_ = std::vector<uint64_t>(subscriber.begin(), subscriber.end());
     subscribers_actor_id_.reserve(subscriber.size());
     for (uint64_t task_id : subscriber) {
       subscribers_actor_id_.push_back(IDMgr::Singleton().GetActorIdFromTaskId(task_id));
