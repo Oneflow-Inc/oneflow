@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_KERNEL_KERNEL_H_
-#define ONEFLOW_KERNEL_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_KERNEL_H_
 
 #include <memory>
 #include <functional>
@@ -52,4 +52,4 @@ using KernelWardFunc = void (Kernel::*)(std::function<Blob*(const std::string&)>
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_KERNEL_KERNEL_H_
+#endif // ONEFLOW_CORE_KERNEL_KERNEL_H_

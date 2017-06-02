@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_COMMON_PROTOBUF_H_
-#define ONEFLOW_COMMON_PROTOBUF_H_
+#ifndef ONEFLOW_CORE_COMMON_PROTOBUF_H_
+#define ONEFLOW_CORE_COMMON_PROTOBUF_H_
 
 #ifdef _MSC_VER
 #include <io.h>
@@ -82,4 +82,4 @@ google::protobuf::Map<K, V> HashMap2PbMap(const HashMap<K, V>& hash_map) {
 
 } // namespace caffe
 
-#endif // ONEFLOW_COMMON_PROTOBUF_H_
+#endif // ONEFLOW_CORE_COMMON_PROTOBUF_H_

@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_GRAPH_EXEC_GRAPH_H_
-#define ONEFLOW_GRAPH_EXEC_GRAPH_H_
+#ifndef ONEFLOW_CORE_GRAPH_EXEC_GRAPH_H_
+#define ONEFLOW_CORE_GRAPH_EXEC_GRAPH_H_
 
 #include "oneflow/core/graph/exec_sequence.pb.h"
 #include "oneflow/core/operator/operator.h"
@@ -80,4 +80,4 @@ class ExecGraph final : public Graph<ExecNode, ExecEdge> {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_GRAPH_EXEC_GRAPH_H_
+#endif // ONEFLOW_CORE_GRAPH_EXEC_GRAPH_H_

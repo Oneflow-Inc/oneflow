@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_COMMON_SHAPE_H_
-#define ONEFLOW_COMMON_SHAPE_H_
+#ifndef ONEFLOW_CORE_COMMON_SHAPE_H_
+#define ONEFLOW_CORE_COMMON_SHAPE_H_
 
 #include <vector>
 #include <string>
@@ -66,4 +66,4 @@ inline int64_t Shape::Count(int64_t begin_axis) const {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_COMMON_SHAPE_H_
+#endif // ONEFLOW_CORE_COMMON_SHAPE_H_

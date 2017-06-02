@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_COMMON_RANGE_H_
-#define ONEFLOW_COMMON_RANGE_H_
+#ifndef ONEFLOW_CORE_COMMON_RANGE_H_
+#define ONEFLOW_CORE_COMMON_RANGE_H_
 
 #include "oneflow/core/common/util.h"
 
@@ -32,4 +32,4 @@ class Range final {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_COMMON_RANGE_H_
+#endif // ONEFLOW_CORE_COMMON_RANGE_H_

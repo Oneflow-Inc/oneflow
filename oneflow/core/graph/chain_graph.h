@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_GRAPH_CHAIN_GRAPH_H_
-#define ONEFLOW_GRAPH_CHAIN_GRAPH_H_
+#ifndef ONEFLOW_CORE_GRAPH_CHAIN_GRAPH_H_
+#define ONEFLOW_CORE_GRAPH_CHAIN_GRAPH_H_
 
 #include <list>
 #include "oneflow/core/graph/logical_graph.h"
@@ -94,4 +94,4 @@ std::vector<std::string> FindLbnsBetween(const ChainNode*, const ChainNode*);
 
 } // namespace oneflow
 
-#endif // ONEFLOW_GRAPH_CHAIN_GRAPH_H_
+#endif // ONEFLOW_CORE_GRAPH_CHAIN_GRAPH_H_

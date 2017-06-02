@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_COMMON_UTIL_H
-#define ONEFLOW_COMMON_UTIL_H
+#ifndef ONEFLOW_CORE_COMMON_UTIL_H
+#define ONEFLOW_CORE_COMMON_UTIL_H
 
 #include <unordered_set>
 #include <unordered_map>
@@ -116,4 +116,4 @@ void EraseIf(HashMap<K, V>* hash_map,
 
 } // namespace oneflow
 
-#endif // ONEFLOW_COMMON_UTIL_H
+#endif // ONEFLOW_CORE_COMMON_UTIL_H

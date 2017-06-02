@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_REGISTER_REGISTER_H_
-#define ONEFLOW_REGISTER_REGISTER_H_
+#ifndef ONEFLOW_CORE_REGISTER_REGISTER_H_
+#define ONEFLOW_CORE_REGISTER_REGISTER_H_
 
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/common/util.h"
@@ -38,4 +38,4 @@ class Regst final {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_REGISTER_REGISTER_H_
+#endif // ONEFLOW_CORE_REGISTER_REGISTER_H_

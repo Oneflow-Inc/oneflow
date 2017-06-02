@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_GRAPH_LOGICAL_GRAPH_H_
-#define ONEFLOW_GRAPH_LOGICAL_GRAPH_H_
+#ifndef ONEFLOW_CORE_GRAPH_LOGICAL_GRAPH_H_
+#define ONEFLOW_CORE_GRAPH_LOGICAL_GRAPH_H_
 
 #include <memory>
 #include "oneflow/core/graph/graph.h"
@@ -88,4 +88,4 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_GRAPH_LOGICAL_GRAPH_H_
+#endif // ONEFLOW_CORE_GRAPH_LOGICAL_GRAPH_H_

@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_KERNEL_KERNEL_MANAGER_H_
-#define ONEFLOW_KERNEL_KERNEL_MANAGER_H_
+#ifndef ONEFLOW_CORE_KERNEL_KERNEL_MANAGER_H_
+#define ONEFLOW_CORE_KERNEL_KERNEL_MANAGER_H_
 
 #include <utility>
 #include <memory>
@@ -78,4 +78,4 @@ struct GpuDoubleKernelRegister {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_KERNEL_KERNEL_MANAGER_H_
+#endif // ONEFLOW_CORE_KERNEL_KERNEL_MANAGER_H_
