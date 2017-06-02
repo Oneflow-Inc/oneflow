@@ -4,6 +4,7 @@
 #include "common/util.h"
 #include "common/protobuf.h"
 #include "common/shape.h"
+#include "common/id_manager.h"
 #include "memory/memory_case.pb.h"
 #include "register/register_desc.pb.h"
 
@@ -17,11 +18,16 @@ class RtRegstDesc {
 
   RtRegstDesc(const RegstDescProto& regst_desc_proto) {
     regst_desc_id_ = regst_desc_proto.regst_desc_id();
-    producer_task_id_ = regst_desc_proto.producer_task_id();
+    producer_actor_id_ = 
+      IDMgr::Singleton().GetActorIdFromTaskId(regst_desc_proto.producer_task_id());
     register_num_ = regst_desc_proto.register_num();
 
     const auto& subscriber = regst_desc_proto.subscriber_task_id();
-    subscribers_task_id_ = std::vector<uint64_t>(subscriber.begin(), subscriber.end());
+    //subscribers_actor_id_ = std::vector<uint64_t>(subscriber.begin(), subscriber.end());
+    subscribers_actor_id_.reserve(subscriber.size());
+    for (uint64_t task_id : subscriber) {
+      subscribers_actor_id_.push_back(IDMgr::Singleton().GetActorIdFromTaskId(task_id));
+    }
 
     for (const auto& pair : regst_desc_proto.lbn2shape()) {
       lbn2shape_.emplace(pair.first, of_make_unique<Shape>(pair.second));
@@ -30,9 +36,9 @@ class RtRegstDesc {
   }
 
   uint64_t regst_desc_id() const { return regst_desc_id_; }
-  uint64_t producer_task_id() const { return producer_task_id_; }
-  std::vector<uint64_t>& subscribers_task_id() { 
-    return subscribers_task_id_;
+  uint64_t producer_actor_id() const { return producer_actor_id_; }
+  const std::vector<uint64_t>& subscribers_actor_id() const { 
+    return subscribers_actor_id_;
   }
   int64_t register_num() const { return register_num_; }
   MemoryCase mem_case() const { return mem_case_; }

@@ -17,13 +17,13 @@ class Regst final {
   Blob* GetBlobPtrFromLbn(const std::string& lbn);
 
   uint64_t regst_desc_id() const {
-    TODO();
+    return regst_desc_->regst_desc_id();
   }
   uint64_t producer_actor_id() const {
-    TODO();
+    return regst_desc_->producer_actor_id();
   }
   const std::vector<uint64_t>& subscribers_actor_id() const {
-    TODO();
+    return regst_desc_->subscribers_actor_id();
   }
     
  private:
