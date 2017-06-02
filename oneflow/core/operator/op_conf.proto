@@ -1,0 +1,213 @@
+syntax = "proto3";
+package oneflow;
+
+import "oneflow/core/common/shape.proto";
+
+message ConstantFillerConf {
+  float value = 1;
+}
+
+message UniformFillerConf {
+  float min = 1;
+  float max = 2;
+}
+
+message GaussianFillerConf {
+  float mean = 1;
+  float std = 2;
+  // The expected number of non-zero output weights for a given input
+  int32 sparse = 3;
+}
+
+message FillerConf {
+  oneof type {
+    ConstantFillerConf constant_conf = 1;
+    UniformFillerConf uniform_conf = 2;
+    GaussianFillerConf gaussian_conf = 3;
+  }
+  // Normalize the filler variance by fan_in, fan_out, or their average.
+  // Applies to 'xavier' and 'msra' fillers.
+  enum VarianceNorm {
+    FAN_IN = 0;
+    FAN_OUT = 1;
+    AVERAGE = 2;
+  }
+  VarianceNorm variance_norm = 4;
+}
+
+message ConvolutionOpConf {
+  string in = 1;
+  string out = 2;
+
+  uint32 out_num = 3; // The number of outputs for the layer
+  bool has_bias_term = 4; // whether to have bias terms
+
+  // Pad, kernel size, and stride are all given as a single value for equal
+  // dimensions in all spatial dimensions, or once per spatial dimension.
+  repeated uint32 pad = 5; // The padding size; defaults to 0
+  repeated uint32 kernel_size = 6; // The kernel size
+  repeated uint32 stride = 7; // The stride; defaults to 1
+  // Factor used to dilate the kernel, (implicitly) zero-filling the resulting
+  // holes. (Kernel dilation is sometimes referred to by its use in the
+  // algorithme ид trous from Holschneider et al. 1987.)
+  repeated uint32 dilation = 8; // The dilation; defaults to 1
+
+  uint32 group = 15; // The group size for group conv
+
+  FillerConf weight_filler = 16; // The filler for the weight
+  FillerConf bias_filler = 17; // The filler for the bias
+
+  // The axis to interpret as "channels" when performing convolution.
+  // Preceding dimensions are treated as independent inputs;
+  // succeeding dimensions are treated as "spatial".
+  // With (N, C, H, W) inputs, and axis == 1 (the default), we perform
+  // N independent 2D convolutions, sliding C-channel (or (C/g)-channels, for
+  // groups g>1) filters across the spatial axes (H, W) of the input.
+  // With (N, C, D, H, W) inputs, and axis == 1, we perform
+  // N independent 3D convolutions, sliding (C/g)-channels
+  // filters across the spatial axes (D, H, W) of the input.
+  int32 axis = 18;
+
+  // Whether to force use of the general ND convolution, even if a specific
+  // implementation for blobs of the appropriate number of spatial dimensions
+  // is available. (Currently, there is only a 2D-specific convolution
+  // implementation; for input blobs with num_axes != 2, this option is
+  // ignored and the ND implementation will be used.)
+  bool force_nd_im2col = 19;
+}
+
+message InnerProductOpConf {
+  string in = 1;
+  string out = 2;
+
+  uint32 out_num = 3; // The number of outputs for the layer
+  bool has_bias_term = 4; // whether to have bias terms
+  FillerConf weight_filler = 5; // The filler for the weight
+  FillerConf bias_filler = 6; // The filler for the bias
+
+  // The first axis to be lumped into a single inner product computation;
+  // all preceding axes are retained in the output.
+  // May be negative to index from the end (e.g., -1 for the last axis).
+  int32 axis = 7;
+  // Specify whether to transpose the weight matrix or not.
+  // If transpose == true, any operations will be performed on the transpose
+  // of the weight matrix. The weight matrix itself is not going to be transposed
+  // but rather the transfer flag of operations will be toggled accordingly.
+  bool need_transpose = 8;
+}
+
+message DataLoaderOpConf {
+  string feature = 1;
+  ShapeProto shape_of_one_feature_ins = 2;
+  string label = 3;
+}
+
+message PoolingOpConf {
+  string in = 1;
+  string out = 2;
+
+  enum PoolMethod {
+    MAX = 0;
+    AVE = 1;
+    STOCHASTIC = 2;
+  }
+  PoolMethod pool = 3; // The pooling method
+  // Pad, kernel size, and stride are all given as a repeated value
+  // dimensions in height and width or 3D
+  repeated uint32 pad = 4; // The padding size {H, W} or {D, H, W}
+  repeated uint32 kernel_size = 7; // The kernel size
+  repeated uint32 stride = 10; // The stride
+}
+
+message ReluOpConf {
+  string in = 1;
+  string out = 2;
+}
+
+message SoftmaxOpConf {
+  string in = 1;
+  string out = 2;
+  int32 axis = 3;
+}
+
+message MultinomialLogisticLossOpConf {
+  string prediction = 1;
+  string label = 2;
+  string loss = 3;
+}
+
+message ConcatOpConf {
+  repeated string in = 1;
+  string out = 2;
+  int32 axis = 3;
+}
+
+message CopyCommNetOpConf {
+}
+
+message CopyHdOpConf {
+  enum Type {
+    H2D = 0;
+    D2H = 1;
+  }
+  Type type = 1;
+}
+
+message CloneOpConf {
+  uint32 out_num = 1;
+  string lbn = 2;
+}
+
+message BoxConcatConf {
+  int32 axis = 1;
+}
+
+message BoxAddConf {
+}
+
+message BoxDataSplitConf {
+}
+
+message BoxCloneConf {
+}
+
+message BoxingOpConf {
+  string lbn = 1;
+  uint32 in_num = 2;
+  uint32 out_num = 3;
+  oneof in_box {
+    BoxConcatConf concat_box = 4;
+    BoxAddConf add_box = 5;
+  }
+  oneof out_box {
+    BoxDataSplitConf data_split_box = 6;
+    BoxCloneConf clone_box = 7;
+  }
+}
+
+message ModelUpdateOpConf {
+}
+
+message ModelSaveOpConf {
+  repeated string lbns = 1;
+}
+
+message OperatorConf {
+  string name = 1;
+  oneof op_type {
+    ConvolutionOpConf convolution_conf = 100;
+    InnerProductOpConf innerproduct_conf = 101;
+    DataLoaderOpConf data_loader_conf = 102;
+    PoolingOpConf pooling_conf = 103;
+    ReluOpConf relu_conf = 104;
+    SoftmaxOpConf softmax_conf = 105;
+    MultinomialLogisticLossOpConf multinomial_logistic_loss_conf = 106;
+    CopyHdOpConf copy_hd_conf = 107;
+    CloneOpConf clone_conf = 108;
+    BoxingOpConf boxing_conf = 109;
+    ModelUpdateOpConf model_update_conf = 110;
+    ModelSaveOpConf model_save_conf = 111;
+    ConcatOpConf concat_conf = 113;
+    CopyCommNetOpConf copy_comm_net_conf = 114;
+  }
+}
