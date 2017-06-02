@@ -1,6 +1,7 @@
 #include "register/register_manager.h"
 #include "register/blob.h"
 #include "common/id_manager.h"
+#include "common/job_desc.h"
 
 namespace oneflow {
 
@@ -10,21 +11,32 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
   for (size_t i = 0; i < regst_desc_proto.register_num(); ++i) {
     Regst* regst = new Regst;
     regst->regst_desc_ = runtime_regst_desc;
-    regst->regst_id_ = IDMgr::Singleton().NewRegstId(regst_desc_proto.regst_desc_id());
-    std::vector<std::function<void()>> deallocates;
-    deallocates.reserve(regst_desc_proto.lbn2shape().size());
+    regst->regst_id_ =
+        IDMgr::Singleton().NewRegstId(regst_desc_proto.regst_desc_id());
+
+    uint64_t elem_size = sizeof(float);
+    if (JobDesc::Singleton().floating_point_type() == kDouble) {
+      elem_size = sizeof(double);
+    }
+    uint64_t elem_cnt = 0;
+    std::vector<std::string> lbns(regst_desc_proto.lbn2shape().size());
     for (const auto& pair : regst_desc_proto.lbn2shape()) {
       Shape* shape_ptr = runtime_regst_desc->GetShapePtrFromLbn(pair.first);
-      std::pair<char*, std::function<void()>> allocation = 
-          MemoryAllocator::Singleton().Allocate(regst_desc_proto.mem_case(), shape_ptr->elem_cnt());
-      deallocates.push_back(allocation.second);
-      CHECK(regst->lbn2blob_.emplace(pair.first, of_make_unique<Blob>(allocation.first, shape_ptr)).second);
+      lbns.push_back(pair.first);
+      elem_cnt += shape_ptr->elem_cnt();
     }
-    regst->deleter_ = [&deallocates]() {
-      for (std::function<void()> func : deallocates) {
-        func();
-      }
-    };
+    std::sort(lbns.begin(), lbns.end());
+    std::pair<char*, std::function<void()>> allocation =
+        MemoryAllocator::Singleton().Allocate(
+            regst_desc_proto.mem_case(), elem_cnt * elem_size);
+
+    uint64_t blob_idx = 0;
+    for (const std::string& lbn : lbns) {
+      Shape* shape_ptr = runtime_regst_desc->GetShapePtrFromLbn(lbn);
+      CHECK(regst->lbn2blob_.emplace(lbn, of_make_unique<Blob>(allocation.first + blob_idx, shape_ptr)).second);
+      blob_idx += shape_ptr->elem_cnt() * elem_size;
+    }
+    regst->deleter_ = allocation.second;
     OneRegstDone(regst);
   }
 }
