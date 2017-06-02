@@ -40,7 +40,7 @@ class RtRegstDesc {
     return subscribers_actor_id_;
   }
   int64_t register_num() const { return register_num_; }
-  MemoryCase mem_case() const { return mem_case_; }
+  const MemoryCase& mem_case() const { return mem_case_; }
 
   Shape* GetShapePtrFromLbn(const std::string& lbn) {
     return lbn2shape_.at(lbn).get();
