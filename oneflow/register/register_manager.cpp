@@ -6,9 +6,9 @@
 namespace oneflow {
 
 void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
-               std::function<void(Regst*)> OneRegstDone) {
+                         std::function<void(Regst*)> OneRegstDone) {
   std::shared_ptr<RtRegstDesc> runtime_regst_desc(new RtRegstDesc(regst_desc_proto));
-  for (size_t i = 0; i < regst_desc_proto.register_num(); ++i) {
+  for (uint64_t i = 0; i < regst_desc_proto.register_num(); ++i) {
     Regst* regst = new Regst;
     regst->regst_desc_ = runtime_regst_desc;
     regst->regst_id_ =
@@ -19,9 +19,10 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
       elem_size = sizeof(double);
     }
     uint64_t elem_cnt = 0;
-    std::vector<std::string> lbns(regst_desc_proto.lbn2shape().size());
+    std::vector<std::string> lbns;
+    lbns.reserve(regst_desc_proto.lbn2shape().size());
     for (const auto& pair : regst_desc_proto.lbn2shape()) {
-      Shape* shape_ptr = runtime_regst_desc->GetShapePtrFromLbn(pair.first);
+      const Shape* shape_ptr = runtime_regst_desc->GetShapePtrFromLbn(pair.first);
       lbns.push_back(pair.first);
       elem_cnt += shape_ptr->elem_cnt();
     }
@@ -32,8 +33,9 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
 
     uint64_t blob_idx = 0;
     for (const std::string& lbn : lbns) {
-      Shape* shape_ptr = runtime_regst_desc->GetShapePtrFromLbn(lbn);
-      CHECK(regst->lbn2blob_.emplace(lbn, of_make_unique<Blob>(allocation.first + blob_idx, shape_ptr)).second);
+      const Shape* shape_ptr = runtime_regst_desc->GetShapePtrFromLbn(lbn);
+      auto blob_ptr = of_make_unique<Blob>(allocation.first + blob_idx, shape_ptr);
+      CHECK(regst->lbn2blob_.emplace(lbn, std::move(blob_ptr)).second);
       blob_idx += shape_ptr->elem_cnt() * elem_size;
     }
     regst->deleter_ = allocation.second;

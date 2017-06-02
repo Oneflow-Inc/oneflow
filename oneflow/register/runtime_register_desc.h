@@ -2,9 +2,7 @@
 #define ONEFLOW_REGISTER_RUNTIME_REGISTER_DESC_H_
 
 #include "common/util.h"
-#include "common/protobuf.h"
 #include "common/shape.h"
-#include "common/id_manager.h"
 #include "memory/memory_case.pb.h"
 #include "register/register_desc.pb.h"
 
@@ -16,23 +14,7 @@ class RtRegstDesc {
   RtRegstDesc() = delete;
   ~RtRegstDesc() = default;
 
-  RtRegstDesc(const RegstDescProto& regst_desc_proto) {
-    regst_desc_id_ = regst_desc_proto.regst_desc_id();
-    producer_actor_id_ = 
-      IDMgr::Singleton().GetActorIdFromTaskId(regst_desc_proto.producer_task_id());
-    register_num_ = regst_desc_proto.register_num();
-
-    const auto& subscriber = regst_desc_proto.subscriber_task_id();
-    subscribers_actor_id_.reserve(subscriber.size());
-    for (uint64_t task_id : subscriber) {
-      subscribers_actor_id_.push_back(IDMgr::Singleton().GetActorIdFromTaskId(task_id));
-    }
-
-    for (const auto& pair : regst_desc_proto.lbn2shape()) {
-      lbn2shape_.emplace(pair.first, of_make_unique<Shape>(pair.second));
-    }
-    mem_case_ = regst_desc_proto.mem_case();
-  }
+  RtRegstDesc(const RegstDescProto& regst_desc_proto);
 
   uint64_t regst_desc_id() const { return regst_desc_id_; }
   uint64_t producer_actor_id() const { return producer_actor_id_; }
@@ -42,7 +24,7 @@ class RtRegstDesc {
   int64_t register_num() const { return register_num_; }
   const MemoryCase& mem_case() const { return mem_case_; }
 
-  Shape* GetShapePtrFromLbn(const std::string& lbn) {
+  const Shape* GetShapePtrFromLbn(const std::string& lbn) const {
     return lbn2shape_.at(lbn).get();
   }
 
