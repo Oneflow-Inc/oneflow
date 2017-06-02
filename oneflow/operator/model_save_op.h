@@ -16,10 +16,9 @@ class ModelSaveOp final : public SysOperator {
   const PbMessage& GetSpecialConf() const override;
 
  private:
-  std::string ibn2lbn(const std::string& ibn) const override {
-    return RegstDesc::kAllLbn;
+  std::string ibn2lbn(const std::string& input_bn) const override {
+    return input_bn.substr(3);
   }
-
 };
 
 } // namespace oneflow

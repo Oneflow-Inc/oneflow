@@ -3,6 +3,8 @@
 
 namespace oneflow {
 
+class MdUpdtCompTaskNode;
+
 MdUpdtTaskGraph::MdUpdtTaskGraph(
     const std::string& name,
     const ChainNode* data_chain,
@@ -35,15 +37,17 @@ void MdUpdtTaskGraph::BuildTaskGraph(const ChainNode* data_chain,
       && JobDesc::Singleton().is_train()) {
     ChainNode* faker_chain = chain_gph->NewNode();
     faker_chain->mut_op_vec().clear();
-    faker_chain->mut_parallel_desc() = data_chain->parallel_desc();
-    faker_chain->mut_output_lbns() = {RegstDesc::kAllLbn};
-    updt_chain->mut_input_lbns() = {RegstDesc::kAllLbn};
+    auto parallel_desc4faker = new ParallelDesc(*(data_chain->parallel_desc()));
+    parallel_desc4faker->mut_policy() = kFakerMdUpdt;
+    faker_chain->mut_parallel_desc().reset(parallel_desc4faker);
+    faker_chain->mut_output_lbns() = {kBaledBlobName};
+    updt_chain->mut_input_lbns() = {kBaledBlobName};
     Connect(faker_chain, chain_gph->NewEdge(), updt_chain);
   }
   //
   chain_gph->UpdateSourceAndSink();
   chain_gph->ToDotFile(dot_path_prefix + "chain_graph.dot");
-  BuildFromChainGph(std::move(chain_gph), false, dot_path_prefix);
+  BuildFromChainGph<MdUpdtCompTaskNode>(std::move(chain_gph), false, dot_path_prefix);
 }
 
 } // namespace oneflow

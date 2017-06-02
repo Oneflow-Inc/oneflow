@@ -2,7 +2,7 @@ syntax = "proto3";
 package oneflow;
 
 import "operator/operator.proto";
-import "actor/task.proto";
+import "common/task.proto";
 import "common/job_desc.proto";
 import "conf/resource.proto";
 import "conf/strategy.proto";

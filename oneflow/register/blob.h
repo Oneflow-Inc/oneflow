@@ -9,17 +9,17 @@ namespace oneflow {
 class Blob {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
-  Blob(char* dptr, const Shape& shape) : dptr_(dptr), shape_(shape) {}
+  Blob(char* dptr, const Shape* shape) : dptr_(dptr), shape_(shape) {}
   ~Blob() {}
 
   const char* dptr() const { return dptr_; }
-  const Shape& shape() const { return shape_; }
+  const Shape& shape() const { return *shape_; }
   
   char* mut_dptr() { return dptr_; }
 
  private:
   char* dptr_ ;
-  Shape shape_;
+  const Shape* shape_;
 };
 
 }  // namespace oneflow

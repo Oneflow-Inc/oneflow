@@ -52,7 +52,7 @@ class BoxingTaskNode : public TaskNode {
   void BpInferShapeOfBlobsInProducedRegsts(TaskGraph*);
   
   void EnrollAllRegstAndBindRelatedEdge();
-  TaskType task_type() const override { return BoxingTask; }
+  TaskType task_type() const override { return kBoxingTask; }
   
 };
 

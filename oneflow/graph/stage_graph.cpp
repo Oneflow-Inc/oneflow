@@ -21,7 +21,7 @@ StageGraph::StageGraph(std::unique_ptr<const ChainGraph>&& chain_gph,
       size_t device_num =
           parallel_desc->sorted_device_phy_ids(machine_id).size();
       if (device_num == 0) {
-        device_num = 1; // DiskLoader
+        device_num = 1; // persistence
       }
       range_idx += device_num;
       stage_node->mut_parallel_range().mut_end() = range_idx;

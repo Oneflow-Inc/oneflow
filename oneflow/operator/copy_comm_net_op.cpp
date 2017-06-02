@@ -15,11 +15,11 @@ const PbMessage& CopyCommNetOp::GetSpecialConf() const {
 }
 
 std::string CopyCommNetOp::obn2lbn(const std::string& output_bn) const {
-  return RegstDesc::kAllLbn;
+  return kBaledBlobName;
 }
 
 std::string CopyCommNetOp::ibn2lbn(const std::string& input_bn) const {
-  return RegstDesc::kAllLbn;
+  return kBaledBlobName;
 }
 
 REGISTER_OP(OperatorConf::kCopyCommNetConf, CopyCommNetOp);

@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include "common/util.h"
-#include "actor/actor_message.pb.h"
+#include "actor/actor_message.h"
 
 namespace oneflow {
 

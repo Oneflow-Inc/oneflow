@@ -5,11 +5,13 @@ import "graph/exec_sequence.proto";
 import "register/register_desc.proto";
 
 enum TaskType {
-  HostCompTask = 0;
-  DeviceCompTask = 1;
-  CopyHdTask = 2;
-  CopyCommNetTask = 3;
-  BoxingTask = 4;
+  kInvalidTaskType = 0;
+  kDataCompTask = 1;
+  kMdSaveCompTask = 2;
+  kMdUpdtCompTask = 3;
+  kCopyHdTask = 4;
+  kCopyCommNetTask = 5;
+  kBoxingTask = 6;
 }
 
 message TaskProto {

@@ -162,6 +162,9 @@ message BoxConcatConf {
   int32 axis = 1;
 }
 
+message BoxAddConf {
+}
+
 message BoxDataSplitConf {
 }
 
@@ -172,20 +175,21 @@ message BoxingOpConf {
   string lbn = 1;
   uint32 in_num = 2;
   uint32 out_num = 3;
-  BoxConcatConf concat_box = 4;
+  oneof in_box {
+    BoxConcatConf concat_box = 4;
+    BoxAddConf add_box = 5;
+  }
   oneof out_box {
-    BoxDataSplitConf data_split_box = 5;
-    BoxCloneConf clone_box = 6;
+    BoxDataSplitConf data_split_box = 6;
+    BoxCloneConf clone_box = 7;
   }
 }
 
 message ModelUpdateOpConf {
 }
 
-message ModelLoadOpConf {
-}
-
 message ModelSaveOpConf {
+  repeated string lbns = 1;
 }
 
 message OperatorConf {
@@ -202,8 +206,7 @@ message OperatorConf {
     CloneOpConf clone_conf = 108;
     BoxingOpConf boxing_conf = 109;
     ModelUpdateOpConf model_update_conf = 110;
-    ModelLoadOpConf model_load_conf = 111;
-    ModelSaveOpConf model_save_conf = 112;
+    ModelSaveOpConf model_save_conf = 111;
     ConcatOpConf concat_conf = 113;
     CopyCommNetOpConf copy_comm_net_conf = 114;
   }

@@ -7,6 +7,7 @@
 #include <memory>
 #include "common/util.h"
 #include "common/id_manager.h"
+#include "common/keyword.h"
 
 namespace oneflow {
 

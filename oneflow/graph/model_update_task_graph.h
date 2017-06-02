@@ -17,13 +17,6 @@ class MdUpdtTaskGraph final : public TaskGraph {
       const std::vector<CompTaskNode*>& sorted_fw_comptasks4data_chain,
       const std::string& dot_path_prefix);
   
-  CompTaskNodeMemFunc Func4FwBuildExecAndEnrollLbn2Regsts() const override {
-    return &CompTaskNode::MdUpdtFwBuildExecAndEnrollLbn2Regsts;
-  }
-  CompTaskNodeMemFunc Func4FwInferShapeOfBlobsInProducedRegsts() const override {
-    return &CompTaskNode::MdUpdtFwInferShapeOfBlobsInProducedRegsts;
-  }
-
   CompTaskNode* GetFwTaskFromParallelId(uint64_t parallel_id) const {
     return parallel_id2fw_task_.at(parallel_id);
   }

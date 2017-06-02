@@ -4,6 +4,7 @@
 #include "common/util.h"
 #include "common/shape.h"
 #include "register/register_desc.pb.h"
+#include "graph/copy_task_node.h"
 
 namespace oneflow {
 
@@ -43,8 +44,6 @@ class RegstDesc final {
   void ToProto(RegstDescProto*) const;
   MemoryCase InferMemCase() const;
   
-  static const char* kAllLbn;
-
  private:
   uint64_t regst_desc_id_;
   const TaskNode* producer_;

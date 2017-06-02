@@ -2,9 +2,8 @@
 #define ONEFLOW_REGISTER_REGISTER_H_
 
 #include "register/blob.h"
-#include "actor/actor_message.pb.h"
-#include "actor/actor_msg_bus.h"
 #include "common/util.h"
+#include "register/runtime_register_desc.h"
 
 namespace oneflow {
 
@@ -17,12 +16,22 @@ class Regst final {
   
   Blob* GetBlobPtrFromLbn(const std::string& lbn);
 
+  uint64_t regst_desc_id() const {
+    return regst_desc_->regst_desc_id();
+  }
+  uint64_t producer_actor_id() const {
+    return regst_desc_->producer_actor_id();
+  }
+  const std::vector<uint64_t>& subscribers_actor_id() const {
+    return regst_desc_->subscribers_actor_id();
+  }
+    
  private:
   friend class RegstMgr;
   Regst() = default;
-  uint64_t id_;
-  uint64_t producer_id_;
-  std::vector<uint64_t> subscriber_ids_;
+
+  std::shared_ptr<const RtRegstDesc> regst_desc_;
+  uint64_t regst_id_;
   std::function<void()> deleter_;
   HashMap<std::string, std::unique_ptr<Blob>> lbn2blob_;
 };

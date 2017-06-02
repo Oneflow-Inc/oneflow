@@ -2,7 +2,7 @@
 #include "glog/logging.h"
 #include "common/id_manager.h"
 #include "common/protobuf.h"
-#include "graph/model_load_task_graph.h"
+#include "graph/model_save_comp_task_node.h"
 #include "graph/model_save_task_graph.h"
 #include "graph/model_update_task_graph.h"
 #include "graph/data_task_graph.h"
@@ -33,7 +33,7 @@ class Compiler final {
   void BuildGraphs();
   void BuildModelGraphs(const std::pair<const ChainNode*, std::vector<CompTaskNode*>>&);
   void InferShape4Regsts();
-  void EraseMeaningLessNodesAndRegsts();
+  void EraseMeaningLessRegsts();
   void GenElfFile(const std::string& elf_filepath);
   
   std::vector<std::unique_ptr<TaskGraph>> ordered_task_gphs_;
@@ -68,11 +68,12 @@ void Compiler::ForEachTaskNode(std::function<void(TaskNode*)> func) {
 void Compiler::Compile(const JobConf& job_conf,
                        const std::string& elf_filepath) {
   JobDesc::Singleton().InitFromJobConf(job_conf);
+  JobDesc::Singleton().set_piece_size(50);
   IDMgr::Singleton().InitFromResource(JobDesc::Singleton().resource());
 
   BuildGraphs();
   InferShape4Regsts();
-  EraseMeaningLessNodesAndRegsts();
+  EraseMeaningLessRegsts();
   GenElfFile(elf_filepath);
 }
 
@@ -120,27 +121,19 @@ void Compiler::BuildModelGraphs(
   auto updt_gph = new MdUpdtTaskGraph(
       "md_updt_" + chain_tag,
       pair.first, pair.second, dot_path_prefix + "model_update_");
-  ChainNode* updt_chain = updt_gph->chain_gph()->SoleSinkNode();
-  auto sorted_updt_tasks = updt_gph->SortedCompTasksInChain(updt_chain);
-  HashMap<uint64_t, CompTaskNode*> parallel_id2updt_task;
-  for (CompTaskNode* update_task : sorted_updt_tasks) {
-    CHECK(parallel_id2updt_task.emplace(
-          update_task->parallel_id(), update_task).second);
-  }
   ordered_task_gphs_.emplace_back(updt_gph);
-  LOG(INFO) << "Build MdLoadTaskGraph... for " << chain_tag;
-  auto load_gph = new MdLoadTaskGraph(
-      "md_load_" + chain_tag,
-      updt_chain, parallel_id2updt_task, policy,
-      dot_path_prefix + "model_load_");
-  ordered_task_gphs_.emplace_back(load_gph);
   if (JobDesc::Singleton().is_train()) {
     LOG(INFO) << "Build MdSaveTaskGraph... for " << chain_tag;
-    auto save_gph = new MdSaveTaskGraph(
-        "md_save_" + chain_tag,
-        updt_chain, parallel_id2updt_task, policy,
-        dot_path_prefix + "model_save_");
-    ordered_task_gphs_.emplace_back(save_gph);
+    ChainNode* updt_chain = updt_gph->chain_gph()->SoleSinkNode();
+    auto updt_tasks = updt_gph->SortedCompTasksInChain(updt_chain);
+    if (policy == kDataParallel) { updt_tasks = {updt_tasks.front()}; }
+    for (CompTaskNode* update_task : updt_tasks) {
+      auto save_gph = new MdSaveTaskGraph(
+          "md_save_" + update_task->node_id_str(),
+          update_task,
+          dot_path_prefix + "model_save_" + update_task->node_id_str() + "_");
+      ordered_task_gphs_.emplace_back(save_gph);
+    }
   }
 }
 
@@ -151,7 +144,7 @@ void Compiler::InferShape4Regsts() {
   }
 }
 
-void Compiler::EraseMeaningLessNodesAndRegsts() {
+void Compiler::EraseMeaningLessRegsts() {
   ForEachTaskNode([](TaskNode* task_node) {
     task_node->EraseZeroSizeBlobInProducedRegsts();
     task_node->EraseProducedEmptyRegsts();
@@ -161,7 +154,7 @@ void Compiler::EraseMeaningLessNodesAndRegsts() {
 void Compiler::GenElfFile(const std::string& elf_filepath) {
   OfElf elf;
   ForEachTaskNode([&elf](TaskNode* node) {
-    if (!node->produced_regst_descs().empty()) {
+    if (!node->IsMeaningLess()) {
       node->ToProto(elf.mutable_task()->Add());
     }
   });

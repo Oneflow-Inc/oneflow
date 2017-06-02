@@ -56,7 +56,7 @@ class CopyHDTaskNode final : public CopyTaskNode {
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return of_make_unique<CopyHDTaskNode> ();
   }
-  TaskType task_type() const override { return CopyHdTask; }
+  TaskType task_type() const override { return kCopyHdTask; }
 
   bool is_fw_in_copy_;
 
@@ -86,7 +86,7 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
     set_stage_node(fw_node->SoleInEdge()->src_node()->stage_node());
     set_task_id();
   }
-  TaskType task_type() const override { return CopyCommNetTask; }
+  TaskType task_type() const override { return kCopyCommNetTask; }
 
 };
 

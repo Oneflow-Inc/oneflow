@@ -28,6 +28,11 @@ void FwCompleteBoxOpConfModelModel(BoxingOpConf* conf) {
   conf->mutable_clone_box();
 }
 
+void FwCompleteBoxOpConfFakerMdUpdt(BoxingOpConf* conf) {
+  conf->mutable_add_box();
+  conf->mutable_clone_box();
+}
+
 } // namespace
 
 void BoxingTaskNode::FwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
@@ -114,8 +119,12 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
     CompleteBoxOp = &FwCompleteBoxOpConfDataModel;
   } else if (in_policy == kModelParallel && out_policy == kDataParallel) {
     CompleteBoxOp = &FwCompleteBoxOpConfModelData;
-  } else {
+  } else if (in_policy == kModelParallel && out_policy == kModelParallel) {
     CompleteBoxOp = &FwCompleteBoxOpConfModelModel;
+  } else {
+    CHECK_EQ(in_policy, kFakerMdUpdt);
+    CHECK_EQ(out_policy, kModelParallel);
+    CompleteBoxOp = &FwCompleteBoxOpConfFakerMdUpdt;
   }
   // func 4 construct boxing_op in this node
   auto ConstructBoxingOp = [&](const std::string& lbn) {
@@ -130,7 +139,7 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
   };
   // lbns
   std::vector<std::string> lbns = FindLbnsBetween(in_chain, out_chain);
-  if (lbns.at(0) == RegstDesc::kAllLbn) {
+  if (lbns.at(0) == kBaledBlobName) {
     CHECK_EQ(lbns.size(), 1);
     lbns.clear();
     auto in_regst_0 = GetRelatedRegst(sorted_in_edges.at(0));
