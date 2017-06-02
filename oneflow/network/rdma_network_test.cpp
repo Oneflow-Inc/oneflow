@@ -31,14 +31,14 @@ int main(int argc, char** argv) {
 
   struct NetworkTopology net_topo;
   net_topo.all_nodes.resize(2);
-  net_topo.all_nodes[0].machine_id = 0;
-  net_topo.all_nodes[0].address = "11.11.1.109";
-  net_topo.all_nodes[0].port = 53433;
-  net_topo.all_nodes[0].neighbors.insert(1);
-  net_topo.all_nodes[1].machine_id = 1;
-  net_topo.all_nodes[1].address = "11.11.1.132";
-  net_topo.all_nodes[1].port = 53433;
-  net_topo.all_nodes[1].neighbors.insert(0);
+  net_topo.all_nodes[FLAGS_my_machine_id].machine_id = FLAGS_my_machine_id;
+  net_topo.all_nodes[FLAGS_my_machine_id].address = FLAGS_my_ip;
+  net_topo.all_nodes[FLAGS_my_machine_id].port = 53433;
+  net_topo.all_nodes[FLAGS_my_machine_id].neighbors.insert(FLAGS_peer_machine_id);
+  net_topo.all_nodes[FLAGS_peer_machine_id].machine_id = FLAGS_peer_machine_id;
+  net_topo.all_nodes[FLAGS_peer_machine_id].address = FLAGS_peer_ip;
+  net_topo.all_nodes[FLAGS_peer_machine_id].port = 53433;
+  net_topo.all_nodes[FLAGS_peer_machine_id].neighbors.insert(FLAGS_my_machine_id);
   
   clock_t start_time, current_time;
 
