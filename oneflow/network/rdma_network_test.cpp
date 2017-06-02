@@ -13,8 +13,10 @@ using namespace oneflow;
 using namespace std;
 
 DEFINE_int32(my_machine_id, 0, "local machine id");
+DEFINE_string(my_ip, "11.11.1.109", "local machine ip");
 DEFINE_int32(peer_machine_id, 1, "peer machine id");
-DEFINE_int32(transfer_size, 1024, "transfer data size");
+DEFINE_string(peer_ip, "11.11.1.132", "peer machine ip");
+DEFINE_int64(transfer_size, 1024, "transfer data size");
 DEFINE_int32(transfer_times, 1, "transfer data times");
 
 int main(int argc, char** argv) {
@@ -30,11 +32,11 @@ int main(int argc, char** argv) {
   struct NetworkTopology net_topo;
   net_topo.all_nodes.resize(2);
   net_topo.all_nodes[0].machine_id = 0;
-  net_topo.all_nodes[0].address = "11.11.1.11";
+  net_topo.all_nodes[0].address = "11.11.1.109";
   net_topo.all_nodes[0].port = 53433;
   net_topo.all_nodes[0].neighbors.insert(1);
   net_topo.all_nodes[1].machine_id = 1;
-  net_topo.all_nodes[1].address = "11.11.1.13";
+  net_topo.all_nodes[1].address = "11.11.1.132";
   net_topo.all_nodes[1].port = 53433;
   net_topo.all_nodes[1].neighbors.insert(0);
   
