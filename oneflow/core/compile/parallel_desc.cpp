@@ -1,5 +1,6 @@
 #include "oneflow/core/compile/parallel_desc.h"
 #include <algorithm>
+#include "tensorflow/core/lib/strings/numbers.h"
 
 namespace oneflow {
 
@@ -29,13 +30,16 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
       machine_id2sorted_device_phy_ids_[machine_id] = {};
       device_type_ = DeviceType::kCPU;
     } else if (to_symbol_pos == std::string::npos) {
-      uint64_t device_id = StoullOrDie(device_id_str);
+      uint64_t device_id;
+      CHECK(tensorflow::strings::safe_strtou64(device_id_str, &device_id));
       machine_id2sorted_device_phy_ids_[machine_id].push_back(device_id);
     } else {
-      uint64_t begin_device_id =
-        StoullOrDie(device_id_str.substr(0, to_symbol_pos));
-      uint64_t end_device_id =
-        StoullOrDie(device_id_str.substr(to_symbol_pos + 1));
+      uint64_t begin_device_id;
+      CHECK(tensorflow::strings::safe_strtou64(
+          device_id_str.substr(0, to_symbol_pos), &begin_device_id));
+      uint64_t end_device_id;
+      CHECK(tensorflow::strings::safe_strtou64(
+        device_id_str.substr(to_symbol_pos + 1), &end_device_id));
       CHECK_LT(begin_device_id, end_device_id);
       for (uint64_t i = begin_device_id; i <= end_device_id; ++i) {
         machine_id2sorted_device_phy_ids_[machine_id].push_back(i);
