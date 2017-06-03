@@ -134,6 +134,7 @@ MemoryCase RegstDesc::InferMemCase() const {
     if (device_type == kGPU && producer_->task_type() != kBoxingTask) {
       SetDeviceCudaMemoryAccordingToThrdLocId(mem_case, producer_->thrd_loc_id());
     } else {
+      mem_case.mutable_host_pageable_mem();
       SetHostPinnedMemoryAccordingToSubscribers(mem_case, subscribers_);
     }
   }
