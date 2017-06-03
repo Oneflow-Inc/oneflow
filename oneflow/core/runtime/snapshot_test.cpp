@@ -15,12 +15,14 @@ TEST(Snapshot, write_and_read) {
   // perftools::gputools::port::GetCurrentDirectory(&current_dir);
   std::string snapshot_root_path = tensorflow::io::JoinPath("file://", "/C:/Users/oneflow/root_path/" ,"snapshot1");
   if (env->IsDirectory(snapshot_root_path).code() == tensorflow::error::OK) {
-    int64_t undeleted_files, undeleted_dirs;
-    env->DeleteRecursively(snapshot_root_path, &undeleted_dirs, &undeleted_files);
+    std::vector<std::string> children;
+    env->GetChildren(snapshot_root_path, &children);
+    ASSERT_EQ(children.size(), 0);
+  } else {
+    ASSERT_TRUE(env->CreateDir(snapshot_root_path).code() == tensorflow::error::OK);
   }
   // write
   {
-    TF_CHECK_OK(env->CreateDir(snapshot_root_path));
     Snapshot snapshot_write(snapshot_root_path);
     std::string key = "key1";
     auto write_stream1_ptr = snapshot_write.GetOutStream(key, 0);
@@ -46,6 +48,9 @@ TEST(Snapshot, write_and_read) {
     ASSERT_EQ(result, 'a');
     (*read_stream_ptr) >> result;
     ASSERT_EQ(result, 'b');
+    ASSERT_TRUE((*read_stream_ptr).good());
+    (*read_stream_ptr) >> result;
+    ASSERT_TRUE((*read_stream_ptr).eof());
   }
 }
 

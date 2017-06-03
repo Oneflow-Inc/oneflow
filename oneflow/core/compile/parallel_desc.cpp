@@ -39,7 +39,7 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
           device_id_str.substr(0, to_symbol_pos), &begin_device_id));
       uint64_t end_device_id;
       CHECK(tensorflow::strings::safe_strtou64(
-        device_id_str.substr(to_symbol_pos + 1), &end_device_id));
+          device_id_str.substr(to_symbol_pos + 1), &end_device_id));
       CHECK_LT(begin_device_id, end_device_id);
       for (uint64_t i = begin_device_id; i <= end_device_id; ++i) {
         machine_id2sorted_device_phy_ids_[machine_id].push_back(i);
