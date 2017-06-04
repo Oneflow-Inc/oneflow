@@ -4,7 +4,7 @@ option(tensorflow_BUILD_CC_TESTS "Build cc unit tests " OFF)
 option(tensorflow_ENABLE_GPU "Enable GPU support" OFF)
 
 set(TENSORFLOW_URL https://github.com/Oneflow-Inc/tensorflow.git)
-set(TENSORFLOW_TAG 60222b9bcc29ab47337db5dbb6c0102f8b9c2212)
+set(TENSORFLOW_TAG 8f47670ac8458de7b472f8a7763980b791b70b8f)
 
 set(TENSORFLOW_BUILD_INCLUDE ${CMAKE_CURRENT_BINARY_DIR}/tensorflow/src/tensorflow/tensorflow)
 set(TENSORFLOW_INCLUDE_DIR ${THIRD_PARTY_DIR}/tensorflow/include)
