@@ -2,8 +2,33 @@
 #include "oneflow/core/common/id_manager.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/graph/copy_task_node.h"
 
 namespace oneflow {
+
+namespace {
+
+void SetDeviceCudaMemoryAccordingToThrdLocId(MemoryCase& mem_case, 
+                                             uint64_t thrd_loc_id) {
+  uint64_t device_id = IDMgr::Singleton().DevPhyId4ThrdLocId(thrd_loc_id);
+  mem_case.mutable_device_cuda_mem()->set_device_id(device_id);
+}
+
+void SetHostPinnedMemoryAccordingToSubscribers(MemoryCase& mem_case, 
+    const HashSet<const TaskNode*>& subs) {
+  for (const TaskNode* sub : subs) {
+    if (sub->task_type() == kCopyCommNetTask) {
+      mem_case.mutable_host_pinned_mem()->set_need_rdma(true);
+    }
+    if (auto cp_hd_sub = dynamic_cast<const CopyHDTaskNode*>(sub)) {
+      if (cp_hd_sub->IsH2D()) {
+        mem_case.mutable_host_pinned_mem()->set_need_cuda(true);
+      }
+    }
+  }
+}
+
+}
 
 RegstDesc::RegstDesc() {
   producer_ = nullptr;
@@ -93,8 +118,27 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
 }
 
 MemoryCase RegstDesc::InferMemCase() const {
-  // TODO
-  return MemoryCase();
+  MemoryCase mem_case;
+  DeviceType device_type = producer_->chain_node()->parallel_desc()->device_type();
+  if (auto cp_hd_producer = dynamic_cast<const CopyHDTaskNode*>(producer_)) {
+    if (cp_hd_producer->IsH2D()) {
+      SetDeviceCudaMemoryAccordingToThrdLocId(mem_case, producer_->thrd_loc_id());
+    } else {
+      mem_case.mutable_host_pinned_mem()->set_need_cuda(true);
+      SetHostPinnedMemoryAccordingToSubscribers(mem_case, subscribers_);
+    }
+  } else if (producer_->task_type() == kCopyCommNetTask) {
+    mem_case.mutable_host_pinned_mem()->set_need_rdma(true);
+    SetHostPinnedMemoryAccordingToSubscribers(mem_case, subscribers_);
+  } else {
+    if (device_type == kGPU && producer_->task_type() != kBoxingTask) {
+      SetDeviceCudaMemoryAccordingToThrdLocId(mem_case, producer_->thrd_loc_id());
+    } else {
+      mem_case.mutable_host_pageable_mem();
+      SetHostPinnedMemoryAccordingToSubscribers(mem_case, subscribers_);
+    }
+  }
+  return mem_case;
 }
 
 } // namespace oneflow
