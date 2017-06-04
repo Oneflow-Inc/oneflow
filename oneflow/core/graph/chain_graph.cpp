@@ -258,7 +258,7 @@ ChainGraph::ChainGraph(const LogicalGraph* logical_gph,
     return std::hash<Chain*> ()(&(*chain_it));
   };
   HashMap<ChainIt, ChainNode*, decltype(HashChainIt)>
-      chain_it2chain_node(0, HashChainIt);
+      chain_it2chain_node(11, HashChainIt);
   HashMap<ChainNode*, std::unordered_set<ChainNode*>> chain_node2pred;
   for (auto chain_it = chain_list.begin(); chain_it != chain_list.end(); ++chain_it) {
     ChainNode* chain_node = NewNode();

@@ -69,7 +69,7 @@ void DoOneTestGraph(const TestGraph& test_graph,
   HashMap<uint64_t, uint64_t> node_id2order;
   auto NodePairHash = [](const NodeIdPair& val) { return val.first ^ val.second; };
   std::unordered_set<NodeIdPair,
-                     decltype(NodePairHash)> edges_node_pair(10, NodePairHash);
+                     decltype(NodePairHash)> edges_node_pair(11, NodePairHash);
   uint64_t order = 0;
   for (auto it = test_graph.cbegin(); it != test_graph.cend(); ++it) {
     topo_array.push_back(it->test_node_id());
