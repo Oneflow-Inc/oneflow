@@ -167,6 +167,7 @@ void DataCompTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   SubscribeRegstDesc("model_tmp",
                      GetFwNode()->GetSubscribedRegstDesc("model_tmp"));
   SubscribeRegstDesc("in", GetFwNode()->GetSubscribedRegstDesc("in"));
+  SubscribeRegstDesc("out_diff", GetRelatedRegst(SoleInEdge()));
   // Enroll Lbn
   BpEnrollLbn2ProducedRegst();
 }

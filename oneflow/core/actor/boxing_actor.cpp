@@ -9,7 +9,7 @@ void BoxingActor::Init(const TaskProto& task_proto) {
   uint64_t middle_regst_desc_id = GetRegstDescIdFromName("middle");
   for (const auto& regst : produced_regst_vec()) {
     if (regst->regst_desc_id() == middle_regst_desc_id) {
-      LOG_IF(WARNING, middle_regst_ != nullptr) << "";
+      LOG_IF(WARNING, middle_regst_ != nullptr) << "redundant middle register";
       middle_regst_ = regst.get();
     } else {
       waiting_out_regst_[regst->regst_desc_id()].push(regst.get());
@@ -32,7 +32,7 @@ void BoxingActor::ProcessMsg(const ActorMsg& msg) {
       waiting_in_regst_it = emplace_ret.first;
     }
     CHECK(waiting_in_regst_it->second->emplace(msg.regst()->regst_desc_id(),
-                                             msg.regst()).second);
+                                               msg.regst()).second);
     if (waiting_in_regst_it->second->size() == in_regst_desc_num_) {
       std::pair<uint64_t, std::unique_ptr<HashMap<uint64_t, Regst*>>> ready_ins;
       ready_ins.first = waiting_in_regst_it->first;

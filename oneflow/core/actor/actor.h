@@ -25,7 +25,7 @@ class Actor {
  protected:
   struct ExecKernel {
     const Kernel* kernel;
-    std::unordered_map<std::string, uint64_t> bn_in_op2regst_desc_id;
+    HashMap<std::string, uint64_t> bn_in_op2regst_desc_id;
   };
 
   Actor() = default;
