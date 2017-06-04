@@ -17,7 +17,7 @@ class Actor {
   OF_DISALLOW_COPY_AND_MOVE(Actor);
   virtual ~Actor() = default;
 
-  virtual void Init(const TaskProto& task_proto);
+  virtual void Init(const TaskProto& task_proto) = 0;
   virtual void ProcessMsg(const ActorMsg&) = 0;
 
   uint64_t actor_id() const { return actor_id_; }

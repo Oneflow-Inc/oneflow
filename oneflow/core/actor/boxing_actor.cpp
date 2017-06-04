@@ -12,17 +12,25 @@ void BoxingActor::Init(const TaskProto& task_proto) {
       LOG_IF(WARNING, middle_regst_ != nullptr) << "redundant middle register";
       middle_regst_ = regst.get();
     } else {
-      waiting_out_regst_[regst->regst_desc_id()].push(regst.get());
+      writeable_out_regst_[regst->regst_desc_id()].push(regst.get());
+      out_regst2reading_cnt_[regst.get()] = 0;
     }
   }
-  waiting_out_regst_desc_num_ = waiting_out_regst_.size();
+  writeable_out_regst_desc_num_ = writeable_out_regst_.size();
 }
 
 void BoxingActor::ProcessMsg(const ActorMsg& msg) {
-  auto waiting_out_regst_it = waiting_out_regst_.find(msg.regst()->regst_desc_id());
-  if (waiting_out_regst_it != waiting_out_regst_.end()) {
-    if (waiting_out_regst_it->second.empty()) { waiting_out_regst_desc_num_ += 1; }
-    waiting_out_regst_it->second.push(msg.regst());
+  auto writeable_out_regst_it = writeable_out_regst_.find(msg.regst()->regst_desc_id());
+  if (writeable_out_regst_it != writeable_out_regst_.end()) {
+    auto reading_cnt_it = out_regst2reading_cnt_.find(msg.regst());
+    CHECK_GE(reading_cnt_it->second, 1);
+    reading_cnt_it->second -= 1;
+    if (reading_cnt_it->second == 0) {
+      if (writeable_out_regst_it->second.empty()) {
+        writeable_out_regst_desc_num_ += 1;
+      }
+      writeable_out_regst_it->second.push(msg.regst());
+    }
   } else {
     auto waiting_in_regst_it = waiting_in_regst_.find(msg.piece_id());
     if (waiting_in_regst_it == waiting_in_regst_.end()) {
@@ -42,7 +50,7 @@ void BoxingActor::ProcessMsg(const ActorMsg& msg) {
     }
   }
   if (!ready_in_regst_.empty()
-      && waiting_out_regst_desc_num_ == waiting_out_regst_.size()) {
+      && writeable_out_regst_desc_num_ == writeable_out_regst_.size()) {
     WardKernelAndSendMsg();
   }
 }
@@ -53,9 +61,9 @@ void BoxingActor::WardKernelAndSendMsg() {
     if (regst_desc_id == middle_regst_->regst_desc_id()) {
       return middle_regst_;
     }
-    auto waiting_out_regst_it = waiting_out_regst_.find(regst_desc_id);
-    if (waiting_out_regst_it != waiting_out_regst_.end()) {
-      return waiting_out_regst_it->second.front();
+    auto writeable_out_regst_it = writeable_out_regst_.find(regst_desc_id);
+    if (writeable_out_regst_it != writeable_out_regst_.end()) {
+      return writeable_out_regst_it->second.front();
     } else {
       return ready_in_regst_.front().second->at(regst_desc_id);
     }
@@ -64,15 +72,16 @@ void BoxingActor::WardKernelAndSendMsg() {
   {
     ActorMsg msg;
     msg.set_piece_id(ready_in_regst_.front().first);
-    for (auto& pair : waiting_out_regst_) {
+    for (auto& pair : writeable_out_regst_) {
       Regst* regst = pair.second.front();
+      out_regst2reading_cnt_.at(regst) = regst->subscribers_actor_id().size();
       msg.set_regst(regst);
       for (uint64_t subscriber : regst->subscribers_actor_id()) {
         msg.set_dst_actor_id(subscriber);
         ActorMsgBus::Singleton().SendMsg(msg);
       }
       pair.second.pop();
-      if (pair.second.empty()) { waiting_out_regst_desc_num_ -= 1; }
+      if (pair.second.empty()) { writeable_out_regst_desc_num_ -= 1; }
     }
   }
   // Send Msg about In Regst
