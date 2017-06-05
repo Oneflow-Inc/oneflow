@@ -10,7 +10,7 @@ else()
   list(APPEND oneflow_platform_excludes "windows")
 endif()
 
-file(GLOB_RECURSE oneflow_all_src "${oneflow_src_dir}/*.*")
+file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*")
 foreach(oneflow_single_file ${oneflow_all_src})
   # Verify whether this file is for other platforms
   set(exclude_this OFF)
@@ -25,30 +25,30 @@ foreach(oneflow_single_file ${oneflow_all_src})
     continue()
   endif()
 
-  file(RELATIVE_PATH oneflow_relative_file ${oneflow_src_dir} ${oneflow_single_file})
+  file(RELATIVE_PATH oneflow_relative_file ${PROJECT_SOURCE_DIR}/oneflow/core/ ${oneflow_single_file})
   get_filename_component(oneflow_relative_path ${oneflow_relative_file} PATH)
   string(REPLACE "/" "\\" group_name ${oneflow_relative_path})
   source_group("${group_name}" FILES ${oneflow_single_file})
 
-  if("${oneflow_single_file}" MATCHES "^${oneflow_src_dir}/.*\\.h$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.h$")
     list(APPEND of_all_obj_cc ${oneflow_single_file})
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${oneflow_src_dir}/.*\\.cuh$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cuh$")
     list(APPEND of_all_obj_cc ${oneflow_single_file})
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${oneflow_src_dir}/.*\\.cu$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cu$")
     list(APPEND of_all_obj_cc ${oneflow_single_file})
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${oneflow_src_dir}/.*\\.proto")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.proto")
     list(APPEND of_all_proto ${oneflow_single_file})
     list(APPEND of_all_obj_cc ${oneflow_single_file})   # include the proto file in the project
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${oneflow_src_dir}/.*\\.cpp")
-    if("${oneflow_single_file}" MATCHES "^${oneflow_src_dir}/.*_test\\.cpp")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cpp")
+    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*_test\\.cpp")
       # test file
       list(APPEND of_all_test_cc ${oneflow_single_file})
     else()
