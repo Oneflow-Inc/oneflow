@@ -1,9 +1,0 @@
-syntax = "proto3";
-package oneflow;
-
-import "operator/op_conf.proto";
-
-message DLNetConf {
-  string name = 1;
-  repeated OperatorConf op = 100;
-}

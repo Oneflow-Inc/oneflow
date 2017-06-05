@@ -1,6 +1,6 @@
 # main cpp
-list(APPEND of_main_cc ${oneflow_src_dir}/compile/compiler.cpp)
-list(APPEND of_main_cc ${oneflow_src_dir}/runtime/elf_runner.cpp)
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/compile/compiler.cpp)
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/runtime/elf_runner.cpp)
 
 if(WIN32)
   set(oneflow_platform "windows")
@@ -63,19 +63,18 @@ endforeach()
 
 # proto obj lib
 foreach(proto_name ${of_all_proto})
-  file(RELATIVE_PATH proto_rel_name ${oneflow_src_dir} ${proto_name})
+  file(RELATIVE_PATH proto_rel_name ${PROJECT_SOURCE_DIR} ${proto_name})
   list(APPEND of_all_rel_protos ${proto_rel_name})
 endforeach()
 
 RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
-                               ${oneflow_src_dir}
+                               ${PROJECT_SOURCE_DIR}
                                ${of_all_rel_protos})
 
 add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(of_protoobj ${oneflow_third_party_libs})
 
 # cc obj lib
-include_directories(${oneflow_src_dir})
 include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
 cuda_add_library(of_ccobj ${of_all_obj_cc})
