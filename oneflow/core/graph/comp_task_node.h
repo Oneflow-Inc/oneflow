@@ -26,7 +26,7 @@ class CompTaskNode : public TaskNode {
  protected:
   virtual void InitWithFwNode(TaskNode* fw_node) override {
     TaskNode::InitWithFwNode(fw_node);
-    auto fw_comp_code = of_dynamic_cast<CompTaskNode*> (fw_node);
+    auto fw_comp_code = static_cast<CompTaskNode*> (fw_node);
     parallel_id_ = fw_comp_code->parallel_id_;
   }
 

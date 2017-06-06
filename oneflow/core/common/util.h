@@ -30,13 +30,6 @@ namespace oneflow {
 #define TODO() \
   LOG(FATAL) << "TODO";
 
-template<typename Target, typename Source>
-inline Target of_dynamic_cast(Source arg) {
-  Target ret = dynamic_cast<Target> (arg);
-  CHECK_NOTNULL(ret);
-  return ret;
-}
-
 inline bool operator == (const google::protobuf::MessageLite& lhs,
                          const google::protobuf::MessageLite& rhs) {
   return lhs.SerializeAsString() == rhs.SerializeAsString();

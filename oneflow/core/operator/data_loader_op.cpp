@@ -24,7 +24,7 @@ void DataLoaderOp::InferShape4FwBlobs(
     uint64_t parallel_num) const {
   // useful vars
   uint32_t piece_size = JobDesc::Singleton().piece_size();
-  auto op_conf = of_dynamic_cast<const DataLoaderOpConf*> (&GetSpecialConf());
+  auto op_conf = static_cast<const DataLoaderOpConf*> (&GetSpecialConf());
   // feature shape
   Shape feature_shape_of_one_ins(op_conf->shape_of_one_feature_ins());
   std::vector<int64_t> feature_shape = {piece_size};

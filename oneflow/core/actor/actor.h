@@ -29,7 +29,8 @@ class Actor {
   };
 
   Actor() = default;
-  void WardKernel(std::function<Regst*(uint64_t)> GetRegstFromRegstDescId);
+  void WardKernel(
+      std::function<std::shared_ptr<RegstWarpper>(uint64_t)> Regst4RegstDescId);
   const std::vector<std::unique_ptr<Regst>>& produced_regst_vec() const {
     return produced_regst_vec_;
   }
@@ -37,12 +38,24 @@ class Actor {
     return name2regst_desc_id_.at(name);
   }
 
+  // Status of Produced Registers
+  int TryOneReadDone(Regst* regst);
+  Regst* GetCurWriteableRegst(uint64_t regst_desc_id);
+  void ForEachCurWriteableRegst(std::function<void(Regst*)> func);
+  void CurWriteDone();
+  bool IsWriteReady();
+
  private:
   uint64_t actor_id_;
   KernelWardFunc ward_func_;
   std::vector<ExecKernel> exec_kernel_vec_;
   std::vector<std::unique_ptr<Regst>> produced_regst_vec_;
   HashMap<std::string, uint64_t> name2regst_desc_id_;
+  
+  // Status of Produced Registers
+  HashMap<uint64_t, std::queue<Regst*>> writeable_produced_regst_; // <regst_desc_id, regst>
+  uint64_t writeable_produced_regst_desc_num_;
+  HashMap<Regst*, int64_t> produced_regst2reading_cnt_;
 
 };
 

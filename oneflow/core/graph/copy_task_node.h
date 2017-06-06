@@ -51,7 +51,7 @@ class CopyHDTaskNode final : public CopyTaskNode {
 
   void InitWithFwNode(TaskNode* fw_node) override {
     TaskNode::InitWithFwNode(fw_node);
-    is_fw_in_copy_ = of_dynamic_cast<CopyHDTaskNode*>(fw_node)->is_fw_in_copy_;
+    is_fw_in_copy_ = static_cast<CopyHDTaskNode*>(fw_node)->is_fw_in_copy_;
   }
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return of_make_unique<CopyHDTaskNode> ();
