@@ -1,8 +1,8 @@
-#ifndef ONEFLOW_NETWORK_RDMA_WINDOWS_RDMA_MEMORY_H_
-#define ONEFLOW_NETWORK_RDMA_WINDOWS_RDMA_MEMORY_H_
+#ifndef ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_RDMA_MEMORY_H_
+#define ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_RDMA_MEMORY_H_
 
-#include "network/rdma/windows/ndsupport.h"
-#include "network/network_memory.h"
+#include "oneflow/core/network/rdma/windows/ndsupport.h"
+#include "oneflow/core/network/network_memory.h"
 
 namespace oneflow {
 
@@ -29,4 +29,4 @@ class RdmaMemory : public NetworkMemory {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_NETWORK_RDMA_WINDOWS_RDMA_MEMORY_H_
+#endif  // ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_RDMA_MEMORY_H_

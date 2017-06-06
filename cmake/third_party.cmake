@@ -8,10 +8,12 @@ include(googletest)
 include(glog)
 include(gflags)
 include(grpc)
+include(tensorflow)
 
 find_package(CUDA REQUIRED)
 
 set(oneflow_third_party_libs
+    ${tensorflow_STATIC_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
     ${ZLIB_STATIC_LIBRARIES}
     ${GLOG_STATIC_LIBRARIES}
@@ -19,6 +21,12 @@ set(oneflow_third_party_libs
     ${GOOGLETEST_STATIC_LIBRARIES}
     ${PROTOBUF_STATIC_LIBRARIES}
     ${GRPC_STATIC_LIBRARIES}
+    ${gif_STATIC_LIBRARIES}
+    ${farmhash_STATIC_LIBRARIES}
+    ${highwayhash_STATIC_LIBRARIES}
+    ${JPEG_STATIC_LIBRARIES}
+    ${PNG_STATIC_LIBRARIES}
+    ${JSONCPP_STATIC_LIBRARIES}
 )
 
 if(WIN32)
@@ -40,6 +48,22 @@ set(oneflow_third_party_dependencies
   protobuf_copy_binary_to_destination
   grpc_copy_headers_to_destination
   grpc_copy_libs_to_destination
+  grpc_copy_binary_to_destination
+  tensorflow_copy_headers_to_destination
+  tensorflow_copy_libs_to_destination
+  gif_copy_headers_to_destination
+  gif_copy_libs_to_destination
+  farmhash_copy_headers_to_destination
+  farmhash_copy_libs_to_destination
+  highwayhash_copy_headers_to_destination
+  highwayhash_copy_libs_to_destination
+  jpeg_copy_headers_to_destination
+  jpeg_copy_libs_to_destination
+  png_copy_headers_to_destination
+  png_copy_libs_to_destination
+  jsoncpp_copy_headers_to_destination
+  jsoncpp_copy_libs_to_destination
+  eigen_copy_headers_dir
 )
 
 include_directories(
@@ -49,6 +73,14 @@ include_directories(
     ${GOOGLETEST_INCLUDE_DIR}
     ${PROTOBUF_INCLUDE_DIR}
     ${GRPC_INCLUDE_DIR}
+    ${TENSORFLOW_INCLUDE_DIR}
+    ${GIF_INCLUDE_DIR}
+    ${FARMHASH_INCLUDE_DIR}
+    ${HIGHWAYHASH_INCLUDE_DIR}
+    ${JPEG_INCLUDE_DIR}
+    ${PNG_INCLUDE_DIR}
+    ${JSONCPP_INCLUDE_DIR}
+    ${EIGEN_INCLUDE_DIRS}
 )
 if (ONEFLOW_USE_RDMA)
   if(WIN32)

@@ -1,10 +1,10 @@
-#ifndef ONEFLOW_NETWORK_RDMA_WINDOWS_RDMA_MANAGER_H_
-#define ONEFLOW_NETWORK_RDMA_WINDOWS_RDMA_MANAGER_H_
+#ifndef ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_RDMA_MANAGER_H_
+#define ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_RDMA_MANAGER_H_
 
 #include <stdint.h>
 #include <ndspi.h>
-#include "network/rdma/windows/interface.h"
-#include "network/network_message.h"
+#include "oneflow/core/network/rdma/windows/interface.h"
+#include "oneflow/core/network/network_message.h"
 
 namespace oneflow {
 
@@ -52,4 +52,4 @@ class RdmaManager {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_NETWORK_RDMA_WINDOWS_RDMA_MANAGER_H_
+#endif  // ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_RDMA_MANAGER_H_

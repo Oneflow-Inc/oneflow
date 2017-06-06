@@ -1,6 +1,6 @@
 # main cpp
-list(APPEND of_main_cc ${oneflow_src_dir}/compile/compiler.cpp)
-list(APPEND of_main_cc ${oneflow_src_dir}/runtime/elf_runner.cpp)
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/compile/compiler.cpp)
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/runtime/elf_runner.cpp)
 
 if(WIN32)
   set(oneflow_platform "windows")
@@ -10,7 +10,7 @@ else()
   list(APPEND oneflow_platform_excludes "windows")
 endif()
 
-file(GLOB_RECURSE oneflow_all_src "${oneflow_src_dir}/*.*")
+file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*")
 foreach(oneflow_single_file ${oneflow_all_src})
   # Verify whether this file is for other platforms
   set(exclude_this OFF)
@@ -25,30 +25,30 @@ foreach(oneflow_single_file ${oneflow_all_src})
     continue()
   endif()
 
-  file(RELATIVE_PATH oneflow_relative_file ${oneflow_src_dir} ${oneflow_single_file})
+  file(RELATIVE_PATH oneflow_relative_file ${PROJECT_SOURCE_DIR}/oneflow/core/ ${oneflow_single_file})
   get_filename_component(oneflow_relative_path ${oneflow_relative_file} PATH)
   string(REPLACE "/" "\\" group_name ${oneflow_relative_path})
   source_group("${group_name}" FILES ${oneflow_single_file})
 
-  if("${oneflow_single_file}" MATCHES "^${oneflow_src_dir}/.*\\.h$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.h$")
     list(APPEND of_all_obj_cc ${oneflow_single_file})
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${oneflow_src_dir}/.*\\.cuh$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cuh$")
     list(APPEND of_all_obj_cc ${oneflow_single_file})
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${oneflow_src_dir}/.*\\.cu$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cu$")
     list(APPEND of_all_obj_cc ${oneflow_single_file})
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${oneflow_src_dir}/.*\\.proto")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.proto")
     list(APPEND of_all_proto ${oneflow_single_file})
     list(APPEND of_all_obj_cc ${oneflow_single_file})   # include the proto file in the project
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${oneflow_src_dir}/.*\\.cpp")
-    if("${oneflow_single_file}" MATCHES "^${oneflow_src_dir}/.*_test\\.cpp")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cpp")
+    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*_test\\.cpp")
       # test file
       list(APPEND of_all_test_cc ${oneflow_single_file})
     else()
@@ -63,19 +63,19 @@ endforeach()
 
 # proto obj lib
 foreach(proto_name ${of_all_proto})
-  file(RELATIVE_PATH proto_rel_name ${oneflow_src_dir} ${proto_name})
+  file(RELATIVE_PATH proto_rel_name ${PROJECT_SOURCE_DIR} ${proto_name})
   list(APPEND of_all_rel_protos ${proto_rel_name})
 endforeach()
 
 RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
-                               ${oneflow_src_dir}
+                               ${PROJECT_SOURCE_DIR}
                                ${of_all_rel_protos})
 
 add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(of_protoobj ${oneflow_third_party_libs})
 
 # cc obj lib
-include_directories(${oneflow_src_dir})
+include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
 cuda_add_library(of_ccobj ${of_all_obj_cc})
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})

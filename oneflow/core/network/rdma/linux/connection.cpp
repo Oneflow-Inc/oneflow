@@ -1,11 +1,11 @@
-#include "network/rdma/linux/connection.h"
+#include "oneflow/core/network/rdma/linux/connection.h"
 #include <infiniband/verbs.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <iostream>
-#include "network/rdma/linux/interface.h"
-#include "network/rdma/request_pool.h"
+#include "oneflow/core/network/rdma/linux/interface.h"
+#include "oneflow/core/network/rdma/request_pool.h"
 
 namespace oneflow {
 

@@ -1,9 +1,9 @@
-#ifndef ONEFLOW_NETWORK_RDMA_CONNECTION_POOL_H_
-#define ONEFLOW_NETWORK_RDMA_CONNECTION_POOL_H_
+#ifndef ONEFLOW_CORE_NETWORK_RDMA_CONNECTION_POOL_H_
+#define ONEFLOW_CORE_NETWORK_RDMA_CONNECTION_POOL_H_
 
 #include <unordered_map>
 
-#include "network/rdma/agency.h"
+#include "oneflow/core/network/rdma/agency.h"
 
 namespace oneflow {
 
@@ -25,4 +25,4 @@ class ConnectionPool {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_NETWORK_RDMA_CONNECTION_POOL_H_
+#endif  // ONEFLOW_CORE_NETWORK_RDMA_CONNECTION_POOL_H_

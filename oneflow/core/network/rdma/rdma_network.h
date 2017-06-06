@@ -1,14 +1,14 @@
-#ifndef ONEFLOW_NETWORK_RDMA_RDMA_NETWORK_H_
-#define ONEFLOW_NETWORK_RDMA_RDMA_NETWORK_H_
+#ifndef ONEFLOW_CORE_NETWORK_RDMA_RDMA_NETWORK_H_
+#define ONEFLOW_CORE_NETWORK_RDMA_RDMA_NETWORK_H_
 
 #include <memory>
 #include <unordered_map>
-#include "network/network.h"
-#include "network/network_memory.h"
-#include "network/rdma/agency.h"
-#include "network/rdma/connection_pool.h"
-#include "network/rdma/message_pool.h"
-#include "network/rdma/request_pool.h"
+#include "oneflow/core/network/network.h"
+#include "oneflow/core/network/network_memory.h"
+#include "oneflow/core/network/rdma/agency.h"
+#include "oneflow/core/network/rdma/connection_pool.h"
+#include "oneflow/core/network/rdma/message_pool.h"
+#include "oneflow/core/network/rdma/request_pool.h"
 
 
 namespace oneflow {
@@ -98,4 +98,4 @@ class RdmaNetwork : public Network {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_NETWORK_RDMA_RDMA_NETWORK_H_
+#endif  // ONEFLOW_CORE_NETWORK_RDMA_RDMA_NETWORK_H_

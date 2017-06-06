@@ -1,0 +1,30 @@
+syntax = "proto3";
+package oneflow;
+
+enum ParallelPolicy {
+  kDataParallel = 0;
+  kModelParallel = 1;
+  kFakerMdUpdt = 2;
+}
+
+message DeviceSet {
+  repeated string device_name = 1;
+}
+
+message ParallelConf {
+  ParallelPolicy policy = 1;
+  DeviceSet device_set = 2;
+}
+
+message OpNameSet {
+  repeated string op_name = 1;
+}
+
+message PlacementGroup {
+  OpNameSet op_set = 1;
+  ParallelConf parallel_conf = 2;
+}
+
+message Strategy {
+  repeated PlacementGroup placement_group = 1;
+}

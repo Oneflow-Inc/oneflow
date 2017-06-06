@@ -1,8 +1,8 @@
-#include "network/network_message_queue.h"
+#include "oneflow/core/network/network_message_queue.h"
 
 // #include "common/common.h"
 #include <glog/logging.h>
-#include "network/network.h"
+#include "oneflow/core/network/network.h"
 //#include "runtime/event_message.h"
 
 namespace oneflow {

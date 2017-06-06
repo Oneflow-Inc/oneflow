@@ -1,15 +1,15 @@
-#include "network/rdma/rdma_network.h"
+#include "oneflow/core/network/rdma/rdma_network.h"
 
 
 #include <vector>
 #include <string>
 // #include <iphlpapa.h>
 
-#include "network/network.h"
-#include "network/rdma/agency.h"
-#include "network/rdma/connection_pool.h"
-#include "network/rdma/message_pool.h"
-#include "network/rdma/request_pool.h"
+#include "oneflow/core/network/network.h"
+#include "oneflow/core/network/rdma/agency.h"
+#include "oneflow/core/network/rdma/connection_pool.h"
+#include "oneflow/core/network/rdma/message_pool.h"
+#include "oneflow/core/network/rdma/request_pool.h"
 
 namespace oneflow {
 

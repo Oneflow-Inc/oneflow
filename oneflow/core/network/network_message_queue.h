@@ -1,7 +1,7 @@
-#ifndef ONEFLOW_NETWORK_NETWORK_MESSAGE_QUEUE_H_
-#define ONEFLOW_NETWORK_NETWORK_MESSAGE_QUEUE_H_
+#ifndef ONEFLOW_CORE_NETWORK_NETWORK_MESSAGE_QUEUE_H_
+#define ONEFLOW_CORE_NETWORK_NETWORK_MESSAGE_QUEUE_H_
 #include <memory>
-#include "network/network_message.h"
+#include "oneflow/core/network/network_message.h"
 //#include "runtime/event_message.h"
 
 // NetworkMessageQueue provides an friendly interface for NetThread which could
@@ -30,4 +30,4 @@ class NetworkMessageQueue {
 };
 }  // namespace oneflow
 
-#endif  // ONEFLOW_NETWORK_NETWORK_MESSAGE_QUEUE_H_
+#endif  // ONEFLOW_CORE_NETWORK_NETWORK_MESSAGE_QUEUE_H_

@@ -1,13 +1,13 @@
-#ifndef ONEFLOW_NETWORK_NETWORK_H_
-#define ONEFLOW_NETWORK_NETWORK_H_
+#ifndef ONEFLOW_CORE_NETWORK_NETWORK_H_
+#define ONEFLOW_CORE_NETWORK_NETWORK_H_
 
 #include <vector>
 #include <string>
 #include <memory>
 #include <unordered_map>
-#include "actor/actor_message.pb.h"
-#include "network/network_message.h"
-#include "network/network_topology.h"
+#include "oneflow/core/actor/actor_message.h"
+#include "oneflow/core/network/network_message.h"
+#include "oneflow/core/network/network_topology.h"
 
 namespace oneflow {
 
@@ -99,4 +99,4 @@ class Network {
 Network* GetRdmaInstance();
 }  // namespace oneflow
 
-#endif  // ONEFLOW_NETWORK_NETWORK_H_
+#endif  // ONEFLOW_CORE_NETWORK_NETWORK_H_

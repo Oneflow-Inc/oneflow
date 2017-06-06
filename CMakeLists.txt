@@ -15,7 +15,6 @@ enable_testing()
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-set(oneflow_src_dir ${PROJECT_SOURCE_DIR}/oneflow)
 set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
 
 if (WIN32)
@@ -56,6 +55,7 @@ list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir}/third_party)
 list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir})
 include(util)
 include(proto2cpp)
+include(proto2grpc)
 include(third_party)
 
 if (BUILD_THIRD_PARTY)
@@ -64,5 +64,6 @@ if (BUILD_THIRD_PARTY)
   set(BUILD_THIRD_PARTY OFF CACHE BOOL "" FORCE)
 else()
   include(oneflow)
+  include(tf_tests)
 endif()
 

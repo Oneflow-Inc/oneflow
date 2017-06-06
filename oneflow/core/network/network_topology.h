@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_NETWORK_NETWORK_TOPOLOGY_H_
-#define ONEFLOW_NETWORK_NETWORK_TOPOLOGY_H_
+#ifndef ONEFLOW_CORE_NETWORK_NETWORK_TOPOLOGY_H_
+#define ONEFLOW_CORE_NETWORK_NETWORK_TOPOLOGY_H_
 
 #include <string>
 #include <unordered_set>
@@ -24,4 +24,4 @@ struct NetworkTopology {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_NETWORK_NETWORK_TOPOLOGY_H_
+#endif  // ONEFLOW_CORE_NETWORK_NETWORK_TOPOLOGY_H_

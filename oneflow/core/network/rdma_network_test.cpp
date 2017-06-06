@@ -1,8 +1,8 @@
 #include "gflags/gflags.h"
 #include "glog/logging.h"
-#include "network/network.h"
-#include "network/network_message.h"
-#include "network/network_memory.h"
+#include "oneflow/core/network/network.h"
+#include "oneflow/core/network/network_message.h"
+#include "oneflow/core/network/network_memory.h"
 
 #include <time.h>
 #include <iostream>

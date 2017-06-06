@@ -1,11 +1,11 @@
-#ifndef ONEFLOW_NETWORK_RDMA_REQUEST_POOL_H_
-#define ONEFLOW_NETWORK_RDMA_REQUEST_POOL_H_
+#ifndef ONEFLOW_CORE_NETWORK_RDMA_REQUEST_POOL_H_
+#define ONEFLOW_CORE_NETWORK_RDMA_REQUEST_POOL_H_
 
 #include <unordered_map>
 #include <cstdint>
 #include <memory>
-#include "network/rdma/message_pool.h"
-#include "network/rdma/agency.h"
+#include "oneflow/core/network/rdma/message_pool.h"
+#include "oneflow/core/network/rdma/agency.h"
 
 
 namespace oneflow {
@@ -50,4 +50,4 @@ class RequestPool {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_NETWORK_RDMA_REQUEST_POOL_H_
+#endif  // ONEFLOW_CORE_NETWORK_RDMA_REQUEST_POOL_H_
