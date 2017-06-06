@@ -44,6 +44,11 @@ class Actor {
   void ForEachCurWriteableRegst(std::function<void(Regst*)> func);
   void CurWriteDone();
   bool IsWriteReady();
+  void SetReadOnlyForRegstDescId(uint64_t regst_desc_id) {
+    auto it = writeable_produced_regst_.find(regst_desc_id);
+    if (!it->second.empty()) { writeable_produced_regst_desc_num_ -= 1; }
+    writeable_produced_regst_.erase(it);
+  }
 
  private:
   uint64_t actor_id_;
