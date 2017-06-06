@@ -1,6 +1,0 @@
-syntax = "proto3";
-package oneflow;
-
-message ShapeProto {
-  repeated int64 dim = 1;
-}
