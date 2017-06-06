@@ -20,6 +20,7 @@ class RemoteRegstWarpper final : public RegstWarpper {
   uint64_t model_version_id() const override { TODO(); }
   uint64_t regst_desc_id() const override { TODO(); }
   uint64_t producer_actor_id() const override { TODO(); }
+  Regst* regst_raw_ptr() const override { TODO(); }
 
  private:
 
