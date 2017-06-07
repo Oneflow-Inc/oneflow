@@ -10,8 +10,7 @@ namespace oneflow {
 
 TEST(Snapshot, write_and_read) {
   tensorflow::Env* env = tensorflow::Env::Default();
-  std::string current_dir;
-  GetCwd(&current_dir);
+  std::string current_dir = GetCwd();
   current_dir = tensorflow::str_util::StringReplace(current_dir, "\\", "/", true);
   std::string snapshot_root_path = tensorflow::io::JoinPath(
       "file://", current_dir ,"/tmp_snapshot_test_asdfasdf");

@@ -25,9 +25,12 @@ PersistentInStream& PersistentInStream::Read(char* s, size_t n) {
     return *this;
   };
   tensorflow::StringPiece result;
-  if (file_->Read(offset_, n, &result, s).code() != tensorflow::error::OK) {
-    is_eof_ = true;
+  if (file_->Read(offset_, n, &result, s).code() == tensorflow::error::OK) {
+    CHECK(result.size() == n);
+  } else {
+    is_eof_ = true; 
   }
+  CHECK(result.data() == s);
   offset_ += n;
   return *this;
 }

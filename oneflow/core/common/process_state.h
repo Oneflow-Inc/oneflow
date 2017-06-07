@@ -13,19 +13,18 @@
 
 namespace oneflow {
 
-bool GetCwd(std::string* dir) {
+std::string GetCwd() {
   size_t len = 128;
   std::unique_ptr<char[]> a(new char[len]);
   for (;;) {
     char* p = getcwd(a.get(), len);
     if (p != NULL) {
-      *dir = p;
-      return true;
+      return p;
     } else if (errno == ERANGE) {
       len += len;
       a.reset(new char[len]);
     } else {
-      return false;
+      return NULL;
     }
   }
 }
