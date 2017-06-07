@@ -65,16 +65,6 @@ void SortAndRemoveDuplication(std::vector<T>* vec) {
   vec->erase(unique_it, vec->end());
 }
 
-inline unsigned long long StoullOrDie(const std::string& s) {
-  unsigned long long ret = 0;
-  try {
-    ret = std::stoull(s);
-  } catch (std::exception& e){
-    LOG(FATAL) << "Error: " << s;
-  }
-  return ret;
-}
-
 inline std::string NewUniqueId() {
   static uint64_t id = 0;
   return std::to_string(id++);
