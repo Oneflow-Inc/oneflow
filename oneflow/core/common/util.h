@@ -9,6 +9,8 @@
 #include "glog/logging.h"
 #include "google/protobuf/message.h"
 #include "google/protobuf/descriptor.h"
+#include "cuda.h"
+#include "cuda_runtime.h"
 
 namespace oneflow {
 

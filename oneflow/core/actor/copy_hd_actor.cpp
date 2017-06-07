@@ -7,7 +7,8 @@ void CopyHdActor::Init(const TaskProto& task_proto) {
   TODO();
 }
 
-void CopyHdActor::ProcessMsg(const ActorMsg& actor_msg) {
+void CopyHdActor::ProcessMsg(const ActorMsg& actor_msg,
+                             const ThreadContext&) {
   TODO();
 }
 

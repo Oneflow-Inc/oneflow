@@ -12,13 +12,13 @@ class BoxingActor final : public Actor {
   ~BoxingActor() = default;
 
   void Init(const TaskProto&) override;
-  void ProcessMsg(const ActorMsg&) override;
+  void ProcessMsg(const ActorMsg&, const ThreadContext&) override;
 
  private:
   using RDescId2RwMap = HashMap<uint64_t, std::shared_ptr<RegstWarpper>>;
   using RDescId2RwMapPtr = std::unique_ptr<RDescId2RwMap>;
 
-  void WardKernelAndSendMsg();
+  void WardKernelAndSendMsg(const KernelContext&);
 
   // <piece_id, map>
   HashMap<uint64_t, RDescId2RwMapPtr> waiting_in_regst_;

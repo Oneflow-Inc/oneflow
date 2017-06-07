@@ -4,7 +4,8 @@ namespace oneflow {
 
 CpuThread::CpuThread() {
   mut_thread() = std::thread([this]() {
-    PollMsgChannel();
+    ThreadContext ctx;
+    PollMsgChannel(ctx);
   });
 }
 

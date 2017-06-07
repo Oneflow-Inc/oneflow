@@ -7,9 +7,12 @@ void MdUpdtCompActor::Init(const TaskProto& task_proto) {
   CompActor::Init(task_proto);
 }
 
-void MdUpdtCompActor::ProcessMsg(const ActorMsg& actor_msg) {
+void MdUpdtCompActor::ProcessMsg(const ActorMsg& actor_msg,
+                                 const ThreadContext& thread_ctx) {
+  KernelContext kernel_ctx;
+  kernel_ctx.cuda_stream = thread_ctx.compute_cuda_stream;
   if (actor_msg.msg_type() == ActorMsgType::kCmdMsg) {
-    ProcessCommand(actor_msg.actor_cmd());
+    ProcessCommand(actor_msg.actor_cmd(), kernel_ctx);
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
     TODO();
   } else {
@@ -17,15 +20,16 @@ void MdUpdtCompActor::ProcessMsg(const ActorMsg& actor_msg) {
   }
 }
 
-void MdUpdtCompActor::ProcessCommand(ActorCmd cmd) {
+void MdUpdtCompActor::ProcessCommand(ActorCmd cmd,
+                                     const KernelContext& kernel_ctx) {
   if (cmd == ActorCmd::kInitModel) {
-    ProcessInitModelCmd();
+    ProcessInitModelCmd(kernel_ctx);
   } else {
     UNEXPECTED_RUN();
   }
 }
 
-void MdUpdtCompActor::ProcessInitModelCmd() {
+void MdUpdtCompActor::ProcessInitModelCmd(const KernelContext& kernel_ctx) {
   Regst* model_regst = GetCurWriteableRegst("model");
   model_regst->set_model_version_id(0);
   Regst* model_tmp_regst = GetCurWriteableRegst("model_tmp");
@@ -37,7 +41,7 @@ void MdUpdtCompActor::ProcessInitModelCmd() {
   model_regst->ForEachLbn(CollectKernelsFromLbn);
   model_tmp_regst->ForEachLbn(CollectKernelsFromLbn);
   for (const Kernel* kernel : kernels) {
-    kernel->InitModelAndModelTmpBlobs([&](const std::string& bn_in_op) {
+    kernel->InitModelAndModelTmpBlobs(kernel_ctx, [&](const std::string& bn_in_op) {
       const std::string& lbn = kernel->Lbn4BnInOp(bn_in_op);
       Blob* ret = model_regst->GetBlobPtrFromLbn(lbn);
       if (ret == nullptr) { ret = model_tmp_regst->GetBlobPtrFromLbn(lbn); }

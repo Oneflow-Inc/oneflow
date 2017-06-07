@@ -12,11 +12,11 @@ public:
   ~MdUpdtCompActor() = default;
 
   void Init(const TaskProto&) override;
-  void ProcessMsg(const ActorMsg&) override;
+  void ProcessMsg(const ActorMsg&, const ThreadContext&) override;
 
 private:
-  void ProcessCommand(ActorCmd cmd);
-  void ProcessInitModelCmd();
+  void ProcessCommand(ActorCmd cmd, const KernelContext&);
+  void ProcessInitModelCmd(const KernelContext&);
 
 };
 

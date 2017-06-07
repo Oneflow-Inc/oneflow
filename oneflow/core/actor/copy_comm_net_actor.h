@@ -12,7 +12,7 @@ public:
   ~CopyCommNetActor() = default;
 
   void Init(const TaskProto&) override;
-  void ProcessMsg(const ActorMsg&) override;
+  void ProcessMsg(const ActorMsg&, const ThreadContext&) override;
 
 private:
 

@@ -7,7 +7,8 @@ void FwDataCompActor::Init(const TaskProto& task_proto) {
   TODO();
 }
 
-void FwDataCompActor::ProcessMsg(const ActorMsg& actor_msg) {
+void FwDataCompActor::ProcessMsg(const ActorMsg& actor_msg,
+                                 const ThreadContext&) {
   TODO();
 }
 

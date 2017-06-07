@@ -10,6 +10,7 @@
 #include "oneflow/core/actor/actor_msg_bus.h"
 #include "oneflow/core/register/register.h"
 #include "oneflow/core/register/register_manager.h"
+#include "oneflow/core/thread/thread_context.h"
 
 namespace oneflow {
 
@@ -19,7 +20,7 @@ class Actor {
   virtual ~Actor() = default;
 
   virtual void Init(const TaskProto& task_proto) = 0;
-  virtual void ProcessMsg(const ActorMsg&) = 0;
+  virtual void ProcessMsg(const ActorMsg&, const ThreadContext& ctx) = 0;
 
   uint64_t actor_id() const { return actor_id_; }
  
@@ -31,6 +32,7 @@ class Actor {
 
   Actor() = default;
   void WardKernel(
+      const KernelContext& kernel_ctx,
       std::function<std::shared_ptr<RegstWarpper>(uint64_t)> Regst4RegstDescId);
   void ForEachProducedRegst(std::function<void(Regst*)>);
   uint64_t RegstDescId4Name(const std::string& name) const {

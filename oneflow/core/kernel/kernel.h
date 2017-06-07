@@ -12,6 +12,10 @@
 
 namespace oneflow {
 
+struct KernelContext {
+  cudaStream_t* cuda_stream;
+};
+
 class Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Kernel);
@@ -23,13 +27,19 @@ class Kernel {
     op_.reset(op);
   }
 
-  void InitModelAndModelTmpBlobs(std::function<Blob*(const std::string&)> Blob4BnInOp) const;
+  void InitModelAndModelTmpBlobs(
+      const KernelContext& ctx,
+      std::function<Blob*(const std::string&)> Blob4BnInOp) const;
 
   // for Forward / Bp Calculation in FwExecGragh node and BpExecGragh node
   // through bn_in_op2blob_ptr function get the input blob and output blob
   // the Kernel will using the input blob calculate the result and fill output
-  virtual void Forward(std::function<Blob*(const std::string&)>) const = 0;
-  virtual void Backward(std::function<Blob*(const std::string&)>) const = 0;
+  virtual void Forward(
+      const KernelContext& ctx,
+      std::function<Blob*(const std::string&)>) const = 0;
+  virtual void Backward(
+      const KernelContext& ctx,
+      std::function<Blob*(const std::string&)>) const = 0;
 
   //
   const std::string& Lbn4BnInOp(const std::string& bn_in_op) const {
@@ -42,7 +52,8 @@ class Kernel {
   std::unique_ptr<const Operator> op_;
 };
 
-using KernelWardFunc = void (Kernel::*)(std::function<Blob*(const std::string&)>) const;
+using KernelWardFunc = void (Kernel::*)(
+    const KernelContext&, std::function<Blob*(const std::string&)>) const;
 
 #define INSTANTIATE_CPU_KERNEL_CLASS(classname) \
   char gInstantiationGuardCPU##classname; \

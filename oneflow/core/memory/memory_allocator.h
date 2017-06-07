@@ -2,8 +2,6 @@
 #define ONEFLOW_CORE_MEMORY_MEMORY_ALLOCATOR_H_
 
 #include "oneflow/core/memory/memory_case.pb.h"
-#include "cuda.h"
-#include "cuda_runtime.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {

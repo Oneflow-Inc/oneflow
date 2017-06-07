@@ -7,7 +7,8 @@ void CopyCommNetActor::Init(const TaskProto& task_proto) {
   TODO();
 }
 
-void CopyCommNetActor::ProcessMsg(const ActorMsg& actor_msg) {
+void CopyCommNetActor::ProcessMsg(const ActorMsg& actor_msg,
+                                  const ThreadContext&) {
   TODO();
 }
 

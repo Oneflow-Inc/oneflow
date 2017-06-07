@@ -25,7 +25,7 @@ class Thread {
  protected:
   Thread() = default;
   std::thread& mut_thread() { return thread_; }
-  void PollMsgChannel();
+  void PollMsgChannel(const ThreadContext& thread_ctx);
 
  private:
 
