@@ -1,19 +1,20 @@
-#include "oneflow/core/runtime/snapshot.h"
+#include "oneflow/core/persistence/snapshot.h"
 #include "gtest/gtest.h"
 #include "tensorflow/core/platform/env.h"
 #include "tensorflow/core/framework/graph.pb.h"
 #include "tensorflow/core/lib/io/path.h"
-#include "tensorflow/stream_executor/lib/process_state.h"
+#include "tensorflow/core/lib/strings/str_util.h"
+#include "oneflow/core/common/process_state.h"
 
 namespace oneflow {
-
-// std::string BaseDir() { return "file://"; }
 
 TEST(Snapshot, write_and_read) {
   tensorflow::Env* env = tensorflow::Env::Default();
   std::string current_dir;
-  // perftools::gputools::port::GetCurrentDirectory(&current_dir);
-  std::string snapshot_root_path = tensorflow::io::JoinPath("file://", "/C:/Users/oneflow/root_path/" ,"snapshot1");
+  GetCwd(&current_dir);
+  current_dir = tensorflow::str_util::StringReplace(current_dir, "\\", "/", true);
+  std::string snapshot_root_path = tensorflow::io::JoinPath(
+      "file://", current_dir ,"/tmp_snapshot_test_asdfasdf");
   if (env->IsDirectory(snapshot_root_path).code() == tensorflow::error::OK) {
     std::vector<std::string> children;
     env->GetChildren(snapshot_root_path, &children);
@@ -52,6 +53,24 @@ TEST(Snapshot, write_and_read) {
     (*read_stream_ptr) >> result;
     ASSERT_TRUE((*read_stream_ptr).eof());
   }
+  {
+    Snapshot snapshot_read(snapshot_root_path);
+    std::string key = "key1";
+    auto read_stream_ptr = snapshot_read.GetInStream(key, 0);
+    char result;
+    (*read_stream_ptr) >> result;
+    ASSERT_EQ(result, 'a');
+    (*read_stream_ptr) >> result;
+    ASSERT_EQ(result, 'b');
+    ASSERT_TRUE((*read_stream_ptr).good());
+    (*read_stream_ptr) >> result;
+    ASSERT_TRUE((*read_stream_ptr).eof());
+  }
+  int64_t undeletefiles, undeletedirs;
+  ASSERT_TRUE(env->DeleteRecursively(
+      snapshot_root_path, 
+      &undeletefiles, 
+      &undeletedirs).code() == tensorflow::error::OK);
 }
 
 }  // namespace oneflow

@@ -1,12 +1,12 @@
-#include "oneflow/core/runtime/snapshot.h"
+#include "oneflow/core/persistence/snapshot.h"
 #include <memory>
 #include <string>
 #include <algorithm>
 #include <vector>
 #include "tensorflow/core/platform/env.h"
 #include "tensorflow/core/lib/io/path.h"
-#include "tensorflow/core/lib/strings/numbers.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/numbers.h"
 
 namespace oneflow {
 
@@ -50,8 +50,7 @@ void Snapshot::CheckAndConcat() {
     for (std::string sub_file_name : file_names) {
       std::string file_path = tensorflow::io::JoinPath(sub_dir, sub_file_name);
       TF_CHECK_OK(env_->FileExists(file_path));
-      int32_t part_id;
-      CHECK(tensorflow::strings::safe_strto32(sub_file_name, &part_id));
+      int32_t part_id = Sto32orDie(sub_file_name);
       max_part_id = std::max(max_part_id, part_id);
     }
     CHECK_EQ(max_part_id, file_names.size() - 1);
@@ -60,27 +59,39 @@ void Snapshot::CheckAndConcat() {
     TF_CHECK_OK(env_->NewWritableFile(concat_file_path, &concat_file));
     for (int32_t i = 0; i <= max_part_id; ++i) {
       std::string file_path = tensorflow::io::JoinPath(sub_dir,
-        std::to_string(i));
-      std::string data = "";
-      TF_CHECK_OK(tensorflow::ReadFileToString(env_, file_path, &data));
-      TF_CHECK_OK(concat_file->Append(tensorflow::StringPiece(data)));
+                                                       std::to_string(i));
+      const uint64_t batch_size = 64 * 1024 * 1024;
+      char* scratch = new char[batch_size];
+      uint64_t offset = 0;
+      std::unique_ptr<tensorflow::RandomAccessFile> file;
+      TF_CHECK_OK(env_->NewRandomAccessFile(file_path, &file));
+      uint64_t file_size = 0;
+      TF_CHECK_OK(env_->GetFileSize(file_path, &file_size));
+      while (offset < file_size) {
+        tensorflow::StringPiece data;
+        int n = std::min(batch_size, (file_size - offset));
+        TF_CHECK_OK(file->Read(offset, n, &data, scratch));
+        TF_CHECK_OK(concat_file->Append(data));
+        offset += n;
+      }
       TF_CHECK_OK(env_->DeleteFile(file_path));
+      free(scratch);
     }
     concat_file->Close();
   }
   
 }
 
-std::unique_ptr<Snapshot::InStream> Snapshot::GetInStream(
+std::unique_ptr<PersistentInStream> Snapshot::GetInStream(
     const std::string& key,
     size_t begin_pos) {
   std::string file_path = tensorflow::io::JoinPath(root_path_, key,
                                                    concat_file_name_);
-  InStream* ret = new InStream(file_path, begin_pos);
-  return std::unique_ptr<InStream>(ret);
+  PersistentInStream* ret = new PersistentInStream(file_path, begin_pos);
+  return std::unique_ptr<PersistentInStream>(ret);
 }
 
-std::unique_ptr<Snapshot::OutStream> Snapshot::GetOutStream(
+std::unique_ptr<PersistentOutStream> Snapshot::GetOutStream(
     const std::string& key,
     int32_t part_id) {
   std::string dir_path = tensorflow::io::JoinPath(root_path_, key);
@@ -90,50 +101,8 @@ std::unique_ptr<Snapshot::OutStream> Snapshot::GetOutStream(
   TF_CHECK_OK(env_->IsDirectory(dir_path));
   std::string file_path = tensorflow::io::JoinPath(dir_path,
                                                    std::to_string(part_id));
-  OutStream* ret = new OutStream(file_path);
-  return std::unique_ptr<OutStream>(ret);
-}
-
-Snapshot::InStream::InStream(const std::string& file_path, uint64_t offset) {
-  tensorflow::Env* env_ = tensorflow::Env::Default();
-  TF_CHECK_OK(env_->FileExists(file_path));
-  TF_CHECK_OK(env_->NewRandomAccessFile(file_path, &file_));
-  offset_ = offset;
-  env_->GetFileSize(file_path, &file_size_);
-  if (offset < file_size_) {
-    is_eof_ = false;
-  } else {
-    is_eof_ = true;
-  }
-}
-
-Snapshot::InStream& Snapshot::InStream::Read(char* s, size_t n) {
-  if (!good()) {
-    return *this;
-  }
-  if (offset_ + n > file_size_) {
-    is_eof_ = true;
-    offset_ += n;
-    return *this;
-  };
-  tensorflow::StringPiece result;
-  char* scratch = new char[n];
-  if (file_->Read(offset_, n, &result, scratch).code() != tensorflow::error::OK) {
-    is_eof_ = true;
-  }
-  std::memcpy(s, result.data(), result.size());
-  offset_ += n;
-  return *this;
-}
-
-Snapshot::OutStream::OutStream(const std::string& file_path) {
-  TF_CHECK_OK(tensorflow::Env::Default()->NewWritableFile(file_path, &file_));
-}
-
-Snapshot::OutStream& Snapshot::OutStream::Write(const char* s, size_t n) {
-  auto data = tensorflow::StringPiece(s, n);
-  file_->Append(data);
-  return *this;
+  PersistentOutStream* ret = new PersistentOutStream(file_path);
+  return std::unique_ptr<PersistentOutStream>(ret);
 }
 
 }  // namespace oneflow

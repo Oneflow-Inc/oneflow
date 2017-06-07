@@ -1,0 +1,36 @@
+#ifndef ONEFLOW_CORE_COMMON_PROCESS_STATE_H_
+#define ONEFLOW_CORE_COMMON_PROCESS_STATE_H_
+
+#if defined(_MSC_VER)
+#include <direct.h>
+#include <stdlib.h>
+#include <WinSock2.h>
+#pragma comment(lib, "Ws2_32.lib")
+#else
+#include <unistd.h>
+#endif
+#include <memory>
+
+namespace oneflow {
+
+bool GetCwd(std::string* dir) {
+  size_t len = 128;
+  std::unique_ptr<char[]> a(new char[len]);
+  for (;;) {
+    char* p = getcwd(a.get(), len);
+    if (p != NULL) {
+      *dir = p;
+      return true;
+    } else if (errno == ERANGE) {
+      len += len;
+      a.reset(new char[len]);
+    } else {
+      return false;
+    }
+  }
+}
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_COMMON_PROCESS_STATE_H_
+
