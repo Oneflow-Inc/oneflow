@@ -22,6 +22,9 @@ class Kernel {
     op->InitFromProto(op_proto);
     op_.reset(op);
   }
+
+  void InitModelAndModelTmpBlobs(std::function<Blob*(const std::string&)> Blob4BnInOp) const;
+
   // for Forward / Bp Calculation in FwExecGragh node and BpExecGragh node
   // through bn_in_op2blob_ptr function get the input blob and output blob
   // the Kernel will using the input blob calculate the result and fill output
@@ -29,7 +32,7 @@ class Kernel {
   virtual void Backward(std::function<Blob*(const std::string&)>) const = 0;
 
   //
-  const std::string& GetLbnFromBnInOp(const std::string& bn_in_op) const {
+  const std::string& Lbn4BnInOp(const std::string& bn_in_op) const {
     return op_->Lbn4BnInOp(bn_in_op);
   }
 

@@ -4,6 +4,7 @@
 #include <queue>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/kernel/kernel_manager.h"
 #include "oneflow/core/common/task.pb.h"
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/actor/actor_msg_bus.h"
@@ -39,6 +40,7 @@ class Actor {
   // Status of Produced Registers
   int TryOneReadDone(Regst* regst);
   Regst* GetCurWriteableRegst(uint64_t regst_desc_id);
+  Regst* GetCurWriteableRegst(const std::string& name);
   void ForEachCurWriteableRegst(std::function<void(Regst*)> func);
   void CurWriteDone();
   bool IsWriteReady();

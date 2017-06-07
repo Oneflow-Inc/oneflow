@@ -15,6 +15,8 @@ public:
   void ProcessMsg(const ActorMsg&) override;
 
 private:
+  void ProcessCommand(ActorCmd cmd);
+  void ProcessInitModelCmd();
 
 };
 

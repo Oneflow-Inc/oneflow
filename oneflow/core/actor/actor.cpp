@@ -47,7 +47,7 @@ void Actor::WardKernel(
     (ek.kernel->*ward_func_)([&](const std::string& bn_in_op) {
       uint64_t regst_desc_id = ek.bn_in_op2regst_desc_id.at(bn_in_op);
       auto regst = Regst4RegstDescId(regst_desc_id);
-      const std::string& lbn = ek.kernel->GetLbnFromBnInOp(bn_in_op);
+      const std::string& lbn = ek.kernel->Lbn4BnInOp(bn_in_op);
       return regst->GetBlobPtrFromLbn(lbn);
     });
   }
@@ -79,6 +79,10 @@ Regst* Actor::GetCurWriteableRegst(uint64_t regst_desc_id) {
   auto it = writeable_produced_regst_.find(regst_desc_id);
   if (it == writeable_produced_regst_.end()) { return nullptr; }
   return it->second.front();
+}
+
+Regst* Actor::GetCurWriteableRegst(const std::string& name) {
+  return GetCurWriteableRegst(RegstDescId4Name(name));
 }
 
 void Actor::ForEachCurWriteableRegst(std::function<void(Regst*)> func) {

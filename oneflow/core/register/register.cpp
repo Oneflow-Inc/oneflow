@@ -15,7 +15,12 @@ void Regst::ForEachLbn(std::function<void(const std::string&)> func) {
 }
 
 Blob* Regst::GetBlobPtrFromLbn(const std::string& lbn) {
-  return lbn2blob_.at(lbn).get();
+  auto it = lbn2blob_.find(lbn);
+  if (it == lbn2blob_.end()) {
+    return nullptr;
+  } else {
+    return it->second.get();
+  }
 }
 
 } // namespace oneflow

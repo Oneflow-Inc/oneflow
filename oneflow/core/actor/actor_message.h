@@ -6,6 +6,15 @@
 
 namespace oneflow {
 
+enum class ActorCmd {
+  kInitModel = 0
+};
+
+enum class ActorMsgType {
+  kRegstMsg = 0,
+  kCmdMsg = 1
+};
+
 class ActorMsg final {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(ActorMsg);
@@ -17,11 +26,23 @@ class ActorMsg final {
 
   // Getters
   uint64_t dst_actor_id() const { return dst_actor_id_; }
-  std::shared_ptr<RegstWarpper> regst_warpper() const { return regst_warpper_; }
+  ActorMsgType msg_type() const { return msg_type_; }
+  std::shared_ptr<RegstWarpper> regst_warpper() const {
+    CHECK(msg_type_ == ActorMsgType::kRegstMsg);
+    return regst_warpper_;
+  }
+  ActorCmd actor_cmd() const {
+    CHECK(msg_type_ == ActorMsgType::kCmdMsg);
+    return actor_cmd_;
+  }
   
  private:
+
   uint64_t dst_actor_id_;
+  ActorMsgType msg_type_;
+
   std::shared_ptr<RegstWarpper> regst_warpper_;
+  ActorCmd actor_cmd_;
 
 };
 
