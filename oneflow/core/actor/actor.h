@@ -31,10 +31,8 @@ class Actor {
   Actor() = default;
   void WardKernel(
       std::function<std::shared_ptr<RegstWarpper>(uint64_t)> Regst4RegstDescId);
-  const std::vector<std::unique_ptr<Regst>>& produced_regst_vec() const {
-    return produced_regst_vec_;
-  }
-  uint64_t GetRegstDescIdFromName(const std::string& name) const {
+  void ForEachProducedRegst(std::function<void(Regst*)>);
+  uint64_t RegstDescId4Name(const std::string& name) const {
     return name2regst_desc_id_.at(name);
   }
 

@@ -34,7 +34,7 @@ void Actor::Init(const TaskProto& task_proto) {
     CHECK(name2regst_desc_id_.emplace(pair.first, pair.second).second);
   }
   // Status of Produced Registers
-  for (const auto& regst : produced_regst_vec()) {
+  for (const auto& regst : produced_regst_vec_) {
     writeable_produced_regst_[regst->regst_desc_id()].push(regst.get());
     produced_regst2reading_cnt_[regst.get()] = 0;
   }
@@ -50,6 +50,12 @@ void Actor::WardKernel(
       const std::string& lbn = ek.kernel->GetLbnFromBnInOp(bn_in_op);
       return regst->GetBlobPtrFromLbn(lbn);
     });
+  }
+}
+
+void Actor::ForEachProducedRegst(std::function<void(Regst*)> func) {
+  for (const auto& regst : produced_regst_vec_) {
+    func(regst.get());
   }
 }
 

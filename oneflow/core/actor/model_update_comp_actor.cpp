@@ -4,6 +4,7 @@
 namespace oneflow {
 
 void MdUpdtCompActor::Init(const TaskProto& task_proto) {
+  CompActor::Init(task_proto);
   TODO();
 }
 
