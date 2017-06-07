@@ -170,6 +170,8 @@ class SysOperator : public Operator {
 std::string GenDiffBn(const std::string& bn);
 std::string GenUnDiffBn(const std::string& diff_bn);
 
+std::string GetOpNameFromLbn(const std::string& lbn);
+
 } // namespace oneflow
 
 #endif // ONEFLOW_CORE_OPERATOR_OP_H_

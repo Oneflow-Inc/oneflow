@@ -24,6 +24,7 @@ class Regst final {
   const std::vector<uint64_t>& subscribers_actor_id() const {
     return regst_desc_->subscribers_actor_id();
   }
+  void ForEachLbn(std::function<void(const std::string&)>);
 
   // Setters
   void set_piece_id(uint64_t val) { piece_id_ = val; }
