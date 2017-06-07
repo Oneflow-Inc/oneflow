@@ -1,8 +1,8 @@
-#ifndef ONEFLOW_ACTOR_ACTOR_MESSAGE_H_
-#define ONEFLOW_ACTOR_ACTOR_MESSAGE_H_
+#ifndef ONEFLOW_CORE_ACTOR_ACTOR_MESSAGE_H_
+#define ONEFLOW_CORE_ACTOR_ACTOR_MESSAGE_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/register/register.h"
+#include "oneflow/core/register/register_warpper.h"
 
 namespace oneflow {
 
@@ -12,24 +12,19 @@ class ActorMsg final {
   ActorMsg();
   ~ActorMsg() = default;
 
-  // Getters and Setters
+  static ActorMsg BuildMsgForRegstReader(uint64_t reader_actor_id, Regst*);
+  static ActorMsg BuildMsgForRegstWriter(uint64_t writer_actor_id, Regst*);
+
+  // Getters
   uint64_t dst_actor_id() const { return dst_actor_id_; }
-  void set_dst_actor_id(uint64_t val) { dst_actor_id_ = val; }
-  uint64_t piece_id() const { return piece_id_; }
-  void set_piece_id(uint64_t val) { piece_id_ = val; }
-  Regst* regst() const { return regst_; }
-  void set_regst(Regst* val) { regst_ = val; }
-  void* regst_dptr() const { return regst_dptr_; }
-  void set_regst_dptr(void* val) { regst_dptr_ = val; }
+  std::shared_ptr<RegstWarpper> regst_warpper() const { return regst_warpper_; }
   
  private:
   uint64_t dst_actor_id_;
-  uint64_t piece_id_;
-  Regst* regst_;
-  void* regst_dptr_;
+  std::shared_ptr<RegstWarpper> regst_warpper_;
 
 };
 
 } // namespace oneflow
 
-#endif // ONEFLOW_ACTOR_ACTOR_MESSAGE_H_
+#endif // ONEFLOW_CORE_ACTOR_ACTOR_MESSAGE_H_

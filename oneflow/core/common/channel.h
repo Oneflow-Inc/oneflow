@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_COMMON_CHANNEL_H_
-#define ONEFLOW_COMMON_CHANNEL_H_
+#ifndef ONEFLOW_CORE_COMMON_CHANNEL_H_
+#define ONEFLOW_CORE_COMMON_CHANNEL_H_
 
 #include <mutex>
 #include <condition_variable>
@@ -81,4 +81,4 @@ void Channel<T>::CloseReceiveEnd() {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_COMMON_CHANNEL_H_
+#endif // ONEFLOW_CORE_COMMON_CHANNEL_H_

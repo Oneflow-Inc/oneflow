@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_GRAPH_OUT_BOXING_TASK_NODE_H_
-#define ONEFLOW_GRAPH_OUT_BOXING_TASK_NODE_H_
+#ifndef ONEFLOW_CORE_GRAPH_OUT_BOXING_TASK_NODE_H_
+#define ONEFLOW_CORE_GRAPH_OUT_BOXING_TASK_NODE_H_
 
 #include "oneflow/core/graph/boxing_task_node.h"
 
@@ -24,4 +24,4 @@ class OutBoxingTaskNode final : public BoxingTaskNode {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_GRAPH_OUT_BOXING_TASK_NODE_H_
+#endif // ONEFLOW_CORE_GRAPH_OUT_BOXING_TASK_NODE_H_

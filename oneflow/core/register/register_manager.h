@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_REGISTER_REGISTER_MANAGER_H_
-#define ONEFLOW_REGISTER_REGISTER_MANAGER_H_
+#ifndef ONEFLOW_CORE_REGISTER_REGISTER_MANAGER_H_
+#define ONEFLOW_CORE_REGISTER_REGISTER_MANAGER_H_
 
 #include "oneflow/core/register/register.h"
 #include "oneflow/core/common/util.h"
@@ -30,4 +30,4 @@ class RegstMgr final {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_REGISTER_REGISTER_MANAGER_H_
+#endif // ONEFLOW_CORE_REGISTER_REGISTER_MANAGER_H_

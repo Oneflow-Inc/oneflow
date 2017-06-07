@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_ACTOR_ACTOR_REGISTRY_H_
-#define ONEFLOW_ACTOR_ACTOR_REGISTRY_H_
+#ifndef ONEFLOW_CORE_ACTOR_ACTOR_REGISTRY_H_
+#define ONEFLOW_CORE_ACTOR_ACTOR_REGISTRY_H_
 
 #include "oneflow/core/actor/actor.h"
 #include "oneflow/core/common/task.pb.h"
@@ -23,4 +23,4 @@ struct ActorRegister {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_ACTOR_ACTOR_REGISTRY_H_
+#endif // ONEFLOW_CORE_ACTOR_ACTOR_REGISTRY_H_

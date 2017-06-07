@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_COPY_TASK_NODE_H_
-#define ONEFLOW_COPY_TASK_NODE_H_
+#ifndef ONEFLOW_CORE_COPY_TASK_NODE_H_
+#define ONEFLOW_CORE_COPY_TASK_NODE_H_
 
 #include "oneflow/core/graph/task_node.h"
 
@@ -51,7 +51,7 @@ class CopyHDTaskNode final : public CopyTaskNode {
 
   void InitWithFwNode(TaskNode* fw_node) override {
     TaskNode::InitWithFwNode(fw_node);
-    is_fw_in_copy_ = of_dynamic_cast<CopyHDTaskNode*>(fw_node)->is_fw_in_copy_;
+    is_fw_in_copy_ = static_cast<CopyHDTaskNode*>(fw_node)->is_fw_in_copy_;
   }
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return of_make_unique<CopyHDTaskNode> ();
@@ -92,4 +92,4 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_COPY_TASK_NODE_H_
+#endif // ONEFLOW_CORE_COPY_TASK_NODE_H_

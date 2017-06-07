@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-TaskNode::TaskNode() : produced_regst2out_edge_(10, [](const std::weak_ptr<RegstDesc>& v) { return std::hash<void*>() (v.lock().get()); }) {
+TaskNode::TaskNode() : produced_regst2out_edge_(11, [](const std::weak_ptr<RegstDesc>& v) { return std::hash<void*>() (v.lock().get()); }) {
   stage_node_ = nullptr;
   related_fw_or_bp_node_ = nullptr;
 }

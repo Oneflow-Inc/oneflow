@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_ACTOR_ACTOR_H_
-#define ONEFLOW_ACTOR_ACTOR_H_
+#ifndef ONEFLOW_CORE_ACTOR_ACTOR_H_
+#define ONEFLOW_CORE_ACTOR_ACTOR_H_
 
 #include <queue>
 #include "oneflow/core/common/util.h"
@@ -17,7 +17,7 @@ class Actor {
   OF_DISALLOW_COPY_AND_MOVE(Actor);
   virtual ~Actor() = default;
 
-  virtual void Init(const TaskProto& task_proto);
+  virtual void Init(const TaskProto& task_proto) = 0;
   virtual void ProcessMsg(const ActorMsg&) = 0;
 
   uint64_t actor_id() const { return actor_id_; }
@@ -25,16 +25,29 @@ class Actor {
  protected:
   struct ExecKernel {
     const Kernel* kernel;
-    std::unordered_map<std::string, uint64_t> bn_in_op2regst_desc_id;
+    HashMap<std::string, uint64_t> bn_in_op2regst_desc_id;
   };
 
   Actor() = default;
-  void WardKernel(std::function<Regst*(uint64_t)> GetRegstFromRegstDescId);
+  void WardKernel(
+      std::function<std::shared_ptr<RegstWarpper>(uint64_t)> Regst4RegstDescId);
   const std::vector<std::unique_ptr<Regst>>& produced_regst_vec() const {
     return produced_regst_vec_;
   }
   uint64_t GetRegstDescIdFromName(const std::string& name) const {
     return name2regst_desc_id_.at(name);
+  }
+
+  // Status of Produced Registers
+  int TryOneReadDone(Regst* regst);
+  Regst* GetCurWriteableRegst(uint64_t regst_desc_id);
+  void ForEachCurWriteableRegst(std::function<void(Regst*)> func);
+  void CurWriteDone();
+  bool IsWriteReady();
+  void SetReadOnlyForRegstDescId(uint64_t regst_desc_id) {
+    auto it = writeable_produced_regst_.find(regst_desc_id);
+    if (!it->second.empty()) { writeable_produced_regst_desc_num_ -= 1; }
+    writeable_produced_regst_.erase(it);
   }
 
  private:
@@ -43,9 +56,14 @@ class Actor {
   std::vector<ExecKernel> exec_kernel_vec_;
   std::vector<std::unique_ptr<Regst>> produced_regst_vec_;
   HashMap<std::string, uint64_t> name2regst_desc_id_;
+  
+  // Status of Produced Registers
+  HashMap<uint64_t, std::queue<Regst*>> writeable_produced_regst_; // <regst_desc_id, regst>
+  uint64_t writeable_produced_regst_desc_num_;
+  HashMap<Regst*, int64_t> produced_regst2reading_cnt_;
 
 };
 
 } // namespace oneflow
 
-#endif // ONEFLOW_ACTOR_ACTOR_H_
+#endif // ONEFLOW_CORE_ACTOR_ACTOR_H_

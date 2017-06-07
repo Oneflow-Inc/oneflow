@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_THREAD_CPU_THREAD_H_
-#define ONEFLOW_THREAD_CPU_THREAD_H_
+#ifndef ONEFLOW_CORE_THREAD_CPU_THREAD_H_
+#define ONEFLOW_CORE_THREAD_CPU_THREAD_H_
 
 #include "oneflow/core/thread/thread.h"
 
@@ -16,4 +16,4 @@ class CpuThread final : public Thread {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_THREAD_CPU_THREAD_H_
+#endif // ONEFLOW_CORE_THREAD_CPU_THREAD_H_

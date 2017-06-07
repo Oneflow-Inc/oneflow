@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_ACTOR_BOXING_ACTOR_H_
-#define ONEFLOW_ACTOR_BOXING_ACTOR_H_
+#ifndef ONEFLOW_CORE_ACTOR_BOXING_ACTOR_H_
+#define ONEFLOW_CORE_ACTOR_BOXING_ACTOR_H_
 
 #include "oneflow/core/actor/actor.h"
 
@@ -15,21 +15,18 @@ class BoxingActor final : public Actor {
   void ProcessMsg(const ActorMsg&) override;
 
  private:
+  using RDescId2RwMap = HashMap<uint64_t, std::shared_ptr<RegstWarpper>>;
+  using RDescId2RwMapPtr = std::unique_ptr<RDescId2RwMap>;
 
   void WardKernelAndSendMsg();
 
-  // <piece_id, <regst_desc_id, regst>>
-  HashMap<uint64_t, std::unique_ptr<HashMap<uint64_t, Regst*>>> waiting_in_regst_;
-  std::queue<std::pair<uint64_t, std::unique_ptr<HashMap<uint64_t, Regst*>>>> ready_in_regst_;
+  // <piece_id, map>
+  HashMap<uint64_t, RDescId2RwMapPtr> waiting_in_regst_;
+  std::queue<std::pair<uint64_t, RDescId2RwMapPtr>> ready_in_regst_;
   uint64_t in_regst_desc_num_;
-  // <regst_desc_id, regst>
-  HashMap<uint64_t, std::queue<Regst*>> waiting_out_regst_;
-  uint64_t waiting_out_regst_desc_num_;
-  // 
-  Regst* middle_regst_;
 
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_ACTOR_BOXING_ACTOR_H_
+#endif // ONEFLOW_CORE_ACTOR_BOXING_ACTOR_H_

@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_RUNTIME_SNAPSHOT_H_
-#define ONEFLOW_RUNTIME_SNAPSHOT_H_
+#ifndef ONEFLOW_CORE_RUNTIME_SNAPSHOT_H_
+#define ONEFLOW_CORE_RUNTIME_SNAPSHOT_H_
 
 #include "tensorflow/core/platform/env.h"
 #include "oneflow/core/common/util.h"
@@ -113,4 +113,4 @@ class Snapshot::OutStream final {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_RUNTIME_SNAPSHOT_H_
+#endif // ONEFLOW_CORE_RUNTIME_SNAPSHOT_H_

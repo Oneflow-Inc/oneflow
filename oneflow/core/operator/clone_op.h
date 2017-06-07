@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_OPERATOR_CLONE_OP_H_
-#define ONEFLOW_OPERATOR_CLONE_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_CLONE_OP_H_
+#define ONEFLOW_CORE_OPERATOR_CLONE_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
@@ -33,4 +33,4 @@ class CloneOp final : public SysOperator {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_OPERATOR_CLONE_OP_H_
+#endif // ONEFLOW_CORE_OPERATOR_CLONE_OP_H_

@@ -5,7 +5,7 @@ namespace oneflow {
 
 void MdSaveCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   CHECK(IsFwNode());
-  auto md_save_gph = of_dynamic_cast<MdSaveTaskGraph*> (gph);
+  auto md_save_gph = static_cast<MdSaveTaskGraph*> (gph);
   CompTaskNode* updt_task = md_save_gph->update_task();
   if (in_edges().empty()) {
     BindProducedRegstAndOutEdge(updt_task->GetProducedRegstDesc("model"),

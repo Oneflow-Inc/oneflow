@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_COMPILE_PARALLEL_DESC_H_
-#define ONEFLOW_COMPILE_PARALLEL_DESC_H_
+#ifndef ONEFLOW_CORE_COMPILE_PARALLEL_DESC_H_
+#define ONEFLOW_CORE_COMPILE_PARALLEL_DESC_H_
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/id_manager.h"
@@ -56,4 +56,4 @@ std::string GetMachineNameFromDeviceName(const std::string& device_name);
 
 } // namespace oneflow
 
-#endif // ONEFLOW_COMPILE_PARALLEL_DESC_H_
+#endif // ONEFLOW_CORE_COMPILE_PARALLEL_DESC_H_
