@@ -10,8 +10,8 @@ message JobDescProto {
   DLNetConf train_dlnet_conf = 1;
   Resource resource = 2;
   Strategy strategy = 3;
-  string model_load_machine = 4;
-  string model_save_machine = 5;
+  string model_load_snapshot_path = 4;
+  string model_save_snapshots_path = 5;
   uint32 batch_size = 6;
   uint32 piece_size = 7;
   bool is_train = 8;
