@@ -8,7 +8,7 @@
 #include "oneflow/core/graph/data_task_graph.h"
 #include "oneflow/core/register/register_desc.h"
 #include "oneflow/core/job/job_conf.pb.h"
-#include "oneflow/core/job/ofelf.pb.h"
+#include "oneflow/core/job/plan.pb.h"
 
 namespace oneflow {
 
@@ -22,7 +22,7 @@ class Compiler final {
     return obj;
   }
 
-  void Compile(const JobConf& job_conf, const std::string& elf_filepath);
+  void Compile(const JobConf& job_conf, const std::string& plan_filepath);
 
  private:
   Compiler() = default;
@@ -34,7 +34,7 @@ class Compiler final {
   void BuildModelGraphs(const std::pair<const ChainNode*, std::vector<CompTaskNode*>>&);
   void InferShape4Regsts();
   void EraseMeaningLessRegsts();
-  void GenElfFile(const std::string& elf_filepath);
+  void GenPlanFile(const std::string& plan_filepath);
   
   std::vector<std::unique_ptr<TaskGraph>> ordered_task_gphs_;
 
@@ -66,7 +66,7 @@ void Compiler::ForEachTaskNode(std::function<void(TaskNode*)> func) {
 
 // TODO: inference "piece_size" and "register_num for each register_desc"
 void Compiler::Compile(const JobConf& job_conf,
-                       const std::string& elf_filepath) {
+                       const std::string& plan_filepath) {
   JobDesc::Singleton().InitFromJobConf(job_conf);
   JobDesc::Singleton().set_piece_size(50);
   IDMgr::Singleton().InitFromResource(JobDesc::Singleton().resource());
@@ -74,7 +74,7 @@ void Compiler::Compile(const JobConf& job_conf,
   BuildGraphs();
   InferShape4Regsts();
   EraseMeaningLessRegsts();
-  GenElfFile(elf_filepath);
+  GenPlanFile(plan_filepath);
 }
 
 void Compiler::BuildGraphs() {
@@ -151,34 +151,34 @@ void Compiler::EraseMeaningLessRegsts() {
   });
 }
 
-void Compiler::GenElfFile(const std::string& elf_filepath) {
-  OfElf elf;
-  ForEachTaskNode([&elf](TaskNode* node) {
+void Compiler::GenPlanFile(const std::string& plan_filepath) {
+  Plan plan;
+  ForEachTaskNode([&plan](TaskNode* node) {
     if (!node->IsMeaningLess()) {
-      node->ToProto(elf.mutable_task()->Add());
+      node->ToProto(plan.mutable_task()->Add());
     }
   });
-  OpMgr::Singleton().AllOpToProto(elf.mutable_op());
-  JobDesc::Singleton().ToProto(elf.mutable_job_desc());
-  ForEachChainNode([&elf](ChainNode* node) {
+  OpMgr::Singleton().AllOpToProto(plan.mutable_op());
+  JobDesc::Singleton().ToProto(plan.mutable_job_desc());
+  ForEachChainNode([&plan](ChainNode* node) {
     for (std::shared_ptr<const Operator> op : node->op_vec()) {
-      CHECK(elf.mutable_op_name2device_type()->insert(
+      CHECK(plan.mutable_op_name2device_type()->insert(
           {op->op_name(), node->parallel_desc()->device_type()}).second);
     }
   });
-  ForEachStageNode([&elf](StageNode* node) {
-    auto pbmap = elf.mutable_machine_id2op_name_set();
+  ForEachStageNode([&plan](StageNode* node) {
+    auto pbmap = plan.mutable_machine_id2op_name_set();
     for (std::shared_ptr<const Operator> op : node->chain_node()->op_vec()) {
       (*pbmap)[node->machine_id()].add_op_name(op->op_name());
     }
   });
-  PrintProtoToTextFile(elf, elf_filepath);
+  PrintProtoToTextFile(plan, plan_filepath);
 }
 
 } // namespace oneflow
 
 DEFINE_string(job_conf_filepath, "", "");
-DEFINE_string(elf_filepath, "", "");
+DEFINE_string(plan_filepath, "", "");
 
 int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);
@@ -186,7 +186,7 @@ int main(int argc, char** argv) {
   LOG(INFO) << "Compiler Starting Up...";
   oneflow::JobConf job_conf;
   oneflow::ParseProtoFromTextFile(FLAGS_job_conf_filepath, &job_conf);
-  oneflow::Compiler::Singleton().Compile(job_conf, FLAGS_elf_filepath);
+  oneflow::Compiler::Singleton().Compile(job_conf, FLAGS_plan_filepath);
   LOG(INFO) << "Compiler Shutting Down...";
   return 0;
 }

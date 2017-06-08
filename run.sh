@@ -11,7 +11,7 @@ mkdir "log/dot/model"
 mkdir "log/dot/exec"
 GLOG_logtostderr=0 GLOG_log_dir=./log ./compiler \
     -job_conf_filepath=../prototxt/multi_machine_job.prototxt \
-    -elf_filepath=./elf
+    -plan_filepath=./plan
 
 if [ "$1" = "--withdot" ]
 then

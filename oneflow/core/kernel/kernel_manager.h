@@ -7,7 +7,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/job/ofelf.pb.h"
+#include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
@@ -23,7 +23,7 @@ class KernelMgr final {
     return op_name2kernel_ptr_.at(op_name).get();
   }
 
-  void InitFromELF(const OfElf& of_Elf);
+  void InitFromPlan(const Plan&);
 
  private:
   KernelMgr() = default;
