@@ -5,7 +5,7 @@ namespace oneflow {
 
 void MdUpdtCompActor::Init(const TaskProto& task_proto) {
   CompActor::Init(task_proto);
-  state_ = &BeforeInitializeModelState::Singleton();
+  cur_handle_ = &MdUpdtCompActor::HandleBeforeInitializeModel;
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
 }
@@ -14,17 +14,16 @@ void MdUpdtCompActor::ProcessMsg(const ActorMsg& actor_msg,
                                  const ThreadContext& thread_ctx) {
   KernelContext kernel_ctx;
   kernel_ctx.cuda_stream = thread_ctx.compute_cuda_stream;
-  state_->ProcessMsg(actor_msg, kernel_ctx, this);
+  (this->*cur_handle_)(actor_msg, kernel_ctx);
 }
 
-void MdUpdtCompActor::BeforeInitializeModelState::ProcessMsg(
+void MdUpdtCompActor::HandleBeforeInitializeModel(
     const ActorMsg& actor_msg,
-    const KernelContext& kernel_ctx,
-    MdUpdtCompActor* actor) {
+    const KernelContext& kernel_ctx) {
   CHECK(actor_msg.actor_cmd() == ActorCmd::kInitializeModel);
-  Regst* model_regst = actor->GetCurWriteableRegst(actor->model_regst_desc_id_);
+  Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
   model_regst->set_model_version_id(0);
-  Regst* model_tmp_regst = actor->GetCurWriteableRegst(actor->model_tmp_regst_desc_id_);
+  Regst* model_tmp_regst = GetCurWriteableRegst(model_tmp_regst_desc_id_);
   HashSet<const Kernel*> kernels;
   auto CollectKernelsFromLbn = [&kernels](const std::string& lbn) {
     std::string op_name = GetOpNameFromLbn(lbn);
@@ -42,30 +41,27 @@ void MdUpdtCompActor::BeforeInitializeModelState::ProcessMsg(
       return ret;
     });
   }
-  actor->state_ = &BeforeSendInitialModelState::Singleton();
+  cur_handle_ = &MdUpdtCompActor::HandleBeforeSendInitialModel;
 }
 
-void MdUpdtCompActor::BeforeSendInitialModelState::ProcessMsg(
+void MdUpdtCompActor::HandleBeforeSendInitialModel(
     const ActorMsg& actor_msg,
-    const KernelContext& kernel_ctx,
-    MdUpdtCompActor* actor) {
+    const KernelContext& kernel_ctx) {
   CHECK(actor_msg.actor_cmd() == ActorCmd::kSendInitialModel);
-  actor->CurWriteDone();
-  actor->SetReadOnlyForRegstDescId(actor->model_tmp_regst_desc_id_);
-  actor->state_ = &UpdateModelState::Singleton();
+  CurWriteDone();
+  SetReadOnlyForRegstDescId(model_tmp_regst_desc_id_);
+  cur_handle_ = &MdUpdtCompActor::HandleForUpdateModel;
 }
 
-void MdUpdtCompActor::UpdateModelState::ProcessMsg(
+void MdUpdtCompActor::HandleForUpdateModel(
     const ActorMsg&,
-    const KernelContext&,
-    MdUpdtCompActor* actor) {
+    const KernelContext&) {
   TODO();
 }
 
-void MdUpdtCompActor::EndState::ProcessMsg(
+void MdUpdtCompActor::EndHandle(
     const ActorMsg&,
-    const KernelContext&,
-    MdUpdtCompActor* actor) {
+    const KernelContext&) {
   TODO();
 }
 
