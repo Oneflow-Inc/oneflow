@@ -34,7 +34,12 @@ class JobDesc final {
 
   uint32_t piece_size() const { return piece_size_; }
   void set_piece_size(uint32_t val) { piece_size_ = val; }
+  
+  uint32_t num_of_piece_in_batch() const { return num_of_piece_in_batch_; }
+  void set_num_of_piece_in_batch(uint32_t val) { num_of_piece_in_batch_ = val; }
 
+  uint32_t staleness() const { return staleness_; }
+  void set_staleness(uint32_t val) { staleness_ = val; }
  private:
   JobDesc() = default;
 
@@ -43,8 +48,9 @@ class JobDesc final {
   Strategy strategy_;
   std::string md_load_snapshot_path_;
   std::string md_save_snapshots_path_;
-  uint32_t batch_size_;
   uint32_t piece_size_;
+  uint32_t num_of_piece_in_batch_;
+  uint32_t staleness_;
   bool is_train_;
   FloatingPointType floating_point_type_;
 
