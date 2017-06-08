@@ -1,9 +1,9 @@
-#ifndef ONEFLOW_CORE_RUNTIME_RUNTIME_INFO_H_
-#define ONEFLOW_CORE_RUNTIME_RUNTIME_INFO_H_
+#ifndef ONEFLOW_CORE_JOB_RUNTIME_INFO_H_
+#define ONEFLOW_CORE_JOB_RUNTIME_INFO_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/id_manager.h"
-#include "oneflow/core/runtime/runtime_state.pb.h"
+#include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/job/runtime_state.pb.h"
 
 namespace oneflow {
 
@@ -38,4 +38,4 @@ class RuntimeInfo final {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_CORE_RUNTIME_RUNTIME_INFO_H_
+#endif // ONEFLOW_CORE_JOB_RUNTIME_INFO_H_

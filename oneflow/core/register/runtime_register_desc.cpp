@@ -1,5 +1,5 @@
 #include "oneflow/core/register/runtime_register_desc.h"
-#include "oneflow/core/common/id_manager.h"
+#include "oneflow/core/job/id_manager.h"
 
 namespace oneflow {
 

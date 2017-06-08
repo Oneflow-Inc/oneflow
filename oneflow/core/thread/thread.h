@@ -5,9 +5,9 @@
 #include <thread>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/channel.h"
-#include "oneflow/core/common/task.pb.h"
+#include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/actor/actor.h"
-#include "oneflow/core/actor/actor_msg_bus.h"
+#include "oneflow/core/actor/actor_message_bus.h"
 
 namespace oneflow {
 

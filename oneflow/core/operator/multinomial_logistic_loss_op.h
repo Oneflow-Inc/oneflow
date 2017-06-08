@@ -1,5 +1,5 @@
-#ifndef OPERATOR_MULTINOMIAL_LOGISTIC_LOSS_OP_H_
-#define OPERATOR_MULTINOMIAL_LOGISTIC_LOSS_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_MULTINOMIAL_LOGISTIC_LOSS_OP_H_
+#define ONEFLOW_CORE_OPERATOR_MULTINOMIAL_LOGISTIC_LOSS_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
@@ -29,4 +29,4 @@ class MultinomialLogisticLossOp : public UserOperator {
 
 } // namespace oneflow
 
-#endif // OPERATOR_MULTINOMIAL_LOGISTIC_LOSS_OP_H_
+#endif // ONEFLOW_CORE_OPERATOR_MULTINOMIAL_LOGISTIC_LOSS_OP_H_

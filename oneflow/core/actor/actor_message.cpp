@@ -1,8 +1,8 @@
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/register/remote_register_warpper.h"
 #include "oneflow/core/register/local_register_warpper.h"
-#include "oneflow/core/common/id_manager.h"
-#include "oneflow/core/runtime/runtime_info.h"
+#include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/job/runtime_info.h"
 
 namespace oneflow {
 

@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_ACTOR_ACTOR_REGISTRY_H_
 
 #include "oneflow/core/actor/actor.h"
-#include "oneflow/core/common/task.pb.h"
+#include "oneflow/core/job/task.pb.h"
 
 namespace oneflow {
 

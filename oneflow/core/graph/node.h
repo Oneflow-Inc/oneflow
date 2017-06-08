@@ -6,8 +6,8 @@
 #include <vector>
 #include <memory>
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/id_manager.h"
-#include "oneflow/core/common/keyword.h"
+#include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/job/keyword.h"
 
 namespace oneflow {
 

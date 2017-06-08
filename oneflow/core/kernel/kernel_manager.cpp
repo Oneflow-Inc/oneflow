@@ -1,6 +1,6 @@
 #include "oneflow/core/kernel/kernel_manager.h"
-#include "oneflow/core/common/job_desc.h"
-#include "oneflow/core/runtime/runtime_info.h"
+#include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/runtime_info.h"
 
 namespace oneflow {
 

@@ -1,9 +1,9 @@
-#ifndef ONEFLOW_CORE_COMMON_JOB_DESC_H_
-#define ONEFLOW_CORE_COMMON_JOB_DESC_H_
+#ifndef ONEFLOW_CORE_JOB_JOB_DESC_H_
+#define ONEFLOW_CORE_JOB_JOB_DESC_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/conf/job_conf.pb.h"
-#include "oneflow/core/common/job_desc.pb.h"
+#include "oneflow/core/job/job_conf.pb.h"
+#include "oneflow/core/job/job_desc.pb.h"
 
 namespace oneflow {
 
@@ -52,4 +52,4 @@ class JobDesc final {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_CORE_COMMON_JOB_DESC_H_
+#endif // ONEFLOW_CORE_JOB_JOB_DESC_H_

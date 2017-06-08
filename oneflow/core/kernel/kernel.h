@@ -3,8 +3,8 @@
 
 #include <memory>
 #include <functional>
-#include "oneflow/core/conf/resource.pb.h"
-#include "oneflow/core/conf/job_conf.pb.h"
+#include "oneflow/core/job/resource.pb.h"
+#include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/operator_manager.h"
