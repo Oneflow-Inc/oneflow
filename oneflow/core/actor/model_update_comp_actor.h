@@ -19,7 +19,7 @@ class MdUpdtCompActor final : public CompActor {
   void HandleBeforeInitializeModel(const ActorMsg&, const KernelContext&);
   void HandleBeforeSendInitialModel(const ActorMsg&, const KernelContext&);
   void HandleForUpdateModel(const ActorMsg&, const KernelContext&);
-  void EndHandle(const ActorMsg&, const KernelContext&);
+  void InvalidHandle(const ActorMsg&, const KernelContext&);
 
   void (MdUpdtCompActor::*cur_handle_)(const ActorMsg&, const KernelContext&);
   uint64_t model_regst_desc_id_;

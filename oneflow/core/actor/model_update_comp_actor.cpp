@@ -59,10 +59,10 @@ void MdUpdtCompActor::HandleForUpdateModel(
   TODO();
 }
 
-void MdUpdtCompActor::EndHandle(
+void MdUpdtCompActor::InvalidHandle(
     const ActorMsg&,
     const KernelContext&) {
-  TODO();
+  UNEXPECTED_RUN();
 }
 
 REGISTER_ACTOR(kMdUpdtCompTask, true, MdUpdtCompActor);
