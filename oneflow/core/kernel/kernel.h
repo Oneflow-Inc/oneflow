@@ -13,7 +13,7 @@
 namespace oneflow {
 
 struct KernelContext {
-  cudaStream_t* cuda_stream;
+  const cudaStream_t* cuda_stream;
 };
 
 class Kernel {
