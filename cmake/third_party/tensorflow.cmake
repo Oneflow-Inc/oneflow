@@ -4,7 +4,7 @@ option(tensorflow_BUILD_CC_TESTS "Build cc unit tests " OFF)
 option(tensorflow_ENABLE_GPU "Enable GPU support" OFF)
 
 set(TENSORFLOW_URL https://github.com/Oneflow-Inc/tensorflow.git)
-set(TENSORFLOW_TAG 60222b9bcc29ab47337db5dbb6c0102f8b9c2212)
+set(TENSORFLOW_TAG 520ee41eb0e67e126de7c779955ea83ffe6b09bc)
 
 set(TENSORFLOW_BUILD_INCLUDE ${CMAKE_CURRENT_BINARY_DIR}/tensorflow/src/tensorflow/tensorflow)
 set(TENSORFLOW_INCLUDE_DIR ${THIRD_PARTY_DIR}/tensorflow/include)
@@ -125,6 +125,8 @@ ExternalProject_Add(tensorflow
             protobuf_copy_headers_to_destination
             protobuf_copy_libs_to_destination
             protobuf_copy_binary_to_destination
+            glog_copy_headers_to_destination
+            glog_copy_libs_to_destination
     GIT_REPOSITORY ${TENSORFLOW_URL}
     GIT_TAG ${TENSORFLOW_TAG}
     UPDATE_COMMAND ""
@@ -143,6 +145,8 @@ ExternalProject_Add(tensorflow
         -DPROTOBUF_INCLUDE_DIRS=${PROTOBUF_INCLUDE_DIR}
         -Dprotobuf_STATIC_LIBRARIES=${PROTOBUF_STATIC_LIBRARIES}
         -DPROTOBUF_PROTOC_EXECUTABLE=${PROTOBUF_PROTOC_EXECUTABLE}
+        -Dglog_INCLUDE_DIR=${GLOG_INCLUDE_DIR}
+        -Dglog_STATIC_LIBRARIES=${GLOG_STATIC_LIBRARIES}
         ${TENSORFLOW_ADDITIONAL_CMAKE_OPTIONS}        
     CMAKE_CACHE_ARGS
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
@@ -157,6 +161,8 @@ ExternalProject_Add(tensorflow
         -DPROTOBUF_INCLUDE_DIRS:STRING=${PROTOBUF_INCLUDE_DIR}
         -Dprotobuf_STATIC_LIBRARIES:STRING=${PROTOBUF_STATIC_LIBRARIES}
         -DPROTOBUF_PROTOC_EXECUTABLE:STRING=${PROTOBUF_PROTOC_EXECUTABLE}
+        -Dglog_INCLUDE_DIR:STRING=${GLOG_INCLUDE_DIR}
+        -Dglog_STATIC_LIBRARIES:STRING=${GLOG_STATIC_LIBRARIES}
         )
 
 add_custom_target(tensorflow_create_header_dir
