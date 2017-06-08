@@ -59,12 +59,6 @@ void MdUpdtCompActor::HandleForUpdateModel(
   TODO();
 }
 
-void MdUpdtCompActor::InvalidHandle(
-    const ActorMsg&,
-    const KernelContext&) {
-  UNEXPECTED_RUN();
-}
-
 REGISTER_ACTOR(kMdUpdtCompTask, true, MdUpdtCompActor);
 
 }  // namespace oneflow
