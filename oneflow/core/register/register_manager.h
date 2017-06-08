@@ -15,10 +15,7 @@ class RegstMgr final {
   OF_DISALLOW_COPY_AND_MOVE(RegstMgr);
   ~RegstMgr() = default;
 
-  static RegstMgr& Singleton() {
-    static RegstMgr obj;
-    return obj;
-  }
+  OF_SINGLETON(RegstMgr);
 
   void NewRegsts(const RegstDescProto& regst_desc_proto,
                  std::function<void(Regst*)> OneRegstDone);

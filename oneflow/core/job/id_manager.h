@@ -11,10 +11,7 @@ class IDMgr final {
   OF_DISALLOW_COPY_AND_MOVE(IDMgr);
   ~IDMgr() = default;
 
-  static IDMgr& Singleton() {
-    static IDMgr obj;
-    return obj;
-  }
+  OF_SINGLETON(IDMgr);
 
   void InitFromResource(const Resource& resource) {
     LOG(INFO) << "Init IDManager...";

@@ -32,6 +32,12 @@ namespace oneflow {
 #define TODO() \
   LOG(FATAL) << "TODO";
 
+#define OF_SINGLETON(ClassName) \
+  static ClassName& Singleton() { \
+    static ClassName obj; \
+    return obj; \
+  }
+
 inline bool operator == (const google::protobuf::MessageLite& lhs,
                          const google::protobuf::MessageLite& rhs) {
   return lhs.SerializeAsString() == rhs.SerializeAsString();

@@ -17,10 +17,7 @@ class KernelMgr final {
   OF_DISALLOW_COPY_AND_MOVE(KernelMgr);
   ~KernelMgr() = default;
 
-  static KernelMgr& Singleton() {
-    static KernelMgr obj;
-    return obj;
-  }
+  OF_SINGLETON(KernelMgr);
 
   const Kernel* GetKernelFromOpName(const std::string& op_name) {
     return op_name2kernel_ptr_.at(op_name).get();
