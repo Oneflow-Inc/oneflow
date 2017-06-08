@@ -1,7 +1,8 @@
 #ifndef ONEFLOW_CORE_GRAPH_TASK_NODE_H_
 #define ONEFLOW_CORE_GRAPH_TASK_NODE_H_
 
-#include "oneflow/core/common/task.pb.h"
+#include "oneflow/core/job/task.pb.h"
+#include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/graph/stage_graph.h"
 #include "oneflow/core/graph/exec_graph.h"
 

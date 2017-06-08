@@ -3,7 +3,7 @@
 
 #include <memory>
 #include "oneflow/core/thread/thread.h"
-#include "oneflow/core/actor/actor_msg_bus.h"
+#include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/common/protobuf.h"
 

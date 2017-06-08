@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_REMOTE_REGISTER_WARPPER_H_
-#define ONEFLOW_CORE_REMOTE_REGISTER_WARPPER_H_
+#ifndef ONEFLOW_CORE_REGISTER_REMOTE_REGISTER_WARPPER_H_
+#define ONEFLOW_CORE_REGISTER_REMOTE_REGISTER_WARPPER_H_
 
 #include "oneflow/core/register/register_warpper.h"
 
@@ -28,4 +28,4 @@ class RemoteRegstWarpper final : public RegstWarpper {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_CORE_REMOTE_REGISTER_WARPPER_H_
+#endif // ONEFLOW_CORE_REGISTER_REMOTE_REGISTER_WARPPER_H_

@@ -1,5 +1,5 @@
 #include "oneflow/core/register/register_desc.h"
-#include "oneflow/core/common/id_manager.h"
+#include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/graph/copy_task_node.h"

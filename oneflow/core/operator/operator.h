@@ -1,13 +1,13 @@
-#ifndef ONEFLOW_CORE_OPERATOR_OP_H_
-#define ONEFLOW_CORE_OPERATOR_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_OPERATOR_H_
+#define ONEFLOW_CORE_OPERATOR_OPERATOR_H_
 
 #include <string>
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/conf/strategy.pb.h"
+#include "oneflow/core/job/strategy.pb.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/keyword.h"
+#include "oneflow/core/job/keyword.h"
 #include "oneflow/core/operator/operator.pb.h"
 
 namespace oneflow {
@@ -174,4 +174,4 @@ std::string GetOpNameFromLbn(const std::string& lbn);
 
 } // namespace oneflow
 
-#endif // ONEFLOW_CORE_OPERATOR_OP_H_
+#endif // ONEFLOW_CORE_OPERATOR_OPERATOR_H_

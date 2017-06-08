@@ -6,9 +6,9 @@
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/operator_manager.h"
-#include "oneflow/core/compile/parallel_desc.h"
-#include "oneflow/core/common/id_manager.h"
-#include "oneflow/core/common/job_desc.h"
+#include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 

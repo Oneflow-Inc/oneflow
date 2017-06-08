@@ -15,6 +15,7 @@ public:
   void ProcessMsg(const ActorMsg&, const ThreadContext&) override;
 
 private:
+  std::queue<std::shared_ptr<RegstWarpper>> waiting_in_regst_;
 
 };
 

@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_ACTOR_COMP_ACTOR_H_
-#define ONEFLOW_CORE_ACTOR_COMP_ACTOR_H_
+#ifndef ONEFLOW_CORE_ACTOR_COMPUTE_ACTOR_H_
+#define ONEFLOW_CORE_ACTOR_COMPUTE_ACTOR_H_
 
 #include "oneflow/core/actor/actor.h"
 
@@ -27,4 +27,4 @@ class CompActor : public Actor {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_CORE_ACTOR_COMP_ACTOR_H_
+#endif // ONEFLOW_CORE_ACTOR_COMPUTE_ACTOR_H_

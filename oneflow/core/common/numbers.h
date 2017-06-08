@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_COMMON_NUMBER_H_
-#define ONEFLOW_CORE_COMMON_NUMBER_H_
+#ifndef ONEFLOW_CORE_COMMON_NUMBERS_H_
+#define ONEFLOW_CORE_COMMON_NUMBERS_H_
 
 #include "tensorflow/core/lib/strings/numbers.h"
 
@@ -31,4 +31,4 @@ inline int32_t Sto32orDie(const std::string& s) {
 
 }
 
-#endif  // ONEFLOW_CORE_COMMON_NUMBER_H_ 
+#endif  // ONEFLOW_CORE_COMMON_NUMBERS_H_ 

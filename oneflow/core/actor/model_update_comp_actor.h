@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_ACTOR_MODEL_UPDATE_COMP_ACTOR_H_
 #define ONEFLOW_CORE_ACTOR_MODEL_UPDATE_COMP_ACTOR_H_
 
-#include "oneflow/core/actor/comp_actor.h"
+#include "oneflow/core/actor/compute_actor.h"
 
 namespace oneflow {
 
