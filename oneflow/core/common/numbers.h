@@ -6,13 +6,13 @@
 namespace oneflow {
 
 inline uint64_t Stou64OrDie(const std::string& s) {
-  uint64_t ret = 0;
+  tensorflow::uint64 ret = 0;
   CHECK(tensorflow::strings::safe_strtou64(s, &ret));
   return ret;
 }
 
 inline int64_t Sto64OrDie(const std::string& s) {
-  int64_t ret = 0;
+  tensorflow::int64 ret = 0;
   CHECK(tensorflow::strings::safe_strto64(s, &ret));
   return ret;
 }

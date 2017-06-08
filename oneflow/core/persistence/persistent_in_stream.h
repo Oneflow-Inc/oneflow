@@ -35,7 +35,7 @@ class PersistentInStream final {
 
  private:
   std::unique_ptr<tensorflow::RandomAccessFile> file_;
-  uint64_t file_size_;
+  tensorflow::uint64 file_size_;
   uint64_t offset_;
   bool is_eof_;
 };

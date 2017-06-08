@@ -65,7 +65,7 @@ TEST(Snapshot, write_and_read) {
     (*read_stream_ptr) >> result;
     ASSERT_TRUE((*read_stream_ptr).eof());
   }
-  int64_t undeletefiles, undeletedirs;
+  tensorflow::int64 undeletefiles, undeletedirs;
   ASSERT_TRUE(env->DeleteRecursively(
       snapshot_root_path, 
       &undeletefiles, 
