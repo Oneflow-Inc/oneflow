@@ -6,7 +6,7 @@
 namespace oneflow {
 
 class MdUpdtCompActor final : public CompActor {
-public:
+ public:
   OF_DISALLOW_COPY_AND_MOVE(MdUpdtCompActor);
   MdUpdtCompActor() = default;
   ~MdUpdtCompActor() = default;
@@ -14,11 +14,13 @@ public:
   void Init(const TaskProto&) override;
   void ProcessMsg(const ActorMsg&, const ThreadContext&) override;
 
-private:
-  void ProcessCommand(ActorCmd cmd, const KernelContext&);
-  void ProcessInitializeModelCmd(const KernelContext&);
-  void ProcessSendInitialModelCmd();
-  
+ private:
+
+  void HandleBeforeInitializeModel(const ActorMsg&, const KernelContext&);
+  void HandleBeforeSendInitialModel(const ActorMsg&, const KernelContext&);
+  void HandleForUpdateModel(const ActorMsg&, const KernelContext&);
+
+  void (MdUpdtCompActor::*cur_handle_)(const ActorMsg&, const KernelContext&);
   uint64_t model_regst_desc_id_;
   uint64_t model_tmp_regst_desc_id_;
 

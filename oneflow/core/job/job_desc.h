@@ -12,10 +12,7 @@ class JobDesc final {
   OF_DISALLOW_COPY_AND_MOVE(JobDesc);
   ~JobDesc() = default;
 
-  static JobDesc& Singleton() {
-    static JobDesc obj;
-    return obj;
-  }
+  OF_SINGLETON(JobDesc);
 
   void InitFromJobConf(const JobConf&);
   void InitFromProto(const JobDescProto&);

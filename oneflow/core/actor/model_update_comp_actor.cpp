@@ -5,6 +5,7 @@ namespace oneflow {
 
 void MdUpdtCompActor::Init(const TaskProto& task_proto) {
   CompActor::Init(task_proto);
+  cur_handle_ = &MdUpdtCompActor::HandleBeforeInitializeModel;
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
 }
@@ -13,28 +14,13 @@ void MdUpdtCompActor::ProcessMsg(const ActorMsg& actor_msg,
                                  const ThreadContext& thread_ctx) {
   KernelContext kernel_ctx;
   kernel_ctx.cuda_stream = thread_ctx.compute_cuda_stream;
-  if (actor_msg.msg_type() == ActorMsgType::kCmdMsg) {
-    ProcessCommand(actor_msg.actor_cmd(), kernel_ctx);
-  } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
-    TODO();
-  } else {
-    UNEXPECTED_RUN();
-  }
+  (this->*cur_handle_)(actor_msg, kernel_ctx);
 }
 
-void MdUpdtCompActor::ProcessCommand(ActorCmd cmd,
-                                     const KernelContext& kernel_ctx) {
-  if (cmd == ActorCmd::kInitializeModel) {
-    ProcessInitializeModelCmd(kernel_ctx);
-  } else if (cmd == ActorCmd::kSendInitialModel) {
-    ProcessSendInitialModelCmd();
-  } else {
-    UNEXPECTED_RUN();
-  }
-}
-
-void MdUpdtCompActor::ProcessInitializeModelCmd(
+void MdUpdtCompActor::HandleBeforeInitializeModel(
+    const ActorMsg& actor_msg,
     const KernelContext& kernel_ctx) {
+  CHECK(actor_msg.actor_cmd() == ActorCmd::kInitializeModel);
   Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
   model_regst->set_model_version_id(0);
   Regst* model_tmp_regst = GetCurWriteableRegst(model_tmp_regst_desc_id_);
@@ -55,11 +41,22 @@ void MdUpdtCompActor::ProcessInitializeModelCmd(
       return ret;
     });
   }
+  cur_handle_ = &MdUpdtCompActor::HandleBeforeSendInitialModel;
 }
 
-void MdUpdtCompActor::ProcessSendInitialModelCmd() {
+void MdUpdtCompActor::HandleBeforeSendInitialModel(
+    const ActorMsg& actor_msg,
+    const KernelContext& kernel_ctx) {
+  CHECK(actor_msg.actor_cmd() == ActorCmd::kSendInitialModel);
   CurWriteDone();
   SetReadOnlyForRegstDescId(model_tmp_regst_desc_id_);
+  cur_handle_ = &MdUpdtCompActor::HandleForUpdateModel;
+}
+
+void MdUpdtCompActor::HandleForUpdateModel(
+    const ActorMsg&,
+    const KernelContext&) {
+  TODO();
 }
 
 REGISTER_ACTOR(kMdUpdtCompTask, true, MdUpdtCompActor);

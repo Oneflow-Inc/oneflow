@@ -7,7 +7,7 @@ import "oneflow/core/job/job_desc.proto";
 import "oneflow/core/job/resource.proto";
 import "oneflow/core/job/strategy.proto";
 
-message OfElf {
+message Plan {
   repeated TaskProto task = 1;
   repeated OperatorProto op = 3;
   JobDescProto job_desc = 4;
