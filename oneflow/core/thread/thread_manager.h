@@ -14,10 +14,7 @@ class ThreadMgr final {
   OF_DISALLOW_COPY_AND_MOVE(ThreadMgr);
   ~ThreadMgr();
 
-  static ThreadMgr& Singleton() {
-    static ThreadMgr obj;
-    return obj;
-  }
+  OF_SINGLETON(ThreadMgr);
   
   Thread* GetThrd(uint64_t thrd_loc_id);
 

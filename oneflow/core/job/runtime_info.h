@@ -12,10 +12,7 @@ class RuntimeInfo final {
   OF_DISALLOW_COPY_AND_MOVE(RuntimeInfo);
   ~RuntimeInfo() = default;
 
-  static RuntimeInfo& Singleton() {
-    static RuntimeInfo obj;
-    return obj;
-  }
+  OF_SINGLETON(RuntimeInfo);
 
   uint64_t this_machine_id() const { return this_machine_id_; }
   RuntimeState state() const { return state_; }

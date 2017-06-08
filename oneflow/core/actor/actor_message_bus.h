@@ -12,10 +12,7 @@ class ActorMsgBus final {
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgBus);
   ~ActorMsgBus() = default;
 
-  static ActorMsgBus& Singleton() {
-    static ActorMsgBus obj;
-    return obj;
-  }
+  OF_SINGLETON(ActorMsgBus);
 
   void SendMsg(const ActorMsg& msg);
 
