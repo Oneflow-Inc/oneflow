@@ -60,16 +60,16 @@ void Snapshot::CheckAndConcat() {
     for (int32_t i = 0; i <= max_part_id; ++i) {
       std::string file_path = tensorflow::io::JoinPath(sub_dir,
                                                        std::to_string(i));
-      const uint64_t batch_size = 64 * 1024 * 1024;
+      const tensorflow::uint64 batch_size = 64 * 1024 * 1024;
       char* scratch = new char[batch_size];
-      uint64_t offset = 0;
+      tensorflow::uint64 offset = 0;
       std::unique_ptr<tensorflow::RandomAccessFile> file;
       TF_CHECK_OK(env_->NewRandomAccessFile(file_path, &file));
-      uint64_t file_size = 0;
+      tensorflow::uint64 file_size = 0;
       TF_CHECK_OK(env_->GetFileSize(file_path, &file_size));
       while (offset < file_size) {
         tensorflow::StringPiece data;
-        int n = std::min(batch_size, (file_size - offset));
+        tensorflow::uint64 n = std::min(batch_size, (file_size - offset));
         TF_CHECK_OK(file->Read(offset, n, &data, scratch));
         TF_CHECK_OK(concat_file->Append(data));
         offset += n;
