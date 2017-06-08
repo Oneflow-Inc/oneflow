@@ -16,7 +16,11 @@ public:
 
 private:
   void ProcessCommand(ActorCmd cmd, const KernelContext&);
-  void ProcessInitModelCmd(const KernelContext&);
+  void ProcessInitializeModelCmd(const KernelContext&);
+  void ProcessSendInitialModelCmd();
+  
+  uint64_t model_regst_desc_id_;
+  uint64_t model_tmp_regst_desc_id_;
 
 };
 

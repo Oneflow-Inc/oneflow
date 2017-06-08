@@ -7,12 +7,13 @@
 namespace oneflow {
 
 enum class ActorCmd {
-  kInitModel = 0
+  kInitializeModel = 0,
+  kSendInitialModel
 };
 
 enum class ActorMsgType {
   kRegstMsg = 0,
-  kCmdMsg = 1
+  kCmdMsg
 };
 
 class ActorMsg final {
@@ -34,6 +35,18 @@ class ActorMsg final {
   ActorCmd actor_cmd() const {
     CHECK(msg_type_ == ActorMsgType::kCmdMsg);
     return actor_cmd_;
+  }
+  // Setters
+  void set_dst_actor_id(uint64_t val) {
+    dst_actor_id_ = val;
+  }
+  void set_regst_warpper(std::shared_ptr<RegstWarpper> val) {
+    msg_type_ = ActorMsgType::kRegstMsg;
+    regst_warpper_ = val;
+  }
+  void set_actor_cmd(ActorCmd val) {
+    msg_type_ = ActorMsgType::kCmdMsg;
+    actor_cmd_ = val;
   }
   
  private:
