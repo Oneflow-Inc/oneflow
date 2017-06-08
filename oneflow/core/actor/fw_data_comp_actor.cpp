@@ -21,7 +21,7 @@ bool FwDataCompActor::IsReadReady(uint32_t staleness,
   return false;
 }
 
-void FwDataCompActor::ProcessMsg(const ActorMsg& actor_msg,
+void FwDataCompActor::ProcessMsg(const ActorMsg& msg,
                                  const ThreadContext& thread_ctx) {
   KernelContext kernel_ctx;
   uint32_t staleness = JobDesc::Singleton().staleness();
@@ -36,8 +36,8 @@ void FwDataCompActor::ProcessMsg(const ActorMsg& actor_msg,
       in_.push(regst_wp);
     }
   }
-  while (IsReadReady() && IsWriteReady()) {
-    WardKernelAndSendMsg(kernel_ctx);
+  while (IsReadReady(staleness, num_of_piece_in_batch) && IsWriteReady()) {
+    //WardKernelAndSendMsg(kernel_ctx);
   }
 }
 
