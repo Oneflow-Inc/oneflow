@@ -15,7 +15,7 @@ public:
   void ProcessMsg(const ActorMsg&, const ThreadContext&) override;
 
 private:
-  bool IsReadReady(uint32_t, uint32_t);
+  bool IsReadReady();
   void WardKernelAndSendMsg(const KernelContext&);
 
   uint64_t expected_model_version_id_;
@@ -24,6 +24,7 @@ private:
   std::shared_ptr<RegstWarpper> model_regst_;
   std::shared_ptr<RegstWarpper> model_tmp_regst_;
   std::queue<std::shared_ptr<RegstWarpper>> in_;
+  HashMap<uint64_t, std::shared_ptr<RegstWarpper>> ready_in_regst_;
 };
 
 }  // namespace oneflow
