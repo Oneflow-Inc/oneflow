@@ -9,6 +9,8 @@
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/register/register.h"
+#include "oneflow/core/register/local_register_warpper.h"
+#include "oneflow/core/register/remote_register_warpper.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/thread/thread_context.h"
 
