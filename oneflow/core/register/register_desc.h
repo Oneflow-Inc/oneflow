@@ -33,8 +33,8 @@ class RegstDesc final {
   void EnrollLbn(const std::string& lbn);
   const Shape& GetShape(const std::string& lbn) const;
   Shape* GetMutShapePtr(const std::string& lbn);
-  HashMap<std::string, std::unique_ptr<Shape>>& mut_lbn2shape();
-  const HashMap<std::string, std::unique_ptr<Shape>>& lbn2shape() const;
+  void ForEachLbn(std::function<void(const std::string&)> func) const;
+  size_t NumOfLbn() const { return lbn2shape_.size(); }
 
   //
   void EraseZeroSizeBlob();

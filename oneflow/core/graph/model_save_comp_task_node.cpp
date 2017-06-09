@@ -16,9 +16,9 @@ void MdSaveCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
     OperatorConf op_conf;
     op_conf.set_name("model_save_op" + updt_task->node_id_str());
     op_conf.mutable_model_save_conf();
-    for (const auto& pair : GetRelatedRegst(SoleInEdge())->lbn2shape()) {
-      op_conf.mutable_model_save_conf()->add_lbns(pair.first);
-    }
+    GetRelatedRegst(SoleInEdge())->ForEachLbn([&](const std::string& lbn) {
+      op_conf.mutable_model_save_conf()->add_lbns(lbn);
+    });
 
     ExecNode* exec_node = mut_exec_gph().NewNode();
     exec_node->mut_op() = OpMgr::Singleton().ConstructOp(op_conf);

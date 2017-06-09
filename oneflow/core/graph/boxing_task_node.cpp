@@ -143,9 +143,9 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
     CHECK_EQ(lbns.size(), 1);
     lbns.clear();
     auto in_regst_0 = GetRelatedRegst(sorted_in_edges.at(0));
-    for (const auto& pair : in_regst_0->lbn2shape()) {
-      lbns.push_back(pair.first);
-    }
+    in_regst_0->ForEachLbn([&](const std::string& lbn) {
+      lbns.push_back(lbn);
+    });
   }
   // Enroll Lbn
   auto middle_regst = GetProducedRegstDesc("middle");
