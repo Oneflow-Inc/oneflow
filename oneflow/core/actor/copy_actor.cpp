@@ -1,4 +1,5 @@
 #include "oneflow/core/actor/copy_actor.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/register/local_register_warpper.h"
 
 namespace oneflow {
@@ -13,6 +14,8 @@ void CopyActor::ProcessMsgAndWardKernel(const ActorMsg& msg,
     waiting_in_regst_.push(std::move(msg.regst_warpper()));
   }
   if (!waiting_in_regst_.empty() && IsWriteReady()) {
+    uint64_t piece_id = expected_piece_id();
+    CHECK_EQ(waiting_in_regst.front()->piece_id(), piece_id);
     WardKernel(kernel_ctx, [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
       Regst* regst = GetCurWriteableRegst(regst_desc_id);
       if (regst == nullptr) {
@@ -21,6 +24,9 @@ void CopyActor::ProcessMsgAndWardKernel(const ActorMsg& msg,
       } else {
         return std::make_shared<LocalRegstWarpper> (regst);
       }
+    });
+    ForEachCurWriteableRegst([piece_id](Regst* regst) {
+      regst->set_piece_id(piece_id);
     });
     CurWriteDone();
     std::shared_ptr<RegstWarpper> regst = waiting_in_regst_.front();
