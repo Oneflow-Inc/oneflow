@@ -33,7 +33,7 @@ void FwDataCompActor::ProcessMsg(const ActorMsg& msg,
   if (TryUpdtStateAsFromRegstReader(msg.regst_warpper()->regst_raw_ptr()) != 0) {
     std::shared_ptr<RegstWarpper> regst_wp = msg.regst_warpper();
     if (regst_wp->regst_desc_id() == model_tmp_regst_desc_id_) {
-      CHECK_EQ(model_tmp_regst_, nullptr);
+      CHECK(!model_tmp_regst_);
       model_tmp_regst_ = regst_wp;
       ready_in_regst_[model_tmp_regst_desc_id_] = regst_wp;
     } else if (regst_wp->regst_desc_id() == model_regst_desc_id_) {
@@ -48,7 +48,7 @@ void FwDataCompActor::ProcessMsg(const ActorMsg& msg,
       in_.push(regst_wp);
     }
   }
-  while (IsReadReady(staleness, num_of_piece_in_batch) && IsWriteReady()) {
+  while (IsReadReady() && IsWriteReady()) {
     WardKernelAndSendMsg(kernel_ctx);
   }
 }
