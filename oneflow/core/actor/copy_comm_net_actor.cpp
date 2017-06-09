@@ -11,7 +11,7 @@ void CopyCommNetActor::Init(const TaskProto& task_proto) {
 void CopyCommNetActor::ProcessMsg(const ActorMsg& msg,
                                   const ThreadContext&) {
   KernelContext kernel_ctx;
-  if (TryOneReadDone(msg.regst_warpper()->regst_raw_ptr()) != 0) {
+  if (TryUpdtStateAsFromRegstReader(msg.regst_warpper()->regst_raw_ptr()) != 0) {
     waiting_in_regst_.push(std::move(msg.regst_warpper()));
   }
   if (!waiting_in_regst_.empty() && IsWriteReady()) {
