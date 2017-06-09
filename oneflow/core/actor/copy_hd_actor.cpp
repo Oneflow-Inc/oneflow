@@ -8,7 +8,7 @@ void CopyHdActor::ProcessMsg(const ActorMsg& msg,
                              const ThreadContext& thread_ctx) {
   KernelContext kernel_ctx;
   kernel_ctx.cuda_stream = thread_ctx.copy_hd_cuda_stream;
-  ProcessMsgAndWardKernel(msg, kernel_ctx);
+  ProcessMsgWithKernelCtx(msg, kernel_ctx);
 }
 
 REGISTER_ACTOR(kCopyHdTask, true, CopyHdActor);

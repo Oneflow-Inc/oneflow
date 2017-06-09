@@ -8,7 +8,7 @@ void CopyActor::Init(const TaskProto& task_proto) {
   Actor::Init(task_proto);
 }
 
-void CopyActor::ProcessMsgAndWardKernel(const ActorMsg& msg,
+void CopyActor::ProcessMsgWithKernelCtx(const ActorMsg& msg,
                                         const KernelContext& kernel_ctx) {
   if (TryOneReadDone(msg.regst_warpper()->regst_raw_ptr()) != 0) {
     waiting_in_regst_.push(std::move(msg.regst_warpper()));

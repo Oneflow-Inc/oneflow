@@ -15,7 +15,7 @@ public:
 
 protected:
   CopyActor() = default;
-  void ProcessMsgAndWardKernel(const ActorMsg& msg, const KernelContext& kernel_ctx);
+  void ProcessMsgWithKernelCtx(const ActorMsg& msg, const KernelContext& kernel_ctx);
 
 private:
   std::queue<std::shared_ptr<RegstWarpper>> waiting_in_regst_;
