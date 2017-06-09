@@ -14,7 +14,7 @@ void FwDataCompActor::Init(const TaskProto& task_proto) {
 bool FwDataCompActor::IsReadReady() {
   uint32_t staleness = JobDesc::Singleton().staleness();
   uint32_t num_of_piece_in_batch = JobDesc::Singleton().num_of_piece_in_batch();
-  if (model_regst_ != nullptr && model_tmp_regst_ != nullptr && !in_.empty()) {
+  if (model_regst_ && model_tmp_regst_ && !in_.empty()) {
     if(model_regst_->model_version_id() + staleness - 1 >= 
        in_.front()->piece_id() / num_of_piece_in_batch) {
       return true;
@@ -38,9 +38,11 @@ void FwDataCompActor::ProcessMsg(const ActorMsg& msg,
       ready_in_regst_[model_tmp_regst_desc_id_] = regst_wp;
     } else if (regst_wp->regst_desc_id() == model_regst_desc_id_) {
       CHECK_EQ(regst_wp->model_version_id(), expected_model_version_id_);
-      ActorMsgBus::Singleton().SendMsg(ActorMsg::BuildMsgForRegstWriter(
-            model_regst_->producer_actor_id(),
-            model_regst_->regst_raw_ptr()));
+      if (model_regst_) {
+        ActorMsgBus::Singleton().SendMsg(ActorMsg::BuildMsgForRegstWriter(
+              model_regst_->producer_actor_id(),
+              model_regst_->regst_raw_ptr()));
+      }
       model_regst_ = regst_wp;
       ready_in_regst_[model_regst_desc_id_] = regst_wp;
       expected_model_version_id_ += 1;
@@ -61,7 +63,7 @@ void FwDataCompActor::WardKernelAndSendMsg(const KernelContext& kernel_ctx) {
   WardKernel(kernel_ctx, [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
     Regst* regst = GetCurWriteableRegst(regst_desc_id);
     if (regst == nullptr) {
-      return ready_in_regst_[regst_desc_id];
+      return ready_in_regst_.at(regst_desc_id);
     } else {
       return std::make_shared<LocalRegstWarpper> (regst);
     }
