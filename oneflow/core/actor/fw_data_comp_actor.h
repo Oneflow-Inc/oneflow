@@ -15,22 +15,15 @@ public:
   void ProcessMsg(const ActorMsg&, const ThreadContext&) override;
 
 private:
-  struct Minst {
-    bool operator () (const std::shared_ptr<RegstWarpper>& a, 
-                     const std::shared_ptr<RegstWarpper>& b) const {
-      return a->piece_id() > b->piece_id();
-    }
-  };
   bool IsReadReady(uint32_t, uint32_t);
   void WardKernelAndSendMsg(const KernelContext&);
 
+  uint64_t expected_model_version_id_;
   uint64_t model_regst_desc_id_;
   uint64_t model_tmp_regst_desc_id_;
   std::shared_ptr<RegstWarpper> model_regst_;
   std::shared_ptr<RegstWarpper> model_tmp_regst_;
-  std::priority_queue<std::shared_ptr<RegstWarpper>,
-                      std::vector<std::shared_ptr<RegstWarpper>>,
-                      Minst> in_;
+  std::queue<std::shared_ptr<RegstWarpper>> in_;
 };
 
 }  // namespace oneflow
