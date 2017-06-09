@@ -15,7 +15,8 @@ void CopyActor::ProcessMsgWithKernelCtx(const ActorMsg& msg,
   }
   if (!waiting_in_regst_.empty() && IsWriteReady()) {
     uint64_t piece_id = expected_piece_id();
-    CHECK_EQ(waiting_in_regst_.front()->piece_id(), piece_id);
+    std::shared_ptr<RegstWarpper> regst_wp = waiting_in_regst_.front();
+    CHECK_EQ(regst_wp->piece_id(), piece_id);
     WardKernel(kernel_ctx, [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
       Regst* regst = GetCurWriteableRegst(regst_desc_id);
       if (regst == nullptr) {
@@ -25,14 +26,14 @@ void CopyActor::ProcessMsgWithKernelCtx(const ActorMsg& msg,
         return std::make_shared<LocalRegstWarpper> (regst);
       }
     });
-    ForEachCurWriteableRegst([piece_id](Regst* regst) {
-      regst->set_piece_id(piece_id);
+    ForEachCurWriteableRegst([&regst_wp](Regst* regst) {
+      regst->set_piece_id(regst_wp->piece_id());
+      regst->set_model_version_id(regst_wp->model_version_id());
     });
     CurWriteDone();
-    std::shared_ptr<RegstWarpper> regst = waiting_in_regst_.front();
     ActorMsgBus::Singleton().SendMsg(ActorMsg::BuildMsgForRegstWriter(
-          regst->producer_actor_id(),
-          regst->regst_raw_ptr()));
+          regst_wp->producer_actor_id(),
+          regst_wp->regst_raw_ptr()));
     waiting_in_regst_.pop();
   }
 }
