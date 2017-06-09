@@ -63,7 +63,7 @@ void Actor::ForEachProducedRegst(std::function<void(Regst*)> func) {
   }
 }
 
-int Actor::TryOneReadDone(Regst* regst) {
+int Actor::TryUpdtStateAsFromRegstReader(Regst* regst) {
   auto reading_cnt_it = produced_regst2reading_cnt_.find(regst);
   if (reading_cnt_it == produced_regst2reading_cnt_.end()) { return -1; }
   CHECK_GE(reading_cnt_it->second, 1);

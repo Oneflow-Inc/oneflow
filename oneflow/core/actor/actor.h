@@ -41,7 +41,7 @@ class Actor {
 
   uint64_t expected_piece_id() const { return expected_piece_id_; }
   // Status of Produced Registers
-  int TryOneReadDone(Regst* regst);
+  int TryUpdtStateAsFromRegstReader(Regst* regst);
   Regst* GetCurWriteableRegst(uint64_t regst_desc_id);
   Regst* GetCurWriteableRegst(const std::string& name);
   void ForEachCurWriteableRegst(std::function<void(Regst*)> func);

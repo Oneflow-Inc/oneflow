@@ -54,9 +54,17 @@ void MdUpdtCompActor::HandleBeforeSendInitialModel(
 }
 
 void MdUpdtCompActor::HandleForUpdateModel(
-    const ActorMsg&,
-    const KernelContext&) {
-  TODO();
+    const ActorMsg& actor_msg,
+    const KernelContext& kernel_ctx) {
+  if (actor_msg.msg_type() == ActorMsgType::kCmdMsg) {
+    CHECK(actor_msg.actor_cmd() == ActorCmd::kStop);
+    cur_handle_ = nullptr;
+    TODO();
+  } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
+    TODO();
+  } else {
+    UNEXPECTED_RUN();
+  }
 }
 
 REGISTER_ACTOR(kMdUpdtCompTask, true, MdUpdtCompActor);
