@@ -40,7 +40,6 @@ class JobDesc final {
   Strategy strategy_;
   std::string md_load_snapshot_path_;
   std::string md_save_snapshots_path_;
-  uint32_t batch_size_;
   uint32_t piece_size_;
   bool is_train_;
   FloatingPointType floating_point_type_;
