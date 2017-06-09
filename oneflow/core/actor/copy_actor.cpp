@@ -15,7 +15,7 @@ void CopyActor::ProcessMsgAndWardKernel(const ActorMsg& msg,
   }
   if (!waiting_in_regst_.empty() && IsWriteReady()) {
     uint64_t piece_id = expected_piece_id();
-    CHECK_EQ(waiting_in_regst.front()->piece_id(), piece_id);
+    CHECK_EQ(waiting_in_regst_.front()->piece_id(), piece_id);
     WardKernel(kernel_ctx, [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
       Regst* regst = GetCurWriteableRegst(regst_desc_id);
       if (regst == nullptr) {
