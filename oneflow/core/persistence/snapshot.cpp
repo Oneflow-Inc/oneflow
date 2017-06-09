@@ -41,7 +41,7 @@ void Snapshot::CheckAndConcat() {
         CHECK_EQ(file_names[0], "0");
         env_->RenameFile(file_path, concat_file_path);
       }
-      return;
+      continue;
     }
     // if the children number is more than 1, every child must be a file,
     // and the file name must be {0,1,2 ... n} , n is the part number
