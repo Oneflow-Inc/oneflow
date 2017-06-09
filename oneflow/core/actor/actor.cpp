@@ -33,6 +33,8 @@ void Actor::Init(const TaskProto& task_proto) {
   for (const auto& pair : task_proto.subscribed_regst_desc_id()) {
     CHECK(name2regst_desc_id_.emplace(pair.first, pair.second).second);
   }
+  //
+  expected_piece_id_ = 0;
   // Status of Produced Registers
   for (const auto& regst : produced_regst_vec_) {
     writeable_produced_regst_[regst->regst_desc_id()].push(regst.get());
@@ -52,6 +54,7 @@ void Actor::WardKernel(
       return regst->GetBlobPtrFromLbn(lbn);
     });
   }
+  expected_piece_id_ += 1;
 }
 
 void Actor::ForEachProducedRegst(std::function<void(Regst*)> func) {
@@ -60,7 +63,7 @@ void Actor::ForEachProducedRegst(std::function<void(Regst*)> func) {
   }
 }
 
-int Actor::TryOneReadDone(Regst* regst) {
+int Actor::TryUpdtStateAsFromRegstReader(Regst* regst) {
   auto reading_cnt_it = produced_regst2reading_cnt_.find(regst);
   if (reading_cnt_it == produced_regst2reading_cnt_.end()) { return -1; }
   CHECK_GE(reading_cnt_it->second, 1);
