@@ -8,7 +8,8 @@ namespace oneflow {
 
 enum class ActorCmd {
   kInitializeModel = 0,
-  kSendInitialModel
+  kSendInitialModel,
+  kStop
 };
 
 enum class ActorMsgType {
