@@ -19,7 +19,6 @@ protected:
 
 private:
   std::queue<std::shared_ptr<RegstWarpper>> waiting_in_regst_;
-  uint64_t waiting_piece_id_;
 
 };
 
