@@ -14,9 +14,11 @@ void FwDataCompActor::Init(const TaskProto& task_proto) {
 bool FwDataCompActor::IsReadReady() {
   uint32_t staleness = JobDesc::Singleton().staleness();
   uint32_t num_of_piece_in_batch = JobDesc::Singleton().num_of_piece_in_batch();
+  // More Effective Distributed ML via a Stale Synchronous Parallel Parameter Server
+  uint64_t cur_iteration = in_.front()->piece_id() / num_of_piece_in_batch;
+  uint64_t stale_version = cur_iteration - staleness;
   if (model_regst_ && model_tmp_regst_ && !in_.empty()) {
-    if(model_regst_->model_version_id() + staleness - 1 >= 
-       in_.front()->piece_id() / num_of_piece_in_batch) {
+    if(model_regst_->model_version_id() >= stale_version) {
       return true;
     }
   }
