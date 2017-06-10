@@ -189,7 +189,7 @@ message ModelUpdateOpConf {
 }
 
 message ModelDiffAccOpConf {
-  uint32 minibatch_num = 1;
+  uint32 model_diff_num = 1;
 }
 
 message ModelSaveOpConf {

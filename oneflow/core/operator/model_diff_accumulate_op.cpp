@@ -14,7 +14,7 @@ void ModelDiffAccOp::InitFromOpConf(const OperatorConf& op_conf) {
   EnrollOutputBn("model_diff_acc", false);
 }
 
-const PbMessage& ModelUpdateOp::GetSpecialConf() const {
+const PbMessage& ModelDiffAccOp::GetSpecialConf() const {
   return op_conf().model_update_conf();
 }
 
