@@ -5,6 +5,7 @@
 #include "oneflow/core/graph/model_save_comp_task_node.h"
 #include "oneflow/core/graph/model_save_task_graph.h"
 #include "oneflow/core/graph/model_update_task_graph.h"
+#include "oneflow/core/graph/model_diff_accumulate_task_graph.h"
 #include "oneflow/core/graph/data_task_graph.h"
 #include "oneflow/core/register/register_desc.h"
 #include "oneflow/core/job/job_conf.pb.h"
@@ -117,15 +118,32 @@ void Compiler::BuildModelGraphs(
   str_replace(&chain_tag, '/', '_');
   const std::string dot_path_prefix = DotDir() + "/model/" + chain_tag + "_";
   ParallelPolicy policy = pair.first->parallel_desc()->policy();
+
+  LOG(INFO) << "Build MdDiffAccTaskGraph... for " << chain_tag;
+  auto diff_acc_gph = new MdDiffAccTaskGraph(
+      "md_diff_acc_" + chain_tag,
+      pair.first, pair.second, dot_path_prefix + "model_diff_acc_");
+  ordered_task_gphs_.emplace_back(diff_acc_gph);
+
   LOG(INFO) << "Build MdUpdtTaskGraph... for " << chain_tag;
-  auto updt_gph = new MdUpdtTaskGraph(
-      "md_updt_" + chain_tag,
-      pair.first, pair.second, dot_path_prefix + "model_update_");
-  ordered_task_gphs_.emplace_back(updt_gph);
+  ChainNode* diff_acc_chain = diff_acc_gph->chain_gph()->SoleSinkNode();
+  auto diff_acc_tasks = diff_acc_gph->SortedCompTasksInChain(diff_acc_chain);
+  std::vector<CompTaskNode*> updt_tasks;
+  updt_tasks.reserve(diff_acc_tasks.size());
+  for (CompTaskNode* diff_acc_task : diff_acc_tasks) {
+    auto updt_gph = new MdUpdtTaskGraph(
+        "md_updt_" + diff_acc_task->node_id_str(),
+        diff_acc_task,
+        dot_path_prefix + "model_update_" + diff_acc_task->node_id_str() + "_");
+    ordered_task_gphs_.emplace_back(updt_gph);
+    ChainNode* updt_chain = updt_gph->chain_gph()->SoleSinkNode();
+    auto updt_tasks_in_chain = updt_gph->SortedCompTasksInChain(updt_chain);
+    CHECK_EQ(updt_tasks_in_chain.size(), 1);
+    updt_tasks.push_back(updt_tasks_in_chain[0]);
+  }
+
   if (JobDesc::Singleton().is_train()) {
     LOG(INFO) << "Build MdSaveTaskGraph... for " << chain_tag;
-    ChainNode* updt_chain = updt_gph->chain_gph()->SoleSinkNode();
-    auto updt_tasks = updt_gph->SortedCompTasksInChain(updt_chain);
     if (policy == kDataParallel) { updt_tasks = {updt_tasks.front()}; }
     for (CompTaskNode* update_task : updt_tasks) {
       auto save_gph = new MdSaveTaskGraph(

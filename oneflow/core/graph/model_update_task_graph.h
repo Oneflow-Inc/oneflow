@@ -11,24 +11,19 @@ class MdUpdtTaskGraph final : public TaskGraph {
   MdUpdtTaskGraph() = delete;
   ~MdUpdtTaskGraph() = default;
 
-  MdUpdtTaskGraph(
-      const std::string& name,
-      const ChainNode* data_chain,
-      const std::vector<CompTaskNode*>& sorted_fw_comptasks4data_chain,
-      const std::string& dot_path_prefix);
-  
-  CompTaskNode* GetFwTaskFromParallelId(uint64_t parallel_id) const {
-    return parallel_id2fw_task_.at(parallel_id);
-  }
+  MdUpdtTaskGraph(const std::string& name,
+                  CompTaskNode* diff_acc_task,
+                  const std::string& dot_path_prefix);
+
+  CompTaskNode* diff_acc_task() const { return diff_acc_task_; }
 
  private:
-   void BuildTaskGraph(const ChainNode* data_chain,
-                       const std::string& dot_path_prefix);
+  void BuildTaskGraph(const std::string& dot_path_prefix);
 
-   HashMap<uint64_t, CompTaskNode*> parallel_id2fw_task_;
+  CompTaskNode* diff_acc_task_;
 
 };
 
 } // namespace oneflow
 
-#endif // ONEFLOW_CORE_GRAPH_MODEL_UPDATE_TASK_GRAPH_H_
+#endif // ONEFLOW_CORE_GRAPH_MODEL_SAVE_TASK_GRAPH_H_

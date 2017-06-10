@@ -39,7 +39,8 @@ void MdSaveTaskGraph::BuildTaskGraph(const std::string& dot_path_prefix) {
     auto model_save_comp_task_node = 
         dynamic_cast<MdSaveCompTaskNode*>(node.get());
     if (model_save_comp_task_node != nullptr) {
-      model_save_comp_task_node->set_related_update_task_parallel_id(update_task_->parallel_id());
+      model_save_comp_task_node->set_related_update_task_parallel_id(
+          update_task_->related_diff_acc_task_parallel_id());
     }
   }
 }
