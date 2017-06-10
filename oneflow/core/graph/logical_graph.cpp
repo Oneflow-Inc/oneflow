@@ -50,10 +50,10 @@ void LogicalGraph::NaiveBuildGraphStruct(
 
 void LogicalGraph::FillNodeWithParallelDesc(const Strategy& strategy_conf) {
   HashMap<std::string, LogicalNode*> op_name2node;
-  for (const std::unique_ptr<LogicalNode>& logical_node : nodes()) {
+  ForEachNode([&](LogicalNode* logical_node) {
     const std::string& op_name = logical_node->op()->op_name();
-    CHECK(op_name2node.emplace(op_name, logical_node.get()).second);
-  }
+    CHECK(op_name2node.emplace(op_name, logical_node).second);
+  });
   for (int gid = 0; gid < strategy_conf.placement_group_size(); ++gid) {
     const PlacementGroup& cur_group = strategy_conf.placement_group(gid);
     for (int li = 0; li < cur_group.op_set().op_name_size(); ++li) {
@@ -79,7 +79,7 @@ void LogicalGraph::AddCloneNodes(
 void LogicalGraph::CollectCloneInfos(
     std::vector<CloneInfo>* clone_infos,
     const HashMap<LogicalEdge*, std::string>& edge2lbn) {
-  for (const std::unique_ptr<LogicalNode>& cur_node : nodes()) {
+  ForEachNode([&](LogicalNode* cur_node) {
     HashMap<std::string, std::vector<LogicalEdge*>> lbn2edges;
     for (LogicalEdge* edge : cur_node->out_edges()) {
       lbn2edges[edge2lbn.at(edge)].push_back(edge);
@@ -97,11 +97,11 @@ void LogicalGraph::CollectCloneInfos(
       // Set clone_info
       CloneInfo clone_info;
       clone_info.clone_op = clone_op;
-      clone_info.pred_node = cur_node.get();
+      clone_info.pred_node = cur_node;
       clone_info.edges = std::move(edges);
       clone_infos->push_back(clone_info);
     }
-  }
+  });
 }
 
 void LogicalGraph::AddOneCloneNode(

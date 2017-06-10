@@ -26,8 +26,8 @@ class Compiler final {
 
  private:
   Compiler() = default;
-  void ForEachChainNode(std::function<void(ChainNode*)> func);
-  void ForEachStageNode(std::function<void(StageNode*)> func);
+  void ConstForEachChainNode(std::function<void(const ChainNode*)> func);
+  void ConstForEachStageNode(std::function<void(const StageNode*)> func);
   void ForEachTaskNode(std::function<void(TaskNode*)> func);
   
   void BuildGraphs();
@@ -40,27 +40,27 @@ class Compiler final {
 
 };
 
-void Compiler::ForEachChainNode(std::function<void(ChainNode*)> func) {
+void Compiler::ConstForEachChainNode(std::function<void(const ChainNode*)> func) {
   for (const auto& task_gph : ordered_task_gphs_) {
-    for (const auto& chain_node : task_gph->chain_gph()->nodes()) {
-      func(chain_node.get());
-    }
+    task_gph->chain_gph()->ConstForEachNode([&](const ChainNode* chain) {
+      func(chain);
+    });
   }
 }
 
-void Compiler::ForEachStageNode(std::function<void(StageNode*)> func) {
+void Compiler::ConstForEachStageNode(std::function<void(const StageNode*)> func) {
   for (const auto& task_gph : ordered_task_gphs_) {
-    for (const auto& stage_node : task_gph->stage_gph()->nodes()) {
-      func(stage_node.get());
-    }
+    task_gph->stage_gph()->ConstForEachNode([&](const StageNode* stage) {
+      func(stage);
+    });
   }
 }
 
 void Compiler::ForEachTaskNode(std::function<void(TaskNode*)> func) {
   for (const auto& task_gph : ordered_task_gphs_) {
-    for (const auto& task_node : task_gph->nodes()) {
-      func(task_node.get());
-    }
+    task_gph->ForEachNode([&](TaskNode* task) {
+      func(task);
+    });
   }
 }
 
@@ -90,12 +90,12 @@ void Compiler::BuildGraphs() {
   // construct data_chain2sorted_fw_comp_tasks
   HashMap<const ChainNode*, std::vector<CompTaskNode*>>
       data_chain2sorted_fw_comp_tasks;
-  for (const auto& node : data_task_gph->nodes()) {
-    auto fw_node = dynamic_cast<CompTaskNode*>(node.get());
+  data_task_gph->ForEachNode([&](TaskNode* node) {
+    auto fw_node = dynamic_cast<CompTaskNode*>(node);
     if (fw_node == nullptr || fw_node->IsBpNode()
-                           || fw_node->IsLossNode()) { continue; }
+                           || fw_node->IsLossNode()) { return; }
     data_chain2sorted_fw_comp_tasks[fw_node->chain_node()].push_back(fw_node);
-  }
+  });
   for (auto& pair : data_chain2sorted_fw_comp_tasks) {
     SortByParallelId(&(pair.second));
   }
@@ -104,7 +104,7 @@ void Compiler::BuildGraphs() {
     BuildModelGraphs(pair);
   }
   // all exec_graph 2 dot
-  ForEachTaskNode([](TaskNode* node) {
+  ForEachTaskNode([](const TaskNode* node) {
     std::string file_path = DotDir() + "/exec/" + node->node_id_str() + ".dot";
     node->exec_gph().ToDotFile(file_path);
   });
@@ -153,20 +153,20 @@ void Compiler::EraseMeaningLessRegsts() {
 
 void Compiler::GenPlanFile(const std::string& plan_filepath) {
   Plan plan;
-  ForEachTaskNode([&plan](TaskNode* node) {
+  ForEachTaskNode([&plan](const TaskNode* node) {
     if (!node->IsMeaningLess()) {
       node->ToProto(plan.mutable_task()->Add());
     }
   });
   OpMgr::Singleton().AllOpToProto(plan.mutable_op());
   JobDesc::Singleton().ToProto(plan.mutable_job_desc());
-  ForEachChainNode([&plan](ChainNode* node) {
+  ConstForEachChainNode([&plan](const ChainNode* node) {
     for (std::shared_ptr<const Operator> op : node->op_vec()) {
       CHECK(plan.mutable_op_name2device_type()->insert(
           {op->op_name(), node->parallel_desc()->device_type()}).second);
     }
   });
-  ForEachStageNode([&plan](StageNode* node) {
+  ConstForEachStageNode([&plan](const StageNode* node) {
     auto pbmap = plan.mutable_machine_id2op_name_set();
     for (std::shared_ptr<const Operator> op : node->chain_node()->op_vec()) {
       (*pbmap)[node->machine_id()].add_op_name(op->op_name());
