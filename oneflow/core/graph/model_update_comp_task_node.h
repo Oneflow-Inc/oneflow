@@ -11,6 +11,20 @@ class MdUpdtCompTaskNode final : public CompTaskNode {
   MdUpdtCompTaskNode() = default;
   ~MdUpdtCompTaskNode() = default;
 
+  uint64_t related_diff_acc_task_parallel_id() {
+    return related_diff_acc_task_parallel_id_;
+  }
+
+  void set_related_diff_acc_task_parallel_id(uint64_t parallel_id) {
+    related_diff_acc_task_parallel_id_ = parallel_id;
+  }
+
+  void ToProto(TaskProto* ret) const override {
+    TaskNode::ToProto(ret);
+    ret->set_parallel_id(related_diff_acc_task_parallel_id_);
+  }
+
+
  private:
   void BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) override;
   void InferShapeOfBlobsInProducedRegsts(TaskGraph* gph) override;
@@ -20,6 +34,7 @@ class MdUpdtCompTaskNode final : public CompTaskNode {
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return of_make_unique<MdUpdtCompTaskNode> ();
   }
+  uint64_t related_diff_acc_task_parallel_id_;
 
 };
 
