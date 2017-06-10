@@ -77,7 +77,7 @@ void TaskNode::TakeOverRegstDesc(TaskNode* rhs,
 void TaskNode::EraseProducedEmptyRegsts() {
   EraseIf<std::string, std::shared_ptr<RegstDesc>> (&produced_regst_descs_, []
       (HashMap<std::string, std::shared_ptr<RegstDesc>>::iterator it) {
-    return it->second->lbn2shape().empty();
+    return it->second->NumOfLbn() == 0;
   });
 }
 
