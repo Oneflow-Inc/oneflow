@@ -21,11 +21,7 @@ class Kernel {
   OF_DISALLOW_COPY_AND_MOVE(Kernel);
   virtual ~Kernel() = default;
 
-  void InitFromOpProto(const OperatorProto& op_proto) {
-    Operator* op = CreateOp(op_proto.op_conf().op_type_case());
-    op->InitFromProto(op_proto);
-    op_.reset(op);
-  }
+  void InitFromOpProto(const OperatorProto& op_proto);
 
   void InitModelAndModelTmpBlobs(
       const KernelContext& ctx,
@@ -57,12 +53,12 @@ using KernelWardFunc = void (Kernel::*)(
 
 #define INSTANTIATE_CPU_KERNEL_CLASS(classname) \
   char gInstantiationGuardCPU##classname; \
-  template class classname<DeviceType::kCPU, FloatingPointType::kFloat>; \
-  template class classname<DeviceType::kCPU, FloatingPointType::kDouble>;
+  template class classname<DeviceType::kCPU, float>; \
+  template class classname<DeviceType::kCPU, double>;
 #define INSTANTIATE_GPU_KERNEL_CLASS(classname) \
   char gInstantiationGuardGPU##classname; \
-  template class classname<DeviceType::kGPU, FloatingPointType::kFloat>; \
-  template class classname<DeviceType::kGPU, FloatingPointType::kDouble>;
+  template class classname<DeviceType::kGPU, float>; \
+  template class classname<DeviceType::kGPU, double>;
 
 }  // namespace oneflow
 

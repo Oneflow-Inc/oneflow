@@ -68,10 +68,10 @@ struct GpuDoubleKernelRegister {
 };
 
 #define REGISTER_KERNEL(OpTypeCase, KernelType) \
-  static CpuFloatKernelRegister<OpTypeCase, KernelType<DeviceType::kCPU, FloatingPointType::kFloat>> g_##KernelType##_cpu_float_regst_var; \
-  static CpuDoubleKernelRegister<OpTypeCase, KernelType<DeviceType::kCPU, FloatingPointType::kDouble>> g_##KernelType##_cpu_double_regst_var; \
-  static GpuFloatKernelRegister<OpTypeCase, KernelType<DeviceType::kGPU, FloatingPointType::kFloat>> g_##KernelType##_gpu_float_regst_var; \
-  static GpuDoubleKernelRegister<OpTypeCase, KernelType<DeviceType::kGPU, FloatingPointType::kDouble>> g_##KernelType##_gpu_double_regst_var;
+  static CpuFloatKernelRegister<OpTypeCase, KernelType<DeviceType::kCPU, float>> g_##KernelType##_cpu_float_regst_var; \
+  static CpuDoubleKernelRegister<OpTypeCase, KernelType<DeviceType::kCPU, double>> g_##KernelType##_cpu_double_regst_var; \
+  static GpuFloatKernelRegister<OpTypeCase, KernelType<DeviceType::kGPU, float>> g_##KernelType##_gpu_float_regst_var; \
+  static GpuDoubleKernelRegister<OpTypeCase, KernelType<DeviceType::kGPU, double>> g_##KernelType##_gpu_double_regst_var;
 
 }  // namespace oneflow
 
