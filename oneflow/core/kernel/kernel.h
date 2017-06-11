@@ -44,6 +44,8 @@ class Kernel {
 
  protected:
   Kernel() = default;
+  const Operator* op() const { return op_.get(); }
+
  private:
   std::unique_ptr<const Operator> op_;
 };
