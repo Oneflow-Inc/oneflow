@@ -6,7 +6,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, FloatingPointType floating_point_type>
+template<DeviceType device_type, typename floating_point_type>
 class CopyHdKernel final {
 };
 
