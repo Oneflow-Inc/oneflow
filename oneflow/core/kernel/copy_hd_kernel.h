@@ -11,7 +11,21 @@ class CopyHdKernel final {
 };
 
 template<typename floating_point_type>
-class CopyHdKernel<DeviceType::kGPU, floating_point_type>  final 
+class CopyHdKernel<DeviceType::kCPU, floating_point_type> final
+    : public Kernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CopyHdKernel);
+  CopyHdKernel() = default;
+  ~CopyHdKernel() = default;
+
+  void Forward(const KernelContext&,
+               std::function<Blob*(const std::string&)>) const override {}
+  void Backward(const KernelContext&,
+                std::function<Blob*(const std::string&)>) const override {}
+};
+
+template<typename floating_point_type>
+class CopyHdKernel<DeviceType::kGPU, floating_point_type> final 
     : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CopyHdKernel);
