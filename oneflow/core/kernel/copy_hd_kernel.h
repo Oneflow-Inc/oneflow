@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_KERNEL_COPY_HD_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_COPY_HD_KERNEL_H_
 
+#include <string>
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_manager.h"
 
@@ -25,7 +26,7 @@ class CopyHdKernel<DeviceType::kCPU, floating_point_type> final
 };
 
 template<typename floating_point_type>
-class CopyHdKernel<DeviceType::kGPU, floating_point_type> final 
+class CopyHdKernel<DeviceType::kGPU, floating_point_type> final
     : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CopyHdKernel);

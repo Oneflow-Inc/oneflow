@@ -12,18 +12,18 @@ void CopyHdKernel<DeviceType::kGPU, floating_point_type>::Forward(
   Blob* in_blob = BnInOp2BlobPtr(ibn);
   const std::string& obn = op()->SoleObn();
   Blob* out_blob = BnInOp2BlobPtr(obn);
-  
+
   const CopyHdOpConf& copy_hd_conf = op()->op_conf().copy_hd_conf();
-  
+
   if (copy_hd_conf.type() == copy_hd_conf.H2D) {
-    cudaMemcpyAsync(out_blob->mut_dptr(), in_blob->dptr(), 
+    cudaMemcpyAsync(out_blob->mut_dptr(), in_blob->dptr(),
                     in_blob->shape().elem_cnt()*sizeof(floating_point_type),
                     cudaMemcpyHostToDevice,
                     *(ctx.cuda_stream));
   } else {
-    cudaMemcpyAsync(out_blob->mut_dptr(), in_blob->dptr(), 
+    cudaMemcpyAsync(out_blob->mut_dptr(), in_blob->dptr(),
                     in_blob->shape().elem_cnt()*sizeof(floating_point_type),
-                    cudaMemcpyDeviceToHost, 
+                    cudaMemcpyDeviceToHost,
                     *(ctx.cuda_stream));
   }
 }
@@ -40,12 +40,12 @@ void CopyHdKernel<DeviceType::kGPU, floating_point_type>::Backward(
   const CopyHdOpConf& copy_hd_conf = op()->op_conf().copy_hd_conf();
 
   if (copy_hd_conf.type() == copy_hd_conf.H2D) {
-    cudaMemcpyAsync(out_blob->mut_dptr(), in_blob->dptr(), 
+    cudaMemcpyAsync(out_blob->mut_dptr(), in_blob->dptr(),
                     in_blob->shape().elem_cnt()*sizeof(floating_point_type),
                     cudaMemcpyHostToDevice,
                     *(ctx.cuda_stream));
   } else {
-    cudaMemcpyAsync(out_blob->mut_dptr(), in_blob->dptr(), 
+    cudaMemcpyAsync(out_blob->mut_dptr(), in_blob->dptr(),
                     in_blob->shape().elem_cnt()*sizeof(floating_point_type),
                     cudaMemcpyDeviceToHost,
                     *(ctx.cuda_stream));
