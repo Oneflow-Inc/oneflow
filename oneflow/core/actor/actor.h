@@ -39,10 +39,11 @@ class Actor {
     return name2regst_desc_id_.at(name);
   }
 
+  std::unique_ptr<KernelCtx>& mut_kernel_ctx() { return kernel_ctx_; }
+
   // Status of Produced Registers
   uint64_t expected_piece_id() const { return expected_piece_id_; }
   void AsyncWardKernelAndSendMsgToRegstReader(
-      const KernelCtx& kernel_ctx,
       std::function<std::shared_ptr<RegstWarpper>(uint64_t)> Regst4RegstDescId);
   int TryUpdtStateAsFromRegstReader(Regst* regst);
   Regst* GetCurWriteableRegst(uint64_t regst_desc_id);
@@ -62,6 +63,8 @@ class Actor {
   std::vector<ExecKernel> exec_kernel_vec_;
   std::vector<std::unique_ptr<Regst>> produced_regst_vec_;
   HashMap<std::string, uint64_t> name2regst_desc_id_;
+
+  std::unique_ptr<KernelCtx> kernel_ctx_;
   
   // Status of Produced Registers
   uint64_t expected_piece_id_;

@@ -26,7 +26,7 @@ bool FwDataCompActor::IsReadReady() {
 
 void FwDataCompActor::ProcessMsg(const ActorMsg& msg,
                                  const ThreadContext& thread_ctx) {
-  CudaKernelCtx kernel_ctx(thread_ctx.compute_cuda_stream, nullptr, nullptr);
+  CudaKernelCtx kernel_ctx(nullptr, nullptr, nullptr);
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     TODO();
   }
