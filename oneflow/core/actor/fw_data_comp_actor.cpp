@@ -25,7 +25,7 @@ bool FwDataCompActor::IsReadReady() {
 
 void FwDataCompActor::ProcessMsg(const ActorMsg& msg,
                                  const ThreadContext& thread_ctx) {
-  KernelContext kernel_ctx;
+  KernelCtx kernel_ctx;
   kernel_ctx.cuda_stream = thread_ctx.compute_cuda_stream;
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     TODO();
@@ -55,7 +55,7 @@ void FwDataCompActor::ProcessMsg(const ActorMsg& msg,
   }
 }
 
-void FwDataCompActor::WardKernelAndSendMsg(const KernelContext& kernel_ctx) {
+void FwDataCompActor::WardKernelAndSendMsg(const KernelCtx& kernel_ctx) {
   CHECK_EQ(in_.front()->piece_id(), expected_piece_id());
   ready_in_regst_[in_.front()->regst_desc_id()] = in_.front();
   uint64_t piece_id = in_.front()->piece_id();

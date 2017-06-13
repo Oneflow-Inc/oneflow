@@ -6,7 +6,7 @@ namespace oneflow {
 
 void CopyCommNetActor::ProcessMsg(const ActorMsg& msg,
                                   const ThreadContext&) {
-  KernelContext kernel_ctx;
+  KernelCtx kernel_ctx;
   ProcessMsgWithKernelCtx(msg, kernel_ctx);
 }
 

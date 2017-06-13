@@ -34,7 +34,7 @@ class Actor {
 
   Actor() = default;
   void WardKernel(
-      const KernelContext& kernel_ctx,
+      const KernelCtx& kernel_ctx,
       std::function<std::shared_ptr<RegstWarpper>(uint64_t)> Regst4RegstDescId);
   void ForEachProducedRegst(std::function<void(Regst*)>);
   uint64_t RegstDescId4Name(const std::string& name) const {

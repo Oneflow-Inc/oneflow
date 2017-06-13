@@ -67,9 +67,11 @@ struct GpuDoubleKernelRegister {
   }
 };
 
-#define REGISTER_KERNEL(OpTypeCase, KernelType) \
+#define REGISTER_CPU_KERNEL(OpTypeCase, KernelType) \
   static CpuFloatKernelRegister<OpTypeCase, KernelType<DeviceType::kCPU, float>> g_##KernelType##_cpu_float_regst_var; \
-  static CpuDoubleKernelRegister<OpTypeCase, KernelType<DeviceType::kCPU, double>> g_##KernelType##_cpu_double_regst_var; \
+  static CpuDoubleKernelRegister<OpTypeCase, KernelType<DeviceType::kCPU, double>> g_##KernelType##_cpu_double_regst_var;
+
+#define REGISTER_GPU_KERNEL(OpTypeCase, KernelType) \
   static GpuFloatKernelRegister<OpTypeCase, KernelType<DeviceType::kGPU, float>> g_##KernelType##_gpu_float_regst_var; \
   static GpuDoubleKernelRegister<OpTypeCase, KernelType<DeviceType::kGPU, double>> g_##KernelType##_gpu_double_regst_var;
 
