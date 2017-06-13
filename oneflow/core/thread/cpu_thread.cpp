@@ -11,7 +11,7 @@ CpuThread::CpuThread() {
   });
   mut_actor_thread() = std::thread([this]() {
     ThreadContext ctx;
-    ctx.cpu_stream_ = &cpu_stream_;
+    ctx.cpu_stream = &cpu_stream_;
     PollMsgChannel(ctx);
   });
 }
