@@ -14,6 +14,25 @@ void BpDataCompActor::Init(const TaskProto& task_proto) {
   expected_model_version_id_ = 0;
 }
 
+bool BpDataCompActor::IsReadReady() {
+  if (read_in_.size() != 6) {
+    return false;
+  }
+  for (auto const& pair : read_in_) {
+    if (pair.second.empty()) {
+      return false;
+    }
+  }
+  if (read_in_.at(model_regst_desc_id_).front()->model_version_id() != 
+      read_in_.at(activation_regst_desc_id_).front()->model_version_id()) {
+    ActorMsgBus::Singleton().SendMsg(ActorMsg::BuildMsgForRegstWriter(
+          read_in_.at(model_regst_desc_id_).front()->producer_actor_id(),
+          read_in_.at(model_regst_desc_id_).front()->regst_raw_ptr()));
+    read_in_.at(model_regst_desc_id_).pop();
+  }
+  return !read_in_.at(model_regst_desc_id_).empty();
+}
+
 void BpDataCompActor::ProcessMsg(const ActorMsg& msg,
                                  const ThreadContext& thread_ctx) {
   KernelContext kernel_ctx;
@@ -31,7 +50,7 @@ void BpDataCompActor::ProcessMsg(const ActorMsg& msg,
     }
     read_in_[model_tmp_regst_desc_id_].push(regst_wp);
   }
-  while (read_in_.size() == 6 && IsWriteReady()) {
+  while (IsReadReady() && IsWriteReady()) {
     WardKernelAndSendMsg(kernel_ctx);
   }
 }
@@ -64,14 +83,6 @@ void BpDataCompActor::WardKernelAndSendMsg(const KernelContext& kernel_ctx) {
             pair.second.front()->producer_actor_id(),
             pair.second.front()->regst_raw_ptr()));
       pair.second.pop();
-    }
-  }
-  if (!read_in_.at(activation_regst_desc_id_).empty()) {
-    if (cur_model != read_in_.at(activation_regst_desc_id_).front()->model_version_id()) {
-      ActorMsgBus::Singleton().SendMsg(ActorMsg::BuildMsgForRegstWriter(
-            read_in_.at(model_regst_desc_id_).front()->producer_actor_id(),
-            read_in_.at(model_regst_desc_id_).front()->regst_raw_ptr()));
-      read_in_.at(model_regst_desc_id_).pop();
     }
   }
 }

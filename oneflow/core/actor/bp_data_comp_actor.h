@@ -15,6 +15,7 @@ public:
   void ProcessMsg(const ActorMsg&, const ThreadContext&) override;
 
 private:
+  bool IsReadReady();
   void WardKernelAndSendMsg(const KernelContext&);
   
   uint64_t expected_model_version_id_;
