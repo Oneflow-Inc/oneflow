@@ -7,7 +7,8 @@
 namespace oneflow {
 
 enum class ActorCmd {
-  kInitializeModel = 0,
+  kInitKernelCtx = 0,
+  kInitializeModel,
   kSendInitialModel,
   kStop
 };
