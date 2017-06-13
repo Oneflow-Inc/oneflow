@@ -11,8 +11,10 @@ class CudaKernelCtx final : public KernelCtx {
   CudaKernelCtx() = delete;
   ~CudaKernelCtx() = default;
 
-  CudaKernelCtx(const cudaStream_t* cuda_stream) {
+  CudaKernelCtx(const cudaStream_t* cuda_stream,
+                const cublasHandle_t* cublas_handle) {
     set_cuda_stream(cuda_stream);
+    set_cublas_handle(cublas_handle);
   }
 
   void AddCallBack(std::function<void()> callback) const override {

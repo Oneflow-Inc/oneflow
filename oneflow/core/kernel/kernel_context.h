@@ -13,6 +13,7 @@ class KernelCtx {
 
   Channel<std::function<void()>>* cpu_stream() const { return cpu_stream_; }
   const cudaStream_t& cuda_stream() const { return *cuda_stream_; }
+  const cublasHandle_t& cublas_handle() const { return *cublas_handle_; }
 
   virtual void AddCallBack(std::function<void()>) const = 0;
 
@@ -25,10 +26,14 @@ class KernelCtx {
   void set_cuda_stream(const cudaStream_t* val) {
     cuda_stream_ = val;
   }
+  void set_cublas_handle(const cublasHandle_t* val) {
+    cublas_handle_ = val;
+  }
 
  private:
   Channel<std::function<void()>>* cpu_stream_;
   const cudaStream_t* cuda_stream_;
+  const cublasHandle_t* cublas_handle_;
 
 };
 

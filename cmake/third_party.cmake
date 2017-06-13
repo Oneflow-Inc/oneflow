@@ -27,6 +27,7 @@ set(oneflow_third_party_libs
     ${JPEG_STATIC_LIBRARIES}
     ${PNG_STATIC_LIBRARIES}
     ${JSONCPP_STATIC_LIBRARIES}
+    ${CUDA_CUBLAS_LIBRARIES}
 )
 
 if(WIN32)
