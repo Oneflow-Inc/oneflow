@@ -54,6 +54,7 @@ class Actor {
     if (!it->second.empty()) { writeable_produced_regst_desc_num_ -= 1; }
     writeable_produced_regst_.erase(it);
   }
+  int64_t total_reading_cnt() const { return total_reading_cnt_; }
 
  private:
   uint64_t actor_id_;
@@ -67,6 +68,7 @@ class Actor {
   HashMap<uint64_t, std::queue<Regst*>> writeable_produced_regst_; // <regst_desc_id, regst>
   uint64_t writeable_produced_regst_desc_num_;
   HashMap<Regst*, int64_t> produced_regst2reading_cnt_;
+  int64_t total_reading_cnt_;
 
 };
 
