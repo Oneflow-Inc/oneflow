@@ -4,6 +4,7 @@
 
 namespace oneflow {
 
+// need review
 void CopyActor::Init(const TaskProto& task_proto) {
   Actor::Init(task_proto);
 }

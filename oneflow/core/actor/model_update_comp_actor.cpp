@@ -3,6 +3,7 @@
 
 namespace oneflow {
 
+// need review
 void MdUpdtCompActor::Init(const TaskProto& task_proto) {
   CompActor::Init(task_proto);
   cur_handle_ = &MdUpdtCompActor::HandleBeforeInitializeModel;
