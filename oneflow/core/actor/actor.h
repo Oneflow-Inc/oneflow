@@ -3,6 +3,7 @@
 
 #include <queue>
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/cuda_stream_handle.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_manager.h"
 #include "oneflow/core/kernel/cpu_kernel_context.h"
@@ -39,12 +40,14 @@ class Actor {
     return name2regst_desc_id_.at(name);
   }
 
+  const KernelCtx& kernel_ctx() const { return *kernel_ctx_; }
   std::unique_ptr<KernelCtx>& mut_kernel_ctx() { return kernel_ctx_; }
 
   // Status of Produced Registers
   uint64_t expected_piece_id() const { return expected_piece_id_; }
   void AsyncWardKernelAndSendMsgToRegstReader(
       std::function<std::shared_ptr<RegstWarpper>(uint64_t)> Regst4RegstDescId);
+  void AsyncSendMsgToRegstReader();
   int TryUpdtStateAsFromRegstReader(Regst* regst);
   Regst* GetCurWriteableRegst(uint64_t regst_desc_id);
   Regst* GetCurWriteableRegst(const std::string& name);

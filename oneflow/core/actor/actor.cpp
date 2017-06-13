@@ -55,6 +55,10 @@ void Actor::AsyncWardKernelAndSendMsgToRegstReader(
     });
   }
   expected_piece_id_ += 1;
+  AsyncSendMsgToRegstReader();
+}
+
+void Actor::AsyncSendMsgToRegstReader() {
   for (auto& pair : writeable_produced_regst_) {
     Regst* regst = pair.second.front();
     kernel_ctx_->AddCallBack([regst]() {
