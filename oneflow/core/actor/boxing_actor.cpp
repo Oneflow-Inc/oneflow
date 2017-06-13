@@ -11,7 +11,7 @@ void BoxingActor::Init(const TaskProto& task_proto) {
 
 void BoxingActor::ProcessMsg(const ActorMsg& msg,
                              const ThreadContext& thread_ctx) {
-  KernelContext kernel_ctx;
+  KernelCtx kernel_ctx;
   if (TryUpdtStateAsFromRegstReader(msg.regst_warpper()->regst_raw_ptr()) != 0) {
     std::shared_ptr<RegstWarpper> regst_wp = msg.regst_warpper();
     auto waiting_in_regst_it = waiting_in_regst_.find(regst_wp->piece_id());
@@ -36,7 +36,7 @@ void BoxingActor::ProcessMsg(const ActorMsg& msg,
   }
 }
 
-void BoxingActor::WardKernelAndSendMsg(const KernelContext& kernel_ctx) {
+void BoxingActor::WardKernelAndSendMsg(const KernelCtx& kernel_ctx) {
   uint64_t piece_id = ready_in_regst_.front().first;
   WardKernel(kernel_ctx, [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
     Regst* regst = GetCurWriteableRegst(regst_desc_id);

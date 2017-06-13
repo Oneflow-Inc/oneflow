@@ -44,7 +44,7 @@ void Actor::Init(const TaskProto& task_proto) {
 }
 
 void Actor::WardKernel(
-    const KernelContext& kernel_ctx,
+    const KernelCtx& kernel_ctx,
     std::function<std::shared_ptr<RegstWarpper>(uint64_t)> Regst4RegstDescId) {
   for (const ExecKernel& ek : exec_kernel_vec_) {
     (ek.kernel->*ward_func_)(kernel_ctx, [&](const std::string& bn_in_op) {

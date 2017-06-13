@@ -9,7 +9,7 @@ void Kernel::InitFromOpProto(const OperatorProto& op_proto) {
 }
 
 void Kernel::InitModelAndModelTmpBlobs(
-    const KernelContext& ctx,
+    const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> Blob4BnInOp) const {
   TODO();
 }

@@ -12,14 +12,14 @@ void MdUpdtCompActor::Init(const TaskProto& task_proto) {
 
 void MdUpdtCompActor::ProcessMsg(const ActorMsg& actor_msg,
                                  const ThreadContext& thread_ctx) {
-  KernelContext kernel_ctx;
+  KernelCtx kernel_ctx;
   kernel_ctx.cuda_stream = thread_ctx.compute_cuda_stream;
   (this->*cur_handle_)(actor_msg, kernel_ctx);
 }
 
 void MdUpdtCompActor::HandleBeforeInitializeModel(
     const ActorMsg& actor_msg,
-    const KernelContext& kernel_ctx) {
+    const KernelCtx& kernel_ctx) {
   CHECK(actor_msg.actor_cmd() == ActorCmd::kInitializeModel);
   Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
   model_regst->set_model_version_id(0);
@@ -46,7 +46,7 @@ void MdUpdtCompActor::HandleBeforeInitializeModel(
 
 void MdUpdtCompActor::HandleBeforeSendInitialModel(
     const ActorMsg& actor_msg,
-    const KernelContext& kernel_ctx) {
+    const KernelCtx& kernel_ctx) {
   CHECK(actor_msg.actor_cmd() == ActorCmd::kSendInitialModel);
   CurWriteDone();
   SetReadOnlyForRegstDescId(model_tmp_regst_desc_id_);
@@ -55,7 +55,7 @@ void MdUpdtCompActor::HandleBeforeSendInitialModel(
 
 void MdUpdtCompActor::HandleForUpdateModel(
     const ActorMsg& actor_msg,
-    const KernelContext& kernel_ctx) {
+    const KernelCtx& kernel_ctx) {
   if (actor_msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK(actor_msg.actor_cmd() == ActorCmd::kStop);
     TODO();
@@ -69,7 +69,7 @@ void MdUpdtCompActor::HandleForUpdateModel(
 
 void MdUpdtCompActor::ProcessRegstFromMsg(
     std::shared_ptr<RegstWarpper> regst_warpper,
-    const KernelContext& kernel_ctx) {
+    const KernelCtx& kernel_ctx) {
   if (TryUpdtStateAsFromRegstReader(regst_warpper->regst_raw_ptr()) != 0) {
     waiting_model_diff_acc_queue_.push(regst_warpper);
   }

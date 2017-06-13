@@ -9,12 +9,9 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/operator_manager.h"
 #include "oneflow/core/operator/operator.pb.h"
+#include "oneflow/core/kernel/kernel_context.h"
 
 namespace oneflow {
-
-struct KernelContext {
-  const cudaStream_t* cuda_stream;
-};
 
 class Kernel {
  public:
@@ -24,17 +21,17 @@ class Kernel {
   void InitFromOpProto(const OperatorProto& op_proto);
 
   void InitModelAndModelTmpBlobs(
-      const KernelContext& ctx,
+      const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> Blob4BnInOp) const;
 
   // for Forward / Bp Calculation in FwExecGragh node and BpExecGragh node
   // through bn_in_op2blob_ptr function get the input blob and output blob
   // the Kernel will using the input blob calculate the result and fill output
   virtual void Forward(
-      const KernelContext& ctx,
+      const KernelCtx& ctx,
       std::function<Blob*(const std::string&)>) const = 0;
   virtual void Backward(
-      const KernelContext& ctx,
+      const KernelCtx& ctx,
       std::function<Blob*(const std::string&)>) const = 0;
 
   //
@@ -51,7 +48,7 @@ class Kernel {
 };
 
 using KernelWardFunc = void (Kernel::*)(
-    const KernelContext&, std::function<Blob*(const std::string&)>) const;
+    const KernelCtx&, std::function<Blob*(const std::string&)>) const;
 
 #define INSTANTIATE_CPU_KERNEL_CLASS(classname) \
   char gInstantiationGuardCPU##classname; \
