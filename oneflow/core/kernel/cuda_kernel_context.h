@@ -17,9 +17,7 @@ class CudaKernelCtx final : public KernelCtx {
     set_cublas_handle(cublas_handle);
   }
 
-  void AddCallBack(std::function<void()> callback) const override {
-    TODO();
-  }
+  void AddCallBack(std::function<void()> callback) const override;
 
  private:
 };

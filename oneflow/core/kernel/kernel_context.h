@@ -18,7 +18,9 @@ class KernelCtx {
   virtual void AddCallBack(std::function<void()>) const = 0;
 
  protected:
-  KernelCtx() : cpu_stream_(nullptr), cuda_stream_(nullptr) {}
+  KernelCtx() : cpu_stream_(nullptr),
+                cuda_stream_(nullptr),
+                cublas_handle_(nullptr) {}
 
   void set_cpu_stream(Channel<std::function<void()>>* val) {
     cpu_stream_ = val;
