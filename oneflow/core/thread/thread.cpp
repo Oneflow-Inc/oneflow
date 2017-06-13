@@ -3,15 +3,11 @@
 namespace oneflow {
 
 Thread::~Thread() {
-  Join();
+  actor_thread_.join();
 }
 
 void Thread::AddActor(const TaskProto&) {
   TODO();
-}
-
-void Thread::Join() {
-  thread_.join();
 }
 
 void Thread::PollMsgChannel(const ThreadContext& thread_ctx) {

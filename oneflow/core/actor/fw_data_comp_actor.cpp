@@ -25,8 +25,7 @@ bool FwDataCompActor::IsReadReady() {
 
 void FwDataCompActor::ProcessMsg(const ActorMsg& msg,
                                  const ThreadContext& thread_ctx) {
-  KernelCtx kernel_ctx;
-  kernel_ctx.cuda_stream = thread_ctx.compute_cuda_stream;
+  CudaKernelCtx kernel_ctx(thread_ctx.compute_cuda_stream, nullptr);
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     TODO();
   }
@@ -60,19 +59,19 @@ void FwDataCompActor::WardKernelAndSendMsg(const KernelCtx& kernel_ctx) {
   ready_in_regst_[in_.front()->regst_desc_id()] = in_.front();
   uint64_t piece_id = in_.front()->piece_id();
   uint64_t model_version_id = model_regst_->model_version_id();
-  WardKernel(kernel_ctx, [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
-    Regst* regst = GetCurWriteableRegst(regst_desc_id);
-    if (regst == nullptr) {
-      return ready_in_regst_.at(regst_desc_id);
-    } else {
-      return std::make_shared<LocalRegstWarpper> (regst);
-    }
-  });
+  //WardKernel(kernel_ctx, [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+  //  Regst* regst = GetCurWriteableRegst(regst_desc_id);
+  //  if (regst == nullptr) {
+  //    return ready_in_regst_.at(regst_desc_id);
+  //  } else {
+  //    return std::make_shared<LocalRegstWarpper> (regst);
+  //  }
+  //});
   ForEachCurWriteableRegst([piece_id, model_version_id](Regst* regst) {
     regst->set_piece_id(piece_id);
     regst->set_model_version_id(model_version_id);
   });
-  CurWriteDone();
+  //CurWriteDone();
   ActorMsgBus::Singleton().SendMsg(ActorMsg::BuildMsgForRegstWriter(
         in_.front()->producer_actor_id(),
         in_.front()->regst_raw_ptr()));

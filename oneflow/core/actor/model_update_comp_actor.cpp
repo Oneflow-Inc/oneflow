@@ -12,8 +12,7 @@ void MdUpdtCompActor::Init(const TaskProto& task_proto) {
 
 void MdUpdtCompActor::ProcessMsg(const ActorMsg& actor_msg,
                                  const ThreadContext& thread_ctx) {
-  KernelCtx kernel_ctx;
-  kernel_ctx.cuda_stream = thread_ctx.compute_cuda_stream;
+  CudaKernelCtx kernel_ctx(thread_ctx.compute_cuda_stream, nullptr);
   (this->*cur_handle_)(actor_msg, kernel_ctx);
 }
 
@@ -48,7 +47,7 @@ void MdUpdtCompActor::HandleBeforeSendInitialModel(
     const ActorMsg& actor_msg,
     const KernelCtx& kernel_ctx) {
   CHECK(actor_msg.actor_cmd() == ActorCmd::kSendInitialModel);
-  CurWriteDone();
+  //CurWriteDone();
   SetReadOnlyForRegstDescId(model_tmp_regst_desc_id_);
   cur_handle_ = &MdUpdtCompActor::HandleForUpdateModel;
 }
@@ -78,14 +77,14 @@ void MdUpdtCompActor::ProcessRegstFromMsg(
     waiting_model_diff_acc_queue_.pop();
     Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
     auto model_wpr = std::make_shared<LocalRegstWarpper>(model_regst);
-    WardKernel(kernel_ctx,
-               [&](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
-      if (regst_desc_id == model_regst_desc_id_) {
-        return model_wpr;
-      } else {
-        return model_diff_acc_wpr;
-      }
-    });
+    //WardKernel(kernel_ctx,
+    //           [&](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+    //  if (regst_desc_id == model_regst_desc_id_) {
+    //    return model_wpr;
+    //  } else {
+    //    return model_diff_acc_wpr;
+    //  }
+    //});
     model_regst->set_model_version_id(model_diff_acc_wpr->model_version_id());
   }
 }

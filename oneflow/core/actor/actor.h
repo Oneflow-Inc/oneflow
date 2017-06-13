@@ -5,6 +5,8 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_manager.h"
+#include "oneflow/core/kernel/cpu_kernel_context.h"
+#include "oneflow/core/kernel/cuda_kernel_context.h"
 #include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/actor/actor_message_bus.h"
@@ -33,21 +35,19 @@ class Actor {
   };
 
   Actor() = default;
-  void WardKernel(
-      const KernelCtx& kernel_ctx,
-      std::function<std::shared_ptr<RegstWarpper>(uint64_t)> Regst4RegstDescId);
-  void ForEachProducedRegst(std::function<void(Regst*)>);
   uint64_t RegstDescId4Name(const std::string& name) const {
     return name2regst_desc_id_.at(name);
   }
 
-  uint64_t expected_piece_id() const { return expected_piece_id_; }
   // Status of Produced Registers
+  uint64_t expected_piece_id() const { return expected_piece_id_; }
+  void AsyncWardKernelAndSendMsgToRegstReader(
+      const KernelCtx& kernel_ctx,
+      std::function<std::shared_ptr<RegstWarpper>(uint64_t)> Regst4RegstDescId);
   int TryUpdtStateAsFromRegstReader(Regst* regst);
   Regst* GetCurWriteableRegst(uint64_t regst_desc_id);
   Regst* GetCurWriteableRegst(const std::string& name);
   void ForEachCurWriteableRegst(std::function<void(Regst*)> func);
-  void CurWriteDone();
   bool IsWriteReady();
   void SetReadOnlyForRegstDescId(uint64_t regst_desc_id) {
     auto it = writeable_produced_regst_.find(regst_desc_id);
@@ -62,8 +62,8 @@ class Actor {
   std::vector<std::unique_ptr<Regst>> produced_regst_vec_;
   HashMap<std::string, uint64_t> name2regst_desc_id_;
   
-  uint64_t expected_piece_id_;
   // Status of Produced Registers
+  uint64_t expected_piece_id_;
   HashMap<uint64_t, std::queue<Regst*>> writeable_produced_regst_; // <regst_desc_id, regst>
   uint64_t writeable_produced_regst_desc_num_;
   HashMap<Regst*, int64_t> produced_regst2reading_cnt_;

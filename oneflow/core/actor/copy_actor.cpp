@@ -17,7 +17,8 @@ void CopyActor::ProcessMsgWithKernelCtx(const ActorMsg& msg,
     uint64_t piece_id = expected_piece_id();
     std::shared_ptr<RegstWarpper> regst_wp = waiting_in_regst_.front();
     CHECK_EQ(regst_wp->piece_id(), piece_id);
-    WardKernel(kernel_ctx, [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+    AsyncWardKernelAndSendMsgToRegstReader(kernel_ctx,
+        [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
       Regst* regst = GetCurWriteableRegst(regst_desc_id);
       if (regst == nullptr) {
         CHECK_EQ(regst_desc_id, waiting_in_regst_.front()->regst_desc_id());
@@ -30,7 +31,6 @@ void CopyActor::ProcessMsgWithKernelCtx(const ActorMsg& msg,
       regst->set_piece_id(regst_wp->piece_id());
       regst->set_model_version_id(regst_wp->model_version_id());
     });
-    CurWriteDone();
     ActorMsgBus::Singleton().SendMsg(ActorMsg::BuildMsgForRegstWriter(
           regst_wp->producer_actor_id(),
           regst_wp->regst_raw_ptr()));

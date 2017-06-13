@@ -7,17 +7,10 @@
 namespace oneflow {
 
 ThreadMgr::~ThreadMgr() {
-  JoinAllThreads();
 }
 
 Thread* ThreadMgr::GetThrd(uint64_t thrd_loc_id) {
   return threads_.at(thrd_loc_id).get();
-}
-
-void ThreadMgr::JoinAllThreads() {
-  for (const std::unique_ptr<Thread>& thrd : threads_) {
-    thrd->Join();
-  }
 }
 
 ThreadMgr::ThreadMgr() {
