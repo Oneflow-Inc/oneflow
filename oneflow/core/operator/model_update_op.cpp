@@ -9,7 +9,6 @@ void ModelUpdateOp::InitFromOpConf(const OperatorConf& op_conf) {
   mut_op_conf() = op_conf;
   
   EnrollInputBn("model_diffs", false);
-  EnrollInputBn("model_init", false);
   EnrollOutputBn("model", false);
 }
 

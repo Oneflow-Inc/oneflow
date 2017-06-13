@@ -4,6 +4,8 @@
 
 namespace oneflow {
 
+// need review
+
 void BoxingActor::Init(const TaskProto& task_proto) {
   Actor::Init(task_proto);
   in_regst_desc_num_ = task_proto.subscribed_regst_desc_id().size();
@@ -11,7 +13,7 @@ void BoxingActor::Init(const TaskProto& task_proto) {
 
 void BoxingActor::ProcessMsg(const ActorMsg& msg,
                              const ThreadContext& thread_ctx) {
-  KernelContext kernel_ctx;
+  CpuKernelCtx kernel_ctx(thread_ctx.cpu_stream);
   if (TryUpdtStateAsFromRegstReader(msg.regst_warpper()->regst_raw_ptr()) != 0) {
     std::shared_ptr<RegstWarpper> regst_wp = msg.regst_warpper();
     auto waiting_in_regst_it = waiting_in_regst_.find(regst_wp->piece_id());
@@ -36,9 +38,10 @@ void BoxingActor::ProcessMsg(const ActorMsg& msg,
   }
 }
 
-void BoxingActor::WardKernelAndSendMsg(const KernelContext& kernel_ctx) {
+void BoxingActor::WardKernelAndSendMsg(const KernelCtx& kernel_ctx) {
   uint64_t piece_id = ready_in_regst_.front().first;
-  WardKernel(kernel_ctx, [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+  AsyncWardKernelAndSendMsgToRegstReader(
+      [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
     Regst* regst = GetCurWriteableRegst(regst_desc_id);
     if (regst == nullptr) {
       return ready_in_regst_.front().second->at(regst_desc_id);
@@ -49,7 +52,6 @@ void BoxingActor::WardKernelAndSendMsg(const KernelContext& kernel_ctx) {
   ForEachCurWriteableRegst([piece_id](Regst* regst) {
     regst->set_piece_id(piece_id);
   });
-  CurWriteDone();
   for (const auto& pair : *(ready_in_regst_.front().second)) {
     std::shared_ptr<RegstWarpper> regst = pair.second;
     ActorMsgBus::Singleton().SendMsg(ActorMsg::BuildMsgForRegstWriter(

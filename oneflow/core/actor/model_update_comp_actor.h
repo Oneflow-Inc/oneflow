@@ -15,16 +15,19 @@ class MdUpdtCompActor final : public CompActor {
   void ProcessMsg(const ActorMsg&, const ThreadContext&) override;
 
  private:
-  void HandleBeforeInitializeModel(const ActorMsg&, const KernelContext&);
-  void HandleBeforeSendInitialModel(const ActorMsg&, const KernelContext&);
-  void HandleForUpdateModel(const ActorMsg&, const KernelContext&);
+  void HandleBeforeInitKernelCtx(const ActorMsg&, const ThreadContext&);
+  void HandleBeforeInitializeModel(const ActorMsg&, const ThreadContext&);
+  void HandleBeforeSendInitialModel(const ActorMsg&, const ThreadContext&);
+  void HandleForUpdateModel(const ActorMsg&, const ThreadContext&);
 
-  void ProcessRegstFromMsg(std::shared_ptr<RegstWarpper>, const KernelContext&);
+  void ProcessRegstFromMsg(std::shared_ptr<RegstWarpper>);
 
-  void (MdUpdtCompActor::*cur_handle_)(const ActorMsg&, const KernelContext&);
+  CudaStreamHandle cuda_handle_;
+  void (MdUpdtCompActor::*cur_msg_handle_)(const ActorMsg&, const ThreadContext&);
   uint64_t model_regst_desc_id_;
   uint64_t model_tmp_regst_desc_id_;
   std::queue<std::shared_ptr<RegstWarpper>> waiting_model_diff_acc_queue_;
+  uint64_t next_model_version_id_;
 
 };
 

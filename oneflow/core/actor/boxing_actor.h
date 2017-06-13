@@ -18,7 +18,7 @@ class BoxingActor final : public Actor {
   using RDescId2RwMap = HashMap<uint64_t, std::shared_ptr<RegstWarpper>>;
   using RDescId2RwMapPtr = std::unique_ptr<RDescId2RwMap>;
 
-  void WardKernelAndSendMsg(const KernelContext&);
+  void WardKernelAndSendMsg(const KernelCtx&);
 
   // <piece_id, map>
   HashMap<uint64_t, RDescId2RwMapPtr> waiting_in_regst_;

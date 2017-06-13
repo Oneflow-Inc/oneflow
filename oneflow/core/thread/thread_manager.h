@@ -18,8 +18,6 @@ class ThreadMgr final {
   
   Thread* GetThrd(uint64_t thrd_loc_id);
 
-  void JoinAllThreads();
-
  private:
   ThreadMgr();
 

@@ -174,13 +174,13 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
 }
 
 void BoxingTaskNode::FwInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
-  for (const auto& exec_node : exec_gph().nodes()) {
+  exec_gph().ConstForEachNode([this](const ExecNode* exec_node) {
     exec_node->op()->InferShape4FwBlobs(
         exec_node->GetMutShapePtr4BnInOpFunc(),
         chain_node()->parallel_desc()->policy(),
         0,
         0);
-  }
+  });
 }
 
 namespace {
@@ -197,8 +197,7 @@ std::shared_ptr<RegstDesc> GetBpRegstFromFwRegst(
 
 void BoxingTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   EnrollAllRegstAndBindRelatedEdge();
-  const ExecGraph& fw_exec_gph = GetFwNode()->exec_gph();
-  for (const std::unique_ptr<ExecNode>& fw_node: fw_exec_gph.nodes()) {
+  GetFwNode()->exec_gph().ConstForEachNode([&](const ExecNode* fw_node) {
     std::unique_ptr<ExecNode> bp_node(new ExecNode);
     bp_node->mut_op() = fw_node->op();
     bool need_enroll = true;
@@ -215,7 +214,7 @@ void BoxingTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
       in_diff_regst->EnrollLbn(lbn);
       bp_node->BindBnInOpAndRegst(idbn, in_diff_regst);
     }
-    if (need_enroll == false) { continue; }
+    if (need_enroll == false) { return; }
     // out_diff
     for (const std::string& obn : fw_node->op()->output_bns()) {
       std::string odbn = GenDiffBn(obn);
@@ -232,7 +231,7 @@ void BoxingTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
       bp_node->BindBnInOpAndRegst(dtbn, bp_middle_regst);
     }
     mut_exec_gph().EnrollNode(std::move(bp_node));
-  }
+  });
   mut_exec_gph().UpdateSourceAndSink();
 }
   

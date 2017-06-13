@@ -3,10 +3,23 @@
 namespace oneflow {
 
 CpuThread::CpuThread() {
-  mut_thread() = std::thread([this]() {
+  cpu_device_ = std::thread([this]() {
+    std::function<void()> work;
+    while (cpu_stream_.Receive(&work) == 0) {
+      work();
+    }
+  });
+  mut_actor_thread() = std::thread([this]() {
     ThreadContext ctx;
+    ctx.cpu_stream = &cpu_stream_;
     PollMsgChannel(ctx);
   });
+}
+
+CpuThread::~CpuThread() {
+  cpu_stream_.CloseSendEnd();
+  cpu_device_.join();
+  cpu_stream_.CloseReceiveEnd();
 }
 
 } // namespace oneflow

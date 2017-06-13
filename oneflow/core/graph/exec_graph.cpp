@@ -29,11 +29,11 @@ void ExecNode::ToProto(ExecNodeProto* ret) const {
 }
 
 void ExecGraph::ToExecSequence(ExecSequence* ret) const {
-  for (const ExecNode& node: *this) {
-    if (!node.bn_in_op2regst().empty()) {
-      node.ToProto(ret->add_exec_node());
+  ConstTopoForEachNode([&](const ExecNode* node) {
+    if (!node->bn_in_op2regst().empty()) {
+      node->ToProto(ret->add_exec_node());
     }
-  }
+  });
 }
 
 } // namespace oneflow

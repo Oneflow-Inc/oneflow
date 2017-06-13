@@ -3,8 +3,11 @@
 
 #include <queue>
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/cuda_stream_handle.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_manager.h"
+#include "oneflow/core/kernel/cpu_kernel_context.h"
+#include "oneflow/core/kernel/cuda_kernel_context.h"
 #include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/actor/actor_message_bus.h"
@@ -33,27 +36,29 @@ class Actor {
   };
 
   Actor() = default;
-  void WardKernel(
-      const KernelContext& kernel_ctx,
-      std::function<std::shared_ptr<RegstWarpper>(uint64_t)> Regst4RegstDescId);
-  void ForEachProducedRegst(std::function<void(Regst*)>);
   uint64_t RegstDescId4Name(const std::string& name) const {
     return name2regst_desc_id_.at(name);
   }
 
-  uint64_t expected_piece_id() const { return expected_piece_id_; }
+  const KernelCtx& kernel_ctx() const { return *kernel_ctx_; }
+  std::unique_ptr<KernelCtx>& mut_kernel_ctx() { return kernel_ctx_; }
+
   // Status of Produced Registers
+  uint64_t expected_piece_id() const { return expected_piece_id_; }
+  void AsyncWardKernelAndSendMsgToRegstReader(
+      std::function<std::shared_ptr<RegstWarpper>(uint64_t)> Regst4RegstDescId);
+  void AsyncSendMsgToRegstReader();
   int TryUpdtStateAsFromRegstReader(Regst* regst);
   Regst* GetCurWriteableRegst(uint64_t regst_desc_id);
   Regst* GetCurWriteableRegst(const std::string& name);
   void ForEachCurWriteableRegst(std::function<void(Regst*)> func);
-  void CurWriteDone();
   bool IsWriteReady();
   void SetReadOnlyForRegstDescId(uint64_t regst_desc_id) {
     auto it = writeable_produced_regst_.find(regst_desc_id);
     if (!it->second.empty()) { writeable_produced_regst_desc_num_ -= 1; }
     writeable_produced_regst_.erase(it);
   }
+  int64_t total_reading_cnt() const { return total_reading_cnt_; }
 
  private:
   uint64_t actor_id_;
@@ -61,12 +66,15 @@ class Actor {
   std::vector<ExecKernel> exec_kernel_vec_;
   std::vector<std::unique_ptr<Regst>> produced_regst_vec_;
   HashMap<std::string, uint64_t> name2regst_desc_id_;
+
+  std::unique_ptr<KernelCtx> kernel_ctx_;
   
-  uint64_t expected_piece_id_;
   // Status of Produced Registers
+  uint64_t expected_piece_id_;
   HashMap<uint64_t, std::queue<Regst*>> writeable_produced_regst_; // <regst_desc_id, regst>
   uint64_t writeable_produced_regst_desc_num_;
   HashMap<Regst*, int64_t> produced_regst2reading_cnt_;
+  int64_t total_reading_cnt_;
 
 };
 

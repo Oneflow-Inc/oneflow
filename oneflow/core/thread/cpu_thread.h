@@ -9,9 +9,12 @@ class CpuThread final : public Thread {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuThread);
   CpuThread();
-  ~CpuThread() = default;
+  ~CpuThread();
 
  private:
+  std::thread cpu_device_;
+  Channel<std::function<void()>> cpu_stream_;
+
 };
 
 } // namespace oneflow
