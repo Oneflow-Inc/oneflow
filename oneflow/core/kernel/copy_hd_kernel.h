@@ -4,7 +4,7 @@
 #include <string>
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_manager.h"
-#include "oneflow/core/kernel/kernel_context.h"
+#include "oneflow/core/kernel/cuda_kernel_context.h"
 
 namespace oneflow {
 
@@ -20,10 +20,15 @@ class CopyHdKernel<DeviceType::kGPU, floating_point_type> final
   CopyHdKernel() = default;
   ~CopyHdKernel() = default;
 
+  void InitFromOpProto(const OperatorProto& op_proto);
+  
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
   void Backward(const KernelCtx&,
                 std::function<Blob*(const std::string&)>) const override;
+
+ private:
+  void (*CopyHdAsync)(Blob*, Blob*, const cudaStream_t&, size_t);
 };
 
 }  // namespace oneflow
