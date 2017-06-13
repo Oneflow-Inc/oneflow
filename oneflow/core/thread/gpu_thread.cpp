@@ -5,7 +5,7 @@
 namespace oneflow {
 
 GpuThread::GpuThread(int device_phy_id) {
-  mut_thread() = std::thread([this, device_phy_id]() {
+  mut_actor_thread() = std::thread([this, device_phy_id]() {
     cudaSetDevice(device_phy_id);
     UniqueCudaStream copy_hd_cuda_stream;
     UniqueCudaStream compute_cuda_stream;

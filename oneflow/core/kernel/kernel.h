@@ -18,7 +18,7 @@ class Kernel {
   OF_DISALLOW_COPY_AND_MOVE(Kernel);
   virtual ~Kernel() = default;
 
-  void InitFromOpProto(const OperatorProto& op_proto);
+  virtual void InitFromOpProto(const OperatorProto& op_proto);
 
   void InitModelAndModelTmpBlobs(
       const KernelCtx& ctx,

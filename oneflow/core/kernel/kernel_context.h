@@ -7,7 +7,7 @@
 namespace oneflow {
 
 struct KernelCtx {
-  Channel<std::function<void()>>* cpu_channel;
+  Channel<std::function<void()>>* cpu_stream;
   const cudaStream_t* cuda_stream;
 };
 
