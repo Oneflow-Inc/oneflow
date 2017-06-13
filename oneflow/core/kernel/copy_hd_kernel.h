@@ -4,25 +4,12 @@
 #include <string>
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_manager.h"
+#include "oneflow/core/kernel/kernel_context.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename floating_point_type>
 class CopyHdKernel final {
-};
-
-template<typename floating_point_type>
-class CopyHdKernel<DeviceType::kCPU, floating_point_type> final
-    : public Kernel {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CopyHdKernel);
-  CopyHdKernel() = default;
-  ~CopyHdKernel() = default;
-
-  void Forward(const KernelContext&,
-               std::function<Blob*(const std::string&)>) const override {}
-  void Backward(const KernelContext&,
-                std::function<Blob*(const std::string&)>) const override {}
 };
 
 template<typename floating_point_type>
@@ -33,9 +20,9 @@ class CopyHdKernel<DeviceType::kGPU, floating_point_type> final
   CopyHdKernel() = default;
   ~CopyHdKernel() = default;
 
-  void Forward(const KernelContext&,
+  void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
-  void Backward(const KernelContext&,
+  void Backward(const KernelCtx&,
                 std::function<Blob*(const std::string&)>) const override;
 };
 
