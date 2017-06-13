@@ -13,7 +13,7 @@ void MdUpdtCompActor::Init(const TaskProto& task_proto) {
 
 void MdUpdtCompActor::ProcessMsg(const ActorMsg& actor_msg,
                                  const ThreadContext& thread_ctx) {
-  CudaKernelCtx kernel_ctx(thread_ctx.compute_cuda_stream, nullptr);
+  CudaKernelCtx kernel_ctx(thread_ctx.compute_cuda_stream, nullptr, nullptr);
   (this->*cur_handle_)(actor_msg, kernel_ctx);
 }
 

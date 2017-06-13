@@ -2,6 +2,7 @@
 #include "cuda_runtime.h"
 #include "oneflow/core/common/unique_cuda_stream.h"
 #include "oneflow/core/common/unique_cublas_handle.h"
+#include "oneflow/core/common/unique_cudnn_handle.h"
 
 namespace oneflow {
 
@@ -12,10 +13,12 @@ GpuThread::GpuThread(int device_phy_id) {
     UniqueCudaStream compute_cuda_stream;
     {
       UniqueCublasHandle cublas_handle(compute_cuda_stream.get());
+      UniqueCudnnHandle cudnn_handle(compute_cuda_stream.get());
       ThreadContext ctx;
       ctx.copy_hd_cuda_stream = copy_hd_cuda_stream.get();
       ctx.compute_cuda_stream = compute_cuda_stream.get();
       ctx.cublas_handle = cublas_handle.get();
+      ctx.cudnn_handle = cudnn_handle.get();
       PollMsgChannel(ctx);
     }
   });
