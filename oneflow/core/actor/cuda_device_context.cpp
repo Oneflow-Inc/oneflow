@@ -1,4 +1,4 @@
-#include "oneflow/core/kernel/cuda_kernel_context.h"
+#include "oneflow/core/actor/cuda_device_context.h"
 
 namespace oneflow {
 
@@ -15,7 +15,7 @@ void CUDART_CB CudaCallBackHandle(cudaStream_t,
 
 } // namespace
 
-void CudaKernelCtx::AddCallBack(std::function<void()> callback_stack) const {
+void CudaDeviceCtx::AddCallBack(std::function<void()> callback_stack) const {
   auto callback_heap = new std::function<void()> (callback_stack);
   CHECK_EQ(cudaStreamAddCallback(cuda_stream(),
                                  &CudaCallBackHandle,

@@ -10,8 +10,8 @@ ActorMsg::ActorMsg() {
   dst_actor_id_ = std::numeric_limits<uint64_t>::max();
 }
 
-ActorMsg ActorMsg::BuildMsgForRegstReader(uint64_t reader_actor_id,
-                                          Regst* regst_raw_ptr) {
+ActorMsg ActorMsg::BuildReadableRegstMsg(uint64_t reader_actor_id,
+                                         Regst* regst_raw_ptr) {
   ActorMsg msg;
   msg.dst_actor_id_ = reader_actor_id;
   msg.msg_type_ = ActorMsgType::kRegstMsg;
@@ -24,8 +24,8 @@ ActorMsg ActorMsg::BuildMsgForRegstReader(uint64_t reader_actor_id,
   return msg;
 }
 
-ActorMsg ActorMsg::BuildMsgForRegstWriter(uint64_t writer_actor_id,
-                                          Regst* regst_raw_ptr) {
+ActorMsg ActorMsg::BuildRegstMsgToProducer(uint64_t writer_actor_id,
+                                           Regst* regst_raw_ptr) {
   ActorMsg msg;
   msg.dst_actor_id_ = writer_actor_id;
   msg.msg_type_ = ActorMsgType::kRegstMsg;

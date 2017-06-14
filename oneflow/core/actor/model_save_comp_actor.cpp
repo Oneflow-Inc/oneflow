@@ -8,7 +8,7 @@ void MdSaveCompActor::Init(const TaskProto& task_proto) {
   TODO();
 }
 
-void MdSaveCompActor::ProcessMsg(const ActorMsg& actor_msg, const ThreadContext&) {
+int MdSaveCompActor::ProcessMsg(const ActorMsg& actor_msg, const ThreadContext&) {
   TODO();
 }
 
