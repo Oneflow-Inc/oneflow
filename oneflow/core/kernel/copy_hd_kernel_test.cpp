@@ -27,7 +27,7 @@ TEST(CopyHdKernel, forward_h2d) {
   
   cudaStream_t cuda_stream;
   CHECK_EQ(cudaStreamCreate(&cuda_stream), cudaSuccess);
-  CudaKernelCtx cuda_kernel_ctx(&cuda_stream, nullptr);
+  CudaKernelCtx cuda_kernel_ctx(&cuda_stream, nullptr, nullptr);
 
   OperatorConf op_conf;
   op_conf.set_name("copy_hd_test");
