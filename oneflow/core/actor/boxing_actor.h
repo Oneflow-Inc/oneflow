@@ -12,7 +12,7 @@ class BoxingActor final : public Actor {
   ~BoxingActor() = default;
 
   void Init(const TaskProto&) override;
-  void ProcessMsg(const ActorMsg&, const ThreadContext&) override;
+  int ProcessMsg(const ActorMsg&, const ThreadContext&) override;
 
  private:
   using RDescId2RwMap = HashMap<uint64_t, std::shared_ptr<RegstWarpper>>;

@@ -12,7 +12,7 @@ class MdSaveCompActor final : public CompActor {
   ~MdSaveCompActor() = default;
 
   void Init(const TaskProto&) override;
-  void ProcessMsg(const ActorMsg&, const ThreadContext&) override;
+  int ProcessMsg(const ActorMsg&, const ThreadContext&) override;
 
  private:
   uint64_t model_regst_desc_id_;
