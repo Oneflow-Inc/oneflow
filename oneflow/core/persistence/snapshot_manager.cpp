@@ -1,11 +1,12 @@
 #include "oneflow/core/persistence/snapshot_manager.h"
 #include "tensorflow/core/lib/io/path.h"
 #include "tensorflow/core/platform/env.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
-void SnapshotManager::InitFromPlan(const Plan& plan) {
-  model_save_snapshots_path_ = plan.job_desc().model_save_snapshots_path();
+void SnapshotMgr::Init() {
+  model_save_snapshots_path_ = JobDesc::Singleton().md_save_snapshots_path();
   tensorflow::Env* env = tensorflow::Env::Default();
   if (env->IsDirectory(model_save_snapshots_path_).code() != tensorflow::error::OK) {
     TF_CHECK_OK(env->CreateDir(model_save_snapshots_path_));
@@ -13,19 +14,21 @@ void SnapshotManager::InitFromPlan(const Plan& plan) {
   std::vector<std::string> result;
   TF_CHECK_OK(env->GetChildren(model_save_snapshots_path_, &result));
   CHECK_EQ(result.size(), 0);
-  load_snapshot_ptr_ = new Snapshot(plan.job_desc().model_load_snapshot_path());
+  readable_snapshot_ptr_.reset(new Snapshot(JobDesc::Singleton().md_load_snapshot_path()));
 }
 
-const Snapshot* SnapshotManager::GetWriterSnapshotFromSnapshotId(uint64_t snapshot_id) {
-  if (snapshot_id2snapshot_.find(snapshot_id) == snapshot_id2snapshot_.end()) {
+Snapshot* SnapshotMgr::GetWriteableSnapshot(uint64_t snapshot_id) {
+  auto it = snapshot_id2writeable_snapshot_.find(snapshot_id);
+  if (it == snapshot_id2writeable_snapshot_.end()) {
     std::string snapshot_root_path = tensorflow::io::JoinPath(
         model_save_snapshots_path_, "snapshot_" + std::to_string(snapshot_id));
     tensorflow::Env* env = tensorflow::Env::Default();
     TF_CHECK_OK(env->CreateDir(snapshot_root_path));
-    CHECK(snapshot_id2snapshot_.emplace(
-        snapshot_id, new Snapshot(snapshot_root_path)).second);
+    std::unique_ptr<Snapshot> ret(new Snapshot(snapshot_root_path));
+    CHECK(snapshot_id2writeable_snapshot_.emplace(snapshot_id, std::move(ret)).second);
+    return ret.get();
   }
-  return snapshot_id2snapshot_.at(snapshot_id);
+  return it->second.get();
 }
 
 }  // namespace oneflow

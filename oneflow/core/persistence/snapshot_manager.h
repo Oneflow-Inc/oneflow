@@ -7,26 +7,26 @@
 
 namespace oneflow {
 
-class SnapshotManager {
+class SnapshotMgr {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(SnapshotManager)
-  ~SnapshotManager() = default;
+  OF_DISALLOW_COPY_AND_MOVE(SnapshotMgr)
+  ~SnapshotMgr() = default;
 
-  OF_SINGLETON(SnapshotManager);
+  OF_SINGLETON(SnapshotMgr);
 
-  const Snapshot* GetWriterSnapshotFromSnapshotId(uint64_t snapshot_id);
+  Snapshot* GetWriteableSnapshot(uint64_t snapshot_id);
 
-  const Snapshot* GetReadSnapshot() {
-    return load_snapshot_ptr_;
+  const Snapshot* GetReadableSnapshot() {
+    return readable_snapshot_ptr_.get();
   }
 
-  void InitFromPlan(const Plan& plan); 
+  void Init(); 
 
  private:
-  SnapshotManager() = default;
+  SnapshotMgr() = default;
   std::string model_save_snapshots_path_;
-  Snapshot* load_snapshot_ptr_;
-  HashMap<uint64_t, Snapshot*> snapshot_id2snapshot_;
+  std::unique_ptr<const Snapshot> readable_snapshot_ptr_;
+  HashMap<uint64_t, std::unique_ptr<Snapshot>> snapshot_id2writeable_snapshot_;
 };
 
 }  // namespace oneflow
