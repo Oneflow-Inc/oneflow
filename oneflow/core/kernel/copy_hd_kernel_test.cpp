@@ -1,7 +1,8 @@
 #include "oneflow/core/kernel/copy_hd_kernel.h"
 #include "gtest/gtest.h"
 #include "oneflow/core/operator/operator.pb.h"
-#include "oneflow/core/kernel/cuda_kernel_context.h"
+#include "oneflow/core/kernel/kernel_context.h"
+#include "oneflow/core/actor/cuda_device_context.h"
 #include "cuda.h"
 #include "cuda_runtime.h"
 
@@ -41,10 +42,12 @@ TEST(CopyHdKernel, copy_h2d) {
   CHECK_EQ(cudaMemset(in_diff, 1, buffer_size), cudaSuccess);
   CHECK_EQ(cudaMemset(out_diff_check, 1, buffer_size), cudaSuccess); 
 
-  // Create CudaKernelContext
+  // Create CudaDeviceContext and KernelContext
   cudaStream_t cuda_stream;
   CHECK_EQ(cudaStreamCreate(&cuda_stream), cudaSuccess);
-  CudaKernelCtx cuda_kernel_ctx(&cuda_stream, nullptr, nullptr);
+  CudaDeviceCtx* cuda_device_ctx = new CudaDeviceCtx(&cuda_stream, nullptr, nullptr);
+  KernelCtx ctx;
+  ctx.device_ctx = cuda_device_ctx;
 
   // Config copy hd operator and generate op_proto
   OperatorConf op_conf;
@@ -71,7 +74,7 @@ TEST(CopyHdKernel, copy_h2d) {
   copy_hd_kernel.InitFromOpProto(op_proto);
   
   // test forward
-  copy_hd_kernel.Forward(cuda_kernel_ctx, fp);
+  copy_hd_kernel.Forward(ctx, fp);
   CHECK_EQ(cudaStreamSynchronize(cuda_stream), cudaSuccess);
   CHECK_EQ(cudaMemcpy(in_check, out, buffer_size,
                       cudaMemcpyDeviceToHost),
@@ -79,7 +82,7 @@ TEST(CopyHdKernel, copy_h2d) {
   CHECK_EQ(strcmp(in, in_check), 0);
 
   // test backward
-  copy_hd_kernel.Backward(cuda_kernel_ctx, fp);
+  copy_hd_kernel.Backward(ctx, fp);
   CHECK_EQ(cudaStreamSynchronize(cuda_stream), cudaSuccess);
   CHECK_NE(strcmp(in_diff, out_diff_check), 0);
 }

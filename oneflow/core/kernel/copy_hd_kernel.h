@@ -4,7 +4,8 @@
 #include <string>
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_manager.h"
-#include "oneflow/core/kernel/cuda_kernel_context.h"
+#include "oneflow/core/kernel/kernel_context.h"
+#include "oneflow/core/actor/cuda_device_context.h"
 
 namespace oneflow {
 
