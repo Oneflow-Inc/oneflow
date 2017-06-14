@@ -1,4 +1,4 @@
-#include "distributed_runtime/grpc_master_service_impl.h"
+#include "oneflow/core/distributed_runtime/grpc_master_service_impl.h"
 
 #include "grpc++/impl/codegen/async_stream.h"
 #include "grpc++/impl/codegen/async_unary_call.h"
@@ -11,6 +11,7 @@
 
 namespace oneflow {
 
+
 const char* GrpcMasterMethodName(GrpcMasterMethod id) {
   switch (id) {
     case GrpcMasterMethod::kSendGraph:
@@ -21,7 +22,8 @@ const char* GrpcMasterMethodName(GrpcMasterMethod id) {
 namespace grpc {
 
 std::unique_ptr<MasterService::Stub> MasterService::NewStub(
-    const std::shared_ptr<::grpc::ChannelInterface>& channel) {
+    const std::shared_ptr<::grpc::ChannelInterface>& channel,
+    const ::grpc::StubOptions& options) {
   std::unique_ptr<MasterService::Stub> stub(new MasterService::Stub(channel));
   return stub;
 }
@@ -43,8 +45,7 @@ MasterService::AsyncService::AsyncService() {
   for (int i = 0; i < kGrpcNumMasterMethods; ++i) {
     AddMethod(new ::grpc::RpcServiceMethod(
           GrpcMasterMethodName(static_cast<GrpcMasterMethod>(i)),
-          ::grpc::RpcMethod::NORMAL_RPC,
-          nullptr));
+          ::grpc::RpcMethod::NORMAL_RPC, nullptr));
     ::grpc::Service::MarkMethodAsync(i);
   }
 }

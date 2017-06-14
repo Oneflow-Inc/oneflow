@@ -12,10 +12,10 @@
 
 #include <memory>
 
-#include "distributed_runtime/grpc_serialization_traits.h"
-#include "distributed_runtime/master_service.pb.h"
+#include "oneflow/core/distributed_runtime/grpc_serialization_traits.h"
+#include "oneflow/core/distributed_runtime/master_service.pb.h"
 
-// OF_GRPC_ALLOW_UNLIMITED_MESSAGE_SIZE(oneflow::SendGraphRequest);
+OF_GRPC_ALLOW_UNLIMITED_MESSAGE_SIZE(oneflow::SendGraphRequest);
 
 namespace grpc {
 class CompletionQueue;
@@ -60,7 +60,8 @@ class MasterService GRPC_FINAL {
   };  // Stub
 
   static std::unique_ptr<Stub> NewStub(
-      const std::shared_ptr<::grpc::ChannelInterface>& channel);
+      const std::shared_ptr<::grpc::ChannelInterface>& channel,
+      const ::grpc::StubOptions& options = ::grpc::StubOptions());
 
   class AsyncService : public ::grpc::Service {
    public:
