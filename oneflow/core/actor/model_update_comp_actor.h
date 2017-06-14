@@ -20,7 +20,7 @@ class MdUpdtCompActor final : public CompActor {
   void HandleBeforeSendInitialModel(const ActorMsg&, const ThreadContext&);
   void HandleForUpdateModel(const ActorMsg&, const ThreadContext&);
 
-  void ProcessRegstFromMsg(std::shared_ptr<RegstWarpper>);
+  void ProcessRegstMsg(std::shared_ptr<RegstWarpper>);
 
   CudaStreamHandle cuda_handle_;
   void (MdUpdtCompActor::*cur_msg_handle_)(const ActorMsg&, const ThreadContext&);

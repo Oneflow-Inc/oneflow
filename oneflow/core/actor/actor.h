@@ -45,7 +45,7 @@ class Actor {
 
   // Status of Produced Registers
   uint64_t expected_piece_id() const { return expected_piece_id_; }
-  void AsyncWardKernelAndSendMsgToRegstReader(
+  void AsyncWardKernel(
       std::function<std::shared_ptr<RegstWarpper>(uint64_t)> Regst4RegstDescId);
   void AsyncSendMsgToRegstReader();
   int TryUpdtStateAsFromRegstReader(Regst* regst);

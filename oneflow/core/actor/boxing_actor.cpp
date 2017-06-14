@@ -40,15 +40,15 @@ void BoxingActor::ProcessMsg(const ActorMsg& msg,
 
 void BoxingActor::WardKernelAndSendMsg(const KernelCtx& kernel_ctx) {
   uint64_t piece_id = ready_in_regst_.front().first;
-  AsyncWardKernelAndSendMsgToRegstReader(
-      [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
-    Regst* regst = GetCurWriteableRegst(regst_desc_id);
-    if (regst == nullptr) {
-      return ready_in_regst_.front().second->at(regst_desc_id);
-    } else {
-      return std::make_shared<LocalRegstWarpper> (regst);
-    }
-  });
+  //AsyncWardKernelAndSendMsgToRegstReader(
+  //    [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+  //  Regst* regst = GetCurWriteableRegst(regst_desc_id);
+  //  if (regst == nullptr) {
+  //    return ready_in_regst_.front().second->at(regst_desc_id);
+  //  } else {
+  //    return std::make_shared<LocalRegstWarpper> (regst);
+  //  }
+  //});
   ForEachCurWriteableRegst([piece_id](Regst* regst) {
     regst->set_piece_id(piece_id);
   });

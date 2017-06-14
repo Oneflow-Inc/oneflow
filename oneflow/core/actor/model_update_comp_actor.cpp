@@ -74,13 +74,13 @@ void MdUpdtCompActor::HandleForUpdateModel(
     TODO();
     cur_msg_handle_ = nullptr;
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
-    ProcessRegstFromMsg(actor_msg.regst_warpper());
+    ProcessRegstMsg(actor_msg.regst_warpper());
   } else {
     UNEXPECTED_RUN();
   }
 }
 
-void MdUpdtCompActor::ProcessRegstFromMsg(
+void MdUpdtCompActor::ProcessRegstMsg(
     std::shared_ptr<RegstWarpper> regst_warpper) {
   if (TryUpdtStateAsFromRegstReader(regst_warpper->regst_raw_ptr()) != 0) {
     waiting_model_diff_acc_queue_.push(regst_warpper);
@@ -91,7 +91,7 @@ void MdUpdtCompActor::ProcessRegstFromMsg(
     Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
     auto model_wpr = std::make_shared<LocalRegstWarpper>(model_regst);
     model_regst->set_model_version_id(next_model_version_id_++);
-    AsyncWardKernelAndSendMsgToRegstReader(
+    AsyncWardKernel(
         [&](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
       if (regst_desc_id == model_regst_desc_id_) {
         return model_wpr;
@@ -99,6 +99,7 @@ void MdUpdtCompActor::ProcessRegstFromMsg(
         return model_diff_acc_wpr;
       }
     });
+    AsyncSendMsgToRegstReader();
   }
 }
 

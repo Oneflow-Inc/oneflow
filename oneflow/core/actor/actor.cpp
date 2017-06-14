@@ -44,7 +44,7 @@ void Actor::Init(const TaskProto& task_proto) {
   total_reading_cnt_ = 0;
 }
 
-void Actor::AsyncWardKernelAndSendMsgToRegstReader(
+void Actor::AsyncWardKernel(
     std::function<std::shared_ptr<RegstWarpper>(uint64_t)> Regst4RegstDescId) {
   for (const ExecKernel& ek : exec_kernel_vec_) {
     (ek.kernel->*ward_func_)(*kernel_ctx_, [&](const std::string& bn_in_op) {
@@ -55,7 +55,6 @@ void Actor::AsyncWardKernelAndSendMsgToRegstReader(
     });
   }
   expected_piece_id_ += 1;
-  AsyncSendMsgToRegstReader();
 }
 
 void Actor::AsyncSendMsgToRegstReader() {
