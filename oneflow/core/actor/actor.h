@@ -25,7 +25,9 @@ class Actor {
   virtual ~Actor() = default;
 
   virtual void Init(const TaskProto& task_proto) = 0;
-  virtual void ProcessMsg(const ActorMsg&, const ThreadContext& ctx) = 0;
+  // 1: success, but actor can't process next msg
+  // 0: success, actor can process next msg
+  virtual int ProcessMsg(const ActorMsg&, const ThreadContext& ctx) = 0;
 
   uint64_t actor_id() const { return actor_id_; }
  
@@ -47,8 +49,10 @@ class Actor {
   uint64_t expected_piece_id() const { return expected_piece_id_; }
   void AsyncWardKernel(
       std::function<std::shared_ptr<RegstWarpper>(uint64_t)> Regst4RegstDescId);
-  void AsyncSendMsgToRegstReader();
-  int TryUpdtStateAsFromRegstReader(Regst* regst);
+  void AsyncSendReadableRegstMsg();
+  void AsyncSendStopMsgToRegstSubscribers(uint64_t regst_desc_id);
+  void AsyncDo(std::function<void()>);
+  int TryUpdtStateAsProducedRegst(Regst* regst);
   Regst* GetCurWriteableRegst(uint64_t regst_desc_id);
   Regst* GetCurWriteableRegst(const std::string& name);
   void ForEachCurWriteableRegst(std::function<void(Regst*)> func);
@@ -64,7 +68,7 @@ class Actor {
   uint64_t actor_id_;
   KernelWardFunc ward_func_;
   std::vector<ExecKernel> exec_kernel_vec_;
-  std::vector<std::unique_ptr<Regst>> produced_regst_vec_;
+  HashMap<uint64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_; // <regst_desc_id, regst>
   HashMap<std::string, uint64_t> name2regst_desc_id_;
 
   std::unique_ptr<KernelCtx> kernel_ctx_;

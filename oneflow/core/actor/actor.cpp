@@ -20,10 +20,10 @@ void Actor::Init(const TaskProto& task_proto) {
     ek.bn_in_op2regst_desc_id = PbMap2HashMap(node.bn_in_op2regst_desc_id());
     exec_kernel_vec_.push_back(std::move(ek));
   }
-  // produced_regst_vec_
+  // produced_regsts_
   for (const auto& pair : task_proto.produced_regst_desc()) {
     RegstMgr::Singleton().NewRegsts(pair.second, [this](Regst* regst) {
-      produced_regst_vec_.emplace_back(regst);
+      produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
     });
   }
   // name2regst_desc_id_
@@ -36,9 +36,11 @@ void Actor::Init(const TaskProto& task_proto) {
   }
   // Status of Produced Registers
   expected_piece_id_ = 0;
-  for (const auto& regst : produced_regst_vec_) {
-    writeable_produced_regst_[regst->regst_desc_id()].push(regst.get());
-    produced_regst2reading_cnt_[regst.get()] = 0;
+  for (const auto& pair : produced_regsts_) {
+    for (const auto& regst : pair.second) {
+      writeable_produced_regst_[regst->regst_desc_id()].push(regst.get());
+      produced_regst2reading_cnt_[regst.get()] = 0;
+    }
   }
   writeable_produced_regst_desc_num_ = writeable_produced_regst_.size();
   total_reading_cnt_ = 0;
@@ -57,12 +59,12 @@ void Actor::AsyncWardKernel(
   expected_piece_id_ += 1;
 }
 
-void Actor::AsyncSendMsgToRegstReader() {
+void Actor::AsyncSendReadableRegstMsg() {
   for (auto& pair : writeable_produced_regst_) {
     Regst* regst = pair.second.front();
     kernel_ctx_->AddCallBack([regst]() {
       for (uint64_t subscriber : regst->subscribers_actor_id()) {
-        ActorMsg msg = ActorMsg::BuildMsgForRegstReader(subscriber, regst);
+        ActorMsg msg = ActorMsg::BuildReadableRegstMsg(subscriber, regst);
         ActorMsgBus::Singleton().SendMsg(std::move(msg));
       }
     });
@@ -73,7 +75,23 @@ void Actor::AsyncSendMsgToRegstReader() {
   }
 }
 
-int Actor::TryUpdtStateAsFromRegstReader(Regst* regst) {
+void Actor::AsyncSendStopMsgToRegstSubscribers(uint64_t regst_desc_id) {
+  Regst* one_regst = produced_regsts_.at(regst_desc_id).front().get();
+  kernel_ctx_->AddCallBack([one_regst]() {
+    for (uint64_t subscriber : one_regst->subscribers_actor_id()) {
+      ActorMsg msg;
+      msg.set_dst_actor_id(subscriber);
+      msg.set_actor_cmd(ActorCmd::kStop);
+      ActorMsgBus::Singleton().SendMsg(std::move(msg));
+    }
+  });
+}
+
+void Actor::AsyncDo(std::function<void()> func) {
+  kernel_ctx_->AddCallBack(func);
+}
+
+int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   auto reading_cnt_it = produced_regst2reading_cnt_.find(regst);
   if (reading_cnt_it == produced_regst2reading_cnt_.end()) { return -1; }
   CHECK_GE(reading_cnt_it->second, 1);

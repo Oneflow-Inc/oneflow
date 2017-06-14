@@ -11,7 +11,7 @@ public:
   ~CopyActor() = default;
 
   void Init(const TaskProto&) override;
-  virtual void ProcessMsg(const ActorMsg&, const ThreadContext&) = 0;
+  virtual int ProcessMsg(const ActorMsg&, const ThreadContext&) = 0;
 
 protected:
   CopyActor() = default;
