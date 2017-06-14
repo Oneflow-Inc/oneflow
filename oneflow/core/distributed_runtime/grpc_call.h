@@ -1,5 +1,5 @@
-#ifndef DISTRIBUTED_RUNTIME_GRPC_CALL_H
-#define DISTRIBUTED_RUNTIME_GRPC_CALL_H
+#ifndef ONEFLOW_CORE_DISTRIBUTED_RUNTIME_GRPC_CALL_H_
+#define ONEFLOW_CORE_DISTRIBUTED_RUNTIME_GRPC_CALL_H_
 
 #include "tensorflow/core/lib/core/refcount.h"
 
@@ -9,143 +9,143 @@
 #include "grpc++/support/byte_buffer.h"
 
 namespace oneflow {
- 
+
 template <class Service>
 class UntypedCall : public core::RefCounted {
-  public:
-    virtual ~UntypedCall() {}
+ public:
+  virtual ~UntypedCall() {}
 
-    virtual void RequestReceived(Service* service, bool ok) = 0;
+  virtual void RequestReceived(Service* service, bool ok) = 0;
 
-    virtual void RequestCancelled(Service* service, bool ok) = 0;
+  virtual void RequestCancelled(Service* service, bool ok) = 0;
 
-    class Tag {
-      public:
-        enum Callback {kRequestReceived, kResponseSent, kCancelled};
+  class Tag {
+   public:
+    enum Callback {kRequestReceived, kResponseSent, kCancelled};
 
-        Tag(UntypedCall* call, Callback cb) : call_(call), callback_(cb) {}
+    Tag(UntypedCall* call, Callback cb) : call_(call), callback_(cb) {}
 
-        void OnCompleted(Service* service, bool ok) {
-          switch(callback_) {
-            case kRequestReceived:
-              call_->RequestReceived(service, ok);
-              break;
-            case kResponseSent:
-              break;
-            case kCancelled:
-              call_->RequestCancelled(service, ok);
-              break;
-          }
-          call_->Unref();
-        }
+    void OnCompleted(Service* service, bool ok) {
+      switch (callback_) {
+        case kRequestReceived:
+          call_->RequestReceived(service, ok);
+          break;
+        case kResponseSent:
+          break;
+        case kCancelled:
+          call_->RequestCancelled(service, ok);
+          break;
+      }
+        call_->Unref();
+      }
 
-      private:
-        UntypedCall* const call_;
-        Callback callback_;
-    };//Tag
-};//Untypedcall 
+   private:
+    UntypedCall* const call_;
+    Callback callback_;
+  };  // Tag
+};  // Untypedcall
 
-template <class Service, class GrpcService, 
+template <class Service, class GrpcService,
           class RequestMessage, class ResponseMessage>
 class Call : public UntypedCall<Service> {
-  public:
-    using EnqueueFunction = void (GrpcService::*)(
-        ::grpc::ServerContext*, RequestMessage*,
-        ::grpc::ServerAsyncResponseWriter<ResponseMessage>*,
-        ::grpc::CompletionQueue*, ::grpc::ServerCompletionQueue*, void*);
+ public:
+  using EnqueueFunction = void (GrpcService::*)(
+      ::grpc::ServerContext*, RequestMessage*,
+      ::grpc::ServerAsyncResponseWriter<ResponseMessage>*,
+      ::grpc::CompletionQueue*, ::grpc::ServerCompletionQueue*, void*);
 
-    using HandleRequestFunction = void (Service::*)(
-        Call<Service, GrpcService, RequestMessage, ResponseMessage>*);
+  using HandleRequestFunction = void (Service::*)(
+      Call<Service, GrpcService, RequestMessage, ResponseMessage>*);
 
-    Call(HandleRequestFunction handle_request_function)
-      : handle_request_function_(handle_request_function),
-        responder_(&ctx_) {}
-    virtual ~Call() {}
+  Call(HandleRequestFunction handle_request_function)
+    : handle_request_function_(handle_request_function),
+      responder_(&ctx_) {}
+  virtual ~Call() {}
 
-    void RequestReceived(Service* service, bool ok) override {
-      if (ok) {
-        this->Ref();
-        (service->*handle_request_function_)(this);
-      }
-    }
-
-    void SendResponse(::grpc::Status status) {
+  void RequestReceived(Service* service, bool ok) override {
+    if (ok) {
       this->Ref();
-      responder_.Finish(response, status, &response_sent_tag_);
-      this->Unref();
+      (service->*handle_request_function_)(this);
     }
+  }
 
-    void RequestCancelled(Service* service, bool ok) override {
-      if (ctx_.IsCancelled()) {
-        mutex_lock l (mu_);
-        if(cancel_callback_) {
-          cancel_callback_();
-        }
-      }
-    }
+  void SendResponse(::grpc::Status status) {
+    this->Ref();
+    responder_.Finish(response, status, &response_sent_tag_);
+    this->Unref();
+  }
 
-    void SetCancelCallback(std::function<void()> callback) {
+  void RequestCancelled(Service* service, bool ok) override {
+    if (ctx_.IsCancelled()) {
       mutex_lock l(mu_);
-      cancel_callback_ = std::move(callback);
-    }
-
-    void ClearCancelCallback() {
-      mutex_lock l(mu_);
-      cancel_callback_ = nullptr;
-    }
-
-    static void EnqueueRequest(GrpcService* grpc_service,
-                               ::grpc::ServerCompletionQueue* cq,
-                               EnqueueFunction enqueue_function,
-                               HandleRequestFunction handle_request_function,
-                               bool supports_cancel) {
-      auto call = new Call<Service, GrpcService, RequestMessage, ResponseMessage>(
-          handle_request_function);
-      if (supports_cancel) {
-        call->RegisterCancellationHandler();
+      if (cancel_callback_) {
+        cancel_callback_();
       }
-      (grpc_service->*enqueue_function)(&call->ctx_, &call->request,
-                                        &call->responder_, cq, cq,
-                                        &call->request_received_tag_); 
-    }//EnqueueRequest
+    }
+  }
 
-    static void EnqueueRequestForMethod(GrpcService* grpc_service,
-                                        ::grpc::ServerCompletionQueue* cq,
-                                        int method_id, 
-                                        HandleRequestFunction handle_request_function,
-                                        bool supports_cancel) {
-      auto call = new Call<Service, GrpcService, RequestMessage, ResponseMessage>(
+  void SetCancelCallback(std::function<void()> callback) {
+    mutex_lock l(mu_);
+    cancel_callback_ = std::move(callback);
+  }
+
+  void ClearCancelCallback() {
+    mutex_lock l(mu_);
+    cancel_callback_ = nullptr;
+  }
+
+  static void EnqueueRequest(GrpcService* grpc_service,
+                             ::grpc::ServerCompletionQueue* cq,
+                             EnqueueFunction enqueue_function,
+                             HandleRequestFunction handle_request_function,
+                             bool supports_cancel) {
+    auto call = new Call<Service, GrpcService, RequestMessage, ResponseMessage>(
           handle_request_function);
-      if(supports_cancel) {
-        call->RegisterCancellationHandler();
-      }
-      grpc_service->RequestAsyncUnary(method_id, &call->ctx_, &call->request,
+    if (supports_cancel) {
+      call->RegisterCancellationHandler();
+    }
+    (grpc_service->*enqueue_function)(&call->ctx_, &call->request,
                                       &call->responder_, cq, cq,
                                       &call->request_received_tag_);
-    }//EnqueueRequestForMethod
+  }  // EnqueueRequest
 
-    RequestMessage request;
-    ResponseMessage response;
-
-  private:
-    void RegisterCancellationHandler() {
-      this->Ref();
-      ctx_.AsyncNotifyWhenDone(&cancelled_tag_);
+  static void EnqueueRequestForMethod(GrpcService* grpc_service,
+                ::grpc::ServerCompletionQueue* cq,
+                int method_id,
+                HandleRequestFunction handle_request_function,
+                bool supports_cancel) {
+    auto call = new Call<Service, GrpcService, RequestMessage, ResponseMessage>(
+        handle_request_function);
+    if (supports_cancel) {
+      call->RegisterCancellationHandler();
     }
+    grpc_service->RequestAsyncUnary(method_id, &call->ctx_, &call->request,
+                                    &call->responder_, cq, cq,
+                                    &call->request_received_tag_);
+  }  // EnqueueRequestForMethod
 
-    HandleRequestFunction handle_request_function_;
-    ::grpc::ServerContext ctx_;
-    ::grpc::ServerAsyncResponseWriter<ResponseMessage> responder_;
-  
-    typedef typename UntypedCall<Service>::Tag Tag;
-    Tag request_received_tag_{this, Tag::kRequestReceived};
-    Tag response_sent_tag_{this, Tag::kResponseSent};
-    Tag cancelled_tag_{this, Tag::Cancelled};
+  RequestMessage request;
+  ResponseMessage response;
 
-    mutex mu_;
-    std::function<void()> cancel_callback_ GUARDED_BY(mu_);
-};//class Call
- 
-}//namespace oneflow
+ private:
+  void RegisterCancellationHandler() {
+    this->Ref();
+    ctx_.AsyncNotifyWhenDone(&cancelled_tag_);
+  }
 
-#endif /* !DISTRIBUTED_RUNTIME_GRPC_CALL_H */
+  HandleRequestFunction handle_request_function_;
+  ::grpc::ServerContext ctx_;
+  ::grpc::ServerAsyncResponseWriter<ResponseMessage> responder_;
+
+  typedef typename UntypedCall<Service>::Tag Tag;
+  Tag request_received_tag_{this, Tag::kRequestReceived};
+  Tag response_sent_tag_{this, Tag::kResponseSent};
+  Tag cancelled_tag_{this, Tag::Cancelled};
+
+  mutex mu_;
+  std::function<void()> cancel_callback_ GUARDED_BY(mu_);
+};  // class Call
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_DISTRIBUTED_RUNTIME_GRPC_CALL_H_ 
