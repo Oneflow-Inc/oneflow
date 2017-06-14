@@ -7,8 +7,8 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/common/ofelf.pb.h"
-#include "oneflow/core/common/job_desc.h"
+#include "oneflow/core/job/plan.pb.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
@@ -17,16 +17,13 @@ class KernelMgr final {
   OF_DISALLOW_COPY_AND_MOVE(KernelMgr);
   ~KernelMgr() = default;
 
-  static KernelMgr& Singleton() {
-    static KernelMgr obj;
-    return obj;
-  }
+  OF_SINGLETON(KernelMgr);
 
   const Kernel* GetKernelFromOpName(const std::string& op_name) {
     return op_name2kernel_ptr_.at(op_name).get();
   }
 
-  void InitFromELF(const OfElf& of_Elf);
+  void InitFromPlan(const Plan&);
 
  private:
   KernelMgr() = default;
@@ -70,11 +67,13 @@ struct GpuDoubleKernelRegister {
   }
 };
 
-#define REGISTER_KERNEL(OpTypeCase, KernelType) \
-  static CpuFloatKernelRegister<OpTypeCase, KernelType<DeviceType::kCPU, FloatingPointType::kFloat>> g_##KernelType##_cpu_float_regst_var; \
-  static CpuDoubleKernelRegister<OpTypeCase, KernelType<DeviceType::kCPU, FloatingPointType::kDouble>> g_##KernelType##_cpu_double_regst_var; \
-  static GpuFloatKernelRegister<OpTypeCase, KernelType<DeviceType::kGPU, FloatingPointType::kFloat>> g_##KernelType##_gpu_float_regst_var; \
-  static GpuDoubleKernelRegister<OpTypeCase, KernelType<DeviceType::kGPU, FloatingPointType::kDouble>> g_##KernelType##_gpu_double_regst_var;
+#define REGISTER_CPU_KERNEL(OpTypeCase, KernelType) \
+  static CpuFloatKernelRegister<OpTypeCase, KernelType<DeviceType::kCPU, float>> g_##KernelType##_cpu_float_regst_var; \
+  static CpuDoubleKernelRegister<OpTypeCase, KernelType<DeviceType::kCPU, double>> g_##KernelType##_cpu_double_regst_var;
+
+#define REGISTER_GPU_KERNEL(OpTypeCase, KernelType) \
+  static GpuFloatKernelRegister<OpTypeCase, KernelType<DeviceType::kGPU, float>> g_##KernelType##_gpu_float_regst_var; \
+  static GpuDoubleKernelRegister<OpTypeCase, KernelType<DeviceType::kGPU, double>> g_##KernelType##_gpu_double_regst_var;
 
 }  // namespace oneflow
 

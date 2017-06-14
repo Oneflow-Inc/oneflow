@@ -5,9 +5,9 @@
 #include <thread>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/channel.h"
-#include "oneflow/core/common/task.pb.h"
+#include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/actor/actor.h"
-#include "oneflow/core/actor/actor_msg_bus.h"
+#include "oneflow/core/actor/actor_message_bus.h"
 
 namespace oneflow {
 
@@ -20,16 +20,14 @@ class Thread {
 
   Channel<ActorMsg>* GetMsgChannelPtr() { return &msg_channel_; }
 
-  void Join();
-
  protected:
   Thread() = default;
-  std::thread& mut_thread() { return thread_; }
-  void PollMsgChannel();
+  std::thread& mut_actor_thread() { return actor_thread_; }
+  void PollMsgChannel(const ThreadContext& thread_ctx);
 
  private:
 
-  std::thread thread_;
+  std::thread actor_thread_;
   Channel<ActorMsg> msg_channel_;
   HashMap<uint64_t, std::unique_ptr<Actor>> id2actor_ptr_;
 

@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_COMMON_UTIL_H
-#define ONEFLOW_CORE_COMMON_UTIL_H
+#ifndef ONEFLOW_CORE_COMMON_UTIL_H_
+#define ONEFLOW_CORE_COMMON_UTIL_H_
 
 #include <unordered_set>
 #include <unordered_map>
@@ -9,6 +9,10 @@
 #include "glog/logging.h"
 #include "google/protobuf/message.h"
 #include "google/protobuf/descriptor.h"
+#include "cuda.h"
+#include "cuda_runtime.h"
+#include "cublas_v2.h"
+#include "cudnn.h"
 
 namespace oneflow {
 
@@ -30,12 +34,11 @@ namespace oneflow {
 #define TODO() \
   LOG(FATAL) << "TODO";
 
-template<typename Target, typename Source>
-inline Target of_dynamic_cast(Source arg) {
-  Target ret = dynamic_cast<Target> (arg);
-  CHECK_NOTNULL(ret);
-  return ret;
-}
+#define OF_SINGLETON(ClassName) \
+  static ClassName& Singleton() { \
+    static ClassName obj; \
+    return obj; \
+  }
 
 inline bool operator == (const google::protobuf::MessageLite& lhs,
                          const google::protobuf::MessageLite& rhs) {
@@ -68,16 +71,6 @@ void SortAndRemoveDuplication(std::vector<T>* vec) {
   std::sort(vec->begin(), vec->end());
   auto unique_it = std::unique(vec->begin(), vec->end());
   vec->erase(unique_it, vec->end());
-}
-
-inline unsigned long long StoullOrDie(const std::string& s) {
-  unsigned long long ret = 0;
-  try {
-    ret = std::stoull(s);
-  } catch (std::exception& e){
-    LOG(FATAL) << "Error: " << s;
-  }
-  return ret;
 }
 
 inline std::string NewUniqueId() {
@@ -116,4 +109,4 @@ void EraseIf(HashMap<K, V>* hash_map,
 
 } // namespace oneflow
 
-#endif // ONEFLOW_CORE_COMMON_UTIL_H
+#endif // ONEFLOW_CORE_COMMON_UTIL_H_

@@ -1,8 +1,8 @@
-#ifndef ONEFLOW_CORE_COMMON_ID_MANAGER_H_
-#define ONEFLOW_CORE_COMMON_ID_MANAGER_H_
+#ifndef ONEFLOW_CORE_JOB_ID_MANAGER_H_
+#define ONEFLOW_CORE_JOB_ID_MANAGER_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/conf/resource.pb.h"
+#include "oneflow/core/job/resource.pb.h"
 
 namespace oneflow {
 
@@ -11,10 +11,7 @@ class IDMgr final {
   OF_DISALLOW_COPY_AND_MOVE(IDMgr);
   ~IDMgr() = default;
 
-  static IDMgr& Singleton() {
-    static IDMgr obj;
-    return obj;
-  }
+  OF_SINGLETON(IDMgr);
 
   void InitFromResource(const Resource& resource) {
     LOG(INFO) << "Init IDManager...";
@@ -104,4 +101,4 @@ class IDMgr final {
 
 }  // namespace oneflow
 
-#endif // ONEFLOW_CORE_COMMON_ID_MANAGER_H_
+#endif // ONEFLOW_CORE_JOB_ID_MANAGER_H_

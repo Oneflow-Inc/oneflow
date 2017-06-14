@@ -14,10 +14,7 @@ class OpMgr final {
   OF_DISALLOW_COPY_AND_MOVE(OpMgr);
   ~OpMgr() = default;
   
-  static OpMgr& Singleton() {
-    static OpMgr obj;
-    return obj;
-  }
+  OF_SINGLETON(OpMgr);
   
   std::shared_ptr<Operator> ConstructOp(const OperatorConf&);
 

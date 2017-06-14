@@ -1,5 +1,5 @@
 #include "oneflow/core/register/register_desc.h"
-#include "oneflow/core/common/id_manager.h"
+#include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/graph/copy_task_node.h"
@@ -68,13 +68,10 @@ Shape* RegstDesc::GetMutShapePtr(const std::string& lbn) {
   return lbn2shape_.at(lbn).get();
 }
 
-HashMap<std::string, std::unique_ptr<Shape>>& RegstDesc::mut_lbn2shape() {
-  return lbn2shape_;
-}
-
-const HashMap<std::string, std::unique_ptr<Shape>>&
-RegstDesc::lbn2shape() const {
-  return lbn2shape_;
+void RegstDesc::ForEachLbn(std::function<void(const std::string&)> func) const {
+  for (const auto& p : lbn2shape_) {
+    func(p.first);
+  }
 }
 
 void RegstDesc::EraseZeroSizeBlob() {

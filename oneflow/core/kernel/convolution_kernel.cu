@@ -3,18 +3,22 @@
 
 namespace oneflow {
 
-template<FloatingPointType floating_point_type>
+template<typename floating_point_type>
 void ConvolutionKernel<DeviceType::kGPU, floating_point_type>::Forward(
+    const KernelCtx&,
     std::function<Blob*(const std::string&)> bn_in_op2blob_ptr) const {
   TODO();
 }
 
-template<FloatingPointType floating_point_type>
+template<typename floating_point_type>
 void ConvolutionKernel<DeviceType::kGPU, floating_point_type>::Backward(
-  std::function<Blob*(const std::string&)> bn_in_op2blob_ptr) const {
+    const KernelCtx&,
+    std::function<Blob*(const std::string&)> bn_in_op2blob_ptr) const {
   TODO();
 }
 
 INSTANTIATE_GPU_KERNEL_CLASS(ConvolutionKernel);
+
+REGISTER_GPU_KERNEL(OperatorConf::kConvolutionConf, ConvolutionKernel);
 
 }  // namespace oneflow

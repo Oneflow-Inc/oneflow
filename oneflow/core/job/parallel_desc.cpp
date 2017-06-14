@@ -1,5 +1,6 @@
-#include "oneflow/core/compile/parallel_desc.h"
+#include "oneflow/core/job/parallel_desc.h"
 #include <algorithm>
+#include "oneflow/core/common/numbers.h"
 
 namespace oneflow {
 
@@ -29,13 +30,13 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
       machine_id2sorted_device_phy_ids_[machine_id] = {};
       device_type_ = DeviceType::kCPU;
     } else if (to_symbol_pos == std::string::npos) {
-      uint64_t device_id = StoullOrDie(device_id_str);
+      uint64_t device_id = Stou64OrDie(device_id_str);
       machine_id2sorted_device_phy_ids_[machine_id].push_back(device_id);
     } else {
-      uint64_t begin_device_id =
-        StoullOrDie(device_id_str.substr(0, to_symbol_pos));
+      uint64_t begin_device_id = 
+          Stou64OrDie(device_id_str.substr(0, to_symbol_pos));
       uint64_t end_device_id =
-        StoullOrDie(device_id_str.substr(to_symbol_pos + 1));
+          Stou64OrDie(device_id_str.substr(to_symbol_pos + 1));
       CHECK_LT(begin_device_id, end_device_id);
       for (uint64_t i = begin_device_id; i <= end_device_id; ++i) {
         machine_id2sorted_device_phy_ids_[machine_id].push_back(i);

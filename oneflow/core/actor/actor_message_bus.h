@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_ACTOR_ACTOR_MSG_BUS_H_
-#define ONEFLOW_CORE_ACTOR_ACTOR_MSG_BUS_H_
+#ifndef ONEFLOW_CORE_ACTOR_ACTOR_MESSAGE_BUS_H_
+#define ONEFLOW_CORE_ACTOR_ACTOR_MESSAGE_BUS_H_
 
 #include <stdint.h>
 #include "oneflow/core/common/util.h"
@@ -12,10 +12,7 @@ class ActorMsgBus final {
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgBus);
   ~ActorMsgBus() = default;
 
-  static ActorMsgBus& Singleton() {
-    static ActorMsgBus obj;
-    return obj;
-  }
+  OF_SINGLETON(ActorMsgBus);
 
   void SendMsg(const ActorMsg& msg);
 
@@ -25,4 +22,4 @@ class ActorMsgBus final {
 
 }  // namespace oneflow
 
-#endif // ONEFLOW_CORE_ACTOR_ACTOR_MSG_BUS_H_
+#endif // ONEFLOW_CORE_ACTOR_ACTOR_MESSAGE_BUS_H_

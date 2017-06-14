@@ -71,11 +71,11 @@ void DoOneTestGraph(const TestGraph& test_graph,
   std::unordered_set<NodeIdPair,
                      decltype(NodePairHash)> edges_node_pair(11, NodePairHash);
   uint64_t order = 0;
-  for (auto it = test_graph.cbegin(); it != test_graph.cend(); ++it) {
-    topo_array.push_back(it->test_node_id());
-    node_id2order.emplace(it->test_node_id(), order);
+  test_graph.ConstTopoForEachNode([&](const TestNode* node) {
+    topo_array.push_back(node->test_node_id());
+    node_id2order.emplace(node->test_node_id(), order);
     ++order;
-  }
+  });
   ASSERT_EQ(topo_array.size(), node_num);
   // method : 
   // judge every edge <u,v>
@@ -91,21 +91,21 @@ void DoOneTestGraph(const TestGraph& test_graph,
     }
   }
   // 2. judge whether the getter method of Graph can return all nodes and edges
-  ASSERT_EQ(test_graph.nodes().size(), node_num);
-  ASSERT_EQ(test_graph.edges().size(), edge_num);
+  ASSERT_EQ(test_graph.node_num(), node_num);
+  ASSERT_EQ(test_graph.edge_num(), edge_num);
   std::unordered_set<uint64_t> node_ids;
-  for (const std::unique_ptr<TestNode>& cur_node : test_graph.nodes()) {
+  test_graph.ConstForEachNode([&](const TestNode* cur_node) {
     uint64_t cur_node_id = cur_node->test_node_id();
     ASSERT_TRUE(node_ids.insert(cur_node_id).second);
     ASSERT_LT(cur_node_id, node_num);
     ASSERT_GE(cur_node_id, 0);
-  }
-  for (const std::unique_ptr<TestEdge>&  cur_edge : test_graph.edges()) {
+  });
+  test_graph.ConstForEachEdge([&](const TestEdge* cur_edge) {
     uint64_t src_node_id = cur_edge->src_node()->test_node_id();
     uint64_t dst_node_id = cur_edge->dst_node()->test_node_id();
     ASSERT_TRUE(
         edges_node_pair.count(std::make_pair(src_node_id, dst_node_id)) > 0);
-  }
+  });
 }
 
 TEST(TestGraph, test_graph_node_num_7) {

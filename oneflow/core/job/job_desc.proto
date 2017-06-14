@@ -1,0 +1,18 @@
+syntax = "proto3";
+package oneflow;
+
+import "oneflow/core/job/dlnet_conf.proto";
+import "oneflow/core/job/resource.proto";
+import "oneflow/core/job/strategy.proto";
+import "oneflow/core/job/job_conf.proto";
+
+message JobDescProto {
+  DLNetConf train_dlnet_conf = 1;
+  Resource resource = 2;
+  Strategy strategy = 3;
+  string model_load_snapshot_path = 4;
+  string model_save_snapshots_path = 5;
+  uint32 piece_size = 7;
+  bool is_train = 8;
+  FloatingPointType floating_point_type = 9;
+}

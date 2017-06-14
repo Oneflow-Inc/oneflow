@@ -3,7 +3,7 @@
 
 #include <memory>
 #include "oneflow/core/thread/thread.h"
-#include "oneflow/core/actor/actor_msg_bus.h"
+#include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/common/protobuf.h"
 
@@ -14,14 +14,9 @@ class ThreadMgr final {
   OF_DISALLOW_COPY_AND_MOVE(ThreadMgr);
   ~ThreadMgr();
 
-  static ThreadMgr& Singleton() {
-    static ThreadMgr obj;
-    return obj;
-  }
+  OF_SINGLETON(ThreadMgr);
   
   Thread* GetThrd(uint64_t thrd_loc_id);
-
-  void JoinAllThreads();
 
  private:
   ThreadMgr();

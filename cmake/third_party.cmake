@@ -11,6 +11,7 @@ include(grpc)
 include(tensorflow)
 
 find_package(CUDA REQUIRED)
+find_package(CuDNN REQUIRED)
 
 set(oneflow_third_party_libs
     ${tensorflow_STATIC_LIBRARIES}
@@ -27,6 +28,8 @@ set(oneflow_third_party_libs
     ${JPEG_STATIC_LIBRARIES}
     ${PNG_STATIC_LIBRARIES}
     ${JSONCPP_STATIC_LIBRARIES}
+    ${CUDA_CUBLAS_LIBRARIES}
+    ${CUDNN_LIBRARIES}
 )
 
 if(WIN32)
@@ -81,6 +84,7 @@ include_directories(
     ${PNG_INCLUDE_DIR}
     ${JSONCPP_INCLUDE_DIR}
     ${EIGEN_INCLUDE_DIRS}
+    ${CUDNN_INCLUDE_DIRS}
 )
 if (ONEFLOW_USE_RDMA)
   if(WIN32)

@@ -1,6 +1,6 @@
 # main cpp
-list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/compile/compiler.cpp)
-list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/runtime/elf_runner.cpp)
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/compiler.cpp)
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/runtime.cpp)
 
 if(WIN32)
   set(oneflow_platform "windows")

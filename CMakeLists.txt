@@ -16,6 +16,7 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
+add_definitions(-DTENSORFLOW_USE_GLOG) # tell tensorflow use glog/logging.h in platform/logging.h
 
 if (WIN32)
   set(CMAKE_BUILD_TYPE Debug)

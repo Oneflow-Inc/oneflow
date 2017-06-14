@@ -1,9 +1,9 @@
-#ifndef ONEFLOW_CORE_RUNTIME_RUNTIME_INFO_H_
-#define ONEFLOW_CORE_RUNTIME_RUNTIME_INFO_H_
+#ifndef ONEFLOW_CORE_JOB_RUNTIME_INFO_H_
+#define ONEFLOW_CORE_JOB_RUNTIME_INFO_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/id_manager.h"
-#include "oneflow/core/runtime/runtime_state.pb.h"
+#include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/job/runtime_state.pb.h"
 
 namespace oneflow {
 
@@ -12,10 +12,7 @@ class RuntimeInfo final {
   OF_DISALLOW_COPY_AND_MOVE(RuntimeInfo);
   ~RuntimeInfo() = default;
 
-  static RuntimeInfo& Singleton() {
-    static RuntimeInfo obj;
-    return obj;
-  }
+  OF_SINGLETON(RuntimeInfo);
 
   uint64_t this_machine_id() const { return this_machine_id_; }
   RuntimeState state() const { return state_; }
@@ -38,4 +35,4 @@ class RuntimeInfo final {
 
 } // namespace oneflow
 
-#endif // ONEFLOW_CORE_RUNTIME_RUNTIME_INFO_H_
+#endif // ONEFLOW_CORE_JOB_RUNTIME_INFO_H_

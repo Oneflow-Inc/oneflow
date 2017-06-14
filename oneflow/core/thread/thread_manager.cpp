@@ -1,23 +1,16 @@
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/thread/gpu_thread.h"
 #include "oneflow/core/thread/cpu_thread.h"
-#include "oneflow/core/common/job_desc.h"
+#include "oneflow/core/job/job_desc.h"
 #include <utility>
 
 namespace oneflow {
 
 ThreadMgr::~ThreadMgr() {
-  JoinAllThreads();
 }
 
 Thread* ThreadMgr::GetThrd(uint64_t thrd_loc_id) {
   return threads_.at(thrd_loc_id).get();
-}
-
-void ThreadMgr::JoinAllThreads() {
-  for (const std::unique_ptr<Thread>& thrd : threads_) {
-    thrd->Join();
-  }
 }
 
 ThreadMgr::ThreadMgr() {

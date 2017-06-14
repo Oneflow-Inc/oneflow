@@ -6,9 +6,9 @@
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/operator_manager.h"
-#include "oneflow/core/compile/parallel_desc.h"
-#include "oneflow/core/common/id_manager.h"
-#include "oneflow/core/common/job_desc.h"
+#include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
@@ -20,7 +20,7 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   // Getters
   const StageGraph* stage_gph() const { return stage_gph_.get(); }
   const ChainGraph* chain_gph() const { return stage_gph_->chain_gph(); }
-  std::vector<CompTaskNode*> SortedCompTasksInChain(const ChainNode*) const;
+  std::vector<CompTaskNode*> SortedCompTasksInChain(const ChainNode*);
 
   void InferShapeOfBlobsInProducedRegsts();
   

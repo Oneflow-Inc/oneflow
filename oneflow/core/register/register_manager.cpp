@@ -1,7 +1,7 @@
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/register/blob.h"
-#include "oneflow/core/common/id_manager.h"
-#include "oneflow/core/common/job_desc.h"
+#include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 

@@ -2,12 +2,12 @@ syntax = "proto3";
 package oneflow;
 
 import "oneflow/core/operator/operator.proto";
-import "oneflow/core/common/task.proto";
-import "oneflow/core/common/job_desc.proto";
-import "oneflow/core/conf/resource.proto";
-import "oneflow/core/conf/strategy.proto";
+import "oneflow/core/job/task.proto";
+import "oneflow/core/job/job_desc.proto";
+import "oneflow/core/job/resource.proto";
+import "oneflow/core/job/strategy.proto";
 
-message OfElf {
+message Plan {
   repeated TaskProto task = 1;
   repeated OperatorProto op = 3;
   JobDescProto job_desc = 4;
