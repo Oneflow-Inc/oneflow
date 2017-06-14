@@ -6,8 +6,9 @@
 #include "oneflow/core/common/cuda_stream_handle.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_manager.h"
-#include "oneflow/core/kernel/cpu_kernel_context.h"
-#include "oneflow/core/kernel/cuda_kernel_context.h"
+#include "oneflow/core/kernel/kernel_context.h"
+#include "oneflow/core/actor/cpu_device_context.h"
+#include "oneflow/core/actor/cuda_device_context.h"
 #include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/actor/actor_message_bus.h"
@@ -42,12 +43,13 @@ class Actor {
     return name2regst_desc_id_.at(name);
   }
 
-  const KernelCtx& kernel_ctx() const { return *kernel_ctx_; }
-  std::unique_ptr<KernelCtx>& mut_kernel_ctx() { return kernel_ctx_; }
+  const DeviceCtx* device_ctx() const { return device_ctx_.get(); }
+  std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
 
   // Status of Produced Registers
   uint64_t expected_piece_id() const { return expected_piece_id_; }
   void AsyncWardKernel(
+      const KernelCtx&,
       std::function<std::shared_ptr<RegstWarpper>(uint64_t)> Regst4RegstDescId);
   void AsyncSendReadableRegstMsg();
   void AsyncSendRegstDescDoneMsgToSubscribers(uint64_t regst_desc_id);
@@ -71,7 +73,7 @@ class Actor {
   HashMap<uint64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_; // <regst_desc_id, regst>
   HashMap<std::string, uint64_t> name2regst_desc_id_;
 
-  std::unique_ptr<KernelCtx> kernel_ctx_;
+  std::unique_ptr<DeviceCtx> device_ctx_;
   
   // Status of Produced Registers
   uint64_t expected_piece_id_;

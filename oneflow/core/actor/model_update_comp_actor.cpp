@@ -5,7 +5,7 @@ namespace oneflow {
 
 void MdUpdtCompActor::Init(const TaskProto& task_proto) {
   CompActor::Init(task_proto);
-  cur_msg_handle_ = &MdUpdtCompActor::HandleBeforeInitKernelCtx;
+  cur_msg_handle_ = &MdUpdtCompActor::HandleBeforeInitDeviceCtx;
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
   next_model_version_id_ = 0;
@@ -16,14 +16,14 @@ int MdUpdtCompActor::ProcessMsg(const ActorMsg& actor_msg,
   return (this->*cur_msg_handle_)(actor_msg, thread_ctx);
 }
 
-int MdUpdtCompActor::HandleBeforeInitKernelCtx(
+int MdUpdtCompActor::HandleBeforeInitDeviceCtx(
     const ActorMsg& actor_msg,
     const ThreadContext& thread_ctx) {
-  CHECK(actor_msg.actor_cmd() == ActorCmd::kInitKernelCtx);
+  CHECK(actor_msg.actor_cmd() == ActorCmd::kInitDeviceCtx);
   if (thread_ctx.cpu_stream) {
-    mut_kernel_ctx().reset(new CpuKernelCtx(thread_ctx.cpu_stream));
+    mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
   } else {
-    mut_kernel_ctx().reset(new CudaKernelCtx(cuda_handle_.cuda_stream(),
+    mut_device_ctx().reset(new CudaDeviceCtx(cuda_handle_.cuda_stream(),
                                              cuda_handle_.cublas_handle(),
                                              cuda_handle_.cudnn_handle()));
   }
@@ -45,8 +45,11 @@ int MdUpdtCompActor::HandleBeforeInitializeModel(
   };
   model_regst->ForEachLbn(CollectKernelsFromLbn);
   model_tmp_regst->ForEachLbn(CollectKernelsFromLbn);
+  
+  KernelCtx kernel_ctx;
+  kernel_ctx.device_ctx = device_ctx();
   for (const Kernel* kernel : kernels) {
-    kernel->InitModelAndModelTmpBlobs(kernel_ctx(),
+    kernel->InitModelAndModelTmpBlobs(kernel_ctx,
                                       [&](const std::string& bn_in_op) {
       const std::string& lbn = kernel->Lbn4BnInOp(bn_in_op);
       Blob* ret = model_regst->GetBlobPtrFromLbn(lbn);
@@ -100,14 +103,14 @@ int MdUpdtCompActor::HandleUpdtModelWhenNoReadableRegstMsg(
       cur_msg_handle_ = nullptr;
       return 1;
     } else {
-      cur_msg_handle_ = &MdUpdtCompActor::HandleWaitingReadingCntEqualZero;
+      cur_msg_handle_ = &MdUpdtCompActor::HandleWaitUntilReadingCntEqualZero;
       return 0;
     }
   }
   return 0;
 }
 
-int MdUpdtCompActor::HandleWaitingReadingCntEqualZero(
+int MdUpdtCompActor::HandleWaitUntilReadingCntEqualZero(
     const ActorMsg& actor_msg,
     const ThreadContext& thread_ctx) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(
@@ -126,7 +129,9 @@ void MdUpdtCompActor::TryWardKernelAndSendMsg() {
     Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
     auto model_wpr = std::make_shared<LocalRegstWarpper>(model_regst);
     model_regst->set_model_version_id(next_model_version_id_++);
-    AsyncWardKernel(
+    KernelCtx kernel_ctx;
+    kernel_ctx.device_ctx = device_ctx();
+    AsyncWardKernel(kernel_ctx,
         [&](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
       if (regst_desc_id == model_regst_desc_id_) {
         return model_wpr;

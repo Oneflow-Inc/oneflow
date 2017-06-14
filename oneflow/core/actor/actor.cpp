@@ -47,9 +47,10 @@ void Actor::Init(const TaskProto& task_proto) {
 }
 
 void Actor::AsyncWardKernel(
+    const KernelCtx& kernel_ctx,
     std::function<std::shared_ptr<RegstWarpper>(uint64_t)> Regst4RegstDescId) {
   for (const ExecKernel& ek : exec_kernel_vec_) {
-    (ek.kernel->*ward_func_)(*kernel_ctx_, [&](const std::string& bn_in_op) {
+    (ek.kernel->*ward_func_)(kernel_ctx, [&](const std::string& bn_in_op) {
       uint64_t regst_desc_id = ek.bn_in_op2regst_desc_id.at(bn_in_op);
       auto regst = Regst4RegstDescId(regst_desc_id);
       const std::string& lbn = ek.kernel->Lbn4BnInOp(bn_in_op);
@@ -62,7 +63,7 @@ void Actor::AsyncWardKernel(
 void Actor::AsyncSendReadableRegstMsg() {
   for (auto& pair : writeable_produced_regst_) {
     Regst* regst = pair.second.front();
-    kernel_ctx_->AddCallBack([regst]() {
+    device_ctx_->AddCallBack([regst]() {
       for (uint64_t subscriber : regst->subscribers_actor_id()) {
         ActorMsg msg = ActorMsg::BuildReadableRegstMsg(subscriber, regst);
         ActorMsgBus::Singleton().SendMsg(std::move(msg));
@@ -77,7 +78,7 @@ void Actor::AsyncSendReadableRegstMsg() {
 
 void Actor::AsyncSendRegstDescDoneMsgToSubscribers(uint64_t regst_desc_id) {
   Regst* one_regst = produced_regsts_.at(regst_desc_id).front().get();
-  kernel_ctx_->AddCallBack([one_regst]() {
+  device_ctx_->AddCallBack([one_regst]() {
     for (uint64_t subscriber : one_regst->subscribers_actor_id()) {
       ActorMsg msg;
       msg.set_dst_actor_id(subscriber);
@@ -88,7 +89,7 @@ void Actor::AsyncSendRegstDescDoneMsgToSubscribers(uint64_t regst_desc_id) {
 }
 
 void Actor::AsyncDo(std::function<void()> func) {
-  kernel_ctx_->AddCallBack(func);
+  device_ctx_->AddCallBack(func);
 }
 
 int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {

@@ -15,14 +15,14 @@ class MdUpdtCompActor final : public CompActor {
   int ProcessMsg(const ActorMsg&, const ThreadContext&) override;
 
  private:
-  int HandleBeforeInitKernelCtx(const ActorMsg&, const ThreadContext&);
+  int HandleBeforeInitDeviceCtx(const ActorMsg&, const ThreadContext&);
   int HandleBeforeInitializeModel(const ActorMsg&, const ThreadContext&);
   int HandleBeforeSendInitialModel(const ActorMsg&, const ThreadContext&);
   int HandleUpdateModel(const ActorMsg&, const ThreadContext&);
   int HandleUpdtModelWhenNoReadableRegstMsg(const ActorMsg&,
                                             const ThreadContext&);
-  int HandleWaitingReadingCntEqualZero(const ActorMsg& actor_msg,
-                                       const ThreadContext& thread_ctx);
+  int HandleWaitUntilReadingCntEqualZero(const ActorMsg& actor_msg,
+                                         const ThreadContext& thread_ctx);
 
   void TryWardKernelAndSendMsg();
 
