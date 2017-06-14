@@ -7,7 +7,7 @@ namespace oneflow {
 namespace {
 
 void CopyH2DAsync(Blob* in_blob, Blob* out_blob,
-                  const cudaStream_t& cuda_stream, size_t type_size) {
+                  const cudaStream_t& cuda_stream, const size_t type_size) {
   CHECK_EQ(cudaMemcpyAsync(out_blob->mut_dptr(),
                            in_blob->dptr(),
                            in_blob->shape().elem_cnt() * type_size,
@@ -17,7 +17,7 @@ void CopyH2DAsync(Blob* in_blob, Blob* out_blob,
 }
 
 void CopyD2HAsync(Blob* in_blob, Blob* out_blob,
-                  const cudaStream_t& cuda_stream, size_t type_size) {
+                  const cudaStream_t& cuda_stream, const size_t type_size) {
   CHECK_EQ(cudaMemcpyAsync(out_blob->mut_dptr(),
                            in_blob->dptr(),
                            in_blob->shape().elem_cnt() * type_size,
@@ -36,9 +36,11 @@ void CopyHdKernel<DeviceType::kGPU, floating_point_type>::InitFromOpProto(
   const CopyHdOpConf& copy_hd_conf = op()->op_conf().copy_hd_conf();
 
   if (copy_hd_conf.type() == CopyHdOpConf::H2D) {
-    CopyHdAsync = CopyH2DAsync;
+    ForwardCopy = CopyH2DAsync;
+    BackwardCopy = CopyD2HAsync;
   } else {
-    CopyHdAsync = CopyD2HAsync;
+    ForwardCopy = CopyD2HAsync;
+    BackwardCopy = CopyH2DAsync;
   }
 }
 
@@ -46,26 +48,22 @@ template<typename floating_point_type>
 void CopyHdKernel<DeviceType::kGPU, floating_point_type>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  const std::string& ibn = op()->SoleIbn();
-  Blob* in_blob = BnInOp2BlobPtr(ibn);
-  const std::string& obn = op()->SoleObn();
-  Blob* out_blob = BnInOp2BlobPtr(obn);
-  size_t type_size = sizeof(floating_point_type);
+  Blob* in_blob  = BnInOp2BlobPtr( op()->SoleIbn() );
+  Blob* out_blob = BnInOp2BlobPtr( op()->SoleObn() );
 
-  (*CopyHdAsync)(in_blob, out_blob, ctx.cuda_stream(), type_size);
+  (*ForwardCopy)(in_blob, out_blob,
+                 ctx.cuda_stream(), sizeof(floating_point_type));
 }
 
 template<typename floating_point_type>
 void CopyHdKernel<DeviceType::kGPU, floating_point_type>::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  const std::string& odbn = op()->SoleOdbn();
-  Blob* in_blob = BnInOp2BlobPtr(odbn);
-  const std::string& idbn = op()->SoleIdbn();
-  Blob* out_blob = BnInOp2BlobPtr(idbn);
-  size_t type_size = sizeof(floating_point_type);
+  Blob* in_blob  = BnInOp2BlobPtr( op()->SoleOdbn() );
+  Blob* out_blob = BnInOp2BlobPtr( op()->SoleIdbn() );
 
-  (*CopyHdAsync)(in_blob, out_blob, ctx.cuda_stream(), type_size);
+  (*BackwardCopy)(in_blob, out_blob,
+                 ctx.cuda_stream(), sizeof(floating_point_type));
 }
 
 INSTANTIATE_GPU_KERNEL_CLASS(CopyHdKernel);
