@@ -75,13 +75,13 @@ void Actor::AsyncSendReadableRegstMsg() {
   }
 }
 
-void Actor::AsyncSendStopMsgToRegstSubscribers(uint64_t regst_desc_id) {
+void Actor::AsyncSendRegstDescDoneMsgToSubscribers(uint64_t regst_desc_id) {
   Regst* one_regst = produced_regsts_.at(regst_desc_id).front().get();
   kernel_ctx_->AddCallBack([one_regst]() {
     for (uint64_t subscriber : one_regst->subscribers_actor_id()) {
       ActorMsg msg;
       msg.set_dst_actor_id(subscriber);
-      msg.set_actor_cmd(ActorCmd::kStop);
+      msg.set_actor_cmd(ActorCmd::kOneRegstDescDone);
       ActorMsgBus::Singleton().SendMsg(std::move(msg));
     }
   });

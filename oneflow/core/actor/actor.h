@@ -50,7 +50,7 @@ class Actor {
   void AsyncWardKernel(
       std::function<std::shared_ptr<RegstWarpper>(uint64_t)> Regst4RegstDescId);
   void AsyncSendReadableRegstMsg();
-  void AsyncSendStopMsgToRegstSubscribers(uint64_t regst_desc_id);
+  void AsyncSendRegstDescDoneMsgToSubscribers(uint64_t regst_desc_id);
   void AsyncDo(std::function<void()>);
   int TryUpdtStateAsProducedRegst(Regst* regst);
   Regst* GetCurWriteableRegst(uint64_t regst_desc_id);

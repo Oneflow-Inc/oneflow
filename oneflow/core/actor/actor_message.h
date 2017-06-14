@@ -10,7 +10,7 @@ enum class ActorCmd {
   kInitKernelCtx = 0,
   kInitializeModel,
   kSendInitialModel,
-  kStop
+  kOneRegstDescDone
 };
 
 enum class ActorMsgType {

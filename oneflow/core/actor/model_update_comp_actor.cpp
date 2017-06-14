@@ -65,7 +65,7 @@ int MdUpdtCompActor::HandleBeforeSendInitialModel(
   CHECK(actor_msg.actor_cmd() == ActorCmd::kSendInitialModel);
   AsyncSendReadableRegstMsg();
   SetReadOnlyForRegstDescId(model_tmp_regst_desc_id_);
-  AsyncSendStopMsgToRegstSubscribers(model_tmp_regst_desc_id_);
+  AsyncSendRegstDescDoneMsgToSubscribers(model_tmp_regst_desc_id_);
   cur_msg_handle_ = &MdUpdtCompActor::HandleUpdateModel;
   return 0;
 }
@@ -74,7 +74,7 @@ int MdUpdtCompActor::HandleUpdateModel(
     const ActorMsg& actor_msg,
     const ThreadContext& thread_ctx) {
   if (actor_msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK(actor_msg.actor_cmd() == ActorCmd::kStop);
+    CHECK(actor_msg.actor_cmd() == ActorCmd::kOneRegstDescDone);
     cur_msg_handle_ = &MdUpdtCompActor::HandleUpdtModelWhenNoReadableRegstMsg;
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
     auto regst_warpper = actor_msg.regst_warpper();
@@ -94,6 +94,24 @@ int MdUpdtCompActor::HandleUpdtModelWhenNoReadableRegstMsg(
   CHECK_EQ(TryUpdtStateAsProducedRegst(
       actor_msg.regst_warpper()->regst_raw_ptr()), 0);
   TryWardKernelAndSendMsg();
+  if (waiting_model_diff_acc_queue_.empty()) {
+    AsyncSendRegstDescDoneMsgToSubscribers(model_regst_desc_id_);
+    if (total_reading_cnt() == 0) {
+      cur_msg_handle_ = nullptr;
+      return 1;
+    } else {
+      cur_msg_handle_ = &MdUpdtCompActor::HandleWaitingReadingCntEqualZero;
+      return 0;
+    }
+  }
+  return 0;
+}
+
+int MdUpdtCompActor::HandleWaitingReadingCntEqualZero(
+    const ActorMsg& actor_msg,
+    const ThreadContext& thread_ctx) {
+  CHECK_EQ(TryUpdtStateAsProducedRegst(
+      actor_msg.regst_warpper()->regst_raw_ptr()), 0);
   if (total_reading_cnt() == 0) {
     cur_msg_handle_ = nullptr;
     return 1;
