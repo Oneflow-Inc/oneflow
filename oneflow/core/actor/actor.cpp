@@ -44,11 +44,10 @@ void Actor::Init(const TaskProto& task_proto) {
   total_reading_cnt_ = 0;
 }
 
-void Actor::AsyncWardKernelAndSendMsgToRegstReader(
-    const KernelCtx& kernel_ctx,
+void Actor::AsyncWardKernel(
     std::function<std::shared_ptr<RegstWarpper>(uint64_t)> Regst4RegstDescId) {
   for (const ExecKernel& ek : exec_kernel_vec_) {
-    (ek.kernel->*ward_func_)(kernel_ctx, [&](const std::string& bn_in_op) {
+    (ek.kernel->*ward_func_)(*kernel_ctx_, [&](const std::string& bn_in_op) {
       uint64_t regst_desc_id = ek.bn_in_op2regst_desc_id.at(bn_in_op);
       auto regst = Regst4RegstDescId(regst_desc_id);
       const std::string& lbn = ek.kernel->Lbn4BnInOp(bn_in_op);
@@ -56,9 +55,12 @@ void Actor::AsyncWardKernelAndSendMsgToRegstReader(
     });
   }
   expected_piece_id_ += 1;
+}
+
+void Actor::AsyncSendMsgToRegstReader() {
   for (auto& pair : writeable_produced_regst_) {
     Regst* regst = pair.second.front();
-    kernel_ctx.AddCallBack([regst]() {
+    kernel_ctx_->AddCallBack([regst]() {
       for (uint64_t subscriber : regst->subscribers_actor_id()) {
         ActorMsg msg = ActorMsg::BuildMsgForRegstReader(subscriber, regst);
         ActorMsgBus::Singleton().SendMsg(std::move(msg));
