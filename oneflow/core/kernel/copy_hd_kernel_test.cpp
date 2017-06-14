@@ -13,13 +13,16 @@ TEST(CopyHdKernel, forward_h2d) {
   Shape* output_shape = new Shape(dim_vec);
 
   char* in;
+  char* in_check;
   char* out;
   
   size_t buffer_size = input_shape->elem_cnt()*sizeof(float);
   CHECK_EQ(cudaMallocHost(&in, buffer_size), cudaSuccess);
+  CHECK_EQ(cudaMallocHost(&in_check, buffer_size), cudaSuccess);
   CHECK_EQ(cudaMalloc(&out, buffer_size), cudaSuccess);
   
   CHECK_EQ(cudaMemset(in, 0, buffer_size), cudaSuccess);
+  CHECK_EQ(cudaMemset(in_check, 1, buffer_size), cudaSuccess);
   CHECK_EQ(cudaMemset(out, 1, buffer_size), cudaSuccess);
   
   cudaStream_t cuda_stream;
@@ -47,6 +50,9 @@ TEST(CopyHdKernel, forward_h2d) {
   copy_hd_kernel.InitFromOpProto(op_proto);
   copy_hd_kernel.Forward(cuda_kernel_ctx, fp);
   CHECK_EQ(cudaStreamSynchronize(cuda_stream), cudaSuccess);
+  CHECK_EQ(cudaMemcpy(in_check, out, buffer_size, cudaMemcpyDeviceToHost),
+           cudaSuccess);
+  CHECK_EQ(strcmp(in, in_check), 0);
 }
 
 }  // namespace oneflow
