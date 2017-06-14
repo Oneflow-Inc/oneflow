@@ -46,10 +46,8 @@ int MdUpdtCompActor::HandleBeforeInitializeModel(
   model_regst->ForEachLbn(CollectKernelsFromLbn);
   model_tmp_regst->ForEachLbn(CollectKernelsFromLbn);
   
-  KernelCtx kernel_ctx;
-  kernel_ctx.device_ctx = device_ctx();
   for (const Kernel* kernel : kernels) {
-    kernel->InitModelAndModelTmpBlobs(kernel_ctx,
+    kernel->InitModelAndModelTmpBlobs(GenDefaultKernelCtx(),
                                       [&](const std::string& bn_in_op) {
       const std::string& lbn = kernel->Lbn4BnInOp(bn_in_op);
       Blob* ret = model_regst->GetBlobPtrFromLbn(lbn);
@@ -129,9 +127,7 @@ void MdUpdtCompActor::TryWardKernelAndSendMsg() {
     Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
     auto model_wpr = std::make_shared<LocalRegstWarpper>(model_regst);
     model_regst->set_model_version_id(next_model_version_id_++);
-    KernelCtx kernel_ctx;
-    kernel_ctx.device_ctx = device_ctx();
-    AsyncWardKernel(kernel_ctx,
+    AsyncWardKernel(GenDefaultKernelCtx(),
         [&](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
       if (regst_desc_id == model_regst_desc_id_) {
         return model_wpr;

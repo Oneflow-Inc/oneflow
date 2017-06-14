@@ -46,6 +46,12 @@ void Actor::Init(const TaskProto& task_proto) {
   total_reading_cnt_ = 0;
 }
 
+KernelCtx Actor::GenDefaultKernelCtx() const {
+  KernelCtx ctx;
+  ctx.device_ctx = device_ctx_.get();
+  return ctx;
+}
+
 void Actor::AsyncWardKernel(
     const KernelCtx& kernel_ctx,
     std::function<std::shared_ptr<RegstWarpper>(uint64_t)> Regst4RegstDescId) {

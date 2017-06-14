@@ -45,6 +45,7 @@ class Actor {
 
   const DeviceCtx* device_ctx() const { return device_ctx_.get(); }
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
+  KernelCtx GenDefaultKernelCtx() const;
 
   // Status of Produced Registers
   uint64_t expected_piece_id() const { return expected_piece_id_; }
