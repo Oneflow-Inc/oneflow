@@ -43,7 +43,7 @@ class MasterService GRPC_FINAL {
   class StubInterface {
    public:
     virtual ~StubInterface() {}
-    virtual ::grpc::Status SendGraph(::grpc::ClientContext* context,
+    virtual ::grpc::Status SendGraphSync(::grpc::ClientContext* context,
                                      const SendGraphRequest& request,
                                      SendGraphResponse* response) = 0;
   };  // Stubinterface
