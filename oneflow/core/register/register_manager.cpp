@@ -38,7 +38,12 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
       CHECK(regst->lbn2blob_.emplace(lbn, std::move(blob_ptr)).second);
       blob_idx += shape_ptr->elem_cnt() * elem_size;
     }
-    regst->deleter_ = allocation.second;
+    Shape* baled_blob_shape = new Shape({elem_cnt});
+    regst->baled_blob_.reset(new Blob(allocation.first, baled_blob_shape));
+    regst->deleter_ = [allocation, baled_blob_shape]() {
+      allocation.second();
+      delete baled_blob_shape;
+    };
     OneRegstDone(regst);
   }
 }
