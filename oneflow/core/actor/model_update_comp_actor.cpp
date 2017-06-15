@@ -47,13 +47,8 @@ int MdUpdtCompActor::HandleBeforeInitializeModel(
   model_tmp_regst->ForEachLbn(CollectKernelsFromLbn);
   
   for (const Kernel* kernel : kernels) {
-    kernel->InitModelAndModelTmpBlobs(
-        GenDefaultKernelCtx(),
-        parallel_policy(),
-        parallel_id(),
-        parallel_num(),
-        SnapshotMgr::Singleton().GetReadableSnapshot(),
-        [&](const std::string& bn_in_op) {
+    kernel->InitModelAndModelTmpBlobs(GenDefaultKernelCtx(),
+                                      [&](const std::string& bn_in_op) {
       const std::string& lbn = kernel->Lbn4BnInOp(bn_in_op);
       Blob* ret = model_regst->GetBlobPtrFromLbn(lbn);
       if (ret == nullptr) { ret = model_tmp_regst->GetBlobPtrFromLbn(lbn); }
@@ -146,12 +141,7 @@ void MdUpdtCompActor::TryWardKernelAndSendMsg() {
       }
     });
     AsyncSendReadableRegstMsg();
-    ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(
-        model_diff_acc_wpr->producer_actor_id(),
-        model_diff_acc_wpr->regst_raw_ptr());
-    AsyncDo([msg]() {
-      ActorMsgBus::Singleton().SendMsg(msg);
-    });
+    AsyncSendRegstMsgToProducer(model_diff_acc_wpr);
   }
 }
 

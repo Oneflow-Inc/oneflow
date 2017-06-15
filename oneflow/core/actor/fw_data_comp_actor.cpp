@@ -41,7 +41,7 @@ int FwDataCompActor::HandleInitDeviceCtx(
                                              cuda_handle_.cublas_handle(),
                                              cuda_handle_.cudnn_handle()));
   }
-  cur_msg_handle_ = &MdUpdtCompActor::HandleFwComp;
+  cur_msg_handle_ = &FwDataCompActor::HandleFwComp;
   return 0;
 }
 
@@ -52,7 +52,7 @@ int FwDataCompActor::HandleFwComp(
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kOneRegstDescDone);
     num_of_read_over_ += 1;
     if (num_of_read_over_ == 3) {
-      cur_msg_handle_ = &FwDataCompActor::HandleUpdtModelWhenNoReadableRegstMsg;
+      cur_msg_handle_ = &FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg;
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()) != 0) {
@@ -97,7 +97,7 @@ int FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg(
   return 0;
 }
   
-int MdUpdtCompActor::HandleWaitUntilReadingCntEqualZero(
+int FwDataCompActor::HandleWaitUntilReadingCntEqualZero(
     const ActorMsg& msg,
     const ThreadContext& thread_ctx) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
@@ -108,13 +108,15 @@ int MdUpdtCompActor::HandleWaitUntilReadingCntEqualZero(
   return 0;
 }
 
-void FwDataCompActor::WardKernelAndSendMsg(const KernelCtx& kernel_ctx) {
+void FwDataCompActor::TryWardKernelAndSendMsg() {
   while (IsReadReady() && IsWriteReady()) {
     CHECK_EQ(in_.front()->piece_id(), expected_piece_id());
     ready_in_regst_[in_.front()->regst_desc_id()] = in_.front();
     uint64_t piece_id = in_.front()->piece_id();
     uint64_t model_version_id = model_regst_->model_version_id();
-    WardKernel(kernel_ctx, [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+    AsyncWardKernel(
+        GenDefaultKernelCtx, 
+        [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
       Regst* regst = GetCurWriteableRegst(regst_desc_id);
       if (regst == nullptr) {
         return ready_in_regst_.at(regst_desc_id);
