@@ -9,15 +9,35 @@ void MdSaveCompActor::Init(const TaskProto& task_proto) {
   model_regst_desc_id_ = RegstDescId4Name("model");
 }
 
-int MdSaveCompActor::ProcessMsg(const ActorMsg& actor_msg, const ThreadContext&) {
+int MdSaveCompActor::ProcessMsg(
+    const ActorMsg& actor_msg,
+    const ThreadContext& thread_ctx) {
+  return (this->*cur_msg_handle_)(actor_msg, thread_ctx);
+}
+
+int MdSaveCompActor::HandleBeforeInitDeviceCtx(
+    const ActorMsg& actor_msg,
+    const ThreadContext& thread_ctx) {
+  CHECK(actor_msg.actor_cmd() == ActorCmd::kInitDeviceCtx);
+  CHECK(thread_ctx.cpu_stream);
+  mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
+  cur_msg_handle_ = &MdSaveCompActor::HandleSaveModel;
+  return 0;
+}
+
+int MdSaveCompActor::HandleSaveModel(
+    const ActorMsg& actor_msg,
+    const ThreadContext& thread_ctx) {
   if (actor_msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK(actor_msg.actor_cmd() == ActorCmd::kOneRegstDescDone);
     return 1;
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
-    auto regst_warpper = actor_msg.regst_warpper();
-    auto kernel_ctx = GenDefaultKernelCtx();
-    kernel_ctx.other = &std::make_tuple(regst_warpper->model_version_id(),
-                                        parallel_id());
+    std::shared_ptr<RegstWarpper> regst_warpper = actor_msg.regst_warpper();
+    KernelCtx kernel_ctx = GenDefaultKernelCtx();
+    std::tuple<uint64_t, uint64_t> save_ctx = std::make_tuple(
+        regst_warpper->model_version_id(),
+        parallel_id());
+    kernel_ctx.other = &save_ctx;
     AsyncWardKernel(
         kernel_ctx,
         [&](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {

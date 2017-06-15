@@ -15,6 +15,10 @@ class MdSaveCompActor final : public CompActor {
   int ProcessMsg(const ActorMsg&, const ThreadContext&) override;
 
  private:
+   int HandleBeforeInitDeviceCtx(const ActorMsg&, const ThreadContext&);
+   int HandleSaveModel(const ActorMsg&, const ThreadContext&);
+   int (MdSaveCompActor::*cur_msg_handle_)(const ActorMsg&, const ThreadContext&);
+
   uint64_t model_regst_desc_id_;
 };
 
