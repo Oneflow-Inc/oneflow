@@ -17,7 +17,10 @@ class MdSaveCompTaskNode final : public CompTaskNode {
 
   void ToProto(TaskProto* ret) const override {
     TaskNode::ToProto(ret);
-    ret->set_parallel_id(related_update_task_parallel_id_);
+    // TODO
+    // parallel_policy
+    // parallel_id
+    // parallel_num
   }
 
  private:

@@ -10,6 +10,14 @@ class MdUpdtCompTaskNode final : public CompTaskNode {
   OF_DISALLOW_COPY_AND_MOVE(MdUpdtCompTaskNode);
   MdUpdtCompTaskNode() = default;
   ~MdUpdtCompTaskNode() = default;
+  
+  void ToProto(TaskProto* ret) const override {
+    TaskNode::ToProto(ret);
+    // TODO
+    // parallel_policy
+    // parallel_id
+    // parallel_num
+  }
 
  private:
   void BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) override;

@@ -17,10 +17,6 @@ class CompTaskNode : public TaskNode {
   void set_parallel_id(uint64_t parallel_id) { parallel_id_ = parallel_id; }
   bool IsLossNode() const { return chain_node()->IsLossNode(); }
   std::string VisualStr() const override;
-  virtual void ToProto(TaskProto* ret) const override {
-    TaskNode::ToProto(ret);
-    ret->set_parallel_id(parallel_id_);
-  }
   std::string device_name() const;
 
  protected:

@@ -18,10 +18,14 @@ class CompActor : public Actor {
     parallel_id_ = task_proto.parallel_id();
   }
 
+  ParallelPolicy parallel_policy() const { return parallel_policy_; }
   uint64_t parallel_id() const { return parallel_id_; }
+  uint64_t parallel_num() const { return parallel_num_; }
 
  private:
+  ParallelPolicy parallel_policy_;
   uint64_t parallel_id_;
+  uint64_t parallel_num_;
 
 };
 
