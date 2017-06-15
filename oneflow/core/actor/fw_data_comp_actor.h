@@ -16,8 +16,11 @@ public:
 
 private:
   bool IsReadReady();
-  void WardKernelAndSendMsg(const KernelCtx&);
+  void WardKernelAndSendMsg();
 
+  CudaStreamHandle cuda_handle_;
+  int (MdUpdtCompActor::*cur_msg_handle_)(const ActorMsg&, const ThreadContext&);
+  int num_of_read_over_;
   uint64_t expected_model_version_id_;
   uint64_t model_regst_desc_id_;
   uint64_t model_tmp_regst_desc_id_;
