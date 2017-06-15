@@ -22,7 +22,6 @@ class ModelDiffAccOp final : public SysOperator {
   std::string obn2lbn(const std::string& output_bn) const override {
     return kBaledBlobName;
   }
-  uint32_t model_diff_num_;
 
 };
 
