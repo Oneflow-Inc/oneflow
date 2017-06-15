@@ -53,6 +53,7 @@ int FwDataCompActor::ProcessMsg(const ActorMsg& msg,
   //while (IsReadReady() && IsWriteReady()) {
   //  WardKernelAndSendMsg(kernel_ctx);
   //}
+  return -1;
 }
 
 void FwDataCompActor::WardKernelAndSendMsg(const KernelCtx& kernel_ctx) {
