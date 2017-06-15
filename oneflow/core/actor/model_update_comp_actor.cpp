@@ -146,12 +146,7 @@ void MdUpdtCompActor::TryWardKernelAndSendMsg() {
       }
     });
     AsyncSendReadableRegstMsg();
-    ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(
-        model_diff_acc_wpr->producer_actor_id(),
-        model_diff_acc_wpr->regst_raw_ptr());
-    AsyncDo([msg]() {
-      ActorMsgBus::Singleton().SendMsg(msg);
-    });
+    AsyncSendRegstMsgToProducer(model_diff_acc_wpr);
   }
 }
 

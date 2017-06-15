@@ -94,8 +94,23 @@ void Actor::AsyncSendRegstDescDoneMsgToSubscribers(uint64_t regst_desc_id) {
   });
 }
 
+void Actor::AsyncSendRegstDescDoneMsgForAllProducedRegstDesc() {
+  for (const auto& pair : produced_regsts_) {
+    AsyncSendRegstDescDoneMsgToSubscribers(pair.first);
+  }
+}
+
 void Actor::AsyncDo(std::function<void()> func) {
   device_ctx_->AddCallBack(func);
+}
+
+void Actor::AsyncSendRegstMsgToProducer(const std::shared_ptr<RegstWarpper>& wp) {
+  ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(
+      wp->producer_actor_id(),
+      wp->regst_raw_ptr());
+  AsyncDo([msg]() {
+    ActorMsgBus::Singleton().SendMsg(msg);
+  });
 }
 
 int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
