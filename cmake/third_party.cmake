@@ -13,6 +13,8 @@ include(tensorflow)
 find_package(CUDA REQUIRED)
 find_package(CuDNN REQUIRED)
 
+find_package(BLAS REQUIRED)
+
 set(oneflow_third_party_libs
     ${tensorflow_STATIC_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
@@ -30,6 +32,7 @@ set(oneflow_third_party_libs
     ${JSONCPP_STATIC_LIBRARIES}
     ${CUDA_CUBLAS_LIBRARIES}
     ${CUDNN_LIBRARIES}
+    ${BLAS_LIBRARIES}
 )
 
 if(WIN32)

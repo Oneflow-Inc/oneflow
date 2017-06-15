@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <functional>
+#include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/register/blob.h"
@@ -10,6 +11,9 @@
 #include "oneflow/core/operator/operator_manager.h"
 #include "oneflow/core/operator/operator.pb.h"
 #include "oneflow/core/kernel/kernel_context.h"
+extern "C" {
+#include "oneflow/core/common/cblas.h"
+}
 
 namespace oneflow {
 
@@ -20,9 +24,15 @@ class Kernel {
 
   virtual void InitFromOpProto(const OperatorProto& op_proto);
 
-  void InitModelAndModelTmpBlobs(
+  virtual void InitModelAndModelTmpBlobs(
       const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> Blob4BnInOp) const;
+      ParallelPolicy policy,
+      uint64_t parallel_id,
+      uint64_t parallel_num,
+      const Snapshot*,
+      std::function<Blob*(const std::string&)> Blob4BnInOp) const {
+    UNEXPECTED_RUN();
+  }
 
   // for Forward / Bp Calculation in FwExecGragh node and BpExecGragh node
   // through bn_in_op2blob_ptr function get the input blob and output blob

@@ -47,8 +47,13 @@ int MdUpdtCompActor::HandleBeforeInitializeModel(
   model_tmp_regst->ForEachLbn(CollectKernelsFromLbn);
   
   for (const Kernel* kernel : kernels) {
-    kernel->InitModelAndModelTmpBlobs(GenDefaultKernelCtx(),
-                                      [&](const std::string& bn_in_op) {
+    kernel->InitModelAndModelTmpBlobs(
+        GenDefaultKernelCtx(),
+        parallel_policy(),
+        parallel_id(),
+        parallel_num(),
+        SnapshotMgr::Singleton().GetReadableSnapshot(),
+        [&](const std::string& bn_in_op) {
       const std::string& lbn = kernel->Lbn4BnInOp(bn_in_op);
       Blob* ret = model_regst->GetBlobPtrFromLbn(lbn);
       if (ret == nullptr) { ret = model_tmp_regst->GetBlobPtrFromLbn(lbn); }

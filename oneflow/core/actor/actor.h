@@ -17,6 +17,7 @@
 #include "oneflow/core/register/remote_register_warpper.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/thread/thread_context.h"
+#include "oneflow/core/persistence/snapshot_manager.h"
 
 namespace oneflow {
 

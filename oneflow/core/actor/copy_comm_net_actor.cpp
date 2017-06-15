@@ -9,6 +9,7 @@ int CopyCommNetActor::ProcessMsg(const ActorMsg& msg,
                                   const ThreadContext&) {
   //CpuKernelCtx kernel_ctx(nullptr);
   //ProcessMsgWithKernelCtx(msg, kernel_ctx);
+  return -1;
 }
 
 REGISTER_ACTOR(kCopyCommNetTask, true, CopyCommNetActor);
