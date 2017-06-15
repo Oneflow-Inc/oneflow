@@ -18,12 +18,12 @@ enum Location {
 };
 
 Blob* CreateBlob(const std::vector<int64_t>& dim_vec,
-                 int filled, enum Location flag) { 
+                 int filled, enum Location buffer_loc) { 
   char* buffer;
   Shape* shape = new Shape(dim_vec);
   
   size_t buffer_size = shape->elem_cnt()*sizeof(float);
-  if (flag == Host) {
+  if (buffer_loc == Host) {
     CHECK_EQ(cudaMallocHost(&buffer, buffer_size), cudaSuccess);
   } else {
     CHECK_EQ(cudaMalloc(&buffer, buffer_size), cudaSuccess);
@@ -34,12 +34,12 @@ Blob* CreateBlob(const std::vector<int64_t>& dim_vec,
 }
 
 void BuildCopyHdKernel(CopyHdKernel<DeviceType::kGPU, float>* copy_hd_kernel,
-                       CopyHdOpConf::Type type) {
+                       CopyHdOpConf::Type hd_type) {
   // Config copy hd operator
   OperatorConf op_conf;
   op_conf.set_name("copy_hd_test");
   CopyHdOpConf* copy_hd_conf = op_conf.mutable_copy_hd_conf();
-  copy_hd_conf->set_type(type);
+  copy_hd_conf->set_type(hd_type);
   auto copy_hd_op = OpMgr::Singleton().ConstructOp(op_conf);
   
   OperatorProto op_proto;
