@@ -29,8 +29,8 @@ class CopyHdKernel<DeviceType::kGPU, floating_point_type> final
                 std::function<Blob*(const std::string&)>) const override;
 
  private:
-  void (*ForwardCopy)(Blob*, Blob*, const cudaStream_t&, size_t);
-  void (*BackwardCopy)(Blob*, Blob*, const cudaStream_t&, size_t);
+  void (*ForwardCopyFunc)(Blob*, Blob*, const cudaStream_t&, size_t);
+  void (*BackwardCopyFunc)(Blob*, Blob*, const cudaStream_t&, size_t);
 };
 
 }  // namespace oneflow

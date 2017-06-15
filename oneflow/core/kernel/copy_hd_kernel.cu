@@ -26,7 +26,7 @@ void CopyD2HAsync(Blob* in_blob, Blob* out_blob,
            cudaSuccess);
 }
 
-}  // namespac
+}  // namespace
 
 template<typename floating_point_type>
 void CopyHdKernel<DeviceType::kGPU, floating_point_type>::InitFromOpProto(
@@ -36,11 +36,11 @@ void CopyHdKernel<DeviceType::kGPU, floating_point_type>::InitFromOpProto(
   const CopyHdOpConf& copy_hd_conf = op()->op_conf().copy_hd_conf();
 
   if (copy_hd_conf.type() == CopyHdOpConf::H2D) {
-    ForwardCopy = CopyH2DAsync;
-    BackwardCopy = CopyD2HAsync;
+    ForwardCopyFunc = CopyH2DAsync;
+    BackwardCopyFunc = CopyD2HAsync;
   } else {
-    ForwardCopy = CopyD2HAsync;
-    BackwardCopy = CopyH2DAsync;
+    ForwardCopyFunc = CopyD2HAsync;
+    BackwardCopyFunc = CopyH2DAsync;
   }
 }
 
@@ -48,10 +48,10 @@ template<typename floating_point_type>
 void CopyHdKernel<DeviceType::kGPU, floating_point_type>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  Blob* in_blob  = BnInOp2BlobPtr( op()->SoleIbn() );
-  Blob* out_blob = BnInOp2BlobPtr( op()->SoleObn() );
+  Blob* in_blob  = BnInOp2BlobPtr(op()->SoleIbn());
+  Blob* out_blob = BnInOp2BlobPtr(op()->SoleObn());
 
-  (*ForwardCopy)(in_blob, out_blob,
+  (*ForwardCopyFunc)(in_blob, out_blob,
                  ctx.device_ctx->cuda_stream(), sizeof(floating_point_type));
 }
 
@@ -59,10 +59,10 @@ template<typename floating_point_type>
 void CopyHdKernel<DeviceType::kGPU, floating_point_type>::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  Blob* in_blob  = BnInOp2BlobPtr( op()->SoleOdbn() );
-  Blob* out_blob = BnInOp2BlobPtr( op()->SoleIdbn() );
+  Blob* in_blob  = BnInOp2BlobPtr(op()->SoleOdbn());
+  Blob* out_blob = BnInOp2BlobPtr(op()->SoleIdbn());
 
-  (*BackwardCopy)(in_blob, out_blob,
+  (*BackwardCopyFunc)(in_blob, out_blob,
                  ctx.device_ctx->cuda_stream(), sizeof(floating_point_type));
 }
 
