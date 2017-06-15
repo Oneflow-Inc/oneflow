@@ -20,7 +20,6 @@ void MdDiffAccCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   // comp task node
   NewProducedRegstDesc("model_diff_acc");
   auto model_diff_acc_regst = GetProducedRegstDesc("model_diff_acc");
-  BindProducedRegstAndOutEdge(model_diff_acc_regst, SoleOutEdge());
 
   ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = chain_node()->SoleOp();
