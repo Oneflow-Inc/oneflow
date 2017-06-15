@@ -26,7 +26,7 @@ bool FwDataCompActor::IsReadReady() {
 }
 
 int FwDataCompActor::ProcessMsg(const ActorMsg& msg,
-                                 const ThreadContext& thread_ctx) {
+                                const ThreadContext& thread_ctx) {
   return (this->*cur_msg_handle_)(msg, thread_ctx);
 }
 
