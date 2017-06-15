@@ -36,10 +36,8 @@ class JobDesc final {
   void set_num_of_piece_in_batch(uint32_t val) { num_of_piece_in_batch_ = val; }
 
   uint32_t staleness() const { return staleness_; }
-  void set_staleness(uint32_t val) { staleness_ = val; }
 
   int32_t num_of_batches_in_snapshot() const { return num_of_batches_in_snapshot_; }
-  void set_num_of_batches_in_snapshot(int32_t val) { num_of_batches_in_snapshot_ = val; }
  private:
   JobDesc() = default;
 
