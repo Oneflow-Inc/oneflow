@@ -38,9 +38,11 @@ int MdSaveCompActor::HandleSaveModel(
         JobDesc::Singleton().num_of_batches_in_snapshot();
     CHECK_GT(num_of_batches_in_snapshot, 0);
     if (model_version_id % num_of_batches_in_snapshot == 0) {
+      uint64_t snapshot_id = model_version_id / num_of_batches_in_snapshot;
+      Snapshot* snapshot = SnapshotMgr::Singleton().GetWriteableSnapshot(snapshot_id);
       KernelCtx kernel_ctx = GenDefaultKernelCtx();
-      std::tuple<uint64_t, uint64_t> save_ctx = std::make_tuple(model_version_id,
-                                                                parallel_id());
+      std::tuple<Snapshot*, uint64_t> save_ctx = std::make_tuple(snapshot,
+                                                                 parallel_id());
       kernel_ctx.other = &save_ctx;
       AsyncWardKernel(
           kernel_ctx,
