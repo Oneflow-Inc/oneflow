@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+import "oneflow/core/proto/types.proto";
+import "oneflow/core/proto/tensor_shape.proto";
+
+package oneflow;
+
+message TensorProto {
+  repeated int64 int_val = 1;
+  TensorShapeProto tensor_shape = 2;
+  bytes tensor_content = 3;  
+  DataType dtype = 4; 
+}

@@ -1,0 +1,10 @@
+machine_list {
+  id: "0"
+  ip: "192.168.1.11"
+  port: "500051"
+}
+machine_list {
+  id: "1"
+  ip: "192.168.1.13"
+  port: "500051"
+}

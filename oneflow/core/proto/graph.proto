@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package oneflow;
+
+import "oneflow/core/proto/node.proto";
+import "oneflow/core/proto/function.proto";
+
+message GraphDef {
+  repeated NodeDef node = 1;
+  FunctionDefLibrary library = 2;
+}
+
+
+
+

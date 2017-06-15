@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package oneflow;
+
+message TensorShapeProto {
+  message Dim {
+    int64 size = 1;
+    string name = 2;
+  }
+
+  repeated Dim dim = 2;
+}
