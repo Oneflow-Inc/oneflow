@@ -34,7 +34,7 @@ Blob* CreateBlob(const std::vector<int64_t>& dim_vec,
 }
 
 void BuildCopyHdKernel(CopyHdKernel<DeviceType::kGPU, float>* copy_hd_kernel,
-                       enum CopyHdOpConf_Type type) {
+                       CopyHdOpConf::Type type) {
   // Config copy hd operator
   OperatorConf op_conf;
   op_conf.set_name("copy_hd_test");
