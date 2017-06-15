@@ -1,5 +1,6 @@
 #include "oneflow/core/graph/model_save_task_graph.h"
 #include "oneflow/core/graph/model_save_comp_task_node.h"
+#include "oneflow/core/graph/model_update_comp_task_node.h"
 
 namespace oneflow {
 
@@ -35,11 +36,12 @@ void MdSaveTaskGraph::BuildTaskGraph(const std::string& dot_path_prefix) {
   chain_gph->UpdateSourceAndSink();
   chain_gph->ToDotFile(dot_path_prefix + "chain_graph.dot");
   BuildFromChainGph<MdSaveCompTaskNode>(std::move(chain_gph), false, dot_path_prefix);
-  ForEachNode([&](TaskNode* node) {
+  ForEachNode([this](TaskNode* node) {
     auto model_save_comp_task_node =  dynamic_cast<MdSaveCompTaskNode*>(node);
     if (model_save_comp_task_node != nullptr) {
+      auto model_updt_comp_task_node =  dynamic_cast<MdUpdtCompTaskNode*>(update_task_);
       model_save_comp_task_node->set_related_update_task_parallel_id(
-          update_task_->related_diff_acc_task_parallel_id());
+          model_updt_comp_task_node->related_fw_task_parallel_id());
     }
   });
 }

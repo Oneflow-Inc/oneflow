@@ -33,8 +33,7 @@ void MdDiffAccTaskGraph::BuildTaskGraph(const ChainNode* data_chain,
   parallel_desc4diff_acc->mut_policy() = kModelParallel;
   diff_acc_chain->mut_parallel_desc().reset(parallel_desc4diff_acc);
   // FakerChain
-  if (data_chain->parallel_desc()->policy() == kDataParallel
-      && JobDesc::Singleton().is_train()) {
+  if (data_chain->parallel_desc()->policy() == kDataParallel) {
     ChainNode* faker_chain = chain_gph->NewNode();
     faker_chain->mut_op_vec().clear();
     auto parallel_desc4faker = new ParallelDesc(*(data_chain->parallel_desc()));
