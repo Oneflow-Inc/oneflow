@@ -37,6 +37,9 @@ class JobDesc final {
 
   uint32_t staleness() const { return staleness_; }
   void set_staleness(uint32_t val) { staleness_ = val; }
+
+  int32_t num_of_batches_in_snapshot() const { return num_of_batches_in_snapshot_; }
+  void set_num_of_batches_in_snapshot(int32_t val) { num_of_batches_in_snapshot_ = val; }
  private:
   JobDesc() = default;
 
@@ -50,7 +53,7 @@ class JobDesc final {
   uint32_t staleness_;
   bool is_train_;
   FloatingPointType floating_point_type_;
-
+  int32_t num_of_batches_in_snapshot_;
 };
 
 } // namespace oneflow

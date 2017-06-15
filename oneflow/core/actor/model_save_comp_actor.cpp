@@ -7,6 +7,8 @@ namespace oneflow {
 void MdSaveCompActor::Init(const TaskProto& task_proto) {
   CompActor::Init(task_proto);
   model_regst_desc_id_ = RegstDescId4Name("model");
+  num_of_batches_in_snapshot_ = JobDesc::Singleton().num_of_batches_in_snapshot();
+  CHECK_GT(num_of_batches_in_snapshot_, 0);
 }
 
 int MdSaveCompActor::ProcessMsg(
@@ -33,10 +35,13 @@ int MdSaveCompActor::HandleSaveModel(
     return 1;
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
     std::shared_ptr<RegstWarpper> regst_warpper = actor_msg.regst_warpper();
+    uint64_t model_version_id = regst_warpper->model_version_id();
+    if (model_version_id % num_of_batches_in_snapshot_ != 0) {
+      return 0;
+    }
     KernelCtx kernel_ctx = GenDefaultKernelCtx();
-    std::tuple<uint64_t, uint64_t> save_ctx = std::make_tuple(
-        regst_warpper->model_version_id(),
-        parallel_id());
+    std::tuple<uint64_t, uint64_t> save_ctx = std::make_tuple(model_version_id,
+                                                              parallel_id());
     kernel_ctx.other = &save_ctx;
     AsyncWardKernel(
         kernel_ctx,

@@ -20,6 +20,7 @@ class MdSaveCompActor final : public CompActor {
    int (MdSaveCompActor::*cur_msg_handle_)(const ActorMsg&, const ThreadContext&);
 
   uint64_t model_regst_desc_id_;
+  int32_t num_of_batches_in_snapshot_;
 };
 
 }  // namespace oneflow
