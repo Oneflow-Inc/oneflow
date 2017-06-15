@@ -54,10 +54,10 @@ message SendTaskGraphResponse {
   GraphDef task_graph = 1;
 }
 
-message CheckStatusRequest {
+message GetStatusRequest {
   int32 status = 1;
 }
-message CheckStatusResponse {
+message GetStatusResponse {
   int32 status = 1;
 }
 
