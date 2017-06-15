@@ -11,6 +11,8 @@
 #include "google/protobuf/descriptor.h"
 #include "cuda.h"
 #include "cuda_runtime.h"
+#include "cublas_v2.h"
+#include "cudnn.h"
 
 namespace oneflow {
 

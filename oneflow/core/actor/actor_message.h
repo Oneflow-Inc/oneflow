@@ -7,9 +7,10 @@
 namespace oneflow {
 
 enum class ActorCmd {
-  kInitializeModel = 0,
+  kInitDeviceCtx = 0,
+  kInitializeModel,
   kSendInitialModel,
-  kStop
+  kOneRegstDescDone
 };
 
 enum class ActorMsgType {
@@ -23,8 +24,8 @@ class ActorMsg final {
   ActorMsg();
   ~ActorMsg() = default;
 
-  static ActorMsg BuildMsgForRegstReader(uint64_t reader_actor_id, Regst*);
-  static ActorMsg BuildMsgForRegstWriter(uint64_t writer_actor_id, Regst*);
+  static ActorMsg BuildReadableRegstMsg(uint64_t reader_actor_id, Regst*);
+  static ActorMsg BuildRegstMsgToProducer(uint64_t writer_actor_id, Regst*);
 
   // Getters
   uint64_t dst_actor_id() const { return dst_actor_id_; }

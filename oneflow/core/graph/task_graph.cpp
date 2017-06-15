@@ -24,26 +24,26 @@ inline void TaskConnect(TaskNode* src_node,
 }
 
 void TaskGraph::BuildExecAndEnrollLbn2Regsts() {
-  for (TaskNode& node : *this) {
-    node.BuildExecAndEnrollLbn2Regsts(this);
-  }
+  TopoForEachNode([this](TaskNode* node) {
+    node->BuildExecAndEnrollLbn2Regsts(this);
+  });
 }
 
 void TaskGraph::InferShapeOfBlobsInProducedRegsts() {
-  for (TaskNode& node : *this) {
-    node.InferShapeOfBlobsInProducedRegsts(this);
-  }
+  TopoForEachNode([this](TaskNode* node) {
+    node->InferShapeOfBlobsInProducedRegsts(this);
+  });
 }
 
 std::vector<CompTaskNode*> TaskGraph::SortedCompTasksInChain(
-    const ChainNode* chain) const {
+    const ChainNode* chain) {
   std::vector<CompTaskNode*> ret;
-  for (const auto& node : nodes()) {
-    auto comp_node = dynamic_cast<CompTaskNode*> (node.get());
+  ForEachNode([&](TaskNode* node) {
+    auto comp_node = dynamic_cast<CompTaskNode*> (node);
     if (comp_node && comp_node->chain_node() == chain) {
       ret.push_back(comp_node);
     }
-  }
+  });
   return ret;
 }
 
@@ -80,15 +80,15 @@ INSTANTIATE_TASK_GPH_MEM_FUNC(BuildFromStageGph, bool, const std::string&);
 
 template<typename CompTaskNodeType>
 void TaskGraph::InitCompTaskNodes(Stage2TaskNodesMap* stage2task_nodes) {
-  for (const std::unique_ptr<StageNode>& stage : stage_gph_->nodes()) {
+  stage_gph_->ConstForEachNode([&](const StageNode* stage) {
     if (stage->chain_node()->parallel_desc()->device_type() == kGPU) {
       Stage2DeviceCompTaskNodes<CompTaskNodeType>(
-          stage.get(), &((*stage2task_nodes)[stage.get()]));
+          stage, &((*stage2task_nodes)[stage]));
     } else {
       Stage2HostCompTaskNodes<CompTaskNodeType>(
-          stage.get(), &((*stage2task_nodes)[stage.get()]));
+          stage, &((*stage2task_nodes)[stage]));
     }
-  }
+  });
 }
 
 INSTANTIATE_TASK_GPH_MEM_FUNC(InitCompTaskNodes, Stage2TaskNodesMap*);
@@ -174,10 +174,10 @@ INSTANTIATE_TASK_GPH_MEM_FUNC(
     const StageNode* stage, TaskNodesInStage* task_nodes_in_stage);
 
 void TaskGraph::InitBoxingTaskNodes(Stage2TaskNodesMap* stage2task_nodes) {
-  for (const std::unique_ptr<StageNode>& stage : stage_gph_->nodes()) {
-    InitInboxingTaskNode(stage.get(), &(stage2task_nodes->at(stage.get())));
-    InitOutBoxingTaskNode(stage.get(), &(stage2task_nodes->at(stage.get())));
-  }
+  stage_gph_->ConstForEachNode([&](const StageNode* stage) {
+    InitInboxingTaskNode(stage, &(stage2task_nodes->at(stage)));
+    InitOutBoxingTaskNode(stage, &(stage2task_nodes->at(stage)));
+  });
 }
 
 void TaskGraph::InitInboxingTaskNode(const StageNode* stage,
@@ -225,9 +225,9 @@ void TaskGraph::InitOutBoxingTaskNode(
 
 void TaskGraph::ConnectBoxingTaskNodes(
     const Stage2TaskNodesMap* stage2task_nodes) {
-  for (const std::unique_ptr<StageNode>& cur_stage : stage_gph_->nodes()) {
-    if (cur_stage->out_edges().empty()) { continue; }
-    const TaskNodesInStage& cur_tasks = stage2task_nodes->at(cur_stage.get());
+  stage_gph_->ConstForEachNode([&](const StageNode* cur_stage) {
+    if (cur_stage->out_edges().empty()) { return; }
+    const TaskNodesInStage& cur_tasks = stage2task_nodes->at(cur_stage);
     TaskNode* out_node = cur_tasks.out_boxing_task_node;
     if (out_node == nullptr) {
       CHECK_EQ(cur_tasks.comp_out_task_nodes.size(), 1);
@@ -255,7 +255,7 @@ void TaskGraph::ConnectBoxingTaskNodes(
       TaskConnect(out_node, NewEdge(), comm_net_node);
       TaskConnect(comm_net_node, NewEdge(), in_node);
     }
-  }
+  });
 }
 
 void TaskGraph::BuildBpStruct() {
@@ -268,15 +268,15 @@ void TaskGraph::BuildBpStruct() {
 
 void TaskGraph::GenerateRelatedBpNodes(
     std::vector<TaskNode*> *loss_node_vec) {
-  for (auto task_node = begin(); task_node != end(); ++task_node) {
-    if (auto comp_task_node = dynamic_cast<CompTaskNode*> (&(*task_node))) {
+  TopoForEachNode([&](TaskNode* task_node) {
+    if (auto comp_task_node = dynamic_cast<CompTaskNode*> (task_node)) {
       if (comp_task_node->IsLossNode()) {
-        loss_node_vec->push_back(&(*task_node));
-        continue;
+        loss_node_vec->push_back(task_node);
+        return;
       }
       if (comp_task_node->chain_node()->HasOpWithModelOrModelTmpBlob()) {
         EnrollNode(comp_task_node->BuildAndConnectBpNode());
-        continue;
+        return;
       }
     }
     for (TaskEdge* edge : task_node->in_edges()) {
@@ -285,7 +285,7 @@ void TaskGraph::GenerateRelatedBpNodes(
         break;
       }
     }
-  }
+  });
 }
 
 void TaskGraph::BackwardConnect(

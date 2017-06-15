@@ -3,11 +3,12 @@
 
 namespace oneflow {
 
+// need review
 void BpDataCompActor::Init(const TaskProto& task_proto) {
   TODO();
 }
 
-void BpDataCompActor::ProcessMsg(const ActorMsg& actor_msg,
+int BpDataCompActor::ProcessMsg(const ActorMsg& actor_msg,
                                  const ThreadContext&) {
   TODO();
 }

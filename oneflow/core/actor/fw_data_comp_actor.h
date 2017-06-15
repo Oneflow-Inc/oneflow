@@ -12,11 +12,11 @@ public:
   ~FwDataCompActor() = default;
 
   void Init(const TaskProto&) override;
-  void ProcessMsg(const ActorMsg&, const ThreadContext&) override;
+  int ProcessMsg(const ActorMsg&, const ThreadContext&) override;
 
 private:
   bool IsReadReady();
-  void WardKernelAndSendMsg(const KernelContext&);
+  void WardKernelAndSendMsg(const KernelCtx&);
 
   uint64_t expected_model_version_id_;
   uint64_t model_regst_desc_id_;

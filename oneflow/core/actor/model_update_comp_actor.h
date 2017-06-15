@@ -12,19 +12,26 @@ class MdUpdtCompActor final : public CompActor {
   ~MdUpdtCompActor() = default;
 
   void Init(const TaskProto&) override;
-  void ProcessMsg(const ActorMsg&, const ThreadContext&) override;
+  int ProcessMsg(const ActorMsg&, const ThreadContext&) override;
 
  private:
-  void HandleBeforeInitializeModel(const ActorMsg&, const KernelContext&);
-  void HandleBeforeSendInitialModel(const ActorMsg&, const KernelContext&);
-  void HandleForUpdateModel(const ActorMsg&, const KernelContext&);
+  int HandleBeforeInitDeviceCtx(const ActorMsg&, const ThreadContext&);
+  int HandleBeforeInitializeModel(const ActorMsg&, const ThreadContext&);
+  int HandleBeforeSendInitialModel(const ActorMsg&, const ThreadContext&);
+  int HandleUpdateModel(const ActorMsg&, const ThreadContext&);
+  int HandleUpdtModelWhenNoReadableRegstMsg(const ActorMsg&,
+                                            const ThreadContext&);
+  int HandleWaitUntilReadingCntEqualZero(const ActorMsg& actor_msg,
+                                         const ThreadContext& thread_ctx);
 
-  void ProcessRegstFromMsg(std::shared_ptr<RegstWarpper>, const KernelContext&);
+  void TryWardKernelAndSendMsg();
 
-  void (MdUpdtCompActor::*cur_handle_)(const ActorMsg&, const KernelContext&);
+  CudaStreamHandle cuda_handle_;
+  int (MdUpdtCompActor::*cur_msg_handle_)(const ActorMsg&, const ThreadContext&);
   uint64_t model_regst_desc_id_;
   uint64_t model_tmp_regst_desc_id_;
   std::queue<std::shared_ptr<RegstWarpper>> waiting_model_diff_acc_queue_;
+  uint64_t next_model_version_id_;
 
 };
 

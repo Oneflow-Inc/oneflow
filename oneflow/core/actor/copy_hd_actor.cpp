@@ -4,11 +4,11 @@
 
 namespace oneflow {
 
-void CopyHdActor::ProcessMsg(const ActorMsg& msg,
+// need review
+int CopyHdActor::ProcessMsg(const ActorMsg& msg,
                              const ThreadContext& thread_ctx) {
-  KernelContext kernel_ctx;
-  kernel_ctx.cuda_stream = thread_ctx.copy_hd_cuda_stream;
-  ProcessMsgWithKernelCtx(msg, kernel_ctx);
+  //CudaKernelCtx kernel_ctx(thread_ctx.copy_hd_cuda_stream, nullptr, nullptr);
+  //ProcessMsgWithKernelCtx(msg, kernel_ctx);
 }
 
 REGISTER_ACTOR(kCopyHdTask, true, CopyHdActor);

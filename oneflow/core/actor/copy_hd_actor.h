@@ -11,7 +11,7 @@ public:
   CopyHdActor() = default;
   ~CopyHdActor() = default;
 
-  void ProcessMsg(const ActorMsg&, const ThreadContext&) override;
+  int ProcessMsg(const ActorMsg&, const ThreadContext&) override;
 
 private:
 

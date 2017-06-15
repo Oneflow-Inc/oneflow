@@ -11,11 +11,11 @@ public:
   ~CopyActor() = default;
 
   void Init(const TaskProto&) override;
-  virtual void ProcessMsg(const ActorMsg&, const ThreadContext&) = 0;
+  virtual int ProcessMsg(const ActorMsg&, const ThreadContext&) = 0;
 
 protected:
   CopyActor() = default;
-  void ProcessMsgWithKernelCtx(const ActorMsg& msg, const KernelContext& kernel_ctx);
+  void ProcessMsgWithKernelCtx(const ActorMsg& msg, const KernelCtx& kernel_ctx);
 
 private:
   std::queue<std::shared_ptr<RegstWarpper>> waiting_in_regst_;

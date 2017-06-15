@@ -20,16 +20,14 @@ class Thread {
 
   Channel<ActorMsg>* GetMsgChannelPtr() { return &msg_channel_; }
 
-  void Join();
-
  protected:
   Thread() = default;
-  std::thread& mut_thread() { return thread_; }
+  std::thread& mut_actor_thread() { return actor_thread_; }
   void PollMsgChannel(const ThreadContext& thread_ctx);
 
  private:
 
-  std::thread thread_;
+  std::thread actor_thread_;
   Channel<ActorMsg> msg_channel_;
   HashMap<uint64_t, std::unique_ptr<Actor>> id2actor_ptr_;
 
