@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_DISTRIBUTED_RUNTIME_MASTER_H_
 #define ONEFLOW_CORE_DISTRIBUTED_RUNTIME_MASTER_H_
 
-#include "oneflow/core/distributed_runtime/worker.pb.h"
+//#include "oneflow/core/distributed_runtime/worker.pb.h"
 #include "oneflow/core/distributed_runtime/master_service.pb.h"
 //#include "oneflow/core/distributed_runtime/grpc_remote_worker.h"
 #include "oneflow/core/distributed_runtime/grpc_channel_cache.h"
