@@ -13,7 +13,12 @@ void Thread::AddActor(const TaskProto&) {
 void Thread::PollMsgChannel(const ThreadContext& thread_ctx) {
   ActorMsg msg;
   while (msg_channel_.Receive(&msg) == 0) {
-    id2actor_ptr_.at(msg.dst_actor_id())->ProcessMsg(msg, thread_ctx);
+    auto actor_it = id2actor_ptr_.find(msg.dst_actor_id());
+    int code = actor_it->second->ProcessMsg(msg, thread_ctx);
+    if (code == 1) {
+      // Be Careful: do not erase this actor
+    }
+    CHECK_EQ(code, 0);
   }
 }
 

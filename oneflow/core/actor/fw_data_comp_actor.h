@@ -12,7 +12,7 @@ public:
   ~FwDataCompActor() = default;
 
   void Init(const TaskProto&) override;
-  void ProcessMsg(const ActorMsg&, const ThreadContext&) override;
+  int ProcessMsg(const ActorMsg&, const ThreadContext&) override;
 
 private:
   bool IsReadReady();
