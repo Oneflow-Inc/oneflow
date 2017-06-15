@@ -70,6 +70,7 @@ int MdUpdtCompActor::HandleBeforeSendInitialModel(
   if (JobDesc::Singleton().is_train()) {
     cur_msg_handle_ = &MdUpdtCompActor::HandleUpdateModel;
   } else {
+    AsyncSendRegstDescDoneMsgToSubscribers(model_regst_desc_id_);
     cur_msg_handle_ = &MdUpdtCompActor::HandleWaitUntilReadingCntEqualZero;
   }
   return 0;
