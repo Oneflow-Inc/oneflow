@@ -13,6 +13,10 @@ class ClearOp final : public SysOperator {
   OF_DISALLOW_COPY_AND_MOVE(ClearOp);
   ClearOp() = default;
   ~ClearOp() = default;
+
+  void InitFromOpConf(const OperatorConf& op_conf) override;
+
+  const PbMessage& GetSpecialConf() const override;
   
  private:
 

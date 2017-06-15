@@ -196,6 +196,9 @@ message ModelSaveOpConf {
   repeated string lbns = 1;
 }
 
+message ClearOpConf {
+}
+
 message OperatorConf {
   string name = 1;
   oneof op_type {
@@ -214,5 +217,6 @@ message OperatorConf {
     ModelDiffAccOpConf model_diff_acc_conf = 112;
     ConcatOpConf concat_conf = 113;
     CopyCommNetOpConf copy_comm_net_conf = 114;
+    ClearOpConf clear_conf = 115;
   }
 }
