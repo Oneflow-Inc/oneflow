@@ -26,8 +26,8 @@ class Actor {
   virtual ~Actor() = default;
 
   virtual void Init(const TaskProto& task_proto) = 0;
-  // 1: success, but actor can't process next msg
-  // 0: success, actor can process next msg
+  // 1: success, and actor finish
+  // 0: success, and actor not finish
   virtual int ProcessMsg(const ActorMsg&, const ThreadContext& ctx) = 0;
 
   uint64_t actor_id() const { return actor_id_; }

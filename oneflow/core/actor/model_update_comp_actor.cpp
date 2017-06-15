@@ -67,7 +67,11 @@ int MdUpdtCompActor::HandleBeforeSendInitialModel(
   AsyncSendReadableRegstMsg();
   SetReadOnlyForRegstDescId(model_tmp_regst_desc_id_);
   AsyncSendRegstDescDoneMsgToSubscribers(model_tmp_regst_desc_id_);
-  cur_msg_handle_ = &MdUpdtCompActor::HandleUpdateModel;
+  if (JobDesc::Singleton().is_train()) {
+    cur_msg_handle_ = &MdUpdtCompActor::HandleUpdateModel;
+  } else {
+    cur_msg_handle_ = &MdUpdtCompActor::HandleWaitUntilReadingCntEqualZero;
+  }
   return 0;
 }
 
