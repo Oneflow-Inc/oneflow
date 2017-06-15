@@ -83,10 +83,10 @@ int FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg(
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
   TryWardKernelAndSendMsg();
   if (in_.empty()) {
+    AsyncSendRegstMsgToProducer(model_regst_);
+    AsyncSendRegstMsgToProducer(model_tmp_regst_);
+    AsyncSendRegstDescDoneMsgForAllProducedRegstDesc();
     if (total_reading_cnt() == 0) {
-      AsyncSendRegstMsgToProducer(model_regst_);
-      AsyncSendRegstMsgToProducer(model_tmp_regst_);
-      AsyncSendRegstDescDoneMsgForAllProducedRegstDesc();
       cur_msg_handle_ = nullptr;
       return 1;
     } else {
