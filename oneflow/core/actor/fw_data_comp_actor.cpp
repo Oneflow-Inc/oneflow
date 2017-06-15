@@ -49,7 +49,7 @@ int FwDataCompActor::HandleFwComp(
     const ActorMsg& msg,
     const ThreadContext& thread_ctx) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK_EQ(msg.actor_cmd(), ActorCmd::kOneRegstDescDone);
+    CHECK(msg.actor_cmd() == ActorCmd::kOneRegstDescDone);
     num_of_read_over_ += 1;
     if (num_of_read_over_ == 3) {
       cur_msg_handle_ = &FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg;
@@ -114,8 +114,7 @@ void FwDataCompActor::TryWardKernelAndSendMsg() {
     ready_in_regst_[in_.front()->regst_desc_id()] = in_.front();
     uint64_t piece_id = in_.front()->piece_id();
     uint64_t model_version_id = model_regst_->model_version_id();
-    AsyncWardKernel(
-        GenDefaultKernelCtx, 
+    AsyncWardKernel(GenDefaultKernelCtx(), 
         [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
       Regst* regst = GetCurWriteableRegst(regst_desc_id);
       if (regst == nullptr) {
