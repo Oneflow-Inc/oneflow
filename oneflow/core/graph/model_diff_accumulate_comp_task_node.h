@@ -13,9 +13,9 @@ class MdDiffAccCompTaskNode final : public CompTaskNode {
 
   void ToProto(TaskProto* proto) const override {
     TaskNode::ToProto(proto);
-    proto->set_parallel_policy(chain_node()->parallel_desc()->policy());
-    proto->set_parallel_id(parallel_id());
-    proto->set_parallel_num(chain_node()->parallel_desc()->parallel_num());
+    proto->set_parallel_policy(fw_task_->chain_node()->parallel_desc()->policy());
+    proto->set_parallel_id(fw_task_->parallel_id());
+    proto->set_parallel_num(fw_task_->chain_node()->parallel_desc()->parallel_num());
   }
 
  private:
@@ -27,6 +27,7 @@ class MdDiffAccCompTaskNode final : public CompTaskNode {
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return of_make_unique<MdDiffAccCompTaskNode> ();
   }
+  CompTaskNode* fw_task_;
 
 };
 

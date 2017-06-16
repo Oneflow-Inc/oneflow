@@ -1,11 +1,10 @@
 #include "oneflow/core/graph/model_save_task_graph.h"
 #include "oneflow/core/graph/model_save_comp_task_node.h"
-#include "oneflow/core/graph/model_update_comp_task_node.h"
 
 namespace oneflow {
 
 MdSaveTaskGraph::MdSaveTaskGraph(const std::string& name,
-                                 CompTaskNode* update_task,
+                                 MdUpdtCompTaskNode* update_task,
                                  const std::string& dot_path_prefix) {
   mut_name() = name;
   update_task_ = update_task;
@@ -39,8 +38,7 @@ void MdSaveTaskGraph::BuildTaskGraph(const std::string& dot_path_prefix) {
   ForEachNode([this](TaskNode* node) {
     auto model_save_comp_task_node =  dynamic_cast<MdSaveCompTaskNode*>(node);
     if (model_save_comp_task_node != nullptr) {
-      auto model_updt_comp_task_node =  dynamic_cast<MdUpdtCompTaskNode*>(update_task_);
-      model_save_comp_task_node->set_fw_task(model_updt_comp_task_node->fw_task());
+      model_save_comp_task_node->set_fw_task(update_task_->fw_task());
     }
   });
 }
