@@ -53,6 +53,8 @@ TEST(CopyHdKernel, copy_h2d_3x4x5x6) {
   std::vector<int64_t> dim_vec = {3, 4, 5, 6};
 
   // Build blob for test h2d
+  // Forward: copy blob_host to blob_device
+  // Backward: copy blob_device to expected_blob_host
   Blob* blob_host = CreateBlob(dim_vec, 1, Location::kHost);
   Blob* blob_device = CreateBlob(dim_vec, 2, Location::kDevice);
   Blob* expected_blob_host = CreateBlob(dim_vec, 3, Location::kHost);
@@ -78,8 +80,6 @@ TEST(CopyHdKernel, copy_h2d_3x4x5x6) {
   };
 
   // test forward and backward in h2d
-  // Forward: copy blob_host to blob_device
-  // Backward: copy blob_device to expected_blob_host
   copy_h2d_kernel->Forward(ctx, fp);
   copy_h2d_kernel->Backward(ctx, fp);
   CHECK_EQ(cudaStreamSynchronize(cuda_stream), cudaSuccess);
@@ -94,6 +94,8 @@ TEST(CopyHdKernel, copy_d2h_4x5x6x7) {
   std::vector<int64_t> dim_vec = {4, 5, 6, 7};
 
   // Build blob for test d2h
+  // Forward: copy blob_device to blob_host
+  // Backward: copy blob_host to expected_blob_device
   Blob* blob_device = CreateBlob(dim_vec, 1, Location::kDevice);
   Blob* blob_host = CreateBlob(dim_vec, 2, Location::kHost);
   Blob* expected_blob_device = CreateBlob(dim_vec, 3, Location::kDevice);
@@ -124,8 +126,6 @@ TEST(CopyHdKernel, copy_d2h_4x5x6x7) {
   };
 
   // test forward and backward in d2h
-  // Forward: copy blob_device to blob_host
-  // Backward: copy blob_host to expected_blob_device
   copy_d2h_kernel->Forward(ctx, fp);
   copy_d2h_kernel->Backward(ctx, fp);
   CHECK_EQ(cudaStreamSynchronize(cuda_stream), cudaSuccess);
