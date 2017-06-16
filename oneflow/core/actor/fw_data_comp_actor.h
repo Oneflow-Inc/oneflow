@@ -25,7 +25,7 @@ private:
 
   CudaStreamHandle cuda_handle_;
   int (FwDataCompActor::*cur_msg_handle_)(const ActorMsg&, const ThreadContext&);
-  int num_of_read_over_;
+  int num_of_read_done_;
   uint64_t expected_model_version_id_;
   uint64_t model_regst_desc_id_;
   uint64_t model_tmp_regst_desc_id_;
