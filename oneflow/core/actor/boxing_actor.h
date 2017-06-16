@@ -20,7 +20,6 @@ class BoxingActor final : public Actor {
   int HandleBoxingWhenNoReadableRegstMsg(const ActorMsg&, const ThreadContext&);
   int HandleWaitUntilReadingCntEqualZero(const ActorMsg&, const ThreadContext&);
 
-  bool IsReadReady();
   void TryWardKernelAndSendMsg();
 
   CudaStreamHandle cuda_handle_;
