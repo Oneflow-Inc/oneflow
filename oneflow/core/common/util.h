@@ -107,6 +107,15 @@ void EraseIf(HashMap<K, V>* hash_map,
   }
 }
 
+#define OF_DECLARE_ENUM_TO_OSTREAM_FUNC(EnumType) \
+std::ostream& operator << (std::ostream& out_stream, const EnumType&)
+
+#define OF_DEFINE_ENUM_TO_OSTREAM_FUNC(EnumType) \
+std::ostream& operator << (std::ostream& out_stream, const EnumType& x) { \
+  out_stream << static_cast<int> (x); \
+  return out_stream; \
+}
+
 } // namespace oneflow
 
 #endif // ONEFLOW_CORE_COMMON_UTIL_H_
