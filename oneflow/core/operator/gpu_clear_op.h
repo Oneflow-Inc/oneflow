@@ -17,6 +17,12 @@ class GpuClearOp final : public SysOperator {
   const PbMessage& GetSpecialConf() const override;
   
  private:
+  std::string ibn2lbn(const std::string& input_bn) const override {
+    return op_name();
+  }
+  std::string obn2lbn(const std::string& output_bn) const override {
+    return op_name();
+  }
 
 };
 

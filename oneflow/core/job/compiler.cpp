@@ -183,6 +183,7 @@ void Compiler::GenPlanFile(const std::string& plan_filepath) {
       node->ToProto(plan.mutable_task()->Add());
     }
   });
+
   OperatorConf gpu_clear_op_conf;
   gpu_clear_op_conf.set_name("gpu_clear_" + NewUniqueId());
   gpu_clear_op_conf.mutable_gpu_clear_conf();
@@ -191,7 +192,6 @@ void Compiler::GenPlanFile(const std::string& plan_filepath) {
   cpu_clear_op_conf.set_name("cpu_clear_" + NewUniqueId());
   cpu_clear_op_conf.mutable_cpu_clear_conf();
   auto cpu_clear_op = OpMgr::Singleton().ConstructOp(cpu_clear_op_conf);
-
   OpMgr::Singleton().AllOpToProto(plan.mutable_op());
   JobDesc::Singleton().ToProto(plan.mutable_job_desc());
   ConstForEachChainNode([&plan](const ChainNode* node) {
