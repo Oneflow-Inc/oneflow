@@ -18,10 +18,10 @@ class ClearOp final : public SysOperator {
 
  private:
   std::string ibn2lbn(const std::string& input_bn) const override {
-    return op_name();
+    return kBaledBlobName;
   }
   std::string obn2lbn(const std::string& output_bn) const override {
-    return op_name();
+    return kBaledBlobName;
   }
 };
 
