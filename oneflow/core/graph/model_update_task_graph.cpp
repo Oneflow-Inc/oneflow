@@ -35,7 +35,7 @@ void MdUpdtTaskGraph::BuildTaskGraph(const std::string& dot_path_prefix) {
   ForEachNode([this](TaskNode* node) {
     auto model_updt_comp_task_node = dynamic_cast<MdUpdtCompTaskNode*>(node);
     if (model_updt_comp_task_node != nullptr) {
-      model_updt_comp_task_node->set_related_fw_task_parallel_id(fw_task_->parallel_id());
+      model_updt_comp_task_node->set_fw_task(fw_task_);
     }
   });
 }
