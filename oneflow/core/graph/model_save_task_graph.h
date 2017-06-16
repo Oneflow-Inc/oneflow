@@ -21,7 +21,6 @@ class MdSaveTaskGraph final : public TaskGraph {
   void BuildTaskGraph(const std::string& dot_path_prefix);
 
   CompTaskNode* update_task_;
-
 };
 
 } // namespace oneflow

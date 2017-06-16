@@ -10,7 +10,7 @@ class MdSaveCompTaskNode final : public CompTaskNode {
   OF_DISALLOW_COPY_AND_MOVE(MdSaveCompTaskNode);
   MdSaveCompTaskNode() = default;
   ~MdSaveCompTaskNode() = default;
-  
+ 
   void ToProto(TaskProto* proto) const override {
     TaskNode::ToProto(proto);
     proto->set_parallel_policy(fw_task_->chain_node()->parallel_desc()->policy());
@@ -35,7 +35,6 @@ class MdSaveCompTaskNode final : public CompTaskNode {
     return of_make_unique<MdSaveCompTaskNode> ();
   }
   CompTaskNode* fw_task_;
-
 };
 
 } // namespace oneflow

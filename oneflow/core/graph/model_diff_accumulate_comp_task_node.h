@@ -28,7 +28,6 @@ class MdDiffAccCompTaskNode final : public CompTaskNode {
     return of_make_unique<MdDiffAccCompTaskNode> ();
   }
   CompTaskNode* fw_task_;
-
 };
 
 } // namespace oneflow

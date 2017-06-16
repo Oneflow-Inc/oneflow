@@ -24,7 +24,7 @@ void MdSaveTaskGraph::BuildTaskGraph(const std::string& dot_path_prefix) {
   faker_chain->mut_output_lbns() = {kBaledBlobName};
   // save
   ChainNode* save_chain = chain_gph->NewNode();
-  std::string machine_name = 
+  std::string machine_name =
       GetMachineNameFromDeviceName(update_task_->device_name());
   ParallelConf save_pr_conf;
   save_pr_conf.set_policy(kDataParallel);
@@ -39,7 +39,8 @@ void MdSaveTaskGraph::BuildTaskGraph(const std::string& dot_path_prefix) {
   ForEachNode([this](TaskNode* node) {
     auto model_save_comp_task_node = dynamic_cast<MdSaveCompTaskNode*>(node);
     if (model_save_comp_task_node != nullptr) {
-      auto model_update_comp_task_node = static_cast<MdUpdtCompTaskNode*>(update_task_);
+      auto model_update_comp_task_node =
+          static_cast<MdUpdtCompTaskNode*>(update_task_);
       model_save_comp_task_node->set_fw_task(model_update_comp_task_node->fw_task());
     }
   });

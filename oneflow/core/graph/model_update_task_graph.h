@@ -24,9 +24,8 @@ class MdUpdtTaskGraph final : public TaskGraph {
 
   CompTaskNode* fw_task_;
   CompTaskNode* diff_acc_task_;
-
 };
 
 } // namespace oneflow
 
-#endif // ONEFLOW_CORE_GRAPH_MODEL_SAVE_TASK_GRAPH_H_
+#endif // ONEFLOW_CORE_GRAPH_MODEL_UPDATE_TASK_GRAPH_H_

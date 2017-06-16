@@ -186,11 +186,11 @@ void Compiler::GenPlanFile(const std::string& plan_filepath) {
 
   OperatorConf gpu_clear_op_conf;
   gpu_clear_op_conf.set_name("gpu_clear_" + NewUniqueId());
-  gpu_clear_op_conf.mutable_gpu_clear_conf();
+  gpu_clear_op_conf.mutable_clear_conf();
   auto gpu_clear_op = OpMgr::Singleton().ConstructOp(gpu_clear_op_conf);
   OperatorConf cpu_clear_op_conf;
   cpu_clear_op_conf.set_name("cpu_clear_" + NewUniqueId());
-  cpu_clear_op_conf.mutable_cpu_clear_conf();
+  cpu_clear_op_conf.mutable_clear_conf();
   auto cpu_clear_op = OpMgr::Singleton().ConstructOp(cpu_clear_op_conf);
   OpMgr::Singleton().AllOpToProto(plan.mutable_op());
   JobDesc::Singleton().ToProto(plan.mutable_job_desc());

@@ -11,7 +11,8 @@ void MdUpdtCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   CompTaskNode* diff_acc_task = md_updt_gph->diff_acc_task();
   std::shared_ptr<RegstDesc> model_diff_acc_regst;
   if (diff_acc_task != nullptr) {
-    model_diff_acc_regst = diff_acc_task->GetProducedRegstDesc("model_diff_acc");
+    model_diff_acc_regst =
+        diff_acc_task->GetProducedRegstDesc("model_diff_acc");
   }
   TakeOverRegstDesc(fw_task, "model");
   TakeOverRegstDesc(fw_task, "model_tmp");
