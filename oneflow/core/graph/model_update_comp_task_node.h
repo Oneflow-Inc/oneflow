@@ -10,6 +10,14 @@ class MdUpdtCompTaskNode final : public CompTaskNode {
   OF_DISALLOW_COPY_AND_MOVE(MdUpdtCompTaskNode);
   MdUpdtCompTaskNode() = default;
   ~MdUpdtCompTaskNode() = default;
+  
+  void ToProto(TaskProto* ret) const override {
+    TaskNode::ToProto(ret);
+    // TODO
+    // parallel_policy
+    // parallel_id
+    // parallel_num
+  }
 
   void set_related_fw_task_parallel_id(uint64_t parallel_id) {
     related_fw_task_parallel_id_ = parallel_id;

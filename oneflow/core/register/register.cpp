@@ -1,4 +1,5 @@
 #include "oneflow/core/register/register.h"
+#include "oneflow/core/job/keyword.h"
 
 namespace oneflow {
 
@@ -16,10 +17,12 @@ void Regst::ForEachLbn(std::function<void(const std::string&)> func) {
 
 Blob* Regst::GetBlobPtrFromLbn(const std::string& lbn) {
   auto it = lbn2blob_.find(lbn);
-  if (it == lbn2blob_.end()) {
-    return nullptr;
-  } else {
+  if (it != lbn2blob_.end()) {
     return it->second.get();
+  } else if (lbn == kBaledBlobName) {
+    return baled_blob_.get();
+  } else {
+    return nullptr;
   }
 }
 

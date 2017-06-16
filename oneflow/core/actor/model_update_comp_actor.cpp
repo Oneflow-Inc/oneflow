@@ -47,8 +47,13 @@ int MdUpdtCompActor::HandleBeforeInitializeModel(
   model_tmp_regst->ForEachLbn(CollectKernelsFromLbn);
   
   for (const Kernel* kernel : kernels) {
-    kernel->InitModelAndModelTmpBlobs(GenDefaultKernelCtx(),
-                                      [&](const std::string& bn_in_op) {
+    kernel->InitModelAndModelTmpBlobs(
+        GenDefaultKernelCtx(),
+        parallel_policy(),
+        parallel_id(),
+        parallel_num(),
+        SnapshotMgr::Singleton().GetReadableSnapshot(),
+        [&](const std::string& bn_in_op) {
       const std::string& lbn = kernel->Lbn4BnInOp(bn_in_op);
       Blob* ret = model_regst->GetBlobPtrFromLbn(lbn);
       if (ret == nullptr) { ret = model_tmp_regst->GetBlobPtrFromLbn(lbn); }
@@ -67,7 +72,12 @@ int MdUpdtCompActor::HandleBeforeSendInitialModel(
   AsyncSendReadableRegstMsg();
   SetReadOnlyForRegstDescId(model_tmp_regst_desc_id_);
   AsyncSendRegstDescDoneMsgToSubscribers(model_tmp_regst_desc_id_);
-  cur_msg_handle_ = &MdUpdtCompActor::HandleUpdateModel;
+  if (JobDesc::Singleton().is_train()) {
+    cur_msg_handle_ = &MdUpdtCompActor::HandleUpdateModel;
+  } else {
+    AsyncSendRegstDescDoneMsgToSubscribers(model_regst_desc_id_);
+    cur_msg_handle_ = &MdUpdtCompActor::HandleWaitUntilReadingCntEqualZero;
+  }
   return 0;
 }
 
@@ -136,12 +146,7 @@ void MdUpdtCompActor::TryWardKernelAndSendMsg() {
       }
     });
     AsyncSendReadableRegstMsg();
-    ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(
-        model_diff_acc_wpr->producer_actor_id(),
-        model_diff_acc_wpr->regst_raw_ptr());
-    AsyncDo([msg]() {
-      ActorMsgBus::Singleton().SendMsg(msg);
-    });
+    AsyncSendRegstMsgToProducer(model_diff_acc_wpr);
   }
 }
 

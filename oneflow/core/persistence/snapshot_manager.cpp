@@ -14,7 +14,10 @@ void SnapshotMgr::Init() {
   std::vector<std::string> result;
   TF_CHECK_OK(env->GetChildren(model_save_snapshots_path_, &result));
   CHECK_EQ(result.size(), 0);
-  readable_snapshot_ptr_.reset(new Snapshot(JobDesc::Singleton().md_load_snapshot_path()));
+  const std::string& load_path = JobDesc::Singleton().md_load_snapshot_path();
+  if (load_path != "") {
+    readable_snapshot_ptr_.reset(new Snapshot(load_path));
+  }
 }
 
 Snapshot* SnapshotMgr::GetWriteableSnapshot(uint64_t snapshot_id) {

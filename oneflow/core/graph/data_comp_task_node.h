@@ -11,6 +11,13 @@ class DataCompTaskNode final : public CompTaskNode {
   DataCompTaskNode() = default;
   ~DataCompTaskNode() = default;
 
+  void ToProto(TaskProto* proto) const override {
+    TaskNode::ToProto(proto);
+    proto->set_parallel_policy(chain_node()->parallel_desc()->policy());
+    proto->set_parallel_id(parallel_id());
+    proto->set_parallel_num(chain_node()->parallel_desc()->parallel_num());
+  }
+
  private:
   OVERRIDE_IF_FW_BP_FOR_FUNC(BuildExecAndEnrollLbn2Regsts);
   OVERRIDE_IF_FW_BP_FOR_FUNC(InferShapeOfBlobsInProducedRegsts);

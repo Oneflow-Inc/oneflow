@@ -3,6 +3,7 @@ package oneflow;
 
 import "oneflow/core/graph/exec_sequence.proto";
 import "oneflow/core/register/register_desc.proto";
+import "oneflow/core/job/strategy.proto";
 
 enum TaskType {
   kInvalidTaskType = 0;
@@ -25,6 +26,8 @@ message TaskProto {
   ExecSequence exec_sequence = 6;
   map<string, RegstDescProto> produced_regst_desc = 7;
   map<string, uint64> subscribed_regst_desc_id = 8;
-  // for
-  uint64 parallel_id = 1000; // for CompTask
+  // for CompTask
+  ParallelPolicy parallel_policy = 1000;
+  uint64 parallel_id = 1001;
+  uint64 parallel_num = 1002;
 }

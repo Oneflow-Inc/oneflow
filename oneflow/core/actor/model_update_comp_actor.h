@@ -21,8 +21,7 @@ class MdUpdtCompActor final : public CompActor {
   int HandleUpdateModel(const ActorMsg&, const ThreadContext&);
   int HandleUpdtModelWhenNoReadableRegstMsg(const ActorMsg&,
                                             const ThreadContext&);
-  int HandleWaitUntilReadingCntEqualZero(const ActorMsg& actor_msg,
-                                         const ThreadContext& thread_ctx);
+  int HandleWaitUntilReadingCntEqualZero(const ActorMsg&, const ThreadContext&);
 
   void TryWardKernelAndSendMsg();
 
