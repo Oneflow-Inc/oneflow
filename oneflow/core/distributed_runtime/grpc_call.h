@@ -2,16 +2,19 @@
 #define ONEFLOW_CORE_DISTRIBUTED_RUNTIME_GRPC_CALL_H_
 
 #include "tensorflow/core/lib/core/refcount.h"
+#include "tensorflow/core/platform/default/mutex.h"
 
 #include "grpc++/grpc++.h"
 #include "grpc++/impl/codegen/service_type.h"
 #include "grpc++/impl/codegen/call.h"
 #include "grpc++/support/byte_buffer.h"
 
+
+
 namespace oneflow {
 
 template <class Service>
-class UntypedCall : public core::RefCounted {
+class UntypedCall : public tensorflow::core::RefCounted {
  public:
   virtual ~UntypedCall() {}
 
@@ -77,7 +80,7 @@ class Call : public UntypedCall<Service> {
 
   void RequestCancelled(Service* service, bool ok) override {
     if (ctx_.IsCancelled()) {
-      mutex_lock l(mu_);
+      ::tensorflow::mutex_lock l(mu_);
       if (cancel_callback_) {
         cancel_callback_();
       }
@@ -85,12 +88,12 @@ class Call : public UntypedCall<Service> {
   }
 
   void SetCancelCallback(std::function<void()> callback) {
-    mutex_lock l(mu_);
+    ::tensorflow::mutex_lock l(mu_);
     cancel_callback_ = std::move(callback);
   }
 
   void ClearCancelCallback() {
-    mutex_lock l(mu_);
+    tensorflow::mutex_lock l(mu_);
     cancel_callback_ = nullptr;
   }
 
@@ -142,7 +145,7 @@ class Call : public UntypedCall<Service> {
   Tag response_sent_tag_{this, Tag::kResponseSent};
   Tag cancelled_tag_{this, Tag::Cancelled};
 
-  mutex mu_;
+  ::tensorflow::mutex mu_;
   std::function<void()> cancel_callback_ GUARDED_BY(mu_);
 };  // class Call
 
