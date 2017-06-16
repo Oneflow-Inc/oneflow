@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_DISTRIBUTED_RUNTIME_GRPC_CALL_H_
 
 #include "tensorflow/core/lib/core/refcount.h"
-#include "tensorflow/core/platform/default/mutex.h"
+#include "tensorflow/core/platform/mutex.h"
 
 #include "grpc++/grpc++.h"
 #include "grpc++/impl/codegen/service_type.h"

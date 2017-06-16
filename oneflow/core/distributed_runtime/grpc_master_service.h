@@ -10,7 +10,7 @@
 #include "oneflow/core/distributed_runtime/grpc_master_service_impl.h"
 #include "oneflow/core/distributed_runtime/master.h"
 
-#include "tensorflow/core/platform/default/mutex.h"
+#include "tensorflow/core/platform/mutex.h"
 
 #include "oneflow/core/distributed_runtime/master_service.pb.h"
 
