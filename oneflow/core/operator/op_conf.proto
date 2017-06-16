@@ -189,14 +189,16 @@ message ModelUpdateOpConf {
 }
 
 message ModelDiffAccOpConf {
-  uint32 model_diff_num = 1;
 }
 
 message ModelSaveOpConf {
   repeated string lbns = 1;
 }
 
-message ClearOpConf {
+message CpuClearOpConf {
+}
+
+message GpuClearOpConf {
 }
 
 message OperatorConf {
@@ -217,6 +219,7 @@ message OperatorConf {
     ModelDiffAccOpConf model_diff_acc_conf = 112;
     ConcatOpConf concat_conf = 113;
     CopyCommNetOpConf copy_comm_net_conf = 114;
-    ClearOpConf clear_conf = 115;
+    CpuClearOpConf cpu_clear_conf = 115;
+    GpuClearOpConf gpu_clear_conf = 116;
   }
 }

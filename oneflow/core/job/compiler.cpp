@@ -183,6 +183,15 @@ void Compiler::GenPlanFile(const std::string& plan_filepath) {
       node->ToProto(plan.mutable_task()->Add());
     }
   });
+  OperatorConf gpu_clear_op_conf;
+  gpu_clear_op_conf.set_name("gpu_clear_" + NewUniqueId());
+  gpu_clear_op_conf.mutable_gpu_clear_conf();
+  auto gpu_clear_op = OpMgr::Singleton().ConstructOp(gpu_clear_op_conf);
+  OperatorConf cpu_clear_op_conf;
+  cpu_clear_op_conf.set_name("cpu_clear_" + NewUniqueId());
+  cpu_clear_op_conf.mutable_cpu_clear_conf();
+  auto cpu_clear_op = OpMgr::Singleton().ConstructOp(cpu_clear_op_conf);
+
   OpMgr::Singleton().AllOpToProto(plan.mutable_op());
   JobDesc::Singleton().ToProto(plan.mutable_job_desc());
   ConstForEachChainNode([&plan](const ChainNode* node) {
@@ -191,12 +200,20 @@ void Compiler::GenPlanFile(const std::string& plan_filepath) {
           {op->op_name(), node->parallel_desc()->device_type()}).second);
     }
   });
+  CHECK(plan.mutable_op_name2device_type()->insert(
+      {gpu_clear_op->op_name(), kGPU}).second);
+  CHECK(plan.mutable_op_name2device_type()->insert(
+      {cpu_clear_op->op_name(), kCPU}).second);
   ConstForEachStageNode([&plan](const StageNode* node) {
     auto pbmap = plan.mutable_machine_id2op_name_set();
     for (std::shared_ptr<const Operator> op : node->chain_node()->op_vec()) {
       (*pbmap)[node->machine_id()].add_op_name(op->op_name());
     }
   });
+  for (auto& pair : *(plan.mutable_machine_id2op_name_set())) {
+    pair.second.add_op_name(gpu_clear_op->op_name());
+    pair.second.add_op_name(cpu_clear_op->op_name());
+  }
   PrintProtoToTextFile(plan, plan_filepath);
 }
 

@@ -9,31 +9,23 @@ void MdUpdtCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   auto md_updt_gph = static_cast<MdUpdtTaskGraph*> (gph);
   CompTaskNode* fw_task = md_updt_gph->fw_task();
   CompTaskNode* diff_acc_task = md_updt_gph->diff_acc_task();
-  std::shared_ptr<RegstDesc> model_diff_acc_regst;
+  std::shared_ptr<RegstDesc> model_diff_acc_regst = nullptr;
   if (diff_acc_task != nullptr) {
     model_diff_acc_regst = diff_acc_task->GetProducedRegstDesc("model_diff_acc");
   }
-  if (in_edges().empty()) {
-    if (model_diff_acc_regst != nullptr) {
-      BindProducedRegstAndOutEdge(model_diff_acc_regst, SoleOutEdge());
-    }
-  } else if (out_edges().empty()) {
-    TakeOverRegstDesc(fw_task, "model");
-    TakeOverRegstDesc(fw_task, "model_tmp");
-    auto model_regst = GetProducedRegstDesc("model");
+  TakeOverRegstDesc(fw_task, "model");
+  TakeOverRegstDesc(fw_task, "model_tmp");
+  auto model_regst = GetProducedRegstDesc("model");
 
-    ExecNode* exec_node = mut_exec_gph().NewNode();
-    exec_node->mut_op() = chain_node()->SoleOp();
-    const std::string ibn = "model_diffs";
-    if (model_diff_acc_regst) {
-      exec_node->BindBnInOpAndRegst(ibn, model_diff_acc_regst);
-      SubscribeRegstDesc(ibn, model_diff_acc_regst);
-    }
-    exec_node->BindBnInOpAndRegst(exec_node->op()->SoleObn(), model_regst);
-    mut_exec_gph().UpdateSourceAndSink();
-  } else {
-    UNEXPECTED_RUN();
+  ExecNode* exec_node = mut_exec_gph().NewNode();
+  exec_node->mut_op() = chain_node()->SoleOp();
+  const std::string ibn = "model_diffs";
+  if (model_diff_acc_regst != nullptr) {
+    exec_node->BindBnInOpAndRegst(ibn, model_diff_acc_regst);
+    SubscribeRegstDesc(ibn, model_diff_acc_regst);
   }
+  exec_node->BindBnInOpAndRegst(exec_node->op()->SoleObn(), model_regst);
+  mut_exec_gph().UpdateSourceAndSink();
 }
 
 void MdUpdtCompTaskNode::InferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {

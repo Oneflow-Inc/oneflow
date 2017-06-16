@@ -16,14 +16,6 @@ MdUpdtTaskGraph::MdUpdtTaskGraph(const std::string& name,
 
 void MdUpdtTaskGraph::BuildTaskGraph(const std::string& dot_path_prefix) {
   auto chain_gph = of_make_unique<ChainGraph> ();
-  // faker
-  ChainNode* faker_chain = chain_gph->NewNode();
-  ParallelConf faker_pr_conf;
-  faker_pr_conf.set_policy(kDataParallel);
-  faker_pr_conf.mutable_device_set()->add_device_name(fw_task_->device_name());
-  faker_chain->mut_parallel_desc().reset(new ParallelDesc(faker_pr_conf));
-  faker_chain->mut_output_lbns() = {kBaledBlobName};
-  // update
   OperatorConf op_conf;
   op_conf.set_name("model_update_"+ NewUniqueId());
   op_conf.mutable_model_update_conf();
@@ -36,11 +28,10 @@ void MdUpdtTaskGraph::BuildTaskGraph(const std::string& dot_path_prefix) {
   updt_chain->mut_parallel_desc().reset(new ParallelDesc(updt_pr_conf));
   updt_chain->mut_input_lbns() = {kBaledBlobName};
   updt_chain->mut_op_vec() = {model_updt_op};
-
-  Connect(faker_chain, chain_gph->NewEdge(), updt_chain);
   chain_gph->UpdateSourceAndSink();
   chain_gph->ToDotFile(dot_path_prefix + "chain_graph.dot");
   BuildFromChainGph<MdUpdtCompTaskNode>(std::move(chain_gph), false, dot_path_prefix);
+
   ForEachNode([this](TaskNode* node) {
     auto model_updt_comp_task_node = dynamic_cast<MdUpdtCompTaskNode*>(node);
     if (model_updt_comp_task_node != nullptr) {
