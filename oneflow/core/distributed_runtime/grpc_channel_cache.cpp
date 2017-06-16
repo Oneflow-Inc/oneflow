@@ -18,7 +18,7 @@ void GrpcChannelCache::CreateChannelCache() {
     std::string dst_ip_port = dst_ip + ":" + dst_port;
     std::shared_ptr<::grpc::Channel> channel =
       ::grpc::CreateChannel(dst_ip_port, ::grpc::InsecureChannelCredentials());
-    channel_map_.insert({dst_ip, channel});
+    channel_map_.insert({dst_ip_port, channel});
   }
 }
 
