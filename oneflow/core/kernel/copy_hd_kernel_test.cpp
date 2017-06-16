@@ -17,17 +17,17 @@ enum class Location {
 };
 
 Blob* CreateBlob(const std::vector<int64_t>& dim_vec, int value,
-                 Location buffer_loc) {
+                 Location dptr_location) {
   char* dptr;
   Shape* shape = new Shape(dim_vec);
 
-  size_t buffer_size = shape->elem_cnt()*sizeof(float);
-  if (buffer_loc == Location::kHost) {
-    CHECK_EQ(cudaMallocHost(&dptr, buffer_size), cudaSuccess);
-    memset(dptr, value, buffer_size);
+  size_t dptr_size = shape->elem_cnt()*sizeof(float);
+  if (dptr_location == Location::kHost) {
+    CHECK_EQ(cudaMallocHost(&dptr, dptr_size), cudaSuccess);
+    memset(dptr, value, dptr_size);
   } else {
-    CHECK_EQ(cudaMalloc(&dptr, buffer_size), cudaSuccess);
-    CHECK_EQ(cudaMemset(dptr, value, buffer_size), cudaSuccess);
+    CHECK_EQ(cudaMalloc(&dptr, dptr_size), cudaSuccess);
+    CHECK_EQ(cudaMemset(dptr, value, dptr_size), cudaSuccess);
   }
 
   return new Blob(dptr, shape);
@@ -83,10 +83,10 @@ TEST(CopyHdKernel, copy_h2d_3x4x5x6) {
   copy_h2d_kernel->Backward(ctx, fp);
   CHECK_EQ(cudaStreamSynchronize(cuda_stream), cudaSuccess);
 
-  CHECK_EQ(memcmp(blob_host->dptr(),
-                  expected_blob_host->dptr(),
-                  blob_host->shape().elem_cnt() * sizeof(float)),
-           0);
+  ASSERT_EQ(memcmp(blob_host->dptr(),
+                   expected_blob_host->dptr(),
+                   blob_host->shape().elem_cnt() * sizeof(float)),
+            0);
 }
 
 TEST(CopyHdKernel, copy_d2h_4x5x6x7) {
@@ -140,10 +140,10 @@ TEST(CopyHdKernel, copy_d2h_4x5x6x7) {
                       cudaMemcpyDeviceToHost),
            cudaSuccess);
 
-  CHECK_EQ(memcmp(blob_device_copy->dptr(),
-                  expected_blob_device_copy->dptr(),
-                  blob_device_copy->shape().elem_cnt() * sizeof(float)),
-           0);
+  ASSERT_EQ(memcmp(blob_device_copy->dptr(),
+                   expected_blob_device_copy->dptr(),
+                   blob_device_copy->shape().elem_cnt() * sizeof(float)),
+            0);
 }
 
 }  // namespace oneflow
