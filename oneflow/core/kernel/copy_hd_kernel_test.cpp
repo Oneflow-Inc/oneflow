@@ -29,7 +29,8 @@ Blob* CreateBlob(const std::vector<int64_t>& dim_vec,
     CHECK_EQ(cudaMalloc(&buffer, buffer_size), cudaSuccess);
   }
 
-  CHECK_EQ(cudaMemset(buffer, value, buffer_size), cudaSuccess);
+  CHECK_EQ(cudaMemset(buffer, 0, buffer_size), cudaSuccess);
+  CHECK_EQ(cudaMemset(buffer, value, buffer_size-1), cudaSuccess);
   return new Blob(buffer, shape);
 }
 
