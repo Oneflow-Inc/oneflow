@@ -37,7 +37,7 @@ void TaskGraph::InferShapeOfBlobsInProducedRegsts() {
   });
 }
 
-std::vector<CompTaskNode*> TaskGraph::SortedCompTasksInChain(
+std::vector<CompTaskNode*> TaskGraph::CompTasksInChain(
     const ChainNode* chain) {
   std::vector<CompTaskNode*> ret;
   ForEachNode([&](TaskNode* node) {
