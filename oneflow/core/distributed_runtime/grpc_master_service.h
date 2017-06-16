@@ -85,11 +85,11 @@ class GrpcMasterService {
   using MasterCall = Call<GrpcMasterService, grpc::MasterService::AsyncService,
                           RequestMessage, ResponseMessage>;
 
-  ::tensorflow::Status SendGraphHandler(MasterCall<SendGraphRequest,
+  void SendGraphHandler(MasterCall<SendGraphRequest,
                         SendGraphResponse>* call) {
     Schedule([this, call] {
         tensorflow::Status s = master_->SendGraph(&call->request, &call->response);
-      call->SendResponse(s);
+      call->SendResponse(ToGrpcStatus(s));
     });
   }  // Sendgraphhandler
 };  // GrpcMasterService
