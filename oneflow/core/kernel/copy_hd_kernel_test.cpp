@@ -12,24 +12,24 @@ namespace oneflow {
 
 namespace {
 
-enum Location {
-  Host = 0,
-  Device = 1
+enum class Location {
+  kHost, 
+  kDevice
 };
 
 Blob* CreateBlob(const std::vector<int64_t>& dim_vec,
-                 int filled, enum Location buffer_loc) { 
+                 int value, enum Location buffer_loc) { 
   char* buffer;
   Shape* shape = new Shape(dim_vec);
   
   size_t buffer_size = shape->elem_cnt()*sizeof(float);
-  if (buffer_loc == Host) {
+  if (buffer_loc == Location::kHost) {
     CHECK_EQ(cudaMallocHost(&buffer, buffer_size), cudaSuccess);
   } else {
     CHECK_EQ(cudaMalloc(&buffer, buffer_size), cudaSuccess);
   }
 
-  CHECK_EQ(cudaMemset(buffer, filled, buffer_size), cudaSuccess);
+  CHECK_EQ(cudaMemset(buffer, value, buffer_size), cudaSuccess);
   return new Blob(buffer, shape);
 }
 
@@ -53,9 +53,9 @@ TEST(CopyHdKernel, copy_h2d_3x4x5x6) {
   std::vector<int64_t> dim_vec = {3, 4, 5, 6};
  
   // Build blob for test h2d 
-  Blob* blob_host = CreateBlob(dim_vec, 0, Host);
-  Blob* blob_device = CreateBlob(dim_vec, 1, Device);
-  Blob* check_blob_host = CreateBlob(dim_vec, 2, Host);
+  Blob* blob_host = CreateBlob(dim_vec, 1, Location::kHost);
+  Blob* blob_device = CreateBlob(dim_vec, 2, Location::kDevice);
+  Blob* check_blob_host = CreateBlob(dim_vec, 3, Location::kHost);
  
   // Create CudaDeviceContext and KernelContext
   cudaStream_t cuda_stream;
@@ -64,8 +64,7 @@ TEST(CopyHdKernel, copy_h2d_3x4x5x6) {
   ctx.device_ctx = new CudaDeviceCtx(&cuda_stream, nullptr, nullptr);
 
   // build CopyH2DKernel
-  CopyHdKernel<DeviceType::kGPU, float>* copy_h2d_kernel = 
-      new CopyHdKernel<DeviceType::kGPU, float>;
+  auto copy_h2d_kernel = new CopyHdKernel<DeviceType::kGPU, float>;
   BuildCopyHdKernel(copy_h2d_kernel, CopyHdOpConf::H2D);
   
   // Build function pointer of blob name to blob
@@ -84,17 +83,17 @@ TEST(CopyHdKernel, copy_h2d_3x4x5x6) {
   CHECK_EQ(cudaStreamSynchronize(cuda_stream), cudaSuccess);
 
   // check 
-  CHECK_EQ(strcmp(blob_host->dptr(), check_blob_host->dptr()), 0);
+  ASSERT_STREQ(blob_host->dptr(), check_blob_host->dptr());
 }
 
 TEST(CopyHdKernel, copy_d2h_4x5x6x7) {
   std::vector<int64_t> dim_vec = {4, 5, 6, 7};
 
   // Build blob for test d2h
-  Blob* blob_device = CreateBlob(dim_vec, 0, Device);
-  Blob* blob_host = CreateBlob(dim_vec, 1, Host);
-  Blob* check_blob_device = CreateBlob(dim_vec, 2, Device);
-  Blob* check_blob_host = CreateBlob(dim_vec, 3, Host);
+  Blob* blob_device = CreateBlob(dim_vec, 1, Location::kDevice);
+  Blob* blob_host = CreateBlob(dim_vec, 2, Location::kHost);
+  Blob* check_blob_device = CreateBlob(dim_vec, 3, Location::kDevice);
+  Blob* check_blob_host = CreateBlob(dim_vec, 4, Location::kHost);
 
   // Create CudaDeviceContext and KernelContext
   cudaStream_t cuda_stream;
@@ -128,7 +127,7 @@ TEST(CopyHdKernel, copy_d2h_4x5x6x7) {
                       check_blob_device->shape().elem_cnt() * sizeof(float),
                       cudaMemcpyDeviceToHost),
            cudaSuccess);
-  CHECK_EQ(strcmp(blob_host->dptr(), check_blob_host->dptr()), 0);
+  ASSERT_STREQ(blob_host->dptr(), check_blob_host->dptr());
 }
 
 }  // namespace oneflow

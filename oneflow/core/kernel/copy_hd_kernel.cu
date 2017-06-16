@@ -52,7 +52,8 @@ void CopyHdKernel<DeviceType::kGPU, floating_point_type>::Forward(
   Blob* out_blob = BnInOp2BlobPtr(op()->SoleObn());
 
   (*ForwardCopyFunc)(in_blob, out_blob,
-                 ctx.device_ctx->cuda_stream(), sizeof(floating_point_type));
+                     ctx.device_ctx->cuda_stream(),
+                     sizeof(floating_point_type));
 }
 
 template<typename floating_point_type>
@@ -63,7 +64,8 @@ void CopyHdKernel<DeviceType::kGPU, floating_point_type>::Backward(
   Blob* out_blob = BnInOp2BlobPtr(op()->SoleIdbn());
 
   (*BackwardCopyFunc)(in_blob, out_blob,
-                 ctx.device_ctx->cuda_stream(), sizeof(floating_point_type));
+                      ctx.device_ctx->cuda_stream(),
+                      sizeof(floating_point_type));
 }
 
 INSTANTIATE_GPU_KERNEL_CLASS(CopyHdKernel);
