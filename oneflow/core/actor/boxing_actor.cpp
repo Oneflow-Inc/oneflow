@@ -36,6 +36,7 @@ int BoxingActor::ProcessMsg(const ActorMsg& msg,
   //if (!ready_in_regst_.empty() && IsWriteReady()) {
   //  WardKernelAndSendMsg(kernel_ctx);
   //}
+  return -1;
 }
 
 void BoxingActor::WardKernelAndSendMsg(const KernelCtx& kernel_ctx) {

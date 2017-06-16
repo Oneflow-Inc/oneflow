@@ -8,10 +8,4 @@ void Kernel::InitFromOpProto(const OperatorProto& op_proto) {
   op_.reset(op);
 }
 
-void Kernel::InitModelAndModelTmpBlobs(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> Blob4BnInOp) const {
-  TODO();
-}
-
 } // namespace oneflow

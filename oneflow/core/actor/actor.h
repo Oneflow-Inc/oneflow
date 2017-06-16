@@ -17,6 +17,7 @@
 #include "oneflow/core/register/remote_register_warpper.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/thread/thread_context.h"
+#include "oneflow/core/persistence/snapshot_manager.h"
 
 namespace oneflow {
 
@@ -26,8 +27,8 @@ class Actor {
   virtual ~Actor() = default;
 
   virtual void Init(const TaskProto& task_proto) = 0;
-  // 1: success, but actor can't process next msg
-  // 0: success, actor can process next msg
+  // 1: success, and actor finish
+  // 0: success, and actor not finish
   virtual int ProcessMsg(const ActorMsg&, const ThreadContext& ctx) = 0;
 
   uint64_t actor_id() const { return actor_id_; }
@@ -53,6 +54,8 @@ class Actor {
       std::function<std::shared_ptr<RegstWarpper>(uint64_t)> Regst4RegstDescId);
   void AsyncSendReadableRegstMsg();
   void AsyncSendRegstDescDoneMsgToSubscribers(uint64_t regst_desc_id);
+  void AsyncSendRegstDescDoneMsgForAllProducedRegstDesc();
+  void AsyncSendRegstMsgToProducer(const std::shared_ptr<RegstWarpper>&);
   void AsyncDo(std::function<void()>);
   int TryUpdtStateAsProducedRegst(Regst* regst);
   Regst* GetCurWriteableRegst(uint64_t regst_desc_id);
