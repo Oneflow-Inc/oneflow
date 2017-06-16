@@ -33,7 +33,7 @@ int FwDataCompActor::ProcessMsg(const ActorMsg& msg,
 int FwDataCompActor::HandleInitDeviceCtx(
     const ActorMsg& msg,
     const ThreadContext& thread_ctx) {
-  CHECK(msg.actor_cmd() == ActorCmd::kInitDeviceCtx);
+  CHECK_EQ(msg.actor_cmd(), ActorCmd::kInitDeviceCtx);
   if (thread_ctx.cpu_stream) {
     mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
   } else {
@@ -49,7 +49,7 @@ int FwDataCompActor::HandleFwComp(
     const ActorMsg& msg,
     const ThreadContext& thread_ctx) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK(msg.actor_cmd() == ActorCmd::kOneRegstDescDone);
+    CHECK_EQ(msg.actor_cmd(), ActorCmd::kOneRegstDescDone);
     num_of_read_done_ += 1;
     if (num_of_read_done_ == 3) {
       cur_msg_handle_ = &FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg;

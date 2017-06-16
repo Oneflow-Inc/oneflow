@@ -21,11 +21,11 @@ bool BpDataCompActor::IsReadReady() {
   if (num_of_read_empty_) {
     return false;
   }
-  if (read_in_.at(model_regst_desc_id_).front()->model_version_id() != 
-      read_in_.at(activation_regst_desc_id_).front()->model_version_id()) {
-    AsyncSendRegstMsgToProducer(read_in_.at(model_regst_desc_id_).front());
-    read_in_.at(model_regst_desc_id_).pop();
-    num_of_read_empty_ += read_in_.at(model_regst_desc_id_).empty();
+  if (read_regst_.at(model_regst_desc_id_).front()->model_version_id() != 
+      read_regst_.at(activation_regst_desc_id_).front()->model_version_id()) {
+    AsyncSendRegstMsgToProducer(read_regst_.at(model_regst_desc_id_).front());
+    read_regst_.at(model_regst_desc_id_).pop();
+    num_of_read_empty_ += read_regst_.at(model_regst_desc_id_).empty();
   }
   return !num_of_read_empty_;
 }
@@ -38,7 +38,7 @@ int BpDataCompActor::ProcessMsg(const ActorMsg& msg,
 int BpDataCompActor::HandleInitDeviceCtx(
     const ActorMsg& msg,
     const ThreadContext& thread_ctx) {
-  CHECK(msg.actor_cmd() == ActorCmd::kInitDeviceCtx);
+  CHECK_EQ(msg.actor_cmd(), ActorCmd::kInitDeviceCtx);
   if (thread_ctx.cpu_stream) {
     mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
   } else {
@@ -54,7 +54,7 @@ int BpDataCompActor::HandleBpComp(
     const ActorMsg& msg,
     const ThreadContext& thread_ctx) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK(msg.actor_cmd() == ActorCmd::kOneRegstDescDone);
+    CHECK_EQ(msg.actor_cmd(), ActorCmd::kOneRegstDescDone);
     num_of_read_done_ += 1;
     if (num_of_read_done_ == 6) {
       cur_msg_handle_ = &BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg;
@@ -63,14 +63,14 @@ int BpDataCompActor::HandleBpComp(
     if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()) != 0) {
       std::shared_ptr<RegstWarpper> regst_wp = msg.regst_warpper();
       if (regst_wp->regst_desc_id() == model_tmp_regst_desc_id_) {
-        CHECK(read_in_.find(model_tmp_regst_desc_id_) == read_in_.end());
+        CHECK(read_regst_.find(model_tmp_regst_desc_id_) == read_regst_.end());
       } else if (regst_wp->regst_desc_id() == model_regst_desc_id_) {
         CHECK_EQ(regst_wp->model_version_id(), expected_model_version_id_++);
       } else {
         // do nothing
       }
-      num_of_read_empty_ -= read_in_[regst_wp->regst_desc_id()].empty();
-      read_in_.at(regst_wp->regst_desc_id()).push(regst_wp);
+      num_of_read_empty_ -= read_regst_[regst_wp->regst_desc_id()].empty();
+      read_regst_.at(regst_wp->regst_desc_id()).push(regst_wp);
     }
   }
   TryWardKernelAndSendMsg();
@@ -82,13 +82,13 @@ int BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg(
     const ThreadContext& thread_ctx) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
   TryWardKernelAndSendMsg();
-  if (read_in_.at(activation_regst_desc_id_).empty()) {
-    while (!read_in_.at(model_regst_desc_id_).empty()) {
-      AsyncSendRegstMsgToProducer(read_in_.at(model_regst_desc_id_).front());
-      read_in_.at(model_regst_desc_id_).pop();
+  if (read_regst_.at(activation_regst_desc_id_).empty()) {
+    while (!read_regst_.at(model_regst_desc_id_).empty()) {
+      AsyncSendRegstMsgToProducer(read_regst_.at(model_regst_desc_id_).front());
+      read_regst_.at(model_regst_desc_id_).pop();
     }
-    AsyncSendRegstMsgToProducer(read_in_.at(model_tmp_regst_desc_id_).front());
-    read_in_.at(model_tmp_regst_desc_id_).pop();
+    AsyncSendRegstMsgToProducer(read_regst_.at(model_tmp_regst_desc_id_).front());
+    read_regst_.at(model_tmp_regst_desc_id_).pop();
     AsyncSendRegstDescDoneMsgForAllProducedRegstDesc();
     num_of_read_empty_ = 6;
     if (total_reading_cnt() == 0) {
@@ -115,11 +115,11 @@ int BpDataCompActor::HandleWaitUntilReadingCntEqualZero(
 
 void BpDataCompActor::TryWardKernelAndSendMsg() {
   while (IsReadReady() && IsWriteReady()) {
-    uint64_t cur_model = read_in_.at(model_regst_desc_id_).front()->model_version_id();
+    uint64_t cur_model = read_regst_.at(model_regst_desc_id_).front()->model_version_id();
     uint64_t piece_id = expected_piece_id();
-    CHECK_EQ(cur_model, read_in_.at(activation_regst_desc_id_).front()->model_version_id());
-    CHECK_EQ(cur_model, read_in_.at(data_tmp_regst_desc_id_).front()->model_version_id());
-    for (const auto& pair : read_in_) {
+    CHECK_EQ(cur_model, read_regst_.at(activation_regst_desc_id_).front()->model_version_id());
+    CHECK_EQ(cur_model, read_regst_.at(data_tmp_regst_desc_id_).front()->model_version_id());
+    for (const auto& pair : read_regst_) {
       if (pair.first != model_regst_desc_id_ && pair.first != model_tmp_regst_desc_id_) {
         CHECK_EQ(pair.second.front()->piece_id(), piece_id);
       }
@@ -128,7 +128,7 @@ void BpDataCompActor::TryWardKernelAndSendMsg() {
         [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
       Regst* regst = GetCurWriteableRegst(regst_desc_id);
       if (regst == nullptr) {
-        return read_in_.at(regst_desc_id).front();
+        return read_regst_.at(regst_desc_id).front();
       } else {
         return std::make_shared<LocalRegstWarpper> (regst);
       }
@@ -137,7 +137,7 @@ void BpDataCompActor::TryWardKernelAndSendMsg() {
       regst->set_piece_id(piece_id);
     });
     AsyncSendReadableRegstMsg();
-    for (auto& pair : read_in_) {
+    for (auto& pair : read_regst_) {
       if (pair.first != model_regst_desc_id_ && pair.first != model_tmp_regst_desc_id_) {
         AsyncSendRegstMsgToProducer(pair.second.front());
         pair.second.pop();

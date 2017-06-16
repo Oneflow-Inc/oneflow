@@ -33,7 +33,7 @@ private:
   uint64_t activation_regst_desc_id_;
   uint64_t data_tmp_regst_desc_id_;
   // <regst_desc_id, queue<regst_wp>>
-  HashMap<uint64_t, std::queue<std::shared_ptr<RegstWarpper>>> read_in_;
+  HashMap<uint64_t, std::queue<std::shared_ptr<RegstWarpper>>> read_regst_;
 };
 
 }  // namespace oneflow
