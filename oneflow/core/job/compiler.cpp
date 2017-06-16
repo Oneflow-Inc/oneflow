@@ -129,7 +129,7 @@ void Compiler::BuildModelGraphs(
     ordered_task_gphs_.emplace_back(diff_acc_gph);
 
     ChainNode* diff_acc_chain = diff_acc_gph->chain_gph()->SoleSinkNode();
-    diff_acc_tasks = diff_acc_gph->SortedCompTasksInChain(diff_acc_chain);
+    diff_acc_tasks = diff_acc_gph->CompTasksInChain(diff_acc_chain);
     SortByParallelId(&diff_acc_tasks);
   }
 
@@ -144,7 +144,7 @@ void Compiler::BuildModelGraphs(
         dot_path_prefix + "model_update_" + data_fw_task->node_id_str() + "_");
     ordered_task_gphs_.emplace_back(updt_gph);
     ChainNode* updt_chain = updt_gph->chain_gph()->SoleSinkNode();
-    auto updt_tasks_in_chain = updt_gph->SortedCompTasksInChain(updt_chain);
+    auto updt_tasks_in_chain = updt_gph->CompTasksInChain(updt_chain);
     CHECK_EQ(updt_tasks_in_chain.size(), 1);
     updt_tasks.push_back(updt_tasks_in_chain[0]);
   }
