@@ -41,14 +41,14 @@ void InnerProductOp::InferShape4FwBlobs(
 
   // model bn
   CHECK_EQ(model_bns().size(), 2);
-  Shape* weight_shape_ptr = GetShapePtr4BnInOp(model_bns().at(0));
-  Shape* bias_shape_ptr = GetShapePtr4BnInOp(model_bns().at(1));
-  *weight_shape_ptr = Shape({1, out_num, in_shape_ptr->Count(1)});
-  *bias_shape_ptr = Shape({1, out_num});
+  Shape* weight_shape_ptr = GetShapePtr4BnInOp("weight");
+  Shape* bias_shape_ptr = GetShapePtr4BnInOp("bias");
+  *weight_shape_ptr = Shape({out_num, in_shape_ptr->Count(1)});
+  *bias_shape_ptr = Shape({out_num});
 
   // model tmp bn
   CHECK_EQ(model_tmp_bns().size(), 1);
-  Shape* bias_multiplier_shape_ptr = GetShapePtr4BnInOp(model_tmp_bns().at(0));
+  Shape* bias_multiplier_shape_ptr = GetShapePtr4BnInOp("bias_multiplier");
   *bias_multiplier_shape_ptr = Shape({in_shape_ptr->At(0), 1});
 }
 

@@ -36,9 +36,9 @@ TEST(InnerProductOp, modelparallel_innerproduct) {
   Shape* out_shape_ptr = bn2shape_ptr.at(ip_op->SoleObn());
   CHECK_EQ(*out_shape_ptr, Shape({1000, out_num}));
   Shape* weight_shape_ptr = bn2shape_ptr.at(ip_op->model_bns().at(0));
-  CHECK_EQ(*weight_shape_ptr, Shape({1, out_num, 3*256*256}));
+  CHECK_EQ(*weight_shape_ptr, Shape({out_num, 3*256*256}));
   Shape* bias_shape_ptr = bn2shape_ptr.at(ip_op->model_bns().at(1));
-  CHECK_EQ(*bias_shape_ptr, Shape({1, out_num}));
+  CHECK_EQ(*bias_shape_ptr, Shape({out_num}));
   Shape* bias_multiplier_shape_ptr =
     bn2shape_ptr.at(ip_op->model_tmp_bns().at(0));
   CHECK_EQ(*bias_multiplier_shape_ptr, Shape({1000, 1}));
@@ -69,9 +69,9 @@ TEST(InnerProductOp, dataparallel_innerproduct) {
   Shape* out_shape_ptr = bn2shape_ptr.at(ip_op->SoleObn());
   CHECK_EQ(*out_shape_ptr, Shape({1000, 40}));
   Shape* weight_shape_ptr = bn2shape_ptr.at(ip_op->model_bns().at(0));
-  CHECK_EQ(*weight_shape_ptr, Shape({1, 40, 3*256*256}));
+  CHECK_EQ(*weight_shape_ptr, Shape({40, 3*256*256}));
   Shape* bias_shape_ptr = bn2shape_ptr.at(ip_op->model_bns().at(1));
-  CHECK_EQ(*bias_shape_ptr, Shape({1, 40}));
+  CHECK_EQ(*bias_shape_ptr, Shape({40}));
   Shape* bias_multiplier_shape_ptr =
     bn2shape_ptr.at(ip_op->model_tmp_bns().at(0));
   CHECK_EQ(*bias_multiplier_shape_ptr, Shape({1000, 1}));
