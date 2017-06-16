@@ -32,7 +32,7 @@ template<typename floating_point_type>
 void CopyHdKernel<DeviceType::kGPU, floating_point_type>::InitFromOpProto(
     const OperatorProto& op_proto) {
   Kernel::InitFromOpProto(op_proto);
-  
+
   const CopyHdOpConf& copy_hd_conf = op()->op_conf().copy_hd_conf();
 
   if (copy_hd_conf.type() == CopyHdOpConf::H2D) {
