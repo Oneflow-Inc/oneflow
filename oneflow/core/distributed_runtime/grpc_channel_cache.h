@@ -21,15 +21,13 @@ class GrpcChannelCache {
   ~GrpcChannelCache();
 
   void CreateChannelCache();
-  std::shared_ptr<::grpc::Channel> FindChannel(std::string& address);
+  std::shared_ptr<::grpc::Channel> FindChannel(const std::string& address);
 
   std::map<std::string, std::shared_ptr<::grpc::Channel>> channel_map_;
 
   oneflow::ClusterSpec cluster_spec_;
 };
 
-
-}
-
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_DISTRIBUTED_RUNTIME_GRPC_CHANNEL_CACHE_H_

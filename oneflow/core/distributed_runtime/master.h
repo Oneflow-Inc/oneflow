@@ -6,6 +6,8 @@
 //#include "oneflow/core/distributed_runtime/grpc_remote_worker.h"
 #include "oneflow/core/distributed_runtime/grpc_channel_cache.h"
 
+#include "tensorflow/core/lib/core/status.h"
+
 namespace oneflow {
 
 class Master {
@@ -13,7 +15,7 @@ class Master {
   Master(GrpcChannelCache* channel_cache);
   ~Master();
 
-  void SendGraph(SendGraphRequest* request,
+  ::tensorflow::Status SendGraph(SendGraphRequest* request,
                  SendGraphResponse* response);
   void Barrier();
 

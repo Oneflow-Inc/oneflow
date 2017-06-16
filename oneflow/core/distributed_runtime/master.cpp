@@ -7,7 +7,7 @@ Master::Master(GrpcChannelCache* channel_cache)
 
 Master::~Master() {}
 
-void Master::SendGraph(SendGraphRequest* request,
+::tensorflow::Status Master::SendGraph(SendGraphRequest* request,
                        SendGraphResponse* response) {
   /*
   GraphCompile graph_compile;

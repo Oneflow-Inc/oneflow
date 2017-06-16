@@ -3,7 +3,7 @@
 
 namespace oneflow {
 
-GrpcChannelCache::GrpcChannelCache(oneflow::ClusterSpec cluster_spec) 
+GrpcChannelCache::GrpcChannelCache(oneflow::ClusterSpec cluster_spec)
   : cluster_spec_(cluster_spec) {}
 GrpcChannelCache::~GrpcChannelCache() {}
 
@@ -22,8 +22,9 @@ void GrpcChannelCache::CreateChannelCache() {
   }
 }
 
-std::shared_ptr<::grpc::Channel> GrpcChannelCache::FindChannel(std::string& address) {
-  if(channel_map_.find(address) != channel_map_.end()) {
+std::shared_ptr<::grpc::Channel> GrpcChannelCache::FindChannel(
+    const std::string& address) {
+  if (channel_map_.find(address) != channel_map_.end()) {
     return channel_map_[address];
   }
 }
