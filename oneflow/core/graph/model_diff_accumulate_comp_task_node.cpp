@@ -8,10 +8,8 @@ void MdDiffAccCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   auto md_diff_acc_gph = static_cast<MdDiffAccTaskGraph*> (gph);
   CompTaskNode* fw_task = md_diff_acc_gph->GetFwTaskFromParallelId(parallel_id());
   TaskNode* bp_task = fw_task->GetBpNode();
-  std::shared_ptr<RegstDesc> model_diff_regst;
-  if (bp_task != nullptr) {
-    model_diff_regst = bp_task->GetProducedRegstDesc("model_diff");
-  }
+  std::shared_ptr<RegstDesc> model_diff_regst = 
+      bp_task->GetProducedRegstDesc("model_diff");
   // faker task node
   if (chain_node()->op_vec().empty()) {
     BindProducedRegstAndOutEdge(model_diff_regst, SoleOutEdge());
@@ -25,10 +23,8 @@ void MdDiffAccCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   exec_node->mut_op() = chain_node()->SoleOp();
   const std::string ibn = "model_diff";
   if (in_edges().empty()) {
-    if (model_diff_regst) {
-      exec_node->BindBnInOpAndRegst(ibn, model_diff_regst);
-      SubscribeRegstDesc(ibn, model_diff_regst);
-    }
+    exec_node->BindBnInOpAndRegst(ibn, model_diff_regst);
+    SubscribeRegstDesc(ibn, model_diff_regst);
   } else {
     exec_node->BindBnInOpAndRegst(ibn, GetRelatedRegst(SoleInEdge()));
     SubscribeRegstDesc(ibn, GetRelatedRegst(SoleInEdge()));
@@ -39,6 +35,11 @@ void MdDiffAccCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
 
 void MdDiffAccCompTaskNode::InferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
   CHECK(IsFwNode());
+  if (!chain_node()->op_vec().empty()) {
+    std::shared_ptr<RegstDesc> in_regst = GetSubscribedRegstDesc("model_diff");
+    std::shared_ptr<RegstDesc> out_regst = GetProducedRegstDesc("model_diff_acc");
+    out_regst->CopyShapeFrom(in_regst.get());
+  }
 }
 
 } // namespace oneflow
