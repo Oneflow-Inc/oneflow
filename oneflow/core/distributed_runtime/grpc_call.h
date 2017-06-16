@@ -143,7 +143,7 @@ class Call : public UntypedCall<Service> {
   typedef typename UntypedCall<Service>::Tag Tag;
   Tag request_received_tag_{this, Tag::kRequestReceived};
   Tag response_sent_tag_{this, Tag::kResponseSent};
-  Tag cancelled_tag_{this, Tag::Cancelled};
+  Tag cancelled_tag_{this, Tag::kCancelled};
 
   ::tensorflow::mutex mu_;
   std::function<void()> cancel_callback_ GUARDED_BY(mu_);
