@@ -6,7 +6,7 @@ namespace oneflow {
 void MdDiffAccCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   CHECK(IsFwNode());
   auto md_diff_acc_gph = static_cast<MdDiffAccTaskGraph*> (gph);
-  fw_task_ = md_diff_acc_gph->GetFwTaskFromParallelId(parallel_id());
+  CompTaskNode* fw_task_ = md_diff_acc_gph->GetFwTaskFromParallelId(parallel_id());
   TaskNode* bp_task = fw_task_->GetBpNode();
   std::shared_ptr<RegstDesc> model_diff_regst = 
       bp_task->GetProducedRegstDesc("model_diff");
