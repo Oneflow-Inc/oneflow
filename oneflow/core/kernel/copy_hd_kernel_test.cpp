@@ -24,12 +24,12 @@ Blob* CreateBlob(const std::vector<int64_t>& dim_vec, int value,
   size_t buffer_size = shape->elem_cnt()*sizeof(float);
   if (buffer_loc == Location::kHost) {
     CHECK_EQ(cudaMallocHost(&buffer, buffer_size), cudaSuccess);
+    memset(buffer, value, buffer_size);
   } else {
     CHECK_EQ(cudaMalloc(&buffer, buffer_size), cudaSuccess);
+    CHECK_EQ(cudaMemset(buffer, value, buffer_size), cudaSuccess);
   }
 
-  CHECK_EQ(cudaMemset(buffer, 0, buffer_size), cudaSuccess);
-  CHECK_EQ(cudaMemset(buffer, value, buffer_size-1), cudaSuccess);
   return new Blob(buffer, shape);
 }
 
@@ -55,7 +55,7 @@ TEST(CopyHdKernel, copy_h2d_3x4x5x6) {
   // Build blob for test h2d
   Blob* blob_host = CreateBlob(dim_vec, 1, Location::kHost);
   Blob* blob_device = CreateBlob(dim_vec, 2, Location::kDevice);
-  Blob* check_blob_host = CreateBlob(dim_vec, 3, Location::kHost);
+  Blob* expected_blob_host = CreateBlob(dim_vec, 3, Location::kHost);
 
   // Create CudaDeviceContext and KernelContext
   cudaStream_t cuda_stream;
@@ -71,19 +71,23 @@ TEST(CopyHdKernel, copy_h2d_3x4x5x6) {
   HashMap<std::string, Blob*> bn2blob_ptr{
       {"in", blob_host},
       {"out", blob_device},
-      {"in_diff", check_blob_host},
+      {"in_diff", expected_blob_host},
       {"out_diff", blob_device}};
   auto fp = [&bn2blob_ptr](const std::string& bn) {
     return bn2blob_ptr.at(bn);
   };
 
-  // test forward and backward
+  // test forward and backward in h2d
+  // Forward: copy blob_host to blob_device
+  // Backward: copy blob_device to expected_blob_host
   copy_h2d_kernel->Forward(ctx, fp);
   copy_h2d_kernel->Backward(ctx, fp);
   CHECK_EQ(cudaStreamSynchronize(cuda_stream), cudaSuccess);
 
-  // check
-  ASSERT_STREQ(blob_host->dptr(), check_blob_host->dptr());
+  // CHECK: Expect blob_host is equal to expected_blob_host
+  CHECK(!memcmp(blob_host->dptr(),
+                expected_blob_host->dptr(),
+                blob_host->shape().elem_cnt() * sizeof(float)));
 }
 
 TEST(CopyHdKernel, copy_d2h_4x5x6x7) {
@@ -92,8 +96,11 @@ TEST(CopyHdKernel, copy_d2h_4x5x6x7) {
   // Build blob for test d2h
   Blob* blob_device = CreateBlob(dim_vec, 1, Location::kDevice);
   Blob* blob_host = CreateBlob(dim_vec, 2, Location::kHost);
-  Blob* check_blob_device = CreateBlob(dim_vec, 3, Location::kDevice);
-  Blob* check_blob_host = CreateBlob(dim_vec, 4, Location::kHost);
+  Blob* expected_blob_device = CreateBlob(dim_vec, 3, Location::kDevice);
+
+  // copy for check
+  Blob* blob_device_copy = CreateBlob(dim_vec, 4, Location::kHost);
+  Blob* expected_blob_device_copy = CreateBlob(dim_vec, 5, Location::kHost);
 
   // Create CudaDeviceContext and KernelContext
   cudaStream_t cuda_stream;
@@ -110,24 +117,35 @@ TEST(CopyHdKernel, copy_d2h_4x5x6x7) {
   HashMap<std::string, Blob*> bn2blob_ptr{
       {"in", blob_device},
       {"out", blob_host},
-      {"in_diff", check_blob_device},
+      {"in_diff", expected_blob_device},
       {"out_diff", blob_host}};
   auto fp = [&bn2blob_ptr](const std::string& bn) {
     return bn2blob_ptr.at(bn);
   };
 
-  // test forward and backward
+  // test forward and backward in d2h
+  // Forward: copy blob_device to blob_host
+  // Backward: copy blob_host to expected_blob_device
   copy_d2h_kernel->Forward(ctx, fp);
   copy_d2h_kernel->Backward(ctx, fp);
   CHECK_EQ(cudaStreamSynchronize(cuda_stream), cudaSuccess);
 
-  // check
-  CHECK_EQ(cudaMemcpy(check_blob_host->mut_dptr(),
-                      check_blob_device->dptr(),
-                      check_blob_device->shape().elem_cnt() * sizeof(float),
+  // CHECK: Copy blob_device and expected_blob_device to host for check.
+  //        Expecte blob_device_copy is equal to expected_blob_device_copy.
+  CHECK_EQ(cudaMemcpy(blob_device_copy->mut_dptr(),
+                      blob_device->dptr(),
+                      blob_device->shape().elem_cnt() * sizeof(float),
                       cudaMemcpyDeviceToHost),
            cudaSuccess);
-  ASSERT_STREQ(blob_host->dptr(), check_blob_host->dptr());
+  CHECK_EQ(cudaMemcpy(expected_blob_device_copy->mut_dptr(),
+                      expected_blob_device->dptr(),
+                      expected_blob_device->shape().elem_cnt() * sizeof(float),
+                      cudaMemcpyDeviceToHost),
+           cudaSuccess);
+
+  CHECK(!memcmp(blob_device_copy->dptr(),
+                expected_blob_device_copy->dptr(),
+                blob_device_copy->shape().elem_cnt() * sizeof(float)));
 }
 
 }  // namespace oneflow
