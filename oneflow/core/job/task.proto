@@ -10,9 +10,10 @@ enum TaskType {
   kDataCompTask = 1;
   kMdSaveCompTask = 2;
   kMdUpdtCompTask = 3;
-  kCopyHdTask = 4;
-  kCopyCommNetTask = 5;
-  kBoxingTask = 6;
+  kMdDiffAccCompTask = 4;
+  kCopyHdTask = 5;
+  kCopyCommNetTask = 6;
+  kBoxingTask = 7;
 }
 
 message TaskProto {

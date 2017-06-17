@@ -188,8 +188,14 @@ message BoxingOpConf {
 message ModelUpdateOpConf {
 }
 
+message ModelDiffAccOpConf {
+}
+
 message ModelSaveOpConf {
   repeated string lbns = 1;
+}
+
+message ClearOpConf {
 }
 
 message OperatorConf {
@@ -207,7 +213,9 @@ message OperatorConf {
     BoxingOpConf boxing_conf = 109;
     ModelUpdateOpConf model_update_conf = 110;
     ModelSaveOpConf model_save_conf = 111;
+    ModelDiffAccOpConf model_diff_acc_conf = 112;
     ConcatOpConf concat_conf = 113;
     CopyCommNetOpConf copy_comm_net_conf = 114;
+    ClearOpConf clear_conf = 115;
   }
 }
