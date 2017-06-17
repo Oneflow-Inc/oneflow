@@ -120,7 +120,7 @@ void Compiler::BuildModelGraphs(
   ParallelPolicy policy = pair.first->parallel_desc()->policy();
 
   bool is_train = JobDesc::Singleton().is_train();
-  std::vector<CompTaskNode*> diff_acc_tasks;
+  std::vector<CompTaskNode*> sorted_diff_acc_tasks;
   if (is_train) {
     LOG(INFO) << "Build MdDiffAccTaskGraph... for " << chain_tag;
     auto diff_acc_gph = new MdDiffAccTaskGraph(
@@ -129,8 +129,8 @@ void Compiler::BuildModelGraphs(
     ordered_task_gphs_.emplace_back(diff_acc_gph);
 
     ChainNode* diff_acc_chain = diff_acc_gph->chain_gph()->SoleSinkNode();
-    diff_acc_tasks = diff_acc_gph->CompTasksInChain(diff_acc_chain);
-    SortByParallelId(&diff_acc_tasks);
+    sorted_diff_acc_tasks = diff_acc_gph->CompTasksInChain(diff_acc_chain);
+    SortByParallelId(&sorted_diff_acc_tasks);
   }
 
   LOG(INFO) << "Build MdUpdtTaskGraph... for " << chain_tag;
@@ -140,7 +140,7 @@ void Compiler::BuildModelGraphs(
     CompTaskNode* data_fw_task = pair.second[i];
     auto updt_gph = new MdUpdtTaskGraph(
         "md_updt_" + data_fw_task->node_id_str(),
-        data_fw_task, is_train ? diff_acc_tasks[i] : nullptr,
+        data_fw_task, is_train ? sorted_diff_acc_tasks[i] : nullptr,
         dot_path_prefix + "model_update_" + data_fw_task->node_id_str() + "_");
     ordered_task_gphs_.emplace_back(updt_gph);
     ChainNode* updt_chain = updt_gph->chain_gph()->SoleSinkNode();
@@ -185,11 +185,11 @@ void Compiler::GenPlanFile(const std::string& plan_filepath) {
   });
 
   OperatorConf gpu_clear_op_conf;
-  gpu_clear_op_conf.set_name("gpu_clear_op");
+  gpu_clear_op_conf.set_name("gpu_clear");
   gpu_clear_op_conf.mutable_clear_conf();
   auto gpu_clear_op = OpMgr::Singleton().ConstructOp(gpu_clear_op_conf);
   OperatorConf cpu_clear_op_conf;
-  cpu_clear_op_conf.set_name("cpu_clear_op");
+  cpu_clear_op_conf.set_name("cpu_clear");
   cpu_clear_op_conf.mutable_clear_conf();
   auto cpu_clear_op = OpMgr::Singleton().ConstructOp(cpu_clear_op_conf);
   OpMgr::Singleton().AllOpToProto(plan.mutable_op());
