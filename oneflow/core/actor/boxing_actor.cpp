@@ -41,6 +41,8 @@ int BoxingActor::HandleBoxing(
       std::shared_ptr<RegstWarpper> regst_wp = msg.regst_warpper();
       num_of_read_empty_ -= read_regst_[regst_wp->regst_desc_id()].empty();
       read_regst_.at(regst_wp->regst_desc_id()).push(regst_wp);
+    } else {
+      // do nothing
     }
   }
   TryWardKernelAndSendMsg();

@@ -22,7 +22,6 @@ class BoxingActor final : public Actor {
 
   void TryWardKernelAndSendMsg();
 
-  CudaStreamHandle cuda_handle_;
   int (BoxingActor::*cur_msg_handle_)(const ActorMsg&, const ThreadContext&);
   int num_of_subscribed_regsts_;
   int num_of_read_empty_;
