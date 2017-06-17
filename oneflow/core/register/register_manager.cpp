@@ -14,11 +14,11 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     regst->regst_id_ =
         IDMgr::Singleton().NewRegstId(regst_desc_proto.regst_desc_id());
 
-    uint64_t elem_size = sizeof(float);
+    size_t elem_size = sizeof(float);
     if (JobDesc::Singleton().floating_point_type() == kDouble) {
       elem_size = sizeof(double);
     }
-    uint64_t elem_cnt = 0;
+    int64_t elem_cnt = 0;
     std::vector<std::string> lbns;
     lbns.reserve(regst_desc_proto.lbn2shape().size());
     for (const auto& pair : regst_desc_proto.lbn2shape()) {

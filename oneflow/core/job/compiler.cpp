@@ -5,6 +5,7 @@
 #include "oneflow/core/graph/model_save_comp_task_node.h"
 #include "oneflow/core/graph/model_save_task_graph.h"
 #include "oneflow/core/graph/model_update_task_graph.h"
+#include "oneflow/core/graph/model_diff_accumulate_task_graph.h"
 #include "oneflow/core/graph/data_task_graph.h"
 #include "oneflow/core/register/register_desc.h"
 #include "oneflow/core/job/job_conf.pb.h"
@@ -117,15 +118,39 @@ void Compiler::BuildModelGraphs(
   str_replace(&chain_tag, '/', '_');
   const std::string dot_path_prefix = DotDir() + "/model/" + chain_tag + "_";
   ParallelPolicy policy = pair.first->parallel_desc()->policy();
+
+  bool is_train = JobDesc::Singleton().is_train();
+  std::vector<CompTaskNode*> sorted_diff_acc_tasks;
+  if (is_train) {
+    LOG(INFO) << "Build MdDiffAccTaskGraph... for " << chain_tag;
+    auto diff_acc_gph = new MdDiffAccTaskGraph(
+        "md_diff_acc_" + chain_tag,
+        pair.first, pair.second, dot_path_prefix + "model_diff_acc_");
+    ordered_task_gphs_.emplace_back(diff_acc_gph);
+
+    ChainNode* diff_acc_chain = diff_acc_gph->chain_gph()->SoleSinkNode();
+    sorted_diff_acc_tasks = diff_acc_gph->CompTasksInChain(diff_acc_chain);
+    SortByParallelId(&sorted_diff_acc_tasks);
+  }
+
   LOG(INFO) << "Build MdUpdtTaskGraph... for " << chain_tag;
-  auto updt_gph = new MdUpdtTaskGraph(
-      "md_updt_" + chain_tag,
-      pair.first, pair.second, dot_path_prefix + "model_update_");
-  ordered_task_gphs_.emplace_back(updt_gph);
-  if (JobDesc::Singleton().is_train()) {
-    LOG(INFO) << "Build MdSaveTaskGraph... for " << chain_tag;
+  std::vector<CompTaskNode*> updt_tasks;
+  updt_tasks.reserve(pair.second.size());
+  for (size_t i = 0; i < pair.second.size(); ++i) {
+    CompTaskNode* data_fw_task = pair.second[i];
+    auto updt_gph = new MdUpdtTaskGraph(
+        "md_updt_" + data_fw_task->node_id_str(),
+        data_fw_task, is_train ? sorted_diff_acc_tasks[i] : nullptr,
+        dot_path_prefix + "model_update_" + data_fw_task->node_id_str() + "_");
+    ordered_task_gphs_.emplace_back(updt_gph);
     ChainNode* updt_chain = updt_gph->chain_gph()->SoleSinkNode();
-    auto updt_tasks = updt_gph->SortedCompTasksInChain(updt_chain);
+    auto updt_tasks_in_chain = updt_gph->CompTasksInChain(updt_chain);
+    CHECK_EQ(updt_tasks_in_chain.size(), 1);
+    updt_tasks.push_back(updt_tasks_in_chain[0]);
+  }
+
+  if (is_train) {
+    LOG(INFO) << "Build MdSaveTaskGraph... for " << chain_tag;
     if (policy == kDataParallel) { updt_tasks = {updt_tasks.front()}; }
     for (CompTaskNode* update_task : updt_tasks) {
       auto save_gph = new MdSaveTaskGraph(
@@ -158,6 +183,15 @@ void Compiler::GenPlanFile(const std::string& plan_filepath) {
       node->ToProto(plan.mutable_task()->Add());
     }
   });
+
+  OperatorConf gpu_clear_op_conf;
+  gpu_clear_op_conf.set_name("gpu_clear");
+  gpu_clear_op_conf.mutable_clear_conf();
+  auto gpu_clear_op = OpMgr::Singleton().ConstructOp(gpu_clear_op_conf);
+  OperatorConf cpu_clear_op_conf;
+  cpu_clear_op_conf.set_name("cpu_clear");
+  cpu_clear_op_conf.mutable_clear_conf();
+  auto cpu_clear_op = OpMgr::Singleton().ConstructOp(cpu_clear_op_conf);
   OpMgr::Singleton().AllOpToProto(plan.mutable_op());
   JobDesc::Singleton().ToProto(plan.mutable_job_desc());
   ConstForEachChainNode([&plan](const ChainNode* node) {
@@ -166,12 +200,20 @@ void Compiler::GenPlanFile(const std::string& plan_filepath) {
           {op->op_name(), node->parallel_desc()->device_type()}).second);
     }
   });
+  CHECK(plan.mutable_op_name2device_type()->insert(
+      {gpu_clear_op->op_name(), kGPU}).second);
+  CHECK(plan.mutable_op_name2device_type()->insert(
+      {cpu_clear_op->op_name(), kCPU}).second);
   ConstForEachStageNode([&plan](const StageNode* node) {
     auto pbmap = plan.mutable_machine_id2op_name_set();
     for (std::shared_ptr<const Operator> op : node->chain_node()->op_vec()) {
       (*pbmap)[node->machine_id()].add_op_name(op->op_name());
     }
   });
+  for (auto& pair : *(plan.mutable_machine_id2op_name_set())) {
+    pair.second.add_op_name(gpu_clear_op->op_name());
+    pair.second.add_op_name(cpu_clear_op->op_name());
+  }
   PrintProtoToTextFile(plan, plan_filepath);
 }
 

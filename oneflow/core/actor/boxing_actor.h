@@ -15,15 +15,19 @@ class BoxingActor final : public Actor {
   int ProcessMsg(const ActorMsg&, const ThreadContext&) override;
 
  private:
-  using RDescId2RwMap = HashMap<uint64_t, std::shared_ptr<RegstWarpper>>;
-  using RDescId2RwMapPtr = std::unique_ptr<RDescId2RwMap>;
+  int HandleInitDeviceCtx(const ActorMsg&, const ThreadContext&);
+  int HandleBoxing(const ActorMsg&, const ThreadContext&);
+  int HandleBoxingWhenNoReadableRegstMsg(const ActorMsg&, const ThreadContext&);
+  int HandleWaitUntilReadingCntEqualZero(const ActorMsg&, const ThreadContext&);
 
-  void WardKernelAndSendMsg(const KernelCtx&);
+  void TryWardKernelAndSendMsg();
 
-  // <piece_id, map>
-  HashMap<uint64_t, RDescId2RwMapPtr> waiting_in_regst_;
-  std::queue<std::pair<uint64_t, RDescId2RwMapPtr>> ready_in_regst_;
-  uint64_t in_regst_desc_num_;
+  int (BoxingActor::*cur_msg_handle_)(const ActorMsg&, const ThreadContext&);
+  int num_of_subscribed_regsts_;
+  int num_of_read_empty_;
+  int num_of_read_done_;
+  // <regst_desc_id, queue<regst_wp>>
+  HashMap<uint64_t, std::queue<std::shared_ptr<RegstWarpper>>> read_regst_;
 
 };
 

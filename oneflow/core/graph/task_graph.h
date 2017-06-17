@@ -20,7 +20,7 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   // Getters
   const StageGraph* stage_gph() const { return stage_gph_.get(); }
   const ChainGraph* chain_gph() const { return stage_gph_->chain_gph(); }
-  std::vector<CompTaskNode*> SortedCompTasksInChain(const ChainNode*);
+  std::vector<CompTaskNode*> CompTasksInChain(const ChainNode*);
 
   void InferShapeOfBlobsInProducedRegsts();
   

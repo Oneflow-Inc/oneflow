@@ -3,6 +3,7 @@
 ### 1.1 Linux 
 
 ```
+export LD_LIBRARY_PATH=/path/to/blas_lib_dir:$LD_LIBRARY_PATH
 mkdir build && cd build
 cmake -DBUILD_THIRD_PARTY=ON .. && make
 cmake -DBUILD_THIRD_PARTY=OFF .. && make

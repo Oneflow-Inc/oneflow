@@ -13,10 +13,14 @@ enum class ActorCmd {
   kOneRegstDescDone
 };
 
+OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ActorCmd);
+
 enum class ActorMsgType {
   kRegstMsg = 0,
   kCmdMsg
 };
+
+OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ActorMsgType);
 
 class ActorMsg final {
  public:

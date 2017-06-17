@@ -4,62 +4,105 @@
 
 namespace oneflow {
 
-// need review
-
 void BoxingActor::Init(const TaskProto& task_proto) {
   Actor::Init(task_proto);
-  in_regst_desc_num_ = task_proto.subscribed_regst_desc_id().size();
+  num_of_subscribed_regsts_ = task_proto.subscribed_regst_desc_id().size();
+  num_of_read_empty_ = num_of_subscribed_regsts_;
+  num_of_read_done_ = 0;
+  cur_msg_handle_ = &BoxingActor::HandleInitDeviceCtx;
 }
 
 int BoxingActor::ProcessMsg(const ActorMsg& msg,
                              const ThreadContext& thread_ctx) {
-  //CpuKernelCtx kernel_ctx(thread_ctx.cpu_stream);
-  //if (TryUpdtStateAsFromRegstReader(msg.regst_warpper()->regst_raw_ptr()) != 0) {
-  //  std::shared_ptr<RegstWarpper> regst_wp = msg.regst_warpper();
-  //  auto waiting_in_regst_it = waiting_in_regst_.find(regst_wp->piece_id());
-  //  if (waiting_in_regst_it == waiting_in_regst_.end()) {
-  //    auto emplace_ret = waiting_in_regst_.emplace(
-  //        regst_wp->piece_id(), of_make_unique<RDescId2RwMap> ());
-  //    CHECK(emplace_ret.second);
-  //    waiting_in_regst_it = emplace_ret.first;
-  //  }
-  //  CHECK(waiting_in_regst_it->second->emplace(regst_wp->regst_desc_id(),
-  //                                             regst_wp).second);
-  //  if (waiting_in_regst_it->second->size() == in_regst_desc_num_) {
-  //    std::pair<uint64_t, RDescId2RwMapPtr> ready_ins;
-  //    ready_ins.first = waiting_in_regst_it->first;
-  //    ready_ins.second.swap(waiting_in_regst_it->second);
-  //    ready_in_regst_.push(std::move(ready_ins));
-  //    waiting_in_regst_.erase(waiting_in_regst_it);
-  //  }
-  //}
-  //if (!ready_in_regst_.empty() && IsWriteReady()) {
-  //  WardKernelAndSendMsg(kernel_ctx);
-  //}
-  return -1;
+  return (this->*cur_msg_handle_)(msg, thread_ctx);
 }
 
-void BoxingActor::WardKernelAndSendMsg(const KernelCtx& kernel_ctx) {
-  //uint64_t piece_id = ready_in_regst_.front().first;
-  //AsyncWardKernelAndSendMsgToRegstReader(
-  //    [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
-  //  Regst* regst = GetCurWriteableRegst(regst_desc_id);
-  //  if (regst == nullptr) {
-  //    return ready_in_regst_.front().second->at(regst_desc_id);
-  //  } else {
-  //    return std::make_shared<LocalRegstWarpper> (regst);
-  //  }
-  //});
-  //ForEachCurWriteableRegst([piece_id](Regst* regst) {
-  //  regst->set_piece_id(piece_id);
-  //});
-  //for (const auto& pair : *(ready_in_regst_.front().second)) {
-  //  std::shared_ptr<RegstWarpper> regst = pair.second;
-  //  ActorMsgBus::Singleton().SendMsg(ActorMsg::BuildMsgForRegstWriter(
-  //      regst->producer_actor_id(),
-  //      regst->regst_raw_ptr()));
-  //}
-  //ready_in_regst_.pop();
+int BoxingActor::HandleInitDeviceCtx(
+    const ActorMsg& msg,
+    const ThreadContext& thread_ctx) {
+  CHECK_EQ(msg.actor_cmd(), ActorCmd::kInitDeviceCtx);
+  CHECK(thread_ctx.cpu_stream);
+  mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
+  cur_msg_handle_ = &BoxingActor::HandleBoxing;
+  return 0;
+}
+
+int BoxingActor::HandleBoxing(
+    const ActorMsg& msg,
+    const ThreadContext& thread_ctx) {
+  if (msg.msg_type() == ActorMsgType::kCmdMsg) {
+    CHECK_EQ(msg.actor_cmd(), ActorCmd::kOneRegstDescDone);
+    num_of_read_done_ += 1;
+    if (num_of_read_done_ == num_of_subscribed_regsts_) {
+      cur_msg_handle_ = &BoxingActor::HandleBoxingWhenNoReadableRegstMsg;
+    }
+  } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
+    if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()) != 0) {
+      std::shared_ptr<RegstWarpper> regst_wp = msg.regst_warpper();
+      num_of_read_empty_ -= read_regst_[regst_wp->regst_desc_id()].empty();
+      read_regst_.at(regst_wp->regst_desc_id()).push(regst_wp);
+    } else {
+      // do nothing
+    }
+  }
+  TryWardKernelAndSendMsg();
+  return 0;
+}
+
+int BoxingActor::HandleBoxingWhenNoReadableRegstMsg(
+    const ActorMsg& msg,
+    const ThreadContext& thread_ctx) {
+  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
+  TryWardKernelAndSendMsg();
+  if (num_of_read_empty_ == num_of_subscribed_regsts_) {
+    AsyncSendRegstDescDoneMsgForAllProducedRegstDesc();
+    if (total_reading_cnt() == 0) {
+      cur_msg_handle_ = nullptr;
+      return 1;
+    } else {
+      cur_msg_handle_ = &BoxingActor::HandleWaitUntilReadingCntEqualZero;
+      return 0;
+    }
+  }
+  return 0;
+}
+  
+int BoxingActor::HandleWaitUntilReadingCntEqualZero(
+    const ActorMsg& msg,
+    const ThreadContext& thread_ctx) {
+  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
+  if (total_reading_cnt() == 0) {
+    cur_msg_handle_ = nullptr;
+    return 1;
+  }
+  return 0;
+}
+
+void BoxingActor::TryWardKernelAndSendMsg() {
+  if (!num_of_read_empty_ && IsWriteReady()) {
+    uint64_t piece_id = expected_piece_id();
+    for (const auto& pair : read_regst_) {
+      CHECK_EQ(pair.second.front()->piece_id(), piece_id);
+    }
+    AsyncWardKernel(GenDefaultKernelCtx(), 
+        [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+      Regst* regst = GetCurWriteableRegst(regst_desc_id);
+      if (regst == nullptr) {
+        return read_regst_.at(regst_desc_id).front();
+      } else {
+        return std::make_shared<LocalRegstWarpper> (regst);
+      }
+    });
+    ForEachCurWriteableRegst([piece_id](Regst* regst) {
+      regst->set_piece_id(piece_id);
+    });
+    AsyncSendReadableRegstMsg();
+    for (auto& pair : read_regst_) {
+      AsyncSendRegstMsgToProducer(pair.second.front());
+      pair.second.pop();
+      num_of_read_empty_ += pair.second.empty();
+    }
+  }
 }
 
 REGISTER_ACTOR(kBoxingTask, true, BoxingActor);
