@@ -4,7 +4,6 @@
 
 namespace oneflow {
 
-// need review
 void BpDataCompActor::Init(const TaskProto& task_proto) {
   Actor::Init(task_proto);
   model_regst_desc_id_ = RegstDescId4Name("model");

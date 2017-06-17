@@ -4,8 +4,6 @@
 
 namespace oneflow {
 
-// need review
-
 void BoxingActor::Init(const TaskProto& task_proto) {
   Actor::Init(task_proto);
   num_of_subscribed_regsts_ = task_proto.subscribed_regst_desc_id().size();
@@ -47,7 +45,6 @@ int BoxingActor::HandleBoxing(
   }
   TryWardKernelAndSendMsg();
   return 0;
-  
 }
 
 int BoxingActor::HandleBoxingWhenNoReadableRegstMsg(
