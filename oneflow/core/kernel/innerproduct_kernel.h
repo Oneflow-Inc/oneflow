@@ -21,8 +21,6 @@ class InnerProductKernel<DeviceType::kCPU, floating_point_type> final
   InnerProductKernel() = default;
   ~InnerProductKernel() = default;
 
-  void InitFromOpProto(const OperatorProto& op_proto);
-
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
   void Backward(const KernelCtx&,
@@ -36,8 +34,6 @@ class InnerProductKernel<DeviceType::kGPU, floating_point_type> final
   OF_DISALLOW_COPY_AND_MOVE(InnerProductKernel);
   InnerProductKernel() = default;
   ~InnerProductKernel() = default;
-
-  void InitFromOpProto(const OperatorProto& op_proto);
 
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
