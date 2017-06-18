@@ -2,6 +2,8 @@
 #include <string>
 #include <typeinfo>
 
+namespace oneflow {
+
 namespace {
 
 template<typename T>
@@ -30,8 +32,6 @@ cublasStatus_t cublas_axpy<double>(cublasHandle_t handle, int n,
 
 } // namespace
 
-
-namespace oneflow {
 
 template<typename floating_point_type>
 void CloneKernel<DeviceType::kGPU, floating_point_type>::Forward(
