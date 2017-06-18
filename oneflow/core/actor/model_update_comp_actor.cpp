@@ -19,7 +19,7 @@ int MdUpdtCompActor::ProcessMsg(const ActorMsg& actor_msg,
 int MdUpdtCompActor::HandleBeforeInitDeviceCtx(
     const ActorMsg& actor_msg,
     const ThreadContext& thread_ctx) {
-  CHECK(actor_msg.actor_cmd() == ActorCmd::kInitDeviceCtx);
+  CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kInitDeviceCtx);
   if (thread_ctx.cpu_stream) {
     mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
   } else {
@@ -34,7 +34,7 @@ int MdUpdtCompActor::HandleBeforeInitDeviceCtx(
 int MdUpdtCompActor::HandleBeforeInitializeModel(
     const ActorMsg& actor_msg,
     const ThreadContext& thread_ctx) {
-  CHECK(actor_msg.actor_cmd() == ActorCmd::kInitializeModel);
+  CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kInitializeModel);
   Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
   model_regst->set_model_version_id(next_model_version_id_++);
   Regst* model_tmp_regst = GetCurWriteableRegst(model_tmp_regst_desc_id_);
@@ -47,8 +47,13 @@ int MdUpdtCompActor::HandleBeforeInitializeModel(
   model_tmp_regst->ForEachLbn(CollectKernelsFromLbn);
   
   for (const Kernel* kernel : kernels) {
-    kernel->InitModelAndModelTmpBlobs(GenDefaultKernelCtx(),
-                                      [&](const std::string& bn_in_op) {
+    kernel->InitModelAndModelTmpBlobs(
+        GenDefaultKernelCtx(),
+        parallel_policy(),
+        parallel_id(),
+        parallel_num(),
+        SnapshotMgr::Singleton().GetReadableSnapshot(),
+        [&](const std::string& bn_in_op) {
       const std::string& lbn = kernel->Lbn4BnInOp(bn_in_op);
       Blob* ret = model_regst->GetBlobPtrFromLbn(lbn);
       if (ret == nullptr) { ret = model_tmp_regst->GetBlobPtrFromLbn(lbn); }
@@ -63,7 +68,7 @@ int MdUpdtCompActor::HandleBeforeInitializeModel(
 int MdUpdtCompActor::HandleBeforeSendInitialModel(
     const ActorMsg& actor_msg,
     const ThreadContext& thread_ctx) {
-  CHECK(actor_msg.actor_cmd() == ActorCmd::kSendInitialModel);
+  CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kSendInitialModel);
   AsyncSendReadableRegstMsg();
   SetReadOnlyForRegstDescId(model_tmp_regst_desc_id_);
   AsyncSendRegstDescDoneMsgToSubscribers(model_tmp_regst_desc_id_);
@@ -80,7 +85,7 @@ int MdUpdtCompActor::HandleUpdateModel(
     const ActorMsg& actor_msg,
     const ThreadContext& thread_ctx) {
   if (actor_msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK(actor_msg.actor_cmd() == ActorCmd::kOneRegstDescDone);
+    CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kOneRegstDescDone);
     cur_msg_handle_ = &MdUpdtCompActor::HandleUpdtModelWhenNoReadableRegstMsg;
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
     auto regst_warpper = actor_msg.regst_warpper();
@@ -141,12 +146,7 @@ void MdUpdtCompActor::TryWardKernelAndSendMsg() {
       }
     });
     AsyncSendReadableRegstMsg();
-    ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(
-        model_diff_acc_wpr->producer_actor_id(),
-        model_diff_acc_wpr->regst_raw_ptr());
-    AsyncDo([msg]() {
-      ActorMsgBus::Singleton().SendMsg(msg);
-    });
+    AsyncSendRegstMsgToProducer(model_diff_acc_wpr);
   }
 }
 

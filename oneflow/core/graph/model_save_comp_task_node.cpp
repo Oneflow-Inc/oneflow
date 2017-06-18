@@ -1,4 +1,5 @@
 #include "oneflow/core/graph/model_save_comp_task_node.h"
+#include "oneflow/core/graph/model_update_comp_task_node.h"
 #include "oneflow/core/graph/model_save_task_graph.h"
 
 namespace oneflow {

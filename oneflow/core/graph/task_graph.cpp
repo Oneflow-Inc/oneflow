@@ -1,6 +1,7 @@
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/data_comp_task_node.h"
 #include "oneflow/core/graph/model_update_comp_task_node.h"
+#include "oneflow/core/graph/model_diff_accumulate_comp_task_node.h"
 #include "oneflow/core/graph/model_save_comp_task_node.h"
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/graph/in_boxing_task_node.h"
@@ -11,6 +12,7 @@ namespace oneflow {
 #define INSTANTIATE_TASK_GPH_MEM_FUNC(func, ...) \
   template void TaskGraph::func<DataCompTaskNode>(__VA_ARGS__); \
   template void TaskGraph::func<MdUpdtCompTaskNode>(__VA_ARGS__); \
+  template void TaskGraph::func<MdDiffAccCompTaskNode>(__VA_ARGS__); \
   template void TaskGraph::func<MdSaveCompTaskNode>(__VA_ARGS__);
 
 namespace {
@@ -35,7 +37,7 @@ void TaskGraph::InferShapeOfBlobsInProducedRegsts() {
   });
 }
 
-std::vector<CompTaskNode*> TaskGraph::SortedCompTasksInChain(
+std::vector<CompTaskNode*> TaskGraph::CompTasksInChain(
     const ChainNode* chain) {
   std::vector<CompTaskNode*> ret;
   ForEachNode([&](TaskNode* node) {

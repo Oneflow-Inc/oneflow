@@ -14,11 +14,11 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     regst->regst_id_ =
         IDMgr::Singleton().NewRegstId(regst_desc_proto.regst_desc_id());
 
-    uint64_t elem_size = sizeof(float);
+    size_t elem_size = sizeof(float);
     if (JobDesc::Singleton().floating_point_type() == kDouble) {
       elem_size = sizeof(double);
     }
-    uint64_t elem_cnt = 0;
+    int64_t elem_cnt = 0;
     std::vector<std::string> lbns;
     lbns.reserve(regst_desc_proto.lbn2shape().size());
     for (const auto& pair : regst_desc_proto.lbn2shape()) {
@@ -38,7 +38,12 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
       CHECK(regst->lbn2blob_.emplace(lbn, std::move(blob_ptr)).second);
       blob_idx += shape_ptr->elem_cnt() * elem_size;
     }
-    regst->deleter_ = allocation.second;
+    Shape* baled_blob_shape = new Shape({elem_cnt});
+    regst->baled_blob_.reset(new Blob(allocation.first, baled_blob_shape));
+    regst->deleter_ = [allocation, baled_blob_shape]() {
+      allocation.second();
+      delete baled_blob_shape;
+    };
     OneRegstDone(regst);
   }
 }

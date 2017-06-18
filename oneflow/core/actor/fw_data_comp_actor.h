@@ -15,9 +15,17 @@ public:
   int ProcessMsg(const ActorMsg&, const ThreadContext&) override;
 
 private:
-  bool IsReadReady();
-  void WardKernelAndSendMsg(const KernelCtx&);
+  int HandleInitDeviceCtx(const ActorMsg&, const ThreadContext&);
+  int HandleFwComp(const ActorMsg&, const ThreadContext&);
+  int HandleFwCompWhenNoReadableRegstMsg(const ActorMsg&, const ThreadContext&);
+  int HandleWaitUntilReadingCntEqualZero(const ActorMsg&, const ThreadContext&);
 
+  bool IsReadReady();
+  void TryWardKernelAndSendMsg();
+
+  CudaStreamHandle cuda_handle_;
+  int (FwDataCompActor::*cur_msg_handle_)(const ActorMsg&, const ThreadContext&);
+  int num_of_read_done_;
   uint64_t expected_model_version_id_;
   uint64_t model_regst_desc_id_;
   uint64_t model_tmp_regst_desc_id_;

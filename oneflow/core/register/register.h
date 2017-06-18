@@ -42,6 +42,7 @@ class Regst final {
   uint64_t regst_id_;
   std::function<void()> deleter_;
   HashMap<std::string, std::unique_ptr<Blob>> lbn2blob_;
+  std::unique_ptr<Blob> baled_blob_;
 };
 
 } // namespace oneflow

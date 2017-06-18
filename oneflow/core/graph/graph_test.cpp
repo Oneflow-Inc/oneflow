@@ -64,32 +64,46 @@ using NodeIdPair = std::pair<uint64_t, uint64_t>;
 void DoOneTestGraph(const TestGraph& test_graph,
                     const std::vector<std::vector<uint64_t>>& graph_conf) {
   uint64_t node_num = graph_conf.size();
+
   // 1. Determines whether the traversal result satisfies the topological order
-  std::vector<uint64_t> topo_array;
-  HashMap<uint64_t, uint64_t> node_id2order;
+  HashMap<uint64_t, uint64_t> node_id2order, node_id2rorder;
   auto NodePairHash = [](const NodeIdPair& val) { return val.first ^ val.second; };
   std::unordered_set<NodeIdPair,
                      decltype(NodePairHash)> edges_node_pair(11, NodePairHash);
   uint64_t order = 0;
   test_graph.ConstTopoForEachNode([&](const TestNode* node) {
-    topo_array.push_back(node->test_node_id());
     node_id2order.emplace(node->test_node_id(), order);
     ++order;
   });
-  ASSERT_EQ(topo_array.size(), node_num);
+  ASSERT_EQ(node_id2order.size(), node_num);
+
+  order = 0;
+  test_graph.ConstReverseTopoForEachNode([&](const TestNode* node) {
+    node_id2rorder.emplace(node->test_node_id(), order);
+    ++order;
+  });
+  ASSERT_EQ(node_id2rorder.size(), node_num);
+
   // method : 
-  // judge every edge <u,v>
-  // the node u's order in topo_array is smaller than node v
+  // judge every directed edge <u,v>
+  // the node u's order is smaller than v
   uint64_t edge_num = 0;
   for (uint64_t src_node_id = 0; src_node_id < node_num; ++src_node_id) {
-    uint64_t src_node_order = node_id2order.at(src_node_id);
     for (uint64_t dst_node_id : graph_conf[src_node_id]) {
-      uint64_t dst_node_order = node_id2order.at(dst_node_id);
-      ASSERT_LT(src_node_order, dst_node_order);
+      // check topo order
+      uint64_t src_ord = node_id2order.at(src_node_id);
+      uint64_t dst_ord = node_id2order.at(dst_node_id);
+      ASSERT_LT(src_ord, dst_ord);
+      // check reverse-topo order
+      src_ord = node_id2rorder.at(src_node_id);
+      dst_ord = node_id2rorder.at(dst_node_id);
+      ASSERT_GE(src_ord, dst_ord);
+      // 
       ++edge_num;
       edges_node_pair.insert(std::make_pair(src_node_id, dst_node_id));
     }
   }
+
   // 2. judge whether the getter method of Graph can return all nodes and edges
   ASSERT_EQ(test_graph.node_num(), node_num);
   ASSERT_EQ(test_graph.edge_num(), edge_num);

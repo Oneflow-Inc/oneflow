@@ -6,6 +6,9 @@
 
 namespace oneflow {
 
+OF_DEFINE_ENUM_TO_OSTREAM_FUNC(ActorCmd);
+OF_DEFINE_ENUM_TO_OSTREAM_FUNC(ActorMsgType);
+
 ActorMsg::ActorMsg() {
   dst_actor_id_ = std::numeric_limits<uint64_t>::max();
 }
