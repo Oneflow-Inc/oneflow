@@ -19,11 +19,11 @@ class GrpcRemoteMaster {
 
   ~GrpcRemoteMaster() {}
 
-  ::tensorflow::Status SendGraphSync(const SendGraphRequest* request,
+  ::tensorflow::Status SendGraph(const SendGraphRequest* request,
                        SendGraphResponse* response) {
     ::grpc::ClientContext ctx;
     ctx.set_fail_fast(false);
-    return FromGrpcStatus(stub_->SendGraphSync(&ctx, *request, response));
+    return FromGrpcStatus(stub_->SendGraph(&ctx, *request, response));
   }
 
  private:

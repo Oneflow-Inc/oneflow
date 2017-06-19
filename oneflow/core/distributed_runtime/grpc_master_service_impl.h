@@ -15,8 +15,6 @@
 #include "oneflow/core/distributed_runtime/grpc_serialization_traits.h"
 #include "oneflow/core/distributed_runtime/master_service.pb.h"
 
-OF_GRPC_ALLOW_UNLIMITED_MESSAGE_SIZE(oneflow::SendGraphRequest);
-
 namespace grpc {
 class CompletionQueue;
 class Channel;
@@ -27,14 +25,6 @@ class ServerContext;
 
 namespace oneflow {
 
-enum class GrpcMasterMethod {
-  kSendGraph
-};
-
-static const int kGrpcNumMasterMethods =
-  static_cast<int> (GrpcMasterMethod::kSendGraph) + 1;
-
-const char* GrpcMasterMethodName(GrpcMasterMethod id);
 
 namespace grpc {
 
@@ -43,15 +33,14 @@ class MasterService GRPC_FINAL {
   class StubInterface {
    public:
     virtual ~StubInterface() {}
-    virtual ::grpc::Status SendGraphSync(::grpc::ClientContext* context,
+    virtual ::grpc::Status SendGraph(::grpc::ClientContext* context,
                                      const SendGraphRequest& request,
                                      SendGraphResponse* response) = 0;
   };  // Stubinterface
-
   class Stub GRPC_FINAL : public StubInterface {
    public:
     Stub(const std::shared_ptr<::grpc::ChannelInterface>& channel);
-    ::grpc::Status SendGraphSync(::grpc::ClientContext* context,
+    ::grpc::Status SendGraph(::grpc::ClientContext* context,
                                  const SendGraphRequest& request,
                                  SendGraphResponse* response) GRPC_OVERRIDE;
    private:
@@ -67,7 +56,16 @@ class MasterService GRPC_FINAL {
    public:
     AsyncService();
     virtual ~AsyncService();
-    using ::grpc::Service::RequestAsyncUnary;
+
+    void RequestSendGraph(
+        ::grpc::ServerContext* context, SendGraphRequest* request,
+        ::grpc::ServerAsyncResponseWriter<SendGraphResponse>* response,
+        ::grpc::CompletionQueue* new_call_cq,
+        ::grpc::ServerCompletionQueue* notification_cq, void* tag) {
+      ::grpc::Service::RequestAsyncUnary(0, context, request, response,
+                                         new_call_cq, notification_cq, tag);
+    }
+
   };  // Asyncservice
 };  // Masterservice
 

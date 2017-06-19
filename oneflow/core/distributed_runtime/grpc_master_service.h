@@ -18,16 +18,14 @@
 
 namespace oneflow {
 
-using ::grpc::ServerBuilder;
-
 class GrpcMasterService {
  public:
   GrpcMasterService(Master* master, ::grpc::ServerBuilder* builder)
-      : master_(master) {
+      : master_(master), is_shutdown_(false) {
     builder->RegisterService(&master_service_);
     cq_ = builder->AddCompletionQueue();
-    core_num_ = std::thread::hardware_concurrency();
-    compute_pool_ = new ::tensorflow::thread::ThreadPool(tensorflow::Env::Default(), "master_service", core_num_);
+    //core_num_ = std::thread::hardware_concurrency();
+    //compute_pool_ = new ::tensorflow::thread::ThreadPool(tensorflow::Env::Default(), "master_service", core_num_);
   }
 
   ~GrpcMasterService() {
@@ -52,21 +50,27 @@ class GrpcMasterService {
 #define ENQUEUE_REQUEST(method, supports_cancel)                          \
   do {                                                                    \
     ::tensorflow::mutex_lock l(mu_);                                      \
-    Call<GrpcMasterService, grpc::MasterService::AsyncService,            \
-        method##Request, method##Response>::                              \
-    EnqueueRequestForMethod(                                              \
-        &master_service_, cq_.get(),                                      \
-        static_cast<int>(GrpcMasterMethod::k##method),                    \
-        &GrpcMasterService::method##Handler,                              \
-        (supports_cancel));                                               \
+    if (!is_shutdown_) {                                                  \
+      Call<GrpcMasterService, grpc::MasterService::AsyncService,          \
+        method##Request, method##Response>::EnqueueRequest(               \
+          &master_service_, cq_.get(),                                    \
+          &grpc::MasterService::AsyncService::Request##method,            \
+          &GrpcMasterService::method##Handler,                            \
+          (supports_cancel));                                             \
+    }                                                                     \
   } while (0)
 
   void EnqueueSendGraphMethod() {
-    ENQUEUE_REQUEST(SendGraph, false);
+    ENQUEUE_REQUEST(SendGraph, true);
+    std::cout<<"hi~"<<std::endl;
   }
 
- private:
-  Master* master_;
+  void test() {
+    std::cout<<"hehe"<<std::endl;
+  }
+
+ public:
+  Master* master_ = nullptr;
   std::unique_ptr<::grpc::ServerCompletionQueue> cq_;
   grpc::MasterService::AsyncService master_service_;
 
@@ -74,12 +78,12 @@ class GrpcMasterService {
   bool is_shutdown_ GUARDED_BY(mu_);
   ::grpc::Alarm* shutdown_alarm_ = nullptr;
 
-  size_t core_num_;
-  tensorflow::thread::ThreadPool* compute_pool_ = nullptr;
+  //size_t core_num_;
+  //tensorflow::thread::ThreadPool* compute_pool_ = nullptr;
 
-  void Schedule(std::function<void()> f) {
-    compute_pool_->Schedule(std::move(f));
-  }
+  //void Schedule(std::function<void()> f) {
+  //  compute_pool_->Schedule(std::move(f));
+  //}
 
   template<class RequestMessage, class ResponseMessage>
   using MasterCall = Call<GrpcMasterService, grpc::MasterService::AsyncService,
@@ -87,11 +91,14 @@ class GrpcMasterService {
 
   void SendGraphHandler(MasterCall<SendGraphRequest,
                         SendGraphResponse>* call) {
-    Schedule([this, call] {
-        tensorflow::Status s = master_->SendGraph(&call->request, &call->response);
-      call->SendResponse(ToGrpcStatus(s));
-    });
+    //Schedule([this, call] {
+    //    ::tensorflow::Status s = master_->SendGraph(&call->request, &call->response);
+    //  call->SendResponse(ToGrpcStatus(s));
+    //});
+    //ENQUEUE_REQUEST(SendGraph, true);
   }  // Sendgraphhandler
+
+#undef ENQUEUE_REQUEST
 };  // GrpcMasterService
 
 }  // oneflow

@@ -34,20 +34,16 @@ TEST(GrpcMasterServer, test) {
 
   std::string server_address("0.0.0.0:50051");
 
-  std::shared_ptr<::grpc::Channel> dst_channel = channel->FindChannel(server_address);
-
-  GrpcRemoteMaster* remote_master = new GrpcRemoteMaster(dst_channel);
-  oneflow::SendGraphRequest req;
-  oneflow::SendGraphResponse resp;
-
   ::grpc::ServerBuilder builder;
   builder.AddListeningPort(server_address, ::grpc::InsecureServerCredentials());
   GrpcMasterService* master_service = new GrpcMasterService(master, &builder);
   builder.BuildAndStart();
-  
-  remote_master->SendGraphSync(&req, &resp);
 
-  //master_service->EnqueueSendGraphMethod();
+  master_service->EnqueueSendGraphMethod();
+  //master_service->test();
+  void* tag;
+  bool ok;
+  //master_service->cq_->Next(&tag, &ok);
 
 }
 
@@ -57,5 +53,3 @@ int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
-
-

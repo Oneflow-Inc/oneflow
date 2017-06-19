@@ -11,15 +11,11 @@
 
 namespace oneflow {
 
-
-const char* GrpcMasterMethodName(GrpcMasterMethod id) {
-  switch (id) {
-    case GrpcMasterMethod::kSendGraph:
-      return "/oneflow.MasterService/SendGraph";
-  }
-}  // GrpcMasterMethodName
-
 namespace grpc {
+
+static const char* grpcMasterService_method_names[] = {
+  "/oneflow.MasterService/SendGraph",
+};
 
 std::unique_ptr<MasterService::Stub> MasterService::NewStub(
     const std::shared_ptr<::grpc::ChannelInterface>& channel,
@@ -31,10 +27,12 @@ std::unique_ptr<MasterService::Stub> MasterService::NewStub(
 MasterService::Stub::Stub(
     const std::shared_ptr<::grpc::ChannelInterface>& channel)
   : channel_(channel),
-    rpcmethod_SendGraph_(GrpcMasterMethodName(static_cast<GrpcMasterMethod>(0)),
-                              ::grpc::RpcMethod::NORMAL_RPC, channel) {}
+    rpcmethod_SendGraph_(grpcMasterService_method_names[0],
+                              ::grpc::RpcMethod::NORMAL_RPC, channel) {
 
-::grpc::Status MasterService::Stub::SendGraphSync(
+}
+
+::grpc::Status MasterService::Stub::SendGraph(
     ::grpc::ClientContext* context, const SendGraphRequest& request,
     SendGraphResponse* response) {
   return ::grpc::BlockingUnaryCall(channel_.get(), rpcmethod_SendGraph_,
@@ -42,10 +40,10 @@ MasterService::Stub::Stub(
 }
 
 MasterService::AsyncService::AsyncService() {
-  for (int i = 0; i < kGrpcNumMasterMethods; ++i) {
-    AddMethod(new ::grpc::RpcServiceMethod(
-          GrpcMasterMethodName(static_cast<GrpcMasterMethod>(i)),
-          ::grpc::RpcMethod::NORMAL_RPC, nullptr));
+  for (int i = 0; i < 1; ++i) {
+    AddMethod(new ::grpc::RpcServiceMethod(grpcMasterService_method_names[i],
+                                           ::grpc::RpcMethod::NORMAL_RPC, 
+                                           nullptr));
     ::grpc::Service::MarkMethodAsync(i);
   }
 }
