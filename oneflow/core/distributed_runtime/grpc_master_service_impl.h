@@ -25,6 +25,14 @@ class ServerContext;
 
 namespace oneflow {
 
+enum class GrpcMasterMethod {
+  kSendGraph,
+};
+
+static const int kGrpcNumMasterMethods =
+  static_cast<int> (GrpcMasterMethod::kSendGraph) + 1;
+
+const char* GrpcMasterMethodName(GrpcMasterMethod id);
 
 namespace grpc {
 
@@ -56,16 +64,7 @@ class MasterService GRPC_FINAL {
    public:
     AsyncService();
     virtual ~AsyncService();
-
-    void RequestSendGraph(
-        ::grpc::ServerContext* context, ::oneflow::SendGraphRequest* request,
-        ::grpc::ServerAsyncResponseWriter< ::oneflow::SendGraphResponse>* response,
-        ::grpc::CompletionQueue* new_call_cq,
-        ::grpc::ServerCompletionQueue* notification_cq, void* tag) {
-      ::grpc::Service::RequestAsyncUnary(0, context, request, response,
-                                         new_call_cq, notification_cq, tag);
-    }
-
+    using ::grpc::Service::RequestAsyncUnary;
   };  // Asyncservice
 };  // Masterservice
 

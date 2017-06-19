@@ -15,12 +15,14 @@ Master::~Master() {}
   */
   //oneflow::SendTaskGraphRequest task_request;
   //oneflow::SendTaskGraphResponse task_response;
-  Barrier();
-  for(auto& channel : channel_cache_->channel_map_) {
-    std::unique_ptr<::grpc::ServerCompletionQueue> cq_;
+  //Barrier();
+  response->set_tmp("11111");
+  //for(auto& channel : channel_cache_->channel_map_) {
+  //  std::unique_ptr<::grpc::ServerCompletionQueue> cq_;
     //remote_worker_ = new GrpcRemoteWorker(channel.second, cq_.get());
     //remote_worker_->SendTaskGraphSync(task_request, task_response);
-  }
+  //}
+  return ::tensorflow::Status::OK();
 }
 
 void Master::Barrier() {

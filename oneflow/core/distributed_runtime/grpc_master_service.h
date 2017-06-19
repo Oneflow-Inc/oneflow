@@ -47,6 +47,7 @@ class GrpcMasterService {
     }
   }  // Shutdown
 
+/*
 #define ENQUEUE_REQUEST(method, supports_cancel)                          \
   do {                                                                    \
     ::tensorflow::mutex_lock l(mu_);                                      \
@@ -55,6 +56,19 @@ class GrpcMasterService {
         method##Request, method##Response>::EnqueueRequest(               \
           &master_service_, cq_.get(),                                    \
           &grpc::MasterService::AsyncService::Request##method,            \
+          &GrpcMasterService::method##Handler,                            \
+          (supports_cancel));                                             \
+    }                                                                     \
+  } while (0)
+*/
+#define ENQUEUE_REQUEST(method, supports_cancel)                          \
+  do {                                                                    \
+    ::tensorflow::mutex_lock l(mu_);                                      \
+    if (!is_shutdown_) {                                                  \
+      Call<GrpcMasterService, grpc::MasterService::AsyncService,          \
+        method##Request, method##Response>::EnqueueRequestForMethod(      \
+          &master_service_, cq_.get(),                                    \
+          static_cast<int16_t>(GrpcMasterMethod::k##method),              \
           &GrpcMasterService::method##Handler,                            \
           (supports_cancel));                                             \
     }                                                                     \
@@ -78,12 +92,12 @@ class GrpcMasterService {
   bool is_shutdown_ GUARDED_BY(mu_);
   ::grpc::Alarm* shutdown_alarm_ = nullptr;
 
-  //size_t core_num_;
-  //tensorflow::thread::ThreadPool* compute_pool_ = nullptr;
+  size_t core_num_;
+  tensorflow::thread::ThreadPool* compute_pool_ = nullptr;
 
-  //void Schedule(std::function<void()> f) {
-  //  compute_pool_->Schedule(std::move(f));
-  //}
+  void Schedule(std::function<void()> f) {
+    compute_pool_->Schedule(std::move(f));
+  }
 
   template<class RequestMessage, class ResponseMessage>
   using MasterCall = Call<GrpcMasterService, grpc::MasterService::AsyncService,
@@ -92,8 +106,8 @@ class GrpcMasterService {
   void SendGraphHandler(MasterCall<SendGraphRequest,
                         SendGraphResponse>* call) {
     //Schedule([this, call] {
-    //    ::tensorflow::Status s = master_->SendGraph(&call->request, &call->response);
-    //  call->SendResponse(ToGrpcStatus(s));
+       ::tensorflow::Status s = master_->SendGraph(&call->request, &call->response);
+       call->SendResponse(ToGrpcStatus(s));
     //});
     //ENQUEUE_REQUEST(SendGraph, true);
   }  // Sendgraphhandler

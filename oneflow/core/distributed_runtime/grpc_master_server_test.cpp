@@ -37,14 +37,22 @@ TEST(GrpcMasterServer, test) {
   ::grpc::ServerBuilder builder;
   builder.AddListeningPort(server_address, ::grpc::InsecureServerCredentials());
   GrpcMasterService* master_service = new GrpcMasterService(master, &builder);
-  std::shared_ptr<Server> server_ = builder.BuildAndStart();
+  std::shared_ptr<Server> server = builder.BuildAndStart();
 
   master_service->EnqueueSendGraphMethod();
   //master_service->test();
   void* tag;
   bool ok;
-  //master_service->cq_->Next(&tag, &ok);
+  master_service->cq_->Next(&tag, &ok);
+  UntypedCall<GrpcMasterService>::Tag* callback_tag =
+    static_cast<UntypedCall<GrpcMasterService>::Tag*>(tag);
+  if (callback_tag) {
+    callback_tag->OnCompleted(master_service, ok);
+  } else {
+    master_service->cq_->Shutdown();
+  }
 
+  server->Shutdown();
 }
 
 }
