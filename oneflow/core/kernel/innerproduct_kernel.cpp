@@ -9,14 +9,16 @@ namespace {
 
 template<typename floating_point_type>
 void BlasMatrixMult(
-  const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_TRANSPOSE TransB,
-  const floating_point_type alpha, const floating_point_type beta,
-  Blob* A, Blob* B, Blob* C) {
+    Channel<std::function<void()>>* cpu_stream,
+    const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_TRANSPOSE TransB,
+    const floating_point_type alpha, const floating_point_type beta,
+    Blob* A, Blob* B, Blob* C) {
 }
 
 // C = alpha * A * B + beta * C
 template<>
 void BlasMatrixMult<float>(
+    Channel<std::function<void()>>* cpu_stream,
     const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_TRANSPOSE TransB,
     const float alpha, const float beta, Blob* A, Blob* B, Blob* C) {
   const enum CBLAS_ORDER Order = CblasRowMajor;
@@ -27,15 +29,19 @@ void BlasMatrixMult<float>(
   const int ldb = (TransA == CblasNoTrans) ? N : K;
   const int ldc = N;
 
-  cblas_sgemm(
-      Order, TransA, TransB, M, N, K, alpha,
-      reinterpret_cast<const float*>(A->dptr()), lda,
-      reinterpret_cast<const float*>(B->dptr()), ldb, beta,
-      reinterpret_cast<float*>(C->mut_dptr()), ldc);
+  std::function<void()> fp = [=]() {
+    cblas_sgemm(
+        Order, TransA, TransB, M, N, K, alpha,
+        reinterpret_cast<const float*>(A->dptr()), lda,
+        reinterpret_cast<const float*>(B->dptr()), ldb, beta,
+        reinterpret_cast<float*>(C->mut_dptr()), ldc);
+  };
+  cpu_stream->Send(fp);
 }
 
 template<>
 void BlasMatrixMult<double>(
+    Channel<std::function<void()>>* cpu_stream,
     const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_TRANSPOSE TransB,
     const double alpha, const double beta, Blob* A, Blob* B, Blob* C) {
   const enum CBLAS_ORDER Order = CblasRowMajor;
@@ -46,10 +52,13 @@ void BlasMatrixMult<double>(
   const int ldb = (TransA == CblasNoTrans) ? N : K;
   const int ldc = N;
 
-  cblas_dgemm(Order, TransA, TransB, M, N, K, alpha,
-      reinterpret_cast<const double*>(A->dptr()), lda,
-      reinterpret_cast<const double*>(B->dptr()), ldb, beta,
-      reinterpret_cast<double*>(C->mut_dptr()), ldc);
+  std::function<void()> fp = [=]() {
+    cblas_dgemm(Order, TransA, TransB, M, N, K, alpha,
+        reinterpret_cast<const double*>(A->dptr()), lda,
+        reinterpret_cast<const double*>(B->dptr()), ldb, beta,
+        reinterpret_cast<double*>(C->mut_dptr()), ldc);
+  };
+  cpu_stream->Send(fp);
 }
 
 }  // namespace
@@ -67,13 +76,15 @@ void InnerProductKernel<DeviceType::kCPU, floating_point_type>::Forward(
 
   // out_data = in_data * weight.t
   BlasMatrixMult<floating_point_type>(
-      CblasNoTrans, CblasTrans, (floating_point_type)1.,
-      (floating_point_type)0., in_data, weight, out_data);
+      ctx.device_ctx->cpu_stream(), CblasNoTrans, CblasTrans,
+      (floating_point_type)1., (floating_point_type)0.,
+      in_data, weight, out_data);
 
   // out_data = bias_multiplier * bias + out_data
   BlasMatrixMult<floating_point_type>(
-      CblasNoTrans, CblasNoTrans, (floating_point_type)1.,
-      (floating_point_type)1., bias_multiplier, bias, out_data);
+      ctx.device_ctx->cpu_stream(), CblasNoTrans, CblasNoTrans,
+      (floating_point_type)1., (floating_point_type)1.,
+      bias_multiplier, bias, out_data);
 }
 
 template<typename floating_point_type>
@@ -93,18 +104,21 @@ void InnerProductKernel<DeviceType::kCPU, floating_point_type>::Backward(
 
   // in_diff = out_diff * weight
   BlasMatrixMult<floating_point_type>(
-      CblasNoTrans, CblasNoTrans, (floating_point_type)1.,
-      (floating_point_type)0., out_diff, weight, in_diff);
+      ctx.device_ctx->cpu_stream(), CblasNoTrans, CblasNoTrans,
+      (floating_point_type)1., (floating_point_type)0.,
+      out_diff, weight, in_diff);
 
   // weight_diff = out_diff.t * in_data
   BlasMatrixMult<floating_point_type>(
-      CblasTrans, CblasNoTrans, (floating_point_type)1.,
-      (floating_point_type)0., out_diff, in_data, weight_diff);
+      ctx.device_ctx->cpu_stream(), CblasTrans, CblasNoTrans,
+      (floating_point_type)1., (floating_point_type)0.,
+      out_diff, in_data, weight_diff);
 
   // bias_diff = out_diff.t * bias_multiplier
   BlasMatrixMult<floating_point_type>(
-      CblasTrans, CblasNoTrans, (floating_point_type)1.,
-      (floating_point_type)0., out_diff, bias_multiplier, bias_diff);
+      ctx.device_ctx->cpu_stream(), CblasTrans, CblasNoTrans,
+      (floating_point_type)1., (floating_point_type)0.,
+      out_diff, bias_multiplier, bias_diff);
 }
 
 INSTANTIATE_CPU_KERNEL_CLASS(InnerProductKernel);
