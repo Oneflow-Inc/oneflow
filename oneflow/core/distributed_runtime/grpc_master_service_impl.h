@@ -58,8 +58,8 @@ class MasterService GRPC_FINAL {
     virtual ~AsyncService();
 
     void RequestSendGraph(
-        ::grpc::ServerContext* context, SendGraphRequest* request,
-        ::grpc::ServerAsyncResponseWriter<SendGraphResponse>* response,
+        ::grpc::ServerContext* context, ::oneflow::SendGraphRequest* request,
+        ::grpc::ServerAsyncResponseWriter< ::oneflow::SendGraphResponse>* response,
         ::grpc::CompletionQueue* new_call_cq,
         ::grpc::ServerCompletionQueue* notification_cq, void* tag) {
       ::grpc::Service::RequestAsyncUnary(0, context, request, response,

@@ -37,7 +37,7 @@ TEST(GrpcMasterServer, test) {
   ::grpc::ServerBuilder builder;
   builder.AddListeningPort(server_address, ::grpc::InsecureServerCredentials());
   GrpcMasterService* master_service = new GrpcMasterService(master, &builder);
-  builder.BuildAndStart();
+  std::shared_ptr<Server> server_ = builder.BuildAndStart();
 
   master_service->EnqueueSendGraphMethod();
   //master_service->test();
