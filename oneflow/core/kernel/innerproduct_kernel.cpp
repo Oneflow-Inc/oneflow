@@ -30,8 +30,8 @@ void BlasMatrixMult<float>(
   cblas_sgemm(
       Order, TransA, TransB, M, N, K, alpha,
       reinterpret_cast<const float*>(A->dptr()), lda,
-      reinterpret_cast<const float*>(B->dptr()), ldb,
-      beta, reinterpret_cast<float*>(C->mut_dptr()), ldc);
+      reinterpret_cast<const float*>(B->dptr()), ldb, beta,
+      reinterpret_cast<float*>(C->mut_dptr()), ldc);
 }
 
 template<>
@@ -48,8 +48,8 @@ void BlasMatrixMult<double>(
 
   cblas_dgemm(Order, TransA, TransB, M, N, K, alpha,
       reinterpret_cast<const double*>(A->dptr()), lda,
-      reinterpret_cast<const double*>(B->dptr()), ldb,
-      beta, reinterpret_cast<double*>(C->mut_dptr()), ldc);
+      reinterpret_cast<const double*>(B->dptr()), ldb, beta,
+      reinterpret_cast<double*>(C->mut_dptr()), ldc);
 }
 
 }  // namespace
@@ -65,10 +65,10 @@ void InnerProductKernel<DeviceType::kCPU, floating_point_type>::Forward(
   Blob* bias = BnInOp2BlobPtr(op()->model_bns().at(1));
   Blob* bias_multiplier = BnInOp2BlobPtr(op()->model_tmp_bns().at(0));
 
-  // out_data = weight * in_data
+  // out_data = in_data * weight.t
   BlasMatrixMult<floating_point_type>(
-      CblasNoTrans, CblasNoTrans, (floating_point_type)1.,
-      (floating_point_type)0., weight, in_data, out_data);
+      CblasNoTrans, CblasTrans, (floating_point_type)1.,
+      (floating_point_type)0., in_data, weight, out_data);
 
   // out_data = bias_multiplier * bias + out_data
   BlasMatrixMult<floating_point_type>(
