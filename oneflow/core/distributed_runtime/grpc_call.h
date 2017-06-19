@@ -37,8 +37,8 @@ class UntypedCall : public ::tensorflow::core::RefCounted {
           call_->RequestCancelled(service, ok);
           break;
       }
-        call_->Unref();
-      }
+      call_->Unref();
+    }
 
    private:
     UntypedCall* const call_;
@@ -72,7 +72,11 @@ class Call : public UntypedCall<Service> {
 
   void SendResponse(::grpc::Status status) {
     this->Ref();
-    responder_.Finish(response, status, &response_sent_tag_);
+    if(status.ok()){ 
+      std::cout<<"SendResponse: response = "<<response.tmp()<<std::endl;
+      responder_.Finish(response, status, &response_sent_tag_);
+      std::cout<<"SendResponse: responder_.Finish"<<std::endl;
+    }
     this->Unref();
   }
 

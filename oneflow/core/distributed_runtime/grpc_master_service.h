@@ -105,11 +105,10 @@ class GrpcMasterService {
 
   void SendGraphHandler(MasterCall<SendGraphRequest,
                         SendGraphResponse>* call) {
-    //Schedule([this, call] {
-       ::tensorflow::Status s = master_->SendGraph(&call->request, &call->response);
-       call->SendResponse(ToGrpcStatus(s));
-    //});
-    //ENQUEUE_REQUEST(SendGraph, true);
+    ::tensorflow::Status s = master_->SendGraph(&call->request, &call->response);
+    std::cout<<"GrpcMasterService: will response to Client = "<<call->response.tmp()<<std::endl;
+    call->SendResponse(ToGrpcStatus(s));
+    ENQUEUE_REQUEST(SendGraph, true);
   }  // Sendgraphhandler
 
 #undef ENQUEUE_REQUEST

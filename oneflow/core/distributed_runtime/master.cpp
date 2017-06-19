@@ -16,13 +16,16 @@ Master::~Master() {}
   //oneflow::SendTaskGraphRequest task_request;
   //oneflow::SendTaskGraphResponse task_response;
   //Barrier();
-  response->set_tmp("11111");
+  std::cout<<"Server: request from Client = "<<request->tmp()<<std::endl;
+  response->set_tmp(8);
   //for(auto& channel : channel_cache_->channel_map_) {
   //  std::unique_ptr<::grpc::ServerCompletionQueue> cq_;
     //remote_worker_ = new GrpcRemoteWorker(channel.second, cq_.get());
     //remote_worker_->SendTaskGraphSync(task_request, task_response);
   //}
+  //std::cout<<"master: status = "<<::tensorflow::Status::OK()<<std::endl;
   return ::tensorflow::Status::OK();
+  //return true;
 }
 
 void Master::Barrier() {

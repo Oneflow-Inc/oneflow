@@ -43,16 +43,19 @@ TEST(GrpcMasterServer, test) {
   //master_service->test();
   void* tag;
   bool ok;
+
   master_service->cq_->Next(&tag, &ok);
   UntypedCall<GrpcMasterService>::Tag* callback_tag =
     static_cast<UntypedCall<GrpcMasterService>::Tag*>(tag);
   if (callback_tag) {
     callback_tag->OnCompleted(master_service, ok);
+    std::cout<<"OnCompleted end "<<std::endl;
   } else {
     master_service->cq_->Shutdown();
   }
+  std::cout<<"master service end"<<std::endl;
 
-  server->Shutdown();
+  //server->Shutdown();
 }
 
 }

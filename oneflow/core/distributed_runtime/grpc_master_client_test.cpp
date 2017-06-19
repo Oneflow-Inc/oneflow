@@ -30,22 +30,23 @@ TEST(GrpcMasterServer, test) {
   }
   GrpcChannelCache* channel = new GrpcChannelCache(cluster_spec);
   channel->CreateChannelCache();
-  Master* master = new Master(channel);
 
   std::string server_address("0.0.0.0:50051");
-
   std::shared_ptr<::grpc::Channel> dst_channel = channel->FindChannel(server_address);
 
   GrpcRemoteMaster* remote_master = new GrpcRemoteMaster(dst_channel);
   oneflow::SendGraphRequest req;
+  req.set_tmp(7);
   oneflow::SendGraphResponse resp;
 
-  ::grpc::ServerBuilder builder;
-  builder.AddListeningPort(server_address, ::grpc::InsecureServerCredentials());
-  GrpcMasterService* master_service = new GrpcMasterService(master, &builder);
-  builder.BuildAndStart();
-  
-  remote_master->SendGraph(&req, &resp);
+  ::tensorflow::Status s = remote_master->SendGraph(&req, &resp);
+  std::cout<<"client ========"<<std::endl;
+  if(!s.ok()) {
+    std::cout<<"wait for response from server "<<std::endl;
+    std::cout<<"response from server: "<<resp.tmp()<<std::endl;
+  } else {
+    std::cout<<"s is not ok"<<std::endl;
+  }
 
   //master_service->EnqueueSendGraphMethod();
 

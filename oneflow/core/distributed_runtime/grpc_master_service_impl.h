@@ -49,8 +49,8 @@ class MasterService GRPC_FINAL {
    public:
     Stub(const std::shared_ptr<::grpc::ChannelInterface>& channel);
     ::grpc::Status SendGraph(::grpc::ClientContext* context,
-                                 const SendGraphRequest& request,
-                                 SendGraphResponse* response) GRPC_OVERRIDE;
+                             const SendGraphRequest& request,
+                             SendGraphResponse* response) GRPC_OVERRIDE;
    private:
     std::shared_ptr<::grpc::ChannelInterface> channel_;
     const ::grpc::RpcMethod rpcmethod_SendGraph_;
