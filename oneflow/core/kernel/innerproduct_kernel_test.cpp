@@ -63,9 +63,11 @@ TEST(InnerProductKernel, inner_product_kernel_cpu) {
   Blob* weight_diff = CreateBlob(dim_vec, 5, Location::kHost);
   Blob* bias_diff = CreateBlob(dim_vec, 6, Location::kHost);
 
+  // TODO(shiyuan) fill blob
+
   // Create cpu_device_context and kernel context
   Channel<std::function<void()>> cpu_stream;
-  // TODO(shiyuan)
+  // TODO(shiyuan) init cpu_stream
   KernelCtx ctx;
   ctx.device_ctx = new CpuDeviceCtx(&cpu_stream);
 
@@ -114,6 +116,8 @@ TEST(InnerProductKernel, inner_product_kernel_gpu) {
 
   Blob* weight_diff = CreateBlob(dim_vec, 5, Location::kDevice);
   Blob* bias_diff = CreateBlob(dim_vec, 6, Location::kDevice);
+
+  // TODO(shiyuan) fill blob
 
   // Create gpu_device_context and kernel context
   cublasHandle_t cublas_handle;
