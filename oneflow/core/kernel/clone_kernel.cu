@@ -63,11 +63,11 @@ void CloneKernel<DeviceType::kGPU, floating_point_type>::Backward(
                            cudaMemcpyDeviceToDevice,
                            ctx.device_ctx->cuda_stream()),
            cudaSuccess);
-  const floating_point_type alpha = 1.0;
+  const floating_point_type* alpha = floating_point_type(1.0);
   for(int i = 1; i != odbns.size(); ++i) {
     Blob* out_blob = BnInOp2BlobPtr(odbns[i]);
     CHECK_EQ(cublas_axpy<floating_point_type>(ctx.device_ctx->cublas_handle(),
-                                              idbn_blob->shape().elem_cnt(), &alpha,
+                                              idbn_blob->shape().elem_cnt(), alpha,
                                               reinterpret_cast<const floating_point_type*>(out_blob->dptr()), 1,
                                               reinterpret_cast<floating_point_type*>(idbn_blob->mut_dptr()), 1),
              cudaSuccess);
