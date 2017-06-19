@@ -9,5 +9,6 @@ message SendGraphRequest {
 }
 message SendGraphResponse {
   GraphDef graph = 1;
+  string tmp = 2;
 }
 
