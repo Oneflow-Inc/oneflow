@@ -40,12 +40,12 @@ void CloneKernel<DeviceType::kCPU, floating_point_type>::Forward(
   const std::vector<std::string>& obns = op()->output_bns();
   for(auto& obn : obns) {
     Blob* out_blob = BnInOp2BlobPtr(obn);
-    auto cpu_stream_func = [&]() {
+    auto cpu_stream_memcpy = [&]() {
       memcpy(out_blob->mut_dptr(),
              in_blob->dptr(),
              in_blob->shape().elem_cnt()*sizeof(floating_point_type));
     };
-    ctx.device_ctx->cpu_stream()->Send(cpu_stream_func);
+    ctx.device_ctx->cpu_stream()->Send(cpu_stream_memcpy);
   }
 }
 
@@ -53,21 +53,21 @@ template<typename floating_point_type>
 void CloneKernel<DeviceType::kCPU, floating_point_type>::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  Blob* in_blob = BnInOp2BlobPtr(op()->SoleIdbn());
+  Blob* idbn_blob = BnInOp2BlobPtr(op()->SoleIdbn());
   const std::vector<std::string>& odbns = op()->output_diff_bns();
   if (odbns.size() == 0) return;
-  auto cpu_stream_memcpy = [&]() {
-    memcpy(in_blob->mut_dptr(),
+  auto cpu_stream_memcpy = [=]() {
+    memcpy(idbn_blob->mut_dptr(),
            BnInOp2BlobPtr(odbns[0])->dptr(),
-           in_blob->shape().elem_cnt() * sizeof(floating_point_type));
+           idbn_blob->shape().elem_cnt() * sizeof(floating_point_type));
   };
   ctx.device_ctx->cpu_stream()->Send(cpu_stream_memcpy);
-  for(int i=1; i!=odbns.size(); ++i) {
+  for(int i = 1; i != odbns.size(); ++i) {
     Blob* out_blob = BnInOp2BlobPtr(odbns[i]);
-    auto cpu_stream_axpy = [&]() {
-      cblas_axpy<floating_point_type>(in_blob->shape().elem_cnt(), 1.0,
+    auto cpu_stream_axpy = [=]() {
+      cblas_axpy<floating_point_type>(idbn_blob->shape().elem_cnt(), 1.0,
                                       reinterpret_cast<const floating_point_type*>(out_blob->dptr()), 1,
-                                      reinterpret_cast<floating_point_type*>(in_blob->mut_dptr()), 1);
+                                      reinterpret_cast<floating_point_type*>(idbn_blob->mut_dptr()), 1);
     };
     ctx.device_ctx->cpu_stream()->Send(cpu_stream_axpy);
   }

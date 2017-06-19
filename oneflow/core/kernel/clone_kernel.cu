@@ -54,26 +54,27 @@ template<typename floating_point_type>
 void CloneKernel<DeviceType::kGPU, floating_point_type>::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  Blob* in_blob = BnInOp2BlobPtr(op()->SoleIdbn());
+  Blob* idbn_blob = BnInOp2BlobPtr(op()->SoleIdbn());
   const std::vector<std::string>& odbns = op()->output_diff_bns();
   if (odbns.size() == 0) return;
-  CHECK_EQ(cudaMemcpyAsync(in_blob->mut_dptr(),
+  CHECK_EQ(cudaMemcpyAsync(idbn_blob->mut_dptr(),
                            BnInOp2BlobPtr(odbns[0])->dptr(),
-                           in_blob->shape().elem_cnt() * sizeof(floating_point_type),
+                           idbn_blob->shape().elem_cnt() * sizeof(floating_point_type),
                            cudaMemcpyDeviceToDevice,
                            ctx.device_ctx->cuda_stream()),
            cudaSuccess);
   const floating_point_type alpha = 1.0;
-  for(int i=1; i != odbns.size(); ++i) {
+  for(int i = 1; i != odbns.size(); ++i) {
     Blob* out_blob = BnInOp2BlobPtr(odbns[i]);
     CHECK_EQ(cublas_axpy<floating_point_type>(ctx.device_ctx->cublas_handle(),
-                                              in_blob->shape().elem_cnt(), &alpha,
+                                              idbn_blob->shape().elem_cnt(), &alpha,
                                               reinterpret_cast<const floating_point_type*>(out_blob->dptr()), 1,
-                                              reinterpret_cast<floating_point_type*>(in_blob->mut_dptr()), 1),
+                                              reinterpret_cast<floating_point_type*>(idbn_blob->mut_dptr()), 1),
              cudaSuccess);
   }
 }
 
 INSTANTIATE_GPU_KERNEL_CLASS(CloneKernel);
+REGISTER_GPU_KERNEL(OperatorConf::kCloneConf, CloneKernel);
 
 }  // namespace oneflow
