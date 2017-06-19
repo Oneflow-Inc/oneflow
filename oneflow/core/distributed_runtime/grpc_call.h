@@ -73,9 +73,9 @@ class Call : public UntypedCall<Service> {
   void SendResponse(::grpc::Status status) {
     this->Ref();
     if(status.ok()){ 
-      std::cout<<"SendResponse: response = "<<response.tmp()<<std::endl;
+      std::cout<<"in grpc_call.h, SendResponse: response = "<<response.tmp()<<std::endl;
       responder_.Finish(response, status, &response_sent_tag_);
-      std::cout<<"SendResponse: responder_.Finish"<<std::endl;
+      std::cout<<"in grpc_call.h, SendResponse: responder_.Finish"<<std::endl;
     }
     this->Unref();
   }

@@ -16,7 +16,7 @@ Master::~Master() {}
   //oneflow::SendTaskGraphRequest task_request;
   //oneflow::SendTaskGraphResponse task_response;
   //Barrier();
-  std::cout<<"Server: request from Client = "<<request->tmp()<<std::endl;
+  std::cout<<"in master.cpp, Server: request from Client = "<<request->tmp()<<std::endl;
   response->set_tmp(8);
   //for(auto& channel : channel_cache_->channel_map_) {
   //  std::unique_ptr<::grpc::ServerCompletionQueue> cq_;

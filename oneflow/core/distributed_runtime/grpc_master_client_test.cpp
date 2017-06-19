@@ -40,12 +40,12 @@ TEST(GrpcMasterServer, test) {
   oneflow::SendGraphResponse resp;
 
   ::tensorflow::Status s = remote_master->SendGraph(&req, &resp);
-  std::cout<<"client ========"<<std::endl;
-  if(!s.ok()) {
-    std::cout<<"wait for response from server "<<std::endl;
-    std::cout<<"response from server: "<<resp.tmp()<<std::endl;
+  std::cout<<"in grpc_master_client_test.cpp, client ========"<<std::endl;
+  if(s.ok()) {
+    std::cout<<"in grpc_master_client_test.cpp, wait for response from server "<<std::endl;
+    std::cout<<"in grpc_master_client_test.cpp, response from server: "<<resp.tmp()<<std::endl;
   } else {
-    std::cout<<"s is not ok"<<std::endl;
+    std::cout<<"in grpc_master_client_test.cpp, s is not ok"<<std::endl;
   }
 
   //master_service->EnqueueSendGraphMethod();
