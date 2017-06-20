@@ -3,23 +3,11 @@
 
 namespace oneflow {
 
-void MdUpdtCompActor::Init(const TaskProto& task_proto) {
-  CompActor::Init(task_proto);
-  cur_msg_handle_ = &MdUpdtCompActor::HandleBeforeInitDeviceCtx;
+void MdUpdtCompActor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
+  CompActor::Init(task_proto, thread_ctx);
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
   next_model_version_id_ = 0;
-}
-
-int MdUpdtCompActor::ProcessMsg(const ActorMsg& actor_msg,
-                                 const ThreadContext& thread_ctx) {
-  return (this->*cur_msg_handle_)(actor_msg, thread_ctx);
-}
-
-int MdUpdtCompActor::HandleBeforeInitDeviceCtx(
-    const ActorMsg& actor_msg,
-    const ThreadContext& thread_ctx) {
-  CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kInitDeviceCtx);
   if (thread_ctx.cpu_stream) {
     mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
   } else {
@@ -28,12 +16,13 @@ int MdUpdtCompActor::HandleBeforeInitDeviceCtx(
                                              cuda_handle_.cudnn_handle()));
   }
   cur_msg_handle_ = &MdUpdtCompActor::HandleBeforeInitializeModel;
-  return 0;
 }
 
-int MdUpdtCompActor::HandleBeforeInitializeModel(
-    const ActorMsg& actor_msg,
-    const ThreadContext& thread_ctx) {
+int MdUpdtCompActor::ProcessMsg(const ActorMsg& actor_msg) {
+  return (this->*cur_msg_handle_)(actor_msg);
+}
+
+int MdUpdtCompActor::HandleBeforeInitializeModel(const ActorMsg& actor_msg) {
   CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kInitializeModel);
   Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
   model_regst->set_model_version_id(next_model_version_id_++);
@@ -65,27 +54,23 @@ int MdUpdtCompActor::HandleBeforeInitializeModel(
   return 0;
 }
 
-int MdUpdtCompActor::HandleBeforeSendInitialModel(
-    const ActorMsg& actor_msg,
-    const ThreadContext& thread_ctx) {
+int MdUpdtCompActor::HandleBeforeSendInitialModel(const ActorMsg& actor_msg) {
   CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kSendInitialModel);
   AsyncSendReadableRegstMsg();
   SetReadOnlyForRegstDescId(model_tmp_regst_desc_id_);
-  AsyncSendRegstDescDoneMsgToSubscribers(model_tmp_regst_desc_id_);
+  AsyncSendEORDMsgToSubscribers(model_tmp_regst_desc_id_);
   if (JobDesc::Singleton().is_train()) {
     cur_msg_handle_ = &MdUpdtCompActor::HandleUpdateModel;
   } else {
-    AsyncSendRegstDescDoneMsgToSubscribers(model_regst_desc_id_);
+    AsyncSendEORDMsgToSubscribers(model_regst_desc_id_);
     cur_msg_handle_ = &MdUpdtCompActor::HandleWaitUntilReadingCntEqualZero;
   }
   return 0;
 }
 
-int MdUpdtCompActor::HandleUpdateModel(
-    const ActorMsg& actor_msg,
-    const ThreadContext& thread_ctx) {
+int MdUpdtCompActor::HandleUpdateModel(const ActorMsg& actor_msg) {
   if (actor_msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kOneRegstDescDone);
+    CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kEORD);
     cur_msg_handle_ = &MdUpdtCompActor::HandleUpdtModelWhenNoReadableRegstMsg;
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
     auto regst_warpper = actor_msg.regst_warpper();
@@ -100,13 +85,12 @@ int MdUpdtCompActor::HandleUpdateModel(
 }
 
 int MdUpdtCompActor::HandleUpdtModelWhenNoReadableRegstMsg(
-    const ActorMsg& actor_msg,
-    const ThreadContext& thread_ctx) {
+    const ActorMsg& actor_msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(
       actor_msg.regst_warpper()->regst_raw_ptr()), 0);
   TryWardKernelAndSendMsg();
   if (waiting_model_diff_acc_queue_.empty()) {
-    AsyncSendRegstDescDoneMsgToSubscribers(model_regst_desc_id_);
+    AsyncSendEORDMsgToSubscribers(model_regst_desc_id_);
     if (total_reading_cnt() == 0) {
       cur_msg_handle_ = nullptr;
       return 1;
@@ -119,8 +103,7 @@ int MdUpdtCompActor::HandleUpdtModelWhenNoReadableRegstMsg(
 }
 
 int MdUpdtCompActor::HandleWaitUntilReadingCntEqualZero(
-    const ActorMsg& actor_msg,
-    const ThreadContext& thread_ctx) {
+    const ActorMsg& actor_msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(
       actor_msg.regst_warpper()->regst_raw_ptr()), 0);
   if (total_reading_cnt() == 0) {

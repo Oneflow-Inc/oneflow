@@ -13,8 +13,8 @@ class CompActor : public Actor {
  protected:
   CompActor() = default;
 
-  virtual void Init(const TaskProto& task_proto) override {
-    Actor::Init(task_proto);
+  virtual void Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) override {
+    Actor::Init(task_proto, thread_ctx);
     parallel_id_ = task_proto.parallel_id();
   }
 

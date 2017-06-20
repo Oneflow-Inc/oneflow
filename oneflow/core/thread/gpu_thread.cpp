@@ -8,7 +8,7 @@ GpuThread::GpuThread(int device_phy_id) {
   mut_actor_thread() = std::thread([this, device_phy_id]() {
     cudaSetDevice(device_phy_id);
     CudaStreamHandle copy_hd_cuda_handle;
-    ThreadContext ctx;
+    ThreadCtx ctx;
     ctx.copy_hd_cuda_stream = copy_hd_cuda_handle.cuda_stream();
     PollMsgChannel(ctx);
   });

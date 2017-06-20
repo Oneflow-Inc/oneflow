@@ -11,7 +11,7 @@ public:
   CopyCommNetActor() = default;
   ~CopyCommNetActor() = default;
 
-  int ProcessMsg(const ActorMsg&, const ThreadContext&) override;
+  int ProcessMsg(const ActorMsg&) override;
 
 private:
 

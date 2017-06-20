@@ -62,8 +62,11 @@ class IDMgr final {
   }
 
   // Runtime
-  uint64_t GetActorIdFromTaskId(uint64_t task_id) {
+  uint64_t ActorId4TaskId(uint64_t task_id) {
     return task_id;
+  }
+  uint64_t TaskId4ActorId(uint64_t actor_id) {
+    return actor_id;
   }
   uint64_t NewRegstId(uint64_t regst_desc_id) {
     CHECK_LT(regst_desc_id2num_of_register_[regst_desc_id],
