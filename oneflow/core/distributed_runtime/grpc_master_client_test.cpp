@@ -48,7 +48,6 @@ TEST(GrpcMasterServer, test) {
     std::cout << "s is not ok" << std::endl;
   }
 
-  /*
   req.set_tmp(3);
   s = remote_master->SendGraph(&req, &resp);
   if (s.ok()) {
@@ -56,7 +55,7 @@ TEST(GrpcMasterServer, test) {
   } else {
     std::cout << "s is not ok" << std::endl;
   }
-  */
+
 }  // TEST
 
 }  // namespace oneflow
