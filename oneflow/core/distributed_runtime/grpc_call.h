@@ -17,13 +17,11 @@ class UntypedCall : public ::tensorflow::core::RefCounted {
   virtual ~UntypedCall() {}
 
   virtual void RequestReceived(Service* service, bool ok) = 0;
-
   virtual void RequestCancelled(Service* service, bool ok) = 0;
 
   class Tag {
    public:
     enum Callback {kRequestReceived, kResponseSent, kCancelled};
-
     Tag(UntypedCall* call, Callback cb) : call_(call), callback_(cb) {}
 
     void OnCompleted(Service* service, bool ok) {
@@ -72,11 +70,7 @@ class Call : public UntypedCall<Service> {
 
   void SendResponse(::grpc::Status status) {
     this->Ref();
-    if(status.ok()){ 
-      std::cout<<"in grpc_call.h, SendResponse: response = "<<response.tmp()<<std::endl;
-      responder_.Finish(response, status, &response_sent_tag_);
-      std::cout<<"in grpc_call.h, SendResponse: responder_.Finish"<<std::endl;
-    }
+    responder_.Finish(response, status, &response_sent_tag_);
     this->Unref();
   }
 
@@ -153,4 +147,4 @@ class Call : public UntypedCall<Service> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_DISTRIBUTED_RUNTIME_GRPC_CALL_H_ 
+#endif  // ONEFLOW_CORE_DISTRIBUTED_RUNTIME_GRPC_CALL_H_

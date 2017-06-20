@@ -1,11 +1,11 @@
-#include <fstream>
 #include "oneflow/core/distributed_runtime/grpc_remote_master.h"
 #include "oneflow/core/distributed_runtime/master_service.pb.h"
 #include "oneflow/core/distributed_runtime/grpc_channel_cache.h"
 #include "oneflow/core/distributed_runtime/grpc_master_service.h"
 
-#include "grpc++/grpc++.h"
+#include <fstream>
 
+#include "grpc++/grpc++.h"
 #include <google/protobuf/text_format.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 
@@ -13,7 +13,8 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
-DEFINE_string(resource, "/home/xiaoshu/dl_sys/oneflow_dev_grpc/oneflow/core/proto/cluster_config.txt", "");
+DEFINE_string(resource,
+    "/home/xiaoshu/dl_sys/oneflow_dev_grpc/oneflow/core/proto/cluster_config.txt", "");
 
 namespace oneflow {
 
@@ -21,18 +22,19 @@ TEST(GrpcMasterServer, test) {
   oneflow::ClusterSpec cluster_spec;
   std::ifstream fin(FLAGS_resource);
   google::protobuf::io::IstreamInputStream pbin(&fin);
-  if(!google::protobuf::TextFormat::Parse(&pbin, &cluster_spec)) {
-    std::cout<<"parse proto error!"<<std::endl;
+  if (!google::protobuf::TextFormat::Parse(&pbin, &cluster_spec)) {
+    std::cout << "parse proto error!" << std::endl;
     fin.close();
   }
-  for(auto& node_info : cluster_spec.node_info()) {
-    std::cout<<node_info.ip()<<":"<<node_info.port()<<std::endl;
+  for (auto& node_info : cluster_spec.node_info()) {
+    std::cout << node_info.ip() << ":" << node_info.port() << std::endl;
   }
   GrpcChannelCache* channel = new GrpcChannelCache(cluster_spec);
   channel->CreateChannelCache();
 
   std::string server_address("0.0.0.0:50051");
-  std::shared_ptr<::grpc::Channel> dst_channel = channel->FindChannel(server_address);
+  std::shared_ptr<::grpc::Channel> dst_channel
+    = channel->FindChannel(server_address);
 
   GrpcRemoteMaster* remote_master = new GrpcRemoteMaster(dst_channel);
   oneflow::SendGraphRequest req;
@@ -40,19 +42,27 @@ TEST(GrpcMasterServer, test) {
   oneflow::SendGraphResponse resp;
 
   ::tensorflow::Status s = remote_master->SendGraph(&req, &resp);
-  std::cout<<"in grpc_master_client_test.cpp, client ========"<<std::endl;
-  if(s.ok()) {
-    std::cout<<"in grpc_master_client_test.cpp, wait for response from server "<<std::endl;
-    std::cout<<"in grpc_master_client_test.cpp, response from server: "<<resp.tmp()<<std::endl;
+  if (s.ok()) {
+    std::cout << "1th response from server: " << resp.tmp() << std::endl;
   } else {
-    std::cout<<"in grpc_master_client_test.cpp, s is not ok"<<std::endl;
+    std::cout << "s is not ok" << std::endl;
   }
 
-  //master_service->EnqueueSendGraphMethod();
+  /*
+  oneflow::SendGraphRequest req2;
+  req2.set_tmp(2);
+  oneflow::SendGraphResponse resp2;
+  GrpcRemoteMaster* rm = new GrpcRemoteMaster(dst_channel);
+  ::tensorflow::Status ss = rm->SendGraph(&req2, &resp2);
+  if (ss.ok()) {
+    std::cout << "2nd response from server: " << resp2.tmp() << std::endl;
+  } else {
+    std::cout << "s is not ok" << std::endl;
+  }
+  */
+}  // TEST
 
-}
-
-}
+}  // namespace oneflow
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);

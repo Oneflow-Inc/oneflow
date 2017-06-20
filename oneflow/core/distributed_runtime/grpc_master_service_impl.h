@@ -29,8 +29,8 @@ enum class GrpcMasterMethod {
   kSendGraph,
 };
 
-static const int kGrpcNumMasterMethods =
-  static_cast<int> (GrpcMasterMethod::kSendGraph) + 1;
+static const int32_t kGrpcNumMasterMethods =
+  static_cast<int32_t> (GrpcMasterMethod::kSendGraph) + 1;
 
 const char* GrpcMasterMethodName(GrpcMasterMethod id);
 
@@ -57,8 +57,7 @@ class MasterService GRPC_FINAL {
   };  // Stub
 
   static std::unique_ptr<Stub> NewStub(
-      const std::shared_ptr<::grpc::ChannelInterface>& channel,
-      const ::grpc::StubOptions& options = ::grpc::StubOptions());
+      const std::shared_ptr<::grpc::ChannelInterface>& channel);
 
   class AsyncService : public ::grpc::Service {
    public:

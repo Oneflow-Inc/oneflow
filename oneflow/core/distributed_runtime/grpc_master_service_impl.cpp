@@ -22,8 +22,7 @@ const char* GrpcMasterMethodName(GrpcMasterMethod id) {
 namespace grpc {
 
 std::unique_ptr<MasterService::Stub> MasterService::NewStub(
-    const std::shared_ptr<::grpc::ChannelInterface>& channel,
-    const ::grpc::StubOptions& options) {
+    const std::shared_ptr<::grpc::ChannelInterface>& channel) {
   std::unique_ptr<MasterService::Stub> stub(new MasterService::Stub(channel));
   return stub;
 }
@@ -32,7 +31,7 @@ MasterService::Stub::Stub(
     const std::shared_ptr<::grpc::ChannelInterface>& channel)
   : channel_(channel),
     rpcmethod_SendGraph_(GrpcMasterMethodName(static_cast<GrpcMasterMethod>(0)),
-                              ::grpc::RpcMethod::NORMAL_RPC, channel) {}
+                         ::grpc::RpcMethod::NORMAL_RPC, channel) {}
 
 ::grpc::Status MasterService::Stub::SendGraph(
     ::grpc::ClientContext* context, const SendGraphRequest& request,

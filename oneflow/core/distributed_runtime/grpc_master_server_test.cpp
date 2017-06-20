@@ -21,13 +21,14 @@ TEST(GrpcMasterServer, test) {
   oneflow::ClusterSpec cluster_spec;
   std::ifstream fin(FLAGS_resource);
   google::protobuf::io::IstreamInputStream pbin(&fin);
-  if(!google::protobuf::TextFormat::Parse(&pbin, &cluster_spec)) {
-    std::cout<<"parse proto error!"<<std::endl;
+  if (!google::protobuf::TextFormat::Parse(&pbin, &cluster_spec)) {
+    std::cout << "parse proto error!" << std::endl;
     fin.close();
   }
-  for(auto& node_info : cluster_spec.node_info()) {
-    std::cout<<node_info.ip()<<":"<<node_info.port()<<std::endl;
+  for (auto& node_info : cluster_spec.node_info()) {
+    std::cout << node_info.ip() << ":" << node_info.port() << std::endl;
   }
+
   GrpcChannelCache* channel = new GrpcChannelCache(cluster_spec);
   channel->CreateChannelCache();
   Master* master = new Master(channel);
@@ -40,25 +41,34 @@ TEST(GrpcMasterServer, test) {
   std::shared_ptr<Server> server = builder.BuildAndStart();
 
   master_service->EnqueueSendGraphMethod();
-  //master_service->test();
+
   void* tag;
   bool ok;
-
+  // process 1th request from client
   master_service->cq_->Next(&tag, &ok);
   UntypedCall<GrpcMasterService>::Tag* callback_tag =
     static_cast<UntypedCall<GrpcMasterService>::Tag*>(tag);
   if (callback_tag) {
     callback_tag->OnCompleted(master_service, ok);
-    std::cout<<"in grpc_master_server_test.cpp, OnCompleted end "<<std::endl;
   } else {
     master_service->cq_->Shutdown();
   }
-  std::cout<<"in grpc_master_server_test.cpp, master service end"<<std::endl;
 
-  //server->Shutdown();
-}
+  // process 2nd request from client
+  master_service->cq_->Next(&tag, &ok);
+  callback_tag = static_cast<UntypedCall<GrpcMasterService>::Tag*>(tag);
+  if (callback_tag) {
+    callback_tag->OnCompleted(master_service, ok);
+  } else {
+    master_service->cq_->Shutdown();
+  }
 
-}
+  master_service->cq_->Next(&tag, &ok);
+
+  delete master_service;
+}  // TEST
+
+}  // namespace oneflow
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);

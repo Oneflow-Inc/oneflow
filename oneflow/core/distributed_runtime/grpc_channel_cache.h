@@ -17,7 +17,7 @@ namespace oneflow {
 
 class GrpcChannelCache {
  public:
-  GrpcChannelCache(oneflow::ClusterSpec cluster_spec);
+  explicit GrpcChannelCache(oneflow::ClusterSpec cluster_spec);
   ~GrpcChannelCache();
 
   void CreateChannelCache();

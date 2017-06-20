@@ -14,7 +14,8 @@ namespace oneflow {
 
 class GrpcRemoteMaster {
  public:
-  explicit GrpcRemoteMaster(std::shared_ptr<::grpc::Channel> client_channel)
+  explicit GrpcRemoteMaster(
+      const std::shared_ptr<::grpc::Channel>& client_channel)
       : stub_(grpc::MasterService::NewStub(client_channel)) {}
 
   ~GrpcRemoteMaster() {}
@@ -22,13 +23,7 @@ class GrpcRemoteMaster {
   ::tensorflow::Status SendGraph(const SendGraphRequest* request,
                        SendGraphResponse* response) {
     ::grpc::ClientContext ctx;
-    //ctx.set_fail_fast(false);
-    ::grpc::Status s = stub_->SendGraph(&ctx, *request, response);
-
-    std::cout<<s.ok()<<std::endl;
-    std::cout<<"response = "<<response->tmp()<<std::endl;
-    //return FromGrpcStatus(stub_->SendGraph(&ctx, *request, response));
-    return FromGrpcStatus(s);
+    return FromGrpcStatus(stub_->SendGraph(&ctx, *request, response));
   }
 
  private:

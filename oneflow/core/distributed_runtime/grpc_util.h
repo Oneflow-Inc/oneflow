@@ -12,8 +12,9 @@ inline ::tensorflow::Status FromGrpcStatus(const ::grpc::Status& s) {
   if (s.ok()) {
     return ::tensorflow::Status::OK();
   } else {
-    return ::tensorflow::Status(static_cast<tensorflow::error::Code>(s.error_code()),
-                  s.error_message());
+    return ::tensorflow::Status(
+        static_cast<tensorflow::error::Code>(s.error_code()),
+        s.error_message());
   }
 }
 
@@ -21,8 +22,9 @@ inline ::grpc::Status ToGrpcStatus(const ::tensorflow::Status& s) {
   if (s.ok()) {
     return ::grpc::Status::OK;
   } else {
-    return ::grpc::Status(static_cast<::grpc::StatusCode>(s.code()),
-                          s.error_message());
+    return ::grpc::Status(
+        static_cast<::grpc::StatusCode>(s.code()),
+        s.error_message());
   }
 }
 
