@@ -32,7 +32,6 @@ cublasStatus_t cublas_axpy<double>(cublasHandle_t handle, int n,
 
 } // namespace
 
-
 template<typename floating_point_type>
 void CloneKernel<DeviceType::kGPU, floating_point_type>::Forward(
     const KernelCtx& ctx,
@@ -62,13 +61,13 @@ void CloneKernel<DeviceType::kGPU, floating_point_type>::Backward(
                            cudaMemcpyDeviceToDevice,
                            ctx.device_ctx->cuda_stream()),
            cudaSuccess);
-  const floating_point_type alpha = 1.0;
+  const floating_point_type alpha = {1.0f};
   for(size_t i = 1; i != odbns.size(); ++i) {
-    const Blob* out_blob = BnInOp2BlobPtr(odbns[i]);
+    const Blob* odbn_blob = BnInOp2BlobPtr(odbns[i]);
     CHECK_EQ(cublas_axpy<floating_point_type>(
                  ctx.device_ctx->cublas_handle(),
                  idbn_blob->shape().elem_cnt(), &alpha,
-                 static_cast<const floating_point_type*>(out_blob->dptr()), 1,
+                 static_cast<const floating_point_type*>(odbn_blob->dptr()), 1,
                  static_cast<floating_point_type*>(idbn_blob->mut_dptr()), 1),
              cudaSuccess);
   }
