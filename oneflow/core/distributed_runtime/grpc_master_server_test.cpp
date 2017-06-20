@@ -63,12 +63,14 @@ TEST(GrpcMasterServer, test) {
   UntypedCall<GrpcMasterService>::Tag* callback_tag2 = nullptr;
   callback_tag2 = static_cast<UntypedCall<GrpcMasterService>::Tag*>(tag2);
   if (callback_tag2) {
-    callback_tag2->OnCompleted(master_service, ok);
+    callback_tag2->OnCompleted(master_service, ok2);
   } else {
     master_service->cq_->Shutdown();
   }
 
-  master_service->cq_->Next(&tag, &ok);
+  void* tag3;
+  bool ok3;
+  master_service->cq_->Next(&tag3, &ok3);
 
   delete master_service;
 }  // TEST
