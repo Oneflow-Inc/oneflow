@@ -7,18 +7,45 @@ namespace oneflow {
 namespace {
 
 template<typename floating_point_type>
+void cublas_gemm(
+    const cublasHandle_t& cublas_handle, const cublasOperation_t cuTransA,
+    const cublasOperation_t cuTransB, const int M, const int N, const int K,
+    const floating_point_type* alpha, const floating_point_type* dptrA,
+    const int lda, const floating_point_type* dptrB, const int ldb,
+    const floating_point_type* beta, floating_point_type* dptrC,
+    const int ldc) {
+}
+
+template<>
+void cublas_gemm<float>(
+    const cublasHandle_t& cublas_handle, const cublasOperation_t cuTransA,
+    const cublasOperation_t cuTransB, const int M, const int N, const int K,
+    const float* alpha, const float* dptrA, const int lda, const float* dptrB,
+    const int ldb, const float* beta, float* dptrC, const int ldc) {
+  CHECK_EQ(cublasSgemm(
+               cublas_handle, cuTransA, cuTransB, M, N, K, alpha, dptrA, lda,
+               dptrB, ldb, beta, dptrC, ldc),
+           CUBLAS_STATUS_SUCCESS);
+}
+
+template<>
+void cublas_gemm<double>(
+    const cublasHandle_t& cublas_handle, const cublasOperation_t cuTransA,
+    const cublasOperation_t cuTransB, const int M, const int N, const int K,
+    const double* alpha, const double* dptrA, const int lda,
+    const double* dptrB, const int ldb, const double* beta, double* dptrC,
+    const int ldc) {
+  CHECK_EQ(cublasDgemm(
+               cublas_handle, cuTransA, cuTransB, M, N, K, alpha, dptrA, lda,
+               dptrB, ldb, beta, dptrC, ldc),
+           CUBLAS_STATUS_SUCCESS);
+}
+
+template<typename floating_point_type>
 void BlasMatrixMult(
     const cublasHandle_t& cublas_handle, const enum CBLAS_TRANSPOSE TransA,
     const enum CBLAS_TRANSPOSE TransB, const floating_point_type alpha,
     const floating_point_type beta, Blob* A, Blob* B, Blob* C) {
-}
-
-template<>
-void BlasMatrixMult<float>(
-    const cublasHandle_t& cublas_handle, const enum CBLAS_TRANSPOSE TransA,
-    const enum CBLAS_TRANSPOSE TransB, const float alpha, const float beta,
-    Blob* A, Blob* B, Blob* C) {
-  const enum CBLAS_ORDER Order = CblasRowMajor;
   cublasOperation_t cuTransA =
     (TransA == CblasNoTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
   cublasOperation_t cuTransB =
@@ -30,37 +57,11 @@ void BlasMatrixMult<float>(
   const int ldb = (TransB == CblasNoTrans) ? N : K;
   const int ldc = N;
 
-  CHECK_EQ(cublasSgemm(
-               cublas_handle, cuTransA, cuTransB, M, N, K, &alpha,
-               static_cast<const float*>(A->dptr()), lda,
-               static_cast<const float*>(B->dptr()), ldb, &beta,
-               static_cast<float*>(C->mut_dptr()), ldc),
-           CUBLAS_STATUS_SUCCESS);
-}
-
-template<>
-void BlasMatrixMult<double>(
-    const cublasHandle_t& cublas_handle, const enum CBLAS_TRANSPOSE TransA,
-    const enum CBLAS_TRANSPOSE TransB, const double alpha, const double beta,
-    Blob* A, Blob* B, Blob* C) {
-  const enum CBLAS_ORDER Order = CblasRowMajor;
-  cublasOperation_t cuTransA =
-    (TransA == CblasNoTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
-  cublasOperation_t cuTransB =
-    (TransB == CblasNoTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
-  const int M = C->shape().NumAxes();
-  const int N = C->shape().At(0);
-  const int K = A->shape().At(0);
-  const int lda = (TransA == CblasNoTrans) ? K : M;
-  const int ldb = (TransB == CblasNoTrans) ? N : K;
-  const int ldc = N;
-
-  CHECK_EQ(cublasDgemm(
-               cublas_handle, cuTransA, cuTransB, M, N, K, &alpha,
-               static_cast<const double*>(A->dptr()), lda,
-               static_cast<const double*>(B->dptr()), ldb, &beta,
-               static_cast<double*>(C->mut_dptr()), ldc),
-           CUBLAS_STATUS_SUCCESS);
+  cublas_gemm<floating_point_type>(
+      cublas_handle, cuTransA, cuTransB, M, N, K, &alpha,
+      static_cast<const floating_point_type*>(A->dptr()), lda,
+      static_cast<const floating_point_type*>(B->dptr()), ldb, &beta,
+      static_cast<floating_point_type*>(C->mut_dptr()), ldc);
 }
 
 }  // namespace
@@ -69,23 +70,25 @@ template<typename floating_point_type>
 void InnerProductKernel<DeviceType::kGPU, floating_point_type>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  Blob* in_data = BnInOp2BlobPtr(op()->SoleIbn());
-  Blob* out_data = BnInOp2BlobPtr(op()->SoleObn());
+  Blob* in_data = BnInOp2BlobPtr("in");
+  Blob* out_data = BnInOp2BlobPtr("out");
 
-  Blob* weight = BnInOp2BlobPtr(op()->model_bns().at(0));
-  Blob* bias = BnInOp2BlobPtr(op()->model_bns().at(1));
-  Blob* bias_multiplier = BnInOp2BlobPtr(op()->model_tmp_bns().at(0));
+  Blob* weight = BnInOp2BlobPtr("weight");
+  Blob* bias = BnInOp2BlobPtr("bias");
+  Blob* bias_multiplier = BnInOp2BlobPtr("bias_multiplier");
 
   // out_data = in_data * weight.t
   BlasMatrixMult<floating_point_type>(
       ctx.device_ctx->cublas_handle(), CblasNoTrans, CblasTrans,
-      (floating_point_type)1., (floating_point_type)0.,
+      static_cast<floating_point_type>(1.),
+      static_cast<floating_point_type>(0.),
       in_data, weight, out_data);
 
   // out_data = bias_multiplier * bias + out_data
   BlasMatrixMult<floating_point_type>(
       ctx.device_ctx->cublas_handle(), CblasNoTrans, CblasNoTrans,
-      (floating_point_type)1., (floating_point_type)0.,
+      static_cast<floating_point_type>(1.),
+      static_cast<floating_point_type>(0.),
       bias_multiplier, bias, out_data);
 }
 
@@ -93,34 +96,43 @@ template<typename floating_point_type>
 void InnerProductKernel<DeviceType::kGPU, floating_point_type>::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  Blob* in_data = BnInOp2BlobPtr(op()->SoleIbn());
+  Blob* in_data = BnInOp2BlobPtr("in");
 
-  Blob* out_diff = BnInOp2BlobPtr(op()->SoleOdbn());
-  Blob* in_diff = BnInOp2BlobPtr(op()->SoleIdbn());
+  Blob* out_diff = BnInOp2BlobPtr("out_diff");
+  Blob* in_diff = BnInOp2BlobPtr("in_diff");
 
-  Blob* weight = BnInOp2BlobPtr(op()->model_bns().at(0));
-  Blob* bias_multiplier = BnInOp2BlobPtr(op()->model_tmp_bns().at(0));
+  Blob* weight = BnInOp2BlobPtr("weight");
+  Blob* bias_multiplier = BnInOp2BlobPtr("bias_multiplier");
 
-  Blob* weight_diff = BnInOp2BlobPtr(op()->model_diff_bns().at(0));
-  Blob* bias_diff = BnInOp2BlobPtr(op()->model_diff_bns().at(1));
+  Blob* weight_diff = BnInOp2BlobPtr("weight_diff");
+  Blob* bias_diff = BnInOp2BlobPtr("bias_diff");
 
   // in_diff = out_diff * weight
-  BlasMatrixMult<floating_point_type>(
-      ctx.device_ctx->cublas_handle(), CblasNoTrans, CblasNoTrans,
-      (floating_point_type)1., (floating_point_type)0.,
-      out_diff, weight, in_diff);
+  if (in_diff != nullptr) {
+    BlasMatrixMult<floating_point_type>(
+        ctx.device_ctx->cublas_handle(), CblasNoTrans, CblasNoTrans,
+        static_cast<floating_point_type>(1.),
+        static_cast<floating_point_type>(0.),
+        out_diff, weight, in_diff);
+  }
 
   // weight_diff = out_diff.t * in_data
-  BlasMatrixMult<floating_point_type>(
-      ctx.device_ctx->cublas_handle(), CblasTrans, CblasNoTrans,
-      (floating_point_type)1., (floating_point_type)0.,
-      out_diff, in_data, weight_diff);
+  if (weight_diff != nullptr) {
+    BlasMatrixMult<floating_point_type>(
+        ctx.device_ctx->cublas_handle(), CblasTrans, CblasNoTrans,
+        static_cast<floating_point_type>(1.),
+        static_cast<floating_point_type>(0.),
+        out_diff, in_data, weight_diff);
+  }
 
   // bias_diff = out_diff.t * bias_multiplier
-  BlasMatrixMult<floating_point_type>(
-      ctx.device_ctx->cublas_handle(), CblasTrans, CblasNoTrans,
-      (floating_point_type)1., (floating_point_type)0.,
-      out_diff, bias_multiplier, bias_diff);
+  if (bias_diff != nullptr) {
+    BlasMatrixMult<floating_point_type>(
+        ctx.device_ctx->cublas_handle(), CblasTrans, CblasNoTrans,
+        static_cast<floating_point_type>(1.),
+        static_cast<floating_point_type>(0.),
+        out_diff, bias_multiplier, bias_diff);
+  }
 }
 
 INSTANTIATE_GPU_KERNEL_CLASS(InnerProductKernel);
