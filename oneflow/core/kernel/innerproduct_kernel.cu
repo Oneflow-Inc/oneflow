@@ -32,9 +32,9 @@ void BlasMatrixMult<float>(
 
   CHECK_EQ(cublasSgemm(
                cublas_handle, cuTransA, cuTransB, M, N, K, &alpha,
-               reinterpret_cast<const float*>(A->dptr()), lda,
-               reinterpret_cast<const float*>(B->dptr()), ldb, &beta,
-               reinterpret_cast<float*>(C->mut_dptr()), ldc),
+               static_cast<const float*>(A->dptr()), lda,
+               static_cast<const float*>(B->dptr()), ldb, &beta,
+               static_cast<float*>(C->mut_dptr()), ldc),
            CUBLAS_STATUS_SUCCESS);
 }
 
@@ -57,9 +57,9 @@ void BlasMatrixMult<double>(
 
   CHECK_EQ(cublasDgemm(
                cublas_handle, cuTransA, cuTransB, M, N, K, &alpha,
-               reinterpret_cast<const double*>(A->dptr()), lda,
-               reinterpret_cast<const double*>(B->dptr()), ldb, &beta,
-               reinterpret_cast<double*>(C->mut_dptr()), ldc),
+               static_cast<const double*>(A->dptr()), lda,
+               static_cast<const double*>(B->dptr()), ldb, &beta,
+               static_cast<double*>(C->mut_dptr()), ldc),
            CUBLAS_STATUS_SUCCESS);
 }
 

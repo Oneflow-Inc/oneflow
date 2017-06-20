@@ -32,9 +32,9 @@ void BlasMatrixMult<float>(
   std::function<void()> fp = [=]() {
     cblas_sgemm(
         Order, TransA, TransB, M, N, K, alpha,
-        reinterpret_cast<const float*>(A->dptr()), lda,
-        reinterpret_cast<const float*>(B->dptr()), ldb, beta,
-        reinterpret_cast<float*>(C->mut_dptr()), ldc);
+        static_cast<const float*>(A->dptr()), lda,
+        static_cast<const float*>(B->dptr()), ldb, beta,
+        static_cast<float*>(C->mut_dptr()), ldc);
   };
   cpu_stream->Send(fp);
 }
@@ -54,9 +54,9 @@ void BlasMatrixMult<double>(
 
   std::function<void()> fp = [=]() {
     cblas_dgemm(Order, TransA, TransB, M, N, K, alpha,
-        reinterpret_cast<const double*>(A->dptr()), lda,
-        reinterpret_cast<const double*>(B->dptr()), ldb, beta,
-        reinterpret_cast<double*>(C->mut_dptr()), ldc);
+        static_cast<const double*>(A->dptr()), lda,
+        static_cast<const double*>(B->dptr()), ldb, beta,
+        static_cast<double*>(C->mut_dptr()), ldc);
   };
   cpu_stream->Send(fp);
 }
