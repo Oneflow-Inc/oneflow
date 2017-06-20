@@ -27,6 +27,7 @@ class Thread {
 
  private:
   HashMap<uint64_t, TaskProto> id2task_;
+  std::mutex id2task_mtx_;
 
   std::thread actor_thread_;
   Channel<ActorMsg> msg_channel_;
