@@ -38,8 +38,7 @@ void CloneKernel<DeviceType::kCPU, floating_point_type>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
   const Blob* in_blob = BnInOp2BlobPtr(op()->SoleIbn());
-  const std::vector<std::string>& obns = op()->output_bns();
-  for(const std::string& obn : obns) {
+  for(const std::string& obn : op()->output_bns()) {
     Blob* out_blob = BnInOp2BlobPtr(obn);
     ctx.device_ctx->cpu_stream()->Send([=] {
       memcpy(out_blob->mut_dptr(),
@@ -56,10 +55,10 @@ void CloneKernel<DeviceType::kCPU, floating_point_type>::Backward(
   Blob* idbn_blob = BnInOp2BlobPtr(op()->SoleIdbn());
   const std::vector<std::string>& odbns = op()->output_diff_bns();
   if (odbns.size() == 0) return;
-  const Blob* odbn_blob = BnInOp2BlobPtr(odbns[0]);
+  const Blob* odbn_blob_0 = BnInOp2BlobPtr(odbns[0]);
   ctx.device_ctx->cpu_stream()->Send([=] {
     memcpy(idbn_blob->mut_dptr(),
-           odbn_blob->dptr(),
+           odbn_blob_0->dptr(),
            idbn_blob->shape().elem_cnt() * sizeof(floating_point_type));
   });
   for(size_t i = 1; i != odbns.size(); ++i) {
