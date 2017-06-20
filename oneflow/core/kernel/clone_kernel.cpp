@@ -45,7 +45,7 @@ void CloneKernel<DeviceType::kCPU, floating_point_type>::Forward(
       memcpy(out_blob->mut_dptr(),
              in_blob->dptr(),
              in_blob->shape().elem_cnt() * sizeof(floating_point_type));
-      });
+    });
   }
 }
 

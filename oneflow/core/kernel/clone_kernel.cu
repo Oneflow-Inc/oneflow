@@ -37,9 +37,8 @@ template<typename floating_point_type>
 void CloneKernel<DeviceType::kGPU, floating_point_type>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  Blob* in_blob = BnInOp2BlobPtr(op()->SoleIbn());
-  const std::vector<std::string>& obns = op()->output_bns();
-  for(auto& obn : obns) {
+  const Blob* in_blob = BnInOp2BlobPtr(op()->SoleIbn());
+  for(const std::string& obn : op()->output_bns()) {
     Blob* out_blob = BnInOp2BlobPtr(obn);
     CHECK_EQ(cudaMemcpyAsync(out_blob->mut_dptr(),
                              in_blob->dptr(),
