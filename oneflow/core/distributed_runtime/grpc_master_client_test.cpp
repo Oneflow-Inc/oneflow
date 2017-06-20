@@ -49,13 +49,10 @@ TEST(GrpcMasterServer, test) {
   }
 
   /*
-  oneflow::SendGraphRequest req2;
-  req2.set_tmp(2);
-  oneflow::SendGraphResponse resp2;
-  GrpcRemoteMaster* rm = new GrpcRemoteMaster(dst_channel);
-  ::tensorflow::Status ss = rm->SendGraph(&req2, &resp2);
-  if (ss.ok()) {
-    std::cout << "2nd response from server: " << resp2.tmp() << std::endl;
+  req.set_tmp(3);
+  s = remote_master->SendGraph(&req, &resp);
+  if (s.ok()) {
+    std::cout << "2nd response from server: " << resp.tmp() << std::endl;
   } else {
     std::cout << "s is not ok" << std::endl;
   }
