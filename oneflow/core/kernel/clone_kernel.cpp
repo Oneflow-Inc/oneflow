@@ -11,7 +11,7 @@ void cblas_axpy(const int N,
                 const T alpha,
                 const T *x, const int incx,
                 T *y, const int incy) {
-  LOG(FATAL) << "floating_point_type should be float or dounle";
+  LOG(FATAL) << "floating_point_type should be float or double";
 }
 
 template<>
@@ -34,18 +34,17 @@ void cblas_axpy<double>(const int N,
 
 template<typename floating_point_type>
 void CloneKernel<DeviceType::kCPU, floating_point_type>::Forward(
-  const KernelCtx& ctx,
-  std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  Blob* in_blob = BnInOp2BlobPtr(op()->SoleIbn());
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
+  const Blob* in_blob = BnInOp2BlobPtr(op()->SoleIbn());
   const std::vector<std::string>& obns = op()->output_bns();
-  for(auto& obn : obns) {
+  for(const std::string& obn : obns) {
     Blob* out_blob = BnInOp2BlobPtr(obn);
-    auto cpu_stream_memcpy = [&]() {
+    ctx.device_ctx->cpu_stream()->Send([=] {
       memcpy(out_blob->mut_dptr(),
              in_blob->dptr(),
-             in_blob->shape().elem_cnt()*sizeof(floating_point_type));
-    };
-    ctx.device_ctx->cpu_stream()->Send(cpu_stream_memcpy);
+             in_blob->shape().elem_cnt() * sizeof(floating_point_type));
+      });
   }
 }
 
@@ -56,20 +55,20 @@ void CloneKernel<DeviceType::kCPU, floating_point_type>::Backward(
   Blob* idbn_blob = BnInOp2BlobPtr(op()->SoleIdbn());
   const std::vector<std::string>& odbns = op()->output_diff_bns();
   if (odbns.size() == 0) return;
-  auto cpu_stream_memcpy = [=]() {
+  const Blob* odbn_blob = BnInOp2BlobPtr(odbns[0]);
+  ctx.device_ctx->cpu_stream()->Send([=] {
     memcpy(idbn_blob->mut_dptr(),
-           BnInOp2BlobPtr(odbns[0])->dptr(),
+           odbn_blob->dptr(),
            idbn_blob->shape().elem_cnt() * sizeof(floating_point_type));
-  };
-  ctx.device_ctx->cpu_stream()->Send(cpu_stream_memcpy);
-  for(int i = 1; i != odbns.size(); ++i) {
-    Blob* out_blob = BnInOp2BlobPtr(odbns[i]);
-    auto cpu_stream_axpy = [=]() {
-      cblas_axpy<floating_point_type>(idbn_blob->shape().elem_cnt(), 1.0,
-                                      reinterpret_cast<const floating_point_type*>(out_blob->dptr()), 1,
-                                      reinterpret_cast<floating_point_type*>(idbn_blob->mut_dptr()), 1);
-    };
-    ctx.device_ctx->cpu_stream()->Send(cpu_stream_axpy);
+  });
+  for(size_t i = 1; i != odbns.size(); ++i) {
+    const Blob* out_blob = BnInOp2BlobPtr(odbns[i]);
+    ctx.device_ctx->cpu_stream()->Send([=] {
+      cblas_axpy<floating_point_type>(
+          idbn_blob->shape().elem_cnt(), 1.0,
+          static_cast<const floating_point_type*>(out_blob->dptr()), 1,
+          static_cast<floating_point_type*>(idbn_blob->mut_dptr()), 1);
+    });
   }
 }
 
