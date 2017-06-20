@@ -82,21 +82,21 @@ void Actor::AsyncSendReadableRegstMsg() {
   }
 }
 
-void Actor::AsyncSendRegstDescDoneMsgToSubscribers(uint64_t regst_desc_id) {
+void Actor::AsyncSendEORDMsgToSubscribers(uint64_t regst_desc_id) {
   Regst* one_regst = produced_regsts_.at(regst_desc_id).front().get();
   device_ctx_->AddCallBack([one_regst]() {
     for (uint64_t subscriber : one_regst->subscribers_actor_id()) {
       ActorMsg msg;
       msg.set_dst_actor_id(subscriber);
-      msg.set_actor_cmd(ActorCmd::kOneRegstDescDone);
+      msg.set_actor_cmd(ActorCmd::kEORD);
       ActorMsgBus::Singleton().SendMsg(std::move(msg));
     }
   });
 }
 
-void Actor::AsyncSendRegstDescDoneMsgForAllProducedRegstDesc() {
+void Actor::AsyncSendEORDMsgForAllProducedRegstDesc() {
   for (const auto& pair : produced_regsts_) {
-    AsyncSendRegstDescDoneMsgToSubscribers(pair.first);
+    AsyncSendEORDMsgToSubscribers(pair.first);
   }
 }
 

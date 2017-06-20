@@ -10,7 +10,7 @@ enum class ActorCmd {
   kInitDeviceCtx = 0,
   kInitializeModel,
   kSendInitialModel,
-  kOneRegstDescDone
+  kEORD // End Of Register Desc
 };
 
 OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ActorCmd);

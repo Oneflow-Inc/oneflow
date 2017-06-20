@@ -12,7 +12,7 @@ void BpDataCompActor::Init(const TaskProto& task_proto) {
   data_tmp_regst_desc_id_ = RegstDescId4Name("data_tmp");
   expected_model_version_id_ = 0;
   num_of_read_empty_ = 6;
-  num_of_read_done_ = 0;
+  num_of_eord_ = 0;
   cur_msg_handle_ = &BpDataCompActor::HandleInitDeviceCtx;
 }
 
@@ -53,9 +53,9 @@ int BpDataCompActor::HandleBpComp(
     const ActorMsg& msg,
     const ThreadContext& thread_ctx) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK_EQ(msg.actor_cmd(), ActorCmd::kOneRegstDescDone);
-    num_of_read_done_ += 1;
-    if (num_of_read_done_ == 6) {
+    CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
+    num_of_eord_ += 1;
+    if (num_of_eord_ == 6) {
       cur_msg_handle_ = &BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg;
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
@@ -88,7 +88,7 @@ int BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg(
     }
     AsyncSendRegstMsgToProducer(read_regst_.at(model_tmp_regst_desc_id_).front());
     read_regst_.at(model_tmp_regst_desc_id_).pop();
-    AsyncSendRegstDescDoneMsgForAllProducedRegstDesc();
+    AsyncSendEORDMsgForAllProducedRegstDesc();
     num_of_read_empty_ = 6;
     if (total_reading_cnt() == 0) {
       cur_msg_handle_ = nullptr;

@@ -9,7 +9,7 @@ void FwDataCompActor::Init(const TaskProto& task_proto) {
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
   expected_model_version_id_ = 0;
-  num_of_read_done_ = 0;
+  num_of_eord_ = 0;
   cur_msg_handle_ = &FwDataCompActor::HandleInitDeviceCtx;
 }
 
@@ -49,9 +49,9 @@ int FwDataCompActor::HandleFwComp(
     const ActorMsg& msg,
     const ThreadContext& thread_ctx) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK_EQ(msg.actor_cmd(), ActorCmd::kOneRegstDescDone);
-    num_of_read_done_ += 1;
-    if (num_of_read_done_ == 3) {
+    CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
+    num_of_eord_ += 1;
+    if (num_of_eord_ == 3) {
       cur_msg_handle_ = &FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg;
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
@@ -87,7 +87,7 @@ int FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg(
     model_regst_ = nullptr;
     AsyncSendRegstMsgToProducer(model_tmp_regst_);
     model_tmp_regst_ = nullptr;
-    AsyncSendRegstDescDoneMsgForAllProducedRegstDesc();
+    AsyncSendEORDMsgForAllProducedRegstDesc();
     if (total_reading_cnt() == 0) {
       cur_msg_handle_ = nullptr;
       return 1;

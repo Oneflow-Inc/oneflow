@@ -29,7 +29,7 @@ int MdSaveCompActor::HandleSaveModel(
     const ActorMsg& actor_msg,
     const ThreadContext& thread_ctx) {
   if (actor_msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK(actor_msg.actor_cmd() == ActorCmd::kOneRegstDescDone);
+    CHECK(actor_msg.actor_cmd() == ActorCmd::kEORD);
     return 1;
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
     std::shared_ptr<RegstWarpper> regst_warpper = actor_msg.regst_warpper();

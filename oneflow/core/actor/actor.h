@@ -53,8 +53,8 @@ class Actor {
       const KernelCtx&,
       std::function<std::shared_ptr<RegstWarpper>(uint64_t)> Regst4RegstDescId);
   void AsyncSendReadableRegstMsg();
-  void AsyncSendRegstDescDoneMsgToSubscribers(uint64_t regst_desc_id);
-  void AsyncSendRegstDescDoneMsgForAllProducedRegstDesc();
+  void AsyncSendEORDMsgToSubscribers(uint64_t regst_desc_id);
+  void AsyncSendEORDMsgForAllProducedRegstDesc();
   void AsyncSendRegstMsgToProducer(const std::shared_ptr<RegstWarpper>&);
   void AsyncDo(std::function<void()>);
   int TryUpdtStateAsProducedRegst(Regst* regst);

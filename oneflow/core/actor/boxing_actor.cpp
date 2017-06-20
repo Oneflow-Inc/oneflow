@@ -8,7 +8,7 @@ void BoxingActor::Init(const TaskProto& task_proto) {
   Actor::Init(task_proto);
   num_of_subscribed_regsts_ = task_proto.subscribed_regst_desc_id().size();
   num_of_read_empty_ = num_of_subscribed_regsts_;
-  num_of_read_done_ = 0;
+  num_of_eord_ = 0;
   cur_msg_handle_ = &BoxingActor::HandleInitDeviceCtx;
 }
 
@@ -31,9 +31,9 @@ int BoxingActor::HandleBoxing(
     const ActorMsg& msg,
     const ThreadContext& thread_ctx) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK_EQ(msg.actor_cmd(), ActorCmd::kOneRegstDescDone);
-    num_of_read_done_ += 1;
-    if (num_of_read_done_ == num_of_subscribed_regsts_) {
+    CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
+    num_of_eord_ += 1;
+    if (num_of_eord_ == num_of_subscribed_regsts_) {
       cur_msg_handle_ = &BoxingActor::HandleBoxingWhenNoReadableRegstMsg;
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
@@ -55,7 +55,7 @@ int BoxingActor::HandleBoxingWhenNoReadableRegstMsg(
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
   TryWardKernelAndSendMsg();
   if (num_of_read_empty_ == num_of_subscribed_regsts_) {
-    AsyncSendRegstDescDoneMsgForAllProducedRegstDesc();
+    AsyncSendEORDMsgForAllProducedRegstDesc();
     if (total_reading_cnt() == 0) {
       cur_msg_handle_ = nullptr;
       return 1;

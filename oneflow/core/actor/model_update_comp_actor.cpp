@@ -71,11 +71,11 @@ int MdUpdtCompActor::HandleBeforeSendInitialModel(
   CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kSendInitialModel);
   AsyncSendReadableRegstMsg();
   SetReadOnlyForRegstDescId(model_tmp_regst_desc_id_);
-  AsyncSendRegstDescDoneMsgToSubscribers(model_tmp_regst_desc_id_);
+  AsyncSendEORDMsgToSubscribers(model_tmp_regst_desc_id_);
   if (JobDesc::Singleton().is_train()) {
     cur_msg_handle_ = &MdUpdtCompActor::HandleUpdateModel;
   } else {
-    AsyncSendRegstDescDoneMsgToSubscribers(model_regst_desc_id_);
+    AsyncSendEORDMsgToSubscribers(model_regst_desc_id_);
     cur_msg_handle_ = &MdUpdtCompActor::HandleWaitUntilReadingCntEqualZero;
   }
   return 0;
@@ -85,7 +85,7 @@ int MdUpdtCompActor::HandleUpdateModel(
     const ActorMsg& actor_msg,
     const ThreadContext& thread_ctx) {
   if (actor_msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kOneRegstDescDone);
+    CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kEORD);
     cur_msg_handle_ = &MdUpdtCompActor::HandleUpdtModelWhenNoReadableRegstMsg;
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
     auto regst_warpper = actor_msg.regst_warpper();
@@ -106,7 +106,7 @@ int MdUpdtCompActor::HandleUpdtModelWhenNoReadableRegstMsg(
       actor_msg.regst_warpper()->regst_raw_ptr()), 0);
   TryWardKernelAndSendMsg();
   if (waiting_model_diff_acc_queue_.empty()) {
-    AsyncSendRegstDescDoneMsgToSubscribers(model_regst_desc_id_);
+    AsyncSendEORDMsgToSubscribers(model_regst_desc_id_);
     if (total_reading_cnt() == 0) {
       cur_msg_handle_ = nullptr;
       return 1;
