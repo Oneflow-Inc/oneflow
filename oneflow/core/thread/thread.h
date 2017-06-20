@@ -16,16 +16,17 @@ class Thread {
   OF_DISALLOW_COPY_AND_MOVE(Thread);
   virtual ~Thread();
 
-  void AddActor(const TaskProto&);
+  void AddTask(const TaskProto&);
 
   Channel<ActorMsg>* GetMsgChannelPtr() { return &msg_channel_; }
 
  protected:
   Thread() = default;
   std::thread& mut_actor_thread() { return actor_thread_; }
-  void PollMsgChannel(const ThreadContext& thread_ctx);
+  void PollMsgChannel(const ThreadCtx& thread_ctx);
 
  private:
+  HashMap<uint64_t, TaskProto> id2task_;
 
   std::thread actor_thread_;
   Channel<ActorMsg> msg_channel_;

@@ -3,7 +3,7 @@
 
 namespace oneflow {
 
-void Actor::Init(const TaskProto& task_proto) {
+void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   // actor_id
   actor_id_ = task_proto.id();
   // ward_func

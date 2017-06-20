@@ -3,31 +3,19 @@
 
 namespace oneflow {
 
-// need review
-void MdSaveCompActor::Init(const TaskProto& task_proto) {
-  CompActor::Init(task_proto);
+void MdSaveCompActor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
+  CompActor::Init(task_proto, thread_ctx);
   model_regst_desc_id_ = RegstDescId4Name("model");
-}
-
-int MdSaveCompActor::ProcessMsg(
-    const ActorMsg& actor_msg,
-    const ThreadContext& thread_ctx) {
-  return (this->*cur_msg_handle_)(actor_msg, thread_ctx);
-}
-
-int MdSaveCompActor::HandleBeforeInitDeviceCtx(
-    const ActorMsg& actor_msg,
-    const ThreadContext& thread_ctx) {
-  CHECK(actor_msg.actor_cmd() == ActorCmd::kInitDeviceCtx);
   CHECK(thread_ctx.cpu_stream);
   mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
   cur_msg_handle_ = &MdSaveCompActor::HandleSaveModel;
-  return 0;
 }
 
-int MdSaveCompActor::HandleSaveModel(
-    const ActorMsg& actor_msg,
-    const ThreadContext& thread_ctx) {
+int MdSaveCompActor::ProcessMsg(const ActorMsg& actor_msg) {
+  return (this->*cur_msg_handle_)(actor_msg);
+}
+
+int MdSaveCompActor::HandleSaveModel(const ActorMsg& actor_msg) {
   if (actor_msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK(actor_msg.actor_cmd() == ActorCmd::kEORD);
     return 1;

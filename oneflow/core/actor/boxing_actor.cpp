@@ -4,32 +4,21 @@
 
 namespace oneflow {
 
-void BoxingActor::Init(const TaskProto& task_proto) {
-  Actor::Init(task_proto);
+void BoxingActor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
+  Actor::Init(task_proto, thread_ctx);
   num_of_subscribed_regsts_ = task_proto.subscribed_regst_desc_id().size();
   num_of_read_empty_ = num_of_subscribed_regsts_;
   num_of_eord_ = 0;
-  cur_msg_handle_ = &BoxingActor::HandleInitDeviceCtx;
-}
-
-int BoxingActor::ProcessMsg(const ActorMsg& msg,
-                             const ThreadContext& thread_ctx) {
-  return (this->*cur_msg_handle_)(msg, thread_ctx);
-}
-
-int BoxingActor::HandleInitDeviceCtx(
-    const ActorMsg& msg,
-    const ThreadContext& thread_ctx) {
-  CHECK_EQ(msg.actor_cmd(), ActorCmd::kInitDeviceCtx);
   CHECK(thread_ctx.cpu_stream);
   mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
   cur_msg_handle_ = &BoxingActor::HandleBoxing;
-  return 0;
 }
 
-int BoxingActor::HandleBoxing(
-    const ActorMsg& msg,
-    const ThreadContext& thread_ctx) {
+int BoxingActor::ProcessMsg(const ActorMsg& msg) {
+  return (this->*cur_msg_handle_)(msg);
+}
+
+int BoxingActor::HandleBoxing(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     num_of_eord_ += 1;
@@ -49,9 +38,7 @@ int BoxingActor::HandleBoxing(
   return 0;
 }
 
-int BoxingActor::HandleBoxingWhenNoReadableRegstMsg(
-    const ActorMsg& msg,
-    const ThreadContext& thread_ctx) {
+int BoxingActor::HandleBoxingWhenNoReadableRegstMsg(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
   TryWardKernelAndSendMsg();
   if (num_of_read_empty_ == num_of_subscribed_regsts_) {
@@ -67,9 +54,7 @@ int BoxingActor::HandleBoxingWhenNoReadableRegstMsg(
   return 0;
 }
   
-int BoxingActor::HandleWaitUntilReadingCntEqualZero(
-    const ActorMsg& msg,
-    const ThreadContext& thread_ctx) {
+int BoxingActor::HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
   if (total_reading_cnt() == 0) {
     cur_msg_handle_ = nullptr;
