@@ -6,6 +6,7 @@
 namespace oneflow {
 
 namespace {
+
 template<typename T>
 void cblas_axpy(const int N,
                 const T alpha,
