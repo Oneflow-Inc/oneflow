@@ -43,14 +43,14 @@ TEST(GrpcMasterServer, test) {
 
   ::tensorflow::Status s = remote_worker->GetStatus(&req, &resp);
   if (s.ok()) {
-    std::cout << "1th response from server: " << resp.status() << std::endl;
+    std::cout << "1th response from server: " << resp.status_test() << std::endl;
   } else {
     std::cout << "s is not ok" << std::endl;
   }
 
   s = remote_worker->GetStatus(&req, &resp);
   if (s.ok()) {
-    std::cout << "2nd response from server: " << resp.status() << std::endl;
+    std::cout << "2nd response from server: " << resp.status_test() << std::endl;
   } else {
     std::cout << "s is not ok" << std::endl;
   }
@@ -60,12 +60,41 @@ TEST(GrpcMasterServer, test) {
   oneflow::GetMachineDescResponse resp_machine;
   s = remote_worker->GetMachineDesc(&req_machine, &resp_machine);
   if (s.ok()) {
-    std::cout<<"GetMachineDesc from server: " << resp_machine.machine_desc_test() << std::endl;
+    std::cout<<resp_machine.machine_desc_test() << std::endl;
   } else {
     std::cout << "s is not ok" << std::endl;
   }
 
+  oneflow::GetMemoryDescRequest req_memory;
+  oneflow::GetMemoryDescResponse resp_memory;
+  s = remote_worker->GetMemoryDesc(&req_memory, &resp_memory);
+  if (s.ok()) {
+    std::cout<<resp_memory.memory_desc_test() << std::endl;
+  } else {
+    std::cout<< "s is not ok" << std::endl;
+  }
 
+  /*
+  oneflow::SendTaskGraphRequest req_sendtask;
+  //req_sendtask.set_send_task_graph_test("send_task_graph_test from client");
+  oneflow::SendTaskGraphResponse resp_sendtask;
+  s = remote_worker->SendTaskGraph(&req_sendtask, &resp_sendtask);
+  if (s.ok()) {
+    std::cout<< resp_sendtask.send_task_graph_test() << std::endl;
+  } else {
+    std::cout << "s is not ok " << std::endl;
+  }
+  */
+  /*
+  oneflow::SendMessageRequest req_sendmessage;
+  oneflow::SendMessageResponse resp_sendmessage;
+  s = remote_worker->SendMessage(&req_sendmessage, &resp_sendmessage);
+  if (s.ok()) {
+    std::cout<<resp_sendmessage.send_message_test() << std::endl;
+  } else {
+    std::cout << "s is not ok " << std::endl;
+  }
+  */
 
 }  // TEST
 

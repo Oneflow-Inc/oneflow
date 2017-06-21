@@ -77,6 +77,30 @@ TEST(GrpcWorkerServer, test) {
     worker_service->cq_->Shutdown();
   }
   worker_service->cq_->Next(&tag, &ok);
+  
+  //process GetMemoryDesc from client
+  worker_service->EnqueueGetMemoryDescMethod();
+  worker_service->cq_->Next(&tag, &ok);
+  callback_tag = static_cast<UntypedCall<GrpcWorkerService>::Tag*>(tag);
+  if (callback_tag) {
+    callback_tag->OnCompleted(worker_service, ok);
+  } else {
+    worker_service->cq_->Shutdown();
+  }
+  worker_service->cq_->Next(&tag, &ok);
+ 
+  /* 
+  // process SendTaskGraph from client
+  worker_service->EnqueueSendTaskGraphMethod();
+  worker_service->cq_->Next(&tag, &ok);
+  callback_tag = static_cast<UntypedCall<GrpcWorkerService>::Tag*>(tag);
+  if (callback_tag) {
+    callback_tag->OnCompleted(worker_service, ok);
+  } else {
+    worker_service->cq_->Shutdown();
+  }
+  worker_service->cq_->Next(&tag, &ok);
+  */
 
   delete worker_service;
 }  // TEST

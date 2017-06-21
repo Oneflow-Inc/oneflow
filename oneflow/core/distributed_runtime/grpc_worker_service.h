@@ -71,6 +71,18 @@ class GrpcWorkerService {
   void EnqueueGetMachineDescMethod() {
     ENQUEUE_REQUEST(GetMachineDesc, false);
   }
+  void EnqueueGetMemoryDescMethod() {
+    ENQUEUE_REQUEST(GetMemoryDesc, false);
+  }
+  void EnqueueSendTaskGraphMethod() {
+    ENQUEUE_REQUEST(SendTaskGraph, false);
+  }
+  void EnqueueSendMessageMethod() {
+    ENQUEUE_REQUEST(SendMessage, false);
+  }
+  void EnqueueReadDataMethod() {
+    EnqueueReadDataRaw();
+  }
 
  public:
   Worker* worker_;
@@ -108,6 +120,7 @@ class GrpcWorkerService {
         = worker_->GetMachineDesc(&call->request, &call->response);
       call->SendResponse(ToGrpcStatus(status));
     });
+    ENQUEUE_REQUEST(GetMachineDesc, false);
   }
 
   void GetMemoryDescHandler(WorkerCall<GetMemoryDescRequest, 
@@ -117,6 +130,7 @@ class GrpcWorkerService {
         = worker_->GetMemoryDesc(&call->request, &call->response);
       call->SendResponse(ToGrpcStatus(status));
     });
+    ENQUEUE_REQUEST(GetMachineDesc, false);
   }
 
   void SendTaskGraphHandler(WorkerCall<SendTaskGraphRequest,
@@ -126,6 +140,7 @@ class GrpcWorkerService {
         = worker_->SendTaskGraph(&call->request, &call->response);
       call->SendResponse(ToGrpcStatus(status));
     });
+    ENQUEUE_REQUEST(SendTaskGraph, false);
   }
 
   void SendMessageHandler(WorkerCall<SendMessageRequest,
@@ -135,6 +150,7 @@ class GrpcWorkerService {
         = worker_->SendMessageAsync(&call->request, &call->response);
       call->SendResponse(ToGrpcStatus(status));
     });
+    ENQUEUE_REQUEST(SendMessage, false);
   }
 
   void ReadDataHandleRaw(
