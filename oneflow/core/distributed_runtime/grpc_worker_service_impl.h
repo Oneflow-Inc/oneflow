@@ -76,7 +76,7 @@ enum class GrpcWorkerMethod {
   kSendMessage,
   kReadData
 };
-static const int kGrpcNumWorkerMethods = 
+static const int kGrpcNumWorkerMethods =
   static_cast<int>(GrpcWorkerMethod::kReadData) + 1;
 
 const char* GrpcWorkerMethodName(GrpcWorkerMethod id);

@@ -39,7 +39,7 @@ std::unique_ptr<WorkerService::Stub> WorkerService::NewStub(
 WorkerService::Stub::Stub(
     const std::shared_ptr<::grpc::ChannelInterface>& channel)
     : channel_(channel),
-      rpcmethod_GetStatus_(GrpcWorkerMethodName(static_cast<GrpcWorkerMethod>(4)),
+      rpcmethod_GetStatus_(GrpcWorkerMethodName(static_cast<GrpcWorkerMethod>(0)),
                              ::grpc::RpcMethod::NORMAL_RPC, channel),
       rpcmethod_GetMachineDesc_(GrpcWorkerMethodName(static_cast<GrpcWorkerMethod>(1)),
                                 ::grpc::RpcMethod::NORMAL_RPC, channel),
