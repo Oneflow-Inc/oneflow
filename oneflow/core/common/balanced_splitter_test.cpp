@@ -1,5 +1,4 @@
 #include "oneflow/core/common/balanced_splitter.h"
-#include "gtest/gtest.h"
 
 namespace oneflow {
 

@@ -1,5 +1,4 @@
 #include "oneflow/core/actor/actor_registry.h"
-#include "glog/logging.h"
 
 namespace oneflow {
 

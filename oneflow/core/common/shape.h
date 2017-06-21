@@ -1,9 +1,6 @@
 #ifndef ONEFLOW_CORE_COMMON_SHAPE_H_
 #define ONEFLOW_CORE_COMMON_SHAPE_H_
 
-#include <vector>
-#include <string>
-#include <iostream>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/shape.pb.h"
 

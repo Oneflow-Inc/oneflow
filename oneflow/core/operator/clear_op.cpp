@@ -1,5 +1,4 @@
 #include "oneflow/core/operator/clear_op.h"
-#include "oneflow/core/operator/operator_manager.h"
 
 namespace oneflow {
 

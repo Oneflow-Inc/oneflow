@@ -5,7 +5,6 @@
 #include <condition_variable>
 #include <atomic>
 #include <queue>
-#include "glog/logging.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {

@@ -1,8 +1,4 @@
 #include "oneflow/core/operator/boxing_op.h"
-#include <string>
-#include <vector>
-#include "gtest/gtest.h"
-#include "oneflow/core/operator/operator_manager.h"
 
 namespace oneflow {
 

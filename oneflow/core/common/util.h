@@ -6,9 +6,12 @@
 #include <functional>
 #include <algorithm>
 #include <mutex>
+#include <utility>
+#include <memory>
+#include <thread>
+#include <list>
 #include "glog/logging.h"
-#include "google/protobuf/message.h"
-#include "google/protobuf/descriptor.h"
+#include "gtest/gtest.h"
 #include "cuda.h"
 #include "cuda_runtime.h"
 #include "cublas_v2.h"
@@ -39,16 +42,6 @@ namespace oneflow {
     static ClassName obj; \
     return obj; \
   }
-
-inline bool operator == (const google::protobuf::MessageLite& lhs,
-                         const google::protobuf::MessageLite& rhs) {
-  return lhs.SerializeAsString() == rhs.SerializeAsString();
-}
-
-inline bool operator != (const google::protobuf::MessageLite& lhs,
-                         const google::protobuf::MessageLite& rhs) {
-  return !(lhs == rhs);
-}
 
 template<typename T>
 bool operator == (const std::weak_ptr<T>& lhs, const std::weak_ptr<T>& rhs) {

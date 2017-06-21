@@ -1,7 +1,4 @@
 #include "oneflow/core/operator/relu_op.h"
-#include <vector>
-#include "gtest/gtest.h"
-#include "oneflow/core/operator/operator_manager.h"
 
 namespace oneflow {
 
