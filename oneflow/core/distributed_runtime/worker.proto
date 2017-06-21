@@ -42,9 +42,11 @@ message GetStatusResponse {
 
 message GetMachineDescRequest {
   MachineDesc machine_desc = 1;
+  int32 machine_test = 2;
 }
 message GetMachineDescResponse {
   MachineDesc machine_desc = 1;
+  int32 machine_test = 2;
 }
 
 message GetMemoryDescRequest {

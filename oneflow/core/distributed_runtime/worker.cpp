@@ -26,6 +26,8 @@ Worker::Worker(GrpcChannelCache* channel_cache)
   response->mutable_machine_desc()->set_machine_id(0);
   response->mutable_machine_desc()->set_ip("192.168.1.11");
   response->mutable_machine_desc()->set_port(50051);
+ 
+  response->set_machine_test(22);
 
   return ::tensorflow::Status::OK();
 }

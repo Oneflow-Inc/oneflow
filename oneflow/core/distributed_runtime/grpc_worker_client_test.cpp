@@ -55,6 +55,18 @@ TEST(GrpcMasterServer, test) {
     std::cout << "s is not ok" << std::endl;
   }
 
+  //Test for GetMachineDesc
+  oneflow::GetMachineDescRequest req_machine;
+  oneflow::GetMachineDescResponse resp_machine;
+  s = remote_worker->GetMachineDesc(&req_machine, &resp_machine);
+  if (s.ok()) {
+    std::cout<<"GetMachineDesc from server: " << resp_machine.machine_test() << std::endl;
+  } else {
+    std::cout << "s is not ok" << std::endl;
+  }
+
+
+
 }  // TEST
 
 }  // namespace oneflow

@@ -68,6 +68,9 @@ class GrpcWorkerService {
   void EnqueueGetStatusMethod() {
     ENQUEUE_REQUEST(GetStatus, false);
   }
+  void EnqueueGetMachineDescMethod() {
+    ENQUEUE_REQUEST(GetMachineDesc, false);
+  }
 
  public:
   Worker* worker_;
