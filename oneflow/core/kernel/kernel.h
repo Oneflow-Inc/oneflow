@@ -11,9 +11,7 @@
 #include "oneflow/core/operator/operator_manager.h"
 #include "oneflow/core/operator/operator.pb.h"
 #include "oneflow/core/kernel/kernel_context.h"
-extern "C" {
-#include "oneflow/core/common/cblas.h"
-}
+#include "oneflow/core/common/cblas_template.h"
 
 namespace oneflow {
 
