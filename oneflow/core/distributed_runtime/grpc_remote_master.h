@@ -23,7 +23,6 @@ class GrpcRemoteMaster {
   ::tensorflow::Status SendGraph(const SendGraphRequest* request,
                        SendGraphResponse* response) {
     ::grpc::ClientContext ctx;
-    std::cout<<"request = "<<request->tmp()<<std::endl;
     return FromGrpcStatus(stub_->SendGraph(&ctx, *request, response));
   }
 
