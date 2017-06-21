@@ -33,6 +33,13 @@ message NetworkMessageRpc {
   EventMessageRpc event_message = 4;
 }
 
+message GetStatusRequest {
+  int32 status = 1;
+}
+message GetStatusResponse {
+  int32 status = 1;
+}
+
 message GetMachineDescRequest {
   MachineDesc machine_desc = 1;
 }
@@ -52,13 +59,6 @@ message SendTaskGraphRequest {
 }
 message SendTaskGraphResponse {
   GraphDef task_graph = 1;
-}
-
-message GetStatusRequest {
-  int32 status = 1;
-}
-message GetStatusResponse {
-  int32 status = 1;
 }
 
 message SendMessageRequest {
