@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_COMMON_CBLAS_TEMPLATE_H_
-#define ONEFLOW_CORE_COMMON_CBLAS_TEMPLATE_H_
+#ifndef ONEFLOW_BLAS_CBLAS_TEMPLATE_H_
+#define ONEFLOW_BLAS_CBLAS_TEMPLATE_H_
 
 extern "C" {
 #include "oneflow/blas/cblas.h"
@@ -8,4 +8,4 @@ extern "C" {
 namespace oneflow {
 } // namespace oneflow
 
-#endif // ONEFLOW_CORE_COMMON_CBLAS_TEMPLATE_H_
+#endif // ONEFLOW_BLAS_CBLAS_TEMPLATE_H_
