@@ -60,14 +60,10 @@ using KernelWardFunc = void (Kernel::*)(
 
 #define INSTANTIATE_CPU_KERNEL_CLASS(classname) \
   char gInstantiationGuardCPU##classname; \
-  template class classname<DeviceType::kALL, float>; \
-  template class classname<DeviceType::kALL, double>; \
-  template class classname<DeviceType::kCPU, double>; \
+  template class classname<DeviceType::kCPU, float>; \
   template class classname<DeviceType::kCPU, double>;
 #define INSTANTIATE_GPU_KERNEL_CLASS(classname) \
   char gInstantiationGuardGPU##classname; \
-  template class classname<DeviceType::kALL, float>; \
-  template class classname<DeviceType::kALL, double>; \
   template class classname<DeviceType::kGPU, float>; \
   template class classname<DeviceType::kGPU, double>;
 
