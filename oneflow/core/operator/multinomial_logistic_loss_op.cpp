@@ -1,7 +1,4 @@
-#include <string>
 #include "oneflow/core/operator/multinomial_logistic_loss_op.h"
-#include "glog/logging.h"
-#include "oneflow/core/operator/operator_manager.h"
 
 namespace oneflow {
 

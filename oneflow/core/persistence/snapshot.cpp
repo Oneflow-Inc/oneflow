@@ -1,11 +1,5 @@
 #include "oneflow/core/persistence/snapshot.h"
-#include <memory>
-#include <string>
-#include <algorithm>
-#include <vector>
-#include "tensorflow/core/platform/env.h"
 #include "tensorflow/core/lib/io/path.h"
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/numbers.h"
 
 namespace oneflow {

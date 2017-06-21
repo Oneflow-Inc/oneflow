@@ -1,6 +1,5 @@
 #include "oneflow/core/graph/model_diff_accumulate_task_graph.h"
 #include "oneflow/core/graph/model_diff_accumulate_comp_task_node.h"
-#include "oneflow/core/operator/operator_manager.h"
 
 namespace oneflow {
 

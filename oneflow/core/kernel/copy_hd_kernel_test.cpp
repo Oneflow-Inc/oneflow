@@ -1,7 +1,4 @@
 #include "oneflow/core/kernel/copy_hd_kernel.h"
-#include <memory>
-#include <vector>
-#include "gtest/gtest.h"
 #include "oneflow/core/operator/operator.pb.h"
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/operator/copy_hd_op.h"

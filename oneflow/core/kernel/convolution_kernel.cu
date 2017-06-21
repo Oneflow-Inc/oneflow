@@ -1,5 +1,4 @@
 #include "oneflow/core/kernel/convolution_kernel.h"
-#include <string>
 
 namespace oneflow {
 

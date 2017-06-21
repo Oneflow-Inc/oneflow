@@ -1,6 +1,4 @@
 #include "oneflow/core/graph/chain_graph.h"
-#include "glog/logging.h"
-#include <list>
 
 namespace oneflow {
 

@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_OPERATOR_CLONE_OP_H_
 #define ONEFLOW_CORE_OPERATOR_CLONE_OP_H_
 
-#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/operator/operator_manager.h"
 
 namespace oneflow {
 

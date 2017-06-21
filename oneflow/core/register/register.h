@@ -2,7 +2,6 @@
 #define ONEFLOW_CORE_REGISTER_REGISTER_H_
 
 #include "oneflow/core/register/blob.h"
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 
 namespace oneflow {

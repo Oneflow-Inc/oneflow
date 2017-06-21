@@ -1,6 +1,5 @@
 #include "oneflow/core/graph/logical_graph.h"
 #include <iostream>
-#include "glog/logging.h"
 #include "oneflow/core/operator/operator_manager.h"
 
 namespace oneflow {

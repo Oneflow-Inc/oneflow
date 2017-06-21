@@ -1,7 +1,6 @@
 #ifndef ONEFLOW_CORE_GRAPH_CHAIN_GRAPH_H_
 #define ONEFLOW_CORE_GRAPH_CHAIN_GRAPH_H_
 
-#include <list>
 #include "oneflow/core/graph/logical_graph.h"
 
 namespace oneflow {

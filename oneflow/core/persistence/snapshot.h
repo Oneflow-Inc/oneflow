@@ -1,8 +1,6 @@
 #ifndef ONEFLOW_CORE_PERSISTENCE_SNAPSHOT_H_
 #define ONEFLOW_CORE_PERSISTENCE_SNAPSHOT_H_
 
-#include "tensorflow/core/platform/env.h"
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
 

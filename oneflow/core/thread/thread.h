@@ -1,8 +1,6 @@
 #ifndef ONEFLOW_CORE_THREAD_THREAD_H_
 #define ONEFLOW_CORE_THREAD_THREAD_H_
 
-#include <memory>
-#include <thread>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/job/task.pb.h"

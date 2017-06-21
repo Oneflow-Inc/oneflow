@@ -1,10 +1,6 @@
 #ifndef ONEFLOW_CORE_GRAPH_NODE_H_
 #define ONEFLOW_CORE_GRAPH_NODE_H_
 
-#include <stdint.h>
-#include <unordered_set>
-#include <vector>
-#include <memory>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/keyword.h"

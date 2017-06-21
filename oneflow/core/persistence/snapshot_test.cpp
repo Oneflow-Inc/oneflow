@@ -1,6 +1,4 @@
 #include "oneflow/core/persistence/snapshot.h"
-#include "gtest/gtest.h"
-#include "tensorflow/core/platform/env.h"
 #include "tensorflow/core/framework/graph.pb.h"
 #include "tensorflow/core/lib/io/path.h"
 #include "tensorflow/core/lib/strings/str_util.h"

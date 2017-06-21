@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_PERSISTENCE_PERSISTENT_CIRCULAR_LINE_READER_H_
 #define ONEFLOW_CORE_PERSISTENCE_PERSISTENT_CIRCULAR_LINE_READER_H_
 
-#include "oneflow/core/common/util.h"
+#include "oneflow/core/persistence/persistent_in_stream.h"
 
 namespace oneflow {
 

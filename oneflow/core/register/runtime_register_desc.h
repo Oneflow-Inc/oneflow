@@ -1,7 +1,6 @@
 #ifndef ONEFLOW_CORE_REGISTER_RUNTIME_REGISTER_DESC_H_
 #define ONEFLOW_CORE_REGISTER_RUNTIME_REGISTER_DESC_H_
 
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/register/register_desc.pb.h"
