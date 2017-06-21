@@ -91,10 +91,11 @@ class GrpcWorkerService {
 
   void GetStatusHandler(WorkerCall<GetStatusRequest,
                                    GetStatusResponse>* call) {
-    Schedule([this, call] {
+    //Schedule([this, call] {
       ::tensorflow::Status status = worker_->GetStatus(&call->request, &call->response);
       call->SendResponse(ToGrpcStatus(status));
-    });
+    //});
+    ENQUEUE_REQUEST(GetStatus, false);
   }
 
   void GetMachineDescHandler(WorkerCall<GetMachineDescRequest,
