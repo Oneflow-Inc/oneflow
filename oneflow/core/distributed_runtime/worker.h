@@ -11,12 +11,18 @@
 #include <google/protobuf/text_format.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 
+namespace grpc {
+class ByteBuffer;
+}
+
 namespace oneflow {
 
 class Worker {
  public:
   explicit Worker(GrpcChannelCache* channel_cache);
   ~Worker() {};
+
+  typedef std::function<void(const ::tensorflow::Status&)> StatusCallback;
 
   ::tensorflow::Status GetStatus(GetStatusRequest* request,
                                  GetStatusResponse* response);
@@ -30,14 +36,16 @@ class Worker {
   ::tensorflow::Status SendTaskGraph(SendTaskGraphRequest* request,
                                      SendTaskGraphResponse* response);
 
-  ::tensorflow::Status SendMessage(SendMessageRequest* request,
+  ::tensorflow::Status SendMessageAsync(SendMessageRequest* request,
                                    SendMessageResponse* response);
 
-  ::tensorflow::Status ReadData(ReadDataRequest* request,
-                                ::grpc::ByteBuffer* response);
+  ::tensorflow::Status ReadDataAsync(ReadDataRequest* request,
+                                ::grpc::ByteBuffer* response,
+                                StatusCallback done);
   
   template <typename ProtoMessage>
   void ParseToProto(ProtoMessage& proto_type, std::string& file_name);
+   
 
   private:
    GrpcChannelCache* channel_cache_;

@@ -13,18 +13,23 @@
 #include "tensorflow/core/platform/mutex.h"
 #include "tensorflow/core/lib/core/threadpool.h"
 
+namespace grpc {
+class ByteBuffer;
+}
+
 namespace oneflow {
 
 class GrpcWorkerService {
  public:
-  GrpcWorkerService(::grpc::ServerBuilder* builder) {
-    builder->RegisterService(&worker_service_);
-    cq_ = builder->AddCompletionQueue();
-    core_num_ = std::thread::hardware_concurrency();
-    compute_pool_ = 
-      new ::tensorflow::thread::ThreadPool(
-          ::tensorflow::Env::Default(), 
-          "worker_service", core_num_);
+  GrpcWorkerService(Worker* worker, ::grpc::ServerBuilder* builder) 
+    : worker_(worker), is_shutdown_(false) {
+      builder->RegisterService(&worker_service_);
+      cq_ = builder->AddCompletionQueue();
+      core_num_ = std::thread::hardware_concurrency();
+      compute_pool_ =
+        new ::tensorflow::thread::ThreadPool(
+            ::tensorflow::Env::Default(), 
+            "worker_service", core_num_);
   }
 
   ~GrpcWorkerService() {
@@ -34,7 +39,7 @@ class GrpcWorkerService {
   void Shutdown() {
     bool did_shutdown = false;
     {
-      ::tensorflow::mutext_lock l(mu_);
+      ::tensorflow::mutex_lock l(mu_);
       if (!is_shutdown_) {
         is_shutdown_ = true;
         did_shutdown = true;
@@ -48,7 +53,7 @@ class GrpcWorkerService {
 
 #define ENQUEUE_REQUEST(method, supports_cancel)                          \
   do {                                                                    \
-    ::tensorflow::mutext_lock l(mu_);                                     \
+    ::tensorflow::mutex_lock l(mu_);                                     \
     if (!is_shutdown_) {                                                  \
       Call<GrpcWorkerService, grpc::WorkerService::AsyncService,          \
            method##Request, method##Response>::                           \
@@ -68,9 +73,8 @@ class GrpcWorkerService {
   Worker* worker_;
   std::unique_ptr<::grpc::ServerCompletionQueue> cq_;
   grpc::WorkerService::AsyncService worker_service_;
-  GrpcWorker* grpc_worker_;
 
-  ::tensorflow::mutext mu_;
+  ::tensorflow::mutex mu_;
   bool is_shutdown_ GUARDED_BY(mu_);
   ::grpc::Alarm* shutdown_alarm_ = nullptr;
 
@@ -87,66 +91,71 @@ class GrpcWorkerService {
 
   void GetStatusHandler(WorkerCall<GetStatusRequest,
                                    GetStatusResponse>* call) {
-    pool_->enqueue([this, call] {
-      ::tensorflow::Status status = worker_->GetStatus();
-      call->SendResponse(status);
+    Schedule([this, call] {
+      ::tensorflow::Status status = worker_->GetStatus(&call->request, &call->response);
+      call->SendResponse(ToGrpcStatus(status));
     });
   }
 
   void GetMachineDescHandler(WorkerCall<GetMachineDescRequest,
                                         GetMachineDescResponse>* call) {
-    pool_->enqueue([this, call] {
+    Schedule([this, call] {
       ::tensorflow::Status status 
         = worker_->GetMachineDesc(&call->request, &call->response);
-      call->SendResponse(status);
+      call->SendResponse(ToGrpcStatus(status));
     });
   }
 
   void GetMemoryDescHandler(WorkerCall<GetMemoryDescRequest, 
-                                        GetMemoryDescResponse>* call) {
-    pool_->enqueue([this, call] {
+                                       GetMemoryDescResponse>* call) {
+    Schedule([this, call] {
       ::tensorflow::Status status 
         = worker_->GetMemoryDesc(&call->request, &call->response);
-      call->SendResponse(status);
+      call->SendResponse(ToGrpcStatus(status));
     });
   }
 
   void SendTaskGraphHandler(WorkerCall<SendTaskGraphRequest,
                                        SendTaskGraphResponse>* call) {
-    pool_->enqueue([this, call] {
+    Schedule([this, call] {
       ::tensorflow::Status status 
         = worker_->SendTaskGraph(&call->request, &call->response);
-      call->SendResponse(status);
+      call->SendResponse(ToGrpcStatus(status));
     });
   }
-#undef ENQUEUE_REQUEST
 
-  void SendMessageHandler(WorkerCall<SendMessageRequest, 
+  void SendMessageHandler(WorkerCall<SendMessageRequest,
                                      SendMessageResponse>* call) {
-    pool_->enqueue([this, call] {
+    Schedule([this, call] {
       ::tensorflow::Status status 
-        = worker_->SendMessage(&call->request, &call->response);
-      call->SendResponse(status);
+        = worker_->SendMessageAsync(&call->request, &call->response);
+      call->SendResponse(ToGrpcStatus(status));
     });
   }
 
+  void ReadDataHandleRaw(
+      WorkerCall<ReadDataRequest, ::grpc::ByteBuffer>* call) {
+    Schedule([this, call] {
+      worker_->ReadDataAsync(&call->request, &call->response,
+                             [this, call](const ::tensorflow::Status& status) {
+                               call->SendResponse(ToGrpcStatus(status));
+                             });
+    });
+    EnqueueReadDataRaw();
+  }
+
+#undef ENQUEUE_REQUEST
   void EnqueueReadDataRaw() {
-    Call<GrpcWorkerService, grpc::WorkerService::AsyncService,
-         ReadDataRequest, ::grpc::ByteBuffer>::
-         EnqueueRequestForMethod(
-           &worker_service_, cq_.get(),
-           static_cast<int>(GrpcWorkerMethod::kReadData),
-           &GrpcWorkerService::ReadDataRaw);
+    ::tensorflow::mutex_lock l(mu_);
+    if (!is_shutdown_) {
+      Call<GrpcWorkerService, grpc::WorkerService::AsyncService,
+        ReadDataRequest, ::grpc::ByteBuffer>::
+        EnqueueRequestForMethod(
+          &worker_service_, cq_.get(),
+          static_cast<int>(GrpcWorkerMethod::kReadData),
+          &GrpcWorkerService::ReadDataHandleRaw, true);
+    }
   }
-
-  void ReadDataRaw(WorkerCall<ReadDataRequest, ::grpc::ByteBuffer>* call) {
-    pool_->enqueue([this, call] {
-      ::tensorflow::Status status 
-        = grpc_worker_->ReadData(&call->request, &call->response);
-      call->SendResponse(status);
-      EnqueueReadDataRaw();
-    });
-  }  // Readdataraw
 
 };  // Grpcworkerservice
 

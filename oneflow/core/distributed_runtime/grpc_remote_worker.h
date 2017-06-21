@@ -30,22 +30,28 @@ class GrpcRemoteWorker {
 
     ~GrpcRemoteWorker() {}
 
-    void GetMachineDesc(GetMachineDescRequest request,
-                        GetMachineDescResponse response) {
+    ::tensorflow::Status GetStatus(const GetStatusRequest* request,
+                   GetStatusResponse* response) {
       ::grpc::ClientContext ctx;
-      stub_->GetMachineDesc(&ctx, request, &response);
+      return FromGrpcStatus(stub_->GetStatus(&ctx, *request, response));
     }
 
-    void GetMemoryDesc(GetMemoryDescRequest request,
-                       GetMemoryDescResponse response) {
+    ::tensorflow::Status GetMachineDesc(GetMachineDescRequest* request,
+                        GetMachineDescResponse* response) {
       ::grpc::ClientContext ctx;
-      stub_->GetMemoryDesc(&ctx, request, &response); 
+      return FromGrpcStatus(stub_->GetMachineDesc(&ctx, *request, response));
     }
 
-    void SendTaskGraph(SendTaskGraphRequest request,
-                       SendTaskGraphResponse response) {
+    ::tensorflow::Status GetMemoryDesc(GetMemoryDescRequest* request,
+                       GetMemoryDescResponse* response) {
       ::grpc::ClientContext ctx;
-      stub_->SendTaskGraph(&ctx, request, &response);
+      return FromGrpcStatus(stub_->GetMemoryDesc(&ctx, *request, response)); 
+    }
+
+    ::tensorflow::Status SendTaskGraph(SendTaskGraphRequest* request,
+                       SendTaskGraphResponse* response) {
+      ::grpc::ClientContext ctx;
+      return FromGrpcStatus(stub_->SendTaskGraph(&ctx, *request, response));
     }
 
     void SendMessageAsync(SendMessageRequest* request,
@@ -54,6 +60,7 @@ class GrpcRemoteWorker {
       IssueRequest(request, response, sendmessage_, std::move(done));
     }
 
+    /*
     void ReadDataAsync(ReadDataRequest* request,
                        TensorResponse* response,
                        Callback done) {
@@ -72,6 +79,7 @@ class GrpcRemoteWorker {
       // callback done is passed in by NetActor
       IssueRequest(request, response, readdata_, std::move(done));
     }
+    */
 
  private:
   std::unique_ptr<grpc::WorkerService::Stub> stub_;
@@ -97,6 +105,7 @@ class GrpcRemoteWorker {
 
     private:
      ::grpc::ClientContext* context_;
+     ::grpc::Status status_;
      ::grpc::ClientAsyncResponseReader<ResponseMessage> reader_;
      Callback done_;
   };  // class RPCState

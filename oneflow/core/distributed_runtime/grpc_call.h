@@ -6,8 +6,13 @@
 
 #include "grpc++/grpc++.h"
 #include "grpc++/impl/codegen/service_type.h"
+#include "grpc++/impl/codegen/call.h"
+#include "grpc++/support/byte_buffer.h"
 #include "grpc++/server_builder.h"
 
+namespace grpc {
+class ByteBuffer;
+}
 
 namespace oneflow {
 

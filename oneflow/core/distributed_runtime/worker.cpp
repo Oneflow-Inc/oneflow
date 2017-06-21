@@ -51,7 +51,7 @@ Worker::Worker(GrpcChannelCache* channel_cache)
   return ::tensorflow::Status::OK();
 }
 
-::tensorflow::Status Worker::SendMessage(SendMessageRequest* request,
+::tensorflow::Status Worker::SendMessageAsync(SendMessageRequest* request,
                                          SendMessageResponse* response) {
   /*
   NetworkMessage* network_message = new NetworkMessage;
@@ -70,9 +70,10 @@ Worker::Worker(GrpcChannelCache* channel_cache)
   return ::tensorflow::Status::OK();
 }
 
-::tensorflow::Status Worker::ReadData(ReadDataRequest* requeset,
-                                          ::grpc::ByteBuffer* response) {
-  ReadDataResponse* tmp = new ReadDataResponse;
+::tensorflow::Status Worker::ReadDataAsync(ReadDataRequest* request,
+                                           ::grpc::ByteBuffer* response,
+                                           StatusCallback done) {
+  //ReadDataResponse* tmp = new ReadDataResponse;
   //grpc::EncodeRecvTensorResponseToByteBuffer(*tmp, response);
 
   return ::tensorflow::Status::OK();
