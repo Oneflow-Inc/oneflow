@@ -5,8 +5,8 @@
 
 namespace oneflow {
 
-struct ThreadContext {
-  ThreadContext() : cpu_stream(nullptr),
+struct ThreadCtx {
+  ThreadCtx() : cpu_stream(nullptr),
                     copy_hd_cuda_stream(nullptr) {}
   
   Channel<std::function<void()>>* cpu_stream;

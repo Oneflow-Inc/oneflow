@@ -11,13 +11,13 @@ class MdSaveCompActor final : public CompActor {
   MdSaveCompActor() = default;
   ~MdSaveCompActor() = default;
 
-  void Init(const TaskProto&) override;
-  int ProcessMsg(const ActorMsg&, const ThreadContext&) override;
+  void Init(const TaskProto&, const ThreadCtx&) override;
+  int ProcessMsg(const ActorMsg&) override;
 
  private:
-   int HandleBeforeInitDeviceCtx(const ActorMsg&, const ThreadContext&);
-   int HandleSaveModel(const ActorMsg&, const ThreadContext&);
-   int (MdSaveCompActor::*cur_msg_handle_)(const ActorMsg&, const ThreadContext&);
+   int HandleBeforeInitDeviceCtx(const ActorMsg&);
+   int HandleSaveModel(const ActorMsg&);
+   int (MdSaveCompActor::*cur_msg_handle_)(const ActorMsg&);
 
   uint64_t model_regst_desc_id_;
 };

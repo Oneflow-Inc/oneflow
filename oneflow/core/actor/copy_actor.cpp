@@ -5,8 +5,8 @@
 namespace oneflow {
 
 // need review
-void CopyActor::Init(const TaskProto& task_proto) {
-  Actor::Init(task_proto);
+void CopyActor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
+  Actor::Init(task_proto, thread_ctx);
 }
 
 void CopyActor::ProcessMsgWithKernelCtx(const ActorMsg& msg,

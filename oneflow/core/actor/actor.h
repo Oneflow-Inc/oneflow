@@ -26,10 +26,10 @@ class Actor {
   OF_DISALLOW_COPY_AND_MOVE(Actor);
   virtual ~Actor() = default;
 
-  virtual void Init(const TaskProto& task_proto) = 0;
+  virtual void Init(const TaskProto&, const ThreadCtx&) = 0;
   // 1: success, and actor finish
   // 0: success, and actor not finish
-  virtual int ProcessMsg(const ActorMsg&, const ThreadContext& ctx) = 0;
+  virtual int ProcessMsg(const ActorMsg&) = 0;
 
   uint64_t actor_id() const { return actor_id_; }
  
@@ -53,8 +53,8 @@ class Actor {
       const KernelCtx&,
       std::function<std::shared_ptr<RegstWarpper>(uint64_t)> Regst4RegstDescId);
   void AsyncSendReadableRegstMsg();
-  void AsyncSendRegstDescDoneMsgToSubscribers(uint64_t regst_desc_id);
-  void AsyncSendRegstDescDoneMsgForAllProducedRegstDesc();
+  void AsyncSendEORDMsgToSubscribers(uint64_t regst_desc_id);
+  void AsyncSendEORDMsgForAllProducedRegstDesc();
   void AsyncSendRegstMsgToProducer(const std::shared_ptr<RegstWarpper>&);
   void AsyncDo(std::function<void()>);
   int TryUpdtStateAsProducedRegst(Regst* regst);

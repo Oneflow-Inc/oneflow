@@ -10,8 +10,8 @@ public:
   OF_DISALLOW_COPY_AND_MOVE(CopyActor);
   ~CopyActor() = default;
 
-  void Init(const TaskProto&) override;
-  virtual int ProcessMsg(const ActorMsg&, const ThreadContext&) = 0;
+  void Init(const TaskProto&, const ThreadCtx&) override;
+  virtual int ProcessMsg(const ActorMsg&) = 0;
 
 protected:
   CopyActor() = default;

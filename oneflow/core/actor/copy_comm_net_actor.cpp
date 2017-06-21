@@ -5,8 +5,7 @@
 namespace oneflow {
 
 // need review
-int CopyCommNetActor::ProcessMsg(const ActorMsg& msg,
-                                  const ThreadContext&) {
+int CopyCommNetActor::ProcessMsg(const ActorMsg& msg) {
   //CpuKernelCtx kernel_ctx(nullptr);
   //ProcessMsgWithKernelCtx(msg, kernel_ctx);
   return -1;
