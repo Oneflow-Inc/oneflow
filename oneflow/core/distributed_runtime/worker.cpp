@@ -15,6 +15,7 @@ Worker::Worker(GrpcChannelCache* channel_cache)
 
 ::tensorflow::Status Worker::GetStatus(GetStatusRequest* request,
                                        GetStatusResponse* response) {
+  std::cout<<"request from client = "<<request->status() << std::endl;
   response->set_status(1);
 
   return ::tensorflow::Status::OK();
