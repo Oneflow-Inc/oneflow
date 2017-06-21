@@ -15,8 +15,8 @@ Worker::Worker(GrpcChannelCache* channel_cache)
 
 ::tensorflow::Status Worker::GetStatus(GetStatusRequest* request,
                                        GetStatusResponse* response) {
-  std::cout<<"request from client = "<<request->status() << std::endl;
-  response->set_status(1);
+  std::cout<<"request from client = "<<request->status_test() << std::endl;
+  response->set_status_test("get_status_test from server");
 
   return ::tensorflow::Status::OK();
 }
@@ -26,8 +26,9 @@ Worker::Worker(GrpcChannelCache* channel_cache)
   response->mutable_machine_desc()->set_machine_id(0);
   response->mutable_machine_desc()->set_ip("192.168.1.11");
   response->mutable_machine_desc()->set_port(50051);
- 
-  response->set_machine_test(22);
+  
+  std::cout << "request from client = " << request->machine_desc_test() << std::endl; 
+  response->set_machine_desc_test("machine_desc_test from server");
 
   return ::tensorflow::Status::OK();
 }
@@ -41,6 +42,8 @@ Worker::Worker(GrpcChannelCache* channel_cache)
   response->mutable_memory_desc()->set_memory_address(memory_desc_for_resp.memory_address());
   response->mutable_memory_desc()->set_remoted_token(memory_desc_for_resp.remoted_token());
 
+  std::cout << "request from client = " << request->memory_desc_test() << std::endl;
+  response->set_memory_desc_test("memory_desc_test from server");
   return ::tensorflow::Status::OK();
 }
 
@@ -50,7 +53,8 @@ Worker::Worker(GrpcChannelCache* channel_cache)
   //convert TaskGraphDef to TaskGraph
   //then init thread to start executor taskgraph
   //response is empty
-
+  std::cout << "request from client = " << request->send_task_graph_test() << std::endl;
+  response->set_send_task_graph_test("send_task_test from server");
   return ::tensorflow::Status::OK();
 }
 
@@ -69,6 +73,8 @@ Worker::Worker(GrpcChannelCache* channel_cache)
   CommBus* comm_bus = new CommBus; 
   comm_bus->queues_[thread_local_id]->Push(event_message);
   */
+  std::cout << "request from client = " << request->send_message_test() << std::endl;
+  response->set_send_message_test("send_message_test from server");
 
   return ::tensorflow::Status::OK();
 }
@@ -79,6 +85,8 @@ Worker::Worker(GrpcChannelCache* channel_cache)
   //ReadDataResponse* tmp = new ReadDataResponse;
   //grpc::EncodeRecvTensorResponseToByteBuffer(*tmp, response);
 
+  //std::cout << "request from client = " << request->read_data_test() << std::endl;
+  //response->set_read_data_test("read_data_test from server");
   return ::tensorflow::Status::OK();
 }
 

@@ -60,7 +60,7 @@ TEST(GrpcMasterServer, test) {
   oneflow::GetMachineDescResponse resp_machine;
   s = remote_worker->GetMachineDesc(&req_machine, &resp_machine);
   if (s.ok()) {
-    std::cout<<"GetMachineDesc from server: " << resp_machine.machine_test() << std::endl;
+    std::cout<<"GetMachineDesc from server: " << resp_machine.machine_desc_test() << std::endl;
   } else {
     std::cout << "s is not ok" << std::endl;
   }
