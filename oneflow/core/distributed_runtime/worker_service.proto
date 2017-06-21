@@ -5,7 +5,7 @@ package oneflow;
 import "oneflow/core/distributed_runtime/worker.proto";
 
 service WorkerService {
-  rpc CheckStatus(GetStatusRequest) returns (GetStatusResponse);
+  rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
   rpc GetMachineDesc(GetMachineDescRequest) returns (GetMachineDescResponse);
   rpc GetMemoryDesc(GetMemoryDescRequest) returns (GetMemoryDescResponse);
   rpc SendTaskGraph(SendTaskGraphRequest) returns (SendTaskGraphResponse);

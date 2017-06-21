@@ -63,10 +63,12 @@ message GetMemoryDescResponse {
 message SendTaskGraphRequest {
   GraphDef task_graph = 1;
   string send_task_graph_test = 2;
+  int32 tmp = 3;
 }
 message SendTaskGraphResponse {
   GraphDef task_graph = 1;
   string send_task_graph_test = 2;
+  int32 tmp = 3;
 }
 
 message SendMessageRequest {

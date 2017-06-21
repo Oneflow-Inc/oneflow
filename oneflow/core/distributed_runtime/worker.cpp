@@ -53,8 +53,8 @@ Worker::Worker(GrpcChannelCache* channel_cache)
   //convert TaskGraphDef to TaskGraph
   //then init thread to start executor taskgraph
   //response is empty
-  std::cout << "request from client = " << request->send_task_graph_test() << std::endl;
-  response->set_send_task_graph_test("send_task_graph_test from server");
+  std::cout << "SendTaskGraph request from client = " << request->send_task_graph_test() << std::endl;
+  response->set_send_task_graph_test("SendTaskGraph from server");
   return ::tensorflow::Status::OK();
 }
 

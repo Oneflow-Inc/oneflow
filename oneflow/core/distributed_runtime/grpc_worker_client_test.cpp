@@ -38,10 +38,12 @@ TEST(GrpcMasterServer, test) {
 
   std::unique_ptr< ::grpc::ServerCompletionQueue> cq_;
   GrpcRemoteWorker* remote_worker = new GrpcRemoteWorker(dst_channel, cq_.get());
+  ::tensorflow::Status s;
+
+  //Test
   oneflow::GetStatusRequest req;
   oneflow::GetStatusResponse resp;
-
-  ::tensorflow::Status s = remote_worker->GetStatus(&req, &resp);
+  s = remote_worker->GetStatus(&req, &resp);
   if (s.ok()) {
     std::cout << "1th response from server: " << resp.status_test() << std::endl;
   } else {
@@ -74,17 +76,16 @@ TEST(GrpcMasterServer, test) {
     std::cout<< "s is not ok" << std::endl;
   }
 
-  /*
-  oneflow::SendTaskGraphRequest req_sendtask;
+  oneflow::SendTaskGraphRequest req_stg;
   //req_sendtask.set_send_task_graph_test("send_task_graph_test from client");
-  oneflow::SendTaskGraphResponse resp_sendtask;
-  s = remote_worker->SendTaskGraph(&req_sendtask, &resp_sendtask);
+  oneflow::SendTaskGraphResponse resp_stg;
+  s = remote_worker->SendTaskGraph(&req_stg, &resp_stg);
   if (s.ok()) {
-    std::cout<< resp_sendtask.send_task_graph_test() << std::endl;
+    std::cout<< resp_stg.send_task_graph_test() << std::endl;
   } else {
     std::cout << "s is not ok " << std::endl;
   }
-  */
+
   /*
   oneflow::SendMessageRequest req_sendmessage;
   oneflow::SendMessageResponse resp_sendmessage;
