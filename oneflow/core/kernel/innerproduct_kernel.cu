@@ -7,41 +7,6 @@ namespace oneflow {
 namespace {
 
 template<typename floating_point_type>
-void cublas_gemm(
-    const cublasHandle_t& cublas_handle, const cublasOperation_t cuTransA,
-    const cublasOperation_t cuTransB, const int M, const int N, const int K,
-    const floating_point_type* alpha, const floating_point_type* dptrA,
-    const int lda, const floating_point_type* dptrB, const int ldb,
-    const floating_point_type* beta, floating_point_type* dptrC,
-    const int ldc) {
-}
-
-template<>
-void cublas_gemm<float>(
-    const cublasHandle_t& cublas_handle, const cublasOperation_t cuTransA,
-    const cublasOperation_t cuTransB, const int M, const int N, const int K,
-    const float* alpha, const float* dptrA, const int lda, const float* dptrB,
-    const int ldb, const float* beta, float* dptrC, const int ldc) {
-  CHECK_EQ(cublasSgemm(
-               cublas_handle, cuTransA, cuTransB, M, N, K, alpha, dptrA, lda,
-               dptrB, ldb, beta, dptrC, ldc),
-           CUBLAS_STATUS_SUCCESS);
-}
-
-template<>
-void cublas_gemm<double>(
-    const cublasHandle_t& cublas_handle, const cublasOperation_t cuTransA,
-    const cublasOperation_t cuTransB, const int M, const int N, const int K,
-    const double* alpha, const double* dptrA, const int lda,
-    const double* dptrB, const int ldb, const double* beta, double* dptrC,
-    const int ldc) {
-  CHECK_EQ(cublasDgemm(
-               cublas_handle, cuTransA, cuTransB, M, N, K, alpha, dptrA, lda,
-               dptrB, ldb, beta, dptrC, ldc),
-           CUBLAS_STATUS_SUCCESS);
-}
-
-template<typename floating_point_type>
 void BlasMatrixMult(
     const cublasHandle_t& cublas_handle, const enum CBLAS_TRANSPOSE TransA,
     const enum CBLAS_TRANSPOSE TransB, const floating_point_type alpha,
@@ -80,15 +45,15 @@ void InnerProductKernel<DeviceType::kGPU, floating_point_type>::Forward(
   // out_data = in_data * weight.t
   BlasMatrixMult<floating_point_type>(
       ctx.device_ctx->cublas_handle(), CblasNoTrans, CblasTrans,
-      static_cast<floating_point_type>(1.),
-      static_cast<floating_point_type>(0.),
+      static_cast<floating_point_type>(1.0),
+      static_cast<floating_point_type>(0.0),
       in_data, weight, out_data);
 
   // out_data = bias_multiplier * bias + out_data
   BlasMatrixMult<floating_point_type>(
       ctx.device_ctx->cublas_handle(), CblasNoTrans, CblasNoTrans,
-      static_cast<floating_point_type>(1.),
-      static_cast<floating_point_type>(0.),
+      static_cast<floating_point_type>(1.0),
+      static_cast<floating_point_type>(0.0),
       bias_multiplier, bias, out_data);
 }
 
@@ -111,28 +76,24 @@ void InnerProductKernel<DeviceType::kGPU, floating_point_type>::Backward(
   if (in_diff != nullptr) {
     BlasMatrixMult<floating_point_type>(
         ctx.device_ctx->cublas_handle(), CblasNoTrans, CblasNoTrans,
-        static_cast<floating_point_type>(1.),
-        static_cast<floating_point_type>(0.),
+        static_cast<floating_point_type>(1.0),
+        static_cast<floating_point_type>(0.0),
         out_diff, weight, in_diff);
   }
 
   // weight_diff = out_diff.t * in_data
-  if (weight_diff != nullptr) {
-    BlasMatrixMult<floating_point_type>(
-        ctx.device_ctx->cublas_handle(), CblasTrans, CblasNoTrans,
-        static_cast<floating_point_type>(1.),
-        static_cast<floating_point_type>(0.),
-        out_diff, in_data, weight_diff);
-  }
+  BlasMatrixMult<floating_point_type>(
+      ctx.device_ctx->cublas_handle(), CblasTrans, CblasNoTrans,
+      static_cast<floating_point_type>(1.0),
+      static_cast<floating_point_type>(0.0),
+      out_diff, in_data, weight_diff);
 
   // bias_diff = out_diff.t * bias_multiplier
-  if (bias_diff != nullptr) {
-    BlasMatrixMult<floating_point_type>(
-        ctx.device_ctx->cublas_handle(), CblasTrans, CblasNoTrans,
-        static_cast<floating_point_type>(1.),
-        static_cast<floating_point_type>(0.),
-        out_diff, bias_multiplier, bias_diff);
-  }
+  BlasMatrixMult<floating_point_type>(
+      ctx.device_ctx->cublas_handle(), CblasTrans, CblasNoTrans,
+      static_cast<floating_point_type>(1.0),
+      static_cast<floating_point_type>(0.0),
+      out_diff, bias_multiplier, bias_diff);
 }
 
 INSTANTIATE_GPU_KERNEL_CLASS(InnerProductKernel);
