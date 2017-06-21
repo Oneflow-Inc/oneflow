@@ -31,6 +31,7 @@ class BoxingKernel<DeviceType::kALL, floating_point_type> :
  protected:
   virtual void OFMemcpy(const KernelCtx& ctx, \
       void* dst, const void* src, size_t sz) = 0;
+  virtual void OFBlobcpy(const KernelCtx& ctx, Blob* a, Blob* b) = 0;
   virtual void OFAddBlob(const KernelCtx& ctx, Blob*, Blob*)=0;
   virtual void OFBlasAxpy( 
     const KernelCtx& ctx, 
@@ -55,37 +56,37 @@ class BoxingKernel<DeviceType::kALL, floating_point_type> :
     uint64_t src_offset, dst_offset; /* corresponding offsets*/
     uint64_t copy_sz; 
   };
-  void InferCopyRules(std::function<Blob*(const std::string&)>);
+  void InferCopyRules(std::function<Blob*(const std::string&)>) const;
   void ConstructRulesFromShape(
       std::map<const std::string*, int64_t>& src_bn2slice, 
       std::map<const std::string*, int64_t>& dst_bn2slice,
       int64_t seg_cnt, int64_t slice_sz, int concat_axis, 
       std::vector<struct copy_rule>& rules
-  ); 
+  ) const; 
 
-  void ConstructFwCloneRules(std::function<Blob*(const std::string&)>);
+  void ConstructFwCloneRules(std::function<Blob*(const std::string&)>) const;
       
   void InferCopyRulesFromBns(
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr,
     const std::vector<std::string>& src_bns,
     const std::vector<std::string>& dst_bns,
     std::vector<copy_rule>& copy_rules
-    );
+    ) const;
 
   void AddBoxForward(
       const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)>) ;
+      std::function<Blob*(const std::string&)>) const;
 
   void AddBoxBackward(
       const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)>) ;
+      std::function<Blob*(const std::string&)>) const;
 
   void ConcatBoxForward(
       const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)>) ;
+      std::function<Blob*(const std::string&)>) const;
   void ConcatBoxBackward(
       const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)>) ;
+      std::function<Blob*(const std::string&)>) const;
 
   using ExecFunc = void (BoxingKernel<DeviceType::kALL, \
       floating_point_type>::*) (
@@ -93,8 +94,8 @@ class BoxingKernel<DeviceType::kALL, floating_point_type> :
       std::function<Blob*(const std::string&)>
       ) const;
 
-  std::vector<copy_rule> fw_copy_rules;
-  std::vector<copy_rule> bw_copy_rules;
+  mutable std::vector<copy_rule> fw_copy_rules;
+  mutable std::vector<copy_rule> bw_copy_rules;
   ExecFunc fw_func_;
   ExecFunc bw_func_;
 };
@@ -107,20 +108,21 @@ class BoxingKernel<DeviceType::kCPU, floating_point_type> final :
   BoxingKernel() = default;
   ~BoxingKernel() = default;
 
-  virtual void OFMemcpy(const KernelCtx& ctx, \
-      void* dst, const void* src, size_t sz);
-  virtual void OFAddBlob(const KernelCtx& ctx, Blob*, Blob*);
-  virtual void OFBlasAxpy( 
+  void OFMemcpy(const KernelCtx& ctx, \
+      void* dst, const void* src, size_t sz) override;
+  void OFBlobcpy(const KernelCtx& ctx, Blob* a, Blob* b) override;
+  void OFAddBlob(const KernelCtx& ctx, Blob*, Blob*) override;
+  void OFBlasAxpy( 
     const KernelCtx& ctx, 
     const int N, const floating_point_type alpha, 
     const floating_point_type* X, const int incX, 
     floating_point_type *Y, const int incY
-    );
-  virtual void OFBlasScal(
+    ) override;
+  void OFBlasScal(
     const KernelCtx& ctx,
     const int n, const floating_point_type alpha,
     floating_point_type* x, int incx
-    );
+    ) override;
 };
 
 template<typename floating_point_type>
@@ -131,20 +133,21 @@ class BoxingKernel<DeviceType::kGPU, floating_point_type> final :
   BoxingKernel() = default;
   ~BoxingKernel() = default;
 
-  virtual void OFMemcpy(const KernelCtx& ctx, \
-      void* dst, const void* src, size_t sz);
-  virtual void OFAddBlob(const KernelCtx& ctx, Blob*, Blob*);
-  virtual void OFBlasAxpy( 
+  void OFMemcpy(const KernelCtx& ctx, \
+      void* dst, const void* src, size_t sz) override;
+  void OFBlobcpy(const KernelCtx& ctx, Blob* a, Blob* b) override;
+  void OFAddBlob(const KernelCtx& ctx, Blob*, Blob*) override;
+  void OFBlasAxpy( 
     const KernelCtx& ctx, 
     const int N, const floating_point_type alpha, 
     const floating_point_type* X, const int incX, 
     floating_point_type *Y, const int incY
-    );
-  virtual void OFBlasScal(
+    ) override;
+  void OFBlasScal(
     const KernelCtx& ctx,
     const int n, const floating_point_type alpha,
     floating_point_type* x, int incx
-    );
+    ) override;
 };
 
 } // namespace oneflow

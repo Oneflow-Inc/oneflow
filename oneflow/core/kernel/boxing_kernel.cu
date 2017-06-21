@@ -12,6 +12,18 @@ void BoxingKernel<DeviceType::kGPU, floating_point_type>::OFMemcpy(
       ctx.device_ctx->cuda_stream()), cudaSuccess);
 }
 
+template<typename floating_point_type>
+void BoxingKernel<DeviceType::kGPU, floating_point_type>::OFBlobcpy(
+    const KernelCtx& ctx, 
+    Blob* a, Blob* b) {
+  CHECK_EQ(cudaMemcpyAsync( 
+      static_cast<floating_point_type*>(b->mut_dptr()), 
+      static_cast<const floating_point_type*>(a->dptr()),
+      sizeof(floating_point_type) * a->shape().elem_cnt(),
+      cudaMemcpyDeviceToDevice, ctx.device_ctx->cuda_stream()), 
+      cudaSuccess);
+}
+
 template<>
 void BoxingKernel<DeviceType::kGPU, float>::OFAddBlob(
     const KernelCtx& ctx, Blob* a, Blob* b) {
