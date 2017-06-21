@@ -15,8 +15,8 @@
 #include "oneflow/core/distributed_runtime/worker_service.pb.h"
 
 
-OF_GRPC_ALLOW_UNLIMITED_MESSAGE_SIZE(oneflow::SendTaskGraphRequest);
-OF_GRPC_ALLOW_UNLIMITED_MESSAGE_SIZE(oneflow::SendMessageRequest);
+//OF_GRPC_ALLOW_UNLIMITED_MESSAGE_SIZE(oneflow::SendTaskGraphRequest);
+//OF_GRPC_ALLOW_UNLIMITED_MESSAGE_SIZE(oneflow::SendMessageRequest);
 OF_GRPC_ALLOW_UNLIMITED_MESSAGE_SIZE(oneflow::ReadDataResponse);
 
 namespace oneflow {
