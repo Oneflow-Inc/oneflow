@@ -10,10 +10,10 @@
 #include "oneflow/core/distributed_runtime/grpc_call.h"
 #include "oneflow/core/distributed_runtime/grpc_master_service_impl.h"
 #include "oneflow/core/distributed_runtime/master.h"
+#include "oneflow/core/distributed_runtime/master_service.pb.h"
 
 #include "tensorflow/core/platform/mutex.h"
 #include "tensorflow/core/lib/core/threadpool.h"
-#include "oneflow/core/distributed_runtime/master_service.pb.h"
 
 namespace oneflow {
 
@@ -76,9 +76,9 @@ class GrpcMasterService {
 
   void SendGraphHandler(MasterCall<SendGraphRequest,
                         SendGraphResponse>* call) {
-    ::tensorflow::Status s
+    ::tensorflow::Status status
       = master_->SendGraph(&call->request, &call->response);
-    call->SendResponse(ToGrpcStatus(s));
+    call->SendResponse(ToGrpcStatus(status));
     ENQUEUE_REQUEST(SendGraph, false);
   }  // Sendgraphhandler
 
