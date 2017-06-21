@@ -35,45 +35,55 @@ message NetworkMessageRpc {
 
 message GetStatusRequest {
   int32 status = 1;
+  string status_test = 2;
 }
 message GetStatusResponse {
   int32 status = 1;
+  string status_test = 2;
 }
 
 message GetMachineDescRequest {
   MachineDesc machine_desc = 1;
-  int32 machine_test = 2;
+  string machine_desc_test = 2;
 }
 message GetMachineDescResponse {
   MachineDesc machine_desc = 1;
-  int32 machine_test = 2;
+  string machine_desc_test = 2;
 }
 
 message GetMemoryDescRequest {
   MemoryDesc memory_desc = 1;
+  string memory_desc_test = 2;
 }
 message GetMemoryDescResponse {
   MemoryDesc memory_desc = 1;
+  string memory_desc_test = 2;
 }
 
 message SendTaskGraphRequest {
   GraphDef task_graph = 1;
+  string send_task_graph_test = 2;
 }
 message SendTaskGraphResponse {
   GraphDef task_graph = 1;
+  string send_task_graph_test = 2;
 }
 
 message SendMessageRequest {
   NetworkMessageRpc network_message = 1;
+  string send_message_test = 2;
 }
 message SendMessageResponse {
+  string send_message_test = 1;
 }
 
 message ReadDataRequest {
   TensorProto tensor = 1;
   int64 register_id = 2;
   int32 dst_machine_id = 3; 
+  string read_data_test = 4;
 }
 message ReadDataResponse {
   TensorProto tensor = 1;
+  string read_data_test = 2;
 }
