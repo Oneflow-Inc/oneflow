@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_COMMON_CBLAS_TEMPLATE_H_
 
 extern "C" {
-#include "oneflow/cblas.h"
+#include "oneflow/extern/cblas.h"
 }
 
 namespace oneflow {
