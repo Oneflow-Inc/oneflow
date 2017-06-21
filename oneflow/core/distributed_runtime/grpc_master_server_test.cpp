@@ -54,24 +54,19 @@ TEST(GrpcMasterServer, test) {
   } else {
     master_service->cq_->Shutdown();
   }
+  master_service->cq_->Next(&tag, &ok);
 
   // process 2nd request from client
   std::cout << "server wait for 2nd request......." << std::endl;
-  void* tag2;
-  bool ok2;
-  master_service->cq_->Next(&tag2, &ok2);
-  UntypedCall<GrpcMasterService>::Tag* callback_tag2 = nullptr;
-  callback_tag2 = static_cast<UntypedCall<GrpcMasterService>::Tag*>(tag2);
-  if (callback_tag2) {
-    callback_tag2->OnCompleted(master_service, ok2);
+  master_service->cq_->Next(&tag, &ok);
+  callback_tag = static_cast<UntypedCall<GrpcMasterService>::Tag*>(tag);
+  if (callback_tag) {
+    callback_tag->OnCompleted(master_service, ok);
   } else {
     master_service->cq_->Shutdown();
   }
 
-  void* tag3;
-  bool ok3;
-  master_service->cq_->Next(&tag3, &ok3);
-
+  master_service->cq_->Next(&tag, &ok);
   delete master_service;
 }  // TEST
 

@@ -58,7 +58,7 @@ class GrpcMasterService {
   } while (0)
 
   void EnqueueSendGraphMethod() {
-    ENQUEUE_REQUEST(SendGraph, true);
+    ENQUEUE_REQUEST(SendGraph, false);
   }
 
  public:
@@ -79,7 +79,7 @@ class GrpcMasterService {
     ::tensorflow::Status s
       = master_->SendGraph(&call->request, &call->response);
     call->SendResponse(ToGrpcStatus(s));
-    ENQUEUE_REQUEST(SendGraph, true);
+    ENQUEUE_REQUEST(SendGraph, false);
   }  // Sendgraphhandler
 
 #undef ENQUEUE_REQUEST
