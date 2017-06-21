@@ -1,4 +1,3 @@
-#include <string>
 #include "oneflow/core/operator/multinomial_logistic_loss_op.h"
 
 namespace oneflow {

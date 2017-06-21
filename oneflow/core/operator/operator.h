@@ -1,7 +1,6 @@
 #ifndef ONEFLOW_CORE_OPERATOR_OPERATOR_H_
 #define ONEFLOW_CORE_OPERATOR_OPERATOR_H_
 
-#include <string>
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/job/strategy.pb.h"
 #include "oneflow/core/common/shape.h"

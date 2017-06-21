@@ -10,6 +10,11 @@
 #include <memory>
 #include <thread>
 #include <list>
+#include <condition_variable>
+#include <atomic>
+#include <queue>
+#include <fstream>
+#include <iostream>
 #include "glog/logging.h"
 #include "gtest/gtest.h"
 #include "cuda.h"

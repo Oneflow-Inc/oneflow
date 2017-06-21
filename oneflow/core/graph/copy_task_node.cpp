@@ -1,7 +1,6 @@
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/operator/copy_hd_op.h"
 #include "oneflow/core/operator/copy_comm_net_op.h"
-#include "oneflow/core/operator/operator_manager.h"
 
 namespace oneflow {
 

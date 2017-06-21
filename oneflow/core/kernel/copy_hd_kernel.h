@@ -1,8 +1,6 @@
 #ifndef ONEFLOW_CORE_KERNEL_COPY_HD_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_COPY_HD_KERNEL_H_
 
-#include <string>
-#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_manager.h"
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/actor/cuda_device_context.h"

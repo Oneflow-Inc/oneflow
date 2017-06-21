@@ -1,18 +1,13 @@
 #ifndef ONEFLOW_CORE_ACTOR_ACTOR_H_
 #define ONEFLOW_CORE_ACTOR_ACTOR_H_
 
-#include <queue>
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/cuda_stream_handle.h"
-#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_manager.h"
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/actor/cpu_device_context.h"
 #include "oneflow/core/actor/cuda_device_context.h"
 #include "oneflow/core/job/task.pb.h"
-#include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/actor/actor_message_bus.h"
-#include "oneflow/core/register/register.h"
 #include "oneflow/core/register/local_register_warpper.h"
 #include "oneflow/core/register/remote_register_warpper.h"
 #include "oneflow/core/register/register_manager.h"

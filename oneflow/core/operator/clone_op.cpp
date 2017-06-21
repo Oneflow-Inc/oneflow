@@ -1,4 +1,3 @@
-#include <string>
 #include "oneflow/core/operator/clone_op.h"
 
 namespace oneflow {

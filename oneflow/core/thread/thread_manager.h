@@ -1,7 +1,6 @@
 #ifndef ONEFLOW_CORE_THREAD_THREAD_MANAGER_H_
 #define ONEFLOW_CORE_THREAD_THREAD_MANAGER_H_
 
-#include <memory>
 #include "oneflow/core/thread/thread.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/common/channel.h"

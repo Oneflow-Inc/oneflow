@@ -4,10 +4,8 @@
 #ifdef _MSC_VER
 #include <io.h>
 #endif
-#include <string>
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/operator/operator.pb.h"
+#include "google/protobuf/map.h"
 #include "google/protobuf/message.h"
 #include "google/protobuf/descriptor.h"
 

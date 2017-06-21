@@ -2,7 +2,6 @@
 #define ONEFLOW_CORE_REGISTER_REGISTER_MANAGER_H_
 
 #include "oneflow/core/register/register.h"
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/memory/memory_allocator.h"

@@ -1,6 +1,4 @@
 #include "oneflow/core/actor/copy_actor.h"
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/register/local_register_warpper.h"
 
 namespace oneflow {
 
