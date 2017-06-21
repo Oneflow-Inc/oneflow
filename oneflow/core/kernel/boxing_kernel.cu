@@ -12,37 +12,78 @@ void BoxingKernel<DeviceType::kGPU, floating_point_type>::OFMemcpy(
       ctx.device_ctx->cuda_stream()), cudaSuccess);
 }
 
-template<typename floating_point_type>
-void BoxingKernel<DeviceType::kGPU, floating_point_type>::OFAddBlob(
+template<>
+void BoxingKernel<DeviceType::kGPU, float>::OFAddBlob(
     const KernelCtx& ctx, Blob* a, Blob* b) {
-  CHECK_EQ(cublas_axpy<floating_point_type>(
-        ctx.device()->cublas_handle(),
-        a->shape().elem_cnt(), 1.0,
-        static_cast<const floating_point_type>(a->dptr()), 1,
-        static_cast<floating_point_type>(b->mut_dptr()), 1), 
+  static const float alpha = 1.0;
+  CHECK_EQ(cublasSaxpy(
+        ctx.device_ctx->cublas_handle(),
+        a->shape().elem_cnt(), &alpha,
+        static_cast<const float*>(a->dptr()), 1,
+        static_cast<float*>(b->mut_dptr()), 1),
+    cudaSuccess);
+}
+
+template<>
+void BoxingKernel<DeviceType::kGPU, double>::OFAddBlob(
+    const KernelCtx& ctx, Blob* a, Blob* b) {
+  static const double alpha = 1.0;
+  CHECK_EQ(cublasDaxpy(
+        ctx.device_ctx->cublas_handle(),
+        a->shape().elem_cnt(), &alpha,
+        static_cast<const double*>(a->dptr()), 1,
+        static_cast<double*>(b->mut_dptr()), 1), 
       cudaSuccess);
 }
 
-template<typename floating_point_type>
-void BoxingKernel<DeviceType::kGPU, floating_point_type>::of_cblas_axpy(
+template<>
+void BoxingKernel<DeviceType::kGPU, float>::OFBlasAxpy(
     const KernelCtx& ctx, 
-    const int N, const floating_point_type alpha, 
-    const floating_point_type *X, const int incX, 
-    floating_point_type *Y, const int incY) {
-  CHECK_EQ(cublas_axpy<floating_point_type>(
-        ctx.device()->cublas_handle(),
-        N, alpha, X, incX, Y, incY), 
+    const int N, const float alpha, 
+    const float *X, const int incX, 
+    float *Y, const int incY) {
+  float tmp_alpha = alpha;
+  CHECK_EQ(cublasSaxpy(
+        ctx.device_ctx->cublas_handle(),
+        N, &tmp_alpha, X, incX, Y, incY), 
       cudaSuccess);
 }
 
-template<typename floating_point_type> 
-void BoxingKernel<DeviceType::kGPU, floating_point_type>::of_cblas_scal(
+template<>
+void BoxingKernel<DeviceType::kGPU, double>::OFBlasAxpy(
     const KernelCtx& ctx, 
-    const int n, const floating_point_type alpha,
-    floating_point_type* x, int incx) {
-  CHECK_EQ(cublas_scal<floating_point_type>(
-        ctx.device()->cublas_handle(),
-        n, alpha, x, incx), 
+    const int N, const double alpha, 
+    const double *X, const int incX, 
+    double *Y, const int incY) {
+  double tmp_alpha = alpha;
+  CHECK_EQ(cublasDaxpy(
+        ctx.device_ctx->cublas_handle(),
+        N, &tmp_alpha, X, incX, Y, incY), 
+      cudaSuccess);
+}
+
+template<> 
+void BoxingKernel<DeviceType::kGPU, float>::OFBlasScal(
+    const KernelCtx& ctx, 
+    const int n, const float alpha,
+    float* x, int incx) {
+  float tmp_alpha = alpha;
+  CHECK_EQ(cublasSscal(
+        ctx.device_ctx->cublas_handle(),
+        n, &tmp_alpha, x, incx), 
+      cudaSuccess);
+
+}
+
+template<> 
+void BoxingKernel<DeviceType::kGPU, double>::OFBlasScal(
+    const KernelCtx& ctx, 
+    const int n, const double alpha,
+    double* x, int incx) {
+  double tmp_alpha = alpha;
+  CHECK_EQ(cublasDscal(
+        ctx.device_ctx->cublas_handle(),
+        n, &tmp_alpha, x, incx), 
       cudaSuccess);
 
 }
