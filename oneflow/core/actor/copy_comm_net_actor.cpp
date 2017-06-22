@@ -4,13 +4,6 @@
 
 namespace oneflow {
 
-// need review
-int CopyCommNetActor::ProcessMsg(const ActorMsg& msg) {
-  //CpuKernelCtx kernel_ctx(nullptr);
-  //ProcessMsgWithKernelCtx(msg, kernel_ctx);
-  return -1;
-}
-
 REGISTER_ACTOR(kCopyCommNetTask, true, CopyCommNetActor);
 REGISTER_ACTOR(kCopyCommNetTask, false, CopyCommNetActor);
 

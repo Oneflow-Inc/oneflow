@@ -11,14 +11,14 @@ public:
   ~CopyActor() = default;
 
   void Init(const TaskProto&, const ThreadCtx&) override;
-  virtual int ProcessMsg(const ActorMsg&) = 0;
+  int ProcessMsg(const ActorMsg&) override;
 
 protected:
   CopyActor() = default;
-  void ProcessMsgWithKernelCtx(const ActorMsg& msg, const KernelCtx& kernel_ctx);
 
 private:
   std::queue<std::shared_ptr<RegstWarpper>> waiting_in_regst_;
+  CudaStreamHandle cuda_handle_;
 
 };
 
