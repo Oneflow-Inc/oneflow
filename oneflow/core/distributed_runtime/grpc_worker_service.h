@@ -148,6 +148,7 @@ class GrpcWorkerService {
     Schedule([this, call] {
       ::tensorflow::Status status 
         = worker_->SendMessageAsync(&call->request, &call->response);
+      //std::cout<< " which will be return to client: "<<call->response.send_message_test() << std::endl;
       call->SendResponse(ToGrpcStatus(status));
     });
     ENQUEUE_REQUEST(SendMessage, false);
