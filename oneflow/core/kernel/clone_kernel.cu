@@ -33,7 +33,7 @@ void CloneKernel<DeviceType::kGPU, floating_point_type>::Backward(
                            cudaMemcpyDeviceToDevice,
                            ctx.device_ctx->cuda_stream()),
            cudaSuccess);
-  const floating_point_type alpha = 1.0;
+  const floating_point_type alpha = {1.0f};
   for(size_t i = 1; i != odbns.size(); ++i) {
     const Blob* out_blob = BnInOp2BlobPtr(odbns[i]);
     cublas_axpy<floating_point_type>(

@@ -33,11 +33,11 @@ void CloneKernel<DeviceType::kCPU, floating_point_type>::Backward(
            idbn_blob->shape().elem_cnt() * sizeof(floating_point_type));
   });
   for(size_t i = 1; i != odbns.size(); ++i) {
-    const Blob* out_blob = BnInOp2BlobPtr(odbns[i]);
+    const Blob* odbn_blob = BnInOp2BlobPtr(odbns[i]);
     ctx.device_ctx->cpu_stream()->Send([=] {
       cblas_axpy<floating_point_type>(
           idbn_blob->shape().elem_cnt(), 1.0,
-          static_cast<const floating_point_type*>(out_blob->dptr()), 1,
+          static_cast<const floating_point_type*>(odbn_blob->dptr()), 1,
           static_cast<floating_point_type*>(idbn_blob->mut_dptr()), 1);
     });
   }
