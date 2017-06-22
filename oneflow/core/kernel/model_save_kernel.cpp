@@ -6,23 +6,22 @@ template<typename floating_point_type>
 void ModelSaveKernel<DeviceType::kCPU, floating_point_type>::Forward(
   const KernelCtx& kernel_ctx,
   std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  std::tuple<Snapshot*, uint64_t>* save_ctx =
-      static_cast<std::tuple<Snapshot*, uint64_t>>(kernel_ctx.other);
+  auto save_ctx = static_cast<std::tuple<Snapshot*, uint64_t>*>(kernel_ctx.other);
   Snapshot* snapshot = std::get<0>(*save_ctx);
   uint64_t parallel_id = std::get<1>(*save_ctx);
-  size_t elem_size = sizeof(double);
-  if(JobDesc::Singleton().floating_point_type() == FloatingPointType::kFloat) {
-    elem_size = sizeof(float);
-  }
   for(const std::string& ibn : op()->input_bns()) {
-    std::string lbn = op()->ibn2lbn(ibn);
-    PersistentOutStream* out_stream = snapshot->GetOutStream(lbn, parallel_id);
+    const std::string lbn = op()->Lbn4BnInOp(ibn);
     Blob* blob_ptr = BnInOp2BlobPtr(ibn);
-    kernel_ctx.device_ctx->cpu_stream()->Send([out_stream, blob_ptr]() {
-      out_stream->Write(blob_ptr->dptr(),
-                        blob_ptr->shape().elem_cnt() * elem_size);
+    kernel_ctx.device_ctx->cpu_stream()->Send([=]() {
+      std::unique_ptr<PersistentOutStream> out_stream = 
+          std::move(snapshot->GetOutStream(lbn, parallel_id));
+      out_stream->Write(static_cast<const char*>(blob_ptr->dptr()),
+                        blob_ptr->shape().elem_cnt() * sizeof(floating_point_type));
     });
   }
 }
+
+INSTANTIATE_CPU_KERNEL_CLASS(ModelSaveKernel);
+REGISTER_CPU_KERNEL(OperatorConf::kModelSaveConf, ModelSaveKernel);
 
 }  // namespace oneflow
