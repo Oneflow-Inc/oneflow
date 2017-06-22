@@ -4,8 +4,6 @@
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_manager.h"
 #include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/job/resource.pb.h"
-#include "oneflow/core/job/job_conf.pb.h"
 
 namespace oneflow {
 

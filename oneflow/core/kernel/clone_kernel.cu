@@ -4,35 +4,6 @@
 
 namespace oneflow {
 
-namespace {
-
-template<typename T>
-cublasStatus_t cublas_axpy(cublasHandle_t handle, int n,
-                           const T *alpha,
-                           const T *x, int incx,
-                           T *y, int incy){
-  LOG(FATAL) << "floating_point_type should be float or double";
-}
-
-template<>
-cublasStatus_t cublas_axpy<float>(cublasHandle_t handle, int n,
-                                  const float *alpha,
-                                  const float *x, int incx,
-                                  float *y, int incy){
-  return cublasSaxpy(handle, n, alpha, x, incx, y, incy);
-}
-
-template<>
-cublasStatus_t cublas_axpy<double>(cublasHandle_t handle, int n,
-                                   const double *alpha,
-                                   const double *x, int incx,
-                                   double *y, int incy){
-  return cublasDaxpy(handle, n, alpha, x, incx, y, incy);
-}
-
-} // namespace
-
-
 template<typename floating_point_type>
 void CloneKernel<DeviceType::kGPU, floating_point_type>::Forward(
     const KernelCtx& ctx,
@@ -65,12 +36,11 @@ void CloneKernel<DeviceType::kGPU, floating_point_type>::Backward(
   const floating_point_type alpha = 1.0;
   for(size_t i = 1; i != odbns.size(); ++i) {
     const Blob* out_blob = BnInOp2BlobPtr(odbns[i]);
-    CHECK_EQ(cublas_axpy<floating_point_type>(
-                 ctx.device_ctx->cublas_handle(),
-                 idbn_blob->shape().elem_cnt(), &alpha,
-                 static_cast<const floating_point_type*>(out_blob->dptr()), 1,
-                 static_cast<floating_point_type*>(idbn_blob->mut_dptr()), 1),
-             cudaSuccess);
+    cublas_axpy<floating_point_type>(
+        ctx.device_ctx->cublas_handle(),
+        idbn_blob->shape().elem_cnt(), &alpha,
+        static_cast<const floating_point_type*>(out_blob->dptr()), 1,
+        static_cast<floating_point_type*>(idbn_blob->mut_dptr()), 1);
   }
 }
 

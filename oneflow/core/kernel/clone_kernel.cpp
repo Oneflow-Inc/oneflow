@@ -1,37 +1,8 @@
 #include "oneflow/core/kernel/clone_kernel.h"
 #include <string>
 #include <cstring>
-#include "oneflow/core/common/cblas.h"
 
 namespace oneflow {
-
-namespace {
-
-template<typename T>
-void cblas_axpy(const int N,
-                const T alpha,
-                const T *x, const int incx,
-                T *y, const int incy) {
-  LOG(FATAL) << "floating_point_type should be float or double";
-}
-
-template<>
-void cblas_axpy<float>(const int N,
-                       const float alpha,
-                       const float *x, const int incx,
-                       float *y, const int incy) {
-  cblas_saxpy(N, alpha, x, incx, y, incy);
-}
-
-template<>
-void cblas_axpy<double>(const int N,
-                        const double alpha,
-                        const double *x, const int incx,
-                        double *y, const int incy) {
-  cblas_daxpy(N, alpha, x, incx, y, incy);
-}
-
-}// namespace
 
 template<typename floating_point_type>
 void CloneKernel<DeviceType::kCPU, floating_point_type>::Forward(
