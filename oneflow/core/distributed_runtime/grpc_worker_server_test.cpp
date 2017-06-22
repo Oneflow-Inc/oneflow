@@ -44,7 +44,6 @@ TEST(GrpcWorkerServer, test) {
   bool ok;
   UntypedCall<GrpcWorkerService>::Tag* callback_tag = nullptr;
 
-  /*
   // process 1th request from client
   std::cout << "server wait for 1th request......." << std::endl;
   worker_service->EnqueueGetStatusMethod();
@@ -78,7 +77,7 @@ TEST(GrpcWorkerServer, test) {
     worker_service->cq_->Shutdown();
   }
   worker_service->cq_->Next(&tag, &ok);
-  
+
   //process GetMemoryDesc from client
   worker_service->EnqueueGetMemoryDescMethod();
   worker_service->cq_->Next(&tag, &ok);
@@ -100,7 +99,6 @@ TEST(GrpcWorkerServer, test) {
     worker_service->cq_->Shutdown();
   }
   worker_service->cq_->Next(&tag, &ok);
-  */
 
   // process SendMessage from client
   worker_service->EnqueueSendMessageMethod();
@@ -112,6 +110,9 @@ TEST(GrpcWorkerServer, test) {
     worker_service->cq_->Shutdown();
   }
   worker_service->cq_->Next(&tag, &ok);
+
+  // process ReadData from client
+  //worker_service->EnqueueReadDataMethod();
 
   delete worker_service;
 }  // TEST

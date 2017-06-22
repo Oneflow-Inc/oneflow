@@ -64,7 +64,6 @@ class GrpcRemoteWorker {
 
       Callback wrapper_done;
       const Callback* cb_to_use;
-
       wrapper_done = [this, request, req_copy, response, done]() {
         //int64_t step_id = request->step_id();
         done();

@@ -85,7 +85,7 @@ Worker::Worker(GrpcChannelCache* channel_cache)
   //ReadDataResponse* tmp = new ReadDataResponse;
   //grpc::EncodeRecvTensorResponseToByteBuffer(*tmp, response);
 
-  //std::cout << "request from client = " << request->read_data_test() << std::endl;
+  std::cout << "request from client = " << request->read_data_test() << std::endl;
   //response->set_read_data_test("read_data_test from server");
   return ::tensorflow::Status::OK();
 }

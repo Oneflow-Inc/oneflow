@@ -40,24 +40,7 @@ TEST(GrpcMasterServer, test) {
   GrpcRemoteWorker* remote_worker = new GrpcRemoteWorker(std::move(dst_channel), &cq);
   ::tensorflow::Status s;
 
-  oneflow::SendMessageRequest req_sendmessage;
-  req_sendmessage.set_send_message_test("hi~, server");
-  oneflow::SendMessageResponse resp_sendmessage;
-  auto cb = [&resp_sendmessage](::tensorflow::Status s) {
-    std::cout<<"callback : " << resp_sendmessage.send_message_test() << std::endl;
-  };
-  remote_worker->SendMessageAsync(&req_sendmessage, &resp_sendmessage, cb);
-
-  void* tag;
-  bool ok;
-  remote_worker->cq_->Next(&tag, &ok);
-
-  GrpcClientCQTag* callback_tag;
-  callback_tag  = static_cast<GrpcClientCQTag*>(tag);
-  callback_tag->OnCompleted(ok);
-
   //Test
-  /*
   oneflow::GetStatusRequest req;
   oneflow::GetStatusResponse resp;
   s = remote_worker->GetStatus(&req, &resp);
@@ -102,7 +85,22 @@ TEST(GrpcMasterServer, test) {
   } else {
     std::cout << "s is not ok " << std::endl;
   }
-  */
+
+  oneflow::SendMessageRequest req_sendmessage;
+  req_sendmessage.set_send_message_test("hi~, server");
+  oneflow::SendMessageResponse resp_sendmessage;
+  auto cb = [&resp_sendmessage](::tensorflow::Status s) {
+    std::cout<<"callback : " << resp_sendmessage.send_message_test() << std::endl;
+  };
+  remote_worker->SendMessageAsync(&req_sendmessage, &resp_sendmessage, cb);
+
+  void* tag;
+  bool ok;
+  remote_worker->cq_->Next(&tag, &ok);
+
+  GrpcClientCQTag* callback_tag;
+  callback_tag  = static_cast<GrpcClientCQTag*>(tag);
+  callback_tag->OnCompleted(ok);
 
 }  // TEST
 

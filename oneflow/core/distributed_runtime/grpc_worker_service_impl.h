@@ -14,7 +14,7 @@
 #include "oneflow/core/distributed_runtime/grpc_serialization_traits.h"
 #include "oneflow/core/distributed_runtime/worker_service.pb.h"
 
-OF_GRPC_ALLOW_UNLIMITED_MESSAGE_SIZE(oneflow::ReadDataResponse);
+//OF_GRPC_ALLOW_UNLIMITED_MESSAGE_SIZE(oneflow::ReadDataResponse);
 
 namespace oneflow {
 
