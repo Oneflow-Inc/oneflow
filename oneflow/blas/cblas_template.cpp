@@ -22,4 +22,22 @@ void cblas_gemm<double>(
               beta, C, ldc);
 }
 
+template<>
+void cblas_axpy<float>(
+    const int N,
+    const float alpha,
+    const float *x, const int incx,
+    float *y, const int incy) {
+  cblas_saxpy(N, alpha, x, incx, y, incy);
+}
+
+template<>
+void cblas_axpy<double>(
+    const int N,
+    const double alpha,
+    const double *x, const int incx,
+    double *y, const int incy) {
+  cblas_daxpy(N, alpha, x, incx, y, incy);
+}
+
 }  // namespace oneflow

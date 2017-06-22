@@ -14,6 +14,14 @@ void cublas_gemm(
     const floating_point_type* beta, floating_point_type* C, const int ldc) {
 }
 
+template<typename floating_point_type>
+void cublas_axpy(
+    cublasHandle_t handle, int n,
+    const floating_point_type *alpha,
+    const floating_point_type *x, int incx,
+    floating_point_type *y, int incy) {
+}
+
 } // namespace oneflow
 
 #endif // ONEFLOW_BLAS_CUBLAS_TEMPLATE_H_
