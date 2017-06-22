@@ -13,9 +13,9 @@ void BoxingKernel<DeviceType::kGPU, floating_point_type>::OFMemcpy(
 }
 
 template<typename floating_point_type>
-void BoxingKernel<DeviceType::kGPU, floating_point_type>::OFBlobcpy(
+void BoxingKernel<DeviceType::kGPU, floating_point_type>::OFBlobCpy(
     const KernelCtx& ctx, 
-    Blob* a, Blob* b) {
+    const Blob* a, Blob* b) {
   CHECK_EQ(cudaMemcpyAsync( 
       static_cast<floating_point_type*>(b->mut_dptr()), 
       static_cast<const floating_point_type*>(a->dptr()),
@@ -25,8 +25,8 @@ void BoxingKernel<DeviceType::kGPU, floating_point_type>::OFBlobcpy(
 }
 
 template<>
-void BoxingKernel<DeviceType::kGPU, float>::OFAddBlob(
-    const KernelCtx& ctx, Blob* a, Blob* b) {
+void BoxingKernel<DeviceType::kGPU, float>::OFBlobAdd(
+    const KernelCtx& ctx, const Blob* a, Blob* b) {
   static const float alpha = 1.0;
   CHECK_EQ(cublasSaxpy(
         ctx.device_ctx->cublas_handle(),
@@ -37,8 +37,8 @@ void BoxingKernel<DeviceType::kGPU, float>::OFAddBlob(
 }
 
 template<>
-void BoxingKernel<DeviceType::kGPU, double>::OFAddBlob(
-    const KernelCtx& ctx, Blob* a, Blob* b) {
+void BoxingKernel<DeviceType::kGPU, double>::OFBlobAdd(
+    const KernelCtx& ctx, const Blob* a, Blob* b) {
   static const double alpha = 1.0;
   CHECK_EQ(cublasDaxpy(
         ctx.device_ctx->cublas_handle(),

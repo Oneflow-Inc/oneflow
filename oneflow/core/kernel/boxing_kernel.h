@@ -31,8 +31,8 @@ class BoxingKernel<DeviceType::kALL, floating_point_type> :
  protected:
   virtual void OFMemcpy(const KernelCtx& ctx, \
       void* dst, const void* src, size_t sz) = 0;
-  virtual void OFBlobcpy(const KernelCtx& ctx, Blob* a, Blob* b) = 0;
-  virtual void OFAddBlob(const KernelCtx& ctx, Blob*, Blob*)=0;
+  virtual void OFBlobCpy(const KernelCtx& ctx, const Blob* a, Blob* b) = 0;
+  virtual void OFBlobAdd(const KernelCtx& ctx, const Blob*, Blob*) = 0;
   virtual void OFBlasAxpy( 
     const KernelCtx& ctx, 
     const int N, const floating_point_type alpha, 
@@ -57,7 +57,7 @@ class BoxingKernel<DeviceType::kALL, floating_point_type> :
     uint64_t copy_sz; 
   };
   void InferCopyRules(std::function<Blob*(const std::string&)>) const;
-  void ConstructRulesFromShape(
+  void ConstructCopyRulesFromShape(
       std::map<const std::string*, int64_t>& src_bn2slice, 
       std::map<const std::string*, int64_t>& dst_bn2slice,
       int64_t seg_cnt, int64_t slice_sz, int concat_axis, 
@@ -110,8 +110,8 @@ class BoxingKernel<DeviceType::kCPU, floating_point_type> final :
 
   void OFMemcpy(const KernelCtx& ctx, \
       void* dst, const void* src, size_t sz) override;
-  void OFBlobcpy(const KernelCtx& ctx, Blob* a, Blob* b) override;
-  void OFAddBlob(const KernelCtx& ctx, Blob*, Blob*) override;
+  void OFBlobCpy(const KernelCtx& ctx, const Blob* a, Blob* b) override;
+  void OFBlobAdd(const KernelCtx& ctx, const Blob*, Blob*) override;
   void OFBlasAxpy( 
     const KernelCtx& ctx, 
     const int N, const floating_point_type alpha, 
@@ -135,8 +135,8 @@ class BoxingKernel<DeviceType::kGPU, floating_point_type> final :
 
   void OFMemcpy(const KernelCtx& ctx, \
       void* dst, const void* src, size_t sz) override;
-  void OFBlobcpy(const KernelCtx& ctx, Blob* a, Blob* b) override;
-  void OFAddBlob(const KernelCtx& ctx, Blob*, Blob*) override;
+  void OFBlobCpy(const KernelCtx& ctx, const Blob* a, Blob* b) override;
+  void OFBlobAdd(const KernelCtx& ctx, const Blob*, Blob*) override;
   void OFBlasAxpy( 
     const KernelCtx& ctx, 
     const int N, const floating_point_type alpha, 
