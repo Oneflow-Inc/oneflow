@@ -8,8 +8,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename floating_point_type>
-class CloneKernel final {
-};
+class CloneKernel;
 
 template<typename floating_point_type>
 class CloneKernel<DeviceType::kCPU, floating_point_type> final : public Kernel {
