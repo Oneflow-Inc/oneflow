@@ -10,12 +10,12 @@ void ModelSaveKernel<DeviceType::kCPU, floating_point_type>::Forward(
   Snapshot* snapshot = std::get<0>(*save_ctx);
   uint64_t parallel_id = std::get<1>(*save_ctx);
   for(const std::string& ibn : op()->input_bns()) {
-    const std::string lbn = op()->Lbn4BnInOp(ibn);
+    const std::string& lbn = op()->Lbn4BnInOp(ibn);
     Blob* blob_ptr = BnInOp2BlobPtr(ibn);
     kernel_ctx.device_ctx->cpu_stream()->Send([=]() {
       std::unique_ptr<PersistentOutStream> out_stream = 
-          std::move(snapshot->GetOutStream(lbn, parallel_id));
-      out_stream->Write(static_cast<const char*>(blob_ptr->dptr()),
+          snapshot->GetOutStream(lbn, parallel_id);
+      out_stream->Write((const char*)blob_ptr->dptr(),
                         blob_ptr->shape().elem_cnt() * sizeof(floating_point_type));
     });
   }
