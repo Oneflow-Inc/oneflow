@@ -11,7 +11,10 @@ public:
   CopyHdActor() = default;
   ~CopyHdActor() = default;
 
+  void Init(const TaskProto&, const ThreadCtx&) override;
+
 private:
+  CudaStreamHandle cuda_handle_;
 
 };
 

@@ -10,7 +10,7 @@ public:
   OF_DISALLOW_COPY_AND_MOVE(CopyActor);
   ~CopyActor() = default;
 
-  void Init(const TaskProto&, const ThreadCtx&) override;
+  virtual void Init(const TaskProto&, const ThreadCtx&) = 0;
   int ProcessMsg(const ActorMsg&) override;
 
 protected:
@@ -18,7 +18,6 @@ protected:
 
 private:
   std::queue<std::shared_ptr<RegstWarpper>> waiting_in_regst_;
-  CudaStreamHandle cuda_handle_;
 
 };
 

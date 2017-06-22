@@ -11,6 +11,8 @@ public:
   CopyCommNetActor() = default;
   ~CopyCommNetActor() = default;
 
+  void Init(const TaskProto&, const ThreadCtx&) override;
+
 private:
 
 };

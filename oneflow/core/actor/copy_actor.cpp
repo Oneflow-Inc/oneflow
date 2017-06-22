@@ -4,13 +4,6 @@ namespace oneflow {
 
 void CopyActor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   Actor::Init(task_proto, thread_ctx);
-  if (thread_ctx.cpu_stream) {
-    mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
-  } else {
-    mut_device_ctx().reset(new CudaDeviceCtx(cuda_handle_.cuda_stream(),
-                                             cuda_handle_.cublas_handle(),
-                                             cuda_handle_.cudnn_handle()));
-  }
 }
 
 int CopyActor::ProcessMsg(const ActorMsg& msg) {
