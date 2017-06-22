@@ -1,16 +1,12 @@
 #ifndef ONEFLOW_CORE_KERNEL_MODEL_SAVE_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_MODEL_SAVE_KERNEL_H_
 
-#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_manager.h"
-#include "oneflow/core/job/resource.pb.h"
-#include "oneflow/core/job/job_conf.pb.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename floating_point_type>
-class ModelSaveKernel final {
-};
+class ModelSaveKernel;
 
 template<typename floating_point_type>
 class ModelSaveKernel<DeviceType::kCPU, floating_point_type> final : public Kernel {

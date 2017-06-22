@@ -8,8 +8,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename floating_point_type>
-class CopyHdKernel final {
-};
+class CopyHdKernel;
 
 template<typename floating_point_type>
 class CopyHdKernel<DeviceType::kGPU, floating_point_type> final

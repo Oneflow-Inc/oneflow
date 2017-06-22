@@ -10,8 +10,8 @@
 #include "oneflow/core/operator/operator.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/blas/cblas_template.h"
-#include "oneflow/blas/cublas_template.h"
+#include "oneflow/core/blas/cblas_template.h"
+#include "oneflow/core/blas/cublas_template.h"
 
 namespace oneflow {
 
