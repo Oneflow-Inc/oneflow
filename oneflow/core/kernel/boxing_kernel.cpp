@@ -170,11 +170,12 @@ void BoxingKernel<DeviceType::kALL, \
   std::map<const std::string*, int64_t>& dst_bn2slice,
   int64_t seg_cnt, int64_t slice_sz, int concat_axis, 
   std::vector<struct copy_rule>& rules) const {
-
   auto src_iter = src_bn2slice.begin();
   auto dst_iter = dst_bn2slice.begin();
   int64_t src_offset = 0, src_cap = src_iter->second;
   int64_t dst_offset = 0, dst_cap = dst_iter->second;
+
+  const int64_t step_sz = sizeof(floating_point_type);
   while (src_iter != src_bn2slice.end() && \
       dst_iter != dst_bn2slice.end()) {
     dst_offset = 0, dst_cap = dst_iter->second;
@@ -183,22 +184,26 @@ void BoxingKernel<DeviceType::kALL, \
       for (size_t i=0; i<seg_cnt; ++i) {
         struct copy_rule cr;
         cr.src_bn = *src_iter->first;
-        cr.dst_bn = *src_iter->first;
-        cr.src_offset = (src_offset + i * src_cap) * slice_sz;
-        cr.dst_offset = (dst_offset + i * dst_cap) * slice_sz;
-        cr.copy_sz = p * slice_sz * sizeof(floating_point_type);
+        cr.dst_bn = *dst_iter->first;
+        cr.src_offset = (src_offset + i * src_cap) * slice_sz * step_sz;
+        cr.dst_offset = (dst_offset + i * dst_cap) * slice_sz * step_sz;
+        cr.copy_sz = p * slice_sz * step_sz;
         rules.push_back(std::move(cr));
       }
       src_offset += p, dst_offset += p;
       if (src_offset == src_cap) {
-        src_cap = 0;
         if (++src_iter == src_bn2slice.end()) break;
+        src_offset = 0;
+        src_cap = src_iter->second;
       }
     } // while current dst_cap is not full
     ++dst_iter;
   }
+
   ASSERT_EQ(dst_iter, dst_bn2slice.end());
+  ASSERT_EQ(src_iter, src_bn2slice.end());
   ASSERT_EQ(dst_offset, dst_cap);
+  ASSERT_EQ(src_offset, src_cap);
 }
 
 // If out box case is a clone box, then previous rules would only encapsulate 

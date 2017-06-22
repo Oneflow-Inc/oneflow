@@ -40,11 +40,12 @@ void BuildBoxingKernel(BoxingKernel<DeviceType::kCPU, float>* boxing_kernel,\
   op_conf.set_name("boxing_test");
   BoxingOpConf* boxing_conf = op_conf.mutable_boxing_conf();
   if (in_box_case == BoxingOpConf::kConcatBox) {
-    auto concat_box = new BoxConcatConf;
-    boxing_conf->set_allocated_concat_box(concat_box);
+    //auto concat_box = new BoxConcatConf;
+  
+    //boxing_conf->set_allocated_concat_box(concat_box);
 
     // manually set axis to 1 in current case
-    //op_conf.mutable_concat_conf()->set_axis(1);
+    boxing_conf->mutable_concat_box()->set_axis(1);
   } else {
     auto add_box = new BoxAddConf; 
     boxing_conf->set_allocated_add_box(add_box);
@@ -72,7 +73,7 @@ std::map<std::string, Blob*>*  ConstructBlobs(int32_t in_num, \
     int32_t out_num, Location loc) {
   std::vector<std::vector<int64_t> > in_dim_vecs = { {3, 4, 5, 5}, {3, 2, 5, 5}, \
     {3, 1, 5, 5}, { 3, 7, 5, 5}};
-  std::vector<std::vector<int64_t> > out_dim_vec = { {3, 5, 5, 5}, {3, 6, 5, 5}, \
+  std::vector<std::vector<int64_t> > out_dim_vecs = { {3, 5, 5, 5}, {3, 6, 5, 5}, \
     {3, 3, 5, 5}};
 
   auto bn2blob_ptr = new std::map<std::string, Blob*>;
@@ -84,9 +85,9 @@ std::map<std::string, Blob*>*  ConstructBlobs(int32_t in_num, \
   }
   for (size_t i=0; i<out_num; ++i) {
     bn2blob_ptr->insert(make_pair("out_"+std::to_string(i), \
-          CreateBlob(in_dim_vecs[i], (i+1)*1.0, loc)));
+          CreateBlob(out_dim_vecs[i], (i+1)*1.0, loc)));
     bn2blob_ptr->insert(make_pair("out_"+std::to_string(i)+"_diff", \
-          CreateBlob(in_dim_vecs[i], (i+1)*10.0, loc)));
+          CreateBlob(out_dim_vecs[i], (i+1)*10.0, loc)));
   }
 
   return bn2blob_ptr;
