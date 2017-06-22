@@ -16,13 +16,14 @@ enum class Location {
 
 Blob* CreateBlob(const std::vector<int64_t>& dim_vec, float value,
                  Location dptr_location) {
-  char* dptr;
+  void* dptr;
   Shape* shape = new Shape(dim_vec);
 
   size_t dptr_size = shape->elem_cnt()*sizeof(float);
   if (dptr_location == Location::kHost) {
     CHECK_EQ(cudaMallocHost(&dptr, dptr_size), cudaSuccess);
-    memset(dptr, value, dptr_size);
+    float* fptr = static_cast<float*>(dptr);
+    std::fill(fptr, fptr+shape->elem_cnt(), value);
   } else {
     CHECK_EQ(cudaMalloc(&dptr, dptr_size), cudaSuccess);
     CHECK_EQ(cudaMemset(dptr, value, dptr_size), cudaSuccess);
@@ -40,11 +41,6 @@ void BuildBoxingKernel(BoxingKernel<DeviceType::kCPU, float>* boxing_kernel,\
   op_conf.set_name("boxing_test");
   BoxingOpConf* boxing_conf = op_conf.mutable_boxing_conf();
   if (in_box_case == BoxingOpConf::kConcatBox) {
-    //auto concat_box = new BoxConcatConf;
-  
-    //boxing_conf->set_allocated_concat_box(concat_box);
-
-    // manually set axis to 1 in current case
     boxing_conf->mutable_concat_box()->set_axis(1);
   } else {
     auto add_box = new BoxAddConf; 
@@ -81,11 +77,11 @@ std::map<std::string, Blob*>*  ConstructBlobs(int32_t in_num, \
     bn2blob_ptr->insert(make_pair("in_"+std::to_string(i), \
           CreateBlob(in_dim_vecs[i], (i+1)*1.0, loc)));
     bn2blob_ptr->insert(make_pair("in_"+std::to_string(i)+"_diff", \
-          CreateBlob(in_dim_vecs[i], (i+1)*10.0, loc)));
+          CreateBlob(in_dim_vecs[i], 0, loc)));
   }
   for (size_t i=0; i<out_num; ++i) {
     bn2blob_ptr->insert(make_pair("out_"+std::to_string(i), \
-          CreateBlob(out_dim_vecs[i], (i+1)*1.0, loc)));
+          CreateBlob(out_dim_vecs[i], 0, loc)));
     bn2blob_ptr->insert(make_pair("out_"+std::to_string(i)+"_diff", \
           CreateBlob(out_dim_vecs[i], (i+1)*10.0, loc)));
   }
@@ -95,9 +91,23 @@ std::map<std::string, Blob*>*  ConstructBlobs(int32_t in_num, \
 
 void PrintBlob(Blob* blob) {
   float* fptr = static_cast<float*>(blob->mut_dptr());
-  int64_t sz = blob->shape().elem_cnt();
-  for (size_t i=0; i<sz; ++i) {
-    std::cout << fptr[i] << " ";
+  //int64_t sz = blob->shape().elem_cnt();
+  auto dim_vec = blob->shape().dim_vec();
+  int a =dim_vec[0], b = dim_vec[1], c=dim_vec[2], d=dim_vec[3];
+  std::cout << "blob size is:" << a << " " << b << " " << c << " " << d << " ";
+  std::cout << std::endl;
+  float* p = fptr;
+  for (size_t i=0; i<a; ++i) {
+    for (size_t j=0; j<b; ++j) {
+      for (size_t k=0; k<c; ++k) {
+        for (size_t z=0; z<d; ++z) {
+          std::cout << *p++ << " "; 
+        }
+        std::cout << std::endl;
+      }
+       std::cout << std::endl;
+    }
+    std::cout << std::endl;
   }
   std::cout << std::endl;
 }
@@ -124,15 +134,16 @@ TEST(boxingKernel, boxing_3x4x5x6) {
       std::cout<< "\n\n\n\n" << bn << "\n\n\n";
     return bn2blob_ptr->at(bn);
   };
-
+  
   // Run forward && backward test
   boxing_kernel->Forward(ctx, fp);
-  //boxing_kernel->Backward(ctx, fp);
+  boxing_kernel->Backward(ctx, fp);
   //CHECK_EQ(cudaStreamSynchronize(cuda_stream), cudaSuccess);
+  std::cout << "\n\n\n\n\n" ;
   
   // Check results
   for (auto iter : *bn2blob_ptr) {
-    std::cout << (iter.first) << " : ";
+    std::cout << (iter.first) << " : " << std::endl;
     PrintBlob(iter.second);
   }
 

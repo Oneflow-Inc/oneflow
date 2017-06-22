@@ -2,10 +2,12 @@
 #include <string>
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/blas/cblas.h"
-#define KSDEBUG
+
+#define BOXING_KERNEL_TEST_DEBUG
 
 namespace oneflow {
 
+#define BOXING_KERNEL_TEST_DEBUG
 // templates for memory copy 
 template<typename floating_point_type>
 void BoxingKernel<DeviceType::kCPU, floating_point_type>::OFMemcpy(
@@ -18,8 +20,8 @@ template<typename floating_point_type>
 void BoxingKernel<DeviceType::kCPU, floating_point_type>::OFBlobCpy(
     const KernelCtx& ctx, 
     const Blob* a, Blob* b) {
-  memcpy( static_cast<floating_point_type*>(b->mut_dptr()), 
-      static_cast<const floating_point_type*>(a->dptr()),
+  memcpy( static_cast<char*>(b->mut_dptr()), 
+      static_cast<const char*>(a->dptr()),
       sizeof(floating_point_type) * a->shape().elem_cnt());
 }
 
@@ -253,13 +255,13 @@ void BoxingKernel<DeviceType::kALL, floating_point_type>::ConcatBoxForward(
     for (auto rule : this->fw_copy_rules) {
       Blob* src_blob = BnInOp2BlobPtr(rule.src_bn);
       Blob* dst_blob = BnInOp2BlobPtr(rule.dst_bn);
-      OFMemcpy(ctx, static_cast<floating_point_type*>(dst_blob->mut_dptr()) \
+      OFMemcpy(ctx, static_cast<char*>(dst_blob->mut_dptr()) \
           + rule.dst_offset, \
-         static_cast<const floating_point_type*>(src_blob->dptr()) \
+         static_cast<const char*>(src_blob->dptr()) \
          + rule.src_offset, rule.copy_sz);
     }
   };
-#ifdef KSDEBUG
+#ifndef BOXING_KERNEL_TEST_DEBUG
   ctx.device_ctx->cpu_stream()->Send(fp);
 #else
   fp();
@@ -281,14 +283,14 @@ void BoxingKernel<DeviceType::kALL, floating_point_type>::ConcatBoxBackward(
     for (auto rule : this->bw_copy_rules) {
       Blob* src_blob = BnInOp2BlobPtr(rule.src_bn);
       Blob* dst_blob = BnInOp2BlobPtr(rule.dst_bn);
-      OFMemcpy(ctx, static_cast<floating_point_type*>(dst_blob->mut_dptr()) \
+      OFMemcpy(ctx, static_cast<char*>(dst_blob->mut_dptr()) \
           + rule.dst_offset, \
-         static_cast<const floating_point_type*>(src_blob->dptr()) \
+         static_cast<const char*>(src_blob->dptr()) \
          + rule.src_offset, rule.copy_sz);
     }
   };
 
-#ifdef KSDEBUG
+#ifndef BOXING_KERNEL_TEST_DEBUG
   ctx.device_ctx->cpu_stream()->Send(fp);
 #else
   fp();
@@ -314,7 +316,7 @@ void BoxingKernel<DeviceType::kALL, floating_point_type>::AddBoxForward(
       OFBlobAdd(ctx, BnInOp2BlobPtr(input_bns.at(i)), dst_blob);
     }
   };
-#ifdef KSDEBUG
+#ifndef BOXING_KERNEL_TEST_DEBUG
   ctx.device_ctx->cpu_stream()->Send(fp1);
 #else
   fp1();
@@ -332,7 +334,7 @@ void BoxingKernel<DeviceType::kALL, floating_point_type>::AddBoxForward(
         OFBlobCpy(ctx, dst_blob, BnInOp2BlobPtr(output_bns.at(i)));
       }
     };
-#ifdef KSDEBUG
+#ifndef BOXING_KERNEL_TEST_DEBUG
     ctx.device_ctx->cpu_stream()->Send(fp2);
 #else
     fp2();
@@ -368,7 +370,7 @@ void BoxingKernel<DeviceType::kALL, floating_point_type>::AddBoxBackward(
     }
   };
 
-#ifdef KSDEBUG
+#ifndef BOXING_KERNEL_TEST_DEBUG
   ctx.device_ctx->cpu_stream()->Send(fp);
 #else
   fp();
