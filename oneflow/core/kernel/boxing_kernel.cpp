@@ -2,6 +2,7 @@
 #include <string>
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/blas/cblas.h"
+#define KSDEBUG
 
 namespace oneflow {
 
@@ -83,6 +84,16 @@ template<typename floating_point_type>
 void BoxingKernel<DeviceType::kALL, floating_point_type>::InitFromOpProto(
     const OperatorProto& op_proto) {
   Kernel::InitFromOpProto(op_proto);
+
+
+  /*for (const std::string& s : op()->input_bns()) {
+    std::cout << s << std::endl;
+  }
+
+  for (const std::string& s : op()->output_bns()) {
+    std::cout << s << std::endl;
+  }*/
+
   const BoxingOpConf& boxing_conf = op()->op_conf().boxing_conf();
   if (boxing_conf.in_box_case() == BoxingOpConf::kConcatBox) {
     fw_func_ = &BoxingKernel<DeviceType::kALL, \
@@ -243,7 +254,11 @@ void BoxingKernel<DeviceType::kALL, floating_point_type>::ConcatBoxForward(
          + rule.src_offset, rule.copy_sz);
     }
   };
-  ctx.device_ctx->AddCallBack(fp);
+#ifdef KSDEBUG
+  ctx.device_ctx->cpu_stream()->Send(fp);
+#else
+  fp();
+#endif
 }
 
 template<typename floating_point_type>
@@ -268,7 +283,11 @@ void BoxingKernel<DeviceType::kALL, floating_point_type>::ConcatBoxBackward(
     }
   };
 
-  ctx.device_ctx->AddCallBack(fp);
+#ifdef KSDEBUG
+  ctx.device_ctx->cpu_stream()->Send(fp);
+#else
+  fp();
+#endif
 }
 
 template<typename floating_point_type>
@@ -290,7 +309,11 @@ void BoxingKernel<DeviceType::kALL, floating_point_type>::AddBoxForward(
       OFBlobAdd(ctx, BnInOp2BlobPtr(input_bns.at(i)), dst_blob);
     }
   };
-  ctx.device_ctx->AddCallBack(fp1);
+#ifdef KSDEBUG
+  ctx.device_ctx->cpu_stream()->Send(fp1);
+#else
+  fp1();
+#endif
       
   // 3. If output box is in clone mode, copy it to remaining boxes.
   const BoxingOpConf& boxing_conf = op()->op_conf().boxing_conf();
@@ -304,7 +327,11 @@ void BoxingKernel<DeviceType::kALL, floating_point_type>::AddBoxForward(
         OFBlobCpy(ctx, dst_blob, BnInOp2BlobPtr(output_bns.at(i)));
       }
     };
-    ctx.device_ctx->AddCallBack(fp2);
+#ifdef KSDEBUG
+    ctx.device_ctx->cpu_stream()->Send(fp2);
+#else
+    fp2();
+#endif
   }
 
 }
@@ -336,7 +363,11 @@ void BoxingKernel<DeviceType::kALL, floating_point_type>::AddBoxBackward(
     }
   };
 
-  ctx.device_ctx->AddCallBack(fp);
+#ifdef KSDEBUG
+  ctx.device_ctx->cpu_stream()->Send(fp);
+#else
+  fp();
+#endif
 }
 
 INSTANTIATE_CPU_KERNEL_CLASS(BoxingKernel);
