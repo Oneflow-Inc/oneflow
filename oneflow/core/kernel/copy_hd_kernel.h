@@ -19,7 +19,7 @@ class CopyHdKernel<DeviceType::kGPU, floating_point_type> final
   CopyHdKernel() = default;
   ~CopyHdKernel() = default;
 
-  void InitFromOpProto(const OperatorProto& op_proto);
+  void InitFromOpProto(const OperatorProto& op_proto) override;
 
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
