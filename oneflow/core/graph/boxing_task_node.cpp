@@ -216,7 +216,6 @@ void BoxingTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
     // out_diff
     for (const std::string& obn : fw_node->op()->output_bns()) {
       std::string odbn = GenDiffBn(obn);
-      const std::string& lbn = fw_node->op()->Lbn4BnInOp(obn);
       auto out_regst = fw_node->GetRegstFromBnInOp(obn);
       auto out_diff_regst = GetBpRegstFromFwRegst(out_regst);
       bp_node->BindBnInOpAndRegst(odbn, out_diff_regst);
