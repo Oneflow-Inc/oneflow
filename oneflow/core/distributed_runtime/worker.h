@@ -17,12 +17,13 @@ class ByteBuffer;
 
 namespace oneflow {
 
+typedef std::function<void(const ::tensorflow::Status&)> StatusCallback;
+
 class Worker {
  public:
   explicit Worker(GrpcChannelCache* channel_cache);
   ~Worker() {};
 
-  typedef std::function<void(const ::tensorflow::Status&)> StatusCallback;
 
   ::tensorflow::Status GetStatus(GetStatusRequest* request,
                                  GetStatusResponse* response);

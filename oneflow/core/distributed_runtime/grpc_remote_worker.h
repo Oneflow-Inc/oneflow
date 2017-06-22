@@ -12,19 +12,13 @@
 
 namespace oneflow {
 
-typedef std::function<void()> Callback;
-
 class GrpcRemoteWorker {
  public:
   GrpcRemoteWorker(std::shared_ptr<::grpc::Channel> channel,
                    ::grpc::CompletionQueue* completion_queue)
-    : channel_(channel),
+    : channel_(std::move(channel)),
       stub_(grpc::WorkerService::NewStub(channel)),
       cq_(completion_queue),
-      getstatus_(Method(GrpcWorkerMethod::kGetStatus)),
-      getmachinedesc_(Method(GrpcWorkerMethod::kGetMachineDesc)),
-      getmemorydesc_(Method(GrpcWorkerMethod::kGetMemoryDesc)),
-      sendtaskgraph_(Method(GrpcWorkerMethod::kSendTaskGraph)),
       sendmessage_(Method(GrpcWorkerMethod::kSendMessage)),
       readdata_(Method(GrpcWorkerMethod::kReadData)) {}
 
@@ -56,14 +50,14 @@ class GrpcRemoteWorker {
 
     void SendMessageAsync(SendMessageRequest* request,
                           SendMessageResponse* response,
-                          Callback done) {
+                          StatusCallback done) {
       IssueRequest(request, response, sendmessage_, std::move(done));
     }
 
     /*
     void ReadDataAsync(ReadDataRequest* request,
                        TensorResponse* response,
-                       Callback done) {
+                       StatusCallback done) {
       ReadDataRequest* req_copy = nullptr;
       req_copy = new ReadDataRequest;
       *req_copy = *request;
@@ -81,17 +75,17 @@ class GrpcRemoteWorker {
     }
     */
 
- private:
+ public:
   std::unique_ptr<grpc::WorkerService::Stub> stub_;
 
   template <class RequestMessage, class ResponseMessage>
-  class RPCState : GrpcClientCQTag {
+  class RPCState final : public GrpcClientCQTag {
    public:
     RPCState(::grpc::ChannelInterface* channel, ::grpc::CompletionQueue* cq, 
              const ::grpc::RpcMethod& method, const RequestMessage& request,
-             Callback done)
+             StatusCallback done)
       : reader_(channel, cq, method, context_, request),
-        done_(done) {}
+        done_(std::move(done)) {}
 
     ~RPCState() {}
 
@@ -100,19 +94,22 @@ class GrpcRemoteWorker {
     }
 
     void OnCompleted(bool ok) {
-      if(ok) done_();
+      if (ok) {
+        done_(FromGrpcStatus(status_));
+        delete this;
+      }
     }
 
     private:
      ::grpc::ClientContext* context_;
-     ::grpc::Status status_;
      ::grpc::ClientAsyncResponseReader<ResponseMessage> reader_;
-     Callback done_;
+     ::grpc::Status status_;
+     StatusCallback done_;
   };  // class RPCState
 
   template <class RequestMessage, class ResponseMessage>
   void IssueRequest(const RequestMessage* request, ResponseMessage* response,
-                    const ::grpc::RpcMethod& method, Callback done) {
+                    const ::grpc::RpcMethod& method, StatusCallback done) {
     auto state = new RPCState<RequestMessage, ResponseMessage>(
                    channel_.get(), cq_, method, *request, std::move(done));
     state->StartRPC(response);
@@ -125,10 +122,6 @@ class GrpcRemoteWorker {
   std::shared_ptr<::grpc::Channel> channel_;
   ::grpc::CompletionQueue* cq_;
 
-  const ::grpc::RpcMethod getstatus_;
-  const ::grpc::RpcMethod getmachinedesc_;
-  const ::grpc::RpcMethod getmemorydesc_;
-  const ::grpc::RpcMethod sendtaskgraph_;
   const ::grpc::RpcMethod sendmessage_;
   const ::grpc::RpcMethod readdata_;
 };//class GrpcRemoteWorker

@@ -43,6 +43,7 @@ TEST(GrpcWorkerServer, test) {
   void* tag;
   bool ok;
   UntypedCall<GrpcWorkerService>::Tag* callback_tag = nullptr;
+
   /*
   // process 1th request from client
   std::cout << "server wait for 1th request......." << std::endl;
@@ -88,9 +89,21 @@ TEST(GrpcWorkerServer, test) {
     worker_service->cq_->Shutdown();
   }
   worker_service->cq_->Next(&tag, &ok);
-  */ 
+
   // process SendTaskGraph from client
   worker_service->EnqueueSendTaskGraphMethod();
+  worker_service->cq_->Next(&tag, &ok);
+  callback_tag = static_cast<UntypedCall<GrpcWorkerService>::Tag*>(tag);
+  if (callback_tag) {
+    callback_tag->OnCompleted(worker_service, ok);
+  } else {
+    worker_service->cq_->Shutdown();
+  }
+  worker_service->cq_->Next(&tag, &ok);
+  */
+
+  // process SendMessage from client
+  worker_service->EnqueueSendMessageMethod();
   worker_service->cq_->Next(&tag, &ok);
   callback_tag = static_cast<UntypedCall<GrpcWorkerService>::Tag*>(tag);
   if (callback_tag) {

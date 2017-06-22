@@ -36,11 +36,12 @@ TEST(GrpcMasterServer, test) {
   std::shared_ptr<::grpc::Channel> dst_channel
     = channel->FindChannel(server_address);
 
-  std::unique_ptr< ::grpc::ServerCompletionQueue> cq_;
+  std::unique_ptr< ::grpc::CompletionQueue> cq_;
   GrpcRemoteWorker* remote_worker = new GrpcRemoteWorker(dst_channel, cq_.get());
   ::tensorflow::Status s;
 
   //Test
+  /*
   oneflow::GetStatusRequest req;
   oneflow::GetStatusResponse resp;
   s = remote_worker->GetStatus(&req, &resp);
@@ -85,17 +86,19 @@ TEST(GrpcMasterServer, test) {
   } else {
     std::cout << "s is not ok " << std::endl;
   }
+  */
 
-  /*
   oneflow::SendMessageRequest req_sendmessage;
   oneflow::SendMessageResponse resp_sendmessage;
-  s = remote_worker->SendMessage(&req_sendmessage, &resp_sendmessage);
-  if (s.ok()) {
-    std::cout<<resp_sendmessage.send_message_test() << std::endl;
-  } else {
-    std::cout << "s is not ok " << std::endl;
-  }
-  */
+  auto cb = [resp_sendmessage, remote_worker](::tensorflow::Status s) {
+    //void* tag;
+    //bool ok;
+    //remote_worker->cq_->Next(&tag, &ok);
+
+    //std::cout<<resp_sendmessage.send_message_test() << std::endl;
+  
+  };
+  remote_worker->SendMessageAsync(&req_sendmessage, &resp_sendmessage, cb);
 
 }  // TEST
 

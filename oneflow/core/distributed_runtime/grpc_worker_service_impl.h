@@ -14,9 +14,6 @@
 #include "oneflow/core/distributed_runtime/grpc_serialization_traits.h"
 #include "oneflow/core/distributed_runtime/worker_service.pb.h"
 
-
-//OF_GRPC_ALLOW_UNLIMITED_MESSAGE_SIZE(oneflow::SendTaskGraphRequest);
-//OF_GRPC_ALLOW_UNLIMITED_MESSAGE_SIZE(oneflow::SendMessageRequest);
 OF_GRPC_ALLOW_UNLIMITED_MESSAGE_SIZE(oneflow::ReadDataResponse);
 
 namespace oneflow {
@@ -74,7 +71,7 @@ enum class GrpcWorkerMethod {
   kGetMemoryDesc,
   kSendTaskGraph,
   kSendMessage,
-  kReadData
+  kReadData,
 };
 static const int kGrpcNumWorkerMethods =
   static_cast<int>(GrpcWorkerMethod::kReadData) + 1;

@@ -92,6 +92,3 @@ WorkerService::AsyncService::~AsyncService() {}
 }  // namespace grpc
 
 }  // namespace oneflow
-
-
-

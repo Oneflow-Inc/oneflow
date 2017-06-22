@@ -73,7 +73,7 @@ Worker::Worker(GrpcChannelCache* channel_cache)
   CommBus* comm_bus = new CommBus; 
   comm_bus->queues_[thread_local_id]->Push(event_message);
   */
-  std::cout << "request from client = " << request->send_message_test() << std::endl;
+  std::cout << "SendMessage request from client = " << request->send_message_test() << std::endl;
   response->set_send_message_test("send_message_test from server");
 
   return ::tensorflow::Status::OK();
