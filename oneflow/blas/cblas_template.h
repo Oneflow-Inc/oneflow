@@ -16,6 +16,15 @@ void cblas_gemm(
     floating_point_type* C, const int ldc) {
 }
 
+template<typename floating_point_type>
+void cblas_axpy(
+    const int N,
+    const floating_point_type alpha,
+    const floating_point_type *x, const int incx,
+    floating_point_type *y, const int incy) {
+  LOG(FATAL) << "floating_point_type should be float or double";
+}
+
 } // namespace oneflow
 
 #endif // ONEFLOW_BLAS_CBLAS_TEMPLATE_H_
