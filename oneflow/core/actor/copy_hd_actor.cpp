@@ -61,20 +61,20 @@ void CopyHdActor::TryWardKernelAndSendMsg() {
     CHECK_EQ(regst_wp->piece_id(), expected_piece_id());
     AsyncWardKernel(GenDefaultKernelCtx(),
         [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
-        Regst* regst = GetCurWriteableRegst(regst_desc_id);
-        if (regst == nullptr) {
+      Regst* regst = GetCurWriteableRegst(regst_desc_id);
+      if (regst == nullptr) {
         CHECK_EQ(regst_desc_id, waiting_in_regst_.front()->regst_desc_id());
         return waiting_in_regst_.front();
-        } else {
+      } else {
         return std::make_shared<LocalRegstWarpper> (regst);
-        }
-        });
+      }
+    });
     ForEachCurWriteableRegst([&regst_wp](Regst* regst) {
-        regst->set_piece_id(regst_wp->piece_id());
-        regst->set_model_version_id(regst_wp->model_version_id());
-        });
+      regst->set_piece_id(regst_wp->piece_id());
+      regst->set_model_version_id(regst_wp->model_version_id());
+    });
     AsyncSendReadableRegstMsg();
-    AsyncSendRegstMsgToProducer(waiting_in_regst_.front());
+    AsyncSendRegstMsgToProducer(regst_wp);
     waiting_in_regst_.pop();
   }
 }
