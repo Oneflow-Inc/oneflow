@@ -8,7 +8,7 @@ void CopyActor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
 
 int CopyActor::ProcessMsg(const ActorMsg& msg) {
   if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()) != 0) {
-    waiting_in_regst_.push(std::move(msg.regst_warpper()));
+    waiting_in_regst_.push(msg.regst_warpper());
   }
   if (!waiting_in_regst_.empty() && IsWriteReady()) {
     uint64_t piece_id = expected_piece_id();
