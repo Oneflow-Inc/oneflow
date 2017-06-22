@@ -11,7 +11,9 @@ public:
   OF_DISALLOW_COPY_AND_MOVE(PersistentOutStream);
   PersistentOutStream() = delete;
   ~PersistentOutStream() {
-    file_->Close();
+    if(file_->Close().code() != tensorflow::error::OK) {
+      LOG(FATAL) << "can't close file of out_stream";
+    }
   }
 
   PersistentOutStream(const std::string& file_path);
