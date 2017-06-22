@@ -11,7 +11,7 @@ cublasStatus_t cublas_axpy(cublasHandle_t handle, int n,
                            const T *alpha,
                            const T *x, int incx,
                            T *y, int incy){
-  LOG(FATAL) << "floating_point_type should be flaot or double";
+  LOG(FATAL) << "floating_point_type should be float or double";
 }
 
 template<>
