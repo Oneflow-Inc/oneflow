@@ -1,7 +1,6 @@
 #ifndef ONEFLOW_CORE_GRAPH_COMP_TASK_NODE_H_
 #define ONEFLOW_CORE_GRAPH_COMP_TASK_NODE_H_
 
-#include <algorithm>
 #include "oneflow/core/graph/task_node.h"
 
 namespace oneflow {

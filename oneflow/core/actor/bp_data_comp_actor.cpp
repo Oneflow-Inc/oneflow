@@ -4,16 +4,23 @@
 
 namespace oneflow {
 
-void BpDataCompActor::Init(const TaskProto& task_proto) {
-  Actor::Init(task_proto);
+void BpDataCompActor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
+  Actor::Init(task_proto, thread_ctx);
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
   activation_regst_desc_id_ = RegstDescId4Name("activation");
   data_tmp_regst_desc_id_ = RegstDescId4Name("data_tmp");
   expected_model_version_id_ = 0;
   num_of_read_empty_ = 6;
-  num_of_read_done_ = 0;
-  cur_msg_handle_ = &BpDataCompActor::HandleInitDeviceCtx;
+  num_of_eord_ = 0;
+  if (thread_ctx.cpu_stream) {
+    mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
+  } else {
+    mut_device_ctx().reset(new CudaDeviceCtx(cuda_handle_.cuda_stream(),
+                                             cuda_handle_.cublas_handle(),
+                                             cuda_handle_.cudnn_handle()));
+  }
+  cur_msg_handle_ = &BpDataCompActor::HandleBpComp;
 }
 
 bool BpDataCompActor::IsReadReady() {
@@ -29,33 +36,15 @@ bool BpDataCompActor::IsReadReady() {
   return !num_of_read_empty_;
 }
 
-int BpDataCompActor::ProcessMsg(const ActorMsg& msg,
-                                const ThreadContext& thread_ctx) {
-  return (this->*cur_msg_handle_)(msg, thread_ctx);
+int BpDataCompActor::ProcessMsg(const ActorMsg& msg) {
+  return (this->*cur_msg_handle_)(msg);
 }
 
-int BpDataCompActor::HandleInitDeviceCtx(
-    const ActorMsg& msg,
-    const ThreadContext& thread_ctx) {
-  CHECK_EQ(msg.actor_cmd(), ActorCmd::kInitDeviceCtx);
-  if (thread_ctx.cpu_stream) {
-    mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
-  } else {
-    mut_device_ctx().reset(new CudaDeviceCtx(cuda_handle_.cuda_stream(),
-                                             cuda_handle_.cublas_handle(),
-                                             cuda_handle_.cudnn_handle()));
-  }
-  cur_msg_handle_ = &BpDataCompActor::HandleBpComp;
-  return 0;
-}
-
-int BpDataCompActor::HandleBpComp(
-    const ActorMsg& msg,
-    const ThreadContext& thread_ctx) {
+int BpDataCompActor::HandleBpComp(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK_EQ(msg.actor_cmd(), ActorCmd::kOneRegstDescDone);
-    num_of_read_done_ += 1;
-    if (num_of_read_done_ == 6) {
+    CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
+    num_of_eord_ += 1;
+    if (num_of_eord_ == 6) {
       cur_msg_handle_ = &BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg;
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
@@ -76,9 +65,7 @@ int BpDataCompActor::HandleBpComp(
   return 0;
 }
 
-int BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg(
-    const ActorMsg& msg,
-    const ThreadContext& thread_ctx) {
+int BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
   TryWardKernelAndSendMsg();
   if (read_regst_.at(activation_regst_desc_id_).empty()) {
@@ -88,7 +75,7 @@ int BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg(
     }
     AsyncSendRegstMsgToProducer(read_regst_.at(model_tmp_regst_desc_id_).front());
     read_regst_.at(model_tmp_regst_desc_id_).pop();
-    AsyncSendRegstDescDoneMsgForAllProducedRegstDesc();
+    AsyncSendEORDMsgForAllProducedRegstDesc();
     num_of_read_empty_ = 6;
     if (total_reading_cnt() == 0) {
       cur_msg_handle_ = nullptr;
@@ -101,9 +88,7 @@ int BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg(
   return 0;
 }
   
-int BpDataCompActor::HandleWaitUntilReadingCntEqualZero(
-    const ActorMsg& msg,
-    const ThreadContext& thread_ctx) {
+int BpDataCompActor::HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
   if (total_reading_cnt() == 0) {
     cur_msg_handle_ = nullptr;

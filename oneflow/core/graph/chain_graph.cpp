@@ -1,6 +1,4 @@
 #include "oneflow/core/graph/chain_graph.h"
-#include "glog/logging.h"
-#include <list>
 
 namespace oneflow {
 
@@ -299,13 +297,13 @@ void ChainGraph::SetInOutLbn4AllChainNodeInDataTaskGraph() {
     auto& produced_lbns = chain2produced_lbns[cur_node];
     for (std::shared_ptr<const Operator> op : cur_node->op_vec()) {
       for (const std::string& obn : op->output_bns()) {
-        std::string lbn = op->Lbn4BnInOp(obn);
+        const std::string& lbn = op->Lbn4BnInOp(obn);
         produced_lbns.insert(lbn);
       }
     }
     for (std::shared_ptr<const Operator> op : cur_node->op_vec()) {
       for (const std::string& ibn : op->input_bns()) {
-        std::string lbn = op->Lbn4BnInOp(ibn);
+        const std::string& lbn = op->Lbn4BnInOp(ibn);
         if (produced_lbns.find(lbn) == produced_lbns.end()) {
           cur_node->mut_input_lbns().push_back(lbn);
         }

@@ -4,10 +4,8 @@
 #ifdef _MSC_VER
 #include <io.h>
 #endif
-#include <string>
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/operator/operator.pb.h"
+#include "google/protobuf/map.h"
 #include "google/protobuf/message.h"
 #include "google/protobuf/descriptor.h"
 
@@ -78,6 +76,17 @@ template<typename K, typename V>
 google::protobuf::Map<K, V> HashMap2PbMap(const HashMap<K, V>& hash_map) {
   using RetType = google::protobuf::Map<std::string, std::string>;
   return RetType(hash_map.begin(), hash_map.end());
+}
+
+// operator
+inline bool operator == (const google::protobuf::MessageLite& lhs,
+                         const google::protobuf::MessageLite& rhs) {
+  return lhs.SerializeAsString() == rhs.SerializeAsString();
+}
+
+inline bool operator != (const google::protobuf::MessageLite& lhs,
+                         const google::protobuf::MessageLite& rhs) {
+  return !(lhs == rhs);
 }
 
 } // namespace caffe

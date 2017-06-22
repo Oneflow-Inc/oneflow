@@ -22,22 +22,18 @@ class JobDesc final {
   const DLNetConf& train_dlnet_conf() const { return train_dlnet_conf_; }
   const Resource& resource() const { return resource_; }
   const Strategy& strategy() const { return strategy_; }
+  const std::string& md_load_snapshot_path() { return md_load_snapshot_path_; }
+  const std::string& md_save_snapshots_path() { return md_save_snapshots_path_; }
+  int32_t piece_size() const { return piece_size_; }
+  int32_t num_of_piece_in_batch() const { return num_of_pieces_in_batch_; }
+  bool is_train() const { return is_train_; }
   const FloatingPointType& floating_point_type() const { 
     return floating_point_type_; 
   }
-  const std::string& md_load_snapshot_path() { return md_load_snapshot_path_; }
-  const std::string& md_save_snapshots_path() { return md_save_snapshots_path_; }
-  bool is_train() const { return is_train_; }
-
-  uint32_t piece_size() const { return piece_size_; }
-  void set_piece_size(uint32_t val) { piece_size_ = val; }
-  
-  uint32_t num_of_piece_in_batch() const { return num_of_piece_in_batch_; }
-  void set_num_of_piece_in_batch(uint32_t val) { num_of_piece_in_batch_ = val; }
-
-  uint32_t staleness() const { return staleness_; }
-
   int32_t num_of_batches_in_snapshot() const { return num_of_batches_in_snapshot_; }
+  int32_t staleness() const { return staleness_; }
+  int64_t total_batch_num() const { return total_batch_num_; }
+
  private:
   JobDesc() = default;
 
@@ -46,12 +42,14 @@ class JobDesc final {
   Strategy strategy_;
   std::string md_load_snapshot_path_;
   std::string md_save_snapshots_path_;
-  uint32_t piece_size_;
-  uint32_t num_of_piece_in_batch_;
-  uint32_t staleness_;
+  int32_t piece_size_;
+  int32_t num_of_pieces_in_batch_;
   bool is_train_;
   FloatingPointType floating_point_type_;
   int32_t num_of_batches_in_snapshot_;
+  int32_t staleness_;
+  int64_t total_batch_num_;
+
 };
 
 } // namespace oneflow

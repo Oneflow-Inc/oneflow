@@ -1,7 +1,6 @@
 #ifndef ONEFLOW_CORE_REGISTER_BLOB_H_
 #define ONEFLOW_CORE_REGISTER_BLOB_H_
 
-#include <functional>
 #include "oneflow/core/common/shape.h"
 
 namespace oneflow {

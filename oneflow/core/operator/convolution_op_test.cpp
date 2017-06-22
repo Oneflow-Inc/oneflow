@@ -1,6 +1,4 @@
 #include "oneflow/core/operator/convolution_op.h"
-#include "oneflow/core/operator/operator_manager.h"
-#include "gtest/gtest.h"
 
 namespace oneflow {
 

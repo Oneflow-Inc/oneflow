@@ -1,6 +1,5 @@
 #include "oneflow/core/persistence/snapshot_manager.h"
 #include "tensorflow/core/lib/io/path.h"
-#include "tensorflow/core/platform/env.h"
 #include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {

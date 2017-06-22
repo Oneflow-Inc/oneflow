@@ -14,6 +14,7 @@ find_package(CUDA REQUIRED)
 find_package(CuDNN REQUIRED)
 
 find_package(BLAS REQUIRED)
+message(STATUS "Blas Lib: " ${BLAS_LIBRARIES})
 
 set(oneflow_third_party_libs
     ${tensorflow_STATIC_LIBRARIES}

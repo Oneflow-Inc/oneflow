@@ -1,8 +1,7 @@
 #ifndef ONEFLOW_CORE_OPERATOR_POOLING_OP_H_
 #define ONEFLOW_CORE_OPERATOR_POOLING_OP_H_
 
-#include <string>
-#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/operator/operator_manager.h"
 
 namespace oneflow {
 

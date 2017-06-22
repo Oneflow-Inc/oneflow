@@ -1,18 +1,13 @@
 #ifndef ONEFLOW_CORE_ACTOR_ACTOR_H_
 #define ONEFLOW_CORE_ACTOR_ACTOR_H_
 
-#include <queue>
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/cuda_stream_handle.h"
-#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_manager.h"
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/actor/cpu_device_context.h"
 #include "oneflow/core/actor/cuda_device_context.h"
 #include "oneflow/core/job/task.pb.h"
-#include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/actor/actor_message_bus.h"
-#include "oneflow/core/register/register.h"
 #include "oneflow/core/register/local_register_warpper.h"
 #include "oneflow/core/register/remote_register_warpper.h"
 #include "oneflow/core/register/register_manager.h"
@@ -26,10 +21,10 @@ class Actor {
   OF_DISALLOW_COPY_AND_MOVE(Actor);
   virtual ~Actor() = default;
 
-  virtual void Init(const TaskProto& task_proto) = 0;
+  virtual void Init(const TaskProto&, const ThreadCtx&) = 0;
   // 1: success, and actor finish
   // 0: success, and actor not finish
-  virtual int ProcessMsg(const ActorMsg&, const ThreadContext& ctx) = 0;
+  virtual int ProcessMsg(const ActorMsg&) = 0;
 
   uint64_t actor_id() const { return actor_id_; }
  
@@ -53,8 +48,8 @@ class Actor {
       const KernelCtx&,
       std::function<std::shared_ptr<RegstWarpper>(uint64_t)> Regst4RegstDescId);
   void AsyncSendReadableRegstMsg();
-  void AsyncSendRegstDescDoneMsgToSubscribers(uint64_t regst_desc_id);
-  void AsyncSendRegstDescDoneMsgForAllProducedRegstDesc();
+  void AsyncSendEORDMsgToSubscribers(uint64_t regst_desc_id);
+  void AsyncSendEORDMsgForAllProducedRegstDesc();
   void AsyncSendRegstMsgToProducer(const std::shared_ptr<RegstWarpper>&);
   void AsyncDo(std::function<void()>);
   int TryUpdtStateAsProducedRegst(Regst* regst);

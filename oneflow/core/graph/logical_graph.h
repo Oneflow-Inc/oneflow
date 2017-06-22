@@ -1,7 +1,6 @@
 #ifndef ONEFLOW_CORE_GRAPH_LOGICAL_GRAPH_H_
 #define ONEFLOW_CORE_GRAPH_LOGICAL_GRAPH_H_
 
-#include <memory>
 #include "oneflow/core/graph/graph.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/dlnet_conf.pb.h"

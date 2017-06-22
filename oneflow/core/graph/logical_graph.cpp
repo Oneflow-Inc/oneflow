@@ -1,6 +1,5 @@
 #include "oneflow/core/graph/logical_graph.h"
 #include <iostream>
-#include "glog/logging.h"
 #include "oneflow/core/operator/operator_manager.h"
 
 namespace oneflow {
@@ -30,7 +29,7 @@ void LogicalGraph::NaiveBuildGraphStruct(
     cur_node->mut_op() = OpMgr::Singleton().ConstructOp(cur_op_conf);
     // Connect input node
     for (const std::string& ibn : cur_node->op()->input_bns()) {
-      std::string lbn = cur_node->op()->Lbn4BnInOp(ibn);
+      const std::string& lbn = cur_node->op()->Lbn4BnInOp(ibn);
       LogicalNode* pred_node = lbn2producer.at(lbn);
       LogicalEdge* edge = NewEdge();
       CHECK(edge2lbn->emplace(edge, lbn).second);
@@ -39,7 +38,7 @@ void LogicalGraph::NaiveBuildGraphStruct(
     }
     // Construct output
     for (const std::string& obn : cur_node->op()->output_bns()) {
-      std::string lbn = cur_node->op()->Lbn4BnInOp(obn);
+      const std::string& lbn = cur_node->op()->Lbn4BnInOp(obn);
       CHECK(lbn2producer.emplace(lbn, cur_node).second);
     }
   }
@@ -114,7 +113,7 @@ void LogicalGraph::AddOneCloneNode(
   CHECK_EQ(clone_node->op()->output_bns().size(), clone_info.edges.size());
   for (size_t i = 0; i < clone_info.edges.size(); ++i) {
     const std::string& obn = clone_node->op()->output_bns().at(i);
-    std::string lbn = clone_node->op()->Lbn4BnInOp(obn);
+    const std::string& lbn = clone_node->op()->Lbn4BnInOp(obn);
     LogicalEdge* edge = clone_info.edges.at(i);
     const std::string& ibn = edge2ibn.at(edge);
     LogicalNode* dst_node = edge->dst_node();

@@ -1,8 +1,6 @@
 #include "oneflow/core/graph/boxing_task_node.h"
-#include <algorithm>
 #include "oneflow/core/operator/operator_manager.h"
 #include "oneflow/core/operator/boxing_op.h"
-#include "oneflow/core/graph/comp_task_node.h"
 
 namespace oneflow {
 
@@ -204,7 +202,7 @@ void BoxingTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
     // in_diff
     for (const std::string& ibn : fw_node->op()->input_bns()) {
       std::string idbn = GenDiffBn(ibn);
-      std::string lbn = fw_node->op()->Lbn4BnInOp(ibn);
+      const std::string& lbn = fw_node->op()->Lbn4BnInOp(ibn);
       auto in_regst = fw_node->GetRegstFromBnInOp(ibn);
       auto in_diff_regst = GetBpRegstFromFwRegst(in_regst);
       if (!in_diff_regst) {
@@ -218,14 +216,14 @@ void BoxingTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
     // out_diff
     for (const std::string& obn : fw_node->op()->output_bns()) {
       std::string odbn = GenDiffBn(obn);
-      std::string lbn = fw_node->op()->Lbn4BnInOp(obn);
+      const std::string& lbn = fw_node->op()->Lbn4BnInOp(obn);
       auto out_regst = fw_node->GetRegstFromBnInOp(obn);
       auto out_diff_regst = GetBpRegstFromFwRegst(out_regst);
       bp_node->BindBnInOpAndRegst(odbn, out_diff_regst);
     }
     // data tmp
     for (const std::string& dtbn : fw_node->op()->data_tmp_bns()) {
-      std::string lbn = fw_node->op()->Lbn4BnInOp(dtbn);
+      const std::string& lbn = fw_node->op()->Lbn4BnInOp(dtbn);
       auto bp_middle_regst = GetProducedRegstDesc("middle");
       bp_middle_regst->EnrollLbn(lbn);
       bp_node->BindBnInOpAndRegst(dtbn, bp_middle_regst);

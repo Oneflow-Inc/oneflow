@@ -1,9 +1,6 @@
 #ifndef ONEFLOW_CORE_OPERATOR_OPERATOR_MANAGER_H_
 #define ONEFLOW_CORE_OPERATOR_OPERATOR_MANAGER_H_
 
-#include <iostream>
-#include <functional>
-#include <list>
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 

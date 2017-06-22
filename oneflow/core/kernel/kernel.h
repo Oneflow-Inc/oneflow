@@ -1,8 +1,6 @@
 #ifndef ONEFLOW_CORE_KERNEL_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_KERNEL_H_
 
-#include <memory>
-#include <functional>
 #include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/job/job_conf.pb.h"
@@ -10,10 +8,10 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/operator_manager.h"
 #include "oneflow/core/operator/operator.pb.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/kernel/kernel_context.h"
-extern "C" {
-#include "oneflow/core/common/cblas.h"
-}
+#include "oneflow/blas/cblas_template.h"
+#include "oneflow/blas/cublas_template.h"
 
 namespace oneflow {
 

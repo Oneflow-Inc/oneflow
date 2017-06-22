@@ -1,5 +1,4 @@
 #include "gflags/gflags.h"
-#include "glog/logging.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/graph/model_save_comp_task_node.h"
@@ -65,13 +64,11 @@ void Compiler::ForEachTaskNode(std::function<void(TaskNode*)> func) {
   }
 }
 
-// TODO: inference "piece_size" and "register_num for each register_desc"
+// TODO: inference "register_num for each register_desc"
 void Compiler::Compile(const JobConf& job_conf,
                        const std::string& plan_filepath) {
   JobDesc::Singleton().InitFromJobConf(job_conf);
-  JobDesc::Singleton().set_piece_size(50);
   IDMgr::Singleton().InitFromResource(JobDesc::Singleton().resource());
-
   BuildGraphs();
   InferShape4Regsts();
   EraseMeaningLessRegsts();

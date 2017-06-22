@@ -1,10 +1,6 @@
 #ifndef ONEFLOW_CORE_KERNEL_KERNEL_MANAGER_H_
 #define ONEFLOW_CORE_KERNEL_KERNEL_MANAGER_H_
 
-#include <utility>
-#include <memory>
-#include <string>
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/job/plan.pb.h"
