@@ -10,17 +10,13 @@ void CopyHdActor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx)
   mut_device_ctx().reset(new CudaDeviceCtx(thread_ctx.copy_hd_cuda_stream,
                                            nullptr,
                                            nullptr));
-  cur_msg_handle_ = &CopyHdActor::HandleCopyHd;
-}
-
-int CopyHdActor::ProcessMsg(const ActorMsg& msg) {
-  return (this->*cur_msg_handle_)(msg);
+  OF_SET_MSG_HANDLE(&CopyHdActor::HandleCopyHd);
 }
 
 int CopyHdActor::HandleCopyHd(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
-    cur_msg_handle_ = &CopyHdActor::HandleCopyHdWhenNoReadableRegstMsg;
+    OF_SET_MSG_HANDLE(&CopyHdActor::HandleCopyHdWhenNoReadableRegstMsg);
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()) != 0) {
       waiting_in_regst_.push(msg.regst_warpper());
@@ -36,10 +32,10 @@ int CopyHdActor::HandleCopyHdWhenNoReadableRegstMsg(const ActorMsg& msg) {
   if (waiting_in_regst_.empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
     if (total_reading_cnt() == 0) {
-      cur_msg_handle_ = nullptr;
+      OF_SET_MSG_HANDLE(nullptr);
       return 1;
     } else {
-      cur_msg_handle_ = &CopyHdActor::HandleWaitUntilReadingCntEqualZero;
+      OF_SET_MSG_HANDLE(&CopyHdActor::HandleWaitUntilReadingCntEqualZero);
       return 0;
     }
   }
@@ -49,7 +45,7 @@ int CopyHdActor::HandleCopyHdWhenNoReadableRegstMsg(const ActorMsg& msg) {
 int CopyHdActor::HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
   if (total_reading_cnt() == 0) {
-    cur_msg_handle_ = nullptr;
+    OF_SET_MSG_HANDLE(nullptr);
     return 1;
   }
   return 0;

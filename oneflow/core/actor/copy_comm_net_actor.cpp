@@ -8,17 +8,13 @@ void CopyCommNetActor::Init(const TaskProto& task_proto, const ThreadCtx& thread
   Actor::Init(task_proto, thread_ctx);
   CHECK(thread_ctx.cpu_stream);
   mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
-  cur_msg_handle_ = &CopyCommNetActor::HandleCopyCommNet;
-}
-
-int CopyCommNetActor::ProcessMsg(const ActorMsg& msg) {
-  return (this->*cur_msg_handle_)(msg);
+  OF_SET_MSG_HANDLE(&CopyCommNetActor::HandleCopyCommNet);
 }
 
 int CopyCommNetActor::HandleCopyCommNet(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
-    cur_msg_handle_ = &CopyCommNetActor::HandleCopyCommNetWhenNoReadableRegstMsg;
+    OF_SET_MSG_HANDLE(&CopyCommNetActor::HandleCopyCommNetWhenNoReadableRegstMsg);
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     auto regst_wp = msg.regst_warpper();
     if (TryUpdtStateAsProducedRegst(regst_wp->regst_raw_ptr()) != 0) {
@@ -35,10 +31,10 @@ int CopyCommNetActor::HandleCopyCommNetWhenNoReadableRegstMsg(const ActorMsg& ms
   if (piece_id2waiting_in_regst_.empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
     if (total_reading_cnt() == 0) {
-      cur_msg_handle_ = nullptr;
+      OF_SET_MSG_HANDLE(nullptr);
       return 1;
     } else {
-      cur_msg_handle_ = &CopyCommNetActor::HandleWaitUntilReadingCntEqualZero;
+      OF_SET_MSG_HANDLE(&CopyCommNetActor::HandleWaitUntilReadingCntEqualZero);
       return 0;
     }
   }
@@ -48,7 +44,7 @@ int CopyCommNetActor::HandleCopyCommNetWhenNoReadableRegstMsg(const ActorMsg& ms
 int CopyCommNetActor::HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
   if (total_reading_cnt() == 0) {
-    cur_msg_handle_ = nullptr;
+    OF_SET_MSG_HANDLE(nullptr);
     return 1;
   }
   return 0;

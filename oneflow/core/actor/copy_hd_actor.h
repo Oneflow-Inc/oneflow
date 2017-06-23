@@ -12,7 +12,6 @@ public:
   ~CopyHdActor() = default;
 
   void Init(const TaskProto&, const ThreadCtx&) override;
-  int ProcessMsg(const ActorMsg&) override;
 
 private:
   int HandleCopyHd(const ActorMsg&);
@@ -20,7 +19,6 @@ private:
   int HandleWaitUntilReadingCntEqualZero(const ActorMsg&);
 
   void TryWardKernelAndSendMsg();
-  int (CopyHdActor::*cur_msg_handle_)(const ActorMsg&);
   std::queue<std::shared_ptr<RegstWarpper>> waiting_in_regst_;
 
 };

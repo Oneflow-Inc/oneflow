@@ -12,7 +12,6 @@ public:
   ~CopyCommNetActor() = default;
 
   void Init(const TaskProto&, const ThreadCtx&) override;
-  int ProcessMsg(const ActorMsg&) override;
 
 private:
   int HandleCopyCommNet(const ActorMsg&);
@@ -20,7 +19,6 @@ private:
   int HandleWaitUntilReadingCntEqualZero(const ActorMsg&);
 
   void TryWardKernelAndSendMsg();
-  int (CopyCommNetActor::*cur_msg_handle_)(const ActorMsg&);
   HashMap<int64_t, std::shared_ptr<RegstWarpper>> piece_id2waiting_in_regst_;
 
 };
