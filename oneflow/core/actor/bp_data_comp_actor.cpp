@@ -20,7 +20,7 @@ void BpDataCompActor::Init(const TaskProto& task_proto, const ThreadCtx& thread_
                                              cuda_handle_.cublas_handle(),
                                              cuda_handle_.cudnn_handle()));
   }
-  cur_msg_handle_ = &BpDataCompActor::HandleBpComp;
+  OF_SET_MSG_HANDLE(&BpDataCompActor::HandleBpComp);
 }
 
 bool BpDataCompActor::IsReadReady() {
@@ -36,16 +36,12 @@ bool BpDataCompActor::IsReadReady() {
   return !num_of_read_empty_;
 }
 
-int BpDataCompActor::ProcessMsg(const ActorMsg& msg) {
-  return (this->*cur_msg_handle_)(msg);
-}
-
 int BpDataCompActor::HandleBpComp(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     num_of_eord_ += 1;
     if (num_of_eord_ == 6) {
-      cur_msg_handle_ = &BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg;
+      OF_SET_MSG_HANDLE(&BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg);
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()) != 0) {
@@ -78,25 +74,16 @@ int BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg(const ActorMsg& msg) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
     num_of_read_empty_ = 6;
     if (total_reading_cnt() == 0) {
-      cur_msg_handle_ = nullptr;
+      OF_SET_MSG_HANDLE(nullptr);
       return 1;
     } else {
-      cur_msg_handle_ = &BpDataCompActor::HandleWaitUntilReadingCntEqualZero;
+      OF_SET_MSG_HANDLE(nullptr);
       return 0;
     }
   }
   return 0;
 }
   
-int BpDataCompActor::HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
-  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
-  if (total_reading_cnt() == 0) {
-    cur_msg_handle_ = nullptr;
-    return 1;
-  }
-  return 0;
-}
-
 void BpDataCompActor::TryWardKernelAndSendMsg() {
   while (IsReadReady() && IsWriteReady()) {
     int64_t cur_model = read_regst_.at(model_regst_desc_id_).front()->model_version_id();

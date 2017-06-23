@@ -8,11 +8,7 @@ void MdSaveCompActor::Init(const TaskProto& task_proto, const ThreadCtx& thread_
   model_regst_desc_id_ = RegstDescId4Name("model");
   CHECK(thread_ctx.cpu_stream);
   mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
-  cur_msg_handle_ = &MdSaveCompActor::HandleSaveModel;
-}
-
-int MdSaveCompActor::ProcessMsg(const ActorMsg& actor_msg) {
-  return (this->*cur_msg_handle_)(actor_msg);
+  OF_SET_MSG_HANDLE(&MdSaveCompActor::HandleSaveModel);
 }
 
 int MdSaveCompActor::HandleSaveModel(const ActorMsg& actor_msg) {

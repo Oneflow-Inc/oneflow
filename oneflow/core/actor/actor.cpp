@@ -60,6 +60,15 @@ KernelCtx Actor::GenDefaultKernelCtx() const {
   return ctx;
 }
 
+int Actor::HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
+  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
+  if (total_reading_cnt_ == 0) {
+    msg_handle_ = nullptr;
+    return 1;
+  }
+  return 0;
+}
+
 void Actor::AsyncWardKernel(
     const KernelCtx& kernel_ctx,
     std::function<std::shared_ptr<RegstWarpper>(int64_t)> Regst4RegstDescId) {

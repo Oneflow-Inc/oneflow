@@ -12,18 +12,15 @@ public:
   ~FwDataCompActor() = default;
 
   void Init(const TaskProto&, const ThreadCtx&) override;
-  int ProcessMsg(const ActorMsg&) override;
 
 private:
   int HandleFwComp(const ActorMsg&);
   int HandleFwCompWhenNoReadableRegstMsg(const ActorMsg&);
-  int HandleWaitUntilReadingCntEqualZero(const ActorMsg&);
 
   bool IsReadReady();
   void TryWardKernelAndSendMsg();
 
   CudaStreamHandle cuda_handle_;
-  int (FwDataCompActor::*cur_msg_handle_)(const ActorMsg&);
   int num_of_eord_;
   int64_t expected_model_version_id_;
   int64_t model_regst_desc_id_;

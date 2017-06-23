@@ -12,18 +12,15 @@ public:
   ~BpDataCompActor() = default;
 
   void Init(const TaskProto&, const ThreadCtx&) override;
-  int ProcessMsg(const ActorMsg&) override;
 
 private:
   int HandleBpComp(const ActorMsg&);
   int HandleBpCompWhenNoReadableRegstMsg(const ActorMsg&);
-  int HandleWaitUntilReadingCntEqualZero(const ActorMsg&);
 
   bool IsReadReady();
   void TryWardKernelAndSendMsg();
 
   CudaStreamHandle cuda_handle_;
-  int (BpDataCompActor::*cur_msg_handle_)(const ActorMsg&);
   int num_of_read_empty_;
   int num_of_eord_;
   int64_t expected_model_version_id_;
