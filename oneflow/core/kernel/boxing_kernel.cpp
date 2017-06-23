@@ -1,7 +1,7 @@
 #include "oneflow/core/kernel/boxing_kernel.h"
 #include <string>
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/blas/cblas.h"
+#include "oneflow/core/blas/cblas.h"
 
 #define BOXING_KERNEL_TEST_DEBUG
 
@@ -113,7 +113,7 @@ void BoxingKernel<DeviceType::kALL, floating_point_type>::InitFromOpProto(
 template<typename floating_point_type>
 void BoxingKernel<DeviceType::kALL, floating_point_type>::InferCopyRules(
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-    // This box kernel MUST be concat ==> (split/clone) box kernel
+    // This box kernel MUST be 'concat==>(split/clone)' box kernel
     // Infer fw copy rules
     InferCopyRulesFromBns(BnInOp2BlobPtr, op()->input_bns(), 
         op()->output_bns(), fw_copy_rules); 
@@ -202,8 +202,9 @@ void BoxingKernel<DeviceType::kALL, \
     ++dst_iter;
   }
 
-  ASSERT_EQ(dst_iter, dst_bn2slice.end());
   ASSERT_EQ(src_iter, src_bn2slice.end());
+  ASSERT_TRUE((dst_iter==dst_bn2slice.end()) || \
+      --dst_iter==dst_bn2slice.begin());
   ASSERT_EQ(dst_offset, dst_cap);
   ASSERT_EQ(src_offset, src_cap);
 }
@@ -347,7 +348,7 @@ template<typename floating_point_type>
 void BoxingKernel<DeviceType::kALL, floating_point_type>::AddBoxBackward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  Blob* out_diff = BnInOp2BlobPtr(op()->output_diff_bns().front());
+  const Blob* out_diff = BnInOp2BlobPtr(op()->output_diff_bns().front());
   const std::vector<std::string>& idbns = op()->input_diff_bns();
   Blob* fst_in_diff = BnInOp2BlobPtr(idbns.front());
 
