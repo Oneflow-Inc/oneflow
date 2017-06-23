@@ -29,6 +29,9 @@ class BoxingKernel<DeviceType::kALL, floating_point_type> :
   void Backward(const KernelCtx&,
                 std::function<Blob*(const std::string&)>) const override;
  protected:
+  // Mark: seems inappropriate to use ctx into OF* fucntions. However, since 
+  // it is a virtual function, we do not know whether it will be excecuted on
+  // cpu or gpu yet.
   virtual void OFMemcpy(const KernelCtx& ctx, \
       void* dst, const void* src, size_t sz) = 0;
   virtual void OFBlobCpy(const KernelCtx& ctx, const Blob* a, Blob* b) = 0;
@@ -57,7 +60,7 @@ class BoxingKernel<DeviceType::kALL, floating_point_type> :
     uint64_t copy_sz; 
   };
   void InferCopyRules(std::function<Blob*(const std::string&)>) const;
-  void ConstructCopyRulesFromShape(
+  void ConstructCopyRulesFromSlice(
       std::map<const std::string*, int64_t>& src_bn2slice, 
       std::map<const std::string*, int64_t>& dst_bn2slice,
       int64_t seg_cnt, int64_t slice_sz, int concat_axis, 
@@ -73,17 +76,21 @@ class BoxingKernel<DeviceType::kALL, floating_point_type> :
     std::vector<copy_rule>& copy_rules
     ) const;
 
+  // Forward function for Add box
   void AddBoxForward(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)>) const;
-
+  // Backward function for Add box
   void AddBoxBackward(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)>) const;
 
+  // Forward function for Concat box 
   void ConcatBoxForward(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)>) const;
+
+  // Backward function for Concat-split box && concat-clone box
   void ConcatBoxBackward(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)>) const;
@@ -108,6 +115,7 @@ class BoxingKernel<DeviceType::kCPU, floating_point_type> final :
   BoxingKernel() = default;
   ~BoxingKernel() = default;
 
+  // implementations of math virtual functions on cpu
   void OFMemcpy(const KernelCtx& ctx, \
       void* dst, const void* src, size_t sz) override;
   void OFBlobCpy(const KernelCtx& ctx, const Blob* a, Blob* b) override;
@@ -133,6 +141,7 @@ class BoxingKernel<DeviceType::kGPU, floating_point_type> final :
   BoxingKernel() = default;
   ~BoxingKernel() = default;
 
+  // implementations of math virtual functions on gpu
   void OFMemcpy(const KernelCtx& ctx, \
       void* dst, const void* src, size_t sz) override;
   void OFBlobCpy(const KernelCtx& ctx, const Blob* a, Blob* b) override;
