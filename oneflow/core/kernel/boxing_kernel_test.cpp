@@ -1,9 +1,9 @@
+#include <iostream>
 #include "oneflow/core/kernel/boxing_kernel.h"
 #include "oneflow/core/operator/operator.pb.h"
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/operator/boxing_op.h"
 #include "oneflow/core/actor/cuda_device_context.h"
-#include <iostream>
 
 namespace oneflow {
 
@@ -66,20 +66,20 @@ BoxingKernel<DeviceType::kCPU, float>* BuildBoxingKernel(
 }
 
 std::function<Blob*(const std::string&)>  ConstructBn2BlobPtr(
-    std::vector<std::vector<int64_t> >& in_dim_vecs,
-    std::vector<std::vector<int64_t> >& out_dim_vecs, Location loc) {
+    const std::vector<std::vector<int64_t> >& in_dim_vecs,
+    const std::vector<std::vector<int64_t> >& out_dim_vecs, Location loc) {
   int32_t in_num = in_dim_vecs.size();
   int32_t out_num = out_dim_vecs.size();
 
   // construct mapping from bns to blobs
   auto bn2blob_ptr = new std::map<std::string, Blob*>;
-  for (size_t i=0; i<in_num; ++i) {
+  for (size_t i=0; i < in_num; ++i) {
     bn2blob_ptr->insert(make_pair("in_" + std::to_string(i), \
           CreateBlob(in_dim_vecs[i], (i+1)*1.0, loc)));
     bn2blob_ptr->insert(make_pair("in_" + std::to_string(i) + "_diff", \
           CreateBlob(in_dim_vecs[i], 0, loc)));
   }
-  for (size_t i=0; i<out_num; ++i) {
+  for (size_t i=0; i < out_num; ++i) {
     bn2blob_ptr->insert(make_pair("out_" + std::to_string(i), \
           CreateBlob(out_dim_vecs[i], (i+1)*10.0, loc)));
     bn2blob_ptr->insert(make_pair("out_" + std::to_string(i) + "_diff", \
@@ -96,9 +96,9 @@ std::function<Blob*(const std::string&)>  ConstructBn2BlobPtr(\
     std::vector<std::vector<int64_t> >& in_dim_vecs, \
     std::vector<std::vector<int64_t> >& out_dim_vecs, \
     Location loc) {
-  auto bn_map = new std::map<std::string, Blob*>; 
+  auto bn_map = new std::map<std::string, Blob*>;
   // Link the output blobs in bn2bptr, to input blobs in bn_map
-  for (size_t i=0; i<out_dim_vecs.size(); ++i) {
+  for (size_t i=0; i < out_dim_vecs.size(); ++i) {
     Blob* b = bn2bptr("out_" + std::to_string(i));
     bn_map->insert(make_pair("in_"+std::to_string(i), b));
 
@@ -108,7 +108,7 @@ std::function<Blob*(const std::string&)>  ConstructBn2BlobPtr(\
 
   // construct output blobs, the blob numbers should be the same with previous
   // input blobs numbers
-  for (size_t i=0; i<in_dim_vecs.size(); ++i) {
+  for (size_t i=0; i < in_dim_vecs.size(); ++i) {
     bn_map->insert(make_pair("out_" + std::to_string(i), \
           CreateBlob(in_dim_vecs[i], 0, loc)));
     bn_map->insert(make_pair("out_" + std::to_string(i) + "_diff", \
@@ -124,13 +124,13 @@ void PrintBlob(Blob* blob) {
   float* fptr = static_cast<float*>(\
       blob->mut_dptr());
   auto dim_vec = blob->shape().dim_vec();
-  int a =dim_vec[0], b = dim_vec[1], c=dim_vec[2], d=dim_vec[3];
+  int a = dim_vec[0], b = dim_vec[1], c=dim_vec[2], d=dim_vec[3];
   printf("Blob size is: %d %d %d %d\n", a, b, c, d);
   float* p = fptr;
-  for (size_t i=0; i<a; ++i) {
-    for (size_t j=0; j<b; ++j) {
-      for (size_t k=0; k<c; ++k) {
-        for (size_t z=0; z<d; ++z) {
+  for (size_t i=0; i < a; ++i) {
+    for (size_t j=0; j < b; ++j) {
+      for (size_t k=0; k < c; ++k) {
+        for (size_t z=0; z < d; ++z) {
           printf("%f ", *p++);
         }
         printf("\n");
@@ -144,15 +144,15 @@ void PrintBlob(Blob* blob) {
 
 bool IsBlobEq(Blob* A, Blob* B, Location loc) {
   // check dimension
-  std::vector<int64_t> dim_vec_0 = A->shape().dim_vec(); 
+  std::vector<int64_t> dim_vec_0 = A->shape().dim_vec();
   std::vector<int64_t> dim_vec_1 = B->shape().dim_vec();
-  if (dim_vec_0.size() != dim_vec_1.size()) 
+  if (dim_vec_0.size() != dim_vec_1.size())
     return false;
-  for (size_t i=0; i<dim_vec_0.size(); ++i) {
+  for (size_t i=0; i < dim_vec_0.size(); ++i) {
     if (dim_vec_0.at(i) != dim_vec_1.at(i))
       return false;
   }
-  
+
   // Move device memory to host if needed 
   size_t data_sz = A->shape().elem_cnt() * sizeof(float);
   const void* dptr_0, *dptr_1;
@@ -171,7 +171,7 @@ bool IsBlobEq(Blob* A, Blob* B, Location loc) {
   // Check blob memory contents
   const char* p = static_cast<const char*>(dptr_0);
   const char* q = static_cast<const char*>(dptr_1);
-  for (size_t i=0; i<data_sz; ++i) {
+  for (size_t i=0; i < data_sz; ++i) {
     if (p[i] != q[i]) 
       return false;
   }
@@ -206,7 +206,7 @@ TEST(boxingKernel, boxing_concat_split_box_cpu) {
   auto fp = ConstructBn2BlobPtr(in_dim_vecs, \
       out_dim_vecs, Location::kHost); 
 
-  // Build reverse blobs 
+  // Build reverse blobs
   auto r_fp = ConstructBn2BlobPtr(fp, in_dim_vecs, \
       out_dim_vecs, Location::kHost); 
   
@@ -217,7 +217,7 @@ TEST(boxingKernel, boxing_concat_split_box_cpu) {
   boxing_kernel_0->Backward(ctx, fp);
 
   // Check input && output blobs in this graph should be the same
-  for (size_t i=0; i<in_dim_vecs.size(); ++i) {
+  for (size_t i=0; i < in_dim_vecs.size(); ++i) {
     ASSERT_TRUE(IsBlobEq(fp("in_"+std::to_string(i)), \
           r_fp("out_"+std::to_string(i)), Location::kHost));
     ASSERT_TRUE(IsBlobEq(fp("in_"+std::to_string(i)+"_diff"), \
@@ -258,12 +258,12 @@ TEST(boxingKernel, boxing_concat_clone_box_cpu) {
   boxing_kernel_0->Backward(ctx, fp_0);
 
   // Check the output blobs 
-  for (size_t i=0; i<in_dim_vecs.size(); ++i) {
+  for (size_t i=0; i < in_dim_vecs.size(); ++i) {
     const std::string bn = "in_" + std::to_string(i) + "_diff";
   // Mark: The diff should only depend on the first out_0_diff
     ASSERT_TRUE(IsBlobEq(fp_0(bn), fp_1(bn), Location::kHost));
   }
-  for (size_t i=0; i<out_dim_vecs_1.size(); ++i) {
+  for (size_t i=0; i < out_dim_vecs_1.size(); ++i) {
     const std::string bn = "out_" + std::to_string(i);
     ASSERT_TRUE(IsBlobEq(fp_1(bn), fp_0("out_0"), Location::kHost));
   }
@@ -296,7 +296,7 @@ TEST(boxingKernel, boxing_add_clone_box_cpu) {
   Blob* expected_add_b = CreateBlob(out_dim_vecs[0], 10.0, Location::kHost);
   Blob* expected_diff_b = CreateBlob(in_dim_vecs[0], 0.25, Location::kHost);
   
-  for (size_t i=0; i<out_dim_vecs.size(); ++i) {
+  for (size_t i=0; i < out_dim_vecs.size(); ++i) {
     ASSERT_TRUE(IsBlobEq(fp("out_"+std::to_string(i)), expected_add_b, \
           Location::kHost));
     ASSERT_TRUE(IsBlobEq(fp("out_"+std::to_string(i)+"_diff"), \
@@ -304,7 +304,7 @@ TEST(boxingKernel, boxing_add_clone_box_cpu) {
   }
 }
 
-} // namespace oneflow
+}  // namespace oneflow
 
 int main(int argc, char* argv[]) {
   ::testing::InitGoogleTest(&argc, argv);
