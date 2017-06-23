@@ -24,10 +24,10 @@ void FwDataCompActor::Init(const TaskProto& task_proto,
 bool FwDataCompActor::IsReadReady() {
   if (model_regst_ && model_tmp_regst_ && !in_.empty()) {
     // More Effective Distributed ML via a Stale Synchronous Parallel Parameter Server
-    uint32_t staleness = JobDesc::Singleton().staleness();
-    uint32_t num_of_piece_in_batch = JobDesc::Singleton().num_of_piece_in_batch();
-    uint64_t cur_iteration = in_.front()->piece_id() / num_of_piece_in_batch;
-    uint64_t stale_version = cur_iteration - staleness;
+    int32_t staleness = JobDesc::Singleton().staleness();
+    int32_t num_of_piece_in_batch = JobDesc::Singleton().num_of_piece_in_batch();
+    int64_t cur_iteration = in_.front()->piece_id() / num_of_piece_in_batch;
+    int64_t stale_version = cur_iteration - staleness;
     return model_regst_->model_version_id() >= stale_version;
   }
   return false;
@@ -101,10 +101,10 @@ void FwDataCompActor::TryWardKernelAndSendMsg() {
   while (IsReadReady() && IsWriteReady()) {
     CHECK_EQ(in_.front()->piece_id(), expected_piece_id());
     ready_in_regst_[in_.front()->regst_desc_id()] = in_.front();
-    uint64_t piece_id = in_.front()->piece_id();
-    uint64_t model_version_id = model_regst_->model_version_id();
+    int64_t piece_id = in_.front()->piece_id();
+    int64_t model_version_id = model_regst_->model_version_id();
     AsyncWardKernel(GenDefaultKernelCtx(), 
-        [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+        [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
       Regst* regst = GetCurWriteableRegst(regst_desc_id);
       if (regst == nullptr) {
         return ready_in_regst_.at(regst_desc_id);

@@ -11,7 +11,7 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& regst_desc_proto) {
 
   const auto& subscriber = regst_desc_proto.subscriber_task_id();
   subscribers_actor_id_.reserve(subscriber.size());
-  for (uint64_t task_id : subscriber) {
+  for (int64_t task_id : subscriber) {
     subscribers_actor_id_.push_back(IDMgr::Singleton().ActorId4TaskId(task_id));
   }
 

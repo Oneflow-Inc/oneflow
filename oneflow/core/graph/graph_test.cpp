@@ -7,14 +7,14 @@ class TestEdge;
 class TestNode final : public Node<TestNode, TestEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TestNode);
-  TestNode(uint64_t node_id_) {
+  TestNode(int64_t node_id_) {
     test_node_id_ = node_id_;
   }
   ~TestNode() = default;
 
-  uint64_t test_node_id() const { return test_node_id_; }
+  int64_t test_node_id() const { return test_node_id_; }
  private:
-  uint64_t test_node_id_;
+  int64_t test_node_id_;
 };
 
 class TestEdge final : public Edge<TestNode, TestEdge> {
@@ -32,7 +32,7 @@ class TestGraph final : public Graph<TestNode, TestEdge> {
   TestGraph() = delete;
   ~TestGraph() = default;
 
-  TestGraph(const std::vector<std::vector<uint64_t>>& graph_conf) {
+  TestGraph(const std::vector<std::vector<int64_t>>& graph_conf) {
     std::vector<TestNode*> node_id2node;
     for (size_t i = 0; i < graph_conf.size(); ++i) {
       TestNode* cur_node = new TestNode(i);
@@ -51,18 +51,18 @@ class TestGraph final : public Graph<TestNode, TestEdge> {
   }
 };
 
-using NodeIdPair = std::pair<uint64_t, uint64_t>;
+using NodeIdPair = std::pair<int64_t, int64_t>;
 
 void DoOneTestGraph(const TestGraph& test_graph,
-                    const std::vector<std::vector<uint64_t>>& graph_conf) {
-  uint64_t node_num = graph_conf.size();
+                    const std::vector<std::vector<int64_t>>& graph_conf) {
+  int64_t node_num = graph_conf.size();
 
   // 1. Determines whether the traversal result satisfies the topological order
-  HashMap<uint64_t, uint64_t> node_id2order, node_id2rorder;
+  HashMap<int64_t, int64_t> node_id2order, node_id2rorder;
   auto NodePairHash = [](const NodeIdPair& val) { return val.first ^ val.second; };
   std::unordered_set<NodeIdPair,
                      decltype(NodePairHash)> edges_node_pair(11, NodePairHash);
-  uint64_t order = 0;
+  int64_t order = 0;
   test_graph.ConstTopoForEachNode([&](const TestNode* node) {
     node_id2order.emplace(node->test_node_id(), order);
     ++order;
@@ -79,12 +79,12 @@ void DoOneTestGraph(const TestGraph& test_graph,
   // method : 
   // judge every directed edge <u,v>
   // the node u's order is smaller than v
-  uint64_t edge_num = 0;
-  for (uint64_t src_node_id = 0; src_node_id < node_num; ++src_node_id) {
-    for (uint64_t dst_node_id : graph_conf[src_node_id]) {
+  int64_t edge_num = 0;
+  for (int64_t src_node_id = 0; src_node_id < node_num; ++src_node_id) {
+    for (int64_t dst_node_id : graph_conf[src_node_id]) {
       // check topo order
-      uint64_t src_ord = node_id2order.at(src_node_id);
-      uint64_t dst_ord = node_id2order.at(dst_node_id);
+      int64_t src_ord = node_id2order.at(src_node_id);
+      int64_t dst_ord = node_id2order.at(dst_node_id);
       ASSERT_LT(src_ord, dst_ord);
       // check reverse-topo order
       src_ord = node_id2rorder.at(src_node_id);
@@ -99,25 +99,25 @@ void DoOneTestGraph(const TestGraph& test_graph,
   // 2. judge whether the getter method of Graph can return all nodes and edges
   ASSERT_EQ(test_graph.node_num(), node_num);
   ASSERT_EQ(test_graph.edge_num(), edge_num);
-  std::unordered_set<uint64_t> node_ids;
+  std::unordered_set<int64_t> node_ids;
   test_graph.ConstForEachNode([&](const TestNode* cur_node) {
-    uint64_t cur_node_id = cur_node->test_node_id();
+    int64_t cur_node_id = cur_node->test_node_id();
     ASSERT_TRUE(node_ids.insert(cur_node_id).second);
     ASSERT_LT(cur_node_id, node_num);
     ASSERT_GE(cur_node_id, 0);
   });
   test_graph.ConstForEachEdge([&](const TestEdge* cur_edge) {
-    uint64_t src_node_id = cur_edge->src_node()->test_node_id();
-    uint64_t dst_node_id = cur_edge->dst_node()->test_node_id();
+    int64_t src_node_id = cur_edge->src_node()->test_node_id();
+    int64_t dst_node_id = cur_edge->dst_node()->test_node_id();
     ASSERT_TRUE(
         edges_node_pair.count(std::make_pair(src_node_id, dst_node_id)) > 0);
   });
 }
 
 TEST(TestGraph, test_graph_node_num_7) {
-  std::vector<std::vector<uint64_t>> graph_conf;
-  for (uint64_t i = 0; i < 7; ++i) {
-    graph_conf.push_back(std::vector<uint64_t>());
+  std::vector<std::vector<int64_t>> graph_conf;
+  for (int64_t i = 0; i < 7; ++i) {
+    graph_conf.push_back(std::vector<int64_t>());
   }
   graph_conf[2].push_back(1);
   graph_conf[2].push_back(0);

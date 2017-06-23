@@ -121,7 +121,7 @@ void MdUpdtCompActor::TryWardKernelAndSendMsg() {
     auto model_wpr = std::make_shared<LocalRegstWarpper>(model_regst);
     model_regst->set_model_version_id(next_model_version_id_++);
     AsyncWardKernel(GenDefaultKernelCtx(),
-        [&](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+        [&](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
       if (regst_desc_id == model_regst_desc_id_) {
         return model_wpr;
       } else {

@@ -21,20 +21,20 @@ int MdSaveCompActor::HandleSaveModel(const ActorMsg& actor_msg) {
     return 1;
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
     std::shared_ptr<RegstWarpper> regst_warpper = actor_msg.regst_warpper();
-    uint64_t model_version_id = regst_warpper->model_version_id();
+    int64_t model_version_id = regst_warpper->model_version_id();
     int32_t num_of_batches_in_snapshot = 
         JobDesc::Singleton().num_of_batches_in_snapshot();
     CHECK_GT(num_of_batches_in_snapshot, 0);
     if (model_version_id % num_of_batches_in_snapshot == 0) {
-      uint64_t snapshot_id = model_version_id / num_of_batches_in_snapshot;
+      int64_t snapshot_id = model_version_id / num_of_batches_in_snapshot;
       Snapshot* snapshot = SnapshotMgr::Singleton().GetWriteableSnapshot(snapshot_id);
       KernelCtx kernel_ctx = GenDefaultKernelCtx();
-      std::tuple<Snapshot*, uint64_t> save_ctx = std::make_tuple(snapshot,
+      std::tuple<Snapshot*, int64_t> save_ctx = std::make_tuple(snapshot,
                                                                  parallel_id());
       kernel_ctx.other = &save_ctx;
       AsyncWardKernel(
           kernel_ctx,
-          [&](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+          [&](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
         CHECK_EQ(regst_desc_id, model_regst_desc_id_);
         return regst_warpper;
       });

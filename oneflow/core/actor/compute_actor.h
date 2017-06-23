@@ -19,13 +19,13 @@ class CompActor : public Actor {
   }
 
   ParallelPolicy parallel_policy() const { return parallel_policy_; }
-  uint64_t parallel_id() const { return parallel_id_; }
-  uint64_t parallel_num() const { return parallel_num_; }
+  int64_t parallel_id() const { return parallel_id_; }
+  int64_t parallel_num() const { return parallel_num_; }
 
  private:
   ParallelPolicy parallel_policy_;
-  uint64_t parallel_id_;
-  uint64_t parallel_num_;
+  int64_t parallel_id_;
+  int64_t parallel_num_;
 
 };
 
