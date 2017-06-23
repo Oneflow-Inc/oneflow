@@ -41,6 +41,7 @@ TEST(GrpcMasterServer, test) {
   ::tensorflow::Status s;
 
   //Test
+  /*
   oneflow::GetStatusRequest req;
   oneflow::GetStatusResponse resp;
   s = remote_worker->GetStatus(&req, &resp);
@@ -93,14 +94,13 @@ TEST(GrpcMasterServer, test) {
     std::cout<<"callback : " << resp_sendmessage.send_message_test() << std::endl;
   };
   remote_worker->SendMessageAsync(&req_sendmessage, &resp_sendmessage, cb);
-
   void* tag;
   bool ok;
   remote_worker->cq_->Next(&tag, &ok);
-
   GrpcClientCQTag* callback_tag;
   callback_tag  = static_cast<GrpcClientCQTag*>(tag);
   callback_tag->OnCompleted(ok);
+  */
 
 }  // TEST
 
