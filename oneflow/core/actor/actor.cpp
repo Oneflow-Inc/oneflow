@@ -46,6 +46,14 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   total_reading_cnt_ = 0;
 }
 
+int64_t Actor::RegstDescId4Name(const std::string& name) const {
+  auto find_it = name2regst_desc_id_.find(name);
+  if (find_it != name2regst_desc_id_.end()) {
+    return find_it->second;
+  }
+  return -1;
+}
+
 KernelCtx Actor::GenDefaultKernelCtx() const {
   KernelCtx ctx;
   ctx.device_ctx = device_ctx_.get();

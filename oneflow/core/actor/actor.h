@@ -35,9 +35,7 @@ class Actor {
   };
 
   Actor() = default;
-  int64_t RegstDescId4Name(const std::string& name) const {
-    return name2regst_desc_id_.at(name);
-  }
+  int64_t RegstDescId4Name(const std::string& name) const;
 
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
   KernelCtx GenDefaultKernelCtx() const;
