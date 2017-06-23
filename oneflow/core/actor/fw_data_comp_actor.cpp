@@ -19,10 +19,12 @@ void FwDataCompActor::Init(const TaskProto& task_proto,
                                              cuda_handle_.cudnn_handle()));
   }
   if (in_desc_id_ == -1) {
+    CHECK_EQ(model_regst_desc_id_, -1);
+    CHECK_EQ(model_tmp_regst_desc_id_, -1);
     OF_SET_MSG_HANDLE(&FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg);
   } else {
-    num_of_not_eord_ = 1 + (model_regst_desc_id_ != -1) + 
-                       (model_tmp_regst_desc_id_ != -1);
+    num_of_not_eord_ = 1 + (model_regst_desc_id_ != -1) 
+                       + (model_tmp_regst_desc_id_ != -1);
     OF_SET_MSG_HANDLE(&FwDataCompActor::HandleFwComp);
   }
 }
@@ -31,12 +33,12 @@ bool FwDataCompActor::IsReadReady() {
   if (in_desc_id_ == -1) {
     return true;
   }
-  if (in_.empty() || (model_regst_desc_id_ != -1 && !model_regst_) ||
-      (model_tmp_regst_desc_id_ != -1 && !model_tmp_regst_)) {
+  if (in_.empty() || (model_regst_desc_id_ != -1 && !model_regst_)
+      || (model_tmp_regst_desc_id_ != -1 && !model_tmp_regst_)) {
     return false;
   }
   if (model_regst_desc_id_ != -1) {
-    // More Effective Distributed ML via a Stale Synchronous Parallel Parameter Server
+    //Ho Q, Cipar J, Cui H, et al. More effective distributed ml via a stale synchronous parallel parameter server
     int32_t staleness = JobDesc::Singleton().staleness();
     int32_t num_of_piece_in_batch = JobDesc::Singleton().num_of_piece_in_batch();
     int64_t cur_iteration = in_.front()->piece_id() / num_of_piece_in_batch;
