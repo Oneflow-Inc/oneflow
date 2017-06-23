@@ -355,7 +355,7 @@ void BoxingKernel<DeviceType::kALL, floating_point_type>::AddBoxBackward(
   std::function<void()> fp = [out_diff, fst_in_diff, idbns, ctx, \
                               BnInOp2BlobPtr, this]() {
   // 1. scale out_dbn by 1.0/input_number to fst idbn;
-    uint64_t bsz = fst_in_diff->shape().elem_cnt();
+    int64_t bsz = fst_in_diff->shape().elem_cnt();
     size_t idbns_sz = idbns.size();
     OFBlasScal(ctx, bsz, 0.0, \
         static_cast<floating_point_type*>(fst_in_diff->mut_dptr()), 1);

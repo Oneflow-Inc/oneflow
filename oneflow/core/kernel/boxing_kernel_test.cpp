@@ -35,10 +35,10 @@ Blob* CreateBlob(const std::vector<int64_t>& dim_vec,
   return new Blob(dptr, shape);
 }
 
-void BuildBoxingKernel(BoxingKernel<DeviceType::kCPU, float>* boxing_kernel,\
-                       uint32_t in_num, uint32_t out_num, int kernel_seq,\
-                       BoxingOpConf::InBoxCase in_box_case, \
-                       BoxingOpConf::OutBoxCase out_box_case) {
+BoxingKernel<DeviceType::kCPU, float>* BuildBoxingKernel(
+    int32_t in_num, int32_t out_num, int kernel_seq, \
+    BoxingOpConf::InBoxCase in_box_case, \
+    BoxingOpConf::OutBoxCase out_box_case) {
   // config boxing operator from box cases
   OperatorConf op_conf;
   op_conf.set_name("boxing_test"+std::to_string(kernel_seq));
@@ -60,10 +60,12 @@ void BuildBoxingKernel(BoxingKernel<DeviceType::kCPU, float>* boxing_kernel,\
   auto boxing_op = OpMgr::Singleton().ConstructOp(op_conf);
   OperatorProto op_proto;
   boxing_op->ToProto(&op_proto);
+  auto boxing_kernel = new BoxingKernel<DeviceType::kCPU, float>;
   boxing_kernel->InitFromOpProto(op_proto);
+  return boxing_kernel;
 }
 
-std::map<std::string, Blob*>*  ConstructBlobs(
+std::function<Blob*(const std::string&)>  ConstructBn2BlobPtr(
     std::vector<std::vector<int64_t> >& in_dim_vecs,
     std::vector<std::vector<int64_t> >& out_dim_vecs, Location loc) {
   int32_t in_num = in_dim_vecs.size();
@@ -84,10 +86,12 @@ std::map<std::string, Blob*>*  ConstructBlobs(
           CreateBlob(out_dim_vecs[i], (i+1)*1.0, loc)));
   }
 
-  return bn2blob_ptr;
+  return [bn2blob_ptr](const std::string& bn) {
+    return bn2blob_ptr->at(bn);
+  };
 }
 
-std::map<std::string, Blob*>* ConstructBnMap(\
+std::function<Blob*(const std::string&)>  ConstructBn2BlobPtr(\
     std::function<Blob*(const std::string&)> bn2bptr, \
     std::vector<std::vector<int64_t> >& in_dim_vecs, \
     std::vector<std::vector<int64_t> >& out_dim_vecs, \
@@ -110,7 +114,10 @@ std::map<std::string, Blob*>* ConstructBnMap(\
     bn_map->insert(make_pair("out_" + std::to_string(i) + "_diff", \
           CreateBlob(in_dim_vecs[i], (i+1)*10.0, loc)));
   }
-  return bn_map;
+
+  return [bn_map](const std::string& bn) {
+    return bn_map->at(bn);
+  };
 }
 
 void PrintBlob(Blob* blob) {
@@ -174,7 +181,10 @@ bool IsBlobEq(Blob* A, Blob* B, Location loc) {
 
 }  // namespace
 
-// Mark: Too long, code need refine
+// Mark: code too long and dirty, need refine
+// Trick: To test concat and split box, kernel_0 and kernel_1 are connected.
+// The data in blobs of inputs of kernel_0 and outputs of kernel_1 
+// should be the same.
 TEST(boxingKernel, boxing_concat_split_box_cpu) {
   // Create CudaDeviceContext and KernelContext
   cudaStream_t cuda_stream;
@@ -183,51 +193,115 @@ TEST(boxingKernel, boxing_concat_split_box_cpu) {
   ctx.device_ctx = new CudaDeviceCtx(&cuda_stream, nullptr, nullptr);
 
   // Build boxing kernel
-  auto boxing_kernel_0 = new BoxingKernel<DeviceType::kCPU, float>;  
-  BuildBoxingKernel(boxing_kernel_0, 4, 3, 0, BoxingOpConf::kConcatBox, \
-      BoxingOpConf::kDataSplitBox);
-
-  auto boxing_kernel_1 = new BoxingKernel<DeviceType::kCPU, float>;  
-  BuildBoxingKernel(boxing_kernel_1, 3, 4, 1, BoxingOpConf::kConcatBox, \
-      BoxingOpConf::kDataSplitBox);
+  auto boxing_kernel_0 = BuildBoxingKernel(4, 3, 0, \
+      BoxingOpConf::kConcatBox, BoxingOpConf::kDataSplitBox);
+  auto boxing_kernel_1 = BuildBoxingKernel(3, 4, 1, \
+      BoxingOpConf::kConcatBox, BoxingOpConf::kDataSplitBox);
 
   // Build blobs
   std::vector<std::vector<int64_t> > in_dim_vecs = { {3, 4, 5, 5}, \
     {3, 2, 5, 5}, {3, 1, 5, 5}, { 3, 7, 5, 5}};
   std::vector<std::vector<int64_t> > out_dim_vecs = { {3, 5, 5, 5}, \
     {3, 6, 5, 5}, {3, 3, 5, 5}};
-  auto bn2blob_ptr = ConstructBlobs(in_dim_vecs, \
+  auto fp = ConstructBn2BlobPtr(in_dim_vecs, \
       out_dim_vecs, Location::kHost); 
-  auto fp = [bn2blob_ptr](const std::string& bn) {
-    //ASSERT_TRUE(bn2blob_ptr->find(bn) != bn2blob_ptr->end());
-    if (bn2blob_ptr->find(bn) == bn2blob_ptr->end()) {
-      std::cout << bn << "\n\n\n\n\n";
-    }
-    return bn2blob_ptr->at(bn);
-  };
 
   // Build reverse blobs 
-  auto r_bn2blob_ptr = ConstructBnMap(fp, in_dim_vecs, \
+  auto r_fp = ConstructBn2BlobPtr(fp, in_dim_vecs, \
       out_dim_vecs, Location::kHost); 
-  auto r_fp = [r_bn2blob_ptr](const std::string& bn) {
-    //ASSERT_TRUE(r_bn2blob_ptr->find(bn) != r_bn2blob_ptr->end());
-    return r_bn2blob_ptr->at(bn);
-  };
   
   // Run forward && backward test
-  // Data flow: blobs ----> kernel_0 ----> kernel_1 ----> Final Check
   boxing_kernel_0->Forward(ctx, fp);
   boxing_kernel_1->Forward(ctx, r_fp);
   boxing_kernel_1->Backward(ctx, r_fp);
   boxing_kernel_0->Backward(ctx, fp);
 
-  // Check Results
+  // Check input && output blobs in this graph should be the same
   for (size_t i=0; i<in_dim_vecs.size(); ++i) {
     ASSERT_TRUE(IsBlobEq(fp("in_"+std::to_string(i)), \
           r_fp("out_"+std::to_string(i)), Location::kHost));
-    //std::cout << "Passed one blob!\n";
-  }
+    ASSERT_TRUE(IsBlobEq(fp("in_"+std::to_string(i)+"_diff"), \
+          r_fp("out_"+std::to_string(i)+"_diff"), Location::kHost));
+  } 
+}
 
+TEST(boxingKernel, boxing_concat_clone_box_cpu) {
+  // Create CudaDeviceContext and KernelContext
+  cudaStream_t cuda_stream;
+  CHECK_EQ(cudaStreamCreate(&cuda_stream), cudaSuccess);
+  KernelCtx ctx;
+  ctx.device_ctx = new CudaDeviceCtx(&cuda_stream, nullptr, nullptr);
+
+  // Build boxing kernel
+  auto boxing_kernel_0 = BuildBoxingKernel(4, 1, 0, \
+      BoxingOpConf::kConcatBox, BoxingOpConf::kDataSplitBox);
+  auto boxing_kernel_1 = BuildBoxingKernel(4, 5, 1, \
+      BoxingOpConf::kConcatBox, BoxingOpConf::kDataSplitBox);
+
+  // Build mapping bns->blobs with first kernel
+  std::vector<std::vector<int64_t> > in_dim_vecs = { {3, 4, 5, 5}, \
+    {3, 2, 5, 5}, {3, 1, 5, 5}, { 3, 7, 5, 5}};
+  std::vector<std::vector<int64_t> > out_dim_vecs_0 = { { 3, 14, 5, 5}};
+  std::vector<std::vector<int64_t> > out_dim_vecs_1 = { {3, 14, 5, 5}, \
+    {3, 14, 5, 5}, {3, 14, 5, 5}, {3, 14, 5, 5}, {3, 14, 5, 5} };
+  auto fp_0 = ConstructBn2BlobPtr(in_dim_vecs, \
+      out_dim_vecs_0, Location::kHost); 
+
+  // Build mapping bns->blobs with second kernel
+  auto fp_1 = ConstructBn2BlobPtr(in_dim_vecs, \
+      out_dim_vecs_1, Location::kHost); 
+  
+  // Run forward && backward test
+  boxing_kernel_0->Forward(ctx, fp_0);
+  boxing_kernel_1->Forward(ctx, fp_1);
+  boxing_kernel_1->Backward(ctx, fp_1);
+  boxing_kernel_0->Backward(ctx, fp_0);
+
+  // Check the output blobs 
+  for (size_t i=0; i<in_dim_vecs.size(); ++i) {
+    const std::string bn = "in_" + std::to_string(i) + "_diff";
+  // Mark: The diff should only depend on the first out_0_diff
+    ASSERT_TRUE(IsBlobEq(fp_0(bn), fp_1(bn), Location::kHost));
+  }
+  for (size_t i=0; i<out_dim_vecs_1.size(); ++i) {
+    const std::string bn = "out_" + std::to_string(i);
+    ASSERT_TRUE(IsBlobEq(fp_1(bn), fp_0("out_0"), Location::kHost));
+  }
+}
+
+TEST(boxingKernel, boxing_add_clone_box_cpu) {
+  // Create CudaDeviceContext and KernelContext
+  cudaStream_t cuda_stream;
+  CHECK_EQ(cudaStreamCreate(&cuda_stream), cudaSuccess);
+  KernelCtx ctx;
+  ctx.device_ctx = new CudaDeviceCtx(&cuda_stream, nullptr, nullptr);
+
+  // Build boxing kernel
+  auto boxing_kernel = BuildBoxingKernel(4, 3, 0, BoxingOpConf::kAddBox, \
+      BoxingOpConf::kCloneBox);
+
+  // Build mapping bns->blobs
+  std::vector<std::vector<int64_t> > in_dim_vecs = { {3, 4, 5, 5}, \
+    {3, 4, 5, 5}, {3, 4, 5, 5}, { 3, 4, 5, 5} };
+  std::vector<std::vector<int64_t> > out_dim_vecs = { {3, 4, 5, 5}, \
+    {3, 4, 5, 5}, {3, 4, 5, 5} };
+  auto fp = ConstructBn2BlobPtr(in_dim_vecs, \
+      out_dim_vecs, Location::kHost); 
+
+  // Run forward && backward
+  boxing_kernel->Forward(ctx, fp);
+  boxing_kernel->Backward(ctx, fp);
+
+  // check if add-results is the same as expected.
+  Blob* expected_add_b = CreateBlob(out_dim_vecs[0], 10.0, Location::kHost);
+  Blob* expected_diff_b = CreateBlob(in_dim_vecs[0], 0.25, Location::kHost);
+  
+  for (size_t i=0; i<out_dim_vecs.size(); ++i) {
+    ASSERT_TRUE(IsBlobEq(fp("out_"+std::to_string(i)), expected_add_b, \
+          Location::kHost));
+    ASSERT_TRUE(IsBlobEq(fp("out_"+std::to_string(i)+"_diff"), \
+          expected_diff_b, Location::kHost));
+  }
 }
 
 } // namespace oneflow
