@@ -7,7 +7,7 @@ PersistentInStream::PersistentInStream(const std::string& file_path, uint64_t of
   TF_CHECK_OK(env_->FileExists(file_path));
   TF_CHECK_OK(env_->NewRandomAccessFile(file_path, &file_));
   offset_ = offset;
-  env_->GetFileSize(file_path, &file_size_);
+  TF_CHECK_OK(env_->GetFileSize(file_path, &file_size_));
   if (offset < file_size_) {
     is_eof_ = false;
   } else {
