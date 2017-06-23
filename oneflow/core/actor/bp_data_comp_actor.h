@@ -15,7 +15,6 @@ public:
   int ProcessMsg(const ActorMsg&) override;
 
 private:
-  int HandleInitDeviceCtx(const ActorMsg&);
   int HandleBpComp(const ActorMsg&);
   int HandleBpCompWhenNoReadableRegstMsg(const ActorMsg&);
   int HandleWaitUntilReadingCntEqualZero(const ActorMsg&);

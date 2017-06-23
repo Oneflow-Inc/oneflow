@@ -15,7 +15,6 @@ class BoxingActor final : public Actor {
   int ProcessMsg(const ActorMsg&) override;
 
  private:
-  int HandleInitDeviceCtx(const ActorMsg&);
   int HandleBoxing(const ActorMsg&);
   int HandleBoxingWhenNoReadableRegstMsg(const ActorMsg&);
   int HandleWaitUntilReadingCntEqualZero(const ActorMsg&);
