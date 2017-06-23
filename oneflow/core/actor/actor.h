@@ -47,8 +47,11 @@ class Actor {
   void set_msg_handle(MsgHandle val) { msg_handle_ = val; }
   #define OF_SET_MSG_HANDLE(val) \
     do { \
+      LOG(INFO) << "Actor " << actor_id() << " switch to " << #val; \
       set_msg_handle(static_cast<MsgHandle>(val)); \
     } while(0)
+
+  // Common Handles
   int HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg);
 
   // Status of Produced Registers
