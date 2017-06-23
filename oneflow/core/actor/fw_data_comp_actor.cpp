@@ -18,7 +18,7 @@ void FwDataCompActor::Init(const TaskProto& task_proto,
                                              cuda_handle_.cublas_handle(),
                                              cuda_handle_.cudnn_handle()));
   }
-  cur_msg_handle_ = &FwDataCompActor::HandleFwComp;
+  OF_SET_MSG_HANDLE(&FwDataCompActor::HandleFwComp);
 }
 
 bool FwDataCompActor::IsReadReady() {
@@ -33,16 +33,12 @@ bool FwDataCompActor::IsReadReady() {
   return false;
 }
 
-int FwDataCompActor::ProcessMsg(const ActorMsg& msg) {
-  return (this->*cur_msg_handle_)(msg);
-}
-
 int FwDataCompActor::HandleFwComp(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     num_of_eord_ += 1;
     if (num_of_eord_ == 3) {
-      cur_msg_handle_ = &FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg;
+      OF_SET_MSG_HANDLE(&FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg);
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()) != 0) {
@@ -78,25 +74,16 @@ int FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg(const ActorMsg& msg) {
     model_tmp_regst_ = nullptr;
     AsyncSendEORDMsgForAllProducedRegstDesc();
     if (total_reading_cnt() == 0) {
-      cur_msg_handle_ = nullptr;
+      OF_SET_MSG_HANDLE(nullptr);
       return 1;
     } else {
-      cur_msg_handle_ = &FwDataCompActor::HandleWaitUntilReadingCntEqualZero;
+      OF_SET_MSG_HANDLE(&FwDataCompActor::HandleWaitUntilReadingCntEqualZero);
       return 0;
     }
   }
   return 0;
 }
   
-int FwDataCompActor::HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
-  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
-  if (total_reading_cnt() == 0) {
-    cur_msg_handle_ = nullptr;
-    return 1;
-  }
-  return 0;
-}
-
 void FwDataCompActor::TryWardKernelAndSendMsg() {
   while (IsReadReady() && IsWriteReady()) {
     CHECK_EQ(in_.front()->piece_id(), expected_piece_id());

@@ -24,7 +24,9 @@ class Actor {
   virtual void Init(const TaskProto&, const ThreadCtx&) = 0;
   // 1: success, and actor finish
   // 0: success, and actor not finish
-  virtual int ProcessMsg(const ActorMsg&) = 0;
+  int ProcessMsg(const ActorMsg& msg) {
+    return (this->*msg_handle_)(msg);
+  }
 
   int64_t actor_id() const { return actor_id_; }
  
@@ -39,6 +41,15 @@ class Actor {
 
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
   KernelCtx GenDefaultKernelCtx() const;
+
+  // Msg Handle
+  using MsgHandle = int (Actor::*)(const ActorMsg&);
+  void set_msg_handle(MsgHandle val) { msg_handle_ = val; }
+  #define OF_SET_MSG_HANDLE(val) \
+    do { \
+      set_msg_handle(static_cast<MsgHandle>(val)); \
+    } while(0)
+  int HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg);
 
   // Status of Produced Registers
   int64_t expected_piece_id() const { return expected_piece_id_; }
@@ -70,6 +81,8 @@ class Actor {
   HashMap<std::string, int64_t> name2regst_desc_id_;
 
   std::unique_ptr<DeviceCtx> device_ctx_;
+
+  MsgHandle msg_handle_;
   
   // Status of Produced Registers
   int64_t expected_piece_id_;
