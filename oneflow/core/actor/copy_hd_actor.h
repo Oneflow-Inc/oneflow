@@ -22,7 +22,6 @@ private:
   void TryWardKernelAndSendMsg();
   int (CopyHdActor::*cur_msg_handle_)(const ActorMsg&);
   std::queue<std::shared_ptr<RegstWarpper>> waiting_in_regst_;
-  CudaStreamHandle cuda_handle_;
 
 };
 

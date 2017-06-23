@@ -21,7 +21,7 @@ private:
 
   void TryWardKernelAndSendMsg();
   int (CopyCommNetActor::*cur_msg_handle_)(const ActorMsg&);
-  HashMap<uint64_t, std::shared_ptr<RegstWarpper>> id2waiting_in_regst_;
+  HashMap<int64_t, std::shared_ptr<RegstWarpper>> piece_id2waiting_in_regst_;
 
 };
 

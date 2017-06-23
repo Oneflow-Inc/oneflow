@@ -7,9 +7,9 @@ namespace oneflow {
 void CopyHdActor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   Actor::Init(task_proto, thread_ctx);
   CHECK(thread_ctx.copy_hd_cuda_stream);
-  mut_device_ctx().reset(new CudaDeviceCtx(cuda_handle_.cuda_stream(),
-                                           cuda_handle_.cublas_handle(),
-                                           cuda_handle_.cudnn_handle()));
+  mut_device_ctx().reset(new CudaDeviceCtx(thread_ctx.copy_hd_cuda_stream,
+                                           nullptr,
+                                           nullptr));
   cur_msg_handle_ = &CopyHdActor::HandleCopyHd;
 }
 

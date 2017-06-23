@@ -22,7 +22,7 @@ int CopyCommNetActor::HandleCopyCommNet(const ActorMsg& msg) {
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     auto regst_wp = msg.regst_warpper();
     if (TryUpdtStateAsProducedRegst(regst_wp->regst_raw_ptr()) != 0) {
-      CHECK(id2waiting_in_regst_.emplace(regst_wp->piece_id(), regst_wp).second);
+      CHECK(piece_id2waiting_in_regst_.emplace(regst_wp->piece_id(), regst_wp).second);
     }
   }
   TryWardKernelAndSendMsg();
@@ -32,7 +32,7 @@ int CopyCommNetActor::HandleCopyCommNet(const ActorMsg& msg) {
 int CopyCommNetActor::HandleCopyCommNetWhenNoReadableRegstMsg(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
   TryWardKernelAndSendMsg();
-  if (id2waiting_in_regst_.empty()) {
+  if (piece_id2waiting_in_regst_.empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
     if (total_reading_cnt() == 0) {
       cur_msg_handle_ = nullptr;
@@ -55,8 +55,8 @@ int CopyCommNetActor::HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
 }
 
 void CopyCommNetActor::TryWardKernelAndSendMsg() {
-  auto next_regst_it = id2waiting_in_regst_.find(expected_piece_id());
-  if (next_regst_it == id2waiting_in_regst_.end()) {
+  auto next_regst_it = piece_id2waiting_in_regst_.find(expected_piece_id());
+  if (next_regst_it == piece_id2waiting_in_regst_.end()) {
     return;
   }
   if (IsWriteReady()) {
@@ -76,7 +76,7 @@ void CopyCommNetActor::TryWardKernelAndSendMsg() {
     });
     AsyncSendReadableRegstMsg();
     AsyncSendRegstMsgToProducer(regst_wp);
-    id2waiting_in_regst_.erase(next_regst_it);
+    piece_id2waiting_in_regst_.erase(next_regst_it);
   }
 }
 
