@@ -50,7 +50,6 @@ class JobDesc final {
   int32_t num_of_batches_in_snapshot_;
   int32_t staleness_;
   int64_t total_batch_num_;
-  int64_t total_piece_num_;
 
 };
 

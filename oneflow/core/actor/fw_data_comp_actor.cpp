@@ -24,7 +24,7 @@ void FwDataCompActor::Init(const TaskProto& task_proto,
     OF_SET_MSG_HANDLE(&FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg);
   } else {
     num_of_not_eord_ = 1 + (model_regst_desc_id_ != -1) 
-                       + (model_tmp_regst_desc_id_ != -1);
+                         + (model_tmp_regst_desc_id_ != -1);
     OF_SET_MSG_HANDLE(&FwDataCompActor::HandleFwComp);
   }
 }
@@ -34,7 +34,7 @@ bool FwDataCompActor::IsReadReady() {
     return true;
   }
   if (in_.empty() || (model_regst_desc_id_ != -1 && !model_regst_)
-      || (model_tmp_regst_desc_id_ != -1 && !model_tmp_regst_)) {
+                  || (model_tmp_regst_desc_id_ != -1 && !model_tmp_regst_)) {
     return false;
   }
   if (model_regst_desc_id_ != -1) {
