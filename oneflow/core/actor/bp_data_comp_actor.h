@@ -14,7 +14,6 @@ public:
   void Init(const TaskProto&, const ThreadCtx&) override;
 
 private:
-  int HandleInitDeviceCtx(const ActorMsg&);
   int HandleBpComp(const ActorMsg&);
   int HandleBpCompWhenNoReadableRegstMsg(const ActorMsg&);
 
