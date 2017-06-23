@@ -9,37 +9,36 @@
 
 namespace oneflow {
   
-template<DeviceType device_type, typename floating_point_type>
-class BoxingKernel : public Kernel {
-};
+template<DeviceType device_type, typename floating_point_type> 
+class BoxingKernel; 
 
 template<typename floating_point_type>
 class BoxingKernel<DeviceType::kALL, floating_point_type> : 
   public Kernel {
  public:
-  // OF_DISALLOW_COPY_AND_MOVE(BoxingKernel);
-  BoxingKernel() = default;
-  ~BoxingKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(BoxingKernel);
+  virtual ~BoxingKernel() = default;
 
-  void InitFromOpProto(const OperatorProto& op_proto);
+  void InitFromOpProto(const OperatorProto& op_proto) override;
 
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
   void Backward(const KernelCtx&,
                 std::function<Blob*(const std::string&)>) const override;
  protected:
+  BoxingKernel() = default;
   // Mark: seems inappropriate to use ctx into OF* fucntions. However, since 
   // it is a virtual function, we do not know whether it will be excecuted on
   // cpu or gpu yet.
-  virtual void OFMemcpy(const KernelCtx& ctx, \
+  virtual void Memcpy(const KernelCtx& ctx,
       void* dst, const void* src, size_t sz) = 0;
-  virtual void OFBlobCpy(const KernelCtx& ctx, const Blob* a, Blob* b) = 0;
-  virtual void OFBlobAdd(const KernelCtx& ctx, const Blob*, Blob*) = 0;
-  virtual void OFBlasAxpy(const KernelCtx& ctx, const int N, \
+  virtual void BlobCpy(const KernelCtx& ctx, const Blob* a, Blob* b) = 0;
+  virtual void BlobAdd(const KernelCtx& ctx, const Blob*, Blob*) = 0;
+  virtual void BlasAxpy(const KernelCtx& ctx, const int N,
       const floating_point_type alpha,
       const floating_point_type* X, const int incX,
       floating_point_type *Y, const int incY) = 0;
-  virtual void OFBlasScal(const KernelCtx& ctx, const int n, \
+  virtual void BlasScal(const KernelCtx& ctx, const int n,
       const floating_point_type alpha, floating_point_type* x, int incx) = 0;
 
   // For concat ==> (split/clone) box:
@@ -87,8 +86,8 @@ class BoxingKernel<DeviceType::kALL, floating_point_type> :
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)>) const;
 
-  using ExecFunc = void (BoxingKernel<DeviceType::kALL, \
-      floating_point_type>::*) (const KernelCtx&, \
+  using ExecFunc = void (BoxingKernel<DeviceType::kALL,
+      floating_point_type>::*) (const KernelCtx&,
         std::function<Blob*(const std::string&)>) const;
 
   mutable std::vector<copy_rule> fw_copy_rules;
@@ -106,38 +105,38 @@ class BoxingKernel<DeviceType::kCPU, floating_point_type> final :
   ~BoxingKernel() = default;
 
   // implementations of math virtual functions on cpu
-  void OFMemcpy(const KernelCtx& ctx, \
+  void Memcpy(const KernelCtx& ctx,
       void* dst, const void* src, size_t sz) override;
-  void OFBlobCpy(const KernelCtx& ctx, const Blob* a, Blob* b) override;
-  void OFBlobAdd(const KernelCtx& ctx, const Blob*, Blob*) override;
-  void OFBlasAxpy(const KernelCtx& ctx, const int N, \
-      const floating_point_type alpha, \
-      const floating_point_type* X, const int incX, floating_point_type *Y, \
+  void BlobCpy(const KernelCtx& ctx, const Blob* a, Blob* b) override;
+  void BlobAdd(const KernelCtx& ctx, const Blob*, Blob*) override;
+  void BlasAxpy(const KernelCtx& ctx, const int N,
+      const floating_point_type alpha,
+      const floating_point_type* X, const int incX, floating_point_type *Y,
       const int incY) override;
-  void OFBlasScal(const KernelCtx& ctx, const int n, \
-      const floating_point_type alpha, floating_point_type* x, \
+  void BlasScal(const KernelCtx& ctx, const int n,
+      const floating_point_type alpha, floating_point_type* x,
       int incx) override;
 };
 
 template<typename floating_point_type>
 class BoxingKernel<DeviceType::kGPU, floating_point_type> final : 
   public BoxingKernel<DeviceType::kALL, floating_point_type> {
-  public:
+ public:
   OF_DISALLOW_COPY_AND_MOVE(BoxingKernel);
   BoxingKernel() = default;
   ~BoxingKernel() = default;
 
   // implementations of math virtual functions on gpu
-  void OFMemcpy(const KernelCtx& ctx, \
+  void Memcpy(const KernelCtx& ctx,
       void* dst, const void* src, size_t sz) override;
-  void OFBlobCpy(const KernelCtx& ctx, const Blob* a, Blob* b) override;
-  void OFBlobAdd(const KernelCtx& ctx, const Blob*, Blob*) override;
-  void OFBlasAxpy(const KernelCtx& ctx, const int N, \
-      const floating_point_type alpha, \
-      const floating_point_type* X, const int incX, \
+  void BlobCpy(const KernelCtx& ctx, const Blob* a, Blob* b) override;
+  void BlobAdd(const KernelCtx& ctx, const Blob*, Blob*) override;
+  void BlasAxpy(const KernelCtx& ctx, const int N,
+      const floating_point_type alpha,
+      const floating_point_type* X, const int incX,
       floating_point_type *Y, const int incY) override;
-  void OFBlasScal(const KernelCtx& ctx, const int n, \
-      const floating_point_type alpha, floating_point_type* x, \
+  void BlasScal(const KernelCtx& ctx, const int n,
+      const floating_point_type alpha, floating_point_type* x,
       int incx) override;
 };
 

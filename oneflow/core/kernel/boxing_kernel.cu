@@ -5,36 +5,36 @@
 namespace oneflow {
 
 template<typename floating_point_type>
-void BoxingKernel<DeviceType::kGPU, floating_point_type>::OFMemcpy(
+void BoxingKernel<DeviceType::kGPU, floating_point_type>::Memcpy(
     const KernelCtx& ctx, void* dst, const void* src, size_t sz) {
   CHECK_EQ(cudaMemcpyAsync(dst, src, sz, cudaMemcpyDeviceToDevice, 
       ctx.device_ctx->cuda_stream()), cudaSuccess);
 }
 
 template<typename floating_point_type>
-void BoxingKernel<DeviceType::kGPU, floating_point_type>::OFBlobCpy(
+void BoxingKernel<DeviceType::kGPU, floating_point_type>::BlobCpy(
     const KernelCtx& ctx, const Blob* a, Blob* b) {
-  CHECK_EQ(cudaMemcpyAsync(static_cast<floating_point_type*>(b->mut_dptr()), \
-        static_cast<const floating_point_type*>(a->dptr()), \
-        sizeof(floating_point_type) * a->shape().elem_cnt(), \
-        cudaMemcpyDeviceToDevice, ctx.device_ctx->cuda_stream()), \
+  CHECK_EQ(cudaMemcpyAsync(static_cast<floating_point_type*>(b->mut_dptr()), 
+        static_cast<const floating_point_type*>(a->dptr()), 
+        sizeof(floating_point_type) * a->shape().elem_cnt(), 
+        cudaMemcpyDeviceToDevice, ctx.device_ctx->cuda_stream()), 
       cudaSuccess);
 }
 
 template<>
-void BoxingKernel<DeviceType::kGPU, float>::OFBlobAdd(
+void BoxingKernel<DeviceType::kGPU, float>::BlobAdd(
     const KernelCtx& ctx, const Blob* a, Blob* b) {
   static const float alpha = 1.0;
   CHECK_EQ(cublasSaxpy(
         ctx.device_ctx->cublas_handle(),
         a->shape().elem_cnt(), &alpha,
         static_cast<const float*>(a->dptr()), 1,
-        static_cast<float*>(b->mut_dptr()), 1), \
+        static_cast<float*>(b->mut_dptr()), 1), 
       cudaSuccess);
 }
 
 template<>
-void BoxingKernel<DeviceType::kGPU, double>::OFBlobAdd(
+void BoxingKernel<DeviceType::kGPU, double>::BlobAdd(
     const KernelCtx& ctx, const Blob* a, Blob* b) {
   static const double alpha = 1.0;
   CHECK_EQ(cublasDaxpy(
@@ -46,8 +46,8 @@ void BoxingKernel<DeviceType::kGPU, double>::OFBlobAdd(
 }
 
 template<>
-void BoxingKernel<DeviceType::kGPU, float>::OFBlasAxpy(
-    const KernelCtx& ctx, const int N, const float alpha, const float *X, \
+void BoxingKernel<DeviceType::kGPU, float>::BlasAxpy(
+    const KernelCtx& ctx, const int N, const float alpha, const float *X, 
     const int incX, float *Y, const int incY) {
   float tmp_alpha = alpha;
   CHECK_EQ(cublasSaxpy(
@@ -57,8 +57,8 @@ void BoxingKernel<DeviceType::kGPU, float>::OFBlasAxpy(
 }
 
 template<>
-void BoxingKernel<DeviceType::kGPU, double>::OFBlasAxpy(
-    const KernelCtx& ctx, const int N, const double alpha, const double *X, \
+void BoxingKernel<DeviceType::kGPU, double>::BlasAxpy(
+    const KernelCtx& ctx, const int N, const double alpha, const double *X, 
     const int incX, double *Y, const int incY) {
   double tmp_alpha = alpha;
   CHECK_EQ(cublasDaxpy(
@@ -68,7 +68,7 @@ void BoxingKernel<DeviceType::kGPU, double>::OFBlasAxpy(
 }
 
 template<> 
-void BoxingKernel<DeviceType::kGPU, float>::OFBlasScal(
+void BoxingKernel<DeviceType::kGPU, float>::BlasScal(
     const KernelCtx& ctx, const int n, const float alpha, float* x, int incx) {
   float tmp_alpha = alpha;
   CHECK_EQ(cublasSscal(
@@ -78,8 +78,8 @@ void BoxingKernel<DeviceType::kGPU, float>::OFBlasScal(
 }
 
 template<> 
-void BoxingKernel<DeviceType::kGPU, double>::OFBlasScal(
-    const KernelCtx& ctx, const int n, const double alpha, double* x, \
+void BoxingKernel<DeviceType::kGPU, double>::BlasScal(
+    const KernelCtx& ctx, const int n, const double alpha, double* x,
     int incx) {
   double tmp_alpha = alpha;
   CHECK_EQ(cublasDscal(
