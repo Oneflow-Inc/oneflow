@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+import "oneflow/core/common/shape.proto";
+
+package oneflow;
+
+message RegisterProto {
+  message BlobProto{
+    ShapeProto blob_shape = 1;
+    bytes blob_content = 3;
+  }
+  int32 blob_num = 2;
+}
