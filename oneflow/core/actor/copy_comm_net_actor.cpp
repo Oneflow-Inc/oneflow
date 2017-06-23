@@ -41,15 +41,6 @@ int CopyCommNetActor::HandleCopyCommNetWhenNoReadableRegstMsg(const ActorMsg& ms
   return 0;
 }
   
-int CopyCommNetActor::HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
-  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
-  if (total_reading_cnt() == 0) {
-    OF_SET_MSG_HANDLE(nullptr);
-    return 1;
-  }
-  return 0;
-}
-
 void CopyCommNetActor::TryWardKernelAndSendMsg() {
   auto next_regst_it = piece_id2waiting_in_regst_.find(expected_piece_id());
   if (next_regst_it == piece_id2waiting_in_regst_.end()) {

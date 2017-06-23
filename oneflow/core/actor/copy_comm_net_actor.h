@@ -16,7 +16,6 @@ public:
 private:
   int HandleCopyCommNet(const ActorMsg&);
   int HandleCopyCommNetWhenNoReadableRegstMsg(const ActorMsg&);
-  int HandleWaitUntilReadingCntEqualZero(const ActorMsg&);
 
   void TryWardKernelAndSendMsg();
   HashMap<int64_t, std::shared_ptr<RegstWarpper>> piece_id2waiting_in_regst_;

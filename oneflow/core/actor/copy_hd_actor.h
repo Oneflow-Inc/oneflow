@@ -16,7 +16,6 @@ public:
 private:
   int HandleCopyHd(const ActorMsg&);
   int HandleCopyHdWhenNoReadableRegstMsg(const ActorMsg&);
-  int HandleWaitUntilReadingCntEqualZero(const ActorMsg&);
 
   void TryWardKernelAndSendMsg();
   std::queue<std::shared_ptr<RegstWarpper>> waiting_in_regst_;

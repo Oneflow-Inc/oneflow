@@ -41,15 +41,6 @@ int CopyHdActor::HandleCopyHdWhenNoReadableRegstMsg(const ActorMsg& msg) {
   }
   return 0;
 }
-  
-int CopyHdActor::HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
-  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
-  if (total_reading_cnt() == 0) {
-    OF_SET_MSG_HANDLE(nullptr);
-    return 1;
-  }
-  return 0;
-}
 
 void CopyHdActor::TryWardKernelAndSendMsg() {
   if (!waiting_in_regst_.empty() && IsWriteReady()) {
