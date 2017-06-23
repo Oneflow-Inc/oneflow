@@ -16,13 +16,13 @@ Snapshot::Snapshot(const std::string& snapshot_root_path) {
 void Snapshot::CheckAndConcat() {
   // the children of the root path must be dir, not file
   std::vector<std::string> sub_dir_names;
-  env_->GetChildren(root_path_, &sub_dir_names);
+  TF_CHECK_OK(env_->GetChildren(root_path_, &sub_dir_names));
   for (std::string sub_dir_name : sub_dir_names) {
     std::string sub_dir = tensorflow::io::JoinPath(root_path_, sub_dir_name);
     TF_CHECK_OK(env_->IsDirectory(sub_dir));
     // for the children of the sub_dir
     std::vector<std::string> file_names;
-    env_->GetChildren(sub_dir, &file_names);
+    TF_CHECK_OK(env_->GetChildren(sub_dir, &file_names));
     CHECK_NE(file_names.size(), 0);
     std::string concat_file_path = tensorflow::io::JoinPath(sub_dir, concat_file_name_);
     // if the children number is 1 , the child must be a file
@@ -33,7 +33,7 @@ void Snapshot::CheckAndConcat() {
       TF_CHECK_OK(env_->FileExists(file_path));
       if (file_names[0] != concat_file_name_) {
         CHECK_EQ(file_names[0], "0");
-        env_->RenameFile(file_path, concat_file_path);
+        TF_CHECK_OK(env_->RenameFile(file_path, concat_file_path));
       }
       continue;
     }
@@ -71,7 +71,7 @@ void Snapshot::CheckAndConcat() {
       TF_CHECK_OK(env_->DeleteFile(file_path));
       free(scratch);
     }
-    concat_file->Close();
+    TF_CHECK_OK(concat_file->Close());
   }
   
 }
@@ -90,7 +90,7 @@ std::unique_ptr<PersistentOutStream> Snapshot::GetOutStream(
     int32_t part_id) {
   std::string dir_path = tensorflow::io::JoinPath(root_path_, key);
   if (env_->IsDirectory(dir_path).code() == tensorflow::error::NOT_FOUND) {
-    env_->CreateDir(dir_path);
+    TF_CHECK_OK(env_->CreateDir(dir_path));
   }
   TF_CHECK_OK(env_->IsDirectory(dir_path));
   std::string file_path = tensorflow::io::JoinPath(dir_path,
