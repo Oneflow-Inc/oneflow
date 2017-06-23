@@ -20,13 +20,13 @@ void TaskNode::set_stage_node(const StageNode* new_stage_node) {
   stage_node_ = new_stage_node;
 }
 
-uint64_t& TaskNode::mut_thrd_loc_id() {
+int64_t& TaskNode::mut_thrd_loc_id() {
   CHECK(IsFwNode());
   return thrd_loc_id_;
 }
 
 void TaskNode::set_task_id() {
-  uint64_t machine_id = stage_node_->machine_id();
+  int64_t machine_id = stage_node_->machine_id();
   task_id_ = IDMgr::Singleton().NewTaskId(machine_id, thrd_loc_id_);
 }
 

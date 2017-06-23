@@ -22,8 +22,8 @@ const PbMessage& ConvolutionOp::GetSpecialConf() const {
 void ConvolutionOp::InferShape4FwBlobs(
     std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
     ParallelPolicy policy,
-    uint64_t parallel_id,
-    uint64_t parallel_num) const {
+    int64_t parallel_id,
+    int64_t parallel_num) const {
   Shape* input_shape_ptr = GetShapePtr4BnInOp(SoleIbn());
   Shape* output_shape_ptr = GetShapePtr4BnInOp(SoleObn());
   Shape* colbuf_shape_ptr = GetShapePtr4BnInOp("col_buf");

@@ -20,8 +20,8 @@ class MultinomialLogisticLossOp : public UserOperator {
   void InferShape4FwBlobs(
       std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
       ParallelPolicy policy,
-      uint64_t parallel_id,
-      uint64_t parallel_num) const override;
+      int64_t parallel_id,
+      int64_t parallel_num) const override;
 
  private:
 

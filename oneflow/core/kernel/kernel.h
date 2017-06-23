@@ -25,8 +25,8 @@ class Kernel {
   virtual void InitModelAndModelTmpBlobs(
       const KernelCtx& ctx,
       ParallelPolicy policy,
-      uint64_t parallel_id,
-      uint64_t parallel_num,
+      int64_t parallel_id,
+      int64_t parallel_num,
       const Snapshot*,
       std::function<Blob*(const std::string&)> Blob4BnInOp) const {
     UNEXPECTED_RUN();

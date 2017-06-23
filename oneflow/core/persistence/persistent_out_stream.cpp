@@ -8,7 +8,7 @@ PersistentOutStream::PersistentOutStream(const std::string& file_path) {
 
 PersistentOutStream& PersistentOutStream::Write(const char* s, size_t n) {
   auto data = tensorflow::StringPiece(s, n);
-  file_->Append(data);
+  TF_CHECK_OK(file_->Append(data));
   return *this;
 }
 

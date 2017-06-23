@@ -18,10 +18,10 @@ const PbMessage& DataLoaderOp::GetSpecialConf() const {
 void DataLoaderOp::InferShape4FwBlobs(
     std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
     ParallelPolicy policy,
-    uint64_t parallel_id,
-    uint64_t parallel_num) const {
+    int64_t parallel_id,
+    int64_t parallel_num) const {
   // useful vars
-  uint32_t piece_size = JobDesc::Singleton().piece_size();
+  int32_t piece_size = JobDesc::Singleton().piece_size();
   auto op_conf = static_cast<const DataLoaderOpConf*> (&GetSpecialConf());
   // feature shape
   Shape feature_shape_of_one_ins(op_conf->shape_of_one_feature_ins());

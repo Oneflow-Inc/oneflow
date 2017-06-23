@@ -99,9 +99,9 @@ template<typename CompTaskNodeType>
 void TaskGraph::Stage2DeviceCompTaskNodes(
     const StageNode* stage,
     TaskNodesInStage* task_nodes_in_stage) {
-  uint64_t parallel_idx = stage->parallel_range().begin();
+  int64_t parallel_idx = stage->parallel_range().begin();
   for (auto device_phy_id : stage->SortedDevicePhyIds()) {
-    uint64_t thread_local_id =
+    int64_t thread_local_id =
         IDMgr::Singleton().ThrdLocId4DevPhyId(device_phy_id);
     // comp_task_node
     CompTaskNodeType* comp_task_node = NewTaskNode<CompTaskNodeType> ();
@@ -147,9 +147,9 @@ INSTANTIATE_TASK_GPH_MEM_FUNC(
 template<typename CompTaskNodeType>
 void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
                                         TaskNodesInStage* task_nodes_in_stage) {
-  const uint64_t parallel_begin = stage->parallel_range().begin();
-  const uint64_t parallel_end = stage->parallel_range().end();
-  uint64_t parallel_idx = parallel_begin;
+  const int64_t parallel_begin = stage->parallel_range().begin();
+  const int64_t parallel_end = stage->parallel_range().end();
+  int64_t parallel_idx = parallel_begin;
   while (parallel_idx < parallel_end) {
     CompTaskNodeType* comp_task_node = NewTaskNode<CompTaskNodeType> ();
     comp_task_node->SetFwNode();

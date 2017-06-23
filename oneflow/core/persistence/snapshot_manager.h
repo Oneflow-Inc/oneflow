@@ -14,7 +14,7 @@ class SnapshotMgr {
 
   OF_SINGLETON(SnapshotMgr);
 
-  Snapshot* GetWriteableSnapshot(uint64_t snapshot_id);
+  Snapshot* GetWriteableSnapshot(int64_t snapshot_id);
 
   const Snapshot* GetReadableSnapshot() {
     return readable_snapshot_ptr_.get();
@@ -26,7 +26,7 @@ class SnapshotMgr {
   SnapshotMgr() = default;
   std::string model_save_snapshots_path_;
   std::unique_ptr<const Snapshot> readable_snapshot_ptr_;
-  HashMap<uint64_t, std::unique_ptr<Snapshot>> snapshot_id2writeable_snapshot_;
+  HashMap<int64_t, std::unique_ptr<Snapshot>> snapshot_id2writeable_snapshot_;
 };
 
 }  // namespace oneflow

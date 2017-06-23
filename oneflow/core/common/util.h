@@ -72,7 +72,7 @@ void SortAndRemoveDuplication(std::vector<T>* vec) {
 }
 
 inline std::string NewUniqueId() {
-  static uint64_t id = 0;
+  static int64_t id = 0;
   return std::to_string(id++);
 }
 

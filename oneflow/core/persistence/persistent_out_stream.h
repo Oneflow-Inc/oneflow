@@ -11,7 +11,7 @@ public:
   OF_DISALLOW_COPY_AND_MOVE(PersistentOutStream);
   PersistentOutStream() = delete;
   ~PersistentOutStream() {
-    file_->Close();
+    TF_CHECK_OK(file_->Close());
   }
 
   PersistentOutStream(const std::string& file_path);

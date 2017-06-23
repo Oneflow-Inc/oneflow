@@ -10,7 +10,7 @@ message HostPinnedMemory {
 }
 
 message DeviceCudaMemory {
-  uint64 device_id = 1;
+  int64 device_id = 1;
 }
 
 message MemoryCase {

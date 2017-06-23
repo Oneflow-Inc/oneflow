@@ -24,12 +24,12 @@ class Thread {
   void PollMsgChannel(const ThreadCtx& thread_ctx);
 
  private:
-  HashMap<uint64_t, TaskProto> id2task_;
+  HashMap<int64_t, TaskProto> id2task_;
   std::mutex id2task_mtx_;
 
   std::thread actor_thread_;
   Channel<ActorMsg> msg_channel_;
-  HashMap<uint64_t, std::unique_ptr<Actor>> id2actor_ptr_;
+  HashMap<int64_t, std::unique_ptr<Actor>> id2actor_ptr_;
 
 };
 

@@ -47,9 +47,7 @@ class Operator {
 
   DEFINE_GET_VAL_FROM_SPECIAL_CONF(std::string, String);
   DEFINE_GET_VAL_FROM_SPECIAL_CONF(int32_t, Int32);
-  DEFINE_GET_VAL_FROM_SPECIAL_CONF(uint32_t, UInt32);
   DEFINE_GET_VAL_FROM_SPECIAL_CONF(int64_t, Int64);
-  DEFINE_GET_VAL_FROM_SPECIAL_CONF(uint64_t, UInt64);
 
   #undef DEFINE_GET_VAL_FROM_SPECIAL_CONF
   
@@ -80,8 +78,8 @@ class Operator {
   virtual void InferShape4FwBlobs(
       std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
       ParallelPolicy policy,
-      uint64_t parallel_id,
-      uint64_t parallel_num) const = 0;
+      int64_t parallel_id,
+      int64_t parallel_num) const = 0;
 
  protected:
   virtual std::string ibn2lbn(const std::string& input_bn) const = 0;
@@ -145,8 +143,8 @@ class SysOperator : public Operator {
   virtual void InferShape4FwBlobs(
       std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
       ParallelPolicy policy,
-      uint64_t parallel_id,
-      uint64_t parallel_num) const override {
+      int64_t parallel_id,
+      int64_t parallel_num) const override {
     UNEXPECTED_RUN();
   }
 

@@ -18,16 +18,16 @@ enum TaskType {
 
 message TaskProto {
   // common
-  uint64 id = 1;
+  int64 id = 1;
   TaskType type = 2;
-  uint64 machine_id = 3;
-  uint64 thrd_local_id = 4;
+  int64 machine_id = 3;
+  int64 thrd_local_id = 4;
   bool is_forward = 5;
   ExecSequence exec_sequence = 6;
   map<string, RegstDescProto> produced_regst_desc = 7;
-  map<string, uint64> subscribed_regst_desc_id = 8;
+  map<string, int64> subscribed_regst_desc_id = 8;
   // for CompTask
   ParallelPolicy parallel_policy = 1000;
-  uint64 parallel_id = 1001;
-  uint64 parallel_num = 1002;
+  int64 parallel_id = 1001;
+  int64 parallel_num = 1002;
 }

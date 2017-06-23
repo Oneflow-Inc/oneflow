@@ -65,12 +65,12 @@ int BoxingActor::HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
 
 void BoxingActor::TryWardKernelAndSendMsg() {
   if (!num_of_read_empty_ && IsWriteReady()) {
-    uint64_t piece_id = expected_piece_id();
+    int64_t piece_id = expected_piece_id();
     for (const auto& pair : read_regst_) {
       CHECK_EQ(pair.second.front()->piece_id(), piece_id);
     }
     AsyncWardKernel(GenDefaultKernelCtx(), 
-        [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+        [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
       Regst* regst = GetCurWriteableRegst(regst_desc_id);
       if (regst == nullptr) {
         return read_regst_.at(regst_desc_id).front();

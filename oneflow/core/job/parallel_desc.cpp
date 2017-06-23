@@ -20,7 +20,7 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
         ParseDeviceNameConf(device_name);
     std::string machine_name = machine_name_device_id.first;
     std::string device_id_str = machine_name_device_id.second;
-    uint64_t machine_id =
+    int64_t machine_id =
         IDMgr::Singleton().MachineID4MachineName(machine_name);
     sorted_machine_ids_.push_back(machine_id);
     // if the device_name format is "machine_xxx:0-3", add device_id {0,1,2,3}
@@ -29,15 +29,15 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
       machine_id2sorted_device_phy_ids_[machine_id] = {};
       device_type_ = DeviceType::kCPU;
     } else if (to_symbol_pos == std::string::npos) {
-      uint64_t device_id = Stou64OrDie(device_id_str);
+      int64_t device_id = Stou64OrDie(device_id_str);
       machine_id2sorted_device_phy_ids_[machine_id].push_back(device_id);
     } else {
-      uint64_t begin_device_id = 
+      int64_t begin_device_id = 
           Stou64OrDie(device_id_str.substr(0, to_symbol_pos));
-      uint64_t end_device_id =
+      int64_t end_device_id =
           Stou64OrDie(device_id_str.substr(to_symbol_pos + 1));
       CHECK_LT(begin_device_id, end_device_id);
-      for (uint64_t i = begin_device_id; i <= end_device_id; ++i) {
+      for (int64_t i = begin_device_id; i <= end_device_id; ++i) {
         machine_id2sorted_device_phy_ids_[machine_id].push_back(i);
       }
     }
@@ -67,9 +67,9 @@ std::string ParallelDesc::VisualStr() const {
     ss << "CPU";
   }
   ss << "}{machine_id2sorted_device_phy_ids:";
-  for (uint64_t machine_id : sorted_machine_ids_) {
+  for (int64_t machine_id : sorted_machine_ids_) {
     ss << "{" << machine_id << ":[";
-    for (uint64_t device_phy_id : machine_id2sorted_device_phy_ids_.at(machine_id)) {
+    for (int64_t device_phy_id : machine_id2sorted_device_phy_ids_.at(machine_id)) {
       ss << device_phy_id << ",";
     }
     ss << "]}";

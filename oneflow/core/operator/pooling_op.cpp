@@ -18,8 +18,8 @@ const PbMessage& PoolingOp::GetSpecialConf() const {
 void PoolingOp::InferShape4FwBlobs(
     std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
     ParallelPolicy policy,
-    uint64_t parallel_id,
-    uint64_t parallel_num) const {
+    int64_t parallel_id,
+    int64_t parallel_num) const {
   Shape* output_shape_ptr = GetShapePtr4BnInOp(SoleObn());
   Shape* input_shape_ptr = GetShapePtr4BnInOp(SoleIbn());
   const PoolingOpConf& pooling_conf = op_conf().pooling_conf();
