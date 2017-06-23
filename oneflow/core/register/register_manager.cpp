@@ -11,8 +11,6 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
   for (uint64_t i = 0; i < regst_desc_proto.register_num(); ++i) {
     Regst* regst = new Regst;
     regst->regst_desc_ = runtime_regst_desc;
-    regst->regst_id_ =
-        IDMgr::Singleton().NewRegstId(regst_desc_proto.regst_desc_id());
 
     size_t elem_size = sizeof(float);
     if (JobDesc::Singleton().floating_point_type() == kDouble) {
