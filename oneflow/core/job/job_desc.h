@@ -33,6 +33,7 @@ class JobDesc final {
   int32_t num_of_batches_in_snapshot() const { return num_of_batches_in_snapshot_; }
   int32_t staleness() const { return staleness_; }
   int64_t total_batch_num() const { return total_batch_num_; }
+  int64_t total_piece_num() const { return total_batch_num_ * num_of_pieces_in_batch_; }
 
  private:
   JobDesc() = default;
@@ -49,6 +50,7 @@ class JobDesc final {
   int32_t num_of_batches_in_snapshot_;
   int32_t staleness_;
   int64_t total_batch_num_;
+  int64_t total_piece_num_;
 
 };
 
