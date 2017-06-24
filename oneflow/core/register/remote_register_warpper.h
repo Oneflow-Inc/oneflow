@@ -3,6 +3,7 @@
 
 #include "oneflow/core/register/register_warpper.h"
 #include "oneflow/core/job/keyword.h"
+#include "oneflow/core/common/shape.h"
 
 namespace oneflow {
 
@@ -14,7 +15,10 @@ class RemoteRegstWarpper final : public RegstWarpper {
 
   RemoteRegstWarpper(Regst* regst) {
     regst_ = regst;
-    baled_blob_ = regst_->GetBlobPtrFromLbn(kBaledBlobName);
+
+    Blob* blob = regst_->GetBlobPtrFromLbn(kBaledBlobName);
+    baled_blob_ = new Blob(blob->mut_dptr(), new Shape(blob->shape()));
+
     piece_id_ = regst_->piece_id();
     model_version_id_ = regst_->model_version_id();
     regst_desc_id_ = regst_->regst_desc_id();
