@@ -7,10 +7,10 @@ namespace oneflow {
 void FwDataCompActor::Init(const TaskProto& task_proto,
                            const ThreadCtx& thread_ctx) {
   Actor::Init(task_proto, thread_ctx);
+  in_desc_id_ = RegstDescId4Name("in");
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
   expected_model_version_id_ = 0;
-  num_of_eord_ = 0;
   if (thread_ctx.cpu_stream) {
     mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
   } else {
@@ -18,26 +18,41 @@ void FwDataCompActor::Init(const TaskProto& task_proto,
                                              cuda_handle_.cublas_handle(),
                                              cuda_handle_.cudnn_handle()));
   }
-  OF_SET_MSG_HANDLE(&FwDataCompActor::HandleFwComp);
+  if (in_desc_id_ == -1) {
+    CHECK_EQ(model_regst_desc_id_, -1);
+    CHECK_EQ(model_tmp_regst_desc_id_, -1);
+    OF_SET_MSG_HANDLE(&FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg);
+  } else {
+    num_of_not_eord_ = 1 + (model_regst_desc_id_ != -1) 
+                         + (model_tmp_regst_desc_id_ != -1);
+    OF_SET_MSG_HANDLE(&FwDataCompActor::HandleFwComp);
+  }
 }
 
 bool FwDataCompActor::IsReadReady() {
-  if (model_regst_ && model_tmp_regst_ && !in_.empty()) {
-    // More Effective Distributed ML via a Stale Synchronous Parallel Parameter Server
+  if (in_desc_id_ == -1) {
+    return true;
+  }
+  if (in_.empty() || (model_regst_desc_id_ != -1 && !model_regst_)
+                  || (model_tmp_regst_desc_id_ != -1 && !model_tmp_regst_)) {
+    return false;
+  }
+  if (model_regst_desc_id_ != -1) {
+    //Ho Q, Cipar J, Cui H, et al. More effective distributed ml via a stale synchronous parallel parameter server
     int32_t staleness = JobDesc::Singleton().staleness();
     int32_t num_of_piece_in_batch = JobDesc::Singleton().num_of_piece_in_batch();
     int64_t cur_iteration = in_.front()->piece_id() / num_of_piece_in_batch;
     int64_t stale_version = cur_iteration - staleness;
     return model_regst_->model_version_id() >= stale_version;
   }
-  return false;
+  return true;
 }
 
 int FwDataCompActor::HandleFwComp(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
-    num_of_eord_ += 1;
-    if (num_of_eord_ == 3) {
+    num_of_not_eord_ -= 1;
+    if (!num_of_not_eord_) {
       OF_SET_MSG_HANDLE(&FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg);
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
@@ -67,11 +82,16 @@ int FwDataCompActor::HandleFwComp(const ActorMsg& msg) {
 int FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
   TryWardKernelAndSendMsg();
-  if (in_.empty()) {
-    AsyncSendRegstMsgToProducer(model_regst_);
-    model_regst_ = nullptr;
-    AsyncSendRegstMsgToProducer(model_tmp_regst_);
-    model_tmp_regst_ = nullptr;
+  int total_piece_num = JobDesc::Singleton().total_piece_num();
+  if ((in_desc_id_!=-1 && in_.empty()) || expected_piece_id() == total_piece_num) {
+    if (model_regst_desc_id_ != -1) {
+      AsyncSendRegstMsgToProducer(model_regst_);
+      model_regst_ = nullptr;
+    }
+    if (model_tmp_regst_desc_id_ != -1) {
+      AsyncSendRegstMsgToProducer(model_tmp_regst_);
+      model_tmp_regst_ = nullptr;
+    }
     AsyncSendEORDMsgForAllProducedRegstDesc();
     if (total_reading_cnt() == 0) {
       OF_SET_MSG_HANDLE(nullptr);
