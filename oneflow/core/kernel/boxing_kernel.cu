@@ -12,6 +12,13 @@ void BoxingKernel<DeviceType::kGPU, floating_point_type>::Memcpy(
 }
 
 template<typename floating_point_type>
+void BoxingKernel<DeviceType::kGPU, floating_point_type>::Memset(
+    const KernelCtx& ctx, void* dst, const char value, size_t sz) {
+  CHECK_EQ(cudaMemsetAsync(dst, value, sz, ctx.device_ctx->cuda_stream()), 
+      cudaSuccess);
+}
+
+template<typename floating_point_type>
 void BoxingKernel<DeviceType::kGPU, floating_point_type>::BlobCpy(
     const KernelCtx& ctx, const Blob* a, Blob* b) {
   CHECK_EQ(cudaMemcpyAsync(static_cast<floating_point_type*>(b->mut_dptr()), 

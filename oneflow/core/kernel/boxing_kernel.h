@@ -27,11 +27,13 @@ class BoxingKernel<DeviceType::kALL, floating_point_type> :
                 std::function<Blob*(const std::string&)>) const override;
  protected:
   BoxingKernel() = default;
-  // Mark: seems inappropriate to use ctx into OF* fucntions. However, since 
+  // Mark: seems inappropriate to send ctx into these fucntions. However, since 
   // it is a virtual function, we do not know whether it will be excecuted on
   // cpu or gpu yet.
   virtual void Memcpy(const KernelCtx& ctx,
       void* dst, const void* src, size_t sz) = 0;
+  virtual void Memset(const KernelCtx& ctx, void* dst, const char value, 
+      size_t sz) = 0;
   virtual void BlobCpy(const KernelCtx& ctx, const Blob* a, Blob* b) = 0;
   virtual void BlobAdd(const KernelCtx& ctx, const Blob*, Blob*) = 0;
   virtual void BlasAxpy(const KernelCtx& ctx, const int N,
@@ -70,7 +72,7 @@ class BoxingKernel<DeviceType::kALL, floating_point_type> :
   // Do direct memory copy from saved rules
   void CopyDataFromRules( const KernelCtx& ctx, 
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr, 
-    std::vector<copy_rule>& copy_rules) const; 
+    std::vector<copy_rule>& copy_rules); 
 
   // Forward function for Add box
   void AddBoxForward(
@@ -110,6 +112,8 @@ class BoxingKernel<DeviceType::kCPU, floating_point_type> final :
   ~BoxingKernel() = default;
 
   // implementations of math virtual functions on cpu
+  void Memset(const KernelCtx& ctx, void* dst, const char value, 
+      size_t sz) override;
   void Memcpy(const KernelCtx& ctx,
       void* dst, const void* src, size_t sz) override;
   void BlobCpy(const KernelCtx& ctx, const Blob* a, Blob* b) override;
@@ -132,6 +136,8 @@ class BoxingKernel<DeviceType::kGPU, floating_point_type> final :
   ~BoxingKernel() = default;
 
   // implementations of math virtual functions on gpu
+  void Memset(const KernelCtx& ctx, void* dst, const char value, 
+      size_t sz) override;
   void Memcpy(const KernelCtx& ctx,
       void* dst, const void* src, size_t sz) override;
   void BlobCpy(const KernelCtx& ctx, const Blob* a, Blob* b) override;
