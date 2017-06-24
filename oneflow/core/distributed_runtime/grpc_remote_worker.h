@@ -54,25 +54,12 @@ class GrpcRemoteWorker {
       IssueRequest(request, response, sendmessage_, std::move(done));
     }
 
-    /*
     void ReadDataAsync(ReadDataRequest* request,
-                       TensorResponse* response,
+                       ReadDataResponse* response,
                        StatusCallback done) {
-      ReadDataRequest* req_copy = nullptr;
-      req_copy = new ReadDataRequest;
-      *req_copy = *request;
-
-      Callback wrapper_done;
-      const Callback* cb_to_use;
-      wrapper_done = [this, request, req_copy, response, done]() {
-        //int64_t step_id = request->step_id();
-        done();
-      };
-      cb_to_use = &wrapper_done;
       // callback done is passed in by NetActor
       IssueRequest(request, response, readdata_, std::move(done));
     }
-    */
 
  public:
   std::unique_ptr<grpc::WorkerService::Stub> stub_;
