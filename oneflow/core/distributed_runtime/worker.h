@@ -40,9 +40,9 @@ class Worker {
   ::tensorflow::Status SendMessageAsync(SendMessageRequest* request,
                                    SendMessageResponse* response);
 
-  ::tensorflow::Status ReadDataAsync(ReadDataRequest* request,
+  void ReadDataAsync(ReadDataRequest* request,
                                      ReadDataResponse* response,
-                                     StatusCallback done);
+                                     StatusCallback status);
 
   template <typename ProtoMessage>
   void ParseToProto(ProtoMessage& proto_type, std::string& file_name);
