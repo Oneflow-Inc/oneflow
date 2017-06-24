@@ -67,6 +67,11 @@ class BoxingKernel<DeviceType::kALL, floating_point_type> :
     std::vector<copy_rule>& copy_rules
     ) const;
 
+  // Do direct memory copy from saved rules
+  void CopyDataFromRules( const KernelCtx& ctx, 
+    std::function<Blob*(const std::string&)> BnInOp2BlobPtr, 
+    std::vector<copy_rule>& copy_rules) const; 
+
   // Forward function for Add box
   void AddBoxForward(
       const KernelCtx& ctx,
