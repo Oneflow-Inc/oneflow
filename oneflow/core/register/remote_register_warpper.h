@@ -17,7 +17,8 @@ class RemoteRegstWarpper final : public RegstWarpper {
     regst_ = regst;
 
     Blob* blob = regst_->GetBlobPtrFromLbn(kBaledBlobName);
-    baled_blob_ = new Blob(blob->mut_dptr(), new Shape(blob->shape()));
+    baled_blob_shape_.reset(new Shape(blob->shape()));
+    baled_blob_.reset(new Blob(blob->mut_dptr(), baled_blob_shape_.get()));
 
     piece_id_ = regst_->piece_id();
     model_version_id_ = regst_->model_version_id();
@@ -27,7 +28,7 @@ class RemoteRegstWarpper final : public RegstWarpper {
 
   Blob* GetBlobPtrFromLbn(const std::string& lbn) override {
     CHECK_EQ(kBaledBlobName, lbn);
-    return baled_blob_;
+    return baled_blob_.get();
   }
   int64_t piece_id() const override {
     return piece_id_;
@@ -51,7 +52,8 @@ class RemoteRegstWarpper final : public RegstWarpper {
   int64_t regst_desc_id_;
   int64_t producer_actor_id_;
   Regst* regst_;
-  Blob* baled_blob_;
+  std::unique_ptr<Shape> baled_blob_shape_;
+  std::unique_ptr<Blob> baled_blob_;
 
 };
 
