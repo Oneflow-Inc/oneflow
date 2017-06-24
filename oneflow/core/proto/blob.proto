@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+import "oneflow/core/common/shape.proto";
+
+package oneflow;
+
+message BlobProto {
+  ShapeProto blob_shape = 1;
+  bytes blob_content = 2;
+}

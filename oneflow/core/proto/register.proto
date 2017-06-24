@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+import "oneflow/core/proto/blob.proto";
+
+package oneflow;
+
+message RegisterProto {
+  int32 blob_num = 1;
+  repeated BlobProto blob_proto = 2;
+}

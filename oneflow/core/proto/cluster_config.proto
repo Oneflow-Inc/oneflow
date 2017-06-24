@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package oneflow;
+
+message NodeInfo {
+  string id = 1;
+  string address = 2;
+  string ip = 3;
+  string port = 4;
+}
+
+message ClusterSpec {
+  repeated NodeInfo node_info = 1;
+}

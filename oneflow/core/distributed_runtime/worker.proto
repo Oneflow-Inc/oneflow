@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package oneflow;
+
+import "oneflow/core/proto/graph.proto";
+import "oneflow/core/proto/register.proto";
+
+message MachineDesc {
+  int32 machine_id = 1;
+  string ip = 2;
+  int32 port = 3;
+}
+
+message MemoryDesc {
+  uint64 machine_id = 1;
+  uint64 memory_address = 2;
+  uint64 remoted_token = 3;
+}
+
+message EventMessageRpc {
+  int32 envent_message_type = 1;
+  int64 from_task_id = 2;
+  int64 to_task_id = 3;
+  int64 data_id = 4;
+  int64 register_id = 5;
+  bool is_model = 6;
+}
+
+message NetworkMessageRpc {
+  int32 network_message_type = 1;
+  int64 src_machine_id = 2;
+  int64 dst_machine_id = 3;
+  EventMessageRpc event_message = 4;
+}
+
+message GetStatusRequest {
+  int32 status = 1;
+  string status_test = 2;
+}
+message GetStatusResponse {
+  int32 status = 1;
+  string status_test = 2;
+}
+
+message GetMachineDescRequest {
+  MachineDesc machine_desc = 1;
+  string machine_desc_test = 2;
+}
+message GetMachineDescResponse {
+  MachineDesc machine_desc = 1;
+  string machine_desc_test = 2;
+}
+
+message GetMemoryDescRequest {
+  MemoryDesc memory_desc = 1;
+  string memory_desc_test = 2;
+}
+message GetMemoryDescResponse {
+  MemoryDesc memory_desc = 1;
+  string memory_desc_test = 2;
+}
+
+message SendTaskGraphRequest {
+  GraphDef task_graph = 1;
+  string send_task_graph_test = 2;
+  int32 tmp = 3;
+}
+message SendTaskGraphResponse {
+  GraphDef task_graph = 1;
+  string send_task_graph_test = 2;
+  int32 tmp = 3;
+}
+
+message SendMessageRequest {
+  NetworkMessageRpc network_message = 1;
+  string send_message_test = 2;
+}
+message SendMessageResponse {
+  string send_message_test = 1;
+}
+
+message ReadDataRequest {
+  RegisterProto tensor = 1;
+  int64 register_id = 2;
+  int32 dst_machine_id = 3; 
+  string read_data_test = 4;
+}
+message ReadDataResponse {
+  RegisterProto register = 1;
+  string read_data_test = 2;
+}

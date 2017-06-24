@@ -11,21 +11,21 @@ set(GRPC_TAG d6f4f987d9c8129426b299b6073fe8ca5b9ea813)
 
 if(WIN32)
     set(GRPC_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/${CMAKE_BUILD_TYPE})
-    set(GRPC_LIBRARY_NAMES gpr.lib
+    set(GRPC_LIBRARY_NAMES grpc++_unsecure.lib
       grpc_unsecure.lib
-      grpc++_unsecure.lib)
+      gpr.lib)
     set(GRPC_EXECUTABLE_NAME grpc_cpp_plugin.exe)
 elseif(APPLE AND ("${CMAKE_GENERATOR}" STREQUAL "Xcode"))
     set(GRPC_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/${CMAKE_BUILD_TYPE})
-    set(GRPC_LIBRARY_NAMES libgpr.a
+    set(GRPC_LIBRARY_NAMES libgrpc++_unsecure.a
       libgrpc_unsecure.a
-      libgrpc++_unsecure.a)
+      libgpr.a)
     set(GRPC_EXECUTABLE_NAME grpc_cpp_plugin)
 else()
     set(GRPC_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc)
-    set(GRPC_LIBRARY_NAMES libgpr.a
+    set(GRPC_LIBRARY_NAMES libgrpc++_unsecure.a 
       libgrpc_unsecure.a
-      libgrpc++_unsecure.a)
+      libgpr.a)
     set(GRPC_EXECUTABLE_NAME grpc_cpp_plugin)
 endif()
 

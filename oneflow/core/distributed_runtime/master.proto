@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package oneflow;
+
+import "oneflow/core/proto/graph.proto";
+
+message SendGraphRequest {
+  GraphDef graph = 1;
+  int32 tmp = 2;
+}
+message SendGraphResponse {
+  GraphDef graph = 1;
+  int32 tmp = 2;
+}
+
