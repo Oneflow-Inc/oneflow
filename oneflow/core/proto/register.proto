@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-import "oneflow/core/distributed_runtime/blob.proto";
+import "oneflow/core/proto/blob.proto";
 
 package oneflow;
 

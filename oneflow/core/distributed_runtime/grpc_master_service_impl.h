@@ -12,7 +12,7 @@
 
 #include <memory>
 
-#include "oneflow/core/distributed_runtime/grpc_serialization_traits.h"
+//#include "oneflow/core/distributed_runtime/grpc_serialization_traits.h"
 #include "oneflow/core/distributed_runtime/master_service.pb.h"
 
 namespace grpc {

@@ -3,7 +3,7 @@ syntax = "proto3";
 package oneflow;
 
 import "oneflow/core/proto/graph.proto";
-import "oneflow/core/proto/tensor.proto";
+import "oneflow/core/proto/register.proto";
 
 message MachineDesc {
   int32 machine_id = 1;
@@ -80,12 +80,12 @@ message SendMessageResponse {
 }
 
 message ReadDataRequest {
-  TensorProto tensor = 1;
+  RegisterProto tensor = 1;
   int64 register_id = 2;
   int32 dst_machine_id = 3; 
   string read_data_test = 4;
 }
 message ReadDataResponse {
-  TensorProto tensor = 1;
+  RegisterProto register = 1;
   string read_data_test = 2;
 }
