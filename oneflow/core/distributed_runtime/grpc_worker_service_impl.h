@@ -10,11 +10,7 @@
 #include <grpc++/impl/codegen/stub_options.h>
 #include <grpc++/impl/codegen/sync_stream.h>
 
-//#include "oneflow/core/distributed_runtime/tensor_coding.h"
-//#include "oneflow/core/distributed_runtime/grpc_serialization_traits.h"
 #include "oneflow/core/distributed_runtime/worker_service.pb.h"
-
-//OF_GRPC_ALLOW_UNLIMITED_MESSAGE_SIZE(oneflow::ReadDataResponse);
 
 namespace grpc {
 

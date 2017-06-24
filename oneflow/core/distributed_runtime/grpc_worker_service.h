@@ -157,7 +157,7 @@ class GrpcWorkerService {
       WorkerCall<ReadDataRequest, ReadDataResponse>* call) {
     Schedule([this, call] {
       worker_->ReadDataAsync(&call->request, &call->response,
-                             [this, call](const ::tensorflow::Status& status) {
+                             [call](const ::tensorflow::Status& status) {
                                call->SendResponse(ToGrpcStatus(status));
                              });
     });
