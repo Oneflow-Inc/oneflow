@@ -109,7 +109,10 @@ void FwDataCompActor::TryWardKernelAndSendMsg() {
     CHECK_EQ(in_.front()->piece_id(), expected_piece_id());
     ready_in_regst_[in_.front()->regst_desc_id()] = in_.front();
     int64_t piece_id = in_.front()->piece_id();
-    int64_t model_version_id = model_regst_->model_version_id();
+    int64_t model_version_id = -1;
+    if (model_regst_) {
+      model_version_id = model_regst_->model_version_id();
+    }
     AsyncWardKernel(GenDefaultKernelCtx(), 
         [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
       Regst* regst = GetCurWriteableRegst(regst_desc_id);
