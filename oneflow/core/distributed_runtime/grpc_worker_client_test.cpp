@@ -86,21 +86,36 @@ TEST(GrpcMasterServer, test) {
   } else {
     std::cout << "s is not ok " << std::endl;
   }
+  */
 
-  oneflow::SendMessageRequest req_sendmessage;
-  req_sendmessage.set_send_message_test("hi~, server");
-  oneflow::SendMessageResponse resp_sendmessage;
-  auto cb = [&resp_sendmessage](::tensorflow::Status s) {
-    std::cout<<"callback : " << resp_sendmessage.send_message_test() << std::endl;
-  };
-  remote_worker->SendMessageAsync(&req_sendmessage, &resp_sendmessage, cb);
+  //Async request
+  GrpcClientCQTag* callback_tag;
   void* tag;
   bool ok;
+  
+  //sendmessage request
+  oneflow::SendMessageRequest req_sendmessage;
+  req_sendmessage.set_send_message_test("hi~, server, I am send_message client");
+  oneflow::SendMessageResponse resp_sendmessage;
+  auto cb_send_message = [&resp_sendmessage](::tensorflow::Status s) {
+    std::cout<<"callback : " << resp_sendmessage.send_message_test() << std::endl;
+  };
+  remote_worker->SendMessageAsync(&req_sendmessage, &resp_sendmessage, cb_send_message);
   remote_worker->cq_->Next(&tag, &ok);
-  GrpcClientCQTag* callback_tag;
   callback_tag  = static_cast<GrpcClientCQTag*>(tag);
   callback_tag->OnCompleted(ok);
-  */
+
+  // readdata request
+  oneflow::ReadDataRequest req_readdata;
+  req_readdata.set_read_data_test("hi~, server, I am read_data client");
+  oneflow::ReadDataResponse resp_readdata;
+  auto cb_read_data = [&resp_readdata](::tensorflow::Status s) {
+    std::cout << "callback: " << resp_readdata.read_data_test() << std::endl;
+  };
+  remote_worker->ReadDataAsync(&req_readdata, &resp_readdata, cb_read_data);
+  remote_worker->cq_->Next(&tag, &ok);
+  callback_tag = static_cast<GrpcClientCQTag*>(tag);
+  callback_tag->OnCompleted(ok);
 
 }  // TEST
 
