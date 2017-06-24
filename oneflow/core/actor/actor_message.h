@@ -27,11 +27,11 @@ class ActorMsg final {
   ActorMsg();
   ~ActorMsg() = default;
 
-  static ActorMsg BuildReadableRegstMsg(uint64_t reader_actor_id, Regst*);
-  static ActorMsg BuildRegstMsgToProducer(uint64_t writer_actor_id, Regst*);
+  static ActorMsg BuildReadableRegstMsg(int64_t reader_actor_id, Regst*);
+  static ActorMsg BuildRegstMsgToProducer(int64_t writer_actor_id, Regst*);
 
   // Getters
-  uint64_t dst_actor_id() const { return dst_actor_id_; }
+  int64_t dst_actor_id() const { return dst_actor_id_; }
   ActorMsgType msg_type() const { return msg_type_; }
   std::shared_ptr<RegstWarpper> regst_warpper() const {
     CHECK(msg_type_ == ActorMsgType::kRegstMsg);
@@ -42,7 +42,7 @@ class ActorMsg final {
     return actor_cmd_;
   }
   // Setters
-  void set_dst_actor_id(uint64_t val) {
+  void set_dst_actor_id(int64_t val) {
     dst_actor_id_ = val;
   }
   void set_regst_warpper(std::shared_ptr<RegstWarpper> val) {
@@ -56,7 +56,7 @@ class ActorMsg final {
   
  private:
 
-  uint64_t dst_actor_id_;
+  int64_t dst_actor_id_;
   ActorMsgType msg_type_;
 
   std::shared_ptr<RegstWarpper> regst_warpper_;

@@ -14,7 +14,7 @@ class RuntimeInfo final {
 
   OF_SINGLETON(RuntimeInfo);
 
-  uint64_t this_machine_id() const { return this_machine_id_; }
+  int64_t this_machine_id() const { return this_machine_id_; }
   RuntimeState state() const { return state_; }
 
   void set_this_machine_name(const std::string& name) {
@@ -27,7 +27,7 @@ class RuntimeInfo final {
  private:
   RuntimeInfo() = default;
 
-  uint64_t this_machine_id_;
+  int64_t this_machine_id_;
   std::string this_machine_name_;
   RuntimeState state_;
 

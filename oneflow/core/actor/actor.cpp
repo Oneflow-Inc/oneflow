@@ -46,18 +46,35 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   total_reading_cnt_ = 0;
 }
 
+int64_t Actor::RegstDescId4Name(const std::string& name) const {
+  auto find_it = name2regst_desc_id_.find(name);
+  if (find_it != name2regst_desc_id_.end()) {
+    return find_it->second;
+  }
+  return -1;
+}
+
 KernelCtx Actor::GenDefaultKernelCtx() const {
   KernelCtx ctx;
   ctx.device_ctx = device_ctx_.get();
   return ctx;
 }
 
+int Actor::HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
+  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
+  if (total_reading_cnt_ == 0) {
+    msg_handle_ = nullptr;
+    return 1;
+  }
+  return 0;
+}
+
 void Actor::AsyncWardKernel(
     const KernelCtx& kernel_ctx,
-    std::function<std::shared_ptr<RegstWarpper>(uint64_t)> Regst4RegstDescId) {
+    std::function<std::shared_ptr<RegstWarpper>(int64_t)> Regst4RegstDescId) {
   for (const ExecKernel& ek : exec_kernel_vec_) {
     (ek.kernel->*ward_func_)(kernel_ctx, [&](const std::string& bn_in_op) {
-      uint64_t regst_desc_id = ek.bn_in_op2regst_desc_id.at(bn_in_op);
+      int64_t regst_desc_id = ek.bn_in_op2regst_desc_id.at(bn_in_op);
       auto regst = Regst4RegstDescId(regst_desc_id);
       const std::string& lbn = ek.kernel->Lbn4BnInOp(bn_in_op);
       return regst->GetBlobPtrFromLbn(lbn);
@@ -70,7 +87,7 @@ void Actor::AsyncSendReadableRegstMsg() {
   for (auto& pair : writeable_produced_regst_) {
     Regst* regst = pair.second.front();
     device_ctx_->AddCallBack([regst]() {
-      for (uint64_t subscriber : regst->subscribers_actor_id()) {
+      for (int64_t subscriber : regst->subscribers_actor_id()) {
         ActorMsg msg = ActorMsg::BuildReadableRegstMsg(subscriber, regst);
         ActorMsgBus::Singleton().SendMsg(std::move(msg));
       }
@@ -82,10 +99,10 @@ void Actor::AsyncSendReadableRegstMsg() {
   }
 }
 
-void Actor::AsyncSendEORDMsgToSubscribers(uint64_t regst_desc_id) {
+void Actor::AsyncSendEORDMsgToSubscribers(int64_t regst_desc_id) {
   Regst* one_regst = produced_regsts_.at(regst_desc_id).front().get();
   device_ctx_->AddCallBack([one_regst]() {
-    for (uint64_t subscriber : one_regst->subscribers_actor_id()) {
+    for (int64_t subscriber : one_regst->subscribers_actor_id()) {
       ActorMsg msg;
       msg.set_dst_actor_id(subscriber);
       msg.set_actor_cmd(ActorCmd::kEORD);
@@ -129,7 +146,7 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   return 0;
 }
 
-Regst* Actor::GetCurWriteableRegst(uint64_t regst_desc_id) {
+Regst* Actor::GetCurWriteableRegst(int64_t regst_desc_id) {
   auto it = writeable_produced_regst_.find(regst_desc_id);
   if (it == writeable_produced_regst_.end()) { return nullptr; }
   return it->second.front();

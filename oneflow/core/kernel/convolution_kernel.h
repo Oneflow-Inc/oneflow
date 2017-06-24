@@ -6,8 +6,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename floating_point_type>
-class ConvolutionKernel final {
-};
+class ConvolutionKernel;
 
 template<typename floating_point_type>
 class ConvolutionKernel<DeviceType::kCPU, floating_point_type> final : public Kernel {

@@ -27,8 +27,8 @@ void DisConnect(EdgeType* edge) {
   edge->dst_node_ = nullptr;
 }
 
-uint64_t NewNodeId();
-uint64_t NewEdgeId();
+int64_t NewNodeId();
+int64_t NewEdgeId();
 
 template<typename NodeType, typename EdgeType>
 class Edge {
@@ -41,7 +41,7 @@ class Edge {
   }
   virtual ~Edge() = default;
 
-  uint64_t edge_id() const { return edge_id_; }
+  int64_t edge_id() const { return edge_id_; }
   std::string edge_id_str() const { return std::to_string(edge_id_); }
 
   NodeType* src_node() const { return src_node_; }
@@ -55,7 +55,7 @@ class Edge {
                                           NodeType* dst_node);
   friend void DisConnect<EdgeType>(EdgeType* edge);
   
-  uint64_t edge_id_;
+  int64_t edge_id_;
   
   NodeType* src_node_;
   NodeType* dst_node_;
@@ -71,7 +71,7 @@ class Node {
   }
   virtual ~Node() = default;
 
-  uint64_t node_id() const { return node_id_; }
+  int64_t node_id() const { return node_id_; }
   std::string node_id_str() const { return std::to_string(node_id_); }
   EdgeType* SoleInEdge() const {
     CHECK_EQ(in_edges_.size(), 1);
@@ -106,7 +106,7 @@ class Node {
                                           NodeType* dst_node);
   friend void DisConnect<EdgeType>(EdgeType* edge);
 
-  uint64_t node_id_;
+  int64_t node_id_;
   std::unordered_set<EdgeType*> in_edges_;
   std::unordered_set<EdgeType*> out_edges_;
 

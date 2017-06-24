@@ -12,8 +12,8 @@ class CompTaskNode : public TaskNode {
   virtual ~CompTaskNode() = default;
 
   // Getters and Setters
-  uint64_t parallel_id() const { return parallel_id_; }
-  void set_parallel_id(uint64_t parallel_id) { parallel_id_ = parallel_id; }
+  int64_t parallel_id() const { return parallel_id_; }
+  void set_parallel_id(int64_t parallel_id) { parallel_id_ = parallel_id; }
   bool IsLossNode() const { return chain_node()->IsLossNode(); }
   std::string VisualStr() const override;
   std::string device_name() const;
@@ -26,7 +26,7 @@ class CompTaskNode : public TaskNode {
   }
 
  private:
-  uint64_t parallel_id_;
+  int64_t parallel_id_;
 
 };
 

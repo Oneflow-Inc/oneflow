@@ -21,8 +21,8 @@ const PbMessage& ConcatOp::GetSpecialConf() const {
 void ConcatOp::InferShape4FwBlobs(
     std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
     ParallelPolicy policy,
-    uint64_t parallel_id,
-    uint64_t parallel_num) const {
+    int64_t parallel_id,
+    int64_t parallel_num) const {
   std::vector<int64_t> vec = GetShapePtr4BnInOp(input_bns().at(0))->dim_vec();
   for (size_t ibn_idx = 1; ibn_idx < input_bns().size(); ++ibn_idx) {
     Shape* ib_shape = GetShapePtr4BnInOp(input_bns().at(ibn_idx));

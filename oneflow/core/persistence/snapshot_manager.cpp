@@ -19,7 +19,7 @@ void SnapshotMgr::Init() {
   }
 }
 
-Snapshot* SnapshotMgr::GetWriteableSnapshot(uint64_t snapshot_id) {
+Snapshot* SnapshotMgr::GetWriteableSnapshot(int64_t snapshot_id) {
   auto it = snapshot_id2writeable_snapshot_.find(snapshot_id);
   if (it == snapshot_id2writeable_snapshot_.end()) {
     std::string snapshot_root_path = tensorflow::io::JoinPath(

@@ -10,8 +10,8 @@
 #include "oneflow/core/operator/operator.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/blas/cblas_template.h"
-#include "oneflow/blas/cublas_template.h"
+#include "oneflow/core/blas/cblas_template.h"
+#include "oneflow/core/blas/cublas_template.h"
 
 namespace oneflow {
 
@@ -25,8 +25,8 @@ class Kernel {
   virtual void InitModelAndModelTmpBlobs(
       const KernelCtx& ctx,
       ParallelPolicy policy,
-      uint64_t parallel_id,
-      uint64_t parallel_num,
+      int64_t parallel_id,
+      int64_t parallel_num,
       const Snapshot*,
       std::function<Blob*(const std::string&)> Blob4BnInOp) const {
     UNEXPECTED_RUN();

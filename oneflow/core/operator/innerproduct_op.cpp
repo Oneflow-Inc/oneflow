@@ -22,10 +22,10 @@ const PbMessage& InnerProductOp::GetSpecialConf() const {
 void InnerProductOp::InferShape4FwBlobs(
     std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
     ParallelPolicy policy,
-    uint64_t parallel_id,
-    uint64_t parallel_num) const {
+    int64_t parallel_id,
+    int64_t parallel_num) const {
   Shape* in_shape_ptr = GetShapePtr4BnInOp(SoleIbn());
-  uint32_t out_num = GetUInt32FromSpecialConf("out_num");
+  int32_t out_num = GetInt32FromSpecialConf("out_num");
   if (policy == kModelParallel) {
     BalancedSplitter splitter(out_num, parallel_num);
     out_num = splitter.At(parallel_id).size();

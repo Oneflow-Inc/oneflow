@@ -18,23 +18,19 @@ void FwDataCompActor::Init(const TaskProto& task_proto,
                                              cuda_handle_.cublas_handle(),
                                              cuda_handle_.cudnn_handle()));
   }
-  cur_msg_handle_ = &FwDataCompActor::HandleFwComp;
+  OF_SET_MSG_HANDLE(&FwDataCompActor::HandleFwComp);
 }
 
 bool FwDataCompActor::IsReadReady() {
   if (model_regst_ && model_tmp_regst_ && !in_.empty()) {
     // More Effective Distributed ML via a Stale Synchronous Parallel Parameter Server
-    uint32_t staleness = JobDesc::Singleton().staleness();
-    uint32_t num_of_piece_in_batch = JobDesc::Singleton().num_of_piece_in_batch();
-    uint64_t cur_iteration = in_.front()->piece_id() / num_of_piece_in_batch;
-    uint64_t stale_version = cur_iteration - staleness;
+    int32_t staleness = JobDesc::Singleton().staleness();
+    int32_t num_of_piece_in_batch = JobDesc::Singleton().num_of_piece_in_batch();
+    int64_t cur_iteration = in_.front()->piece_id() / num_of_piece_in_batch;
+    int64_t stale_version = cur_iteration - staleness;
     return model_regst_->model_version_id() >= stale_version;
   }
   return false;
-}
-
-int FwDataCompActor::ProcessMsg(const ActorMsg& msg) {
-  return (this->*cur_msg_handle_)(msg);
 }
 
 int FwDataCompActor::HandleFwComp(const ActorMsg& msg) {
@@ -42,7 +38,7 @@ int FwDataCompActor::HandleFwComp(const ActorMsg& msg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     num_of_eord_ += 1;
     if (num_of_eord_ == 3) {
-      cur_msg_handle_ = &FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg;
+      OF_SET_MSG_HANDLE(&FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg);
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()) != 0) {
@@ -78,33 +74,24 @@ int FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg(const ActorMsg& msg) {
     model_tmp_regst_ = nullptr;
     AsyncSendEORDMsgForAllProducedRegstDesc();
     if (total_reading_cnt() == 0) {
-      cur_msg_handle_ = nullptr;
+      OF_SET_MSG_HANDLE(nullptr);
       return 1;
     } else {
-      cur_msg_handle_ = &FwDataCompActor::HandleWaitUntilReadingCntEqualZero;
+      OF_SET_MSG_HANDLE(&FwDataCompActor::HandleWaitUntilReadingCntEqualZero);
       return 0;
     }
   }
   return 0;
 }
   
-int FwDataCompActor::HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
-  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
-  if (total_reading_cnt() == 0) {
-    cur_msg_handle_ = nullptr;
-    return 1;
-  }
-  return 0;
-}
-
 void FwDataCompActor::TryWardKernelAndSendMsg() {
   while (IsReadReady() && IsWriteReady()) {
     CHECK_EQ(in_.front()->piece_id(), expected_piece_id());
     ready_in_regst_[in_.front()->regst_desc_id()] = in_.front();
-    uint64_t piece_id = in_.front()->piece_id();
-    uint64_t model_version_id = model_regst_->model_version_id();
+    int64_t piece_id = in_.front()->piece_id();
+    int64_t model_version_id = model_regst_->model_version_id();
     AsyncWardKernel(GenDefaultKernelCtx(), 
-        [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+        [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
       Regst* regst = GetCurWriteableRegst(regst_desc_id);
       if (regst == nullptr) {
         return ready_in_regst_.at(regst_desc_id);

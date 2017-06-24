@@ -70,7 +70,7 @@ void AddGpuDoubleKernelCreator(OperatorConf::OpTypeCase op_type_case,
 
 void KernelMgr::InitFromPlan(const Plan& plan) {
   FloatingPointType floating_point_type = JobDesc::Singleton().floating_point_type();
-  uint64_t this_machine_id = RuntimeInfo::Singleton().this_machine_id();
+  int64_t this_machine_id = RuntimeInfo::Singleton().this_machine_id();
   const PbRpf<std::string>& op_names_rpf =
       plan.machine_id2op_name_set().at(this_machine_id).op_name();
   std::unordered_set<std::string> op_name_set(op_names_rpf.begin(),

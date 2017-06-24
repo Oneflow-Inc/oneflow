@@ -19,8 +19,8 @@ const PbMessage& MultinomialLogisticLossOp::GetSpecialConf() const {
 void MultinomialLogisticLossOp::InferShape4FwBlobs(
     std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
     ParallelPolicy policy,
-    uint64_t parallel_id,
-    uint64_t parallel_num) const {
+    int64_t parallel_id,
+    int64_t parallel_num) const {
   *GetShapePtr4BnInOp(SoleObn()) = Shape({1});
   *GetShapePtr4BnInOp(SoleDtbn()) = Shape({1});
   for (size_t i = 0;i < input_diff_bns().size(); ++i) {
