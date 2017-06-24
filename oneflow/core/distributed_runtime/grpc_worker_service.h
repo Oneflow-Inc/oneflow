@@ -28,7 +28,7 @@ class GrpcWorkerService {
       core_num_ = std::thread::hardware_concurrency();
       compute_pool_ =
         new ::tensorflow::thread::ThreadPool(
-            ::tensorflow::Env::Default(), 
+            ::tensorflow::Env::Default(),
             "worker_service", core_num_);
   }
 
@@ -154,7 +154,7 @@ class GrpcWorkerService {
   }
 
   void ReadDataHandleRaw(
-      WorkerCall<ReadDataRequest, ::grpc::ByteBuffer>* call) {
+      WorkerCall<ReadDataRequest, ReadDataResponse>* call) {
     Schedule([this, call] {
       worker_->ReadDataAsync(&call->request, &call->response,
                              [this, call](const ::tensorflow::Status& status) {
@@ -169,7 +169,7 @@ class GrpcWorkerService {
     ::tensorflow::mutex_lock l(mu_);
     if (!is_shutdown_) {
       Call<GrpcWorkerService, grpc::WorkerService::AsyncService,
-        ReadDataRequest, ::grpc::ByteBuffer>::
+        ReadDataRequest, ReadDataResponse>::
         EnqueueRequestForMethod(
           &worker_service_, cq_.get(),
           static_cast<int>(GrpcWorkerMethod::kReadData),

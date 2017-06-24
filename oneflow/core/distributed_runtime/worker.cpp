@@ -1,5 +1,5 @@
 #include "oneflow/core/distributed_runtime/worker.h"
-#include "oneflow/core/distributed_runtime/grpc_tensor_coding.h"
+//#include "oneflow/core/distributed_runtime/grpc_tensor_coding.h"
 #include "oneflow/core/distributed_runtime/worker.pb.h"
 
 //#include "oneflow/core/network/network_message.h"
@@ -80,12 +80,8 @@ Worker::Worker(GrpcChannelCache* channel_cache)
 }
 
 ::tensorflow::Status Worker::ReadDataAsync(ReadDataRequest* request,
-                                           ::grpc::ByteBuffer* response,
+                                           ReadDataResponse* response,
                                            StatusCallback done) {
-  //const int64_t register_id = request->register_id();
-  
-  const Tensor val;
-  grpc::EncodeTensorToByteBuffer(false, val, response);
 
   //std::cout << "request from client = " << request->read_data_test() << std::endl;
   //response->set_read_data_test("read_data_test from server");

@@ -11,55 +11,18 @@
 #include <grpc++/impl/codegen/sync_stream.h>
 
 //#include "oneflow/core/distributed_runtime/tensor_coding.h"
-#include "oneflow/core/distributed_runtime/grpc_serialization_traits.h"
+//#include "oneflow/core/distributed_runtime/grpc_serialization_traits.h"
 #include "oneflow/core/distributed_runtime/worker_service.pb.h"
 
 //OF_GRPC_ALLOW_UNLIMITED_MESSAGE_SIZE(oneflow::ReadDataResponse);
 
-namespace oneflow {
-
-//class GrpcByteSource : public TensorResponse::Source {
-class GrpcByteSource {
-  public:
-    explicit GrpcByteSource(grpc_byte_buffer* buffer) : buffer_(buffer) {}
-    ~GrpcByteSource() { }
-
-  private:
-    grpc_byte_buffer* buffer_;
-};
-
-}  // namespace oneflow
-
 namespace grpc {
+
 class CompletionQueue;
 class Channel;
 class RpcService;
 class ServerCompletionQueue;
 class ServerContext;
-
-/*
-template <>
-class SerializationTraits<oneflow::TensorResponse>
-  : public UnlimitedSizeProtoSerializationTraits<oneflow::TensorResponse> {
- public:
-  static Status Serialize(const oneflow::TensorResponse& msg,
-                          grpc_byte_buffer** bp, bool* own_buffer) {
-
-  }
-
-  static Status Deserialize(grpc_byte_buffer* buffer,
-                            oneflow::TensorResponse* msg,
-                            int64_t max_message_size = INT_MAX) {
-    Status result = g_core_codegen_interface->ok();
-    ::oneflow::GrpcByteSource source(buffer);
-    msg->ParseFrom(&source); 
-    g_core_codegen_interface->grpc_byte_buffer_destroy(buffer);
-  }
-
- private:
-
-};
-*/
 
 }  // namespace grpc
 

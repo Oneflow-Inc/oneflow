@@ -41,12 +41,11 @@ class Worker {
                                    SendMessageResponse* response);
 
   ::tensorflow::Status ReadDataAsync(ReadDataRequest* request,
-                                ::grpc::ByteBuffer* response,
-                                StatusCallback done);
-  
+                                     ReadDataResponse* response,
+                                     StatusCallback done);
+
   template <typename ProtoMessage>
   void ParseToProto(ProtoMessage& proto_type, std::string& file_name);
-   
 
   private:
    GrpcChannelCache* channel_cache_;
