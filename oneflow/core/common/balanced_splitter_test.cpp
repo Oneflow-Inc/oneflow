@@ -20,8 +20,3 @@ TEST(BalancedSplitter, split_2_to_3_part) {
 }
 
 } // namespace oneflow
-
-int main(int argc, char **argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
