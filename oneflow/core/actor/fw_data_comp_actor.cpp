@@ -106,9 +106,11 @@ int FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg(const ActorMsg& msg) {
   
 void FwDataCompActor::TryWardKernelAndSendMsg() {
   while (IsReadReady() && IsWriteReady()) {
-    CHECK_EQ(in_.front()->piece_id(), expected_piece_id());
-    ready_in_regst_[in_.front()->regst_desc_id()] = in_.front();
-    int64_t piece_id = in_.front()->piece_id();
+    int64_t piece_id = expected_piece_id();
+    if (!in_.empty()) {
+      CHECK_EQ(in_.front()->piece_id(), piece_id);
+      ready_in_regst_[in_.front()->regst_desc_id()] = in_.front();
+    }
     int64_t model_version_id = -1;
     if (model_regst_) {
       model_version_id = model_regst_->model_version_id();
@@ -127,8 +129,10 @@ void FwDataCompActor::TryWardKernelAndSendMsg() {
       regst->set_model_version_id(model_version_id);
     });
     AsyncSendReadableRegstMsg();
-    AsyncSendRegstMsgToProducer(in_.front());
-    in_.pop();
+    if (!in_.empty()) {
+      AsyncSendRegstMsgToProducer(in_.front());
+      in_.pop();
+    }
   }
 }
 
