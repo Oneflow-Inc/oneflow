@@ -3,7 +3,6 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/id_manager.h"
-#include "oneflow/core/job/runtime_state.pb.h"
 
 namespace oneflow {
 
@@ -15,7 +14,6 @@ class RuntimeInfo final {
   OF_SINGLETON(RuntimeInfo);
 
   int64_t this_machine_id() const { return this_machine_id_; }
-  RuntimeState state() const { return state_; }
 
   void set_this_machine_name(const std::string& name) {
     this_machine_name_ = name;
@@ -29,7 +27,6 @@ class RuntimeInfo final {
 
   int64_t this_machine_id_;
   std::string this_machine_name_;
-  RuntimeState state_;
 
 };
 

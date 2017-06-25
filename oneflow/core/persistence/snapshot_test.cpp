@@ -14,7 +14,7 @@ TEST(Snapshot, write_and_read) {
       current_dir ,"/tmp_snapshot_test_asdfasdf");
   if (env->IsDirectory(snapshot_root_path).code() == tensorflow::error::OK) {
     std::vector<std::string> children;
-    env->GetChildren(snapshot_root_path, &children);
+    TF_CHECK_OK(env->GetChildren(snapshot_root_path, &children));
     ASSERT_EQ(children.size(), 0);
   } else {
     ASSERT_TRUE(env->CreateDir(snapshot_root_path).code() == tensorflow::error::OK);
@@ -33,8 +33,8 @@ TEST(Snapshot, write_and_read) {
   std::string file2 = tensorflow::io::JoinPath(snapshot_root_path, key, "1");
   std::string data1;
   std::string data2;
-  tensorflow::ReadFileToString(env, file1, &data1);
-  tensorflow::ReadFileToString(env, file2, &data2);
+  TF_CHECK_OK(tensorflow::ReadFileToString(env, file1, &data1));
+  TF_CHECK_OK(tensorflow::ReadFileToString(env, file2, &data2));
   ASSERT_EQ(data1, "a");
   ASSERT_EQ(data2, "b");
   // read
