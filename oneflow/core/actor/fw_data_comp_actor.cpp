@@ -21,12 +21,11 @@ void FwDataCompActor::Init(const TaskProto& task_proto,
   if (in_desc_id_ == -1) {
     CHECK_EQ(model_regst_desc_id_, -1);
     CHECK_EQ(model_tmp_regst_desc_id_, -1);
-    OF_SET_MSG_HANDLE(&FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg);
   } else {
     num_of_not_eord_ = 1 + (model_regst_desc_id_ != -1) 
                          + (model_tmp_regst_desc_id_ != -1);
-    OF_SET_MSG_HANDLE(&FwDataCompActor::HandleFwComp);
   }
+  OF_SET_MSG_HANDLE(&FwDataCompActor::WaitToStart);
 }
 
 bool FwDataCompActor::IsReadReady() {
@@ -46,6 +45,17 @@ bool FwDataCompActor::IsReadReady() {
     return model_regst_->model_version_id() >= stale_version;
   }
   return true;
+}
+
+int FwDataCompActor::WaitToStart(const ActorMsg& msg) {
+  CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
+  if (in_desc_id_ == -1) {
+    TryWardKernelAndSendMsg();
+    OF_SET_MSG_HANDLE(&FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg);
+  } else {
+    OF_SET_MSG_HANDLE(&FwDataCompActor::HandleFwComp);
+  }
+  return 0;
 }
 
 int FwDataCompActor::HandleFwComp(const ActorMsg& msg) {
