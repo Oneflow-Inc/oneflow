@@ -47,8 +47,3 @@ TEST(PoolingOp, pool_100x64x11x11) {
 }
 
 }  // namespace oneflow
-
-int main(int argc, char **argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
