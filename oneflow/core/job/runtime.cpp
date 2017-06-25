@@ -3,8 +3,9 @@
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/runtime_info.h"
-#include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/register/register_manager.h"
+#include "oneflow/core/kernel/kernel_manager.h"
+#include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/actor/actor_message_bus.h"
 
 namespace oneflow {
 
@@ -16,14 +17,49 @@ class Runtime final {
   OF_SINGLETON(Runtime);
 
   void Run(const Plan& plan, const std::string& this_machine_name) {
-    JobDesc::Singleton().InitFromProto(plan.job_desc());
-    IDMgr::Singleton().InitFromResource(JobDesc::Singleton().resource());
-    RuntimeInfo::Singleton().set_this_machine_name(this_machine_name);
-    TODO();
+    InitSingleton(plan, this_machine_name);
+    AddMdUpdtCompTaskAndInitModel(plan);
+    AddTheOtherTasks(plan);
+    SendInitialModel(plan);
+    // send msg to source actor ?
   }
 
  private:
   Runtime() = default;
+  void InitSingleton(const Plan& plan, const std::string& this_machine_name) {
+    JobDesc::Singleton().InitFromProto(plan.job_desc());
+    IDMgr::Singleton().InitFromResource(JobDesc::Singleton().resource());
+    RuntimeInfo::Singleton().set_this_machine_name(this_machine_name);
+    KernelMgr::Singleton().InitFromPlan(plan);
+  }
+  void AddMdUpdtCompTaskAndInitModel(const Plan& plan) {
+    for (const TaskProto& task : plan.task()) {
+      if (task.type() == kMdUpdtCompTask) {
+        ThreadMgr::Singleton().GetThrd(task.thrd_local_id())->AddTask(task);
+        ActorMsg msg;
+        msg.set_dst_actor_id(IDMgr::Singleton().ActorId4TaskId(task.id()));
+        msg.set_actor_cmd(ActorCmd::kInitializeModel);
+        ActorMsgBus::Singleton().SendMsg(msg);
+      }
+    }
+  }
+  void AddTheOtherTasks(const Plan& plan) {
+    for (const TaskProto& task : plan.task()) {
+      if (task.type() != kMdUpdtCompTask) {
+        ThreadMgr::Singleton().GetThrd(task.thrd_local_id())->AddTask(task);
+      }
+    }
+  }
+  void SendInitialModel(const Plan& plan) {
+    for (const TaskProto& task : plan.task()) {
+      if (task.type() == kMdUpdtCompTask) {
+        ActorMsg msg;
+        msg.set_dst_actor_id(IDMgr::Singleton().ActorId4TaskId(task.id()));
+        msg.set_actor_cmd(ActorCmd::kSendInitialModel);
+        ActorMsgBus::Singleton().SendMsg(msg);
+      }
+    }
+  }
 
 };
 
