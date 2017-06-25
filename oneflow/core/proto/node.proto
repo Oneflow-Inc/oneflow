@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package oneflow;
+
+message NodeDef {
+  string name = 1;
+  string op = 2;
+  repeated string input = 3;
+}

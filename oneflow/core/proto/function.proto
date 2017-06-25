@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package oneflow;
+
+import "oneflow/core/proto/node.proto";
+
+message FunctionDefLibrary {
+  repeated FunctionDef function = 1;
+  repeated GradientDef gradient = 2;
+}
+
+message FunctionDef {
+  repeated NodeDef node = 1;
+}
+
+message GradientDef {
+  string function_name = 1;
+  string gradient_func = 2;
+}
