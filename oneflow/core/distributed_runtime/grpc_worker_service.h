@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_DISTRIBUTED_RUNTIME_GRPC_SERVER_SERVICE_H_
-#define ONEFLOW_CORE_DISTRIBUTED_RUNTIME_GRPC_SERVER_SERVICE_H_
+#ifndef ONEFLOW_CORE_DISTRIBUTED_RUNTIME_GRPC_WORKER_SERVICE_H_
+#define ONEFLOW_CORE_DISTRIBUTED_RUNTIME_GRPC_WORKER_SERVICE_H_
 
 #include <thread>
 #include "grpc++/alarm.h"
@@ -12,10 +12,6 @@
 
 #include "tensorflow/core/platform/mutex.h"
 #include "tensorflow/core/lib/core/threadpool.h"
-
-namespace grpc {
-class ByteBuffer;
-}
 
 namespace oneflow {
 
@@ -107,7 +103,8 @@ class GrpcWorkerService {
   void GetStatusHandler(WorkerCall<GetStatusRequest,
                                    GetStatusResponse>* call) {
     Schedule([this, call] {
-      ::tensorflow::Status status = worker_->GetStatus(&call->request, &call->response);
+      ::tensorflow::Status status
+        = worker_->GetStatus(&call->request, &call->response);
       call->SendResponse(ToGrpcStatus(status));
     });
     ENQUEUE_REQUEST(GetStatus, false);
@@ -116,17 +113,17 @@ class GrpcWorkerService {
   void GetMachineDescHandler(WorkerCall<GetMachineDescRequest,
                                         GetMachineDescResponse>* call) {
     Schedule([this, call] {
-      ::tensorflow::Status status 
+      ::tensorflow::Status status
         = worker_->GetMachineDesc(&call->request, &call->response);
       call->SendResponse(ToGrpcStatus(status));
     });
     ENQUEUE_REQUEST(GetMachineDesc, false);
   }
 
-  void GetMemoryDescHandler(WorkerCall<GetMemoryDescRequest, 
+  void GetMemoryDescHandler(WorkerCall<GetMemoryDescRequest,
                                        GetMemoryDescResponse>* call) {
     Schedule([this, call] {
-      ::tensorflow::Status status 
+      ::tensorflow::Status status
         = worker_->GetMemoryDesc(&call->request, &call->response);
       call->SendResponse(ToGrpcStatus(status));
     });
@@ -136,7 +133,7 @@ class GrpcWorkerService {
   void SendTaskGraphHandler(WorkerCall<SendTaskGraphRequest,
                                        SendTaskGraphResponse>* call) {
     Schedule([this, call] {
-      ::tensorflow::Status status 
+      ::tensorflow::Status status
         = worker_->SendTaskGraph(&call->request, &call->response);
       call->SendResponse(ToGrpcStatus(status));
     });
@@ -146,7 +143,7 @@ class GrpcWorkerService {
   void SendMessageHandler(WorkerCall<SendMessageRequest,
                                      SendMessageResponse>* call) {
     Schedule([this, call] {
-      ::tensorflow::Status status 
+      ::tensorflow::Status status
         = worker_->SendMessageAsync(&call->request, &call->response);
       call->SendResponse(ToGrpcStatus(status));
     });
@@ -176,9 +173,8 @@ class GrpcWorkerService {
           &GrpcWorkerService::ReadDataHandleRaw, true);
     }
   }
-
 };  // Grpcworkerservice
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_DISTRIBUTED_RUNTIME_GRPC_SERVER_SERVICE_H_
+#endif  // ONEFLOW_CORE_DISTRIBUTED_RUNTIME_GRPC_WORKER_SERVICE_H_

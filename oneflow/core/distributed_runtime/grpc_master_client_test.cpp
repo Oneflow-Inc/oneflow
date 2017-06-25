@@ -55,7 +55,6 @@ TEST(GrpcMasterServer, test) {
   } else {
     std::cout << "s is not ok" << std::endl;
   }
-
 }  // TEST
 
 }  // namespace oneflow

@@ -12,7 +12,7 @@
 namespace oneflow {
 
 const char* GrpcWorkerMethodName(GrpcWorkerMethod id) {
-  switch(id) {
+  switch (id) {
     case GrpcWorkerMethod::kGetStatus:
       return "/oneflow.WorkerService/GetStatus";
     case GrpcWorkerMethod::kGetMachineDesc:
@@ -29,24 +29,30 @@ const char* GrpcWorkerMethodName(GrpcWorkerMethod id) {
 }
 
 namespace grpc {
-//for client
+
+// for client
 std::unique_ptr<WorkerService::Stub> WorkerService::NewStub(
     const std::shared_ptr<::grpc::ChannelInterface>& channel) {
-  std::unique_ptr<WorkerService::Stub> stub(new WorkerService::Stub(channel));
+  std::unique_ptr<WorkerService::Stub> stub(
+      new WorkerService::Stub(channel));
   return stub;
 }
 
 WorkerService::Stub::Stub(
     const std::shared_ptr<::grpc::ChannelInterface>& channel)
     : channel_(channel),
-      rpcmethod_GetStatus_(GrpcWorkerMethodName(static_cast<GrpcWorkerMethod>(0)),
+      rpcmethod_GetStatus_(GrpcWorkerMethodName(
+                             static_cast<GrpcWorkerMethod>(0)),
                              ::grpc::RpcMethod::NORMAL_RPC, channel),
-      rpcmethod_GetMachineDesc_(GrpcWorkerMethodName(static_cast<GrpcWorkerMethod>(1)),
+      rpcmethod_GetMachineDesc_(GrpcWorkerMethodName(
+                                  static_cast<GrpcWorkerMethod>(1)),
+                                  ::grpc::RpcMethod::NORMAL_RPC, channel),
+      rpcmethod_GetMemoryDesc_(GrpcWorkerMethodName(
+                                static_cast<GrpcWorkerMethod>(2)),
                                 ::grpc::RpcMethod::NORMAL_RPC, channel),
-      rpcmethod_GetMemoryDesc_(GrpcWorkerMethodName(static_cast<GrpcWorkerMethod>(2)),
-                                ::grpc::RpcMethod::NORMAL_RPC, channel),
-      rpcmethod_SendTaskGraph_(GrpcWorkerMethodName(static_cast<GrpcWorkerMethod>(3)),
-                                ::grpc::RpcMethod::NORMAL_RPC, channel) {}
+      rpcmethod_SendTaskGraph_(GrpcWorkerMethodName(
+                                 static_cast<GrpcWorkerMethod>(3)),
+                                 ::grpc::RpcMethod::NORMAL_RPC, channel) {}
 
 ::grpc::Status WorkerService::Stub::GetStatus(
     ::grpc::ClientContext* context, const GetStatusRequest& request,
@@ -72,7 +78,8 @@ WorkerService::Stub::Stub(
 ::grpc::Status WorkerService::Stub::SendTaskGraph(
     ::grpc::ClientContext* context, const SendTaskGraphRequest& request,
     SendTaskGraphResponse* response) {
-  return ::grpc::BlockingUnaryCall(channel_.get(), rpcmethod_SendTaskGraph_,
+  return ::grpc::BlockingUnaryCall(channel_.get(),
+                                   rpcmethod_SendTaskGraph_,
                                    context, request, response);
 }
 

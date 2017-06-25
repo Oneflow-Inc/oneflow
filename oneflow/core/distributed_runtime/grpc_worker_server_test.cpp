@@ -67,7 +67,7 @@ TEST(GrpcWorkerServer, test) {
   }
   worker_service->cq_->Next(&tag, &ok);
 
-  //process GetMachineDesc from client
+  // process GetMachineDesc from client
   worker_service->EnqueueGetMachineDescMethod();
   worker_service->cq_->Next(&tag, &ok);
   callback_tag = static_cast<UntypedCall<GrpcWorkerService>::Tag*>(tag);
@@ -78,7 +78,7 @@ TEST(GrpcWorkerServer, test) {
   }
   worker_service->cq_->Next(&tag, &ok);
 
-  //process GetMemoryDesc from client
+  // process GetMemoryDesc from client
   worker_service->EnqueueGetMemoryDescMethod();
   worker_service->cq_->Next(&tag, &ok);
   callback_tag = static_cast<UntypedCall<GrpcWorkerService>::Tag*>(tag);

@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-Master::Master(GrpcChannelCache* channel_cache) 
+Master::Master(GrpcChannelCache* channel_cache)
   : channel_cache_(channel_cache) {}
 
 Master::~Master() {}
@@ -17,7 +17,6 @@ Master::~Master() {}
 }
 
 void Master::Barrier() {
-
 }
 
 }  // namespace oneflow

@@ -3,9 +3,6 @@
 
 #include "grpc++/grpc++.h"
 #include "oneflow/core/distributed_runtime/worker.h"
-
-//#include "oneflow/core/distributed_runtime/tensor_coding.h"
-
 #include "oneflow/core/distributed_runtime/grpc_worker_service_impl.h"
 #include "oneflow/core/distributed_runtime/worker_service.pb.h"
 #include "oneflow/core/distributed_runtime/grpc_client_cq_tag.h"
@@ -39,7 +36,7 @@ class GrpcRemoteWorker {
     ::tensorflow::Status GetMemoryDesc(const GetMemoryDescRequest* request,
                        GetMemoryDescResponse* response) {
       ::grpc::ClientContext ctx;
-      return FromGrpcStatus(stub_->GetMemoryDesc(&ctx, *request, response)); 
+      return FromGrpcStatus(stub_->GetMemoryDesc(&ctx, *request, response));
     }
 
     ::tensorflow::Status SendTaskGraph(const SendTaskGraphRequest* request,
@@ -106,8 +103,8 @@ class GrpcRemoteWorker {
   }  // IssueRequest
 
   ::grpc::RpcMethod Method(GrpcWorkerMethod id) {
-    return ::grpc::RpcMethod(GrpcWorkerMethodName(id), 
-                             ::grpc::RpcMethod::NORMAL_RPC, 
+    return ::grpc::RpcMethod(GrpcWorkerMethodName(id),
+                             ::grpc::RpcMethod::NORMAL_RPC,
                              channel_);
   }
 

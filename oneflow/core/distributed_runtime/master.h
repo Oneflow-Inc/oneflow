@@ -22,7 +22,6 @@ class Master {
  private:
   // GrpcRemoteWorker* remote_worker_;
   GrpcChannelCache* channel_cache_;
-
 };  // Master
 
 }  // namespace oneflow

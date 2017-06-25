@@ -1,12 +1,11 @@
 #include "oneflow/core/distributed_runtime/worker.h"
-//#include "oneflow/core/distributed_runtime/grpc_tensor_coding.h"
 #include "oneflow/core/distributed_runtime/worker.pb.h"
 
-//#include "oneflow/core/network/network_message.h"
-//#include "oneflow/core/network/network_memory.h"
+// #include "oneflow/core/network/network_message.h"
+// #include "oneflow/core/network/network_memory.h"
 
-//#include "context/id_map.h"
-//#include "oneflow/core/runtime/comm_bus.h"
+// #include "context/id_map.h"
+// #include "oneflow/core/runtime/comm_bus.h"
 
 namespace oneflow {
 
@@ -15,7 +14,7 @@ Worker::Worker(GrpcChannelCache* channel_cache)
 
 ::tensorflow::Status Worker::GetStatus(GetStatusRequest* request,
                                        GetStatusResponse* response) {
-  std::cout<<"request from client = "<<request->status_test() << std::endl;
+  std::cout << "request from client = " << request->status_test() << std::endl;
   response->set_status_test("get_status_test from server");
 
   return ::tensorflow::Status::OK();
@@ -26,8 +25,9 @@ Worker::Worker(GrpcChannelCache* channel_cache)
   response->mutable_machine_desc()->set_machine_id(0);
   response->mutable_machine_desc()->set_ip("192.168.1.11");
   response->mutable_machine_desc()->set_port(50051);
-  
-  std::cout << "request from client = " << request->machine_desc_test() << std::endl; 
+
+  std::cout << "request from client = "
+    << request->machine_desc_test() << std::endl;
   response->set_machine_desc_test("machine_desc_test from server");
 
   return ::tensorflow::Status::OK();
@@ -49,11 +49,12 @@ Worker::Worker(GrpcChannelCache* channel_cache)
 
 ::tensorflow::Status Worker::SendTaskGraph(SendTaskGraphRequest* request,
                                            SendTaskGraphResponse* response) {
-  //TODO
-  //convert TaskGraphDef to TaskGraph
-  //then init thread to start executor taskgraph
-  //response is empty
-  std::cout << "SendTaskGraph request from client = " << request->send_task_graph_test() << std::endl;
+  // TODO(xiaoshu)
+  // convert TaskGraphDef to TaskGraph
+  // then init thread to start executor taskgraph
+  // response is empty
+  std::cout << "SendTaskGraph request from client = "
+    << request->send_task_graph_test() << std::endl;
   response->set_send_task_graph_test("SendTaskGraph from server");
   return ::tensorflow::Status::OK();
 }
@@ -82,7 +83,6 @@ Worker::Worker(GrpcChannelCache* channel_cache)
 void Worker::ReadDataAsync(ReadDataRequest* request,
                                            ReadDataResponse* response,
                                            StatusCallback done) {
-
   std::cout << "request from client = " << request->read_data_test() << std::endl;
   response->set_read_data_test("read_data_test from server");
   done(::tensorflow::Status::OK());
@@ -90,9 +90,9 @@ void Worker::ReadDataAsync(ReadDataRequest* request,
 
 template <typename ProtoMessage>
 void Worker::ParseToProto(ProtoMessage& proto_type, std::string& file_name) {
-  std::ifstream input_file(file_name); 
+  std::ifstream input_file(file_name);
   google::protobuf::io::IstreamInputStream proto_file(&input_file);
-  if(!google::protobuf::TextFormat::Parse(&proto_file, &proto_type)) {
+  if (!google::protobuf::TextFormat::Parse(&proto_file, &proto_type)) {
     input_file.close();
   }  // end if
 }  // end Parsetoproto
