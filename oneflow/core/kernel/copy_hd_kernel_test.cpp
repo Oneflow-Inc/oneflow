@@ -1,7 +1,4 @@
 #include "oneflow/core/kernel/copy_hd_kernel.h"
-#include "oneflow/core/operator/operator.pb.h"
-#include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/operator/copy_hd_op.h"
 #include "oneflow/core/actor/cuda_device_context.h"
 
 namespace oneflow {
