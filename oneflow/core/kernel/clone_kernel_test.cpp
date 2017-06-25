@@ -79,6 +79,15 @@ void HostCloneKernelTest(std::vector<int64_t>& dim_vec, Location location) {
   KernelCtx ctx;
   ctx.device_ctx = new CpuDeviceCtx(cpu_stream);
 
+  auto cpu_thread = std::thread([&] {
+    std::function<void()> work;
+    for (int i = 0; i < out_num*2; ++i) {
+      if(ctx.device_ctx->cpu_stream()->Receive(&work) == 0) {
+        work();
+      }
+    }
+  });
+
   // build CloneKernel
   auto clone_kernel = new CloneKernel<DeviceType::kCPU, float>;
   BuildHostCloneKernel(clone_kernel, out_num, "clone_kernel_test");
@@ -96,7 +105,10 @@ void HostCloneKernelTest(std::vector<int64_t>& dim_vec, Location location) {
   };
 
   // clone in_blob -> out_blobs
+  // clone in_blob -> out_blobs
   clone_kernel->Forward(ctx, fp);
+  clone_kernel->Backward(ctx, fp);
+  cpu_thread.join();
 
   // test Forward
   for (int i = 0; i != out_num; ++i) {
@@ -105,9 +117,6 @@ void HostCloneKernelTest(std::vector<int64_t>& dim_vec, Location location) {
                      in_blob->shape().elem_cnt() * sizeof(float)),
               0);
   }
-
-  // clone in_blob -> out_blobs
-  clone_kernel->Backward(ctx, fp);
 
   // test Backward
   float* in_diff_dptr = static_cast<float*>(in_diff_blob->mut_dptr());
@@ -132,8 +141,10 @@ void DeviceCloneKernelTest(std::vector<int64_t>& dim_vec, Location location) {
   // Create CudaDeviceContext and KernelContext
   cudaStream_t cuda_stream;
   CHECK_EQ(cudaStreamCreate(&cuda_stream), cudaSuccess);
+  cublasHandle_t cublas_handle;
+  CHECK_EQ(cublasCreate(&cublas_handle), CUBLAS_STATUS_SUCCESS);
   KernelCtx ctx;
-  ctx.device_ctx = new CudaDeviceCtx(&cuda_stream, nullptr, nullptr);
+  ctx.device_ctx = new CudaDeviceCtx(&cuda_stream, &cublas_handle, nullptr);
 
   // build CloneKernel
   auto clone_kernel = new CloneKernel<DeviceType::kGPU, float>;
@@ -153,12 +164,13 @@ void DeviceCloneKernelTest(std::vector<int64_t>& dim_vec, Location location) {
 
   // clone in_blob -> out_blobs
   clone_kernel->Forward(ctx, fp);
+  CHECK_EQ(cudaStreamSynchronize(ctx.device_ctx->cuda_stream()), cudaSuccess);
 
   // test Forward
   int dptr_size = in_blob->shape().elem_cnt() * sizeof(float);
 
   void* in_blob_dptr = malloc(dptr_size);
-  std::vector<void*> out_blobs_dptr;
+  std::vector<void*> out_blobs_dptr(out_num);
 
   CHECK_EQ(cudaMemcpy(in_blob_dptr, in_blob->dptr(), dptr_size, cudaMemcpyDeviceToHost),
            cudaSuccess);
@@ -167,7 +179,6 @@ void DeviceCloneKernelTest(std::vector<int64_t>& dim_vec, Location location) {
     CHECK_EQ(cudaMemcpy(out_blobs_dptr[i], out_blobs[i]->dptr(), dptr_size, cudaMemcpyDeviceToHost),
              cudaSuccess);
   }
-
   for (int i = 0; i != out_num; ++i) {
     ASSERT_EQ(memcmp(in_blob_dptr,
                      out_blobs_dptr[i],
@@ -177,15 +188,23 @@ void DeviceCloneKernelTest(std::vector<int64_t>& dim_vec, Location location) {
 
   // clone in_blob -> out_blobs
   clone_kernel->Backward(ctx, fp);
+  CHECK_EQ(cudaStreamSynchronize(ctx.device_ctx->cuda_stream()), cudaSuccess);
 
   // test Backward
-
-  float* in_diff_dptr = static_cast<float*>(in_diff_blob->mut_dptr());
-  float* out0_diff_dptr = static_cast<float*>(out_diff_blobs[0]->mut_dptr());
+  void* in_diff_host_cpy = malloc(dptr_size);
+  cudaMemcpy(in_diff_host_cpy, in_diff_blob->dptr(), dptr_size, cudaMemcpyDeviceToHost);
+  std::vector<void*> out_diff_host_cpy(out_num);
+  for(int i = 0; i != out_num; ++i) {
+    out_diff_host_cpy[i] = malloc(dptr_size);
+    cudaMemcpy(out_diff_host_cpy[i], out_diff_blobs[i]->dptr(), dptr_size, cudaMemcpyDeviceToHost);
+  }
+  float* in_diff_dptr = static_cast<float*>(in_diff_host_cpy);
+  float* out0_diff_dptr = static_cast<float*>(out_diff_host_cpy[0]);
   for (int i = 0; i != in_diff_blob->shape().elem_cnt(); ++i) {
     ASSERT_EQ(out0_diff_dptr[i] * out_num, in_diff_dptr[i]);
   }
 }
+
 }  // namespace
 
 TEST(CloneKernel, host_clone_4x5x6x7) {
