@@ -33,13 +33,17 @@ class Runtime final {
         other_tasks.push_back(&task);
       }
     }
+    LOG(INFO) << "InitModel";
     HandoutTasks(mdupdt_tasks);
     RuntimeCtx::Singleton().SetModelInitCnt(mdupdt_tasks.size());
     SendCmdMsg(mdupdt_tasks, ActorCmd::kInitializeModel);
     HandoutTasks(source_tasks);
     HandoutTasks(other_tasks);
-    SendCmdMsg(mdupdt_tasks, ActorCmd::kSendInitialModel);
     RuntimeCtx::Singleton().WaitUnitlAllModelInitDone();
+    LOG(INFO) << "InitModel on this machine done";
+    // TODO: Barrier
+    LOG(INFO) << "InitModel on all machine done";
+    SendCmdMsg(mdupdt_tasks, ActorCmd::kSendInitialModel);
     SendCmdMsg(source_tasks, ActorCmd::kStart);
   }
 
