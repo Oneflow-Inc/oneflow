@@ -1,6 +1,4 @@
 #include "oneflow/core/kernel/innerproduct_kernel.h"
-#include <string>
-#include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
 

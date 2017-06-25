@@ -1,6 +1,0 @@
-syntax = "proto3";
-package oneflow;
-
-enum RuntimeState {
-  kLoadModel = 0;
-}

@@ -15,6 +15,7 @@ class IDMgr final {
 
   void InitFromResource(const Resource& resource) {
     LOG(INFO) << "Init IDManager...";
+    Clear();
     machine_num_ = resource.machine_size();
     CHECK_LT(machine_num_, static_cast<int64_t>(1) << machine_id_bit_num_);
     device_num_per_machine_ = resource.device_num_per_machine();
@@ -53,7 +54,7 @@ class IDMgr final {
     CHECK_LT(thread_id2num_of_tasks_[thrd_id], (static_cast<int64_t>(1) << task_id_bit_num_) - 1);
     return thrd_id | (thread_id2num_of_tasks_[thrd_id]++);
   }
-  int64_t NewRegstDescId(int64_t producer_task_id) {
+  int64_t NewRegstDescId() {
     return regst_desc_id_count_++;
   }
 
@@ -75,6 +76,11 @@ class IDMgr final {
 
  private:
   IDMgr() = default;
+  void Clear() {
+    thread_id2num_of_tasks_.clear();
+    machine_id2machine_name_.clear();
+    machine_name2machine_id_.clear();
+  }
   int32_t machine_num_;
   int64_t device_num_per_machine_;
   int64_t regst_desc_id_count_;

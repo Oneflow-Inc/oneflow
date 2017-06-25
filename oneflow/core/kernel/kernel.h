@@ -22,15 +22,13 @@ class Kernel {
 
   virtual void InitFromOpProto(const OperatorProto& op_proto);
 
-  virtual void InitModelAndModelTmpBlobs(
+  void InitModelAndModelTmpBlobs(
       const KernelCtx& ctx,
       ParallelPolicy policy,
       int64_t parallel_id,
       int64_t parallel_num,
       const Snapshot*,
-      std::function<Blob*(const std::string&)> Blob4BnInOp) const {
-    UNEXPECTED_RUN();
-  }
+      std::function<Blob*(const std::string&)> Blob4BnInOp) const;
 
   // for Forward / Bp Calculation in FwExecGragh node and BpExecGragh node
   // through bn_in_op2blob_ptr function get the input blob and output blob
@@ -50,6 +48,21 @@ class Kernel {
  protected:
   Kernel() = default;
   const Operator* op() const { return op_.get(); }
+
+  virtual void InitModelAndModelTmpBlobsWithSnapshot(
+      const KernelCtx& ctx,
+      ParallelPolicy policy,
+      int64_t parallel_id,
+      int64_t parallel_num,
+      const Snapshot*,
+      std::function<Blob*(const std::string&)> Blob4BnInOp) const {
+    UNEXPECTED_RUN();
+  }
+  virtual void InitModelAndModelTmpBlobsWithoutSnapshot(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> Blob4BnInOp) const {
+    UNEXPECTED_RUN();
+  }
 
  private:
   std::unique_ptr<const Operator> op_;
