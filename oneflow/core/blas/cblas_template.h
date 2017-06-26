@@ -10,7 +10,7 @@ namespace oneflow {
 // level 1 vector and vector
 // dot product
 template<typename floating_point_type>
-void cblas_dot(
+floating_point_type cblas_dot(
     const int N,
     const floating_point_type* X, const int incX,
     const floating_point_type* Y, const int incY);

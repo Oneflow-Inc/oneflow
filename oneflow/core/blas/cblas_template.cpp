@@ -5,17 +5,17 @@ namespace oneflow {
 // level 1 vector and vector
 // dot product
 template<>
-void cblas_dot<float>(
+float cblas_dot<float>(
     const int N, const float* X, const int incX,
     const float* Y, const int incY) {
-  cblas_sdot(N, X, incX, Y, incY);
+  return cblas_sdot(N, X, incX, Y, incY);
 }
 
 template<>
-void cblas_dot<double>(
+double cblas_dot<double>(
     const int N, const double* X, const int incX,
     const double* Y, const int incY) {
-  cblas_ddot(N, X, incX, Y, incY);
+  return cblas_ddot(N, X, incX, Y, incY);
 }
 
 // swap x and y
