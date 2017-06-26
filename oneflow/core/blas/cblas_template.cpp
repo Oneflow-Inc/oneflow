@@ -76,38 +76,44 @@ void cblas_scal<double>(
 // matrix vector multiply
 template<>
 void cblas_gemv<float>(
-    const enum CBLAS_TRANSPOSE TransA, const int M, const int N,
-    const float alpha, const float* A, const int lda, const float* X,
-    const int incX, const float beta, float* Y, const int incY) {
-  cblas_sgemv(CblasRowMajor, TransA, M, N, alpha, A, lda, X, incX, beta, Y, incY);
+    const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE TransA,
+    const int M, const int N, const float alpha,
+    const float* A, const int lda,
+    const float* X, const int incX, const float beta,
+    float* Y, const int incY) {
+  cblas_sgemv(order, TransA, M, N, alpha, A, lda, X, incX, beta, Y, incY);
 }
 
 template<>
 void cblas_gemv<double>(
-    const enum CBLAS_TRANSPOSE TransA, const int M, const int N,
-    const double alpha, const double* A, const int lda, const double* X,
-    const int incX, const double beta, double* Y, const int incY) {
-  cblas_dgemv(CblasRowMajor, TransA, M, N, alpha, A, lda, X, incX, beta, Y, incY);
+    const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE TransA,
+    const int M, const int N, const double alpha,
+    const double* A, const int lda,
+    const double* X, const int incX, const double beta,
+    double* Y, const int incY) {
+  cblas_dgemv(order, TransA, M, N, alpha, A, lda, X, incX, beta, Y, incY);
 }
 
 // matrix matrix multiply
 template<>
 void cblas_gemm<float>(
-    const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_TRANSPOSE TransB,
-    const int M, const int N, const int K, const float alpha, const float* A,
-    const int lda, const float* B, const int ldb, const float beta, float* C,
-    const int ldc) {
-  cblas_sgemm(CblasRowMajor, TransA, TransB, M, N, K, alpha, A, lda, B, ldb,
+    const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE TransA,
+    const enum CBLAS_TRANSPOSE TransB, const int M, const int N, const int K,
+    const float alpha, const float* A, const int lda, 
+    const float* B, const int ldb, const float beta,
+    float* C, const int ldc) {
+  cblas_sgemm(order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb,
               beta, C, ldc);
 }
 
 template<>
 void cblas_gemm<double>(
-    const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_TRANSPOSE TransB,
-    const int M, const int N, const int K, const double alpha, const double* A,
-    const int lda, const double* B, const int ldb, const double beta, double* C,
-    const int ldc) {
-  cblas_dgemm(CblasRowMajor, TransA, TransB, M, N, K, alpha, A, lda, B, ldb,
+    const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE TransA,
+    const enum CBLAS_TRANSPOSE TransB, const int M, const int N, const int K,
+    const double alpha, const double* A, const int lda,
+    const double* B, const int ldb, const double beta,
+    double* C, const int ldc) {
+  cblas_dgemm(order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb,
               beta, C, ldc);
 }
 

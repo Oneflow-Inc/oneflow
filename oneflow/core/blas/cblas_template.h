@@ -48,20 +48,21 @@ void cblas_scal(
 // matrix vector multiply
 template<typename floating_point_type>
 void cblas_gemv(
-    const enum CBLAS_TRANSPOSE TransA, const int M, const int N,
-    const floating_point_type alpha, const floating_point_type* A,
-    const int lda, const floating_point_type* X, const int incX,
+    const enum CBLAS_ORDER order,const enum CBLAS_TRANSPOSE TransA,
+    const int M, const int N, const floating_point_type alpha,
+    const floating_point_type* A, const int lda,
+    const floating_point_type* X, const int incX,
     const floating_point_type beta, floating_point_type* Y, const int incY);
 
 // level 3 matrix and matrix
 // matrix matrix multiply
 template<typename floating_point_type>
 void cblas_gemm(
-    const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_TRANSPOSE TransB,
-    const int M, const int N, const int K, const floating_point_type alpha,
-    const floating_point_type* A, const int lda,
-    const floating_point_type* B, const int ldb, const floating_point_type beta,
-    floating_point_type* C, const int ldc);
+    const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE TransA,
+    const enum CBLAS_TRANSPOSE TransB, const int M, const int N, const int K,
+    const floating_point_type alpha, const floating_point_type* A,
+    const int lda, const floating_point_type* B, const int ldb,
+    const floating_point_type beta, floating_point_type* C, const int ldc);
 
 } // namespace oneflow
 
