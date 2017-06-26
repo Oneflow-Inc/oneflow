@@ -107,26 +107,17 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(Location loc) {
   };
 }
 
-int BlobCmpCpu(Blob* A, Blob* B) {
+void BlobCmpCpu(Blob* A, Blob* B) {
   const float* dptr_A = static_cast<const float*>(A->dptr());
   const float* dptr_B = static_cast<const float*>(B->dptr());
   size_t dptr_size = A->shape().elem_cnt();
-  float epsilon = 1e-10;
-  int ret = 0;
 
   for (size_t i = 0; i < dptr_size; ++i) {
-    if (dptr_A[i] - dptr_B[i] > epsilon) {
-      ret = -1;
-      return ret;
-    } else if (dptr_B[i] - dptr_A[i] > epsilon) {
-      ret = 1;
-      return ret;
-    }
+    ASSERT_FLOAT_EQ(dptr_A[i], dptr_B[i]);
   }
-  return ret;
 }
 
-int BlobCmpGpu(Blob* A, Blob* B) {
+void BlobCmpGpu(Blob* A, Blob* B) {
   float* dptr;
   size_t dptr_size = A->shape().elem_cnt()*sizeof(float);
   cudaMallocHost(&dptr, dptr_size);
@@ -138,7 +129,7 @@ int BlobCmpGpu(Blob* A, Blob* B) {
   cudaMemcpy(copy_A->mut_dptr(), A->dptr(), dptr_size, cudaMemcpyDeviceToHost);
   cudaMemcpy(copy_B->mut_dptr(), B->dptr(), dptr_size, cudaMemcpyDeviceToHost);
 
-  return BlobCmpCpu(copy_A, copy_B);
+  BlobCmpCpu(copy_A, copy_B);
 }
 
 }  // namespace
@@ -169,10 +160,10 @@ TEST(InnerProductKernel, inner_product_kernel_cpu) {
   });
   cpu_thread.join();
   
-  ASSERT_EQ(BlobCmpCpu(fp("out"), fp("expected_out")), 0);
-  ASSERT_EQ(BlobCmpCpu(fp("in_diff"), fp("expected_in_diff")), 0);
-  ASSERT_EQ(BlobCmpCpu(fp("weight_diff"), fp("expected_weight_diff")), 0);
-  ASSERT_EQ(BlobCmpCpu(fp("bias_diff"), fp("expected_bias_diff")), 0);
+  BlobCmpCpu(fp("out"), fp("expected_out"));
+  BlobCmpCpu(fp("in_diff"), fp("expected_in_diff"));
+  BlobCmpCpu(fp("weight_diff"), fp("expected_weight_diff"));
+  BlobCmpCpu(fp("bias_diff"), fp("expected_bias_diff"));
 }
 
 TEST(InnerProductKernel, inner_product_kernel_gpu) {
@@ -192,10 +183,10 @@ TEST(InnerProductKernel, inner_product_kernel_gpu) {
   inner_product_gpu_kernel->Forward(ctx, fp);
   inner_product_gpu_kernel->Backward(ctx, fp);
 
-  ASSERT_EQ(BlobCmpGpu(fp("out"), fp("expected_out")), 0);
-  ASSERT_EQ(BlobCmpGpu(fp("in_diff"), fp("expected_in_diff")), 0);
-  ASSERT_EQ(BlobCmpGpu(fp("weight_diff"), fp("expected_weight_diff")), 0);
-  ASSERT_EQ(BlobCmpGpu(fp("bias_diff"), fp("expected_bias_diff")), 0);
+  BlobCmpGpu(fp("out"), fp("expected_out"));
+  BlobCmpGpu(fp("in_diff"), fp("expected_in_diff"));
+  BlobCmpGpu(fp("weight_diff"), fp("expected_weight_diff"));
+  BlobCmpGpu(fp("bias_diff"), fp("expected_bias_diff"));
 }
 
 }  // namespace oneflow
