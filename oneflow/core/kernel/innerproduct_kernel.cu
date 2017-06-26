@@ -1,7 +1,5 @@
 #include "oneflow/core/kernel/innerproduct_kernel.h"
 
-using namespace std;
-
 namespace oneflow {
 
 namespace {
