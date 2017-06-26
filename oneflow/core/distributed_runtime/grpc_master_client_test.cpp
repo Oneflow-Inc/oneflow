@@ -13,8 +13,12 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
+#ifdef _MSC_VER
+DEFINE_string(resource,"D:/users/xiaoshu/sandbox/oneflow/oneflow/core/proto/cluster_config.txt", "");
+#else
 DEFINE_string(resource,
     "/home/xiaoshu/dl_sys/oneflow_dev_grpc/oneflow/core/proto/cluster_config.txt", "");
+#endif
 
 namespace oneflow {
 
@@ -32,7 +36,7 @@ TEST(GrpcMasterServer, test) {
   GrpcChannelCache* channel = new GrpcChannelCache(cluster_spec);
   channel->CreateChannelCache();
 
-  std::string server_address("0.0.0.0:50051");
+  std::string server_address("127.0.0.1:50051");
   std::shared_ptr<::grpc::Channel> dst_channel
     = channel->FindChannel(server_address);
 
