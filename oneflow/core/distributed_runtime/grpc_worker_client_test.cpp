@@ -32,7 +32,7 @@ TEST(GrpcMasterServer, test) {
   GrpcChannelCache* channel = new GrpcChannelCache(cluster_spec);
   channel->CreateChannelCache();
 
-  std::string server_address("0.0.0.0:50051");
+  std::string server_address("127.0.0.1:50051");
   std::shared_ptr<::grpc::Channel> dst_channel
     = channel->FindChannel(server_address);
 
