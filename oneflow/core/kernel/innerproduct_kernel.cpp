@@ -19,7 +19,7 @@ void BlasMatrixMult(
 
   cpu_stream->Send([=]() {
     cblas_gemm(
-        TransA, TransB, M, N, K, alpha,
+        CblasRowMajor, TransA, TransB, M, N, K, alpha,
         static_cast<const floating_point_type*>(A->dptr()), lda,
         static_cast<const floating_point_type*>(B->dptr()), ldb, beta,
         static_cast<floating_point_type*>(C->mut_dptr()), ldc);
