@@ -99,7 +99,7 @@ template<>
 void cblas_gemm<float>(
     const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE TransA,
     const enum CBLAS_TRANSPOSE TransB, const int M, const int N, const int K,
-    const float alpha, const float* A, const int lda, 
+    const float alpha, const float* A, const int lda,
     const float* B, const int ldb, const float beta,
     float* C, const int ldc) {
   cblas_sgemm(order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb,
