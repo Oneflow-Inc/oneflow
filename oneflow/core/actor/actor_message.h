@@ -7,9 +7,10 @@
 namespace oneflow {
 
 enum class ActorCmd {
-  kInitializeModel = 0,
-  kSendInitialModel,
-  kEORD // End Of Register Desc
+  kInitializeModel = 0, // MdUpdt Actor
+  kSendInitialModel, // MdUpdt Actor
+  kEORD, // End Of Register Desc, All Actor except Source Actor
+  kStart // Source Actor
 };
 
 OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ActorCmd);
