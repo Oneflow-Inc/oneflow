@@ -15,9 +15,10 @@
 
 #ifdef _MSC_VER
 DEFINE_string(resource,
-	"D:/users/xiaoshu/sandbox/oneflow/oneflow/core/proto/cluster_config.txt", "");
+  "D:/users/xiaoshu/sandbox/oneflow/oneflow/core/proto/cluster_config.txt", "");
 #else
-DEFINE_string(resource, "/home/xiaoshu/dl_sys/oneflow_dev_grpc/oneflow/core/proto/cluster_config.txt", "");
+DEFINE_string(resource,
+  "/home/xiaoshu/dl_sys/oneflow_dev_grpc/oneflow/core/proto/cluster_config.txt", "");
 #endif
 
 namespace oneflow {
