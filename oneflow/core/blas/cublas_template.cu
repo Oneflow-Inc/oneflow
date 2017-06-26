@@ -4,25 +4,25 @@ namespace oneflow {
 
 template<>
 void cublas_gemm<float>(
-    const cublasHandle_t& cublas_handle, const cublasOperation_t cuTransA,
-    const cublasOperation_t cuTransB, const int M, const int N, const int K,
-    const float* alpha, const float* A, const int lda, const float* B,
-    const int ldb, const float* beta, float* C, const int ldc) {
+    const cublasHandle_t& cublas_handle, cublasOperation_t cuTransA,
+    cublasOperation_t cuTransB, int M, int N, int K,
+    const float alpha, const float* A, int lda, const float* B,
+    int ldb, const float beta, float* C, int ldc) {
   CHECK_EQ(cublasSgemm(
-               cublas_handle, cuTransA, cuTransB, M, N, K, alpha, A, lda, B,
-               ldb, beta, C, ldc),
+               cublas_handle, cuTransA, cuTransB, M, N, K, &alpha, A, lda, B,
+               ldb, &beta, C, ldc),
            CUBLAS_STATUS_SUCCESS);
 }
 
 template<>
 void cublas_gemm<double>(
-    const cublasHandle_t& cublas_handle, const cublasOperation_t cuTransA,
-    const cublasOperation_t cuTransB, const int M, const int N, const int K,
-    const double* alpha, const double* A, const int lda, const double* B,
-    const int ldb, const double* beta, double* C, const int ldc) {
+    const cublasHandle_t& cublas_handle, cublasOperation_t cuTransA,
+    cublasOperation_t cuTransB, int M, int N, int K,
+    const double alpha, const double* A, int lda, const double* B,
+    int ldb, const double beta, double* C, int ldc) {
   CHECK_EQ(cublasDgemm(
-               cublas_handle, cuTransA, cuTransB, M, N, K, alpha, A, lda, B,
-               ldb, beta, C, ldc),
+               cublas_handle, cuTransA, cuTransB, M, N, K, &alpha, A, lda, B,
+               ldb, &beta, C, ldc),
            CUBLAS_STATUS_SUCCESS);
 }
 
