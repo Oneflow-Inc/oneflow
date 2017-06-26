@@ -7,7 +7,7 @@ namespace oneflow {
 
 class RemoteRegstWarpper final : public RegstWarpper {
  public:
-  // OF_DISALLOW_COPY_AND_MOVE(RemoteRegstWarpper)
+  OF_DISALLOW_COPY_AND_MOVE(RemoteRegstWarpper)
   RemoteRegstWarpper() = delete;
   ~RemoteRegstWarpper() = default;
 
