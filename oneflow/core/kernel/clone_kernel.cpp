@@ -37,7 +37,7 @@ void CloneKernel<device_type, floating_point_type>::Backward(
   }
 }
 
-INSTANTIATE_CPU_KERNEL_CLASS(CloneKernel);
-REGISTER_CPU_KERNEL(OperatorConf::kCloneConf, CloneKernel);
+INSTANTIATE_KERNEL_CLASS(CloneKernel);
+REGISTER_KERNEL(OperatorConf::kCloneConf, CloneKernel);
 
 }  // namespace oneflow
