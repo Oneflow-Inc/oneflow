@@ -17,6 +17,8 @@ class ThreadMgr final {
   
   Thread* GetThrd(int64_t thrd_loc_id);
 
+  void ClearAllThread();
+
  private:
   ThreadMgr();
 

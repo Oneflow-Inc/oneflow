@@ -75,8 +75,3 @@ TEST(BoxingOp, box_4_10x5x6x6) {
 }
 
 }  // namespace oneflow
-
-int main(int argc, char **argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}

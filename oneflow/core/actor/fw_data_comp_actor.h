@@ -14,6 +14,7 @@ public:
   void Init(const TaskProto&, const ThreadCtx&) override;
 
 private:
+  int WaitToStart(const ActorMsg&);
   int HandleFwComp(const ActorMsg&);
   int HandleFwCompWhenNoReadableRegstMsg(const ActorMsg&);
 

@@ -7,7 +7,7 @@ namespace oneflow {
 
 class LocalRegstWarpper final : public RegstWarpper {
  public:
-  // OF_DISALLOW_COPY_AND_MOVE(LocalRegstWarpper);
+  OF_DISALLOW_COPY_AND_MOVE(LocalRegstWarpper);
   LocalRegstWarpper() = delete;
   ~LocalRegstWarpper() = default;
 
