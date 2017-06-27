@@ -45,7 +45,9 @@ class Runtime final {
     LOG(INFO) << "InitModel on all machine done";
     SendCmdMsg(mdupdt_tasks, ActorCmd::kSendInitialModel);
     SendCmdMsg(source_tasks, ActorCmd::kStart);
-    ThreadMgr::Singleton().ClearAllThread();
+    ThreadMgr::Singleton().ForEachThread([](Thread* thrd) {
+      thrd->JoinAllActor();
+    });
   }
 
  private:
