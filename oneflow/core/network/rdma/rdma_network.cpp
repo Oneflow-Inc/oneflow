@@ -57,11 +57,6 @@ void RdmaNetwork::Barrier() {
   for (int32_t i = 0; i < num_successors; ++i) {
     // Wait for the Barrier
     while (!PollRecvQueue(&result))
-#ifdef WIN32
-      Sleep(1000);
-#else
-      sleep(1);
-#endif
     // CHECK(result.type == NetworkResultType::NET_RECEIVE_MSG)
     //   << "Expected recv msg";
     // CHECK(result.net_msg.type == NetworkMessageType::MSG_TYPE_BARRIER)
@@ -78,11 +73,6 @@ void RdmaNetwork::Barrier() {
       barrier_msg.dst_machine_id = peer_machine_id;
       Send(barrier_msg);
       while (!PollSendQueue(&result))
-#ifdef WIN32
-      Sleep(1000);
-#else
-      sleep(1);
-#endif
       // CHECK(result.type == NetworkResultType::NET_SEND_OK);
     }
   }
@@ -93,11 +83,6 @@ void RdmaNetwork::Barrier() {
   // n for SEND_OK, n for RECEIVE_MSG
   for (int32_t i = 0; i < num_predecessors; ++i) {
     while (!PollRecvQueue(&result))
-#ifdef WIN32
-      Sleep(1000);
-#else
-      sleep(1);
-#endif
     // CHECK(result.type == NetworkResultType::NET_RECEIVE_MSG);
     // CHECK(result.net_msg.type == NetworkMessageType::MSG_TYPE_REPLY_BARRIER);
   }
@@ -112,11 +97,6 @@ void RdmaNetwork::Barrier() {
       reply_barrier_msg.dst_machine_id = peer_machine_id;
       Send(reply_barrier_msg);
       while (!PollSendQueue(&result))
-#ifdef WIN32
-      Sleep(1000);
-#else
-      sleep(1);
-#endif
       // CHECK(result.type == NetworkResultType::NET_SEND_OK);
     }
   }
@@ -265,11 +245,6 @@ void RdmaNetwork::EstablishConnection() {
       do {
         // TODO(shiyuan) delete conn; (connector and queue_pair)
         // If connection failed, wait and retry again.
-#ifdef WIN32
-        Sleep(2000);
-#else
-        sleep(2);
-#endif
         conn = NewConnection();
         // connection_pool_->GetConnection(peer_machine_id);
         conn->Bind(net_topo_.all_nodes[my_machine_id_].address.c_str(), port_);

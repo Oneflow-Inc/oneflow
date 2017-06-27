@@ -20,8 +20,54 @@ sockaddr_in GetAddress(const char* ip, int port) {
   return addr;
 }
 
-void TransQueuePaitState() {
+void TransQueuePairState() {
+  struct ibv_qp_attr qp_attr;
+  memset(&qp_attr, 0, sizeof(ibv_qp_attr));
 
+  qp_attr.qp_state = IBV_QPS_INIT;
+  qp_attr.pkey_index = 0;
+  qp_attr.port_num = 1;
+  qp_attr.qp_access_flags = IBV_ACCESS_LOCAL_WRITE |
+                            IBV_ACCESS_REMOTE_WRITE |
+                            IBV_ACCESS_REMOTE_READ;
+
+  CHECK(ibv_modify_qp(queue_pair_, &qp_attr,
+                IBV_QP_STATE | IBV_QP_PKEY_INDEX |
+                IBV_QP_PORT | IBV_QP_ACCESS_FLAGS));  // TODO(shiyuan): check
+
+  qp_attr.qp_state = IBV_QPS_RTR;
+  qp_attr.path_mtu = connector_->active_mtu;
+  qp_attr.dest_qp_num = connector_->peer_qpn;
+  qp_attr.rq_psn = connector_->peer_psn;
+  qp_attr.max_dest_rd_atomic = 1;
+  qp_attr.min_rnr_timer = 12;
+  qp_attr.ah_attr.is_global = 1;
+  qp_attr.ah_attr.grh.dgid.global.subnet_prefix = connector_->peer_snp;
+  qp_attr.ah_attr.grh.dgid.global.interface_id = connector_->peer_iid;
+  qp_attr.ah_attr.grh.flow_label = 0;
+  qp_attr.ah_attr.grh.hop_limit = 255;
+  qp_attr.ah_attr.dlid = connector_->peer_lid;
+  qp_attr.ah_attr.sl = 0;
+  qp_attr.ah_attr.src_path_bits = 0;
+  qp_attr.ah_attr.port_num = 1;
+
+  CHECK(ibv_modify_qp(queue_pair_, &qp_attr,
+                IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU | IBV_QP_DEST_QPN |
+                IBV_QP_RQ_PSN | IBV_QP_MAX_DEST_RD_ATOMIC |
+                IBV_QP_MIN_RNR_TIMER));  // TODO(shiyuan): check
+
+  memset(&qp_attr, 0, sizeof(ibv_qp_attr));
+  qp_attr.qp_state = IBV_QPS_RTS;
+  qp_attr.sq_psn = connector_->my_psn;
+  qp_attr.timeout = 14;
+  qp_attr.retry_cnt = 7;
+  qp_attr.rnr_retry = 7;
+  qp_attr.max_rd_atomic = 1;
+
+  CHECK(ibv_modify_qp(queue_pair_, &qp_attr,
+                IBV_QP_STATE | IBV_QP_TIMEOUT | IBV_QP_RETRY_CNT |
+                IBV_QP_RNR_RETRY | IBV_QP_SQ_PSN |
+                IBV_QP_MAX_QP_RD_ATOMIC));  // TODO(shiyuan): check
 }
 
 }  // namespace
@@ -33,28 +79,21 @@ Connection::Connection(uint64_t my_machine_id, uint64_t peer_machine_id)
     : my_machine_id_(my_machine_id), peer_machine_id_(peer_machine_id),
       connector(nullptr), queue_pair(nullptr) {}
 
-bool Connection::Bind(const char* ip, int port) {
+void Connection::Bind(const char* ip, int port) {
   my_addr_ = GetAddress(ip, port);
   my_sock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  int ret = bind(my_sock_, (struct sockaddr*)&my_addr_, sizeof(my_addr_));
-  if (ret == 0)
-    return true;
-  else
-    return false;
+  CHECK_EQ(bind(my_sock_, (struct sockaddr*)&my_addr_, sizeof(my_addr_)), 0);
 }
 
-bool Connection::TryConnectTo(const char* peer_ip, int port) {
+void Connection::TryConnectTo(const char* peer_ip, int port) {
   struct sockaddr_in peer_addr = GetAddress(peer_ip, port);
   struct Connector temp_connector;
   int read_bytes = 0;
   int total_read_bytes = 0;
   int rc;
   int peer_sock = socket(AF_INET, SOCK_STREAM, 0);
-  int ret = connect(peer_sock, (struct sockaddr*)&peer_addr, sizeof(peer_addr));
-  if ((ret != 0) || (peer_sock < 0)) {
-    close(peer_sock);
-    return false;
-  }
+  CHECK_EQ(connect(peer_sock, (struct sockaddr*)&peer_addr, sizeof(peer_addr)),
+           0);
 
   rc = write(peer_sock, &my_machine_id_, sizeof(my_machine_id_));
   if (rc < sizeof(my_machine_id_))
@@ -82,68 +121,15 @@ bool Connection::TryConnectTo(const char* peer_ip, int port) {
   connector_->peer_snp = temp_connector.my_snp;
   connector_->peer_iid = temp_connector.my_iid;
 
-  ret = close(peer_sock);
-  if (ret != 0)
-    return false;
-
-  return true;
-}
-
-void Connection::TransferQueuePair() {
-  struct ibv_qp_attr qp_attr;
-  memset(&qp_attr, 0, sizeof(ibv_qp_attr));
-
-  qp_attr.qp_state = IBV_QPS_INIT;
-  qp_attr.pkey_index = 0;
-  qp_attr.port_num = 1;
-  qp_attr.qp_access_flags = IBV_ACCESS_LOCAL_WRITE |
-                            IBV_ACCESS_REMOTE_WRITE |
-                            IBV_ACCESS_REMOTE_READ;
-
-  ibv_modify_qp(queue_pair_, &qp_attr,
-                IBV_QP_STATE | IBV_QP_PKEY_INDEX |
-                IBV_QP_PORT | IBV_QP_ACCESS_FLAGS);
-
-  qp_attr.qp_state = IBV_QPS_RTR;
-  qp_attr.path_mtu = connector_->active_mtu;
-  qp_attr.dest_qp_num = connector_->peer_qpn;
-  qp_attr.rq_psn = connector_->peer_psn;
-  qp_attr.max_dest_rd_atomic = 1;
-  qp_attr.min_rnr_timer = 12;
-  qp_attr.ah_attr.is_global = 1;
-  qp_attr.ah_attr.grh.dgid.global.subnet_prefix = connector_->peer_snp;
-  qp_attr.ah_attr.grh.dgid.global.interface_id = connector_->peer_iid;
-  qp_attr.ah_attr.grh.flow_label = 0;
-  qp_attr.ah_attr.grh.hop_limit = 255;
-  qp_attr.ah_attr.dlid = connector_->peer_lid;
-  qp_attr.ah_attr.sl = 0;
-  qp_attr.ah_attr.src_path_bits = 0;
-  qp_attr.ah_attr.port_num = 1;
-
-  ibv_modify_qp(queue_pair_, &qp_attr,
-                IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU | IBV_QP_DEST_QPN |
-                IBV_QP_RQ_PSN | IBV_QP_MAX_DEST_RD_ATOMIC |
-                IBV_QP_MIN_RNR_TIMER);
-
-  memset(&qp_attr, 0, sizeof(ibv_qp_attr));
-  qp_attr.qp_state = IBV_QPS_RTS;
-  qp_attr.sq_psn = connector_->my_psn;
-  qp_attr.timeout = 14;
-  qp_attr.retry_cnt = 7;
-  qp_attr.rnr_retry = 7;
-  qp_attr.max_rd_atomic = 1;
-
-  ibv_modify_qp(queue_pair_, &qp_attr,
-                IBV_QP_STATE | IBV_QP_TIMEOUT | IBV_QP_RETRY_CNT |
-                IBV_QP_RNR_RETRY | IBV_QP_SQ_PSN | IBV_QP_MAX_QP_RD_ATOMIC);
+  CHECK_EQ(close(peer_sock), 0);
 }
 
 void Connection::CompleteConnectionTo() {
-  TransferQueuePair();
+  TransQueuePairState();
 }
 
 void Connection::AcceptConnect() {
-  TransferQueuePair();
+  TransQueuePairState();
 }
 
 void Connection::DestroyConnection() {
@@ -159,7 +145,7 @@ void Connection::PostSendRequest(Request* send_request) {
   wr.opcode = IBV_WR_SEND;
   wr.send_flags = IBV_SEND_SIGNALED;
 
-  ibv_post_send(queue_pair_, &wr, &bad_wr);
+  CHECK(ibv_post_send(queue_pair_, &wr, &bad_wr));  // TODO(shiyuan): check
 }
 
 void Connection::PostRecvRequest(Request* recv_request) {
@@ -169,7 +155,7 @@ void Connection::PostRecvRequest(Request* recv_request) {
   wr.sg_list = static_cast<ibv_sge*>(
       recv_request->rdma_msg->net_memory()->sge());
   wr.num_sge = 1;
-  ibv_post_recv(queue_pair_, &wr, &bad_wr);
+  CHECK(ibv_post_recv(queue_pair_, &wr, &bad_wr));  // TODO(shiyuan): check
 }
 
 void Connection::PostReadRequest(
@@ -185,7 +171,7 @@ void Connection::PostReadRequest(
   wr.wr.rdma.remote_addr = remote_memory_descriptor->address;
   wr.wr.rdma.rkey = remote_memory_descriptor->remote_token;
 
-  ibv_post_send(queue_pair_, &wr, &bad_wr);
+  CHECK(ibv_post_send(queue_pair_, &wr, &bad_wr));  // TODO(shiyuan): check
 }
 
 }  // namespace oneflow

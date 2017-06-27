@@ -1,7 +1,6 @@
 #include "oneflow/core/network/rdma/linux/rdma_memory.h"
 #include "oneflow/core/network/rdma/linux/interface.h"
 
-
 namespace oneflow {
 
 RdmaMemory::RdmaMemory(struct ibv_mr* memory_region,
@@ -39,4 +38,3 @@ void RdmaMemory::Unregister() {
 }
 
 }  // namespace oneflow
-

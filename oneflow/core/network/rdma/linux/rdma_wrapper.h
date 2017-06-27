@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_MANAGER_H_
-#define ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_MANAGER_H_
+#ifndef ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_WRAPPER_H_
+#define ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_WRAPPER_H_
 
 #include <stdint.h>
 #include <stdio.h>
@@ -15,16 +15,16 @@ class Connection;
 class RdmaMemory;
 struct Request;
 
-class RdmaManager {
+class RdmaWrapper {
  public:
-  RdmaManager();
-  ~RdmaManager();
+  RdmaWrapper();
+  ~RdmaWrapper();
 
-  bool Init(const char* addr, int port);
-  bool Destroy();
+  void Init(const char* addr, int port);
+  void Destroy();
 
-  bool CreateConnector(Connection* conn);
-  bool CreateQueuePair(Connection* conn);
+  void CreateConnector(Connection* conn);
+  void CreateQueuePair(Connection* conn);
 
   RdmaMemory* NewNetworkMemory();
 
@@ -40,14 +40,14 @@ class RdmaManager {
   struct rdma_event_channel* ec_;
   struct ibv_context* context_;
   struct ibv_pd* protect_domain_;
+  
   // completion queue
   struct ibv_cq* recv_cq_;
   struct ibv_cq* send_cq_;
 
-  // Listener
   struct rdma_cm_id* listener_;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_MANAGER_H_
+#endif  // ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_WRAPPER_H_

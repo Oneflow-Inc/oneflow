@@ -1,4 +1,4 @@
-#include "oneflow/core/network/rdma/linux/rdma_manager.h"
+#include "oneflow/core/network/rdma/linux/rdma_wrapper.h"
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -23,18 +23,13 @@ struct sockaddr_in GetAddress(const char* ip, int port) {
 
 }  // namespace
 
-RdmaManager::RdmaManager() {
-  context_ = NULL;
-  listener_ = NULL;
-  send_cq_ = NULL;
-  recv_cq_ = NULL;
-  protect_domain_ = NULL;
+RdmaWrapper::RdmaWrapper() : context_(nullptr), listener_(nullptr),
+    send_cq_(nullptr), recv_cq_(nullptr), protect_domain_(nullptr) {}
+
+RdmaWrapper::~RdmaWrapper() {
 }
 
-RdmaManager::~RdmaManager() {
-}
-
-bool RdmaManager::Init(const char* ip, int port) {
+void RdmaWrapper::Init(const char* ip, int port) {
   my_addr_ = GetAddress(ip, port);
 
   // Init Adapter
@@ -49,27 +44,20 @@ bool RdmaManager::Init(const char* ip, int port) {
 
   my_sock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
-  int ret = bind(my_sock_, (struct sockaddr*)&my_addr_, sizeof(my_addr_));
-  if (ret != 0)
-    return false;
+  CHECK_EQ(bind(my_sock_, (struct sockaddr*)&my_addr_, sizeof(my_addr_)), 0);
 
-  ret = listen(my_sock_, 100);  // TODO(shiyuan) backlog
-  if (ret != 0)
-    return false;
-
-  return true;
+  CHECK_EQ(listen(my_sock_, 100), 0);  // TODO(shiyuan) backlog
 }
 
-bool RdmaManager::Destroy() {
+void RdmaWrapper::Destroy() {
   // TODO(shiyuan)
-  return true;
+  // CHECK
+  // return true;
 }
 
-bool RdmaManager::CreateConnector(Connection* conn) {
+void RdmaWrapper::CreateConnector(Connection* conn) {
   struct ibv_port_attr attr;
-  int ret = ibv_query_port(context_, (uint8_t)1, &attr);
-  if (ret != 0)
-    return false;
+  CHECK_EQ(ibv_query_port(context_, (uint8_t)1, &attr), 0);
 
   struct Connector* connector = new Connector;
   srand((unsigned)time(NULL));
@@ -77,17 +65,15 @@ bool RdmaManager::CreateConnector(Connection* conn) {
   connector->my_qpn = 0;  // Will be set up after the creation of the queue pair
   connector->my_psn = static_cast<uint32_t>(rand()) & 0xffffff;
   union ibv_gid gid;
-  ibv_query_gid(context_, (uint8_t)1, 0, &gid);
+  CHECK(ibv_query_gid(context_, (uint8_t)1, 0, &gid));  // TODO(shiyuan): check
   connector->my_snp = gid.global.subnet_prefix;
   connector->my_iid = gid.global.interface_id;
   connector->active_mtu = attr.active_mtu;
 
   conn->set_connector(connector);
-
-  return true;
 }
 
-bool RdmaManager::CreateQueuePair(Connection* conn) {
+void RdmaWrapper::CreateQueuePair(Connection* conn) {
   struct ibv_qp_init_attr qp_init_attr;
 
   memset(&qp_init_attr, 0, sizeof(qp_init_attr));
@@ -104,15 +90,11 @@ bool RdmaManager::CreateQueuePair(Connection* conn) {
   qp_init_attr.cap.max_recv_sge = 1;
 
   struct ibv_qp* queue_pair = ibv_create_qp(protect_domain_, &qp_init_attr);;
+  CHECK_NQ(queue_pair, NULL);  // TODO(shiyuan): check
   conn->set_queue_pair(queue_pair);
-
-  if (queue_pair != NULL)
-    return true;
-  else
-    return false;
 }
 
-RdmaMemory* RdmaManager::NewNetworkMemory() {
+RdmaMemory* RdmaWrapper::NewNetworkMemory() {
   // XXX(shiyuan)
   struct ibv_mr* memory_region = NULL;
   // HRESULT hr = adapter_->CreateMemoryRegion(
@@ -124,7 +106,7 @@ RdmaMemory* RdmaManager::NewNetworkMemory() {
   return rdma_memory;
 }
 
-uint64_t RdmaManager::WaitForConnection(Connection* conn,
+uint64_t RdmaWrapper::WaitForConnection(Connection* conn,
                                         Request* recv_request) {
   uint64_t peer_machine_id;
   struct Connector* connector = conn->connector();
@@ -135,10 +117,11 @@ uint64_t RdmaManager::WaitForConnection(Connection* conn,
   socklen_t addr_len = sizeof(peer_addr);
 
   int peer_sock = accept(my_sock_, (struct sockaddr*)&peer_addr, &addr_len);
+  CHECK(peer_sock);  // TODO(shiyuan): check
 
-  read(peer_sock, &peer_machine_id, sizeof(uint64_t));
+  CHECK(read(peer_sock, &peer_machine_id, sizeof(uint64_t)));  // TODO(shiyuan): check
 
-  write(peer_sock, connector, sizeof(struct Connector));
+  CHECK(write(peer_sock, connector, sizeof(struct Connector)));  // TODO(shiyuan): check
 
   total_read_bytes = 0;
   read_bytes = 0;
@@ -149,7 +132,6 @@ uint64_t RdmaManager::WaitForConnection(Connection* conn,
     }
   }
 
-
   connector->peer_lid = temp_connector.my_lid;
   connector->peer_qpn = temp_connector.my_qpn;
   connector->peer_psn = temp_connector.my_psn;
@@ -157,7 +139,7 @@ uint64_t RdmaManager::WaitForConnection(Connection* conn,
   connector->peer_iid = temp_connector.my_iid;
   conn->set_connector(connector);
 
-  close(peer_sock);
+  CHECK(close(peer_sock));  // TODO(shiyuan): check
 
   conn->AcceptConnect();
   return peer_machine_id;
@@ -165,29 +147,29 @@ uint64_t RdmaManager::WaitForConnection(Connection* conn,
 
 // |result| is owned by the caller, and the received message will be held in
 // result->net_msg, having result->type == NetworkResultType::NET_RECEIVE_MSG.
-int32_t RdmaManager::PollRecvQueue(NetworkResult* result) {
+int32_t RdmaWrapper::PollRecvQueue(NetworkResult* result) {
   struct ibv_wc wc;
   int32_t len = ibv_poll_cq(recv_cq_, 1, &wc);
+  
   if (len <= 0) {  // return number of CQEs in array wc or -1 on error
     return -1;
   }
-  if (wc.status != IBV_WC_SUCCESS) {
-    return -1;
-  }
+
+  CHECK_EQ(wc.status, IBV_WC_SUCCESS);
+  
   result->type = NetworkResultType::NET_RECEIVE_MSG;
   int32_t time_stamp = wc.wr_id;
   return time_stamp;
 }
 
-int32_t RdmaManager::PollSendQueue(NetworkResult* result) {
+int32_t RdmaWrapper::PollSendQueue(NetworkResult* result) {
   struct ibv_wc wc;
   int32_t len = ibv_poll_cq(send_cq_, 1, &wc);
 
   if (len <= 0)  // return number of CQEs in array wc or -1 on error
     return -1;
 
-  if (wc.status != IBV_WC_SUCCESS)
-    return -1;
+  CHECK_EQ(wc.status, IBV_WC_SUCCESS);
 
   switch (wc.opcode) {
     case IBV_WC_SEND: {

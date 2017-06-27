@@ -34,8 +34,8 @@ class Connection {
   Connection(uint64_t my_machine_id, uint64_t peer_machine_id);
   ~Connection();
 
-  bool Bind(const char* my_address, int port);
-  bool TryConnectTo(const char* peer_address, int port);
+  void Bind(const char* my_address, int port);
+  void TryConnectTo(const char* peer_address, int port);
   void CompleteConnectionTo();
   void AcceptConnect();
 
@@ -57,8 +57,6 @@ class Connection {
   struct ibv_qp* queue_pair() { return queue_pair_; }
 
  private:
-  void TransferQueuePair();
-
   struct Connector* connector_;
   struct ibv_qp* queue_pair_;
 
