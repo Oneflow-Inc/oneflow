@@ -5,16 +5,14 @@
 
 namespace oneflow {
 
-ThreadMgr::~ThreadMgr() {
-  ClearAllThread();
-}
-
 Thread* ThreadMgr::GetThrd(int64_t thrd_loc_id) {
   return threads_.at(thrd_loc_id).get();
 }
 
-void ThreadMgr::ClearAllThread() {
-  threads_.clear();
+void ThreadMgr::ForEachThread(std::function<void(Thread*)> func) {
+  for (const auto& t : threads_) {
+    func(t.get());
+  }
 }
 
 ThreadMgr::ThreadMgr() {
