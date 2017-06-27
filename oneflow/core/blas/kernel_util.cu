@@ -59,7 +59,7 @@ class KernelUtil<DeviceType::kGPU, floating_point_type> final {
         M, N, K, &alpha_0, A, lda, B, ldb, &beta_0, C, ldc);
   }
 
-  void BlasDot(const KernelCtx& ctx,
+  static void BlasDot(const KernelCtx& ctx,
       const int N, const floating_point_type* X, const int incX,
       const floating_point_type* Y, const int incY, 
       floating_point_type* result) {

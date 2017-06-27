@@ -62,7 +62,7 @@ class KernelUtil<DeviceType::kCPU, floating_point_type> final {
     });
   }
 
-  void BlasDot(const KernelCtx& ctx, 
+  static void BlasDot(const KernelCtx& ctx, 
       const int N, const floating_point_type* X, const int incX,
       const floating_point_type* Y, const int incY, 
       floating_point_type* result) {
@@ -71,7 +71,6 @@ class KernelUtil<DeviceType::kCPU, floating_point_type> final {
     });
   }
 
-  // swap x and y
   static void BlasSwap(const KernelCtx& ctx,
       const int N,
       floating_point_type* X, const int incX,
@@ -81,7 +80,6 @@ class KernelUtil<DeviceType::kCPU, floating_point_type> final {
     });
   }
 
-  // copy x into y
   static void BlasCopy(const KernelCtx& ctx,
       const int N,
       const floating_point_type* X, const int incX,
