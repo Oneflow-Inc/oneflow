@@ -34,12 +34,18 @@ PersistentOutStream& operator << (PersistentOutStream& out_stream,
   return out_stream;
 }
 
-template<>
-PersistentOutStream& operator << <std::string>(
-    PersistentOutStream& out_stream, const std::string& s);
+inline PersistentOutStream& operator <<(
+    PersistentOutStream& out_stream, const std::string& s) {
+  out_stream.Write(s.c_str(), s.size());
+  return out_stream;
+}
 
-PersistentOutStream& operator << (
-    PersistentOutStream& out_stream, const char* s);
+template<size_t n>
+PersistentOutStream& operator <<(
+    PersistentOutStream& out_stream, const char (&s)[n]) {
+  out_stream.Write(s, strlen(s));
+  return out_stream;
+}
 
 }  // namespace oneflow
 
