@@ -81,12 +81,13 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
   ChainGraph() = default;
   ~ChainGraph() = default;
 
-  ChainGraph(const LogicalGraph* logical_gph,
-             const std::string& dot_filepath);
+  ChainGraph(const LogicalGraph* logical_gph);
+
+  const char* TypeName() const override { return "ChainGraph"; }
 
  private:
   void SetInOutLbn4AllChainNodeInDataTaskGraph();
-
+  
 };
 
 std::vector<std::string> FindLbnsBetween(const ChainNode*, const ChainNode*);
