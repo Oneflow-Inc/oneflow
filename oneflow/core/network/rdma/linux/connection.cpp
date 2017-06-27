@@ -20,20 +20,18 @@ sockaddr_in GetAddress(const char* ip, int port) {
   return addr;
 }
 
+void TransQueuePaitState() {
+
+}
+
 }  // namespace
 
 Connection::Connection(uint64_t my_machine_id)
     : Connection::Connection(my_machine_id, -1) {}
 
-Connection::Connection(uint64_t my_machine_id, uint64_t peer_machine_id) {
-  my_machine_id_ = my_machine_id;
-  peer_machine_id_ = peer_machine_id;
-  connector_ = NULL;
-  queue_pair_ = NULL;
-}
-
-Connection::~Connection() {
-}
+Connection::Connection(uint64_t my_machine_id, uint64_t peer_machine_id)
+    : my_machine_id_(my_machine_id), peer_machine_id_(peer_machine_id),
+      connector(nullptr), queue_pair(nullptr) {}
 
 bool Connection::Bind(const char* ip, int port) {
   my_addr_ = GetAddress(ip, port);
