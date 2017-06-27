@@ -7,10 +7,10 @@ namespace oneflow {
 void FwDataCompActor::Init(const TaskProto& task_proto,
                            const ThreadCtx& thread_ctx) {
   Actor::Init(task_proto, thread_ctx);
+  in_desc_id_ = RegstDescId4Name("in");
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
   expected_model_version_id_ = 0;
-  num_of_eord_ = 0;
   if (thread_ctx.cpu_stream) {
     mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
   } else {
@@ -18,31 +18,49 @@ void FwDataCompActor::Init(const TaskProto& task_proto,
                                              cuda_handle_.cublas_handle(),
                                              cuda_handle_.cudnn_handle()));
   }
-  cur_msg_handle_ = &FwDataCompActor::HandleFwComp;
+  if (in_desc_id_ == -1) {
+    CHECK_EQ(model_regst_desc_id_, -1);
+    CHECK_EQ(model_tmp_regst_desc_id_, -1);
+    OF_SET_MSG_HANDLE(&FwDataCompActor::WaitToStart);
+  } else {
+    num_of_not_eord_ = 1 + (model_regst_desc_id_ != -1) 
+                         + (model_tmp_regst_desc_id_ != -1);
+    OF_SET_MSG_HANDLE(&FwDataCompActor::HandleFwComp);
+  }
 }
 
 bool FwDataCompActor::IsReadReady() {
-  if (model_regst_ && model_tmp_regst_ && !in_.empty()) {
-    // More Effective Distributed ML via a Stale Synchronous Parallel Parameter Server
-    uint32_t staleness = JobDesc::Singleton().staleness();
-    uint32_t num_of_piece_in_batch = JobDesc::Singleton().num_of_piece_in_batch();
-    uint64_t cur_iteration = in_.front()->piece_id() / num_of_piece_in_batch;
-    uint64_t stale_version = cur_iteration - staleness;
+  if (in_desc_id_ == -1) {
+    return true;
+  }
+  if (in_.empty() || (model_regst_desc_id_ != -1 && !model_regst_)
+                  || (model_tmp_regst_desc_id_ != -1 && !model_tmp_regst_)) {
+    return false;
+  }
+  if (model_regst_desc_id_ != -1) {
+    //Ho Q, Cipar J, Cui H, et al. More effective distributed ml via a stale synchronous parallel parameter server
+    int32_t staleness = JobDesc::Singleton().staleness();
+    int32_t num_of_piece_in_batch = JobDesc::Singleton().num_of_piece_in_batch();
+    int64_t cur_iteration = in_.front()->piece_id() / num_of_piece_in_batch;
+    int64_t stale_version = cur_iteration - staleness;
     return model_regst_->model_version_id() >= stale_version;
   }
-  return false;
+  return true;
 }
 
-int FwDataCompActor::ProcessMsg(const ActorMsg& msg) {
-  return (this->*cur_msg_handle_)(msg);
+int FwDataCompActor::WaitToStart(const ActorMsg& msg) {
+  CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
+  TryWardKernelAndSendMsg();
+  OF_SET_MSG_HANDLE(&FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg);
+  return 0;
 }
 
 int FwDataCompActor::HandleFwComp(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
-    num_of_eord_ += 1;
-    if (num_of_eord_ == 3) {
-      cur_msg_handle_ = &FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg;
+    num_of_not_eord_ -= 1;
+    if (!num_of_not_eord_) {
+      OF_SET_MSG_HANDLE(&FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg);
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()) != 0) {
@@ -71,40 +89,41 @@ int FwDataCompActor::HandleFwComp(const ActorMsg& msg) {
 int FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
   TryWardKernelAndSendMsg();
-  if (in_.empty()) {
-    AsyncSendRegstMsgToProducer(model_regst_);
-    model_regst_ = nullptr;
-    AsyncSendRegstMsgToProducer(model_tmp_regst_);
-    model_tmp_regst_ = nullptr;
+  int total_piece_num = JobDesc::Singleton().total_piece_num();
+  if ((in_desc_id_!=-1 && in_.empty()) || expected_piece_id() == total_piece_num) {
+    if (model_regst_desc_id_ != -1) {
+      AsyncSendRegstMsgToProducer(model_regst_);
+      model_regst_ = nullptr;
+    }
+    if (model_tmp_regst_desc_id_ != -1) {
+      AsyncSendRegstMsgToProducer(model_tmp_regst_);
+      model_tmp_regst_ = nullptr;
+    }
     AsyncSendEORDMsgForAllProducedRegstDesc();
     if (total_reading_cnt() == 0) {
-      cur_msg_handle_ = nullptr;
+      OF_SET_MSG_HANDLE(nullptr);
       return 1;
     } else {
-      cur_msg_handle_ = &FwDataCompActor::HandleWaitUntilReadingCntEqualZero;
+      OF_SET_MSG_HANDLE(&FwDataCompActor::HandleWaitUntilReadingCntEqualZero);
       return 0;
     }
   }
   return 0;
 }
   
-int FwDataCompActor::HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
-  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
-  if (total_reading_cnt() == 0) {
-    cur_msg_handle_ = nullptr;
-    return 1;
-  }
-  return 0;
-}
-
 void FwDataCompActor::TryWardKernelAndSendMsg() {
   while (IsReadReady() && IsWriteReady()) {
-    CHECK_EQ(in_.front()->piece_id(), expected_piece_id());
-    ready_in_regst_[in_.front()->regst_desc_id()] = in_.front();
-    uint64_t piece_id = in_.front()->piece_id();
-    uint64_t model_version_id = model_regst_->model_version_id();
+    int64_t piece_id = expected_piece_id();
+    if (!in_.empty()) {
+      CHECK_EQ(in_.front()->piece_id(), piece_id);
+      ready_in_regst_[in_.front()->regst_desc_id()] = in_.front();
+    }
+    int64_t model_version_id = -1;
+    if (model_regst_) {
+      model_version_id = model_regst_->model_version_id();
+    }
     AsyncWardKernel(GenDefaultKernelCtx(), 
-        [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+        [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
       Regst* regst = GetCurWriteableRegst(regst_desc_id);
       if (regst == nullptr) {
         return ready_in_regst_.at(regst_desc_id);
@@ -117,8 +136,10 @@ void FwDataCompActor::TryWardKernelAndSendMsg() {
       regst->set_model_version_id(model_version_id);
     });
     AsyncSendReadableRegstMsg();
-    AsyncSendRegstMsgToProducer(in_.front());
-    in_.pop();
+    if (!in_.empty()) {
+      AsyncSendRegstMsgToProducer(in_.front());
+      in_.pop();
+    }
   }
 }
 

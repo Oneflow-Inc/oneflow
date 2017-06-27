@@ -9,8 +9,8 @@ namespace oneflow {
 namespace {
 
 void SetDeviceCudaMemoryAccordingToThrdLocId(MemoryCase& mem_case, 
-                                             uint64_t thrd_loc_id) {
-  uint64_t device_id = IDMgr::Singleton().DevPhyId4ThrdLocId(thrd_loc_id);
+                                             int64_t thrd_loc_id) {
+  int64_t device_id = IDMgr::Singleton().DevPhyId4ThrdLocId(thrd_loc_id);
   mem_case.mutable_device_cuda_mem()->set_device_id(device_id);
 }
 

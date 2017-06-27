@@ -72,17 +72,13 @@ void SortAndRemoveDuplication(std::vector<T>* vec) {
 }
 
 inline std::string NewUniqueId() {
-  static uint64_t id = 0;
+  static int64_t id = 0;
   return std::to_string(id++);
 }
 
 inline std::string LogDir() {
   static std::string log_dir = std::getenv("GLOG_log_dir");
   return log_dir;
-}
-
-inline std::string DotDir() {
-  return LogDir() + "/dot";
 }
 
 inline void str_replace(std::string* str, char old_ch, char new_ch) {

@@ -8,7 +8,7 @@ namespace oneflow {
 void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
                          std::function<void(Regst*)> OneRegstDone) {
   auto runtime_regst_desc = std::make_shared<const RtRegstDesc>(regst_desc_proto);
-  for (uint64_t i = 0; i < regst_desc_proto.register_num(); ++i) {
+  for (int64_t i = 0; i < regst_desc_proto.register_num(); ++i) {
     Regst* regst = new Regst;
     regst->regst_desc_ = runtime_regst_desc;
 
@@ -29,7 +29,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
         MemoryAllocator::Singleton().Allocate(
             regst_desc_proto.mem_case(), elem_cnt * elem_size);
 
-    uint64_t blob_idx = 0;
+    int64_t blob_idx = 0;
     for (const std::string& lbn : lbns) {
       const Shape* shape_ptr = runtime_regst_desc->GetShapePtrFromLbn(lbn);
       auto blob_ptr = of_make_unique<Blob>(allocation.first + blob_idx, shape_ptr);

@@ -1,5 +1,6 @@
 #include "oneflow/core/actor/model_update_comp_actor.h"
 #include "oneflow/core/actor/actor_registry.h"
+#include "oneflow/core/job/runtime_context.h"
 
 namespace oneflow {
 
@@ -15,11 +16,7 @@ void MdUpdtCompActor::Init(const TaskProto& task_proto, const ThreadCtx& thread_
                                              cuda_handle_.cublas_handle(),
                                              cuda_handle_.cudnn_handle()));
   }
-  cur_msg_handle_ = &MdUpdtCompActor::HandleBeforeInitializeModel;
-}
-
-int MdUpdtCompActor::ProcessMsg(const ActorMsg& actor_msg) {
-  return (this->*cur_msg_handle_)(actor_msg);
+  OF_SET_MSG_HANDLE(&MdUpdtCompActor::HandleBeforeInitializeModel);
 }
 
 int MdUpdtCompActor::HandleBeforeInitializeModel(const ActorMsg& actor_msg) {
@@ -50,7 +47,10 @@ int MdUpdtCompActor::HandleBeforeInitializeModel(const ActorMsg& actor_msg) {
       return ret;
     });
   }
-  cur_msg_handle_ = &MdUpdtCompActor::HandleBeforeSendInitialModel;
+  AsyncDo([]() {
+      RuntimeCtx::Singleton().OneModelInitDone();
+  });
+  OF_SET_MSG_HANDLE(&MdUpdtCompActor::HandleBeforeSendInitialModel);
   return 0;
 }
 
@@ -60,10 +60,10 @@ int MdUpdtCompActor::HandleBeforeSendInitialModel(const ActorMsg& actor_msg) {
   SetReadOnlyForRegstDescId(model_tmp_regst_desc_id_);
   AsyncSendEORDMsgToSubscribers(model_tmp_regst_desc_id_);
   if (JobDesc::Singleton().is_train()) {
-    cur_msg_handle_ = &MdUpdtCompActor::HandleUpdateModel;
+    OF_SET_MSG_HANDLE(&MdUpdtCompActor::HandleUpdateModel);
   } else {
     AsyncSendEORDMsgToSubscribers(model_regst_desc_id_);
-    cur_msg_handle_ = &MdUpdtCompActor::HandleWaitUntilReadingCntEqualZero;
+    OF_SET_MSG_HANDLE(&MdUpdtCompActor::HandleWaitUntilReadingCntEqualZero);
   }
   return 0;
 }
@@ -71,7 +71,7 @@ int MdUpdtCompActor::HandleBeforeSendInitialModel(const ActorMsg& actor_msg) {
 int MdUpdtCompActor::HandleUpdateModel(const ActorMsg& actor_msg) {
   if (actor_msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kEORD);
-    cur_msg_handle_ = &MdUpdtCompActor::HandleUpdtModelWhenNoReadableRegstMsg;
+    OF_SET_MSG_HANDLE(&MdUpdtCompActor::HandleUpdtModelWhenNoReadableRegstMsg);
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
     auto regst_warpper = actor_msg.regst_warpper();
     if (TryUpdtStateAsProducedRegst(regst_warpper->regst_raw_ptr()) != 0) {
@@ -92,23 +92,12 @@ int MdUpdtCompActor::HandleUpdtModelWhenNoReadableRegstMsg(
   if (waiting_model_diff_acc_queue_.empty()) {
     AsyncSendEORDMsgToSubscribers(model_regst_desc_id_);
     if (total_reading_cnt() == 0) {
-      cur_msg_handle_ = nullptr;
+      OF_SET_MSG_HANDLE(nullptr);
       return 1;
     } else {
-      cur_msg_handle_ = &MdUpdtCompActor::HandleWaitUntilReadingCntEqualZero;
+      OF_SET_MSG_HANDLE(&MdUpdtCompActor::HandleWaitUntilReadingCntEqualZero);
       return 0;
     }
-  }
-  return 0;
-}
-
-int MdUpdtCompActor::HandleWaitUntilReadingCntEqualZero(
-    const ActorMsg& actor_msg) {
-  CHECK_EQ(TryUpdtStateAsProducedRegst(
-      actor_msg.regst_warpper()->regst_raw_ptr()), 0);
-  if (total_reading_cnt() == 0) {
-    cur_msg_handle_ = nullptr;
-    return 1;
   }
   return 0;
 }
@@ -121,7 +110,7 @@ void MdUpdtCompActor::TryWardKernelAndSendMsg() {
     auto model_wpr = std::make_shared<LocalRegstWarpper>(model_regst);
     model_regst->set_model_version_id(next_model_version_id_++);
     AsyncWardKernel(GenDefaultKernelCtx(),
-        [&](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+        [&](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
       if (regst_desc_id == model_regst_desc_id_) {
         return model_wpr;
       } else {

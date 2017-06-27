@@ -11,11 +11,7 @@ void BoxingActor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx)
   num_of_eord_ = 0;
   CHECK(thread_ctx.cpu_stream);
   mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
-  cur_msg_handle_ = &BoxingActor::HandleBoxing;
-}
-
-int BoxingActor::ProcessMsg(const ActorMsg& msg) {
-  return (this->*cur_msg_handle_)(msg);
+  OF_SET_MSG_HANDLE(&BoxingActor::HandleBoxing);
 }
 
 int BoxingActor::HandleBoxing(const ActorMsg& msg) {
@@ -23,7 +19,7 @@ int BoxingActor::HandleBoxing(const ActorMsg& msg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     num_of_eord_ += 1;
     if (num_of_eord_ == num_of_subscribed_regsts_) {
-      cur_msg_handle_ = &BoxingActor::HandleBoxingWhenNoReadableRegstMsg;
+      OF_SET_MSG_HANDLE(&BoxingActor::HandleBoxingWhenNoReadableRegstMsg);
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()) != 0) {
@@ -44,33 +40,24 @@ int BoxingActor::HandleBoxingWhenNoReadableRegstMsg(const ActorMsg& msg) {
   if (num_of_read_empty_ == num_of_subscribed_regsts_) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
     if (total_reading_cnt() == 0) {
-      cur_msg_handle_ = nullptr;
+      OF_SET_MSG_HANDLE(nullptr);
       return 1;
     } else {
-      cur_msg_handle_ = &BoxingActor::HandleWaitUntilReadingCntEqualZero;
+      OF_SET_MSG_HANDLE(&BoxingActor::HandleWaitUntilReadingCntEqualZero);
       return 0;
     }
   }
   return 0;
 }
   
-int BoxingActor::HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
-  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
-  if (total_reading_cnt() == 0) {
-    cur_msg_handle_ = nullptr;
-    return 1;
-  }
-  return 0;
-}
-
 void BoxingActor::TryWardKernelAndSendMsg() {
   if (!num_of_read_empty_ && IsWriteReady()) {
-    uint64_t piece_id = expected_piece_id();
+    int64_t piece_id = expected_piece_id();
     for (const auto& pair : read_regst_) {
       CHECK_EQ(pair.second.front()->piece_id(), piece_id);
     }
     AsyncWardKernel(GenDefaultKernelCtx(), 
-        [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+        [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
       Regst* regst = GetCurWriteableRegst(regst_desc_id);
       if (regst == nullptr) {
         return read_regst_.at(regst_desc_id).front();

@@ -11,20 +11,10 @@ public:
   OF_DISALLOW_COPY_AND_MOVE(PersistentOutStream);
   PersistentOutStream() = delete;
   ~PersistentOutStream() {
-    file_->Close();
+    TF_CHECK_OK(file_->Close());
   }
 
   PersistentOutStream(const std::string& file_path);
-
-  // the type T must be fundamental
-  template<typename T>
-  PersistentOutStream& operator << (const T& x) {
-    const char* x_ptr = &x;
-    static_assert(std::is_fundamental<T>::value, "Not fundamental type");
-    size_t n = sizeof(x);
-    Write(x_ptr, n);
-    return *this;
-  }
 
   // Write block of data
   // Inserts the first n characters of the array pointed by s into the stream.
@@ -33,6 +23,29 @@ public:
 private:
   std::unique_ptr<tensorflow::WritableFile> file_;
 };
+
+template<typename T>
+PersistentOutStream& operator << (PersistentOutStream& out_stream,
+                                  const T& x) {
+  static_assert(std::is_fundamental<T>::value, "Not fundamental type");
+  const char* x_ptr = &x;
+  size_t n = sizeof(x);
+  out_stream.Write(x_ptr, n);
+  return out_stream;
+}
+
+inline PersistentOutStream& operator <<(
+    PersistentOutStream& out_stream, const std::string& s) {
+  out_stream.Write(s.c_str(), s.size());
+  return out_stream;
+}
+
+template<size_t n>
+PersistentOutStream& operator <<(
+    PersistentOutStream& out_stream, const char (&s)[n]) {
+  out_stream.Write(s, strlen(s));
+  return out_stream;
+}
 
 }  // namespace oneflow
 

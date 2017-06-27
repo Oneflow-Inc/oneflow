@@ -1,19 +1,24 @@
 #ifndef ONEFLOW_CORE_ACTOR_COPY_HD_ACTOR_H_
 #define ONEFLOW_CORE_ACTOR_COPY_HD_ACTOR_H_
 
-#include "oneflow/core/actor/copy_actor.h"
+#include "oneflow/core/actor/actor.h"
 
 namespace oneflow {
 
-class CopyHdActor final : public CopyActor {
+class CopyHdActor final : public Actor {
 public:
   OF_DISALLOW_COPY_AND_MOVE(CopyHdActor);
   CopyHdActor() = default;
   ~CopyHdActor() = default;
 
-  int ProcessMsg(const ActorMsg&) override;
+  void Init(const TaskProto&, const ThreadCtx&) override;
 
 private:
+  int HandleCopyHd(const ActorMsg&);
+  int HandleCopyHdWhenNoReadableRegstMsg(const ActorMsg&);
+
+  void TryWardKernelAndSendMsg();
+  std::queue<std::shared_ptr<RegstWarpper>> waiting_in_regst_;
 
 };
 

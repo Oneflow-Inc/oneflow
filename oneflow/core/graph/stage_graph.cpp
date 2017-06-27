@@ -2,8 +2,7 @@
 
 namespace oneflow {
 
-StageGraph::StageGraph(std::unique_ptr<const ChainGraph>&& chain_gph,
-                       const std::string& dot_filepath) {
+StageGraph::StageGraph(std::unique_ptr<const ChainGraph>&& chain_gph) {
   LOG(INFO) << "Build StageGraph...";
   chain_gph_ = std::move(chain_gph);
   HashMap<const ChainNode*, std::vector<StageNode*>> chain2stages;
@@ -11,8 +10,8 @@ StageGraph::StageGraph(std::unique_ptr<const ChainGraph>&& chain_gph,
   chain_gph_->ConstForEachNode([&](const ChainNode* cur_chain) {
     chain2stages[cur_chain] = {};
     auto parallel_desc = cur_chain->parallel_desc();
-    uint64_t range_idx = 0;
-    for (uint64_t machine_id : parallel_desc->sorted_machine_ids()) {
+    int64_t range_idx = 0;
+    for (int64_t machine_id : parallel_desc->sorted_machine_ids()) {
       StageNode* stage_node = NewNode();
       stage_node->mut_machine_id() = machine_id;
       stage_node->set_chain_node(cur_chain);
@@ -41,7 +40,7 @@ StageGraph::StageGraph(std::unique_ptr<const ChainGraph>&& chain_gph,
   });
   // Post processing
   UpdateSourceAndSink();
-  ToDotFile(dot_filepath);
+  ToDotWithAutoFilePath();
 }
 
 } // namespace oneflow

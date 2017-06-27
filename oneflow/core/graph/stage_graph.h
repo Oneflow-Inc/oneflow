@@ -17,10 +17,10 @@ class StageNode final : public Node<StageNode, StageEdge> {
   std::string machine_id_str() const {
     return std::to_string(machine_id_);
   }
-  const uint64_t& machine_id() const {
+  const int64_t& machine_id() const {
     return machine_id_;
   }
-  uint64_t& mut_machine_id() {
+  int64_t& mut_machine_id() {
     return machine_id_;
   }
 
@@ -38,7 +38,7 @@ class StageNode final : public Node<StageNode, StageEdge> {
     return parallel_range_;
   }
 
-  const std::vector<uint64_t>& SortedDevicePhyIds() const {
+  const std::vector<int64_t>& SortedDevicePhyIds() const {
     return chain_node_->parallel_desc()->sorted_device_phy_ids(machine_id_);
   }
 
@@ -48,7 +48,7 @@ class StageNode final : public Node<StageNode, StageEdge> {
 
  private:
   const ChainNode* chain_node_;
-  uint64_t machine_id_;
+  int64_t machine_id_;
   Range parallel_range_;
 
 };
@@ -68,10 +68,10 @@ class StageGraph final : public Graph<StageNode, StageEdge> {
   StageGraph() = delete;
   ~StageGraph() = default;
 
-  StageGraph(std::unique_ptr<const ChainGraph>&& chain_gph,
-             const std::string& dot_filepath);
+  StageGraph(std::unique_ptr<const ChainGraph>&& chain_gph);
 
   const ChainGraph* chain_gph() const { return chain_gph_.get(); }
+  const char* TypeName() const override { return "StageGraph"; }
 
  private:
   std::unique_ptr<const ChainGraph> chain_gph_;

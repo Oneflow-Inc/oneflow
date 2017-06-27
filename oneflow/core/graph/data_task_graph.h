@@ -15,6 +15,8 @@ class DataTaskGraph final : public TaskGraph {
                 const DLNetConf& dl_net_conf,
                 const Strategy& strategy_conf,
                 bool need_bp);
+  
+  const char* TypeName() const override { return "DataTaskGraph"; }
 
  private:
 };

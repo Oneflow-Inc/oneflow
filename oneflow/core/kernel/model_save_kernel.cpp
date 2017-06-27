@@ -6,9 +6,9 @@ template<typename floating_point_type>
 void ModelSaveKernel<DeviceType::kCPU, floating_point_type>::Forward(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  auto save_ctx = static_cast<std::tuple<Snapshot*, uint64_t>*>(kernel_ctx.other);
+  auto save_ctx = static_cast<std::tuple<Snapshot*, int64_t>*>(kernel_ctx.other);
   Snapshot* snapshot = std::get<0>(*save_ctx);
-  uint64_t parallel_id = std::get<1>(*save_ctx);
+  int64_t parallel_id = std::get<1>(*save_ctx);
   for(const std::string& ibn : op()->input_bns()) {
     const std::string& lbn = op()->Lbn4BnInOp(ibn);
     Blob* blob_ptr = BnInOp2BlobPtr(ibn);

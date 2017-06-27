@@ -12,5 +12,5 @@ message Plan {
   repeated OperatorProto op = 3;
   JobDescProto job_desc = 4;
   map<string, DeviceType> op_name2device_type = 5;
-  map<uint64, OpNameSet> machine_id2op_name_set = 6;
+  map<int64, OpNameSet> machine_id2op_name_set = 6;
 }

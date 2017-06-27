@@ -15,9 +15,9 @@ class RtRegstDesc {
 
   RtRegstDesc(const RegstDescProto& regst_desc_proto);
 
-  uint64_t regst_desc_id() const { return regst_desc_id_; }
-  uint64_t producer_actor_id() const { return producer_actor_id_; }
-  const std::vector<uint64_t>& subscribers_actor_id() const { 
+  int64_t regst_desc_id() const { return regst_desc_id_; }
+  int64_t producer_actor_id() const { return producer_actor_id_; }
+  const std::vector<int64_t>& subscribers_actor_id() const { 
     return subscribers_actor_id_;
   }
   int64_t register_num() const { return register_num_; }
@@ -28,9 +28,9 @@ class RtRegstDesc {
   }
 
  private:
-  uint64_t regst_desc_id_;
-  uint64_t producer_actor_id_;
-  std::vector<uint64_t> subscribers_actor_id_;
+  int64_t regst_desc_id_;
+  int64_t producer_actor_id_;
+  std::vector<int64_t> subscribers_actor_id_;
   std::unordered_map<std::string, std::unique_ptr<Shape>> lbn2shape_;
   int64_t register_num_;
   MemoryCase mem_case_;

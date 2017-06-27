@@ -31,8 +31,8 @@ std::string BoxingOp::obn2lbn(const std::string& output_bn) const {
 void BoxingOp::InferShape4FwBlobs(
     std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
     ParallelPolicy policy,
-    uint64_t parallel_id,
-    uint64_t parallel_num) const {
+    int64_t parallel_id,
+    int64_t parallel_num) const {
   auto boxing_conf = op_conf().boxing_conf();
   auto in_box_case = boxing_conf.in_box_case();
   std::vector<int64_t> data_tmp_blob_shape_vec =
@@ -59,7 +59,7 @@ void BoxingOp::InferShape4FwBlobs(
   auto out_box_case = boxing_conf.out_box_case();
   CHECK_NE(out_box_case, BoxingOpConf::OUT_BOX_NOT_SET);
   if (out_box_case == BoxingOpConf::kDataSplitBox) {
-    uint32_t out_num = output_bns().size();
+    int32_t out_num = output_bns().size();
     BalancedSplitter splitter(data_tmp_blob_shape_vec[0], out_num);
     auto output_shape_vec = data_tmp_blob_shape_vec;
     for (size_t i = 0; i < out_num; ++i) {

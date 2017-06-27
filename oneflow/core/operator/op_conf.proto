@@ -39,20 +39,20 @@ message ConvolutionOpConf {
   string in = 1;
   string out = 2;
 
-  uint32 out_num = 3; // The number of outputs for the layer
+  int32 out_num = 3; // The number of outputs for the layer
   bool has_bias_term = 4; // whether to have bias terms
 
   // Pad, kernel size, and stride are all given as a single value for equal
   // dimensions in all spatial dimensions, or once per spatial dimension.
-  repeated uint32 pad = 5; // The padding size; defaults to 0
-  repeated uint32 kernel_size = 6; // The kernel size
-  repeated uint32 stride = 7; // The stride; defaults to 1
+  repeated int32 pad = 5; // The padding size; defaults to 0
+  repeated int32 kernel_size = 6; // The kernel size
+  repeated int32 stride = 7; // The stride; defaults to 1
   // Factor used to dilate the kernel, (implicitly) zero-filling the resulting
   // holes. (Kernel dilation is sometimes referred to by its use in the
   // algorithme ид trous from Holschneider et al. 1987.)
-  repeated uint32 dilation = 8; // The dilation; defaults to 1
+  repeated int32 dilation = 8; // The dilation; defaults to 1
 
-  uint32 group = 15; // The group size for group conv
+  int32 group = 15; // The group size for group conv
 
   FillerConf weight_filler = 16; // The filler for the weight
   FillerConf bias_filler = 17; // The filler for the bias
@@ -80,7 +80,7 @@ message InnerProductOpConf {
   string in = 1;
   string out = 2;
 
-  uint32 out_num = 3; // The number of outputs for the layer
+  int32 out_num = 3; // The number of outputs for the layer
   bool has_bias_term = 4; // whether to have bias terms
   FillerConf weight_filler = 5; // The filler for the weight
   FillerConf bias_filler = 6; // The filler for the bias
@@ -114,9 +114,9 @@ message PoolingOpConf {
   PoolMethod pool = 3; // The pooling method
   // Pad, kernel size, and stride are all given as a repeated value
   // dimensions in height and width or 3D
-  repeated uint32 pad = 4; // The padding size {H, W} or {D, H, W}
-  repeated uint32 kernel_size = 7; // The kernel size
-  repeated uint32 stride = 10; // The stride
+  repeated int32 pad = 4; // The padding size {H, W} or {D, H, W}
+  repeated int32 kernel_size = 7; // The kernel size
+  repeated int32 stride = 10; // The stride
 }
 
 message ReluOpConf {
@@ -154,7 +154,7 @@ message CopyHdOpConf {
 }
 
 message CloneOpConf {
-  uint32 out_num = 1;
+  int32 out_num = 1;
   string lbn = 2;
 }
 
@@ -173,8 +173,8 @@ message BoxCloneConf {
 
 message BoxingOpConf {
   string lbn = 1;
-  uint32 in_num = 2;
-  uint32 out_num = 3;
+  int32 in_num = 2;
+  int32 out_num = 3;
   oneof in_box {
     BoxConcatConf concat_box = 4;
     BoxAddConf add_box = 5;

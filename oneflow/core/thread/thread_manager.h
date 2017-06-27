@@ -15,7 +15,9 @@ class ThreadMgr final {
 
   OF_SINGLETON(ThreadMgr);
   
-  Thread* GetThrd(uint64_t thrd_loc_id);
+  Thread* GetThrd(int64_t thrd_loc_id);
+
+  void ClearAllThread();
 
  private:
   ThreadMgr();

@@ -7,7 +7,7 @@ namespace oneflow {
 
 class LocalRegstWarpper final : public RegstWarpper {
  public:
-  // OF_DISALLOW_COPY_AND_MOVE(LocalRegstWarpper);
+  OF_DISALLOW_COPY_AND_MOVE(LocalRegstWarpper);
   LocalRegstWarpper() = delete;
   ~LocalRegstWarpper() = default;
 
@@ -16,16 +16,16 @@ class LocalRegstWarpper final : public RegstWarpper {
   Blob* GetBlobPtrFromLbn(const std::string& lbn) override {
     return regst_->GetBlobPtrFromLbn(lbn);
   }
-  uint64_t piece_id() const override {
+  int64_t piece_id() const override {
     return regst_->piece_id();
   }
-  uint64_t model_version_id() const override {
+  int64_t model_version_id() const override {
     return regst_->model_version_id();
   }
-  uint64_t regst_desc_id() const override {
+  int64_t regst_desc_id() const override {
     return regst_->regst_desc_id();
   }
-  uint64_t producer_actor_id() const override {
+  int64_t producer_actor_id() const override {
     return regst_->producer_actor_id();
   }
   Regst* regst_raw_ptr() const override {
