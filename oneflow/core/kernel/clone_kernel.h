@@ -15,8 +15,10 @@ class CloneKernel<DeviceType::kCPU, floating_point_type> final : public Kernel {
   CloneKernel() = default;
   ~CloneKernel() = default;
 
-  void Forward(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
-  void Backward(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
+  void Forward(const KernelCtx&,
+               std::function<Blob*(const std::string&)>) const override;
+  void Backward(const KernelCtx&,
+                std::function<Blob*(const std::string&)>) const override;
 };
 
 template<typename floating_point_type>
@@ -26,8 +28,10 @@ class CloneKernel<DeviceType::kGPU, floating_point_type> final : public Kernel {
   CloneKernel() = default;
   ~CloneKernel() = default;
 
-  void Forward(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
-  void Backward(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
+  void Forward(const KernelCtx&,
+               std::function<Blob*(const std::string&)>) const override;
+  void Backward(const KernelCtx&,
+                std::function<Blob*(const std::string&)>) const override;
 
 };
 
