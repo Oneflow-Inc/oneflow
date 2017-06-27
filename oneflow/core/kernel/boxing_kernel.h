@@ -5,19 +5,15 @@
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_manager.h"
 #include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/actor/cuda_device_context.h"
 
 namespace oneflow {
   
-template<DeviceType device_type, typename floating_point_type> 
-class BoxingKernel; 
-
-template<typename floating_point_type>
-class BoxingKernel<DeviceType::kALL, floating_point_type> : 
-  public Kernel {
+template<DeviceType device_type, typename floating_point_type>
+class BoxingKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BoxingKernel);
-  virtual ~BoxingKernel() = default;
+  BoxingKernel() = default;
+  ~BoxingKernel() = default;
 
   void InitFromOpProto(const OperatorProto& op_proto) override;
 
@@ -25,24 +21,7 @@ class BoxingKernel<DeviceType::kALL, floating_point_type> :
                std::function<Blob*(const std::string&)>) const override;
   void Backward(const KernelCtx&,
                 std::function<Blob*(const std::string&)>) const override;
- protected:
-  BoxingKernel() = default;
-  // Mark: seems inappropriate to send ctx into these fucntions. However, since 
-  // it is a virtual function, we do not know whether it will be excecuted on
-  // cpu or gpu yet.
-  virtual void Memcpy(const KernelCtx& ctx,
-      void* dst, const void* src, size_t sz) = 0;
-  virtual void Memset(const KernelCtx& ctx, void* dst, const char value, 
-      size_t sz) = 0;
-  virtual void BlobCpy(const KernelCtx& ctx, const Blob* a, Blob* b) = 0;
-  virtual void BlobAdd(const KernelCtx& ctx, const Blob*, Blob*) = 0;
-  virtual void BlasAxpy(const KernelCtx& ctx, const int N,
-      const floating_point_type alpha,
-      const floating_point_type* X, const int incX,
-      floating_point_type *Y, const int incY) = 0;
-  virtual void BlasScal(const KernelCtx& ctx, const int n,
-      const floating_point_type alpha, floating_point_type* x, int incx) = 0;
-
+ 
   // For concat ==> (split/clone) box:
   // a copy_rule means a step of memory action during runtime. Since the 
   // blob shapes are fixed after initilization, the offsets of each blobs 
@@ -72,7 +51,7 @@ class BoxingKernel<DeviceType::kALL, floating_point_type> :
   // Do direct memory copy from saved rules
   void CopyDataFromRules( const KernelCtx& ctx, 
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr, 
-    std::vector<copy_rule>& copy_rules); 
+    std::vector<copy_rule>& copy_rules) const; 
 
   // Forward function for Add box
   void AddBoxForward(
@@ -93,62 +72,13 @@ class BoxingKernel<DeviceType::kALL, floating_point_type> :
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)>) const;
 
-  using ExecFunc = void (BoxingKernel<DeviceType::kALL,
-      floating_point_type>::*) (const KernelCtx&,
-        std::function<Blob*(const std::string&)>) const;
+  using ExecFunc = void (BoxingKernel<device_type, floating_point_type>::*) 
+    (const KernelCtx&, std::function<Blob*(const std::string&)>) const;
 
   mutable std::vector<copy_rule> fw_copy_rules;
   mutable std::vector<copy_rule> bw_copy_rules;
   ExecFunc fw_func_;
   ExecFunc bw_func_;
-};
-
-template<typename floating_point_type>
-class BoxingKernel<DeviceType::kCPU, floating_point_type> final : 
-  public BoxingKernel<DeviceType::kALL, floating_point_type>  {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(BoxingKernel);
-  BoxingKernel() = default;
-  ~BoxingKernel() = default;
-
-  // implementations of math virtual functions on cpu
-  void Memset(const KernelCtx& ctx, void* dst, const char value, 
-      size_t sz) override;
-  void Memcpy(const KernelCtx& ctx,
-      void* dst, const void* src, size_t sz) override;
-  void BlobCpy(const KernelCtx& ctx, const Blob* a, Blob* b) override;
-  void BlobAdd(const KernelCtx& ctx, const Blob*, Blob*) override;
-  void BlasAxpy(const KernelCtx& ctx, const int N,
-      const floating_point_type alpha,
-      const floating_point_type* X, const int incX, floating_point_type *Y,
-      const int incY) override;
-  void BlasScal(const KernelCtx& ctx, const int n,
-      const floating_point_type alpha, floating_point_type* x,
-      int incx) override;
-};
-
-template<typename floating_point_type>
-class BoxingKernel<DeviceType::kGPU, floating_point_type> final : 
-  public BoxingKernel<DeviceType::kALL, floating_point_type> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(BoxingKernel);
-  BoxingKernel() = default;
-  ~BoxingKernel() = default;
-
-  // implementations of math virtual functions on gpu
-  void Memset(const KernelCtx& ctx, void* dst, const char value, 
-      size_t sz) override;
-  void Memcpy(const KernelCtx& ctx,
-      void* dst, const void* src, size_t sz) override;
-  void BlobCpy(const KernelCtx& ctx, const Blob* a, Blob* b) override;
-  void BlobAdd(const KernelCtx& ctx, const Blob*, Blob*) override;
-  void BlasAxpy(const KernelCtx& ctx, const int N,
-      const floating_point_type alpha,
-      const floating_point_type* X, const int incX,
-      floating_point_type *Y, const int incY) override;
-  void BlasScal(const KernelCtx& ctx, const int n,
-      const floating_point_type alpha, floating_point_type* x,
-      int incx) override;
 };
 
 }  // namespace oneflow
