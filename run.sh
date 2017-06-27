@@ -5,10 +5,6 @@ rm -rf ./log ./log.tar.gz ./core.*
 
 # compiler
 mkdir "log"
-mkdir "log/dot"
-mkdir "log/dot/data"
-mkdir "log/dot/model"
-mkdir "log/dot/exec"
 GLOG_logtostderr=0 GLOG_log_dir=./log ./compiler \
     -job_conf_filepath=../prototxt/multi_machine_job.prototxt \
     -plan_filepath=./plan

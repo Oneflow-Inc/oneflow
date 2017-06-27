@@ -242,8 +242,7 @@ bool ChainNode::HasOpWithModelOrModelTmpBlob() const {
   return false;
 }
 
-ChainGraph::ChainGraph(const LogicalGraph* logical_gph,
-                       const std::string& dot_filepath) {
+ChainGraph::ChainGraph(const LogicalGraph* logical_gph) {
   LOG(INFO) << "Build ChainGraph...";
   // Build Chain
   std::list<Chain> chain_list;
@@ -287,7 +286,7 @@ ChainGraph::ChainGraph(const LogicalGraph* logical_gph,
   // Post processing
   UpdateSourceAndSink();
   SetInOutLbn4AllChainNodeInDataTaskGraph();
-  ToDotFile(dot_filepath);
+  ToDotWithAutoFilePath();
 }
 
 void ChainGraph::SetInOutLbn4AllChainNodeInDataTaskGraph() {

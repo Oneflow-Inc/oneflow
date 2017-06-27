@@ -80,6 +80,10 @@ using KernelWardFunc = void (Kernel::*)(
   template class classname<DeviceType::kGPU, float>; \
   template class classname<DeviceType::kGPU, double>;
 
+#define INSTANTIATE_KERNEL_CLASS(classname) \
+  INSTANTIATE_CPU_KERNEL_CLASS(classname) \
+  INSTANTIATE_GPU_KERNEL_CLASS(classname)
+
 }  // namespace oneflow
 
 #endif // ONEFLOW_CORE_KERNEL_KERNEL_H_

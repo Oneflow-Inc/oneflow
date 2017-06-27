@@ -52,33 +52,30 @@ std::vector<CompTaskNode*> TaskGraph::CompTasksInChain(
 template<typename CompTaskNodeType>
 void TaskGraph::BuildFromChainGph(
     std::unique_ptr<ChainGraph>&& chain_gph,
-    bool need_bp,
-    const std::string& dot_filepath_prefix) {
-  stage_gph_.reset(new StageGraph(std::move(chain_gph),
-                   dot_filepath_prefix + "stage_graph.dot"));
-  BuildFromStageGph<CompTaskNodeType>(need_bp, dot_filepath_prefix);
+    bool need_bp) {
+  stage_gph_.reset(new StageGraph(std::move(chain_gph)));
+  BuildFromStageGph<CompTaskNodeType>(need_bp);
 }
 
 INSTANTIATE_TASK_GPH_MEM_FUNC(
-    BuildFromChainGph, std::unique_ptr<ChainGraph>&&, bool, const std::string&);
+    BuildFromChainGph, std::unique_ptr<ChainGraph>&&, bool);
 
 template<typename CompTaskNodeType>
-void TaskGraph::BuildFromStageGph(bool need_bp,
-                                  const std::string& dot_filepath_prefix) {
+void TaskGraph::BuildFromStageGph(bool need_bp) {
   LOG(INFO) << "Build FwTaskGraph...";
   Stage2TaskNodesMap stage2task_nodes;
   InitCompTaskNodes<CompTaskNodeType>(&stage2task_nodes);
   InitBoxingTaskNodes(&stage2task_nodes);
   ConnectBoxingTaskNodes(&stage2task_nodes);
   UpdateSourceAndSink();
-  ToDotFile(dot_filepath_prefix + "fw_task_graph.dot");
+  ToDotWithAutoFilePath();
   if (need_bp) {
     BuildBpStruct();
-    ToDotFile(dot_filepath_prefix + "bp_task_graph.dot");
+    ToDotWithAutoFilePath();
   }
 }
 
-INSTANTIATE_TASK_GPH_MEM_FUNC(BuildFromStageGph, bool, const std::string&);
+INSTANTIATE_TASK_GPH_MEM_FUNC(BuildFromStageGph, bool);
 
 template<typename CompTaskNodeType>
 void TaskGraph::InitCompTaskNodes(Stage2TaskNodesMap* stage2task_nodes) {
