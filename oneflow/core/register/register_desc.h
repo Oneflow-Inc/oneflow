@@ -19,8 +19,8 @@ class RegstDesc final {
   ~RegstDesc() = default;
 
   // regst_desc_id
-  uint64_t regst_desc_id() const { return regst_desc_id_; }
-  void set_regst_desc_id(uint64_t val) { regst_desc_id_ = val; }
+  int64_t regst_desc_id() const { return regst_desc_id_; }
+  void set_regst_desc_id(int64_t val) { regst_desc_id_ = val; }
   // Producer
   const TaskNode* GetProducer() const { return producer_; }
   void SetProducer(const TaskNode* task_node) { producer_ = task_node; }
@@ -33,8 +33,8 @@ class RegstDesc final {
   void EnrollLbn(const std::string& lbn);
   const Shape& GetShape(const std::string& lbn) const;
   Shape* GetMutShapePtr(const std::string& lbn);
-  HashMap<std::string, std::unique_ptr<Shape>>& mut_lbn2shape();
-  const HashMap<std::string, std::unique_ptr<Shape>>& lbn2shape() const;
+  void ForEachLbn(std::function<void(const std::string&)> func) const;
+  size_t NumOfLbn() const { return lbn2shape_.size(); }
 
   //
   void EraseZeroSizeBlob();
@@ -44,7 +44,7 @@ class RegstDesc final {
   MemoryCase InferMemCase() const;
   
  private:
-  uint64_t regst_desc_id_;
+  int64_t regst_desc_id_;
   const TaskNode* producer_;
   HashSet<const TaskNode*> subscribers_;
   

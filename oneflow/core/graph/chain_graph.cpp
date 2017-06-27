@@ -1,6 +1,4 @@
 #include "oneflow/core/graph/chain_graph.h"
-#include "glog/logging.h"
-#include <list>
 
 namespace oneflow {
 
@@ -35,15 +33,15 @@ void InitChains(
     Logical2ChainItMap* logical2chain_it) {
   chain_list->clear();
   logical2chain_it->clear();
-  for (const std::unique_ptr<LogicalNode>& node : logi_gph.nodes()) {
+  logi_gph.ConstForEachNode([&](const LogicalNode* node) {
     // Init one Chain with one Node
     chain_list->emplace_back();
-    logical2chain_it->insert({node.get(), --chain_list->end()});
+    logical2chain_it->insert({node, --chain_list->end()});
     Chain& cur_chain = chain_list->back();
-    cur_chain.nodes = {node.get()};
-  }
+    cur_chain.nodes = {node};
+  });
   // Init ancestors
-  for (auto node = logi_gph.cbegin(); node != logi_gph.cend(); ++node) {
+  logi_gph.ConstTopoForEachNode([&](const LogicalNode* node) {
     ChainIt cur_chain = logical2chain_it->at(&(*node));
     cur_chain->ancestors.clear();
     cur_chain->ancestors_and_this.clear();
@@ -61,9 +59,9 @@ void InitChains(
     // ancestors_and_this
     cur_chain->ancestors_and_this.insert(cur_chain->ancestors.begin(),
                                          cur_chain->ancestors.end());
-  }
+  });
   // Init descendants
-  for (auto node = logi_gph.crbegin(); node != logi_gph.crend(); ++node) {
+  logi_gph.ConstReverseTopoForEachNode([&](const LogicalNode* node) {
     ChainIt cur_chain = logical2chain_it->at(&(*node));
     cur_chain->descendants.clear();
     cur_chain->descendants_and_this.clear();
@@ -81,7 +79,7 @@ void InitChains(
     }
     cur_chain->descendants_and_this.insert(cur_chain->descendants.begin(),
                                            cur_chain->descendants.end());
-  }
+  });
 }
 
 void ModelMergeChains(
@@ -295,27 +293,27 @@ ChainGraph::ChainGraph(const LogicalGraph* logical_gph,
 void ChainGraph::SetInOutLbn4AllChainNodeInDataTaskGraph() {
   HashMap<ChainNode*, std::unordered_set<std::string>> chain2produced_lbns;
   // Init chain2produced_lbns and Set InputLbns
-  for (const auto& cur_node : nodes()) {
-    auto& produced_lbns = chain2produced_lbns[cur_node.get()];
+  ForEachNode([&](ChainNode* cur_node) {
+    auto& produced_lbns = chain2produced_lbns[cur_node];
     for (std::shared_ptr<const Operator> op : cur_node->op_vec()) {
       for (const std::string& obn : op->output_bns()) {
-        std::string lbn = op->Lbn4BnInOp(obn);
+        const std::string& lbn = op->Lbn4BnInOp(obn);
         produced_lbns.insert(lbn);
       }
     }
     for (std::shared_ptr<const Operator> op : cur_node->op_vec()) {
       for (const std::string& ibn : op->input_bns()) {
-        std::string lbn = op->Lbn4BnInOp(ibn);
+        const std::string& lbn = op->Lbn4BnInOp(ibn);
         if (produced_lbns.find(lbn) == produced_lbns.end()) {
           cur_node->mut_input_lbns().push_back(lbn);
         }
       }
     }
     SortAndRemoveDuplication(&(cur_node->mut_input_lbns()));
-  }
+  });
   // Set OutputLbns
-  for (const auto& cur_node : nodes()) {
-    const auto& produced_lbns = chain2produced_lbns.at(cur_node.get());
+  ForEachNode([&](ChainNode* cur_node) {
+    const auto& produced_lbns = chain2produced_lbns.at(cur_node);
     for (ChainEdge* out_edge : cur_node->out_edges()) {
       for (const std::string& lbn : out_edge->dst_node()->input_lbns()) {
         if (produced_lbns.find(lbn) != produced_lbns.end()) {
@@ -324,7 +322,7 @@ void ChainGraph::SetInOutLbn4AllChainNodeInDataTaskGraph() {
       }
     }
     SortAndRemoveDuplication(&(cur_node->mut_output_lbns()));
-  }
+  });
 }
 
 std::vector<std::string> FindLbnsBetween(const ChainNode* src_node, 

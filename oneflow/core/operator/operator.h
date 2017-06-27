@@ -1,13 +1,12 @@
-#ifndef ONEFLOW_CORE_OPERATOR_OP_H_
-#define ONEFLOW_CORE_OPERATOR_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_OPERATOR_H_
+#define ONEFLOW_CORE_OPERATOR_OPERATOR_H_
 
-#include <string>
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/conf/strategy.pb.h"
+#include "oneflow/core/job/strategy.pb.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/keyword.h"
+#include "oneflow/core/job/keyword.h"
 #include "oneflow/core/operator/operator.pb.h"
 
 namespace oneflow {
@@ -48,9 +47,7 @@ class Operator {
 
   DEFINE_GET_VAL_FROM_SPECIAL_CONF(std::string, String);
   DEFINE_GET_VAL_FROM_SPECIAL_CONF(int32_t, Int32);
-  DEFINE_GET_VAL_FROM_SPECIAL_CONF(uint32_t, UInt32);
   DEFINE_GET_VAL_FROM_SPECIAL_CONF(int64_t, Int64);
-  DEFINE_GET_VAL_FROM_SPECIAL_CONF(uint64_t, UInt64);
 
   #undef DEFINE_GET_VAL_FROM_SPECIAL_CONF
   
@@ -81,8 +78,8 @@ class Operator {
   virtual void InferShape4FwBlobs(
       std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
       ParallelPolicy policy,
-      uint64_t parallel_id,
-      uint64_t parallel_num) const = 0;
+      int64_t parallel_id,
+      int64_t parallel_num) const = 0;
 
  protected:
   virtual std::string ibn2lbn(const std::string& input_bn) const = 0;
@@ -146,8 +143,8 @@ class SysOperator : public Operator {
   virtual void InferShape4FwBlobs(
       std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
       ParallelPolicy policy,
-      uint64_t parallel_id,
-      uint64_t parallel_num) const override {
+      int64_t parallel_id,
+      int64_t parallel_num) const override {
     UNEXPECTED_RUN();
   }
 
@@ -170,6 +167,8 @@ class SysOperator : public Operator {
 std::string GenDiffBn(const std::string& bn);
 std::string GenUnDiffBn(const std::string& diff_bn);
 
+std::string GetOpNameFromLbn(const std::string& lbn);
+
 } // namespace oneflow
 
-#endif // ONEFLOW_CORE_OPERATOR_OP_H_
+#endif // ONEFLOW_CORE_OPERATOR_OPERATOR_H_

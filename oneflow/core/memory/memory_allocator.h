@@ -2,8 +2,6 @@
 #define ONEFLOW_CORE_MEMORY_MEMORY_ALLOCATOR_H_
 
 #include "oneflow/core/memory/memory_case.pb.h"
-#include "cuda.h"
-#include "cuda_runtime.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -13,10 +11,7 @@ class MemoryAllocator final {
   OF_DISALLOW_COPY_AND_MOVE(MemoryAllocator);
   ~MemoryAllocator() = default;
   
-  static MemoryAllocator& Singleton() {
-    static MemoryAllocator obj;
-    return obj;
-  }
+  OF_SINGLETON(MemoryAllocator);
 
   std::pair<char*, std::function<void()>> Allocate(
       MemoryCase mem_case, std::size_t size);

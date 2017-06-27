@@ -1,14 +1,17 @@
 #ifndef ONEFLOW_CORE_KERNEL_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_KERNEL_H_
 
-#include <memory>
-#include <functional>
-#include "oneflow/core/conf/resource.pb.h"
-#include "oneflow/core/conf/job_conf.pb.h"
+#include "oneflow/core/persistence/snapshot.h"
+#include "oneflow/core/job/resource.pb.h"
+#include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/operator_manager.h"
 #include "oneflow/core/operator/operator.pb.h"
+#include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/kernel/kernel_context.h"
+#include "oneflow/core/blas/cblas_template.h"
+#include "oneflow/core/blas/cublas_template.h"
 
 namespace oneflow {
 
@@ -17,38 +20,65 @@ class Kernel {
   OF_DISALLOW_COPY_AND_MOVE(Kernel);
   virtual ~Kernel() = default;
 
-  void InitFromOpProto(const OperatorProto& op_proto) {
-    Operator* op = CreateOp(op_proto.op_conf().op_type_case());
-    op->InitFromProto(op_proto);
-    op_.reset(op);
-  }
+  virtual void InitFromOpProto(const OperatorProto& op_proto);
+
+  void InitModelAndModelTmpBlobs(
+      const KernelCtx& ctx,
+      ParallelPolicy policy,
+      int64_t parallel_id,
+      int64_t parallel_num,
+      const Snapshot*,
+      std::function<Blob*(const std::string&)> Blob4BnInOp) const;
+
   // for Forward / Bp Calculation in FwExecGragh node and BpExecGragh node
   // through bn_in_op2blob_ptr function get the input blob and output blob
   // the Kernel will using the input blob calculate the result and fill output
-  virtual void Forward(std::function<Blob*(const std::string&)>) const = 0;
-  virtual void Backward(std::function<Blob*(const std::string&)>) const = 0;
+  virtual void Forward(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)>) const = 0;
+  virtual void Backward(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)>) const = 0;
 
   //
-  const std::string& GetLbnFromBnInOp(const std::string& bn_in_op) const {
+  const std::string& Lbn4BnInOp(const std::string& bn_in_op) const {
     return op_->Lbn4BnInOp(bn_in_op);
   }
 
  protected:
   Kernel() = default;
+  const Operator* op() const { return op_.get(); }
+
+  virtual void InitModelAndModelTmpBlobsWithSnapshot(
+      const KernelCtx& ctx,
+      ParallelPolicy policy,
+      int64_t parallel_id,
+      int64_t parallel_num,
+      const Snapshot*,
+      std::function<Blob*(const std::string&)> Blob4BnInOp) const {
+    UNEXPECTED_RUN();
+  }
+  virtual void InitModelAndModelTmpBlobsWithoutSnapshot(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> Blob4BnInOp) const {
+    UNEXPECTED_RUN();
+  }
+
  private:
   std::unique_ptr<const Operator> op_;
 };
 
-using KernelWardFunc = void (Kernel::*)(std::function<Blob*(const std::string&)>) const;
+using KernelWardFunc = void (Kernel::*)(
+    const KernelCtx&, std::function<Blob*(const std::string&)>) const;
 
 #define INSTANTIATE_CPU_KERNEL_CLASS(classname) \
   char gInstantiationGuardCPU##classname; \
-  template class classname<DeviceType::kCPU, FloatingPointType::kFloat>; \
-  template class classname<DeviceType::kCPU, FloatingPointType::kDouble>;
+  template class classname<DeviceType::kCPU, float>; \
+  template class classname<DeviceType::kCPU, double>;
 #define INSTANTIATE_GPU_KERNEL_CLASS(classname) \
   char gInstantiationGuardGPU##classname; \
-  template class classname<DeviceType::kGPU, FloatingPointType::kFloat>; \
-  template class classname<DeviceType::kGPU, FloatingPointType::kDouble>;
+  template class classname<DeviceType::kGPU, float>; \
+  template class classname<DeviceType::kGPU, double>;
 
 }  // namespace oneflow
 

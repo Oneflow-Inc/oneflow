@@ -1,8 +1,7 @@
 #ifndef ONEFLOW_CORE_OPERATOR_POOLING_OP_H_
 #define ONEFLOW_CORE_OPERATOR_POOLING_OP_H_
 
-#include <string>
-#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/operator/operator_manager.h"
 
 namespace oneflow {
 
@@ -20,8 +19,8 @@ class PoolingOp final : public UserOperator {
   void InferShape4FwBlobs(
     std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
     ParallelPolicy policy,
-    uint64_t parallel_id,
-    uint64_t parallel_num) const override;
+    int64_t parallel_id,
+    int64_t parallel_num) const override;
 
  private:
 };

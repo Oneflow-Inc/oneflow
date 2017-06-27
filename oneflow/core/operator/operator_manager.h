@@ -1,9 +1,6 @@
 #ifndef ONEFLOW_CORE_OPERATOR_OPERATOR_MANAGER_H_
 #define ONEFLOW_CORE_OPERATOR_OPERATOR_MANAGER_H_
 
-#include <iostream>
-#include <functional>
-#include <list>
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 
@@ -14,10 +11,7 @@ class OpMgr final {
   OF_DISALLOW_COPY_AND_MOVE(OpMgr);
   ~OpMgr() = default;
   
-  static OpMgr& Singleton() {
-    static OpMgr obj;
-    return obj;
-  }
+  OF_SINGLETON(OpMgr);
   
   std::shared_ptr<Operator> ConstructOp(const OperatorConf&);
 

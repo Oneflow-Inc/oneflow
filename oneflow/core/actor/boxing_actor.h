@@ -11,23 +11,19 @@ class BoxingActor final : public Actor {
   BoxingActor() = default;
   ~BoxingActor() = default;
 
-  void Init(const TaskProto&) override;
-  void ProcessMsg(const ActorMsg&) override;
+  void Init(const TaskProto&, const ThreadCtx&) override;
 
  private:
+  int HandleBoxing(const ActorMsg&);
+  int HandleBoxingWhenNoReadableRegstMsg(const ActorMsg&);
 
-  void WardKernelAndSendMsg();
+  void TryWardKernelAndSendMsg();
 
-  // <piece_id, <regst_desc_id, regst>>
-  HashMap<uint64_t, std::unique_ptr<HashMap<uint64_t, Regst*>>> waiting_in_regst_;
-  std::queue<std::pair<uint64_t, std::unique_ptr<HashMap<uint64_t, Regst*>>>> ready_in_regst_;
-  uint64_t in_regst_desc_num_;
-  // <regst_desc_id, regst>
-  HashMap<uint64_t, std::queue<Regst*>> writeable_out_regst_;
-  uint64_t writeable_out_regst_desc_num_;
-  HashMap<Regst*, int64_t> out_regst2reading_cnt_;
-  // 
-  Regst* middle_regst_;
+  int num_of_subscribed_regsts_;
+  int num_of_read_empty_;
+  int num_of_eord_;
+  // <regst_desc_id, queue<regst_wp>>
+  HashMap<int64_t, std::queue<std::shared_ptr<RegstWarpper>>> read_regst_;
 
 };
 

@@ -1,98 +1,80 @@
 #include "oneflow/core/actor/boxing_actor.h"
 #include "oneflow/core/actor/actor_registry.h"
+#include "oneflow/core/register/local_register_warpper.h"
 
 namespace oneflow {
 
-void BoxingActor::Init(const TaskProto& task_proto) {
-  Actor::Init(task_proto);
-  in_regst_desc_num_ = task_proto.subscribed_regst_desc_id().size();
-  uint64_t middle_regst_desc_id = GetRegstDescIdFromName("middle");
-  for (const auto& regst : produced_regst_vec()) {
-    if (regst->regst_desc_id() == middle_regst_desc_id) {
-      LOG_IF(WARNING, middle_regst_ != nullptr) << "redundant middle register";
-      middle_regst_ = regst.get();
-    } else {
-      writeable_out_regst_[regst->regst_desc_id()].push(regst.get());
-      out_regst2reading_cnt_[regst.get()] = 0;
-    }
-  }
-  writeable_out_regst_desc_num_ = writeable_out_regst_.size();
+void BoxingActor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
+  Actor::Init(task_proto, thread_ctx);
+  num_of_subscribed_regsts_ = task_proto.subscribed_regst_desc_id().size();
+  num_of_read_empty_ = num_of_subscribed_regsts_;
+  num_of_eord_ = 0;
+  CHECK(thread_ctx.cpu_stream);
+  mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
+  OF_SET_MSG_HANDLE(&BoxingActor::HandleBoxing);
 }
 
-void BoxingActor::ProcessMsg(const ActorMsg& msg) {
-  auto writeable_out_regst_it = writeable_out_regst_.find(msg.regst()->regst_desc_id());
-  if (writeable_out_regst_it != writeable_out_regst_.end()) {
-    auto reading_cnt_it = out_regst2reading_cnt_.find(msg.regst());
-    CHECK_GE(reading_cnt_it->second, 1);
-    reading_cnt_it->second -= 1;
-    if (reading_cnt_it->second == 0) {
-      if (writeable_out_regst_it->second.empty()) {
-        writeable_out_regst_desc_num_ += 1;
-      }
-      writeable_out_regst_it->second.push(msg.regst());
+int BoxingActor::HandleBoxing(const ActorMsg& msg) {
+  if (msg.msg_type() == ActorMsgType::kCmdMsg) {
+    CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
+    num_of_eord_ += 1;
+    if (num_of_eord_ == num_of_subscribed_regsts_) {
+      OF_SET_MSG_HANDLE(&BoxingActor::HandleBoxingWhenNoReadableRegstMsg);
     }
-  } else {
-    auto waiting_in_regst_it = waiting_in_regst_.find(msg.piece_id());
-    if (waiting_in_regst_it == waiting_in_regst_.end()) {
-      auto emplace_ret = waiting_in_regst_.emplace(
-          msg.piece_id(), of_make_unique<HashMap<uint64_t, Regst*>> ());
-      CHECK(emplace_ret.second);
-      waiting_in_regst_it = emplace_ret.first;
-    }
-    CHECK(waiting_in_regst_it->second->emplace(msg.regst()->regst_desc_id(),
-                                               msg.regst()).second);
-    if (waiting_in_regst_it->second->size() == in_regst_desc_num_) {
-      std::pair<uint64_t, std::unique_ptr<HashMap<uint64_t, Regst*>>> ready_ins;
-      ready_ins.first = waiting_in_regst_it->first;
-      ready_ins.second.swap(waiting_in_regst_it->second);
-      ready_in_regst_.push(std::move(ready_ins));
-      waiting_in_regst_.erase(waiting_in_regst_it);
+  } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
+    if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()) != 0) {
+      std::shared_ptr<RegstWarpper> regst_wp = msg.regst_warpper();
+      num_of_read_empty_ -= read_regst_[regst_wp->regst_desc_id()].empty();
+      read_regst_.at(regst_wp->regst_desc_id()).push(regst_wp);
+    } else {
+      // do nothing
     }
   }
-  if (!ready_in_regst_.empty()
-      && writeable_out_regst_desc_num_ == writeable_out_regst_.size()) {
-    WardKernelAndSendMsg();
-  }
+  TryWardKernelAndSendMsg();
+  return 0;
 }
 
-void BoxingActor::WardKernelAndSendMsg() {
-  // Ward Kernel
-  WardKernel([this](uint64_t regst_desc_id) {
-    if (regst_desc_id == middle_regst_->regst_desc_id()) {
-      return middle_regst_;
-    }
-    auto writeable_out_regst_it = writeable_out_regst_.find(regst_desc_id);
-    if (writeable_out_regst_it != writeable_out_regst_.end()) {
-      return writeable_out_regst_it->second.front();
+int BoxingActor::HandleBoxingWhenNoReadableRegstMsg(const ActorMsg& msg) {
+  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
+  TryWardKernelAndSendMsg();
+  if (num_of_read_empty_ == num_of_subscribed_regsts_) {
+    AsyncSendEORDMsgForAllProducedRegstDesc();
+    if (total_reading_cnt() == 0) {
+      OF_SET_MSG_HANDLE(nullptr);
+      return 1;
     } else {
-      return ready_in_regst_.front().second->at(regst_desc_id);
+      OF_SET_MSG_HANDLE(&BoxingActor::HandleWaitUntilReadingCntEqualZero);
+      return 0;
     }
-  });
-  // Send Msg about Out Regst
-  {
-    ActorMsg msg;
-    msg.set_piece_id(ready_in_regst_.front().first);
-    for (auto& pair : writeable_out_regst_) {
-      Regst* regst = pair.second.front();
-      out_regst2reading_cnt_.at(regst) = regst->subscribers_actor_id().size();
-      msg.set_regst(regst);
-      for (uint64_t subscriber : regst->subscribers_actor_id()) {
-        msg.set_dst_actor_id(subscriber);
-        ActorMsgBus::Singleton().SendMsg(msg);
+  }
+  return 0;
+}
+  
+void BoxingActor::TryWardKernelAndSendMsg() {
+  if (!num_of_read_empty_ && IsWriteReady()) {
+    int64_t piece_id = expected_piece_id();
+    for (const auto& pair : read_regst_) {
+      CHECK_EQ(pair.second.front()->piece_id(), piece_id);
+    }
+    AsyncWardKernel(GenDefaultKernelCtx(), 
+        [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+      Regst* regst = GetCurWriteableRegst(regst_desc_id);
+      if (regst == nullptr) {
+        return read_regst_.at(regst_desc_id).front();
+      } else {
+        return std::make_shared<LocalRegstWarpper> (regst);
       }
+    });
+    ForEachCurWriteableRegst([piece_id](Regst* regst) {
+      regst->set_piece_id(piece_id);
+    });
+    AsyncSendReadableRegstMsg();
+    for (auto& pair : read_regst_) {
+      AsyncSendRegstMsgToProducer(pair.second.front());
       pair.second.pop();
-      if (pair.second.empty()) { writeable_out_regst_desc_num_ -= 1; }
+      num_of_read_empty_ += pair.second.empty();
     }
   }
-  // Send Msg about In Regst
-  for (const auto& pair : *(ready_in_regst_.front().second)) {
-    Regst* regst = pair.second;
-    ActorMsg msg;
-    msg.set_dst_actor_id(regst->producer_actor_id());
-    msg.set_regst(regst);
-    ActorMsgBus::Singleton().SendMsg(msg);
-  }
-  ready_in_regst_.pop();
 }
 
 REGISTER_ACTOR(kBoxingTask, true, BoxingActor);

@@ -1,8 +1,6 @@
 #include "oneflow/core/graph/boxing_task_node.h"
-#include <algorithm>
 #include "oneflow/core/operator/operator_manager.h"
 #include "oneflow/core/operator/boxing_op.h"
-#include "oneflow/core/graph/comp_task_node.h"
 
 namespace oneflow {
 
@@ -143,9 +141,9 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
     CHECK_EQ(lbns.size(), 1);
     lbns.clear();
     auto in_regst_0 = GetRelatedRegst(sorted_in_edges.at(0));
-    for (const auto& pair : in_regst_0->lbn2shape()) {
-      lbns.push_back(pair.first);
-    }
+    in_regst_0->ForEachLbn([&](const std::string& lbn) {
+      lbns.push_back(lbn);
+    });
   }
   // Enroll Lbn
   auto middle_regst = GetProducedRegstDesc("middle");
@@ -174,13 +172,13 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
 }
 
 void BoxingTaskNode::FwInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
-  for (const auto& exec_node : exec_gph().nodes()) {
+  exec_gph().ConstForEachNode([this](const ExecNode* exec_node) {
     exec_node->op()->InferShape4FwBlobs(
         exec_node->GetMutShapePtr4BnInOpFunc(),
         chain_node()->parallel_desc()->policy(),
         0,
         0);
-  }
+  });
 }
 
 namespace {
@@ -197,15 +195,14 @@ std::shared_ptr<RegstDesc> GetBpRegstFromFwRegst(
 
 void BoxingTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   EnrollAllRegstAndBindRelatedEdge();
-  const ExecGraph& fw_exec_gph = GetFwNode()->exec_gph();
-  for (const std::unique_ptr<ExecNode>& fw_node: fw_exec_gph.nodes()) {
+  GetFwNode()->exec_gph().ConstForEachNode([&](const ExecNode* fw_node) {
     std::unique_ptr<ExecNode> bp_node(new ExecNode);
     bp_node->mut_op() = fw_node->op();
     bool need_enroll = true;
     // in_diff
     for (const std::string& ibn : fw_node->op()->input_bns()) {
       std::string idbn = GenDiffBn(ibn);
-      std::string lbn = fw_node->op()->Lbn4BnInOp(ibn);
+      const std::string& lbn = fw_node->op()->Lbn4BnInOp(ibn);
       auto in_regst = fw_node->GetRegstFromBnInOp(ibn);
       auto in_diff_regst = GetBpRegstFromFwRegst(in_regst);
       if (!in_diff_regst) {
@@ -215,24 +212,23 @@ void BoxingTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
       in_diff_regst->EnrollLbn(lbn);
       bp_node->BindBnInOpAndRegst(idbn, in_diff_regst);
     }
-    if (need_enroll == false) { continue; }
+    if (need_enroll == false) { return; }
     // out_diff
     for (const std::string& obn : fw_node->op()->output_bns()) {
       std::string odbn = GenDiffBn(obn);
-      std::string lbn = fw_node->op()->Lbn4BnInOp(obn);
       auto out_regst = fw_node->GetRegstFromBnInOp(obn);
       auto out_diff_regst = GetBpRegstFromFwRegst(out_regst);
       bp_node->BindBnInOpAndRegst(odbn, out_diff_regst);
     }
     // data tmp
     for (const std::string& dtbn : fw_node->op()->data_tmp_bns()) {
-      std::string lbn = fw_node->op()->Lbn4BnInOp(dtbn);
+      const std::string& lbn = fw_node->op()->Lbn4BnInOp(dtbn);
       auto bp_middle_regst = GetProducedRegstDesc("middle");
       bp_middle_regst->EnrollLbn(lbn);
       bp_node->BindBnInOpAndRegst(dtbn, bp_middle_regst);
     }
     mut_exec_gph().EnrollNode(std::move(bp_node));
-  }
+  });
   mut_exec_gph().UpdateSourceAndSink();
 }
   

@@ -10,15 +10,16 @@ class MdSaveCompTaskNode final : public CompTaskNode {
   OF_DISALLOW_COPY_AND_MOVE(MdSaveCompTaskNode);
   MdSaveCompTaskNode() = default;
   ~MdSaveCompTaskNode() = default;
-
-  void set_related_update_task_parallel_id(uint64_t parallel_id) {
-    related_update_task_parallel_id_ = parallel_id;
+ 
+  void ToProto(TaskProto* proto) const override {
+    TaskNode::ToProto(proto);
+    proto->set_parallel_policy(fw_task_->chain_node()->parallel_desc()->policy());
+    proto->set_parallel_id(fw_task_->parallel_id());
+    proto->set_parallel_num(fw_task_->chain_node()->parallel_desc()->parallel_num());
   }
 
-  void ToProto(TaskProto* ret) const override {
-    TaskNode::ToProto(ret);
-    ret->set_parallel_id(related_update_task_parallel_id_);
-  }
+  void set_fw_task(CompTaskNode* fw_task) { fw_task_ = fw_task; }
+  CompTaskNode* fw_task() { return fw_task_; }
 
  private:
   void BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) override;
@@ -33,9 +34,7 @@ class MdSaveCompTaskNode final : public CompTaskNode {
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return of_make_unique<MdSaveCompTaskNode> ();
   }
-
-  uint64_t related_update_task_parallel_id_;
-
+  CompTaskNode* fw_task_;
 };
 
 } // namespace oneflow

@@ -1,6 +1,4 @@
 #include "oneflow/core/operator/softmax_op.h"
-#include "oneflow/core/operator/operator_manager.h"
-#include "gtest/gtest.h"
 
 namespace oneflow {
 
@@ -26,8 +24,3 @@ TEST(SoftmaxOp, softmax_3x4x5) {
 }
 
 } // namespace oneflow
-
-int main(int argc, char **argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}

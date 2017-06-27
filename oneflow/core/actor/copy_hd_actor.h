@@ -11,10 +11,14 @@ public:
   CopyHdActor() = default;
   ~CopyHdActor() = default;
 
-  void Init(const TaskProto&) override;
-  void ProcessMsg(const ActorMsg&) override;
+  void Init(const TaskProto&, const ThreadCtx&) override;
 
 private:
+  int HandleCopyHd(const ActorMsg&);
+  int HandleCopyHdWhenNoReadableRegstMsg(const ActorMsg&);
+
+  void TryWardKernelAndSendMsg();
+  std::queue<std::shared_ptr<RegstWarpper>> waiting_in_regst_;
 
 };
 

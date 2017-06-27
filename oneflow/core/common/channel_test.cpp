@@ -1,7 +1,4 @@
 #include "oneflow/core/common/channel.h"
-#include <thread>
-#include <vector>
-#include "gtest/gtest.h"
 #include "oneflow/core/common/range.h"
 
 namespace oneflow {
@@ -67,8 +64,3 @@ TEST(Channel, 30sender40receiver) {
 }
 
 }  // namespace oneflow
-
-int main(int argc, char **argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}

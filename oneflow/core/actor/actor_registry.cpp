@@ -1,5 +1,4 @@
 #include "oneflow/core/actor/actor_registry.h"
-#include "glog/logging.h"
 
 namespace oneflow {
 
@@ -27,10 +26,11 @@ void AddActorCreator(TaskType task_type, bool is_forward,
   CHECK(ActorType2Creator().emplace(actor_type_pair, creator).second);
 }
 
-std::shared_ptr<Actor> ConstructActor(const TaskProto& task_proto) {
+std::unique_ptr<Actor> ConstructActor(const TaskProto& task_proto,
+                                      const ThreadCtx& thread_ctx) {
   ActorTypePair actor_type_pair{task_proto.type(), task_proto.is_forward()};
-  std::shared_ptr<Actor> ret(ActorType2Creator().at(actor_type_pair)());
-  ret->Init(task_proto);
+  std::unique_ptr<Actor> ret(ActorType2Creator().at(actor_type_pair)());
+  ret->Init(task_proto, thread_ctx);
   return ret;
 }
 

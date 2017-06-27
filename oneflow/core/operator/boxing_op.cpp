@@ -1,7 +1,4 @@
 #include "oneflow/core/operator/boxing_op.h"
-#include <string>
-#include <vector>
-#include "oneflow/core/operator/operator_manager.h"
 #include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
@@ -34,18 +31,24 @@ std::string BoxingOp::obn2lbn(const std::string& output_bn) const {
 void BoxingOp::InferShape4FwBlobs(
     std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
     ParallelPolicy policy,
-    uint64_t parallel_id,
-    uint64_t parallel_num) const {
+    int64_t parallel_id,
+    int64_t parallel_num) const {
   auto boxing_conf = op_conf().boxing_conf();
-  // concat input blob shape to middle blob shape
-  int32_t concat_axis = boxing_conf.concat_box().axis();
-  CHECK(concat_axis == 0 || concat_axis == 1);
+  auto in_box_case = boxing_conf.in_box_case();
   std::vector<int64_t> data_tmp_blob_shape_vec =
     GetShapePtr4BnInOp(input_bns().at(0))->dim_vec();
+
+  // if it is a concat-box, concat input blob shape to middle blob shape
+  // otherwise only check all boxes are in the same shape.
+  int32_t concat_axis = 0;
+  if (in_box_case == BoxingOpConf::kConcatBox) {
+    concat_axis = boxing_conf.concat_box().axis();
+    CHECK(concat_axis == 0 || concat_axis == 1);
+  }
   for (size_t ib_idx = 1; ib_idx < input_bns().size(); ++ib_idx) {
     auto ib_shape_vec = GetShapePtr4BnInOp(input_bns().at(ib_idx))->dim_vec();
     for (size_t i = 0; i < ib_shape_vec.size(); ++i) {
-      if (i == concat_axis) {
+      if (in_box_case == BoxingOpConf::kConcatBox && i == concat_axis) {
         data_tmp_blob_shape_vec[i] += ib_shape_vec[i];
       } else {
         CHECK_EQ(data_tmp_blob_shape_vec[i], ib_shape_vec[i]);
@@ -56,7 +59,7 @@ void BoxingOp::InferShape4FwBlobs(
   auto out_box_case = boxing_conf.out_box_case();
   CHECK_NE(out_box_case, BoxingOpConf::OUT_BOX_NOT_SET);
   if (out_box_case == BoxingOpConf::kDataSplitBox) {
-    uint32_t out_num = output_bns().size();
+    int32_t out_num = output_bns().size();
     BalancedSplitter splitter(data_tmp_blob_shape_vec[0], out_num);
     auto output_shape_vec = data_tmp_blob_shape_vec;
     for (size_t i = 0; i < out_num; ++i) {

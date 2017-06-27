@@ -1,6 +1,4 @@
 #include "oneflow/core/operator/convolution_op.h"
-#include "oneflow/core/operator/operator_manager.h"
-#include "gtest/gtest.h"
 
 namespace oneflow {
 
@@ -39,14 +37,9 @@ TEST(ConvolutionOp, TestForInferShape4FwBlobs) {
   Shape* biasmult_shape_ptr = fp(convolution_op->model_tmp_bns().at(0));
   ASSERT_EQ(*output_shape_ptr, Shape({100, 16, 82, 82}));
   ASSERT_EQ(*colbuf_shape_ptr, Shape({100, 82 * 82, 64 * 20 * 20}));
-  ASSERT_EQ(*weight_shape_ptr, Shape({1, 16, 64 * 20 * 20}));
-  ASSERT_EQ(*bias_shape_ptr, Shape({1, 16}));
+  ASSERT_EQ(*weight_shape_ptr, Shape({16, 64 * 20 * 20}));
+  ASSERT_EQ(*bias_shape_ptr, Shape({16}));
   ASSERT_EQ(*biasmult_shape_ptr, Shape({82 * 82}));
 }
 
 } // namespace oneflow
-
-int main(int argc, char **argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}

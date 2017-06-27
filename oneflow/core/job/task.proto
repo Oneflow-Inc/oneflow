@@ -1,0 +1,33 @@
+syntax = "proto3";
+package oneflow;
+
+import "oneflow/core/graph/exec_sequence.proto";
+import "oneflow/core/register/register_desc.proto";
+import "oneflow/core/job/strategy.proto";
+
+enum TaskType {
+  kInvalidTaskType = 0;
+  kDataCompTask = 1;
+  kMdSaveCompTask = 2;
+  kMdUpdtCompTask = 3;
+  kMdDiffAccCompTask = 4;
+  kCopyHdTask = 5;
+  kCopyCommNetTask = 6;
+  kBoxingTask = 7;
+}
+
+message TaskProto {
+  // common
+  int64 id = 1;
+  TaskType type = 2;
+  int64 machine_id = 3;
+  int64 thrd_local_id = 4;
+  bool is_forward = 5;
+  ExecSequence exec_sequence = 6;
+  map<string, RegstDescProto> produced_regst_desc = 7;
+  map<string, int64> subscribed_regst_desc_id = 8;
+  // for CompTask
+  ParallelPolicy parallel_policy = 1000;
+  int64 parallel_id = 1001;
+  int64 parallel_num = 1002;
+}

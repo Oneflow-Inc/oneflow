@@ -1,0 +1,22 @@
+syntax = "proto3";
+package oneflow;
+
+enum FloatingPointType {
+  kFloat = 0;
+  kDouble = 1;
+}
+
+message JobConf {
+  string train_dlnet_conf_filepath = 1;
+  string resource_filepath = 2;
+  string strategy_filepath = 3;
+  string model_load_snapshot_path = 4;
+  string model_save_snapshots_path = 5;
+  int32 piece_size = 7;
+  int32 num_of_pieces_in_batch = 8;
+  bool is_train = 9;
+  FloatingPointType floating_point_type = 10;
+  int32 num_of_batches_in_snapshot = 11;
+  int32 staleness = 12;
+  int64 total_batch_num = 13;
+}

@@ -1,7 +1,8 @@
 #ifndef ONEFLOW_CORE_GRAPH_TASK_NODE_H_
 #define ONEFLOW_CORE_GRAPH_TASK_NODE_H_
 
-#include "oneflow/core/common/task.pb.h"
+#include "oneflow/core/job/task.pb.h"
+#include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/graph/stage_graph.h"
 #include "oneflow/core/graph/exec_graph.h"
 
@@ -23,17 +24,17 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   TaskNode* GetBpNode() const;
   const ChainNode* chain_node() const { return stage_node_->chain_node();}
   const StageNode* stage_node() const { return stage_node_; }
-  const uint64_t& thrd_loc_id() const { return thrd_loc_id_; }
+  const int64_t& thrd_loc_id() const { return thrd_loc_id_; }
   std::string thrd_loc_id_str() const { return std::to_string(thrd_loc_id_); }
   const ExecGraph& exec_gph() const { return exec_gph_; }
-  uint64_t task_id() const { return task_id_; }
+  int64_t task_id() const { return task_id_; }
   std::string task_id_str() const { return std::to_string(task_id_); }
   virtual bool IsMeaningLess() const { return produced_regst_descs_.empty(); }
   
   // Setters
   void SetFwNode() { is_fw_node_ = true; }
   void set_stage_node(const StageNode*);
-  uint64_t& mut_thrd_loc_id();
+  int64_t& mut_thrd_loc_id();
   void set_task_id();
 
   // return bp_node
@@ -90,10 +91,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
  private:
   // In task_gph level
   const StageNode* stage_node_;
-  uint64_t thrd_loc_id_;
+  int64_t thrd_loc_id_;
   bool is_fw_node_;
   TaskNode* related_fw_or_bp_node_;
-  uint64_t task_id_;
+  int64_t task_id_;
   // In task level
   ExecGraph exec_gph_;
 

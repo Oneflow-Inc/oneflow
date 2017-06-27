@@ -3,7 +3,7 @@ package oneflow;
 
 message ExecNodeProto {
   string op_name = 2;
-  map<string, uint64> bn_in_op2regst_desc_id = 3;
+  map<string, int64> bn_in_op2regst_desc_id = 3;
 }
 
 message ExecSequence {

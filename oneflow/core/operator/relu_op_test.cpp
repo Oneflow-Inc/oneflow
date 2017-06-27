@@ -1,7 +1,4 @@
 #include "oneflow/core/operator/relu_op.h"
-#include <vector>
-#include "gtest/gtest.h"
-#include "oneflow/core/operator/operator_manager.h"
 
 namespace oneflow {
 
@@ -29,8 +26,3 @@ TEST(ReluOp, relu_3x5x4) {
 }
 
 }  // namespace oneflow
-
-int main(int argc, char **argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}

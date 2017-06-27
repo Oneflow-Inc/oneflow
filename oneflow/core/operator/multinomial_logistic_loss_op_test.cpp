@@ -1,9 +1,4 @@
-#include <utility>
-#include <string>
-#include <vector>
 #include "oneflow/core/operator/multinomial_logistic_loss_op.h"
-#include "oneflow/core/operator/operator_manager.h"
-#include "gtest/gtest.h"
 
 namespace oneflow {
 
@@ -46,8 +41,3 @@ TEST(MultinomialLogisticLossOp, test_loss_op) {
 }
 
 }  // namespace oneflow
-
-int main(int argc, char **argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}

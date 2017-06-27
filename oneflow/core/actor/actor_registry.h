@@ -2,11 +2,12 @@
 #define ONEFLOW_CORE_ACTOR_ACTOR_REGISTRY_H_
 
 #include "oneflow/core/actor/actor.h"
-#include "oneflow/core/common/task.pb.h"
+#include "oneflow/core/job/task.pb.h"
+#include "oneflow/core/thread/thread_context.h"
 
 namespace oneflow {
 
-std::shared_ptr<Actor> ConstructActor(const TaskProto&);
+std::unique_ptr<Actor> ConstructActor(const TaskProto&, const ThreadCtx&);
 
 void AddActorCreator(TaskType task_type, bool is_forward,
                      std::function<Actor*()> creator);

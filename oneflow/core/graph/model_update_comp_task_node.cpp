@@ -1,20 +1,18 @@
 #include "oneflow/core/graph/model_update_comp_task_node.h"
 #include "oneflow/core/graph/model_update_task_graph.h"
+#include "oneflow/core/operator/operator_manager.h"
 
 namespace oneflow {
 
 void MdUpdtCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   CHECK(IsFwNode());
-  auto md_updt_gph = of_dynamic_cast<MdUpdtTaskGraph*> (gph);
-  CompTaskNode* fw_task = md_updt_gph->GetFwTaskFromParallelId(parallel_id());
-  TaskNode* bp_task = fw_task->GetBpNode();
-  std::shared_ptr<RegstDesc> model_diff_regst;
-  if (bp_task != nullptr) {
-    model_diff_regst = bp_task->GetProducedRegstDesc("model_diff");
-  }
-  if (chain_node()->op_vec().empty()) {
-    BindProducedRegstAndOutEdge(model_diff_regst, SoleOutEdge());
-    return;
+  auto md_updt_gph = static_cast<MdUpdtTaskGraph*> (gph);
+  CompTaskNode* fw_task = md_updt_gph->fw_task();
+  CompTaskNode* diff_acc_task = md_updt_gph->diff_acc_task();
+  std::shared_ptr<RegstDesc> model_diff_acc_regst;
+  if (diff_acc_task != nullptr) {
+    model_diff_acc_regst =
+        diff_acc_task->GetProducedRegstDesc("model_diff_acc");
   }
   TakeOverRegstDesc(fw_task, "model");
   TakeOverRegstDesc(fw_task, "model_tmp");
@@ -23,14 +21,9 @@ void MdUpdtCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = chain_node()->SoleOp();
   const std::string ibn = "model_diffs";
-  if (in_edges().empty()) {
-    if (model_diff_regst) {
-      exec_node->BindBnInOpAndRegst(ibn, model_diff_regst);
-      SubscribeRegstDesc(ibn, model_diff_regst);
-    }
-  } else {
-    exec_node->BindBnInOpAndRegst(ibn, GetRelatedRegst(SoleInEdge()));
-    SubscribeRegstDesc(ibn, GetRelatedRegst(SoleInEdge()));
+  if (model_diff_acc_regst != nullptr) {
+    exec_node->BindBnInOpAndRegst(ibn, model_diff_acc_regst);
+    SubscribeRegstDesc(ibn, model_diff_acc_regst);
   }
   exec_node->BindBnInOpAndRegst(exec_node->op()->SoleObn(), model_regst);
   mut_exec_gph().UpdateSourceAndSink();

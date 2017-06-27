@@ -1,6 +1,4 @@
 #include "oneflow/core/operator/convolution_op.h"
-#include "glog/logging.h"
-#include "oneflow/core/operator/operator_manager.h"
 
 namespace oneflow {
 
@@ -24,11 +22,11 @@ const PbMessage& ConvolutionOp::GetSpecialConf() const {
 void ConvolutionOp::InferShape4FwBlobs(
     std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
     ParallelPolicy policy,
-    uint64_t parallel_id,
-    uint64_t parallel_num) const {
+    int64_t parallel_id,
+    int64_t parallel_num) const {
   Shape* input_shape_ptr = GetShapePtr4BnInOp(SoleIbn());
   Shape* output_shape_ptr = GetShapePtr4BnInOp(SoleObn());
-  Shape* colbuf_shape_ptr = GetShapePtr4BnInOp(data_tmp_bns().at(0));
+  Shape* colbuf_shape_ptr = GetShapePtr4BnInOp("col_buf");
   auto conv_conf = op_conf().convolution_conf();
   int64_t batch_size = input_shape_ptr->At(0);
   int64_t c_i = input_shape_ptr->At(1);
@@ -46,11 +44,11 @@ void ConvolutionOp::InferShape4FwBlobs(
   *output_shape_ptr = Shape(output_shape_vec);
   CHECK_EQ(output_shape_ptr->NumAxes(), input_shape_ptr->NumAxes());
   *colbuf_shape_ptr = Shape({batch_size, output_size, c_i * kernel_size}); 
-  Shape* weight = GetShapePtr4BnInOp(model_bns().at(0));
-  Shape* bias  = GetShapePtr4BnInOp(model_bns().at(1));
-  Shape* biasmult_shape_ptr = GetShapePtr4BnInOp(model_tmp_bns().at(0));
-  *weight = Shape({1, c_o, c_i * kernel_size});
-  *bias = Shape({1, c_o});
+  Shape* weight = GetShapePtr4BnInOp("weight");
+  Shape* bias  = GetShapePtr4BnInOp("bias");
+  Shape* biasmult_shape_ptr = GetShapePtr4BnInOp("bias_multiplier");
+  *weight = Shape({c_o, c_i * kernel_size});
+  *bias = Shape({c_o});
   *biasmult_shape_ptr = Shape({output_size});
 }
 
