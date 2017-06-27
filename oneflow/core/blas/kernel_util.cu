@@ -23,14 +23,12 @@ class KernelUtil<DeviceType::kGPU, floating_point_type> final {
       const floating_point_type alpha,
       const floating_point_type* X, const int incX,
       floating_point_type *Y, const int incY) {
-    const floating_point_type alpha_0 = alpha;
-    cublas_axpy(ctx.device_ctx->cublas_handle(), N, &alpha_0, X, incX, Y, incY);
+    cublas_axpy(ctx.device_ctx->cublas_handle(), N, &alpha, X, incX, Y, incY);
   }
 
   static void BlasScal(const KernelCtx& ctx, const int n,
      const floating_point_type alpha, floating_point_type* x, const int incx) {
-   const floating_point_type alpha_0 = alpha;
-   cublas_scal(ctx.device_ctx->cublas_handle(), n, &alpha_0, x, incx);
+   cublas_scal(ctx.device_ctx->cublas_handle(), n, &alpha, x, incx);
   }
 
   static void BlasGemv(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans, 
@@ -39,10 +37,8 @@ class KernelUtil<DeviceType::kGPU, floating_point_type> final {
       const int incx, const floating_point_type beta, floating_point_type* y, 
       const int incy) {
     cublasOperation_t cublas_trans = CblasTrans2CublasTrans(trans);
-    const floating_point_type alpha_0 = alpha;
-    const floating_point_type beta_0 = beta;
-    cublas_gemv(ctx.device_ctx->cublas_handle(), cublas_trans, m, n, 
-        &alpha_0, A, lda, x, incx, &beta_0, y, incy);
+    cublas_gemv(ctx.device_ctx->cublas_handle(), cublas_trans, n, m, 
+        &alpha, A, lda, x, incx, &beta, y, incy);
   }
 
   static void BlasGemm(const KernelCtx& ctx,
@@ -53,10 +49,8 @@ class KernelUtil<DeviceType::kGPU, floating_point_type> final {
       const floating_point_type beta, floating_point_type* C, const int ldc) {
     cublasOperation_t cublas_trans_a = CblasTrans2CublasTrans(TransA);
     cublasOperation_t cublas_trans_b = CblasTrans2CublasTrans(TransB);
-    const floating_point_type alpha_0 = alpha;
-    const floating_point_type beta_0 = beta;
-    cublas_gemm(ctx.device_ctx->cublas_handle(), cublas_trans_a, cublas_trans_b,
-        M, N, K, &alpha_0, A, lda, B, ldb, &beta_0, C, ldc);
+    cublas_gemm(ctx.device_ctx->cublas_handle(), cublas_trans_b, cublas_trans_a,
+        N, M, K, &alpha, B, ldb, A, lda, &beta, C, ldc);
   }
 
   static void BlasDot(const KernelCtx& ctx,
