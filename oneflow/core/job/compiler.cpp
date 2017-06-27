@@ -103,8 +103,7 @@ void Compiler::BuildGraphs() {
   }
   // all exec_graph 2 dot
   ForEachTaskNode([](const TaskNode* node) {
-    std::string file_path = DotDir() + "/exec/" + node->node_id_str() + ".dot";
-    node->exec_gph().ToDotFile(file_path);
+    node->exec_gph().ToDotWithAutoFilePath();
   });
 }
 
@@ -113,7 +112,6 @@ void Compiler::BuildModelGraphs(
   if (pair.first->HasOpWithModelOrModelTmpBlob() == false) { return; } 
   std::string chain_tag = pair.first->op_vec().front()->op_name();
   str_replace(&chain_tag, '/', '_');
-  const std::string dot_path_prefix = DotDir() + "/model/" + chain_tag + "_";
   ParallelPolicy policy = pair.first->parallel_desc()->policy();
 
   bool is_train = JobDesc::Singleton().is_train();
@@ -122,7 +120,7 @@ void Compiler::BuildModelGraphs(
     LOG(INFO) << "Build MdDiffAccTaskGraph... for " << chain_tag;
     auto diff_acc_gph = new MdDiffAccTaskGraph(
         "md_diff_acc_" + chain_tag,
-        pair.first, pair.second, dot_path_prefix + "model_diff_acc_");
+        pair.first, pair.second);
     ordered_task_gphs_.emplace_back(diff_acc_gph);
 
     ChainNode* diff_acc_chain = diff_acc_gph->chain_gph()->SoleSinkNode();
@@ -137,8 +135,7 @@ void Compiler::BuildModelGraphs(
     CompTaskNode* data_fw_task = pair.second[i];
     auto updt_gph = new MdUpdtTaskGraph(
         "md_updt_" + data_fw_task->node_id_str(),
-        data_fw_task, is_train ? sorted_diff_acc_tasks[i] : nullptr,
-        dot_path_prefix + "model_update_" + data_fw_task->node_id_str() + "_");
+        data_fw_task, is_train ? sorted_diff_acc_tasks[i] : nullptr);
     ordered_task_gphs_.emplace_back(updt_gph);
     ChainNode* updt_chain = updt_gph->chain_gph()->SoleSinkNode();
     auto updt_tasks_in_chain = updt_gph->CompTasksInChain(updt_chain);
@@ -152,8 +149,7 @@ void Compiler::BuildModelGraphs(
     for (CompTaskNode* update_task : updt_tasks) {
       auto save_gph = new MdSaveTaskGraph(
           "md_save_" + update_task->node_id_str(),
-          update_task,
-          dot_path_prefix + "model_save_" + update_task->node_id_str() + "_");
+          update_task);
       ordered_task_gphs_.emplace_back(save_gph);
     }
   }

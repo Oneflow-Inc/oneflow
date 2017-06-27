@@ -73,6 +73,7 @@ class ExecGraph final : public Graph<ExecNode, ExecEdge> {
   ~ExecGraph() = default;
   
   void ToExecSequence(ExecSequence* ret) const;
+  const char* TypeName() const override { return "ExecGraph"; }
 
  private:
 

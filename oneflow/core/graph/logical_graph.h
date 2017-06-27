@@ -57,8 +57,9 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   ~LogicalGraph() = default;
 
   LogicalGraph(const DLNetConf& dl_net_conf,
-               const Strategy& strategy_conf,
-               const std::string& dot_filepath);
+               const Strategy& strategy_conf);
+  
+  const char* TypeName() const override { return "LogicalGraph"; }
 
  private:
   void NaiveBuildGraphStruct(
@@ -81,7 +82,6 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void AddOneCloneNode(
       const CloneInfo& clone_info,
       const HashMap<LogicalEdge*, std::string>& edge2ibn);
-
 
 };
 
