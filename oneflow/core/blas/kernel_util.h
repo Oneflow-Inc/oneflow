@@ -48,15 +48,15 @@ class KernelUtil final {
 
   // x = a*x
   static void BlasScal(const KernelCtx& ctx, const int n,
-      const floating_point_type alpha, floating_point_type* x, int incx);
+      const floating_point_type alpha, floating_point_type* x, const int incx);
 
   // level 2 matrix and vector
   // matrix vector multiply
   static void BlasGemv(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans, 
       int m, int n, const floating_point_type alpha, 
       const floating_point_type* A, int lda, const floating_point_type* x, 
-      int incx, const floating_point_type beta, 
-      floating_point_type* y, int incy);
+      const int incx, const floating_point_type beta, 
+      floating_point_type* y, const int incy);
 
   // level 3 matrix and matrix
   // matrix matrix multiply

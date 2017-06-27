@@ -32,7 +32,7 @@ class KernelUtil<DeviceType::kCPU, floating_point_type> final {
   }
 
   static void BlasScal(const KernelCtx& ctx, const int n,
-      const floating_point_type alpha, floating_point_type* x, int incx) {
+      const floating_point_type alpha, floating_point_type* x, const int incx) {
     ctx.device_ctx->cpu_stream()->Send([n, alpha, x, incx]() {
       cblas_scal(n, alpha, x, incx);
     });
@@ -41,8 +41,8 @@ class KernelUtil<DeviceType::kCPU, floating_point_type> final {
   static void BlasGemv(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans, 
       int m, int n, const floating_point_type alpha, 
       const floating_point_type* A, int lda, const floating_point_type* x, 
-      int incx, const floating_point_type beta, 
-      floating_point_type* y, int incy) {
+      const int incx, const floating_point_type beta, 
+      floating_point_type* y, const int incy) {
     ctx.device_ctx->cpu_stream()->Send([=](){
       // Set col major to keep it as the same with cublas
       cblas_gemv(CBLAS_ORDER::CblasColMajor, trans, m, n, alpha, A, lda, x,

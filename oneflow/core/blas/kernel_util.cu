@@ -28,7 +28,7 @@ class KernelUtil<DeviceType::kGPU, floating_point_type> final {
   }
 
   static void BlasScal(const KernelCtx& ctx, const int n,
-     const floating_point_type alpha, floating_point_type* x, int incx) {
+     const floating_point_type alpha, floating_point_type* x, const int incx) {
    const floating_point_type alpha_0 = alpha;
    cublas_scal(ctx.device_ctx->cublas_handle(), n, &alpha_0, x, incx);
   }
@@ -36,8 +36,8 @@ class KernelUtil<DeviceType::kGPU, floating_point_type> final {
   static void BlasGemv(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans, 
       int m, int n, const floating_point_type alpha, 
       const floating_point_type* A, int lda, const floating_point_type* x, 
-      int incx, const floating_point_type beta, floating_point_type* y, 
-      int incy) {
+      const int incx, const floating_point_type beta, floating_point_type* y, 
+      const int incy) {
     cublasOperation_t cublas_trans = CblasTrans2CublasTrans(trans);
     const floating_point_type alpha_0 = alpha;
     const floating_point_type beta_0 = beta;
