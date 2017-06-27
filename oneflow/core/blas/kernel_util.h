@@ -6,54 +6,27 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename floating_point_type> class KernelUtil;
-
-template<typename floating_point_type>
-class KernelUtil<DeviceType::kCPU, floating_point_type> final {
+template<DeviceType device_type, typename floating_point_type> 
+class KernelUtil final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelUtil);
   KernelUtil() = default;
   ~KernelUtil() = default;
 
-  OF_SINGLETON(KernelUtil);
-
-  void Memcpy(const KernelCtx& ctx, 
+  static void Memcpy(const KernelCtx& ctx, 
      void* dst, const void* src, size_t sz);
 
-  void Memset(const KernelCtx& ctx, void* dst, const char value,
+  static void Memset(const KernelCtx& ctx, void* dst, const char value,
       size_t sz);
 
-  void BlasAxpy(const KernelCtx& ctx, const int N,
+  static void BlasAxpy(const KernelCtx& ctx, const int N,
       const floating_point_type alpha,
       const floating_point_type* X, const int incX,
       floating_point_type *Y, const int incY);
 
-  void BlasScal(const KernelCtx& ctx, const int n,
+  static void BlasScal(const KernelCtx& ctx, const int n,
       const floating_point_type alpha, floating_point_type* x, int incx);
-};
 
-template<typename floating_point_type>
-class KernelUtil<DeviceType::kGPU, floating_point_type> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(KernelUtil);
-  KernelUtil() = default;
-  ~KernelUtil() = default;
-
-  OF_SINGLETON(KernelUtil);
-
-  void Memcpy(const KernelCtx& ctx, 
-     void* dst, const void* src, size_t sz);
-
-  void Memset(const KernelCtx& ctx, void* dst, const char value,
-      size_t sz);
-
-  void BlasAxpy(const KernelCtx& ctx, const int N,
-      const floating_point_type alpha,
-      const floating_point_type* X, const int incX,
-      floating_point_type *Y, const int incY);
-
-  void BlasScal(const KernelCtx& ctx, const int n,
-      const floating_point_type alpha, floating_point_type* x, int incx);
 };
 
 }  // namespace oneflow

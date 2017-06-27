@@ -1,5 +1,5 @@
 #include "oneflow/core/blas/kernel_util.h"
-#include "oneflow/core/blas/cblas.h"
+#include "oneflow/core/blas/cblas_template.h"
 
 namespace oneflow {
 
@@ -9,7 +9,7 @@ void KernelUtil<DeviceType::kCPU, float>::BlasAxpy(
     const int N, const float alpha, 
     const float *X, const int incX, 
     float *Y, const int incY) {
-  cblas_saxpy(N, alpha, X, incX, Y, incY);
+  cblas_axpy(N, alpha, X, incX, Y, incY);
 }
 
 template<>
@@ -18,7 +18,7 @@ void KernelUtil<DeviceType::kCPU, double>::BlasAxpy(
     const int N, const double alpha, 
     const double *X, const int incX, 
     double *Y, const int incY) {
-  cblas_daxpy(N, alpha, X, incX, Y, incY);
+  cblas_axpy(N, alpha, X, incX, Y, incY);
 }
 
 template<> 
@@ -26,7 +26,7 @@ void KernelUtil<DeviceType::kCPU, double>::BlasScal(
     const KernelCtx& ctx,
     const int n, const double alpha,
     double* x, int incx) {
-  cblas_dscal(n, alpha, x, incx);
+  cblas_scal(n, alpha, x, incx);
 }
 
 template<> 
@@ -34,7 +34,7 @@ void KernelUtil<DeviceType::kCPU, float>::BlasScal(
     const KernelCtx& ctx,
     const int n, const float alpha,
     float* x, int incx) {
-  cblas_sscal(n, alpha, x, incx);
+  cblas_scal(n, alpha, x, incx);
 }
 
 template<>
