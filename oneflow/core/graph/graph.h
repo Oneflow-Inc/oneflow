@@ -1,6 +1,10 @@
 #ifndef ONEFLOW_CORE_GRAPH_GRAPH_H_
 #define ONEFLOW_CORE_GRAPH_GRAPH_H_
 
+#include "tensorflow/core/platform/env.h"
+#include "tensorflow/core/lib/io/path.h"
+#include "gflags/gflags.h"
+#include "oneflow/core/persistence/persistent_out_stream.h"
 #include "oneflow/core/graph/node.h"
 
 namespace oneflow {
@@ -32,6 +36,7 @@ class Graph {
   NodeType* SoleNode() const;
   size_t node_num() const { return nodes_.size(); }
   size_t edge_num() const { return edges_.size(); }
+  virtual const char* TypeName() const { return "Not Defined"; }
   
   // Setters
   NodeType* NewNode();
@@ -43,8 +48,10 @@ class Graph {
   void UpdateSourceAndSink();
 
   // ToDot
-  virtual std::string ToDotString() const;
-  void ToDotFile(const std::string& dot_filepath) const;
+  template<typename StreamT>
+  void ToDotWithStream(StreamT& out_stream) const;
+  void ToDotWithFilePath(const std::string& file_path) const;
+  void ToDotWithAutoFilePath() const;
 
  private:
   class TopoIterator;
@@ -244,29 +251,36 @@ void Graph<NodeType, EdgeType>::UpdateSourceAndSink() {
 }
 
 template<typename NodeType, typename EdgeType>
-std::string Graph<NodeType, EdgeType>::ToDotString() const {
-  std::stringstream ss;
-  ss << "digraph {" << std::endl;
-  for (const auto& node : nodes_) {
-    ss << "\"" << node->VisualStr() << "\"" << std::endl;
-  }
-  for (const auto& edge : edges_) {
-    ss << "\"" << edge->src_node()->VisualStr() << "\" -> "
+template<typename StreamT>
+void Graph<NodeType, EdgeType>::ToDotWithStream(StreamT& out_stream) const {
+  out_stream << "digraph {\n";
+  this->ConstForEachNode([&](const NodeType* node) {
+    out_stream << "\"" << node->VisualStr() << "\"\n";
+  });
+  this->ConstForEachEdge([&](const EdgeType* edge) {
+    out_stream << "\"" << edge->src_node()->VisualStr() << "\" -> "
        << "\"" << edge->dst_node()->VisualStr() << "\""
-       << "[label=\"" << edge->VisualStr() << "\"];"
-       << std::endl;
-  }
-  ss << "}" << std::endl;
-  return ss.str();
+       << "[label=\"" << edge->VisualStr() << "\"];\n";
+  });
+  out_stream << "}\n";
 }
 
 template<typename NodeType, typename EdgeType>
-void Graph<NodeType, EdgeType>::ToDotFile(const std::string& dot_filepath) const {
-  std::fstream fs(dot_filepath.c_str(), std::fstream::out);
-  CHECK(fs.good()) << "failed to open " << dot_filepath;
-  fs << ToDotString();
-  CHECK(fs.good()) << "failed to write " << dot_filepath;
-  fs.close();
+void Graph<NodeType, EdgeType>::ToDotWithFilePath(const std::string& file_path) const {
+  std::string dir_name = tensorflow::io::Dirname(file_path).ToString();
+  tensorflow::Env* env = tensorflow::Env::Default();
+  if (env->IsDirectory(dir_name).code() != tensorflow::error::OK) {
+    TF_CHECK_OK(env->RecursivelyCreateDir(dir_name));
+  }
+  PersistentOutStream out_stream(file_path);
+  ToDotWithStream(out_stream);
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::ToDotWithAutoFilePath() const {
+  std::string file_path = LogDir() + "/dot/" + TypeName()
+                                   + "/" + NewUniqueId() + ".dot";
+  ToDotWithFilePath(file_path);
 }
 
 template<typename NodeType>

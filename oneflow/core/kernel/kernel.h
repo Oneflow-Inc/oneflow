@@ -9,9 +9,7 @@
 #include "oneflow/core/operator/operator_manager.h"
 #include "oneflow/core/operator/operator.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/blas/cblas_template.h"
-#include "oneflow/core/blas/cublas_template.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 
@@ -79,6 +77,10 @@ using KernelWardFunc = void (Kernel::*)(
   char gInstantiationGuardGPU##classname; \
   template class classname<DeviceType::kGPU, float>; \
   template class classname<DeviceType::kGPU, double>;
+
+#define INSTANTIATE_KERNEL_CLASS(classname) \
+  INSTANTIATE_CPU_KERNEL_CLASS(classname) \
+  INSTANTIATE_GPU_KERNEL_CLASS(classname)
 
 }  // namespace oneflow
 
