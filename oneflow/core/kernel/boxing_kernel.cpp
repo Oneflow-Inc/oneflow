@@ -108,8 +108,8 @@ void BoxingKernel<device_type, floating_point_type>::ConstructCopyRulesFromSlice
   int64_t dst_offset = 0, dst_cap = dst_iter->second;
 
   const int64_t step_sz = sizeof(floating_point_type);
-  while (src_iter != src_bn2slice.end() &&
-      dst_iter != dst_bn2slice.end()) {
+  while (src_iter != src_bn2slice.end() 
+      && dst_iter != dst_bn2slice.end()) {
     dst_offset = 0, dst_cap = dst_iter->second;
     while (dst_offset < dst_cap) {
       int64_t p = std::min(src_cap-src_offset, dst_cap-dst_offset);
