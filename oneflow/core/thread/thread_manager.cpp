@@ -6,10 +6,15 @@
 namespace oneflow {
 
 ThreadMgr::~ThreadMgr() {
+  ClearAllThread();
 }
 
 Thread* ThreadMgr::GetThrd(int64_t thrd_loc_id) {
   return threads_.at(thrd_loc_id).get();
+}
+
+void ThreadMgr::ClearAllThread() {
+  threads_.clear();
 }
 
 ThreadMgr::ThreadMgr() {
