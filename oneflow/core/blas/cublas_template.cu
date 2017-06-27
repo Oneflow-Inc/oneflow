@@ -51,15 +51,16 @@ void cublas_copy<double>(
 // y = a*x + y
 template<>
 void cublas_axpy<float>(
-    cublasHandle_t handle, int n, const float* alpha, const float* x, int incx,
-    float* y, int incy) {
+    cublasHandle_t handle, int n, const float* alpha, const float* x, 
+    const int incx, float* y, const int incy) {
   CHECK_EQ(cublasSaxpy(handle, n, alpha, x, incx, y, incy),
            CUBLAS_STATUS_SUCCESS);
 }
 
 template<>
 void cublas_axpy<double>(
-    cublasHandle_t handle, int n, const double* alpha, const double* x, int incx,
+    cublasHandle_t handle, int n, const double* alpha, 
+    const double* x, const int incx,
     double* y, int incy) {
   CHECK_EQ(cublasDaxpy(handle, n, alpha, x, incx, y, incy),
            CUBLAS_STATUS_SUCCESS);
