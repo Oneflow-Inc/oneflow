@@ -4,12 +4,12 @@
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_manager.h"
 #include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/blas/math.h"
+#include "oneflow/core/blas/kernel_util.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename floating_point_type>
-class CloneKernel final : public Kernel, public Math<device_type, floating_point_type> {
+class CloneKernel final : public Kernel{
  public:
   OF_DISALLOW_COPY_AND_MOVE(CloneKernel);
   CloneKernel() = default;

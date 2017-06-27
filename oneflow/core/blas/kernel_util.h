@@ -1,19 +1,22 @@
-#ifndef ONEFLOW_CORE_BLAS_MATH_H_
-#define ONEFLOW_CORE_BLAS_MATH_H_
+#ifndef ONEFLOW_CORE_BLAS_KERNELUTIL_H_
+#define ONEFLOW_CORE_BLAS_KERNELUTIL_H_
 #include <string>
 #include "oneflow/core/kernel/kernel_context.h"
-//#include "oneflow/core/actor/device_context.h"
 #include "oneflow/core/job/resource.pb.h"
-//#include "oneflow/core/actor/cuda_device_context.h"
-//#include "oneflow/core/blas/cblas.h"
 
 namespace oneflow {
 
-template<DeviceType device_type, typename floating_point_type> class Math;
+template<DeviceType device_type, typename floating_point_type> class KernelUtil;
 
 template<typename floating_point_type>
-class Math<DeviceType::kCPU, floating_point_type> {
+class KernelUtil<DeviceType::kCPU, floating_point_type> final {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(KernelUtil);
+  KernelUtil() = default;
+  ~KernelUtil() = default;
+
+  OF_SINGLETON(KernelUtil);
+
   void Memcpy(const KernelCtx& ctx, 
      void* dst, const void* src, size_t sz);
 
@@ -30,8 +33,14 @@ class Math<DeviceType::kCPU, floating_point_type> {
 };
 
 template<typename floating_point_type>
-class Math<DeviceType::kGPU, floating_point_type> {
+class KernelUtil<DeviceType::kGPU, floating_point_type> {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(KernelUtil);
+  KernelUtil() = default;
+  ~KernelUtil() = default;
+
+  OF_SINGLETON(KernelUtil);
+
   void Memcpy(const KernelCtx& ctx, 
      void* dst, const void* src, size_t sz);
 
@@ -48,4 +57,4 @@ class Math<DeviceType::kGPU, floating_point_type> {
 };
 
 }  // namespace oneflow
-#endif // ONEFLOW_CORE_BLAS_MATH_H__
+#endif // ONEFLOW_CORE_BLAS_KERNELUTIL_H__
