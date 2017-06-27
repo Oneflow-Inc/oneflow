@@ -1,6 +1,6 @@
-#ifndef ONEFLOW_CORE_BLAS_KERNELUTIL_H_
-#define ONEFLOW_CORE_BLAS_KERNELUTIL_H_
-#include <string>
+#ifndef ONEFLOW_CORE_KERNEL_KERNEL_UTIL_H_
+#define ONEFLOW_CORE_KERNEL_KERNEL_UTIL_H_
+
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/blas/cblas_template.h"
@@ -70,4 +70,4 @@ class KernelUtil final {
 };
 
 }  // namespace oneflow
-#endif // ONEFLOW_CORE_BLAS_KERNELUTIL_H__
+#endif // ONEFLOW_CORE_KERNEL_KERNEL_UTIL_H__

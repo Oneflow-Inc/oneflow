@@ -1,6 +1,4 @@
 #include "oneflow/core/kernel/clone_kernel.h"
-#include <string>
-#include "oneflow/core/blas/kernel_util.h"
 
 namespace oneflow {
 
