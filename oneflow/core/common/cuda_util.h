@@ -5,13 +5,9 @@
 
 namespace oneflow {
 
-// CUDA: various checks for different function calls.
-#define CUDA_CHECK(condition) \
-  /* Code block avoids redefinition of cudaError_t error */ \
-  do { \
-    cudaError_t error = condition; \
-    CHECK_EQ(error, cudaSuccess) << " " << cudaGetErrorString(error); \
-  } while (0)
+inline void CudaCheck(cudaError_t error) {
+  CHECK_EQ(error, cudaSuccess) << " " << cudaGetErrorString(error);
+}
 
 // CUDA: grid stride looping
 #define CUDA_1D_KERNEL_LOOP(i, n) \
@@ -20,7 +16,9 @@ namespace oneflow {
        i += blockDim.x * gridDim.x)
 
 // CUDA: check for error after kernel execution and exit loudly if there is one.
-#define CUDA_POST_KERNEL_CHECK CUDA_CHECK(cudaPeekAtLastError())
+inline void CudaPostKernelCheck() {
+  CudaCheck(cudaPeekAtLastError());
+}
 
 const int32_t g_threads_num_per_block = 512;
 const int32_t g_max_blocks_num = 4096;
