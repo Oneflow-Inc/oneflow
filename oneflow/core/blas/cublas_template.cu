@@ -84,20 +84,20 @@ void cublas_scal<double>(
 template<>
 void cublas_gemv<float>(
     cublasHandle_t handle, cublasOperation_t trans, int m, int n,
-    const float* alpha, const float* A, int lda, const float* x, int incx,
+    const float* alpha, const float* a, int lda, const float* x, int incx,
     const float* beta, float* y, int incy) {
   CHECK_EQ(cublasSgemv(
-               handle, trans, m, n, alpha, A, lda, x, incx, beta, y, incy),
+               handle, trans, m, n, alpha, a, lda, x, incx, beta, y, incy),
            CUBLAS_STATUS_SUCCESS);
 }
 
 template<>
 void cublas_gemv<double>(
     cublasHandle_t handle, cublasOperation_t trans, int m, int n,
-    const double* alpha, const double* A, int lda, const double* x, int incx,
+    const double* alpha, const double* a, int lda, const double* x, int incx,
     const double* beta, double* y, int incy) {
   CHECK_EQ(cublasDgemv(
-               handle, trans, m, n, alpha, A, lda, x, incx, beta, y, incy),
+               handle, trans, m, n, alpha, a, lda, x, incx, beta, y, incy),
            CUBLAS_STATUS_SUCCESS);
 }
 
@@ -105,25 +105,25 @@ void cublas_gemv<double>(
 // matrix matrix multiply
 template<>
 void cublas_gemm<float>(
-    cublasHandle_t handle, cublasOperation_t cuTransA,
-    cublasOperation_t cuTransB, int m, int n, int k,
-    const float* alpha, const float* A, int lda,
-    const float* B, int ldb, const float* beta, float* C, int ldc) {
+    cublasHandle_t handle, cublasOperation_t cutrans_a,
+    cublasOperation_t cutrans_b, int m, int n, int k,
+    const float* alpha, const float* a, int lda,
+    const float* b, int ldb, const float* beta, float* c, int ldc) {
   CHECK_EQ(cublasSgemm(
-               handle, cuTransA, cuTransB, m, n, k, alpha, A, lda, B, ldb, beta,
-               C, ldc),
+               handle, cutrans_a, cutrans_b, m, n, k, alpha, a, lda, b, ldb, beta,
+               c, ldc),
            CUBLAS_STATUS_SUCCESS);
 }
 
 template<>
 void cublas_gemm<double>(
-    cublasHandle_t handle, cublasOperation_t cuTransA,
-    cublasOperation_t cuTransB, int m, int n, int k,
-    const double* alpha, const double* A, int lda,
-    const double* B, int ldb, const double* beta, double* C, int ldc) {
+    cublasHandle_t handle, cublasOperation_t cutrans_a,
+    cublasOperation_t cutrans_b, int m, int n, int k,
+    const double* alpha, const double* a, int lda,
+    const double* b, int ldb, const double* beta, double* c, int ldc) {
   CHECK_EQ(cublasDgemm(
-               handle, cuTransA, cuTransB, m, n, k, alpha, A, lda, B, ldb, beta,
-               C, ldc),
+               handle, cutrans_a, cutrans_b, m, n, k, alpha, a, lda, b, ldb, beta,
+               c, ldc),
            CUBLAS_STATUS_SUCCESS);
 }
 

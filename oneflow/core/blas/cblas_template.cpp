@@ -6,116 +6,115 @@ namespace oneflow {
 // dot product
 template<>
 float cblas_dot<float>(
-    const int N, const float* X, const int incX,
-    const float* Y, const int incY) {
-  return cblas_sdot(N, X, incX, Y, incY);
+    const int n, const float* x, const int incx,
+    const float* y, const int incy) {
+  return cblas_sdot(n, x, incx, y, incy);
 }
 
 template<>
 double cblas_dot<double>(
-    const int N, const double* X, const int incX,
-    const double* Y, const int incY) {
-  return cblas_ddot(N, X, incX, Y, incY);
+    const int n, const double* x, const int incx,
+    const double* y, const int incy) {
+  return cblas_ddot(n, x, incx, y, incy);
 }
 
 // swap x and y
 template<>
 void cblas_swap<float>(
-    const int N, float* X, const int incX, float* Y, const int incY) {
-  cblas_sswap(N, X, incX, Y, incY);
+    const int n, float* x, const int incx, float* y, const int incy) {
+  cblas_sswap(n, x, incx, y, incy);
 }
 
 template<>
 void cblas_swap<double>(
-    const int N, double* X, const int incX, double* Y, const int incY) {
-  cblas_dswap(N, X, incX, Y, incY);
+    const int n, double* x, const int incx, double* y, const int incy) {
+  cblas_dswap(n, x, incx, y, incy);
 }
 
 // copy x into y
 template<>
 void cblas_copy<float>(
-    const int N, const float* X, const int incX, float* Y, const int incY) {
-  cblas_scopy(N, X, incX, Y, incY);
+    const int n, const float* x, const int incx, float* y, const int incy) {
+  cblas_scopy(n, x, incx, y, incy);
 }
 
 template<>
 void cblas_copy<double>(
-    const int N, const double* X, const int incX, double* Y, const int incY) {
-  cblas_dcopy(N, X, incX, Y, incY);
+    const int n, const double* x, const int incx, double* y, const int incy) {
+  cblas_dcopy(n, x, incx, y, incy);
 }
 
 // y = a*x + y
 template<>
 void cblas_axpy<float>(
-    const int N, const float alpha, const float* X, const int incX,
-    float* Y, const int incY) {
-  cblas_saxpy(N, alpha, X, incX, Y, incY);
+    const int n, const float alpha, const float* x, const int incx,
+    float* y, const int incy) {
+  cblas_saxpy(n, alpha, x, incx, y, incy);
 }
 
 template<>
 void cblas_axpy<double>(
-    const int N, const double alpha, const double* X, const int incX,
-    double* Y, const int incY) {
-  cblas_daxpy(N, alpha, X, incX, Y, incY);
+    const int n, const double alpha, const double* x, const int incx,
+    double* y, const int incy) {
+  cblas_daxpy(n, alpha, x, incx, y, incy);
 }
 
 // x = a*x
 template<>
 void cblas_scal<float>(
-    const int N, const float alpha, float* X, const int incX) {
-  cblas_sscal(N, alpha, X, incX);
+    const int n, const float alpha, float* x, const int incx) {
+  cblas_sscal(n, alpha, x, incx);
 }
 
 template<>
 void cblas_scal<double>(
-    const int N, const double alpha, double* X, const int incX) {
-  cblas_dscal(N, alpha, X, incX);
+    const int n, const double alpha, double* x, const int incx) {
+  cblas_dscal(n, alpha, x, incx);
 }
 
 // level 2 matrix and vector
 // matrix vector multiply
 template<>
 void cblas_gemv<float>(
-    const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE TransA,
-    const int M, const int N, const float alpha,
-    const float* A, const int lda,
-    const float* X, const int incX, const float beta,
-    float* Y, const int incY) {
-  cblas_sgemv(order, TransA, M, N, alpha, A, lda, X, incX, beta, Y, incY);
+    const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE trans_a,
+    const int m, const int n, const float alpha,
+    const float* a, const int lda,
+    const float* x, const int incx, const float beta,
+    float* y, const int incy) {
+  cblas_sgemv(order, trans_a, m, n, alpha, a, lda, x, incx, beta, y, incy);
 }
 
 template<>
 void cblas_gemv<double>(
-    const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE TransA,
-    const int M, const int N, const double alpha,
-    const double* A, const int lda,
-    const double* X, const int incX, const double beta,
-    double* Y, const int incY) {
-  cblas_dgemv(order, TransA, M, N, alpha, A, lda, X, incX, beta, Y, incY);
+    const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE trans_a,
+    const int m, const int n, const double alpha,
+    const double* a, const int lda,
+    const double* x, const int incx, const double beta,
+    double* y, const int incy) {
+  cblas_dgemv(order, trans_a, m, n, alpha, a, lda, x, incx, beta, y, incy);
 }
 
 // matrix matrix multiply
 template<>
 void cblas_gemm<float>(
-    const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE TransA,
-    const enum CBLAS_TRANSPOSE TransB, const int M, const int N, const int K,
-    const float alpha, const float* A, const int lda,
-    const float* B, const int ldb, const float beta,
-    float* C, const int ldc) {
-  cblas_sgemm(order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb,
-              beta, C, ldc);
+    const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE trans_a,
+    const enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
+    const float alpha, const float* a, const int lda,
+    const float* b, const int ldb, const float beta,
+    float* c, const int ldc) {
+  cblas_sgemm(order, trans_a, trans_b, m, n, k, alpha, a, lda, b, ldb,
+              beta, c, ldc);
 }
 
 template<>
 void cblas_gemm<double>(
-    const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE TransA,
-    const enum CBLAS_TRANSPOSE TransB, const int M, const int N, const int K,
-    const double alpha, const double* A, const int lda,
-    const double* B, const int ldb, const double beta,
-    double* C, const int ldc) {
-  cblas_dgemm(order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb,
-              beta, C, ldc);
+    const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE trans_a,
+    const enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
+    const double alpha, const double* a, const int lda,
+    const double* b, const int ldb, const double beta,
+    double* c, const int ldc) {
+  cblas_dgemm(order, trans_a, trans_b, m, n, k, alpha, a, lda, b, ldb,
+              beta, c, ldc);
 }
-
 
 }  // namespace oneflow
