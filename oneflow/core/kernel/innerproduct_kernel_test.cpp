@@ -31,9 +31,7 @@ Blob* CreateBlob(const std::vector<int64_t>& dim_vec, float* matrix,
 }
 
 template<DeviceType device_type, typename floating_point_type>
-void BuildInnerProductKernel(
-    InnerProductKernel<device_type,
-                       floating_point_type>* inner_product_kernel) {
+Kernel* BuildInnerProductKernel() {
   // Config InnerProduct operator
   OperatorConf op_conf;
   op_conf.set_name("inner_product_test");
@@ -45,7 +43,12 @@ void BuildInnerProductKernel(
 
   OperatorProto op_proto;
   inner_product_op->ToProto(&op_proto);
+  
+  auto inner_product_kernel =
+    new InnerProductKernel<device_type, floating_point_type>();
   inner_product_kernel->InitFromOpProto(op_proto);
+  
+  return inner_product_kernel;
 }
 
 std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(Location loc) {
@@ -134,8 +137,8 @@ TEST(InnerProductKernel, inner_product_kernel_cpu) {
   ctx.device_ctx = new CpuDeviceCtx(cpu_stream);
 
   // build InnerProductKernel
-  auto inner_product_cpu_kernel = new InnerProductKernel<DeviceType::kCPU, float>;
-  BuildInnerProductKernel(inner_product_cpu_kernel);
+  auto inner_product_cpu_kernel =
+    BuildInnerProductKernel<DeviceType::kCPU, float>();
 
   // build function pointer of blob name to blob
   auto BnInOp2BlobPtr = BuildBnInOp2BlobPtr(Location::kHost);
@@ -168,8 +171,8 @@ TEST(InnerProductKernel, inner_product_kernel_gpu) {
   ctx.device_ctx = new CudaDeviceCtx(nullptr, &cublas_handle, nullptr);
 
   // Build InnerProductKernel
-  auto inner_product_gpu_kernel = new InnerProductKernel<DeviceType::kGPU, float>;
-  BuildInnerProductKernel(inner_product_gpu_kernel);
+  auto inner_product_gpu_kernel = 
+    BuildInnerProductKernel<DeviceType::kGPU, float>();
 
   // Build function pointer of blob name to blob
   auto BnInOp2BlobPtr = BuildBnInOp2BlobPtr(Location::kDevice);
