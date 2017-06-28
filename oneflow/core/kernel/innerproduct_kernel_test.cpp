@@ -128,6 +128,14 @@ void BlobCmpGpu(Blob* A, Blob* B) {
   BlobCmpCpu(copy_A, copy_B);
 }
 
+void CheckResult(std::function<Blob*(const std::string&)> BnInOp2BlobPtr,
+                 std::function<void(Blob*, Blob*)> CmpFunc) {
+  CmpFunc(BnInOp2BlobPtr("out"), BnInOp2BlobPtr("expected_out"));
+  CmpFunc(BnInOp2BlobPtr("in_diff"), BnInOp2BlobPtr("expected_in_diff"));
+  CmpFunc(BnInOp2BlobPtr("weight_diff"), BnInOp2BlobPtr("expected_weight_diff"));
+  CmpFunc(BnInOp2BlobPtr("bias_diff"), BnInOp2BlobPtr("expected_bias_diff"));
+}
+
 }  // namespace
 
 TEST(InnerProductKernel, inner_product_kernel_cpu) {
@@ -155,20 +163,19 @@ TEST(InnerProductKernel, inner_product_kernel_cpu) {
     }
   });
   cpu_thread.join();
-  
-  BlobCmpCpu(BnInOp2BlobPtr("out"), BnInOp2BlobPtr("expected_out"));
-  BlobCmpCpu(BnInOp2BlobPtr("in_diff"), BnInOp2BlobPtr("expected_in_diff"));
-  BlobCmpCpu(
-      BnInOp2BlobPtr("weight_diff"), BnInOp2BlobPtr("expected_weight_diff"));
-  BlobCmpCpu(BnInOp2BlobPtr("bias_diff"), BnInOp2BlobPtr("expected_bias_diff"));
+
+  CheckResult(BnInOp2BlobPtr, BlobCmpCpu);  
 }
 
 TEST(InnerProductKernel, inner_product_kernel_gpu) {
   // Create gpu_device_context and kernel context
+  cudaStream_t cuda_stream;
   cublasHandle_t cublas_handle;
+  CHECK_EQ(cudaStreamCreate(&cuda_stream), cudaSuccess);
   CHECK_EQ(cublasCreate(&cublas_handle), CUBLAS_STATUS_SUCCESS);
+  CHECK_EQ(cublasSetStream(cublas_handle, cuda_stream), CUBLAS_STATUS_SUCCESS);
   KernelCtx ctx;
-  ctx.device_ctx = new CudaDeviceCtx(nullptr, &cublas_handle, nullptr);
+  ctx.device_ctx = new CudaDeviceCtx(&cuda_stream, &cublas_handle, nullptr);
 
   // Build InnerProductKernel
   auto inner_product_gpu_kernel = 
@@ -180,11 +187,9 @@ TEST(InnerProductKernel, inner_product_kernel_gpu) {
   inner_product_gpu_kernel->Forward(ctx, BnInOp2BlobPtr);
   inner_product_gpu_kernel->Backward(ctx, BnInOp2BlobPtr);
 
-  BlobCmpGpu(BnInOp2BlobPtr("out"), BnInOp2BlobPtr("expected_out"));
-  BlobCmpGpu(BnInOp2BlobPtr("in_diff"), BnInOp2BlobPtr("expected_in_diff"));
-  BlobCmpGpu(
-      BnInOp2BlobPtr("weight_diff"), BnInOp2BlobPtr("expected_weight_diff"));
-  BlobCmpGpu(BnInOp2BlobPtr("bias_diff"), BnInOp2BlobPtr("expected_bias_diff"));
+  CHECK_EQ(cudaStreamSynchronize(cuda_stream), cudaSuccess);  
+
+  CheckResult(BnInOp2BlobPtr, BlobCmpGpu);
 }
 
 }  // namespace oneflow
