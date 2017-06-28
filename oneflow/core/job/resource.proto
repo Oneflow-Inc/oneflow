@@ -8,7 +8,6 @@ message Machine {
 }
 
 enum DeviceType {
-  kCPU = 0;
   kGPU = 1;
   kALL = 2;
 }
