@@ -78,11 +78,13 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(Location loc) {
   (*bn2blob_ptr)["bias"] = CreateBlob({1, 3}, bias_mat, loc);
   (*bn2blob_ptr)["bias_multiplier"] =
     CreateBlob({2, 1}, bias_multiplier_mat, loc);
+
   (*bn2blob_ptr)["out"] = CreateBlob({2, 3}, out_mat, loc);
   (*bn2blob_ptr)["out_diff"] = (*bn2blob_ptr)["out"];
   (*bn2blob_ptr)["in_diff"] = CreateBlob({2, 4}, in_diff_mat, loc);
   (*bn2blob_ptr)["weight_diff"] = CreateBlob({3, 4}, weight_diff_mat, loc);
   (*bn2blob_ptr)["bias_diff"] = CreateBlob({1, 3}, bias_diff_mat, loc);
+
   (*bn2blob_ptr)["expected_out"] = CreateBlob({2, 3}, expected_out_mat, loc);
   (*bn2blob_ptr)["expected_in_diff"] =
     CreateBlob({2, 4}, expected_in_diff_mat, loc);
@@ -96,29 +98,31 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(Location loc) {
   };
 }
 
-void BlobCmpCpu(Blob* A, Blob* B) {
-  const float* dptr_A = static_cast<const float*>(A->dptr());
-  const float* dptr_B = static_cast<const float*>(B->dptr());
-  size_t dptr_size = A->shape().elem_cnt();
+void BlobCmpCpu(Blob* lhs, Blob* rhs) {
+  const float* dptr_lhs = static_cast<const float*>(lhs->dptr());
+  const float* dptr_rhs = static_cast<const float*>(rhs->dptr());
+  size_t dptr_size = lhs->shape().elem_cnt();
 
   for (size_t i = 0; i < dptr_size; ++i) {
-    ASSERT_FLOAT_EQ(dptr_A[i], dptr_B[i]);
+    ASSERT_FLOAT_EQ(dptr_lhs[i], dptr_rhs[i]);
   }
 }
 
-void BlobCmpGpu(Blob* A, Blob* B) {
+void BlobCmpGpu(Blob* lhs, Blob* rhs) {
   float* dptr;
-  size_t dptr_size = A->shape().elem_cnt()*sizeof(float);
+  size_t dptr_size = lhs->shape().elem_cnt()*sizeof(float);
   cudaMallocHost(&dptr, dptr_size);
   memset(dptr, 0, dptr_size);
 
-  Blob* copy_A = CreateBlob(A->shape().dim_vec(), dptr, Location::kHost);
-  Blob* copy_B = CreateBlob(B->shape().dim_vec(), dptr, Location::kHost);
+  Blob* copy_lhs = CreateBlob(lhs->shape().dim_vec(), dptr, Location::kHost);
+  Blob* copy_rhs = CreateBlob(rhs->shape().dim_vec(), dptr, Location::kHost);
 
-  cudaMemcpy(copy_A->mut_dptr(), A->dptr(), dptr_size, cudaMemcpyDeviceToHost);
-  cudaMemcpy(copy_B->mut_dptr(), B->dptr(), dptr_size, cudaMemcpyDeviceToHost);
+  cudaMemcpy(copy_lhs->mut_dptr(), lhs->dptr(), dptr_size,
+             cudaMemcpyDeviceToHost);
+  cudaMemcpy(copy_rhs->mut_dptr(), rhs->dptr(), dptr_size,
+             cudaMemcpyDeviceToHost);
 
-  BlobCmpCpu(copy_A, copy_B);
+  BlobCmpCpu(copy_lhs, copy_rhs);
 }
 
 void CheckResult(std::function<Blob*(const std::string&)> BnInOp2BlobPtr,
