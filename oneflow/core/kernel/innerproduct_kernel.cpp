@@ -6,22 +6,22 @@ namespace {
 
 template<DeviceType device_type, typename floating_point_type>
 void BlasMatrixMatrix(
-    const KernelCtx& ctx, const enum CBLAS_TRANSPOSE TransA,
-    const enum CBLAS_TRANSPOSE TransB, const floating_point_type alpha,
-    const floating_point_type beta, Blob* A, Blob* B, Blob* C) {
-  const int M = C->shape().At(0);
-  const int N = C->shape().At(1);
-  const int K = (TransA == CblasNoTrans) ? A->shape().At(1) : A->shape().At(0);
+    const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans_a,
+    const enum CBLAS_TRANSPOSE trans_b, const floating_point_type alpha,
+    const floating_point_type beta, Blob* a, Blob* b, Blob* c) {
+  const int m = c->shape().At(0);
+  const int n = c->shape().At(1);
+  const int k = (trans_a == CblasNoTrans) ? a->shape().At(1) : a->shape().At(0);
 
-  const int lda = (TransA == CblasNoTrans) ? K : M;
-  const int ldb = (TransB == CblasNoTrans) ? N : K;
-  const int ldc = N;
+  const int lda = (trans_a == CblasNoTrans) ? k : m;
+  const int ldb = (trans_b == CblasNoTrans) ? n : k;
+  const int ldc = n;
 
   KernelUtil<device_type, floating_point_type>::BlasGemm(
-      ctx, CblasRowMajor, TransA, TransB, M, N, K, alpha,
-      static_cast<const floating_point_type*>(A->dptr()), lda,
-      static_cast<const floating_point_type*>(B->dptr()), ldb, beta,
-      static_cast<floating_point_type*>(C->mut_dptr()), ldc);
+      ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha,
+      static_cast<const floating_point_type*>(a->dptr()), lda,
+      static_cast<const floating_point_type*>(b->dptr()), ldb, beta,
+      static_cast<floating_point_type*>(c->mut_dptr()), ldc);
 }
 
 }  // namespace
