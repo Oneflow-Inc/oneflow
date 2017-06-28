@@ -1,11 +1,4 @@
 #include "oneflow/core/kernel/innerproduct_kernel.h"
-#include <memory>
-#include <vector>
-#include <string>
-#include "gtest/gtest.h"
-#include "oneflow/core/operator/operator.pb.h"
-#include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/operator/innerproduct_op.h"
 #include "oneflow/core/actor/cpu_device_context.h"
 #include "oneflow/core/actor/cuda_device_context.h"
 
@@ -18,7 +11,7 @@ enum class Location {
   kDevice
 };
 
-Blob* CreateBlob(const std::vector<int64_t>& dim_vec, float* mat,
+Blob* CreateBlob(const std::vector<int64_t>& dim_vec, float* matrix,
                  Location mem_location) {
   void* dptr;
   Shape* shape = new Shape(dim_vec);
@@ -26,11 +19,11 @@ Blob* CreateBlob(const std::vector<int64_t>& dim_vec, float* mat,
   size_t dptr_size = shape->elem_cnt()*sizeof(float);
   if (mem_location == Location::kHost) {
     CHECK_EQ(cudaMallocHost(&dptr, dptr_size), cudaSuccess);
-    CHECK_EQ(cudaMemcpy(dptr, mat, dptr_size, cudaMemcpyHostToHost),
+    CHECK_EQ(cudaMemcpy(dptr, matrix, dptr_size, cudaMemcpyHostToHost),
              cudaSuccess);
   } else {
     CHECK_EQ(cudaMalloc(&dptr, dptr_size), cudaSuccess);
-    CHECK_EQ(cudaMemcpy(dptr, mat, dptr_size, cudaMemcpyHostToDevice),
+    CHECK_EQ(cudaMemcpy(dptr, matrix, dptr_size, cudaMemcpyHostToDevice),
              cudaSuccess);
   }
 
@@ -55,7 +48,7 @@ void BuildInnerProductKernel(
   inner_product_kernel->InitFromOpProto(op_proto);
 }
 
-std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(Location loc) {
+std::function<Blob*(const std::string&)> BnInOp2BlobPtr(Location loc) {
   // Create matrix
   float in_mat[] = {1, 2, 3, 4, 5, 6, 7, 8};
   float weight_mat[] = {5, 4, 5, 3, 2, 1, 7, 0, 1, 1, 9, 8};
@@ -145,7 +138,7 @@ TEST(InnerProductKernel, inner_product_kernel_cpu) {
   BuildInnerProductKernel(inner_product_cpu_kernel);
 
   // build function pointer of blob name to blob
-  auto fp = BuildBnInOp2BlobPtr(Location::kHost);
+  auto fp = BnInOp2BlobPtr(Location::kHost);
 
   inner_product_cpu_kernel->Forward(ctx, fp);
   inner_product_cpu_kernel->Backward(ctx, fp);
@@ -178,7 +171,7 @@ TEST(InnerProductKernel, inner_product_kernel_gpu) {
   BuildInnerProductKernel(inner_product_gpu_kernel);
 
   // Build function pointer of blob name to blob
-  auto fp = BuildBnInOp2BlobPtr(Location::kDevice);
+  auto fp = BnInOp2BlobPtr(Location::kDevice);
 
   inner_product_gpu_kernel->Forward(ctx, fp);
   inner_product_gpu_kernel->Backward(ctx, fp);
