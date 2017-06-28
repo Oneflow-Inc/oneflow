@@ -1,4 +1,6 @@
 #include "oneflow/core/kernel/innerproduct_kernel.h"
+#include <string>
+#include <vector>
 #include "oneflow/core/actor/cpu_device_context.h"
 #include "oneflow/core/actor/cuda_device_context.h"
 
@@ -43,11 +45,11 @@ Kernel* BuildInnerProductKernel() {
 
   OperatorProto op_proto;
   inner_product_op->ToProto(&op_proto);
-  
+
   auto inner_product_kernel =
     new InnerProductKernel<device_type, floating_point_type>();
   inner_product_kernel->InitFromOpProto(op_proto);
-  
+
   return inner_product_kernel;
 }
 
@@ -132,7 +134,8 @@ void CheckResult(std::function<Blob*(const std::string&)> BnInOp2BlobPtr,
                  std::function<void(Blob*, Blob*)> CmpFunc) {
   CmpFunc(BnInOp2BlobPtr("out"), BnInOp2BlobPtr("expected_out"));
   CmpFunc(BnInOp2BlobPtr("in_diff"), BnInOp2BlobPtr("expected_in_diff"));
-  CmpFunc(BnInOp2BlobPtr("weight_diff"), BnInOp2BlobPtr("expected_weight_diff"));
+  CmpFunc(
+      BnInOp2BlobPtr("weight_diff"), BnInOp2BlobPtr("expected_weight_diff"));
   CmpFunc(BnInOp2BlobPtr("bias_diff"), BnInOp2BlobPtr("expected_bias_diff"));
 }
 
@@ -157,14 +160,14 @@ TEST(InnerProductKernel, inner_product_kernel_cpu) {
   auto cpu_thread = std::thread([&] {
     std::function<void()> work;
     for (int i = 0; i < 5; ++i) {
-      if(ctx.device_ctx->cpu_stream()->Receive(&work) == 0) {
+      if (ctx.device_ctx->cpu_stream()->Receive(&work) == 0) {
         work();
       }
     }
   });
   cpu_thread.join();
 
-  CheckResult(BnInOp2BlobPtr, BlobCmpCpu);  
+  CheckResult(BnInOp2BlobPtr, BlobCmpCpu);
 }
 
 TEST(InnerProductKernel, inner_product_kernel_gpu) {
@@ -178,7 +181,7 @@ TEST(InnerProductKernel, inner_product_kernel_gpu) {
   ctx.device_ctx = new CudaDeviceCtx(&cuda_stream, &cublas_handle, nullptr);
 
   // Build InnerProductKernel
-  auto inner_product_gpu_kernel = 
+  auto inner_product_gpu_kernel =
     BuildInnerProductKernel<DeviceType::kGPU, float>();
 
   // Build function pointer of blob name to blob
@@ -187,7 +190,7 @@ TEST(InnerProductKernel, inner_product_kernel_gpu) {
   inner_product_gpu_kernel->Forward(ctx, BnInOp2BlobPtr);
   inner_product_gpu_kernel->Backward(ctx, BnInOp2BlobPtr);
 
-  CHECK_EQ(cudaStreamSynchronize(cuda_stream), cudaSuccess);  
+  CHECK_EQ(cudaStreamSynchronize(cuda_stream), cudaSuccess);
 
   CheckResult(BnInOp2BlobPtr, BlobCmpGpu);
 }
