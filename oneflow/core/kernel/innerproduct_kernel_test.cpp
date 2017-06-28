@@ -48,7 +48,7 @@ void BuildInnerProductKernel(
   inner_product_kernel->InitFromOpProto(op_proto);
 }
 
-std::function<Blob*(const std::string&)> BnInOp2BlobPtr(Location loc) {
+std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(Location loc) {
   // Create matrix
   float in_mat[] = {1, 2, 3, 4, 5, 6, 7, 8};
   float weight_mat[] = {5, 4, 5, 3, 2, 1, 7, 0, 1, 1, 9, 8};
@@ -138,10 +138,10 @@ TEST(InnerProductKernel, inner_product_kernel_cpu) {
   BuildInnerProductKernel(inner_product_cpu_kernel);
 
   // build function pointer of blob name to blob
-  auto fp = BnInOp2BlobPtr(Location::kHost);
+  auto BnInOp2BlobPtr = BuildBnInOp2BlobPtr(Location::kHost);
 
-  inner_product_cpu_kernel->Forward(ctx, fp);
-  inner_product_cpu_kernel->Backward(ctx, fp);
+  inner_product_cpu_kernel->Forward(ctx, BnInOp2BlobPtr);
+  inner_product_cpu_kernel->Backward(ctx, BnInOp2BlobPtr);
 
   auto cpu_thread = std::thread([&] {
     std::function<void()> work;
@@ -153,10 +153,11 @@ TEST(InnerProductKernel, inner_product_kernel_cpu) {
   });
   cpu_thread.join();
   
-  BlobCmpCpu(fp("out"), fp("expected_out"));
-  BlobCmpCpu(fp("in_diff"), fp("expected_in_diff"));
-  BlobCmpCpu(fp("weight_diff"), fp("expected_weight_diff"));
-  BlobCmpCpu(fp("bias_diff"), fp("expected_bias_diff"));
+  BlobCmpCpu(BnInOp2BlobPtr("out"), BnInOp2BlobPtr("expected_out"));
+  BlobCmpCpu(BnInOp2BlobPtr("in_diff"), BnInOp2BlobPtr("expected_in_diff"));
+  BlobCmpCpu(
+      BnInOp2BlobPtr("weight_diff"), BnInOp2BlobPtr("expected_weight_diff"));
+  BlobCmpCpu(BnInOp2BlobPtr("bias_diff"), BnInOp2BlobPtr("expected_bias_diff"));
 }
 
 TEST(InnerProductKernel, inner_product_kernel_gpu) {
@@ -171,15 +172,16 @@ TEST(InnerProductKernel, inner_product_kernel_gpu) {
   BuildInnerProductKernel(inner_product_gpu_kernel);
 
   // Build function pointer of blob name to blob
-  auto fp = BnInOp2BlobPtr(Location::kDevice);
+  auto BnInOp2BlobPtr = BuildBnInOp2BlobPtr(Location::kDevice);
 
-  inner_product_gpu_kernel->Forward(ctx, fp);
-  inner_product_gpu_kernel->Backward(ctx, fp);
+  inner_product_gpu_kernel->Forward(ctx, BnInOp2BlobPtr);
+  inner_product_gpu_kernel->Backward(ctx, BnInOp2BlobPtr);
 
-  BlobCmpGpu(fp("out"), fp("expected_out"));
-  BlobCmpGpu(fp("in_diff"), fp("expected_in_diff"));
-  BlobCmpGpu(fp("weight_diff"), fp("expected_weight_diff"));
-  BlobCmpGpu(fp("bias_diff"), fp("expected_bias_diff"));
+  BlobCmpGpu(BnInOp2BlobPtr("out"), BnInOp2BlobPtr("expected_out"));
+  BlobCmpGpu(BnInOp2BlobPtr("in_diff"), BnInOp2BlobPtr("expected_in_diff"));
+  BlobCmpGpu(
+      BnInOp2BlobPtr("weight_diff"), BnInOp2BlobPtr("expected_weight_diff"));
+  BlobCmpGpu(BnInOp2BlobPtr("bias_diff"), BnInOp2BlobPtr("expected_bias_diff"));
 }
 
 }  // namespace oneflow
