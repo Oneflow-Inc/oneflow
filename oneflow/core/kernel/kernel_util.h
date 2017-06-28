@@ -25,26 +25,26 @@ class KernelUtil final {
   // level 1 vector and vector
   // dot product
   static void  BlasDot(const KernelCtx& ctx,
-      const int N, const floating_point_type* X, const int incX,
-      const floating_point_type* Y, const int incY, floating_point_type* result);
+      const int n, const floating_point_type* x, const int incx,
+      const floating_point_type* y, const int incy, floating_point_type* result);
 
   // swap x and y
   static void BlasSwap(const KernelCtx& ctx,
-      const int N,
-      floating_point_type* X, const int incX,
-      floating_point_type* Y, const int incY);
+      const int n,
+      floating_point_type* x, const int incx,
+      floating_point_type* y, const int incy);
 
   // copy x into y
   static void BlasCopy(const KernelCtx& ctx,
-      const int N,
-      const floating_point_type* X, const int incX,
-      floating_point_type* Y, const int incY);
+      const int n,
+      const floating_point_type* x, const int incx,
+      floating_point_type* y, const int incy);
 
   // y = a*x + y
-  static void BlasAxpy(const KernelCtx& ctx, const int N,
+  static void BlasAxpy(const KernelCtx& ctx, const int n,
       const floating_point_type alpha,
-      const floating_point_type* X, const int incX,
-      floating_point_type *Y, const int incY);
+      const floating_point_type* x, const int incx,
+      floating_point_type* y, const int incy);
 
   // x = a*x
   static void BlasScal(const KernelCtx& ctx, const int n,
@@ -54,20 +54,19 @@ class KernelUtil final {
   // matrix vector multiply
   static void BlasGemv(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans, 
       int m, int n, const floating_point_type alpha, 
-      const floating_point_type* A, int lda, const floating_point_type* x, 
+      const floating_point_type* a, int lda, const floating_point_type* x, 
       const int incx, const floating_point_type beta, 
       floating_point_type* y, const int incy);
 
   // level 3 matrix and matrix
   // matrix matrix multiply
   static void BlasGemm(const KernelCtx& ctx,
-      const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE TransA,
-      const enum CBLAS_TRANSPOSE TransB, const int M, const int N, const int K,
-      const floating_point_type alpha, const floating_point_type* A,
-      const int lda, const floating_point_type* B, const int ldb,
-      const floating_point_type beta, floating_point_type* C, const int ldc);
-
+      const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE trans_a,
+      const enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
+      const floating_point_type alpha, const floating_point_type* a,
+      const int lda, const floating_point_type* b, const int ldb,
+      const floating_point_type beta, floating_point_type* c, const int ldc);
 };
 
 }  // namespace oneflow
-#endif // ONEFLOW_CORE_KERNEL_KERNEL_UTIL_H__
+#endif // ONEFLOW_CORE_KERNEL_KERNEL_UTIL_H_
