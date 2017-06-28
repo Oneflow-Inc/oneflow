@@ -70,36 +70,27 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(Location loc) {
                                       782, 992, 1202, 1412};
   float expected_bias_diff_mat[] = {152, 96, 210};
 
-  // Build blob for test
-  Blob* in = CreateBlob({2, 4}, in_mat, loc);
-  Blob* weight = CreateBlob({3, 4}, weight_mat, loc);
-  Blob* bias = CreateBlob({1, 3}, bias_mat, loc);
-  Blob* bias_multiplier = CreateBlob({2, 1}, bias_multiplier_mat, loc);
-  Blob* out = CreateBlob({2, 3}, out_mat, loc);
-  Blob* out_diff = out;
-  Blob* in_diff = CreateBlob({2, 4}, in_diff_mat, loc);
-  Blob* weight_diff = CreateBlob({3, 4}, weight_diff_mat, loc);
-  Blob* bias_diff = CreateBlob({1, 3}, bias_diff_mat, loc);
-  Blob* expected_out = CreateBlob({2, 3}, expected_out_mat, loc);
-  Blob* expected_in_diff = CreateBlob({2, 4}, expected_in_diff_mat, loc);
-  Blob* expected_weight_diff = CreateBlob(
-      {3, 4}, expected_weight_diff_mat, loc);
-  Blob* expected_bias_diff = CreateBlob({1, 3}, expected_bias_diff_mat, loc);
+  auto bn2blob_ptr = new HashMap<std::string, Blob*>;
 
-  auto bn2blob_ptr = new HashMap<std::string, Blob*>{
-      {"in", in},
-      {"out", out},
-      {"weight", weight},
-      {"bias", bias},
-      {"bias_multiplier", bias_multiplier},
-      {"in_diff", in_diff},
-      {"out_diff", out_diff},
-      {"weight_diff", weight_diff},
-      {"bias_diff", bias_diff},
-      {"expected_out", expected_out},
-      {"expected_in_diff", expected_in_diff},
-      {"expected_weight_diff", expected_weight_diff},
-      {"expected_bias_diff", expected_bias_diff}};
+  // Build blob for test
+  (*bn2blob_ptr)["in"]  = CreateBlob({2, 4}, in_mat, loc);
+  (*bn2blob_ptr)["weight"] = CreateBlob({3, 4}, weight_mat, loc);
+  (*bn2blob_ptr)["bias"] = CreateBlob({1, 3}, bias_mat, loc);
+  (*bn2blob_ptr)["bias_multiplier"] =
+    CreateBlob({2, 1}, bias_multiplier_mat, loc);
+  (*bn2blob_ptr)["out"] = CreateBlob({2, 3}, out_mat, loc);
+  (*bn2blob_ptr)["out_diff"] = (*bn2blob_ptr)["out"];
+  (*bn2blob_ptr)["in_diff"] = CreateBlob({2, 4}, in_diff_mat, loc);
+  (*bn2blob_ptr)["weight_diff"] = CreateBlob({3, 4}, weight_diff_mat, loc);
+  (*bn2blob_ptr)["bias_diff"] = CreateBlob({1, 3}, bias_diff_mat, loc);
+  (*bn2blob_ptr)["expected_out"] = CreateBlob({2, 3}, expected_out_mat, loc);
+  (*bn2blob_ptr)["expected_in_diff"] =
+    CreateBlob({2, 4}, expected_in_diff_mat, loc);
+  (*bn2blob_ptr)["expected_weight_diff"] =
+    CreateBlob({3, 4}, expected_weight_diff_mat, loc);
+  (*bn2blob_ptr)["expected_bias_diff"] =
+    CreateBlob({1, 3}, expected_bias_diff_mat, loc);
+
   return [bn2blob_ptr](const std::string& bn) {
     return bn2blob_ptr->at(bn);
   };
