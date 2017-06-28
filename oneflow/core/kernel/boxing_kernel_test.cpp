@@ -3,36 +3,38 @@
 #include "oneflow/core/operator/operator.pb.h"
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/operator/boxing_op.h"
-#include "oneflow/core/actor/cuda_device_context.h"
+#include "oneflow/core/actor/cpu_device_context.h"
 
 namespace oneflow {
 
 namespace {
 
-enum class Location {
-  kHost,
-  kDevice
-};
-
-Blob* CreateBlob(const std::vector<int64_t>& dim_vec,
-    float value, Location dptr_location) {
-  void* dptr;
-  Shape* shape = new Shape(dim_vec);
-  size_t dptr_size = shape->elem_cnt()*sizeof(float);
-
-  // Initialize host memory
-  CHECK_EQ(cudaMallocHost(&dptr, dptr_size), cudaSuccess);
-  float* fptr = static_cast<float*>(dptr);
-  std::fill(fptr, fptr+shape->elem_cnt(), value);
-
-  // copy to device if needed
-  if (dptr_location == Location::kDevice) {
-    CHECK_EQ(cudaMalloc(&dptr, dptr_size), cudaSuccess);
-    CHECK_EQ(cudaMemcpy(dptr, fptr, dptr_size*sizeof(float),
-          cudaMemcpyHostToDevice), cudaSuccess);
+void FakeRun(Channel<std::function<void()> >* cpu_stream) {
+  std::function<void()> work;
+  cpu_stream->CloseSendEnd();
+  while (cpu_stream->Receive(&work) == 0) {
+    work();
   }
+}
 
+Blob* CreateBlob(const std::vector<int64_t>& dim_vec, float value) {
+  Shape* shape = new Shape(dim_vec);
+  size_t dptr_size = shape->elem_cnt() * sizeof(float);
+
+  float* dptr = static_cast<float*>(malloc(dptr_size));
+  std::fill(dptr, dptr+shape->elem_cnt(), value);
+  
   return new Blob(dptr, shape);
+}
+
+void BlobCmp(Blob* A, Blob* B) {
+  const float* dptr_A = static_cast<const float*>(A->dptr());
+  const float* dptr_B = static_cast<const float*>(B->dptr());
+  size_t dptr_size = A->shape().elem_cnt();
+
+  for (size_t i = 0; i < dptr_size; ++i) {
+    ASSERT_FLOAT_EQ(dptr_A[i], dptr_B[i]);
+  }
 }
 
 BoxingKernel<DeviceType::kCPU, float>* BuildBoxingKernel(
@@ -65,9 +67,10 @@ BoxingKernel<DeviceType::kCPU, float>* BuildBoxingKernel(
   return boxing_kernel;
 }
 
-std::function<Blob*(const std::string&)>  ConstructBn2BlobPtr(
+std::function<Blob*(const std::string&)> ConstructBnInOp2BlobPtr(
     const std::vector<std::vector<int64_t> >& in_dim_vecs,
-    const std::vector<std::vector<int64_t> >& out_dim_vecs, Location loc) {
+    const std::vector<std::vector<int64_t> >& out_dim_vecs,
+    const std::vector<int64_t> middle_dim={0, 0, 0, 0}) {
   int32_t in_num = in_dim_vecs.size();
   int32_t out_num = out_dim_vecs.size();
 
@@ -75,127 +78,66 @@ std::function<Blob*(const std::string&)>  ConstructBn2BlobPtr(
   auto bn2blob_ptr = new std::map<std::string, Blob*>;
   for (size_t i=0; i < in_num; ++i) {
     bn2blob_ptr->insert(make_pair("in_" + std::to_string(i),
-          CreateBlob(in_dim_vecs[i], (i+1)*1.0, loc)));
+          CreateBlob(in_dim_vecs[i], (i+1)*1.0)));
     bn2blob_ptr->insert(make_pair("in_" + std::to_string(i) + "_diff",
-          CreateBlob(in_dim_vecs[i], 0, loc)));
+          CreateBlob(in_dim_vecs[i], 0)));
   }
-  for (size_t i=0; i < out_num; ++i) { bn2blob_ptr->insert(make_pair("out_" + std::to_string(i), CreateBlob(out_dim_vecs[i], (i+1)*10.0, loc)));
+  for (size_t i=0; i < out_num; ++i) { bn2blob_ptr->insert(
+      make_pair("out_" + std::to_string(i), 
+        CreateBlob(out_dim_vecs[i], (i+1)*10.0)));
     bn2blob_ptr->insert(make_pair("out_" + std::to_string(i) + "_diff",
-          CreateBlob(out_dim_vecs[i], (i+1)*1.0, loc)));
+          CreateBlob(out_dim_vecs[i], (i+1)*1.0)));
   }
   bn2blob_ptr->insert(make_pair(std::string("middle"), 
-        CreateBlob(in_dim_vecs[0], 0, loc)));
+        CreateBlob(middle_dim, 0)));
 
   return [bn2blob_ptr](const std::string& bn) {
     return bn2blob_ptr->at(bn);
   };
 }
 
-std::function<Blob*(const std::string&)>  ConstructBn2BlobPtr(
+// Use the output blobs in bn2bptr as the input blobs 
+std::function<Blob*(const std::string&)> ConstructBnInOp2BlobPtr(
     std::function<Blob*(const std::string&)> bn2bptr,
-    std::vector<std::vector<int64_t> >& in_dim_vecs,
-    std::vector<std::vector<int64_t> >& out_dim_vecs,
-    Location loc) {
-  auto bn_map = new std::map<std::string, Blob*>;
-  // Link the output blobs in bn2bptr, to input blobs in bn_map
+    const std::vector<std::vector<int64_t> >& in_dim_vecs,
+    const std::vector<std::vector<int64_t> >& out_dim_vecs, 
+    const std::vector<int64_t> middle_dim = {0, 0, 0, 0}) {
+  auto bn2blob_ptr = new std::map<std::string, Blob*>;
+  // Link the output blobs in bn2bptr, to input blobs in bn2blob_ptr
   for (size_t i=0; i < out_dim_vecs.size(); ++i) {
     Blob* b = bn2bptr("out_" + std::to_string(i));
-    bn_map->insert(make_pair("in_"+std::to_string(i), b));
+    bn2blob_ptr->insert(make_pair("in_"+std::to_string(i), b));
 
     b = bn2bptr("out_"+std::to_string(i)+"_diff");
-    bn_map->insert(make_pair("in_"+std::to_string(i)+"_diff", b));
+    bn2blob_ptr->insert(make_pair("in_"+std::to_string(i)+"_diff", b));
   }
-  bn_map->insert(make_pair(std::string("middle"), 
-        CreateBlob(in_dim_vecs[0], 0, loc)));
+  bn2blob_ptr->insert(make_pair(std::string("middle"), 
+        CreateBlob(middle_dim, 0)));
 
-  // construct output blobs, the blob numbers should be the same with previous
-  // input blobs numbers
   for (size_t i=0; i < in_dim_vecs.size(); ++i) {
-    bn_map->insert(make_pair("out_" + std::to_string(i),
-          CreateBlob(in_dim_vecs[i], 0, loc)));
-    bn_map->insert(make_pair("out_" + std::to_string(i) + "_diff",
-          CreateBlob(in_dim_vecs[i], (i+1)*10.0, loc)));
-  }
+    bn2blob_ptr->insert(make_pair("out_" + std::to_string(i),
+          CreateBlob(in_dim_vecs[i], 0)));
+    bn2blob_ptr->insert(make_pair("out_" + std::to_string(i) + "_diff",
+          CreateBlob(in_dim_vecs[i], (i+1)*10.0))); }
 
-  return [bn_map](const std::string& bn) {
-    return bn_map->at(bn);
+  return [bn2blob_ptr](const std::string& bn) {
+    return bn2blob_ptr->at(bn);
   };
-}
-
-// Mark: will remove in the future
-void PrintBlob(Blob* blob) {
-  float* fptr = static_cast<float*>(blob->mut_dptr());
-  auto dim_vec = blob->shape().dim_vec();
-  int a = dim_vec[0], b = dim_vec[1], c=dim_vec[2], d=dim_vec[3];
-  printf("Blob size is: %d %d %d %d\n", a, b, c, d);
-  float* p = fptr;
-  for (size_t i=0; i < a; ++i) {
-    for (size_t j=0; j < b; ++j) {
-      for (size_t k=0; k < c; ++k) {
-        for (size_t z=0; z < d; ++z) {
-          printf("%f ", *p++);
-        }
-        printf("\n");
-      }
-      printf("\n");
-    }
-    printf("\n");
-  }
-  printf("\n");
-}
-
-bool IsBlobEq(Blob* A, Blob* B, Location loc) {
-  // check dimension
-  std::vector<int64_t> dim_vec_0 = A->shape().dim_vec();
-  std::vector<int64_t> dim_vec_1 = B->shape().dim_vec();
-  if (dim_vec_0.size() != dim_vec_1.size())
-    return false;
-  for (size_t i=0; i < dim_vec_0.size(); ++i) {
-    if (dim_vec_0.at(i) != dim_vec_1.at(i))
-      return false;
-  }
-
-  // Move device memory to host if needed 
-  size_t data_sz = A->shape().elem_cnt() * sizeof(float);
-  const void* dptr_0, *dptr_1;
-  if (loc == Location::kDevice) {
-    CHECK_EQ(cudaMallocHost(&dptr_0, data_sz), cudaSuccess);
-    CHECK_EQ(cudaMallocHost(&dptr_1, data_sz), cudaSuccess);
-    CHECK_EQ(cudaMemcpy(&dptr_0, A->dptr(), data_sz,
-          cudaMemcpyDeviceToHost), cudaSuccess);
-    CHECK_EQ(cudaMemcpy(&dptr_1, B->dptr(), data_sz,
-          cudaMemcpyDeviceToHost), cudaSuccess);
-  } else {
-    dptr_0 = A->dptr();
-    dptr_1 = A->dptr();
-  }
-
-  // Check blob memory contents
-  const char* p = static_cast<const char*>(dptr_0);
-  const char* q = static_cast<const char*>(dptr_1);
-  for (size_t i=0; i < data_sz; ++i) {
-    if (p[i] != q[i]) 
-      return false;
-  }
-  
-  return true;
 }
 
 }  // namespace
 
-
-TEST(boxingKernel, boxing_concat_clone_box_cpu) {
-  // Create CudaDeviceContext and KernelContext
-  cudaStream_t cuda_stream;
-  CHECK_EQ(cudaStreamCreate(&cuda_stream), cudaSuccess);
+TEST(boxingKernel, boxing_concat_clone_box) {
+  // Create cpu_device and kernel contexts
+  auto cpu_stream = new Channel<std::function<void()> >;
   KernelCtx ctx;
-  ctx.device_ctx = new CudaDeviceCtx(&cuda_stream, nullptr, nullptr);
+  ctx.device_ctx = new CpuDeviceCtx(cpu_stream);
 
   // Build boxing kernel
   auto boxing_kernel_0 = BuildBoxingKernel(4, 1, 0,
       BoxingOpConf::kConcatBox, BoxingOpConf::kDataSplitBox);
   auto boxing_kernel_1 = BuildBoxingKernel(4, 5, 1,
-      BoxingOpConf::kConcatBox, BoxingOpConf::kDataSplitBox);
+      BoxingOpConf::kConcatBox, BoxingOpConf::kCloneBox);
 
   // Build mapping bns->blobs with first kernel
   std::vector<std::vector<int64_t> > in_dim_vecs = { {3, 4, 5, 5},
@@ -203,41 +145,40 @@ TEST(boxingKernel, boxing_concat_clone_box_cpu) {
   std::vector<std::vector<int64_t> > out_dim_vecs_0 = { { 3, 14, 5, 5}};
   std::vector<std::vector<int64_t> > out_dim_vecs_1 = { {3, 14, 5, 5},
     {3, 14, 5, 5}, {3, 14, 5, 5}, {3, 14, 5, 5}, {3, 14, 5, 5} };
-  auto fp_0 = ConstructBn2BlobPtr(in_dim_vecs,
-      out_dim_vecs_0, Location::kHost); 
+  
+  auto BnInOp2BlobPtr_0 = ConstructBnInOp2BlobPtr(in_dim_vecs,
+      out_dim_vecs_0, out_dim_vecs_0[0]); 
 
   // Build mapping bns->blobs with second kernel
-  auto fp_1 = ConstructBn2BlobPtr(in_dim_vecs,
-      out_dim_vecs_1, Location::kHost); 
+  auto BnInOp2BlobPtr_1 = ConstructBnInOp2BlobPtr(in_dim_vecs,
+      out_dim_vecs_1, out_dim_vecs_0[0]); 
   
   // Run forward && backward test
-  boxing_kernel_0->Forward(ctx, fp_0);
-  boxing_kernel_1->Forward(ctx, fp_1);
-  boxing_kernel_1->Backward(ctx, fp_1);
-  boxing_kernel_0->Backward(ctx, fp_0);
+  boxing_kernel_0->Forward(ctx, BnInOp2BlobPtr_0);
+  boxing_kernel_1->Forward(ctx, BnInOp2BlobPtr_1);
+  boxing_kernel_1->Backward(ctx, BnInOp2BlobPtr_1);
+  boxing_kernel_0->Backward(ctx, BnInOp2BlobPtr_0);
+
+  FakeRun(cpu_stream);
 
   // Check the output blobs 
-  for (size_t i=0; i < in_dim_vecs.size(); ++i) {
-    const std::string bn = "in_" + std::to_string(i) + "_diff";
-  // Mark: The diff should only depend on the first out_0_diff
-    ASSERT_TRUE(IsBlobEq(fp_0(bn), fp_1(bn), Location::kHost));
-  }
+  Blob* expected_in_diff = CreateBlob({3, 14, 5, 5}, 15.0);
+  BlobCmp(BnInOp2BlobPtr_1("middle"), expected_in_diff);
+
   for (size_t i=0; i < out_dim_vecs_1.size(); ++i) {
     const std::string bn = "out_" + std::to_string(i);
-    ASSERT_TRUE(IsBlobEq(fp_1(bn), fp_0("out_0"), Location::kHost));
+    BlobCmp(BnInOp2BlobPtr_1(bn), BnInOp2BlobPtr_0("out_0"));
   }
 }
 
-// Mark: code too long and dirty, need refine
 // Trick: To test concat and split box, kernel_0 and kernel_1 are connected.
 // The data in blobs of inputs of kernel_0 and outputs of kernel_1 
 // should be the same.
-TEST(boxingKernel, boxing_concat_split_box_cpu) {
-  // Create CudaDeviceContext and KernelContext
-  cudaStream_t cuda_stream;
-  CHECK_EQ(cudaStreamCreate(&cuda_stream), cudaSuccess);
+TEST(boxingKernel, boxing_concat_split_box) {
+  // Create cpu_device and kernel contexts
+  auto cpu_stream = new Channel<std::function<void()>>;
   KernelCtx ctx;
-  ctx.device_ctx = new CudaDeviceCtx(&cuda_stream, nullptr, nullptr);
+  ctx.device_ctx = new CpuDeviceCtx(cpu_stream);
 
   // Build boxing kernel
   auto boxing_kernel_0 = BuildBoxingKernel(4, 3, 0,
@@ -250,34 +191,35 @@ TEST(boxingKernel, boxing_concat_split_box_cpu) {
     {3, 2, 5, 5}, {3, 1, 5, 5}, { 3, 7, 5, 5}};
   std::vector<std::vector<int64_t> > out_dim_vecs = { {3, 5, 5, 5},
     {3, 6, 5, 5}, {3, 3, 5, 5}};
-  auto fp = ConstructBn2BlobPtr(in_dim_vecs,
-      out_dim_vecs, Location::kHost); 
+  auto BnInOp2BlobPtr = ConstructBnInOp2BlobPtr(in_dim_vecs,
+      out_dim_vecs); 
 
   // Build reverse blobs
-  auto r_fp = ConstructBn2BlobPtr(fp, in_dim_vecs,
-      out_dim_vecs, Location::kHost); 
+  auto r_BnInOp2BlobPtr = ConstructBnInOp2BlobPtr(BnInOp2BlobPtr, in_dim_vecs,
+      out_dim_vecs); 
   
   // Run forward && backward test
-  boxing_kernel_0->Forward(ctx, fp);
-  boxing_kernel_1->Forward(ctx, r_fp);
-  boxing_kernel_1->Backward(ctx, r_fp);
-  boxing_kernel_0->Backward(ctx, fp);
+  boxing_kernel_0->Forward(ctx, BnInOp2BlobPtr);
+  boxing_kernel_1->Forward(ctx, r_BnInOp2BlobPtr);
+  boxing_kernel_1->Backward(ctx, r_BnInOp2BlobPtr);
+  boxing_kernel_0->Backward(ctx, BnInOp2BlobPtr);
+
+  FakeRun(cpu_stream);
 
   // Check input && output blobs in this graph should be the same
   for (size_t i=0; i < in_dim_vecs.size(); ++i) {
-    ASSERT_TRUE(IsBlobEq(fp("in_"+std::to_string(i)),
-          r_fp("out_"+std::to_string(i)), Location::kHost));
-    ASSERT_TRUE(IsBlobEq(fp("in_"+std::to_string(i)+"_diff"),
-          r_fp("out_"+std::to_string(i)+"_diff"), Location::kHost));
+    BlobCmp(BnInOp2BlobPtr("in_" + std::to_string(i)), 
+        r_BnInOp2BlobPtr("out_" + std::to_string(i)));
+    BlobCmp(BnInOp2BlobPtr("in_" + std::to_string(i) + "_diff"),
+        r_BnInOp2BlobPtr("out_" + std::to_string(i) + "_diff"));
   } 
 }
 
-TEST(boxingKernel, boxing_add_clone_box_cpu) {
-  // Create CudaDeviceContext and KernelContext
-  cudaStream_t cuda_stream;
-  CHECK_EQ(cudaStreamCreate(&cuda_stream), cudaSuccess);
+TEST(boxingKernel, boxing_add_clone_box) {
+  // Create cpu_device and kernel contexts
+  auto cpu_stream = new Channel<std::function<void()>>;
   KernelCtx ctx;
-  ctx.device_ctx = new CudaDeviceCtx(&cuda_stream, nullptr, nullptr);
+  ctx.device_ctx = new CpuDeviceCtx(cpu_stream);
 
   // Build boxing kernel
   auto boxing_kernel = BuildBoxingKernel(4, 3, 0, BoxingOpConf::kAddBox,
@@ -288,54 +230,54 @@ TEST(boxingKernel, boxing_add_clone_box_cpu) {
     {3, 4, 5, 5}, {3, 4, 5, 5}, { 3, 4, 5, 5} };
   std::vector<std::vector<int64_t> > out_dim_vecs = { {3, 4, 5, 5},
     {3, 4, 5, 5}, {3, 4, 5, 5} };
-  auto fp = ConstructBn2BlobPtr(in_dim_vecs,
-      out_dim_vecs, Location::kHost); 
+  auto BnInOp2BlobPtr = ConstructBnInOp2BlobPtr(in_dim_vecs,
+      out_dim_vecs, {3, 4, 5, 5}); 
 
   // Run forward && backward
-  boxing_kernel->Forward(ctx, fp);
+  boxing_kernel->Forward(ctx, BnInOp2BlobPtr);
+
+  FakeRun(cpu_stream);
 
   // check if add-results is the same as expected.
-  Blob* expected_add_b = CreateBlob(out_dim_vecs[0], 10.0, Location::kHost);
+  Blob* expected_add_b = CreateBlob(out_dim_vecs[0], 10.0);
   
   for (size_t i=0; i < out_dim_vecs.size(); ++i) {
-    ASSERT_TRUE(IsBlobEq(fp("out_"+std::to_string(i)), expected_add_b,
-          Location::kHost));
+    BlobCmp(BnInOp2BlobPtr("out_"+std::to_string(i)), expected_add_b);
   }
 }
 
-TEST(boxingKernel, boxing_add_split_box_cpu) {
-  // Create CudaDeviceContext and KernelContext
-  cudaStream_t cuda_stream;
-  CHECK_EQ(cudaStreamCreate(&cuda_stream), cudaSuccess);
+TEST(boxingKernel, boxing_add_split_box) {
+  // Create cpu_device and kernel contexts
+  auto cpu_stream = new Channel<std::function<void()>>;
   KernelCtx ctx;
-  ctx.device_ctx = new CudaDeviceCtx(&cuda_stream, nullptr, nullptr);
+  ctx.device_ctx = new CpuDeviceCtx(cpu_stream);
 
   // Build boxing kernel
   auto boxing_kernel = BuildBoxingKernel(4, 2, 0, BoxingOpConf::kAddBox,
       BoxingOpConf::kDataSplitBox);
 
   // Build mapping bns->blobs
-  std::vector<std::vector<int64_t> > in_dim_vecs = { {3, 4, 5, 5},
-    {3, 4, 5, 5}, {3, 4, 5, 5}, { 3, 4, 5, 5} };
-  std::vector<std::vector<int64_t> > out_dim_vecs = { {3, 2, 5, 5},
-    {3, 2, 5, 5} };
-  auto fp = ConstructBn2BlobPtr(in_dim_vecs,
-      out_dim_vecs, Location::kHost); 
+  std::vector<std::vector<int64_t> > in_dim_vecs = { {3, 7, 5, 5},
+    {3, 7, 5, 5}, {3, 7, 5, 5}, { 3, 7, 5, 5} };
+  std::vector<std::vector<int64_t> > out_dim_vecs = { {1, 7, 5, 5},
+    {2, 7, 5, 5} };
+  auto BnInOp2BlobPtr = ConstructBnInOp2BlobPtr(in_dim_vecs, 
+      out_dim_vecs, {3, 7, 5, 5}); 
 
   // Run forward
-  boxing_kernel->Forward(ctx, fp);
+  boxing_kernel->Forward(ctx, BnInOp2BlobPtr);
+
+  FakeRun(cpu_stream);
 
   // check if add-results is the same as expected.
-  Blob* expected_add_b = CreateBlob(out_dim_vecs[0], 10.0, Location::kHost);
-  
+  Blob* expected_add_blobs[out_dim_vecs.size()];
   for (size_t i=0; i < out_dim_vecs.size(); ++i) {
-    ASSERT_TRUE(IsBlobEq(fp("out_"+std::to_string(i)), expected_add_b,
-          Location::kHost));
+    expected_add_blobs[i] = CreateBlob(out_dim_vecs[i], 10.0);
+  }
+   
+  for (size_t i=0; i < out_dim_vecs.size(); ++i) {
+    BlobCmp(BnInOp2BlobPtr("out_"+std::to_string(i)), expected_add_blobs[i]);
   }
 }
-}  // namespace oneflow
 
-int main(int argc, char* argv[]) {
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
+}  // namespace oneflow

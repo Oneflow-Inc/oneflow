@@ -33,14 +33,20 @@ class BoxingKernel final : public Kernel {
     uint64_t src_offset, dst_offset; /* corresponding offsets*/
     uint64_t copy_sz; 
   };
+
+  // Infer copy rules from BnInOp2BlobPtr
   void InferCopyRules(std::function<Blob*(const std::string&)>) const;
+
   void ConstructCopyRulesFromSlice(
       const std::map<const std::string*, int64_t>& src_bn2slice, 
       const std::map<const std::string*, int64_t>& dst_bn2slice,
       int64_t seg_cnt, int64_t slice_sz, int concat_axis, 
       std::vector<struct copy_rule>& rules) const; 
 
+  // Construct rules of copying first output blob to the remaining blobs
   void ConstructFwCloneRules(std::function<Blob*(const std::string&)>) const;
+
+  // Infer copy rules with the assigned src && dst blob names
   void InferCopyRulesFromBns(
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr,
     const std::vector<std::string>& src_bns,
