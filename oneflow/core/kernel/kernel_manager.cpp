@@ -81,6 +81,7 @@ void KernelMgr::InitFromPlan(const Plan& plan) {
       continue;
     }
     DeviceType device_type = plan.op_name2device_type().at(op_name);
+    LOG(INFO) << "construct kernel: " << op_name;
     std::unique_ptr<Kernel> kernel_ptr(CreateKernel(
         op_proto.op_conf().op_type_case(),
         device_type,
