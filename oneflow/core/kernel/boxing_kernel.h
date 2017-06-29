@@ -71,8 +71,8 @@ class BoxingKernel final : public Kernel {
   using WardFunc = void (BoxingKernel<device_type, FloatingPointType>::*) 
     (const KernelCtx&, std::function<Blob*(const std::string&)>) const;
 
-  // Due to current design, there is only one boxing thread, thus no mutex 
-  // is required here.
+  // NOTE: Due to current design, there is only one boxing thread, thus no 
+  // mutex is required here.
   mutable std::vector<CopyRule> fw_copy_rules_;
   mutable std::vector<CopyRule> bw_copy_rules_;
   WardFunc fw_func_;
