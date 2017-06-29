@@ -19,8 +19,11 @@ private:
 
   void TryWardKernelAndSendMsg();
 
-  ExecKernel clear_ek_;
-
+  std::queue<std::shared_ptr<RegstWarpper>> waiting_in_regst_;
+  const Kernel* clear_kernel_;
+  CudaStreamHandle cuda_handle_;
+  HashMap<Regst*, int32_t> model_diff_acc_cnt_;
+  int32_t num_of_piece_in_batch_;
 };
 
 }  // namespace oneflow

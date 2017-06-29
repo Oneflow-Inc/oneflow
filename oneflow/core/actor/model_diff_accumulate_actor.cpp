@@ -1,26 +1,88 @@
-#include "oneflow/core/actor/model_diff_acc_actor.h"
+#include "oneflow/core/actor/model_diff_accumulate_actor.h"
 
 namespace oneflow {
 
 void MdDiffAccActor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   Actor::Init(task_proto, thread_ctx);
-  if (thread_ctx.cuda_stream) {
-    clear_ek_.kernel = KernelMgr::Singleton().GetKernelFromOpName("gpu_clear");
-    clear_ek_.bn_in_op2regst_desc_id = PbMap2HashMap();
+  if (thread_ctx.cpu_stream) {
+    clear_kernel_ = KernelMgr::Singleton().GetKernelFromOpName("cpu_clear");
+    mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
   } else {
-    clear_ek_.kernel = KernelMgr::Singleton().GetKernelFromOpName("cpu_clear");
-    clear_ek_.bn_in_op2regst_desc_id = PbMap2HashMap();
+    clear_kernel_ = KernelMgr::Singleton().GetKernelFromOpName("gpu_clear");
+    mut_device_ctx().reset(new CudaDeviceCtx(cuda_handle_.cuda_stream(),
+                                             cuda_handle_.cublas_handle(),
+                                             cuda_handle_.cudnn_handle()));
   }
   OF_SET_MSG_HANDLE(&MdDiffAccActor::HandleMdDiffAcc);
+  num_of_piece_in_batch_ = JobDesc::Singleton().num_of_piece_in_batch();
+  ForEachCurWriteableRegst([this](Regst* regst) {
+      model_diff_acc_cnt_[regst] = 0;
+  });
 }
 
-int MdDiffAccActor::HandleMdDiffAcc(const ActorMsg&) {
+int MdDiffAccActor::HandleMdDiffAcc(const ActorMsg& msg) {
+  if (msg.msg_type() == ActorMsgType::kCmdMsg) {
+    CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
+    OF_SET_MSG_HANDLE(&MdDiffAccActor::HandleMdDiffAccWhenNoReadableRegstMsg);
+  } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
+    if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()) != 0) {
+      waiting_in_regst_.push(msg.regst_warpper());
+    }
+  }
+  TryWardKernelAndSendMsg();
+  return 0;
 }
 
-int MdDiffAccActor::HandleMdDiffAccWhenNoReadableRegstMsg(const ActorMsg&) {
+int MdDiffAccActor::HandleMdDiffAccWhenNoReadableRegstMsg(const ActorMsg& msg) {
+  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
+  TryWardKernelAndSendMsg();
+  if (waiting_in_regst_.empty()) {
+    AsyncSendEORDMsgForAllProducedRegstDesc();
+    if (total_reading_cnt() == 0) {
+      OF_SET_MSG_HANDLE(nullptr);
+      return 1;
+    } else {
+      OF_SET_MSG_HANDLE(&MdDiffAccActor::HandleWaitUntilReadingCntEqualZero);
+      return 0;
+    }
+  }
+  return 0;
 }
 
 void MdDiffAccActor::TryWardKernelAndSendMsg() {
+  if (!waiting_in_regst_.empty() && IsWriteReady()) {
+    std::shared_ptr<RegstWarpper> regst_wp = waiting_in_regst_.front();
+    CHECK_EQ(regst_wp->piece_id(), expected_piece_id());
+    KernelCtx ctx = GenDefaultKernelCtx();
+    ForEachCurWriteableRegst([&](Regst* regst) {
+      if (model_diff_acc_cnt_[regst] == num_of_piece_in_batch_) {
+        clear_kernel_->Forward(ctx,
+            [&](const std::string& bn_in_op) {
+          const std::string& lbn = clear_kernel_->Lbn4BnInOp(bn_in_op); 
+          return regst->GetBlobPtrFromLbn(lbn);
+        });
+        model_diff_acc_cnt_[regst] = 0;
+      }
+    });
+    AsyncWardKernel(ctx,
+        [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+      Regst* regst = GetCurWriteableRegst(regst_desc_id);
+      if (regst == nullptr) {
+        CHECK_EQ(regst_desc_id, waiting_in_regst_.front()->regst_desc_id());
+        return waiting_in_regst_.front();
+      } else {
+        return std::make_shared<LocalRegstWarpper> (regst);
+      }
+    });
+    ForEachCurWriteableRegst([this, &regst_wp](Regst* regst) {
+      regst->set_piece_id(regst_wp->piece_id());
+      regst->set_model_version_id(regst_wp->model_version_id());
+      model_diff_acc_cnt_[regst] ++;
+    });
+    AsyncSendReadableRegstMsg();
+    AsyncSendRegstMsgToProducer(regst_wp);
+    waiting_in_regst_.pop();
+  }
 }
 
 }  // namespace oneflow
