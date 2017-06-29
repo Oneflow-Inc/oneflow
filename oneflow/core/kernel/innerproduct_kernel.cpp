@@ -109,6 +109,7 @@ void InnerProductKernel<device_type, floating_point_type>::
   InitModelAndModelTmpBlobsWithoutSnapshot(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  TODO();
 }
 
 INSTANTIATE_KERNEL_CLASS(InnerProductKernel);
