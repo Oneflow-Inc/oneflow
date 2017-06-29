@@ -3,8 +3,8 @@
 
 namespace oneflow {
 
-template<typename floating_point_type>
-class DataLoaderKernel<DeviceType::kCPU, floating_point_type> final : public Kernel {
+template<typename FloatingPointType>
+class DataLoaderKernel<DeviceType::kCPU, FloatingPointType> final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DataLoaderKernel);
   DataLoaderKernel() = default;
@@ -19,8 +19,8 @@ class DataLoaderKernel<DeviceType::kCPU, floating_point_type> final : public Ker
 
 };
 
-template<typename floating_point_type>
-void DataLoaderKernel<DeviceType::kCPU, floating_point_type>::Forward(
+template<typename FloatingPointType>
+void DataLoaderKernel<DeviceType::kCPU, FloatingPointType>::Forward(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
   PersistentCircularLineReader* reader = RuntimeCtx::Singleton().GetDataReader();

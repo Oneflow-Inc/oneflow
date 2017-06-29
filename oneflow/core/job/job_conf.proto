@@ -1,7 +1,7 @@
 syntax = "proto3";
 package oneflow;
 
-enum FloatingPointType {
+enum FloatingPointTypeProto {
   kFloat = 0;
   kDouble = 1;
 }
@@ -15,7 +15,7 @@ message JobConf {
   int32 piece_size = 7;
   int32 num_of_pieces_in_batch = 8;
   bool is_train = 9;
-  FloatingPointType floating_point_type = 10;
+  FloatingPointTypeProto floating_point_type = 10;
   int32 num_of_batches_in_snapshot = 11;
   int32 staleness = 12;
   int64 total_batch_num = 13;

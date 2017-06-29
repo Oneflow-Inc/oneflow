@@ -5,11 +5,11 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename floating_point_type>
+template<DeviceType device_type, typename FloatingPointType>
 class ModelSaveKernel;
 
-template<typename floating_point_type>
-class ModelSaveKernel<DeviceType::kCPU, floating_point_type> final : public Kernel {
+template<typename FloatingPointType>
+class ModelSaveKernel<DeviceType::kCPU, FloatingPointType> final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ModelSaveKernel);
   ModelSaveKernel() = default;

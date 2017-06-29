@@ -2,8 +2,8 @@
 
 namespace oneflow {
 
-template<typename floating_point_type>
-void ModelSaveKernel<DeviceType::kCPU, floating_point_type>::Forward(
+template<typename FloatingPointType>
+void ModelSaveKernel<DeviceType::kCPU, FloatingPointType>::Forward(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
   auto save_ctx = static_cast<std::tuple<Snapshot*, int64_t>*>(kernel_ctx.other);
@@ -16,7 +16,7 @@ void ModelSaveKernel<DeviceType::kCPU, floating_point_type>::Forward(
       std::unique_ptr<PersistentOutStream> out_stream = 
           snapshot->GetOutStream(lbn, parallel_id);
       out_stream->Write(static_cast<const char*>(blob_ptr->dptr()),
-                        blob_ptr->shape().elem_cnt() * sizeof(floating_point_type));
+                        blob_ptr->shape().elem_cnt() * sizeof(FloatingPointType));
     });
   }
 }
