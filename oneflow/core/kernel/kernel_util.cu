@@ -8,8 +8,8 @@ class KernelUtil<DeviceType::kGPU, floating_point_type> final {
   KernelUtil() = delete;
 
   static void Memcpy(const KernelCtx& ctx, 
-     void* dst, const void* src, size_t sz) {
-    CHECK_EQ(cudaMemcpyAsync(dst, src, sz, cudaMemcpyDeviceToDevice, 
+     void* dst, const void* src, size_t sz, cudaMemcpyKind kind) {
+    CHECK_EQ(cudaMemcpyAsync(dst, src, sz, kind, 
         ctx.device_ctx->cuda_stream()), cudaSuccess);
   }
 
