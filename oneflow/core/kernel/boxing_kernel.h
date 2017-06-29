@@ -8,7 +8,7 @@
 
 namespace oneflow {
   
-template<DeviceType device_type, typename floating_point_type>
+template<DeviceType device_type, typename FloatingPointType>
 class BoxingKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BoxingKernel);
@@ -54,7 +54,7 @@ class BoxingKernel final : public Kernel {
       std::vector<copy_rule>* copy_rules) const;
 
   // Do direct memory copy from saved rules
-  void CopyDataFromRules( const KernelCtx& ctx, 
+  void CopyDataFromRules(const KernelCtx& ctx, 
       std::function<Blob*(const std::string&)> BnInOp2BlobPtr, 
       const std::vector<copy_rule>& copy_rules) const; 
 
@@ -73,11 +73,13 @@ class BoxingKernel final : public Kernel {
   void ConcatBoxBackward(const KernelCtx& ctx,
                          std::function<Blob*(const std::string&)>) const;
 
-  using ExecFunc = void (BoxingKernel<device_type, floating_point_type>::*) 
+  using ExecFunc = void (BoxingKernel<device_type, FloatingPointType>::*) 
     (const KernelCtx&, std::function<Blob*(const std::string&)>) const;
 
-  mutable std::vector<copy_rule> fw_copy_rules;
-  mutable std::vector<copy_rule> bw_copy_rules;
+  // Due to current design, there is only one boxing thread, thus no mutex 
+  // is required here.
+  mutable std::vector<copy_rule> fw_copy_rules_;
+  mutable std::vector<copy_rule> bw_copy_rules_;
   ExecFunc fw_func_;
   ExecFunc bw_func_;
 };
