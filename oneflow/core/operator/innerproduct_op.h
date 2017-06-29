@@ -20,7 +20,7 @@ class InnerProductOp final : public UserOperator {
       int64_t parallel_num) const override;
 
  private:
-
+  bool has_bias_term_;
 };
 
 } // namespace oneflow
