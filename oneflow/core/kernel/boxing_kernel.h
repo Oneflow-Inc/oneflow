@@ -21,7 +21,7 @@ class BoxingKernel final : public Kernel {
                std::function<Blob*(const std::string&)>) const override;
   void Backward(const KernelCtx&,
                 std::function<Blob*(const std::string&)>) const override;
- 
+ private: 
   // For concat ==> (split/clone) box:
   // a copy_rule means a step of memory action during runtime. Since the 
   // blob shapes are fixed after initilization, the offsets of each blobs 
@@ -40,43 +40,38 @@ class BoxingKernel final : public Kernel {
   void ConstructCopyRulesFromSlice(
       const std::map<const std::string*, int64_t>& src_bn2slice, 
       const std::map<const std::string*, int64_t>& dst_bn2slice,
-      int64_t seg_cnt, int64_t slice_sz, int concat_axis, 
-      std::vector<struct copy_rule>& rules) const; 
+      int64_t seg_cnt, int64_t slice_sz, int32_t concat_axis, 
+      std::vector<struct copy_rule>* rules) const; 
 
   // Construct rules of copying first output blob to the remaining blobs
   void ConstructFwCloneRules(std::function<Blob*(const std::string&)>) const;
 
   // Infer copy rules with the assigned src && dst blob names
   void InferCopyRulesFromBns(
-    std::function<Blob*(const std::string&)> BnInOp2BlobPtr,
-    const std::vector<std::string>& src_bns,
-    const std::vector<std::string>& dst_bns,
-    std::vector<copy_rule>& copy_rules
-    ) const;
+      std::function<Blob*(const std::string&)> BnInOp2BlobPtr,
+      const std::vector<std::string>& src_bns,
+      const std::vector<std::string>& dst_bns, 
+      std::vector<copy_rule>* copy_rules) const;
 
   // Do direct memory copy from saved rules
   void CopyDataFromRules( const KernelCtx& ctx, 
-    std::function<Blob*(const std::string&)> BnInOp2BlobPtr, 
-    std::vector<copy_rule>& copy_rules) const; 
+      std::function<Blob*(const std::string&)> BnInOp2BlobPtr, 
+      const std::vector<copy_rule>& copy_rules) const; 
 
   // Forward function for Add box
-  void AddBoxForward(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)>) const;
+  void AddBoxForward(const KernelCtx& ctx,
+                     std::function<Blob*(const std::string&)>) const;
   // Backward function for Add box
-  void AddBoxBackward(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)>) const;
+  void AddBoxBackward(const KernelCtx& ctx,
+                      std::function<Blob*(const std::string&)>) const;
 
   // Forward function for Concat box 
-  void ConcatBoxForward(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)>) const;
+  void ConcatBoxForward(const KernelCtx& ctx,
+                        std::function<Blob*(const std::string&)>) const;
 
   // Backward function for Concat-split box && concat-clone box
-  void ConcatBoxBackward(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)>) const;
+  void ConcatBoxBackward(const KernelCtx& ctx,
+                         std::function<Blob*(const std::string&)>) const;
 
   using ExecFunc = void (BoxingKernel<device_type, floating_point_type>::*) 
     (const KernelCtx&, std::function<Blob*(const std::string&)>) const;
