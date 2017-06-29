@@ -246,38 +246,4 @@ TEST(boxingKernel, boxing_add_clone_box) {
   }
 }
 
-TEST(boxingKernel, boxing_add_split_box) {
-  // Create cpu_device and kernel contexts
-  auto cpu_stream = new Channel<std::function<void()>>;
-  KernelCtx ctx;
-  ctx.device_ctx = new CpuDeviceCtx(cpu_stream);
-
-  // Build boxing kernel
-  auto boxing_kernel = BuildBoxingKernel(4, 2, 0, BoxingOpConf::kAddBox,
-      BoxingOpConf::kDataSplitBox);
-
-  // Build mapping bns->blobs
-  std::vector<std::vector<int64_t> > in_dim_vecs = { {3, 7, 5, 5},
-    {3, 7, 5, 5}, {3, 7, 5, 5}, { 3, 7, 5, 5} };
-  std::vector<std::vector<int64_t> > out_dim_vecs = { {1, 7, 5, 5},
-    {2, 7, 5, 5} };
-  auto BnInOp2BlobPtr = ConstructBnInOp2BlobPtr(in_dim_vecs, 
-      out_dim_vecs, {3, 7, 5, 5}); 
-
-  // Run forward
-  boxing_kernel->Forward(ctx, BnInOp2BlobPtr);
-
-  FakeRun(cpu_stream);
-
-  // check if add-results is the same as expected.
-  Blob* expected_add_blobs[out_dim_vecs.size()];
-  for (size_t i=0; i < out_dim_vecs.size(); ++i) {
-    expected_add_blobs[i] = CreateBlob(out_dim_vecs[i], 10.0);
-  }
-   
-  for (size_t i=0; i < out_dim_vecs.size(); ++i) {
-    BlobCmp(BnInOp2BlobPtr("out_"+std::to_string(i)), expected_add_blobs[i]);
-  }
-}
-
 }  // namespace oneflow

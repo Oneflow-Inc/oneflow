@@ -18,18 +18,13 @@ void BoxingKernel<device_type, FloatingPointType>::InitFromOpProto(
   }
 }
 
-// Infer all the copy rules during execution time.
 template<DeviceType device_type, typename FloatingPointType>
 void BoxingKernel<device_type, FloatingPointType>::InferCopyRules(
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
   auto boxing_conf = op()->op_conf().boxing_conf();
   auto in_box_case = boxing_conf.in_box_case();
   // Infer Forward Copy Rules
-  if (in_box_case == BoxingOpConf::kAddBox) {
-    // add-box copy rules: copy from middle to output
-    InferCopyRulesFromBns(BnInOp2BlobPtr, {"middle"}, 
-                          op()->output_bns(), &fw_copy_rules_);
-  } else if (in_box_case == BoxingOpConf::kConcatBox) {
+  if (in_box_case == BoxingOpConf::kConcatBox) {
     // concat-box copy rules: copy directly from input to output
     InferCopyRulesFromBns(BnInOp2BlobPtr, op()->input_bns(),
                           op()->output_bns(), &fw_copy_rules_);
@@ -48,7 +43,7 @@ void BoxingKernel<device_type, FloatingPointType>::InferCopyRules(
     InferCopyRulesFromBns(BnInOp2BlobPtr, op()->input_diff_bns(),
                           op()->output_diff_bns(), &bw_copy_rules_);
     // Reverse back input && output diff blob for each backward rule
-    for (struct copy_rule& rule : bw_copy_rules_) {
+    for (copy_rule& rule : bw_copy_rules_) {
       std::swap(rule.src_bn, rule.dst_bn);
       std::swap(rule.src_offset, rule.dst_offset);
     }
@@ -96,39 +91,34 @@ void BoxingKernel<device_type,
     const std::map<const std::string*, int64_t>& dst_bn2slice,
     int64_t seg_cnt, int64_t slice_sz, int32_t concat_axis, 
     std::vector<struct copy_rule>* rules) const {
-  auto src_iter = src_bn2slice.begin();
-  auto dst_iter = dst_bn2slice.begin();
   int64_t src_offset = 0; 
-  int64_t src_cap = src_iter->second;
-  int64_t dst_offset = 0; 
-  int64_t dst_cap = dst_iter->second;
-
   const int64_t step_sz = sizeof(FloatingPointType);
-  while (src_iter != src_bn2slice.end() 
-      && dst_iter != dst_bn2slice.end()) {
-    dst_offset = 0;
-    dst_cap = dst_iter->second;
-    while (dst_offset < dst_cap) {
-      int64_t p = std::min(src_cap-src_offset, dst_cap-dst_offset);
+  for (auto src_iter = src_bn2slice.begin(), dst_iter = dst_bn2slice.begin();
+      src_iter != src_bn2slice.end() && dst_iter != dst_bn2slice.end();) {
+    int64_t dst_offset = 0;
+    while (dst_offset < dst_iter->second) {
+      int64_t p = std::min(src_iter->second - src_offset, 
+                           dst_iter->second - dst_offset);
       for (size_t i = 0; i < seg_cnt; ++i) {
-        struct copy_rule cr;
+        copy_rule cr;
         cr.src_bn = *src_iter->first;
         cr.dst_bn = *dst_iter->first;
-        cr.src_offset = (src_offset + i * src_cap) * slice_sz * step_sz;
-        cr.dst_offset = (dst_offset + i * dst_cap) * slice_sz * step_sz;
+        cr.src_offset = (src_offset + i * src_iter->second) 
+          * slice_sz * step_sz;
+        cr.dst_offset = (dst_offset + i * dst_iter->second) 
+          * slice_sz * step_sz;
         cr.copy_sz = p * slice_sz * step_sz;
         rules->push_back(std::move(cr));
       }
       src_offset += p;
       dst_offset += p;
-      if (src_offset == src_cap) {
+      if (src_offset == src_iter->second) {
         if (++src_iter == src_bn2slice.end()) { 
           break;
         }
         src_offset = 0;
-        src_cap = src_iter->second;
       }
-    }  // while current dst_cap is not full
+    }  // while current dst box is not full 
     ++dst_iter;
   }
 }
@@ -142,7 +132,7 @@ void BoxingKernel<device_type, FloatingPointType>::ConstructFwCloneRules(
   const std::vector<std::string>& obns = op()->output_bns();
   int64_t copy_sz = BnInOp2BlobPtr(obns.front())->shape().elem_cnt();
   for (size_t i = 1; i < obns.size(); ++i) {
-    struct copy_rule cr;
+    copy_rule cr;
     cr.src_bn = obns.front();
     cr.dst_bn = obns.at(i);
     cr.src_offset = 0;
@@ -167,9 +157,6 @@ void BoxingKernel<device_type, FloatingPointType>::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
   CHECK(!bw_copy_rules_.empty());
-  if (bw_copy_rules_.empty()) {
-    InferCopyRules(BnInOp2BlobPtr);
-  }
   (this->*bw_func_)(ctx, BnInOp2BlobPtr);
 }
 
@@ -178,7 +165,7 @@ void BoxingKernel<device_type, FloatingPointType>::CopyDataFromRules(
     const KernelCtx& ctx, 
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr, 
     const std::vector<copy_rule>& copy_rules) const {
-  for (const struct copy_rule& rule : copy_rules) {
+  for (const copy_rule& rule : copy_rules) {
     Blob* src_blob = BnInOp2BlobPtr(rule.src_bn);
     Blob* dst_blob = BnInOp2BlobPtr(rule.dst_bn);
     KernelUtil<device_type, FloatingPointType>::Memcpy(ctx, 
@@ -206,7 +193,7 @@ void BoxingKernel<device_type, FloatingPointType>::ConcatBoxBackward(
     KernelUtil<device_type, FloatingPointType>::Memset(ctx, 
         middle->mut_dptr(), 0, middle->shape().elem_cnt() * 
         sizeof(FloatingPointType));
-    for (auto bn : op()->output_diff_bns()) {
+    for (const std::string& bn : op()->output_diff_bns()) {
       Blob* blob = BnInOp2BlobPtr(bn);
       KernelUtil<device_type, FloatingPointType>::BlasAxpy(ctx, 
           blob->shape().elem_cnt(), 1.0, 
@@ -223,16 +210,16 @@ void BoxingKernel<device_type, FloatingPointType>::AddBoxForward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
   // Add all the input blobs into data_tmp blob
-  Blob* middle = BnInOp2BlobPtr("middle");
+  Blob* out_0 = BnInOp2BlobPtr("out_0");
   KernelUtil<device_type, FloatingPointType>::Memset(ctx, 
-      middle->mut_dptr(), 0, middle->shape().elem_cnt() * 
+      out_0->mut_dptr(), 0, out_0->shape().elem_cnt() * 
       sizeof(FloatingPointType));
-  for (auto bn : op()->input_bns()) {
+  for (const std::string& bn : op()->input_bns()) {
     Blob* blob = BnInOp2BlobPtr(bn);
     KernelUtil<device_type, FloatingPointType>::BlasAxpy(ctx, 
         BnInOp2BlobPtr(bn)->shape().elem_cnt(), 1.0, 
         static_cast<const FloatingPointType*>(blob->dptr()), 1,
-        static_cast<FloatingPointType*>(middle->mut_dptr()), 1);
+        static_cast<FloatingPointType*>(out_0->mut_dptr()), 1);
   }
 
   // look at the copy table, transfer the data from data_tmp

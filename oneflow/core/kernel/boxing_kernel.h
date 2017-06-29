@@ -58,18 +58,14 @@ class BoxingKernel final : public Kernel {
       std::function<Blob*(const std::string&)> BnInOp2BlobPtr, 
       const std::vector<copy_rule>& copy_rules) const; 
 
-  // Forward function for Add box
   void AddBoxForward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)>) const;
-  // Backward function for Add box
   void AddBoxBackward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)>) const;
 
-  // Forward function for Concat box 
   void ConcatBoxForward(const KernelCtx& ctx,
                         std::function<Blob*(const std::string&)>) const;
 
-  // Backward function for Concat-split box && concat-clone box
   void ConcatBoxBackward(const KernelCtx& ctx,
                          std::function<Blob*(const std::string&)>) const;
 
