@@ -41,6 +41,7 @@ Kernel* BuildInnerProductKernel() {
   inner_product_conf->set_in("ip_in");
   inner_product_conf->set_out("ip_out");
   inner_product_conf->set_out_num(40);
+  inner_product_conf->set_has_bias_term(true);
   auto inner_product_op = OpMgr::Singleton().ConstructOp(op_conf);
 
   OperatorProto op_proto;
@@ -151,13 +152,13 @@ TEST(InnerProductKernel, inner_product_kernel_cpu) {
 
   inner_product_cpu_kernel->Forward(ctx, BnInOp2BlobPtr);
   inner_product_cpu_kernel->Backward(ctx, BnInOp2BlobPtr);
+  
+  ctx.device_ctx->cpu_stream()->CloseSendEnd();
 
   auto cpu_thread = std::thread([&] {
     std::function<void()> work;
-    for (int i = 0; i < 5; ++i) {
-      if (ctx.device_ctx->cpu_stream()->Receive(&work) == 0) {
+    while (ctx.device_ctx->cpu_stream()->Receive(&work) == 0) {
         work();
-      }
     }
   });
   cpu_thread.join();
