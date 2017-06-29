@@ -48,6 +48,7 @@ class Runtime final {
     ThreadMgr::Singleton().ForEachThread([](Thread* thrd) {
       thrd->JoinAllActor();
     });
+    ThreadMgr::Singleton().ClearAllThread();
   }
 
  private:
