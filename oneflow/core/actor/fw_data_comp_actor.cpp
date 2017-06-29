@@ -6,7 +6,7 @@ namespace oneflow {
 
 void FwDataCompActor::Init(const TaskProto& task_proto,
                            const ThreadCtx& thread_ctx) {
-  Actor::Init(task_proto, thread_ctx);
+  CompActor::Init(task_proto, thread_ctx);
   in_desc_id_ = RegstDescId4Name("in");
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
@@ -18,9 +18,11 @@ void FwDataCompActor::Init(const TaskProto& task_proto,
                                              cuda_handle_.cublas_handle(),
                                              cuda_handle_.cudnn_handle()));
   }
+  kernel_ctx_ = GenDefaultKernelCtx();
   if (in_desc_id_ == -1) {
     CHECK_EQ(model_regst_desc_id_, -1);
     CHECK_EQ(model_tmp_regst_desc_id_, -1);
+    kernel_ctx_.other = reinterpret_cast<void*>(parallel_id());
     OF_SET_MSG_HANDLE(&FwDataCompActor::WaitToStart);
   } else {
     num_of_not_eord_ = 1 + (model_regst_desc_id_ != -1) 
@@ -122,7 +124,7 @@ void FwDataCompActor::TryWardKernelAndSendMsg() {
     if (model_regst_) {
       model_version_id = model_regst_->model_version_id();
     }
-    AsyncWardKernel(GenDefaultKernelCtx(), 
+    AsyncWardKernel(kernel_ctx_, 
         [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
       Regst* regst = GetCurWriteableRegst(regst_desc_id);
       if (regst == nullptr) {

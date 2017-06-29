@@ -7,57 +7,57 @@ namespace oneflow {
 
 // level 1 vector and vector
 // dot product
-template<typename floating_point_type>
+template<typename FloatingPointType>
 void cublas_dot(
     cublasHandle_t handle, int n,
-    const floating_point_type* x, int incx,
-    const floating_point_type* y, int incy, floating_point_type* result);
+    const FloatingPointType* x, int incx,
+    const FloatingPointType* y, int incy, FloatingPointType* result);
 
 // swap x and y
-template<typename floating_point_type>
+template<typename FloatingPointType>
 void cublas_swap(
     cublasHandle_t handle, int n,
-    floating_point_type* x, int incx, floating_point_type* y, int incy);
+    FloatingPointType* x, int incx, FloatingPointType* y, int incy);
 
 // copy x into y
-template<typename floating_point_type>
+template<typename FloatingPointType>
 void cublas_copy(
     cublasHandle_t handle, int n,
-    const floating_point_type* x, int incx,
-    floating_point_type* y, int incy);
+    const FloatingPointType* x, int incx,
+    FloatingPointType* y, int incy);
 
 // y = a*x + y
-template<typename floating_point_type>
+template<typename FloatingPointType>
 void cublas_axpy(
     cublasHandle_t handle, int n,
-    const floating_point_type* alpha,
-    const floating_point_type* x, int incx,
-    floating_point_type* y, int incy);
+    const FloatingPointType* alpha,
+    const FloatingPointType* x, int incx,
+    FloatingPointType* y, int incy);
 
 // x = a*x
-template<typename floating_point_type>
+template<typename FloatingPointType>
 void cublas_scal(
     cublasHandle_t handle, int n,
-    const floating_point_type* alpha, floating_point_type* x, int incx);
+    const FloatingPointType* alpha, FloatingPointType* x, int incx);
 
 // level 2 matrix and vector
 // matrix vector multiply
-template<typename floating_point_type>
+template<typename FloatingPointType>
 void cublas_gemv(
     cublasHandle_t handle, cublasOperation_t trans, int m, int n,
-    const floating_point_type* alpha, const floating_point_type* A, int lda,
-    const floating_point_type* x, int incx, const floating_point_type* beta,
-    floating_point_type* y, int incy);
+    const FloatingPointType* alpha, const FloatingPointType* a, int lda,
+    const FloatingPointType* x, int incx, const FloatingPointType* beta,
+    FloatingPointType* y, int incy);
 
 // level 3 matrix and matrix
 // matrix matrix multiply
-template<typename floating_point_type>
+template<typename FloatingPointType>
 void cublas_gemm(
-    cublasHandle_t handle, cublasOperation_t cuTransA,
-    cublasOperation_t cuTransB, int m, int n, int k,
-    const floating_point_type* alpha, const floating_point_type* A, int lda,
-    const floating_point_type* B, int ldb,
-    const floating_point_type* beta, floating_point_type* C, int ldc);
+    cublasHandle_t handle, cublasOperation_t cutrans_a,
+    cublasOperation_t cutrans_b, int m, int n, int k,
+    const FloatingPointType* alpha, const FloatingPointType* a, int lda,
+    const FloatingPointType* b, int ldb,
+    const FloatingPointType* beta, FloatingPointType* c, int ldc);
 
 } // namespace oneflow
 

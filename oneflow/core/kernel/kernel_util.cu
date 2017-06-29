@@ -1,15 +1,15 @@
 #include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
-template<typename floating_point_type> 
-class KernelUtil<DeviceType::kGPU, floating_point_type> final {
+template<typename FloatingPointType> 
+class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelUtil);
   KernelUtil() = delete;
 
   static void Memcpy(const KernelCtx& ctx, 
-     void* dst, const void* src, size_t sz) {
-    CHECK_EQ(cudaMemcpyAsync(dst, src, sz, cudaMemcpyDeviceToDevice, 
+     void* dst, const void* src, size_t sz, cudaMemcpyKind kind) {
+    CHECK_EQ(cudaMemcpyAsync(dst, src, sz, kind, 
         ctx.device_ctx->cuda_stream()), cudaSuccess);
   }
 
@@ -19,59 +19,59 @@ class KernelUtil<DeviceType::kGPU, floating_point_type> final {
         cudaSuccess);
   }
 
-  static void BlasAxpy(const KernelCtx& ctx, const int N,
-      const floating_point_type alpha,
-      const floating_point_type* X, const int incX,
-      floating_point_type *Y, const int incY) {
-    cublas_axpy(ctx.device_ctx->cublas_handle(), N, &alpha, X, incX, Y, incY);
+  static void BlasAxpy(const KernelCtx& ctx, const int n,
+      const FloatingPointType alpha,
+      const FloatingPointType* x, const int incx,
+      FloatingPointType* y, const int incy) {
+    cublas_axpy(ctx.device_ctx->cublas_handle(), n, &alpha, x, incx, y, incy);
   }
 
   static void BlasScal(const KernelCtx& ctx, const int n,
-     const floating_point_type alpha, floating_point_type* x, const int incx) {
+     const FloatingPointType alpha, FloatingPointType* x, const int incx) {
    cublas_scal(ctx.device_ctx->cublas_handle(), n, &alpha, x, incx);
   }
 
   static void BlasGemv(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans, 
-      int m, int n, const floating_point_type alpha, 
-      const floating_point_type* A, int lda, const floating_point_type* x, 
-      const int incx, const floating_point_type beta, floating_point_type* y, 
+      int m, int n, const FloatingPointType alpha, 
+      const FloatingPointType* a, int lda, const FloatingPointType* x, 
+      const int incx, const FloatingPointType beta, FloatingPointType* y, 
       const int incy) {
     cublasOperation_t cublas_trans = CblasTrans2CublasTrans(trans);
     cublas_gemv(ctx.device_ctx->cublas_handle(), cublas_trans, n, m, 
-        &alpha, A, lda, x, incx, &beta, y, incy);
+        &alpha, a, lda, x, incx, &beta, y, incy);
   }
 
   static void BlasGemm(const KernelCtx& ctx,
-      const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE TransA,
-      const enum CBLAS_TRANSPOSE TransB, const int M, const int N, const int K,
-      const floating_point_type alpha, const floating_point_type* A,
-      const int lda, const floating_point_type* B, const int ldb,
-      const floating_point_type beta, floating_point_type* C, const int ldc) {
-    cublasOperation_t cublas_trans_a = CblasTrans2CublasTrans(TransA);
-    cublasOperation_t cublas_trans_b = CblasTrans2CublasTrans(TransB);
+      const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE trans_a,
+      const enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
+      const FloatingPointType alpha, const FloatingPointType* a,
+      const int lda, const FloatingPointType* b, const int ldb,
+      const FloatingPointType beta, FloatingPointType* c, const int ldc) {
+    cublasOperation_t cublas_trans_a = CblasTrans2CublasTrans(trans_a);
+    cublasOperation_t cublas_trans_b = CblasTrans2CublasTrans(trans_b);
     cublas_gemm(ctx.device_ctx->cublas_handle(), cublas_trans_b, cublas_trans_a,
-        N, M, K, &alpha, B, ldb, A, lda, &beta, C, ldc);
+        n, m, k, &alpha, b, ldb, a, lda, &beta, c, ldc);
   }
 
   static void BlasDot(const KernelCtx& ctx,
-      const int N, const floating_point_type* X, const int incX,
-      const floating_point_type* Y, const int incY, 
-      floating_point_type* result) {
-    cublas_dot(ctx.device_ctx->cublas_handle(), N, X, incX, Y, incY, result);
+      const int n, const FloatingPointType* x, const int incx,
+      const FloatingPointType* y, const int incy, 
+      FloatingPointType* result) {
+    cublas_dot(ctx.device_ctx->cublas_handle(), n, x, incx, y, incy, result);
   }
 
   static void BlasSwap(const KernelCtx& ctx,
-      const int N,
-      floating_point_type* X, const int incX,
-      floating_point_type* Y, const int incY) {
-    cublas_swap(ctx.device_ctx->cublas_handle(), N, X, incX, Y, incY);
+      const int n,
+      FloatingPointType* x, const int incx,
+      FloatingPointType* y, const int incy) {
+    cublas_swap(ctx.device_ctx->cublas_handle(), n, x, incx, y, incy);
   }
 
   static void BlasCopy(const KernelCtx& ctx,
-      const int N,
-      const floating_point_type* X, const int incX,
-      floating_point_type* Y, const int incY) {
-    cublas_copy(ctx.device_ctx->cublas_handle(), N, X, incX, Y, incY);
+      const int n,
+      const FloatingPointType* x, const int incx,
+      FloatingPointType* y, const int incy) {
+    cublas_copy(ctx.device_ctx->cublas_handle(), n, x, incx, y, incy);
   }
 
  private:

@@ -1,16 +1,16 @@
-#ifndef ONEFLOW_CORE_KERNEL_CLONE_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_CLONE_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_DATA_LOADER_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_DATA_LOADER_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel_manager.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename FloatingPointType>
-class CloneKernel final : public Kernel{
+class DataLoaderKernel final : public Kernel {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CloneKernel);
-  CloneKernel() = default;
-  ~CloneKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(DataLoaderKernel);
+  DataLoaderKernel() = default;
+  ~DataLoaderKernel() = default;
 
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
@@ -20,4 +20,4 @@ class CloneKernel final : public Kernel{
 
 } // namespace oneflow
 
-#endif // ONEFLOW_CORE_KERNEL_CLONE_KERNEL_H_
+#endif // ONEFLOW_CORE_KERNEL_DATA_LOADER_KERNEL_H_

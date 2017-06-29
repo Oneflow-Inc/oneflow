@@ -1,6 +1,5 @@
 #include "oneflow/core/persistence/snapshot.h"
 #include "tensorflow/core/lib/io/path.h"
-#include "oneflow/core/common/numbers.h"
 
 namespace oneflow {
 
@@ -44,7 +43,7 @@ void Snapshot::CheckAndConcat() {
     for (std::string sub_file_name : file_names) {
       std::string file_path = tensorflow::io::JoinPath(sub_dir, sub_file_name);
       TF_CHECK_OK(env_->FileExists(file_path));
-      int32_t part_id = Sto32orDie(sub_file_name);
+      int32_t part_id = oneflow_cast<int32_t>(sub_file_name);
       max_part_id = std::max(max_part_id, part_id);
     }
     CHECK_EQ(max_part_id, file_names.size() - 1);
