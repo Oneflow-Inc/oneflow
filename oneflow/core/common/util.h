@@ -113,6 +113,19 @@ std::ostream& operator << (std::ostream& out_stream, const EnumType& x) { \
 template<typename OutType, typename InType>
 OutType oneflow_cast(const InType&);
 
+void Split(const std::string& text,
+           const std::string& delims,
+           std::function<void(std::string&&)> Func);
+
+template<typename T>
+void SplitAndParseAs(const std::string& text,
+                     const std::string& delims,
+                     std::function<void(T&&)> Func) {
+  Split(text, delims, [&Func](std::string&& s) {
+    Func(oneflow_cast<T>(s));
+  });
+}
+
 } // namespace oneflow
 
 #endif // ONEFLOW_CORE_COMMON_UTIL_H_

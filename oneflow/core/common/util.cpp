@@ -31,4 +31,17 @@ uint64_t oneflow_cast(const std::string& s) {
   return ret;
 }
 
+void Split(const std::string& text,
+           const std::string& delims,
+           std::function<void(std::string&&)> Func) {
+  size_t token_start = 0;
+  if (text.empty()) { return; }
+  for (size_t i = 0; i < text.size() + 1; ++i) {
+    if ((i == text.size()) || (delims.find(text[i]) != std::string::npos)) {
+      Func(text.substr(token_start, i - token_start));
+      token_start = i + 1;
+    }
+  }
+}
+
 } // namespace oneflow
