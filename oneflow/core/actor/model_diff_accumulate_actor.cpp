@@ -14,9 +14,8 @@ void MdDiffAccActor::Init(const TaskProto& task_proto, const ThreadCtx& thread_c
                                              cuda_handle_.cudnn_handle()));
   }
   OF_SET_MSG_HANDLE(&MdDiffAccActor::HandleMdDiffAcc);
-  num_of_piece_in_batch_ = JobDesc::Singleton().num_of_piece_in_batch();
   ForEachCurWriteableRegst([this](Regst* regst) {
-      model_diff_acc_cnt_[regst] = 0;
+    model_diff_acc_cnt_[regst] = 0;
   });
 }
 
@@ -55,14 +54,16 @@ void MdDiffAccActor::TryWardKernelAndSendMsg() {
     CHECK_EQ(regst_wp->piece_id(), expected_piece_id());
     KernelCtx ctx = GenDefaultKernelCtx();
     ForEachCurWriteableRegst([&](Regst* regst) {
-      if (model_diff_acc_cnt_[regst] == num_of_piece_in_batch_) {
-        clear_kernel_->Forward(ctx,
-            [&](const std::string& bn_in_op) {
-          const std::string& lbn = clear_kernel_->Lbn4BnInOp(bn_in_op); 
-          return regst->GetBlobPtrFromLbn(lbn);
-        });
-        model_diff_acc_cnt_[regst] = 0;
+      auto diff_cnt = model_diff_acc_cnt_.find(regst);
+      if (diff_cnt->second != JobDesc::Singleton().num_of_piece_in_batch()) {
+        return;
       }
+      clear_kernel_->Forward(ctx,
+          [&](const std::string& bn_in_op) {
+        const std::string& lbn = clear_kernel_->Lbn4BnInOp(bn_in_op); 
+        return regst->GetBlobPtrFromLbn(lbn);
+      });
+      diff_cnt->second = 0;
     });
     AsyncWardKernel(ctx,
         [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
@@ -76,8 +77,7 @@ void MdDiffAccActor::TryWardKernelAndSendMsg() {
     });
     ForEachCurWriteableRegst([this, &regst_wp](Regst* regst) {
       regst->set_piece_id(regst_wp->piece_id());
-      regst->set_model_version_id(regst_wp->model_version_id());
-      model_diff_acc_cnt_[regst] ++;
+      ++ model_diff_acc_cnt_[regst];
     });
     AsyncSendReadableRegstMsg();
     AsyncSendRegstMsgToProducer(regst_wp);

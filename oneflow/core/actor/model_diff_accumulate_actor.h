@@ -1,11 +1,11 @@
 #ifndef ONEFLOW_CORE_ACTOR_MODEL_DIFF_ACCUMULATE_ACTOR_H_
 #define ONEFLOW_CORE_ACTOR_MODEL_DIFF_ACCUMULATE_ACTOR_H_
 
-#include "oneflow/core/actor/actor.h"
+#include "oneflow/core/actor/compute_actor.h"
 
 namespace oneflow {
 
-class MdDiffAccActor final : public Actor {
+class MdDiffAccActor final : public CompActor {
 public:
   OF_DISALLOW_COPY_AND_MOVE(MdDiffAccActor);
   MdDiffAccActor() = default;
@@ -23,7 +23,6 @@ private:
   const Kernel* clear_kernel_;
   CudaStreamHandle cuda_handle_;
   HashMap<Regst*, int32_t> model_diff_acc_cnt_;
-  int32_t num_of_piece_in_batch_;
 };
 
 }  // namespace oneflow
