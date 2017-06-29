@@ -1,5 +1,4 @@
 #include "oneflow/core/kernel/boxing_kernel.h"
-#include <string>
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/blas/kernel_util.h"
 
