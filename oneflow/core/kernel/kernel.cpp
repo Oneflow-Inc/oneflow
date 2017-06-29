@@ -14,12 +14,12 @@ void Kernel::InitModelAndModelTmpBlobs(
     int64_t parallel_id,
     int64_t parallel_num,
     const Snapshot* snapshot,
-    std::function<Blob*(const std::string&)> Blob4BnInOp) const {
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (snapshot) {
     InitModelAndModelTmpBlobsWithSnapshot(
-        ctx, policy, parallel_id, parallel_num, snapshot, Blob4BnInOp);
+        ctx, policy, parallel_id, parallel_num, snapshot, BnInOp2Blob);
   } else {
-    InitModelAndModelTmpBlobsWithoutSnapshot(ctx, Blob4BnInOp);
+    InitModelAndModelTmpBlobsWithoutSnapshot(ctx, BnInOp2Blob);
   }
 }
 

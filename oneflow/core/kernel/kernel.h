@@ -26,7 +26,7 @@ class Kernel {
       int64_t parallel_id,
       int64_t parallel_num,
       const Snapshot*,
-      std::function<Blob*(const std::string&)> Blob4BnInOp) const;
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   // for Forward / Bp Calculation in FwExecGragh node and BpExecGragh node
   // through bn_in_op2blob_ptr function get the input blob and output blob
@@ -53,12 +53,12 @@ class Kernel {
       int64_t parallel_id,
       int64_t parallel_num,
       const Snapshot*,
-      std::function<Blob*(const std::string&)> Blob4BnInOp) const {
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNEXPECTED_RUN();
   }
   virtual void InitModelAndModelTmpBlobsWithoutSnapshot(
       const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> Blob4BnInOp) const {
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNEXPECTED_RUN();
   }
 
