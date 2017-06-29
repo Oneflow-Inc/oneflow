@@ -17,7 +17,7 @@ class KernelUtil final {
   // memory copy
   static void Memcpy(const KernelCtx& ctx, 
      void* dst, const void* src, size_t sz, 
-     cudaMemcpyKind kind=cudaMemcpyKind::cudaMemcpyHostToHost);
+     cudaMemcpyKind kind = cudaMemcpyKind::cudaMemcpyHostToHost);
 
   // memory set
   static void Memset(const KernelCtx& ctx, void* dst, const char value,
