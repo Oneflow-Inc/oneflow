@@ -20,12 +20,12 @@ inline void CudaPostKernelCheck() {
   CudaCheck(cudaPeekAtLastError());
 }
 
-const int32_t g_threads_num_per_block = 512;
-const int32_t g_max_blocks_num = 4096;
+const int32_t kCudaThreadsNumPerBlock = 512;
+const int32_t kCudaMaxBlocksNum = 4096;
 
 inline int32_t BlocksNum4ThreadsNum(const int32_t N) {
-  return std::min((N + g_threads_num_per_block - 1) / g_threads_num_per_block, 
-                  g_max_blocks_num);
+  return std::min((N + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock, 
+                  kCudaMaxBlocksNum);
 }
 
 }  // namespace oneflow
