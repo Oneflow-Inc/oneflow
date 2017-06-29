@@ -81,10 +81,6 @@ inline std::string LogDir() {
   return log_dir;
 }
 
-inline std::string DotDir() {
-  return LogDir() + "/dot";
-}
-
 inline void str_replace(std::string* str, char old_ch, char new_ch) {
   for (size_t i = 0; i < str->size(); ++i) {
     if (str->at(i) == old_ch) {

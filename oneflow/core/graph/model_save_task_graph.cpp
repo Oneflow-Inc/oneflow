@@ -5,15 +5,14 @@
 namespace oneflow {
 
 MdSaveTaskGraph::MdSaveTaskGraph(const std::string& name,
-                                 CompTaskNode* update_task,
-                                 const std::string& dot_path_prefix) {
+                                 CompTaskNode* update_task) {
   mut_name() = name;
   update_task_ = update_task;
-  BuildTaskGraph(dot_path_prefix);
+  BuildTaskGraph();
   BuildExecAndEnrollLbn2Regsts();
 }
 
-void MdSaveTaskGraph::BuildTaskGraph(const std::string& dot_path_prefix) {
+void MdSaveTaskGraph::BuildTaskGraph() {
   auto chain_gph = of_make_unique<ChainGraph> ();
   // faker
   ChainNode* faker_chain = chain_gph->NewNode();
@@ -34,8 +33,8 @@ void MdSaveTaskGraph::BuildTaskGraph(const std::string& dot_path_prefix) {
   //
   Connect(faker_chain, chain_gph->NewEdge(), save_chain);
   chain_gph->UpdateSourceAndSink();
-  chain_gph->ToDotFile(dot_path_prefix + "chain_graph.dot");
-  BuildFromChainGph<MdSaveCompTaskNode>(std::move(chain_gph), false, dot_path_prefix);
+  chain_gph->ToDotWithAutoFilePath();
+  BuildFromChainGph<MdSaveCompTaskNode>(std::move(chain_gph), false);
   ForEachNode([this](TaskNode* node) {
     auto model_save_comp_task_node = dynamic_cast<MdSaveCompTaskNode*>(node);
     if (model_save_comp_task_node != nullptr) {

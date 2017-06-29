@@ -5,7 +5,7 @@
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/memory/memory_allocator.h"
-#include "oneflow/core/job/runtime_info.h"
+#include "oneflow/core/job/runtime_context.h"
 
 namespace oneflow {
 

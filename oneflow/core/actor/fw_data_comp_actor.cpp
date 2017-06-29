@@ -6,7 +6,7 @@ namespace oneflow {
 
 void FwDataCompActor::Init(const TaskProto& task_proto,
                            const ThreadCtx& thread_ctx) {
-  Actor::Init(task_proto, thread_ctx);
+  CompActor::Init(task_proto, thread_ctx);
   in_desc_id_ = RegstDescId4Name("in");
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
@@ -18,10 +18,12 @@ void FwDataCompActor::Init(const TaskProto& task_proto,
                                              cuda_handle_.cublas_handle(),
                                              cuda_handle_.cudnn_handle()));
   }
+  kernel_ctx_ = GenDefaultKernelCtx();
   if (in_desc_id_ == -1) {
     CHECK_EQ(model_regst_desc_id_, -1);
     CHECK_EQ(model_tmp_regst_desc_id_, -1);
-    OF_SET_MSG_HANDLE(&FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg);
+    kernel_ctx_.other = reinterpret_cast<void*>(parallel_id());
+    OF_SET_MSG_HANDLE(&FwDataCompActor::WaitToStart);
   } else {
     num_of_not_eord_ = 1 + (model_regst_desc_id_ != -1) 
                          + (model_tmp_regst_desc_id_ != -1);
@@ -46,6 +48,13 @@ bool FwDataCompActor::IsReadReady() {
     return model_regst_->model_version_id() >= stale_version;
   }
   return true;
+}
+
+int FwDataCompActor::WaitToStart(const ActorMsg& msg) {
+  CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
+  TryWardKernelAndSendMsg();
+  OF_SET_MSG_HANDLE(&FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg);
+  return 0;
 }
 
 int FwDataCompActor::HandleFwComp(const ActorMsg& msg) {
@@ -106,11 +115,16 @@ int FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg(const ActorMsg& msg) {
   
 void FwDataCompActor::TryWardKernelAndSendMsg() {
   while (IsReadReady() && IsWriteReady()) {
-    CHECK_EQ(in_.front()->piece_id(), expected_piece_id());
-    ready_in_regst_[in_.front()->regst_desc_id()] = in_.front();
-    int64_t piece_id = in_.front()->piece_id();
-    int64_t model_version_id = model_regst_->model_version_id();
-    AsyncWardKernel(GenDefaultKernelCtx(), 
+    int64_t piece_id = expected_piece_id();
+    if (!in_.empty()) {
+      CHECK_EQ(in_.front()->piece_id(), piece_id);
+      ready_in_regst_[in_.front()->regst_desc_id()] = in_.front();
+    }
+    int64_t model_version_id = -1;
+    if (model_regst_) {
+      model_version_id = model_regst_->model_version_id();
+    }
+    AsyncWardKernel(kernel_ctx_, 
         [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
       Regst* regst = GetCurWriteableRegst(regst_desc_id);
       if (regst == nullptr) {
@@ -124,8 +138,10 @@ void FwDataCompActor::TryWardKernelAndSendMsg() {
       regst->set_model_version_id(model_version_id);
     });
     AsyncSendReadableRegstMsg();
-    AsyncSendRegstMsgToProducer(in_.front());
-    in_.pop();
+    if (!in_.empty()) {
+      AsyncSendRegstMsgToProducer(in_.front());
+      in_.pop();
+    }
   }
 }
 

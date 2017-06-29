@@ -1,5 +1,6 @@
 #include "oneflow/core/actor/model_update_comp_actor.h"
 #include "oneflow/core/actor/actor_registry.h"
+#include "oneflow/core/job/runtime_context.h"
 
 namespace oneflow {
 
@@ -46,6 +47,9 @@ int MdUpdtCompActor::HandleBeforeInitializeModel(const ActorMsg& actor_msg) {
       return ret;
     });
   }
+  AsyncDo([]() {
+      RuntimeCtx::Singleton().OneModelInitDone();
+  });
   OF_SET_MSG_HANDLE(&MdUpdtCompActor::HandleBeforeSendInitialModel);
   return 0;
 }

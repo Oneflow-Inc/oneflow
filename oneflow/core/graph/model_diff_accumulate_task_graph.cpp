@@ -6,18 +6,16 @@ namespace oneflow {
 MdDiffAccTaskGraph::MdDiffAccTaskGraph(
     const std::string& name,
     const ChainNode* data_chain,
-    const std::vector<CompTaskNode*>& sorted_fw_comptasks4data_chain,
-    const std::string& dot_path_prefix) {
+    const std::vector<CompTaskNode*>& sorted_fw_comptasks4data_chain) {
   mut_name() = name;
-  BuildTaskGraph(data_chain, dot_path_prefix);
+  BuildTaskGraph(data_chain);
   for (CompTaskNode* fw_task : sorted_fw_comptasks4data_chain) {
     CHECK(parallel_id2fw_task_.emplace(fw_task->parallel_id(), fw_task).second);
   }
   BuildExecAndEnrollLbn2Regsts();
 }
 
-void MdDiffAccTaskGraph::BuildTaskGraph(const ChainNode* data_chain,
-                                        const std::string& dot_path_prefix) {
+void MdDiffAccTaskGraph::BuildTaskGraph(const ChainNode* data_chain) {
   // Construct ModelDiffAccOp
   OperatorConf op_conf;
   op_conf.set_name("model_diff_acc_" + NewUniqueId());
@@ -44,8 +42,8 @@ void MdDiffAccTaskGraph::BuildTaskGraph(const ChainNode* data_chain,
   }
   //
   chain_gph->UpdateSourceAndSink();
-  chain_gph->ToDotFile(dot_path_prefix + "chain_graph.dot");
-  BuildFromChainGph<MdDiffAccCompTaskNode>(std::move(chain_gph), false, dot_path_prefix);
+  chain_gph->ToDotWithAutoFilePath();
+  BuildFromChainGph<MdDiffAccCompTaskNode>(std::move(chain_gph), false);
 }
 
 } // namespace oneflow

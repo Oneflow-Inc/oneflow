@@ -7,7 +7,7 @@ namespace oneflow {
 
 class RegstWarpper {
  public:
-  // OF_DISALLOW_COPY_AND_MOVE(RegstWarpper);
+  OF_DISALLOW_COPY_AND_MOVE(RegstWarpper);
   virtual ~RegstWarpper() = default;
 
   virtual Blob* GetBlobPtrFromLbn(const std::string& lbn) = 0;

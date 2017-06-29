@@ -31,16 +31,14 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
 
   template<typename CompTaskNodeType>
   void BuildFromChainGph(std::unique_ptr<ChainGraph>&& chain_gph,
-                         bool need_bp,
-                         const std::string& dot_filepath_prefix);
+                         bool need_bp);
   void BuildExecAndEnrollLbn2Regsts();
 
   std::string& mut_name() { return name_; }
 
  private:
   template<typename CompTaskNodeType>
-  void BuildFromStageGph(bool need_bp,
-                         const std::string& dot_filepath_prefix);
+  void BuildFromStageGph(bool need_bp);
 
   template<typename TaskNodeType>
   TaskNodeType* NewTaskNode() {
