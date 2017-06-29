@@ -27,7 +27,7 @@ class JobDesc final {
   int32_t piece_size() const { return piece_size_; }
   int32_t num_of_piece_in_batch() const { return num_of_pieces_in_batch_; }
   bool is_train() const { return is_train_; }
-  const FloatingPointType& floating_point_type() const { 
+  const FloatingPointTypeProto& floating_point_type() const { 
     return floating_point_type_; 
   }
   int32_t num_of_batches_in_snapshot() const { return num_of_batches_in_snapshot_; }
@@ -46,7 +46,7 @@ class JobDesc final {
   int32_t piece_size_;
   int32_t num_of_pieces_in_batch_;
   bool is_train_;
-  FloatingPointType floating_point_type_;
+  FloatingPointTypeProto floating_point_type_;
   int32_t num_of_batches_in_snapshot_;
   int32_t staleness_;
   int64_t total_batch_num_;

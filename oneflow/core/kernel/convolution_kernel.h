@@ -5,11 +5,11 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename floating_point_type>
+template<DeviceType device_type, typename FloatingPointType>
 class ConvolutionKernel;
 
-template<typename floating_point_type>
-class ConvolutionKernel<DeviceType::kCPU, floating_point_type> final : public Kernel {
+template<typename FloatingPointType>
+class ConvolutionKernel<DeviceType::kCPU, FloatingPointType> final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvolutionKernel);
   ConvolutionKernel() = default;
@@ -19,8 +19,8 @@ class ConvolutionKernel<DeviceType::kCPU, floating_point_type> final : public Ke
   void Backward(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
 };
 
-template<typename floating_point_type>
-class ConvolutionKernel<DeviceType::kGPU, floating_point_type> final : public Kernel {
+template<typename FloatingPointType>
+class ConvolutionKernel<DeviceType::kGPU, FloatingPointType> final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvolutionKernel);
   ConvolutionKernel() = default;

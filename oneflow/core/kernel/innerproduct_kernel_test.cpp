@@ -32,7 +32,7 @@ Blob* CreateBlob(const std::vector<int64_t>& dim_vec, float* matrix,
   return new Blob(dptr, shape);
 }
 
-template<DeviceType device_type, typename floating_point_type>
+template<DeviceType device_type, typename FloatingPointType>
 Kernel* BuildInnerProductKernel() {
   // Config InnerProduct operator
   OperatorConf op_conf;
@@ -47,7 +47,7 @@ Kernel* BuildInnerProductKernel() {
   inner_product_op->ToProto(&op_proto);
 
   auto inner_product_kernel =
-    new InnerProductKernel<device_type, floating_point_type>();
+    new InnerProductKernel<device_type, FloatingPointType>();
   inner_product_kernel->InitFromOpProto(op_proto);
 
   return inner_product_kernel;
