@@ -36,14 +36,14 @@ class BoxingKernel final : public Kernel {
 
   void InferCopyRules(std::function<Blob*(const std::string&)>) const;
 
-  void ConstructCopyRulesFromConcatDim(
+  void InferCopyRulesFromConcatDim(
       const std::map<const std::string*, int64_t>& src_bn2concat_dim, 
       const std::map<const std::string*, int64_t>& dst_bn2concat_dim,
       int64_t seg_cnt, int64_t concat_dim_sz, int32_t concat_axis, 
       std::vector<CopyRule>* rules) const; 
 
-  // Construct rules of copying first output blob to the remaining output blobs
-  void ConstructFwCloneRules(std::function<Blob*(const std::string&)>) const;
+  // Infer rules of copying first output blob to the remaining output blobs
+  void InferFwCloneRules(std::function<Blob*(const std::string&)>) const;
 
   // Infer copy rules with the assigned src && dst blob names
   void InferCopyRulesFromBns(
@@ -68,15 +68,15 @@ class BoxingKernel final : public Kernel {
   void ConcatBoxBackward(const KernelCtx& ctx,
                          std::function<Blob*(const std::string&)>) const;
 
-  using ExecFunc = void (BoxingKernel<device_type, FloatingPointType>::*) 
+  using WardFunc = void (BoxingKernel<device_type, FloatingPointType>::*) 
     (const KernelCtx&, std::function<Blob*(const std::string&)>) const;
 
   // Due to current design, there is only one boxing thread, thus no mutex 
   // is required here.
   mutable std::vector<CopyRule> fw_copy_rules_;
   mutable std::vector<CopyRule> bw_copy_rules_;
-  ExecFunc fw_func_;
-  ExecFunc bw_func_;
+  WardFunc fw_func_;
+  WardFunc bw_func_;
 };
 
 }  // namespace oneflow

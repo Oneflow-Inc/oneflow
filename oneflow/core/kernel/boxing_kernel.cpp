@@ -31,10 +31,8 @@ void BoxingKernel<device_type, FloatingPointType>::InferCopyRules(
   } else {
     // do nothing
   }
-  // Mark: if output is clone-box, add forward copy rules from first 
-  // output blob to the remaining output blobs
   if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
-    ConstructFwCloneRules(BnInOp2BlobPtr);
+    InferFwCloneRules(BnInOp2BlobPtr);
   }
 
   // Infer Backward Copy Rules
@@ -80,13 +78,13 @@ void BoxingKernel<device_type, FloatingPointType>::InferCopyRulesFromBns(
   int64_t concat_dim_sz = src_fst_blob->shape().Count(concat_axis+1);
   int64_t seg_cnt = (concat_axis == 0) ? 1 : (src_fst_blob->shape().At(0));
 
-  ConstructCopyRulesFromConcatDim(src_bn2concat_dim, dst_bn2concat_dim, seg_cnt, 
+  InferCopyRulesFromConcatDim(src_bn2concat_dim, dst_bn2concat_dim, seg_cnt, 
                               concat_dim_sz, concat_axis, copy_rules);
 }
 
 template<DeviceType device_type, typename FloatingPointType>
 void BoxingKernel<device_type,
-    FloatingPointType>::ConstructCopyRulesFromConcatDim(
+    FloatingPointType>::InferCopyRulesFromConcatDim(
     const std::map<const std::string*, int64_t>& src_bn2concat_dim, 
     const std::map<const std::string*, int64_t>& dst_bn2concat_dim,
     int64_t seg_cnt, int64_t concat_dim_sz, int32_t concat_axis, 
@@ -129,7 +127,7 @@ void BoxingKernel<device_type,
 // the input source boxes to the first single output box. Hence, we have to 
 // clone the first output box to the remaining output boxes.
 template<DeviceType device_type, typename FloatingPointType>
-void BoxingKernel<device_type, FloatingPointType>::ConstructFwCloneRules(
+void BoxingKernel<device_type, FloatingPointType>::InferFwCloneRules(
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
   const std::vector<std::string>& obns = op()->output_bns();
   int64_t copy_sz = BnInOp2BlobPtr(obns.front())->shape().elem_cnt();
