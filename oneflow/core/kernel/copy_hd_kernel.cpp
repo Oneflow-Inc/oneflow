@@ -30,11 +30,11 @@ void CopyHdKernel<device_type, floating_point_type>::InitFromOpProto(
   const CopyHdOpConf& copy_hd_conf = op()->op_conf().copy_hd_conf();
 
   if (copy_hd_conf.type() == CopyHdOpConf::H2D) {
-    ForwardCopyFunc = CopyH2DAsync;
-    BackwardCopyFunc = CopyD2HAsync;
+    ForwardCopyFunc_ = &CopyH2DAsync<device_type, floating_point_type>;
+    BackwardCopyFunc_ = &CopyD2HAsync<device_type, floating_point_type>;
   } else {
-    ForwardCopyFunc = CopyD2HAsync;
-    BackwardCopyFunc = CopyH2DAsync;
+    ForwardCopyFunc_ = &CopyD2HAsync<device_type, floating_point_type>;
+    BackwardCopyFunc_ = &CopyH2DAsync<device_type, floating_point_type>;
   }
 }
 
@@ -45,8 +45,7 @@ void CopyHdKernel<device_type, floating_point_type>::Forward(
   Blob* in_blob  = BnInOp2BlobPtr(op()->SoleIbn());
   Blob* out_blob = BnInOp2BlobPtr(op()->SoleObn());
 
-  (*ForwardCopyFunc)<device_type, floating_point_type>(
-      ctx, out_blob, in_blob, sizeof(floating_point_type));
+  ForwardCopyFunc_(ctx, out_blob, in_blob, sizeof(floating_point_type));
 }
 
 template<DeviceType device_type, typename floating_point_type>
@@ -56,11 +55,10 @@ void CopyHdKernel<device_type, floating_point_type>::Backward(
   Blob* in_blob  = BnInOp2BlobPtr(op()->SoleOdbn());
   Blob* out_blob = BnInOp2BlobPtr(op()->SoleIdbn());
 
-  (*BackwardCopyFunc)<device_type, floating_point_type>(
-      ctx, out_blob, in_blob, sizeof(floating_point_type));
+  BackwardCopyFunc_(ctx, out_blob, in_blob, sizeof(floating_point_type));
 }
 
-INSTANTIATE_KERNEL_CLASS(CopyHdKernel);
-REGISTER_KERNEL(OperatorConf::kCopyHdConf, CopyHdKernel);
+INSTANTIATE_GPU_KERNEL_CLASS(CopyHdKernel);
+REGISTER_GPU_KERNEL(OperatorConf::kCopyHdConf, CopyHdKernel);
 
 }  // namespace oneflow

@@ -20,8 +20,8 @@ class CopyHdKernel final : public Kernel {
                 std::function<Blob*(const std::string&)>) const override;
 
  private:
-  void (*ForwardCopyFunc)(Blob*, Blob*, const cudaStream_t&, size_t);
-  void (*BackwardCopyFunc)(Blob*, Blob*, const cudaStream_t&, size_t);
+  void (*ForwardCopyFunc_)(const KernelCtx&, Blob*, Blob*, const size_t);
+  void (*BackwardCopyFunc_)(const KernelCtx&, Blob*, Blob*, const size_t);
 };
 
 }  // namespace oneflow
