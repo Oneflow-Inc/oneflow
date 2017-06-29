@@ -110,6 +110,9 @@ std::ostream& operator << (std::ostream& out_stream, const EnumType& x) { \
   return out_stream; \
 }
 
+template<typename OutType, typename InType>
+OutType oneflow_cast(const InType&);
+
 } // namespace oneflow
 
 #endif // ONEFLOW_CORE_COMMON_UTIL_H_
