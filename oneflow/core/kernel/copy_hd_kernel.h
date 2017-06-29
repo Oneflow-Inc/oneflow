@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename floating_point_type>
+template<DeviceType device_type, typename FloatingPointType>
 class CopyHdKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CopyHdKernel);

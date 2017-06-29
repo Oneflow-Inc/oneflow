@@ -21,20 +21,20 @@ DEFINE_STATIC_CASE2KERNEL_MAP(Gpu, Double);
 
 Kernel* CreateKernel(OperatorConf::OpTypeCase op_type_case,
                      DeviceType device_type,
-                     FloatingPointType floating_point_type) {
+                     FloatingPointTypeProto floating_point_type) {
   if (device_type == DeviceType::kCPU) {
-    if (floating_point_type == FloatingPointType::kFloat) {
+    if (floating_point_type == FloatingPointTypeProto::kFloat) {
       return TypeCase2CpuFloatKernelCreator().at(op_type_case)();
-    } else if (floating_point_type == FloatingPointType::kDouble) {
+    } else if (floating_point_type == FloatingPointTypeProto::kDouble) {
       return TypeCase2CpuDoubleKernelCreator().at(op_type_case)();
     } else {
       LOG(FATAL) << "floating point type has not been set";
       return nullptr;
     }
   } else if (device_type == DeviceType::kGPU) {
-    if (floating_point_type == FloatingPointType::kFloat) {
+    if (floating_point_type == FloatingPointTypeProto::kFloat) {
       return TypeCase2GpuFloatKernelCreator().at(op_type_case)();
-    } else if (floating_point_type == FloatingPointType::kDouble) {
+    } else if (floating_point_type == FloatingPointTypeProto::kDouble) {
       return TypeCase2GpuDoubleKernelCreator().at(op_type_case)();
     } else {
       LOG(FATAL) << "floating point type has not been set";
@@ -69,7 +69,6 @@ void AddGpuDoubleKernelCreator(OperatorConf::OpTypeCase op_type_case,
 }
 
 void KernelMgr::InitFromPlan(const Plan& plan) {
-  FloatingPointType floating_point_type = JobDesc::Singleton().floating_point_type();
   int64_t this_machine_id = RuntimeCtx::Singleton().this_machine_id();
   const PbRpf<std::string>& op_names_rpf =
       plan.machine_id2op_name_set().at(this_machine_id).op_name();
@@ -85,7 +84,7 @@ void KernelMgr::InitFromPlan(const Plan& plan) {
     std::unique_ptr<Kernel> kernel_ptr(CreateKernel(
         op_proto.op_conf().op_type_case(),
         device_type,
-        floating_point_type));
+        JobDesc::Singleton().floating_point_type()));
     kernel_ptr->InitFromOpProto(op_proto);
     CHECK(op_name2kernel_ptr_.emplace(op_name, std::move(kernel_ptr)).second);
   }
