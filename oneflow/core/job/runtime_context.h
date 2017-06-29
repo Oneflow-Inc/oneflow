@@ -3,6 +3,7 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/persistence/persistent_circular_line_reader.h"
 
 namespace oneflow {
 
@@ -21,6 +22,9 @@ class RuntimeCtx final {
   void OneModelInitDone();
   void WaitUnitlAllModelInitDone();
 
+  PersistentCircularLineReader* GetDataReader() { return data_reader_.get(); }
+  void InitDataReader(const std::string& filepath);
+
  private:
   RuntimeCtx() = default;
 
@@ -30,6 +34,7 @@ class RuntimeCtx final {
   int32_t model_init_cnt_;
   std::mutex model_init_cnt_mtx_;
   std::condition_variable model_init_cnt_cond_;
+  std::unique_ptr<PersistentCircularLineReader> data_reader_;
 
 };
 
