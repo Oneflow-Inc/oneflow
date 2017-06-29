@@ -45,7 +45,7 @@ void cublas_scal(
 template<typename floating_point_type>
 void cublas_gemv(
     cublasHandle_t handle, cublasOperation_t trans, int m, int n,
-    const floating_point_type* alpha, const floating_point_type* A, int lda,
+    const floating_point_type* alpha, const floating_point_type* a, int lda,
     const floating_point_type* x, int incx, const floating_point_type* beta,
     floating_point_type* y, int incy);
 
@@ -53,11 +53,11 @@ void cublas_gemv(
 // matrix matrix multiply
 template<typename floating_point_type>
 void cublas_gemm(
-    cublasHandle_t handle, cublasOperation_t cuTransA,
-    cublasOperation_t cuTransB, int m, int n, int k,
-    const floating_point_type* alpha, const floating_point_type* A, int lda,
-    const floating_point_type* B, int ldb,
-    const floating_point_type* beta, floating_point_type* C, int ldc);
+    cublasHandle_t handle, cublasOperation_t cutrans_a,
+    cublasOperation_t cutrans_b, int m, int n, int k,
+    const floating_point_type* alpha, const floating_point_type* a, int lda,
+    const floating_point_type* b, int ldb,
+    const floating_point_type* beta, floating_point_type* c, int ldc);
 
 } // namespace oneflow
 

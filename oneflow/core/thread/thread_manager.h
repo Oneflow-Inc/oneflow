@@ -11,13 +11,14 @@ namespace oneflow {
 class ThreadMgr final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ThreadMgr);
-  ~ThreadMgr();
+  ~ThreadMgr() = default;
 
   OF_SINGLETON(ThreadMgr);
   
   Thread* GetThrd(int64_t thrd_loc_id);
 
-  void ClearAllThread();
+  void ForEachThread(std::function<void(Thread*)>);
+  void ClearAllThread() { threads_.clear(); }
 
  private:
   ThreadMgr();

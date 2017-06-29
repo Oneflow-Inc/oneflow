@@ -12,11 +12,13 @@ namespace oneflow {
 class Thread {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Thread);
-  virtual ~Thread();
+  virtual ~Thread() = default;
 
   void AddTask(const TaskProto&);
 
   Channel<ActorMsg>* GetMsgChannelPtr() { return &msg_channel_; }
+
+  void JoinAllActor() { actor_thread_.join(); }
 
  protected:
   Thread() = default;

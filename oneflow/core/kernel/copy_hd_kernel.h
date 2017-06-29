@@ -6,11 +6,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename floating_point_type>
-class CopyHdKernel;
-
-template<typename floating_point_type>
-class CopyHdKernel<DeviceType::kGPU, floating_point_type> final
-    : public Kernel {
+class CopyHdKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CopyHdKernel);
   CopyHdKernel() = default;
@@ -24,8 +20,8 @@ class CopyHdKernel<DeviceType::kGPU, floating_point_type> final
                 std::function<Blob*(const std::string&)>) const override;
 
  private:
-  void (*ForwardCopyFunc)(Blob*, Blob*, const cudaStream_t&, size_t);
-  void (*BackwardCopyFunc)(Blob*, Blob*, const cudaStream_t&, size_t);
+  void (*ForwardCopyFunc_)(const KernelCtx&, Blob*, Blob*, const size_t);
+  void (*BackwardCopyFunc_)(const KernelCtx&, Blob*, Blob*, const size_t);
 };
 
 }  // namespace oneflow

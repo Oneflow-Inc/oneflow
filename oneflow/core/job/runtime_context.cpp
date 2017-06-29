@@ -29,4 +29,8 @@ void RuntimeCtx::WaitUnitlAllModelInitDone() {
   });
 }
 
+void RuntimeCtx::InitDataReader(const std::string& filepath) {
+  data_reader_.reset(new PersistentCircularLineReader(filepath));
+}
+
 } // namespace oneflow
