@@ -32,7 +32,7 @@ void BoxingKernel<device_type, FloatingPointType>::InferCopyRules(
     // do nothing
   }
   // Mark: if output is clone-box, add forward copy rules from first 
-  // output blob to the remaining blobs
+  // output blob to the remaining output blobs
   if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
     ConstructFwCloneRules(BnInOp2BlobPtr);
   }
@@ -43,7 +43,7 @@ void BoxingKernel<device_type, FloatingPointType>::InferCopyRules(
     InferCopyRulesFromBns(BnInOp2BlobPtr, op()->input_diff_bns(),
                           op()->output_diff_bns(), &bw_copy_rules_);
     // Reverse back input && output diff blob for each backward rule
-    for (copy_rule& rule : bw_copy_rules_) {
+    for (CopyRule& rule : bw_copy_rules_) {
       std::swap(rule.src_bn, rule.dst_bn);
       std::swap(rule.src_offset, rule.dst_offset);
     }
@@ -61,7 +61,7 @@ void BoxingKernel<device_type, FloatingPointType>::InferCopyRulesFromBns(
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr,
     const std::vector<std::string>& src_bns,
     const std::vector<std::string>& dst_bns,
-    std::vector<copy_rule>* copy_rules) const {
+    std::vector<CopyRule>* copy_rules) const {
   // P.S This routine will be called only once, thus some performance
   // loss seems ok.
   std::map<const std::string*, int64_t> src_bn2slice; 
@@ -90,7 +90,7 @@ void BoxingKernel<device_type,
     const std::map<const std::string*, int64_t>& src_bn2slice, 
     const std::map<const std::string*, int64_t>& dst_bn2slice,
     int64_t seg_cnt, int64_t slice_sz, int32_t concat_axis, 
-    std::vector<struct copy_rule>* rules) const {
+    std::vector<CopyRule>* rules) const {
   int64_t src_offset = 0; 
   const int64_t step_sz = sizeof(FloatingPointType);
   for (auto src_iter = src_bn2slice.begin(), dst_iter = dst_bn2slice.begin();
@@ -100,7 +100,7 @@ void BoxingKernel<device_type,
       int64_t p = std::min(src_iter->second - src_offset, 
                            dst_iter->second - dst_offset);
       for (size_t i = 0; i < seg_cnt; ++i) {
-        copy_rule cr;
+        CopyRule cr;
         cr.src_bn = *src_iter->first;
         cr.dst_bn = *dst_iter->first;
         cr.src_offset = (src_offset + i * src_iter->second) 
@@ -132,7 +132,7 @@ void BoxingKernel<device_type, FloatingPointType>::ConstructFwCloneRules(
   const std::vector<std::string>& obns = op()->output_bns();
   int64_t copy_sz = BnInOp2BlobPtr(obns.front())->shape().elem_cnt();
   for (size_t i = 1; i < obns.size(); ++i) {
-    copy_rule cr;
+    CopyRule cr;
     cr.src_bn = obns.front();
     cr.dst_bn = obns.at(i);
     cr.src_offset = 0;
@@ -164,8 +164,8 @@ template<DeviceType device_type, typename FloatingPointType>
 void BoxingKernel<device_type, FloatingPointType>::CopyDataFromRules(
     const KernelCtx& ctx, 
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr, 
-    const std::vector<copy_rule>& copy_rules) const {
-  for (const copy_rule& rule : copy_rules) {
+    const std::vector<CopyRule>& copy_rules) const {
+  for (const CopyRule& rule : copy_rules) {
     Blob* src_blob = BnInOp2BlobPtr(rule.src_bn);
     Blob* dst_blob = BnInOp2BlobPtr(rule.dst_bn);
     KernelUtil<device_type, FloatingPointType>::Memcpy(ctx, 
@@ -212,8 +212,8 @@ void BoxingKernel<device_type, FloatingPointType>::AddBoxForward(
   // Add all the input blobs into data_tmp blob
   Blob* out_0 = BnInOp2BlobPtr("out_0");
   KernelUtil<device_type, FloatingPointType>::Memset(ctx, 
-      out_0->mut_dptr(), 0, out_0->shape().elem_cnt() * 
-      sizeof(FloatingPointType));
+      out_0->mut_dptr(), 0, 
+      out_0->shape().elem_cnt() * sizeof(FloatingPointType));
   for (const std::string& bn : op()->input_bns()) {
     Blob* blob = BnInOp2BlobPtr(bn);
     KernelUtil<device_type, FloatingPointType>::BlasAxpy(ctx, 
@@ -230,8 +230,6 @@ template<DeviceType device_type, typename FloatingPointType>
 void BoxingKernel<device_type, FloatingPointType>::AddBoxBackward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  // Discussed with Will, currently no backward actions of addbox
-  // do nothing
   UNEXPECTED_RUN();
 }
 
