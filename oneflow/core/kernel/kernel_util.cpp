@@ -10,7 +10,7 @@ class KernelUtil<DeviceType::kCPU, floating_point_type> final {
 
   static void Memcpy(const KernelCtx& ctx, 
      void* dst, const void* src, size_t sz, 
-     cudaMemcpyKind kind=cudaMemcpyKind::cudaMemcpyHostToHost) {
+     cudaMemcpyKind kind = cudaMemcpyKind::cudaMemcpyHostToHost) {
     ctx.device_ctx->cpu_stream()->Send([dst, src, sz](){
       memcpy(dst, src, sz);
     });
