@@ -6,11 +6,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename floating_point_type>
-class CopyHdKernel;
-
-template<typename floating_point_type>
-class CopyHdKernel<DeviceType::kGPU, floating_point_type> final
-    : public Kernel {
+class CopyHdKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CopyHdKernel);
   CopyHdKernel() = default;
