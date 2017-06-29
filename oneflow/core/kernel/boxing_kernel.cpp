@@ -64,37 +64,39 @@ void BoxingKernel<device_type, FloatingPointType>::InferCopyRulesFromBns(
     std::vector<CopyRule>* copy_rules) const {
   // P.S This routine will be called only once, thus some performance
   // loss seems ok.
-  std::map<const std::string*, int64_t> src_bn2slice; 
-  std::map<const std::string*, int64_t> dst_bn2slice; 
+  std::map<const std::string*, int64_t> src_bn2concat_dim; 
+  std::map<const std::string*, int64_t> dst_bn2concat_dim; 
   int32_t concat_axis = op()->op_conf().boxing_conf().concat_box().axis();
   for (const std::string& bn : src_bns) {
-    CHECK(src_bn2slice.emplace(&bn,
+    CHECK(src_bn2concat_dim.emplace(&bn,
           (BnInOp2BlobPtr(bn)->shape().At(concat_axis))).second);
   }
   for (const std::string& bn : dst_bns) {
-    CHECK(dst_bn2slice.emplace(&bn,
+    CHECK(dst_bn2concat_dim.emplace(&bn,
           (BnInOp2BlobPtr(bn)->shape().At(concat_axis))).second);
   }
   
   Blob* src_fst_blob = BnInOp2BlobPtr(src_bns.front());
-  int64_t slice_sz = src_fst_blob->shape().Count(concat_axis+1);
+  int64_t concat_dim_sz = src_fst_blob->shape().Count(concat_axis+1);
   int64_t seg_cnt = (concat_axis == 0) ? 1 : (src_fst_blob->shape().At(0));
 
-  ConstructCopyRulesFromSlice(src_bn2slice, dst_bn2slice, seg_cnt, 
-                              slice_sz, concat_axis, copy_rules);
+  ConstructCopyRulesFromConcatDim(src_bn2concat_dim, dst_bn2concat_dim, seg_cnt, 
+                              concat_dim_sz, concat_axis, copy_rules);
 }
 
 template<DeviceType device_type, typename FloatingPointType>
 void BoxingKernel<device_type,
-    FloatingPointType>::ConstructCopyRulesFromSlice(
-    const std::map<const std::string*, int64_t>& src_bn2slice, 
-    const std::map<const std::string*, int64_t>& dst_bn2slice,
-    int64_t seg_cnt, int64_t slice_sz, int32_t concat_axis, 
+    FloatingPointType>::ConstructCopyRulesFromConcatDim(
+    const std::map<const std::string*, int64_t>& src_bn2concat_dim, 
+    const std::map<const std::string*, int64_t>& dst_bn2concat_dim,
+    int64_t seg_cnt, int64_t concat_dim_sz, int32_t concat_axis, 
     std::vector<CopyRule>* rules) const {
   int64_t src_offset = 0; 
   const int64_t step_sz = sizeof(FloatingPointType);
-  for (auto src_iter = src_bn2slice.begin(), dst_iter = dst_bn2slice.begin();
-      src_iter != src_bn2slice.end() && dst_iter != dst_bn2slice.end();) {
+  for (auto src_iter = src_bn2concat_dim.begin(), 
+      dst_iter = dst_bn2concat_dim.begin();
+      src_iter != src_bn2concat_dim.end() 
+      && dst_iter != dst_bn2concat_dim.end();) {
     int64_t dst_offset = 0;
     while (dst_offset < dst_iter->second) {
       int64_t p = std::min(src_iter->second - src_offset, 
@@ -104,16 +106,16 @@ void BoxingKernel<device_type,
         cr.src_bn = *src_iter->first;
         cr.dst_bn = *dst_iter->first;
         cr.src_offset = (src_offset + i * src_iter->second) 
-          * slice_sz * step_sz;
+          * concat_dim_sz * step_sz;
         cr.dst_offset = (dst_offset + i * dst_iter->second) 
-          * slice_sz * step_sz;
-        cr.copy_sz = p * slice_sz * step_sz;
+          * concat_dim_sz * step_sz;
+        cr.copy_sz = p * concat_dim_sz * step_sz;
         rules->push_back(std::move(cr));
       }
       src_offset += p;
       dst_offset += p;
       if (src_offset == src_iter->second) {
-        if (++src_iter == src_bn2slice.end()) { 
+        if (++src_iter == src_bn2concat_dim.end()) { 
           break;
         }
         src_offset = 0;

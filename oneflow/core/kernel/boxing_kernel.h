@@ -36,10 +36,10 @@ class BoxingKernel final : public Kernel {
 
   void InferCopyRules(std::function<Blob*(const std::string&)>) const;
 
-  void ConstructCopyRulesFromSlice(
-      const std::map<const std::string*, int64_t>& src_bn2slice, 
-      const std::map<const std::string*, int64_t>& dst_bn2slice,
-      int64_t seg_cnt, int64_t slice_sz, int32_t concat_axis, 
+  void ConstructCopyRulesFromConcatDim(
+      const std::map<const std::string*, int64_t>& src_bn2concat_dim, 
+      const std::map<const std::string*, int64_t>& dst_bn2concat_dim,
+      int64_t seg_cnt, int64_t concat_dim_sz, int32_t concat_axis, 
       std::vector<CopyRule>* rules) const; 
 
   // Construct rules of copying first output blob to the remaining output blobs
