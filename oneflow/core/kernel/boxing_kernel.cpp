@@ -182,10 +182,9 @@ void BoxingKernel<device_type, FloatingPointType>::CopyDataFromRules(
     Blob* src_blob = BnInOp2BlobPtr(rule.src_bn);
     Blob* dst_blob = BnInOp2BlobPtr(rule.dst_bn);
     KernelUtil<device_type, FloatingPointType>::Memcpy(ctx, 
-        static_cast<char*>(dst_blob->mut_dptr())
-        + rule.dst_offset,
-        static_cast<const char*>(src_blob->dptr())
-        + rule.src_offset, rule.copy_sz);
+        static_cast<char*>(dst_blob->mut_dptr()) + rule.dst_offset,
+        static_cast<const char*>(src_blob->dptr()) + rule.src_offset, 
+        rule.copy_sz);
   }
 }
 
