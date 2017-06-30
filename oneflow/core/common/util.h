@@ -1,55 +1,53 @@
 #ifndef ONEFLOW_CORE_COMMON_UTIL_H_
 #define ONEFLOW_CORE_COMMON_UTIL_H_
 
-#include <unordered_set>
-#include <unordered_map>
-#include <functional>
 #include <algorithm>
-#include <mutex>
-#include <utility>
-#include <memory>
-#include <thread>
-#include <list>
-#include <condition_variable>
 #include <atomic>
-#include <queue>
+#include <condition_variable>
 #include <fstream>
+#include <functional>
 #include <iostream>
-#include "glog/logging.h"
-#include "gtest/gtest.h"
+#include <list>
+#include <memory>
+#include <mutex>
+#include <queue>
+#include <thread>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include "cublas_v2.h"
 #include "cuda.h"
 #include "cuda_runtime.h"
-#include "cublas_v2.h"
 #include "cudnn.h"
+#include "glog/logging.h"
+#include "gtest/gtest.h"
 
 namespace oneflow {
 
-#define OF_DISALLOW_COPY(ClassName) \
+#define OF_DISALLOW_COPY(ClassName)     \
   ClassName(const ClassName&) = delete; \
-  ClassName& operator = (const ClassName&) = delete;
+  ClassName& operator=(const ClassName&) = delete;
 
 #define OF_DISALLOW_MOVE(ClassName) \
-  ClassName(ClassName&&) = delete; \
-  ClassName& operator = (ClassName&&) = delete;
+  ClassName(ClassName&&) = delete;  \
+  ClassName& operator=(ClassName&&) = delete;
 
 #define OF_DISALLOW_COPY_AND_MOVE(ClassName) \
-  OF_DISALLOW_COPY(ClassName) \
+  OF_DISALLOW_COPY(ClassName)                \
   OF_DISALLOW_MOVE(ClassName)
 
-#define UNEXPECTED_RUN() \
-  LOG(FATAL) << "Unexpected Run";
+#define UNEXPECTED_RUN() LOG(FATAL) << "Unexpected Run";
 
-#define TODO() \
-  LOG(FATAL) << "TODO";
+#define TODO() LOG(FATAL) << "TODO";
 
-#define OF_SINGLETON(ClassName) \
+#define OF_SINGLETON(ClassName)   \
   static ClassName& Singleton() { \
-    static ClassName obj; \
-    return obj; \
+    static ClassName obj;         \
+    return obj;                   \
   }
 
 template<typename T>
-bool operator == (const std::weak_ptr<T>& lhs, const std::weak_ptr<T>& rhs) {
+bool operator==(const std::weak_ptr<T>& lhs, const std::weak_ptr<T>& rhs) {
   return lhs.lock().get() == rhs.lock().get();
 }
 
@@ -83,9 +81,7 @@ inline std::string LogDir() {
 
 inline void str_replace(std::string* str, char old_ch, char new_ch) {
   for (size_t i = 0; i < str->size(); ++i) {
-    if (str->at(i) == old_ch) {
-      str->at(i) = new_ch;
-    }
+    if (str->at(i) == old_ch) { str->at(i) = new_ch; }
   }
 }
 
@@ -102,17 +98,26 @@ void EraseIf(HashMap<K, V>* hash_map,
 }
 
 #define OF_DECLARE_ENUM_TO_OSTREAM_FUNC(EnumType) \
-std::ostream& operator << (std::ostream& out_stream, const EnumType&)
+  std::ostream& operator<<(std::ostream& out_stream, const EnumType&)
 
-#define OF_DEFINE_ENUM_TO_OSTREAM_FUNC(EnumType) \
-std::ostream& operator << (std::ostream& out_stream, const EnumType& x) { \
-  out_stream << static_cast<int> (x); \
-  return out_stream; \
-}
+#define OF_DEFINE_ENUM_TO_OSTREAM_FUNC(EnumType)                          \
+  std::ostream& operator<<(std::ostream& out_stream, const EnumType& x) { \
+    out_stream << static_cast<int>(x);                                    \
+    return out_stream;                                                    \
+  }
 
 template<typename OutType, typename InType>
 OutType oneflow_cast(const InType&);
 
-} // namespace oneflow
+void Split(const std::string& text, const std::string& delims,
+           std::function<void(std::string&&)> Func);
 
-#endif // ONEFLOW_CORE_COMMON_UTIL_H_
+template<typename T>
+void SplitAndParseAs(const std::string& text, const std::string& delims,
+                     std::function<void(T&&)> Func) {
+  Split(text, delims, [&Func](std::string&& s) { Func(oneflow_cast<T>(s)); });
+}
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_COMMON_UTIL_H_

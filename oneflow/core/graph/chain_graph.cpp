@@ -27,10 +27,8 @@ void SetChainNodeWithChainIt(ChainNode* chain_node, ChainIt chain_it) {
   }
 }
 
-void InitChains(
-    const LogicalGraph& logi_gph,
-    std::list<Chain>* chain_list,
-    Logical2ChainItMap* logical2chain_it) {
+void InitChains(const LogicalGraph& logi_gph, std::list<Chain>* chain_list,
+                Logical2ChainItMap* logical2chain_it) {
   chain_list->clear();
   logical2chain_it->clear();
   logi_gph.ConstForEachNode([&](const LogicalNode* node) {
@@ -82,9 +80,8 @@ void InitChains(
   });
 }
 
-void ModelMergeChains(
-    std::list<Chain>* chain_list,
-    Logical2ChainItMap* logical2chain_it) {
+void ModelMergeChains(std::list<Chain>* chain_list,
+                      Logical2ChainItMap* logical2chain_it) {
   for (auto& pair : *logical2chain_it) {
     // Get cur_node, pred_node
     const LogicalNode* cur_node = pair.first;
@@ -101,8 +98,7 @@ void ModelMergeChains(
     ChainIt pred_chain = logical2chain_it->at(pred_node);
     ChainIt cur_chain = pair.second;
     // Merge
-    pred_chain->nodes.insert(pred_chain->nodes.end(),
-                             cur_chain->nodes.begin(),
+    pred_chain->nodes.insert(pred_chain->nodes.end(), cur_chain->nodes.begin(),
                              cur_chain->nodes.end());
     for (const LogicalNode* node : cur_chain->nodes) {
       pred_chain->descendants.erase(node);
@@ -112,11 +108,10 @@ void ModelMergeChains(
   }
 }
 
-bool TryMergeWithConnect(
-    const LogicalNode* up_node,
-    const LogicalNode* bottom_node,
-    std::list<Chain>* chain_list,
-    Logical2ChainItMap* logical2chain_it) {
+bool TryMergeWithConnect(const LogicalNode* up_node,
+                         const LogicalNode* bottom_node,
+                         std::list<Chain>* chain_list,
+                         Logical2ChainItMap* logical2chain_it) {
   // Get chain
   ChainIt up_chain = logical2chain_it->at(up_node);
   ChainIt bottom_chain = logical2chain_it->at(bottom_node);
@@ -146,11 +141,10 @@ bool TryMergeWithConnect(
   return true;
 }
 
-bool TryMergeWithoutConnect(
-    const LogicalNode* lhs_node,
-    const LogicalNode* rhs_node,
-    std::list<Chain>* chain_list,
-    Logical2ChainItMap* logical2chain_it) {
+bool TryMergeWithoutConnect(const LogicalNode* lhs_node,
+                            const LogicalNode* rhs_node,
+                            std::list<Chain>* chain_list,
+                            Logical2ChainItMap* logical2chain_it) {
   // Get chain
   ChainIt lhs_chain = logical2chain_it->at(lhs_node);
   ChainIt rhs_chain = logical2chain_it->at(rhs_node);
@@ -170,11 +164,9 @@ bool TryMergeWithoutConnect(
   return true;
 }
 
-bool TryDataMerge(
-    const LogicalNode* first,
-    const LogicalNode* second,
-    std::list<Chain>* chain_list,
-    Logical2ChainItMap* logical2chain_it) {
+bool TryDataMerge(const LogicalNode* first, const LogicalNode* second,
+                  std::list<Chain>* chain_list,
+                  Logical2ChainItMap* logical2chain_it) {
   if (first->parallel_desc()->Equal(second->parallel_desc().get()) == false) {
     return false;
   }
@@ -186,10 +178,9 @@ bool TryDataMerge(
   return false;
 }
 
-bool DoOneDataMerge(
-    const std::vector<const LogicalNode*>& data_parallel_node,
-    std::list<Chain>* chain_list,
-    Logical2ChainItMap* logical2chain_it) {
+bool DoOneDataMerge(const std::vector<const LogicalNode*>& data_parallel_node,
+                    std::list<Chain>* chain_list,
+                    Logical2ChainItMap* logical2chain_it) {
   for (const LogicalNode* first : data_parallel_node) {
     for (const LogicalNode* second : data_parallel_node) {
       if (first == second) { continue; }
@@ -204,10 +195,9 @@ bool DoOneDataMerge(
   return false;
 }
 
-void DataMergeChains(
-    const LogicalGraph& logical_gph,
-    std::list<Chain>* chain_list,
-    Logical2ChainItMap* logical2chain_it) {
+void DataMergeChains(const LogicalGraph& logical_gph,
+                     std::list<Chain>* chain_list,
+                     Logical2ChainItMap* logical2chain_it) {
   std::vector<const LogicalNode*> data_parallel_node;
   for (const auto& pair : *logical2chain_it) {
     const LogicalNode* cur_logi_node = pair.first;
@@ -215,17 +205,14 @@ void DataMergeChains(
     if (cur_logi_node->IsLossNode()) { continue; }
     data_parallel_node.push_back(cur_logi_node);
   }
-  while (DoOneDataMerge(data_parallel_node, chain_list, logical2chain_it)) {
-  }
+  while (DoOneDataMerge(data_parallel_node, chain_list, logical2chain_it)) {}
 }
 
-} // namespace
+}  // namespace
 
 std::string ChainNode::ConcatedOpsName() const {
   std::stringstream ss;
-  for (auto op : op_vec_) {
-    ss << "\\n" << op->op_name();
-  }
+  for (auto op : op_vec_) { ss << "\\n" << op->op_name(); }
   if (!op_vec_.empty()) {
     return ss.str().substr(2);
   } else {
@@ -252,19 +239,21 @@ ChainGraph::ChainGraph(const LogicalGraph* logical_gph) {
   DataMergeChains(*logical_gph, &chain_list, &logical2chain_it);
   // Init chain_nodes
   auto HashChainIt = [](const ChainIt& chain_it) {
-    return std::hash<Chain*> ()(&(*chain_it));
+    return std::hash<Chain*>()(&(*chain_it));
   };
-  HashMap<ChainIt, ChainNode*, decltype(HashChainIt)>
-      chain_it2chain_node(11, HashChainIt);
+  HashMap<ChainIt, ChainNode*, decltype(HashChainIt)> chain_it2chain_node(
+      11, HashChainIt);
   HashMap<ChainNode*, std::unordered_set<ChainNode*>> chain_node2pred;
-  for (auto chain_it = chain_list.begin(); chain_it != chain_list.end(); ++chain_it) {
+  for (auto chain_it = chain_list.begin(); chain_it != chain_list.end();
+       ++chain_it) {
     ChainNode* chain_node = NewNode();
     chain_it2chain_node[chain_it] = chain_node;
     chain_node2pred[chain_node] = {};
     SetChainNodeWithChainIt(chain_node, chain_it);
   }
   // Record the predecessor
-  for (auto chain_it = chain_list.begin(); chain_it != chain_list.end(); ++chain_it) {
+  for (auto chain_it = chain_list.begin(); chain_it != chain_list.end();
+       ++chain_it) {
     ChainNode* chain_node = chain_it2chain_node.at(chain_it);
     for (const LogicalNode* logi_node : chain_it->nodes) {
       for (auto logi_in_edge : logi_node->in_edges()) {
@@ -324,14 +313,12 @@ void ChainGraph::SetInOutLbn4AllChainNodeInDataTaskGraph() {
   });
 }
 
-std::vector<std::string> FindLbnsBetween(const ChainNode* src_node, 
+std::vector<std::string> FindLbnsBetween(const ChainNode* src_node,
                                          const ChainNode* dst_node) {
   std::vector<std::string> matching_lbns;
   for (const std::string& src_node_output_lbn : src_node->output_lbns()) {
-    for (const std::string& dst_node_input_lbn : dst_node->input_lbns()) { 
-      if (src_node_output_lbn != dst_node_input_lbn) {
-        continue;
-      }        
+    for (const std::string& dst_node_input_lbn : dst_node->input_lbns()) {
+      if (src_node_output_lbn != dst_node_input_lbn) { continue; }
       matching_lbns.push_back(src_node_output_lbn);
       break;
     }
@@ -343,10 +330,8 @@ std::vector<std::string> FindLbnsBetween(const ChainNode* src_node,
 std::string ChainEdge::VisualStr() const {
   std::vector<std::string> lbns = FindLbnsBetween(src_node(), dst_node());
   std::stringstream ss;
-  for (const std::string& lbn : lbns) {
-    ss << "\\n" << lbn;
-  }
+  for (const std::string& lbn : lbns) { ss << "\\n" << lbn; }
   return ss.str().substr(2);
 }
 
-} // namespace oneflow
+}  // namespace oneflow

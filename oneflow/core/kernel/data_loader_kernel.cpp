@@ -3,8 +3,9 @@
 
 namespace oneflow {
 
-template<typename floating_point_type>
-class DataLoaderKernel<DeviceType::kCPU, floating_point_type> final : public Kernel {
+template<typename FloatingPointType>
+class DataLoaderKernel<DeviceType::kCPU, FloatingPointType> final
+    : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DataLoaderKernel);
   DataLoaderKernel() = default;
@@ -16,14 +17,14 @@ class DataLoaderKernel<DeviceType::kCPU, floating_point_type> final : public Ker
                 std::function<Blob*(const std::string&)>) const override {
     UNEXPECTED_RUN();
   }
-
 };
 
-template<typename floating_point_type>
-void DataLoaderKernel<DeviceType::kCPU, floating_point_type>::Forward(
+template<typename FloatingPointType>
+void DataLoaderKernel<DeviceType::kCPU, FloatingPointType>::Forward(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  PersistentCircularLineReader* reader = RuntimeCtx::Singleton().GetDataReader();
+  PersistentCircularLineReader* reader =
+      RuntimeCtx::Singleton().GetDataReader();
   if (reader == nullptr) {
     std::string data_dir = op()->GetStringFromSpecialConf("data_dir");
     int64_t parallel_id = reinterpret_cast<int64_t>(kernel_ctx.other);
@@ -36,5 +37,5 @@ void DataLoaderKernel<DeviceType::kCPU, floating_point_type>::Forward(
 
 INSTANTIATE_CPU_KERNEL_CLASS(DataLoaderKernel);
 REGISTER_CPU_KERNEL(OperatorConf::kDataLoaderConf, DataLoaderKernel)
-  
-} // namespace oneflow
+
+}  // namespace oneflow

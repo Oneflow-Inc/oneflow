@@ -1,9 +1,9 @@
 #ifndef ONEFLOW_CORE_REGISTER_REMOTE_REGISTER_WARPPER_H_
 #define ONEFLOW_CORE_REGISTER_REMOTE_REGISTER_WARPPER_H_
 
-#include "oneflow/core/register/register_warpper.h"
-#include "oneflow/core/job/keyword.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/job/keyword.h"
+#include "oneflow/core/register/register_warpper.h"
 
 namespace oneflow {
 
@@ -30,21 +30,11 @@ class RemoteRegstWarpper final : public RegstWarpper {
     CHECK_EQ(kBaledBlobName, lbn);
     return baled_blob_.get();
   }
-  int64_t piece_id() const override {
-    return piece_id_;
-  }
-  int64_t model_version_id() const override {
-    return model_version_id_;
-  }
-  int64_t regst_desc_id() const override {
-    return regst_desc_id_;
-  }
-  int64_t producer_actor_id() const override {
-    return producer_actor_id_;
-  }
-  Regst* regst_raw_ptr() const override {
-    return regst_;
-  }
+  int64_t piece_id() const override { return piece_id_; }
+  int64_t model_version_id() const override { return model_version_id_; }
+  int64_t regst_desc_id() const override { return regst_desc_id_; }
+  int64_t producer_actor_id() const override { return producer_actor_id_; }
+  Regst* regst_raw_ptr() const override { return regst_; }
 
  private:
   int64_t piece_id_;
@@ -54,9 +44,8 @@ class RemoteRegstWarpper final : public RegstWarpper {
   Regst* regst_;
   std::unique_ptr<Shape> baled_blob_shape_;
   std::unique_ptr<Blob> baled_blob_;
-
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_REGISTER_REMOTE_REGISTER_WARPPER_H_
+#endif  // ONEFLOW_CORE_REGISTER_REMOTE_REGISTER_WARPPER_H_

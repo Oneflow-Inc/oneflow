@@ -1,12 +1,12 @@
 #include "oneflow/core/graph/model_save_comp_task_node.h"
-#include "oneflow/core/graph/model_update_comp_task_node.h"
 #include "oneflow/core/graph/model_save_task_graph.h"
+#include "oneflow/core/graph/model_update_comp_task_node.h"
 
 namespace oneflow {
 
 void MdSaveCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   CHECK(IsFwNode());
-  auto md_save_gph = static_cast<MdSaveTaskGraph*> (gph);
+  auto md_save_gph = static_cast<MdSaveTaskGraph*>(gph);
   CompTaskNode* updt_task = md_save_gph->update_task();
   if (in_edges().empty()) {
     BindProducedRegstAndOutEdge(updt_task->GetProducedRegstDesc("model"),
@@ -36,4 +36,4 @@ void MdSaveCompTaskNode::InferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
   CHECK(IsFwNode());
 }
 
-} // namespace oneflow
+}  // namespace oneflow

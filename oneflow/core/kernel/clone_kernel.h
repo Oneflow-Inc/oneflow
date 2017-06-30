@@ -5,17 +5,19 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename floating_point_type>
-class CloneKernel final : public Kernel{
+template<DeviceType device_type, typename FloatingPointType>
+class CloneKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CloneKernel);
   CloneKernel() = default;
   ~CloneKernel() = default;
 
-  void Forward(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
-  void Backward(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
+  void Forward(const KernelCtx&,
+               std::function<Blob*(const std::string&)>) const override;
+  void Backward(const KernelCtx&,
+                std::function<Blob*(const std::string&)>) const override;
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_KERNEL_CLONE_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_CLONE_KERNEL_H_

@@ -2,7 +2,8 @@
 
 namespace oneflow {
 
-PersistentInStream::PersistentInStream(const std::string& file_path, uint64_t offset) {
+PersistentInStream::PersistentInStream(const std::string& file_path,
+                                       uint64_t offset) {
   tensorflow::Env* env_ = tensorflow::Env::Default();
   TF_CHECK_OK(env_->FileExists(file_path));
   TF_CHECK_OK(env_->NewRandomAccessFile(file_path, &file_));
@@ -16,9 +17,7 @@ PersistentInStream::PersistentInStream(const std::string& file_path, uint64_t of
 }
 
 PersistentInStream& PersistentInStream::Read(char* s, size_t n) {
-  if (!good()) {
-    return *this;
-  }
+  if (!good()) { return *this; }
   if (offset_ + n > file_size_) {
     is_eof_ = true;
     offset_ += n;
@@ -28,7 +27,7 @@ PersistentInStream& PersistentInStream::Read(char* s, size_t n) {
   if (file_->Read(offset_, n, &result, s).code() == tensorflow::error::OK) {
     CHECK(result.size() == n);
   } else {
-    is_eof_ = true; 
+    is_eof_ = true;
   }
   CHECK(result.data() == s);
   offset_ += n;

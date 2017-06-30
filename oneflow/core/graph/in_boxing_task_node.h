@@ -13,15 +13,14 @@ class InBoxingTaskNode final : public BoxingTaskNode {
 
  private:
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    return of_make_unique<InBoxingTaskNode> ();
+    return of_make_unique<InBoxingTaskNode>();
   }
   void InitWithFwNode(TaskNode* fw_node) override {
     BoxingTaskNode::InitWithFwNode(fw_node);
   }
   void FwVirtualBuild() override;
-
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_GRAPH_IN_BOXING_TASK_NODE_H_
+#endif  // ONEFLOW_CORE_GRAPH_IN_BOXING_TASK_NODE_H_

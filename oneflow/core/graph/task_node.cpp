@@ -2,7 +2,10 @@
 
 namespace oneflow {
 
-TaskNode::TaskNode() : produced_regst2out_edge_(11, [](const std::weak_ptr<RegstDesc>& v) { return std::hash<void*>() (v.lock().get()); }) {
+TaskNode::TaskNode()
+    : produced_regst2out_edge_(11, [](const std::weak_ptr<RegstDesc>& v) {
+        return std::hash<void*>()(v.lock().get());
+      }) {
   stage_node_ = nullptr;
   related_fw_or_bp_node_ = nullptr;
 }
@@ -75,10 +78,11 @@ void TaskNode::TakeOverRegstDesc(TaskNode* rhs,
 }
 
 void TaskNode::EraseProducedEmptyRegsts() {
-  EraseIf<std::string, std::shared_ptr<RegstDesc>> (&produced_regst_descs_, []
-      (HashMap<std::string, std::shared_ptr<RegstDesc>>::iterator it) {
-    return it->second->NumOfLbn() == 0;
-  });
+  EraseIf<std::string, std::shared_ptr<RegstDesc>>(
+      &produced_regst_descs_,
+      [](HashMap<std::string, std::shared_ptr<RegstDesc>>::iterator it) {
+        return it->second->NumOfLbn() == 0;
+      });
 }
 
 void TaskNode::EraseZeroSizeBlobInProducedRegsts() {
@@ -113,7 +117,7 @@ void TaskNode::BindProducedRegstAndOutEdge(std::weak_ptr<RegstDesc> regst,
 
 std::shared_ptr<RegstDesc> TaskNode::NewProducedRegstDesc(
     const std::string& regst_desc_name) {
-  auto regst_desc = std::make_shared<RegstDesc> ();
+  auto regst_desc = std::make_shared<RegstDesc>();
   regst_desc->SetProducer(this);
   regst_desc->set_regst_desc_id(IDMgr::Singleton().NewRegstDescId());
   CHECK(produced_regst_descs_.emplace(regst_desc_name, regst_desc).second);
@@ -136,14 +140,16 @@ void TaskNode::ToProto(TaskProto* ret) const {
   for (const auto& pair : produced_regst_descs_) {
     RegstDescProto regst_desc_proto;
     pair.second->ToProto(&regst_desc_proto);
-    CHECK(ret->mutable_produced_regst_desc()->insert(
-          {pair.first, regst_desc_proto}).second);
+    CHECK(ret->mutable_produced_regst_desc()
+              ->insert({pair.first, regst_desc_proto})
+              .second);
   }
   for (const auto& pair : subscribed_regst_descs_) {
     auto regst_desc = pair.second.lock();
     if (regst_desc) {
-      CHECK(ret->mutable_subscribed_regst_desc_id()->insert(
-          {pair.first, regst_desc->regst_desc_id()}).second);
+      CHECK(ret->mutable_subscribed_regst_desc_id()
+                ->insert({pair.first, regst_desc->regst_desc_id()})
+                .second);
     }
   }
 }
@@ -159,10 +165,10 @@ std::string TaskNode::DebugStr() const {
   std::stringstream ss;
   ss << "{" << node_id_str() << "\t";
   for (const auto& pair : produced_regst_descs_) {
-    ss << "{" << pair.first << ":" << pair.second->DebugStr() << "}"; 
+    ss << "{" << pair.first << ":" << pair.second->DebugStr() << "}";
   }
   ss << "}";
   return ss.str();
 }
 
-} // namespace oneflow
+}  // namespace oneflow

@@ -1,19 +1,19 @@
 #include "oneflow/core/graph/copy_task_node.h"
-#include "oneflow/core/operator/copy_hd_op.h"
 #include "oneflow/core/operator/copy_comm_net_op.h"
+#include "oneflow/core/operator/copy_hd_op.h"
 
 namespace oneflow {
 
-void CopyTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph*){
+void CopyTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   auto out_regst = NewProducedRegstDesc("copy_out");
   BindProducedRegstAndOutEdge(out_regst, SoleOutEdge());
   std::shared_ptr<RegstDesc> in_regst = GetRelatedRegst(SoleInEdge());
   SubscribeRegstDesc("copy_in", in_regst);
   out_regst->CopyLbnFrom(in_regst.get());
-  
+
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = ConstructOp();
-  
+
   if (IsFwNode()) {
     node->BindBnInOpAndRegst(node->op()->SoleIbn(), in_regst);
     node->BindBnInOpAndRegst(node->op()->SoleObn(), out_regst);
@@ -21,7 +21,7 @@ void CopyTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph*){
     node->BindBnInOpAndRegst(node->op()->SoleOdbn(), in_regst);
     node->BindBnInOpAndRegst(node->op()->SoleIdbn(), out_regst);
   }
-  
+
   mut_exec_gph().UpdateSourceAndSink();
 }
 
@@ -56,4 +56,4 @@ std::shared_ptr<const Operator> CopyCommNetTaskNode::ConstructOp() const {
   return OpMgr::Singleton().ConstructOp(op_conf);
 }
 
-} // namespace oneflow
+}  // namespace oneflow

@@ -2,12 +2,12 @@
 #define ONEFLOW_CORE_KERNEL_INNERPRODUCT_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/kernel_manager.h"
 #include "oneflow/core/kernel/kernel_context.h"
+#include "oneflow/core/kernel/kernel_manager.h"
 
 namespace oneflow {
 
-template<DeviceType device_type, typename floating_point_type>
+template<DeviceType device_type, typename FloatingPointType>
 class InnerProductKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(InnerProductKernel);

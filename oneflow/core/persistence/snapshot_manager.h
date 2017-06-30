@@ -2,8 +2,8 @@
 #define ONEFLOW_CORE_PERSISTENCE_SNAPSHOT_MANAGER_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/job/plan.pb.h"
+#include "oneflow/core/persistence/snapshot.h"
 
 namespace oneflow {
 
@@ -16,11 +16,9 @@ class SnapshotMgr {
 
   Snapshot* GetWriteableSnapshot(int64_t snapshot_id);
 
-  const Snapshot* GetReadableSnapshot() {
-    return readable_snapshot_ptr_.get();
-  }
+  const Snapshot* GetReadableSnapshot() { return readable_snapshot_ptr_.get(); }
 
-  void Init(); 
+  void Init();
 
  private:
   SnapshotMgr() = default;

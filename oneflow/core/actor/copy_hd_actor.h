@@ -6,22 +6,21 @@
 namespace oneflow {
 
 class CopyHdActor final : public Actor {
-public:
+ public:
   OF_DISALLOW_COPY_AND_MOVE(CopyHdActor);
   CopyHdActor() = default;
   ~CopyHdActor() = default;
 
   void Init(const TaskProto&, const ThreadCtx&) override;
 
-private:
+ private:
   int HandleCopyHd(const ActorMsg&);
   int HandleCopyHdWhenNoReadableRegstMsg(const ActorMsg&);
 
   void TryWardKernelAndSendMsg();
   std::queue<std::shared_ptr<RegstWarpper>> waiting_in_regst_;
-
 };
 
 }  // namespace oneflow
 
-#endif // ONEFLOW_CORE_ACTOR_COPY_HD_ACTOR_H_
+#endif  // ONEFLOW_CORE_ACTOR_COPY_HD_ACTOR_H_

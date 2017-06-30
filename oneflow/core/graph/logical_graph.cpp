@@ -16,8 +16,7 @@ LogicalGraph::LogicalGraph(const DLNetConf& dl_net_conf,
 }
 
 void LogicalGraph::NaiveBuildGraphStruct(
-    const DLNetConf& dl_net_conf,
-    HashMap<LogicalEdge*, std::string>* edge2lbn,
+    const DLNetConf& dl_net_conf, HashMap<LogicalEdge*, std::string>* edge2lbn,
     HashMap<LogicalEdge*, std::string>* edge2ibn) {
   HashMap<std::string, LogicalNode*> lbn2producer;
   // Process Op
@@ -123,4 +122,4 @@ void LogicalGraph::AddOneCloneNode(
   }
 }
 
-} // namespace oneflow
+}  // namespace oneflow

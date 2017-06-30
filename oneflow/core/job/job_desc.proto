@@ -15,7 +15,7 @@ message JobDescProto {
   int32 piece_size = 6;
   int32 num_of_pieces_in_batch = 7;
   bool is_train = 8;
-  FloatingPointType floating_point_type = 9;
+  FloatingPointTypeProto floating_point_type = 9;
   int32 num_of_batches_in_snapshot = 10;
   int32 staleness = 11;
   int64 total_batch_num = 12;

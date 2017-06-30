@@ -18,9 +18,7 @@ const PbMessage& CloneOp::GetSpecialConf() const {
 
 void CloneOp::InferShape4FwBlobs(
     std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
-    ParallelPolicy policy,
-    int64_t parallel_id,
-    int64_t parallel_num) const {
+    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
   Shape* input_shape_ptr = GetShapePtr4BnInOp(SoleIbn());
   for (std::string obn : output_bns()) {
     *GetShapePtr4BnInOp(obn) = *input_shape_ptr;

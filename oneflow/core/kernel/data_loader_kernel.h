@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename floating_point_type>
+template<DeviceType device_type, typename FloatingPointType>
 class DataLoaderKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DataLoaderKernel);
@@ -18,6 +18,6 @@ class DataLoaderKernel final : public Kernel {
                 std::function<Blob*(const std::string&)>) const override;
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_KERNEL_DATA_LOADER_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_DATA_LOADER_KERNEL_H_

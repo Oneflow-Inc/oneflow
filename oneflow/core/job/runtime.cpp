@@ -1,11 +1,11 @@
 #include "gflags/gflags.h"
+#include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/job/id_manager.h"
-#include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/kernel/kernel_manager.h"
 #include "oneflow/core/thread/thread_manager.h"
-#include "oneflow/core/actor/actor_message_bus.h"
 
 namespace oneflow {
 
@@ -45,9 +45,8 @@ class Runtime final {
     LOG(INFO) << "InitModel on all machine done";
     SendCmdMsg(mdupdt_tasks, ActorCmd::kSendInitialModel);
     SendCmdMsg(source_tasks, ActorCmd::kStart);
-    ThreadMgr::Singleton().ForEachThread([](Thread* thrd) {
-      thrd->JoinAllActor();
-    });
+    ThreadMgr::Singleton().ForEachThread(
+        [](Thread* thrd) { thrd->JoinAllActor(); });
     ThreadMgr::Singleton().ClearAllThread();
   }
 
@@ -72,10 +71,9 @@ class Runtime final {
       ActorMsgBus::Singleton().SendMsg(msg);
     }
   }
-
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
 DEFINE_string(plan_filepath, "", "");
 DEFINE_string(this_machine_name, "", "");
