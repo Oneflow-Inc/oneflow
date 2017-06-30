@@ -12,22 +12,21 @@ class MdDiffAccTaskGraph final : public TaskGraph {
   ~MdDiffAccTaskGraph() = default;
 
   MdDiffAccTaskGraph(
-      const std::string& name,
-      const ChainNode* data_chain,
-      const std::vector<CompTaskNode*>& sorted_fw_comptasks4data_chain,
-      const std::string& dot_path_prefix);
+      const std::string& name, const ChainNode* data_chain,
+      const std::vector<CompTaskNode*>& sorted_fw_comptasks4data_chain);
 
   CompTaskNode* GetFwTaskFromParallelId(int64_t parallel_id) const {
     return parallel_id2fw_task_.at(parallel_id);
   }
 
- private:
-   void BuildTaskGraph(const ChainNode* data_chain,
-                       const std::string& dot_path_prefix);
+  const char* TypeName() const override { return "MdDiffAccTaskGraph"; }
 
-   HashMap<int64_t, CompTaskNode*> parallel_id2fw_task_;
+ private:
+  void BuildTaskGraph(const ChainNode* data_chain);
+
+  HashMap<int64_t, CompTaskNode*> parallel_id2fw_task_;
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_GRAPH_MODEL_DIFF_ACCUMULATE_TASK_GRAPH_H_
+#endif  // ONEFLOW_CORE_GRAPH_MODEL_DIFF_ACCUMULATE_TASK_GRAPH_H_

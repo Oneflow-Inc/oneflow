@@ -1,14 +1,14 @@
 #ifndef ONEFLOW_CORE_GRAPH_TASK_GRAPH_H_
 #define ONEFLOW_CORE_GRAPH_TASK_GRAPH_H_
 
-#include "oneflow/core/graph/stage_graph.h"
 #include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/graph/copy_task_node.h"
-#include "oneflow/core/operator/operator.h"
-#include "oneflow/core/operator/operator_manager.h"
-#include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/graph/stage_graph.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/operator/operator_manager.h"
 
 namespace oneflow {
 
@@ -16,31 +16,28 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TaskGraph);
   virtual ~TaskGraph() = default;
-  
+
   // Getters
   const StageGraph* stage_gph() const { return stage_gph_.get(); }
   const ChainGraph* chain_gph() const { return stage_gph_->chain_gph(); }
   std::vector<CompTaskNode*> CompTasksInChain(const ChainNode*);
 
   void InferShapeOfBlobsInProducedRegsts();
-  
+
   const std::string& name() const { return name_; }
 
  protected:
   TaskGraph() = default;
 
   template<typename CompTaskNodeType>
-  void BuildFromChainGph(std::unique_ptr<ChainGraph>&& chain_gph,
-                         bool need_bp,
-                         const std::string& dot_filepath_prefix);
+  void BuildFromChainGph(std::unique_ptr<ChainGraph>&& chain_gph, bool need_bp);
   void BuildExecAndEnrollLbn2Regsts();
 
   std::string& mut_name() { return name_; }
 
  private:
   template<typename CompTaskNodeType>
-  void BuildFromStageGph(bool need_bp,
-                         const std::string& dot_filepath_prefix);
+  void BuildFromStageGph(bool need_bp);
 
   template<typename TaskNodeType>
   TaskNodeType* NewTaskNode() {
@@ -57,9 +54,8 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
     BoxingTaskNode* in_boxing_task_node;
     BoxingTaskNode* out_boxing_task_node;
   };
-  
-  using Stage2TaskNodesMap =
-      HashMap<const StageNode*, TaskNodesInStage>;
+
+  using Stage2TaskNodesMap = HashMap<const StageNode*, TaskNodesInStage>;
 
   template<typename TaskNodeType>
   void InitCompTaskNodes(Stage2TaskNodesMap* stage2task_nodes);
@@ -75,15 +71,14 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   void InitOutBoxingTaskNode(const StageNode* stage,
                              TaskNodesInStage* task_nodes_in_stage);
   void ConnectBoxingTaskNodes(const Stage2TaskNodesMap* stage2task_nodes);
-  void GenerateRelatedBpNodes(std::vector<TaskNode*> *turning_node_vec);
+  void GenerateRelatedBpNodes(std::vector<TaskNode*>* turning_node_vec);
   void BackwardConnect(const std::vector<TaskNode*>& turning_node_vec);
   void BuildBpStruct();
 
   std::unique_ptr<const StageGraph> stage_gph_;
-  std::string name_; 
-
+  std::string name_;
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_GRAPH_TASK_GRAPH_H_
+#endif  // ONEFLOW_CORE_GRAPH_TASK_GRAPH_H_

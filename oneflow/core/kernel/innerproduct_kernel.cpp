@@ -4,35 +4,33 @@ namespace oneflow {
 
 namespace {
 
-template<typename floating_point_type>
-void BlasMatrixMult(
-    Channel<std::function<void()>>* cpu_stream,
-    const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_TRANSPOSE TransB,
-    const floating_point_type alpha, const floating_point_type beta,
-    Blob* A, Blob* B, Blob* C) {
-  const int M = C->shape().NumAxes();  // rows number of C
-  const int N = C->shape().At(0);  // columns number of C
-  const int K = A->shape().At(0);  // columns number of A
-  const int lda = (TransA == CblasNoTrans) ? K : M;
-  const int ldb = (TransA == CblasNoTrans) ? N : K;
-  const int ldc = N;
+template<DeviceType device_type, typename FloatingPointType>
+void BlasMatrixMatrix(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans_a,
+                      const enum CBLAS_TRANSPOSE trans_b,
+                      const FloatingPointType alpha,
+                      const FloatingPointType beta, Blob* a, Blob* b, Blob* c) {
+  const int m = c->shape().At(0);
+  const int n = c->shape().At(1);
+  const int k = (trans_a == CblasNoTrans) ? a->shape().At(1) : a->shape().At(0);
 
-  cpu_stream->Send([=]() {
-    cblas_gemm(
-        CblasRowMajor, TransA, TransB, M, N, K, alpha,
-        static_cast<const floating_point_type*>(A->dptr()), lda,
-        static_cast<const floating_point_type*>(B->dptr()), ldb, beta,
-        static_cast<floating_point_type*>(C->mut_dptr()), ldc);
-  });
+  const int lda = (trans_a == CblasNoTrans) ? k : m;
+  const int ldb = (trans_b == CblasNoTrans) ? n : k;
+  const int ldc = n;
+
+  KernelUtil<device_type, FloatingPointType>::BlasGemm(
+      ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha,
+      static_cast<const FloatingPointType*>(a->dptr()), lda,
+      static_cast<const FloatingPointType*>(b->dptr()), ldb, beta,
+      static_cast<FloatingPointType*>(c->mut_dptr()), ldc);
 }
 
 }  // namespace
 
-template<typename floating_point_type>
-void InnerProductKernel<DeviceType::kCPU, floating_point_type>::Forward(
+template<DeviceType device_type, typename FloatingPointType>
+void InnerProductKernel<device_type, FloatingPointType>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  Blob* in_data  = BnInOp2BlobPtr("in");
+  Blob* in_data = BnInOp2BlobPtr("in");
   Blob* out_data = BnInOp2BlobPtr("out");
 
   Blob* weight = BnInOp2BlobPtr("weight");
@@ -40,22 +38,18 @@ void InnerProductKernel<DeviceType::kCPU, floating_point_type>::Forward(
   Blob* bias_multiplier = BnInOp2BlobPtr("bias_multiplier");
 
   // out_data = in_data * weight.t
-  BlasMatrixMult<floating_point_type>(
-      ctx.device_ctx->cpu_stream(), CblasNoTrans, CblasTrans,
-      static_cast<floating_point_type>(1.0),
-      static_cast<floating_point_type>(0.0),
-      in_data, weight, out_data);
+  BlasMatrixMatrix<device_type, FloatingPointType>(
+      ctx, CblasNoTrans, CblasTrans, static_cast<FloatingPointType>(1.0),
+      static_cast<FloatingPointType>(0.0), in_data, weight, out_data);
 
   // out_data = bias_multiplier * bias + out_data
-  BlasMatrixMult<floating_point_type>(
-      ctx.device_ctx->cpu_stream(), CblasNoTrans, CblasNoTrans,
-      static_cast<floating_point_type>(1.0),
-      static_cast<floating_point_type>(1.0),
-      bias_multiplier, bias, out_data);
+  BlasMatrixMatrix<device_type, FloatingPointType>(
+      ctx, CblasNoTrans, CblasNoTrans, static_cast<FloatingPointType>(1.0),
+      static_cast<FloatingPointType>(1.0), bias_multiplier, bias, out_data);
 }
 
-template<typename floating_point_type>
-void InnerProductKernel<DeviceType::kCPU, floating_point_type>::Backward(
+template<DeviceType device_type, typename FloatingPointType>
+void InnerProductKernel<device_type, FloatingPointType>::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
   Blob* in_data = BnInOp2BlobPtr("in");
@@ -71,29 +65,24 @@ void InnerProductKernel<DeviceType::kCPU, floating_point_type>::Backward(
 
   // in_diff = out_diff * weight
   if (in_diff != nullptr) {
-    BlasMatrixMult<floating_point_type>(
-        ctx.device_ctx->cpu_stream(), CblasNoTrans, CblasNoTrans,
-        static_cast<floating_point_type>(1.0),
-        static_cast<floating_point_type>(0.0),
-        out_diff, weight, in_diff);
+    BlasMatrixMatrix<device_type, FloatingPointType>(
+        ctx, CblasNoTrans, CblasNoTrans, static_cast<FloatingPointType>(1.0),
+        static_cast<FloatingPointType>(0.0), out_diff, weight, in_diff);
   }
 
   // weight_diff = out_diff.t * in_data
-  BlasMatrixMult<floating_point_type>(
-      ctx.device_ctx->cpu_stream(), CblasTrans, CblasNoTrans,
-      static_cast<floating_point_type>(1.0),
-      static_cast<floating_point_type>(0.0),
-      out_diff, in_data, weight_diff);
+  BlasMatrixMatrix<device_type, FloatingPointType>(
+      ctx, CblasTrans, CblasNoTrans, static_cast<FloatingPointType>(1.0),
+      static_cast<FloatingPointType>(0.0), out_diff, in_data, weight_diff);
 
-  // bias_diff = out_diff.t * bias_multiplier
-  BlasMatrixMult<floating_point_type>(
-      ctx.device_ctx->cpu_stream(), CblasTrans, CblasNoTrans,
-      static_cast<floating_point_type>(1.0),
-      static_cast<floating_point_type>(0.0),
-      out_diff, bias_multiplier, bias_diff);
+  // bias_diff = bias_multiplier.t * out_diff
+  BlasMatrixMatrix<device_type, FloatingPointType>(
+      ctx, CblasTrans, CblasNoTrans, static_cast<FloatingPointType>(1.0),
+      static_cast<FloatingPointType>(0.0), bias_multiplier, out_diff,
+      bias_diff);
 }
 
-INSTANTIATE_CPU_KERNEL_CLASS(InnerProductKernel);
-REGISTER_CPU_KERNEL(OperatorConf::kInnerproductConf, InnerProductKernel);
+INSTANTIATE_KERNEL_CLASS(InnerProductKernel);
+REGISTER_KERNEL(OperatorConf::kInnerproductConf, InnerProductKernel);
 
 }  // namespace oneflow

@@ -16,9 +16,7 @@ const PbMessage& SoftmaxOp::GetSpecialConf() const {
 
 void SoftmaxOp::InferShape4FwBlobs(
     std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
-    ParallelPolicy policy,
-    int64_t parallel_id,
-    int64_t parallel_num) const {
+    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
   std::vector<int64_t> vec = GetShapePtr4BnInOp(SoleIbn())->dim_vec();
   CHECK_GT(vec.size(), 1);
   int32_t axis = (op_conf().softmax_conf().axis() + vec.size()) % vec.size();
@@ -28,4 +26,4 @@ void SoftmaxOp::InferShape4FwBlobs(
 
 REGISTER_OP(OperatorConf::kSoftmaxConf, SoftmaxOp);
 
-} // namespace oneflow
+}  // namespace oneflow

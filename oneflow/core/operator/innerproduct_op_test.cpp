@@ -13,12 +13,11 @@ TEST(InnerProductOp, modelparallel_innerproduct) {
 
   std::vector<int64_t> shape_vec = {1000, 3, 256, 256};
   HashMap<std::string, Shape*> bn2shape_ptr = {
-    {ip_op->SoleIbn(), new Shape(shape_vec)},
-    {ip_op->SoleObn(), new Shape},
-    {ip_op->model_bns().at(0), new Shape},
-    {ip_op->model_bns().at(1), new Shape},
-    {ip_op->model_tmp_bns().at(0), new Shape}
-  };
+      {ip_op->SoleIbn(), new Shape(shape_vec)},
+      {ip_op->SoleObn(), new Shape},
+      {ip_op->model_bns().at(0), new Shape},
+      {ip_op->model_bns().at(1), new Shape},
+      {ip_op->model_tmp_bns().at(0), new Shape}};
   auto fp = [&bn2shape_ptr](const std::string& bn) {
     return bn2shape_ptr.at(bn);
   };
@@ -31,11 +30,11 @@ TEST(InnerProductOp, modelparallel_innerproduct) {
   Shape* out_shape_ptr = bn2shape_ptr.at(ip_op->SoleObn());
   CHECK_EQ(*out_shape_ptr, Shape({1000, out_num}));
   Shape* weight_shape_ptr = bn2shape_ptr.at(ip_op->model_bns().at(0));
-  CHECK_EQ(*weight_shape_ptr, Shape({out_num, 3*256*256}));
+  CHECK_EQ(*weight_shape_ptr, Shape({out_num, 3 * 256 * 256}));
   Shape* bias_shape_ptr = bn2shape_ptr.at(ip_op->model_bns().at(1));
   CHECK_EQ(*bias_shape_ptr, Shape({out_num}));
   Shape* bias_multiplier_shape_ptr =
-    bn2shape_ptr.at(ip_op->model_tmp_bns().at(0));
+      bn2shape_ptr.at(ip_op->model_tmp_bns().at(0));
   CHECK_EQ(*bias_multiplier_shape_ptr, Shape({1000, 1}));
 }
 
@@ -49,11 +48,11 @@ TEST(InnerProductOp, dataparallel_innerproduct) {
 
   std::vector<int64_t> shape_vec = {1000, 3, 256, 256};
   HashMap<std::string, Shape*> bn2shape_ptr = {
-    {ip_op->SoleIbn(), new Shape(shape_vec)},
-    {ip_op->SoleObn(), new Shape},
-    {ip_op->model_bns().at(0), new Shape},
-    {ip_op->model_bns().at(1), new Shape},
-    {ip_op->model_tmp_bns().at(0), new Shape},
+      {ip_op->SoleIbn(), new Shape(shape_vec)},
+      {ip_op->SoleObn(), new Shape},
+      {ip_op->model_bns().at(0), new Shape},
+      {ip_op->model_bns().at(1), new Shape},
+      {ip_op->model_tmp_bns().at(0), new Shape},
   };
   auto fp = [&bn2shape_ptr](const std::string& bn) {
     return bn2shape_ptr.at(bn);
@@ -64,13 +63,12 @@ TEST(InnerProductOp, dataparallel_innerproduct) {
   Shape* out_shape_ptr = bn2shape_ptr.at(ip_op->SoleObn());
   CHECK_EQ(*out_shape_ptr, Shape({1000, 40}));
   Shape* weight_shape_ptr = bn2shape_ptr.at(ip_op->model_bns().at(0));
-  CHECK_EQ(*weight_shape_ptr, Shape({40, 3*256*256}));
+  CHECK_EQ(*weight_shape_ptr, Shape({40, 3 * 256 * 256}));
   Shape* bias_shape_ptr = bn2shape_ptr.at(ip_op->model_bns().at(1));
   CHECK_EQ(*bias_shape_ptr, Shape({40}));
   Shape* bias_multiplier_shape_ptr =
-    bn2shape_ptr.at(ip_op->model_tmp_bns().at(0));
+      bn2shape_ptr.at(ip_op->model_tmp_bns().at(0));
   CHECK_EQ(*bias_multiplier_shape_ptr, Shape({1000, 1}));
 }
-
 
 }  // namespace oneflow

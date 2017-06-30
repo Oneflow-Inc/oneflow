@@ -9,9 +9,7 @@ Regst::Regst() {
 }
 
 void Regst::ForEachLbn(std::function<void(const std::string&)> func) {
-  for (const auto& pair : lbn2blob_) {
-    func(pair.first);
-  }
+  for (const auto& pair : lbn2blob_) { func(pair.first); }
 }
 
 Blob* Regst::GetBlobPtrFromLbn(const std::string& lbn) {
@@ -25,4 +23,4 @@ Blob* Regst::GetBlobPtrFromLbn(const std::string& lbn) {
   }
 }
 
-} // namespace oneflow
+}  // namespace oneflow

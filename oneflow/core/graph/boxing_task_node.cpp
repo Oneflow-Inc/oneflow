@@ -1,6 +1,6 @@
 #include "oneflow/core/graph/boxing_task_node.h"
-#include "oneflow/core/operator/operator_manager.h"
 #include "oneflow/core/operator/boxing_op.h"
+#include "oneflow/core/operator/operator_manager.h"
 
 namespace oneflow {
 
@@ -31,7 +31,7 @@ void FwCompleteBoxOpConfFakerMdUpdt(BoxingOpConf* conf) {
   conf->mutable_clone_box();
 }
 
-} // namespace
+}  // namespace
 
 void BoxingTaskNode::FwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   EnrollAllRegstAndBindRelatedEdge();
@@ -68,14 +68,14 @@ void BoxingTaskNode::FwInitChain2SortedEdgesMaps(
   }
   for (auto& pair : *chain2sorted_edges) {
     std::vector<const TaskEdge*>& edges = pair.second;
-    std::sort(edges.begin(), edges.end(), [&edge2stage](const TaskEdge* lhs,
-                                                        const TaskEdge* rhs) {
-      const StageNode* lhs_stage = edge2stage.at(lhs);
-      const StageNode* rhs_stage = edge2stage.at(rhs);
-      CHECK(lhs_stage->chain_node() == rhs_stage->chain_node());
-      return lhs_stage->parallel_range().begin() <
-             rhs_stage->parallel_range().begin();
-    });
+    std::sort(edges.begin(), edges.end(),
+              [&edge2stage](const TaskEdge* lhs, const TaskEdge* rhs) {
+                const StageNode* lhs_stage = edge2stage.at(lhs);
+                const StageNode* rhs_stage = edge2stage.at(rhs);
+                CHECK(lhs_stage->chain_node() == rhs_stage->chain_node());
+                return lhs_stage->parallel_range().begin()
+                       < rhs_stage->parallel_range().begin();
+              });
   }
 }
 
@@ -91,12 +91,12 @@ void BoxingTaskNode::FwSortEdgesInnerStage(
     }
     return ret;
   };
-  std::sort(edges_to_be_sorted->begin(), edges_to_be_sorted->end(), [&]
-      (const TaskEdge* lhs, const TaskEdge* rhs) {
-    const CompTaskNode* lhs_node = GetPredSuccCompTaskNode(lhs);
-    const CompTaskNode* rhs_node = GetPredSuccCompTaskNode(rhs);
-    return lhs_node->parallel_id() < rhs_node->parallel_id();
-  });
+  std::sort(edges_to_be_sorted->begin(), edges_to_be_sorted->end(),
+            [&](const TaskEdge* lhs, const TaskEdge* rhs) {
+              const CompTaskNode* lhs_node = GetPredSuccCompTaskNode(lhs);
+              const CompTaskNode* rhs_node = GetPredSuccCompTaskNode(rhs);
+              return lhs_node->parallel_id() < rhs_node->parallel_id();
+            });
 }
 
 void BoxingTaskNode::FwBuildChainSortedEdgesPair(
@@ -141,9 +141,8 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
     CHECK_EQ(lbns.size(), 1);
     lbns.clear();
     auto in_regst_0 = GetRelatedRegst(sorted_in_edges.at(0));
-    in_regst_0->ForEachLbn([&](const std::string& lbn) {
-      lbns.push_back(lbn);
-    });
+    in_regst_0->ForEachLbn(
+        [&](const std::string& lbn) { lbns.push_back(lbn); });
   }
   // Enroll Lbn
   auto middle_regst = GetProducedRegstDesc("middle");
@@ -173,11 +172,9 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
 
 void BoxingTaskNode::FwInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
   exec_gph().ConstForEachNode([this](const ExecNode* exec_node) {
-    exec_node->op()->InferShape4FwBlobs(
-        exec_node->GetMutShapePtr4BnInOpFunc(),
-        chain_node()->parallel_desc()->policy(),
-        0,
-        0);
+    exec_node->op()->InferShape4FwBlobs(exec_node->GetMutShapePtr4BnInOpFunc(),
+                                        chain_node()->parallel_desc()->policy(),
+                                        0, 0);
   });
 }
 
@@ -191,7 +188,7 @@ std::shared_ptr<RegstDesc> GetBpRegstFromFwRegst(
   return GetRelatedRegst(bp_edge);
 }
 
-}
+}  // namespace
 
 void BoxingTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   EnrollAllRegstAndBindRelatedEdge();
@@ -231,7 +228,7 @@ void BoxingTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   });
   mut_exec_gph().UpdateSourceAndSink();
 }
-  
+
 void BoxingTaskNode::BpInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
   for (TaskEdge* fw_in_edge : GetFwNode()->in_edges()) {
     auto in_regst = GetRelatedRegst(fw_in_edge);
@@ -240,8 +237,8 @@ void BoxingTaskNode::BpInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
     }
   }
   auto fw_middle_regst = GetFwNode()->GetProducedRegstDesc("middle");
-    auto bp_middle_regst = GetProducedRegstDesc("middle");
+  auto bp_middle_regst = GetProducedRegstDesc("middle");
   bp_middle_regst->CopyShapeFrom(fw_middle_regst.get());
 }
 
-} // namespace oneflow
+}  // namespace oneflow

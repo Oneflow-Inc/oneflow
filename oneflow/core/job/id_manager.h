@@ -19,8 +19,10 @@ class IDMgr final {
     machine_num_ = resource.machine_size();
     CHECK_LT(machine_num_, static_cast<int64_t>(1) << machine_id_bit_num_);
     device_num_per_machine_ = resource.device_num_per_machine();
-    // reserve 3 number of device_id for persistence_, boxing_ and commnet_ ThrdLocId
-    CHECK_LT(device_num_per_machine_, (static_cast<int64_t>(1) << device_id_bit_num_) - 3);
+    // reserve 3 number of device_id for persistence_, boxing_ and commnet_
+    // ThrdLocId
+    CHECK_LT(device_num_per_machine_,
+             (static_cast<int64_t>(1) << device_id_bit_num_) - 3);
     for (int64_t i = 0; i < machine_num_; ++i) {
       const std::string& machine_name = resource.machine(i).name();
       CHECK(machine_name2machine_id_.emplace(machine_name, i).second);
@@ -51,20 +53,15 @@ class IDMgr final {
     int64_t machine_id64bit = machine_id << (63 - machine_id_bit_num_);
     int64_t device_id64bit = thrd_local_id << task_id_bit_num_;
     int64_t thrd_id = machine_id64bit | device_id64bit;
-    CHECK_LT(thread_id2num_of_tasks_[thrd_id], (static_cast<int64_t>(1) << task_id_bit_num_) - 1);
+    CHECK_LT(thread_id2num_of_tasks_[thrd_id],
+             (static_cast<int64_t>(1) << task_id_bit_num_) - 1);
     return thrd_id | (thread_id2num_of_tasks_[thrd_id]++);
   }
-  int64_t NewRegstDescId() {
-    return regst_desc_id_count_++;
-  }
+  int64_t NewRegstDescId() { return regst_desc_id_count_++; }
 
   // Runtime
-  int64_t ActorId4TaskId(int64_t task_id) {
-    return task_id;
-  }
-  int64_t TaskId4ActorId(int64_t actor_id) {
-    return actor_id;
-  }
+  int64_t ActorId4TaskId(int64_t task_id) { return task_id; }
+  int64_t TaskId4ActorId(int64_t actor_id) { return actor_id; }
   int64_t MachineId4ActorId(int64_t actor_id) {
     return actor_id >> (63 - machine_id_bit_num_);
   }
@@ -99,4 +96,4 @@ class IDMgr final {
 
 }  // namespace oneflow
 
-#endif // ONEFLOW_CORE_JOB_ID_MANAGER_H_
+#endif  // ONEFLOW_CORE_JOB_ID_MANAGER_H_

@@ -13,7 +13,8 @@ class CompActor : public Actor {
  protected:
   CompActor() = default;
 
-  virtual void Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) override {
+  virtual void Init(const TaskProto& task_proto,
+                    const ThreadCtx& thread_ctx) override {
     Actor::Init(task_proto, thread_ctx);
     parallel_id_ = task_proto.parallel_id();
   }
@@ -26,9 +27,8 @@ class CompActor : public Actor {
   ParallelPolicy parallel_policy_;
   int64_t parallel_id_;
   int64_t parallel_num_;
-
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_ACTOR_COMPUTE_ACTOR_H_
+#endif  // ONEFLOW_CORE_ACTOR_COMPUTE_ACTOR_H_

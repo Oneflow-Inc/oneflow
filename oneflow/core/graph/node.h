@@ -8,9 +8,7 @@
 namespace oneflow {
 
 template<typename NodeType, typename EdgeType>
-void Connect(NodeType* src_node,
-             EdgeType* edge,
-             NodeType* dst_node) {
+void Connect(NodeType* src_node, EdgeType* edge, NodeType* dst_node) {
   CHECK(src_node->out_edges_.insert(edge).second);
   CHECK(dst_node->in_edges_.insert(edge).second);
   CHECK(edge->src_node_ == nullptr);
@@ -50,25 +48,21 @@ class Edge {
   virtual std::string VisualStr() const { return ""; }
 
  private:
-  friend void Connect<NodeType, EdgeType>(NodeType* src_node,
-                                          EdgeType* edge,
+  friend void Connect<NodeType, EdgeType>(NodeType* src_node, EdgeType* edge,
                                           NodeType* dst_node);
   friend void DisConnect<EdgeType>(EdgeType* edge);
-  
+
   int64_t edge_id_;
-  
+
   NodeType* src_node_;
   NodeType* dst_node_;
-
 };
 
 template<typename NodeType, typename EdgeType>
 class Node {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Node);
-  Node() {
-    node_id_ = NewNodeId();
-  }
+  Node() { node_id_ = NewNodeId(); }
   virtual ~Node() = default;
 
   int64_t node_id() const { return node_id_; }
@@ -82,36 +76,26 @@ class Node {
     return *(out_edges_.begin());
   }
 
-  const std::unordered_set<EdgeType*>& in_edges() const {
-    return in_edges_;
-  }
-  const std::unordered_set<EdgeType*>& out_edges() const {
-    return out_edges_;
-  }
+  const std::unordered_set<EdgeType*>& in_edges() const { return in_edges_; }
+  const std::unordered_set<EdgeType*>& out_edges() const { return out_edges_; }
 
   void DisconnectAllEdges() {
-    for (EdgeType* edge : in_edges_) {
-      DisConnect(edge);
-    }
-    for (EdgeType* edge : out_edges_) {
-      DisConnect(edge);
-    }
+    for (EdgeType* edge : in_edges_) { DisConnect(edge); }
+    for (EdgeType* edge : out_edges_) { DisConnect(edge); }
   }
-  
+
   virtual std::string VisualStr() const { return ""; }
 
  private:
-  friend void Connect<NodeType, EdgeType>(NodeType* src_node,
-                                          EdgeType* edge,
+  friend void Connect<NodeType, EdgeType>(NodeType* src_node, EdgeType* edge,
                                           NodeType* dst_node);
   friend void DisConnect<EdgeType>(EdgeType* edge);
 
   int64_t node_id_;
   std::unordered_set<EdgeType*> in_edges_;
   std::unordered_set<EdgeType*> out_edges_;
-
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_GRAPH_NODE_H_
+#endif  // ONEFLOW_CORE_GRAPH_NODE_H_

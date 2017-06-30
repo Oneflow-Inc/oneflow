@@ -13,13 +13,13 @@ class Range final {
 
   Range(int64_t begin, int64_t end) : begin_(begin), end_(end) {}
 
-  bool operator == (const Range& rhs) const {
+  bool operator==(const Range& rhs) const {
     return begin_ == rhs.begin_ && end_ == rhs.end_;
   }
 
   int64_t begin() const { return begin_; }
   int64_t end() const { return end_; }
-  
+
   int64_t& mut_begin() { return begin_; }
   int64_t& mut_end() { return end_; }
 
@@ -30,6 +30,6 @@ class Range final {
   int64_t end_;
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_COMMON_RANGE_H_
+#endif  // ONEFLOW_CORE_COMMON_RANGE_H_

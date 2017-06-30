@@ -3,10 +3,6 @@
 
 namespace oneflow {
 
-Thread::~Thread() {
-  actor_thread_.join();
-}
-
 void Thread::AddTask(const TaskProto& task) {
   std::unique_lock<std::mutex> lck(id2task_mtx_);
   CHECK(id2task_.emplace(task.id(), task).second);
@@ -14,7 +10,8 @@ void Thread::AddTask(const TaskProto& task) {
 
 void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
   ActorMsg msg;
-  while (msg_channel_.Receive(&msg) == 0) {
+  while (true) {
+    CHECK_EQ(msg_channel_.Receive(&msg), 0);
     int64_t actor_id = msg.dst_actor_id();
     auto actor_it = id2actor_ptr_.find(actor_id);
     if (actor_it == id2actor_ptr_.end()) {
@@ -29,11 +26,12 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
     }
     int process_msg_ret = actor_it->second->ProcessMsg(msg);
     if (process_msg_ret == 1) {
-      // Be Careful: do not erase this actor
+      id2actor_ptr_.erase(actor_it);
+      if (id2actor_ptr_.empty()) { break; }
+    } else {
+      CHECK_EQ(process_msg_ret, 0);
     }
-    CHECK_EQ(process_msg_ret, 0);
   }
-  id2actor_ptr_.clear();
 }
 
 }  // namespace oneflow

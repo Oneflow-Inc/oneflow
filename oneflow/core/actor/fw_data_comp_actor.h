@@ -1,19 +1,19 @@
 #ifndef ONEFLOW_CORE_ACTOR_FW_DATA_COMP_ACTOR_H_
 #define ONEFLOW_CORE_ACTOR_FW_DATA_COMP_ACTOR_H_
 
-#include "oneflow/core/actor/actor.h"
+#include "oneflow/core/actor/compute_actor.h"
 
 namespace oneflow {
 
-class FwDataCompActor final : public Actor {
-public:
+class FwDataCompActor final : public CompActor {
+ public:
   OF_DISALLOW_COPY_AND_MOVE(FwDataCompActor);
   FwDataCompActor() = default;
   ~FwDataCompActor() = default;
 
   void Init(const TaskProto&, const ThreadCtx&) override;
 
-private:
+ private:
   int WaitToStart(const ActorMsg&);
   int HandleFwComp(const ActorMsg&);
   int HandleFwCompWhenNoReadableRegstMsg(const ActorMsg&);
@@ -31,8 +31,9 @@ private:
   std::shared_ptr<RegstWarpper> model_tmp_regst_;
   std::queue<std::shared_ptr<RegstWarpper>> in_;
   HashMap<int64_t, std::shared_ptr<RegstWarpper>> ready_in_regst_;
+  KernelCtx kernel_ctx_;
 };
 
 }  // namespace oneflow
 
-#endif // ONEFLOW_CORE_ACTOR_FW_DATA_COMP_ACTOR_H_
+#endif  // ONEFLOW_CORE_ACTOR_FW_DATA_COMP_ACTOR_H_

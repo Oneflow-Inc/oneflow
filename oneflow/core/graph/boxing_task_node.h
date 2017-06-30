@@ -10,20 +10,18 @@ class BoxingTaskNode : public TaskNode {
   OF_DISALLOW_COPY_AND_MOVE(BoxingTaskNode);
   BoxingTaskNode() = default;
   virtual ~BoxingTaskNode() = default;
-  
+
   std::string VisualStr() const override {
     return TaskNode::VisualStr() + "Boxing";
   }
 
-  void ToProto(TaskProto* ret) const override {
-    TaskNode::ToProto(ret);
-  };
+  void ToProto(TaskProto* ret) const override { TaskNode::ToProto(ret); };
 
  protected:
   virtual void InitWithFwNode(TaskNode* fw_node) override {
     TaskNode::InitWithFwNode(fw_node);
   }
-  
+
   using ChainEdgesPair =
       std::pair<const ChainNode*, std::vector<const TaskEdge*>>;
   using Chain2EdgesMap =
@@ -33,10 +31,9 @@ class BoxingTaskNode : public TaskNode {
       const std::unordered_set<TaskEdge*>& (TaskNode::*in_out_edges)() const,
       TaskNode* (TaskEdge::*src_dst_node)() const,
       TaskEdge* (TaskNode::*SoleEdge)() const);
-  void FwSortEdgesInnerStage(
-      std::vector<const TaskEdge*>* edges_to_be_sorted,
-      TaskNode* (TaskEdge::*src_dst_node)() const,
-      TaskEdge* (TaskNode::*SoleEdge)() const);
+  void FwSortEdgesInnerStage(std::vector<const TaskEdge*>* edges_to_be_sorted,
+                             TaskNode* (TaskEdge::*src_dst_node)() const,
+                             TaskEdge* (TaskNode::*SoleEdge)() const);
   void FwBuildChainSortedEdgesPair(
       const ChainEdgesPair& chain_sorted_in_edges,
       const ChainEdgesPair& chain_sorted_out_edges);
@@ -50,12 +47,11 @@ class BoxingTaskNode : public TaskNode {
   void FwInferShapeOfBlobsInProducedRegsts(TaskGraph*);
   void BpBuildExecAndEnrollLbn2Regsts(TaskGraph*);
   void BpInferShapeOfBlobsInProducedRegsts(TaskGraph*);
-  
+
   void EnrollAllRegstAndBindRelatedEdge();
   TaskType task_type() const override { return kBoxingTask; }
-  
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_GRAPH_BOXING_TASK_NODE_H_
+#endif  // ONEFLOW_CORE_GRAPH_BOXING_TASK_NODE_H_
