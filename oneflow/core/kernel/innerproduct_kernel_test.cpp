@@ -122,24 +122,37 @@ void BuildKernelCtx<DeviceType::kGPU>(KernelCtx* ctx) {
 }
 
 template<DeviceType device_type>
-void Barrier(const KernelCtx& ctx);
+void SyncStream(const KernelCtx& ctx);
 
 template<>
-void Barrier<DeviceType::kCPU>(const KernelCtx& ctx) {
-  ctx.device_ctx->cpu_stream()->CloseSendEnd();
-
-  auto cpu_thread = std::thread([&] {
-    std::function<void()> work;
-    while (ctx.device_ctx->cpu_stream()->Receive(&work) == 0) {
-        work();
-    }
-  });
-  cpu_thread.join();
+void SyncStream<DeviceType::kCPU>(const KernelCtx& ctx) {
 }
 
 template<>
-void Barrier<DeviceType::kGPU>(const KernelCtx& ctx) {
+void SyncStream<DeviceType::kGPU>(const KernelCtx& ctx) {
   CHECK_EQ(cudaStreamSynchronize(ctx.device_ctx->cuda_stream()), cudaSuccess);
+}
+
+Kernel* BuildInnerProductKernel(bool has_bias_term) {
+  // Config InnerProduct operator
+  OperatorConf op_conf;
+  op_conf.set_name("inner_product_test");
+  InnerProductOpConf* inner_product_conf =
+    op_conf.mutable_innerproduct_conf();
+  inner_product_conf->set_in("ip_in");
+  inner_product_conf->set_out("ip_out");
+  inner_product_conf->set_out_num(40);
+  inner_product_conf->set_has_bias_term(has_bias_term);
+  auto inner_product_op = OpMgr::Singleton().ConstructOp(op_conf);
+
+  OperatorProto op_proto;
+  inner_product_op->ToProto(&op_proto);
+
+  auto inner_product_kernel =
+    new InnerProductKernel<device_type, FloatingPointType>();
+  inner_product_kernel->InitFromOpProto(op_proto);
+
+  return inner_product_kernel;
 }
 
 template<DeviceType device_type>
@@ -199,44 +212,9 @@ class TestInnerProductKernel {
   }
 
   void Run() {
-    // Build InnerProductKernel
-    auto inner_product_kernel =
-      BuildInnerProductKernel(has_bias_term_);
-
-    // Build function pointer of blob name to blob
-    auto BnInOp2BlobPtr =
-      BuildBnInOp2BlobPtr<device_type, FloatingPointType>(has_bias_term_);
-
-    inner_product_kernel->Forward(ctx_, BnInOp2BlobPtr);
-    inner_product_kernel->Backward(ctx_, BnInOp2BlobPtr);
-
-    Barrier<device_type>(ctx_);
-
-    CheckResult(BnInOp2BlobPtr, BlobCmp<device_type>, has_bias_term_);
   }
 
  private:
-  Kernel* BuildInnerProductKernel(bool has_bias_term) {
-    // Config InnerProduct operator
-    OperatorConf op_conf;
-    op_conf.set_name("inner_product_test");
-    InnerProductOpConf* inner_product_conf =
-      op_conf.mutable_innerproduct_conf();
-    inner_product_conf->set_in("ip_in");
-    inner_product_conf->set_out("ip_out");
-    inner_product_conf->set_out_num(40);
-    inner_product_conf->set_has_bias_term(has_bias_term);
-    auto inner_product_op = OpMgr::Singleton().ConstructOp(op_conf);
-
-    OperatorProto op_proto;
-    inner_product_op->ToProto(&op_proto);
-
-    auto inner_product_kernel =
-      new InnerProductKernel<device_type, FloatingPointType>();
-    inner_product_kernel->InitFromOpProto(op_proto);
-
-    return inner_product_kernel;
-  }
 
   bool has_bias_term_;
   KernelCtx ctx_;
@@ -244,8 +222,30 @@ class TestInnerProductKernel {
 };
 
 TEST(InnerProductKernel, inner_product_kernel_cpu_with_bias) {
-  TestInnerProductKernel<DeviceType::kCPU, float> ipk_cpu_with_bias(true);
-  ipk_cpu_with_bias.Run();
+  bool has_bias_term = true;
+
+  // Build InnerProductKernel
+  auto inner_product_kernel = BuildInnerProductKernel(has_bias_term);
+
+  // Build function pointer of blob name to blob
+  auto BnInOp2BlobPtr =
+    BuildBnInOp2BlobPtr<device_type, FloatingPointType>(has_bias_term_);
+
+  inner_product_kernel->Forward(ctx, BnInOp2BlobPtr);
+  inner_product_kernel->Backward(ctx, BnInOp2BlobPtr);
+
+  SyncStream<device_type>(ctx);
+  ctx.device_ctx->cpu_stream()->CloseSendEnd();
+
+  auto cpu_thread = std::thread([&] {
+    std::function<void()> work;
+    while (ctx.device_ctx->cpu_stream()->Receive(&work) == 0) {
+        work();
+    }
+  });
+  cpu_thread.join();
+
+  CheckResult(BnInOp2BlobPtr, BlobCmp<device_type>, has_bias_term_);
 }
 
 TEST(InnerProductKernel, inner_product_kernel_cpu_without_bias) {
