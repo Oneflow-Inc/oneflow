@@ -15,9 +15,9 @@ class PersistentInStream final {
   PersistentInStream(const std::string& file_path, uint64_t offset);
 
   template<typename T>
-  PersistentInStream& operator >> (T& x) {
+  PersistentInStream& operator>>(T& x) {
     static_assert(std::is_fundamental<T>::value, "Not fundamental type");
-    char* s= &x;
+    char* s = &x;
     size_t n = sizeof(x);
     Read(s, n);
     return *this;
@@ -25,13 +25,9 @@ class PersistentInStream final {
 
   PersistentInStream& Read(char* s, size_t n);
 
-  bool good() const {
-    return !is_eof_;
-  }
+  bool good() const { return !is_eof_; }
 
-  bool eof() const {
-    return is_eof_;
-  }
+  bool eof() const { return is_eof_; }
 
  private:
   std::unique_ptr<tensorflow::RandomAccessFile> file_;

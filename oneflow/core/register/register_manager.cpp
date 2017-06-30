@@ -1,13 +1,14 @@
 #include "oneflow/core/register/register_manager.h"
-#include "oneflow/core/register/blob.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/register/blob.h"
 
 namespace oneflow {
 
 void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
                          std::function<void(Regst*)> OneRegstDone) {
-  auto runtime_regst_desc = std::make_shared<const RtRegstDesc>(regst_desc_proto);
+  auto runtime_regst_desc =
+      std::make_shared<const RtRegstDesc>(regst_desc_proto);
   for (int64_t i = 0; i < regst_desc_proto.register_num(); ++i) {
     Regst* regst = new Regst;
     regst->regst_desc_ = runtime_regst_desc;
@@ -20,19 +21,21 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     std::vector<std::string> lbns;
     lbns.reserve(regst_desc_proto.lbn2shape().size());
     for (const auto& pair : regst_desc_proto.lbn2shape()) {
-      const Shape* shape_ptr = runtime_regst_desc->GetShapePtrFromLbn(pair.first);
+      const Shape* shape_ptr =
+          runtime_regst_desc->GetShapePtrFromLbn(pair.first);
       lbns.push_back(pair.first);
       elem_cnt += shape_ptr->elem_cnt();
     }
     std::sort(lbns.begin(), lbns.end());
     std::pair<char*, std::function<void()>> allocation =
-        MemoryAllocator::Singleton().Allocate(
-            regst_desc_proto.mem_case(), elem_cnt * elem_size);
+        MemoryAllocator::Singleton().Allocate(regst_desc_proto.mem_case(),
+                                              elem_cnt * elem_size);
 
     int64_t blob_idx = 0;
     for (const std::string& lbn : lbns) {
       const Shape* shape_ptr = runtime_regst_desc->GetShapePtrFromLbn(lbn);
-      auto blob_ptr = of_make_unique<Blob>(allocation.first + blob_idx, shape_ptr);
+      auto blob_ptr =
+          of_make_unique<Blob>(allocation.first + blob_idx, shape_ptr);
       CHECK(regst->lbn2blob_.emplace(lbn, std::move(blob_ptr)).second);
       blob_idx += shape_ptr->elem_cnt() * elem_size;
     }
@@ -46,4 +49,4 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
   }
 }
 
-}
+}  // namespace oneflow

@@ -31,8 +31,7 @@ uint64_t oneflow_cast(const std::string& s) {
   return ret;
 }
 
-void Split(const std::string& text,
-           const std::string& delims,
+void Split(const std::string& text, const std::string& delims,
            std::function<void(std::string&&)> Func) {
   size_t token_start = 0;
   if (text.empty()) { return; }
@@ -44,4 +43,4 @@ void Split(const std::string& text,
   }
 }
 
-} // namespace oneflow
+}  // namespace oneflow

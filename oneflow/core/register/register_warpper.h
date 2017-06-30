@@ -19,9 +19,8 @@ class RegstWarpper {
 
  protected:
   RegstWarpper() = default;
-
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_REGISTER_REGISTER_WARPPER_H_
+#endif  // ONEFLOW_CORE_REGISTER_REGISTER_WARPPER_H_

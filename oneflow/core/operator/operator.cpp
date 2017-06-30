@@ -1,7 +1,7 @@
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
-  
+
 void Operator::InitFromProto(const OperatorProto& op_proto) {
   op_conf_ = op_proto.op_conf();
   bn_in_op2lbn_ = PbMap2HashMap(op_proto.bn_in_op2lbn());
@@ -32,9 +32,8 @@ const std::string& Operator::Lbn4BnInOp(const std::string& bn_in_op) const {
   return bn_in_op2lbn_.at(bn_in_op);
 }
 
-void Operator::ModifyLbn4BnInOp(
-    const std::string& bn_in_op,
-    const std::string& lbn) {
+void Operator::ModifyLbn4BnInOp(const std::string& bn_in_op,
+                                const std::string& lbn) {
   bn_in_op2lbn_.at(bn_in_op) = lbn;
 }
 
@@ -120,9 +119,7 @@ std::string UserOperator::mbn2lbn(const std::string& model_bn) const {
   return op_name() + "/" + model_bn;
 }
 
-std::string GenDiffBn(const std::string& bn) {
-  return bn + "_diff";
-}
+std::string GenDiffBn(const std::string& bn) { return bn + "_diff"; }
 
 std::string GenUnDiffBn(const std::string& diff_bn) {
   CHECK_STREQ(diff_bn.substr(diff_bn.size() - 5).c_str(), "_diff");
@@ -135,4 +132,4 @@ std::string GetOpNameFromLbn(const std::string& lbn) {
   return lbn.substr(0, pos);
 }
 
-} // namespace oneflow
+}  // namespace oneflow

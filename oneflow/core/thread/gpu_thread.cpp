@@ -13,4 +13,4 @@ GpuThread::GpuThread(int device_phy_id) {
   });
 }
 
-} // namespace oneflow
+}  // namespace oneflow

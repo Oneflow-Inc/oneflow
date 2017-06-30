@@ -1,11 +1,11 @@
 #ifndef ONEFLOW_CORE_JOB_PARALLEL_DESC_H_
 #define ONEFLOW_CORE_JOB_PARALLEL_DESC_H_
 
+#include <exception>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/id_manager.h"
-#include "oneflow/core/job/strategy.pb.h"
 #include "oneflow/core/job/job_desc.h"
-#include <exception>
+#include "oneflow/core/job/strategy.pb.h"
 
 namespace oneflow {
 
@@ -16,10 +16,10 @@ class ParallelDesc {
   ~ParallelDesc() = default;
 
   ParallelDesc(const ParallelConf& user_conf);
-  
+
   // Getters
   const ParallelPolicy& policy() const { return policy_; }
-  const DeviceType& device_type() const { return device_type_; } 
+  const DeviceType& device_type() const { return device_type_; }
   const std::vector<int64_t>& sorted_machine_ids() const {
     return sorted_machine_ids_;
   }
@@ -33,17 +33,15 @@ class ParallelDesc {
   //
   ParallelPolicy& mut_policy() { return policy_; }
   bool Equal(const ParallelDesc& rhs) const {
-	  return policy_ == rhs.policy_ 
-		  && device_type_ == rhs.device_type_ 
-		  && sorted_machine_ids_ == rhs.sorted_machine_ids_ 
-		  && machine_id2sorted_device_phy_ids_ == rhs.machine_id2sorted_device_phy_ids_;
+    return policy_ == rhs.policy_ && device_type_ == rhs.device_type_
+           && sorted_machine_ids_ == rhs.sorted_machine_ids_
+           && machine_id2sorted_device_phy_ids_
+                  == rhs.machine_id2sorted_device_phy_ids_;
   }
-  bool Equal(const ParallelDesc* rhs) const {
-    return Equal(*rhs);
-  }
+  bool Equal(const ParallelDesc* rhs) const { return Equal(*rhs); }
 
   std::string VisualStr() const;
-  
+
  private:
   ParallelPolicy policy_;
   DeviceType device_type_;
@@ -54,6 +52,6 @@ class ParallelDesc {
 
 std::string GetMachineNameFromDeviceName(const std::string& device_name);
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_JOB_PARALLEL_DESC_H_
+#endif  // ONEFLOW_CORE_JOB_PARALLEL_DESC_H_

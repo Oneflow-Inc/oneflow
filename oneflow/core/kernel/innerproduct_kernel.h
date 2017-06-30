@@ -2,8 +2,8 @@
 #define ONEFLOW_CORE_KERNEL_INNERPRODUCT_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/kernel_manager.h"
 #include "oneflow/core/kernel/kernel_context.h"
+#include "oneflow/core/kernel/kernel_manager.h"
 
 namespace oneflow {
 
@@ -18,7 +18,7 @@ class InnerProductKernel final : public Kernel {
                std::function<Blob*(const std::string&)>) const override;
   void Backward(const KernelCtx&,
                 std::function<Blob*(const std::string&)>) const override;
- 
+
  protected:
   void InitModelAndModelTmpBlobsWithoutSnapshot(
       const KernelCtx&,

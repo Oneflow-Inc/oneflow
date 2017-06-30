@@ -8,17 +8,14 @@ namespace oneflow {
 
 namespace {
 
-enum class Location {
-  kHost,
-  kDevice
-};
+enum class Location { kHost, kDevice };
 
 Blob* CreateBlob(const std::vector<int64_t>& dim_vec, float* matrix,
                  Location mem_location) {
   void* dptr;
   Shape* shape = new Shape(dim_vec);
 
-  size_t dptr_size = shape->elem_cnt()*sizeof(float);
+  size_t dptr_size = shape->elem_cnt() * sizeof(float);
   if (mem_location == Location::kHost) {
     CHECK_EQ(cudaMallocHost(&dptr, dptr_size), cudaSuccess);
     CHECK_EQ(cudaMemcpy(dptr, matrix, dptr_size, cudaMemcpyHostToHost),
@@ -53,22 +50,21 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
   float bias_diff_mat[3] = {0};
 
   float expected_out_without_bias_mat[] = {40, 25, 62, 108, 65, 138};
-  float expected_in_diff_without_bias_mat[] = {312, 247, 933, 616, 808, 635,
-                                                2237, 1428};
+  float expected_in_diff_without_bias_mat[] = {312, 247, 933,  616,
+                                               808, 635, 2237, 1428};
   float expected_weight_diff_without_bias_mat[] = {
-    580, 728, 876, 1024, 350, 440, 530, 620, 752, 952, 1152, 1352};
+      580, 728, 876, 1024, 350, 440, 530, 620, 752, 952, 1152, 1352};
 
   float expected_out_mat[] = {42, 28, 67, 110, 68, 143};
   float expected_in_diff_mat[] = {333, 263, 1009, 662, 829, 651, 2313, 1474};
-  float expected_weight_diff_mat[] = {592, 744,  896, 1048,
-                                      368, 464,  560,  656,
-                                      782, 992, 1202, 1412};
+  float expected_weight_diff_mat[] = {592, 744, 896, 1048, 368,  464,
+                                      560, 656, 782, 992,  1202, 1412};
   float expected_bias_diff_mat[] = {152, 96, 210};
 
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
 
   // Build blob for test
-  (*bn2blob_ptr)["in"]  = CreateBlob({2, 4}, in_mat, loc);
+  (*bn2blob_ptr)["in"] = CreateBlob({2, 4}, in_mat, loc);
   (*bn2blob_ptr)["weight"] = CreateBlob({3, 4}, weight_mat, loc);
 
   (*bn2blob_ptr)["out"] = CreateBlob({2, 3}, out_mat, loc);
@@ -79,26 +75,24 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
   if (has_bias_term) {
     (*bn2blob_ptr)["bias"] = CreateBlob({1, 3}, bias_mat, loc);
     (*bn2blob_ptr)["bias_multiplier"] =
-      CreateBlob({2, 1}, bias_multiplier_mat, loc);
+        CreateBlob({2, 1}, bias_multiplier_mat, loc);
     (*bn2blob_ptr)["bias_diff"] = CreateBlob({1, 3}, bias_diff_mat, loc);
     (*bn2blob_ptr)["expected_bias_diff"] =
-      CreateBlob({1, 3}, expected_bias_diff_mat, loc);
+        CreateBlob({1, 3}, expected_bias_diff_mat, loc);
     (*bn2blob_ptr)["expected_out"] = CreateBlob({2, 3}, expected_out_mat, loc);
     (*bn2blob_ptr)["expected_in_diff"] =
-      CreateBlob({2, 4}, expected_in_diff_mat, loc);
+        CreateBlob({2, 4}, expected_in_diff_mat, loc);
     (*bn2blob_ptr)["expected_weight_diff"] =
-      CreateBlob({3, 4}, expected_weight_diff_mat, loc);
+        CreateBlob({3, 4}, expected_weight_diff_mat, loc);
   } else {
-    (*bn2blob_ptr)["expected_out"] = CreateBlob({2, 3},
-        expected_out_without_bias_mat, loc);
+    (*bn2blob_ptr)["expected_out"] =
+        CreateBlob({2, 3}, expected_out_without_bias_mat, loc);
     (*bn2blob_ptr)["expected_in_diff"] =
-      CreateBlob({2, 4}, expected_in_diff_without_bias_mat, loc);
+        CreateBlob({2, 4}, expected_in_diff_without_bias_mat, loc);
     (*bn2blob_ptr)["expected_weight_diff"] =
-      CreateBlob({3, 4}, expected_weight_diff_without_bias_mat, loc);
+        CreateBlob({3, 4}, expected_weight_diff_without_bias_mat, loc);
   }
-  return [bn2blob_ptr](const std::string& bn) {
-    return bn2blob_ptr->at(bn);
-  };
+  return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
 }
 
 template<DeviceType device_type, typename FloatingPointType>
@@ -106,8 +100,7 @@ Kernel* BuildInnerProductKernel(bool has_bias_term) {
   // Config InnerProduct operator
   OperatorConf op_conf;
   op_conf.set_name("inner_product_test");
-  InnerProductOpConf* inner_product_conf =
-    op_conf.mutable_innerproduct_conf();
+  InnerProductOpConf* inner_product_conf = op_conf.mutable_innerproduct_conf();
   inner_product_conf->set_in("ip_in");
   inner_product_conf->set_out("ip_out");
   inner_product_conf->set_out_num(40);
@@ -118,7 +111,7 @@ Kernel* BuildInnerProductKernel(bool has_bias_term) {
   inner_product_op->ToProto(&op_proto);
 
   auto inner_product_kernel =
-    new InnerProductKernel<device_type, FloatingPointType>();
+      new InnerProductKernel<device_type, FloatingPointType>();
   inner_product_kernel->InitFromOpProto(op_proto);
 
   return inner_product_kernel;
@@ -136,7 +129,7 @@ void BlobCmpCpu(Blob* lhs, Blob* rhs) {
 
 void BlobCmpGpu(Blob* lhs, Blob* rhs) {
   float* dptr;
-  size_t dptr_size = lhs->shape().elem_cnt()*sizeof(float);
+  size_t dptr_size = lhs->shape().elem_cnt() * sizeof(float);
   cudaMallocHost(&dptr, dptr_size);
   memset(dptr, 0, dptr_size);
 
@@ -156,8 +149,8 @@ void CheckResult(std::function<Blob*(const std::string&)> BnInOp2BlobPtr,
                  bool has_bias_term) {
   CmpFunc(BnInOp2BlobPtr("out"), BnInOp2BlobPtr("expected_out"));
   CmpFunc(BnInOp2BlobPtr("in_diff"), BnInOp2BlobPtr("expected_in_diff"));
-  CmpFunc(
-      BnInOp2BlobPtr("weight_diff"), BnInOp2BlobPtr("expected_weight_diff"));
+  CmpFunc(BnInOp2BlobPtr("weight_diff"),
+          BnInOp2BlobPtr("expected_weight_diff"));
 
   if (has_bias_term) {
     CmpFunc(BnInOp2BlobPtr("bias_diff"), BnInOp2BlobPtr("expected_bias_diff"));
@@ -176,10 +169,10 @@ TEST(InnerProductKernel, inner_product_kernel_cpu_with_bias) {
 
   // Build function pointer of blob name to blob
   auto BnInOp2BlobPtr =
-    BuildBnInOp2BlobPtr<DeviceType::kCPU, float>(has_bias_term);
+      BuildBnInOp2BlobPtr<DeviceType::kCPU, float>(has_bias_term);
 
   auto inner_product_kernel =
-    BuildInnerProductKernel<DeviceType::kCPU, float>(has_bias_term);
+      BuildInnerProductKernel<DeviceType::kCPU, float>(has_bias_term);
 
   inner_product_kernel->Forward(ctx, BnInOp2BlobPtr);
   inner_product_kernel->Backward(ctx, BnInOp2BlobPtr);
@@ -188,9 +181,7 @@ TEST(InnerProductKernel, inner_product_kernel_cpu_with_bias) {
 
   auto cpu_thread = std::thread([&] {
     std::function<void()> work;
-    while (ctx.device_ctx->cpu_stream()->Receive(&work) == 0) {
-        work();
-    }
+    while (ctx.device_ctx->cpu_stream()->Receive(&work) == 0) { work(); }
   });
   cpu_thread.join();
 
@@ -207,10 +198,10 @@ TEST(InnerProductKernel, inner_product_kernel_cpu_without_bias) {
 
   // Build function pointer of blob name to blob
   auto BnInOp2BlobPtr =
-    BuildBnInOp2BlobPtr<DeviceType::kCPU, float>(has_bias_term);
+      BuildBnInOp2BlobPtr<DeviceType::kCPU, float>(has_bias_term);
 
   auto inner_product_kernel =
-    BuildInnerProductKernel<DeviceType::kCPU, float>(has_bias_term);
+      BuildInnerProductKernel<DeviceType::kCPU, float>(has_bias_term);
 
   inner_product_kernel->Forward(ctx, BnInOp2BlobPtr);
   inner_product_kernel->Backward(ctx, BnInOp2BlobPtr);
@@ -219,9 +210,7 @@ TEST(InnerProductKernel, inner_product_kernel_cpu_without_bias) {
 
   auto cpu_thread = std::thread([&] {
     std::function<void()> work;
-    while (ctx.device_ctx->cpu_stream()->Receive(&work) == 0) {
-        work();
-    }
+    while (ctx.device_ctx->cpu_stream()->Receive(&work) == 0) { work(); }
   });
   cpu_thread.join();
 
@@ -243,10 +232,10 @@ TEST(InnerProductKernel, inner_product_kernel_gpu_with_bias) {
 
   // Build function pointer of blob name to blob
   auto BnInOp2BlobPtr =
-    BuildBnInOp2BlobPtr<DeviceType::kGPU, float>(has_bias_term);
+      BuildBnInOp2BlobPtr<DeviceType::kGPU, float>(has_bias_term);
 
   auto inner_product_kernel =
-    BuildInnerProductKernel<DeviceType::kGPU, float>(has_bias_term);
+      BuildInnerProductKernel<DeviceType::kGPU, float>(has_bias_term);
 
   inner_product_kernel->Forward(ctx, BnInOp2BlobPtr);
   inner_product_kernel->Backward(ctx, BnInOp2BlobPtr);
@@ -271,10 +260,10 @@ TEST(InnerProductKernel, inner_product_kernel_gpu_without_bias) {
 
   // Build function pointer of blob name to blob
   auto BnInOp2BlobPtr =
-    BuildBnInOp2BlobPtr<DeviceType::kGPU, float>(has_bias_term);
+      BuildBnInOp2BlobPtr<DeviceType::kGPU, float>(has_bias_term);
 
   auto inner_product_kernel =
-    BuildInnerProductKernel<DeviceType::kGPU, float>(has_bias_term);
+      BuildInnerProductKernel<DeviceType::kGPU, float>(has_bias_term);
 
   inner_product_kernel->Forward(ctx, BnInOp2BlobPtr);
   inner_product_kernel->Backward(ctx, BnInOp2BlobPtr);

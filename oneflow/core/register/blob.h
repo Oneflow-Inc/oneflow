@@ -13,14 +13,14 @@ class Blob {
 
   const void* dptr() const { return dptr_; }
   const Shape& shape() const { return *shape_; }
-  
+
   void* mut_dptr() { return dptr_; }
 
  private:
-  void* dptr_ ;
+  void* dptr_;
   const Shape* shape_;
 };
 
 }  // namespace oneflow
 
-#endif // ONEFLOW_CORE_REGISTER_BLOB_H_
+#endif  // ONEFLOW_CORE_REGISTER_BLOB_H_

@@ -16,14 +16,12 @@ class SoftmaxOp : public UserOperator {
 
   void InferShape4FwBlobs(
       std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
-      ParallelPolicy policy,
-      int64_t parallel_id,
+      ParallelPolicy policy, int64_t parallel_id,
       int64_t parallel_num) const override;
-  
- private:
 
+ private:
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_OPERATOR_SOFTMAX_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_SOFTMAX_OP_H_

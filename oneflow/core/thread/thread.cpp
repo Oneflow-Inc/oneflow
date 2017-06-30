@@ -27,9 +27,7 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
     int process_msg_ret = actor_it->second->ProcessMsg(msg);
     if (process_msg_ret == 1) {
       id2actor_ptr_.erase(actor_it);
-      if (id2actor_ptr_.empty()) {
-        break;
-      }
+      if (id2actor_ptr_.empty()) { break; }
     } else {
       CHECK_EQ(process_msg_ret, 0);
     }

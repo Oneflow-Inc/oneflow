@@ -6,14 +6,14 @@
 namespace oneflow {
 
 class MdDiffAccActor final : public CompActor {
-public:
+ public:
   OF_DISALLOW_COPY_AND_MOVE(MdDiffAccActor);
   MdDiffAccActor() = default;
   ~MdDiffAccActor() = default;
 
   void Init(const TaskProto&, const ThreadCtx&) override;
 
-private:
+ private:
   int HandleMdDiffAcc(const ActorMsg&);
   int HandleMdDiffAccWhenNoReadableRegstMsg(const ActorMsg&);
 

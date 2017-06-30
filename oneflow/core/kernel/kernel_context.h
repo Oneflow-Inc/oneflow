@@ -12,6 +12,6 @@ struct KernelCtx {
   void* other;
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_KERNEL_KERNEL_CONTEXT_H_
+#endif  // ONEFLOW_CORE_KERNEL_KERNEL_CONTEXT_H_

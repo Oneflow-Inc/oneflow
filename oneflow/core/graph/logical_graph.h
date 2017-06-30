@@ -2,10 +2,10 @@
 #define ONEFLOW_CORE_GRAPH_LOGICAL_GRAPH_H_
 
 #include "oneflow/core/graph/graph.h"
-#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/dlnet_conf.pb.h"
-#include "oneflow/core/job/strategy.pb.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/strategy.pb.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -17,12 +17,8 @@ class LogicalNode final : public Node<LogicalNode, LogicalEdge> {
   LogicalNode() = default;
   ~LogicalNode() = default;
 
-  std::shared_ptr<Operator> op() const {
-    return op_;
-  }
-  std::shared_ptr<Operator>& mut_op() {
-    return op_;
-  }
+  std::shared_ptr<Operator> op() const { return op_; }
+  std::shared_ptr<Operator>& mut_op() { return op_; }
 
   std::shared_ptr<const ParallelDesc> parallel_desc() const {
     return parallel_desc_;
@@ -38,7 +34,6 @@ class LogicalNode final : public Node<LogicalNode, LogicalEdge> {
  private:
   std::shared_ptr<Operator> op_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
-
 };
 
 class LogicalEdge final : public Edge<LogicalNode, LogicalEdge> {
@@ -56,16 +51,14 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   LogicalGraph() = delete;
   ~LogicalGraph() = default;
 
-  LogicalGraph(const DLNetConf& dl_net_conf,
-               const Strategy& strategy_conf);
-  
+  LogicalGraph(const DLNetConf& dl_net_conf, const Strategy& strategy_conf);
+
   const char* TypeName() const override { return "LogicalGraph"; }
 
  private:
-  void NaiveBuildGraphStruct(
-      const DLNetConf& dl_net_conf,
-      HashMap<LogicalEdge*, std::string>* edge2lbn,
-      HashMap<LogicalEdge*, std::string>* edge2ibn);
+  void NaiveBuildGraphStruct(const DLNetConf& dl_net_conf,
+                             HashMap<LogicalEdge*, std::string>* edge2lbn,
+                             HashMap<LogicalEdge*, std::string>* edge2ibn);
   void FillNodeWithParallelDesc(const Strategy& strategy_conf);
 
   struct CloneInfo {
@@ -73,18 +66,14 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
     LogicalNode* pred_node;
     std::vector<LogicalEdge*> edges;
   };
-  void AddCloneNodes(
-      const HashMap<LogicalEdge*, std::string>& edge2lbn,
-      const HashMap<LogicalEdge*, std::string>& edge2ibn);
-  void CollectCloneInfos(
-      std::vector<CloneInfo>* clone_infos,
-      const HashMap<LogicalEdge*, std::string>& edge2lbn);
-  void AddOneCloneNode(
-      const CloneInfo& clone_info,
-      const HashMap<LogicalEdge*, std::string>& edge2ibn);
-
+  void AddCloneNodes(const HashMap<LogicalEdge*, std::string>& edge2lbn,
+                     const HashMap<LogicalEdge*, std::string>& edge2ibn);
+  void CollectCloneInfos(std::vector<CloneInfo>* clone_infos,
+                         const HashMap<LogicalEdge*, std::string>& edge2lbn);
+  void AddOneCloneNode(const CloneInfo& clone_info,
+                       const HashMap<LogicalEdge*, std::string>& edge2ibn);
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_GRAPH_LOGICAL_GRAPH_H_
+#endif  // ONEFLOW_CORE_GRAPH_LOGICAL_GRAPH_H_

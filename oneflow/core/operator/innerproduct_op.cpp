@@ -10,7 +10,7 @@ void InnerProductOp::InitFromOpConf(const OperatorConf& op_conf) {
   EnrollInputBn("in");
   EnrollOutputBn("out");
   EnrollModelBn("weight");
-  
+
   if (GetBoolFromSpecialConf("has_bias_term")) {
     EnrollModelBn("bias");
     EnrollModelTmpBn("bias_multiplier");
@@ -23,9 +23,7 @@ const PbMessage& InnerProductOp::GetSpecialConf() const {
 
 void InnerProductOp::InferShape4FwBlobs(
     std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
-    ParallelPolicy policy,
-    int64_t parallel_id,
-    int64_t parallel_num) const {
+    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
   Shape* in_shape_ptr = GetShapePtr4BnInOp(SoleIbn());
   int32_t out_num = GetInt32FromSpecialConf("out_num");
   if (policy == kModelParallel) {
@@ -40,7 +38,7 @@ void InnerProductOp::InferShape4FwBlobs(
   // model bn
   Shape* weight_shape_ptr = GetShapePtr4BnInOp("weight");
   *weight_shape_ptr = Shape({out_num, in_shape_ptr->Count(1)});
-  
+
   if (GetBoolFromSpecialConf("has_bias_term")) {
     // model bn
     Shape* bias_shape_ptr = GetShapePtr4BnInOp("bias");

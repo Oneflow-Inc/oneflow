@@ -1,13 +1,14 @@
 #include "oneflow/core/persistence/snapshot_manager.h"
-#include "tensorflow/core/lib/io/path.h"
 #include "oneflow/core/job/job_desc.h"
+#include "tensorflow/core/lib/io/path.h"
 
 namespace oneflow {
 
 void SnapshotMgr::Init() {
   model_save_snapshots_path_ = JobDesc::Singleton().md_save_snapshots_path();
   tensorflow::Env* env = tensorflow::Env::Default();
-  if (env->IsDirectory(model_save_snapshots_path_).code() != tensorflow::error::OK) {
+  if (env->IsDirectory(model_save_snapshots_path_).code()
+      != tensorflow::error::OK) {
     TF_CHECK_OK(env->CreateDir(model_save_snapshots_path_));
   }
   std::vector<std::string> result;
@@ -27,7 +28,8 @@ Snapshot* SnapshotMgr::GetWriteableSnapshot(int64_t snapshot_id) {
     tensorflow::Env* env = tensorflow::Env::Default();
     TF_CHECK_OK(env->CreateDir(snapshot_root_path));
     std::unique_ptr<Snapshot> ret(new Snapshot(snapshot_root_path));
-    CHECK(snapshot_id2writeable_snapshot_.emplace(snapshot_id, std::move(ret)).second);
+    CHECK(snapshot_id2writeable_snapshot_.emplace(snapshot_id, std::move(ret))
+              .second);
     return ret.get();
   }
   return it->second.get();

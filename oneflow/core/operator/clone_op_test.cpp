@@ -10,7 +10,7 @@ TEST(CloneOp, clone_4x3_3_times) {
   auto clone_op = OpMgr::Singleton().ConstructOp(op_conf);
 
   HashMap<std::string, Shape*> bn2shape_ptr{
-    {clone_op->SoleIbn(), new Shape({4, 3})}};
+      {clone_op->SoleIbn(), new Shape({4, 3})}};
   for (std::string obn : clone_op->output_bns()) {
     bn2shape_ptr.emplace(obn, new Shape);
   }

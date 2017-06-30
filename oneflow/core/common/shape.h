@@ -1,8 +1,8 @@
 #ifndef ONEFLOW_CORE_COMMON_SHAPE_H_
 #define ONEFLOW_CORE_COMMON_SHAPE_H_
 
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/shape.pb.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
@@ -13,8 +13,8 @@ class Shape final {
   explicit Shape(const std::vector<int64_t>& dim_vec);
   Shape(const ShapeProto& shape_proto);
   ~Shape() = default;
-  
-  bool operator == (const Shape& rhs) const;
+
+  bool operator==(const Shape& rhs) const;
   std::string DebugStr() const;
 
   void ToProto(ShapeProto*) const;
@@ -34,17 +34,15 @@ class Shape final {
 
   std::vector<int64_t> dim_vec_;
   int64_t elem_cnt_;
-
 };
 
-std::ostream& operator<< (std::ostream& out, const Shape& shape);
+std::ostream& operator<<(std::ostream& out, const Shape& shape);
 
-inline Shape::Shape(const std::vector<int64_t>& dim_vec) :
-    dim_vec_(dim_vec) {
+inline Shape::Shape(const std::vector<int64_t>& dim_vec) : dim_vec_(dim_vec) {
   UpdateElemCnt();
 }
 
-inline bool Shape::operator == (const Shape& rhs) const {
+inline bool Shape::operator==(const Shape& rhs) const {
   return dim_vec_ == rhs.dim_vec_;
 }
 
@@ -61,6 +59,6 @@ inline int64_t Shape::Count(int64_t begin_axis) const {
   return Count(begin_axis, NumAxes());
 }
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_COMMON_SHAPE_H_
+#endif  // ONEFLOW_CORE_COMMON_SHAPE_H_

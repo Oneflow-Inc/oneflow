@@ -21,22 +21,20 @@ void DataCompTaskNode::FwBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   FwSetExecNodeFromInRegst(extern_in_lbn2consumer);
   FwEnrollLbn2OutRegst(lbn2producer);
   FwEnrollLbn2ActivationRegst();
-  FwEnrollLbn2ModelAndTmpRegsts(); // model model_tmp data_tmp
+  FwEnrollLbn2ModelAndTmpRegsts();  // model model_tmp data_tmp
 }
 
 void DataCompTaskNode::FwInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
   exec_gph().ConstTopoForEachNode([this](const ExecNode* node) {
     node->op()->InferShape4FwBlobs(
         node->GetMutShapePtr4BnInOpFunc(),
-        chain_node()->parallel_desc()->policy(),
-        parallel_id(),
+        chain_node()->parallel_desc()->policy(), parallel_id(),
         chain_node()->parallel_desc()->parallel_num());
   });
 }
 
 void DataCompTaskNode::FwBuildFromUserOps(
-    Lbn2NodeBnMap* lbn2producer,
-    Lbn2NodeBnMap* extern_in_lbn2consumer) {
+    Lbn2NodeBnMap* lbn2producer, Lbn2NodeBnMap* extern_in_lbn2consumer) {
   for (std::shared_ptr<const Operator> op : chain_node()->op_vec()) {
     ExecNode* cur_node = mut_exec_gph().NewNode();
     cur_node->mut_op() = op;
@@ -56,8 +54,7 @@ void DataCompTaskNode::FwBuildFromUserOps(
         edge->mut_dst_bn() = ibn;
         Connect(producer_it->second.first, edge, cur_node);
       } else {
-        CHECK(extern_in_lbn2consumer->insert({lbn,
-                                              {cur_node, ibn}}).second);
+        CHECK(extern_in_lbn2consumer->insert({lbn, {cur_node, ibn}}).second);
       }
     }
   });
@@ -161,8 +158,7 @@ void DataCompTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   // Subscribe
   SubscribeRegstDesc("activation",
                      GetFwNode()->GetProducedRegstDesc("activation"));
-  SubscribeRegstDesc("data_tmp",
-                     GetFwNode()->GetProducedRegstDesc("data_tmp"));
+  SubscribeRegstDesc("data_tmp", GetFwNode()->GetProducedRegstDesc("data_tmp"));
   SubscribeRegstDesc("model", GetFwNode()->GetSubscribedRegstDesc("model"));
   SubscribeRegstDesc("model_tmp",
                      GetFwNode()->GetSubscribedRegstDesc("model_tmp"));
@@ -179,7 +175,8 @@ void DataCompTaskNode::BpInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
   in_diff_regst->CopyShapeFrom(in_regst.get());
   // model_diff_regst
   if (auto md_diff_regst = GetProducedRegstDesc("model_diff")) {
-    md_diff_regst->CopyShapeFrom(GetFwNode()->GetSubscribedRegstDesc("model").get());
+    md_diff_regst->CopyShapeFrom(
+        GetFwNode()->GetSubscribedRegstDesc("model").get());
   }
   // activation_diff_regst
   if (auto acti_diff_regst = GetProducedRegstDesc("activation_diff")) {
@@ -201,8 +198,7 @@ void DataCompTaskNode::BpBuildExecGraph() {
     bp_edge->set_lbn(fw_edge->lbn());
     bp_edge->mut_src_bn() = GenDiffBn(fw_edge->dst_bn());
     bp_edge->mut_dst_bn() = GenDiffBn(fw_edge->src_bn());
-    Connect(fw_node2bp_node.at(fw_edge->dst_node()),
-            bp_edge,
+    Connect(fw_node2bp_node.at(fw_edge->dst_node()), bp_edge,
             fw_node2bp_node.at(fw_edge->src_node()));
   });
   mut_exec_gph().UpdateSourceAndSink();
@@ -222,7 +218,7 @@ void DataCompTaskNode::BpEnrollLbn2ActivationDiffRegst() {
   exec_gph().ConstForEachEdge([&](const ExecEdge* edge) {
     edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), activation_diff_regst);
     edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(), activation_diff_regst);
-    edge->src_node()->BindBnInOpAndRegst(GenUnDiffBn(edge->src_bn()),     
+    edge->src_node()->BindBnInOpAndRegst(GenUnDiffBn(edge->src_bn()),
                                          activation_regst);
     edge->dst_node()->BindBnInOpAndRegst(GenUnDiffBn(edge->dst_bn()),
                                          activation_regst);
@@ -280,4 +276,4 @@ void DataCompTaskNode::BpEnrollLbn2ModelDiffRegst() {
   });
 }
 
-} // namespace oneflow
+}  // namespace oneflow
