@@ -101,38 +101,7 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
   };
 }
 
-template<DeviceType device_type>
-void BuildKernelCtx(KernelCtx* ctx);
-
-template<>
-void BuildKernelCtx<DeviceType::kCPU>(KernelCtx* ctx) {
-  auto cpu_stream = new Channel<std::function<void()>>;
-  ctx->device_ctx = new CpuDeviceCtx(cpu_stream);
-}
-
-template<>
-void BuildKernelCtx<DeviceType::kGPU>(KernelCtx* ctx) {
-  cudaStream_t* cuda_stream = new cudaStream_t;
-  cublasHandle_t* cublas_handle = new cublasHandle_t;
-  CHECK_EQ(cudaStreamCreate(cuda_stream), cudaSuccess);
-  CHECK_EQ(cublasCreate(cublas_handle), CUBLAS_STATUS_SUCCESS);
-  CHECK_EQ(cublasSetStream(*cublas_handle, *cuda_stream),
-           CUBLAS_STATUS_SUCCESS);
-  ctx->device_ctx = new CudaDeviceCtx(cuda_stream, cublas_handle, nullptr);
-}
-
-template<DeviceType device_type>
-void SyncStream(const KernelCtx& ctx);
-
-template<>
-void SyncStream<DeviceType::kCPU>(const KernelCtx& ctx) {
-}
-
-template<>
-void SyncStream<DeviceType::kGPU>(const KernelCtx& ctx) {
-  CHECK_EQ(cudaStreamSynchronize(ctx.device_ctx->cuda_stream()), cudaSuccess);
-}
-
+template<DeviceType device_type, typename FloatingPointType>
 Kernel* BuildInnerProductKernel(bool has_bias_term) {
   // Config InnerProduct operator
   OperatorConf op_conf;
@@ -155,11 +124,7 @@ Kernel* BuildInnerProductKernel(bool has_bias_term) {
   return inner_product_kernel;
 }
 
-template<DeviceType device_type>
-void BlobCmp(Blob* lhs, Blob* rhs);
-
-template<>
-void BlobCmp<DeviceType::kCPU>(Blob* lhs, Blob* rhs) {
+void BlobCmpCpu(Blob* lhs, Blob* rhs) {
   const float* dptr_lhs = static_cast<const float*>(lhs->dptr());
   const float* dptr_rhs = static_cast<const float*>(rhs->dptr());
   size_t dptr_size = lhs->shape().elem_cnt();
@@ -169,8 +134,7 @@ void BlobCmp<DeviceType::kCPU>(Blob* lhs, Blob* rhs) {
   }
 }
 
-template<>
-void BlobCmp<DeviceType::kGPU>(Blob* lhs, Blob* rhs) {
+void BlobCmpGpu(Blob* lhs, Blob* rhs) {
   float* dptr;
   size_t dptr_size = lhs->shape().elem_cnt()*sizeof(float);
   cudaMallocHost(&dptr, dptr_size);
@@ -184,7 +148,7 @@ void BlobCmp<DeviceType::kGPU>(Blob* lhs, Blob* rhs) {
   cudaMemcpy(copy_rhs->mut_dptr(), rhs->dptr(), dptr_size,
              cudaMemcpyDeviceToHost);
 
-  BlobCmp<DeviceType::kCPU>(copy_lhs, copy_rhs);
+  BlobCmpCpu(copy_lhs, copy_rhs);
 }
 
 void CheckResult(std::function<Blob*(const std::string&)> BnInOp2BlobPtr,
@@ -202,39 +166,24 @@ void CheckResult(std::function<Blob*(const std::string&)> BnInOp2BlobPtr,
 
 }  // namespace
 
-template<DeviceType device_type, typename FloatingPointType>
-class TestInnerProductKernel {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(TestInnerProductKernel);
-  explicit TestInnerProductKernel(bool has_bias_term)
-      : has_bias_term_(has_bias_term) {
-    BuildKernelCtx<device_type>(&ctx_);
-  }
-
-  void Run() {
-  }
-
- private:
-
-  bool has_bias_term_;
-  KernelCtx ctx_;
-  std::function<void(Blob*, Blob*)> BlobCmpFunc_;
-};
-
 TEST(InnerProductKernel, inner_product_kernel_cpu_with_bias) {
   bool has_bias_term = true;
 
   // Build InnerProductKernel
-  auto inner_product_kernel = BuildInnerProductKernel(has_bias_term);
+  KernelCtx ctx;
+  auto cpu_stream = new Channel<std::function<void()>>;
+  ctx.device_ctx = new CpuDeviceCtx(cpu_stream);
 
   // Build function pointer of blob name to blob
   auto BnInOp2BlobPtr =
-    BuildBnInOp2BlobPtr<device_type, FloatingPointType>(has_bias_term_);
+    BuildBnInOp2BlobPtr<DeviceType::kCPU, float>(has_bias_term);
+
+  auto inner_product_kernel =
+    BuildInnerProductKernel<DeviceType::kCPU, float>(has_bias_term);
 
   inner_product_kernel->Forward(ctx, BnInOp2BlobPtr);
   inner_product_kernel->Backward(ctx, BnInOp2BlobPtr);
 
-  SyncStream<device_type>(ctx);
   ctx.device_ctx->cpu_stream()->CloseSendEnd();
 
   auto cpu_thread = std::thread([&] {
@@ -245,22 +194,94 @@ TEST(InnerProductKernel, inner_product_kernel_cpu_with_bias) {
   });
   cpu_thread.join();
 
-  CheckResult(BnInOp2BlobPtr, BlobCmp<device_type>, has_bias_term_);
+  CheckResult(BnInOp2BlobPtr, BlobCmpCpu, has_bias_term);
 }
 
 TEST(InnerProductKernel, inner_product_kernel_cpu_without_bias) {
-  TestInnerProductKernel<DeviceType::kCPU, float> ipk_cpu_without_bias(false);
-  ipk_cpu_without_bias.Run();
+  bool has_bias_term = false;
+
+  // Build InnerProductKernel
+  KernelCtx ctx;
+  auto cpu_stream = new Channel<std::function<void()>>;
+  ctx.device_ctx = new CpuDeviceCtx(cpu_stream);
+
+  // Build function pointer of blob name to blob
+  auto BnInOp2BlobPtr =
+    BuildBnInOp2BlobPtr<DeviceType::kCPU, float>(has_bias_term);
+
+  auto inner_product_kernel =
+    BuildInnerProductKernel<DeviceType::kCPU, float>(has_bias_term);
+
+  inner_product_kernel->Forward(ctx, BnInOp2BlobPtr);
+  inner_product_kernel->Backward(ctx, BnInOp2BlobPtr);
+
+  ctx.device_ctx->cpu_stream()->CloseSendEnd();
+
+  auto cpu_thread = std::thread([&] {
+    std::function<void()> work;
+    while (ctx.device_ctx->cpu_stream()->Receive(&work) == 0) {
+        work();
+    }
+  });
+  cpu_thread.join();
+
+  CheckResult(BnInOp2BlobPtr, BlobCmpCpu, has_bias_term);
 }
 
 TEST(InnerProductKernel, inner_product_kernel_gpu_with_bias) {
-  TestInnerProductKernel<DeviceType::kGPU, float> ipk_gpu_with_bias(true);
-  ipk_gpu_with_bias.Run();
+  bool has_bias_term = true;
+
+  // Build InnerProductKernel
+  KernelCtx ctx;
+  cudaStream_t* cuda_stream = new cudaStream_t;
+  cublasHandle_t* cublas_handle = new cublasHandle_t;
+  CHECK_EQ(cudaStreamCreate(cuda_stream), cudaSuccess);
+  CHECK_EQ(cublasCreate(cublas_handle), CUBLAS_STATUS_SUCCESS);
+  CHECK_EQ(cublasSetStream(*cublas_handle, *cuda_stream),
+           CUBLAS_STATUS_SUCCESS);
+  ctx.device_ctx = new CudaDeviceCtx(cuda_stream, cublas_handle, nullptr);
+
+  // Build function pointer of blob name to blob
+  auto BnInOp2BlobPtr =
+    BuildBnInOp2BlobPtr<DeviceType::kGPU, float>(has_bias_term);
+
+  auto inner_product_kernel =
+    BuildInnerProductKernel<DeviceType::kGPU, float>(has_bias_term);
+
+  inner_product_kernel->Forward(ctx, BnInOp2BlobPtr);
+  inner_product_kernel->Backward(ctx, BnInOp2BlobPtr);
+
+  CHECK_EQ(cudaStreamSynchronize(ctx.device_ctx->cuda_stream()), cudaSuccess);
+
+  CheckResult(BnInOp2BlobPtr, BlobCmpGpu, has_bias_term);
 }
 
 TEST(InnerProductKernel, inner_product_kernel_gpu_without_bias) {
-  TestInnerProductKernel<DeviceType::kGPU, float> ipk_gpu_without_bias(false);
-  ipk_gpu_without_bias.Run();
+  bool has_bias_term = false;
+
+  // Build InnerProductKernel
+  KernelCtx ctx;
+  cudaStream_t* cuda_stream = new cudaStream_t;
+  cublasHandle_t* cublas_handle = new cublasHandle_t;
+  CHECK_EQ(cudaStreamCreate(cuda_stream), cudaSuccess);
+  CHECK_EQ(cublasCreate(cublas_handle), CUBLAS_STATUS_SUCCESS);
+  CHECK_EQ(cublasSetStream(*cublas_handle, *cuda_stream),
+           CUBLAS_STATUS_SUCCESS);
+  ctx.device_ctx = new CudaDeviceCtx(cuda_stream, cublas_handle, nullptr);
+
+  // Build function pointer of blob name to blob
+  auto BnInOp2BlobPtr =
+    BuildBnInOp2BlobPtr<DeviceType::kGPU, float>(has_bias_term);
+
+  auto inner_product_kernel =
+    BuildInnerProductKernel<DeviceType::kGPU, float>(has_bias_term);
+
+  inner_product_kernel->Forward(ctx, BnInOp2BlobPtr);
+  inner_product_kernel->Backward(ctx, BnInOp2BlobPtr);
+
+  CHECK_EQ(cudaStreamSynchronize(ctx.device_ctx->cuda_stream()), cudaSuccess);
+
+  CheckResult(BnInOp2BlobPtr, BlobCmpGpu, has_bias_term);
 }
 
 }  // namespace oneflow
