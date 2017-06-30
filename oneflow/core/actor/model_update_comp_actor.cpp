@@ -4,7 +4,8 @@
 
 namespace oneflow {
 
-void MdUpdtCompActor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
+void MdUpdtCompActor::Init(const TaskProto& task_proto,
+                           const ThreadCtx& thread_ctx) {
   CompActor::Init(task_proto, thread_ctx);
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
@@ -31,25 +32,20 @@ int MdUpdtCompActor::HandleBeforeInitializeModel(const ActorMsg& actor_msg) {
   };
   model_regst->ForEachLbn(CollectKernelsFromLbn);
   model_tmp_regst->ForEachLbn(CollectKernelsFromLbn);
-  
+
   for (const Kernel* kernel : kernels) {
     kernel->InitModelAndModelTmpBlobs(
-        GenDefaultKernelCtx(),
-        parallel_policy(),
-        parallel_id(),
-        parallel_num(),
+        GenDefaultKernelCtx(), parallel_policy(), parallel_id(), parallel_num(),
         SnapshotMgr::Singleton().GetReadableSnapshot(),
         [&](const std::string& bn_in_op) {
-      const std::string& lbn = kernel->Lbn4BnInOp(bn_in_op);
-      Blob* ret = model_regst->GetBlobPtrFromLbn(lbn);
-      if (ret == nullptr) { ret = model_tmp_regst->GetBlobPtrFromLbn(lbn); }
-      CHECK(ret != nullptr);
-      return ret;
-    });
+          const std::string& lbn = kernel->Lbn4BnInOp(bn_in_op);
+          Blob* ret = model_regst->GetBlobPtrFromLbn(lbn);
+          if (ret == nullptr) { ret = model_tmp_regst->GetBlobPtrFromLbn(lbn); }
+          CHECK(ret != nullptr);
+          return ret;
+        });
   }
-  AsyncDo([]() {
-      RuntimeCtx::Singleton().OneModelInitDone();
-  });
+  AsyncDo([]() { RuntimeCtx::Singleton().OneModelInitDone(); });
   OF_SET_MSG_HANDLE(&MdUpdtCompActor::HandleBeforeSendInitialModel);
   return 0;
 }
@@ -86,8 +82,9 @@ int MdUpdtCompActor::HandleUpdateModel(const ActorMsg& actor_msg) {
 
 int MdUpdtCompActor::HandleUpdtModelWhenNoReadableRegstMsg(
     const ActorMsg& actor_msg) {
-  CHECK_EQ(TryUpdtStateAsProducedRegst(
-      actor_msg.regst_warpper()->regst_raw_ptr()), 0);
+  CHECK_EQ(
+      TryUpdtStateAsProducedRegst(actor_msg.regst_warpper()->regst_raw_ptr()),
+      0);
   TryWardKernelAndSendMsg();
   if (waiting_model_diff_acc_queue_.empty()) {
     AsyncSendEORDMsgToSubscribers(model_regst_desc_id_);
@@ -109,14 +106,15 @@ void MdUpdtCompActor::TryWardKernelAndSendMsg() {
     Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
     auto model_wpr = std::make_shared<LocalRegstWarpper>(model_regst);
     model_regst->set_model_version_id(next_model_version_id_++);
-    AsyncWardKernel(GenDefaultKernelCtx(),
+    AsyncWardKernel(
+        GenDefaultKernelCtx(),
         [&](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
-      if (regst_desc_id == model_regst_desc_id_) {
-        return model_wpr;
-      } else {
-        return model_diff_acc_wpr;
-      }
-    });
+          if (regst_desc_id == model_regst_desc_id_) {
+            return model_wpr;
+          } else {
+            return model_diff_acc_wpr;
+          }
+        });
     AsyncSendReadableRegstMsg();
     AsyncSendRegstMsgToProducer(model_diff_acc_wpr);
   }

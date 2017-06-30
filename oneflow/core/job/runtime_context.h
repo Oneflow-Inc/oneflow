@@ -17,7 +17,7 @@ class RuntimeCtx final {
   int64_t this_machine_id() const { return this_machine_id_; }
 
   void set_this_machine_name(const std::string& name);
-  
+
   void SetModelInitCnt(int32_t val);
   void OneModelInitDone();
   void WaitUnitlAllModelInitDone();
@@ -35,9 +35,8 @@ class RuntimeCtx final {
   std::mutex model_init_cnt_mtx_;
   std::condition_variable model_init_cnt_cond_;
   std::unique_ptr<PersistentCircularLineReader> data_reader_;
-
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_JOB_RUNTIME_CONTEXT_H_
+#endif  // ONEFLOW_CORE_JOB_RUNTIME_CONTEXT_H_

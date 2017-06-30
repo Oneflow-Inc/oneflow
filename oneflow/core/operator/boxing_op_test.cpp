@@ -22,19 +22,19 @@ TEST(BoxingOp, box_4_10x5x6x6) {
   boxing_conf->mutable_data_split_box();
   auto boxing_op = OpMgr::Singleton().ConstructOp(op_conf);
   HashMap<std::string, Shape*> bn2shape_ptr{
-    {boxing_op->input_bns()[0], new Shape(input_shape_vec2)},
-    {boxing_op->input_bns()[1], new Shape(input_shape_vec2)},
-    {boxing_op->input_bns()[2], new Shape(input_shape_vec2)},
-    {boxing_op->input_bns()[3], new Shape(input_shape_vec1)},
-    {boxing_op->SoleDtbn(), new Shape},
-    {boxing_op->output_bns()[0], new Shape},
-    {boxing_op->output_bns()[1], new Shape},
-    {boxing_op->output_bns()[2], new Shape},
+      {boxing_op->input_bns()[0], new Shape(input_shape_vec2)},
+      {boxing_op->input_bns()[1], new Shape(input_shape_vec2)},
+      {boxing_op->input_bns()[2], new Shape(input_shape_vec2)},
+      {boxing_op->input_bns()[3], new Shape(input_shape_vec1)},
+      {boxing_op->SoleDtbn(), new Shape},
+      {boxing_op->output_bns()[0], new Shape},
+      {boxing_op->output_bns()[1], new Shape},
+      {boxing_op->output_bns()[2], new Shape},
   };
   auto fp = [&bn2shape_ptr](const std::string& bn) {
     return bn2shape_ptr.at(bn);
   };
-  
+
   // do infer shape
   boxing_op->InferShape4FwBlobs(fp, kModelParallel, 0, 1);
 
@@ -50,9 +50,7 @@ TEST(BoxingOp, box_4_10x5x6x6) {
   for (size_t i = 0; i < boxing_op->output_bns().size(); ++i) {
     Shape* output_shape_ptr = bn2shape_ptr.at(boxing_op->output_bns()[i]);
     std::vector<int64_t> output_shape_vec = {3, 17, 6, 6};
-    if (i == 0) {
-      output_shape_vec[0] = 4;
-    }
+    if (i == 0) { output_shape_vec[0] = 4; }
     ASSERT_EQ(*output_shape_ptr, Shape(output_shape_vec));
   }
 
@@ -65,13 +63,12 @@ TEST(BoxingOp, box_4_10x5x6x6) {
 
   // do infer shape
   boxing_op->InferShape4FwBlobs(fp, kModelParallel, 0, 1);
- 
-  // test results
-  // output shape should be the same as input 
-  data_tmp_shape_ptr = bn2shape_ptr.at(boxing_op->SoleDtbn()); 
-  Shape* output_shape_ptr = bn2shape_ptr.at(boxing_op->output_bns()[0]);
-  ASSERT_EQ(*output_shape_ptr, Shape(input_shape_vec2)); 
 
+  // test results
+  // output shape should be the same as input
+  data_tmp_shape_ptr = bn2shape_ptr.at(boxing_op->SoleDtbn());
+  Shape* output_shape_ptr = bn2shape_ptr.at(boxing_op->output_bns()[0]);
+  ASSERT_EQ(*output_shape_ptr, Shape(input_shape_vec2));
 }
 
 }  // namespace oneflow

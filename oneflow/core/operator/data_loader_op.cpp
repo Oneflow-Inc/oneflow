@@ -6,7 +6,7 @@ namespace oneflow {
 void DataLoaderOp::InitFromOpConf(const OperatorConf& op_conf) {
   CHECK(op_conf.has_data_loader_conf());
   mut_op_conf() = op_conf;
- 
+
   EnrollOutputBn("feature", false);
   EnrollOutputBn("label", false);
 }
@@ -17,12 +17,10 @@ const PbMessage& DataLoaderOp::GetSpecialConf() const {
 
 void DataLoaderOp::InferShape4FwBlobs(
     std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
-    ParallelPolicy policy,
-    int64_t parallel_id,
-    int64_t parallel_num) const {
+    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
   // useful vars
   int32_t piece_size = JobDesc::Singleton().piece_size();
-  auto op_conf = static_cast<const DataLoaderOpConf*> (&GetSpecialConf());
+  auto op_conf = static_cast<const DataLoaderOpConf*>(&GetSpecialConf());
   // feature shape
   Shape feature_shape_of_one_ins(op_conf->shape_of_one_feature_ins());
   std::vector<int64_t> feature_shape = {piece_size};
@@ -36,4 +34,4 @@ void DataLoaderOp::InferShape4FwBlobs(
 
 REGISTER_OP(OperatorConf::kDataLoaderConf, DataLoaderOp);
 
-} // namespace oneflow
+}  // namespace oneflow

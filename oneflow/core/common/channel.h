@@ -26,7 +26,8 @@ class Channel final {
   // close the channel's send end, the thread can't send item to the channel
   void CloseSendEnd();
 
-  // close the channel's receive end , the thread can't receive item from channel
+  // close the channel's receive end , the thread can't receive item from
+  // channel
   void CloseReceiveEnd();
 
  private:
@@ -40,9 +41,7 @@ class Channel final {
 template<typename T>
 int Channel<T>::Send(const T& item) {
   std::unique_lock<std::mutex> lock(mutex_);
-  if (is_send_closed_) {
-    return -1;
-  }
+  if (is_send_closed_) { return -1; }
   val_.push(item);
   cond_.notify_one();
   return 0;
@@ -51,10 +50,10 @@ int Channel<T>::Send(const T& item) {
 template<typename T>
 int Channel<T>::Receive(T* item) {
   std::unique_lock<std::mutex> lock(mutex_);
-  cond_.wait(lock, [this]() { return !val_.empty() || is_receive_closed_ || is_send_closed_; });
-  if (val_.empty() || is_receive_closed_) {
-    return -1;
-  }
+  cond_.wait(lock, [this]() {
+    return !val_.empty() || is_receive_closed_ || is_send_closed_;
+  });
+  if (val_.empty() || is_receive_closed_) { return -1; }
   *item = val_.front();
   val_.pop();
   return 0;
@@ -76,4 +75,4 @@ void Channel<T>::CloseReceiveEnd() {
 
 }  // namespace oneflow
 
-#endif // ONEFLOW_CORE_COMMON_CHANNEL_H_
+#endif  // ONEFLOW_CORE_COMMON_CHANNEL_H_

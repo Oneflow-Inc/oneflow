@@ -15,4 +15,4 @@ const PbMessage& CopyHdOp::GetSpecialConf() const {
 
 REGISTER_OP(OperatorConf::kCopyHdConf, CopyHdOp);
 
-} // namespace oneflow
+}  // namespace oneflow

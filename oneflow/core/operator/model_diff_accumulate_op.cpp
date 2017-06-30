@@ -16,4 +16,4 @@ const PbMessage& ModelDiffAccOp::GetSpecialConf() const {
 
 REGISTER_OP(OperatorConf::kModelDiffAccConf, ModelDiffAccOp);
 
-}
+}  // namespace oneflow

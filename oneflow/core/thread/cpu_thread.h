@@ -14,9 +14,8 @@ class CpuThread final : public Thread {
  private:
   std::thread cpu_device_;
   Channel<std::function<void()>> cpu_stream_;
-
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_THREAD_CPU_THREAD_H_
+#endif  // ONEFLOW_CORE_THREAD_CPU_THREAD_H_

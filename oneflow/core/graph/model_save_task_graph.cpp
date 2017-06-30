@@ -13,12 +13,13 @@ MdSaveTaskGraph::MdSaveTaskGraph(const std::string& name,
 }
 
 void MdSaveTaskGraph::BuildTaskGraph() {
-  auto chain_gph = of_make_unique<ChainGraph> ();
+  auto chain_gph = of_make_unique<ChainGraph>();
   // faker
   ChainNode* faker_chain = chain_gph->NewNode();
   ParallelConf faker_pr_conf;
   faker_pr_conf.set_policy(kDataParallel);
-  faker_pr_conf.mutable_device_set()->add_device_name(update_task_->device_name());
+  faker_pr_conf.mutable_device_set()->add_device_name(
+      update_task_->device_name());
   faker_chain->mut_parallel_desc().reset(new ParallelDesc(faker_pr_conf));
   faker_chain->mut_output_lbns() = {kBaledBlobName};
   // save
@@ -27,7 +28,8 @@ void MdSaveTaskGraph::BuildTaskGraph() {
       GetMachineNameFromDeviceName(update_task_->device_name());
   ParallelConf save_pr_conf;
   save_pr_conf.set_policy(kDataParallel);
-  save_pr_conf.mutable_device_set()->add_device_name(machine_name + ":persistence");
+  save_pr_conf.mutable_device_set()->add_device_name(machine_name
+                                                     + ":persistence");
   save_chain->mut_parallel_desc().reset(new ParallelDesc(save_pr_conf));
   save_chain->mut_input_lbns() = {kBaledBlobName};
   //
@@ -40,9 +42,10 @@ void MdSaveTaskGraph::BuildTaskGraph() {
     if (model_save_comp_task_node != nullptr) {
       auto model_update_comp_task_node =
           static_cast<MdUpdtCompTaskNode*>(update_task_);
-      model_save_comp_task_node->set_fw_task(model_update_comp_task_node->fw_task());
+      model_save_comp_task_node->set_fw_task(
+          model_update_comp_task_node->fw_task());
     }
   });
 }
 
-} // namespace oneflow
+}  // namespace oneflow

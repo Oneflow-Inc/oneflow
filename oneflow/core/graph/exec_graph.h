@@ -1,11 +1,11 @@
 #ifndef ONEFLOW_CORE_GRAPH_EXEC_GRAPH_H_
 #define ONEFLOW_CORE_GRAPH_EXEC_GRAPH_H_
 
-#include "oneflow/core/graph/exec_sequence.pb.h"
-#include "oneflow/core/operator/operator.h"
-#include "oneflow/core/graph/graph.h"
-#include "oneflow/core/register/register_desc.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/graph/exec_sequence.pb.h"
+#include "oneflow/core/graph/graph.h"
+#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/register/register_desc.h"
 
 namespace oneflow {
 
@@ -32,7 +32,6 @@ class ExecEdge final : public Edge<ExecNode, ExecEdge> {
   std::string lbn_;
   std::string src_bn_;
   std::string dst_bn_;
-
 };
 
 class ExecNode final : public Node<ExecNode, ExecEdge> {
@@ -44,10 +43,12 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   std::shared_ptr<const Operator> op() const { return op_; }
   std::shared_ptr<const Operator>& mut_op() { return op_; }
 
-  void BindBnInOpAndRegst(const std::string& bn_in_op, std::weak_ptr<RegstDesc> regst) {
+  void BindBnInOpAndRegst(const std::string& bn_in_op,
+                          std::weak_ptr<RegstDesc> regst) {
     CHECK(bn_in_op2regst_.emplace(bn_in_op, regst).second);
   }
-  std::shared_ptr<RegstDesc> GetRegstFromBnInOp(const std::string& bn_in_op) const {
+  std::shared_ptr<RegstDesc> GetRegstFromBnInOp(
+      const std::string& bn_in_op) const {
     return bn_in_op2regst_.at(bn_in_op).lock();
   }
   const HashMap<std::string, std::weak_ptr<RegstDesc>>& bn_in_op2regst() const {
@@ -55,15 +56,14 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   }
 
   std::function<Shape*(const std::string&)> GetMutShapePtr4BnInOpFunc() const;
-  
+
   std::string VisualStr() const { return op_->op_name(); }
-  
+
   void ToProto(ExecNodeProto* ret) const;
 
  private:
   std::shared_ptr<const Operator> op_;
   HashMap<std::string, std::weak_ptr<RegstDesc>> bn_in_op2regst_;
-
 };
 
 class ExecGraph final : public Graph<ExecNode, ExecEdge> {
@@ -71,14 +71,13 @@ class ExecGraph final : public Graph<ExecNode, ExecEdge> {
   OF_DISALLOW_COPY_AND_MOVE(ExecGraph);
   ExecGraph() = default;
   ~ExecGraph() = default;
-  
+
   void ToExecSequence(ExecSequence* ret) const;
   const char* TypeName() const override { return "ExecGraph"; }
 
  private:
-
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_GRAPH_EXEC_GRAPH_H_
+#endif  // ONEFLOW_CORE_GRAPH_EXEC_GRAPH_H_

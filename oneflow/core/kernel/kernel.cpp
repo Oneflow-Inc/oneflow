@@ -9,18 +9,15 @@ void Kernel::InitFromOpProto(const OperatorProto& op_proto) {
 }
 
 void Kernel::InitModelAndModelTmpBlobs(
-    const KernelCtx& ctx,
-    ParallelPolicy policy,
-    int64_t parallel_id,
-    int64_t parallel_num,
-    const Snapshot* snapshot,
+    const KernelCtx& ctx, ParallelPolicy policy, int64_t parallel_id,
+    int64_t parallel_num, const Snapshot* snapshot,
     std::function<Blob*(const std::string&)> Blob4BnInOp) const {
   if (snapshot) {
-    InitModelAndModelTmpBlobsWithSnapshot(
-        ctx, policy, parallel_id, parallel_num, snapshot, Blob4BnInOp);
+    InitModelAndModelTmpBlobsWithSnapshot(ctx, policy, parallel_id,
+                                          parallel_num, snapshot, Blob4BnInOp);
   } else {
     InitModelAndModelTmpBlobsWithoutSnapshot(ctx, Blob4BnInOp);
   }
 }
 
-} // namespace oneflow
+}  // namespace oneflow

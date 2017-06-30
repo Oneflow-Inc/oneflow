@@ -7,10 +7,11 @@ namespace oneflow {
 namespace {
 
 #define DEFINE_STATIC_CASE2KERNEL_MAP(DeviceType, FloatingPointType) \
-HashMap<int, std::function<Kernel*()>>& TypeCase2##DeviceType##FloatingPointType##KernelCreator() { \
-  static HashMap<int, std::function<Kernel*()>> obj; \
-  return obj; \
-}
+  HashMap<int, std::function<Kernel*()>>&                            \
+      TypeCase2##DeviceType##FloatingPointType##KernelCreator() {    \
+    static HashMap<int, std::function<Kernel*()>> obj;               \
+    return obj;                                                      \
+  }
 
 DEFINE_STATIC_CASE2KERNEL_MAP(Cpu, Float);
 DEFINE_STATIC_CASE2KERNEL_MAP(Gpu, Float);
@@ -49,7 +50,7 @@ Kernel* CreateKernel(OperatorConf::OpTypeCase op_type_case,
 }  // namespace
 
 void AddCpuFloatKernelCreator(OperatorConf::OpTypeCase op_type_case,
-                              std::function<Kernel*()> creator ) {
+                              std::function<Kernel*()> creator) {
   CHECK(TypeCase2CpuFloatKernelCreator().emplace(op_type_case, creator).second);
 }
 
@@ -60,12 +61,14 @@ void AddGpuFloatKernelCreator(OperatorConf::OpTypeCase op_type_case,
 
 void AddCpuDoubleKernelCreator(OperatorConf::OpTypeCase op_type_case,
                                std::function<Kernel*()> creator) {
-  CHECK(TypeCase2CpuDoubleKernelCreator().emplace(op_type_case, creator).second);
+  CHECK(
+      TypeCase2CpuDoubleKernelCreator().emplace(op_type_case, creator).second);
 }
 
 void AddGpuDoubleKernelCreator(OperatorConf::OpTypeCase op_type_case,
                                std::function<Kernel*()> creator) {
-  CHECK(TypeCase2GpuDoubleKernelCreator().emplace(op_type_case, creator).second);
+  CHECK(
+      TypeCase2GpuDoubleKernelCreator().emplace(op_type_case, creator).second);
 }
 
 void KernelMgr::InitFromPlan(const Plan& plan) {
@@ -76,15 +79,12 @@ void KernelMgr::InitFromPlan(const Plan& plan) {
                                               op_names_rpf.end());
   for (const OperatorProto& op_proto : plan.op()) {
     const std::string& op_name = op_proto.op_conf().name();
-    if (op_name_set.find(op_name) == op_name_set.end()) {
-      continue;
-    }
+    if (op_name_set.find(op_name) == op_name_set.end()) { continue; }
     DeviceType device_type = plan.op_name2device_type().at(op_name);
     LOG(INFO) << "construct kernel: " << op_name;
-    std::unique_ptr<Kernel> kernel_ptr(CreateKernel(
-        op_proto.op_conf().op_type_case(),
-        device_type,
-        JobDesc::Singleton().floating_point_type()));
+    std::unique_ptr<Kernel> kernel_ptr(
+        CreateKernel(op_proto.op_conf().op_type_case(), device_type,
+                     JobDesc::Singleton().floating_point_type()));
     kernel_ptr->InitFromOpProto(op_proto);
     CHECK(op_name2kernel_ptr_.emplace(op_name, std::move(kernel_ptr)).second);
   }

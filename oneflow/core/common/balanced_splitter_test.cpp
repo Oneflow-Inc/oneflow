@@ -19,4 +19,4 @@ TEST(BalancedSplitter, split_2_to_3_part) {
   ASSERT_TRUE(splitter.At(2) == Range(2, 2));
 }
 
-} // namespace oneflow
+}  // namespace oneflow

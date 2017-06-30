@@ -21,9 +21,7 @@ const PbMessage& InnerProductOp::GetSpecialConf() const {
 
 void InnerProductOp::InferShape4FwBlobs(
     std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
-    ParallelPolicy policy,
-    int64_t parallel_id,
-    int64_t parallel_num) const {
+    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
   Shape* in_shape_ptr = GetShapePtr4BnInOp(SoleIbn());
   int32_t out_num = GetInt32FromSpecialConf("out_num");
   if (policy == kModelParallel) {
