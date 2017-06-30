@@ -36,7 +36,7 @@ void BoxingKernel<device_type, FloatingPointType>::InferCopyRules(
   }
 
   // Infer Backward Copy Rules
-  // concat-split box copy rules: directly decompose && assemble
+  // concat-split box copy rules: copy diffs from odbs to idbs
   if (boxing_conf.out_box_case() == BoxingOpConf::kDataSplitBox) {
     InferCopyRulesFromBns(BnInOp2BlobPtr, op()->input_diff_bns(),
                           op()->output_diff_bns(), &bw_copy_rules_);
@@ -209,20 +209,22 @@ template<DeviceType device_type, typename FloatingPointType>
 void BoxingKernel<device_type, FloatingPointType>::AddBoxForward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  // Add all the input blobs into data_tmp blob
+  // Copy blob in_0 to out_0
   Blob* out_0 = BnInOp2BlobPtr("out_0");
-  KernelUtil<device_type, FloatingPointType>::Memset(ctx, 
-      out_0->mut_dptr(), 0, 
+  Blob* in_0 = BnInOp2BlobPtr("in_0");
+  KernelUtil<device_type, FloatingPointType>::Memcpy(ctx, 
+      out_0->mut_dptr(), in_0->dptr(),
       out_0->shape().elem_cnt() * sizeof(FloatingPointType));
-  for (const std::string& bn : op()->input_bns()) {
-    Blob* blob = BnInOp2BlobPtr(bn);
+  // Add remaining input blobs to out_0
+  for (size_t i = 1; i < op()->input_bns().size(); ++i) {
+    Blob* in_i = BnInOp2BlobPtr("in_" + std::to_string(i));
     KernelUtil<device_type, FloatingPointType>::BlasAxpy(ctx, 
-        BnInOp2BlobPtr(bn)->shape().elem_cnt(), 1.0, 
-        static_cast<const FloatingPointType*>(blob->dptr()), 1,
+        out_0->shape().elem_cnt(), 1.0, 
+        static_cast<const FloatingPointType*>(in_i->dptr()), 1,
         static_cast<FloatingPointType*>(out_0->mut_dptr()), 1);
   }
 
-  // look at the copy table, transfer the data from data_tmp
+  // The data in out_0 will be copied to other output blobs.
   CopyDataFromRules(ctx, BnInOp2BlobPtr, fw_copy_rules_); 
 }
 

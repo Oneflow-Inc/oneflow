@@ -43,7 +43,7 @@ BoxingKernel<DeviceType::kCPU, float>* BuildBoxingKernel(
     BoxingOpConf::OutBoxCase out_box_case) {
   // config boxing operator from box cases
   OperatorConf op_conf;
-  op_conf.set_name("boxing_test"+std::to_string(kernel_seq));
+  op_conf.set_name("boxing_test" + std::to_string(kernel_seq));
   BoxingOpConf* boxing_conf = op_conf.mutable_boxing_conf();
   boxing_conf->set_in_num(in_num);
   boxing_conf->set_out_num(out_num);
@@ -70,55 +70,53 @@ BoxingKernel<DeviceType::kCPU, float>* BuildBoxingKernel(
 std::function<Blob*(const std::string&)> ConstructBnInOp2BlobPtr(
     const std::vector<std::vector<int64_t> >& in_dim_vecs,
     const std::vector<std::vector<int64_t> >& out_dim_vecs,
-    const std::vector<int64_t> middle_dim={0, 0, 0, 0}) {
+    const std::vector<int64_t> middle_dim = {0, 0, 0, 0}) {
   int32_t in_num = in_dim_vecs.size();
   int32_t out_num = out_dim_vecs.size();
-
   // construct mapping from bns to blobs
   auto bn2blob_ptr = new std::map<std::string, Blob*>;
   for (size_t i=0; i < in_num; ++i) {
     bn2blob_ptr->insert(make_pair("in_" + std::to_string(i),
-          CreateBlob(in_dim_vecs[i], (i+1)*1.0)));
+          CreateBlob(in_dim_vecs[i], (i + 1) * 1.0)));
     bn2blob_ptr->insert(make_pair("in_" + std::to_string(i) + "_diff",
           CreateBlob(in_dim_vecs[i], 0)));
   }
-  for (size_t i=0; i < out_num; ++i) { bn2blob_ptr->insert(
-      make_pair("out_" + std::to_string(i), 
-        CreateBlob(out_dim_vecs[i], (i+1)*10.0)));
-    bn2blob_ptr->insert(make_pair("out_" + std::to_string(i) + "_diff",
-          CreateBlob(out_dim_vecs[i], (i+1)*1.0)));
+  for (size_t i=0; i < out_num; ++i) { 
+    bn2blob_ptr->emplace("out_" + std::to_string(i), 
+                         CreateBlob(out_dim_vecs[i], (i + 1) * 10.0));
+    bn2blob_ptr->emplace("out_" + std::to_string(i) + "_diff",
+                         CreateBlob(out_dim_vecs[i], (i + 1) * 1.0));
   }
-  bn2blob_ptr->insert(make_pair(std::string("middle"), 
-        CreateBlob(middle_dim, 0)));
+  bn2blob_ptr->emplace(std::string("middle"), CreateBlob(middle_dim, 0));
 
   return [bn2blob_ptr](const std::string& bn) {
     return bn2blob_ptr->at(bn);
   };
 }
 
-// Use the output blobs in bn2bptr as the input blobs 
+// Use the output blobs in BnInOp2BlobPtr as the input blobs 
 std::function<Blob*(const std::string&)> ConstructBnInOp2BlobPtr(
     std::function<Blob*(const std::string&)> bn2bptr,
     const std::vector<std::vector<int64_t> >& in_dim_vecs,
     const std::vector<std::vector<int64_t> >& out_dim_vecs, 
     const std::vector<int64_t> middle_dim = {0, 0, 0, 0}) {
   auto bn2blob_ptr = new std::map<std::string, Blob*>;
-  // Link the output blobs in bn2bptr, to input blobs in bn2blob_ptr
   for (size_t i=0; i < out_dim_vecs.size(); ++i) {
     Blob* b = bn2bptr("out_" + std::to_string(i));
-    bn2blob_ptr->insert(make_pair("in_"+std::to_string(i), b));
+    bn2blob_ptr->emplace("in_" + std::to_string(i), b);
 
-    b = bn2bptr("out_"+std::to_string(i)+"_diff");
-    bn2blob_ptr->insert(make_pair("in_"+std::to_string(i)+"_diff", b));
+    b = bn2bptr("out_" + std::to_string(i) + "_diff");
+    bn2blob_ptr->emplace("in_" + std::to_string(i) + "_diff", b);
   }
-  bn2blob_ptr->insert(make_pair(std::string("middle"), 
-        CreateBlob(middle_dim, 0)));
+
+  bn2blob_ptr->emplace(std::string("middle"), CreateBlob(middle_dim, 0));
 
   for (size_t i=0; i < in_dim_vecs.size(); ++i) {
-    bn2blob_ptr->insert(make_pair("out_" + std::to_string(i),
-          CreateBlob(in_dim_vecs[i], 0)));
-    bn2blob_ptr->insert(make_pair("out_" + std::to_string(i) + "_diff",
-          CreateBlob(in_dim_vecs[i], (i+1)*10.0))); }
+    bn2blob_ptr->emplace("out_" + std::to_string(i),
+                         CreateBlob(in_dim_vecs[i], 0));
+    bn2blob_ptr->emplace("out_" + std::to_string(i) + "_diff",
+                         CreateBlob(in_dim_vecs[i], (i + 1) * 10.0)); 
+  }
 
   return [bn2blob_ptr](const std::string& bn) {
     return bn2blob_ptr->at(bn);
@@ -140,16 +138,19 @@ TEST(boxingKernel, boxing_concat_clone_box) {
       BoxingOpConf::kConcatBox, BoxingOpConf::kCloneBox);
 
   // Build mapping bns->blobs with first kernel
-  std::vector<std::vector<int64_t> > in_dim_vecs = { {3, 4, 5, 5},
-    {3, 2, 5, 5}, {3, 1, 5, 5}, { 3, 7, 5, 5}};
-  std::vector<std::vector<int64_t> > out_dim_vecs_0 = { { 3, 14, 5, 5}};
-  std::vector<std::vector<int64_t> > out_dim_vecs_1 = { {3, 14, 5, 5},
-    {3, 14, 5, 5}, {3, 14, 5, 5}, {3, 14, 5, 5}, {3, 14, 5, 5} };
-  
+  std::vector<std::vector<int64_t> > in_dim_vecs = {{3, 4, 5, 5},
+                                                    {3, 2, 5, 5},
+                                                    {3, 1, 5, 5},
+                                                    {3, 7, 5, 5}};
+  std::vector<std::vector<int64_t> > out_dim_vecs_0 = {{ 3, 14, 5, 5}};
+  std::vector<std::vector<int64_t> > out_dim_vecs_1 = {{3, 14, 5, 5},
+                                                       {3, 14, 5, 5},
+                                                       {3, 14, 5, 5},
+                                                       {3, 14, 5, 5},
+                                                       {3, 14, 5, 5}};
   auto BnInOp2BlobPtr_0 = ConstructBnInOp2BlobPtr(in_dim_vecs,
       out_dim_vecs_0, out_dim_vecs_0[0]); 
 
-  // Build mapping bns->blobs with second kernel
   auto BnInOp2BlobPtr_1 = ConstructBnInOp2BlobPtr(in_dim_vecs,
       out_dim_vecs_1, out_dim_vecs_0[0]); 
   
@@ -161,19 +162,19 @@ TEST(boxingKernel, boxing_concat_clone_box) {
 
   FakeRun(cpu_stream);
 
-  // Check the output blobs 
-  Blob* expected_in_diff = CreateBlob({3, 14, 5, 5}, 15.0);
-  BlobCmp(BnInOp2BlobPtr_1("middle"), expected_in_diff);
+  for (size_t i = 0; i < in_dim_vecs.size(); ++i) {
+    Blob* expected_in_diff = CreateBlob(in_dim_vecs[i], 15.0);
+    Blob* in_i_diff = BnInOp2BlobPtr_1("in_" + std::to_string(i) + "_diff");
+    BlobCmp(in_i_diff, expected_in_diff);
+  }
 
-  for (size_t i=0; i < out_dim_vecs_1.size(); ++i) {
-    const std::string bn = "out_" + std::to_string(i);
-    BlobCmp(BnInOp2BlobPtr_1(bn), BnInOp2BlobPtr_0("out_0"));
+  Blob* out_0 = BnInOp2BlobPtr_0("out_0");
+  for (size_t i=1; i < out_dim_vecs_1.size(); ++i) {
+    Blob* out_i = BnInOp2BlobPtr_1("out_" + std::to_string(i));
+    BlobCmp(out_i, out_0);
   }
 }
 
-// Trick: To test concat and split box, kernel_0 and kernel_1 are connected.
-// The data in blobs of inputs of kernel_0 and outputs of kernel_1 
-// should be the same.
 TEST(boxingKernel, boxing_concat_split_box) {
   // Create cpu_device and kernel contexts
   auto cpu_stream = new Channel<std::function<void()>>;
@@ -187,12 +188,14 @@ TEST(boxingKernel, boxing_concat_split_box) {
       BoxingOpConf::kConcatBox, BoxingOpConf::kDataSplitBox);
 
   // Build blobs
-  std::vector<std::vector<int64_t> > in_dim_vecs = { {3, 4, 5, 5},
-    {3, 2, 5, 5}, {3, 1, 5, 5}, { 3, 7, 5, 5}};
-  std::vector<std::vector<int64_t> > out_dim_vecs = { {3, 5, 5, 5},
-    {3, 6, 5, 5}, {3, 3, 5, 5}};
-  auto BnInOp2BlobPtr = ConstructBnInOp2BlobPtr(in_dim_vecs,
-      out_dim_vecs); 
+  std::vector<std::vector<int64_t> > in_dim_vecs = {{3, 4, 5, 5},
+                                                    {3, 2, 5, 5},
+                                                    {3, 1, 5, 5},
+                                                    { 3, 7, 5, 5}};
+  std::vector<std::vector<int64_t> > out_dim_vecs = {{3, 5, 5, 5},
+                                                     {3, 6, 5, 5},
+                                                     {3, 3, 5, 5}};
+  auto BnInOp2BlobPtr = ConstructBnInOp2BlobPtr(in_dim_vecs, out_dim_vecs); 
 
   // Build reverse blobs
   auto r_BnInOp2BlobPtr = ConstructBnInOp2BlobPtr(BnInOp2BlobPtr, in_dim_vecs,
@@ -223,15 +226,18 @@ TEST(boxingKernel, boxing_add_clone_box) {
 
   // Build boxing kernel
   auto boxing_kernel = BuildBoxingKernel(4, 3, 0, BoxingOpConf::kAddBox,
-      BoxingOpConf::kCloneBox);
+                                         BoxingOpConf::kCloneBox);
 
   // Build mapping bns->blobs
-  std::vector<std::vector<int64_t> > in_dim_vecs = { {3, 4, 5, 5},
-    {3, 4, 5, 5}, {3, 4, 5, 5}, { 3, 4, 5, 5} };
-  std::vector<std::vector<int64_t> > out_dim_vecs = { {3, 4, 5, 5},
-    {3, 4, 5, 5}, {3, 4, 5, 5} };
-  auto BnInOp2BlobPtr = ConstructBnInOp2BlobPtr(in_dim_vecs,
-      out_dim_vecs, {3, 4, 5, 5}); 
+  std::vector<std::vector<int64_t> > in_dim_vecs = {{3, 4, 5, 5},
+                                                    {3, 4, 5, 5},
+                                                    {3, 4, 5, 5},
+                                                    {3, 4, 5, 5}};
+  std::vector<std::vector<int64_t> > out_dim_vecs = {{3, 4, 5, 5},
+                                                     {3, 4, 5, 5},
+                                                     {3, 4, 5, 5}};
+  auto BnInOp2BlobPtr = ConstructBnInOp2BlobPtr(in_dim_vecs, out_dim_vecs,
+                                                {3, 4, 5, 5}); 
 
   // Run forward && backward
   boxing_kernel->Forward(ctx, BnInOp2BlobPtr);
@@ -240,7 +246,6 @@ TEST(boxingKernel, boxing_add_clone_box) {
 
   // check if add-results is the same as expected.
   Blob* expected_add_b = CreateBlob(out_dim_vecs[0], 10.0);
-  
   for (size_t i=0; i < out_dim_vecs.size(); ++i) {
     BlobCmp(BnInOp2BlobPtr("out_"+std::to_string(i)), expected_add_b);
   }

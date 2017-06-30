@@ -20,8 +20,7 @@ class BoxingKernel final : public Kernel {
   void Backward(const KernelCtx&,
                 std::function<Blob*(const std::string&)>) const override;
  private: 
-  // For concat ==> (split/clone) box:
-  // a CopyRule means a step of memory action during runtime. Since the 
+  // A CopyRule means a step of memory action during runtime. Since the 
   // blob shapes are fixed after initilization, the offsets of each blobs 
   // are therefore constant during execution. We can write down the offsets
   // of each blob in the first time, and directly use these records to do
@@ -57,6 +56,7 @@ class BoxingKernel final : public Kernel {
       std::function<Blob*(const std::string&)> BnInOp2BlobPtr, 
       const std::vector<CopyRule>& copy_rules) const; 
 
+  // Forward && backward will call these functions according to input-box types
   void AddBoxForward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)>) const;
   void AddBoxBackward(const KernelCtx& ctx,
