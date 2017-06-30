@@ -24,11 +24,20 @@ foreach(subdir ${subdir_list})
 endforeach()
 
 # clang format
-add_custom_target(of_format
-  COMMAND clang-format
-  -i
-  -style=file
-  ${of_all_obj_cc} ${of_main_cc} ${of_all_test_cc})
+add_custom_target(of_format)
+
+foreach(source_file ${of_all_obj_cc})
+    add_custom_command(TARGET of_format PRE_BUILD
+    COMMAND clang-format -i -style=file ${source_file})
+endforeach()
+foreach(source_file ${of_main_cc})
+    add_custom_command(TARGET of_format PRE_BUILD
+    COMMAND clang-format -i -style=file ${source_file})
+endforeach()
+foreach(source_file ${of_all_test_cc})
+    add_custom_command(TARGET of_format PRE_BUILD
+    COMMAND clang-format -i -style=file ${source_file})
+endforeach()
 
 # proto obj lib
 foreach(proto_name ${of_all_proto})
