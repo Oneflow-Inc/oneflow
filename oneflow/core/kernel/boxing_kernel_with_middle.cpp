@@ -43,7 +43,7 @@ void BoxingKernel<device_type, FloatingPointType>::AddBoxes2Middle(
       middle->shape().elem_cnt() * sizeof(FloatingPointType));
 
   // Add remaining blobs in bns to middle
-  for (size_t i = 0; i < bns.size(); ++i) {
+  for (size_t i = 1; i < bns.size(); ++i) {
     Blob* b_i = BnInOp2BlobPtr(bns.at(i));
     KernelUtil<device_type, FloatingPointType>::BlasAxpy(
         ctx, middle->shape().elem_cnt(), 1.0,
@@ -60,24 +60,25 @@ void BoxingKernel<device_type, FloatingPointType>::SplitMiddle2Boxes(
   Blob* middle = BnInOp2BlobPtr("middle");
   const int32_t concat_axis = op()->op_conf().boxing_conf().concat_box().axis();
   const int64_t middle_sz =
-      middle->shape().elem_cnt() * sizeof(FloatingPointType);
-  const int64_t step_sz = middle->shape().Count(1);
+      middle->shape().Count(concat_axis) * sizeof(FloatingPointType);
   const int64_t step_num = (concat_axis == 0) ? 1 : middle->shape().At(0);
   for (size_t i = 0; i < step_num; ++i) {
     size_t j = 0;
-    for (int64_t offset = step_sz * i; offset < middle_sz;) {
+    for (int64_t offset = i * middle_sz; offset < (i + 1) * middle_sz;) {
       Blob* b_j = BnInOp2BlobPtr(bns.at(j));
-      int64_t b_sz = b_j->shape().elem_cnt() * sizeof(FloatingPointType);
+      int64_t b_sz =
+          b_j->shape().Count(concat_axis) * sizeof(FloatingPointType);
       if (!reverse) {
         KernelUtil<device_type, FloatingPointType>::Memcpy(
-            ctx, b_j->mut_dptr(),
+            ctx, static_cast<char*>(b_j->mut_dptr()) + i * b_sz,
             static_cast<const char*>(middle->dptr()) + offset, b_sz);
       } else {
         KernelUtil<device_type, FloatingPointType>::Memcpy(
-            ctx, static_cast<char*>(middle->mut_dptr()) + offset, b_j->dptr(),
-            b_sz);
+            ctx, static_cast<char*>(middle->mut_dptr()) + offset,
+            i * b_sz + static_cast<const char*>(b_j->dptr()), b_sz);
       }
       offset += b_sz;
+      ++j;
     }
   }
 }
@@ -89,9 +90,9 @@ void BoxingKernel<device_type, FloatingPointType>::CopyMiddle2Boxes(
   Blob* middle = BnInOp2BlobPtr("middle");
   int64_t middle_sz = middle->shape().elem_cnt() * sizeof(FloatingPointType);
   for (const std::string& bn : bns) {
-    Blob* out_i = BnInOp2BlobPtr(bn);
+    Blob* b_i = BnInOp2BlobPtr(bn);
     KernelUtil<device_type, FloatingPointType>::Memcpy(
-        ctx, out_i->mut_dptr(), middle->dptr(), middle_sz);
+        ctx, b_i->mut_dptr(), middle->dptr(), middle_sz);
   }
 }
 
@@ -121,7 +122,7 @@ template<DeviceType device_type, typename FloatingPointType>
 void BoxingKernel<device_type, FloatingPointType>::ConcatSplitBoxBackward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  AddBoxes2Middle(ctx, op()->output_diff_bns(), BnInOp2BlobPtr);
+  SplitMiddle2Boxes(ctx, op()->output_diff_bns(), BnInOp2BlobPtr, true);
   SplitMiddle2Boxes(ctx, op()->input_diff_bns(), BnInOp2BlobPtr, false);
 }
 
@@ -130,7 +131,6 @@ void BoxingKernel<device_type, FloatingPointType>::ConcatCloneBoxForward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
   SplitMiddle2Boxes(ctx, op()->input_bns(), BnInOp2BlobPtr, true);
-  // Clone middle blob to output blobs
   CopyMiddle2Boxes(ctx, op()->output_bns(), BnInOp2BlobPtr);
 }
 

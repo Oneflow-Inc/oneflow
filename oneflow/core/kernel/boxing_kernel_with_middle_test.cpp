@@ -1,9 +1,5 @@
 #include "oneflow/core/kernel/boxing_kernel_with_middle.h"
-#include <iostream>
 #include "oneflow/core/actor/cpu_device_context.h"
-#include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/operator/boxing_op.h"
-#include "oneflow/core/operator/operator.pb.h"
 
 namespace oneflow {
 
@@ -36,12 +32,12 @@ void BlobCmp(Blob* A, Blob* B) {
 }
 
 BoxingKernel<DeviceType::kCPU, float>* BuildBoxingKernel(
-    int32_t in_num, int32_t out_num, int kernel_seq,
+    int32_t in_num, int32_t out_num, int kernel_name,
     BoxingOpConf::InBoxCase in_box_case,
     BoxingOpConf::OutBoxCase out_box_case) {
   // config boxing operator from box cases
   OperatorConf op_conf;
-  op_conf.set_name("boxing_test" + std::to_string(kernel_seq));
+  op_conf.set_name("boxing_test" + std::to_string(kernel_name));
   BoxingOpConf* boxing_conf = op_conf.mutable_boxing_conf();
   boxing_conf->set_in_num(in_num);
   boxing_conf->set_out_num(out_num);
@@ -184,11 +180,12 @@ TEST(boxingKernel, boxing_concat_split_box) {
       {3, 4, 5, 5}, {3, 2, 5, 5}, {3, 1, 5, 5}, {3, 7, 5, 5}};
   std::vector<std::vector<int64_t>> out_dim_vecs = {
       {3, 5, 5, 5}, {3, 6, 5, 5}, {3, 3, 5, 5}};
-  auto BnInOp2BlobPtr = ConstructBnInOp2BlobPtr(in_dim_vecs, out_dim_vecs);
+  auto BnInOp2BlobPtr =
+      ConstructBnInOp2BlobPtr(in_dim_vecs, out_dim_vecs, {3, 14, 5, 5});
 
   // Build reverse blobs
-  auto r_BnInOp2BlobPtr =
-      ConstructBnInOp2BlobPtr(BnInOp2BlobPtr, in_dim_vecs, out_dim_vecs);
+  auto r_BnInOp2BlobPtr = ConstructBnInOp2BlobPtr(BnInOp2BlobPtr, in_dim_vecs,
+                                                  out_dim_vecs, {3, 14, 5, 5});
 
   // Run forward && backward test
   boxing_kernel_0->Forward(ctx, BnInOp2BlobPtr);
