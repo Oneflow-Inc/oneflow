@@ -67,3 +67,10 @@ foreach(cc ${of_all_test_cc})
   target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
   add_test(NAME ${test_name} COMMAND ${test_exe_name})
 endforeach()
+
+# clang format
+add_custom_target(format
+  COMMAND clang-format
+  -i
+  -style=file
+  ${of_all_obj_cc} ${of_main_cc} ${of_all_test_cc})
