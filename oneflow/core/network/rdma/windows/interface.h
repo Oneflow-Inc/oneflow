@@ -1,13 +1,13 @@
-#ifndef ONEFLOW_NETWORK_RDMA_WINDOWS_INTERFACE_H_
-#define ONEFLOW_NETWORK_RDMA_WINDOWS_INTERFACE_H_
+#ifndef ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_INTERFACE_H_
+#define ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_INTERFACE_H_
 
 #include <ws2tcpip.h>
 
-#include "network/rdma/windows/ndcommon.h"
-#include "network/rdma/windows/ndsupport.h"
-#include "network/rdma/windows/rdma_manager.h"
-#include "network/rdma/windows/rdma_memory.h"
-#include "network/rdma/windows/rdma_message.h"
-#include "network/rdma/windows/connection.h"
+#include "oneflow/core/network/rdma/windows/ndcommon.h"
+#include "oneflow/core/network/rdma/windows/ndsupport.h"
+#include "oneflow/core/network/rdma/windows/rdma_manager.h"
+#include "oneflow/core/network/rdma/windows/rdma_memory.h"
+#include "oneflow/core/network/rdma/windows/rdma_message.h"
+#include "oneflow/core/network/rdma/windows/connection.h"
 
-#endif  // ONEFLOW_NETWORK_RDMA_WINDOWS_INTERFACE_H_
+#endif  // ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_INTERFACE_H_

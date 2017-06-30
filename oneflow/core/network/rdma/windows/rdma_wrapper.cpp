@@ -1,4 +1,4 @@
-#include "oneflow/core/network/rdma/windows/rdma_manager.h"
+#include "oneflow/core/network/rdma/windows/rdma_wrapper.h"
 
 #include <Ws2tcpip.h>  // TODO(shiyuan)
 #include <windows.h>
@@ -26,142 +26,122 @@ sockaddr_in GetSocket(const char* addr, int port) {
 
 }  // namespace
 
-RdmaManager::RdmaManager() {
-  adapter_ = NULL;
-  listener_ = NULL;
-  send_cq_ = NULL;
-  recv_cq_ = NULL;
-}
+RdmaWrapper::RdmaWrapper() : adapter_(nullptr), listener_(nullptr),
+    send_cq_(nullptr), recv_cq_(nullptr) {}
 
-RdmaManager::~RdmaManager() {
+RdmaWrapper::~RdmaWrapper() {
   Destroy();
 }
 
-bool RdmaManager::Init(const char* addr, int port) {
+void RdmaWrapper::Init(const char* addr, int port) {
   my_sock_ = GetSocket(addr, port);
 
   // INIT ADAPTER
   // NdspiV2Open
-  HRESULT hr = NdStartup();
-  // CHECK hr
-  hr = NdOpenV2Adapter(reinterpret_cast<const sockaddr*>(&my_sock_),
-                       sizeof(my_sock_),
-                       &adapter_);
-  // CHECK hr
+  CHECK_EQ(NdStartup(), );  // TODO(shiyuan)
+  CHECK_EQ(NdOpenV2Adapter(reinterpret_cast<const sockaddr*>(&my_sock_),
+                           sizeof(my_sock_),
+                           &adapter_),
+            );  // TODO(shiyuan)
 
-  hr = adapter_->CreateOverlappedFile(&overlapped_file_);
-  // CHECK hr
+  CHECK_EQ(adapter_->CreateOverlappedFile(&overlapped_file_), );  // TODO(shiyuan)
 
   ULONG info_size = sizeof(adapter_info_);
   adapter_info_.InfoVersion = ND_VERSION_2;
-  hr = adapter_->Query(&adapter_info_, &info_size);
-  // CHECK hr
+  CHECK_EQ(adapter_->Query(&adapter_info_, &info_size), );  // TODO(shiyuan)
 
   // INIT ENV
   // Create Send Completion Queue and Recv Completion Queue
-  hr = adapter_->CreateCompletionQueue(
-      IID_IND2CompletionQueue,
-      overlapped_file_,
-      adapter_info_.MaxCompletionQueueDepth,  // use max depth as default
-      0,  // not specify processor group
-      0,  // not specify affinity
-      reinterpret_cast<void**>(&send_cq_));
-  // CHECK(!FAILED(hr)) << "Failed to create send completion queue\n";
+  CHECK_EQ(adapter_->CreateCompletionQueue(
+               IID_IND2CompletionQueue,
+               overlapped_file_,
+               adapter_info_.MaxCompletionQueueDepth,  // use max depth as default
+               0,  // not specify processor group
+               0,  // not specify affinity
+               reinterpret_cast<void**>(&send_cq_)),
+            );  // TODO(shiyuan)
 
-  hr = adapter_->CreateCompletionQueue(
-      IID_IND2CompletionQueue,
-      overlapped_file_,
-      adapter_info_.MaxCompletionQueueDepth,
-      0,
-      0,
-      reinterpret_cast<void**>(&recv_cq_));
-  // CHECK(!FAILED(hr)) << "Failed to create recv completion queue\n";
+  CHECK_EQ(adapter_->CreateCompletionQueue(
+               IID_IND2CompletionQueue,
+               overlapped_file_,
+               adapter_info_.MaxCompletionQueueDepth,
+               0,
+               0,
+               reinterpret_cast<void**>(&recv_cq_)),
+            );  // TODO(shiyuan)
 
   // StartListen
-  hr = adapter_->CreateListener(
-      IID_IND2Listener,
-      overlapped_file_,
-      reinterpret_cast<void**>(&listener_));
-  // CHECK(!FAILED(hr)) << "Failed to create listener\n";
+  CHECK_EQ(adapter_->CreateListener(
+               IID_IND2Listener,
+               overlapped_file_,
+               reinterpret_cast<void**>(&listener_)),
+            );  // TODO(shiyuan)
 
-  hr = listener_->Bind(
-      reinterpret_cast<const sockaddr*>(&my_sock_),
-      sizeof(sockaddr_in));
-  // CHECK(!FAILED(hr)) << "Failed to bind\n";
+  CHECK_EQ(listener_->Bind(
+               reinterpret_cast<const sockaddr*>(&my_sock_),
+               sizeof(sockaddr_in)),
+            );  // TODO(shiyuan)
 
   // Start listening for incoming connection requests
   // argument BACKLOG: The maximum number of pending connection requests
   // to maintain for the listen request. Set to zero to indicate no limit.
-  hr = listener_->Listen(0);  // NOTE: not sure whether 0(no limit) is OK
-  // CHECK(!FAILED(hr)) << "Failed to Listen\n";
-
-  return true;
+  CHECK_EQ(listener_->Listen(0),  // NOTE: not sure whether 0(no limit) is OK
+            );  // TODO(shiyuan)
 }
 
-bool RdmaManager::Destroy() {
-  send_cq_->Release();
-  recv_cq_->Release();
-  listener_->Release();
-  adapter_->Release();
-  return true;
+void RdmaWrapper::Destroy() {
+  CHECK(send_cq_->Release(), );  // TODO(shiyuan)
+  CHECK(recv_cq_->Release(), );  // TODO(shiyuan)
+  CHECK(listener_->Release(), );  // TODO(shiyuan)
+  CHECK(adapter_->Release(), );  // TODO(shiyuan)
 }
 
-bool RdmaManager::CreateConnector(Connection* conn) {
+void RdmaWrapper::CreateConnector(Connection* conn) {
   IND2Connector* connector = NULL;
-  HRESULT hr = adapter_->CreateConnector(
-      IID_IND2Connector,
-      overlapped_file_,
-      reinterpret_cast<void**>(&connector));
+  CHECK(adapter_->CreateConnector(
+            IID_IND2Connector,
+            overlapped_file_,
+            reinterpret_cast<void**>(&connector)),
+        );  // TODO(shiyuan)
   conn->set_connector(connector);
-
-  if (SUCCEEDED(hr)) {
-    return true;
-  } else {
-    return false;
-  }
 }
 
-bool RdmaManager::CreateProtectDomain(Connection* conn) {
-  return true;
+void RdmaWrapper::CreateProtectDomain(Connection* conn) {
 }
 
-bool RdmaManager::CreateQueuePair(Connection* conn) {
+void RdmaWrapper::CreateQueuePair(Connection* conn) {
   IND2QueuePair* queue_pair = NULL;
-  HRESULT hr = adapter_->CreateQueuePair(
-      IID_IND2QueuePair,
-      recv_cq_,
-      send_cq_,
-      NULL,
-      // just all set them as maximum value, need to be set
-      // according to our application protocal carefully.
-      adapter_info_.MaxReceiveQueueDepth,
-      adapter_info_.MaxInitiatorQueueDepth,
-      1,  // adapter_info_.MaxRecvSge,
-      adapter_info_.MaxInitiatorSge,
-      adapter_info_.MaxInlineDataSize,
-      reinterpret_cast<void**>(&queue_pair));
+  CHECK(adapter_->CreateQueuePair(
+            IID_IND2QueuePair,
+            recv_cq_,
+            send_cq_,
+            NULL,
+            // just all set them as maximum value, need to be set
+            // according to our application protocal carefully.
+            adapter_info_.MaxReceiveQueueDepth,
+            adapter_info_.MaxInitiatorQueueDepth,
+            1,  // adapter_info_.MaxRecvSge,
+            adapter_info_.MaxInitiatorSge,
+            adapter_info_.MaxInlineDataSize,
+            reinterpret_cast<void**>(&queue_pair)),
+        );  // TODO(shiyuan)
   conn->set_queue_pair(queue_pair);
-
-  if (SUCCEEDED(hr)) {
-    return true;
-  } else {
-    return false;
-  }
 }
 
-RdmaMemory* RdmaManager::NewNetworkMemory() {
+RdmaMemory* RdmaWrapper::NewNetworkMemory() {
   IND2MemoryRegion* memory_region = NULL;
-  HRESULT hr = adapter_->CreateMemoryRegion(
-      IID_IND2MemoryRegion,
-      overlapped_file_,
-      reinterpret_cast<void**>(&memory_region));
+  CHECK(adapter_->CreateMemoryRegion(
+            IID_IND2MemoryRegion,
+            overlapped_file_,
+            reinterpret_cast<void**>(&memory_region)),
+        );  // TODO(shiyuan)
 
   RdmaMemory* rdma_memory = new RdmaMemory(memory_region);
   return rdma_memory;
 }
 
 // FIXME(shiyuan) bug
-uint64_t RdmaManager::WaitForConnection(Connection* conn,
+uint64_t RdmaWrapper::WaitForConnection(Connection* conn,
                                         Request* receive_request) {
   uint64_t peer_machine_id;
   ULONG size = sizeof(peer_machine_id);
@@ -197,7 +177,7 @@ uint64_t RdmaManager::WaitForConnection(Connection* conn,
 
 // |result| is owned by the caller, and the received message will be held in
 // result->net_msg, having result->type == NetworkResultType::NET_RECEIVE_MSG.
-int32_t RdmaManager::PollRecvQueue(NetworkResult* result) {
+int32_t RdmaWrapper::PollRecvQueue(NetworkResult* result) {
   ND2_RESULT nd2_result;
   uint32_t len = recv_cq_->GetResults(&nd2_result, 1);
   if (len == 0)
@@ -215,7 +195,7 @@ int32_t RdmaManager::PollRecvQueue(NetworkResult* result) {
   return time_stamp;
 }
 
-int32_t RdmaManager::PollSendQueue(NetworkResult* result) {
+int32_t RdmaWrapper::PollSendQueue(NetworkResult* result) {
   ND2_RESULT nd2_result;
   uint32_t len = send_cq_->GetResults(&nd2_result, 1);
   if (len == 0)

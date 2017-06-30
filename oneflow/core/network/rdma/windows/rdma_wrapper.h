@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_RDMA_MANAGER_H_
-#define ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_RDMA_MANAGER_H_
+#ifndef ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_RDMA_WRAPPER_H_
+#define ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_RDMA_WRAPPER_H_
 
 #include <stdint.h>
 #include <ndspi.h>
@@ -12,17 +12,17 @@ class Connection;
 class RdmaMemory;
 struct Request;
 
-class RdmaManager {
+class RdmaWrapper {
  public:
-  RdmaManager();
-  ~RdmaManager();
+  RdmaWrapper();
+  ~RdmaWrapper();
 
-  bool Init(const char* addr, int port);
-  bool Destroy();
+  void Init(const char* addr, int port);
+  void Destroy();
 
-  bool CreateConnector(Connection* conn);
-  bool CreateProtectDomain(Connection* conn);
-  bool CreateQueuePair(Connection* conn);
+  void CreateConnector(Connection* conn);
+  void CreateProtectDomain(Connection* conn);
+  void CreateQueuePair(Connection* conn);
 
   RdmaMemory* NewNetworkMemory();
 
@@ -52,4 +52,4 @@ class RdmaManager {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_RDMA_MANAGER_H_
+#endif  // ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_RDMA_WRAPPER_H_
