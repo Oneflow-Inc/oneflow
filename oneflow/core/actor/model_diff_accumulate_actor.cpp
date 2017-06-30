@@ -78,7 +78,7 @@ void MdDiffAccActor::TryWardKernelAndSendMsg() {
   });
   ForEachCurWriteableRegst([this, &regst_wp](Regst* regst) {
     regst->set_piece_id(regst_wp->piece_id());
-    ++model_diff_acc_cnt_[regst];
+    ++model_diff_acc_cnt_.at(regst);
   });
   AsyncSendReadableRegstMsg();
   AsyncSendRegstMsgToProducer(regst_wp);
