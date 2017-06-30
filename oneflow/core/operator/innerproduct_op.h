@@ -18,9 +18,6 @@ class InnerProductOp final : public UserOperator {
       ParallelPolicy policy,
       int64_t parallel_id,
       int64_t parallel_num) const override;
-
- private:
-  bool has_bias_term_;
 };
 
 } // namespace oneflow

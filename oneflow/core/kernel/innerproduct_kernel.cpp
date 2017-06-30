@@ -27,16 +27,6 @@ void BlasMatrixMatrix(
 }  // namespace
 
 template<DeviceType device_type, typename FloatingPointType>
-void InnerProductKernel<device_type, FloatingPointType>::InitFromOpProto(
-    const OperatorProto& op_proto) {
-  Kernel::InitFromOpProto(op_proto);
-
-  const InnerProductOpConf& inner_product_conf =
-    op()->op_conf().innerproduct_conf();
-  has_bias_term_ = inner_product_conf.has_bias_term();
-}
-
-template<DeviceType device_type, typename FloatingPointType>
 void InnerProductKernel<device_type, FloatingPointType>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
@@ -51,7 +41,7 @@ void InnerProductKernel<device_type, FloatingPointType>::Forward(
       static_cast<FloatingPointType>(0.0),
       in_data, weight, out_data);
   
-  if (has_bias_term_) {
+  if (op()->GetBoolFromSpecialConf("has_bias_term")) {
     Blob* bias = BnInOp2BlobPtr("bias");
     Blob* bias_multiplier = BnInOp2BlobPtr("bias_multiplier");
     
@@ -91,7 +81,7 @@ void InnerProductKernel<device_type, FloatingPointType>::Backward(
       static_cast<FloatingPointType>(0.0),
       out_diff, in_data, weight_diff);
   
-  if (has_bias_term_) {
+  if (op()->GetBoolFromSpecialConf("has_bias_term")) {
     Blob* bias_diff = BnInOp2BlobPtr("bias_diff");
     Blob* bias_multiplier = BnInOp2BlobPtr("bias_multiplier");
 

@@ -14,8 +14,6 @@ class InnerProductKernel final : public Kernel {
   InnerProductKernel() = default;
   ~InnerProductKernel() = default;
 
-  void InitFromOpProto(const OperatorProto& op_proto) override;
-
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
   void Backward(const KernelCtx&,
@@ -25,9 +23,6 @@ class InnerProductKernel final : public Kernel {
   void InitModelAndModelTmpBlobsWithoutSnapshot(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
-
- private:
-  bool has_bias_term_;
 };
 
 }  // namespace oneflow

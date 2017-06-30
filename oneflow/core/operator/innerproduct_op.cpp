@@ -6,13 +6,12 @@ namespace oneflow {
 void InnerProductOp::InitFromOpConf(const OperatorConf& op_conf) {
   CHECK(op_conf.has_innerproduct_conf());
   mut_op_conf() = op_conf;
-  has_bias_term_ = op_conf.innerproduct_conf().has_bias_term();
 
   EnrollInputBn("in");
   EnrollOutputBn("out");
   EnrollModelBn("weight");
   
-  if (has_bias_term_) {
+  if (GetBoolFromSpecialConf("has_bias_term")) {
     EnrollModelBn("bias");
     EnrollModelTmpBn("bias_multiplier");
   }
@@ -42,7 +41,7 @@ void InnerProductOp::InferShape4FwBlobs(
   Shape* weight_shape_ptr = GetShapePtr4BnInOp("weight");
   *weight_shape_ptr = Shape({out_num, in_shape_ptr->Count(1)});
   
-  if (has_bias_term_) {
+  if (GetBoolFromSpecialConf("has_bias_term")) {
     // model bn
     Shape* bias_shape_ptr = GetShapePtr4BnInOp("bias");
     *bias_shape_ptr = Shape({out_num});
