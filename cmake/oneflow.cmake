@@ -23,6 +23,13 @@ foreach(subdir ${subdir_list})
   list(APPEND of_all_test_cc ${subdir_test_cpps})
 endforeach()
 
+# clang format
+add_custom_target(of_format
+  COMMAND clang-format
+  -i
+  -style=file
+  ${of_all_obj_cc} ${of_main_cc} ${of_all_test_cc})
+
 # proto obj lib
 foreach(proto_name ${of_all_proto})
   file(RELATIVE_PATH proto_rel_name ${PROJECT_SOURCE_DIR} ${proto_name})
@@ -35,6 +42,7 @@ RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
 
 cuda_add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(of_protoobj ${oneflow_third_party_libs})
+add_dependencies(of_protoobj of_format)
 
 # cc obj lib
 include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
@@ -67,10 +75,3 @@ foreach(cc ${of_all_test_cc})
   target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
   add_test(NAME ${test_name} COMMAND ${test_exe_name})
 endforeach()
-
-# clang format
-add_custom_target(format
-  COMMAND clang-format
-  -i
-  -style=file
-  ${of_all_obj_cc} ${of_main_cc} ${of_all_test_cc})
