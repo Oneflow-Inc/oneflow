@@ -88,23 +88,19 @@ void TestDataParallelInnerProductOp(bool has_bias_term) {
 }  // namespace
 
 TEST(InnerProductOp, modelparallel_innerproduct_with_bias) {
-  bool has_bias_term = true;
-  TestModelParallelInnerProductOp(has_bias_term);
+  TestModelParallelInnerProductOp(true);
 }
 
 TEST(InnerProductOp, modelparallel_innerproduct_without_bias) {
-  bool has_bias_term = false;
-  TestModelParallelInnerProductOp(has_bias_term);
+  TestModelParallelInnerProductOp(false);
 }
 
 TEST(InnerProductOp, dataparallel_innerproduct_with_bias) {
-  bool has_bias_term = true;
-  TestDataParallelInnerProductOp(has_bias_term);
+  TestDataParallelInnerProductOp(true);
 }
 
 TEST(InnerProductOp, dataparallel_innerproduct_without_bias) {
-  bool has_bias_term = false;
-  TestDataParallelInnerProductOp(has_bias_term);
+  TestDataParallelInnerProductOp(false);
 }
 
 }  // namespace oneflow

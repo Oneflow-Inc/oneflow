@@ -221,23 +221,19 @@ void TestInnerProductKernel(bool has_bias_term) {
 }  // namespace
 
 TEST(InnerProductKernel, inner_product_kernel_cpu_with_bias) {
-  bool has_bias_term = true;
-  TestInnerProductKernel<DeviceType::kCPU, float>(has_bias_term);
+  TestInnerProductKernel<DeviceType::kCPU, float>(true);
 }
 
 TEST(InnerProductKernel, inner_product_kernel_cpu_without_bias) {
-  bool has_bias_term = false;
-  TestInnerProductKernel<DeviceType::kCPU, float>(has_bias_term);
+  TestInnerProductKernel<DeviceType::kCPU, float>(false);
 }
 
 TEST(InnerProductKernel, inner_product_kernel_gpu_with_bias) {
-  bool has_bias_term = true;
-  TestInnerProductKernel<DeviceType::kGPU, float>(has_bias_term);
+  TestInnerProductKernel<DeviceType::kGPU, float>(true);
 }
 
 TEST(InnerProductKernel, inner_product_kernel_gpu_without_bias) {
-  bool has_bias_term = false;
-  TestInnerProductKernel<DeviceType::kGPU, float>(has_bias_term);
+  TestInnerProductKernel<DeviceType::kGPU, float>(false);
 }
 
 }  // namespace oneflow
