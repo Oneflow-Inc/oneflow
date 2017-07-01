@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_ACTOR_DEVICE_CONTEXT_H_
-#define ONEFLOW_CORE_ACTOR_DEVICE_CONTEXT_H_
+#ifndef ONEFLOW_CORE_DEVICE_DEVICE_CONTEXT_H_
+#define ONEFLOW_CORE_DEVICE_DEVICE_CONTEXT_H_
 
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/common/util.h"
@@ -41,4 +41,4 @@ class DeviceCtx {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_DEVICE_CONTEXT_H_
+#endif  // ONEFLOW_CORE_DEVICE_DEVICE_CONTEXT_H_
