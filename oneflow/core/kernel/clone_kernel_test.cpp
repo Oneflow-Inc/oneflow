@@ -1,5 +1,5 @@
-#include <random>
 #include "oneflow/core/kernel/clone_kernel.h"
+#include <random>
 #include "oneflow/core/actor/cpu_device_context.h"
 #include "oneflow/core/actor/cuda_device_context.h"
 
@@ -7,10 +7,7 @@ namespace oneflow {
 
 namespace {
 
-enum class Location {
-  kHost,
-  kDevice
-};
+enum class Location { kHost, kDevice };
 
 struct CloneKernelBlobs {
   CloneKernelBlobs(const int);
@@ -21,15 +18,14 @@ struct CloneKernelBlobs {
   std::vector<Blob*> out_diff_blobs;
 };
 
-CloneKernelBlobs::CloneKernelBlobs(const int out_num_param):
-  out_num(out_num_param),
-  in_blob(nullptr), in_diff_blob(nullptr),
-  out_blobs(out_num_param, nullptr),
-  out_diff_blobs(out_num_param, nullptr) {
-}
+CloneKernelBlobs::CloneKernelBlobs(const int out_num_param)
+    : out_num(out_num_param),
+      in_blob(nullptr),
+      in_diff_blob(nullptr),
+      out_blobs(out_num_param, nullptr),
+      out_diff_blobs(out_num_param, nullptr) {}
 
-Blob* CreateBlob(const std::vector<int64_t>& dim_vec,
-                 const float* data_vec,
+Blob* CreateBlob(const std::vector<int64_t>& dim_vec, const float* data_vec,
                  Location location) {
   void* dptr = nullptr;
   Shape* shape = new Shape(dim_vec);
@@ -47,8 +43,8 @@ Blob* CreateBlob(const std::vector<int64_t>& dim_vec,
   return new Blob(dptr, shape);
 }
 
-Blob* CreateBlobWithSameValue(const std::vector<int64_t>& dim_vec,
-                              float value, Location location) {
+Blob* CreateBlobWithSameValue(const std::vector<int64_t>& dim_vec, float value,
+                              Location location) {
   Shape* shape = new Shape(dim_vec);
   float* data_vec = new float[shape->elem_cnt()];
   std::fill(data_vec, data_vec + shape->elem_cnt(), value);
@@ -62,15 +58,12 @@ Blob* CreateBlobWithRandomValue(const std::vector<int64_t>& dim_vec,
   std::mt19937 gen(rd());
   std::uniform_real_distribution<float> dis(0, 10);
   float* data_vec = new float[shape->elem_cnt()];
-  for (int64_t i = 0; i != shape->elem_cnt(); ++i) {
-    data_vec[i] = dis(gen);
-  }
+  for (int64_t i = 0; i != shape->elem_cnt(); ++i) { data_vec[i] = dis(gen); }
   return CreateBlob(dim_vec, data_vec, location);
 }
 
 template<DeviceType device_type>
-Kernel* ConstructCloneKernel(
-    const int out_num, const std::string& lbn) {
+Kernel* ConstructCloneKernel(const int out_num, const std::string& lbn) {
   OperatorConf op_conf;
   op_conf.set_name("clone_test");
   CloneOpConf* clone_conf = op_conf.mutable_clone_conf();
@@ -88,13 +81,11 @@ Kernel* ConstructCloneKernel(
 }
 
 CloneKernelBlobs* CreateCloneKernelBlobsFromData(
-    const std::vector<int64_t>& dim_vec,
-    const int out_num,
-    const HashMap<std::string, float>& init_value_map,
-    Location location) {
+    const std::vector<int64_t>& dim_vec, const int out_num,
+    const HashMap<std::string, float>& init_value_map, Location location) {
   CloneKernelBlobs* ck_blobs = new CloneKernelBlobs(out_num);
-  ck_blobs->in_blob = CreateBlobWithSameValue(
-      dim_vec, init_value_map.at("in_blob"), location);
+  ck_blobs->in_blob =
+      CreateBlobWithSameValue(dim_vec, init_value_map.at("in_blob"), location);
   ck_blobs->in_diff_blob = CreateBlobWithSameValue(
       dim_vec, init_value_map.at("in_diff_blob"), location);
   // 0 : {k. k. k...}
@@ -110,9 +101,7 @@ CloneKernelBlobs* CreateCloneKernelBlobsFromData(
 }
 
 CloneKernelBlobs* CreateCloneKernelBlobsWithRandomValue(
-    const std::vector<int64_t>& dim_vec,
-    const int out_num,
-    Location location) {
+    const std::vector<int64_t>& dim_vec, const int out_num, Location location) {
   CloneKernelBlobs* ck_blobs = new CloneKernelBlobs(out_num);
   ck_blobs->in_blob = CreateBlobWithRandomValue(dim_vec, location);
   ck_blobs->in_diff_blob = CreateBlobWithRandomValue(dim_vec, location);
@@ -124,7 +113,7 @@ CloneKernelBlobs* CreateCloneKernelBlobsWithRandomValue(
 }
 
 void InitBn2BlobPtr(HashMap<std::string, Blob*>& bn2blob_ptr,
-                     CloneKernelBlobs* ck_blobs) {
+                    CloneKernelBlobs* ck_blobs) {
   bn2blob_ptr["in"] = ck_blobs->in_blob;
   bn2blob_ptr["in_diff"] = ck_blobs->in_diff_blob;
   for (size_t i = 0; i != ck_blobs->out_num; ++i) {
@@ -147,9 +136,7 @@ void CPUStreamExec(int out_num, std::function<Blob*(const std::string&)> fp) {
     std::function<void()> work;
     // Both Forward and Backward receive out_num times
     for (int i = 0; i < out_num * 2; ++i) {
-      if (ctx.device_ctx->cpu_stream()->Receive(&work) == 0) {
-        work();
-      }
+      if (ctx.device_ctx->cpu_stream()->Receive(&work) == 0) { work(); }
     }
   });
   cpu_thread.join();
@@ -190,8 +177,8 @@ void TestForward(CloneKernelBlobs* ck_blobs, Location location) {
   } else {
     in_blob_dptr = GetMemcpyDeviceToHost(ck_blobs->in_blob->dptr(), dptr_size);
     for (int i = 0; i != ck_blobs->out_num; ++i) {
-      out_blobs_dptr[i] = GetMemcpyDeviceToHost(
-          ck_blobs->out_blobs[i]->dptr(), dptr_size);
+      out_blobs_dptr[i] =
+          GetMemcpyDeviceToHost(ck_blobs->out_blobs[i]->dptr(), dptr_size);
     }
   }
   for (int i = 0; i != ck_blobs->out_num; ++i) {
@@ -205,8 +192,7 @@ void TestBackward(CloneKernelBlobs* ck_blobs, Location location) {
   float* in_diff_blob_dptr = nullptr;
   std::vector<float*> out_diff_blob_dptrs(ck_blobs->out_num, nullptr);
   if (location == Location::kHost) {
-    in_diff_blob_dptr =
-        static_cast<float*>(ck_blobs->in_diff_blob->mut_dptr());
+    in_diff_blob_dptr = static_cast<float*>(ck_blobs->in_diff_blob->mut_dptr());
     for (int i = 0; i != ck_blobs->out_num; ++i) {
       out_diff_blob_dptrs[i] =
           static_cast<float*>(ck_blobs->out_diff_blobs[i]->mut_dptr());
@@ -249,8 +235,8 @@ TEST(CloneKernel, host_random_4x5x6x7) {
   const int out_num = 3;
   const std::vector<int64_t> dim_vec = {4, 5, 6, 7};
   Location location = Location::kHost;
-  CloneKernelBlobs* ck_blobs = CreateCloneKernelBlobsWithRandomValue(
-      dim_vec, out_num, location);
+  CloneKernelBlobs* ck_blobs =
+      CreateCloneKernelBlobsWithRandomValue(dim_vec, out_num, location);
   CloneKernelTest(ck_blobs, location);
 }
 
@@ -258,18 +244,18 @@ TEST(CloneKernel, device_random_4x5x6x7) {
   const int out_num = 3;
   const std::vector<int64_t> dim_vec = {4, 5, 6, 7};
   Location location = Location::kDevice;
-  CloneKernelBlobs* ck_blobs = CreateCloneKernelBlobsWithRandomValue(
-      dim_vec, out_num, location);
+  CloneKernelBlobs* ck_blobs =
+      CreateCloneKernelBlobsWithRandomValue(dim_vec, out_num, location);
   CloneKernelTest(ck_blobs, location);
 }
 
 TEST(CloneKernel, host_fixed_1x3x2) {
   const int out_num = 3;
   const std::vector<int64_t> dim_vec = {1, 3, 2};
-  const HashMap<std::string, float> init_value_map = {
-    {"in_blob", 1.3}, {"out_blob", 2.4},
-    {"in_diff_blob", 3.5}, {"out_diff_blob", 4.6}
-  };
+  const HashMap<std::string, float> init_value_map = {{"in_blob", 1.3},
+                                                      {"out_blob", 2.4},
+                                                      {"in_diff_blob", 3.5},
+                                                      {"out_diff_blob", 4.6}};
   Location location = Location::kHost;
   CloneKernelBlobs* ck_blobs = CreateCloneKernelBlobsFromData(
       dim_vec, out_num, init_value_map, location);
@@ -279,10 +265,10 @@ TEST(CloneKernel, host_fixed_1x3x2) {
 TEST(CloneKernel, device_fixed_1x3x2) {
   const int out_num = 3;
   const std::vector<int64_t> dim_vec = {1, 3, 2};
-  const HashMap<std::string, float> init_value_map = {
-    {"in_blob", 1.3}, {"out_blob", 2.4},
-    {"in_diff_blob", 3.5}, {"out_diff_blob", 4.6}
-  };
+  const HashMap<std::string, float> init_value_map = {{"in_blob", 1.3},
+                                                      {"out_blob", 2.4},
+                                                      {"in_diff_blob", 3.5},
+                                                      {"out_diff_blob", 4.6}};
   Location location = Location::kDevice;
   CloneKernelBlobs* ck_blobs = CreateCloneKernelBlobsFromData(
       dim_vec, out_num, init_value_map, location);
