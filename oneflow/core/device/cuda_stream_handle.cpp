@@ -1,4 +1,4 @@
-#include "oneflow/core/common/cuda_stream_handle.h"
+#include "oneflow/core/device/cuda_stream_handle.h"
 
 namespace oneflow {
 

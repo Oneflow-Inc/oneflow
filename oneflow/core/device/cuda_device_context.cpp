@@ -1,4 +1,4 @@
-#include "oneflow/core/actor/cuda_device_context.h"
+#include "oneflow/core/device/cuda_device_context.h"
 
 namespace oneflow {
 
