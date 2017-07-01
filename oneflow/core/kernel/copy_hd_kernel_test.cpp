@@ -31,7 +31,7 @@ void BuildCopyHdKernel(CopyHdKernel<DeviceType::kGPU, float>* copy_hd_kernel,
   op_conf.set_name("copy_hd_test");
   CopyHdOpConf* copy_hd_conf = op_conf.mutable_copy_hd_conf();
   copy_hd_conf->set_type(hd_type);
-  auto copy_hd_op = OpMgr::Singleton().ConstructOp(op_conf);
+  auto copy_hd_op = OpMgr::Singleton()->ConstructOp(op_conf);
 
   OperatorProto op_proto;
   copy_hd_op->ToProto(&op_proto);

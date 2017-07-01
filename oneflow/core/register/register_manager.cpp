@@ -14,7 +14,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     regst->regst_desc_ = runtime_regst_desc;
 
     size_t elem_size = sizeof(float);
-    if (JobDesc::Singleton().floating_point_type() == kDouble) {
+    if (JobDesc::Singleton()->floating_point_type() == kDouble) {
       elem_size = sizeof(double);
     }
     int64_t elem_cnt = 0;
@@ -28,8 +28,8 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     }
     std::sort(lbns.begin(), lbns.end());
     std::pair<char*, std::function<void()>> allocation =
-        MemoryAllocator::Singleton().Allocate(regst_desc_proto.mem_case(),
-                                              elem_cnt * elem_size);
+        MemoryAllocator::Singleton()->Allocate(regst_desc_proto.mem_case(),
+                                               elem_cnt * elem_size);
 
     int64_t blob_idx = 0;
     for (const std::string& lbn : lbns) {

@@ -11,8 +11,7 @@ enum class Location { kHost, kDevice };
 
 template<typename FloatingPointType>
 Blob* CreateBlob(const std::vector<int64_t>& dim_vec,
-                 FloatingPointType* data_vec,
-                 Location mem_location) {
+                 FloatingPointType* data_vec, Location mem_location) {
   void* dptr;
   Shape* shape = new Shape(dim_vec);
 
@@ -47,9 +46,12 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
 
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
 
-  (*bn2blob_ptr)["model_diff"] = CreateBlob<FloatingPointType>(dim_vec, diff_data, loc);
-  (*bn2blob_ptr)["model_diff_acc"] = CreateBlob<FloatingPointType>(dim_vec, diff_acc_data, loc);
-  (*bn2blob_ptr)["expected_acc"] = CreateBlob<FloatingPointType>(dim_vec, expected_data, loc);
+  (*bn2blob_ptr)["model_diff"] =
+      CreateBlob<FloatingPointType>(dim_vec, diff_data, loc);
+  (*bn2blob_ptr)["model_diff_acc"] =
+      CreateBlob<FloatingPointType>(dim_vec, diff_acc_data, loc);
+  (*bn2blob_ptr)["expected_acc"] =
+      CreateBlob<FloatingPointType>(dim_vec, expected_data, loc);
   return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
 }
 
@@ -78,12 +80,13 @@ Kernel* BuildMdDiffAccKernel() {
   OperatorConf op_conf;
   op_conf.set_name("model_diff_acc");
   op_conf.mutable_model_diff_acc_conf();
-  auto model_diff_acc_op = OpMgr::Singleton().ConstructOp(op_conf);
+  auto model_diff_acc_op = OpMgr::Singleton()->ConstructOp(op_conf);
 
   OperatorProto op_proto;
   model_diff_acc_op->ToProto(&op_proto);
 
-  auto model_diff_acc_kernel = new MdDiffAccKernel<device_type, FloatingPointType>();
+  auto model_diff_acc_kernel =
+      new MdDiffAccKernel<device_type, FloatingPointType>();
   model_diff_acc_kernel->InitFromOpProto(op_proto);
 
   return model_diff_acc_kernel;
@@ -154,15 +157,18 @@ void TestMdDiffAccKernel() {
 
   auto BnInOp2BlobPtr = BuildBnInOp2BlobPtr<device_type, FloatingPointType>();
 
-  auto model_diff_acc_kernel = BuildMdDiffAccKernel<device_type, FloatingPointType>();
+  auto model_diff_acc_kernel =
+      BuildMdDiffAccKernel<device_type, FloatingPointType>();
 
   model_diff_acc_kernel->Forward(ctx, BnInOp2BlobPtr);
   SyncStream<device_type>(&ctx);
 
   if (device_type == DeviceType::kCPU) {
-    CheckResult<FloatingPointType>(BnInOp2BlobPtr, BlobCmpCpu<FloatingPointType>);
+    CheckResult<FloatingPointType>(BnInOp2BlobPtr,
+                                   BlobCmpCpu<FloatingPointType>);
   } else {
-    CheckResult<FloatingPointType>(BnInOp2BlobPtr, BlobCmpGpu<FloatingPointType>);
+    CheckResult<FloatingPointType>(BnInOp2BlobPtr,
+                                   BlobCmpGpu<FloatingPointType>);
   }
 }
 }  // namespace

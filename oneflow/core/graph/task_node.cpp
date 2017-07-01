@@ -30,7 +30,7 @@ int64_t& TaskNode::mut_thrd_loc_id() {
 
 void TaskNode::set_task_id() {
   int64_t machine_id = stage_node_->machine_id();
-  task_id_ = IDMgr::Singleton().NewTaskId(machine_id, thrd_loc_id_);
+  task_id_ = IDMgr::Singleton()->NewTaskId(machine_id, thrd_loc_id_);
 }
 
 std::unique_ptr<TaskNode> TaskNode::BuildAndConnectBpNode() {
@@ -72,7 +72,7 @@ void TaskNode::TakeOverRegstDesc(TaskNode* rhs,
   CHECK_EQ(produced_regst2out_edge_.count(rhs_regst_it->second), 0);
   this_regst.swap(rhs_regst_it->second);
   this_regst->SetProducer(this);
-  this_regst->set_regst_desc_id(IDMgr::Singleton().NewRegstDescId());
+  this_regst->set_regst_desc_id(IDMgr::Singleton()->NewRegstDescId());
   rhs->produced_regst_descs_.erase(rhs_regst_it);
   CHECK(produced_regst_descs_.emplace(regst_desc_name, this_regst).second);
 }
@@ -119,7 +119,7 @@ std::shared_ptr<RegstDesc> TaskNode::NewProducedRegstDesc(
     const std::string& regst_desc_name) {
   auto regst_desc = std::make_shared<RegstDesc>();
   regst_desc->SetProducer(this);
-  regst_desc->set_regst_desc_id(IDMgr::Singleton().NewRegstDescId());
+  regst_desc->set_regst_desc_id(IDMgr::Singleton()->NewRegstDescId());
   CHECK(produced_regst_descs_.emplace(regst_desc_name, regst_desc).second);
   return regst_desc;
 }

@@ -16,8 +16,8 @@ ActorMsg ActorMsg::BuildReadableRegstMsg(int64_t reader_actor_id,
   ActorMsg msg;
   msg.dst_actor_id_ = reader_actor_id;
   msg.msg_type_ = ActorMsgType::kRegstMsg;
-  if (IDMgr::Singleton().MachineId4ActorId(reader_actor_id)
-      == RuntimeCtx::Singleton().this_machine_id()) {
+  if (IDMgr::Singleton()->MachineId4ActorId(reader_actor_id)
+      == RuntimeCtx::Singleton()->this_machine_id()) {
     msg.regst_warpper_.reset(new LocalRegstWarpper(regst_raw_ptr));
   } else {
     msg.regst_warpper_.reset(new RemoteRegstWarpper(regst_raw_ptr));

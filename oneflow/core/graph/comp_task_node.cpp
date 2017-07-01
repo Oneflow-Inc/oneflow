@@ -16,9 +16,10 @@ std::string CompTaskNode::VisualStr() const {
 }
 
 std::string CompTaskNode::device_name() const {
-  return IDMgr::Singleton().MachineName4MachineId(stage_node()->machine_id())
+  return IDMgr::Singleton()->MachineName4MachineId(stage_node()->machine_id())
          + ":"
-         + std::to_string(IDMgr::Singleton().DevPhyId4ThrdLocId(thrd_loc_id()));
+         + std::to_string(
+               IDMgr::Singleton()->DevPhyId4ThrdLocId(thrd_loc_id()));
 }
 
 void SortByParallelId(std::vector<CompTaskNode*>* comp_node_vec) {
