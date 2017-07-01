@@ -1,6 +1,4 @@
 #include "oneflow/core/kernel/innerproduct_kernel.h"
-#include <string>
-#include <vector>
 #include "oneflow/core/actor/cpu_device_context.h"
 #include "oneflow/core/actor/cuda_device_context.h"
 
