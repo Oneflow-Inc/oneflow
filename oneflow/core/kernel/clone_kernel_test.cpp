@@ -125,7 +125,7 @@ void InitBn2BlobPtr(HashMap<std::string, Blob*>& bn2blob_ptr,
 
 void CPUStreamExec(int out_num, std::function<Blob*(const std::string&)> fp) {
   KernelCtx ctx;
-  ctx.device_ctx = new CpuDeviceCtx(new Channel<std::function<void()>>);
+  ctx.device_ctx = new CpuDeviceCtx(new CpuStream);
   auto clone_kernel =
       ConstructCloneKernel<DeviceType::kCPU>(out_num, "clone_kernel_test");
 
@@ -136,7 +136,7 @@ void CPUStreamExec(int out_num, std::function<Blob*(const std::string&)> fp) {
     std::function<void()> work;
     // Both Forward and Backward receive out_num times
     for (int i = 0; i < out_num * 2; ++i) {
-      if (ctx.device_ctx->cpu_stream()->Receive(&work) == 0) { work(); }
+      if (ctx.device_ctx->cpu_stream()->ReceiveWork(&work) == 0) { work(); }
     }
   });
   cpu_thread.join();

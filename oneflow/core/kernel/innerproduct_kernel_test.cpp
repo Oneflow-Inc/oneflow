@@ -107,7 +107,7 @@ void BuildKernelCtx(KernelCtx* ctx);
 
 template<>
 void BuildKernelCtx<DeviceType::kCPU>(KernelCtx* ctx) {
-  auto cpu_stream = new Channel<std::function<void()>>;
+  auto cpu_stream = new CpuStream;
   ctx->device_ctx = new CpuDeviceCtx(cpu_stream);
 }
 
@@ -153,7 +153,7 @@ void SyncStream<DeviceType::kCPU>(KernelCtx* ctx) {
 
   auto cpu_thread = std::thread([&] {
     std::function<void()> work;
-    while (ctx->device_ctx->cpu_stream()->Receive(&work) == 0) { work(); }
+    while (ctx->device_ctx->cpu_stream()->ReceiveWork(&work) == 0) { work(); }
   });
   cpu_thread.join();
 }
