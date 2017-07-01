@@ -17,8 +17,6 @@ class InnerProductOp final : public UserOperator {
       std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
       ParallelPolicy policy, int64_t parallel_id,
       int64_t parallel_num) const override;
-
- private:
 };
 
 }  // namespace oneflow
