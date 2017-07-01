@@ -185,7 +185,6 @@ TEST(boxingKernel, boxing_concat_split_box) {
   auto BnInOp2BlobPtr =
       ConstructBnInOp2BlobPtr(in_dim_vecs, out_dim_vecs, {3, 14, 5, 5});
 
-  // Build reverse blobs
   auto r_BnInOp2BlobPtr = ConstructBnInOp2BlobPtr(BnInOp2BlobPtr, in_dim_vecs,
                                                   out_dim_vecs, {3, 14, 5, 5});
 
@@ -226,7 +225,6 @@ TEST(boxingKernel, boxing_concat_split_box_with_null) {
   auto BnInOp2BlobPtr =
       ConstructBnInOp2BlobPtr(in_dim_vecs, out_dim_vecs, {3, 14, 5, 5});
 
-  // Build reverse blobs
   auto r_BnInOp2BlobPtr = ConstructBnInOp2BlobPtr(BnInOp2BlobPtr, in_dim_vecs,
                                                   out_dim_vecs, {3, 14, 5, 5});
 
