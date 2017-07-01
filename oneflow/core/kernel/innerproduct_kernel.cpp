@@ -8,7 +8,8 @@ template<DeviceType device_type, typename FloatingPointType>
 void BlasMatrixMatrix(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans_a,
                       const enum CBLAS_TRANSPOSE trans_b,
                       const FloatingPointType alpha,
-                      const FloatingPointType beta, Blob* a, Blob* b, Blob* c) {
+                      const FloatingPointType beta, const Blob* a,
+                      const Blob* b, Blob* c) {
   const int m = c->shape().At(0);
   const int n = c->shape().At(1);
   const int k = (trans_a == CblasNoTrans) ? a->shape().At(1) : a->shape().At(0);
@@ -30,9 +31,9 @@ template<DeviceType device_type, typename FloatingPointType>
 void InnerProductKernel<device_type, FloatingPointType>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  Blob* in_data = BnInOp2BlobPtr("in");
+  const Blob* in_data = BnInOp2BlobPtr("in");
+  const Blob* weight = BnInOp2BlobPtr("weight");
   Blob* out_data = BnInOp2BlobPtr("out");
-  Blob* weight = BnInOp2BlobPtr("weight");
 
   // out_data = in_data * weight.t
   BlasMatrixMatrix<device_type, FloatingPointType>(
@@ -40,8 +41,8 @@ void InnerProductKernel<device_type, FloatingPointType>::Forward(
       static_cast<FloatingPointType>(0.0), in_data, weight, out_data);
 
   if (op()->GetBoolFromSpecialConf("has_bias_term")) {
-    Blob* bias = BnInOp2BlobPtr("bias");
-    Blob* bias_multiplier = BnInOp2BlobPtr("bias_multiplier");
+    const Blob* bias = BnInOp2BlobPtr("bias");
+    const Blob* bias_multiplier = BnInOp2BlobPtr("bias_multiplier");
 
     // out_data = bias_multiplier * bias + out_data
     BlasMatrixMatrix<device_type, FloatingPointType>(
@@ -54,11 +55,11 @@ template<DeviceType device_type, typename FloatingPointType>
 void InnerProductKernel<device_type, FloatingPointType>::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  Blob* in_data = BnInOp2BlobPtr("in");
-  Blob* out_diff = BnInOp2BlobPtr("out_diff");
+  const Blob* in_data = BnInOp2BlobPtr("in");
+  const Blob* out_diff = BnInOp2BlobPtr("out_diff");
   Blob* in_diff = BnInOp2BlobPtr("in_diff");
 
-  Blob* weight = BnInOp2BlobPtr("weight");
+  const Blob* weight = BnInOp2BlobPtr("weight");
   Blob* weight_diff = BnInOp2BlobPtr("weight_diff");
 
   // in_diff = out_diff * weight
@@ -74,8 +75,8 @@ void InnerProductKernel<device_type, FloatingPointType>::Backward(
       static_cast<FloatingPointType>(0.0), out_diff, in_data, weight_diff);
 
   if (op()->GetBoolFromSpecialConf("has_bias_term")) {
+    const Blob* bias_multiplier = BnInOp2BlobPtr("bias_multiplier");
     Blob* bias_diff = BnInOp2BlobPtr("bias_diff");
-    Blob* bias_multiplier = BnInOp2BlobPtr("bias_multiplier");
 
     // bias_diff = bias_multiplier.t * out_diff
     BlasMatrixMatrix<device_type, FloatingPointType>(
