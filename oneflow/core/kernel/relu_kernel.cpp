@@ -39,7 +39,7 @@ class ReluKernelUtil<DeviceType::kCPU, FloatingPointType> final {
                       const FloatingPointType* in, FloatingPointType* out) {
     ctx.device_ctx->cpu_stream()->Send([=]() {
       for (int64_t i = 0; i < n; ++i) {
-        out[i] = std::max(in[i], 0);
+        out[i] = std::max(in[i], static_cast<FloatingPointType>(0.0));
       }
     });
   }
@@ -56,6 +56,7 @@ class ReluKernelUtil<DeviceType::kCPU, FloatingPointType> final {
   }
 };
 
+INSTANTIATE_CPU_KERNEL_UTIL_CLASS(ReluKernelUtil);
 INSTANTIATE_KERNEL_CLASS(ReluKernel);
 REGISTER_KERNEL(OperatorConf::kReluConf, ReluKernel);
 
