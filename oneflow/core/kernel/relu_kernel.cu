@@ -1,4 +1,4 @@
-#include "oneflow/core/common/cuda_util.h"
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/relu_kernel.h"
 
 namespace oneflow {

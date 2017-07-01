@@ -37,7 +37,7 @@ class ReluKernelUtil<DeviceType::kCPU, FloatingPointType> final {
 
   static void Forward(const KernelCtx& ctx, const int64_t n,
                       const FloatingPointType* in, FloatingPointType* out) {
-    ctx.device_ctx->cpu_stream()->Send([=]() {
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
       for (int64_t i = 0; i < n; ++i) {
         out[i] = std::max(in[i], static_cast<FloatingPointType>(0.0));
       }
@@ -48,7 +48,7 @@ class ReluKernelUtil<DeviceType::kCPU, FloatingPointType> final {
                        const FloatingPointType* out_diff,
                        const FloatingPointType* in,
                        FloatingPointType* in_diff) {
-    ctx.device_ctx->cpu_stream()->Send([=]() {
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
       for (int64_t i = 0; i < n; ++i) {
         in_diff[i] = in[i] > 0 ? out_diff[i] : 0;
       }

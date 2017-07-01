@@ -48,7 +48,7 @@ template<typename FloatingPointType>
 Blob* CreateBlobWithSameValue(const std::vector<int64_t>& dim_vec,
                               FloatingPointType value, Location location) {
   Shape* shape = new Shape(dim_vec);
-  FloatingPointType* data_vec = new floating_point_type[shape->elem_cnt()];
+  FloatingPointType* data_vec = new FloatingPointType[shape->elem_cnt()];
   std::fill(data_vec, data_vec + shape->elem_cnt(), value);
   return CreateBlob<FloatingPointType>(dim_vec, data_vec, location);
 }
@@ -60,7 +60,7 @@ Blob* CreateBlobWithRandomValue(const std::vector<int64_t>& dim_vec,
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_real_distribution<FloatingPointType> dis(0, 10);
-  FloatingPointType* data_vec = new floating_point_type[shape->elem_cnt()];
+  FloatingPointType* data_vec = new FloatingPointType[shape->elem_cnt()];
   for (int64_t i = 0; i != shape->elem_cnt(); ++i) { data_vec[i] = dis(gen); }
   return CreateBlob<FloatingPointType>(dim_vec, data_vec, location);
 }
@@ -137,9 +137,8 @@ template<typename FloatingPointType>
 void CPUStreamExec(int out_num, std::function<Blob*(const std::string&)> fp) {
   KernelCtx ctx;
   ctx.device_ctx = new CpuDeviceCtx(new CpuStream);
-  auto clone_kernel =
-      ConstructCloneKernel<DeviceType::kCPU, FloatingPointType>(
-          out_num, "clone_kernel_test");
+  auto clone_kernel = ConstructCloneKernel<DeviceType::kCPU, FloatingPointType>(
+      out_num, "clone_kernel_test");
 
   clone_kernel->Forward(ctx, fp);
   clone_kernel->Backward(ctx, fp);
@@ -162,9 +161,8 @@ void GPUStreamExec(int out_num, std::function<Blob*(const std::string&)> fp) {
   CHECK_EQ(cublasCreate(&cublas_handle), CUBLAS_STATUS_SUCCESS);
   KernelCtx ctx;
   ctx.device_ctx = new CudaDeviceCtx(&cuda_stream, &cublas_handle, nullptr);
-  auto clone_kernel =
-      ConstructCloneKernel<DeviceType::kGPU, FloatingPointType>(
-          out_num, "clone_kernel_test");
+  auto clone_kernel = ConstructCloneKernel<DeviceType::kGPU, FloatingPointType>(
+      out_num, "clone_kernel_test");
 
   clone_kernel->Forward(ctx, fp);
   clone_kernel->Backward(ctx, fp);
@@ -207,7 +205,7 @@ void TestBackward(CloneKernelBlobs* ck_blobs, Location location) {
       ck_blobs->in_blob->shape().elem_cnt() * sizeof(FloatingPointType);
   FloatingPointType* in_diff_blob_dptr = nullptr;
   std::vector<FloatingPointType*> out_diff_blob_dptrs(ck_blobs->out_num,
-                                                        nullptr);
+                                                      nullptr);
   if (location == Location::kHost) {
     in_diff_blob_dptr =
         static_cast<FloatingPointType*>(ck_blobs->in_diff_blob->mut_dptr());
@@ -255,8 +253,8 @@ template<typename FloatingPointType>
 void TestRandomData(const std::vector<int64_t> dim_vec, int out_num,
                     Location location) {
   CloneKernelBlobs* ck_blobs =
-      CreateCloneKernelBlobsWithRandomValue<FloatingPointType>(
-          dim_vec, out_num, location);
+      CreateCloneKernelBlobsWithRandomValue<FloatingPointType>(dim_vec, out_num,
+                                                               location);
   CloneKernelTest<FloatingPointType>(ck_blobs, location);
 }
 
