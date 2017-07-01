@@ -4,7 +4,8 @@
 
 namespace oneflow {
 
-void BpDataCompActor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
+void BpDataCompActor::Init(const TaskProto& task_proto,
+                           const ThreadCtx& thread_ctx) {
   Actor::Init(task_proto, thread_ctx);
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
@@ -24,11 +25,11 @@ void BpDataCompActor::Init(const TaskProto& task_proto, const ThreadCtx& thread_
 }
 
 bool BpDataCompActor::IsReadReady() {
-  if (num_of_read_empty_) {
-    return false;
-  }
-  if (read_regst_.at(model_regst_desc_id_).front()->model_version_id() != 
-      read_regst_.at(activation_regst_desc_id_).front()->model_version_id()) {
+  if (num_of_read_empty_) { return false; }
+  if (read_regst_.at(model_regst_desc_id_).front()->model_version_id()
+      != read_regst_.at(activation_regst_desc_id_)
+             .front()
+             ->model_version_id()) {
     AsyncSendRegstMsgToProducer(read_regst_.at(model_regst_desc_id_).front());
     read_regst_.at(model_regst_desc_id_).pop();
     num_of_read_empty_ += read_regst_.at(model_regst_desc_id_).empty();
@@ -44,7 +45,8 @@ int BpDataCompActor::HandleBpComp(const ActorMsg& msg) {
       OF_SET_MSG_HANDLE(&BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg);
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()) != 0) {
+    if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr())
+        != 0) {
       std::shared_ptr<RegstWarpper> regst_wp = msg.regst_warpper();
       if (regst_wp->regst_desc_id() == model_tmp_regst_desc_id_) {
         CHECK(read_regst_.find(model_tmp_regst_desc_id_) == read_regst_.end());
@@ -62,14 +64,16 @@ int BpDataCompActor::HandleBpComp(const ActorMsg& msg) {
 }
 
 int BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg(const ActorMsg& msg) {
-  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()), 0);
+  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
+           0);
   TryWardKernelAndSendMsg();
   if (read_regst_.at(activation_regst_desc_id_).empty()) {
     while (!read_regst_.at(model_regst_desc_id_).empty()) {
       AsyncSendRegstMsgToProducer(read_regst_.at(model_regst_desc_id_).front());
       read_regst_.at(model_regst_desc_id_).pop();
     }
-    AsyncSendRegstMsgToProducer(read_regst_.at(model_tmp_regst_desc_id_).front());
+    AsyncSendRegstMsgToProducer(
+        read_regst_.at(model_tmp_regst_desc_id_).front());
     read_regst_.at(model_tmp_regst_desc_id_).pop();
     AsyncSendEORDMsgForAllProducedRegstDesc();
     num_of_read_empty_ = 6;
@@ -83,33 +87,40 @@ int BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg(const ActorMsg& msg) {
   }
   return 0;
 }
-  
+
 void BpDataCompActor::TryWardKernelAndSendMsg() {
   while (IsReadReady() && IsWriteReady()) {
-    int64_t cur_model = read_regst_.at(model_regst_desc_id_).front()->model_version_id();
+    int64_t cur_model =
+        read_regst_.at(model_regst_desc_id_).front()->model_version_id();
     int64_t piece_id = expected_piece_id();
-    CHECK_EQ(cur_model, read_regst_.at(activation_regst_desc_id_).front()->model_version_id());
-    CHECK_EQ(cur_model, read_regst_.at(data_tmp_regst_desc_id_).front()->model_version_id());
+    CHECK_EQ(
+        cur_model,
+        read_regst_.at(activation_regst_desc_id_).front()->model_version_id());
+    CHECK_EQ(
+        cur_model,
+        read_regst_.at(data_tmp_regst_desc_id_).front()->model_version_id());
     for (const auto& pair : read_regst_) {
-      if (pair.first != model_regst_desc_id_ && pair.first != model_tmp_regst_desc_id_) {
+      if (pair.first != model_regst_desc_id_
+          && pair.first != model_tmp_regst_desc_id_) {
         CHECK_EQ(pair.second.front()->piece_id(), piece_id);
       }
     }
-    AsyncWardKernel(GenDefaultKernelCtx(), 
+    AsyncWardKernel(
+        GenDefaultKernelCtx(),
         [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
-      Regst* regst = GetCurWriteableRegst(regst_desc_id);
-      if (regst == nullptr) {
-        return read_regst_.at(regst_desc_id).front();
-      } else {
-        return std::make_shared<LocalRegstWarpper> (regst);
-      }
-    });
-    ForEachCurWriteableRegst([piece_id](Regst* regst) {
-      regst->set_piece_id(piece_id);
-    });
+          Regst* regst = GetCurWriteableRegst(regst_desc_id);
+          if (regst == nullptr) {
+            return read_regst_.at(regst_desc_id).front();
+          } else {
+            return std::make_shared<LocalRegstWarpper>(regst);
+          }
+        });
+    ForEachCurWriteableRegst(
+        [piece_id](Regst* regst) { regst->set_piece_id(piece_id); });
     AsyncSendReadableRegstMsg();
     for (auto& pair : read_regst_) {
-      if (pair.first != model_regst_desc_id_ && pair.first != model_tmp_regst_desc_id_) {
+      if (pair.first != model_regst_desc_id_
+          && pair.first != model_tmp_regst_desc_id_) {
         AsyncSendRegstMsgToProducer(pair.second.front());
         pair.second.pop();
         num_of_read_empty_ += pair.second.empty();

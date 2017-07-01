@@ -6,7 +6,7 @@ namespace oneflow {
 
 void MdUpdtCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   CHECK(IsFwNode());
-  auto md_updt_gph = static_cast<MdUpdtTaskGraph*> (gph);
+  auto md_updt_gph = static_cast<MdUpdtTaskGraph*>(gph);
   CompTaskNode* fw_task = md_updt_gph->fw_task();
   CompTaskNode* diff_acc_task = md_updt_gph->diff_acc_task();
   std::shared_ptr<RegstDesc> model_diff_acc_regst;
@@ -33,4 +33,4 @@ void MdUpdtCompTaskNode::InferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
   CHECK(IsFwNode());
 }
 
-} // namespace oneflow
+}  // namespace oneflow

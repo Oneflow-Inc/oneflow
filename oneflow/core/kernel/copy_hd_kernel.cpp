@@ -42,7 +42,7 @@ template<DeviceType device_type, typename FloatingPointType>
 void CopyHdKernel<device_type, FloatingPointType>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  Blob* in_blob  = BnInOp2BlobPtr(op()->SoleIbn());
+  Blob* in_blob = BnInOp2BlobPtr(op()->SoleIbn());
   Blob* out_blob = BnInOp2BlobPtr(op()->SoleObn());
 
   ForwardCopyFunc_(ctx, out_blob, in_blob, sizeof(FloatingPointType));
@@ -52,7 +52,7 @@ template<DeviceType device_type, typename FloatingPointType>
 void CopyHdKernel<device_type, FloatingPointType>::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  Blob* in_blob  = BnInOp2BlobPtr(op()->SoleOdbn());
+  Blob* in_blob = BnInOp2BlobPtr(op()->SoleOdbn());
   Blob* out_blob = BnInOp2BlobPtr(op()->SoleIdbn());
 
   BackwardCopyFunc_(ctx, out_blob, in_blob, sizeof(FloatingPointType));

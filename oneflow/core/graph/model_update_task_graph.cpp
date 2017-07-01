@@ -3,8 +3,7 @@
 
 namespace oneflow {
 
-MdUpdtTaskGraph::MdUpdtTaskGraph(const std::string& name,
-                                 CompTaskNode* fw_task,
+MdUpdtTaskGraph::MdUpdtTaskGraph(const std::string& name, CompTaskNode* fw_task,
                                  CompTaskNode* diff_acc_task) {
   mut_name() = name;
   fw_task_ = fw_task;
@@ -14,9 +13,9 @@ MdUpdtTaskGraph::MdUpdtTaskGraph(const std::string& name,
 }
 
 void MdUpdtTaskGraph::BuildTaskGraph() {
-  auto chain_gph = of_make_unique<ChainGraph> ();
+  auto chain_gph = of_make_unique<ChainGraph>();
   OperatorConf op_conf;
-  op_conf.set_name("model_update_"+ NewUniqueId());
+  op_conf.set_name("model_update_" + NewUniqueId());
   op_conf.mutable_model_update_conf();
   auto model_updt_op = OpMgr::Singleton().ConstructOp(op_conf);
 
@@ -39,4 +38,4 @@ void MdUpdtTaskGraph::BuildTaskGraph() {
   });
 }
 
-} // namespace oneflow
+}  // namespace oneflow

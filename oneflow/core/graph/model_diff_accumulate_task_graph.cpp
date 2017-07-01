@@ -4,8 +4,7 @@
 namespace oneflow {
 
 MdDiffAccTaskGraph::MdDiffAccTaskGraph(
-    const std::string& name,
-    const ChainNode* data_chain,
+    const std::string& name, const ChainNode* data_chain,
     const std::vector<CompTaskNode*>& sorted_fw_comptasks4data_chain) {
   mut_name() = name;
   BuildTaskGraph(data_chain);
@@ -22,7 +21,7 @@ void MdDiffAccTaskGraph::BuildTaskGraph(const ChainNode* data_chain) {
   op_conf.mutable_model_diff_acc_conf();
   auto model_diff_acc_op = OpMgr::Singleton().ConstructOp(op_conf);
   // ModelDiffAccChain
-  auto chain_gph = of_make_unique<ChainGraph> ();
+  auto chain_gph = of_make_unique<ChainGraph>();
   ChainNode* diff_acc_chain = chain_gph->NewNode();
   diff_acc_chain->mut_op_vec() = {model_diff_acc_op};
   auto parallel_desc4diff_acc =
@@ -46,4 +45,4 @@ void MdDiffAccTaskGraph::BuildTaskGraph(const ChainNode* data_chain) {
   BuildFromChainGph<MdDiffAccCompTaskNode>(std::move(chain_gph), false);
 }
 
-} // namespace oneflow
+}  // namespace oneflow

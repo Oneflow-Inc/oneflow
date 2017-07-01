@@ -23,4 +23,4 @@ std::string CopyCommNetOp::ibn2lbn(const std::string& input_bn) const {
 
 REGISTER_OP(OperatorConf::kCopyCommNetConf, CopyCommNetOp);
 
-} // namespace oneflow
+}  // namespace oneflow

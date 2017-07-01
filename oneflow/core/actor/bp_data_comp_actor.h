@@ -6,14 +6,14 @@
 namespace oneflow {
 
 class BpDataCompActor final : public Actor {
-public:
+ public:
   OF_DISALLOW_COPY_AND_MOVE(BpDataCompActor);
   BpDataCompActor() = default;
   ~BpDataCompActor() = default;
 
   void Init(const TaskProto&, const ThreadCtx&) override;
 
-private:
+ private:
   int HandleBpComp(const ActorMsg&);
   int HandleBpCompWhenNoReadableRegstMsg(const ActorMsg&);
 
@@ -34,4 +34,4 @@ private:
 
 }  // namespace oneflow
 
-#endif // ONEFLOW_CORE_ACTOR_BP_DATA_COMP_ACTOR_H_
+#endif  // ONEFLOW_CORE_ACTOR_BP_DATA_COMP_ACTOR_H_

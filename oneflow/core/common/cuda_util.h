@@ -10,21 +10,18 @@ inline void CudaCheck(cudaError_t error) {
 }
 
 // CUDA: grid stride looping
-#define CUDA_1D_KERNEL_LOOP(i, n) \
-  for (int32_t i = blockIdx.x * blockDim.x + threadIdx.x; \
-       i < (n); \
+#define CUDA_1D_KERNEL_LOOP(i, n)                                  \
+  for (int32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < (n); \
        i += blockDim.x * gridDim.x)
 
 // CUDA: check for error after kernel execution and exit loudly if there is one.
-inline void CudaPostKernelCheck() {
-  CudaCheck(cudaPeekAtLastError());
-}
+inline void CudaPostKernelCheck() { CudaCheck(cudaPeekAtLastError()); }
 
 const int32_t kCudaThreadsNumPerBlock = 512;
 const int32_t kCudaMaxBlocksNum = 4096;
 
 inline int32_t BlocksNum4ThreadsNum(const int32_t N) {
-  return std::min((N + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock, 
+  return std::min((N + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock,
                   kCudaMaxBlocksNum);
 }
 

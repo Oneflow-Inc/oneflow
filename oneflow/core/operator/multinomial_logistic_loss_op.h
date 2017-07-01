@@ -16,17 +16,15 @@ class MultinomialLogisticLossOp : public UserOperator {
   void InitFromOpConf(const OperatorConf& op_conf) override;
   const PbMessage& GetSpecialConf() const override;
   bool IsLossOp() const override { return true; }
-  
+
   void InferShape4FwBlobs(
       std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
-      ParallelPolicy policy,
-      int64_t parallel_id,
+      ParallelPolicy policy, int64_t parallel_id,
       int64_t parallel_num) const override;
 
  private:
-
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_OPERATOR_MULTINOMIAL_LOGISTIC_LOSS_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_MULTINOMIAL_LOGISTIC_LOSS_OP_H_

@@ -17,8 +17,7 @@ class ConcatOp final : public UserOperator {
 
   void InferShape4FwBlobs(
       std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
-      ParallelPolicy policy,
-      int64_t parallel_id,
+      ParallelPolicy policy, int64_t parallel_id,
       int64_t parallel_num) const override;
 
  private:
@@ -27,9 +26,8 @@ class ConcatOp final : public UserOperator {
   }
 
   std::unordered_map<std::string, std::string> ibn2lbn_;
-
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_OPERATOR_CONCAT_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_CONCAT_OP_H_

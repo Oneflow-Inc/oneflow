@@ -14,29 +14,17 @@ class StageNode final : public Node<StageNode, StageEdge> {
   StageNode() = default;
   ~StageNode() = default;
 
-  std::string machine_id_str() const {
-    return std::to_string(machine_id_);
-  }
-  const int64_t& machine_id() const {
-    return machine_id_;
-  }
-  int64_t& mut_machine_id() {
-    return machine_id_;
-  }
+  std::string machine_id_str() const { return std::to_string(machine_id_); }
+  const int64_t& machine_id() const { return machine_id_; }
+  int64_t& mut_machine_id() { return machine_id_; }
 
-  const ChainNode* chain_node() const {
-    return chain_node_;
-  }
+  const ChainNode* chain_node() const { return chain_node_; }
   void set_chain_node(const ChainNode* new_chain_node) {
     chain_node_ = new_chain_node;
   }
 
-  const Range& parallel_range() const {
-    return parallel_range_;
-  }
-  Range& mut_parallel_range() {
-    return parallel_range_;
-  }
+  const Range& parallel_range() const { return parallel_range_; }
+  Range& mut_parallel_range() { return parallel_range_; }
 
   const std::vector<int64_t>& SortedDevicePhyIds() const {
     return chain_node_->parallel_desc()->sorted_device_phy_ids(machine_id_);
@@ -50,7 +38,6 @@ class StageNode final : public Node<StageNode, StageEdge> {
   const ChainNode* chain_node_;
   int64_t machine_id_;
   Range parallel_range_;
-
 };
 
 class StageEdge final : public Edge<StageNode, StageEdge> {
@@ -58,7 +45,7 @@ class StageEdge final : public Edge<StageNode, StageEdge> {
   OF_DISALLOW_COPY_AND_MOVE(StageEdge);
   StageEdge() = default;
   ~StageEdge() = default;
-    
+
  private:
 };
 
@@ -75,9 +62,8 @@ class StageGraph final : public Graph<StageNode, StageEdge> {
 
  private:
   std::unique_ptr<const ChainGraph> chain_gph_;
-
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_GRAPH_STAGE_GRAPH_H_
+#endif  // ONEFLOW_CORE_GRAPH_STAGE_GRAPH_H_

@@ -2,8 +2,8 @@
 
 namespace oneflow {
 
-std::pair<std::string, std::string>
-ParseDeviceNameConf(const std::string& device_name) {
+std::pair<std::string, std::string> ParseDeviceNameConf(
+    const std::string& device_name) {
   int64_t delimiter_pos = device_name.rfind(":");
   CHECK_NE(delimiter_pos, std::string::npos);
   return {device_name.substr(0, delimiter_pos),
@@ -19,8 +19,7 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
         ParseDeviceNameConf(device_name);
     std::string machine_name = machine_name_device_id.first;
     std::string device_id_str = machine_name_device_id.second;
-    int64_t machine_id =
-        IDMgr::Singleton().MachineID4MachineName(machine_name);
+    int64_t machine_id = IDMgr::Singleton().MachineID4MachineName(machine_name);
     sorted_machine_ids_.push_back(machine_id);
     // if the device_name format is "machine_xxx:0-3", add device_id {0,1,2,3}
     int64_t to_symbol_pos = device_id_str.rfind("-");
@@ -31,7 +30,7 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
       int64_t device_id = oneflow_cast<int64_t>(device_id_str);
       machine_id2sorted_device_phy_ids_[machine_id].push_back(device_id);
     } else {
-      int64_t begin_device_id = 
+      int64_t begin_device_id =
           oneflow_cast<int64_t>(device_id_str.substr(0, to_symbol_pos));
       int64_t end_device_id =
           oneflow_cast<int64_t>(device_id_str.substr(to_symbol_pos + 1));
@@ -42,7 +41,7 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
     }
   }
   SortAndRemoveDuplication(&sorted_machine_ids_);
-  for (auto&pair : machine_id2sorted_device_phy_ids_) {
+  for (auto& pair : machine_id2sorted_device_phy_ids_) {
     SortAndRemoveDuplication(&(pair.second));
   }
   parallel_num_ = 0;
@@ -68,7 +67,8 @@ std::string ParallelDesc::VisualStr() const {
   ss << "}{machine_id2sorted_device_phy_ids:";
   for (int64_t machine_id : sorted_machine_ids_) {
     ss << "{" << machine_id << ":[";
-    for (int64_t device_phy_id : machine_id2sorted_device_phy_ids_.at(machine_id)) {
+    for (int64_t device_phy_id :
+         machine_id2sorted_device_phy_ids_.at(machine_id)) {
       ss << device_phy_id << ",";
     }
     ss << "]}";

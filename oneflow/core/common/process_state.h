@@ -2,9 +2,9 @@
 #define ONEFLOW_CORE_COMMON_PROCESS_STATE_H_
 
 #if defined(_MSC_VER)
+#include <WinSock2.h>
 #include <direct.h>
 #include <stdlib.h>
-#include <WinSock2.h>
 #pragma comment(lib, "Ws2_32.lib")
 #else
 #include <unistd.h>
@@ -32,4 +32,3 @@ std::string GetCwd() {
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_PROCESS_STATE_H_
-

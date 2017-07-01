@@ -50,4 +50,4 @@ void JobDesc::ToProto(JobDescProto* proto) const {
   proto->set_total_batch_num(total_batch_num_);
 }
 
-} // namespace oneflow
+}  // namespace oneflow

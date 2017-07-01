@@ -20,9 +20,8 @@ class CudaStreamHandle final {
   std::unique_ptr<cudaStream_t> cuda_stream_;
   std::unique_ptr<cublasHandle_t> cublas_handle_;
   std::unique_ptr<cudnnHandle_t> cudnn_handle_;
-
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_COMMON_CUDA_STREAM_HANDLE_H_
+#endif  // ONEFLOW_CORE_COMMON_CUDA_STREAM_HANDLE_H_

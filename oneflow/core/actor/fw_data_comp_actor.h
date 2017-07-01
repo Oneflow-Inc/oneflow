@@ -6,14 +6,14 @@
 namespace oneflow {
 
 class FwDataCompActor final : public CompActor {
-public:
+ public:
   OF_DISALLOW_COPY_AND_MOVE(FwDataCompActor);
   FwDataCompActor() = default;
   ~FwDataCompActor() = default;
 
   void Init(const TaskProto&, const ThreadCtx&) override;
 
-private:
+ private:
   int WaitToStart(const ActorMsg&);
   int HandleFwComp(const ActorMsg&);
   int HandleFwCompWhenNoReadableRegstMsg(const ActorMsg&);
@@ -36,4 +36,4 @@ private:
 
 }  // namespace oneflow
 
-#endif // ONEFLOW_CORE_ACTOR_FW_DATA_COMP_ACTOR_H_
+#endif  // ONEFLOW_CORE_ACTOR_FW_DATA_COMP_ACTOR_H_

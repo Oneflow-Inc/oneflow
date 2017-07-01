@@ -30,13 +30,11 @@ std::string BoxingOp::obn2lbn(const std::string& output_bn) const {
 
 void BoxingOp::InferShape4FwBlobs(
     std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
-    ParallelPolicy policy,
-    int64_t parallel_id,
-    int64_t parallel_num) const {
+    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
   auto boxing_conf = op_conf().boxing_conf();
   auto in_box_case = boxing_conf.in_box_case();
   std::vector<int64_t> data_tmp_blob_shape_vec =
-    GetShapePtr4BnInOp(input_bns().at(0))->dim_vec();
+      GetShapePtr4BnInOp(input_bns().at(0))->dim_vec();
 
   // if it is a concat-box, concat input blob shape to middle blob shape
   // otherwise only check all boxes are in the same shape.

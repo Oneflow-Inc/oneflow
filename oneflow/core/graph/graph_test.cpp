@@ -7,12 +7,11 @@ class TestEdge;
 class TestNode final : public Node<TestNode, TestEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TestNode);
-  TestNode(int64_t node_id_) {
-    test_node_id_ = node_id_;
-  }
+  TestNode(int64_t node_id_) { test_node_id_ = node_id_; }
   ~TestNode() = default;
 
   int64_t test_node_id() const { return test_node_id_; }
+
  private:
   int64_t test_node_id_;
 };
@@ -59,9 +58,11 @@ void DoOneTestGraph(const TestGraph& test_graph,
 
   // 1. Determines whether the traversal result satisfies the topological order
   HashMap<int64_t, int64_t> node_id2order, node_id2rorder;
-  auto NodePairHash = [](const NodeIdPair& val) { return val.first ^ val.second; };
-  std::unordered_set<NodeIdPair,
-                     decltype(NodePairHash)> edges_node_pair(11, NodePairHash);
+  auto NodePairHash = [](const NodeIdPair& val) {
+    return val.first ^ val.second;
+  };
+  std::unordered_set<NodeIdPair, decltype(NodePairHash)> edges_node_pair(
+      11, NodePairHash);
   int64_t order = 0;
   test_graph.ConstTopoForEachNode([&](const TestNode* node) {
     node_id2order.emplace(node->test_node_id(), order);
@@ -76,7 +77,7 @@ void DoOneTestGraph(const TestGraph& test_graph,
   });
   ASSERT_EQ(node_id2rorder.size(), node_num);
 
-  // method : 
+  // method :
   // judge every directed edge <u,v>
   // the node u's order is smaller than v
   int64_t edge_num = 0;
@@ -90,7 +91,7 @@ void DoOneTestGraph(const TestGraph& test_graph,
       src_ord = node_id2rorder.at(src_node_id);
       dst_ord = node_id2rorder.at(dst_node_id);
       ASSERT_GE(src_ord, dst_ord);
-      // 
+      //
       ++edge_num;
       edges_node_pair.insert(std::make_pair(src_node_id, dst_node_id));
     }
@@ -109,8 +110,8 @@ void DoOneTestGraph(const TestGraph& test_graph,
   test_graph.ConstForEachEdge([&](const TestEdge* cur_edge) {
     int64_t src_node_id = cur_edge->src_node()->test_node_id();
     int64_t dst_node_id = cur_edge->dst_node()->test_node_id();
-    ASSERT_TRUE(
-        edges_node_pair.count(std::make_pair(src_node_id, dst_node_id)) > 0);
+    ASSERT_TRUE(edges_node_pair.count(std::make_pair(src_node_id, dst_node_id))
+                > 0);
   });
 }
 
@@ -129,4 +130,4 @@ TEST(TestGraph, test_graph_node_num_7) {
   DoOneTestGraph(test_graph, graph_conf);
 }
 
-}// namespace oneflow
+}  // namespace oneflow
