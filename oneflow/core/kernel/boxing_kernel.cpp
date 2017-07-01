@@ -66,11 +66,13 @@ void BoxingKernel<device_type, FloatingPointType>::InferCopyRulesFromBns(
   std::map<const std::string*, int64_t> dst_bn2concat_dim;
   int32_t concat_axis = op()->op_conf().boxing_conf().concat_box().axis();
   for (const std::string& bn : src_bns) {
+    if (BnInOp2BlobPtr(bn) == nullptr) { break; }
     CHECK(src_bn2concat_dim
               .emplace(&bn, (BnInOp2BlobPtr(bn)->shape().At(concat_axis)))
               .second);
   }
   for (const std::string& bn : dst_bns) {
+    if (BnInOp2BlobPtr(bn) == nullptr) { break; }
     CHECK(dst_bn2concat_dim
               .emplace(&bn, (BnInOp2BlobPtr(bn)->shape().At(concat_axis)))
               .second);
@@ -131,6 +133,7 @@ void BoxingKernel<device_type, FloatingPointType>::InferFwCloneRules(
   const std::vector<std::string>& obns = op()->output_bns();
   int64_t copy_sz = BnInOp2BlobPtr(obns.front())->shape().elem_cnt();
   for (size_t i = 1; i < obns.size(); ++i) {
+    if (BnInOp2BlobPtr(obns.at(i)) == nullptr) { break; }
     CopyRule cr;
     cr.src_bn = obns.front();
     cr.dst_bn = obns.at(i);

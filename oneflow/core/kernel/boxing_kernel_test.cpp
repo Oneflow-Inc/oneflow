@@ -15,6 +15,7 @@ Blob* CreateBlob(const std::vector<int64_t>& dim_vec, float value) {
   Shape* shape = new Shape(dim_vec);
   size_t dptr_size = shape->elem_cnt() * sizeof(float);
 
+  if (dptr_size == 0) { return nullptr; }
   float* dptr = static_cast<float*>(malloc(dptr_size));
   std::fill(dptr, dptr + shape->elem_cnt(), value);
 
@@ -22,6 +23,7 @@ Blob* CreateBlob(const std::vector<int64_t>& dim_vec, float value) {
 }
 
 void BlobCmp(Blob* A, Blob* B) {
+  if (A == B) return;
   const float* dptr_A = static_cast<const float*>(A->dptr());
   const float* dptr_B = static_cast<const float*>(B->dptr());
   size_t dptr_size = A->shape().elem_cnt();
@@ -180,6 +182,47 @@ TEST(boxingKernel, boxing_concat_split_box) {
       {3, 4, 5, 5}, {3, 2, 5, 5}, {3, 1, 5, 5}, {3, 7, 5, 5}};
   std::vector<std::vector<int64_t>> out_dim_vecs = {
       {3, 5, 5, 5}, {3, 6, 5, 5}, {3, 3, 5, 5}};
+  auto BnInOp2BlobPtr =
+      ConstructBnInOp2BlobPtr(in_dim_vecs, out_dim_vecs, {3, 14, 5, 5});
+
+  // Build reverse blobs
+  auto r_BnInOp2BlobPtr = ConstructBnInOp2BlobPtr(BnInOp2BlobPtr, in_dim_vecs,
+                                                  out_dim_vecs, {3, 14, 5, 5});
+
+  // Run forward && backward test
+  boxing_kernel_0->Forward(ctx, BnInOp2BlobPtr);
+  boxing_kernel_1->Forward(ctx, r_BnInOp2BlobPtr);
+  boxing_kernel_1->Backward(ctx, r_BnInOp2BlobPtr);
+  boxing_kernel_0->Backward(ctx, BnInOp2BlobPtr);
+
+  FakeRun(cpu_stream);
+
+  // Check input && output blobs in this graph should be the same
+  for (size_t i = 0; i < in_dim_vecs.size(); ++i) {
+    BlobCmp(BnInOp2BlobPtr("in_" + std::to_string(i)),
+            r_BnInOp2BlobPtr("out_" + std::to_string(i)));
+    BlobCmp(BnInOp2BlobPtr("in_" + std::to_string(i) + "_diff"),
+            r_BnInOp2BlobPtr("out_" + std::to_string(i) + "_diff"));
+  }
+}
+
+TEST(boxingKernel, boxing_concat_split_box_with_null) {
+  // Create cpu_device and kernel contexts
+  auto cpu_stream = new Channel<std::function<void()>>;
+  KernelCtx ctx;
+  ctx.device_ctx = new CpuDeviceCtx(cpu_stream);
+
+  // Build boxing kernel
+  auto boxing_kernel_0 = BuildBoxingKernel(4, 3, 0, BoxingOpConf::kConcatBox,
+                                           BoxingOpConf::kDataSplitBox);
+  auto boxing_kernel_1 = BuildBoxingKernel(3, 4, 1, BoxingOpConf::kConcatBox,
+                                           BoxingOpConf::kDataSplitBox);
+
+  // Build blobs
+  std::vector<std::vector<int64_t>> in_dim_vecs = {
+      {3, 4, 5, 5}, {3, 2, 5, 5}, {3, 1, 5, 5}, {3, 7, 5, 5}, {3, 0, 5, 5}};
+  std::vector<std::vector<int64_t>> out_dim_vecs = {
+      {3, 5, 5, 5}, {3, 6, 5, 5}, {3, 3, 5, 5}, {3, 0, 5, 5}, {3, 0, 5, 5}};
   auto BnInOp2BlobPtr =
       ConstructBnInOp2BlobPtr(in_dim_vecs, out_dim_vecs, {3, 14, 5, 5});
 
