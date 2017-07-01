@@ -5,15 +5,15 @@
 
 namespace oneflow {
 
+using google::protobuf::Descriptor;
+using google::protobuf::FieldDescriptor;
+using google::protobuf::Reflection;
+using google::protobuf::io::CodedInputStream;
+using google::protobuf::io::CodedOutputStream;
 using google::protobuf::io::IstreamInputStream;
 using google::protobuf::io::OstreamOutputStream;
 using google::protobuf::io::ZeroCopyInputStream;
-using google::protobuf::io::CodedInputStream;
 using google::protobuf::io::ZeroCopyOutputStream;
-using google::protobuf::io::CodedOutputStream;
-using google::protobuf::Descriptor;
-using google::protobuf::Reflection;
-using google::protobuf::FieldDescriptor;
 
 // string
 void ParseProtoFromString(const std::string& str, PbMessage* proto) {
