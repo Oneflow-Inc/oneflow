@@ -7,15 +7,14 @@ namespace oneflow {
 void MdUpdtCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   CHECK(IsFwNode());
   auto md_updt_gph = static_cast<MdUpdtTaskGraph*> (gph);
-  CompTaskNode* fw_task = md_updt_gph->fw_task();
   CompTaskNode* diff_acc_task = md_updt_gph->diff_acc_task();
   std::shared_ptr<RegstDesc> model_diff_acc_regst;
   if (diff_acc_task != nullptr) {
     model_diff_acc_regst =
         diff_acc_task->GetProducedRegstDesc("model_diff_acc");
   }
-  TakeOverRegstDesc(fw_task, "model");
-  TakeOverRegstDesc(fw_task, "model_tmp");
+  TakeOverRegstDesc(fw_task_, "model");
+  TakeOverRegstDesc(fw_task_, "model_tmp");
   auto model_regst = GetProducedRegstDesc("model");
 
   ExecNode* exec_node = mut_exec_gph().NewNode();
