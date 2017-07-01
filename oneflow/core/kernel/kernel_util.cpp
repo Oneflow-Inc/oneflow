@@ -1,4 +1,5 @@
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
@@ -86,7 +87,6 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
   }
 };
 
-template class KernelUtil<DeviceType::kCPU, float>;
-template class KernelUtil<DeviceType::kCPU, double>;
+INSTANTIATE_CPU_KERNEL_UTIL_CLASS(KernelUtil);
 
 }  //  namespace oneflow
