@@ -24,6 +24,6 @@ class CudaDeviceCtx final : public DeviceCtx {
  private:
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_ACTOR_CUDA_DEVICE_CONTEXT_H_
+#endif  // ONEFLOW_CORE_ACTOR_CUDA_DEVICE_CONTEXT_H_

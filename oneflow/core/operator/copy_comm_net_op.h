@@ -13,13 +13,12 @@ class CopyCommNetOp final : public SysOperator {
 
   void InitFromOpConf(const OperatorConf& op_conf) override;
   const PbMessage& GetSpecialConf() const override;
-  
+
  private:
   std::string ibn2lbn(const std::string& input_bn) const override;
   std::string obn2lbn(const std::string& output_bn) const override;
-
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_OPERATOR_COPY_COMM_NET_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_COPY_COMM_NET_OP_H_

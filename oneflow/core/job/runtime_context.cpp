@@ -17,20 +17,16 @@ void RuntimeCtx::SetModelInitCnt(int32_t val) {
 void RuntimeCtx::OneModelInitDone() {
   std::unique_lock<std::mutex> lck(model_init_cnt_mtx_);
   model_init_cnt_ -= 1;
-  if (model_init_cnt_ == 0) {
-    model_init_cnt_cond_.notify_one();
-  }
+  if (model_init_cnt_ == 0) { model_init_cnt_cond_.notify_one(); }
 }
 
 void RuntimeCtx::WaitUnitlAllModelInitDone() {
   std::unique_lock<std::mutex> lck(model_init_cnt_mtx_);
-  model_init_cnt_cond_.wait(lck, [this]() {
-    return model_init_cnt_ == 0;
-  });
+  model_init_cnt_cond_.wait(lck, [this]() { return model_init_cnt_ == 0; });
 }
 
 void RuntimeCtx::InitDataReader(const std::string& filepath) {
   data_reader_.reset(new PersistentCircularLineReader(filepath));
 }
 
-} // namespace oneflow
+}  // namespace oneflow

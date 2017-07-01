@@ -15,14 +15,12 @@ class InnerProductOp final : public UserOperator {
   const PbMessage& GetSpecialConf() const override;
   void InferShape4FwBlobs(
       std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
-      ParallelPolicy policy,
-      int64_t parallel_id,
+      ParallelPolicy policy, int64_t parallel_id,
       int64_t parallel_num) const override;
 
  private:
-
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_OPERATOR_INNERPRODUCT_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_INNERPRODUCT_OP_H_

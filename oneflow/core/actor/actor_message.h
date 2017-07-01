@@ -7,18 +7,15 @@
 namespace oneflow {
 
 enum class ActorCmd {
-  kInitializeModel = 0, // MdUpdt Actor
-  kSendInitialModel, // MdUpdt Actor
-  kEORD, // End Of Register Desc, All Actor except Source Actor
-  kStart // Source Actor
+  kInitializeModel = 0,  // MdUpdt Actor
+  kSendInitialModel,     // MdUpdt Actor
+  kEORD,                 // End Of Register Desc, All Actor except Source Actor
+  kStart                 // Source Actor
 };
 
 OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ActorCmd);
 
-enum class ActorMsgType {
-  kRegstMsg = 0,
-  kCmdMsg
-};
+enum class ActorMsgType { kRegstMsg = 0, kCmdMsg };
 
 OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ActorMsgType);
 
@@ -43,9 +40,7 @@ class ActorMsg final {
     return actor_cmd_;
   }
   // Setters
-  void set_dst_actor_id(int64_t val) {
-    dst_actor_id_ = val;
-  }
+  void set_dst_actor_id(int64_t val) { dst_actor_id_ = val; }
   void set_regst_warpper(std::shared_ptr<RegstWarpper> val) {
     msg_type_ = ActorMsgType::kRegstMsg;
     regst_warpper_ = val;
@@ -54,17 +49,15 @@ class ActorMsg final {
     msg_type_ = ActorMsgType::kCmdMsg;
     actor_cmd_ = val;
   }
-  
- private:
 
+ private:
   int64_t dst_actor_id_;
   ActorMsgType msg_type_;
 
   std::shared_ptr<RegstWarpper> regst_warpper_;
   ActorCmd actor_cmd_;
-
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_ACTOR_ACTOR_MESSAGE_H_
+#endif  // ONEFLOW_CORE_ACTOR_ACTOR_MESSAGE_H_

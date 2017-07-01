@@ -17,14 +17,13 @@ class PoolingOp final : public UserOperator {
   const PbMessage& GetSpecialConf() const override;
 
   void InferShape4FwBlobs(
-    std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
-    ParallelPolicy policy,
-    int64_t parallel_id,
-    int64_t parallel_num) const override;
+      std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+      ParallelPolicy policy, int64_t parallel_id,
+      int64_t parallel_num) const override;
 
  private:
 };
 
 }  // namespace oneflow
 
-#endif // ONEFLOW_CORE_OPERATOR_POOLING_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_POOLING_OP_H_

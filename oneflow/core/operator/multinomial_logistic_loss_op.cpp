@@ -18,12 +18,10 @@ const PbMessage& MultinomialLogisticLossOp::GetSpecialConf() const {
 
 void MultinomialLogisticLossOp::InferShape4FwBlobs(
     std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
-    ParallelPolicy policy,
-    int64_t parallel_id,
-    int64_t parallel_num) const {
+    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
   *GetShapePtr4BnInOp(SoleObn()) = Shape({1});
   *GetShapePtr4BnInOp(SoleDtbn()) = Shape({1});
-  for (size_t i = 0;i < input_diff_bns().size(); ++i) {
+  for (size_t i = 0; i < input_diff_bns().size(); ++i) {
     Shape* input_diff_shape_ptr = GetShapePtr4BnInOp(input_diff_bns().at(i));
     if (input_diff_shape_ptr != nullptr) {
       *input_diff_shape_ptr = *GetShapePtr4BnInOp(input_bns().at(i));
@@ -32,6 +30,6 @@ void MultinomialLogisticLossOp::InferShape4FwBlobs(
 }
 
 REGISTER_OP(OperatorConf::kMultinomialLogisticLossConf,
-    MultinomialLogisticLossOp);
+            MultinomialLogisticLossOp);
 
 }  // namespace oneflow

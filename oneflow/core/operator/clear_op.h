@@ -24,6 +24,6 @@ class ClearOp final : public SysOperator {
   }
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_OPERATOR_CLEAR_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_CLEAR_OP_H_

@@ -1,34 +1,32 @@
 #include "oneflow/core/graph/task_graph.h"
+#include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/graph/data_comp_task_node.h"
-#include "oneflow/core/graph/model_update_comp_task_node.h"
+#include "oneflow/core/graph/in_boxing_task_node.h"
 #include "oneflow/core/graph/model_diff_accumulate_comp_task_node.h"
 #include "oneflow/core/graph/model_save_comp_task_node.h"
-#include "oneflow/core/graph/copy_task_node.h"
-#include "oneflow/core/graph/in_boxing_task_node.h"
+#include "oneflow/core/graph/model_update_comp_task_node.h"
 #include "oneflow/core/graph/out_boxing_task_node.h"
 
 namespace oneflow {
 
-#define INSTANTIATE_TASK_GPH_MEM_FUNC(func, ...) \
-  template void TaskGraph::func<DataCompTaskNode>(__VA_ARGS__); \
-  template void TaskGraph::func<MdUpdtCompTaskNode>(__VA_ARGS__); \
+#define INSTANTIATE_TASK_GPH_MEM_FUNC(func, ...)                     \
+  template void TaskGraph::func<DataCompTaskNode>(__VA_ARGS__);      \
+  template void TaskGraph::func<MdUpdtCompTaskNode>(__VA_ARGS__);    \
   template void TaskGraph::func<MdDiffAccCompTaskNode>(__VA_ARGS__); \
   template void TaskGraph::func<MdSaveCompTaskNode>(__VA_ARGS__);
 
 namespace {
 
-inline void TaskConnect(TaskNode* src_node,
-                        TaskEdge* edge,
+inline void TaskConnect(TaskNode* src_node, TaskEdge* edge,
                         TaskNode* dst_node) {
   Connect<TaskNode, TaskEdge>(src_node, edge, dst_node);
 }
 
-}
+}  // namespace
 
 void TaskGraph::BuildExecAndEnrollLbn2Regsts() {
-  TopoForEachNode([this](TaskNode* node) {
-    node->BuildExecAndEnrollLbn2Regsts(this);
-  });
+  TopoForEachNode(
+      [this](TaskNode* node) { node->BuildExecAndEnrollLbn2Regsts(this); });
 }
 
 void TaskGraph::InferShapeOfBlobsInProducedRegsts() {
@@ -37,11 +35,10 @@ void TaskGraph::InferShapeOfBlobsInProducedRegsts() {
   });
 }
 
-std::vector<CompTaskNode*> TaskGraph::CompTasksInChain(
-    const ChainNode* chain) {
+std::vector<CompTaskNode*> TaskGraph::CompTasksInChain(const ChainNode* chain) {
   std::vector<CompTaskNode*> ret;
   ForEachNode([&](TaskNode* node) {
-    auto comp_node = dynamic_cast<CompTaskNode*> (node);
+    auto comp_node = dynamic_cast<CompTaskNode*>(node);
     if (comp_node && comp_node->chain_node() == chain) {
       ret.push_back(comp_node);
     }
@@ -50,15 +47,14 @@ std::vector<CompTaskNode*> TaskGraph::CompTasksInChain(
 }
 
 template<typename CompTaskNodeType>
-void TaskGraph::BuildFromChainGph(
-    std::unique_ptr<ChainGraph>&& chain_gph,
-    bool need_bp) {
+void TaskGraph::BuildFromChainGph(std::unique_ptr<ChainGraph>&& chain_gph,
+                                  bool need_bp) {
   stage_gph_.reset(new StageGraph(std::move(chain_gph)));
   BuildFromStageGph<CompTaskNodeType>(need_bp);
 }
 
-INSTANTIATE_TASK_GPH_MEM_FUNC(
-    BuildFromChainGph, std::unique_ptr<ChainGraph>&&, bool);
+INSTANTIATE_TASK_GPH_MEM_FUNC(BuildFromChainGph, std::unique_ptr<ChainGraph>&&,
+                              bool);
 
 template<typename CompTaskNodeType>
 void TaskGraph::BuildFromStageGph(bool need_bp) {
@@ -84,8 +80,8 @@ void TaskGraph::InitCompTaskNodes(Stage2TaskNodesMap* stage2task_nodes) {
       Stage2DeviceCompTaskNodes<CompTaskNodeType>(
           stage, &((*stage2task_nodes)[stage]));
     } else {
-      Stage2HostCompTaskNodes<CompTaskNodeType>(
-          stage, &((*stage2task_nodes)[stage]));
+      Stage2HostCompTaskNodes<CompTaskNodeType>(stage,
+                                                &((*stage2task_nodes)[stage]));
     }
   });
 }
@@ -94,14 +90,13 @@ INSTANTIATE_TASK_GPH_MEM_FUNC(InitCompTaskNodes, Stage2TaskNodesMap*);
 
 template<typename CompTaskNodeType>
 void TaskGraph::Stage2DeviceCompTaskNodes(
-    const StageNode* stage,
-    TaskNodesInStage* task_nodes_in_stage) {
+    const StageNode* stage, TaskNodesInStage* task_nodes_in_stage) {
   int64_t parallel_idx = stage->parallel_range().begin();
   for (auto device_phy_id : stage->SortedDevicePhyIds()) {
     int64_t thread_local_id =
         IDMgr::Singleton().ThrdLocId4DevPhyId(device_phy_id);
     // comp_task_node
-    CompTaskNodeType* comp_task_node = NewTaskNode<CompTaskNodeType> ();
+    CompTaskNodeType* comp_task_node = NewTaskNode<CompTaskNodeType>();
     comp_task_node->SetFwNode();
     comp_task_node->set_stage_node(stage);
     comp_task_node->mut_thrd_loc_id() = thread_local_id;
@@ -109,7 +104,7 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
     comp_task_node->set_task_id();
     // comp_in_task_node
     if (!stage->in_edges().empty()) {
-      CopyHDTaskNode* comp_in_task_node = NewTaskNode<CopyHDTaskNode> ();
+      CopyHDTaskNode* comp_in_task_node = NewTaskNode<CopyHDTaskNode>();
       comp_in_task_node->SetFwNode();
       comp_in_task_node->set_stage_node(stage);
       comp_in_task_node->mut_thrd_loc_id() = thread_local_id;
@@ -122,7 +117,7 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
     }
     // comp_out_task_node
     if (!stage->out_edges().empty()) {
-      CopyHDTaskNode* comp_out_task_node = NewTaskNode<CopyHDTaskNode> ();
+      CopyHDTaskNode* comp_out_task_node = NewTaskNode<CopyHDTaskNode>();
       comp_out_task_node->SetFwNode();
       comp_out_task_node->set_stage_node(stage);
       comp_out_task_node->mut_thrd_loc_id() = thread_local_id;
@@ -134,12 +129,12 @@ void TaskGraph::Stage2DeviceCompTaskNodes(
       task_nodes_in_stage->comp_out_task_nodes.push_back(comp_task_node);
     }
   }
-  CHECK_EQ(parallel_idx, stage->parallel_range().end()) << stage->chain_node()->VisualStr();
+  CHECK_EQ(parallel_idx, stage->parallel_range().end())
+      << stage->chain_node()->VisualStr();
 }
 
-INSTANTIATE_TASK_GPH_MEM_FUNC(
-    Stage2DeviceCompTaskNodes,
-    const StageNode* stage, TaskNodesInStage* task_nodes_in_stage);
+INSTANTIATE_TASK_GPH_MEM_FUNC(Stage2DeviceCompTaskNodes, const StageNode* stage,
+                              TaskNodesInStage* task_nodes_in_stage);
 
 template<typename CompTaskNodeType>
 void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
@@ -148,29 +143,30 @@ void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
   const int64_t parallel_end = stage->parallel_range().end();
   int64_t parallel_idx = parallel_begin;
   while (parallel_idx < parallel_end) {
-    CompTaskNodeType* comp_task_node = NewTaskNode<CompTaskNodeType> ();
+    CompTaskNodeType* comp_task_node = NewTaskNode<CompTaskNodeType>();
     comp_task_node->SetFwNode();
     comp_task_node->set_stage_node(stage);
     comp_task_node->set_parallel_id(parallel_idx);
     comp_task_node->set_task_id();
     // Set comp_task_node::thread_local_id
     if (stage->SortedDevicePhyIds().empty()) {
-      comp_task_node->mut_thrd_loc_id() = IDMgr::Singleton().PersistenceThrdLocId();
+      comp_task_node->mut_thrd_loc_id() =
+          IDMgr::Singleton().PersistenceThrdLocId();
     } else {
-      auto device_id = stage->SortedDevicePhyIds().at(parallel_idx - parallel_begin);
+      auto device_id =
+          stage->SortedDevicePhyIds().at(parallel_idx - parallel_begin);
       comp_task_node->mut_thrd_loc_id() =
           IDMgr::Singleton().ThrdLocId4DevPhyId(device_id);
     }
-    // 
+    //
     task_nodes_in_stage->comp_in_task_nodes.push_back(comp_task_node);
     task_nodes_in_stage->comp_out_task_nodes.push_back(comp_task_node);
     parallel_idx += 1;
   }
 }
 
-INSTANTIATE_TASK_GPH_MEM_FUNC(
-    Stage2HostCompTaskNodes,
-    const StageNode* stage, TaskNodesInStage* task_nodes_in_stage);
+INSTANTIATE_TASK_GPH_MEM_FUNC(Stage2HostCompTaskNodes, const StageNode* stage,
+                              TaskNodesInStage* task_nodes_in_stage);
 
 void TaskGraph::InitBoxingTaskNodes(Stage2TaskNodesMap* stage2task_nodes) {
   stage_gph_->ConstForEachNode([&](const StageNode* stage) {
@@ -182,14 +178,12 @@ void TaskGraph::InitBoxingTaskNodes(Stage2TaskNodesMap* stage2task_nodes) {
 void TaskGraph::InitInboxingTaskNode(const StageNode* stage,
                                      TaskNodesInStage* task_nodes_in_stage) {
   task_nodes_in_stage->in_boxing_task_node = nullptr;
-  if (stage->in_edges().empty()) {
-    return;
-  }
+  if (stage->in_edges().empty()) { return; }
   if (stage->in_edges().size() == 1
       && task_nodes_in_stage->comp_in_task_nodes.size() == 1) {
     return;
   }
-  InBoxingTaskNode* boxing_task = NewTaskNode<InBoxingTaskNode> ();
+  InBoxingTaskNode* boxing_task = NewTaskNode<InBoxingTaskNode>();
   boxing_task->SetFwNode();
   boxing_task->set_stage_node(stage);
   boxing_task->mut_thrd_loc_id() = IDMgr::Singleton().BoxingThrdLocId();
@@ -200,18 +194,15 @@ void TaskGraph::InitInboxingTaskNode(const StageNode* stage,
   task_nodes_in_stage->in_boxing_task_node = boxing_task;
 }
 
-void TaskGraph::InitOutBoxingTaskNode(
-    const StageNode* stage,
-    TaskNodesInStage* task_nodes_in_stage) {
+void TaskGraph::InitOutBoxingTaskNode(const StageNode* stage,
+                                      TaskNodesInStage* task_nodes_in_stage) {
   task_nodes_in_stage->out_boxing_task_node = nullptr;
-  if (stage->out_edges().empty()) {
-    return;
-  }
+  if (stage->out_edges().empty()) { return; }
   if (stage->out_edges().size() == 1
       && task_nodes_in_stage->comp_out_task_nodes.size() == 1) {
     return;
   }
-  OutBoxingTaskNode* boxing_task = NewTaskNode<OutBoxingTaskNode> ();
+  OutBoxingTaskNode* boxing_task = NewTaskNode<OutBoxingTaskNode>();
   boxing_task->SetFwNode();
   boxing_task->set_stage_node(stage);
   boxing_task->mut_thrd_loc_id() = IDMgr::Singleton().BoxingThrdLocId();
@@ -244,11 +235,10 @@ void TaskGraph::ConnectBoxingTaskNodes(
         TaskConnect(out_node, NewEdge(), in_node);
         continue;
       }
-      CopyCommNetTaskNode* comm_net_node = NewTaskNode<CopyCommNetTaskNode> ();
+      CopyCommNetTaskNode* comm_net_node = NewTaskNode<CopyCommNetTaskNode>();
       comm_net_node->SetFwNode();
       comm_net_node->set_stage_node(succ_stage);
-      comm_net_node->mut_thrd_loc_id() =
-          IDMgr::Singleton().CommNetThrdLocId();
+      comm_net_node->mut_thrd_loc_id() = IDMgr::Singleton().CommNetThrdLocId();
       comm_net_node->set_task_id();
 
       TaskConnect(out_node, NewEdge(), comm_net_node);
@@ -265,10 +255,9 @@ void TaskGraph::BuildBpStruct() {
   UpdateSourceAndSink();
 }
 
-void TaskGraph::GenerateRelatedBpNodes(
-    std::vector<TaskNode*> *loss_node_vec) {
+void TaskGraph::GenerateRelatedBpNodes(std::vector<TaskNode*>* loss_node_vec) {
   TopoForEachNode([&](TaskNode* task_node) {
-    if (auto comp_task_node = dynamic_cast<CompTaskNode*> (task_node)) {
+    if (auto comp_task_node = dynamic_cast<CompTaskNode*>(task_node)) {
       if (comp_task_node->IsLossNode()) {
         loss_node_vec->push_back(task_node);
         return;
@@ -287,8 +276,7 @@ void TaskGraph::GenerateRelatedBpNodes(
   });
 }
 
-void TaskGraph::BackwardConnect(
-    const std::vector<TaskNode*>& loss_node_vec) {
+void TaskGraph::BackwardConnect(const std::vector<TaskNode*>& loss_node_vec) {
   std::queue<TaskNode*> bp_node_queue;
   std::unordered_set<TaskNode*> has_been_enqueued;
   auto TryEnqueue = [&bp_node_queue, &has_been_enqueued](TaskNode* node) {
@@ -323,4 +311,4 @@ void TaskGraph::BackwardConnect(
   }
 }
 
-} // namespace oneflow
+}  // namespace oneflow

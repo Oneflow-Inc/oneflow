@@ -10,10 +10,8 @@ class CpuDeviceCtx final : public DeviceCtx {
   // OF_DISALLOW_COPY_AND_MOVE(CpuDeviceCtx);
   CpuDeviceCtx() = delete;
   ~CpuDeviceCtx() = default;
-  
-  CpuDeviceCtx(Channel<std::function<void()>>* chan) {
-    set_cpu_stream(chan);
-  }
+
+  CpuDeviceCtx(Channel<std::function<void()>>* chan) { set_cpu_stream(chan); }
 
   void AddCallBack(std::function<void()> callback) const override {
     cpu_stream()->Send(callback);
@@ -22,6 +20,6 @@ class CpuDeviceCtx final : public DeviceCtx {
  private:
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_ACTOR_CPU_DEVICE_CONTEXT_H_
+#endif  // ONEFLOW_CORE_ACTOR_CPU_DEVICE_CONTEXT_H_

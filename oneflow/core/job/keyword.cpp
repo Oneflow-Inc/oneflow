@@ -4,4 +4,4 @@ namespace oneflow {
 
 const char* kBaledBlobName = "_oneflow_BaledBlobName";
 
-} // namespace oneflow
+}  // namespace oneflow

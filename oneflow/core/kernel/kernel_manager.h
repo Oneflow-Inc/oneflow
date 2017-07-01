@@ -2,9 +2,9 @@
 #define ONEFLOW_CORE_KERNEL_KERNEL_MANAGER_H_
 
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/plan.pb.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
@@ -63,18 +63,26 @@ struct GpuDoubleKernelRegister {
   }
 };
 
-#define REGISTER_CPU_KERNEL(OpTypeCase, KernelType) \
-  static CpuFloatKernelRegister<OpTypeCase, KernelType<DeviceType::kCPU, float>> g_##KernelType##_cpu_float_regst_var; \
-  static CpuDoubleKernelRegister<OpTypeCase, KernelType<DeviceType::kCPU, double>> g_##KernelType##_cpu_double_regst_var;
+#define REGISTER_CPU_KERNEL(OpTypeCase, KernelType)                    \
+  static CpuFloatKernelRegister<OpTypeCase,                            \
+                                KernelType<DeviceType::kCPU, float>>   \
+      g_##KernelType##_cpu_float_regst_var;                            \
+  static CpuDoubleKernelRegister<OpTypeCase,                           \
+                                 KernelType<DeviceType::kCPU, double>> \
+      g_##KernelType##_cpu_double_regst_var;
 
-#define REGISTER_GPU_KERNEL(OpTypeCase, KernelType) \
-  static GpuFloatKernelRegister<OpTypeCase, KernelType<DeviceType::kGPU, float>> g_##KernelType##_gpu_float_regst_var; \
-  static GpuDoubleKernelRegister<OpTypeCase, KernelType<DeviceType::kGPU, double>> g_##KernelType##_gpu_double_regst_var;
+#define REGISTER_GPU_KERNEL(OpTypeCase, KernelType)                    \
+  static GpuFloatKernelRegister<OpTypeCase,                            \
+                                KernelType<DeviceType::kGPU, float>>   \
+      g_##KernelType##_gpu_float_regst_var;                            \
+  static GpuDoubleKernelRegister<OpTypeCase,                           \
+                                 KernelType<DeviceType::kGPU, double>> \
+      g_##KernelType##_gpu_double_regst_var;
 
 #define REGISTER_KERNEL(OpTypeCase, KernelType) \
-  REGISTER_CPU_KERNEL(OpTypeCase, KernelType) \
+  REGISTER_CPU_KERNEL(OpTypeCase, KernelType)   \
   REGISTER_GPU_KERNEL(OpTypeCase, KernelType)
 
 }  // namespace oneflow
 
-#endif // ONEFLOW_CORE_KERNEL_KERNEL_MANAGER_H_
+#endif  // ONEFLOW_CORE_KERNEL_KERNEL_MANAGER_H_

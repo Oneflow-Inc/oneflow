@@ -16,4 +16,4 @@ const PbMessage& ModelSaveOp::GetSpecialConf() const {
 
 REGISTER_OP(OperatorConf::kModelSaveConf, ModelSaveOp);
 
-}
+}  // namespace oneflow

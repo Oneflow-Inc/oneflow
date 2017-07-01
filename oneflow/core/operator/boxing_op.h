@@ -16,16 +16,14 @@ class BoxingOp final : public SysOperator {
 
   void InferShape4FwBlobs(
       std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
-      ParallelPolicy policy,
-      int64_t parallel_id,
+      ParallelPolicy policy, int64_t parallel_id,
       int64_t parallel_num) const override;
-  
+
  private:
   std::string ibn2lbn(const std::string& input_bn) const override;
   std::string obn2lbn(const std::string& output_bn) const override;
-
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_OPERATOR_BOXING_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_BOXING_OP_H_

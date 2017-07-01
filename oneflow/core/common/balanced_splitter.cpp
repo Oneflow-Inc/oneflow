@@ -17,10 +17,10 @@ Range BalancedSplitter::At(int64_t idx) const {
     upper_pound_num = lower_pound_num + (size_per_range_ + 1);
   } else {
     lower_pound_num = (size_per_range_ + 1) * change_pos_
-      + size_per_range_ * (idx - change_pos_);
+                      + size_per_range_ * (idx - change_pos_);
     upper_pound_num = lower_pound_num + size_per_range_;
   }
   return Range(lower_pound_num, upper_pound_num);
 }
 
-} // namespace oneflow
+}  // namespace oneflow

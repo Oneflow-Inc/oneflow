@@ -21,9 +21,8 @@ class ModelUpdateOp final : public SysOperator {
   std::string obn2lbn(const std::string& output_bn) const override {
     return kBaledBlobName;
   }
-
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_OPERATOR_MODEL_UPDATE_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_MODEL_UPDATE_OP_H_

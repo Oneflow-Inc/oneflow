@@ -29,15 +29,9 @@ const cudnnHandle_t* CudaStreamHandle::cudnn_handle() {
 }
 
 CudaStreamHandle::~CudaStreamHandle() {
-  if (cudnn_handle_) {
-    CHECK_EQ(cudnnDestroy(*cudnn_handle_), 0);
-  }
-  if (cublas_handle_) {
-    CHECK_EQ(cublasDestroy(*cublas_handle_), 0);
-  }
-  if (cuda_stream_) {
-    CHECK_EQ(cudaStreamDestroy(*cuda_stream_), 0);
-  }
+  if (cudnn_handle_) { CHECK_EQ(cudnnDestroy(*cudnn_handle_), 0); }
+  if (cublas_handle_) { CHECK_EQ(cublasDestroy(*cublas_handle_), 0); }
+  if (cuda_stream_) { CHECK_EQ(cudaStreamDestroy(*cuda_stream_), 0); }
 }
 
-} // namespace oneflow
+}  // namespace oneflow

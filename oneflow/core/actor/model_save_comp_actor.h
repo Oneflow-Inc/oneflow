@@ -21,4 +21,4 @@ class MdSaveCompActor final : public CompActor {
 
 }  // namespace oneflow
 
-#endif // ONEFLOW_CORE_ACTOR_MODEL_SAVE_COMP_ACTOR_H_
+#endif  // ONEFLOW_CORE_ACTOR_MODEL_SAVE_COMP_ACTOR_H_

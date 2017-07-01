@@ -1,11 +1,11 @@
 #ifndef ONEFLOW_CORE_GRAPH_GRAPH_H_
 #define ONEFLOW_CORE_GRAPH_GRAPH_H_
 
-#include "tensorflow/core/platform/env.h"
-#include "tensorflow/core/lib/io/path.h"
 #include "gflags/gflags.h"
-#include "oneflow/core/persistence/persistent_out_stream.h"
 #include "oneflow/core/graph/node.h"
+#include "oneflow/core/persistence/persistent_out_stream.h"
+#include "tensorflow/core/lib/io/path.h"
+#include "tensorflow/core/platform/env.h"
 
 namespace oneflow {
 
@@ -23,11 +23,11 @@ class Graph {
   void ConstForEachNode(std::function<void(const NodeType*)>) const;
   void ConstTopoForEachNode(std::function<void(const NodeType*)>) const;
   void ConstReverseTopoForEachNode(std::function<void(const NodeType*)>) const;
-  
+
   // For Each Edge
   void ForEachEdge(std::function<void(EdgeType*)>);
   void ConstForEachEdge(std::function<void(const EdgeType*)>) const;
-  
+
   // Getters
   const std::unordered_set<NodeType*>& source_nodes() const;
   const std::unordered_set<NodeType*>& sink_nodes() const;
@@ -37,7 +37,7 @@ class Graph {
   size_t node_num() const { return nodes_.size(); }
   size_t edge_num() const { return edges_.size(); }
   virtual const char* TypeName() const { return "Not Defined"; }
-  
+
   // Setters
   NodeType* NewNode();
   EdgeType* NewEdge();
@@ -57,9 +57,9 @@ class Graph {
   class TopoIterator;
   class ReverseTopoIterator;
   TopoIterator begin() { return source_nodes_; }
-  TopoIterator end() { return std::unordered_set<NodeType*> (); }
+  TopoIterator end() { return std::unordered_set<NodeType*>(); }
   ReverseTopoIterator rbegin() { return sink_nodes_; }
-  ReverseTopoIterator rend() { return std::unordered_set<NodeType*> (); }
+  ReverseTopoIterator rend() { return std::unordered_set<NodeType*>(); }
 
   //
   std::unordered_set<NodeType*> source_nodes_;
@@ -68,25 +68,22 @@ class Graph {
   std::vector<std::unique_ptr<EdgeType>> edges_;
 };
 
-
 template<typename NodeType, typename EdgeType>
 class Graph<NodeType, EdgeType>::TopoIterator final {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(TopoIterator);
   TopoIterator() = default;
   ~TopoIterator() = default;
-  
+
   TopoIterator(const std::unordered_set<NodeType*>& source_nodes) {
-    for (NodeType* node : source_nodes) {
-      bfs_queue_.push(node);
-    }
+    for (NodeType* node : source_nodes) { bfs_queue_.push(node); }
   }
-  
-  NodeType& operator * () { return *(bfs_queue_.front()); }
-  NodeType* operator -> () { return &(*(*this)); }
-  TopoIterator& operator ++ ();
-  
-  bool operator != (const TopoIterator&) const;
+
+  NodeType& operator*() { return *(bfs_queue_.front()); }
+  NodeType* operator->() { return &(*(*this)); }
+  TopoIterator& operator++();
+
+  bool operator!=(const TopoIterator&) const;
 
  private:
   std::queue<NodeType*> bfs_queue_;
@@ -99,57 +96,48 @@ class Graph<NodeType, EdgeType>::ReverseTopoIterator final {
   // OF_DISALLOW_COPY_AND_MOVE(ReverseTopoIterator);
   ReverseTopoIterator() = default;
   ~ReverseTopoIterator() = default;
-  
-  ReverseTopoIterator(const std::unordered_set<NodeType*>& sink_nodes) {
-    for (NodeType* node : sink_nodes) {
-      bfs_queue_.push(node);
-    }
-  }
-  
-  NodeType& operator * () { return *(bfs_queue_.front()); }
-  NodeType* operator -> () { return &(*(*this)); }
 
-  ReverseTopoIterator& operator ++ ();
-  
-  bool operator != (const ReverseTopoIterator&) const;
+  ReverseTopoIterator(const std::unordered_set<NodeType*>& sink_nodes) {
+    for (NodeType* node : sink_nodes) { bfs_queue_.push(node); }
+  }
+
+  NodeType& operator*() { return *(bfs_queue_.front()); }
+  NodeType* operator->() { return &(*(*this)); }
+
+  ReverseTopoIterator& operator++();
+
+  bool operator!=(const ReverseTopoIterator&) const;
 
  private:
   std::queue<NodeType*> bfs_queue_;
-  HashMap<NodeType*, int32_t > visited_cnt_;
+  HashMap<NodeType*, int32_t> visited_cnt_;
 };
 
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ForEachNode(
     std::function<void(NodeType*)> func) {
-  for (auto& x : nodes_) {
-    func(x.get());
-  }
+  for (auto& x : nodes_) { func(x.get()); }
 }
 
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::TopoForEachNode(
     std::function<void(NodeType*)> func) {
-  for (TopoIterator it = begin(); it != end(); ++it) {
-    func(&(*it));
-  }
+  for (TopoIterator it = begin(); it != end(); ++it) { func(&(*it)); }
 }
 
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ReverseTopoForEachNode(
     std::function<void(NodeType*)> func) {
-  for (ReverseTopoIterator it = rbegin(); it != rend(); ++it) {
-    func(&(*it));
+  for (ReverseTopoIterator it = rbegin(); it != rend(); ++it) { func(&(*it)); }
+}
+
+#define OF_DEFINE_CONST_FOR_EACH_NODE(FuncName)                    \
+  template<typename NodeType, typename EdgeType>                   \
+  void Graph<NodeType, EdgeType>::Const##FuncName(                 \
+      std::function<void(const NodeType*)> func) const {           \
+    auto cast_this = const_cast<Graph<NodeType, EdgeType>*>(this); \
+    cast_this->FuncName(std::bind(func, std::placeholders::_1));   \
   }
-}
-
-
-#define OF_DEFINE_CONST_FOR_EACH_NODE(FuncName) \
-template<typename NodeType, typename EdgeType> \
-void Graph<NodeType, EdgeType>::Const##FuncName( \
-    std::function<void(const NodeType*)> func) const { \
-  auto cast_this = const_cast<Graph<NodeType, EdgeType>*> (this); \
-  cast_this->FuncName(std::bind(func, std::placeholders::_1)); \
-}
 
 OF_DEFINE_CONST_FOR_EACH_NODE(ForEachNode);
 OF_DEFINE_CONST_FOR_EACH_NODE(TopoForEachNode);
@@ -160,27 +148,25 @@ OF_DEFINE_CONST_FOR_EACH_NODE(ReverseTopoForEachNode);
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ForEachEdge(
     std::function<void(EdgeType*)> func) {
-  for (auto& x : edges_) {
-    func(x.get());
-  }
+  for (auto& x : edges_) { func(x.get()); }
 }
 
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ConstForEachEdge(
     std::function<void(const EdgeType*)> func) const {
-  auto cast_this = const_cast<Graph<NodeType, EdgeType>*> (this);
+  auto cast_this = const_cast<Graph<NodeType, EdgeType>*>(this);
   cast_this->ForEachEdge(std::bind(func, std::placeholders::_1));
 }
 
 template<typename NodeType, typename EdgeType>
-const std::unordered_set<NodeType*>&
-Graph<NodeType, EdgeType>::source_nodes() const {
+const std::unordered_set<NodeType*>& Graph<NodeType, EdgeType>::source_nodes()
+    const {
   return source_nodes_;
 }
 
 template<typename NodeType, typename EdgeType>
-const std::unordered_set<NodeType*>&
-Graph<NodeType, EdgeType>::sink_nodes() const {
+const std::unordered_set<NodeType*>& Graph<NodeType, EdgeType>::sink_nodes()
+    const {
   return sink_nodes_;
 }
 
@@ -241,12 +227,8 @@ void Graph<NodeType, EdgeType>::UpdateSourceAndSink() {
   source_nodes_.clear();
   sink_nodes_.clear();
   for (const std::unique_ptr<NodeType>& node : nodes_) {
-    if (node->in_edges().empty()) {
-      source_nodes_.insert(node.get());
-    }
-    if (node->out_edges().empty()) {
-      sink_nodes_.insert(node.get());
-    }
+    if (node->in_edges().empty()) { source_nodes_.insert(node.get()); }
+    if (node->out_edges().empty()) { sink_nodes_.insert(node.get()); }
   }
 }
 
@@ -259,14 +241,15 @@ void Graph<NodeType, EdgeType>::ToDotWithStream(StreamT& out_stream) const {
   });
   this->ConstForEachEdge([&](const EdgeType* edge) {
     out_stream << "\"" << edge->src_node()->VisualStr() << "\" -> "
-       << "\"" << edge->dst_node()->VisualStr() << "\""
-       << "[label=\"" << edge->VisualStr() << "\"];\n";
+               << "\"" << edge->dst_node()->VisualStr() << "\""
+               << "[label=\"" << edge->VisualStr() << "\"];\n";
   });
   out_stream << "}\n";
 }
 
 template<typename NodeType, typename EdgeType>
-void Graph<NodeType, EdgeType>::ToDotWithFilePath(const std::string& file_path) const {
+void Graph<NodeType, EdgeType>::ToDotWithFilePath(
+    const std::string& file_path) const {
   std::string dir_name = tensorflow::io::Dirname(file_path).ToString();
   tensorflow::Env* env = tensorflow::Env::Default();
   if (env->IsDirectory(dir_name).code() != tensorflow::error::OK) {
@@ -278,17 +261,15 @@ void Graph<NodeType, EdgeType>::ToDotWithFilePath(const std::string& file_path) 
 
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ToDotWithAutoFilePath() const {
-  std::string file_path = LogDir() + "/dot/" + TypeName()
-                                   + "/" + NewUniqueId() + ".dot";
+  std::string file_path =
+      LogDir() + "/dot/" + TypeName() + "/" + NewUniqueId() + ".dot";
   ToDotWithFilePath(file_path);
 }
 
 template<typename NodeType>
 bool IsNotEqual4BfsQueue(const std::queue<NodeType*>& lhs,
                          const std::queue<NodeType*>& rhs) {
-  if (lhs.empty() != rhs.empty()) {
-    return true;
-  }
+  if (lhs.empty() != rhs.empty()) { return true; }
   if (lhs.empty() == false && rhs.empty() == false) {
     return lhs.front() != rhs.front();
   }
@@ -296,27 +277,28 @@ bool IsNotEqual4BfsQueue(const std::queue<NodeType*>& lhs,
 }
 
 template<typename NodeType, typename EdgeType>
-auto Graph<NodeType, EdgeType>::TopoIterator::operator ++ () -> TopoIterator& {
+auto Graph<NodeType, EdgeType>::TopoIterator::operator++() -> TopoIterator& {
   NodeType* cur_node = bfs_queue_.front();
   bfs_queue_.pop();
   for (EdgeType* out_edge : cur_node->out_edges()) {
     NodeType* dst_node = out_edge->dst_node();
     visited_cnt_[dst_node] += 1;
     if (visited_cnt_.at(dst_node) == dst_node->in_edges().size()) {
-       bfs_queue_.push(dst_node);
+      bfs_queue_.push(dst_node);
     }
   }
   return *this;
 }
 
 template<typename NodeType, typename EdgeType>
-bool Graph<NodeType, EdgeType>::TopoIterator::operator != (
+bool Graph<NodeType, EdgeType>::TopoIterator::operator!=(
     const TopoIterator& rhs) const {
   return IsNotEqual4BfsQueue(bfs_queue_, rhs.bfs_queue_);
 }
 
 template<typename NodeType, typename EdgeType>
-auto Graph<NodeType, EdgeType>::ReverseTopoIterator::operator ++ () -> ReverseTopoIterator& {
+auto Graph<NodeType, EdgeType>::ReverseTopoIterator::operator++()
+    -> ReverseTopoIterator& {
   NodeType* cur_node = bfs_queue_.front();
   bfs_queue_.pop();
   for (EdgeType* in_edge : cur_node->in_edges()) {
@@ -330,11 +312,11 @@ auto Graph<NodeType, EdgeType>::ReverseTopoIterator::operator ++ () -> ReverseTo
 }
 
 template<typename NodeType, typename EdgeType>
-bool Graph<NodeType, EdgeType>::ReverseTopoIterator::operator != (
+bool Graph<NodeType, EdgeType>::ReverseTopoIterator::operator!=(
     const ReverseTopoIterator& rhs) const {
   return IsNotEqual4BfsQueue(bfs_queue_, rhs.bfs_queue_);
 }
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_GRAPH_GRAPH_H_
+#endif  // ONEFLOW_CORE_GRAPH_GRAPH_H_

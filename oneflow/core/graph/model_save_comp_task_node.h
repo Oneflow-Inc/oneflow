@@ -10,12 +10,14 @@ class MdSaveCompTaskNode final : public CompTaskNode {
   OF_DISALLOW_COPY_AND_MOVE(MdSaveCompTaskNode);
   MdSaveCompTaskNode() = default;
   ~MdSaveCompTaskNode() = default;
- 
+
   void ToProto(TaskProto* proto) const override {
     TaskNode::ToProto(proto);
-    proto->set_parallel_policy(fw_task_->chain_node()->parallel_desc()->policy());
+    proto->set_parallel_policy(
+        fw_task_->chain_node()->parallel_desc()->policy());
     proto->set_parallel_id(fw_task_->parallel_id());
-    proto->set_parallel_num(fw_task_->chain_node()->parallel_desc()->parallel_num());
+    proto->set_parallel_num(
+        fw_task_->chain_node()->parallel_desc()->parallel_num());
   }
 
   void set_fw_task(CompTaskNode* fw_task) { fw_task_ = fw_task; }
@@ -28,15 +30,13 @@ class MdSaveCompTaskNode final : public CompTaskNode {
     return !GetSubscribedRegstDesc("model");
   }
 
-  TaskType task_type() const override {
-    return kMdSaveCompTask;
-  }
+  TaskType task_type() const override { return kMdSaveCompTask; }
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    return of_make_unique<MdSaveCompTaskNode> ();
+    return of_make_unique<MdSaveCompTaskNode>();
   }
   CompTaskNode* fw_task_;
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_GRAPH_MODEL_SAVE_COMP_TASK_NODE_H_
+#endif  // ONEFLOW_CORE_GRAPH_MODEL_SAVE_COMP_TASK_NODE_H_
