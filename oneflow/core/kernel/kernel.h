@@ -74,6 +74,19 @@ using KernelWardFunc = void (Kernel::*)(
   INSTANTIATE_CPU_KERNEL_CLASS(classname)   \
   INSTANTIATE_GPU_KERNEL_CLASS(classname)
 
+#define INSTANTIATE_CPU_KERNEL_UTIL_CLASS(classname) \
+  char gInstantiationGuardCPU##classname;            \
+  template class classname<DeviceType::kCPU, float>; \
+  template class classname<DeviceType::kCPU, double>;
+#define INSTANTIATE_GPU_KERNEL_UTIL_CLASS(classname) \
+  char gInstantiationGuardGPU##classname;            \
+  template class classname<DeviceType::kGPU, float>; \
+  template class classname<DeviceType::kGPU, double>;
+
+#define INSTANTIATE_KERNEL_UTIL_CLASS(classname) \
+  INSTANTIATE_CPU_KERNEL_UTIL_CLASS(classname)   \
+  INSTANTIATE_GPU_KERNEL_UTIL_CLASS(classname)
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_H_
