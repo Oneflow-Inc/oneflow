@@ -29,7 +29,7 @@ void DataLoaderOp::InferShape4FwBlobs(
                        feature_shape_of_one_ins.dim_vec().end());
   *GetShapePtr4BnInOp("feature") = Shape(feature_shape);
   // label shape
-  *GetShapePtr4BnInOp("label") = Shape({piece_size, 1});
+  *GetShapePtr4BnInOp("label") = Shape({piece_size});
 }
 
 REGISTER_OP(OperatorConf::kDataLoaderConf, DataLoaderOp);
