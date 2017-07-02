@@ -14,9 +14,6 @@ inline void CudaCheck(cudaError_t error) {
   for (int32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < (n); \
        i += blockDim.x * gridDim.x)
 
-// CUDA: check for error after kernel execution and exit loudly if there is one.
-inline void CudaPostKernelCheck() { CudaCheck(cudaPeekAtLastError()); }
-
 const int32_t kCudaThreadsNumPerBlock = 512;
 const int32_t kCudaMaxBlocksNum = 4096;
 
