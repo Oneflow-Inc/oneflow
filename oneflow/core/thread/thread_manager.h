@@ -17,9 +17,6 @@ class ThreadMgr final {
 
   Thread* GetThrd(int64_t thrd_loc_id);
 
-  void ForEachThread(std::function<void(Thread*)>);
-  void ClearAllThread() { threads_.clear(); }
-
  private:
   ThreadMgr();
 

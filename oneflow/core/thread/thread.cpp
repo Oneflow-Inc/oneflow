@@ -34,4 +34,12 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
   }
 }
 
+void Thread::Deconstruct() {
+  actor_thread_.join();
+  CHECK(id2task_.empty());
+  msg_channel_.CloseSendEnd();
+  msg_channel_.CloseReceiveEnd();
+  CHECK(id2actor_ptr_.empty());
+}
+
 }  // namespace oneflow
