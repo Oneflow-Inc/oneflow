@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_COMMON_CUDA_STREAM_HANDLE_H_
-#define ONEFLOW_CORE_COMMON_CUDA_STREAM_HANDLE_H_
+#ifndef ONEFLOW_CORE_DEVICE_CUDA_STREAM_HANDLE_H_
+#define ONEFLOW_CORE_DEVICE_CUDA_STREAM_HANDLE_H_
 
 #include "oneflow/core/common/util.h"
 
@@ -24,4 +24,4 @@ class CudaStreamHandle final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_CUDA_STREAM_HANDLE_H_
+#endif  // ONEFLOW_CORE_DEVICE_CUDA_STREAM_HANDLE_H_

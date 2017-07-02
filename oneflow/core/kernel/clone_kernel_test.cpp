@@ -1,7 +1,7 @@
 #include "oneflow/core/kernel/clone_kernel.h"
 #include <random>
-#include "oneflow/core/actor/cpu_device_context.h"
-#include "oneflow/core/actor/cuda_device_context.h"
+#include "oneflow/core/device/cpu_device_context.h"
+#include "oneflow/core/device/cuda_device_context.h"
 
 namespace oneflow {
 
@@ -48,7 +48,7 @@ template<typename FloatingPointType>
 Blob* CreateBlobWithSameValue(const std::vector<int64_t>& dim_vec,
                               FloatingPointType value, Location location) {
   Shape* shape = new Shape(dim_vec);
-  FloatingPointType* data_vec = new floating_point_type[shape->elem_cnt()];
+  FloatingPointType* data_vec = new FloatingPointType[shape->elem_cnt()];
   std::fill(data_vec, data_vec + shape->elem_cnt(), value);
   return CreateBlob<FloatingPointType>(dim_vec, data_vec, location);
 }
@@ -60,7 +60,7 @@ Blob* CreateBlobWithRandomValue(const std::vector<int64_t>& dim_vec,
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_real_distribution<FloatingPointType> dis(0, 10);
-  FloatingPointType* data_vec = new floating_point_type[shape->elem_cnt()];
+  FloatingPointType* data_vec = new FloatingPointType[shape->elem_cnt()];
   for (int64_t i = 0; i != shape->elem_cnt(); ++i) { data_vec[i] = dis(gen); }
   return CreateBlob<FloatingPointType>(dim_vec, data_vec, location);
 }
@@ -136,7 +136,7 @@ void InitBn2BlobPtr(HashMap<std::string, Blob*>& bn2blob_ptr,
 template<typename FloatingPointType>
 void CPUStreamExec(int out_num, std::function<Blob*(const std::string&)> fp) {
   KernelCtx ctx;
-  ctx.device_ctx = new CpuDeviceCtx(new Channel<std::function<void()>>);
+  ctx.device_ctx = new CpuDeviceCtx(new CpuStream);
   auto clone_kernel = ConstructCloneKernel<DeviceType::kCPU, FloatingPointType>(
       out_num, "clone_kernel_test");
 
@@ -147,7 +147,7 @@ void CPUStreamExec(int out_num, std::function<Blob*(const std::string&)> fp) {
     std::function<void()> work;
     // Both Forward and Backward receive out_num times
     for (int i = 0; i < out_num * 2; ++i) {
-      if (ctx.device_ctx->cpu_stream()->Receive(&work) == 0) { work(); }
+      if (ctx.device_ctx->cpu_stream()->ReceiveWork(&work) == 0) { work(); }
     }
   });
   cpu_thread.join();

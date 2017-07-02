@@ -5,7 +5,7 @@ namespace oneflow {
 CpuThread::CpuThread() {
   cpu_device_ = std::thread([this]() {
     std::function<void()> work;
-    while (cpu_stream_.Receive(&work) == 0) { work(); }
+    while (cpu_stream_.ReceiveWork(&work) == 0) { work(); }
   });
   mut_actor_thread() = std::thread([this]() {
     ThreadCtx ctx;

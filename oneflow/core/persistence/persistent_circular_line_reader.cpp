@@ -13,7 +13,7 @@ PersistentCircularLineReader::PersistentCircularLineReader(
 void PersistentCircularLineReader::ReadLine(std::string* line) {
   tensorflow::Status status = in_->ReadLine(line);
   if (status.code() == tensorflow::error::OUT_OF_RANGE) {
-    in_->Seek(0);
+    TF_CHECK_OK(in_->Seek(0));
     status = in_->ReadLine(line);
   }
   TF_CHECK_OK(status);

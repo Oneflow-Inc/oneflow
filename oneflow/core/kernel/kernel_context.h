@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_KERNEL_KERNEL_CONTEXT_H_
 #define ONEFLOW_CORE_KERNEL_KERNEL_CONTEXT_H_
 
-#include "oneflow/core/actor/device_context.h"
+#include "oneflow/core/device/device_context.h"
 
 namespace oneflow {
 
