@@ -33,13 +33,11 @@ Blob* CreateBlob(const std::vector<int64_t>& dim_vec,
 
   size_t dptr_size = shape->elem_cnt() * sizeof(FloatingPointType);
   if (location == Location::kHost) {
-    CHECK_EQ(cudaMallocHost(&dptr, dptr_size), cudaSuccess);
-    CHECK_EQ(cudaMemcpy(dptr, data_vec, dptr_size, cudaMemcpyHostToHost),
-             cudaSuccess);
+    CudaCheck(cudaMallocHost(&dptr, dptr_size));
+    CudaCheck(cudaMemcpy(dptr, data_vec, dptr_size, cudaMemcpyHostToHost));
   } else {
-    CHECK_EQ(cudaMalloc(&dptr, dptr_size), cudaSuccess);
-    CHECK_EQ(cudaMemcpy(dptr, data_vec, dptr_size, cudaMemcpyHostToDevice),
-             cudaSuccess);
+    CudaCheck(cudaMalloc(&dptr, dptr_size));
+    CudaCheck(cudaMemcpy(dptr, data_vec, dptr_size, cudaMemcpyHostToDevice));
   }
   return new Blob(dptr, shape);
 }
@@ -156,7 +154,7 @@ void CPUStreamExec(int out_num, std::function<Blob*(const std::string&)> fp) {
 template<typename FloatingPointType>
 void GPUStreamExec(int out_num, std::function<Blob*(const std::string&)> fp) {
   cudaStream_t cuda_stream;
-  CHECK_EQ(cudaStreamCreate(&cuda_stream), cudaSuccess);
+  CudaCheck(cudaStreamCreate(&cuda_stream));
   cublasHandle_t cublas_handle;
   CHECK_EQ(cublasCreate(&cublas_handle), CUBLAS_STATUS_SUCCESS);
   KernelCtx ctx;
@@ -167,12 +165,12 @@ void GPUStreamExec(int out_num, std::function<Blob*(const std::string&)> fp) {
   clone_kernel->Forward(ctx, fp);
   clone_kernel->Backward(ctx, fp);
 
-  CHECK_EQ(cudaStreamSynchronize(ctx.device_ctx->cuda_stream()), cudaSuccess);
+  CudaCheck(cudaStreamSynchronize(ctx.device_ctx->cuda_stream()));
 }
 
 void* GetMemcpyDeviceToHost(const void* src, size_t count) {
   void* dst = malloc(count);
-  CHECK_EQ(cudaMemcpy(dst, src, count, cudaMemcpyDeviceToHost), cudaSuccess);
+  CudaCheck(cudaMemcpy(dst, src, count, cudaMemcpyDeviceToHost));
   return dst;
 }
 

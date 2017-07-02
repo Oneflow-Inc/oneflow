@@ -14,11 +14,11 @@ Blob* CreateBlob(const std::vector<int64_t>& dim_vec, int value,
 
   size_t dptr_size = shape->elem_cnt() * sizeof(float);
   if (dptr_location == Location::kHost) {
-    CHECK_EQ(cudaMallocHost(&dptr, dptr_size), cudaSuccess);
+    CudaCheck(cudaMallocHost(&dptr, dptr_size));
     memset(dptr, value, dptr_size);
   } else {
-    CHECK_EQ(cudaMalloc(&dptr, dptr_size), cudaSuccess);
-    CHECK_EQ(cudaMemset(dptr, value, dptr_size), cudaSuccess);
+    CudaCheck(cudaMalloc(&dptr, dptr_size));
+    CudaCheck(cudaMemset(dptr, value, dptr_size));
   }
 
   return new Blob(dptr, shape);
@@ -50,7 +50,7 @@ TEST(CopyHdKernel, copy_h2d_3x4x5x6) {
 
   // Create CudaDeviceContext and KernelContext
   cudaStream_t cuda_stream;
-  CHECK_EQ(cudaStreamCreate(&cuda_stream), cudaSuccess);
+  CudaCheck(cudaStreamCreate(&cuda_stream));
   KernelCtx ctx;
   ctx.device_ctx = new CudaDeviceCtx(&cuda_stream, nullptr, nullptr);
 
@@ -71,7 +71,7 @@ TEST(CopyHdKernel, copy_h2d_3x4x5x6) {
   copy_h2d_kernel->Forward(ctx, fp);
   // out_diff(blob_device) -> in_diff(expected_blob_host)
   copy_h2d_kernel->Backward(ctx, fp);
-  CHECK_EQ(cudaStreamSynchronize(cuda_stream), cudaSuccess);
+  CudaCheck(cudaStreamSynchronize(cuda_stream));
 
   ASSERT_EQ(memcmp(blob_host->dptr(), expected_blob_host->dptr(),
                    blob_host->shape().elem_cnt() * sizeof(float)),
@@ -92,7 +92,7 @@ TEST(CopyHdKernel, copy_d2h_4x5x6x7) {
 
   // Create CudaDeviceContext and KernelContext
   cudaStream_t cuda_stream;
-  CHECK_EQ(cudaStreamCreate(&cuda_stream), cudaSuccess);
+  CudaCheck(cudaStreamCreate(&cuda_stream));
   KernelCtx ctx;
   ctx.device_ctx = new CudaDeviceCtx(&cuda_stream, nullptr, nullptr);
 
@@ -114,18 +114,16 @@ TEST(CopyHdKernel, copy_d2h_4x5x6x7) {
   copy_d2h_kernel->Forward(ctx, fp);
   // out_diff(blob_host) -> in_diff(expected_blob_device)
   copy_d2h_kernel->Backward(ctx, fp);
-  CHECK_EQ(cudaStreamSynchronize(cuda_stream), cudaSuccess);
+  CudaCheck(cudaStreamSynchronize(cuda_stream));
 
   // Copy blob_device and expected_blob_device to host for check.
-  CHECK_EQ(cudaMemcpy(blob_device_copy->mut_dptr(), blob_device->dptr(),
-                      blob_device->shape().elem_cnt() * sizeof(float),
-                      cudaMemcpyDeviceToHost),
-           cudaSuccess);
-  CHECK_EQ(cudaMemcpy(expected_blob_device_copy->mut_dptr(),
-                      expected_blob_device->dptr(),
-                      expected_blob_device->shape().elem_cnt() * sizeof(float),
-                      cudaMemcpyDeviceToHost),
-           cudaSuccess);
+  CudaCheck(cudaMemcpy(blob_device_copy->mut_dptr(), blob_device->dptr(),
+                       blob_device->shape().elem_cnt() * sizeof(float),
+                       cudaMemcpyDeviceToHost));
+  CudaCheck(cudaMemcpy(expected_blob_device_copy->mut_dptr(),
+                       expected_blob_device->dptr(),
+                       expected_blob_device->shape().elem_cnt() * sizeof(float),
+                       cudaMemcpyDeviceToHost));
 
   ASSERT_EQ(memcmp(blob_device_copy->dptr(), expected_blob_device_copy->dptr(),
                    blob_device_copy->shape().elem_cnt() * sizeof(float)),
