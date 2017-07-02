@@ -32,7 +32,6 @@ class ReluKernelUtil<DeviceType::kGPU, FloatingPointType> final {
     ReluForwardGpu<FloatingPointType>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
            ctx.device_ctx->cuda_stream()>>>(n, in, out);
-    CudaPostKernelCheck();
   }
 
   static void Backward(const KernelCtx& ctx, const int64_t n,
@@ -42,7 +41,6 @@ class ReluKernelUtil<DeviceType::kGPU, FloatingPointType> final {
     ReluBackwardGpu<FloatingPointType>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
            ctx.device_ctx->cuda_stream()>>>(n, out_diff, in, in_diff);
-    CudaPostKernelCheck();
   }
 };
 

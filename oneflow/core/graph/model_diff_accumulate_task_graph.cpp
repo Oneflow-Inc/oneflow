@@ -19,7 +19,7 @@ void MdDiffAccTaskGraph::BuildTaskGraph(const ChainNode* data_chain) {
   OperatorConf op_conf;
   op_conf.set_name("model_diff_acc_" + NewUniqueId());
   op_conf.mutable_model_diff_acc_conf();
-  auto model_diff_acc_op = OpMgr::Singleton().ConstructOp(op_conf);
+  auto model_diff_acc_op = OpMgr::Singleton()->ConstructOp(op_conf);
   // ModelDiffAccChain
   auto chain_gph = of_make_unique<ChainGraph>();
   ChainNode* diff_acc_chain = chain_gph->NewNode();

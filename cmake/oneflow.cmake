@@ -49,7 +49,8 @@ include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
 cuda_add_library(of_ccobj ${of_all_obj_cc})
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})
-add_dependencies(of_ccobj of_protoobj of_format)
+add_dependencies(of_ccobj of_protoobj)
+add_dependencies(of_ccobj of_format)
 
 if(APPLE)
   set(of_libs -Wl,-force_load of_ccobj of_protoobj)

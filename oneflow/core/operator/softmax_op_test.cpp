@@ -9,7 +9,7 @@ TEST(SoftmaxOp, softmax_3x4x5) {
   op_conf.mutable_softmax_conf()->set_axis(1);
   op_conf.mutable_softmax_conf()->set_in("softmax/in");
   op_conf.mutable_softmax_conf()->set_out("softmax/out");
-  auto softmax_op = OpMgr::Singleton().ConstructOp(op_conf);
+  auto softmax_op = OpMgr::Singleton()->ConstructOp(op_conf);
   HashMap<std::string, Shape*> bn2shape_ptr{
       {softmax_op->SoleIbn(), new Shape({3, 4, 5})},
       {softmax_op->SoleObn(), new Shape}};

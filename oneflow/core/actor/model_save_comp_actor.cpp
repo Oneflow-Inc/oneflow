@@ -20,12 +20,12 @@ int MdSaveCompActor::HandleSaveModel(const ActorMsg& actor_msg) {
     std::shared_ptr<RegstWarpper> regst_warpper = actor_msg.regst_warpper();
     int64_t model_version_id = regst_warpper->model_version_id();
     int32_t num_of_batches_in_snapshot =
-        JobDesc::Singleton().num_of_batches_in_snapshot();
+        JobDesc::Singleton()->num_of_batches_in_snapshot();
     CHECK_GT(num_of_batches_in_snapshot, 0);
     if (model_version_id % num_of_batches_in_snapshot == 0) {
       int64_t snapshot_id = model_version_id / num_of_batches_in_snapshot;
       Snapshot* snapshot =
-          SnapshotMgr::Singleton().GetWriteableSnapshot(snapshot_id);
+          SnapshotMgr::Singleton()->GetWriteableSnapshot(snapshot_id);
       KernelCtx kernel_ctx = GenDefaultKernelCtx();
       std::tuple<Snapshot*, int64_t> save_ctx =
           std::make_tuple(snapshot, parallel_id());
@@ -39,7 +39,7 @@ int MdSaveCompActor::HandleSaveModel(const ActorMsg& actor_msg) {
     }
     ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(
         regst_warpper->producer_actor_id(), regst_warpper->regst_raw_ptr());
-    AsyncDo([msg]() { ActorMsgBus::Singleton().SendMsg(msg); });
+    AsyncDo([msg]() { ActorMsgBus::Singleton()->SendMsg(msg); });
   } else {
     UNEXPECTED_RUN();
   }

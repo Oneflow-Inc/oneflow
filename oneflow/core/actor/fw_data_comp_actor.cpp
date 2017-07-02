@@ -40,9 +40,9 @@ bool FwDataCompActor::IsReadReady() {
   if (model_regst_desc_id_ != -1) {
     // Ho Q, Cipar J, Cui H, et al. More effective distributed ml via a stale
     // synchronous parallel parameter server
-    int32_t staleness = JobDesc::Singleton().staleness();
+    int32_t staleness = JobDesc::Singleton()->staleness();
     int32_t num_of_piece_in_batch =
-        JobDesc::Singleton().num_of_piece_in_batch();
+        JobDesc::Singleton()->num_of_piece_in_batch();
     int64_t cur_iteration = in_.front()->piece_id() / num_of_piece_in_batch;
     int64_t stale_version = cur_iteration - staleness;
     return model_regst_->model_version_id() >= stale_version;
@@ -91,7 +91,7 @@ int FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
            0);
   TryWardKernelAndSendMsg();
-  int total_piece_num = JobDesc::Singleton().total_piece_num();
+  int total_piece_num = JobDesc::Singleton()->total_piece_num();
   if ((in_desc_id_ != -1 && in_.empty())
       || expected_piece_id() == total_piece_num) {
     if (model_regst_desc_id_ != -1) {

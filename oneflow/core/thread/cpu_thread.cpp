@@ -15,6 +15,7 @@ CpuThread::CpuThread() {
 }
 
 CpuThread::~CpuThread() {
+  Thread::Deconstruct();
   cpu_stream_.CloseSendEnd();
   cpu_device_.join();
   cpu_stream_.CloseReceiveEnd();
