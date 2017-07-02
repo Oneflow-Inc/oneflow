@@ -20,8 +20,8 @@ inline void CudaPostKernelCheck() { CudaCheck(cudaPeekAtLastError()); }
 const int32_t kCudaThreadsNumPerBlock = 512;
 const int32_t kCudaMaxBlocksNum = 4096;
 
-inline int32_t BlocksNum4ThreadsNum(const int32_t N) {
-  return std::min((N + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock,
+inline int32_t BlocksNum4ThreadsNum(const int32_t n) {
+  return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock,
                   kCudaMaxBlocksNum);
 }
 
