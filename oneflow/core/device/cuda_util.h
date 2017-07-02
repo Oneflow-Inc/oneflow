@@ -1,13 +1,17 @@
 #ifndef ONEFLOW_CORE_DEVICE_CUDA_UTIL_H_
 #define ONEFLOW_CORE_DEVICE_CUDA_UTIL_H_
 
+#include "cublas_v2.h"
+#include "cuda.h"
+#include "cuda_runtime.h"
+#include "cudnn.h"
+#include "curand.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
-inline void CudaCheck(cudaError_t error) {
-  CHECK_EQ(error, cudaSuccess) << " " << cudaGetErrorString(error);
-}
+template<typename T>
+void CudaCheck(T error);
 
 // CUDA: grid stride looping
 #define CUDA_1D_KERNEL_LOOP(i, n)                                  \

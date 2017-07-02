@@ -48,9 +48,8 @@ class KernelTestCommon<DeviceType::kGPU, FloatingPointType> final {
     cudaStream_t* cuda_stream = new cudaStream_t;
     cublasHandle_t* cublas_handle = new cublasHandle_t;
     CudaCheck(cudaStreamCreate(cuda_stream));
-    CHECK_EQ(cublasCreate(cublas_handle), CUBLAS_STATUS_SUCCESS);
-    CHECK_EQ(cublasSetStream(*cublas_handle, *cuda_stream),
-             CUBLAS_STATUS_SUCCESS);
+    CudaCheck(cublasCreate(cublas_handle));
+    CudaCheck(cublasSetStream(*cublas_handle, *cuda_stream));
     ctx->device_ctx = new CudaDeviceCtx(cuda_stream, cublas_handle, nullptr);
   }
 
@@ -84,7 +83,6 @@ class KernelTestCommon<DeviceType::kGPU, FloatingPointType> final {
   }
 };
 
-char gInstantiationGuardGPUKernelTestCommon;
 template class KernelTestCommon<DeviceType::kGPU, float>;
 template class KernelTestCommon<DeviceType::kGPU, double>;
 

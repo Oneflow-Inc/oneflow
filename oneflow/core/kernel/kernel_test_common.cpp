@@ -78,7 +78,6 @@ class KernelTestCommon<DeviceType::kCPU, FloatingPointType> final {
   }
 };
 
-char gInstantiationGuardCPUKernelTestCommon;
 template class KernelTestCommon<DeviceType::kCPU, float>;
 template class KernelTestCommon<DeviceType::kCPU, double>;
 
