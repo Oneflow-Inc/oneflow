@@ -10,13 +10,6 @@ namespace test {
 
 template<DeviceType device_type, typename FloatingPointType>
 std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
-  Location loc;
-  if (device_type == DeviceType::kCPU) {
-    loc = Location::kHost;
-  } else {
-    loc = Location::kDevice;
-  }
-
   std::vector<int64_t> dim_vec = {2, 4};
   FloatingPointType diff_data[] = {1, 2, 3, 4, 5, 6, 7, 8};
   FloatingPointType diff_acc_data[] = {5, 3, 2, 1, 7, 0, 1, 1};
@@ -26,11 +19,14 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
 
   (*bn2blob_ptr)["model_diff"] =
-      CreateBlobWithVector<FloatingPointType>(dim_vec, diff_data, loc);
+      KernelTestCommon<device_type, FloatingPointType>::CreateBlobWithVector(
+          dim_vec, diff_data);
   (*bn2blob_ptr)["model_diff_acc"] =
-      CreateBlobWithVector<FloatingPointType>(dim_vec, diff_acc_data, loc);
+      KernelTestCommon<device_type, FloatingPointType>::CreateBlobWithVector(
+          dim_vec, diff_acc_data);
   (*bn2blob_ptr)["expected_acc"] =
-      CreateBlobWithVector<FloatingPointType>(dim_vec, expected_data, loc);
+      KernelTestCommon<device_type, FloatingPointType>::CreateBlobWithVector(
+          dim_vec, expected_data);
   return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
 }
 
@@ -54,7 +50,7 @@ Kernel* BuildMdDiffAccKernel() {
 template<DeviceType device_type, typename FloatingPointType>
 void TestMdDiffAccKernel() {
   KernelCtx ctx;
-  BuildKernelCtx<device_type>(&ctx);
+  KernelTestCommon<device_type, FloatingPointType>::BuildKernelCtx(&ctx);
 
   auto BnInOp2BlobPtr = BuildBnInOp2BlobPtr<device_type, FloatingPointType>();
 
@@ -62,17 +58,10 @@ void TestMdDiffAccKernel() {
       BuildMdDiffAccKernel<device_type, FloatingPointType>();
 
   model_diff_acc_kernel->Forward(ctx, BnInOp2BlobPtr);
-  SyncStream<device_type>(&ctx);
+  KernelTestCommon<device_type, FloatingPointType>::SyncStream(&ctx);
 
-  if (device_type == DeviceType::kCPU) {
-    CheckResult<FloatingPointType>(BnInOp2BlobPtr, "model_diff_acc",
-                                   "expected_acc",
-                                   BlobCmpCpu<FloatingPointType>);
-  } else {
-    CheckResult<FloatingPointType>(BnInOp2BlobPtr, "model_diff_acc",
-                                   "expected_acc",
-                                   BlobCmpGpu<FloatingPointType>);
-  }
+  KernelTestCommon<device_type, FloatingPointType>::CheckResult(
+      BnInOp2BlobPtr, "model_diff_acc", "expected_acc");
 }
 }  // namespace test
 

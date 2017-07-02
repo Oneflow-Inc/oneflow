@@ -15,19 +15,31 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
 
   if (hd_type == CopyHdOpConf::H2D) {
     (*bn2blob_ptr)["in"] =
-        CreateBlobWithSameValue<FloatingPointType>(dim_vec, 1, Location::kHost);
-    (*bn2blob_ptr)["out"] = CreateBlobWithSameValue<FloatingPointType>(
-        dim_vec, 2, Location::kDevice);
+        KernelTestCommon<DeviceType::kCPU,
+                         FloatingPointType>::CreateBlobWithSameValue(dim_vec,
+                                                                     1);
+    (*bn2blob_ptr)["out"] =
+        KernelTestCommon<DeviceType::kGPU,
+                         FloatingPointType>::CreateBlobWithSameValue(dim_vec,
+                                                                     2);
     (*bn2blob_ptr)["in_diff"] =
-        CreateBlobWithSameValue<FloatingPointType>(dim_vec, 3, Location::kHost);
+        KernelTestCommon<DeviceType::kCPU,
+                         FloatingPointType>::CreateBlobWithSameValue(dim_vec,
+                                                                     3);
     (*bn2blob_ptr)["out_diff"] = (*bn2blob_ptr)["out"];
   } else {
-    (*bn2blob_ptr)["in"] = CreateBlobWithSameValue<FloatingPointType>(
-        dim_vec, 1, Location::kDevice);
+    (*bn2blob_ptr)["in"] =
+        KernelTestCommon<DeviceType::kGPU,
+                         FloatingPointType>::CreateBlobWithSameValue(dim_vec,
+                                                                     1);
     (*bn2blob_ptr)["out"] =
-        CreateBlobWithSameValue<FloatingPointType>(dim_vec, 2, Location::kHost);
-    (*bn2blob_ptr)["in_diff"] = CreateBlobWithSameValue<FloatingPointType>(
-        dim_vec, 3, Location::kDevice);
+        KernelTestCommon<DeviceType::kCPU,
+                         FloatingPointType>::CreateBlobWithSameValue(dim_vec,
+                                                                     2);
+    (*bn2blob_ptr)["in_diff"] =
+        KernelTestCommon<DeviceType::kGPU,
+                         FloatingPointType>::CreateBlobWithSameValue(dim_vec,
+                                                                     3);
     (*bn2blob_ptr)["out_diff"] = (*bn2blob_ptr)["out"];
   }
   return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
@@ -51,7 +63,7 @@ Kernel* BuildCopyHdKernel(CopyHdOpConf::Type hd_type) {
 template<typename FloatingPointType>
 void TestCopyHdKernel(CopyHdOpConf::Type hd_type) {
   KernelCtx ctx;
-  BuildKernelCtx<DeviceType::kGPU>(&ctx);
+  KernelTestCommon<DeviceType::kGPU, FloatingPointType>::BuildKernelCtx(&ctx);
 
   auto BnInOp2BlobPtr = BuildBnInOp2BlobPtr<FloatingPointType>(hd_type);
 
@@ -59,14 +71,14 @@ void TestCopyHdKernel(CopyHdOpConf::Type hd_type) {
 
   copy_hd_kernel->Forward(ctx, BnInOp2BlobPtr);
   copy_hd_kernel->Backward(ctx, BnInOp2BlobPtr);
-  SyncStream<DeviceType::kGPU>(&ctx);
+  KernelTestCommon<DeviceType::kGPU, FloatingPointType>::SyncStream(&ctx);
 
   if (hd_type == CopyHdOpConf::H2D) {
-    CheckResult<FloatingPointType>(BnInOp2BlobPtr, "in", "in_diff",
-                                   BlobCmpCpu<FloatingPointType>);
+    KernelTestCommon<DeviceType::kCPU, FloatingPointType>::CheckResult(
+        BnInOp2BlobPtr, "in", "in_diff");
   } else {
-    CheckResult<FloatingPointType>(BnInOp2BlobPtr, "in", "in_diff",
-                                   BlobCmpGpu<FloatingPointType>);
+    KernelTestCommon<DeviceType::kGPU, FloatingPointType>::CheckResult(
+        BnInOp2BlobPtr, "in", "in_diff");
   }
 }
 }  // namespace test
