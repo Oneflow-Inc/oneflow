@@ -17,13 +17,11 @@ Blob* CreateBlob(const std::vector<int64_t>& dim_vec,
 
   size_t dptr_size = shape->elem_cnt() * sizeof(FloatingPointType);
   if (mem_location == Location::kHost) {
-    CHECK_EQ(cudaMallocHost(&dptr, dptr_size), cudaSuccess);
-    CHECK_EQ(cudaMemcpy(dptr, data_vec, dptr_size, cudaMemcpyHostToHost),
-             cudaSuccess);
+    CudaCheck(cudaMallocHost(&dptr, dptr_size));
+    CudaCheck(cudaMemcpy(dptr, data_vec, dptr_size, cudaMemcpyHostToHost));
   } else {
-    CHECK_EQ(cudaMalloc(&dptr, dptr_size), cudaSuccess);
-    CHECK_EQ(cudaMemcpy(dptr, data_vec, dptr_size, cudaMemcpyHostToDevice),
-             cudaSuccess);
+    CudaCheck(cudaMalloc(&dptr, dptr_size));
+    CudaCheck(cudaMemcpy(dptr, data_vec, dptr_size, cudaMemcpyHostToDevice));
   }
 
   return new Blob(dptr, shape);
@@ -68,7 +66,7 @@ template<>
 void BuildKernelCtx<DeviceType::kGPU>(KernelCtx* ctx) {
   cudaStream_t* cuda_stream = new cudaStream_t;
   cublasHandle_t* cublas_handle = new cublasHandle_t;
-  CHECK_EQ(cudaStreamCreate(cuda_stream), cudaSuccess);
+  CudaCheck(cudaStreamCreate(cuda_stream));
   CHECK_EQ(cublasCreate(cublas_handle), CUBLAS_STATUS_SUCCESS);
   CHECK_EQ(cublasSetStream(*cublas_handle, *cuda_stream),
            CUBLAS_STATUS_SUCCESS);
@@ -108,7 +106,7 @@ void SyncStream<DeviceType::kCPU>(KernelCtx* ctx) {
 
 template<>
 void SyncStream<DeviceType::kGPU>(KernelCtx* ctx) {
-  CHECK_EQ(cudaStreamSynchronize(ctx->device_ctx->cuda_stream()), cudaSuccess);
+  CudaCheck(cudaStreamSynchronize(ctx->device_ctx->cuda_stream()));
 }
 
 template<typename FloatingPointType>

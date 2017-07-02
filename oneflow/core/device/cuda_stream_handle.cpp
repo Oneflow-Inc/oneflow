@@ -1,11 +1,12 @@
 #include "oneflow/core/device/cuda_stream_handle.h"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
 const cudaStream_t* CudaStreamHandle::cuda_stream() {
   if (!cuda_stream_) {
     cuda_stream_.reset(new cudaStream_t);
-    CHECK_EQ(cudaStreamCreate(cuda_stream_.get()), 0);
+    CudaCheck(cudaStreamCreate(cuda_stream_.get()));
   }
   return cuda_stream_.get();
 }
@@ -31,7 +32,7 @@ const cudnnHandle_t* CudaStreamHandle::cudnn_handle() {
 CudaStreamHandle::~CudaStreamHandle() {
   if (cudnn_handle_) { CHECK_EQ(cudnnDestroy(*cudnn_handle_), 0); }
   if (cublas_handle_) { CHECK_EQ(cublasDestroy(*cublas_handle_), 0); }
-  if (cuda_stream_) { CHECK_EQ(cudaStreamDestroy(*cuda_stream_), 0); }
+  if (cuda_stream_) { CudaCheck(cudaStreamDestroy(*cuda_stream_)); }
 }
 
 }  // namespace oneflow

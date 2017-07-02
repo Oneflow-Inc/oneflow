@@ -45,7 +45,7 @@ class Runtime final {
     LOG(INFO) << "InitModel on all machine done";
     SendCmdMsg(mdupdt_tasks, ActorCmd::kSendInitialModel);
     SendCmdMsg(source_tasks, ActorCmd::kStart);
-    delete ThreadMgr::Singleton();
+    DeleteSingleton();
   }
 
  private:
@@ -55,6 +55,14 @@ class Runtime final {
     IDMgr::Singleton()->InitFromResource(JobDesc::Singleton()->resource());
     RuntimeCtx::Singleton()->set_this_machine_name(this_machine_name);
     KernelMgr::Singleton()->InitFromPlan(plan);
+    SnapshotMgr::Singleton()->Init();
+    ActorMsgBus::Singleton()->Init();
+    ThreadMgr::Singleton();
+  }
+  void DeleteSingleton() {
+    delete ThreadMgr::Singleton();
+    delete ActorMsgBus::Singleton();
+    delete SnapshotMgr::Singleton();
   }
   void HandoutTasks(const std::vector<const TaskProto*>& tasks) {
     for (const TaskProto* task : tasks) {
