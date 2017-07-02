@@ -3,38 +3,6 @@
 
 namespace oneflow {
 
-namespace {
-
-template<typename FloatingPointType>
-void Split2FloatingPoint(const std::string&, const char,
-                         std::vector<FloatingPointType>&);
-
-template<>
-void Split2FloatingPoint(const std::string& line, const char comma,
-                         std::vector<float>& datas) {
-  std::stringstream ss(line);
-
-  while (ss.good()) {
-    std::string substr;
-    std::getline(ss, substr, comma);
-    datas.push_back(std::stof(substr));
-  }
-}
-
-template<>
-void Split2FloatingPoint(const std::string& line, const char comma,
-                         std::vector<double>& datas) {
-  std::stringstream ss(line);
-
-  while (ss.good()) {
-    std::string substr;
-    std::getline(ss, substr, comma);
-    datas.push_back(std::stod(substr));
-  }
-}
-
-}  // namespace
-
 template<typename FloatingPointType>
 class DataLoaderKernel<DeviceType::kCPU, FloatingPointType> final
     : public Kernel {
@@ -66,26 +34,27 @@ void DataLoaderKernel<DeviceType::kCPU, FloatingPointType>::Forward(
   }
   Blob* label_blob = BnInOp2BlobPtr("label");
   Blob* feature_blob = BnInOp2BlobPtr("feature");
-
   size_t piece_size = label_blob->shape().elem_cnt();
-  FloatingPointType* label_dptr =
-      static_cast<FloatingPointType*>(label_blob->mut_dptr());
-  FloatingPointType* feature_dptr =
-      static_cast<FloatingPointType*>(feature_blob->mut_dptr());
 
   kernel_ctx.device_ctx->cpu_stream()->SendWork([=]() {
-    int64_t feature_idx = 0;
-    int64_t label_idx = 0;
-
+    FloatingPointType* label_dptr =
+        static_cast<FloatingPointType*>(label_blob->mut_dptr());
+    FloatingPointType* feature_dptr =
+        static_cast<FloatingPointType*>(feature_blob->mut_dptr());
+    std::string line;
+    bool is_new_line;
     for (size_t i = 0; i != piece_size; ++i) {
-      std::string line;
-      std::vector<FloatingPointType> datas;
+      is_new_line = true;
       reader->ReadLine(&line);
-      Split2FloatingPoint<FloatingPointType>(line, ',', datas);
-      label_dptr[label_idx++] = datas[0];
-      for (size_t j = 1; j != datas.size(); ++j) {
-        feature_dptr[feature_idx++] = datas[j];
-      }
+      SplitAndParseAs<FloatingPointType>(line, ",",
+                                         [&](FloatingPointType data) {
+                                           if (is_new_line) {
+                                             *label_dptr++ = data;
+                                             is_new_line = false;
+                                             return;
+                                           }
+                                           *feature_dptr++ = data;
+                                         });
     }
   });
 }
