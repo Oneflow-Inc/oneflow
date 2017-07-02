@@ -28,8 +28,6 @@ void BoxingKernel<device_type, FloatingPointType>::InferCopyRules(
     // concat-box copy rules: copy directly from input to output
     InferCopyRulesFromBns(BnInOp2Blob, op()->input_bns(), op()->output_bns(),
                           &fw_copy_rules_);
-  } else {
-    // do nothing
   }
   if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
     InferFwCloneRules(BnInOp2Blob);
@@ -50,7 +48,7 @@ void BoxingKernel<device_type, FloatingPointType>::InferCopyRules(
     InferCopyRulesFromBns(BnInOp2Blob, {"middle"}, op()->input_diff_bns(),
                           &bw_copy_rules_);
   } else {
-    // do nothing
+    UNEXPECTED_RUN();
   }
 }
 
