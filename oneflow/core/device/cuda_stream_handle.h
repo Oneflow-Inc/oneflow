@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_DEVICE_CUDA_STREAM_HANDLE_H_
 #define ONEFLOW_CORE_DEVICE_CUDA_STREAM_HANDLE_H_
 
-#include "oneflow/core/common/util.h"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 

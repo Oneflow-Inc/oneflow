@@ -156,7 +156,7 @@ void GPUStreamExec(int out_num, std::function<Blob*(const std::string&)> fp) {
   cudaStream_t cuda_stream;
   CudaCheck(cudaStreamCreate(&cuda_stream));
   cublasHandle_t cublas_handle;
-  CHECK_EQ(cublasCreate(&cublas_handle), CUBLAS_STATUS_SUCCESS);
+  CudaCheck(cublasCreate(&cublas_handle));
   KernelCtx ctx;
   ctx.device_ctx = new CudaDeviceCtx(&cuda_stream, &cublas_handle, nullptr);
   auto clone_kernel = ConstructCloneKernel<DeviceType::kGPU, FloatingPointType>(

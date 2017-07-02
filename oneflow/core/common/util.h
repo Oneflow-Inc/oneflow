@@ -15,10 +15,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
-#include "cublas_v2.h"
-#include "cuda.h"
-#include "cuda_runtime.h"
-#include "cudnn.h"
 #include "glog/logging.h"
 #include "gtest/gtest.h"
 
