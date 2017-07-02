@@ -72,7 +72,7 @@ Kernel* ConstructCloneKernel(const int out_num, const std::string& lbn) {
   CloneOpConf* clone_conf = op_conf.mutable_clone_conf();
   clone_conf->set_out_num(out_num);
   clone_conf->set_lbn(lbn);
-  auto clone_op = OpMgr::Singleton().ConstructOp(op_conf);
+  auto clone_op = OpMgr::Singleton()->ConstructOp(op_conf);
 
   OperatorProto op_proto;
   clone_op->ToProto(&op_proto);

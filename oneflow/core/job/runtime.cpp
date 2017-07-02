@@ -22,7 +22,7 @@ class Runtime final {
     std::vector<const TaskProto*> source_tasks;
     std::vector<const TaskProto*> other_tasks;
     for (const TaskProto& task : plan.task()) {
-      if (task.machine_id() != RuntimeCtx::Singleton().this_machine_id()) {
+      if (task.machine_id() != RuntimeCtx::Singleton()->this_machine_id()) {
         continue;
       }
       if (task.type() == kMdUpdtCompTask) {
@@ -35,40 +35,38 @@ class Runtime final {
     }
     LOG(INFO) << "InitModel";
     HandoutTasks(mdupdt_tasks);
-    RuntimeCtx::Singleton().SetModelInitCnt(mdupdt_tasks.size());
+    RuntimeCtx::Singleton()->SetModelInitCnt(mdupdt_tasks.size());
     SendCmdMsg(mdupdt_tasks, ActorCmd::kInitializeModel);
     HandoutTasks(source_tasks);
     HandoutTasks(other_tasks);
-    RuntimeCtx::Singleton().WaitUnitlAllModelInitDone();
+    RuntimeCtx::Singleton()->WaitUnitlAllModelInitDone();
     LOG(INFO) << "InitModel on this machine done";
     // TODO: Barrier
     LOG(INFO) << "InitModel on all machine done";
     SendCmdMsg(mdupdt_tasks, ActorCmd::kSendInitialModel);
     SendCmdMsg(source_tasks, ActorCmd::kStart);
-    ThreadMgr::Singleton().ForEachThread(
-        [](Thread* thrd) { thrd->JoinAllActor(); });
-    ThreadMgr::Singleton().ClearAllThread();
+    delete ThreadMgr::Singleton();
   }
 
  private:
   Runtime() = default;
   void InitSingleton(const Plan& plan, const std::string& this_machine_name) {
-    JobDesc::Singleton().InitFromProto(plan.job_desc());
-    IDMgr::Singleton().InitFromResource(JobDesc::Singleton().resource());
-    RuntimeCtx::Singleton().set_this_machine_name(this_machine_name);
-    KernelMgr::Singleton().InitFromPlan(plan);
+    JobDesc::Singleton()->InitFromProto(plan.job_desc());
+    IDMgr::Singleton()->InitFromResource(JobDesc::Singleton()->resource());
+    RuntimeCtx::Singleton()->set_this_machine_name(this_machine_name);
+    KernelMgr::Singleton()->InitFromPlan(plan);
   }
   void HandoutTasks(const std::vector<const TaskProto*>& tasks) {
     for (const TaskProto* task : tasks) {
-      ThreadMgr::Singleton().GetThrd(task->thrd_local_id())->AddTask(*task);
+      ThreadMgr::Singleton()->GetThrd(task->thrd_local_id())->AddTask(*task);
     }
   }
   void SendCmdMsg(const std::vector<const TaskProto*>& tasks, ActorCmd cmd) {
     for (const TaskProto* task : tasks) {
       ActorMsg msg;
-      msg.set_dst_actor_id(IDMgr::Singleton().ActorId4TaskId(task->id()));
+      msg.set_dst_actor_id(IDMgr::Singleton()->ActorId4TaskId(task->id()));
       msg.set_actor_cmd(cmd);
-      ActorMsgBus::Singleton().SendMsg(msg);
+      ActorMsgBus::Singleton()->SendMsg(msg);
     }
   }
 };
@@ -84,7 +82,7 @@ int main(int argc, char** argv) {
   LOG(INFO) << "Runtime Starting Up...";
   oneflow::Plan plan;
   oneflow::ParseProtoFromTextFile(FLAGS_plan_filepath, &plan);
-  oneflow::Runtime::Singleton().Run(plan, FLAGS_this_machine_name);
+  oneflow::Runtime::Singleton()->Run(plan, FLAGS_this_machine_name);
   LOG(INFO) << "Runtime Shutting Down...";
   return 0;
 }

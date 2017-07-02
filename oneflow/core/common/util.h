@@ -40,10 +40,10 @@ namespace oneflow {
 
 #define TODO() LOG(FATAL) << "TODO";
 
-#define OF_SINGLETON(ClassName)   \
-  static ClassName& Singleton() { \
-    static ClassName obj;         \
-    return obj;                   \
+#define OF_SINGLETON(ClassName)            \
+  static ClassName* Singleton() {          \
+    static ClassName* ptr = new ClassName; \
+    return ptr;                            \
   }
 
 template<typename T>

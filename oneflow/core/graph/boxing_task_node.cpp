@@ -133,7 +133,7 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
     box_conf->set_in_num(sorted_in_edges.size());
     box_conf->set_out_num(sorted_out_edges.size());
     CompleteBoxOp(box_conf);
-    return OpMgr::Singleton().ConstructOp(op_conf);
+    return OpMgr::Singleton()->ConstructOp(op_conf);
   };
   // lbns
   std::vector<std::string> lbns = FindLbnsBetween(in_chain, out_chain);

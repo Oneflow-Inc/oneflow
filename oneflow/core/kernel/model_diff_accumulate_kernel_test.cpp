@@ -39,7 +39,7 @@ Kernel* BuildMdDiffAccKernel() {
   OperatorConf op_conf;
   op_conf.set_name("model_diff_acc");
   op_conf.mutable_model_diff_acc_conf();
-  auto model_diff_acc_op = OpMgr::Singleton().ConstructOp(op_conf);
+  auto model_diff_acc_op = OpMgr::Singleton()->ConstructOp(op_conf);
 
   OperatorProto op_proto;
   model_diff_acc_op->ToProto(&op_proto);

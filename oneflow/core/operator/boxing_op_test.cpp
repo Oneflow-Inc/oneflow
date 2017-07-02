@@ -20,7 +20,7 @@ TEST(BoxingOp, box_4_10x5x6x6) {
   // test concat_box shape function
   boxing_conf->mutable_concat_box()->set_axis(1);
   boxing_conf->mutable_data_split_box();
-  auto boxing_op = OpMgr::Singleton().ConstructOp(op_conf);
+  auto boxing_op = OpMgr::Singleton()->ConstructOp(op_conf);
   HashMap<std::string, Shape*> bn2shape_ptr{
       {boxing_op->input_bns()[0], new Shape(input_shape_vec2)},
       {boxing_op->input_bns()[1], new Shape(input_shape_vec2)},
@@ -59,7 +59,7 @@ TEST(BoxingOp, box_4_10x5x6x6) {
   boxing_conf->set_out_num(1);
   boxing_conf->mutable_add_box();
   boxing_conf->mutable_clone_box();
-  boxing_op = OpMgr::Singleton().ConstructOp(op_conf);
+  boxing_op = OpMgr::Singleton()->ConstructOp(op_conf);
 
   // do infer shape
   boxing_op->InferShape4FwBlobs(fp, kModelParallel, 0, 1);

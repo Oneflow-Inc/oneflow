@@ -93,7 +93,7 @@ Kernel* BuildInnerProductKernel(bool has_bias_term) {
   inner_product_conf->set_out("ip_out");
   inner_product_conf->set_out_num(40);
   inner_product_conf->set_has_bias_term(has_bias_term);
-  auto inner_product_op = OpMgr::Singleton().ConstructOp(op_conf);
+  auto inner_product_op = OpMgr::Singleton()->ConstructOp(op_conf);
 
   OperatorProto op_proto;
   inner_product_op->ToProto(&op_proto);

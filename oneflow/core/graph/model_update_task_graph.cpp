@@ -17,7 +17,7 @@ void MdUpdtTaskGraph::BuildTaskGraph() {
   OperatorConf op_conf;
   op_conf.set_name("model_update_" + NewUniqueId());
   op_conf.mutable_model_update_conf();
-  auto model_updt_op = OpMgr::Singleton().ConstructOp(op_conf);
+  auto model_updt_op = OpMgr::Singleton()->ConstructOp(op_conf);
 
   ChainNode* updt_chain = chain_gph->NewNode();
   ParallelConf updt_pr_conf;
