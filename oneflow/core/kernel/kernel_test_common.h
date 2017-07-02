@@ -34,15 +34,6 @@ class KernelTestCommon final {
       const std::string& check, const std::string& expected);
 };
 
-#define INSTANTIATE_CPU_KERNEL_TEST_COMMON_CLASS(classname) \
-  char gInstantiationGuardCPU##classname;                   \
-  template class classname<DeviceType::kCPU, float>;        \
-  template class classname<DeviceType::kCPU, double>;
-#define INSTANTIATE_GPU_KERNEL_TEST_COMMON_CLASS(classname) \
-  char gInstantiationGuardGPU##classname;                   \
-  template class classname<DeviceType::kGPU, float>;        \
-  template class classname<DeviceType::kGPU, double>;
-
 }  // namespace test
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_TEST_COMMON_H_

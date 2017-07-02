@@ -17,9 +17,8 @@ class KernelTestCommon<DeviceType::kGPU, FloatingPointType> final {
     void* dptr;
     Shape* shape = new Shape(dim_vec);
     size_t dptr_size = shape->elem_cnt() * sizeof(FloatingPointType);
-    CHECK_EQ(cudaMalloc(&dptr, dptr_size), cudaSuccess);
-    CHECK_EQ(cudaMemcpy(dptr, data_vec, dptr_size, cudaMemcpyHostToDevice),
-             cudaSuccess);
+    CudaCheck(cudaMalloc(&dptr, dptr_size));
+    CudaCheck(cudaMemcpy(dptr, data_vec, dptr_size, cudaMemcpyHostToDevice));
     return new Blob(dptr, shape);
   }
 
@@ -48,7 +47,7 @@ class KernelTestCommon<DeviceType::kGPU, FloatingPointType> final {
   static void BuildKernelCtx(KernelCtx* ctx) {
     cudaStream_t* cuda_stream = new cudaStream_t;
     cublasHandle_t* cublas_handle = new cublasHandle_t;
-    CHECK_EQ(cudaStreamCreate(cuda_stream), cudaSuccess);
+    CudaCheck(cudaStreamCreate(cuda_stream));
     CHECK_EQ(cublasCreate(cublas_handle), CUBLAS_STATUS_SUCCESS);
     CHECK_EQ(cublasSetStream(*cublas_handle, *cuda_stream),
              CUBLAS_STATUS_SUCCESS);
@@ -56,8 +55,7 @@ class KernelTestCommon<DeviceType::kGPU, FloatingPointType> final {
   }
 
   static void SyncStream(KernelCtx* ctx) {
-    CHECK_EQ(cudaStreamSynchronize(ctx->device_ctx->cuda_stream()),
-             cudaSuccess);
+    CudaCheck(cudaStreamSynchronize(ctx->device_ctx->cuda_stream()));
   }
 
   static void BlobCmp(Blob* lhs, Blob* rhs) {
@@ -85,7 +83,10 @@ class KernelTestCommon<DeviceType::kGPU, FloatingPointType> final {
         BnInOp2BlobPtr(check), BnInOp2BlobPtr(expected));
   }
 };
-INSTANTIATE_GPU_KERNEL_TEST_COMMON_CLASS(KernelTestCommon);
+
+char gInstantiationGuardGPUKernelTestCommon;
+template class KernelTestCommon<DeviceType::kGPU, float>;
+template class KernelTestCommon<DeviceType::kGPU, double>;
 
 }  // namespace test
 }  // namespace oneflow

@@ -17,9 +17,8 @@ class KernelTestCommon<DeviceType::kCPU, FloatingPointType> final {
     void* dptr;
     Shape* shape = new Shape(dim_vec);
     size_t dptr_size = shape->elem_cnt() * sizeof(FloatingPointType);
-    CHECK_EQ(cudaMallocHost(&dptr, dptr_size), cudaSuccess);
-    CHECK_EQ(cudaMemcpy(dptr, data_vec, dptr_size, cudaMemcpyHostToHost),
-             cudaSuccess);
+    CudaCheck(cudaMallocHost(&dptr, dptr_size));
+    CudaCheck(cudaMemcpy(dptr, data_vec, dptr_size, cudaMemcpyHostToHost));
     return new Blob(dptr, shape);
   }
 
@@ -78,7 +77,10 @@ class KernelTestCommon<DeviceType::kCPU, FloatingPointType> final {
         BnInOp2BlobPtr(check), BnInOp2BlobPtr(expected));
   }
 };
-INSTANTIATE_CPU_KERNEL_TEST_COMMON_CLASS(KernelTestCommon);
+
+char gInstantiationGuardCPUKernelTestCommon;
+template class KernelTestCommon<DeviceType::kCPU, float>;
+template class KernelTestCommon<DeviceType::kCPU, double>;
 
 }  // namespace test
 }  // namespace oneflow
