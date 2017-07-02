@@ -47,16 +47,15 @@ class BoxingKernel final : public Kernel {
 
   // Infer copy rules with the assigned src && dst blob names
   void InferCopyRulesFromBns(
-      std::function<Blob*(const std::string&)> BnInOp2BlobPtr,
+      std::function<Blob*(const std::string&)> BnInOp2Blob,
       const std::vector<std::string>& src_bns,
       const std::vector<std::string>& dst_bns,
       std::vector<CopyRule>* copy_rules) const;
 
   // Do direct memory copy from saved rules
-  void CopyDataFromRules(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2BlobPtr,
-      const std::vector<CopyRule>& copy_rules) const;
+  void CopyDataFromRules(const KernelCtx& ctx,
+                         std::function<Blob*(const std::string&)> BnInOp2Blob,
+                         const std::vector<CopyRule>& copy_rules) const;
 
   // Forward && backward will call these functions according to input-box types
   void AddBoxForward(const KernelCtx& ctx,
