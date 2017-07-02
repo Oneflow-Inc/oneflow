@@ -34,17 +34,17 @@ void DataLoaderKernel<DeviceType::kCPU, FloatingPointType>::Forward(
   }
   Blob* label_blob = BnInOp2BlobPtr("label");
   Blob* feature_blob = BnInOp2BlobPtr("feature");
-  size_t piece_size = label_blob->shape().elem_cnt();
 
   kernel_ctx.device_ctx->cpu_stream()->SendWork([=]() {
+    int64_t piece_size = label_blob->shape().elem_cnt();
     FloatingPointType* label_dptr =
         static_cast<FloatingPointType*>(label_blob->mut_dptr());
     FloatingPointType* feature_dptr =
         static_cast<FloatingPointType*>(feature_blob->mut_dptr());
+
     std::string line;
-    bool is_new_line;
-    for (size_t i = 0; i != piece_size; ++i) {
-      is_new_line = true;
+    for (int64_t i = 0; i != piece_size; ++i) {
+      bool is_new_line = true;
       reader->ReadLine(&line);
       SplitAndParseAs<FloatingPointType>(line, ",",
                                          [&](FloatingPointType data) {
