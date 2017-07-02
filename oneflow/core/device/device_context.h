@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_DEVICE_DEVICE_CONTEXT_H_
 
 #include "oneflow/core/device/cpu_stream.h"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
