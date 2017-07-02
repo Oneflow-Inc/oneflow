@@ -245,8 +245,6 @@ void CloneKernelTest(CloneKernelBlobs* ck_blobs, Location location) {
   TestBackward<FloatingPointType>(ck_blobs, location);
 }
 
-}  // namespace
-
 template<typename FloatingPointType>
 void TestRandomData(const std::vector<int64_t> dim_vec, int out_num,
                     Location location) {
@@ -269,6 +267,8 @@ void TestFixedData(const std::vector<int64_t> dim_vec, int out_num,
           dim_vec, out_num, init_value_map, location);
   CloneKernelTest<FloatingPointType>(ck_blobs, location);
 }
+
+}  // namespace
 
 TEST(CloneKernel, random_4x5x6x7) {
   const int out_num = 3;
