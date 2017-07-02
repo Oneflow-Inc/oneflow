@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_THREAD_CPU_THREAD_H_
 #define ONEFLOW_CORE_THREAD_CPU_THREAD_H_
 
+#include "oneflow/core/device/cpu_stream.h"
 #include "oneflow/core/thread/thread.h"
 
 namespace oneflow {
@@ -13,7 +14,7 @@ class CpuThread final : public Thread {
 
  private:
   std::thread cpu_device_;
-  Channel<std::function<void()>> cpu_stream_;
+  CpuStream cpu_stream_;
 };
 
 }  // namespace oneflow

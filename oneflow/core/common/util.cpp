@@ -31,6 +31,20 @@ uint64_t oneflow_cast(const std::string& s) {
   return ret;
 }
 
+template<>
+float oneflow_cast(const std::string& s) {
+  float ret = 0.0f;
+  CHECK(tensorflow::strings::safe_strtof(s.c_str(), &ret));
+  return ret;
+}
+
+template<>
+double oneflow_cast(const std::string& s) {
+  double ret = 0.0;
+  CHECK(tensorflow::strings::safe_strtod(s.c_str(), &ret));
+  return ret;
+}
+
 void Split(const std::string& text, const std::string& delims,
            std::function<void(std::string&&)> Func) {
   size_t token_start = 0;

@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_COMMON_CUDA_UTIL_H_
-#define ONEFLOW_CORE_COMMON_CUDA_UTIL_H_
+#ifndef ONEFLOW_CORE_DEVICE_CUDA_UTIL_H_
+#define ONEFLOW_CORE_DEVICE_CUDA_UTIL_H_
 
 #include "oneflow/core/common/util.h"
 
@@ -14,17 +14,14 @@ inline void CudaCheck(cudaError_t error) {
   for (int32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < (n); \
        i += blockDim.x * gridDim.x)
 
-// CUDA: check for error after kernel execution and exit loudly if there is one.
-inline void CudaPostKernelCheck() { CudaCheck(cudaPeekAtLastError()); }
-
 const int32_t kCudaThreadsNumPerBlock = 512;
 const int32_t kCudaMaxBlocksNum = 4096;
 
-inline int32_t BlocksNum4ThreadsNum(const int32_t N) {
-  return std::min((N + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock,
+inline int32_t BlocksNum4ThreadsNum(const int32_t n) {
+  return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock,
                   kCudaMaxBlocksNum);
 }
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_CUDA_UTIL_H_
+#endif  // ONEFLOW_CORE_DEVICE_CUDA_UTIL_H_

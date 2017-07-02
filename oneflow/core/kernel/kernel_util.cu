@@ -1,3 +1,4 @@
+#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
@@ -91,7 +92,6 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
   }
 };
 
-template class KernelUtil<DeviceType::kGPU, float>;
-template class KernelUtil<DeviceType::kGPU, double>;
+INSTANTIATE_GPU_KERNEL_UTIL_CLASS(KernelUtil);
 
 }  // namespace oneflow

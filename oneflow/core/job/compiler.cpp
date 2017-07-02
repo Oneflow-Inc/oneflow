@@ -17,10 +17,7 @@ class Compiler final {
   OF_DISALLOW_COPY_AND_MOVE(Compiler);
   ~Compiler() = default;
 
-  static Compiler& Singleton() {
-    static Compiler obj;
-    return obj;
-  }
+  OF_SINGLETON(Compiler);
 
   void Compile(const JobConf& job_conf, const std::string& plan_filepath);
 
@@ -65,8 +62,8 @@ void Compiler::ForEachTaskNode(std::function<void(TaskNode*)> func) {
 // TODO: inference "register_num for each register_desc"
 void Compiler::Compile(const JobConf& job_conf,
                        const std::string& plan_filepath) {
-  JobDesc::Singleton().InitFromJobConf(job_conf);
-  IDMgr::Singleton().InitFromResource(JobDesc::Singleton().resource());
+  JobDesc::Singleton()->InitFromJobConf(job_conf);
+  IDMgr::Singleton()->InitFromResource(JobDesc::Singleton()->resource());
   BuildGraphs();
   InferShape4Regsts();
   EraseMeaningLessRegsts();
@@ -78,8 +75,8 @@ void Compiler::BuildGraphs() {
   // data graph
   LOG(INFO) << "Build DataTaskGraph...";
   auto data_task_gph = new DataTaskGraph(
-      "data", JobDesc::Singleton().train_dlnet_conf(),
-      JobDesc::Singleton().strategy(), JobDesc::Singleton().is_train());
+      "data", JobDesc::Singleton()->train_dlnet_conf(),
+      JobDesc::Singleton()->strategy(), JobDesc::Singleton()->is_train());
   ordered_task_gphs_.emplace_back(data_task_gph);
   // construct data_chain2sorted_fw_comp_tasks
   HashMap<const ChainNode*, std::vector<CompTaskNode*>>
@@ -110,7 +107,7 @@ void Compiler::BuildModelGraphs(
   str_replace(&chain_tag, '/', '_');
   ParallelPolicy policy = pair.first->parallel_desc()->policy();
 
-  bool is_train = JobDesc::Singleton().is_train();
+  bool is_train = JobDesc::Singleton()->is_train();
   std::vector<CompTaskNode*> sorted_diff_acc_tasks;
   if (is_train) {
     LOG(INFO) << "Build MdDiffAccTaskGraph... for " << chain_tag;
@@ -172,13 +169,13 @@ void Compiler::GenPlanFile(const std::string& plan_filepath) {
   OperatorConf gpu_clear_op_conf;
   gpu_clear_op_conf.set_name("gpu_clear");
   gpu_clear_op_conf.mutable_clear_conf();
-  auto gpu_clear_op = OpMgr::Singleton().ConstructOp(gpu_clear_op_conf);
+  auto gpu_clear_op = OpMgr::Singleton()->ConstructOp(gpu_clear_op_conf);
   OperatorConf cpu_clear_op_conf;
   cpu_clear_op_conf.set_name("cpu_clear");
   cpu_clear_op_conf.mutable_clear_conf();
-  auto cpu_clear_op = OpMgr::Singleton().ConstructOp(cpu_clear_op_conf);
-  OpMgr::Singleton().AllOpToProto(plan.mutable_op());
-  JobDesc::Singleton().ToProto(plan.mutable_job_desc());
+  auto cpu_clear_op = OpMgr::Singleton()->ConstructOp(cpu_clear_op_conf);
+  OpMgr::Singleton()->AllOpToProto(plan.mutable_op());
+  JobDesc::Singleton()->ToProto(plan.mutable_job_desc());
   ConstForEachChainNode([&plan](const ChainNode* node) {
     for (std::shared_ptr<const Operator> op : node->op_vec()) {
       CHECK(plan.mutable_op_name2device_type()
@@ -216,7 +213,7 @@ int main(int argc, char** argv) {
   LOG(INFO) << "Compiler Starting Up...";
   oneflow::JobConf job_conf;
   oneflow::ParseProtoFromTextFile(FLAGS_job_conf_filepath, &job_conf);
-  oneflow::Compiler::Singleton().Compile(job_conf, FLAGS_plan_filepath);
+  oneflow::Compiler::Singleton()->Compile(job_conf, FLAGS_plan_filepath);
   LOG(INFO) << "Compiler Shutting Down...";
   return 0;
 }

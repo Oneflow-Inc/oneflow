@@ -12,14 +12,15 @@ std::pair<std::string, std::string> ParseDeviceNameConf(
 
 ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
   policy_ = user_conf.policy();
-  device_type_ = JobDesc::Singleton().resource().device_type();
+  device_type_ = JobDesc::Singleton()->resource().device_type();
   for (int64_t i = 0; i < user_conf.device_set().device_name_size(); ++i) {
     const std::string& device_name = user_conf.device_set().device_name(i);
     std::pair<std::string, std::string> machine_name_device_id =
         ParseDeviceNameConf(device_name);
     std::string machine_name = machine_name_device_id.first;
     std::string device_id_str = machine_name_device_id.second;
-    int64_t machine_id = IDMgr::Singleton().MachineID4MachineName(machine_name);
+    int64_t machine_id =
+        IDMgr::Singleton()->MachineID4MachineName(machine_name);
     sorted_machine_ids_.push_back(machine_id);
     // if the device_name format is "machine_xxx:0-3", add device_id {0,1,2,3}
     int64_t to_symbol_pos = device_id_str.rfind("-");

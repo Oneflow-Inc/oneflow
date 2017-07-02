@@ -46,14 +46,14 @@ std::shared_ptr<const Operator> CopyHDTaskNode::ConstructOp() const {
   op_conf.set_name("copy_hd_" + NewUniqueId());
   CopyHdOpConf* copy_hd_conf = op_conf.mutable_copy_hd_conf();
   copy_hd_conf->set_type(IsH2D() ? CopyHdOpConf::H2D : CopyHdOpConf::D2H);
-  return OpMgr::Singleton().ConstructOp(op_conf);
+  return OpMgr::Singleton()->ConstructOp(op_conf);
 }
 
 std::shared_ptr<const Operator> CopyCommNetTaskNode::ConstructOp() const {
   OperatorConf op_conf;
   op_conf.set_name("comm_net_" + NewUniqueId());
   op_conf.mutable_copy_comm_net_conf();
-  return OpMgr::Singleton().ConstructOp(op_conf);
+  return OpMgr::Singleton()->ConstructOp(op_conf);
 }
 
 }  // namespace oneflow
