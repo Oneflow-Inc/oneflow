@@ -49,8 +49,11 @@ Kernel* BuildCopyHdKernel(CopyHdOpConf::Type hd_type) {
 
 template<typename FloatingPointType>
 void TestCopyHdKernel(CopyHdOpConf::Type hd_type) {
+  using KTCommonCpu = KernelTestCommon<DeviceType::kCPU, FloatingPointType>;
+  using KTCommonGpu = KernelTestCommon<DeviceType::kGPU, FloatingPointType>;
+
   KernelCtx ctx;
-  KernelTestCommon<DeviceType::kGPU, FloatingPointType>::BuildKernelCtx(&ctx);
+  KTCommonGpu::BuildKernelCtx(&ctx);
 
   auto BnInOp2BlobPtr = BuildBnInOp2BlobPtr<FloatingPointType>(hd_type);
 
@@ -58,14 +61,12 @@ void TestCopyHdKernel(CopyHdOpConf::Type hd_type) {
 
   copy_hd_kernel->Forward(ctx, BnInOp2BlobPtr);
   copy_hd_kernel->Backward(ctx, BnInOp2BlobPtr);
-  KernelTestCommon<DeviceType::kGPU, FloatingPointType>::SyncStream(&ctx);
+  KTCommonGpu::SyncStream(&ctx);
 
   if (hd_type == CopyHdOpConf::H2D) {
-    KernelTestCommon<DeviceType::kCPU, FloatingPointType>::CheckResult(
-        BnInOp2BlobPtr, "in", "in_diff");
+    KTCommonCpu::CheckResult(BnInOp2BlobPtr, "in", "in_diff");
   } else {
-    KernelTestCommon<DeviceType::kGPU, FloatingPointType>::CheckResult(
-        BnInOp2BlobPtr, "in", "in_diff");
+    KTCommonGpu::CheckResult(BnInOp2BlobPtr, "in", "in_diff");
   }
 }
 }  // namespace test

@@ -45,8 +45,9 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(int out_num) {
 
 template<DeviceType device_type, typename FloatingPointType>
 void TestCloneKernel() {
+  using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
   KernelCtx ctx;
-  KernelTestCommon<device_type, FloatingPointType>::BuildKernelCtx(&ctx);
+  KTCommon::BuildKernelCtx(&ctx);
 
   const int out_num = 3;
   auto BnInOp2BlobPtr =
@@ -55,14 +56,12 @@ void TestCloneKernel() {
 
   clone_kernel->Forward(ctx, BnInOp2BlobPtr);
   clone_kernel->Backward(ctx, BnInOp2BlobPtr);
-  KernelTestCommon<device_type, FloatingPointType>::SyncStream(&ctx);
+  KTCommon::SyncStream(&ctx);
 
   for (size_t i = 0; i != out_num; ++i) {
-    KernelTestCommon<device_type, FloatingPointType>::CheckResult(
-        BnInOp2BlobPtr, "in", "out_" + std::to_string(i));
+    KTCommon::CheckResult(BnInOp2BlobPtr, "in", "out_" + std::to_string(i));
   }
-  KernelTestCommon<device_type, FloatingPointType>::CheckResult(
-      BnInOp2BlobPtr, "in_diff", "in_diff_expected");
+  KTCommon::CheckResult(BnInOp2BlobPtr, "in_diff", "in_diff_expected");
 }
 
 }  // namespace test
