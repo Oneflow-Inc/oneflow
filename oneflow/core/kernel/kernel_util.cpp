@@ -137,53 +137,51 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
         [=]() { cblas_copy(n, x, incx, y, incy); });
   }
 
-  static void Filler(const KernelCtx& ctx, const FillerConf& filler_conf,
-                     Blob* blob) {
-    if (filler_conf.has_constant_conf()) {
-      ConstantFiller(ctx, filler_conf.constant_conf(), blob);
-    } else if (filler_conf.has_uniform_conf()) {
-      UniformFiller(ctx, filler_conf.uniform_conf(), blob);
-    } else if (filler_conf.has_gaussian_conf()) {
-      GaussianFiller(ctx, filler_conf.gaussian_conf(), blob);
+  static void Fill(const KernelCtx& ctx, const FillConf& fill_conf,
+                   Blob* blob) {
+    if (fill_conf.has_constant_conf()) {
+      ConstantFill(ctx, fill_conf.constant_conf(), blob);
+    } else if (fill_conf.has_uniform_conf()) {
+      UniformFill(ctx, fill_conf.uniform_conf(), blob);
+    } else if (fill_conf.has_gaussian_conf()) {
+      GaussianFill(ctx, fill_conf.gaussian_conf(), blob);
     } else {
-      CHECK(false) << "Unknown filler name";
+      CHECK(false) << "Unknown fill name";
     }
   }
 
  private:
-  static void ConstantFiller(const KernelCtx& ctx,
-                             const ConstantFillerConf& filler_conf,
-                             Blob* blob) {
+  static void ConstantFill(const KernelCtx& ctx,
+                           const ConstantFillConf& fill_conf, Blob* blob) {
     FloatingPointType* dptr = static_cast<FloatingPointType*>(blob->mut_dptr());
     const int64_t elem_cnt = blob->shape().elem_cnt();
-    const FloatingPointType value = filler_conf.value();
+    const FloatingPointType value = fill_conf.value();
     CHECK(elem_cnt);
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
       for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = value; }
     });
   }
 
-  static void UniformFiller(const KernelCtx& ctx,
-                            const UniformFillerConf& filler_conf, Blob* blob) {
+  static void UniformFill(const KernelCtx& ctx,
+                          const UniformFillConf& fill_conf, Blob* blob) {
     CHECK(blob->shape().elem_cnt());
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
       RngUniform<FloatingPointType>(
           blob->shape().elem_cnt(),
-          static_cast<FloatingPointType>(filler_conf.min()),
-          static_cast<FloatingPointType>(filler_conf.max()),
+          static_cast<FloatingPointType>(fill_conf.min()),
+          static_cast<FloatingPointType>(fill_conf.max()),
           static_cast<FloatingPointType*>(blob->mut_dptr()));
     });
   }
 
-  static void GaussianFiller(const KernelCtx& ctx,
-                             const GaussianFillerConf& filler_conf,
-                             Blob* blob) {
+  static void GaussianFill(const KernelCtx& ctx,
+                           const GaussianFillConf& fill_conf, Blob* blob) {
     CHECK(blob->shape().elem_cnt());
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
       RngGaussian<FloatingPointType>(
           blob->shape().elem_cnt(),
-          static_cast<FloatingPointType>(filler_conf.mean()),
-          static_cast<FloatingPointType>(filler_conf.std()),
+          static_cast<FloatingPointType>(fill_conf.mean()),
+          static_cast<FloatingPointType>(fill_conf.std()),
           static_cast<FloatingPointType*>(blob->mut_dptr()));
     });
   }
