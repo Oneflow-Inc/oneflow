@@ -141,14 +141,11 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
   static void Filler(const KernelCtx& ctx, const FillerConf& filler_conf,
                      Blob* blob) {
     if (filler_conf.has_constant_conf()) {
-      ConstantFiller(ctx, dynamic_cast<const ConstantFillerConf&>(filler_conf),
-                     blob);
+      ConstantFiller(ctx, filler_conf.constant_conf(), blob);
     } else if (filler_conf.has_uniform_conf()) {
-      UniformFiller(ctx, dynamic_cast<const UniformFillerConf&>(filler_conf),
-                    blob);
+      UniformFiller(ctx, filler_conf.uniform_conf(), blob);
     } else if (filler_conf.has_gaussian_conf()) {
-      GaussianFiller(ctx, dynamic_cast<const GaussianFillerConf&>(filler_conf),
-                     blob);
+      GaussianFiller(ctx, filler_conf.gaussian_conf(), blob);
     } else {
       CHECK(false) << "Unknown filler name";
     }
@@ -162,13 +159,15 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
     const int64_t elem_cnt = blob->shape().elem_cnt();
     const FloatingPointType value = filler_conf.value();
     CHECK(elem_cnt);
-    for (size_t i = 0; i < elem_cnt; ++i) { dptr[i] = value; }
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+      for (size_t i = 0; i < elem_cnt; ++i) { dptr[i] = value; }
+    });
   }
 
   static void UniformFiller(const KernelCtx& ctx,
                             const UniformFillerConf& filler_conf, Blob* blob) {
     CHECK(blob->shape().elem_cnt());
-    ctx.device_ctx->cpu_stream()->Send([=]() {
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
       RngUniform<FloatingPointType>(
           blob->shape().elem_cnt(),
           static_cast<FloatingPointType>(filler_conf.min()),
@@ -181,7 +180,7 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
                              const GaussianFillerConf& filler_conf,
                              Blob* blob) {
     CHECK(blob->shape().elem_cnt());
-    ctx.device_ctx->cpu_stream()->Send([=]() {
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
       RngGaussian<FloatingPointType>(
           blob->shape().elem_cnt(),
           static_cast<FloatingPointType>(filler_conf.mean()),
