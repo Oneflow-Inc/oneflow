@@ -1,6 +1,59 @@
 #include "oneflow/core/kernel/kernel_util.h"
+#include <limits>
 
 namespace oneflow {
+
+namespace {
+
+template<typename FloatingPointType>
+static void RngUniform(const int64_t elem_cnt, const FloatingPointType min,
+                       const FloatingPointType max, FloatingPointType* dptr) {
+  CHECK_GE(elem_cnt, 0);
+  CHECK(dptr);
+  CHECK_LE(min, max);
+  std::random_device rd;
+  std::mt19937 generator(rd());
+  std::uniform_real_distribution<FloatingPointType> random_distribution(
+      min, std::nextafter(max, std::numeric_limits<FloatingPointType>::max()));
+
+  for (size_t i = 0; i < elem_cnt; ++i) {
+    dptr[i] = random_distribution(generator);
+  }
+}
+
+template<typename FloatingPointType>
+static void RngGaussian(const int64_t elem_cnt, const FloatingPointType mean,
+                        const FloatingPointType std, FloatingPointType* dptr) {
+  CHECK_GE(elem_cnt, 0);
+  CHECK(dptr);
+  CHECK_GT(std, 0);
+  std::random_device rd;
+  std::mt19937 generator(rd());
+  std::normal_distribution<FloatingPointType> random_distribution(mean, std);
+
+  for (size_t i = 0; i < elem_cnt; i++) {
+    dptr[i] = random_distribution(generator);
+  }
+}
+
+template<typename FloatingPointType>
+static void RngBernoulli(const int64_t elem_cnt,
+                         const FloatingPointType non_zero_probability,
+                         bool* mask) {
+  CHECK_GE(elem_cnt, 0);
+  CHECK(mask);
+  CHECK_GE(non_zero_probability, 0);
+  CHECK_LE(non_zero_probability, 1);
+  std::random_device rd;
+  std::mt19937 generator(rd());
+  std::bernoulli_distribution random_distribution(non_zero_probability);
+
+  for (size_t i = 0; i < elem_cnt; i++) {
+    mask[i] = random_distribution(generator);
+  }
+}
+
+}  // namespace
 
 template<typename FloatingPointType>
 class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
@@ -83,6 +136,58 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
                        FloatingPointType* y, const int incy) {
     ctx.device_ctx->cpu_stream()->Send(
         [=]() { cblas_copy(n, x, incx, y, incy); });
+  }
+
+  static void Filler(const KernelCtx& ctx, const FillerConf& filler_conf,
+                     Blob* blob) {
+    if (filler_conf.has_constant_conf()) {
+      ConstantFiller(ctx, dynamic_cast<const ConstantFillerConf&>(filler_conf),
+                     blob);
+    } else if (filler_conf.has_uniform_conf()) {
+      UniformFiller(ctx, dynamic_cast<const UniformFillerConf&>(filler_conf),
+                    blob);
+    } else if (filler_conf.has_gaussian_conf()) {
+      GaussianFiller(ctx, dynamic_cast<const GaussianFillerConf&>(filler_conf),
+                     blob);
+    } else {
+      CHECK(false) << "Unknown filler name";
+    }
+  }
+
+ private:
+  static void ConstantFiller(const KernelCtx& ctx,
+                             const ConstantFillerConf& filler_conf,
+                             Blob* blob) {
+    FloatingPointType* dptr = static_cast<FloatingPointType*>(blob->mut_dptr());
+    const int64_t elem_cnt = blob->shape().elem_cnt();
+    const FloatingPointType value = filler_conf.value();
+    CHECK(elem_cnt);
+    for (size_t i = 0; i < elem_cnt; ++i) { dptr[i] = value; }
+  }
+
+  static void UniformFiller(const KernelCtx& ctx,
+                            const UniformFillerConf& filler_conf, Blob* blob) {
+    CHECK(blob->shape().elem_cnt());
+    ctx.device_ctx->cpu_stream()->Send([=]() {
+      RngUniform<FloatingPointType>(
+          blob->shape().elem_cnt(),
+          static_cast<FloatingPointType>(filler_conf.min()),
+          static_cast<FloatingPointType>(filler_conf.max()),
+          static_cast<FloatingPointType*>(blob->mut_dptr()));
+    });
+  }
+
+  static void GaussianFiller(const KernelCtx& ctx,
+                             const GaussianFillerConf& filler_conf,
+                             Blob* blob) {
+    CHECK(blob->shape().elem_cnt());
+    ctx.device_ctx->cpu_stream()->Send([=]() {
+      RngGaussian<FloatingPointType>(
+          blob->shape().elem_cnt(),
+          static_cast<FloatingPointType>(filler_conf.mean()),
+          static_cast<FloatingPointType>(filler_conf.std()),
+          static_cast<FloatingPointType*>(blob->mut_dptr()));
+    });
   }
 };
 

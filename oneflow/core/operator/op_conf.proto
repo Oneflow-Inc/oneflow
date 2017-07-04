@@ -15,8 +15,6 @@ message UniformFillerConf {
 message GaussianFillerConf {
   float mean = 1;
   float std = 2;
-  // The expected number of non-zero output weights for a given input
-  int32 sparse = 3;
 }
 
 message FillerConf {
@@ -25,14 +23,6 @@ message FillerConf {
     UniformFillerConf uniform_conf = 2;
     GaussianFillerConf gaussian_conf = 3;
   }
-  // Normalize the filler variance by fan_in, fan_out, or their average.
-  // Applies to 'xavier' and 'msra' fillers.
-  enum VarianceNorm {
-    FAN_IN = 0;
-    FAN_OUT = 1;
-    AVERAGE = 2;
-  }
-  VarianceNorm variance_norm = 4;
 }
 
 message ConvolutionOpConf {
