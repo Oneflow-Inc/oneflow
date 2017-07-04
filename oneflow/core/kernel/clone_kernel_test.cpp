@@ -25,27 +25,20 @@ Kernel* BuildCloneKernel(int out_num) {
 
 template<DeviceType device_type, typename FloatingPointType>
 std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(int out_num) {
+  using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
+
   std::vector<int64_t> dim_vec = {1, 3, 2};
 
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
-  (*bn2blob_ptr)["in"] =
-      KernelTestCommon<device_type, FloatingPointType>::CreateBlobWithSameValue(
-          dim_vec, 1);
-  (*bn2blob_ptr)["in_diff"] =
-      KernelTestCommon<device_type, FloatingPointType>::CreateBlobWithSameValue(
-          dim_vec, 2);
+  (*bn2blob_ptr)["in"] = KTCommon::CreateBlobWithSameValue(dim_vec, 1);
+  (*bn2blob_ptr)["in_diff"] = KTCommon::CreateBlobWithSameValue(dim_vec, 2);
   (*bn2blob_ptr)["in_diff_expected"] =
-      KernelTestCommon<device_type, FloatingPointType>::CreateBlobWithSameValue(
-          dim_vec, 4 * out_num);
+      KTCommon::CreateBlobWithSameValue(dim_vec, 4 * out_num);
   for (size_t i = 0; i != out_num; ++i) {
     (*bn2blob_ptr)["out_" + std::to_string(i)] =
-        KernelTestCommon<device_type,
-                         FloatingPointType>::CreateBlobWithSameValue(dim_vec,
-                                                                     3);
+        KTCommon::CreateBlobWithSameValue(dim_vec, 3);
     (*bn2blob_ptr)["out_" + std::to_string(i) + "_diff"] =
-        KernelTestCommon<device_type,
-                         FloatingPointType>::CreateBlobWithSameValue(dim_vec,
-                                                                     4);
+        KTCommon::CreateBlobWithSameValue(dim_vec, 4);
   }
   return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
 }
@@ -55,7 +48,7 @@ void TestCloneKernel() {
   KernelCtx ctx;
   KernelTestCommon<device_type, FloatingPointType>::BuildKernelCtx(&ctx);
 
-  int out_num = 3;
+  const int out_num = 3;
   auto BnInOp2BlobPtr =
       BuildBnInOp2BlobPtr<device_type, FloatingPointType>(out_num);
   auto clone_kernel = BuildCloneKernel<device_type, FloatingPointType>(out_num);

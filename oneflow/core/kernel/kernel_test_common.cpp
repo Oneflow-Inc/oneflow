@@ -27,9 +27,7 @@ class KernelTestCommon<DeviceType::kCPU, FloatingPointType> final {
     Shape* shape = new Shape(dim_vec);
     FloatingPointType* data_vec = new FloatingPointType[shape->elem_cnt()];
     std::fill(data_vec, data_vec + shape->elem_cnt(), value);
-    return KernelTestCommon<DeviceType::kCPU,
-                            FloatingPointType>::CreateBlobWithVector(dim_vec,
-                                                                     data_vec);
+    return CreateBlobWithVector(dim_vec, data_vec);
   }
 
   static Blob* CreateBlobWithRandomValue(const std::vector<int64_t>& dim_vec) {
@@ -39,9 +37,7 @@ class KernelTestCommon<DeviceType::kCPU, FloatingPointType> final {
     std::uniform_real_distribution<FloatingPointType> dis(0, 10);
     FloatingPointType* data_vec = new FloatingPointType[shape->elem_cnt()];
     for (int64_t i = 0; i != shape->elem_cnt(); ++i) { data_vec[i] = dis(gen); }
-    return KernelTestCommon<DeviceType::kCPU,
-                            FloatingPointType>::CreateBlobWithVector(dim_vec,
-                                                                     data_vec);
+    return CreateBlobWithVector(dim_vec, data_vec);
   }
 
   static void BuildKernelCtx(KernelCtx* ctx) {
@@ -73,8 +69,7 @@ class KernelTestCommon<DeviceType::kCPU, FloatingPointType> final {
   static void CheckResult(
       std::function<Blob*(const std::string&)> BnInOp2BlobPtr,
       const std::string& check, const std::string& expected) {
-    KernelTestCommon<DeviceType::kCPU, FloatingPointType>::BlobCmp(
-        BnInOp2BlobPtr(check), BnInOp2BlobPtr(expected));
+    return BlobCmp(BnInOp2BlobPtr(check), BnInOp2BlobPtr(expected));
   }
 };
 

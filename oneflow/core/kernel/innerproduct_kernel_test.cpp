@@ -10,6 +10,7 @@ namespace test {
 template<DeviceType device_type, typename FloatingPointType>
 std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
     bool has_bias_term) {
+  using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
   FloatingPointType in_mat[] = {1, 2, 3, 4, 5, 6, 7, 8};
   FloatingPointType weight_mat[] = {5, 4, 5, 3, 2, 1, 7, 0, 1, 1, 9, 8};
   FloatingPointType bias_mat[] = {2, 3, 5};
@@ -34,55 +35,36 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
 
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
 
-  (*bn2blob_ptr)["in"] =
-      KernelTestCommon<device_type, FloatingPointType>::CreateBlobWithVector(
-          {2, 4}, in_mat);
-  (*bn2blob_ptr)["weight"] =
-      KernelTestCommon<device_type, FloatingPointType>::CreateBlobWithVector(
-          {3, 4}, weight_mat);
-  (*bn2blob_ptr)["out"] =
-      KernelTestCommon<device_type, FloatingPointType>::CreateBlobWithVector(
-          {2, 3}, out_mat);
+  (*bn2blob_ptr)["in"] = KTCommon::CreateBlobWithVector({2, 4}, in_mat);
+  (*bn2blob_ptr)["weight"] = KTCommon::CreateBlobWithVector({3, 4}, weight_mat);
+  (*bn2blob_ptr)["out"] = KTCommon::CreateBlobWithVector({2, 3}, out_mat);
   (*bn2blob_ptr)["out_diff"] = (*bn2blob_ptr)["out"];
   (*bn2blob_ptr)["in_diff"] =
-      KernelTestCommon<device_type, FloatingPointType>::CreateBlobWithVector(
-          {2, 4}, in_diff_mat);
+      KTCommon::CreateBlobWithVector({2, 4}, in_diff_mat);
   (*bn2blob_ptr)["weight_diff"] =
-      KernelTestCommon<device_type, FloatingPointType>::CreateBlobWithVector(
-          {3, 4}, weight_diff_mat);
+      KTCommon::CreateBlobWithVector({3, 4}, weight_diff_mat);
 
   if (has_bias_term) {
-    (*bn2blob_ptr)["bias"] =
-        KernelTestCommon<device_type, FloatingPointType>::CreateBlobWithVector(
-            {1, 3}, bias_mat);
+    (*bn2blob_ptr)["bias"] = KTCommon::CreateBlobWithVector({1, 3}, bias_mat);
     (*bn2blob_ptr)["bias_multiplier"] =
-        KernelTestCommon<device_type, FloatingPointType>::CreateBlobWithVector(
-            {2, 1}, bias_multiplier_mat);
+        KTCommon::CreateBlobWithVector({2, 1}, bias_multiplier_mat);
     (*bn2blob_ptr)["bias_diff"] =
-        KernelTestCommon<device_type, FloatingPointType>::CreateBlobWithVector(
-            {1, 3}, bias_diff_mat);
+        KTCommon::CreateBlobWithVector({1, 3}, bias_diff_mat);
     (*bn2blob_ptr)["expected_bias_diff"] =
-        KernelTestCommon<device_type, FloatingPointType>::CreateBlobWithVector(
-            {1, 3}, expected_bias_diff_mat);
+        KTCommon::CreateBlobWithVector({1, 3}, expected_bias_diff_mat);
     (*bn2blob_ptr)["expected_out"] =
-        KernelTestCommon<device_type, FloatingPointType>::CreateBlobWithVector(
-            {2, 3}, expected_out_mat);
+        KTCommon::CreateBlobWithVector({2, 3}, expected_out_mat);
     (*bn2blob_ptr)["expected_in_diff"] =
-        KernelTestCommon<device_type, FloatingPointType>::CreateBlobWithVector(
-            {2, 4}, expected_in_diff_mat);
+        KTCommon::CreateBlobWithVector({2, 4}, expected_in_diff_mat);
     (*bn2blob_ptr)["expected_weight_diff"] =
-        KernelTestCommon<device_type, FloatingPointType>::CreateBlobWithVector(
-            {3, 4}, expected_weight_diff_mat);
+        KTCommon::CreateBlobWithVector({3, 4}, expected_weight_diff_mat);
   } else {
     (*bn2blob_ptr)["expected_out"] =
-        KernelTestCommon<device_type, FloatingPointType>::CreateBlobWithVector(
-            {2, 3}, expected_out_without_bias_mat);
-    (*bn2blob_ptr)["expected_in_diff"] =
-        KernelTestCommon<device_type, FloatingPointType>::CreateBlobWithVector(
-            {2, 4}, expected_in_diff_without_bias_mat);
-    (*bn2blob_ptr)["expected_weight_diff"] =
-        KernelTestCommon<device_type, FloatingPointType>::CreateBlobWithVector(
-            {3, 4}, expected_weight_diff_without_bias_mat);
+        KTCommon::CreateBlobWithVector({2, 3}, expected_out_without_bias_mat);
+    (*bn2blob_ptr)["expected_in_diff"] = KTCommon::CreateBlobWithVector(
+        {2, 4}, expected_in_diff_without_bias_mat);
+    (*bn2blob_ptr)["expected_weight_diff"] = KTCommon::CreateBlobWithVector(
+        {3, 4}, expected_weight_diff_without_bias_mat);
   }
   return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
 }
@@ -110,8 +92,9 @@ Kernel* BuildInnerProductKernel(bool has_bias_term) {
 
 template<DeviceType device_type, typename FloatingPointType>
 void TestInnerProductKernel(bool has_bias_term) {
+  using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
   KernelCtx ctx;
-  KernelTestCommon<device_type, FloatingPointType>::BuildKernelCtx(&ctx);
+  KTCommon::BuildKernelCtx(&ctx);
 
   auto BnInOp2BlobPtr =
       BuildBnInOp2BlobPtr<device_type, FloatingPointType>(has_bias_term);
@@ -122,17 +105,13 @@ void TestInnerProductKernel(bool has_bias_term) {
   inner_product_kernel->Forward(ctx, BnInOp2BlobPtr);
   inner_product_kernel->Backward(ctx, BnInOp2BlobPtr);
 
-  KernelTestCommon<device_type, FloatingPointType>::SyncStream(&ctx);
+  KTCommon::SyncStream(&ctx);
 
-  KernelTestCommon<device_type, FloatingPointType>::CheckResult(
-      BnInOp2BlobPtr, "out", "expected_out");
-  KernelTestCommon<device_type, FloatingPointType>::CheckResult(
-      BnInOp2BlobPtr, "in_diff", "expected_in_diff");
-  KernelTestCommon<device_type, FloatingPointType>::CheckResult(
-      BnInOp2BlobPtr, "weight_diff", "expected_weight_diff");
+  KTCommon::CheckResult(BnInOp2BlobPtr, "out", "expected_out");
+  KTCommon::CheckResult(BnInOp2BlobPtr, "in_diff", "expected_in_diff");
+  KTCommon::CheckResult(BnInOp2BlobPtr, "weight_diff", "expected_weight_diff");
   if (has_bias_term) {
-    KernelTestCommon<device_type, FloatingPointType>::CheckResult(
-        BnInOp2BlobPtr, "bias_diff", "expected_bias_diff");
+    KTCommon::CheckResult(BnInOp2BlobPtr, "bias_diff", "expected_bias_diff");
   }
 }
 

@@ -9,37 +9,24 @@ namespace test {
 template<typename FloatingPointType>
 std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
     CopyHdOpConf::Type hd_type) {
+  using KTCommonCpu = KernelTestCommon<DeviceType::kCPU, FloatingPointType>;
+  using KTCommonGpu = KernelTestCommon<DeviceType::kGPU, FloatingPointType>;
+
   std::vector<int64_t> dim_vec = {3, 4, 5, 6};
 
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
 
   if (hd_type == CopyHdOpConf::H2D) {
-    (*bn2blob_ptr)["in"] =
-        KernelTestCommon<DeviceType::kCPU,
-                         FloatingPointType>::CreateBlobWithSameValue(dim_vec,
-                                                                     1);
-    (*bn2blob_ptr)["out"] =
-        KernelTestCommon<DeviceType::kGPU,
-                         FloatingPointType>::CreateBlobWithSameValue(dim_vec,
-                                                                     2);
+    (*bn2blob_ptr)["in"] = KTCommonCpu::CreateBlobWithSameValue(dim_vec, 1);
+    (*bn2blob_ptr)["out"] = KTCommonGpu::CreateBlobWithSameValue(dim_vec, 2);
     (*bn2blob_ptr)["in_diff"] =
-        KernelTestCommon<DeviceType::kCPU,
-                         FloatingPointType>::CreateBlobWithSameValue(dim_vec,
-                                                                     3);
+        KTCommonCpu::CreateBlobWithSameValue(dim_vec, 3);
     (*bn2blob_ptr)["out_diff"] = (*bn2blob_ptr)["out"];
   } else {
-    (*bn2blob_ptr)["in"] =
-        KernelTestCommon<DeviceType::kGPU,
-                         FloatingPointType>::CreateBlobWithSameValue(dim_vec,
-                                                                     1);
-    (*bn2blob_ptr)["out"] =
-        KernelTestCommon<DeviceType::kCPU,
-                         FloatingPointType>::CreateBlobWithSameValue(dim_vec,
-                                                                     2);
+    (*bn2blob_ptr)["in"] = KTCommonGpu::CreateBlobWithSameValue(dim_vec, 1);
+    (*bn2blob_ptr)["out"] = KTCommonCpu::CreateBlobWithSameValue(dim_vec, 2);
     (*bn2blob_ptr)["in_diff"] =
-        KernelTestCommon<DeviceType::kGPU,
-                         FloatingPointType>::CreateBlobWithSameValue(dim_vec,
-                                                                     3);
+        KTCommonGpu::CreateBlobWithSameValue(dim_vec, 3);
     (*bn2blob_ptr)["out_diff"] = (*bn2blob_ptr)["out"];
   }
   return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };

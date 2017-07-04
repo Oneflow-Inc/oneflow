@@ -27,9 +27,7 @@ class KernelTestCommon<DeviceType::kGPU, FloatingPointType> final {
     Shape* shape = new Shape(dim_vec);
     FloatingPointType* data_vec = new FloatingPointType[shape->elem_cnt()];
     std::fill(data_vec, data_vec + shape->elem_cnt(), value);
-    return KernelTestCommon<DeviceType::kGPU,
-                            FloatingPointType>::CreateBlobWithVector(dim_vec,
-                                                                     data_vec);
+    return CreateBlobWithVector(dim_vec, data_vec);
   }
 
   static Blob* CreateBlobWithRandomValue(const std::vector<int64_t>& dim_vec) {
@@ -39,9 +37,7 @@ class KernelTestCommon<DeviceType::kGPU, FloatingPointType> final {
     std::uniform_real_distribution<FloatingPointType> dis(0, 10);
     FloatingPointType* data_vec = new FloatingPointType[shape->elem_cnt()];
     for (int64_t i = 0; i != shape->elem_cnt(); ++i) { data_vec[i] = dis(gen); }
-    return KernelTestCommon<DeviceType::kGPU,
-                            FloatingPointType>::CreateBlobWithVector(dim_vec,
-                                                                     data_vec);
+    return CreateBlobWithVector(dim_vec, data_vec);
   }
 
   static void BuildKernelCtx(KernelCtx* ctx) {
@@ -58,28 +54,28 @@ class KernelTestCommon<DeviceType::kGPU, FloatingPointType> final {
   }
 
   static void BlobCmp(Blob* lhs, Blob* rhs) {
+    using KTCommonCpu = KernelTestCommon<DeviceType::kCPU, FloatingPointType>;
+
     FloatingPointType* dptr;
     size_t dptr_size = lhs->shape().elem_cnt() * sizeof(FloatingPointType);
-    cudaMallocHost(&dptr, dptr_size);
+    CudaCheck(cudaMallocHost(&dptr, dptr_size));
     memset(dptr, 0, dptr_size);
-    Blob* copy_lhs = KernelTestCommon<DeviceType::kCPU, FloatingPointType>::
-        CreateBlobWithVector(lhs->shape().dim_vec(), dptr);
-    Blob* copy_rhs = KernelTestCommon<DeviceType::kCPU, FloatingPointType>::
-        CreateBlobWithVector(rhs->shape().dim_vec(), dptr);
-    cudaMemcpy(copy_lhs->mut_dptr(), lhs->dptr(), dptr_size,
-               cudaMemcpyDeviceToHost);
-    cudaMemcpy(copy_rhs->mut_dptr(), rhs->dptr(), dptr_size,
-               cudaMemcpyDeviceToHost);
+    Blob* copy_lhs =
+        KTCommonCpu::CreateBlobWithVector(lhs->shape().dim_vec(), dptr);
+    Blob* copy_rhs =
+        KTCommonCpu::CreateBlobWithVector(rhs->shape().dim_vec(), dptr);
+    CudaCheck(cudaMemcpy(copy_lhs->mut_dptr(), lhs->dptr(), dptr_size,
+                         cudaMemcpyDeviceToHost));
+    CudaCheck(cudaMemcpy(copy_rhs->mut_dptr(), rhs->dptr(), dptr_size,
+                         cudaMemcpyDeviceToHost));
 
-    KernelTestCommon<DeviceType::kCPU, FloatingPointType>::BlobCmp(copy_lhs,
-                                                                   copy_rhs);
+    KTCommonCpu::BlobCmp(copy_lhs, copy_rhs);
   }
 
   static void CheckResult(
       std::function<Blob*(const std::string&)> BnInOp2BlobPtr,
       const std::string& check, const std::string& expected) {
-    KernelTestCommon<DeviceType::kGPU, FloatingPointType>::BlobCmp(
-        BnInOp2BlobPtr(check), BnInOp2BlobPtr(expected));
+    BlobCmp(BnInOp2BlobPtr(check), BnInOp2BlobPtr(expected));
   }
 };
 

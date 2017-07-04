@@ -10,6 +10,8 @@ namespace test {
 
 template<DeviceType device_type, typename FloatingPointType>
 std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
+  using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
+
   std::vector<int64_t> dim_vec = {2, 4};
   FloatingPointType diff_data[] = {1, 2, 3, 4, 5, 6, 7, 8};
   FloatingPointType diff_acc_data[] = {5, 3, 2, 1, 7, 0, 1, 1};
@@ -19,14 +21,11 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
 
   (*bn2blob_ptr)["model_diff"] =
-      KernelTestCommon<device_type, FloatingPointType>::CreateBlobWithVector(
-          dim_vec, diff_data);
+      KTCommon::CreateBlobWithVector(dim_vec, diff_data);
   (*bn2blob_ptr)["model_diff_acc"] =
-      KernelTestCommon<device_type, FloatingPointType>::CreateBlobWithVector(
-          dim_vec, diff_acc_data);
+      KTCommon::CreateBlobWithVector(dim_vec, diff_acc_data);
   (*bn2blob_ptr)["expected_acc"] =
-      KernelTestCommon<device_type, FloatingPointType>::CreateBlobWithVector(
-          dim_vec, expected_data);
+      KTCommon::CreateBlobWithVector(dim_vec, expected_data);
   return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
 }
 
@@ -49,8 +48,9 @@ Kernel* BuildMdDiffAccKernel() {
 
 template<DeviceType device_type, typename FloatingPointType>
 void TestMdDiffAccKernel() {
+  using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
   KernelCtx ctx;
-  KernelTestCommon<device_type, FloatingPointType>::BuildKernelCtx(&ctx);
+  KTCommon::BuildKernelCtx(&ctx);
 
   auto BnInOp2BlobPtr = BuildBnInOp2BlobPtr<device_type, FloatingPointType>();
 
@@ -58,10 +58,9 @@ void TestMdDiffAccKernel() {
       BuildMdDiffAccKernel<device_type, FloatingPointType>();
 
   model_diff_acc_kernel->Forward(ctx, BnInOp2BlobPtr);
-  KernelTestCommon<device_type, FloatingPointType>::SyncStream(&ctx);
+  KTCommon::SyncStream(&ctx);
 
-  KernelTestCommon<device_type, FloatingPointType>::CheckResult(
-      BnInOp2BlobPtr, "model_diff_acc", "expected_acc");
+  KTCommon::CheckResult(BnInOp2BlobPtr, "model_diff_acc", "expected_acc");
 }
 }  // namespace test
 
