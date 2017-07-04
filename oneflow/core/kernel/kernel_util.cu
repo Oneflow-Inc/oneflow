@@ -1,3 +1,5 @@
+#include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
@@ -9,14 +11,13 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
 
   static void Memcpy(const KernelCtx& ctx, void* dst, const void* src,
                      size_t sz, cudaMemcpyKind kind) {
-    CHECK_EQ(cudaMemcpyAsync(dst, src, sz, kind, ctx.device_ctx->cuda_stream()),
-             cudaSuccess);
+    CudaCheck(
+        cudaMemcpyAsync(dst, src, sz, kind, ctx.device_ctx->cuda_stream()));
   }
 
   static void Memset(const KernelCtx& ctx, void* dst, const char value,
                      size_t sz) {
-    CHECK_EQ(cudaMemsetAsync(dst, value, sz, ctx.device_ctx->cuda_stream()),
-             cudaSuccess);
+    CudaCheck(cudaMemsetAsync(dst, value, sz, ctx.device_ctx->cuda_stream()));
   }
 
   static void BlasAxpy(const KernelCtx& ctx, const int n,
@@ -91,7 +92,6 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
   }
 };
 
-template class KernelUtil<DeviceType::kGPU, float>;
-template class KernelUtil<DeviceType::kGPU, double>;
+INSTANTIATE_GPU_KERNEL_UTIL_CLASS(KernelUtil);
 
 }  // namespace oneflow

@@ -28,7 +28,7 @@ int MdUpdtCompActor::HandleBeforeInitializeModel(const ActorMsg& actor_msg) {
   HashSet<const Kernel*> kernels;
   auto CollectKernelsFromLbn = [&kernels](const std::string& lbn) {
     std::string op_name = GetOpNameFromLbn(lbn);
-    kernels.insert(KernelMgr::Singleton().GetKernelFromOpName(op_name));
+    kernels.insert(KernelMgr::Singleton()->GetKernelFromOpName(op_name));
   };
   model_regst->ForEachLbn(CollectKernelsFromLbn);
   model_tmp_regst->ForEachLbn(CollectKernelsFromLbn);
@@ -36,7 +36,7 @@ int MdUpdtCompActor::HandleBeforeInitializeModel(const ActorMsg& actor_msg) {
   for (const Kernel* kernel : kernels) {
     kernel->InitModelAndModelTmpBlobs(
         GenDefaultKernelCtx(), parallel_policy(), parallel_id(), parallel_num(),
-        SnapshotMgr::Singleton().GetReadableSnapshot(),
+        SnapshotMgr::Singleton()->GetReadableSnapshot(),
         [&](const std::string& bn_in_op) {
           const std::string& lbn = kernel->Lbn4BnInOp(bn_in_op);
           Blob* ret = model_regst->GetBlobPtrFromLbn(lbn);
@@ -45,7 +45,7 @@ int MdUpdtCompActor::HandleBeforeInitializeModel(const ActorMsg& actor_msg) {
           return ret;
         });
   }
-  AsyncDo([]() { RuntimeCtx::Singleton().OneModelInitDone(); });
+  AsyncDo([]() { RuntimeCtx::Singleton()->OneModelInitDone(); });
   OF_SET_MSG_HANDLE(&MdUpdtCompActor::HandleBeforeSendInitialModel);
   return 0;
 }
@@ -55,7 +55,7 @@ int MdUpdtCompActor::HandleBeforeSendInitialModel(const ActorMsg& actor_msg) {
   AsyncSendReadableRegstMsg();
   SetReadOnlyForRegstDescId(model_tmp_regst_desc_id_);
   AsyncSendEORDMsgToSubscribers(model_tmp_regst_desc_id_);
-  if (JobDesc::Singleton().is_train()) {
+  if (JobDesc::Singleton()->is_train()) {
     OF_SET_MSG_HANDLE(&MdUpdtCompActor::HandleUpdateModel);
   } else {
     AsyncSendEORDMsgToSubscribers(model_regst_desc_id_);

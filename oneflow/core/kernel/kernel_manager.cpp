@@ -72,7 +72,7 @@ void AddGpuDoubleKernelCreator(OperatorConf::OpTypeCase op_type_case,
 }
 
 void KernelMgr::InitFromPlan(const Plan& plan) {
-  int64_t this_machine_id = RuntimeCtx::Singleton().this_machine_id();
+  int64_t this_machine_id = RuntimeCtx::Singleton()->this_machine_id();
   const PbRpf<std::string>& op_names_rpf =
       plan.machine_id2op_name_set().at(this_machine_id).op_name();
   std::unordered_set<std::string> op_name_set(op_names_rpf.begin(),
@@ -84,7 +84,7 @@ void KernelMgr::InitFromPlan(const Plan& plan) {
     LOG(INFO) << "construct kernel: " << op_name;
     std::unique_ptr<Kernel> kernel_ptr(
         CreateKernel(op_proto.op_conf().op_type_case(), device_type,
-                     JobDesc::Singleton().floating_point_type()));
+                     JobDesc::Singleton()->floating_point_type()));
     kernel_ptr->InitFromOpProto(op_proto);
     CHECK(op_name2kernel_ptr_.emplace(op_name, std::move(kernel_ptr)).second);
   }

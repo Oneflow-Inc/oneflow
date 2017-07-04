@@ -16,6 +16,10 @@ class ActorMsgBus final {
 
   void SendMsg(const ActorMsg& msg);
 
+  void Init() {
+    // TODO
+  }
+
  private:
   ActorMsgBus() = default;
 };

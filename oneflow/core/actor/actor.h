@@ -2,9 +2,9 @@
 #define ONEFLOW_CORE_ACTOR_ACTOR_H_
 
 #include "oneflow/core/actor/actor_message_bus.h"
-#include "oneflow/core/actor/cpu_device_context.h"
-#include "oneflow/core/actor/cuda_device_context.h"
-#include "oneflow/core/common/cuda_stream_handle.h"
+#include "oneflow/core/device/cpu_device_context.h"
+#include "oneflow/core/device/cuda_device_context.h"
+#include "oneflow/core/device/cuda_stream_handle.h"
 #include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/kernel/kernel_manager.h"
