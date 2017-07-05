@@ -17,7 +17,12 @@ class CopyCommNetActor final : public Actor {
   int HandleNormal(const ActorMsg&) override;
   int HandleWaitUntilNoReadableRegst(const ActorMsg&) override;
 
-  void TryLaunchKernelAndSendMsg();
+  bool IsReadReady() override {
+    return piece_id2waiting_in_regst_.find(expected_piece_id())
+           != piece_id2waiting_in_regst_.end();
+  }
+  void Act();
+
   HashMap<int64_t, std::shared_ptr<RegstWarpper>> piece_id2waiting_in_regst_;
 };
 

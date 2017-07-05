@@ -32,14 +32,14 @@ int BoxingActor::HandleNormal(const ActorMsg& msg) {
       // do nothing
     }
   }
-  TryLaunchKernelAndSendMsg();
+  TryActUntilFail();
   return 0;
 }
 
 int BoxingActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
            0);
-  TryLaunchKernelAndSendMsg();
+  TryActUntilFail();
   if (num_of_read_empty_ == num_of_subscribed_regsts_) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
     if (total_reading_cnt() == 0) {
@@ -53,30 +53,28 @@ int BoxingActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
   return 0;
 }
 
-void BoxingActor::TryLaunchKernelAndSendMsg() {
-  if (!num_of_read_empty_ && IsWriteReady()) {
-    int64_t piece_id = expected_piece_id();
-    for (const auto& pair : read_regst_) {
-      CHECK_EQ(pair.second.front()->piece_id(), piece_id);
-    }
-    AsyncLaunchKernel(
-        GenDefaultKernelCtx(),
-        [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
-          Regst* regst = GetCurWriteableRegst(regst_desc_id);
-          if (regst == nullptr) {
-            return read_regst_.at(regst_desc_id).front();
-          } else {
-            return std::make_shared<LocalRegstWarpper>(regst);
-          }
-        });
-    ForEachCurWriteableRegst(
-        [piece_id](Regst* regst) { regst->set_piece_id(piece_id); });
-    AsyncSendReadableRegstMsg();
-    for (auto& pair : read_regst_) {
-      AsyncSendRegstMsgToProducer(pair.second.front());
-      pair.second.pop();
-      num_of_read_empty_ += pair.second.empty();
-    }
+void BoxingActor::Act() {
+  int64_t piece_id = expected_piece_id();
+  for (const auto& pair : read_regst_) {
+    CHECK_EQ(pair.second.front()->piece_id(), piece_id);
+  }
+  AsyncLaunchKernel(
+      GenDefaultKernelCtx(),
+      [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+        Regst* regst = GetCurWriteableRegst(regst_desc_id);
+        if (regst == nullptr) {
+          return read_regst_.at(regst_desc_id).front();
+        } else {
+          return std::make_shared<LocalRegstWarpper>(regst);
+        }
+      });
+  ForEachCurWriteableRegst(
+      [piece_id](Regst* regst) { regst->set_piece_id(piece_id); });
+  AsyncSendReadableRegstMsg();
+  for (auto& pair : read_regst_) {
+    AsyncSendRegstMsgToProducer(pair.second.front());
+    pair.second.pop();
+    num_of_read_empty_ += pair.second.empty();
   }
 }
 

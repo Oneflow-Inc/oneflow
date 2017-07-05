@@ -23,14 +23,14 @@ int CopyCommNetActor::HandleNormal(const ActorMsg& msg) {
                 .second);
     }
   }
-  TryLaunchKernelAndSendMsg();
+  TryActUntilFail();
   return 0;
 }
 
 int CopyCommNetActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
            0);
-  TryLaunchKernelAndSendMsg();
+  TryActUntilFail();
   if (piece_id2waiting_in_regst_.empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
     if (total_reading_cnt() == 0) {
@@ -44,30 +44,27 @@ int CopyCommNetActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
   return 0;
 }
 
-void CopyCommNetActor::TryLaunchKernelAndSendMsg() {
+void CopyCommNetActor::Act() {
   auto next_regst_it = piece_id2waiting_in_regst_.find(expected_piece_id());
-  if (next_regst_it == piece_id2waiting_in_regst_.end()) { return; }
-  if (IsWriteReady()) {
-    std::shared_ptr<RegstWarpper> regst_wp = next_regst_it->second;
-    AsyncLaunchKernel(
-        GenDefaultKernelCtx(),
-        [this,
-         &regst_wp](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
-          Regst* regst = GetCurWriteableRegst(regst_desc_id);
-          if (regst == nullptr) {
-            return regst_wp;
-          } else {
-            return std::make_shared<LocalRegstWarpper>(regst);
-          }
-        });
-    ForEachCurWriteableRegst([&regst_wp](Regst* regst) {
-      regst->set_piece_id(regst_wp->piece_id());
-      regst->set_model_version_id(regst_wp->model_version_id());
-    });
-    AsyncSendReadableRegstMsg();
-    AsyncSendRegstMsgToProducer(regst_wp);
-    piece_id2waiting_in_regst_.erase(next_regst_it);
-  }
+  std::shared_ptr<RegstWarpper> regst_wp = next_regst_it->second;
+  AsyncLaunchKernel(
+      GenDefaultKernelCtx(),
+      [this,
+       &regst_wp](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+        Regst* regst = GetCurWriteableRegst(regst_desc_id);
+        if (regst == nullptr) {
+          return regst_wp;
+        } else {
+          return std::make_shared<LocalRegstWarpper>(regst);
+        }
+      });
+  ForEachCurWriteableRegst([&regst_wp](Regst* regst) {
+    regst->set_piece_id(regst_wp->piece_id());
+    regst->set_model_version_id(regst_wp->model_version_id());
+  });
+  AsyncSendReadableRegstMsg();
+  AsyncSendRegstMsgToProducer(regst_wp);
+  piece_id2waiting_in_regst_.erase(next_regst_it);
 }
 
 REGISTER_ACTOR(kCopyCommNetTask, true, CopyCommNetActor);

@@ -73,7 +73,7 @@ int MdUpdtCompActor::HandleNormal(const ActorMsg& actor_msg) {
     if (TryUpdtStateAsProducedRegst(regst_warpper->regst_raw_ptr()) != 0) {
       waiting_model_diff_acc_queue_.push(regst_warpper);
     }
-    TryLaunchKernelAndSendMsg();
+    TryActUntilFail();
   } else {
     UNEXPECTED_RUN();
   }
@@ -84,7 +84,7 @@ int MdUpdtCompActor::HandleWaitUntilNoReadableRegst(const ActorMsg& actor_msg) {
   CHECK_EQ(
       TryUpdtStateAsProducedRegst(actor_msg.regst_warpper()->regst_raw_ptr()),
       0);
-  TryLaunchKernelAndSendMsg();
+  TryActUntilFail();
   if (waiting_model_diff_acc_queue_.empty()) {
     AsyncSendEORDMsgToSubscribers(model_regst_desc_id_);
     if (total_reading_cnt() == 0) {
@@ -98,25 +98,23 @@ int MdUpdtCompActor::HandleWaitUntilNoReadableRegst(const ActorMsg& actor_msg) {
   return 0;
 }
 
-void MdUpdtCompActor::TryLaunchKernelAndSendMsg() {
-  if (!waiting_model_diff_acc_queue_.empty() && IsWriteReady()) {
-    auto model_diff_acc_wpr = waiting_model_diff_acc_queue_.front();
-    waiting_model_diff_acc_queue_.pop();
-    Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
-    auto model_wpr = std::make_shared<LocalRegstWarpper>(model_regst);
-    model_regst->set_model_version_id(next_model_version_id_++);
-    AsyncLaunchKernel(
-        GenDefaultKernelCtx(),
-        [&](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
-          if (regst_desc_id == model_regst_desc_id_) {
-            return model_wpr;
-          } else {
-            return model_diff_acc_wpr;
-          }
-        });
-    AsyncSendReadableRegstMsg();
-    AsyncSendRegstMsgToProducer(model_diff_acc_wpr);
-  }
+void MdUpdtCompActor::Act() {
+  auto model_diff_acc_wpr = waiting_model_diff_acc_queue_.front();
+  waiting_model_diff_acc_queue_.pop();
+  Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
+  auto model_wpr = std::make_shared<LocalRegstWarpper>(model_regst);
+  model_regst->set_model_version_id(next_model_version_id_++);
+  AsyncLaunchKernel(
+      GenDefaultKernelCtx(),
+      [&](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+        if (regst_desc_id == model_regst_desc_id_) {
+          return model_wpr;
+        } else {
+          return model_diff_acc_wpr;
+        }
+      });
+  AsyncSendReadableRegstMsg();
+  AsyncSendRegstMsgToProducer(model_diff_acc_wpr);
 }
 
 REGISTER_ACTOR(kMdUpdtCompTask, true, MdUpdtCompActor);
