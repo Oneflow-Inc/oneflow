@@ -73,7 +73,7 @@ int MdUpdtCompActor::HandleNormal(const ActorMsg& actor_msg) {
     if (TryUpdtStateAsProducedRegst(regst_warpper->regst_raw_ptr()) != 0) {
       waiting_model_diff_acc_queue_.push(regst_warpper);
     }
-    TryActUntilFail();
+    ActUntilFail();
   } else {
     UNEXPECTED_RUN();
   }
@@ -84,7 +84,7 @@ int MdUpdtCompActor::HandleWaitUntilNoReadableRegst(const ActorMsg& actor_msg) {
   CHECK_EQ(
       TryUpdtStateAsProducedRegst(actor_msg.regst_warpper()->regst_raw_ptr()),
       0);
-  TryActUntilFail();
+  ActUntilFail();
   if (waiting_model_diff_acc_queue_.empty()) {
     AsyncSendEORDMsgToSubscribers(model_regst_desc_id_);
     if (total_reading_cnt() == 0) {

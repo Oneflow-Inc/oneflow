@@ -55,7 +55,7 @@ class Actor {
   int HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg);
 
   // Act
-  void TryActUntilFail();
+  void ActUntilFail();
   virtual void Act() = 0;
   virtual bool IsReadReady() = 0;
 

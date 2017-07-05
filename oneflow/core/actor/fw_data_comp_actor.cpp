@@ -52,7 +52,7 @@ bool FwDataCompActor::IsReadReady() {
 
 int FwDataCompActor::WaitToStart(const ActorMsg& msg) {
   CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
-  TryActUntilFail();
+  ActUntilFail();
   OF_SET_MSG_HANDLE(&FwDataCompActor::HandleWaitUntilNoReadableRegst);
   return 0;
 }
@@ -83,14 +83,14 @@ int FwDataCompActor::HandleNormal(const ActorMsg& msg) {
       }
     }
   }
-  TryActUntilFail();
+  ActUntilFail();
   return 0;
 }
 
 int FwDataCompActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
            0);
-  TryActUntilFail();
+  ActUntilFail();
   int total_piece_num = JobDesc::Singleton()->total_piece_num();
   if ((in_desc_id_ != -1 && in_.empty())
       || expected_piece_id() == total_piece_num) {

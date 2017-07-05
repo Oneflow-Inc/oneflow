@@ -23,14 +23,14 @@ int CopyCommNetActor::HandleNormal(const ActorMsg& msg) {
                 .second);
     }
   }
-  TryActUntilFail();
+  ActUntilFail();
   return 0;
 }
 
 int CopyCommNetActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
            0);
-  TryActUntilFail();
+  ActUntilFail();
   if (piece_id2waiting_in_regst_.empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
     if (total_reading_cnt() == 0) {

@@ -59,14 +59,14 @@ int BpDataCompActor::HandleNormal(const ActorMsg& msg) {
       read_regst_.at(regst_wp->regst_desc_id()).push(regst_wp);
     }
   }
-  TryActUntilFail();
+  ActUntilFail();
   return 0;
 }
 
 int BpDataCompActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
            0);
-  TryActUntilFail();
+  ActUntilFail();
   if (read_regst_.at(activation_regst_desc_id_).empty()) {
     while (!read_regst_.at(model_regst_desc_id_).empty()) {
       AsyncSendRegstMsgToProducer(read_regst_.at(model_regst_desc_id_).front());

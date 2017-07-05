@@ -68,7 +68,7 @@ int Actor::HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
   return 0;
 }
 
-void Actor::TryActUntilFail() {
+void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) { Act(); }
 }
 

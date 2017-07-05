@@ -18,7 +18,7 @@ int MdSaveCompActor::HandleNormal(const ActorMsg& actor_msg) {
     return 1;
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
     regst_warpper_ = actor_msg.regst_warpper();
-    TryActUntilFail();
+    ActUntilFail();
   } else {
     UNEXPECTED_RUN();
   }

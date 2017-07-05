@@ -23,14 +23,14 @@ int CopyHdActor::HandleNormal(const ActorMsg& msg) {
       waiting_in_regst_.push(msg.regst_warpper());
     }
   }
-  TryActUntilFail();
+  ActUntilFail();
   return 0;
 }
 
 int CopyHdActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
            0);
-  TryActUntilFail();
+  ActUntilFail();
   if (waiting_in_regst_.empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
     if (total_reading_cnt() == 0) {

@@ -32,14 +32,14 @@ int BoxingActor::HandleNormal(const ActorMsg& msg) {
       // do nothing
     }
   }
-  TryActUntilFail();
+  ActUntilFail();
   return 0;
 }
 
 int BoxingActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
            0);
-  TryActUntilFail();
+  ActUntilFail();
   if (num_of_read_empty_ == num_of_subscribed_regsts_) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
     if (total_reading_cnt() == 0) {
