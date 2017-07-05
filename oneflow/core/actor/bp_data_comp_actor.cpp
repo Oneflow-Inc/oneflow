@@ -113,9 +113,8 @@ void BpDataCompActor::Act() {
           return std::make_shared<LocalRegstWarpper>(regst);
         }
       });
-  ForEachCurWriteableRegst(
+  AsyncSendReadableRegstMsg(
       [piece_id](Regst* regst) { regst->set_piece_id(piece_id); });
-  AsyncSendReadableRegstMsg();
   for (auto& pair : read_regst_) {
     if (pair.first != model_regst_desc_id_
         && pair.first != model_tmp_regst_desc_id_) {

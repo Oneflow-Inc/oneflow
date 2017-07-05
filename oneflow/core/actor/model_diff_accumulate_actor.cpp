@@ -75,11 +75,10 @@ void MdDiffAccActor::Act() {
           return std::make_shared<LocalRegstWarpper>(regst);
         }
       });
-  ForEachCurWriteableRegst([this, &regst_wp](Regst* regst) {
+  AsyncSendReadableRegstMsg([this, &regst_wp](Regst* regst) {
     regst->set_piece_id(regst_wp->piece_id());
     ++model_diff_acc_cnt_.at(regst);
   });
-  AsyncSendReadableRegstMsg();
   AsyncSendRegstMsgToProducer(regst_wp);
   waiting_in_regst_.pop();
 }

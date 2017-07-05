@@ -18,7 +18,7 @@ class MdDiffAccActor final : public CompActor {
   int HandleWaitUntilNoReadableRegst(const ActorMsg&) override;
 
   bool IsReadReady() override { return !waiting_in_regst_.empty(); }
-  void Act();
+  void Act() override;
 
   std::queue<std::shared_ptr<RegstWarpper>> waiting_in_regst_;
   const Kernel* clear_kernel_;

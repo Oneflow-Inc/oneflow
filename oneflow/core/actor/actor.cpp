@@ -87,8 +87,13 @@ void Actor::AsyncLaunchKernel(
 }
 
 void Actor::AsyncSendReadableRegstMsg() {
+  AsyncSendReadableRegstMsg([](Regst*) {});
+}
+
+void Actor::AsyncSendReadableRegstMsg(std::function<void(Regst*)> PreProcess) {
   for (auto& pair : writeable_produced_regst_) {
     Regst* regst = pair.second.front();
+    PreProcess(regst);
     device_ctx_->AddCallBack([regst]() {
       for (int64_t subscriber : regst->subscribers_actor_id()) {
         ActorMsg msg = ActorMsg::BuildReadableRegstMsg(subscriber, regst);

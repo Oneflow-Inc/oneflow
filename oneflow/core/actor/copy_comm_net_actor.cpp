@@ -58,11 +58,10 @@ void CopyCommNetActor::Act() {
           return std::make_shared<LocalRegstWarpper>(regst);
         }
       });
-  ForEachCurWriteableRegst([&regst_wp](Regst* regst) {
+  AsyncSendReadableRegstMsg([&regst_wp](Regst* regst) {
     regst->set_piece_id(regst_wp->piece_id());
     regst->set_model_version_id(regst_wp->model_version_id());
   });
-  AsyncSendReadableRegstMsg();
   AsyncSendRegstMsgToProducer(regst_wp);
   piece_id2waiting_in_regst_.erase(next_regst_it);
 }
