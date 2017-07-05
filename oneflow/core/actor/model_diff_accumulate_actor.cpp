@@ -29,14 +29,14 @@ int MdDiffAccActor::HandleNormal(const ActorMsg& msg) {
       waiting_in_regst_.push(msg.regst_warpper());
     }
   }
-  TryLaunchKernelAndSendMsg();
+  TryActUntilFail();
   return 0;
 }
 
 int MdDiffAccActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
            0);
-  TryLaunchKernelAndSendMsg();
+  TryActUntilFail();
   if (waiting_in_regst_.empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
     if (total_reading_cnt() == 0) {
@@ -50,8 +50,7 @@ int MdDiffAccActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
   return 0;
 }
 
-void MdDiffAccActor::TryLaunchKernelAndSendMsg() {
-  if (waiting_in_regst_.empty() || !IsWriteReady()) { return; }
+void MdDiffAccActor::Act() {
   std::shared_ptr<RegstWarpper> regst_wp = waiting_in_regst_.front();
   CHECK_EQ(regst_wp->piece_id(), expected_piece_id());
   KernelCtx ctx = GenDefaultKernelCtx();

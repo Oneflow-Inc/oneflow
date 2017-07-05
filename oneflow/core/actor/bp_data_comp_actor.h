@@ -17,8 +17,8 @@ class BpDataCompActor final : public Actor {
   int HandleNormal(const ActorMsg&) override;
   int HandleWaitUntilNoReadableRegst(const ActorMsg&) override;
 
-  bool IsReadReady();
-  void TryLaunchKernelAndSendMsg();
+  bool IsReadReady() override;
+  void Act() override;
 
   CudaStreamHandle cuda_handle_;
   int num_of_read_empty_;
