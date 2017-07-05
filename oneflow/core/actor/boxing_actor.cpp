@@ -12,15 +12,15 @@ void BoxingActor::Init(const TaskProto& task_proto,
   num_of_eord_ = 0;
   CHECK(thread_ctx.cpu_stream);
   mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
-  OF_SET_MSG_HANDLE(&BoxingActor::HandleBoxing);
+  OF_SET_MSG_HANDLE(&BoxingActor::HandleNormal);
 }
 
-int BoxingActor::HandleBoxing(const ActorMsg& msg) {
+int BoxingActor::HandleNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     num_of_eord_ += 1;
     if (num_of_eord_ == num_of_subscribed_regsts_) {
-      OF_SET_MSG_HANDLE(&BoxingActor::HandleBoxingWhenNoReadableRegstMsg);
+      OF_SET_MSG_HANDLE(&BoxingActor::HandleWaitUntilNoReadableRegst);
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr())
@@ -36,7 +36,7 @@ int BoxingActor::HandleBoxing(const ActorMsg& msg) {
   return 0;
 }
 
-int BoxingActor::HandleBoxingWhenNoReadableRegstMsg(const ActorMsg& msg) {
+int BoxingActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
            0);
   TryLaunchKernelAndSendMsg();

@@ -9,12 +9,12 @@ void MdSaveCompActor::Init(const TaskProto& task_proto,
   model_regst_desc_id_ = RegstDescId4Name("model");
   CHECK(thread_ctx.cpu_stream);
   mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
-  OF_SET_MSG_HANDLE(&MdSaveCompActor::HandleSaveModel);
+  OF_SET_MSG_HANDLE(&MdSaveCompActor::HandleNormal);
 }
 
-int MdSaveCompActor::HandleSaveModel(const ActorMsg& actor_msg) {
+int MdSaveCompActor::HandleNormal(const ActorMsg& actor_msg) {
   if (actor_msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK(actor_msg.actor_cmd() == ActorCmd::kEORD);
+    CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kEORD);
     return 1;
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
     std::shared_ptr<RegstWarpper> regst_warpper = actor_msg.regst_warpper();

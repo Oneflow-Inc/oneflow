@@ -14,8 +14,8 @@ class BoxingActor final : public Actor {
   void Init(const TaskProto&, const ThreadCtx&) override;
 
  private:
-  int HandleBoxing(const ActorMsg&);
-  int HandleBoxingWhenNoReadableRegstMsg(const ActorMsg&);
+  int HandleNormal(const ActorMsg&) override;
+  int HandleWaitUntilNoReadableRegst(const ActorMsg&) override;
 
   void TryLaunchKernelAndSendMsg();
 

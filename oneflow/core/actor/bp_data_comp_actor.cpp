@@ -21,7 +21,7 @@ void BpDataCompActor::Init(const TaskProto& task_proto,
                                              cuda_handle_.cublas_handle(),
                                              cuda_handle_.cudnn_handle()));
   }
-  OF_SET_MSG_HANDLE(&BpDataCompActor::HandleBpComp);
+  OF_SET_MSG_HANDLE(&BpDataCompActor::HandleNormal);
 }
 
 bool BpDataCompActor::IsReadReady() {
@@ -37,12 +37,12 @@ bool BpDataCompActor::IsReadReady() {
   return !num_of_read_empty_;
 }
 
-int BpDataCompActor::HandleBpComp(const ActorMsg& msg) {
+int BpDataCompActor::HandleNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     num_of_eord_ += 1;
     if (num_of_eord_ == 6) {
-      OF_SET_MSG_HANDLE(&BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg);
+      OF_SET_MSG_HANDLE(&BpDataCompActor::HandleWaitUntilNoReadableRegst);
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr())
@@ -63,7 +63,7 @@ int BpDataCompActor::HandleBpComp(const ActorMsg& msg) {
   return 0;
 }
 
-int BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg(const ActorMsg& msg) {
+int BpDataCompActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
            0);
   TryLaunchKernelAndSendMsg();
@@ -81,7 +81,7 @@ int BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg(const ActorMsg& msg) {
       OF_SET_MSG_HANDLE(nullptr);
       return 1;
     } else {
-      OF_SET_MSG_HANDLE(nullptr);
+      OF_SET_MSG_HANDLE(&BpDataCompActor::HandleWaitUntilReadingCntEqualZero);
       return 0;
     }
   }

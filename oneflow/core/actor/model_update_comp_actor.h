@@ -17,8 +17,8 @@ class MdUpdtCompActor final : public CompActor {
   int HandleBeforeInitDeviceCtx(const ActorMsg&);
   int HandleBeforeInitializeModel(const ActorMsg&);
   int HandleBeforeSendInitialModel(const ActorMsg&);
-  int HandleUpdateModel(const ActorMsg&);
-  int HandleUpdtModelWhenNoReadableRegstMsg(const ActorMsg&);
+  int HandleNormal(const ActorMsg&) override;
+  int HandleWaitUntilNoReadableRegst(const ActorMsg&) override;
 
   void TryLaunchKernelAndSendMsg();
 

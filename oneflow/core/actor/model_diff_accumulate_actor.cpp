@@ -14,15 +14,15 @@ void MdDiffAccActor::Init(const TaskProto& task_proto,
                                              cuda_handle_.cublas_handle(),
                                              cuda_handle_.cudnn_handle()));
   }
-  OF_SET_MSG_HANDLE(&MdDiffAccActor::HandleMdDiffAcc);
+  OF_SET_MSG_HANDLE(&MdDiffAccActor::HandleNormal);
   ForEachCurWriteableRegst(
       [this](Regst* regst) { model_diff_acc_cnt_[regst] = 0; });
 }
 
-int MdDiffAccActor::HandleMdDiffAcc(const ActorMsg& msg) {
+int MdDiffAccActor::HandleNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
-    OF_SET_MSG_HANDLE(&MdDiffAccActor::HandleMdDiffAccWhenNoReadableRegstMsg);
+    OF_SET_MSG_HANDLE(&MdDiffAccActor::HandleWaitUntilNoReadableRegst);
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr())
         != 0) {
@@ -33,7 +33,7 @@ int MdDiffAccActor::HandleMdDiffAcc(const ActorMsg& msg) {
   return 0;
 }
 
-int MdDiffAccActor::HandleMdDiffAccWhenNoReadableRegstMsg(const ActorMsg& msg) {
+int MdDiffAccActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
            0);
   TryLaunchKernelAndSendMsg();

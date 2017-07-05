@@ -56,7 +56,7 @@ int MdUpdtCompActor::HandleBeforeSendInitialModel(const ActorMsg& actor_msg) {
   SetReadOnlyForRegstDescId(model_tmp_regst_desc_id_);
   AsyncSendEORDMsgToSubscribers(model_tmp_regst_desc_id_);
   if (JobDesc::Singleton()->is_train()) {
-    OF_SET_MSG_HANDLE(&MdUpdtCompActor::HandleUpdateModel);
+    OF_SET_MSG_HANDLE(&MdUpdtCompActor::HandleNormal);
   } else {
     AsyncSendEORDMsgToSubscribers(model_regst_desc_id_);
     OF_SET_MSG_HANDLE(&MdUpdtCompActor::HandleWaitUntilReadingCntEqualZero);
@@ -64,10 +64,10 @@ int MdUpdtCompActor::HandleBeforeSendInitialModel(const ActorMsg& actor_msg) {
   return 0;
 }
 
-int MdUpdtCompActor::HandleUpdateModel(const ActorMsg& actor_msg) {
+int MdUpdtCompActor::HandleNormal(const ActorMsg& actor_msg) {
   if (actor_msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kEORD);
-    OF_SET_MSG_HANDLE(&MdUpdtCompActor::HandleUpdtModelWhenNoReadableRegstMsg);
+    OF_SET_MSG_HANDLE(&MdUpdtCompActor::HandleWaitUntilNoReadableRegst);
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
     auto regst_warpper = actor_msg.regst_warpper();
     if (TryUpdtStateAsProducedRegst(regst_warpper->regst_raw_ptr()) != 0) {
@@ -80,8 +80,7 @@ int MdUpdtCompActor::HandleUpdateModel(const ActorMsg& actor_msg) {
   return 0;
 }
 
-int MdUpdtCompActor::HandleUpdtModelWhenNoReadableRegstMsg(
-    const ActorMsg& actor_msg) {
+int MdUpdtCompActor::HandleWaitUntilNoReadableRegst(const ActorMsg& actor_msg) {
   CHECK_EQ(
       TryUpdtStateAsProducedRegst(actor_msg.regst_warpper()->regst_raw_ptr()),
       0);

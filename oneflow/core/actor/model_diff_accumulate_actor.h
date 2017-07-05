@@ -14,8 +14,8 @@ class MdDiffAccActor final : public CompActor {
   void Init(const TaskProto&, const ThreadCtx&) override;
 
  private:
-  int HandleMdDiffAcc(const ActorMsg&);
-  int HandleMdDiffAccWhenNoReadableRegstMsg(const ActorMsg&);
+  int HandleNormal(const ActorMsg&) override;
+  int HandleWaitUntilNoReadableRegst(const ActorMsg&) override;
 
   void TryLaunchKernelAndSendMsg();
 

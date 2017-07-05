@@ -50,6 +50,8 @@ class Actor {
   } while (0)
 
   // Common Handles
+  virtual int HandleNormal(const ActorMsg& msg) = 0;
+  virtual int HandleWaitUntilNoReadableRegst(const ActorMsg& msg) = 0;
   int HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg);
 
   // Status of Produced Registers
