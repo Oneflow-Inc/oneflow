@@ -63,6 +63,7 @@ class Actor {
   void AsyncLaunchKernel(
       const KernelCtx&,
       std::function<std::shared_ptr<RegstWarpper>(int64_t)> Regst4RegstDescId);
+  void AsyncSendReadableRegstMsg(std::function<void(Regst*)> PreProcess);
   void AsyncSendReadableRegstMsg();
   void AsyncSendEORDMsgToSubscribers(int64_t regst_desc_id);
   void AsyncSendEORDMsgForAllProducedRegstDesc();

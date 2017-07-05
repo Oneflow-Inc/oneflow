@@ -21,7 +21,7 @@ class CopyCommNetActor final : public Actor {
     return piece_id2waiting_in_regst_.find(expected_piece_id())
            != piece_id2waiting_in_regst_.end();
   }
-  void Act();
+  void Act() override;
 
   HashMap<int64_t, std::shared_ptr<RegstWarpper>> piece_id2waiting_in_regst_;
 };

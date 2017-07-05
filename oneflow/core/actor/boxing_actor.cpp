@@ -68,9 +68,8 @@ void BoxingActor::Act() {
           return std::make_shared<LocalRegstWarpper>(regst);
         }
       });
-  ForEachCurWriteableRegst(
+  AsyncSendReadableRegstMsg(
       [piece_id](Regst* regst) { regst->set_piece_id(piece_id); });
-  AsyncSendReadableRegstMsg();
   for (auto& pair : read_regst_) {
     AsyncSendRegstMsgToProducer(pair.second.front());
     pair.second.pop();

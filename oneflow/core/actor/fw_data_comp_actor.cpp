@@ -132,11 +132,10 @@ void FwDataCompActor::Act() {
           return std::make_shared<LocalRegstWarpper>(regst);
         }
       });
-  ForEachCurWriteableRegst([piece_id, model_version_id](Regst* regst) {
+  AsyncSendReadableRegstMsg([piece_id, model_version_id](Regst* regst) {
     regst->set_piece_id(piece_id);
     regst->set_model_version_id(model_version_id);
   });
-  AsyncSendReadableRegstMsg();
   if (!in_.empty()) {
     AsyncSendRegstMsgToProducer(in_.front());
     in_.pop();
