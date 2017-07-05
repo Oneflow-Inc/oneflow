@@ -9,7 +9,11 @@ namespace oneflow {
 OF_DEFINE_ENUM_TO_OSTREAM_FUNC(ActorCmd);
 OF_DEFINE_ENUM_TO_OSTREAM_FUNC(ActorMsgType);
 
-ActorMsg::ActorMsg() { dst_actor_id_ = -1; }
+ActorMsg::ActorMsg() {
+  dst_actor_id_ = -1;
+  piece_id_ = -1;
+  model_version_id_ = -1;
+}
 
 ActorMsg ActorMsg::BuildReadableRegstMsg(int64_t reader_actor_id,
                                          Regst* regst_raw_ptr) {
