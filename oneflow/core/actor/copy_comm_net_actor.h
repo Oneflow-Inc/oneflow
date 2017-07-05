@@ -17,7 +17,7 @@ class CopyCommNetActor final : public Actor {
   int HandleCopyCommNet(const ActorMsg&);
   int HandleCopyCommNetWhenNoReadableRegstMsg(const ActorMsg&);
 
-  void TryWardKernelAndSendMsg();
+  void TryLaunchKernelAndSendMsg();
   HashMap<int64_t, std::shared_ptr<RegstWarpper>> piece_id2waiting_in_regst_;
 };
 

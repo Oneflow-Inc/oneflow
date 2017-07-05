@@ -24,7 +24,7 @@ int CopyCommNetActor::HandleCopyCommNet(const ActorMsg& msg) {
                 .second);
     }
   }
-  TryWardKernelAndSendMsg();
+  TryLaunchKernelAndSendMsg();
   return 0;
 }
 
@@ -32,7 +32,7 @@ int CopyCommNetActor::HandleCopyCommNetWhenNoReadableRegstMsg(
     const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
            0);
-  TryWardKernelAndSendMsg();
+  TryLaunchKernelAndSendMsg();
   if (piece_id2waiting_in_regst_.empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
     if (total_reading_cnt() == 0) {
@@ -46,12 +46,12 @@ int CopyCommNetActor::HandleCopyCommNetWhenNoReadableRegstMsg(
   return 0;
 }
 
-void CopyCommNetActor::TryWardKernelAndSendMsg() {
+void CopyCommNetActor::TryLaunchKernelAndSendMsg() {
   auto next_regst_it = piece_id2waiting_in_regst_.find(expected_piece_id());
   if (next_regst_it == piece_id2waiting_in_regst_.end()) { return; }
   if (IsWriteReady()) {
     std::shared_ptr<RegstWarpper> regst_wp = next_regst_it->second;
-    AsyncWardKernel(
+    AsyncLaunchKernel(
         GenDefaultKernelCtx(),
         [this,
          &regst_wp](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {

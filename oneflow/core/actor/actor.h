@@ -54,7 +54,7 @@ class Actor {
 
   // Status of Produced Registers
   int64_t expected_piece_id() const { return expected_piece_id_; }
-  void AsyncWardKernel(
+  void AsyncLaunchKernel(
       const KernelCtx&,
       std::function<std::shared_ptr<RegstWarpper>(int64_t)> Regst4RegstDescId);
   void AsyncSendReadableRegstMsg();

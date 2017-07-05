@@ -59,14 +59,14 @@ int BpDataCompActor::HandleBpComp(const ActorMsg& msg) {
       read_regst_.at(regst_wp->regst_desc_id()).push(regst_wp);
     }
   }
-  TryWardKernelAndSendMsg();
+  TryLaunchKernelAndSendMsg();
   return 0;
 }
 
 int BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
            0);
-  TryWardKernelAndSendMsg();
+  TryLaunchKernelAndSendMsg();
   if (read_regst_.at(activation_regst_desc_id_).empty()) {
     while (!read_regst_.at(model_regst_desc_id_).empty()) {
       AsyncSendRegstMsgToProducer(read_regst_.at(model_regst_desc_id_).front());
@@ -88,7 +88,7 @@ int BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg(const ActorMsg& msg) {
   return 0;
 }
 
-void BpDataCompActor::TryWardKernelAndSendMsg() {
+void BpDataCompActor::TryLaunchKernelAndSendMsg() {
   while (IsReadReady() && IsWriteReady()) {
     int64_t cur_model =
         read_regst_.at(model_regst_desc_id_).front()->model_version_id();
@@ -105,7 +105,7 @@ void BpDataCompActor::TryWardKernelAndSendMsg() {
         CHECK_EQ(pair.second.front()->piece_id(), piece_id);
       }
     }
-    AsyncWardKernel(
+    AsyncLaunchKernel(
         GenDefaultKernelCtx(),
         [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
           Regst* regst = GetCurWriteableRegst(regst_desc_id);

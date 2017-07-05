@@ -18,7 +18,7 @@ class BpDataCompActor final : public Actor {
   int HandleBpCompWhenNoReadableRegstMsg(const ActorMsg&);
 
   bool IsReadReady();
-  void TryWardKernelAndSendMsg();
+  void TryLaunchKernelAndSendMsg();
 
   CudaStreamHandle cuda_handle_;
   int num_of_read_empty_;

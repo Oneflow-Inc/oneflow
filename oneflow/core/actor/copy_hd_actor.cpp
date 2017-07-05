@@ -23,14 +23,14 @@ int CopyHdActor::HandleCopyHd(const ActorMsg& msg) {
       waiting_in_regst_.push(msg.regst_warpper());
     }
   }
-  TryWardKernelAndSendMsg();
+  TryLaunchKernelAndSendMsg();
   return 0;
 }
 
 int CopyHdActor::HandleCopyHdWhenNoReadableRegstMsg(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
            0);
-  TryWardKernelAndSendMsg();
+  TryLaunchKernelAndSendMsg();
   if (waiting_in_regst_.empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
     if (total_reading_cnt() == 0) {
@@ -44,11 +44,11 @@ int CopyHdActor::HandleCopyHdWhenNoReadableRegstMsg(const ActorMsg& msg) {
   return 0;
 }
 
-void CopyHdActor::TryWardKernelAndSendMsg() {
+void CopyHdActor::TryLaunchKernelAndSendMsg() {
   if (!waiting_in_regst_.empty() && IsWriteReady()) {
     std::shared_ptr<RegstWarpper> regst_wp = waiting_in_regst_.front();
     CHECK_EQ(regst_wp->piece_id(), expected_piece_id());
-    AsyncWardKernel(
+    AsyncLaunchKernel(
         GenDefaultKernelCtx(),
         [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
           Regst* regst = GetCurWriteableRegst(regst_desc_id);

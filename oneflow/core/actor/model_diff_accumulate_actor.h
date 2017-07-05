@@ -17,7 +17,7 @@ class MdDiffAccActor final : public CompActor {
   int HandleMdDiffAcc(const ActorMsg&);
   int HandleMdDiffAccWhenNoReadableRegstMsg(const ActorMsg&);
 
-  void TryWardKernelAndSendMsg();
+  void TryLaunchKernelAndSendMsg();
 
   std::queue<std::shared_ptr<RegstWarpper>> waiting_in_regst_;
   const Kernel* clear_kernel_;

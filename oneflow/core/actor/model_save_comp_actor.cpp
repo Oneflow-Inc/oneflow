@@ -30,7 +30,7 @@ int MdSaveCompActor::HandleSaveModel(const ActorMsg& actor_msg) {
       std::tuple<Snapshot*, int64_t> save_ctx =
           std::make_tuple(snapshot, parallel_id());
       kernel_ctx.other = &save_ctx;
-      AsyncWardKernel(
+      AsyncLaunchKernel(
           kernel_ctx,
           [&](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
             CHECK_EQ(regst_desc_id, model_regst_desc_id_);

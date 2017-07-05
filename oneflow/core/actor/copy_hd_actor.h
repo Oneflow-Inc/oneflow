@@ -17,7 +17,7 @@ class CopyHdActor final : public Actor {
   int HandleCopyHd(const ActorMsg&);
   int HandleCopyHdWhenNoReadableRegstMsg(const ActorMsg&);
 
-  void TryWardKernelAndSendMsg();
+  void TryLaunchKernelAndSendMsg();
   std::queue<std::shared_ptr<RegstWarpper>> waiting_in_regst_;
 };
 

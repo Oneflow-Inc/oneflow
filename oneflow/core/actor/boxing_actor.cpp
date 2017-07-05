@@ -32,14 +32,14 @@ int BoxingActor::HandleBoxing(const ActorMsg& msg) {
       // do nothing
     }
   }
-  TryWardKernelAndSendMsg();
+  TryLaunchKernelAndSendMsg();
   return 0;
 }
 
 int BoxingActor::HandleBoxingWhenNoReadableRegstMsg(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
            0);
-  TryWardKernelAndSendMsg();
+  TryLaunchKernelAndSendMsg();
   if (num_of_read_empty_ == num_of_subscribed_regsts_) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
     if (total_reading_cnt() == 0) {
@@ -53,13 +53,13 @@ int BoxingActor::HandleBoxingWhenNoReadableRegstMsg(const ActorMsg& msg) {
   return 0;
 }
 
-void BoxingActor::TryWardKernelAndSendMsg() {
+void BoxingActor::TryLaunchKernelAndSendMsg() {
   if (!num_of_read_empty_ && IsWriteReady()) {
     int64_t piece_id = expected_piece_id();
     for (const auto& pair : read_regst_) {
       CHECK_EQ(pair.second.front()->piece_id(), piece_id);
     }
-    AsyncWardKernel(
+    AsyncLaunchKernel(
         GenDefaultKernelCtx(),
         [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
           Regst* regst = GetCurWriteableRegst(regst_desc_id);

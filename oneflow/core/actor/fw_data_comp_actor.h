@@ -19,7 +19,7 @@ class FwDataCompActor final : public CompActor {
   int HandleFwCompWhenNoReadableRegstMsg(const ActorMsg&);
 
   bool IsReadReady();
-  void TryWardKernelAndSendMsg();
+  void TryLaunchKernelAndSendMsg();
 
   CudaStreamHandle cuda_handle_;
   int num_of_not_eord_;

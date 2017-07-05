@@ -17,7 +17,7 @@ class BoxingActor final : public Actor {
   int HandleBoxing(const ActorMsg&);
   int HandleBoxingWhenNoReadableRegstMsg(const ActorMsg&);
 
-  void TryWardKernelAndSendMsg();
+  void TryLaunchKernelAndSendMsg();
 
   int num_of_subscribed_regsts_;
   int num_of_read_empty_;
