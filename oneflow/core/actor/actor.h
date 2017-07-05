@@ -50,11 +50,13 @@ class Actor {
   } while (0)
 
   // Common Handles
+  virtual int HandleNormal(const ActorMsg& msg) = 0;
+  virtual int HandleWaitUntilNoReadableRegst(const ActorMsg& msg) = 0;
   int HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg);
 
   // Status of Produced Registers
   int64_t expected_piece_id() const { return expected_piece_id_; }
-  void AsyncWardKernel(
+  void AsyncLaunchKernel(
       const KernelCtx&,
       std::function<std::shared_ptr<RegstWarpper>(int64_t)> Regst4RegstDescId);
   void AsyncSendReadableRegstMsg();

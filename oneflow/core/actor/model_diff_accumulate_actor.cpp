@@ -14,29 +14,29 @@ void MdDiffAccActor::Init(const TaskProto& task_proto,
                                              cuda_handle_.cublas_handle(),
                                              cuda_handle_.cudnn_handle()));
   }
-  OF_SET_MSG_HANDLE(&MdDiffAccActor::HandleMdDiffAcc);
+  OF_SET_MSG_HANDLE(&MdDiffAccActor::HandleNormal);
   ForEachCurWriteableRegst(
       [this](Regst* regst) { model_diff_acc_cnt_[regst] = 0; });
 }
 
-int MdDiffAccActor::HandleMdDiffAcc(const ActorMsg& msg) {
+int MdDiffAccActor::HandleNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
-    OF_SET_MSG_HANDLE(&MdDiffAccActor::HandleMdDiffAccWhenNoReadableRegstMsg);
+    OF_SET_MSG_HANDLE(&MdDiffAccActor::HandleWaitUntilNoReadableRegst);
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr())
         != 0) {
       waiting_in_regst_.push(msg.regst_warpper());
     }
   }
-  TryWardKernelAndSendMsg();
+  TryLaunchKernelAndSendMsg();
   return 0;
 }
 
-int MdDiffAccActor::HandleMdDiffAccWhenNoReadableRegstMsg(const ActorMsg& msg) {
+int MdDiffAccActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
            0);
-  TryWardKernelAndSendMsg();
+  TryLaunchKernelAndSendMsg();
   if (waiting_in_regst_.empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
     if (total_reading_cnt() == 0) {
@@ -50,7 +50,7 @@ int MdDiffAccActor::HandleMdDiffAccWhenNoReadableRegstMsg(const ActorMsg& msg) {
   return 0;
 }
 
-void MdDiffAccActor::TryWardKernelAndSendMsg() {
+void MdDiffAccActor::TryLaunchKernelAndSendMsg() {
   if (waiting_in_regst_.empty() || !IsWriteReady()) { return; }
   std::shared_ptr<RegstWarpper> regst_wp = waiting_in_regst_.front();
   CHECK_EQ(regst_wp->piece_id(), expected_piece_id());
@@ -66,7 +66,7 @@ void MdDiffAccActor::TryWardKernelAndSendMsg() {
     });
     diff_cnt->second = 0;
   });
-  AsyncWardKernel(
+  AsyncLaunchKernel(
       ctx, [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
         Regst* regst = GetCurWriteableRegst(regst_desc_id);
         if (regst == nullptr) {

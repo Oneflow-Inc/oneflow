@@ -68,7 +68,7 @@ int Actor::HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
   return 0;
 }
 
-void Actor::AsyncWardKernel(
+void Actor::AsyncLaunchKernel(
     const KernelCtx& kernel_ctx,
     std::function<std::shared_ptr<RegstWarpper>(int64_t)> Regst4RegstDescId) {
   for (const ExecKernel& ek : exec_kernel_vec_) {

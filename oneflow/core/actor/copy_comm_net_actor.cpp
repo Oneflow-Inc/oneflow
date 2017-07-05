@@ -9,14 +9,13 @@ void CopyCommNetActor::Init(const TaskProto& task_proto,
   Actor::Init(task_proto, thread_ctx);
   CHECK(thread_ctx.cpu_stream);
   mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
-  OF_SET_MSG_HANDLE(&CopyCommNetActor::HandleCopyCommNet);
+  OF_SET_MSG_HANDLE(&CopyCommNetActor::HandleNormal);
 }
 
-int CopyCommNetActor::HandleCopyCommNet(const ActorMsg& msg) {
+int CopyCommNetActor::HandleNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
-    OF_SET_MSG_HANDLE(
-        &CopyCommNetActor::HandleCopyCommNetWhenNoReadableRegstMsg);
+    OF_SET_MSG_HANDLE(&CopyCommNetActor::HandleWaitUntilNoReadableRegst);
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     auto regst_wp = msg.regst_warpper();
     if (TryUpdtStateAsProducedRegst(regst_wp->regst_raw_ptr()) != 0) {
@@ -24,15 +23,14 @@ int CopyCommNetActor::HandleCopyCommNet(const ActorMsg& msg) {
                 .second);
     }
   }
-  TryWardKernelAndSendMsg();
+  TryLaunchKernelAndSendMsg();
   return 0;
 }
 
-int CopyCommNetActor::HandleCopyCommNetWhenNoReadableRegstMsg(
-    const ActorMsg& msg) {
+int CopyCommNetActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
            0);
-  TryWardKernelAndSendMsg();
+  TryLaunchKernelAndSendMsg();
   if (piece_id2waiting_in_regst_.empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
     if (total_reading_cnt() == 0) {
@@ -46,12 +44,12 @@ int CopyCommNetActor::HandleCopyCommNetWhenNoReadableRegstMsg(
   return 0;
 }
 
-void CopyCommNetActor::TryWardKernelAndSendMsg() {
+void CopyCommNetActor::TryLaunchKernelAndSendMsg() {
   auto next_regst_it = piece_id2waiting_in_regst_.find(expected_piece_id());
   if (next_regst_it == piece_id2waiting_in_regst_.end()) { return; }
   if (IsWriteReady()) {
     std::shared_ptr<RegstWarpper> regst_wp = next_regst_it->second;
-    AsyncWardKernel(
+    AsyncLaunchKernel(
         GenDefaultKernelCtx(),
         [this,
          &regst_wp](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {

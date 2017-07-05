@@ -17,10 +17,10 @@ class MdUpdtCompActor final : public CompActor {
   int HandleBeforeInitDeviceCtx(const ActorMsg&);
   int HandleBeforeInitializeModel(const ActorMsg&);
   int HandleBeforeSendInitialModel(const ActorMsg&);
-  int HandleUpdateModel(const ActorMsg&);
-  int HandleUpdtModelWhenNoReadableRegstMsg(const ActorMsg&);
+  int HandleNormal(const ActorMsg&) override;
+  int HandleWaitUntilNoReadableRegst(const ActorMsg&) override;
 
-  void TryWardKernelAndSendMsg();
+  void TryLaunchKernelAndSendMsg();
 
   CudaStreamHandle cuda_handle_;
   int64_t model_regst_desc_id_;

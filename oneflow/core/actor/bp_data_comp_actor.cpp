@@ -25,7 +25,7 @@ void BpDataCompActor::Init(const TaskProto& task_proto,
                                              cuda_handle_.cublas_handle(),
                                              cuda_handle_.cudnn_handle()));
   }
-  OF_SET_MSG_HANDLE(&BpDataCompActor::HandleBpComp);
+  OF_SET_MSG_HANDLE(&BpDataCompActor::HandleNormal);
 }
 
 bool BpDataCompActor::IsReadReady() {
@@ -41,12 +41,12 @@ bool BpDataCompActor::IsReadReady() {
   return !num_of_read_empty_;
 }
 
-int BpDataCompActor::HandleBpComp(const ActorMsg& msg) {
+int BpDataCompActor::HandleNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     num_of_eord_ -= 1;
     if (!num_of_eord_) {
-      OF_SET_MSG_HANDLE(&BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg);
+      OF_SET_MSG_HANDLE(&BpDataCompActor::HandleWaitUntilNoReadableRegst);
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr())
@@ -63,14 +63,14 @@ int BpDataCompActor::HandleBpComp(const ActorMsg& msg) {
       read_regst_.at(regst_wp->regst_desc_id()).push(regst_wp);
     }
   }
-  TryWardKernelAndSendMsg();
+  TryLaunchKernelAndSendMsg();
   return 0;
 }
 
-int BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg(const ActorMsg& msg) {
+int BpDataCompActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
            0);
-  TryWardKernelAndSendMsg();
+  TryLaunchKernelAndSendMsg();
   if (read_regst_.at(activation_regst_desc_id_).empty()) {
     while (!read_regst_.at(model_regst_desc_id_).empty()) {
       AsyncSendRegstMsgToProducer(read_regst_.at(model_regst_desc_id_).front());
@@ -85,14 +85,14 @@ int BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg(const ActorMsg& msg) {
       OF_SET_MSG_HANDLE(nullptr);
       return 1;
     } else {
-      OF_SET_MSG_HANDLE(nullptr);
+      OF_SET_MSG_HANDLE(&BpDataCompActor::HandleWaitUntilReadingCntEqualZero);
       return 0;
     }
   }
   return 0;
 }
 
-void BpDataCompActor::TryWardKernelAndSendMsg() {
+void BpDataCompActor::TryLaunchKernelAndSendMsg() {
   while (IsReadReady() && IsWriteReady()) {
     int64_t cur_model =
         read_regst_.at(model_regst_desc_id_).front()->model_version_id();
@@ -109,7 +109,7 @@ void BpDataCompActor::TryWardKernelAndSendMsg() {
         CHECK_EQ(pair.second.front()->piece_id(), piece_id);
       }
     }
-    AsyncWardKernel(
+    AsyncLaunchKernel(
         GenDefaultKernelCtx(),
         [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
           Regst* regst = GetCurWriteableRegst(regst_desc_id);
