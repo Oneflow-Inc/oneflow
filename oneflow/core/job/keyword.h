@@ -5,6 +5,6 @@ namespace oneflow {
 
 extern const char* kBaledBlobName;
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_JOB_KEYWORD_H_
+#endif  // ONEFLOW_CORE_JOB_KEYWORD_H_

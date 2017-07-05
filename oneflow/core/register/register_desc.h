@@ -1,8 +1,8 @@
 #ifndef ONEFLOW_CORE_REGISTER_REGISTER_DESC_H_
 #define ONEFLOW_CORE_REGISTER_REGISTER_DESC_H_
 
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/register/register_desc.pb.h"
 
 namespace oneflow {
@@ -42,17 +42,16 @@ class RegstDesc final {
   std::string DebugStr() const;
   void ToProto(RegstDescProto*) const;
   MemoryCase InferMemCase() const;
-  
+
  private:
   int64_t regst_desc_id_;
   const TaskNode* producer_;
   HashSet<const TaskNode*> subscribers_;
-  
+
   HashMap<std::string, std::unique_ptr<Shape>> lbn2shape_;
   int64_t register_num_;
-
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_REGISTER_REGISTER_DESC_H_
+#endif  // ONEFLOW_CORE_REGISTER_REGISTER_DESC_H_

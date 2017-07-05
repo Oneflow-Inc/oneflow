@@ -1,18 +1,18 @@
 #ifndef ONEFLOW_CORE_ACTOR_ACTOR_H_
 #define ONEFLOW_CORE_ACTOR_ACTOR_H_
 
-#include "oneflow/core/common/cuda_stream_handle.h"
-#include "oneflow/core/kernel/kernel_manager.h"
-#include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/actor/cpu_device_context.h"
-#include "oneflow/core/actor/cuda_device_context.h"
-#include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/actor/actor_message_bus.h"
-#include "oneflow/core/register/local_register_warpper.h"
-#include "oneflow/core/register/remote_register_warpper.h"
-#include "oneflow/core/register/register_manager.h"
-#include "oneflow/core/thread/thread_context.h"
+#include "oneflow/core/device/cpu_device_context.h"
+#include "oneflow/core/device/cuda_device_context.h"
+#include "oneflow/core/device/cuda_stream_handle.h"
+#include "oneflow/core/job/task.pb.h"
+#include "oneflow/core/kernel/kernel_context.h"
+#include "oneflow/core/kernel/kernel_manager.h"
 #include "oneflow/core/persistence/snapshot_manager.h"
+#include "oneflow/core/register/local_register_warpper.h"
+#include "oneflow/core/register/register_manager.h"
+#include "oneflow/core/register/remote_register_warpper.h"
+#include "oneflow/core/thread/thread_context.h"
 
 namespace oneflow {
 
@@ -24,12 +24,10 @@ class Actor {
   virtual void Init(const TaskProto&, const ThreadCtx&) = 0;
   // 1: success, and actor finish
   // 0: success, and actor not finish
-  int ProcessMsg(const ActorMsg& msg) {
-    return (this->*msg_handle_)(msg);
-  }
+  int ProcessMsg(const ActorMsg& msg) { return (this->*msg_handle_)(msg); }
 
   int64_t actor_id() const { return actor_id_; }
- 
+
  protected:
   struct ExecKernel {
     const Kernel* kernel;
@@ -45,11 +43,11 @@ class Actor {
   // Msg Handle
   using MsgHandle = int (Actor::*)(const ActorMsg&);
   void set_msg_handle(MsgHandle val) { msg_handle_ = val; }
-  #define OF_SET_MSG_HANDLE(val) \
-    do { \
-      LOG(INFO) << "Actor " << actor_id() << " switch to " << #val; \
-      set_msg_handle(static_cast<MsgHandle>(val)); \
-    } while(0)
+#define OF_SET_MSG_HANDLE(val)                                    \
+  do {                                                            \
+    LOG(INFO) << "Actor " << actor_id() << " switch to " << #val; \
+    set_msg_handle(static_cast<MsgHandle>(val));                  \
+  } while (0)
 
   // Common Handles
   int HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg);
@@ -80,22 +78,23 @@ class Actor {
   int64_t actor_id_;
   KernelWardFunc ward_func_;
   std::vector<ExecKernel> exec_kernel_vec_;
-  HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_; // <regst_desc_id, regst>
+  HashMap<int64_t, std::vector<std::unique_ptr<Regst>>>
+      produced_regsts_;  // <regst_desc_id, regst>
   HashMap<std::string, int64_t> name2regst_desc_id_;
 
   std::unique_ptr<DeviceCtx> device_ctx_;
 
   MsgHandle msg_handle_;
-  
+
   // Status of Produced Registers
   int64_t expected_piece_id_;
-  HashMap<int64_t, std::queue<Regst*>> writeable_produced_regst_; // <regst_desc_id, regst>
+  HashMap<int64_t, std::queue<Regst*>>
+      writeable_produced_regst_;  // <regst_desc_id, regst>
   int64_t writeable_produced_regst_desc_num_;
   HashMap<Regst*, int64_t> produced_regst2reading_cnt_;
   int64_t total_reading_cnt_;
-
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_ACTOR_ACTOR_H_
+#endif  // ONEFLOW_CORE_ACTOR_ACTOR_H_

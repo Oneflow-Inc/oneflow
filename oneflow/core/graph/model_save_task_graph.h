@@ -11,18 +11,17 @@ class MdSaveTaskGraph final : public TaskGraph {
   MdSaveTaskGraph() = delete;
   ~MdSaveTaskGraph() = default;
 
-  MdSaveTaskGraph(const std::string& name,
-                  CompTaskNode* update_task,
-                  const std::string& dot_path_prefix);
+  MdSaveTaskGraph(const std::string& name, CompTaskNode* update_task);
 
   CompTaskNode* update_task() const { return update_task_; }
+  const char* TypeName() const override { return "MdSaveTaskGraph"; }
 
  private:
-  void BuildTaskGraph(const std::string& dot_path_prefix);
+  void BuildTaskGraph();
 
   CompTaskNode* update_task_;
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_GRAPH_MODEL_SAVE_TASK_GRAPH_H_
+#endif  // ONEFLOW_CORE_GRAPH_MODEL_SAVE_TASK_GRAPH_H_

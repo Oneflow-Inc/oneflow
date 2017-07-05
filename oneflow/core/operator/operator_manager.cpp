@@ -9,7 +9,7 @@ HashMap<int, std::function<Operator*()>>& OpTypeCase2Creator() {
   return obj;
 }
 
-}
+}  // namespace
 
 void AddOpCreator(OperatorConf::OpTypeCase op_type_case,
                   std::function<Operator*()> creator) {
@@ -20,8 +20,7 @@ Operator* CreateOp(OperatorConf::OpTypeCase op_type_case) {
   return OpTypeCase2Creator().at(op_type_case)();
 }
 
-std::shared_ptr<Operator> OpMgr::ConstructOp(
-    const OperatorConf& op_conf) {
+std::shared_ptr<Operator> OpMgr::ConstructOp(const OperatorConf& op_conf) {
   std::shared_ptr<Operator> ret(CreateOp(op_conf.op_type_case()));
   ret->InitFromOpConf(op_conf);
   op_list_.emplace_back(ret);
@@ -40,4 +39,4 @@ void OpMgr::AllOpToProto(PbRpf<OperatorProto>* ret) {
   }
 }
 
-} // namespace oneflow
+}  // namespace oneflow

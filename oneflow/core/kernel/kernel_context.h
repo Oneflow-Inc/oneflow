@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_KERNEL_KERNEL_CONTEXT_H_
 #define ONEFLOW_CORE_KERNEL_KERNEL_CONTEXT_H_
 
-#include "oneflow/core/actor/device_context.h"
+#include "oneflow/core/device/device_context.h"
 
 namespace oneflow {
 
@@ -12,6 +12,6 @@ struct KernelCtx {
   void* other;
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_KERNEL_KERNEL_CONTEXT_H_
+#endif  // ONEFLOW_CORE_KERNEL_KERNEL_CONTEXT_H_

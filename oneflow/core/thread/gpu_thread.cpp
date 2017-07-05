@@ -1,5 +1,5 @@
 #include "oneflow/core/thread/gpu_thread.h"
-#include "oneflow/core/common/cuda_stream_handle.h"
+#include "oneflow/core/device/cuda_stream_handle.h"
 
 namespace oneflow {
 
@@ -13,4 +13,4 @@ GpuThread::GpuThread(int device_phy_id) {
   });
 }
 
-} // namespace oneflow
+}  // namespace oneflow

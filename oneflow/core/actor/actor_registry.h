@@ -20,8 +20,9 @@ struct ActorRegister {
 };
 
 #define REGISTER_ACTOR(TaskType, IsForward, ActorType) \
-  static ActorRegister<TaskType, IsForward, ActorType> g_##ActorType##_##IsForward##_register_var;
+  static ActorRegister<TaskType, IsForward, ActorType> \
+      g_##ActorType##_##IsForward##_register_var;
 
 }  // namespace oneflow
 
-#endif // ONEFLOW_CORE_ACTOR_ACTOR_REGISTRY_H_
+#endif  // ONEFLOW_CORE_ACTOR_ACTOR_REGISTRY_H_

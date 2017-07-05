@@ -10,7 +10,10 @@ void BoxingOp::InitFromOpConf(const OperatorConf& op_conf) {
   for (int64_t i = 0; i < op_conf.boxing_conf().in_num(); ++i) {
     EnrollInputBn("in_" + std::to_string(i));
   }
-  EnrollDataTmpBn("middle");
+  if (op_conf.boxing_conf().in_box_case() == BoxingOpConf::kConcatBox
+      && op_conf.boxing_conf().out_box_case() == BoxingOpConf::kCloneBox) {
+    EnrollDataTmpBn("middle");
+  }
   for (int64_t i = 0; i < op_conf.boxing_conf().out_num(); ++i) {
     EnrollOutputBn("out_" + std::to_string(i));
   }
@@ -30,15 +33,13 @@ std::string BoxingOp::obn2lbn(const std::string& output_bn) const {
 
 void BoxingOp::InferShape4FwBlobs(
     std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
-    ParallelPolicy policy,
-    int64_t parallel_id,
-    int64_t parallel_num) const {
+    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
   auto boxing_conf = op_conf().boxing_conf();
   auto in_box_case = boxing_conf.in_box_case();
   std::vector<int64_t> data_tmp_blob_shape_vec =
-    GetShapePtr4BnInOp(input_bns().at(0))->dim_vec();
+      GetShapePtr4BnInOp(input_bns().at(0))->dim_vec();
 
-  // if it is a concat-box, concat input blob shape to middle blob shape
+  // if it is a concat-box, accumulate the dimensions on concat-axis.
   // otherwise only check all boxes are in the same shape.
   int32_t concat_axis = 0;
   if (in_box_case == BoxingOpConf::kConcatBox) {
@@ -55,8 +56,13 @@ void BoxingOp::InferShape4FwBlobs(
       }
     }
   }
-  *GetShapePtr4BnInOp(SoleDtbn()) = Shape(data_tmp_blob_shape_vec);
   auto out_box_case = boxing_conf.out_box_case();
+  // Although the shape of data_tmp is caculated in all kinds of concat boxes,
+  // it is stored back if and only if this is a concat-clone box
+  if (in_box_case == BoxingOpConf::kConcatBox
+      && out_box_case == BoxingOpConf::kCloneBox) {
+    *GetShapePtr4BnInOp(SoleDtbn()) = Shape(data_tmp_blob_shape_vec);
+  }
   CHECK_NE(out_box_case, BoxingOpConf::OUT_BOX_NOT_SET);
   if (out_box_case == BoxingOpConf::kDataSplitBox) {
     int32_t out_num = output_bns().size();

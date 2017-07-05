@@ -2,12 +2,10 @@
 
 namespace oneflow {
 
-void ExecEdge::set_lbn(const std::string& lbn) {
-  lbn_ = lbn;
-}
+void ExecEdge::set_lbn(const std::string& lbn) { lbn_ = lbn; }
 
-std::function<Shape*(const std::string&)>
-ExecNode::GetMutShapePtr4BnInOpFunc() const {
+std::function<Shape*(const std::string&)> ExecNode::GetMutShapePtr4BnInOpFunc()
+    const {
   return [this](const std::string& bn_in_op) -> Shape* {
     auto it = this->bn_in_op2regst_.find(bn_in_op);
     if (it == this->bn_in_op2regst_.end()) { return nullptr; }
@@ -19,11 +17,11 @@ ExecNode::GetMutShapePtr4BnInOpFunc() const {
 
 void ExecNode::ToProto(ExecNodeProto* ret) const {
   ret->set_op_name(op_->op_name());
-  for (const auto& bn_regst: bn_in_op2regst_) {
+  for (const auto& bn_regst : bn_in_op2regst_) {
     auto regst = bn_regst.second.lock();
     if (regst) {
-      ret->mutable_bn_in_op2regst_desc_id()->insert({
-          bn_regst.first, regst->regst_desc_id()});
+      ret->mutable_bn_in_op2regst_desc_id()->insert(
+          {bn_regst.first, regst->regst_desc_id()});
     }
   }
 }
@@ -36,4 +34,4 @@ void ExecGraph::ToExecSequence(ExecSequence* ret) const {
   });
 }
 
-} // namespace oneflow
+}  // namespace oneflow

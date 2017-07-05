@@ -5,20 +5,18 @@
 namespace oneflow {
 
 LogicalGraph::LogicalGraph(const DLNetConf& dl_net_conf,
-                           const Strategy& strategy_conf,
-                           const std::string& dot_filepath) {
+                           const Strategy& strategy_conf) {
   LOG(INFO) << "Build LogicalGraph...";
   HashMap<LogicalEdge*, std::string> edge2lbn;
   HashMap<LogicalEdge*, std::string> edge2ibn;
   NaiveBuildGraphStruct(dl_net_conf, &edge2lbn, &edge2ibn);
   FillNodeWithParallelDesc(strategy_conf);
   AddCloneNodes(edge2lbn, edge2ibn);
-  ToDotFile(dot_filepath);
+  ToDotWithAutoFilePath();
 }
 
 void LogicalGraph::NaiveBuildGraphStruct(
-    const DLNetConf& dl_net_conf,
-    HashMap<LogicalEdge*, std::string>* edge2lbn,
+    const DLNetConf& dl_net_conf, HashMap<LogicalEdge*, std::string>* edge2lbn,
     HashMap<LogicalEdge*, std::string>* edge2ibn) {
   HashMap<std::string, LogicalNode*> lbn2producer;
   // Process Op
@@ -26,7 +24,7 @@ void LogicalGraph::NaiveBuildGraphStruct(
     const OperatorConf& cur_op_conf = dl_net_conf.op(op_i);
     // Construct cur node
     LogicalNode* cur_node = NewNode();
-    cur_node->mut_op() = OpMgr::Singleton().ConstructOp(cur_op_conf);
+    cur_node->mut_op() = OpMgr::Singleton()->ConstructOp(cur_op_conf);
     // Connect input node
     for (const std::string& ibn : cur_node->op()->input_bns()) {
       const std::string& lbn = cur_node->op()->Lbn4BnInOp(ibn);
@@ -92,7 +90,7 @@ void LogicalGraph::CollectCloneInfos(
       pb_op_conf.set_name("clone_" + lbn);
       pb_op_conf.mutable_clone_conf()->set_out_num(edges.size());
       pb_op_conf.mutable_clone_conf()->set_lbn(lbn);
-      auto clone_op = OpMgr::Singleton().ConstructOp(pb_op_conf);
+      auto clone_op = OpMgr::Singleton()->ConstructOp(pb_op_conf);
       // Set clone_info
       CloneInfo clone_info;
       clone_info.clone_op = clone_op;
@@ -124,4 +122,4 @@ void LogicalGraph::AddOneCloneNode(
   }
 }
 
-} // namespace oneflow
+}  // namespace oneflow

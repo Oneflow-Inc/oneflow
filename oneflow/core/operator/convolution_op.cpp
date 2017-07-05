@@ -5,11 +5,11 @@ namespace oneflow {
 void ConvolutionOp::InitFromOpConf(const OperatorConf& op_conf) {
   CHECK(op_conf.has_convolution_conf());
   mut_op_conf() = op_conf;
-  
+
   EnrollInputBn("in");
   EnrollOutputBn("out");
   EnrollDataTmpBn("col_buf");
-  
+
   EnrollModelBn("weight");
   EnrollModelBn("bias");
   EnrollModelTmpBn("bias_multiplier");
@@ -21,9 +21,7 @@ const PbMessage& ConvolutionOp::GetSpecialConf() const {
 
 void ConvolutionOp::InferShape4FwBlobs(
     std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
-    ParallelPolicy policy,
-    int64_t parallel_id,
-    int64_t parallel_num) const {
+    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
   Shape* input_shape_ptr = GetShapePtr4BnInOp(SoleIbn());
   Shape* output_shape_ptr = GetShapePtr4BnInOp(SoleObn());
   Shape* colbuf_shape_ptr = GetShapePtr4BnInOp("col_buf");
@@ -35,17 +33,19 @@ void ConvolutionOp::InferShape4FwBlobs(
   int64_t output_size = 1;
   std::vector<int64_t> output_shape_vec = {batch_size, c_o};
   for (int64_t i = 0; i < input_shape_ptr->NumAxes() - 2; ++i) {
-    int64_t len = (input_shape_ptr->At(i + 2) + 2 * conv_conf.pad(i) - 
-                  conv_conf.kernel_size(i)) / conv_conf.stride(i) + 1; 
+    int64_t len = (input_shape_ptr->At(i + 2) + 2 * conv_conf.pad(i)
+                   - conv_conf.kernel_size(i))
+                      / conv_conf.stride(i)
+                  + 1;
     output_shape_vec.push_back(len);
     kernel_size *= conv_conf.kernel_size(i);
     output_size *= len;
   }
   *output_shape_ptr = Shape(output_shape_vec);
   CHECK_EQ(output_shape_ptr->NumAxes(), input_shape_ptr->NumAxes());
-  *colbuf_shape_ptr = Shape({batch_size, output_size, c_i * kernel_size}); 
+  *colbuf_shape_ptr = Shape({batch_size, output_size, c_i * kernel_size});
   Shape* weight = GetShapePtr4BnInOp("weight");
-  Shape* bias  = GetShapePtr4BnInOp("bias");
+  Shape* bias = GetShapePtr4BnInOp("bias");
   Shape* biasmult_shape_ptr = GetShapePtr4BnInOp("bias_multiplier");
   *weight = Shape({c_o, c_i * kernel_size});
   *bias = Shape({c_o});
@@ -54,4 +54,4 @@ void ConvolutionOp::InferShape4FwBlobs(
 
 REGISTER_OP(OperatorConf::kConvolutionConf, ConvolutionOp);
 
-} // namespace oneflow
+}  // namespace oneflow

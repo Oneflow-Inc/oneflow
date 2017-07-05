@@ -8,9 +8,9 @@ TEST(ReluOp, relu_3x5x4) {
   op_conf.set_name("relu_test");
   op_conf.mutable_relu_conf()->set_in("relu_in");
   op_conf.mutable_relu_conf()->set_out("relu_out");
-  auto relu_op = OpMgr::Singleton().ConstructOp(op_conf);
-  std::vector<int64_t> input_shape_vec = { 3, 5, 4 };
-  HashMap<std::string, Shape*> bn2shape_ptr {
+  auto relu_op = OpMgr::Singleton()->ConstructOp(op_conf);
+  std::vector<int64_t> input_shape_vec = {3, 5, 4};
+  HashMap<std::string, Shape*> bn2shape_ptr{
       {relu_op->SoleIbn(), new Shape(input_shape_vec)},
       {relu_op->SoleObn(), new Shape}};
   auto fp = [&bn2shape_ptr](const std::string& bn) {

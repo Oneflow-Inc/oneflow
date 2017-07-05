@@ -23,6 +23,14 @@ foreach(subdir ${subdir_list})
   list(APPEND of_all_test_cc ${subdir_test_cpps})
 endforeach()
 
+# clang format
+add_custom_target(of_format)
+
+foreach(source_file ${of_all_obj_cc} ${of_main_cc} ${of_all_test_cc})
+    add_custom_command(TARGET of_format PRE_BUILD
+    COMMAND clang-format -i -style=file ${source_file})
+endforeach()
+
 # proto obj lib
 foreach(proto_name ${of_all_proto})
   file(RELATIVE_PATH proto_rel_name ${PROJECT_SOURCE_DIR} ${proto_name})
@@ -42,6 +50,7 @@ include_directories(${PROJECT_BINARY_DIR})
 cuda_add_library(of_ccobj ${of_all_obj_cc})
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})
 add_dependencies(of_ccobj of_protoobj)
+add_dependencies(of_ccobj of_format)
 
 if(APPLE)
   set(of_libs -Wl,-force_load of_ccobj of_protoobj)

@@ -7,21 +7,55 @@ extern "C" {
 
 namespace oneflow {
 
-template<typename floating_point_type>
-void cblas_gemm(
-    const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_TRANSPOSE TransB,
-    const int M, const int N, const int K, const floating_point_type alpha,
-    const floating_point_type* A, const int lda,
-    const floating_point_type* B, const int ldb, const floating_point_type beta,
-    floating_point_type* C, const int ldc);
+// level 1 vector and vector
+// dot product
+template<typename FloatingPointType>
+FloatingPointType cblas_dot(const int n, const FloatingPointType* x,
+                            const int incx, const FloatingPointType* y,
+                            const int incy);
 
-template<typename floating_point_type>
-void cblas_axpy(
-    const int N,
-    const floating_point_type alpha,
-    const floating_point_type *x, const int incx,
-    floating_point_type *y, const int incy);
+// swap x and y
+template<typename FloatingPointType>
+void cblas_swap(const int n, FloatingPointType* x, const int incx,
+                FloatingPointType* y, const int incy);
 
-} // namespace oneflow
+// copy x into y
+template<typename FloatingPointType>
+void cblas_copy(const int n, const FloatingPointType* x, const int incx,
+                FloatingPointType* y, const int incy);
 
-#endif // ONEFLOW_CORE_BLAS_CBLAS_TEMPLATE_H_
+// y = a*x + y
+template<typename FloatingPointType>
+void cblas_axpy(const int n, const FloatingPointType alpha,
+                const FloatingPointType* x, const int incx,
+                FloatingPointType* y, const int incy);
+
+// x = a*x
+template<typename FloatingPointType>
+void cblas_scal(const int n, const FloatingPointType alpha,
+                FloatingPointType* x, const int incx);
+
+// level 2 matrix and vector
+// matrix vector multiply
+template<typename FloatingPointType>
+void cblas_gemv(const enum CBLAS_ORDER order,
+                const enum CBLAS_TRANSPOSE trans_a, const int m, const int n,
+                const FloatingPointType alpha, const FloatingPointType* a,
+                const int lda, const FloatingPointType* x, const int incx,
+                const FloatingPointType beta, FloatingPointType* y,
+                const int incy);
+
+// level 3 matrix and matrix
+// matrix matrix multiply
+template<typename FloatingPointType>
+void cblas_gemm(const enum CBLAS_ORDER order,
+                const enum CBLAS_TRANSPOSE trans_a,
+                const enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
+                const int k, const FloatingPointType alpha,
+                const FloatingPointType* a, const int lda,
+                const FloatingPointType* b, const int ldb,
+                const FloatingPointType beta, FloatingPointType* c,
+                const int ldc);
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_BLAS_CBLAS_TEMPLATE_H_

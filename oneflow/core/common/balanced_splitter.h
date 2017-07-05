@@ -2,8 +2,8 @@
 #define ONEFLOW_CORE_COMMON_BALANCED_SPLITTER_H_
 
 #include <stdint.h>
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/range.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
@@ -27,11 +27,11 @@ class BalancedSplitter final {
   Range At(int64_t idx) const;
 
  private:
-   int64_t size_per_range_;
-   int64_t change_pos_;
-   int64_t split_num_;
+  int64_t size_per_range_;
+  int64_t change_pos_;
+  int64_t split_num_;
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_COMMON_BALANCED_SPLITTER_H_
+#endif  // ONEFLOW_CORE_COMMON_BALANCED_SPLITTER_H_

@@ -17,8 +17,7 @@ class ReluOp final : public UserOperator {
 
   void InferShape4FwBlobs(
       std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
-      ParallelPolicy policy,
-      int64_t parallel_id,
+      ParallelPolicy policy, int64_t parallel_id,
       int64_t parallel_num) const override;
 
  private:
@@ -26,4 +25,4 @@ class ReluOp final : public UserOperator {
 
 }  // namespace oneflow
 
-#endif // ONEFLOW_CORE_OPERATOR_RELU_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_RELU_OP_H_

@@ -100,6 +100,7 @@ message DataLoaderOpConf {
   string feature = 1;
   ShapeProto shape_of_one_feature_ins = 2;
   string label = 3;
+  string data_dir = 4;
 }
 
 message PoolingOpConf {

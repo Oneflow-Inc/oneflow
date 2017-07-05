@@ -21,17 +21,16 @@ class CompTaskNode : public TaskNode {
  protected:
   virtual void InitWithFwNode(TaskNode* fw_node) override {
     TaskNode::InitWithFwNode(fw_node);
-    auto fw_comp_code = static_cast<CompTaskNode*> (fw_node);
+    auto fw_comp_code = static_cast<CompTaskNode*>(fw_node);
     parallel_id_ = fw_comp_code->parallel_id_;
   }
 
  private:
   int64_t parallel_id_;
-
 };
 
 void SortByParallelId(std::vector<CompTaskNode*>* comp_node_vec);
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_GRAPH_COMP_TASK_NODE_H_
+#endif  // ONEFLOW_CORE_GRAPH_COMP_TASK_NODE_H_

@@ -1,21 +1,21 @@
 #include "oneflow/core/register/register_desc.h"
-#include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/graph/copy_task_node.h"
+#include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/job/id_manager.h"
 
 namespace oneflow {
 
 namespace {
 
-void SetDeviceCudaMemoryAccordingToThrdLocId(MemoryCase& mem_case, 
+void SetDeviceCudaMemoryAccordingToThrdLocId(MemoryCase& mem_case,
                                              int64_t thrd_loc_id) {
-  int64_t device_id = IDMgr::Singleton().DevPhyId4ThrdLocId(thrd_loc_id);
+  int64_t device_id = IDMgr::Singleton()->DevPhyId4ThrdLocId(thrd_loc_id);
   mem_case.mutable_device_cuda_mem()->set_device_id(device_id);
 }
 
-void SetHostPinnedMemoryAccordingToSubscribers(MemoryCase& mem_case, 
-    const HashSet<const TaskNode*>& subs) {
+void SetHostPinnedMemoryAccordingToSubscribers(
+    MemoryCase& mem_case, const HashSet<const TaskNode*>& subs) {
   for (const TaskNode* sub : subs) {
     if (sub->task_type() == kCopyCommNetTask) {
       mem_case.mutable_host_pinned_mem()->set_need_rdma(true);
@@ -28,11 +28,11 @@ void SetHostPinnedMemoryAccordingToSubscribers(MemoryCase& mem_case,
   }
 }
 
-}
+}  // namespace
 
 RegstDesc::RegstDesc() {
   producer_ = nullptr;
-  register_num_ = 5; // TODO
+  register_num_ = 5;  // TODO
 }
 
 void RegstDesc::AddSubscriber(const TaskNode* new_subscriber) {
@@ -43,7 +43,7 @@ void RegstDesc::CopyLbnFrom(const RegstDesc* rhs) {
   lbn2shape_.clear();
   for (const auto& pair : rhs->lbn2shape_) {
     const std::string& lbn = pair.first;
-    auto shape = of_make_unique<Shape> ();
+    auto shape = of_make_unique<Shape>();
     CHECK(lbn2shape_.emplace(lbn, std::move(shape)).second);
   }
 }
@@ -69,23 +69,20 @@ Shape* RegstDesc::GetMutShapePtr(const std::string& lbn) {
 }
 
 void RegstDesc::ForEachLbn(std::function<void(const std::string&)> func) const {
-  for (const auto& p : lbn2shape_) {
-    func(p.first);
-  }
+  for (const auto& p : lbn2shape_) { func(p.first); }
 }
 
 void RegstDesc::EraseZeroSizeBlob() {
-  EraseIf<std::string, std::unique_ptr<Shape>>(&lbn2shape_, []
-      (HashMap<std::string, std::unique_ptr<Shape>>::iterator it) {
-    return it->second->elem_cnt() == 0;
-  });
+  EraseIf<std::string, std::unique_ptr<Shape>>(
+      &lbn2shape_,
+      [](HashMap<std::string, std::unique_ptr<Shape>>::iterator it) {
+        return it->second->elem_cnt() == 0;
+      });
 }
 
 int64_t RegstDesc::CompElemCntOfAllBlob() const {
   int64_t sum = 0;
-  for (const auto& pair : lbn2shape_) {
-    sum += pair.second->elem_cnt();
-  }
+  for (const auto& pair : lbn2shape_) { sum += pair.second->elem_cnt(); }
   return sum;
 }
 
@@ -93,7 +90,7 @@ std::string RegstDesc::DebugStr() const {
   std::stringstream ss;
   ss << "{";
   for (const auto& pair : lbn2shape_) {
-    ss << "{" << pair.first << ":" << pair.second->DebugStr() << "}"; 
+    ss << "{" << pair.first << ":" << pair.second->DebugStr() << "}";
   }
   ss << "}";
   return ss.str();
@@ -116,10 +113,12 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
 
 MemoryCase RegstDesc::InferMemCase() const {
   MemoryCase mem_case;
-  DeviceType device_type = producer_->chain_node()->parallel_desc()->device_type();
+  DeviceType device_type =
+      producer_->chain_node()->parallel_desc()->device_type();
   if (auto cp_hd_producer = dynamic_cast<const CopyHDTaskNode*>(producer_)) {
     if (cp_hd_producer->IsH2D()) {
-      SetDeviceCudaMemoryAccordingToThrdLocId(mem_case, producer_->thrd_loc_id());
+      SetDeviceCudaMemoryAccordingToThrdLocId(mem_case,
+                                              producer_->thrd_loc_id());
     } else {
       mem_case.mutable_host_pinned_mem()->set_need_cuda(true);
       SetHostPinnedMemoryAccordingToSubscribers(mem_case, subscribers_);
@@ -129,7 +128,8 @@ MemoryCase RegstDesc::InferMemCase() const {
     SetHostPinnedMemoryAccordingToSubscribers(mem_case, subscribers_);
   } else {
     if (device_type == kGPU && producer_->task_type() != kBoxingTask) {
-      SetDeviceCudaMemoryAccordingToThrdLocId(mem_case, producer_->thrd_loc_id());
+      SetDeviceCudaMemoryAccordingToThrdLocId(mem_case,
+                                              producer_->thrd_loc_id());
     } else {
       mem_case.mutable_host_pageable_mem();
       SetHostPinnedMemoryAccordingToSubscribers(mem_case, subscribers_);
@@ -138,4 +138,4 @@ MemoryCase RegstDesc::InferMemCase() const {
   return mem_case;
 }
 
-} // namespace oneflow
+}  // namespace oneflow

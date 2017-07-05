@@ -1,6 +1,5 @@
 #include "oneflow/core/persistence/snapshot.h"
 #include "tensorflow/core/lib/io/path.h"
-#include "oneflow/core/common/numbers.h"
 
 namespace oneflow {
 
@@ -24,10 +23,11 @@ void Snapshot::CheckAndConcat() {
     std::vector<std::string> file_names;
     TF_CHECK_OK(env_->GetChildren(sub_dir, &file_names));
     CHECK_NE(file_names.size(), 0);
-    std::string concat_file_path = tensorflow::io::JoinPath(sub_dir, concat_file_name_);
+    std::string concat_file_path =
+        tensorflow::io::JoinPath(sub_dir, concat_file_name_);
     // if the children number is 1 , the child must be a file
-    // if the file name is not the concat_file_name_ , the file name must be "0",
-    // and then replace the name to concat_file_name_
+    // if the file name is not the concat_file_name_ , the file name must be
+    // "0", and then replace the name to concat_file_name_
     if (file_names.size() == 1) {
       std::string file_path = tensorflow::io::JoinPath(sub_dir, file_names[0]);
       TF_CHECK_OK(env_->FileExists(file_path));
@@ -44,7 +44,7 @@ void Snapshot::CheckAndConcat() {
     for (std::string sub_file_name : file_names) {
       std::string file_path = tensorflow::io::JoinPath(sub_dir, sub_file_name);
       TF_CHECK_OK(env_->FileExists(file_path));
-      int32_t part_id = Sto32orDie(sub_file_name);
+      int32_t part_id = oneflow_cast<int32_t>(sub_file_name);
       max_part_id = std::max(max_part_id, part_id);
     }
     CHECK_EQ(max_part_id, file_names.size() - 1);
@@ -52,8 +52,8 @@ void Snapshot::CheckAndConcat() {
     std::unique_ptr<tensorflow::WritableFile> concat_file;
     TF_CHECK_OK(env_->NewWritableFile(concat_file_path, &concat_file));
     for (int32_t i = 0; i <= max_part_id; ++i) {
-      std::string file_path = tensorflow::io::JoinPath(sub_dir,
-                                                       std::to_string(i));
+      std::string file_path =
+          tensorflow::io::JoinPath(sub_dir, std::to_string(i));
       const tensorflow::uint64 batch_size = 64 * 1024 * 1024;
       char* scratch = new char[batch_size];
       tensorflow::uint64 offset = 0;
@@ -73,28 +73,25 @@ void Snapshot::CheckAndConcat() {
     }
     TF_CHECK_OK(concat_file->Close());
   }
-  
 }
 
 std::unique_ptr<PersistentInStream> Snapshot::GetInStream(
-    const std::string& key,
-    size_t begin_pos) {
-  std::string file_path = tensorflow::io::JoinPath(root_path_, key,
-                                                   concat_file_name_);
+    const std::string& key, size_t begin_pos) {
+  std::string file_path =
+      tensorflow::io::JoinPath(root_path_, key, concat_file_name_);
   PersistentInStream* ret = new PersistentInStream(file_path, begin_pos);
   return std::unique_ptr<PersistentInStream>(ret);
 }
 
 std::unique_ptr<PersistentOutStream> Snapshot::GetOutStream(
-    const std::string& key,
-    int32_t part_id) {
+    const std::string& key, int32_t part_id) {
   std::string dir_path = tensorflow::io::JoinPath(root_path_, key);
   if (env_->IsDirectory(dir_path).code() == tensorflow::error::NOT_FOUND) {
     TF_CHECK_OK(env_->CreateDir(dir_path));
   }
   TF_CHECK_OK(env_->IsDirectory(dir_path));
-  std::string file_path = tensorflow::io::JoinPath(dir_path,
-                                                   std::to_string(part_id));
+  std::string file_path =
+      tensorflow::io::JoinPath(dir_path, std::to_string(part_id));
   PersistentOutStream* ret = new PersistentOutStream(file_path);
   return std::unique_ptr<PersistentOutStream>(ret);
 }
