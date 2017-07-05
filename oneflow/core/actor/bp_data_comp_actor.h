@@ -22,7 +22,8 @@ class BpDataCompActor final : public Actor {
 
   CudaStreamHandle cuda_handle_;
   int num_of_read_empty_;
-  int num_of_eord_;
+  int num_of_not_eord_;
+  int64_t in_regst_desc_id_;
   int64_t expected_model_version_id_;
   int64_t model_regst_desc_id_;
   int64_t model_tmp_regst_desc_id_;

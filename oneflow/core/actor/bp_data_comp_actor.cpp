@@ -7,13 +7,17 @@ namespace oneflow {
 void BpDataCompActor::Init(const TaskProto& task_proto,
                            const ThreadCtx& thread_ctx) {
   Actor::Init(task_proto, thread_ctx);
+  in_regst_desc_id_ = RegstDescId4Name("in");
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
   activation_regst_desc_id_ = RegstDescId4Name("activation");
   data_tmp_regst_desc_id_ = RegstDescId4Name("data_tmp");
   expected_model_version_id_ = 0;
-  num_of_read_empty_ = 6;
-  num_of_eord_ = 0;
+  num_of_read_empty_ = 2 + (model_regst_desc_id_ != -1)
+                         + (model_tmp_regst_desc_id_ != -1)
+                         + (activation_regst_desc_id_ != -1)
+                         + (data_tmp_regst_desc_id_ != -1);
+  num_of_not_eord_ = num_of_read_empty_;
   if (thread_ctx.cpu_stream) {
     mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
   } else {
@@ -40,8 +44,8 @@ bool BpDataCompActor::IsReadReady() {
 int BpDataCompActor::HandleBpComp(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
-    num_of_eord_ += 1;
-    if (num_of_eord_ == 6) {
+    num_of_eord_ -= 1;
+    if (!num_of_eord_) {
       OF_SET_MSG_HANDLE(&BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg);
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
