@@ -114,11 +114,6 @@ void SplitAndParseAs(const std::string& text, const std::string& delims,
   Split(text, delims, [&Func](std::string&& s) { Func(oneflow_cast<T>(s)); });
 }
 
-inline uint32_t NewRandomSeed() {
-  static std::mt19937 gen{std::random_device{}()};
-  return gen();
-}
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_UTIL_H_

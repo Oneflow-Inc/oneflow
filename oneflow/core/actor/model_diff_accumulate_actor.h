@@ -14,11 +14,10 @@ class MdDiffAccActor final : public CompActor {
   void Init(const TaskProto&, const ThreadCtx&) override;
 
  private:
-  int HandleNormal(const ActorMsg&) override;
-  int HandleWaitUntilNoReadableRegst(const ActorMsg&) override;
+  int HandleMdDiffAcc(const ActorMsg&);
+  int HandleMdDiffAccWhenNoReadableRegstMsg(const ActorMsg&);
 
-  bool IsReadReady() override { return !waiting_in_regst_.empty(); }
-  void Act() override;
+  void TryWardKernelAndSendMsg();
 
   std::queue<std::shared_ptr<RegstWarpper>> waiting_in_regst_;
   const Kernel* clear_kernel_;

@@ -14,11 +14,11 @@ class BpDataCompActor final : public Actor {
   void Init(const TaskProto&, const ThreadCtx&) override;
 
  private:
-  int HandleNormal(const ActorMsg&) override;
-  int HandleWaitUntilNoReadableRegst(const ActorMsg&) override;
+  int HandleBpComp(const ActorMsg&);
+  int HandleBpCompWhenNoReadableRegstMsg(const ActorMsg&);
 
-  bool IsReadReady() override;
-  void Act() override;
+  bool IsReadReady();
+  void TryWardKernelAndSendMsg();
 
   CudaStreamHandle cuda_handle_;
   int num_of_read_empty_;

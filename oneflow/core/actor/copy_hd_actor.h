@@ -14,12 +14,10 @@ class CopyHdActor final : public Actor {
   void Init(const TaskProto&, const ThreadCtx&) override;
 
  private:
-  int HandleNormal(const ActorMsg&) override;
-  int HandleWaitUntilNoReadableRegst(const ActorMsg&) override;
+  int HandleCopyHd(const ActorMsg&);
+  int HandleCopyHdWhenNoReadableRegstMsg(const ActorMsg&);
 
-  bool IsReadReady() override { return !waiting_in_regst_.empty(); }
-  void Act() override;
-
+  void TryWardKernelAndSendMsg();
   std::queue<std::shared_ptr<RegstWarpper>> waiting_in_regst_;
 };
 

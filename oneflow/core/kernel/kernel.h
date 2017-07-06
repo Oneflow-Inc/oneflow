@@ -58,7 +58,7 @@ class Kernel {
   std::unique_ptr<const Operator> op_;
 };
 
-using KernelLaunchFunc = void (Kernel::*)(
+using KernelWardFunc = void (Kernel::*)(
     const KernelCtx&, std::function<Blob*(const std::string&)>) const;
 
 #define INSTANTIATE_CPU_KERNEL_CLASS(classname)      \

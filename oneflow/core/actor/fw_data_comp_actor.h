@@ -15,11 +15,11 @@ class FwDataCompActor final : public CompActor {
 
  private:
   int WaitToStart(const ActorMsg&);
-  int HandleNormal(const ActorMsg&) override;
-  int HandleWaitUntilNoReadableRegst(const ActorMsg&) override;
+  int HandleFwComp(const ActorMsg&);
+  int HandleFwCompWhenNoReadableRegstMsg(const ActorMsg&);
 
-  bool IsReadReady() override;
-  void Act() override;
+  bool IsReadReady();
+  void TryWardKernelAndSendMsg();
 
   CudaStreamHandle cuda_handle_;
   int num_of_not_eord_;

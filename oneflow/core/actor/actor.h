@@ -50,40 +50,33 @@ class Actor {
   } while (0)
 
   // Common Handles
-  virtual int HandleNormal(const ActorMsg& msg) = 0;
-  virtual int HandleWaitUntilNoReadableRegst(const ActorMsg& msg) = 0;
   int HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg);
 
-  // Act
-  void ActUntilFail();
-  virtual void Act() = 0;
-  virtual bool IsReadReady() = 0;
-
-  // Async Do on KernelCtx
-  void AsyncLaunchKernel(
+  // Status of Produced Registers
+  int64_t expected_piece_id() const { return expected_piece_id_; }
+  void AsyncWardKernel(
       const KernelCtx&,
       std::function<std::shared_ptr<RegstWarpper>(int64_t)> Regst4RegstDescId);
-  void AsyncSendReadableRegstMsg(std::function<void(Regst*)> PreProcess);
   void AsyncSendReadableRegstMsg();
   void AsyncSendEORDMsgToSubscribers(int64_t regst_desc_id);
   void AsyncSendEORDMsgForAllProducedRegstDesc();
   void AsyncSendRegstMsgToProducer(const std::shared_ptr<RegstWarpper>&);
   void AsyncDo(std::function<void()>);
-
-  // Status of Produced Registers
   int TryUpdtStateAsProducedRegst(Regst* regst);
   Regst* GetCurWriteableRegst(int64_t regst_desc_id);
   Regst* GetCurWriteableRegst(const std::string& name);
   void ForEachCurWriteableRegst(std::function<void(Regst*)> func);
-  void SetReadOnlyForRegstDescId(int64_t regst_desc_id);
+  bool IsWriteReady();
+  void SetReadOnlyForRegstDescId(int64_t regst_desc_id) {
+    auto it = writeable_produced_regst_.find(regst_desc_id);
+    if (!it->second.empty()) { writeable_produced_regst_desc_num_ -= 1; }
+    writeable_produced_regst_.erase(it);
+  }
   int64_t total_reading_cnt() const { return total_reading_cnt_; }
-  int64_t expected_piece_id() const { return expected_piece_id_; }
 
  private:
-  bool IsWriteReady();
-
   int64_t actor_id_;
-  KernelLaunchFunc launch_func_;
+  KernelWardFunc ward_func_;
   std::vector<ExecKernel> exec_kernel_vec_;
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>>
       produced_regsts_;  // <regst_desc_id, regst>
