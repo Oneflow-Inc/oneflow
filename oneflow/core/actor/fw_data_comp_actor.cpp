@@ -146,7 +146,7 @@ void FwDataCompActor::Act() {
     msg.set_dst_actor_id(bp_actor_id_);
     msg.set_piece_id(piece_id);
     msg.set_model_version_id(model_version_id);
-    AsyncDo([msg]() { ActorMsgBus::Singleton().SendMsg(msg); });
+    AsyncDo([msg]() { ActorMsgBus::Singleton()->SendMsg(msg); });
   }
 }
 
