@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_ACTOR_ACTOR_MESSAGE_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/register/register_warpper.h"
+#include "oneflow/core/register/register_wrapper.h"
 
 namespace oneflow {
 
@@ -31,9 +31,9 @@ class ActorMsg final {
   // Getters
   int64_t dst_actor_id() const { return dst_actor_id_; }
   ActorMsgType msg_type() const { return msg_type_; }
-  std::shared_ptr<RegstWarpper> regst_warpper() const {
+  std::shared_ptr<RegstWrapper> regst_wrapper() const {
     CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
-    return regst_warpper_;
+    return regst_wrapper_;
   }
   ActorCmd actor_cmd() const {
     CHECK_EQ(msg_type_, ActorMsgType::kCmdMsg);
@@ -49,9 +49,9 @@ class ActorMsg final {
   }
   // Setters
   void set_dst_actor_id(int64_t val) { dst_actor_id_ = val; }
-  void set_regst_warpper(std::shared_ptr<RegstWarpper> val) {
+  void set_regst_wrapper(std::shared_ptr<RegstWrapper> val) {
     msg_type_ = ActorMsgType::kRegstMsg;
-    regst_warpper_ = val;
+    regst_wrapper_ = val;
   }
   void set_actor_cmd(ActorCmd val) {
     msg_type_ = ActorMsgType::kCmdMsg;
@@ -70,7 +70,7 @@ class ActorMsg final {
   int64_t dst_actor_id_;
   ActorMsgType msg_type_;
 
-  std::shared_ptr<RegstWarpper> regst_warpper_;
+  std::shared_ptr<RegstWrapper> regst_wrapper_;
   ActorCmd actor_cmd_;
   int64_t piece_id_;
   int64_t model_version_id_;

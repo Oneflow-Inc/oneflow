@@ -1,6 +1,6 @@
 #include "oneflow/core/actor/boxing_actor.h"
 #include "oneflow/core/actor/actor_registry.h"
-#include "oneflow/core/register/local_register_warpper.h"
+#include "oneflow/core/register/local_register_wrapper.h"
 
 namespace oneflow {
 
@@ -23,9 +23,9 @@ int BoxingActor::HandleNormal(const ActorMsg& msg) {
       OF_SET_MSG_HANDLE(&BoxingActor::HandleWaitUntilNoReadableRegst);
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr())
+    if (TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr())
         != 0) {
-      std::shared_ptr<RegstWarpper> regst_wp = msg.regst_warpper();
+      std::shared_ptr<RegstWrapper> regst_wp = msg.regst_wrapper();
       num_of_read_empty_ -= read_regst_[regst_wp->regst_desc_id()].empty();
       read_regst_.at(regst_wp->regst_desc_id()).push(regst_wp);
     } else {
@@ -37,7 +37,7 @@ int BoxingActor::HandleNormal(const ActorMsg& msg) {
 }
 
 int BoxingActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
-  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
+  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
            0);
   ActUntilFail();
   if (num_of_read_empty_ == num_of_subscribed_regsts_) {
@@ -60,12 +60,12 @@ void BoxingActor::Act() {
   }
   AsyncLaunchKernel(
       GenDefaultKernelCtx(),
-      [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+      [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWrapper> {
         Regst* regst = GetCurWriteableRegst(regst_desc_id);
         if (regst == nullptr) {
           return read_regst_.at(regst_desc_id).front();
         } else {
-          return std::make_shared<LocalRegstWarpper>(regst);
+          return std::make_shared<LocalRegstWrapper>(regst);
         }
       });
   AsyncSendReadableRegstMsg(

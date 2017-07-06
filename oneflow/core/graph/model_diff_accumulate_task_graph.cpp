@@ -35,8 +35,8 @@ void MdDiffAccTaskGraph::BuildTaskGraph(const ChainNode* data_chain) {
     auto parallel_desc4faker = new ParallelDesc(*(data_chain->parallel_desc()));
     parallel_desc4faker->mut_policy() = kFakerMdUpdt;
     faker_chain->mut_parallel_desc().reset(parallel_desc4faker);
-    faker_chain->mut_output_lbns() = {kBaledBlobName};
-    diff_acc_chain->mut_input_lbns() = {kBaledBlobName};
+    faker_chain->mut_output_lbns() = {kPackedBlobName};
+    diff_acc_chain->mut_input_lbns() = {kPackedBlobName};
     Connect(faker_chain, chain_gph->NewEdge(), diff_acc_chain);
   }
   //

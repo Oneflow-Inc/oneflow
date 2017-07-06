@@ -69,9 +69,9 @@ int MdUpdtCompActor::HandleNormal(const ActorMsg& actor_msg) {
     CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kEORD);
     OF_SET_MSG_HANDLE(&MdUpdtCompActor::HandleWaitUntilNoReadableRegst);
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
-    auto regst_warpper = actor_msg.regst_warpper();
-    if (TryUpdtStateAsProducedRegst(regst_warpper->regst_raw_ptr()) != 0) {
-      waiting_model_diff_acc_queue_.push(regst_warpper);
+    auto regst_wrapper = actor_msg.regst_wrapper();
+    if (TryUpdtStateAsProducedRegst(regst_wrapper->regst_raw_ptr()) != 0) {
+      waiting_model_diff_acc_queue_.push(regst_wrapper);
     }
     ActUntilFail();
   } else {
@@ -82,7 +82,7 @@ int MdUpdtCompActor::HandleNormal(const ActorMsg& actor_msg) {
 
 int MdUpdtCompActor::HandleWaitUntilNoReadableRegst(const ActorMsg& actor_msg) {
   CHECK_EQ(
-      TryUpdtStateAsProducedRegst(actor_msg.regst_warpper()->regst_raw_ptr()),
+      TryUpdtStateAsProducedRegst(actor_msg.regst_wrapper()->regst_raw_ptr()),
       0);
   ActUntilFail();
   if (waiting_model_diff_acc_queue_.empty()) {
@@ -102,11 +102,11 @@ void MdUpdtCompActor::Act() {
   auto model_diff_acc_wpr = waiting_model_diff_acc_queue_.front();
   waiting_model_diff_acc_queue_.pop();
   Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
-  auto model_wpr = std::make_shared<LocalRegstWarpper>(model_regst);
+  auto model_wpr = std::make_shared<LocalRegstWrapper>(model_regst);
   model_regst->set_model_version_id(next_model_version_id_++);
   AsyncLaunchKernel(
       GenDefaultKernelCtx(),
-      [&](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+      [&](int64_t regst_desc_id) -> std::shared_ptr<RegstWrapper> {
         if (regst_desc_id == model_regst_desc_id_) {
           return model_wpr;
         } else {

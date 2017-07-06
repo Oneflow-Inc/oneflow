@@ -1,6 +1,6 @@
 #include "oneflow/core/actor/bp_data_comp_actor.h"
 #include "oneflow/core/actor/actor_registry.h"
-#include "oneflow/core/register/local_register_warpper.h"
+#include "oneflow/core/register/local_register_wrapper.h"
 
 namespace oneflow {
 
@@ -45,9 +45,9 @@ int BpDataCompActor::HandleNormal(const ActorMsg& msg) {
       OF_SET_MSG_HANDLE(&BpDataCompActor::HandleWaitUntilNoReadableRegst);
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr())
+    if (TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr())
         != 0) {
-      std::shared_ptr<RegstWarpper> regst_wp = msg.regst_warpper();
+      std::shared_ptr<RegstWrapper> regst_wp = msg.regst_wrapper();
       if (regst_wp->regst_desc_id() == model_tmp_regst_desc_id_) {
         CHECK(read_regst_.find(model_tmp_regst_desc_id_) == read_regst_.end());
       } else if (regst_wp->regst_desc_id() == model_regst_desc_id_) {
@@ -64,7 +64,7 @@ int BpDataCompActor::HandleNormal(const ActorMsg& msg) {
 }
 
 int BpDataCompActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
-  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
+  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
            0);
   ActUntilFail();
   if (read_regst_.at(activation_regst_desc_id_).empty()) {
@@ -105,12 +105,12 @@ void BpDataCompActor::Act() {
   }
   AsyncLaunchKernel(
       GenDefaultKernelCtx(),
-      [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+      [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWrapper> {
         Regst* regst = GetCurWriteableRegst(regst_desc_id);
         if (regst == nullptr) {
           return read_regst_.at(regst_desc_id).front();
         } else {
-          return std::make_shared<LocalRegstWarpper>(regst);
+          return std::make_shared<LocalRegstWrapper>(regst);
         }
       });
   AsyncSendReadableRegstMsg(

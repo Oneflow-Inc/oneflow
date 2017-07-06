@@ -24,9 +24,9 @@ int MdDiffAccActor::HandleNormal(const ActorMsg& msg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     OF_SET_MSG_HANDLE(&MdDiffAccActor::HandleWaitUntilNoReadableRegst);
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr())
+    if (TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr())
         != 0) {
-      waiting_in_regst_.push(msg.regst_warpper());
+      waiting_in_regst_.push(msg.regst_wrapper());
     }
   }
   ActUntilFail();
@@ -34,7 +34,7 @@ int MdDiffAccActor::HandleNormal(const ActorMsg& msg) {
 }
 
 int MdDiffAccActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
-  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
+  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
            0);
   ActUntilFail();
   if (waiting_in_regst_.empty()) {
@@ -51,7 +51,7 @@ int MdDiffAccActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
 }
 
 void MdDiffAccActor::Act() {
-  std::shared_ptr<RegstWarpper> regst_wp = waiting_in_regst_.front();
+  std::shared_ptr<RegstWrapper> regst_wp = waiting_in_regst_.front();
   CHECK_EQ(regst_wp->piece_id(), expected_piece_id());
   KernelCtx ctx = GenDefaultKernelCtx();
   ForEachCurWriteableRegst([&](Regst* regst) {
@@ -66,13 +66,13 @@ void MdDiffAccActor::Act() {
     diff_cnt->second = 0;
   });
   AsyncLaunchKernel(
-      ctx, [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+      ctx, [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWrapper> {
         Regst* regst = GetCurWriteableRegst(regst_desc_id);
         if (regst == nullptr) {
           CHECK_EQ(regst_desc_id, waiting_in_regst_.front()->regst_desc_id());
           return waiting_in_regst_.front();
         } else {
-          return std::make_shared<LocalRegstWarpper>(regst);
+          return std::make_shared<LocalRegstWrapper>(regst);
         }
       });
   AsyncSendReadableRegstMsg([this, &regst_wp](Regst* regst) {

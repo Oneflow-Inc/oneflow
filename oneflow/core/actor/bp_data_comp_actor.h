@@ -29,7 +29,7 @@ class BpDataCompActor final : public Actor {
   int64_t activation_regst_desc_id_;
   int64_t data_tmp_regst_desc_id_;
   // <regst_desc_id, queue<regst_wp>>
-  HashMap<int64_t, std::queue<std::shared_ptr<RegstWarpper>>> read_regst_;
+  HashMap<int64_t, std::queue<std::shared_ptr<RegstWrapper>>> read_regst_;
 };
 
 }  // namespace oneflow

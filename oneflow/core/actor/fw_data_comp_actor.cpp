@@ -1,6 +1,6 @@
 #include "oneflow/core/actor/fw_data_comp_actor.h"
 #include "oneflow/core/actor/actor_registry.h"
-#include "oneflow/core/register/local_register_warpper.h"
+#include "oneflow/core/register/local_register_wrapper.h"
 
 namespace oneflow {
 
@@ -65,9 +65,9 @@ int FwDataCompActor::HandleNormal(const ActorMsg& msg) {
       OF_SET_MSG_HANDLE(&FwDataCompActor::HandleWaitUntilNoReadableRegst);
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr())
+    if (TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr())
         != 0) {
-      std::shared_ptr<RegstWarpper> regst_wp = msg.regst_warpper();
+      std::shared_ptr<RegstWrapper> regst_wp = msg.regst_wrapper();
       if (regst_wp->regst_desc_id() == model_tmp_regst_desc_id_) {
         CHECK(!model_tmp_regst_);
         model_tmp_regst_ = regst_wp;
@@ -88,7 +88,7 @@ int FwDataCompActor::HandleNormal(const ActorMsg& msg) {
 }
 
 int FwDataCompActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
-  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
+  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
            0);
   ActUntilFail();
   int total_piece_num = JobDesc::Singleton()->total_piece_num();
@@ -124,12 +124,12 @@ void FwDataCompActor::Act() {
   if (model_regst_) { model_version_id = model_regst_->model_version_id(); }
   AsyncLaunchKernel(
       kernel_ctx_,
-      [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+      [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWrapper> {
         Regst* regst = GetCurWriteableRegst(regst_desc_id);
         if (regst == nullptr) {
           return ready_in_regst_.at(regst_desc_id);
         } else {
-          return std::make_shared<LocalRegstWarpper>(regst);
+          return std::make_shared<LocalRegstWrapper>(regst);
         }
       });
   AsyncSendReadableRegstMsg([piece_id, model_version_id](Regst* regst) {
