@@ -1,10 +1,10 @@
 #ifndef ONEFLOW_CORE_NETWORK_NETWORK_MESSAGE_H_
 #define ONEFLOW_CORE_NETWORK_NETWORK_MESSAGE_H_
 #include <cstdint>
-//#include "runtime/event_message.h"
 #include "oneflow/core/actor/actor_message.h"
 
 namespace oneflow {
+
 typedef std::shared_ptr<ActorMsg> MsgPtr;
 
 enum class NetworkMessageType {

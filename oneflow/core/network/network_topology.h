@@ -8,10 +8,8 @@
 namespace oneflow {
 
 // A graph to store connection relationship in network
-// After Dag is build successfully, NetworkTopo can be generated from the dag.
-//
-//
-// void Dag::GenerateNetworkTopo(NetworkTopo* result);
+// After DAG is build successfully, NetworkTopo can be generated from the DAG.
+// void GenerateNetworkTopo(NetworkTopo* result);
 struct NetworkTopology {
   struct Node {
     int64_t machine_id;

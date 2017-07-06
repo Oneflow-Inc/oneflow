@@ -14,7 +14,7 @@ class Network;
 class NetworkMessageQueue {
  public:
   NetworkMessageQueue();
-  ~NetworkMessageQueue();
+  ~NetworkMessageQueue() = default;
 
   bool TryPop(MsgPtr& msg);
 

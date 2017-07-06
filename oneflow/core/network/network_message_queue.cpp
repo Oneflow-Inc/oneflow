@@ -1,15 +1,11 @@
 #include "oneflow/core/network/network_message_queue.h"
 
-// #include "common/common.h"
 #include <glog/logging.h>
 #include "oneflow/core/network/network.h"
-//#include "runtime/event_message.h"
 
 namespace oneflow {
 
 NetworkMessageQueue::NetworkMessageQueue() { network_ = GetRdmaInstance(); }
-
-NetworkMessageQueue::~NetworkMessageQueue() {}
 
 bool NetworkMessageQueue::TryPop(MsgPtr& msg) {
   if (!network_->Poll(&result_)) {
@@ -39,4 +35,5 @@ void NetworkMessageQueue::ProcessReceiveOK(MsgPtr& msg) {
 void NetworkMessageQueue::ProcessReadOK(MsgPtr& msg) {
   *msg = result_.net_msg.actor_msg;
 }
+
 }  // namespace oneflow

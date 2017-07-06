@@ -5,9 +5,6 @@
 namespace oneflow {
 
 struct MemoryDescriptor {
-  // To avoid involve windows header for the following typedef
-  // typedef unsigned long long UINT64
-  // typedef unsigned int       UINT32
   int64_t machine_id;
   uint64_t address;
   uint32_t remote_token;
@@ -15,6 +12,7 @@ struct MemoryDescriptor {
 
 class NetworkMemory {
  public:
+  NetworkMemory() = default;
   virtual ~NetworkMemory() = default;
 
   // Id: id of this memory, -1 means the id is trivial
