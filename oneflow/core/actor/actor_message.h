@@ -47,6 +47,7 @@ class ActorMsg final {
     CHECK_EQ(msg_type_, ActorMsgType::kPieceModelIdMsg);
     return model_version_id_;
   }
+
   // Setters
   void set_dst_actor_id(int64_t val) { dst_actor_id_ = val; }
   void set_regst_wrapper(std::shared_ptr<RegstWrapper> val) {
@@ -64,6 +65,16 @@ class ActorMsg final {
   void set_model_version_id(int64_t val) {
     msg_type_ = ActorMsgType::kPieceModelIdMsg;
     model_version_id_ = val;
+  }
+
+  // Serialize
+  template<typename StreamT>
+  void Serialize(StreamT& out_stream) const {
+    TODO();
+  }
+  template<typename StreamT>
+  void Deserialize(StreamT& in_stream) {
+    TODO();
   }
 
  private:
