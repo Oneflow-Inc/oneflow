@@ -63,7 +63,7 @@ class Network {
 
   // |msg| is owned by the caller and can be released once |Send| returns, even
   // though the actual transmission of the |msg| content has not occurred.
-  virtual bool Send(const NetworkMessage& msg) = 0;
+  virtual void Send(const NetworkMessage& msg) = 0;
 
   // We assume a following working procedure:
   // (1) Issue a READ verb to RDMA service by |Read|, which also connects a
@@ -83,7 +83,7 @@ class Network {
   // only use a single net_thread to process all the network routines at a node.
   virtual void Read(MemoryDescriptor* src, NetworkMemory* dst) = 0;
 
-  virtual void RegisterEventMessage(MsgPtr event_msg) = 0;
+  virtual void RegisterEventMessage(MsgPtr actor_msg) = 0;
 
   // Poll a result from completion queue if have. Return true if get result,
   // false otherwise.

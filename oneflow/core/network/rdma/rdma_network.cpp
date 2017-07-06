@@ -51,7 +51,7 @@ void RdmaNetwork::Barrier() {
   NetworkResult result;
   for (int32_t i = 0; i < num_successors; ++i) {
     // Wait for the Barrier
-    while (!PollRecvQueue(&result))
+    while (!PollRecvQueue(&result));
     // CHECK(result.type == NetworkResultType::NET_RECEIVE_MSG)
     //   << "Expected recv msg";
     // CHECK(result.net_msg.type == NetworkMessageType::MSG_TYPE_BARRIER)
@@ -67,7 +67,7 @@ void RdmaNetwork::Barrier() {
     if (peer_machine_id < my_machine_id_) {
       barrier_msg.dst_machine_id = peer_machine_id;
       Send(barrier_msg);
-      while (!PollSendQueue(&result))
+      while (!PollSendQueue(&result));
       // CHECK(result.type == NetworkResultType::NET_SEND_OK);
     }
   }
@@ -77,7 +77,7 @@ void RdmaNetwork::Barrier() {
   // we shall poll 2 * n (num_predecessors) net event,
   // n for SEND_OK, n for RECEIVE_MSG
   for (int32_t i = 0; i < num_predecessors; ++i) {
-    while (!PollRecvQueue(&result))
+    while (!PollRecvQueue(&result));
     // CHECK(result.type == NetworkResultType::NET_RECEIVE_MSG);
     // CHECK(result.net_msg.type == NetworkMessageType::MSG_TYPE_REPLY_BARRIER);
   }
@@ -91,7 +91,7 @@ void RdmaNetwork::Barrier() {
     if (peer_machine_id > my_machine_id_) {
       reply_barrier_msg.dst_machine_id = peer_machine_id;
       Send(reply_barrier_msg);
-      while (!PollSendQueue(&result))
+      while (!PollSendQueue(&result));
       // CHECK(result.type == NetworkResultType::NET_SEND_OK);
     }
   }

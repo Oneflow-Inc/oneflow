@@ -12,7 +12,7 @@
 
 namespace oneflow {
 
-class RdmaNetwork : public Network {
+class RdmaNetwork final : public Network {
  public:
   void Init(int64_t my_machine_id, const NetworkTopology& net_topo) override;
   void Finalize() override;
@@ -81,7 +81,7 @@ class RdmaNetwork : public Network {
   // estimate the pre-post number
   static const int kPrePostRecvNumber = 16;
 
-  RdmaManager* rdma_manager_;
+  RdmaWrapper* rdma_wrapper_;
   int64_t my_machine_id_;
   int port_;
   NetworkTopology net_topo_;

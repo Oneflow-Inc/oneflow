@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_NETWORK_RDMA_LINUX_CONNECTION_H_
 #define ONEFLOW_CORE_NETWORK_RDMA_LINUX_CONNECTION_H_
 
+#include <infiniband/verbs.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
