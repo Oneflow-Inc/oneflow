@@ -8,7 +8,7 @@ struct MemoryDescriptor {
   // To avoid involve windows header for the following typedef
   // typedef unsigned long long UINT64
   // typedef unsigned int       UINT32
-  uint64_t machine_id;
+  int64_t machine_id;
   uint64_t address;
   uint32_t remote_token;
 };
@@ -50,8 +50,8 @@ class NetworkMemory {
 
  protected:
   MemoryDescriptor descriptor_;
-  int64_t id_;           // memory id, set as register id
-  void* memory_;         // Not owned
+  int64_t id_;    // memory id, set as register id
+  void* memory_;  // Not owned
   size_t size_;
   bool registered_ = false;
 };

@@ -3,14 +3,14 @@
 
 namespace oneflow {
 
-RdmaMemory::RdmaMemory(IND2MemoryRegion* memory_region) {
-  memory_region_ = memory_region;
-}
+RdmaMemory::RdmaMemory(IND2MemoryRegion* memory_region)
+    : memory_region_(memory_region) {}
 
 // Register as ND memory region
 void RdmaMemory::Register() {
   OVERLAPPED ov;
   ov.hEvent = CreateEvent(NULL, false, false, NULL);
+  CHECK(ov.hEvent);
 
   HRESULT hr = memory_region_->Register(
       memory_,
@@ -21,10 +21,10 @@ void RdmaMemory::Register() {
       // TODO(shiyuan): TEST(FLAG)
       &ov);
 
-
   if (hr == ND_PENDING) {
     hr = memory_region_->GetOverlappedResult(&ov, TRUE);
   }
+  CHECK(SUCCEEDED(hr));
 
   // Set ND2_SGE
   sge_.Buffer = memory_;
@@ -35,22 +35,21 @@ void RdmaMemory::Register() {
   descriptor_.remote_token = memory_region_->GetRemoteToken();
 
   registered_ = true;
-  CloseHandle(ov.hEvent);
+  CHECK(CloseHandle(ov.hEvent));
 }
 
 void RdmaMemory::Unregister() {
   OVERLAPPED ov;
   ov.hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+  CHECK(ov.hEvent);
+
   HRESULT hr = memory_region_->Deregister(&ov);
   if (hr == ND_PENDING) {
     hr = memory_region_->GetOverlappedResult(&ov, TRUE);
   }
+  CHECK(SUCCEEDED(hr));
   registered_ = false;
-  CloseHandle(ov.hEvent);
+  CHECK(CloseHandle(ov.hEvent));
 }
-
-/*const void* Memory::sge() const {
-  return &sge_;
-}*/
 
 }  // namespace oneflow

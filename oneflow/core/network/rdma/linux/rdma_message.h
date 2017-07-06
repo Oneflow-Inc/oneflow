@@ -25,5 +25,4 @@ class RdmaMessage {
 
 }  // namespace oneflow
 
-
 #endif  // ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_MESSAGE_H_

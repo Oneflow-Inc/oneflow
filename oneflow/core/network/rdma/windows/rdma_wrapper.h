@@ -26,7 +26,7 @@ class RdmaWrapper {
 
   RdmaMemory* NewNetworkMemory();
 
-  uint64_t WaitForConnection(Connection* conn, Request* receive_request);
+  int64_t WaitForConnection(Connection* conn, Request* receive_request);
 
   int32_t PollRecvQueue(NetworkResult* result);
   int32_t PollSendQueue(NetworkResult* result);
@@ -35,7 +35,7 @@ class RdmaWrapper {
   sockaddr_in my_sock() { return my_sock_; }
 
  private:
-  sockaddr_in my_sock_;
+  sockaddr_in my_addr_;
 
   // NdspiV2 specific adatper and information
   IND2Adapter* adapter_;

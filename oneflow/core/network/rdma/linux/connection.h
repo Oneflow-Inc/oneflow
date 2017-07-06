@@ -1,13 +1,13 @@
 #ifndef ONEFLOW_CORE_NETWORK_RDMA_LINUX_CONNECTION_H_
 #define ONEFLOW_CORE_NETWORK_RDMA_LINUX_CONNECTION_H_
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <netdb.h>
-#include "oneflow/core/network/rdma/linux/interface.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include "oneflow/core/network/network_memory.h"
+#include "oneflow/core/network/rdma/linux/interface.h"
 
 namespace oneflow {
 
@@ -30,8 +30,8 @@ struct Connector {
 
 class Connection {
  public:
-  explicit Connection(uint64_t my_machine_id);
-  Connection(uint64_t my_machine_id, uint64_t peer_machine_id);
+  explicit Connection(int64_t my_machine_id);
+  Connection(int64_t my_machine_id, int64_t peer_machine_id);
   ~Connection();
 
   void Bind(const char* my_address, int port);
@@ -53,15 +53,19 @@ class Connection {
     connector_->my_qpn = queue_pair_->qp_num;
   }
 
-  struct Connector* connector() { return connector_; }
-  struct ibv_qp* queue_pair() { return queue_pair_; }
+  struct Connector* connector() {
+    return connector_;
+  }
+  struct ibv_qp* queue_pair() {
+    return queue_pair_;
+  }
 
  private:
   struct Connector* connector_;
   struct ibv_qp* queue_pair_;
 
-  uint64_t my_machine_id_;
-  uint64_t peer_machine_id_;
+  int64_t my_machine_id_;
+  int64_t peer_machine_id_;
 
   struct sockaddr_in my_addr_;
   int my_sock_;

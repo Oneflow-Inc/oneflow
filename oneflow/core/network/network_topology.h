@@ -14,10 +14,10 @@ namespace oneflow {
 // void Dag::GenerateNetworkTopo(NetworkTopo* result);
 struct NetworkTopology {
   struct Node {
-    uint64_t machine_id;
+    int64_t machine_id;
     std::string address;
     int32_t port;
-    std::unordered_set<uint64_t> neighbors;
+    std::unordered_set<int64_t> neighbors;
   };
   std::vector<Node> all_nodes;
 };

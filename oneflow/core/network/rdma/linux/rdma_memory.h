@@ -8,9 +8,9 @@ namespace oneflow {
 
 class RdmaMemory : public NetworkMemory {
  public:
+  using NetworkMemory::descriptor_;
   using NetworkMemory::memory_;
   using NetworkMemory::size_;
-  using NetworkMemory::descriptor_;
 
   RdmaMemory() = default;
   RdmaMemory(struct ibv_mr* memory_region, struct ibv_pd* protect_domain);

@@ -4,8 +4,9 @@
 namespace oneflow {
 
 RdmaMessage::RdmaMessage() {
-  net_memory_ = dynamic_cast<RdmaMemory*>(
-      GetRdmaInstance()->NewNetworkMemory());
+  net_memory_ =
+      dynamic_cast<RdmaMemory*>(GetRdmaInstance()->NewNetworkMemory());
+  CHECK(net_memory_);
   net_memory_->Reset(reinterpret_cast<char*>(&net_msg_), sizeof(net_msg_));
   net_memory_->Register();
 }

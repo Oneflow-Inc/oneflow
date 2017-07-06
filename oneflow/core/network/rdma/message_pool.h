@@ -7,8 +7,7 @@
 
 namespace oneflow {
 
-
-template <typename MessageType>
+template<typename MessageType>
 class MessagePool {
  public:
   explicit MessagePool(int32_t initial_size);
@@ -20,14 +19,15 @@ class MessagePool {
  private:
   std::queue<MessageType*> empty_buffer_;
 };
-template <typename MessageType>
+
+template<typename MessageType>
 MessagePool<MessageType>::MessagePool(int32_t initial_size) {
   for (int i = 0; i < initial_size; ++i) {
     empty_buffer_.push(new MessageType());
   }
 }
 
-template <typename MessageType>
+template<typename MessageType>
 MessagePool<MessageType>::~MessagePool() {
   while (!empty_buffer_.empty()) {
     MessageType* buffer = empty_buffer_.front();
@@ -36,7 +36,7 @@ MessagePool<MessageType>::~MessagePool() {
   }
 }
 
-template <typename MessageType>
+template<typename MessageType>
 MessageType* MessagePool<MessageType>::Alloc() {
   // for easy implementation, we always allocate new
   // if no available buffer.
@@ -51,7 +51,7 @@ MessageType* MessagePool<MessageType>::Alloc() {
   return buffer;
 }
 
-template <typename MessageType>
+template<typename MessageType>
 void MessagePool<MessageType>::Free(MessageType* buffer) {
   if (buffer != nullptr) empty_buffer_.push(buffer);
 }

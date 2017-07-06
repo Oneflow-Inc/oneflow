@@ -23,15 +23,17 @@ RequestPool::~RequestPool() {
 Request* RequestPool::AllocRequest(bool is_send) {
   int32_t time_stamp = new_time_stamp();
   Request* request = new Request();
+  CHECK(request);
   request->time_stamp = time_stamp;
   request->is_send = is_send;
   request->rdma_msg = msg_pool_->Alloc();
-  request_dict_.insert({ time_stamp, request });
+  request_dict_.insert({time_stamp, request});
   return request;
 }
 
 void RequestPool::ReleaseRequest(int32_t time_stamp) {
   auto request = GetRequest(time_stamp);
+  CHECK(request);
   // Return the registered message to |msg_pool_|
   msg_pool_->Free(request->rdma_msg);
   // Destroy the Request object
@@ -42,15 +44,17 @@ void RequestPool::ReleaseRequest(int32_t time_stamp) {
 
 Request* RequestPool::GetRequest(int32_t time_stamp) const {
   auto request_it = request_dict_.find(time_stamp);
+  CHECK(request_it);
   return request_it->second;
 }
 
 Request* RequestPool::UpdateTimeStampAndReuse(int32_t time_stamp) {
   Request* request = GetRequest(time_stamp);
+  CHECK(request);
   int32_t new_ts = new_time_stamp();
   request->time_stamp = new_ts;
   request_dict_.erase(time_stamp);
-  request_dict_.insert({ new_ts, request });
+  request_dict_.insert({new_ts, request});
   return request;
 }
 

@@ -1,9 +1,9 @@
 #include "oneflow/core/network/network.h"
 
 #include <glog/logging.h>
-#include <vector>
-#include <string>
 #include <memory>
+#include <string>
+#include <vector>
 // #include "common/common.h"
 
 #include "oneflow/core/network/rdma/rdma_network.h"

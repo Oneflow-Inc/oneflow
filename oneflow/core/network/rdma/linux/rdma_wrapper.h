@@ -1,13 +1,13 @@
 #ifndef ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_WRAPPER_H_
 #define ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_WRAPPER_H_
 
+#include <infiniband/verbs.h>
+#include <netdb.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <netdb.h>
-#include <infiniband/verbs.h>
 
-#include "oneflow/core/network/rdma/linux/interface.h"
 #include "oneflow/core/network/network_message.h"
+#include "oneflow/core/network/rdma/linux/interface.h"
 
 namespace oneflow {
 
@@ -28,7 +28,7 @@ class RdmaWrapper {
 
   RdmaMemory* NewNetworkMemory();
 
-  uint64_t WaitForConnection(Connection* conn, Request* receive_request);
+  int64_t WaitForConnection(Connection* conn, Request* receive_request);
 
   int32_t PollRecvQueue(NetworkResult* result);
   int32_t PollSendQueue(NetworkResult* result);
@@ -40,7 +40,7 @@ class RdmaWrapper {
   struct rdma_event_channel* ec_;
   struct ibv_context* context_;
   struct ibv_pd* protect_domain_;
-  
+
   // completion queue
   struct ibv_cq* recv_cq_;
   struct ibv_cq* send_cq_;

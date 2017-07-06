@@ -1,12 +1,11 @@
 #ifndef ONEFLOW_CORE_NETWORK_RDMA_REQUEST_POOL_H_
 #define ONEFLOW_CORE_NETWORK_RDMA_REQUEST_POOL_H_
 
-#include <unordered_map>
 #include <cstdint>
 #include <memory>
-#include "oneflow/core/network/rdma/message_pool.h"
+#include <unordered_map>
 #include "oneflow/core/network/rdma/agency.h"
-
+#include "oneflow/core/network/rdma/message_pool.h"
 
 namespace oneflow {
 

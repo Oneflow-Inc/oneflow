@@ -1,8 +1,8 @@
 #include "gflags/gflags.h"
 #include "glog/logging.h"
 #include "oneflow/core/network/network.h"
-#include "oneflow/core/network/network_message.h"
 #include "oneflow/core/network/network_memory.h"
+#include "oneflow/core/network/network_message.h"
 
 #include <time.h>
 #include <iostream>
@@ -20,8 +20,8 @@ DEFINE_int64(transfer_size, 1024, "transfer data size");
 DEFINE_int32(transfer_times, 1, "transfer data times");
 
 int main(int argc, char** argv) {
-  google::InitGoogleLogging((const char *)argv[0]);
-  google::SetLogDestination(google::GLOG_INFO, "./rdma_info");  
+  google::InitGoogleLogging((const char*)argv[0]);
+  google::SetLogDestination(google::GLOG_INFO, "./rdma_info");
   gflags::SetUsageMessage("Usage: ./rdma_network_test");
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   FLAGS_logtostderr = 1;
@@ -34,25 +34,27 @@ int main(int argc, char** argv) {
   net_topo.all_nodes[FLAGS_my_machine_id].machine_id = FLAGS_my_machine_id;
   net_topo.all_nodes[FLAGS_my_machine_id].address = FLAGS_my_ip;
   net_topo.all_nodes[FLAGS_my_machine_id].port = 53433;
-  net_topo.all_nodes[FLAGS_my_machine_id].neighbors.insert(FLAGS_peer_machine_id);
+  net_topo.all_nodes[FLAGS_my_machine_id].neighbors.insert(
+      FLAGS_peer_machine_id);
   net_topo.all_nodes[FLAGS_peer_machine_id].machine_id = FLAGS_peer_machine_id;
   net_topo.all_nodes[FLAGS_peer_machine_id].address = FLAGS_peer_ip;
   net_topo.all_nodes[FLAGS_peer_machine_id].port = 53433;
-  net_topo.all_nodes[FLAGS_peer_machine_id].neighbors.insert(FLAGS_my_machine_id);
-  
+  net_topo.all_nodes[FLAGS_peer_machine_id].neighbors.insert(
+      FLAGS_my_machine_id);
+
   clock_t start_time, current_time;
 
   // modify here manually
-  uint64_t my_machine_id = FLAGS_my_machine_id;
-  uint64_t peer_machine_id = FLAGS_peer_machine_id;
+  int64_t my_machine_id = FLAGS_my_machine_id;
+  int64_t peer_machine_id = FLAGS_peer_machine_id;
 
   net->Init(my_machine_id, net_topo);
   LOG(INFO) << "Net Init Success." << endl;
 
   NetworkMessage msg;
   NetworkResult result;
-  
-  /*  
+
+  /*
   msg.src_machine_id = my_machine_id;
   msg.type = NetworkMessageType::MSG_TYPE_BARRIER;
   msg.dst_machine_id = peer_machine_id;
@@ -61,10 +63,9 @@ int main(int argc, char** argv) {
   cout << "PostSendRequest" << endl;
 
   int k = 0;
-  for (int i = 0; i < 2 * net_topo.all_nodes[my_machine_id].neighbors.size(); ++i) {
-    while (!net->Poll(&result)) {
-      sleep(1);
-      printf("Poll time: %d, false\n", k++);
+  for (int i = 0; i < 2 * net_topo.all_nodes[my_machine_id].neighbors.size();
+  ++i) { while (!net->Poll(&result)) { sleep(1); printf("Poll time: %d,
+  false\n", k++);
     }
     printf("Poll time: %d, true \n", k++);
     if (result.type == NetworkResultType::NET_SEND_OK) {
@@ -104,7 +105,7 @@ int main(int argc, char** argv) {
     memory_msg.token = src_memory->memory_discriptor().remote_token;
     net->Send(memory_msg);
   }
-  
+
   // useful for all machine
   int i = 0;
   while (i < FLAGS_transfer_times) {
@@ -114,22 +115,22 @@ int main(int argc, char** argv) {
     }
     if (result.type == NetworkResultType::NET_SEND_OK) {
       LOG(INFO) << "send ok" << endl;
-    }
-    else if (result.type == NetworkResultType::NET_RECEIVE_MSG) {
-      if (result.net_msg.type == NetworkMessageType::MSG_TYPE_REMOTE_MEMORY_DESCRIPTOR) {
+    } else if (result.type == NetworkResultType::NET_RECEIVE_MSG) {
+      if (result.net_msg.type
+          == NetworkMessageType::MSG_TYPE_REMOTE_MEMORY_DESCRIPTOR) {
         LOG(INFO) << "recv descriptor" << endl;
         remote_memory_descriptor->machine_id = result.net_msg.src_machine_id;
         remote_memory_descriptor->address = result.net_msg.address;
         remote_memory_descriptor->remote_token = result.net_msg.token;
-        if (remote_memory_descriptor->address == 0) { 
-          LOG(INFO) << "address error" << endl; 
-          exit(1); 
+        if (remote_memory_descriptor->address == 0) {
+          LOG(INFO) << "address error" << endl;
+          exit(1);
         }
         net->Read(remote_memory_descriptor, dst_memory);
         LOG(INFO) << "async read issued" << endl;
         start_time = clock();
-      }
-      else if (result.net_msg.type == NetworkMessageType::MSG_TYPE_REQUEST_ACK) {
+      } else if (result.net_msg.type
+                 == NetworkMessageType::MSG_TYPE_REQUEST_ACK) {
         LOG(INFO) << "Send next memory descriptor" << endl;
         NetworkMessage memory_msg;
         memory_msg.type = NetworkMessageType::MSG_TYPE_REMOTE_MEMORY_DESCRIPTOR;
@@ -139,12 +140,10 @@ int main(int argc, char** argv) {
         memory_msg.token = src_memory->memory_discriptor().remote_token;
         net->Send(memory_msg);
       }
-    }
-    else if (result.type == NetworkResultType::NET_READ_OK) {
+    } else if (result.type == NetworkResultType::NET_READ_OK) {
       current_time = clock();
-      LOG(INFO) << "READ OK. TIMES: " << i 
-        << ", cost time: " << (double)(current_time - start_time)/CLOCKS_PER_SEC 
-        << endl;
+      LOG(INFO) << "READ OK. TIMES: " << i << ", cost time: "
+                << (double)(current_time - start_time) / CLOCKS_PER_SEC << endl;
       start_time = current_time;
       NetworkMessage read_ok_msg;
       read_ok_msg.type = NetworkMessageType::MSG_TYPE_REQUEST_ACK;
@@ -156,8 +155,8 @@ int main(int argc, char** argv) {
   }
 
   LOG(INFO) << "Network Shutting Down..." << endl;
-  delete []src_buffer;
-  delete []dst_buffer;
+  delete[] src_buffer;
+  delete[] dst_buffer;
   gflags::ShutDownCommandLineFlags();
   google::ShutdownGoogleLogging();
   return 0;

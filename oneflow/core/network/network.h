@@ -1,24 +1,23 @@
 #ifndef ONEFLOW_CORE_NETWORK_NETWORK_H_
 #define ONEFLOW_CORE_NETWORK_NETWORK_H_
 
-#include <vector>
-#include <string>
 #include <memory>
+#include <string>
 #include <unordered_map>
+#include <vector>
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/network/network_message.h"
 #include "oneflow/core/network/network_topology.h"
 
 namespace oneflow {
 
-//struct NetworkMessage;
+// struct NetworkMessage;
 
 struct NetworkResult;
 
 struct MemoryDescriptor;
 
 class NetworkMemory;
-
 
 /*
 Network defines interface that ONEFLOW uses for machine-level communication
@@ -29,8 +28,8 @@ The Network interface provide asynchronous communication with neighbors in
 network topo graph. The Network can send msg to others.
 
 Two kinds of communication can be done. One is send Network Message, the other
-is write a local memory to a remote machines. For the write call, the memory must
-be registerd before writing.
+is write a local memory to a remote machines. For the write call, the memory
+must be registerd before writing.
 
 Inquiring sending status and polling incoming message, call
 
@@ -51,8 +50,7 @@ class Network {
  public:
   // Init the network environment and connect with each other based on the
   // network topo. Suppose net_topo is a connected graph
-  virtual void Init(uint64_t my_machine_id,
-                    const NetworkTopology& net_topo) = 0;
+  virtual void Init(int64_t my_machine_id, const NetworkTopology& net_topo) = 0;
 
   virtual void Finalize() = 0;
 

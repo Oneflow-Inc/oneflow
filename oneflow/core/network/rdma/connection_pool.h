@@ -12,13 +12,13 @@ class ConnectionPool {
   ConnectionPool();
   ~ConnectionPool() = default;
 
-  void AddConnection(uint64_t peer_machine_id, Connection* conn);
-  void CleanConnection(uint64_t peer_machine_id);
-  Connection* GetConnection(uint64_t peer_machine_id) const;
+  void AddConnection(int64_t peer_machine_id, Connection* conn);
+  void CleanConnection(int64_t peer_machine_id);
+  Connection* GetConnection(int64_t peer_machine_id) const;
 
  private:
   int32_t conn_num_;
-  std::unordered_map<uint64_t, Connection*> connection_dict_;
+  std::unordered_map<int64_t, Connection*> connection_dict_;
   ConnectionPool(const ConnectionPool& other) = delete;
   Connection& operator=(const ConnectionPool& other) = delete;
 };

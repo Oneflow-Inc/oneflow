@@ -10,18 +10,17 @@
 #include "oneflow/core/network/rdma/message_pool.h"
 #include "oneflow/core/network/rdma/request_pool.h"
 
-
 namespace oneflow {
 
 class RdmaNetwork : public Network {
  public:
-  void Init(uint64_t my_machine_id, const NetworkTopology& net_topo) override;
+  void Init(int64_t my_machine_id, const NetworkTopology& net_topo) override;
   void Finalize() override;
   void Barrier() override;
 
   NetworkMemory* NewNetworkMemory() override;
 
-  bool Send(const NetworkMessage& msg) override;
+  void Send(const NetworkMessage& msg) override;
   // remote_memory_descriptor, local_memory
   void Read(MemoryDescriptor* src, NetworkMemory* dst) override;
   void RegisterEventMessage(MsgPtr actor_msg) override;
@@ -64,17 +63,17 @@ class RdmaNetwork : public Network {
   bool PollSendQueue(NetworkResult* result);
 
   // Post a new Request object to the receiving queue connecting to |peer_rank|
-  // void PostRecvRequest(uint64_t peer_machine_id);
+  // void PostRecvRequest(int64_t peer_machine_id);
   // Re-post the Request object indexed by |time_stamp| to the receive queue
   // connecting to |peer_rank|, just updating its time_stamp to a new value.
-  // void RePostRecvRequest(uint64_t peer_machine_id, int32_t time_stamp);
+  // void RePostRecvRequest(int64_t peer_machine_id, int32_t time_stamp);
 
   const MemoryDescriptor& GetMemoryDescriptor(int64_t register_id) const;
 
   // As active side, try to connect to others;
   // return true if successfully, false if failed
-  // bool TryConnectTo(uint64_t peer_machine_id);
-  // void CompleteConnectionTo(uint64_t peer_machine_id);
+  // bool TryConnectTo(int64_t peer_machine_id);
+  // void CompleteConnectionTo(int64_t peer_machine_id);
 
   // As passive side, prepare for others' connect
   // int32_t WaitForConnection();
@@ -83,7 +82,7 @@ class RdmaNetwork : public Network {
   static const int kPrePostRecvNumber = 16;
 
   RdmaManager* rdma_manager_;
-  uint64_t my_machine_id_;
+  int64_t my_machine_id_;
   int port_;
   NetworkTopology net_topo_;
 

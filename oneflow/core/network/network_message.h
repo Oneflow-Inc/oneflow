@@ -7,7 +7,6 @@
 namespace oneflow {
 typedef std::shared_ptr<ActorMsg> MsgPtr;
 
-
 enum class NetworkMessageType {
   MSG_TYPE_BARRIER = 1,
   MSG_TYPE_REPLY_BARRIER = -1,
@@ -20,8 +19,8 @@ enum class NetworkMessageType {
 struct NetworkMessage {
   // required
   NetworkMessageType type;
-  uint64_t src_machine_id;
-  uint64_t dst_machine_id;
+  int64_t src_machine_id;
+  int64_t dst_machine_id;
 
   // Request/ack EventMessage between send/recv actors for MSG_TYPE_READ_OK or
   // MSG_TYPE_ACK_CONSUMED
@@ -33,11 +32,7 @@ struct NetworkMessage {
   uint32_t token;
 };
 
-enum class NetworkResultType {
-  NET_READ_OK,
-  NET_SEND_OK,
-  NET_RECEIVE_MSG
-};
+enum class NetworkResultType { NET_READ_OK, NET_SEND_OK, NET_RECEIVE_MSG };
 
 struct NetworkResult {
   NetworkResultType type;

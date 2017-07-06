@@ -7,12 +7,9 @@
 
 namespace oneflow {
 
-NetworkMessageQueue::NetworkMessageQueue() {
-  network_ = GetRdmaInstance();
-}
+NetworkMessageQueue::NetworkMessageQueue() { network_ = GetRdmaInstance(); }
 
-NetworkMessageQueue::~NetworkMessageQueue() {
-}
+NetworkMessageQueue::~NetworkMessageQueue() {}
 
 bool NetworkMessageQueue::TryPop(MsgPtr& msg) {
   if (!network_->Poll(&result_)) {
@@ -25,14 +22,9 @@ bool NetworkMessageQueue::TryPop(MsgPtr& msg) {
   }
   msg.reset(new ActorMsg());
   switch (result_.type) {
-  case NetworkResultType::NET_SEND_OK:
-    return false;
-  case NetworkResultType::NET_RECEIVE_MSG:
-    ProcessReceiveOK(msg);
-    break;
-  case NetworkResultType::NET_READ_OK:
-    ProcessReadOK(msg);
-    break;
+    case NetworkResultType::NET_SEND_OK: return false;
+    case NetworkResultType::NET_RECEIVE_MSG: ProcessReceiveOK(msg); break;
+    case NetworkResultType::NET_READ_OK: ProcessReadOK(msg); break;
   }
   return true;
 }

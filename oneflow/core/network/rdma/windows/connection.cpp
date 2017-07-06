@@ -1,6 +1,5 @@
 #include "oneflow/core/network/rdma/windows/connection.h"
 #include <ndspi.h>
-#include <iostream>
 #include "oneflow/core/network/rdma/windows/interface.h"
 #include "oneflow/core/network/rdma/request_pool.h"
 
@@ -19,35 +18,28 @@ sockaddr_in GetSocket(const char* address, int port) {
 
 }  // namespace
 
-Connection::Connection(uint64_t my_machine_id)
+Connection::Connection(int64_t my_machine_id)
     : Connection::Connection(my_machine_id, -1) {}
 
-Connection::Connection(uint64_t my_machine_id, uint64_t peer_machine_id) {
-  my_machine_id_ = my_machine_id;
-  peer_machine_id_ = peer_machine_id;
-  connector_ = NULL;
-  queue_pair_ = NULL;
-  // TODO(shiyuan)
-  ov_ = new OVERLAPPED;
+Connection::Connection(int64_t my_machine_id, int64_t peer_machine_id)
+    : my_machine_id_(my_machine_id), peer_machine_id_(peer_machine_id),
+      connector_(nullptr), queue_pair_(nullptr), ov_(new OVERLAPPED) {
   ov_->hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 }
 
 Connection::~Connection() {
 }
 
-bool Connection::Bind(const char* my_address, int port) {
+void Connection::Bind(const char* my_address, int port) {
   sockaddr_in my_sock = GetSocket(my_address, port);
   HRESULT hr = connector_->Bind(reinterpret_cast<const sockaddr*>(&my_sock),
-                               sizeof(my_sock));
-  if (SUCCEEDED(hr)) {
-    return true;
-  } else {
-    return false;
-  }
+                                sizeof(my_sock));
+  CHECK(SUCCEEDED(hr));
 }
 
-bool Connection::TryConnectTo(const char* peer_address, int port) {
+void Connection::TryConnectTo(const char* peer_address, int port) {
   sockaddr_in peer_sock = GetSocket(peer_address, port);
+  CHECK(peer_sock);
   HRESULT hr = connector_->Connect(
       queue_pair_,
       reinterpret_cast<const sockaddr*>(&peer_sock),
@@ -56,7 +48,7 @@ bool Connection::TryConnectTo(const char* peer_address, int port) {
       10,      // outbound read limit, max in-flight number
       &my_machine_id_,  // Send the active side machine id as private data to
                         // tell the passive side who is the sender.
-      sizeof(uint64_t),
+      sizeof(int64_t),
       ov_);
 
   if (hr == ND_PENDING) {
@@ -64,12 +56,7 @@ bool Connection::TryConnectTo(const char* peer_address, int port) {
     std::cout << "ND_PENDING" << std::endl;
   }
 
-  if (SUCCEEDED(hr)) {
-    return true;
-  } else {
-    std::cout << "Failed try to connect" << std::endl;
-    return false;
-  }
+  CHECK(SUCCEEDED(hr)) << "Failed try to connect";
 }
 
 void Connection::CompleteConnectionTo() {
@@ -78,10 +65,7 @@ void Connection::CompleteConnectionTo() {
   if (hr == ND_PENDING) {
     hr = connector_->GetOverlappedResult(ov_, TRUE);
   }
-  if (FAILED(hr) || hr == ND_TIMEOUT) {
-    std::cout << "CompleteConnect failed" << std::endl;
-  }
-  // CHECK(!FAILED(hr)) << "Failed to complete connection\n";
+  CHECK(SUCCEEDED(hr))<< "CompleteConnect failed";
 }
 
 void Connection::AcceptConnect() {
@@ -94,25 +78,20 @@ void Connection::AcceptConnect() {
   if (hr == ND_PENDING) {
     hr = connector_->GetOverlappedResult(ov_, true);
   }
-  if (SUCCEEDED(hr)) {
-    std::cout << "Success accept connection" << std::endl;
-  } else {
-    std::cout << "Fail accept connection" << std::endl;
-  }
-  // CHECK(!FAILED(hr)) << "Failed to accept\n";
-  // LOG(INFO) << "Accept done\n";
+  CHECK(SUCCEEDED(hr)) << "Fail accept connection";
 }
 
 void Connection::DestroyConnection() {
 }
 
 void Connection::PostSendRequest(Request* send_request) {
-  queue_pair_->Send(
+  HRESULT hr = queue_pair_->Send(
       &send_request->time_stamp,
       static_cast<const ND2_SGE*>(
           send_request->rdma_msg->net_memory()->sge()),
       1,
       0);  // TODO(shiyuan) this flag should be mod for generate an event in cq
+  CHECK(SUCCEEDED(hr));
 }
 
 void Connection::PostRecvRequest(Request* recv_request) {
@@ -121,6 +100,7 @@ void Connection::PostRecvRequest(Request* recv_request) {
       static_cast<const ND2_SGE*>(
           recv_request->rdma_msg->net_memory()->sge()),
       1);
+  CHECK(SUCCEEDED(hr));
 }
 
 void Connection::PostReadRequest(
@@ -134,6 +114,7 @@ void Connection::PostReadRequest(
       remote_memory_descriptor->address,
       remote_memory_descriptor->remote_token,
       0);  // TODO(shiyuan) parameters
+  CHECK(SUCCEEDED(hr));
 }
 
 }  // namespace oneflow
