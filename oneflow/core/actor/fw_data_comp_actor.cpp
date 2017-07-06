@@ -29,6 +29,7 @@ void FwDataCompActor::Init(const TaskProto& task_proto,
         1 + (model_regst_desc_id_ != -1) + (model_tmp_regst_desc_id_ != -1);
     OF_SET_MSG_HANDLE(&FwDataCompActor::HandleNormal);
   }
+  bp_actor_id_ = IDMgr::Singleton()->ActorId4TaskId(task_proto.bp_task_id());
 }
 
 bool FwDataCompActor::IsReadReady() {

@@ -7,6 +7,8 @@ namespace oneflow {
 
 namespace test {
 
+namespace {
+
 template<DeviceType device_type, typename FloatingPointType>
 std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
     bool has_bias_term) {
@@ -114,6 +116,8 @@ void TestInnerProductKernel(bool has_bias_term) {
     KTCommon::CheckResult(BnInOp2BlobPtr, "bias_diff", "expected_bias_diff");
   }
 }
+
+}  // namespace
 
 }  // namespace test
 
