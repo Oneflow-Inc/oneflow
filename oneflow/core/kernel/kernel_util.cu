@@ -85,7 +85,8 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
     CudaCheck(cudaMallocHost(&dptr, dptr_size));
 
     Blob* temp_blob_host = new Blob(dptr, shape);
-    KernelUtil::Fill(ctx, fill_conf, temp_blob_host);
+    KernelUtil<DeviceType::kCPU, FloatingPointType>::Fill(ctx, fill_conf,
+                                                          temp_blob_host);
 
     CudaCheck(cudaMemcpy(blob->mut_dptr(), temp_blob_host->dptr(), dptr_size,
                          cudaMemcpyHostToDevice));
