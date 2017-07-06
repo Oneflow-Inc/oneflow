@@ -15,10 +15,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
-#include "cublas_v2.h"
-#include "cuda.h"
-#include "cuda_runtime.h"
-#include "cudnn.h"
 #include "glog/logging.h"
 #include "gtest/gtest.h"
 
@@ -40,10 +36,10 @@ namespace oneflow {
 
 #define TODO() LOG(FATAL) << "TODO";
 
-#define OF_SINGLETON(ClassName)   \
-  static ClassName& Singleton() { \
-    static ClassName obj;         \
-    return obj;                   \
+#define OF_SINGLETON(ClassName)            \
+  static ClassName* Singleton() {          \
+    static ClassName* ptr = new ClassName; \
+    return ptr;                            \
   }
 
 template<typename T>
@@ -116,6 +112,11 @@ template<typename T>
 void SplitAndParseAs(const std::string& text, const std::string& delims,
                      std::function<void(T&&)> Func) {
   Split(text, delims, [&Func](std::string&& s) { Func(oneflow_cast<T>(s)); });
+}
+
+inline uint32_t NewRandomSeed() {
+  static std::mt19937 gen{std::random_device{}()};
+  return gen();
 }
 
 }  // namespace oneflow

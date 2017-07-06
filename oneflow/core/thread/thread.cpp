@@ -16,7 +16,7 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
     auto actor_it = id2actor_ptr_.find(actor_id);
     if (actor_it == id2actor_ptr_.end()) {
       std::unique_lock<std::mutex> lck(id2task_mtx_);
-      int64_t task_id = IDMgr::Singleton().TaskId4ActorId(actor_id);
+      int64_t task_id = IDMgr::Singleton()->TaskId4ActorId(actor_id);
       auto task_it = id2task_.find(task_id);
       auto emplace_ret = id2actor_ptr_.emplace(
           actor_id, ConstructActor(task_it->second, thread_ctx));
@@ -32,6 +32,14 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
       CHECK_EQ(process_msg_ret, 0);
     }
   }
+}
+
+void Thread::Deconstruct() {
+  actor_thread_.join();
+  CHECK(id2task_.empty());
+  msg_channel_.CloseSendEnd();
+  msg_channel_.CloseReceiveEnd();
+  CHECK(id2actor_ptr_.empty());
 }
 
 }  // namespace oneflow

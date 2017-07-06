@@ -10,7 +10,7 @@ TEST(ConcatOp, concat_two_3x3) {
   op_conf.mutable_concat_conf()->add_in("concat/in1");
   op_conf.mutable_concat_conf()->set_axis(1);
   op_conf.mutable_concat_conf()->set_out("concat_test_lbn");
-  auto concat_op = OpMgr::Singleton().ConstructOp(op_conf);
+  auto concat_op = OpMgr::Singleton()->ConstructOp(op_conf);
 
   std::vector<int64_t> shape_vec = {3, 3};
   HashMap<std::string, Shape*> bn2shape_ptr{

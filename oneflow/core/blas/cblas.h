@@ -1,5 +1,5 @@
-#ifndef CBLAS_H
-#define CBLAS_H
+#ifndef ONEFLOW_CORE_BLAS_CBLAS_H_
+#define ONEFLOW_CORE_BLAS_CBLAS_H_
 #include <stddef.h>
 
 /*

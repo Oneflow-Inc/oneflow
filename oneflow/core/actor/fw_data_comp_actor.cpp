@@ -27,7 +27,7 @@ void FwDataCompActor::Init(const TaskProto& task_proto,
   } else {
     num_of_not_eord_ =
         1 + (model_regst_desc_id_ != -1) + (model_tmp_regst_desc_id_ != -1);
-    OF_SET_MSG_HANDLE(&FwDataCompActor::HandleFwComp);
+    OF_SET_MSG_HANDLE(&FwDataCompActor::HandleNormal);
   }
 }
 
@@ -40,9 +40,9 @@ bool FwDataCompActor::IsReadReady() {
   if (model_regst_desc_id_ != -1) {
     // Ho Q, Cipar J, Cui H, et al. More effective distributed ml via a stale
     // synchronous parallel parameter server
-    int32_t staleness = JobDesc::Singleton().staleness();
+    int32_t staleness = JobDesc::Singleton()->staleness();
     int32_t num_of_piece_in_batch =
-        JobDesc::Singleton().num_of_piece_in_batch();
+        JobDesc::Singleton()->num_of_piece_in_batch();
     int64_t cur_iteration = in_.front()->piece_id() / num_of_piece_in_batch;
     int64_t stale_version = cur_iteration - staleness;
     return model_regst_->model_version_id() >= stale_version;
@@ -52,17 +52,17 @@ bool FwDataCompActor::IsReadReady() {
 
 int FwDataCompActor::WaitToStart(const ActorMsg& msg) {
   CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
-  TryWardKernelAndSendMsg();
-  OF_SET_MSG_HANDLE(&FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg);
+  ActUntilFail();
+  OF_SET_MSG_HANDLE(&FwDataCompActor::HandleWaitUntilNoReadableRegst);
   return 0;
 }
 
-int FwDataCompActor::HandleFwComp(const ActorMsg& msg) {
+int FwDataCompActor::HandleNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     num_of_not_eord_ -= 1;
     if (!num_of_not_eord_) {
-      OF_SET_MSG_HANDLE(&FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg);
+      OF_SET_MSG_HANDLE(&FwDataCompActor::HandleWaitUntilNoReadableRegst);
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr())
@@ -83,15 +83,15 @@ int FwDataCompActor::HandleFwComp(const ActorMsg& msg) {
       }
     }
   }
-  TryWardKernelAndSendMsg();
+  ActUntilFail();
   return 0;
 }
 
-int FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg(const ActorMsg& msg) {
+int FwDataCompActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
            0);
-  TryWardKernelAndSendMsg();
-  int total_piece_num = JobDesc::Singleton().total_piece_num();
+  ActUntilFail();
+  int total_piece_num = JobDesc::Singleton()->total_piece_num();
   if ((in_desc_id_ != -1 && in_.empty())
       || expected_piece_id() == total_piece_num) {
     if (model_regst_desc_id_ != -1) {
@@ -114,34 +114,31 @@ int FwDataCompActor::HandleFwCompWhenNoReadableRegstMsg(const ActorMsg& msg) {
   return 0;
 }
 
-void FwDataCompActor::TryWardKernelAndSendMsg() {
-  while (IsReadReady() && IsWriteReady()) {
-    int64_t piece_id = expected_piece_id();
-    if (!in_.empty()) {
-      CHECK_EQ(in_.front()->piece_id(), piece_id);
-      ready_in_regst_[in_.front()->regst_desc_id()] = in_.front();
-    }
-    int64_t model_version_id = -1;
-    if (model_regst_) { model_version_id = model_regst_->model_version_id(); }
-    AsyncWardKernel(
-        kernel_ctx_,
-        [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
-          Regst* regst = GetCurWriteableRegst(regst_desc_id);
-          if (regst == nullptr) {
-            return ready_in_regst_.at(regst_desc_id);
-          } else {
-            return std::make_shared<LocalRegstWarpper>(regst);
-          }
-        });
-    ForEachCurWriteableRegst([piece_id, model_version_id](Regst* regst) {
-      regst->set_piece_id(piece_id);
-      regst->set_model_version_id(model_version_id);
-    });
-    AsyncSendReadableRegstMsg();
-    if (!in_.empty()) {
-      AsyncSendRegstMsgToProducer(in_.front());
-      in_.pop();
-    }
+void FwDataCompActor::Act() {
+  int64_t piece_id = expected_piece_id();
+  if (!in_.empty()) {
+    CHECK_EQ(in_.front()->piece_id(), piece_id);
+    ready_in_regst_[in_.front()->regst_desc_id()] = in_.front();
+  }
+  int64_t model_version_id = -1;
+  if (model_regst_) { model_version_id = model_regst_->model_version_id(); }
+  AsyncLaunchKernel(
+      kernel_ctx_,
+      [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+        Regst* regst = GetCurWriteableRegst(regst_desc_id);
+        if (regst == nullptr) {
+          return ready_in_regst_.at(regst_desc_id);
+        } else {
+          return std::make_shared<LocalRegstWarpper>(regst);
+        }
+      });
+  AsyncSendReadableRegstMsg([piece_id, model_version_id](Regst* regst) {
+    regst->set_piece_id(piece_id);
+    regst->set_model_version_id(model_version_id);
+  });
+  if (!in_.empty()) {
+    AsyncSendRegstMsgToProducer(in_.front());
+    in_.pop();
   }
 }
 

@@ -14,10 +14,11 @@ class BoxingActor final : public Actor {
   void Init(const TaskProto&, const ThreadCtx&) override;
 
  private:
-  int HandleBoxing(const ActorMsg&);
-  int HandleBoxingWhenNoReadableRegstMsg(const ActorMsg&);
+  int HandleNormal(const ActorMsg&) override;
+  int HandleWaitUntilNoReadableRegst(const ActorMsg&) override;
 
-  void TryWardKernelAndSendMsg();
+  bool IsReadReady() override { return !num_of_read_empty_; }
+  void Act() override;
 
   int num_of_subscribed_regsts_;
   int num_of_read_empty_;

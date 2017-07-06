@@ -12,7 +12,7 @@ namespace oneflow {
 class Thread {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Thread);
-  virtual ~Thread() = default;
+  virtual ~Thread() { Deconstruct(); }
 
   void AddTask(const TaskProto&);
 
@@ -24,6 +24,7 @@ class Thread {
   Thread() = default;
   std::thread& mut_actor_thread() { return actor_thread_; }
   void PollMsgChannel(const ThreadCtx& thread_ctx);
+  void Deconstruct();
 
  private:
   HashMap<int64_t, TaskProto> id2task_;

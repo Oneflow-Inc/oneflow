@@ -9,15 +9,19 @@ namespace oneflow {
 OF_DEFINE_ENUM_TO_OSTREAM_FUNC(ActorCmd);
 OF_DEFINE_ENUM_TO_OSTREAM_FUNC(ActorMsgType);
 
-ActorMsg::ActorMsg() { dst_actor_id_ = -1; }
+ActorMsg::ActorMsg() {
+  dst_actor_id_ = -1;
+  piece_id_ = -1;
+  model_version_id_ = -1;
+}
 
 ActorMsg ActorMsg::BuildReadableRegstMsg(int64_t reader_actor_id,
                                          Regst* regst_raw_ptr) {
   ActorMsg msg;
   msg.dst_actor_id_ = reader_actor_id;
   msg.msg_type_ = ActorMsgType::kRegstMsg;
-  if (IDMgr::Singleton().MachineId4ActorId(reader_actor_id)
-      == RuntimeCtx::Singleton().this_machine_id()) {
+  if (IDMgr::Singleton()->MachineId4ActorId(reader_actor_id)
+      == RuntimeCtx::Singleton()->this_machine_id()) {
     msg.regst_warpper_.reset(new LocalRegstWarpper(regst_raw_ptr));
   } else {
     msg.regst_warpper_.reset(new RemoteRegstWarpper(regst_raw_ptr));

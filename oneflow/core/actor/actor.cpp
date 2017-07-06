@@ -8,21 +8,21 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   actor_id_ = task_proto.id();
   // ward_func
   if (task_proto.is_forward()) {
-    ward_func_ = &Kernel::Forward;
+    launch_func_ = &Kernel::Forward;
   } else {
-    ward_func_ = &Kernel::Backward;
+    launch_func_ = &Kernel::Backward;
   }
   // exec_kernel_vec_
   exec_kernel_vec_.reserve(task_proto.exec_sequence().exec_node_size());
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
-    ek.kernel = KernelMgr::Singleton().GetKernelFromOpName(node.op_name());
+    ek.kernel = KernelMgr::Singleton()->GetKernelFromOpName(node.op_name());
     ek.bn_in_op2regst_desc_id = PbMap2HashMap(node.bn_in_op2regst_desc_id());
     exec_kernel_vec_.push_back(std::move(ek));
   }
   // produced_regsts_
   for (const auto& pair : task_proto.produced_regst_desc()) {
-    RegstMgr::Singleton().NewRegsts(pair.second, [this](Regst* regst) {
+    RegstMgr::Singleton()->NewRegsts(pair.second, [this](Regst* regst) {
       produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
     });
   }
@@ -68,11 +68,15 @@ int Actor::HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
   return 0;
 }
 
-void Actor::AsyncWardKernel(
+void Actor::ActUntilFail() {
+  while (IsReadReady() && IsWriteReady()) { Act(); }
+}
+
+void Actor::AsyncLaunchKernel(
     const KernelCtx& kernel_ctx,
     std::function<std::shared_ptr<RegstWarpper>(int64_t)> Regst4RegstDescId) {
   for (const ExecKernel& ek : exec_kernel_vec_) {
-    (ek.kernel->*ward_func_)(kernel_ctx, [&](const std::string& bn_in_op) {
+    (ek.kernel->*launch_func_)(kernel_ctx, [&](const std::string& bn_in_op) {
       int64_t regst_desc_id = ek.bn_in_op2regst_desc_id.at(bn_in_op);
       auto regst = Regst4RegstDescId(regst_desc_id);
       const std::string& lbn = ek.kernel->Lbn4BnInOp(bn_in_op);
@@ -83,12 +87,17 @@ void Actor::AsyncWardKernel(
 }
 
 void Actor::AsyncSendReadableRegstMsg() {
+  AsyncSendReadableRegstMsg([](Regst*) {});
+}
+
+void Actor::AsyncSendReadableRegstMsg(std::function<void(Regst*)> PreProcess) {
   for (auto& pair : writeable_produced_regst_) {
     Regst* regst = pair.second.front();
+    PreProcess(regst);
     device_ctx_->AddCallBack([regst]() {
       for (int64_t subscriber : regst->subscribers_actor_id()) {
         ActorMsg msg = ActorMsg::BuildReadableRegstMsg(subscriber, regst);
-        ActorMsgBus::Singleton().SendMsg(std::move(msg));
+        ActorMsgBus::Singleton()->SendMsg(std::move(msg));
       }
     });
     produced_regst2reading_cnt_.at(regst) =
@@ -106,7 +115,7 @@ void Actor::AsyncSendEORDMsgToSubscribers(int64_t regst_desc_id) {
       ActorMsg msg;
       msg.set_dst_actor_id(subscriber);
       msg.set_actor_cmd(ActorCmd::kEORD);
-      ActorMsgBus::Singleton().SendMsg(std::move(msg));
+      ActorMsgBus::Singleton()->SendMsg(std::move(msg));
     }
   });
 }
@@ -125,7 +134,7 @@ void Actor::AsyncSendRegstMsgToProducer(
     const std::shared_ptr<RegstWarpper>& wp) {
   ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(wp->producer_actor_id(),
                                                    wp->regst_raw_ptr());
-  AsyncDo([msg]() { ActorMsgBus::Singleton().SendMsg(msg); });
+  AsyncDo([msg]() { ActorMsgBus::Singleton()->SendMsg(msg); });
 }
 
 int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
@@ -160,6 +169,12 @@ void Actor::ForEachCurWriteableRegst(std::function<void(Regst*)> func) {
 
 bool Actor::IsWriteReady() {
   return writeable_produced_regst_desc_num_ == writeable_produced_regst_.size();
+}
+
+void Actor::SetReadOnlyForRegstDescId(int64_t regst_desc_id) {
+  auto it = writeable_produced_regst_.find(regst_desc_id);
+  if (!it->second.empty()) { writeable_produced_regst_desc_num_ -= 1; }
+  writeable_produced_regst_.erase(it);
 }
 
 }  // namespace oneflow

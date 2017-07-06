@@ -14,10 +14,15 @@ class CopyCommNetActor final : public Actor {
   void Init(const TaskProto&, const ThreadCtx&) override;
 
  private:
-  int HandleCopyCommNet(const ActorMsg&);
-  int HandleCopyCommNetWhenNoReadableRegstMsg(const ActorMsg&);
+  int HandleNormal(const ActorMsg&) override;
+  int HandleWaitUntilNoReadableRegst(const ActorMsg&) override;
 
-  void TryWardKernelAndSendMsg();
+  bool IsReadReady() override {
+    return piece_id2waiting_in_regst_.find(expected_piece_id())
+           != piece_id2waiting_in_regst_.end();
+  }
+  void Act() override;
+
   HashMap<int64_t, std::shared_ptr<RegstWarpper>> piece_id2waiting_in_regst_;
 };
 

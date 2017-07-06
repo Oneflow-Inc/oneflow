@@ -21,7 +21,7 @@ void BpDataCompActor::Init(const TaskProto& task_proto,
                                              cuda_handle_.cublas_handle(),
                                              cuda_handle_.cudnn_handle()));
   }
-  OF_SET_MSG_HANDLE(&BpDataCompActor::HandleBpComp);
+  OF_SET_MSG_HANDLE(&BpDataCompActor::HandleNormal);
 }
 
 bool BpDataCompActor::IsReadReady() {
@@ -37,12 +37,12 @@ bool BpDataCompActor::IsReadReady() {
   return !num_of_read_empty_;
 }
 
-int BpDataCompActor::HandleBpComp(const ActorMsg& msg) {
+int BpDataCompActor::HandleNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     num_of_eord_ += 1;
     if (num_of_eord_ == 6) {
-      OF_SET_MSG_HANDLE(&BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg);
+      OF_SET_MSG_HANDLE(&BpDataCompActor::HandleWaitUntilNoReadableRegst);
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr())
@@ -59,14 +59,14 @@ int BpDataCompActor::HandleBpComp(const ActorMsg& msg) {
       read_regst_.at(regst_wp->regst_desc_id()).push(regst_wp);
     }
   }
-  TryWardKernelAndSendMsg();
+  ActUntilFail();
   return 0;
 }
 
-int BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg(const ActorMsg& msg) {
+int BpDataCompActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
            0);
-  TryWardKernelAndSendMsg();
+  ActUntilFail();
   if (read_regst_.at(activation_regst_desc_id_).empty()) {
     while (!read_regst_.at(model_regst_desc_id_).empty()) {
       AsyncSendRegstMsgToProducer(read_regst_.at(model_regst_desc_id_).front());
@@ -81,50 +81,46 @@ int BpDataCompActor::HandleBpCompWhenNoReadableRegstMsg(const ActorMsg& msg) {
       OF_SET_MSG_HANDLE(nullptr);
       return 1;
     } else {
-      OF_SET_MSG_HANDLE(nullptr);
+      OF_SET_MSG_HANDLE(&BpDataCompActor::HandleWaitUntilReadingCntEqualZero);
       return 0;
     }
   }
   return 0;
 }
 
-void BpDataCompActor::TryWardKernelAndSendMsg() {
-  while (IsReadReady() && IsWriteReady()) {
-    int64_t cur_model =
-        read_regst_.at(model_regst_desc_id_).front()->model_version_id();
-    int64_t piece_id = expected_piece_id();
-    CHECK_EQ(
-        cur_model,
-        read_regst_.at(activation_regst_desc_id_).front()->model_version_id());
-    CHECK_EQ(
-        cur_model,
-        read_regst_.at(data_tmp_regst_desc_id_).front()->model_version_id());
-    for (const auto& pair : read_regst_) {
-      if (pair.first != model_regst_desc_id_
-          && pair.first != model_tmp_regst_desc_id_) {
-        CHECK_EQ(pair.second.front()->piece_id(), piece_id);
-      }
+void BpDataCompActor::Act() {
+  int64_t cur_model =
+      read_regst_.at(model_regst_desc_id_).front()->model_version_id();
+  int64_t piece_id = expected_piece_id();
+  CHECK_EQ(
+      cur_model,
+      read_regst_.at(activation_regst_desc_id_).front()->model_version_id());
+  CHECK_EQ(cur_model,
+           read_regst_.at(data_tmp_regst_desc_id_).front()->model_version_id());
+  for (const auto& pair : read_regst_) {
+    if (pair.first != model_regst_desc_id_
+        && pair.first != model_tmp_regst_desc_id_) {
+      CHECK_EQ(pair.second.front()->piece_id(), piece_id);
     }
-    AsyncWardKernel(
-        GenDefaultKernelCtx(),
-        [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
-          Regst* regst = GetCurWriteableRegst(regst_desc_id);
-          if (regst == nullptr) {
-            return read_regst_.at(regst_desc_id).front();
-          } else {
-            return std::make_shared<LocalRegstWarpper>(regst);
-          }
-        });
-    ForEachCurWriteableRegst(
-        [piece_id](Regst* regst) { regst->set_piece_id(piece_id); });
-    AsyncSendReadableRegstMsg();
-    for (auto& pair : read_regst_) {
-      if (pair.first != model_regst_desc_id_
-          && pair.first != model_tmp_regst_desc_id_) {
-        AsyncSendRegstMsgToProducer(pair.second.front());
-        pair.second.pop();
-        num_of_read_empty_ += pair.second.empty();
-      }
+  }
+  AsyncLaunchKernel(
+      GenDefaultKernelCtx(),
+      [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+        Regst* regst = GetCurWriteableRegst(regst_desc_id);
+        if (regst == nullptr) {
+          return read_regst_.at(regst_desc_id).front();
+        } else {
+          return std::make_shared<LocalRegstWarpper>(regst);
+        }
+      });
+  AsyncSendReadableRegstMsg(
+      [piece_id](Regst* regst) { regst->set_piece_id(piece_id); });
+  for (auto& pair : read_regst_) {
+    if (pair.first != model_regst_desc_id_
+        && pair.first != model_tmp_regst_desc_id_) {
+      AsyncSendRegstMsgToProducer(pair.second.front());
+      pair.second.pop();
+      num_of_read_empty_ += pair.second.empty();
     }
   }
 }

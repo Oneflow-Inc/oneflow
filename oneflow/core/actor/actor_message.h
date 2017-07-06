@@ -15,7 +15,7 @@ enum class ActorCmd {
 
 OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ActorCmd);
 
-enum class ActorMsgType { kRegstMsg = 0, kCmdMsg };
+enum class ActorMsgType { kRegstMsg = 0, kCmdMsg, kPieceModelIdMsg };
 
 OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ActorMsgType);
 
@@ -32,12 +32,20 @@ class ActorMsg final {
   int64_t dst_actor_id() const { return dst_actor_id_; }
   ActorMsgType msg_type() const { return msg_type_; }
   std::shared_ptr<RegstWarpper> regst_warpper() const {
-    CHECK(msg_type_ == ActorMsgType::kRegstMsg);
+    CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
     return regst_warpper_;
   }
   ActorCmd actor_cmd() const {
-    CHECK(msg_type_ == ActorMsgType::kCmdMsg);
+    CHECK_EQ(msg_type_, ActorMsgType::kCmdMsg);
     return actor_cmd_;
+  }
+  int64_t piece_id() const {
+    CHECK_EQ(msg_type_, ActorMsgType::kPieceModelIdMsg);
+    return piece_id_;
+  }
+  int64_t model_version_id() const {
+    CHECK_EQ(msg_type_, ActorMsgType::kPieceModelIdMsg);
+    return model_version_id_;
   }
   // Setters
   void set_dst_actor_id(int64_t val) { dst_actor_id_ = val; }
@@ -49,6 +57,14 @@ class ActorMsg final {
     msg_type_ = ActorMsgType::kCmdMsg;
     actor_cmd_ = val;
   }
+  void set_piece_id(int64_t val) {
+    msg_type_ = ActorMsgType::kPieceModelIdMsg;
+    piece_id_ = val;
+  }
+  void set_model_version_id(int64_t val) {
+    msg_type_ = ActorMsgType::kPieceModelIdMsg;
+    model_version_id_ = val;
+  }
 
  private:
   int64_t dst_actor_id_;
@@ -56,6 +72,8 @@ class ActorMsg final {
 
   std::shared_ptr<RegstWarpper> regst_warpper_;
   ActorCmd actor_cmd_;
+  int64_t piece_id_;
+  int64_t model_version_id_;
 };
 
 }  // namespace oneflow
