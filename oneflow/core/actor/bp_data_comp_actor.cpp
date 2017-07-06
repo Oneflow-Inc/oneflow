@@ -7,7 +7,6 @@ namespace oneflow {
 void BpDataCompActor::Init(const TaskProto& task_proto,
                            const ThreadCtx& thread_ctx) {
   Actor::Init(task_proto, thread_ctx);
-  in_regst_desc_id_ = RegstDescId4Name("in");
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
   activation_regst_desc_id_ = RegstDescId4Name("activation");
@@ -29,13 +28,15 @@ void BpDataCompActor::Init(const TaskProto& task_proto,
 }
 
 bool BpDataCompActor::IsReadReady() {
-  if (num_of_read_empty_) { return false; }
-  if (read_regst_.at(model_regst_desc_id_).front()->model_version_id()
-      != read_regst_.at(activation_regst_desc_id_)
-             .front()
-             ->model_version_id()) {
-    AsyncSendRegstMsgToProducer(read_regst_.at(model_regst_desc_id_).front());
-    read_regst_.at(model_regst_desc_id_).pop();
+  if (num_of_read_empty_ || piece_model_id_.empty()) { return false; }
+  if (model_regst_desc_id_ != -1) {
+    CHECK_GE(piece_model_id_.front().second, 0);
+    while (read_regst_.at(model_regst_desc_id_).front().model_version_id()
+           != piece_model_id_.front().second
+           && !read_regst_.at(model_regst_desc_id_).empty()) {
+      AsyncSendRegstMsgToProducer(read_regst_.at(model_regst_desc_id_).front());
+      read_regst_.at(model_regst_desc_id_).pop();
+    }
     num_of_read_empty_ += read_regst_.at(model_regst_desc_id_).empty();
   }
   return !num_of_read_empty_;
@@ -62,6 +63,8 @@ int BpDataCompActor::HandleNormal(const ActorMsg& msg) {
       num_of_read_empty_ -= read_regst_[regst_wp->regst_desc_id()].empty();
       read_regst_.at(regst_wp->regst_desc_id()).push(regst_wp);
     }
+  } else if (msg.msg_type() == ActorMsgType::kPieceModelIdMsg) {
+    piece_model_id_.emplace(msg.piece_id(), msg.model_version_id());
   }
   ActUntilFail();
   return 0;
@@ -71,14 +74,17 @@ int BpDataCompActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
            0);
   ActUntilFail();
-  if (read_regst_.at(activation_regst_desc_id_).empty()) {
-    while (!read_regst_.at(model_regst_desc_id_).empty()) {
+  if (piece_model_id_.empty()) {
+    while (model_regst_desc_id_ != -1 
+           && !read_regst_.at(model_regst_desc_id_).empty()) {
       AsyncSendRegstMsgToProducer(read_regst_.at(model_regst_desc_id_).front());
       read_regst_.at(model_regst_desc_id_).pop();
     }
-    AsyncSendRegstMsgToProducer(
-        read_regst_.at(model_tmp_regst_desc_id_).front());
-    read_regst_.at(model_tmp_regst_desc_id_).pop();
+    if (model_tmp_regst_desc_id_ != -1) {
+      AsyncSendRegstMsgToProducer(
+          read_regst_.at(model_tmp_regst_desc_id_).front());
+      read_regst_.at(model_tmp_regst_desc_id_).pop();
+    }
     AsyncSendEORDMsgForAllProducedRegstDesc();
     num_of_read_empty_ = 6;
     if (total_reading_cnt() == 0) {
@@ -96,11 +102,8 @@ void BpDataCompActor::Act() {
   int64_t cur_model =
       read_regst_.at(model_regst_desc_id_).front()->model_version_id();
   int64_t piece_id = expected_piece_id();
-  CHECK_EQ(
-      cur_model,
-      read_regst_.at(activation_regst_desc_id_).front()->model_version_id());
-  CHECK_EQ(cur_model,
-           read_regst_.at(data_tmp_regst_desc_id_).front()->model_version_id());
+  CHECK_EQ(piece_model_id_.front().first, piece_id);
+  piece_model_id_.pop();
   for (const auto& pair : read_regst_) {
     if (pair.first != model_regst_desc_id_
         && pair.first != model_tmp_regst_desc_id_) {
