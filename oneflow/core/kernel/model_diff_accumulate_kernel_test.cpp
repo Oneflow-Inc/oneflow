@@ -8,6 +8,8 @@ namespace oneflow {
 
 namespace test {
 
+namespace {
+
 template<DeviceType device_type, typename FloatingPointType>
 std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
   using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
@@ -62,6 +64,9 @@ void TestMdDiffAccKernel() {
 
   KTCommon::CheckResult(BnInOp2BlobPtr, "model_diff_acc", "expected_acc");
 }
+
+}  // namespace
+
 }  // namespace test
 
 TEST(MdDiffAccKernel, model_diff_acc_kernel_cpu) {

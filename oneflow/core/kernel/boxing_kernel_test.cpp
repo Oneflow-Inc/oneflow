@@ -5,6 +5,8 @@ namespace oneflow {
 
 namespace test {
 
+namespace {
+
 template<typename FloatingPointType>
 BoxingKernel<DeviceType::kCPU, FloatingPointType>* BuildBoxingKernel(
     int32_t in_num, int32_t out_num, int kernel_name,
@@ -261,6 +263,8 @@ void TestBoxingKernelAddClone() {
                       expected_add_b);
   }
 }
+
+}  // namespace
 
 }  // namespace test
 
