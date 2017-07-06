@@ -74,16 +74,6 @@ class KernelUtil final {
 
   // Generate random number of specific distribution
   static void Fill(const KernelCtx& ctx, const FillConf& fill_conf, Blob* blob);
-
- private:
-  static void ConstantFill(const KernelCtx& ctx,
-                           const ConstantFillConf& fill_conf, Blob* blob);
-
-  static void UniformFill(const KernelCtx& ctx,
-                          const UniformFillConf& fill_conf, Blob* blob);
-
-  static void GaussianFill(const KernelCtx& ctx,
-                           const GaussianFillConf& fill_conf, Blob* blob);
 };
 
 }  // namespace oneflow
