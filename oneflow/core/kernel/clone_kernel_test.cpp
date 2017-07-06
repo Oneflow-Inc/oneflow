@@ -8,6 +8,8 @@ namespace oneflow {
 
 namespace test {
 
+namespace {
+
 template<DeviceType device_type, typename FloatingPointType>
 Kernel* BuildCloneKernel(int out_num) {
   OperatorConf op_conf;
@@ -63,6 +65,8 @@ void TestCloneKernel() {
   }
   KTCommon::CheckResult(BnInOp2BlobPtr, "in_diff", "in_diff_expected");
 }
+
+}  // namespace
 
 }  // namespace test
 
