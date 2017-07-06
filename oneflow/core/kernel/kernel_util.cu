@@ -3,6 +3,7 @@
 #include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
+
 template<typename FloatingPointType>
 class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
  public:
@@ -74,6 +75,11 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
                        const FloatingPointType* x, const int incx,
                        FloatingPointType* y, const int incy) {
     cublas_copy(ctx.device_ctx->cublas_handle(), n, x, incx, y, incy);
+  }
+
+  static void Fill(const KernelCtx& ctx, const FillConf& fill_conf,
+                   Blob* blob) {
+    
   }
 
  private:

@@ -5,14 +5,18 @@ namespace oneflow {
 
 namespace {
 
+uint32_t NewRandomSeed() {
+  static std::mt19937 gen{std::random_device{}()};
+  return gen();
+}
+
 template<typename FloatingPointType>
 void RngUniform(const int64_t elem_cnt, const FloatingPointType min,
                 const FloatingPointType max, FloatingPointType* dptr) {
   CHECK_GE(elem_cnt, 0);
   CHECK(dptr);
   CHECK_LE(min, max);
-  std::random_device rd;
-  std::mt19937 generator(rd());
+  std::mt19937 generator(NewRandomSeed());
   std::uniform_real_distribution<FloatingPointType> random_distribution(
       min, std::nextafter(max, std::numeric_limits<FloatingPointType>::max()));
 
@@ -26,29 +30,12 @@ void RngGaussian(const int64_t elem_cnt, const FloatingPointType mean,
                  const FloatingPointType std, FloatingPointType* dptr) {
   CHECK_GE(elem_cnt, 0);
   CHECK(dptr);
-  CHECK_GT(std, 0);
-  std::random_device rd;
-  std::mt19937 generator(rd());
+  CHECK_GT(std, 0.0);
+  std::mt19937 generator(NewRandomSeed());
   std::normal_distribution<FloatingPointType> random_distribution(mean, std);
 
-  for (int64_t i = 0; i < elem_cnt; i++) {
+  for (int64_t i = 0; i < elem_cnt; ++i) {
     dptr[i] = random_distribution(generator);
-  }
-}
-
-template<typename FloatingPointType>
-void RngBernoulli(const int64_t elem_cnt,
-                  const FloatingPointType non_zero_probability, bool* mask) {
-  CHECK_GE(elem_cnt, 0);
-  CHECK(mask);
-  CHECK_GE(non_zero_probability, 0);
-  CHECK_LE(non_zero_probability, 1);
-  std::random_device rd;
-  std::mt19937 generator(rd());
-  std::bernoulli_distribution random_distribution(non_zero_probability);
-
-  for (int64_t i = 0; i < elem_cnt; i++) {
-    mask[i] = random_distribution(generator);
   }
 }
 
