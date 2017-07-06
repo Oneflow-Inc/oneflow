@@ -133,7 +133,7 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
     } else if (fill_conf.has_gaussian_conf()) {
       GaussianFill(ctx, fill_conf.gaussian_conf(), blob);
     } else {
-      CHECK(false) << "Unknown fill name";
+      UNEXPECTED_RUN();
     }
   }
 

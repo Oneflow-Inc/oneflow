@@ -90,6 +90,8 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
 
     CudaCheck(cudaMemcpy(blob->mut_dptr(), temp_blob_host->dptr(), dptr_size,
                          cudaMemcpyHostToDevice));
+    delete shape;
+    delete dptr;
   }
 
  private:
