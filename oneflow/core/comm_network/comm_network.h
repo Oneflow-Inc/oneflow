@@ -16,6 +16,19 @@ class CommNetwork final {
     // TODO
   }
 
+  void Read(int64_t src_machine_id, void* src_dptr, void* dst_dptr, size_t sz,
+            std::function<void()> callback) {
+    // TODO
+  }
+
+  void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
+    // TODO
+  }
+  void SetCallbackForReceivedActorMsg(
+      std::function<void(const ActorMsg&)> callback) {
+    // TODO
+  }
+
  private:
   CommNetwork() = default;
 };
