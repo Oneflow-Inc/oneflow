@@ -128,7 +128,6 @@ message ReluOpConf {
 message SoftmaxOpConf {
   string in = 1;
   string out = 2;
-  int32 axis = 3;
 }
 
 message MultinomialLogisticLossOpConf {
