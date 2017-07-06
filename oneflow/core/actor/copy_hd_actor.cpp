@@ -1,6 +1,6 @@
 #include "oneflow/core/actor/copy_hd_actor.h"
 #include "oneflow/core/actor/actor_registry.h"
-#include "oneflow/core/register/local_register_warpper.h"
+#include "oneflow/core/register/local_register_wrapper.h"
 
 namespace oneflow {
 
@@ -18,19 +18,19 @@ int CopyHdActor::HandleNormal(const ActorMsg& msg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     OF_SET_MSG_HANDLE(&CopyHdActor::HandleWaitUntilNoReadableRegst);
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    if (TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr())
+    if (TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr())
         != 0) {
-      waiting_in_regst_.push(msg.regst_warpper());
+      waiting_in_regst_.push(msg.regst_wrapper());
     }
   }
-  TryActUntilFail();
+  ActUntilFail();
   return 0;
 }
 
 int CopyHdActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
-  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
+  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
            0);
-  TryActUntilFail();
+  ActUntilFail();
   if (waiting_in_regst_.empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
     if (total_reading_cnt() == 0) {
@@ -45,17 +45,17 @@ int CopyHdActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
 }
 
 void CopyHdActor::Act() {
-  std::shared_ptr<RegstWarpper> regst_wp = waiting_in_regst_.front();
+  std::shared_ptr<RegstWrapper> regst_wp = waiting_in_regst_.front();
   CHECK_EQ(regst_wp->piece_id(), expected_piece_id());
   AsyncLaunchKernel(
       GenDefaultKernelCtx(),
-      [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+      [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWrapper> {
         Regst* regst = GetCurWriteableRegst(regst_desc_id);
         if (regst == nullptr) {
           CHECK_EQ(regst_desc_id, waiting_in_regst_.front()->regst_desc_id());
           return waiting_in_regst_.front();
         } else {
-          return std::make_shared<LocalRegstWarpper>(regst);
+          return std::make_shared<LocalRegstWrapper>(regst);
         }
       });
   AsyncSendReadableRegstMsg([&regst_wp](Regst* regst) {

@@ -19,11 +19,11 @@ class MdSaveCompActor final : public CompActor {
     UNEXPECTED_RUN();
   }
 
-  bool IsReadReady() override { return regst_warpper_ != nullptr; }
+  bool IsReadReady() override { return regst_wrapper_ != nullptr; }
   void Act() override;
 
   int64_t model_regst_desc_id_;
-  std::shared_ptr<RegstWarpper> regst_warpper_;
+  std::shared_ptr<RegstWrapper> regst_wrapper_;
 };
 
 }  // namespace oneflow

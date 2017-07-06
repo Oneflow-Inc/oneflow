@@ -20,7 +20,7 @@ class MdDiffAccActor final : public CompActor {
   bool IsReadReady() override { return !waiting_in_regst_.empty(); }
   void Act() override;
 
-  std::queue<std::shared_ptr<RegstWarpper>> waiting_in_regst_;
+  std::queue<std::shared_ptr<RegstWrapper>> waiting_in_regst_;
   const Kernel* clear_kernel_;
   CudaStreamHandle cuda_handle_;
   HashMap<Regst*, int32_t> model_diff_acc_cnt_;

@@ -59,7 +59,7 @@ KernelCtx Actor::GenDefaultKernelCtx() const {
 }
 
 int Actor::HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
-  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_warpper()->regst_raw_ptr()),
+  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
            0);
   if (total_reading_cnt_ == 0) {
     msg_handle_ = nullptr;
@@ -68,13 +68,13 @@ int Actor::HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
   return 0;
 }
 
-void Actor::TryActUntilFail() {
+void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) { Act(); }
 }
 
 void Actor::AsyncLaunchKernel(
     const KernelCtx& kernel_ctx,
-    std::function<std::shared_ptr<RegstWarpper>(int64_t)> Regst4RegstDescId) {
+    std::function<std::shared_ptr<RegstWrapper>(int64_t)> Regst4RegstDescId) {
   for (const ExecKernel& ek : exec_kernel_vec_) {
     (ek.kernel->*launch_func_)(kernel_ctx, [&](const std::string& bn_in_op) {
       int64_t regst_desc_id = ek.bn_in_op2regst_desc_id.at(bn_in_op);
@@ -131,7 +131,7 @@ void Actor::AsyncDo(std::function<void()> func) {
 }
 
 void Actor::AsyncSendRegstMsgToProducer(
-    const std::shared_ptr<RegstWarpper>& wp) {
+    const std::shared_ptr<RegstWrapper>& wp) {
   ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(wp->producer_actor_id(),
                                                    wp->regst_raw_ptr());
   AsyncDo([msg]() { ActorMsgBus::Singleton()->SendMsg(msg); });

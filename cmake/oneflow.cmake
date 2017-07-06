@@ -69,10 +69,6 @@ foreach(cc ${of_main_cc})
 endforeach()
 
 # build test
-foreach(cc ${of_all_test_cc})
-  get_filename_component(test_name ${cc} NAME_WE)
-  string(CONCAT test_exe_name ${test_name} exe)
-  cuda_add_executable(${test_exe_name} ${cc})
-  target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
-  add_test(NAME ${test_name} COMMAND ${test_exe_name})
-endforeach()
+cuda_add_executable(oneflow_testexe ${of_all_test_cc})
+target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs})
+add_test(NAME oneflow_test COMMAND oneflow_testexe)

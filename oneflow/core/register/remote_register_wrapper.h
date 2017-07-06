@@ -1,24 +1,24 @@
-#ifndef ONEFLOW_CORE_REGISTER_REMOTE_REGISTER_WARPPER_H_
-#define ONEFLOW_CORE_REGISTER_REMOTE_REGISTER_WARPPER_H_
+#ifndef ONEFLOW_CORE_REGISTER_REMOTE_REGISTER_WRAPPER_H_
+#define ONEFLOW_CORE_REGISTER_REMOTE_REGISTER_WRAPPER_H_
 
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/job/keyword.h"
-#include "oneflow/core/register/register_warpper.h"
+#include "oneflow/core/register/register_wrapper.h"
 
 namespace oneflow {
 
-class RemoteRegstWarpper final : public RegstWarpper {
+class RemoteRegstWrapper final : public RegstWrapper {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(RemoteRegstWarpper)
-  RemoteRegstWarpper() = delete;
-  ~RemoteRegstWarpper() = default;
+  OF_DISALLOW_COPY_AND_MOVE(RemoteRegstWrapper)
+  RemoteRegstWrapper() = delete;
+  ~RemoteRegstWrapper() = default;
 
-  RemoteRegstWarpper(Regst* regst) {
+  RemoteRegstWrapper(Regst* regst) {
     regst_ = regst;
 
-    Blob* blob = regst_->GetBlobPtrFromLbn(kBaledBlobName);
-    baled_blob_shape_.reset(new Shape(blob->shape()));
-    baled_blob_.reset(new Blob(blob->mut_dptr(), baled_blob_shape_.get()));
+    Blob* blob = regst_->GetBlobPtrFromLbn(kPackedBlobName);
+    packed_blob_shape_.reset(new Shape(blob->shape()));
+    packed_blob_.reset(new Blob(blob->mut_dptr(), packed_blob_shape_.get()));
 
     piece_id_ = regst_->piece_id();
     model_version_id_ = regst_->model_version_id();
@@ -27,8 +27,8 @@ class RemoteRegstWarpper final : public RegstWarpper {
   }
 
   Blob* GetBlobPtrFromLbn(const std::string& lbn) override {
-    CHECK_EQ(kBaledBlobName, lbn);
-    return baled_blob_.get();
+    CHECK_EQ(kPackedBlobName, lbn);
+    return packed_blob_.get();
   }
   int64_t piece_id() const override { return piece_id_; }
   int64_t model_version_id() const override { return model_version_id_; }
@@ -42,10 +42,10 @@ class RemoteRegstWarpper final : public RegstWarpper {
   int64_t regst_desc_id_;
   int64_t producer_actor_id_;
   Regst* regst_;
-  std::unique_ptr<Shape> baled_blob_shape_;
-  std::unique_ptr<Blob> baled_blob_;
+  std::unique_ptr<Shape> packed_blob_shape_;
+  std::unique_ptr<Blob> packed_blob_;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_REGISTER_REMOTE_REGISTER_WARPPER_H_
+#endif  // ONEFLOW_CORE_REGISTER_REMOTE_REGISTER_WRAPPER_H_

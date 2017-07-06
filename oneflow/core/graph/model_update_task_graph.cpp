@@ -24,7 +24,7 @@ void MdUpdtTaskGraph::BuildTaskGraph() {
   updt_pr_conf.set_policy(kDataParallel);
   updt_pr_conf.mutable_device_set()->add_device_name(fw_task_->device_name());
   updt_chain->mut_parallel_desc().reset(new ParallelDesc(updt_pr_conf));
-  updt_chain->mut_input_lbns() = {kBaledBlobName};
+  updt_chain->mut_input_lbns() = {kPackedBlobName};
   updt_chain->mut_op_vec() = {model_updt_op};
   chain_gph->UpdateSourceAndSink();
   chain_gph->ToDotWithAutoFilePath();

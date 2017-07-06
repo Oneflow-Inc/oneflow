@@ -137,7 +137,7 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
   };
   // lbns
   std::vector<std::string> lbns = FindLbnsBetween(in_chain, out_chain);
-  if (lbns.at(0) == kBaledBlobName) {
+  if (lbns.at(0) == kPackedBlobName) {
     CHECK_EQ(lbns.size(), 1);
     lbns.clear();
     auto in_regst_0 = GetRelatedRegst(sorted_in_edges.at(0));

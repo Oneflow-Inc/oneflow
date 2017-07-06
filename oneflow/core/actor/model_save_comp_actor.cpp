@@ -17,8 +17,8 @@ int MdSaveCompActor::HandleNormal(const ActorMsg& actor_msg) {
     CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kEORD);
     return 1;
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
-    regst_warpper_ = actor_msg.regst_warpper();
-    TryActUntilFail();
+    regst_wrapper_ = actor_msg.regst_wrapper();
+    ActUntilFail();
   } else {
     UNEXPECTED_RUN();
   }
@@ -26,7 +26,7 @@ int MdSaveCompActor::HandleNormal(const ActorMsg& actor_msg) {
 }
 
 void MdSaveCompActor::Act() {
-  int64_t model_version_id = regst_warpper_->model_version_id();
+  int64_t model_version_id = regst_wrapper_->model_version_id();
   int32_t num_of_batches_in_snapshot =
       JobDesc::Singleton()->num_of_batches_in_snapshot();
   CHECK_GT(num_of_batches_in_snapshot, 0);
@@ -40,15 +40,15 @@ void MdSaveCompActor::Act() {
     kernel_ctx.other = &save_ctx;
     AsyncLaunchKernel(
         kernel_ctx,
-        [&](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
+        [&](int64_t regst_desc_id) -> std::shared_ptr<RegstWrapper> {
           CHECK_EQ(regst_desc_id, model_regst_desc_id_);
-          return regst_warpper_;
+          return regst_wrapper_;
         });
   }
   ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(
-      regst_warpper_->producer_actor_id(), regst_warpper_->regst_raw_ptr());
+      regst_wrapper_->producer_actor_id(), regst_wrapper_->regst_raw_ptr());
   AsyncDo([msg]() { ActorMsgBus::Singleton()->SendMsg(msg); });
-  regst_warpper_.reset();
+  regst_wrapper_.reset();
 }
 
 REGISTER_ACTOR(kMdSaveCompTask, true, MdSaveCompActor);

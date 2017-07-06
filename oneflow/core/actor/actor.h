@@ -9,9 +9,9 @@
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/kernel/kernel_manager.h"
 #include "oneflow/core/persistence/snapshot_manager.h"
-#include "oneflow/core/register/local_register_warpper.h"
+#include "oneflow/core/register/local_register_wrapper.h"
 #include "oneflow/core/register/register_manager.h"
-#include "oneflow/core/register/remote_register_warpper.h"
+#include "oneflow/core/register/remote_register_wrapper.h"
 #include "oneflow/core/thread/thread_context.h"
 
 namespace oneflow {
@@ -55,19 +55,19 @@ class Actor {
   int HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg);
 
   // Act
-  void TryActUntilFail();
+  void ActUntilFail();
   virtual void Act() = 0;
   virtual bool IsReadReady() = 0;
 
   // Async Do on KernelCtx
   void AsyncLaunchKernel(
       const KernelCtx&,
-      std::function<std::shared_ptr<RegstWarpper>(int64_t)> Regst4RegstDescId);
+      std::function<std::shared_ptr<RegstWrapper>(int64_t)> Regst4RegstDescId);
   void AsyncSendReadableRegstMsg(std::function<void(Regst*)> PreProcess);
   void AsyncSendReadableRegstMsg();
   void AsyncSendEORDMsgToSubscribers(int64_t regst_desc_id);
   void AsyncSendEORDMsgForAllProducedRegstDesc();
-  void AsyncSendRegstMsgToProducer(const std::shared_ptr<RegstWarpper>&);
+  void AsyncSendRegstMsgToProducer(const std::shared_ptr<RegstWrapper>&);
   void AsyncDo(std::function<void()>);
 
   // Status of Produced Registers
