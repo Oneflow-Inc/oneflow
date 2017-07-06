@@ -1,8 +1,6 @@
 #ifndef ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_INTERFACE_H_
 #define ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_INTERFACE_H_
 
-#include <ws2tcpip.h>
-
 #include "oneflow/core/network/rdma/windows/ndcommon.h"
 #include "oneflow/core/network/rdma/windows/ndsupport.h"
 #include "oneflow/core/network/rdma/windows/rdma_wrapper.h"

@@ -12,12 +12,21 @@
 
 namespace oneflow {
 
+RdmaNetwork::RdmaNetwork() 
+  : rdma_wrapper_(nullptr),
+    my_machine_id_(-1),
+    port_(-1) {}
+
+RdmaNetwork::~RdmaNetwork() {
+  Finalize();
+}
+
 void RdmaNetwork::Init(int64_t my_machine_id, const NetworkTopology& net_topo) {
   my_machine_id_ = my_machine_id;
   net_topo_ = net_topo;
   port_ = net_topo.all_nodes[my_machine_id].port;
-  rdma_manager_ = new RdmaManager();
-  rdma_manager_->Init(net_topo.all_nodes[my_machine_id].address.c_str(), port_);
+  rdma_wrapper_ = new RdmaWrapper();
+  rdma_wrapper_->Init(net_topo.all_nodes[my_machine_id].address.c_str(), port_);
   request_pool_.reset(new RequestPool());
   connection_pool_.reset(new ConnectionPool());
   EstablishConnection();
@@ -25,7 +34,7 @@ void RdmaNetwork::Init(int64_t my_machine_id, const NetworkTopology& net_topo) {
 
 void RdmaNetwork::Finalize() {
   register_id_to_mem_descriptor_.clear();
-  rdma_manager_->Destroy();
+  rdma_wrapper_->Destroy();
 }
 
 void RdmaNetwork::Barrier() {
@@ -99,7 +108,7 @@ void RdmaNetwork::Barrier() {
 }
 
 NetworkMemory* RdmaNetwork::NewNetworkMemory() {
-  return rdma_manager_->NewNetworkMemory();
+  return rdma_wrapper_->NewNetworkMemory();
 }
 
 // |msg| contains src machine_id and dst machine_id
@@ -169,15 +178,15 @@ Connection* RdmaNetwork::NewConnection() {
   Connection* conn = new Connection(my_machine_id_);
   CHECK(conn);
 
-  rdma_manager_->CreateConnector(conn);
-  rdma_manager_->CreateQueuePair(conn);
+  rdma_wrapper_->CreateConnector(conn);
+  rdma_wrapper_->CreateQueuePair(conn);
   return conn;
 }
 
 // |result| is owned by the caller, and the received message will be held in
 // result->net_msg, having result->type == NetworkResultType::NET_RECEIVE_MSG.
 bool RdmaNetwork::PollRecvQueue(NetworkResult* result) {
-  int32_t time_stamp = rdma_manager_->PollRecvQueue(result);
+  int32_t time_stamp = rdma_wrapper_->PollRecvQueue(result);
   if (time_stamp == -1) { return false; }
 
   Request* request = request_pool_->GetRequest(time_stamp);
@@ -201,7 +210,7 @@ bool RdmaNetwork::PollRecvQueue(NetworkResult* result) {
 }
 
 bool RdmaNetwork::PollSendQueue(NetworkResult* result) {
-  int32_t time_stamp = rdma_manager_->PollSendQueue(result);
+  int32_t time_stamp = rdma_wrapper_->PollSendQueue(result);
   if (time_stamp == -1) { return false; }
 
   Request* request = request_pool_->GetRequest(time_stamp);
@@ -217,7 +226,6 @@ bool RdmaNetwork::PollSendQueue(NetworkResult* result) {
 const MemoryDescriptor& RdmaNetwork::GetMemoryDescriptor(
     int64_t register_id) const {
   auto mem_descriptor_it = register_id_to_mem_descriptor_.find(register_id);
-  CHECK(mem_descriptor_it);
 
   return mem_descriptor_it->second;
 }
@@ -260,7 +268,7 @@ void RdmaNetwork::EstablishConnection() {
       CHECK(receive_request);
       // connecting with src_machine_id
       int64_t src_machine_id =
-          rdma_manager_->WaitForConnection(conn, receive_request);
+          rdma_wrapper_->WaitForConnection(conn, receive_request);
       CHECK(src_machine_id);
       connection_pool_->AddConnection(src_machine_id, conn);
       // Pre-post Receive issue before connect

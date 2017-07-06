@@ -6,7 +6,11 @@
 
 namespace oneflow {
 
-ConnectionPool::ConnectionPool() { conn_num_ = 0; }
+ConnectionPool::ConnectionPool() : conn_num_(0) {}
+
+ConnectionPool::~ConnectionPool() {
+  // TODO(shiyuan): delete connection_dict_;
+}
 
 void ConnectionPool::AddConnection(int64_t peer_machine_id, Connection* conn) {
   connection_dict_.insert({peer_machine_id, conn});

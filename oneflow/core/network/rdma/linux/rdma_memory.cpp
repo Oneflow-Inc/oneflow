@@ -5,12 +5,17 @@ namespace oneflow {
 
 RdmaMemory::RdmaMemory(struct ibv_mr* memory_region,
                        struct ibv_pd* protect_domain)
-    : memory_region_(memory_region), protect_domain_(protect_domain) {}
+    : protect_domain_(protect_domain),
+      memory_region_(memory_region) {}
+
+RdmaMemory::~RdmaMemory() {
+  // TODO(shiyuan)
+}
 
 void RdmaMemory::Register() {
   memory_region_ = ibv_reg_mr(protect_domain_, memory_, size_,
-                              IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE
-                                  | IBV_ACCESS_REMOTE_READ);
+                              IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE |
+                              IBV_ACCESS_REMOTE_READ);
   CHECK(memory_region_);
 
   sge_.addr = (uint64_t)memory_;
@@ -24,7 +29,7 @@ void RdmaMemory::Register() {
 }
 
 void RdmaMemory::Unregister() {
-  CHECK_EQ(ibv_dereg_mr(memory_region_));
+  CHECK_EQ(ibv_dereg_mr(memory_region_), 0);
   registered_ = false;
 }
 

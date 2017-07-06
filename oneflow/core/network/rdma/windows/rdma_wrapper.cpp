@@ -26,15 +26,18 @@ sockaddr_in GetAddress(const char* ip, int port) {
 
 }  // namespace
 
-RdmaWrapper::RdmaWrapper() : adapter_(nullptr), listener_(nullptr),
-    send_cq_(nullptr), recv_cq_(nullptr) {}
+RdmaWrapper::RdmaWrapper()
+    : adapter_(nullptr),
+      send_cq_(nullptr),
+      recv_cq_(nullptr),
+      listener_(nullptr) {}
 
 RdmaWrapper::~RdmaWrapper() {
+  // TODO(shiyuan)
 }
 
 void RdmaWrapper::Init(const char* ip, int port) {
   my_addr_ = GetSocket(addr, port);
-  CHECK(my_addr_);
 
   // INIT ADAPTER
   // NdspiV2Open

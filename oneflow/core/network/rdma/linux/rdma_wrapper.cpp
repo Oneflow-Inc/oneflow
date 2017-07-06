@@ -25,16 +25,17 @@ struct sockaddr_in GetAddress(const char* ip, int port) {
 
 RdmaWrapper::RdmaWrapper()
     : context_(nullptr),
-      listener_(nullptr),
+      protect_domain_(nullptr),
       send_cq_(nullptr),
       recv_cq_(nullptr),
-      protect_domain_(nullptr) {}
+      listener_(nullptr) {}
 
-RdmaWrapper::~RdmaWrapper() {}
+RdmaWrapper::~RdmaWrapper() {
+  // TODO(shiyuan)
+}
 
 void RdmaWrapper::Init(const char* ip, int port) {
   my_addr_ = GetAddress(ip, port);
-  CHECK(my_addr_);
 
   // Init Adapter
   struct ibv_device** device_list = ibv_get_device_list(NULL);
@@ -122,7 +123,7 @@ int64_t RdmaWrapper::WaitForConnection(Connection* conn,
   socklen_t addr_len = sizeof(peer_addr);
 
   int peer_sock = accept(my_sock_, (struct sockaddr*)&peer_addr, &addr_len);
-  CHECK_NE(peer_sock, INVALID_SOCKET);
+  CHECK_NE(peer_sock, -1);
   CHECK_GT(read(peer_sock, &peer_machine_id, sizeof(int64_t)), 0);
   CHECK_GT(write(peer_sock, connector, sizeof(struct Connector)), 0);
 

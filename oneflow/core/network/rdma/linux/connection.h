@@ -36,7 +36,7 @@ class Connection {
   ~Connection();
 
   void Bind(const char* my_address, int port);
-  void TryConnectTo(const char* peer_address, int port);
+  bool TryConnectTo(const char* peer_address, int port);
   void CompleteConnectionTo();
   void AcceptConnect();
 

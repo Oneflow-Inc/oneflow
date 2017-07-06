@@ -14,6 +14,8 @@ namespace oneflow {
 
 class RdmaNetwork final : public Network {
  public:
+  RdmaNetwork();
+  ~RdmaNetwork();
   void Init(int64_t my_machine_id, const NetworkTopology& net_topo) override;
   void Finalize() override;
   void Barrier() override;

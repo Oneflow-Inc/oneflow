@@ -6,6 +6,10 @@ namespace oneflow {
 RdmaMemory::RdmaMemory(IND2MemoryRegion* memory_region)
     : memory_region_(memory_region) {}
 
+RdmaMemory::~RdmaMemory() {
+  // TODO(shiyuan)
+}
+
 // Register as ND memory region
 void RdmaMemory::Register() {
   OVERLAPPED ov;

@@ -37,13 +37,12 @@ class RdmaWrapper {
   int my_sock_;
   sockaddr_in my_addr_;
 
-  struct rdma_event_channel* ec_;
   struct ibv_context* context_;
   struct ibv_pd* protect_domain_;
 
   // completion queue
-  struct ibv_cq* recv_cq_;
   struct ibv_cq* send_cq_;
+  struct ibv_cq* recv_cq_;
 
   struct rdma_cm_id* listener_;
 };

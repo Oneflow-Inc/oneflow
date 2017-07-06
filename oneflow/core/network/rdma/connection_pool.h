@@ -10,7 +10,7 @@ namespace oneflow {
 class ConnectionPool {
  public:
   ConnectionPool();
-  ~ConnectionPool() = default;
+  ~ConnectionPool();
 
   void AddConnection(int64_t peer_machine_id, Connection* conn);
   void CleanConnection(int64_t peer_machine_id);

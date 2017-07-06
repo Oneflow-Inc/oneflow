@@ -14,6 +14,7 @@ class RdmaMemory : public NetworkMemory {
 
   RdmaMemory() = default;
   RdmaMemory(struct ibv_mr* memory_region, struct ibv_pd* protect_domain);
+  ~RdmaMemory();
 
   void Register() override;
   void Unregister() override;

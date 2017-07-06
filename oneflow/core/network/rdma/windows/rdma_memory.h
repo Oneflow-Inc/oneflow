@@ -14,6 +14,7 @@ class RdmaMemory : public NetworkMemory {
 
   RdmaMemory() = default;
   explicit RdmaMemory(IND2MemoryRegion* memory_region);
+  ~RdmaMemory();
 
   void Register() override;
   void Unregister() override;
