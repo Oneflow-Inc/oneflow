@@ -16,6 +16,9 @@ class DataCompTaskNode final : public CompTaskNode {
     proto->set_parallel_policy(chain_node()->parallel_desc()->policy());
     proto->set_parallel_id(parallel_id());
     proto->set_parallel_num(chain_node()->parallel_desc()->parallel_num());
+    if (IsFwNode() && GetBpNode()) {
+      proto->set_bp_task_id(GetBpNode()->task_id());
+    }
   }
 
  private:
