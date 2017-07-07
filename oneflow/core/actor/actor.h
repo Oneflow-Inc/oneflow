@@ -58,7 +58,7 @@ class Actor {
   void ActUntilFail();
   virtual void Act() = 0;
   virtual bool IsReadReady() = 0;
-
+  virtual int ProcessEord() = 0;
   // Async Do on KernelCtx
   void AsyncLaunchKernel(
       const KernelCtx&,

@@ -15,22 +15,29 @@ void BoxingActor::Init(const TaskProto& task_proto,
   OF_SET_MSG_HANDLE(&BoxingActor::HandleNormal);
 }
 
+int BoxingActor::ProcessEord() {
+  num_of_eord_ += 1;
+  if (num_of_eord_ == num_of_subscribed_regsts_) {
+    if (num_of_read_empty_ == num_of_subscribed_regsts_) {
+      if (!total_reading_cnt()) {
+        OF_SET_MSG_HANDLE(nullptr);
+        return 1;
+      } else {
+        OF_SET_MSG_HANDLE(&BoxingActor::HandleWaitUntilReadingCntEqualZero);
+      }
+    } else {
+      OF_SET_MSG_HANDLE(&BoxingActor::HandleWaitUntilNoReadableRegst);
+    }
+  } else {
+    // do nothing
+  }
+  return 0;
+}
+
 int BoxingActor::HandleNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
-    num_of_eord_ += 1;
-    if (num_of_eord_ == num_of_subscribed_regsts_) {
-      if (num_of_read_empty_ == num_of_subscribed_regsts_) {
-        if (!total_reading_cnt()) {
-          OF_SET_MSG_HANDLE(nullptr);
-          return 1;
-        } else {
-          OF_SET_MSG_HANDLE(&BoxingActor::HandleWaitUntilReadingCntEqualZero);
-        }
-      } else {
-        OF_SET_MSG_HANDLE(&BoxingActor::HandleWaitUntilNoReadableRegst);
-      }
-    }
+    return ProcessEord();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr())
         != 0) {

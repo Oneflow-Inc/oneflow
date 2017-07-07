@@ -19,6 +19,7 @@ class BoxingActor final : public Actor {
 
   bool IsReadReady() override { return !num_of_read_empty_; }
   void Act() override;
+  int ProcessEord() override;
 
   int num_of_subscribed_regsts_;
   int num_of_read_empty_;

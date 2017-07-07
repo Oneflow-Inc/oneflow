@@ -22,6 +22,7 @@ class MdUpdtCompActor final : public CompActor {
 
   bool IsReadReady() override { return !waiting_model_diff_acc_queue_.empty(); }
   void Act() override;
+  int ProcessEord() override { TODO(); }
 
   CudaStreamHandle cuda_handle_;
   int64_t model_regst_desc_id_;
