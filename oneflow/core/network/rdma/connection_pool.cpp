@@ -8,7 +8,7 @@ namespace oneflow {
 ConnectionPool::ConnectionPool() : conn_num_(0) {}
 
 ConnectionPool::~ConnectionPool() {
-  // TODO(shiyuan): delete connection_dict_;
+  connection_dict_.erase (connection_dict_.begin(), conection_dict_.end());
 }
 
 void ConnectionPool::AddConnection(int64_t peer_machine_id, Connection* conn) {
