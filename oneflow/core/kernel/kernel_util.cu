@@ -79,21 +79,21 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
 
   static void Fill(const KernelCtx& ctx, const FillConf& fill_conf,
                    Blob* blob) {
-    void* dptr;
-    size_t dptr_size = blob->shape().elem_cnt() * sizeof(FloatingPointType);
-    CudaCheck(cudaMallocHost(&dptr, dptr_size));
+    void* host_raw_dptr;
+    size_t byte_size = blob->shape().elem_cnt() * sizeof(FloatingPointType);
+    CudaCheck(cudaMallocHost(&host_raw_dptr, byte_size));
 
-    std::unique_ptr<void, std::function<void(void*)>> auto_dptr(
-        dptr, [&](void* dptr) { cudaFree(dptr); });
-    std::unique_ptr<Shape> shape(new Shape(blob->shape()));
+    std::unique_ptr<void, std::function<void(void*)>> host_unique_ptr(
+        host_raw_dptr, [&](void* dptr) { CudaCheck(cudaFree(dptr)); });
+    std::unique_ptr<Shape> host_blob_shape(new Shape(blob->shape()));
 
-    std::unique_ptr<Blob> temp_blob_host(
-        new Blob(auto_dptr.get(), shape.get()));
+    std::unique_ptr<Blob> host_blob(
+        new Blob(host_unique_ptr.get(), host_blob_shape.get()));
     KernelUtil<DeviceType::kCPU, FloatingPointType>::Fill(ctx, fill_conf,
-                                                          temp_blob_host.get());
+                                                          host_blob.get());
 
     KernelUtil<DeviceType::kGPU, FloatingPointType>::Memcpy(
-        ctx, blob->mut_dptr(), temp_blob_host->dptr(), dptr_size,
+        ctx, blob->mut_dptr(), host_blob->dptr(), byte_size,
         cudaMemcpyHostToDevice);
   }
 
