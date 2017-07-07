@@ -20,7 +20,7 @@ int BoxingActor::HandleNormal(const ActorMsg& msg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     num_of_eord_ += 1;
     if (num_of_eord_ == num_of_subscribed_regsts_) {
-      if (num_of_read_empty_ < num_of_subscribed_regsts_) {
+      if (num_of_read_empty_ == num_of_subscribed_regsts_) {
         if (!total_reading_cnt()) {
           OF_SET_MSG_HANDLE(nullptr);
           return 1;
