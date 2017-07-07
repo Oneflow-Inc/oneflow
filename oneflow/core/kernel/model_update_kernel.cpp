@@ -10,12 +10,12 @@ void MdUpdateKernel<device_type, FloatingPointType>::Backward(
   Blob* model_diffs_blob = BnInOp2BlobPtr("model_diffs");
   float learn_rate = op()->op_conf().model_update_conf().learn_rate();
   KernelUtil<device_type, FloatingPointType>::BlasAxpy(
-    ctx, model_blob->shape().elem_cnt(), -learn_rate,
-    static_cast<const FloatingPointType*>(model_blob->dptr()), 1,
-    static_cast<FloatingPointType*>(model_diffs->mut_dptr()), 1);
+      ctx, model_blob->shape().elem_cnt(), -learn_rate,
+      static_cast<const FloatingPointType*>(model_blob->dptr()), 1,
+      static_cast<FloatingPointType*>(model_diffs_blob->mut_dptr()), 1);
 }
 
-INSTANIATE_KERNEL_CALSS();
-REGISTER_KERNEL();
+INSTANTIATE_KERNEL_CLASS(MdUpdateKernel);
+REGISTER_KERNEL(OperatorConf::kModelUpdateConf, MdUpdateKernel);
 
 }  // namespace oneflow
