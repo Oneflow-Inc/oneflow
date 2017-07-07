@@ -21,7 +21,7 @@ sockaddr_in GetAddress(const char* ip, int port) {
 }
 
 void TransQueuePairState(
-    struct Connector* connector, struct ibv_qp* queue_pair) {
+    const Connector& connector, ibv_qp* queue_pair) {
   struct ibv_qp_attr qp_attr;
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));
 
@@ -37,17 +37,17 @@ void TransQueuePairState(
            0);
 
   qp_attr.qp_state = IBV_QPS_RTR;
-  qp_attr.path_mtu = connector->active_mtu;
-  qp_attr.dest_qp_num = connector->peer_qpn;
-  qp_attr.rq_psn = connector->peer_psn;
+  qp_attr.path_mtu = connector.active_mtu;
+  qp_attr.dest_qp_num = connector.peer_qpn;
+  qp_attr.rq_psn = connector.peer_psn;
   qp_attr.max_dest_rd_atomic = 1;
   qp_attr.min_rnr_timer = 12;
   qp_attr.ah_attr.is_global = 1;
-  qp_attr.ah_attr.grh.dgid.global.subnet_prefix = connector->peer_snp;
-  qp_attr.ah_attr.grh.dgid.global.interface_id = connector->peer_iid;
+  qp_attr.ah_attr.grh.dgid.global.subnet_prefix = connector.peer_snp;
+  qp_attr.ah_attr.grh.dgid.global.interface_id = connector.peer_iid;
   qp_attr.ah_attr.grh.flow_label = 0;
   qp_attr.ah_attr.grh.hop_limit = 255;
-  qp_attr.ah_attr.dlid = connector->peer_lid;
+  qp_attr.ah_attr.dlid = connector.peer_lid;
   qp_attr.ah_attr.sl = 0;
   qp_attr.ah_attr.src_path_bits = 0;
   qp_attr.ah_attr.port_num = 1;
@@ -60,7 +60,7 @@ void TransQueuePairState(
 
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));
   qp_attr.qp_state = IBV_QPS_RTS;
-  qp_attr.sq_psn = connector->my_psn;
+  qp_attr.sq_psn = connector.my_psn;
   qp_attr.timeout = 14;
   qp_attr.retry_cnt = 7;
   qp_attr.rnr_retry = 7;
@@ -92,17 +92,17 @@ Connection::~Connection() {
 void Connection::Bind(const char* ip, int port) {
   my_addr_ = GetAddress(ip, port);
   my_sock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  CHECK_EQ(bind(my_sock_, (struct sockaddr*)&my_addr_, sizeof(my_addr_)), 0);
+  CHECK_EQ(bind(my_sock_, (sockaddr*)&my_addr_, sizeof(my_addr_)), 0);
 }
 
 bool Connection::TryConnectTo(const char* peer_ip, int port) {
-  struct sockaddr_in peer_addr = GetAddress(peer_ip, port);
-  struct Connector temp_connector;
+  sockaddr_in peer_addr = GetAddress(peer_ip, port);
+  Connector temp_connector;
   int read_bytes = 0;
   int total_read_bytes = 0;
   int rc = 0;
   int peer_sock = socket(AF_INET, SOCK_STREAM, 0);
-  int ret = connect(peer_sock, (struct sockaddr*)&peer_addr, sizeof(peer_addr));
+  int ret = connect(peer_sock, (sockaddr*)&peer_addr, sizeof(peer_addr));
   if ((ret != 0) || (peer_sock < 0)) {
     CHECK_EQ(close(peer_sock), 0);
     return false;
@@ -115,16 +115,16 @@ bool Connection::TryConnectTo(const char* peer_ip, int port) {
     rc = 0;
   }
 
-  while (!rc && total_read_bytes < sizeof(struct Connector)) {
-    read_bytes = read(peer_sock, &temp_connector, sizeof(struct Connector));
+  while (!rc && total_read_bytes < sizeof(Connector)) {
+    read_bytes = read(peer_sock, &temp_connector, sizeof(Connector));
     if (read_bytes > 0)
       total_read_bytes += read_bytes;
     else
       rc = read_bytes;
   }
 
-  rc = write(peer_sock, connector_, sizeof(struct Connector));
-  if (rc < sizeof(struct Connector)) {
+  rc = write(peer_sock, connector_, sizeof(Connector));
+  if (rc < sizeof(Connector)) {
     return false;
   } else {
     rc = 0;
@@ -141,22 +141,22 @@ bool Connection::TryConnectTo(const char* peer_ip, int port) {
 }
 
 void Connection::CompleteConnectionTo() {
-  TransQueuePairState(connector_, queue_pair_);
+  TransQueuePairState(*connector_, queue_pair_);
 }
 
 void Connection::AcceptConnect() {
-  TransQueuePairState(connector_, queue_pair_);
+  TransQueuePairState(*connector_, queue_pair_);
 }
 
 void Connection::DestroyConnection() {}
 
-void Connection::PostSendRequest(Request* send_request) {
+void Connection::PostSendRequest(const Request& send_request) {
   struct ibv_send_wr wr;
   struct ibv_send_wr* bad_wr = nullptr;
-  wr.wr_id = send_request->time_stamp;
+  wr.wr_id = send_request.time_stamp;
   wr.next = nullptr;
   wr.sg_list =
-      static_cast<ibv_sge*>(send_request->rdma_msg->net_memory()->sge());
+      static_cast<ibv_sge*>(send_request.rdma_msg->net_memory()->sge());
   wr.num_sge = 1;
   wr.opcode = IBV_WR_SEND;
   wr.send_flags = IBV_SEND_SIGNALED;
@@ -164,29 +164,30 @@ void Connection::PostSendRequest(Request* send_request) {
   CHECK_EQ(ibv_post_send(queue_pair_, &wr, &bad_wr), 0);
 }
 
-void Connection::PostRecvRequest(Request* recv_request) {
+void Connection::PostRecvRequest(const Request& recv_request) {
   struct ibv_recv_wr wr;
   struct ibv_recv_wr* bad_wr = nullptr;
-  wr.wr_id = recv_request->time_stamp;
+  wr.wr_id = recv_request.time_stamp;
   wr.next = nullptr;
   wr.sg_list =
-      static_cast<ibv_sge*>(recv_request->rdma_msg->net_memory()->sge());
+      static_cast<ibv_sge*>(recv_request.rdma_msg->net_memory()->sge());
   wr.num_sge = 1;
   CHECK_EQ(ibv_post_recv(queue_pair_, &wr, &bad_wr), 0);
 }
 
-void Connection::PostReadRequest(Request* read_request,
-                                 MemoryDescriptor* remote_memory_descriptor,
-                                 RdmaMemory* dst_memory) {
+void Connection::PostReadRequest(
+    const Request& read_request,
+    const MemoryDescriptor& remote_memory_descriptor,
+    RdmaMemory* dst_memory) {
   struct ibv_send_wr wr;
   struct ibv_send_wr* bad_wr = nullptr;
-  wr.wr_id = read_request->time_stamp;
+  wr.wr_id = read_request.time_stamp;
   wr.opcode = IBV_WR_RDMA_READ;
   wr.sg_list = static_cast<ibv_sge*>(dst_memory->sge());
   wr.num_sge = 1;
   wr.send_flags = IBV_SEND_SIGNALED;
-  wr.wr.rdma.remote_addr = remote_memory_descriptor->address;
-  wr.wr.rdma.rkey = remote_memory_descriptor->remote_token;
+  wr.wr.rdma.remote_addr = remote_memory_descriptor.address;
+  wr.wr.rdma.rkey = remote_memory_descriptor.remote_token;
 
   CHECK_EQ(ibv_post_send(queue_pair_, &wr, &bad_wr), 0);
 }

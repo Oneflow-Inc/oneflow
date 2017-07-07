@@ -9,11 +9,8 @@
 #include <sal.h>
 #include <new>
 #include <cstdint>
-#include "oneflow/core/network/rdma/windows/ndsupport.h"
-#include "oneflow/core/network/rdma/windows/ndcommon.h"
 #include "oneflow/core/network/rdma/windows/interface.h"
 #include "oneflow/core/network/network_memory.h"
-
 
 namespace oneflow {
 
@@ -33,10 +30,10 @@ class Connection {
 
   void DestroyConnection();
 
-  void PostSendRequest(Request* send_request);
-  void PostRecvRequest(Request* recv_request);
-  void PostReadRequest(Request* read_request,
-                       MemoryDescriptor* remote_memory_descriptor,
+  void PostSendRequest(const Request& send_request);
+  void PostRecvRequest(const Request& recv_request);
+  void PostReadRequest(const Request& read_request,
+                       const MemoryDescriptor& remote_memory_descriptor,
                        RdmaMemory* dst_memory);
 
   void set_connector(IND2Connector* connector) { connector_ = connector; }

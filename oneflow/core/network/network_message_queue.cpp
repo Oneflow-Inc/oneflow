@@ -12,15 +12,15 @@ bool NetworkMessageQueue::TryPop(MsgPtr& msg) {
     // No event occurs at network
     return false;
   }
-  if (result_.type == NetworkResultType::NET_SEND_OK) {
-    // The network actor just ignore the NET_SENT_OK event
+  if (result_.type == NetworkResultType::kSendOk) {
+    // The network actor just ignore the kSendOk event
     return false;
   }
   msg.reset(new ActorMsg());
   switch (result_.type) {
-    case NetworkResultType::NET_SEND_OK: return false;
-    case NetworkResultType::NET_RECEIVE_MSG: ProcessReceiveOK(msg); break;
-    case NetworkResultType::NET_READ_OK: ProcessReadOK(msg); break;
+    case NetworkResultType::kSendOk: return false;
+    case NetworkResultType::kReceiveMsg: ProcessReceiveOK(msg); break;
+    case NetworkResultType::kReadOk: ProcessReadOK(msg); break;
   }
   return true;
 }
@@ -28,7 +28,7 @@ bool NetworkMessageQueue::TryPop(MsgPtr& msg) {
 void NetworkMessageQueue::ProcessReceiveOK(MsgPtr& msg) {
   auto& net_msg = result_.net_msg;
   // There is only one expected type of message: MSG_TYPE_REQUEST_ACK
-  CHECK(net_msg.type == NetworkMessageType::MSG_TYPE_REQUEST_ACK);
+  CHECK(net_msg.type == NetworkMessageType::kRequestAck);
   *msg = net_msg.actor_msg;
 }
 

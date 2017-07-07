@@ -42,33 +42,29 @@ class Connection {
 
   void DestroyConnection();
 
-  void PostSendRequest(Request* send_request);
-  void PostRecvRequest(Request* recv_request);
-  void PostReadRequest(Request* read_request,
-                       MemoryDescriptor* remote_memory_descriptor,
+  void PostSendRequest(const Request& send_request);
+  void PostRecvRequest(const Request& recv_request);
+  void PostReadRequest(const Request& read_request,
+                       const MemoryDescriptor& remote_memory_descriptor,
                        RdmaMemory* dst_memory);
 
-  void set_connector(struct Connector* connector) { connector_ = connector; }
-  void set_queue_pair(struct ibv_qp* queue_pair) {
+  void set_connector(Connector* connector) { connector_ = connector; }
+  void set_queue_pair(ibv_qp* queue_pair) {
     queue_pair_ = queue_pair;
     connector_->my_qpn = queue_pair_->qp_num;
   }
 
-  struct Connector* connector() {
-    return connector_;
-  }
-  struct ibv_qp* queue_pair() {
-    return queue_pair_;
-  }
+  Connector* connector() { return connector_; }
+  ibv_qp* queue_pair() { return queue_pair_; }
 
  private:
-  struct Connector* connector_;
-  struct ibv_qp* queue_pair_;
+  Connector* connector_;
+  ibv_qp* queue_pair_;
 
   int64_t my_machine_id_;
   int64_t peer_machine_id_;
 
-  struct sockaddr_in my_addr_;
+  sockaddr_in my_addr_;
   int my_sock_;
 };
 

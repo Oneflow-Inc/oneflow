@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include "oneflow/core/network/network.h"
 #include "oneflow/core/network/network_memory.h"
-#include "oneflow/core/network/rdma/agency.h"
+#include "oneflow/core/network/rdma/switch.h"
 #include "oneflow/core/network/rdma/connection_pool.h"
 #include "oneflow/core/network/rdma/message_pool.h"
 #include "oneflow/core/network/rdma/request_pool.h"
@@ -24,8 +24,8 @@ class RdmaNetwork final : public Network {
 
   void Send(const NetworkMessage& msg) override;
   // remote_memory_descriptor, local_memory
-  void Read(MemoryDescriptor* src, NetworkMemory* dst) override;
-  void RegisterEventMessage(MsgPtr actor_msg) override;
+  void Read(const MemoryDescriptor& src, NetworkMemory* dst) override;
+  void EnrollActorMessage(MsgPtr actor_msg) override;
   bool Poll(NetworkResult* result) override;
 
  private:
@@ -51,15 +51,15 @@ class RdmaNetwork final : public Network {
   void EstablishConnection();
 
   // |result| is owned by the caller, and the received message will be held in
-  // result->net_msg, having result->type == NetworkResultType::NET_RECEIVE_MSG.
+  // result->net_msg, having result->type == NetworkResultType::kReceiveMsg.
   bool PollRecvQueue(NetworkResult* result);
 
   // |result| is owned by the caller, there are two types of complection events
   // for initiator:
   // (1) successfully sends out a message to a peer, in this case:
-  //     result->type == NetworkResultType::NET_SEND_OK
+  //     result->type == NetworkResultType::kSendOk
   // (2) successfully reads a piece of data from a peer, in this case:
-  //     result->type == NetworkResultType::NET_READ_OK
+  //     result->type == NetworkResultType::kReadOk
   //
   // Both send request and read request are submitted to the send request queue.
   bool PollSendQueue(NetworkResult* result);

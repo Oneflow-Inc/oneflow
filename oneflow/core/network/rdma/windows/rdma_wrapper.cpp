@@ -99,7 +99,7 @@ void RdmaWrapper::Destroy() {
 }
 
 void RdmaWrapper::CreateConnector(Connection* conn) {
-  IND2Connector* connector = NULL;
+  IND2Connector* connector = nullptr;
   HRESULT hr = adapter_->CreateConnector(
             IID_IND2Connector,
             overlapped_file_,
@@ -112,7 +112,7 @@ void RdmaWrapper::CreateProtectDomain(Connection* conn) {
 }
 
 void RdmaWrapper::CreateQueuePair(Connection* conn) {
-  IND2QueuePair* queue_pair = NULL;
+  IND2QueuePair* queue_pair = nullptr;
   HRESULT hr = adapter_->CreateQueuePair(
             IID_IND2QueuePair,
             recv_cq_,
@@ -126,11 +126,12 @@ void RdmaWrapper::CreateQueuePair(Connection* conn) {
             adapter_info_.MaxInitiatorSge,
             adapter_info_.MaxInlineDataSize,
             reinterpret_cast<void**>(&queue_pair));
+  CHECK(SUCCEEDED(hr));
   conn->set_queue_pair(queue_pair);
 }
 
 RdmaMemory* RdmaWrapper::NewNetworkMemory() {
-  IND2MemoryRegion* memory_region = NULL;
+  IND2MemoryRegion* memory_region = nullptr;
   HRESULT hr = adapter_->CreateMemoryRegion(
             IID_IND2MemoryRegion,
             overlapped_file_,
@@ -171,7 +172,7 @@ int64_t RdmaWrapper::WaitForConnection(Connection* conn,
 }
 
 // |result| is owned by the caller, and the received message will be held in
-// result->net_msg, having result->type == NetworkResultType::NET_RECEIVE_MSG.
+// result->net_msg, having result->type == NetworkResultType::kReceiveMsg.
 int32_t RdmaWrapper::PollRecvQueue(NetworkResult* result) {
   ND2_RESULT nd2_result;
   uint32_t len = recv_cq_->GetResults(&nd2_result, 1);
@@ -180,7 +181,7 @@ int32_t RdmaWrapper::PollRecvQueue(NetworkResult* result) {
 
   CHECK_EQ(nd2_result.Status, ND_SUCCESS);
 
-  result->type = NetworkResultType::NET_RECEIVE_MSG;
+  result->type = NetworkResultType::kReceiveMsg;
   // The context is the message timestamp in Recv Request.
   int32_t time_stamp = *(static_cast<int32_t*>(nd2_result.RequestContext));
   return time_stamp;
@@ -196,7 +197,7 @@ int32_t RdmaWrapper::PollSendQueue(NetworkResult* result) {
 
   switch (nd2_result.RequestType) {
     case ND2_REQUEST_TYPE::Nd2RequestTypeSend: {
-      result->type = NetworkResultType::NET_SEND_OK;
+      result->type = NetworkResultType::kSendOk;
       // The context is the message timestamp in Send request.
       // The network object does not have additional information
       // to convey to outside caller, it just recycle the
@@ -205,7 +206,7 @@ int32_t RdmaWrapper::PollSendQueue(NetworkResult* result) {
       return time_stamp;
     }
     case ND2_REQUEST_TYPE::Nd2RequestTypeRead: {
-      result->type = NetworkResultType::NET_READ_OK;
+      result->type = NetworkResultType::kReadOk;
       // The context is the message timestamp in Read request.
       // The network object needs to convey the information about
       // "what data have been read" to external caller.

@@ -1,7 +1,5 @@
 #include "oneflow/core/network/rdma/request_pool.h"
 
-#include <limits>
-
 namespace oneflow {
 
 RequestPool::RequestPool() : sequence_number_(0) {

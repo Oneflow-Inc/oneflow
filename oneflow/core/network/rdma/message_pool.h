@@ -2,8 +2,7 @@
 #define ONEFLOW_CORE_NETWORK_RDMA_MESSAGE_POOL_H_
 
 #include <queue>
-
-#include "oneflow/core/network/rdma/agency.h"
+#include "oneflow/core/network/rdma/switch.h"
 
 namespace oneflow {
 

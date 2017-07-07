@@ -1,15 +1,5 @@
 #include "oneflow/core/network/rdma/rdma_network.h"
 
-#include <string>
-#include <vector>
-// #include <iphlpapa.h>
-
-#include "oneflow/core/network/network.h"
-#include "oneflow/core/network/rdma/agency.h"
-#include "oneflow/core/network/rdma/connection_pool.h"
-#include "oneflow/core/network/rdma/message_pool.h"
-#include "oneflow/core/network/rdma/request_pool.h"
-
 namespace oneflow {
 
 RdmaNetwork::RdmaNetwork() 
@@ -60,24 +50,25 @@ void RdmaNetwork::Barrier() {
   NetworkResult result;
   for (int32_t i = 0; i < num_successors; ++i) {
     // Wait for the Barrier
-    while (!PollRecvQueue(&result));
-    // CHECK(result.type == NetworkResultType::NET_RECEIVE_MSG)
-    //   << "Expected recv msg";
-    // CHECK(result.net_msg.type == NetworkMessageType::MSG_TYPE_BARRIER)
-    //   << "Expected MSG_TYPE_BARRIER";
+    while (!PollRecvQueue(&result)) {
+      CHECK(result.type == NetworkResultType::kReceiveMsg)
+        << "Expected recv msg";
+      CHECK(result.net_msg.type == NetworkMessageType::kBarrier)
+        << "Expected MessageType::kBarrier";
+    }
   }
   printf("Barrier wait all barrier over\n");
 
   // 2. Send to all the predecessors Barrier message
   NetworkMessage barrier_msg;
   barrier_msg.src_machine_id = my_machine_id_;
-  barrier_msg.type = NetworkMessageType::MSG_TYPE_BARRIER;
+  barrier_msg.type = NetworkMessageType::kBarrier;
   for (auto peer_machine_id : net_topo_.all_nodes[my_machine_id_].neighbors) {
     if (peer_machine_id < my_machine_id_) {
       barrier_msg.dst_machine_id = peer_machine_id;
       Send(barrier_msg);
-      while (!PollSendQueue(&result));
-      // CHECK(result.type == NetworkResultType::NET_SEND_OK);
+      while (!PollSendQueue(&result))
+        CHECK(result.type == NetworkResultType::kSendOk);
     }
   }
   printf("Barrier send all barrier over\n");
@@ -86,22 +77,24 @@ void RdmaNetwork::Barrier() {
   // we shall poll 2 * n (num_predecessors) net event,
   // n for SEND_OK, n for RECEIVE_MSG
   for (int32_t i = 0; i < num_predecessors; ++i) {
-    while (!PollRecvQueue(&result));
-    // CHECK(result.type == NetworkResultType::NET_RECEIVE_MSG);
-    // CHECK(result.net_msg.type == NetworkMessageType::MSG_TYPE_REPLY_BARRIER);
+    while (!PollRecvQueue(&result)) {
+      CHECK(result.type == NetworkResultType::kReceiveMsg);
+      CHECK(result.net_msg.type == NetworkMessageType::kReplyBarrier);
+    }
   }
   printf("Barrier wait all reply barrier over\n");
 
   // 4. Send the Reply Barrier msg to all its
   NetworkMessage reply_barrier_msg;
   reply_barrier_msg.src_machine_id = my_machine_id_;
-  reply_barrier_msg.type = NetworkMessageType::MSG_TYPE_REPLY_BARRIER;
+  reply_barrier_msg.type = NetworkMessageType::kReplyBarrier;
   for (auto peer_machine_id : net_topo_.all_nodes[my_machine_id_].neighbors) {
     if (peer_machine_id > my_machine_id_) {
       reply_barrier_msg.dst_machine_id = peer_machine_id;
       Send(reply_barrier_msg);
-      while (!PollSendQueue(&result));
-      // CHECK(result.type == NetworkResultType::NET_SEND_OK);
+      while (!PollSendQueue(&result)) {
+        CHECK(result.type == NetworkResultType::kSendOk);
+      }
     }
   }
   printf("Barrier send all reply barrier over\n");
@@ -131,13 +124,13 @@ void RdmaNetwork::Send(const NetworkMessage& msg) {
   // We need to know the completion event of Send to recycle the
   // buffer of message.
 
-  conn->PostSendRequest(send_request);
+  conn->PostSendRequest(*send_request);
 }
 
-void RdmaNetwork::Read(MemoryDescriptor* remote_memory_descriptor,
+void RdmaNetwork::Read(const MemoryDescriptor& remote_memory_descriptor,
                        NetworkMemory* local_memory) {
   Connection* conn =
-      connection_pool_->GetConnection(remote_memory_descriptor->machine_id);
+      connection_pool_->GetConnection(remote_memory_descriptor.machine_id);
   CHECK(conn);
 
   Request* read_request = request_pool_->AllocRequest(true);
@@ -148,13 +141,13 @@ void RdmaNetwork::Read(MemoryDescriptor* remote_memory_descriptor,
   // The read_request->registered_message->mutable_msg() will be set in
   // |RegisterEventMessage|.
 
-  RdmaMemory* dst_memory = reinterpret_cast<RdmaMemory*>(local_memory);
+  RdmaMemory* dst_memory = static_cast<RdmaMemory*>(local_memory);
   CHECK(dst_memory);
 
-  conn->PostReadRequest(read_request, remote_memory_descriptor, dst_memory);
+  conn->PostReadRequest(*read_request, remote_memory_descriptor, dst_memory);
 }
 
-void RdmaNetwork::RegisterEventMessage(MsgPtr actor_msg) {
+void RdmaNetwork::EnrollActorMessage(MsgPtr actor_msg) {
   Request* last_read_request =
       request_pool_->GetRequest(time_stamp_of_last_read_request_);
   CHECK(last_read_request);
@@ -184,7 +177,7 @@ Connection* RdmaNetwork::NewConnection() {
 }
 
 // |result| is owned by the caller, and the received message will be held in
-// result->net_msg, having result->type == NetworkResultType::NET_RECEIVE_MSG.
+// result->net_msg, having result->type == NetworkResultType::kReceiveMsg.
 bool RdmaNetwork::PollRecvQueue(NetworkResult* result) {
   int32_t time_stamp = rdma_wrapper_->PollRecvQueue(result);
   if (time_stamp == -1) { return false; }
@@ -204,7 +197,7 @@ bool RdmaNetwork::PollRecvQueue(NetworkResult* result) {
   CHECK(conn);
   request = request_pool_->UpdateTimeStampAndReuse(time_stamp);
   CHECK(request);
-  conn->PostRecvRequest(request);
+  conn->PostRecvRequest(*request);
 
   return true;
 }
@@ -244,7 +237,7 @@ void RdmaNetwork::EstablishConnection() {
         conn = NewConnection();
         CHECK(conn);
         conn->Bind(net_topo_.all_nodes[my_machine_id_].address.c_str(), port_);
-        conn->PostRecvRequest(receive_request);
+        conn->PostRecvRequest(*receive_request);
       } while (!conn->TryConnectTo(
           net_topo_.all_nodes[peer_machine_id].address.c_str(), port_));
       conn->CompleteConnectionTo();
@@ -252,7 +245,7 @@ void RdmaNetwork::EstablishConnection() {
       for (int k = 0; k < kPrePostRecvNumber; ++k) {
         receive_request = request_pool_->AllocRequest(false);
         CHECK(receive_request);
-        conn->PostRecvRequest(receive_request);
+        conn->PostRecvRequest(*receive_request);
       }
     }
   }
@@ -275,7 +268,7 @@ void RdmaNetwork::EstablishConnection() {
       for (int k = 0; k < kPrePostRecvNumber; ++k) {
         receive_request = request_pool_->AllocRequest(false);
         CHECK(receive_request);
-        conn->PostRecvRequest(receive_request);
+        conn->PostRecvRequest(*receive_request);
       }
     }
   }

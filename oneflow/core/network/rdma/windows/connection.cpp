@@ -80,7 +80,7 @@ void Connection::AcceptConnect() {
   HRESULT hr = connector_->Accept(queue_pair_,
       10,  // inbound limit
       10,  // outbound limit
-      NULL,  // add private data? // Credit information?
+      nullptr,  // add private data? // Credit information?
       0,
       ov_);
   if (hr == ND_PENDING) {
@@ -92,35 +92,35 @@ void Connection::AcceptConnect() {
 void Connection::DestroyConnection() {
 }
 
-void Connection::PostSendRequest(Request* send_request) {
+void Connection::PostSendRequest(const Request& send_request) {
   HRESULT hr = queue_pair_->Send(
-      &send_request->time_stamp,
+      &send_request.time_stamp,
       static_cast<const ND2_SGE*>(
-          send_request->rdma_msg->net_memory()->sge()),
+          send_request.rdma_msg->net_memory()->sge()),
       1,
       0);  // TODO(shiyuan) this flag should be mod for generate an event in cq
   CHECK(SUCCEEDED(hr));
 }
 
-void Connection::PostRecvRequest(Request* recv_request) {
+void Connection::PostRecvRequest(const Request& recv_request) {
   HRESULT hr = queue_pair_->Receive(
-      &recv_request->time_stamp,
+      &recv_request.time_stamp,
       static_cast<const ND2_SGE*>(
-          recv_request->rdma_msg->net_memory()->sge()),
+          recv_request.rdma_msg->net_memory()->sge()),
       1);
   CHECK(SUCCEEDED(hr));
 }
 
 void Connection::PostReadRequest(
-    Request* read_request,
-    MemoryDescriptor* remote_memory_descriptor,
+    const Request& read_request,
+    const MemoryDescriptor& remote_memory_descriptor,
     RdmaMemory* dst_memory) {
   HRESULT hr = queue_pair_->Read(
-      &read_request->time_stamp,
+      &read_request.time_stamp,
       static_cast<const ND2_SGE*>(dst_memory->sge()),
       1,
-      remote_memory_descriptor->address,
-      remote_memory_descriptor->remote_token,
+      remote_memory_descriptor.address,
+      remote_memory_descriptor.remote_token,
       0);  // TODO(shiyuan) parameters
   CHECK(SUCCEEDED(hr));
 }

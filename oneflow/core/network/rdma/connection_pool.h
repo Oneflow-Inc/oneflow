@@ -2,8 +2,7 @@
 #define ONEFLOW_CORE_NETWORK_RDMA_CONNECTION_POOL_H_
 
 #include <unordered_map>
-
-#include "oneflow/core/network/rdma/agency.h"
+#include "oneflow/core/network/rdma/switch.h"
 
 namespace oneflow {
 

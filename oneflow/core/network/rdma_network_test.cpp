@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
   // send memory descriptor to peer
   if (my_machine_id == 1) {
     NetworkMessage memory_msg;
-    memory_msg.type = NetworkMessageType::MSG_TYPE_REMOTE_MEMORY_DESCRIPTOR;
+    memory_msg.type = NetworkMessageType::kRemoteMemoryDescriptor;
     memory_msg.src_machine_id = my_machine_id;
     memory_msg.dst_machine_id = peer_machine_id;
     memory_msg.address = src_memory->memory_discriptor().address;
@@ -113,11 +113,11 @@ int main(int argc, char** argv) {
       // sleep(1);
       // cout << "Poll result false" << endl;
     }
-    if (result.type == NetworkResultType::NET_SEND_OK) {
+    if (result.type == NetworkResultType::kSendOk) {
       LOG(INFO) << "send ok" << endl;
-    } else if (result.type == NetworkResultType::NET_RECEIVE_MSG) {
+    } else if (result.type == NetworkResultType::kReceiveMsg) {
       if (result.net_msg.type
-          == NetworkMessageType::MSG_TYPE_REMOTE_MEMORY_DESCRIPTOR) {
+          == NetworkMessageType::kRemoteMemoryDescriptor) {
         LOG(INFO) << "recv descriptor" << endl;
         remote_memory_descriptor->machine_id = result.net_msg.src_machine_id;
         remote_memory_descriptor->address = result.net_msg.address;
@@ -126,27 +126,27 @@ int main(int argc, char** argv) {
           LOG(INFO) << "address error" << endl;
           exit(1);
         }
-        net->Read(remote_memory_descriptor, dst_memory);
+        net->Read(*remote_memory_descriptor, dst_memory);
         LOG(INFO) << "async read issued" << endl;
         start_time = clock();
       } else if (result.net_msg.type
-                 == NetworkMessageType::MSG_TYPE_REQUEST_ACK) {
+                 == NetworkMessageType::kRequestAck) {
         LOG(INFO) << "Send next memory descriptor" << endl;
         NetworkMessage memory_msg;
-        memory_msg.type = NetworkMessageType::MSG_TYPE_REMOTE_MEMORY_DESCRIPTOR;
+        memory_msg.type = NetworkMessageType::kRemoteMemoryDescriptor;
         memory_msg.src_machine_id = my_machine_id;
         memory_msg.dst_machine_id = peer_machine_id;
         memory_msg.address = src_memory->memory_discriptor().address;
         memory_msg.token = src_memory->memory_discriptor().remote_token;
         net->Send(memory_msg);
       }
-    } else if (result.type == NetworkResultType::NET_READ_OK) {
+    } else if (result.type == NetworkResultType::kReadOk) {
       current_time = clock();
       LOG(INFO) << "READ OK. TIMES: " << i << ", cost time: "
                 << (double)(current_time - start_time) / CLOCKS_PER_SEC << endl;
       start_time = current_time;
       NetworkMessage read_ok_msg;
-      read_ok_msg.type = NetworkMessageType::MSG_TYPE_REQUEST_ACK;
+      read_ok_msg.type = NetworkMessageType::kRequestAck;
       read_ok_msg.src_machine_id = my_machine_id;
       read_ok_msg.dst_machine_id = peer_machine_id;
       net->Send(read_ok_msg);

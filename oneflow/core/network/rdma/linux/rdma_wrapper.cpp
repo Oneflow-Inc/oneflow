@@ -67,7 +67,7 @@ void RdmaWrapper::CreateConnector(Connection* conn) {
 
   struct Connector* connector = new Connector;
   CHECK(connector);
-  srand((unsigned)time(nullptr));
+  srand((unsigned)time(NULL));
   connector->my_lid = attr.lid;
   connector->my_qpn = 0;  // Will be set up after the creation of the queue pair
   connector->my_psn = static_cast<uint32_t>(rand()) & 0xffffff;
@@ -104,7 +104,7 @@ void RdmaWrapper::CreateQueuePair(Connection* conn) {
 
 RdmaMemory* RdmaWrapper::NewNetworkMemory() {
   // XXX(shiyuan)
-  struct ibv_mr* memory_region = NULL;
+  struct ibv_mr* memory_region = nullptr;
 
   RdmaMemory* rdma_memory = new RdmaMemory(memory_region, protect_domain_);
   CHECK(rdma_memory);
@@ -148,7 +148,7 @@ int64_t RdmaWrapper::WaitForConnection(Connection* conn,
 }
 
 // |result| is owned by the caller, and the received message will be held in
-// result->net_msg, having result->type == NetworkResultType::NET_RECEIVE_MSG.
+// result->net_msg, having result->type == NetworkResultType::kReceiveMsg.
 int32_t RdmaWrapper::PollRecvQueue(NetworkResult* result) {
   struct ibv_wc wc;
   int32_t len = ibv_poll_cq(recv_cq_, 1, &wc);
@@ -158,7 +158,7 @@ int32_t RdmaWrapper::PollRecvQueue(NetworkResult* result) {
 
   CHECK_EQ(wc.status, IBV_WC_SUCCESS);
 
-  result->type = NetworkResultType::NET_RECEIVE_MSG;
+  result->type = NetworkResultType::kReceiveMsg;
   int32_t time_stamp = wc.wr_id;
   return time_stamp;
 }
@@ -174,7 +174,7 @@ int32_t RdmaWrapper::PollSendQueue(NetworkResult* result) {
 
   switch (wc.opcode) {
     case IBV_WC_SEND: {
-      result->type = NetworkResultType::NET_SEND_OK;
+      result->type = NetworkResultType::kSendOk;
       // The context is the message timestamp in Send request.
       // Tehe network object does not have additional information
       // to convey to outside caller, it just recycle the
@@ -183,7 +183,7 @@ int32_t RdmaWrapper::PollSendQueue(NetworkResult* result) {
       return time_stamp;
     }
     case IBV_WC_RDMA_READ: {
-      result->type = NetworkResultType::NET_READ_OK;
+      result->type = NetworkResultType::kReadOk;
       // The context is the message timestamp in Read request.
       // The network object needs to convey the information about
       // "what data have been read" to external caller.

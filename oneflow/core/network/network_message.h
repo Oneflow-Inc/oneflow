@@ -7,13 +7,11 @@ namespace oneflow {
 
 typedef std::shared_ptr<ActorMsg> MsgPtr;
 
-enum class NetworkMessageType {
-  MSG_TYPE_BARRIER = 1,
-  MSG_TYPE_REPLY_BARRIER = -1,
-
-  MSG_TYPE_REMOTE_MEMORY_DESCRIPTOR = 2,
-
-  MSG_TYPE_REQUEST_ACK = 3
+enum NetworkMessageType {
+  kBarrier = 1,
+  kReplyBarrier = -1,
+  kRemoteMemoryDescriptor = 2,
+  kRequestAck = 3
 };
 
 struct NetworkMessage {
@@ -22,9 +20,8 @@ struct NetworkMessage {
   int64_t src_machine_id;
   int64_t dst_machine_id;
 
-  // Request/ack EventMessage between send/recv actors for MSG_TYPE_READ_OK or
+  // Request/ack ActorMessage between send/recv actors for MSG_TYPE_READ_OK or
   // MSG_TYPE_ACK_CONSUMED
-  // Also, includes the Write completion event message to send actor
   ActorMsg actor_msg;
 
   // Optional for REMOTE_MEMORY_DESCRIPTOR message
@@ -32,11 +29,11 @@ struct NetworkMessage {
   uint32_t token;
 };
 
-enum class NetworkResultType { NET_READ_OK, NET_SEND_OK, NET_RECEIVE_MSG };
+enum NetworkResultType { kReadOk = 0, kSendOk, kReceiveMsg };
 
 struct NetworkResult {
   NetworkResultType type;
-  // Used when type == NET_RECEIVE_MSG, or type == NET_READ_OK, msg.
+  // Used when type == kReceiveMsg, or type == kReadOk, msg.
   NetworkMessage net_msg;
 };
 

@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_NETWORK_RDMA_AGENCY_H_
-#define ONEFLOW_CORE_NETWORK_RDMA_AGENCY_H_
+#ifndef ONEFLOW_CORE_NETWORK_RDMA_SWITCH_H_
+#define ONEFLOW_CORE_NETWORK_RDMA_SWITCH_H_
 
 #ifdef WIN32
 #include "oneflow/core/network/rdma/windows/interface.h"
@@ -7,4 +7,4 @@
 #include "oneflow/core/network/rdma/linux/interface.h"
 #endif
 
-#endif  // ONEFLOW_CORE_NETWORK_RDMA_AGENCY_H_
+#endif  // ONEFLOW_CORE_NETWORK_RDMA_SWITCH_H_

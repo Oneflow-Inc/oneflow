@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <memory>
 #include <unordered_map>
-#include "oneflow/core/network/rdma/agency.h"
+#include "oneflow/core/network/rdma/switch.h"
 #include "oneflow/core/network/rdma/message_pool.h"
 
 namespace oneflow {
