@@ -92,8 +92,9 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
     KernelUtil<DeviceType::kCPU, FloatingPointType>::Fill(ctx, fill_conf,
                                                           temp_blob_host.get());
 
-    CudaCheck(cudaMemcpy(blob->mut_dptr(), temp_blob_host->dptr(), dptr_size,
-                         cudaMemcpyHostToDevice));
+    KernelUtil<DeviceType::kGPU, FloatingPointType>::Memcpy(
+        ctx, blob->mut_dptr(), temp_blob_host->dptr(), dptr_size,
+        cudaMemcpyHostToDevice);
   }
 
  private:
