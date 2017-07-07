@@ -20,7 +20,16 @@ int BoxingActor::HandleNormal(const ActorMsg& msg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     num_of_eord_ += 1;
     if (num_of_eord_ == num_of_subscribed_regsts_) {
-      OF_SET_MSG_HANDLE(&BoxingActor::HandleWaitUntilNoReadableRegst);
+      if (num_of_read_empty_ < num_of_subscribed_regsts_) {
+        if (!total_reading_cnt()) {
+          OF_SET_MSG_HANDLE(nullptr);
+          return 1;
+        } else {
+          OF_SET_MSG_HANDLE(&BoxingActor::HandleWaitUntilReadingCntEqualZero);
+        }
+      } else {
+        OF_SET_MSG_HANDLE(&BoxingActor::HandleWaitUntilNoReadableRegst);
+      }
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr())
@@ -31,8 +40,8 @@ int BoxingActor::HandleNormal(const ActorMsg& msg) {
     } else {
       // do nothing
     }
+    ActUntilFail();
   }
-  ActUntilFail();
   return 0;
 }
 
