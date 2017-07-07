@@ -3,7 +3,7 @@
 
 namespace oneflow {
 
-extern const char* kBaledBlobName;
+extern const char* kPackedBlobName;
 
 }  // namespace oneflow
 

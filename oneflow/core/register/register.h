@@ -20,11 +20,11 @@ class Regst final {
     return regst_desc_->subscribers_actor_id();
   }
   void ForEachLbn(std::function<void(const std::string&)>);
+  Blob* GetBlobPtrFromLbn(const std::string& lbn);
 
   // Setters
   void set_piece_id(int64_t val) { piece_id_ = val; }
   void set_model_version_id(int64_t val) { model_version_id_ = val; }
-  Blob* GetBlobPtrFromLbn(const std::string& lbn);
 
  private:
   friend class RegstMgr;
@@ -36,7 +36,7 @@ class Regst final {
   std::shared_ptr<const RtRegstDesc> regst_desc_;
   std::function<void()> deleter_;
   HashMap<std::string, std::unique_ptr<Blob>> lbn2blob_;
-  std::unique_ptr<Blob> baled_blob_;
+  std::unique_ptr<Blob> packed_blob_;
 };
 
 }  // namespace oneflow

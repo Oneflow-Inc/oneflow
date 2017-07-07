@@ -32,6 +32,15 @@ class JobDesc final {
   const FloatingPointTypeProto& floating_point_type() const {
     return floating_point_type_;
   }
+  size_t FloatingPointSize() const {
+    if (floating_point_type_ == FloatingPointTypeProto::kFloat) {
+      return sizeof(float);
+    } else if (floating_point_type_ == FloatingPointTypeProto::kDouble) {
+      return sizeof(double);
+    } else {
+      UNEXPECTED_RUN();
+    }
+  }
   int32_t num_of_batches_in_snapshot() const {
     return num_of_batches_in_snapshot_;
   }

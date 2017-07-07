@@ -1,5 +1,6 @@
 #include "gflags/gflags.h"
 #include "oneflow/core/actor/actor_message_bus.h"
+#include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/plan.pb.h"
@@ -41,7 +42,7 @@ class Runtime final {
     HandoutTasks(other_tasks);
     RuntimeCtx::Singleton()->WaitUnitlAllModelInitDone();
     LOG(INFO) << "InitModel on this machine done";
-    // TODO: Barrier
+    OF_BARRIER();
     LOG(INFO) << "InitModel on all machine done";
     SendCmdMsg(mdupdt_tasks, ActorCmd::kSendInitialModel);
     SendCmdMsg(source_tasks, ActorCmd::kStart);

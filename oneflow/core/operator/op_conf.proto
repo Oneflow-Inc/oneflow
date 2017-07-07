@@ -118,7 +118,6 @@ message ReluOpConf {
 message SoftmaxOpConf {
   string in = 1;
   string out = 2;
-  int32 axis = 3;
 }
 
 message MultinomialLogisticLossOpConf {
@@ -186,9 +185,6 @@ message ModelSaveOpConf {
   repeated string lbns = 1;
 }
 
-message ClearOpConf {
-}
-
 message OperatorConf {
   string name = 1;
   oneof op_type {
@@ -207,6 +203,5 @@ message OperatorConf {
     ModelDiffAccOpConf model_diff_acc_conf = 112;
     ConcatOpConf concat_conf = 113;
     CopyCommNetOpConf copy_comm_net_conf = 114;
-    ClearOpConf clear_conf = 115;
   }
 }

@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_ACTOR_ACTOR_MESSAGE_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/register/register_warpper.h"
+#include "oneflow/core/register/register_wrapper.h"
 
 namespace oneflow {
 
@@ -15,7 +15,7 @@ enum class ActorCmd {
 
 OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ActorCmd);
 
-enum class ActorMsgType { kRegstMsg = 0, kCmdMsg };
+enum class ActorMsgType { kRegstMsg = 0, kCmdMsg, kPieceModelIdMsg };
 
 OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ActorMsgType);
 
@@ -31,31 +31,60 @@ class ActorMsg final {
   // Getters
   int64_t dst_actor_id() const { return dst_actor_id_; }
   ActorMsgType msg_type() const { return msg_type_; }
-  std::shared_ptr<RegstWarpper> regst_warpper() const {
-    CHECK(msg_type_ == ActorMsgType::kRegstMsg);
-    return regst_warpper_;
+  std::shared_ptr<RegstWrapper> regst_wrapper() const {
+    CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
+    return regst_wrapper_;
   }
   ActorCmd actor_cmd() const {
-    CHECK(msg_type_ == ActorMsgType::kCmdMsg);
+    CHECK_EQ(msg_type_, ActorMsgType::kCmdMsg);
     return actor_cmd_;
   }
+  int64_t piece_id() const {
+    CHECK_EQ(msg_type_, ActorMsgType::kPieceModelIdMsg);
+    return piece_id_;
+  }
+  int64_t model_version_id() const {
+    CHECK_EQ(msg_type_, ActorMsgType::kPieceModelIdMsg);
+    return model_version_id_;
+  }
+
   // Setters
   void set_dst_actor_id(int64_t val) { dst_actor_id_ = val; }
-  void set_regst_warpper(std::shared_ptr<RegstWarpper> val) {
+  void set_regst_wrapper(std::shared_ptr<RegstWrapper> val) {
     msg_type_ = ActorMsgType::kRegstMsg;
-    regst_warpper_ = val;
+    regst_wrapper_ = val;
   }
   void set_actor_cmd(ActorCmd val) {
     msg_type_ = ActorMsgType::kCmdMsg;
     actor_cmd_ = val;
+  }
+  void set_piece_id(int64_t val) {
+    msg_type_ = ActorMsgType::kPieceModelIdMsg;
+    piece_id_ = val;
+  }
+  void set_model_version_id(int64_t val) {
+    msg_type_ = ActorMsgType::kPieceModelIdMsg;
+    model_version_id_ = val;
+  }
+
+  // Serialize
+  template<typename StreamT>
+  void Serialize(StreamT& out_stream) const {
+    TODO();
+  }
+  template<typename StreamT>
+  void Deserialize(StreamT& in_stream) {
+    TODO();
   }
 
  private:
   int64_t dst_actor_id_;
   ActorMsgType msg_type_;
 
-  std::shared_ptr<RegstWarpper> regst_warpper_;
+  std::shared_ptr<RegstWrapper> regst_wrapper_;
   ActorCmd actor_cmd_;
+  int64_t piece_id_;
+  int64_t model_version_id_;
 };
 
 }  // namespace oneflow

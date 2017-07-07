@@ -14,9 +14,16 @@ class MdSaveCompActor final : public CompActor {
   void Init(const TaskProto&, const ThreadCtx&) override;
 
  private:
-  int HandleSaveModel(const ActorMsg&);
+  int HandleNormal(const ActorMsg&) override;
+  int HandleWaitUntilNoReadableRegst(const ActorMsg& msg) override {
+    UNEXPECTED_RUN();
+  }
+
+  bool IsReadReady() override { return regst_wrapper_ != nullptr; }
+  void Act() override;
 
   int64_t model_regst_desc_id_;
+  std::shared_ptr<RegstWrapper> regst_wrapper_;
 };
 
 }  // namespace oneflow

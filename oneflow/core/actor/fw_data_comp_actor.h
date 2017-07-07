@@ -15,11 +15,11 @@ class FwDataCompActor final : public CompActor {
 
  private:
   int WaitToStart(const ActorMsg&);
-  int HandleFwComp(const ActorMsg&);
-  int HandleFwCompWhenNoReadableRegstMsg(const ActorMsg&);
+  int HandleNormal(const ActorMsg&) override;
+  int HandleWaitUntilNoReadableRegst(const ActorMsg&) override;
 
-  bool IsReadReady();
-  void TryWardKernelAndSendMsg();
+  bool IsReadReady() override;
+  void Act() override;
 
   CudaStreamHandle cuda_handle_;
   int num_of_not_eord_;
@@ -27,11 +27,12 @@ class FwDataCompActor final : public CompActor {
   int64_t in_desc_id_;
   int64_t model_regst_desc_id_;
   int64_t model_tmp_regst_desc_id_;
-  std::shared_ptr<RegstWarpper> model_regst_;
-  std::shared_ptr<RegstWarpper> model_tmp_regst_;
-  std::queue<std::shared_ptr<RegstWarpper>> in_;
-  HashMap<int64_t, std::shared_ptr<RegstWarpper>> ready_in_regst_;
+  std::shared_ptr<RegstWrapper> model_regst_;
+  std::shared_ptr<RegstWrapper> model_tmp_regst_;
+  std::queue<std::shared_ptr<RegstWrapper>> in_;
+  HashMap<int64_t, std::shared_ptr<RegstWrapper>> ready_in_regst_;
   KernelCtx kernel_ctx_;
+  int64_t bp_actor_id_;
 };
 
 }  // namespace oneflow

@@ -11,6 +11,7 @@
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <random>
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
@@ -112,6 +113,11 @@ template<typename T>
 void SplitAndParseAs(const std::string& text, const std::string& delims,
                      std::function<void(T&&)> Func) {
   Split(text, delims, [&Func](std::string&& s) { Func(oneflow_cast<T>(s)); });
+}
+
+inline uint32_t NewRandomSeed() {
+  static std::mt19937 gen{std::random_device{}()};
+  return gen();
 }
 
 }  // namespace oneflow

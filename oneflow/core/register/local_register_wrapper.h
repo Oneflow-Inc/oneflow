@@ -1,17 +1,17 @@
-#ifndef ONEFLOW_CORE_REGISTER_LOCAL_REGISTER_WARPPER_H_
-#define ONEFLOW_CORE_REGISTER_LOCAL_REGISTER_WARPPER_H_
+#ifndef ONEFLOW_CORE_REGISTER_LOCAL_REGISTER_WRAPPER_H_
+#define ONEFLOW_CORE_REGISTER_LOCAL_REGISTER_WRAPPER_H_
 
-#include "oneflow/core/register/register_warpper.h"
+#include "oneflow/core/register/register_wrapper.h"
 
 namespace oneflow {
 
-class LocalRegstWarpper final : public RegstWarpper {
+class LocalRegstWrapper final : public RegstWrapper {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(LocalRegstWarpper);
-  LocalRegstWarpper() = delete;
-  ~LocalRegstWarpper() = default;
+  OF_DISALLOW_COPY_AND_MOVE(LocalRegstWrapper);
+  LocalRegstWrapper() = delete;
+  ~LocalRegstWrapper() = default;
 
-  LocalRegstWarpper(Regst* regst) : regst_(regst) {}
+  LocalRegstWrapper(Regst* regst) : regst_(regst) {}
 
   Blob* GetBlobPtrFromLbn(const std::string& lbn) override {
     return regst_->GetBlobPtrFromLbn(lbn);
@@ -32,4 +32,4 @@ class LocalRegstWarpper final : public RegstWarpper {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_REGISTER_LOCAL_REGISTER_WARPPER_H_
+#endif  // ONEFLOW_CORE_REGISTER_LOCAL_REGISTER_WRAPPER_H_
