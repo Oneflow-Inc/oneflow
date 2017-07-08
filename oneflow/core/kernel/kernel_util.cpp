@@ -3,6 +3,44 @@
 
 namespace oneflow {
 
+namespace {
+
+uint32_t NewRandomSeed() {
+  static std::mt19937 gen{std::random_device{}()};
+  return gen();
+}
+
+template<typename FloatingPointType>
+void RngUniform(const int64_t elem_cnt, const FloatingPointType min,
+                const FloatingPointType max, FloatingPointType* dptr) {
+  CHECK_GE(elem_cnt, 0);
+  CHECK(dptr);
+  CHECK_LE(min, max);
+  std::mt19937 generator(NewRandomSeed());
+  std::uniform_real_distribution<FloatingPointType> random_distribution(
+      min, std::nextafter(max, std::numeric_limits<FloatingPointType>::max()));
+
+  for (int64_t i = 0; i < elem_cnt; ++i) {
+    dptr[i] = random_distribution(generator);
+  }
+}
+
+template<typename FloatingPointType>
+void RngGaussian(const int64_t elem_cnt, const FloatingPointType mean,
+                 const FloatingPointType std, FloatingPointType* dptr) {
+  CHECK_GE(elem_cnt, 0);
+  CHECK(dptr);
+  CHECK_GT(std, 0.0);
+  std::mt19937 generator(NewRandomSeed());
+  std::normal_distribution<FloatingPointType> random_distribution(mean, std);
+
+  for (int64_t i = 0; i < elem_cnt; ++i) {
+    dptr[i] = random_distribution(generator);
+  }
+}
+
+}  // namespace
+
 template<typename FloatingPointType>
 class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
  public:
@@ -84,6 +122,55 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
                        FloatingPointType* y, const int incy) {
     ctx.device_ctx->cpu_stream()->SendWork(
         [=]() { cblas_copy(n, x, incx, y, incy); });
+  }
+
+  static void Fill(const KernelCtx& ctx, const FillConf& fill_conf,
+                   Blob* blob) {
+    if (fill_conf.has_constant_conf()) {
+      ConstantFill(ctx, fill_conf.constant_conf(), blob);
+    } else if (fill_conf.has_uniform_conf()) {
+      UniformFill(ctx, fill_conf.uniform_conf(), blob);
+    } else if (fill_conf.has_gaussian_conf()) {
+      GaussianFill(ctx, fill_conf.gaussian_conf(), blob);
+    } else {
+      UNEXPECTED_RUN();
+    }
+  }
+
+ private:
+  static void ConstantFill(const KernelCtx& ctx,
+                           const ConstantFillConf& fill_conf, Blob* blob) {
+    FloatingPointType* dptr = static_cast<FloatingPointType*>(blob->mut_dptr());
+    const int64_t elem_cnt = blob->shape().elem_cnt();
+    const FloatingPointType value = fill_conf.value();
+    CHECK(elem_cnt);
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+      for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = value; }
+    });
+  }
+
+  static void UniformFill(const KernelCtx& ctx,
+                          const UniformFillConf& fill_conf, Blob* blob) {
+    CHECK(blob->shape().elem_cnt());
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+      RngUniform<FloatingPointType>(
+          blob->shape().elem_cnt(),
+          static_cast<FloatingPointType>(fill_conf.min()),
+          static_cast<FloatingPointType>(fill_conf.max()),
+          static_cast<FloatingPointType*>(blob->mut_dptr()));
+    });
+  }
+
+  static void GaussianFill(const KernelCtx& ctx,
+                           const GaussianFillConf& fill_conf, Blob* blob) {
+    CHECK(blob->shape().elem_cnt());
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+      RngGaussian<FloatingPointType>(
+          blob->shape().elem_cnt(),
+          static_cast<FloatingPointType>(fill_conf.mean()),
+          static_cast<FloatingPointType>(fill_conf.std()),
+          static_cast<FloatingPointType*>(blob->mut_dptr()));
+    });
   }
 };
 
