@@ -50,7 +50,7 @@ class JobDesc final {
   int64_t total_piece_num() const {
     return total_batch_num_ * num_of_pieces_in_batch_;
   }
-  FillConf* global_fill_conf() const { return nullptr; }
+  FillConf* global_fill_conf() const { TODO(); }
 
  private:
   JobDesc() = default;
