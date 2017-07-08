@@ -176,6 +176,7 @@ message BoxingOpConf {
 }
 
 message ModelUpdateOpConf {
+  float learning_rate = 1;
 }
 
 message ModelDiffAccOpConf {

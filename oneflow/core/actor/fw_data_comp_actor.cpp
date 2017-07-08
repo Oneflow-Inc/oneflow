@@ -72,12 +72,12 @@ int FwDataCompActor::HandleNormal(const ActorMsg& msg) {
       if (regst_wp->regst_desc_id() == model_tmp_regst_desc_id_) {
         CHECK(!model_tmp_regst_);
         model_tmp_regst_ = regst_wp;
-        ready_in_regst_[model_tmp_regst_desc_id_] = regst_wp;
+        readable_regst_[model_tmp_regst_desc_id_] = regst_wp;
       } else if (regst_wp->regst_desc_id() == model_regst_desc_id_) {
         CHECK_EQ(regst_wp->model_version_id(), expected_model_version_id_);
         if (model_regst_) { AsyncSendRegstMsgToProducer(model_regst_); }
         model_regst_ = regst_wp;
-        ready_in_regst_[model_regst_desc_id_] = regst_wp;
+        readable_regst_[model_regst_desc_id_] = regst_wp;
         expected_model_version_id_ += 1;
       } else {
         in_.push(regst_wp);
@@ -119,7 +119,7 @@ void FwDataCompActor::Act() {
   int64_t piece_id = expected_piece_id();
   if (!in_.empty()) {
     CHECK_EQ(in_.front()->piece_id(), piece_id);
-    ready_in_regst_[in_.front()->regst_desc_id()] = in_.front();
+    readable_regst_[in_.front()->regst_desc_id()] = in_.front();
   }
   int64_t model_version_id = -1;
   if (model_regst_) { model_version_id = model_regst_->model_version_id(); }
@@ -128,7 +128,7 @@ void FwDataCompActor::Act() {
       [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWrapper> {
         Regst* regst = GetCurWriteableRegst(regst_desc_id);
         if (regst == nullptr) {
-          return ready_in_regst_.at(regst_desc_id);
+          return readable_regst_.at(regst_desc_id);
         } else {
           return std::make_shared<LocalRegstWrapper>(regst);
         }

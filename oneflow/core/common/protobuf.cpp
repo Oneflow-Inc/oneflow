@@ -26,23 +26,15 @@ void PrintProtoToString(const PbMessage& proto, std::string* str) {
 // txt file
 void ParseProtoFromTextFile(const std::string& file_path, PbMessage* proto) {
   std::ifstream in_stream(file_path.c_str(), std::ifstream::in);
-  // make sure in_stream lives longer than input
-  {
-    IstreamInputStream input(&in_stream);
-    CHECK(google::protobuf::TextFormat::Parse(&input, proto));
-  }
-  in_stream.close();
+  IstreamInputStream input(&in_stream);
+  CHECK(google::protobuf::TextFormat::Parse(&input, proto));
 }
 void PrintProtoToTextFile(const PbMessage& proto,
                           const std::string& file_path) {
   std::ofstream out_stream(file_path.c_str(),
                            std::ofstream::out | std::ofstream::trunc);
-  // make sure out_stream lives longer than output
-  {
-    OstreamOutputStream output(&out_stream);
-    CHECK(google::protobuf::TextFormat::Print(proto, &output));
-  }
-  out_stream.close();
+  OstreamOutputStream output(&out_stream);
+  CHECK(google::protobuf::TextFormat::Print(proto, &output));
 }
 
 #define DEFINE_GET_VAL_FROM_PBMESSAGE(ret_type, func_name)                \
