@@ -91,7 +91,18 @@ void InnerProductKernel<device_type, FloatingPointType>::
     InitModelAndModelTmpBlobsWithoutSnapshot(
         const KernelCtx& ctx,
         std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  TODO();
+  if (op()->GetBoolFromSpecialConf("has_weight_fill")) {
+    const FillConf& fill_conf = op()->GetSpecialConf("weight_fill");
+    KernelUtil::Fill(ctx, fill_conf, BnInOp2BlobPtr("weight"));
+  }
+
+  if (op()->GetBoolFromSpecialConf("has_bias_term")
+      && op()->GetBoolFromSpecialConf("has_bias_fill")) {
+    const FillConf& fill_conf = op()->GetSpecialConf("bias_fill");
+    KernelUtil::Fill(ctx, fill_conf, BnInOp2BlobPtr("bias"));
+  }
+
+  // fill bias_multiplier
 }
 
 INSTANTIATE_KERNEL_CLASS(InnerProductKernel);
