@@ -1,2 +1,7 @@
 * @willzhang4a58
-/oneflow/core/kernel/ @Wind5 @chengtbf
+/CMakeLists.txt @yuanms2
+/cmake @yuanms2
+/oneflow/core/actor/ @Wind5
+/oneflow/core/kernel/ @Wind5 @chengtbf @LeGend-AI
+/oneflow/core/operator/ @Wind5 @chengtbf @LeGend-AI
+/oneflow/core/persistence/ @chengtbf
