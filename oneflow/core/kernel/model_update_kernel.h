@@ -13,12 +13,12 @@ class MdUpdateKernel final : public Kernel {
   ~MdUpdateKernel() = default;
 
   void Forward(const KernelCtx&,
-               std::function<Blob*(const std::string&)>) const override {
-    UNEXPECTED_RUN();
-  }
+               std::function<Blob*(const std::string&)>) const override;
 
   void Backward(const KernelCtx&,
-                std::function<Blob*(const std::string&)>) const override;
+                std::function<Blob*(const std::string&)>) const override {
+    UNEXPECTED_RUN();
+  }
 
  private:
 };

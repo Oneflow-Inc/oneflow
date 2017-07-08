@@ -5,6 +5,8 @@
 #include "oneflow/core/blas/cublas_template.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/kernel/kernel_context.h"
+#include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/register/blob.h"
 
 namespace oneflow {
 
@@ -69,6 +71,9 @@ class KernelUtil final {
                        const FloatingPointType* b, const int ldb,
                        const FloatingPointType beta, FloatingPointType* c,
                        const int ldc);
+
+  // Generate random number of specific distribution
+  static void Fill(const KernelCtx& ctx, const FillConf& fill_conf, Blob* blob);
 };
 
 }  // namespace oneflow
