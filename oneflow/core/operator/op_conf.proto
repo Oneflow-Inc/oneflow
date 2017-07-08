@@ -3,36 +3,26 @@ package oneflow;
 
 import "oneflow/core/common/shape.proto";
 
-message ConstantFillerConf {
+message ConstantFillConf {
   float value = 1;
 }
 
-message UniformFillerConf {
+message UniformFillConf {
   float min = 1;
   float max = 2;
 }
 
-message GaussianFillerConf {
+message GaussianFillConf {
   float mean = 1;
   float std = 2;
-  // The expected number of non-zero output weights for a given input
-  int32 sparse = 3;
 }
 
-message FillerConf {
+message FillConf {
   oneof type {
-    ConstantFillerConf constant_conf = 1;
-    UniformFillerConf uniform_conf = 2;
-    GaussianFillerConf gaussian_conf = 3;
+    ConstantFillConf constant_conf = 1;
+    UniformFillConf uniform_conf = 2;
+    GaussianFillConf gaussian_conf = 3;
   }
-  // Normalize the filler variance by fan_in, fan_out, or their average.
-  // Applies to 'xavier' and 'msra' fillers.
-  enum VarianceNorm {
-    FAN_IN = 0;
-    FAN_OUT = 1;
-    AVERAGE = 2;
-  }
-  VarianceNorm variance_norm = 4;
 }
 
 message ConvolutionOpConf {
@@ -54,8 +44,8 @@ message ConvolutionOpConf {
 
   int32 group = 15; // The group size for group conv
 
-  FillerConf weight_filler = 16; // The filler for the weight
-  FillerConf bias_filler = 17; // The filler for the bias
+  FillConf weight_fill = 16; // The fill for the weight
+  FillConf bias_fill = 17; // The fill for the bias
 
   // The axis to interpret as "channels" when performing convolution.
   // Preceding dimensions are treated as independent inputs;
@@ -82,8 +72,8 @@ message InnerProductOpConf {
 
   int32 out_num = 3; // The number of outputs for the layer
   bool has_bias_term = 4; // whether to have bias terms
-  FillerConf weight_filler = 5; // The filler for the weight
-  FillerConf bias_filler = 6; // The filler for the bias
+  FillConf weight_fill = 5; // The fill for the weight
+  FillConf bias_fill = 6; // The fill for the bias
 
   // The first axis to be lumped into a single inner product computation;
   // all preceding axes are retained in the output.
