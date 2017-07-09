@@ -50,7 +50,7 @@ void Actor::ProcessEord() {
   num_of_not_eord_ -= 1;
   if (!num_of_not_eord_) {
     if (num_of_read_empty_) {
-      if (!total_reading_cnt()) {
+      if (!total_reading_cnt_) {
         OF_SET_MSG_HANDLE(nullptr);
       } else {
         OF_SET_MSG_HANDLE(&Actor::HandleWaitUntilReadingCntEqualZero);
