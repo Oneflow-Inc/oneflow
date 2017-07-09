@@ -40,8 +40,14 @@ class Actor {
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
   KernelCtx GenDefaultKernelCtx() const;
 
+  int num_of_not_eord() { return num_of_not_eord_; }
+  void set_num_of_not_eord(int val) { num_of_not_eord_ = val; }
+  int num_of_read_empty() { return num_of_read_empty_; }
+  void set_num_of_read_empty(int val) { num_of_read_empty_ = val; }
+
   // Msg Handle
   using MsgHandle = int (Actor::*)(const ActorMsg&);
+  MsgHandle msg_handle() { return msg_handle_; }
   void set_msg_handle(MsgHandle val) { msg_handle_ = val; }
 #define OF_SET_MSG_HANDLE(val)                                    \
   do {                                                            \
@@ -58,7 +64,7 @@ class Actor {
   void ActUntilFail();
   virtual void Act() = 0;
   virtual bool IsReadReady() = 0;
-  virtual int ProcessEord() = 0;
+  virtual void ProcessEord();
   // Async Do on KernelCtx
   void AsyncLaunchKernel(
       const KernelCtx&,
@@ -100,6 +106,8 @@ class Actor {
   int64_t writeable_produced_regst_desc_num_;
   HashMap<Regst*, int64_t> produced_regst2reading_cnt_;
   int64_t total_reading_cnt_;
+  int num_of_not_eord_;
+  int num_of_read_empty_;
 };
 
 }  // namespace oneflow
