@@ -10,36 +10,35 @@ void CopyHdActor::Init(const TaskProto& task_proto,
   CHECK(thread_ctx.copy_hd_cuda_stream);
   mut_device_ctx().reset(
       new CudaDeviceCtx(thread_ctx.copy_hd_cuda_stream, nullptr, nullptr));
+  mut_num_of_not_eord() = 1;
+  mut_num_of_read_empty() = 1;
   OF_SET_MSG_HANDLE(&CopyHdActor::HandleNormal);
 }
 
 int CopyHdActor::HandleNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
-    OF_SET_MSG_HANDLE(&CopyHdActor::HandleWaitUntilNoReadableRegst);
+    ProcessEord();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr())
         != 0) {
+      mut_num_of_read_empty() = 0;
       waiting_in_regst_.push(msg.regst_wrapper());
+    } else {
+      // do nothing
     }
+    ActUntilFail();
   }
-  ActUntilFail();
-  return 0;
+  return msg_handle() == nullptr;
 }
 
 int CopyHdActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
            0);
   ActUntilFail();
-  if (waiting_in_regst_.empty()) {
+  if (mut_num_of_read_empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
-    if (total_reading_cnt() == 0) {
-      OF_SET_MSG_HANDLE(nullptr);
-      return 1;
-    } else {
-      OF_SET_MSG_HANDLE(&CopyHdActor::HandleWaitUntilReadingCntEqualZero);
-      return 0;
-    }
+    OF_SET_MSG_HANDLE(&CopyHdActor::HandleWaitUntilReadingCntEqualZero);
   }
   return 0;
 }
@@ -64,6 +63,7 @@ void CopyHdActor::Act() {
   });
   AsyncSendRegstMsgToProducer(regst_wp);
   waiting_in_regst_.pop();
+  mut_num_of_read_empty() = waiting_in_regst_.empty();
 }
 
 REGISTER_ACTOR(kCopyHdTask, true, CopyHdActor);
