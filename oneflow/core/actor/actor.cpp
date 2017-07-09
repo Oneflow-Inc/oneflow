@@ -55,6 +55,7 @@ void Actor::ProcessEord() {
       } else {
         OF_SET_MSG_HANDLE(&Actor::HandleWaitUntilReadingCntEqualZero);
       }
+      AsyncSendEORDMsgForAllProducedRegstDesc();
     } else {
       OF_SET_MSG_HANDLE(&Actor::HandleWaitUntilNoReadableRegst);
     }

@@ -40,7 +40,7 @@ class Actor {
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
   KernelCtx GenDefaultKernelCtx() const;
 
-  int& mut_num_of_not_eord() { return num_of_not_eord_; }
+  void set_num_of_not_eord(int val) { num_of_not_eord_ = val; }
   int& mut_num_of_read_empty() { return num_of_read_empty_; }
 
   // Msg Handle
