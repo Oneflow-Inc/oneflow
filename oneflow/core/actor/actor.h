@@ -40,10 +40,8 @@ class Actor {
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
   KernelCtx GenDefaultKernelCtx() const;
 
-  int num_of_not_eord() { return num_of_not_eord_; }
-  void set_num_of_not_eord(int val) { num_of_not_eord_ = val; }
-  int num_of_read_empty() { return num_of_read_empty_; }
-  void set_num_of_read_empty(int val) { num_of_read_empty_ = val; }
+  int& mut_num_of_not_eord() { return num_of_not_eord_; }
+  int& mut_num_of_read_empty() { return num_of_read_empty_; }
 
   // Msg Handle
   using MsgHandle = int (Actor::*)(const ActorMsg&);

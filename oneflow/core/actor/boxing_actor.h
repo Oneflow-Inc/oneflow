@@ -17,7 +17,7 @@ class BoxingActor final : public Actor {
   int HandleNormal(const ActorMsg&) override;
   int HandleWaitUntilNoReadableRegst(const ActorMsg&) override;
 
-  bool IsReadReady() override { return !num_of_read_empty(); }
+  bool IsReadReady() override { return !mut_num_of_read_empty(); }
   void Act() override;
 
   // <regst_desc_id, queue<regst_wp>>

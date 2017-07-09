@@ -8,8 +8,8 @@ void BoxingActor::Init(const TaskProto& task_proto,
                        const ThreadCtx& thread_ctx) {
   Actor::Init(task_proto, thread_ctx);
   int num_of_subscribed_regsts = task_proto.subscribed_regst_desc_id().size();
-  set_num_of_not_eord(num_of_subscribed_regsts);
-  set_num_of_read_empty(num_of_subscribed_regsts);
+  mut_num_of_not_eord() = num_of_subscribed_regsts;
+  mut_num_of_read_empty() = num_of_subscribed_regsts;
   CHECK(thread_ctx.cpu_stream);
   mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
   OF_SET_MSG_HANDLE(&BoxingActor::HandleNormal);
@@ -23,8 +23,7 @@ int BoxingActor::HandleNormal(const ActorMsg& msg) {
     if (TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr())
         != 0) {
       std::shared_ptr<RegstWrapper> regst_wp = msg.regst_wrapper();
-      set_num_of_read_empty(num_of_read_empty()
-                            - read_regst_[regst_wp->regst_desc_id()].empty());
+      mut_num_of_read_empty() -= read_regst_[regst_wp->regst_desc_id()].empty();
       read_regst_.at(regst_wp->regst_desc_id()).push(regst_wp);
     } else {
       // do nothing
@@ -38,7 +37,7 @@ int BoxingActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
            0);
   ActUntilFail();
-  if (num_of_read_empty()) {
+  if (mut_num_of_read_empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
     OF_SET_MSG_HANDLE(&BoxingActor::HandleWaitUntilReadingCntEqualZero);
   }
@@ -65,7 +64,7 @@ void BoxingActor::Act() {
   for (auto& pair : read_regst_) {
     AsyncSendRegstMsgToProducer(pair.second.front());
     pair.second.pop();
-    set_num_of_read_empty(num_of_read_empty() + pair.second.empty());
+    mut_num_of_read_empty() += pair.second.empty();
   }
 }
 
