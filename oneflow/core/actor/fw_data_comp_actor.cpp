@@ -25,8 +25,8 @@ void FwDataCompActor::Init(const TaskProto& task_proto,
     kernel_ctx_.other = reinterpret_cast<void*>(parallel_id());
     OF_SET_MSG_HANDLE(&FwDataCompActor::WaitToStart);
   } else {
-    mut_num_of_not_eord() =
-        1 + (model_regst_desc_id_ != -1) + (model_tmp_regst_desc_id_ != -1);
+    set_num_of_not_eord(1 + (model_regst_desc_id_ != -1)
+                        + (model_tmp_regst_desc_id_ != -1));
     mut_num_of_read_empty() = 1;  // only consider "in"regst
     OF_SET_MSG_HANDLE(&FwDataCompActor::HandleNormal);
   }
@@ -97,9 +97,9 @@ int FwDataCompActor::HandleNormal(const ActorMsg& msg) {
         in_.push(regst_wp);
       }
     }
+    ActUntilFail();
   }
-  ActUntilFail();
-  return 0;
+  return msg_handle() == nullptr;
 }
 
 int FwDataCompActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
