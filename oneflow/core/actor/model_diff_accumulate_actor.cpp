@@ -14,7 +14,7 @@ void MdDiffAccActor::Init(const TaskProto& task_proto,
                                              cuda_handle_.cublas_handle(),
                                              cuda_handle_.cudnn_handle()));
   }
-  mut_num_of_not_eord() = 1;
+  set_num_of_not_eord(1);
   mut_num_of_read_empty() = 1;
   OF_SET_MSG_HANDLE(&MdDiffAccActor::HandleNormal);
   ForEachCurWriteableRegst(
