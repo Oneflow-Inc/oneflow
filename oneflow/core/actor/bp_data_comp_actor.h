@@ -19,7 +19,6 @@ class BpDataCompActor final : public Actor {
 
   bool IsReadReady() override;
   void Act() override;
-  void ProcessEord() override { TODO(); }
 
   CudaStreamHandle cuda_handle_;
   int num_of_read_empty_;

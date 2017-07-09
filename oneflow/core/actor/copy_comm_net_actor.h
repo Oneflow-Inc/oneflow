@@ -22,7 +22,6 @@ class CopyCommNetActor final : public Actor {
            != piece_id2waiting_in_regst_.end();
   }
   void Act() override;
-  void ProcessEord() override { TODO(); }
 
   HashMap<int64_t, std::shared_ptr<RegstWrapper>> piece_id2waiting_in_regst_;
 };

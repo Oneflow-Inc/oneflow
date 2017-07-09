@@ -19,7 +19,6 @@ class CopyHdActor final : public Actor {
 
   bool IsReadReady() override { return !waiting_in_regst_.empty(); }
   void Act() override;
-  void ProcessEord() override { TODO(); }
 
   std::queue<std::shared_ptr<RegstWrapper>> waiting_in_regst_;
 };

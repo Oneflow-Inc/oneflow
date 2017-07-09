@@ -20,7 +20,6 @@ class FwDataCompActor final : public CompActor {
 
   bool IsReadReady() override;
   void Act() override;
-  void ProcessEord() override { TODO(); }
 
   CudaStreamHandle cuda_handle_;
   int num_of_not_eord_;

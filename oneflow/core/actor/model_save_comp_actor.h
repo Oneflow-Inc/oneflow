@@ -21,7 +21,6 @@ class MdSaveCompActor final : public CompActor {
 
   bool IsReadReady() override { return regst_wrapper_ != nullptr; }
   void Act() override;
-  void ProcessEord() override { TODO(); }
 
   int64_t model_regst_desc_id_;
   std::shared_ptr<RegstWrapper> regst_wrapper_;
