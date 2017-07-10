@@ -17,12 +17,9 @@ class BoxingActor final : public Actor {
   int HandleNormal(const ActorMsg&) override;
   int HandleWaitUntilNoReadableRegst(const ActorMsg&) override;
 
-  bool IsReadReady() override { return !num_of_read_empty_; }
+  bool IsReadReady() override { return !mut_num_of_read_empty(); }
   void Act() override;
 
-  int num_of_subscribed_regsts_;
-  int num_of_read_empty_;
-  int num_of_eord_;
   // <regst_desc_id, queue<regst_wp>>
   HashMap<int64_t, std::queue<std::shared_ptr<RegstWrapper>>> read_regst_;
 };

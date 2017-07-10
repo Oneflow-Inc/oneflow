@@ -8,6 +8,8 @@ void CopyCommNetActor::Init(const TaskProto& task_proto,
                             const ThreadCtx& thread_ctx) {
   Actor::Init(task_proto, thread_ctx);
   CHECK(thread_ctx.cpu_stream);
+  set_num_of_not_eord(1);
+  mut_num_of_read_empty() = 1;
   mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
   OF_SET_MSG_HANDLE(&CopyCommNetActor::HandleNormal);
 }
@@ -15,16 +17,19 @@ void CopyCommNetActor::Init(const TaskProto& task_proto,
 int CopyCommNetActor::HandleNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
-    OF_SET_MSG_HANDLE(&CopyCommNetActor::HandleWaitUntilNoReadableRegst);
+    ProcessEord();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     auto regst_wp = msg.regst_wrapper();
     if (TryUpdtStateAsProducedRegst(regst_wp->regst_raw_ptr()) != 0) {
+      mut_num_of_read_empty() = 0;
       CHECK(piece_id2waiting_in_regst_.emplace(regst_wp->piece_id(), regst_wp)
                 .second);
+    } else {
+      // do nothing
     }
+    ActUntilFail();
   }
-  ActUntilFail();
-  return 0;
+  return msg_handle() == nullptr;
 }
 
 int CopyCommNetActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
@@ -33,13 +38,7 @@ int CopyCommNetActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
   ActUntilFail();
   if (piece_id2waiting_in_regst_.empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
-    if (total_reading_cnt() == 0) {
-      OF_SET_MSG_HANDLE(nullptr);
-      return 1;
-    } else {
-      OF_SET_MSG_HANDLE(&CopyCommNetActor::HandleWaitUntilReadingCntEqualZero);
-      return 0;
-    }
+    OF_SET_MSG_HANDLE(&CopyCommNetActor::HandleWaitUntilReadingCntEqualZero);
   }
   return 0;
 }
@@ -64,6 +63,7 @@ void CopyCommNetActor::Act() {
   });
   AsyncSendRegstMsgToProducer(regst_wp);
   piece_id2waiting_in_regst_.erase(next_regst_it);
+  mut_num_of_read_empty() = piece_id2waiting_in_regst_.empty();
 }
 
 REGISTER_ACTOR(kCopyCommNetTask, true, CopyCommNetActor);
