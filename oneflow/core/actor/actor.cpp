@@ -46,6 +46,24 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   total_reading_cnt_ = 0;
 }
 
+void Actor::ProcessEord() {
+  num_of_not_eord_ -= 1;
+  if (!num_of_not_eord_) {
+    if (num_of_read_empty_) {
+      if (!total_reading_cnt_) {
+        OF_SET_MSG_HANDLE(nullptr);
+      } else {
+        OF_SET_MSG_HANDLE(&Actor::HandleWaitUntilReadingCntEqualZero);
+      }
+      AsyncSendEORDMsgForAllProducedRegstDesc();
+    } else {
+      OF_SET_MSG_HANDLE(&Actor::HandleWaitUntilNoReadableRegst);
+    }
+  } else {
+    // do nothing
+  }
+}
+
 int64_t Actor::RegstDescId4Name(const std::string& name) const {
   auto find_it = name2regst_desc_id_.find(name);
   if (find_it != name2regst_desc_id_.end()) { return find_it->second; }

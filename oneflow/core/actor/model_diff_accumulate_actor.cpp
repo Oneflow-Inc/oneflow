@@ -14,6 +14,8 @@ void MdDiffAccActor::Init(const TaskProto& task_proto,
                                              cuda_handle_.cublas_handle(),
                                              cuda_handle_.cudnn_handle()));
   }
+  set_num_of_not_eord(1);
+  mut_num_of_read_empty() = 1;
   OF_SET_MSG_HANDLE(&MdDiffAccActor::HandleNormal);
   ForEachCurWriteableRegst(
       [this](Regst* regst) { model_diff_acc_cnt_[regst] = 0; });
@@ -22,15 +24,18 @@ void MdDiffAccActor::Init(const TaskProto& task_proto,
 int MdDiffAccActor::HandleNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
-    OF_SET_MSG_HANDLE(&MdDiffAccActor::HandleWaitUntilNoReadableRegst);
+    ProcessEord();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr())
         != 0) {
+      mut_num_of_read_empty() = 0;
       waiting_in_regst_.push(msg.regst_wrapper());
+    } else {
+      // do nothing
     }
+    ActUntilFail();
   }
-  ActUntilFail();
-  return 0;
+  return msg_handle() == nullptr;
 }
 
 int MdDiffAccActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
@@ -39,13 +44,7 @@ int MdDiffAccActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
   ActUntilFail();
   if (waiting_in_regst_.empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
-    if (total_reading_cnt() == 0) {
-      OF_SET_MSG_HANDLE(nullptr);
-      return 1;
-    } else {
-      OF_SET_MSG_HANDLE(&MdDiffAccActor::HandleWaitUntilReadingCntEqualZero);
-      return 0;
-    }
+    OF_SET_MSG_HANDLE(&MdDiffAccActor::HandleWaitUntilReadingCntEqualZero);
   }
   return 0;
 }
@@ -81,6 +80,7 @@ void MdDiffAccActor::Act() {
   });
   AsyncSendRegstMsgToProducer(regst_wp);
   waiting_in_regst_.pop();
+  mut_num_of_read_empty() = waiting_in_regst_.empty();
 }
 
 }  // namespace oneflow
