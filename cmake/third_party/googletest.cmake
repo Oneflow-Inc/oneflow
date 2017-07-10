@@ -13,17 +13,17 @@ set(googletest_URL https://github.com/google/googletest.git)
 set(googletest_TAG ec44c6c1675c25b9827aacd08c02433cccde7780)
 
 if(WIN32)
-    set(GOOGLETEST_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googletest/${CMAKE_BUILD_TYPE})
+    set(GOOGLETEST_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googlemock/gtest/${CMAKE_BUILD_TYPE})
     set(GOOGLETEST_LIBRARY_NAMES gtest.lib gtest_main.lib)
     set(GOOGLEMOCK_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googlemock/${CMAKE_BUILD_TYPE})
     set(GOOGLEMOCK_LIBRARY_NAMES gmock.lib gmock_main.lib)
 elseif(APPLE AND ("${CMAKE_GENERATOR}" STREQUAL "Xcode"))
-    set(GOOGLETEST_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googletest/${CMAKE_BUILD_TYPE})
+    set(GOOGLETEST_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googlemock/gtest/${CMAKE_BUILD_TYPE})
     set(GOOGLETEST_LIBRARY_NAMES libgtest.a libgtest_main.a)
     set(GOOGLEMOCK_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googlemock/${CMAKE_BUILD_TYPE})
     set(GOOGLEMOCK_LIBRARY_NAMES libgmock.a libgmock_main.a)
 else()
-    set(GOOGLETEST_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googletest)
+    set(GOOGLETEST_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googlemock/gtest)
     set(GOOGLETEST_LIBRARY_NAMES libgtest.a libgtest_main.a)
     set(GOOGLEMOCK_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googlemock)
     set(GOOGLEMOCK_LIBRARY_NAMES libgmock.a libgmock_main.a)
@@ -51,7 +51,7 @@ ExternalProject_Add(googletest
     CMAKE_CACHE_ARGS
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
         -DBUILD_GMOCK:BOOL=ON
-        -DBUILD_GTEST:BOOL=ON
+	-DBUILD_GTEST:BOOL=OFF  # gmock includes gtest
         -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
         #-Dgtest_force_shared_crt:BOOL=ON  #default value is OFF
 )
