@@ -23,6 +23,7 @@ set(oneflow_third_party_libs
     ${GLOG_STATIC_LIBRARIES}
     ${GFLAGS_STATIC_LIBRARIES}
     ${GOOGLETEST_STATIC_LIBRARIES}
+    ${GOOGLEMOCK_STATIC_LIBRARIES}
     ${PROTOBUF_STATIC_LIBRARIES}
     ${GRPC_STATIC_LIBRARIES}
     ${gif_STATIC_LIBRARIES}
@@ -50,6 +51,8 @@ set(oneflow_third_party_dependencies
   glog_copy_libs_to_destination
   googletest_copy_headers_to_destination
   googletest_copy_libs_to_destination
+  googlemock_copy_headers_to_destination
+  googlemock_copy_libs_to_destination
   protobuf_copy_headers_to_destination
   protobuf_copy_libs_to_destination
   protobuf_copy_binary_to_destination
@@ -77,6 +80,7 @@ include_directories(
     ${GFLAGS_INCLUDE_DIR}
     ${GLOG_INCLUDE_DIR}
     ${GOOGLETEST_INCLUDE_DIR}
+    ${GOOGLEMOCK_INCLUDE_DIR}
     ${PROTOBUF_INCLUDE_DIR}
     ${GRPC_INCLUDE_DIR}
     ${TENSORFLOW_INCLUDE_DIR}
