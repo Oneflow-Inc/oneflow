@@ -22,7 +22,7 @@ Kernel* BuildMdUpdateKernel(float learning_rate) {
   return model_update_kernel;
 }
 
-void InitJobConf(int32_t piece_size, int32_t num_of_pieces_in_batch) {
+void InitJobDesc(int32_t piece_size, int32_t num_of_pieces_in_batch) {
   JobConf job_conf;
   job_conf.set_piece_size(piece_size);
   job_conf.set_num_of_pieces_in_batch(num_of_pieces_in_batch);
@@ -53,7 +53,9 @@ void TestMdUpdateKernel() {
   auto BnInOp2BlobPtr = BuildBnInOp2BlobPtr<device_type, FloatingPointType>();
   auto model_update_kernel =
       BuildMdUpdateKernel<device_type, FloatingPointType>(learning_rate);
-  InitJobConf(1, 2);
+  int32_t piece_size = 1;
+  int32_t num_of_pieces_in_batch = 2;
+  InitJobDesc(piece_size, num_of_pieces_in_batch);
 
   model_update_kernel->Forward(ctx, BnInOp2BlobPtr);
   KTCommon::SyncStream(&ctx);
