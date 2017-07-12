@@ -8,7 +8,7 @@ void SoftmaxOp::InitFromOpConf(const OperatorConf& op_conf) {
 
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  EnrollDataTmpBn("tmp_max");
+  EnrollDataTmpBn("tmp");
 }
 
 const PbMessage& SoftmaxOp::GetSpecialConf() const {
