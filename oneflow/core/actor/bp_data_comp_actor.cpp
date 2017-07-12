@@ -12,10 +12,10 @@ void BpDataCompActor::Init(const TaskProto& task_proto,
   activation_regst_desc_id_ = RegstDescId4Name("activation");
   data_tmp_regst_desc_id_ = RegstDescId4Name("data_tmp");
   expected_model_version_id_ = 0;
-  num_of_read_empty_ =
+  mut_num_of_read_empty() =
       2 + (model_regst_desc_id_ != -1) + (model_tmp_regst_desc_id_ != -1)
       + (activation_regst_desc_id_ != -1) + (data_tmp_regst_desc_id_ != -1);
-  num_of_not_eord_ = num_of_read_empty_;
+  set_num_of_not_eord(mut_num_of_read_empty());
   if (thread_ctx.cpu_stream) {
     mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
   } else {
@@ -27,7 +27,7 @@ void BpDataCompActor::Init(const TaskProto& task_proto,
 }
 
 bool BpDataCompActor::IsReadReady() {
-  if (num_of_read_empty_ || piece_model_id_.empty()) { return false; }
+  if (mut_num_of_read_empty() || piece_model_id_.empty()) { return false; }
   if (model_regst_desc_id_ != -1) {
     CHECK_GE(piece_model_id_.front().second, 0);
     while (read_regst_.at(model_regst_desc_id_).front()->model_version_id()
@@ -36,17 +36,31 @@ bool BpDataCompActor::IsReadReady() {
       AsyncSendRegstMsgToProducer(read_regst_.at(model_regst_desc_id_).front());
       read_regst_.at(model_regst_desc_id_).pop();
     }
-    num_of_read_empty_ += read_regst_.at(model_regst_desc_id_).empty();
+    mut_num_of_read_empty() += read_regst_.at(model_regst_desc_id_).empty();
   }
-  return !num_of_read_empty_;
+  return !mut_num_of_read_empty();
+}
+
+void BpDataCompActor::AsyncSendMsgToModelAndModelTmpProducer() {
+  while (model_regst_desc_id_ != -1
+         && !read_regst_.at(model_regst_desc_id_).empty()) {
+    AsyncSendRegstMsgToProducer(read_regst_.at(model_regst_desc_id_).front());
+    read_regst_.at(model_regst_desc_id_).pop();
+  }
+  if (model_tmp_regst_desc_id_ != -1) {
+    AsyncSendRegstMsgToProducer(
+        read_regst_.at(model_tmp_regst_desc_id_).front());
+    read_regst_.at(model_tmp_regst_desc_id_).pop();
+  }
 }
 
 int BpDataCompActor::HandleNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
-    num_of_not_eord_ -= 1;
-    if (!num_of_not_eord_) {
-      OF_SET_MSG_HANDLE(&BpDataCompActor::HandleWaitUntilNoReadableRegst);
+    ProcessEord();
+    if (msg_handle() == &BpDataCompActor::HandleWaitUntilReadingCntEqualZero
+        || msg_handle() == nullptr) {
+      AsyncSendMsgToModelAndModelTmpProducer();
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr())
@@ -59,42 +73,26 @@ int BpDataCompActor::HandleNormal(const ActorMsg& msg) {
       } else {
         // do nothing
       }
-      num_of_read_empty_ -= read_regst_[regst_wp->regst_desc_id()].empty();
+      mut_num_of_read_empty() -= read_regst_[regst_wp->regst_desc_id()].empty();
       read_regst_.at(regst_wp->regst_desc_id()).push(regst_wp);
     }
+    ActUntilFail();
   } else if (msg.msg_type() == ActorMsgType::kPieceModelIdMsg) {
     piece_model_id_.emplace(msg.piece_id(), msg.model_version_id());
   } else {
     UNEXPECTED_RUN();
   }
-  ActUntilFail();
-  return 0;
+  return msg_handle() == nullptr;
 }
 
 int BpDataCompActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
            0);
   ActUntilFail();
-  if (piece_model_id_.empty()) {
-    while (model_regst_desc_id_ != -1
-           && !read_regst_.at(model_regst_desc_id_).empty()) {
-      AsyncSendRegstMsgToProducer(read_regst_.at(model_regst_desc_id_).front());
-      read_regst_.at(model_regst_desc_id_).pop();
-    }
-    if (model_tmp_regst_desc_id_ != -1) {
-      AsyncSendRegstMsgToProducer(
-          read_regst_.at(model_tmp_regst_desc_id_).front());
-      read_regst_.at(model_tmp_regst_desc_id_).pop();
-    }
+  if (mut_num_of_read_empty()) {
+    AsyncSendMsgToModelAndModelTmpProducer();
     AsyncSendEORDMsgForAllProducedRegstDesc();
-    num_of_read_empty_ = 6;
-    if (total_reading_cnt() == 0) {
-      OF_SET_MSG_HANDLE(nullptr);
-      return 1;
-    } else {
-      OF_SET_MSG_HANDLE(&BpDataCompActor::HandleWaitUntilReadingCntEqualZero);
-      return 0;
-    }
+    OF_SET_MSG_HANDLE(&BpDataCompActor::HandleWaitUntilReadingCntEqualZero);
   }
   return 0;
 }
@@ -126,7 +124,7 @@ void BpDataCompActor::Act() {
         && pair.first != model_tmp_regst_desc_id_) {
       AsyncSendRegstMsgToProducer(pair.second.front());
       pair.second.pop();
-      num_of_read_empty_ += pair.second.empty();
+      mut_num_of_read_empty() += pair.second.empty();
     }
   }
 }

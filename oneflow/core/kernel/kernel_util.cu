@@ -121,6 +121,26 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
     cublas_copy(ctx.device_ctx->cublas_handle(), n, x, incx, y, incy);
   }
 
+  static void Fill(const KernelCtx& ctx, const FillConf& fill_conf,
+                   Blob* blob) {
+    void* host_raw_dptr;
+    size_t byte_size = blob->shape().elem_cnt() * sizeof(FloatingPointType);
+    CudaCheck(cudaMallocHost(&host_raw_dptr, byte_size));
+
+    std::unique_ptr<void, std::function<void(void*)>> host_unique_ptr(
+        host_raw_dptr, [&](void* dptr) { CudaCheck(cudaFree(dptr)); });
+    std::unique_ptr<Shape> host_blob_shape(new Shape(blob->shape()));
+
+    std::unique_ptr<Blob> host_blob(
+        new Blob(host_unique_ptr.get(), host_blob_shape.get()));
+    KernelUtil<DeviceType::kCPU, FloatingPointType>::Fill(ctx, fill_conf,
+                                                          host_blob.get());
+
+    KernelUtil<DeviceType::kGPU, FloatingPointType>::Memcpy(
+        ctx, blob->mut_dptr(), host_blob->dptr(), byte_size,
+        cudaMemcpyHostToDevice);
+  }
+
  private:
   static cublasOperation_t CblasTrans2CublasTrans(CBLAS_TRANSPOSE trans) {
     cublasOperation_t cublas_trans;
