@@ -27,8 +27,8 @@ void SoftmaxKernel<device_type, FloatingPointType>::Forward(
                                                                 tmp);
   // sub | every element of out blob subract the max value of the same sample
   for (int64_t i = 0; i < w; ++i) {
-    KernelUtil<device_type, FloatingPointType>::BlasAxpy(ctx, n * w - i, -1.0,
-                                                         tmp, 1, out + i, w);
+    KernelUtil<device_type, FloatingPointType>::BlasAxpy(ctx, n, -1.0, tmp, 1,
+                                                         out + i, w);
   }
   // exp | exponentiation every element
   KernelUtil<device_type, FloatingPointType>::Exp(ctx, n * w, out, out);
@@ -71,8 +71,8 @@ void SoftmaxKernel<device_type, FloatingPointType>::Backward(
   }
   // sub | in_diff[i][j] -= tmp[i]
   for (int64_t i = 0; i < w; ++i) {
-    KernelUtil<device_type, FloatingPointType>::BlasAxpy(
-        ctx, n * w - i, -1.0, tmp, 1, in_diff + i, w);
+    KernelUtil<device_type, FloatingPointType>::BlasAxpy(ctx, n, -1.0, tmp, 1,
+                                                         in_diff + i, w);
   }
   // elementwise multiplication | in_diff[i][j] *= out[i][j]
   KernelUtil<device_type, FloatingPointType>::Mul(ctx, n * w, in_diff, out,
