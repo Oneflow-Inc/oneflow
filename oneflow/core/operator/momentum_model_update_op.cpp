@@ -7,7 +7,7 @@ void MomentumModelUpdateOp::InitFromOpConf(const OperatorConf& op_conf) {
   mut_op_conf() = op_conf;
 
   EnrollInputBn("model_diffs", false);
-  EnrollOutputBn("momentum", false);
+  EnrollModelTmpBn("momentum");
   EnrollOutputBn("model", false);
 }
 
