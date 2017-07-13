@@ -2,6 +2,8 @@
 
 namespace oneflow {
 
+// momentum = beta * momentum - alpha * model_diff
+// model = model - momentum(new)
 template<DeviceType device_type, typename FloatingPointType>
 void MomentumMdUpdateKernel<device_type, FloatingPointType>::Forward(
     const KernelCtx& ctx,
