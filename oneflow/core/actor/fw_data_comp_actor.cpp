@@ -93,8 +93,8 @@ int FwDataCompActor::HandleNormal(const ActorMsg& msg) {
         readable_regst_[model_regst_desc_id_] = regst_wp;
         expected_model_version_id_ += 1;
       } else {
-        mut_num_of_read_empty() -= in_.empty();
         in_.push(regst_wp);
+        mut_num_of_read_empty() = 0;
       }
     }
     ActUntilFail();
@@ -141,7 +141,7 @@ void FwDataCompActor::Act() {
   if (!in_.empty()) {
     AsyncSendRegstMsgToProducer(in_.front());
     in_.pop();
-    mut_num_of_read_empty() += in_.empty();
+    mut_num_of_read_empty() = in_.empty();
   }
   if (bp_actor_id_ != -1) {
     ActorMsg msg;

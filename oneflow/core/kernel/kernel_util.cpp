@@ -76,6 +76,44 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
         [n, alpha, x, incx]() { cblas_scal(n, alpha, x, incx); });
   }
 
+  static void Max(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* max_ptr) {
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+      *max_ptr = x[0];
+      for (int64_t i = 0; i < n; ++i) { *max_ptr = std::max(*max_ptr, x[i]); }
+    });
+  }
+
+  static void Exp(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* y) {
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+      for (int64_t i = 0; i < n; ++i) { y[i] = std::exp(x[i]); }
+    });
+  }
+
+  static void Sum(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* sum_ptr) {
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+      *sum_ptr = 0;
+      for (int64_t i = 0; i < n; ++i) { *sum_ptr += x[i]; }
+    });
+  }
+
+  static void Div(const KernelCtx& ctx, const int64_t n, FloatingPointType* x,
+                  const FloatingPointType alpha) {
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+      for (int64_t i = 0; i < n; ++i) { x[i] = x[i] / alpha; }
+    });
+  }
+
+  static void Mul(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, const FloatingPointType* y,
+                  FloatingPointType* z) {
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+      for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }
+    });
+  }
+
   static void BlasGemv(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans,
                        int m, int n, const FloatingPointType alpha,
                        const FloatingPointType* a, int lda,

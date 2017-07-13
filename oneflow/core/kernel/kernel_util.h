@@ -51,6 +51,29 @@ class KernelUtil final {
   static void BlasScal(const KernelCtx& ctx, const int n,
                        const FloatingPointType alpha, FloatingPointType* x,
                        const int incx);
+  // max(x)
+  // NO template specialization for GPU
+  static void Max(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* max_ptr);
+
+  // y = exp(x)
+  static void Exp(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* y);
+
+  // sum(x)
+  // NO template specialization for GPU
+  static void Sum(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* sum_ptr);
+
+  // x = x / a
+  static void Div(const KernelCtx& ctx, const int64_t n, FloatingPointType* x,
+                  const FloatingPointType alpha);
+
+  // element-wise multiplication
+  // z[i] = x[i] * y[i]
+  static void Mul(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, const FloatingPointType* y,
+                  FloatingPointType* z);
 
   // level 2 matrix and vector
   // matrix vector multiply
