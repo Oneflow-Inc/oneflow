@@ -77,6 +77,8 @@ class KernelTestCommon<DeviceType::kGPU, FloatingPointType> final {
       const std::string& check, const std::string& expected) {
     BlobCmp(BnInOp2BlobPtr(check), BnInOp2BlobPtr(expected));
   }
+
+  static void CheckDistribution(const Blob* check_blob, FillType fill_type) {}
 };
 
 template class KernelTestCommon<DeviceType::kGPU, float>;

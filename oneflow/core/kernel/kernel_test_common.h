@@ -9,6 +9,13 @@ namespace oneflow {
 
 namespace test {
 
+enum class FillType {
+  kDoNotFill = 0,
+  kConstant = 1,
+  kUniform = 2,
+  kGaussian = 3
+};
+
 template<DeviceType device_type, typename FloatingPointType>
 class KernelTestCommon final {
  public:
@@ -32,6 +39,8 @@ class KernelTestCommon final {
   static void CheckResult(
       std::function<Blob*(const std::string&)> BnInOp2BlobPtr,
       const std::string& check, const std::string& expected);
+
+  static void CheckDistribution(const Blob* check_blob, FillType fill_type);
 };
 
 }  // namespace test
