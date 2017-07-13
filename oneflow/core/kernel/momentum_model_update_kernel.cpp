@@ -9,7 +9,7 @@ void MomentumMdUpdateKernel<device_type, FloatingPointType>::Forward(
   Blob* model_blob = BnInOp2BlobPtr("model");
   Blob* model_diffs_blob = BnInOp2BlobPtr("model_diffs");
   Blob* momentum_blob = BnInOp2BlobPtr("momentum");
-  float learning_rate = op()->op_conf().model_update_conf().learning_rate();
+  float learning_rate = op()->op_conf().momentum_model_update_conf().learning_rate();
   float beta = op()->op_conf().momentum_model_update_conf().beta();
   float alpha = -learning_rate / JobDesc::Singleton()->batch_size();
   CHECK(std::isfinite(alpha));
