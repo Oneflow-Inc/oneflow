@@ -21,6 +21,9 @@ class MomentumModelUpdateOp final : public SysOperator {
   std::string obn2lbn(const std::string& output_bn) const override {
     return kPackedBlobName;
   }
+  std::string mtbn2lbn(const std::string& output_bn) const override {
+    return kPackedBlobName;
+  }
 };
 
 }  // namespace oneflow
