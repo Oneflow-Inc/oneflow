@@ -67,7 +67,7 @@ class KernelUtil final {
 
   // x = x / a
   static void Div(const KernelCtx& ctx, const int64_t n, FloatingPointType* x,
-                  const FloatingPointType alpha);
+                  const FloatingPointType* alpha_ptr);
 
   // element-wise multiplication
   // z[i] = x[i] * y[i]

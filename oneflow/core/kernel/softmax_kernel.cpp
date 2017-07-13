@@ -11,6 +11,8 @@ void SoftmaxKernel<device_type, FloatingPointType>::Forward(
   Blob* out_blob = BnInOp2BlobPtr(op()->SoleObn());
   Blob* tmp_blob = BnInOp2BlobPtr(op()->SoleDtbn());
   const int64_t n = out_blob->shape().At(0);
+  // std::cout<< out_blob->shape().At(0) << std::endl;
+  LOG(INFO) << "haha " << out_blob->shape().At(0);
   const int64_t w = out_blob->shape().At(1);
   const FloatingPointType* in =
       static_cast<const FloatingPointType*>(in_blob->mut_dptr());
@@ -39,7 +41,7 @@ void SoftmaxKernel<device_type, FloatingPointType>::Forward(
   // div | every element of out[i] divided by the data of tmp[i] (the sum value)
   for (int64_t i = 0; i < n; ++i) {
     KernelUtil<device_type, FloatingPointType>::Div(ctx, w, out + i * w,
-                                                    tmp[i]);
+                                                    &tmp[i]);
   }
 }
 
@@ -67,7 +69,7 @@ void SoftmaxKernel<device_type, FloatingPointType>::Backward(
   // dot product | get dot product tmp[i] from out[i] * out_diff[i]
   for (int64_t i = 0; i < n; ++i) {
     KernelUtil<device_type, FloatingPointType>::BlasDot(
-        ctx, w, out + i * w, 1, out_diff + i * w, 1, tmp + i);
+        ctx, w, out + i * w, 1, out_diff + i * w, 1, &tmp[i]);
   }
   // sub | in_diff[i][j] -= tmp[i]
   for (int64_t i = 0; i < w; ++i) {
