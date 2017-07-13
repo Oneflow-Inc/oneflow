@@ -19,18 +19,21 @@ void MomentumMdUpdateKernel<device_type, FloatingPointType>::Forward(
 
   // momentum = beta * momentum
   KernelUtil<device_type, FloatingPointType>::BlasScal(
-      ctx, momentum_blob->shape().elem_cnt(), beta,
+      ctx, momentum_blob->shape().elem_cnt(),
+      static_cast<const FloatingPointType>(-beta),
       static_cast<FloatingPointType*>(momentum_blob->mut_dptr()), 1);
 
   // momentum = momentum - alpha * model_diff
   KernelUtil<device_type, FloatingPointType>::BlasAxpy(
-      ctx, momentum_blob->shape().elem_cnt(), -alpha,
+      ctx, momentum_blob->shape().elem_cnt(),
+      static_cast<const FloatingPointType>(-alpha),
       static_cast<const FloatingPointType*>(model_diffs_blob->dptr()), 1,
       static_cast<FloatingPointType*>(momentum_blob->mut_dptr()), 1);
 
   // model = model - momentum
   KernelUtil<device_type, FloatingPointType>::BlasAxpy(
-      ctx, model_blob->shape().elem_cnt(), -1,
+      ctx, model_blob->shape().elem_cnt(),
+      static_cast<const FloatingPointType>(-1),
       static_cast<const FloatingPointType*>(momentum_blob->dptr()), 1,
       static_cast<FloatingPointType*>(model_blob->mut_dptr()), 1);
 }
