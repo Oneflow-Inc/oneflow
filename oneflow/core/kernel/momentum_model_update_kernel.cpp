@@ -11,7 +11,7 @@ void MomentumMdUpdateKernel<device_type, FloatingPointType>::Forward(
   Blob* momentum_blob = BnInOp2BlobPtr("momentum");
   float learning_rate = op()->op_conf().momentum_model_update_conf().learning_rate();
   float beta = op()->op_conf().momentum_model_update_conf().beta();
-  float alpha = -learning_rate / JobDesc::Singleton()->batch_size();
+  float alpha = learning_rate / JobDesc::Singleton()->batch_size();
   CHECK(std::isfinite(alpha));
 
   // momentum = beta * momentum
@@ -21,7 +21,7 @@ void MomentumMdUpdateKernel<device_type, FloatingPointType>::Forward(
 
   // momentum = momentum - alpha * model_diff
   KernelUtil<device_type, FloatingPointType>::BlasAxpy(
-      ctx, momentum_blob->shape().elem_cnt(), alpha,
+      ctx, momentum_blob->shape().elem_cnt(), -alpha,
       static_cast<const FloatingPointType*>(model_diffs_blob->dptr()), 1,
       static_cast<FloatingPointType*>(momentum_blob->mut_dptr()), 1);
 
