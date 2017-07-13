@@ -114,6 +114,20 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
     });
   }
 
+  static void Sqrt(const KernelCtx& ctx, const int64_t n,
+                   FloatingPointType* x) {
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+      for (int64_t i = 0; i < n; ++i) { x[i] = std::sqrt(x[i]); }
+    });
+  }
+
+  static void AddK(const KernelCtx& ctx, const int64_t n, FloatingPointType* x,
+                   const FloatingPointType k) {
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+      for (int64_t i = 0; i < n; ++i) { x[i] += k; }
+    });
+  }
+
   static void BlasGemv(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans,
                        int m, int n, const FloatingPointType alpha,
                        const FloatingPointType* a, int lda,
