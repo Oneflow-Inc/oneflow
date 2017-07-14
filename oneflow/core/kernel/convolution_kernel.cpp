@@ -17,7 +17,7 @@ void Vec2Matrix(const KernelCtx& ctx, const FloatingPointType* data_col,
                 const int dilation_h, const int dilation_w,
                 FloatingPointType* mut_dptr) {
   ctx.device_ctx->cpu_stream()->SendWork([=]() mutable {
-    memset(mut_dptr, height * width * channels, 0);
+    memset(mut_dptr, 0, height * width * channels);
     const int output_h =
         (height + 2 * pad_h - (dilation_h * (kernel_h - 1) + 1)) / stride_h + 1;
     const int output_w =
