@@ -1,6 +1,5 @@
 #ifndef ONEFLOW_CORE_NETWORK_NETWORK_MEMORY_H_
 #define ONEFLOW_CORE_NETWORK_NETWORK_MEMORY_H_
-#include <cstdint>
 
 namespace oneflow {
 
@@ -12,6 +11,7 @@ struct MemoryDescriptor {
 
 class NetworkMemory {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(NetworkMemory);
   NetworkMemory() = default;
   virtual ~NetworkMemory() = default;
 

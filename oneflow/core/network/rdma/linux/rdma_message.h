@@ -11,6 +11,7 @@ class RdmaMemory;
 
 class RdmaMessage {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(RdmaMessage);
   RdmaMessage();
   ~RdmaMessage();
 

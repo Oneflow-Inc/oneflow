@@ -3,7 +3,6 @@
 #include <infiniband/verbs.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include <iostream>
 #include "oneflow/core/network/rdma/linux/interface.h"
 #include "oneflow/core/network/rdma/request_pool.h"
 
@@ -85,8 +84,7 @@ Connection::Connection(int64_t my_machine_id, int64_t peer_machine_id)
       peer_machine_id_(peer_machine_id){}
 
 Connection::~Connection() {
-  // delete connector_;
-  // delete queue_pair_;
+  // TODO(shiyuan)
 }
 
 void Connection::Bind(const char* ip, int port) {

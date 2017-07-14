@@ -17,6 +17,7 @@ struct Request;
 
 class RdmaWrapper {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(RdmaWrapper);
   RdmaWrapper();
   ~RdmaWrapper();
 

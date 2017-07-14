@@ -31,6 +31,7 @@ struct Connector {
 
 class Connection {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(Connection);
   explicit Connection(int64_t my_machine_id);
   Connection(int64_t my_machine_id, int64_t peer_machine_id);
   ~Connection();

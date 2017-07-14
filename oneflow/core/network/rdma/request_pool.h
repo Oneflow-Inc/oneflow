@@ -1,9 +1,6 @@
 #ifndef ONEFLOW_CORE_NETWORK_RDMA_REQUEST_POOL_H_
 #define ONEFLOW_CORE_NETWORK_RDMA_REQUEST_POOL_H_
 
-#include <cstdint>
-#include <memory>
-#include <unordered_map>
 #include "oneflow/core/network/rdma/switch.h"
 #include "oneflow/core/network/rdma/message_pool.h"
 
@@ -17,6 +14,7 @@ struct Request {
 
 class RequestPool {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(RequestPool);
   RequestPool();
   ~RequestPool();
 
@@ -33,7 +31,7 @@ class RequestPool {
   // Update and reuse the Request object indexed by |time_stamp|, to avoid
   // unnecessary object destroy and creation. It is useful when only time_stamp
   // needs update, while other properties do not change.
-  Request* UpdateTimeStampAndReuse(int32_t time_stamp);
+  Request* UpdateTimeStampAndReuse(int32_t time_stamp);  // TODO(shiyuan)
 
  private:
   int32_t sequence_number_;

@@ -1,8 +1,6 @@
 #ifndef ONEFLOW_CORE_NETWORK_RDMA_RDMA_NETWORK_H_
 #define ONEFLOW_CORE_NETWORK_RDMA_RDMA_NETWORK_H_
 
-#include <memory>
-#include <unordered_map>
 #include "oneflow/core/network/network.h"
 #include "oneflow/core/network/network_memory.h"
 #include "oneflow/core/network/rdma/switch.h"
@@ -14,19 +12,25 @@ namespace oneflow {
 
 class RdmaNetwork final : public Network {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(RdmaNetwork);
   RdmaNetwork();
   ~RdmaNetwork();
+
   void Init(int64_t my_machine_id, const NetworkTopology& net_topo) override;
   void Finalize() override;
-  void Barrier() override;
 
-  NetworkMemory* NewNetworkMemory() override;
+  NetworkMessage* RegsiteMessage(const ActorMsg& actor_msg) override;
+  NetworkMemory* RegisteMemory(void* dptr, size_t len) override;
 
   void Send(const NetworkMessage& msg) override;
-  // remote_memory_descriptor, local_memory
-  void Read(const MemoryDescriptor& src, NetworkMemory* dst) override;
-  void EnrollActorMessage(MsgPtr actor_msg) override;
+  void SetCallbackForReceivedActorMsg(
+      std::function<void(const ActorMsg&)> callback) override;
+
+  void Read(const MemoryDescriptor& remote_memory_descriptor,
+            NetworkMemory* local_memory) override;
+  
   bool Poll(NetworkResult* result) override;
+  void Barrier() override;
 
  private:
   void InitConnections();

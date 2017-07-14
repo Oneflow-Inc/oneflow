@@ -1,8 +1,5 @@
 #include "oneflow/core/network/rdma/connection_pool.h"
 
-#include <cstdint>
-#include <memory>
-
 namespace oneflow {
 
 ConnectionPool::ConnectionPool() : conn_num_(0) {}

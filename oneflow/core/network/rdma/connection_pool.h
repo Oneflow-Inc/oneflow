@@ -1,13 +1,13 @@
 #ifndef ONEFLOW_CORE_NETWORK_RDMA_CONNECTION_POOL_H_
 #define ONEFLOW_CORE_NETWORK_RDMA_CONNECTION_POOL_H_
 
-#include <unordered_map>
 #include "oneflow/core/network/rdma/switch.h"
 
 namespace oneflow {
 
 class ConnectionPool {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(ConnectionPool);
   ConnectionPool();
   ~ConnectionPool() = default;
 

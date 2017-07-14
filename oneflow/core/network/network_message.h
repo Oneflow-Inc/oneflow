@@ -1,15 +1,12 @@
 #ifndef ONEFLOW_CORE_NETWORK_NETWORK_MESSAGE_H_
 #define ONEFLOW_CORE_NETWORK_NETWORK_MESSAGE_H_
-#include <cstdint>
 #include "oneflow/core/actor/actor_message.h"
 
 namespace oneflow {
 
-typedef std::shared_ptr<ActorMsg> MsgPtr;
-
 enum NetworkMessageType {
-  kBarrier = 1,
-  kReplyBarrier = -1,
+  kBarrier = 0,
+  kReplyBarrier = 1,
   kRemoteMemoryDescriptor = 2,
   kRequestAck = 3
 };
@@ -29,7 +26,11 @@ struct NetworkMessage {
   uint32_t token;
 };
 
-enum NetworkResultType { kReadOk = 0, kSendOk, kReceiveMsg };
+enum NetworkResultType {
+  kReadOk = 0,
+  kSendOk = 1,
+  kReceiveMsg = 2
+};
 
 struct NetworkResult {
   NetworkResultType type;

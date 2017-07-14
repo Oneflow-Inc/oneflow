@@ -6,8 +6,9 @@
 
 namespace oneflow {
 
-class RdmaMemory : public NetworkMemory {
+class RdmaMemory final : public NetworkMemory {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(RdmaMemory);
   using NetworkMemory::descriptor_;
   using NetworkMemory::memory_;
   using NetworkMemory::size_;

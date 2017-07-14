@@ -104,7 +104,7 @@ NetworkMemory* RdmaNetwork::NewNetworkMemory() {
   return rdma_wrapper_->NewNetworkMemory();
 }
 
-// |msg| contains src machine_id and dst machine_id
+// |msg| contains src_machine_id and dst_machine_id
 void RdmaNetwork::Send(const NetworkMessage& msg) {
   int64_t dst_machine_id = msg.dst_machine_id;
   Connection* conn = connection_pool_->GetConnection(dst_machine_id);
@@ -262,7 +262,7 @@ void RdmaNetwork::EstablishConnection() {
       // connecting with src_machine_id
       int64_t src_machine_id =
           rdma_wrapper_->WaitForConnection(conn, receive_request);
-      CHECK(src_machine_id);
+      CHECK_NE(src_machine_id, -1);
       connection_pool_->AddConnection(src_machine_id, conn);
       // Pre-post Receive issue before connect
       for (int k = 0; k < kPrePostRecvNumber; ++k) {
