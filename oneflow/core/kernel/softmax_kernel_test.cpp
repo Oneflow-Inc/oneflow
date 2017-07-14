@@ -20,7 +20,7 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
   FloatingPointType expected_out_mat[8] = {
       0.0320586, 0.0871443, 0.2368828, 0.6439143, 0.25, 0.25, 0.25, 0.25};
   FloatingPointType expected_in_diff_mat[8] = {
-      -0.0737048, -0.1306349, -0.1182198, 0.3225596,
+      -0.0737048, -0.1306350, -0.1182198, 0.3225595,
       -0.875,     0.875,      -0.375,     0.375};
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
   (*bn2blob_ptr)["in"] = KTCommon::CreateBlobWithVector({2, 4}, in_mat);

@@ -26,10 +26,7 @@ void SoftmaxKernel<device_type, FloatingPointType>::Forward(
   SoftmaxKernelUtil<device_type, FloatingPointType>::ForwardMax(ctx, n, w, out,
                                                                 tmp);
   // sub | every element of out blob subract the max value of the same sample
-  for (int64_t i = 0; i < w; ++i) {
-    KernelUtil<device_type, FloatingPointType>::BlasAxpy(ctx, n, -1.0, tmp, 1,
-                                                         out + i, w);
-  }
+  SoftmaxKernelUtil<device_type, FloatingPointType>::Sub(ctx, n, w, out, tmp);
   // exp | exponentiation every element
   KernelUtil<device_type, FloatingPointType>::Exp(ctx, n * w, out, out);
   // sum | calculate sum of every sample vector out[i], store in tmp[i]
@@ -70,10 +67,8 @@ void SoftmaxKernel<device_type, FloatingPointType>::Backward(
         ctx, w, out + i * w, 1, out_diff + i * w, 1, tmp + i);
   }
   // sub | in_diff[i][j] -= tmp[i]
-  for (int64_t i = 0; i < w; ++i) {
-    KernelUtil<device_type, FloatingPointType>::BlasAxpy(ctx, n, -1.0, tmp, 1,
-                                                         in_diff + i, w);
-  }
+  SoftmaxKernelUtil<device_type, FloatingPointType>::Sub(ctx, n, w, in_diff,
+                                                         tmp);
   // elementwise multiplication | in_diff[i][j] *= out[i][j]
   KernelUtil<device_type, FloatingPointType>::Mul(ctx, n * w, in_diff, out,
                                                   in_diff);
@@ -98,6 +93,14 @@ class SoftmaxKernelUtil<DeviceType::kCPU, FloatingPointType> final {
     for (int64_t i = 0; i < n; ++i) {
       KernelUtil<DeviceType::kCPU, FloatingPointType>::Sum(ctx, w, out + i * w,
                                                            tmp + i);
+    }
+  }
+
+  static void Sub(const KernelCtx& ctx, const int64_t n, const int64_t w,
+                  FloatingPointType* matrix, const FloatingPointType* vector) {
+    for (int64_t i = 0; i < w; ++i) {
+      KernelUtil<DeviceType::kCPU, FloatingPointType>::BlasAxpy(
+          ctx, n, -1.0, vector, 1, matrix + i, w);
     }
   }
 };
