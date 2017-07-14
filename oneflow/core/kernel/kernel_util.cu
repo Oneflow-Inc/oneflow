@@ -24,24 +24,6 @@ __global__ void MulGpu(const int64_t n, const FloatingPointType* x,
   CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y[i]; }
 }
 
-template<typename FloatingPointType>
-__global__ void SqrtGpu(const int64_t n, const FloatingPointType* x,
-                        FloatingPointType* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::sqrt(x[i]); }
-}
-
-template<typename FloatingPointType>
-__global__ void AddKGpu(const int64_t n, const FloatingPointType k,
-                        const FloatingPointType* x, FloatingPointType* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] + k; }
-}
-
-template<typename FloatingPointType>
-__global__ void InverseGpu(const int64_t n, const FloatingPointType* x,
-                           FloatingPointType* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = 1 / x[i]; }
-}
-
 }  // namespace
 
 template<typename FloatingPointType>
@@ -94,28 +76,6 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
     MulGpu<FloatingPointType>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
            ctx.device_ctx->cuda_stream()>>>(n, x, y, z);
-  }
-
-  static void Sqrt(const KernelCtx& ctx, const int64_t n,
-                   const FloatingPointType* x, FloatingPointType* y) {
-    SqrtGpu<FloatingPointType>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-           ctx.device_ctx->cuda_stream()>>>(n, x, y);
-  }
-
-  static void AddK(const KernelCtx& ctx, const int64_t n,
-                   const FloatingPointType k, const FloatingPointType* x,
-                   FloatingPointType* y) {
-    AddKGpu<FloatingPointType>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-           ctx.device_ctx->cuda_stream()>>>(n, k, x, y);
-  }
-
-  static void Inverse(const KernelCtx& ctx, const int64_t n,
-                      const FloatingPointType* x, FloatingPointType* y) {
-    InverseGpu<FloatingPointType>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-           ctx.device_ctx->cuda_stream()>>>(n, x, y);
   }
 
   static void BlasGemv(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans,
