@@ -3,8 +3,6 @@
 
 namespace oneflow {
 
-namespace {}  // namespace
-
 template<DeviceType device_type, typename FloatingPointType>
 void ConvolutionKernel<device_type, FloatingPointType>::Forward(
     const KernelCtx& ctx,
@@ -24,9 +22,9 @@ void ConvolutionKernel<device_type, FloatingPointType>::Forward(
     KernelUtil<device_type, FloatingPointType>::im2col(
         ctx, static_cast<FloatingPointType*>(in->mut_dptr()) + i * in_im_sz,
         in_shape.At(1), in_shape.At(2), in_shape.At(3),
-        conv_conf.kernel_size(2), conv_conf.kernel_size(3), conv_conf.pad(2),
-        conv_conf.pad(3), conv_conf.stride(2), conv_conf.stride(3),
-        conv_conf.dilation(2), conv_conf.dilation(3),
+        conv_conf.kernel_size(0), conv_conf.kernel_size(1), conv_conf.pad(0),
+        conv_conf.pad(1), conv_conf.stride(0), conv_conf.stride(1),
+        conv_conf.dilation(0), conv_conf.dilation(1),
         static_cast<FloatingPointType*>(col_buf->mut_dptr())
             + i * col_buf->shape().Count(1) * sizeof(FloatingPointType));
 
@@ -109,7 +107,7 @@ void ConvolutionKernel<device_type, FloatingPointType>::Backward(
   for (size_t i = 0; i < batch_sz; ++i) {
     KernelUtil<device_type, FloatingPointType>::BlasGemm(
         ctx, CBLAS_ORDER::CblasRowMajor, CblasTrans, CblasNoTrans,
-        col_buf->shape().At(1), col_buf->shape().At(2), weight->shape().At(1),
+        col_buf->shape().At(1), col_buf->shape().At(2), weight->shape().At(0),
         static_cast<FloatingPointType>(1.0),
         static_cast<const FloatingPointType*>(out_diff->dptr()) + i * out_im_sz,
         out_diff->shape().At(1),
@@ -117,7 +115,7 @@ void ConvolutionKernel<device_type, FloatingPointType>::Backward(
         weight->shape().At(1), static_cast<FloatingPointType>(0.0),
         static_cast<FloatingPointType*>(col_buf->mut_dptr())
             + i * col_buf->shape().Count(1) * sizeof(FloatingPointType),
-        col_buf->shape().At(1));
+        col_buf->shape().At(2));
   }
 
   Blob* in_diff = BnInOp2Blob("in_diff");
@@ -126,18 +124,18 @@ void ConvolutionKernel<device_type, FloatingPointType>::Backward(
   for (size_t i = 0; i < batch_sz; ++i) {
     KernelUtil<device_type, FloatingPointType>::col2im(
         ctx,
-        static_cast<FloatingPointType*>(col_buf->mut_dptr())
+        static_cast<const FloatingPointType*>(col_buf->dptr())
             + i * col_buf->shape().Count(1) * sizeof(FloatingPointType),
         in_diff_shape.At(1), in_diff_shape.At(2), in_diff_shape.At(3),
-        conv_conf.kernel_size(2), conv_conf.kernel_size(3), conv_conf.pad(2),
-        conv_conf.pad(3), conv_conf.stride(2), conv_conf.stride(3),
-        conv_conf.dilation(2), conv_conf.dilation(3),
+        conv_conf.kernel_size(0), conv_conf.kernel_size(1), conv_conf.pad(0),
+        conv_conf.pad(1), conv_conf.stride(0), conv_conf.stride(1),
+        conv_conf.dilation(0), conv_conf.dilation(1),
         static_cast<FloatingPointType*>(in_diff->mut_dptr())
             + i * in_diff_shape.Count(1) * sizeof(FloatingPointType));
   }
 }
 
-INSTANTIATE_CPU_KERNEL_CLASS(ConvolutionKernel);
+INSTANTIATE_KERNEL_CLASS(ConvolutionKernel);
 REGISTER_CPU_KERNEL(OperatorConf::kConvolutionConf, ConvolutionKernel);
 
 }  // namespace oneflow
