@@ -49,8 +49,8 @@ void ConvolutionKernel<device_type, FloatingPointType>::Forward(
           bias->shape().At(0), bias_multiplier->shape().At(0), 1,
           static_cast<FloatingPointType>(1.0),
           static_cast<const FloatingPointType*>(bias->dptr()), 1,
-          static_cast<const FloatingPointType*>(bias_multiplier->dptr()), 1,
-          static_cast<FloatingPointType>(1.0),
+          static_cast<const FloatingPointType*>(bias_multiplier->dptr()),
+          bias_multiplier->shape().At(0), static_cast<FloatingPointType>(1.0),
           static_cast<FloatingPointType*>(out->mut_dptr()) + i * out_im_sz,
           bias_multiplier->shape().At(0));
     }
@@ -71,11 +71,14 @@ void ConvolutionKernel<device_type, FloatingPointType>::Backward(
 
   // compute weight_diff
   Blob* weight_diff = BnInOp2Blob("weight_diff");
+  KernelUtil<device_type, FloatingPointType>::Memset(
+      ctx, weight_diff->mut_dptr(), 0,
+      sizeof(FloatingPointType) * weight_diff->shape().elem_cnt());
   for (size_t i = 0; i < batch_sz; ++i) {
     KernelUtil<device_type, FloatingPointType>::BlasGemm(
         ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasNoTrans,
-        weight_diff->shape().At(1), weight_diff->shape().At(2),
-        out_diff->shape().At(2), static_cast<FloatingPointType>(1.0),
+        weight_diff->shape().At(0), weight_diff->shape().At(1),
+        out_diff->shape().Count(2), static_cast<FloatingPointType>(1.0),
         static_cast<const FloatingPointType*>(out_diff->dptr()) + i * out_im_sz,
         out_diff->shape().Count(2),
         static_cast<const FloatingPointType*>(col_buf->dptr())
@@ -87,17 +90,20 @@ void ConvolutionKernel<device_type, FloatingPointType>::Backward(
 
   // compute bias_diff
   if (op()->GetBoolFromSpecialConf("has_bias_term")) {
-    const Blob* bias_multiplier = BnInOp2Blob("bias_multiplier");
+    const Blob* bias_mul = BnInOp2Blob("bias_multiplier");
     Blob* bias_diff = BnInOp2Blob("bias_diff");
+    KernelUtil<device_type, FloatingPointType>::Memset(
+        ctx, bias_diff->mut_dptr(), 0,
+        sizeof(FloatingPointType) * bias_diff->shape().elem_cnt());
     for (size_t i = 0; i < batch_sz; ++i) {
       KernelUtil<device_type, FloatingPointType>::BlasGemm(
-          ctx, CBLAS_ORDER::CblasRowMajor, CblasTrans, CblasNoTrans,
-          bias_diff->shape().At(0), 1, bias_multiplier->shape().At(0),
+          ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasNoTrans,
+          bias_diff->shape().At(0), 1, bias_mul->shape().At(0),
           static_cast<FloatingPointType>(1.0),
           static_cast<const FloatingPointType*>(out_diff->dptr())
-              + i * out_diff->shape().Count(2) * sizeof(FloatingPointType),
+              + i * out_im_sz,
           out_diff->shape().Count(2),
-          static_cast<const FloatingPointType*>(bias_multiplier->dptr()), 1,
+          static_cast<const FloatingPointType*>(bias_mul->dptr()), 1,
           static_cast<FloatingPointType>(1.0),
           static_cast<FloatingPointType*>(bias_diff->mut_dptr()), 1);
     }
@@ -110,7 +116,7 @@ void ConvolutionKernel<device_type, FloatingPointType>::Backward(
         col_buf->shape().At(1), col_buf->shape().At(2), weight->shape().At(0),
         static_cast<FloatingPointType>(1.0),
         static_cast<const FloatingPointType*>(out_diff->dptr()) + i * out_im_sz,
-        out_diff->shape().At(1),
+        out_diff->shape().Count(2),
         static_cast<const FloatingPointType*>(weight->dptr()),
         weight->shape().At(1), static_cast<FloatingPointType>(0.0),
         static_cast<FloatingPointType*>(col_buf->mut_dptr())
