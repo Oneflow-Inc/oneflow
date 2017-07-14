@@ -6,7 +6,14 @@ template<typename FloatingPointType>
 void PoolingKernel<DeviceType::kCPU, FloatingPointType>::Forward(
     const KernelCtx&,
     std::function<Blob*(const std::string&)> bn_in_op2blob_ptr) const {
-  TODO();
+  Blob* in_blob = bn_in_op2blob_ptr("in");
+  Blob* out_blob = bn_in_op2blob_ptr("out");
+  PoolingOpConf_PoolMethod pool_method = op()->op_conf().pooling_conf().pool();
+  switch (pool_method) {
+    case PoolingOpConf_PoolMethod_MAX: break;
+    case PoolingOpConf_PoolMethod_AVE: break;
+    case PoolingOpConf_PoolMethod_STOCHASTIC: break;
+  }
 }
 
 template<typename FloatingPointType>
