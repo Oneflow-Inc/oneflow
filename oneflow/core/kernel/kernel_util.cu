@@ -9,13 +9,13 @@ namespace {
 template<typename FloatingPointType>
 __global__ void ExpGpu(const int64_t n, const FloatingPointType* x,
                        FloatingPointType* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::exp(x[i]); }
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = exp(x[i]); }
 }
 
 template<typename FloatingPointType>
 __global__ void DivGpu(const int64_t n, FloatingPointType* x,
-                       const FloatingPointType alpha) {
-  CUDA_1D_KERNEL_LOOP(i, n) { x[i] = x[i] / alpha; }
+                       const FloatingPointType* alpha_ptr) {
+  CUDA_1D_KERNEL_LOOP(i, n) { x[i] = x[i] / (*alpha_ptr); }
 }
 
 template<typename FloatingPointType>
@@ -64,10 +64,10 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
   }
 
   static void Div(const KernelCtx& ctx, const int64_t n, FloatingPointType* x,
-                  const FloatingPointType alpha) {
+                  const FloatingPointType* alpha_ptr) {
     DivGpu<FloatingPointType>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-           ctx.device_ctx->cuda_stream()>>>(n, x, alpha);
+           ctx.device_ctx->cuda_stream()>>>(n, x, alpha_ptr);
   }
 
   static void Mul(const KernelCtx& ctx, const int64_t n,
