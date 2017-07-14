@@ -75,6 +75,13 @@ class KernelUtil final {
                   const FloatingPointType* x, const FloatingPointType* y,
                   FloatingPointType* z);
 
+  // x = sqrt(x)
+  static void Sqrt(const KernelCtx& ctx, const int64_t n, FloatingPointType* x);
+
+  // x = x + k
+  static void AddK(const KernelCtx& ctx, const int64_t n, FloatingPointType* x,
+                   const FloatingPointType k);
+
   // level 2 matrix and vector
   // matrix vector multiply
   static void BlasGemv(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans,

@@ -24,6 +24,17 @@ __global__ void MulGpu(const int64_t n, const FloatingPointType* x,
   CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y[i]; }
 }
 
+template<typename FloatingPointType>
+__global__ void SqrtGpu(const int64_t n, FloatingPointType* x) {
+  CUDA_1D_KERNEL_LOOP(i, n) { x[i] = std::sqrt(x[i]); }
+}
+
+template<typename FloatingPointType>
+__global__ void AddKGpu(const int64_t n, FloatingPointType* x,
+                        const FloatingPointType k) {
+  CUDA_1D_KERNEL_LOOP(i, n) { x[i] += k; }
+}
+
 }  // namespace
 
 template<typename FloatingPointType>
@@ -76,6 +87,20 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
     MulGpu<FloatingPointType>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
            ctx.device_ctx->cuda_stream()>>>(n, x, y, z);
+  }
+
+  static void Sqrt(const KernelCtx& ctx, const int64_t n,
+                   FloatingPointType* x) {
+    SqrtGpu<FloatingPointType>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx.device_ctx->cuda_stream()>>>(n, x);
+  }
+
+  static void AddK(const KernelCtx& ctx, const int64_t n, FloatingPointType* x,
+                   const FloatingPointType k) {
+    AddKGpu<FloatingPointType>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx.device_ctx->cuda_stream()>>>(n, x, k);
   }
 
   static void BlasGemv(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans,
