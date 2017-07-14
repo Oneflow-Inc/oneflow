@@ -179,6 +179,11 @@ message ModelUpdateOpConf {
   float learning_rate = 1;
 }
 
+message MomentumModelUpdateOpConf {
+  float learning_rate = 1;
+  float beta = 2;
+}
+
 message ModelDiffAccOpConf {
 }
 
@@ -204,5 +209,6 @@ message OperatorConf {
     ModelDiffAccOpConf model_diff_acc_conf = 112;
     ConcatOpConf concat_conf = 113;
     CopyCommNetOpConf copy_comm_net_conf = 114;
+    MomentumModelUpdateOpConf momentum_model_update_conf = 115;
   }
 }
