@@ -115,16 +115,24 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
   }
 
   static void Sqrt(const KernelCtx& ctx, const int64_t n,
-                   FloatingPointType* x) {
+                   const FloatingPointType* x, FloatingPointType* y) {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
-      for (int64_t i = 0; i < n; ++i) { x[i] = std::sqrt(x[i]); }
+      for (int64_t i = 0; i < n; ++i) { y[i] = std::sqrt(x[i]); }
     });
   }
 
-  static void AddK(const KernelCtx& ctx, const int64_t n, FloatingPointType* x,
-                   const FloatingPointType k) {
+  static void AddK(const KernelCtx& ctx, const int64_t n,
+                   const FloatingPointType k, const FloatingPointType* x,
+                   FloatingPointType* y) {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
-      for (int64_t i = 0; i < n; ++i) { x[i] += k; }
+      for (int64_t i = 0; i < n; ++i) { y[i] = x[i] + k; }
+    });
+  }
+
+  static void Inverse(const KernelCtx& ctx, const int64_t n,
+                      const FloatingPointType* x, FloatingPointType* y) {
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+      for (int64_t i = 0; i < n; ++i) { y[i] = 1 / x[i]; }
     });
   }
 
