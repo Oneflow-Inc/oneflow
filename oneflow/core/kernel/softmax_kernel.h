@@ -36,6 +36,11 @@ class SoftmaxKernelUtil final {
   // matrix shape = n*w, vector shape = n
   static void Sub(const KernelCtx& ctx, const int64_t n, const int64_t w,
                   FloatingPointType* matrix, const FloatingPointType* vector);
+
+  static void BackwardDot(const KernelCtx& ctx, const int64_t n,
+                          const int64_t w, const FloatingPointType* out,
+                          const FloatingPointType* out_diff,
+                          FloatingPointType* tmp);
 };
 
 }  // namespace oneflow

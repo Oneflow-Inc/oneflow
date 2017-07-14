@@ -7,14 +7,12 @@ namespace oneflow {
 template<>
 void cublas_dot<float>(cublasHandle_t handle, int n, const float* x, int incx,
                        const float* y, int incy, float* result) {
-  cublasSetPointerMode(handle, CUBLAS_POINTER_MODE_DEVICE);
   CudaCheck(cublasSdot(handle, n, x, incx, y, incy, result));
 }
 
 template<>
 void cublas_dot<double>(cublasHandle_t handle, int n, const double* x, int incx,
                         const double* y, int incy, double* result) {
-  cublasSetPointerMode(handle, CUBLAS_POINTER_MODE_DEVICE);
   CudaCheck(cublasDdot(handle, n, x, incx, y, incy, result));
 }
 

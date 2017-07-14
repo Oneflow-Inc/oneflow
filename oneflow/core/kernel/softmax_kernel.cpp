@@ -62,10 +62,8 @@ void SoftmaxKernel<device_type, FloatingPointType>::Backward(
   KernelUtil<device_type, FloatingPointType>::BlasCopy(ctx, n * w, out_diff, 1,
                                                        in_diff, 1);
   // dot product | get dot product tmp[i] from out[i] * out_diff[i]
-  for (int64_t i = 0; i < n; ++i) {
-    KernelUtil<device_type, FloatingPointType>::BlasDot(
-        ctx, w, out + i * w, 1, out_diff + i * w, 1, tmp + i);
-  }
+  SoftmaxKernelUtil<device_type, FloatingPointType>::BackwardDot(ctx, n, w, out,
+                                                                 out_diff, tmp);
   // sub | in_diff[i][j] -= tmp[i]
   SoftmaxKernelUtil<device_type, FloatingPointType>::Sub(ctx, n, w, in_diff,
                                                          tmp);
@@ -101,6 +99,16 @@ class SoftmaxKernelUtil<DeviceType::kCPU, FloatingPointType> final {
     for (int64_t i = 0; i < w; ++i) {
       KernelUtil<DeviceType::kCPU, FloatingPointType>::BlasAxpy(
           ctx, n, -1.0, vector, 1, matrix + i, w);
+    }
+  }
+
+  static void BackwardDot(const KernelCtx& ctx, const int64_t n,
+                          const int64_t w, const FloatingPointType* out,
+                          const FloatingPointType* out_diff,
+                          FloatingPointType* tmp) {
+    for (int64_t i = 0; i < n; ++i) {
+      KernelUtil<DeviceType::kCPU, FloatingPointType>::BlasDot(
+          ctx, w, out + i * w, 1, out_diff + i * w, 1, tmp + i);
     }
   }
 };
