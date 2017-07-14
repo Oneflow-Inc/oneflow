@@ -114,6 +114,28 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
     });
   }
 
+  static void Sqrt(const KernelCtx& ctx, const int64_t n,
+                   const FloatingPointType* x, FloatingPointType* y) {
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+      for (int64_t i = 0; i < n; ++i) { y[i] = std::sqrt(x[i]); }
+    });
+  }
+
+  static void AddK(const KernelCtx& ctx, const int64_t n,
+                   const FloatingPointType k, const FloatingPointType* x,
+                   FloatingPointType* y) {
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+      for (int64_t i = 0; i < n; ++i) { y[i] = x[i] + k; }
+    });
+  }
+
+  static void Inverse(const KernelCtx& ctx, const int64_t n,
+                      const FloatingPointType* x, FloatingPointType* y) {
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+      for (int64_t i = 0; i < n; ++i) { y[i] = 1 / x[i]; }
+    });
+  }
+
   static void BlasGemv(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans,
                        int m, int n, const FloatingPointType alpha,
                        const FloatingPointType* a, int lda,
