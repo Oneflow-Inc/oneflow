@@ -29,6 +29,13 @@ __global__ void SoftmaxForwardSumGpu(const int64_t n, const int64_t w,
   }
 }
 
+template<typename FloatingPointType>
+__global__ void SoftmaxSubGpu(const int64_t n, const int64_t w,
+                              FloatingPointType* matrix,
+                              const FloatingPointType* vector) {
+  CUDA_1D_KERNEL_LOOP(i, n * w) { matrix[i] -= vector[i / w]; }
+}
+
 }  // namespace
 
 template<typename FloatingPointType>
@@ -49,6 +56,13 @@ class SoftmaxKernelUtil<DeviceType::kGPU, FloatingPointType> final {
     SoftmaxForwardSumGpu<FloatingPointType>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
            ctx.device_ctx->cuda_stream()>>>(n, w, out, tmp);
+  }
+
+  static void Sub(const KernelCtx& ctx, const int64_t n, const int64_t w,
+                  FloatingPointType* matrix, const FloatingPointType* vector) {
+    SoftmaxSubGpu<FloatingPointType>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx.device_ctx->cuda_stream()>>>(n, w, matrix, vector);
   }
 };
 
