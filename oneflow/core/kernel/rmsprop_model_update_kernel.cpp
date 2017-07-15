@@ -17,7 +17,8 @@ void RMSPropMdUpdateKernel<device_type, FloatingPointType>::Forward(
   CHECK(std::isfinite(alpha));
 
   RMSPropMdUpdateKernelUtil<device_type, FloatingPointType>::UpdateMeanSquare(
-      ctx, mean_square_blob->shape().elem_cnt(), decay_rate,
+      ctx, mean_square_blob->shape().elem_cnt(),
+      static_cast<FloatingPointType>(decay_rate),
       static_cast<FloatingPointType*>(mean_square_blob->mut_dptr()),
       static_cast<const FloatingPointType*>(model_diffs_blob->dptr()));
 
@@ -56,9 +57,7 @@ class RMSPropMdUpdateKernelUtil<DeviceType::kCPU, FloatingPointType> final {
                           const FloatingPointType alpha) {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
       for (int64_t i = 0; i < n; ++i) {
-        model[i] =
-            model[i]
-            - alpha * model_diff[i] / (std::sqrt(mean_square[i]) + epsilon);
+        model[i] -= alpha * model_diff[i] / (std::sqrt(mean_square[i]) + epsilon);
       }
     });
   }

@@ -12,13 +12,12 @@ __global__ void UpdateMeanSquareGpu(const int64_t n,
                                     FloatingPointType* mean_square,
                                     const FloatingPointType* model_diff) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    mean_square[i] =
-        decay_rate * mean_square[i] + (1 - decay_rate) * model_diff[i];
+    mean_square[i] = decay_rate * mean_square[i]
+                     + (1 - decay_rate) * model_diff[i] * model_diff[i];
   }
 }
 
-// alpha /= sqrt(mean_squre) + epsilon
-// model = model - alpha * model_diff
+// model -= alpha * model_diff / (sqrt(mean_square) + epsilon)
 template<typename FloatingPointType>
 __global__ void UpdateModelGpu(const int64_t n, FloatingPointType* model,
                                const FloatingPointType* model_diff,
@@ -26,8 +25,7 @@ __global__ void UpdateModelGpu(const int64_t n, FloatingPointType* model,
                                const FloatingPointType epsilon,
                                const FloatingPointType alpha) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    model[i] = model[i]
-               - alpha * model_diff[i] / (std::sqrt(mean_square[i]) + epsilon);
+    model[i] -=  alpha * model_diff[i] / (std::sqrt(mean_square[i]) + epsilon);
   }
 }
 
