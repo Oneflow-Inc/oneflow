@@ -12,7 +12,7 @@ __global__ void SoftmaxForwardMaxGpu(const int64_t n, const int64_t w,
   CUDA_1D_KERNEL_LOOP(i, n) {
     FloatingPointType max_value = out[i * w];
     for (int64_t j = 0; j < w; ++j) {
-      max_value = max(max_value, out[i * w + j]);
+      max_value = max_value > out[i * w + j] ? max_value : out[i * w + j];
     }
     tmp[i] = max_value;
   }

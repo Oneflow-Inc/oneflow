@@ -9,7 +9,7 @@ namespace {
 template<typename FloatingPointType>
 __global__ void ExpGpu(const int64_t n, const FloatingPointType* x,
                        FloatingPointType* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = exp(x[i]); }
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::exp(x[i]); }
 }
 
 template<typename FloatingPointType>
