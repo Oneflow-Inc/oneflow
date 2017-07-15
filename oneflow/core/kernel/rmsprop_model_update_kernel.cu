@@ -24,7 +24,7 @@ __global__ void UpdateModelGpu(const int64_t n, FloatingPointType* model,
                                const FloatingPointType* model_diff,
                                const FloatingPointType* mean_square,
                                const FloatingPointType epsilon,
-                               FloatingPointType alpha) {
+                               const FloatingPointType alpha) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     model[i] = model[i]
                - alpha * model_diff[i] / (std::sqrt(mean_square[i]) + epsilon);

@@ -53,7 +53,7 @@ class RMSPropMdUpdateKernelUtil<DeviceType::kCPU, FloatingPointType> final {
                           const FloatingPointType* model_diff,
                           const FloatingPointType* mean_square,
                           const FloatingPointType epsilon,
-                          FloatingPointType alpha) {
+                          const FloatingPointType alpha) {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
       for (int64_t i = 0; i < n; ++i) {
         model[i] =
