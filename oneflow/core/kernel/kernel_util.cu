@@ -5,29 +5,6 @@
 namespace oneflow {
 
 namespace {
-// CUDA: various checks for different function calls.
-#define CUDA_CHECK(condition)                                         \
-  /* Code block avoids redefinition of cudaError_t error */           \
-  do {                                                                \
-    cudaError_t error = condition;                                    \
-    CHECK_EQ(error, cudaSuccess) << " " << cudaGetErrorString(error); \
-  } while (0)
-
-// CUDA: grid stride looping
-#define CUDA_KERNEL_LOOP(i, n)                                 \
-  for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < (n); \
-       i += blockDim.x * gridDim.x)
-
-// CUDA: check for error after kernel execution and exit loudly if there is one.
-#define CUDA_POST_KERNEL_CHECK CUDA_CHECK(cudaPeekAtLastError())
-
-// CUDA: use 512 threads per block
-const int OF_CUDA_NUM_THREADS = 512;
-
-// CUDA: number of blocks for threads.
-inline int OF_GET_BLOCKS(const int N) {
-  return (N + OF_CUDA_NUM_THREADS - 1) / OF_CUDA_NUM_THREADS;
-}
 
 template<typename FloatingPointType>
 __global__ void Im2ColGpuKernel(const int n, const FloatingPointType* data_im,
@@ -38,7 +15,7 @@ __global__ void Im2ColGpuKernel(const int n, const FloatingPointType* data_im,
                                 const int dilation_h, const int dilation_w,
                                 const int height_col, const int width_col,
                                 FloatingPointType* data_col) {
-  CUDA_KERNEL_LOOP(index, n) {
+  CUDA_1D_KERNEL_LOOP(index, n) {
     const int h_index = index / width_col;
     const int h_col = h_index % height_col;
     const int w_col = index % width_col;
@@ -71,7 +48,7 @@ __global__ void Col2ImGpuKernel(
     const int pad_h, const int pad_w, const int stride_h, const int stride_w,
     const int dilation_h, const int dilation_w, const int height_col,
     const int width_col, FloatingPointType* data_im) {
-  CUDA_KERNEL_LOOP(index, n) {
+  CUDA_1D_KERNEL_LOOP(index, n) {
     FloatingPointType val = 0;
     const int w_im = index % width + pad_w;
     const int h_im = (index / width) % height + pad_h;
@@ -234,11 +211,10 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
         (width + 2 * pad_w - (dilation_w * (kernel_w - 1) + 1)) / stride_w + 1;
     int num_kernels = channels * height_col * width_col;
     Im2ColGpuKernel<FloatingPointType>
-        <<<OF_GET_BLOCKS(num_kernels), OF_CUDA_NUM_THREADS>>>(
+        <<<BlocksNum4ThreadsNum(num_kernels), kCudaThreadsNumPerBlock>>>(
             num_kernels, data_im, height, width, kernel_h, kernel_w, pad_h,
             pad_w, stride_h, stride_w, dilation_h, dilation_w, height_col,
             width_col, data_col);
-    CUDA_POST_KERNEL_CHECK;
   }
 
   static void Col2Im(const KernelCtx& ctx, const FloatingPointType* data_col,
@@ -255,11 +231,10 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
     // To avoid involving atomic operations, we will launch one kernel per
     // bottom dimension, and then in the kernel add up the top dimensions.
     Col2ImGpuKernel<FloatingPointType>
-        <<<OF_GET_BLOCKS(num_kernels), OF_CUDA_NUM_THREADS>>>(
+        <<<BlocksNum4ThreadsNum(num_kernels), kCudaThreadsNumPerBlock>>>(
             num_kernels, data_col, height, width, channels, kernel_h, kernel_w,
             pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w,
             height_col, width_col, data_im);
-    CUDA_POST_KERNEL_CHECK;
   }
 
   static void Fill(const KernelCtx& ctx, const FillConf& fill_conf,
