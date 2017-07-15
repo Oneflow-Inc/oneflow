@@ -158,5 +158,4 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
 };
 
 INSTANTIATE_GPU_KERNEL_UTIL_CLASS(KernelUtil);
-
 }  // namespace oneflow
