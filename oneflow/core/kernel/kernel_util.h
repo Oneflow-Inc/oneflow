@@ -94,13 +94,13 @@ class KernelUtil final {
                        const FloatingPointType* b, const int ldb,
                        const FloatingPointType beta, FloatingPointType* c,
                        const int ldc);
-  static void im2col(const KernelCtx& ctx, const FloatingPointType* data_im,
+  static void Im2Col(const KernelCtx& ctx, const FloatingPointType* data_im,
                      const int channels, const int height, const int width,
                      const int kernel_h, const int kernel_w, const int pad_h,
                      const int pad_w, const int stride_h, const int stride_w,
                      const int dilation_h, const int dilation_w,
                      FloatingPointType* data_col);
-  static void col2im(const KernelCtx& ctx, const FloatingPointType* data_col,
+  static void Col2Im(const KernelCtx& ctx, const FloatingPointType* data_col,
                      const int channels, const int height, const int width,
                      const int kernel_h, const int kernel_w, const int pad_h,
                      const int pad_w, const int stride_h, const int stride_w,

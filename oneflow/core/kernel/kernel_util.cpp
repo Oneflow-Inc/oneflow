@@ -166,7 +166,7 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
         [=]() { cblas_copy(n, x, incx, y, incy); });
   }
 
-  static void col2im(const KernelCtx& ctx, const FloatingPointType* data_col,
+  static void Col2Im(const KernelCtx& ctx, const FloatingPointType* data_col,
                      const int channels, const int height, const int width,
                      const int kernel_h, const int kernel_w, const int pad_h,
                      const int pad_w, const int stride_h, const int stride_w,
@@ -206,7 +206,7 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
     });
   }
 
-  static void im2col(const KernelCtx& ctx, const FloatingPointType* dptr,
+  static void Im2Col(const KernelCtx& ctx, const FloatingPointType* dptr,
                      const int channels, const int height, const int width,
                      const int kernel_h, const int kernel_w, const int pad_h,
                      const int pad_w, const int stride_h, const int stride_w,

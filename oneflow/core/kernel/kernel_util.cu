@@ -30,14 +30,14 @@ inline int OF_GET_BLOCKS(const int N) {
 }
 
 template<typename FloatingPointType>
-__global__ void im2col_gpu_kernel(const int n, const FloatingPointType* data_im,
-                                  const int height, const int width,
-                                  const int kernel_h, const int kernel_w,
-                                  const int pad_h, const int pad_w,
-                                  const int stride_h, const int stride_w,
-                                  const int dilation_h, const int dilation_w,
-                                  const int height_col, const int width_col,
-                                  FloatingPointType* data_col) {
+__global__ void Im2ColGpuKernel(const int n, const FloatingPointType* data_im,
+                                const int height, const int width,
+                                const int kernel_h, const int kernel_w,
+                                const int pad_h, const int pad_w,
+                                const int stride_h, const int stride_w,
+                                const int dilation_h, const int dilation_w,
+                                const int height_col, const int width_col,
+                                FloatingPointType* data_col) {
   CUDA_KERNEL_LOOP(index, n) {
     const int h_index = index / width_col;
     const int h_col = h_index % height_col;
@@ -65,7 +65,7 @@ __global__ void im2col_gpu_kernel(const int n, const FloatingPointType* data_im,
 }
 
 template<typename FloatingPointType>
-__global__ void col2im_gpu_kernel(
+__global__ void Col2ImGpuKernel(
     const int n, const FloatingPointType* data_col, const int height,
     const int width, const int channels, const int kernel_h, const int kernel_w,
     const int pad_h, const int pad_w, const int stride_h, const int stride_w,
@@ -220,7 +220,7 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
     cublas_copy(ctx.device_ctx->cublas_handle(), n, x, incx, y, incy);
   }
 
-  static void im2col(const KernelCtx& ctx, const FloatingPointType* data_im,
+  static void Im2Col(const KernelCtx& ctx, const FloatingPointType* data_im,
                      const int channels, const int height, const int width,
                      const int kernel_h, const int kernel_w, const int pad_h,
                      const int pad_w, const int stride_h, const int stride_w,
@@ -233,8 +233,7 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
     int width_col =
         (width + 2 * pad_w - (dilation_w * (kernel_w - 1) + 1)) / stride_w + 1;
     int num_kernels = channels * height_col * width_col;
-    // NOLINT_NEXT_LINE(whitespace/operators)
-    im2col_gpu_kernel<FloatingPointType>
+    Im2ColGpuKernel<FloatingPointType>
         <<<OF_GET_BLOCKS(num_kernels), OF_CUDA_NUM_THREADS>>>(
             num_kernels, data_im, height, width, kernel_h, kernel_w, pad_h,
             pad_w, stride_h, stride_w, dilation_h, dilation_w, height_col,
@@ -242,7 +241,7 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
     CUDA_POST_KERNEL_CHECK;
   }
 
-  static void col2im(const KernelCtx& ctx, const FloatingPointType* data_col,
+  static void Col2Im(const KernelCtx& ctx, const FloatingPointType* data_col,
                      const int channels, const int height, const int width,
                      const int kernel_h, const int kernel_w, const int pad_h,
                      const int pad_w, const int stride_h, const int stride_w,
@@ -255,8 +254,7 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
     int num_kernels = channels * height * width;
     // To avoid involving atomic operations, we will launch one kernel per
     // bottom dimension, and then in the kernel add up the top dimensions.
-    // NOLINT_NEXT_LINE(whitespace/operators)
-    col2im_gpu_kernel<FloatingPointType>
+    Col2ImGpuKernel<FloatingPointType>
         <<<OF_GET_BLOCKS(num_kernels), OF_CUDA_NUM_THREADS>>>(
             num_kernels, data_col, height, width, channels, kernel_h, kernel_w,
             pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w,

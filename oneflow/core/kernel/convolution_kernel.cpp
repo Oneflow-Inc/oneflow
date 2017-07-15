@@ -19,7 +19,7 @@ void ConvolutionKernel<device_type, FloatingPointType>::Forward(
       col_buf->shape().Count(1) * sizeof(FloatingPointType);
   auto conv_conf = op()->op_conf().convolution_conf();
   for (size_t i = 0; i < in_shape.At(0); ++i) {
-    KernelUtil<device_type, FloatingPointType>::im2col(
+    KernelUtil<device_type, FloatingPointType>::Im2Col(
         ctx, static_cast<FloatingPointType*>(in->mut_dptr()) + i * in_im_sz,
         in_shape.At(1), in_shape.At(2), in_shape.At(3),
         conv_conf.kernel_size(0), conv_conf.kernel_size(1), conv_conf.pad(0),
@@ -144,7 +144,7 @@ void ConvolutionKernel<device_type, FloatingPointType>::ComputeInputDiff(
   const Shape& in_diff_shape = in_diff->shape();
   auto conv_conf = op()->op_conf().convolution_conf();
   for (size_t i = 0; i < batch_sz; ++i) {
-    KernelUtil<device_type, FloatingPointType>::col2im(
+    KernelUtil<device_type, FloatingPointType>::Col2Im(
         ctx,
         static_cast<const FloatingPointType*>(col_buf->dptr())
             + i * col_buf->shape().Count(1) * sizeof(FloatingPointType),
