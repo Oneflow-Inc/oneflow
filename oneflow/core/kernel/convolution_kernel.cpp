@@ -8,11 +8,11 @@ void ConvolutionKernel<device_type, FloatingPointType>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* in = BnInOp2Blob("in");
+  const Shape& in_shape = in->shape();
+  CHECK_EQ(in_shape.NumAxes(), 4);
   Blob* out = BnInOp2Blob("out");
   Blob* col_buf = BnInOp2Blob("col_buf");
   Blob* weight = BnInOp2Blob("weight");
-  const Shape& in_shape = in->shape();
-  CHECK_EQ(in_shape.NumAxes(), 4);
   const int64_t in_im_sz = in_shape.Count(1) * sizeof(FloatingPointType);
   const int64_t out_im_sz = out->shape().Count(1) * sizeof(FloatingPointType);
   const int64_t col_im_sz =
@@ -25,8 +25,7 @@ void ConvolutionKernel<device_type, FloatingPointType>::Forward(
         conv_conf.kernel_size(0), conv_conf.kernel_size(1), conv_conf.pad(0),
         conv_conf.pad(1), conv_conf.stride(0), conv_conf.stride(1),
         conv_conf.dilation(0), conv_conf.dilation(1),
-        static_cast<FloatingPointType*>(col_buf->mut_dptr())
-            + i * col_buf->shape().Count(1) * sizeof(FloatingPointType));
+        static_cast<FloatingPointType*>(col_buf->mut_dptr()) + i * col_im_sz);
 
     KernelUtil<device_type, FloatingPointType>::BlasGemm(
         ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasTrans,
@@ -58,19 +57,16 @@ void ConvolutionKernel<device_type, FloatingPointType>::Forward(
 }
 
 template<DeviceType device_type, typename FloatingPointType>
-void ConvolutionKernel<device_type, FloatingPointType>::Backward(
+void ConvolutionKernel<device_type, FloatingPointType>::ComputeWeightDiff(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* out_diff = BnInOp2Blob("out_diff");
-  const Blob* weight = BnInOp2Blob("weight");
+  Blob* weight_diff = BnInOp2Blob("weight_diff");
   Blob* col_buf = BnInOp2Blob("col_buf");
-
+  const Blob* out_diff = BnInOp2Blob("out_diff");
   const int64_t out_im_sz =
       out_diff->shape().Count(1) * sizeof(FloatingPointType);
   int64_t batch_sz = out_diff->shape().At(0);
 
-  // compute weight_diff
-  Blob* weight_diff = BnInOp2Blob("weight_diff");
   KernelUtil<device_type, FloatingPointType>::Memset(
       ctx, weight_diff->mut_dptr(), 0,
       sizeof(FloatingPointType) * weight_diff->shape().elem_cnt());
@@ -87,8 +83,17 @@ void ConvolutionKernel<device_type, FloatingPointType>::Backward(
         static_cast<FloatingPointType*>(weight_diff->mut_dptr()),
         weight_diff->shape().At(1));
   }
+}
 
-  // compute bias_diff
+template<DeviceType device_type, typename FloatingPointType>
+void ConvolutionKernel<device_type, FloatingPointType>::ComputeBiasDiff(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* out_diff = BnInOp2Blob("out_diff");
+  const int64_t out_im_sz =
+      out_diff->shape().Count(1) * sizeof(FloatingPointType);
+  int64_t batch_sz = out_diff->shape().At(0);
+
   if (op()->GetBoolFromSpecialConf("has_bias_term")) {
     const Blob* bias_mul = BnInOp2Blob("bias_multiplier");
     Blob* bias_diff = BnInOp2Blob("bias_diff");
@@ -108,8 +113,19 @@ void ConvolutionKernel<device_type, FloatingPointType>::Backward(
           static_cast<FloatingPointType*>(bias_diff->mut_dptr()), 1);
     }
   }
+}
 
-  // compute in_diff
+template<DeviceType device_type, typename FloatingPointType>
+void ConvolutionKernel<device_type, FloatingPointType>::ComputeInputDiff(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* out_diff = BnInOp2Blob("out_diff");
+  const Blob* weight = BnInOp2Blob("weight");
+  Blob* col_buf = BnInOp2Blob("col_buf");
+
+  const int64_t out_im_sz =
+      out_diff->shape().Count(1) * sizeof(FloatingPointType);
+  int64_t batch_sz = out_diff->shape().At(0);
   for (size_t i = 0; i < batch_sz; ++i) {
     KernelUtil<device_type, FloatingPointType>::BlasGemm(
         ctx, CBLAS_ORDER::CblasRowMajor, CblasTrans, CblasNoTrans,
@@ -139,6 +155,17 @@ void ConvolutionKernel<device_type, FloatingPointType>::Backward(
         static_cast<FloatingPointType*>(in_diff->mut_dptr())
             + i * in_diff_shape.Count(1) * sizeof(FloatingPointType));
   }
+}
+
+template<DeviceType device_type, typename FloatingPointType>
+void ConvolutionKernel<device_type, FloatingPointType>::Backward(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ComputeWeightDiff(ctx, BnInOp2Blob);
+  if (op()->GetBoolFromSpecialConf("has_bias_term")) {
+    ComputeBiasDiff(ctx, BnInOp2Blob);
+  }
+  ComputeInputDiff(ctx, BnInOp2Blob);
 }
 
 INSTANTIATE_KERNEL_CLASS(ConvolutionKernel);

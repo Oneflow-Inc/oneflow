@@ -58,7 +58,7 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
       KTCommon::CreateBlobWithVector({1, 1, 3, 3}, expected_in_diff_mat);
   (*bn2blob_ptr)["expected_weight_diff"] =
       KTCommon::CreateBlobWithVector({2, 4}, expected_weight_diff_mat);
-  
+
   return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
 }
 

@@ -16,6 +16,17 @@ class ConvolutionKernel final : public Kernel {
                std::function<Blob*(const std::string&)>) const override;
   void Backward(const KernelCtx&,
                 std::function<Blob*(const std::string&)>) const override;
+
+ private:
+  void ComputeWeightDiff(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  void ComputeInputDiff(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  void ComputeBiasDiff(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 };
 
 }  // namespace oneflow
