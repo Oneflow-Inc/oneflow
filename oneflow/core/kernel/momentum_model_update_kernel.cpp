@@ -20,7 +20,7 @@ void MomentumMdUpdateKernel<device_type, FloatingPointType>::Forward(
   // momentum = beta * momentum
   KernelUtil<device_type, FloatingPointType>::BlasScal(
       ctx, momentum_blob->shape().elem_cnt(),
-      static_cast<FloatingPointType>(-beta),
+      static_cast<FloatingPointType>(beta),
       static_cast<FloatingPointType*>(momentum_blob->mut_dptr()), 1);
 
   // momentum = momentum - alpha * model_diff
