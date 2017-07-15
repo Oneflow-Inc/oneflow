@@ -32,8 +32,7 @@ void MomentumMdUpdateKernel<device_type, FloatingPointType>::Forward(
 
   // model = model - momentum
   KernelUtil<device_type, FloatingPointType>::BlasAxpy(
-      ctx, model_blob->shape().elem_cnt(),
-      static_cast<FloatingPointType>(-1),
+      ctx, model_blob->shape().elem_cnt(), static_cast<FloatingPointType>(-1),
       static_cast<const FloatingPointType*>(momentum_blob->dptr()), 1,
       static_cast<FloatingPointType*>(model_blob->mut_dptr()), 1);
 }
