@@ -104,6 +104,25 @@ __global__ void col2im_gpu_kernel(
     data_im[index] = val;
   }
 }
+
+template<typename FloatingPointType>
+__global__ void ExpGpu(const int64_t n, const FloatingPointType* x,
+                       FloatingPointType* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::exp(x[i]); }
+}
+
+template<typename FloatingPointType>
+__global__ void DivGpu(const int64_t n, FloatingPointType* x,
+                       const FloatingPointType alpha) {
+  CUDA_1D_KERNEL_LOOP(i, n) { x[i] = x[i] / alpha; }
+}
+
+template<typename FloatingPointType>
+__global__ void MulGpu(const int64_t n, const FloatingPointType* x,
+                       const FloatingPointType* y, FloatingPointType* z) {
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y[i]; }
+}
+
 }  // namespace
 
 template<typename FloatingPointType>
@@ -134,6 +153,28 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
                        const FloatingPointType alpha, FloatingPointType* x,
                        const int incx) {
     cublas_scal(ctx.device_ctx->cublas_handle(), n, &alpha, x, incx);
+  }
+
+  static void Exp(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* y) {
+    ExpGpu<FloatingPointType>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx.device_ctx->cuda_stream()>>>(n, x, y);
+  }
+
+  static void Div(const KernelCtx& ctx, const int64_t n, FloatingPointType* x,
+                  const FloatingPointType alpha) {
+    DivGpu<FloatingPointType>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx.device_ctx->cuda_stream()>>>(n, x, alpha);
+  }
+
+  static void Mul(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, const FloatingPointType* y,
+                  FloatingPointType* z) {
+    MulGpu<FloatingPointType>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx.device_ctx->cuda_stream()>>>(n, x, y, z);
   }
 
   static void BlasGemv(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans,
@@ -223,6 +264,26 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
     CUDA_POST_KERNEL_CHECK;
   }
 
+  static void Fill(const KernelCtx& ctx, const FillConf& fill_conf,
+                   Blob* blob) {
+    void* host_raw_dptr;
+    size_t byte_size = blob->shape().elem_cnt() * sizeof(FloatingPointType);
+    CudaCheck(cudaMallocHost(&host_raw_dptr, byte_size));
+
+    std::unique_ptr<void, std::function<void(void*)>> host_unique_ptr(
+        host_raw_dptr, [&](void* dptr) { CudaCheck(cudaFree(dptr)); });
+    std::unique_ptr<Shape> host_blob_shape(new Shape(blob->shape()));
+
+    std::unique_ptr<Blob> host_blob(
+        new Blob(host_unique_ptr.get(), host_blob_shape.get()));
+    KernelUtil<DeviceType::kCPU, FloatingPointType>::Fill(ctx, fill_conf,
+                                                          host_blob.get());
+
+    KernelUtil<DeviceType::kGPU, FloatingPointType>::Memcpy(
+        ctx, blob->mut_dptr(), host_blob->dptr(), byte_size,
+        cudaMemcpyHostToDevice);
+  }
+
  private:
   static cublasOperation_t CblasTrans2CublasTrans(CBLAS_TRANSPOSE trans) {
     cublasOperation_t cublas_trans;
@@ -240,5 +301,4 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
 };
 
 INSTANTIATE_GPU_KERNEL_UTIL_CLASS(KernelUtil);
-
 }  // namespace oneflow

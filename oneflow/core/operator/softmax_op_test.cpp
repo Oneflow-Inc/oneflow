@@ -20,9 +20,9 @@ TEST(SoftmaxOp, softmax_3x5) {
   softmax_op->InferShape4FwBlobs(fp, kDataParallel, 0, 1);
   // test
   Shape* output_shape_ptr = fp(softmax_op->SoleObn());
-  Shape* tmp_max_shape_ptr = fp(softmax_op->SoleDtbn());
+  Shape* tmp_shape_ptr = fp(softmax_op->SoleDtbn());
   ASSERT_EQ(*output_shape_ptr, Shape({3, 5}));
-  ASSERT_EQ(*tmp_max_shape_ptr, Shape({3}));
+  ASSERT_EQ(*tmp_shape_ptr, Shape({3}));
 }
 
 }  // namespace oneflow
