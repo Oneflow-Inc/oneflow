@@ -17,7 +17,7 @@ __global__ void UpdateMeanSquareGpu(const int64_t n,
   }
 }
 
-// alpha /= sqrt(mean_squre + epsilon
+// alpha /= sqrt(mean_squre) + epsilon
 // model = model - alpha * model_diff
 template<typename FloatingPointType>
 __global__ void UpdateModelGpu(const int64_t n, FloatingPointType* model,
