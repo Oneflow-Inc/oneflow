@@ -62,7 +62,7 @@ class KernelTestCommon<DeviceType::kCPU, FloatingPointType> final {
     size_t dptr_size = lhs->shape().elem_cnt();
 
     for (size_t i = 0; i < dptr_size; ++i) {
-      ASSERT_NEAR(dptr_lhs[i], dptr_rhs[i], 0.0000001);
+      ASSERT_FLOAT_EQ(dptr_lhs[i], dptr_rhs[i]);
     }
   }
 
