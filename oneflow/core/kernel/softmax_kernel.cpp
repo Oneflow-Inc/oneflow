@@ -13,7 +13,7 @@ void SoftmaxKernel<device_type, FloatingPointType>::Forward(
   const int64_t n = out_blob->shape().At(0);
   const int64_t w = out_blob->shape().At(1);
   const FloatingPointType* in =
-      static_cast<const FloatingPointType*>(in_blob->mut_dptr());
+      static_cast<const FloatingPointType*>(in_blob->dptr());
   FloatingPointType* tmp =
       static_cast<FloatingPointType*>(tmp_blob->mut_dptr());
   FloatingPointType* out =
@@ -55,9 +55,9 @@ void SoftmaxKernel<device_type, FloatingPointType>::Backward(
   FloatingPointType* tmp =
       static_cast<FloatingPointType*>(tmp_blob->mut_dptr());
   const FloatingPointType* out =
-      static_cast<const FloatingPointType*>(out_blob->mut_dptr());
+      static_cast<const FloatingPointType*>(out_blob->dptr());
   const FloatingPointType* out_diff =
-      static_cast<const FloatingPointType*>(out_diff_blob->mut_dptr());
+      static_cast<const FloatingPointType*>(out_diff_blob->dptr());
   // copy out_diff to in_diff
   KernelUtil<device_type, FloatingPointType>::BlasCopy(ctx, n * w, out_diff, 1,
                                                        in_diff, 1);
@@ -98,7 +98,8 @@ class SoftmaxKernelUtil<DeviceType::kCPU, FloatingPointType> final {
                   FloatingPointType* matrix, const FloatingPointType* vector) {
     for (int64_t i = 0; i < w; ++i) {
       KernelUtil<DeviceType::kCPU, FloatingPointType>::BlasAxpy(
-          ctx, n, -1.0, vector, 1, matrix + i, w);
+          ctx, n, static_cast<FloatingPointType>(-1.0), vector, 1, matrix + i,
+          w);
     }
   }
 

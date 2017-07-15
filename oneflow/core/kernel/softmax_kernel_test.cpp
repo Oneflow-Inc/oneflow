@@ -14,9 +14,6 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
   using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
   FloatingPointType in_mat[8] = {1, 2, 3, 4, 0, 0, 0, 0};
   FloatingPointType out_diff_mat[8] = {0.2, 1, 2, 3, -4.0, 3.0, -2.0, 1.0};
-  FloatingPointType out_mat[8] = {0};
-  FloatingPointType in_diff_mat[8] = {0};
-  FloatingPointType tmp_mat[2] = {0};
   FloatingPointType expected_out_mat[8] = {
       0.0320586, 0.0871443, 0.2368828, 0.6439143, 0.25, 0.25, 0.25, 0.25};
   FloatingPointType expected_in_diff_mat[8] = {
@@ -24,10 +21,9 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
       -0.875,     0.875,      -0.375,     0.375};
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
   (*bn2blob_ptr)["in"] = KTCommon::CreateBlobWithVector({2, 4}, in_mat);
-  (*bn2blob_ptr)["out"] = KTCommon::CreateBlobWithVector({2, 4}, out_mat);
-  (*bn2blob_ptr)["tmp"] = KTCommon::CreateBlobWithVector({2}, tmp_mat);
-  (*bn2blob_ptr)["in_diff"] =
-      KTCommon::CreateBlobWithVector({2, 4}, in_diff_mat);
+  (*bn2blob_ptr)["out"] = KTCommon::CreateBlobWithSameValue({2, 4}, 0.0);
+  (*bn2blob_ptr)["tmp"] = KTCommon::CreateBlobWithSameValue({2}, 0.0);
+  (*bn2blob_ptr)["in_diff"] = KTCommon::CreateBlobWithSameValue({2, 4}, 0.0);
   (*bn2blob_ptr)["out_diff"] =
       KTCommon::CreateBlobWithVector({2, 4}, out_diff_mat);
   (*bn2blob_ptr)["expected_out"] =
