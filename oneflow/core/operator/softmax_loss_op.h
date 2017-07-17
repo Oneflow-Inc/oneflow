@@ -5,11 +5,11 @@
 
 namespace oneflow {
 
-class SoftmaxWithLossOp : public UserOperator {
+class SoftmaxLossOp final : public UserOperator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(SoftmaxWithLossOp);
-  SoftmaxWithLossOp() = default;
-  ~SoftmaxWithLossOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(SoftmaxLossOp);
+  SoftmaxLossOp() = default;
+  ~SoftmaxLossOp() = default;
 
   void InitFromOpConf(const OperatorConf& op_conf) override;
   const PbMessage& GetSpecialConf() const override;

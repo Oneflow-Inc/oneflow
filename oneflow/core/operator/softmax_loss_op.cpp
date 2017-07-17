@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-void SoftmaxWithLossOp::InitFromOpConf(const OperatorConf& op_conf) {
+void SoftmaxLossOp::InitFromOpConf(const OperatorConf& op_conf) {
   CHECK(op_conf.has_softmax_loss_conf());
   mut_op_conf() = op_conf;
 
@@ -13,11 +13,11 @@ void SoftmaxWithLossOp::InitFromOpConf(const OperatorConf& op_conf) {
   EnrollOutputBn("loss", false);
 }
 
-const PbMessage& SoftmaxWithLossOp::GetSpecialConf() const {
+const PbMessage& SoftmaxLossOp::GetSpecialConf() const {
   return op_conf().softmax_loss_conf();
 }
 
-void SoftmaxWithLossOp::InferShape4FwBlobs(
+void SoftmaxLossOp::InferShape4FwBlobs(
     std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
     ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
   const std::vector<int64_t> in_dim_vec = GetShapePtr4BnInOp("in")->dim_vec();
@@ -28,6 +28,6 @@ void SoftmaxWithLossOp::InferShape4FwBlobs(
   *GetShapePtr4BnInOp("tmp_1D") = Shape({in_dim_vec[0]});
 }
 
-REGISTER_OP(OperatorConf::kSoftmaxLossConf, SoftmaxWithLossOp);
+REGISTER_OP(OperatorConf::kSoftmaxLossConf, SoftmaxLossOp);
 
 }  // namespace oneflow

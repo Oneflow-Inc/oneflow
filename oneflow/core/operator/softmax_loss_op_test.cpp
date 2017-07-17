@@ -2,15 +2,13 @@
 
 namespace oneflow {
 
-TEST(SoftmaxWithLossOp, softmax_loss_3x5) {
+TEST(SoftmaxLossOp, softmax_loss_3x5) {
   // create softmax_loss_op
   OperatorConf op_conf;
   op_conf.set_name("softmax_loss_test");
   op_conf.mutable_softmax_loss_conf()->set_in("softmax_loss/in");
   op_conf.mutable_softmax_loss_conf()->set_label("softmax_loss/label");
   op_conf.mutable_softmax_loss_conf()->set_loss("softmax_loss/loss");
-  op_conf.mutable_softmax_loss_conf()->set_normalization(
-      LossNormalizationMode::NONE);
   auto softmax_loss_op = ConstructOp(op_conf);
   HashMap<std::string, Shape*> bn2shape_ptr{{"in", new Shape({3, 5})},
                                             {"label", new Shape({3, 5})},
