@@ -13,7 +13,7 @@ void SoftmaxKernel<device_type, FloatingPointType>::Forward(
   const int64_t n = out_blob->shape().At(0);
   const int64_t w = out_blob->shape().At(1);
   const FloatingPointType* in =
-      static_cast<const FloatingPointType*>(in_blob->mut_dptr());
+      static_cast<const FloatingPointType*>(in_blob->dptr());
   FloatingPointType* tmp =
       static_cast<FloatingPointType*>(tmp_blob->mut_dptr());
   FloatingPointType* out =
@@ -26,10 +26,7 @@ void SoftmaxKernel<device_type, FloatingPointType>::Forward(
   SoftmaxKernelUtil<device_type, FloatingPointType>::ForwardMax(ctx, n, w, out,
                                                                 tmp);
   // sub | every element of out blob subract the max value of the same sample
-  for (int64_t i = 0; i < w; ++i) {
-    KernelUtil<device_type, FloatingPointType>::BlasAxpy(ctx, n, -1.0, tmp, 1,
-                                                         out + i, w);
-  }
+  SoftmaxKernelUtil<device_type, FloatingPointType>::Sub(ctx, n, w, out, tmp);
   // exp | exponentiation every element
   KernelUtil<device_type, FloatingPointType>::Exp(ctx, n * w, out, out);
   // sum | calculate sum of every sample vector out[i], store in tmp[i]
@@ -39,7 +36,7 @@ void SoftmaxKernel<device_type, FloatingPointType>::Forward(
   // div | every element of out[i] divided by the data of tmp[i] (the sum value)
   for (int64_t i = 0; i < n; ++i) {
     KernelUtil<device_type, FloatingPointType>::Div(ctx, w, out + i * w,
-                                                    tmp[i]);
+                                                    tmp + i);
   }
 }
 
@@ -58,22 +55,18 @@ void SoftmaxKernel<device_type, FloatingPointType>::Backward(
   FloatingPointType* tmp =
       static_cast<FloatingPointType*>(tmp_blob->mut_dptr());
   const FloatingPointType* out =
-      static_cast<const FloatingPointType*>(out_blob->mut_dptr());
+      static_cast<const FloatingPointType*>(out_blob->dptr());
   const FloatingPointType* out_diff =
-      static_cast<const FloatingPointType*>(out_diff_blob->mut_dptr());
+      static_cast<const FloatingPointType*>(out_diff_blob->dptr());
   // copy out_diff to in_diff
   KernelUtil<device_type, FloatingPointType>::BlasCopy(ctx, n * w, out_diff, 1,
                                                        in_diff, 1);
   // dot product | get dot product tmp[i] from out[i] * out_diff[i]
-  for (int64_t i = 0; i < n; ++i) {
-    KernelUtil<device_type, FloatingPointType>::BlasDot(
-        ctx, w, out + i * w, 1, out_diff + i * w, 1, tmp + i);
-  }
+  SoftmaxKernelUtil<device_type, FloatingPointType>::BackwardDot(ctx, n, w, out,
+                                                                 out_diff, tmp);
   // sub | in_diff[i][j] -= tmp[i]
-  for (int64_t i = 0; i < w; ++i) {
-    KernelUtil<device_type, FloatingPointType>::BlasAxpy(ctx, n, -1.0, tmp, 1,
-                                                         in_diff + i, w);
-  }
+  SoftmaxKernelUtil<device_type, FloatingPointType>::Sub(ctx, n, w, in_diff,
+                                                         tmp);
   // elementwise multiplication | in_diff[i][j] *= out[i][j]
   KernelUtil<device_type, FloatingPointType>::Mul(ctx, n * w, in_diff, out,
                                                   in_diff);
@@ -98,6 +91,25 @@ class SoftmaxKernelUtil<DeviceType::kCPU, FloatingPointType> final {
     for (int64_t i = 0; i < n; ++i) {
       KernelUtil<DeviceType::kCPU, FloatingPointType>::Sum(ctx, w, out + i * w,
                                                            tmp + i);
+    }
+  }
+
+  static void Sub(const KernelCtx& ctx, const int64_t n, const int64_t w,
+                  FloatingPointType* matrix, const FloatingPointType* vector) {
+    for (int64_t i = 0; i < w; ++i) {
+      KernelUtil<DeviceType::kCPU, FloatingPointType>::BlasAxpy(
+          ctx, n, static_cast<FloatingPointType>(-1.0), vector, 1, matrix + i,
+          w);
+    }
+  }
+
+  static void BackwardDot(const KernelCtx& ctx, const int64_t n,
+                          const int64_t w, const FloatingPointType* out,
+                          const FloatingPointType* out_diff,
+                          FloatingPointType* tmp) {
+    for (int64_t i = 0; i < n; ++i) {
+      KernelUtil<DeviceType::kCPU, FloatingPointType>::BlasDot(
+          ctx, w, out + i * w, 1, out_diff + i * w, 1, tmp + i);
     }
   }
 };

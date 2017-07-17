@@ -100,9 +100,9 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
   }
 
   static void Div(const KernelCtx& ctx, const int64_t n, FloatingPointType* x,
-                  const FloatingPointType alpha) {
+                  const FloatingPointType* alpha_ptr) {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
-      for (int64_t i = 0; i < n; ++i) { x[i] = x[i] / alpha; }
+      for (int64_t i = 0; i < n; ++i) { x[i] = x[i] / (*alpha_ptr); }
     });
   }
 
