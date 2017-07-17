@@ -62,8 +62,8 @@ __global__ void Col2ImGpuKernel(
         (h_im < kernel_extent_h) ? 0 : (h_im - kernel_extent_h) / stride_h + 1;
     const int h_col_end = min(h_im / stride_h + 1, height_col);
     // TODO: use LCM of stride and dilation to avoid unnecessary loops
-    for (int h_col = h_col_start; h_col < h_col_end; h_col += 1) {
-      for (int w_col = w_col_start; w_col < w_col_end; w_col += 1) {
+    for (int h_col = h_col_start; h_col < h_col_end; ++h_col) {
+      for (int w_col = w_col_start; w_col < w_col_end; ++w_col) {
         int h_k = (h_im - h_col * stride_h);
         int w_k = (w_im - w_col * stride_w);
         if (h_k % dilation_h == 0 && w_k % dilation_w == 0) {
@@ -120,8 +120,6 @@ class ConvolutionKernelUtil<DeviceType::kGPU, FloatingPointType> final {
     int width_col =
         (width + 2 * pad_w - (dilation_w * (kernel_w - 1) + 1)) / stride_w + 1;
     int num_kernels = channels * height * width;
-    // To avoid involving atomic operations, we will launch one kernel per
-    // bottom dimension, and then in the kernel add up the top dimensions.
     Col2ImGpuKernel<FloatingPointType>
         <<<BlocksNum4ThreadsNum(num_kernels), kCudaThreadsNumPerBlock, 0,
            ctx.device_ctx->cuda_stream()>>>(
