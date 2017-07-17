@@ -54,14 +54,12 @@ __global__ void Col2ImGpuKernel(
     const int c_im = index / (width * height);
     int kernel_extent_w = (kernel_w - 1) * dilation_w + 1;
     int kernel_extent_h = (kernel_h - 1) * dilation_h + 1;
-    // compute the start and end of the output
     const int w_col_start =
         (w_im < kernel_extent_w) ? 0 : (w_im - kernel_extent_w) / stride_w + 1;
     const int w_col_end = min(w_im / stride_w + 1, width_col);
     const int h_col_start =
         (h_im < kernel_extent_h) ? 0 : (h_im - kernel_extent_h) / stride_h + 1;
     const int h_col_end = min(h_im / stride_h + 1, height_col);
-    // TODO: use LCM of stride and dilation to avoid unnecessary loops
     for (int h_col = h_col_start; h_col < h_col_end; ++h_col) {
       for (int w_col = w_col_start; w_col < w_col_end; ++w_col) {
         int h_k = (h_im - h_col * stride_h);
@@ -94,8 +92,6 @@ class ConvolutionKernelUtil<DeviceType::kGPU, FloatingPointType> final {
                      const int pad_w, const int stride_h, const int stride_w,
                      const int dilation_h, const int dilation_w,
                      FloatingPointType* data_col) {
-    // We are going to launch channels * height_col * width_col kernels, each
-    // kernel responsible for copying a single-channel grid.
     int height_col =
         (height + 2 * pad_h - (dilation_h * (kernel_h - 1) + 1)) / stride_h + 1;
     int width_col =

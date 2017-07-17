@@ -46,7 +46,7 @@ class ConvolutionKernelUtil<DeviceType::kCPU, FloatingPointType> final {
                   if (IsAGreaterThanZeroAndLessThanB(input_col, width)) {
                     mut_dptr[input_row * width + input_col] += *data_col;
                   }
-                  data_col++;
+                  ++data_col;
                   input_col += stride_w;
                 }
               }
