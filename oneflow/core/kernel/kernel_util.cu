@@ -4,6 +4,28 @@
 
 namespace oneflow {
 
+namespace {
+
+template<typename FloatingPointType>
+__global__ void ExpGpu(const int64_t n, const FloatingPointType* x,
+                       FloatingPointType* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::exp(x[i]); }
+}
+
+template<typename FloatingPointType>
+__global__ void DivGpu(const int64_t n, FloatingPointType* x,
+                       const FloatingPointType* alpha_ptr) {
+  CUDA_1D_KERNEL_LOOP(i, n) { x[i] = x[i] / (*alpha_ptr); }
+}
+
+template<typename FloatingPointType>
+__global__ void MulGpu(const int64_t n, const FloatingPointType* x,
+                       const FloatingPointType* y, FloatingPointType* z) {
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y[i]; }
+}
+
+}  // namespace
+
 template<typename FloatingPointType>
 class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
  public:
@@ -32,6 +54,28 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
                        const FloatingPointType alpha, FloatingPointType* x,
                        const int incx) {
     cublas_scal(ctx.device_ctx->cublas_handle(), n, &alpha, x, incx);
+  }
+
+  static void Exp(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* y) {
+    ExpGpu<FloatingPointType>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx.device_ctx->cuda_stream()>>>(n, x, y);
+  }
+
+  static void Div(const KernelCtx& ctx, const int64_t n, FloatingPointType* x,
+                  const FloatingPointType* alpha_ptr) {
+    DivGpu<FloatingPointType>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx.device_ctx->cuda_stream()>>>(n, x, alpha_ptr);
+  }
+
+  static void Mul(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, const FloatingPointType* y,
+                  FloatingPointType* z) {
+    MulGpu<FloatingPointType>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx.device_ctx->cuda_stream()>>>(n, x, y, z);
   }
 
   static void BlasGemv(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans,
@@ -114,5 +158,4 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
 };
 
 INSTANTIATE_GPU_KERNEL_UTIL_CLASS(KernelUtil);
-
 }  // namespace oneflow
