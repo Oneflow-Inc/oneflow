@@ -35,10 +35,10 @@ __global__ void RangeAveQueryGpuKernel(
   for (int64_t h = hstart; h < hend; ++h) {
     for (int64_t w = wstart; w < wend; ++w) {
       const int64_t index = h * in_width + w;
-      out_dptr[out_index] = out_dptr[out_index] + in_dptr[index];
+      out_dptr[out_index] += in_dptr[index];
     }
   }
-  out_dptr[out_index] = out_dptr[out_index] / pool_size;
+  out_dptr[out_index] /= pool_size;
 }
 
 // TODO(shiyuan) random function
@@ -62,8 +62,7 @@ __global__ void PoolingMaxBpGpuKernel(
     const int64_t wstart, const int64_t hend, const int64_t wend,
     FloatingPointType* in_diff_dptr) {
   const int64_t in_diff_index = mask_dptr[out_diff_index];
-  in_diff_dptr[in_diff_index] =
-      in_diff_dptr[in_diff_index] + out_diff_dptr[out_diff_index];
+  in_diff_dptr[in_diff_index] += out_diff_dptr[out_diff_index];
 }
 
 template<typename FloatingPointType>
@@ -75,9 +74,7 @@ __global__ void PoolingAveBpGpuKernel(
     FloatingPointType* in_diff_dptr) {
   for (int h = hstart; h < hend; ++h) {
     for (int w = wstart; w < wend; ++w) {
-      in_diff_dptr[h * in_width + w] =
-          in_diff_dptr[h * in_width + w]
-          + out_diff_dptr[out_diff_index] / pool_size;
+      in_diff_dptr[h * in_width + w] += out_diff_dptr[out_diff_index] / pool_size;
     }
   }
 }
@@ -90,8 +87,7 @@ __global__ void PoolingStoBpGpuKernel(
     const int64_t wstart, const int64_t hend, const int64_t wend,
     FloatingPointType* in_diff_dptr) {
   const int64_t in_diff_index = mask_dptr[out_diff_index];
-  in_diff_dptr[in_diff_index] =
-      in_diff_dptr[in_diff_index] + out_diff_dptr[out_diff_index];
+  in_diff_dptr[in_diff_index] += out_diff_dptr[out_diff_index];
 }
 
 }  // namespace
