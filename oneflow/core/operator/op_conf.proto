@@ -3,6 +3,11 @@ package oneflow;
 
 import "oneflow/core/common/shape.proto";
 
+enum LossNormalizationMode {
+  PIECE_SIZE = 0;
+  NONE = 1;
+}
+
 message ConstantFillConf {
   float value = 1;
 }
@@ -120,6 +125,13 @@ message SoftmaxOpConf {
   string out = 2;
 }
 
+message SoftmaxWithLossOpConf {
+  string in = 1;
+  string label = 3;
+  string loss = 4;
+  LossNormalizationMode normalization  = 5;
+}
+
 message MultinomialLogisticLossOpConf {
   string prediction = 1;
   string label = 2;
@@ -217,5 +229,6 @@ message OperatorConf {
     CopyCommNetOpConf copy_comm_net_conf = 114;
     MomentumModelUpdateOpConf momentum_mdupdt_conf = 115;
     RMSPropModelUpdateOpConf rmsprop_mdupdt_conf = 116;
+	SoftmaxWithLossOpConf softmax_loss_conf = 117;
   }
 }
