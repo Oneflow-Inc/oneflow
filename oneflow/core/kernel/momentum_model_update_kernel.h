@@ -1,16 +1,16 @@
-#ifndef ONEFLOW_CORE_KERNEL_MODEL_UPDATE_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_MODEL_UPDATE_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_MOMENTUM_MODEL_UPDATE_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_MOMENTUM_MODEL_UPDATE_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel_manager.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename FloatingPointType>
-class MdUpdateKernel final : public Kernel {
+class MomentumMdUpdateKernel final : public Kernel {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(MdUpdateKernel);
-  MdUpdateKernel() = default;
-  ~MdUpdateKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(MomentumMdUpdateKernel);
+  MomentumMdUpdateKernel() = default;
+  ~MomentumMdUpdateKernel() = default;
 
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
@@ -25,4 +25,4 @@ class MdUpdateKernel final : public Kernel {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_MODEL_UPDATE_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_MOMENTUM_MODEL_UPDATE_KERNEL_H_

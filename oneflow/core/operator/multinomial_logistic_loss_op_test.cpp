@@ -9,7 +9,7 @@ TEST(MultinomialLogisticLossOp, test_loss_op) {
       "prediction");
   op_conf.mutable_multinomial_logistic_loss_conf()->set_label("label");
   op_conf.mutable_multinomial_logistic_loss_conf()->set_loss("loss");
-  auto loss_op = OpMgr::Singleton()->ConstructOp(op_conf);
+  auto loss_op = ConstructOp(op_conf);
 
   HashMap<std::string, Shape*> bn2shape_ptr{
       {loss_op->input_bns().at(0), new Shape({500, 3 * 256 * 256 * 256, 1, 1})},

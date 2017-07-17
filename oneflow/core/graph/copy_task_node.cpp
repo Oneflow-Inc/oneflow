@@ -12,7 +12,7 @@ void CopyTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   out_regst->CopyLbnFrom(in_regst.get());
 
   ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = ConstructOp();
+  node->mut_op() = AddOp();
 
   if (IsFwNode()) {
     node->BindBnInOpAndRegst(node->op()->SoleIbn(), in_regst);
@@ -41,19 +41,19 @@ void CopyHDTaskNode::SetFwOutCopy() {
   is_fw_in_copy_ = false;
 }
 
-std::shared_ptr<const Operator> CopyHDTaskNode::ConstructOp() const {
+std::shared_ptr<const Operator> CopyHDTaskNode::AddOp() const {
   OperatorConf op_conf;
   op_conf.set_name("copy_hd_" + NewUniqueId());
   CopyHdOpConf* copy_hd_conf = op_conf.mutable_copy_hd_conf();
   copy_hd_conf->set_type(IsH2D() ? CopyHdOpConf::H2D : CopyHdOpConf::D2H);
-  return OpMgr::Singleton()->ConstructOp(op_conf);
+  return OpMgr::Singleton()->AddOp(op_conf);
 }
 
-std::shared_ptr<const Operator> CopyCommNetTaskNode::ConstructOp() const {
+std::shared_ptr<const Operator> CopyCommNetTaskNode::AddOp() const {
   OperatorConf op_conf;
   op_conf.set_name("comm_net_" + NewUniqueId());
   op_conf.mutable_copy_comm_net_conf();
-  return OpMgr::Singleton()->ConstructOp(op_conf);
+  return OpMgr::Singleton()->AddOp(op_conf);
 }
 
 }  // namespace oneflow

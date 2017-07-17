@@ -170,9 +170,13 @@ void Compiler::GenPlanFile(const std::string& plan_filepath) {
   JobDesc::Singleton()->ToProto(plan.mutable_job_desc());
   ConstForEachChainNode([&plan](const ChainNode* node) {
     for (std::shared_ptr<const Operator> op : node->op_vec()) {
-      CHECK(plan.mutable_op_name2device_type()
-                ->insert({op->op_name(), node->parallel_desc()->device_type()})
-                .second);
+      auto it = plan.mutable_op_name2device_type()->find(op->op_name());
+      if (it == plan.mutable_op_name2device_type()->end()) {
+        plan.mutable_op_name2device_type()->insert(
+            {op->op_name(), node->parallel_desc()->device_type()});
+      } else {
+        CHECK_EQ(it->second, node->parallel_desc()->device_type());
+      }
     }
   });
   ConstForEachStageNode([&plan](const StageNode* node) {
@@ -180,6 +184,7 @@ void Compiler::GenPlanFile(const std::string& plan_filepath) {
     for (std::shared_ptr<const Operator> op : node->chain_node()->op_vec()) {
       (*pbmap)[node->machine_id()].add_op_name(op->op_name());
     }
+    // TODO: unique
   });
   PrintProtoToTextFile(plan, plan_filepath);
 }
