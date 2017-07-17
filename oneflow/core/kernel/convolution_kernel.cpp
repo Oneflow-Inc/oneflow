@@ -32,8 +32,7 @@ class ConvolutionKernelUtil<DeviceType::kCPU, FloatingPointType> final {
           (width + 2 * pad_w - (dilation_w * (kernel_w - 1) + 1)) / stride_w
           + 1;
       const int channel_size = height * width;
-      for (int channel = channels; channel > 0; mut_dptr += channel_size) {
-        --channel;
+      for (int channel = channels; channel-- > 0; mut_dptr += channel_size) {
         for (int kernel_row = 0; kernel_row < kernel_h; ++kernel_row) {
           for (int kernel_col = 0; kernel_col < kernel_w; ++kernel_col) {
             int input_row = -pad_h + kernel_row * dilation_h;
@@ -72,8 +71,7 @@ class ConvolutionKernelUtil<DeviceType::kCPU, FloatingPointType> final {
           (width + 2 * pad_w - (dilation_w * (kernel_w - 1) + 1)) / stride_w
           + 1;
       const int channel_size = height * width;
-      for (int channel = channels; channel > 0; dptr += channel_size) {
-        --channel;
+      for (int channel = channels; channel-- > 0; dptr += channel_size) {
         for (int kernel_row = 0; kernel_row < kernel_h; ++kernel_row) {
           for (int kernel_col = 0; kernel_col < kernel_w; ++kernel_col) {
             int input_row = -pad_h + kernel_row * dilation_h;
