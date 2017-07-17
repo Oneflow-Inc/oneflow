@@ -102,7 +102,8 @@ class ConvolutionKernelUtil<DeviceType::kGPU, FloatingPointType> final {
         (width + 2 * pad_w - (dilation_w * (kernel_w - 1) + 1)) / stride_w + 1;
     int num_kernels = channels * height_col * width_col;
     Im2ColGpuKernel<FloatingPointType>
-        <<<BlocksNum4ThreadsNum(num_kernels), kCudaThreadsNumPerBlock>>>(
+        <<<BlocksNum4ThreadsNum(num_kernels), kCudaThreadsNumPerBlock, 0,
+           ctx.device_ctx->cuda_stream()>>>(
             num_kernels, data_im, height, width, kernel_h, kernel_w, pad_h,
             pad_w, stride_h, stride_w, dilation_h, dilation_w, height_col,
             width_col, data_col);
@@ -122,7 +123,8 @@ class ConvolutionKernelUtil<DeviceType::kGPU, FloatingPointType> final {
     // To avoid involving atomic operations, we will launch one kernel per
     // bottom dimension, and then in the kernel add up the top dimensions.
     Col2ImGpuKernel<FloatingPointType>
-        <<<BlocksNum4ThreadsNum(num_kernels), kCudaThreadsNumPerBlock>>>(
+        <<<BlocksNum4ThreadsNum(num_kernels), kCudaThreadsNumPerBlock, 0,
+           ctx.device_ctx->cuda_stream()>>>(
             num_kernels, data_col, height, width, channels, kernel_h, kernel_w,
             pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w,
             height_col, width_col, data_im);
