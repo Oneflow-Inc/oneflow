@@ -13,8 +13,6 @@ class OpMgr final {
 
   OF_SINGLETON(OpMgr);
 
-  void Init();
-
   std::shared_ptr<Operator> AddOp(const OperatorConf&);
 
   void AllOpToProto(PbRpf<OperatorProto>*);
