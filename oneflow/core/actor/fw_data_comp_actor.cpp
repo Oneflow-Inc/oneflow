@@ -43,9 +43,9 @@ bool FwDataCompActor::IsReadReady() {
     // Ho Q, Cipar J, Cui H, et al. More effective distributed ml via a stale
     // synchronous parallel parameter server
     int32_t staleness = JobDesc::Singleton()->staleness();
-    int32_t num_of_piece_in_batch =
-        JobDesc::Singleton()->num_of_piece_in_batch();
-    int64_t cur_iteration = in_.front()->piece_id() / num_of_piece_in_batch;
+    int32_t num_of_pieces_in_batch =
+        JobDesc::Singleton()->num_of_pieces_in_batch();
+    int64_t cur_iteration = in_.front()->piece_id() / num_of_pieces_in_batch;
     int64_t stale_version = cur_iteration - staleness;
     return model_regst_->model_version_id() >= stale_version;
   }

@@ -55,7 +55,7 @@ void MdDiffAccActor::Act() {
   KernelCtx ctx = GenDefaultKernelCtx();
   ForEachCurWriteableRegst([&](Regst* regst) {
     auto diff_cnt = model_diff_acc_cnt_.find(regst);
-    if (diff_cnt->second != JobDesc::Singleton()->num_of_piece_in_batch()) {
+    if (diff_cnt->second != JobDesc::Singleton()->num_of_pieces_in_batch()) {
       return;
     }
     Blob* packed_blob = regst->GetBlobPtrFromLbn(kPackedBlobName);

@@ -1,4 +1,4 @@
-#include "oneflow/core/kernel/model_update_kernel.h"
+#include "oneflow/core/kernel/normal_model_update_kernel.h"
 #include "oneflow/core/kernel/kernel_test_common.h"
 
 namespace oneflow {
@@ -11,9 +11,10 @@ template<DeviceType device_type, typename FloatingPointType>
 Kernel* BuildMdUpdateKernel(float learning_rate) {
   OperatorConf op_conf;
   op_conf.set_name("model_update_test");
-  ModelUpdateOpConf* model_update_conf = op_conf.mutable_model_update_conf();
+  NormalModelUpdateOpConf* model_update_conf =
+      op_conf.mutable_normal_mdupdt_conf();
   model_update_conf->set_learning_rate(learning_rate);
-  auto model_update_op = OpMgr::Singleton()->ConstructOp(op_conf);
+  auto model_update_op = ConstructOp(op_conf);
   OperatorProto op_proto;
   model_update_op->ToProto(&op_proto);
   auto model_update_kernel =

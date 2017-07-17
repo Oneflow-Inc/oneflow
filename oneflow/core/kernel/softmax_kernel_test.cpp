@@ -40,7 +40,7 @@ Kernel* BuildSoftmaxKernel() {
   SoftmaxOpConf* softmax_conf = op_conf.mutable_softmax_conf();
   softmax_conf->set_in("softmax/in");
   softmax_conf->set_out("softmax/out");
-  auto softmax_op = OpMgr::Singleton()->ConstructOp(op_conf);
+  auto softmax_op = ConstructOp(op_conf);
   OperatorProto op_proto;
   softmax_op->ToProto(&op_proto);
   auto softmax_kernel = new SoftmaxKernel<device_type, FloatingPointType>();

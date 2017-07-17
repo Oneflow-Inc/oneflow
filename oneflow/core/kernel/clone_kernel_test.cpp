@@ -17,7 +17,7 @@ Kernel* BuildCloneKernel(int out_num) {
   CloneOpConf* clone_conf = op_conf.mutable_clone_conf();
   clone_conf->set_out_num(out_num);
   clone_conf->set_lbn("clone_kernel_test");
-  auto clone_op = OpMgr::Singleton()->ConstructOp(op_conf);
+  auto clone_op = ConstructOp(op_conf);
   OperatorProto op_proto;
   clone_op->ToProto(&op_proto);
   auto clone_kernel = new CloneKernel<device_type, FloatingPointType>();

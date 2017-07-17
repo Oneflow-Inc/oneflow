@@ -175,7 +175,7 @@ message BoxingOpConf {
   }
 }
 
-message ModelUpdateOpConf {
+message NormalModelUpdateOpConf {
   float learning_rate = 1;
 }
 
@@ -210,12 +210,12 @@ message OperatorConf {
     CopyHdOpConf copy_hd_conf = 107;
     CloneOpConf clone_conf = 108;
     BoxingOpConf boxing_conf = 109;
-    ModelUpdateOpConf model_update_conf = 110;
+    NormalModelUpdateOpConf normal_mdupdt_conf = 110;
     ModelSaveOpConf model_save_conf = 111;
     ModelDiffAccOpConf model_diff_acc_conf = 112;
     ConcatOpConf concat_conf = 113;
     CopyCommNetOpConf copy_comm_net_conf = 114;
-    MomentumModelUpdateOpConf momentum_model_update_conf = 115;
-    RMSPropModelUpdateOpConf rmsprop_model_update_conf = 116;
+    MomentumModelUpdateOpConf momentum_mdupdt_conf = 115;
+    RMSPropModelUpdateOpConf rmsprop_mdupdt_conf = 116;
   }
 }
