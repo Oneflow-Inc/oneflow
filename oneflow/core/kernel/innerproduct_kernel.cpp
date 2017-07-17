@@ -98,7 +98,7 @@ void InnerProductKernel<device_type, FloatingPointType>::
         ctx, op()->op_conf().innerproduct_conf().weight_fill(),
         BnInOp2Blob("weight"));
   } else {
-    FillConf* weight_fill_conf = JobDesc::Singleton()->global_fill_conf();
+    FillConf* weight_fill_conf = JobDesc::Singleton()->default_fill_conf();
     CHECK(weight_fill_conf);
     KernelUtil<device_type, FloatingPointType>::Fill(ctx, *weight_fill_conf,
                                                      BnInOp2Blob("weight"));
@@ -110,7 +110,7 @@ void InnerProductKernel<device_type, FloatingPointType>::
           ctx, op()->op_conf().innerproduct_conf().bias_fill(),
           BnInOp2Blob("bias"));
     } else {
-      FillConf* bias_fill_conf = JobDesc::Singleton()->global_fill_conf();
+      FillConf* bias_fill_conf = JobDesc::Singleton()->default_fill_conf();
       CHECK(bias_fill_conf);
       KernelUtil<device_type, FloatingPointType>::Fill(ctx, *bias_fill_conf,
                                                        BnInOp2Blob("bias"));
