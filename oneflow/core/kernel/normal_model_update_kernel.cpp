@@ -1,4 +1,4 @@
-#include "oneflow/core/kernel/model_update_kernel.h"
+#include "oneflow/core/kernel/normal_model_update_kernel.h"
 
 namespace oneflow {
 
@@ -8,7 +8,7 @@ void MdUpdateKernel<device_type, FloatingPointType>::Forward(
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
   Blob* model_blob = BnInOp2BlobPtr("model");
   Blob* model_diffs_blob = BnInOp2BlobPtr("model_diffs");
-  float learning_rate = op()->op_conf().model_update_conf().learning_rate();
+  float learning_rate = op()->op_conf().normal_mdupdt_conf().learning_rate();
   float alpha = -learning_rate / JobDesc::Singleton()->batch_size();
   CHECK(std::isfinite(alpha));
 
@@ -20,6 +20,6 @@ void MdUpdateKernel<device_type, FloatingPointType>::Forward(
 }
 
 INSTANTIATE_KERNEL_CLASS(MdUpdateKernel);
-REGISTER_KERNEL(OperatorConf::kModelUpdateConf, MdUpdateKernel);
+REGISTER_KERNEL(OperatorConf::kNormalMdupdtConf, MdUpdateKernel);
 
 }  // namespace oneflow

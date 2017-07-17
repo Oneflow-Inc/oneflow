@@ -99,9 +99,11 @@ Kernel* BuildInnerProductKernel(bool has_bias_term, FillType fill_type) {
   inner_product_conf->set_out("ip_out");
   inner_product_conf->set_out_num(40);
   inner_product_conf->set_has_bias_term(has_bias_term);
+
   FillConf* weight_fill_conf = new FillConf;
   FillConf* bias_fill_conf = new FillConf;
   if (fill_type == FillType::kConstant) {
+    std::cout << "kConstant" << std::endl;
     weight_fill_conf->set_allocated_constant_conf(new ConstantFillConf);
     weight_fill_conf->mutable_constant_conf()->set_value(1.0f);
     inner_product_conf->set_allocated_weight_fill(weight_fill_conf);
@@ -128,7 +130,7 @@ Kernel* BuildInnerProductKernel(bool has_bias_term, FillType fill_type) {
     inner_product_conf->set_allocated_bias_fill(bias_fill_conf);
   }
 
-  auto inner_product_op = OpMgr::Singleton()->ConstructOp(op_conf);
+  auto inner_product_op = ConstructOp(op_conf);
 
   OperatorProto op_proto;
   inner_product_op->ToProto(&op_proto);

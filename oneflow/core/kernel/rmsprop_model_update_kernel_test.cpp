@@ -13,11 +13,11 @@ Kernel* BuildRMSPropMdUpdateKernel(float learning_rate, float decay_rate,
   OperatorConf op_conf;
   op_conf.set_name("rmsprop_model_update_test");
   RMSPropModelUpdateOpConf* rmsprop_md_update_conf =
-      op_conf.mutable_rmsprop_model_update_conf();
+      op_conf.mutable_rmsprop_mdupdt_conf();
   rmsprop_md_update_conf->set_learning_rate(learning_rate);
   rmsprop_md_update_conf->set_decay_rate(decay_rate);
   rmsprop_md_update_conf->set_epsilon(epsilon);
-  auto rmsprop_md_update_op = OpMgr::Singleton()->ConstructOp(op_conf);
+  auto rmsprop_md_update_op = ConstructOp(op_conf);
   OperatorProto op_proto;
   rmsprop_md_update_op->ToProto(&op_proto);
   auto rmsprop_md_update_kernel =

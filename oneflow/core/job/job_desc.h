@@ -19,54 +19,51 @@ class JobDesc final {
   void ToProto(JobDescProto*) const;
 
   // Getters
+  const JobConf& job_conf() const { return job_conf_; }
   const DLNetConf& train_dlnet_conf() const { return train_dlnet_conf_; }
   const Resource& resource() const { return resource_; }
   const Strategy& strategy() const { return strategy_; }
-  const std::string& md_load_snapshot_path() { return md_load_snapshot_path_; }
-  const std::string& md_save_snapshots_path() {
-    return md_save_snapshots_path_;
+  const std::string& md_load_snapshot_path() {
+    return job_conf_.model_load_snapshot_path();
   }
-  int32_t piece_size() const { return piece_size_; }
-  int32_t num_of_piece_in_batch() const { return num_of_pieces_in_batch_; }
-  int32_t batch_size() const { return piece_size_ * num_of_pieces_in_batch_; }
-  bool is_train() const { return is_train_; }
-  const FloatingPointTypeProto& floating_point_type() const {
-    return floating_point_type_;
+  const std::string& md_save_snapshots_path() {
+    return job_conf_.model_save_snapshots_path();
+  }
+  int32_t piece_size() const { return job_conf_.piece_size(); }
+  int32_t num_of_pieces_in_batch() const {
+    return job_conf_.num_of_pieces_in_batch();
+  }
+  int32_t batch_size() const { return piece_size() * num_of_pieces_in_batch(); }
+  bool is_train() const { return job_conf_.is_train(); }
+  FloatingPointTypeProto floating_point_type() const {
+    return job_conf_.floating_point_type();
   }
   size_t FloatingPointSize() const {
-    if (floating_point_type_ == FloatingPointTypeProto::kFloat) {
+    if (floating_point_type() == FloatingPointTypeProto::kFloat) {
       return sizeof(float);
-    } else if (floating_point_type_ == FloatingPointTypeProto::kDouble) {
+    } else if (floating_point_type() == FloatingPointTypeProto::kDouble) {
       return sizeof(double);
     } else {
       UNEXPECTED_RUN();
     }
   }
   int32_t num_of_batches_in_snapshot() const {
-    return num_of_batches_in_snapshot_;
+    return job_conf_.num_of_batches_in_snapshot();
   }
-  int32_t staleness() const { return staleness_; }
-  int64_t total_batch_num() const { return total_batch_num_; }
+  int32_t staleness() const { return job_conf_.staleness(); }
+  int64_t total_batch_num() const { return job_conf_.total_batch_num(); }
   int64_t total_piece_num() const {
-    return total_batch_num_ * num_of_pieces_in_batch_;
+    return total_batch_num() * num_of_pieces_in_batch();
   }
   FillConf* global_fill_conf() const { TODO(); }
 
  private:
   JobDesc() = default;
 
+  JobConf job_conf_;
   DLNetConf train_dlnet_conf_;
   Resource resource_;
   Strategy strategy_;
-  std::string md_load_snapshot_path_;
-  std::string md_save_snapshots_path_;
-  int32_t piece_size_;
-  int32_t num_of_pieces_in_batch_;
-  bool is_train_;
-  FloatingPointTypeProto floating_point_type_;
-  int32_t num_of_batches_in_snapshot_;
-  int32_t staleness_;
-  int64_t total_batch_num_;
 };
 
 }  // namespace oneflow

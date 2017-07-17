@@ -73,8 +73,7 @@ class KernelTestCommon<DeviceType::kCPU, FloatingPointType> final {
   }
 
   static void CheckDistribution(const Blob* check_blob, FillType fill_type) {
-    size_t dptr_size =
-        check_blob->shape().elem_cnt() * sizeof(FloatingPointType);
+    size_t dptr_size = check_blob->shape().elem_cnt();
     const FloatingPointType* dptr =
         static_cast<const FloatingPointType*>(check_blob->dptr());
     if (fill_type == FillType::kConstant) {

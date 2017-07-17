@@ -78,7 +78,19 @@ class KernelTestCommon<DeviceType::kGPU, FloatingPointType> final {
     BlobCmp(BnInOp2BlobPtr(check), BnInOp2BlobPtr(expected));
   }
 
-  static void CheckDistribution(const Blob* check_blob, FillType fill_type) {}
+  static void CheckDistribution(const Blob* check_blob, FillType fill_type) {
+    using KTCommonCpu = KernelTestCommon<DeviceType::kGPU, FloatingPointType>;
+
+    FloatingPointType* dptr;
+    size_t dptr_size = check_blob->shape().elem_cnt() * sizeof(FloatingPointType);
+    CudaCheck(cudaMallocHost(&dptr, dptr_size));
+    memset(dptr, 0, dptr_size);
+    Blob* copy_check_blob = KTCommonCpu::CreateBlobWithVector(check_blob->shape().dim_vec(), dptr);
+    CudaCheck(cudaMemcpy(copy_check_blob->mut_dptr(), check_blob->dptr(), dptr_size,
+                         cudaMemcpyDeviceToHost));
+
+    KTCommonCpu::CheckDistribution(check_blob, fill_type);
+  }
 };
 
 template class KernelTestCommon<DeviceType::kGPU, float>;

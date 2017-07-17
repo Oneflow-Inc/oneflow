@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_KERNEL_MODEL_UPDATE_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_MODEL_UPDATE_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_NORMAL_MODEL_UPDATE_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_NORMAL_MODEL_UPDATE_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel_manager.h"
 
@@ -25,4 +25,4 @@ class MdUpdateKernel final : public Kernel {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_MODEL_UPDATE_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_NORMAL_MODEL_UPDATE_KERNEL_H_

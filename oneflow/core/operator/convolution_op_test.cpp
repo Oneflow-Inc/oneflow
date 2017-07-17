@@ -15,7 +15,7 @@ TEST(ConvolutionOp, TestForInferShape4FwBlobs) {
   op_conf.mutable_convolution_conf()->add_kernel_size(20);
   op_conf.mutable_convolution_conf()->add_stride(3);
   op_conf.mutable_convolution_conf()->add_stride(3);
-  auto convolution_op = OpMgr::Singleton()->ConstructOp(op_conf);
+  auto convolution_op = ConstructOp(op_conf);
   std::vector<int64_t> input_vec = {100, 64, 256, 256};
   HashMap<std::string, Shape*> bn2shape_ptr{
       {convolution_op->SoleIbn(), new Shape(input_vec)},
