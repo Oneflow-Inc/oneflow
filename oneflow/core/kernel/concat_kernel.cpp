@@ -27,8 +27,8 @@ void ConcatKernel<device_type, FloatingPointType>::Forward(
                     * concat_element_size,
           (static_cast<const FloatingPointType*>(ibn_blob->dptr()))
               + concat_idx * in_concat_axis_size * concat_element_size,
-          in_concat_axis_size * concat_element_size
-              * sizeof(FloatingPointType));
+          in_concat_axis_size * concat_element_size * sizeof(FloatingPointType),
+          cudaMemcpyKind::cudaMemcpyDeviceToDevice);
     }
     offset_concat_axis += in_concat_axis_size;
   }
@@ -58,7 +58,8 @@ void ConcatKernel<device_type, FloatingPointType>::Backward(
               + (split_idx * out_diff_split_axis_size + offset_split_axis)
                     * split_element_size,
           in_diff_split_axis_size * split_element_size
-              * sizeof(FloatingPointType));
+              * sizeof(FloatingPointType),
+          cudaMemcpyKind::cudaMemcpyDeviceToDevice);
     }
     offset_split_axis += in_diff_split_axis_size;
   }
