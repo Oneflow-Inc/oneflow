@@ -103,7 +103,6 @@ Kernel* BuildInnerProductKernel(bool has_bias_term, FillType fill_type) {
   FillConf* weight_fill_conf = new FillConf;
   FillConf* bias_fill_conf = new FillConf;
   if (fill_type == FillType::kConstant) {
-    std::cout << "kConstant" << std::endl;
     weight_fill_conf->set_allocated_constant_conf(new ConstantFillConf);
     weight_fill_conf->mutable_constant_conf()->set_value(1.0f);
     inner_product_conf->set_allocated_weight_fill(weight_fill_conf);
@@ -179,7 +178,6 @@ void IpKernelFillMdlAndMdlTmp(FillType fill_type) {
 
   auto inner_product_kernel =
       BuildInnerProductKernel<device_type, FloatingPointType>(true, fill_type);
-
   inner_product_kernel->InitModelAndModelTmpBlobs(
       ctx, ParallelPolicy::kDataParallel, 0, 0, nullptr, BnInOp2Blob);
 
@@ -214,11 +212,18 @@ TEST(InnerProductKernel, inner_product_kernel_gpu_without_bias) {
   test::IpKernelFwAndBp<DeviceType::kGPU, double>(false);
 }
 
-TEST(InnerProductKernel, fill_parameter_in_cpu_with_constant) {
+TEST(InnerProductKernel, fill_model_in_cpu_with_constant) {
   test::IpKernelFillMdlAndMdlTmp<DeviceType::kCPU, float>(
       test::FillType::kConstant);
   test::IpKernelFillMdlAndMdlTmp<DeviceType::kCPU, double>(
       test::FillType::kConstant);
+}
+
+TEST(InnerProductKernel, fill_model_in_gpu_with_constant) {
+  // test::IpKernelFillMdlAndMdlTmp<DeviceType::kGPU, float>(
+  //     test::FillType::kConstant);
+  // test::IpKernelFillMdlAndMdlTmp<DeviceType::kGPU, double>(
+  //     test::FillType::kConstant);
 }
 
 }  // namespace oneflow

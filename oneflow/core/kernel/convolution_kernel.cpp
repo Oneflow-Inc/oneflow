@@ -272,31 +272,30 @@ void ConvolutionKernel<device_type, FloatingPointType>::
         std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto conv_conf = op()->op_conf().convolution_conf();
 
-  if (op()->GetBoolFromSpecialConf("has_weight_fill")) {
-    KernelUtil<device_type, FloatingPointType>::Fill(
-        ctx, conv_conf.weight_fill(), BnInOp2Blob("weight"));
+  const FillConf* weight_fill_conf;
+  if (conv_conf.has_weight_fill()) {
+    weight_fill_conf = &conv_conf.weight_fill();
   } else {
-    FillConf* weight_fill_conf = JobDesc::Singleton()->default_fill_conf();
-    CHECK(weight_fill_conf);
-    KernelUtil<device_type, FloatingPointType>::Fill(ctx, *weight_fill_conf,
-                                                     BnInOp2Blob("weight"));
+    weight_fill_conf = JobDesc::Singleton()->default_fill_conf();
   }
+  CHECK(weight_fill_conf);
+  KernelUtil<device_type, FloatingPointType>::Fill(ctx, *weight_fill_conf,
+                                                   BnInOp2Blob("weight"));
 
-  if (op()->GetBoolFromSpecialConf("has_bias_term")) {
-    if (op()->GetBoolFromSpecialConf("has_bias_fill")) {
-      KernelUtil<device_type, FloatingPointType>::Fill(
-          ctx, conv_conf.bias_fill(), BnInOp2Blob("bias"));
+  if (conv_conf.has_bias_term()) {
+    const FillConf* bias_fill_conf;
+    if (conv_conf.has_bias_fill()) {
+      bias_fill_conf = &conv_conf.bias_fill();
     } else {
-      FillConf* bias_fill_conf = JobDesc::Singleton()->default_fill_conf();
-      CHECK(bias_fill_conf);
-      KernelUtil<device_type, FloatingPointType>::Fill(ctx, *bias_fill_conf,
-                                                       BnInOp2Blob("bias"));
+      bias_fill_conf = JobDesc::Singleton()->default_fill_conf();
     }
+    CHECK(bias_fill_conf);
+    KernelUtil<device_type, FloatingPointType>::Fill(ctx, *bias_fill_conf,
+                                                     BnInOp2Blob("bias"));
 
-    ConstantFillConf constant_fill_conf;
-    constant_fill_conf.set_value(1.0f);
     FillConf bias_multiplier_fill_conf;
-    bias_multiplier_fill_conf.set_allocated_constant_conf(&constant_fill_conf);
+    bias_multiplier_fill_conf.set_allocated_constant_conf(new ConstantFillConf);
+    bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.0f);
     KernelUtil<device_type, FloatingPointType>::Fill(
         ctx, bias_multiplier_fill_conf, BnInOp2Blob("bias_multiplier"));
   }
