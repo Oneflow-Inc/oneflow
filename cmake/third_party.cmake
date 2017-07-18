@@ -94,4 +94,5 @@ include_directories(
     ${JSONCPP_INCLUDE_DIR}
     ${EIGEN_INCLUDE_DIRS}
     ${CUDNN_INCLUDE_DIRS}
+    ${CUB_INCLUDE_DIR}
 )

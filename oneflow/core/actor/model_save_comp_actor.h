@@ -14,8 +14,8 @@ class MdSaveCompActor final : public CompActor {
   void Init(const TaskProto&, const ThreadCtx&) override;
 
  private:
-  int HandleNormal(const ActorMsg&) override;
-  int HandleWaitUntilNoReadableRegst(const ActorMsg& msg) override {
+  int HandlerNormal(const ActorMsg&) override;
+  int HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) override {
     UNEXPECTED_RUN();
   }
 

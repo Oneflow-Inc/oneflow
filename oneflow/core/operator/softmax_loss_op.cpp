@@ -22,7 +22,7 @@ void SoftmaxLossOp::InferShape4FwBlobs(
     ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
   const std::vector<int64_t> in_dim_vec = GetShapePtr4BnInOp("in")->dim_vec();
   CHECK_EQ(in_dim_vec.size(), 2);
-  CHECK_EQ(*GetShapePtr4BnInOp("label"), *GetShapePtr4BnInOp("in"));
+  CHECK_EQ(*GetShapePtr4BnInOp("label"), Shape({in_dim_vec[0]}));
   *GetShapePtr4BnInOp(SoleObn()) = Shape({1});
   *GetShapePtr4BnInOp("prob") = Shape(in_dim_vec);
   *GetShapePtr4BnInOp("tmp_1D") = Shape({in_dim_vec[0]});
