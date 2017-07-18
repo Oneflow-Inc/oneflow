@@ -1,3 +1,4 @@
+#include "cub/cub.cuh"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
@@ -56,11 +57,27 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
     cublas_scal(ctx.device_ctx->cublas_handle(), n, &alpha, x, incx);
   }
 
+  static void Max(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* max_ptr) {
+    void* temp_storage = NULL;
+    size_t temp_storage_bytes = 0;
+    cub::DeviceReduce::Max(temp_storage, temp_storage_bytes, x, max_ptr, n,
+                           ctx.device_ctx->cuda_stream());
+  }
+
   static void Exp(const KernelCtx& ctx, const int64_t n,
                   const FloatingPointType* x, FloatingPointType* y) {
     ExpGpu<FloatingPointType>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
            ctx.device_ctx->cuda_stream()>>>(n, x, y);
+  }
+
+  static void Sum(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* sum_ptr) {
+    void* temp_storage = NULL;
+    size_t temp_storage_bytes = 0;
+    cub::DeviceReduce::Sum(temp_storage, temp_storage_bytes, x, sum_ptr, n,
+                           ctx.device_ctx->cuda_stream());
   }
 
   static void Div(const KernelCtx& ctx, const int64_t n, FloatingPointType* x,

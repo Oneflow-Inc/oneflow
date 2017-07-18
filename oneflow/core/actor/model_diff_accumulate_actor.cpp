@@ -16,12 +16,12 @@ void MdDiffAccActor::Init(const TaskProto& task_proto,
   }
   set_num_of_not_eord(1);
   mut_num_of_read_empty() = 1;
-  OF_SET_MSG_HANDLE(&MdDiffAccActor::HandleNormal);
+  OF_SET_MSG_HANDLER(&MdDiffAccActor::HandlerNormal);
   ForEachCurWriteableRegst(
       [this](Regst* regst) { model_diff_acc_cnt_[regst] = 0; });
 }
 
-int MdDiffAccActor::HandleNormal(const ActorMsg& msg) {
+int MdDiffAccActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     ProcessEord();
@@ -35,16 +35,16 @@ int MdDiffAccActor::HandleNormal(const ActorMsg& msg) {
     }
     ActUntilFail();
   }
-  return msg_handle() == nullptr;
+  return msg_handler() == nullptr;
 }
 
-int MdDiffAccActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
+int MdDiffAccActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
            0);
   ActUntilFail();
   if (waiting_in_regst_.empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
-    OF_SET_MSG_HANDLE(&MdDiffAccActor::HandleWaitUntilReadingCntEqualZero);
+    OF_SET_MSG_HANDLER(&MdDiffAccActor::HandlerWaitUntilReadingCntEqualZero);
   }
   return 0;
 }
