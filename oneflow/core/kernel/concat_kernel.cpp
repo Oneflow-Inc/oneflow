@@ -7,29 +7,43 @@ void ConcatKernel<device_type, FloatingPointType>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
   const std::vector<std::string>& ibns = op()->input_bns();
-  if (ibns.size() == 0) return;
+  if (ibns.size() == 0) { return; }
   Blob* out_blob = BnInOp2BlobPtr(op()->SoleObn());
-  int32_t concat_axis = op()->op_conf().concat_conf().axis();
-  if (concat_axis < 0) concat_axis += out_blob->shape().NumAxes();
-  const int64_t concat_num_each_blob = out_blob->shape().Count(0, concat_axis);
-  const int64_t concat_element_size = out_blob->shape().Count(concat_axis + 1);
+  const int32_t concat_axis = op()->op_conf().concat_conf().axis();
+  int32_t pos_concat_axis = concat_axis;
+  if (concat_axis < 0) {
+    pos_concat_axis = out_blob->shape().NumAxes() + concat_axis;
+  }
+  const int64_t concat_num_each_blob =
+      out_blob->shape().Count(0, pos_concat_axis);
+  const int64_t concat_element_size =
+      out_blob->shape().Count(pos_concat_axis + 1);
   const int64_t out_concat_axis_size = out_blob->shape().At(concat_axis);
+  FloatingPointType* obn_dptr =
+      static_cast<FloatingPointType*>(out_blob->mut_dptr());
   int64_t offset_concat_axis = 0;
-  for (size_t ibn_idx = 0; ibn_idx < ibns.size(); ++ibn_idx) {
-    const Blob* ibn_blob = BnInOp2BlobPtr(ibns[ibn_idx]);
+
+  for (const std::string& ibn : ibns) {
+    const Blob* ibn_blob = BnInOp2BlobPtr(ibn);
+    const FloatingPointType* ibn_dptr =
+        static_cast<const FloatingPointType*>(ibn_blob->dptr());
     const int64_t in_concat_axis_size = ibn_blob->shape().At(concat_axis);
+    const int64_t cpy_size =
+        in_concat_axis_size * concat_element_size * sizeof(FloatingPointType);
+
     for (int64_t concat_idx = 0; concat_idx < concat_num_each_blob;
          ++concat_idx) {
+      FloatingPointType* obn_dst_adr =
+          obn_dptr
+          + (concat_idx * out_concat_axis_size + offset_concat_axis)
+                * concat_element_size;
+      const FloatingPointType* ibn_src_adr =
+          ibn_dptr + concat_idx * in_concat_axis_size * concat_element_size;
       KernelUtil<device_type, FloatingPointType>::Memcpy(
-          ctx,
-          (static_cast<FloatingPointType*>(out_blob->mut_dptr()))
-              + (concat_idx * out_concat_axis_size + offset_concat_axis)
-                    * concat_element_size,
-          (static_cast<const FloatingPointType*>(ibn_blob->dptr()))
-              + concat_idx * in_concat_axis_size * concat_element_size,
-          in_concat_axis_size * concat_element_size * sizeof(FloatingPointType),
+          ctx, obn_dst_adr, ibn_src_adr, cpy_size,
           cudaMemcpyKind::cudaMemcpyDeviceToDevice);
     }
+
     offset_concat_axis += in_concat_axis_size;
   }
 }
@@ -40,27 +54,40 @@ void ConcatKernel<device_type, FloatingPointType>::Backward(
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
   const Blob* odbn_blob = BnInOp2BlobPtr(op()->SoleOdbn());
   const std::vector<std::string>& idbns = op()->input_diff_bns();
-  int32_t split_axis = op()->op_conf().concat_conf().axis();
-  if (split_axis < 0) split_axis += odbn_blob->shape().NumAxes();
-  const int64_t split_num_each_blob = odbn_blob->shape().Count(0, split_axis);
-  const int64_t split_element_size = odbn_blob->shape().Count(split_axis + 1);
+  const int32_t split_axis = op()->op_conf().concat_conf().axis();
+  int32_t pos_split_axis = split_axis;
+  if (split_axis < 0) {
+    pos_split_axis = odbn_blob->shape().NumAxes() + split_axis;
+  }
+  const int64_t split_num_each_blob =
+      odbn_blob->shape().Count(0, pos_split_axis);
+  const int64_t split_element_size =
+      odbn_blob->shape().Count(pos_split_axis + 1);
   const int64_t out_diff_split_axis_size = odbn_blob->shape().At(split_axis);
+  const FloatingPointType* odbn_dptr =
+      static_cast<const FloatingPointType*>(odbn_blob->dptr());
   int64_t offset_split_axis = 0;
-  for (size_t idbns_idx = 0; idbns_idx < idbns.size(); ++idbns_idx) {
-    Blob* idbn_blob = BnInOp2BlobPtr(idbns[idbns_idx]);
+
+  for (const std::string& idbn : idbns) {
+    Blob* idbn_blob = BnInOp2BlobPtr(idbn);
+    FloatingPointType* idbn_dptr =
+        static_cast<FloatingPointType*>(idbn_blob->mut_dptr());
     const int64_t in_diff_split_axis_size = idbn_blob->shape().At(split_axis);
+    const int64_t cpy_size = in_diff_split_axis_size * split_element_size
+                             * sizeof(FloatingPointType);
+
     for (int64_t split_idx = 0; split_idx < split_num_each_blob; ++split_idx) {
+      const FloatingPointType* odbn_src_adr =
+          odbn_dptr
+          + (split_idx * out_diff_split_axis_size + offset_split_axis)
+                * split_element_size;
+      FloatingPointType* idbn_dst_adr =
+          idbn_dptr + split_idx * in_diff_split_axis_size * split_element_size;
       KernelUtil<device_type, FloatingPointType>::Memcpy(
-          ctx,
-          static_cast<FloatingPointType*>(idbn_blob->mut_dptr())
-              + split_idx * in_diff_split_axis_size * split_element_size,
-          static_cast<const FloatingPointType*>(odbn_blob->dptr())
-              + (split_idx * out_diff_split_axis_size + offset_split_axis)
-                    * split_element_size,
-          in_diff_split_axis_size * split_element_size
-              * sizeof(FloatingPointType),
+          ctx, idbn_dst_adr, odbn_src_adr, cpy_size,
           cudaMemcpyKind::cudaMemcpyDeviceToDevice);
     }
+
     offset_split_axis += in_diff_split_axis_size;
   }
 }
