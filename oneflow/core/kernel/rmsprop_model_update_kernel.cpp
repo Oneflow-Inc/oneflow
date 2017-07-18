@@ -9,10 +9,9 @@ void RMSPropMdUpdateKernel<device_type, FloatingPointType>::Forward(
   Blob* model_blob = BnInOp2BlobPtr("model");
   Blob* model_diffs_blob = BnInOp2BlobPtr("model_diffs");
   Blob* mean_square_blob = BnInOp2BlobPtr("mean_square");
-  float learning_rate =
-      op()->op_conf().rmsprop_model_update_conf().learning_rate();
-  float decay_rate = op()->op_conf().rmsprop_model_update_conf().decay_rate();
-  float epsilon = op()->op_conf().rmsprop_model_update_conf().epsilon();
+  float learning_rate = op()->op_conf().rmsprop_mdupdt_conf().learning_rate();
+  float decay_rate = op()->op_conf().rmsprop_mdupdt_conf().decay_rate();
+  float epsilon = op()->op_conf().rmsprop_mdupdt_conf().epsilon();
   float alpha = learning_rate / JobDesc::Singleton()->batch_size();
   CHECK(std::isfinite(alpha));
 
@@ -65,6 +64,6 @@ class RMSPropMdUpdateKernelUtil<DeviceType::kCPU, FloatingPointType> final {
 
 INSTANTIATE_CPU_KERNEL_UTIL_CLASS(RMSPropMdUpdateKernelUtil);
 INSTANTIATE_KERNEL_CLASS(RMSPropMdUpdateKernel);
-REGISTER_KERNEL(OperatorConf::kRmspropModelUpdateConf, RMSPropMdUpdateKernel);
+REGISTER_KERNEL(OperatorConf::kRmspropMdupdtConf, RMSPropMdUpdateKernel);
 
 }  // namespace oneflow

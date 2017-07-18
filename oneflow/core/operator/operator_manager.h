@@ -13,20 +13,24 @@ class OpMgr final {
 
   OF_SINGLETON(OpMgr);
 
-  std::shared_ptr<Operator> ConstructOp(const OperatorConf&);
+  std::shared_ptr<Operator> AddOp(const OperatorConf&);
 
   void AllOpToProto(PbRpf<OperatorProto>*);
+
+  std::shared_ptr<const Operator> ModelUpdateOp();
 
  private:
   OpMgr() = default;
 
   std::list<std::weak_ptr<const Operator>> op_list_;
+  std::shared_ptr<const Operator> model_update_op_;
 };
 
 void AddOpCreator(OperatorConf::OpTypeCase op_type_case,
                   std::function<Operator*()> creator);
 
 Operator* CreateOp(OperatorConf::OpTypeCase op_type_case);
+std::shared_ptr<Operator> ConstructOp(const OperatorConf&);
 
 template<OperatorConf::OpTypeCase op_type_case, typename OpType>
 struct OpRegister {

@@ -40,7 +40,7 @@ Kernel* BuildReluKernel() {
   ReluOpConf* relu_conf = op_conf.mutable_relu_conf();
   relu_conf->set_in("relu/in");
   relu_conf->set_out("relu/out");
-  auto relu_op = OpMgr::Singleton()->ConstructOp(op_conf);
+  auto relu_op = ConstructOp(op_conf);
   OperatorProto op_proto;
   relu_op->ToProto(&op_proto);
   auto relu_kernel = new ReluKernel<device_type, FloatingPointType>();

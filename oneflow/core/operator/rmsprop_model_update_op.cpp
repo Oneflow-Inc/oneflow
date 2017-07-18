@@ -3,7 +3,7 @@
 namespace oneflow {
 
 void RMSPropModelUpdateOp::InitFromOpConf(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_rmsprop_model_update_conf());
+  CHECK(op_conf.has_rmsprop_mdupdt_conf());
   mut_op_conf() = op_conf;
 
   EnrollInputBn("model_diffs", false);
@@ -12,9 +12,9 @@ void RMSPropModelUpdateOp::InitFromOpConf(const OperatorConf& op_conf) {
 }
 
 const PbMessage& RMSPropModelUpdateOp::GetSpecialConf() const {
-  return op_conf().rmsprop_model_update_conf();
+  return op_conf().rmsprop_mdupdt_conf();
 }
 
-REGISTER_OP(OperatorConf::kRmspropModelUpdateConf, RMSPropModelUpdateOp);
+REGISTER_OP(OperatorConf::kRmspropMdupdtConf, RMSPropModelUpdateOp);
 
 }  // namespace oneflow
