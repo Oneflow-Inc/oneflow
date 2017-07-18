@@ -11,7 +11,7 @@ TEST(SoftmaxLossOp, softmax_loss_3x5) {
   op_conf.mutable_softmax_loss_conf()->set_loss("softmax_loss/loss");
   auto softmax_loss_op = ConstructOp(op_conf);
   HashMap<std::string, Shape*> bn2shape_ptr{{"in", new Shape({3, 5})},
-                                            {"label", new Shape({3, 5})},
+                                            {"label", new Shape({3})},
                                             {"prob", new Shape},
                                             {"tmp_1D", new Shape},
                                             {"loss", new Shape}};
