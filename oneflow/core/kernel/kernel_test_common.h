@@ -3,6 +3,7 @@
 
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/kernel/kernel_context.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/register/blob.h"
 
 namespace oneflow {
@@ -40,7 +41,8 @@ class KernelTestCommon final {
       std::function<Blob*(const std::string&)> BnInOp2BlobPtr,
       const std::string& check, const std::string& expected);
 
-  static void CheckDistribution(const Blob* check_blob, FillType fill_type);
+  static void CheckDistribution(const Blob& check_blob,
+                                const FillConf& fill_conf);
 };
 
 }  // namespace test

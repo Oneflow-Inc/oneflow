@@ -72,8 +72,7 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
 }
 
 template<DeviceType device_type, typename FloatingPointType>
-std::function<Blob*(const std::string&)> BuildEmptyMdlForFill(
-    FillType fill_type) {
+std::function<Blob*(const std::string&)> BuildEmptyMdlForFill() {
   using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
   FloatingPointType weight_mat[10000] = {0};
   FloatingPointType bias_mat[10000] = {0};
@@ -91,7 +90,7 @@ std::function<Blob*(const std::string&)> BuildEmptyMdlForFill(
 }
 
 template<DeviceType device_type, typename FloatingPointType>
-Kernel* BuildInnerProductKernel(bool has_bias_term, FillType fill_type) {
+Kernel* BuildInnerProductKernel(bool has_bias_term, FillConf* fill_conf) {
   OperatorConf op_conf;
   op_conf.set_name("inner_product_test");
   InnerProductOpConf* inner_product_conf = op_conf.mutable_innerproduct_conf();
@@ -100,33 +99,9 @@ Kernel* BuildInnerProductKernel(bool has_bias_term, FillType fill_type) {
   inner_product_conf->set_out_num(40);
   inner_product_conf->set_has_bias_term(has_bias_term);
 
-  FillConf* weight_fill_conf = new FillConf;
-  FillConf* bias_fill_conf = new FillConf;
-  if (fill_type == FillType::kConstant) {
-    weight_fill_conf->set_allocated_constant_conf(new ConstantFillConf);
-    weight_fill_conf->mutable_constant_conf()->set_value(1.0f);
-    inner_product_conf->set_allocated_weight_fill(weight_fill_conf);
-    bias_fill_conf->set_allocated_constant_conf(new ConstantFillConf);
-    bias_fill_conf->mutable_constant_conf()->set_value(1.0f);
-    inner_product_conf->set_allocated_bias_fill(bias_fill_conf);
-  } else if (fill_type == FillType::kUniform) {
-    weight_fill_conf->set_allocated_uniform_conf(new UniformFillConf);
-    weight_fill_conf->mutable_uniform_conf()->set_min(10.0f);
-    weight_fill_conf->mutable_uniform_conf()->set_max(20.0f);
-    inner_product_conf->set_allocated_weight_fill(weight_fill_conf);
-    bias_fill_conf->set_allocated_uniform_conf(new UniformFillConf);
-    bias_fill_conf->mutable_uniform_conf()->set_min(10.0f);
-    bias_fill_conf->mutable_uniform_conf()->set_max(20.0f);
-    inner_product_conf->set_allocated_bias_fill(bias_fill_conf);
-  } else if (fill_type == FillType::kGaussian) {
-    weight_fill_conf->set_allocated_gaussian_conf(new GaussianFillConf);
-    weight_fill_conf->mutable_gaussian_conf()->set_mean(0.0f);
-    weight_fill_conf->mutable_gaussian_conf()->set_std(1.0f);
-    inner_product_conf->set_allocated_weight_fill(weight_fill_conf);
-    bias_fill_conf->set_allocated_gaussian_conf(new GaussianFillConf);
-    bias_fill_conf->mutable_gaussian_conf()->set_mean(0.0f);
-    bias_fill_conf->mutable_gaussian_conf()->set_std(1.0f);
-    inner_product_conf->set_allocated_bias_fill(bias_fill_conf);
+  if (fill_conf != nullptr) {
+    inner_product_conf->mutable_weight_fill()->CopyFrom(*fill_conf);
+    inner_product_conf->mutable_bias_fill()->CopyFrom(*fill_conf);
   }
 
   auto inner_product_op = ConstructOp(op_conf);
@@ -151,8 +126,8 @@ void IpKernelFwAndBp(bool has_bias_term) {
       BuildBnInOp2BlobPtr<device_type, FloatingPointType>(has_bias_term);
 
   auto inner_product_kernel =
-      BuildInnerProductKernel<device_type, FloatingPointType>(
-          has_bias_term, FillType::kDoNotFill);
+      BuildInnerProductKernel<device_type, FloatingPointType>(has_bias_term,
+                                                              nullptr);
 
   inner_product_kernel->Forward(ctx, BnInOp2Blob);
   inner_product_kernel->Backward(ctx, BnInOp2Blob);
@@ -168,24 +143,23 @@ void IpKernelFwAndBp(bool has_bias_term) {
 }
 
 template<DeviceType device_type, typename FloatingPointType>
-void IpKernelFillMdlAndMdlTmp(FillType fill_type) {
+void IpKernelFillMdlAndMdlTmp(FillConf* fill_conf) {
   using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
   KernelCtx ctx;
   KTCommon::BuildKernelCtx(&ctx);
 
-  auto BnInOp2Blob =
-      BuildEmptyMdlForFill<device_type, FloatingPointType>(fill_type);
+  auto BnInOp2Blob = BuildEmptyMdlForFill<device_type, FloatingPointType>();
 
   auto inner_product_kernel =
-      BuildInnerProductKernel<device_type, FloatingPointType>(true, fill_type);
+      BuildInnerProductKernel<device_type, FloatingPointType>(true, fill_conf);
   inner_product_kernel->InitModelAndModelTmpBlobs(
       ctx, ParallelPolicy::kDataParallel, 0, 0, nullptr, BnInOp2Blob);
 
-  KernelTestCommon<DeviceType::kCPU, FloatingPointType>::SyncStream(&ctx);
+  KTCommon::SyncStream(&ctx);
 
-  KTCommon::CheckDistribution(BnInOp2Blob("weight"), fill_type);
-  KTCommon::CheckDistribution(BnInOp2Blob("bias"), fill_type);
-  KTCommon::CheckDistribution(BnInOp2Blob("bias_multiplier"), fill_type);
+  KTCommon::CheckDistribution(*BnInOp2Blob("weight"), *fill_conf);
+  KTCommon::CheckDistribution(*BnInOp2Blob("bias"), *fill_conf);
+  KTCommon::CheckDistribution(*BnInOp2Blob("bias_multiplier"), *fill_conf);
 }
 
 }  // namespace
@@ -213,17 +187,17 @@ TEST(InnerProductKernel, inner_product_kernel_gpu_without_bias) {
 }
 
 TEST(InnerProductKernel, fill_model_in_cpu_with_constant) {
-  test::IpKernelFillMdlAndMdlTmp<DeviceType::kCPU, float>(
-      test::FillType::kConstant);
-  test::IpKernelFillMdlAndMdlTmp<DeviceType::kCPU, double>(
-      test::FillType::kConstant);
+  FillConf fill_conf;
+  fill_conf.mutable_constant_conf()->set_value(1.0f);
+  test::IpKernelFillMdlAndMdlTmp<DeviceType::kCPU, float>(&fill_conf);
+  test::IpKernelFillMdlAndMdlTmp<DeviceType::kCPU, double>(&fill_conf);
 }
 
 TEST(InnerProductKernel, fill_model_in_gpu_with_constant) {
-  // test::IpKernelFillMdlAndMdlTmp<DeviceType::kGPU, float>(
-  //     test::FillType::kConstant);
-  // test::IpKernelFillMdlAndMdlTmp<DeviceType::kGPU, double>(
-  //     test::FillType::kConstant);
+  FillConf fill_conf;
+  fill_conf.mutable_constant_conf()->set_value(1.0f);
+  test::IpKernelFillMdlAndMdlTmp<DeviceType::kGPU, float>(&fill_conf);
+  test::IpKernelFillMdlAndMdlTmp<DeviceType::kGPU, double>(&fill_conf);
 }
 
 }  // namespace oneflow

@@ -72,12 +72,21 @@ class KernelTestCommon<DeviceType::kCPU, FloatingPointType> final {
     return BlobCmp(BnInOp2BlobPtr(check), BnInOp2BlobPtr(expected));
   }
 
-  static void CheckDistribution(const Blob* check_blob, FillType fill_type) {
-    size_t dptr_size = check_blob->shape().elem_cnt();
+  static void CheckDistribution(const Blob& check_blob,
+                                const FillConf& fill_conf) {
+    size_t dptr_size = check_blob.shape().elem_cnt();
     const FloatingPointType* dptr =
-        static_cast<const FloatingPointType*>(check_blob->dptr());
-    if (fill_type == FillType::kConstant) {
-      for (size_t i = 0; i < dptr_size; ++i) { ASSERT_FLOAT_EQ(dptr[i], 1.0f); }
+        static_cast<const FloatingPointType*>(check_blob.dptr());
+    if (fill_conf.has_constant_conf()) {
+      for (size_t i = 0; i < dptr_size; ++i) {
+        ASSERT_FLOAT_EQ(dptr[i], fill_conf.constant_conf().value());
+      }
+    } else if (fill_conf.has_uniform_conf()) {
+      TODO();
+    } else if (fill_conf.has_gaussian_conf()) {
+      TODO();
+    } else {
+      UNEXPECTED_RUN();
     }
   }
 };
