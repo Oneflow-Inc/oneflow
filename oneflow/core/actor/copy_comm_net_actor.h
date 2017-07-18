@@ -14,8 +14,8 @@ class CopyCommNetActor final : public Actor {
   void Init(const TaskProto&, const ThreadCtx&) override;
 
  private:
-  int HandleNormal(const ActorMsg&) override;
-  int HandleWaitUntilNoReadableRegst(const ActorMsg&) override;
+  int HandlerNormal(const ActorMsg&) override;
+  int HandlerWaitUntilNoReadableRegst(const ActorMsg&) override;
 
   bool IsReadReady() override {
     return piece_id2waiting_in_regst_.find(expected_piece_id())

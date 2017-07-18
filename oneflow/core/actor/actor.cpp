@@ -51,13 +51,13 @@ void Actor::ProcessEord() {
   if (!num_of_not_eord_) {
     if (num_of_read_empty_) {
       if (!total_reading_cnt_) {
-        OF_SET_MSG_HANDLE(nullptr);
+        OF_SET_MSG_HANDLER(nullptr);
       } else {
-        OF_SET_MSG_HANDLE(&Actor::HandleWaitUntilReadingCntEqualZero);
+        OF_SET_MSG_HANDLER(&Actor::HandlerWaitUntilReadingCntEqualZero);
       }
       AsyncSendEORDMsgForAllProducedRegstDesc();
     } else {
-      OF_SET_MSG_HANDLE(&Actor::HandleWaitUntilNoReadableRegst);
+      OF_SET_MSG_HANDLER(&Actor::HandlerWaitUntilNoReadableRegst);
     }
   } else {
     // do nothing
@@ -76,11 +76,11 @@ KernelCtx Actor::GenDefaultKernelCtx() const {
   return ctx;
 }
 
-int Actor::HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
+int Actor::HandlerWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
            0);
   if (total_reading_cnt_ == 0) {
-    msg_handle_ = nullptr;
+    msg_handler_ = nullptr;
     return 1;
   }
   return 0;

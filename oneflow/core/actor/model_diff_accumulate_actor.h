@@ -14,8 +14,8 @@ class MdDiffAccActor final : public CompActor {
   void Init(const TaskProto&, const ThreadCtx&) override;
 
  private:
-  int HandleNormal(const ActorMsg&) override;
-  int HandleWaitUntilNoReadableRegst(const ActorMsg&) override;
+  int HandlerNormal(const ActorMsg&) override;
+  int HandlerWaitUntilNoReadableRegst(const ActorMsg&) override;
 
   bool IsReadReady() override { return !waiting_in_regst_.empty(); }
   void Act() override;
