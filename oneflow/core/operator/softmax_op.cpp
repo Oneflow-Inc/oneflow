@@ -19,7 +19,7 @@ void SoftmaxOp::InferShape4FwBlobs(
     std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
     ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
   std::vector<int64_t> vec = GetShapePtr4BnInOp(SoleIbn())->dim_vec();
-  CHECK_GE(vec.size(), 2);
+  CHECK_EQ(vec.size(), 2);
   *GetShapePtr4BnInOp(SoleObn()) = Shape(vec);
   *GetShapePtr4BnInOp(SoleDtbn()) = Shape({vec[0]});
 }

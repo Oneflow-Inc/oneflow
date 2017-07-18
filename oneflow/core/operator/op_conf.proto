@@ -120,6 +120,12 @@ message SoftmaxOpConf {
   string out = 2;
 }
 
+message SoftmaxLossOpConf {
+  string in = 1;
+  string label = 3;
+  string loss = 4;
+}
+
 message MultinomialLogisticLossOpConf {
   string prediction = 1;
   string label = 2;
@@ -217,5 +223,6 @@ message OperatorConf {
     CopyCommNetOpConf copy_comm_net_conf = 114;
     MomentumModelUpdateOpConf momentum_mdupdt_conf = 115;
     RMSPropModelUpdateOpConf rmsprop_mdupdt_conf = 116;
+    SoftmaxLossOpConf softmax_loss_conf = 117;
   }
 }
