@@ -14,8 +14,6 @@ TEST(MultinomialLogisticLossOp, test_loss_op) {
   HashMap<std::string, Shape*> bn2shape_ptr{
       {loss_op->input_bns().at(0), new Shape({500, 3 * 256 * 256 * 256, 1, 1})},
       {loss_op->input_bns().at(1), new Shape({500, 1, 1, 1})},
-      {loss_op->input_diff_bns().at(0), new Shape},
-      {loss_op->input_diff_bns().at(1), new Shape},
       {loss_op->SoleObn(), new Shape},
       {loss_op->SoleDtbn(), new Shape}};
 
@@ -29,14 +27,6 @@ TEST(MultinomialLogisticLossOp, test_loss_op) {
   Shape* loss_buffer_shape_ptr = bn2shape_ptr.at(loss_op->SoleDtbn());
   ASSERT_EQ(*loss_shape_ptr, Shape({1}));
   ASSERT_EQ(*loss_buffer_shape_ptr, Shape({1}));
-  Shape* prediction_diff_shape_ptr =
-      bn2shape_ptr.at(loss_op->input_diff_bns().at(0));
-  ASSERT_EQ(*prediction_diff_shape_ptr,
-            *bn2shape_ptr.at(loss_op->input_bns().at(0)));
-  Shape* label_diff_shape_ptr =
-      bn2shape_ptr.at(loss_op->input_diff_bns().at(1));
-  ASSERT_EQ(*label_diff_shape_ptr,
-            *bn2shape_ptr.at(loss_op->input_bns().at(1)));
 }
 
 }  // namespace oneflow
