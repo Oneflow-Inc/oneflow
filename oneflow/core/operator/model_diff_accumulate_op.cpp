@@ -11,7 +11,7 @@ void ModelDiffAccOp::InitFromOpConf(const OperatorConf& op_conf) {
 }
 
 const PbMessage& ModelDiffAccOp::GetSpecialConf() const {
-  return op_conf().model_update_conf();
+  return op_conf().model_diff_acc_conf();
 }
 
 REGISTER_OP(OperatorConf::kModelDiffAccConf, ModelDiffAccOp);

@@ -14,11 +14,11 @@ class MdUpdtCompActor final : public CompActor {
   void Init(const TaskProto&, const ThreadCtx&) override;
 
  private:
-  int HandleBeforeInitDeviceCtx(const ActorMsg&);
-  int HandleBeforeInitializeModel(const ActorMsg&);
-  int HandleBeforeSendInitialModel(const ActorMsg&);
-  int HandleNormal(const ActorMsg&) override;
-  int HandleWaitUntilNoReadableRegst(const ActorMsg&) override;
+  int HandlerBeforeInitDeviceCtx(const ActorMsg&);
+  int HandlerBeforeInitializeModel(const ActorMsg&);
+  int HandlerBeforeSendInitialModel(const ActorMsg&);
+  int HandlerNormal(const ActorMsg&) override;
+  int HandlerWaitUntilNoReadableRegst(const ActorMsg&) override;
 
   bool IsReadReady() override { return !waiting_model_diff_acc_queue_.empty(); }
   void Act() override;

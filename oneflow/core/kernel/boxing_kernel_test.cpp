@@ -30,7 +30,7 @@ BoxingKernel<DeviceType::kCPU, FloatingPointType>* BuildBoxingKernel(
   }
 
   // Build boxing kernel from configured box
-  auto boxing_op = OpMgr::Singleton()->ConstructOp(op_conf);
+  auto boxing_op = ConstructOp(op_conf);
   OperatorProto op_proto;
   boxing_op->ToProto(&op_proto);
   auto boxing_kernel = new BoxingKernel<DeviceType::kCPU, FloatingPointType>;

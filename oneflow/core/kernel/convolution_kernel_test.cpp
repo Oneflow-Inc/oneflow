@@ -78,7 +78,7 @@ Kernel* BuildConvolutionKernel(bool has_bias_term) {
   op_conf.mutable_convolution_conf()->add_dilation(1);
   op_conf.mutable_convolution_conf()->add_dilation(1);
   op_conf.mutable_convolution_conf()->set_has_bias_term(has_bias_term);
-  auto convolution_op = OpMgr::Singleton()->ConstructOp(op_conf);
+  auto convolution_op = ConstructOp(op_conf);
 
   OperatorProto op_proto;
   convolution_op->ToProto(&op_proto);
