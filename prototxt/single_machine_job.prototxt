@@ -1,6 +1,6 @@
 train_dlnet_conf_filepath: "../prototxt/google_net.prototxt"
 resource_filepath: "../prototxt/single_machine_resource.prototxt"
-strategy_filepath: "../prototxt/single_machine_strategy.prototxt"
+placement_filepath: "../prototxt/single_machine_placement.prototxt"
 model_load_snapshot_path: ""
 model_save_snapshots_path: "./snapshots"
 piece_size: 50

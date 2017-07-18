@@ -5,12 +5,12 @@
 namespace oneflow {
 
 LogicalGraph::LogicalGraph(const DLNetConf& dl_net_conf,
-                           const Strategy& strategy_conf) {
+                           const Placement& placement) {
   LOG(INFO) << "Build LogicalGraph...";
   HashMap<LogicalEdge*, std::string> edge2lbn;
   HashMap<LogicalEdge*, std::string> edge2ibn;
   NaiveBuildGraphStruct(dl_net_conf, &edge2lbn, &edge2ibn);
-  FillNodeWithParallelDesc(strategy_conf);
+  FillNodeWithParallelDesc(placement);
   AddCloneNodes(edge2lbn, edge2ibn);
   ToDotWithAutoFilePath();
 }
@@ -45,14 +45,14 @@ void LogicalGraph::NaiveBuildGraphStruct(
   UpdateSourceAndSink();
 }
 
-void LogicalGraph::FillNodeWithParallelDesc(const Strategy& strategy_conf) {
+void LogicalGraph::FillNodeWithParallelDesc(const Placement& placement) {
   HashMap<std::string, LogicalNode*> op_name2node;
   ForEachNode([&](LogicalNode* logical_node) {
     const std::string& op_name = logical_node->op()->op_name();
     CHECK(op_name2node.emplace(op_name, logical_node).second);
   });
-  for (int gid = 0; gid < strategy_conf.placement_group_size(); ++gid) {
-    const PlacementGroup& cur_group = strategy_conf.placement_group(gid);
+  for (int gid = 0; gid < placement.placement_group_size(); ++gid) {
+    const PlacementGroup& cur_group = placement.placement_group(gid);
     for (int li = 0; li < cur_group.op_set().op_name_size(); ++li) {
       const std::string& op_name = cur_group.op_set().op_name(li);
       auto it = op_name2node.find(op_name);
