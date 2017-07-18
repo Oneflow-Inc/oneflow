@@ -4,7 +4,7 @@
 #include "oneflow/core/graph/graph.h"
 #include "oneflow/core/job/dlnet_conf.pb.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/strategy.pb.h"
+#include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
@@ -51,7 +51,7 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   LogicalGraph() = delete;
   ~LogicalGraph() = default;
 
-  LogicalGraph(const DLNetConf& dl_net_conf, const Strategy& strategy_conf);
+  LogicalGraph(const DLNetConf& dl_net_conf, const Placement& placement);
 
   const char* TypeName() const override { return "LogicalGraph"; }
 
@@ -59,7 +59,7 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void NaiveBuildGraphStruct(const DLNetConf& dl_net_conf,
                              HashMap<LogicalEdge*, std::string>* edge2lbn,
                              HashMap<LogicalEdge*, std::string>* edge2ibn);
-  void FillNodeWithParallelDesc(const Strategy& strategy_conf);
+  void FillNodeWithParallelDesc(const Placement& placement);
 
   struct CloneInfo {
     std::shared_ptr<Operator> clone_op;

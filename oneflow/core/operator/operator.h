@@ -5,7 +5,7 @@
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/keyword.h"
-#include "oneflow/core/job/strategy.pb.h"
+#include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/operator.pb.h"
 

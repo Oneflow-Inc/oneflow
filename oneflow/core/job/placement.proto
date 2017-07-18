@@ -25,6 +25,6 @@ message PlacementGroup {
   ParallelConf parallel_conf = 2;
 }
 
-message Strategy {
+message Placement {
   repeated PlacementGroup placement_group = 1;
 }
