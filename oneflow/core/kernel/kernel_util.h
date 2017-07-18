@@ -96,6 +96,7 @@ class KernelUtil final {
                        const int ldc);
 
   // Generate random number of specific distribution
+  static void Fill(const FillConf& fill_conf, Blob* blob);
   static void Fill(const KernelCtx& ctx, const FillConf& fill_conf, Blob* blob);
 };
 

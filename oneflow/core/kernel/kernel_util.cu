@@ -132,7 +132,7 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
 
     std::unique_ptr<Blob> host_blob(
         new Blob(host_unique_ptr.get(), host_blob_shape.get()));
-    KernelUtil<DeviceType::kCPU, FloatingPointType>::Fill(ctx, fill_conf,
+    KernelUtil<DeviceType::kCPU, FloatingPointType>::Fill(fill_conf,
                                                           host_blob.get());
 
     KernelUtil<DeviceType::kGPU, FloatingPointType>::Memcpy(

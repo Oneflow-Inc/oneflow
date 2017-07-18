@@ -76,7 +76,7 @@ void Compiler::BuildGraphs() {
   LOG(INFO) << "Build DataTaskGraph...";
   auto data_task_gph = new DataTaskGraph(
       "data", JobDesc::Singleton()->train_dlnet_conf(),
-      JobDesc::Singleton()->strategy(), JobDesc::Singleton()->is_train());
+      JobDesc::Singleton()->placement(), JobDesc::Singleton()->is_train());
   ordered_task_gphs_.emplace_back(data_task_gph);
   // construct data_chain2sorted_fw_comp_tasks
   HashMap<const ChainNode*, std::vector<CompTaskNode*>>

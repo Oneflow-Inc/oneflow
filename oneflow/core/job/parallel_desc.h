@@ -5,7 +5,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/job_desc.h"
-#include "oneflow/core/job/strategy.pb.h"
+#include "oneflow/core/job/placement.pb.h"
 
 namespace oneflow {
 

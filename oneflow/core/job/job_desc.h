@@ -22,7 +22,7 @@ class JobDesc final {
   const JobConf& job_conf() const { return job_conf_; }
   const DLNetConf& train_dlnet_conf() const { return train_dlnet_conf_; }
   const Resource& resource() const { return resource_; }
-  const Strategy& strategy() const { return strategy_; }
+  const Placement& placement() const { return placement_; }
   const std::string& md_load_snapshot_path() {
     return job_conf_.model_load_snapshot_path();
   }
@@ -63,7 +63,7 @@ class JobDesc final {
   JobConf job_conf_;
   DLNetConf train_dlnet_conf_;
   Resource resource_;
-  Strategy strategy_;
+  Placement placement_;
 };
 
 }  // namespace oneflow
