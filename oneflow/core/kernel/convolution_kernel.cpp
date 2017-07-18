@@ -294,7 +294,6 @@ void ConvolutionKernel<device_type, FloatingPointType>::
                                                      BnInOp2Blob("bias"));
 
     FillConf bias_multiplier_fill_conf;
-    bias_multiplier_fill_conf.set_allocated_constant_conf(new ConstantFillConf);
     bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.0f);
     KernelUtil<device_type, FloatingPointType>::Fill(
         ctx, bias_multiplier_fill_conf, BnInOp2Blob("bias_multiplier"));
