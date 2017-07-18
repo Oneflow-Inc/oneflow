@@ -7,10 +7,11 @@ void SALRMdUpdateKernel<device_type, FloatingPointType>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
   Blob* model_blob = BnInOp2BlobPtr("model");
-  Blob* model_diff_blob = BnInOp2BlobPtr("model_diffs");
-  Blob* learning_rate_blob = BnInOp2BlobPtr("learning_rates");
-  Blob* last_diff_flag_blob = BnInOp2BlobPtr("last_diffs_flag");
-  float epsilon = op()->op_conf().salr_mdupdt_conf().epsilon();
+  Blob* model_diff_blob = BnInOp2BlobPtr("model_diff");
+  Blob* learning_rate_blob = BnInOp2BlobPtr("learning_rate");
+  Blob* last_diff_flag_blob = BnInOp2BlobPtr("last_diff_flag");
+  float epsilon = op()->op_conf().salr_mdupdt_conf().epsilon()
+                  / JobDesc::Singleton()->batch_size();
   float delta = op()->op_conf().salr_mdupdt_conf().delta();
 
   SALRMdUpdateKernelUtil<device_type, FloatingPointType>::UpdateLearningRate(

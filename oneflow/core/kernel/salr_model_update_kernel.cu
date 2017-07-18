@@ -28,10 +28,10 @@ __global__ void UpdateLearningRateGpu(const int64_t n,
 template<typename FloatingPointType>
 __global__ void UpdateModelGpu(const int64_t n, FloatingPointType* model,
                                const FloatingPointType* model_diff,
-                               const FloatingPointType* mean_square,
+                               const FloatingPointType* learning_rate,
                                const FloatingPointType epsilon) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    model[i] -= (-epsilon) * learning_rate[i] * model_diff[i];
+    model[i] -= -epsilon * learning_rate[i] * model_diff[i];
   }
 }
 
