@@ -11,7 +11,7 @@ enum FloatingPointTypeProto {
 message JobConf {
   string train_dlnet_conf_filepath = 1;
   string resource_filepath = 2;
-  string strategy_filepath = 3;
+  string placement_filepath = 3;
   string model_load_snapshot_path = 4;
   string model_save_snapshots_path = 5;
   int32 piece_size = 7;
