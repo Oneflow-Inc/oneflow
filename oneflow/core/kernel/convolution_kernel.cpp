@@ -117,22 +117,21 @@ void ConvolutionKernel<device_type, FloatingPointType>::Forward(
   auto conv_conf = op()->op_conf().convolution_conf();
   for (size_t i = 0; i < in_shape.At(0); ++i) {
     ConvolutionKernelUtil<device_type, FloatingPointType>::Im2Col(
-        ctx, static_cast<FloatingPointType*>(in->mut_dptr()) + i * in_im_sz,
-        in_shape.At(1), in_shape.At(2), in_shape.At(3),
-        conv_conf.kernel_size(0), conv_conf.kernel_size(1), conv_conf.pad(0),
-        conv_conf.pad(1), conv_conf.stride(0), conv_conf.stride(1),
-        conv_conf.dilation(0), conv_conf.dilation(1),
-        static_cast<FloatingPointType*>(col_buf->mut_dptr()) + i * col_im_sz);
+        ctx, in->mut_dptr<FloatingPointType>() + i * in_im_sz, in_shape.At(1),
+        in_shape.At(2), in_shape.At(3), conv_conf.kernel_size(0),
+        conv_conf.kernel_size(1), conv_conf.pad(0), conv_conf.pad(1),
+        conv_conf.stride(0), conv_conf.stride(1), conv_conf.dilation(0),
+        conv_conf.dilation(1),
+        col_buf->mut_dptr<FloatingPointType>() + i * col_im_sz);
 
     KernelUtil<device_type, FloatingPointType>::BlasGemm(
         ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasTrans,
         out->shape().At(1), out->shape().Count(2), weight->shape().At(1),
-        static_cast<FloatingPointType>(1.0),
-        static_cast<const FloatingPointType*>(weight->dptr()),
+        static_cast<FloatingPointType>(1.0), weight->dptr<FloatingPointType>(),
         weight->shape().At(1),
-        static_cast<const FloatingPointType*>(col_buf->dptr()) + i * col_im_sz,
+        col_buf->dptr<FloatingPointType>() + i * col_im_sz,
         weight->shape().At(1), static_cast<FloatingPointType>(1.0),
-        static_cast<FloatingPointType*>(out->mut_dptr()) + i * out_im_sz,
+        out->mut_dptr<FloatingPointType>() + i * out_im_sz,
         col_buf->shape().At(1));
 
     if (op()->GetBoolFromSpecialConf("has_bias_term")) {
@@ -143,11 +142,10 @@ void ConvolutionKernel<device_type, FloatingPointType>::Forward(
       KernelUtil<device_type, FloatingPointType>::BlasGemm(
           ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasNoTrans,
           bias->shape().At(0), bias_multiplier->shape().At(0), 1,
-          static_cast<FloatingPointType>(1.0),
-          static_cast<const FloatingPointType*>(bias->dptr()), 1,
-          static_cast<const FloatingPointType*>(bias_multiplier->dptr()),
+          static_cast<FloatingPointType>(1.0), bias->dptr<FloatingPointType>(),
+          1, bias_multiplier->dptr<FloatingPointType>(),
           bias_multiplier->shape().At(0), static_cast<FloatingPointType>(1.0),
-          static_cast<FloatingPointType*>(out->mut_dptr()) + i * out_im_sz,
+          out->mut_dptr<FloatingPointType>() + i * out_im_sz,
           bias_multiplier->shape().At(0));
     }
   }
@@ -172,13 +170,12 @@ void ConvolutionKernel<device_type, FloatingPointType>::ComputeWeightDiff(
         ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasNoTrans,
         weight_diff->shape().At(0), weight_diff->shape().At(1),
         out_diff->shape().Count(2), static_cast<FloatingPointType>(1.0),
-        static_cast<const FloatingPointType*>(out_diff->dptr()) + i * out_im_sz,
+        out_diff->dptr<FloatingPointType>() + i * out_im_sz,
         out_diff->shape().Count(2),
-        static_cast<const FloatingPointType*>(col_buf->dptr())
+        col_buf->dptr<FloatingPointType>()
             + i * col_buf->shape().Count(1) * sizeof(FloatingPointType),
         col_buf->shape().At(2), static_cast<FloatingPointType>(1.0),
-        static_cast<FloatingPointType*>(weight_diff->mut_dptr()),
-        weight_diff->shape().At(1));
+        weight_diff->mut_dptr<FloatingPointType>(), weight_diff->shape().At(1));
   }
 }
 
@@ -202,12 +199,10 @@ void ConvolutionKernel<device_type, FloatingPointType>::ComputeBiasDiff(
           ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasNoTrans,
           bias_diff->shape().At(0), 1, bias_mul->shape().At(0),
           static_cast<FloatingPointType>(1.0),
-          static_cast<const FloatingPointType*>(out_diff->dptr())
-              + i * out_im_sz,
-          out_diff->shape().Count(2),
-          static_cast<const FloatingPointType*>(bias_mul->dptr()), 1,
+          out_diff->dptr<FloatingPointType>() + i * out_im_sz,
+          out_diff->shape().Count(2), bias_mul->dptr<FloatingPointType>(), 1,
           static_cast<FloatingPointType>(1.0),
-          static_cast<FloatingPointType*>(bias_diff->mut_dptr()), 1);
+          bias_diff->mut_dptr<FloatingPointType>(), 1);
     }
   }
 }
@@ -228,11 +223,10 @@ void ConvolutionKernel<device_type, FloatingPointType>::ComputeInputDiff(
         ctx, CBLAS_ORDER::CblasRowMajor, CblasTrans, CblasNoTrans,
         col_buf->shape().At(1), col_buf->shape().At(2), weight->shape().At(0),
         static_cast<FloatingPointType>(1.0),
-        static_cast<const FloatingPointType*>(out_diff->dptr()) + i * out_im_sz,
-        out_diff->shape().Count(2),
-        static_cast<const FloatingPointType*>(weight->dptr()),
+        out_diff->dptr<FloatingPointType>() + i * out_im_sz,
+        out_diff->shape().Count(2), weight->dptr<FloatingPointType>(),
         weight->shape().At(1), static_cast<FloatingPointType>(0.0),
-        static_cast<FloatingPointType*>(col_buf->mut_dptr())
+        col_buf->mut_dptr<FloatingPointType>()
             + i * col_buf->shape().Count(1) * sizeof(FloatingPointType),
         col_buf->shape().At(2));
   }
@@ -243,13 +237,13 @@ void ConvolutionKernel<device_type, FloatingPointType>::ComputeInputDiff(
   for (size_t i = 0; i < batch_sz; ++i) {
     ConvolutionKernelUtil<device_type, FloatingPointType>::Col2Im(
         ctx,
-        static_cast<const FloatingPointType*>(col_buf->dptr())
+        col_buf->dptr<FloatingPointType>()
             + i * col_buf->shape().Count(1) * sizeof(FloatingPointType),
         in_diff_shape.At(1), in_diff_shape.At(2), in_diff_shape.At(3),
         conv_conf.kernel_size(0), conv_conf.kernel_size(1), conv_conf.pad(0),
         conv_conf.pad(1), conv_conf.stride(0), conv_conf.stride(1),
         conv_conf.dilation(0), conv_conf.dilation(1),
-        static_cast<FloatingPointType*>(in_diff->mut_dptr())
+        in_diff->mut_dptr<FloatingPointType>()
             + i * in_diff_shape.Count(1) * sizeof(FloatingPointType));
   }
 }

@@ -20,9 +20,8 @@ void BlasMatrixMatrix(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans_a,
 
   KernelUtil<device_type, FloatingPointType>::BlasGemm(
       ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha,
-      static_cast<const FloatingPointType*>(a->dptr()), lda,
-      static_cast<const FloatingPointType*>(b->dptr()), ldb, beta,
-      static_cast<FloatingPointType*>(c->mut_dptr()), ldc);
+      a->dptr<FloatingPointType>(), lda, b->dptr<FloatingPointType>(), ldb,
+      beta, c->mut_dptr<FloatingPointType>(), ldc);
 }
 
 }  // namespace

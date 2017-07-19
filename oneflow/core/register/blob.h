@@ -11,10 +11,17 @@ class Blob {
   Blob(void* dptr, const Shape* shape) : dptr_(dptr), shape_(shape) {}
   ~Blob() {}
 
-  const void* dptr() const { return dptr_; }
-  const Shape& shape() const { return *shape_; }
+  template<typename T = void>
+  const T* dptr() const {
+    return static_cast<const T*>(dptr_);
+  }
 
-  void* mut_dptr() { return dptr_; }
+  template<typename T = void>
+  T* mut_dptr() const {
+    return static_cast<T*>(dptr_);
+  }
+
+  const Shape& shape() const { return *shape_; }
 
  private:
   void* dptr_;

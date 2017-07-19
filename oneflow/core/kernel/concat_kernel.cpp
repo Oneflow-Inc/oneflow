@@ -13,14 +13,12 @@ void ConcatKernel<device_type, FloatingPointType>::Forward(
   const int64_t concat_element_size = out_blob->shape().Count(concat_axis + 1);
   const int64_t concat_num_each_blob = out_blob->shape().Count(0, concat_axis);
   const int64_t out_concat_axis_size = out_blob->shape().At(concat_axis);
-  FloatingPointType* obn_dptr =
-      static_cast<FloatingPointType*>(out_blob->mut_dptr());
+  FloatingPointType* obn_dptr = out_blob->mut_dptr<FloatingPointType>();
   int64_t offset_concat_axis = 0;
 
   for (const std::string& ibn : ibns) {
     const Blob* ibn_blob = BnInOp2BlobPtr(ibn);
-    const FloatingPointType* ibn_dptr =
-        static_cast<const FloatingPointType*>(ibn_blob->dptr());
+    const FloatingPointType* ibn_dptr = ibn_blob->dptr<FloatingPointType>();
     const int64_t in_concat_axis_size = ibn_blob->shape().At(concat_axis);
     const int64_t cp_size =
         in_concat_axis_size * concat_element_size * sizeof(FloatingPointType);
@@ -52,14 +50,12 @@ void ConcatKernel<device_type, FloatingPointType>::Backward(
   const int64_t split_element_size = odbn_blob->shape().Count(split_axis + 1);
   const int64_t split_num_each_blob = odbn_blob->shape().Count(0, split_axis);
   const int64_t out_diff_split_axis_size = odbn_blob->shape().At(split_axis);
-  const FloatingPointType* odbn_dptr =
-      static_cast<const FloatingPointType*>(odbn_blob->dptr());
+  const FloatingPointType* odbn_dptr = odbn_blob->dptr<FloatingPointType>();
   int64_t offset_split_axis = 0;
 
   for (const std::string& idbn : idbns) {
     Blob* idbn_blob = BnInOp2BlobPtr(idbn);
-    FloatingPointType* idbn_dptr =
-        static_cast<FloatingPointType*>(idbn_blob->mut_dptr());
+    FloatingPointType* idbn_dptr = idbn_blob->mut_dptr<FloatingPointType>();
     const int64_t in_diff_split_axis_size = idbn_blob->shape().At(split_axis);
     const int64_t cp_size = in_diff_split_axis_size * split_element_size
                             * sizeof(FloatingPointType);

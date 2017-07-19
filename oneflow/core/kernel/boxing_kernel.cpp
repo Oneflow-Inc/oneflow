@@ -166,9 +166,8 @@ void BoxingKernel<device_type, FloatingPointType>::CopyDataFromRules(
     Blob* src_blob = BnInOp2Blob(rule.src_bn);
     Blob* dst_blob = BnInOp2Blob(rule.dst_bn);
     KernelUtil<device_type, FloatingPointType>::Memcpy(
-        ctx, static_cast<char*>(dst_blob->mut_dptr()) + rule.dst_offset,
-        static_cast<const char*>(src_blob->dptr()) + rule.src_offset,
-        rule.copy_sz);
+        ctx, dst_blob->mut_dptr<char>() + rule.dst_offset,
+        src_blob->dptr<char>() + rule.src_offset, rule.copy_sz);
   }
 }
 
@@ -193,9 +192,8 @@ void BoxingKernel<device_type, FloatingPointType>::ConcatBoxBackward(
     for (const std::string& bn : op()->output_diff_bns()) {
       Blob* blob = BnInOp2Blob(bn);
       KernelUtil<device_type, FloatingPointType>::BlasAxpy(
-          ctx, blob->shape().elem_cnt(), 1.0,
-          static_cast<const FloatingPointType*>(blob->dptr()), 1,
-          static_cast<FloatingPointType*>(middle->mut_dptr()), 1);
+          ctx, blob->shape().elem_cnt(), 1.0, blob->dptr<FloatingPointType>(),
+          1, middle->mut_dptr<FloatingPointType>(), 1);
     }
   }
 
@@ -216,9 +214,8 @@ void BoxingKernel<device_type, FloatingPointType>::AddBoxForward(
   for (size_t i = 1; i < op()->input_bns().size(); ++i) {
     Blob* in_i = BnInOp2Blob("in_" + std::to_string(i));
     KernelUtil<device_type, FloatingPointType>::BlasAxpy(
-        ctx, out_0->shape().elem_cnt(), 1.0,
-        static_cast<const FloatingPointType*>(in_i->dptr()), 1,
-        static_cast<FloatingPointType*>(out_0->mut_dptr()), 1);
+        ctx, out_0->shape().elem_cnt(), 1.0, in_i->dptr<FloatingPointType>(), 1,
+        out_0->mut_dptr<FloatingPointType>(), 1);
   }
 
   // The data in out_0 will be copied to other output blobs.
