@@ -7,7 +7,7 @@ void SoftmaxLossOp::InitFromOpConf(const OperatorConf& op_conf) {
   mut_op_conf() = op_conf;
 
   EnrollInputBn("in");
-  EnrollInputBn("label");
+  EnrollInputBn("label", false);
   EnrollDataTmpBn("prob");
   EnrollDataTmpBn("tmp_1D");
   EnrollOutputBn("loss", false);
