@@ -78,8 +78,8 @@ class KernelTestCommon<DeviceType::kGPU, FloatingPointType> final {
     BlobCmp(BnInOp2BlobPtr(check), BnInOp2BlobPtr(expected));
   }
 
-  static void CheckDistribution(const Blob& check_blob,
-                                const FillConf& fill_conf) {
+  static void CheckFillResult(const Blob& check_blob,
+                              const FillConf& fill_conf) {
     using KTCommonCpu = KernelTestCommon<DeviceType::kCPU, FloatingPointType>;
 
     void* host_raw_dptr;
@@ -96,7 +96,7 @@ class KernelTestCommon<DeviceType::kGPU, FloatingPointType> final {
     CudaCheck(cudaMemcpy(copy_check_blob->mut_dptr(), check_blob.dptr(),
                          byte_size, cudaMemcpyDeviceToHost));
 
-    KTCommonCpu::CheckDistribution(*copy_check_blob, fill_conf);
+    KTCommonCpu::CheckFillResult(*copy_check_blob, fill_conf);
   }
 };  // namespace test
 

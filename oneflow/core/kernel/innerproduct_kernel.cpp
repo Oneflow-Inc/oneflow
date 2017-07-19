@@ -93,12 +93,12 @@ void InnerProductKernel<device_type, FloatingPointType>::
         std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto ip_conf = op()->op_conf().innerproduct_conf();
 
-  const FillConf* weight_fill_conf = &ip_conf.weight_fill();
+  const FillConf* weight_fill_conf = OF_PB_POINTER_GET(ip_conf, weight_fill);
   KernelUtil<device_type, FloatingPointType>::FillWithProperConf(
       ctx, weight_fill_conf, BnInOp2Blob("weight"));
 
   if (ip_conf.has_bias_term()) {
-    const FillConf* bias_fill_conf = &ip_conf.bias_fill();
+    const FillConf* bias_fill_conf = OF_PB_POINTER_GET(ip_conf, bias_fill);
     KernelUtil<device_type, FloatingPointType>::FillWithProperConf(
         ctx, bias_fill_conf, BnInOp2Blob("bias"));
 

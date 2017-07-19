@@ -157,9 +157,9 @@ void IpKernelFillMdlAndMdlTmp(FillConf* fill_conf) {
 
   KTCommon::SyncStream(&ctx);
 
-  KTCommon::CheckDistribution(*BnInOp2Blob("weight"), *fill_conf);
-  KTCommon::CheckDistribution(*BnInOp2Blob("bias"), *fill_conf);
-  KTCommon::CheckDistribution(*BnInOp2Blob("bias_multiplier"), *fill_conf);
+  KTCommon::CheckFillResult(*BnInOp2Blob("weight"), *fill_conf);
+  KTCommon::CheckFillResult(*BnInOp2Blob("bias"), *fill_conf);
+  KTCommon::CheckFillResult(*BnInOp2Blob("bias_multiplier"), *fill_conf);
 }
 
 }  // namespace

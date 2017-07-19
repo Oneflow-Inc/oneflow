@@ -72,8 +72,8 @@ class KernelTestCommon<DeviceType::kCPU, FloatingPointType> final {
     return BlobCmp(BnInOp2BlobPtr(check), BnInOp2BlobPtr(expected));
   }
 
-  static void CheckDistribution(const Blob& check_blob,
-                                const FillConf& fill_conf) {
+  static void CheckFillResult(const Blob& check_blob,
+                              const FillConf& fill_conf) {
     size_t dptr_size = check_blob.shape().elem_cnt();
     const FloatingPointType* dptr =
         static_cast<const FloatingPointType*>(check_blob.dptr());

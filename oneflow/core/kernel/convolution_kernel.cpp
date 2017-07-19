@@ -272,12 +272,12 @@ void ConvolutionKernel<device_type, FloatingPointType>::
         std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto conv_conf = op()->op_conf().convolution_conf();
 
-  const FillConf* weight_fill_conf = &conv_conf.weight_fill();
+  const FillConf* weight_fill_conf = OF_PB_POINTER_GET(conv_conf, weight_fill);
   KernelUtil<device_type, FloatingPointType>::FillWithProperConf(
       ctx, weight_fill_conf, BnInOp2Blob("weight"));
 
   if (conv_conf.has_bias_term()) {
-    const FillConf* bias_fill_conf = &conv_conf.bias_fill();
+    const FillConf* bias_fill_conf = OF_PB_POINTER_GET(conv_conf, bias_fill);
     KernelUtil<device_type, FloatingPointType>::FillWithProperConf(
         ctx, bias_fill_conf, BnInOp2Blob("bias"));
 
