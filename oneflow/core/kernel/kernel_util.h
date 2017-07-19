@@ -54,7 +54,8 @@ class KernelUtil final {
                        const int incx);
   // max(x)
   static void Max(const KernelCtx& ctx, const int64_t n,
-                  const FloatingPointType* x, FloatingPointType* max_ptr);
+                  const FloatingPointType* x, FloatingPointType* max_ptr,
+                  FloatingPointType* temp_storage, size_t temp_storage_bytes);
 
   // y = exp(x)
   static void Exp(const KernelCtx& ctx, const int64_t n,
@@ -62,7 +63,8 @@ class KernelUtil final {
 
   // sum(x)
   static void Sum(const KernelCtx& ctx, const int64_t n,
-                  const FloatingPointType* x, FloatingPointType* sum_ptr);
+                  const FloatingPointType* x, FloatingPointType* sum_ptr,
+                  FloatingPointType* temp_storage, size_t temp_storage_bytes);
 
   // x = x / a
   static void Div(const KernelCtx& ctx, const int64_t n, FloatingPointType* x,
