@@ -22,10 +22,10 @@ void ConcatKernel<device_type, FloatingPointType>::Forward(
          ++concat_idx) {
       KernelUtil<device_type, FloatingPointType>::Memcpy(
           ctx,
-          (static_cast<FloatingPointType*>(out_blob->mut_dptr()))
+          out_blob->mut_dptr<FloatingPointType>()
               + (concat_idx * out_concat_axis_size + offset_concat_axis)
                     * concat_element_size,
-          (static_cast<const FloatingPointType*>(ibn_blob->dptr()))
+          ibn_blob->dptr<FloatingPointType>()
               + concat_idx * in_concat_axis_size * concat_element_size,
           in_concat_axis_size * concat_element_size * sizeof(FloatingPointType),
           cudaMemcpyKind::cudaMemcpyDeviceToDevice);
@@ -52,9 +52,9 @@ void ConcatKernel<device_type, FloatingPointType>::Backward(
     for (int64_t split_idx = 0; split_idx < split_num_each_blob; ++split_idx) {
       KernelUtil<device_type, FloatingPointType>::Memcpy(
           ctx,
-          static_cast<FloatingPointType*>(idbn_blob->mut_dptr())
+          idbn_blob->mut_dptr<FloatingPointType>()
               + split_idx * in_diff_split_axis_size * split_element_size,
-          static_cast<const FloatingPointType*>(odbn_blob->dptr())
+          odbn_blob->dptr<FloatingPointType>()
               + (split_idx * out_diff_split_axis_size + offset_split_axis)
                     * split_element_size,
           in_diff_split_axis_size * split_element_size

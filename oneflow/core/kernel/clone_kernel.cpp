@@ -30,8 +30,8 @@ void CloneKernel<device_type, FloatingPointType>::Backward(
     const Blob* odbn_blob = BnInOp2BlobPtr(odbns[i]);
     KernelUtil<device_type, FloatingPointType>::BlasAxpy(
         ctx, idbn_blob->shape().elem_cnt(), 1.0,
-        static_cast<const FloatingPointType*>(odbn_blob->dptr()), 1,
-        static_cast<FloatingPointType*>(idbn_blob->mut_dptr()), 1);
+        odbn_blob->dptr<FloatingPointType>(), 1,
+        idbn_blob->mut_dptr<FloatingPointType>(), 1);
   }
 }
 

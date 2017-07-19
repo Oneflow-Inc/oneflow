@@ -15,8 +15,8 @@ void MdUpdateKernel<device_type, FloatingPointType>::Forward(
   // model = model - alpha * model_diff
   KernelUtil<device_type, FloatingPointType>::BlasAxpy(
       ctx, model_blob->shape().elem_cnt(), alpha,
-      static_cast<const FloatingPointType*>(model_diffs_blob->dptr()), 1,
-      static_cast<FloatingPointType*>(model_blob->mut_dptr()), 1);
+      model_diffs_blob->dptr<FloatingPointType>(), 1,
+      model_blob->mut_dptr<FloatingPointType>(), 1);
 }
 
 INSTANTIATE_KERNEL_CLASS(MdUpdateKernel);
