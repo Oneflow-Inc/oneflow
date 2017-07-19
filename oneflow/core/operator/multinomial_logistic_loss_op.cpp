@@ -7,7 +7,7 @@ void MultinomialLogisticLossOp::InitFromOpConf(const OperatorConf& op_conf) {
   mut_op_conf() = op_conf;
 
   EnrollInputBn("prediction");
-  EnrollInputBn("label");
+  EnrollInputBn("label", false);
   EnrollOutputBn("loss", false);
   EnrollDataTmpBn("loss_buffer");
 }

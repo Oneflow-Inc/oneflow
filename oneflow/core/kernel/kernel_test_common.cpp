@@ -55,10 +55,8 @@ class KernelTestCommon<DeviceType::kCPU, FloatingPointType> final {
   }
 
   static void BlobCmp(Blob* lhs, Blob* rhs) {
-    const FloatingPointType* dptr_lhs =
-        static_cast<const FloatingPointType*>(lhs->dptr());
-    const FloatingPointType* dptr_rhs =
-        static_cast<const FloatingPointType*>(rhs->dptr());
+    const FloatingPointType* dptr_lhs = lhs->dptr<FloatingPointType>();
+    const FloatingPointType* dptr_rhs = rhs->dptr<FloatingPointType>();
     size_t dptr_size = lhs->shape().elem_cnt();
 
     for (size_t i = 0; i < dptr_size; ++i) {

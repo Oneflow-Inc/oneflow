@@ -3,6 +3,7 @@
 
 #include "oneflow/core/blas/cblas_template.h"
 #include "oneflow/core/blas/cublas_template.h"
+#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/operator/op_conf.pb.h"
@@ -96,6 +97,15 @@ class KernelUtil final {
   // Generate random number of specific distribution
   static void Fill(const FillConf& fill_conf, Blob* blob);
   static void Fill(const KernelCtx& ctx, const FillConf& fill_conf, Blob* blob);
+
+  // detect fill conf
+  static void FillWithProperConf(const KernelCtx& ctx,
+                                 const FillConf* fill_conf, Blob* blob) {
+    if (fill_conf == nullptr) {
+      fill_conf = JobDesc::Singleton()->default_fill_conf();
+    }
+    Fill(ctx, *fill_conf, blob);
+  }
 };
 
 }  // namespace oneflow

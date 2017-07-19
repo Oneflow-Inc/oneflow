@@ -12,32 +12,10 @@ void SoftmaxKernel<device_type, FloatingPointType>::Forward(
   Blob* tmp_blob = BnInOp2BlobPtr(op()->SoleDtbn());
   const int64_t n = out_blob->shape().At(0);
   const int64_t w = out_blob->shape().At(1);
-  const FloatingPointType* in =
-      static_cast<const FloatingPointType*>(in_blob->dptr());
-  FloatingPointType* tmp =
-      static_cast<FloatingPointType*>(tmp_blob->mut_dptr());
-  FloatingPointType* out =
-      static_cast<FloatingPointType*>(out_blob->mut_dptr());
-  // copy in blob to out blob
-  KernelUtil<device_type, FloatingPointType>::BlasCopy(ctx, n * w, in, 1, out,
-                                                       1);
-  // max | calculate max of every sample vector out[i], store in tmp[i]
-  //       the out[i] now is store the data of in[i]
-  SoftmaxKernelUtil<device_type, FloatingPointType>::ForwardMax(ctx, n, w, out,
-                                                                tmp);
-  // sub | every element of out blob subract the max value of the same sample
-  SoftmaxKernelUtil<device_type, FloatingPointType>::Sub(ctx, n, w, out, tmp);
-  // exp | exponentiation every element
-  KernelUtil<device_type, FloatingPointType>::Exp(ctx, n * w, out, out);
-  // sum | calculate sum of every sample vector out[i], store in tmp[i]
-  //       the out[i] now is store the tmp data after exp
-  SoftmaxKernelUtil<device_type, FloatingPointType>::ForwardSum(ctx, n, w, out,
-                                                                tmp);
-  // div | every element of out[i] divided by the data of tmp[i] (the sum value)
-  for (int64_t i = 0; i < n; ++i) {
-    KernelUtil<device_type, FloatingPointType>::Div(ctx, w, out + i * w,
-                                                    tmp + i);
-  }
+  const FloatingPointType* in = in_blob->dptr<FloatingPointType>();
+  FloatingPointType* tmp = tmp_blob->mut_dptr<FloatingPointType>();
+  FloatingPointType* out = out_blob->mut_dptr<FloatingPointType>();
+  SoftmaxComputeProb<device_type, FloatingPointType>(ctx, n, w, in, tmp, out);
 }
 
 template<DeviceType device_type, typename FloatingPointType>
@@ -50,14 +28,10 @@ void SoftmaxKernel<device_type, FloatingPointType>::Backward(
   Blob* tmp_blob = BnInOp2BlobPtr(op()->SoleDtbn());
   const int64_t n = out_blob->shape().At(0);
   const int64_t w = out_blob->shape().At(1);
-  FloatingPointType* in_diff =
-      static_cast<FloatingPointType*>(in_diff_blob->mut_dptr());
-  FloatingPointType* tmp =
-      static_cast<FloatingPointType*>(tmp_blob->mut_dptr());
-  const FloatingPointType* out =
-      static_cast<const FloatingPointType*>(out_blob->dptr());
-  const FloatingPointType* out_diff =
-      static_cast<const FloatingPointType*>(out_diff_blob->dptr());
+  FloatingPointType* in_diff = in_diff_blob->mut_dptr<FloatingPointType>();
+  FloatingPointType* tmp = tmp_blob->mut_dptr<FloatingPointType>();
+  const FloatingPointType* out = out_blob->dptr<FloatingPointType>();
+  const FloatingPointType* out_diff = out_diff_blob->dptr<FloatingPointType>();
   // copy out_diff to in_diff
   KernelUtil<device_type, FloatingPointType>::BlasCopy(ctx, n * w, out_diff, 1,
                                                        in_diff, 1);
