@@ -17,15 +17,15 @@ void SALRMdUpdateKernel<device_type, FloatingPointType>::Forward(
   SALRMdUpdateKernelUtil<device_type, FloatingPointType>::UpdateLearningRate(
       ctx, learning_rate_blob->shape().elem_cnt(),
       static_cast<FloatingPointType>(delta),
-      static_cast<FloatingPointType*>(last_diff_flag_blob->mut_dptr()),
-      static_cast<const FloatingPointType*>(model_diff_blob->dptr()),
-      static_cast<FloatingPointType*>(learning_rate_blob->mut_dptr()));
+      last_diff_flag_blob->mut_dptr<FloatingPointType>(),
+      model_diff_blob->dptr<FloatingPointType>(),
+      learning_rate_blob->mut_dptr<FloatingPointType>());
 
   SALRMdUpdateKernelUtil<device_type, FloatingPointType>::UpdateModel(
       ctx, model_blob->shape().elem_cnt(),
-      static_cast<FloatingPointType*>(model_blob->mut_dptr()),
-      static_cast<const FloatingPointType*>(model_diff_blob->dptr()),
-      static_cast<const FloatingPointType*>(learning_rate_blob->mut_dptr()),
+      model_blob->mut_dptr<FloatingPointType>(),
+      model_diff_blob->dptr<FloatingPointType>(),
+      learning_rate_blob->mut_dptr<FloatingPointType>(),
       static_cast<FloatingPointType>(epsilon));
 }
 
