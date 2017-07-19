@@ -78,7 +78,7 @@ Kernel* BuildMultinomialLogisticLossKernel() {
   multinomial_logistic_loss_conf->set_prediction("mll/prediction");
   multinomial_logistic_loss_conf->set_label("mll/label");
   multinomial_logistic_loss_conf->set_loss("mll/loss");
-  auto multinomial_logistic_loss_op = OpMgr::Singleton()->ConstructOp(op_conf);
+  auto multinomial_logistic_loss_op = ConstructOp(op_conf);
   OperatorProto op_proto;
   multinomial_logistic_loss_op->ToProto(&op_proto);
   auto multinomial_logistic_loss_kernel =
