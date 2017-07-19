@@ -5,18 +5,13 @@ namespace oneflow {
 
 namespace {
 
-uint32_t NewRandomSeed() {
-  static std::mt19937 gen{std::random_device{}()};
-  return gen();
-}
-
 template<typename FloatingPointType>
 void RngUniform(const int64_t elem_cnt, const FloatingPointType min,
                 const FloatingPointType max, FloatingPointType* dptr) {
   CHECK_GE(elem_cnt, 0);
   CHECK(dptr);
   CHECK_LE(min, max);
-  std::mt19937 generator(NewRandomSeed());
+  std::mt19937 generator(KernelUtil<DeviceType::kCPU, FloatingPointType>::NewRandomSeed());
   std::uniform_real_distribution<FloatingPointType> random_distribution(
       min, std::nextafter(max, std::numeric_limits<FloatingPointType>::max()));
 
@@ -31,7 +26,7 @@ void RngGaussian(const int64_t elem_cnt, const FloatingPointType mean,
   CHECK_GE(elem_cnt, 0);
   CHECK(dptr);
   CHECK_GT(std, 0.0);
-  std::mt19937 generator(NewRandomSeed());
+  std::mt19937 generator(KernelUtil<DeviceType::kCPU, FloatingPointType>::NewRandomSeed());
   std::normal_distribution<FloatingPointType> random_distribution(mean, std);
 
   for (int64_t i = 0; i < elem_cnt; ++i) {
@@ -46,6 +41,11 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelUtil);
   KernelUtil() = delete;
+
+  static uint32_t NewRandomSeed() {
+    static std::mt19937 gen{std::random_device{}()};
+    return gen();
+  }
 
   static void Memcpy(
       const KernelCtx& ctx, void* dst, const void* src, size_t sz,

@@ -63,15 +63,15 @@ void PoolingKernel<device_type, FloatingPointType>::Forward(
           hend = std::min(hend, in_blob->shape().At(2));
           wend = std::min(wend, in_blob->shape().At(3));
           const int64_t out_index = out_h * out_blob->shape().At(3) + out_w;
-          PoolingMethodForwardFunc_(in_dptr, in_blob->shape().At(2),
+          PoolingMethodForwardFunc_(ctx, in_dptr, in_blob->shape().At(2),
                                     in_blob->shape().At(3), pool_size, hstart,
                                     wstart, hend, wend, out_index, out_dptr,
                                     mask_dptr);
         }
       }
-      in_dptr += in_blob->shape().At(2) * in_blob->shape().At(3);
-      out_dptr += out_blob->shape().At(2) * out_blob->shape().At(3);
-      mask_dptr += out_blob->shape().At(2) * out_blob->shape().At(3);
+      in_dptr += in_blob->shape().Count(2);
+      out_dptr += out_blob->shape().Count(2);
+      mask_dptr += out_blob->shape().Count(2);
     }
   }
 }
@@ -116,15 +116,15 @@ void PoolingKernel<device_type, FloatingPointType>::Backward(
           const int64_t out_diff_index =
               out_h * out_diff_blob->shape().At(3) + out_w;
           PoolingMethodBackwardFunc_(
-              out_diff_dptr, mask_dptr, pool_size, out_diff_index,
+              ctx, out_diff_dptr, mask_dptr, pool_size, out_diff_index,
               in_diff_blob->shape().At(2), in_diff_blob->shape().At(3), hstart,
               wstart, hend, wend, in_diff_dptr);
         }
       }
       out_diff_dptr +=
-          out_diff_blob->shape().At(2) * out_diff_blob->shape().At(3);
-      mask_dptr += out_diff_blob->shape().At(2) * out_diff_blob->shape().At(3);
-      in_diff_dptr += in_diff_blob->shape().At(2) * in_diff_blob->shape().At(3);
+          out_diff_blob->shape().Count(2);
+      mask_dptr += out_diff_blob->shape().Count(2);
+      in_diff_dptr += in_diff_blob->shape().Count(2);
     }
   }
 }
@@ -135,87 +135,100 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
   OF_DISALLOW_COPY_AND_MOVE(PoolingKernelUtil);
   PoolingKernelUtil() = delete;
 
-  static void RangeMaxQuery(const FloatingPointType* in_dptr,
+  static void RangeMaxQuery(const KernelCtx& ctx, const FloatingPointType* in_dptr,
                             const int64_t in_height, const int64_t in_width,
                             const int64_t hstart, const int64_t wstart,
                             const int64_t hend, const int64_t wend,
                             const int64_t pool_size, const int64_t out_index,
                             FloatingPointType* out_dptr, int64_t* mask_dptr) {
-    out_dptr[out_index] = in_dptr[hstart * in_width + wstart];
-    mask_dptr[out_index] = hstart * in_width + wstart;
-    for (int64_t h = hstart; h < hend; ++h) {
-      for (int64_t w = wstart; w < wend; ++w) {
-        const int64_t index = h * in_width + w;
-        if (in_dptr[index] > out_dptr[out_index]) {
-          out_dptr[out_index] = in_dptr[index];
-          mask_dptr[out_index] = index;
+    ctx.device_ctx->cpu_stream()->SendWork([=]() mutable {
+      out_dptr[out_index] = in_dptr[hstart * in_width + wstart];
+      mask_dptr[out_index] = hstart * in_width + wstart;
+      for (int64_t h = hstart; h < hend; ++h) {
+        for (int64_t w = wstart; w < wend; ++w) {
+          const int64_t index = h * in_width + w;
+          if (in_dptr[index] > out_dptr[out_index]) {
+            out_dptr[out_index] = in_dptr[index];
+            mask_dptr[out_index] = index;
+          }
         }
       }
-    }
+    });
   }
 
-  static void RangeAveQuery(const FloatingPointType* in_dptr,
+  static void RangeAveQuery(const KernelCtx& ctx, const FloatingPointType* in_dptr,
                             const int64_t in_height, const int64_t in_width,
                             const int64_t hstart, const int64_t wstart,
                             const int64_t hend, const int64_t wend,
                             const int64_t pool_size, const int64_t out_index,
                             FloatingPointType* out_dptr, int64_t* mask_dptr) {
-    out_dptr[out_index] = 0;
-    for (int64_t h = hstart; h < hend; ++h) {
-      for (int64_t w = wstart; w < wend; ++w) {
-        const int64_t index = h * in_width + w;
-        out_dptr[out_index] += in_dptr[index];
+    ctx.device_ctx->cpu_stream()->SendWork([=]() mutable {
+      out_dptr[out_index] = 0;
+      for (int64_t h = hstart; h < hend; ++h) {
+        for (int64_t w = wstart; w < wend; ++w) {
+          const int64_t index = h * in_width + w;
+          out_dptr[out_index] += in_dptr[index];
+        }
       }
-    }
-    out_dptr[out_index] /= pool_size;
+      out_dptr[out_index] /= pool_size;
+    });
   }
 
-  static void RangeStoQuery(const FloatingPointType* in_dptr,
+  static void RangeStoQuery(const KernelCtx& ctx, const FloatingPointType* in_dptr,
                             const int64_t in_height, const int64_t in_width,
                             const int64_t hstart, const int64_t wstart,
                             const int64_t hend, const int64_t wend,
                             const int64_t pool_size, const int64_t out_index,
                             FloatingPointType* out_dptr, int64_t* mask_dptr) {
-    const int64_t index = (hstart + random()) * in_width + (wstart + random());
-    out_dptr[out_index] = in_dptr[index];
-    mask_dptr[out_index] = index;
+    ctx.device_ctx->cpu_stream()->SendWork([=]() mutable {
+      std::mt19937 generator(KernelUtil<device_type, FloatingPointType>::NewRandomSeed());
+      const int64_t index = (hstart + (generator() % (hend - hstart))) * in_width + (wstart + (generator() % (wend - wstart)));
+      out_dptr[out_index] = in_dptr[index];
+      mask_dptr[out_index] = index;
+    });
   }
 
-  static void PoolingMaxBp(const FloatingPointType* out_diff_dptr,
+  static void PoolingMaxBp(const KernelCtx& ctx, const FloatingPointType* out_diff_dptr,
                            const int64_t* mask_dptr, const int64_t pool_size,
                            const int64_t out_diff_index,
                            const int64_t in_height, const int64_t in_width,
                            const int64_t hstart, const int64_t wstart,
                            const int64_t hend, const int64_t wend,
                            FloatingPointType* in_diff_dptr) {
-    const int64_t in_diff_index = mask_dptr[out_diff_index];
-    in_diff_dptr[in_diff_index] += out_diff_dptr[out_diff_index];
+    ctx.device_ctx->cpu_stream()->SendWork([=]() mutable {
+      const int64_t in_diff_index = mask_dptr[out_diff_index];
+      in_diff_dptr[in_diff_index] += out_diff_dptr[out_diff_index];
+    });
   }
 
-  static void PoolingAveBp(const FloatingPointType* out_diff_dptr,
+  static void PoolingAveBp(const KernelCtx& ctx, const FloatingPointType* out_diff_dptr,
                            const int64_t* mask_dptr, const int64_t pool_size,
                            const int64_t out_diff_index,
                            const int64_t in_height, const int64_t in_width,
                            const int64_t hstart, const int64_t wstart,
                            const int64_t hend, const int64_t wend,
                            FloatingPointType* in_diff_dptr) {
-    for (int h = hstart; h < hend; ++h) {
-      for (int w = wstart; w < wend; ++w) {
-        in_diff_dptr[h * in_width + w] +=
-            out_diff_dptr[out_diff_index] / pool_size;
+    ctx.device_ctx->cpu_stream()->SendWork([=]() mutable {
+      for (int h = hstart; h < hend; ++h) {
+        for (int w = wstart; w < wend; ++w) {
+          in_diff_dptr[h * in_width + w] +=
+              out_diff_dptr[out_diff_index] / pool_size;
+        }
       }
-    }
+    });
   }
 
-  static void PoolingStoBp(const FloatingPointType* out_diff_dptr,
+  static void PoolingStoBp(const KernelCtx& ctx, const FloatingPointType* out_diff_dptr,
                            const int64_t* mask_dptr, const int64_t pool_size,
                            const int64_t out_diff_index,
                            const int64_t in_height, const int64_t in_width,
                            const int64_t hstart, const int64_t wstart,
                            const int64_t hend, const int64_t wend,
                            FloatingPointType* in_diff_dptr) {
-    const int64_t in_diff_index = mask_dptr[out_diff_index];
-    in_diff_dptr[in_diff_index] += out_diff_dptr[out_diff_index];
+    ctx.device_ctx->cpu_stream()->SendWork([=]() mutable {
+      const int64_t in_diff_index = mask_dptr[out_diff_index];
+      in_diff_dptr[in_diff_index] += out_diff_dptr[out_diff_index];
+    });
   }
 };
 

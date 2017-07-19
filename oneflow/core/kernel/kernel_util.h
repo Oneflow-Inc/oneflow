@@ -15,6 +15,9 @@ class KernelUtil final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelUtil);
   KernelUtil() = delete;
+  
+  // generator random seed
+  static uint32_t NewRandomSeed();
 
   // memory copy
   static void Memcpy(

@@ -92,7 +92,6 @@ __global__ void PoolingStoBpGpuKernel(
 
 }  // namespace
 
-// TODO(shiyuan) kernel_nums and cuda_stream
 template<typename FloatingPointType>
 class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
  public:
@@ -106,7 +105,8 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
                             const int64_t pool_size, const int64_t out_index,
                             FloatingPointType* out_dptr, int64_t* mask_dptr) {
     RangeMaxQueryGpuKernel<FloatingPointType>
-        <<<BlocksNum4ThreadsNum(1), kCudaThreadsNumPerBlock>>>(
+        <<<BlocksNum4ThreadsNum(1), kCudaThreadsNumPerBlock, 0,
+           ctx.device_ctx->cuda_stream()>>>(
             in_dptr, in_height, in_width, hstart, wstart, hend, wend, pool_size,
             out_index, out_dptr, mask_dptr);
   }
@@ -118,7 +118,8 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
                             const int64_t pool_size, const int64_t out_index,
                             FloatingPointType* out_dptr, int64_t* mask_dptr) {
     RangeAveQueryGpuKernel<FloatingPointType>
-        <<<BlocksNum4ThreadsNum(1), kCudaThreadsNumPerBlock>>>(
+        <<<BlocksNum4ThreadsNum(1), kCudaThreadsNumPerBlock, 0,
+           ctx.device_ctx->cuda_stream()>>>(
             in_dptr, in_height, in_width, hstart, wstart, hend, wend, pool_size,
             out_index, out_dptr, mask_dptr);
   }
@@ -130,7 +131,8 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
                             const int64_t pool_size, const int64_t out_index,
                             FloatingPointType* out_dptr, int64_t* mask_dptr) {
     RangeStoQueryGpuKernel<FloatingPointType>
-        <<<BlocksNum4ThreadsNum(1), kCudaThreadsNumPerBlock>>>(
+        <<<BlocksNum4ThreadsNum(1), kCudaThreadsNumPerBlock, 0,
+           ctx.device_ctx->cuda_stream()>>>(
             in_dptr, in_height, in_width, hstart, wstart, hend, wend, pool_size,
             out_index, out_dptr, mask_dptr);
   }
@@ -143,7 +145,8 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
                            const int64_t hend, const int64_t wend,
                            FloatingPointType* in_diff_dptr) {
     PoolingMaxBpGpuKernel<FloatingPointType>
-        <<<BlocksNum4ThreadsNum(1), kCudaThreadsNumPerBlock>>>(
+        <<<BlocksNum4ThreadsNum(1), kCudaThreadsNumPerBlock, 0,
+           ctx.device_ctx->cuda_stream()>>>(
             out_diff_dptr, mask_dptr, pool_size, out_diff_index, in_height,
             in_width, hstart, wstart, hend, wend, in_diff_dptr);
   }
@@ -156,7 +159,8 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
                            const int64_t hend, const int64_t wend,
                            FloatingPointType* in_diff_dptr) {
     PoolingAveBpGpuKernel<FloatingPointType>
-        <<<BlocksNum4ThreadsNum(1), kCudaThreadsNumPerBlock>>>(
+        <<<BlocksNum4ThreadsNum(1), kCudaThreadsNumPerBlock, 0,
+           ctx.device_ctx->cuda_stream()>>>(
             out_diff_dptr, mask_dptr, pool_size, out_diff_index, in_height,
             in_width, hstart, wstart, hend, wend, in_diff_dptr);
   }
@@ -169,7 +173,8 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
                            const int64_t hend, const int64_t wend,
                            FloatingPointType* in_diff_dptr) {
     PoolingStoBpGpuKernel<FloatingPointType>
-        <<<BlocksNum4ThreadsNum(1), kCudaThreadsNumPerBlock>>>(
+        <<<BlocksNum4ThreadsNum(1), kCudaThreadsNumPerBlock, 0,
+           ctx.device_ctx->cuda_stream()>>>(
             out_diff_dptr, mask_dptr, pool_size, out_diff_index, in_height,
             in_width, hstart, wstart, hend, wend, in_diff_dptr);
   }

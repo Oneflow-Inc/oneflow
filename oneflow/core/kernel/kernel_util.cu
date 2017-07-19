@@ -32,6 +32,10 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelUtil);
   KernelUtil() = delete;
+  
+  static uint32_t NewRandomSeed() {
+    TODO();
+  }
 
   static void Memcpy(const KernelCtx& ctx, void* dst, const void* src,
                      size_t sz, cudaMemcpyKind kind) {
