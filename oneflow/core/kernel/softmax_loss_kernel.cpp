@@ -15,16 +15,11 @@ void SoftmaxLossKernel<device_type, FloatingPointType>::Forward(
   Blob* loss_blob = BnInOp2BlobPtr("loss");
   const int64_t n = in_blob->shape().At(0);
   const int64_t w = in_blob->shape().At(1);
-  const FloatingPointType* in =
-      static_cast<const FloatingPointType*>(in_blob->dptr());
-  const FloatingPointType* label =
-      static_cast<const FloatingPointType*>(label_blob->dptr());
-  FloatingPointType* tmp =
-      static_cast<FloatingPointType*>(tmp_blob->mut_dptr());
-  FloatingPointType* prob =
-      static_cast<FloatingPointType*>(prob_blob->mut_dptr());
-  FloatingPointType* loss =
-      static_cast<FloatingPointType*>(loss_blob->mut_dptr());
+  const FloatingPointType* in = (in_blob->dptr<FloatingPointType>());
+  const FloatingPointType* label = (label_blob->dptr<FloatingPointType>());
+  FloatingPointType* tmp = (tmp_blob->mut_dptr<FloatingPointType>());
+  FloatingPointType* prob = (prob_blob->mut_dptr<FloatingPointType>());
+  FloatingPointType* loss = (loss_blob->mut_dptr<FloatingPointType>());
   // forward
   SoftmaxComputeProb<device_type, FloatingPointType>(ctx, n, w, in, tmp, prob);
   SoftmaxLossKernelUtil<device_type, FloatingPointType>::ComputeLoss(

@@ -37,10 +37,9 @@ void DataLoaderKernel<DeviceType::kCPU, FloatingPointType>::Forward(
 
   kernel_ctx.device_ctx->cpu_stream()->SendWork([=]() {
     int64_t piece_size = label_blob->shape().elem_cnt();
-    FloatingPointType* label_dptr =
-        static_cast<FloatingPointType*>(label_blob->mut_dptr());
+    FloatingPointType* label_dptr = label_blob->mut_dptr<FloatingPointType>();
     FloatingPointType* feature_dptr =
-        static_cast<FloatingPointType*>(feature_blob->mut_dptr());
+        feature_blob->mut_dptr<FloatingPointType>();
 
     std::string line;
     for (int64_t i = 0; i != piece_size; ++i) {

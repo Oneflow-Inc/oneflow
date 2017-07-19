@@ -3,6 +3,7 @@
 
 #include "oneflow/core/blas/cblas_template.h"
 #include "oneflow/core/blas/cublas_template.h"
+#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/operator/op_conf.pb.h"
@@ -52,7 +53,6 @@ class KernelUtil final {
                        const FloatingPointType alpha, FloatingPointType* x,
                        const int incx);
   // max(x)
-  // NO template specialization for GPU
   static void Max(const KernelCtx& ctx, const int64_t n,
                   const FloatingPointType* x, FloatingPointType* max_ptr);
 
@@ -61,7 +61,6 @@ class KernelUtil final {
                   const FloatingPointType* x, FloatingPointType* y);
 
   // sum(x)
-  // NO template specialization for GPU
   static void Sum(const KernelCtx& ctx, const int64_t n,
                   const FloatingPointType* x, FloatingPointType* sum_ptr);
 
@@ -98,6 +97,15 @@ class KernelUtil final {
   // Generate random number of specific distribution
   static void Fill(const FillConf& fill_conf, Blob* blob);
   static void Fill(const KernelCtx& ctx, const FillConf& fill_conf, Blob* blob);
+
+  // detect fill conf
+  static void FillWithProperConf(const KernelCtx& ctx,
+                                 const FillConf* fill_conf, Blob* blob) {
+    if (fill_conf == nullptr) {
+      fill_conf = JobDesc::Singleton()->default_fill_conf();
+    }
+    Fill(ctx, *fill_conf, blob);
+  }
 };
 
 }  // namespace oneflow
