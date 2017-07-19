@@ -10,14 +10,14 @@ void ConcatKernel<device_type, FloatingPointType>::Forward(
   if (ibns.size() == 0) { return; }
   Blob* out_blob = BnInOp2BlobPtr(op()->SoleObn());
   const int32_t concat_axis = op()->op_conf().concat_conf().axis();
-  int32_t pos_concat_axis = concat_axis;
-  if (concat_axis < 0) {
-    pos_concat_axis = out_blob->shape().NumAxes() + concat_axis;
+  const int64_t concat_element_size = out_blob->shape().Count(concat_axis + 1);
+  int64_t concat_num_each_blob = 0;
+  if (concat_axis >= 0) {
+    concat_num_each_blob = out_blob->shape().Count(0, concat_axis);
+  } else {
+    const int64_t num_axes = out_blob->shape().NumAxes();
+    concat_num_each_blob = out_blob->shape().Count(-num_axes, concat_axis);
   }
-  const int64_t concat_num_each_blob =
-      out_blob->shape().Count(0, pos_concat_axis);
-  const int64_t concat_element_size =
-      out_blob->shape().Count(pos_concat_axis + 1);
   const int64_t out_concat_axis_size = out_blob->shape().At(concat_axis);
   FloatingPointType* obn_dptr =
       static_cast<FloatingPointType*>(out_blob->mut_dptr());
@@ -55,14 +55,14 @@ void ConcatKernel<device_type, FloatingPointType>::Backward(
   const Blob* odbn_blob = BnInOp2BlobPtr(op()->SoleOdbn());
   const std::vector<std::string>& idbns = op()->input_diff_bns();
   const int32_t split_axis = op()->op_conf().concat_conf().axis();
-  int32_t pos_split_axis = split_axis;
-  if (split_axis < 0) {
-    pos_split_axis = odbn_blob->shape().NumAxes() + split_axis;
+  const int64_t split_element_size = odbn_blob->shape().Count(split_axis + 1);
+  int64_t split_num_each_blob = 0;
+  if (split_axis >= 0) {
+    split_num_each_blob = odbn_blob->shape().Count(0, split_axis);
+  } else {
+    const int64_t num_axes = odbn_blob->shape().NumAxes();
+    split_num_each_blob = odbn_blob->shape().Count(-num_axes, split_axis);
   }
-  const int64_t split_num_each_blob =
-      odbn_blob->shape().Count(0, pos_split_axis);
-  const int64_t split_element_size =
-      odbn_blob->shape().Count(pos_split_axis + 1);
   const int64_t out_diff_split_axis_size = odbn_blob->shape().At(split_axis);
   const FloatingPointType* odbn_dptr =
       static_cast<const FloatingPointType*>(odbn_blob->dptr());
