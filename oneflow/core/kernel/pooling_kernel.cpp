@@ -34,46 +34,21 @@ template<DeviceType device_type, typename FloatingPointType>
 void PoolingKernel<device_type, FloatingPointType>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  auto pooling_conf = op()->op_conf().pooling_conf();
+  
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
   Blob* mask_blob = BnInOp2Blob("idx");
+  
   CHECK((in_blob->shape().NumAxes() == 4)
         && (out_blob->shape().NumAxes() == 4));
-  const FloatingPointType* in_dptr =
-      static_cast<const FloatingPointType*>(in_blob->dptr());
-  FloatingPointType* out_dptr =
-      static_cast<FloatingPointType*>(out_blob->mut_dptr());
-  int64_t* mask_dptr = static_cast<int64_t*>(mask_blob->mut_dptr());
-
-  auto pooling_conf = op()->op_conf().pooling_conf();
-
-  for (int64_t n = 0; n < out_blob->shape().At(0); ++n) {
-    for (int64_t c = 0; c < out_blob->shape().At(1); ++c) {
-      for (int64_t out_h = 0; out_h < out_blob->shape().At(2); ++out_h) {
-        for (int64_t out_w = 0; out_w < out_blob->shape().At(3); ++out_w) {
-          int64_t hstart = out_h * pooling_conf.stride(0) - pooling_conf.pad(0);
-          int64_t wstart = out_w * pooling_conf.stride(1) - pooling_conf.pad(1);
-          int64_t hend = std::min(hstart + pooling_conf.kernel_size(0),
-                                  in_blob->shape().At(2) + pooling_conf.pad(0));
-          int64_t wend = std::min(wstart + pooling_conf.kernel_size(1),
-                                  in_blob->shape().At(3) + pooling_conf.pad(1));
-          int64_t pool_size = (hend - hstart) * (wend - wstart);
-          hstart = std::max(hstart, static_cast<int64_t>(0));
-          wstart = std::max(wstart, static_cast<int64_t>(0));
-          hend = std::min(hend, in_blob->shape().At(2));
-          wend = std::min(wend, in_blob->shape().At(3));
-          const int64_t out_index = out_h * out_blob->shape().At(3) + out_w;
-          PoolingMethodForwardFunc_(ctx, in_dptr, in_blob->shape().At(2),
-                                    in_blob->shape().At(3), pool_size, hstart,
-                                    wstart, hend, wend, out_index, out_dptr,
-                                    mask_dptr);
-        }
-      }
-      in_dptr += in_blob->shape().Count(2);
-      out_dptr += out_blob->shape().Count(2);
-      mask_dptr += out_blob->shape().Count(2);
-    }
-  }
+  
+  PoolingKernelUtil<device_type, FloatingPointType>::PoolingForward(
+      ctx, in_blob, out_blob, mask_blob,
+      pooling_conf.kernel_size(0), pooling_conf.kernel_size(1),
+      pooling_conf.pad(0), pooling_conf.pad(1),
+      pooling_conf.stride(0), pooling_conf.stride(1),
+      PoolingMethodForwardFunc_);
 }
 
 template<DeviceType device_type, typename FloatingPointType>
@@ -82,51 +57,20 @@ void PoolingKernel<device_type, FloatingPointType>::Backward(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (BnInOp2Blob("in_diff") == nullptr) { return; }
 
+  auto pooling_conf = op()->op_conf().pooling_conf();
+  
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   const Blob* mask_blob = BnInOp2Blob("idx");
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
   CHECK((in_diff_blob->shape().NumAxes() == 4)
         && (out_diff_blob->shape().NumAxes() == 4));
 
-  const FloatingPointType* out_diff_dptr =
-      static_cast<const FloatingPointType*>(out_diff_blob->dptr());
-  const int64_t* mask_dptr = static_cast<const int64_t*>(mask_blob->dptr());
-  FloatingPointType* in_diff_dptr =
-      static_cast<FloatingPointType*>(in_diff_blob->mut_dptr());
-
-  auto pooling_conf = op()->op_conf().pooling_conf();
-
-  for (int64_t n = 0; n < out_diff_blob->shape().At(0); ++n) {
-    for (int64_t c = 0; c < out_diff_blob->shape().At(1); ++c) {
-      for (int64_t out_h = 0; out_h < out_diff_blob->shape().At(2); ++out_h) {
-        for (int64_t out_w = 0; out_w < out_diff_blob->shape().At(3); ++out_w) {
-          int64_t hstart = out_h * pooling_conf.stride(0) - pooling_conf.pad(0);
-          int64_t wstart = out_w * pooling_conf.stride(1) - pooling_conf.pad(1);
-          int64_t hend =
-              std::min(hstart + pooling_conf.kernel_size(0),
-                       in_diff_blob->shape().At(2) + pooling_conf.pad(0));
-          int64_t wend =
-              std::min(wstart + pooling_conf.kernel_size(1),
-                       in_diff_blob->shape().At(3) + pooling_conf.pad(1));
-          int64_t pool_size = (hend - hstart) * (wend - wstart);
-          hstart = std::max(hstart, static_cast<int64_t>(0));
-          wstart = std::max(wstart, static_cast<int64_t>(0));
-          hend = std::min(hend, in_diff_blob->shape().At(2));
-          wend = std::min(wend, in_diff_blob->shape().At(3));
-          const int64_t out_diff_index =
-              out_h * out_diff_blob->shape().At(3) + out_w;
-          PoolingMethodBackwardFunc_(
-              ctx, out_diff_dptr, mask_dptr, pool_size, out_diff_index,
-              in_diff_blob->shape().At(2), in_diff_blob->shape().At(3), hstart,
-              wstart, hend, wend, in_diff_dptr);
-        }
-      }
-      out_diff_dptr +=
-          out_diff_blob->shape().Count(2);
-      mask_dptr += out_diff_blob->shape().Count(2);
-      in_diff_dptr += in_diff_blob->shape().Count(2);
-    }
-  }
+  PoolingKernelUtil<device_type, FloatingPointType>::PoolingBackward(
+      ctx, out_diff_blob, mask_blob, in_diff_blob,
+      pooling_conf.kernel_size(0), pooling_conf.kernel_size(1),
+      pooling_conf.pad(0), pooling_conf.pad(1),
+      pooling_conf.stride(0), pooling_conf.stride(1),
+      PoolingMethodBackwardFunc_)
 }
 
 template<typename FloatingPointType>
@@ -141,7 +85,6 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
                             const int64_t hend, const int64_t wend,
                             const int64_t pool_size, const int64_t out_index,
                             FloatingPointType* out_dptr, int64_t* mask_dptr) {
-    ctx.device_ctx->cpu_stream()->SendWork([=]() mutable {
       out_dptr[out_index] = in_dptr[hstart * in_width + wstart];
       mask_dptr[out_index] = hstart * in_width + wstart;
       for (int64_t h = hstart; h < hend; ++h) {
@@ -153,7 +96,6 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
           }
         }
       }
-    });
   }
 
   static void RangeAveQuery(const KernelCtx& ctx, const FloatingPointType* in_dptr,
@@ -162,7 +104,6 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
                             const int64_t hend, const int64_t wend,
                             const int64_t pool_size, const int64_t out_index,
                             FloatingPointType* out_dptr, int64_t* mask_dptr) {
-    ctx.device_ctx->cpu_stream()->SendWork([=]() mutable {
       out_dptr[out_index] = 0;
       for (int64_t h = hstart; h < hend; ++h) {
         for (int64_t w = wstart; w < wend; ++w) {
@@ -171,7 +112,6 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
         }
       }
       out_dptr[out_index] /= pool_size;
-    });
   }
 
   static void RangeStoQuery(const KernelCtx& ctx, const FloatingPointType* in_dptr,
@@ -180,12 +120,10 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
                             const int64_t hend, const int64_t wend,
                             const int64_t pool_size, const int64_t out_index,
                             FloatingPointType* out_dptr, int64_t* mask_dptr) {
-    ctx.device_ctx->cpu_stream()->SendWork([=]() mutable {
       std::mt19937 generator(KernelUtil<device_type, FloatingPointType>::NewRandomSeed());
       const int64_t index = (hstart + (generator() % (hend - hstart))) * in_width + (wstart + (generator() % (wend - wstart)));
       out_dptr[out_index] = in_dptr[index];
       mask_dptr[out_index] = index;
-    });
   }
 
   static void PoolingMaxBp(const KernelCtx& ctx, const FloatingPointType* out_diff_dptr,
@@ -195,10 +133,8 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
                            const int64_t hstart, const int64_t wstart,
                            const int64_t hend, const int64_t wend,
                            FloatingPointType* in_diff_dptr) {
-    ctx.device_ctx->cpu_stream()->SendWork([=]() mutable {
       const int64_t in_diff_index = mask_dptr[out_diff_index];
       in_diff_dptr[in_diff_index] += out_diff_dptr[out_diff_index];
-    });
   }
 
   static void PoolingAveBp(const KernelCtx& ctx, const FloatingPointType* out_diff_dptr,
@@ -208,14 +144,12 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
                            const int64_t hstart, const int64_t wstart,
                            const int64_t hend, const int64_t wend,
                            FloatingPointType* in_diff_dptr) {
-    ctx.device_ctx->cpu_stream()->SendWork([=]() mutable {
       for (int h = hstart; h < hend; ++h) {
         for (int w = wstart; w < wend; ++w) {
           in_diff_dptr[h * in_width + w] +=
               out_diff_dptr[out_diff_index] / pool_size;
         }
       }
-    });
   }
 
   static void PoolingStoBp(const KernelCtx& ctx, const FloatingPointType* out_diff_dptr,
@@ -225,9 +159,106 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
                            const int64_t hstart, const int64_t wstart,
                            const int64_t hend, const int64_t wend,
                            FloatingPointType* in_diff_dptr) {
-    ctx.device_ctx->cpu_stream()->SendWork([=]() mutable {
       const int64_t in_diff_index = mask_dptr[out_diff_index];
       in_diff_dptr[in_diff_index] += out_diff_dptr[out_diff_index];
+  }
+
+  static void PoolingForward(const KernelCtx& ctx, const Blob* in_blob,
+                             Blob* out_blob, Blob* mask_blob,
+                             const int64_t kernel_h, const int64_t kernel_w,
+                             const int64_t pad_h, const int64_t pad_w,
+                             const int64_t stride_h, const int64_t stride_w,
+                             std::function<void(
+                                const FloatingPointType*, const int64_t,
+                                const int64_t, const int64_t, const int64_t,
+                                const int64_t, const int64_t, const int64_t,
+                                const int64_t, FloatingPointType*,
+                                int64_t*)> KernelForwardMethod) {
+    ctx.device_ctx->cpu_stream()->SendWork([=]() mutable {  
+      const FloatingPointType* in_dptr =
+          static_cast<const FloatingPointType*>(in_blob->dptr());
+      FloatingPointType* out_dptr =
+          static_cast<FloatingPointType*>(out_blob->mut_dptr());
+      int64_t* mask_dptr = static_cast<int64_t*>(mask_blob->mut_dptr());
+
+      for (int64_t n = 0; n < out_blob->shape().At(0); ++n) {
+        for (int64_t c = 0; c < out_blob->shape().At(1); ++c) {
+          for (int64_t out_h = 0; out_h < out_blob->shape().At(2); ++out_h) {
+            for (int64_t out_w = 0; out_w < out_blob->shape().At(3); ++out_w) {
+              int64_t hstart = out_h * stride_h - pad_h;
+              int64_t wstart = out_w * stride_w - pad_w;
+              int64_t hend = std::min(hstart + kernel_h,
+                                      in_blob->shape().At(2) + pad_h);
+              int64_t wend = std::min(wstart + kernel_w,
+                                      in_blob->shape().At(3) + pad_w);
+              int64_t pool_size = (hend - hstart) * (wend - wstart);
+              hstart = std::max(hstart, static_cast<int64_t>(0));
+              wstart = std::max(wstart, static_cast<int64_t>(0));
+              hend = std::min(hend, in_blob->shape().At(2));
+              wend = std::min(wend, in_blob->shape().At(3));
+              const int64_t out_index = out_h * out_blob->shape().At(3) + out_w;
+              KernelForwardMethod(ctx, in_dptr, in_blob->shape().At(2),
+                                  in_blob->shape().At(3), pool_size, hstart,
+                                  wstart, hend, wend, out_index, out_dptr,
+                                  mask_dptr);
+            }
+          }
+          in_dptr += in_blob->shape().Count(2);
+          out_dptr += out_blob->shape().Count(2);
+          mask_dptr += out_blob->shape().Count(2);
+        }
+      }
+    });
+  }
+
+  static void PoolingBackward(const KernelCtx& ctx, const Blob* out_diff_blob,
+                              const Blob* mask_blob, Blob* in_diff_blob,
+                              const int64_t kernel_h, const int64_t kernel_w,
+                              const int64_t pad_h, const int64_t pad_w,
+                              const int64_t stride_h, const int64_t stride_w,
+                              std::function<void(
+                                  const FloatingPointType*, const int64_t*,
+                                  const int64_t, const int64_t, const int64_t,
+                                  const int64_t, const int64_t, const int64_t,
+                                  const int64_t, const int64_t,
+                                  FloatingPointType*)> KernelBackwardMethod) {
+    ctx.device_ctx->cpu_stream()->SendWork([=]() mutable {
+      const FloatingPointType* out_diff_dptr =
+          static_cast<const FloatingPointType*>(out_diff_blob->dptr());
+      const int64_t* mask_dptr = static_cast<const int64_t*>(mask_blob->dptr());
+      FloatingPointType* in_diff_dptr =
+          static_cast<FloatingPointType*>(in_diff_blob->mut_dptr());
+
+      for (int64_t n = 0; n < out_diff_blob->shape().At(0); ++n) {
+        for (int64_t c = 0; c < out_diff_blob->shape().At(1); ++c) {
+          for (int64_t out_h = 0; out_h < out_diff_blob->shape().At(2); ++out_h) {
+            for (int64_t out_w = 0; out_w < out_diff_blob->shape().At(3); ++out_w) {
+              int64_t hstart = out_h * pooling_conf.stride(0) - pooling_conf.pad(0);
+              int64_t wstart = out_w * pooling_conf.stride(1) - pooling_conf.pad(1);
+              int64_t hend =
+                  std::min(hstart + pooling_conf.kernel_size(0),
+                           in_diff_blob->shape().At(2) + pooling_conf.pad(0));
+              int64_t wend =
+                  std::min(wstart + pooling_conf.kernel_size(1),
+                           in_diff_blob->shape().At(3) + pooling_conf.pad(1));
+              int64_t pool_size = (hend - hstart) * (wend - wstart);
+              hstart = std::max(hstart, static_cast<int64_t>(0));
+              wstart = std::max(wstart, static_cast<int64_t>(0));
+              hend = std::min(hend, in_diff_blob->shape().At(2));
+              wend = std::min(wend, in_diff_blob->shape().At(3));
+              const int64_t out_diff_index =
+                  out_h * out_diff_blob->shape().At(3) + out_w;
+              PoolingMethodBackwardFunc_(
+                  ctx, out_diff_dptr, mask_dptr, pool_size, out_diff_index,
+                  in_diff_blob->shape().At(2), in_diff_blob->shape().At(3), hstart,
+                  wstart, hend, wend, in_diff_dptr);
+            }
+          }
+          out_diff_dptr += out_diff_blob->shape().Count(2);
+          mask_dptr += out_diff_blob->shape().Count(2);
+          in_diff_dptr += in_diff_blob->shape().Count(2);
+        }
+      }
     });
   }
 };
