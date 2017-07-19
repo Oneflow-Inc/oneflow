@@ -93,25 +93,14 @@ void InnerProductKernel<device_type, FloatingPointType>::
         std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto ip_conf = op()->op_conf().innerproduct_conf();
 
-  const FillConf* weight_fill_conf;
-  if (ip_conf.has_weight_fill()) {
-    weight_fill_conf = &ip_conf.weight_fill();
-  } else {
-    weight_fill_conf = JobDesc::Singleton()->default_fill_conf();
-  }
-  CHECK(weight_fill_conf);
-  KernelUtil<device_type, FloatingPointType>::Fill(ctx, *weight_fill_conf,
-                                                   BnInOp2Blob("weight"));
+  const FillConf* weight_fill_conf = &ip_conf.weight_fill();
+  KernelUtil<device_type, FloatingPointType>::FillWithProperConf(
+      ctx, weight_fill_conf, BnInOp2Blob("weight"));
+
   if (ip_conf.has_bias_term()) {
-    const FillConf* bias_fill_conf;
-    if (ip_conf.has_bias_fill()) {
-      bias_fill_conf = &ip_conf.bias_fill();
-    } else {
-      bias_fill_conf = JobDesc::Singleton()->default_fill_conf();
-    }
-    CHECK(bias_fill_conf);
-    KernelUtil<device_type, FloatingPointType>::Fill(ctx, *bias_fill_conf,
-                                                     BnInOp2Blob("bias"));
+    const FillConf* bias_fill_conf = &ip_conf.bias_fill();
+    KernelUtil<device_type, FloatingPointType>::FillWithProperConf(
+        ctx, bias_fill_conf, BnInOp2Blob("bias"));
 
     FillConf bias_multiplier_fill_conf;
     bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.0f);
