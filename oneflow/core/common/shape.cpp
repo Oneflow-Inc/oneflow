@@ -21,7 +21,8 @@ std::string Shape::DebugStr() const {
 }
 
 int64_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
-  CHECK(0 <= begin_axis && begin_axis <= end_axis && end_axis <= NumAxes())
+  CHECK((0 <= begin_axis && begin_axis <= end_axis && end_axis <= NumAxes())
+        || (-NumAxes() <= begin_axis && begin_axis <= end_axis && end_axis < 0))
       << "[begin_axis:" << begin_axis << "][end_axis:" << end_axis
       << "][num_axes:" << NumAxes() << "]";
   int64_t cnt = 1;
