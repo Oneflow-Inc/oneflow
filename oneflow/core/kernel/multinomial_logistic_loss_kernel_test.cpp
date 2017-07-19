@@ -96,16 +96,12 @@ void TestMultinomialLogisticLossKernel() {
   auto multinomial_logistic_loss_kernel =
       BuildMultinomialLogisticLossKernel<device_type, FloatingPointType>();
   multinomial_logistic_loss_kernel->Forward(ctx, BnInOp2BlobPtr);
-  multinomial_logistic_loss_kernel->Backward(ctx, BnInOp2BlobPtr);
+  // multinomial_logistic_loss_kernel->Backward(ctx, BnInOp2BlobPtr);
   KTCommon::SyncStream(&ctx);
   KTCommon::CheckResult(BnInOp2BlobPtr, "loss", "expected_loss");
   KTCommon::CheckResult(BnInOp2BlobPtr, "prediction_diff",
                         "expected_prediction_diff");
 }
-// KTCommon::CheckFloatNear(BnInOp2BlobPtr, "loss", "expected_loss", 1e-4);
-// KTCommon::CheckFloatNear(BnInOp2BlobPtr, "prediction_diff",
-//                         "expected_prediction_diff", 1e-4);
-//}
 
 }  // namespace
 

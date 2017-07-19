@@ -20,6 +20,9 @@ void MultinomialLogisticLossKernel<device_type, FloatingPointType>::Forward(
       static_cast<const FloatingPointType*>(prediction->dptr()),
       static_cast<const FloatingPointType*>(label->dptr()),
       static_cast<FloatingPointType*>(loss->mut_dptr()));
+
+  Blob* prediction_diff = BnInOp2BlobPtr("prediction_diff");
+  if (prediction_diff != nullptr) { Backward(ctx, BnInOp2BlobPtr); }
 }
 
 template<DeviceType device_type, typename FloatingPointType>
