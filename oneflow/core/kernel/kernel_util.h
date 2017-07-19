@@ -53,6 +53,12 @@ class KernelUtil final {
                        const FloatingPointType alpha, FloatingPointType* x,
                        const int incx);
   // max(x)
+  // no Template specialization for gpu
+  static void Max(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* max_ptr);
+
+  // max(x)
+  // temp_storage is for gpu parallel
   static void Max(const KernelCtx& ctx, const int64_t n,
                   const FloatingPointType* x, FloatingPointType* max_ptr,
                   FloatingPointType* temp_storage, size_t temp_storage_bytes);
@@ -62,6 +68,12 @@ class KernelUtil final {
                   const FloatingPointType* x, FloatingPointType* y);
 
   // sum(x)
+  // no Template specialization for gpu
+  static void Sum(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* sum_ptr);
+
+  // sum(x)
+  // temp_storage is for gpu parallel
   static void Sum(const KernelCtx& ctx, const int64_t n,
                   const FloatingPointType* x, FloatingPointType* sum_ptr,
                   FloatingPointType* temp_storage, size_t temp_storage_bytes);

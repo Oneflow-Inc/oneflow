@@ -77,6 +77,11 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
   }
 
   static void Max(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* max_ptr) {
+    Max(ctx, n, x, max_ptr, nullptr, 0);
+  }
+
+  static void Max(const KernelCtx& ctx, const int64_t n,
                   const FloatingPointType* x, FloatingPointType* max_ptr,
                   FloatingPointType* temp_storage, size_t temp_storage_bytes) {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
@@ -90,6 +95,11 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
       for (int64_t i = 0; i < n; ++i) { y[i] = std::exp(x[i]); }
     });
+  }
+
+  static void Sum(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* sum_ptr) {
+    Sum(ctx, n, x, sum_ptr, nullptr, 0);
   }
 
   static void Sum(const KernelCtx& ctx, const int64_t n,

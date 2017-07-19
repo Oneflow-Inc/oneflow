@@ -56,7 +56,7 @@ class SoftmaxKernelUtil<DeviceType::kCPU, FloatingPointType> final {
                          const FloatingPointType* out, FloatingPointType* tmp) {
     for (int64_t i = 0; i < n; ++i) {
       KernelUtil<DeviceType::kCPU, FloatingPointType>::Max(ctx, w, out + i * w,
-                                                           tmp + i, nullptr, 0);
+                                                           tmp + i);
     }
   }
 
@@ -64,7 +64,7 @@ class SoftmaxKernelUtil<DeviceType::kCPU, FloatingPointType> final {
                          const FloatingPointType* out, FloatingPointType* tmp) {
     for (int64_t i = 0; i < n; ++i) {
       KernelUtil<DeviceType::kCPU, FloatingPointType>::Sum(ctx, w, out + i * w,
-                                                           tmp + i, nullptr, 0);
+                                                           tmp + i);
     }
   }
 
