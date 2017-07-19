@@ -15,8 +15,8 @@ class FwDataCompActor final : public CompActor {
 
  private:
   int WaitToStart(const ActorMsg&);
-  int HandleNormal(const ActorMsg&) override;
-  int HandleWaitUntilNoReadableRegst(const ActorMsg&) override;
+  int HandlerNormal(const ActorMsg&) override;
+  int HandlerWaitUntilNoReadableRegst(const ActorMsg&) override;
 
   bool IsReadReady() override;
   void Act() override;

@@ -52,7 +52,6 @@ class KernelUtil final {
                        const FloatingPointType alpha, FloatingPointType* x,
                        const int incx);
   // max(x)
-  // NO template specialization for GPU
   static void Max(const KernelCtx& ctx, const int64_t n,
                   const FloatingPointType* x, FloatingPointType* max_ptr);
 
@@ -61,7 +60,6 @@ class KernelUtil final {
                   const FloatingPointType* x, FloatingPointType* y);
 
   // sum(x)
-  // NO template specialization for GPU
   static void Sum(const KernelCtx& ctx, const int64_t n,
                   const FloatingPointType* x, FloatingPointType* sum_ptr);
 
@@ -96,6 +94,7 @@ class KernelUtil final {
                        const int ldc);
 
   // Generate random number of specific distribution
+  static void Fill(const FillConf& fill_conf, Blob* blob);
   static void Fill(const KernelCtx& ctx, const FillConf& fill_conf, Blob* blob);
 };
 
