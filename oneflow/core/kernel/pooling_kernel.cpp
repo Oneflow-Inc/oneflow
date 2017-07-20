@@ -47,11 +47,9 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
                              Blob* out_blob, Blob* mask_blob,
                              const PoolingOpConf& pooling_conf) {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
-      const FloatingPointType* in_dptr =
-          static_cast<const FloatingPointType*>(in_blob->dptr());
-      FloatingPointType* out_dptr =
-          static_cast<FloatingPointType*>(out_blob->mut_dptr());
-      int64_t* mask_dptr = static_cast<int64_t*>(mask_blob->mut_dptr());
+      const FloatingPointType* in_dptr = in_blob->dptr<FloatingPointType>();
+      FloatingPointType* out_dptr = out_blob->mut_dptr<FloatingPointType>();
+      int64_t* mask_dptr = mask_blob->mut_dptr<int64_t>();
 
       switch (pooling_conf.pool()) {
         case PoolingOpConf::MAX: {
@@ -175,10 +173,10 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
                               const PoolingOpConf& pooling_conf) {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
       const FloatingPointType* out_diff_dptr =
-          static_cast<const FloatingPointType*>(out_diff_blob->dptr());
-      const int64_t* mask_dptr = static_cast<const int64_t*>(mask_blob->dptr());
+          out_diff_blob->dptr<FloatingPointType>();
+      const int64_t* mask_dptr = mask_blob->dptr<int64_t>();
       FloatingPointType* in_diff_dptr =
-          static_cast<FloatingPointType*>(in_diff_blob->mut_dptr());
+          in_diff_blob->mut_dptr<FloatingPointType>();
 
       switch (pooling_conf.pool()) {
         case PoolingOpConf::MAX: {

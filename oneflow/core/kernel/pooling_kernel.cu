@@ -179,29 +179,27 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
         MaxPoolForward<FloatingPointType>
             <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
                ctx.device_ctx->cuda_stream()>>>(
-                count, static_cast<const FloatingPointType*>(in_blob->dptr()),
-                static_cast<FloatingPointType*>(out_blob->mut_dptr()),
-                static_cast<int64_t*>(mask_blob->mut_dptr()),
-                in_blob->shape().At(1), in_blob->shape().At(2),
-                in_blob->shape().At(3), out_blob->shape().At(2),
-                out_blob->shape().At(3), pooling_conf.kernel_size(0),
-                pooling_conf.kernel_size(1), pooling_conf.stride(0),
-                pooling_conf.stride(1), pooling_conf.pad(0),
-                pooling_conf.pad(1));
+                count, in_blob->dptr<FloatingPointType>(),
+                out_blob->mut_dptr<FloatingPointType>(),
+                mask_blob->mut_dptr<int64_t>(), in_blob->shape().At(1),
+                in_blob->shape().At(2), in_blob->shape().At(3),
+                out_blob->shape().At(2), out_blob->shape().At(3),
+                pooling_conf.kernel_size(0), pooling_conf.kernel_size(1),
+                pooling_conf.stride(0), pooling_conf.stride(1),
+                pooling_conf.pad(0), pooling_conf.pad(1));
         break;
       }
       case PoolingOpConf::AVE: {
         AvePoolForward<FloatingPointType>
             <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
                ctx.device_ctx->cuda_stream()>>>(
-                count, static_cast<const FloatingPointType*>(in_blob->dptr()),
-                static_cast<FloatingPointType*>(out_blob->mut_dptr()),
-                in_blob->shape().At(1), in_blob->shape().At(2),
-                in_blob->shape().At(3), out_blob->shape().At(2),
-                out_blob->shape().At(3), pooling_conf.kernel_size(0),
-                pooling_conf.kernel_size(1), pooling_conf.stride(0),
-                pooling_conf.stride(1), pooling_conf.pad(0),
-                pooling_conf.pad(1));
+                count, in_blob->dptr<FloatingPointType>(),
+                out_blob->mut_dptr<FloatingPointType>(), in_blob->shape().At(1),
+                in_blob->shape().At(2), in_blob->shape().At(3),
+                out_blob->shape().At(2), out_blob->shape().At(3),
+                pooling_conf.kernel_size(0), pooling_conf.kernel_size(1),
+                pooling_conf.stride(0), pooling_conf.stride(1),
+                pooling_conf.pad(0), pooling_conf.pad(1));
         break;
       }
       case PoolingOpConf::STOCHASTIC: {
@@ -221,10 +219,9 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
         MaxPoolBackward<FloatingPointType>
             <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
                ctx.device_ctx->cuda_stream()>>>(
-                count,
-                static_cast<const FloatingPointType*>(out_diff_blob->dptr()),
-                static_cast<const int64_t*>(mask_blob->dptr()),
-                static_cast<FloatingPointType*>(in_diff_blob->mut_dptr()),
+                count, out_diff_blob->dptr<FloatingPointType>(),
+                mask_blob->dptr<int64_t>(),
+                in_diff_blob->mut_dptr<FloatingPointType>(),
                 in_diff_blob->shape().At(1), in_diff_blob->shape().At(2),
                 in_diff_blob->shape().At(3), out_diff_blob->shape().At(2),
                 out_diff_blob->shape().At(3), pooling_conf.kernel_size(0),
@@ -237,9 +234,8 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
         AvePoolBackward<FloatingPointType>
             <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
                ctx.device_ctx->cuda_stream()>>>(
-                count,
-                static_cast<const FloatingPointType*>(out_diff_blob->dptr()),
-                static_cast<FloatingPointType*>(in_diff_blob->mut_dptr()),
+                count, out_diff_blob->dptr<FloatingPointType>(),
+                in_diff_blob->mut_dptr<FloatingPointType>(),
                 in_diff_blob->shape().At(1), in_diff_blob->shape().At(2),
                 in_diff_blob->shape().At(3), out_diff_blob->shape().At(2),
                 out_diff_blob->shape().At(3), pooling_conf.kernel_size(0),
