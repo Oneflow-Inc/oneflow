@@ -14,31 +14,20 @@ void MultinomialLogisticLossKernel<device_type, FloatingPointType>::Forward(
       ctx,
       prediction->shape().At(0),  // piece size
       prediction->shape().At(1),  // number of classes
-      prediction->dptr<FloatingPointType>(),
-      label->dptr<FloatingPointType>(),
+      prediction->dptr<FloatingPointType>(), label->dptr<FloatingPointType>(),
       loss->mut_dptr<FloatingPointType>());
 
   Blob* prediction_diff = BnInOp2BlobPtr("prediction_diff");
-  if (prediction_diff != nullptr) { Backward(ctx, BnInOp2BlobPtr); }
-}
-
-template<DeviceType device_type, typename FloatingPointType>
-void MultinomialLogisticLossKernel<device_type, FloatingPointType>::Backward(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  const Blob* prediction = BnInOp2BlobPtr("prediction");
-  const Blob* label = BnInOp2BlobPtr("label");
-  Blob* prediction_diff = BnInOp2BlobPtr("prediction_diff");
   const Blob* loss_diff = BnInOp2BlobPtr("loss_diff");
-
-  MultinomialLogisticLossKernelUtil<device_type, FloatingPointType>::Backward(
-      ctx,
-      prediction->shape().At(0),  // piece size
-      prediction->shape().At(1),  // number of classes
-      prediction->dptr<FloatingPointType>(),
-      label->dptr<FloatingPointType>(),
-      prediction_diff->mut_dptr<FloatingPointType>(),
-      loss_diff->dptr<FloatingPointType>());
+  if (prediction_diff != nullptr) {
+    MultinomialLogisticLossKernelUtil<device_type, FloatingPointType>::Backward(
+        ctx,
+        prediction->shape().At(0),  // piece size
+        prediction->shape().At(1),  // number of classes
+        prediction->dptr<FloatingPointType>(), label->dptr<FloatingPointType>(),
+        prediction_diff->mut_dptr<FloatingPointType>(),
+        loss_diff->dptr<FloatingPointType>());
+  }
 }
 
 template<typename FloatingPointType>

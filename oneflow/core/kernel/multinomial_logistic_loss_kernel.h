@@ -18,7 +18,9 @@ class MultinomialLogisticLossKernel final : public Kernel {
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
   void Backward(const KernelCtx&,
-                std::function<Blob*(const std::string&)>) const override;
+                std::function<Blob*(const std::string&)>) const override {
+    UNEXPECTED_RUN();
+  }
 };
 
 template<DeviceType device_type, typename FloatingPointType>
