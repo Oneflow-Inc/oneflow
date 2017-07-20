@@ -175,7 +175,7 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
     const int64_t count = out_blob->shape().elem_cnt();
 
     switch (pooling_conf.pool()) {
-      case PoolingOpConf::MAX:
+      case PoolingOpConf::MAX: {
         MaxPoolForward<FloatingPointType>
             <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
                ctx.device_ctx->cuda_stream()>>>(
@@ -189,7 +189,8 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
                 pooling_conf.stride(1), pooling_conf.pad(0),
                 pooling_conf.pad(1));
         break;
-      case PoolingOpConf::AVE:
+      }
+      case PoolingOpConf::AVE: {
         AvePoolForward<FloatingPointType>
             <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
                ctx.device_ctx->cuda_stream()>>>(
@@ -202,8 +203,11 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
                 pooling_conf.stride(1), pooling_conf.pad(0),
                 pooling_conf.pad(1));
         break;
-      case PoolingOpConf::STOCHASTIC: TODO();
-      default: UNEXPECTED_RUN();
+      }
+      case PoolingOpConf::STOCHASTIC: {
+        TODO();
+      }
+      default: { UNEXPECTED_RUN(); }
     }
   }
 
@@ -213,7 +217,7 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
     const int64_t count = in_diff_blob->shape().elem_cnt();
 
     switch (pooling_conf.pool()) {
-      case PoolingOpConf::MAX:
+      case PoolingOpConf::MAX: {
         MaxPoolBackward<FloatingPointType>
             <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
                ctx.device_ctx->cuda_stream()>>>(
@@ -228,7 +232,8 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
                 pooling_conf.stride(1), pooling_conf.pad(0),
                 pooling_conf.pad(1));
         break;
-      case PoolingOpConf::AVE:
+      }
+      case PoolingOpConf::AVE: {
         AvePoolBackward<FloatingPointType>
             <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
                ctx.device_ctx->cuda_stream()>>>(
@@ -242,8 +247,11 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
                 pooling_conf.stride(1), pooling_conf.pad(0),
                 pooling_conf.pad(1));
         break;
-      case PoolingOpConf::STOCHASTIC: TODO();
-      default: UNEXPECTED_RUN();
+      }
+      case PoolingOpConf::STOCHASTIC: {
+        TODO();
+      }
+      default: { UNEXPECTED_RUN(); }
     }
   }
 };
