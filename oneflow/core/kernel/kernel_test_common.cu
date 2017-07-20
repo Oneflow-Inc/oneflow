@@ -77,7 +77,28 @@ class KernelTestCommon<DeviceType::kGPU, FloatingPointType> final {
       const std::string& check, const std::string& expected) {
     BlobCmp(BnInOp2BlobPtr(check), BnInOp2BlobPtr(expected));
   }
-};
+
+  static void CheckFillResult(const Blob& check_blob,
+                              const FillConf& fill_conf) {
+    using KTCommonCpu = KernelTestCommon<DeviceType::kCPU, FloatingPointType>;
+
+    void* host_raw_dptr = nullptr;
+    size_t byte_size =
+        check_blob.shape().elem_cnt() * sizeof(FloatingPointType);
+    CudaCheck(cudaMallocHost(&host_raw_dptr, byte_size));
+    memset(host_raw_dptr, 0, byte_size);
+    std::unique_ptr<void, std::function<void(void*)>> host_unique_ptr(
+        host_raw_dptr, [&](void* dptr) { CudaCheck(cudaFreeHost(dptr)); });
+    std::unique_ptr<Shape> host_blob_shape(new Shape(check_blob.shape()));
+
+    std::unique_ptr<Blob> copy_check_blob(
+        new Blob(host_unique_ptr.get(), host_blob_shape.get()));
+    CudaCheck(cudaMemcpy(copy_check_blob->mut_dptr(), check_blob.dptr(),
+                         byte_size, cudaMemcpyDeviceToHost));
+
+    KTCommonCpu::CheckFillResult(*copy_check_blob, fill_conf);
+  }
+};  // namespace test
 
 template class KernelTestCommon<DeviceType::kGPU, float>;
 template class KernelTestCommon<DeviceType::kGPU, double>;

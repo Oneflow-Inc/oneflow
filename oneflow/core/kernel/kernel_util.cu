@@ -141,9 +141,8 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
     void* host_raw_dptr;
     size_t byte_size = blob->shape().elem_cnt() * sizeof(FloatingPointType);
     CudaCheck(cudaMallocHost(&host_raw_dptr, byte_size));
-
     std::unique_ptr<void, std::function<void(void*)>> host_unique_ptr(
-        host_raw_dptr, [&](void* dptr) { CudaCheck(cudaFree(dptr)); });
+        host_raw_dptr, [&](void* dptr) { CudaCheck(cudaFreeHost(dptr)); });
     std::unique_ptr<Shape> host_blob_shape(new Shape(blob->shape()));
 
     std::unique_ptr<Blob> host_blob(
