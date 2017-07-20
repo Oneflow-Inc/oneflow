@@ -11,14 +11,21 @@ void ConcatKernel<device_type, FloatingPointType>::Forward(
   Blob* out_blob = BnInOp2BlobPtr(op()->SoleObn());
   const int32_t concat_axis = op()->op_conf().concat_conf().axis();
   int64_t concat_element_cnt = 1;
-  if (((concat_axis + 1) != out_blob->shape().NumAxes())
+  int64_t concat_num_each_blob = 1;
+  if ((concat_axis != (out_blob->shape().NumAxes() - 1))
       && (concat_axis != -1)) {
     concat_element_cnt = out_blob->shape().Count(concat_axis + 1);
   }
-  const int64_t concat_num_each_blob = out_blob->shape().Count(0, concat_axis);
+  if ((concat_axis != (-out_blob->shape().NumAxes())) && (concat_axis != 0)) {
+    concat_num_each_blob = out_blob->shape().Count(0, concat_axis);
+  }
   const int64_t out_concat_axis_dim = out_blob->shape().At(concat_axis);
   FloatingPointType* obn_dptr = out_blob->mut_dptr<FloatingPointType>();
   int64_t offset_concat_axis = 0;
+  cudaMemcpyKind kind = cudaMemcpyKind::cudaMemcpyHostToHost;
+  if (device_type == DeviceType::kGPU) {
+    kind = cudaMemcpyKind::cudaMemcpyDeviceToDevice;
+  }
 
   for (const std::string& ibn : ibns) {
     const Blob* ibn_blob = BnInOp2BlobPtr(ibn);
@@ -36,13 +43,12 @@ void ConcatKernel<device_type, FloatingPointType>::Forward(
       const FloatingPointType* ibn_src_adr =
           ibn_dptr + concat_idx * in_concat_axis_dim * concat_element_cnt;
       KernelUtil<device_type, FloatingPointType>::Memcpy(
-          ctx, obn_dst_adr, ibn_src_adr, cp_size,
-          cudaMemcpyKind::cudaMemcpyDeviceToDevice);
+          ctx, obn_dst_adr, ibn_src_adr, cp_size, kind);
     }
 
     offset_concat_axis += in_concat_axis_dim;
   }
-}
+}  // namespace oneflow
 
 template<DeviceType device_type, typename FloatingPointType>
 void ConcatKernel<device_type, FloatingPointType>::Backward(
@@ -52,13 +58,21 @@ void ConcatKernel<device_type, FloatingPointType>::Backward(
   const std::vector<std::string>& idbns = op()->input_diff_bns();
   const int32_t split_axis = op()->op_conf().concat_conf().axis();
   int64_t split_element_cnt = 1;
-  if ((split_axis + 1) != odbn_blob->shape().NumAxes() && (split_axis != -1)) {
+  int64_t split_num_each_blob = 1;
+  if ((split_axis != (odbn_blob->shape().NumAxes() - 1))
+      && (split_axis != -1)) {
     split_element_cnt = odbn_blob->shape().Count(split_axis + 1);
   }
-  const int64_t split_num_each_blob = odbn_blob->shape().Count(0, split_axis);
+  if ((split_axis != (-odbn_blob->shape().NumAxes())) && (split_axis != 0)) {
+    split_num_each_blob = odbn_blob->shape().Count(0, split_axis);
+  }
   const int64_t out_diff_split_axis_dim = odbn_blob->shape().At(split_axis);
   const FloatingPointType* odbn_dptr = odbn_blob->dptr<FloatingPointType>();
   int64_t offset_split_axis = 0;
+  cudaMemcpyKind kind = cudaMemcpyKind::cudaMemcpyHostToHost;
+  if (device_type == DeviceType::kGPU) {
+    kind = cudaMemcpyKind::cudaMemcpyDeviceToDevice;
+  }
 
   for (const std::string& idbn : idbns) {
     Blob* idbn_blob = BnInOp2BlobPtr(idbn);
@@ -75,8 +89,7 @@ void ConcatKernel<device_type, FloatingPointType>::Backward(
       FloatingPointType* idbn_dst_adr =
           idbn_dptr + split_idx * in_diff_split_axis_dim * split_element_cnt;
       KernelUtil<device_type, FloatingPointType>::Memcpy(
-          ctx, idbn_dst_adr, odbn_src_adr, cp_size,
-          cudaMemcpyKind::cudaMemcpyDeviceToDevice);
+          ctx, idbn_dst_adr, odbn_src_adr, cp_size, kind);
     }
 
     offset_split_axis += in_diff_split_axis_dim;
