@@ -5,11 +5,6 @@ namespace oneflow {
 
 namespace {
 
-uint32_t NewRandomSeed() {
-  static std::mt19937 gen{std::random_device{}()};
-  return gen();
-}
-
 template<typename FloatingPointType>
 void RngUniform(const int64_t elem_cnt, const FloatingPointType min,
                 const FloatingPointType max, FloatingPointType* dptr) {
