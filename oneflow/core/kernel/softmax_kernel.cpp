@@ -15,26 +15,7 @@ void SoftmaxKernel<device_type, FloatingPointType>::Forward(
   const FloatingPointType* in = in_blob->dptr<FloatingPointType>();
   FloatingPointType* tmp = tmp_blob->mut_dptr<FloatingPointType>();
   FloatingPointType* out = out_blob->mut_dptr<FloatingPointType>();
-  // copy in blob to out blob
-  KernelUtil<device_type, FloatingPointType>::BlasCopy(ctx, n * w, in, 1, out,
-                                                       1);
-  // max | calculate max of every sample vector out[i], store in tmp[i]
-  //       the out[i] now is store the data of in[i]
-  SoftmaxKernelUtil<device_type, FloatingPointType>::ForwardMax(ctx, n, w, out,
-                                                                tmp);
-  // sub | every element of out blob subract the max value of the same sample
-  SoftmaxKernelUtil<device_type, FloatingPointType>::Sub(ctx, n, w, out, tmp);
-  // exp | exponentiation every element
-  KernelUtil<device_type, FloatingPointType>::Exp(ctx, n * w, out, out);
-  // sum | calculate sum of every sample vector out[i], store in tmp[i]
-  //       the out[i] now is store the tmp data after exp
-  SoftmaxKernelUtil<device_type, FloatingPointType>::ForwardSum(ctx, n, w, out,
-                                                                tmp);
-  // div | every element of out[i] divided by the data of tmp[i] (the sum value)
-  for (int64_t i = 0; i < n; ++i) {
-    KernelUtil<device_type, FloatingPointType>::Div(ctx, w, out + i * w,
-                                                    tmp + i);
-  }
+  SoftmaxComputeProb<device_type, FloatingPointType>(ctx, n, w, in, tmp, out);
 }
 
 template<DeviceType device_type, typename FloatingPointType>
