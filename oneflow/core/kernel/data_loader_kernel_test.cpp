@@ -1,5 +1,4 @@
 #include "oneflow/core/kernel/data_loader_kernel.h"
-#include <cstdio>
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/kernel/kernel_test_common.h"
 #include "tensorflow/core/lib/io/path.h"
@@ -46,13 +45,15 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
 }
 
 void InitFile(const std::string& filepath) {
-  std::ofstream on(filepath);
-  on << "1\n"
-     << "2,3\n"
-     << "4,5,6\n"
-     << "7,8,9,10\n"
-     << "11\n"
-     << "12";
+  std::unique_ptr<tensorflow::WritableFile> file;
+  TF_CHECK_OK(tensorflow::Env::Default()->NewWritableFile(filepath, &file));
+  file->Append("1\n");
+  file->Append("2,3\n");
+  file->Append("4,5,6\n");
+  file->Append("7,8,9,10\n");
+  file->Append("11\n");
+  file->Append("12");
+  TF_CHECK_OK(file->Close());
 }
 
 template<typename FloatingPointType>
