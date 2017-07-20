@@ -24,11 +24,11 @@ class PoolingKernelUtil {
   OF_DISALLOW_COPY_AND_MOVE(PoolingKernelUtil);
   PoolingKernelUtil() = delete;
 
-  static void PoolingForward(
-      const KernelCtx&, const Blob*, Blob*, Blob*, const PoolingOpConf&);
+  static void PoolingForward(const KernelCtx&, const Blob*, Blob*, Blob*,
+                             const PoolingOpConf&);
 
-  static void PoolingBackward(
-      const KernelCtx&, const Blob*, const Blob*, Blob*, const PoolingOpConf&);
+  static void PoolingBackward(const KernelCtx&, const Blob*, const Blob*, Blob*,
+                              const PoolingOpConf&);
 };
 
 }  // namespace oneflow
