@@ -7,11 +7,11 @@ namespace {
 
 template<typename FloatingPointType>
 __global__ void MultinomialLogisticLossForwardGpu(
-    const int64_t batch_size, const int64_t num_of_classes,
+    const int64_t piece_size, const int64_t num_of_classes,
     const FloatingPointType* prediction, const FloatingPointType* labels,
     FloatingPointType* loss) {
   // 1 block and 1 thread
-  for (int64_t i = 0; i < batch_size; ++i) {
+  for (int64_t i = 0; i < piece_size; ++i) {
     int64_t label = labels[i];
     // FloatingPointType prob = max(prediction[i * num_of_classes + label],
     //                             FloatingPointType(kLOG_THRESHOLD));
@@ -21,17 +21,17 @@ __global__ void MultinomialLogisticLossForwardGpu(
                : FloatingPointType(kLOG_THRESHOLD);
     loss[0] -= logf(prob);
   }
-  loss[0] = loss[0] / batch_size;
+  loss[0] = loss[0] / piece_size;
 }
 
 template<typename FloatingPointType>
 __global__ void MultinomialLogisticLossBackwardGpu(
-    const int64_t batch_size, const int64_t num_of_classes,
+    const int64_t piece_size, const int64_t num_of_classes,
     const FloatingPointType* prediction, const FloatingPointType* labels,
     FloatingPointType* prediction_diff, const FloatingPointType* loss_diff) {
-  const FloatingPointType scale = -1.0 / batch_size;
-  // batch_size = nthreads
-  CUDA_1D_KERNEL_LOOP(i, batch_size) {
+  const FloatingPointType scale = -1.0 / piece_size;
+  // piece_size = nthreads
+  CUDA_1D_KERNEL_LOOP(i, piece_size) {
     int64_t label = labels[i];
     FloatingPointType prob = prediction[i * num_of_classes + label];
     prob = prob > FloatingPointType(kLOG_THRESHOLD)
@@ -50,30 +50,30 @@ class MultinomialLogisticLossKernelUtil<DeviceType::kGPU, FloatingPointType>
   OF_DISALLOW_COPY_AND_MOVE(MultinomialLogisticLossKernelUtil);
   MultinomialLogisticLossKernelUtil() = delete;
 
-  static void Forward(const KernelCtx& ctx, const int64_t batch_size,
+  static void Forward(const KernelCtx& ctx, const int64_t piece_size,
                       const int64_t num_of_classes,
                       const FloatingPointType* prediction,
                       const FloatingPointType* labels,
                       FloatingPointType* loss) {
     MultinomialLogisticLossForwardGpu<FloatingPointType>
         <<<1, 1, 0,  // 1 block and 1 thread
-           ctx.device_ctx->cuda_stream()>>>(batch_size, num_of_classes,
+           ctx.device_ctx->cuda_stream()>>>(piece_size, num_of_classes,
                                             prediction, labels, loss);
     // MultinomialLogisticLossForwardGpu<FloatingPointType>
-    //     <<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
-    //        ctx.device_ctx->cuda_stream()>>>(batch_size, num_of_classes,
+    //     <<<BlocksNum4ThreadsNum(piece_size), kCudaThreadsNumPerBlock, 0,
+    //        ctx.device_ctx->cuda_stream()>>>(piece_size, num_of_classes,
     //        prediction, labels, loss);
   }
 
-  static void Backward(const KernelCtx& ctx, const int64_t batch_size,
+  static void Backward(const KernelCtx& ctx, const int64_t piece_size,
                        const int64_t num_of_classes,
                        const FloatingPointType* prediction,
                        const FloatingPointType* labels,
                        FloatingPointType* prediction_diff,
                        const FloatingPointType* loss_diff) {
     MultinomialLogisticLossBackwardGpu<FloatingPointType>
-        <<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
-           ctx.device_ctx->cuda_stream()>>>(batch_size, num_of_classes,
+        <<<BlocksNum4ThreadsNum(piece_size), kCudaThreadsNumPerBlock, 0,
+           ctx.device_ctx->cuda_stream()>>>(piece_size, num_of_classes,
                                             prediction, labels, prediction_diff,
                                             loss_diff);
   }

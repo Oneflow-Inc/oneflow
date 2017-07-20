@@ -10,13 +10,10 @@ void MultinomialLogisticLossKernel<device_type, FloatingPointType>::Forward(
   const Blob* label = BnInOp2BlobPtr("label");
   Blob* loss = BnInOp2BlobPtr("loss");
 
-  // int batch_size = prediction->shape().At(0); //N - batch size
-  // int num_of_classes = prediction->shape().At(1);//K - number of classes
-
   MultinomialLogisticLossKernelUtil<device_type, FloatingPointType>::Forward(
       ctx,
-      prediction->shape().At(0),  // N - batch size
-      prediction->shape().At(1),  // K - number of classes
+      prediction->shape().At(0),  // piece size
+      prediction->shape().At(1),  // number of classes
       static_cast<const FloatingPointType*>(prediction->dptr()),
       static_cast<const FloatingPointType*>(label->dptr()),
       static_cast<FloatingPointType*>(loss->mut_dptr()));
@@ -36,8 +33,8 @@ void MultinomialLogisticLossKernel<device_type, FloatingPointType>::Backward(
 
   MultinomialLogisticLossKernelUtil<device_type, FloatingPointType>::Backward(
       ctx,
-      prediction->shape().At(0),  // N - batch size
-      prediction->shape().At(1),  // K - number of classes
+      prediction->shape().At(0),  // piece size
+      prediction->shape().At(1),  // number of classes
       static_cast<const FloatingPointType*>(prediction->dptr()),
       static_cast<const FloatingPointType*>(label->dptr()),
       static_cast<FloatingPointType*>(prediction_diff->mut_dptr()),
@@ -51,34 +48,34 @@ class MultinomialLogisticLossKernelUtil<DeviceType::kCPU, FloatingPointType>
   OF_DISALLOW_COPY_AND_MOVE(MultinomialLogisticLossKernelUtil);
   MultinomialLogisticLossKernelUtil() = delete;
 
-  static void Forward(const KernelCtx& ctx, const int64_t batch_size,
+  static void Forward(const KernelCtx& ctx, const int64_t piece_size,
                       const int64_t num_of_classes,
                       const FloatingPointType* prediction,
                       const FloatingPointType* labels,
                       FloatingPointType* loss) {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
       loss[0] = 0;
-      for (int64_t i = 0; i < batch_size; ++i) {
+      for (int64_t i = 0; i < piece_size; ++i) {
         int64_t label = labels[i];
         FloatingPointType prob =
             std::max(prediction[i * num_of_classes + label],
                      FloatingPointType(kLOG_THRESHOLD));
         loss[0] -= log(prob);
       }
-      loss[0] = loss[0] / batch_size;
+      loss[0] = loss[0] / piece_size;
     });
   }
 
-  static void Backward(const KernelCtx& ctx, const int64_t batch_size,
+  static void Backward(const KernelCtx& ctx, const int64_t piece_size,
                        const int64_t num_of_classes,
                        const FloatingPointType* prediction,
                        const FloatingPointType* labels,
                        FloatingPointType* prediction_diff,
                        const FloatingPointType* loss_diff) {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
-      // const FloatingPointType scale = - loss_diff[0] / batch_size;
-      const FloatingPointType scale = -1.0 / batch_size;
-      for (int64_t i = 0; i < batch_size; i++) {
+      // const FloatingPointType scale = - loss_diff[0] / piece_size;
+      const FloatingPointType scale = -1.0 / piece_size;
+      for (int64_t i = 0; i < piece_size; i++) {
         int64_t label = labels[i];
         FloatingPointType prob =
             std::max(prediction[i * num_of_classes + label],

@@ -27,11 +27,11 @@ class MultinomialLogisticLossKernelUtil final {
   OF_DISALLOW_COPY_AND_MOVE(MultinomialLogisticLossKernelUtil);
   MultinomialLogisticLossKernelUtil() = delete;
 
-  static void Forward(const KernelCtx& ctx, const int64_t batch_size,
+  static void Forward(const KernelCtx& ctx, const int64_t piece_size,
                       const int64_t num_of_classes,
                       const FloatingPointType* prediction,
                       const FloatingPointType* labels, FloatingPointType* loss);
-  static void Backward(const KernelCtx& ctx, const int64_t batch_size,
+  static void Backward(const KernelCtx& ctx, const int64_t piece_size,
                        const int64_t num_of_classes,
                        const FloatingPointType* prediction,
                        const FloatingPointType* labels,
