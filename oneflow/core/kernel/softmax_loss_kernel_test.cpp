@@ -58,10 +58,6 @@ void TestSoftmaxLossKernel() {
   auto softmax_loss_kernel =
       BuildSoftmaxLossKernel<device_type, FloatingPointType>();
   softmax_loss_kernel->Forward(ctx, BnInOp2BlobPtr);
-  auto loss = BnInOp2BlobPtr("loss")->dptr<FloatingPointType>();
-  auto in_diff = BnInOp2BlobPtr("in_diff")->dptr<FloatingPointType>();
-  auto prob = BnInOp2BlobPtr("prob")->dptr<FloatingPointType>();
-  auto tmp = BnInOp2BlobPtr("tmp_1D")->dptr<FloatingPointType>();
   KTCommon::SyncStream(&ctx);
   KTCommon::CheckResult(BnInOp2BlobPtr, "loss", "expected_loss");
   KTCommon::CheckResult(BnInOp2BlobPtr, "in_diff", "expected_in_diff");
