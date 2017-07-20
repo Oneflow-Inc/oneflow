@@ -40,7 +40,8 @@ class SoftmaxLossKernelUtil<DeviceType::kGPU, FloatingPointType> final {
     SoftmaxLossForwardTmp<FloatingPointType>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
            ctx.device_ctx->cuda_stream()>>>(n, w, label, prob, tmp);
-    KernelUtil<DeviceType::kGPU, FloatingPointType>::Sum(ctx, n, tmp, loss);
+    KernelUtil<DeviceType::kGPU, FloatingPointType>::Sum(
+        ctx, n, tmp, loss, tmp, sizeof(FloatingPointType) * n);
     KernelUtil<DeviceType::kGPU, FloatingPointType>::BlasScal(ctx, 1, 1.0 / n,
                                                               loss, 1);
   }
@@ -48,11 +49,9 @@ class SoftmaxLossKernelUtil<DeviceType::kGPU, FloatingPointType> final {
   static void BackwardSub(const KernelCtx& ctx, const int64_t n,
                           const int64_t w, const FloatingPointType* label,
                           FloatingPointType* in_diff) {
-    ctx.device_ctx->cpu_stream()->SendWork([=]() {
-      for (int64_t i = 0; i < n; ++i) {
-        in_diff[i * w + static_cast<int64_t>(label[i])] -= 1;
-      }
-    });
+    SoftmaxLossBackwardSub<FloatingPointType>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx.device_ctx->cuda_stream()>>>(n, w, label, in_diff);
   }
 };
 
