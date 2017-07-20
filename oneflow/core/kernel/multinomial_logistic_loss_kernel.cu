@@ -28,7 +28,7 @@ template<typename FloatingPointType>
 __global__ void MultinomialLogisticLossBackwardGpu(
     const int64_t piece_size, const int64_t num_of_classes,
     const FloatingPointType* prediction, const FloatingPointType* labels,
-    FloatingPointType* prediction_diff, const FloatingPointType* loss_diff) {
+    FloatingPointType* prediction_diff) {
   const FloatingPointType scale = -1.0 / piece_size;
   // piece_size = nthreads
   CUDA_1D_KERNEL_LOOP(i, piece_size) {
@@ -69,13 +69,11 @@ class MultinomialLogisticLossKernelUtil<DeviceType::kGPU, FloatingPointType>
                        const int64_t num_of_classes,
                        const FloatingPointType* prediction,
                        const FloatingPointType* labels,
-                       FloatingPointType* prediction_diff,
-                       const FloatingPointType* loss_diff) {
+                       FloatingPointType* prediction_diff) {
     MultinomialLogisticLossBackwardGpu<FloatingPointType>
         <<<BlocksNum4ThreadsNum(piece_size), kCudaThreadsNumPerBlock, 0,
-           ctx.device_ctx->cuda_stream()>>>(piece_size, num_of_classes,
-                                            prediction, labels, prediction_diff,
-                                            loss_diff);
+           ctx.device_ctx->cuda_stream()>>>(
+            piece_size, num_of_classes, prediction, labels, prediction_diff);
   }
 };
 

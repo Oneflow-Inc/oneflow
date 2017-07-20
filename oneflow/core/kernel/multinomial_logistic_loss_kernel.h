@@ -37,8 +37,7 @@ class MultinomialLogisticLossKernelUtil final {
                        const int64_t num_of_classes,
                        const FloatingPointType* prediction,
                        const FloatingPointType* labels,
-                       FloatingPointType* prediction_diff,
-                       const FloatingPointType* loss_diff);
+                       FloatingPointType* prediction_diff);
 };
 
 }  // namespace oneflow
