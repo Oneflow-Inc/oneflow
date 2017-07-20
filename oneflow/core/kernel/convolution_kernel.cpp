@@ -270,16 +270,14 @@ void ConvolutionKernel<device_type, FloatingPointType>::
     InitModelAndModelTmpBlobsWithoutSnapshot(
         const KernelCtx& ctx,
         std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  auto conv_conf = op()->op_conf().convolution_conf();
-
-  const FillConf* weight_fill_conf = OF_PB_POINTER_GET(conv_conf, weight_fill);
   KernelUtil<device_type, FloatingPointType>::FillWithProperConf(
-      ctx, weight_fill_conf, BnInOp2Blob("weight"));
+      ctx, OF_PB_POINTER_GET(op()->op_conf().convolution_conf(), weight_fill),
+      BnInOp2Blob("weight"));
 
-  if (conv_conf.has_bias_term()) {
-    const FillConf* bias_fill_conf = OF_PB_POINTER_GET(conv_conf, bias_fill);
+  if (op()->GetBoolFromSpecialConf("has_bias_term")) {
     KernelUtil<device_type, FloatingPointType>::FillWithProperConf(
-        ctx, bias_fill_conf, BnInOp2Blob("bias"));
+        ctx, OF_PB_POINTER_GET(op()->op_conf().convolution_conf(), bias_fill),
+        BnInOp2Blob("bias"));
 
     FillConf bias_multiplier_fill_conf;
     bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.0f);

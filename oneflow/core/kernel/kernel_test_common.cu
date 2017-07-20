@@ -82,7 +82,7 @@ class KernelTestCommon<DeviceType::kGPU, FloatingPointType> final {
                               const FillConf& fill_conf) {
     using KTCommonCpu = KernelTestCommon<DeviceType::kCPU, FloatingPointType>;
 
-    void* host_raw_dptr;
+    void* host_raw_dptr = nullptr;
     size_t byte_size =
         check_blob.shape().elem_cnt() * sizeof(FloatingPointType);
     CudaCheck(cudaMallocHost(&host_raw_dptr, byte_size));
