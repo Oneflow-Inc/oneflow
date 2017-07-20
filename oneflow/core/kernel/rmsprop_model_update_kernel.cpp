@@ -18,14 +18,14 @@ void RMSPropMdUpdateKernel<device_type, FloatingPointType>::Forward(
   RMSPropMdUpdateKernelUtil<device_type, FloatingPointType>::UpdateMeanSquare(
       ctx, mean_square_blob->shape().elem_cnt(),
       static_cast<FloatingPointType>(decay_rate),
-      static_cast<FloatingPointType*>(mean_square_blob->mut_dptr()),
-      static_cast<const FloatingPointType*>(model_diffs_blob->dptr()));
+      mean_square_blob->mut_dptr<FloatingPointType>(),
+      model_diffs_blob->dptr<FloatingPointType>());
 
   RMSPropMdUpdateKernelUtil<device_type, FloatingPointType>::UpdateModel(
       ctx, model_blob->shape().elem_cnt(),
-      static_cast<FloatingPointType*>(model_blob->mut_dptr()),
-      static_cast<const FloatingPointType*>(model_diffs_blob->dptr()),
-      static_cast<const FloatingPointType*>(mean_square_blob->dptr()),
+      model_blob->mut_dptr<FloatingPointType>(),
+      model_diffs_blob->dptr<FloatingPointType>(),
+      mean_square_blob->dptr<FloatingPointType>(),
       static_cast<FloatingPointType>(epsilon),
       static_cast<FloatingPointType>(alpha));
 }

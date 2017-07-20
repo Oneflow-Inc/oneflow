@@ -3,6 +3,7 @@
 
 #include "oneflow/core/blas/cblas_template.h"
 #include "oneflow/core/blas/cublas_template.h"
+#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/operator/op_conf.pb.h"
@@ -52,16 +53,30 @@ class KernelUtil final {
                        const FloatingPointType alpha, FloatingPointType* x,
                        const int incx);
   // max(x)
+  // no Template specialization for gpu
   static void Max(const KernelCtx& ctx, const int64_t n,
                   const FloatingPointType* x, FloatingPointType* max_ptr);
+
+  // max(x)
+  // temp_storage is for gpu parallel
+  static void Max(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* max_ptr,
+                  FloatingPointType* temp_storage, size_t temp_storage_bytes);
 
   // y = exp(x)
   static void Exp(const KernelCtx& ctx, const int64_t n,
                   const FloatingPointType* x, FloatingPointType* y);
 
   // sum(x)
+  // no Template specialization for gpu
   static void Sum(const KernelCtx& ctx, const int64_t n,
                   const FloatingPointType* x, FloatingPointType* sum_ptr);
+
+  // sum(x)
+  // temp_storage is for gpu parallel
+  static void Sum(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* sum_ptr,
+                  FloatingPointType* temp_storage, size_t temp_storage_bytes);
 
   // x = x / a
   static void Div(const KernelCtx& ctx, const int64_t n, FloatingPointType* x,
@@ -96,6 +111,15 @@ class KernelUtil final {
   // Generate random number of specific distribution
   static void Fill(const FillConf& fill_conf, Blob* blob);
   static void Fill(const KernelCtx& ctx, const FillConf& fill_conf, Blob* blob);
+
+  // detect fill conf
+  static void FillWithProperConf(const KernelCtx& ctx,
+                                 const FillConf* fill_conf, Blob* blob) {
+    if (fill_conf == nullptr) {
+      fill_conf = JobDesc::Singleton()->default_fill_conf();
+    }
+    Fill(ctx, *fill_conf, blob);
+  }
 };
 
 }  // namespace oneflow

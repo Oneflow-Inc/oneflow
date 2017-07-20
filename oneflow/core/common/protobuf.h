@@ -85,6 +85,11 @@ inline bool operator!=(const google::protobuf::MessageLite& lhs,
   return !(lhs == rhs);
 }
 
+// Hack Oneof Getter
+
+#define OF_PB_POINTER_GET(obj, field) \
+  obj.has_##field() ? &(obj.field()) : nullptr
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_PROTOBUF_H_

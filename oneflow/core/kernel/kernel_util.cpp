@@ -73,6 +73,12 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
 
   static void Max(const KernelCtx& ctx, const int64_t n,
                   const FloatingPointType* x, FloatingPointType* max_ptr) {
+    Max(ctx, n, x, max_ptr, nullptr, 0);
+  }
+
+  static void Max(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* max_ptr,
+                  FloatingPointType* temp_storage, size_t temp_storage_bytes) {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
       *max_ptr = x[0];
       for (int64_t i = 0; i < n; ++i) { *max_ptr = std::max(*max_ptr, x[i]); }
@@ -88,6 +94,12 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
 
   static void Sum(const KernelCtx& ctx, const int64_t n,
                   const FloatingPointType* x, FloatingPointType* sum_ptr) {
+    Sum(ctx, n, x, sum_ptr, nullptr, 0);
+  }
+
+  static void Sum(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* sum_ptr,
+                  FloatingPointType* temp_storage, size_t temp_storage_bytes) {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
       *sum_ptr = 0;
       for (int64_t i = 0; i < n; ++i) { *sum_ptr += x[i]; }
@@ -175,7 +187,7 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
 
  private:
   static void ConstantFill(const ConstantFillConf& fill_conf, Blob* blob) {
-    FloatingPointType* dptr = static_cast<FloatingPointType*>(blob->mut_dptr());
+    FloatingPointType* dptr = blob->mut_dptr<FloatingPointType>();
     const int64_t elem_cnt = blob->shape().elem_cnt();
     const FloatingPointType value = fill_conf.value();
     CHECK(elem_cnt);
@@ -188,7 +200,7 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
         blob->shape().elem_cnt(),
         static_cast<FloatingPointType>(fill_conf.min()),
         static_cast<FloatingPointType>(fill_conf.max()),
-        static_cast<FloatingPointType*>(blob->mut_dptr()));
+        blob->mut_dptr<FloatingPointType>());
   }
 
   static void GaussianFill(const GaussianFillConf& fill_conf, Blob* blob) {
@@ -197,7 +209,7 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
         blob->shape().elem_cnt(),
         static_cast<FloatingPointType>(fill_conf.mean()),
         static_cast<FloatingPointType>(fill_conf.std()),
-        static_cast<FloatingPointType*>(blob->mut_dptr()));
+        blob->mut_dptr<FloatingPointType>());
   }
 };
 
