@@ -11,7 +11,8 @@ void ConcatKernel<device_type, FloatingPointType>::Forward(
   Blob* out_blob = BnInOp2BlobPtr(op()->SoleObn());
   const int32_t concat_axis = op()->op_conf().concat_conf().axis();
   int64_t concat_element_size = 1;
-  if (out_blob->shape().NumAxes() != (concat_axis + 1)) {
+  if (((concat_axis + 1) != out_blob->shape().NumAxes())
+      && (concat_axis != -1)) {
     concat_element_size = out_blob->shape().Count(concat_axis + 1);
   }
   const int64_t concat_num_each_blob = out_blob->shape().Count(0, concat_axis);
@@ -51,7 +52,7 @@ void ConcatKernel<device_type, FloatingPointType>::Backward(
   const std::vector<std::string>& idbns = op()->input_diff_bns();
   const int32_t split_axis = op()->op_conf().concat_conf().axis();
   int64_t split_element_size = 1;
-  if (odbn_blob->shape().NumAxes() != (split_axis + 1)) {
+  if ((split_axis + 1) != odbn_blob->shape().NumAxes() && (split_axis != -1)) {
     split_element_size = odbn_blob->shape().Count(split_axis + 1);
   }
   const int64_t split_num_each_blob = odbn_blob->shape().Count(0, split_axis);
