@@ -14,9 +14,9 @@ void MultinomialLogisticLossKernel<device_type, FloatingPointType>::Forward(
       ctx,
       prediction->shape().At(0),  // piece size
       prediction->shape().At(1),  // number of classes
-      static_cast<const FloatingPointType*>(prediction->dptr()),
-      static_cast<const FloatingPointType*>(label->dptr()),
-      static_cast<FloatingPointType*>(loss->mut_dptr()));
+      prediction->dptr<FloatingPointType>(),
+      label->dptr<FloatingPointType>(),
+      loss->mut_dptr<FloatingPointType>());
 
   Blob* prediction_diff = BnInOp2BlobPtr("prediction_diff");
   if (prediction_diff != nullptr) { Backward(ctx, BnInOp2BlobPtr); }
@@ -35,10 +35,10 @@ void MultinomialLogisticLossKernel<device_type, FloatingPointType>::Backward(
       ctx,
       prediction->shape().At(0),  // piece size
       prediction->shape().At(1),  // number of classes
-      static_cast<const FloatingPointType*>(prediction->dptr()),
-      static_cast<const FloatingPointType*>(label->dptr()),
-      static_cast<FloatingPointType*>(prediction_diff->mut_dptr()),
-      static_cast<const FloatingPointType*>(loss_diff->dptr()));
+      prediction->dptr<FloatingPointType>(),
+      label->dptr<FloatingPointType>(),
+      prediction_diff->mut_dptr<FloatingPointType>(),
+      loss_diff->dptr<FloatingPointType>());
 }
 
 template<typename FloatingPointType>
@@ -73,7 +73,6 @@ class MultinomialLogisticLossKernelUtil<DeviceType::kCPU, FloatingPointType>
                        FloatingPointType* prediction_diff,
                        const FloatingPointType* loss_diff) {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
-      // const FloatingPointType scale = - loss_diff[0] / piece_size;
       const FloatingPointType scale = -1.0 / piece_size;
       for (int64_t i = 0; i < piece_size; i++) {
         int64_t label = labels[i];
