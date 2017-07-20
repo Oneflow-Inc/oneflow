@@ -15,11 +15,11 @@ void SoftmaxLossKernel<device_type, FloatingPointType>::Forward(
   Blob* loss_blob = BnInOp2BlobPtr("loss");
   const int64_t n = in_blob->shape().At(0);
   const int64_t w = in_blob->shape().At(1);
-  const FloatingPointType* in = (in_blob->dptr<FloatingPointType>());
-  const FloatingPointType* label = (label_blob->dptr<FloatingPointType>());
-  FloatingPointType* tmp = (tmp_blob->mut_dptr<FloatingPointType>());
-  FloatingPointType* prob = (prob_blob->mut_dptr<FloatingPointType>());
-  FloatingPointType* loss = (loss_blob->mut_dptr<FloatingPointType>());
+  const FloatingPointType* in = in_blob->dptr<FloatingPointType>();
+  const FloatingPointType* label = label_blob->dptr<FloatingPointType>();
+  FloatingPointType* tmp = tmp_blob->mut_dptr<FloatingPointType>();
+  FloatingPointType* prob = prob_blob->mut_dptr<FloatingPointType>();
+  FloatingPointType* loss = loss_blob->mut_dptr<FloatingPointType>();
   // forward
   SoftmaxComputeProb<device_type, FloatingPointType>(ctx, n, w, in, tmp, prob);
   SoftmaxLossKernelUtil<device_type, FloatingPointType>::ComputeLoss(
@@ -28,8 +28,7 @@ void SoftmaxLossKernel<device_type, FloatingPointType>::Forward(
   // if in_diff_blob is not null , then do backward
   Blob* in_diff_blob = BnInOp2BlobPtr("in_diff");
   if (in_diff_blob != nullptr) {
-    FloatingPointType* in_diff =
-        static_cast<FloatingPointType*>(in_diff_blob->mut_dptr());
+    FloatingPointType* in_diff = in_diff_blob->mut_dptr<FloatingPointType>();
     KernelUtil<device_type, FloatingPointType>::BlasCopy(ctx, n * w, prob, 1,
                                                          in_diff, 1);
     SoftmaxLossKernelUtil<device_type, FloatingPointType>::BackwardSub(

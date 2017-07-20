@@ -58,9 +58,8 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
   }
 
   static void Max(const KernelCtx& ctx, const int64_t n,
-                  const FloatingPointType* x, FloatingPointType* max_ptr) {
-    void* temp_storage = NULL;
-    size_t temp_storage_bytes = 0;
+                  const FloatingPointType* x, FloatingPointType* max_ptr,
+                  FloatingPointType* temp_storage, size_t temp_storage_bytes) {
     cub::DeviceReduce::Max(temp_storage, temp_storage_bytes, x, max_ptr, n,
                            ctx.device_ctx->cuda_stream());
   }
@@ -73,9 +72,8 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
   }
 
   static void Sum(const KernelCtx& ctx, const int64_t n,
-                  const FloatingPointType* x, FloatingPointType* sum_ptr) {
-    void* temp_storage = NULL;
-    size_t temp_storage_bytes = 0;
+                  const FloatingPointType* x, FloatingPointType* sum_ptr,
+                  FloatingPointType* temp_storage, size_t temp_storage_bytes) {
     cub::DeviceReduce::Sum(temp_storage, temp_storage_bytes, x, sum_ptr, n,
                            ctx.device_ctx->cuda_stream());
   }
