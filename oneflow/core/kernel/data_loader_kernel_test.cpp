@@ -74,11 +74,6 @@ void TestDataLoaderKernel() {
   KTCommon::CheckResult(BnInOp2BlobPtr, "label", "label_expected");
   KTCommon::CheckResult(BnInOp2BlobPtr, "feature", "feature_expected");
 
-  Blob* label_blob = BnInOp2BlobPtr("label");
-  const FloatingPointType* label = label_blob->dptr<FloatingPointType>();
-  for (int i = 0; i != 6; ++i) { std::cout << label[i] << " "; }
-  std::cout << std::endl;
-
   tensorflow::Env::Default()->DeleteFile(filepath);
 }
 
