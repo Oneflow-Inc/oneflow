@@ -3,7 +3,7 @@ package oneflow;
 
 import "oneflow/core/graph/exec_sequence.proto";
 import "oneflow/core/register/register_desc.proto";
-import "oneflow/core/job/strategy.proto";
+import "oneflow/core/job/placement.proto";
 
 enum TaskType {
   kInvalidTaskType = 0;

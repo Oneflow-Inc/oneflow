@@ -1,3 +1,4 @@
+#include "cub/cub.cuh"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
@@ -14,8 +15,8 @@ __global__ void ExpGpu(const int64_t n, const FloatingPointType* x,
 
 template<typename FloatingPointType>
 __global__ void DivGpu(const int64_t n, FloatingPointType* x,
-                       const FloatingPointType alpha) {
-  CUDA_1D_KERNEL_LOOP(i, n) { x[i] = x[i] / alpha; }
+                       const FloatingPointType* alpha_ptr) {
+  CUDA_1D_KERNEL_LOOP(i, n) { x[i] = x[i] / (*alpha_ptr); }
 }
 
 template<typename FloatingPointType>
@@ -56,6 +57,13 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
     cublas_scal(ctx.device_ctx->cublas_handle(), n, &alpha, x, incx);
   }
 
+  static void Max(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* max_ptr,
+                  FloatingPointType* temp_storage, size_t temp_storage_bytes) {
+    cub::DeviceReduce::Max(temp_storage, temp_storage_bytes, x, max_ptr, n,
+                           ctx.device_ctx->cuda_stream());
+  }
+
   static void Exp(const KernelCtx& ctx, const int64_t n,
                   const FloatingPointType* x, FloatingPointType* y) {
     ExpGpu<FloatingPointType>
@@ -63,11 +71,18 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
            ctx.device_ctx->cuda_stream()>>>(n, x, y);
   }
 
+  static void Sum(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* sum_ptr,
+                  FloatingPointType* temp_storage, size_t temp_storage_bytes) {
+    cub::DeviceReduce::Sum(temp_storage, temp_storage_bytes, x, sum_ptr, n,
+                           ctx.device_ctx->cuda_stream());
+  }
+
   static void Div(const KernelCtx& ctx, const int64_t n, FloatingPointType* x,
-                  const FloatingPointType alpha) {
+                  const FloatingPointType* alpha_ptr) {
     DivGpu<FloatingPointType>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-           ctx.device_ctx->cuda_stream()>>>(n, x, alpha);
+           ctx.device_ctx->cuda_stream()>>>(n, x, alpha_ptr);
   }
 
   static void Mul(const KernelCtx& ctx, const int64_t n,
@@ -133,7 +148,7 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
 
     std::unique_ptr<Blob> host_blob(
         new Blob(host_unique_ptr.get(), host_blob_shape.get()));
-    KernelUtil<DeviceType::kCPU, FloatingPointType>::Fill(ctx, fill_conf,
+    KernelUtil<DeviceType::kCPU, FloatingPointType>::Fill(fill_conf,
                                                           host_blob.get());
 
     KernelUtil<DeviceType::kGPU, FloatingPointType>::Memcpy(
@@ -158,5 +173,4 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
 };
 
 INSTANTIATE_GPU_KERNEL_UTIL_CLASS(KernelUtil);
-
 }  // namespace oneflow

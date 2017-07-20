@@ -14,7 +14,7 @@ void TestModelParallelInnerProductOp(bool has_bias_term) {
   op_conf.mutable_innerproduct_conf()->set_out("ip_out");
   op_conf.mutable_innerproduct_conf()->set_has_bias_term(has_bias_term);
   op_conf.mutable_innerproduct_conf()->set_out_num(40);
-  auto ip_op = OpMgr::Singleton()->ConstructOp(op_conf);
+  auto ip_op = ConstructOp(op_conf);
   std::vector<int64_t> shape_vec = {1000, 3, 256, 256};
   HashMap<std::string, Shape*> bn2shape_ptr = {
       {ip_op->SoleIbn(), new Shape(shape_vec)},
@@ -54,7 +54,7 @@ void TestDataParallelInnerProductOp(bool has_bias_term) {
   op_conf.mutable_innerproduct_conf()->set_out("ip_out");
   op_conf.mutable_innerproduct_conf()->set_has_bias_term(has_bias_term);
   op_conf.mutable_innerproduct_conf()->set_out_num(40);
-  auto ip_op = OpMgr::Singleton()->ConstructOp(op_conf);
+  auto ip_op = ConstructOp(op_conf);
 
   std::vector<int64_t> shape_vec = {1000, 3, 256, 256};
   HashMap<std::string, Shape*> bn2shape_ptr = {

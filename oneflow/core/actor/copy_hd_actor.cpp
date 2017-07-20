@@ -12,10 +12,10 @@ void CopyHdActor::Init(const TaskProto& task_proto,
       new CudaDeviceCtx(thread_ctx.copy_hd_cuda_stream, nullptr, nullptr));
   set_num_of_not_eord(1);
   mut_num_of_read_empty() = 1;
-  OF_SET_MSG_HANDLE(&CopyHdActor::HandleNormal);
+  OF_SET_MSG_HANDLER(&CopyHdActor::HandlerNormal);
 }
 
-int CopyHdActor::HandleNormal(const ActorMsg& msg) {
+int CopyHdActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     ProcessEord();
@@ -29,16 +29,16 @@ int CopyHdActor::HandleNormal(const ActorMsg& msg) {
     }
     ActUntilFail();
   }
-  return msg_handle() == nullptr;
+  return msg_handler() == nullptr;
 }
 
-int CopyHdActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
+int CopyHdActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
            0);
   ActUntilFail();
   if (mut_num_of_read_empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
-    OF_SET_MSG_HANDLE(&CopyHdActor::HandleWaitUntilReadingCntEqualZero);
+    OF_SET_MSG_HANDLER(&CopyHdActor::HandlerWaitUntilReadingCntEqualZero);
   }
   return 0;
 }

@@ -17,7 +17,7 @@ void ModelSaveKernel<DeviceType::kCPU, FloatingPointType>::Forward(
       std::unique_ptr<PersistentOutStream> out_stream =
           snapshot->GetOutStream(lbn, parallel_id);
       out_stream->Write(
-          static_cast<const char*>(blob_ptr->dptr()),
+          blob_ptr->dptr<char>(),
           blob_ptr->shape().elem_cnt() * sizeof(FloatingPointType));
     });
   }
