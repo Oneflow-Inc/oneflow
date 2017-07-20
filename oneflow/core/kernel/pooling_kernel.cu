@@ -131,8 +131,8 @@ __global__ void AvePoolBackward(
     const int64_t stride_h, const int64_t stride_w, const int64_t pad_h,
     const int64_t pad_w) {
   CUDA_1D_KERNEL_LOOP(index, nthreads) {
-    const int64_t w = index % width;
-    const int64_t h = (index / width) % height;
+    const int64_t w = index % width + pad_w;
+    const int64_t h = (index / width) % height + pad_h;
     const int64_t c = (index / width / height) % channels;
     const int64_t n = index / width / height / channels;
     int64_t phstart = (h < kernel_h) ? 0 : (h - kernel_h) / stride_h + 1;
@@ -148,8 +148,11 @@ __global__ void AvePoolBackward(
       for (int64_t pw = pwstart; pw < pwend; ++pw) {
         int64_t hstart = ph * stride_h - pad_h;
         int64_t wstart = pw * stride_w - pad_w;
-        int64_t hend = min(hstart + kernel_h, height + pad_h);
-        int64_t wend = min(wstart + kernel_w, width + pad_w);
+        int64_t hend = (hstart + kernel_h < height + pad_h)
+                           ? (hstart + kernel_h)
+                           : (height + pad_h);
+        int64_t wend = (wstart + kernel_w < width + pad_w) ? (wstart + kernel_w)
+                                                           : (width + pad_w);
         int64_t pool_size = (hend - hstart) * (wend - wstart);
         gradient += out_diff_slice[ph * pooled_width + pw] / pool_size;
       }
@@ -169,7 +172,7 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
   static void PoolingForward(const KernelCtx& ctx, const Blob* in_blob,
                              Blob* out_blob, Blob* mask_blob,
                              const PoolingOpConf& pooling_conf) {
-    const int64_t count = out_blob->shape().Count(1);
+    const int64_t count = out_blob->shape().elem_cnt();
 
     switch (pooling_conf.pool()) {
       case PoolingOpConf::MAX:
@@ -207,7 +210,7 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
   static void PoolingBackward(const KernelCtx& ctx, const Blob* out_diff_blob,
                               const Blob* mask_blob, Blob* in_diff_blob,
                               const PoolingOpConf& pooling_conf) {
-    const int64_t count = in_diff_blob->shape().Count(1);
+    const int64_t count = in_diff_blob->shape().elem_cnt();
 
     switch (pooling_conf.pool()) {
       case PoolingOpConf::MAX:

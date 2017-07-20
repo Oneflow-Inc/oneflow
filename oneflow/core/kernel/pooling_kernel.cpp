@@ -73,6 +73,10 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
                   wstart = std::max(wstart, static_cast<int64_t>(0));
                   const int64_t out_index =
                       out_h * out_blob->shape().At(3) + out_w;
+                  out_dptr[out_index] =
+                      in_dptr[hstart * in_blob->shape().At(3) + wstart];
+                  mask_dptr[out_index] =
+                      hstart * in_blob->shape().At(3) + wstart;
                   for (int64_t h = hstart; h < hend; ++h) {
                     for (int64_t w = wstart; w < wend; ++w) {
                       const int64_t index = h * in_blob->shape().At(3) + w;
@@ -114,10 +118,11 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
                   wend = std::min(wend, in_blob->shape().At(3));
                   const int64_t out_index =
                       out_h * out_blob->shape().At(3) + out_w;
+                  out_dptr[out_index] = 0;
                   for (int64_t h = hstart; h < hend; ++h) {
                     for (int64_t w = wstart; w < wend; ++w) {
-                      const int64_t index = h * in_blob->shape().At(3) + w;
-                      out_dptr[out_index] += in_dptr[index];
+                      out_dptr[out_index] +=
+                          in_dptr[h * in_blob->shape().At(3) + w];
                     }
                   }
                   out_dptr[out_index] /= pool_size;
@@ -219,7 +224,7 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
                   for (int h = hstart; h < hend; ++h) {
                     for (int w = wstart; w < wend; ++w) {
                       const int64_t in_diff_index =
-                          h * in_diff_blob->shape().At(3);
+                          h * in_diff_blob->shape().At(3) + w;
                       in_diff_dptr[in_diff_index] +=
                           out_diff_dptr[out_diff_index] / pool_size;
                     }
