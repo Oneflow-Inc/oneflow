@@ -35,6 +35,10 @@ class ConvolutionKernel final : public Kernel {
                 std::function<Blob*(const std::string&)>) const override;
 
  private:
+  void InitModelAndModelTmpBlobsWithoutSnapshot(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
+
   void ComputeWeightDiff(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
