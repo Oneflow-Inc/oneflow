@@ -11,7 +11,8 @@ void RngUniform(const int64_t elem_cnt, const FloatingPointType min,
   CHECK_GE(elem_cnt, 0);
   CHECK(dptr);
   CHECK_LE(min, max);
-  std::mt19937 generator(KernelUtil<DeviceType::kCPU, FloatingPointType>::NewRandomSeed());
+  std::mt19937 generator(
+      KernelUtil<DeviceType::kCPU, FloatingPointType>::NewRandomSeed());
   std::uniform_real_distribution<FloatingPointType> random_distribution(
       min, std::nextafter(max, std::numeric_limits<FloatingPointType>::max()));
 
@@ -26,7 +27,8 @@ void RngGaussian(const int64_t elem_cnt, const FloatingPointType mean,
   CHECK_GE(elem_cnt, 0);
   CHECK(dptr);
   CHECK_GT(std, 0.0);
-  std::mt19937 generator(KernelUtil<DeviceType::kCPU, FloatingPointType>::NewRandomSeed());
+  std::mt19937 generator(
+      KernelUtil<DeviceType::kCPU, FloatingPointType>::NewRandomSeed());
   std::normal_distribution<FloatingPointType> random_distribution(mean, std);
 
   for (int64_t i = 0; i < elem_cnt; ++i) {

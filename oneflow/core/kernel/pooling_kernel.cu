@@ -7,87 +7,193 @@ namespace oneflow {
 namespace {
 
 template<typename FloatingPointType>
-__global__ void RangeMaxQueryGpuKernel(
-    const FloatingPointType* in_dptr, const int64_t in_height,
-    const int64_t in_width, const int64_t hstart, const int64_t wstart,
-    const int64_t hend, const int64_t wend, const int64_t pool_size,
-    const int64_t out_index, FloatingPointType* out_dptr, int64_t* mask_dptr) {
-  out_dptr[out_index] = in_dptr[hstart * in_width + wstart];
-  mask_dptr[out_index] = hstart * in_width + wstart;
-  for (int64_t h = hstart; h < hend; ++h) {
-    for (int64_t w = wstart; w < wend; ++w) {
-      const int64_t index = h * in_width + w;
-      if (in_dptr[index] > out_dptr[out_index]) {
-        out_dptr[out_index] = in_dptr[index];
-        mask_dptr[out_index] = index;
+__global__ void MaxPoolForward(
+    const int64_t nthreads, const Blob* in_blob, Blob* out_blob,
+    Blob* mask_blob, const PoolingOpConf& pooling_conf) {
+  CUDA_1D_KERNEL_LOOP(index, nthreads) {
+    const FloatingPointType* in_dptr =
+      static_cast<const FloatingPointType*>(in_blob->dptr());
+    FloatingPointType* out_dptr =
+      static_cast<FloatingPointType*>(out_blob->mut_dptr());
+    int64_t* mask_dptr = static_cast<int64_t*>(mask_blob->mut_dptr());
+    const int64_t pw = index % out_blob->shape().At(3);
+    const int64_t ph =
+      (index / out_blob->shape().At(3)) % out_blob->shape().At(2);
+    const int64_t c =
+      (index / out_blob->shape().At(3) / out_blob->shape().At(2))
+      % out_blob->shape().At(1);
+    const int64_t n =
+      index / out_blob->shape().At(3) / out_blob->shape().At(2)
+      / out_blob->shape().At(1);
+    int64_t hstart = ph * pooling_conf.stride(0) - pooling_conf.pad(0);
+    int64_t wstart = pw * pooling_conf.stride(1) - pooling_conf.pad(1);
+    const int64_t hend = min(hstart + pooling_conf.kernel_size(0),
+                             in_blob->shape().At(2));
+    const int64_t wend = min(wstart + pooling_conf.kernel_size(1),
+                             in_blob->shape().At(2));
+    hstart = max(hstart, 0);
+    wstart = max(wstart, 0);
+    const FloatingPointType* const in_slice =
+      in_dptr + (n * in_blob->shape().At(1) + c)
+                * in_blob->shape().At(2) * in_blob->shape().At(3);
+    FloatingPointType maxval =
+      in_slice[hstart * in_blob->shape().At(3) + wstart];
+    int64_t maxidx = hstart * in_blob->shape().At(3) + wstart;
+    for (int64_t h = hstart; h < hend; ++h) {
+      for (int64_t w = wstart; w < wend; ++w) {
+        if (in_slice[h * in_blob->shape().At(3) + w] > maxval) {
+          maxidx = h * in_blob->shape().At(3) + w;
+          maxval = in_slice[maxidx];
+        }
       }
     }
+    out_dptr[index] = maxval;
+    mask[index] = maxidx;
   }
 }
 
 template<typename FloatingPointType>
-__global__ void RangeAveQueryGpuKernel(
-    const FloatingPointType* in_dptr, const int64_t in_height,
-    const int64_t in_width, const int64_t hstart, const int64_t wstart,
-    const int64_t hend, const int64_t wend, const int64_t pool_size,
-    const int64_t out_index, FloatingPointType* out_dptr, int64_t* mask_dptr) {
-  out_dptr[out_index] = 0;
-  for (int64_t h = hstart; h < hend; ++h) {
-    for (int64_t w = wstart; w < wend; ++w) {
-      const int64_t index = h * in_width + w;
-      out_dptr[out_index] += in_dptr[index];
+__global__ void AvePoolForward(
+    const int64_t nthreads, const Blob* in_blob, Blob* out_blob,
+    const PoolingOpConf& pooling_conf) {
+  CUDA_1D_KERNEL_LOOP(index, nthreads) {
+    const FloatingPointType* in_dptr =
+      static_cast<const FloatingPointType*>(in_blob->dptr());
+    FloatingPointType* out_dptr =
+      static_cast<FloatingPointType*>(out_blob->mut_dptr());
+    const int64_t pw = index % out_blob->shape().At(3);
+    const int64_t ph =
+      (index / out_blob->shape().At(3)) % out_blob->shape().At(2);
+    const int64_t c =
+      (index / out_blob->shape().At(3) / out_blob->shape().At(2))
+      % out_blob->shape().At(1);
+    const int64_t n =
+      index / out_blob->shape().At(3) / out_blob->shape().At(2)
+      / out_blob->shape().At(1);
+    int64_t hstart = ph * pooling_conf.stride(0) - pooling_conf.pad(0);
+    int64_t wstart = pw * pooling_conf.stride(1) - pooling_conf.pad(1);
+    const int64_t hend = min(hstart + pooling_conf.kernel_size(0),
+                             in_blob->shape().At(2) + pooling_conf.pad(0));
+    const int64_t wend = min(wstart + pooling_conf.kernel_size(1),
+                             in_blob->shape().At(2) + pooling_conf.pad(1));
+    const int64_t pool_size = (hend - hstart) * (wend - wstart);
+    hstart = max(hstart, 0);
+    wstart = max(wstart, 0);
+    hend = min(hend, in_blob->shape().At(2));
+    wend = min(wend, in_blob->shape().At(3));
+    FloatingPointType aveval = 0;
+    const FloatingPointType* const in_slice =
+      in_dptr + (n * in_blob->shape().At(1) + c)
+                * in_blob->shape().At(2) * in_blob->shape().At(3);
+    for (int64_t h = hstart; h < hend; ++h) {
+      for (int64_t w = wstart; w < wend; ++w) {
+          aveval += in_slice[h * in_blob->shape().At(3) + w];
+      }
     }
+    out_dptr[index] = aveval / pool_size;
   }
-  out_dptr[out_index] /= pool_size;
-}
-
-// TODO(shiyuan) random function
-template<typename FloatingPointType>
-__global__ void RangeStoQueryGpuKernel(
-    const FloatingPointType* in_dptr, const int64_t in_height,
-    const int64_t in_width, const int64_t hstart, const int64_t wstart,
-    const int64_t hend, const int64_t wend, const int64_t pool_size,
-    const int64_t out_index, FloatingPointType* out_dptr, int64_t* mask_dptr) {
-  const int64_t index =
-      (hstart /*+ random()*/) * in_width + (wstart /*+ random()*/);
-  out_dptr[out_index] = in_dptr[index];
-  mask_dptr[out_index] = index;
 }
 
 template<typename FloatingPointType>
-__global__ void PoolingMaxBpGpuKernel(
-    const FloatingPointType* out_diff_dptr, const int64_t* mask_dptr,
-    const int64_t pool_size, const int64_t out_diff_index,
-    const int64_t in_height, const int64_t in_width, const int64_t hstart,
-    const int64_t wstart, const int64_t hend, const int64_t wend,
-    FloatingPointType* in_diff_dptr) {
-  const int64_t in_diff_index = mask_dptr[out_diff_index];
-  in_diff_dptr[in_diff_index] += out_diff_dptr[out_diff_index];
-}
-
-template<typename FloatingPointType>
-__global__ void PoolingAveBpGpuKernel(
-    const FloatingPointType* out_diff_dptr, const int64_t* mask_dptr,
-    const int64_t pool_size, const int64_t out_diff_index,
-    const int64_t in_height, const int64_t in_width, const int64_t hstart,
-    const int64_t wstart, const int64_t hend, const int64_t wend,
-    FloatingPointType* in_diff_dptr) {
-  for (int h = hstart; h < hend; ++h) {
-    for (int w = wstart; w < wend; ++w) {
-      in_diff_dptr[h * in_width + w] += out_diff_dptr[out_diff_index] / pool_size;
+__global__ void MaxPoolBackward(
+    const int64_t nthreads, const Blob* out_diff_blob, const Blob* mask_blob,
+    Blob* in_diff_blob, const PoolingOpConf& pooling_conf) {
+  CUDA_1D_KERNEL_LOOP(index, nthreads) {
+    const FloatingPointType* out_diff_dptr =
+      static_cast<const FloatingPointType*>(out_diff_blob->dptr());
+    const int64_t* mask_dptr = static_cast<int64_t*>(mask_blob->dptr());
+    FloatingPointType* in_diff_dptr =
+      static_cast<FloatingPointType*>(in_diff_blob->mut_dptr());
+    const int64_t w = index % in_diff_blob->shape().At(3);
+    const int64_t h = (index / in_diff_blob->shape().At(3))
+      % in_diff_blob->shape().At(2);
+    const int64_t c =
+      (index / in_diff_blob->shape().At(3) / in_diff_blob->shape().At(2))
+      % in_diff_blob->shape().At(1);
+    const int64_t n =
+      index / in_diff_blob->shape().At(3) / in_diff_blob->shape().At(2)
+      / in_diff_blob->shape().At(1);
+    int64_t phstart =
+      ((h + pooling_conf.pad(0)) < pooling_conf.kernel_size(0)) ?
+      0 : (h + pooling_conf.pad(0) - pooling_conf.kernel_size(0))
+          / pooling_conf.stride(0) + 1;
+    int64_t whstart =
+      ((w + pooling_conf.pad(1)) < pooling_conf.kernel_size(1)) ?
+      0 : (w + pooling_conf.pad(1) - pooling_conf.kernel_size(1))
+          / pooling_conf.stride(1) + 1;
+    const int64_t phend =
+      min((h + pooling_conf.pad(0)) / pooling_conf.stride(0) + 1,
+          out_diff_blob->shape().At(2));
+    const int64_t pwend =
+      min((w + pooling_conf.pad(1)) / pooling_conf.stride(1) + 1,
+          out_diff_blob->shape().At(2));
+    FloatingPointType gradient = 0;
+    const int64_t offset =
+      (n * in_diff_blob->shape().At(1) + c) * out_diff_blob->shape().At(2)
+      * out_diff_blob->shape().At(3);
+    const FloatingPointType* const out_diff_slice = out_diff_dptr + offset;
+    const int64_t* const mask_slice = mask_dptr + offset;
+    for (int64_t ph = phstart; ph < phend; ++ph) {
+      for (int64_t pw = pwstart; pw < pwend; ++pw) {
+        if (mask_slice[ph * out_diff_blob->shape().At(3) + pw]
+            == h * in_diff_blob->shape().At(3) + w) {
+          gradient += out_diff_slice[ph * out_diff_blob->shape().At(3) + pw];
+        }
+      }
     }
+    in_diff_dptr[index] = gradient;
   }
 }
 
 template<typename FloatingPointType>
-__global__ void PoolingStoBpGpuKernel(
-    const FloatingPointType* out_diff_dptr, const int64_t* mask_dptr,
-    const int64_t pool_size, const int64_t out_diff_index,
-    const int64_t in_height, const int64_t in_width, const int64_t hstart,
-    const int64_t wstart, const int64_t hend, const int64_t wend,
-    FloatingPointType* in_diff_dptr) {
-  const int64_t in_diff_index = mask_dptr[out_diff_index];
-  in_diff_dptr[in_diff_index] += out_diff_dptr[out_diff_index];
+__global__ void AvePoolBackward(
+    const int64_t nthreads, const Blob* out_diff_blob, Blob* in_diff_blob,
+    const PoolingOpConf& pooling_conf) {
+  CUDA_1D_KERNEL_LOOP(index, nthreads) {
+    const FloatingPointType* out_diff_dptr =
+      static_cast<const FloatingPointType*>(out_diff_blob->dptr());
+    FloatingPointType* in_diff_dptr =
+      static_cast<FloatingPointType*>(in_diff_blob->mut_dptr());
+    const int64_t w = index % in_diff_blob->shape().At(3);
+    const int64_t h = 
+      (index / in_diff_blob->shape().At(3))
+      % in_diff_blob->shape().At(2);
+    const int64_t c = 
+      (index / in_diff_blob->shape().At(3) / in_diff_blob->shape().At(2))
+      % in_diff_blob->shape().At(1);
+    const int64_t n =
+      index / in_diff_blob->shape().At(3) / in_diff_blob->shape().At(2)
+      / in_diff_blob->shape().At(1);
+    int64_t phstart =
+      (h < pooling_conf.kernel_size(0)) ? 0 :
+      (h - pooling_conf.kernel_size(0)) / pooling_conf.stride(0) + 1;
+    int64_t whstart =
+      (w < pooling_conf.kernel_size(1)) ? 0 :
+      (w - pooling_conf.kernel_size(1)) / pooling_conf.stride(1) + 1;
+    const int64_t phend = min(h / pooling_conf.stride(0) + 1,
+                              out_diff_blob->shape().At(2));
+    const int64_t pwend = min(w / pooling_conf.stride(1) + 1,
+                              out_diff_blob->shape().At(2));
+    FloatingPointType gradient = 0;
+    const int64_t offset =
+      (n * in_diff_blob->shape().At(1) + c) * out_diff_blob->shape().At(2)
+      * out_diff_blob->shape().At(3);
+    const FloatingPointType* const out_diff_slice = out_diff_dptr + offset;
+    for (int64_t ph = phstart; ph < phend; ++ph) {
+      for (int64_t pw = pwstart; pw < pwend; ++pw) {
+        int64_t hstart = ph * pooling_conf.stride(0) - pooling_conf.pad(0);
+        int64_t wstart = pw * pooling_conf.stride(1) - pooling_conf.pad(1);
+        int64_t hend = min(hstart + pooling_conf.kernel_size(0),
+                           in_diff_blob->shape().At(2) + pooling_conf.pad(0));
+        int64_t wend = min(wstart + pooling_conf.kernel_size(1),
+                           in_diff_blob->shape().At(3) + pooling_conf.pad(1));
+        int64_t pool_size = (hend - hstart) * (wend - wstart);
+        gradient +=
+          top_diff_slice[ph * out_diff_blob->shape().At(3) + pw] / pool_size;
+      }
+    }
+    in_diff_dptr[index] = gradient;
+  }
 }
 
 }  // namespace
@@ -98,85 +204,54 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
   OF_DISALLOW_COPY_AND_MOVE(PoolingKernelUtil);
   PoolingKernelUtil() = delete;
 
-  static void RangeMaxQuery(const FloatingPointType* in_dptr,
-                            const int64_t in_height, const int64_t in_width,
-                            const int64_t hstart, const int64_t wstart,
-                            const int64_t hend, const int64_t wend,
-                            const int64_t pool_size, const int64_t out_index,
-                            FloatingPointType* out_dptr, int64_t* mask_dptr) {
-    RangeMaxQueryGpuKernel<FloatingPointType>
-        <<<BlocksNum4ThreadsNum(1), kCudaThreadsNumPerBlock, 0,
-           ctx.device_ctx->cuda_stream()>>>(
-            in_dptr, in_height, in_width, hstart, wstart, hend, wend, pool_size,
-            out_index, out_dptr, mask_dptr);
+  static void PoolingForward(const KernelCtx& ctx, const Blob* in_blob,
+                             Blob* out_blob, Blob* mask_blob,
+                             const PoolingOpConf& pooling_conf) {
+    const int64_t count = out_blob->shape().Count(1);
+
+    switch(pooling_conf.pool()) {
+      case PoolingOpConf::MAX:
+        MaxPoolForward<<<BlocksNum4ThreadsNum(num_kernels),
+                         kCudaThreadsNumPerBlock, 0,
+                         ctx.device_ctx->cuda_stream()>>>(
+            count, in_blob, out_blob, mask_blob, pooling_conf);
+        break;
+      case PoolingOpConf::AVE:
+        AvePoolForward<<<BlocksNum4ThreadsNum(num_kernels),
+                         kCudaThreadsNumPerBlock, 0,
+                         ctx.device_ctx->cuda_stream()>>>(
+            count, in_blob, out_blob, pooling_conf);
+        break;
+      case PoolingOpConf::STOCHASTIC:
+        TODO();
+      default:
+        UNEXPECTED_RUN();
+    }
   }
 
-  static void RangeAveQuery(const FloatingPointType* in_dptr,
-                            const int64_t in_height, const int64_t in_width,
-                            const int64_t hstart, const int64_t wstart,
-                            const int64_t hend, const int64_t wend,
-                            const int64_t pool_size, const int64_t out_index,
-                            FloatingPointType* out_dptr, int64_t* mask_dptr) {
-    RangeAveQueryGpuKernel<FloatingPointType>
-        <<<BlocksNum4ThreadsNum(1), kCudaThreadsNumPerBlock, 0,
-           ctx.device_ctx->cuda_stream()>>>(
-            in_dptr, in_height, in_width, hstart, wstart, hend, wend, pool_size,
-            out_index, out_dptr, mask_dptr);
-  }
-
-  static void RangeStoQuery(const FloatingPointType* in_dptr,
-                            const int64_t in_height, const int64_t in_width,
-                            const int64_t hstart, const int64_t wstart,
-                            const int64_t hend, const int64_t wend,
-                            const int64_t pool_size, const int64_t out_index,
-                            FloatingPointType* out_dptr, int64_t* mask_dptr) {
-    RangeStoQueryGpuKernel<FloatingPointType>
-        <<<BlocksNum4ThreadsNum(1), kCudaThreadsNumPerBlock, 0,
-           ctx.device_ctx->cuda_stream()>>>(
-            in_dptr, in_height, in_width, hstart, wstart, hend, wend, pool_size,
-            out_index, out_dptr, mask_dptr);
-  }
-
-  static void PoolingMaxBp(const FloatingPointType* out_diff_dptr,
-                           const int64_t* mask_dptr, const int64_t pool_size,
-                           const int64_t out_diff_index,
-                           const int64_t in_height, const int64_t in_width,
-                           const int64_t hstart, const int64_t wstart,
-                           const int64_t hend, const int64_t wend,
-                           FloatingPointType* in_diff_dptr) {
-    PoolingMaxBpGpuKernel<FloatingPointType>
-        <<<BlocksNum4ThreadsNum(1), kCudaThreadsNumPerBlock, 0,
-           ctx.device_ctx->cuda_stream()>>>(
-            out_diff_dptr, mask_dptr, pool_size, out_diff_index, in_height,
-            in_width, hstart, wstart, hend, wend, in_diff_dptr);
-  }
-
-  static void PoolingAveBp(const FloatingPointType* out_diff_dptr,
-                           const int64_t* mask_dptr, const int64_t pool_size,
-                           const int64_t out_diff_index,
-                           const int64_t in_height, const int64_t in_width,
-                           const int64_t hstart, const int64_t wstart,
-                           const int64_t hend, const int64_t wend,
-                           FloatingPointType* in_diff_dptr) {
-    PoolingAveBpGpuKernel<FloatingPointType>
-        <<<BlocksNum4ThreadsNum(1), kCudaThreadsNumPerBlock, 0,
-           ctx.device_ctx->cuda_stream()>>>(
-            out_diff_dptr, mask_dptr, pool_size, out_diff_index, in_height,
-            in_width, hstart, wstart, hend, wend, in_diff_dptr);
-  }
-
-  static void PoolingStoBp(const FloatingPointType* out_diff_dptr,
-                           const int64_t* mask_dptr, const int64_t pool_size,
-                           const int64_t out_diff_index,
-                           const int64_t in_height, const int64_t in_width,
-                           const int64_t hstart, const int64_t wstart,
-                           const int64_t hend, const int64_t wend,
-                           FloatingPointType* in_diff_dptr) {
-    PoolingStoBpGpuKernel<FloatingPointType>
-        <<<BlocksNum4ThreadsNum(1), kCudaThreadsNumPerBlock, 0,
-           ctx.device_ctx->cuda_stream()>>>(
-            out_diff_dptr, mask_dptr, pool_size, out_diff_index, in_height,
-            in_width, hstart, wstart, hend, wend, in_diff_dptr);
+  static void PoolingBackward(const KernelCtx& ctx, const Blob* out_diff_blob,
+                              const Blob* mask_blob, Blob* in_diff_blob,
+                              const PoolingOpConf& pooling_conf) {
+    const int64_t count = in_diff_blob->shape().Count(1);
+    
+    switch(pooling_conf.pool()) {
+      case PoolingOpConf::MAX:
+        MaxPoolBackward<<<BlocksNum4ThreadsNum(num_kernels),
+                          kCudaThreadsNumPerBlock, 0,
+                          ctx.device_ctx->cuda_stream()>>>(
+            count, out_diff_blob, mask_blob, in_diff_blob, pooling_conf);
+        break;
+      case PoolingOpConf::AVE:
+        AvePoolBackward<<<BlocksNum4ThreadsNum(num_kernels),
+                          kCudaThreadsNumPerBlock, 0,
+                          ctx.device_ctx->cuda_stream()>>>(
+            count, out_diff_blob, in_diff_blob, pooling_conf);
+        break;
+      case PoolingOpConf::STOCHASTIC:
+        TODO();
+      default:
+        UNEXPECTED_RUN();
+    }
   }
 };
 
