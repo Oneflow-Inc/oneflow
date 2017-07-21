@@ -13,8 +13,8 @@ void MultinomialLogisticLossKernel<device_type, FloatingPointType>::Forward(
 
   MultinomialLogisticLossKernelUtil<device_type, FloatingPointType>::Forward(
       ctx,
-      prediction->shape().At(0),  // piece size
-      prediction->shape().At(1),  // number of classes
+      prediction->shape().At(0),  
+      prediction->shape().At(1),  
       prediction->dptr<FloatingPointType>(), label->dptr<FloatingPointType>(),
       loss->mut_dptr<FloatingPointType>(), loss->mut_dptr<FloatingPointType>());
 
@@ -22,8 +22,8 @@ void MultinomialLogisticLossKernel<device_type, FloatingPointType>::Forward(
   if (prediction_diff != nullptr) {
     MultinomialLogisticLossKernelUtil<device_type, FloatingPointType>::Backward(
         ctx,
-        prediction->shape().At(0),  // piece size
-        prediction->shape().At(1),  // number of classes
+        prediction->shape().At(0),
+        prediction->shape().At(1),
         prediction->dptr<FloatingPointType>(), label->dptr<FloatingPointType>(),
         prediction_diff->mut_dptr<FloatingPointType>());
   }
