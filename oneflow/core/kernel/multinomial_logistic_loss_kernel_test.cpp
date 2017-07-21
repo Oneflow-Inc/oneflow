@@ -29,21 +29,13 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
   FloatingPointType loss_mat[1] = {0};
   (*bn2blob_ptr)["loss"] = KTCommon::CreateBlobWithVector({1, 1}, loss_mat);
 
-  FloatingPointType loss_diff_mat[1] = {0};
-  (*bn2blob_ptr)["loss_diff"] =
-      KTCommon::CreateBlobWithVector({1, 1}, loss_diff_mat);
+  FloatingPointType loss_buff_mat[4] = {0};
+  (*bn2blob_ptr)["loss_buff"] =
+      KTCommon::CreateBlobWithVector({1, 1}, loss_buff_mat);
 
   FloatingPointType expected_loss_mat[1] = {2.201842e-02};
   (*bn2blob_ptr)["expected_loss"] =
       KTCommon::CreateBlobWithVector({1, 1}, expected_loss_mat);
-
-  // label is one hot
-  /*FloatingPointType label_mat[40] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
-                                     1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                     0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
-                                     0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
-  (*bn2blob_ptr)["label"] = KTCommon::CreateBlobWithVector({4, 10},
-  label_mat);*/
 
   // label is not one hot
   FloatingPointType label_mat[4] = {3, 3, 2, 9};
@@ -96,7 +88,6 @@ void TestMultinomialLogisticLossKernel() {
   auto multinomial_logistic_loss_kernel =
       BuildMultinomialLogisticLossKernel<device_type, FloatingPointType>();
   multinomial_logistic_loss_kernel->Forward(ctx, BnInOp2BlobPtr);
-  // multinomial_logistic_loss_kernel->Backward(ctx, BnInOp2BlobPtr);
   KTCommon::SyncStream(&ctx);
   KTCommon::CheckResult(BnInOp2BlobPtr, "loss", "expected_loss");
   KTCommon::CheckResult(BnInOp2BlobPtr, "prediction_diff",

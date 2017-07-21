@@ -9,24 +9,23 @@ void MultinomialLogisticLossKernel<device_type, FloatingPointType>::Forward(
   const Blob* prediction = BnInOp2BlobPtr("prediction");
   const Blob* label = BnInOp2BlobPtr("label");
   Blob* loss = BnInOp2BlobPtr("loss");
+  Blob* loss_buff = BnInOp2BlobPtr("loss_buff");
 
   MultinomialLogisticLossKernelUtil<device_type, FloatingPointType>::Forward(
       ctx,
       prediction->shape().At(0),  // piece size
       prediction->shape().At(1),  // number of classes
       prediction->dptr<FloatingPointType>(), label->dptr<FloatingPointType>(),
-      loss->mut_dptr<FloatingPointType>());
+      loss->mut_dptr<FloatingPointType>(), loss->mut_dptr<FloatingPointType>());
 
   Blob* prediction_diff = BnInOp2BlobPtr("prediction_diff");
-  // const Blob* loss_diff = BnInOp2BlobPtr("loss_diff");
   if (prediction_diff != nullptr) {
     MultinomialLogisticLossKernelUtil<device_type, FloatingPointType>::Backward(
         ctx,
         prediction->shape().At(0),  // piece size
         prediction->shape().At(1),  // number of classes
         prediction->dptr<FloatingPointType>(), label->dptr<FloatingPointType>(),
-        prediction_diff->mut_dptr<FloatingPointType>());  //,
-    //    loss_diff->dptr<FloatingPointType>());
+        prediction_diff->mut_dptr<FloatingPointType>());
   }
 }
 
@@ -40,8 +39,8 @@ class MultinomialLogisticLossKernelUtil<DeviceType::kCPU, FloatingPointType>
   static void Forward(const KernelCtx& ctx, const int64_t piece_size,
                       const int64_t num_of_classes,
                       const FloatingPointType* prediction,
-                      const FloatingPointType* labels,
-                      FloatingPointType* loss) {
+                      const FloatingPointType* labels, FloatingPointType* loss,
+                      FloatingPointType* loss_buff) {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
       loss[0] = 0;
       for (int64_t i = 0; i < piece_size; ++i) {
@@ -60,7 +59,6 @@ class MultinomialLogisticLossKernelUtil<DeviceType::kCPU, FloatingPointType>
                        const FloatingPointType* prediction,
                        const FloatingPointType* labels,
                        FloatingPointType* prediction_diff) {
-    //                       const FloatingPointType* loss_diff) {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
       const FloatingPointType scale = -1.0 / piece_size;
       for (int64_t i = 0; i < piece_size; i++) {

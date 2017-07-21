@@ -32,7 +32,8 @@ class MultinomialLogisticLossKernelUtil final {
   static void Forward(const KernelCtx& ctx, const int64_t piece_size,
                       const int64_t num_of_classes,
                       const FloatingPointType* prediction,
-                      const FloatingPointType* labels, FloatingPointType* loss);
+                      const FloatingPointType* labels, FloatingPointType* loss,
+                      FloatingPointType* loss_buff);
   static void Backward(const KernelCtx& ctx, const int64_t piece_size,
                        const int64_t num_of_classes,
                        const FloatingPointType* prediction,
