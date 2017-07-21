@@ -147,8 +147,6 @@ void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
     comp_task_node->SetFwNode();
     comp_task_node->set_stage_node(stage);
     comp_task_node->set_parallel_id(parallel_idx);
-    comp_task_node->set_task_id();
-    // Set comp_task_node::thread_local_id
     if (stage->SortedDevicePhyIds().empty()) {
       comp_task_node->mut_thrd_loc_id() =
           IDMgr::Singleton()->PersistenceThrdLocId();
@@ -158,7 +156,8 @@ void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
       comp_task_node->mut_thrd_loc_id() =
           IDMgr::Singleton()->ThrdLocId4DevPhyId(device_id);
     }
-    //
+    comp_task_node->set_task_id();
+
     task_nodes_in_stage->comp_in_task_nodes.push_back(comp_task_node);
     task_nodes_in_stage->comp_out_task_nodes.push_back(comp_task_node);
     parallel_idx += 1;
