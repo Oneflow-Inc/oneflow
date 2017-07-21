@@ -14,7 +14,8 @@ void MultinomialLogisticLossKernel<device_type, FloatingPointType>::Forward(
   MultinomialLogisticLossKernelUtil<device_type, FloatingPointType>::Forward(
       ctx, prediction->shape().At(0), prediction->shape().At(1),
       prediction->dptr<FloatingPointType>(), label->dptr<FloatingPointType>(),
-      loss->mut_dptr<FloatingPointType>(), loss->mut_dptr<FloatingPointType>());
+      loss->mut_dptr<FloatingPointType>(),
+      loss_buff->mut_dptr<FloatingPointType>());
 
   Blob* prediction_diff = BnInOp2BlobPtr("prediction_diff");
   if (prediction_diff != nullptr) {
