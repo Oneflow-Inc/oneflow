@@ -13,9 +13,9 @@ __global__ void MultinomialLogisticLossForwardGpu(
   CUDA_1D_KERNEL_LOOP(i, instance_num) {
     int64_t label = labels[i];
     FloatingPointType prob = prediction[i * num_of_classes + label];
-    prob = prob > FloatingPointType(kLOG_THRESHOLD)
+    prob = prob > FloatingPointType(kLogThreshold)
                ? prob
-               : FloatingPointType(kLOG_THRESHOLD);
+               : FloatingPointType(kLogThreshold);
     loss_buff[i] = -logf(prob) / instance_num;
   }
 }
@@ -29,9 +29,9 @@ __global__ void MultinomialLogisticLossBackwardGpu(
   CUDA_1D_KERNEL_LOOP(i, instance_num) {
     int64_t label = labels[i];
     FloatingPointType prob = prediction[i * num_of_classes + label];
-    prob = prob > FloatingPointType(kLOG_THRESHOLD)
+    prob = prob > FloatingPointType(kLogThreshold)
                ? prob
-               : FloatingPointType(kLOG_THRESHOLD);
+               : FloatingPointType(kLogThreshold);
     prediction_diff[i * num_of_classes + label] = scale / prob;
   }
 }
