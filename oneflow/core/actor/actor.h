@@ -27,6 +27,12 @@ class Actor {
   int ProcessMsg(const ActorMsg& msg) { return (this->*msg_handler_)(msg); }
 
   int64_t actor_id() const { return actor_id_; }
+  int64_t GetMachineId() const {
+    return IDMgr::Singleton()->MachineId4ActorId(actor_id_);
+  }
+  int64_t GetThrdLocId() const {
+    return IDMgr::Singleton()->ThrdLocId4ActorId(actor_id_);
+  }
 
  protected:
   struct ExecKernel {
@@ -47,10 +53,11 @@ class Actor {
   using MsgHandler = int (Actor::*)(const ActorMsg&);
   MsgHandler msg_handler() { return msg_handler_; }
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
-#define OF_SET_MSG_HANDLER(val)                                   \
-  do {                                                            \
-    LOG(INFO) << "Actor " << actor_id() << " switch to " << #val; \
-    set_msg_handler(static_cast<MsgHandler>(val));                \
+#define OF_SET_MSG_HANDLER(val)                                                \
+  do {                                                                         \
+    LOG(INFO) << "Actor " << actor_id() << " MachineId " << GetMachineId()     \
+              << " ThreadLocalId " << GetThrdLocId() << " switch to " << #val; \
+    set_msg_handler(static_cast<MsgHandler>(val));                             \
   } while (0)
 
   // Common Handlers
