@@ -5,6 +5,7 @@
 namespace oneflow {
 
 void SnapshotMgr::Init() {
+  LOG(INFO) << "SnapshotMgr Init";
   model_save_snapshots_path_ = JobDesc::Singleton()->md_save_snapshots_path();
   tensorflow::Env* env = tensorflow::Env::Default();
   if (env->IsDirectory(model_save_snapshots_path_).code()

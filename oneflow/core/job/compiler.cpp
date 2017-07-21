@@ -73,7 +73,7 @@ void Compiler::Compile(const JobConf& job_conf,
 void Compiler::BuildGraphs() {
   ordered_task_gphs_.clear();
   // data graph
-  LOG(INFO) << "Build DataTaskGraph...";
+  LOG(INFO) << "Build DataTaskGraph";
   auto data_task_gph = new DataTaskGraph(
       "data", JobDesc::Singleton()->train_dlnet_conf(),
       JobDesc::Singleton()->placement(), JobDesc::Singleton()->is_train());
@@ -110,7 +110,7 @@ void Compiler::BuildModelGraphs(
   bool is_train = JobDesc::Singleton()->is_train();
   std::vector<CompTaskNode*> sorted_diff_acc_tasks;
   if (is_train) {
-    LOG(INFO) << "Build MdDiffAccTaskGraph... for " << chain_tag;
+    LOG(INFO) << "Build MdDiffAccTaskGraph for " << chain_tag;
     auto diff_acc_gph = new MdDiffAccTaskGraph("md_diff_acc_" + chain_tag,
                                                pair.first, pair.second);
     ordered_task_gphs_.emplace_back(diff_acc_gph);
@@ -120,7 +120,7 @@ void Compiler::BuildModelGraphs(
     SortByParallelId(&sorted_diff_acc_tasks);
   }
 
-  LOG(INFO) << "Build MdUpdtTaskGraph... for " << chain_tag;
+  LOG(INFO) << "Build MdUpdtTaskGraph for " << chain_tag;
   std::vector<CompTaskNode*> updt_tasks;
   updt_tasks.reserve(pair.second.size());
   for (size_t i = 0; i < pair.second.size(); ++i) {
@@ -136,7 +136,7 @@ void Compiler::BuildModelGraphs(
   }
 
   if (is_train) {
-    LOG(INFO) << "Build MdSaveTaskGraph... for " << chain_tag;
+    LOG(INFO) << "Build MdSaveTaskGraph for " << chain_tag;
     if (policy == kDataParallel) { updt_tasks = {updt_tasks.front()}; }
     for (CompTaskNode* update_task : updt_tasks) {
       auto save_gph = new MdSaveTaskGraph(
@@ -148,7 +148,7 @@ void Compiler::BuildModelGraphs(
 
 void Compiler::InferShape4Regsts() {
   for (auto& task_gph : ordered_task_gphs_) {
-    LOG(INFO) << "InferShape... for " << task_gph->name();
+    LOG(INFO) << "InferShape for " << task_gph->name();
     task_gph->InferShapeOfBlobsInProducedRegsts();
   }
 }
@@ -197,10 +197,10 @@ DEFINE_string(plan_filepath, "", "");
 int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, true);
-  LOG(INFO) << "Compiler Starting Up...";
+  LOG(INFO) << "Compiler Starting Up";
   oneflow::JobConf job_conf;
   oneflow::ParseProtoFromTextFile(FLAGS_job_conf_filepath, &job_conf);
   oneflow::Compiler::Singleton()->Compile(job_conf, FLAGS_plan_filepath);
-  LOG(INFO) << "Compiler Shutting Down...";
+  LOG(INFO) << "Compiler Shutting Down";
   return 0;
 }

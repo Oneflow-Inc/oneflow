@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_JOB_JOB_DESC_H_
 #define ONEFLOW_CORE_JOB_JOB_DESC_H_
 
-#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/job_desc.pb.h"
 
@@ -55,7 +55,9 @@ class JobDesc final {
   int64_t total_piece_num() const {
     return total_batch_num() * num_of_pieces_in_batch();
   }
-  const FillConf* default_fill_conf() const { TODO(); }
+  const FillConf* default_fill_conf() const {
+    return OF_PB_POINTER_GET(job_conf_, default_fill_conf);
+  }
 
  private:
   JobDesc() = default;

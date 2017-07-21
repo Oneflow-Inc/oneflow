@@ -33,7 +33,7 @@ int MdUpdtCompActor::HandlerBeforeInitializeModel(const ActorMsg& actor_msg) {
     kernels.insert(KernelMgr::Singleton()->GetKernelFromOpName(op_name));
   };
   model_regst->ForEachLbn(CollectKernelsFromLbn);
-  model_tmp_regst->ForEachLbn(CollectKernelsFromLbn);
+  if (model_tmp_regst) { model_tmp_regst->ForEachLbn(CollectKernelsFromLbn); }
 
   for (const Kernel* kernel : kernels) {
     kernel->InitModelAndModelTmpBlobs(
