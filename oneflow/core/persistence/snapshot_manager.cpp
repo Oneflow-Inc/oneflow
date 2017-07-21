@@ -29,9 +29,10 @@ Snapshot* SnapshotMgr::GetWriteableSnapshot(int64_t snapshot_id) {
     tensorflow::Env* env = tensorflow::Env::Default();
     TF_CHECK_OK(env->CreateDir(snapshot_root_path));
     std::unique_ptr<Snapshot> ret(new Snapshot(snapshot_root_path));
-    CHECK(snapshot_id2writeable_snapshot_.emplace(snapshot_id, std::move(ret))
-              .second);
-    return ret.get();
+    auto emplace_ret =
+        snapshot_id2writeable_snapshot_.emplace(snapshot_id, std::move(ret));
+    it = emplace_ret.first;
+    CHECK(emplace_ret.second);
   }
   return it->second.get();
 }

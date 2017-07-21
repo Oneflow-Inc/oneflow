@@ -55,8 +55,8 @@ class Actor {
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
 #define OF_SET_MSG_HANDLER(val)                                                \
   do {                                                                         \
-    LOG(INFO) << "Actor " << actor_id() << " MachineId " << GetMachineId()     \
-              << " ThreadLocalId " << GetThrdLocId() << " switch to " << #val; \
+    LOG(INFO) << "Actor " << actor_id() << " ThreadLocalId " << GetThrdLocId() \
+              << " switch to " << #val;                                        \
     set_msg_handler(static_cast<MsgHandler>(val));                             \
   } while (0)
 
