@@ -6,7 +6,6 @@
 #include "oneflow/core/kernel/kernel_manager.h"
 
 namespace oneflow {
-const float kLOG_THRESHOLD = 1e-20;  // should be managed in higher level
 
 template<DeviceType device_type, typename FloatingPointType>
 class MultinomialLogisticLossKernel final : public Kernel {
@@ -29,12 +28,12 @@ class MultinomialLogisticLossKernelUtil final {
   OF_DISALLOW_COPY_AND_MOVE(MultinomialLogisticLossKernelUtil);
   MultinomialLogisticLossKernelUtil() = delete;
 
-  static void Forward(const KernelCtx& ctx, const int64_t piece_size,
+  static void Forward(const KernelCtx& ctx, const int64_t instance_num,
                       const int64_t num_of_classes,
                       const FloatingPointType* prediction,
                       const FloatingPointType* labels, FloatingPointType* loss,
                       FloatingPointType* loss_buff);
-  static void Backward(const KernelCtx& ctx, const int64_t piece_size,
+  static void Backward(const KernelCtx& ctx, const int64_t instance_num,
                        const int64_t num_of_classes,
                        const FloatingPointType* prediction,
                        const FloatingPointType* labels,

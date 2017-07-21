@@ -36,32 +36,32 @@ class MultinomialLogisticLossKernelUtil<DeviceType::kCPU, FloatingPointType>
   OF_DISALLOW_COPY_AND_MOVE(MultinomialLogisticLossKernelUtil);
   MultinomialLogisticLossKernelUtil() = delete;
 
-  static void Forward(const KernelCtx& ctx, const int64_t piece_size,
+  static void Forward(const KernelCtx& ctx, const int64_t instance_num,
                       const int64_t num_of_classes,
                       const FloatingPointType* prediction,
                       const FloatingPointType* labels, FloatingPointType* loss,
                       FloatingPointType* loss_buff) {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
       loss[0] = 0;
-      for (int64_t i = 0; i < piece_size; ++i) {
+      for (int64_t i = 0; i < instance_num; ++i) {
         int64_t label = labels[i];
         FloatingPointType prob =
             std::max(prediction[i * num_of_classes + label],
                      FloatingPointType(kLOG_THRESHOLD));
         loss[0] -= log(prob);
       }
-      loss[0] = loss[0] / piece_size;
+      loss[0] = loss[0] / instance_num;
     });
   }
 
-  static void Backward(const KernelCtx& ctx, const int64_t piece_size,
+  static void Backward(const KernelCtx& ctx, const int64_t instance_num,
                        const int64_t num_of_classes,
                        const FloatingPointType* prediction,
                        const FloatingPointType* labels,
                        FloatingPointType* prediction_diff) {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
-      const FloatingPointType scale = -1.0 / piece_size;
-      for (int64_t i = 0; i < piece_size; i++) {
+      const FloatingPointType scale = -1.0 / instance_num;
+      for (int64_t i = 0; i < instance_num; i++) {
         int64_t label = labels[i];
         FloatingPointType prob =
             std::max(prediction[i * num_of_classes + label],
