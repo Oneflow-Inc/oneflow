@@ -168,23 +168,24 @@ void Compiler::GenPlanFile(const std::string& plan_filepath) {
 
   OpMgr::Singleton()->AllOpToProto(plan.mutable_op());
   JobDesc::Singleton()->ToProto(plan.mutable_job_desc());
-  ConstForEachChainNode([&plan](const ChainNode* node) {
-    for (std::shared_ptr<const Operator> op : node->op_vec()) {
-      auto it = plan.mutable_op_name2device_type()->find(op->op_name());
+  ForEachTaskNode([&](const TaskNode* task_node) {
+    task_node->exec_gph().ConstForEachNode([&](const ExecNode* exec_node) {
+      const std::string& op_name = exec_node->op()->op_name();
+      // op_name2device_type
+      auto it = plan.mutable_op_name2device_type()->find(op_name);
       if (it == plan.mutable_op_name2device_type()->end()) {
         plan.mutable_op_name2device_type()->insert(
-            {op->op_name(), node->parallel_desc()->device_type()});
+            {op_name, task_node->chain_node()->parallel_desc()->device_type()});
       } else {
-        CHECK_EQ(it->second, node->parallel_desc()->device_type());
+        CHECK_EQ(it->second,
+                 task_node->chain_node()->parallel_desc()->device_type());
       }
-    }
-  });
-  ConstForEachStageNode([&plan](const StageNode* node) {
-    auto pbmap = plan.mutable_machine_id2op_name_set();
-    for (std::shared_ptr<const Operator> op : node->chain_node()->op_vec()) {
-      (*pbmap)[node->machine_id()].add_op_name(op->op_name());
-    }
-    // TODO: unique
+      // machine_id2op_name_set
+      int64_t machine_id = task_node->stage_node()->machine_id();
+      (*(plan.mutable_machine_id2op_name_set()))[machine_id].add_op_name(
+          op_name);
+      // TODO: unique
+    });
   });
   PrintProtoToTextFile(plan, plan_filepath);
 }

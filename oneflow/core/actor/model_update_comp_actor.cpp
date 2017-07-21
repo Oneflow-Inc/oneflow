@@ -55,8 +55,10 @@ int MdUpdtCompActor::HandlerBeforeInitializeModel(const ActorMsg& actor_msg) {
 int MdUpdtCompActor::HandlerBeforeSendInitialModel(const ActorMsg& actor_msg) {
   CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kSendInitialModel);
   AsyncSendReadableRegstMsg();
-  SetReadOnlyForRegstDescId(model_tmp_regst_desc_id_);
-  AsyncSendEORDMsgToSubscribers(model_tmp_regst_desc_id_);
+  if (model_tmp_regst_desc_id_ != -1) {
+    SetReadOnlyForRegstDescId(model_tmp_regst_desc_id_);
+    AsyncSendEORDMsgToSubscribers(model_tmp_regst_desc_id_);
+  }
   if (JobDesc::Singleton()->is_train()) {
     OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerNormal);
   } else {
