@@ -10,7 +10,7 @@ namespace test {
 namespace {
 
 template<DeviceType device_type, typename FloatingPointType>
-Kernel* BuildPoolingKernel(const PoolingOpConf_PoolMethod& pooling_method) {
+Kernel* BuildPoolingKernel(const PoolingOpConf::PoolMethod& pooling_method) {
   OperatorConf op_conf;
   op_conf.set_name("pooling_test");
   PoolingOpConf* pooling_conf = op_conf.mutable_pooling_conf();
@@ -34,7 +34,7 @@ Kernel* BuildPoolingKernel(const PoolingOpConf_PoolMethod& pooling_method) {
 
 template<DeviceType device_type, typename FloatingPointType>
 std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
-    const PoolingOpConf_PoolMethod& pooling_method) {
+    const PoolingOpConf::PoolMethod& pooling_method) {
   using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
   FloatingPointType in_mat[] = {1,  2,  3,  4,  5,  6,  7,  8,  9,
                                 10, 11, 12, 13, 14, 15, 16, 17, 18,
@@ -98,7 +98,7 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
 }
 
 template<DeviceType device_type, typename FloatingPointType>
-void TestPoolingKernel(const PoolingOpConf_PoolMethod& pooling_method) {
+void TestPoolingKernel(const PoolingOpConf::PoolMethod& pooling_method) {
   using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
   KernelCtx ctx;
   KTCommon::BuildKernelCtx(&ctx);
