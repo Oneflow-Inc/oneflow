@@ -13,6 +13,9 @@ class MomentumModelUpdateOp final : public SysOperator {
 
   void InitFromOpConf(const OperatorConf& op_conf) override;
   const PbMessage& GetSpecialConf() const override;
+void MomentumModelUpdateOp::InferShape4FwBlob(
+    std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const override;
 
  private:
   std::string ibn2lbn(const std::string& input_bn) const override {
