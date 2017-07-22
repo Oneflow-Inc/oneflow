@@ -121,6 +121,7 @@ inline uint32_t NewRandomSeed() {
 }
 
 const float kLogThreshold = 1e-20;
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_UTIL_H_
