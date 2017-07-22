@@ -8,6 +8,7 @@ namespace {
 // if diff(t) * diff(t-1) > 0
 // then learning_rate = learning_rate + delta
 // else learning_rate = learning_rate * (1 - delta)
+//
 // model -= (-epsilon) * learning_rate * model_diff
 template<typename FloatingPointType>
 __global__ void UpdateModelGpu(const int64_t n, const FloatingPointType delta,

@@ -9,7 +9,7 @@ void SALRModelUpdateOp::InitFromOpConf(const OperatorConf& op_conf) {
   EnrollInputBn("model_diff", false);
   EnrollModelTmpBn("learning_rate");
   EnrollOutputBn("model", false);
-  EnrollDataTmpBn("last_diffs_flag");
+  EnrollDataTmpBn("last_diff_flag");
 }
 
 void SALRModelUpdateOp::InferShape4FwBlobs(
@@ -17,7 +17,7 @@ void SALRModelUpdateOp::InferShape4FwBlobs(
     ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
   Shape* input_shape_ptr = GetShapePtr4BnInOp(SoleIbn());
   *GetShapePtr4BnInOp("learning_rate") = *input_shape_ptr;
-  *GetShapePtr4BnInOp("last_diffs_flag") = *input_shape_ptr;
+  *GetShapePtr4BnInOp("last_diff_flag") = *input_shape_ptr;
 }
 
 const PbMessage& SALRModelUpdateOp::GetSpecialConf() const {

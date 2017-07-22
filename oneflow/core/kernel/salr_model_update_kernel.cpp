@@ -33,6 +33,7 @@ class SALRMdUpdateKernelUtil<DeviceType::kCPU, FloatingPointType> final {
   // if diff(t) * diff(t-1) > 0
   // then learning_rate = learning_rate + delta
   // else learning_rate = learning_rate * (1 - delta)
+  //
   // model -= (-epsilon) * learning_rate * model_diff
   static void UpdateModel(const KernelCtx& ctx, const int64_t n,
                           const FloatingPointType delta,
