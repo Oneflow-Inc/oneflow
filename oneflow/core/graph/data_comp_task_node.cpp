@@ -164,6 +164,7 @@ void DataCompTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
                      GetFwNode()->GetSubscribedRegstDesc("model_tmp"));
   SubscribeRegstDesc("in", GetFwNode()->GetSubscribedRegstDesc("in"));
   SubscribeRegstDesc("out_diff", GetRelatedRegst(SoleInEdge()));
+  SubscribeRegstDesc("out", GetFwNode()->GetProducedRegstDesc("out"));
   // Enroll Lbn
   BpEnrollLbn2ProducedRegst();
 }
@@ -227,6 +228,7 @@ void DataCompTaskNode::BpEnrollLbn2ActivationDiffRegst() {
 
 void DataCompTaskNode::BpSetExecNodeFromOutDiffRegst() {
   auto out_diff_regst = GetRelatedRegst(SoleInEdge());
+  auto out_regst = GetFwNode()->GetProducedRegstDesc("out");
   mut_exec_gph().ForEachNode([&](ExecNode* bp_node) {
     std::unordered_set<std::string> found_bns;
     for (ExecEdge* edge : bp_node->in_edges()) {
@@ -235,6 +237,7 @@ void DataCompTaskNode::BpSetExecNodeFromOutDiffRegst() {
     for (const std::string& odbn : bp_node->op()->output_diff_bns()) {
       if (found_bns.find(odbn) != found_bns.end()) { continue; }
       bp_node->BindBnInOpAndRegst(odbn, out_diff_regst);
+      bp_node->BindBnInOpAndRegst(GenUnDiffBn(odbn), out_regst);
     }
   });
 }
