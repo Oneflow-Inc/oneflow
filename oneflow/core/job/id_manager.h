@@ -14,7 +14,7 @@ class IDMgr final {
   OF_SINGLETON(IDMgr);
 
   void InitFromResource(const Resource& resource) {
-    LOG(INFO) << "Init IDManager...";
+    LOG(INFO) << "Init IDManager";
     Clear();
     machine_num_ = resource.machine_size();
     CHECK_LT(machine_num_, static_cast<int64_t>(1) << machine_id_bit_num_);

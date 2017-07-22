@@ -10,6 +10,7 @@ Thread* ThreadMgr::GetThrd(int64_t thrd_loc_id) {
 }
 
 ThreadMgr::ThreadMgr() {
+  LOG(INFO) << "ThreadMgr Init";
   // device thread - device_num_per_machine
   int64_t dev_num_per_machine =
       JobDesc::Singleton()->resource().device_num_per_machine();
