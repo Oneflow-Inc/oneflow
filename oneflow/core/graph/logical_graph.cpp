@@ -6,7 +6,7 @@ namespace oneflow {
 
 LogicalGraph::LogicalGraph(const DLNetConf& dl_net_conf,
                            const Placement& placement) {
-  LOG(INFO) << "Build LogicalGraph...";
+  LOG(INFO) << "Build LogicalGraph";
   HashMap<LogicalEdge*, std::string> edge2lbn;
   HashMap<LogicalEdge*, std::string> edge2ibn;
   NaiveBuildGraphStruct(dl_net_conf, &edge2lbn, &edge2ibn);
@@ -116,7 +116,7 @@ void LogicalGraph::AddOneCloneNode(
     const std::string& ibn = edge2ibn.at(edge);
     LogicalNode* dst_node = edge->dst_node();
     dst_node->mut_op()->ModifyLbn4BnInOp(ibn, lbn);
-    dst_node->mut_op()->ModifyLbn4BnInOp(GenDiffBn(ibn), lbn);
+    dst_node->mut_op()->TryModifyLbn4BnInOp(GenDiffBn(ibn), lbn);
     DisConnect(edge);
     Connect(clone_node, edge, dst_node);
   }

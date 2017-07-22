@@ -21,6 +21,7 @@ message JobConf {
   int32 num_of_batches_in_snapshot = 11;
   int32 staleness = 12;
   int64 total_batch_num = 13;
+  FillConf default_fill_conf = 14;
   oneof ModelUpdateCase {
     NormalModelUpdateOpConf normal_mdupdt_conf = 1000;
     MomentumModelUpdateOpConf momentum_mdupdt_conf = 1001;

@@ -12,12 +12,14 @@ void RuntimeCtx::set_this_machine_name(const std::string& name) {
 void RuntimeCtx::SetModelInitCnt(int32_t val) {
   std::unique_lock<std::mutex> lck(model_init_cnt_mtx_);
   model_init_cnt_ = val;
+  LOG(INFO) << "Set ModelInitCnt: " << model_init_cnt_;
 }
 
 void RuntimeCtx::OneModelInitDone() {
   std::unique_lock<std::mutex> lck(model_init_cnt_mtx_);
   model_init_cnt_ -= 1;
   if (model_init_cnt_ == 0) { model_init_cnt_cond_.notify_one(); }
+  LOG(INFO) << "OneModelInitDone, current ModelInitCnt: " << model_init_cnt_;
 }
 
 void RuntimeCtx::WaitUnitlAllModelInitDone() {

@@ -1,6 +1,6 @@
 set -e
 
-rm -rf ./log ./log.tar.gz ./core.*
+rm -rf ./log ./log.tar.gz ./core.* ./snapshots
 
 mkdir log
 GLOG_logtostderr=0 GLOG_log_dir=./log ./compiler \
