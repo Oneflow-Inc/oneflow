@@ -26,6 +26,8 @@ op {
     pad: 2
     stride: 1
     stride: 1
+    dilation: 1
+    dilation: 1
   }
 }
 
@@ -56,6 +58,8 @@ op {
     stride: 1
     pad: 0
     pad: 0
+    dilation: 1
+    dilation: 1
   }
 }
 
@@ -71,6 +75,8 @@ op {
     stride: 1
     pad: 0
     pad: 0
+    dilation: 1
+    dilation: 1
   }
 }
 
@@ -86,6 +92,8 @@ op {
     stride: 1
     pad: 0
     pad: 0
+    dilation: 1
+    dilation: 1
   }
 }
 
@@ -101,6 +109,8 @@ op {
     pad: 1
     stride: 1
     stride: 1
+    dilation: 1
+    dilation: 1
   }
 }
 
@@ -116,6 +126,8 @@ op {
     pad: 2
     stride: 1
     stride: 1
+    dilation: 1
+    dilation: 1
   }
 }
 
@@ -200,6 +212,8 @@ op {
     stride: 1
     pad: 0
     pad: 0
+    dilation: 1
+    dilation: 1
   }
 }
 
@@ -215,6 +229,8 @@ op {
     stride: 1
     pad: 0
     pad: 0
+    dilation: 1
+    dilation: 1
   }
 }
 
@@ -230,6 +246,8 @@ op {
     stride: 1
     pad: 0
     pad: 0
+    dilation: 1
+    dilation: 1
   }
 }
 
@@ -245,6 +263,8 @@ op {
     pad: 1
     stride: 1
     stride: 1
+    dilation: 1
+    dilation: 1
   }
 }
 
@@ -260,6 +280,8 @@ op {
     pad: 2
     stride: 1
     stride: 1
+    dilation: 1
+    dilation: 1
   }
 }
 

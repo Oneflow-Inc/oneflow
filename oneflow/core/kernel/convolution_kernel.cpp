@@ -110,10 +110,9 @@ void ConvolutionKernel<device_type, FloatingPointType>::Forward(
   Blob* out = BnInOp2Blob("out");
   Blob* col_buf = BnInOp2Blob("col_buf");
   Blob* weight = BnInOp2Blob("weight");
-  const int64_t in_im_sz = in_shape.Count(1) * sizeof(FloatingPointType);
-  const int64_t out_im_sz = out->shape().Count(1) * sizeof(FloatingPointType);
-  const int64_t col_im_sz =
-      col_buf->shape().Count(1) * sizeof(FloatingPointType);
+  const int64_t in_im_sz = in_shape.Count(1);
+  const int64_t out_im_sz = out->shape().Count(1);
+  const int64_t col_im_sz = col_buf->shape().Count(1);
   auto conv_conf = op()->op_conf().convolution_conf();
   for (size_t i = 0; i < in_shape.At(0); ++i) {
     ConvolutionKernelUtil<device_type, FloatingPointType>::Im2Col(
@@ -158,8 +157,7 @@ void ConvolutionKernel<device_type, FloatingPointType>::ComputeWeightDiff(
   Blob* weight_diff = BnInOp2Blob("weight_diff");
   Blob* col_buf = BnInOp2Blob("col_buf");
   const Blob* out_diff = BnInOp2Blob("out_diff");
-  const int64_t out_im_sz =
-      out_diff->shape().Count(1) * sizeof(FloatingPointType);
+  const int64_t out_im_sz = out_diff->shape().Count(1);
   int64_t batch_sz = out_diff->shape().At(0);
 
   KernelUtil<device_type, FloatingPointType>::Memset(
@@ -172,8 +170,7 @@ void ConvolutionKernel<device_type, FloatingPointType>::ComputeWeightDiff(
         out_diff->shape().Count(2), static_cast<FloatingPointType>(1.0),
         out_diff->dptr<FloatingPointType>() + i * out_im_sz,
         out_diff->shape().Count(2),
-        col_buf->dptr<FloatingPointType>()
-            + i * col_buf->shape().Count(1) * sizeof(FloatingPointType),
+        col_buf->dptr<FloatingPointType>() + i * col_buf->shape().Count(1),
         col_buf->shape().At(2), static_cast<FloatingPointType>(1.0),
         weight_diff->mut_dptr<FloatingPointType>(), weight_diff->shape().At(1));
   }
@@ -184,8 +181,7 @@ void ConvolutionKernel<device_type, FloatingPointType>::ComputeBiasDiff(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* out_diff = BnInOp2Blob("out_diff");
-  const int64_t out_im_sz =
-      out_diff->shape().Count(1) * sizeof(FloatingPointType);
+  const int64_t out_im_sz = out_diff->shape().Count(1);
   int64_t batch_sz = out_diff->shape().At(0);
 
   if (op()->GetBoolFromSpecialConf("has_bias_term")) {
@@ -215,8 +211,7 @@ void ConvolutionKernel<device_type, FloatingPointType>::ComputeInputDiff(
   const Blob* weight = BnInOp2Blob("weight");
   Blob* col_buf = BnInOp2Blob("col_buf");
 
-  const int64_t out_im_sz =
-      out_diff->shape().Count(1) * sizeof(FloatingPointType);
+  const int64_t out_im_sz = out_diff->shape().Count(1);
   int64_t batch_sz = out_diff->shape().At(0);
   for (size_t i = 0; i < batch_sz; ++i) {
     KernelUtil<device_type, FloatingPointType>::BlasGemm(
@@ -226,8 +221,7 @@ void ConvolutionKernel<device_type, FloatingPointType>::ComputeInputDiff(
         out_diff->dptr<FloatingPointType>() + i * out_im_sz,
         out_diff->shape().Count(2), weight->dptr<FloatingPointType>(),
         weight->shape().At(1), static_cast<FloatingPointType>(0.0),
-        col_buf->mut_dptr<FloatingPointType>()
-            + i * col_buf->shape().Count(1) * sizeof(FloatingPointType),
+        col_buf->mut_dptr<FloatingPointType>() + i * col_buf->shape().Count(1),
         col_buf->shape().At(2));
   }
 
@@ -236,15 +230,12 @@ void ConvolutionKernel<device_type, FloatingPointType>::ComputeInputDiff(
   auto conv_conf = op()->op_conf().convolution_conf();
   for (size_t i = 0; i < batch_sz; ++i) {
     ConvolutionKernelUtil<device_type, FloatingPointType>::Col2Im(
-        ctx,
-        col_buf->dptr<FloatingPointType>()
-            + i * col_buf->shape().Count(1) * sizeof(FloatingPointType),
+        ctx, col_buf->dptr<FloatingPointType>() + i * col_buf->shape().Count(1),
         in_diff_shape.At(1), in_diff_shape.At(2), in_diff_shape.At(3),
         conv_conf.kernel_size(0), conv_conf.kernel_size(1), conv_conf.pad(0),
         conv_conf.pad(1), conv_conf.stride(0), conv_conf.stride(1),
         conv_conf.dilation(0), conv_conf.dilation(1),
-        in_diff->mut_dptr<FloatingPointType>()
-            + i * in_diff_shape.Count(1) * sizeof(FloatingPointType));
+        in_diff->mut_dptr<FloatingPointType>() + i * in_diff_shape.Count(1));
   }
 }
 

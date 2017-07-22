@@ -9,7 +9,7 @@ void MultinomialLogisticLossKernel<device_type, FloatingPointType>::Forward(
   const Blob* prediction = BnInOp2BlobPtr("prediction");
   const Blob* label = BnInOp2BlobPtr("label");
   Blob* loss = BnInOp2BlobPtr("loss");
-  Blob* loss_buff = BnInOp2BlobPtr("loss_buff");
+  Blob* loss_buff = BnInOp2BlobPtr("loss_buffer");
 
   MultinomialLogisticLossKernelUtil<device_type, FloatingPointType>::Forward(
       ctx, prediction->shape().At(0), prediction->shape().At(1),
@@ -17,7 +17,7 @@ void MultinomialLogisticLossKernel<device_type, FloatingPointType>::Forward(
       loss->mut_dptr<FloatingPointType>(),
       loss_buff->mut_dptr<FloatingPointType>());
 
-  Blob* prediction_diff = BnInOp2BlobPtr("prediction_diff");
+  Blob* prediction_diff = BnInOp2BlobPtr(GenDiffBn("prediction"));
   if (prediction_diff != nullptr) {
     MultinomialLogisticLossKernelUtil<device_type, FloatingPointType>::Backward(
         ctx, prediction->shape().At(0), prediction->shape().At(1),
