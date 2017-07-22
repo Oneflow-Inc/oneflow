@@ -32,9 +32,17 @@ const std::string& Operator::Lbn4BnInOp(const std::string& bn_in_op) const {
   return bn_in_op2lbn_.at(bn_in_op);
 }
 
+int8_t Operator::TryModifyLbn4BnInOp(const std::string& bn_in_op,
+                                     const std::string& lbn) {
+  auto it = bn_in_op2lbn_.find(bn_in_op);
+  if (it == bn_in_op2lbn_.end()) { return -1; }
+  it->second = lbn;
+  return 0;
+}
+
 void Operator::ModifyLbn4BnInOp(const std::string& bn_in_op,
                                 const std::string& lbn) {
-  bn_in_op2lbn_.at(bn_in_op) = lbn;
+  CHECK_EQ(TryModifyLbn4BnInOp(bn_in_op, lbn), 0);
 }
 
 const std::string& Operator::SoleIbn() const {
