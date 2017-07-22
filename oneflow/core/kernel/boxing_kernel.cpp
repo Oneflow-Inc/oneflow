@@ -19,11 +19,10 @@ void BoxingKernel<device_type, FloatingPointType>::InitFromOpProto(
 }
 
 template<DeviceType device_type, typename FloatingPointType>
-void BoxingKernel<device_type, FloatingPointType>::InferCopyRules(
+void BoxingKernel<device_type, FloatingPointType>::InferFwCopyRules(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto boxing_conf = op()->op_conf().boxing_conf();
   auto in_box_case = boxing_conf.in_box_case();
-  // Infer Forward Copy Rules
   if (in_box_case == BoxingOpConf::kConcatBox) {
     // concat-box copy rules: copy directly from input to output
     InferCopyRulesFromBns(BnInOp2Blob, op()->input_bns(), op()->output_bns(),
@@ -32,9 +31,13 @@ void BoxingKernel<device_type, FloatingPointType>::InferCopyRules(
   if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
     InferFwCloneRules(BnInOp2Blob);
   }
+}
 
-  // Infer Backward Copy Rules
+template<DeviceType device_type, typename FloatingPointType>
+void BoxingKernel<device_type, FloatingPointType>::InferBwCopyRules(
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // concat-split box copy rules: copy diffs from odbs to idbs
+  auto boxing_conf = op()->op_conf().boxing_conf();
   if (boxing_conf.out_box_case() == BoxingOpConf::kDataSplitBox) {
     InferCopyRulesFromBns(BnInOp2Blob, op()->input_diff_bns(),
                           op()->output_diff_bns(), &bw_copy_rules_);
@@ -146,7 +149,7 @@ template<DeviceType device_type, typename FloatingPointType>
 void BoxingKernel<device_type, FloatingPointType>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (fw_copy_rules_.empty()) { InferCopyRules(BnInOp2Blob); }
+  if (fw_copy_rules_.empty()) { InferFwCopyRules(BnInOp2Blob); }
   (this->*fw_func_)(ctx, BnInOp2Blob);
 }
 
@@ -154,7 +157,7 @@ template<DeviceType device_type, typename FloatingPointType>
 void BoxingKernel<device_type, FloatingPointType>::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK(!bw_copy_rules_.empty());
+  if (bw_copy_rules_.empty()) { InferBwCopyRules(BnInOp2Blob); }
   (this->*bw_func_)(ctx, BnInOp2Blob);
 }
 

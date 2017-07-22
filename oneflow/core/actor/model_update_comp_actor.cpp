@@ -33,7 +33,7 @@ int MdUpdtCompActor::HandlerBeforeInitializeModel(const ActorMsg& actor_msg) {
     kernels.insert(KernelMgr::Singleton()->GetKernelFromOpName(op_name));
   };
   model_regst->ForEachLbn(CollectKernelsFromLbn);
-  model_tmp_regst->ForEachLbn(CollectKernelsFromLbn);
+  if (model_tmp_regst) { model_tmp_regst->ForEachLbn(CollectKernelsFromLbn); }
 
   for (const Kernel* kernel : kernels) {
     kernel->InitModelAndModelTmpBlobs(
@@ -55,8 +55,10 @@ int MdUpdtCompActor::HandlerBeforeInitializeModel(const ActorMsg& actor_msg) {
 int MdUpdtCompActor::HandlerBeforeSendInitialModel(const ActorMsg& actor_msg) {
   CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kSendInitialModel);
   AsyncSendReadableRegstMsg();
-  SetReadOnlyForRegstDescId(model_tmp_regst_desc_id_);
-  AsyncSendEORDMsgToSubscribers(model_tmp_regst_desc_id_);
+  if (model_tmp_regst_desc_id_ != -1) {
+    SetReadOnlyForRegstDescId(model_tmp_regst_desc_id_);
+    AsyncSendEORDMsgToSubscribers(model_tmp_regst_desc_id_);
+  }
   if (JobDesc::Singleton()->is_train()) {
     OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerNormal);
   } else {
