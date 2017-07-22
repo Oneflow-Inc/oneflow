@@ -57,4 +57,12 @@ void Split(const std::string& text, const std::string& delims,
   }
 }
 
+struct UtilRegisterT {
+  UtilRegisterT() {
+    std::set_terminate([]() { LOG(FATAL) << "Unhandled Exception"; });
+  }
+};
+
+UtilRegisterT g_util_register_var;
+
 }  // namespace oneflow
