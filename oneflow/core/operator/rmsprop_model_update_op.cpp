@@ -11,6 +11,13 @@ void RMSPropModelUpdateOp::InitFromOpConf(const OperatorConf& op_conf) {
   EnrollOutputBn("model", false);
 }
 
+void RMSPropModelUpdateOp::InferShape4FwBlob(
+    std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
+  Shape* input_shape_ptr = GetShapePtr4BnInOp(SoleIbn());
+  *GetShapePtr4BnInOp("mean_square") = *input_shape_ptr;
+}
+
 const PbMessage& RMSPropModelUpdateOp::GetSpecialConf() const {
   return op_conf().rmsprop_mdupdt_conf();
 }

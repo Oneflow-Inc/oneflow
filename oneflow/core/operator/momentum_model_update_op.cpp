@@ -11,6 +11,13 @@ void MomentumModelUpdateOp::InitFromOpConf(const OperatorConf& op_conf) {
   EnrollOutputBn("model", false);
 }
 
+void MomentumModelUpdateOp::InferShape4FwBlob(
+    std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
+  Shape* input_shape_ptr = GetShapePtr4BnInOp(SoleIbn());
+  *GetShapePtr4BnInOp("momentum") = *input_shape_ptr;
+}
+
 const PbMessage& MomentumModelUpdateOp::GetSpecialConf() const {
   return op_conf().momentum_mdupdt_conf();
 }
