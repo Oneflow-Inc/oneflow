@@ -13,7 +13,7 @@ void BpDataCompActor::Init(const TaskProto& task_proto,
   data_tmp_regst_desc_id_ = RegstDescId4Name("data_tmp");
   expected_model_version_id_ = 0;
   mut_num_of_read_empty() =
-      2 + (model_regst_desc_id_ != -1) + (model_tmp_regst_desc_id_ != -1)
+      3 + (model_regst_desc_id_ != -1) + (model_tmp_regst_desc_id_ != -1)
       + (activation_regst_desc_id_ != -1) + (data_tmp_regst_desc_id_ != -1);
   set_num_of_not_eord(mut_num_of_read_empty());
   if (thread_ctx.cpu_stream) {
