@@ -23,7 +23,7 @@ std::string Shape::DebugStr() const {
 int64_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
   int64_t cnt = 1;
   // The axis num might be negative, so transfer to positive firstly.
-  if (begin_axis != NumAxes()) { begin_axis = CanonicalAxisIndex(begin_axis); }
+  begin_axis = CanonicalAxisIndex(begin_axis);
   if (end_axis != NumAxes()) { end_axis = CanonicalAxisIndex(end_axis); }
   CHECK_LT(begin_axis, end_axis);
   for (int64_t i = begin_axis; i < end_axis; ++i) { cnt *= At(i); }
