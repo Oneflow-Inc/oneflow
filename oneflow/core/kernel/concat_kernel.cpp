@@ -5,9 +5,9 @@ namespace oneflow {
 namespace {
 
 template<typename FloatingPointType>
-FloatingPointType* CalcCopyAddr(FloatingPointType* start_addr,
-                                const int64_t cp_times, const int64_t axis_dim,
-                                const int64_t offset, const int64_t elem_cnt) {
+FloatingPointType* CalcCopyAddr(FloatingPointType* start_addr, int64_t cp_times,
+                                int64_t axis_dim, int64_t offset,
+                                int64_t elem_cnt) {
   return start_addr + (cp_times * axis_dim + offset) * elem_cnt;
 }
 
@@ -15,10 +15,10 @@ FloatingPointType* CalcCopyAddr(FloatingPointType* start_addr,
 
 template<DeviceType device_type, typename FloatingPointType>
 void ConcatKernel<device_type, FloatingPointType>::ForOrBackWard(
-    const KernelCtx& ctx, const std::string out_bn,
-    const std::vector<std::string> in_bns,
+    const KernelCtx& ctx, const std::string& out_bn,
+    const std::vector<std::string>& in_bns,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr,
-    DualCopy copy_func) const {
+    MemCopyFuncType copy_func) const {
   Blob* out_blob = BnInOp2BlobPtr(out_bn);
   if (in_bns.size() == 0) { return; }
   const int32_t concat_axis = op()->op_conf().concat_conf().axis();
