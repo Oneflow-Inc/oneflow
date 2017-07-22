@@ -29,17 +29,13 @@ class SALRMdUpdateKernelUtil final {
   OF_DISALLOW_COPY_AND_MOVE(SALRMdUpdateKernelUtil);
   SALRMdUpdateKernelUtil() = delete;
 
-  static void UpdateLearningRate(const KernelCtx& ctx, const int64_t n,
-                                 const FloatingPointType delta,
-                                 FloatingPointType* last_diff_flag,
-                                 const FloatingPointType* model_diff,
-                                 FloatingPointType* learning_rate);
-
   static void UpdateModel(const KernelCtx& ctx, const int64_t n,
+                          const FloatingPointType delta,
+                          const FloatingPointType epsilon,
                           FloatingPointType* model,
                           const FloatingPointType* model_diff,
-                          const FloatingPointType* learning_rate,
-                          const FloatingPointType epsilon);
+                          FloatingPointType* last_diff_flag,
+                          FloatingPointType* learning_rate);
 };
 
 }  // namespace oneflow

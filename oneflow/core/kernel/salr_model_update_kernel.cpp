@@ -14,19 +14,14 @@ void SALRMdUpdateKernel<device_type, FloatingPointType>::Forward(
                   / JobDesc::Singleton()->batch_size();
   float delta = op()->op_conf().salr_mdupdt_conf().delta();
 
-  SALRMdUpdateKernelUtil<device_type, FloatingPointType>::UpdateLearningRate(
-      ctx, learning_rate_blob->shape().elem_cnt(),
-      static_cast<FloatingPointType>(delta),
-      last_diff_flag_blob->mut_dptr<FloatingPointType>(),
-      model_diff_blob->dptr<FloatingPointType>(),
-      learning_rate_blob->mut_dptr<FloatingPointType>());
-
   SALRMdUpdateKernelUtil<device_type, FloatingPointType>::UpdateModel(
       ctx, model_blob->shape().elem_cnt(),
+      static_cast<FloatingPointType>(delta),
+      static_cast<FloatingPointType>(epsilon),
       model_blob->mut_dptr<FloatingPointType>(),
       model_diff_blob->dptr<FloatingPointType>(),
-      learning_rate_blob->mut_dptr<FloatingPointType>(),
-      static_cast<FloatingPointType>(epsilon));
+      last_diff_flag_blob->mut_dptr<FloatingPointType>(),
+      learning_rate_blob->mut_dptr<FloatingPointType>());
 }
 
 template<typename FloatingPointType>
@@ -38,31 +33,22 @@ class SALRMdUpdateKernelUtil<DeviceType::kCPU, FloatingPointType> final {
   // if diff(t) * diff(t-1) > 0
   // then learning_rate = learning_rate + delta
   // else learning_rate = learning_rate * (1 - delta)
-  static void UpdateLearningRate(const KernelCtx& ctx, const int64_t n,
-                                 const FloatingPointType delta,
-                                 FloatingPointType* last_diff_flag,
-                                 const FloatingPointType* model_diff,
-                                 FloatingPointType* learning_rate) {
+  // model -= (-epsilon) * learning_rate * model_diff
+  static void UpdateModel(const KernelCtx& ctx, const int64_t n,
+                          const FloatingPointType delta,
+                          const FloatingPointType epsilon,
+                          FloatingPointType* model,
+                          const FloatingPointType* model_diff,
+                          FloatingPointType* last_diff_flag,
+                          FloatingPointType* learning_rate) {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
       for (int64_t i = 0; i < n; ++i) {
-        if (last_diff_flag[i] * model_diff[i] > 0) {
+        if (model_diff[i] * last_diff_flag[i] > 0) {
           learning_rate[i] = learning_rate[i] + delta;
         } else {
           learning_rate[i] = learning_rate[i] * (1 - delta);
         }
         last_diff_flag[i] = model_diff[i] > 0 ? 1 : -1;
-      }
-    });
-  }
-
-  // model -= (-epsilon) * learning_rate * model_diff
-  static void UpdateModel(const KernelCtx& ctx, const int64_t n,
-                          FloatingPointType* model,
-                          const FloatingPointType* model_diff,
-                          const FloatingPointType* learning_rate,
-                          const FloatingPointType epsilon) {
-    ctx.device_ctx->cpu_stream()->SendWork([=]() {
-      for (int64_t i = 0; i < n; ++i) {
         model[i] -= (-epsilon) * learning_rate[i] * model_diff[i];
       }
     });
