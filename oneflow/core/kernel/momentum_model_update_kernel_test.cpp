@@ -12,10 +12,10 @@ Kernel* BuildMomentumMdUpdateKernel(float learning_rate, float beta) {
   OperatorConf op_conf;
   op_conf.set_name("momentum_model_update_test");
   MomentumModelUpdateOpConf* momentum_md_update_conf =
-      op_conf.mutable_momentum_model_update_conf();
+      op_conf.mutable_momentum_mdupdt_conf();
   momentum_md_update_conf->set_learning_rate(learning_rate);
   momentum_md_update_conf->set_beta(beta);
-  auto momentum_md_update_op = OpMgr::Singleton()->ConstructOp(op_conf);
+  auto momentum_md_update_op = ConstructOp(op_conf);
   OperatorProto op_proto;
   momentum_md_update_op->ToProto(&op_proto);
   auto momentum_md_update_kernel =

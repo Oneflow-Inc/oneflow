@@ -23,7 +23,7 @@ void BpDataCompActor::Init(const TaskProto& task_proto,
                                              cuda_handle_.cublas_handle(),
                                              cuda_handle_.cudnn_handle()));
   }
-  OF_SET_MSG_HANDLE(&BpDataCompActor::HandleNormal);
+  OF_SET_MSG_HANDLER(&BpDataCompActor::HandlerNormal);
 }
 
 bool BpDataCompActor::IsReadReady() {
@@ -54,12 +54,12 @@ void BpDataCompActor::AsyncSendMsgToModelAndModelTmpProducer() {
   }
 }
 
-int BpDataCompActor::HandleNormal(const ActorMsg& msg) {
+int BpDataCompActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     ProcessEord();
-    if (msg_handle() == &BpDataCompActor::HandleWaitUntilReadingCntEqualZero
-        || msg_handle() == nullptr) {
+    if (msg_handler() == &BpDataCompActor::HandlerWaitUntilReadingCntEqualZero
+        || msg_handler() == nullptr) {
       AsyncSendMsgToModelAndModelTmpProducer();
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
@@ -82,17 +82,17 @@ int BpDataCompActor::HandleNormal(const ActorMsg& msg) {
   } else {
     UNEXPECTED_RUN();
   }
-  return msg_handle() == nullptr;
+  return msg_handler() == nullptr;
 }
 
-int BpDataCompActor::HandleWaitUntilNoReadableRegst(const ActorMsg& msg) {
+int BpDataCompActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
            0);
   ActUntilFail();
   if (mut_num_of_read_empty()) {
     AsyncSendMsgToModelAndModelTmpProducer();
     AsyncSendEORDMsgForAllProducedRegstDesc();
-    OF_SET_MSG_HANDLE(&BpDataCompActor::HandleWaitUntilReadingCntEqualZero);
+    OF_SET_MSG_HANDLER(&BpDataCompActor::HandlerWaitUntilReadingCntEqualZero);
   }
   return 0;
 }

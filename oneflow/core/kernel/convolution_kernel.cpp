@@ -5,7 +5,7 @@ namespace oneflow {
 
 namespace {
 
-inline bool is_a_ge_zero_and_a_lt_b(int a, int b) {
+inline bool IsAGreaterThanZeroAndLessThanB(int a, int b) {
   return static_cast<unsigned>(a) < static_cast<unsigned>(b);
 }
 
@@ -33,19 +33,19 @@ class ConvolutionKernelUtil<DeviceType::kCPU, FloatingPointType> final {
           + 1;
       const int channel_size = height * width;
       for (int channel = channels; channel--; mut_dptr += channel_size) {
-        for (int kernel_row = 0; kernel_row < kernel_h; kernel_row++) {
-          for (int kernel_col = 0; kernel_col < kernel_w; kernel_col++) {
+        for (int kernel_row = 0; kernel_row < kernel_h; ++kernel_row) {
+          for (int kernel_col = 0; kernel_col < kernel_w; ++kernel_col) {
             int input_row = -pad_h + kernel_row * dilation_h;
-            for (int output_rows = output_h; output_rows; output_rows--) {
-              if (!is_a_ge_zero_and_a_lt_b(input_row, height)) {
+            for (int output_rows = output_h; output_rows; --output_rows) {
+              if (!IsAGreaterThanZeroAndLessThanB(input_row, height)) {
                 data_col += output_w;
               } else {
                 int input_col = -pad_w + kernel_col * dilation_w;
-                for (int output_col = output_w; output_col; output_col--) {
-                  if (is_a_ge_zero_and_a_lt_b(input_col, width)) {
+                for (int output_col = output_w; output_col; --output_col) {
+                  if (IsAGreaterThanZeroAndLessThanB(input_col, width)) {
                     mut_dptr[input_row * width + input_col] += *data_col;
                   }
-                  data_col++;
+                  ++data_col;
                   input_col += stride_w;
                 }
               }
@@ -72,18 +72,18 @@ class ConvolutionKernelUtil<DeviceType::kCPU, FloatingPointType> final {
           + 1;
       const int channel_size = height * width;
       for (int channel = channels; channel--; dptr += channel_size) {
-        for (int kernel_row = 0; kernel_row < kernel_h; kernel_row++) {
-          for (int kernel_col = 0; kernel_col < kernel_w; kernel_col++) {
+        for (int kernel_row = 0; kernel_row < kernel_h; ++kernel_row) {
+          for (int kernel_col = 0; kernel_col < kernel_w; ++kernel_col) {
             int input_row = -pad_h + kernel_row * dilation_h;
-            for (int output_rows = output_h; output_rows; output_rows--) {
-              if (!is_a_ge_zero_and_a_lt_b(input_row, height)) {
-                for (int output_cols = output_w; output_cols; output_cols--) {
+            for (int output_rows = output_h; output_rows; --output_rows) {
+              if (!IsAGreaterThanZeroAndLessThanB(input_row, height)) {
+                for (int output_cols = output_w; output_cols; --output_cols) {
                   *(data_col++) = 0;
                 }
               } else {
                 int input_col = -pad_w + kernel_col * dilation_w;
-                for (int output_col = output_w; output_col; output_col--) {
-                  if (is_a_ge_zero_and_a_lt_b(input_col, width)) {
+                for (int output_col = output_w; output_col; --output_col) {
+                  if (IsAGreaterThanZeroAndLessThanB(input_col, width)) {
                     *(data_col++) = dptr[input_row * width + input_col];
                   } else {
                     *(data_col++) = 0;
@@ -117,22 +117,21 @@ void ConvolutionKernel<device_type, FloatingPointType>::Forward(
   auto conv_conf = op()->op_conf().convolution_conf();
   for (size_t i = 0; i < in_shape.At(0); ++i) {
     ConvolutionKernelUtil<device_type, FloatingPointType>::Im2Col(
-        ctx, static_cast<FloatingPointType*>(in->mut_dptr()) + i * in_im_sz,
-        in_shape.At(1), in_shape.At(2), in_shape.At(3),
-        conv_conf.kernel_size(0), conv_conf.kernel_size(1), conv_conf.pad(0),
-        conv_conf.pad(1), conv_conf.stride(0), conv_conf.stride(1),
-        conv_conf.dilation(0), conv_conf.dilation(1),
-        static_cast<FloatingPointType*>(col_buf->mut_dptr()) + i * col_im_sz);
+        ctx, in->mut_dptr<FloatingPointType>() + i * in_im_sz, in_shape.At(1),
+        in_shape.At(2), in_shape.At(3), conv_conf.kernel_size(0),
+        conv_conf.kernel_size(1), conv_conf.pad(0), conv_conf.pad(1),
+        conv_conf.stride(0), conv_conf.stride(1), conv_conf.dilation(0),
+        conv_conf.dilation(1),
+        col_buf->mut_dptr<FloatingPointType>() + i * col_im_sz);
 
     KernelUtil<device_type, FloatingPointType>::BlasGemm(
         ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasTrans,
         out->shape().At(1), out->shape().Count(2), weight->shape().At(1),
-        static_cast<FloatingPointType>(1.0),
-        static_cast<const FloatingPointType*>(weight->dptr()),
+        static_cast<FloatingPointType>(1.0), weight->dptr<FloatingPointType>(),
         weight->shape().At(1),
-        static_cast<const FloatingPointType*>(col_buf->dptr()) + i * col_im_sz,
+        col_buf->dptr<FloatingPointType>() + i * col_im_sz,
         weight->shape().At(1), static_cast<FloatingPointType>(1.0),
-        static_cast<FloatingPointType*>(out->mut_dptr()) + i * out_im_sz,
+        out->mut_dptr<FloatingPointType>() + i * out_im_sz,
         col_buf->shape().At(1));
 
     if (op()->GetBoolFromSpecialConf("has_bias_term")) {
@@ -143,11 +142,10 @@ void ConvolutionKernel<device_type, FloatingPointType>::Forward(
       KernelUtil<device_type, FloatingPointType>::BlasGemm(
           ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasNoTrans,
           bias->shape().At(0), bias_multiplier->shape().At(0), 1,
-          static_cast<FloatingPointType>(1.0),
-          static_cast<const FloatingPointType*>(bias->dptr()), 1,
-          static_cast<const FloatingPointType*>(bias_multiplier->dptr()),
+          static_cast<FloatingPointType>(1.0), bias->dptr<FloatingPointType>(),
+          1, bias_multiplier->dptr<FloatingPointType>(),
           bias_multiplier->shape().At(0), static_cast<FloatingPointType>(1.0),
-          static_cast<FloatingPointType*>(out->mut_dptr()) + i * out_im_sz,
+          out->mut_dptr<FloatingPointType>() + i * out_im_sz,
           bias_multiplier->shape().At(0));
     }
   }
@@ -172,13 +170,12 @@ void ConvolutionKernel<device_type, FloatingPointType>::ComputeWeightDiff(
         ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasNoTrans,
         weight_diff->shape().At(0), weight_diff->shape().At(1),
         out_diff->shape().Count(2), static_cast<FloatingPointType>(1.0),
-        static_cast<const FloatingPointType*>(out_diff->dptr()) + i * out_im_sz,
+        out_diff->dptr<FloatingPointType>() + i * out_im_sz,
         out_diff->shape().Count(2),
-        static_cast<const FloatingPointType*>(col_buf->dptr())
+        col_buf->dptr<FloatingPointType>()
             + i * col_buf->shape().Count(1) * sizeof(FloatingPointType),
         col_buf->shape().At(2), static_cast<FloatingPointType>(1.0),
-        static_cast<FloatingPointType*>(weight_diff->mut_dptr()),
-        weight_diff->shape().At(1));
+        weight_diff->mut_dptr<FloatingPointType>(), weight_diff->shape().At(1));
   }
 }
 
@@ -202,12 +199,10 @@ void ConvolutionKernel<device_type, FloatingPointType>::ComputeBiasDiff(
           ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasNoTrans,
           bias_diff->shape().At(0), 1, bias_mul->shape().At(0),
           static_cast<FloatingPointType>(1.0),
-          static_cast<const FloatingPointType*>(out_diff->dptr())
-              + i * out_im_sz,
-          out_diff->shape().Count(2),
-          static_cast<const FloatingPointType*>(bias_mul->dptr()), 1,
+          out_diff->dptr<FloatingPointType>() + i * out_im_sz,
+          out_diff->shape().Count(2), bias_mul->dptr<FloatingPointType>(), 1,
           static_cast<FloatingPointType>(1.0),
-          static_cast<FloatingPointType*>(bias_diff->mut_dptr()), 1);
+          bias_diff->mut_dptr<FloatingPointType>(), 1);
     }
   }
 }
@@ -228,11 +223,10 @@ void ConvolutionKernel<device_type, FloatingPointType>::ComputeInputDiff(
         ctx, CBLAS_ORDER::CblasRowMajor, CblasTrans, CblasNoTrans,
         col_buf->shape().At(1), col_buf->shape().At(2), weight->shape().At(0),
         static_cast<FloatingPointType>(1.0),
-        static_cast<const FloatingPointType*>(out_diff->dptr()) + i * out_im_sz,
-        out_diff->shape().Count(2),
-        static_cast<const FloatingPointType*>(weight->dptr()),
+        out_diff->dptr<FloatingPointType>() + i * out_im_sz,
+        out_diff->shape().Count(2), weight->dptr<FloatingPointType>(),
         weight->shape().At(1), static_cast<FloatingPointType>(0.0),
-        static_cast<FloatingPointType*>(col_buf->mut_dptr())
+        col_buf->mut_dptr<FloatingPointType>()
             + i * col_buf->shape().Count(1) * sizeof(FloatingPointType),
         col_buf->shape().At(2));
   }
@@ -243,13 +237,13 @@ void ConvolutionKernel<device_type, FloatingPointType>::ComputeInputDiff(
   for (size_t i = 0; i < batch_sz; ++i) {
     ConvolutionKernelUtil<device_type, FloatingPointType>::Col2Im(
         ctx,
-        static_cast<const FloatingPointType*>(col_buf->dptr())
+        col_buf->dptr<FloatingPointType>()
             + i * col_buf->shape().Count(1) * sizeof(FloatingPointType),
         in_diff_shape.At(1), in_diff_shape.At(2), in_diff_shape.At(3),
         conv_conf.kernel_size(0), conv_conf.kernel_size(1), conv_conf.pad(0),
         conv_conf.pad(1), conv_conf.stride(0), conv_conf.stride(1),
         conv_conf.dilation(0), conv_conf.dilation(1),
-        static_cast<FloatingPointType*>(in_diff->mut_dptr())
+        in_diff->mut_dptr<FloatingPointType>()
             + i * in_diff_shape.Count(1) * sizeof(FloatingPointType));
   }
 }
@@ -263,6 +257,27 @@ void ConvolutionKernel<device_type, FloatingPointType>::Backward(
     ComputeBiasDiff(ctx, BnInOp2Blob);
   }
   ComputeInputDiff(ctx, BnInOp2Blob);
+}
+
+template<DeviceType device_type, typename FloatingPointType>
+void ConvolutionKernel<device_type, FloatingPointType>::
+    InitModelAndModelTmpBlobsWithoutSnapshot(
+        const KernelCtx& ctx,
+        std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  KernelUtil<device_type, FloatingPointType>::FillWithProperConf(
+      ctx, OF_PB_POINTER_GET(op()->op_conf().convolution_conf(), weight_fill),
+      BnInOp2Blob("weight"));
+
+  if (op()->GetBoolFromSpecialConf("has_bias_term")) {
+    KernelUtil<device_type, FloatingPointType>::FillWithProperConf(
+        ctx, OF_PB_POINTER_GET(op()->op_conf().convolution_conf(), bias_fill),
+        BnInOp2Blob("bias"));
+
+    FillConf bias_multiplier_fill_conf;
+    bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.0f);
+    KernelUtil<device_type, FloatingPointType>::Fill(
+        ctx, bias_multiplier_fill_conf, BnInOp2Blob("bias_multiplier"));
+  }
 }
 
 INSTANTIATE_KERNEL_CLASS(ConvolutionKernel);

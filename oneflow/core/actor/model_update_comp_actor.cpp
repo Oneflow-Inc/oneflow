@@ -19,10 +19,10 @@ void MdUpdtCompActor::Init(const TaskProto& task_proto,
                                              cuda_handle_.cublas_handle(),
                                              cuda_handle_.cudnn_handle()));
   }
-  OF_SET_MSG_HANDLE(&MdUpdtCompActor::HandleBeforeInitializeModel);
+  OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerBeforeInitializeModel);
 }
 
-int MdUpdtCompActor::HandleBeforeInitializeModel(const ActorMsg& actor_msg) {
+int MdUpdtCompActor::HandlerBeforeInitializeModel(const ActorMsg& actor_msg) {
   CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kInitializeModel);
   Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
   model_regst->set_model_version_id(next_model_version_id_++);
@@ -33,7 +33,7 @@ int MdUpdtCompActor::HandleBeforeInitializeModel(const ActorMsg& actor_msg) {
     kernels.insert(KernelMgr::Singleton()->GetKernelFromOpName(op_name));
   };
   model_regst->ForEachLbn(CollectKernelsFromLbn);
-  model_tmp_regst->ForEachLbn(CollectKernelsFromLbn);
+  if (model_tmp_regst) { model_tmp_regst->ForEachLbn(CollectKernelsFromLbn); }
 
   for (const Kernel* kernel : kernels) {
     kernel->InitModelAndModelTmpBlobs(
@@ -48,25 +48,27 @@ int MdUpdtCompActor::HandleBeforeInitializeModel(const ActorMsg& actor_msg) {
         });
   }
   AsyncDo([]() { RuntimeCtx::Singleton()->OneModelInitDone(); });
-  OF_SET_MSG_HANDLE(&MdUpdtCompActor::HandleBeforeSendInitialModel);
+  OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerBeforeSendInitialModel);
   return 0;
 }
 
-int MdUpdtCompActor::HandleBeforeSendInitialModel(const ActorMsg& actor_msg) {
+int MdUpdtCompActor::HandlerBeforeSendInitialModel(const ActorMsg& actor_msg) {
   CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kSendInitialModel);
   AsyncSendReadableRegstMsg();
-  SetReadOnlyForRegstDescId(model_tmp_regst_desc_id_);
-  AsyncSendEORDMsgToSubscribers(model_tmp_regst_desc_id_);
+  if (model_tmp_regst_desc_id_ != -1) {
+    SetReadOnlyForRegstDescId(model_tmp_regst_desc_id_);
+    AsyncSendEORDMsgToSubscribers(model_tmp_regst_desc_id_);
+  }
   if (JobDesc::Singleton()->is_train()) {
-    OF_SET_MSG_HANDLE(&MdUpdtCompActor::HandleNormal);
+    OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerNormal);
   } else {
     AsyncSendEORDMsgToSubscribers(model_regst_desc_id_);
-    OF_SET_MSG_HANDLE(&MdUpdtCompActor::HandleWaitUntilReadingCntEqualZero);
+    OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerWaitUntilReadingCntEqualZero);
   }
   return 0;
 }
 
-int MdUpdtCompActor::HandleNormal(const ActorMsg& actor_msg) {
+int MdUpdtCompActor::HandlerNormal(const ActorMsg& actor_msg) {
   if (actor_msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kEORD);
     ProcessEord();
@@ -80,17 +82,18 @@ int MdUpdtCompActor::HandleNormal(const ActorMsg& actor_msg) {
   } else {
     UNEXPECTED_RUN();
   }
-  return msg_handle() == nullptr;
+  return msg_handler() == nullptr;
 }
 
-int MdUpdtCompActor::HandleWaitUntilNoReadableRegst(const ActorMsg& actor_msg) {
+int MdUpdtCompActor::HandlerWaitUntilNoReadableRegst(
+    const ActorMsg& actor_msg) {
   CHECK_EQ(
       TryUpdtStateAsProducedRegst(actor_msg.regst_wrapper()->regst_raw_ptr()),
       0);
   ActUntilFail();
   if (waiting_model_diff_acc_queue_.empty()) {
     AsyncSendEORDMsgToSubscribers(model_regst_desc_id_);
-    OF_SET_MSG_HANDLE(&MdUpdtCompActor::HandleWaitUntilReadingCntEqualZero);
+    OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerWaitUntilReadingCntEqualZero);
   }
   return 0;
 }

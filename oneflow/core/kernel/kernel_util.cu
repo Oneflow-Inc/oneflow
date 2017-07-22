@@ -1,3 +1,4 @@
+#include "cub/cub.cuh"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
@@ -56,11 +57,25 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
     cublas_scal(ctx.device_ctx->cublas_handle(), n, &alpha, x, incx);
   }
 
+  static void Max(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* max_ptr,
+                  FloatingPointType* temp_storage, size_t temp_storage_bytes) {
+    cub::DeviceReduce::Max(temp_storage, temp_storage_bytes, x, max_ptr, n,
+                           ctx.device_ctx->cuda_stream());
+  }
+
   static void Exp(const KernelCtx& ctx, const int64_t n,
                   const FloatingPointType* x, FloatingPointType* y) {
     ExpGpu<FloatingPointType>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
            ctx.device_ctx->cuda_stream()>>>(n, x, y);
+  }
+
+  static void Sum(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* sum_ptr,
+                  FloatingPointType* temp_storage, size_t temp_storage_bytes) {
+    cub::DeviceReduce::Sum(temp_storage, temp_storage_bytes, x, sum_ptr, n,
+                           ctx.device_ctx->cuda_stream());
   }
 
   static void Div(const KernelCtx& ctx, const int64_t n, FloatingPointType* x,
@@ -126,14 +141,13 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
     void* host_raw_dptr;
     size_t byte_size = blob->shape().elem_cnt() * sizeof(FloatingPointType);
     CudaCheck(cudaMallocHost(&host_raw_dptr, byte_size));
-
     std::unique_ptr<void, std::function<void(void*)>> host_unique_ptr(
-        host_raw_dptr, [&](void* dptr) { CudaCheck(cudaFree(dptr)); });
+        host_raw_dptr, [&](void* dptr) { CudaCheck(cudaFreeHost(dptr)); });
     std::unique_ptr<Shape> host_blob_shape(new Shape(blob->shape()));
 
     std::unique_ptr<Blob> host_blob(
         new Blob(host_unique_ptr.get(), host_blob_shape.get()));
-    KernelUtil<DeviceType::kCPU, FloatingPointType>::Fill(ctx, fill_conf,
+    KernelUtil<DeviceType::kCPU, FloatingPointType>::Fill(fill_conf,
                                                           host_blob.get());
 
     KernelUtil<DeviceType::kGPU, FloatingPointType>::Memcpy(

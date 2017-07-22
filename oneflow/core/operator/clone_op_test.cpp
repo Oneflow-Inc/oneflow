@@ -7,7 +7,7 @@ TEST(CloneOp, clone_4x3_3_times) {
   op_conf.set_name("clone_test");
   op_conf.mutable_clone_conf()->set_out_num(3);
   op_conf.mutable_clone_conf()->set_lbn("clone_test_lbn");
-  auto clone_op = OpMgr::Singleton()->ConstructOp(op_conf);
+  auto clone_op = ConstructOp(op_conf);
 
   HashMap<std::string, Shape*> bn2shape_ptr{
       {clone_op->SoleIbn(), new Shape({4, 3})}};

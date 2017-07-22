@@ -9,6 +9,7 @@ include(glog)
 include(gflags)
 include(grpc)
 include(tensorflow)
+include(cub)
 
 find_package(CUDA REQUIRED)
 find_package(CuDNN REQUIRED)
@@ -73,6 +74,7 @@ set(oneflow_third_party_dependencies
   jsoncpp_copy_headers_to_destination
   jsoncpp_copy_libs_to_destination
   eigen_copy_headers_dir
+  cub_copy_headers_to_destination
 )
 
 include_directories(
@@ -92,4 +94,5 @@ include_directories(
     ${JSONCPP_INCLUDE_DIR}
     ${EIGEN_INCLUDE_DIRS}
     ${CUDNN_INCLUDE_DIRS}
+    ${CUB_INCLUDE_DIR}
 )

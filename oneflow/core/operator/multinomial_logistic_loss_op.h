@@ -7,7 +7,7 @@ namespace oneflow {
 
 // MLLoss = MultinomialLogisticLoss
 
-class MultinomialLogisticLossOp : public UserOperator {
+class MultinomialLogisticLossOp final : public UserOperator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MultinomialLogisticLossOp);
   MultinomialLogisticLossOp() = default;

@@ -20,9 +20,8 @@ void BlasMatrixMatrix(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans_a,
 
   KernelUtil<device_type, FloatingPointType>::BlasGemm(
       ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha,
-      static_cast<const FloatingPointType*>(a->dptr()), lda,
-      static_cast<const FloatingPointType*>(b->dptr()), ldb, beta,
-      static_cast<FloatingPointType*>(c->mut_dptr()), ldc);
+      a->dptr<FloatingPointType>(), lda, b->dptr<FloatingPointType>(), ldb,
+      beta, c->mut_dptr<FloatingPointType>(), ldc);
 }
 
 }  // namespace
@@ -91,7 +90,20 @@ void InnerProductKernel<device_type, FloatingPointType>::
     InitModelAndModelTmpBlobsWithoutSnapshot(
         const KernelCtx& ctx,
         std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  TODO();
+  KernelUtil<device_type, FloatingPointType>::FillWithProperConf(
+      ctx, OF_PB_POINTER_GET(op()->op_conf().innerproduct_conf(), weight_fill),
+      BnInOp2Blob("weight"));
+
+  if (op()->GetBoolFromSpecialConf("has_bias_term")) {
+    KernelUtil<device_type, FloatingPointType>::FillWithProperConf(
+        ctx, OF_PB_POINTER_GET(op()->op_conf().innerproduct_conf(), bias_fill),
+        BnInOp2Blob("bias"));
+
+    FillConf bias_multiplier_fill_conf;
+    bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.0f);
+    KernelUtil<device_type, FloatingPointType>::Fill(
+        ctx, bias_multiplier_fill_conf, BnInOp2Blob("bias_multiplier"));
+  }
 }
 
 INSTANTIATE_KERNEL_CLASS(InnerProductKernel);

@@ -55,14 +55,12 @@ class KernelTestCommon<DeviceType::kCPU, FloatingPointType> final {
   }
 
   static void BlobCmp(Blob* lhs, Blob* rhs) {
-    const FloatingPointType* dptr_lhs =
-        static_cast<const FloatingPointType*>(lhs->dptr());
-    const FloatingPointType* dptr_rhs =
-        static_cast<const FloatingPointType*>(rhs->dptr());
+    const FloatingPointType* dptr_lhs = lhs->dptr<FloatingPointType>();
+    const FloatingPointType* dptr_rhs = rhs->dptr<FloatingPointType>();
     size_t dptr_size = lhs->shape().elem_cnt();
 
     for (size_t i = 0; i < dptr_size; ++i) {
-      ASSERT_NEAR(dptr_lhs[i], dptr_rhs[i], 0.0000001);
+      ASSERT_FLOAT_EQ(dptr_lhs[i], dptr_rhs[i]);
     }
   }
 
@@ -70,6 +68,24 @@ class KernelTestCommon<DeviceType::kCPU, FloatingPointType> final {
       std::function<Blob*(const std::string&)> BnInOp2BlobPtr,
       const std::string& check, const std::string& expected) {
     return BlobCmp(BnInOp2BlobPtr(check), BnInOp2BlobPtr(expected));
+  }
+
+  static void CheckFillResult(const Blob& check_blob,
+                              const FillConf& fill_conf) {
+    size_t dptr_size = check_blob.shape().elem_cnt();
+    const FloatingPointType* dptr =
+        static_cast<const FloatingPointType*>(check_blob.dptr());
+    if (fill_conf.has_constant_conf()) {
+      for (size_t i = 0; i < dptr_size; ++i) {
+        ASSERT_FLOAT_EQ(dptr[i], fill_conf.constant_conf().value());
+      }
+    } else if (fill_conf.has_uniform_conf()) {
+      TODO();
+    } else if (fill_conf.has_gaussian_conf()) {
+      TODO();
+    } else {
+      UNEXPECTED_RUN();
+    }
   }
 };
 

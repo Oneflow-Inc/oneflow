@@ -10,6 +10,7 @@ op {
       dim: 28
     }
     label: "label"
+    data_dir: "./mnist/"
   }
 }
 

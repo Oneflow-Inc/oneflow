@@ -24,9 +24,15 @@ class Actor {
   virtual void Init(const TaskProto&, const ThreadCtx&) = 0;
   // 1: success, and actor finish
   // 0: success, and actor not finish
-  int ProcessMsg(const ActorMsg& msg) { return (this->*msg_handle_)(msg); }
+  int ProcessMsg(const ActorMsg& msg) { return (this->*msg_handler_)(msg); }
 
   int64_t actor_id() const { return actor_id_; }
+  int64_t GetMachineId() const {
+    return IDMgr::Singleton()->MachineId4ActorId(actor_id_);
+  }
+  int64_t GetThrdLocId() const {
+    return IDMgr::Singleton()->ThrdLocId4ActorId(actor_id_);
+  }
 
  protected:
   struct ExecKernel {
@@ -43,20 +49,21 @@ class Actor {
   void set_num_of_not_eord(int val) { num_of_not_eord_ = val; }
   int& mut_num_of_read_empty() { return num_of_read_empty_; }
 
-  // Msg Handle
-  using MsgHandle = int (Actor::*)(const ActorMsg&);
-  MsgHandle msg_handle() { return msg_handle_; }
-  void set_msg_handle(MsgHandle val) { msg_handle_ = val; }
-#define OF_SET_MSG_HANDLE(val)                                    \
-  do {                                                            \
-    LOG(INFO) << "Actor " << actor_id() << " switch to " << #val; \
-    set_msg_handle(static_cast<MsgHandle>(val));                  \
+  // Msg Handler
+  using MsgHandler = int (Actor::*)(const ActorMsg&);
+  MsgHandler msg_handler() { return msg_handler_; }
+  void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
+#define OF_SET_MSG_HANDLER(val)                                                \
+  do {                                                                         \
+    LOG(INFO) << "Actor " << actor_id() << " ThreadLocalId " << GetThrdLocId() \
+              << " switch to " << #val;                                        \
+    set_msg_handler(static_cast<MsgHandler>(val));                             \
   } while (0)
 
-  // Common Handles
-  virtual int HandleNormal(const ActorMsg& msg) = 0;
-  virtual int HandleWaitUntilNoReadableRegst(const ActorMsg& msg) = 0;
-  int HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg);
+  // Common Handlers
+  virtual int HandlerNormal(const ActorMsg& msg) = 0;
+  virtual int HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) = 0;
+  int HandlerWaitUntilReadingCntEqualZero(const ActorMsg& msg);
 
   // Act
   void ActUntilFail();
@@ -95,7 +102,7 @@ class Actor {
 
   std::unique_ptr<DeviceCtx> device_ctx_;
 
-  MsgHandle msg_handle_;
+  MsgHandler msg_handler_;
 
   // Status of Produced Registers
   int64_t expected_piece_id_;

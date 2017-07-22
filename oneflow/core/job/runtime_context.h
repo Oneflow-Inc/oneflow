@@ -26,7 +26,7 @@ class RuntimeCtx final {
   void InitDataReader(const std::string& filepath);
 
  private:
-  RuntimeCtx() = default;
+  RuntimeCtx() { LOG(INFO) << "RuntimeCtx Init"; }
 
   int64_t this_machine_id_;
   std::string this_machine_name_;

@@ -51,13 +51,13 @@ void Actor::ProcessEord() {
   if (!num_of_not_eord_) {
     if (num_of_read_empty_) {
       if (!total_reading_cnt_) {
-        OF_SET_MSG_HANDLE(nullptr);
+        OF_SET_MSG_HANDLER(nullptr);
       } else {
-        OF_SET_MSG_HANDLE(&Actor::HandleWaitUntilReadingCntEqualZero);
+        OF_SET_MSG_HANDLER(&Actor::HandlerWaitUntilReadingCntEqualZero);
       }
       AsyncSendEORDMsgForAllProducedRegstDesc();
     } else {
-      OF_SET_MSG_HANDLE(&Actor::HandleWaitUntilNoReadableRegst);
+      OF_SET_MSG_HANDLER(&Actor::HandlerWaitUntilNoReadableRegst);
     }
   } else {
     // do nothing
@@ -76,11 +76,11 @@ KernelCtx Actor::GenDefaultKernelCtx() const {
   return ctx;
 }
 
-int Actor::HandleWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
+int Actor::HandlerWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
            0);
   if (total_reading_cnt_ == 0) {
-    msg_handle_ = nullptr;
+    msg_handler_ = nullptr;
     return 1;
   }
   return 0;
@@ -94,12 +94,16 @@ void Actor::AsyncLaunchKernel(
     const KernelCtx& kernel_ctx,
     std::function<std::shared_ptr<RegstWrapper>(int64_t)> Regst4RegstDescId) {
   for (const ExecKernel& ek : exec_kernel_vec_) {
-    (ek.kernel->*launch_func_)(kernel_ctx, [&](const std::string& bn_in_op) {
-      int64_t regst_desc_id = ek.bn_in_op2regst_desc_id.at(bn_in_op);
-      auto regst = Regst4RegstDescId(regst_desc_id);
-      const std::string& lbn = ek.kernel->Lbn4BnInOp(bn_in_op);
-      return regst->GetBlobPtrFromLbn(lbn);
-    });
+    (ek.kernel->*launch_func_)(
+        kernel_ctx, [&](const std::string& bn_in_op) -> Blob* {
+          auto regst_desc_id_it = ek.bn_in_op2regst_desc_id.find(bn_in_op);
+          if (regst_desc_id_it == ek.bn_in_op2regst_desc_id.end()) {
+            return nullptr;
+          }
+          auto regst = Regst4RegstDescId(regst_desc_id_it->second);
+          const std::string& lbn = ek.kernel->Lbn4BnInOp(bn_in_op);
+          return regst->GetBlobPtrFromLbn(lbn);
+        });
   }
   expected_piece_id_ += 1;
 }
