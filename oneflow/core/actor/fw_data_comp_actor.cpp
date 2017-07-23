@@ -55,7 +55,7 @@ bool FwDataCompActor::IsReadReady() {
 int FwDataCompActor::WaitToStart(const ActorMsg& msg) {
   CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
   ActUntilFail();
-  OF_SET_MSG_HANDLER(&FwDataCompActor::HandlerWaitUntilNoReadableRegst);
+  OF_SET_MSG_HANDLER(&FwDataCompActor::HandlerNormal);
   return 0;
 }
 
