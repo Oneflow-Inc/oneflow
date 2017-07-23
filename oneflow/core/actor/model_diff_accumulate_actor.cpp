@@ -1,4 +1,5 @@
 #include "oneflow/core/actor/model_diff_accumulate_actor.h"
+#include "oneflow/core/actor/actor_registry.h"
 
 namespace oneflow {
 
@@ -17,8 +18,7 @@ void MdDiffAccActor::Init(const TaskProto& task_proto,
   set_num_of_not_eord(1);
   mut_num_of_read_empty() = 1;
   OF_SET_MSG_HANDLER(&MdDiffAccActor::HandlerNormal);
-  ForEachCurWriteableRegst(
-      [this](Regst* regst) { model_diff_acc_cnt_[regst] = 0; });
+  diff_acc_cnt_ = 0;
 }
 
 int MdDiffAccActor::HandlerNormal(const ActorMsg& msg) {
@@ -30,10 +30,10 @@ int MdDiffAccActor::HandlerNormal(const ActorMsg& msg) {
         != 0) {
       mut_num_of_read_empty() = 0;
       waiting_in_regst_.push(msg.regst_wrapper());
-    } else {
-      // do nothing
     }
     ActUntilFail();
+  } else {
+    UNEXPECTED_RUN();
   }
   return msg_handler() == nullptr;
 }
@@ -54,15 +54,14 @@ void MdDiffAccActor::Act() {
   CHECK_EQ(regst_wp->piece_id(), expected_piece_id());
   KernelCtx ctx = GenDefaultKernelCtx();
   ForEachCurWriteableRegst([&](Regst* regst) {
-    auto diff_cnt = model_diff_acc_cnt_.find(regst);
-    if (diff_cnt->second != JobDesc::Singleton()->num_of_pieces_in_batch()) {
+    if (diff_acc_cnt_ != JobDesc::Singleton()->num_of_pieces_in_batch()) {
       return;
     }
     Blob* packed_blob = regst->GetBlobPtrFromLbn(kPackedBlobName);
     MemsetFunc(ctx, packed_blob->mut_dptr(), 0,
                packed_blob->shape().elem_cnt()
                    * JobDesc::Singleton()->FloatingPointSize());
-    diff_cnt->second = 0;
+    diff_acc_cnt_ = 0;
   });
   AsyncLaunchKernel(
       ctx, [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWrapper> {
@@ -74,13 +73,15 @@ void MdDiffAccActor::Act() {
           return std::make_shared<LocalRegstWrapper>(regst);
         }
       });
-  AsyncSendReadableRegstMsg([this, &regst_wp](Regst* regst) {
-    regst->set_piece_id(regst_wp->piece_id());
-    ++model_diff_acc_cnt_.at(regst);
-  });
+  diff_acc_cnt_ += 1;
+  if (diff_acc_cnt_ == JobDesc::Singleton()->num_of_pieces_in_batch()) {
+    AsyncSendReadableRegstMsg();
+  }
   AsyncSendRegstMsgToProducer(regst_wp);
   waiting_in_regst_.pop();
   mut_num_of_read_empty() = waiting_in_regst_.empty();
 }
+
+REGISTER_ACTOR(kMdDiffAccCompTask, true, MdDiffAccActor);
 
 }  // namespace oneflow

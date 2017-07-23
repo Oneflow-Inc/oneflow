@@ -30,7 +30,9 @@ void AddActorCreator(TaskType task_type, bool is_forward,
 std::unique_ptr<Actor> ConstructActor(const TaskProto& task_proto,
                                       const ThreadCtx& thread_ctx) {
   ActorTypePair actor_type_pair{task_proto.type(), task_proto.is_forward()};
-  std::unique_ptr<Actor> ret(ActorType2Creator().at(actor_type_pair)());
+  auto it = ActorType2Creator().find(actor_type_pair);
+  CHECK(it != ActorType2Creator().end()) << task_proto.DebugString();
+  std::unique_ptr<Actor> ret(it->second());
   ret->Init(task_proto, thread_ctx);
   return ret;
 }
