@@ -53,11 +53,10 @@ class Actor {
   using MsgHandler = int (Actor::*)(const ActorMsg&);
   MsgHandler msg_handler() { return msg_handler_; }
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
-#define OF_SET_MSG_HANDLER(val)                                                \
-  do {                                                                         \
-    LOG(INFO) << "Actor " << actor_id() << " ThreadLocalId " << GetThrdLocId() \
-              << " switch to " << #val;                                        \
-    set_msg_handler(static_cast<MsgHandler>(val));                             \
+#define OF_SET_MSG_HANDLER(val)                                   \
+  do {                                                            \
+    LOG(INFO) << "Actor " << actor_id() << " switch to " << #val; \
+    set_msg_handler(static_cast<MsgHandler>(val));                \
   } while (0)
 
   // Common Handlers

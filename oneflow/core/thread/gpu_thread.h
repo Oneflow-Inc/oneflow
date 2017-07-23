@@ -11,7 +11,7 @@ class GpuThread final : public Thread {
   GpuThread() = delete;
   ~GpuThread() = default;
 
-  GpuThread(int device_phy_id);
+  GpuThread(int64_t thrd_loc_id, int64_t device_phy_id);
 
  private:
 };

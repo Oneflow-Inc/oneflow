@@ -35,6 +35,7 @@ void FwDataCompActor::Init(const TaskProto& task_proto,
 
 bool FwDataCompActor::IsReadReady() {
   if (in_desc_id_ == -1) { return true; }
+  if (in_desc_id_ == -2) { return false; }
   if (in_.empty() || (model_regst_desc_id_ != -1 && !model_regst_)
       || (model_tmp_regst_desc_id_ != -1 && !model_tmp_regst_)) {
     return false;
@@ -98,6 +99,8 @@ int FwDataCompActor::HandlerNormal(const ActorMsg& msg) {
       }
     }
     ActUntilFail();
+  } else {
+    UNEXPECTED_RUN();
   }
   return msg_handler() == nullptr;
 }
@@ -106,9 +109,8 @@ int FwDataCompActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
            0);
   ActUntilFail();
-  int total_piece_num = JobDesc::Singleton()->total_piece_num();
-  if ((in_desc_id_ != -1 && in_.empty())
-      || expected_piece_id() == total_piece_num) {
+  CHECK_NE(in_desc_id_, -1);
+  if (in_.empty()) {
     AsyncSendMsgToModelAndModelTmpProducer();
     AsyncSendEORDMsgForAllProducedRegstDesc();
     OF_SET_MSG_HANDLER(&FwDataCompActor::HandlerWaitUntilReadingCntEqualZero);
@@ -149,6 +151,14 @@ void FwDataCompActor::Act() {
     msg.set_piece_id(piece_id);
     msg.set_model_version_id(model_version_id);
     AsyncDo([msg]() { ActorMsgBus::Singleton()->SendMsg(msg); });
+  }
+  if (in_desc_id_ == -1
+      && expected_piece_id() == JobDesc::Singleton()->total_piece_num()) {
+    in_desc_id_ = -2;
+    CHECK_EQ(model_regst_desc_id_, -1);
+    CHECK_EQ(model_tmp_regst_desc_id_, -1);
+    AsyncSendEORDMsgForAllProducedRegstDesc();
+    OF_SET_MSG_HANDLER(&FwDataCompActor::HandlerWaitUntilReadingCntEqualZero);
   }
 }
 
