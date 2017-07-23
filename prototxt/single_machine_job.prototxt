@@ -1,6 +1,6 @@
-train_dlnet_conf_filepath: "../prototxt/google_net.prototxt"
-resource_filepath: "../prototxt/single_machine_resource.prototxt"
-placement_filepath: "../prototxt/single_machine_placement.prototxt"
+train_dlnet_conf_filepath: "../prototxt/naive_net.prototxt"
+resource_filepath: "../prototxt/naive_resource.prototxt"
+placement_filepath: "../prototxt/naive_placement.prototxt"
 model_load_snapshot_path: ""
 model_save_snapshots_path: "./snapshots"
 piece_size: 50
@@ -8,6 +8,8 @@ num_of_pieces_in_batch: 4
 is_train: true
 floating_point_type: kFloat
 num_of_batches_in_snapshot: 100
+staleness: 2
+total_batch_num: 1000
 default_fill_conf {
   gaussian_conf {
     mean: 0.0

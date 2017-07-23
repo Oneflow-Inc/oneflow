@@ -1,0 +1,37 @@
+op {
+  name: "mnist"
+  data_loader_conf {
+    feature: "feature"
+    shape_of_one_feature_ins {
+      dim: 784
+    }
+    label: "label"
+    data_dir: "./mnist/"
+  }
+}
+
+op {
+  name: "ip"
+  innerproduct_conf {
+    in: "mnist/feature"
+    out: "out"
+    out_num: 10
+  }
+}
+
+op {
+  name: "softmax"
+  softmax_conf {
+    in: "ip/out"
+    out: "out"
+  }
+}
+
+op {
+  name: "loss"
+  multinomial_logistic_loss_conf {
+    prediction: "softmax/out"
+    label: "mnist/label"
+    loss: "loss"
+  }
+}
