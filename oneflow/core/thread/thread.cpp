@@ -12,10 +12,19 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
   ActorMsg msg;
   while (true) {
     CHECK_EQ(msg_channel_.Receive(&msg), 0);
+    if (msg.msg_type() == ActorMsgType::kCmdMsg
+        && msg.actor_cmd() == ActorCmd::kStopThread) {
+      CHECK(id2actor_ptr_.empty());
+      break;
+    }
     int64_t actor_id = msg.dst_actor_id();
     auto actor_it = id2actor_ptr_.find(actor_id);
     if (actor_it == id2actor_ptr_.end()) {
-      LOG(INFO) << "thread " << this << " construct actor " << actor_id;
+      if (msg.msg_type() == ActorMsgType::kCmdMsg
+          && msg.actor_cmd() == ActorCmd::kEORD) {
+        continue;
+      }
+      LOG(INFO) << "thread " << thrd_loc_id_ << " construct actor " << actor_id;
       std::unique_lock<std::mutex> lck(id2task_mtx_);
       int64_t task_id = IDMgr::Singleton()->TaskId4ActorId(actor_id);
       auto task_it = id2task_.find(task_id);
@@ -27,12 +36,10 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
     }
     int process_msg_ret = actor_it->second->ProcessMsg(msg);
     if (process_msg_ret == 1) {
-      LOG(INFO) << "thread" << this << " deconstruct actor " << actor_id;
+      LOG(INFO) << "thread " << thrd_loc_id_ << " deconstruct actor "
+                << actor_id;
       id2actor_ptr_.erase(actor_it);
-      if (id2actor_ptr_.empty()) {
-        LOG(INFO) << "all actor on thread " << this << " finish";
-        break;
-      }
+      RuntimeCtx::Singleton()->mut_active_actor_cnt().MinusOne();
     } else {
       CHECK_EQ(process_msg_ret, 0);
     }

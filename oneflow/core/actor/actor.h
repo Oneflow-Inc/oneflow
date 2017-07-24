@@ -53,11 +53,10 @@ class Actor {
   using MsgHandler = int (Actor::*)(const ActorMsg&);
   MsgHandler msg_handler() { return msg_handler_; }
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
-#define OF_SET_MSG_HANDLER(val)                                                \
-  do {                                                                         \
-    LOG(INFO) << "Actor " << actor_id() << " ThreadLocalId " << GetThrdLocId() \
-              << " switch to " << #val;                                        \
-    set_msg_handler(static_cast<MsgHandler>(val));                             \
+#define OF_SET_MSG_HANDLER(val)                                   \
+  do {                                                            \
+    LOG(INFO) << "actor " << actor_id() << " switch to " << #val; \
+    set_msg_handler(static_cast<MsgHandler>(val));                \
   } while (0)
 
   // Common Handlers
@@ -74,7 +73,10 @@ class Actor {
   void AsyncLaunchKernel(
       const KernelCtx&,
       std::function<std::shared_ptr<RegstWrapper>(int64_t)> Regst4RegstDescId);
-  void AsyncSendReadableRegstMsg(std::function<void(Regst*)> PreProcess);
+  void AsyncSendReadableRegstMsg(std::function<void(Regst*)> RegstPreProcess,
+                                 std::function<bool(int64_t)> IsAllowedActor);
+  void AsyncSendReadableRegstMsg(std::function<void(Regst*)> RegstPreProcess);
+  void AsyncSendReadableRegstMsg(std::function<bool(int64_t)> IsAllowedActor);
   void AsyncSendReadableRegstMsg();
   void AsyncSendEORDMsgToSubscribers(int64_t regst_desc_id);
   void AsyncSendEORDMsgForAllProducedRegstDesc();

@@ -77,6 +77,10 @@ KernelCtx Actor::GenDefaultKernelCtx() const {
 }
 
 int Actor::HandlerWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
+  if (msg.msg_type() == ActorMsgType::kCmdMsg) {
+    CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
+    return 0;
+  }
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
            0);
   if (total_reading_cnt_ == 0) {
@@ -108,26 +112,40 @@ void Actor::AsyncLaunchKernel(
   expected_piece_id_ += 1;
 }
 
-void Actor::AsyncSendReadableRegstMsg() {
-  AsyncSendReadableRegstMsg([](Regst*) {});
-}
-
-void Actor::AsyncSendReadableRegstMsg(std::function<void(Regst*)> PreProcess) {
+void Actor::AsyncSendReadableRegstMsg(
+    std::function<void(Regst*)> RegstPreProcess,
+    std::function<bool(int64_t)> IsAllowedActor) {
   for (auto& pair : writeable_produced_regst_) {
     Regst* regst = pair.second.front();
-    PreProcess(regst);
-    device_ctx_->AddCallBack([regst]() {
-      for (int64_t subscriber : regst->subscribers_actor_id()) {
+    RegstPreProcess(regst);
+    auto regst_reading_cnt_it = produced_regst2reading_cnt_.find(regst);
+    regst_reading_cnt_it->second = 0;
+    for (int64_t subscriber : regst->subscribers_actor_id()) {
+      if (!IsAllowedActor(subscriber)) { continue; }
+      total_reading_cnt_ += 1;
+      regst_reading_cnt_it->second += 1;
+      device_ctx_->AddCallBack([subscriber, regst]() {
         ActorMsg msg = ActorMsg::BuildReadableRegstMsg(subscriber, regst);
         ActorMsgBus::Singleton()->SendMsg(std::move(msg));
-      }
-    });
-    produced_regst2reading_cnt_.at(regst) =
-        regst->subscribers_actor_id().size();
-    total_reading_cnt_ += regst->subscribers_actor_id().size();
+      });
+    }
     if (!regst->subscribers_actor_id().empty()) { pair.second.pop(); }
     if (pair.second.empty()) { writeable_produced_regst_desc_num_ -= 1; }
   }
+}
+
+void Actor::AsyncSendReadableRegstMsg(
+    std::function<void(Regst*)> RegstPreProcess) {
+  AsyncSendReadableRegstMsg(RegstPreProcess, [](int64_t) { return true; });
+}
+
+void Actor::AsyncSendReadableRegstMsg(
+    std::function<bool(int64_t)> IsAllowedActor) {
+  AsyncSendReadableRegstMsg([](Regst*) {}, IsAllowedActor);
+}
+
+void Actor::AsyncSendReadableRegstMsg() {
+  AsyncSendReadableRegstMsg([](Regst*) {});
 }
 
 void Actor::AsyncSendEORDMsgToSubscribers(int64_t regst_desc_id) {
