@@ -12,6 +12,11 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
   ActorMsg msg;
   while (true) {
     CHECK_EQ(msg_channel_.Receive(&msg), 0);
+    if (msg.msg_type() == ActorMsgType::kCmdMsg
+        && msg.actor_cmd() == ActorCmd::kStopThread) {
+      CHECK(id2actor_ptr_.empty());
+      break;
+    }
     int64_t actor_id = msg.dst_actor_id();
     auto actor_it = id2actor_ptr_.find(actor_id);
     if (actor_it == id2actor_ptr_.end()) {
@@ -34,10 +39,7 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
       LOG(INFO) << "thread " << thrd_loc_id_ << " deconstruct actor "
                 << actor_id;
       id2actor_ptr_.erase(actor_it);
-      if (id2actor_ptr_.empty()) {
-        LOG(INFO) << "all actor on thread " << thrd_loc_id_ << " finish";
-        break;
-      }
+      RuntimeCtx::Singleton()->active_actor_cnt_minus1();
     } else {
       CHECK_EQ(process_msg_ret, 0);
     }

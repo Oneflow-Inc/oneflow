@@ -5,6 +5,16 @@
 
 namespace oneflow {
 
+ThreadMgr::~ThreadMgr() {
+  for (size_t i = 0; i < threads_.size(); ++i) {
+    ActorMsg msg;
+    msg.set_actor_cmd(ActorCmd::kStopThread);
+    threads_[i]->GetMsgChannelPtr()->Send(msg);
+    threads_[i].reset();
+    LOG(INFO) << "thread " << i << " finish";
+  }
+}
+
 Thread* ThreadMgr::GetThrd(int64_t thrd_loc_id) {
   return threads_.at(thrd_loc_id).get();
 }

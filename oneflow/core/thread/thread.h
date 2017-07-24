@@ -12,7 +12,7 @@ namespace oneflow {
 class Thread {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Thread);
-  virtual ~Thread() { Deconstruct(); }
+  virtual ~Thread() = default;
 
   void AddTask(const TaskProto&);
 

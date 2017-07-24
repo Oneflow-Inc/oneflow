@@ -37,6 +37,8 @@ class Runtime final {
     LOG(INFO) << "number of mdupdt tasks is " << mdupdt_tasks.size();
     LOG(INFO) << "number of source tasks is " << source_tasks.size();
     LOG(INFO) << "number of other  tasks is " << other_tasks.size();
+    RuntimeCtx::Singleton()->set_active_actor_cnt(
+        mdupdt_tasks.size() + source_tasks.size() + other_tasks.size());
     HandoutTasks(mdupdt_tasks);
     RuntimeCtx::Singleton()->SetModelInitCnt(mdupdt_tasks.size());
     SendCmdMsg(mdupdt_tasks, ActorCmd::kInitializeModel);
@@ -48,6 +50,7 @@ class Runtime final {
     LOG(INFO) << "InitModel on all machine done";
     SendCmdMsg(mdupdt_tasks, ActorCmd::kSendInitialModel);
     SendCmdMsg(source_tasks, ActorCmd::kStart);
+    RuntimeCtx::Singleton()->WaitUntilNoActiveActor();
     DeleteSingleton();
   }
 
