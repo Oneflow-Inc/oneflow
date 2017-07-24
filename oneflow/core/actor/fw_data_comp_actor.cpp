@@ -152,13 +152,15 @@ void FwDataCompActor::Act() {
     msg.set_model_version_id(model_version_id);
     AsyncDo([msg]() { ActorMsgBus::Singleton()->SendMsg(msg); });
   }
-  if (in_desc_id_ == -1
-      && expected_piece_id() == JobDesc::Singleton()->total_piece_num()) {
+  if (expected_piece_id() == JobDesc::Singleton()->total_piece_num()) {
     in_desc_id_ = -2;
-    CHECK_EQ(model_regst_desc_id_, -1);
-    CHECK_EQ(model_tmp_regst_desc_id_, -1);
+    AsyncSendMsgToModelAndModelTmpProducer();
     AsyncSendEORDMsgForAllProducedRegstDesc();
-    OF_SET_MSG_HANDLER(&FwDataCompActor::HandlerWaitUntilReadingCntEqualZero);
+    if (total_reading_cnt() == 0) {
+      OF_SET_MSG_HANDLER(nullptr);
+    } else {
+      OF_SET_MSG_HANDLER(&FwDataCompActor::HandlerWaitUntilReadingCntEqualZero);
+    }
   }
 }
 

@@ -15,6 +15,10 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
     int64_t actor_id = msg.dst_actor_id();
     auto actor_it = id2actor_ptr_.find(actor_id);
     if (actor_it == id2actor_ptr_.end()) {
+      if (msg.msg_type() == ActorMsgType::kCmdMsg
+          && msg.actor_cmd() == ActorCmd::kEORD) {
+        continue;
+      }
       LOG(INFO) << "thread " << thrd_loc_id_ << " construct actor " << actor_id;
       std::unique_lock<std::mutex> lck(id2task_mtx_);
       int64_t task_id = IDMgr::Singleton()->TaskId4ActorId(actor_id);

@@ -73,7 +73,10 @@ class Actor {
   void AsyncLaunchKernel(
       const KernelCtx&,
       std::function<std::shared_ptr<RegstWrapper>(int64_t)> Regst4RegstDescId);
-  void AsyncSendReadableRegstMsg(std::function<void(Regst*)> PreProcess);
+  void AsyncSendReadableRegstMsg(std::function<void(Regst*)> RegstPreProcess,
+                                 std::function<bool(int64_t)> IsAllowedActor);
+  void AsyncSendReadableRegstMsg(std::function<void(Regst*)> RegstPreProcess);
+  void AsyncSendReadableRegstMsg(std::function<bool(int64_t)> IsAllowedActor);
   void AsyncSendReadableRegstMsg();
   void AsyncSendEORDMsgToSubscribers(int64_t regst_desc_id);
   void AsyncSendEORDMsgForAllProducedRegstDesc();

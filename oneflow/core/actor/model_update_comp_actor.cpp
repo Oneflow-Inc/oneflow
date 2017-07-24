@@ -10,6 +10,7 @@ void MdUpdtCompActor::Init(const TaskProto& task_proto,
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
   next_model_version_id_ = 0;
+  related_save_task_id_ = task_proto.related_save_task_id();
   set_num_of_not_eord(1);
   mut_num_of_read_empty() = 1;
   if (thread_ctx.cpu_stream) {
@@ -104,7 +105,7 @@ void MdUpdtCompActor::Act() {
   mut_num_of_read_empty() = waiting_model_diff_acc_queue_.empty();
   Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
   auto model_wpr = std::make_shared<LocalRegstWrapper>(model_regst);
-  model_regst->set_model_version_id(next_model_version_id_++);
+  model_regst->set_model_version_id(next_model_version_id_);
   AsyncLaunchKernel(
       GenDefaultKernelCtx(),
       [&](int64_t regst_desc_id) -> std::shared_ptr<RegstWrapper> {
@@ -114,8 +115,21 @@ void MdUpdtCompActor::Act() {
           return model_diff_acc_wpr;
         }
       });
-  AsyncSendReadableRegstMsg();
   AsyncSendRegstMsgToProducer(model_diff_acc_wpr);
+  if (next_model_version_id_ == JobDesc::Singleton()->total_batch_num()) {
+    AsyncSendReadableRegstMsg(
+        [this](int64_t actor_id) { return actor_id == related_save_task_id_; });
+    CHECK(!IsReadReady());
+    AsyncSendEORDMsgToSubscribers(model_regst_desc_id_);
+    if (total_reading_cnt() == 0) {
+      OF_SET_MSG_HANDLER(nullptr);
+    } else {
+      OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerWaitUntilReadingCntEqualZero);
+    }
+  } else {
+    AsyncSendReadableRegstMsg();
+  }
+  next_model_version_id_ += 1;
 }
 
 REGISTER_ACTOR(kMdUpdtCompTask, true, MdUpdtCompActor);
