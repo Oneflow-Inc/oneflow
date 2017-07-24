@@ -39,7 +39,7 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
       LOG(INFO) << "thread " << thrd_loc_id_ << " deconstruct actor "
                 << actor_id;
       id2actor_ptr_.erase(actor_it);
-      RuntimeCtx::Singleton()->active_actor_cnt_minus1();
+      RuntimeCtx::Singleton()->mut_active_actor_cnt().MinusOne();
     } else {
       CHECK_EQ(process_msg_ret, 0);
     }
