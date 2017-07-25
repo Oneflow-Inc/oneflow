@@ -32,7 +32,6 @@ class FwDataCompActor final : public CompActor {
   std::queue<std::shared_ptr<RegstWrapper>> in_;
   HashMap<int64_t, std::shared_ptr<RegstWrapper>> readable_regst_;
   KernelCtx kernel_ctx_;
-  int64_t bp_actor_id_;
 };
 
 }  // namespace oneflow

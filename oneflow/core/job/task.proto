@@ -30,8 +30,6 @@ message TaskProto {
   ParallelPolicy parallel_policy = 1000;
   int64 parallel_id = 1001;
   int64 parallel_num = 1002;
-  // for Data Fw Comp Task
-  int64 bp_task_id = 2001;
   // For Model Update Comp Task
   int64 related_save_task_id = 3000;
 }

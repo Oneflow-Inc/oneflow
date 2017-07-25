@@ -30,7 +30,6 @@ void FwDataCompActor::Init(const TaskProto& task_proto,
     mut_num_of_read_empty() = 1;  // only consider "in"regst
     OF_SET_MSG_HANDLER(&FwDataCompActor::HandlerNormal);
   }
-  bp_actor_id_ = IDMgr::Singleton()->ActorId4TaskId(task_proto.bp_task_id());
 }
 
 bool FwDataCompActor::IsReadReady() {
