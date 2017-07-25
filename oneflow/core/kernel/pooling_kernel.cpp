@@ -177,7 +177,8 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
       const int64_t* mask_dptr = mask_blob->dptr<int64_t>();
       FloatingPointType* in_diff_dptr =
           in_diff_blob->mut_dptr<FloatingPointType>();
-
+      memset(in_diff_dptr, 0,
+             in_diff_blob->shape().elem_cnt() * sizeof(FloatingPointType));
       switch (pooling_conf.pool()) {
         case PoolingOpConf::MAX: {
           for (int64_t n = 0; n < out_diff_blob->shape().At(0); ++n) {
@@ -186,9 +187,9 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
                    ++out_h) {
                 for (int64_t out_w = 0; out_w < out_diff_blob->shape().At(3);
                      ++out_w) {
-                  const int out_diff_index =
+                  const int64_t out_diff_index =
                       out_h * out_diff_blob->shape().At(3) + out_w;
-                  const int in_diff_index = mask_dptr[out_diff_index];
+                  const int64_t in_diff_index = mask_dptr[out_diff_index];
                   in_diff_dptr[in_diff_index] += out_diff_dptr[out_diff_index];
                 }
               }
