@@ -31,6 +31,11 @@ void DataCompTaskNode::FwInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
         chain_node()->parallel_desc()->policy(), parallel_id(),
         chain_node()->parallel_desc()->parallel_num());
   });
+  if (IsLossNode()) {
+    auto out_regst = GetRelatedRegst(SoleOutEdge());
+    auto in_regst = GetRelatedRegst(SoleInEdge());
+    out_regst->CopyShapeFrom(in_regst.get());
+  }
 }
 
 void DataCompTaskNode::FwBuildFromUserOps(
