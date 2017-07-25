@@ -11,6 +11,7 @@ void BpDataCompActor::Init(const TaskProto& task_proto,
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
   activation_regst_desc_id_ = RegstDescId4Name("activation");
   data_tmp_regst_desc_id_ = RegstDescId4Name("data_tmp");
+  out_regst_desc_id_ = RegstDescId4Name("out");
   expected_model_version_id_ = 0;
   mut_num_of_read_empty() =
       3 + (model_regst_desc_id_ != -1) + (model_tmp_regst_desc_id_ != -1)
@@ -27,11 +28,13 @@ void BpDataCompActor::Init(const TaskProto& task_proto,
 }
 
 bool BpDataCompActor::IsReadReady() {
-  if (mut_num_of_read_empty() || piece_model_id_.empty()) { return false; }
+  if (mut_num_of_read_empty()) { return false; }
   if (model_regst_desc_id_ != -1) {
-    CHECK_GE(piece_model_id_.front().second, 0);
+    int cur_model_version_id =
+        read_regst_.at(out_regst_desc_id_).front()->model_version_id();
+    CHECK_GE(cur_model_version_id, 0);
     while (read_regst_.at(model_regst_desc_id_).front()->model_version_id()
-               != piece_model_id_.front().second
+               != cur_model_version_id
            && !read_regst_.at(model_regst_desc_id_).empty()) {
       AsyncSendRegstMsgToProducer(read_regst_.at(model_regst_desc_id_).front());
       read_regst_.at(model_regst_desc_id_).pop();
@@ -77,8 +80,6 @@ int BpDataCompActor::HandlerNormal(const ActorMsg& msg) {
       read_regst_.at(regst_wp->regst_desc_id()).push(regst_wp);
     }
     ActUntilFail();
-  } else if (msg.msg_type() == ActorMsgType::kPieceModelIdMsg) {
-    piece_model_id_.emplace(msg.piece_id(), msg.model_version_id());
   } else {
     UNEXPECTED_RUN();
   }
@@ -99,8 +100,7 @@ int BpDataCompActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
 
 void BpDataCompActor::Act() {
   int64_t piece_id = expected_piece_id();
-  CHECK_EQ(piece_model_id_.front().first, piece_id);
-  piece_model_id_.pop();
+  CHECK_EQ(read_regst_.at(out_regst_desc_id_).front()->piece_id(), piece_id);
   for (const auto& pair : read_regst_) {
     if (pair.first != model_regst_desc_id_
         && pair.first != model_tmp_regst_desc_id_) {

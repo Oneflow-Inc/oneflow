@@ -30,7 +30,6 @@ void FwDataCompActor::Init(const TaskProto& task_proto,
     mut_num_of_read_empty() = 1;  // only consider "in"regst
     OF_SET_MSG_HANDLER(&FwDataCompActor::HandlerNormal);
   }
-  bp_actor_id_ = IDMgr::Singleton()->ActorId4TaskId(task_proto.bp_task_id());
 }
 
 bool FwDataCompActor::IsReadReady() {
@@ -144,13 +143,6 @@ void FwDataCompActor::Act() {
     AsyncSendRegstMsgToProducer(in_.front());
     in_.pop();
     mut_num_of_read_empty() = in_.empty();
-  }
-  if (bp_actor_id_ != -1) {
-    ActorMsg msg;
-    msg.set_dst_actor_id(bp_actor_id_);
-    msg.set_piece_id(piece_id);
-    msg.set_model_version_id(model_version_id);
-    AsyncDo([msg]() { ActorMsgBus::Singleton()->SendMsg(msg); });
   }
   if (expected_piece_id() == JobDesc::Singleton()->total_piece_num()) {
     in_desc_id_ = -2;
