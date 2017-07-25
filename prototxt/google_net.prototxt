@@ -43,8 +43,6 @@ op {
     stride: 2
     pad: 0
     pad: 0
-    dilation: 1
-    dilation: 1
   }
 }
 
