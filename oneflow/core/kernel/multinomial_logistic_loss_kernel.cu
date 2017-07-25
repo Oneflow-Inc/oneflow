@@ -1,6 +1,6 @@
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/multinomial_logistic_loss_kernel.h"
-#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
