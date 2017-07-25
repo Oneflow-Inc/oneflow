@@ -27,7 +27,7 @@ class BpDataCompActor final : public Actor {
   int64_t model_tmp_regst_desc_id_;
   int64_t activation_regst_desc_id_;
   int64_t data_tmp_regst_desc_id_;
-  std::queue<std::pair<int64_t, int64_t>> piece_model_id_;
+  int64_t out_regst_desc_id_;
   // <regst_desc_id, queue<regst_wp>>
   HashMap<int64_t, std::queue<std::shared_ptr<RegstWrapper>>> read_regst_;
 };
