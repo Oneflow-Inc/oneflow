@@ -12,14 +12,27 @@ placement_group {
 
 placement_group {
   op_set {
-    op_name: "ip"
+    op_name: "ip4096_784"
+    op_name: "relu_4096"
+  }
+  parallel_conf {
+    policy: kModelParallel
+    device_set {
+      device_name: "centos-0:4-15"
+    }
+  }
+}
+
+placement_group {
+  op_set {
+    op_name: "ip10_4096"
     op_name: "softmax"
     op_name: "loss"
   }
   parallel_conf {
     policy: kDataParallel
     device_set {
-      device_name: "centos-0:0"
+      device_name: "centos-0:0-8"
     }
   }
 }
