@@ -74,7 +74,7 @@ int FwDataCompActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     ProcessEord();
-    if (msg_handler() == &FwDataCompActor::HandlerWaitUntilReadingCntEqualZero
+    if (msg_handler() == &FwDataCompActor::HandlerZombie
         || msg_handler() == nullptr) {
       AsyncSendMsgToModelAndModelTmpProducer();
     }
@@ -112,7 +112,7 @@ int FwDataCompActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
   if (in_.empty()) {
     AsyncSendMsgToModelAndModelTmpProducer();
     AsyncSendEORDMsgForAllProducedRegstDesc();
-    OF_SET_MSG_HANDLER(&FwDataCompActor::HandlerWaitUntilReadingCntEqualZero);
+    OF_SET_MSG_HANDLER(&FwDataCompActor::HandlerZombie);
   }
   return 0;
 }
@@ -148,11 +148,7 @@ void FwDataCompActor::Act() {
     in_desc_id_ = -2;
     AsyncSendMsgToModelAndModelTmpProducer();
     AsyncSendEORDMsgForAllProducedRegstDesc();
-    if (total_reading_cnt() == 0) {
-      OF_SET_MSG_HANDLER(nullptr);
-    } else {
-      OF_SET_MSG_HANDLER(&FwDataCompActor::HandlerWaitUntilReadingCntEqualZero);
-    }
+    TrySwitchToZombie();
   }
 }
 

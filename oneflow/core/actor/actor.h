@@ -62,13 +62,15 @@ class Actor {
   // Common Handlers
   virtual int HandlerNormal(const ActorMsg& msg) = 0;
   virtual int HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) = 0;
-  int HandlerWaitUntilReadingCntEqualZero(const ActorMsg& msg);
+  int HandlerZombie(const ActorMsg& msg);
 
   // Act
   void ActUntilFail();
   virtual void Act() = 0;
   virtual bool IsReadReady() = 0;
-  virtual void ProcessEord();
+  void ProcessEord();
+  void TrySwitchToZombie();
+
   // Async Do on KernelCtx
   void AsyncLaunchKernel(
       const KernelCtx&,

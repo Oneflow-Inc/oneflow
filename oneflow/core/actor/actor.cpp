@@ -53,7 +53,7 @@ void Actor::ProcessEord() {
       if (!total_reading_cnt_) {
         OF_SET_MSG_HANDLER(nullptr);
       } else {
-        OF_SET_MSG_HANDLER(&Actor::HandlerWaitUntilReadingCntEqualZero);
+        OF_SET_MSG_HANDLER(&Actor::HandlerZombie);
       }
       AsyncSendEORDMsgForAllProducedRegstDesc();
     } else {
@@ -61,6 +61,14 @@ void Actor::ProcessEord() {
     }
   } else {
     // do nothing
+  }
+}
+
+void Actor::TrySwitchToZombie() {
+  if (total_reading_cnt_ == 0) {
+    OF_SET_MSG_HANDLER(nullptr);
+  } else {
+    OF_SET_MSG_HANDLER(&Actor::HandlerZombie);
   }
 }
 
@@ -76,7 +84,7 @@ KernelCtx Actor::GenDefaultKernelCtx() const {
   return ctx;
 }
 
-int Actor::HandlerWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
+int Actor::HandlerZombie(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     return 0;

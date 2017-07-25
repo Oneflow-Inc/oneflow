@@ -61,7 +61,7 @@ int BpDataCompActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     ProcessEord();
-    if (msg_handler() == &BpDataCompActor::HandlerWaitUntilReadingCntEqualZero
+    if (msg_handler() == &BpDataCompActor::HandlerZombie
         || msg_handler() == nullptr) {
       AsyncSendMsgToModelAndModelTmpProducer();
     }
@@ -93,7 +93,7 @@ int BpDataCompActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
   if (mut_num_of_read_empty()) {
     AsyncSendMsgToModelAndModelTmpProducer();
     AsyncSendEORDMsgForAllProducedRegstDesc();
-    OF_SET_MSG_HANDLER(&BpDataCompActor::HandlerWaitUntilReadingCntEqualZero);
+    OF_SET_MSG_HANDLER(&BpDataCompActor::HandlerZombie);
   }
   return 0;
 }

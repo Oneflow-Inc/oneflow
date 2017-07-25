@@ -44,7 +44,7 @@ int MdDiffAccActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
   ActUntilFail();
   if (waiting_in_regst_.empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
-    OF_SET_MSG_HANDLER(&MdDiffAccActor::HandlerWaitUntilReadingCntEqualZero);
+    OF_SET_MSG_HANDLER(&MdDiffAccActor::HandlerZombie);
   }
   return 0;
 }
