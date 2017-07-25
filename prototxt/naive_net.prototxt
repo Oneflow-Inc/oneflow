@@ -11,9 +11,26 @@ op {
 }
 
 op {
-  name: "ip"
+  name: "ip4096_784"
   innerproduct_conf {
     in: "mnist/feature"
+    out: "out"
+    out_num: 4096
+  }
+}
+
+op {
+  name: "relu_4096"
+  relu_conf {
+    in: "ip4096_784/out"
+    out: "out"
+  }
+}
+
+op {
+  name: "ip10_4096"
+  innerproduct_conf {
+    in: "relu_4096/out"
     out: "out"
     out_num: 10
   }
@@ -22,7 +39,7 @@ op {
 op {
   name: "softmax"
   softmax_conf {
-    in: "ip/out"
+    in: "ip10_4096/out"
     out: "out"
   }
 }
