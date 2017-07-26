@@ -123,7 +123,15 @@ void MdUpdtCompActor::Act() {
     AsyncSendEORDMsgToSubscribers(model_regst_desc_id_);
     TrySwitchToZombie();
   } else {
-    AsyncSendReadableRegstMsg();
+    if (next_model_version_id_
+            % JobDesc::Singleton()->num_of_batches_in_snapshot()
+        == 0) {
+      AsyncSendReadableRegstMsg();
+    } else {
+      AsyncSendReadableRegstMsg([this](int64_t actor_id) {
+        return actor_id != related_save_task_id_;
+      });
+    }
   }
   next_model_version_id_ += 1;
 }
