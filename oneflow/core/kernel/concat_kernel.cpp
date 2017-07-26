@@ -14,7 +14,7 @@ FloatingPointType* CalcCopyAddr(FloatingPointType* start_addr, int64_t cp_times,
 }  // namespace
 
 template<DeviceType device_type, typename FloatingPointType>
-void ConcatKernel<device_type, FloatingPointType>::ForOrBackWard(
+void ConcatKernel<device_type, FloatingPointType>::ConcatKernelWork(
     const KernelCtx& ctx, const std::string& out_bn,
     const std::vector<std::string>& in_bns,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr,
@@ -70,8 +70,8 @@ void ConcatKernel<device_type, FloatingPointType>::Forward(
     KernelUtil<device_type, FloatingPointType>::Memcpy(ctx, dst, src, size,
                                                        kind);
   };
-  ForOrBackWard(ctx, op()->SoleObn(), op()->input_bns(), BnInOp2BlobPtr,
-                copy_in2out);
+  ConcatKernelWork(ctx, op()->SoleObn(), op()->input_bns(), BnInOp2BlobPtr,
+                   copy_in2out);
 }
 
 template<DeviceType device_type, typename FloatingPointType>
@@ -84,8 +84,8 @@ void ConcatKernel<device_type, FloatingPointType>::Backward(
     KernelUtil<device_type, FloatingPointType>::Memcpy(ctx, dst, src, size,
                                                        kind);
   };
-  ForOrBackWard(ctx, op()->SoleOdbn(), op()->input_diff_bns(), BnInOp2BlobPtr,
-                copy_out2in);
+  ConcatKernelWork(ctx, op()->SoleOdbn(), op()->input_diff_bns(),
+                   BnInOp2BlobPtr, copy_out2in);
 }
 
 INSTANTIATE_KERNEL_CLASS(ConcatKernel);
