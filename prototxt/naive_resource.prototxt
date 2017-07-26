@@ -1,0 +1,8 @@
+machine {
+  addr: ""
+  port: ""
+  name: "centos-0"
+}
+
+device_num_per_machine: 16
+device_type: kCPU

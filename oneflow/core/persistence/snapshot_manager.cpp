@@ -22,6 +22,7 @@ void SnapshotMgr::Init() {
 }
 
 Snapshot* SnapshotMgr::GetWriteableSnapshot(int64_t snapshot_id) {
+  LOG(INFO) << "begin to save snapshot " << snapshot_id;
   auto it = snapshot_id2writeable_snapshot_.find(snapshot_id);
   if (it == snapshot_id2writeable_snapshot_.end()) {
     std::string snapshot_root_path = tensorflow::io::JoinPath(

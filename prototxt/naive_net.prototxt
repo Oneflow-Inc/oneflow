@@ -1,0 +1,54 @@
+op {
+  name: "mnist"
+  data_loader_conf {
+    feature: "feature"
+    shape_of_one_feature_ins {
+      dim: 784
+    }
+    label: "label"
+    data_dir: "./mnist/"
+  }
+}
+
+op {
+  name: "ip4096_784"
+  innerproduct_conf {
+    in: "mnist/feature"
+    out: "out"
+    out_num: 4096
+  }
+}
+
+op {
+  name: "relu_4096"
+  relu_conf {
+    in: "ip4096_784/out"
+    out: "out"
+  }
+}
+
+op {
+  name: "ip10_4096"
+  innerproduct_conf {
+    in: "relu_4096/out"
+    out: "out"
+    out_num: 10
+  }
+}
+
+op {
+  name: "softmax"
+  softmax_conf {
+    in: "ip10_4096/out"
+    out: "out"
+  }
+}
+
+op {
+  name: "loss"
+  multinomial_logistic_loss_conf {
+    prediction: "softmax/out"
+    label: "mnist/label"
+    loss: "loss"
+  }
+}

@@ -38,7 +38,7 @@ int CopyHdActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
   ActUntilFail();
   if (mut_num_of_read_empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
-    OF_SET_MSG_HANDLER(&CopyHdActor::HandlerWaitUntilReadingCntEqualZero);
+    OF_SET_MSG_HANDLER(&CopyHdActor::HandlerZombie);
   }
   return 0;
 }

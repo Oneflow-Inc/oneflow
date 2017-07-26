@@ -19,7 +19,7 @@ message JobConf {
   bool is_train = 9;
   FloatingPointTypeProto floating_point_type = 10;
   int32 num_of_batches_in_snapshot = 11;
-  int32 staleness = 12;
+  int32 staleness = 12; // at least 0. If set as 0, then it's BSP
   int64 total_batch_num = 13;
   FillConf default_fill_conf = 14;
   oneof ModelUpdateCase {

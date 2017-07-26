@@ -26,7 +26,7 @@ class MdDiffAccActor final : public CompActor {
                      size_t sz);
 
   CudaStreamHandle cuda_handle_;
-  HashMap<Regst*, int32_t> model_diff_acc_cnt_;
+  int32_t diff_acc_cnt_;
 };
 
 }  // namespace oneflow
