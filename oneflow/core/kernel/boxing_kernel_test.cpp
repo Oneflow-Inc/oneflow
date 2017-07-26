@@ -10,8 +10,8 @@ namespace {
 template<typename FloatingPointType>
 BoxingKernel<DeviceType::kCPU, FloatingPointType>* BuildBoxingKernel(
     int32_t in_num, int32_t out_num, int kernel_name,
-    BoxingOpConf::InBoxCase in_box_case,
-    BoxingOpConf::OutBoxCase out_box_case) {
+    BoxingOpConf::InBoxCase in_box_case, BoxingOpConf::OutBoxCase out_box_case,
+    int32_t concat_axis = 1) {
   // config boxing operator from box cases
   OperatorConf op_conf;
   op_conf.set_name("boxing_test" + std::to_string(kernel_name));
@@ -19,7 +19,7 @@ BoxingKernel<DeviceType::kCPU, FloatingPointType>* BuildBoxingKernel(
   boxing_conf->set_in_num(in_num);
   boxing_conf->set_out_num(out_num);
   if (in_box_case == BoxingOpConf::kConcatBox) {
-    boxing_conf->mutable_concat_box()->set_axis(1);
+    boxing_conf->mutable_concat_box()->set_axis(concat_axis);
   } else {
     boxing_conf->mutable_add_box();
   }
@@ -146,6 +146,59 @@ void TestBoxingKernelConcatClone() {
     Blob* out_i = BnInOp2BlobPtr_1("out_" + std::to_string(i));
     KTCommon::BlobCmp(out_i, out_0);
   }
+}
+
+template<typename FloatingPointType>
+void TestBoxingKernelConcatSplit_1() {
+  // Create cpu_device and kernel contexts
+  using KTCommon = KernelTestCommon<DeviceType::kCPU, FloatingPointType>;
+
+  KernelCtx ctx;
+  KTCommon::BuildKernelCtx(&ctx);
+
+  // Build boxing kernels
+  auto boxing_kernel = BuildBoxingKernel<FloatingPointType>(
+      4, 2, 0, BoxingOpConf::kConcatBox, BoxingOpConf::kDataSplitBox, 0);
+
+  // Build blobs
+  std::vector<std::vector<int64_t>> in_dim_vecs = {
+      {1, 1, 2, 1}, {2, 1, 2, 1}, {1, 1, 2, 1}, {3, 1, 2, 1}};
+  std::vector<std::vector<int64_t>> out_dim_vecs = {{3, 1, 2, 1}, {4, 1, 2, 1}};
+  auto BnInOp2BlobPtr = ConstructBnInOp2BlobPtr<FloatingPointType>(
+      in_dim_vecs, out_dim_vecs, {7, 1, 2, 1});
+
+  // Run forward && backward test
+  boxing_kernel->Forward(ctx, BnInOp2BlobPtr);
+  boxing_kernel->Backward(ctx, BnInOp2BlobPtr);
+
+  KTCommon::SyncStream(&ctx);
+
+  // Check input && output blobs in this graph should be the same
+  FloatingPointType ex_out_0_mat[] = {1, 1, 2, 2, 2, 2};
+  FloatingPointType ex_out_1_mat[] = {3, 3, 4, 4, 4, 4, 4, 4};
+  Blob* expected_out_0 =
+      KTCommon::CreateBlobWithVector({3, 1, 2, 1}, ex_out_0_mat);
+  Blob* expected_out_1 =
+      KTCommon::CreateBlobWithVector({4, 1, 2, 1}, ex_out_1_mat);
+  KTCommon::BlobCmp(BnInOp2BlobPtr("out_0"), expected_out_0);
+  KTCommon::BlobCmp(BnInOp2BlobPtr("out_1"), expected_out_1);
+
+  FloatingPointType ex_in_diff_0_mat[] = {1, 1};
+  FloatingPointType ex_in_diff_1_mat[] = {1, 1, 1, 1};
+  FloatingPointType ex_in_diff_2_mat[] = {2, 2};
+  FloatingPointType ex_in_diff_3_mat[] = {2, 2, 2, 2, 2, 2};
+  Blob* expected_in_diff_0 =
+      KTCommon::CreateBlobWithVector({1, 1, 2, 1}, ex_in_diff_0_mat);
+  Blob* expected_in_diff_1 =
+      KTCommon::CreateBlobWithVector({2, 1, 2, 1}, ex_in_diff_1_mat);
+  Blob* expected_in_diff_2 =
+      KTCommon::CreateBlobWithVector({1, 1, 2, 1}, ex_in_diff_2_mat);
+  Blob* expected_in_diff_3 =
+      KTCommon::CreateBlobWithVector({3, 1, 2, 1}, ex_in_diff_3_mat);
+  KTCommon::BlobCmp(BnInOp2BlobPtr("in_0_diff"), expected_in_diff_0);
+  KTCommon::BlobCmp(BnInOp2BlobPtr("in_1_diff"), expected_in_diff_1);
+  KTCommon::BlobCmp(BnInOp2BlobPtr("in_2_diff"), expected_in_diff_2);
+  KTCommon::BlobCmp(BnInOp2BlobPtr("in_3_diff"), expected_in_diff_3);
 }
 
 template<typename FloatingPointType>
@@ -316,6 +369,8 @@ TEST(boxingKernel, boxing_concat_clone_box) {
 TEST(boxingKernel, boxing_concat_split_box) {
   test::TestBoxingKernelConcatSplit<float>();
   test::TestBoxingKernelConcatSplit<double>();
+  test::TestBoxingKernelConcatSplit_1<double>();
+  test::TestBoxingKernelConcatSplit_1<double>();
 }
 
 TEST(boxingKernel, boxing_concat_split_box_with_null) {
