@@ -68,9 +68,17 @@ class ActorMsg final {
 
   std::shared_ptr<RegstWrapper> regst_wrapper_;
   ActorCmd actor_cmd_;
-  int64_t piece_id_;
-  int64_t model_version_id_;
 };
+
+template<typename StreamT>
+StreamT& operator<<(StreamT& out_stream, const ActorMsg& msg) {
+  msg.Serialize(out_stream);
+}
+
+template<typename StreamT>
+StreamT& operator>>(StreamT& in_stream, const ActorMsg& msg) {
+  msg.Deserialize(in_stream);
+}
 
 }  // namespace oneflow
 
