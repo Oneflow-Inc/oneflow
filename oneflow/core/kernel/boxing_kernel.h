@@ -53,12 +53,22 @@ class BoxingKernel final : public Kernel {
       const std::vector<std::string>& dst_bns, const int32_t src_axis,
       const int32_t dst_axis, std::vector<CopyRule>* copy_rules) const;
 
-  // Infer copy rules in case of src && dst blobs are at same concat/split axis
-  void InferCopyRulesFromBnsAtSameAxis(
+  // Infer copy rules in case that src && dst blobs are at same concat/split
+  // axis
+  void InferCopyRulesFromEqualAxis(
       std::function<Blob*(const std::string&)> BnInOp2Blob,
       const std::vector<std::string>& src_bns,
       const std::vector<std::string>& dst_bns,
       std::vector<CopyRule>* copy_rules) const;
+
+  // Infer copy rules in case that src && dst blobs do not have equal axis
+  void InferCopyRulesFromUnequalAxis(const std::vector<std::string>& src_bns,
+                                     const std::vector<std::string>& dst_bns,
+                                     const std::vector<Blob*> src_blobs,
+                                     const std::vector<Blob*> dst_blobs,
+                                     const int32_t src_concat_axis,
+                                     const int32_t dst_split_axis,
+                                     std::vector<CopyRule>* copy_rules) const;
 
   // Do direct memory copy from saved rules
   void CopyDataFromRules(const KernelCtx& ctx,
