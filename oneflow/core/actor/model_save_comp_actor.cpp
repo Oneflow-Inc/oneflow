@@ -30,8 +30,9 @@ void MdSaveCompActor::Act() {
   Snapshot* snapshot =
       SnapshotMgr::Singleton()->GetWriteableSnapshot(next_snapshot_id_++);
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  std::tuple<Snapshot*, int64_t> save_ctx =
-      std::make_tuple(snapshot, parallel_id());
+  std::tuple<Snapshot*, int64_t, int64_t, ParallelPolicy> save_ctx =
+      std::make_tuple(snapshot, parallel_id(), parallel_num(),
+                      parallel_policy());
   kernel_ctx.other = &save_ctx;
   AsyncLaunchKernel(
       kernel_ctx, [&](int64_t regst_desc_id) -> std::shared_ptr<RegstWrapper> {
