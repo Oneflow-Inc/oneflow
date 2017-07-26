@@ -50,6 +50,13 @@ class BoxingKernel final : public Kernel {
   void InferCopyRulesFromBns(
       std::function<Blob*(const std::string&)> BnInOp2Blob,
       const std::vector<std::string>& src_bns,
+      const std::vector<std::string>& dst_bns, const int32_t src_axis,
+      const int32_t dst_axis, std::vector<CopyRule>* copy_rules) const;
+
+  // Infer copy rules in case of src && dst blobs are at same concat/split axis
+  void InferCopyRulesFromBnsAtSameAxis(
+      std::function<Blob*(const std::string&)> BnInOp2Blob,
+      const std::vector<std::string>& src_bns,
       const std::vector<std::string>& dst_bns,
       std::vector<CopyRule>* copy_rules) const;
 

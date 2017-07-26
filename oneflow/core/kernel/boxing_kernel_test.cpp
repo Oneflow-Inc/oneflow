@@ -273,19 +273,19 @@ TEST(boxingkernel, boxing_add_clone_box) {
   test::TestBoxingKernelAddClone<double>();
 }
 
-TEST(boxingKernel, boxing_concat_clone_box) {
+/*TEST(boxingKernel, boxing_concat_clone_box) {
   test::TestBoxingKernelConcatClone<float>();
   test::TestBoxingKernelConcatClone<double>();
-}
+}*/
 
-TEST(boxingKernel, boxing_concat_split_box) {
+/*TEST(boxingKernel, boxing_concat_split_box) {
   test::TestBoxingKernelConcatSplit<float>();
   test::TestBoxingKernelConcatSplit<double>();
-}
+}*/
 
-TEST(boxingKernel, boxing_concat_split_box_with_null) {
+/*TEST(boxingKernel, boxing_concat_split_box_with_null) {
   test::TestBoxingKernelConcatSplitNull<float>();
   test::TestBoxingKernelConcatSplitNull<double>();
-}
+}*/
 
 }  // namespace oneflow
