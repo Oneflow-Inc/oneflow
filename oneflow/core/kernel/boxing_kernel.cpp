@@ -29,9 +29,11 @@ void BoxingKernel<device_type, FloatingPointType>::InferFwCopyRules(
     if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
       InferCopyRulesFromBns(BnInOp2Blob, op()->input_bns(), {"out_0"},
                             concat_axis, 0, &fw_copy_rules_);
-    } else {
+    } else if (boxing_conf.out_box_case() == BoxingOpConf::kDataSplitBox) {
       InferCopyRulesFromBns(BnInOp2Blob, op()->input_bns(), op()->output_bns(),
                             concat_axis, 0, &fw_copy_rules_);
+    } else {
+      UNEXPECTED_RUN();
     }
   }
   if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
