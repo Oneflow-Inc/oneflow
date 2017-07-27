@@ -33,6 +33,7 @@ class Compiler final {
   void InferShape4Regsts();
   void EraseMeaningLessRegsts();
   void GenPlanFile(const std::string& plan_filepath);
+  void Plan2DotFile(Plan& plan);
 
   std::vector<std::unique_ptr<TaskGraph>> ordered_task_gphs_;
 };
@@ -163,11 +164,7 @@ void Compiler::EraseMeaningLessRegsts() {
 void Compiler::GenPlanFile(const std::string& plan_filepath) {
   Plan plan;
   ForEachTaskNode([&plan](const TaskNode* node) {
-    if (!node->IsMeaningLess()) {
-      node->ToProto(plan.mutable_task()->Add());
-    } else {
-      LOG(INFO) << "Removed Task " << node->task_id();
-    }
+    if (!node->IsMeaningLess()) { node->ToProto(plan.mutable_task()->Add()); }
   });
 
   OpMgr::Singleton()->AllOpToProto(plan.mutable_op());
@@ -192,6 +189,40 @@ void Compiler::GenPlanFile(const std::string& plan_filepath) {
     });
   });
   PrintProtoToTextFile(plan, plan_filepath);
+  Plan2DotFile(plan);
+}
+
+void Compiler::Plan2DotFile(Plan& plan) {
+  std::string file_path = LogDir() + "/dot/plan.dot";
+  PersistentOutStream out_stream(file_path);
+  out_stream << "digraph {\n";
+  std::set<int64_t> regst_desc_set;
+  for (auto& task_proto : plan.task()) {
+    out_stream << "task" << std::to_string(task_proto.id())
+               << "[label=\"{"
+               << "<f0> " << std::to_string(task_proto.id()) << "\\n|"
+               << "<f1> " << std::to_string(task_proto.thrd_local_id()) << "\\n|"
+               << "<f2> " << std::to_string(task_proto.parallel_id())
+               <<" }\", shape=box];\n";
+    for (auto& regst_desc_pair : task_proto.produced_regst_desc()) {
+      regst_desc_set.insert(regst_desc_pair.second.regst_desc_id());
+    }
+  }
+  for (auto& regst_desc_id : regst_desc_set) {
+    out_stream << "regst_desc" << std::to_string(regst_desc_id)
+               << "[label=\""
+               << std::to_string(regst_desc_id)
+               << "\", shape=ellipse];\n";
+  }
+  for (auto& task_proto : plan.task()) {
+    for (auto& regst_desc_pair : task_proto.produced_regst_desc()) {
+      out_stream << "task" << std::to_string(task_proto.id())
+                 << "->regst_desc"
+                 << std::to_string(regst_desc_pair.second.regst_desc_id())
+                 << ";\n";
+    }
+  }
+  out_stream << "}\n";
 }
 
 }  // namespace oneflow
