@@ -30,7 +30,7 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
   (*bn2blob_ptr)["loss"] = KTCommon::CreateBlobWithVector({1, 1}, loss_mat);
 
   FloatingPointType loss_buff_mat[4] = {0};
-  (*bn2blob_ptr)["loss_buff"] =
+  (*bn2blob_ptr)["loss_buffer"] =
       KTCommon::CreateBlobWithVector({1, 1}, loss_buff_mat);
 
   FloatingPointType expected_loss_mat[1] = {2.201842e-02};

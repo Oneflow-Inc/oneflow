@@ -14,6 +14,7 @@ include(cub)
 find_package(CUDA REQUIRED)
 find_package(CuDNN REQUIRED)
 
+set(BLA_VENDOR "Intel10_64lp_seq")
 find_package(BLAS REQUIRED)
 message(STATUS "Blas Lib: " ${BLAS_LIBRARIES})
 

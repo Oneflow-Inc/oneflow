@@ -12,7 +12,7 @@ namespace oneflow {
 class Thread {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Thread);
-  virtual ~Thread() { Deconstruct(); }
+  virtual ~Thread() = default;
 
   void AddTask(const TaskProto&);
 
@@ -25,6 +25,8 @@ class Thread {
   std::thread& mut_actor_thread() { return actor_thread_; }
   void PollMsgChannel(const ThreadCtx& thread_ctx);
   void Deconstruct();
+  int64_t thrd_loc_id() const { return thrd_loc_id_; }
+  void set_thrd_loc_id(int64_t val) { thrd_loc_id_ = val; }
 
  private:
   HashMap<int64_t, TaskProto> id2task_;
@@ -33,6 +35,8 @@ class Thread {
   std::thread actor_thread_;
   Channel<ActorMsg> msg_channel_;
   HashMap<int64_t, std::unique_ptr<Actor>> id2actor_ptr_;
+
+  int64_t thrd_loc_id_;
 };
 
 }  // namespace oneflow

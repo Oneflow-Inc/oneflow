@@ -101,7 +101,8 @@ std::unique_ptr<PersistentInStream> Snapshot::GetInStream(
 }
 
 std::unique_ptr<PersistentOutStream> Snapshot::GetOutStream(
-    const std::string& key, int32_t part_id) {
+    const std::string& key, int32_t part_id, int32_t part_num) {
+  LOG(WARNING) << "TODO: use part_num to detect the finish of snapshot";
   std::string dir_path =
       tensorflow::io::JoinPath(root_path_, MakeValidFileName(key));
   if (env_->IsDirectory(dir_path).code() == tensorflow::error::NOT_FOUND) {

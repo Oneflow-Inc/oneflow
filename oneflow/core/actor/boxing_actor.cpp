@@ -39,7 +39,7 @@ int BoxingActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
   ActUntilFail();
   if (mut_num_of_read_empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
-    OF_SET_MSG_HANDLER(&BoxingActor::HandlerWaitUntilReadingCntEqualZero);
+    OF_SET_MSG_HANDLER(&BoxingActor::HandlerZombie);
   }
   return 0;
 }

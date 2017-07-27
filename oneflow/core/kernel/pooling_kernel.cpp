@@ -49,7 +49,10 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
       const FloatingPointType* in_dptr = in_blob->dptr<FloatingPointType>();
       FloatingPointType* out_dptr = out_blob->mut_dptr<FloatingPointType>();
-      int64_t* mask_dptr = mask_blob->mut_dptr<int64_t>();
+      static_assert(sizeof(FloatingPointType) >= sizeof(uint32_t),
+                    "sizeof(FloatingPointType) is not greater than or equal to "
+                    "sizeof(uint32_t) in max pooling.");
+      uint32_t* mask_dptr = mask_blob->mut_dptr<uint32_t>();
 
       switch (pooling_conf.pool()) {
         case PoolingOpConf::MAX: {
@@ -77,7 +80,7 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
                       hstart * in_blob->shape().At(3) + wstart;
                   for (int64_t h = hstart; h < hend; ++h) {
                     for (int64_t w = wstart; w < wend; ++w) {
-                      const int64_t index = h * in_blob->shape().At(3) + w;
+                      const uint32_t index = h * in_blob->shape().At(3) + w;
                       if (in_dptr[index] > out_dptr[out_index]) {
                         out_dptr[out_index] = in_dptr[index];
                         mask_dptr[out_index] = index;
@@ -174,10 +177,14 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
       const FloatingPointType* out_diff_dptr =
           out_diff_blob->dptr<FloatingPointType>();
-      const int64_t* mask_dptr = mask_blob->dptr<int64_t>();
+      static_assert(sizeof(FloatingPointType) >= sizeof(uint32_t),
+                    "sizeof(FloatingPointType) is not greater than or equal to "
+                    "sizeof(uint32_t) in max pooling.");
+      const uint32_t* mask_dptr = mask_blob->dptr<uint32_t>();
       FloatingPointType* in_diff_dptr =
           in_diff_blob->mut_dptr<FloatingPointType>();
-
+      memset(in_diff_dptr, 0,
+             in_diff_blob->shape().elem_cnt() * sizeof(FloatingPointType));
       switch (pooling_conf.pool()) {
         case PoolingOpConf::MAX: {
           for (int64_t n = 0; n < out_diff_blob->shape().At(0); ++n) {
@@ -186,9 +193,9 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
                    ++out_h) {
                 for (int64_t out_w = 0; out_w < out_diff_blob->shape().At(3);
                      ++out_w) {
-                  const int out_diff_index =
+                  const int64_t out_diff_index =
                       out_h * out_diff_blob->shape().At(3) + out_w;
-                  const int in_diff_index = mask_dptr[out_diff_index];
+                  const uint32_t in_diff_index = mask_dptr[out_diff_index];
                   in_diff_dptr[in_diff_index] += out_diff_dptr[out_diff_index];
                 }
               }

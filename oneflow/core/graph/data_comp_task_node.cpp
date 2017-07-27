@@ -31,6 +31,11 @@ void DataCompTaskNode::FwInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
         chain_node()->parallel_desc()->policy(), parallel_id(),
         chain_node()->parallel_desc()->parallel_num());
   });
+  if (IsLossNode()) {
+    auto out_regst = GetRelatedRegst(SoleOutEdge());
+    auto in_regst = GetRelatedRegst(SoleInEdge());
+    out_regst->CopyShapeFrom(in_regst.get());
+  }
 }
 
 void DataCompTaskNode::FwBuildFromUserOps(
@@ -264,6 +269,7 @@ void DataCompTaskNode::BpEnrollLbn2ModelDiffRegst() {
   auto data_tmp_regst = GetFwNode()->GetProducedRegstDesc("data_tmp");
   auto model_tmp_regst = GetFwNode()->GetProducedRegstDesc("model_tmp");
   auto model_diff_regst = GetProducedRegstDesc("model_diff");
+  auto model_regst = GetSubscribedRegstDesc("model");
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
     for (const std::string& dtbn : node->op()->data_tmp_bns()) {
       node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
@@ -275,6 +281,9 @@ void DataCompTaskNode::BpEnrollLbn2ModelDiffRegst() {
       const std::string& lbn = node->op()->Lbn4BnInOp(mdbn);
       model_diff_regst->EnrollLbn(lbn);
       node->BindBnInOpAndRegst(mdbn, model_diff_regst);
+    }
+    for (const std::string& mbn : node->op()->model_bns()) {
+      node->BindBnInOpAndRegst(mbn, model_regst);
     }
   });
 }

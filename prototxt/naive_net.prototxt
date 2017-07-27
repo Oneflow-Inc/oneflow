@@ -1,0 +1,56 @@
+op {
+  name: "mnist"
+  data_loader_conf {
+    feature: "feature"
+    shape_of_one_feature_ins {
+      dim: 1
+      dim: 28
+      dim: 28
+    }
+    label: "label"
+    data_dir: "./mnist/"
+  }
+}
+
+op {
+  name: "conv"
+  convolution_conf {
+    in: "mnist/feature"
+    out: "out"
+    out_num: 20
+    kernel_size: 5
+    kernel_size: 5
+    pad: 0
+    pad: 0
+    stride: 1
+    stride: 1
+    dilation: 1
+    dilation: 1
+  }
+}
+
+op {
+  name: "ip"
+  innerproduct_conf {
+    in: "conv/out"
+    out: "out"
+    out_num: 10
+  }
+}
+
+op {
+  name: "softmax"
+  softmax_conf {
+    in: "ip/out"
+    out: "out"
+  }
+}
+
+op {
+  name: "loss"
+  multinomial_logistic_loss_conf {
+    prediction: "softmax/out"
+    label: "mnist/label"
+    loss: "loss"
+  }
+}
