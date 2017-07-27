@@ -49,7 +49,9 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
       const FloatingPointType* in_dptr = in_blob->dptr<FloatingPointType>();
       FloatingPointType* out_dptr = out_blob->mut_dptr<FloatingPointType>();
-      CHECK_GE(sizeof(FloatingPointType), sizeof(uint32_t));
+      static_assert(sizeof(FloatingPointType) >= sizeof(uint32_t),
+                    "sizeof(FloatingPointType) is not greater than or equal to "
+                    "sizeof(uint32_t) in max pooling.");
       uint32_t* mask_dptr = mask_blob->mut_dptr<uint32_t>();
 
       switch (pooling_conf.pool()) {
@@ -175,7 +177,9 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
       const FloatingPointType* out_diff_dptr =
           out_diff_blob->dptr<FloatingPointType>();
-      CHECK_GE(sizeof(FloatingPointType), sizeof(uint32_t));
+      static_assert(sizeof(FloatingPointType) >= sizeof(uint32_t),
+                    "sizeof(FloatingPointType) is not greater than or equal to "
+                    "sizeof(uint32_t) in max pooling.");
       const uint32_t* mask_dptr = mask_blob->dptr<uint32_t>();
       FloatingPointType* in_diff_dptr =
           in_diff_blob->mut_dptr<FloatingPointType>();

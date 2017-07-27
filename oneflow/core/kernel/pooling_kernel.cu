@@ -176,6 +176,9 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
 
     switch (pooling_conf.pool()) {
       case PoolingOpConf::MAX: {
+        static_assert(sizeof(FloatingPointType) >= sizeof(uint32_t),
+                      "sizeof(FloatingPointType) is not greater than or equal "
+                      "to sizeof(uint32_t) in max pooling.");
         MaxPoolForward<FloatingPointType>
             <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
                ctx.device_ctx->cuda_stream()>>>(
@@ -216,6 +219,9 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
 
     switch (pooling_conf.pool()) {
       case PoolingOpConf::MAX: {
+        static_assert(sizeof(FloatingPointType) >= sizeof(uint32_t),
+                      "sizeof(FloatingPointType) is not greater than or equal "
+                      "to sizeof(uint32_t) in max pooling.");
         MaxPoolBackward<FloatingPointType>
             <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
                ctx.device_ctx->cuda_stream()>>>(
