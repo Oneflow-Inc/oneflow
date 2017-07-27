@@ -18,7 +18,10 @@ class Snapshot final {
   std::unique_ptr<PersistentInStream> GetInStream(const std::string& key,
                                                   size_t begin_pos);
   std::unique_ptr<PersistentOutStream> GetOutStream(const std::string& key,
-                                                    int32_t part_id);
+                                                    int32_t part_id,
+                                                    int32_t parallel_num);
+
+  void OnePartDone4Lbn(const std::string& lbn) { LOG(WARNING) << "TODO"; }
 
  private:
   // check the sub_dir of snapshot_root_path and files of sub_dir is legal

@@ -17,7 +17,7 @@ void BoxingActor::Init(const TaskProto& task_proto,
 
 int BoxingActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
+    CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD) << actor_id();
     ProcessEord();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr())
@@ -39,7 +39,7 @@ int BoxingActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
   ActUntilFail();
   if (mut_num_of_read_empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
-    OF_SET_MSG_HANDLER(&BoxingActor::HandlerWaitUntilReadingCntEqualZero);
+    OF_SET_MSG_HANDLER(&BoxingActor::HandlerZombie);
   }
   return 0;
 }

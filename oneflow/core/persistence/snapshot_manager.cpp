@@ -5,6 +5,7 @@
 namespace oneflow {
 
 void SnapshotMgr::Init() {
+  LOG(INFO) << "SnapshotMgr Init";
   model_save_snapshots_path_ = JobDesc::Singleton()->md_save_snapshots_path();
   tensorflow::Env* env = tensorflow::Env::Default();
   if (env->IsDirectory(model_save_snapshots_path_).code()
@@ -21,6 +22,7 @@ void SnapshotMgr::Init() {
 }
 
 Snapshot* SnapshotMgr::GetWriteableSnapshot(int64_t snapshot_id) {
+  LOG(INFO) << "begin to save snapshot " << snapshot_id;
   auto it = snapshot_id2writeable_snapshot_.find(snapshot_id);
   if (it == snapshot_id2writeable_snapshot_.end()) {
     std::string snapshot_root_path = tensorflow::io::JoinPath(
@@ -28,9 +30,10 @@ Snapshot* SnapshotMgr::GetWriteableSnapshot(int64_t snapshot_id) {
     tensorflow::Env* env = tensorflow::Env::Default();
     TF_CHECK_OK(env->CreateDir(snapshot_root_path));
     std::unique_ptr<Snapshot> ret(new Snapshot(snapshot_root_path));
-    CHECK(snapshot_id2writeable_snapshot_.emplace(snapshot_id, std::move(ret))
-              .second);
-    return ret.get();
+    auto emplace_ret =
+        snapshot_id2writeable_snapshot_.emplace(snapshot_id, std::move(ret));
+    it = emplace_ret.first;
+    CHECK(emplace_ret.second);
   }
   return it->second.get();
 }

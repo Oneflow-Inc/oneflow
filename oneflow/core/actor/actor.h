@@ -27,6 +27,12 @@ class Actor {
   int ProcessMsg(const ActorMsg& msg) { return (this->*msg_handler_)(msg); }
 
   int64_t actor_id() const { return actor_id_; }
+  int64_t GetMachineId() const {
+    return IDMgr::Singleton()->MachineId4ActorId(actor_id_);
+  }
+  int64_t GetThrdLocId() const {
+    return IDMgr::Singleton()->ThrdLocId4ActorId(actor_id_);
+  }
 
  protected:
   struct ExecKernel {
@@ -49,25 +55,30 @@ class Actor {
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
 #define OF_SET_MSG_HANDLER(val)                                   \
   do {                                                            \
-    LOG(INFO) << "Actor " << actor_id() << " switch to " << #val; \
+    LOG(INFO) << "actor " << actor_id() << " switch to " << #val; \
     set_msg_handler(static_cast<MsgHandler>(val));                \
   } while (0)
 
   // Common Handlers
   virtual int HandlerNormal(const ActorMsg& msg) = 0;
   virtual int HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) = 0;
-  int HandlerWaitUntilReadingCntEqualZero(const ActorMsg& msg);
+  int HandlerZombie(const ActorMsg& msg);
 
   // Act
   void ActUntilFail();
   virtual void Act() = 0;
   virtual bool IsReadReady() = 0;
-  virtual void ProcessEord();
+  void ProcessEord();
+  void TrySwitchToZombie();
+
   // Async Do on KernelCtx
   void AsyncLaunchKernel(
       const KernelCtx&,
       std::function<std::shared_ptr<RegstWrapper>(int64_t)> Regst4RegstDescId);
-  void AsyncSendReadableRegstMsg(std::function<void(Regst*)> PreProcess);
+  void AsyncSendReadableRegstMsg(std::function<void(Regst*)> RegstPreProcess,
+                                 std::function<bool(int64_t)> IsAllowedActor);
+  void AsyncSendReadableRegstMsg(std::function<void(Regst*)> RegstPreProcess);
+  void AsyncSendReadableRegstMsg(std::function<bool(int64_t)> IsAllowedActor);
   void AsyncSendReadableRegstMsg();
   void AsyncSendEORDMsgToSubscribers(int64_t regst_desc_id);
   void AsyncSendEORDMsgForAllProducedRegstDesc();

@@ -38,7 +38,7 @@ int CopyCommNetActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
   ActUntilFail();
   if (piece_id2waiting_in_regst_.empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
-    OF_SET_MSG_HANDLER(&CopyCommNetActor::HandlerWaitUntilReadingCntEqualZero);
+    OF_SET_MSG_HANDLER(&CopyCommNetActor::HandlerZombie);
   }
   return 0;
 }

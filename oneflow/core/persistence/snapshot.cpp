@@ -3,6 +3,23 @@
 
 namespace oneflow {
 
+namespace {
+
+std::string MakeValidFileName(const std::string& key) {
+  std::string valid_file_name;
+  valid_file_name.reserve(key.size());
+  for (char ch : key) {
+    if (ch == '/') {
+      valid_file_name.push_back('_');
+    } else {
+      valid_file_name.push_back(ch);
+    }
+  }
+  return valid_file_name;
+}
+
+}  // namespace
+
 const char* Snapshot::concat_file_name_ = "all";
 
 Snapshot::Snapshot(const std::string& snapshot_root_path) {
@@ -77,15 +94,17 @@ void Snapshot::CheckAndConcat() {
 
 std::unique_ptr<PersistentInStream> Snapshot::GetInStream(
     const std::string& key, size_t begin_pos) {
-  std::string file_path =
-      tensorflow::io::JoinPath(root_path_, key, concat_file_name_);
+  std::string file_path = tensorflow::io::JoinPath(
+      root_path_, MakeValidFileName(key), concat_file_name_);
   PersistentInStream* ret = new PersistentInStream(file_path, begin_pos);
   return std::unique_ptr<PersistentInStream>(ret);
 }
 
 std::unique_ptr<PersistentOutStream> Snapshot::GetOutStream(
-    const std::string& key, int32_t part_id) {
-  std::string dir_path = tensorflow::io::JoinPath(root_path_, key);
+    const std::string& key, int32_t part_id, int32_t part_num) {
+  LOG(WARNING) << "TODO: use part_num to detect the finish of snapshot";
+  std::string dir_path =
+      tensorflow::io::JoinPath(root_path_, MakeValidFileName(key));
   if (env_->IsDirectory(dir_path).code() == tensorflow::error::NOT_FOUND) {
     TF_CHECK_OK(env_->CreateDir(dir_path));
   }

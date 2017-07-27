@@ -53,7 +53,7 @@ void Actor::ProcessEord() {
       if (!total_reading_cnt_) {
         OF_SET_MSG_HANDLER(nullptr);
       } else {
-        OF_SET_MSG_HANDLER(&Actor::HandlerWaitUntilReadingCntEqualZero);
+        OF_SET_MSG_HANDLER(&Actor::HandlerZombie);
       }
       AsyncSendEORDMsgForAllProducedRegstDesc();
     } else {
@@ -61,6 +61,14 @@ void Actor::ProcessEord() {
     }
   } else {
     // do nothing
+  }
+}
+
+void Actor::TrySwitchToZombie() {
+  if (total_reading_cnt_ == 0) {
+    OF_SET_MSG_HANDLER(nullptr);
+  } else {
+    OF_SET_MSG_HANDLER(&Actor::HandlerZombie);
   }
 }
 
@@ -76,7 +84,11 @@ KernelCtx Actor::GenDefaultKernelCtx() const {
   return ctx;
 }
 
-int Actor::HandlerWaitUntilReadingCntEqualZero(const ActorMsg& msg) {
+int Actor::HandlerZombie(const ActorMsg& msg) {
+  if (msg.msg_type() == ActorMsgType::kCmdMsg) {
+    CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
+    return 0;
+  }
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
            0);
   if (total_reading_cnt_ == 0) {
@@ -94,36 +106,54 @@ void Actor::AsyncLaunchKernel(
     const KernelCtx& kernel_ctx,
     std::function<std::shared_ptr<RegstWrapper>(int64_t)> Regst4RegstDescId) {
   for (const ExecKernel& ek : exec_kernel_vec_) {
-    (ek.kernel->*launch_func_)(kernel_ctx, [&](const std::string& bn_in_op) {
-      int64_t regst_desc_id = ek.bn_in_op2regst_desc_id.at(bn_in_op);
-      auto regst = Regst4RegstDescId(regst_desc_id);
-      const std::string& lbn = ek.kernel->Lbn4BnInOp(bn_in_op);
-      return regst->GetBlobPtrFromLbn(lbn);
-    });
+    (ek.kernel->*launch_func_)(
+        kernel_ctx, [&](const std::string& bn_in_op) -> Blob* {
+          auto regst_desc_id_it = ek.bn_in_op2regst_desc_id.find(bn_in_op);
+          if (regst_desc_id_it == ek.bn_in_op2regst_desc_id.end()) {
+            return nullptr;
+          }
+          auto regst = Regst4RegstDescId(regst_desc_id_it->second);
+          const std::string& lbn = ek.kernel->Lbn4BnInOp(bn_in_op);
+          return regst->GetBlobPtrFromLbn(lbn);
+        });
   }
   expected_piece_id_ += 1;
 }
 
-void Actor::AsyncSendReadableRegstMsg() {
-  AsyncSendReadableRegstMsg([](Regst*) {});
-}
-
-void Actor::AsyncSendReadableRegstMsg(std::function<void(Regst*)> PreProcess) {
+void Actor::AsyncSendReadableRegstMsg(
+    std::function<void(Regst*)> RegstPreProcess,
+    std::function<bool(int64_t)> IsAllowedActor) {
   for (auto& pair : writeable_produced_regst_) {
     Regst* regst = pair.second.front();
-    PreProcess(regst);
-    device_ctx_->AddCallBack([regst]() {
-      for (int64_t subscriber : regst->subscribers_actor_id()) {
+    RegstPreProcess(regst);
+    auto regst_reading_cnt_it = produced_regst2reading_cnt_.find(regst);
+    regst_reading_cnt_it->second = 0;
+    for (int64_t subscriber : regst->subscribers_actor_id()) {
+      if (!IsAllowedActor(subscriber)) { continue; }
+      total_reading_cnt_ += 1;
+      regst_reading_cnt_it->second += 1;
+      device_ctx_->AddCallBack([subscriber, regst]() {
         ActorMsg msg = ActorMsg::BuildReadableRegstMsg(subscriber, regst);
         ActorMsgBus::Singleton()->SendMsg(std::move(msg));
-      }
-    });
-    produced_regst2reading_cnt_.at(regst) =
-        regst->subscribers_actor_id().size();
-    total_reading_cnt_ += regst->subscribers_actor_id().size();
+      });
+    }
     if (!regst->subscribers_actor_id().empty()) { pair.second.pop(); }
     if (pair.second.empty()) { writeable_produced_regst_desc_num_ -= 1; }
   }
+}
+
+void Actor::AsyncSendReadableRegstMsg(
+    std::function<void(Regst*)> RegstPreProcess) {
+  AsyncSendReadableRegstMsg(RegstPreProcess, [](int64_t) { return true; });
+}
+
+void Actor::AsyncSendReadableRegstMsg(
+    std::function<bool(int64_t)> IsAllowedActor) {
+  AsyncSendReadableRegstMsg([](Regst*) {}, IsAllowedActor);
+}
+
+void Actor::AsyncSendReadableRegstMsg() {
+  AsyncSendReadableRegstMsg([](Regst*) {});
 }
 
 void Actor::AsyncSendEORDMsgToSubscribers(int64_t regst_desc_id) {

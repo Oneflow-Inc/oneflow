@@ -31,6 +31,11 @@ void DataCompTaskNode::FwInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
         chain_node()->parallel_desc()->policy(), parallel_id(),
         chain_node()->parallel_desc()->parallel_num());
   });
+  if (IsLossNode()) {
+    auto out_regst = GetRelatedRegst(SoleOutEdge());
+    auto in_regst = GetRelatedRegst(SoleInEdge());
+    out_regst->CopyShapeFrom(in_regst.get());
+  }
 }
 
 void DataCompTaskNode::FwBuildFromUserOps(
@@ -164,6 +169,7 @@ void DataCompTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
                      GetFwNode()->GetSubscribedRegstDesc("model_tmp"));
   SubscribeRegstDesc("in", GetFwNode()->GetSubscribedRegstDesc("in"));
   SubscribeRegstDesc("out_diff", GetRelatedRegst(SoleInEdge()));
+  SubscribeRegstDesc("out", GetFwNode()->GetProducedRegstDesc("out"));
   // Enroll Lbn
   BpEnrollLbn2ProducedRegst();
 }
@@ -227,6 +233,7 @@ void DataCompTaskNode::BpEnrollLbn2ActivationDiffRegst() {
 
 void DataCompTaskNode::BpSetExecNodeFromOutDiffRegst() {
   auto out_diff_regst = GetRelatedRegst(SoleInEdge());
+  auto out_regst = GetFwNode()->GetProducedRegstDesc("out");
   mut_exec_gph().ForEachNode([&](ExecNode* bp_node) {
     std::unordered_set<std::string> found_bns;
     for (ExecEdge* edge : bp_node->in_edges()) {
@@ -235,6 +242,7 @@ void DataCompTaskNode::BpSetExecNodeFromOutDiffRegst() {
     for (const std::string& odbn : bp_node->op()->output_diff_bns()) {
       if (found_bns.find(odbn) != found_bns.end()) { continue; }
       bp_node->BindBnInOpAndRegst(odbn, out_diff_regst);
+      bp_node->BindBnInOpAndRegst(GenUnDiffBn(odbn), out_regst);
     }
   });
 }
@@ -261,6 +269,7 @@ void DataCompTaskNode::BpEnrollLbn2ModelDiffRegst() {
   auto data_tmp_regst = GetFwNode()->GetProducedRegstDesc("data_tmp");
   auto model_tmp_regst = GetFwNode()->GetProducedRegstDesc("model_tmp");
   auto model_diff_regst = GetProducedRegstDesc("model_diff");
+  auto model_regst = GetSubscribedRegstDesc("model");
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
     for (const std::string& dtbn : node->op()->data_tmp_bns()) {
       node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
@@ -272,6 +281,9 @@ void DataCompTaskNode::BpEnrollLbn2ModelDiffRegst() {
       const std::string& lbn = node->op()->Lbn4BnInOp(mdbn);
       model_diff_regst->EnrollLbn(lbn);
       node->BindBnInOpAndRegst(mdbn, model_diff_regst);
+    }
+    for (const std::string& mbn : node->op()->model_bns()) {
+      node->BindBnInOpAndRegst(mbn, model_regst);
     }
   });
 }

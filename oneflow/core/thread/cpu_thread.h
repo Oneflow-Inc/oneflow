@@ -9,7 +9,7 @@ namespace oneflow {
 class CpuThread final : public Thread {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuThread);
-  CpuThread();
+  CpuThread(int64_t thrd_loc_id);
   ~CpuThread();
 
  private:

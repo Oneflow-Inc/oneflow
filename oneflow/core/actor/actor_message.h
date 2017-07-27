@@ -10,12 +10,13 @@ enum class ActorCmd {
   kInitializeModel = 0,  // MdUpdt Actor
   kSendInitialModel,     // MdUpdt Actor
   kEORD,                 // End Of Register Desc, All Actor except Source Actor
-  kStart                 // Source Actor
+  kStart,                // Source Actor
+  kStopThread
 };
 
 OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ActorCmd);
 
-enum class ActorMsgType { kRegstMsg = 0, kCmdMsg, kPieceModelIdMsg };
+enum class ActorMsgType { kRegstMsg = 0, kCmdMsg };
 
 OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ActorMsgType);
 
@@ -39,14 +40,6 @@ class ActorMsg final {
     CHECK_EQ(msg_type_, ActorMsgType::kCmdMsg);
     return actor_cmd_;
   }
-  int64_t piece_id() const {
-    CHECK_EQ(msg_type_, ActorMsgType::kPieceModelIdMsg);
-    return piece_id_;
-  }
-  int64_t model_version_id() const {
-    CHECK_EQ(msg_type_, ActorMsgType::kPieceModelIdMsg);
-    return model_version_id_;
-  }
 
   // Setters
   void set_dst_actor_id(int64_t val) { dst_actor_id_ = val; }
@@ -57,14 +50,6 @@ class ActorMsg final {
   void set_actor_cmd(ActorCmd val) {
     msg_type_ = ActorMsgType::kCmdMsg;
     actor_cmd_ = val;
-  }
-  void set_piece_id(int64_t val) {
-    msg_type_ = ActorMsgType::kPieceModelIdMsg;
-    piece_id_ = val;
-  }
-  void set_model_version_id(int64_t val) {
-    msg_type_ = ActorMsgType::kPieceModelIdMsg;
-    model_version_id_ = val;
   }
 
   // Serialize
@@ -83,9 +68,17 @@ class ActorMsg final {
 
   std::shared_ptr<RegstWrapper> regst_wrapper_;
   ActorCmd actor_cmd_;
-  int64_t piece_id_;
-  int64_t model_version_id_;
 };
+
+template<typename StreamT>
+StreamT& operator<<(StreamT& out_stream, const ActorMsg& msg) {
+  msg.Serialize(out_stream);
+}
+
+template<typename StreamT>
+StreamT& operator>>(StreamT& in_stream, const ActorMsg& msg) {
+  msg.Deserialize(in_stream);
+}
 
 }  // namespace oneflow
 

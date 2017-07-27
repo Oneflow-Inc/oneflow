@@ -24,6 +24,7 @@ class MdSaveCompActor final : public CompActor {
 
   int64_t model_regst_desc_id_;
   std::shared_ptr<RegstWrapper> regst_wrapper_;
+  int64_t next_snapshot_id_;
 };
 
 }  // namespace oneflow

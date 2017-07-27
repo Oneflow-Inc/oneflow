@@ -30,11 +30,11 @@ void FwDataCompActor::Init(const TaskProto& task_proto,
     mut_num_of_read_empty() = 1;  // only consider "in"regst
     OF_SET_MSG_HANDLER(&FwDataCompActor::HandlerNormal);
   }
-  bp_actor_id_ = IDMgr::Singleton()->ActorId4TaskId(task_proto.bp_task_id());
 }
 
 bool FwDataCompActor::IsReadReady() {
   if (in_desc_id_ == -1) { return true; }
+  if (in_desc_id_ == -2) { return false; }
   if (in_.empty() || (model_regst_desc_id_ != -1 && !model_regst_)
       || (model_tmp_regst_desc_id_ != -1 && !model_tmp_regst_)) {
     return false;
@@ -55,7 +55,7 @@ bool FwDataCompActor::IsReadReady() {
 int FwDataCompActor::WaitToStart(const ActorMsg& msg) {
   CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
   ActUntilFail();
-  OF_SET_MSG_HANDLER(&FwDataCompActor::HandlerWaitUntilNoReadableRegst);
+  OF_SET_MSG_HANDLER(&FwDataCompActor::HandlerNormal);
   return 0;
 }
 
@@ -74,7 +74,7 @@ int FwDataCompActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     ProcessEord();
-    if (msg_handler() == &FwDataCompActor::HandlerWaitUntilReadingCntEqualZero
+    if (msg_handler() == &FwDataCompActor::HandlerZombie
         || msg_handler() == nullptr) {
       AsyncSendMsgToModelAndModelTmpProducer();
     }
@@ -98,6 +98,8 @@ int FwDataCompActor::HandlerNormal(const ActorMsg& msg) {
       }
     }
     ActUntilFail();
+  } else {
+    UNEXPECTED_RUN();
   }
   return msg_handler() == nullptr;
 }
@@ -106,12 +108,11 @@ int FwDataCompActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
            0);
   ActUntilFail();
-  int total_piece_num = JobDesc::Singleton()->total_piece_num();
-  if ((in_desc_id_ != -1 && in_.empty())
-      || expected_piece_id() == total_piece_num) {
+  CHECK_NE(in_desc_id_, -1);
+  if (in_.empty()) {
     AsyncSendMsgToModelAndModelTmpProducer();
     AsyncSendEORDMsgForAllProducedRegstDesc();
-    OF_SET_MSG_HANDLER(&FwDataCompActor::HandlerWaitUntilReadingCntEqualZero);
+    OF_SET_MSG_HANDLER(&FwDataCompActor::HandlerZombie);
   }
   return 0;
 }
@@ -143,12 +144,11 @@ void FwDataCompActor::Act() {
     in_.pop();
     mut_num_of_read_empty() = in_.empty();
   }
-  if (bp_actor_id_ != -1) {
-    ActorMsg msg;
-    msg.set_dst_actor_id(bp_actor_id_);
-    msg.set_piece_id(piece_id);
-    msg.set_model_version_id(model_version_id);
-    AsyncDo([msg]() { ActorMsgBus::Singleton()->SendMsg(msg); });
+  if (expected_piece_id() == JobDesc::Singleton()->total_piece_num()) {
+    in_desc_id_ = -2;
+    AsyncSendMsgToModelAndModelTmpProducer();
+    AsyncSendEORDMsgForAllProducedRegstDesc();
+    TrySwitchToZombie();
   }
 }
 

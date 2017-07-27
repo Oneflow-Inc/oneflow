@@ -19,25 +19,38 @@ void BoxingKernel<device_type, FloatingPointType>::InitFromOpProto(
 }
 
 template<DeviceType device_type, typename FloatingPointType>
-void BoxingKernel<device_type, FloatingPointType>::InferCopyRules(
+void BoxingKernel<device_type, FloatingPointType>::InferFwCopyRules(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto boxing_conf = op()->op_conf().boxing_conf();
   auto in_box_case = boxing_conf.in_box_case();
-  // Infer Forward Copy Rules
   if (in_box_case == BoxingOpConf::kConcatBox) {
     // concat-box copy rules: copy directly from input to output
-    InferCopyRulesFromBns(BnInOp2Blob, op()->input_bns(), op()->output_bns(),
-                          &fw_copy_rules_);
+    int32_t concat_axis = boxing_conf.concat_box().axis();
+    if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
+      InferCopyRulesFromBns(BnInOp2Blob, op()->input_bns(), {"out_0"},
+                            concat_axis, 0, &fw_copy_rules_);
+    } else if (boxing_conf.out_box_case() == BoxingOpConf::kDataSplitBox) {
+      InferCopyRulesFromBns(BnInOp2Blob, op()->input_bns(), op()->output_bns(),
+                            concat_axis, 0, &fw_copy_rules_);
+    } else {
+      UNEXPECTED_RUN();
+    }
   }
   if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
     InferFwCloneRules(BnInOp2Blob);
   }
+}
 
-  // Infer Backward Copy Rules
+template<DeviceType device_type, typename FloatingPointType>
+void BoxingKernel<device_type, FloatingPointType>::InferBwCopyRules(
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // concat-split box copy rules: copy diffs from odbs to idbs
+  auto boxing_conf = op()->op_conf().boxing_conf();
+  int32_t concat_axis = boxing_conf.concat_box().axis();
   if (boxing_conf.out_box_case() == BoxingOpConf::kDataSplitBox) {
     InferCopyRulesFromBns(BnInOp2Blob, op()->input_diff_bns(),
-                          op()->output_diff_bns(), &bw_copy_rules_);
+                          op()->output_diff_bns(), concat_axis, 0,
+                          &bw_copy_rules_);
     // Reverse back input && output diff blob for each backward rule
     for (CopyRule& rule : bw_copy_rules_) {
       std::swap(rule.src_bn, rule.dst_bn);
@@ -45,8 +58,8 @@ void BoxingKernel<device_type, FloatingPointType>::InferCopyRules(
     }
   } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
     // concat-clone box copy rules: split back to in_diff from middle
-    InferCopyRulesFromBns(BnInOp2Blob, {"middle"}, op()->input_diff_bns(),
-                          &bw_copy_rules_);
+    InferCopyRulesFromBns(BnInOp2Blob, {"middle"}, op()->input_diff_bns(), 0,
+                          concat_axis, &bw_copy_rules_);
   } else {
     UNEXPECTED_RUN();
   }
@@ -54,6 +67,93 @@ void BoxingKernel<device_type, FloatingPointType>::InferCopyRules(
 
 template<DeviceType device_type, typename FloatingPointType>
 void BoxingKernel<device_type, FloatingPointType>::InferCopyRulesFromBns(
+    std::function<Blob*(const std::string&)> BnInOp2Blob,
+    const std::vector<std::string>& src_bns,
+    const std::vector<std::string>& dst_bns, const int32_t src_concat_axis,
+    const int32_t dst_split_axis, std::vector<CopyRule>* copy_rules) const {
+  if (src_concat_axis == dst_split_axis) {
+    InferCopyRulesFromEqualAxis(BnInOp2Blob, src_bns, dst_bns, copy_rules);
+  } else {
+    std::vector<Blob*> src_blobs;
+    std::vector<Blob*> dst_blobs;
+    for (const std::string& bn : src_bns) {
+      Blob* b = BnInOp2Blob(bn);
+      if (b == nullptr) { break; }
+      src_blobs.emplace_back(b);
+    }
+    for (const std::string& bn : dst_bns) {
+      Blob* b = BnInOp2Blob(bn);
+      if (b == nullptr) { break; }
+      dst_blobs.emplace_back(b);
+    }
+    InferCopyRulesFromUnequalAxis(src_bns, dst_bns, src_blobs, dst_blobs,
+                                  src_concat_axis, dst_split_axis, copy_rules);
+  }
+}
+
+template<DeviceType device_type, typename FloatingPointType>
+void BoxingKernel<device_type, FloatingPointType>::
+    InferCopyRulesFromUnequalAxis(const std::vector<std::string>& src_bns,
+                                  const std::vector<std::string>& dst_bns,
+                                  const std::vector<Blob*> src_blobs,
+                                  const std::vector<Blob*> dst_blobs,
+                                  const int32_t src_concat_axis,
+                                  const int32_t dst_split_axis,
+                                  std::vector<CopyRule>* copy_rules) const {
+  const int64_t im_sz =
+      src_blobs.at(0)->shape().Count(2) * sizeof(FloatingPointType);
+  if (src_concat_axis == 0 && dst_split_axis == 1) {
+    int64_t row_pre_offset_sum = 0;
+    for (size_t src_idx = 0; src_idx < src_blobs.size(); ++src_idx) {
+      Blob* src_b = src_blobs.at(src_idx);
+      for (size_t offset = 0; offset < src_b->shape().At(0); ++offset) {
+        int64_t col_pre_offset_sum = 0;
+        for (size_t dst_idx = 0; dst_idx < dst_blobs.size(); ++dst_idx) {
+          Blob* dst_b = dst_blobs.at(dst_idx);
+          CopyRule cr;
+          cr.src_bn = src_bns.at(src_idx);
+          cr.dst_bn = dst_bns.at(dst_idx);
+          cr.src_offset =
+              (offset * src_b->shape().At(1) + col_pre_offset_sum) * im_sz;
+          cr.dst_offset =
+              ((row_pre_offset_sum + offset) * dst_b->shape().At(1)) * im_sz;
+          cr.copy_sz = dst_b->shape().At(1) * im_sz;
+          copy_rules->push_back(std::move(cr));
+
+          col_pre_offset_sum += dst_b->shape().At(1);
+        }
+      }
+      row_pre_offset_sum += src_b->shape().At(0);
+    }
+  } else if (src_concat_axis == 1 && dst_split_axis == 0) {
+    int64_t col_pre_offset_sum = 0;
+    for (size_t src_idx = 0; src_idx < src_blobs.size(); ++src_idx) {
+      Blob* src_b = src_blobs.at(src_idx);
+      int64_t row_pre_offset_sum = 0;
+      for (size_t dst_idx = 0; dst_idx < dst_blobs.size(); ++dst_idx) {
+        Blob* dst_b = dst_blobs.at(dst_idx);
+        for (size_t offset = 0; offset < dst_b->shape().At(0); ++offset) {
+          CopyRule cr;
+          cr.src_bn = src_bns.at(src_idx);
+          cr.dst_bn = dst_bns.at(dst_idx);
+          cr.src_offset =
+              ((row_pre_offset_sum + offset) * src_b->shape().At(1)) * im_sz;
+          cr.dst_offset =
+              (offset * dst_b->shape().At(1) + col_pre_offset_sum) * im_sz;
+          cr.copy_sz = src_b->shape().At(1) * im_sz;
+          copy_rules->push_back(std::move(cr));
+        }
+        row_pre_offset_sum += dst_b->shape().At(0);
+      }
+      col_pre_offset_sum += src_b->shape().At(1);
+    }
+  } else {
+    UNEXPECTED_RUN();
+  }
+}
+
+template<DeviceType device_type, typename FloatingPointType>
+void BoxingKernel<device_type, FloatingPointType>::InferCopyRulesFromEqualAxis(
     std::function<Blob*(const std::string&)> BnInOp2Blob,
     const std::vector<std::string>& src_bns,
     const std::vector<std::string>& dst_bns,
@@ -146,7 +246,7 @@ template<DeviceType device_type, typename FloatingPointType>
 void BoxingKernel<device_type, FloatingPointType>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (fw_copy_rules_.empty()) { InferCopyRules(BnInOp2Blob); }
+  if (fw_copy_rules_.empty()) { InferFwCopyRules(BnInOp2Blob); }
   (this->*fw_func_)(ctx, BnInOp2Blob);
 }
 
@@ -154,7 +254,7 @@ template<DeviceType device_type, typename FloatingPointType>
 void BoxingKernel<device_type, FloatingPointType>::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK(!bw_copy_rules_.empty());
+  if (bw_copy_rules_.empty()) { InferBwCopyRules(BnInOp2Blob); }
   (this->*bw_func_)(ctx, BnInOp2Blob);
 }
 

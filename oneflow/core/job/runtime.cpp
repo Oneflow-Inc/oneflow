@@ -34,18 +34,25 @@ class Runtime final {
         other_tasks.push_back(&task);
       }
     }
-    LOG(INFO) << "InitModel";
+    LOG(INFO) << "number of mdupdt tasks is " << mdupdt_tasks.size();
+    LOG(INFO) << "number of source tasks is " << source_tasks.size();
+    LOG(INFO) << "number of other  tasks is " << other_tasks.size();
+    RuntimeCtx::Singleton()->mut_active_actor_cnt().Init(
+        "active_actor_cnt",
+        mdupdt_tasks.size() + source_tasks.size() + other_tasks.size());
     HandoutTasks(mdupdt_tasks);
-    RuntimeCtx::Singleton()->SetModelInitCnt(mdupdt_tasks.size());
+    RuntimeCtx::Singleton()->mut_model_init_cnt().Init("model_init_cnt",
+                                                       mdupdt_tasks.size());
     SendCmdMsg(mdupdt_tasks, ActorCmd::kInitializeModel);
     HandoutTasks(source_tasks);
     HandoutTasks(other_tasks);
-    RuntimeCtx::Singleton()->WaitUnitlAllModelInitDone();
+    RuntimeCtx::Singleton()->mut_model_init_cnt().WaitUntilCntEqualZero();
     LOG(INFO) << "InitModel on this machine done";
-    OF_BARRIER();
+    // OF_BARRIER();
     LOG(INFO) << "InitModel on all machine done";
     SendCmdMsg(mdupdt_tasks, ActorCmd::kSendInitialModel);
     SendCmdMsg(source_tasks, ActorCmd::kStart);
+    RuntimeCtx::Singleton()->mut_active_actor_cnt().WaitUntilCntEqualZero();
     DeleteSingleton();
   }
 
@@ -88,10 +95,11 @@ DEFINE_string(this_machine_name, "", "");
 int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, true);
-  LOG(INFO) << "Runtime Starting Up...";
+  LOG(INFO) << "Runtime Starting Up";
   oneflow::Plan plan;
+  LOG(INFO) << "Parse Plan File";
   oneflow::ParseProtoFromTextFile(FLAGS_plan_filepath, &plan);
   oneflow::Runtime::Singleton()->Run(plan, FLAGS_this_machine_name);
-  LOG(INFO) << "Runtime Shutting Down...";
+  LOG(INFO) << "Runtime Shutting Down";
   return 0;
 }
