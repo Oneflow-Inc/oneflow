@@ -18,6 +18,14 @@ class DataCompTaskNode final : public CompTaskNode {
     proto->set_parallel_num(chain_node()->parallel_desc()->parallel_num());
   }
 
+  bool IsMeaningLess() const override {
+    if (IsFwNode()) {
+      return TaskNode::IsMeaningLess();
+    } else {
+      return TaskNode::IsMeaningLess() || GetFwNode()->IsMeaningLess();
+    }
+  }
+
  private:
   OVERRIDE_IF_FW_BP_FOR_FUNC(BuildExecAndEnrollLbn2Regsts);
   OVERRIDE_IF_FW_BP_FOR_FUNC(InferShapeOfBlobsInProducedRegsts);

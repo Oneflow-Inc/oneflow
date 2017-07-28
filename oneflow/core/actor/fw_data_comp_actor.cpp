@@ -96,6 +96,10 @@ int FwDataCompActor::HandlerNormal(const ActorMsg& msg) {
         in_.push(regst_wp);
         mut_num_of_read_empty() = 0;
       }
+      VLOG(4) << "fw data compute actor " << actor_id() << " "
+              << "receive readable regst " << regst_wp->regst_raw_ptr() << ", "
+              << "regst_desc_id:" << regst_wp->regst_desc_id() << ", "
+              << "current num_of_read_empty:" << num_of_read_empty();
     }
     ActUntilFail();
   } else {

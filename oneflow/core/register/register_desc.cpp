@@ -32,7 +32,7 @@ void SetHostPinnedMemoryAccordingToSubscribers(
 
 RegstDesc::RegstDesc() {
   producer_ = nullptr;
-  register_num_ = 5;  // TODO
+  register_num_ = 1;  // TODO
 }
 
 void RegstDesc::AddSubscriber(const TaskNode* new_subscriber) {

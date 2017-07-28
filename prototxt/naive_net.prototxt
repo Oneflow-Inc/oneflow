@@ -13,26 +13,9 @@ op {
 }
 
 op {
-  name: "conv"
-  convolution_conf {
-    in: "mnist/feature"
-    out: "out"
-    out_num: 20
-    kernel_size: 5
-    kernel_size: 5
-    pad: 0
-    pad: 0
-    stride: 1
-    stride: 1
-    dilation: 1
-    dilation: 1
-  }
-}
-
-op {
   name: "ip"
   innerproduct_conf {
-    in: "conv/out"
+    in: "mnist/feature"
     out: "out"
     out_num: 10
   }
