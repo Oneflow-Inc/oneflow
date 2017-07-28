@@ -197,7 +197,7 @@ void Compiler::GenPlanFile(const std::string& plan_filepath) {
 }
 
 void Compiler::Plan2DotFile(Plan& plan) {
-  std::string file_path = LogDir() + "/dot/plan.dot";
+  const std::string file_path = LogDir() + "/dot/plan.dot";
   PersistentOutStream out_stream(file_path);
   out_stream << "digraph {\n";
   std::set<int64_t> regst_desc_ids;
