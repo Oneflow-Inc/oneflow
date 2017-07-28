@@ -201,32 +201,31 @@ void Compiler::Plan2DotFile(const Plan& plan) {
   PersistentOutStream out_stream(file_path);
   out_stream << "digraph {\n";
   HashSet<int64_t> regst_desc_ids;
-  // task
   for (const TaskProto& task_proto : plan.task()) {
     out_stream << "task" << std::to_string(task_proto.id())
-               << "[label=\"{ <f0> " << std::to_string(task_proto.id())
-               << "\\n | <f1> " << std::to_string(task_proto.thrd_local_id())
-               << "\\n | <f2> " << std::to_string(task_proto.parallel_id())
-               << " }\", shape=box];\n";
+               << "[label=\"task_id:" << std::to_string(task_proto.id())
+               << "\\nthrd_loc_id:"
+               << std::to_string(task_proto.thrd_local_id())
+               << "\\nparallel_id:" << std::to_string(task_proto.parallel_id())
+               << "\", shape=ellipse];\n";
     for (const auto& pair : task_proto.produced_regst_desc()) {
       regst_desc_ids.insert(pair.second.regst_desc_id());
     }
   }
-  // regst_desc
   for (const int64_t regst_task_id : regst_desc_ids) {
     out_stream << "regst_desc" << std::to_string(regst_task_id) << "[label=\""
-               << std::to_string(regst_task_id) << "\", shape=ellipse];\n";
+               << std::to_string(regst_task_id) << "\", shape=box];\n";
   }
   for (const TaskProto& task_proto : plan.task()) {
-    // task -> regst_desc
     for (const auto& pair : task_proto.produced_regst_desc()) {
       out_stream << "task" << std::to_string(task_proto.id()) << "->regst_desc"
-                 << std::to_string(pair.second.regst_desc_id()) << ";\n";
+                 << std::to_string(pair.second.regst_desc_id()) << "[label=\""
+                 << pair.first << "\"];\n";
     }
-    // regst_desc -> task
     for (const auto& pair : task_proto.subscribed_regst_desc_id()) {
       out_stream << "regst_desc" << std::to_string(pair.second) << "->task"
-                 << std::to_string(task_proto.id()) << ";\n";
+                 << std::to_string(task_proto.id()) << "[label=\"" << pair.first
+                 << "\"];\n";
     }
   }
   out_stream << "}\n";
