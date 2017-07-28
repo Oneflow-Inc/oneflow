@@ -24,8 +24,8 @@ class RdmaMemory final : public NetworkMemory {
 
  private:
   struct ibv_sge sge_;
-  struct ibv_pd* protect_domain_;
-  struct ibv_mr* memory_region_;
+  ibv_pd* protect_domain_;  // TODO(shiyuan)
+  ibv_mr* memory_region_;  // TODO(shiyuan)
   RdmaMemory(const RdmaMemory&) = delete;
   void operator=(const RdmaMemory&) = delete;
 };

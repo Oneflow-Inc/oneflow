@@ -3,8 +3,7 @@
 
 namespace oneflow {
 
-RdmaMemory::RdmaMemory(struct ibv_mr* memory_region,
-                       struct ibv_pd* protect_domain)
+RdmaMemory::RdmaMemory(ibv_mr* memory_region, ibv_pd* protect_domain)
     : protect_domain_(protect_domain),
       memory_region_(memory_region) {}
 

@@ -80,7 +80,7 @@ class RdmaNetwork final : public Network {
   // estimate the pre-post number
   static const int kPrePostRecvNumber = 16;  // TODO(shiyuan)
 
-  RdmaWrapper* rdma_wrapper_;
+  std::unique_ptr<RdmaWrapper> rdma_wrapper_;
   int64_t my_machine_id_;
   int port_;
   NetworkTopology net_topo_;

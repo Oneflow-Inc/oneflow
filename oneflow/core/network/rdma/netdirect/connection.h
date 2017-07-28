@@ -45,9 +45,9 @@ class Connection {
   OVERLAPPED* overlapped() { return ov_; }
 
  private:
-  IND2Connector* connector_;
-  IND2QueuePair* queue_pair_;
-  OVERLAPPED* ov_;
+  IND2Connector* connector_;  // TODO(shiyuan)
+  IND2QueuePair* queue_pair_;  // TODO(shiyuan)
+  OVERLAPPED* ov_;  // TODO(shiyuan)
 
   int64_t my_machine_id_;
   int64_t peer_machine_id_;

@@ -103,9 +103,7 @@ void RdmaWrapper::CreateQueuePair(Connection* conn) {
 }
 
 RdmaMemory* RdmaWrapper::NewNetworkMemory() {
-  // XXX(shiyuan)
   struct ibv_mr* memory_region = nullptr;
-
   RdmaMemory* rdma_memory = new RdmaMemory(memory_region, protect_domain_);
   CHECK(rdma_memory);
   return rdma_memory;

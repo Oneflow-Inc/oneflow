@@ -13,7 +13,6 @@
 namespace oneflow {
 
 struct Request;
-class RdmaMemory;
 
 struct Connector {
   int32_t my_lid;
@@ -70,8 +69,8 @@ class Connection {
   const ibv_qp& queue_pair() { return *queue_pair_; }
 
  private:
-  Connector* connector_;
-  ibv_qp* queue_pair_;
+  std::unique_ptr<Connector> connector_;  // TODO(shiyuan)
+  std::shared_ptr<ibv_qp> queue_pair_;  // TODO(shiyuan)
 
   int64_t my_machine_id_;
   int64_t peer_machine_id_;

@@ -8,7 +8,6 @@
 
 namespace oneflow {
 
-// Not thread-safe
 class Network {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Network);

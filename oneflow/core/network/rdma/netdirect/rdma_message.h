@@ -20,7 +20,7 @@ class RdmaMessage {
 
  private:
   NetworkMessage net_msg_;
-  NetworkMemory* net_memory_;
+  NetworkMemory* net_memory_;  // TODO(shiyuan)
 };
 
 }  // namespace oneflow

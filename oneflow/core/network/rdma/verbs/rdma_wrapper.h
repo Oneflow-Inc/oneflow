@@ -36,14 +36,13 @@ class RdmaWrapper {
   int my_sock_;
   sockaddr_in my_addr_;
 
-  struct ibv_context* context_;
-  struct ibv_pd* protect_domain_;
-
+  struct ibv_context* context_;  // TODO(shiyuan)
+  struct ibv_pd* protect_domain_;  // TODO(shiyuan)
   // completion queue
-  struct ibv_cq* send_cq_;
-  struct ibv_cq* recv_cq_;
+  struct ibv_cq* send_cq_;  // TODO(shiyuan)
+  struct ibv_cq* recv_cq_;  // TODO(shiyuan)
 
-  struct rdma_cm_id* listener_;
+  struct rdma_cm_id* listener_;  // TODO(shiyuan)
 };
 
 }  // namespace oneflow

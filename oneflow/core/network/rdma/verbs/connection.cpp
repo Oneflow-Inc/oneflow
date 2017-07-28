@@ -146,12 +146,14 @@ void Connection::AcceptConnect() {
   TransQueuePairState(*connector_, queue_pair_);
 }
 
-void Connection::DestroyConnection() {}
+void Connection::DestroyConnection() {
+  // TODO(shiyuan)
+}
 
 void Connection::PostSendRequest(const Request& send_request) {
   struct ibv_send_wr wr;
   struct ibv_send_wr* bad_wr = nullptr;
-  wr.wr_id = send_request.time_stamp;  // TODO(shiyuan)
+  wr.wr_id = send_request.time_stamp;
   wr.next = nullptr;
   wr.sg_list =
       static_cast<ibv_sge*>(send_request.rdma_msg->net_memory()->sge());
@@ -165,7 +167,7 @@ void Connection::PostSendRequest(const Request& send_request) {
 void Connection::PostRecvRequest(const Request& recv_request) {
   struct ibv_recv_wr wr;
   struct ibv_recv_wr* bad_wr = nullptr;
-  wr.wr_id = recv_request.time_stamp;  // TODO(shiyuan)
+  wr.wr_id = recv_request.time_stamp;
   wr.next = nullptr;
   wr.sg_list =
       static_cast<ibv_sge*>(recv_request.rdma_msg->net_memory()->sge());
@@ -179,7 +181,7 @@ void Connection::PostReadRequest(
     RdmaMemory* dst_memory) {
   struct ibv_send_wr wr;
   struct ibv_send_wr* bad_wr = nullptr;
-  wr.wr_id = read_request.time_stamp;  // TODO(shiyuan)
+  wr.wr_id = read_request.time_stamp;
   wr.opcode = IBV_WR_RDMA_READ;
   wr.sg_list = static_cast<ibv_sge*>(dst_memory->sge());
   wr.num_sge = 1;

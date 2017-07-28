@@ -23,7 +23,7 @@ class RdmaMemory : public NetworkMemory {
 
  private:
   ND2_SGE sge_;
-  IND2MemoryRegion* memory_region_;
+  IND2MemoryRegion* memory_region_;  // TODO(shiyuan)
   RdmaMemory(const RdmaMemory&) = delete;
   void operator=(const RdmaMemory&) = delete;
 };
