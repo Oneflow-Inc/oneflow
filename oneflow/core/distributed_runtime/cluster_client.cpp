@@ -6,13 +6,16 @@
 #include "oneflow/core/job/dlnet_conf.pb.h"
 #include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/placement.pb.h"
+#include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/resource.pb.h"
 
 #include <grpc++/grpc++.h>
 
 #include "oneflow/core/distributed_runtime/rpc/grpc_remote_master.h"
+#include "oneflow/core/distributed_runtime/rpc/grpc_remote_worker.h"
 
 DEFINE_string(job_conf_filepath, "", "");
+DEFINE_string(plan_filepath, "", "");
 
 int main(int argc, char** argv) {
   using namespace oneflow;
@@ -32,32 +35,61 @@ int main(int argc, char** argv) {
 
   Placement placement_conf;
   ParseProtoFromTextFile(placement_filepath, &placement_conf);
+  ::tensorflow::Status s;
 
-  std::string master_address = "11.11.1.109:5551";
-  std::shared_ptr<::grpc::Channel> channel = ::grpc::CreateChannel(
+   std::string master_address = "11.11.1.109:5551";
+   std::shared_ptr<::grpc::Channel> channel = ::grpc::CreateChannel(
       master_address, ::grpc::InsecureChannelCredentials());
 
-  std::shared_ptr<GrpcRemoteMaster> remote_master(
+   std::shared_ptr<GrpcRemoteMaster> remote_master(
       new GrpcRemoteMaster(channel));
-  SendJobRequest req;
+   SendJobRequest req;
   *(req.mutable_job_conf()) = job_conf;
   *(req.mutable_dlnet_conf()) = dlnet_conf;
   *(req.mutable_resource_conf()) = resource_conf;
   *(req.mutable_placement_conf()) = placement_conf;
-  SendJobResponse resp;
+   SendJobResponse resp;
 
-  ::tensorflow::Status s = remote_master->SendJob(&req, &resp);
-  if (s.ok()) {
+   s = remote_master->SendJob(&req, &resp);
+   if (s.ok()) {
     LOG(INFO) << "SendJob RPC succeeds";
   } else {
     LOG(INFO) << "SendJob RPC fails";
   }
 
-  s = remote_master->SendJob(&req, &resp);
-  if (s.ok()) {
+   s = remote_master->SendJob(&req, &resp);
+   if (s.ok()) {
     LOG(INFO) << "SendJob RPC succeeds";
   } else {
     LOG(INFO) << "SendJob RPC fails";
   }
+
+  Plan plan;
+  ParseProtoFromTextFile(FLAGS_plan_filepath, &plan);
+
+  std::string worker_address = "11.11.1.109:5551";
+  std::shared_ptr<::grpc::Channel> worker_channel = ::grpc::CreateChannel(
+      worker_address, ::grpc::InsecureChannelCredentials());
+
+  std::shared_ptr<GrpcRemoteWorker> remote_worker(
+      new GrpcRemoteWorker(worker_channel));
+  SendPlanRequest plan_req;
+  *(plan_req.mutable_plan()) = plan;
+  SendPlanResponse plan_resp;
+
+  s = remote_worker->SendPlan(&plan_req, &plan_resp);
+  if (s.ok()) {
+    LOG(INFO) << "SendPlan RPC succeeds";
+  } else {
+    LOG(INFO) << "SendPlan RPC fails";
+  }
+
+  s = remote_worker->SendPlan(&plan_req, &plan_resp);
+  if (s.ok()) {
+    LOG(INFO) << "SendPlan RPC succeeds";
+  } else {
+    LOG(INFO) << "SendPlan RPC fails";
+  }
+
   return 0;
 }

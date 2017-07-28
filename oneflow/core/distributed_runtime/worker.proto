@@ -1,3 +1,11 @@
 syntax = "proto3";
 package oneflow;
 
+import "oneflow/core/job/plan.proto";
+
+message SendPlanRequest {
+  Plan plan = 1;
+}
+
+message SendPlanResponse {
+}
