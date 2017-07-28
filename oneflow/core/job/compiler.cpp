@@ -167,7 +167,7 @@ void Compiler::GenPlanFile(const std::string& plan_filepath) {
     if (!node->IsMeaningLess()) {
       node->ToProto(plan.mutable_task()->Add());
     } else {
-      LOG(INFO) << "Remove Task " << node->task_id();
+      LOG(INFO) << "Removed Task " << node->task_id();
     }
   });
 
