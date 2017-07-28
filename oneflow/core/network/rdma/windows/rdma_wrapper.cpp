@@ -1,14 +1,14 @@
-#include "oneflow/core/network/rdma/netdirect/rdma_wrapper.h"
+#include "oneflow/core/network/rdma/windows/rdma_wrapper.h"
 
 #include <Ws2tcpip.h>  // TODO(shiyuan)
 #include <windows.h>
 
 #include <string.h>
 #include <iostream>
-#include "oneflow/core/network/rdma/netdirect/ndsupport.h"
+#include "oneflow/core/network/rdma/windows/ndsupport.h"
 
-#include "oneflow/core/network/rdma/netdirect/interface.h"
-#include "oneflow/core/network/rdma/netdirect/connection.h"
+#include "oneflow/core/network/rdma/windows/interface.h"
+#include "oneflow/core/network/rdma/windows/connection.h"
 #pragma comment(lib, "Ws2_32.lib")
 
 namespace oneflow {
@@ -33,7 +33,7 @@ RdmaWrapper::RdmaWrapper()
       listener_(nullptr) {}
 
 RdmaWrapper::~RdmaWrapper() {
-  // TODO(shiyuan)
+  Destroy();
 }
 
 void RdmaWrapper::Init(const char* ip, int port) {
@@ -96,6 +96,7 @@ void RdmaWrapper::Init(const char* ip, int port) {
 }
 
 void RdmaWrapper::Destroy() {
+  // TODO(shiyuan)
 }
 
 void RdmaWrapper::CreateConnector(Connection* conn) {
@@ -106,9 +107,6 @@ void RdmaWrapper::CreateConnector(Connection* conn) {
             reinterpret_cast<void**>(&connector));
   CHECK(SUCCEEDED(hr));
   conn->set_connector(connector);
-}
-
-void RdmaWrapper::CreateProtectDomain(Connection* conn) {
 }
 
 void RdmaWrapper::CreateQueuePair(Connection* conn) {
@@ -173,25 +171,24 @@ int64_t RdmaWrapper::WaitForConnection(Connection* conn,
 
 // |result| is owned by the caller, and the received message will be held in
 // result->net_msg, having result->type == NetworkResultType::kReceiveMsg.
-int32_t RdmaWrapper::PollRecvQueue(NetworkResult* result) {
+Request* RdmaWrapper::PollRecvQueue(NetworkResult* result) {
   ND2_RESULT nd2_result;
   uint32_t len = recv_cq_->GetResults(&nd2_result, 1);
   if (len == 0)
-    return -1;
+    return nullptr;
 
   CHECK_EQ(nd2_result.Status, ND_SUCCESS);
 
   result->type = NetworkResultType::kReceiveMsg;
   // The context is the message timestamp in Recv Request.
-  int32_t time_stamp = *(static_cast<int32_t*>(nd2_result.RequestContext));
-  return time_stamp;
+  return reinterpret_cast<Request*>(nd2_result.RequestContext);
 }
 
-int32_t RdmaWrapper::PollSendQueue(NetworkResult* result) {
+Request* RdmaWrapper::PollSendQueue(NetworkResult* result) {
   ND2_RESULT nd2_result;
   uint32_t len = send_cq_->GetResults(&nd2_result, 1);
   if (len == 0)
-    return -1;
+    return nullptr;
 
   CHECK_EQ(nd2_result.Status, ND_SUCCESS);
 
@@ -202,19 +199,17 @@ int32_t RdmaWrapper::PollSendQueue(NetworkResult* result) {
       // The network object does not have additional information
       // to convey to outside caller, it just recycle the
       // registered_message used in sending out.
-      int32_t time_stamp = *(static_cast<int32_t*>(nd2_result.RequestContext));
-      return time_stamp;
+      return reinterpret_cast<Request*>(nd2_result.RequestContext);
     }
     case ND2_REQUEST_TYPE::Nd2RequestTypeRead: {
       result->type = NetworkResultType::kReadOk;
       // The context is the message timestamp in Read request.
       // The network object needs to convey the information about
       // "what data have been read" to external caller.
-      int32_t time_stamp = *(static_cast<int32_t*>(nd2_result.RequestContext));
-      return time_stamp;
+      return reinterpret_cast<Request*>(nd2_result.RequestContext);
     }
     default:
-      return -1;
+      return nullptr;
   }
 }
 

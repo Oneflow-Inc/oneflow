@@ -23,7 +23,7 @@ class RdmaNetwork final : public Network {
 
   void SendMessage(const NetworkMessage& msg) override;
   void SetCallbackForReceivedActorMsg(
-      std::function<void(const ActorMsg&)> callback) override;
+      std::function<void()> callback) override;
   void Read(const MemoryDescriptor& remote_memory_descriptor,
             NetworkMemory* local_memory,
             std::function<void()> callback) override;
@@ -87,8 +87,6 @@ class RdmaNetwork final : public Network {
 
   std::shared_ptr<RequestPool> request_pool_;
   std::shared_ptr<ConnectionPool> connection_pool_;
-
-  int32_t time_stamp_of_last_read_request_;
 
   // build the dict of MemoryDescriptor
   std::unordered_map<int64_t, MemoryDescriptor> register_id_to_mem_descriptor_;

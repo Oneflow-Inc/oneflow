@@ -5,7 +5,11 @@ namespace oneflow {
 RdmaNetwork::RdmaNetwork() 
   : rdma_wrapper_(nullptr),
     my_machine_id_(-1),
-    port_(-1) {}
+    port_(-1) {
+  rdma_wrapper_.reset(new RdmaWrapper());
+  request_pool_.reset(new RequestPool());
+  connection_pool_.reset(new ConnectionPool());
+}
 
 RdmaNetwork::~RdmaNetwork() {
   Finalize();
@@ -15,19 +19,15 @@ void RdmaNetwork::Init(int64_t my_machine_id, const NetworkTopology& net_topo) {
   my_machine_id_ = my_machine_id;
   net_topo_ = net_topo;
   port_ = net_topo.all_nodes[my_machine_id].port;
-  rdma_wrapper_ = new RdmaWrapper();  // TODO(shiyuan)
   rdma_wrapper_->Init(net_topo.all_nodes[my_machine_id].address.c_str(), port_);
-  request_pool_.reset(new RequestPool());
-  connection_pool_.reset(new ConnectionPool());
   EstablishConnection();
 }
 
 void RdmaNetwork::Finalize() {
   register_id_to_mem_descriptor_.clear();
-  rdma_wrapper_->Destroy();
 }
 
-NetworkMemory* RegisterMemory(void* dptr, size_t len) {
+NetworkMemory* RdmaNetwork::RegisterMemory(void* dptr, size_t len) {
   NetworkMemory* net_memory = rdma_wrapper_->NewNetworkMemory();  // TODO(shiyuan)
   net_memory->Reset(dptr, len);
   return net_memory;
@@ -56,11 +56,9 @@ void RdmaNetwork::SendMessage(const NetworkMessage& msg) {
   conn->PostSendRequest(*send_request);
 }
 
-void SetCallbackForReceivedActorMsg(
-    std::function<void(const ActorMsg&)> callback) {
-  // TODO(shiyuan): the same callback for all received actor msg?
-  //                Add to request_pool.
-  //                Add to the recv_request, when construct a new recv_request.
+void RdmaNetwork::SetCallbackForReceivedActorMsg(
+    std::function<void()> callback) {
+    request_pool_->set_callback4recv_msg(callback);
 }
 
 void RdmaNetwork::Read(const MemoryDescriptor& remote_memory_descriptor,
@@ -124,7 +122,7 @@ void RdmaNetwork::Barrier() {
   for (auto peer_machine_id : net_topo_.all_nodes[my_machine_id_].neighbors) {
     if (peer_machine_id < my_machine_id_) {
       barrier_msg.dst_machine_id = peer_machine_id;
-      Send(barrier_msg);
+      SendMessage(barrier_msg);
       while (!PollSendQueue(&result))
         CHECK(result.type == NetworkResultType::kSendOk);
     }
@@ -149,7 +147,7 @@ void RdmaNetwork::Barrier() {
   for (auto peer_machine_id : net_topo_.all_nodes[my_machine_id_].neighbors) {
     if (peer_machine_id > my_machine_id_) {
       reply_barrier_msg.dst_machine_id = peer_machine_id;
-      Send(reply_barrier_msg);
+      SendMessage(reply_barrier_msg);
       while (!PollSendQueue(&result)) {
         CHECK(result.type == NetworkResultType::kSendOk);
       }
@@ -179,13 +177,11 @@ Connection* RdmaNetwork::NewConnection() {
 // |result| is owned by the caller, and the received message will be held in
 // result->net_msg, having result->type == NetworkResultType::kReceiveMsg.
 bool RdmaNetwork::PollRecvQueue(NetworkResult* result) {
-  int32_t time_stamp = rdma_wrapper_->PollRecvQueue(result);
-  if (time_stamp == -1) { return false; }
-
-  Request* request = request_pool_->GetRequest(time_stamp);
-  CHECK(request);
+  Request* request = rdma_wrapper_->PollRecvQueue(result);
+  if (request == nullptr) { return false; }
 
   result->net_msg = request->rdma_msg->msg();
+  request->callback();
 
   // Equivalent to:
   //  request_pool_->ReleaseRequest(time_stamp);
@@ -195,23 +191,20 @@ bool RdmaNetwork::PollRecvQueue(NetworkResult* result) {
   Connection* conn =
       connection_pool_->GetConnection(result->net_msg.src_machine_id);
   CHECK(conn);
-  request = request_pool_->UpdateTimeStampAndReuse(time_stamp);  // TODO(shiyuan): keep callback
   CHECK(request);
   conn->PostRecvRequest(*request);
-
+  
   return true;
 }
 
 bool RdmaNetwork::PollSendQueue(NetworkResult* result) {
-  int32_t time_stamp = rdma_wrapper_->PollSendQueue(result);
-  if (time_stamp == -1) { return false; }
-
-  Request* request = request_pool_->GetRequest(time_stamp);
-  CHECK(request);
+  Request* request = rdma_wrapper_->PollSendQueue(result);
+  if (request == nullptr) { return false; }
 
   result->net_msg = request->rdma_msg->msg();
-  request_pool_->ReleaseRequest(time_stamp);
-
+  request->callback();
+  request_pool_->ReleaseRequest(request);
+  
   return true;
 }
 
@@ -229,7 +222,7 @@ void RdmaNetwork::EstablishConnection() {
   Request* receive_request = nullptr;
   for (auto peer_machine_id : net_topo_.all_nodes[my_machine_id_].neighbors) {
     if (peer_machine_id > my_machine_id_) {
-      receive_request = request_pool_->AllocRequest(false);  // TODO(shiyuan): add callback
+      receive_request = request_pool_->AllocRequest(false);
       CHECK(receive_request);
       do {
         conn = NewConnection();
@@ -241,7 +234,7 @@ void RdmaNetwork::EstablishConnection() {
       conn->CompleteConnectionTo();
       connection_pool_->AddConnection(peer_machine_id, conn);
       for (int k = 0; k < kPrePostRecvNumber; ++k) {
-        receive_request = request_pool_->AllocRequest(false);  // TODO(shiyuan): add callback
+        receive_request = request_pool_->AllocRequest(false);
         CHECK(receive_request);
         conn->PostRecvRequest(*receive_request);
       }
@@ -264,7 +257,7 @@ void RdmaNetwork::EstablishConnection() {
       connection_pool_->AddConnection(src_machine_id, conn);
       // Pre-post Receive issue before connect
       for (int k = 0; k < kPrePostRecvNumber; ++k) {
-        receive_request = request_pool_->AllocRequest(false);  // TODO(shiyuan): add callback
+        receive_request = request_pool_->AllocRequest(false);
         CHECK(receive_request);
         conn->PostRecvRequest(*receive_request);
       }

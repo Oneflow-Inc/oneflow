@@ -24,7 +24,7 @@ class Network {
   // though the actual transmission of the |msg| content has not occurred.
   virtual void SendMessage(const NetworkMessage& msg) = 0;
   virtual void SetCallbackForReceivedActorMsg(
-      std::function<void(const ActorMsg&)> callback) = 0;
+      std::function<void()> callback) = 0;
 
   virtual void Read(const MemoryDescriptor& remote_memory_descriptor,
                     NetworkMemory* local_memory,

@@ -1,9 +1,9 @@
-#ifndef ONEFLOW_CORE_NETWORK_RDMA_NETDIRECT_RDMA_MESSAGE_H_
-#define ONEFLOW_CORE_NETWORK_RDMA_NETDIRECT_RDMA_MESSAGE_H_
+#ifndef ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_RDMA_MESSAGE_H_
+#define ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_RDMA_MESSAGE_H_
 
 #include "oneflow/core/network/network.h"
 #include "oneflow/core/network/network_message.h"
-#include "oneflow/core/network/rdma/netdirect/rdma_memory.h"
+#include "oneflow/core/network/rdma/windows/rdma_memory.h"
 
 namespace oneflow {
 
@@ -11,6 +11,7 @@ class RdmaMemory;
 
 class RdmaMessage {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(RdmaMessage);
   RdmaMessage();
   ~RdmaMessage();
 
@@ -20,9 +21,9 @@ class RdmaMessage {
 
  private:
   NetworkMessage net_msg_;
-  NetworkMemory* net_memory_;  // TODO(shiyuan)
+  NetworkMemory* net_memory_;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_NETWORK_RDMA_NETDIRECT_RDMA_MESSAGE_H_
+#endif  // ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_RDMA_MESSAGE_H_

@@ -1,9 +1,9 @@
-#include "oneflow/core/network/rdma/verbs/connection.h"
+#include "oneflow/core/network/rdma/linux/connection.h"
 #include <arpa/inet.h>
 #include <infiniband/verbs.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include "oneflow/core/network/rdma/verbs/interface.h"
+#include "oneflow/core/network/rdma/linux/interface.h"
 #include "oneflow/core/network/rdma/request_pool.h"
 
 namespace oneflow {
@@ -78,13 +78,23 @@ Connection::Connection(int64_t my_machine_id)
     : Connection::Connection(my_machine_id, -1) {}
 
 Connection::Connection(int64_t my_machine_id, int64_t peer_machine_id)
-    : connector_(nullptr),
-      queue_pair_(nullptr),
-      my_machine_id_(my_machine_id),
-      peer_machine_id_(peer_machine_id){}
+    : my_machine_id_(my_machine_id),
+      peer_machine_id_(peer_machine_id),
+      connector_(nullptr),
+      queue_pair_(nullptr) {}
 
 Connection::~Connection() {
-  // TODO(shiyuan)
+  DestroyConnection();
+}
+
+void Connection::set_connector(Connector* connector) {
+  CHECK(!connector_);
+  connector_ = connector;
+}
+
+void Connection::set_queue_pair(ibv_qp* queue_pair) {
+  CHECK(!queue_pair_);
+  queue_pair_ = queue_pair;
 }
 
 void Connection::Bind(const char* ip, int port) {
@@ -147,13 +157,13 @@ void Connection::AcceptConnect() {
 }
 
 void Connection::DestroyConnection() {
-  // TODO(shiyuan)
+  delete connector_;
 }
 
 void Connection::PostSendRequest(const Request& send_request) {
   struct ibv_send_wr wr;
   struct ibv_send_wr* bad_wr = nullptr;
-  wr.wr_id = send_request.time_stamp;
+  wr.wr_id = reinterpret_cast<uint64_t>(&send_request);
   wr.next = nullptr;
   wr.sg_list =
       static_cast<ibv_sge*>(send_request.rdma_msg->net_memory()->sge());
@@ -167,7 +177,7 @@ void Connection::PostSendRequest(const Request& send_request) {
 void Connection::PostRecvRequest(const Request& recv_request) {
   struct ibv_recv_wr wr;
   struct ibv_recv_wr* bad_wr = nullptr;
-  wr.wr_id = recv_request.time_stamp;
+  wr.wr_id = reinterpret_cast<uint64_t>(&recv_request);
   wr.next = nullptr;
   wr.sg_list =
       static_cast<ibv_sge*>(recv_request.rdma_msg->net_memory()->sge());
@@ -181,7 +191,7 @@ void Connection::PostReadRequest(
     RdmaMemory* dst_memory) {
   struct ibv_send_wr wr;
   struct ibv_send_wr* bad_wr = nullptr;
-  wr.wr_id = read_request.time_stamp;
+  wr.wr_id = reinterpret_cast<uint64_t>(&read_request);
   wr.opcode = IBV_WR_RDMA_READ;
   wr.sg_list = static_cast<ibv_sge*>(dst_memory->sge());
   wr.num_sge = 1;

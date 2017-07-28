@@ -5,7 +5,9 @@ namespace oneflow {
 ConnectionPool::ConnectionPool() : conn_num_(0) {}
 
 ConnectionPool::~ConnectionPool() {
-  connection_dict_.erase (connection_dict_.begin(), conection_dict_.end());
+  for (auto& pair : connection_dict_) {
+    delete pair.second;
+  }
 }
 
 void ConnectionPool::AddConnection(int64_t peer_machine_id, Connection* conn) {

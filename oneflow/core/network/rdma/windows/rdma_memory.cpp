@@ -1,5 +1,5 @@
-#include "oneflow/core/network/rdma/netdirect/rdma_memory.h"
-#include "oneflow/core/network/rdma/netdirect/interface.h"
+#include "oneflow/core/network/rdma/windows/rdma_memory.h"
+#include "oneflow/core/network/rdma/windows/interface.h"
 
 namespace oneflow {
 
@@ -7,7 +7,7 @@ RdmaMemory::RdmaMemory(IND2MemoryRegion* memory_region)
     : memory_region_(memory_region) {}
 
 RdmaMemory::~RdmaMemory() {
-  // TODO(shiyuan)
+  // TODO(shiyuan) delete memory_region_
 }
 
 // Register as ND memory region
@@ -32,7 +32,7 @@ void RdmaMemory::Register() {
 
   // Set ND2_SGE
   sge_.Buffer = memory_;
-  sge_.BufferLength = size_;  // TODO(shiyuan)
+  sge_.BufferLength = size_;
   sge_.MemoryRegionToken = memory_region_->GetLocalToken();
 
   descriptor_.address = (UINT64)memory_;

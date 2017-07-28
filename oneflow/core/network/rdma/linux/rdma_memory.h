@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_NETWORK_RDMA_VERBS_RDMA_MEMORY_H_
-#define ONEFLOW_CORE_NETWORK_RDMA_VERBS_RDMA_MEMORY_H_
+#ifndef ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_MEMORY_H_
+#define ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_MEMORY_H_
 
 #include <infiniband/verbs.h>
 #include "oneflow/core/network/network_memory.h"
@@ -8,7 +8,6 @@ namespace oneflow {
 
 class RdmaMemory final : public NetworkMemory {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(RdmaMemory);
   using NetworkMemory::descriptor_;
   using NetworkMemory::memory_;
   using NetworkMemory::size_;
@@ -23,13 +22,13 @@ class RdmaMemory final : public NetworkMemory {
   void* sge() override { return &sge_; }
 
  private:
-  struct ibv_sge sge_;
-  ibv_pd* protect_domain_;  // TODO(shiyuan)
-  ibv_mr* memory_region_;  // TODO(shiyuan)
+  ibv_sge sge_;
+  ibv_pd* protect_domain_;  // TODO(shiyuan) delete
+  ibv_mr* memory_region_;  // TODO(shiyuan) delete
   RdmaMemory(const RdmaMemory&) = delete;
   void operator=(const RdmaMemory&) = delete;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_NETWORK_RDMA_VERBS_RDMA_MEMORY_H_
+#endif  // ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_MEMORY_H_

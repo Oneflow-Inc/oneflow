@@ -9,7 +9,7 @@ class ConnectionPool {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConnectionPool);
   ConnectionPool();
-  ~ConnectionPool() = default;
+  ~ConnectionPool();
 
   void AddConnection(int64_t peer_machine_id, Connection* conn);
   void CleanConnection(int64_t peer_machine_id);
@@ -18,8 +18,6 @@ class ConnectionPool {
  private:
   int32_t conn_num_;
   std::unordered_map<int64_t, Connection*> connection_dict_;
-  ConnectionPool(const ConnectionPool& other) = delete;
-  Connection& operator=(const ConnectionPool& other) = delete;
 };
 
 }  // namespace oneflow

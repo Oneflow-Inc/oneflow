@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_NETWORK_RDMA_VERBS_RDMA_WRAPPER_H_
-#define ONEFLOW_CORE_NETWORK_RDMA_VERBS_RDMA_WRAPPER_H_
+#ifndef ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_WRAPPER_H_
+#define ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_WRAPPER_H_
 
 #include <infiniband/verbs.h>
 #include <netdb.h>
@@ -7,10 +7,11 @@
 #include <stdio.h>
 
 #include "oneflow/core/network/network_message.h"
-#include "oneflow/core/network/rdma/verbs/interface.h"
+#include "oneflow/core/network/rdma/linux/interface.h"
 
 namespace oneflow {
 
+class Connection;
 struct Request;
 
 class RdmaWrapper {
@@ -29,22 +30,21 @@ class RdmaWrapper {
 
   int64_t WaitForConnection(Connection* conn, Request* receive_request);
 
-  int32_t PollRecvQueue(NetworkResult* result);
-  int32_t PollSendQueue(NetworkResult* result);
+  Request* PollRecvQueue(NetworkResult* result);
+  Request* PollSendQueue(NetworkResult* result);
 
  private:
-  int my_sock_;
+  int32_t my_sock_;
   sockaddr_in my_addr_;
 
-  struct ibv_context* context_;  // TODO(shiyuan)
-  struct ibv_pd* protect_domain_;  // TODO(shiyuan)
-  // completion queue
-  struct ibv_cq* send_cq_;  // TODO(shiyuan)
-  struct ibv_cq* recv_cq_;  // TODO(shiyuan)
+  ibv_context* context_;
+  ibv_pd* protect_domain_;
 
-  struct rdma_cm_id* listener_;  // TODO(shiyuan)
+  // completion queue
+  ibv_cq* send_cq_;
+  ibv_cq* recv_cq_;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_NETWORK_RDMA_VERBS_RDMA_WRAPPER_H_
+#endif  // ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_WRAPPER_H_

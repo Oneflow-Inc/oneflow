@@ -8,12 +8,11 @@
 // Taken from ndspi samples.
 //
 
-
+#include "oneflow/core/network/rdma/windows/ndsupport.h"
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <ws2spi.h>
 #include <initguid.h>
-#include "oneflow/core/network/rdma/netdirect/ndsupport.h"
 #include <glog/logging.h>
 
 

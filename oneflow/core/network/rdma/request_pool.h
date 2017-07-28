@@ -13,7 +13,6 @@ struct Request {
 };
 
 class RequestPool {
-// TODO(shiyuan): need refine
  public:
   OF_DISALLOW_COPY_AND_MOVE(RequestPool);
   RequestPool();
@@ -25,28 +24,15 @@ class RequestPool {
 
   void ReleaseRequest(Request* request);
 
-  // Update and reuse the Request object indexed by |time_stamp|, to avoid
-  // unnecessary object destroy and creation. It is useful when only time_stamp
-  // needs update, while other properties do not change.
-  void ReuseRequest(Request* request);
-  
-  void set_callback4recv_msg(std::function<void(const ActorMsg&)>) {
+  void set_callback4recv_msg(std::function<void()> callback) {
     callback4recv_msg_ = callback;
-  }
-  std::function<void(const ActorMsg&)> callback4recv_msg() {
-    return callback4recv_msg_;
   }
 
  private:
-  int32_t used_request_number_;
-  int32_t total_request_number_;
-  std::unordered_map<int32_t, Request*> request_dict_;
+  std::vector<Request*> request_vector_;
   std::shared_ptr<MessagePool<RdmaMessage>> msg_pool_;
   static const int32_t kBufferSize = 64;
-  std::function<void()> callback4recv_msg_;  // TODO(shiyuan): heap or stack?
-
-  RequestPool(const RequestPool& other) = delete;
-  RequestPool& operator=(const RequestPool& other) = delete;
+  std::function<void()> callback4recv_msg_;  // TODO(shiyuan)
 };
 
 }  // namespace oneflow

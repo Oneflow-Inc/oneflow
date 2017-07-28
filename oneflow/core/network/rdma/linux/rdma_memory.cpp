@@ -1,5 +1,5 @@
-#include "oneflow/core/network/rdma/verbs/rdma_memory.h"
-#include "oneflow/core/network/rdma/verbs/interface.h"
+#include "oneflow/core/network/rdma/linux/rdma_memory.h"
+#include "oneflow/core/network/rdma/linux/interface.h"
 
 namespace oneflow {
 

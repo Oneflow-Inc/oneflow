@@ -11,7 +11,6 @@ struct MemoryDescriptor {
 
 class NetworkMemory {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(NetworkMemory);
   NetworkMemory() = default;
   virtual ~NetworkMemory() = default;
 

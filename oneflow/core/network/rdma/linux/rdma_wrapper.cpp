@@ -1,12 +1,12 @@
-#include "oneflow/core/network/rdma/verbs/rdma_wrapper.h"
+#include "oneflow/core/network/rdma/linux/rdma_wrapper.h"
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <ctime>
 #include <string>
-#include "oneflow/core/network/rdma/verbs/connection.h"
-#include "oneflow/core/network/rdma/verbs/interface.h"
+#include "oneflow/core/network/rdma/linux/connection.h"
+#include "oneflow/core/network/rdma/linux/interface.h"
 
 namespace oneflow {
 
@@ -24,25 +24,24 @@ struct sockaddr_in GetAddress(const char* ip, int port) {
 }  // namespace
 
 RdmaWrapper::RdmaWrapper()
-    : context_(nullptr),
-      protect_domain_(nullptr),
-      send_cq_(nullptr),
-      recv_cq_(nullptr),
-      listener_(nullptr) {}
+  : context_(nullptr),
+    protect_domain_(nullptr),
+    send_cq_(nullptr),
+    recv_cq_(nullptr) {}
 
 RdmaWrapper::~RdmaWrapper() {
-  // TODO(shiyuan)
+  Destroy();
 }
 
 void RdmaWrapper::Init(const char* ip, int port) {
   my_addr_ = GetAddress(ip, port);
 
   // Init Adapter
-  struct ibv_device** device_list = ibv_get_device_list(NULL);
-  struct ibv_device* device = device_list[0];
-  context_ = ibv_open_device(device);
+  ibv_device** device_list = ibv_get_device_list(NULL);  // TODO(shiyuan) delete
+  ibv_device* device = device_list[0];  // TODO(shiyuan) delete
+  context_ = ibv_open_device(device);  // TODO(shiyuan) delete
   CHECK(context_);
-  protect_domain_ = ibv_alloc_pd(context_);
+  protect_domain_ = ibv_alloc_pd(context_);  // TODO(shiyuan) delete
   CHECK(protect_domain_);
 
   // Init env
@@ -59,13 +58,15 @@ void RdmaWrapper::Init(const char* ip, int port) {
   CHECK_EQ(listen(my_sock_, 100), 0);  // TODO(shiyuan) backlog
 }
 
-void RdmaWrapper::Destroy() {}
+void RdmaWrapper::Destroy() {
+  // TODO(shiyuan)
+}
 
 void RdmaWrapper::CreateConnector(Connection* conn) {
-  struct ibv_port_attr attr;
+  ibv_port_attr attr;
   CHECK_EQ(ibv_query_port(context_, (uint8_t)1, &attr), 0);
 
-  struct Connector* connector = new Connector;
+  Connector* connector = new Connector;
   CHECK(connector);
   srand((unsigned)time(NULL));
   connector->my_lid = attr.lid;
@@ -96,14 +97,13 @@ void RdmaWrapper::CreateQueuePair(Connection* conn) {
   qp_init_attr.cap.max_send_sge = 1;
   qp_init_attr.cap.max_recv_sge = 1;
 
-  struct ibv_qp* queue_pair = ibv_create_qp(protect_domain_, &qp_init_attr);
-  ;
+  ibv_qp* queue_pair = ibv_create_qp(protect_domain_, &qp_init_attr);
   CHECK(queue_pair);
   conn->set_queue_pair(queue_pair);
 }
 
 RdmaMemory* RdmaWrapper::NewNetworkMemory() {
-  struct ibv_mr* memory_region = nullptr;
+  ibv_mr* memory_region = nullptr;
   RdmaMemory* rdma_memory = new RdmaMemory(memory_region, protect_domain_);
   CHECK(rdma_memory);
   return rdma_memory;
@@ -112,9 +112,8 @@ RdmaMemory* RdmaWrapper::NewNetworkMemory() {
 int64_t RdmaWrapper::WaitForConnection(Connection* conn,
                                        Request* recv_request) {
   int64_t peer_machine_id;
-  struct Connector* connector = conn->connector();
-  CHECK(connector);
-  struct Connector temp_connector;
+  Connector* connector = conn->mutable_connector();
+  Connector temp_connector;
   int read_bytes = 0;
   int total_read_bytes = 0;
   struct sockaddr_in peer_addr;
@@ -137,7 +136,6 @@ int64_t RdmaWrapper::WaitForConnection(Connection* conn,
   connector->peer_psn = temp_connector.my_psn;
   connector->peer_snp = temp_connector.my_snp;
   connector->peer_iid = temp_connector.my_iid;
-  conn->set_connector(connector);
 
   CHECK_EQ(close(peer_sock), 0);
 
@@ -147,26 +145,25 @@ int64_t RdmaWrapper::WaitForConnection(Connection* conn,
 
 // |result| is owned by the caller, and the received message will be held in
 // result->net_msg, having result->type == NetworkResultType::kReceiveMsg.
-int32_t RdmaWrapper::PollRecvQueue(NetworkResult* result) {
-  struct ibv_wc wc;
+Request* RdmaWrapper::PollRecvQueue(NetworkResult* result) {
+  ibv_wc wc;
   int32_t len = ibv_poll_cq(recv_cq_, 1, &wc);
 
   // return number of CQEs in array wc or -1 on error
-  if (len <= 0) { return -1; }
+  if (len <= 0) { return nullptr; }
 
   CHECK_EQ(wc.status, IBV_WC_SUCCESS);
 
   result->type = NetworkResultType::kReceiveMsg;
-  int32_t time_stamp = wc.wr_id;
-  return time_stamp;
+  return reinterpret_cast<Request*>(wc.wr_id);
 }
 
-int32_t RdmaWrapper::PollSendQueue(NetworkResult* result) {
+Request* RdmaWrapper::PollSendQueue(NetworkResult* result) {
   struct ibv_wc wc;
   int32_t len = ibv_poll_cq(send_cq_, 1, &wc);
 
   // return number of CQEs in array wc or -1 on error
-  if (len <= 0) { return -1; }
+  if (len <= 0) { return nullptr; }
 
   CHECK_EQ(wc.status, IBV_WC_SUCCESS);
 
@@ -177,8 +174,7 @@ int32_t RdmaWrapper::PollSendQueue(NetworkResult* result) {
       // Tehe network object does not have additional information
       // to convey to outside caller, it just recycle the
       // registered_message used in sending out.
-      int32_t time_stamp = wc.wr_id;
-      return time_stamp;
+      return reinterpret_cast<Request*>(wc.wr_id);
     }
     case IBV_WC_RDMA_READ: {
       result->type = NetworkResultType::kReadOk;
@@ -186,10 +182,9 @@ int32_t RdmaWrapper::PollSendQueue(NetworkResult* result) {
       // The network object needs to convey the information about
       // "what data have been read" to external caller.
       // The context is the message
-      int32_t time_stamp = wc.wr_id;
-      return time_stamp;
+      return reinterpret_cast<Request*>(wc.wr_id);
     }
-    default: return -1;
+    default: return nullptr;
   }
 }
 

@@ -9,6 +9,7 @@ namespace oneflow {
 template<typename MessageType>
 class MessagePool {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(MessagePool);
   explicit MessagePool(int32_t initial_size);
   ~MessagePool();
 
