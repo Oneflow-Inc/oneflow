@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_MEMORY_H_
-#define ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_MEMORY_H_
+#ifndef ONEFLOW_CORE_NETWORK_RDMA_VERBS_RDMA_MEMORY_H_
+#define ONEFLOW_CORE_NETWORK_RDMA_VERBS_RDMA_MEMORY_H_
 
 #include <infiniband/verbs.h>
 #include "oneflow/core/network/network_memory.h"
@@ -32,4 +32,4 @@ class RdmaMemory final : public NetworkMemory {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_MEMORY_H_
+#endif  // ONEFLOW_CORE_NETWORK_RDMA_VERBS_RDMA_MEMORY_H_

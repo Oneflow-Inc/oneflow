@@ -1,6 +1,6 @@
-#include "oneflow/core/network/rdma/windows/connection.h"
+#include "oneflow/core/network/rdma/netdirect/connection.h"
 #include <ndspi.h>
-#include "oneflow/core/network/rdma/windows/interface.h"
+#include "oneflow/core/network/rdma/netdirect/interface.h"
 #include "oneflow/core/network/rdma/request_pool.h"
 
 namespace oneflow {

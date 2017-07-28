@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_WRAPPER_H_
-#define ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_WRAPPER_H_
+#ifndef ONEFLOW_CORE_NETWORK_RDMA_VERBS_RDMA_WRAPPER_H_
+#define ONEFLOW_CORE_NETWORK_RDMA_VERBS_RDMA_WRAPPER_H_
 
 #include <infiniband/verbs.h>
 #include <netdb.h>
@@ -7,12 +7,10 @@
 #include <stdio.h>
 
 #include "oneflow/core/network/network_message.h"
-#include "oneflow/core/network/rdma/linux/interface.h"
+#include "oneflow/core/network/rdma/verbs/interface.h"
 
 namespace oneflow {
 
-class Connection;
-class RdmaMemory;
 struct Request;
 
 class RdmaWrapper {
@@ -50,4 +48,4 @@ class RdmaWrapper {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_WRAPPER_H_
+#endif  // ONEFLOW_CORE_NETWORK_RDMA_VERBS_RDMA_WRAPPER_H_

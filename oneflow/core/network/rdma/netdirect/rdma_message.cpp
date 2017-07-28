@@ -1,12 +1,11 @@
-#include "oneflow/core/network/rdma/linux/rdma_message.h"
-#include "oneflow/core/network/rdma/linux/interface.h"
+#include "oneflow/core/network/rdma/netdirect/rdma_message.h"
+#include "oneflow/core/network/rdma/netdirect/interface.h"
 
 namespace oneflow {
 
 RdmaMessage::RdmaMessage() {
-  net_memory_ =
-      dynamic_cast<RdmaMemory*>(GetRdmaInstance()->NewNetworkMemory());
-  CHECK(net_memory_);
+  net_memory_ = dynamic_cast<RdmaMemory*>(
+      GetRdmaInstance()->NewNetworkMemory());
   net_memory_->Reset(reinterpret_cast<char*>(&net_msg_), sizeof(net_msg_));
   net_memory_->Register();
 }
@@ -17,3 +16,4 @@ RdmaMessage::~RdmaMessage() {
 }
 
 }  // namespace oneflow
+

@@ -1,9 +1,9 @@
-#ifndef ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_RDMA_WRAPPER_H_
-#define ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_RDMA_WRAPPER_H_
+#ifndef ONEFLOW_CORE_NETWORK_RDMA_NETDIRECT_RDMA_WRAPPER_H_
+#define ONEFLOW_CORE_NETWORK_RDMA_NETDIRECT_RDMA_WRAPPER_H_
 
 #include <stdint.h>
 #include <ndspi.h>
-#include "oneflow/core/network/rdma/windows/interface.h"
+#include "oneflow/core/network/rdma/netdirect/interface.h"
 #include "oneflow/core/network/network_message.h"
 
 namespace oneflow {
@@ -52,4 +52,4 @@ class RdmaWrapper {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_RDMA_WRAPPER_H_
+#endif  // ONEFLOW_CORE_NETWORK_RDMA_NETDIRECT_RDMA_WRAPPER_H_

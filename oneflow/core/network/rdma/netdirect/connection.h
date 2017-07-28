@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_CONNECTION_H_
-#define ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_CONNECTION_H_
+#ifndef ONEFLOW_CORE_NETWORK_RDMA_NETDIRECT_CONNECTION_H_
+#define ONEFLOW_CORE_NETWORK_RDMA_NETDIRECT_CONNECTION_H_
 
 #include <stdio.h>
 #include <string.h>
@@ -9,7 +9,7 @@
 #include <sal.h>
 #include <new>
 #include <cstdint>
-#include "oneflow/core/network/rdma/windows/interface.h"
+#include "oneflow/core/network/rdma/netdirect/interface.h"
 #include "oneflow/core/network/network_memory.h"
 
 namespace oneflow {
@@ -55,4 +55,4 @@ class Connection {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_CONNECTION_H_
+#endif  // ONEFLOW_CORE_NETWORK_RDMA_NETDIRECT_CONNECTION_H_

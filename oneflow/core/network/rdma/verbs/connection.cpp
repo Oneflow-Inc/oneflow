@@ -1,9 +1,9 @@
-#include "oneflow/core/network/rdma/linux/connection.h"
+#include "oneflow/core/network/rdma/verbs/connection.h"
 #include <arpa/inet.h>
 #include <infiniband/verbs.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include "oneflow/core/network/rdma/linux/interface.h"
+#include "oneflow/core/network/rdma/verbs/interface.h"
 #include "oneflow/core/network/rdma/request_pool.h"
 
 namespace oneflow {
@@ -151,7 +151,7 @@ void Connection::DestroyConnection() {}
 void Connection::PostSendRequest(const Request& send_request) {
   struct ibv_send_wr wr;
   struct ibv_send_wr* bad_wr = nullptr;
-  wr.wr_id = send_request.time_stamp;
+  wr.wr_id = send_request.time_stamp;  // TODO(shiyuan)
   wr.next = nullptr;
   wr.sg_list =
       static_cast<ibv_sge*>(send_request.rdma_msg->net_memory()->sge());
@@ -165,7 +165,7 @@ void Connection::PostSendRequest(const Request& send_request) {
 void Connection::PostRecvRequest(const Request& recv_request) {
   struct ibv_recv_wr wr;
   struct ibv_recv_wr* bad_wr = nullptr;
-  wr.wr_id = recv_request.time_stamp;
+  wr.wr_id = recv_request.time_stamp;  // TODO(shiyuan)
   wr.next = nullptr;
   wr.sg_list =
       static_cast<ibv_sge*>(recv_request.rdma_msg->net_memory()->sge());
@@ -179,7 +179,7 @@ void Connection::PostReadRequest(
     RdmaMemory* dst_memory) {
   struct ibv_send_wr wr;
   struct ibv_send_wr* bad_wr = nullptr;
-  wr.wr_id = read_request.time_stamp;
+  wr.wr_id = read_request.time_stamp;  // TODO(shiyuan)
   wr.opcode = IBV_WR_RDMA_READ;
   wr.sg_list = static_cast<ibv_sge*>(dst_memory->sge());
   wr.num_sge = 1;

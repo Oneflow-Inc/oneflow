@@ -1,14 +1,14 @@
-#include "oneflow/core/network/rdma/windows/rdma_wrapper.h"
+#include "oneflow/core/network/rdma/netdirect/rdma_wrapper.h"
 
 #include <Ws2tcpip.h>  // TODO(shiyuan)
 #include <windows.h>
 
 #include <string.h>
 #include <iostream>
-#include "oneflow/core/network/rdma/windows/ndsupport.h"
+#include "oneflow/core/network/rdma/netdirect/ndsupport.h"
 
-#include "oneflow/core/network/rdma/windows/interface.h"
-#include "oneflow/core/network/rdma/windows/connection.h"
+#include "oneflow/core/network/rdma/netdirect/interface.h"
+#include "oneflow/core/network/rdma/netdirect/connection.h"
 #pragma comment(lib, "Ws2_32.lib")
 
 namespace oneflow {

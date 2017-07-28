@@ -44,7 +44,7 @@ class NetworkMemory {
   virtual void Register() = 0;
   // Unregister memory after finishing network transportation
   virtual void Unregister() = 0;
-  virtual void* sge() = 0;  // XXX(shiyuan) delete const
+  virtual void* sge() = 0;
 
  protected:
   MemoryDescriptor descriptor_;

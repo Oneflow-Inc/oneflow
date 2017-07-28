@@ -1,12 +1,12 @@
-#include "oneflow/core/network/rdma/linux/rdma_wrapper.h"
+#include "oneflow/core/network/rdma/verbs/rdma_wrapper.h"
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <ctime>
 #include <string>
-#include "oneflow/core/network/rdma/linux/connection.h"
-#include "oneflow/core/network/rdma/linux/interface.h"
+#include "oneflow/core/network/rdma/verbs/connection.h"
+#include "oneflow/core/network/rdma/verbs/interface.h"
 
 namespace oneflow {
 

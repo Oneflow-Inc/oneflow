@@ -8,6 +8,7 @@ namespace oneflow {
 
 struct Request {
   RdmaMessage* rdma_msg;
+  std::function<void()> callback;
   int32_t time_stamp;
   bool is_send;
 };
@@ -31,14 +32,14 @@ class RequestPool {
   // Update and reuse the Request object indexed by |time_stamp|, to avoid
   // unnecessary object destroy and creation. It is useful when only time_stamp
   // needs update, while other properties do not change.
-  Request* UpdateTimeStampAndReuse(int32_t time_stamp);  // TODO(shiyuan)
+  Request* UpdateTimeStampAndReuse(int32_t time_stamp);
 
  private:
   int32_t sequence_number_;
   std::unordered_map<int32_t, Request*> request_dict_;
   std::shared_ptr<MessagePool<RdmaMessage>> msg_pool_;
   static const int32_t kBufferSize = 64;
-
+  // TODO(shiyuan): std::function<void()> callback4recvmsg;
   int32_t new_time_stamp();
 
   RequestPool(const RequestPool& other) = delete;

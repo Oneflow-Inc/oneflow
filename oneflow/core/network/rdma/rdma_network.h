@@ -19,15 +19,14 @@ class RdmaNetwork final : public Network {
   void Init(int64_t my_machine_id, const NetworkTopology& net_topo) override;
   void Finalize() override;
 
-  NetworkMessage* RegsiteMessage(const ActorMsg& actor_msg) override;
-  NetworkMemory* RegisteMemory(void* dptr, size_t len) override;
+  NetworkMemory* RegisterMemory(void* dptr, size_t len) override;
 
-  void Send(const NetworkMessage& msg) override;
+  void SendMessage(const NetworkMessage& msg) override;
   void SetCallbackForReceivedActorMsg(
       std::function<void(const ActorMsg&)> callback) override;
-
   void Read(const MemoryDescriptor& remote_memory_descriptor,
-            NetworkMemory* local_memory) override;
+            NetworkMemory* local_memory,
+            std::function<void()> callback) override;
   
   bool Poll(NetworkResult* result) override;
   void Barrier() override;
@@ -68,12 +67,6 @@ class RdmaNetwork final : public Network {
   // Both send request and read request are submitted to the send request queue.
   bool PollSendQueue(NetworkResult* result);
 
-  // Post a new Request object to the receiving queue connecting to |peer_rank|
-  // void PostRecvRequest(int64_t peer_machine_id);
-  // Re-post the Request object indexed by |time_stamp| to the receive queue
-  // connecting to |peer_rank|, just updating its time_stamp to a new value.
-  // void RePostRecvRequest(int64_t peer_machine_id, int32_t time_stamp);
-
   const MemoryDescriptor& GetMemoryDescriptor(int64_t register_id) const;
 
   // As active side, try to connect to others;
@@ -85,7 +78,7 @@ class RdmaNetwork final : public Network {
   // int32_t WaitForConnection();
 
   // estimate the pre-post number
-  static const int kPrePostRecvNumber = 16;
+  static const int kPrePostRecvNumber = 16;  // TODO(shiyuan)
 
   RdmaWrapper* rdma_wrapper_;
   int64_t my_machine_id_;

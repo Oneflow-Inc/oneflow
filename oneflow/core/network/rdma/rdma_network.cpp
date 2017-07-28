@@ -27,6 +27,64 @@ void RdmaNetwork::Finalize() {
   rdma_wrapper_->Destroy();
 }
 
+NetworkMemory* RegisterMemory(void* dptr, size_t len) {
+  NetworkMemory* net_memory = rdma_wrapper_->NewNetworkMemory();
+  net_memory->Reset(dptr, len);
+  return net_memory;
+}
+
+// |msg| contains src_machine_id and dst_machine_id
+void RdmaNetwork::SendMessage(const NetworkMessage& msg) {
+  int64_t dst_machine_id = msg.dst_machine_id;
+  Connection* conn = connection_pool_->GetConnection(dst_machine_id);
+  CHECK(conn);
+
+  // 1. New network request, generating timestamp, get message memory
+  //    from message pool.
+  Request* send_request = request_pool_->AllocRequest(true);
+  CHECK(send_request);
+
+  // 2. Get network message buffer, copy the message.
+  send_request->rdma_msg->mutable_msg() = msg;
+
+  // The last flag of Send, NO_OP_FLAG_SILENT_SUCCESS means the
+  // successful sending will not generate an event in completion queue.
+  // Change the flag to 0 if this does not suit for out design.
+  // We need to know the completion event of Send to recycle the
+  // buffer of message.
+
+  conn->PostSendRequest(*send_request);
+}
+
+void SetCallbackForReceivedActorMsg(
+    std::function<void(const ActorMsg&)> callback) {
+  // TODO(shiyuan): the same callback for all received actor msg?
+  //                Add to request_pool.
+  //                Add to the recv_request, when construct a new recv_request.
+}
+
+void RdmaNetwork::Read(const MemoryDescriptor& remote_memory_descriptor,
+                       NetworkMemory* local_memory,
+                       std::function<void()> callback) {
+  Connection* conn =
+      connection_pool_->GetConnection(remote_memory_descriptor.machine_id);
+  CHECK(conn);
+
+  Request* read_request = request_pool_->AllocRequest(true);
+  CHECK(read_request);
+
+  read_request->callback = callback;
+
+  RdmaMemory* dst_memory = static_cast<RdmaMemory*>(local_memory);
+  CHECK(dst_memory);
+
+  conn->PostReadRequest(*read_request, remote_memory_descriptor, dst_memory);
+}
+
+bool RdmaNetwork::Poll(NetworkResult* result) {
+  return PollRecvQueue(result) || PollSendQueue(result);
+}
+
 void RdmaNetwork::Barrier() {
   // Machine 0 acts as root. All machine send Barrier to root through the net
   // topology, and when root collects all Barrier, it replies the ReplyBarrier
@@ -100,64 +158,6 @@ void RdmaNetwork::Barrier() {
   printf("Barrier send all reply barrier over\n");
 }
 
-NetworkMemory* RdmaNetwork::NewNetworkMemory() {
-  return rdma_wrapper_->NewNetworkMemory();
-}
-
-// |msg| contains src_machine_id and dst_machine_id
-void RdmaNetwork::Send(const NetworkMessage& msg) {
-  int64_t dst_machine_id = msg.dst_machine_id;
-  Connection* conn = connection_pool_->GetConnection(dst_machine_id);
-  CHECK(conn);
-
-  // 1. New network request, generating timestamp, get message memory
-  //    from message pool.
-  Request* send_request = request_pool_->AllocRequest(true);
-  CHECK(send_request);
-
-  // 2. Get network message buffer, copy the message.
-  send_request->rdma_msg->mutable_msg() = msg;
-
-  // The last flag of Send, NO_OP_FLAG_SILENT_SUCCESS means the
-  // successful sending will not generate an event in completion queue.
-  // Change the flag to 0 if this does not suit for out design.
-  // We need to know the completion event of Send to recycle the
-  // buffer of message.
-
-  conn->PostSendRequest(*send_request);
-}
-
-void RdmaNetwork::Read(const MemoryDescriptor& remote_memory_descriptor,
-                       NetworkMemory* local_memory) {
-  Connection* conn =
-      connection_pool_->GetConnection(remote_memory_descriptor.machine_id);
-  CHECK(conn);
-
-  Request* read_request = request_pool_->AllocRequest(true);
-  CHECK(read_request);
-
-  // Memorize the Request object for the most recently issued Read verb.
-  time_stamp_of_last_read_request_ = read_request->time_stamp;
-  // The read_request->registered_message->mutable_msg() will be set in
-  // |RegisterEventMessage|.
-
-  RdmaMemory* dst_memory = static_cast<RdmaMemory*>(local_memory);
-  CHECK(dst_memory);
-
-  conn->PostReadRequest(*read_request, remote_memory_descriptor, dst_memory);
-}
-
-void RdmaNetwork::EnrollActorMessage(MsgPtr actor_msg) {
-  Request* last_read_request =
-      request_pool_->GetRequest(time_stamp_of_last_read_request_);
-  CHECK(last_read_request);
-  last_read_request->rdma_msg->mutable_msg().actor_msg = (*actor_msg);
-}
-
-bool RdmaNetwork::Poll(NetworkResult* result) {
-  return PollRecvQueue(result) || PollSendQueue(result);
-}
-
 void RdmaNetwork::InitConnections() {
   Connection* conn;
   for (auto peer_machine_id : net_topo_.all_nodes[my_machine_id_].neighbors) {
@@ -195,7 +195,7 @@ bool RdmaNetwork::PollRecvQueue(NetworkResult* result) {
   Connection* conn =
       connection_pool_->GetConnection(result->net_msg.src_machine_id);
   CHECK(conn);
-  request = request_pool_->UpdateTimeStampAndReuse(time_stamp);
+  request = request_pool_->UpdateTimeStampAndReuse(time_stamp);  // TODO(shiyuan): keep callback
   CHECK(request);
   conn->PostRecvRequest(*request);
 
@@ -210,7 +210,6 @@ bool RdmaNetwork::PollSendQueue(NetworkResult* result) {
   CHECK(request);
 
   result->net_msg = request->rdma_msg->msg();
-  CHECK(request);
   request_pool_->ReleaseRequest(time_stamp);
 
   return true;
@@ -219,7 +218,6 @@ bool RdmaNetwork::PollSendQueue(NetworkResult* result) {
 const MemoryDescriptor& RdmaNetwork::GetMemoryDescriptor(
     int64_t register_id) const {
   auto mem_descriptor_it = register_id_to_mem_descriptor_.find(register_id);
-
   return mem_descriptor_it->second;
 }
 
@@ -231,7 +229,7 @@ void RdmaNetwork::EstablishConnection() {
   Request* receive_request = nullptr;
   for (auto peer_machine_id : net_topo_.all_nodes[my_machine_id_].neighbors) {
     if (peer_machine_id > my_machine_id_) {
-      receive_request = request_pool_->AllocRequest(false);
+      receive_request = request_pool_->AllocRequest(false);  // TODO(shiyuan): add callback
       CHECK(receive_request);
       do {
         conn = NewConnection();
@@ -243,7 +241,7 @@ void RdmaNetwork::EstablishConnection() {
       conn->CompleteConnectionTo();
       connection_pool_->AddConnection(peer_machine_id, conn);
       for (int k = 0; k < kPrePostRecvNumber; ++k) {
-        receive_request = request_pool_->AllocRequest(false);
+        receive_request = request_pool_->AllocRequest(false);  // TODO(shiyuan): add callback
         CHECK(receive_request);
         conn->PostRecvRequest(*receive_request);
       }
@@ -266,7 +264,7 @@ void RdmaNetwork::EstablishConnection() {
       connection_pool_->AddConnection(src_machine_id, conn);
       // Pre-post Receive issue before connect
       for (int k = 0; k < kPrePostRecvNumber; ++k) {
-        receive_request = request_pool_->AllocRequest(false);
+        receive_request = request_pool_->AllocRequest(false);  // TODO(shiyuan): add callback
         CHECK(receive_request);
         conn->PostRecvRequest(*receive_request);
       }
