@@ -164,7 +164,11 @@ void Compiler::EraseMeaningLessRegsts() {
 void Compiler::GenPlanFile(const std::string& plan_filepath) {
   Plan plan;
   ForEachTaskNode([&plan](const TaskNode* node) {
-    if (!node->IsMeaningLess()) { node->ToProto(plan.mutable_task()->Add()); }
+    if (!node->IsMeaningLess()) {
+      node->ToProto(plan.mutable_task()->Add());
+    } else {
+      LOG(INFO) << "Remove Task " << node->task_id();
+    }
   });
 
   OpMgr::Singleton()->AllOpToProto(plan.mutable_op());
@@ -196,42 +200,33 @@ void Compiler::Plan2DotFile(Plan& plan) {
   std::string file_path = LogDir() + "/dot/plan.dot";
   PersistentOutStream out_stream(file_path);
   out_stream << "digraph {\n";
-  std::set<int64_t> regst_desc_set;
-  for (auto& task_proto : plan.task()) {
-    out_stream << "task" << std::to_string(task_proto.id()) << "[label=\"{"
-               << "<f0> " << std::to_string(task_proto.id()) << "\\n|"
-               << "<f1> " << std::to_string(task_proto.thrd_local_id())
-               << "\\n|"
-               << "<f2> " << std::to_string(task_proto.parallel_id())
+  std::set<int64_t> regst_desc_ids;
+  // task
+  for (const TaskProto& task_proto : plan.task()) {
+    out_stream << "task" << std::to_string(task_proto.id())
+               << "[label=\"{ <f0> " << std::to_string(task_proto.id())
+               << "\\n | <f1> " << std::to_string(task_proto.thrd_local_id())
+               << "\\n | <f2> " << std::to_string(task_proto.parallel_id())
                << " }\", shape=box];\n";
-    for (auto& regst_desc_pair : task_proto.produced_regst_desc()) {
-      regst_desc_set.insert(regst_desc_pair.second.regst_desc_id());
+    for (const auto& pair : task_proto.produced_regst_desc()) {
+      regst_desc_ids.insert(pair.second.regst_desc_id());
     }
   }
-  for (auto& regst_desc_id : regst_desc_set) {
-    out_stream << "regst_desc" << std::to_string(regst_desc_id) << "[label=\""
-               << std::to_string(regst_desc_id) << "\", shape=ellipse];\n";
+  // regst_desc
+  for (const int64_t regst_task_id : regst_desc_ids) {
+    out_stream << "regst_desc" << std::to_string(regst_task_id) << "[label=\""
+               << std::to_string(regst_task_id) << "\", shape=ellipse];\n";
   }
-  for (auto& task_proto : plan.task()) {
-    for (auto& regst_desc_pair : task_proto.produced_regst_desc()) {
+  for (const TaskProto& task_proto : plan.task()) {
+    // task -> regst_desc
+    for (const auto& pair : task_proto.produced_regst_desc()) {
       out_stream << "task" << std::to_string(task_proto.id()) << "->regst_desc"
-                 << std::to_string(regst_desc_pair.second.regst_desc_id())
-                 << ";\n";
+                 << std::to_string(pair.second.regst_desc_id()) << ";\n";
     }
-  }
-  for (auto& task_proto : plan.task()) {
-    for (auto& regst_desc_pair : task_proto.produced_regst_desc()) {
-      if (regst_desc_set.find(regst_desc_pair.second.regst_desc_id())
-          == regst_desc_set.end()) {
-        continue;
-      }
-      for (auto subscriber_task_id :
-           regst_desc_pair.second.subscriber_task_id()) {
-        out_stream << "regst_desc"
-                   << std::to_string(regst_desc_pair.second.regst_desc_id())
-                   << "->task" << std::to_string(subscriber_task_id) << ";\n";
-      }
-      regst_desc_set.erase(regst_desc_pair.second.regst_desc_id());
+    // regst_desc -> task
+    for (const auto& pair : task_proto.subscribed_regst_desc_id()) {
+      out_stream << "regst_desc" << std::to_string(pair.second) << "->task"
+                 << std::to_string(task_proto.id()) << ";\n";
     }
   }
   out_stream << "}\n";
