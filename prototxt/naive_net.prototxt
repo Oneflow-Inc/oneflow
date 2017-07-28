@@ -3,7 +3,9 @@ op {
   data_loader_conf {
     feature: "feature"
     shape_of_one_feature_ins {
-      dim: 784
+      dim: 1
+      dim: 28
+      dim: 28
     }
     label: "label"
     data_dir: "./mnist/"
@@ -11,26 +13,26 @@ op {
 }
 
 op {
-  name: "ip4096_784"
-  innerproduct_conf {
+  name: "conv"
+  convolution_conf {
     in: "mnist/feature"
     out: "out"
-    out_num: 4096
+    out_num: 20
+    kernel_size: 5
+    kernel_size: 5
+    pad: 0
+    pad: 0
+    stride: 1
+    stride: 1
+    dilation: 1
+    dilation: 1
   }
 }
 
 op {
-  name: "relu_4096"
-  relu_conf {
-    in: "ip4096_784/out"
-    out: "out"
-  }
-}
-
-op {
-  name: "ip10_4096"
+  name: "ip"
   innerproduct_conf {
-    in: "relu_4096/out"
+    in: "conv/out"
     out: "out"
     out_num: 10
   }
@@ -39,7 +41,7 @@ op {
 op {
   name: "softmax"
   softmax_conf {
-    in: "ip10_4096/out"
+    in: "ip/out"
     out: "out"
   }
 }

@@ -64,7 +64,7 @@ int MdUpdtCompActor::HandlerBeforeSendInitialModel(const ActorMsg& actor_msg) {
     OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerNormal);
   } else {
     AsyncSendEORDMsgToSubscribers(model_regst_desc_id_);
-    OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerWaitUntilReadingCntEqualZero);
+    OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerZombie);
   }
   return 0;
 }
@@ -94,7 +94,7 @@ int MdUpdtCompActor::HandlerWaitUntilNoReadableRegst(
   ActUntilFail();
   if (waiting_model_diff_acc_queue_.empty()) {
     AsyncSendEORDMsgToSubscribers(model_regst_desc_id_);
-    OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerWaitUntilReadingCntEqualZero);
+    OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerZombie);
   }
   return 0;
 }
@@ -121,13 +121,17 @@ void MdUpdtCompActor::Act() {
         [this](int64_t actor_id) { return actor_id == related_save_task_id_; });
     CHECK(!IsReadReady());
     AsyncSendEORDMsgToSubscribers(model_regst_desc_id_);
-    if (total_reading_cnt() == 0) {
-      OF_SET_MSG_HANDLER(nullptr);
-    } else {
-      OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerWaitUntilReadingCntEqualZero);
-    }
+    TrySwitchToZombie();
   } else {
-    AsyncSendReadableRegstMsg();
+    if (next_model_version_id_
+            % JobDesc::Singleton()->num_of_batches_in_snapshot()
+        == 0) {
+      AsyncSendReadableRegstMsg();
+    } else {
+      AsyncSendReadableRegstMsg([this](int64_t actor_id) {
+        return actor_id != related_save_task_id_;
+      });
+    }
   }
   next_model_version_id_ += 1;
 }

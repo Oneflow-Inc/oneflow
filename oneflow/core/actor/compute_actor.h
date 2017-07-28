@@ -16,7 +16,9 @@ class CompActor : public Actor {
   virtual void Init(const TaskProto& task_proto,
                     const ThreadCtx& thread_ctx) override {
     Actor::Init(task_proto, thread_ctx);
+    parallel_policy_ = task_proto.parallel_policy();
     parallel_id_ = task_proto.parallel_id();
+    parallel_num_ = task_proto.parallel_num();
   }
 
   ParallelPolicy parallel_policy() const { return parallel_policy_; }

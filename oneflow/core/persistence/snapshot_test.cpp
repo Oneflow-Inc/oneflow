@@ -25,8 +25,8 @@ TEST(Snapshot, write_and_read) {
   // write
   {
     Snapshot snapshot_write(snapshot_root_path);
-    auto write_stream1_ptr = snapshot_write.GetOutStream(key, 0);
-    auto write_stream2_ptr = snapshot_write.GetOutStream(key, 1);
+    auto write_stream1_ptr = snapshot_write.GetOutStream(key, 0, 2);
+    auto write_stream2_ptr = snapshot_write.GetOutStream(key, 1, 2);
     (*write_stream1_ptr) << 'a';
     (*write_stream2_ptr) << 'b';
   }

@@ -163,7 +163,11 @@ void Compiler::EraseMeaningLessRegsts() {
 void Compiler::GenPlanFile(const std::string& plan_filepath) {
   Plan plan;
   ForEachTaskNode([&plan](const TaskNode* node) {
-    if (!node->IsMeaningLess()) { node->ToProto(plan.mutable_task()->Add()); }
+    if (!node->IsMeaningLess()) {
+      node->ToProto(plan.mutable_task()->Add());
+    } else {
+      LOG(INFO) << "Removed Task " << node->task_id();
+    }
   });
 
   OpMgr::Singleton()->AllOpToProto(plan.mutable_op());
