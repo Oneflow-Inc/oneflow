@@ -2,7 +2,6 @@
 #define ONEFLOW_CORE_DISTRIBUTED_RUNTIME_MASTER_H_
 
 #include "oneflow/core/distributed_runtime/master.pb.h"
-#include "oneflow/core/distributed_runtime/master_service.pb.h"
 #include "tensorflow/core/lib/core/status.h"
 
 namespace oneflow {

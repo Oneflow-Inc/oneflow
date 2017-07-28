@@ -1,6 +1,8 @@
 # main cpp
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/compiler.cpp)
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/runtime.cpp)
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/distributed_runtime/cluster_node.cpp)
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/distributed_runtime/cluster_client.cpp)
 
 # source_group
 if(WIN32)

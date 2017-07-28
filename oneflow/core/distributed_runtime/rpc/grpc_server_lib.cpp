@@ -18,33 +18,20 @@ limitations under the License.
 #include <cstring>
 #include <limits>
 #include <memory>
+#include <thread>
 
 #include "grpc++/grpc++.h"
 #include "grpc++/security/credentials.h"
 #include "grpc++/server_builder.h"
 #include "grpc/support/alloc.h"
 
-// #include "tensorflow/core/common_runtime/device_factory.h"
-// #include "tensorflow/core/common_runtime/device_mgr.h"
-// #include "tensorflow/core/common_runtime/process_util.h"
-// #include "tensorflow/core/distributed_runtime/graph_mgr.h"
 #include "oneflow/core/distributed_runtime/local_master.h"
 #include "oneflow/core/distributed_runtime/master.h"
-// #include "tensorflow/core/distributed_runtime/master_env.h"
-// #include "tensorflow/core/distributed_runtime/master_session.h"
 #include "oneflow/core/distributed_runtime/rpc/async_service_interface.h"
-// #include "oneflow/core/distributed_runtime/rpc/grpc_channel.h"
 #include "oneflow/core/distributed_runtime/rpc/grpc_master_service.h"
-// #include "tensorflow/core/distributed_runtime/rpc/grpc_worker_cache.h"
-// #include "tensorflow/core/distributed_runtime/rpc/grpc_worker_service.h"
-// #include "tensorflow/core/distributed_runtime/rpc/rpc_rendezvous_mgr.h"
 #include "oneflow/core/distributed_runtime/server_lib.h"
-// #include "oneflow/core/distributed_runtime/worker_env.h"
-// #include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/lib/strings/strcat.h"
-// #include "tensorflow/core/platform/env.h"
 #include "tensorflow/core/platform/mem.h"
-// #include "tensorflow/core/public/session_options.h"
 
 namespace oneflow {
 
@@ -61,19 +48,13 @@ class NoReusePortOption : public ::grpc::ServerBuilderOption {
   void UpdatePlugins(std::vector<std::unique_ptr<::grpc::ServerBuilderPlugin>>*
                          plugins) override {}
 };
-
-//// static utility function
-// RendezvousMgrInterface* NewRpcRendezvousMgr(const WorkerEnv* env) {
-//  return new RpcRendezvousMgr(env);
-//}
-
 }  // namespace
 
-GrpcServer::GrpcServer(const ::tensorflow::ServerDef& server_def)
+GrpcServer::GrpcServer(const ServerDef& server_def)
     : server_def_(server_def), state_(NEW) {}
 
 GrpcServer::~GrpcServer() {
-  TF_CHECK_OK(Stop());
+  // TF_CHECK_OK(Stop());
   TF_CHECK_OK(Join());
 
   delete master_service_;
@@ -103,148 +84,152 @@ GrpcServer::~GrpcServer() {
   // - worker_env_.compute_pool
 }
 
-//::tensorflow::Status GrpcServer::Init(
-//    ServiceInitFunction service_func,
-//    const RendezvousMgrCreationFunction& rendezvous_mgr_func) {
-//  mutex_lock l(mu_);
-//  CHECK_EQ(state_, NEW);
-//  master_env_.env = env_;
-//  worker_env_.env = env_;
-//
-//  SessionOptions sess_opts;
-//  ConfigProto config = server_def_.default_session_config();
-//  sess_opts.config = config;
-//
-//  // Configure shared devices between master and worker.
-//  string name_prefix =
-//      strings::StrCat("/job:", server_def_.job_name(), "/replica:0",
-//                      "/task:", server_def_.task_index());
-//  TF_RETURN_IF_ERROR(DeviceFactory::AddDevices(sess_opts, name_prefix,
-//                                               &master_env_.local_devices));
-//  worker_env_.local_devices = master_env_.local_devices;
-//  worker_env_.device_mgr = new DeviceMgr(worker_env_.local_devices);
-//  worker_env_.rendezvous_mgr = rendezvous_mgr_func == nullptr
-//                                   ? new RpcRendezvousMgr(&worker_env_)
-//                                   : rendezvous_mgr_func(&worker_env_);
-//  string unused;
-//  string default_worker_name;
-//  if (!DeviceNameUtils::SplitDeviceName(master_env_.local_devices[0]->name(),
-//                                        &default_worker_name, &unused)) {
-//    return errors::Internal("Could not parse worker name.");
-//  }
-//
-//  // Look up the port that has been requested for this task in `server_def_`.
-//  int requested_port = -1;
-//  for (const auto& job : server_def_.cluster().job()) {
-//    if (job.name() == server_def_.job_name()) {
-//      auto iter = job.tasks().find(server_def_.task_index());
-//      if (iter == job.tasks().end()) {
-//        return errors::InvalidArgument("Task ", server_def_.task_index(),
-//                                       " was not defined in job \"",
-//                                       server_def_.job_name(), "\"");
-//      }
-//      const std::vector<string> hostname_port =
-//          str_util::Split(iter->second, ':');
-//      if (hostname_port.size() != 2 ||
-//          !strings::safe_strto32(hostname_port[1], &requested_port)) {
-//        return errors::InvalidArgument(
-//            "Could not parse port for local server from \"", iter->second,
-//            "\"");
-//      } else {
-//        break;
-//      }
-//    }
-//  }
-//  if (requested_port == -1) {
-//    return errors::Internal("Job \"", server_def_.job_name(),
-//                            "\" was not defined in cluster");
-//  }
-//
-//  // N.B. The order of initialization here is intricate, because we
-//  // wish to allow `requested_port == 0` (for choosing any port,
-//  // mostly for testing). Therefore, the construction of the channel
-//  // and worker caches depends on `bound_port_`, which is not set
-//  // until we call `builder.BuildAndStart()`. We must create the
-//  // service objects before calling `builder.BuildAndStart()`, but
-//  // `master_env_` and `worker_env_` are only partially
-//  // configured. However, this is not dangerous, because we do not
-//  // start serving requests until `this->Start()` is called, which
-//  // happens after this method returns.
-//  //
-//  // TODO(mrry): Provide a general mechanism for dynamically setting
-//  // the identities of tasks in the worker pool after the service is
-//  // running.
-//  ::grpc::ServerBuilder builder;
-//  builder.AddListeningPort(strings::StrCat("0.0.0.0:", requested_port),
-//                           GetServerCredentials(server_def_), &bound_port_);
-//  builder.SetMaxMessageSize(std::numeric_limits<int32>::max());
-//  builder.SetOption(
-//      std::unique_ptr<::grpc::ServerBuilderOption>(new NoReusePortOption));
-//  master_impl_ = CreateMaster(&master_env_);
-//  master_service_ = NewGrpcMasterService(
-//      master_impl_.get(), config.operation_timeout_in_ms(), &builder);
-//  worker_impl_ = NewGrpcWorker(&worker_env_);
-//  worker_service_ =
-//      NewGrpcWorkerService(worker_impl_.get(), &builder).release();
-//  // extra service:
-//  if (service_func != nullptr) {
-//    service_func(&worker_env_, &builder);
-//  }
-//  server_ = builder.BuildAndStart();
-//
-//  if (!server_) {
-//    return errors::Unknown("Could not start gRPC server");
-//  }
-//
-//  WorkerCacheInterface* worker_cache;
-//  WorkerCacheFactoryOptions worker_cache_factory_options(server_def_);
-//  TF_RETURN_IF_ERROR(
-//      WorkerCacheFactory(worker_cache_factory_options, &worker_cache));
-//  CHECK_NE(nullptr, worker_cache);
-//
-//  // Set up worker environment.
-//  worker_env_.session_mgr = new SessionMgr(
-//      &worker_env_, SessionMgr::WorkerNameFromServerDef(server_def_),
-//      std::unique_ptr<WorkerCacheInterface>(worker_cache),
-//      [this](const ServerDef& server_def, WorkerCacheInterface** worker_cache)
-//      {
-//        WorkerCacheFactoryOptions options(server_def);
-//        return WorkerCacheFactory(options, worker_cache);
-//      });
-//  worker_env_.compute_pool = ComputePool(sess_opts);
-//
-//  // Finish setting up master environment.
-//  master_env_.ops = OpRegistry::Global();
-//  master_env_.worker_cache = worker_cache;
-//  master_env_.master_session_factory =
-//      [config](
-//          SessionOptions options, const MasterEnv* env,
-//          std::unique_ptr<std::vector<std::unique_ptr<Device>>> remote_devs,
-//          std::unique_ptr<WorkerCacheInterface> worker_cache,
-//          std::unique_ptr<DeviceSet> device_set) {
-//        options.config.MergeFrom(config);
-//        return new MasterSession(options, env, std::move(remote_devs),
-//                                 std::move(worker_cache),
-//                                 std::move(device_set),
-//                                 CreateNoOpStatsPublisher);
-//      };
-//  master_env_.worker_cache_factory =
-//      [this](const WorkerCacheFactoryOptions& options,
-//             WorkerCacheInterface** worker_cache) {
-//        return WorkerCacheFactory(options, worker_cache);
-//      };
-//
-//  // Provide direct access to the master from in-process clients.
-//  LocalMaster::Register(target(), master_impl_.get(),
-//                        config.operation_timeout_in_ms());
-//
-//  return Status::OK();
-//}
-
 ::tensorflow::Status GrpcServer::Init() {
-  // return Init(nullptr, nullptr);
-  return ::tensorflow::Status();
+  ::tensorflow::mutex_lock l(mu_);
+  CHECK_EQ(state_, NEW);
+  GetCtrlPlaneAddr();
+  // master_env_.env = env_;
+  // worker_env_.env = env_;
+
+  // SessionOptions sess_opts;
+  // ConfigProto config = server_def_.default_session_config();
+  // sess_opts.config = config;
+
+  //// Configure shared devices between master and worker.
+  // string name_prefix =
+  //    strings::StrCat("/job:", server_def_.job_name(), "/replica:0",
+  //                    "/task:", server_def_.task_index());
+  // TF_RETURN_IF_ERROR(DeviceFactory::AddDevices(sess_opts, name_prefix,
+  //                                             &master_env_.local_devices));
+  // worker_env_.local_devices = master_env_.local_devices;
+  // worker_env_.device_mgr = new DeviceMgr(worker_env_.local_devices);
+  // worker_env_.rendezvous_mgr = rendezvous_mgr_func == nullptr
+  //                                 ? new RpcRendezvousMgr(&worker_env_)
+  //                                 : rendezvous_mgr_func(&worker_env_);
+  // string unused;
+  // string default_worker_name;
+  // if (!DeviceNameUtils::SplitDeviceName(master_env_.local_devices[0]->name(),
+  //                                      &default_worker_name, &unused)) {
+  //  return errors::Internal("Could not parse worker name.");
+  //}
+
+  // Look up the port that has been requested for this task in `server_def_`.
+  // int requested_port = -1;
+  // for (const auto& job : server_def_.cluster().job()) {
+  //  if (job.name() == server_def_.job_name()) {
+  //    auto iter = job.tasks().find(server_def_.task_index());
+  //    if (iter == job.tasks().end()) {
+  //      return errors::InvalidArgument("Task ", server_def_.task_index(),
+  //                                     " was not defined in job \"",
+  //                                     server_def_.job_name(), "\"");
+  //    }
+  //    const std::vector<string> hostname_port =
+  //        str_util::Split(iter->second, ':');
+  //    if (hostname_port.size() != 2 ||
+  //        !strings::safe_strto32(hostname_port[1], &requested_port)) {
+  //      return errors::InvalidArgument(
+  //          "Could not parse port for local server from \"", iter->second,
+  //          "\"");
+  //    } else {
+  //      break;
+  //    }
+  //  }
+  //}
+  // if (requested_port == -1) {
+  //  return errors::Internal("Job \"", server_def_.job_name(),
+  //                          "\" was not defined in cluster");
+  //}
+
+  // N.B. The order of initialization here is intricate, because we
+  // wish to allow `requested_port == 0` (for choosing any port,
+  // mostly for testing). Therefore, the construction of the channel
+  // and worker caches depends on `bound_port_`, which is not set
+  // until we call `builder.BuildAndStart()`. We must create the
+  // service objects before calling `builder.BuildAndStart()`, but
+  // `master_env_` and `worker_env_` are only partially
+  // configured. However, this is not dangerous, because we do not
+  // start serving requests until `this->Start()` is called, which
+  // happens after this method returns.
+  //
+  // TODO(mrry): Provide a general mechanism for dynamically setting
+  // the identities of tasks in the worker pool after the service is
+  // running.
+  std::string server_address =
+      ::tensorflow::strings::StrCat(bound_ip_, ":", bound_port_);
+  ::grpc::ServerBuilder builder;
+  builder.AddListeningPort(server_address, ::grpc::InsecureServerCredentials());
+
+  //::grpc::ServerBuilder builder;
+  // builder.AddListeningPort(::tensorflow::strings::StrCat("0.0.0.0:",
+  //                         requested_port),
+  //                         GetServerCredentials(server_def_), &bound_port_);
+  // builder.SetMaxMessageSize(std::numeric_limits<int32_t>::max());
+  // builder.SetOption(
+  //    std::unique_ptr<::grpc::ServerBuilderOption>(new NoReusePortOption));
+  master_impl_ = CreateMaster();
+  master_service_ = NewGrpcMasterService(master_impl_.get(), &builder);
+  // worker_impl_ = NewGrpcWorker(&worker_env_);
+  // worker_service_ =
+  //    NewGrpcWorkerService(worker_impl_.get(), &builder).release();
+  //// extra service:
+  // if (service_func != nullptr) {
+  //  service_func(&worker_env_, &builder);
+  //}
+  server_ = builder.BuildAndStart();
+
+  if (!server_) {
+    return ::tensorflow::errors::Unknown("Could not start gRPC server");
+  }
+
+  // WorkerCacheInterface* worker_cache;
+  // WorkerCacheFactoryOptions worker_cache_factory_options(server_def_);
+  // TF_RETURN_IF_ERROR(
+  //    WorkerCacheFactory(worker_cache_factory_options, &worker_cache));
+  // CHECK_NE(nullptr, worker_cache);
+
+  //// Set up worker environment.
+  // worker_env_.session_mgr = new SessionMgr(
+  //    &worker_env_, SessionMgr::WorkerNameFromServerDef(server_def_),
+  //    std::unique_ptr<WorkerCacheInterface>(worker_cache),
+  //    [this](const ServerDef& server_def, WorkerCacheInterface** worker_cache)
+  //    {
+  //      WorkerCacheFactoryOptions options(server_def);
+  //      return WorkerCacheFactory(options, worker_cache);
+  //    });
+  // worker_env_.compute_pool = ComputePool(sess_opts);
+
+  // Finish setting up master environment.
+  // master_env_.ops = OpRegistry::Global();
+  // master_env_.worker_cache = worker_cache;
+  // master_env_.master_session_factory =
+  //    [config](
+  //        SessionOptions options, const MasterEnv* env,
+  //        std::unique_ptr<std::vector<std::unique_ptr<Device>>> remote_devs,
+  //        std::unique_ptr<WorkerCacheInterface> worker_cache,
+  //        std::unique_ptr<DeviceSet> device_set) {
+  //      options.config.MergeFrom(config);
+  //      return new MasterSession(options, env, std::move(remote_devs),
+  //                               std::move(worker_cache),
+  //                               std::move(device_set),
+  //                               CreateNoOpStatsPublisher);
+  //    };
+  // master_env_.worker_cache_factory =
+  //    [this](const WorkerCacheFactoryOptions& options,
+  //           WorkerCacheInterface** worker_cache) {
+  //      return WorkerCacheFactory(options, worker_cache);
+  //    };
+
+  // Provide direct access to the master from in-process clients.
+  // LocalMaster::Register(target(), master_impl_.get(),
+  //                      config.operation_timeout_in_ms());
+
+  return ::tensorflow::Status::OK();
 }
+
+//::tensorflow::Status GrpcServer::Init() {
+//  // return Init(nullptr, nullptr);
+//  return ::tensorflow::Status();
+//}
 
 // Status GrpcServer::ParseChannelSpec(const WorkerCacheFactoryOptions& options,
 //                                    GrpcChannelSpec* channel_spec) {
@@ -311,64 +296,78 @@ GrpcServer::~GrpcServer() {
 //  return Status::OK();
 //}
 
+void GrpcServer::GetCtrlPlaneAddr() {
+  this_node_name_ = server_def_.this_node_name();
+
+  std::unordered_map<std::string, ClusterNode> name2node;
+  int32_t node_num = server_def_.cluster_def().cluster_node_size();
+  for (int32_t i = 0; i < node_num; ++i) {
+    std::string node_name =
+        server_def_.cluster_def().cluster_node(i).node_name();
+    ClusterNode cluster_node = server_def_.cluster_def().cluster_node(i);
+    CHECK(name2node.insert(std::make_pair(node_name, cluster_node)).second);
+  }
+
+  auto node_it = name2node.find(this_node_name_);
+  CHECK(node_it != name2node.end());
+  bound_ip_ = node_it->second.ctrl_plane_addr().addr();
+  std::string port = node_it->second.ctrl_plane_addr().port();
+  if (!::tensorflow::strings::safe_strto32(port, &bound_port_)) {
+    LOG(FATAL) << "Could not parse port for local server from " << port;
+  }
+}
 ::tensorflow::Status GrpcServer::Start() {
-  //::tensorflow::mutex_lock l(mu_);
-  // switch (state_) {
-  //  case NEW: {
-  //    master_thread_.reset(
-  //        env_->StartThread(ThreadOptions(), "TF_master_service",
-  //                          [this] { master_service_->HandleRPCsLoop(); }));
-  //    worker_thread_.reset(
-  //        env_->StartThread(ThreadOptions(), "TF_worker_service",
-  //                          [this] { worker_service_->HandleRPCsLoop(); }));
-  //    state_ = STARTED;
-  //    LOG(INFO) << "Started server with target: " << target();
-  //    return Status::OK();
-  //  }
-  //  case STARTED:
-  //    LOG(INFO) << "Server already started (target: " << target() << ")";
-  //    return Status::OK();
-  //  case STOPPED:
-  //    return errors::FailedPrecondition("Server has stopped.");
-  //  default:
-  //    CHECK(false);
-  //}
+  ::tensorflow::mutex_lock l(mu_);
+  switch (state_) {
+    case NEW: {
+      master_thread_ =
+          std::thread(&AsyncServiceInterface::HandleRPCsLoop, master_service_);
+      state_ = STARTED;
+      LOG(INFO) << "Started server with target: " << target();
+      return ::tensorflow::Status::OK();
+    }
+    case STARTED:
+      LOG(INFO) << "Server already started (target: " << target() << ")";
+      return ::tensorflow::Status::OK();
+    case STOPPED:
+      return ::tensorflow::errors::FailedPrecondition("Server has stopped.");
+    default: CHECK(false);
+  }
   return ::tensorflow::Status();
 }
 
 ::tensorflow::Status GrpcServer::Stop() {
-  // mutex_lock l(mu_);
-  // switch (state_) {
-  //  case NEW:
-  //    state_ = STOPPED;
-  //    return Status::OK();
-  //  case STARTED:
-  //    return errors::Unimplemented(
-  //        "Clean shutdown is not currently implemented");
-  //  case STOPPED:
-  //    LOG(INFO) << "Server already stopped (target: " << target() << ")";
-  //    return Status::OK();
-  //  default:
-  //    CHECK(false);
-  //}
+  ::tensorflow::mutex_lock l(mu_);
+  switch (state_) {
+    case NEW: state_ = STOPPED; return ::tensorflow::Status::OK();
+    case STARTED:
+      // return ::tensorflow::errors::Unimplemented(
+      //    "Clean shutdown is not currently implemented");
+      master_service_->Shutdown();
+      return ::tensorflow::Status::OK();
+    case STOPPED:
+      LOG(INFO) << "Server already stopped (target: " << target() << ")";
+      return ::tensorflow::Status::OK();
+    default: CHECK(false);
+  }
   return ::tensorflow::Status();
 }
 
 ::tensorflow::Status GrpcServer::Join() {
-  // mutex_lock l(mu_);
-  // switch (state_) {
-  //  case NEW:
-  //    // Prevent the server from being started subsequently.
-  //    state_ = STOPPED;
-  //    return Status::OK();
-  //  case STARTED:
-  //  case STOPPED:
-  //    master_thread_.reset();
-  //    worker_thread_.reset();
-  //    return Status::OK();
-  //  default:
-  //    CHECK(false);
-  //}
+  ::tensorflow::mutex_lock l(mu_);
+  switch (state_) {
+    case NEW:
+      // Prevent the server from being started subsequently.
+      state_ = STOPPED;
+      return ::tensorflow::Status::OK();
+    case STARTED:
+    case STOPPED:
+      master_thread_.join();
+      // master_thread_.reset();
+      // worker_thread_.reset();
+      return ::tensorflow::Status::OK();
+    default: CHECK(false);
+  }
   return ::tensorflow::Status();
 }
 
@@ -376,10 +375,6 @@ const std::string GrpcServer::target() const {
   return ::tensorflow::strings::StrCat("grpc://localhost:", bound_port_);
 }
 
-// std::shared_ptr<::grpc::ServerCredentials> GrpcServer::GetServerCredentials(
-//    const ServerDef& server_def) const {
-//  return ::grpc::InsecureServerCredentials();
-//}
 //
 // ChannelCreationFunction GrpcServer::GetChannelCreationFunction() const {
 //  // We can do this because SparseGrpcChannelCache is robust to nullptr being
@@ -387,20 +382,18 @@ const std::string GrpcServer::target() const {
 //  return ConvertToChannelCreationFunction(NewHostPortGrpcChannel);
 //}
 //
-// std::unique_ptr<Master> GrpcServer::CreateMaster(MasterEnv* master_env) {
-//  return std::unique_ptr<Master>(new Master(master_env, 0.0));
-//}
+std::unique_ptr<Master> GrpcServer::CreateMaster() {
+  return std::unique_ptr<Master>(new Master());
+}
 
 /* static */
-// Status GrpcServer::Create(const ServerDef& server_def, Env* env,
-//                          std::unique_ptr<ServerInterface>* out_server) {
-//  std::unique_ptr<GrpcServer> ret(
-//      new GrpcServer(server_def, env == nullptr ? Env::Default() : env));
-//  ServiceInitFunction service_func = nullptr;
-//  TF_RETURN_IF_ERROR(ret->Init(service_func, NewRpcRendezvousMgr));
-//  *out_server = std::move(ret);
-//  return Status::OK();
-//}
+::tensorflow::Status GrpcServer::Create(
+    const ServerDef& server_def, std::unique_ptr<ServerInterface>* out_server) {
+  std::unique_ptr<GrpcServer> ret(new GrpcServer(server_def));
+  TF_RETURN_IF_ERROR(ret->Init());
+  *out_server = std::move(ret);
+  return ::tensorflow::Status::OK();
+}
 
 namespace {
 

@@ -24,6 +24,7 @@ limitations under the License.
 // #include "tensorflow/core/distributed_runtime/master_env.h"
 #include "oneflow/core/distributed_runtime/rpc/async_service_interface.h"
 // #include "oneflow/core/distributed_runtime/rpc/grpc_channel.h"
+#include "oneflow/core/distributed_runtime/server_def.pb.h"
 #include "oneflow/core/distributed_runtime/server_lib.h"
 // #include "tensorflow/core/distributed_runtime/session_mgr.h"
 // #include "tensorflow/core/distributed_runtime/worker_env.h"
@@ -46,11 +47,11 @@ class Master;
 
 class GrpcServer : public ServerInterface {
  protected:
-  GrpcServer(const ::tensorflow::ServerDef& server_def);
+  GrpcServer(const ServerDef& server_def);
 
  public:
   static ::tensorflow::Status Create(
-      const ::tensorflow::ServerDef& server_def,
+      const ServerDef& server_def,
       std::unique_ptr<ServerInterface>* out_server);
 
   // Destruction is only supported in the factory method. Clean
@@ -75,7 +76,7 @@ class GrpcServer : public ServerInterface {
 
   // virtual ChannelCreationFunction GetChannelCreationFunction() const;
 
-  // virtual std::unique_ptr<Master> CreateMaster(MasterEnv* master_env);
+  virtual std::unique_ptr<Master> CreateMaster();
 
   //// Creates a WorkerCacheInterface for a session.
   // Status WorkerCacheFactory(const WorkerCacheFactoryOptions& options,
@@ -85,19 +86,26 @@ class GrpcServer : public ServerInterface {
   // Status ParseChannelSpec(const WorkerCacheFactoryOptions& options,
   //                        GrpcChannelSpec* channel_spec);
 
+  void GetCtrlPlaneAddr();
+
   // Returns the port to which this server is bound.
   // This method may only be called after `this->Init()` returns successfully.
   int bound_port() const { return bound_port_; }
 
+  std::string bound_ip() const { return bound_ip_; }
+
   // WorkerEnv* worker_env() { return &worker_env_; }
 
-  const ::tensorflow::ServerDef& server_def() const { return server_def_; }
+  const ServerDef& server_def() const { return server_def_; }
 
  private:
   // The overall server configuration.
-  const ::tensorflow::ServerDef server_def_;
+  const ServerDef server_def_;
   // Env* env_;
 
+  std::string this_node_name_;
+  // The IP address which this server uses
+  std::string bound_ip_;
   // The port to which this server is bound.
   int bound_port_ = 0;
 
@@ -120,7 +128,8 @@ class GrpcServer : public ServerInterface {
   // MasterEnv master_env_;
   std::unique_ptr<Master> master_impl_;
   AsyncServiceInterface* master_service_ = nullptr;
-  std::unique_ptr<::tensorflow::Thread> master_thread_ GUARDED_BY(mu_);
+  // std::unique_ptr<::tensorflow::Thread> master_thread_ GUARDED_BY(mu_);
+  std::thread master_thread_;
 
   //// Implementation of a TensorFlow worker, and RPC polling thread.
   // WorkerEnv worker_env_;

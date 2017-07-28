@@ -17,7 +17,20 @@ limitations under the License.
 #define ONEFLOW_CORE_DISTRIBUTED_RUNTIME_RPC_GRPC_MASTER_SERVICE_H_
 
 #include <memory>
+#include "grpc++/alarm.h"
+#include "grpc++/server_builder.h"
+
+#include "oneflow/core/distributed_runtime/master.h"
+#include "oneflow/core/distributed_runtime/rpc/async_service_interface.h"
+#include "oneflow/core/distributed_runtime/rpc/grpc_call.h"
+#include "oneflow/core/distributed_runtime/rpc/grpc_master_service_impl.h"
+#include "oneflow/core/distributed_runtime/rpc/grpc_util.h"
+
+#include "tensorflow/core/platform/logging.h"
+#include "tensorflow/core/platform/macros.h"
+#include "tensorflow/core/platform/tracing.h"
 #include "tensorflow/core/platform/types.h"
+#include "tensorflow/core/protobuf/master.pb.h"
 
 namespace grpc {
 class ServerBuilder;
@@ -28,6 +41,54 @@ namespace oneflow {
 class AsyncServiceInterface;
 class Master;
 
+// GrpcMasterService implements the RPC service MasterSerivce.
+//
+// A GrpcMasterService maintains the state of live graph computation
+// sessions, each session orchestrates both local and remote devices
+// to carry out the graph computation.
+//
+// A GrpcMasterService knows ahead of time local devices available as
+// client devices.
+//
+// A GrpcMasterService discovers remote devices in the background and
+// keeps track of statistics of those remote devices.
+//
+// Each session analyzes the graph, places nodes across available
+// devices, and ultimately drives the graph computation by initiating
+// RunGraph on workers.
+
+class GrpcMasterService : public AsyncServiceInterface {
+ public:
+  GrpcMasterService(Master* master, ::grpc::ServerBuilder* builder)
+      : master_impl_(master), is_shutdown_(false) {
+    builder->RegisterService(&master_service_);
+    cq_ = builder->AddCompletionQueue();
+  }
+
+  ~GrpcMasterService() override { delete shutdown_alarm_; }
+
+  void Shutdown() override;
+
+  void HandleRPCsLoop() override;
+
+ private:
+  Master* master_impl_ = nullptr;  // Not owned.
+  std::unique_ptr<::grpc::ServerCompletionQueue> cq_;
+  grpc::MasterService::AsyncService master_service_;
+
+  tensorflow::mutex mu_;
+  bool is_shutdown_ GUARDED_BY(mu_);
+  ::grpc::Alarm* shutdown_alarm_ = nullptr;
+
+  template<class RequestMessage, class ResponseMessage>
+  using MasterCall = Call<GrpcMasterService, grpc::MasterService::AsyncService,
+                          RequestMessage, ResponseMessage>;
+
+  void GrpcMasterService::SendJobHandler(
+      MasterCall<SendJobRequest, SendJobResponse>* call);
+
+  TF_DISALLOW_COPY_AND_ASSIGN(GrpcMasterService);
+};
 AsyncServiceInterface* NewGrpcMasterService(Master* master,
                                             ::grpc::ServerBuilder* builder);
 

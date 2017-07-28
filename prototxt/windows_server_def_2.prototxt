@@ -1,0 +1,25 @@
+cluster_def {
+  cluster_node {
+    ctrl_plane_addr {
+      addr : "11.11.1.109"
+      port : "5551"
+    }
+    data_plane_addr {
+      addr : "11.11.1.109"
+      port : "5552"
+    }
+    node_name: "win-oneflow2"
+  }
+  cluster_node {
+    ctrl_plane_addr {
+      addr : "11.11.1.132"
+      port : "5551"
+    }
+    data_plane_addr {
+      addr : "11.11.1.132"
+      port : "5552"
+    }
+    node_name: "win-oneflow1"
+  }
+}
+this_node_name : "win-oneflow2"
