@@ -17,7 +17,7 @@ class Blob {
   }
 
   template<typename T = void>
-  T* mut_dptr() const {
+  T* mut_dptr() {
     return static_cast<T*>(dptr_);
   }
 
