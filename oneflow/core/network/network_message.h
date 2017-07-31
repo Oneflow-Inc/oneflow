@@ -4,6 +4,8 @@
 
 namespace oneflow {
 
+typedef std::shared_ptr<ActorMsg> MsgPtr;
+
 enum NetworkMessageType {
   kBarrier = 0,
   kReplyBarrier = 1,

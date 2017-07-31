@@ -20,7 +20,7 @@ class RdmaWrapper {
   RdmaWrapper();
   ~RdmaWrapper();
 
-  void Init(const char* addr, int port);
+  void Init(const char* my_ip, int32_t my_port);
   void Destroy();
 
   void CreateConnector(Connection* conn);

@@ -12,8 +12,7 @@ class RdmaMemory final : public NetworkMemory {
   using NetworkMemory::memory_;
   using NetworkMemory::size_;
 
-  RdmaMemory() = default;
-  RdmaMemory(struct ibv_mr* memory_region, struct ibv_pd* protect_domain);
+  explicit RdmaMemory(ibv_pd* protect_domain);
   ~RdmaMemory();
 
   void Register() override;
@@ -23,10 +22,8 @@ class RdmaMemory final : public NetworkMemory {
 
  private:
   ibv_sge sge_;
-  ibv_pd* protect_domain_;  // TODO(shiyuan) delete
-  ibv_mr* memory_region_;  // TODO(shiyuan) delete
-  RdmaMemory(const RdmaMemory&) = delete;
-  void operator=(const RdmaMemory&) = delete;
+  ibv_pd* protect_domain_;  // TODO(shiyuan) rdma_wrapper
+  ibv_mr* memory_region_;
 };
 
 }  // namespace oneflow

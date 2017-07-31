@@ -9,11 +9,7 @@ RequestPool::RequestPool() {
 RequestPool::~RequestPool() {
   for (auto& elemt : request_vector_) {
     CHECK(elemt);
-    // Firstly, release the |registered_message| of this request.
-    delete elemt->rdma_msg;
-    elemt->rdma_msg = nullptr;
-    // Secondly, release the request itself.
-    delete elemt;
+    ReleaseRequest(elemt);
   }
   // There are also some registered_message in |msg_pool_|, however, which will
   // be released in the desctructor of MessagePool.
@@ -35,6 +31,7 @@ void RequestPool::ReleaseRequest(Request* request) {
   msg_pool_->Free(request->rdma_msg);
   // Destroy the Request object
   delete request;
+  request = nullptr;
 }
 
 }  // namespace oneflow

@@ -7,13 +7,13 @@ namespace oneflow {
 
 namespace {
 
-sockaddr_in GetSocket(const char* address, int port) {
-  sockaddr_in sock = sockaddr_in();
-  memset(&sock, 0, sizeof(sockaddr_in));
-  inet_pton(AF_INET, address, &sock.sin_addr);
-  sock.sin_family = AF_INET;
-  sock.sin_port = htons(static_cast<u_short>(port));
-  return sock;
+sockaddr_in GetAddress(const char* ip, int32_t port) {
+  sockaddr_in addr = sockaddr_in();
+  memset(&addr, 0, sizeof(sockaddr_in));
+  inet_pton(AF_INET, address, &addr.sin_addr);
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons(static_cast<u_short>(port));
+  return addr;
 }
 
 }  // namespace
@@ -49,20 +49,20 @@ void Connection::set_overlapped(OVERLAPPED* ov) {
   ov_ = ov;
 }
 
-void Connection::Bind(const char* my_address, int port) {
-  sockaddr_in my_sock = GetSocket(my_address, port);
-  HRESULT hr = connector_->Bind(reinterpret_cast<const sockaddr*>(&my_sock),
-                                sizeof(my_sock));
+void Connection::Bind(const char* my_ip, int32_t my_port) {
+  sockaddr_in my_addr = GetAddress(my_ip, my_port);
+  HRESULT hr = connector_->Bind(reinterpret_cast<const sockaddr*>(&my_addr),
+                                sizeof(my_addr));
   CHECK(SUCCEEDED(hr));
 }
 
-bool Connection::TryConnectTo(const char* peer_address, int port) {
-  sockaddr_in peer_sock = GetSocket(peer_address, port);
-  CHECK(peer_sock);
+bool Connection::TryConnectTo(const char* peer_ip, int32_t peer_port) {
+  sockaddr_in peer_addr = GetAddress(peer_ip, peer_port);
+  CHECK(peer_addr);
   HRESULT hr = connector_->Connect(
       queue_pair_,
-      reinterpret_cast<const sockaddr*>(&peer_sock),
-      sizeof(peer_sock),
+      reinterpret_cast<const sockaddr*>(&peer_addr),
+      sizeof(peer_addr),
       10,      // inbound read limit, max in-flight number
       10,      // outbound read limit, max in-flight number
       &my_machine_id_,  // Send the active side machine id as private data to
@@ -106,6 +106,13 @@ void Connection::AcceptConnect() {
 
 void Connection::DestroyConnection() {
   delete ov_;
+  if (queue_pair_ != nullptr) {
+    // TODO(shiyuan)
+  }
+
+  if (connector_ != nullptr) {
+    // TODO(shiyuan)
+  }
 }
 
 void Connection::PostSendRequest(const Request& send_request) {

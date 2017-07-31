@@ -30,9 +30,9 @@ class RequestPool {
 
  private:
   std::vector<Request*> request_vector_;
-  std::shared_ptr<MessagePool<RdmaMessage>> msg_pool_;
+  std::unique_ptr<MessagePool<RdmaMessage>> msg_pool_;
   static const int32_t kBufferSize = 64;
-  std::function<void()> callback4recv_msg_;  // TODO(shiyuan)
+  std::function<void()> callback4recv_msg_;
 };
 
 }  // namespace oneflow

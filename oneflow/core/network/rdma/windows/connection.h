@@ -23,8 +23,8 @@ class Connection {
   Connection(int64_t my_machine_id, int64_t peer_machine_id);
   ~Connection();
 
-  void Bind(const char* my_address, int port);
-  bool TryConnectTo(const char* peer_address, int port);
+  void Bind(const char* my_ip, int32_t my_port);
+  bool TryConnectTo(const char* peer_ip, int32_t peer_port);
   void CompleteConnectionTo();
   void AcceptConnect();
 
@@ -49,12 +49,12 @@ class Connection {
   const OVERLAPPED& overlapped() { return *ov_; }
 
  private:
-  IND2Connector* connector_;
-  IND2QueuePair* queue_pair_;
-  OVERLAPPED* ov_;
-
   int64_t my_machine_id_;
   int64_t peer_machine_id_;
+  
+  IND2Connector* connector_;  // TODO(shiyuan) delete
+  IND2QueuePair* queue_pair_;  // TODO(shiyuan) delete
+  OVERLAPPED* ov_;
 };
 
 }  // namespace oneflow

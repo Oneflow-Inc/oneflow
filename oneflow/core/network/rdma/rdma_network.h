@@ -19,7 +19,8 @@ class RdmaNetwork final : public Network {
   void Init(int64_t my_machine_id, const NetworkTopology& net_topo) override;
   void Finalize() override;
 
-  NetworkMemory* RegisterMemory(void* dptr, size_t len) override;
+  NetworkMemory* RegisterMemory(void* dptr, size_t len,
+                                int64_t register_id = -1) override;
 
   void SendMessage(const NetworkMessage& msg) override;
   void SetCallbackForReceivedActorMsg(
@@ -35,47 +36,18 @@ class RdmaNetwork final : public Network {
   void InitConnections();
   Connection* NewConnection();
 
-  // Connection establishment routine
-  // NDSPI connection establishment follows an active/passive model, where
-  // passive side listens for connections requests initiated by active side
-
-  // If there is a connection between two nodes, we assume the node
-  // with smaller id/rank is the active side, while the node with larger id
-  // is the passive side.
-
-  // From the topo, we can get all the connections information, and know the
-  // number of nodes(connections) that one node need to listen passively,
-  // as well as the number of nodes(connections) that one node need to connect
-  // actively
-
-  // As passive side, create |listener_|, bind it and start listening
-  // void StartListen();
-  // All the active sides connect to the passive sides
+  // passive side listens for connections requests initiated by active side(smaller id/rank)
   void EstablishConnection();
 
   // |result| is owned by the caller, and the received message will be held in
   // result->net_msg, having result->type == NetworkResultType::kReceiveMsg.
   bool PollRecvQueue(NetworkResult* result);
 
-  // |result| is owned by the caller, there are two types of complection events
-  // for initiator:
-  // (1) successfully sends out a message to a peer, in this case:
-  //     result->type == NetworkResultType::kSendOk
-  // (2) successfully reads a piece of data from a peer, in this case:
-  //     result->type == NetworkResultType::kReadOk
-  //
+  // |result| is owned by the caller.
   // Both send request and read request are submitted to the send request queue.
   bool PollSendQueue(NetworkResult* result);
 
   const MemoryDescriptor& GetMemoryDescriptor(int64_t register_id) const;
-
-  // As active side, try to connect to others;
-  // return true if successfully, false if failed
-  // bool TryConnectTo(int64_t peer_machine_id);
-  // void CompleteConnectionTo(int64_t peer_machine_id);
-
-  // As passive side, prepare for others' connect
-  // int32_t WaitForConnection();
 
   // estimate the pre-post number
   static const int kPrePostRecvNumber = 16;  // TODO(shiyuan)
@@ -85,8 +57,8 @@ class RdmaNetwork final : public Network {
   int port_;
   NetworkTopology net_topo_;
 
-  std::shared_ptr<RequestPool> request_pool_;
-  std::shared_ptr<ConnectionPool> connection_pool_;
+  std::unique_ptr<RequestPool> request_pool_;
+  std::unique_ptr<ConnectionPool> connection_pool_;
 
   // build the dict of MemoryDescriptor
   std::unordered_map<int64_t, MemoryDescriptor> register_id_to_mem_descriptor_;

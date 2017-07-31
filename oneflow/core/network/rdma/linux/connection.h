@@ -35,8 +35,8 @@ class Connection {
   Connection(int64_t my_machine_id, int64_t peer_machine_id);
   ~Connection();
 
-  void Bind(const char* my_address, int port);
-  bool TryConnectTo(const char* peer_address, int port);
+  void Bind(const char* my_ip, int32_t my_port);
+  bool TryConnectTo(const char* peer_ip, int32_t peer_port);
   void CompleteConnectionTo();
   void AcceptConnect();
 
@@ -65,7 +65,7 @@ class Connection {
   ibv_qp* queue_pair_;
 
   sockaddr_in my_addr_;
-  int my_sock_;
+  int32_t my_sock_;
 };
 
 }  // namespace oneflow

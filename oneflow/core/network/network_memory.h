@@ -29,7 +29,7 @@ class NetworkMemory {
   //
   // Memory can be used as src memory in Write only after its previous Write
   // requests are all finished, since the id will be re
-  void Reset(void* memory, size_t size, int64_t id = -1) {
+  void Reset(void* memory, size_t size, int64_t id) {
     memory_ = memory;
     size_ = size;
     id_ = id;

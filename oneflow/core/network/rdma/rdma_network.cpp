@@ -5,11 +5,7 @@ namespace oneflow {
 RdmaNetwork::RdmaNetwork() 
   : rdma_wrapper_(nullptr),
     my_machine_id_(-1),
-    port_(-1) {
-  rdma_wrapper_.reset(new RdmaWrapper());
-  request_pool_.reset(new RequestPool());
-  connection_pool_.reset(new ConnectionPool());
-}
+    port_(-1) {}
 
 RdmaNetwork::~RdmaNetwork() {
   Finalize();
@@ -17,8 +13,11 @@ RdmaNetwork::~RdmaNetwork() {
 
 void RdmaNetwork::Init(int64_t my_machine_id, const NetworkTopology& net_topo) {
   my_machine_id_ = my_machine_id;
-  net_topo_ = net_topo;
   port_ = net_topo.all_nodes[my_machine_id].port;
+  net_topo_ = net_topo;
+  rdma_wrapper_.reset(new RdmaWrapper());
+  request_pool_.reset(new RequestPool());
+  connection_pool_.reset(new ConnectionPool());
   rdma_wrapper_->Init(net_topo.all_nodes[my_machine_id].address.c_str(), port_);
   EstablishConnection();
 }
@@ -27,9 +26,10 @@ void RdmaNetwork::Finalize() {
   register_id_to_mem_descriptor_.clear();
 }
 
-NetworkMemory* RdmaNetwork::RegisterMemory(void* dptr, size_t len) {
+NetworkMemory* RdmaNetwork::RegisterMemory(void* dptr, size_t len,
+                                           int64_t register_id) {
   NetworkMemory* net_memory = rdma_wrapper_->NewNetworkMemory();  // TODO(shiyuan)
-  net_memory->Reset(dptr, len);
+  net_memory->Reset(dptr, len, register_id);
   return net_memory;
 }
 
@@ -39,26 +39,17 @@ void RdmaNetwork::SendMessage(const NetworkMessage& msg) {
   Connection* conn = connection_pool_->GetConnection(dst_machine_id);
   CHECK(conn);
 
-  // 1. New network request, generating timestamp, get message memory
-  //    from message pool.
   Request* send_request = request_pool_->AllocRequest(true);
   CHECK(send_request);
 
-  // 2. Get network message buffer, copy the message.
   send_request->rdma_msg->mutable_msg() = msg;
-
-  // The last flag of Send, NO_OP_FLAG_SILENT_SUCCESS means the
-  // successful sending will not generate an event in completion queue.
-  // Change the flag to 0 if this does not suit for out design.
-  // We need to know the completion event of Send to recycle the
-  // buffer of message.
 
   conn->PostSendRequest(*send_request);
 }
 
 void RdmaNetwork::SetCallbackForReceivedActorMsg(
     std::function<void()> callback) {
-    request_pool_->set_callback4recv_msg(callback);
+  request_pool_->set_callback4recv_msg(callback);
 }
 
 void RdmaNetwork::Read(const MemoryDescriptor& remote_memory_descriptor,
@@ -70,7 +61,6 @@ void RdmaNetwork::Read(const MemoryDescriptor& remote_memory_descriptor,
 
   Request* read_request = request_pool_->AllocRequest(true);
   CHECK(read_request);
-
   read_request->callback = callback;
 
   RdmaMemory* dst_memory = static_cast<RdmaMemory*>(local_memory);
@@ -181,13 +171,8 @@ bool RdmaNetwork::PollRecvQueue(NetworkResult* result) {
   if (request == nullptr) { return false; }
 
   result->net_msg = request->rdma_msg->msg();
-  request->callback();
+  request->callback();  // TODO(shiyuan)
 
-  // Equivalent to:
-  //  request_pool_->ReleaseRequest(time_stamp);
-  //  PostReceiveRequest(result->net_msg.src_rank);
-  // but is more efficient
-  // RePostRecvRequest(result->net_msg.src_machine_id, time_stamp);
   Connection* conn =
       connection_pool_->GetConnection(result->net_msg.src_machine_id);
   CHECK(conn);
@@ -202,7 +187,7 @@ bool RdmaNetwork::PollSendQueue(NetworkResult* result) {
   if (request == nullptr) { return false; }
 
   result->net_msg = request->rdma_msg->msg();
-  request->callback();
+  request->callback();  // TODO(shiyuan)
   request_pool_->ReleaseRequest(request);
   
   return true;

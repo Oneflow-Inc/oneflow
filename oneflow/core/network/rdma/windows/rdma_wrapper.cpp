@@ -15,7 +15,7 @@ namespace oneflow {
 
 namespace {
 
-sockaddr_in GetAddress(const char* ip, int port) {
+sockaddr_in GetAddress(const char* ip, int32_t port) {
   sockaddr_in addr = sockaddr_in();
   memset(&addr, 0, sizeof(sockaddr_in));
   inet_pton(AF_INET, ip, &addr.sin_addr);
@@ -36,8 +36,8 @@ RdmaWrapper::~RdmaWrapper() {
   Destroy();
 }
 
-void RdmaWrapper::Init(const char* ip, int port) {
-  my_addr_ = GetSocket(addr, port);
+void RdmaWrapper::Init(const char* my_ip, int32_t my_port) {
+  my_addr_ = GetAddress(my_ip, my_port);
 
   // INIT ADAPTER
   // NdspiV2Open

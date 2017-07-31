@@ -6,8 +6,9 @@ ConnectionPool::ConnectionPool() : conn_num_(0) {}
 
 ConnectionPool::~ConnectionPool() {
   for (auto& pair : connection_dict_) {
-    delete pair.second;
+    CleanConnection(pair.first);
   }
+  connection_dict_.clear();
 }
 
 void ConnectionPool::AddConnection(int64_t peer_machine_id, Connection* conn) {
@@ -20,6 +21,7 @@ void ConnectionPool::CleanConnection(int64_t peer_machine_id) {
   if (conn != nullptr) {
     conn->DestroyConnection();
     delete conn;
+    conn = nullptr;
     conn_num_--;
   }
 }

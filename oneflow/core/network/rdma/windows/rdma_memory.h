@@ -12,7 +12,6 @@ class RdmaMemory : public NetworkMemory {
   using NetworkMemory::size_;
   using NetworkMemory::descriptor_;
 
-  RdmaMemory() = default;
   explicit RdmaMemory(IND2MemoryRegion* memory_region);
   ~RdmaMemory();
 
@@ -24,8 +23,6 @@ class RdmaMemory : public NetworkMemory {
  private:
   ND2_SGE sge_;
   IND2MemoryRegion* memory_region_;  // TODO(shiyuan) delete
-  RdmaMemory(const RdmaMemory&) = delete;
-  void operator=(const RdmaMemory&) = delete;
 };
 
 }  // namespace oneflow

@@ -12,8 +12,8 @@ namespace oneflow {
 
 namespace {
 
-struct sockaddr_in GetAddress(const char* ip, int port) {
-  struct sockaddr_in addr = sockaddr_in();
+sockaddr_in GetAddress(const char* ip, int port) {
+  sockaddr_in addr = sockaddr_in();
   memset(&addr, 0, sizeof(sockaddr_in));
   inet_pton(AF_INET, ip, &addr.sin_addr);
   addr.sin_family = AF_INET;
@@ -33,15 +33,15 @@ RdmaWrapper::~RdmaWrapper() {
   Destroy();
 }
 
-void RdmaWrapper::Init(const char* ip, int port) {
-  my_addr_ = GetAddress(ip, port);
+void RdmaWrapper::Init(const char* my_ip, int32_t my_port) {
+  my_addr_ = GetAddress(my_ip, my_port);
 
   // Init Adapter
-  ibv_device** device_list = ibv_get_device_list(NULL);  // TODO(shiyuan) delete
-  ibv_device* device = device_list[0];  // TODO(shiyuan) delete
-  context_ = ibv_open_device(device);  // TODO(shiyuan) delete
+  ibv_device** device_list = ibv_get_device_list(NULL);
+  ibv_device* device = device_list[0];
+  context_ = ibv_open_device(device);
   CHECK(context_);
-  protect_domain_ = ibv_alloc_pd(context_);  // TODO(shiyuan) delete
+  protect_domain_ = ibv_alloc_pd(context_);
   CHECK(protect_domain_);
 
   // Init env
@@ -53,13 +53,28 @@ void RdmaWrapper::Init(const char* ip, int port) {
   my_sock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   CHECK(my_sock_);
 
-  CHECK_EQ(bind(my_sock_, (struct sockaddr*)&my_addr_, sizeof(my_addr_)), 0);
+  CHECK_EQ(bind(my_sock_, (sockaddr*)&my_addr_, sizeof(my_addr_)), 0);
 
   CHECK_EQ(listen(my_sock_, 100), 0);  // TODO(shiyuan) backlog
+  ibv_free_device_list(device_list);
+  device_list = nullptr;
 }
 
 void RdmaWrapper::Destroy() {
-  // TODO(shiyuan)
+  if (send_cq_ != nullptr) {
+    CHECK_EQ(ibv_destroy_cq(send_cq_), 0);
+  }
+  if (recv_cq_ != nullptr) {
+    CHECK_EQ(ibv_destroy_cq(recv_cq_), 0);
+  }
+
+  if (protect_domain_ != nullptr) {
+    CHECK_EQ(ibv_dealloc_pd(protect_domain_), 0);
+  }
+
+  if (context_ != nullptr) {
+    CHECK_EQ(ibv_close_device(context_), 0);
+  }
 }
 
 void RdmaWrapper::CreateConnector(Connection* conn) {
@@ -82,7 +97,7 @@ void RdmaWrapper::CreateConnector(Connection* conn) {
 }
 
 void RdmaWrapper::CreateQueuePair(Connection* conn) {
-  struct ibv_qp_init_attr qp_init_attr;
+  ibv_qp_init_attr qp_init_attr;
 
   memset(&qp_init_attr, 0, sizeof(qp_init_attr));
   qp_init_attr.qp_context = nullptr;
@@ -103,8 +118,7 @@ void RdmaWrapper::CreateQueuePair(Connection* conn) {
 }
 
 RdmaMemory* RdmaWrapper::NewNetworkMemory() {
-  ibv_mr* memory_region = nullptr;
-  RdmaMemory* rdma_memory = new RdmaMemory(memory_region, protect_domain_);
+  RdmaMemory* rdma_memory = new RdmaMemory(protect_domain_);
   CHECK(rdma_memory);
   return rdma_memory;
 }
@@ -116,18 +130,18 @@ int64_t RdmaWrapper::WaitForConnection(Connection* conn,
   Connector temp_connector;
   int read_bytes = 0;
   int total_read_bytes = 0;
-  struct sockaddr_in peer_addr;
+  sockaddr_in peer_addr;
   socklen_t addr_len = sizeof(peer_addr);
 
-  int peer_sock = accept(my_sock_, (struct sockaddr*)&peer_addr, &addr_len);
+  int peer_sock = accept(my_sock_, (sockaddr*)&peer_addr, &addr_len);
   CHECK_NE(peer_sock, -1);
   CHECK_GT(read(peer_sock, &peer_machine_id, sizeof(int64_t)), 0);
-  CHECK_GT(write(peer_sock, connector, sizeof(struct Connector)), 0);
+  CHECK_GT(write(peer_sock, connector, sizeof(Connector)), 0);
 
   total_read_bytes = 0;
   read_bytes = 0;
-  while (total_read_bytes < sizeof(struct Connector)) {
-    read_bytes = read(peer_sock, &temp_connector, sizeof(struct Connector));
+  while (total_read_bytes < sizeof(Connector)) {
+    read_bytes = read(peer_sock, &temp_connector, sizeof(Connector));
     if (read_bytes > 0) { total_read_bytes += read_bytes; }
   }
 
@@ -159,7 +173,7 @@ Request* RdmaWrapper::PollRecvQueue(NetworkResult* result) {
 }
 
 Request* RdmaWrapper::PollSendQueue(NetworkResult* result) {
-  struct ibv_wc wc;
+  ibv_wc wc;
   int32_t len = ibv_poll_cq(send_cq_, 1, &wc);
 
   // return number of CQEs in array wc or -1 on error

@@ -33,6 +33,7 @@ MessagePool<MessageType>::~MessagePool() {
     MessageType* buffer = empty_buffer_.front();
     empty_buffer_.pop();
     delete buffer;
+    buffer = nullptr;
   }
 }
 
