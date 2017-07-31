@@ -33,6 +33,7 @@ void GrpcMasterService::Shutdown() {
     // polling thread.
     shutdown_alarm_ =
         new ::grpc::Alarm(cq_.get(), gpr_now(GPR_CLOCK_MONOTONIC), nullptr);
+    cpu_stream_.CloseReceiveEnd();
   }
 }
 
@@ -78,13 +79,20 @@ void GrpcMasterService::HandleRPCsLoop() {
   }
 }
 
+void GrpcMasterService::DoWorkLoop() {
+  std::function<void()> work;
+  while (cpu_stream_.ReceiveWork(&work) == 0) { work(); }
+}
+
 // RPC handler for sending job.
 void GrpcMasterService::SendJobHandler(
     MasterCall<SendJobRequest, SendJobResponse>* call) {
-  master_impl_->SendJob(&call->request, &call->response,
-                        [call](const ::tensorflow::Status& status) {
-                          call->SendResponse(ToGrpcStatus(status));
-                        });
+  cpu_stream_.SendWork([this, call]() {
+    master_impl_->SendJob(&call->request, &call->response,
+                          [call](const ::tensorflow::Status& status) {
+                            call->SendResponse(ToGrpcStatus(status));
+                          });
+  });
   ENQUEUE_REQUEST(SendJob, true);
 }
 

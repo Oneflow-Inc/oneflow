@@ -97,11 +97,13 @@ class GrpcServer : public ServerInterface {
   std::unique_ptr<Master> master_impl_;
   AsyncServiceInterface* master_service_ = nullptr;
   std::thread master_thread_;
+  std::thread master_do_thread_;
 
   //// Implementation of a TensorFlow worker, and RPC polling thread.
   std::unique_ptr<Worker> worker_impl_;
   AsyncServiceInterface* worker_service_ = nullptr;
   std::thread worker_thread_;
+  std::thread worker_do_thread_;
 
   std::unique_ptr<::grpc::Server> server_;
 };

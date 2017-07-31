@@ -37,28 +37,28 @@ int main(int argc, char** argv) {
   ParseProtoFromTextFile(placement_filepath, &placement_conf);
   ::tensorflow::Status s;
 
-   std::string master_address = "11.11.1.109:5551";
-   std::shared_ptr<::grpc::Channel> channel = ::grpc::CreateChannel(
+  std::string master_address = "11.11.1.109:5551";
+  std::shared_ptr<::grpc::Channel> channel = ::grpc::CreateChannel(
       master_address, ::grpc::InsecureChannelCredentials());
 
-   std::shared_ptr<GrpcRemoteMaster> remote_master(
+  std::shared_ptr<GrpcRemoteMaster> remote_master(
       new GrpcRemoteMaster(channel));
-   SendJobRequest req;
+  SendJobRequest req;
   *(req.mutable_job_conf()) = job_conf;
   *(req.mutable_dlnet_conf()) = dlnet_conf;
   *(req.mutable_resource_conf()) = resource_conf;
   *(req.mutable_placement_conf()) = placement_conf;
-   SendJobResponse resp;
+  SendJobResponse resp;
 
-   s = remote_master->SendJob(&req, &resp);
-   if (s.ok()) {
+  s = remote_master->SendJob(&req, &resp);
+  if (s.ok()) {
     LOG(INFO) << "SendJob RPC succeeds";
   } else {
     LOG(INFO) << "SendJob RPC fails";
   }
 
-   s = remote_master->SendJob(&req, &resp);
-   if (s.ok()) {
+  s = remote_master->SendJob(&req, &resp);
+  if (s.ok()) {
     LOG(INFO) << "SendJob RPC succeeds";
   } else {
     LOG(INFO) << "SendJob RPC fails";
@@ -66,6 +66,8 @@ int main(int argc, char** argv) {
 
   Plan plan;
   ParseProtoFromTextFile(FLAGS_plan_filepath, &plan);
+
+  // PrintProtoToTextFile(plan, "tmp_plan");
 
   std::string worker_address = "11.11.1.109:5551";
   std::shared_ptr<::grpc::Channel> worker_channel = ::grpc::CreateChannel(

@@ -20,6 +20,7 @@ limitations under the License.
 #include "grpc++/alarm.h"
 #include "grpc++/server_builder.h"
 
+#include "oneflow/core/device/cpu_stream.h"
 #include "oneflow/core/distributed_runtime/master.h"
 #include "oneflow/core/distributed_runtime/rpc/async_service_interface.h"
 #include "oneflow/core/distributed_runtime/rpc/grpc_call.h"
@@ -71,10 +72,13 @@ class GrpcMasterService : public AsyncServiceInterface {
 
   void HandleRPCsLoop() override;
 
+  void DoWorkLoop() override;
+
  private:
   Master* master_impl_ = nullptr;  // Not owned.
   std::unique_ptr<::grpc::ServerCompletionQueue> cq_;
   grpc::MasterService::AsyncService master_service_;
+  CpuStream cpu_stream_;
 
   tensorflow::mutex mu_;
   bool is_shutdown_ GUARDED_BY(mu_);

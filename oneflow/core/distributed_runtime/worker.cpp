@@ -14,6 +14,7 @@ Worker::~Worker() {}
   std::string str_request;
   PrintProtoToString(*request, &str_request);
   LOG(INFO) << str_request;
+  // PrintProtoToTextFile(request->plan(), "tmp_plan2");
   done(::tensorflow::Status());
   return ::tensorflow::Status::OK();
 }

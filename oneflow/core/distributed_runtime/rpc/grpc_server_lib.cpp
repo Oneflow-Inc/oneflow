@@ -71,6 +71,7 @@ GrpcServer::~GrpcServer() {
       ::tensorflow::strings::StrCat(bound_ip_, ":", bound_port_);
   ::grpc::ServerBuilder builder;
   builder.AddListeningPort(server_address, ::grpc::InsecureServerCredentials());
+  builder.SetMaxMessageSize(std::numeric_limits<int32_t>::max());
 
   master_impl_ = CreateMaster();
   master_service_ = NewGrpcMasterService(master_impl_.get(), &builder);
@@ -113,8 +114,12 @@ void GrpcServer::GetCtrlPlaneAddr() {
     case NEW: {
       master_thread_ =
           std::thread(&AsyncServiceInterface::HandleRPCsLoop, master_service_);
+      master_do_thread_ =
+          std::thread(&AsyncServiceInterface::DoWorkLoop, master_service_);
       worker_thread_ =
           std::thread(&AsyncServiceInterface::HandleRPCsLoop, worker_service_);
+      worker_do_thread_ =
+          std::thread(&AsyncServiceInterface::DoWorkLoop, worker_service_);
       state_ = STARTED;
       LOG(INFO) << "Started server with target: " << target();
       return ::tensorflow::Status::OK();
@@ -157,7 +162,9 @@ void GrpcServer::GetCtrlPlaneAddr() {
     case STARTED:
     case STOPPED:
       master_thread_.join();
+      master_do_thread_.join();
       worker_thread_.join();
+      worker_do_thread_.join();
       return ::tensorflow::Status::OK();
     default: CHECK(false);
   }

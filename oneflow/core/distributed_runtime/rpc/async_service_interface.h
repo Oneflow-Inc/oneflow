@@ -28,6 +28,8 @@ class AsyncServiceInterface {
   // This method will block until the service shuts down.
   virtual void HandleRPCsLoop() = 0;
 
+  virtual void DoWorkLoop() = 0;
+
   // Starts shutting down this service.
   //
   // NOTE(mrry): To shut down this service completely, the caller must
