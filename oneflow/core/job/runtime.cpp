@@ -1,3 +1,4 @@
+#include <cfenv>
 #include "gflags/gflags.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/comm_network/comm_network.h"
@@ -93,6 +94,9 @@ DEFINE_string(plan_filepath, "", "");
 DEFINE_string(this_machine_name, "", "");
 
 int main(int argc, char** argv) {
+#ifdef __linux__
+  feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT);
+#endif
   google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, true);
   LOG(INFO) << "Runtime Starting Up";
