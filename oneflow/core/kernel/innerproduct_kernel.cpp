@@ -32,6 +32,8 @@ void InnerProductKernel<device_type, FloatingPointType>::Forward(
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
   const Blob* in_data = BnInOp2BlobPtr("in");
   const Blob* weight = BnInOp2BlobPtr("weight");
+  DCHECK(IsFinite<FloatingPointType>(in_data));
+  DCHECK(IsFinite<FloatingPointType>(weight));
   Blob* out_data = BnInOp2BlobPtr("out");
 
   // out_data = in_data * weight.t
@@ -42,6 +44,8 @@ void InnerProductKernel<device_type, FloatingPointType>::Forward(
   if (op()->GetBoolFromSpecialConf("has_bias_term")) {
     const Blob* bias = BnInOp2BlobPtr("bias");
     const Blob* bias_multiplier = BnInOp2BlobPtr("bias_multiplier");
+    DCHECK(IsFinite<FloatingPointType>(bias));
+    DCHECK(IsFinite<FloatingPointType>(bias_multiplier));
 
     // out_data = bias_multiplier * bias + out_data
     BlasMatrixMatrix<device_type, FloatingPointType>(
@@ -55,10 +59,13 @@ void InnerProductKernel<device_type, FloatingPointType>::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
   const Blob* in_data = BnInOp2BlobPtr("in");
+  DCHECK(IsFinite<FloatingPointType>(in_data));
   const Blob* out_diff = BnInOp2BlobPtr("out_diff");
+  DCHECK(IsFinite<FloatingPointType>(out_diff));
   Blob* in_diff = BnInOp2BlobPtr("in_diff");
 
   const Blob* weight = BnInOp2BlobPtr("weight");
+  DCHECK(IsFinite<FloatingPointType>(weight));
   Blob* weight_diff = BnInOp2BlobPtr("weight_diff");
 
   // in_diff = out_diff * weight
@@ -75,6 +82,7 @@ void InnerProductKernel<device_type, FloatingPointType>::Backward(
 
   if (op()->GetBoolFromSpecialConf("has_bias_term")) {
     const Blob* bias_multiplier = BnInOp2BlobPtr("bias_multiplier");
+    DCHECK(IsFinite<FloatingPointType>(bias_multiplier));
     Blob* bias_diff = BnInOp2BlobPtr("bias_diff");
 
     // bias_diff = bias_multiplier.t * out_diff

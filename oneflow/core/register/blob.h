@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_REGISTER_BLOB_H_
 #define ONEFLOW_CORE_REGISTER_BLOB_H_
 
+#include <cmath>
 #include "oneflow/core/common/shape.h"
 
 namespace oneflow {
@@ -27,6 +28,14 @@ class Blob {
   void* dptr_;
   const Shape* shape_;
 };
+
+template<typename FloatingPointType = void>
+bool IsFinite(const Blob* blob) {
+  for (int64_t i = 0; i < blob->shape().elem_cnt(); ++i) {
+    if (!std::isfinite(blob->dptr<FloatingPointType>()[i])) { return false; }
+  }
+  return true;
+}
 
 }  // namespace oneflow
 

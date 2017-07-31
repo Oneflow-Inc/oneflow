@@ -44,7 +44,7 @@ class MultinomialLogisticLossKernelUtil<DeviceType::kCPU, FloatingPointType>
         int64_t label = labels[i];
         FloatingPointType prob =
             std::max(prediction[i * num_of_classes + label],
-                     FloatingPointType(kLogThreshold));
+                     FloatingPointType(LOG_THRESHOLD));
         loss[0] -= log(prob);
       }
       loss[0] = loss[0] / instance_num;
@@ -62,7 +62,7 @@ class MultinomialLogisticLossKernelUtil<DeviceType::kCPU, FloatingPointType>
         int64_t label = labels[i];
         FloatingPointType prob =
             std::max(prediction[i * num_of_classes + label],
-                     FloatingPointType(kLogThreshold));
+                     FloatingPointType(LOG_THRESHOLD));
         prediction_diff[i * num_of_classes + label] = scale / prob;
       }
     });
