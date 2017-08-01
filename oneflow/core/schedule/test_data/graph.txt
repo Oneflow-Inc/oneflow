@@ -1,0 +1,107 @@
+ln 1 fw1
+ln 2 fw2
+ln 3 fw3
+ln 4 fw4
+ln 5 loss
+ln 6 bp2
+ln 7 bp4
+ln 8 bp3
+ln 9 bp1
+
+gl 5 loss
+
+ae 1 2
+ae 1 3
+ae 3 4
+ae 2 5
+ae 4 5
+ae 5 6
+ae 5 7
+ae 7 8
+ae 6 9
+ae 8 9
+
+pr 1 1002
+pr 1 1003
+pr 3 3004
+pr 2 2005
+pr 4 4005
+pr 5 5006
+pr 5 5007
+pr 7 7008
+pr 6 6009
+pr 8 8009
+
+sr 2 1002
+sr 3 1003
+sr 4 3004
+sr 5 2005
+sr 5 4005
+sr 6 5006
+sr 6 2005
+sr 7 5007
+sr 7 4005
+sr 8 7008
+sr 8 3004
+sr 9 6009
+sr 9 8009
+sr 9 1002
+sr 9 1003
+
+#dn 1 type
+#dn 9 type
+#dn 2 type
+#dn 3 type
+#dn 6 type
+#dn 7 type
+#dn 8 type
+#dn 4 type
+#dn 5 type
+
+#dn 1 type-0
+#dn 9 type-1
+#dn 2 type-2
+#dn 3 type-0
+#dn 6 type-1
+#dn 7 type-2
+#dn 8 type-0
+#dn 4 type-1
+#dn 5 type-2
+
+#dn 1 type-0
+#dn 9 type-0
+#dn 2 type-1
+#dn 3 type-1
+#dn 6 type-1
+#dn 7 type-2
+#dn 8 type-4
+#dn 4 type-2
+#dn 5 type-3
+
+dn 1 type-01
+dn 9 type-02
+#dn 2 type-13
+dn 2 type-47
+dn 3 type-14
+dn 6 type-15
+dn 7 type-16
+dn 8 type-47
+dn 4 type-28
+dn 5 type-39
+
+dt type    1
+dt type-01 1
+dt type-02 1
+dt type-13 1
+dt type-14 1
+dt type-15 1
+dt type-16 1
+dt type-47 2
+dt type-28 1
+dt type-39 1
+
+dt type-0 1
+dt type-1 10
+dt type-4 1
+dt type-2 1
+dt type-3 1
