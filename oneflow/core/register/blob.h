@@ -29,14 +29,6 @@ class Blob {
   const Shape* shape_;
 };
 
-template<typename FloatingPointType = void>
-bool IsFinite(const Blob* blob) {
-  for (int64_t i = 0; i < blob->shape().elem_cnt(); ++i) {
-    if (!std::isfinite(blob->dptr<FloatingPointType>()[i])) { return false; }
-  }
-  return true;
-}
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_REGISTER_BLOB_H_
