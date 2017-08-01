@@ -401,64 +401,6 @@ class DeviceNode : public Node {
   uint64_t memory_limit_ = ULLONG_MAX;
 };
 
-class Pool {
- public:
-  Pool() {}
-
-  static inline std::unique_ptr<Pool> newPool() {
-    return unique_ptr_new<Pool>();
-  }
-
-  inline NodeMgr<Node>& mut_node_mgr() { return node_mgr_; }
-  inline NodeMgr<Node>& mut_fake_node_mgr() { return fake_node_mgr_; }
-
-  inline const ArcMgr& arc_mgr() const { return arc_mgr_; }
-  inline ArcMgr& mut_arc_mgr() { return arc_mgr_; }
-
-  inline const HasOneArcMgr& device_arc_mgr() const { return device_arc_mgr_; }
-  inline HasOneArcMgr& mut_device_arc_mgr() { return device_arc_mgr_; }
-
-  inline NodeMgr<DeviceNode>& mut_device_mgr() { return device_mgr_; }
-
-  inline const ArcMgr& loss_arc_mgr() const { return loss_arc_mgr_; }
-  inline ArcMgr& mut_loss_arc_mgr() { return loss_arc_mgr_; }
-
-  inline const ArcMgr& ascendent_arc_mgr() const { return ascendent_arc_mgr_; }
-  inline ArcMgr& mut_ascendent_arc_mgr() { return ascendent_arc_mgr_; }
-
-  inline const ArcMgr& children_arc_mgr() const { return children_arc_mgr_; }
-  inline ArcMgr& mut_children_arc_mgr() { return children_arc_mgr_; }
-
-  inline NodeMgr<Node>& mut_regst_desc_mgr() { return regst_desc_mgr_; }
-
-  inline const ArcMgr& produced_regst_desc_mgr() const {
-    return produced_regst_desc_mgr_;
-  }
-  inline ArcMgr& mut_produced_regst_desc_mgr() {
-    return produced_regst_desc_mgr_;
-  }
-
-  inline const ArcMgr& subscribed_regst_desc_mgr() const {
-    return subscribed_regst_desc_mgr_;
-  }
-  inline ArcMgr& mut_subscribed_regst_desc_mgr() {
-    return subscribed_regst_desc_mgr_;
-  }
-
- private:
-  NodeMgr<Node> node_mgr_;
-  NodeMgr<Node> fake_node_mgr_;
-  ArcMgr arc_mgr_;
-  ArcMgr loss_arc_mgr_;
-  ArcMgr children_arc_mgr_;
-  ArcMgr ascendent_arc_mgr_;
-  NodeMgr<Node> regst_desc_mgr_;
-  ArcMgr produced_regst_desc_mgr_;
-  ArcMgr subscribed_regst_desc_mgr_;
-  NodeMgr<DeviceNode> device_mgr_;
-  HasOneArcMgr device_arc_mgr_;
-};
-
 class GraphNode : public Node {
  public:
   DEFINE_METHOD_TYPE();
@@ -495,9 +437,6 @@ class GraphNode : public Node {
 
   Node* sink() const { return sink_; }
   Node*& mut_sink() { return sink_; }
-
-  inline const Pool* pool() const { return &pool_; }
-  inline Pool* mut_pool() { return &pool_; }
 
   inline NodeMgr<Node>& mut_node_mgr() { return node_mgr_; }
   inline NodeMgr<Node>& mut_fake_node_mgr() { return fake_node_mgr_; }
@@ -538,7 +477,6 @@ class GraphNode : public Node {
  private:
   Node* source_;
   Node* sink_;
-  Pool pool_;
   NodeMgr<Node> node_mgr_;
   NodeMgr<Node> fake_node_mgr_;
   ArcMgr arc_mgr_;
@@ -656,9 +594,7 @@ class SessionLogger {
 class Session {
  public:
   explicit Session(GraphNode* root, uint32_t nr_batch = 2u)
-      : root_(root),
-        pool_(root->mut_pool()),
-        logger_(unique_ptr_new<SessionLogger>()) {
+      : root_(root), logger_(unique_ptr_new<SessionLogger>()) {
     mut_root()->UpdateSourceAndSink();
     mut_root()->InitDepth();
     mut_root()->InitAscendentArc();
@@ -692,9 +628,6 @@ class Session {
   std::unique_ptr<std::list<Node*>> GetBatchNodes();
   std::unique_ptr<PipeCount> RegstDescCount(bool bottleneck = true);
 
-  inline const Pool* pool() const { return pool_; }
-  inline Pool* mut_pool() { return pool_; }
-
   inline const GraphNode* root() const { return root_; }
   inline GraphNode* mut_root() { return root_; }
   SessionLogger* logger() { return logger_.get(); }
@@ -706,7 +639,6 @@ class Session {
   }
 
   GraphNode* root_;
-  Pool* pool_;
   uint32_t nr_batch_;
   uint32_t nr_base_batch_;
   std::unordered_set<Arc*> tokens_;

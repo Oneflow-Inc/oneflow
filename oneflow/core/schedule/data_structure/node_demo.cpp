@@ -12,7 +12,6 @@ namespace schedule {
 void TestGraph(const std::string& input_name) {
   auto graph = unique_ptr_new<GraphNode>("root");
   auto root = graph.get();
-  auto pool = graph->mut_pool();
 
   auto get_id = [](uint64_t id) { return id * 1001; };
 
@@ -27,16 +26,16 @@ void TestGraph(const std::string& input_name) {
       ss.clear();
       ss << arg1 << "\t" << arg2;
       ss >> id >> name;
-      Node* node = pool->mut_node_mgr().CreateWithId(get_id(id), name);
-      if (node) { pool->mut_children_arc_mgr().CreateIfNotFound(root, node); }
+      Node* node = graph->mut_node_mgr().CreateWithId(get_id(id), name);
+      if (node) { graph->mut_children_arc_mgr().CreateIfNotFound(root, node); }
     } else if (arg0 == "gl") {
       uint64_t id;
       std::string name;
       ss.clear();
       ss << arg1 << "\t" << arg2;
       ss >> id >> name;
-      Node* node = pool->mut_node_mgr().Find(get_id(id));
-      if (node) { pool->mut_loss_arc_mgr().CreateIfNotFound(root, node); }
+      Node* node = graph->mut_node_mgr().Find(get_id(id));
+      if (node) { graph->mut_loss_arc_mgr().CreateIfNotFound(root, node); }
     } else if (arg0 == "ae") {
       uint64_t from_id;
       uint64_t to_id;
@@ -44,16 +43,16 @@ void TestGraph(const std::string& input_name) {
       ss << arg1 << "\t" << arg2;
       ss >> from_id >> to_id;
 
-      Node* from = pool->mut_node_mgr().Find(get_id(from_id));
-      Node* to = pool->mut_node_mgr().Find(get_id(to_id));
-      if (from && to) { pool->mut_arc_mgr().CreateIfNotFound(from, to); }
+      Node* from = graph->mut_node_mgr().Find(get_id(from_id));
+      Node* to = graph->mut_node_mgr().Find(get_id(to_id));
+      if (from && to) { graph->mut_arc_mgr().CreateIfNotFound(from, to); }
     } else if (arg0 == "dt") {
       uint64_t time;
       std::string name;
       ss.clear();
       ss << arg1 << "\t" << arg2;
       ss >> name >> time;
-      auto dev = pool->mut_device_mgr().CreateIfNotFound(name, 1);
+      auto dev = graph->mut_device_mgr().CreateIfNotFound(name, 1);
       dev->mut_time() = time;
     } else if (arg0 == "dn") {
       uint64_t id;
@@ -61,9 +60,9 @@ void TestGraph(const std::string& input_name) {
       ss.clear();
       ss << arg1 << "\t" << arg2;
       ss >> id >> name;
-      auto dev = pool->mut_device_mgr().CreateIfNotFound(name, 1);
-      auto node = pool->mut_node_mgr().CreateIfNotFound(get_id(id));
-      pool->mut_device_arc_mgr().CreateIfNotFound(node, dev);
+      auto dev = graph->mut_device_mgr().CreateIfNotFound(name, 1);
+      auto node = graph->mut_node_mgr().CreateIfNotFound(get_id(id));
+      graph->mut_device_arc_mgr().CreateIfNotFound(node, dev);
     } else if (arg0 == "pr") {
       uint64_t from_id;
       uint64_t to_id;
@@ -71,10 +70,10 @@ void TestGraph(const std::string& input_name) {
       ss << arg1 << "\t" << arg2;
       ss >> from_id >> to_id;
 
-      Node* from = pool->mut_node_mgr().Find(get_id(from_id));
-      Node* to = pool->mut_regst_desc_mgr().CreateIfNotFound(get_id(to_id));
+      Node* from = graph->mut_node_mgr().Find(get_id(from_id));
+      Node* to = graph->mut_regst_desc_mgr().CreateIfNotFound(get_id(to_id));
       if (from && to) {
-        pool->mut_produced_regst_desc_mgr().CreateIfNotFound(from, to);
+        graph->mut_produced_regst_desc_mgr().CreateIfNotFound(from, to);
       }
     } else if (arg0 == "sr") {
       uint64_t from_id;
@@ -83,10 +82,10 @@ void TestGraph(const std::string& input_name) {
       ss << arg1 << "\t" << arg2;
       ss >> from_id >> to_id;
 
-      Node* from = pool->mut_node_mgr().Find(get_id(from_id));
-      Node* to = pool->mut_regst_desc_mgr().CreateIfNotFound(get_id(to_id));
+      Node* from = graph->mut_node_mgr().Find(get_id(from_id));
+      Node* to = graph->mut_regst_desc_mgr().CreateIfNotFound(get_id(to_id));
       if (from && to) {
-        pool->mut_subscribed_regst_desc_mgr().CreateIfNotFound(from, to);
+        graph->mut_subscribed_regst_desc_mgr().CreateIfNotFound(from, to);
       }
     }
   }
