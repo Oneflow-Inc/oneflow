@@ -37,12 +37,12 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
 
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
 
-  (*bn2blob_ptr)["in"] = KTCommon::CreateBlobWithVector({2, 4}, in_mat);
+  (*bn2blob_ptr)["in"] = KTCommon::CreateBlobWithVector({2, 1, 2, 2}, in_mat);
   (*bn2blob_ptr)["weight"] = KTCommon::CreateBlobWithVector({3, 4}, weight_mat);
   (*bn2blob_ptr)["out"] = KTCommon::CreateBlobWithVector({2, 3}, out_mat);
   (*bn2blob_ptr)["out_diff"] = (*bn2blob_ptr)["out"];
   (*bn2blob_ptr)["in_diff"] =
-      KTCommon::CreateBlobWithVector({2, 4}, in_diff_mat);
+      KTCommon::CreateBlobWithVector({2, 1, 2, 2}, in_diff_mat);
   (*bn2blob_ptr)["weight_diff"] =
       KTCommon::CreateBlobWithVector({3, 4}, weight_diff_mat);
 
@@ -57,7 +57,7 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
     (*bn2blob_ptr)["expected_out"] =
         KTCommon::CreateBlobWithVector({2, 3}, expected_out_mat);
     (*bn2blob_ptr)["expected_in_diff"] =
-        KTCommon::CreateBlobWithVector({2, 4}, expected_in_diff_mat);
+        KTCommon::CreateBlobWithVector({2, 1, 2, 2}, expected_in_diff_mat);
     (*bn2blob_ptr)["expected_weight_diff"] =
         KTCommon::CreateBlobWithVector({3, 4}, expected_weight_diff_mat);
   } else {
