@@ -41,7 +41,7 @@ class KernelTestCommon<DeviceType::kCPU, FloatingPointType> final {
   }
 
   static void BuildKernelCtx(KernelCtx* ctx) {
-    auto cpu_stream = new CpuStream;
+    auto cpu_stream = new AsyncCpuStream;
     ctx->device_ctx = new CpuDeviceCtx(cpu_stream);
   }
 

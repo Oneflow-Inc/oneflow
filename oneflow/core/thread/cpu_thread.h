@@ -13,8 +13,8 @@ class CpuThread final : public Thread {
   ~CpuThread();
 
  private:
-  std::thread cpu_device_;
-  CpuStream cpu_stream_;
+  std::unique_ptr<std::thread> cpu_device_;
+  std::unique_ptr<CpuStream> cpu_stream_;
 };
 
 }  // namespace oneflow

@@ -1,25 +1,32 @@
 #include "oneflow/core/thread/cpu_thread.h"
+#include "oneflow/core/device/async_cpu_stream.h"
+#include "oneflow/core/device/sync_cpu_stream.h"
 
 namespace oneflow {
 
 CpuThread::CpuThread(int64_t thrd_loc_id) {
   set_thrd_loc_id(thrd_loc_id);
-  cpu_device_ = std::thread([this]() {
-    std::function<void()> work;
-    while (cpu_stream_.ReceiveWork(&work) == 0) { work(); }
-  });
+  if (JobDesc::Singleton()->use_async_cpu_stream()) {
+    cpu_stream_.reset(new AsyncCpuStream);
+    cpu_device_.reset(new std::thread([this]() {
+      std::function<void()> work;
+      while (cpu_stream_->ReceiveWork(&work) == 0) { work(); }
+    }));
+  } else {
+    cpu_stream_.reset(new SyncCpuStream);
+  }
   mut_actor_thread() = std::thread([this]() {
     ThreadCtx ctx;
-    ctx.cpu_stream = &cpu_stream_;
+    ctx.cpu_stream = cpu_stream_.get();
     PollMsgChannel(ctx);
   });
 }
 
 CpuThread::~CpuThread() {
   Thread::Deconstruct();
-  cpu_stream_.CloseSendEnd();
-  cpu_device_.join();
-  cpu_stream_.CloseReceiveEnd();
+  cpu_stream_->CloseSendEnd();
+  if (cpu_device_) { cpu_device_->join(); }
+  cpu_stream_->CloseReceiveEnd();
 }
 
 }  // namespace oneflow
