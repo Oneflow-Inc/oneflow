@@ -165,9 +165,10 @@ void Actor::AsyncSendReadableRegstMsg() {
 void Actor::AsyncSendEORDMsgToSubscribers(int64_t regst_desc_id) {
   VLOG(4) << "actor " << actor_id_ << " "
           << "send eord for regst_desc_id:" << regst_desc_id;
-  Regst* one_regst = produced_regsts_.at(regst_desc_id).front().get();
-  device_ctx_->AddCallBack([one_regst]() {
-    for (int64_t subscriber : one_regst->subscribers_actor_id()) {
+  const RtRegstDesc* regst_desc =
+      produced_regsts_.at(regst_desc_id).front()->regst_desc();
+  device_ctx_->AddCallBack([regst_desc]() {
+    for (int64_t subscriber : regst_desc->subscribers_actor_id()) {
       ActorMsg msg;
       msg.set_dst_actor_id(subscriber);
       msg.set_actor_cmd(ActorCmd::kEORD);

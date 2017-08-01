@@ -7,8 +7,8 @@ namespace oneflow {
 
 void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
                          std::function<void(Regst*)> OneRegstDone) {
-  auto runtime_regst_desc =
-      std::make_shared<const RtRegstDesc>(regst_desc_proto);
+  const RtRegstDesc* runtime_regst_desc = new RtRegstDesc(regst_desc_proto);
+  rt_regst_descs_.emplace_back(runtime_regst_desc);
   for (int64_t i = 0; i < regst_desc_proto.register_num(); ++i) {
     Regst* regst = new Regst;
     regst->regst_desc_ = runtime_regst_desc;

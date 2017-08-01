@@ -21,6 +21,7 @@ class RegstMgr final {
 
  private:
   RegstMgr() = default;
+  std::list<std::unique_ptr<const RtRegstDesc>> rt_regst_descs_;
 };
 
 }  // namespace oneflow
