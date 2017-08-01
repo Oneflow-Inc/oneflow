@@ -25,10 +25,14 @@ int BoxingActor::HandlerNormal(const ActorMsg& msg) {
       std::shared_ptr<RegstWrapper> regst_wp = msg.regst_wrapper();
       mut_num_of_read_empty() -= read_regst_[regst_wp->regst_desc_id()].empty();
       read_regst_.at(regst_wp->regst_desc_id()).push(regst_wp);
-    } else {
-      // do nothing
+      VLOG(4) << "boxing actor " << actor_id() << " "
+              << "receive readable regst " << regst_wp->regst_raw_ptr() << ", "
+              << "regst_desc_id:" << regst_wp->regst_desc_id() << ", "
+              << "current num_of_read_empty:" << num_of_read_empty();
     }
     ActUntilFail();
+  } else {
+    UNEXPECTED_RUN();
   }
   return msg_handler() == nullptr;
 }

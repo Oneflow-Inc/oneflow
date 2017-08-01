@@ -7,7 +7,7 @@ template<DeviceType device_type, typename FloatingPointType>
 void SoftmaxKernel<device_type, FloatingPointType>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  Blob* in_blob = BnInOp2BlobPtr(op()->SoleIbn());
+  const Blob* in_blob = BnInOp2BlobPtr(op()->SoleIbn());
   Blob* out_blob = BnInOp2BlobPtr(op()->SoleObn());
   Blob* tmp_blob = BnInOp2BlobPtr(op()->SoleDtbn());
   const int64_t n = out_blob->shape().At(0);
@@ -22,8 +22,8 @@ template<DeviceType device_type, typename FloatingPointType>
 void SoftmaxKernel<device_type, FloatingPointType>::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  Blob* out_blob = BnInOp2BlobPtr(op()->SoleObn());
-  Blob* out_diff_blob = BnInOp2BlobPtr(op()->SoleOdbn());
+  const Blob* out_blob = BnInOp2BlobPtr(op()->SoleObn());
+  const Blob* out_diff_blob = BnInOp2BlobPtr(op()->SoleOdbn());
   Blob* in_diff_blob = BnInOp2BlobPtr(op()->SoleIdbn());
   Blob* tmp_blob = BnInOp2BlobPtr(op()->SoleDtbn());
   const int64_t n = out_blob->shape().At(0);

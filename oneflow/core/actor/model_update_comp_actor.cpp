@@ -74,10 +74,14 @@ int MdUpdtCompActor::HandlerNormal(const ActorMsg& actor_msg) {
     CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kEORD);
     ProcessEord();
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
-    auto regst_wrapper = actor_msg.regst_wrapper();
-    if (TryUpdtStateAsProducedRegst(regst_wrapper->regst_raw_ptr()) != 0) {
-      waiting_model_diff_acc_queue_.push(regst_wrapper);
+    auto regst_wp = actor_msg.regst_wrapper();
+    if (TryUpdtStateAsProducedRegst(regst_wp->regst_raw_ptr()) != 0) {
+      waiting_model_diff_acc_queue_.push(regst_wp);
       mut_num_of_read_empty() = 0;
+      VLOG(4) << "model update actor " << actor_id() << " "
+              << "receive readable regst " << regst_wp->regst_raw_ptr() << ", "
+              << "regst_desc_id:" << regst_wp->regst_desc_id() << ", "
+              << "current num_of_read_empty:" << num_of_read_empty();
     }
     ActUntilFail();
   } else {

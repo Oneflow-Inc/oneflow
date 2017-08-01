@@ -47,6 +47,7 @@ class Actor {
   KernelCtx GenDefaultKernelCtx() const;
 
   void set_num_of_not_eord(int val) { num_of_not_eord_ = val; }
+  int num_of_read_empty() const { return num_of_read_empty_; }
   int& mut_num_of_read_empty() { return num_of_read_empty_; }
 
   // Msg Handler

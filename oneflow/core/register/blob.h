@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_REGISTER_BLOB_H_
 #define ONEFLOW_CORE_REGISTER_BLOB_H_
 
+#include <cmath>
 #include "oneflow/core/common/shape.h"
 
 namespace oneflow {
@@ -17,7 +18,7 @@ class Blob {
   }
 
   template<typename T = void>
-  T* mut_dptr() const {
+  T* mut_dptr() {
     return static_cast<T*>(dptr_);
   }
 

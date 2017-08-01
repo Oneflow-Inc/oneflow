@@ -122,8 +122,8 @@ inline uint32_t NewRandomSeed() {
 
 // Work around the following issue on Windows
 // https://stackoverflow.com/questions/33218522/cuda-host-device-variables
-// const float kLogThreshold = 1e-20;
-#define kLogThreshold (1e-20)
+// const float LOG_THRESHOLD = 1e-20;
+#define LOG_THRESHOLD (1e-20)
 
 }  // namespace oneflow
 
