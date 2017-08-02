@@ -52,8 +52,8 @@ class Connection {
   int64_t my_machine_id_;
   int64_t peer_machine_id_;
   
-  IND2Connector* connector_;  // TODO(shiyuan) delete
-  IND2QueuePair* queue_pair_;  // TODO(shiyuan) delete
+  IND2Connector* connector_;
+  IND2QueuePair* queue_pair_;
   OVERLAPPED* ov_;
 };
 

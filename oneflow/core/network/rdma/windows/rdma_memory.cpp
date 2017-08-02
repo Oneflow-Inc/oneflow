@@ -7,7 +7,9 @@ RdmaMemory::RdmaMemory(IND2MemoryRegion* memory_region)
     : memory_region_(memory_region) {}
 
 RdmaMemory::~RdmaMemory() {
-  // TODO(shiyuan) delete memory_region_
+  if (registered_ == true) {
+    Unregister();
+  }
 }
 
 // Register as ND memory region
@@ -17,13 +19,9 @@ void RdmaMemory::Register() {
   CHECK(ov.hEvent);
 
   HRESULT hr = memory_region_->Register(
-      memory_,
-      size_,
-      ND_MR_FLAG_ALLOW_LOCAL_WRITE |
-      ND_MR_FLAG_ALLOW_REMOTE_READ |
-      ND_MR_FLAG_ALLOW_REMOTE_WRITE,
-      // TODO(shiyuan): TEST(FLAG)
-      &ov);
+      memory_, size_,
+      ND_MR_FLAG_ALLOW_LOCAL_WRITE | ND_MR_FLAG_ALLOW_REMOTE_READ |
+      ND_MR_FLAG_ALLOW_REMOTE_WRITE, &ov);
 
   if (hr == ND_PENDING) {
     hr = memory_region_->GetOverlappedResult(&ov, TRUE);

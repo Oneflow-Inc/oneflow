@@ -22,7 +22,7 @@ class RdmaMemory final : public NetworkMemory {
 
  private:
   ibv_sge sge_;
-  ibv_pd* protect_domain_;  // TODO(shiyuan) rdma_wrapper
+  ibv_pd* protect_domain_;  // Not owned
   ibv_mr* memory_region_;
 };
 

@@ -100,7 +100,9 @@ void Connection::set_queue_pair(ibv_qp* queue_pair) {
 void Connection::Bind(const char* my_ip, int32_t my_port) {
   my_addr_ = GetAddress(my_ip, my_port);
   my_sock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  CHECK_EQ(bind(my_sock_, reinterpret_cast<sockaddr*>(&my_addr_), sizeof(my_addr_)), 0);
+  CHECK_EQ(bind(my_sock_, reinterpret_cast<sockaddr*>(&my_addr_),
+                sizeof(my_addr_)),
+           0);
 }
 
 bool Connection::TryConnectTo(const char* peer_ip, int32_t peer_port) {
@@ -110,7 +112,8 @@ bool Connection::TryConnectTo(const char* peer_ip, int32_t peer_port) {
   int64_t total_read_bytes = 0;
   int64_t rc = 0;
   int32_t peer_sock = socket(AF_INET, SOCK_STREAM, 0);
-  int32_t ret = connect(peer_sock, reinterpret_cast<sockaddr*>(&peer_addr), sizeof(peer_addr));
+  int32_t ret = connect(peer_sock, reinterpret_cast<sockaddr*>(&peer_addr),
+                        sizeof(peer_addr));
   if ((ret != 0) || (peer_sock < 0)) {
     CHECK_EQ(close(peer_sock), 0);
     return false;
@@ -166,7 +169,7 @@ void Connection::DestroyConnection() {
 
 void Connection::PostSendRequest(const Request& send_request) {
   ibv_send_wr wr;
-  ibv_send_wr* bad_wr = nullptr;  // TODO(shiyuan)
+  ibv_send_wr* bad_wr = nullptr;
   wr.wr_id = reinterpret_cast<uint64_t>(&send_request);
   wr.next = nullptr;
   wr.sg_list =
@@ -180,7 +183,7 @@ void Connection::PostSendRequest(const Request& send_request) {
 
 void Connection::PostRecvRequest(const Request& recv_request) {
   ibv_recv_wr wr;
-  ibv_recv_wr* bad_wr = nullptr;  // TODO(shiyuan)
+  ibv_recv_wr* bad_wr = nullptr;
   wr.wr_id = reinterpret_cast<uint64_t>(&recv_request);
   wr.next = nullptr;
   wr.sg_list =
@@ -194,7 +197,7 @@ void Connection::PostReadRequest(
     const MemoryDescriptor& remote_memory_descriptor,
     RdmaMemory* dst_memory) {
   ibv_send_wr wr;
-  ibv_send_wr* bad_wr = nullptr;  // TODO(shiyuan)
+  ibv_send_wr* bad_wr = nullptr;
   wr.wr_id = reinterpret_cast<uint64_t>(&read_request);
   wr.opcode = IBV_WR_RDMA_READ;
   wr.sg_list = static_cast<ibv_sge*>(dst_memory->sge());

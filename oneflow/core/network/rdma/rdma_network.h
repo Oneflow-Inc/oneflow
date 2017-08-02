@@ -19,8 +19,7 @@ class RdmaNetwork final : public Network {
   void Init(int64_t my_machine_id, const NetworkTopology& net_topo) override;
   void Finalize() override;
 
-  NetworkMemory* RegisterMemory(void* dptr, size_t len,
-                                int64_t register_id = -1) override;
+  NetworkMemory* RegisterMemory(void* dptr, size_t len) override;
 
   void SendMessage(const NetworkMessage& msg) override;
   void SetCallbackForReceivedActorMsg(

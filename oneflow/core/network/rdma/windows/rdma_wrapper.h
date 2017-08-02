@@ -34,16 +34,16 @@ class RdmaWrapper {
   sockaddr_in my_addr_;
 
   // NdspiV2 specific adatper and information
-  IND2Adapter* adapter_;  // TODO(shiyuan) delete
+  IND2Adapter* adapter_;
   ND2_ADAPTER_INFO adapter_info_;
   HANDLE overlapped_file_;
 
   // completion queue
-  IND2CompletionQueue* send_cq_;  // send cq  TODO(shiyuan) delete
-  IND2CompletionQueue* recv_cq_;  // recv cq  TODO(shiyuan) delete
+  IND2CompletionQueue* send_cq_;
+  IND2CompletionQueue* recv_cq_;
 
   // Listener
-  IND2Listener* listener_;  // TODO(shiyuan) delete
+  IND2Listener* listener_;
 };
 
 }  // namespace oneflow

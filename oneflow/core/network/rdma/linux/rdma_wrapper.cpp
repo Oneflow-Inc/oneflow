@@ -23,12 +23,6 @@ sockaddr_in GetAddress(const char* ip, int port) {
 
 }  // namespace
 
-RdmaWrapper::RdmaWrapper()
-  : context_(nullptr),
-    protect_domain_(nullptr),
-    send_cq_(nullptr),
-    recv_cq_(nullptr) {}
-
 RdmaWrapper::~RdmaWrapper() {
   Destroy();
 }

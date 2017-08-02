@@ -17,7 +17,7 @@ struct Request;
 class RdmaWrapper {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RdmaWrapper);
-  RdmaWrapper();
+  RdmaWrapper() = default;
   ~RdmaWrapper();
 
   void Init(const char* my_ip, int32_t my_port);

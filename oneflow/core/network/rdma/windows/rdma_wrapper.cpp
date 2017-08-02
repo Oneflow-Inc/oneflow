@@ -96,7 +96,22 @@ void RdmaWrapper::Init(const char* my_ip, int32_t my_port) {
 }
 
 void RdmaWrapper::Destroy() {
-  // TODO(shiyuan)
+  if (send_cq_ != nullptr) {
+    send_cq_->Release();
+    send_cq_ = nullptr;
+  }
+  if (recv_cq_ != nullptr) {
+    recv_cq_->Release();
+    recv_cq_ = nullptr;
+  }
+  if (listener_ != nullptr) {
+    listener_->Release();
+    listener_ = nullptr;
+  }
+  if (adapter_ != nullptr) {
+    adapter_->Release();
+    adapter_ = nullptr;
+  }
 }
 
 void RdmaWrapper::CreateConnector(Connection* conn) {

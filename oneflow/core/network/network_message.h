@@ -36,6 +36,7 @@ enum NetworkResultType {
 
 struct NetworkResult {
   NetworkResultType type;
+  std::function<void()> callback;
   // Used when type == kReceiveMsg, or type == kReadOk, msg.
   NetworkMessage net_msg;
 };

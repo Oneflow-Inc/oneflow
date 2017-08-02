@@ -22,7 +22,7 @@ class RdmaMemory : public NetworkMemory {
 
  private:
   ND2_SGE sge_;
-  IND2MemoryRegion* memory_region_;  // TODO(shiyuan) delete
+  IND2MemoryRegion* memory_region_;
 };
 
 }  // namespace oneflow

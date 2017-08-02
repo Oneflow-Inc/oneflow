@@ -105,13 +105,18 @@ void Connection::AcceptConnect() {
 }
 
 void Connection::DestroyConnection() {
-  delete ov_;
-  if (queue_pair_ != nullptr) {
-    // TODO(shiyuan)
-  }
-
   if (connector_ != nullptr) {
-    // TODO(shiyuan)
+    HRESULT hr = connector_->Disconnect(ov_);
+    if (hr == ND_PENDING) {
+      SIZE_T BytesRet;
+      hr = connector_->GetOverlappedResult(ov_, &BytesRet, TRUE);
+    }
+    connector_->Release();
+  }
+  delete ov_;
+  ov_ = nullptr;
+  if (queue_pair_ != nullptr) {
+    queue_pair_->Release();    
   }
 }
 

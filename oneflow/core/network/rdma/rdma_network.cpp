@@ -26,10 +26,9 @@ void RdmaNetwork::Finalize() {
   register_id_to_mem_descriptor_.clear();
 }
 
-NetworkMemory* RdmaNetwork::RegisterMemory(void* dptr, size_t len,
-                                           int64_t register_id) {
+NetworkMemory* RdmaNetwork::RegisterMemory(void* dptr, size_t len) {
   NetworkMemory* net_memory = rdma_wrapper_->NewNetworkMemory();  // TODO(shiyuan)
-  net_memory->Reset(dptr, len, register_id);
+  net_memory->Reset(dptr, len);
   return net_memory;
 }
 
@@ -171,7 +170,7 @@ bool RdmaNetwork::PollRecvQueue(NetworkResult* result) {
   if (request == nullptr) { return false; }
 
   result->net_msg = request->rdma_msg->msg();
-  request->callback();  // TODO(shiyuan)
+  result->callback = request->callback;
 
   Connection* conn =
       connection_pool_->GetConnection(result->net_msg.src_machine_id);
@@ -187,7 +186,7 @@ bool RdmaNetwork::PollSendQueue(NetworkResult* result) {
   if (request == nullptr) { return false; }
 
   result->net_msg = request->rdma_msg->msg();
-  request->callback();  // TODO(shiyuan)
+  result->callback = request->callback;
   request_pool_->ReleaseRequest(request);
   
   return true;
