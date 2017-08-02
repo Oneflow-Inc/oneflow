@@ -125,7 +125,7 @@ std::shared_ptr<RegstDesc> TaskNode::NewProducedRegstDesc(
 }
 
 void TaskNode::ConsumeRegstDesc(const std::string& regst_desc_name,
-                                  std::shared_ptr<RegstDesc> regst_desc) {
+                                std::shared_ptr<RegstDesc> regst_desc) {
   CHECK(consumed_regst_descs_.emplace(regst_desc_name, regst_desc).second);
   regst_desc->AddConsumer(this);
 }

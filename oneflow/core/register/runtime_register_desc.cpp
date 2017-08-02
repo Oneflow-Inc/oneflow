@@ -12,8 +12,7 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& regst_desc_proto) {
   const auto& consumers = regst_desc_proto.consumer_task_id();
   consumers_actor_id_.reserve(consumers.size());
   for (int64_t task_id : consumers) {
-    consumers_actor_id_.push_back(
-        IDMgr::Singleton()->ActorId4TaskId(task_id));
+    consumers_actor_id_.push_back(IDMgr::Singleton()->ActorId4TaskId(task_id));
   }
 
   for (const auto& pair : regst_desc_proto.lbn2shape()) {

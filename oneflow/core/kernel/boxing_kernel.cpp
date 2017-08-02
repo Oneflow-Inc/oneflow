@@ -101,7 +101,9 @@ void BoxingKernel<device_type, FloatingPointType>::
                                   const int32_t dst_split_axis,
                                   std::vector<CopyRule>* copy_rules) const {
   const int64_t im_sz =
-      src_blobs.at(0)->shape().Count(2) * sizeof(FloatingPointType);
+      (src_blobs.at(0)->shape().NumAxes() > 2)
+          ? src_blobs.at(0)->shape().Count(2) * sizeof(FloatingPointType)
+          : 1;
   if (src_concat_axis == 0 && dst_split_axis == 1) {
     int64_t row_pre_offset_sum = 0;
     for (size_t src_idx = 0; src_idx < src_blobs.size(); ++src_idx) {
@@ -177,7 +179,10 @@ void BoxingKernel<device_type, FloatingPointType>::InferCopyRulesFromEqualAxis(
   }
 
   Blob* src_fst_blob = BnInOp2Blob(src_bns.front());
-  int64_t concat_dim_sz = src_fst_blob->shape().Count(concat_axis + 1);
+  const int64_t concat_dim_sz =
+      (src_fst_blob->shape().NumAxes() > 1)
+          ? src_fst_blob->shape().Count(concat_axis + 1)
+          : 1;
   int64_t seg_cnt = (concat_axis == 0) ? 1 : (src_fst_blob->shape().At(0));
 
   InferCopyRulesFromConcatDim(src_bn2concat_dim, dst_bn2concat_dim, seg_cnt,
