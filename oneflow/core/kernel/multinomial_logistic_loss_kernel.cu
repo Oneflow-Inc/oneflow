@@ -25,7 +25,7 @@ __global__ void MultinomialLogisticLossBackwardGpu(
     FloatingPointType* prediction_diff) {
   const FloatingPointType scale = -1.0 / instance_num;
   CUDA_1D_KERNEL_LOOP(i, instance_num) {
-    for (int64_t j = 0; j < num_of_classes; j++) {
+    for (int64_t j = 0; j < num_of_classes; ++j) {
       prediction_diff[i * num_of_classes + j] = 0;
     }
     int64_t label = labels[i];
