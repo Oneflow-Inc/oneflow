@@ -48,8 +48,8 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
 
 void Actor::ProcessEord() {
   VLOG(4) << "actor " << actor_id_ << " process one eord";
-  num_of_not_eord_ -= 1;
-  if (!num_of_not_eord_) {
+  num_of_remaining_eord_ -= 1;
+  if (!num_of_remaining_eord_) {
     if (num_of_read_empty_) {
       if (!total_reading_cnt_) {
         OF_SET_MSG_HANDLER(nullptr);
