@@ -21,10 +21,11 @@ std::string Shape::DebugStr() const {
 }
 
 int64_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
-  CHECK(0 <= begin_axis && begin_axis <= end_axis && end_axis <= NumAxes())
-      << "[begin_axis:" << begin_axis << "][end_axis:" << end_axis
-      << "][num_axes:" << NumAxes() << "]";
   int64_t cnt = 1;
+  // The axis num might be negative, so transfer to positive firstly.
+  begin_axis = CanonicalAxisIndex(begin_axis);
+  if (end_axis != NumAxes()) { end_axis = CanonicalAxisIndex(end_axis); }
+  CHECK_LT(begin_axis, end_axis);
   for (int64_t i = begin_axis; i < end_axis; ++i) { cnt *= At(i); }
   return cnt;
 }
