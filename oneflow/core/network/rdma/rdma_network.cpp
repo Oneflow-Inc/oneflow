@@ -16,9 +16,9 @@ void RdmaNetwork::Init(int64_t my_machine_id, const NetworkTopology& net_topo) {
   port_ = net_topo.all_nodes[my_machine_id].port;
   net_topo_ = net_topo;
   rdma_wrapper_.reset(new RdmaWrapper());
+  rdma_wrapper_->Init(net_topo.all_nodes[my_machine_id].address.c_str(), port_);
   request_pool_.reset(new RequestPool());
   connection_pool_.reset(new ConnectionPool());
-  rdma_wrapper_->Init(net_topo.all_nodes[my_machine_id].address.c_str(), port_);
   EstablishConnection();
 }
 
@@ -29,6 +29,7 @@ void RdmaNetwork::Finalize() {
 NetworkMemory* RdmaNetwork::RegisterMemory(void* dptr, size_t len) {
   NetworkMemory* net_memory = rdma_wrapper_->NewNetworkMemory();  // TODO(shiyuan)
   net_memory->Reset(dptr, len);
+  net_memory->Register();
   return net_memory;
 }
 
@@ -211,6 +212,7 @@ void RdmaNetwork::EstablishConnection() {
       do {
         conn = NewConnection();
         CHECK(conn);
+        std::cout << "my_ip: " << net_topo_.all_nodes[my_machine_id_].address.c_str() << ", my_port: " << port_ << std::endl;
         conn->Bind(net_topo_.all_nodes[my_machine_id_].address.c_str(), port_);
         conn->PostRecvRequest(*receive_request);
       } while (!conn->TryConnectTo(

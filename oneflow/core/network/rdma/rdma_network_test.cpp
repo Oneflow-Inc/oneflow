@@ -54,24 +54,24 @@ int main(int argc, char** argv) {
   NetworkMessage msg;
   NetworkResult result;
 
-  /*
   msg.src_machine_id = my_machine_id;
-  msg.type = NetworkMessageType::MSG_TYPE_BARRIER;
+  msg.type = NetworkMessageType::kBarrier;
   msg.dst_machine_id = peer_machine_id;
 
   net->SendMessage(msg);
   cout << "PostSendRequest" << endl;
 
   int k = 0;
-  for (int i = 0; i < 2 * net_topo.all_nodes[my_machine_id].neighbors.size();
-  ++i) { while (!net->Poll(&result)) { sleep(1); printf("Poll time: %d,
-  false\n", k++);
+  for (int i = 0; i < 2 * net_topo.all_nodes[my_machine_id].neighbors.size(); ++i) { 
+    while (!net->Poll(&result)) {
+      sleep(1);
+      printf("Poll time: %d, false\n", k++);
     }
     printf("Poll time: %d, true \n", k++);
-    if (result.type == NetworkResultType::NET_SEND_OK) {
+    if (result.type == NetworkResultType::kSendOk) {
       printf("Send to %d OK\n", i);
     }
-    else if (result.type == NetworkResultType::NET_RECEIVE_MSG) {
+    else if (result.type == NetworkResultType::kReceiveMsg) {
       printf("Receive from %d OK\n", result.net_msg.src_machine_id);
     }
     else {
@@ -80,8 +80,8 @@ int main(int argc, char** argv) {
   }
 
   cout << "Send/Recv test success." << endl;
-  */
-
+  
+  /*
   // useful for my_machine_id == 0
   char* dst_buffer = new char[FLAGS_transfer_size];
   NetworkMemory* dst_memory = net->RegisterMemory(dst_buffer, FLAGS_transfer_size);
@@ -151,10 +151,11 @@ int main(int argc, char** argv) {
       ++i;
     }
   }
+  */
 
   LOG(INFO) << "Network Shutting Down..." << endl;
-  delete[] src_buffer;
-  delete[] dst_buffer;
+  // delete[] src_buffer;
+  // delete[] dst_buffer;
   gflags::ShutDownCommandLineFlags();
   google::ShutdownGoogleLogging();
   return 0;

@@ -11,10 +11,10 @@ struct MemoryDescriptor {
 
 class NetworkMemory {
  public:
-  NetworkMemory() = default;
+  NetworkMemory() = default;  // TODO(shiyuan)
   virtual ~NetworkMemory() = default;
 
-  void Reset(void* memory, size_t size) {
+  void Reset(void* memory, size_t size) {  // TODO(shiyuan)
     memory_ = memory;
     size_ = size;
   }

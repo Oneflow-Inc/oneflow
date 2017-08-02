@@ -4,7 +4,7 @@
 
 namespace oneflow {
 
-typedef std::shared_ptr<ActorMsg> MsgPtr;
+typedef std::shared_ptr<ActorMsg> MsgPtr;  // TODO(shiyuan)
 
 enum NetworkMessageType {
   kBarrier = 0,
