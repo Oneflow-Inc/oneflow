@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_SCHEDULE_INTERFACE_SCHEDULER_H_
 #define ONEFLOW_CORE_SCHEDULE_INTERFACE_SCHEDULER_H_
 
+#include "oneflow/core/schedule/facotry/factory.h"
 #include "oneflow/core/schedule/interface/policy.h"
 #include "oneflow/core/schedule/interface/policy_hub.h"
 
@@ -11,9 +12,7 @@ class Scheduler {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Scheduler);
   virtual ~Scheduler() = default;
-
- private:
-  std::shared_ptr<PolicyHubBase> pb;
+  static PolicyHubBase* Singleton() { return PH("default"); }
 };
 
 }  // namespace schedule

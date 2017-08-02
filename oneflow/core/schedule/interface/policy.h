@@ -1,8 +1,10 @@
 #ifndef ONEFLOW_CORE_SCHEDULE_INTERFACE_POLICY_H_
 #define ONEFLOW_CORE_SCHEDULE_INTERFACE_POLICY_H_
 
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/schedule/data_structure/node.h"
-#include "oneflow/core/schedule/utils/utils.h"
+#include "oneflow/core/schedule/util/util.h"
 
 namespace oneflow {
 namespace schedule {
@@ -12,108 +14,82 @@ class PolicyHub;
 class Policy {
  public:
   Policy() = default;
-  explicit Policy(PolicyHub* pb) : pb_(pb) {}
+  explicit Policy(PolicyHub* ph) : ph_(ph) {}
   virtual ~Policy() = default;
   OF_DISALLOW_COPY_AND_MOVE(Policy);
   DEFINE_PURE_VIRTUAL_TYPE();
-  inline const PolicyHub* pb() const { return pb_; }
+  inline const PolicyHub* ph() const { return ph_; }
 
  protected:
-  PolicyHub* pb_;
+  PolicyHub* ph_;
 };
 
-class GraphPrinterPolicy : public Policy {
+class PrinterPolicy : public Policy {
  public:
-  GraphPrinterPolicy() = default;
-  explicit GraphPrinterPolicy(PolicyHub* pb) : Policy(pb) {}
-  virtual ~GraphPrinterPolicy() = default;
-  OF_DISALLOW_COPY_AND_MOVE(GraphPrinterPolicy);
-  DEFINE_PURE_VIRTUAL_TYPE();
+  POLICY_INTERFACE_BOILERPLATE(PrinterPolicy);
 
-  virtual void ConsolePrint(const GraphNode& graph) = 0;
+  virtual void PrintGraph(const GraphNode& graph,
+                          const std::string& filename) = 0;
 };
 
 class TestGraphGeneratorPolicy : public Policy {
  public:
-  TestGraphGeneratorPolicy() = default;
-  explicit TestGraphGeneratorPolicy(PolicyHub* pb) : Policy(pb) {}
-  virtual ~TestGraphGeneratorPolicy() = default;
-  OF_DISALLOW_COPY_AND_MOVE(TestGraphGeneratorPolicy);
-  DEFINE_PURE_VIRTUAL_TYPE();
+  POLICY_INTERFACE_BOILERPLATE(TestGraphGeneratorPolicy);
 
   virtual std::unique_ptr<GraphNode> Demo() = 0;
 };
 
 class GraphBuilderPolicy : public Policy {
  public:
-  GraphBuilderPolicy() = default;
-  explicit GraphBuilderPolicy(PolicyHub* pb) : Policy(pb) {}
-  virtual ~GraphBuilderPolicy() = default;
-  OF_DISALLOW_COPY_AND_MOVE(GraphBuilderPolicy);
-  DEFINE_PURE_VIRTUAL_TYPE();
+  POLICY_INTERFACE_BOILERPLATE(GraphBuilderPolicy);
+
+  virtual std::unique_ptr<GraphNode> Builder(const Plan&) = 0;
 };
 
 class StaticSchedulerPolicy : public Policy {
  public:
-  StaticSchedulerPolicy() = default;
-  explicit StaticSchedulerPolicy(PolicyHub* pb) : Policy(pb) {}
-  virtual ~StaticSchedulerPolicy() = default;
-  OF_DISALLOW_COPY_AND_MOVE(StaticSchedulerPolicy);
-  DEFINE_PURE_VIRTUAL_TYPE();
+  POLICY_INTERFACE_BOILERPLATE(StaticSchedulerPolicy);
+
+  virtual std::unique_ptr<ScheduleResult> Schedule(const GraphNode& graph) = 0;
 };
 
 class ScheduleValidatorPolicy : public Policy {
  public:
-  ScheduleValidatorPolicy() = default;
-  explicit ScheduleValidatorPolicy(PolicyHub* pb) : Policy(pb) {}
-  virtual ~ScheduleValidatorPolicy() = default;
-  OF_DISALLOW_COPY_AND_MOVE(ScheduleValidatorPolicy);
-  DEFINE_PURE_VIRTUAL_TYPE();
+  POLICY_INTERFACE_BOILERPLATE(ScheduleValidatorPolicy);
+  virtual bool Validate(const GraphNode& graph,
+                        const ScheduleResult& result) = 0;
 };
 
 class RetimingPolicy : public Policy {
  public:
-  RetimingPolicy() = default;
-  explicit RetimingPolicy(PolicyHub* pb) : Policy(pb) {}
-  virtual ~RetimingPolicy() = default;
-  OF_DISALLOW_COPY_AND_MOVE(RetimingPolicy);
-  DEFINE_PURE_VIRTUAL_TYPE();
+  POLICY_INTERFACE_BOILERPLATE(RetimingPolicy);
+  virtual void Retiming(const GraphNode& graph, ScheduleResult* result) = 0;
 };
 
 class AllocatorPolicy : public Policy {
  public:
-  AllocatorPolicy() = default;
-  explicit AllocatorPolicy(PolicyHub* pb) : Policy(pb) {}
-  virtual ~AllocatorPolicy() = default;
-  OF_DISALLOW_COPY_AND_MOVE(AllocatorPolicy);
-  DEFINE_PURE_VIRTUAL_TYPE();
+  POLICY_INTERFACE_BOILERPLATE(AllocatorPolicy);
+  virtual void Allocate(const GraphNode& graph, ScheduleResult* result) = 0;
 };
 
 class AllocationValidatorPolicy : public Policy {
  public:
-  AllocationValidatorPolicy() = default;
-  explicit AllocationValidatorPolicy(PolicyHub* pb) : Policy(pb) {}
-  virtual ~AllocationValidatorPolicy() = default;
-  OF_DISALLOW_COPY_AND_MOVE(AllocationValidatorPolicy);
-  DEFINE_PURE_VIRTUAL_TYPE();
+  POLICY_INTERFACE_BOILERPLATE(AllocationValidatorPolicy);
+  virtual bool Validate(const GraphNode& graph,
+                        const ScheduleResult& result) = 0;
 };
 
 class LimitedAllocatorPolicy : public Policy {
  public:
-  LimitedAllocatorPolicy() = default;
-  explicit LimitedAllocatorPolicy(PolicyHub* pb) : Policy(pb) {}
-  virtual ~LimitedAllocatorPolicy() = default;
-  OF_DISALLOW_COPY_AND_MOVE(LimitedAllocatorPolicy);
-  DEFINE_PURE_VIRTUAL_TYPE();
+  POLICY_INTERFACE_BOILERPLATE(LimitedAllocatorPolicy);
+  virtual std::unique_ptr<ScheduleResult> Allocate(const GraphNode& graph) = 0;
 };
 
 class LimitedAllocationValidatorPolicy : public Policy {
  public:
-  LimitedAllocationValidatorPolicy() = default;
-  explicit LimitedAllocationValidatorPolicy(PolicyHub* pb) : Policy(pb) {}
-  virtual ~LimitedAllocationValidatorPolicy() = default;
-  OF_DISALLOW_COPY_AND_MOVE(LimitedAllocationValidatorPolicy);
-  DEFINE_PURE_VIRTUAL_TYPE();
+  POLICY_INTERFACE_BOILERPLATE(LimitedAllocationValidatorPolicy);
+  virtual bool Validate(const GraphNode& graph,
+                        const ScheduleResult& result) = 0;
 };
 
 }  // namespace schedule

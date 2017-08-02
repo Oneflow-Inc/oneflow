@@ -5,6 +5,8 @@
 #include <sstream>
 #include <string>
 #include "oneflow/core/schedule/data_structure/node.h"
+#include "oneflow/core/schedule/factory/factory.h"
+#include "oneflow/core/schedule/implement/simulator.h"
 
 namespace oneflow {
 namespace schedule {
@@ -91,6 +93,7 @@ void TestGraph(const std::string& input_name) {
   }
 
   //  auto nr_device = root->DeviceCount();
+  root->Update();
 
   Session sess(root);
 
@@ -159,12 +162,22 @@ void TestGraph(const std::string& input_name) {
   }
 }
 
+void SimulatorPolicyDemo() {
+  auto ph = PH("naive");
+  auto graph = ph->test_graph_generator()->Demo();
+  ph->printer()->PrintGraph(*graph, "");
+  auto schedule_result = ph->static_scheduler()->Schedule(*graph);
+  ph->retiming()->Retiming(*graph, schedule_result.get());
+  ph->allocator()->Allocate(*graph, schedule_result.get());
+}
+
 }  // namespace schedule
 }  // namespace oneflow
 
 int main(int argc, char* argv[]) {
   std::string input_name;
   if (argc > 1) { input_name = argv[1]; }
-  oneflow::schedule::TestGraph(input_name);
+  //  oneflow::schedule::TestGraph(input_name);
+  oneflow::schedule::SimulatorPolicyDemo();
   return 0;
 }
