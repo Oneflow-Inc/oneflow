@@ -11,8 +11,9 @@ void BlasMatrixMatrix(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans_a,
                       const FloatingPointType beta, const Blob* a,
                       const Blob* b, Blob* c) {
   const int m = c->shape().At(0);
-  const int n = c->shape().At(1);
-  const int k = (trans_a == CblasNoTrans) ? a->shape().At(1) : a->shape().At(0);
+  const int n = c->shape().Count(1);
+  const int k =
+      (trans_a == CblasNoTrans) ? a->shape().Count(1) : a->shape().At(0);
 
   const int lda = (trans_a == CblasNoTrans) ? k : m;
   const int ldb = (trans_b == CblasNoTrans) ? n : k;

@@ -21,10 +21,10 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
   (*bn2blob_ptr)["in"] = KTCommon::CreateBlobWithVector({2, 4}, in_mat);
   (*bn2blob_ptr)["label"] = KTCommon::CreateBlobWithVector({2}, label_mat);
-  (*bn2blob_ptr)["prob"] = KTCommon::CreateBlobWithSameValue({2, 4}, 0.0);
-  (*bn2blob_ptr)["tmp_1D"] = KTCommon::CreateBlobWithSameValue({2}, 0.0);
-  (*bn2blob_ptr)["loss"] = KTCommon::CreateBlobWithSameValue({1}, 0.0);
-  (*bn2blob_ptr)["in_diff"] = KTCommon::CreateBlobWithSameValue({2, 4}, 0.0);
+  (*bn2blob_ptr)["prob"] = KTCommon::CreateBlobWithRandomValue({2, 4});
+  (*bn2blob_ptr)["tmp_1D"] = KTCommon::CreateBlobWithRandomValue({2});
+  (*bn2blob_ptr)["loss"] = KTCommon::CreateBlobWithRandomValue({1});
+  (*bn2blob_ptr)["in_diff"] = KTCommon::CreateBlobWithRandomValue({2, 4});
   (*bn2blob_ptr)["expected_loss"] =
       KTCommon::CreateBlobWithVector({1}, expected_loss_mat);
   (*bn2blob_ptr)["expected_in_diff"] =

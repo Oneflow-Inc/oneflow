@@ -12,7 +12,7 @@ __global__ void SoftmaxLossForwardTmp(const int64_t n, const int64_t w,
                                       const FloatingPointType* prob,
                                       FloatingPointType* tmp) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    tmp[i] = -std::log(prob[i * w + static_cast<int64_t>(label[i])]);
+    tmp[i] = -SAFE_LOG(prob[i * w + static_cast<int64_t>(label[i])]);
   }
 }
 

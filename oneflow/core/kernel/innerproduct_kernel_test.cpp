@@ -17,10 +17,6 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
   FloatingPointType weight_mat[] = {5, 4, 5, 3, 2, 1, 7, 0, 1, 1, 9, 8};
   FloatingPointType bias_mat[] = {2, 3, 5};
   FloatingPointType bias_multiplier_mat[] = {1, 1};
-  FloatingPointType out_mat[6] = {0};
-  FloatingPointType in_diff_mat[8] = {0};
-  FloatingPointType weight_diff_mat[12] = {0};
-  FloatingPointType bias_diff_mat[3] = {0};
 
   FloatingPointType expected_out_without_bias_mat[] = {40,  25, 62,
                                                        108, 65, 138};
@@ -37,27 +33,24 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
 
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
 
-  (*bn2blob_ptr)["in"] = KTCommon::CreateBlobWithVector({2, 4}, in_mat);
+  (*bn2blob_ptr)["in"] = KTCommon::CreateBlobWithVector({2, 1, 2, 2}, in_mat);
   (*bn2blob_ptr)["weight"] = KTCommon::CreateBlobWithVector({3, 4}, weight_mat);
-  (*bn2blob_ptr)["out"] = KTCommon::CreateBlobWithVector({2, 3}, out_mat);
+  (*bn2blob_ptr)["out"] = KTCommon::CreateBlobWithRandomValue({2, 3});
   (*bn2blob_ptr)["out_diff"] = (*bn2blob_ptr)["out"];
-  (*bn2blob_ptr)["in_diff"] =
-      KTCommon::CreateBlobWithVector({2, 4}, in_diff_mat);
-  (*bn2blob_ptr)["weight_diff"] =
-      KTCommon::CreateBlobWithVector({3, 4}, weight_diff_mat);
+  (*bn2blob_ptr)["in_diff"] = KTCommon::CreateBlobWithRandomValue({2, 1, 2, 2});
+  (*bn2blob_ptr)["weight_diff"] = KTCommon::CreateBlobWithRandomValue({3, 4});
 
   if (has_bias_term) {
     (*bn2blob_ptr)["bias"] = KTCommon::CreateBlobWithVector({1, 3}, bias_mat);
     (*bn2blob_ptr)["bias_multiplier"] =
         KTCommon::CreateBlobWithVector({2, 1}, bias_multiplier_mat);
-    (*bn2blob_ptr)["bias_diff"] =
-        KTCommon::CreateBlobWithVector({1, 3}, bias_diff_mat);
+    (*bn2blob_ptr)["bias_diff"] = KTCommon::CreateBlobWithRandomValue({1, 3});
     (*bn2blob_ptr)["expected_bias_diff"] =
         KTCommon::CreateBlobWithVector({1, 3}, expected_bias_diff_mat);
     (*bn2blob_ptr)["expected_out"] =
         KTCommon::CreateBlobWithVector({2, 3}, expected_out_mat);
     (*bn2blob_ptr)["expected_in_diff"] =
-        KTCommon::CreateBlobWithVector({2, 4}, expected_in_diff_mat);
+        KTCommon::CreateBlobWithVector({2, 1, 2, 2}, expected_in_diff_mat);
     (*bn2blob_ptr)["expected_weight_diff"] =
         KTCommon::CreateBlobWithVector({3, 4}, expected_weight_diff_mat);
   } else {
@@ -74,17 +67,12 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
 template<DeviceType device_type, typename FloatingPointType>
 std::function<Blob*(const std::string&)> BuildEmptyMdlForFill() {
   using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
-  FloatingPointType weight_mat[10000] = {0};
-  FloatingPointType bias_mat[10000] = {0};
-  FloatingPointType bias_multiplier_mat[10000] = {0};
-
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
 
-  (*bn2blob_ptr)["weight"] =
-      KTCommon::CreateBlobWithVector({100, 100}, weight_mat);
-  (*bn2blob_ptr)["bias"] = KTCommon::CreateBlobWithVector({100, 100}, bias_mat);
+  (*bn2blob_ptr)["weight"] = KTCommon::CreateBlobWithRandomValue({100, 100});
+  (*bn2blob_ptr)["bias"] = KTCommon::CreateBlobWithRandomValue({100, 100});
   (*bn2blob_ptr)["bias_multiplier"] =
-      KTCommon::CreateBlobWithVector({100, 100}, bias_multiplier_mat);
+      KTCommon::CreateBlobWithRandomValue({100, 100});
 
   return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
 }

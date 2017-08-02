@@ -28,7 +28,7 @@ class Runtime final {
       }
       if (task.type() == kMdUpdtCompTask) {
         mdupdt_tasks.push_back(&task);
-      } else if (task.subscribed_regst_desc_id().empty()) {
+      } else if (task.consumed_regst_desc_id().empty()) {
         source_tasks.push_back(&task);
       } else {
         other_tasks.push_back(&task);

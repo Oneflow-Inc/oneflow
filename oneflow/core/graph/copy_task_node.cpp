@@ -8,7 +8,7 @@ void CopyTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   auto out_regst = NewProducedRegstDesc("copy_out");
   BindProducedRegstAndOutEdge(out_regst, SoleOutEdge());
   std::shared_ptr<RegstDesc> in_regst = GetRelatedRegst(SoleInEdge());
-  SubscribeRegstDesc("copy_in", in_regst);
+  ConsumeRegstDesc("copy_in", in_regst);
   out_regst->CopyLbnFrom(in_regst.get());
 
   ExecNode* node = mut_exec_gph().NewNode();

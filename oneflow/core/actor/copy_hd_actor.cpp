@@ -10,7 +10,7 @@ void CopyHdActor::Init(const TaskProto& task_proto,
   CHECK(thread_ctx.copy_hd_cuda_stream);
   mut_device_ctx().reset(
       new CudaDeviceCtx(thread_ctx.copy_hd_cuda_stream, nullptr, nullptr));
-  set_num_of_not_eord(1);
+  set_num_of_remaining_eord(1);
   mut_num_of_read_empty() = 1;
   OF_SET_MSG_HANDLER(&CopyHdActor::HandlerNormal);
 }

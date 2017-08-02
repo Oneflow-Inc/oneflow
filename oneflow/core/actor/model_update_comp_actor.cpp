@@ -11,7 +11,7 @@ void MdUpdtCompActor::Init(const TaskProto& task_proto,
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
   next_model_version_id_ = 0;
   related_save_task_id_ = task_proto.related_save_task_id();
-  set_num_of_not_eord(1);
+  set_num_of_remaining_eord(1);
   mut_num_of_read_empty() = 1;
   if (thread_ctx.cpu_stream) {
     mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
@@ -58,12 +58,12 @@ int MdUpdtCompActor::HandlerBeforeSendInitialModel(const ActorMsg& actor_msg) {
   AsyncSendReadableRegstMsg();
   if (model_tmp_regst_desc_id_ != -1) {
     SetReadOnlyForRegstDescId(model_tmp_regst_desc_id_);
-    AsyncSendEORDMsgToSubscribers(model_tmp_regst_desc_id_);
+    AsyncSendEORDMsgToConsumers(model_tmp_regst_desc_id_);
   }
   if (JobDesc::Singleton()->is_train()) {
     OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerNormal);
   } else {
-    AsyncSendEORDMsgToSubscribers(model_regst_desc_id_);
+    AsyncSendEORDMsgToConsumers(model_regst_desc_id_);
     OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerZombie);
   }
   return 0;
@@ -97,7 +97,7 @@ int MdUpdtCompActor::HandlerWaitUntilNoReadableRegst(
       0);
   ActUntilFail();
   if (waiting_model_diff_acc_queue_.empty()) {
-    AsyncSendEORDMsgToSubscribers(model_regst_desc_id_);
+    AsyncSendEORDMsgToConsumers(model_regst_desc_id_);
     OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerZombie);
   }
   return 0;
@@ -124,7 +124,7 @@ void MdUpdtCompActor::Act() {
     AsyncSendReadableRegstMsg(
         [this](int64_t actor_id) { return actor_id == related_save_task_id_; });
     CHECK(!IsReadReady());
-    AsyncSendEORDMsgToSubscribers(model_regst_desc_id_);
+    AsyncSendEORDMsgToConsumers(model_regst_desc_id_);
     TrySwitchToZombie();
   } else {
     if (next_model_version_id_

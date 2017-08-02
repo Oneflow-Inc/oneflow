@@ -22,7 +22,7 @@ void MdUpdtCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   const std::string ibn = "model_diffs";
   if (model_diff_acc_regst != nullptr) {
     exec_node->BindBnInOpAndRegst(ibn, model_diff_acc_regst);
-    SubscribeRegstDesc(ibn, model_diff_acc_regst);
+    ConsumeRegstDesc(ibn, model_diff_acc_regst);
   }
   exec_node->BindBnInOpAndRegst(exec_node->op()->SoleObn(), model_regst);
   mut_exec_gph().UpdateSourceAndSink();
