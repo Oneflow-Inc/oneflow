@@ -11,7 +11,7 @@ void MdUpdtCompActor::Init(const TaskProto& task_proto,
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
   next_model_version_id_ = 0;
   related_save_task_id_ = task_proto.related_save_task_id();
-  set_num_of_not_eord(1);
+  set_num_of_remaining_eord(1);
   mut_num_of_read_empty() = 1;
   if (thread_ctx.cpu_stream) {
     mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
