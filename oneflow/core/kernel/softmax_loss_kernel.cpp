@@ -52,7 +52,7 @@ class SoftmaxLossKernelUtil<DeviceType::kCPU, FloatingPointType> final {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
       *loss = 0;
       for (int64_t i = 0; i < n; ++i) {
-        *loss -= std::log(prob[i * w + static_cast<int64_t>(label[i])]);
+        *loss -= SAFE_LOG(prob[i * w + static_cast<int64_t>(label[i])]);
       }
       *loss /= n;
     });
