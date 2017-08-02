@@ -16,8 +16,8 @@ class Regst final {
   int64_t model_version_id() const { return model_version_id_; }
   int64_t regst_desc_id() const { return regst_desc_->regst_desc_id(); }
   int64_t producer_actor_id() const { return regst_desc_->producer_actor_id(); }
-  const std::vector<int64_t>& subscribers_actor_id() const {
-    return regst_desc_->subscribers_actor_id();
+  const std::vector<int64_t>& consumers_actor_id() const {
+    return regst_desc_->consumers_actor_id();
   }
   const RtRegstDesc* regst_desc() const { return regst_desc_; }
   void ForEachLbn(std::function<void(const std::string&)>);

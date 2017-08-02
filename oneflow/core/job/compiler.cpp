@@ -222,7 +222,7 @@ void Compiler::Plan2DotFile(const Plan& plan) {
                  << std::to_string(pair.second.regst_desc_id()) << "[label=\""
                  << pair.first << "\"];\n";
     }
-    for (const auto& pair : task_proto.subscribed_regst_desc_id()) {
+    for (const auto& pair : task_proto.consumed_regst_desc_id()) {
       out_stream << "regst_desc" << std::to_string(pair.second) << "->task"
                  << std::to_string(task_proto.id()) << "[label=\"" << pair.first
                  << "\"];\n";
