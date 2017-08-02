@@ -180,7 +180,7 @@ void BoxingKernel<device_type, FloatingPointType>::InferCopyRulesFromEqualAxis(
 
   Blob* src_fst_blob = BnInOp2Blob(src_bns.front());
   const int64_t concat_dim_sz =
-      (src_fst_blob->shape().NumAxes() > 1)
+      (src_fst_blob->shape().NumAxes() > concat_axis + 1)
           ? src_fst_blob->shape().Count(concat_axis + 1)
           : 1;
   int64_t seg_cnt = (concat_axis == 0) ? 1 : (src_fst_blob->shape().At(0));
