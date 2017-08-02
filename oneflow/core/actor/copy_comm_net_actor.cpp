@@ -8,7 +8,7 @@ void CopyCommNetActor::Init(const TaskProto& task_proto,
                             const ThreadCtx& thread_ctx) {
   Actor::Init(task_proto, thread_ctx);
   CHECK(thread_ctx.cpu_stream);
-  set_num_of_not_eord(1);
+  set_num_of_remaining_eord(1);
   mut_num_of_read_empty() = 1;
   mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
   OF_SET_MSG_HANDLER(&CopyCommNetActor::HandlerNormal);
