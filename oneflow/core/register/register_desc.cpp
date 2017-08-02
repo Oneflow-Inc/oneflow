@@ -14,7 +14,7 @@ void SetDeviceCudaMemoryAccordingToThrdLocId(MemoryCase& mem_case,
   mem_case.mutable_device_cuda_mem()->set_device_id(device_id);
 }
 
-void SetHostPinnedMemoryAccordingToSubscribers(
+void SetHostPinnedMemoryAccordingToConsumers(
     MemoryCase& mem_case, const HashSet<const TaskNode*>& subs) {
   for (const TaskNode* sub : subs) {
     if (sub->task_type() == kCopyCommNetTask) {
@@ -35,8 +35,8 @@ RegstDesc::RegstDesc() {
   register_num_ = 2;  // TODO
 }
 
-void RegstDesc::AddSubscriber(const TaskNode* new_subscriber) {
-  CHECK(subscribers_.insert(new_subscriber).second);
+void RegstDesc::AddConsumer(const TaskNode* new_consumer) {
+  CHECK(consumers_.insert(new_consumer).second);
 }
 
 void RegstDesc::CopyLbnFrom(const RegstDesc* rhs) {
@@ -99,9 +99,9 @@ std::string RegstDesc::DebugStr() const {
 void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_regst_desc_id(regst_desc_id_);
   ret->set_producer_task_id(producer_->task_id());
-  for (const TaskNode* subscriber : subscribers_) {
-    if (!subscriber->IsMeaningLess()) {
-      ret->add_subscriber_task_id(subscriber->task_id());
+  for (const TaskNode* consumer : consumers_) {
+    if (!consumer->IsMeaningLess()) {
+      ret->add_consumer_task_id(consumer->task_id());
     }
   }
   for (const auto& pair : lbn2shape_) {
@@ -123,18 +123,18 @@ MemoryCase RegstDesc::InferMemCase() const {
                                               producer_->thrd_loc_id());
     } else {
       mem_case.mutable_host_pinned_mem()->set_need_cuda(true);
-      SetHostPinnedMemoryAccordingToSubscribers(mem_case, subscribers_);
+      SetHostPinnedMemoryAccordingToConsumers(mem_case, consumers_);
     }
   } else if (producer_->task_type() == kCopyCommNetTask) {
     mem_case.mutable_host_pinned_mem()->set_need_rdma(true);
-    SetHostPinnedMemoryAccordingToSubscribers(mem_case, subscribers_);
+    SetHostPinnedMemoryAccordingToConsumers(mem_case, consumers_);
   } else {
     if (device_type == kGPU && producer_->task_type() != kBoxingTask) {
       SetDeviceCudaMemoryAccordingToThrdLocId(mem_case,
                                               producer_->thrd_loc_id());
     } else {
       mem_case.mutable_host_pageable_mem();
-      SetHostPinnedMemoryAccordingToSubscribers(mem_case, subscribers_);
+      SetHostPinnedMemoryAccordingToConsumers(mem_case, consumers_);
     }
   }
   return mem_case;

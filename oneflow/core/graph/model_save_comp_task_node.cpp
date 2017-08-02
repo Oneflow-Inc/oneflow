@@ -12,7 +12,7 @@ void MdSaveCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
     BindProducedRegstAndOutEdge(updt_task->GetProducedRegstDesc("model"),
                                 SoleOutEdge());
   } else if (out_edges().empty()) {
-    SubscribeRegstDesc("model", GetRelatedRegst(SoleInEdge()));
+    ConsumeRegstDesc("model", GetRelatedRegst(SoleInEdge()));
 
     OperatorConf op_conf;
     op_conf.set_name("model_save_op" + updt_task->node_id_str());

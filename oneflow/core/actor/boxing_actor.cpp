@@ -7,9 +7,9 @@ namespace oneflow {
 void BoxingActor::Init(const TaskProto& task_proto,
                        const ThreadCtx& thread_ctx) {
   Actor::Init(task_proto, thread_ctx);
-  int num_of_subscribed_regsts = task_proto.subscribed_regst_desc_id().size();
-  set_num_of_remaining_eord(num_of_subscribed_regsts);
-  mut_num_of_read_empty() = num_of_subscribed_regsts;
+  int num_of_consumed_regsts = task_proto.consumed_regst_desc_id().size();
+  set_num_of_remaining_eord(num_of_consumed_regsts);
+  mut_num_of_read_empty() = num_of_consumed_regsts;
   CHECK(thread_ctx.cpu_stream);
   mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
   OF_SET_MSG_HANDLER(&BoxingActor::HandlerNormal);
