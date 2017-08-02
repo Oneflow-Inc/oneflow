@@ -162,11 +162,10 @@ void DataCompTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   NewProducedRegstDesc("activation_diff");
   // Subscribe
   ConsumeRegstDesc("activation",
-                     GetFwNode()->GetProducedRegstDesc("activation"));
+                   GetFwNode()->GetProducedRegstDesc("activation"));
   ConsumeRegstDesc("data_tmp", GetFwNode()->GetProducedRegstDesc("data_tmp"));
   ConsumeRegstDesc("model", GetFwNode()->GetConsumedRegstDesc("model"));
-  ConsumeRegstDesc("model_tmp",
-                     GetFwNode()->GetConsumedRegstDesc("model_tmp"));
+  ConsumeRegstDesc("model_tmp", GetFwNode()->GetConsumedRegstDesc("model_tmp"));
   ConsumeRegstDesc("in", GetFwNode()->GetConsumedRegstDesc("in"));
   ConsumeRegstDesc("out_diff", GetRelatedRegst(SoleInEdge()));
   ConsumeRegstDesc("out", GetFwNode()->GetProducedRegstDesc("out"));

@@ -88,7 +88,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   std::shared_ptr<RegstDesc> NewProducedRegstDesc(
       const std::string& regst_desc_name);
   void ConsumeRegstDesc(const std::string& regst_desc_name,
-                          std::shared_ptr<RegstDesc> regst_desc);
+                        std::shared_ptr<RegstDesc> regst_desc);
 
  private:
   // In task_gph level
