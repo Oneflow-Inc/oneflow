@@ -41,7 +41,7 @@ void BoxingTaskNode::FwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
 void BoxingTaskNode::EnrollAllRegstAndBindRelatedEdge() {
   for (TaskEdge* edge : in_edges()) {
     std::string name = "boxing_in_" + edge->edge_id_str();
-    SubscribeRegstDesc(name, GetRelatedRegst(edge));
+    ConsumeRegstDesc(name, GetRelatedRegst(edge));
   }
   for (TaskEdge* edge : out_edges()) {
     std::string name = "boxing_out_" + edge->edge_id_str();

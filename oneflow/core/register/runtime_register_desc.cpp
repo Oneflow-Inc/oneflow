@@ -9,10 +9,10 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& regst_desc_proto) {
       IDMgr::Singleton()->ActorId4TaskId(regst_desc_proto.producer_task_id());
   register_num_ = regst_desc_proto.register_num();
 
-  const auto& subscriber = regst_desc_proto.subscriber_task_id();
-  subscribers_actor_id_.reserve(subscriber.size());
-  for (int64_t task_id : subscriber) {
-    subscribers_actor_id_.push_back(
+  const auto& consumers = regst_desc_proto.consumer_task_id();
+  consumers_actor_id_.reserve(consumers.size());
+  for (int64_t task_id : consumers) {
+    consumers_actor_id_.push_back(
         IDMgr::Singleton()->ActorId4TaskId(task_id));
   }
 

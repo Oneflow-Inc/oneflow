@@ -25,7 +25,7 @@ message TaskProto {
   bool is_forward = 5;
   ExecSequence exec_sequence = 6;
   map<string, RegstDescProto> produced_regst_desc = 7;
-  map<string, int64> subscribed_regst_desc_id = 8;
+  map<string, int64> consumed_regst_desc_id = 8;
   // for CompTask
   ParallelPolicy parallel_policy = 1000;
   int64 parallel_id = 1001;
