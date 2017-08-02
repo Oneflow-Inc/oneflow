@@ -42,6 +42,10 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
   (*bn2blob_ptr)["label"] = KTCommon::CreateBlobWithVector({1, 4}, label_mat);
 
   FloatingPointType prediction_diff_mat[40] = {0};
+  for (int64_t i = 0; i < 40; i++) {
+    prediction_diff_mat[i] =
+        (FloatingPointType)rand() / (FloatingPointType)RAND_MAX;
+  }
   (*bn2blob_ptr)["prediction_diff"] =
       KTCommon::CreateBlobWithVector({4, 10}, prediction_diff_mat);
   FloatingPointType expected_prediction_diff_mat[40] = {
