@@ -53,7 +53,7 @@ std::function<Blob*(const std::string&)> ConstructBnInOp2BlobPtr(
         "in_" + std::to_string(i),
         KTCommon::CreateBlobWithSameValue(in_dim_vecs[i], (i + 1) * 1.0));
     bn2blob_ptr->emplace("in_" + std::to_string(i) + "_diff",
-                         KTCommon::CreateBlobWithSameValue(in_dim_vecs[i], 0));
+                         KTCommon::CreateBlobWithRandomValue(in_dim_vecs[i]));
   }
   for (size_t i = 0; i < out_num; ++i) {
     bn2blob_ptr->emplace(
@@ -64,7 +64,7 @@ std::function<Blob*(const std::string&)> ConstructBnInOp2BlobPtr(
         KTCommon::CreateBlobWithSameValue(out_dim_vecs[i], (i + 1) * 1.0));
   }
   bn2blob_ptr->emplace(std::string("middle"),
-                       KTCommon::CreateBlobWithSameValue(middle_dim, 0));
+                       KTCommon::CreateBlobWithRandomValue(middle_dim));
 
   return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
 }
@@ -87,11 +87,11 @@ std::function<Blob*(const std::string&)> ConstructBnInOp2BlobPtr(
   }
 
   bn2blob_ptr->emplace(std::string("middle"),
-                       KTCommon::CreateBlobWithSameValue(middle_dim, 0));
+                       KTCommon::CreateBlobWithRandomValue(middle_dim));
 
   for (size_t i = 0; i < in_dim_vecs.size(); ++i) {
     bn2blob_ptr->emplace("out_" + std::to_string(i),
-                         KTCommon::CreateBlobWithSameValue(in_dim_vecs[i], 0));
+                         KTCommon::CreateBlobWithRandomValue(in_dim_vecs[i]));
     bn2blob_ptr->emplace(
         "out_" + std::to_string(i) + "_diff",
         KTCommon::CreateBlobWithSameValue(in_dim_vecs[i], (i + 1) * 10.0));
