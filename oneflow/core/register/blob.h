@@ -24,6 +24,14 @@ class Blob {
 
   const Shape& shape() const { return *shape_; }
 
+  template<typename FloatingPointType>
+  std::string DebugStr() {
+    std::stringstream ss;
+    ss << dptr_ << "\t";
+    for (int i = 0; i < 10; ++i) { ss << dptr<FloatingPointType>()[i]; }
+    return ss.str();
+  }
+
  private:
   void* dptr_;
   const Shape* shape_;
