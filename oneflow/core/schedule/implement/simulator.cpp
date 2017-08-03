@@ -70,26 +70,6 @@ void SessionLogger::UpdateInterval(SimulatorSession* session, Mode* strategy) {
   });
 }
 
-std::unique_ptr<SimulatorSession::PipeCount> SimulatorSession::RegstDescCount(
-    bool bottleneck) {
-  auto regst_desc2pipe_count = unique_ptr_new<SimulatorSession::PipeCount>();
-  std::cout << "interval=" << logger()->max_interval() << std::endl;
-  graph()->ForeachRegstDesc([&](Node* regst_desc) {
-    Node* owner = nullptr;
-    graph()->produced_regst_desc_mgr().Input(regst_desc, &owner);
-    auto& spec = (*regst_desc2pipe_count)[regst_desc->id()];
-    spec.duration = logger()->mut_regst_desc2duration()[regst_desc];
-    spec.freq = logger()->max_interval();
-    auto count = (uint32_t)ceil(spec.duration / std::max(spec.freq, 1.0f));
-    spec.count = count;
-    logger()->mut_regst_desc2count()[regst_desc] = count;
-    std::cout << "regst_desc2pipe_count\t" << regst_desc->id() << "\t"
-              << spec.count << "\t" << spec.duration << "," << spec.freq
-              << std::endl;
-  });
-  return regst_desc2pipe_count;
-}
-
 void SimulatorSession::ClearTmpData() {
   tokens_.clear();
   logger()->Clear();
@@ -436,16 +416,14 @@ void LazyStrategy::InitTimeNet() {
   });
 }
 
-void LimitedStrategy::InitRegst(const SimulatorSession::PipeCount& pipe_count) {
+void LimitedStrategy::InitRegst(
+    const std::function<uint64_t(uint32_t)>& get_regst_num) {
   Sess()->graph()->ForeachRegstDesc([&](Node* regst_desc) {
-    auto pipe_count_itt = pipe_count.find(regst_desc->id());
-    if (pipe_count_itt != pipe_count.end()) {
-      const auto& spec = pipe_count_itt->second;
-      for (uint32_t i = 0; i < spec.count; i++) {
-        auto regst =
-            mut_regst_node_mgr().Create(std::to_string(regst_desc->id()));
-        mut_r2rd_arc_mgr().CreateIfNotFound(regst, regst_desc);
-      }
+    auto count = get_regst_num(regst_desc->id());
+    for (uint32_t i = 0; i < count; i++) {
+      auto regst =
+          mut_regst_node_mgr().Create(std::to_string(regst_desc->id()));
+      mut_r2rd_arc_mgr().CreateIfNotFound(regst, regst_desc);
     }
   });
 }
@@ -617,17 +595,37 @@ std::unique_ptr<ScheduleResult> StaticSchedulerSimulatorPolicy::Schedule(
   UnlimitedMode<PositiveStrategy> m0(sess);
   m0.Run();
 
-  sess->RegstDescCount();
-  auto logger = sess->GetLoggerThenReset();
+  return sess->GetLoggerThenReset();
+}
+
+void RetimingSimulatorPolicy::Retiming(const Session& session,
+                                       ScheduleResult* result) {
+  auto session_ptr = const_cast<Session*>(&session);
+  auto sess = dynamic_cast<SimulatorSession*>(session_ptr);
+  auto logger = dynamic_cast<SessionLogger*>(result);
+
   UnlimitedMode<NegativeStrategy> m1(sess);
   m1.Run();
+  logger->MergeTimeGapToLossInPlace(&*sess->logger());
+  logger->UpdateDuration(sess, &m1);
+}
 
-  sess->RegstDescCount();
+void AllocatorSimulatorPolicy::Allocate(const Session& session,
+                                        ScheduleResult* result) {
+  auto session_ptr = const_cast<Session*>(&session);
+  auto sess = dynamic_cast<SimulatorSession*>(session_ptr);
+  auto logger = dynamic_cast<SessionLogger*>(result);
 
-  sess->logger()->MergeTimeGapToLossInPlace(&*logger);
-  sess->logger()->UpdateDuration(sess, &m1);
-
-  return sess->GetLoggerThenReset();
+  sess->graph()->ForeachRegstDesc([&](Node* regst_desc) {
+    Node* owner = nullptr;
+    sess->graph()->produced_regst_desc_mgr().Input(regst_desc, &owner);
+    auto duration = logger->mut_regst_desc2duration()[regst_desc];
+    auto interval = logger->max_interval();
+    auto count = (uint32_t)ceil(duration / std::max(interval, 1.0f));
+    logger->mut_regst_desc2count()[regst_desc] = count;
+    std::cout << "Allocate\t" << regst_desc->id() << "\t" << count << "\t"
+              << duration << "," << interval << std::endl;
+  });
 }
 
 }  // namespace schedule

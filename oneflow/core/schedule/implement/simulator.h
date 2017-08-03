@@ -46,18 +46,6 @@ class SimulatorSession : public Session {
   explicit SimulatorSession(GraphNode* graph, uint32_t nr_batch = 2u)
       : Session(graph, nr_batch), logger_(unique_ptr_new<SessionLogger>()) {}
 
-  struct PipeSpec {
-    float duration;
-    float freq;
-    uint32_t count;
-  };
-  typedef std::unordered_map<uint32_t, PipeSpec> PipeCount;
-  typedef std::unordered_map<Node*, std::pair<int32_t, int32_t>> NodeEndTime;
-  typedef std::unordered_map<Node*, uint32_t> NodeAscMaxTime;
-  typedef std::function<std::unique_ptr<std::unordered_map<Node*, Arc*>>(
-      std::unordered_set<Arc*>* tokens)>
-      PickStrategy;
-
   Node* GetInstanceDevice(Arc* instance);
 
   void NewSourceTokens();
@@ -65,7 +53,6 @@ class SimulatorSession : public Session {
   void ClearTmpData();
   void InitNodeBatchInstance(Node* node);
   std::unique_ptr<std::list<Node*>> GetBatchNodes();
-  std::unique_ptr<PipeCount> RegstDescCount(bool bottleneck = true);
 
   SessionLogger* logger() { return logger_.get(); }
   std::unique_ptr<SessionLogger>& mut_logger() { return logger_; }
@@ -77,6 +64,13 @@ class SimulatorSession : public Session {
 
   std::unordered_set<Arc*> tokens_;
   std::unique_ptr<SessionLogger> logger_;
+
+  //  struct PipeSpec {
+  //    float duration;
+  //    float freq;
+  //    uint32_t count;
+  //  };
+  //  typedef std::unordered_map<uint32_t, PipeSpec> PipeCount;
 };
 
 class Strategy {
@@ -261,9 +255,9 @@ class UnlimitedStrategy : public ResourceStrategy {
 class LimitedStrategy : public ResourceStrategy {
  public:
   LimitedStrategy(DirectionStrategy* direction, EvaluationStrategy* evaluation,
-                  const SimulatorSession::PipeCount& pipe_count)
+                  const std::function<uint64_t(uint32_t)>& get_regst_num)
       : ResourceStrategy(direction, evaluation) {
-    InitRegst(pipe_count);
+    InitRegst(get_regst_num);
     InitFuncIsInstanceReady();
   }
   void BeforeRun(Arc* instance);
@@ -279,7 +273,7 @@ class LimitedStrategy : public ResourceStrategy {
   inline const HasOneArcMgr& r2rd_arc_mgr() const { return r2rd_arc_mgr_; }
   inline HasOneArcMgr& mut_r2rd_arc_mgr() { return r2rd_arc_mgr_; }
 
-  void InitRegst(const SimulatorSession::PipeCount& pipe_count);
+  void InitRegst(const std::function<uint64_t(uint32_t)>& get_regst_num);
   void InitFuncIsInstanceReady();
   bool IsAllRegstDescReady(Arc* instance);
   bool IsRegstDescReady(Node* regst_desc, Node* batch);
@@ -366,12 +360,12 @@ template<typename DirectionStrategyType,
 class LimitedMode : public Mode {
  public:
   LimitedMode(SimulatorSession* sess,
-              const SimulatorSession::PipeCount& pipe_count)
+              const std::function<uint64_t(uint32_t)>& get_regst_num)
       : Mode(sess) {
     auto direction = unique_ptr_new<DirectionStrategyType>(sess);
     auto evaluation = unique_ptr_new<EvaluationStrategyType>(&*direction);
-    auto resource =
-        unique_ptr_new<LimitedStrategy>(&*direction, &*evaluation, pipe_count);
+    auto resource = unique_ptr_new<LimitedStrategy>(&*direction, &*evaluation,
+                                                    get_regst_num);
     SetStrategies(std::move(direction), std::move(evaluation),
                   std::move(resource));
   }
@@ -389,13 +383,15 @@ class StaticSchedulerSimulatorPolicy : public StaticSchedulerPolicy {
 class RetimingSimulatorPolicy : public RetimingPolicy {
  public:
   POLICY_IMPLEMENT_BOILERPLATE(RetimingSimulatorPolicy, RetimingPolicy);
-  virtual void Retiming(const Session& session, ScheduleResult* result) {}
+
+  virtual void Retiming(const Session& session, ScheduleResult* result);
 };
 
 class AllocatorSimulatorPolicy : public AllocatorPolicy {
  public:
   POLICY_IMPLEMENT_BOILERPLATE(AllocatorSimulatorPolicy, AllocatorPolicy);
-  virtual void Allocate(const Session& session, ScheduleResult* result) {}
+
+  virtual void Allocate(const Session& session, ScheduleResult* result);
 };
 
 }  // namespace schedule

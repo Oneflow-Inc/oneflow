@@ -11,6 +11,17 @@
 namespace oneflow {
 namespace schedule {
 
+void SimulatorPolicyDemo() {
+  auto ph = PH("naive");
+  auto graph = ph->test_graph_generator()->Demo();
+  ph->printer()->PrintGraph(*graph, "");
+  auto session = ph->static_scheduler()->MakeSession(*graph);
+  auto schedule_result = ph->static_scheduler()->Schedule(*session);
+  ph->retiming()->Retiming(*session, schedule_result.get());
+  ph->allocator()->Allocate(*session, schedule_result.get());
+}
+
+/*
 void TestGraph(const std::string& input_name) {
   auto graph_ptr = unique_ptr_new<GraphNode>("graph");
   auto graph = graph_ptr.get();
@@ -21,7 +32,6 @@ void TestGraph(const std::string& input_name) {
   std::stringstream ss;
   std::ifstream input_file(input_name);
   while (std::cin >> arg0 >> arg1 >> arg2) {
-    // while(input_file >> arg0 >> arg1 >> arg2) {
     if (arg0 == "ln") {
       uint64_t id;
       std::string name;
@@ -146,13 +156,16 @@ void TestGraph(const std::string& input_name) {
       std::cout << p.first << "\t" << limited[p.first].count << std::endl;
       count++;
     }
+                auto get_regst_num = [&](uint64_t id) {
+                        return limited[id];
+                };
     target++;
     if (declined) {
-      LimitedMode<NegativeStrategy> m3(&session, limited);
+      LimitedMode<NegativeStrategy> m3(&session, get_regst_num);
       m3.Run();
       auto log = session.GetLoggerThenReset();
 
-      LimitedMode<PositiveStrategy> m4(&session, limited);
+      LimitedMode<PositiveStrategy> m4(&session, get_regst_num);
       m4.Run();
 
       session.logger()->MergeTimeGapToLossInPlace(&*log);
@@ -161,16 +174,7 @@ void TestGraph(const std::string& input_name) {
     }
   }
 }
-
-void SimulatorPolicyDemo() {
-  auto ph = PH("naive");
-  auto graph = ph->test_graph_generator()->Demo();
-  ph->printer()->PrintGraph(*graph, "");
-  auto session = ph->static_scheduler()->MakeSession(*graph);
-  auto schedule_result = ph->static_scheduler()->Schedule(*session);
-  ph->retiming()->Retiming(*session, schedule_result.get());
-  ph->allocator()->Allocate(*session, schedule_result.get());
-}
+*/
 
 }  // namespace schedule
 }  // namespace oneflow
