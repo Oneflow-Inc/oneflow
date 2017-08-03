@@ -19,6 +19,9 @@ void MultinomialLogisticLossKernel<device_type, FloatingPointType>::Forward(
 
   Blob* prediction_diff = BnInOp2BlobPtr(GenDiffBn("prediction"));
   if (prediction_diff != nullptr) {
+    KernelUtil<device_type, FloatingPointType>::Memset(
+        ctx, prediction_diff->mut_dptr<FloatingPointType>(), 0,
+        prediction_diff->shape().elem_cnt() * sizeof(FloatingPointType));
     MultinomialLogisticLossKernelUtil<device_type, FloatingPointType>::Backward(
         ctx, prediction->shape().At(0), prediction->shape().At(1),
         prediction->dptr<FloatingPointType>(), label->dptr<FloatingPointType>(),
@@ -56,7 +59,7 @@ class MultinomialLogisticLossKernelUtil<DeviceType::kCPU, FloatingPointType>
                        FloatingPointType* prediction_diff) {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
       const FloatingPointType scale = -1.0 / instance_num;
-      for (int64_t i = 0; i < instance_num; i++) {
+      for (int64_t i = 0; i < instance_num; ++i) {
         int64_t label = labels[i];
         FloatingPointType prob =
             MAX_WITH_LOG_THRESHOLD(prediction[i * num_of_classes + label]);
@@ -64,7 +67,7 @@ class MultinomialLogisticLossKernelUtil<DeviceType::kCPU, FloatingPointType>
       }
     });
   }
-};
+};  // namespace oneflow
 
 INSTANTIATE_CPU_KERNEL_UTIL_CLASS(MultinomialLogisticLossKernelUtil);
 INSTANTIATE_KERNEL_CLASS(MultinomialLogisticLossKernel);
