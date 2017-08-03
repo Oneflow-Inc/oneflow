@@ -26,12 +26,6 @@ sockaddr_in GetAddress(const char* ip, int32_t port) {
 
 }  // namespace
 
-EndpointManager::EndpointManager()
-    : adapter_(nullptr),
-      send_cq_(nullptr),
-      recv_cq_(nullptr),
-      listener_(nullptr) {}
-
 EndpointManager::~EndpointManager() {
   Destroy();
 }

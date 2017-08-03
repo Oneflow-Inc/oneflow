@@ -25,16 +25,16 @@ class Connection {
 
   void Bind(const char* my_ip, int32_t my_port);
   bool TryConnectTo(const char* peer_ip, int32_t peer_port);
-  void CompleteConnectionTo();
+  void CompleteConnection();
   void AcceptConnect();
-
-  void DestroyConnection();
 
   void PostSendRequest(const Request& send_request);
   void PostRecvRequest(const Request& recv_request);
   void PostReadRequest(const Request& read_request,
                        const MemoryDescriptor& remote_memory_descriptor,
                        RdmaMemory* dst_memory);
+
+  void Destroy();
 
   IND2Connector* mutable_connector() { return connector_; }
   IND2QueuePair* mutable_queue_pair() { return queue_pair_; }

@@ -88,7 +88,7 @@ Connection::~Connection() {
 }
 
 void Connection::set_connector(Connector* connector) {
-  CHECK(!connector_);
+  CHECK(!connector_);  // TODO(shiyuan)
   connector_ = connector;
 }
 
@@ -100,7 +100,9 @@ void Connection::set_queue_pair(ibv_qp* queue_pair) {
 void Connection::Bind(const char* my_ip, int32_t my_port) {
   my_addr_ = GetAddress(my_ip, my_port);
   my_sock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  CHECK_EQ(bind(my_sock_, (struct sockaddr*)&my_addr_, sizeof(my_addr_)), 0);
+  CHECK_EQ(bind(my_sock_, reinterpret_cast<sockaddr*>(&my_addr_),
+                sizeof(my_addr_)),
+           0);
 }
 
 bool Connection::TryConnectTo(const char* peer_ip, int32_t peer_port) {

@@ -14,7 +14,7 @@ struct Request;
 class EndpointManager {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EndpointManager);
-  EndpointManager();
+  EndpointManager() = default;
   ~EndpointManager();
 
   void Init(const char* my_ip, int32_t my_port);

@@ -10,7 +10,7 @@ namespace {
 sockaddr_in GetAddress(const char* ip, int32_t port) {
   sockaddr_in addr = sockaddr_in();
   memset(&addr, 0, sizeof(sockaddr_in));
-  inet_pton(AF_INET, address, &addr.sin_addr);
+  inet_pton(AF_INET, ip, &addr.sin_addr);
   addr.sin_family = AF_INET;
   addr.sin_port = htons(static_cast<u_short>(port));
   return addr;
@@ -31,7 +31,7 @@ Connection::Connection(int64_t my_machine_id, int64_t peer_machine_id)
 }
 
 Connection::~Connection() {
-  DestroyConnection();
+  Destroy();
 }
 
 void Connection::set_connector(IND2Connector* connector) {
@@ -82,7 +82,7 @@ bool Connection::TryConnectTo(const char* peer_ip, int32_t peer_port) {
   }
 }
 
-void Connection::CompleteConnectionTo() {
+void Connection::CompleteConnection() {
   HRESULT hr;
   hr = connector_->CompleteConnect(ov_);
   if (hr == ND_PENDING) {
@@ -104,7 +104,7 @@ void Connection::AcceptConnect() {
   CHECK(SUCCEEDED(hr)) << "Fail accept connection";
 }
 
-void Connection::DestroyConnection() {
+void Connection::Destroy() {
   if (connector_ != nullptr) {
     HRESULT hr = connector_->Disconnect(ov_);
     if (hr == ND_PENDING) {
