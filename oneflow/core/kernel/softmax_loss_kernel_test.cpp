@@ -14,10 +14,9 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
   using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
   FloatingPointType in_mat[8] = {1, 2, 3, 4, 0, 0, 0, 0};
   FloatingPointType label_mat[2] = {2, 0};
-  FloatingPointType expected_loss_mat[1] = {1.413242};
+  FloatingPointType expected_loss_mat[1] = {2.826484};
   FloatingPointType expected_in_diff_mat[8] = {
-      0.0160293, 0.04357215, -0.3815586, 0.32195715,
-      -0.375,    0.125,      0.125,      0.125};
+      0.0320586, 0.0871443, -0.7631172, 0.6439143, -0.75, 0.25, 0.25, 0.25};
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
   (*bn2blob_ptr)["in"] = KTCommon::CreateBlobWithVector({2, 4}, in_mat);
   (*bn2blob_ptr)["label"] = KTCommon::CreateBlobWithVector({2}, label_mat);
