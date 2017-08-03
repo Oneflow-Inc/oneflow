@@ -149,7 +149,7 @@ bool Connection::TryConnectTo(const char* peer_ip, int32_t peer_port) {
   return true;
 }
 
-void Connection::CompleteConnectionTo() {
+void Connection::CompleteConnection() {
   TransQueuePairState(*connector_, queue_pair_);
 }
 
@@ -157,7 +157,7 @@ void Connection::AcceptConnect() {
   TransQueuePairState(*connector_, queue_pair_);
 }
 
-void Connection::DestroyConnection() {
+void Connection::Destroy() {
   delete connector_;
   connector_ = nullptr;
   if (queue_pair_ != nullptr) {

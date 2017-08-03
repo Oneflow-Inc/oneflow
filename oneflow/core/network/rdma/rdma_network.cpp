@@ -3,7 +3,7 @@
 namespace oneflow {
 
 RdmaNetwork::RdmaNetwork() 
-  : rdma_wrapper_(nullptr),
+  : rdma_manager_(nullptr),
     my_machine_id_(-1),
     port_(-1) {}
 
@@ -15,8 +15,8 @@ void RdmaNetwork::Init(int64_t my_machine_id, const NetworkTopology& net_topo) {
   my_machine_id_ = my_machine_id;
   port_ = net_topo.all_nodes[my_machine_id].port;
   net_topo_ = net_topo;
-  rdma_wrapper_.reset(new RdmaWrapper());
-  rdma_wrapper_->Init(net_topo.all_nodes[my_machine_id].address.c_str(), port_);
+  rdma_manager_.reset(new RdmaManager());
+  rdma_manager_->Init(net_topo.all_nodes[my_machine_id].address.c_str(), port_);
   request_pool_.reset(new RequestPool());
   connection_pool_.reset(new ConnectionPool());
   EstablishConnection();
@@ -27,7 +27,7 @@ void RdmaNetwork::Finalize() {
 }
 
 NetworkMemory* RdmaNetwork::RegisterMemory(void* dptr, size_t len) {
-  NetworkMemory* net_memory = rdma_wrapper_->NewNetworkMemory();  // TODO(shiyuan)
+  NetworkMemory* net_memory = rdma_manager_->NewNetworkMemory();  // TODO(shiyuan)
   net_memory->Reset(dptr, len);
   net_memory->Register();
   return net_memory;
@@ -159,15 +159,15 @@ Connection* RdmaNetwork::NewConnection() {
   Connection* conn = new Connection(my_machine_id_);
   CHECK(conn);
 
-  rdma_wrapper_->CreateConnector(conn);
-  rdma_wrapper_->CreateQueuePair(conn);
+  rdma_manager_->CreateConnector(conn);
+  rdma_manager_->CreateQueuePair(conn);
   return conn;
 }
 
 // |result| is owned by the caller, and the received message will be held in
 // result->net_msg, having result->type == NetworkResultType::kReceiveMsg.
 bool RdmaNetwork::PollRecvQueue(NetworkResult* result) {
-  Request* request = rdma_wrapper_->PollRecvQueue(result);
+  Request* request = rdma_manager_->PollRecvQueue(result);
   if (request == nullptr) { return false; }
 
   result->net_msg = request->rdma_msg->msg();
@@ -183,7 +183,7 @@ bool RdmaNetwork::PollRecvQueue(NetworkResult* result) {
 }
 
 bool RdmaNetwork::PollSendQueue(NetworkResult* result) {
-  Request* request = rdma_wrapper_->PollSendQueue(result);
+  Request* request = rdma_manager_->PollSendQueue(result);
   if (request == nullptr) { return false; }
 
   result->net_msg = request->rdma_msg->msg();
@@ -238,7 +238,7 @@ void RdmaNetwork::EstablishConnection() {
       CHECK(receive_request);
       // connecting with src_machine_id
       int64_t src_machine_id =
-          rdma_wrapper_->WaitForConnection(conn, receive_request);
+          rdma_manager_->WaitForConnection(conn, receive_request);
       CHECK_NE(src_machine_id, -1);
       connection_pool_->AddConnection(src_machine_id, conn);
       // Pre-post Receive issue before connect

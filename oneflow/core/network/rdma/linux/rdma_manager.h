@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_WRAPPER_H_
-#define ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_WRAPPER_H_
+#ifndef ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_MANAGER_H_
+#define ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_MANAGER_H_
 
 #include <infiniband/verbs.h>
 #include <netdb.h>
@@ -14,11 +14,11 @@ namespace oneflow {
 class Connection;
 struct Request;
 
-class RdmaWrapper {
+class RdmaManager {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(RdmaWrapper);
-  RdmaWrapper() = default;
-  ~RdmaWrapper();
+  OF_DISALLOW_COPY_AND_MOVE(RdmaManager);
+  RdmaManager() = default;
+  ~RdmaManager();
 
   void Init(const char* my_ip, int32_t my_port);
   void Destroy();
@@ -47,4 +47,4 @@ class RdmaWrapper {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_WRAPPER_H_
+#endif  // ONEFLOW_CORE_NETWORK_RDMA_LINUX_RDMA_MANAGER_H_

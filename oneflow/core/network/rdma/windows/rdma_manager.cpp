@@ -1,4 +1,4 @@
-#include "oneflow/core/network/rdma/windows/rdma_wrapper.h"
+#include "oneflow/core/network/rdma/windows/rdma_manager.h"
 
 #include <Ws2tcpip.h>  // TODO(shiyuan)
 #include <windows.h>
@@ -26,17 +26,17 @@ sockaddr_in GetAddress(const char* ip, int32_t port) {
 
 }  // namespace
 
-RdmaWrapper::RdmaWrapper()
+RdmaManager::RdmaManager()
     : adapter_(nullptr),
       send_cq_(nullptr),
       recv_cq_(nullptr),
       listener_(nullptr) {}
 
-RdmaWrapper::~RdmaWrapper() {
+RdmaManager::~RdmaManager() {
   Destroy();
 }
 
-void RdmaWrapper::Init(const char* my_ip, int32_t my_port) {
+void RdmaManager::Init(const char* my_ip, int32_t my_port) {
   my_addr_ = GetAddress(my_ip, my_port);
 
   // INIT ADAPTER
@@ -95,7 +95,7 @@ void RdmaWrapper::Init(const char* my_ip, int32_t my_port) {
   CHECK(SUCCEEDED(hr));
 }
 
-void RdmaWrapper::Destroy() {
+void RdmaManager::Destroy() {
   if (send_cq_ != nullptr) {
     send_cq_->Release();
     send_cq_ = nullptr;
@@ -114,7 +114,7 @@ void RdmaWrapper::Destroy() {
   }
 }
 
-void RdmaWrapper::CreateConnector(Connection* conn) {
+void RdmaManager::CreateConnector(Connection* conn) {
   IND2Connector* connector = nullptr;
   HRESULT hr = adapter_->CreateConnector(
             IID_IND2Connector,
@@ -124,7 +124,7 @@ void RdmaWrapper::CreateConnector(Connection* conn) {
   conn->set_connector(connector);
 }
 
-void RdmaWrapper::CreateQueuePair(Connection* conn) {
+void RdmaManager::CreateQueuePair(Connection* conn) {
   IND2QueuePair* queue_pair = nullptr;
   HRESULT hr = adapter_->CreateQueuePair(
             IID_IND2QueuePair,
@@ -143,7 +143,7 @@ void RdmaWrapper::CreateQueuePair(Connection* conn) {
   conn->set_queue_pair(queue_pair);
 }
 
-RdmaMemory* RdmaWrapper::NewNetworkMemory() {
+RdmaMemory* RdmaManager::NewNetworkMemory() {
   IND2MemoryRegion* memory_region = nullptr;
   HRESULT hr = adapter_->CreateMemoryRegion(
             IID_IND2MemoryRegion,
@@ -157,7 +157,7 @@ RdmaMemory* RdmaWrapper::NewNetworkMemory() {
 }
 
 // XXX(shiyuan)
-int64_t RdmaWrapper::WaitForConnection(Connection* conn,
+int64_t RdmaManager::WaitForConnection(Connection* conn,
                                        Request* receive_request) {
   int64_t peer_machine_id;
   ULONG size = sizeof(peer_machine_id);
@@ -186,7 +186,7 @@ int64_t RdmaWrapper::WaitForConnection(Connection* conn,
 
 // |result| is owned by the caller, and the received message will be held in
 // result->net_msg, having result->type == NetworkResultType::kReceiveMsg.
-Request* RdmaWrapper::PollRecvQueue(NetworkResult* result) {
+Request* RdmaManager::PollRecvQueue(NetworkResult* result) {
   ND2_RESULT nd2_result;
   uint32_t len = recv_cq_->GetResults(&nd2_result, 1);
   if (len == 0)
@@ -199,7 +199,7 @@ Request* RdmaWrapper::PollRecvQueue(NetworkResult* result) {
   return reinterpret_cast<Request*>(nd2_result.RequestContext);
 }
 
-Request* RdmaWrapper::PollSendQueue(NetworkResult* result) {
+Request* RdmaManager::PollSendQueue(NetworkResult* result) {
   ND2_RESULT nd2_result;
   uint32_t len = send_cq_->GetResults(&nd2_result, 1);
   if (len == 0)
