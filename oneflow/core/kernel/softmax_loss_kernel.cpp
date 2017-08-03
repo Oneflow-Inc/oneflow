@@ -33,9 +33,6 @@ void SoftmaxLossKernel<device_type, FloatingPointType>::Forward(
                                                          in_diff, 1);
     SoftmaxLossKernelUtil<device_type, FloatingPointType>::BackwardSub(
         ctx, n, w, label, in_diff);
-    // loss weight is 1 / n
-    KernelUtil<device_type, FloatingPointType>::BlasScal(ctx, n * w, 1.0 / n,
-                                                         in_diff, 1);
   }
 }
 
