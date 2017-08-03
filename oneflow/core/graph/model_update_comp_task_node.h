@@ -20,10 +20,10 @@ class MdUpdtCompTaskNode final : public CompTaskNode {
         fw_task_->chain_node()->parallel_desc()->parallel_num());
     int64_t related_save_task_id = -1;
     for (const auto& pair : produced_regst_descs()) {
-      for (const TaskNode* subscriber : pair.second->subscribers()) {
-        if (dynamic_cast<const DataCompTaskNode*>(subscriber) == nullptr) {
+      for (const TaskNode* consumer : pair.second->consumers()) {
+        if (dynamic_cast<const DataCompTaskNode*>(consumer) == nullptr) {
           CHECK_EQ(related_save_task_id, -1);
-          related_save_task_id = subscriber->task_id();
+          related_save_task_id = consumer->task_id();
         }
       }
     }
