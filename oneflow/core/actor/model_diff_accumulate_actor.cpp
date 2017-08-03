@@ -18,7 +18,7 @@ void MdDiffAccActor::Init(const TaskProto& task_proto,
   set_num_of_remaining_eord(1);
   mut_num_of_read_empty() = 1;
   OF_SET_MSG_HANDLER(&MdDiffAccActor::HandlerNormal);
-  diff_acc_cnt_ = 0;
+  diff_acc_cnt_ = JobDesc::Singleton()->num_of_pieces_in_batch();
 }
 
 int MdDiffAccActor::HandlerNormal(const ActorMsg& msg) {

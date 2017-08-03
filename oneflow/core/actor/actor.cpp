@@ -38,7 +38,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   expected_piece_id_ = 0;
   for (const auto& pair : produced_regsts_) {
     for (const auto& regst : pair.second) {
-      writeable_produced_regst_[regst->regst_desc_id()].push(regst.get());
+      writeable_produced_regst_[regst->regst_desc_id()].push_back(regst.get());
       produced_regst2reading_cnt_[regst.get()] = 0;
     }
   }
@@ -138,7 +138,7 @@ void Actor::AsyncSendReadableRegstMsg(
         ActorMsgBus::Singleton()->SendMsg(std::move(msg));
       });
     }
-    if (!regst->consumers_actor_id().empty()) { pair.second.pop(); }
+    if (!regst->consumers_actor_id().empty()) { pair.second.pop_front(); }
     if (pair.second.empty()) { writeable_produced_regst_desc_num_ -= 1; }
     VLOG(4) << "actor " << actor_id() << " "
             << "send readable register " << regst << ", "
@@ -213,7 +213,7 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   auto writeable_it = writeable_produced_regst_.find(regst->regst_desc_id());
   if (writeable_it == writeable_produced_regst_.end()) { return 0; }
   if (writeable_it->second.empty()) { writeable_produced_regst_desc_num_ += 1; }
-  writeable_it->second.push(regst);
+  writeable_it->second.push_back(regst);
   return 0;
 }
 
@@ -233,7 +233,7 @@ void Actor::ForEachCurWriteableRegst(std::function<void(Regst*)> func) {
   }
 }
 
-bool Actor::IsWriteReady() {
+bool Actor::IsWriteReady() const {
   return writeable_produced_regst_desc_num_ == writeable_produced_regst_.size();
 }
 
