@@ -84,7 +84,7 @@ Connection::Connection(int64_t my_machine_id, int64_t peer_machine_id)
       queue_pair_(nullptr) {}
 
 Connection::~Connection() {
-  DestroyConnection();
+  Destroy();
 }
 
 void Connection::set_connector(Connector* connector) {

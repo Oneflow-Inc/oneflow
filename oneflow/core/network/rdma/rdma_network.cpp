@@ -3,7 +3,7 @@
 namespace oneflow {
 
 RdmaNetwork::RdmaNetwork() 
-  : rdma_manager_(nullptr),
+  : endpoint_manager_(nullptr),
     my_machine_id_(-1),
     port_(-1) {}
 
@@ -15,8 +15,8 @@ void RdmaNetwork::Init(int64_t my_machine_id, const NetworkTopology& net_topo) {
   my_machine_id_ = my_machine_id;
   port_ = net_topo.all_nodes[my_machine_id].port;
   net_topo_ = net_topo;
-  rdma_manager_.reset(new RdmaManager());
-  rdma_manager_->Init(net_topo.all_nodes[my_machine_id].address.c_str(), port_);
+  endpoint_manager_.reset(new EndpointManager());
+  endpoint_manager_->Init(net_topo.all_nodes[my_machine_id].address.c_str(), port_);
   request_pool_.reset(new RequestPool());
   connection_pool_.reset(new ConnectionPool());
   EstablishConnection();
@@ -26,10 +26,12 @@ void RdmaNetwork::Finalize() {
   register_id_to_mem_descriptor_.clear();
 }
 
-NetworkMemory* RdmaNetwork::RegisterMemory(void* dptr, size_t len) {
-  NetworkMemory* net_memory = rdma_manager_->NewNetworkMemory();  // TODO(shiyuan)
+NetworkMemory* RdmaNetwork::RegisterMemory(void* dptr, size_t len,
+                                           int64_t register_id) {
+  NetworkMemory* net_memory = endpoint_manager_->NewNetworkMemory();  // TODO(shiyuan)
   net_memory->Reset(dptr, len);
   net_memory->Register();
+  register_id_to_mem_descriptor_[register_id] = net_memory->memory_discriptor();
   return net_memory;
 }
 
@@ -146,28 +148,19 @@ void RdmaNetwork::Barrier() {
   printf("Barrier send all reply barrier over\n");
 }
 
-void RdmaNetwork::InitConnections() {
-  Connection* conn;
-  for (auto peer_machine_id : net_topo_.all_nodes[my_machine_id_].neighbors) {
-    conn = NewConnection();
-    CHECK(conn);
-    connection_pool_->AddConnection(peer_machine_id, conn);
-  }
-}
-
 Connection* RdmaNetwork::NewConnection() {
   Connection* conn = new Connection(my_machine_id_);
   CHECK(conn);
 
-  rdma_manager_->CreateConnector(conn);
-  rdma_manager_->CreateQueuePair(conn);
+  endpoint_manager_->CreateConnector(conn);
+  endpoint_manager_->CreateQueuePair(conn);
   return conn;
 }
 
 // |result| is owned by the caller, and the received message will be held in
 // result->net_msg, having result->type == NetworkResultType::kReceiveMsg.
 bool RdmaNetwork::PollRecvQueue(NetworkResult* result) {
-  Request* request = rdma_manager_->PollRecvQueue(result);
+  Request* request = endpoint_manager_->PollRecvQueue(result);
   if (request == nullptr) { return false; }
 
   result->net_msg = request->rdma_msg->msg();
@@ -183,7 +176,7 @@ bool RdmaNetwork::PollRecvQueue(NetworkResult* result) {
 }
 
 bool RdmaNetwork::PollSendQueue(NetworkResult* result) {
-  Request* request = rdma_manager_->PollSendQueue(result);
+  Request* request = endpoint_manager_->PollSendQueue(result);
   if (request == nullptr) { return false; }
 
   result->net_msg = request->rdma_msg->msg();
@@ -212,12 +205,11 @@ void RdmaNetwork::EstablishConnection() {
       do {
         conn = NewConnection();
         CHECK(conn);
-        std::cout << "my_ip: " << net_topo_.all_nodes[my_machine_id_].address.c_str() << ", my_port: " << port_ << std::endl;
         conn->Bind(net_topo_.all_nodes[my_machine_id_].address.c_str(), port_);
         conn->PostRecvRequest(*receive_request);
       } while (!conn->TryConnectTo(
           net_topo_.all_nodes[peer_machine_id].address.c_str(), port_));
-      conn->CompleteConnectionTo();
+      conn->CompleteConnection();
       connection_pool_->AddConnection(peer_machine_id, conn);
       for (int k = 0; k < kPrePostRecvNumber; ++k) {
         receive_request = request_pool_->AllocRequest(false);
@@ -238,7 +230,7 @@ void RdmaNetwork::EstablishConnection() {
       CHECK(receive_request);
       // connecting with src_machine_id
       int64_t src_machine_id =
-          rdma_manager_->WaitForConnection(conn, receive_request);
+          endpoint_manager_->WaitForConnection(conn, receive_request);
       CHECK_NE(src_machine_id, -1);
       connection_pool_->AddConnection(src_machine_id, conn);
       // Pre-post Receive issue before connect

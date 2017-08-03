@@ -18,12 +18,13 @@ class Network {
   virtual void Init(int64_t my_machine_id, const NetworkTopology& net_topo) = 0;
   virtual void Finalize() = 0;
 
-  virtual NetworkMemory* RegisterMemory(void* dptr, size_t len) = 0;
+  virtual NetworkMemory* RegisterMemory(void* dptr, size_t len,
+                                        int64_t register_id = -1) = 0;
 
   // |msg| is owned by the caller and can be released once |Send| returns, even
   // though the actual transmission of the |msg| content has not occurred.
   virtual void SendMessage(const NetworkMessage& msg) = 0;
-  virtual void SetCallbackForReceivedActorMsg(  // TODO(shiyuan)
+  virtual void SetCallbackForReceivedActorMsg(
       std::function<void()> callback) = 0;
 
   virtual void Read(const MemoryDescriptor& remote_memory_descriptor,

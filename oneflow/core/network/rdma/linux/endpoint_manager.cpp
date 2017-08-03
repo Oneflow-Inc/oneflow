@@ -1,4 +1,4 @@
-#include "oneflow/core/network/rdma/linux/rdma_manager.h"
+#include "oneflow/core/network/rdma/linux/endpoint_manager.h"
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -23,11 +23,11 @@ sockaddr_in GetAddress(const char* ip, int port) {
 
 }  // namespace
 
-RdmaManager::~RdmaManager() {
+EndpointManager::~EndpointManager() {
   Destroy();
 }
 
-void RdmaManager::Init(const char* my_ip, int32_t my_port) {
+void EndpointManager::Init(const char* my_ip, int32_t my_port) {
   my_addr_ = GetAddress(my_ip, my_port);
 
   // Init Adapter
@@ -54,7 +54,7 @@ void RdmaManager::Init(const char* my_ip, int32_t my_port) {
   device_list = nullptr;
 }
 
-void RdmaManager::Destroy() {
+void EndpointManager::Destroy() {
   if (send_cq_ != nullptr) {
     CHECK_EQ(ibv_destroy_cq(send_cq_), 0);
   }
@@ -71,7 +71,7 @@ void RdmaManager::Destroy() {
   }
 }
 
-void RdmaManager::CreateConnector(Connection* conn) {
+void EndpointManager::CreateConnector(Connection* conn) {
   ibv_port_attr attr;
   CHECK_EQ(ibv_query_port(context_, (uint8_t)1, &attr), 0);
 
@@ -90,7 +90,7 @@ void RdmaManager::CreateConnector(Connection* conn) {
   conn->set_connector(connector);
 }
 
-void RdmaManager::CreateQueuePair(Connection* conn) {
+void EndpointManager::CreateQueuePair(Connection* conn) {
   ibv_qp_init_attr qp_init_attr;
 
   memset(&qp_init_attr, 0, sizeof(qp_init_attr));
@@ -111,13 +111,13 @@ void RdmaManager::CreateQueuePair(Connection* conn) {
   conn->set_queue_pair(queue_pair);
 }
 
-RdmaMemory* RdmaManager::NewNetworkMemory() {
+RdmaMemory* EndpointManager::NewNetworkMemory() {
   RdmaMemory* rdma_memory = new RdmaMemory(protect_domain_);
   CHECK(rdma_memory);
   return rdma_memory;
 }
 
-int64_t RdmaManager::WaitForConnection(Connection* conn,
+int64_t EndpointManager::WaitForConnection(Connection* conn,
                                        Request* recv_request) {
   int64_t peer_machine_id;
   Connector* connector = conn->mutable_connector();
@@ -153,7 +153,7 @@ int64_t RdmaManager::WaitForConnection(Connection* conn,
 
 // |result| is owned by the caller, and the received message will be held in
 // result->net_msg, having result->type == NetworkResultType::kReceiveMsg.
-Request* RdmaManager::PollRecvQueue(NetworkResult* result) {
+Request* EndpointManager::PollRecvQueue(NetworkResult* result) {
   ibv_wc wc;
   int32_t len = ibv_poll_cq(recv_cq_, 1, &wc);
 
@@ -166,7 +166,7 @@ Request* RdmaManager::PollRecvQueue(NetworkResult* result) {
   return reinterpret_cast<Request*>(wc.wr_id);
 }
 
-Request* RdmaManager::PollSendQueue(NetworkResult* result) {
+Request* EndpointManager::PollSendQueue(NetworkResult* result) {
   ibv_wc wc;
   int32_t len = ibv_poll_cq(send_cq_, 1, &wc);
 

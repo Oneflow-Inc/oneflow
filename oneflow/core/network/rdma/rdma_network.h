@@ -19,7 +19,8 @@ class RdmaNetwork final : public Network {
   void Init(int64_t my_machine_id, const NetworkTopology& net_topo) override;
   void Finalize() override;
 
-  NetworkMemory* RegisterMemory(void* dptr, size_t len) override;
+  NetworkMemory* RegisterMemory(void* dptr, size_t len,
+                                int64_t register_id) override;
 
   void SendMessage(const NetworkMessage& msg) override;
   void SetCallbackForReceivedActorMsg(
@@ -32,35 +33,28 @@ class RdmaNetwork final : public Network {
   void Barrier() override;
 
  private:
-  void InitConnections();
   Connection* NewConnection();
-
   // passive side listens for connections requests initiated by active side(smaller id/rank)
   void EstablishConnection();
 
   // |result| is owned by the caller, and the received message will be held in
   // result->net_msg, having result->type == NetworkResultType::kReceiveMsg.
   bool PollRecvQueue(NetworkResult* result);
-
   // |result| is owned by the caller.
   // Both send request and read request are submitted to the send request queue.
   bool PollSendQueue(NetworkResult* result);
-
   const MemoryDescriptor& GetMemoryDescriptor(int64_t register_id) const;
 
   // estimate the pre-post number
   static const int kPrePostRecvNumber = 16;  // TODO(shiyuan)
-
-  std::unique_ptr<RdmaManager> rdma_manager_;
+  std::unique_ptr<EndpointManager> endpoint_manager_;
   int64_t my_machine_id_;
   int port_;
   NetworkTopology net_topo_;
-
   std::unique_ptr<RequestPool> request_pool_;
   std::unique_ptr<ConnectionPool> connection_pool_;
-
   // build the dict of MemoryDescriptor
-  std::unordered_map<int64_t, MemoryDescriptor> register_id_to_mem_descriptor_;
+  std::unordered_map<int64_t, MemoryDescriptor> register_id_to_mem_descriptor_;  // TODO(shiyuan)
 };
 
 }  // namespace oneflow

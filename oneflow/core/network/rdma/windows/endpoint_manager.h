@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_RDMA_MANAGER_H_
-#define ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_RDMA_MANAGER_H_
+#ifndef ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_ENDPOINT_MANAGER_H_
+#define ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_ENDPOINT_MANAGER_H_
 
 #include <stdint.h>
 #include <ndspi.h>
@@ -11,11 +11,11 @@ namespace oneflow {
 class Connection;
 struct Request;
 
-class RdmaManager {
+class EndpointManager {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(RdmaManager);
-  RdmaManager();
-  ~RdmaManager();
+  OF_DISALLOW_COPY_AND_MOVE(EndpointManager);
+  EndpointManager();
+  ~EndpointManager();
 
   void Init(const char* my_ip, int32_t my_port);
   void Destroy();
@@ -48,4 +48,4 @@ class RdmaManager {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_RDMA_MANAGER_H_
+#endif  // ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_ENDPOINT_MANAGER_H_
