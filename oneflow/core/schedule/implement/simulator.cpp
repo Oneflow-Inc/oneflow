@@ -7,12 +7,6 @@
 namespace oneflow {
 namespace schedule {
 
-void Session::ForeachRegstDesc(const std::function<void(Node*)>& cb) const {
-  root()->children_arc_mgr().Output(root(), [&](Node* node) {
-    root()->produced_regst_desc_mgr().Output(node, cb);
-  });
-}
-
 float SessionLogger::GetDurationByTimeGapToLoss(Arc* from, Arc* to) {
   float duration = 0.0;
   auto to_loss_gaps = mut_end_time_gap_to_loss()[to];
@@ -25,16 +19,16 @@ float SessionLogger::GetDurationByTimeGapToLoss(Arc* from, Arc* to) {
   return duration;
 }
 
-void SessionLogger::UpdateDuration(Session* session, Mode* strategy) {
-  session->ForeachRegstDesc([&](Node* regst_desc) {
+void SessionLogger::UpdateDuration(SimulatorSession* session, Mode* strategy) {
+  session->graph()->ForeachRegstDesc([&](Node* regst_desc) {
     Node* owner = nullptr;
-    session->root()->produced_regst_desc_mgr().Input(regst_desc, &owner);
+    session->graph()->produced_regst_desc_mgr().Input(regst_desc, &owner);
     float duration = 0;
-    uint32_t start = session->nr_base_batch_;
-    uint32_t end = start + session->nr_base_batch_;
+    uint32_t start = session->nr_base_batch();
+    uint32_t end = start + session->nr_base_batch();
     //    uint32_t start = 0;
     //    uint32_t end = start + 1;
-    session->root()->subscribed_regst_desc_mgr().Input(
+    session->graph()->subscribed_regst_desc_mgr().Input(
         regst_desc, [&](Node* node) {
           float sum = 0;
           for (uint32_t i = start; i < end; i++) {
@@ -56,12 +50,12 @@ void LazyStrategy::TimeLinePushBack(InstanceArc* instance, DeviceNode* device) {
   dev2current_instance_[device] = instance;
 }
 
-void SessionLogger::UpdateInterval(Session* session, Mode* strategy) {
-  session->root()->ForeachNode([&](Node* node) {
+void SessionLogger::UpdateInterval(SimulatorSession* session, Mode* strategy) {
+  session->graph()->ForeachNode([&](Node* node) {
     uint32_t sum = 0;
     uint32_t last = 0;
-    uint32_t start = session->nr_base_batch_;
-    uint32_t end = start + session->nr_base_batch_;
+    uint32_t start = session->nr_base_batch();
+    uint32_t end = start + session->nr_base_batch();
     for (uint32_t i = start; i < end; i++) {
       auto batch = session->batch_node_mgr().Find(i);
       auto instance = session->batch_arc_mgr().Find(batch, node);
@@ -71,17 +65,18 @@ void SessionLogger::UpdateInterval(Session* session, Mode* strategy) {
     }
     mut_node2interval()[node] = 1.0 * sum / (end - 1 - start);
   });
-  session->root()->ForeachNode([&](Node* node) {
+  session->graph()->ForeachNode([&](Node* node) {
     mut_max_interval() = std::max(max_interval(), mut_node2interval()[node]);
   });
 }
 
-std::unique_ptr<Session::PipeCount> Session::RegstDescCount(bool bottleneck) {
-  auto regst_desc2pipe_count = unique_ptr_new<Session::PipeCount>();
+std::unique_ptr<SimulatorSession::PipeCount> SimulatorSession::RegstDescCount(
+    bool bottleneck) {
+  auto regst_desc2pipe_count = unique_ptr_new<SimulatorSession::PipeCount>();
   std::cout << "interval=" << logger()->max_interval() << std::endl;
-  ForeachRegstDesc([&](Node* regst_desc) {
+  graph()->ForeachRegstDesc([&](Node* regst_desc) {
     Node* owner = nullptr;
-    root()->produced_regst_desc_mgr().Input(regst_desc, &owner);
+    graph()->produced_regst_desc_mgr().Input(regst_desc, &owner);
     auto& spec = (*regst_desc2pipe_count)[regst_desc->id()];
     spec.duration = logger()->mut_regst_desc2duration()[regst_desc];
     spec.freq = logger()->max_interval();
@@ -95,7 +90,7 @@ std::unique_ptr<Session::PipeCount> Session::RegstDescCount(bool bottleneck) {
   return regst_desc2pipe_count;
 }
 
-void Session::ClearTmpData() {
+void SimulatorSession::ClearTmpData() {
   tokens_.clear();
   logger()->Clear();
 }
@@ -127,11 +122,12 @@ void SessionLogger::MergeTimeGapToLossInPlace(SessionLogger* logger) {
   merge(&mut_end_time_gap_to_loss(), &logger->mut_end_time_gap_to_loss());
 }
 
-void SessionLogger::UpdateTimeGapToLoss(Session* session, Mode* strategy) {
+void SessionLogger::UpdateTimeGapToLoss(SimulatorSession* session,
+                                        Mode* strategy) {
   std::list<Node*> loss_nodes;
-  session->root()->LossNodes(&loss_nodes);
+  session->graph()->LossNodes(&loss_nodes);
   uint32_t start = 0;
-  uint32_t end = start + session->nr_batch_;
+  uint32_t end = start + session->nr_batch();
   for (uint32_t i = start; i < end; i++) {
     auto batch = session->batch_node_mgr().Find(i);
     for (Node* loss : loss_nodes) {
@@ -154,100 +150,75 @@ void SessionLogger::UpdateTimeGapToLoss(Session* session, Mode* strategy) {
             end_time - loss_middle_time;
       };
       set_time_gap(loss);
-      session->root()->ForeachAscendent(loss, set_time_gap);
-      session->root()->ForeachDescendent(loss, set_time_gap);
+      session->graph()->ForeachAscendent(loss, set_time_gap);
+      session->graph()->ForeachDescendent(loss, set_time_gap);
     }
   }
 }
 
-std::unique_ptr<std::list<Node*>> Session::GetBatchNodes() {
+std::unique_ptr<std::list<Node*>> SimulatorSession::GetBatchNodes() {
   auto batchs = unique_ptr_new<std::list<Node*>>();
-  for (uint32_t i = 0; i < nr_batch_; i++) {
+  for (uint32_t i = 0; i < nr_batch(); i++) {
     batchs->push_back(batch_node_mgr().Find(i));
   }
   return batchs;
 }
 
-void Session::NewSinkTokens() {
+void SimulatorSession::NewSinkTokens() {
   ClearTmpData();
   std::list<Node*> places;
-  root()->arc_mgr().InputArc(root()->sink(), [&](Arc* arc) {
+  graph()->arc_mgr().InputArc(graph()->sink(), [&](Arc* arc) {
     places.push_back(dynamic_cast<Node*>(arc));
   });
   auto batchs = GetBatchNodes();
   batch_arc_mgr().Find(*batchs, places, [&](Arc* arc) { tokens_.insert(arc); });
-  InitNodeBatchInstance(root()->sink());
+  InitNodeBatchInstance(graph()->sink());
 }
 
-void Session::InitNodeBatchInstance(Node* node) {
-  for (uint32_t i = 0; i < nr_batch_; i++) {
+void SimulatorSession::InitNodeBatchInstance(Node* node) {
+  Session::InitNodeBatchInstance(node);
+  for (uint32_t i = 0; i < nr_batch(); i++) {
     auto batch = batch_node_mgr().Find(i);
-    auto start_instance = mut_batch_arc_mgr().CreateIfNotFound(batch, node);
+    auto start_instance = mut_batch_arc_mgr().Find(batch, node);
     logger()->mut_instance2ended_at()[start_instance] = std::make_pair(0u, 0u);
   }
 }
 
-void Session::NewSourceTokens() {
+void SimulatorSession::NewSourceTokens() {
   ClearTmpData();
   std::list<Node*> places;
-  root()->arc_mgr().OutputArc(root()->source(), [&](Arc* arc) {
+  graph()->arc_mgr().OutputArc(graph()->source(), [&](Arc* arc) {
     places.push_back(dynamic_cast<Node*>(arc));
   });
   auto batchs = GetBatchNodes();
   batch_arc_mgr().Find(*batchs, places, [&](Arc* arc) { tokens_.insert(arc); });
-  InitNodeBatchInstance(root()->source());
+  InitNodeBatchInstance(graph()->source());
 }
 
-void Session::NewBatchs() {
-  std::list<Node*> batch_nodes;
-  for (int i = 0; i < nr_batch_; i++) {
-    auto batch = mut_batch_node_mgr().CreateWithId(i, std::to_string(i));
-    batch_nodes.push_back(batch);
-  }
-  root()->ForeachNodeWithSourceAndSink([&](Node* node) {
-    for (auto batch : batch_nodes) {
-      auto instance = mut_batch_arc_mgr().CreateIfNotFound(batch, node);
-      mut_batch_instance_node_mgr().CreateWithId(
-          instance->id(), std::to_string(instance->id()));
-    }
-  });
-  root()->ForeachArc([&](Arc* arc) {
-    auto place = dynamic_cast<Node*>(arc);
-    for (auto batch : batch_nodes) {
-      mut_batch_arc_mgr().CreateIfNotFound(batch, place);
-    }
-  });
-  ForeachRegstDesc([&](Node* regst_desc) {
-    for (auto batch : batch_nodes) {
-      mut_batch_arc_mgr().CreateIfNotFound(batch, regst_desc);
-    }
-  });
-}
-
-Node* Session::GetInstanceDevice(Arc* instance) {
+Node* SimulatorSession::GetInstanceDevice(Arc* instance) {
   Node* ret = nullptr;
-  root()->device_arc_mgr().Output(instance->to(), &ret);
+  graph()->device_arc_mgr().Output(instance->to(), &ret);
   return ret;
 }
 
 int PositiveStrategy::HoldingRegstDesc(Node* node,
                                        const std::function<void(Node*)>& cb) {
-  return Sess()->root()->produced_regst_desc_mgr().Output(node, cb);
+  return Sess()->graph()->produced_regst_desc_mgr().Output(node, cb);
 }
 
 int PositiveStrategy::RegstDescReleasingNode(
     Node* regst_desc, const std::function<void(Node*)>& cb) {
-  return Sess()->root()->subscribed_regst_desc_mgr().Input(regst_desc, cb);
+  return Sess()->graph()->subscribed_regst_desc_mgr().Input(regst_desc, cb);
 }
 
 int NegativeStrategy::HoldingRegstDesc(Node* node,
                                        const std::function<void(Node*)>& cb) {
-  return Sess()->root()->subscribed_regst_desc_mgr().Output(node, cb);
+  return Sess()->graph()->subscribed_regst_desc_mgr().Output(node, cb);
 }
 
 int NegativeStrategy::RegstDescReleasingNode(
     Node* regst_desc, const std::function<void(Node*)>& cb) {
-  return Sess()->root()->produced_regst_desc_mgr().Input(regst_desc, cb);
+  return Sess()->graph()->produced_regst_desc_mgr().Input(regst_desc, cb);
 }
 
 bool PositiveStrategy::CompareInstanceOrder(Arc* instance_a, Arc* instance_b) {
@@ -291,8 +262,8 @@ void ResourceStrategy::InitFuncs() {
                                  direction_, std::placeholders::_1);
   is_instance_ready_ = std::bind(&ResourceStrategy::IsInstanceReady, this,
                                  std::placeholders::_1);
-  get_instance_device_ =
-      std::bind(&Session::GetInstanceDevice, Sess(), std::placeholders::_1);
+  get_instance_device_ = std::bind(&SimulatorSession::GetInstanceDevice, Sess(),
+                                   std::placeholders::_1);
   get_ascendent_ended_at_ = std::bind(&ResourceStrategy::GetAscendentEndedAt,
                                       this, std::placeholders::_1);
   pick_instance_to_run_ = std::bind(&DirectionStrategy::PickInstanceToRun,
@@ -300,12 +271,12 @@ void ResourceStrategy::InitFuncs() {
 }
 
 Arc* NegativeStrategy::GetNextNodeInstance(Arc* arc) {
-  auto input_arc = sess_->root()->arc_mgr().Find(arc->to()->id());
+  auto input_arc = sess_->graph()->arc_mgr().Find(arc->to()->id());
   return sess_->batch_arc_mgr().Find(arc->from(), input_arc->from());
 }
 
 Arc* PositiveStrategy::GetNextNodeInstance(Arc* arc) {
-  auto input_arc = sess_->root()->arc_mgr().Find(arc->to()->id());
+  auto input_arc = sess_->graph()->arc_mgr().Find(arc->to()->id());
   return sess_->batch_arc_mgr().Find(arc->from(), input_arc->to());
 }
 
@@ -327,42 +298,42 @@ void NegativeStrategy::NewStartTokens() { sess_->NewSinkTokens(); }
 
 unsigned int PositiveStrategy::PrevArc(Node* node,
                                        const std::function<void(Arc*)>& cb) {
-  return sess_->root()->arc_mgr().InputArc(node, cb);
+  return sess_->graph()->arc_mgr().InputArc(node, cb);
 }
 
 unsigned int PositiveStrategy::Prev(Node* node,
                                     const std::function<void(Node*)>& cb) {
-  return sess_->root()->arc_mgr().Input(node, cb);
+  return sess_->graph()->arc_mgr().Input(node, cb);
 }
 
 unsigned int PositiveStrategy::NextArc(Node* node,
                                        const std::function<void(Arc*)>& cb) {
-  return sess_->root()->arc_mgr().OutputArc(node, cb);
+  return sess_->graph()->arc_mgr().OutputArc(node, cb);
 }
 
 unsigned int PositiveStrategy::Next(Node* node,
                                     const std::function<void(Node*)>& cb) {
-  return sess_->root()->arc_mgr().Output(node, cb);
+  return sess_->graph()->arc_mgr().Output(node, cb);
 }
 
 unsigned int NegativeStrategy::PrevArc(Node* node,
                                        const std::function<void(Arc*)>& cb) {
-  return sess_->root()->arc_mgr().OutputArc(node, cb);
+  return sess_->graph()->arc_mgr().OutputArc(node, cb);
 }
 
 unsigned int NegativeStrategy::Prev(Node* node,
                                     const std::function<void(Node*)>& cb) {
-  return sess_->root()->arc_mgr().Output(node, cb);
+  return sess_->graph()->arc_mgr().Output(node, cb);
 }
 
 unsigned int NegativeStrategy::NextArc(Node* node,
                                        const std::function<void(Arc*)>& cb) {
-  return sess_->root()->arc_mgr().InputArc(node, cb);
+  return sess_->graph()->arc_mgr().InputArc(node, cb);
 }
 
 unsigned int NegativeStrategy::Next(Node* node,
                                     const std::function<void(Node*)>& cb) {
-  return sess_->root()->arc_mgr().Input(node, cb);
+  return sess_->graph()->arc_mgr().Input(node, cb);
 }
 
 void LimitedStrategy::InitFuncIsInstanceReady() {
@@ -412,7 +383,7 @@ void LazyStrategy::Retiming() {
   float max_interval = Sess()->logger()->max_interval();
   auto get_next_instance = [&](InstanceArc* instance) {
     InstanceArc* next = nullptr;
-    if (instance->to() != Sess()->root()->sink()) {
+    if (instance->to() != Sess()->graph()->sink()) {
       auto batch = instance->from();
       auto next_batch_id = direction_->NextBatchId(batch->id());
       auto next_batch = Sess()->batch_node_mgr().Find(next_batch_id);
@@ -449,9 +420,9 @@ void LazyStrategy::Retiming() {
 }
 
 void LazyStrategy::InitTimeNet() {
-  Sess()->root()->ForeachArc([&](Arc* arc) {
+  Sess()->graph()->ForeachArc([&](Arc* arc) {
     uint32_t start = 0;
-    uint32_t end = Sess()->nr_batch_;
+    uint32_t end = Sess()->nr_batch();
     for (uint32_t i = start; i < end; i++) {
       auto batch = Sess()->batch_node_mgr().Find(i);
       auto from_node = direction_->GetFrom(arc);
@@ -465,8 +436,8 @@ void LazyStrategy::InitTimeNet() {
   });
 }
 
-void LimitedStrategy::InitRegst(const Session::PipeCount& pipe_count) {
-  Sess()->ForeachRegstDesc([&](Node* regst_desc) {
+void LimitedStrategy::InitRegst(const SimulatorSession::PipeCount& pipe_count) {
+  Sess()->graph()->ForeachRegstDesc([&](Node* regst_desc) {
     auto pipe_count_itt = pipe_count.find(regst_desc->id());
     if (pipe_count_itt != pipe_count.end()) {
       const auto& spec = pipe_count_itt->second;
@@ -632,25 +603,31 @@ void Mode::Run() {
   sess_logger->UpdateDuration(Sess(), this);
 }
 
-std::unique_ptr<ScheduleResult> StaticSchedulerSimulatorPolicy::Schedule(
+std::unique_ptr<Session> StaticSchedulerSimulatorPolicy::MakeSession(
     const GraphNode& graph) {
-  auto root = const_cast<GraphNode*>(&graph);
-  Session sess(root);
+  auto graph_ptr = const_cast<GraphNode*>(&graph);
+  return unique_ptr_new<SimulatorSession>(graph_ptr);
+}
 
-  UnlimitedMode<PositiveStrategy> m0(&sess);
+std::unique_ptr<ScheduleResult> StaticSchedulerSimulatorPolicy::Schedule(
+    const Session& session) {
+  auto session_ptr = const_cast<Session*>(&session);
+  auto sess = dynamic_cast<SimulatorSession*>(session_ptr);
+
+  UnlimitedMode<PositiveStrategy> m0(sess);
   m0.Run();
 
-  sess.RegstDescCount();
-  auto logger = sess.GetLoggerThenReset();
-  UnlimitedMode<NegativeStrategy> m1(&sess);
+  sess->RegstDescCount();
+  auto logger = sess->GetLoggerThenReset();
+  UnlimitedMode<NegativeStrategy> m1(sess);
   m1.Run();
 
-  sess.RegstDescCount();
+  sess->RegstDescCount();
 
-  sess.logger()->MergeTimeGapToLossInPlace(&*logger);
-  sess.logger()->UpdateDuration(&sess, &m1);
+  sess->logger()->MergeTimeGapToLossInPlace(&*logger);
+  sess->logger()->UpdateDuration(sess, &m1);
 
-  return sess.GetLoggerThenReset();
+  return sess->GetLoggerThenReset();
 }
 
 }  // namespace schedule

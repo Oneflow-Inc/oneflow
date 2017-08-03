@@ -12,8 +12,8 @@ namespace oneflow {
 namespace schedule {
 
 void TestGraph(const std::string& input_name) {
-  auto graph = unique_ptr_new<GraphNode>("root");
-  auto root = graph.get();
+  auto graph_ptr = unique_ptr_new<GraphNode>("graph");
+  auto graph = graph_ptr.get();
 
   auto get_id = [](uint64_t id) { return id * 1001; };
 
@@ -29,7 +29,7 @@ void TestGraph(const std::string& input_name) {
       ss << arg1 << "\t" << arg2;
       ss >> id >> name;
       Node* node = graph->mut_node_mgr().CreateWithId(get_id(id), name);
-      if (node) { graph->mut_children_arc_mgr().CreateIfNotFound(root, node); }
+      if (node) { graph->mut_children_arc_mgr().CreateIfNotFound(graph, node); }
     } else if (arg0 == "gl") {
       uint64_t id;
       std::string name;
@@ -37,7 +37,7 @@ void TestGraph(const std::string& input_name) {
       ss << arg1 << "\t" << arg2;
       ss >> id >> name;
       Node* node = graph->mut_node_mgr().Find(get_id(id));
-      if (node) { graph->mut_loss_arc_mgr().CreateIfNotFound(root, node); }
+      if (node) { graph->mut_loss_arc_mgr().CreateIfNotFound(graph, node); }
     } else if (arg0 == "ae") {
       uint64_t from_id;
       uint64_t to_id;
@@ -92,10 +92,10 @@ void TestGraph(const std::string& input_name) {
     }
   }
 
-  //  auto nr_device = root->DeviceCount();
-  root->Update();
+  //  auto nr_device = graph->DeviceCount();
+  graph->Update();
 
-  Session sess(root);
+  SimulatorSession sess(graph);
 
   UnlimitedMode<PositiveStrategy> m0(&sess);
   //  UnlimitedMode<NegativeStrategy> m0(&sess);
@@ -113,7 +113,7 @@ void TestGraph(const std::string& input_name) {
 
   auto regst_desc2count = sess.RegstDescCount();
 
-  Session session(root);
+  SimulatorSession session(graph);
 
   std::cout << "------limited------" << std::endl;
   LimitedMode<NegativeStrategy> m3(&session, *regst_desc2count);
@@ -133,7 +133,7 @@ void TestGraph(const std::string& input_name) {
   int target = 0;
   for (int i = 0; i < 10; i++) {
     std::cout << "---------------" << std::endl;
-    Session::PipeCount limited;
+    SimulatorSession::PipeCount limited;
     int count = 0;
     bool declined = false;
     for (const auto& p : *regst_desc2count) {
@@ -166,9 +166,10 @@ void SimulatorPolicyDemo() {
   auto ph = PH("naive");
   auto graph = ph->test_graph_generator()->Demo();
   ph->printer()->PrintGraph(*graph, "");
-  auto schedule_result = ph->static_scheduler()->Schedule(*graph);
-  ph->retiming()->Retiming(*graph, schedule_result.get());
-  ph->allocator()->Allocate(*graph, schedule_result.get());
+  auto session = ph->static_scheduler()->MakeSession(*graph);
+  auto schedule_result = ph->static_scheduler()->Schedule(*session);
+  ph->retiming()->Retiming(*session, schedule_result.get());
+  ph->allocator()->Allocate(*session, schedule_result.get());
 }
 
 }  // namespace schedule

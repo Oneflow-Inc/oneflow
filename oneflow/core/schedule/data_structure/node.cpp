@@ -48,6 +48,11 @@ void GraphNode::ForeachNode(const std::function<void(Node*)>& cb) const {
   cb(sink());
 }
 
+void GraphNode::ForeachRegstDesc(const std::function<void(Node*)>& cb) const {
+  children_arc_mgr().Output(
+      this, [&](Node* node) { produced_regst_desc_mgr().Output(node, cb); });
+}
+
 uint32_t GraphNode::Depth() const {
   auto depth = source()->depth();
   return depth ? depth - 1 : 0;

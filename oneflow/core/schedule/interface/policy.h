@@ -4,6 +4,8 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/schedule/data_structure/node.h"
+#include "oneflow/core/schedule/data_structure/schedule_result.h"
+#include "oneflow/core/schedule/data_structure/session.h"
 #include "oneflow/core/schedule/util/util.h"
 
 namespace oneflow {
@@ -50,45 +52,46 @@ class StaticSchedulerPolicy : public Policy {
  public:
   POLICY_INTERFACE_BOILERPLATE(StaticSchedulerPolicy);
 
-  virtual std::unique_ptr<ScheduleResult> Schedule(const GraphNode& graph) = 0;
+  virtual std::unique_ptr<Session> MakeSession(const GraphNode& graph) = 0;
+  virtual std::unique_ptr<ScheduleResult> Schedule(const Session& session) = 0;
 };
 
 class ScheduleValidatorPolicy : public Policy {
  public:
   POLICY_INTERFACE_BOILERPLATE(ScheduleValidatorPolicy);
-  virtual bool Validate(const GraphNode& graph,
+  virtual bool Validate(const Session& session,
                         const ScheduleResult& result) = 0;
 };
 
 class RetimingPolicy : public Policy {
  public:
   POLICY_INTERFACE_BOILERPLATE(RetimingPolicy);
-  virtual void Retiming(const GraphNode& graph, ScheduleResult* result) = 0;
+  virtual void Retiming(const Session& session, ScheduleResult* result) = 0;
 };
 
 class AllocatorPolicy : public Policy {
  public:
   POLICY_INTERFACE_BOILERPLATE(AllocatorPolicy);
-  virtual void Allocate(const GraphNode& graph, ScheduleResult* result) = 0;
+  virtual void Allocate(const Session& session, ScheduleResult* result) = 0;
 };
 
 class AllocationValidatorPolicy : public Policy {
  public:
   POLICY_INTERFACE_BOILERPLATE(AllocationValidatorPolicy);
-  virtual bool Validate(const GraphNode& graph,
+  virtual bool Validate(const Session& session,
                         const ScheduleResult& result) = 0;
 };
 
 class LimitedAllocatorPolicy : public Policy {
  public:
   POLICY_INTERFACE_BOILERPLATE(LimitedAllocatorPolicy);
-  virtual std::unique_ptr<ScheduleResult> Allocate(const GraphNode& graph) = 0;
+  virtual std::unique_ptr<ScheduleResult> Allocate(const Session& session) = 0;
 };
 
 class LimitedAllocationValidatorPolicy : public Policy {
  public:
   POLICY_INTERFACE_BOILERPLATE(LimitedAllocationValidatorPolicy);
-  virtual bool Validate(const GraphNode& graph,
+  virtual bool Validate(const Session& session,
                         const ScheduleResult& result) = 0;
 };
 

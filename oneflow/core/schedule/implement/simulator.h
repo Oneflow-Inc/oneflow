@@ -20,36 +20,31 @@
 #include <vector>
 
 #include "oneflow/core/schedule/data_structure/node.h"
+#include "oneflow/core/schedule/data_structure/session.h"
 #include "oneflow/core/schedule/interface/policy.h"
 #include "oneflow/core/schedule/util/util.h"
 
 namespace oneflow {
 namespace schedule {
 
-class Session;
+class SimulatorSession;
 
 class SessionLogger : public ScheduleResult {
  public:
   SessionLogger() : ScheduleResult() {}
   DEFINE_METHOD_TYPE();
   void Clear();
-  void UpdateTimeGapToLoss(Session* session, Mode* strategy);
-  void UpdateDuration(Session* session, Mode* strategy);
-  void UpdateInterval(Session* session, Mode* strategy);
+  void UpdateTimeGapToLoss(SimulatorSession* session, Mode* strategy);
+  void UpdateDuration(SimulatorSession* session, Mode* strategy);
+  void UpdateInterval(SimulatorSession* session, Mode* strategy);
   void MergeTimeGapToLossInPlace(SessionLogger* logger);
   float GetDurationByTimeGapToLoss(Arc* from, Arc* to);
 };
 
-class Session {
+class SimulatorSession : public Session {
  public:
-  explicit Session(GraphNode* root, uint32_t nr_batch = 2u)
-      : root_(root), logger_(unique_ptr_new<SessionLogger>()) {
-    auto nr_device = root->DeviceCount();
-    auto depth = root->Depth();
-    nr_base_batch_ = std::min(nr_device, depth);
-    nr_batch_ = std::max(nr_batch, nr_device * 3);
-    NewBatchs();
-  }
+  explicit SimulatorSession(GraphNode* graph, uint32_t nr_batch = 2u)
+      : Session(graph, nr_batch), logger_(unique_ptr_new<SessionLogger>()) {}
 
   struct PipeSpec {
     float duration;
@@ -65,17 +60,13 @@ class Session {
 
   Node* GetInstanceDevice(Arc* instance);
 
-  void ForeachRegstDesc(const std::function<void(Node*)>& cb) const;
   void NewSourceTokens();
   void NewSinkTokens();
   void ClearTmpData();
-  void NewBatchs();
   void InitNodeBatchInstance(Node* node);
   std::unique_ptr<std::list<Node*>> GetBatchNodes();
   std::unique_ptr<PipeCount> RegstDescCount(bool bottleneck = true);
 
-  inline const GraphNode* root() const { return root_; }
-  inline GraphNode* mut_root() { return root_; }
   SessionLogger* logger() { return logger_.get(); }
   std::unique_ptr<SessionLogger>& mut_logger() { return logger_; }
   std::unique_ptr<SessionLogger> GetLoggerThenReset() {
@@ -84,45 +75,24 @@ class Session {
     return ret;
   }
 
-  GraphNode* root_;
-  uint32_t nr_batch_;
-  uint32_t nr_base_batch_;
   std::unordered_set<Arc*> tokens_;
   std::unique_ptr<SessionLogger> logger_;
-
-  inline const NodeMgr<Node>& batch_node_mgr() const { return batch_node_mgr_; }
-  inline NodeMgr<Node>& mut_batch_node_mgr() { return batch_node_mgr_; }
-
-  inline const ArcMgr& batch_arc_mgr() const { return batch_arc_mgr_; }
-  inline ArcMgr& mut_batch_arc_mgr() { return batch_arc_mgr_; }
-
-  inline const NodeMgr<Node>& batch_instance_node_mgr() const {
-    return batch_instance_node_mgr_;
-  }
-  inline NodeMgr<Node>& mut_batch_instance_node_mgr() {
-    return batch_instance_node_mgr_;
-  }
-
- private:
-  NodeMgr<Node> batch_instance_node_mgr_;
-  NodeMgr<Node> batch_node_mgr_;
-  ArcMgr batch_arc_mgr_;
 };
 
 class Strategy {
  public:
-  Strategy(Session* sess) : sess_(sess) {}
+  Strategy(SimulatorSession* sess) : sess_(sess) {}
   virtual ~Strategy() {}
 
-  inline Session* Sess() { return sess_; }
+  inline SimulatorSession* Sess() { return sess_; }
 
  protected:
-  Session* sess_;
+  SimulatorSession* sess_;
 };
 
 class DirectionStrategy : public Strategy {
  public:
-  DirectionStrategy(Session* sess) : Strategy(sess) {}
+  DirectionStrategy(SimulatorSession* sess) : Strategy(sess) {}
   virtual ~DirectionStrategy() {}
 
   virtual int32_t GetTime(int32_t x) = 0;
@@ -154,7 +124,7 @@ class DirectionStrategy : public Strategy {
 
 class PositiveStrategy : public DirectionStrategy {
  public:
-  PositiveStrategy(Session* sess) : DirectionStrategy(sess) {}
+  PositiveStrategy(SimulatorSession* sess) : DirectionStrategy(sess) {}
   virtual ~PositiveStrategy() {}
   int32_t GetTime(int32_t x) { return x; }
   int32_t GetStartTime(const std::pair<int32_t, int32_t>& p) {
@@ -173,10 +143,10 @@ class PositiveStrategy : public DirectionStrategy {
   int HoldingRegstDesc(Node* node, const std::function<void(Node*)>& cb);
   int RegstDescReleasingNode(Node* regst_desc,
                              const std::function<void(Node*)>& cb);
-  Node* StartNode() { return Sess()->root()->source(); }
-  Node* EndNode() { return Sess()->root()->sink(); }
+  Node* StartNode() { return Sess()->graph()->source(); }
+  Node* EndNode() { return Sess()->graph()->sink(); }
   Node* EndBatch() {
-    return Sess()->batch_node_mgr().Find(Sess()->nr_batch_ - 1);
+    return Sess()->batch_node_mgr().Find(Sess()->nr_batch() - 1);
   }
   Node* GetFrom(Arc* arc) { return arc->from(); }
   Node* GetTo(Arc* arc) { return arc->to(); }
@@ -185,7 +155,7 @@ class PositiveStrategy : public DirectionStrategy {
 
 class NegativeStrategy : public DirectionStrategy {
  public:
-  NegativeStrategy(Session* sess) : DirectionStrategy(sess) {}
+  NegativeStrategy(SimulatorSession* sess) : DirectionStrategy(sess) {}
   virtual ~NegativeStrategy() {}
   virtual int32_t GetTime(int32_t x) { return -x; }
   virtual int32_t GetStartTime(const std::pair<int32_t, int32_t>& p) {
@@ -204,8 +174,8 @@ class NegativeStrategy : public DirectionStrategy {
   int HoldingRegstDesc(Node* node, const std::function<void(Node*)>& cb);
   int RegstDescReleasingNode(Node* regst_desc,
                              const std::function<void(Node*)>& cb);
-  Node* StartNode() { return Sess()->root()->sink(); }
-  Node* EndNode() { return Sess()->root()->source(); }
+  Node* StartNode() { return Sess()->graph()->sink(); }
+  Node* EndNode() { return Sess()->graph()->source(); }
   Node* EndBatch() { return Sess()->batch_node_mgr().Find(0u); }
   Node* GetFrom(Arc* arc) { return arc->to(); }
   Node* GetTo(Arc* arc) { return arc->from(); }
@@ -291,7 +261,7 @@ class UnlimitedStrategy : public ResourceStrategy {
 class LimitedStrategy : public ResourceStrategy {
  public:
   LimitedStrategy(DirectionStrategy* direction, EvaluationStrategy* evaluation,
-                  const Session::PipeCount& pipe_count)
+                  const SimulatorSession::PipeCount& pipe_count)
       : ResourceStrategy(direction, evaluation) {
     InitRegst(pipe_count);
     InitFuncIsInstanceReady();
@@ -309,7 +279,7 @@ class LimitedStrategy : public ResourceStrategy {
   inline const HasOneArcMgr& r2rd_arc_mgr() const { return r2rd_arc_mgr_; }
   inline HasOneArcMgr& mut_r2rd_arc_mgr() { return r2rd_arc_mgr_; }
 
-  void InitRegst(const Session::PipeCount& pipe_count);
+  void InitRegst(const SimulatorSession::PipeCount& pipe_count);
   void InitFuncIsInstanceReady();
   bool IsAllRegstDescReady(Arc* instance);
   bool IsRegstDescReady(Node* regst_desc, Node* batch);
@@ -325,7 +295,7 @@ class LimitedStrategy : public ResourceStrategy {
 
 class Mode : public Strategy {
  public:
-  Mode(Session* sess) : Strategy(sess) {}
+  Mode(SimulatorSession* sess) : Strategy(sess) {}
   virtual ~Mode() {}
   DEFINE_PURE_VIRTUAL_TYPE();
   inline int32_t GetTime(int32_t x) { return direction_->GetTime(x); }
@@ -380,7 +350,7 @@ template<typename DirectionStrategyType,
          typename EvaluationStrategyType = LazyStrategy>
 class UnlimitedMode : public Mode {
  public:
-  explicit UnlimitedMode(Session* sess) : Mode(sess) {
+  explicit UnlimitedMode(SimulatorSession* sess) : Mode(sess) {
     auto direction = unique_ptr_new<DirectionStrategyType>(sess);
     auto evaluation = unique_ptr_new<EvaluationStrategyType>(&*direction);
     auto resource =
@@ -395,7 +365,8 @@ template<typename DirectionStrategyType,
          typename EvaluationStrategyType = EagerStrategy>
 class LimitedMode : public Mode {
  public:
-  LimitedMode(Session* sess, const Session::PipeCount& pipe_count)
+  LimitedMode(SimulatorSession* sess,
+              const SimulatorSession::PipeCount& pipe_count)
       : Mode(sess) {
     auto direction = unique_ptr_new<DirectionStrategyType>(sess);
     auto evaluation = unique_ptr_new<EvaluationStrategyType>(&*direction);
@@ -411,19 +382,20 @@ class StaticSchedulerSimulatorPolicy : public StaticSchedulerPolicy {
  public:
   POLICY_IMPLEMENT_BOILERPLATE(StaticSchedulerSimulatorPolicy,
                                StaticSchedulerPolicy);
-  virtual std::unique_ptr<ScheduleResult> Schedule(const GraphNode& graph);
+  virtual std::unique_ptr<Session> MakeSession(const GraphNode& graph);
+  virtual std::unique_ptr<ScheduleResult> Schedule(const Session& session);
 };
 
 class RetimingSimulatorPolicy : public RetimingPolicy {
  public:
   POLICY_IMPLEMENT_BOILERPLATE(RetimingSimulatorPolicy, RetimingPolicy);
-  virtual void Retiming(const GraphNode& graph, ScheduleResult* result) {}
+  virtual void Retiming(const Session& session, ScheduleResult* result) {}
 };
 
 class AllocatorSimulatorPolicy : public AllocatorPolicy {
  public:
   POLICY_IMPLEMENT_BOILERPLATE(AllocatorSimulatorPolicy, AllocatorPolicy);
-  virtual void Allocate(const GraphNode& graph, ScheduleResult* result) {}
+  virtual void Allocate(const Session& session, ScheduleResult* result) {}
 };
 
 }  // namespace schedule
