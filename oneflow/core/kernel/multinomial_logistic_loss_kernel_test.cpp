@@ -29,9 +29,7 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
   FloatingPointType loss_mat[1] = {0};
   (*bn2blob_ptr)["loss"] = KTCommon::CreateBlobWithVector({1, 1}, loss_mat);
 
-  FloatingPointType loss_buff_mat[4] = {0};
-  (*bn2blob_ptr)["loss_buffer"] =
-      KTCommon::CreateBlobWithVector({1, 1}, loss_buff_mat);
+  (*bn2blob_ptr)["loss_buffer"] = KTCommon::CreateBlobWithRandomValue({4, 1});
 
   FloatingPointType expected_loss_mat[1] = {2.201842e-02};
   (*bn2blob_ptr)["expected_loss"] =
@@ -41,13 +39,8 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
   FloatingPointType label_mat[4] = {3, 3, 2, 9};
   (*bn2blob_ptr)["label"] = KTCommon::CreateBlobWithVector({1, 4}, label_mat);
 
-  FloatingPointType prediction_diff_mat[40] = {0};
-  for (int64_t i = 0; i < 40; ++i) {
-    prediction_diff_mat[i] =
-        (FloatingPointType)rand() / (FloatingPointType)RAND_MAX;
-  }
   (*bn2blob_ptr)["prediction_diff"] =
-      KTCommon::CreateBlobWithVector({4, 10}, prediction_diff_mat);
+      KTCommon::CreateBlobWithRandomValue({4, 10});
   FloatingPointType expected_prediction_diff_mat[40] = {
       -0.000000e+00, -0.000000e+00, -0.000000e+00, -2.500708e-01,
       -0.000000e+00, -0.000000e+00, -0.000000e+00, -0.000000e+00,
