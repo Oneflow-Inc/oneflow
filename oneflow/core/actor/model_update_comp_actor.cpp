@@ -56,7 +56,7 @@ int MdUpdtCompActor::HandlerBeforeInitializeModel(const ActorMsg& actor_msg) {
           return ret;
         });
   }
-  AsyncCopyModelFromCurToNext();
+  if (JobDesc::Singleton()->is_train()) { AsyncCopyModelFromCurToNext(); }
   AsyncDo([]() { RuntimeCtx::Singleton()->mut_model_init_cnt().MinusOne(); });
   OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerBeforeSendInitialModel);
   return 0;
