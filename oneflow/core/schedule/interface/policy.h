@@ -95,6 +95,12 @@ class LimitedAllocationValidatorPolicy : public Policy {
                         const ScheduleResult& result) = 0;
 };
 
+class PlanSetterPolicy : public Policy {
+ public:
+  POLICY_INTERFACE_BOILERPLATE(PlanSetterPolicy);
+  virtual bool SetRegstNum(const ScheduleResult& result, Plan* plan) = 0;
+};
+
 }  // namespace schedule
 }  // namespace oneflow
 

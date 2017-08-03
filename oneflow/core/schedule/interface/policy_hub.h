@@ -43,119 +43,134 @@ class PolicyHub : public PolicyHubBase {
     CLONE_POLICY(ph, allocator());
     CLONE_POLICY(ph, allocation_validator());
     CLONE_POLICY(ph, limited_allocation_validator());
+    CLONE_POLICY(ph, plan_setter());
     return this;
   }
 
   PolicyHub* Merge(const PolicyHub* ph) { return Merge(*ph); }
 
-  inline const std::unique_ptr<GraphBuilderPolicy>& graph_builder() const {
-    return graph_builder_;
-  }
-
-  inline const std::unique_ptr<LimitedAllocatorPolicy>& limited_allocator()
-      const {
-    return limited_allocator_;
-  }
-
-  inline const std::unique_ptr<PrinterPolicy>& printer() const {
-    return printer_;
-  }
-  inline const std::unique_ptr<TestGraphGeneratorPolicy>& test_graph_generator()
-      const {
-    return test_graph_generator_;
-  }
   inline const std::unique_ptr<StaticSchedulerPolicy>& static_scheduler()
       const {
     return static_scheduler_;
   }
-  inline const std::unique_ptr<ScheduleValidatorPolicy>& schedule_validator()
-      const {
-    return schedule_validator_;
-  }
-  inline const std::unique_ptr<RetimingPolicy>& retiming() const {
-    return retiming_;
-  }
-  inline const std::unique_ptr<AllocatorPolicy>& allocator() const {
-    return allocator_;
-  }
-  inline const std::unique_ptr<AllocationValidatorPolicy>&
-  allocation_validator() const {
-    return allocation_validator_;
-  }
-  inline const std::unique_ptr<LimitedAllocationValidatorPolicy>&
-  limited_allocation_validator() const {
-    return limited_allocation_validator_;
-  }
-
-  inline std::unique_ptr<GraphBuilderPolicy>& mut_graph_builder() {
-    return graph_builder_;
-  }
-
-  inline std::unique_ptr<LimitedAllocatorPolicy>& mut_limited_allocator() {
-    return limited_allocator_;
-  }
-
-  inline std::unique_ptr<PrinterPolicy>& mut_printer() { return printer_; }
-  inline std::unique_ptr<TestGraphGeneratorPolicy>& mut_test_graph_generator() {
-    return test_graph_generator_;
-  }
   inline std::unique_ptr<StaticSchedulerPolicy>& mut_static_scheduler() {
     return static_scheduler_;
-  }
-  inline std::unique_ptr<ScheduleValidatorPolicy>& mut_schedule_validator() {
-    return schedule_validator_;
-  }
-  inline std::unique_ptr<RetimingPolicy>& mut_retiming() { return retiming_; }
-  inline std::unique_ptr<AllocatorPolicy>& mut_allocator() {
-    return allocator_;
-  }
-  inline std::unique_ptr<AllocationValidatorPolicy>&
-  mut_allocation_validator() {
-    return allocation_validator_;
-  }
-  inline std::unique_ptr<LimitedAllocationValidatorPolicy>&
-  mut_limited_allocation_validator() {
-    return limited_allocation_validator_;
   }
   PolicyHub* Add(std::unique_ptr<StaticSchedulerPolicy>&& policy) {
     mut_static_scheduler() = std::move(policy);
     return this;
   }
+
+  inline const std::unique_ptr<ScheduleValidatorPolicy>& schedule_validator()
+      const {
+    return schedule_validator_;
+  }
+  inline std::unique_ptr<ScheduleValidatorPolicy>& mut_schedule_validator() {
+    return schedule_validator_;
+  }
   PolicyHub* Add(std::unique_ptr<ScheduleValidatorPolicy>&& policy) {
     mut_schedule_validator() = std::move(policy);
     return this;
   }
+
+  inline const std::unique_ptr<RetimingPolicy>& retiming() const {
+    return retiming_;
+  }
+  inline std::unique_ptr<RetimingPolicy>& mut_retiming() { return retiming_; }
   PolicyHub* Add(std::unique_ptr<RetimingPolicy>&& policy) {
     mut_retiming() = std::move(policy);
     return this;
+  }
+
+  inline const std::unique_ptr<AllocatorPolicy>& allocator() const {
+    return allocator_;
+  }
+  inline std::unique_ptr<AllocatorPolicy>& mut_allocator() {
+    return allocator_;
   }
   PolicyHub* Add(std::unique_ptr<AllocatorPolicy>&& policy) {
     mut_allocator() = std::move(policy);
     return this;
   }
+
+  inline const std::unique_ptr<LimitedAllocationValidatorPolicy>&
+  limited_allocation_validator() const {
+    return limited_allocation_validator_;
+  }
+  inline std::unique_ptr<LimitedAllocationValidatorPolicy>&
+  mut_limited_allocation_validator() {
+    return limited_allocation_validator_;
+  }
   PolicyHub* Add(std::unique_ptr<LimitedAllocationValidatorPolicy>&& policy) {
     mut_limited_allocation_validator() = std::move(policy);
     return this;
+  }
+
+  inline const std::unique_ptr<GraphBuilderPolicy>& graph_builder() const {
+    return graph_builder_;
+  }
+  inline std::unique_ptr<GraphBuilderPolicy>& mut_graph_builder() {
+    return graph_builder_;
   }
   PolicyHub* Add(std::unique_ptr<GraphBuilderPolicy>&& policy) {
     mut_graph_builder() = std::move(policy);
     return this;
   }
 
+  inline const std::unique_ptr<LimitedAllocatorPolicy>& limited_allocator()
+      const {
+    return limited_allocator_;
+  }
+  inline std::unique_ptr<LimitedAllocatorPolicy>& mut_limited_allocator() {
+    return limited_allocator_;
+  }
   PolicyHub* Add(std::unique_ptr<LimitedAllocatorPolicy>&& policy) {
     mut_limited_allocator() = std::move(policy);
     return this;
   }
+
+  inline const std::unique_ptr<PrinterPolicy>& printer() const {
+    return printer_;
+  }
+  inline std::unique_ptr<PrinterPolicy>& mut_printer() { return printer_; }
   PolicyHub* Add(std::unique_ptr<PrinterPolicy>&& policy) {
     mut_printer() = std::move(policy);
     return this;
+  }
+
+  inline const std::unique_ptr<TestGraphGeneratorPolicy>& test_graph_generator()
+      const {
+    return test_graph_generator_;
+  }
+  inline std::unique_ptr<TestGraphGeneratorPolicy>& mut_test_graph_generator() {
+    return test_graph_generator_;
   }
   PolicyHub* Add(std::unique_ptr<TestGraphGeneratorPolicy>&& policy) {
     mut_test_graph_generator() = std::move(policy);
     return this;
   }
+
+  inline const std::unique_ptr<AllocationValidatorPolicy>&
+  allocation_validator() const {
+    return allocation_validator_;
+  }
+  inline std::unique_ptr<AllocationValidatorPolicy>&
+  mut_allocation_validator() {
+    return allocation_validator_;
+  }
   PolicyHub* Add(std::unique_ptr<AllocationValidatorPolicy>&& policy) {
     mut_allocation_validator() = std::move(policy);
+    return this;
+  }
+
+  inline const std::unique_ptr<PlanSetterPolicy>& plan_setter() const {
+    return plan_setter_;
+  }
+  inline std::unique_ptr<PlanSetterPolicy>& mut_plan_setter() {
+    return plan_setter_;
+  }
+  PolicyHub* Add(std::unique_ptr<PlanSetterPolicy>&& policy) {
+    mut_plan_setter() = std::move(policy);
     return this;
   }
 
@@ -171,6 +186,7 @@ class PolicyHub : public PolicyHubBase {
   std::unique_ptr<AllocationValidatorPolicy> allocation_validator_;
   std::unique_ptr<LimitedAllocationValidatorPolicy>
       limited_allocation_validator_;
+  std::unique_ptr<PlanSetterPolicy> plan_setter_;
 };
 
 }  // namespace schedule
