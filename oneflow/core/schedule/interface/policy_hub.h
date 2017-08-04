@@ -20,6 +20,8 @@ class PolicyHubBase {
   OF_DISALLOW_COPY_AND_MOVE(PolicyHubBase);
   DEFINE_PURE_VIRTUAL_TYPE();
 
+  virtual void Allocate(Plan* plan) = 0;
+
  private:
   std::string name_;
 };
@@ -32,6 +34,13 @@ class PolicyHub : public PolicyHubBase {
   OF_DISALLOW_COPY_AND_MOVE(PolicyHub);
   DEFINE_METHOD_TYPE();
 
+  void Allocate(Plan* plan) {
+    std::unique_ptr<GraphNode> graph = BuildeGraph(*plan);
+    std::unique_ptr<Session> sess = MakeSession(*graph);
+    std::unique_ptr<ScheduleResult> sr = LimitedAllocate(*sess);
+    SetPlanRegstNum(*sr, plan);
+  }
+
   //	facade
   inline void PrintGraph(const GraphNode& graph,
                          const std::string& filename) const {
@@ -42,9 +51,9 @@ class PolicyHub : public PolicyHubBase {
     CHECK(test_graph_generator());
     return test_graph_generator()->DemoGraph();
   }
-  inline std::unique_ptr<GraphNode> Builder(const Plan& plan) const {
+  inline std::unique_ptr<GraphNode> BuildeGraph(const Plan& plan) const {
     CHECK(graph_builder());
-    return graph_builder()->Builder(plan);
+    return graph_builder()->BuildeGraph(plan);
   }
   inline std::unique_ptr<Session> MakeSession(const GraphNode& graph) const {
     CHECK(static_scheduler());

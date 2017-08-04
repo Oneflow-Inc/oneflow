@@ -45,7 +45,7 @@ class GraphBuilderPolicy : public Policy {
  public:
   POLICY_INTERFACE_BOILERPLATE(GraphBuilderPolicy);
 
-  virtual std::unique_ptr<GraphNode> Builder(const Plan& plan) = 0;
+  virtual std::unique_ptr<GraphNode> BuildeGraph(const Plan& plan) = 0;
 };
 
 class StaticSchedulerPolicy : public Policy {

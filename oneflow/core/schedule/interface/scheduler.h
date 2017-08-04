@@ -12,7 +12,15 @@ class Scheduler {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Scheduler);
   virtual ~Scheduler() = default;
-  static PolicyHubBase* Singleton() { return PH("default"); }
+
+  static void Allocate(Plan* plan) {
+    PolicyHub* ph = DefaultPH();
+    CHECK(ph);
+    ph->Allocate(plan);
+  }
+
+ private:
+  static PolicyHub* DefaultPH() { return PH("default"); }
 };
 
 }  // namespace schedule
