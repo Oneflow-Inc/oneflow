@@ -35,46 +35,58 @@ class PolicyHub : public PolicyHubBase {
   //	facade
   inline void PrintGraph(const GraphNode& graph,
                          const std::string& filename) const {
+    CHECK(printer());
     return printer()->PrintGraph(graph, filename);
   }
   inline std::unique_ptr<GraphNode> DemoGraph() const {
+    CHECK(test_graph_generator());
     return test_graph_generator()->DemoGraph();
   }
   inline std::unique_ptr<GraphNode> Builder(const Plan& plan) const {
+    CHECK(graph_builder());
     return graph_builder()->Builder(plan);
   }
   inline std::unique_ptr<Session> MakeSession(const GraphNode& graph) const {
+    CHECK(static_scheduler());
     return static_scheduler()->MakeSession(graph);
   }
   inline std::unique_ptr<ScheduleResult> Schedule(
       const Session& session) const {
+    CHECK(static_scheduler());
     return static_scheduler()->Schedule(session);
   }
   inline bool ValidateSchedule(const Session& session,
                                const ScheduleResult& result) const {
+    CHECK(schedule_validator());
     return schedule_validator()->ValidateSchedule(session, result);
   }
   inline void Retiming(const Session& session, ScheduleResult* result) const {
+    CHECK(retiming());
     return retiming()->Retiming(session, result);
   }
   inline void AllocateFromSchedule(const Session& session,
                                    ScheduleResult* result) const {
+    CHECK(allocator());
     return allocator()->AllocateFromSchedule(session, result);
   }
   inline bool ValidateAllocation(const Session& session,
                                  const ScheduleResult& result) const {
+    CHECK(allocation_validator());
     return allocation_validator()->ValidateAllocation(session, result);
   }
   inline std::unique_ptr<ScheduleResult> LimitedAllocate(
       const Session& session) const {
+    CHECK(limited_allocator());
     return limited_allocator()->LimitedAllocate(session);
   }
   inline bool ValidateLimitedAllocation(const Session& session,
                                         const ScheduleResult& result) const {
+    CHECK(limited_allocation_validator());
     return limited_allocation_validator()->ValidateLimitedAllocation(session,
                                                                      result);
   }
   inline bool SetPlanRegstNum(const ScheduleResult& result, Plan* plan) const {
+    CHECK(plan_setter());
     return plan_setter()->SetPlanRegstNum(result, plan);
   }
 

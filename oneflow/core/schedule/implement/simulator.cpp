@@ -623,7 +623,7 @@ void AllocatorSimulatorPolicy::AllocateFromSchedule(const Session& session,
     auto interval = logger->max_interval();
     auto count = (uint32_t)ceil(duration / std::max(interval, 1.0f));
     logger->mut_regst_desc2count()[regst_desc] = count;
-    std::cout << "Allocate\t" << regst_desc->id() << "\t" << count << "\t"
+    std::cout << "Allocation\t" << regst_desc->id() << "\t" << count << "\t"
               << duration << "," << interval << std::endl;
   });
 }

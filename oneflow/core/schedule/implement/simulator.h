@@ -28,6 +28,7 @@ namespace oneflow {
 namespace schedule {
 
 class SimulatorSession;
+class Mode;
 
 class SessionLogger : public ScheduleResult {
  public:

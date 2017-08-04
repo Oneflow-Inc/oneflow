@@ -503,8 +503,6 @@ class RegstDesc : public Node {
 
 typedef Node Regst;
 
-class Mode;
-
 }  // namespace schedule
 }  // namespace oneflow
 

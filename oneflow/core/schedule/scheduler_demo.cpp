@@ -19,6 +19,9 @@ void SimulatorPolicyDemo() {
   auto schedule_result = ph->Schedule(*session);
   ph->Retiming(*session, schedule_result.get());
   ph->AllocateFromSchedule(*session, schedule_result.get());
+  bool success = ph->ValidateAllocation(*session, *schedule_result);
+  std::cout << "allocation is " << (success ? "" : "NOT ") << "optimal"
+            << std::endl;
 }
 
 /*
