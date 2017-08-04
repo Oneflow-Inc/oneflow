@@ -11,13 +11,10 @@ class MdSaveCompTaskNode final : public CompTaskNode {
   MdSaveCompTaskNode() = default;
   ~MdSaveCompTaskNode() = default;
 
-  void ToProto(TaskProto* proto) const override {
-    TaskNode::ToProto(proto);
-    proto->set_parallel_policy(
-        fw_task_->chain_node()->parallel_desc()->policy());
-    proto->set_parallel_id(fw_task_->parallel_id());
-    proto->set_parallel_num(
-        fw_task_->chain_node()->parallel_desc()->parallel_num());
+  void ToProto(TaskProto* proto, std::function<int64_t(const ChainNode*)>
+                                     MeaninglessTaskCnt4Chain) const override {
+    TaskNode::ToProto(proto, MeaninglessTaskCnt4Chain);
+    fw_task_->FillProtoWithParallelInfo(proto, MeaninglessTaskCnt4Chain);
   }
 
   void set_fw_task(CompTaskNode* fw_task) { fw_task_ = fw_task; }

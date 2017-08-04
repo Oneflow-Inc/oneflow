@@ -1,5 +1,6 @@
 #include "gflags/gflags.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/graph/data_comp_task_node.h"
 #include "oneflow/core/graph/data_task_graph.h"
 #include "oneflow/core/graph/model_diff_accumulate_task_graph.h"
 #include "oneflow/core/graph/model_save_comp_task_node.h"
@@ -162,13 +163,28 @@ void Compiler::EraseMeaningLessRegsts() {
 }
 
 void Compiler::GenPlanFile(const std::string& plan_filepath) {
-  Plan plan;
-  ForEachTaskNode([&plan](const TaskNode* node) {
-    if (!node->IsMeaningLess()) {
-      node->ToProto(plan.mutable_task()->Add());
-    } else {
-      LOG(INFO) << "Removed Task " << node->task_id();
+  HashMap<const ChainNode*, int64_t> chain2meaningless_task_cnt;
+  ForEachTaskNode([&](const TaskNode* node) {
+    auto comp_task_node = dynamic_cast<const DataCompTaskNode*>(node);
+    if (comp_task_node && node->IsFwNode() && node->IsMeaningLess()) {
+      chain2meaningless_task_cnt[node->chain_node()] += 1;
     }
+  });
+  auto MeaninglessTaskCnt4Chain = [&](const ChainNode* chain) -> int64_t {
+    auto it = chain2meaningless_task_cnt.find(chain);
+    if (it != chain2meaningless_task_cnt.end()) {
+      return it->second;
+    } else {
+      return 0;
+    }
+  };
+  Plan plan;
+  ForEachTaskNode([&](const TaskNode* node) {
+    if (node->IsMeaningLess()) {
+      LOG(INFO) << "MeaningLess Task Id: " << node->task_id();
+      return;
+    }
+    node->ToProto(plan.mutable_task()->Add(), MeaninglessTaskCnt4Chain);
   });
 
   OpMgr::Singleton()->AllOpToProto(plan.mutable_op());
