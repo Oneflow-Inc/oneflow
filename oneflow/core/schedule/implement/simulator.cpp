@@ -610,8 +610,8 @@ void RetimingSimulatorPolicy::Retiming(const Session& session,
   logger->UpdateDuration(sess, &m1);
 }
 
-void AllocatorSimulatorPolicy::Allocate(const Session& session,
-                                        ScheduleResult* result) {
+void AllocatorSimulatorPolicy::AllocateFromSchedule(const Session& session,
+                                                    ScheduleResult* result) {
   auto session_ptr = const_cast<Session*>(&session);
   auto sess = dynamic_cast<SimulatorSession*>(session_ptr);
   auto logger = dynamic_cast<SessionLogger*>(result);

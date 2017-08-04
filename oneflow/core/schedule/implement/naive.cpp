@@ -10,7 +10,7 @@ void PrinterNaivePolicy::PrintGraph(const GraphNode& graph,
   graph.node_mgr().Dump();
 }
 
-std::unique_ptr<GraphNode> TestGraphGeneratorNaivePolicy::Demo() {
+std::unique_ptr<GraphNode> TestGraphGeneratorNaivePolicy::DemoGraph() {
   auto graph = unique_ptr_new<GraphNode>("root");
   auto root = graph.get();
 

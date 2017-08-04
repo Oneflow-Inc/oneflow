@@ -38,14 +38,14 @@ class TestGraphGeneratorPolicy : public Policy {
  public:
   POLICY_INTERFACE_BOILERPLATE(TestGraphGeneratorPolicy);
 
-  virtual std::unique_ptr<GraphNode> Demo() = 0;
+  virtual std::unique_ptr<GraphNode> DemoGraph() = 0;
 };
 
 class GraphBuilderPolicy : public Policy {
  public:
   POLICY_INTERFACE_BOILERPLATE(GraphBuilderPolicy);
 
-  virtual std::unique_ptr<GraphNode> Builder(const Plan&) = 0;
+  virtual std::unique_ptr<GraphNode> Builder(const Plan& plan) = 0;
 };
 
 class StaticSchedulerPolicy : public Policy {
@@ -59,8 +59,8 @@ class StaticSchedulerPolicy : public Policy {
 class ScheduleValidatorPolicy : public Policy {
  public:
   POLICY_INTERFACE_BOILERPLATE(ScheduleValidatorPolicy);
-  virtual bool Validate(const Session& session,
-                        const ScheduleResult& result) = 0;
+  virtual bool ValidateSchedule(const Session& session,
+                                const ScheduleResult& result) = 0;
 };
 
 class RetimingPolicy : public Policy {
@@ -72,33 +72,35 @@ class RetimingPolicy : public Policy {
 class AllocatorPolicy : public Policy {
  public:
   POLICY_INTERFACE_BOILERPLATE(AllocatorPolicy);
-  virtual void Allocate(const Session& session, ScheduleResult* result) = 0;
+  virtual void AllocateFromSchedule(const Session& session,
+                                    ScheduleResult* result) = 0;
 };
 
 class AllocationValidatorPolicy : public Policy {
  public:
   POLICY_INTERFACE_BOILERPLATE(AllocationValidatorPolicy);
-  virtual bool Validate(const Session& session,
-                        const ScheduleResult& result) = 0;
+  virtual bool ValidateAllocation(const Session& session,
+                                  const ScheduleResult& result) = 0;
 };
 
 class LimitedAllocatorPolicy : public Policy {
  public:
   POLICY_INTERFACE_BOILERPLATE(LimitedAllocatorPolicy);
-  virtual std::unique_ptr<ScheduleResult> Allocate(const Session& session) = 0;
+  virtual std::unique_ptr<ScheduleResult> LimitedAllocate(
+      const Session& session) = 0;
 };
 
 class LimitedAllocationValidatorPolicy : public Policy {
  public:
   POLICY_INTERFACE_BOILERPLATE(LimitedAllocationValidatorPolicy);
-  virtual bool Validate(const Session& session,
-                        const ScheduleResult& result) = 0;
+  virtual bool ValidateLimitedAllocation(const Session& session,
+                                         const ScheduleResult& result) = 0;
 };
 
 class PlanSetterPolicy : public Policy {
  public:
   POLICY_INTERFACE_BOILERPLATE(PlanSetterPolicy);
-  virtual bool SetRegstNum(const ScheduleResult& result, Plan* plan) = 0;
+  virtual bool SetPlanRegstNum(const ScheduleResult& result, Plan* plan) = 0;
 };
 
 }  // namespace schedule

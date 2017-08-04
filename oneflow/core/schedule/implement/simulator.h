@@ -391,7 +391,8 @@ class AllocatorSimulatorPolicy : public AllocatorPolicy {
  public:
   POLICY_IMPLEMENT_BOILERPLATE(AllocatorSimulatorPolicy, AllocatorPolicy);
 
-  virtual void Allocate(const Session& session, ScheduleResult* result);
+  virtual void AllocateFromSchedule(const Session& session,
+                                    ScheduleResult* result);
 };
 
 }  // namespace schedule

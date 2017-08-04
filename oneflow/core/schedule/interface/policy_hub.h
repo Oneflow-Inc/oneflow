@@ -32,6 +32,52 @@ class PolicyHub : public PolicyHubBase {
   OF_DISALLOW_COPY_AND_MOVE(PolicyHub);
   DEFINE_METHOD_TYPE();
 
+  //	facade
+  inline void PrintGraph(const GraphNode& graph,
+                         const std::string& filename) const {
+    return printer()->PrintGraph(graph, filename);
+  }
+  inline std::unique_ptr<GraphNode> DemoGraph() const {
+    return test_graph_generator()->DemoGraph();
+  }
+  inline std::unique_ptr<GraphNode> Builder(const Plan& plan) const {
+    return graph_builder()->Builder(plan);
+  }
+  inline std::unique_ptr<Session> MakeSession(const GraphNode& graph) const {
+    return static_scheduler()->MakeSession(graph);
+  }
+  inline std::unique_ptr<ScheduleResult> Schedule(
+      const Session& session) const {
+    return static_scheduler()->Schedule(session);
+  }
+  inline bool ValidateSchedule(const Session& session,
+                               const ScheduleResult& result) const {
+    return schedule_validator()->ValidateSchedule(session, result);
+  }
+  inline void Retiming(const Session& session, ScheduleResult* result) const {
+    return retiming()->Retiming(session, result);
+  }
+  inline void AllocateFromSchedule(const Session& session,
+                                   ScheduleResult* result) const {
+    return allocator()->AllocateFromSchedule(session, result);
+  }
+  inline bool ValidateAllocation(const Session& session,
+                                 const ScheduleResult& result) const {
+    return allocation_validator()->ValidateAllocation(session, result);
+  }
+  inline std::unique_ptr<ScheduleResult> LimitedAllocate(
+      const Session& session) const {
+    return limited_allocator()->LimitedAllocate(session);
+  }
+  inline bool ValidateLimitedAllocation(const Session& session,
+                                        const ScheduleResult& result) const {
+    return limited_allocation_validator()->ValidateLimitedAllocation(session,
+                                                                     result);
+  }
+  inline bool SetPlanRegstNum(const ScheduleResult& result, Plan* plan) const {
+    return plan_setter()->SetPlanRegstNum(result, plan);
+  }
+
   PolicyHub* Merge(const PolicyHub& ph) {
     CLONE_POLICY(ph, graph_builder());
     CLONE_POLICY(ph, limited_allocator());

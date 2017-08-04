@@ -12,7 +12,7 @@ class TestGraphGeneratorNaivePolicy : public TestGraphGeneratorPolicy {
   POLICY_IMPLEMENT_BOILERPLATE(TestGraphGeneratorNaivePolicy,
                                TestGraphGeneratorPolicy);
 
-  virtual std::unique_ptr<GraphNode> Demo();
+  virtual std::unique_ptr<GraphNode> DemoGraph();
 };
 
 class PrinterNaivePolicy : public PrinterPolicy {

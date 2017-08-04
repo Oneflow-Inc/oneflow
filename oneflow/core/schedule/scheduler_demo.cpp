@@ -13,12 +13,12 @@ namespace schedule {
 
 void SimulatorPolicyDemo() {
   auto ph = PH("naive");
-  auto graph = ph->test_graph_generator()->Demo();
-  ph->printer()->PrintGraph(*graph, "");
-  auto session = ph->static_scheduler()->MakeSession(*graph);
-  auto schedule_result = ph->static_scheduler()->Schedule(*session);
-  ph->retiming()->Retiming(*session, schedule_result.get());
-  ph->allocator()->Allocate(*session, schedule_result.get());
+  auto graph = ph->DemoGraph();
+  ph->PrintGraph(*graph, "");
+  auto session = ph->MakeSession(*graph);
+  auto schedule_result = ph->Schedule(*session);
+  ph->Retiming(*session, schedule_result.get());
+  ph->AllocateFromSchedule(*session, schedule_result.get());
 }
 
 /*
