@@ -130,7 +130,9 @@ void TaskNode::ConsumeRegstDesc(const std::string& regst_desc_name,
   regst_desc->AddConsumer(this);
 }
 
-void TaskNode::ToProto(TaskProto* ret) const {
+void TaskNode::ToProto(
+    TaskProto* ret,
+    std::function<int64_t(const ChainNode*)> MeaninglessTaskCnt4Chain) const {
   ret->set_id(task_id_);
   ret->set_type(task_type());
   ret->set_machine_id(stage_node_->machine_id());

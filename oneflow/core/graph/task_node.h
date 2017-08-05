@@ -72,7 +72,12 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   std::shared_ptr<RegstDesc> GetProducedRegst4OutEdge(const TaskEdge*) const;
 
   //
-  virtual void ToProto(TaskProto*) const;
+  virtual void ToProto(TaskProto* proto) const {
+    ToProto(proto, [](const ChainNode*) { return 0; });
+  }
+  virtual void ToProto(
+      TaskProto*,
+      std::function<int64_t(const ChainNode*)> MeaninglessTaskCnt4Chain) const;
   virtual std::string VisualStr() const override;
   virtual TaskType task_type() const = 0;
   std::string DebugStr() const;

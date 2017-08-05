@@ -32,4 +32,5 @@ message TaskProto {
   int64 parallel_num = 1002;
   // For Model Update Comp Task
   int64 related_save_task_id = 3000;
+  uint32 random_seed = 3001;
 }
