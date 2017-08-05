@@ -19,9 +19,9 @@ class Snapshot final {
                                                   size_t begin_pos);
   std::unique_ptr<PersistentOutStream> GetOutStream(const std::string& key,
                                                     int32_t part_id,
-                                                    int32_t parallel_num);
+                                                    int32_t part_num);
 
-  void OnePartDone4Lbn(const std::string& lbn) { LOG(WARNING) << "TODO"; }
+  void OnePartDone4Key(const std::string& key);
 
  private:
   // check the sub_dir of snapshot_root_path and files of sub_dir is legal
@@ -31,6 +31,8 @@ class Snapshot final {
   // a uniform file name, this file is concated from
   //   {part_0, part_1, ... part_n}
   static const char* concat_file_name_;
+  static const char* done_file_name_;
+  HashMap<std::string, int32_t> key2part_cnt_;
   std::string root_path_;
   tensorflow::Env* env_;
 };

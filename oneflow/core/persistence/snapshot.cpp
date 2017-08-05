@@ -21,6 +21,7 @@ std::string MakeValidFileName(const std::string& key) {
 }  // namespace
 
 const char* Snapshot::concat_file_name_ = "all";
+const char* Snapshot::done_file_name_ = "done";
 
 Snapshot::Snapshot(const std::string& snapshot_root_path) {
   env_ = tensorflow::Env::Default();
@@ -102,7 +103,9 @@ std::unique_ptr<PersistentInStream> Snapshot::GetInStream(
 
 std::unique_ptr<PersistentOutStream> Snapshot::GetOutStream(
     const std::string& key, int32_t part_id, int32_t part_num) {
-  LOG(WARNING) << "TODO: use part_num to detect the finish of snapshot";
+  if (key2part_cnt_.find(key) == key2part_cnt_.end()) {
+    CHECK(key2part_cnt_.emplace(key, part_num).second);
+  }
   std::string dir_path =
       tensorflow::io::JoinPath(root_path_, MakeValidFileName(key));
   if (env_->IsDirectory(dir_path).code() == tensorflow::error::NOT_FOUND) {
@@ -113,6 +116,17 @@ std::unique_ptr<PersistentOutStream> Snapshot::GetOutStream(
       tensorflow::io::JoinPath(dir_path, std::to_string(part_id));
   PersistentOutStream* ret = new PersistentOutStream(file_path);
   return std::unique_ptr<PersistentOutStream>(ret);
+}
+
+void Snapshot::OnePartDone4Key(const std::string& key) {
+  auto key2part_cnt_it = key2part_cnt_.find(key);
+  key2part_cnt_it->second -= 1;
+  if (key2part_cnt_it->second == 0) {
+    std::string done_file_path = tensorflow::io::JoinPath(
+        root_path_, MakeValidFileName(key), done_file_name_);
+    PersistentOutStream out_stream(done_file_path);
+    key2part_cnt_.erase(key2part_cnt_it);
+  }
 }
 
 }  // namespace oneflow

@@ -41,7 +41,7 @@ int BoxingActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
            0);
   ActUntilFail();
-  if (mut_num_of_read_empty()) {
+  if (num_of_read_empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
     OF_SET_MSG_HANDLER(&BoxingActor::HandlerZombie);
   }
