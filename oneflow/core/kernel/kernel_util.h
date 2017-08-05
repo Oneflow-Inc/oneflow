@@ -109,16 +109,18 @@ class KernelUtil final {
                        const int ldc);
 
   // Generate random number of specific distribution
-  static void Fill(const FillConf& fill_conf, Blob* blob);
-  static void Fill(const KernelCtx& ctx, const FillConf& fill_conf, Blob* blob);
+  static void Fill(const FillConf& fill_conf, uint32_t random_seed, Blob* blob);
+  static void Fill(const KernelCtx& ctx, const FillConf& fill_conf,
+                   uint32_t random_seed, Blob* blob);
 
   // detect fill conf
   static void FillWithProperConf(const KernelCtx& ctx,
-                                 const FillConf* fill_conf, Blob* blob) {
+                                 const FillConf* fill_conf,
+                                 uint32_t random_seed, Blob* blob) {
     if (fill_conf == nullptr) {
       fill_conf = JobDesc::Singleton()->default_fill_conf();
     }
-    Fill(ctx, *fill_conf, blob);
+    Fill(ctx, *fill_conf, random_seed, blob);
   }
 };
 

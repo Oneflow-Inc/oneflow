@@ -16,7 +16,9 @@ void Kernel::InitModelAndModelTmpBlobs(
     InitModelAndModelTmpBlobsWithSnapshot(ctx, policy, parallel_id,
                                           parallel_num, snapshot, BnInOp2Blob);
   } else {
-    InitModelAndModelTmpBlobsWithoutSnapshot(ctx, BnInOp2Blob);
+    uint32_t random_seed = reinterpret_cast<uint64_t>(ctx.other);
+    std::mt19937 random_seed_gen(random_seed);
+    InitModelAndModelTmpBlobsWithRandomSeed(ctx, random_seed_gen, BnInOp2Blob);
   }
 }
 
