@@ -36,7 +36,7 @@ void ModelSaveKernel<DeviceType::kCPU, FloatingPointType>::Forward(
             blob_ptr->dptr<char>(),
             blob_ptr->shape().elem_cnt() * sizeof(FloatingPointType));
       }
-      snapshot->OnePartDone4Lbn(lbn);
+      snapshot->OnePartDone4Key(lbn);
     });
   }
 }
