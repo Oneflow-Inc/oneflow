@@ -4,9 +4,9 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include "oneflow/core/schedule/data_structure/node.h"
-#include "oneflow/core/schedule/factory/factory.h"
-#include "oneflow/core/schedule/implement/simulator.h"
+#include "oneflow/core/schedule/factory.h"
+#include "oneflow/core/schedule/node.h"
+#include "oneflow/core/schedule/simulator.h"
 
 namespace oneflow {
 namespace schedule {

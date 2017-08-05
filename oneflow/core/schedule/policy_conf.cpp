@@ -1,7 +1,7 @@
-#include "oneflow/core/schedule/factory/factory.h"
-#include "oneflow/core/schedule/implement/naive.h"
-#include "oneflow/core/schedule/implement/simulator.h"
-#include "oneflow/core/schedule/implement/validator.h"
+#include "oneflow/core/schedule/factory.h"
+#include "oneflow/core/schedule/naive.h"
+#include "oneflow/core/schedule/simulator.h"
+#include "oneflow/core/schedule/validator.h"
 
 namespace oneflow {
 namespace schedule {

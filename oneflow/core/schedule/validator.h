@@ -1,9 +1,9 @@
 #ifndef ONEFLOW_CORE_SCHEDULE_IMPLEMENT_VALIDATOR_H_
 #define ONEFLOW_CORE_SCHEDULE_IMPLEMENT_VALIDATOR_H_
 
-#include "oneflow/core/schedule/data_structure/session.h"
-#include "oneflow/core/schedule/interface/policy.h"
-#include "oneflow/core/schedule/util/util.h"
+#include "oneflow/core/schedule/policy.h"
+#include "oneflow/core/schedule/session.h"
+#include "oneflow/core/schedule/util.h"
 
 namespace oneflow {
 namespace schedule {

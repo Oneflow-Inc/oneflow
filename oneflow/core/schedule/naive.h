@@ -1,8 +1,8 @@
 #ifndef ONEFLOW_CORE_SCHEDULE_IMPLEMENT_NAIVE_H_
 #define ONEFLOW_CORE_SCHEDULE_IMPLEMENT_NAIVE_H_
 
-#include "oneflow/core/schedule/interface/policy.h"
-#include "oneflow/core/schedule/util/util.h"
+#include "oneflow/core/schedule/policy.h"
+#include "oneflow/core/schedule/util.h"
 
 namespace oneflow {
 namespace schedule {

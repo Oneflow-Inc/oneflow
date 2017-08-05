@@ -1,9 +1,9 @@
 #ifndef ONEFLOW_CORE_SCHEDULE_INTERFACE_SCHEDULER_H_
 #define ONEFLOW_CORE_SCHEDULE_INTERFACE_SCHEDULER_H_
 
-#include "oneflow/core/schedule/facotry/factory.h"
-#include "oneflow/core/schedule/interface/policy.h"
-#include "oneflow/core/schedule/interface/policy_hub.h"
+#include "oneflow/core/schedule/factory.h"
+#include "oneflow/core/schedule/policy.h"
+#include "oneflow/core/schedule/policy_hub.h"
 
 namespace oneflow {
 namespace schedule {

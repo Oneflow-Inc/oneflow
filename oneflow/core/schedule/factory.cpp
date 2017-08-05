@@ -1,4 +1,4 @@
-#include "oneflow/core/schedule/factory/factory.h"
+#include "oneflow/core/schedule/factory.h"
 
 namespace oneflow {
 namespace schedule {

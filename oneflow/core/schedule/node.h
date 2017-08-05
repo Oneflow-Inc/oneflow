@@ -19,7 +19,7 @@
 #include <utility>
 #include <vector>
 
-#include "oneflow/core/schedule/util/util.h"
+#include "oneflow/core/schedule/util.h"
 
 namespace oneflow {
 namespace schedule {

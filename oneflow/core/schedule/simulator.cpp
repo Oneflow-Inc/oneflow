@@ -1,8 +1,8 @@
 /**
  * Copyright 2017 Xinqi Li
  */
-#include "oneflow/core/schedule/implement/simulator.h"
-#include "oneflow/core/schedule/data_structure/node.h"
+#include "oneflow/core/schedule/simulator.h"
+#include "oneflow/core/schedule/node.h"
 
 namespace oneflow {
 namespace schedule {

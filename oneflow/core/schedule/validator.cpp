@@ -1,6 +1,6 @@
-#include "oneflow/core/schedule/implement/validator.h"
-#include "oneflow/core/schedule/implement/simulator.h"
-#include "oneflow/core/schedule/interface/policy_hub.h"
+#include "oneflow/core/schedule/validator.h"
+#include "oneflow/core/schedule/policy_hub.h"
+#include "oneflow/core/schedule/simulator.h"
 namespace oneflow {
 namespace schedule {
 

@@ -1,5 +1,5 @@
-#include "oneflow/core/schedule/implement/naive.h"
-#include "oneflow/core/schedule/util/util.h"
+#include "oneflow/core/schedule/naive.h"
+#include "oneflow/core/schedule/util.h"
 
 namespace oneflow {
 namespace schedule {

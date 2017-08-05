@@ -1,4 +1,4 @@
-#include "oneflow/core/schedule/data_structure/session.h"
+#include "oneflow/core/schedule/session.h"
 namespace oneflow {
 namespace schedule {
 

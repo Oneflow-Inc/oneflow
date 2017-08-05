@@ -1,8 +1,8 @@
 #ifndef ONEFLOW_CORE_SCHEDULE_POLICY_FACTORY_FACTORY_H_
 #define ONEFLOW_CORE_SCHEDULE_POLICY_FACTORY_FACTORY_H_
 
-#include "oneflow/core/schedule/interface/policy.h"
-#include "oneflow/core/schedule/interface/policy_hub.h"
+#include "oneflow/core/schedule/policy.h"
+#include "oneflow/core/schedule/policy_hub.h"
 
 namespace oneflow {
 namespace schedule {
