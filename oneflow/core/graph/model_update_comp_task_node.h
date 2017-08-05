@@ -25,10 +25,13 @@ class MdUpdtCompTaskNode final : public CompTaskNode {
       }
     }
     proto->set_related_save_task_id(related_save_task_id);
+    proto->set_random_seed(random_seed_);
   }
 
   void set_fw_task(CompTaskNode* fw_task) { fw_task_ = fw_task; }
   CompTaskNode* fw_task() { return fw_task_; }
+
+  void set_random_seed(uint32_t val) { random_seed_ = val; }
 
  private:
   void BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) override;
@@ -38,6 +41,7 @@ class MdUpdtCompTaskNode final : public CompTaskNode {
     return of_make_unique<MdUpdtCompTaskNode>();
   }
   CompTaskNode* fw_task_;
+  uint32_t random_seed_;
 };
 
 }  // namespace oneflow

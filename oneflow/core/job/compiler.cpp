@@ -125,11 +125,12 @@ void Compiler::BuildModelGraphs(
   LOG(INFO) << "Build MdUpdtTaskGraph for " << chain_tag;
   std::vector<CompTaskNode*> updt_tasks;
   updt_tasks.reserve(pair.second.size());
+  uint32_t random_seed = NewRandomSeed();
   for (size_t i = 0; i < pair.second.size(); ++i) {
     CompTaskNode* data_fw_task = pair.second[i];
     auto updt_gph = new MdUpdtTaskGraph(
         "md_updt_" + data_fw_task->node_id_str(), data_fw_task,
-        is_train ? sorted_diff_acc_tasks[i] : nullptr);
+        is_train ? sorted_diff_acc_tasks[i] : nullptr, random_seed);
     ordered_task_gphs_.emplace_back(updt_gph);
     ChainNode* updt_chain = updt_gph->chain_gph()->SoleSinkNode();
     auto updt_tasks_in_chain = updt_gph->CompTasksInChain(updt_chain);
