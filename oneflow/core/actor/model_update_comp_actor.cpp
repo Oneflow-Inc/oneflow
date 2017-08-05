@@ -11,6 +11,7 @@ void MdUpdtCompActor::Init(const TaskProto& task_proto,
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
   next_model_version_id_ = 0;
   related_save_task_id_ = task_proto.related_save_task_id();
+  random_seed_ = task_proto.random_seed();
   set_num_of_remaining_eord(1);
   mut_num_of_read_empty() = 1;
   if (thread_ctx.cpu_stream) {
@@ -44,9 +45,11 @@ int MdUpdtCompActor::HandlerBeforeInitializeModel(const ActorMsg& actor_msg) {
   model_regst->ForEachLbn(CollectKernelsFromLbn);
   if (model_tmp_regst) { model_tmp_regst->ForEachLbn(CollectKernelsFromLbn); }
 
+  KernelCtx kernel_ctx = GenDefaultKernelCtx();
+  kernel_ctx.other = reinterpret_cast<void*>(random_seed_);
   for (const Kernel* kernel : kernels) {
     kernel->InitModelAndModelTmpBlobs(
-        GenDefaultKernelCtx(), parallel_policy(), parallel_id(), parallel_num(),
+        kernel_ctx, parallel_policy(), parallel_id(), parallel_num(),
         SnapshotMgr::Singleton()->GetReadableSnapshot(),
         [&](const std::string& bn_in_op) {
           const std::string& lbn = kernel->Lbn4BnInOp(bn_in_op);

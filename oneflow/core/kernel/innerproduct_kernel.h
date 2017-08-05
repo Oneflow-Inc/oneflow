@@ -20,8 +20,8 @@ class InnerProductKernel final : public Kernel {
                 std::function<Blob*(const std::string&)>) const override;
 
  protected:
-  void InitModelAndModelTmpBlobsWithoutSnapshot(
-      const KernelCtx&,
+  void InitModelAndModelTmpBlobsWithRandomSeed(
+      const KernelCtx&, std::mt19937,
       std::function<Blob*(const std::string&)>) const override;
 };
 

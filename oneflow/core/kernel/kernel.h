@@ -48,8 +48,8 @@ class Kernel {
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNEXPECTED_RUN();
   }
-  virtual void InitModelAndModelTmpBlobsWithoutSnapshot(
-      const KernelCtx& ctx,
+  virtual void InitModelAndModelTmpBlobsWithRandomSeed(
+      const KernelCtx& ctx, std::mt19937 random_seed_gen,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNEXPECTED_RUN();
   }
