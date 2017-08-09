@@ -30,27 +30,27 @@ class ScheduleResult {
   ScheduleResult() {}
   DEFINE_PURE_VIRTUAL_TYPE();
 
-  inline const std::unordered_map<Arc*, std::pair<int32_t, int32_t>>&
+  inline const std::unordered_map<Arc<Node>*, std::pair<int32_t, int32_t>>&
   instance2ended_at() const {
     return instance2ended_at_;
   }
-  inline std::unordered_map<Arc*, std::pair<int32_t, int32_t>>&
+  inline std::unordered_map<Arc<Node>*, std::pair<int32_t, int32_t>>&
   mut_instance2ended_at() {
     return instance2ended_at_;
   }
-  inline const std::unordered_map<Arc*, std::unordered_map<Node*, float>>&
+  inline const std::unordered_map<Arc<Node>*, std::unordered_map<Node*, float>>&
   start_time_gap_to_loss() const {
     return start_time_gap_to_loss_;
   };
-  inline std::unordered_map<Arc*, std::unordered_map<Node*, float>>&
+  inline std::unordered_map<Arc<Node>*, std::unordered_map<Node*, float>>&
   mut_start_time_gap_to_loss() {
     return start_time_gap_to_loss_;
   };
-  inline const std::unordered_map<Arc*, std::unordered_map<Node*, float>>&
+  inline const std::unordered_map<Arc<Node>*, std::unordered_map<Node*, float>>&
   end_time_gap_to_loss() const {
     return end_time_gap_to_loss_;
   };
-  inline std::unordered_map<Arc*, std::unordered_map<Node*, float>>&
+  inline std::unordered_map<Arc<Node>*, std::unordered_map<Node*, float>>&
   mut_end_time_gap_to_loss() {
     return end_time_gap_to_loss_;
   };
@@ -84,10 +84,11 @@ class ScheduleResult {
   }
 
  protected:
-  std::unordered_map<Arc*, std::pair<int32_t, int32_t>> instance2ended_at_;
-  std::unordered_map<Arc*, std::unordered_map<Node*, float>>
+  std::unordered_map<Arc<Node>*, std::pair<int32_t, int32_t>>
+      instance2ended_at_;
+  std::unordered_map<Arc<Node>*, std::unordered_map<Node*, float>>
       start_time_gap_to_loss_;
-  std::unordered_map<Arc*, std::unordered_map<Node*, float>>
+  std::unordered_map<Arc<Node>*, std::unordered_map<Node*, float>>
       end_time_gap_to_loss_;
   std::unordered_map<Node*, int32_t> device2ended_at_;
   std::unordered_map<Node*, float> node2interval_;

@@ -145,44 +145,53 @@ class NodeMgr {
       name2id2node_;
 };
 
+template<typename SrcNodeType, typename DstNodeType = SrcNodeType>
 class Arc : public Node {
  public:
-  Arc(Node* from, Node* to) {
+  Arc(SrcNodeType* from, DstNodeType* to) {
     mut_from() = from;
     mut_to() = to;
     mut_name() = "";
   }
 
-  Arc(Node* from, Node* to, const std::string& name) {
+  Arc(SrcNodeType* from, DstNodeType* to, const std::string& name) {
     mut_from() = from;
     mut_to() = to;
     mut_name() = name;
   }
 
-  Node* from() const { return from_; }
-  Node*& mut_from() { return from_; }
+  typedef SrcNodeType src_node_type;
+  typedef DstNodeType dst_node_type;
 
-  Node* to() const { return to_; }
-  Node*& mut_to() { return to_; }
+  SrcNodeType* from() const { return from_; }
+  SrcNodeType*& mut_from() { return from_; }
+
+  DstNodeType* to() const { return to_; }
+  DstNodeType*& mut_to() { return to_; }
 
   std::string name() const { return from()->name() + "->" + to()->name(); }
 
  private:
-  Node* from_;
-  Node* to_;
+  SrcNodeType* from_;
+  DstNodeType* to_;
 };
 
+template<typename ArcType,
+         typename SrcNodeType = typename ArcType::src_node_type,
+         typename DstNodeType = typename ArcType::dst_node_type>
 class ArcMgr {
  public:
-  ArcMgr() {}
+  ArcMgr() = default;
+  virtual ~ArcMgr() = default;
 
   template<typename... Args>
-  Arc* CreateIfNotFound(Node* from, Node* to, Args&&... args) {
+  ArcType* CreateIfNotFound(SrcNodeType* from, DstNodeType* to,
+                            Args&&... args) {
     auto node = Find(from, to);
     return node ? node : Create(from, to, std::forward<Args>(args)...);
   }
 
-  int Insert(std::unique_ptr<Arc>&& arcp) {
+  int Insert(std::unique_ptr<ArcType>&& arcp) {
     if (Find(arcp->from(), arcp->to())) { return 0; }
     from2to2arc_[arcp->from()][arcp->to()] = arcp.get();
     to2from2arc_[arcp->to()][arcp->from()] = arcp.get();
@@ -190,29 +199,29 @@ class ArcMgr {
     return 1;
   }
 
-  unsigned int Input(const Node* to) const {
-    return Input(to, [](Node* from) {});
+  unsigned int Input(const DstNodeType* to) const {
+    return Input(to, [](SrcNodeType* from) {});
   }
 
-  unsigned int Input(const Node* to, std::list<Node*>* l) const {
-    return Input(to, [l](Node* from) { l->push_back(from); });
+  unsigned int Input(const DstNodeType* to, std::list<SrcNodeType*>* l) const {
+    return Input(to, [l](SrcNodeType* from) { l->push_back(from); });
   }
 
-  unsigned int Input(const Node* to,
-                     const std::function<void(Node*)>& cb) const {
-    return InputArc(to, [&cb](Arc* arcp) { cb(arcp->from()); });
+  unsigned int Input(const DstNodeType* to,
+                     const std::function<void(SrcNodeType*)>& cb) const {
+    return InputArc(to, [&cb](ArcType* arcp) { cb(arcp->from()); });
   }
 
-  unsigned int Input(const Node* to, Node** from) const {
-    return InputArc(to, [from](Arc* p) { *from = p->from(); });
+  unsigned int Input(const DstNodeType* to, SrcNodeType** from) const {
+    return InputArc(to, [from](ArcType* p) { *from = p->from(); });
   }
 
-  unsigned int InputArc(const Node* to, std::list<Arc*>* l) const {
-    return InputArc(to, [l](Arc* arc) { l->push_back(arc); });
+  unsigned int InputArc(const DstNodeType* to, std::list<ArcType*>* l) const {
+    return InputArc(to, [l](ArcType* arc) { l->push_back(arc); });
   }
 
-  unsigned int InputArc(std::list<Node*> to_nodes,
-                        const std::function<void(Arc*)>& cb) const {
+  unsigned int InputArc(std::list<DstNodeType*> to_nodes,
+                        const std::function<void(ArcType*)>& cb) const {
     unsigned int count = 0;
     for (auto node_itt = to_nodes.begin(); node_itt != to_nodes.end();
          node_itt++) {
@@ -226,14 +235,14 @@ class ArcMgr {
     return count;
   }
 
-  unsigned int InputArc(const Node* to, Arc* ptr) const {
-    return InputArc(to, [&ptr](Arc* p) { ptr = p; });
+  unsigned int InputArc(const DstNodeType* to, ArcType* ptr) const {
+    return InputArc(to, [&ptr](ArcType* p) { ptr = p; });
   }
 
-  unsigned int InputArc(const Node* to,
-                        const std::function<void(Arc*)>& cb) const {
+  unsigned int InputArc(const DstNodeType* to,
+                        const std::function<void(ArcType*)>& cb) const {
     unsigned int count = 0;
-    auto itt = to2from2arc_.find(const_cast<Node*>(to));
+    auto itt = to2from2arc_.find(const_cast<DstNodeType*>(to));
     if (itt == to2from2arc_.end()) { return count; }
     for (auto jtt = itt->second.begin(); jtt != itt->second.end(); jtt++) {
       cb(jtt->second);
@@ -242,34 +251,37 @@ class ArcMgr {
     return count;
   }
 
-  unsigned int Output(const Node* from, Node** to) const {
-    return OutputArc(from, [&to](Arc* p) { *to = p->to(); });
+  unsigned int Output(const SrcNodeType* from, DstNodeType** to) const {
+    return OutputArc(from, [&to](ArcType* p) { *to = p->to(); });
   }
 
-  unsigned int Output(const Node* from) const {
-    return Output(from, [](Node* to) {});
+  unsigned int Output(const SrcNodeType* from) const {
+    return Output(from, [](DstNodeType* to) {});
   }
 
-  unsigned int Output(const Node* from, std::list<Node*>* l) const {
-    return Output(from, [&l](Node* to) { l->push_back(to); });
+  unsigned int Output(const SrcNodeType* from,
+                      std::list<DstNodeType*>* l) const {
+    return Output(from, [&l](DstNodeType* to) { l->push_back(to); });
   }
 
-  unsigned int Output(const Node* from,
-                      const std::function<void(Node*)>& cb) const {
-    return OutputArc(from, [&cb](Arc* arcp) { cb(arcp->to()); });
+  unsigned int Output(const SrcNodeType* from,
+                      const std::function<void(DstNodeType*)>& cb) const {
+    return OutputArc(from, [&cb](ArcType* arcp) { cb(arcp->to()); });
   }
 
-  unsigned int OutputArc(const Node* from, Arc* ptr) const {
-    return OutputArc(from, [&ptr](Arc* p) { ptr = p; });
+  unsigned int OutputArc(const SrcNodeType* from, ArcType* ptr) const {
+    return OutputArc(from, [&ptr](ArcType* p) { ptr = p; });
   }
 
-  unsigned int OutputArc(const Node* from, std::list<Arc*>* l) const {
-    return OutputArc(from, [&l](Arc* arc) { l->push_back(arc); });
+  unsigned int OutputArc(const SrcNodeType* from,
+                         std::list<ArcType*>* l) const {
+    return OutputArc(from, [&l](ArcType* arc) { l->push_back(arc); });
   }
 
-  unsigned int OutputArc(const Node* from, std::function<void(Arc*)> cb) const {
+  unsigned int OutputArc(const SrcNodeType* from,
+                         std::function<void(ArcType*)> cb) const {
     unsigned int count = 0;
-    auto itt = from2to2arc_.find(const_cast<Node*>(from));
+    auto itt = from2to2arc_.find(const_cast<SrcNodeType*>(from));
     if (itt == from2to2arc_.end()) { return count; }
     for (auto jtt = itt->second.begin(); jtt != itt->second.end(); jtt++) {
       cb(jtt->second);
@@ -278,8 +290,8 @@ class ArcMgr {
     return count;
   }
 
-  unsigned int OutputArc(const std::list<Node*>& from_nodes,
-                         const std::function<void(Arc*)>& cb) const {
+  unsigned int OutputArc(const std::list<SrcNodeType*>& from_nodes,
+                         const std::function<void(ArcType*)>& cb) const {
     unsigned int count = 0;
     for (auto node_itt = from_nodes.begin(); node_itt != from_nodes.end();
          node_itt++) {
@@ -293,13 +305,13 @@ class ArcMgr {
     return count;
   }
 
-  void Find(const std::list<Node*>& from_nodes,
-            const std::list<Node*>& to_nodes,
-            const std::function<void(Arc*)>& cb) const {
-    for (Node* from : from_nodes) {
+  void Find(const std::list<SrcNodeType*>& from_nodes,
+            const std::list<DstNodeType*>& to_nodes,
+            const std::function<void(ArcType*)>& cb) const {
+    for (auto from : from_nodes) {
       auto itt = from2to2arc_.find(from);
       if (itt == from2to2arc_.end()) { continue; }
-      for (Node* to : to_nodes) {
+      for (auto to : to_nodes) {
         auto jtt = itt->second.find(to);
         if (jtt == itt->second.end()) { continue; }
         cb(jtt->second);
@@ -307,7 +319,7 @@ class ArcMgr {
     }
   }
 
-  Arc* Find(Node* from, Node* to) const {
+  ArcType* Find(SrcNodeType* from, DstNodeType* to) const {
     auto itt = from2to2arc_.find(from);
     if (itt == from2to2arc_.end()) { return nullptr; }
     auto jtt = itt->second.find(to);
@@ -315,7 +327,7 @@ class ArcMgr {
     return jtt->second;
   }
 
-  Arc* Find(uint64_t id) const {
+  ArcType* Find(uint64_t id) const {
     auto itt = id2arc_.find(id);
     if (itt == id2arc_.end()) { return nullptr; }
     return itt->second.get();
@@ -333,7 +345,7 @@ class ArcMgr {
     id2arc_.erase(id);
   }
 
-  void Delete(Node* from, Node* to) {
+  void Delete(SrcNodeType* from, DstNodeType* to) {
     auto arcp = Find(from, to);
     if (!arcp) { return; }
     Delete(arcp->id());
@@ -346,8 +358,8 @@ class ArcMgr {
   }
 
   template<typename... Args>
-  Arc* Create(Args&&... args) {
-    auto p = std::unique_ptr<Arc>(new Arc(std::forward<Args>(args)...));
+  ArcType* Create(Args&&... args) {
+    auto p = std::unique_ptr<ArcType>(new ArcType(std::forward<Args>(args)...));
     auto ret = p.get();
     p->mut_id() = GetAutoIncrementId();
     if (!Insert(std::move(p))) { ret = nullptr; }
@@ -355,22 +367,29 @@ class ArcMgr {
   }
 
  protected:
-  std::unordered_map<Node*, std::unordered_map<Node*, Arc*>> from2to2arc_;
-  std::unordered_map<Node*, std::unordered_map<Node*, Arc*>> to2from2arc_;
-  std::unordered_map<uint64_t, std::unique_ptr<Arc>> id2arc_;
+  std::unordered_map<SrcNodeType*, std::unordered_map<DstNodeType*, ArcType*>>
+      from2to2arc_;
+  std::unordered_map<DstNodeType*, std::unordered_map<SrcNodeType*, ArcType*>>
+      to2from2arc_;
+  std::unordered_map<uint64_t, std::unique_ptr<ArcType>> id2arc_;
 };
 
-class HasOneArcMgr : public ArcMgr {
+template<typename ArcType,
+         typename SrcNodeType = typename ArcType::src_node_type,
+         typename DstNodeType = typename ArcType::dst_node_type>
+class HasOneArcMgr : public ArcMgr<ArcType> {
  public:
   HasOneArcMgr() {}
 
   template<typename... Args>
-  Arc* CreateIfNotFound(Node* from, Node* to, Args&&... args) {
-    std::list<Node*> to_nodes;
-    Output(from, &to_nodes);
+  ArcType* CreateIfNotFound(SrcNodeType* from, DstNodeType* to,
+                            Args&&... args) {
+    std::list<DstNodeType*> to_nodes;
+    this->Output(from, &to_nodes);
 
-    for (auto node : to_nodes) { Delete(from, node); }
-    return ArcMgr::CreateIfNotFound(from, to, std::forward<Args>(args)...);
+    for (auto node : to_nodes) { this->Delete(from, node); }
+    return ArcMgr<ArcType>::CreateIfNotFound(from, to,
+                                             std::forward<Args>(args)...);
   }
 };
 
@@ -388,6 +407,19 @@ class DeviceNode : public Node {
  private:
   unsigned int time_;
   uint64_t memory_limit_ = ULLONG_MAX;
+};
+
+class RegstDesc : public Node {
+ public:
+  RegstDesc(const std::string name) : Node(name) {}
+  RegstDesc() : Node() {}
+  virtual ~RegstDesc() {}
+
+  uint64_t regst_size() const { return regst_size_; }
+  uint64_t& mut_regst_size() { return regst_size_; }
+
+ private:
+  uint64_t regst_size_ = 1u;
 };
 
 class GraphNode : public Node {
@@ -417,15 +449,15 @@ class GraphNode : public Node {
   void ForeachAscendent(Node*, const std::function<void(Node*)>& cb) const;
   void ForeachDescendent(Node*, const std::function<void(Node*)>& cb) const;
   void ForeachNodeWithSourceAndSink(const std::function<void(Node*)>& cb) const;
-  void ForeachRegstDesc(const std::function<void(Node*)>& cb) const;
+  void ForeachRegstDesc(const std::function<void(RegstDesc*)>& cb) const;
 
   void Walk(const std::function<void(Node*)>& cb);
-  void WalkArc(const std::function<void(Arc*)>& cb);
+  void WalkArc(const std::function<void(Arc<Node>*)>& cb);
   uint32_t DeviceCount() const;
   uint32_t Depth() const;
   void WalkReverse(const std::function<void(Node*)>& cb);
-  void WalkArcReverse(const std::function<void(Arc*)>& cb);
-  void ForeachArc(const std::function<void(Arc*)>& cb) const;
+  void WalkArcReverse(const std::function<void(Arc<Node>*)>& cb);
+  void ForeachArc(const std::function<void(Arc<Node>*)>& cb) const;
   void UpdateSourceAndSink();
   int LossNodes(std::list<Node*>* l) const;
   Node* source() const { return source_; }
@@ -439,36 +471,46 @@ class GraphNode : public Node {
 
   inline NodeMgr<Node>& mut_fake_node_mgr() { return fake_node_mgr_; }
 
-  inline const ArcMgr& arc_mgr() const { return arc_mgr_; }
-  inline ArcMgr& mut_arc_mgr() { return arc_mgr_; }
+  inline const ArcMgr<Arc<Node>>& arc_mgr() const { return arc_mgr_; }
+  inline ArcMgr<Arc<Node>>& mut_arc_mgr() { return arc_mgr_; }
 
-  inline const HasOneArcMgr& device_arc_mgr() const { return device_arc_mgr_; }
-  inline HasOneArcMgr& mut_device_arc_mgr() { return device_arc_mgr_; }
+  inline const HasOneArcMgr<Arc<Node, DeviceNode>>& device_arc_mgr() const {
+    return device_arc_mgr_;
+  }
+  inline HasOneArcMgr<Arc<Node, DeviceNode>>& mut_device_arc_mgr() {
+    return device_arc_mgr_;
+  }
 
   inline NodeMgr<DeviceNode>& mut_device_mgr() { return device_mgr_; }
 
-  inline const ArcMgr& loss_arc_mgr() const { return loss_arc_mgr_; }
-  inline ArcMgr& mut_loss_arc_mgr() { return loss_arc_mgr_; }
+  inline const ArcMgr<Arc<Node>>& loss_arc_mgr() const { return loss_arc_mgr_; }
+  inline ArcMgr<Arc<Node>>& mut_loss_arc_mgr() { return loss_arc_mgr_; }
 
-  inline const ArcMgr& ascendent_arc_mgr() const { return ascendent_arc_mgr_; }
-  inline ArcMgr& mut_ascendent_arc_mgr() { return ascendent_arc_mgr_; }
-
-  inline const ArcMgr& children_arc_mgr() const { return children_arc_mgr_; }
-  inline ArcMgr& mut_children_arc_mgr() { return children_arc_mgr_; }
-
-  inline NodeMgr<Node>& mut_regst_desc_mgr() { return regst_desc_mgr_; }
-
-  inline const ArcMgr& produced_regst_desc_mgr() const {
-    return produced_regst_desc_mgr_;
+  inline const ArcMgr<Arc<Node>>& ascendent_arc_mgr() const {
+    return ascendent_arc_mgr_;
   }
-  inline ArcMgr& mut_produced_regst_desc_mgr() {
-    return produced_regst_desc_mgr_;
+  inline ArcMgr<Arc<Node>>& mut_ascendent_arc_mgr() {
+    return ascendent_arc_mgr_;
   }
 
-  inline const ArcMgr& subscribed_regst_desc_mgr() const {
+  inline const ArcMgr<Arc<Node>>& children_arc_mgr() const {
+    return children_arc_mgr_;
+  }
+  inline ArcMgr<Arc<Node>>& mut_children_arc_mgr() { return children_arc_mgr_; }
+
+  inline NodeMgr<RegstDesc>& mut_regst_desc_mgr() { return regst_desc_mgr_; }
+
+  inline const ArcMgr<Arc<Node, RegstDesc>>& produced_regst_desc_mgr() const {
+    return produced_regst_desc_mgr_;
+  }
+  inline ArcMgr<Arc<Node, RegstDesc>>& mut_produced_regst_desc_mgr() {
+    return produced_regst_desc_mgr_;
+  }
+
+  inline const ArcMgr<Arc<Node, RegstDesc>>& subscribed_regst_desc_mgr() const {
     return subscribed_regst_desc_mgr_;
   }
-  inline ArcMgr& mut_subscribed_regst_desc_mgr() {
+  inline ArcMgr<Arc<Node, RegstDesc>>& mut_subscribed_regst_desc_mgr() {
     return subscribed_regst_desc_mgr_;
   }
 
@@ -477,31 +519,16 @@ class GraphNode : public Node {
   Node* sink_;
   NodeMgr<Node> node_mgr_;
   NodeMgr<Node> fake_node_mgr_;
-  ArcMgr arc_mgr_;
-  ArcMgr loss_arc_mgr_;
-  ArcMgr children_arc_mgr_;
-  ArcMgr ascendent_arc_mgr_;
-  NodeMgr<Node> regst_desc_mgr_;
-  ArcMgr produced_regst_desc_mgr_;
-  ArcMgr subscribed_regst_desc_mgr_;
+  ArcMgr<Arc<Node>> arc_mgr_;
+  ArcMgr<Arc<Node>> loss_arc_mgr_;
+  ArcMgr<Arc<Node>> children_arc_mgr_;
+  ArcMgr<Arc<Node>> ascendent_arc_mgr_;
+  NodeMgr<RegstDesc> regst_desc_mgr_;
+  ArcMgr<Arc<Node, RegstDesc>> produced_regst_desc_mgr_;
+  ArcMgr<Arc<Node, RegstDesc>> subscribed_regst_desc_mgr_;
   NodeMgr<DeviceNode> device_mgr_;
-  HasOneArcMgr device_arc_mgr_;
+  HasOneArcMgr<Arc<Node, DeviceNode>> device_arc_mgr_;
 };
-
-class RegstDesc : public Node {
- public:
-  RegstDesc(const std::string name) : Node(name) {}
-  RegstDesc() : Node() {}
-  virtual ~RegstDesc() {}
-
-  uint64_t regst_size() const { return regst_size_; }
-  uint64_t& mut_regst_size() { return regst_size_; }
-
- private:
-  uint64_t regst_size_ = 1u;
-};
-
-typedef Node Regst;
 
 }  // namespace schedule
 }  // namespace oneflow

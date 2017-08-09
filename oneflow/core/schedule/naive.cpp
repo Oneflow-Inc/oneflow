@@ -168,7 +168,8 @@ std::unique_ptr<GraphNode> TestGraphGeneratorNaivePolicy::DemoGraph() {
       ss >> from_id >> to_id;
 
       Node* from = graph->mut_node_mgr().Find(get_id(from_id));
-      Node* to = graph->mut_regst_desc_mgr().CreateIfNotFound(get_id(to_id));
+      RegstDesc* to =
+          graph->mut_regst_desc_mgr().CreateIfNotFound(get_id(to_id));
       if (from && to) {
         graph->mut_produced_regst_desc_mgr().CreateIfNotFound(from, to);
       }
@@ -180,7 +181,8 @@ std::unique_ptr<GraphNode> TestGraphGeneratorNaivePolicy::DemoGraph() {
       ss >> from_id >> to_id;
 
       Node* from = graph->mut_node_mgr().Find(get_id(from_id));
-      Node* to = graph->mut_regst_desc_mgr().CreateIfNotFound(get_id(to_id));
+      RegstDesc* to =
+          graph->mut_regst_desc_mgr().CreateIfNotFound(get_id(to_id));
       if (from && to) {
         graph->mut_subscribed_regst_desc_mgr().CreateIfNotFound(from, to);
       }

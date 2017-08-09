@@ -16,7 +16,7 @@ int GraphNode::LossNodes(std::list<Node*>* l) const {
 }
 
 void GraphNode::UpdateSourceAndSink() {
-  std::list<Arc*> arcs;
+  std::list<Arc<Node>*> arcs;
   arc_mgr().OutputArc(source(), &arcs);
   arc_mgr().InputArc(sink(), &arcs);
   for (auto arc : arcs) { mut_arc_mgr().Delete(arc->id()); }
@@ -30,7 +30,7 @@ void GraphNode::UpdateSourceAndSink() {
   });
 }
 
-void GraphNode::ForeachArc(const std::function<void(Arc*)>& cb) const {
+void GraphNode::ForeachArc(const std::function<void(Arc<Node>*)>& cb) const {
   arc_mgr().OutputArc(source(), cb);
   children_arc_mgr().Output(
       this, [&](Node* child) { arc_mgr().OutputArc(child, cb); });
@@ -48,7 +48,8 @@ void GraphNode::ForeachNode(const std::function<void(Node*)>& cb) const {
   cb(sink());
 }
 
-void GraphNode::ForeachRegstDesc(const std::function<void(Node*)>& cb) const {
+void GraphNode::ForeachRegstDesc(
+    const std::function<void(RegstDesc*)>& cb) const {
   children_arc_mgr().Output(
       this, [&](Node* node) { produced_regst_desc_mgr().Output(node, cb); });
 }
@@ -59,18 +60,18 @@ uint32_t GraphNode::Depth() const {
 }
 
 uint32_t GraphNode::DeviceCount() const {
-  std::unordered_set<Node*> devices;
+  std::unordered_set<DeviceNode*> devices;
   children_arc_mgr().Output(this, [&](Node* node) {
-    Node* device = nullptr;
+    DeviceNode* device = nullptr;
     device_arc_mgr().Output(node, &device);
     devices.insert(device);
   });
   return devices.size();
 }
 
-void GraphNode::WalkArcReverse(const std::function<void(Arc*)>& cb) {
+void GraphNode::WalkArcReverse(const std::function<void(Arc<Node>*)>& cb) {
   WalkReverse([&](Node* node) {
-    arc_mgr().OutputArc(node, [&](Arc* arc) { cb(arc); });
+    arc_mgr().OutputArc(node, [&](Arc<Node>* arc) { cb(arc); });
   });
 }
 
@@ -83,7 +84,7 @@ void GraphNode::WalkReverse(const std::function<void(Node*)>& cb) {
       cb(node);
       marked.insert(node);
       next.erase(node);
-      arc_mgr().InputArc(node, [&](Arc* arc) {
+      arc_mgr().InputArc(node, [&](Arc<Node>* arc) {
         bool all_marked = true;
         arc_mgr().Output(arc->from(), [&](Node* from) {
           if (all_marked && marked.find(from) == marked.end()) {
@@ -98,7 +99,7 @@ void GraphNode::WalkReverse(const std::function<void(Node*)>& cb) {
   }
 }
 
-void GraphNode::WalkArc(const std::function<void(Arc*)>& cb) {
+void GraphNode::WalkArc(const std::function<void(Arc<Node>*)>& cb) {
   Walk([&](Node* node) { arc_mgr().InputArc(node, cb); });
 }
 
@@ -111,7 +112,7 @@ void GraphNode::Walk(const std::function<void(Node*)>& cb) {
       cb(node);
       marked.insert(node);
       next.erase(node);
-      arc_mgr().OutputArc(node, [&](Arc* arc) {
+      arc_mgr().OutputArc(node, [&](Arc<Node>* arc) {
         bool all_marked = true;
         arc_mgr().Input(arc->to(), [&](Node* from) {
           if (all_marked && marked.find(from) == marked.end()) {

@@ -10,7 +10,7 @@ void Session::InitNodeBatchInstance(Node* node) {
 }
 
 void Session::NewBatchs() {
-  std::list<Node*> batch_nodes;
+  std::list<Batch*> batch_nodes;
   for (int i = 0; i < nr_batch(); i++) {
     auto batch = mut_batch_node_mgr().CreateWithId(i, std::to_string(i));
     batch_nodes.push_back(batch);
@@ -22,7 +22,7 @@ void Session::NewBatchs() {
           instance->id(), std::to_string(instance->id()));
     }
   });
-  graph()->ForeachArc([&](Arc* arc) {
+  graph()->ForeachArc([&](Arc<Node>* arc) {
     auto place = dynamic_cast<Node*>(arc);
     for (auto batch : batch_nodes) {
       mut_batch_arc_mgr().CreateIfNotFound(batch, place);

@@ -7,6 +7,17 @@
 namespace oneflow {
 namespace schedule {
 
+typedef Node Regst;
+
+class Batch : public Node {
+ public:
+  Batch(const std::string name) : Node(name) {}
+  Batch() : Node() {}
+  virtual ~Batch() {}
+};
+
+typedef Arc<Batch, Node> TaskInstance;
+
 class Session {
  public:
   Session() = delete;
@@ -27,11 +38,15 @@ class Session {
   inline const GraphNode* graph() const { return graph_; }
   inline GraphNode* mut_graph() { return graph_; }
 
-  inline const NodeMgr<Node>& batch_node_mgr() const { return batch_node_mgr_; }
-  inline NodeMgr<Node>& mut_batch_node_mgr() { return batch_node_mgr_; }
+  inline const NodeMgr<Batch>& batch_node_mgr() const {
+    return batch_node_mgr_;
+  }
+  inline NodeMgr<Batch>& mut_batch_node_mgr() { return batch_node_mgr_; }
 
-  inline const ArcMgr& batch_arc_mgr() const { return batch_arc_mgr_; }
-  inline ArcMgr& mut_batch_arc_mgr() { return batch_arc_mgr_; }
+  inline const ArcMgr<Arc<Node>>& batch_arc_mgr() const {
+    return batch_arc_mgr_;
+  }
+  inline ArcMgr<Arc<Node>>& mut_batch_arc_mgr() { return batch_arc_mgr_; }
 
   inline const NodeMgr<Node>& batch_instance_node_mgr() const {
     return batch_instance_node_mgr_;
@@ -49,8 +64,8 @@ class Session {
   uint32_t nr_batch_;
   uint32_t nr_base_batch_;
   NodeMgr<Node> batch_instance_node_mgr_;
-  NodeMgr<Node> batch_node_mgr_;
-  ArcMgr batch_arc_mgr_;
+  NodeMgr<Batch> batch_node_mgr_;
+  ArcMgr<Arc<Node>> batch_arc_mgr_;
 };
 
 }  // namespace schedule
