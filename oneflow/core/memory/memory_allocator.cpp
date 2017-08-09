@@ -9,13 +9,13 @@ std::pair<char*, std::function<void()>> MemoryAllocator::Allocate(
   if (mem_case.has_host_pageable_mem()) {
     dptr = (char*)malloc(size);
     CHECK(dptr != nullptr);
-    memset(dptr, 0, sizeof(size));
+    memset(dptr, 0, size);
   } else if (mem_case.has_host_pinned_mem()) {
     if (mem_case.host_pinned_mem().need_cuda()) {
       CudaCheck(cudaMallocHost(&dptr, size));
     }
     if (mem_case.host_pinned_mem().need_rdma()) { TODO(); }
-    memset(dptr, 0, sizeof(size));
+    memset(dptr, 0, size);
   } else if (mem_case.has_device_cuda_mem()) {
     int32_t current_device_id;
     CudaCheck(cudaGetDevice(&current_device_id));
