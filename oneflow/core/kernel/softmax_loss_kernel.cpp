@@ -8,13 +8,13 @@ template<DeviceType device_type, typename FloatingPointType>
 void SoftmaxLossKernel<device_type, FloatingPointType>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  Blob* in_blob = BnInOp2BlobPtr("in");
-  Blob* label_blob = BnInOp2BlobPtr("label");
+  const Blob* in_blob = BnInOp2BlobPtr("in");
+  const Blob* label_blob = BnInOp2BlobPtr("label");
   Blob* prob_blob = BnInOp2BlobPtr("prob");
   Blob* tmp_blob = BnInOp2BlobPtr("tmp_1D");
   Blob* loss_blob = BnInOp2BlobPtr("loss");
   const int64_t n = in_blob->shape().At(0);
-  const int64_t w = in_blob->shape().At(1);
+  const int64_t w = in_blob->shape().Count(1);
   const FloatingPointType* in = in_blob->dptr<FloatingPointType>();
   const FloatingPointType* label = label_blob->dptr<FloatingPointType>();
   FloatingPointType* tmp = tmp_blob->mut_dptr<FloatingPointType>();

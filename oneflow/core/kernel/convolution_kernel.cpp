@@ -104,19 +104,19 @@ template<DeviceType device_type, typename FloatingPointType>
 void ConvolutionKernel<device_type, FloatingPointType>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* in = BnInOp2Blob("in");
+  const Blob* in = BnInOp2Blob("in");
   const Shape& in_shape = in->shape();
   CHECK_EQ(in_shape.NumAxes(), 4);
   Blob* out = BnInOp2Blob("out");
   Blob* col_buf = BnInOp2Blob("col_buf");
-  Blob* weight = BnInOp2Blob("weight");
+  const Blob* weight = BnInOp2Blob("weight");
   const int64_t in_im_sz = in_shape.Count(1);
   const int64_t out_im_sz = out->shape().Count(1);
   const int64_t col_im_sz = col_buf->shape().Count(1);
   auto conv_conf = op()->op_conf().convolution_conf();
   for (size_t i = 0; i < in_shape.At(0); ++i) {
     ConvolutionKernelUtil<device_type, FloatingPointType>::Im2Col(
-        ctx, in->mut_dptr<FloatingPointType>() + i * in_im_sz, in_shape.At(1),
+        ctx, in->dptr<FloatingPointType>() + i * in_im_sz, in_shape.At(1),
         in_shape.At(2), in_shape.At(3), conv_conf.kernel_size(0),
         conv_conf.kernel_size(1), conv_conf.pad(0), conv_conf.pad(1),
         conv_conf.stride(0), conv_conf.stride(1), conv_conf.dilation(0),
@@ -207,6 +207,9 @@ template<DeviceType device_type, typename FloatingPointType>
 void ConvolutionKernel<device_type, FloatingPointType>::ComputeInputDiff(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  Blob* in_diff = BnInOp2Blob("in_diff");
+  if (in_diff == nullptr) { return; }
+
   const Blob* out_diff = BnInOp2Blob("out_diff");
   const Blob* weight = BnInOp2Blob("weight");
   Blob* col_buf = BnInOp2Blob("col_buf");
@@ -225,7 +228,6 @@ void ConvolutionKernel<device_type, FloatingPointType>::ComputeInputDiff(
         col_buf->shape().At(2));
   }
 
-  Blob* in_diff = BnInOp2Blob("in_diff");
   const Shape& in_diff_shape = in_diff->shape();
   auto conv_conf = op()->op_conf().convolution_conf();
   for (size_t i = 0; i < batch_sz; ++i) {

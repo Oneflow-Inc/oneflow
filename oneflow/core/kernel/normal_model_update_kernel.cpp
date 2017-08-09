@@ -7,7 +7,7 @@ void MdUpdateKernel<device_type, FloatingPointType>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
   Blob* model_blob = BnInOp2BlobPtr("model");
-  Blob* model_diffs_blob = BnInOp2BlobPtr("model_diffs");
+  const Blob* model_diffs_blob = BnInOp2BlobPtr("model_diffs");
   float learning_rate = op()->op_conf().normal_mdupdt_conf().learning_rate();
   float alpha = learning_rate / JobDesc::Singleton()->batch_size();
   CHECK(std::isfinite(alpha));
