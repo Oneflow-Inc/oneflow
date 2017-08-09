@@ -161,7 +161,7 @@ Request* EndpointManager::PollRecvQueue(NetworkResult* result) {
   // return number of CQEs in array wc or -1 on error
   if (len <= 0) { return nullptr; }
 
-  CHECK_EQ(wc.status, IBV_WC_SUCCESS);
+  if (wc.status != IBV_WC_SUCCESS) { return nullptr; }
 
   result->type = NetworkResultType::kReceiveMsg;
   return reinterpret_cast<Request*>(wc.wr_id);
@@ -174,7 +174,7 @@ Request* EndpointManager::PollSendQueue(NetworkResult* result) {
   // return number of CQEs in array wc or -1 on error
   if (len <= 0) { return nullptr; }
 
-  CHECK_EQ(wc.status, IBV_WC_SUCCESS);
+  if (wc.status != IBV_WC_SUCCESS) { return nullptr; }
 
   switch (wc.opcode) {
     case IBV_WC_SEND: {
