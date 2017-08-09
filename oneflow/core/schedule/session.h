@@ -7,18 +7,18 @@
 namespace oneflow {
 namespace schedule {
 
-typedef Node Regst;
+typedef SNode SRegst;
 
-class Batch : public Node {
+class Batch : public SNode {
  public:
-  Batch(const std::string name) : Node(name) {}
-  Batch() : Node() {}
+  Batch(const std::string name) : SNode(name) {}
+  Batch() : SNode() {}
   virtual ~Batch() {}
 };
 
-typedef Arc<Node> TaskArc;
-typedef Arc<Batch, Node> TaskInstance;
-typedef Arc<Batch, RegstDesc> RegstDescInstance;
+typedef Arc<STask> TaskArc;
+typedef Arc<Batch, STask> TaskInstance;
+typedef Arc<Batch, SRegstDesc> RegstDescInstance;
 typedef Arc<Batch, TaskArc> TaskArcInstance;
 
 class Session {
@@ -35,7 +35,7 @@ class Session {
   }
 
   void NewBatchs();
-  void InitNodeBatchInstance(Node* node);
+  void InitNodeBatchInstance(STask* node);
   std::unique_ptr<std::list<Batch*>> GetBatchNodes();
 
   inline const SGraph* graph() const { return graph_; }

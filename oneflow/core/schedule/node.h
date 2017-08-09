@@ -24,30 +24,26 @@
 namespace oneflow {
 namespace schedule {
 
-class Node {
+// static schedule node
+class SNode {
  public:
-  explicit Node(const std::string name) : name_(name) {}
-  Node() {}
-  virtual ~Node() {}
+  explicit SNode(const std::string name) : name_(name) {}
+  SNode() {}
+  virtual ~SNode() {}
 
   virtual std::string name() const { return name_; }
   virtual std::string& mut_name() { return name_; }
   virtual uint64_t id() const { return id_; }
   virtual uint64_t& mut_id() { return id_; }
-  int depth() const { return depth_; }
-  int& mut_depth() { return depth_; }
 
   DEFINE_METHOD_TYPE();
 
  protected:
   uint64_t id_;
   std::string name_;
-  int depth_;
-  bool is_source_;
-  bool is_sink_;
 };
 
-template<typename NodeType = Node>
+template<typename NodeType = SNode>
 class NodeMgr {
  public:
   NodeMgr() {}
@@ -142,7 +138,7 @@ class NodeMgr {
 };
 
 template<typename SrcNodeType, typename DstNodeType = SrcNodeType>
-class Arc : public Node {
+class Arc : public SNode {
  public:
   Arc(SrcNodeType* from, DstNodeType* to) {
     mut_from() = from;
@@ -389,9 +385,10 @@ class HasOneArcMgr : public ArcMgr<ArcType> {
   }
 };
 
-class DeviceNode : public Node {
+//	static schedule device
+class SDevice : public SNode {
  public:
-  DeviceNode(std::string name, unsigned int time) : Node(name), time_(time) {}
+  SDevice(std::string name, unsigned int time) : SNode(name), time_(time) {}
   unsigned int time() const { return time_; }
   unsigned int& mut_time() { return time_; }
 
@@ -405,11 +402,11 @@ class DeviceNode : public Node {
   uint64_t memory_limit_ = ULLONG_MAX;
 };
 
-class RegstDesc : public Node {
+class SRegstDesc : public SNode {
  public:
-  RegstDesc(const std::string name) : Node(name) {}
-  RegstDesc() : Node() {}
-  virtual ~RegstDesc() {}
+  SRegstDesc(const std::string name) : SNode(name) {}
+  SRegstDesc() : SNode() {}
+  virtual ~SRegstDesc() {}
 
   uint64_t regst_size() const { return regst_size_; }
   uint64_t& mut_regst_size() { return regst_size_; }
@@ -418,13 +415,29 @@ class RegstDesc : public Node {
   uint64_t regst_size_ = 1u;
 };
 
+//	static schedule task
+
+class STask : public SNode {
+ public:
+  explicit STask(const std::string name) : SNode(name) {}
+  STask() {}
+  virtual ~STask() {}
+  DEFINE_METHOD_TYPE();
+  inline int depth() const { return depth_; }
+  inline int& mut_depth() { return depth_; }
+
+ protected:
+  int depth_;
+	SDevice* device_;	
+};
+
 //	static schedule graph
 
-class SGraph : public Node {
+class SGraph : public SNode {
  public:
   DEFINE_METHOD_TYPE();
 
-  SGraph(std::string name) : Node(name) { InitSourceAndSink(); }
+  SGraph(std::string name) : SNode(name) { InitSourceAndSink(); }
 
   void Update() {
     UpdateSourceAndSink();
@@ -435,97 +448,107 @@ class SGraph : public Node {
   void InitSourceAndSink();
   void InitDepth();
 
-  static bool DescNodeOrder(Node* a, Node* b) {
+  static bool DescNodeOrder(STask* a, STask* b) {
     return a->depth() < b->depth();
   }
 
-  static bool AscNodeOrder(Node* a, Node* b) { return a->depth() > b->depth(); }
+  static bool AscNodeOrder(STask* a, STask* b) {
+    return a->depth() > b->depth();
+  }
 
   void InitAscendentArc();
 
-  void ForeachNode(const std::function<void(Node*)>& cb) const;
-  void ForeachAscendent(Node*, const std::function<void(Node*)>& cb) const;
-  void ForeachDescendent(Node*, const std::function<void(Node*)>& cb) const;
-  void ForeachNodeWithSourceAndSink(const std::function<void(Node*)>& cb) const;
-  void ForeachRegstDesc(const std::function<void(RegstDesc*)>& cb) const;
+  void ForeachNode(const std::function<void(STask*)>& cb) const;
+  void ForeachAscendent(STask*, const std::function<void(STask*)>& cb) const;
+  void ForeachDescendent(STask*, const std::function<void(STask*)>& cb) const;
+  void ForeachNodeWithSourceAndSink(
+      const std::function<void(STask*)>& cb) const;
+  void ForeachRegstDesc(const std::function<void(SRegstDesc*)>& cb) const;
 
-  void Walk(const std::function<void(Node*)>& cb);
-  void WalkArc(const std::function<void(Arc<Node>*)>& cb);
+  void Walk(const std::function<void(STask*)>& cb);
+  void WalkArc(const std::function<void(Arc<STask>*)>& cb);
   uint32_t DeviceCount() const;
   uint32_t Depth() const;
-  void WalkReverse(const std::function<void(Node*)>& cb);
-  void WalkArcReverse(const std::function<void(Arc<Node>*)>& cb);
-  void ForeachArc(const std::function<void(Arc<Node>*)>& cb) const;
+  void WalkReverse(const std::function<void(STask*)>& cb);
+  void WalkArcReverse(const std::function<void(Arc<STask>*)>& cb);
+  void ForeachArc(const std::function<void(Arc<STask>*)>& cb) const;
   void UpdateSourceAndSink();
-  int LossNodes(std::list<Node*>* l) const;
-  Node* source() const { return source_; }
-  Node*& mut_source() { return source_; }
+  int LossNodes(std::list<STask*>* l) const;
+  STask* source() const { return source_; }
+  STask*& mut_source() { return source_; }
 
-  Node* sink() const { return sink_; }
-  Node*& mut_sink() { return sink_; }
+  STask* sink() const { return sink_; }
+  STask*& mut_sink() { return sink_; }
 
-  inline const NodeMgr<Node>& node_mgr() const { return node_mgr_; }
-  inline NodeMgr<Node>& mut_node_mgr() { return node_mgr_; }
+  inline const NodeMgr<STask>& node_mgr() const { return node_mgr_; }
+  inline NodeMgr<STask>& mut_node_mgr() { return node_mgr_; }
 
-  inline NodeMgr<Node>& mut_fake_node_mgr() { return fake_node_mgr_; }
+  inline NodeMgr<STask>& mut_fake_node_mgr() { return fake_node_mgr_; }
 
-  inline const ArcMgr<Arc<Node>>& arc_mgr() const { return arc_mgr_; }
-  inline ArcMgr<Arc<Node>>& mut_arc_mgr() { return arc_mgr_; }
+  inline const ArcMgr<Arc<STask>>& arc_mgr() const { return arc_mgr_; }
+  inline ArcMgr<Arc<STask>>& mut_arc_mgr() { return arc_mgr_; }
 
-  inline const HasOneArcMgr<Arc<Node, DeviceNode>>& device_arc_mgr() const {
+  inline const HasOneArcMgr<Arc<STask, SDevice>>& device_arc_mgr() const {
     return device_arc_mgr_;
   }
-  inline HasOneArcMgr<Arc<Node, DeviceNode>>& mut_device_arc_mgr() {
+  inline HasOneArcMgr<Arc<STask, SDevice>>& mut_device_arc_mgr() {
     return device_arc_mgr_;
   }
 
-  inline NodeMgr<DeviceNode>& mut_device_mgr() { return device_mgr_; }
+  inline NodeMgr<SDevice>& mut_device_mgr() { return device_mgr_; }
 
-  inline const ArcMgr<Arc<Node>>& loss_arc_mgr() const { return loss_arc_mgr_; }
-  inline ArcMgr<Arc<Node>>& mut_loss_arc_mgr() { return loss_arc_mgr_; }
-
-  inline const ArcMgr<Arc<Node>>& ascendent_arc_mgr() const {
-    return ascendent_arc_mgr_;
+  inline const ArcMgr<Arc<SGraph, STask>>& loss_arc_mgr() const {
+    return loss_arc_mgr_;
   }
-  inline ArcMgr<Arc<Node>>& mut_ascendent_arc_mgr() {
-    return ascendent_arc_mgr_;
+  inline ArcMgr<Arc<SGraph, STask>>& mut_loss_arc_mgr() {
+    return loss_arc_mgr_;
   }
 
-  inline const ArcMgr<Arc<Node>>& children_arc_mgr() const {
+  inline const ArcMgr<Arc<STask>>& ascendent_arc_mgr() const {
+    return ascendent_arc_mgr_;
+  }
+  inline ArcMgr<Arc<STask>>& mut_ascendent_arc_mgr() {
+    return ascendent_arc_mgr_;
+  }
+
+  inline const ArcMgr<Arc<SGraph, STask>>& children_arc_mgr() const {
     return children_arc_mgr_;
   }
-  inline ArcMgr<Arc<Node>>& mut_children_arc_mgr() { return children_arc_mgr_; }
-
-  inline NodeMgr<RegstDesc>& mut_regst_desc_mgr() { return regst_desc_mgr_; }
-
-  inline const ArcMgr<Arc<Node, RegstDesc>>& produced_regst_desc_mgr() const {
-    return produced_regst_desc_mgr_;
-  }
-  inline ArcMgr<Arc<Node, RegstDesc>>& mut_produced_regst_desc_mgr() {
-    return produced_regst_desc_mgr_;
+  inline ArcMgr<Arc<SGraph, STask>>& mut_children_arc_mgr() {
+    return children_arc_mgr_;
   }
 
-  inline const ArcMgr<Arc<Node, RegstDesc>>& subscribed_regst_desc_mgr() const {
+  inline NodeMgr<SRegstDesc>& mut_regst_desc_mgr() { return regst_desc_mgr_; }
+
+  inline const ArcMgr<Arc<STask, SRegstDesc>>& produced_regst_desc_mgr() const {
+    return produced_regst_desc_mgr_;
+  }
+  inline ArcMgr<Arc<STask, SRegstDesc>>& mut_produced_regst_desc_mgr() {
+    return produced_regst_desc_mgr_;
+  }
+
+  inline const ArcMgr<Arc<STask, SRegstDesc>>& subscribed_regst_desc_mgr()
+      const {
     return subscribed_regst_desc_mgr_;
   }
-  inline ArcMgr<Arc<Node, RegstDesc>>& mut_subscribed_regst_desc_mgr() {
+  inline ArcMgr<Arc<STask, SRegstDesc>>& mut_subscribed_regst_desc_mgr() {
     return subscribed_regst_desc_mgr_;
   }
 
  private:
-  Node* source_;
-  Node* sink_;
-  NodeMgr<Node> node_mgr_;
-  NodeMgr<Node> fake_node_mgr_;
-  ArcMgr<Arc<Node>> arc_mgr_;
-  ArcMgr<Arc<Node>> loss_arc_mgr_;
-  ArcMgr<Arc<Node>> children_arc_mgr_;
-  ArcMgr<Arc<Node>> ascendent_arc_mgr_;
-  NodeMgr<RegstDesc> regst_desc_mgr_;
-  ArcMgr<Arc<Node, RegstDesc>> produced_regst_desc_mgr_;
-  ArcMgr<Arc<Node, RegstDesc>> subscribed_regst_desc_mgr_;
-  NodeMgr<DeviceNode> device_mgr_;
-  HasOneArcMgr<Arc<Node, DeviceNode>> device_arc_mgr_;
+  STask* source_;
+  STask* sink_;
+  NodeMgr<STask> node_mgr_;
+  NodeMgr<STask> fake_node_mgr_;
+  NodeMgr<SRegstDesc> regst_desc_mgr_;
+  NodeMgr<SDevice> device_mgr_;
+  ArcMgr<Arc<STask>> arc_mgr_;
+  ArcMgr<Arc<SGraph, STask>> loss_arc_mgr_;
+  ArcMgr<Arc<SGraph, STask>> children_arc_mgr_;
+  ArcMgr<Arc<STask>> ascendent_arc_mgr_;
+  ArcMgr<Arc<STask, SRegstDesc>> produced_regst_desc_mgr_;
+  ArcMgr<Arc<STask, SRegstDesc>> subscribed_regst_desc_mgr_;
+  HasOneArcMgr<Arc<STask, SDevice>> device_arc_mgr_;
 };
 
 }  // namespace schedule

@@ -11,16 +11,16 @@ void SGraph::InitSourceAndSink() {
   mut_sink() = mut_fake_node_mgr().Create("sink");
 }
 
-int SGraph::LossNodes(std::list<Node*>* l) const {
+int SGraph::LossNodes(std::list<STask*>* l) const {
   return loss_arc_mgr().Output(this, l);
 }
 
 void SGraph::UpdateSourceAndSink() {
-  std::list<Arc<Node>*> arcs;
+  std::list<Arc<STask>*> arcs;
   arc_mgr().OutputArc(source(), &arcs);
   arc_mgr().InputArc(sink(), &arcs);
   for (auto arc : arcs) { mut_arc_mgr().Delete(arc->id()); }
-  children_arc_mgr().Output(this, [&](Node* leaf) {
+  children_arc_mgr().Output(this, [&](STask* leaf) {
     if (!arc_mgr().Input(leaf)) {
       mut_arc_mgr().CreateIfNotFound(source(), leaf);
     }
@@ -30,27 +30,28 @@ void SGraph::UpdateSourceAndSink() {
   });
 }
 
-void SGraph::ForeachArc(const std::function<void(Arc<Node>*)>& cb) const {
+void SGraph::ForeachArc(const std::function<void(Arc<STask>*)>& cb) const {
   arc_mgr().OutputArc(source(), cb);
   children_arc_mgr().Output(
-      this, [&](Node* child) { arc_mgr().OutputArc(child, cb); });
+      this, [&](STask* child) { arc_mgr().OutputArc(child, cb); });
 }
 
 void SGraph::ForeachNodeWithSourceAndSink(
-    const std::function<void(Node*)>& cb) const {
+    const std::function<void(STask*)>& cb) const {
   cb(source());
   ForeachNode(cb);
   cb(sink());
 }
-void SGraph::ForeachNode(const std::function<void(Node*)>& cb) const {
+void SGraph::ForeachNode(const std::function<void(STask*)>& cb) const {
   cb(source());
   children_arc_mgr().Output(this, cb);
   cb(sink());
 }
 
-void SGraph::ForeachRegstDesc(const std::function<void(RegstDesc*)>& cb) const {
+void SGraph::ForeachRegstDesc(
+    const std::function<void(SRegstDesc*)>& cb) const {
   children_arc_mgr().Output(
-      this, [&](Node* node) { produced_regst_desc_mgr().Output(node, cb); });
+      this, [&](STask* node) { produced_regst_desc_mgr().Output(node, cb); });
 }
 
 uint32_t SGraph::Depth() const {
@@ -59,33 +60,33 @@ uint32_t SGraph::Depth() const {
 }
 
 uint32_t SGraph::DeviceCount() const {
-  std::unordered_set<DeviceNode*> devices;
-  children_arc_mgr().Output(this, [&](Node* node) {
-    DeviceNode* device = nullptr;
+  std::unordered_set<SDevice*> devices;
+  children_arc_mgr().Output(this, [&](STask* node) {
+    SDevice* device = nullptr;
     device_arc_mgr().Output(node, &device);
     devices.insert(device);
   });
   return devices.size();
 }
 
-void SGraph::WalkArcReverse(const std::function<void(Arc<Node>*)>& cb) {
-  WalkReverse([&](Node* node) {
-    arc_mgr().OutputArc(node, [&](Arc<Node>* arc) { cb(arc); });
+void SGraph::WalkArcReverse(const std::function<void(Arc<STask>*)>& cb) {
+  WalkReverse([&](STask* node) {
+    arc_mgr().OutputArc(node, [&](Arc<STask>* arc) { cb(arc); });
   });
 }
 
-void SGraph::WalkReverse(const std::function<void(Node*)>& cb) {
-  auto next = std::unordered_set<Node*>{sink()};
-  auto marked = std::unordered_set<Node*>{};
+void SGraph::WalkReverse(const std::function<void(STask*)>& cb) {
+  auto next = std::unordered_set<STask*>{sink()};
+  auto marked = std::unordered_set<STask*>{};
   while (next.size()) {
-    auto queue = std::list<Node*>(next.begin(), next.end());
+    auto queue = std::list<STask*>(next.begin(), next.end());
     for (const auto& node : queue) {
       cb(node);
       marked.insert(node);
       next.erase(node);
-      arc_mgr().InputArc(node, [&](Arc<Node>* arc) {
+      arc_mgr().InputArc(node, [&](Arc<STask>* arc) {
         bool all_marked = true;
-        arc_mgr().Output(arc->from(), [&](Node* from) {
+        arc_mgr().Output(arc->from(), [&](STask* from) {
           if (all_marked && marked.find(from) == marked.end()) {
             all_marked = false;
           }
@@ -98,22 +99,22 @@ void SGraph::WalkReverse(const std::function<void(Node*)>& cb) {
   }
 }
 
-void SGraph::WalkArc(const std::function<void(Arc<Node>*)>& cb) {
-  Walk([&](Node* node) { arc_mgr().InputArc(node, cb); });
+void SGraph::WalkArc(const std::function<void(Arc<STask>*)>& cb) {
+  Walk([&](STask* node) { arc_mgr().InputArc(node, cb); });
 }
 
-void SGraph::Walk(const std::function<void(Node*)>& cb) {
-  auto next = std::unordered_set<Node*>{source()};
-  auto marked = std::unordered_set<Node*>{};
+void SGraph::Walk(const std::function<void(STask*)>& cb) {
+  auto next = std::unordered_set<STask*>{source()};
+  auto marked = std::unordered_set<STask*>{};
   while (next.size()) {
-    auto queue = std::list<Node*>(next.begin(), next.end());
+    auto queue = std::list<STask*>(next.begin(), next.end());
     for (const auto& node : queue) {
       cb(node);
       marked.insert(node);
       next.erase(node);
-      arc_mgr().OutputArc(node, [&](Arc<Node>* arc) {
+      arc_mgr().OutputArc(node, [&](Arc<STask>* arc) {
         bool all_marked = true;
-        arc_mgr().Input(arc->to(), [&](Node* from) {
+        arc_mgr().Input(arc->to(), [&](STask* from) {
           if (all_marked && marked.find(from) == marked.end()) {
             all_marked = false;
           }
@@ -127,11 +128,11 @@ void SGraph::Walk(const std::function<void(Node*)>& cb) {
 }
 
 void SGraph::InitAscendentArc() {
-  Walk([&](Node* node) {
-    arc_mgr().Input(node, [&](Node* prev) {
-      std::list<Node*> l;
+  Walk([&](STask* node) {
+    arc_mgr().Input(node, [&](STask* prev) {
+      std::list<STask*> l;
       ascendent_arc_mgr().Output(prev, &l);
-      for (Node* asc : l) {
+      for (STask* asc : l) {
         mut_ascendent_arc_mgr().CreateIfNotFound(node, asc);
       }
       mut_ascendent_arc_mgr().CreateIfNotFound(node, prev);
@@ -139,21 +140,21 @@ void SGraph::InitAscendentArc() {
   });
 }
 
-void SGraph::ForeachAscendent(Node* node,
-                              const std::function<void(Node*)>& cb) const {
+void SGraph::ForeachAscendent(STask* node,
+                              const std::function<void(STask*)>& cb) const {
   ascendent_arc_mgr().Output(node, cb);
 }
 
-void SGraph::ForeachDescendent(Node* node,
-                               const std::function<void(Node*)>& cb) const {
+void SGraph::ForeachDescendent(STask* node,
+                               const std::function<void(STask*)>& cb) const {
   ascendent_arc_mgr().Input(node, cb);
 }
 
 void SGraph::InitDepth() {
-  WalkReverse([&](Node* node) {
+  WalkReverse([&](STask* node) {
     int depth = -1;
     arc_mgr().Output(node,
-                     [&](Node* to) { depth = std::max(depth, to->depth()); });
+                     [&](STask* to) { depth = std::max(depth, to->depth()); });
     node->mut_depth() = depth + 1;
   });
 }

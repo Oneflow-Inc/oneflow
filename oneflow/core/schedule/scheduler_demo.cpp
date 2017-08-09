@@ -41,7 +41,7 @@ void TestGraph(const std::string& input_name) {
       ss.clear();
       ss << arg1 << "\t" << arg2;
       ss >> id >> name;
-      Node* node = graph->mut_node_mgr().CreateWithId(get_id(id), name);
+      STask* node = graph->mut_node_mgr().CreateWithId(get_id(id), name);
       if (node) { graph->mut_children_arc_mgr().CreateIfNotFound(graph, node); }
     } else if (arg0 == "gl") {
       uint64_t id;
@@ -49,7 +49,7 @@ void TestGraph(const std::string& input_name) {
       ss.clear();
       ss << arg1 << "\t" << arg2;
       ss >> id >> name;
-      Node* node = graph->mut_node_mgr().Find(get_id(id));
+      STask* node = graph->mut_node_mgr().Find(get_id(id));
       if (node) { graph->mut_loss_arc_mgr().CreateIfNotFound(graph, node); }
     } else if (arg0 == "ae") {
       uint64_t from_id;
@@ -58,8 +58,8 @@ void TestGraph(const std::string& input_name) {
       ss << arg1 << "\t" << arg2;
       ss >> from_id >> to_id;
 
-      Node* from = graph->mut_node_mgr().Find(get_id(from_id));
-      Node* to = graph->mut_node_mgr().Find(get_id(to_id));
+      STask* from = graph->mut_node_mgr().Find(get_id(from_id));
+      STask* to = graph->mut_node_mgr().Find(get_id(to_id));
       if (from && to) { graph->mut_arc_mgr().CreateIfNotFound(from, to); }
     } else if (arg0 == "dt") {
       uint64_t time;
@@ -85,9 +85,9 @@ void TestGraph(const std::string& input_name) {
       ss << arg1 << "\t" << arg2;
       ss >> from_id >> to_id;
 
-      Node* from = graph->mut_node_mgr().Find(get_id(from_id));
-      Node* to = graph->mut_regst_desc_mgr().CreateIfNotFound(get_id(to_id));
-      if (from && to) {
+      STask* from = graph->mut_node_mgr().Find(get_id(from_id));
+      STask* to =
+graph->mut_regst_desc_mgr().CreateIfNotFound(get_id(to_id)); if (from && to) {
         graph->mut_produced_regst_desc_mgr().CreateIfNotFound(from, to);
       }
     } else if (arg0 == "sr") {
@@ -97,9 +97,9 @@ void TestGraph(const std::string& input_name) {
       ss << arg1 << "\t" << arg2;
       ss >> from_id >> to_id;
 
-      Node* from = graph->mut_node_mgr().Find(get_id(from_id));
-      Node* to = graph->mut_regst_desc_mgr().CreateIfNotFound(get_id(to_id));
-      if (from && to) {
+      STask* from = graph->mut_node_mgr().Find(get_id(from_id));
+      STask* to =
+graph->mut_regst_desc_mgr().CreateIfNotFound(get_id(to_id)); if (from && to) {
         graph->mut_subscribed_regst_desc_mgr().CreateIfNotFound(from, to);
       }
     }

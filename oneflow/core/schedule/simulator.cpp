@@ -21,8 +21,8 @@ float SessionLogger::GetDurationByTimeGapToLoss(TaskInstance* from,
 }
 
 void SessionLogger::UpdateDuration(SimulatorSession* session, Mode* strategy) {
-  session->graph()->ForeachRegstDesc([&](RegstDesc* regst_desc) {
-    Node* owner = nullptr;
+  session->graph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
+    STask* owner = nullptr;
     session->graph()->produced_regst_desc_mgr().Input(regst_desc, &owner);
     float duration = 0;
     uint32_t start = session->nr_base_batch();
@@ -30,7 +30,7 @@ void SessionLogger::UpdateDuration(SimulatorSession* session, Mode* strategy) {
     //    uint32_t start = 0;
     //    uint32_t end = start + 1;
     session->graph()->subscribed_regst_desc_mgr().Input(
-        regst_desc, [&](Node* node) {
+        regst_desc, [&](STask* node) {
           float sum = 0;
           for (uint32_t i = start; i < end; i++) {
             auto batch = session->batch_node_mgr().Find(i);
@@ -47,15 +47,14 @@ void SessionLogger::UpdateDuration(SimulatorSession* session, Mode* strategy) {
   });
 }
 
-void LazyStrategy::TimeLinePushBack(TaskInstance* instance,
-                                    DeviceNode* device) {
+void LazyStrategy::TimeLinePushBack(TaskInstance* instance, SDevice* device) {
   auto last = dev2current_instance_[device];
   if (last) { mut_timenet_arc_mgr().CreateIfNotFound(last, instance); }
   dev2current_instance_[device] = instance;
 }
 
 void SessionLogger::UpdateInterval(SimulatorSession* session, Mode* strategy) {
-  session->graph()->ForeachNode([&](Node* node) {
+  session->graph()->ForeachNode([&](STask* node) {
     uint32_t sum = 0;
     uint32_t last = 0;
     uint32_t start = session->nr_base_batch();
@@ -69,7 +68,7 @@ void SessionLogger::UpdateInterval(SimulatorSession* session, Mode* strategy) {
     }
     mut_node2interval()[node] = 1.0 * sum / (end - 1 - start);
   });
-  session->graph()->ForeachNode([&](Node* node) {
+  session->graph()->ForeachNode([&](STask* node) {
     mut_max_interval() = std::max(max_interval(), mut_node2interval()[node]);
   });
 }
@@ -108,13 +107,13 @@ void SessionLogger::MergeTimeGapToLossInPlace(SessionLogger* logger) {
 
 void SessionLogger::UpdateTimeGapToLoss(SimulatorSession* session,
                                         Mode* strategy) {
-  std::list<Node*> loss_nodes;
+  std::list<STask*> loss_nodes;
   session->graph()->LossNodes(&loss_nodes);
   uint32_t start = 0;
   uint32_t end = start + session->nr_batch();
   for (uint32_t i = start; i < end; i++) {
     auto batch = session->batch_node_mgr().Find(i);
-    for (Node* loss : loss_nodes) {
+    for (STask* loss : loss_nodes) {
       auto loss_instance = session->task_instance_mgr().Find(batch, loss);
       auto loss_start_time =
           strategy->GetStartTime(mut_instance2ended_at()[loss_instance]);
@@ -122,7 +121,7 @@ void SessionLogger::UpdateTimeGapToLoss(SimulatorSession* session,
           strategy->GetEndTime(mut_instance2ended_at()[loss_instance]);
       float loss_middle_time =
           ((float)loss_start_time + (float)loss_end_time) / 2;
-      auto set_time_gap = [&](Node* node) {
+      auto set_time_gap = [&](STask* node) {
         auto node_instance = session->task_instance_mgr().Find(batch, node);
         float start_time =
             strategy->GetStartTime(mut_instance2ended_at()[node_instance]);
@@ -151,7 +150,7 @@ void SimulatorSession::NewSinkTokens() {
   InitNodeBatchInstance(graph()->sink());
 }
 
-void SimulatorSession::InitNodeBatchInstance(Node* node) {
+void SimulatorSession::InitNodeBatchInstance(STask* node) {
   Session::InitNodeBatchInstance(node);
   for (uint32_t i = 0; i < nr_batch(); i++) {
     auto batch = batch_node_mgr().Find(i);
@@ -171,29 +170,29 @@ void SimulatorSession::NewSourceTokens() {
   InitNodeBatchInstance(graph()->source());
 }
 
-DeviceNode* SimulatorSession::GetInstanceDevice(TaskInstance* instance) {
-  DeviceNode* ret = nullptr;
+SDevice* SimulatorSession::GetInstanceDevice(TaskInstance* instance) {
+  SDevice* ret = nullptr;
   graph()->device_arc_mgr().Output(instance->to(), &ret);
   return ret;
 }
 
 int PositiveStrategy::HoldingRegstDesc(
-    Node* node, const std::function<void(RegstDesc*)>& cb) {
+    STask* node, const std::function<void(SRegstDesc*)>& cb) {
   return Sess()->graph()->produced_regst_desc_mgr().Output(node, cb);
 }
 
 int PositiveStrategy::RegstDescReleasingNode(
-    RegstDesc* regst_desc, const std::function<void(Node*)>& cb) {
+    SRegstDesc* regst_desc, const std::function<void(STask*)>& cb) {
   return Sess()->graph()->subscribed_regst_desc_mgr().Input(regst_desc, cb);
 }
 
 int NegativeStrategy::HoldingRegstDesc(
-    Node* node, const std::function<void(RegstDesc*)>& cb) {
+    STask* node, const std::function<void(SRegstDesc*)>& cb) {
   return Sess()->graph()->subscribed_regst_desc_mgr().Output(node, cb);
 }
 
 int NegativeStrategy::RegstDescReleasingNode(
-    RegstDesc* regst_desc, const std::function<void(Node*)>& cb) {
+    SRegstDesc* regst_desc, const std::function<void(STask*)>& cb) {
   return Sess()->graph()->produced_regst_desc_mgr().Input(regst_desc, cb);
 }
 
@@ -274,42 +273,42 @@ bool ResourceStrategy::IsInstanceReady(TaskInstance* instance) {
 void NegativeStrategy::NewStartTokens() { sess_->NewSinkTokens(); }
 
 unsigned int PositiveStrategy::PrevArc(
-    Node* node, const std::function<void(TaskArc*)>& cb) {
+    STask* node, const std::function<void(TaskArc*)>& cb) {
   return sess_->graph()->arc_mgr().InputArc(node, cb);
 }
 
-unsigned int PositiveStrategy::Prev(Node* node,
-                                    const std::function<void(Node*)>& cb) {
+unsigned int PositiveStrategy::Prev(STask* node,
+                                    const std::function<void(STask*)>& cb) {
   return sess_->graph()->arc_mgr().Input(node, cb);
 }
 
 unsigned int PositiveStrategy::NextArc(
-    Node* node, const std::function<void(TaskArc*)>& cb) {
+    STask* node, const std::function<void(TaskArc*)>& cb) {
   return sess_->graph()->arc_mgr().OutputArc(node, cb);
 }
 
-unsigned int PositiveStrategy::Next(Node* node,
-                                    const std::function<void(Node*)>& cb) {
+unsigned int PositiveStrategy::Next(STask* node,
+                                    const std::function<void(STask*)>& cb) {
   return sess_->graph()->arc_mgr().Output(node, cb);
 }
 
 unsigned int NegativeStrategy::PrevArc(
-    Node* node, const std::function<void(TaskArc*)>& cb) {
+    STask* node, const std::function<void(TaskArc*)>& cb) {
   return sess_->graph()->arc_mgr().OutputArc(node, cb);
 }
 
-unsigned int NegativeStrategy::Prev(Node* node,
-                                    const std::function<void(Node*)>& cb) {
+unsigned int NegativeStrategy::Prev(STask* node,
+                                    const std::function<void(STask*)>& cb) {
   return sess_->graph()->arc_mgr().Output(node, cb);
 }
 
 unsigned int NegativeStrategy::NextArc(
-    Node* node, const std::function<void(TaskArc*)>& cb) {
+    STask* node, const std::function<void(TaskArc*)>& cb) {
   return sess_->graph()->arc_mgr().InputArc(node, cb);
 }
 
-unsigned int NegativeStrategy::Next(Node* node,
-                                    const std::function<void(Node*)>& cb) {
+unsigned int NegativeStrategy::Next(STask* node,
+                                    const std::function<void(STask*)>& cb) {
   return sess_->graph()->arc_mgr().Input(node, cb);
 }
 
@@ -409,7 +408,7 @@ void LazyStrategy::InitTimeNet() {
 
 void LimitedStrategy::InitRegst(
     const std::function<uint64_t(uint32_t)>& get_regst_num) {
-  Sess()->graph()->ForeachRegstDesc([&](RegstDesc* regst_desc) {
+  Sess()->graph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
     auto count = get_regst_num(regst_desc->id());
     for (uint32_t i = 0; i < count; i++) {
       auto regst =
@@ -421,7 +420,7 @@ void LimitedStrategy::InitRegst(
 
 int32_t EvaluationStrategy::GetAscendentEndedAt(TaskInstance* instance) {
   int32_t ended_at = 0;
-  direction_->Prev(instance->to(), [&](Node* node) {
+  direction_->Prev(instance->to(), [&](STask* node) {
     auto instance_input =
         Sess()->task_instance_mgr().Find(instance->from(), node);
     auto itt = Sess()->logger()->instance2ended_at().find(instance_input);
@@ -441,7 +440,7 @@ int32_t ResourceStrategy::GetAscendentEndedAt(TaskInstance* instance) {
 
 int32_t LimitedStrategy::RegstDescEndedAt(TaskInstance* instance) {
   int32_t ended_at = 0;
-  direction_->HoldingRegstDesc(instance->to(), [&](RegstDesc* regst_desc) {
+  direction_->HoldingRegstDesc(instance->to(), [&](SRegstDesc* regst_desc) {
     auto regst = FindFreeRegst(regst_desc, instance->from());
     ended_at = std::max(ended_at, regst2ended_at_[regst]);
   });
@@ -449,7 +448,7 @@ int32_t LimitedStrategy::RegstDescEndedAt(TaskInstance* instance) {
 }
 
 void LimitedStrategy::BeforeRun(TaskInstance* instance) {
-  direction_->HoldingRegstDesc(instance->to(), [&](RegstDesc* regst_desc) {
+  direction_->HoldingRegstDesc(instance->to(), [&](SRegstDesc* regst_desc) {
     auto regst = FindFreeRegst(regst_desc, instance->from());
     auto regst_desc_instance =
         Sess()->regst_desc_instance_mgr().Find(instance->from(), regst_desc);
@@ -458,8 +457,8 @@ void LimitedStrategy::BeforeRun(TaskInstance* instance) {
       return;
     }
     regst_desc_instance2regst_[regst_desc_instance] = regst;
-    direction_->RegstDescReleasingNode(regst_desc, [&](Node* node) {
-      Node* subscriber_instance =
+    direction_->RegstDescReleasingNode(regst_desc, [&](STask* node) {
+      TaskInstance* subscriber_instance =
           Sess()->task_instance_mgr().Find(instance->from(), node);
       mut_regst_arc_mgr().CreateIfNotFound(subscriber_instance, regst);
     });
@@ -467,9 +466,8 @@ void LimitedStrategy::BeforeRun(TaskInstance* instance) {
 }
 
 void LimitedStrategy::AfterRun(TaskInstance* instance) {
-  std::list<Arc<Node, Regst>*> occupied_arcs;
-  Node* instance_node = instance;
-  regst_arc_mgr().OutputArc(instance_node, &occupied_arcs);
+  std::list<Arc<TaskInstance, SRegst>*> occupied_arcs;
+  regst_arc_mgr().OutputArc(instance, &occupied_arcs);
   for (auto arc : occupied_arcs) {
     regst2ended_at_[arc->to()] =
         Sess()->logger()->mut_instance2ended_at()[instance].second;
@@ -479,34 +477,35 @@ void LimitedStrategy::AfterRun(TaskInstance* instance) {
 
 bool LimitedStrategy::IsAllRegstDescReady(TaskInstance* instance) {
   bool all_ready = true;
-  direction_->HoldingRegstDesc(instance->to(), [&](RegstDesc* regst_desc) {
+  direction_->HoldingRegstDesc(instance->to(), [&](SRegstDesc* regst_desc) {
     all_ready = (all_ready && IsRegstDescReady(regst_desc, instance->from()));
   });
   return all_ready;
 }
 
-bool LimitedStrategy::IsRegstFree(Regst* regst) {
+bool LimitedStrategy::IsRegstFree(SRegst* regst) {
   return regst_arc_mgr().Input(regst) == 0;
 }
 
-bool LimitedStrategy::IsRegstDescReady(RegstDesc* regst_desc, Batch* batch) {
+bool LimitedStrategy::IsRegstDescReady(SRegstDesc* regst_desc, Batch* batch) {
   auto regst_desc_instance =
       Sess()->regst_desc_instance_mgr().Find(batch, regst_desc);
   bool free = regst_desc_instance2regst_[regst_desc_instance];
   if (!free) {
-    r2rd_arc_mgr().Input(
-        regst_desc, [&](Regst* regst) { free = (free || IsRegstFree(regst)); });
+    r2rd_arc_mgr().Input(regst_desc, [&](SRegst* regst) {
+      free = (free || IsRegstFree(regst));
+    });
   }
   return free;
 }
 
-Regst* LimitedStrategy::FindFreeRegst(RegstDesc* regst_desc, Batch* batch) {
+SRegst* LimitedStrategy::FindFreeRegst(SRegstDesc* regst_desc, Batch* batch) {
   auto regst_desc_instance =
       Sess()->regst_desc_instance_mgr().Find(batch, regst_desc);
-  Regst* ret = regst_desc_instance2regst_[regst_desc_instance];
+  SRegst* ret = regst_desc_instance2regst_[regst_desc_instance];
   if (!ret) {
     int32_t ended_at = INT_MAX;
-    r2rd_arc_mgr().Input(regst_desc, [&](Regst* regst) {
+    r2rd_arc_mgr().Input(regst_desc, [&](SRegst* regst) {
       if (IsRegstFree(regst)) {
         if (regst2ended_at_[regst] < ended_at) {
           // first recycled register
@@ -519,7 +518,7 @@ Regst* LimitedStrategy::FindFreeRegst(RegstDesc* regst_desc, Batch* batch) {
   return ret;
 }
 
-std::unique_ptr<std::unordered_map<DeviceNode*, TaskInstance*>>
+std::unique_ptr<std::unordered_map<SDevice*, TaskInstance*>>
 ResourceStrategy::Pick(std::unordered_set<TaskArcInstance*>* tokens) {
   auto all_instances = XDistinct<TaskInstance*>(*tokens, get_node_instance_);
   auto ready_instances =
@@ -528,7 +527,7 @@ ResourceStrategy::Pick(std::unordered_set<TaskArcInstance*>* tokens) {
       XGroupBy<int32_t>(*ready_instances, get_ascendent_ended_at_);
   auto first_finished = XAssocKMin(*instances_groupby_ended_at);
   auto instances_groupby_dev =
-      XGroupBy<DeviceNode*>(first_finished->second, get_instance_device_);
+      XGroupBy<SDevice*>(first_finished->second, get_instance_device_);
   auto instances_picked =
       XAssocVMap<TaskInstance*>(*instances_groupby_dev, pick_instance_to_run_);
   return instances_picked;
@@ -540,7 +539,7 @@ void Mode::Run() {
   while (Sess()->tokens_.size()) {
     auto instances_picked = Pick(&Sess()->tokens_);
     for (const auto& p : *instances_picked) {
-      auto dev = dynamic_cast<DeviceNode*>(p.first);
+      auto dev = dynamic_cast<SDevice*>(p.first);
       auto batch = p.second->from();
       BeforeRun(p.second);
       int32_t ended_at = GetAscendentEndedAt(p.second);
@@ -605,8 +604,8 @@ void AllocatorSimulatorPolicy::AllocateFromSchedule(const Session& session,
   auto sess = dynamic_cast<SimulatorSession*>(session_ptr);
   auto logger = dynamic_cast<SessionLogger*>(result);
 
-  sess->graph()->ForeachRegstDesc([&](RegstDesc* regst_desc) {
-    Node* owner = nullptr;
+  sess->graph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
+    STask* owner = nullptr;
     sess->graph()->produced_regst_desc_mgr().Input(regst_desc, &owner);
     auto duration = logger->mut_regst_desc2duration()[regst_desc];
     auto interval = logger->max_interval();
