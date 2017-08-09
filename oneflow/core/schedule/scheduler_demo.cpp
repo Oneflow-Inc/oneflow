@@ -26,7 +26,7 @@ void SimulatorPolicyDemo() {
 
 /*
 void TestGraph(const std::string& input_name) {
-  auto graph_ptr = unique_ptr_new<GraphNode>("graph");
+  auto graph_ptr = unique_ptr_new<SGraph>("graph");
   auto graph = graph_ptr.get();
 
   auto get_id = [](uint64_t id) { return id * 1001; };

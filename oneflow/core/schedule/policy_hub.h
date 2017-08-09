@@ -35,27 +35,27 @@ class PolicyHub : public PolicyHubBase {
   DEFINE_METHOD_TYPE();
 
   void Allocate(Plan* plan) {
-    std::unique_ptr<GraphNode> graph = BuildeGraph(*plan);
+    std::unique_ptr<SGraph> graph = BuildeGraph(*plan);
     std::unique_ptr<Session> sess = MakeSession(*graph);
     std::unique_ptr<ScheduleResult> sr = LimitedAllocate(*sess);
     SetPlanRegstNum(*sr, plan);
   }
 
   //	facade
-  inline void PrintGraph(const GraphNode& graph,
+  inline void PrintGraph(const SGraph& graph,
                          const std::string& filename) const {
     CHECK(printer());
     return printer()->PrintGraph(graph, filename);
   }
-  inline std::unique_ptr<GraphNode> DemoGraph() const {
+  inline std::unique_ptr<SGraph> DemoGraph() const {
     CHECK(test_graph_generator());
     return test_graph_generator()->DemoGraph();
   }
-  inline std::unique_ptr<GraphNode> BuildeGraph(const Plan& plan) const {
+  inline std::unique_ptr<SGraph> BuildeGraph(const Plan& plan) const {
     CHECK(graph_builder());
     return graph_builder()->BuildeGraph(plan);
   }
-  inline std::unique_ptr<Session> MakeSession(const GraphNode& graph) const {
+  inline std::unique_ptr<Session> MakeSession(const SGraph& graph) const {
     CHECK(static_scheduler());
     return static_scheduler()->MakeSession(graph);
   }

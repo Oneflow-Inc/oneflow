@@ -47,14 +47,15 @@ class Node {
   bool is_sink_;
 };
 
-template<typename T = Node>
+template<typename NodeType = Node>
 class NodeMgr {
  public:
   NodeMgr() {}
 
   template<typename... Args>
-  T* Create(Args&&... args) {
-    auto node = std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+  NodeType* Create(Args&&... args) {
+    auto node =
+        std::unique_ptr<NodeType>(new NodeType(std::forward<Args>(args)...));
     auto ret = node.get();
     do { node->mut_id() = GetAutoIncrementId(); } while (Find(node->id()));
     if (!Insert(std::move(node))) { ret = nullptr; }
@@ -62,9 +63,10 @@ class NodeMgr {
   }
 
   template<typename... Args>
-  T* CreateWithId(uint64_t id, Args&&... args) {
+  NodeType* CreateWithId(uint64_t id, Args&&... args) {
     if (Find(id)) { return nullptr; }
-    auto node = std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+    auto node =
+        std::unique_ptr<NodeType>(new NodeType(std::forward<Args>(args)...));
     node->mut_id() = id;
     auto ret = node.get();
     if (!Insert(std::move(node))) { ret = nullptr; }
@@ -72,11 +74,11 @@ class NodeMgr {
   }
 
   template<typename... Args>
-  T* CreateIfNotFound(const std::string& name, Args&&... args) {
-    Node* node = Find(name);
-    T* ret = nullptr;
+  NodeType* CreateIfNotFound(const std::string& name, Args&&... args) {
+    NodeType* node = Find(name);
+    NodeType* ret = nullptr;
     if (node) {
-      ret = dynamic_cast<T*>(node);
+      ret = dynamic_cast<NodeType*>(node);
     } else {
       ret = Create(name, std::forward<Args>(args)...);
     }
@@ -84,32 +86,26 @@ class NodeMgr {
   }
 
   template<typename... Args>
-  T* CreateIfNotFound(uint64_t id, Args&&... args) {
-    Node* node = Find(id);
-    T* ret = nullptr;
-    if (node) {
-      ret = dynamic_cast<T*>(node);
-    } else {
-      ret = CreateWithId(id, std::forward<Args>(args)...);
-    }
-    return ret;
+  NodeType* CreateIfNotFound(uint64_t id, Args&&... args) {
+    NodeType* node = Find(id);
+    return node ? node : CreateWithId(id, std::forward<Args>(args)...);
   }
 
-  int Insert(std::unique_ptr<Node>&& node) {
+  int Insert(std::unique_ptr<NodeType>&& node) {
     if (Find(node->id())) { return 0; }
     name2id2node_[node->name()][node->id()] = node.get();
     id2node_[node->id()] = std::move(node);
     return 1;
   }
 
-  Node* Find(const std::string& name) const {
-    Node* node = nullptr;
-    Find(name, [&](Node* ptr) { node = ptr; });
+  NodeType* Find(const std::string& name) const {
+    NodeType* node = nullptr;
+    Find(name, [&](NodeType* ptr) { node = ptr; });
     return node;
   }
 
   int Find(const std::string& name,
-           const std::function<void(Node*)>& cb) const {
+           const std::function<void(NodeType*)>& cb) const {
     auto itt = name2id2node_.find(name);
     int count = 0;
     if (itt == name2id2node_.end()) { return count; }
@@ -120,7 +116,7 @@ class NodeMgr {
     return count;
   }
 
-  Node* Find(uint64_t id) const {
+  NodeType* Find(uint64_t id) const {
     auto ret = id2node_.find(id);
     if (id2node_.end() == ret) { return nullptr; }
     return ret->second.get();
@@ -140,8 +136,8 @@ class NodeMgr {
   }
 
  private:
-  std::unordered_map<uint64_t, std::unique_ptr<Node>> id2node_;
-  std::unordered_map<std::string, std::unordered_map<uint64_t, Node*>>
+  std::unordered_map<uint64_t, std::unique_ptr<NodeType>> id2node_;
+  std::unordered_map<std::string, std::unordered_map<uint64_t, NodeType*>>
       name2id2node_;
 };
 
@@ -422,11 +418,13 @@ class RegstDesc : public Node {
   uint64_t regst_size_ = 1u;
 };
 
-class GraphNode : public Node {
+//	static schedule graph
+
+class SGraph : public Node {
  public:
   DEFINE_METHOD_TYPE();
 
-  GraphNode(std::string name) : Node(name) { InitSourceAndSink(); }
+  SGraph(std::string name) : Node(name) { InitSourceAndSink(); }
 
   void Update() {
     UpdateSourceAndSink();

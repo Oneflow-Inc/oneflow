@@ -4,14 +4,14 @@
 namespace oneflow {
 namespace schedule {
 
-void PrinterNaivePolicy::PrintGraph(const GraphNode& graph,
+void PrinterNaivePolicy::PrintGraph(const SGraph& graph,
                                     const std::string& filename) {
   std::cout << graph.name() << std::endl;
   graph.node_mgr().Dump();
 }
 
-std::unique_ptr<GraphNode> TestGraphGeneratorNaivePolicy::DemoGraph() {
-  auto graph = unique_ptr_new<GraphNode>("root");
+std::unique_ptr<SGraph> TestGraphGeneratorNaivePolicy::DemoGraph() {
+  auto graph = unique_ptr_new<SGraph>("root");
   auto root = graph.get();
 
   std::string input_str = "ln 1 fw1\n"

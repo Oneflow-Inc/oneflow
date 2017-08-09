@@ -12,13 +12,13 @@ class TestGraphGeneratorNaivePolicy : public TestGraphGeneratorPolicy {
   POLICY_IMPLEMENT_BOILERPLATE(TestGraphGeneratorNaivePolicy,
                                TestGraphGeneratorPolicy);
 
-  virtual std::unique_ptr<GraphNode> DemoGraph();
+  virtual std::unique_ptr<SGraph> DemoGraph();
 };
 
 class PrinterNaivePolicy : public PrinterPolicy {
  public:
   POLICY_IMPLEMENT_BOILERPLATE(PrinterNaivePolicy, PrinterPolicy);
-  virtual void PrintGraph(const GraphNode& graph, const std::string& filename);
+  virtual void PrintGraph(const SGraph& graph, const std::string& filename);
 };
 
 }  // namespace schedule

@@ -17,12 +17,10 @@ void Session::NewBatchs() {
   }
   graph()->ForeachNodeWithSourceAndSink([&](Node* node) {
     for (auto batch : batch_nodes) {
-      auto instance = mut_batch_arc_mgr().CreateIfNotFound(batch, node);
-      mut_batch_instance_node_mgr().CreateWithId(
-          instance->id(), std::to_string(instance->id()));
+      mut_batch_arc_mgr().CreateIfNotFound(batch, node);
     }
   });
-  graph()->ForeachArc([&](Arc<Node>* arc) {
+  graph()->ForeachArc([&](TaskArc* arc) {
     auto place = dynamic_cast<Node*>(arc);
     for (auto batch : batch_nodes) {
       mut_batch_arc_mgr().CreateIfNotFound(batch, place);
@@ -33,6 +31,14 @@ void Session::NewBatchs() {
       mut_batch_arc_mgr().CreateIfNotFound(batch, regst_desc);
     }
   });
+}
+
+std::unique_ptr<std::list<Batch*>> Session::GetBatchNodes() {
+  auto batchs = unique_ptr_new<std::list<Batch*>>();
+  for (uint32_t i = 0; i < nr_batch(); i++) {
+    batchs->push_back(batch_node_mgr().Find(i));
+  }
+  return batchs;
 }
 
 }  // namespace schedule

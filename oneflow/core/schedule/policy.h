@@ -30,29 +30,28 @@ class PrinterPolicy : public Policy {
  public:
   POLICY_INTERFACE_BOILERPLATE(PrinterPolicy);
 
-  virtual void PrintGraph(const GraphNode& graph,
-                          const std::string& filename) = 0;
+  virtual void PrintGraph(const SGraph& graph, const std::string& filename) = 0;
 };
 
 class TestGraphGeneratorPolicy : public Policy {
  public:
   POLICY_INTERFACE_BOILERPLATE(TestGraphGeneratorPolicy);
 
-  virtual std::unique_ptr<GraphNode> DemoGraph() = 0;
+  virtual std::unique_ptr<SGraph> DemoGraph() = 0;
 };
 
 class GraphBuilderPolicy : public Policy {
  public:
   POLICY_INTERFACE_BOILERPLATE(GraphBuilderPolicy);
 
-  virtual std::unique_ptr<GraphNode> BuildeGraph(const Plan& plan) = 0;
+  virtual std::unique_ptr<SGraph> BuildeGraph(const Plan& plan) = 0;
 };
 
 class StaticSchedulerPolicy : public Policy {
  public:
   POLICY_INTERFACE_BOILERPLATE(StaticSchedulerPolicy);
 
-  virtual std::unique_ptr<Session> MakeSession(const GraphNode& graph) = 0;
+  virtual std::unique_ptr<Session> MakeSession(const SGraph& graph) = 0;
   virtual std::unique_ptr<ScheduleResult> Schedule(const Session& session) = 0;
 };
 

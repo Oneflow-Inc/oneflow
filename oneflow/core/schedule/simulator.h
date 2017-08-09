@@ -39,21 +39,20 @@ class SessionLogger : public ScheduleResult {
   void UpdateDuration(SimulatorSession* session, Mode* strategy);
   void UpdateInterval(SimulatorSession* session, Mode* strategy);
   void MergeTimeGapToLossInPlace(SessionLogger* logger);
-  float GetDurationByTimeGapToLoss(Arc<Node>* from, Arc<Node>* to);
+  float GetDurationByTimeGapToLoss(TaskInstance* from, TaskInstance* to);
 };
 
 class SimulatorSession : public Session {
  public:
-  explicit SimulatorSession(GraphNode* graph, uint32_t nr_batch = 2u)
+  explicit SimulatorSession(SGraph* graph, uint32_t nr_batch = 2u)
       : Session(graph, nr_batch), logger_(unique_ptr_new<SessionLogger>()) {}
 
-  DeviceNode* GetInstanceDevice(Arc<Node>* instance);
+  DeviceNode* GetInstanceDevice(TaskInstance* instance);
 
   void NewSourceTokens();
   void NewSinkTokens();
   void ClearTmpData();
   void InitNodeBatchInstance(Node* node);
-  std::unique_ptr<std::list<Node*>> GetBatchNodes();
 
   SessionLogger* logger() { return logger_.get(); }
   std::unique_ptr<SessionLogger>& mut_logger() { return logger_; }
@@ -63,7 +62,7 @@ class SimulatorSession : public Session {
     return ret;
   }
 
-  std::unordered_set<Arc<Node>*> tokens_;
+  std::unordered_set<TaskInstance*> tokens_;
   std::unique_ptr<SessionLogger> logger_;
 
   //  struct PipeSpec {
@@ -95,27 +94,28 @@ class DirectionStrategy : public Strategy {
   virtual int32_t GetEndTime(const std::pair<int32_t, int32_t>& p) = 0;
   virtual void NewStartTokens() = 0;
   virtual unsigned int NextArc(Node* node,
-                               const std::function<void(Arc<Node>*)>& cb) = 0;
+                               const std::function<void(TaskArc*)>& cb) = 0;
   virtual unsigned int Next(Node* node,
                             const std::function<void(Node*)>& cb) = 0;
   virtual unsigned int PrevArc(Node* node,
-                               const std::function<void(Arc<Node>*)>& cb) = 0;
+                               const std::function<void(TaskArc*)>& cb) = 0;
   virtual unsigned int Prev(Node* node,
                             const std::function<void(Node*)>& cb) = 0;
-  virtual Arc<Node>* GetNextNodeInstance(Arc<Node>* arc) = 0;
-  virtual bool CompareInstanceOrder(Arc<Node>* instance_a,
-                                    Arc<Node>* instance_b) = 0;
-  virtual Arc<Node>* PickInstanceToRun(const std::list<Arc<Node>*>& instances);
+  virtual TaskInstance* GetNextNodeInstance(TaskInstance* arc) = 0;
+  virtual bool CompareInstanceOrder(TaskInstance* instance_a,
+                                    TaskInstance* instance_b) = 0;
+  virtual TaskInstance* PickInstanceToRun(
+      const std::list<TaskInstance*>& instances);
   virtual int HoldingRegstDesc(Node* node,
                                const std::function<void(RegstDesc*)>& cb) = 0;
   virtual int RegstDescReleasingNode(RegstDesc* regst_desc,
                                      const std::function<void(Node*)>& cb) = 0;
   virtual Node* StartNode() = 0;
   virtual Node* EndNode() = 0;
-  virtual Node* EndBatch() = 0;
+  virtual Batch* EndBatch() = 0;
   virtual uint32_t NextBatchId(uint32_t batch_id) = 0;
-  virtual Node* GetFrom(Arc<Node>* arc) = 0;
-  virtual Node* GetTo(Arc<Node>* arc) = 0;
+  virtual Node* GetFrom(TaskArc* arc) = 0;
+  virtual Node* GetTo(TaskArc* arc) = 0;
 };
 
 class PositiveStrategy : public DirectionStrategy {
@@ -130,22 +130,22 @@ class PositiveStrategy : public DirectionStrategy {
     return GetTime(p.second);
   }
   void NewStartTokens();
-  unsigned int NextArc(Node* node, const std::function<void(Arc<Node>*)>& cb);
+  unsigned int NextArc(Node* node, const std::function<void(TaskArc*)>& cb);
   unsigned int Next(Node* node, const std::function<void(Node*)>& cb);
-  unsigned int PrevArc(Node* node, const std::function<void(Arc<Node>*)>& cb);
+  unsigned int PrevArc(Node* node, const std::function<void(TaskArc*)>& cb);
   unsigned int Prev(Node* node, const std::function<void(Node*)>& cb);
-  Arc<Node>* GetNextNodeInstance(Arc<Node>* arc);
-  bool CompareInstanceOrder(Arc<Node>* instance_a, Arc<Node>* instance_b);
+  TaskInstance* GetNextNodeInstance(TaskInstance* arc);
+  bool CompareInstanceOrder(TaskInstance* instance_a, TaskInstance* instance_b);
   int HoldingRegstDesc(Node* node, const std::function<void(RegstDesc*)>& cb);
   int RegstDescReleasingNode(RegstDesc* regst_desc,
                              const std::function<void(Node*)>& cb);
   Node* StartNode() { return Sess()->graph()->source(); }
   Node* EndNode() { return Sess()->graph()->sink(); }
-  Node* EndBatch() {
+  Batch* EndBatch() {
     return Sess()->batch_node_mgr().Find(Sess()->nr_batch() - 1);
   }
-  Node* GetFrom(Arc<Node>* arc) { return arc->from(); }
-  Node* GetTo(Arc<Node>* arc) { return arc->to(); }
+  Node* GetFrom(TaskArc* arc) { return arc->from(); }
+  Node* GetTo(TaskArc* arc) { return arc->to(); }
   uint32_t NextBatchId(uint32_t batch_id) { return batch_id + 1; }
 };
 
@@ -161,31 +161,29 @@ class NegativeStrategy : public DirectionStrategy {
     return GetTime(p.first);
   }
   void NewStartTokens();
-  unsigned int NextArc(Node* node, const std::function<void(Arc<Node>*)>& cb);
+  unsigned int NextArc(Node* node, const std::function<void(TaskArc*)>& cb);
   unsigned int Next(Node* node, const std::function<void(Node*)>& cb);
-  unsigned int PrevArc(Node* node, const std::function<void(Arc<Node>*)>& cb);
+  unsigned int PrevArc(Node* node, const std::function<void(TaskArc*)>& cb);
   unsigned int Prev(Node* node, const std::function<void(Node*)>& cb);
-  Arc<Node>* GetNextNodeInstance(Arc<Node>* arc);
-  bool CompareInstanceOrder(Arc<Node>* instance_a, Arc<Node>* instance_b);
+  TaskInstance* GetNextNodeInstance(TaskInstance* arc);
+  bool CompareInstanceOrder(TaskInstance* instance_a, TaskInstance* instance_b);
   int HoldingRegstDesc(Node* node, const std::function<void(RegstDesc*)>& cb);
   int RegstDescReleasingNode(RegstDesc* regst_desc,
                              const std::function<void(Node*)>& cb);
   Node* StartNode() { return Sess()->graph()->sink(); }
   Node* EndNode() { return Sess()->graph()->source(); }
-  Node* EndBatch() { return Sess()->batch_node_mgr().Find(0u); }
-  Node* GetFrom(Arc<Node>* arc) { return arc->to(); }
-  Node* GetTo(Arc<Node>* arc) { return arc->from(); }
+  Batch* EndBatch() { return Sess()->batch_node_mgr().Find(0u); }
+  Node* GetFrom(TaskArc* arc) { return arc->to(); }
+  Node* GetTo(TaskArc* arc) { return arc->from(); }
   uint32_t NextBatchId(uint32_t batch_id) { return batch_id - 1; }
 };
-
-typedef Arc<Node> InstanceArc;
 
 class EvaluationStrategy : public Strategy {
  public:
   EvaluationStrategy(DirectionStrategy* direction)
       : Strategy(direction->Sess()), direction_(direction) {}
-  virtual int32_t GetAscendentEndedAt(Arc<Node>* instance);
-  virtual void TimeLinePushBack(InstanceArc*, DeviceNode*) = 0;
+  virtual int32_t GetAscendentEndedAt(TaskInstance* instance);
+  virtual void TimeLinePushBack(TaskInstance*, DeviceNode*) = 0;
   virtual void Retiming() = 0;
 
  protected:
@@ -195,7 +193,7 @@ class EvaluationStrategy : public Strategy {
 class EagerStrategy : public EvaluationStrategy {
  public:
   EagerStrategy(DirectionStrategy* direction) : EvaluationStrategy(direction) {}
-  void TimeLinePushBack(InstanceArc* instance, DeviceNode* device) {}
+  void TimeLinePushBack(TaskInstance* instance, DeviceNode* device) {}
   void Retiming(){};
 };
 
@@ -205,18 +203,21 @@ class LazyStrategy : public EvaluationStrategy {
     InitTimeNet();
   }
 
-  void TimeLinePushBack(InstanceArc* instance, DeviceNode* device);
+  void TimeLinePushBack(TaskInstance* instance, DeviceNode* device);
   void Retiming();
 
  protected:
-  inline const ArcMgr<Arc<Node>>& timenet_arc_mgr() const {
+  inline const ArcMgr<Arc<TaskInstance>>& timenet_arc_mgr() const {
     return timenet_arc_mgr_;
   }
-  inline ArcMgr<Arc<Node>>& mut_timenet_arc_mgr() { return timenet_arc_mgr_; }
+  inline ArcMgr<Arc<TaskInstance>>& mut_timenet_arc_mgr() {
+    return timenet_arc_mgr_;
+  }
   void InitTimeNet();
-  void WalkTimeNetReverse(const std::function<void(InstanceArc*)>& cb);
-  ArcMgr<Arc<Node>> timenet_arc_mgr_;
-  std::unordered_map<DeviceNode*, InstanceArc*> dev2current_instance_;
+  void WalkTimeNetReverse(const std::function<void(TaskInstance*)>& cb);
+
+  ArcMgr<Arc<TaskInstance>> timenet_arc_mgr_;
+  std::unordered_map<DeviceNode*, TaskInstance*> dev2current_instance_;
 };
 
 class ResourceStrategy : public Strategy {
@@ -228,32 +229,33 @@ class ResourceStrategy : public Strategy {
     InitFuncs();
   }
   virtual ~ResourceStrategy() {}
-  virtual std::unique_ptr<std::unordered_map<DeviceNode*, Arc<Node>*>> Pick(
-      std::unordered_set<Arc<Node>*>* tokens);
-  virtual void BeforeRun(Arc<Node>* instance) = 0;
-  virtual void AfterRun(Arc<Node>* instance) = 0;
-  virtual int32_t GetAscendentEndedAt(Arc<Node>* instance);
+  virtual std::unique_ptr<std::unordered_map<DeviceNode*, TaskInstance*>> Pick(
+      std::unordered_set<TaskInstance*>* tokens);
+  virtual void BeforeRun(TaskInstance* instance) = 0;
+  virtual void AfterRun(TaskInstance* instance) = 0;
+  virtual int32_t GetAscendentEndedAt(TaskInstance* instance);
 
-  std::function<int32_t(Arc<Node>*)> get_ascendent_ended_at_;
+  std::function<int32_t(TaskInstance*)> get_ascendent_ended_at_;
 
  protected:
   void InitFuncs();
-  virtual bool IsInstanceReady(Arc<Node>* instance);
+  virtual bool IsInstanceReady(TaskInstance* instance);
 
-  std::function<Arc<Node>*(Arc<Node>*)> get_node_instance_;
-  std::function<bool(Arc<Node>*)> is_instance_ready_;
-  std::function<DeviceNode*(Arc<Node>*)> get_instance_device_;
+  std::function<TaskInstance*(TaskInstance*)> get_node_instance_;
+  std::function<bool(TaskInstance*)> is_instance_ready_;
+  std::function<DeviceNode*(TaskInstance*)> get_instance_device_;
   EvaluationStrategy* evaluation_;
   DirectionStrategy* direction_;
-  std::function<Arc<Node>*(const std::list<Arc<Node>*>&)> pick_instance_to_run_;
+  std::function<TaskInstance*(const std::list<TaskInstance*>&)>
+      pick_instance_to_run_;
 };
 
 class UnlimitedStrategy : public ResourceStrategy {
  public:
   UnlimitedStrategy(DirectionStrategy* direction, EvaluationStrategy* evalution)
       : ResourceStrategy(direction, evalution) {}
-  virtual void BeforeRun(Arc<Node>* instance) {}
-  virtual void AfterRun(Arc<Node>* instance) {}
+  virtual void BeforeRun(TaskInstance* instance) {}
+  virtual void AfterRun(TaskInstance* instance) {}
 };
 
 class LimitedStrategy : public ResourceStrategy {
@@ -264,8 +266,8 @@ class LimitedStrategy : public ResourceStrategy {
     InitRegst(get_regst_num);
     InitFuncIsInstanceReady();
   }
-  void BeforeRun(Arc<Node>* instance);
-  void AfterRun(Arc<Node>* instance);
+  void BeforeRun(TaskInstance* instance);
+  void AfterRun(TaskInstance* instance);
 
  private:
   inline const NodeMgr<Regst>& regst_node_mgr() const {
@@ -287,13 +289,13 @@ class LimitedStrategy : public ResourceStrategy {
 
   void InitRegst(const std::function<uint64_t(uint32_t)>& get_regst_num);
   void InitFuncIsInstanceReady();
-  bool IsAllRegstDescReady(Arc<Node>* instance);
-  bool IsRegstDescReady(RegstDesc* regst_desc, Node* batch);
-  Regst* FindFreeRegst(RegstDesc* regst_desc, Node* batch);
+  bool IsAllRegstDescReady(TaskInstance* instance);
+  bool IsRegstDescReady(RegstDesc* regst_desc, Batch* batch);
+  Regst* FindFreeRegst(RegstDesc* regst_desc, Batch* batch);
   bool IsRegstFree(Regst* regst);
-  int32_t RegstDescEndedAt(Arc<Node>* instance);
+  int32_t RegstDescEndedAt(TaskInstance* instance);
   std::unordered_map<Regst*, int32_t> regst2ended_at_;
-  std::unordered_map<Arc<Node>*, Regst*> regst_desc_instance2regst_;
+  std::unordered_map<TaskInstance*, Regst*> regst_desc_instance2regst_;
   NodeMgr<Regst> regst_node_mgr_;
   ArcMgr<Arc<Node, Regst>> regst_arc_mgr_;
   HasOneArcMgr<Arc<Regst, RegstDesc>> r2rd_arc_mgr_;
@@ -316,30 +318,30 @@ class Mode : public Strategy {
  protected:
   inline void NewStartTokens() { return direction_->NewStartTokens(); }
   inline unsigned int NextArc(Node* node,
-                              const std::function<void(Arc<Node>*)>& cb) {
+                              const std::function<void(TaskArc*)>& cb) {
     return direction_->NextArc(node, cb);
   }
   inline unsigned int PrevArc(Node* node,
-                              const std::function<void(Arc<Node>*)>& cb) {
+                              const std::function<void(TaskArc*)>& cb) {
     return direction_->PrevArc(node, cb);
   }
-  inline std::unique_ptr<std::unordered_map<DeviceNode*, Arc<Node>*>> Pick(
-      std::unordered_set<Arc<Node>*>* tokens) {
+  inline std::unique_ptr<std::unordered_map<DeviceNode*, TaskInstance*>> Pick(
+      std::unordered_set<TaskInstance*>* tokens) {
     return resource_->Pick(tokens);
   }
-  inline void TimeLinePushBack(InstanceArc* instance, DeviceNode* dev) {
+  inline void TimeLinePushBack(TaskInstance* instance, DeviceNode* dev) {
     return evaluation_->TimeLinePushBack(instance, dev);
   }
   inline void Retiming() { return evaluation_->Retiming(); }
-  inline void BeforeRun(Arc<Node>* instance) {
+  inline void BeforeRun(TaskInstance* instance) {
     //    evaluation_->BeforeRun(instance);
     resource_->BeforeRun(instance);
   }
-  inline void AfterRun(Arc<Node>* instance) {
+  inline void AfterRun(TaskInstance* instance) {
     //    evaluation_->AfterRun(instance);
     resource_->AfterRun(instance);
   }
-  inline int32_t GetAscendentEndedAt(Arc<Node>* instance) {
+  inline int32_t GetAscendentEndedAt(TaskInstance* instance) {
     return resource_->get_ascendent_ended_at_(instance);
   }
   void SetStrategies(std::unique_ptr<DirectionStrategy>&& direction,
@@ -390,7 +392,7 @@ class StaticSchedulerSimulatorPolicy : public StaticSchedulerPolicy {
  public:
   POLICY_IMPLEMENT_BOILERPLATE(StaticSchedulerSimulatorPolicy,
                                StaticSchedulerPolicy);
-  virtual std::unique_ptr<Session> MakeSession(const GraphNode& graph);
+  virtual std::unique_ptr<Session> MakeSession(const SGraph& graph);
   virtual std::unique_ptr<ScheduleResult> Schedule(const Session& session);
 };
 

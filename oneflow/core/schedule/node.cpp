@@ -6,16 +6,16 @@
 namespace oneflow {
 namespace schedule {
 
-void GraphNode::InitSourceAndSink() {
+void SGraph::InitSourceAndSink() {
   mut_source() = mut_fake_node_mgr().Create("source");
   mut_sink() = mut_fake_node_mgr().Create("sink");
 }
 
-int GraphNode::LossNodes(std::list<Node*>* l) const {
+int SGraph::LossNodes(std::list<Node*>* l) const {
   return loss_arc_mgr().Output(this, l);
 }
 
-void GraphNode::UpdateSourceAndSink() {
+void SGraph::UpdateSourceAndSink() {
   std::list<Arc<Node>*> arcs;
   arc_mgr().OutputArc(source(), &arcs);
   arc_mgr().InputArc(sink(), &arcs);
@@ -30,36 +30,35 @@ void GraphNode::UpdateSourceAndSink() {
   });
 }
 
-void GraphNode::ForeachArc(const std::function<void(Arc<Node>*)>& cb) const {
+void SGraph::ForeachArc(const std::function<void(Arc<Node>*)>& cb) const {
   arc_mgr().OutputArc(source(), cb);
   children_arc_mgr().Output(
       this, [&](Node* child) { arc_mgr().OutputArc(child, cb); });
 }
 
-void GraphNode::ForeachNodeWithSourceAndSink(
+void SGraph::ForeachNodeWithSourceAndSink(
     const std::function<void(Node*)>& cb) const {
   cb(source());
   ForeachNode(cb);
   cb(sink());
 }
-void GraphNode::ForeachNode(const std::function<void(Node*)>& cb) const {
+void SGraph::ForeachNode(const std::function<void(Node*)>& cb) const {
   cb(source());
   children_arc_mgr().Output(this, cb);
   cb(sink());
 }
 
-void GraphNode::ForeachRegstDesc(
-    const std::function<void(RegstDesc*)>& cb) const {
+void SGraph::ForeachRegstDesc(const std::function<void(RegstDesc*)>& cb) const {
   children_arc_mgr().Output(
       this, [&](Node* node) { produced_regst_desc_mgr().Output(node, cb); });
 }
 
-uint32_t GraphNode::Depth() const {
+uint32_t SGraph::Depth() const {
   auto depth = source()->depth();
   return depth ? depth - 1 : 0;
 }
 
-uint32_t GraphNode::DeviceCount() const {
+uint32_t SGraph::DeviceCount() const {
   std::unordered_set<DeviceNode*> devices;
   children_arc_mgr().Output(this, [&](Node* node) {
     DeviceNode* device = nullptr;
@@ -69,13 +68,13 @@ uint32_t GraphNode::DeviceCount() const {
   return devices.size();
 }
 
-void GraphNode::WalkArcReverse(const std::function<void(Arc<Node>*)>& cb) {
+void SGraph::WalkArcReverse(const std::function<void(Arc<Node>*)>& cb) {
   WalkReverse([&](Node* node) {
     arc_mgr().OutputArc(node, [&](Arc<Node>* arc) { cb(arc); });
   });
 }
 
-void GraphNode::WalkReverse(const std::function<void(Node*)>& cb) {
+void SGraph::WalkReverse(const std::function<void(Node*)>& cb) {
   auto next = std::unordered_set<Node*>{sink()};
   auto marked = std::unordered_set<Node*>{};
   while (next.size()) {
@@ -99,11 +98,11 @@ void GraphNode::WalkReverse(const std::function<void(Node*)>& cb) {
   }
 }
 
-void GraphNode::WalkArc(const std::function<void(Arc<Node>*)>& cb) {
+void SGraph::WalkArc(const std::function<void(Arc<Node>*)>& cb) {
   Walk([&](Node* node) { arc_mgr().InputArc(node, cb); });
 }
 
-void GraphNode::Walk(const std::function<void(Node*)>& cb) {
+void SGraph::Walk(const std::function<void(Node*)>& cb) {
   auto next = std::unordered_set<Node*>{source()};
   auto marked = std::unordered_set<Node*>{};
   while (next.size()) {
@@ -127,7 +126,7 @@ void GraphNode::Walk(const std::function<void(Node*)>& cb) {
   }
 }
 
-void GraphNode::InitAscendentArc() {
+void SGraph::InitAscendentArc() {
   Walk([&](Node* node) {
     arc_mgr().Input(node, [&](Node* prev) {
       std::list<Node*> l;
@@ -140,17 +139,17 @@ void GraphNode::InitAscendentArc() {
   });
 }
 
-void GraphNode::ForeachAscendent(Node* node,
-                                 const std::function<void(Node*)>& cb) const {
+void SGraph::ForeachAscendent(Node* node,
+                              const std::function<void(Node*)>& cb) const {
   ascendent_arc_mgr().Output(node, cb);
 }
 
-void GraphNode::ForeachDescendent(Node* node,
-                                  const std::function<void(Node*)>& cb) const {
+void SGraph::ForeachDescendent(Node* node,
+                               const std::function<void(Node*)>& cb) const {
   ascendent_arc_mgr().Input(node, cb);
 }
 
-void GraphNode::InitDepth() {
+void SGraph::InitDepth() {
   WalkReverse([&](Node* node) {
     int depth = -1;
     arc_mgr().Output(node,
