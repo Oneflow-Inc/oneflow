@@ -208,7 +208,7 @@ void ConvolutionKernel<device_type, FloatingPointType>::ComputeInputDiff(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* in_diff = BnInOp2Blob("in_diff");
-  if (in_diff == nullptr) { return;}
+  if (in_diff == nullptr) { return; }
 
   const Blob* out_diff = BnInOp2Blob("out_diff");
   const Blob* weight = BnInOp2Blob("weight");
