@@ -24,7 +24,8 @@ class ConvolutionKernelUtil<DeviceType::kCPU, FloatingPointType> final {
                      const int dilation_h, const int dilation_w,
                      FloatingPointType* mut_dptr) {
     ctx.device_ctx->cpu_stream()->SendWork([=]() mutable {
-      memset(mut_dptr, 0, height * width * channels);
+      memset(mut_dptr, 0,
+             height * width * channels * sizeof(FloatingPointType));
       const int output_h =
           (height + 2 * pad_h - (dilation_h * (kernel_h - 1) + 1)) / stride_h
           + 1;
@@ -129,7 +130,7 @@ void ConvolutionKernel<device_type, FloatingPointType>::Forward(
         static_cast<FloatingPointType>(1.0), weight->dptr<FloatingPointType>(),
         weight->shape().At(1),
         col_buf->dptr<FloatingPointType>() + i * col_im_sz,
-        weight->shape().At(1), static_cast<FloatingPointType>(1.0),
+        weight->shape().At(1), static_cast<FloatingPointType>(0.0),
         out->mut_dptr<FloatingPointType>() + i * out_im_sz,
         col_buf->shape().At(1));
 
