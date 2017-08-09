@@ -27,7 +27,7 @@ class Blob {
   template<typename FloatingPointType>
   std::string DebugStr() const {
     std::stringstream ss;
-    ss << dptr_ << "\t";
+    ss << dptr_ << "\t" << shape_->DebugStr() << "\t";
     for (int i = 0; i < 20; ++i) { ss << dptr<FloatingPointType>()[i] << " "; }
     return ss.str();
   }
