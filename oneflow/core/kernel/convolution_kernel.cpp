@@ -207,6 +207,9 @@ template<DeviceType device_type, typename FloatingPointType>
 void ConvolutionKernel<device_type, FloatingPointType>::ComputeInputDiff(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  Blob* in_diff = BnInOp2Blob("in_diff");
+  if (in_diff == nullptr) { return; }
+
   const Blob* out_diff = BnInOp2Blob("out_diff");
   const Blob* weight = BnInOp2Blob("weight");
   Blob* col_buf = BnInOp2Blob("col_buf");
@@ -225,7 +228,6 @@ void ConvolutionKernel<device_type, FloatingPointType>::ComputeInputDiff(
         col_buf->shape().At(2));
   }
 
-  Blob* in_diff = BnInOp2Blob("in_diff");
   const Shape& in_diff_shape = in_diff->shape();
   auto conv_conf = op()->op_conf().convolution_conf();
   for (size_t i = 0; i < batch_sz; ++i) {
