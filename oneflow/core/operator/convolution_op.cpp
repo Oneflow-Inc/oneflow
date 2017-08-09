@@ -11,8 +11,10 @@ void ConvolutionOp::InitFromOpConf(const OperatorConf& op_conf) {
   EnrollDataTmpBn("col_buf");
 
   EnrollModelBn("weight");
-  if (GetBoolFromSpecialConf("has_bias_term")) { EnrollModelBn("bias"); }
-  EnrollModelTmpBn("bias_multiplier");
+  if (GetBoolFromSpecialConf("has_bias_term")) {
+    EnrollModelBn("bias");
+    EnrollModelTmpBn("bias_multiplier");
+  }
 }
 
 const PbMessage& ConvolutionOp::GetSpecialConf() const {
@@ -45,11 +47,14 @@ void ConvolutionOp::InferShape4FwBlobs(
   CHECK_EQ(output_shape_ptr->NumAxes(), input_shape_ptr->NumAxes());
   *colbuf_shape_ptr = Shape({batch_size, output_size, c_i * kernel_size});
   Shape* weight = GetShapePtr4BnInOp("weight");
-  Shape* bias = GetShapePtr4BnInOp("bias");
-  Shape* biasmult_shape_ptr = GetShapePtr4BnInOp("bias_multiplier");
   *weight = Shape({c_o, c_i * kernel_size});
-  *bias = GetBoolFromSpecialConf("has_bias_term") ? Shape({c_o}) : Shape({0});
-  *biasmult_shape_ptr = Shape({output_size});
+
+  if (GetBoolFromSpecialConf("has_bias_term")) {
+    Shape* bias = GetShapePtr4BnInOp("bias");
+    Shape* biasmult_shape_ptr = GetShapePtr4BnInOp("bias_multiplier");
+    *bias = Shape({c_o});
+    *biasmult_shape_ptr = Shape({output_size});
+  }
 }
 
 REGISTER_OP(OperatorConf::kConvolutionConf, ConvolutionOp);
