@@ -43,14 +43,14 @@ class RdmaNetwork final : public Network {
   // |result| is owned by the caller.
   // Both send request and read request are submitted to the send request queue.
   bool PollSendQueue(NetworkResult* result);
-  const MemoryDescriptor& GetMemoryDescriptor(int64_t register_id) const;
+  const MemoryDescriptor& GetMemoryDescriptor(int64_t register_id) const;  // TODO(shiyuan)
 
   // estimate the pre-post number
   static const int kPrePostRecvNumber = 16;  // TODO(shiyuan)
-  std::unique_ptr<EndpointManager> endpoint_manager_;
+  NetworkTopology net_topo_;
   int64_t my_machine_id_;
   int port_;
-  NetworkTopology net_topo_;
+  std::unique_ptr<EndpointManager> endpoint_manager_;
   std::unique_ptr<RequestPool> request_pool_;
   std::unique_ptr<ConnectionPool> connection_pool_;
   // build the dict of MemoryDescriptor

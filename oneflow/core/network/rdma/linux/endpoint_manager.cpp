@@ -48,13 +48,15 @@ void EndpointManager::Init(const char* my_ip, int32_t my_port) {
   CHECK(my_sock_);
 
   CHECK_EQ(bind(my_sock_, (sockaddr*)&my_addr_, sizeof(my_addr_)), 0);
-
   CHECK_EQ(listen(my_sock_, 100), 0);  // TODO(shiyuan) backlog
   ibv_free_device_list(device_list);
   device_list = nullptr;
 }
 
 void EndpointManager::Destroy() {
+  if (my_sock_) {
+    CHECK_EQ(close(my_sock_), 0);
+  }
   if (send_cq_ != nullptr) {
     CHECK_EQ(ibv_destroy_cq(send_cq_), 0);
   }
@@ -147,7 +149,6 @@ int64_t EndpointManager::WaitForConnection(Connection* conn,
 
   CHECK_EQ(close(peer_sock), 0);
 
-  conn->AcceptConnect();
   return peer_machine_id;
 }
 

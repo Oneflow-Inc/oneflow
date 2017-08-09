@@ -40,21 +40,18 @@ int main(int argc, char** argv) {
   net_topo.all_nodes[FLAGS_peer_machine_id].port = 53433;
   net_topo.all_nodes[FLAGS_peer_machine_id].neighbors.insert(FLAGS_my_machine_id);
   
-  clock_t start_time, current_time;
-
   // modify here manually
-  uint64_t my_machine_id = FLAGS_my_machine_id;
-  uint64_t peer_machine_id = FLAGS_peer_machine_id;
+  int64_t my_machine_id = FLAGS_my_machine_id;
+  int64_t peer_machine_id = FLAGS_peer_machine_id;
 
   net->Init(my_machine_id, net_topo);
   LOG(INFO) << "Net Init Success." << endl;
 
   NetworkMessage msg;
   NetworkResult result;
-  
-  /*  
+    
   msg.src_machine_id = my_machine_id;
-  msg.type = NetworkMessageType::MSG_TYPE_BARRIER;
+  msg.type = NetworkMessageType::kBarrier;
   msg.dst_machine_id = peer_machine_id;
 
   net->SendMessage(msg);
@@ -67,11 +64,11 @@ int main(int argc, char** argv) {
       printf("Poll time: %d, false\n", k++);
     }
     printf("Poll time: %d, true \n", k++);
-    if (result.type == NetworkResultType::NET_SEND_OK) {
+    if (result.type == NetworkResultType::kSendOk) {
       printf("Send to %d OK\n", i);
     }
-    else if (result.type == NetworkResultType::NET_RECEIVE_MSG) {
-      printf("Receive from %d OK\n", result.net_msg.src_machine_id);
+    else if (result.type == NetworkResultType::kReceiveMsg) {
+      printf("Receive from %ld OK\n", result.net_msg.src_machine_id);
     }
     else {
       printf("Unexpected net event polled\n");
@@ -79,7 +76,9 @@ int main(int argc, char** argv) {
   }
 
   cout << "Send/Recv test success." << endl;
-  */
+
+  /*
+  clock_t start_time, current_time;
 
   // useful for my_machine_id == 0
   char* dst_buffer = new char[FLAGS_transfer_size];
@@ -151,9 +150,11 @@ int main(int argc, char** argv) {
     }
   }
 
-  LOG(INFO) << "Network Shutting Down..." << endl;
   delete []src_buffer;
   delete []dst_buffer;
+  */
+
+  LOG(INFO) << "Network Shutting Down..." << endl;
   gflags::ShutDownCommandLineFlags();
   google::ShutdownGoogleLogging();
   return 0;

@@ -97,17 +97,9 @@ void Connection::set_queue_pair(ibv_qp* queue_pair) {
   queue_pair_ = queue_pair;
 }
 
-void Connection::Bind(const char* my_ip, int32_t my_port) {
-  my_addr_ = GetAddress(my_ip, my_port);
-  my_sock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  CHECK_EQ(bind(my_sock_, reinterpret_cast<sockaddr*>(&my_addr_),
-                sizeof(my_addr_)),
-           0);
-}
-
 bool Connection::TryConnectTo(const char* peer_ip, int32_t peer_port) {
   sockaddr_in peer_addr = GetAddress(peer_ip, peer_port);
-  Connector temp_connector;
+  Connector peer_connector;
   int64_t read_bytes = 0;
   int64_t total_read_bytes = 0;
   int64_t rc = 0;
@@ -127,7 +119,7 @@ bool Connection::TryConnectTo(const char* peer_ip, int32_t peer_port) {
   }
 
   while (!rc && total_read_bytes < sizeof(Connector)) {
-    read_bytes = read(peer_sock, &temp_connector, sizeof(Connector));
+    read_bytes = read(peer_sock, &peer_connector, sizeof(Connector));
     if (read_bytes > 0)
       total_read_bytes += read_bytes;
     else
@@ -141,11 +133,11 @@ bool Connection::TryConnectTo(const char* peer_ip, int32_t peer_port) {
     rc = 0;
   }
 
-  connector_->peer_lid = temp_connector.my_lid;
-  connector_->peer_qpn = temp_connector.my_qpn;
-  connector_->peer_psn = temp_connector.my_psn;
-  connector_->peer_snp = temp_connector.my_snp;
-  connector_->peer_iid = temp_connector.my_iid;
+  connector_->peer_lid = peer_connector.my_lid;
+  connector_->peer_qpn = peer_connector.my_qpn;
+  connector_->peer_psn = peer_connector.my_psn;
+  connector_->peer_snp = peer_connector.my_snp;
+  connector_->peer_iid = peer_connector.my_iid;
 
   CHECK_EQ(close(peer_sock), 0);
   return true;
@@ -189,7 +181,7 @@ void Connection::PostRecvRequest(const Request& recv_request) {
   wr.sg_list =
       static_cast<ibv_sge*>(recv_request.rdma_msg->net_memory()->sge());
   wr.num_sge = 1;
-  CHECK_EQ(ibv_post_recv(queue_pair_, &wr, &bad_wr), 0);
+  ibv_post_recv(queue_pair_, &wr, &bad_wr);  // TODO(shiyuan)
 }
 
 void Connection::PostReadRequest(
