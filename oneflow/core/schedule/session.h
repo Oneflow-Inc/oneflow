@@ -16,8 +16,10 @@ class Batch : public Node {
   virtual ~Batch() {}
 };
 
-typedef Arc<Batch, Node> TaskInstance;
 typedef Arc<Node> TaskArc;
+typedef Arc<Batch, Node> TaskInstance;
+typedef Arc<Batch, RegstDesc> RegstDescInstance;
+typedef Arc<Batch, TaskArc> TaskArcInstance;
 
 class Session {
  public:
@@ -44,10 +46,26 @@ class Session {
   }
   inline NodeMgr<Batch>& mut_batch_node_mgr() { return batch_node_mgr_; }
 
-  inline const ArcMgr<TaskInstance>& batch_arc_mgr() const {
-    return batch_arc_mgr_;
+  inline const ArcMgr<TaskInstance>& task_instance_mgr() const {
+    return task_instance_mgr_;
   }
-  inline ArcMgr<TaskInstance>& mut_batch_arc_mgr() { return batch_arc_mgr_; }
+  inline ArcMgr<TaskInstance>& mut_task_instance_mgr() {
+    return task_instance_mgr_;
+  }
+
+  inline const ArcMgr<RegstDescInstance>& regst_desc_instance_mgr() const {
+    return regst_desc_instance_mgr_;
+  }
+  inline ArcMgr<RegstDescInstance>& mut_regst_desc_instance_mgr() {
+    return regst_desc_instance_mgr_;
+  }
+
+  inline const ArcMgr<TaskArcInstance>& task_arc_instance_mgr() const {
+    return task_arc_instance_mgr_;
+  }
+  inline ArcMgr<TaskArcInstance>& mut_task_arc_instance_mgr() {
+    return task_arc_instance_mgr_;
+  }
 
   inline uint32_t nr_batch() const { return nr_batch_; }
   inline uint32_t& nr_batch() { return nr_batch_; }
@@ -59,7 +77,9 @@ class Session {
   uint32_t nr_batch_;
   uint32_t nr_base_batch_;
   NodeMgr<Batch> batch_node_mgr_;
-  ArcMgr<TaskInstance> batch_arc_mgr_;
+  ArcMgr<TaskInstance> task_instance_mgr_;
+  ArcMgr<RegstDescInstance> regst_desc_instance_mgr_;
+  ArcMgr<TaskArcInstance> task_arc_instance_mgr_;
 };
 
 }  // namespace schedule

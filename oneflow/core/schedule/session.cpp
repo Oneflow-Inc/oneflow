@@ -5,7 +5,7 @@ namespace schedule {
 void Session::InitNodeBatchInstance(Node* node) {
   for (uint32_t i = 0; i < nr_batch(); i++) {
     auto batch = batch_node_mgr().Find(i);
-    mut_batch_arc_mgr().CreateIfNotFound(batch, node);
+    mut_task_instance_mgr().CreateIfNotFound(batch, node);
   }
 }
 
@@ -17,18 +17,17 @@ void Session::NewBatchs() {
   }
   graph()->ForeachNodeWithSourceAndSink([&](Node* node) {
     for (auto batch : batch_nodes) {
-      mut_batch_arc_mgr().CreateIfNotFound(batch, node);
+      mut_task_instance_mgr().CreateIfNotFound(batch, node);
     }
   });
   graph()->ForeachArc([&](TaskArc* arc) {
-    auto place = dynamic_cast<Node*>(arc);
     for (auto batch : batch_nodes) {
-      mut_batch_arc_mgr().CreateIfNotFound(batch, place);
+      mut_task_arc_instance_mgr().CreateIfNotFound(batch, arc);
     }
   });
-  graph()->ForeachRegstDesc([&](Node* regst_desc) {
+  graph()->ForeachRegstDesc([&](RegstDesc* regst_desc) {
     for (auto batch : batch_nodes) {
-      mut_batch_arc_mgr().CreateIfNotFound(batch, regst_desc);
+      mut_regst_desc_instance_mgr().CreateIfNotFound(batch, regst_desc);
     }
   });
 }
