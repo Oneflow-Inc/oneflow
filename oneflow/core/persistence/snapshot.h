@@ -21,7 +21,7 @@ class Snapshot final {
                                                     int32_t part_id,
                                                     int32_t part_num);
 
-  void OnePartDone4Key(const std::string& key);
+  void OnePartDone4Key(const std::string& key, const int32_t part_id);
 
  private:
   // check the sub_dir of snapshot_root_path and files of sub_dir is legal
@@ -31,8 +31,10 @@ class Snapshot final {
   // a uniform file name, this file is concated from
   //   {part_0, part_1, ... part_n}
   static const char* concat_file_name_;
-  static const char* done_file_name_;
-  HashMap<std::string, int32_t> key2part_cnt_;
+  // a uniform dir name, this dir is store some info about:
+  //  1. total part num
+  //  2. every part file is writed done
+  static const char* key_info_dir_name_;
   std::string root_path_;
   tensorflow::Env* env_;
 };
