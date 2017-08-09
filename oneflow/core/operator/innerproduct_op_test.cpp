@@ -40,7 +40,7 @@ void TestModelParallelInnerProductOp(bool has_bias_term) {
   CHECK_EQ(*weight_shape_ptr, Shape({out_num, 3 * 256 * 256}));
   if (has_bias_term) {
     Shape* bias_shape_ptr = bn2shape_ptr.at(ip_op->model_bns().at(1));
-    CHECK_EQ(*bias_shape_ptr, Shape({out_num}));
+    CHECK_EQ(*bias_shape_ptr, Shape({1, out_num}));
     Shape* bias_multiplier_shape_ptr =
         bn2shape_ptr.at(ip_op->model_tmp_bns().at(0));
     CHECK_EQ(*bias_multiplier_shape_ptr, Shape({1000, 1}));
@@ -78,7 +78,7 @@ void TestDataParallelInnerProductOp(bool has_bias_term) {
   CHECK_EQ(*weight_shape_ptr, Shape({40, 3 * 256 * 256}));
   if (has_bias_term) {
     Shape* bias_shape_ptr = bn2shape_ptr.at(ip_op->model_bns().at(1));
-    CHECK_EQ(*bias_shape_ptr, Shape({40}));
+    CHECK_EQ(*bias_shape_ptr, Shape({1, 40}));
     Shape* bias_multiplier_shape_ptr =
         bn2shape_ptr.at(ip_op->model_tmp_bns().at(0));
     CHECK_EQ(*bias_multiplier_shape_ptr, Shape({1000, 1}));
