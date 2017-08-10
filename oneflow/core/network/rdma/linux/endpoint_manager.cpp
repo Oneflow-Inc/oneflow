@@ -6,7 +6,6 @@
 #include <ctime>
 #include <string>
 #include "oneflow/core/network/rdma/linux/connection.h"
-#include "oneflow/core/network/rdma/linux/interface.h"
 
 namespace oneflow {
 

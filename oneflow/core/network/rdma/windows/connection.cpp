@@ -1,6 +1,6 @@
 #include "oneflow/core/network/rdma/windows/connection.h"
 #include <ndspi.h>
-#include "oneflow/core/network/rdma/windows/interface.h"
+#include <WS2tcpip.h>
 #include "oneflow/core/network/rdma/request_pool.h"
 
 namespace oneflow {
@@ -22,11 +22,11 @@ Connection::Connection(int64_t my_machine_id)
     : Connection::Connection(my_machine_id, -1) {}
 
 Connection::Connection(int64_t my_machine_id, int64_t peer_machine_id)
-    : connector_(nullptr),
+    : my_machine_id_(my_machine_id),
+      peer_machine_id_(peer_machine_id),
+      connector_(nullptr),
       queue_pair_(nullptr),
-      ov_(new OVERLAPPED),
-      my_machine_id_(my_machine_id),
-      peer_machine_id_(peer_machine_id) {
+      ov_(new OVERLAPPED) {
   ov_->hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 }
 
@@ -51,7 +51,6 @@ void Connection::set_overlapped(OVERLAPPED* ov) {
 
 bool Connection::TryConnectTo(const char* peer_ip, int32_t peer_port) {
   sockaddr_in peer_addr = GetAddress(peer_ip, peer_port);
-  CHECK(peer_addr);
   HRESULT hr = connector_->Connect(
       queue_pair_,
       reinterpret_cast<const sockaddr*>(&peer_addr),
@@ -101,8 +100,7 @@ void Connection::Destroy() {
   if (connector_ != nullptr) {
     HRESULT hr = connector_->Disconnect(ov_);
     if (hr == ND_PENDING) {
-      SIZE_T BytesRet;
-      hr = connector_->GetOverlappedResult(ov_, &BytesRet, TRUE);
+      hr = connector_->GetOverlappedResult(ov_, TRUE);
     }
     connector_->Release();
   }

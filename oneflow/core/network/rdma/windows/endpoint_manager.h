@@ -3,9 +3,9 @@
 
 #include <stdint.h>
 #include <ndspi.h>
-#include "oneflow/core/network/windows/connection.h"
-#include "oneflow/core/network/windows/rdma_memory.h"
 #include "oneflow/core/network/network_message.h"
+#include "oneflow/core/network/rdma/windows/connection.h"
+#include "oneflow/core/network/rdma/windows/rdma_memory.h"
 
 namespace oneflow {
 

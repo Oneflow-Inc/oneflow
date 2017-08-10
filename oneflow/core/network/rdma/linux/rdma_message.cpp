@@ -1,5 +1,4 @@
 #include "oneflow/core/network/rdma/linux/rdma_message.h"
-#include "oneflow/core/network/rdma/linux/interface.h"
 
 namespace oneflow {
 

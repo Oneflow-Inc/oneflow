@@ -1,5 +1,5 @@
 #include "oneflow/core/network/rdma/linux/rdma_memory.h"
-#include "oneflow/core/network/rdma/linux/interface.h"
+#include "glog/logging.h"
 
 namespace oneflow {
 
@@ -27,7 +27,7 @@ void RdmaMemory::Register() {
   descriptor_.address = (uint64_t)memory_;
   descriptor_.remote_token = memory_region_->rkey;
 
-  if (memory_region_ != nullptr) { registered_ = true; }
+  registered_ = true;
 }
 
 void RdmaMemory::Unregister() {

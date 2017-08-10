@@ -1,5 +1,5 @@
 #include "oneflow/core/network/rdma/windows/rdma_memory.h"
-#include "oneflow/core/network/rdma/windows/interface.h"
+#include "glog/logging.h"
 
 namespace oneflow {
 

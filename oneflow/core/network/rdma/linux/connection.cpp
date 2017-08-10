@@ -3,7 +3,6 @@
 #include <infiniband/verbs.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include "oneflow/core/network/rdma/linux/interface.h"
 #include "oneflow/core/network/rdma/request_pool.h"
 
 namespace oneflow {

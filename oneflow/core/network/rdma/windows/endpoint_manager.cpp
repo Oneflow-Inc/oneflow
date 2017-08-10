@@ -1,15 +1,12 @@
 #include "oneflow/core/network/rdma/windows/endpoint_manager.h"
 
-#include <Ws2tcpip.h>  // TODO(shiyuan)
+#include <Ws2tcpip.h>
 #include <windows.h>
-
 #include <string.h>
 #include <iostream>
 #include "oneflow/core/network/rdma/windows/ndsupport.h"
-
-#include "oneflow/core/network/rdma/windows/interface.h"
 #include "oneflow/core/network/rdma/windows/connection.h"
-#pragma comment(lib, "Ws2_32.lib")
+#pragma comment(lib, "Ws2_32.lib")  // TODO(shiyuan)
 
 namespace oneflow {
 
@@ -33,8 +30,6 @@ EndpointManager::~EndpointManager() {
 void EndpointManager::Init(const char* my_ip, int32_t my_port) {
   my_addr_ = GetAddress(my_ip, my_port);
 
-  // INIT ADAPTER
-  // NdspiV2Open
   HRESULT hr = NdStartup();
   CHECK(SUCCEEDED(hr)) << "NdStartup failed. hr = " << hr;
   hr = NdOpenV2Adapter(reinterpret_cast<const sockaddr*>(&my_addr_),
@@ -49,8 +44,6 @@ void EndpointManager::Init(const char* my_ip, int32_t my_port) {
   hr = adapter_->Query(&adapter_info_, &info_size);
   CHECK(SUCCEEDED(hr));
 
-  // INIT ENV
-  // Create Send Completion Queue and Recv Completion Queue
   hr = adapter_->CreateCompletionQueue(
                IID_IND2CompletionQueue,
                overlapped_file_,
@@ -152,12 +145,12 @@ RdmaMemory* EndpointManager::NewNetworkMemory() {
 
 // XXX(shiyuan)
 int64_t EndpointManager::WaitForConnection(Connection* conn,
-                                       Request* receive_request) {
+                                           Request* receive_request) {
   int64_t peer_machine_id;
   ULONG size = sizeof(peer_machine_id);
 
-  IND2Connector* connector = conn->connector();
-  OVERLAPPED* ov = conn->overlapped();
+  IND2Connector* connector = conn->mutable_connector();
+  OVERLAPPED* ov = conn->mutable_overlapped();
   HRESULT hr = listener_->GetConnectionRequest(connector, ov);
   if (hr == ND_PENDING) {
     hr = listener_->GetOverlappedResult(ov, TRUE);
@@ -186,9 +179,12 @@ Request* EndpointManager::PollRecvQueue(NetworkResult* result) {
   if (len == 0)
     return nullptr;
 
-  CHECK_EQ(nd2_result.Status, ND_SUCCESS);
+  if (nd2_result.Status != ND_SUCCESS) {  // TODO(shiyuan)
+    return nullptr;
+  }
 
   result->type = NetworkResultType::kReceiveMsg;
+  // TODO(shiyuan) result
   // The context is the message timestamp in Recv Request.
   return reinterpret_cast<Request*>(nd2_result.RequestContext);
 }
@@ -199,7 +195,9 @@ Request* EndpointManager::PollSendQueue(NetworkResult* result) {
   if (len == 0)
     return nullptr;
 
-  CHECK_EQ(nd2_result.Status, ND_SUCCESS);
+  if (nd2_result.Status != ND_SUCCESS) {  // TODO(shiyuan)
+    return nullptr;
+  }
 
   switch (nd2_result.RequestType) {
     case ND2_REQUEST_TYPE::Nd2RequestTypeSend: {
