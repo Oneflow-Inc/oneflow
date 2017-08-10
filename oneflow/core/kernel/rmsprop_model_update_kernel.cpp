@@ -30,18 +30,6 @@ void RMSPropMdUpdateKernel<device_type, FloatingPointType>::Forward(
       static_cast<FloatingPointType>(alpha));
 }
 
-template<DeviceType device_type, typename FloatingPointType>
-void RMSPropMdUpdateKernel<device_type, FloatingPointType>::
-    InitModelAndModelTmpBlobsWithRandomSeed(
-        const KernelCtx& ctx, std::mt19937 random_seed_gen,
-        std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  KernelUtil<device_type, FloatingPointType>::FillWithProperConf(
-      ctx,
-      OF_PB_POINTER_GET(op()->op_conf().rmsprop_mdupdt_conf(),
-                        mean_square_fill),
-      random_seed_gen(), BnInOp2Blob("mean_square"));
-}
-
 template<typename FloatingPointType>
 class RMSPropMdUpdateKernelUtil<DeviceType::kCPU, FloatingPointType> final {
  public:
