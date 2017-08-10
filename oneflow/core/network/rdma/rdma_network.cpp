@@ -2,19 +2,17 @@
 
 namespace oneflow {
 
-RdmaNetwork::RdmaNetwork() 
-  : endpoint_manager_(nullptr),
-    my_machine_id_(-1),
-    port_(-1) {}
+RdmaNetwork::RdmaNetwork()
+  : my_machine_id_(-1), port_(-1), endpoint_manager_(nullptr) {}
 
 RdmaNetwork::~RdmaNetwork() {
   Finalize();
 }
 
 void RdmaNetwork::Init(int64_t my_machine_id, const NetworkTopology& net_topo) {
+  net_topo_ = net_topo;
   my_machine_id_ = my_machine_id;
   port_ = net_topo.all_nodes[my_machine_id].port;
-  net_topo_ = net_topo;
   endpoint_manager_.reset(new EndpointManager());
   endpoint_manager_->Init(net_topo.all_nodes[my_machine_id].address.c_str(), port_);
   request_pool_.reset(new RequestPool());
@@ -90,8 +88,12 @@ void RdmaNetwork::Barrier() {
   int32_t num_predecessors = 0;
   int32_t num_successors = 0;
   for (auto peer_machine_id : net_topo_.all_nodes[my_machine_id_].neighbors) {
-    if (peer_machine_id < my_machine_id_) ++num_predecessors;
-    if (peer_machine_id > my_machine_id_) ++num_successors;
+    if (peer_machine_id < my_machine_id_) {
+      ++num_predecessors;
+    }
+    if (peer_machine_id > my_machine_id_) {
+      ++num_successors;
+    }
   }
 
   // 1. Wait for all the successor machines' barrier message
@@ -115,7 +117,7 @@ void RdmaNetwork::Barrier() {
     if (peer_machine_id < my_machine_id_) {
       barrier_msg.dst_machine_id = peer_machine_id;
       SendMessage(barrier_msg);
-      while (!PollSendQueue(&result))
+      while (!PollSendQueue(&result))  // TODO(shiyuan)
         CHECK(result.type == NetworkResultType::kSendOk);
     }
   }
@@ -125,7 +127,7 @@ void RdmaNetwork::Barrier() {
   // we shall poll 2 * n (num_predecessors) net event,
   // n for SEND_OK, n for RECEIVE_MSG
   for (int32_t i = 0; i < num_predecessors; ++i) {
-    while (!PollRecvQueue(&result)) {
+    while (!PollRecvQueue(&result)) {  // TODO(shiyuan)
       CHECK(result.type == NetworkResultType::kReceiveMsg);
       CHECK(result.net_msg.type == NetworkMessageType::kReplyBarrier);
     }
@@ -192,7 +194,7 @@ const MemoryDescriptor& RdmaNetwork::GetMemoryDescriptor(
   return mem_descriptor_it->second;
 }
 
-void RdmaNetwork::EstablishConnection() {
+void RdmaNetwork::EstablishConnection() {  // TODO(shiyuan)
   // Connect to neighboring nodes with larger rank actively
   // For node with small rank, the connection will fail until its peer with
   // larger rank has established its own active connections
@@ -200,15 +202,14 @@ void RdmaNetwork::EstablishConnection() {
   Request* receive_request = nullptr;
   for (auto peer_machine_id : net_topo_.all_nodes[my_machine_id_].neighbors) {
     if (peer_machine_id > my_machine_id_) {
+      conn = NewConnection();
+      CHECK(conn);
       receive_request = request_pool_->AllocRequest(false);
       CHECK(receive_request);
-      do {
-        conn = NewConnection();
-        CHECK(conn);
-        conn->Bind(net_topo_.all_nodes[my_machine_id_].address.c_str(), port_);
-        conn->PostRecvRequest(*receive_request);
-      } while (!conn->TryConnectTo(
-          net_topo_.all_nodes[peer_machine_id].address.c_str(), port_));
+      conn->PostRecvRequest(*receive_request);
+      while (!conn->TryConnectTo(
+          net_topo_.all_nodes[peer_machine_id].address.c_str(), port_)); // TODO(shiyuan)
+      std::cout << "Try connect to success" << std::endl;
       conn->CompleteConnection();
       connection_pool_->AddConnection(peer_machine_id, conn);
       for (int k = 0; k < kPrePostRecvNumber; ++k) {
@@ -231,6 +232,7 @@ void RdmaNetwork::EstablishConnection() {
       // connecting with src_machine_id
       int64_t src_machine_id =
           endpoint_manager_->WaitForConnection(conn, receive_request);
+      conn->AcceptConnect();
       CHECK_NE(src_machine_id, -1);
       connection_pool_->AddConnection(src_machine_id, conn);
       // Pre-post Receive issue before connect

@@ -49,13 +49,6 @@ void Connection::set_overlapped(OVERLAPPED* ov) {
   ov_ = ov;
 }
 
-void Connection::Bind(const char* my_ip, int32_t my_port) {
-  sockaddr_in my_addr = GetAddress(my_ip, my_port);
-  HRESULT hr = connector_->Bind(reinterpret_cast<const sockaddr*>(&my_addr),
-                                sizeof(my_addr));
-  CHECK(SUCCEEDED(hr));
-}
-
 bool Connection::TryConnectTo(const char* peer_ip, int32_t peer_port) {
   sockaddr_in peer_addr = GetAddress(peer_ip, peer_port);
   CHECK(peer_addr);
