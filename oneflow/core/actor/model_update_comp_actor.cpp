@@ -148,9 +148,10 @@ void MdUpdtCompActor::Act() {
   model_regst->set_model_version_id(next_model_version_id_);
   Regst* data_tmp_regst = GetCurWriteableRegst(data_tmp_regst_desc_id_);
   auto data_tmp_wpr = std::make_shared<LocalRegstWrapper>(data_tmp_regst);
+  KernelCtx kernel_ctx = GenDefaultKernelCtx();
+  kernel_ctx.other = &next_model_version_id_;
   AsyncLaunchKernel(
-      GenDefaultKernelCtx(),
-      [&](int64_t regst_desc_id) -> std::shared_ptr<RegstWrapper> {
+      kernel_ctx, [&](int64_t regst_desc_id) -> std::shared_ptr<RegstWrapper> {
         if (regst_desc_id == model_regst_desc_id_) {
           return model_wpr;
         } else if (regst_desc_id == data_tmp_regst_desc_id_) {
