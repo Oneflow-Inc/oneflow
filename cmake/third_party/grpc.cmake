@@ -77,12 +77,12 @@ add_custom_target(grpc_copy_libs_to_destination
   DEPENDS grpc_create_library_dir)
 
 # pub grpc_cpp_plugin binary in the 'THIRD_PARTY_DIR'
-add_custom_target(grpc_create_binary_dir
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${GRPC_BINARY_DIR}
-  DEPENDS grpc)
+# add_custom_target(grpc_create_binary_dir
+#  COMMAND ${CMAKE_COMMAND} -E make_directory ${GRPC_BINARY_DIR}
+#  DEPENDS grpc)
 
-add_custom_target(grpc_copy_binary_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GRPC_BUILD_CPP_PLUGIN_EXECUTABLE} ${GRPC_BINARY_DIR}
-  DEPENDS grpc_create_binary_dir)
+#add_custom_target(grpc_copy_binary_to_destination
+#  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GRPC_BUILD_CPP_PLUGIN_EXECUTABLE} ${GRPC_BINARY_DIR}
+#  DEPENDS grpc_create_binary_dir)
 
 endif(BUILD_THIRD_PARTY)
