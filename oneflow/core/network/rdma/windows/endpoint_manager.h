@@ -3,12 +3,12 @@
 
 #include <stdint.h>
 #include <ndspi.h>
-#include "oneflow/core/network/rdma/windows/interface.h"
+#include "oneflow/core/network/windows/connection.h"
+#include "oneflow/core/network/windows/rdma_memory.h"
 #include "oneflow/core/network/network_message.h"
 
 namespace oneflow {
 
-class Connection;
 struct Request;
 
 class EndpointManager {

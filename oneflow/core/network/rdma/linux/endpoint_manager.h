@@ -7,11 +7,11 @@
 #include <stdio.h>
 
 #include "oneflow/core/network/network_message.h"
-#include "oneflow/core/network/rdma/linux/interface.h"
+#include "oneflow/core/network/rdma/linux/rdma_memory.h"
+#include "oneflow/core/network/rdma/linux/connection.h"
 
 namespace oneflow {
 
-class Connection;
 struct Request;
 
 class EndpointManager {

@@ -8,11 +8,10 @@
 #include <string.h>
 #include <unistd.h>
 #include "oneflow/core/network/network_memory.h"
-#include "oneflow/core/network/rdma/linux/interface.h"
+#include "oneflow/core/network/rdma/linux/rdma_memory.h"
 
 namespace oneflow {
 
-class RdmaMemory;
 struct Request;
 
 struct Connector {

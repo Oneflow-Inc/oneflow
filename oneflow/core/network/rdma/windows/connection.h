@@ -9,12 +9,11 @@
 #include <sal.h>
 #include <new>
 #include <cstdint>
-#include "oneflow/core/network/rdma/windows/interface.h"
+#include "oneflow/core/network/rdma/windows/rdma_memory.h"
 #include "oneflow/core/network/network_memory.h"
 
 namespace oneflow {
 
-class RdmaMemory;
 struct Request;
 
 class Connection {
