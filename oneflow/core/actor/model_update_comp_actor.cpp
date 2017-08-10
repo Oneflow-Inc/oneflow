@@ -1,6 +1,7 @@
 #include "oneflow/core/actor/model_update_comp_actor.h"
 #include "oneflow/core/actor/actor_registry.h"
 #include "oneflow/core/job/runtime_context.h"
+#include "oneflow/core/kernel/model_update_kernel.h"
 
 namespace oneflow {
 
@@ -9,6 +10,7 @@ void MdUpdtCompActor::Init(const TaskProto& task_proto,
   CompActor::Init(task_proto, thread_ctx);
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
+  data_tmp_regst_desc_id_ = RegstDescId4Name("data_tmp");
   next_model_version_id_ = 0;
   related_save_task_id_ = task_proto.related_save_task_id();
   random_seed_ = task_proto.random_seed();
@@ -54,6 +56,7 @@ int MdUpdtCompActor::HandlerBeforeInitializeModel(const ActorMsg& actor_msg) {
           return model_regst->GetBlobPtrFromLbn(lbn);
         });
   }
+  if (JobDesc::Singleton()->is_train()) { AsyncCopyModelFromCurToNext(); }
   kernels.clear();
   // model_tmp_regst
   Regst* model_tmp_regst = GetCurWriteableRegst(model_tmp_regst_desc_id_);
@@ -66,8 +69,21 @@ int MdUpdtCompActor::HandlerBeforeInitializeModel(const ActorMsg& actor_msg) {
       });
     }
   }
+  kernels.clear();
+  // data_tmp_regst
+  Regst* data_tmp_regst = GetCurWriteableRegst(data_tmp_regst_desc_id_);
+  if (data_tmp_regst) {
+    data_tmp_regst->ForEachLbn(CollectKernelsFromLbn);
+    CHECK_EQ(kernels.size(), 1);
+    auto mdupdt_kernel =
+        static_cast<const ModelUpdtKernel*>(*(kernels.begin()));
+    mdupdt_kernel->InitDataTmpBlobs(
+        kernel_ctx, [&](const std::string& bn_in_op) {
+          const std::string& lbn = mdupdt_kernel->Lbn4BnInOp(bn_in_op);
+          return data_tmp_regst->GetBlobPtrFromLbn(lbn);
+        });
+  }
   //
-  if (JobDesc::Singleton()->is_train()) { AsyncCopyModelFromCurToNext(); }
   AsyncDo([]() { RuntimeCtx::Singleton()->mut_model_init_cnt().MinusOne(); });
   OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerBeforeSendInitialModel);
   return 0;
@@ -130,11 +146,15 @@ void MdUpdtCompActor::Act() {
   Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
   auto model_wpr = std::make_shared<LocalRegstWrapper>(model_regst);
   model_regst->set_model_version_id(next_model_version_id_);
+  Regst* data_tmp_regst = GetCurWriteableRegst(data_tmp_regst_desc_id_);
+  auto data_tmp_wpr = std::make_shared<LocalRegstWrapper>(data_tmp_regst);
   AsyncLaunchKernel(
       GenDefaultKernelCtx(),
       [&](int64_t regst_desc_id) -> std::shared_ptr<RegstWrapper> {
         if (regst_desc_id == model_regst_desc_id_) {
           return model_wpr;
+        } else if (regst_desc_id == data_tmp_regst_desc_id_) {
+          return data_tmp_wpr;
         } else {
           return model_diff_acc_wpr;
         }

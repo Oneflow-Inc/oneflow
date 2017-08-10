@@ -18,7 +18,7 @@ Kernel* BuildMdUpdateKernel(float learning_rate) {
   OperatorProto op_proto;
   model_update_op->ToProto(&op_proto);
   auto model_update_kernel =
-      new MdUpdateKernel<device_type, FloatingPointType>();
+      new NormalMdUpdateKernel<device_type, FloatingPointType>();
   model_update_kernel->InitFromOpProto(op_proto);
   return model_update_kernel;
 }
