@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
   msg.type = NetworkMessageType::kBarrier;
   msg.dst_machine_id = peer_machine_id;
 
-  net->SendMessage(msg);
+  net->SendMsg(msg);
   cout << "PostSendRequest" << endl;
 
   int k = 0;
@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
     memory_msg.dst_machine_id = peer_machine_id;
     memory_msg.address = src_memory->memory_discriptor().address;
     memory_msg.token = src_memory->memory_discriptor().remote_token;
-    net->SendMessage(memory_msg);
+    net->SendMsg(memory_msg);
   }
   
   // useful for all machine
@@ -132,7 +132,7 @@ int main(int argc, char** argv) {
         memory_msg.dst_machine_id = peer_machine_id;
         memory_msg.address = src_memory->memory_discriptor().address;
         memory_msg.token = src_memory->memory_discriptor().remote_token;
-        net->SendMessage(memory_msg);
+        net->SendMsg(memory_msg);
       }
     }
     else if (result.type == NetworkResultType::kReadOk) {
@@ -145,7 +145,7 @@ int main(int argc, char** argv) {
       read_ok_msg.type = NetworkMessageType::kRequestAck;
       read_ok_msg.src_machine_id = my_machine_id;
       read_ok_msg.dst_machine_id = peer_machine_id;
-      net->SendMessage(read_ok_msg);
+      net->SendMsg(read_ok_msg);
       ++i;
     }
   }

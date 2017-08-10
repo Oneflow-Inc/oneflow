@@ -23,7 +23,7 @@ class Network {
 
   // |msg| is owned by the caller and can be released once |Send| returns, even
   // though the actual transmission of the |msg| content has not occurred.
-  virtual void SendMessage(const NetworkMessage& msg) = 0;
+  virtual void SendMsg(const NetworkMessage& msg) = 0;
   virtual void SetCallbackForReceivedActorMsg(
       std::function<void()> callback) = 0;
 

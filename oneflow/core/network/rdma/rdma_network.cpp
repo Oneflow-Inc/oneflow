@@ -34,7 +34,7 @@ NetworkMemory* RdmaNetwork::RegisterMemory(void* dptr, size_t len,
 }
 
 // |msg| contains src_machine_id and dst_machine_id
-void RdmaNetwork::SendMessage(const NetworkMessage& msg) {
+void RdmaNetwork::SendMsg(const NetworkMessage& msg) {
   int64_t dst_machine_id = msg.dst_machine_id;
   Connection* conn = connection_pool_->GetConnection(dst_machine_id);
   CHECK(conn);
@@ -116,7 +116,7 @@ void RdmaNetwork::Barrier() {
   for (auto peer_machine_id : net_topo_.all_nodes[my_machine_id_].neighbors) {
     if (peer_machine_id < my_machine_id_) {
       barrier_msg.dst_machine_id = peer_machine_id;
-      SendMessage(barrier_msg);
+      SendMsg(barrier_msg);
       while (!PollSendQueue(&result))  // TODO(shiyuan)
         CHECK(result.type == NetworkResultType::kSendOk);
     }
@@ -141,7 +141,7 @@ void RdmaNetwork::Barrier() {
   for (auto peer_machine_id : net_topo_.all_nodes[my_machine_id_].neighbors) {
     if (peer_machine_id > my_machine_id_) {
       reply_barrier_msg.dst_machine_id = peer_machine_id;
-      SendMessage(reply_barrier_msg);
+      SendMsg(reply_barrier_msg);
       while (!PollSendQueue(&result)) {
         CHECK(result.type == NetworkResultType::kSendOk);
       }

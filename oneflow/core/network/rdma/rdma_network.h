@@ -22,7 +22,7 @@ class RdmaNetwork final : public Network {
   NetworkMemory* RegisterMemory(void* dptr, size_t len,
                                 int64_t register_id) override;
 
-  void SendMessage(const NetworkMessage& msg) override;
+  void SendMsg(const NetworkMessage& msg) override;
   void SetCallbackForReceivedActorMsg(
       std::function<void()> callback) override;
   void Read(const MemoryDescriptor& remote_memory_descriptor,
