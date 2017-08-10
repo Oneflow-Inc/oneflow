@@ -428,7 +428,7 @@ class STask : public SNode {
 
  protected:
   int depth_;
-	SDevice* device_;	
+  SDevice* device_;
 };
 
 //	static schedule graph
