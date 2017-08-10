@@ -36,7 +36,7 @@ Kernel* BuildSoftmaxLossKernel() {
   OperatorConf op_conf;
   op_conf.set_name("softmax_loss_op_test");
   SoftmaxLossOpConf* softmax_loss_conf = op_conf.mutable_softmax_loss_conf();
-  softmax_loss_conf->set_in("softmax_loss/in");
+  softmax_loss_conf->set_prediction("softmax_loss/in");
   softmax_loss_conf->set_label("softmax_loss/label");
   softmax_loss_conf->set_loss("softmax_loss/loss");
   auto softmax_loss_op = ConstructOp(op_conf);

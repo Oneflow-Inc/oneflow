@@ -34,31 +34,39 @@ void MdUpdtCompActor::Init(const TaskProto& task_proto,
 
 int MdUpdtCompActor::HandlerBeforeInitializeModel(const ActorMsg& actor_msg) {
   CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kInitializeModel);
-  Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
-  model_regst->set_model_version_id(next_model_version_id_++);
-  Regst* model_tmp_regst = GetCurWriteableRegst(model_tmp_regst_desc_id_);
   HashSet<const Kernel*> kernels;
   auto CollectKernelsFromLbn = [&kernels](const std::string& lbn) {
     std::string op_name = GetOpNameFromLbn(lbn);
     kernels.insert(KernelMgr::Singleton()->GetKernelFromOpName(op_name));
   };
-  model_regst->ForEachLbn(CollectKernelsFromLbn);
-  if (model_tmp_regst) { model_tmp_regst->ForEachLbn(CollectKernelsFromLbn); }
-
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   kernel_ctx.other = reinterpret_cast<void*>(random_seed_);
+  // model_regst
+  Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
+  model_regst->set_model_version_id(next_model_version_id_++);
+  model_regst->ForEachLbn(CollectKernelsFromLbn);
   for (const Kernel* kernel : kernels) {
-    kernel->InitModelAndModelTmpBlobs(
+    kernel->InitModelBlobs(
         kernel_ctx, parallel_policy(), parallel_id(), parallel_num(),
         SnapshotMgr::Singleton()->GetReadableSnapshot(),
         [&](const std::string& bn_in_op) {
           const std::string& lbn = kernel->Lbn4BnInOp(bn_in_op);
-          Blob* ret = model_regst->GetBlobPtrFromLbn(lbn);
-          if (ret == nullptr) { ret = model_tmp_regst->GetBlobPtrFromLbn(lbn); }
-          CHECK(ret != nullptr);
-          return ret;
+          return model_regst->GetBlobPtrFromLbn(lbn);
         });
   }
+  kernels.clear();
+  // model_tmp_regst
+  Regst* model_tmp_regst = GetCurWriteableRegst(model_tmp_regst_desc_id_);
+  if (model_tmp_regst) {
+    model_tmp_regst->ForEachLbn(CollectKernelsFromLbn);
+    for (const Kernel* kernel : kernels) {
+      kernel->InitModelTmpBlobs(kernel_ctx, [&](const std::string& bn_in_op) {
+        const std::string& lbn = kernel->Lbn4BnInOp(bn_in_op);
+        return model_tmp_regst->GetBlobPtrFromLbn(lbn);
+      });
+    }
+  }
+  //
   if (JobDesc::Singleton()->is_train()) { AsyncCopyModelFromCurToNext(); }
   AsyncDo([]() { RuntimeCtx::Singleton()->mut_model_init_cnt().MinusOne(); });
   OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerBeforeSendInitialModel);

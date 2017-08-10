@@ -19,12 +19,12 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
   FloatingPointType bias_multiplier_mat[] = {1, 1, 1, 1};  // 2*2
   FloatingPointType out_mat[8] = {100};                    // 1x2x2x2
   FloatingPointType in_diff_mat[9] = {10000};              // 1x1x3x3
-  FloatingPointType weight_diff_mat[8] = {0};              // 2x(1*2*2)
-  FloatingPointType expected_weight_diff_mat[] = {6, 5, 12, -4,
-                                                  5, 0, 10, 0};  // 2x(1*2*2)
-  FloatingPointType bias_diff_mat[2] = {0};                      // 2
-  FloatingPointType expected_bias_diff_mat[] = {8, 5};           // 2
-  FloatingPointType out_diff_mat[] = {1, 3, 2, 2, 2, 1, 1, 1};   // 1x2x2x2
+  FloatingPointType weight_diff_mat[8] = {40};             // 2x(1*2*2)
+  FloatingPointType expected_weight_diff_mat[] = {1.5, 1.25, 3, -1, 1.25,
+                                                  0,   2.5,  0};  // 2x(1*2*2)
+  FloatingPointType bias_diff_mat[2] = {0};                       // 2
+  FloatingPointType expected_bias_diff_mat[] = {2, 1.25};         // 2
+  FloatingPointType out_diff_mat[] = {1, 3, 2, 2, 2, 1, 1, 1};    // 1x2x2x2
   FloatingPointType expected_out_mat[] = {0.9, 0.1, 1.3,  -0.7,
                                           0.1, 0.4, -0.4, -0.7};  // 1x2x2x2
   FloatingPointType expected_in_diff_mat[] = {-0.5, 0.4, 0.7, 0.3, 1.9,

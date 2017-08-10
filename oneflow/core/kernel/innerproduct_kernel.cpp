@@ -88,7 +88,7 @@ void InnerProductKernel<device_type, FloatingPointType>::Backward(
 
 template<DeviceType device_type, typename FloatingPointType>
 void InnerProductKernel<device_type, FloatingPointType>::
-    InitModelAndModelTmpBlobsWithRandomSeed(
+    InitModelBlobsWithRandomSeed(
         const KernelCtx& ctx, std::mt19937 random_seed_gen,
         std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   KernelUtil<device_type, FloatingPointType>::FillWithProperConf(
@@ -99,12 +99,18 @@ void InnerProductKernel<device_type, FloatingPointType>::
     KernelUtil<device_type, FloatingPointType>::FillWithProperConf(
         ctx, OF_PB_POINTER_GET(op()->op_conf().innerproduct_conf(), bias_fill),
         random_seed_gen(), BnInOp2Blob("bias"));
+  }
+}
 
+template<DeviceType device_type, typename FloatingPointType>
+void InnerProductKernel<device_type, FloatingPointType>::InitModelTmpBlobs(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (op()->GetBoolFromSpecialConf("has_bias_term")) {
     FillConf bias_multiplier_fill_conf;
     bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.0f);
     KernelUtil<device_type, FloatingPointType>::Fill(
-        ctx, bias_multiplier_fill_conf, random_seed_gen(),
-        BnInOp2Blob("bias_multiplier"));
+        ctx, bias_multiplier_fill_conf, 0, BnInOp2Blob("bias_multiplier"));
   }
 }
 
