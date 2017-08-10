@@ -91,7 +91,7 @@ void Connection::AcceptConnect() {
       0,
       ov_);
   if (hr == ND_PENDING) {
-    hr = connector_->GetOverlappedResult(ov_, true);
+    hr = connector_->GetOverlappedResult(ov_, TRUE);
   }
   CHECK(SUCCEEDED(hr)) << "Fail accept connection";
 }
@@ -107,13 +107,13 @@ void Connection::Destroy() {
   delete ov_;
   ov_ = nullptr;
   if (queue_pair_ != nullptr) {
-    queue_pair_->Release();    
+    queue_pair_->Release();
   }
 }
 
 void Connection::PostSendRequest(const Request& send_request) {
   HRESULT hr = queue_pair_->Send(
-      &send_request,
+      (void*)&send_request,
       static_cast<const ND2_SGE*>(
           send_request.rdma_msg->net_memory()->sge()),
       1,
@@ -123,7 +123,7 @@ void Connection::PostSendRequest(const Request& send_request) {
 
 void Connection::PostRecvRequest(const Request& recv_request) {
   HRESULT hr = queue_pair_->Receive(
-      &recv_request,
+      (void*)&recv_request,
       static_cast<const ND2_SGE*>(
           recv_request.rdma_msg->net_memory()->sge()),
       1);
@@ -135,7 +135,7 @@ void Connection::PostReadRequest(
     const MemoryDescriptor& remote_memory_descriptor,
     RdmaMemory* dst_memory) {
   HRESULT hr = queue_pair_->Read(
-      &read_request,
+      (void*)&read_request,
       static_cast<const ND2_SGE*>(dst_memory->sge()),
       1,
       remote_memory_descriptor.address,

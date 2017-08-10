@@ -16,7 +16,7 @@ RdmaMemory::~RdmaMemory() {
 void RdmaMemory::Register() {
   OVERLAPPED ov;
   ov.hEvent = CreateEvent(NULL, false, false, NULL);
-  CHECK(ov.hEvent);
+  //CHECK(ov.hEvent);
 
   HRESULT hr = memory_region_->Register(
       memory_, size_,

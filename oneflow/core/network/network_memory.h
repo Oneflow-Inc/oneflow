@@ -1,5 +1,6 @@
 #ifndef ONEFLOW_CORE_NETWORK_NETWORK_MEMORY_H_
 #define ONEFLOW_CORE_NETWORK_NETWORK_MEMORY_H_
+#include <cstdint>
 
 namespace oneflow {
 
