@@ -21,6 +21,9 @@ class RMSPropMdUpdateKernel final : public Kernel {
   }
 
  private:
+  void InitModelAndModelTmpBlobsWithRandomSeed(
+      const KernelCtx&, std::mt19937 random_seed_gen,
+      std::function<Blob*(const std::string&)>) const override;
 };
 
 template<DeviceType device_type, typename FloatingPointType>
