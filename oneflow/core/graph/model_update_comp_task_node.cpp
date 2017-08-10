@@ -25,11 +25,20 @@ void MdUpdtCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
     ConsumeRegstDesc(ibn, model_diff_acc_regst);
   }
   exec_node->BindBnInOpAndRegst(exec_node->op()->SoleObn(), model_regst);
+  auto data_tmp_regst = NewProducedRegstDesc("data_tmp");
+  for (const std::string& dtbn : exec_node->op()->data_tmp_bns()) {
+    const std::string& lbn = exec_node->op()->Lbn4BnInOp(dtbn);
+    data_tmp_regst->EnrollLbn(lbn);
+    exec_node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
+  }
   mut_exec_gph().UpdateSourceAndSink();
 }
 
 void MdUpdtCompTaskNode::InferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
   CHECK(IsFwNode());
+  ExecNode* exec_node = exec_gph().SoleNode();
+  exec_node->op()->InferShape4FwBlobs(exec_node->GetMutShapePtr4BnInOpFunc(),
+                                      kDataParallel, 0, 0);
 }
 
 }  // namespace oneflow
