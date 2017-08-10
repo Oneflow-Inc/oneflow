@@ -1,10 +1,6 @@
 #ifndef ONEFLOW_CORE_NETWORK_NETWORK_TOPOLOGY_H_
 #define ONEFLOW_CORE_NETWORK_NETWORK_TOPOLOGY_H_
 
-#include <string>
-#include <unordered_set>
-#include <vector>
-
 namespace oneflow {
 
 // A graph to store connection relationship in network

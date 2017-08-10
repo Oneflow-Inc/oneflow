@@ -44,7 +44,7 @@ void RdmaNetwork::SendMsg(const NetworkMessage& msg) {
 
   send_request->rdma_msg->mutable_msg() = msg;
 
-  conn->PostSendRequest(*send_request);
+  conn->PostSendRequest(*send_request);  // TODO(shiyuan)
 }
 
 void RdmaNetwork::SetCallbackForReceivedActorMsg(
@@ -66,7 +66,7 @@ void RdmaNetwork::Read(const MemoryDescriptor& remote_memory_descriptor,
   RdmaMemory* dst_memory = static_cast<RdmaMemory*>(local_memory);
   CHECK(dst_memory);
 
-  conn->PostReadRequest(*read_request, remote_memory_descriptor, dst_memory);
+  conn->PostReadRequest(*read_request, remote_memory_descriptor, dst_memory);  // TODO(shiyuan)
 }
 
 bool RdmaNetwork::Poll(NetworkResult* result) {
@@ -172,7 +172,7 @@ bool RdmaNetwork::PollRecvQueue(NetworkResult* result) {
       connection_pool_->GetConnection(result->net_msg.src_machine_id);
   CHECK(conn);
   CHECK(request);
-  conn->PostRecvRequest(*request);
+  conn->PostRecvRequest(*request);  // TODO(shiyuan)
   
   return true;
 }
@@ -206,16 +206,15 @@ void RdmaNetwork::EstablishConnection() {  // TODO(shiyuan)
       CHECK(conn);
       receive_request = request_pool_->AllocRequest(false);
       CHECK(receive_request);
-      conn->PostRecvRequest(*receive_request);
+      conn->PostRecvRequest(*receive_request);  // TODO(shiyuan)
       while (!conn->TryConnectTo(
           net_topo_.all_nodes[peer_machine_id].address.c_str(), port_)); // TODO(shiyuan)
-      std::cout << "Try connect to success" << std::endl;
       conn->CompleteConnection();
       connection_pool_->AddConnection(peer_machine_id, conn);
       for (int k = 0; k < kPrePostRecvNumber; ++k) {
         receive_request = request_pool_->AllocRequest(false);
         CHECK(receive_request);
-        conn->PostRecvRequest(*receive_request);
+        conn->PostRecvRequest(*receive_request);  // TODO(shiyuan)
       }
     }
   }
@@ -232,14 +231,14 @@ void RdmaNetwork::EstablishConnection() {  // TODO(shiyuan)
       // connecting with src_machine_id
       int64_t src_machine_id =
           endpoint_manager_->WaitForConnection(conn, receive_request);
-      conn->AcceptConnect();
       CHECK_NE(src_machine_id, -1);
+      conn->AcceptConnect();
       connection_pool_->AddConnection(src_machine_id, conn);
       // Pre-post Receive issue before connect
       for (int k = 0; k < kPrePostRecvNumber; ++k) {
         receive_request = request_pool_->AllocRequest(false);
         CHECK(receive_request);
-        conn->PostRecvRequest(*receive_request);
+        conn->PostRecvRequest(*receive_request);  // TODO(shiyuan)
       }
     }
   }

@@ -159,8 +159,7 @@ void Connection::Destroy() {
 }
 
 void Connection::PostSendRequest(const Request& send_request) {
-  ibv_send_wr wr;
-  ibv_send_wr* bad_wr = nullptr;
+  ibv_send_wr wr, *bad_wr = nullptr;
   wr.wr_id = reinterpret_cast<uint64_t>(&send_request);
   wr.next = nullptr;
   wr.sg_list =
@@ -168,27 +167,26 @@ void Connection::PostSendRequest(const Request& send_request) {
   wr.num_sge = 1;
   wr.opcode = IBV_WR_SEND;
   wr.send_flags = IBV_SEND_SIGNALED;
-
+  CHECK(queue_pair_);
   CHECK_EQ(ibv_post_send(queue_pair_, &wr, &bad_wr), 0);
 }
 
 void Connection::PostRecvRequest(const Request& recv_request) {
-  ibv_recv_wr wr;
-  ibv_recv_wr* bad_wr = nullptr;
+  ibv_recv_wr wr, *bad_wr = nullptr;
   wr.wr_id = reinterpret_cast<uint64_t>(&recv_request);
   wr.next = nullptr;
   wr.sg_list =
       static_cast<ibv_sge*>(recv_request.rdma_msg->net_memory()->sge());
   wr.num_sge = 1;
-  ibv_post_recv(queue_pair_, &wr, &bad_wr);  // TODO(shiyuan)
+  CHECK(queue_pair_);
+  CHECK_EQ(ibv_post_recv(queue_pair_, &wr, &bad_wr), 0);
 }
 
 void Connection::PostReadRequest(
     const Request& read_request,
     const MemoryDescriptor& remote_memory_descriptor,
     RdmaMemory* dst_memory) {
-  ibv_send_wr wr;
-  ibv_send_wr* bad_wr = nullptr;
+  ibv_send_wr wr, *bad_wr = nullptr;
   wr.wr_id = reinterpret_cast<uint64_t>(&read_request);
   wr.opcode = IBV_WR_RDMA_READ;
   wr.sg_list = static_cast<ibv_sge*>(dst_memory->sge());
@@ -197,6 +195,7 @@ void Connection::PostReadRequest(
   wr.wr.rdma.remote_addr = remote_memory_descriptor.address;
   wr.wr.rdma.rkey = remote_memory_descriptor.remote_token;
 
+  CHECK(queue_pair_);
   CHECK_EQ(ibv_post_send(queue_pair_, &wr, &bad_wr), 0);
 }
 

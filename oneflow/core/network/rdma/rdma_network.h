@@ -25,7 +25,7 @@ class RdmaNetwork final : public Network {
   void SendMsg(const NetworkMessage& msg) override;
   void SetCallbackForReceivedActorMsg(
       std::function<void()> callback) override;
-  void Read(const MemoryDescriptor& remote_memory_descriptor,
+  void Read(const MemoryDescriptor& remote_memory_descriptor,  // TODO(shiyuan)
             NetworkMemory* local_memory,
             std::function<void()> callback) override;
   
@@ -50,9 +50,11 @@ class RdmaNetwork final : public Network {
   NetworkTopology net_topo_;
   int64_t my_machine_id_;
   int port_;
+
   std::unique_ptr<EndpointManager> endpoint_manager_;
   std::unique_ptr<RequestPool> request_pool_;
   std::unique_ptr<ConnectionPool> connection_pool_;
+  
   // build the dict of MemoryDescriptor
   std::unordered_map<int64_t, MemoryDescriptor> register_id_to_mem_descriptor_;  // TODO(shiyuan)
 };

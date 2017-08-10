@@ -2,8 +2,8 @@
 #define ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_ENDPOINT_MANAGER_H_
 
 #include <stdint.h>
-#include <ndspi.h>
 #include "oneflow/core/network/network_message.h"
+#include "oneflow/core/network/rdma/windows/ndsupport.h"
 #include "oneflow/core/network/rdma/windows/connection.h"
 #include "oneflow/core/network/rdma/windows/rdma_memory.h"
 

@@ -46,7 +46,7 @@ void EndpointManager::Init(const char* my_ip, int32_t my_port) {
   my_sock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   CHECK(my_sock_);
 
-  CHECK_EQ(bind(my_sock_, (sockaddr*)&my_addr_, sizeof(my_addr_)), 0);
+  CHECK_EQ(bind(my_sock_, reinterpret_cast<sockaddr*>(&my_addr_), sizeof(my_addr_)), 0);
   CHECK_EQ(listen(my_sock_, 100), 0);  // TODO(shiyuan) backlog
   ibv_free_device_list(device_list);
   device_list = nullptr;
@@ -122,7 +122,7 @@ int64_t EndpointManager::WaitForConnection(Connection* conn,
                                        Request* recv_request) {
   int64_t peer_machine_id;
   Connector* connector = conn->mutable_connector();
-  Connector temp_connector;
+  Connector peer_connector;
   int read_bytes = 0;
   int total_read_bytes = 0;
   sockaddr_in peer_addr;
@@ -136,15 +136,15 @@ int64_t EndpointManager::WaitForConnection(Connection* conn,
   total_read_bytes = 0;
   read_bytes = 0;
   while (total_read_bytes < sizeof(Connector)) {
-    read_bytes = read(peer_sock, &temp_connector, sizeof(Connector));
+    read_bytes = read(peer_sock, &peer_connector, sizeof(Connector));
     if (read_bytes > 0) { total_read_bytes += read_bytes; }
   }
 
-  connector->peer_lid = temp_connector.my_lid;
-  connector->peer_qpn = temp_connector.my_qpn;
-  connector->peer_psn = temp_connector.my_psn;
-  connector->peer_snp = temp_connector.my_snp;
-  connector->peer_iid = temp_connector.my_iid;
+  connector->peer_lid = peer_connector.my_lid;
+  connector->peer_qpn = peer_connector.my_qpn;
+  connector->peer_psn = peer_connector.my_psn;
+  connector->peer_snp = peer_connector.my_snp;
+  connector->peer_iid = peer_connector.my_iid;
 
   CHECK_EQ(close(peer_sock), 0);
 

@@ -27,7 +27,7 @@ class Network {
   virtual void SetCallbackForReceivedActorMsg(
       std::function<void()> callback) = 0;
 
-  virtual void Read(const MemoryDescriptor& remote_memory_descriptor,
+  virtual void Read(const MemoryDescriptor& remote_memory_descriptor,  // TODO(shiyuan)
                     NetworkMemory* local_memory,
                     std::function<void()> callback) = 0;
 
