@@ -39,6 +39,7 @@ class MdUpdtCompActor final : public CompActor {
   CudaStreamHandle cuda_handle_;
   int64_t model_regst_desc_id_;
   int64_t model_tmp_regst_desc_id_;
+  int64_t data_tmp_regst_desc_id_;
   std::queue<std::shared_ptr<RegstWrapper>> waiting_model_diff_acc_queue_;
   int64_t next_model_version_id_;
   int64_t related_save_task_id_;

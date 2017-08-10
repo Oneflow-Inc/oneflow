@@ -3,7 +3,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename FloatingPointType>
-void MdUpdateKernel<device_type, FloatingPointType>::Forward(
+void NormalMdUpdateKernel<device_type, FloatingPointType>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
   Blob* model_blob = BnInOp2BlobPtr("model");
@@ -19,7 +19,7 @@ void MdUpdateKernel<device_type, FloatingPointType>::Forward(
       model_blob->mut_dptr<FloatingPointType>(), 1);
 }
 
-INSTANTIATE_KERNEL_CLASS(MdUpdateKernel);
-REGISTER_KERNEL(OperatorConf::kNormalMdupdtConf, MdUpdateKernel);
+INSTANTIATE_KERNEL_CLASS(NormalMdUpdateKernel);
+REGISTER_KERNEL(OperatorConf::kNormalMdupdtConf, NormalMdUpdateKernel);
 
 }  // namespace oneflow
