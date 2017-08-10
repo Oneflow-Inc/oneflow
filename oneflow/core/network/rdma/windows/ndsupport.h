@@ -13,6 +13,7 @@
 #ifndef _NETDIRECT_H_
 #define _NETDIRECT_H_
 
+#include <initguid.h>
 #include "ndspi.h"
 
 

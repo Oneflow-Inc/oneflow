@@ -60,8 +60,8 @@ int main(int argc, char** argv) {
   int k = 0;
   for (int i = 0; i < 2 * net_topo.all_nodes[my_machine_id].neighbors.size(); ++i) {
     while (!net->Poll(&result)) {
-      sleep(1);
-      printf("Poll time: %d, false\n", k++);
+      //sleep(1);
+      //printf("Poll time: %d, false\n", k++);
     }
     printf("Poll time: %d, true \n", k++);
     if (result.type == NetworkResultType::kSendOk) {
