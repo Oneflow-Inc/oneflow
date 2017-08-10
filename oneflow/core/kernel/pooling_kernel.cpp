@@ -55,7 +55,7 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
       uint32_t* mask_dptr = mask_blob->mut_dptr<uint32_t>();
 
       switch (pooling_conf.pool()) {
-        case PoolingOpConf::MAX: {
+        case PoolingOpConf::kMax: {
           for (int64_t n = 0; n < out_blob->shape().At(0); ++n) {
             for (int64_t c = 0; c < out_blob->shape().At(1); ++c) {
               for (int64_t out_h = 0; out_h < out_blob->shape().At(2);
@@ -96,7 +96,7 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
           }
           break;
         }
-        case PoolingOpConf::AVE: {
+        case PoolingOpConf::kAve: {
           for (int64_t n = 0; n < out_blob->shape().At(0); ++n) {
             for (int64_t c = 0; c < out_blob->shape().At(1); ++c) {
               for (int64_t out_h = 0; out_h < out_blob->shape().At(2);
@@ -136,7 +136,7 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
           }
           break;
         }
-        case PoolingOpConf::STOCHASTIC: {
+        case PoolingOpConf::kStochastic: {
           TODO();
         }
         /*
@@ -186,7 +186,7 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
       memset(in_diff_dptr, 0,
              in_diff_blob->shape().elem_cnt() * sizeof(FloatingPointType));
       switch (pooling_conf.pool()) {
-        case PoolingOpConf::MAX: {
+        case PoolingOpConf::kMax: {
           for (int64_t n = 0; n < out_diff_blob->shape().At(0); ++n) {
             for (int64_t c = 0; c < out_diff_blob->shape().At(1); ++c) {
               for (int64_t out_h = 0; out_h < out_diff_blob->shape().At(2);
@@ -206,7 +206,7 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
           }
           break;
         }
-        case PoolingOpConf::AVE: {
+        case PoolingOpConf::kAve: {
           for (int64_t n = 0; n < out_diff_blob->shape().At(0); ++n) {
             for (int64_t c = 0; c < out_diff_blob->shape().At(1); ++c) {
               for (int64_t out_h = 0; out_h < out_diff_blob->shape().At(2);
@@ -246,7 +246,7 @@ class PoolingKernelUtil<DeviceType::kCPU, FloatingPointType> final {
           }
           break;
         }
-        case PoolingOpConf::STOCHASTIC: {
+        case PoolingOpConf::kStochastic: {
           TODO();
         }
         /*

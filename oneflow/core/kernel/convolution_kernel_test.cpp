@@ -23,8 +23,8 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
   FloatingPointType expected_weight_diff_mat[] = {1.5, 1.25, 3, -1, 1.25,
                                                   0,   2.5,  0};  // 2x(1*2*2)
   FloatingPointType bias_diff_mat[2] = {0};                       // 2
-  FloatingPointType expected_bias_diff_mat[] = {2, 1.25};       // 2
-  FloatingPointType out_diff_mat[] = {1, 3, 2, 2, 2, 1, 1, 1};  // 1x2x2x2
+  FloatingPointType expected_bias_diff_mat[] = {2, 1.25};         // 2
+  FloatingPointType out_diff_mat[] = {1, 3, 2, 2, 2, 1, 1, 1};    // 1x2x2x2
   FloatingPointType expected_out_mat[] = {0.9, 0.1, 1.3,  -0.7,
                                           0.1, 0.4, -0.4, -0.7};  // 1x2x2x2
   FloatingPointType expected_in_diff_mat[] = {-0.5, 0.4, 0.7, 0.3, 1.9,
