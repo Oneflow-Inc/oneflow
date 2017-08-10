@@ -160,7 +160,7 @@ void ConvolutionKernel<device_type, FloatingPointType>::ComputeWeightDiff(
   const Blob* out_diff = BnInOp2Blob("out_diff");
   const int64_t out_im_sz = out_diff->shape().Count(1);
   const int64_t batch_sz = out_diff->shape().At(0);
-  const int64_t conv_sliding_window_sz = out_diff->shape().Count(2);
+  const int64_t conv_sliding_window_steps = out_diff->shape().Count(2);
 
   KernelUtil<device_type, FloatingPointType>::Memset(
       ctx, weight_diff->mut_dptr(), 0,
@@ -170,7 +170,7 @@ void ConvolutionKernel<device_type, FloatingPointType>::ComputeWeightDiff(
         ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasNoTrans,
         weight_diff->shape().At(0), weight_diff->shape().At(1),
         out_diff->shape().Count(2),
-        static_cast<FloatingPointType>(1.0) / conv_sliding_window_sz,
+        static_cast<FloatingPointType>(1.0) / conv_sliding_window_steps,
         out_diff->dptr<FloatingPointType>() + i * out_im_sz,
         out_diff->shape().Count(2),
         col_buf->dptr<FloatingPointType>() + i * col_buf->shape().Count(1),
@@ -188,7 +188,7 @@ void ConvolutionKernel<device_type, FloatingPointType>::ComputeBiasDiff(
   const int64_t batch_sz = out_diff->shape().At(0);
   const Blob* bias_mul = BnInOp2Blob("bias_multiplier");
   Blob* bias_diff = BnInOp2Blob("bias_diff");
-  const int64_t conv_sliding_window_sz = out_diff->shape().Count(2);
+  const int64_t conv_sliding_window_steps = out_diff->shape().Count(2);
 
   KernelUtil<device_type, FloatingPointType>::Memset(
       ctx, bias_diff->mut_dptr(), 0,
@@ -197,7 +197,7 @@ void ConvolutionKernel<device_type, FloatingPointType>::ComputeBiasDiff(
     KernelUtil<device_type, FloatingPointType>::BlasGemm(
         ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasNoTrans,
         bias_diff->shape().At(0), 1, bias_mul->shape().At(0),
-        static_cast<FloatingPointType>(1.0) / conv_sliding_window_sz,
+        static_cast<FloatingPointType>(1.0) / conv_sliding_window_steps,
         out_diff->dptr<FloatingPointType>() + i * out_im_sz,
         out_diff->shape().Count(2), bias_mul->dptr<FloatingPointType>(), 1,
         static_cast<FloatingPointType>(1.0),
