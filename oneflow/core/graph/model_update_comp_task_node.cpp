@@ -37,8 +37,17 @@ void MdUpdtCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
 void MdUpdtCompTaskNode::InferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
   CHECK(IsFwNode());
   ExecNode* exec_node = exec_gph().SoleNode();
-  exec_node->op()->InferShape4FwBlobs(exec_node->GetMutShapePtr4BnInOpFunc(),
-                                      kDataParallel, 0, 0);
+  auto model_diffs_regst = GetConsumedRegstDesc("model_diffs");
+  Shape packed_model_diffs_shape({model_diffs_regst->CompElemCntOfAllBlob()});
+  exec_node->op()->InferShape4FwBlobs(
+      [&](const std::string& bn_in_op) -> Shape* {
+        if (bn_in_op == "model_diffs") {
+          return &packed_model_diffs_shape;
+        } else {
+          return exec_node->GetMutShapePtr4BnInOpFunc()(bn_in_op);
+        }
+      },
+      kDataParallel, 0, 0);
 }
 
 }  // namespace oneflow
