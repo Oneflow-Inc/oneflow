@@ -78,7 +78,7 @@ void EndpointManager::Init(const char* my_ip, int32_t my_port) {
   CHECK(SUCCEEDED(hr));
 
   hr = listener_->Bind(
-               reinterpret_cast<const sockaddr*>(&my_sock_),
+               reinterpret_cast<const sockaddr*>(&my_addr_),
                sizeof(sockaddr_in));
   CHECK(SUCCEEDED(hr));
 
@@ -156,8 +156,8 @@ int64_t EndpointManager::WaitForConnection(Connection* conn,
   int64_t peer_machine_id;
   ULONG size = sizeof(peer_machine_id);
 
-  IND2Connector* connector = conn->connector();
-  OVERLAPPED* ov = conn->overlapped();
+  IND2Connector* connector = conn->mutable_connector();
+  OVERLAPPED* ov = conn->mutable_overlapped();
   HRESULT hr = listener_->GetConnectionRequest(connector, ov);
   if (hr == ND_PENDING) {
     hr = listener_->GetOverlappedResult(ov, TRUE);
@@ -172,7 +172,7 @@ int64_t EndpointManager::WaitForConnection(Connection* conn,
   // CHECK(!FAILED(hr)) << "Failed to get private data. hr = " << hr << "\n";
 
   conn->set_connector(connector);
-  conn->PostRecvRequest(receive_request);
+  conn->PostRecvRequest(*receive_request);
   conn->AcceptConnect();
 
   return peer_machine_id;

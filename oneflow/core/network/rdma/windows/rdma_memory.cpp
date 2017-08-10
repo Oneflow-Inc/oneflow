@@ -1,5 +1,5 @@
 #include "oneflow/core/network/rdma/windows/rdma_memory.h"
-#include "oneflow/core/network/rdma/windows/interface.h"
+#include <glog/logging.h>
 
 namespace oneflow {
 
@@ -16,7 +16,7 @@ RdmaMemory::~RdmaMemory() {
 void RdmaMemory::Register() {
   OVERLAPPED ov;
   ov.hEvent = CreateEvent(NULL, false, false, NULL);
-  CHECK(ov.hEvent);
+  //CHECK(ov.hEvent);
 
   HRESULT hr = memory_region_->Register(
       memory_, size_,

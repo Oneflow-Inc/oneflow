@@ -1,6 +1,6 @@
 #include "oneflow/core/network/rdma/windows/connection.h"
 #include <ndspi.h>
-#include "oneflow/core/network/rdma/windows/interface.h"
+#include "WS2tcpip.h"
 #include "oneflow/core/network/rdma/request_pool.h"
 
 namespace oneflow {
@@ -51,7 +51,7 @@ void Connection::set_overlapped(OVERLAPPED* ov) {
 
 bool Connection::TryConnectTo(const char* peer_ip, int32_t peer_port) {
   sockaddr_in peer_addr = GetAddress(peer_ip, peer_port);
-  CHECK(peer_addr);
+  // CHECK(peer_addr);
   HRESULT hr = connector_->Connect(
       queue_pair_,
       reinterpret_cast<const sockaddr*>(&peer_addr),
@@ -92,7 +92,7 @@ void Connection::AcceptConnect() {
       0,
       ov_);
   if (hr == ND_PENDING) {
-    hr = connector_->GetOverlappedResult(ov_, true);
+    hr = connector_->GetOverlappedResult(ov_, TRUE);
   }
   CHECK(SUCCEEDED(hr)) << "Fail accept connection";
 }
@@ -101,21 +101,20 @@ void Connection::Destroy() {
   if (connector_ != nullptr) {
     HRESULT hr = connector_->Disconnect(ov_);
     if (hr == ND_PENDING) {
-      SIZE_T BytesRet;
-      hr = connector_->GetOverlappedResult(ov_, &BytesRet, TRUE);
+      hr = connector_->GetOverlappedResult(ov_, TRUE);
     }
     connector_->Release();
   }
   delete ov_;
   ov_ = nullptr;
   if (queue_pair_ != nullptr) {
-    queue_pair_->Release();    
+    queue_pair_->Release();
   }
 }
 
 void Connection::PostSendRequest(const Request& send_request) {
   HRESULT hr = queue_pair_->Send(
-      &send_request,
+      (void*)&send_request,
       static_cast<const ND2_SGE*>(
           send_request.rdma_msg->net_memory()->sge()),
       1,
@@ -125,7 +124,7 @@ void Connection::PostSendRequest(const Request& send_request) {
 
 void Connection::PostRecvRequest(const Request& recv_request) {
   HRESULT hr = queue_pair_->Receive(
-      &recv_request,
+      (void*)&recv_request,
       static_cast<const ND2_SGE*>(
           recv_request.rdma_msg->net_memory()->sge()),
       1);
@@ -137,7 +136,7 @@ void Connection::PostReadRequest(
     const MemoryDescriptor& remote_memory_descriptor,
     RdmaMemory* dst_memory) {
   HRESULT hr = queue_pair_->Read(
-      &read_request,
+      (void*)&read_request,
       static_cast<const ND2_SGE*>(dst_memory->sge()),
       1,
       remote_memory_descriptor.address,
