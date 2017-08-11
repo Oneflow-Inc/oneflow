@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_DISTRIBUTED_RUNTIME_RPC_GRPC_SERVER_LIB_H_
 #define ONEFLOW_CORE_DISTRIBUTED_RUNTIME_RPC_GRPC_SERVER_LIB_H_
 #include <memory>
+#include <thread>
 
 #include "grpc++/grpc++.h"
 #include "grpc++/security/credentials.h"
