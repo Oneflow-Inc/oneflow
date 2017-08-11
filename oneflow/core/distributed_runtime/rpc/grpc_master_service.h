@@ -93,8 +93,7 @@ class GrpcMasterService : public AsyncServiceInterface {
   using MasterCall = Call<GrpcMasterService, grpc::MasterService::AsyncService,
                           RequestMessage, ResponseMessage>;
 
-  void GrpcMasterService::SendJobHandler(
-      MasterCall<SendJobRequest, SendJobResponse>* call);
+  void SendJobHandler(MasterCall<SendJobRequest, SendJobResponse>* call);
 
   TF_DISALLOW_COPY_AND_ASSIGN(GrpcMasterService);
 };
