@@ -35,9 +35,12 @@ int main(int argc, char** argv) {
 
   Placement placement_conf;
   ParseProtoFromTextFile(placement_filepath, &placement_conf);
+  LOG(INFO) << "Starting client";
+
   ::tensorflow::Status s;
 
-  std::string master_address = "11.11.1.109:5551";
+  // std::string master_address = "11.11.1.109:5551";
+  std::string master_address = "11.11.1.11:5551";
   std::shared_ptr<::grpc::Channel> channel = ::grpc::CreateChannel(
       master_address, ::grpc::InsecureChannelCredentials());
 
@@ -69,7 +72,8 @@ int main(int argc, char** argv) {
 
   // PrintProtoToTextFile(plan, "tmp_plan");
 
-  std::string worker_address = "11.11.1.109:5551";
+  // std::string worker_address = "11.11.1.109:5551";
+  std::string worker_address = "11.11.1.11:5551";
   std::shared_ptr<::grpc::Channel> worker_channel = ::grpc::CreateChannel(
       worker_address, ::grpc::InsecureChannelCredentials());
 
