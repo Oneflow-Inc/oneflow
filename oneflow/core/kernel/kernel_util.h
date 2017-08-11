@@ -7,6 +7,7 @@
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/register/blob.h"
 
 namespace oneflow {
@@ -122,6 +123,11 @@ class KernelUtil final {
     }
     Fill(ctx, *fill_conf, random_seed, blob);
   }
+
+  // fill blob with snapshot
+  static void FillWithSnapshot(const KernelCtx& ctx, int32_t part_id,
+                               int32_t part_num, const Snapshot* snapshot,
+                               Blob* blob, const std::string& lbn);
 };
 
 }  // namespace oneflow

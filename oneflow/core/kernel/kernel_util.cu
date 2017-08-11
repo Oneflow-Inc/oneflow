@@ -155,6 +155,27 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
         cudaMemcpyHostToDevice);
   }
 
+  static void FillWithSnapshot(const KernelCtx& ctx, int32_t part_id,
+                               int32_t part_num, const Snapshot* snapshot,
+                               Blob* blob, const std::string& lbn) {
+    int64_t blob_size = blob->shape().elem_cnt() * sizeof(FloatingPointType);
+    std::unique_ptr<PersistentInStream> in_stream =
+        snapshot->GetInStreamByPardId(lbn, part_id, part_num, blob_size);
+    // read model from disk to host_blob synchronously
+    void* host_raw_dptr;
+    CudaCheck(cudaMallocHost(&host_raw_dptr, blob_size));
+    std::unique_ptr<void, std::function<void(void*)>> host_unique_ptr(
+        host_raw_dptr, [&](void* dptr) { CudaCheck(cudaFreeHost(dptr)); });
+    std::unique_ptr<Shape> host_blob_shape(new Shape(blob->shape()));
+    std::unique_ptr<Blob> host_blob(
+        new Blob(host_unique_ptr.get(), host_blob_shape.get()));
+    in_stream->Read(host_blob->mut_dptr<char>(), blob_size);
+    // copy to device blob
+    KernelUtil<DeviceType::kGPU, FloatingPointType>::Memcpy(
+        ctx, blob->mut_dptr(), host_blob->dptr(), blob_size,
+        cudaMemcpyHostToDevice);
+  }
+
  private:
   static cublasOperation_t CblasTrans2CublasTrans(CBLAS_TRANSPOSE trans) {
     cublasOperation_t cublas_trans;

@@ -271,6 +271,22 @@ void ConvolutionKernel<device_type, FloatingPointType>::
 }
 
 template<DeviceType device_type, typename FloatingPointType>
+void ConvolutionKernel<device_type, FloatingPointType>::
+    InitModelBlobsWithSnapshot(
+        const KernelCtx& ctx, int32_t part_id, int32_t part_num,
+        const Snapshot* snapshot,
+        std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  KernelUtil<device_type, FloatingPointType>::FillWithSnapshot(
+      ctx, part_id, part_num, snapshot, BnInOp2Blob("weight"),
+      op()->Lbn4BnInOp("weight"));
+  if (op()->GetBoolFromSpecialConf("has_bias_term")) {
+    KernelUtil<device_type, FloatingPointType>::FillWithSnapshot(
+        ctx, part_id, part_num, snapshot, BnInOp2Blob("bias"),
+        op()->Lbn4BnInOp("bias"));
+  }
+}
+
+template<DeviceType device_type, typename FloatingPointType>
 void ConvolutionKernel<device_type, FloatingPointType>::InitModelTmpBlobs(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
