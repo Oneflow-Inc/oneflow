@@ -33,7 +33,7 @@ void GrpcWorkerService::Shutdown() {
     // polling thread.
     shutdown_alarm_ =
         new ::grpc::Alarm(cq_.get(), gpr_now(GPR_CLOCK_MONOTONIC), nullptr);
-    cpu_stream_.CloseReceiveEnd();
+    cpu_stream_->CloseReceiveEnd();
   }
 }
 
@@ -81,13 +81,13 @@ void GrpcWorkerService::HandleRPCsLoop() {
 
 void GrpcWorkerService::DoWorkLoop() {
   std::function<void()> work;
-  while (cpu_stream_.ReceiveWork(&work) == 0) { work(); }
+  while (cpu_stream_->ReceiveWork(&work) == 0) { work(); }
 }
 
 // RPC handler for sending job.
 void GrpcWorkerService::SendPlanHandler(
     WorkerCall<SendPlanRequest, SendPlanResponse>* call) {
-  cpu_stream_.SendWork([this, call]() {
+  cpu_stream_->SendWork([this, call]() {
     worker_impl_->SendPlan(&call->request, &call->response,
                            [call](const ::tensorflow::Status& status) {
                              call->SendResponse(ToGrpcStatus(status));

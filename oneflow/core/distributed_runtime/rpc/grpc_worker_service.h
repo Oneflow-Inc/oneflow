@@ -21,6 +21,7 @@ limitations under the License.
 #include "grpc++/server_builder.h"
 
 #include "oneflow/core/device/cpu_stream.h"
+#include "oneflow/core/device/async_cpu_stream.h"
 #include "oneflow/core/distributed_runtime/rpc/async_service_interface.h"
 #include "oneflow/core/distributed_runtime/rpc/grpc_call.h"
 #include "oneflow/core/distributed_runtime/rpc/grpc_util.h"
@@ -64,9 +65,13 @@ class GrpcWorkerService : public AsyncServiceInterface {
       : worker_impl_(worker), is_shutdown_(false) {
     builder->RegisterService(&worker_service_);
     cq_ = builder->AddCompletionQueue();
+    cpu_stream_ = new AsyncCpuStream();
   }
 
-  ~GrpcWorkerService() override { delete shutdown_alarm_; }
+  ~GrpcWorkerService() override {
+    delete shutdown_alarm_;
+    delete cpu_stream_;
+  }
 
   void Shutdown() override;
 
@@ -78,7 +83,7 @@ class GrpcWorkerService : public AsyncServiceInterface {
   Worker* worker_impl_ = nullptr;  // Not owned.
   std::unique_ptr<::grpc::ServerCompletionQueue> cq_;
   grpc::WorkerService::AsyncService worker_service_;
-  CpuStream cpu_stream_;
+  CpuStream *cpu_stream_;
 
   tensorflow::mutex mu_;
   bool is_shutdown_ GUARDED_BY(mu_);
