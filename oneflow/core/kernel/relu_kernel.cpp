@@ -10,9 +10,8 @@ void ReluKernel<device_type, FloatingPointType>::Forward(
   const Blob* in_data = BnInOp2BlobPtr("in");
   Blob* out_data = BnInOp2BlobPtr("out");
   ReluKernelUtil<device_type, FloatingPointType>::Forward(
-      ctx, out_data->shape().elem_cnt(),
-      static_cast<const FloatingPointType*>(in_data->dptr()),
-      static_cast<FloatingPointType*>(out_data->mut_dptr()));
+      ctx, out_data->shape().elem_cnt(), in_data->dptr<FloatingPointType>(),
+      out_data->mut_dptr<FloatingPointType>());
 }
 
 template<DeviceType device_type, typename FloatingPointType>
@@ -23,10 +22,9 @@ void ReluKernel<device_type, FloatingPointType>::Backward(
   Blob* out_diff = BnInOp2BlobPtr("out_diff");
   Blob* in_diff = BnInOp2BlobPtr("in_diff");
   ReluKernelUtil<device_type, FloatingPointType>::Backward(
-      ctx, in_data->shape().elem_cnt(),
-      static_cast<const FloatingPointType*>(out_diff->dptr()),
-      static_cast<const FloatingPointType*>(in_data->dptr()),
-      static_cast<FloatingPointType*>(in_diff->mut_dptr()));
+      ctx, in_data->shape().elem_cnt(), out_diff->dptr<FloatingPointType>(),
+      in_data->dptr<FloatingPointType>(),
+      in_diff->mut_dptr<FloatingPointType>());
 }
 
 template<typename FloatingPointType>

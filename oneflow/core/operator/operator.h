@@ -5,7 +5,7 @@
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/keyword.h"
-#include "oneflow/core/job/strategy.pb.h"
+#include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/operator.pb.h"
 
@@ -32,6 +32,8 @@ class Operator {
   // bn_in_op <-> lbn
   const std::string& Lbn4BnInOp(const std::string& bn_in_op) const;
   void ModifyLbn4BnInOp(const std::string& bn_in_op, const std::string& lbn);
+  int8_t TryModifyLbn4BnInOp(const std::string& bn_in_op,
+                             const std::string& lbn);
 
   // Getters
   const std::string& op_name() const { return op_conf_.name(); }

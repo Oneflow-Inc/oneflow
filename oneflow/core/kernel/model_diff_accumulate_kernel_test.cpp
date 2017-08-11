@@ -8,6 +8,8 @@ namespace oneflow {
 
 namespace test {
 
+namespace {
+
 template<DeviceType device_type, typename FloatingPointType>
 std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
   using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
@@ -34,7 +36,7 @@ Kernel* BuildMdDiffAccKernel() {
   OperatorConf op_conf;
   op_conf.set_name("model_diff_acc");
   op_conf.mutable_model_diff_acc_conf();
-  auto model_diff_acc_op = OpMgr::Singleton()->ConstructOp(op_conf);
+  auto model_diff_acc_op = ConstructOp(op_conf);
 
   OperatorProto op_proto;
   model_diff_acc_op->ToProto(&op_proto);
@@ -62,6 +64,9 @@ void TestMdDiffAccKernel() {
 
   KTCommon::CheckResult(BnInOp2BlobPtr, "model_diff_acc", "expected_acc");
 }
+
+}  // namespace
+
 }  // namespace test
 
 TEST(MdDiffAccKernel, model_diff_acc_kernel_cpu) {

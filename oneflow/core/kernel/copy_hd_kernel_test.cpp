@@ -6,6 +6,8 @@ namespace oneflow {
 
 namespace test {
 
+namespace {
+
 template<typename FloatingPointType>
 std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
     CopyHdOpConf::Type hd_type) {
@@ -38,7 +40,7 @@ Kernel* BuildCopyHdKernel(CopyHdOpConf::Type hd_type) {
   op_conf.set_name("copy_hd_test");
   CopyHdOpConf* copy_hd_conf = op_conf.mutable_copy_hd_conf();
   copy_hd_conf->set_type(hd_type);
-  auto copy_hd_op = OpMgr::Singleton()->ConstructOp(op_conf);
+  auto copy_hd_op = ConstructOp(op_conf);
 
   OperatorProto op_proto;
   copy_hd_op->ToProto(&op_proto);
@@ -69,6 +71,9 @@ void TestCopyHdKernel(CopyHdOpConf::Type hd_type) {
     KTCommonGpu::CheckResult(BnInOp2BlobPtr, "in", "in_diff");
   }
 }
+
+}  // namespace
+
 }  // namespace test
 
 TEST(CopyHdKernel, copy_d2h) {

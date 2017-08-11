@@ -5,7 +5,7 @@ import "oneflow/core/operator/operator.proto";
 import "oneflow/core/job/task.proto";
 import "oneflow/core/job/job_desc.proto";
 import "oneflow/core/job/resource.proto";
-import "oneflow/core/job/strategy.proto";
+import "oneflow/core/job/placement.proto";
 
 message Plan {
   repeated TaskProto task = 1;

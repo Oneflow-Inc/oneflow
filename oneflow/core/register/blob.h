@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_REGISTER_BLOB_H_
 #define ONEFLOW_CORE_REGISTER_BLOB_H_
 
+#include <cmath>
 #include "oneflow/core/common/shape.h"
 
 namespace oneflow {
@@ -11,10 +12,25 @@ class Blob {
   Blob(void* dptr, const Shape* shape) : dptr_(dptr), shape_(shape) {}
   ~Blob() {}
 
-  const void* dptr() const { return dptr_; }
+  template<typename T = void>
+  const T* dptr() const {
+    return static_cast<const T*>(dptr_);
+  }
+
+  template<typename T = void>
+  T* mut_dptr() {
+    return static_cast<T*>(dptr_);
+  }
+
   const Shape& shape() const { return *shape_; }
 
-  void* mut_dptr() { return dptr_; }
+  template<typename FloatingPointType>
+  std::string DebugStr() const {
+    std::stringstream ss;
+    ss << dptr_ << "\t" << shape_->DebugStr() << "\t";
+    for (int i = 0; i < 20; ++i) { ss << dptr<FloatingPointType>()[i] << " "; }
+    return ss.str();
+  }
 
  private:
   void* dptr_;

@@ -5,22 +5,22 @@
 
 namespace oneflow {
 
-class ModelUpdateOp final : public SysOperator {
+class ModelUpdtOp : public SysOperator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ModelUpdateOp);
-  ModelUpdateOp() = default;
-  ~ModelUpdateOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ModelUpdtOp);
+  virtual ~ModelUpdtOp() = default;
 
-  void InitFromOpConf(const OperatorConf& op_conf) override;
-  const PbMessage& GetSpecialConf() const override;
+  virtual void InferShape4FwBlobs(
+      std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+      ParallelPolicy policy, int64_t parallel_id,
+      int64_t parallel_num) const override {
+    // do nothing
+  }
+
+ protected:
+  ModelUpdtOp() = default;
 
  private:
-  std::string ibn2lbn(const std::string& input_bn) const override {
-    return kBaledBlobName;
-  }
-  std::string obn2lbn(const std::string& output_bn) const override {
-    return kBaledBlobName;
-  }
 };
 
 }  // namespace oneflow

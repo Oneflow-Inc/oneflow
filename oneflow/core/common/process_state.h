@@ -13,7 +13,7 @@
 
 namespace oneflow {
 
-std::string GetCwd() {
+inline std::string GetCwd() {
   size_t len = 128;
   std::unique_ptr<char[]> a(new char[len]);
   for (;;) {

@@ -3,6 +3,41 @@
 
 namespace oneflow {
 
+namespace {
+
+template<typename FloatingPointType>
+void RngUniform(const int64_t elem_cnt, const FloatingPointType min,
+                const FloatingPointType max, uint32_t random_seed,
+                FloatingPointType* dptr) {
+  CHECK_GE(elem_cnt, 0);
+  CHECK(dptr);
+  CHECK_LE(min, max);
+  std::mt19937 generator(random_seed);
+  std::uniform_real_distribution<FloatingPointType> random_distribution(
+      min, std::nextafter(max, std::numeric_limits<FloatingPointType>::max()));
+
+  for (int64_t i = 0; i < elem_cnt; ++i) {
+    dptr[i] = random_distribution(generator);
+  }
+}
+
+template<typename FloatingPointType>
+void RngGaussian(const int64_t elem_cnt, const FloatingPointType mean,
+                 const FloatingPointType std, uint32_t random_seed,
+                 FloatingPointType* dptr) {
+  CHECK_GE(elem_cnt, 0);
+  CHECK(dptr);
+  CHECK_GT(std, 0.0);
+  std::mt19937 generator(random_seed);
+  std::normal_distribution<FloatingPointType> random_distribution(mean, std);
+
+  for (int64_t i = 0; i < elem_cnt; ++i) {
+    dptr[i] = random_distribution(generator);
+  }
+}
+
+}  // namespace
+
 template<typename FloatingPointType>
 class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
  public:
@@ -36,6 +71,56 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
                        const int incx) {
     ctx.device_ctx->cpu_stream()->SendWork(
         [n, alpha, x, incx]() { cblas_scal(n, alpha, x, incx); });
+  }
+
+  static void Max(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* max_ptr) {
+    Max(ctx, n, x, max_ptr, nullptr, 0);
+  }
+
+  static void Max(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* max_ptr,
+                  FloatingPointType* temp_storage, size_t temp_storage_bytes) {
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+      *max_ptr = x[0];
+      for (int64_t i = 0; i < n; ++i) { *max_ptr = std::max(*max_ptr, x[i]); }
+    });
+  }
+
+  static void Exp(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* y) {
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+      for (int64_t i = 0; i < n; ++i) { y[i] = std::exp(x[i]); }
+    });
+  }
+
+  static void Sum(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* sum_ptr) {
+    Sum(ctx, n, x, sum_ptr, nullptr, 0);
+  }
+
+  static void Sum(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, FloatingPointType* sum_ptr,
+                  FloatingPointType* temp_storage, size_t temp_storage_bytes) {
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+      *sum_ptr = 0;
+      for (int64_t i = 0; i < n; ++i) { *sum_ptr += x[i]; }
+    });
+  }
+
+  static void Div(const KernelCtx& ctx, const int64_t n, FloatingPointType* x,
+                  const FloatingPointType* alpha_ptr) {
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+      for (int64_t i = 0; i < n; ++i) { x[i] = x[i] / (*alpha_ptr); }
+    });
+  }
+
+  static void Mul(const KernelCtx& ctx, const int64_t n,
+                  const FloatingPointType* x, const FloatingPointType* y,
+                  FloatingPointType* z) {
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+      for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }
+    });
   }
 
   static void BlasGemv(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans,
@@ -84,6 +169,53 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
                        FloatingPointType* y, const int incy) {
     ctx.device_ctx->cpu_stream()->SendWork(
         [=]() { cblas_copy(n, x, incx, y, incy); });
+  }
+
+  static void Fill(const FillConf& fill_conf, uint32_t random_seed,
+                   Blob* blob) {
+    if (fill_conf.has_constant_conf()) {
+      ConstantFill(fill_conf.constant_conf(), blob);
+    } else if (fill_conf.has_uniform_conf()) {
+      UniformFill(fill_conf.uniform_conf(), random_seed, blob);
+    } else if (fill_conf.has_gaussian_conf()) {
+      GaussianFill(fill_conf.gaussian_conf(), random_seed, blob);
+    } else {
+      UNEXPECTED_RUN();
+    }
+  }
+  static void Fill(const KernelCtx& ctx, const FillConf& fill_conf,
+                   uint32_t random_seed, Blob* blob) {
+    ctx.device_ctx->cpu_stream()->SendWork(
+        [=]() { Fill(fill_conf, random_seed, blob); });
+  }
+
+ private:
+  static void ConstantFill(const ConstantFillConf& fill_conf, Blob* blob) {
+    FloatingPointType* dptr = blob->mut_dptr<FloatingPointType>();
+    const int64_t elem_cnt = blob->shape().elem_cnt();
+    const FloatingPointType value = fill_conf.value();
+    CHECK(elem_cnt);
+    for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = value; }
+  }
+
+  static void UniformFill(const UniformFillConf& fill_conf,
+                          uint32_t random_seed, Blob* blob) {
+    CHECK(blob->shape().elem_cnt());
+    RngUniform<FloatingPointType>(
+        blob->shape().elem_cnt(),
+        static_cast<FloatingPointType>(fill_conf.min()),
+        static_cast<FloatingPointType>(fill_conf.max()), random_seed,
+        blob->mut_dptr<FloatingPointType>());
+  }
+
+  static void GaussianFill(const GaussianFillConf& fill_conf,
+                           uint32_t random_seed, Blob* blob) {
+    CHECK(blob->shape().elem_cnt());
+    RngGaussian<FloatingPointType>(
+        blob->shape().elem_cnt(),
+        static_cast<FloatingPointType>(fill_conf.mean()),
+        static_cast<FloatingPointType>(fill_conf.std()), random_seed,
+        blob->mut_dptr<FloatingPointType>());
   }
 };
 

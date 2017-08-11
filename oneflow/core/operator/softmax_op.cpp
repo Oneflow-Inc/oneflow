@@ -8,6 +8,7 @@ void SoftmaxOp::InitFromOpConf(const OperatorConf& op_conf) {
 
   EnrollInputBn("in");
   EnrollOutputBn("out");
+  EnrollDataTmpBn("tmp");
 }
 
 const PbMessage& SoftmaxOp::GetSpecialConf() const {
@@ -18,10 +19,9 @@ void SoftmaxOp::InferShape4FwBlobs(
     std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
     ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
   std::vector<int64_t> vec = GetShapePtr4BnInOp(SoleIbn())->dim_vec();
-  CHECK_GT(vec.size(), 1);
-  int32_t axis = (op_conf().softmax_conf().axis() + vec.size()) % vec.size();
-  vec.erase(vec.begin() + axis);
+  CHECK_EQ(vec.size(), 2);
   *GetShapePtr4BnInOp(SoleObn()) = Shape(vec);
+  *GetShapePtr4BnInOp(SoleDtbn()) = Shape({vec[0]});
 }
 
 REGISTER_OP(OperatorConf::kSoftmaxConf, SoftmaxOp);

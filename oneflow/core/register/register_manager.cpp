@@ -7,8 +7,8 @@ namespace oneflow {
 
 void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
                          std::function<void(Regst*)> OneRegstDone) {
-  auto runtime_regst_desc =
-      std::make_shared<const RtRegstDesc>(regst_desc_proto);
+  const RtRegstDesc* runtime_regst_desc = new RtRegstDesc(regst_desc_proto);
+  rt_regst_descs_.emplace_back(runtime_regst_desc);
   for (int64_t i = 0; i < regst_desc_proto.register_num(); ++i) {
     Regst* regst = new Regst;
     regst->regst_desc_ = runtime_regst_desc;
@@ -39,11 +39,11 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
       CHECK(regst->lbn2blob_.emplace(lbn, std::move(blob_ptr)).second);
       blob_idx += shape_ptr->elem_cnt() * elem_size;
     }
-    Shape* baled_blob_shape = new Shape({elem_cnt});
-    regst->baled_blob_.reset(new Blob(allocation.first, baled_blob_shape));
-    regst->deleter_ = [allocation, baled_blob_shape]() {
+    Shape* packed_blob_shape = new Shape({elem_cnt});
+    regst->packed_blob_.reset(new Blob(allocation.first, packed_blob_shape));
+    regst->deleter_ = [allocation, packed_blob_shape]() {
       allocation.second();
-      delete baled_blob_shape;
+      delete packed_blob_shape;
     };
     OneRegstDone(regst);
   }

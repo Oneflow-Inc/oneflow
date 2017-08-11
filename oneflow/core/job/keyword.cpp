@@ -2,6 +2,6 @@
 
 namespace oneflow {
 
-const char* kBaledBlobName = "_oneflow_BaledBlobName";
+const char* kPackedBlobName = "_oneflow_PackedBlobName";
 
 }  // namespace oneflow

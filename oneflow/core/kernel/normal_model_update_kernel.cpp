@@ -1,0 +1,25 @@
+#include "oneflow/core/kernel/normal_model_update_kernel.h"
+
+namespace oneflow {
+
+template<DeviceType device_type, typename FloatingPointType>
+void NormalMdUpdateKernel<device_type, FloatingPointType>::Forward(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
+  Blob* model_blob = BnInOp2BlobPtr("model");
+  const Blob* model_diffs_blob = BnInOp2BlobPtr("model_diffs");
+  float learning_rate = op()->op_conf().normal_mdupdt_conf().learning_rate();
+  float alpha = learning_rate / JobDesc::Singleton()->batch_size();
+  CHECK(std::isfinite(alpha));
+
+  // model = model - alpha * model_diff
+  KernelUtil<device_type, FloatingPointType>::BlasAxpy(
+      ctx, model_blob->shape().elem_cnt(), -alpha,
+      model_diffs_blob->dptr<FloatingPointType>(), 1,
+      model_blob->mut_dptr<FloatingPointType>(), 1);
+}
+
+INSTANTIATE_KERNEL_CLASS(NormalMdUpdateKernel);
+REGISTER_KERNEL(OperatorConf::kNormalMdupdtConf, NormalMdUpdateKernel);
+
+}  // namespace oneflow
