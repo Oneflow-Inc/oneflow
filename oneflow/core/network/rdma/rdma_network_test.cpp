@@ -15,19 +15,14 @@
 using namespace oneflow;
 using namespace std;
 
-DEFINE_int32(my_machine_id, 0, "local machine id");
-DEFINE_string(my_ip, "11.11.1.11", "local machine ip");
-DEFINE_int32(peer_machine_id, 1, "peer machine id");
-DEFINE_string(peer_ip, "11.11.1.13", "peer machine ip");
+DEFINE_int32(my_machine_id, 1, "local machine id");
+DEFINE_string(my_ip, "11.11.1.13", "local machine ip");
+DEFINE_int32(peer_machine_id, 0, "peer machine id");
+DEFINE_string(peer_ip, "11.11.1.11", "peer machine ip");
 DEFINE_int64(transfer_size, 1024, "transfer data size");
 DEFINE_int32(transfer_times, 1, "transfer data times");
 
-int main(int argc, char** argv) {
-  google::InitGoogleLogging((const char *)argv[0]);
-  google::SetLogDestination(google::GLOG_INFO, "./rdma_info");  
-  gflags::SetUsageMessage("Usage: ./rdma_network_test");
-  gflags::ParseCommandLineFlags(&argc, &argv, true);
-  FLAGS_logtostderr = 1;
+TEST(RdmaNetwork, rdma_network_send_msg) {
   LOG(INFO) << "Network Starting Up..." << endl;
   Network* net = oneflow::GetRdmaInstance();
   LOG(INFO) << "Create Rdma Instance Success." << endl;
@@ -162,7 +157,4 @@ int main(int argc, char** argv) {
   */
 
   LOG(INFO) << "Network Shutting Down..." << endl;
-  gflags::ShutDownCommandLineFlags();
-  google::ShutdownGoogleLogging();
-  return 0;
 }
