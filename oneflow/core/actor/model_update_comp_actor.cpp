@@ -1,6 +1,7 @@
 #include "oneflow/core/actor/model_update_comp_actor.h"
 #include "oneflow/core/actor/actor_registry.h"
 #include "oneflow/core/job/runtime_context.h"
+#include "oneflow/core/kernel/model_update_kernel.h"
 
 namespace oneflow {
 
@@ -9,45 +10,80 @@ void MdUpdtCompActor::Init(const TaskProto& task_proto,
   CompActor::Init(task_proto, thread_ctx);
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
+  data_tmp_regst_desc_id_ = RegstDescId4Name("data_tmp");
   next_model_version_id_ = 0;
   related_save_task_id_ = task_proto.related_save_task_id();
-  set_num_of_not_eord(1);
+  random_seed_ = task_proto.random_seed();
+  set_num_of_remaining_eord(1);
   mut_num_of_read_empty() = 1;
   if (thread_ctx.cpu_stream) {
     mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
+    MemcpyFunc = std::bind(&KernelUtil<DeviceType::kCPU, float>::Memcpy,
+                           std::placeholders::_1, std::placeholders::_2,
+                           std::placeholders::_3, std::placeholders::_4,
+                           cudaMemcpyKind::cudaMemcpyHostToHost);
   } else {
     mut_device_ctx().reset(new CudaDeviceCtx(cuda_handle_.cuda_stream(),
                                              cuda_handle_.cublas_handle(),
                                              cuda_handle_.cudnn_handle()));
+    MemcpyFunc = std::bind(&KernelUtil<DeviceType::kGPU, float>::Memcpy,
+                           std::placeholders::_1, std::placeholders::_2,
+                           std::placeholders::_3, std::placeholders::_4,
+                           cudaMemcpyKind::cudaMemcpyDeviceToDevice);
   }
   OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerBeforeInitializeModel);
 }
 
 int MdUpdtCompActor::HandlerBeforeInitializeModel(const ActorMsg& actor_msg) {
   CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kInitializeModel);
-  Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
-  model_regst->set_model_version_id(next_model_version_id_++);
-  Regst* model_tmp_regst = GetCurWriteableRegst(model_tmp_regst_desc_id_);
   HashSet<const Kernel*> kernels;
   auto CollectKernelsFromLbn = [&kernels](const std::string& lbn) {
     std::string op_name = GetOpNameFromLbn(lbn);
     kernels.insert(KernelMgr::Singleton()->GetKernelFromOpName(op_name));
   };
+  KernelCtx kernel_ctx = GenDefaultKernelCtx();
+  kernel_ctx.other = reinterpret_cast<void*>(random_seed_);
+  // model_regst
+  Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
+  model_regst->set_model_version_id(next_model_version_id_++);
   model_regst->ForEachLbn(CollectKernelsFromLbn);
-  if (model_tmp_regst) { model_tmp_regst->ForEachLbn(CollectKernelsFromLbn); }
-
   for (const Kernel* kernel : kernels) {
-    kernel->InitModelAndModelTmpBlobs(
-        GenDefaultKernelCtx(), parallel_policy(), parallel_id(), parallel_num(),
+    kernel->InitModelBlobs(
+        kernel_ctx, parallel_policy(), parallel_id(), parallel_num(),
         SnapshotMgr::Singleton()->GetReadableSnapshot(),
         [&](const std::string& bn_in_op) {
           const std::string& lbn = kernel->Lbn4BnInOp(bn_in_op);
-          Blob* ret = model_regst->GetBlobPtrFromLbn(lbn);
-          if (ret == nullptr) { ret = model_tmp_regst->GetBlobPtrFromLbn(lbn); }
-          CHECK(ret != nullptr);
-          return ret;
+          return model_regst->GetBlobPtrFromLbn(lbn);
         });
   }
+  if (JobDesc::Singleton()->is_train()) { AsyncCopyModelFromCurToNext(); }
+  kernels.clear();
+  // model_tmp_regst
+  Regst* model_tmp_regst = GetCurWriteableRegst(model_tmp_regst_desc_id_);
+  if (model_tmp_regst) {
+    model_tmp_regst->ForEachLbn(CollectKernelsFromLbn);
+    for (const Kernel* kernel : kernels) {
+      kernel->InitModelTmpBlobs(kernel_ctx, [&](const std::string& bn_in_op) {
+        const std::string& lbn = kernel->Lbn4BnInOp(bn_in_op);
+        return model_tmp_regst->GetBlobPtrFromLbn(lbn);
+      });
+    }
+  }
+  kernels.clear();
+  // data_tmp_regst
+  Regst* data_tmp_regst = GetCurWriteableRegst(data_tmp_regst_desc_id_);
+  if (data_tmp_regst) {
+    data_tmp_regst->ForEachLbn(CollectKernelsFromLbn);
+    CHECK_EQ(kernels.size(), 1);
+    auto mdupdt_kernel =
+        static_cast<const ModelUpdtKernel*>(*(kernels.begin()));
+    mdupdt_kernel->InitDataTmpBlobs(
+        kernel_ctx, [&](const std::string& bn_in_op) {
+          const std::string& lbn = mdupdt_kernel->Lbn4BnInOp(bn_in_op);
+          return data_tmp_regst->GetBlobPtrFromLbn(lbn);
+        });
+  }
+  //
   AsyncDo([]() { RuntimeCtx::Singleton()->mut_model_init_cnt().MinusOne(); });
   OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerBeforeSendInitialModel);
   return 0;
@@ -58,12 +94,12 @@ int MdUpdtCompActor::HandlerBeforeSendInitialModel(const ActorMsg& actor_msg) {
   AsyncSendReadableRegstMsg();
   if (model_tmp_regst_desc_id_ != -1) {
     SetReadOnlyForRegstDescId(model_tmp_regst_desc_id_);
-    AsyncSendEORDMsgToSubscribers(model_tmp_regst_desc_id_);
+    AsyncSendEORDMsgToConsumers(model_tmp_regst_desc_id_);
   }
   if (JobDesc::Singleton()->is_train()) {
     OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerNormal);
   } else {
-    AsyncSendEORDMsgToSubscribers(model_regst_desc_id_);
+    AsyncSendEORDMsgToConsumers(model_regst_desc_id_);
     OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerZombie);
   }
   return 0;
@@ -74,10 +110,14 @@ int MdUpdtCompActor::HandlerNormal(const ActorMsg& actor_msg) {
     CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kEORD);
     ProcessEord();
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
-    auto regst_wrapper = actor_msg.regst_wrapper();
-    if (TryUpdtStateAsProducedRegst(regst_wrapper->regst_raw_ptr()) != 0) {
-      waiting_model_diff_acc_queue_.push(regst_wrapper);
+    auto regst_wp = actor_msg.regst_wrapper();
+    if (TryUpdtStateAsProducedRegst(regst_wp->regst_raw_ptr()) != 0) {
+      waiting_model_diff_acc_queue_.push(regst_wp);
       mut_num_of_read_empty() = 0;
+      VLOG(4) << "model update actor " << actor_id() << " "
+              << "receive readable regst " << regst_wp->regst_raw_ptr() << ", "
+              << "regst_desc_id:" << regst_wp->regst_desc_id() << ", "
+              << "current num_of_read_empty:" << num_of_read_empty();
     }
     ActUntilFail();
   } else {
@@ -93,7 +133,7 @@ int MdUpdtCompActor::HandlerWaitUntilNoReadableRegst(
       0);
   ActUntilFail();
   if (waiting_model_diff_acc_queue_.empty()) {
-    AsyncSendEORDMsgToSubscribers(model_regst_desc_id_);
+    AsyncSendEORDMsgToConsumers(model_regst_desc_id_);
     OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerZombie);
   }
   return 0;
@@ -106,21 +146,27 @@ void MdUpdtCompActor::Act() {
   Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
   auto model_wpr = std::make_shared<LocalRegstWrapper>(model_regst);
   model_regst->set_model_version_id(next_model_version_id_);
+  Regst* data_tmp_regst = GetCurWriteableRegst(data_tmp_regst_desc_id_);
+  auto data_tmp_wpr = std::make_shared<LocalRegstWrapper>(data_tmp_regst);
+  KernelCtx kernel_ctx = GenDefaultKernelCtx();
+  kernel_ctx.other = &next_model_version_id_;
   AsyncLaunchKernel(
-      GenDefaultKernelCtx(),
-      [&](int64_t regst_desc_id) -> std::shared_ptr<RegstWrapper> {
+      kernel_ctx, [&](int64_t regst_desc_id) -> std::shared_ptr<RegstWrapper> {
         if (regst_desc_id == model_regst_desc_id_) {
           return model_wpr;
+        } else if (regst_desc_id == data_tmp_regst_desc_id_) {
+          return data_tmp_wpr;
         } else {
           return model_diff_acc_wpr;
         }
       });
   AsyncSendRegstMsgToProducer(model_diff_acc_wpr);
+  AsyncCopyModelFromCurToNext();
   if (next_model_version_id_ == JobDesc::Singleton()->total_batch_num()) {
     AsyncSendReadableRegstMsg(
         [this](int64_t actor_id) { return actor_id == related_save_task_id_; });
     CHECK(!IsReadReady());
-    AsyncSendEORDMsgToSubscribers(model_regst_desc_id_);
+    AsyncSendEORDMsgToConsumers(model_regst_desc_id_);
     TrySwitchToZombie();
   } else {
     if (next_model_version_id_

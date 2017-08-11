@@ -6,7 +6,7 @@ template<DeviceType device_type, typename FloatingPointType>
 void MdDiffAccKernel<device_type, FloatingPointType>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  Blob* in_blob = BnInOp2BlobPtr("model_diff");
+  const Blob* in_blob = BnInOp2BlobPtr("model_diff");
   Blob* out_blob = BnInOp2BlobPtr("model_diff_acc");
   KernelUtil<device_type, FloatingPointType>::BlasAxpy(
       ctx, in_blob->shape().elem_cnt(), static_cast<FloatingPointType>(1.0),

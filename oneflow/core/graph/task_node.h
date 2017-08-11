@@ -56,7 +56,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   //
   std::shared_ptr<RegstDesc> GetProducedRegstDesc(
       const std::string& regst_desc_name);
-  std::shared_ptr<RegstDesc> GetSubscribedRegstDesc(
+  std::shared_ptr<RegstDesc> GetConsumedRegstDesc(
       const std::string& regst_desc_name) const;
   void TakeOverRegstDesc(TaskNode* rhs, const std::string& regst_desc_name);
   void EraseProducedEmptyRegsts();
@@ -72,7 +72,12 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   std::shared_ptr<RegstDesc> GetProducedRegst4OutEdge(const TaskEdge*) const;
 
   //
-  virtual void ToProto(TaskProto*) const;
+  virtual void ToProto(TaskProto* proto) const {
+    ToProto(proto, [](const ChainNode*) { return 0; });
+  }
+  virtual void ToProto(
+      TaskProto*,
+      std::function<int64_t(const ChainNode*)> MeaninglessTaskCnt4Chain) const;
   virtual std::string VisualStr() const override;
   virtual TaskType task_type() const = 0;
   std::string DebugStr() const;
@@ -87,8 +92,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   std::shared_ptr<RegstDesc> NewProducedRegstDesc(
       const std::string& regst_desc_name);
-  void SubscribeRegstDesc(const std::string& regst_desc_name,
-                          std::shared_ptr<RegstDesc> regst_desc);
+  void ConsumeRegstDesc(const std::string& regst_desc_name,
+                        std::shared_ptr<RegstDesc> regst_desc);
 
  private:
   // In task_gph level
@@ -101,7 +106,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   ExecGraph exec_gph_;
 
   HashMap<std::string, std::shared_ptr<RegstDesc>> produced_regst_descs_;
-  HashMap<std::string, std::weak_ptr<RegstDesc>> subscribed_regst_descs_;
+  HashMap<std::string, std::weak_ptr<RegstDesc>> consumed_regst_descs_;
 
   HashMap<std::weak_ptr<RegstDesc>, const TaskEdge*,
           std::function<size_t(const std::weak_ptr<RegstDesc>&)>>

@@ -17,6 +17,11 @@ class CompTaskNode : public TaskNode {
   bool IsLossNode() const { return chain_node()->IsLossNode(); }
   std::string VisualStr() const override;
   std::string device_name() const;
+  virtual void FillProtoWithParallelInfo(
+      TaskProto* proto,
+      std::function<int64_t(const ChainNode*)> MeaninglessTaskCnt4Chain) const {
+    UNEXPECTED_RUN();
+  }
 
  protected:
   virtual void InitWithFwNode(TaskNode* fw_node) override {

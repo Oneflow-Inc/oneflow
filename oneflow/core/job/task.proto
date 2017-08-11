@@ -25,11 +25,12 @@ message TaskProto {
   bool is_forward = 5;
   ExecSequence exec_sequence = 6;
   map<string, RegstDescProto> produced_regst_desc = 7;
-  map<string, int64> subscribed_regst_desc_id = 8;
+  map<string, int64> consumed_regst_desc_id = 8;
   // for CompTask
   ParallelPolicy parallel_policy = 1000;
   int64 parallel_id = 1001;
   int64 parallel_num = 1002;
   // For Model Update Comp Task
   int64 related_save_task_id = 3000;
+  uint32 random_seed = 3001;
 }

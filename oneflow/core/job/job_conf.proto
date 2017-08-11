@@ -22,6 +22,7 @@ message JobConf {
   int32 staleness = 12; // at least 0. If set as 0, then it's BSP
   int64 total_batch_num = 13;
   FillConf default_fill_conf = 14;
+  bool use_async_cpu_stream = 15;
   oneof ModelUpdateCase {
     NormalModelUpdateOpConf normal_mdupdt_conf = 1000;
     MomentumModelUpdateOpConf momentum_mdupdt_conf = 1001;

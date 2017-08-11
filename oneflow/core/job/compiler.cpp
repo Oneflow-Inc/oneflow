@@ -1,5 +1,6 @@
 #include "gflags/gflags.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/graph/data_comp_task_node.h"
 #include "oneflow/core/graph/data_task_graph.h"
 #include "oneflow/core/graph/model_diff_accumulate_task_graph.h"
 #include "oneflow/core/graph/model_save_comp_task_node.h"
@@ -33,6 +34,7 @@ class Compiler final {
   void InferShape4Regsts();
   void EraseMeaningLessRegsts();
   void GenPlanFile(const std::string& plan_filepath);
+  void Plan2DotFile(const Plan& plan);
 
   std::vector<std::unique_ptr<TaskGraph>> ordered_task_gphs_;
 };
@@ -123,11 +125,12 @@ void Compiler::BuildModelGraphs(
   LOG(INFO) << "Build MdUpdtTaskGraph for " << chain_tag;
   std::vector<CompTaskNode*> updt_tasks;
   updt_tasks.reserve(pair.second.size());
+  uint32_t random_seed = NewRandomSeed();
   for (size_t i = 0; i < pair.second.size(); ++i) {
     CompTaskNode* data_fw_task = pair.second[i];
     auto updt_gph = new MdUpdtTaskGraph(
         "md_updt_" + data_fw_task->node_id_str(), data_fw_task,
-        is_train ? sorted_diff_acc_tasks[i] : nullptr);
+        is_train ? sorted_diff_acc_tasks[i] : nullptr, random_seed);
     ordered_task_gphs_.emplace_back(updt_gph);
     ChainNode* updt_chain = updt_gph->chain_gph()->SoleSinkNode();
     auto updt_tasks_in_chain = updt_gph->CompTasksInChain(updt_chain);
@@ -161,13 +164,28 @@ void Compiler::EraseMeaningLessRegsts() {
 }
 
 void Compiler::GenPlanFile(const std::string& plan_filepath) {
-  Plan plan;
-  ForEachTaskNode([&plan](const TaskNode* node) {
-    if (!node->IsMeaningLess()) {
-      node->ToProto(plan.mutable_task()->Add());
-    } else {
-      LOG(INFO) << "Removed Task " << node->task_id();
+  HashMap<const ChainNode*, int64_t> chain2meaningless_task_cnt;
+  ForEachTaskNode([&](const TaskNode* node) {
+    auto comp_task_node = dynamic_cast<const DataCompTaskNode*>(node);
+    if (comp_task_node && node->IsFwNode() && node->IsMeaningLess()) {
+      chain2meaningless_task_cnt[node->chain_node()] += 1;
     }
+  });
+  auto MeaninglessTaskCnt4Chain = [&](const ChainNode* chain) -> int64_t {
+    auto it = chain2meaningless_task_cnt.find(chain);
+    if (it != chain2meaningless_task_cnt.end()) {
+      return it->second;
+    } else {
+      return 0;
+    }
+  };
+  Plan plan;
+  ForEachTaskNode([&](const TaskNode* node) {
+    if (node->IsMeaningLess()) {
+      LOG(INFO) << "MeaningLess Task Id: " << node->task_id();
+      return;
+    }
+    node->ToProto(plan.mutable_task()->Add(), MeaninglessTaskCnt4Chain);
   });
 
   OpMgr::Singleton()->AllOpToProto(plan.mutable_op());
@@ -192,6 +210,42 @@ void Compiler::GenPlanFile(const std::string& plan_filepath) {
     });
   });
   PrintProtoToTextFile(plan, plan_filepath);
+  Plan2DotFile(plan);
+}
+
+void Compiler::Plan2DotFile(const Plan& plan) {
+  const std::string file_path = LogDir() + "/dot/plan.dot";
+  PersistentOutStream out_stream(file_path);
+  out_stream << "digraph {\n";
+  HashSet<int64_t> regst_desc_ids;
+  for (const TaskProto& task_proto : plan.task()) {
+    out_stream << "task" << std::to_string(task_proto.id())
+               << "[label=\"task_id:" << std::to_string(task_proto.id())
+               << "\\nthrd_loc_id:"
+               << std::to_string(task_proto.thrd_local_id())
+               << "\\nparallel_id:" << std::to_string(task_proto.parallel_id())
+               << "\", shape=ellipse];\n";
+    for (const auto& pair : task_proto.produced_regst_desc()) {
+      regst_desc_ids.insert(pair.second.regst_desc_id());
+    }
+  }
+  for (const int64_t regst_task_id : regst_desc_ids) {
+    out_stream << "regst_desc" << std::to_string(regst_task_id) << "[label=\""
+               << std::to_string(regst_task_id) << "\", shape=box];\n";
+  }
+  for (const TaskProto& task_proto : plan.task()) {
+    for (const auto& pair : task_proto.produced_regst_desc()) {
+      out_stream << "task" << std::to_string(task_proto.id()) << "->regst_desc"
+                 << std::to_string(pair.second.regst_desc_id()) << "[label=\""
+                 << pair.first << "\"];\n";
+    }
+    for (const auto& pair : task_proto.consumed_regst_desc_id()) {
+      out_stream << "regst_desc" << std::to_string(pair.second) << "->task"
+                 << std::to_string(task_proto.id()) << "[label=\"" << pair.first
+                 << "\"];\n";
+    }
+  }
+  out_stream << "}\n";
 }
 
 }  // namespace oneflow

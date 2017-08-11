@@ -58,6 +58,7 @@ class JobDesc final {
   const FillConf* default_fill_conf() const {
     return OF_PB_POINTER_GET(job_conf_, default_fill_conf);
   }
+  bool use_async_cpu_stream() const { return job_conf_.use_async_cpu_stream(); }
 
  private:
   JobDesc() = default;

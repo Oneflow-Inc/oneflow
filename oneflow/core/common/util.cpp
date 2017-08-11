@@ -1,4 +1,5 @@
 #include "oneflow/core/common/util.h"
+#include <cfenv>
 #include "tensorflow/core/lib/strings/numbers.h"
 
 namespace oneflow {
@@ -56,5 +57,15 @@ void Split(const std::string& text, const std::string& delims,
     }
   }
 }
+
+struct SetProcessEnvT {
+  SetProcessEnvT() {
+#ifdef __linux__
+    feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW);
+#endif
+  }
+};
+
+static SetProcessEnvT g_set_process_env_var;
 
 }  // namespace oneflow

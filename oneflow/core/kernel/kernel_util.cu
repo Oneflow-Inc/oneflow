@@ -137,7 +137,7 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
   }
 
   static void Fill(const KernelCtx& ctx, const FillConf& fill_conf,
-                   Blob* blob) {
+                   uint32_t random_seed, Blob* blob) {
     void* host_raw_dptr;
     size_t byte_size = blob->shape().elem_cnt() * sizeof(FloatingPointType);
     CudaCheck(cudaMallocHost(&host_raw_dptr, byte_size));
@@ -147,8 +147,8 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
 
     std::unique_ptr<Blob> host_blob(
         new Blob(host_unique_ptr.get(), host_blob_shape.get()));
-    KernelUtil<DeviceType::kCPU, FloatingPointType>::Fill(fill_conf,
-                                                          host_blob.get());
+    KernelUtil<DeviceType::kCPU, FloatingPointType>::Fill(
+        fill_conf, random_seed, host_blob.get());
 
     KernelUtil<DeviceType::kGPU, FloatingPointType>::Memcpy(
         ctx, blob->mut_dptr(), host_blob->dptr(), byte_size,

@@ -6,7 +6,7 @@ TEST(SoftmaxLossOp, softmax_loss_3x5) {
   // create softmax_loss_op
   OperatorConf op_conf;
   op_conf.set_name("softmax_loss_test");
-  op_conf.mutable_softmax_loss_conf()->set_in("softmax_loss/in");
+  op_conf.mutable_softmax_loss_conf()->set_prediction("softmax_loss/in");
   op_conf.mutable_softmax_loss_conf()->set_label("softmax_loss/label");
   op_conf.mutable_softmax_loss_conf()->set_loss("softmax_loss/loss");
   auto softmax_loss_op = ConstructOp(op_conf);

@@ -7,9 +7,9 @@ namespace oneflow {
 void BoxingActor::Init(const TaskProto& task_proto,
                        const ThreadCtx& thread_ctx) {
   Actor::Init(task_proto, thread_ctx);
-  int num_of_subscribed_regsts = task_proto.subscribed_regst_desc_id().size();
-  set_num_of_not_eord(num_of_subscribed_regsts);
-  mut_num_of_read_empty() = num_of_subscribed_regsts;
+  int num_of_consumed_regsts = task_proto.consumed_regst_desc_id().size();
+  set_num_of_remaining_eord(num_of_consumed_regsts);
+  mut_num_of_read_empty() = num_of_consumed_regsts;
   CHECK(thread_ctx.cpu_stream);
   mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
   OF_SET_MSG_HANDLER(&BoxingActor::HandlerNormal);
@@ -25,10 +25,14 @@ int BoxingActor::HandlerNormal(const ActorMsg& msg) {
       std::shared_ptr<RegstWrapper> regst_wp = msg.regst_wrapper();
       mut_num_of_read_empty() -= read_regst_[regst_wp->regst_desc_id()].empty();
       read_regst_.at(regst_wp->regst_desc_id()).push(regst_wp);
-    } else {
-      // do nothing
+      VLOG(4) << "boxing actor " << actor_id() << " "
+              << "receive readable regst " << regst_wp->regst_raw_ptr() << ", "
+              << "regst_desc_id:" << regst_wp->regst_desc_id() << ", "
+              << "current num_of_read_empty:" << num_of_read_empty();
     }
     ActUntilFail();
+  } else {
+    UNEXPECTED_RUN();
   }
   return msg_handler() == nullptr;
 }
@@ -37,7 +41,7 @@ int BoxingActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
            0);
   ActUntilFail();
-  if (mut_num_of_read_empty()) {
+  if (num_of_read_empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
     OF_SET_MSG_HANDLER(&BoxingActor::HandlerZombie);
   }

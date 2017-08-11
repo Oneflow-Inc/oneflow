@@ -12,7 +12,7 @@ __global__ void SoftmaxLossForwardTmp(const int64_t n, const int64_t w,
                                       const FloatingPointType* prob,
                                       FloatingPointType* tmp) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    tmp[i] = -std::log(prob[i * w + static_cast<int64_t>(label[i])]);
+    tmp[i] = -SAFE_LOG(prob[i * w + static_cast<int64_t>(label[i])]);
   }
 }
 
@@ -42,8 +42,6 @@ class SoftmaxLossKernelUtil<DeviceType::kGPU, FloatingPointType> final {
            ctx.device_ctx->cuda_stream()>>>(n, w, label, prob, tmp);
     KernelUtil<DeviceType::kGPU, FloatingPointType>::Sum(
         ctx, n, tmp, loss, tmp, sizeof(FloatingPointType) * n);
-    KernelUtil<DeviceType::kGPU, FloatingPointType>::BlasScal(ctx, 1, 1.0 / n,
-                                                              loss, 1);
   }
 
   static void BackwardSub(const KernelCtx& ctx, const int64_t n,

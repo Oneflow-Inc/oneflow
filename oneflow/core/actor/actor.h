@@ -46,8 +46,9 @@ class Actor {
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
   KernelCtx GenDefaultKernelCtx() const;
 
-  void set_num_of_not_eord(int val) { num_of_not_eord_ = val; }
-  int& mut_num_of_read_empty() { return num_of_read_empty_; }
+  void set_num_of_remaining_eord(int val) { num_of_remaining_eord_ = val; }
+  int64_t num_of_read_empty() const { return num_of_read_empty_; }
+  int64_t& mut_num_of_read_empty() { return num_of_read_empty_; }
 
   // Msg Handler
   using MsgHandler = int (Actor::*)(const ActorMsg&);
@@ -80,7 +81,7 @@ class Actor {
   void AsyncSendReadableRegstMsg(std::function<void(Regst*)> RegstPreProcess);
   void AsyncSendReadableRegstMsg(std::function<bool(int64_t)> IsAllowedActor);
   void AsyncSendReadableRegstMsg();
-  void AsyncSendEORDMsgToSubscribers(int64_t regst_desc_id);
+  void AsyncSendEORDMsgToConsumers(int64_t regst_desc_id);
   void AsyncSendEORDMsgForAllProducedRegstDesc();
   void AsyncSendRegstMsgToProducer(const std::shared_ptr<RegstWrapper>&);
   void AsyncDo(std::function<void()>);
@@ -94,9 +95,16 @@ class Actor {
   int64_t total_reading_cnt() const { return total_reading_cnt_; }
   int64_t expected_piece_id() const { return expected_piece_id_; }
 
- private:
-  bool IsWriteReady();
+  // IsWriteReady
+  virtual bool IsWriteReady() const;
+  size_t CurWriteableRegstNum4DescId(int64_t regst_desc_id) const {
+    return writeable_produced_regst_.at(regst_desc_id).size();
+  }
+  Regst* GetNextWriteableRegst(int64_t regst_desc_id) {
+    return writeable_produced_regst_.at(regst_desc_id).at(1);
+  }
 
+ private:
   int64_t actor_id_;
   KernelLaunchFunc launch_func_;
   std::vector<ExecKernel> exec_kernel_vec_;
@@ -110,13 +118,13 @@ class Actor {
 
   // Status of Produced Registers
   int64_t expected_piece_id_;
-  HashMap<int64_t, std::queue<Regst*>>
+  HashMap<int64_t, std::deque<Regst*>>
       writeable_produced_regst_;  // <regst_desc_id, regst>
   int64_t writeable_produced_regst_desc_num_;
   HashMap<Regst*, int64_t> produced_regst2reading_cnt_;
   int64_t total_reading_cnt_;
-  int num_of_not_eord_;
-  int num_of_read_empty_;
+  int64_t num_of_remaining_eord_;
+  int64_t num_of_read_empty_;
 };
 
 }  // namespace oneflow

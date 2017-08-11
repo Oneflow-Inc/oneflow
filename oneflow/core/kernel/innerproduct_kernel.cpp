@@ -11,8 +11,9 @@ void BlasMatrixMatrix(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans_a,
                       const FloatingPointType beta, const Blob* a,
                       const Blob* b, Blob* c) {
   const int m = c->shape().At(0);
-  const int n = c->shape().At(1);
-  const int k = (trans_a == CblasNoTrans) ? a->shape().At(1) : a->shape().At(0);
+  const int n = c->shape().Count(1);
+  const int k =
+      (trans_a == CblasNoTrans) ? a->shape().Count(1) : a->shape().At(0);
 
   const int lda = (trans_a == CblasNoTrans) ? k : m;
   const int ldb = (trans_b == CblasNoTrans) ? n : k;
@@ -87,22 +88,29 @@ void InnerProductKernel<device_type, FloatingPointType>::Backward(
 
 template<DeviceType device_type, typename FloatingPointType>
 void InnerProductKernel<device_type, FloatingPointType>::
-    InitModelAndModelTmpBlobsWithoutSnapshot(
-        const KernelCtx& ctx,
+    InitModelBlobsWithRandomSeed(
+        const KernelCtx& ctx, std::mt19937 random_seed_gen,
         std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   KernelUtil<device_type, FloatingPointType>::FillWithProperConf(
       ctx, OF_PB_POINTER_GET(op()->op_conf().innerproduct_conf(), weight_fill),
-      BnInOp2Blob("weight"));
+      random_seed_gen(), BnInOp2Blob("weight"));
 
   if (op()->GetBoolFromSpecialConf("has_bias_term")) {
     KernelUtil<device_type, FloatingPointType>::FillWithProperConf(
         ctx, OF_PB_POINTER_GET(op()->op_conf().innerproduct_conf(), bias_fill),
-        BnInOp2Blob("bias"));
+        random_seed_gen(), BnInOp2Blob("bias"));
+  }
+}
 
+template<DeviceType device_type, typename FloatingPointType>
+void InnerProductKernel<device_type, FloatingPointType>::InitModelTmpBlobs(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (op()->GetBoolFromSpecialConf("has_bias_term")) {
     FillConf bias_multiplier_fill_conf;
     bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.0f);
     KernelUtil<device_type, FloatingPointType>::Fill(
-        ctx, bias_multiplier_fill_conf, BnInOp2Blob("bias_multiplier"));
+        ctx, bias_multiplier_fill_conf, 0, BnInOp2Blob("bias_multiplier"));
   }
 }
 
