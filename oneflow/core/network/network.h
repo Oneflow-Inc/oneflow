@@ -16,10 +16,8 @@ class Network {
   // Init the network environment and connect with each other based on the
   // network topo. Suppose net_topo is a connected graph
   virtual void Init(int64_t my_machine_id, const NetworkTopology& net_topo) = 0;
-  virtual void Finalize() = 0;
 
-  virtual NetworkMemory* RegisterMemory(void* dptr, size_t len,
-                                        int64_t register_id = -1) = 0;
+  virtual NetworkMemory* RegisterMemory(void* dptr, size_t len) = 0;
 
   // |msg| is owned by the caller and can be released once |Send| returns, even
   // though the actual transmission of the |msg| content has not occurred.

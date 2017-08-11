@@ -118,8 +118,7 @@ RdmaMemory* EndpointManager::NewNetworkMemory() {
   return rdma_memory;
 }
 
-int64_t EndpointManager::WaitForConnection(Connection* conn,
-                                       Request* recv_request) {
+int64_t EndpointManager::WaitForConnection(Connection* conn) {
   int64_t peer_machine_id;
   Connector* connector = conn->mutable_connector();
   Connector peer_connector;

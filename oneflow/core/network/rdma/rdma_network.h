@@ -14,13 +14,11 @@ class RdmaNetwork final : public Network {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RdmaNetwork);
   RdmaNetwork();
-  ~RdmaNetwork();
+  ~RdmaNetwork() = default;
 
   void Init(int64_t my_machine_id, const NetworkTopology& net_topo) override;
-  void Finalize() override;
 
-  NetworkMemory* RegisterMemory(void* dptr, size_t len,
-                                int64_t register_id) override;
+  NetworkMemory* RegisterMemory(void* dptr, size_t len) override;
 
   void SendMsg(const NetworkMessage& msg) override;
   void SetCallbackForReceivedActorMsg(
@@ -43,10 +41,9 @@ class RdmaNetwork final : public Network {
   // |result| is owned by the caller.
   // Both send request and read request are submitted to the send request queue.
   bool PollSendQueue(NetworkResult* result);
-  const MemoryDescriptor& GetMemoryDescriptor(int64_t register_id) const;  // TODO(shiyuan)
 
   // estimate the pre-post number
-  static const int kPrePostRecvNumber = 16;  // TODO(shiyuan)
+  static const int kPrePostRecvNumber = 15;  // TODO(shiyuan)
   NetworkTopology net_topo_;
   int64_t my_machine_id_;
   int port_;
@@ -54,9 +51,6 @@ class RdmaNetwork final : public Network {
   std::unique_ptr<EndpointManager> endpoint_manager_;
   std::unique_ptr<RequestPool> request_pool_;
   std::unique_ptr<ConnectionPool> connection_pool_;
-  
-  // build the dict of MemoryDescriptor
-  std::unordered_map<int64_t, MemoryDescriptor> register_id_to_mem_descriptor_;  // TODO(shiyuan)
 };
 
 }  // namespace oneflow

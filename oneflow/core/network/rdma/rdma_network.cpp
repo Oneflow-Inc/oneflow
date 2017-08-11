@@ -5,10 +5,6 @@ namespace oneflow {
 RdmaNetwork::RdmaNetwork()
   : my_machine_id_(-1), port_(-1), endpoint_manager_(nullptr) {}
 
-RdmaNetwork::~RdmaNetwork() {
-  Finalize();
-}
-
 void RdmaNetwork::Init(int64_t my_machine_id, const NetworkTopology& net_topo) {
   net_topo_ = net_topo;
   my_machine_id_ = my_machine_id;
@@ -20,16 +16,10 @@ void RdmaNetwork::Init(int64_t my_machine_id, const NetworkTopology& net_topo) {
   EstablishConnection();
 }
 
-void RdmaNetwork::Finalize() {
-  register_id_to_mem_descriptor_.clear();
-}
-
-NetworkMemory* RdmaNetwork::RegisterMemory(void* dptr, size_t len,
-                                           int64_t register_id) {
+NetworkMemory* RdmaNetwork::RegisterMemory(void* dptr, size_t len) {
   NetworkMemory* net_memory = endpoint_manager_->NewNetworkMemory();  // TODO(shiyuan)
   net_memory->Reset(dptr, len);
   net_memory->Register();
-  register_id_to_mem_descriptor_[register_id] = net_memory->memory_discriptor();
   return net_memory;
 }
 
@@ -188,12 +178,6 @@ bool RdmaNetwork::PollSendQueue(NetworkResult* result) {
   return true;
 }
 
-const MemoryDescriptor& RdmaNetwork::GetMemoryDescriptor(
-    int64_t register_id) const {
-  auto mem_descriptor_it = register_id_to_mem_descriptor_.find(register_id);
-  return mem_descriptor_it->second;
-}
-
 void RdmaNetwork::EstablishConnection() {  // TODO(shiyuan)
   // Connect to neighboring nodes with larger rank actively
   // For node with small rank, the connection will fail until its peer with
@@ -206,9 +190,9 @@ void RdmaNetwork::EstablishConnection() {  // TODO(shiyuan)
       CHECK(conn);
       receive_request = request_pool_->AllocRequest(false);
       CHECK(receive_request);
-      conn->PostRecvRequest(*receive_request);  // TODO(shiyuan)
       while (!conn->TryConnectTo(
           net_topo_.all_nodes[peer_machine_id].address.c_str(), port_)); // TODO(shiyuan)
+      conn->PostRecvRequest(*receive_request);  // TODO(shiyuan)
       conn->CompleteConnection();
       connection_pool_->AddConnection(peer_machine_id, conn);
       for (int k = 0; k < kPrePostRecvNumber; ++k) {
@@ -230,8 +214,9 @@ void RdmaNetwork::EstablishConnection() {  // TODO(shiyuan)
       CHECK(receive_request);
       // connecting with src_machine_id
       int64_t src_machine_id =
-          endpoint_manager_->WaitForConnection(conn, receive_request);
+          endpoint_manager_->WaitForConnection(conn);
       CHECK_NE(src_machine_id, -1);
+      conn->PostRecvRequest(*receive_request);  // TODO(shiyuan)
       conn->AcceptConnect();
       connection_pool_->AddConnection(src_machine_id, conn);
       // Pre-post Receive issue before connect

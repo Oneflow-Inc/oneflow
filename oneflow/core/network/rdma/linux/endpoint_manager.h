@@ -27,7 +27,7 @@ class EndpointManager {
 
   RdmaMemory* NewNetworkMemory();
 
-  int64_t WaitForConnection(Connection* conn, Request* receive_request);
+  int64_t WaitForConnection(Connection* conn);
 
   Request* PollRecvQueue(NetworkResult* result);
   Request* PollSendQueue(NetworkResult* result);

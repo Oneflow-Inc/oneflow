@@ -144,8 +144,7 @@ RdmaMemory* EndpointManager::NewNetworkMemory() {
 }
 
 // XXX(shiyuan)
-int64_t EndpointManager::WaitForConnection(Connection* conn,
-                                           Request* receive_request) {
+int64_t EndpointManager::WaitForConnection(Connection* conn) {
   int64_t peer_machine_id;
   ULONG size = sizeof(peer_machine_id);
 
@@ -165,8 +164,6 @@ int64_t EndpointManager::WaitForConnection(Connection* conn,
   // CHECK(!FAILED(hr)) << "Failed to get private data. hr = " << hr << "\n";
 
   conn->set_connector(connector);
-  conn->PostRecvRequest(*receive_request);
-  conn->AcceptConnect();
 
   return peer_machine_id;
 }

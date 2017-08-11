@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
       Sleep(1000);
 #else
       sleep(1);
-#endif;
+#endif
       printf("Poll time: %d, false\n", k++);
     }
     printf("Poll time: %d, true \n", k++);
