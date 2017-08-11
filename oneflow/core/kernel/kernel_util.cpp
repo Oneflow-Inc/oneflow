@@ -192,11 +192,13 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
 
   static void FillWithSnapshot(const KernelCtx& ctx, int32_t part_id,
                                int32_t part_num, const Snapshot* snapshot,
-                               Blob* blob, const std::string& lbn) {
+                               Blob* blob, const std::string& lbn,
+                               int32_t out_num, int64_t other_num) {
     int64_t blob_size = blob->shape().elem_cnt() * sizeof(FloatingPointType);
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
       std::unique_ptr<PersistentInStream> in_stream =
-          snapshot->GetInStreamByPardId(lbn, part_id, part_num, blob_size);
+          snapshot->GetInStreamByPardId(lbn, part_id, part_num, out_num,
+                                        other_num);
       in_stream->Read(blob->mut_dptr<char>(), blob_size);
     });
   }

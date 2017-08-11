@@ -125,9 +125,11 @@ class KernelUtil final {
   }
 
   // fill blob with snapshot
+  //
   static void FillWithSnapshot(const KernelCtx& ctx, int32_t part_id,
                                int32_t part_num, const Snapshot* snapshot,
-                               Blob* blob, const std::string& lbn);
+                               Blob* blob, const std::string& lbn,
+                               int32_t out_num, int64_t other_num);
 };
 
 }  // namespace oneflow

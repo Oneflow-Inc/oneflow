@@ -19,7 +19,7 @@ class Snapshot final {
                                                   size_t begin_pos) const;
   std::unique_ptr<PersistentInStream> GetInStreamByPardId(
       const std::string& key, int32_t part_id, int32_t part_num,
-      int64_t blob_size) const;
+      int32_t out_num, int64_t other_num) const;
   std::unique_ptr<PersistentOutStream> GetOutStream(const std::string& key,
                                                     int32_t part_id,
                                                     int32_t part_num);
