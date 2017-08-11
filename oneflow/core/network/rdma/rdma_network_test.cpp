@@ -6,6 +6,9 @@
 
 #include <time.h>
 #include <iostream>
+#ifdef WIN32
+#include <Windows.h>
+#endif
 
 #define BUFFER_SIZE 50
 
