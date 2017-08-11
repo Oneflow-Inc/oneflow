@@ -1,7 +1,10 @@
 # main cpp
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/compiler.cpp)
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/runtime.cpp)
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/distributed_runtime/cluster_node.cpp)
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/distributed_runtime/cluster_client.cpp)
 
+# source_group
 if(WIN32)
   set(oneflow_platform "windows")
   list(APPEND oneflow_platform_excludes "linux")
@@ -44,7 +47,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.proto")
     list(APPEND of_all_proto ${oneflow_single_file})
-    list(APPEND of_all_obj_cc ${oneflow_single_file})   # include the proto file in the project
+    #list(APPEND of_all_obj_cc ${oneflow_single_file})   # include the proto file in the project
   endif()
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cpp")
@@ -98,10 +101,6 @@ foreach(cc ${of_main_cc})
 endforeach()
 
 # build test
-foreach(cc ${of_all_test_cc})
-  get_filename_component(test_name ${cc} NAME_WE)
-  string(CONCAT test_exe_name ${test_name} exe)
-  cuda_add_executable(${test_exe_name} ${cc})
-  target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
-  add_test(NAME ${test_name} COMMAND ${test_exe_name})
-endforeach()
+cuda_add_executable(oneflow_testexe ${of_all_test_cc})
+target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs})
+add_test(NAME oneflow_test COMMAND oneflow_testexe)

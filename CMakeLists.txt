@@ -39,7 +39,7 @@ if (WIN32)
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /D_ITERATOR_DEBUG_LEVEL=0")
 else()
   list(APPEND CUDA_NVCC_FLAGS "-std=c++11 -w -Wno-deprecated-gpu-targets")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wno-sign-compare")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wno-sign-compare -O0")
 endif()
 
 if (ONEFLOW_USE_RDMA)

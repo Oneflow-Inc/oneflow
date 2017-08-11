@@ -12,14 +12,14 @@ class MdUpdtTaskGraph final : public TaskGraph {
   ~MdUpdtTaskGraph() = default;
 
   MdUpdtTaskGraph(const std::string& name, CompTaskNode* fw_task,
-                  CompTaskNode* diff_acc_task);
+                  CompTaskNode* diff_acc_task, uint32_t random_seed);
 
   CompTaskNode* fw_task() const { return fw_task_; }
   CompTaskNode* diff_acc_task() const { return diff_acc_task_; }
   const char* TypeName() const override { return "MdUpdtTaskGraph"; }
 
  private:
-  void BuildTaskGraph();
+  void BuildTaskGraph(uint32_t random_seed);
 
   CompTaskNode* fw_task_;
   CompTaskNode* diff_acc_task_;

@@ -53,10 +53,10 @@ std::shared_ptr<RegstDesc> TaskNode::GetProducedRegstDesc(
   }
 }
 
-std::shared_ptr<RegstDesc> TaskNode::GetSubscribedRegstDesc(
+std::shared_ptr<RegstDesc> TaskNode::GetConsumedRegstDesc(
     const std::string& regst_desc_name) const {
-  auto it = subscribed_regst_descs_.find(regst_desc_name);
-  if (it == subscribed_regst_descs_.end()) {
+  auto it = consumed_regst_descs_.find(regst_desc_name);
+  if (it == consumed_regst_descs_.end()) {
     return nullptr;
   } else {
     return it->second.lock();
@@ -124,13 +124,15 @@ std::shared_ptr<RegstDesc> TaskNode::NewProducedRegstDesc(
   return regst_desc;
 }
 
-void TaskNode::SubscribeRegstDesc(const std::string& regst_desc_name,
-                                  std::shared_ptr<RegstDesc> regst_desc) {
-  CHECK(subscribed_regst_descs_.emplace(regst_desc_name, regst_desc).second);
-  regst_desc->AddSubscriber(this);
+void TaskNode::ConsumeRegstDesc(const std::string& regst_desc_name,
+                                std::shared_ptr<RegstDesc> regst_desc) {
+  CHECK(consumed_regst_descs_.emplace(regst_desc_name, regst_desc).second);
+  regst_desc->AddConsumer(this);
 }
 
-void TaskNode::ToProto(TaskProto* ret) const {
+void TaskNode::ToProto(
+    TaskProto* ret,
+    std::function<int64_t(const ChainNode*)> MeaninglessTaskCnt4Chain) const {
   ret->set_id(task_id_);
   ret->set_type(task_type());
   ret->set_machine_id(stage_node_->machine_id());
@@ -144,10 +146,10 @@ void TaskNode::ToProto(TaskProto* ret) const {
               ->insert({pair.first, regst_desc_proto})
               .second);
   }
-  for (const auto& pair : subscribed_regst_descs_) {
+  for (const auto& pair : consumed_regst_descs_) {
     auto regst_desc = pair.second.lock();
     if (regst_desc) {
-      CHECK(ret->mutable_subscribed_regst_desc_id()
+      CHECK(ret->mutable_consumed_regst_desc_id()
                 ->insert({pair.first, regst_desc->regst_desc_id()})
                 .second);
     }

@@ -5,27 +5,20 @@
 
 namespace oneflow {
 
-class CpuStream final {
+class CpuStream {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuStream);
   CpuStream() = default;
-  ~CpuStream() = default;
+  virtual ~CpuStream() = default;
 
-  void SendWork(std::function<void()> work) {
-    CHECK_EQ(work_channel_.Send(work), 0);
-  }
+  virtual void SendWork(std::function<void()> work) = 0;
 
   //  0: success
   // -1: fail
-  int ReceiveWork(std::function<void()>* work) {
-    return work_channel_.Receive(work);
-  }
+  virtual int ReceiveWork(std::function<void()>* work) = 0;
 
-  void CloseSendEnd() { work_channel_.CloseSendEnd(); }
-  void CloseReceiveEnd() { work_channel_.CloseReceiveEnd(); }
-
- private:
-  Channel<std::function<void()>> work_channel_;
+  virtual void CloseSendEnd() = 0;
+  virtual void CloseReceiveEnd() = 0;
 };
 
 }  // namespace oneflow

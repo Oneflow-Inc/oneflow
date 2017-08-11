@@ -9,12 +9,12 @@ namespace oneflow {
 class CpuThread final : public Thread {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuThread);
-  CpuThread();
+  CpuThread(int64_t thrd_loc_id);
   ~CpuThread();
 
  private:
-  std::thread cpu_device_;
-  CpuStream cpu_stream_;
+  std::unique_ptr<std::thread> cpu_device_;
+  std::unique_ptr<CpuStream> cpu_stream_;
 };
 
 }  // namespace oneflow

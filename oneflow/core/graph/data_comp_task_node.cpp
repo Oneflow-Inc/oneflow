@@ -31,6 +31,11 @@ void DataCompTaskNode::FwInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
         chain_node()->parallel_desc()->policy(), parallel_id(),
         chain_node()->parallel_desc()->parallel_num());
   });
+  if (IsLossNode()) {
+    auto out_regst = GetRelatedRegst(SoleOutEdge());
+    auto in_regst = GetRelatedRegst(SoleInEdge());
+    out_regst->CopyShapeFrom(in_regst.get());
+  }
 }
 
 void DataCompTaskNode::FwBuildFromUserOps(
@@ -64,7 +69,7 @@ void DataCompTaskNode::FwSetExecNodeFromInRegst(
     const Lbn2NodeBnMap& extern_in_lbn2consumer) {
   if (extern_in_lbn2consumer.empty()) { return; }
   std::shared_ptr<RegstDesc> in_regst = GetRelatedRegst(SoleInEdge());
-  SubscribeRegstDesc("in", in_regst);
+  ConsumeRegstDesc("in", in_regst);
   for (const auto& pair : extern_in_lbn2consumer) {
     ExecNode* node = pair.second.first;
     const std::string& ibn = pair.second.second;
@@ -125,8 +130,8 @@ void DataCompTaskNode::FwEnrollLbn2ModelAndTmpRegsts() {
   auto data_tmp_regst = GetProducedRegstDesc("data_tmp");
   auto model_tmp_regst = GetProducedRegstDesc("model_tmp");
   auto model_regst = GetProducedRegstDesc("model");
-  SubscribeRegstDesc("model_tmp", model_tmp_regst);
-  SubscribeRegstDesc("model", model_regst);
+  ConsumeRegstDesc("model_tmp", model_tmp_regst);
+  ConsumeRegstDesc("model", model_regst);
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
     for (const std::string& dtbn : node->op()->data_tmp_bns()) {
       const std::string& lbn = node->op()->Lbn4BnInOp(dtbn);
@@ -156,14 +161,14 @@ void DataCompTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   NewProducedRegstDesc("model_diff");
   NewProducedRegstDesc("activation_diff");
   // Subscribe
-  SubscribeRegstDesc("activation",
-                     GetFwNode()->GetProducedRegstDesc("activation"));
-  SubscribeRegstDesc("data_tmp", GetFwNode()->GetProducedRegstDesc("data_tmp"));
-  SubscribeRegstDesc("model", GetFwNode()->GetSubscribedRegstDesc("model"));
-  SubscribeRegstDesc("model_tmp",
-                     GetFwNode()->GetSubscribedRegstDesc("model_tmp"));
-  SubscribeRegstDesc("in", GetFwNode()->GetSubscribedRegstDesc("in"));
-  SubscribeRegstDesc("out_diff", GetRelatedRegst(SoleInEdge()));
+  ConsumeRegstDesc("activation",
+                   GetFwNode()->GetProducedRegstDesc("activation"));
+  ConsumeRegstDesc("data_tmp", GetFwNode()->GetProducedRegstDesc("data_tmp"));
+  ConsumeRegstDesc("model", GetFwNode()->GetConsumedRegstDesc("model"));
+  ConsumeRegstDesc("model_tmp", GetFwNode()->GetConsumedRegstDesc("model_tmp"));
+  ConsumeRegstDesc("in", GetFwNode()->GetConsumedRegstDesc("in"));
+  ConsumeRegstDesc("out_diff", GetRelatedRegst(SoleInEdge()));
+  ConsumeRegstDesc("out", GetFwNode()->GetProducedRegstDesc("out"));
   // Enroll Lbn
   BpEnrollLbn2ProducedRegst();
 }
@@ -176,7 +181,7 @@ void DataCompTaskNode::BpInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
   // model_diff_regst
   if (auto md_diff_regst = GetProducedRegstDesc("model_diff")) {
     md_diff_regst->CopyShapeFrom(
-        GetFwNode()->GetSubscribedRegstDesc("model").get());
+        GetFwNode()->GetConsumedRegstDesc("model").get());
   }
   // activation_diff_regst
   if (auto acti_diff_regst = GetProducedRegstDesc("activation_diff")) {
@@ -227,6 +232,7 @@ void DataCompTaskNode::BpEnrollLbn2ActivationDiffRegst() {
 
 void DataCompTaskNode::BpSetExecNodeFromOutDiffRegst() {
   auto out_diff_regst = GetRelatedRegst(SoleInEdge());
+  auto out_regst = GetFwNode()->GetProducedRegstDesc("out");
   mut_exec_gph().ForEachNode([&](ExecNode* bp_node) {
     std::unordered_set<std::string> found_bns;
     for (ExecEdge* edge : bp_node->in_edges()) {
@@ -235,6 +241,7 @@ void DataCompTaskNode::BpSetExecNodeFromOutDiffRegst() {
     for (const std::string& odbn : bp_node->op()->output_diff_bns()) {
       if (found_bns.find(odbn) != found_bns.end()) { continue; }
       bp_node->BindBnInOpAndRegst(odbn, out_diff_regst);
+      bp_node->BindBnInOpAndRegst(GenUnDiffBn(odbn), out_regst);
     }
   });
 }
@@ -261,6 +268,7 @@ void DataCompTaskNode::BpEnrollLbn2ModelDiffRegst() {
   auto data_tmp_regst = GetFwNode()->GetProducedRegstDesc("data_tmp");
   auto model_tmp_regst = GetFwNode()->GetProducedRegstDesc("model_tmp");
   auto model_diff_regst = GetProducedRegstDesc("model_diff");
+  auto model_regst = GetConsumedRegstDesc("model");
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
     for (const std::string& dtbn : node->op()->data_tmp_bns()) {
       node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
@@ -272,6 +280,9 @@ void DataCompTaskNode::BpEnrollLbn2ModelDiffRegst() {
       const std::string& lbn = node->op()->Lbn4BnInOp(mdbn);
       model_diff_regst->EnrollLbn(lbn);
       node->BindBnInOpAndRegst(mdbn, model_diff_regst);
+    }
+    for (const std::string& mbn : node->op()->model_bns()) {
+      node->BindBnInOpAndRegst(mbn, model_regst);
     }
   });
 }

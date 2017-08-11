@@ -21,7 +21,7 @@ void MdSaveTaskGraph::BuildTaskGraph() {
   faker_pr_conf.mutable_device_set()->add_device_name(
       update_task_->device_name());
   faker_chain->mut_parallel_desc().reset(new ParallelDesc(faker_pr_conf));
-  faker_chain->mut_output_lbns() = {kBaledBlobName};
+  faker_chain->mut_output_lbns() = {kPackedBlobName};
   // save
   ChainNode* save_chain = chain_gph->NewNode();
   std::string machine_name =
@@ -31,7 +31,7 @@ void MdSaveTaskGraph::BuildTaskGraph() {
   save_pr_conf.mutable_device_set()->add_device_name(machine_name
                                                      + ":persistence");
   save_chain->mut_parallel_desc().reset(new ParallelDesc(save_pr_conf));
-  save_chain->mut_input_lbns() = {kBaledBlobName};
+  save_chain->mut_input_lbns() = {kPackedBlobName};
   //
   Connect(faker_chain, chain_gph->NewEdge(), save_chain);
   chain_gph->UpdateSourceAndSink();

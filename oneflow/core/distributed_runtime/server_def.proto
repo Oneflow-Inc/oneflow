@@ -1,0 +1,22 @@
+syntax = "proto3";
+package oneflow;
+
+message NodeAddress {
+  string addr = 1;  // domain name or ip
+  string port = 2;
+}
+
+message ClusterNode {
+  NodeAddress ctrl_plane_addr = 1;
+  NodeAddress data_plane_addr = 2;
+  string node_name = 3;
+}
+
+message ClusterDef {
+  repeated ClusterNode cluster_node = 1;
+}
+
+message ServerDef {
+  ClusterDef cluster_def = 1;
+  string this_node_name = 2;
+}

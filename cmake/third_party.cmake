@@ -9,10 +9,12 @@ include(glog)
 include(gflags)
 include(grpc)
 include(tensorflow)
+include(cub)
 
 find_package(CUDA REQUIRED)
 find_package(CuDNN REQUIRED)
 
+set(BLA_VENDOR "Intel10_64lp_seq")
 find_package(BLAS REQUIRED)
 message(STATUS "Blas Lib: " ${BLAS_LIBRARIES})
 
@@ -23,6 +25,7 @@ set(oneflow_third_party_libs
     ${GLOG_STATIC_LIBRARIES}
     ${GFLAGS_STATIC_LIBRARIES}
     ${GOOGLETEST_STATIC_LIBRARIES}
+    ${GOOGLEMOCK_STATIC_LIBRARIES}
     ${PROTOBUF_STATIC_LIBRARIES}
     ${GRPC_STATIC_LIBRARIES}
     ${gif_STATIC_LIBRARIES}
@@ -39,6 +42,7 @@ set(oneflow_third_party_libs
 if(WIN32)
   # static gflags lib requires "PathMatchSpecA" defined in "ShLwApi.Lib"
   list(APPEND oneflow_third_party_libs "ShLwApi.Lib")
+  list(APPEND oneflow_third_party_libs "Ws2_32.lib")
 endif()
 
 set(oneflow_third_party_dependencies
@@ -50,12 +54,13 @@ set(oneflow_third_party_dependencies
   glog_copy_libs_to_destination
   googletest_copy_headers_to_destination
   googletest_copy_libs_to_destination
+  googlemock_copy_headers_to_destination
+  googlemock_copy_libs_to_destination
   protobuf_copy_headers_to_destination
   protobuf_copy_libs_to_destination
   protobuf_copy_binary_to_destination
   grpc_copy_headers_to_destination
   grpc_copy_libs_to_destination
-  grpc_copy_binary_to_destination
   tensorflow_copy_headers_to_destination
   tensorflow_copy_libs_to_destination
   gif_copy_headers_to_destination
@@ -71,6 +76,7 @@ set(oneflow_third_party_dependencies
   jsoncpp_copy_headers_to_destination
   jsoncpp_copy_libs_to_destination
   eigen_copy_headers_dir
+  cub_copy_headers_to_destination
 )
 
 include_directories(
@@ -78,6 +84,7 @@ include_directories(
     ${GFLAGS_INCLUDE_DIR}
     ${GLOG_INCLUDE_DIR}
     ${GOOGLETEST_INCLUDE_DIR}
+    ${GOOGLEMOCK_INCLUDE_DIR}
     ${PROTOBUF_INCLUDE_DIR}
     ${GRPC_INCLUDE_DIR}
     ${TENSORFLOW_INCLUDE_DIR}
@@ -89,6 +96,7 @@ include_directories(
     ${JSONCPP_INCLUDE_DIR}
     ${EIGEN_INCLUDE_DIRS}
     ${CUDNN_INCLUDE_DIRS}
+    ${CUB_INCLUDE_DIR}
 )
 if (ONEFLOW_USE_RDMA)
   if(WIN32)

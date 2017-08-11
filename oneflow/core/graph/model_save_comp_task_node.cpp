@@ -12,7 +12,7 @@ void MdSaveCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
     BindProducedRegstAndOutEdge(updt_task->GetProducedRegstDesc("model"),
                                 SoleOutEdge());
   } else if (out_edges().empty()) {
-    SubscribeRegstDesc("model", GetRelatedRegst(SoleInEdge()));
+    ConsumeRegstDesc("model", GetRelatedRegst(SoleInEdge()));
 
     OperatorConf op_conf;
     op_conf.set_name("model_save_op" + updt_task->node_id_str());
@@ -22,7 +22,7 @@ void MdSaveCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
     });
 
     ExecNode* exec_node = mut_exec_gph().NewNode();
-    exec_node->mut_op() = OpMgr::Singleton()->ConstructOp(op_conf);
+    exec_node->mut_op() = OpMgr::Singleton()->AddOp(op_conf);
     for (const std::string& ibn : exec_node->op()->input_bns()) {
       exec_node->BindBnInOpAndRegst(ibn, GetRelatedRegst(SoleInEdge()));
     }

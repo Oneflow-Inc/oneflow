@@ -24,12 +24,12 @@ void MdDiffAccCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   const std::string ibn = "model_diff";
   if (in_edges().empty()) {
     exec_node->BindBnInOpAndRegst(ibn, model_diff_regst);
-    SubscribeRegstDesc(ibn, model_diff_regst);
+    ConsumeRegstDesc(ibn, model_diff_regst);
   } else {
     exec_node->BindBnInOpAndRegst(ibn, GetRelatedRegst(SoleInEdge()));
-    SubscribeRegstDesc(ibn, GetRelatedRegst(SoleInEdge()));
+    ConsumeRegstDesc(ibn, GetRelatedRegst(SoleInEdge()));
   }
-  model_diff_acc_regst->CopyLbnFrom(GetSubscribedRegstDesc("model_diff").get());
+  model_diff_acc_regst->CopyLbnFrom(GetConsumedRegstDesc("model_diff").get());
   exec_node->BindBnInOpAndRegst(exec_node->op()->SoleObn(),
                                 model_diff_acc_regst);
   mut_exec_gph().UpdateSourceAndSink();
@@ -38,7 +38,7 @@ void MdDiffAccCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
 void MdDiffAccCompTaskNode::InferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
   CHECK(IsFwNode());
   if (!chain_node()->op_vec().empty()) {
-    std::shared_ptr<RegstDesc> in_regst = GetSubscribedRegstDesc("model_diff");
+    std::shared_ptr<RegstDesc> in_regst = GetConsumedRegstDesc("model_diff");
     std::shared_ptr<RegstDesc> out_regst =
         GetProducedRegstDesc("model_diff_acc");
     out_regst->CopyShapeFrom(in_regst.get());

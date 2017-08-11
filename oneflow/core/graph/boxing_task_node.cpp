@@ -41,7 +41,7 @@ void BoxingTaskNode::FwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
 void BoxingTaskNode::EnrollAllRegstAndBindRelatedEdge() {
   for (TaskEdge* edge : in_edges()) {
     std::string name = "boxing_in_" + edge->edge_id_str();
-    SubscribeRegstDesc(name, GetRelatedRegst(edge));
+    ConsumeRegstDesc(name, GetRelatedRegst(edge));
   }
   for (TaskEdge* edge : out_edges()) {
     std::string name = "boxing_out_" + edge->edge_id_str();
@@ -133,11 +133,11 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
     box_conf->set_in_num(sorted_in_edges.size());
     box_conf->set_out_num(sorted_out_edges.size());
     CompleteBoxOp(box_conf);
-    return OpMgr::Singleton()->ConstructOp(op_conf);
+    return OpMgr::Singleton()->AddOp(op_conf);
   };
   // lbns
   std::vector<std::string> lbns = FindLbnsBetween(in_chain, out_chain);
-  if (lbns.at(0) == kBaledBlobName) {
+  if (lbns.at(0) == kPackedBlobName) {
     CHECK_EQ(lbns.size(), 1);
     lbns.clear();
     auto in_regst_0 = GetRelatedRegst(sorted_in_edges.at(0));

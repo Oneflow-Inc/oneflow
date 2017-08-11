@@ -19,7 +19,7 @@ void MdDiffAccTaskGraph::BuildTaskGraph(const ChainNode* data_chain) {
   OperatorConf op_conf;
   op_conf.set_name("model_diff_acc_" + NewUniqueId());
   op_conf.mutable_model_diff_acc_conf();
-  auto model_diff_acc_op = OpMgr::Singleton()->ConstructOp(op_conf);
+  auto model_diff_acc_op = OpMgr::Singleton()->AddOp(op_conf);
   // ModelDiffAccChain
   auto chain_gph = of_make_unique<ChainGraph>();
   ChainNode* diff_acc_chain = chain_gph->NewNode();
@@ -35,8 +35,8 @@ void MdDiffAccTaskGraph::BuildTaskGraph(const ChainNode* data_chain) {
     auto parallel_desc4faker = new ParallelDesc(*(data_chain->parallel_desc()));
     parallel_desc4faker->mut_policy() = kFakerMdUpdt;
     faker_chain->mut_parallel_desc().reset(parallel_desc4faker);
-    faker_chain->mut_output_lbns() = {kBaledBlobName};
-    diff_acc_chain->mut_input_lbns() = {kBaledBlobName};
+    faker_chain->mut_output_lbns() = {kPackedBlobName};
+    diff_acc_chain->mut_input_lbns() = {kPackedBlobName};
     Connect(faker_chain, chain_gph->NewEdge(), diff_acc_chain);
   }
   //

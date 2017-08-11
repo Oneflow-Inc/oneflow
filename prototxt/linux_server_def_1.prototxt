@@ -1,0 +1,25 @@
+cluster_def {
+  cluster_node {
+    ctrl_plane_addr {
+      addr : "11.11.1.11"
+      port : "5551"
+    }
+    data_plane_addr {
+      addr : "11.11.1.11"
+      port : "5552"
+    }
+    node_name: "centos-0"
+  }
+  cluster_node {
+    ctrl_plane_addr {
+      addr : "11.11.1.13"
+      port : "5551"
+    }
+    data_plane_addr {
+      addr : "11.11.1.13"
+      port : "5552"
+    }
+    node_name: "centos-1"
+  }
+}
+this_node_name : "centos-0"

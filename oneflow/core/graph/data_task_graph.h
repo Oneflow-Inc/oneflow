@@ -12,7 +12,7 @@ class DataTaskGraph final : public TaskGraph {
   ~DataTaskGraph() = default;
 
   DataTaskGraph(const std::string& name, const DLNetConf& dl_net_conf,
-                const Strategy& strategy_conf, bool need_bp);
+                const Placement& placement, bool need_bp);
 
   const char* TypeName() const override { return "DataTaskGraph"; }
 
