@@ -18,59 +18,6 @@ sockaddr_in GetAddress(const char* ip, int32_t port) {
   return addr;
 }
 
-void TransQueuePairState(
-    const Connector& connector, ibv_qp* queue_pair) {
-  ibv_qp_attr qp_attr;
-  memset(&qp_attr, 0, sizeof(ibv_qp_attr));
-
-  qp_attr.qp_state = IBV_QPS_INIT;
-  qp_attr.pkey_index = 0;
-  qp_attr.port_num = 1;
-  qp_attr.qp_access_flags =
-      IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ;
-
-  CHECK_EQ(ibv_modify_qp(queue_pair, &qp_attr,
-                         IBV_QP_STATE | IBV_QP_PKEY_INDEX | IBV_QP_PORT |
-                         IBV_QP_ACCESS_FLAGS),
-           0);
-
-  qp_attr.qp_state = IBV_QPS_RTR;
-  qp_attr.path_mtu = connector.active_mtu;
-  qp_attr.dest_qp_num = connector.peer_qpn;
-  qp_attr.rq_psn = connector.peer_psn;
-  qp_attr.max_dest_rd_atomic = 1;
-  qp_attr.min_rnr_timer = 12;
-  qp_attr.ah_attr.is_global = 1;
-  qp_attr.ah_attr.grh.dgid.global.subnet_prefix = connector.peer_snp;
-  qp_attr.ah_attr.grh.dgid.global.interface_id = connector.peer_iid;
-  qp_attr.ah_attr.grh.flow_label = 0;
-  qp_attr.ah_attr.grh.hop_limit = 255;
-  qp_attr.ah_attr.dlid = connector.peer_lid;
-  qp_attr.ah_attr.sl = 0;
-  qp_attr.ah_attr.src_path_bits = 0;
-  qp_attr.ah_attr.port_num = 1;
-
-  CHECK_EQ(ibv_modify_qp(queue_pair, &qp_attr,
-                         IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU |
-                         IBV_QP_DEST_QPN | IBV_QP_RQ_PSN |
-                         IBV_QP_MAX_DEST_RD_ATOMIC | IBV_QP_MIN_RNR_TIMER),
-      0);
-
-  memset(&qp_attr, 0, sizeof(ibv_qp_attr));
-  qp_attr.qp_state = IBV_QPS_RTS;
-  qp_attr.sq_psn = connector.my_psn;
-  qp_attr.timeout = 14;
-  qp_attr.retry_cnt = 7;
-  qp_attr.rnr_retry = 7;
-  qp_attr.max_rd_atomic = 1;
-
-  CHECK_EQ(ibv_modify_qp(queue_pair, &qp_attr,
-                         IBV_QP_STATE | IBV_QP_TIMEOUT | IBV_QP_RETRY_CNT |
-                         IBV_QP_RNR_RETRY | IBV_QP_SQ_PSN |
-                         IBV_QP_MAX_QP_RD_ATOMIC),
-           0);
-}
-
 }  // namespace
 
 Connection::Connection(int64_t my_machine_id)
@@ -142,12 +89,64 @@ bool Connection::TryConnectTo(const char* peer_ip, int32_t peer_port) {
   return true;
 }
 
+void TransQueuePairState() {
+  ibv_qp_attr qp_attr;
+  memset(&qp_attr, 0, sizeof(ibv_qp_attr));
+
+  qp_attr.qp_state = IBV_QPS_INIT;
+  qp_attr.pkey_index = 0;
+  qp_attr.port_num = 1;
+  qp_attr.qp_access_flags =
+      IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ;
+
+  CHECK_EQ(ibv_modify_qp(queue_pair_, &qp_attr,
+                         IBV_QP_STATE | IBV_QP_PKEY_INDEX | IBV_QP_PORT |
+                         IBV_QP_ACCESS_FLAGS),
+           0);
+
+  qp_attr.qp_state = IBV_QPS_RTR;
+  qp_attr.path_mtu = connector_->active_mtu;
+  qp_attr.dest_qp_num = connector_->peer_qpn;
+  qp_attr.rq_psn = connector_->peer_psn;
+  qp_attr.max_dest_rd_atomic = 1;
+  qp_attr.min_rnr_timer = 12;
+  qp_attr.ah_attr.is_global = 1;
+  qp_attr.ah_attr.grh.dgid.global.subnet_prefix = connector_->peer_snp;
+  qp_attr.ah_attr.grh.dgid.global.interface_id = connector_->peer_iid;
+  qp_attr.ah_attr.grh.flow_label = 0;
+  qp_attr.ah_attr.grh.hop_limit = 255;
+  qp_attr.ah_attr.dlid = connector_->peer_lid;
+  qp_attr.ah_attr.sl = 0;
+  qp_attr.ah_attr.src_path_bits = 0;
+  qp_attr.ah_attr.port_num = 1;
+
+  CHECK_EQ(ibv_modify_qp(queue_pair_, &qp_attr,
+                         IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU |
+                         IBV_QP_DEST_QPN | IBV_QP_RQ_PSN |
+                         IBV_QP_MAX_DEST_RD_ATOMIC | IBV_QP_MIN_RNR_TIMER),
+      0);
+
+  memset(&qp_attr, 0, sizeof(ibv_qp_attr));
+  qp_attr.qp_state = IBV_QPS_RTS;
+  qp_attr.sq_psn = connector_->my_psn;
+  qp_attr.timeout = 14;
+  qp_attr.retry_cnt = 7;
+  qp_attr.rnr_retry = 7;
+  qp_attr.max_rd_atomic = 1;
+
+  CHECK_EQ(ibv_modify_qp(queue_pair_, &qp_attr,
+                         IBV_QP_STATE | IBV_QP_TIMEOUT | IBV_QP_RETRY_CNT |
+                         IBV_QP_RNR_RETRY | IBV_QP_SQ_PSN |
+                         IBV_QP_MAX_QP_RD_ATOMIC),
+           0);
+}
+
 void Connection::CompleteConnection() {
-  TransQueuePairState(*connector_, queue_pair_);
+  TransQueuePairState();
 }
 
 void Connection::AcceptConnect() {
-  TransQueuePairState(*connector_, queue_pair_);
+  TransQueuePairState();
 }
 
 void Connection::Destroy() {
