@@ -14,6 +14,7 @@
 #include "oneflow/core/distributed_runtime/rpc/grpc_remote_master.h"
 #include "oneflow/core/distributed_runtime/rpc/grpc_remote_worker.h"
 
+DEFINE_string(server_addr, "", "");
 DEFINE_string(job_conf_filepath, "", "");
 DEFINE_string(plan_filepath, "", "");
 
@@ -26,6 +27,8 @@ int main(int argc, char** argv) {
   std::string dlnet_conf_filepath = job_conf.train_dlnet_conf_filepath();
   std::string resource_filepath = job_conf.resource_filepath();
   std::string placement_filepath = job_conf.placement_filepath();
+
+  std::string master_address = FLAGS_server_addr;
 
   DLNetConf dlnet_conf;
   ParseProtoFromTextFile(dlnet_conf_filepath, &dlnet_conf);
@@ -40,7 +43,7 @@ int main(int argc, char** argv) {
   ::tensorflow::Status s;
 
   // std::string master_address = "11.11.1.109:5551";
-  std::string master_address = "11.11.1.11:5551";
+  // std::string master_address = "11.11.1.11:5551";
   std::shared_ptr<::grpc::Channel> channel = ::grpc::CreateChannel(
       master_address, ::grpc::InsecureChannelCredentials());
 
@@ -73,7 +76,8 @@ int main(int argc, char** argv) {
   // PrintProtoToTextFile(plan, "tmp_plan");
 
   // std::string worker_address = "11.11.1.109:5551";
-  std::string worker_address = "11.11.1.11:5551";
+  // std::string worker_address = "11.11.1.11:5551";
+  std::string worker_address = FLAGS_server_addr;
   std::shared_ptr<::grpc::Channel> worker_channel = ::grpc::CreateChannel(
       worker_address, ::grpc::InsecureChannelCredentials());
 
