@@ -14,15 +14,19 @@ class MdDiffAccActor final : public CompActor {
   void Init(const TaskProto&, const ThreadCtx&) override;
 
  private:
-  int HandleMdDiffAcc(const ActorMsg&);
-  int HandleMdDiffAccWhenNoReadableRegstMsg(const ActorMsg&);
+  int HandlerNormal(const ActorMsg&) override;
+  int HandlerWaitUntilNoReadableRegst(const ActorMsg&) override;
 
-  void TryWardKernelAndSendMsg();
+  bool IsReadReady() override { return !waiting_in_regst_.empty(); }
+  void Act() override;
 
-  std::queue<std::shared_ptr<RegstWarpper>> waiting_in_regst_;
-  const Kernel* clear_kernel_;
+  std::queue<std::shared_ptr<RegstWrapper>> waiting_in_regst_;
+
+  void (*MemsetFunc)(const KernelCtx& ctx, void* dst, const char value,
+                     size_t sz);
+
   CudaStreamHandle cuda_handle_;
-  HashMap<Regst*, int32_t> model_diff_acc_cnt_;
+  int32_t diff_acc_cnt_;
 };
 
 }  // namespace oneflow

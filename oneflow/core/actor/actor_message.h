@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_ACTOR_ACTOR_MESSAGE_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/register/register_warpper.h"
+#include "oneflow/core/register/register_wrapper.h"
 
 namespace oneflow {
 
@@ -10,7 +10,8 @@ enum class ActorCmd {
   kInitializeModel = 0,  // MdUpdt Actor
   kSendInitialModel,     // MdUpdt Actor
   kEORD,                 // End Of Register Desc, All Actor except Source Actor
-  kStart                 // Source Actor
+  kStart,                // Source Actor
+  kStopThread
 };
 
 OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ActorCmd);
@@ -31,32 +32,53 @@ class ActorMsg final {
   // Getters
   int64_t dst_actor_id() const { return dst_actor_id_; }
   ActorMsgType msg_type() const { return msg_type_; }
-  std::shared_ptr<RegstWarpper> regst_warpper() const {
-    CHECK(msg_type_ == ActorMsgType::kRegstMsg);
-    return regst_warpper_;
+  std::shared_ptr<RegstWrapper> regst_wrapper() const {
+    CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
+    return regst_wrapper_;
   }
   ActorCmd actor_cmd() const {
-    CHECK(msg_type_ == ActorMsgType::kCmdMsg);
+    CHECK_EQ(msg_type_, ActorMsgType::kCmdMsg);
     return actor_cmd_;
   }
+
   // Setters
   void set_dst_actor_id(int64_t val) { dst_actor_id_ = val; }
-  void set_regst_warpper(std::shared_ptr<RegstWarpper> val) {
+  void set_regst_wrapper(std::shared_ptr<RegstWrapper> val) {
     msg_type_ = ActorMsgType::kRegstMsg;
-    regst_warpper_ = val;
+    regst_wrapper_ = val;
   }
   void set_actor_cmd(ActorCmd val) {
     msg_type_ = ActorMsgType::kCmdMsg;
     actor_cmd_ = val;
   }
 
+  // Serialize
+  template<typename StreamT>
+  void Serialize(StreamT& out_stream) const {
+    TODO();
+  }
+  template<typename StreamT>
+  void Deserialize(StreamT& in_stream) {
+    TODO();
+  }
+
  private:
   int64_t dst_actor_id_;
   ActorMsgType msg_type_;
 
-  std::shared_ptr<RegstWarpper> regst_warpper_;
+  std::shared_ptr<RegstWrapper> regst_wrapper_;
   ActorCmd actor_cmd_;
 };
+
+template<typename StreamT>
+StreamT& operator<<(StreamT& out_stream, const ActorMsg& msg) {
+  msg.Serialize(out_stream);
+}
+
+template<typename StreamT>
+StreamT& operator>>(StreamT& in_stream, const ActorMsg& msg) {
+  msg.Deserialize(in_stream);
+}
 
 }  // namespace oneflow
 

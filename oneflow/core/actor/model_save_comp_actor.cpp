@@ -9,41 +9,41 @@ void MdSaveCompActor::Init(const TaskProto& task_proto,
   model_regst_desc_id_ = RegstDescId4Name("model");
   CHECK(thread_ctx.cpu_stream);
   mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
-  OF_SET_MSG_HANDLE(&MdSaveCompActor::HandleSaveModel);
+  OF_SET_MSG_HANDLER(&MdSaveCompActor::HandlerNormal);
+  next_snapshot_id_ = 0;
 }
 
-int MdSaveCompActor::HandleSaveModel(const ActorMsg& actor_msg) {
+int MdSaveCompActor::HandlerNormal(const ActorMsg& actor_msg) {
   if (actor_msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK(actor_msg.actor_cmd() == ActorCmd::kEORD);
+    CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kEORD);
     return 1;
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
-    std::shared_ptr<RegstWarpper> regst_warpper = actor_msg.regst_warpper();
-    int64_t model_version_id = regst_warpper->model_version_id();
-    int32_t num_of_batches_in_snapshot =
-        JobDesc::Singleton()->num_of_batches_in_snapshot();
-    CHECK_GT(num_of_batches_in_snapshot, 0);
-    if (model_version_id % num_of_batches_in_snapshot == 0) {
-      int64_t snapshot_id = model_version_id / num_of_batches_in_snapshot;
-      Snapshot* snapshot =
-          SnapshotMgr::Singleton()->GetWriteableSnapshot(snapshot_id);
-      KernelCtx kernel_ctx = GenDefaultKernelCtx();
-      std::tuple<Snapshot*, int64_t> save_ctx =
-          std::make_tuple(snapshot, parallel_id());
-      kernel_ctx.other = &save_ctx;
-      AsyncWardKernel(
-          kernel_ctx,
-          [&](int64_t regst_desc_id) -> std::shared_ptr<RegstWarpper> {
-            CHECK_EQ(regst_desc_id, model_regst_desc_id_);
-            return regst_warpper;
-          });
-    }
-    ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(
-        regst_warpper->producer_actor_id(), regst_warpper->regst_raw_ptr());
-    AsyncDo([msg]() { ActorMsgBus::Singleton()->SendMsg(msg); });
+    regst_wrapper_ = actor_msg.regst_wrapper();
+    VLOG(4) << "model save actor " << actor_id() << " "
+            << "receive readable regst " << regst_wrapper_->regst_raw_ptr()
+            << ", regst_desc_id:" << regst_wrapper_->regst_desc_id();
+    ActUntilFail();
   } else {
     UNEXPECTED_RUN();
   }
   return 0;
+}
+
+void MdSaveCompActor::Act() {
+  Snapshot* snapshot =
+      SnapshotMgr::Singleton()->GetWriteableSnapshot(next_snapshot_id_++);
+  KernelCtx kernel_ctx = GenDefaultKernelCtx();
+  std::tuple<Snapshot*, int64_t, int64_t, ParallelPolicy> save_ctx =
+      std::make_tuple(snapshot, parallel_id(), parallel_num(),
+                      parallel_policy());
+  kernel_ctx.other = &save_ctx;
+  AsyncLaunchKernel(
+      kernel_ctx, [&](int64_t regst_desc_id) -> std::shared_ptr<RegstWrapper> {
+        CHECK_EQ(regst_desc_id, model_regst_desc_id_);
+        return regst_wrapper_;
+      });
+  AsyncSendRegstMsgToProducer(regst_wrapper_);
+  regst_wrapper_.reset();
 }
 
 REGISTER_ACTOR(kMdSaveCompTask, true, MdSaveCompActor);
