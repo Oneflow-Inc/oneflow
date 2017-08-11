@@ -75,6 +75,10 @@ class Actor {
   // Async Do on KernelCtx
   void AsyncLaunchKernel(
       const KernelCtx&,
+      std::function<Blob*(const std::string&, const ExecKernel& ek)>
+          BnInOpAndEk2Blob);
+  void AsyncLaunchKernel(
+      const KernelCtx&,
       std::function<std::shared_ptr<RegstWrapper>(int64_t)> Regst4RegstDescId);
   void AsyncSendReadableRegstMsg(std::function<void(Regst*)> RegstPreProcess,
                                  std::function<bool(int64_t)> IsAllowedActor);

@@ -103,22 +103,32 @@ void Actor::ActUntilFail() {
 
 void Actor::AsyncLaunchKernel(
     const KernelCtx& kernel_ctx,
-    std::function<std::shared_ptr<RegstWrapper>(int64_t)> Regst4RegstDescId) {
+    std::function<Blob*(const std::string&, const ExecKernel& ek)>
+        BnInOpAndEk2Blob) {
   for (const ExecKernel& ek : exec_kernel_vec_) {
-    (ek.kernel->*launch_func_)(
-        kernel_ctx, [&](const std::string& bn_in_op) -> Blob* {
-          auto regst_desc_id_it = ek.bn_in_op2regst_desc_id.find(bn_in_op);
-          if (regst_desc_id_it == ek.bn_in_op2regst_desc_id.end()) {
-            return nullptr;
-          }
-          auto regst = Regst4RegstDescId(regst_desc_id_it->second);
-          const std::string& lbn = ek.kernel->Lbn4BnInOp(bn_in_op);
-          return regst->GetBlobPtrFromLbn(lbn);
-        });
+    (ek.kernel->*launch_func_)(kernel_ctx, [&](const std::string& bn_in_op) {
+      return BnInOpAndEk2Blob(bn_in_op, ek);
+    });
   }
   VLOG(4) << "actor " << actor_id_ << " launch kernel for piece_id "
           << expected_piece_id_;
   expected_piece_id_ += 1;
+}
+
+void Actor::AsyncLaunchKernel(
+    const KernelCtx& kernel_ctx,
+    std::function<std::shared_ptr<RegstWrapper>(int64_t)> Regst4RegstDescId) {
+  AsyncLaunchKernel(
+      kernel_ctx,
+      [&](const std::string& bn_in_op, const ExecKernel& ek) -> Blob* {
+        auto regst_desc_id_it = ek.bn_in_op2regst_desc_id.find(bn_in_op);
+        if (regst_desc_id_it == ek.bn_in_op2regst_desc_id.end()) {
+          return nullptr;
+        }
+        auto regst = Regst4RegstDescId(regst_desc_id_it->second);
+        const std::string& lbn = ek.kernel->Lbn4BnInOp(bn_in_op);
+        return regst->GetBlobPtrFromLbn(lbn);
+      });
 }
 
 void Actor::AsyncSendReadableRegstMsg(
