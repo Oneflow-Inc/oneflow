@@ -11,7 +11,7 @@ void RMSPropMdUpdateKernel<device_type, FloatingPointType>::Forward(
   Blob* mean_square_blob = BnInOp2BlobPtr("mean_square");
   float learning_rate = op()->op_conf().rmsprop_mdupdt_conf().learning_rate();
   float decay_rate = op()->op_conf().rmsprop_mdupdt_conf().decay_rate();
-  float epsilon = op()->op_conf().rmsprop_mdupdt_conf().epsilon();
+  if (*reinterpret_cast<int64_t*>(ctx.other) == 1) { decay_rate = 0.0f; }
   float alpha = learning_rate / JobDesc::Singleton()->batch_size();
   CHECK(std::isfinite(alpha));
 
@@ -26,8 +26,17 @@ void RMSPropMdUpdateKernel<device_type, FloatingPointType>::Forward(
       model_blob->mut_dptr<FloatingPointType>(),
       model_diffs_blob->dptr<FloatingPointType>(),
       mean_square_blob->dptr<FloatingPointType>(),
-      static_cast<FloatingPointType>(epsilon),
       static_cast<FloatingPointType>(alpha));
+}
+
+template<DeviceType device_type, typename FloatingPointType>
+void RMSPropMdUpdateKernel<device_type, FloatingPointType>::InitDataTmpBlobs(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  Blob* mean_square_blob = BnInOp2Blob("mean_square");
+  FloatingPointType* dptr = mean_square_blob->mut_dptr<FloatingPointType>();
+  std::fill(dptr, dptr + mean_square_blob->shape().elem_cnt(),
+            static_cast<FloatingPointType>(0));
 }
 
 template<typename FloatingPointType>
@@ -42,8 +51,8 @@ class RMSPropMdUpdateKernelUtil<DeviceType::kCPU, FloatingPointType> final {
                                const FloatingPointType* model_diff) {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
       for (int64_t i = 0; i < n; ++i) {
-        mean_square[i] = decay_rate * mean_square[i]
-                         + (1 - decay_rate) * model_diff[i] * model_diff[i];
+        mean_square[i] +=
+            (1 - decay_rate) * (model_diff[i] * model_diff[i] - mean_square[i]);
       }
     });
   }
@@ -52,11 +61,10 @@ class RMSPropMdUpdateKernelUtil<DeviceType::kCPU, FloatingPointType> final {
                           FloatingPointType* model,
                           const FloatingPointType* model_diff,
                           const FloatingPointType* mean_square,
-                          const FloatingPointType epsilon,
                           const FloatingPointType alpha) {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
       for (int64_t i = 0; i < n; ++i) {
-        model[i] -= alpha * model_diff[i] / std::sqrt(mean_square[i] + epsilon);
+        model[i] -= alpha * model_diff[i] / std::sqrt(mean_square[i]);
       }
     });
   }
