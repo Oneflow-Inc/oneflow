@@ -57,6 +57,7 @@ class Connection {
   const ibv_qp& queue_pair() { return *queue_pair_; }
 
  private:
+  void TransQueuePairState();
   int64_t my_machine_id_;
   int64_t peer_machine_id_;
 

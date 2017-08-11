@@ -89,7 +89,7 @@ bool Connection::TryConnectTo(const char* peer_ip, int32_t peer_port) {
   return true;
 }
 
-void TransQueuePairState() {
+void Connection::TransQueuePairState() {
   ibv_qp_attr qp_attr;
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));
 
