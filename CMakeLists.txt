@@ -2,6 +2,7 @@
 cmake_minimum_required(VERSION 3.5)
 
 option(BUILD_THIRD_PARTY "Build third party or oneflow" OFF)
+option(ONEFLOW_USE_RDMA  "Use RDMA network" ON)
 
 # Project
 if (BUILD_THIRD_PARTY)
@@ -41,6 +42,12 @@ else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wno-sign-compare -O0")
 endif()
 
+if (ONEFLOW_USE_RDMA)
+  if (UNIX)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -libverbs")
+  endif()
+endif()
+
 set(THIRD_PARTY_DIR "${PROJECT_SOURCE_DIR}/third_party"
   CACHE PATH "Where the third party headers and libs are put")
 
@@ -49,6 +56,7 @@ list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir}/third_party)
 list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir})
 include(util)
 include(proto2cpp)
+include(proto2grpc)
 include(third_party)
 
 if (BUILD_THIRD_PARTY)
