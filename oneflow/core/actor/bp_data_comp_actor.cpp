@@ -16,7 +16,7 @@ void BpDataCompActor::Init(const TaskProto& task_proto,
   mut_num_of_read_empty() =
       3 + (model_regst_desc_id_ != -1) + (model_tmp_regst_desc_id_ != -1)
       + (activation_regst_desc_id_ != -1) + (data_tmp_regst_desc_id_ != -1);
-  set_num_of_remaining_eord(mut_num_of_read_empty());
+  set_num_of_remaining_eord(num_of_read_empty());
   if (thread_ctx.cpu_stream) {
     mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
   } else {
@@ -28,7 +28,7 @@ void BpDataCompActor::Init(const TaskProto& task_proto,
 }
 
 bool BpDataCompActor::IsReadReady() {
-  if (mut_num_of_read_empty()) { return false; }
+  if (num_of_read_empty()) { return false; }
   if (model_regst_desc_id_ != -1) {
     int cur_model_version_id =
         read_regst_.at(out_regst_desc_id_).front()->model_version_id();
@@ -41,7 +41,7 @@ bool BpDataCompActor::IsReadReady() {
     }
     mut_num_of_read_empty() += read_regst_.at(model_regst_desc_id_).empty();
   }
-  return !mut_num_of_read_empty();
+  return !num_of_read_empty();
 }
 
 void BpDataCompActor::AsyncSendMsgToModelAndModelTmpProducer() {
@@ -94,7 +94,7 @@ int BpDataCompActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
            0);
   ActUntilFail();
-  if (mut_num_of_read_empty()) {
+  if (num_of_read_empty()) {
     AsyncSendMsgToModelAndModelTmpProducer();
     AsyncSendEORDMsgForAllProducedRegstDesc();
     OF_SET_MSG_HANDLER(&BpDataCompActor::HandlerZombie);

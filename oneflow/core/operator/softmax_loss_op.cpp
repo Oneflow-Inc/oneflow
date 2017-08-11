@@ -6,7 +6,7 @@ void SoftmaxLossOp::InitFromOpConf(const OperatorConf& op_conf) {
   CHECK(op_conf.has_softmax_loss_conf());
   mut_op_conf() = op_conf;
 
-  EnrollInputBn("in");
+  EnrollInputBn("prediction");
   EnrollInputBn("label", false);
   EnrollDataTmpBn("prob");
   EnrollDataTmpBn("tmp_1D");
@@ -20,7 +20,8 @@ const PbMessage& SoftmaxLossOp::GetSpecialConf() const {
 void SoftmaxLossOp::InferShape4FwBlobs(
     std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
     ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
-  const std::vector<int64_t> in_dim_vec = GetShapePtr4BnInOp("in")->dim_vec();
+  const std::vector<int64_t> in_dim_vec =
+      GetShapePtr4BnInOp("prediction")->dim_vec();
   CHECK_EQ(in_dim_vec.size(), 2);
   CHECK_EQ(*GetShapePtr4BnInOp("label"), Shape({in_dim_vec[0]}));
   *GetShapePtr4BnInOp(SoleObn()) = Shape({1});

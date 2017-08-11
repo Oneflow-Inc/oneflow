@@ -132,6 +132,7 @@ void IpKernelFwAndBp(bool has_bias_term) {
 
 template<DeviceType device_type, typename FloatingPointType>
 void IpKernelFillMdlAndMdlTmp(FillConf* fill_conf) {
+  /*
   using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
   KernelCtx ctx;
   KTCommon::BuildKernelCtx(&ctx);
@@ -148,6 +149,7 @@ void IpKernelFillMdlAndMdlTmp(FillConf* fill_conf) {
   KTCommon::CheckFillResult(*BnInOp2Blob("weight"), *fill_conf);
   KTCommon::CheckFillResult(*BnInOp2Blob("bias"), *fill_conf);
   KTCommon::CheckFillResult(*BnInOp2Blob("bias_multiplier"), *fill_conf);
+  */
 }
 
 }  // namespace
