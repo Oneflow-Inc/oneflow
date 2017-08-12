@@ -41,6 +41,7 @@ void Connection::set_connector(Connector* connector) {
 void Connection::set_queue_pair(ibv_qp* queue_pair) {
   CHECK(!queue_pair_);
   queue_pair_ = queue_pair;
+  connector_->my_qpn = queue_pair_->qp_num;
 }
 
 bool Connection::TryConnectTo(const char* peer_ip, int32_t peer_port) {
@@ -153,7 +154,7 @@ void Connection::Destroy() {
   delete connector_;
   connector_ = nullptr;
   if (queue_pair_ != nullptr) {
-    CHECK_EQ(ibv_destroy_qp(queue_pair_), 0);
+    // CHECK_EQ(ibv_destroy_qp(queue_pair_), 0); TODO(shiyuan)
   }
 }
 
