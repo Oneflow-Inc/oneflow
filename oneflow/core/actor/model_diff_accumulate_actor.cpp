@@ -10,10 +10,11 @@ void MdDiffAccActor::Init(const TaskProto& task_proto,
     MemsetFunc = &KernelUtil<DeviceType::kCPU, float>::Memset;
     mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
   } else {
-    MemsetFunc = &KernelUtil<DeviceType::kGPU, float>::Memset;
-    mut_device_ctx().reset(new CudaDeviceCtx(cuda_handle_.cuda_stream(),
-                                             cuda_handle_.cublas_handle(),
-                                             cuda_handle_.cudnn_handle()));
+    //MemsetFunc = &KernelUtil<DeviceType::kGPU, float>::Memset;
+    //mut_device_ctx().reset(new CudaDeviceCtx(cuda_handle_.cuda_stream(),
+    //                                         cuda_handle_.cublas_handle(),
+    //                                         cuda_handle_.cudnn_handle()));
+    TODO();
   }
   set_num_of_remaining_eord(1);
   mut_num_of_read_empty() = 1;

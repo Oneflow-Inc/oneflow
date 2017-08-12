@@ -38,11 +38,11 @@ foreach(oneflow_single_file ${oneflow_all_src})
   endif()
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cuh$")
-    list(APPEND of_all_obj_cc ${oneflow_single_file})
+    # list(APPEND of_all_obj_cc ${oneflow_single_file})
   endif()
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cu$")
-    list(APPEND of_all_obj_cc ${oneflow_single_file})
+    # list(APPEND of_all_obj_cc ${oneflow_single_file})
   endif()
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.proto")

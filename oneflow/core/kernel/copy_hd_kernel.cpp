@@ -58,7 +58,7 @@ void CopyHdKernel<device_type, FloatingPointType>::Backward(
   BackwardCopyFunc_(ctx, out_blob, in_blob, sizeof(FloatingPointType));
 }
 
-INSTANTIATE_GPU_KERNEL_CLASS(CopyHdKernel);
-REGISTER_GPU_KERNEL(OperatorConf::kCopyHdConf, CopyHdKernel);
+// INSTANTIATE_GPU_KERNEL_CLASS(CopyHdKernel);
+// REGISTER_GPU_KERNEL(OperatorConf::kCopyHdConf, CopyHdKernel);
 
 }  // namespace oneflow
