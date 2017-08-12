@@ -59,6 +59,9 @@ int main(int argc, char** argv) {
   s = remote_master->SendJob(&req, &resp);
   if (s.ok()) {
     LOG(INFO) << "SendJob RPC succeeds";
+    std::string str_plan;
+    PrintProtoToString(resp.plan(), &str_plan);
+    LOG(INFO) << str_plan;
   } else {
     LOG(INFO) << "SendJob RPC fails";
   }
