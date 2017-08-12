@@ -33,10 +33,10 @@ template<DeviceType device_type, typename FloatingPointType>
 void RMSPropMdUpdateKernel<device_type, FloatingPointType>::InitDataTmpBlobs(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* mean_square_blob = BnInOp2Blob("mean_square");
-  FloatingPointType* dptr = mean_square_blob->mut_dptr<FloatingPointType>();
-  std::fill(dptr, dptr + mean_square_blob->shape().elem_cnt(),
-            static_cast<FloatingPointType>(0));
+  FillConf mean_sqaure_fill_conf;
+  mean_sqaure_fill_conf.mutable_constant_conf()->set_value(0.0f);
+  KernelUtil<device_type, FloatingPointType>::Fill(
+      ctx, mean_sqaure_fill_conf, 0, BnInOp2Blob("mean_square"));
 }
 
 template<typename FloatingPointType>
