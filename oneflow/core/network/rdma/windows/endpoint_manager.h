@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 #include "oneflow/core/network/network_message.h"
-#include "oneflow/core/network/rdma/windows/ndsupport.h"
 #include "oneflow/core/network/rdma/windows/connection.h"
+#include "oneflow/core/network/rdma/windows/ndsupport.h"
 #include "oneflow/core/network/rdma/windows/rdma_memory.h"
 
 namespace oneflow {

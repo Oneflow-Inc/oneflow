@@ -16,90 +16,62 @@
 #include <initguid.h>
 #include "ndspi.h"
 
-
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif  // __cplusplus
 
-#define ND_HELPER_API  __stdcall
-
+#define ND_HELPER_API __stdcall
 
 //
 // Initialization
 //
-HRESULT ND_HELPER_API
-NdStartup(
-  VOID
-  );
+HRESULT ND_HELPER_API NdStartup(VOID);
 
-HRESULT ND_HELPER_API
-NdCleanup(
-  VOID
-  );
+HRESULT ND_HELPER_API NdCleanup(VOID);
 
-VOID ND_HELPER_API
-NdFlushProviders(
-  VOID
-  );
+VOID ND_HELPER_API NdFlushProviders(VOID);
 
 //
 // Network capabilities
 //
 #define ND_QUERY_EXCLUDE_EMULATOR_ADDRESSES 0x00000001
-#define ND_QUERY_EXCLUDE_NDv1_ADDRESSES   0x00000002
-#define ND_QUERY_EXCLUDE_NDv2_ADDRESSES   0x00000004
+#define ND_QUERY_EXCLUDE_NDv1_ADDRESSES 0x00000002
+#define ND_QUERY_EXCLUDE_NDv2_ADDRESSES 0x00000004
 
-HRESULT ND_HELPER_API
-NdQueryAddressList(
-  _In_ DWORD flags,
-  _Out_opt_bytecap_post_bytecount_(*pcbAddressList, *pcbAddressList) SOCKET_ADDRESS_LIST* pAddressList,
-  _Inout_ SIZE_T* pcbAddressList
-  );
+HRESULT ND_HELPER_API NdQueryAddressList(
+    _In_ DWORD flags,
+    _Out_opt_bytecap_post_bytecount_(*pcbAddressList, *pcbAddressList)
+        SOCKET_ADDRESS_LIST* pAddressList,
+    _Inout_ SIZE_T* pcbAddressList);
 
+HRESULT ND_HELPER_API NdResolveAddress(
+    _In_bytecount_(cbRemoteAddress) const struct sockaddr* pRemoteAddress,
+    _In_ SIZE_T cbRemoteAddress,
+    _Out_bytecap_(*pcbLocalAddress) struct sockaddr* pLocalAddress,
+    _Inout_ SIZE_T* pcbLocalAddress);
 
-HRESULT ND_HELPER_API
-NdResolveAddress(
-  _In_bytecount_(cbRemoteAddress) const struct sockaddr* pRemoteAddress,
-  _In_ SIZE_T cbRemoteAddress,
-  _Out_bytecap_(*pcbLocalAddress) struct sockaddr* pLocalAddress,
-  _Inout_ SIZE_T* pcbLocalAddress
-  );
+HRESULT ND_HELPER_API NdCheckAddress(_In_bytecount_(cbAddress)
+                                         const struct sockaddr* pAddress,
+                                     _In_ SIZE_T cbAddress);
 
+HRESULT ND_HELPER_API NdOpenAdapter(_In_ REFIID iid,
+                                    _In_bytecount_(cbAddress)
+                                        const struct sockaddr* pAddress,
+                                    _In_ SIZE_T cbAddress,
+                                    _Deref_out_ VOID** ppIAdapter);
 
-HRESULT ND_HELPER_API
-NdCheckAddress(
-  _In_bytecount_(cbAddress) const struct sockaddr* pAddress,
-  _In_ SIZE_T cbAddress
-  );
+HRESULT ND_HELPER_API NdOpenV1Adapter(_In_bytecount_(cbAddress)
+                                          const struct sockaddr* pAddress,
+                                      _In_ SIZE_T cbAddress,
+                                      _Deref_out_ INDAdapter** ppIAdapter);
 
-
-HRESULT ND_HELPER_API
-NdOpenAdapter(
-  _In_ REFIID iid,
-  _In_bytecount_(cbAddress) const struct sockaddr* pAddress,
-  _In_ SIZE_T cbAddress,
-  _Deref_out_ VOID** ppIAdapter
-  );
-
-
-HRESULT ND_HELPER_API
-NdOpenV1Adapter(
-  _In_bytecount_(cbAddress) const struct sockaddr* pAddress,
-  _In_ SIZE_T cbAddress,
-  _Deref_out_ INDAdapter** ppIAdapter
-  );
-
-HRESULT ND_HELPER_API
-NdOpenV2Adapter(
-  __in_bcount(cbAddress) const struct sockaddr* pAddress,
-  __in SIZE_T cbAddress,
-  __deref_out IND2Adapter** ppIAdapter
-);
+HRESULT ND_HELPER_API NdOpenV2Adapter(__in_bcount(cbAddress)
+                                          const struct sockaddr* pAddress,
+                                      __in SIZE_T cbAddress,
+                                      __deref_out IND2Adapter** ppIAdapter);
 
 #ifdef __cplusplus
 }
 #endif  // __cplusplus
 
-
-#endif // _NETDIRECT_H_
+#endif  // _NETDIRECT_H_

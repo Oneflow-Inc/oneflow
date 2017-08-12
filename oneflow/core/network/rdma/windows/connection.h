@@ -1,14 +1,14 @@
 #ifndef ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_CONNECTION_H_
 #define ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_CONNECTION_H_
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <tchar.h>
 #include <process.h>
 #include <sal.h>
-#include <new>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <tchar.h>
 #include <cstdint>
+#include <new>
 #include "oneflow/core/network/network_memory.h"
 #include "oneflow/core/network/rdma/windows/rdma_memory.h"
 
@@ -50,7 +50,7 @@ class Connection {
  private:
   int64_t my_machine_id_;
   int64_t peer_machine_id_;
-  
+
   IND2Connector* connector_;
   IND2QueuePair* queue_pair_;
   OVERLAPPED* ov_;

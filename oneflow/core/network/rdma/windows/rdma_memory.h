@@ -1,8 +1,8 @@
 #ifndef ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_RDMA_MEMORY_H_
 #define ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_RDMA_MEMORY_H_
 
-#include "oneflow/core/network/rdma/windows/ndsupport.h"
 #include "oneflow/core/network/network_memory.h"
+#include "oneflow/core/network/rdma/windows/ndsupport.h"
 
 namespace oneflow {
 
