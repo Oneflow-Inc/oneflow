@@ -52,7 +52,8 @@ int main(int argc, char** argv) {
 
   NetworkMessage msg;
   NetworkResult result;
-    
+   
+  /* 
   msg.src_machine_id = my_machine_id;
   msg.type = NetworkMessageType::kBarrier;
   msg.dst_machine_id = peer_machine_id;
@@ -83,8 +84,9 @@ int main(int argc, char** argv) {
   }
 
   cout << "Send/Recv test success." << endl;
+  */
 
-  /*
+  
   clock_t start_time, current_time;
 
   // useful for my_machine_id == 0
@@ -111,8 +113,12 @@ int main(int argc, char** argv) {
   int i = 0;
   while (i < FLAGS_transfer_times) {
     while (!net->Poll(&result)) {
-      // sleep(1);
-      // cout << "Poll result false" << endl;
+#ifdef WIN32
+      Sleep(1000);
+#else
+      sleep(1);
+#endif
+      cout << "Poll result false" << endl;
     }
     if (result.type == NetworkResultType::kSendOk) {
       LOG(INFO) << "send ok" << endl;
@@ -127,6 +133,13 @@ int main(int argc, char** argv) {
           LOG(INFO) << "address error" << endl; 
           exit(1); 
         }
+        std::cout << "remote_machine_id: "
+                  << remote_memory_descriptor->machine_id
+                  << ", remote_address: "
+                  << remote_memory_descriptor->address
+                  << ", remote_token: "
+                  << remote_memory_descriptor->remote_token << std::endl;
+        std::cout << "before post read" << std::endl;
         net->Read(*remote_memory_descriptor, dst_memory, [](){});
         LOG(INFO) << "async read issued" << endl;
         start_time = clock();
@@ -159,7 +172,7 @@ int main(int argc, char** argv) {
 
   delete []src_buffer;
   delete []dst_buffer;
-  */
+  
 
   LOG(INFO) << "Network Shutting Down..." << endl;
   gflags::ShutDownCommandLineFlags();
