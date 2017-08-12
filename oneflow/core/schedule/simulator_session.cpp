@@ -1,7 +1,7 @@
 /**
  * Copyright 2017 Xinqi Li
  */
-#include "oneflow/core/schedule/simulator.h"
+#include "oneflow/core/schedule/simulator_session.h"
 #include "oneflow/core/schedule/node.h"
 
 namespace oneflow {
@@ -151,7 +151,6 @@ void SimulatorSession::NewSinkTokens() {
 }
 
 void SimulatorSession::InitNodeBatchInstance(STask* node) {
-  Session::InitNodeBatchInstance(node);
   for (uint32_t i = 0; i < nr_batch(); i++) {
     auto batch = batch_node_mgr().Find(i);
     auto start_instance = mut_task_instance_mgr().Find(batch, node);
@@ -407,7 +406,7 @@ void LazyStrategy::InitTimeNet() {
 }
 
 void LimitedStrategy::InitRegst(
-    const std::function<uint64_t(uint32_t)>& get_regst_num) {
+    const std::function<uint32_t(uint64_t)>& get_regst_num) {
   Sess()->graph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
     auto count = get_regst_num(regst_desc->id());
     for (uint32_t i = 0; i < count; i++) {
@@ -569,13 +568,13 @@ void Mode::Run() {
   sess_logger->UpdateDuration(Sess(), this);
 }
 
-std::unique_ptr<Session> StaticSchedulerSimulatorPolicy::MakeSession(
+std::unique_ptr<Session> SchedulerEngineSimulatorPolicy::MakeSession(
     const SGraph& graph) {
   auto graph_ptr = const_cast<SGraph*>(&graph);
   return unique_ptr_new<SimulatorSession>(graph_ptr);
 }
 
-std::unique_ptr<ScheduleResult> StaticSchedulerSimulatorPolicy::Schedule(
+std::unique_ptr<ScheduleResult> SchedulerEngineSimulatorPolicy::Schedule(
     const Session& session) {
   auto session_ptr = const_cast<Session*>(&session);
   auto sess = dynamic_cast<SimulatorSession*>(session_ptr);

@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_SCHEDULE_INTERFACE_POLICY_HUB_H_
 
 #include "oneflow/core/schedule/policy.h"
+#include "oneflow/core/schedule/session.h"
 #include "oneflow/core/schedule/util.h"
 
 namespace oneflow {
@@ -18,7 +19,6 @@ class PolicyHubBase {
   PolicyHubBase(const std::string& name) : name_(name) {}
   virtual ~PolicyHubBase() = default;
   OF_DISALLOW_COPY_AND_MOVE(PolicyHubBase);
-  DEFINE_PURE_VIRTUAL_TYPE();
 
   virtual void Allocate(Plan* plan) = 0;
 
@@ -56,13 +56,13 @@ class PolicyHub : public PolicyHubBase {
     return graph_builder()->BuildeGraph(plan);
   }
   inline std::unique_ptr<Session> MakeSession(const SGraph& graph) const {
-    CHECK(static_scheduler());
-    return static_scheduler()->MakeSession(graph);
+    CHECK(scheduler_engine());
+    return scheduler_engine()->MakeSession(graph);
   }
   inline std::unique_ptr<ScheduleResult> Schedule(
       const Session& session) const {
-    CHECK(static_scheduler());
-    return static_scheduler()->Schedule(session);
+    CHECK(scheduler_engine());
+    return scheduler_engine()->Schedule(session);
   }
   inline bool ValidateSchedule(const Session& session,
                                const ScheduleResult& result) const {
@@ -104,7 +104,7 @@ class PolicyHub : public PolicyHubBase {
     CLONE_POLICY(ph, limited_allocator());
     CLONE_POLICY(ph, printer());
     CLONE_POLICY(ph, test_graph_generator());
-    CLONE_POLICY(ph, static_scheduler());
+    CLONE_POLICY(ph, scheduler_engine());
     CLONE_POLICY(ph, schedule_validator());
     CLONE_POLICY(ph, retiming());
     CLONE_POLICY(ph, allocator());
@@ -116,15 +116,15 @@ class PolicyHub : public PolicyHubBase {
 
   PolicyHub* Merge(const PolicyHub* ph) { return Merge(*ph); }
 
-  inline const std::unique_ptr<StaticSchedulerPolicy>& static_scheduler()
+  inline const std::unique_ptr<SchedulerEnginePolicy>& scheduler_engine()
       const {
-    return static_scheduler_;
+    return scheduler_engine_;
   }
-  inline std::unique_ptr<StaticSchedulerPolicy>& mut_static_scheduler() {
-    return static_scheduler_;
+  inline std::unique_ptr<SchedulerEnginePolicy>& mut_scheduler_engine() {
+    return scheduler_engine_;
   }
-  PolicyHub* Add(std::unique_ptr<StaticSchedulerPolicy>&& policy) {
-    mut_static_scheduler() = std::move(policy);
+  PolicyHub* Add(std::unique_ptr<SchedulerEnginePolicy>&& policy) {
+    mut_scheduler_engine() = std::move(policy);
     return this;
   }
 
@@ -246,7 +246,7 @@ class PolicyHub : public PolicyHubBase {
   std::unique_ptr<LimitedAllocatorPolicy> limited_allocator_;
   std::unique_ptr<PrinterPolicy> printer_;
   std::unique_ptr<TestGraphGeneratorPolicy> test_graph_generator_;
-  std::unique_ptr<StaticSchedulerPolicy> static_scheduler_;
+  std::unique_ptr<SchedulerEnginePolicy> scheduler_engine_;
   std::unique_ptr<ScheduleValidatorPolicy> schedule_validator_;
   std::unique_ptr<RetimingPolicy> retiming_;
   std::unique_ptr<AllocatorPolicy> allocator_;

@@ -1,0 +1,330 @@
+/**
+ * Copyright 2017 Xinqi Li
+ */
+#include "oneflow/core/schedule/simulator_scheduler_engine.h"
+#include "oneflow/core/schedule/node.h"
+#include "oneflow/core/schedule/simulation_strategy.h"
+
+namespace oneflow {
+namespace schedule {
+
+void SimulatorSchedule::TimeLinePushBack(TaskInstance* instance,
+                                         SDevice* device) {
+  auto last = dev2current_instance_[device];
+  if (last) { mut_timenet_arc_mgr().CreateIfNotFound(last, instance); }
+  dev2current_instance_[device] = instance;
+}
+
+void SimulatorSchedule::WalkTimeNetReverse(
+    SimulatorSchedulerEngine* scheduler_engine,
+    const std::function<void(TaskInstance*)>& cb) {
+  CHECK(session() == scheduler_engine->session());
+  CHECK(this == scheduler_engine->schedule());
+  auto last_batch = scheduler_engine->direction_->EndBatch();
+  auto last_node = scheduler_engine->direction_->EndNode();
+  auto last_instance =
+      session()->task_instance_mgr().Find(last_batch, last_node);
+  auto next = std::unordered_set<TaskInstance*>{last_instance};
+  auto marked = std::unordered_set<TaskInstance*>{};
+  while (next.size()) {
+    auto queue = std::list<TaskInstance*>(next.begin(), next.end());
+    for (const auto& instance : queue) {
+      cb(instance);
+      marked.insert(instance);
+      next.erase(instance);
+      timenet_arc_mgr().Input(instance, [&](TaskInstance* prev) {
+        bool all_marked = true;
+        timenet_arc_mgr().Output(prev, [&](TaskInstance* to) {
+          if (all_marked && marked.find(to) == marked.end()) {
+            all_marked = false;
+          }
+        });
+        if (all_marked && marked.find(prev) == marked.end()) {
+          next.insert(prev);
+        }
+      });
+    }
+  }
+}
+
+void SimulatorSchedule::InitTimeNet(
+    SimulatorSchedulerEngine* scheduler_engine) {
+  CHECK(session() == scheduler_engine->session());
+  CHECK(this == scheduler_engine->schedule());
+  session()->graph()->ForeachArc([&](TaskArc* arc) {
+    uint32_t start = 0;
+    uint32_t end = session()->nr_batch();
+    for (uint32_t i = start; i < end; i++) {
+      auto batch = session()->batch_node_mgr().Find(i);
+      auto from_node = scheduler_engine->direction_->GetFrom(arc);
+      auto to_node = scheduler_engine->direction_->GetTo(arc);
+      auto from = session()->task_instance_mgr().Find(batch, from_node);
+      auto to = session()->task_instance_mgr().Find(batch, to_node);
+      mut_timenet_arc_mgr().CreateIfNotFound(from, to);
+    }
+  });
+}
+
+void SimulatorSchedule::Retiming(SimulatorSchedulerEngine* scheduler_engine) {
+  InitTimeNet(scheduler_engine);
+  CHECK(session() == scheduler_engine->session());
+  CHECK(this == scheduler_engine->schedule());
+  float ii = max_interval();
+  auto get_next_instance = [&](TaskInstance* instance) {
+    TaskInstance* next = nullptr;
+    if (instance->to() != session()->graph()->sink()) {
+      auto batch = instance->from();
+      auto next_batch_id =
+          scheduler_engine->direction_->NextBatchId(batch->id());
+      auto next_batch = session()->batch_node_mgr().Find(next_batch_id);
+      next = session()->task_instance_mgr().Find(next_batch, instance->to());
+    }
+    return next;
+  };
+  WalkTimeNetReverse(scheduler_engine, [&](TaskInstance* instance) {
+    auto lazy_end = INT_MAX;
+    int count = timenet_arc_mgr().Output(instance, [&](TaskInstance* instance) {
+      const auto& p = mut_instance2ended_at()[instance];
+      lazy_end = std::min(lazy_end, p.first);
+    });
+    auto& p = mut_instance2ended_at()[instance];
+    if (!count) { lazy_end = p.second; }
+    auto next_instance = get_next_instance(instance);
+    if (next_instance) {
+      auto next_instance_end = mut_instance2ended_at()[next_instance].second;
+      lazy_end = std::min((float)lazy_end, next_instance_end - ii);
+    }
+    lazy_end = std::max(lazy_end, p.second);
+    auto lazy_start = lazy_end - (p.second - p.first);
+    p.second = lazy_end;
+    p.first = lazy_start;
+  });
+}
+
+float SimulatorSchedule::GetDurationByTimeGapToLoss(TaskInstance* from,
+                                                    TaskInstance* to) {
+  float duration = 0.0;
+  auto to_loss_gaps = mut_end_time_gap_to_loss()[to];
+  for (const auto& from_loss_gap : mut_start_time_gap_to_loss()[from]) {
+    auto to_loss_gap_itt = to_loss_gaps.find(from_loss_gap.first);
+    if (to_loss_gap_itt == to_loss_gaps.end()) continue;
+    float d = to_loss_gap_itt->second - from_loss_gap.second;
+    duration = std::max(duration, d);
+  }
+  return duration;
+}
+
+void SimulatorSchedule::UpdateDuration(
+    SimulatorSchedulerEngine* scheduler_engine) {
+  auto session = scheduler_engine->session();
+  session->graph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
+    STask* owner = nullptr;
+    session->graph()->produced_regst_desc_mgr().Input(regst_desc, &owner);
+    float duration = 0;
+    uint32_t start = session->nr_base_batch();
+    uint32_t end = start + session->nr_base_batch();
+    //    uint32_t start = 0;
+    //    uint32_t end = start + 1;
+    session->graph()->subscribed_regst_desc_mgr().Input(
+        regst_desc, [&](STask* node) {
+          float sum = 0;
+          for (uint32_t i = start; i < end; i++) {
+            auto batch = session->batch_node_mgr().Find(i);
+            TaskInstance* owner_instance =
+                session->task_instance_mgr().Find(batch, owner);
+            TaskInstance* node_instance =
+                session->task_instance_mgr().Find(batch, node);
+            sum += GetDurationByTimeGapToLoss(owner_instance, node_instance);
+          }
+          float avg = sum / std::max(1u, (end - start));
+          duration = std::max(duration, avg);
+        });
+    mut_regst_desc2duration()[regst_desc] = std::round(duration);
+  });
+}
+
+void SimulatorSchedule::UpdateInterval(
+    SimulatorSchedulerEngine* scheduler_engine) {
+  auto session = scheduler_engine->session();
+  session->graph()->ForeachNode([&](STask* node) {
+    uint32_t sum = 0;
+    uint32_t last = 0;
+    uint32_t start = session->nr_base_batch();
+    uint32_t end = start + session->nr_base_batch();
+    for (uint32_t i = start; i < end; i++) {
+      auto batch = session->batch_node_mgr().Find(i);
+      auto instance = session->task_instance_mgr().Find(batch, node);
+      auto start =
+          scheduler_engine->GetTime(mut_instance2ended_at()[instance].first);
+      if (last) { sum += start - last; }
+      last = start;
+    }
+    mut_node2interval()[node] = 1.0 * sum / (end - 1 - start);
+  });
+  session->graph()->ForeachNode([&](STask* node) {
+    mut_max_interval() = std::max(max_interval(), mut_node2interval()[node]);
+  });
+}
+
+void SimulatorSchedulerEngine::ClearTmpData() {
+  tokens_.clear();
+  schedule()->Clear();
+}
+
+void SimulatorSchedule::Clear() {
+  mut_instance2ended_at().clear();
+  mut_device2ended_at().clear();
+  mut_node2interval().clear();
+  mut_regst_desc2duration().clear();
+}
+
+void SimulatorSchedule::MergeTimeGapToLossInPlace(SimulatorSchedule* schedule) {
+  typedef decltype(start_time_gap_to_loss_) TimeGap;
+  auto merge = [&](TimeGap* a, TimeGap* b) {
+    for (auto& a_loss2duration : *a) {
+      auto b_loss_duration_itt = b->find(a_loss2duration.first);
+      if (b_loss_duration_itt == b->end()) continue;
+      for (auto& a_duration : a_loss2duration.second) {
+        auto b_duration_itt =
+            b_loss_duration_itt->second.find(a_duration.first);
+        if (b_duration_itt == b_loss_duration_itt->second.end()) continue;
+        if (std::abs(b_duration_itt->second) < std::abs(a_duration.second)) {
+          a_duration.second = b_duration_itt->second;
+        }
+      }
+    }
+  };
+  merge(&mut_start_time_gap_to_loss(), &schedule->mut_start_time_gap_to_loss());
+  merge(&mut_end_time_gap_to_loss(), &schedule->mut_end_time_gap_to_loss());
+}
+
+void SimulatorSchedule::UpdateTimeGapToLoss(
+    SimulatorSchedulerEngine* scheduler_engine) {
+  auto session = scheduler_engine->session();
+  std::list<STask*> loss_nodes;
+  session->graph()->LossNodes(&loss_nodes);
+  uint32_t start = 0;
+  uint32_t end = start + session->nr_batch();
+  for (uint32_t i = start; i < end; i++) {
+    auto batch = session->batch_node_mgr().Find(i);
+    for (STask* loss : loss_nodes) {
+      auto loss_instance = session->task_instance_mgr().Find(batch, loss);
+      auto loss_start_time = scheduler_engine->GetStartTime(
+          mut_instance2ended_at()[loss_instance]);
+      auto loss_end_time =
+          scheduler_engine->GetEndTime(mut_instance2ended_at()[loss_instance]);
+      float loss_middle_time =
+          ((float)loss_start_time + (float)loss_end_time) / 2;
+      auto set_time_gap = [&](STask* node) {
+        auto node_instance = session->task_instance_mgr().Find(batch, node);
+        float start_time = scheduler_engine->GetStartTime(
+            mut_instance2ended_at()[node_instance]);
+        float end_time = scheduler_engine->GetEndTime(
+            mut_instance2ended_at()[node_instance]);
+        mut_start_time_gap_to_loss()[node_instance][loss] =
+            start_time - loss_middle_time;
+        mut_end_time_gap_to_loss()[node_instance][loss] =
+            end_time - loss_middle_time;
+      };
+      set_time_gap(loss);
+      session->graph()->ForeachAscendent(loss, set_time_gap);
+      session->graph()->ForeachDescendent(loss, set_time_gap);
+    }
+  }
+}
+
+void SimulatorSchedulerEngine::NewSinkTokens() {
+  ClearTmpData();
+  std::list<TaskArc*> arcs;
+  auto graph = session()->graph();
+  graph->arc_mgr().InputArc(graph->sink(), &arcs);
+  auto batchs = session()->GetBatchNodes();
+  session()->task_arc_instance_mgr().Find(
+      *batchs, arcs,
+      [&](TaskArcInstance* instance) { tokens_.insert(instance); });
+  InitNodeBatchInstance(graph->sink());
+}
+
+void SimulatorSchedulerEngine::InitNodeBatchInstance(STask* node) {
+  for (uint32_t i = 0; i < session()->nr_batch(); i++) {
+    auto batch = session()->batch_node_mgr().Find(i);
+    auto start_instance = session()->mut_task_instance_mgr().Find(batch, node);
+    schedule()->mut_instance2ended_at()[start_instance] =
+        std::make_pair(0u, 0u);
+  }
+}
+
+void SimulatorSchedulerEngine::NewSourceTokens() {
+  ClearTmpData();
+  std::list<TaskArc*> arcs;
+  auto graph = session()->graph();
+  graph->arc_mgr().OutputArc(graph->source(), &arcs);
+  auto batchs = session()->GetBatchNodes();
+  session()->task_arc_instance_mgr().Find(
+      *batchs, arcs,
+      [&](TaskArcInstance* instance) { tokens_.insert(instance); });
+  InitNodeBatchInstance(graph->source());
+}
+
+SDevice* SimulatorSchedulerEngine::GetInstanceDevice(TaskInstance* instance) {
+  SDevice* ret = nullptr;
+  session()->graph()->device_arc_mgr().Output(instance->to(), &ret);
+  return ret;
+}
+
+void SimulatorSchedulerEngine::InitStrategies(
+    const std::function<uint32_t(uint64_t)>& get_regst_num) {
+  SetStrategy(unique_ptr_new<PositiveDirectionStrategy>(this));
+  //  SetStrategy(unique_ptr_new<NegativeDirectionStrategy>(this));
+  //  SetStrategy(unique_ptr_new<EagerEvaluationStrategy>(direction_.get()));
+  SetStrategy(unique_ptr_new<LazyEvaluationStrategy>(direction_.get()));
+  //  SetStrategy(unique_ptr_new<UnlimitedResourceStrategy>(
+  //      direction_.get(), evaluation_.get(), get_regst_num));
+  SetStrategy(unique_ptr_new<LimitedResourceStrategy>(
+      direction_.get(), evaluation_.get(), get_regst_num));
+}
+
+std::unique_ptr<Schedule> SimulatorSchedulerEngine::StaticSchedule(
+    const std::function<uint32_t(uint64_t)>& get_regst_num) {
+  return Run(get_regst_num);
+}
+
+std::unique_ptr<SimulatorSchedule> SimulatorSchedulerEngine::Run(
+    const std::function<uint32_t(uint64_t)>& get_regst_num) {
+  InitRegst(get_regst_num);
+  NewStartTokens();
+  while (mut_tokens().size()) {
+    auto instances_picked = Pick(&mut_tokens());
+    for (const auto& p : *instances_picked) {
+      auto dev = dynamic_cast<SDevice*>(p.first);
+      auto batch = p.second->from();
+      BeforeRun(p.second);
+      int32_t ended_at = GetAscendentEndedAt(p.second);
+      schedule()->mut_instance2ended_at()[p.second].first = ended_at;
+      ended_at += (dev ? dev->time() : 0);
+      schedule()->mut_device2ended_at()[p.first] = ended_at;
+      schedule()->mut_instance2ended_at()[p.second].second = ended_at;
+      TimeLinePushBack(p.second, dev);
+      AfterRun(p.second);
+      PrevArc(p.second->to(), [&](TaskArc* arc) {
+        auto instance_input =
+            session()->task_arc_instance_mgr().Find(batch, arc);
+        mut_tokens().erase(instance_input);
+      });
+      NextArc(p.second->to(), [&](TaskArc* arc) {
+        auto instance_output =
+            session()->task_arc_instance_mgr().Find(batch, arc);
+        mut_tokens().insert(instance_output);
+      });
+    }
+    if (!instances_picked->size()) { break; }
+  }
+  schedule()->UpdateInterval(this);
+  Retiming();
+  schedule()->UpdateTimeGapToLoss(this);
+  schedule()->UpdateDuration(this);
+  return GetSchedule();
+}
+
+}  // namespace schedule
+}  // namespace oneflow

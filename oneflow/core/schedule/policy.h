@@ -19,7 +19,6 @@ class Policy {
   explicit Policy(PolicyHub* ph) : ph_(ph) {}
   virtual ~Policy() = default;
   OF_DISALLOW_COPY_AND_MOVE(Policy);
-  DEFINE_PURE_VIRTUAL_TYPE();
   inline const PolicyHub* ph() const { return ph_; }
 
  protected:
@@ -47,9 +46,9 @@ class GraphBuilderPolicy : public Policy {
   virtual std::unique_ptr<SGraph> BuildeGraph(const Plan& plan) = 0;
 };
 
-class StaticSchedulerPolicy : public Policy {
+class SchedulerEnginePolicy : public Policy {
  public:
-  POLICY_INTERFACE_BOILERPLATE(StaticSchedulerPolicy);
+  POLICY_INTERFACE_BOILERPLATE(SchedulerEnginePolicy);
 
   virtual std::unique_ptr<Session> MakeSession(const SGraph& graph) = 0;
   virtual std::unique_ptr<ScheduleResult> Schedule(const Session& session) = 0;

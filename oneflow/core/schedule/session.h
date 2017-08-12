@@ -35,7 +35,6 @@ class Session {
   }
 
   void NewBatchs();
-  void InitNodeBatchInstance(STask* node);
   std::unique_ptr<std::list<Batch*>> GetBatchNodes();
 
   inline const SGraph* graph() const { return graph_; }

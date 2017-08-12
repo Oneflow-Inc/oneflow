@@ -1,8 +1,8 @@
 /**
  * Copyright 2017 Xinqi Li
  */
-#ifndef ONEFLOW_CORE_SCHEDULE_DATA_STRUCTURE_SCHEDULE_RESULT_H_
-#define ONEFLOW_CORE_SCHEDULE_DATA_STRUCTURE_SCHEDULE_RESULT_H_
+#ifndef ONEFLOW_CORE_SCHEDULE_SCHEDULE_H_
+#define ONEFLOW_CORE_SCHEDULE_SCHEDULE_H_
 
 #include <limits.h>
 #include <algorithm>
@@ -26,11 +26,10 @@
 namespace oneflow {
 namespace schedule {
 
-class ScheduleResult {
+class Schedule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ScheduleResult);
-  ScheduleResult() = default;
-  virtual ~ScheduleResult() = default;
+  explicit Schedule(Session* session) : session_(session) {}
+  DEFINE_METHOD_TYPE();
 
   inline const std::unordered_map<TaskInstance*, std::pair<int32_t, int32_t>>&
   instance2ended_at() const {
@@ -89,7 +88,10 @@ class ScheduleResult {
     return regst_desc2count_;
   }
 
+  inline Session* session() const { return session_; }
+
  protected:
+  Session* session_;
   std::unordered_map<TaskInstance*, std::pair<int32_t, int32_t>>
       instance2ended_at_;
   std::unordered_map<TaskInstance*, std::unordered_map<STask*, float>>
@@ -106,4 +108,4 @@ class ScheduleResult {
 }  // namespace schedule
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_SCHEDULE_DATA_STRUCTURE_SCHEDULE_RESULT_H_
+#endif  // ONEFLOW_CORE_SCHEDULE_SCHEDULE_H_

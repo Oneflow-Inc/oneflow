@@ -19,6 +19,8 @@
 #include <utility>
 #include <vector>
 
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/schedule/util.h"
 
 namespace oneflow {
@@ -428,16 +430,23 @@ class STask : public SNode {
 
  protected:
   int depth_;
-	SDevice* device_;	
+  SDevice* device_;
 };
 
 //	static schedule graph
 
 class SGraph : public SNode {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(SGraph);
+  SGraph() = default;
+  ~SGraph() = default;
   DEFINE_METHOD_TYPE();
 
-  SGraph(std::string name) : SNode(name) { InitSourceAndSink(); }
+  explicit SGraph(std::string name) : SNode(name) { InitSourceAndSink(); }
+
+  static std::unique_ptr<SGraph> CreateFromPlan(const Plan& plan) {
+    return unique_ptr_new<SGraph>("plan");
+  }
 
   void Update() {
     UpdateSourceAndSink();

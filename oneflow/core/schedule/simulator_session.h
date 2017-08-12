@@ -1,8 +1,8 @@
 /**
  * Copyright 2017 Xinqi Li
  */
-#ifndef ONEFLOW_CORE_SCHEDULE_IMPLEMENT_SIMULATOR_H_
-#define ONEFLOW_CORE_SCHEDULE_IMPLEMENT_SIMULATOR_H_
+#ifndef ONEFLOW_CORE_SCHEDULE_SIMULATOR_SESSION_H_
+#define ONEFLOW_CORE_SCHEDULE_SIMULATOR_SESSION_H_
 
 #include <limits.h>
 #include <algorithm>
@@ -33,7 +33,6 @@ class Mode;
 class SessionLogger : public ScheduleResult {
  public:
   SessionLogger() : ScheduleResult() {}
-  DEFINE_METHOD_TYPE();
   void Clear();
   void UpdateTimeGapToLoss(SimulatorSession* session, Mode* strategy);
   void UpdateDuration(SimulatorSession* session, Mode* strategy);
@@ -261,7 +260,7 @@ class UnlimitedStrategy : public ResourceStrategy {
 class LimitedStrategy : public ResourceStrategy {
  public:
   LimitedStrategy(DirectionStrategy* direction, EvaluationStrategy* evaluation,
-                  const std::function<uint64_t(uint32_t)>& get_regst_num)
+                  const std::function<uint32_t(uint64_t)>& get_regst_num)
       : ResourceStrategy(direction, evaluation) {
     InitRegst(get_regst_num);
     InitFuncIsInstanceReady();
@@ -287,7 +286,7 @@ class LimitedStrategy : public ResourceStrategy {
     return r2rd_arc_mgr_;
   }
 
-  void InitRegst(const std::function<uint64_t(uint32_t)>& get_regst_num);
+  void InitRegst(const std::function<uint32_t(uint64_t)>& get_regst_num);
   void InitFuncIsInstanceReady();
   bool IsAllRegstDescReady(TaskInstance* instance);
   bool IsRegstDescReady(SRegstDesc* regst_desc, Batch* batch);
@@ -305,7 +304,6 @@ class Mode : public Strategy {
  public:
   Mode(SimulatorSession* sess) : Strategy(sess) {}
   virtual ~Mode() {}
-  DEFINE_PURE_VIRTUAL_TYPE();
   inline int32_t GetTime(int32_t x) { return direction_->GetTime(x); }
   inline int32_t GetStartTime(const std::pair<int32_t, int32_t>& p) {
     return direction_->GetStartTime(p);
@@ -376,7 +374,7 @@ template<typename DirectionStrategyType,
 class LimitedMode : public Mode {
  public:
   LimitedMode(SimulatorSession* sess,
-              const std::function<uint64_t(uint32_t)>& get_regst_num)
+              const std::function<uint32_t(uint64_t)>& get_regst_num)
       : Mode(sess) {
     auto direction = unique_ptr_new<DirectionStrategyType>(sess);
     auto evaluation = unique_ptr_new<EvaluationStrategyType>(&*direction);
@@ -388,10 +386,10 @@ class LimitedMode : public Mode {
   DEFINE_METHOD_TYPE();
 };
 
-class StaticSchedulerSimulatorPolicy : public StaticSchedulerPolicy {
+class SchedulerEngineSimulatorPolicy : public SchedulerEnginePolicy {
  public:
-  POLICY_IMPLEMENT_BOILERPLATE(StaticSchedulerSimulatorPolicy,
-                               StaticSchedulerPolicy);
+  POLICY_IMPLEMENT_BOILERPLATE(SchedulerEngineSimulatorPolicy,
+                               SchedulerEnginePolicy);
   virtual std::unique_ptr<Session> MakeSession(const SGraph& graph);
   virtual std::unique_ptr<ScheduleResult> Schedule(const Session& session);
 };
@@ -414,4 +412,4 @@ class AllocatorSimulatorPolicy : public AllocatorPolicy {
 }  // namespace schedule
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_SCHEDULE_IMPLEMENT_SIMULATOR_H_
+#endif  // ONEFLOW_CORE_SCHEDULE_SIMULATOR_SESSION_H_

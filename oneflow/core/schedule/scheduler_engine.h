@@ -1,0 +1,32 @@
+#ifndef ONEFLOW_CORE_SCHEDULE_STATIC_SCHEDULER_H_
+#define ONEFLOW_CORE_SCHEDULE_STATIC_SCHEDULER_H_
+
+#include "oneflow/core/schedule/schedule.h"
+
+namespace oneflow {
+namespace schedule {
+
+class SchedulerEngine {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SchedulerEngine);
+  virtual ~SchedulerEngine() = default;
+  explicit SchedulerEngine(Session* session) : session_(session) {}
+
+  virtual std::unique_ptr<Schedule> StaticSchedule(
+      const std::function<uint32_t(uint64_t)>& get_regst_num) = 0;
+
+  std::unique_ptr<Schedule> StaticSchedule(uint32_t regst_max = 3u) {
+    return StaticSchedule([=](uint64_t id) { return regst_max; });
+  }
+
+  //	getter
+  inline Session* session() const { return session_; }
+
+ protected:
+  Session* session_;
+};
+
+}  // namespace schedule
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_SCHEDULE_STATIC_SCHEDULER_H_

@@ -1,0 +1,19 @@
+#include "oneflow/core/schedule/schedule_factory_configure.h"
+#include "oneflow/core/schedule/simulator_scheduler_engine.h"
+
+namespace oneflow {
+namespace schedule {
+
+REGISTER_SCHEDULE_FACTORY_PROVIDER("naive")
+    ->Set(unique_ptr_new<SGraphConcreteFactory<SGraph>>())
+    ->Set(unique_ptr_new<SessionFactory>())
+    ->Set(unique_ptr_new<
+          SchedulerEngineConcreteFactory<SimulatorSchedulerEngine>>())
+    ->Set(unique_ptr_new<ValidatorFactory>())
+    ->Set(unique_ptr_new<AllocatorFactory>());
+
+REGISTER_SCHEDULE_FACTORY_PROVIDER("default")->Merge(
+    ScheduleFactoryConfigure::Provider("naive"));
+
+}  // namespace schedule
+}  // namespace oneflow

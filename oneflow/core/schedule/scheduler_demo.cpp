@@ -6,7 +6,10 @@
 #include <string>
 #include "oneflow/core/schedule/factory.h"
 #include "oneflow/core/schedule/node.h"
-#include "oneflow/core/schedule/simulator.h"
+#include "oneflow/core/schedule/schedule_factory_configure.h"
+#include "oneflow/core/schedule/session.h"
+#include "oneflow/core/schedule/simulator_scheduler_engine.h"
+#include "oneflow/core/schedule/simulator_session.h"
 
 namespace oneflow {
 namespace schedule {
@@ -22,6 +25,12 @@ void SimulatorPolicyDemo() {
   bool success = ph->ValidateAllocation(*session, *schedule_result);
   std::cout << "allocation is " << (success ? "" : "NOT ") << "optimal"
             << std::endl;
+  auto sfp = ScheduleFactoryConfigure::Provider("default");
+  auto sess = sfp->session_factory()->CreateSession(*graph);
+  auto scheduler_engine =
+      sfp->scheduler_engine_factory()->CreateSchedulerEngine(*sess);
+  auto schedule = scheduler_engine->StaticSchedule();
+  std::cout << "max-interval: " << schedule->max_interval() << std::endl;
 }
 
 /*
