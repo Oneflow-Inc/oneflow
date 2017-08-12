@@ -44,6 +44,8 @@ std::shared_ptr<const Operator> OpMgr::ModelUpdateOp() {
     } else if (job_conf.has_rmsprop_mdupdt_conf()) {
       *(mdupdt_conf.mutable_rmsprop_mdupdt_conf()) =
           job_conf.rmsprop_mdupdt_conf();
+    } else if (job_conf.has_salr_mdupdt_conf()) {
+      *(mdupdt_conf.mutable_salr_mdupdt_conf()) = job_conf.salr_mdupdt_conf();
     } else {
       UNEXPECTED_RUN();
     }

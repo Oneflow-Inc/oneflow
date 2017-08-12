@@ -7,7 +7,7 @@ void SALRModelUpdateOp::InitFromOpConf(const OperatorConf& op_conf) {
   mut_op_conf() = op_conf;
 
   EnrollInputBn("model_diffs", false);
-  EnrollModelTmpBn("learning_rate");
+  EnrollDataTmpBn("learning_rate");
   EnrollOutputBn("model", false);
   EnrollDataTmpBn("last_diff_flag");
 }

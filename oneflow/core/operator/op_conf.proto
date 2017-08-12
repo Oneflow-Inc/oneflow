@@ -196,8 +196,9 @@ message RMSPropModelUpdateOpConf {
 }
 
 message SALRModelUpdateOpConf {
-  float epsilon = 1;
-  float delta = 2;
+  float learning_rate = 1;
+  float epsilon = 2;
+  float delta = 3;
 }
 
 message ModelDiffAccOpConf {
