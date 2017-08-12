@@ -88,8 +88,7 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     return 0;
   }
-  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
-           0);
+  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
   if (total_reading_cnt_ == 0) {
     msg_handler_ = nullptr;
     return 1;
@@ -117,7 +116,7 @@ void Actor::AsyncLaunchKernel(
 
 void Actor::AsyncLaunchKernel(
     const KernelCtx& kernel_ctx,
-    std::function<std::shared_ptr<RegstWrapper>(int64_t)> Regst4RegstDescId) {
+    std::function<Regst*(int64_t)> Regst4RegstDescId) {
   AsyncLaunchKernel(
       kernel_ctx,
       [&](const std::string& bn_in_op, const ExecKernel& ek) -> Blob* {
@@ -197,14 +196,13 @@ void Actor::AsyncDo(std::function<void()> func) {
   device_ctx_->AddCallBack(func);
 }
 
-void Actor::AsyncSendRegstMsgToProducer(
-    const std::shared_ptr<RegstWrapper>& wp) {
+void Actor::AsyncSendRegstMsgToProducer(Regst* regst) {
   VLOG(4) << "actor " << actor_id_ << " "
-          << "return register " << wp->regst_raw_ptr() << " "
-          << "to actor " << wp->producer_actor_id() << ", "
-          << "regst_desc_id:" << wp->regst_desc_id();
-  ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(wp->producer_actor_id(),
-                                                   wp->regst_raw_ptr());
+          << "return register " << regst << " "
+          << "to actor " << regst->producer_actor_id() << ", "
+          << "regst_desc_id:" << regst->regst_desc_id();
+  ActorMsg msg =
+      ActorMsg::BuildRegstMsgToProducer(regst->producer_actor_id(), regst);
   AsyncDo([msg]() { ActorMsgBus::Singleton()->SendMsg(msg); });
 }
 

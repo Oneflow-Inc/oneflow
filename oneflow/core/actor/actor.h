@@ -9,9 +9,7 @@
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/kernel/kernel_manager.h"
 #include "oneflow/core/persistence/snapshot_manager.h"
-#include "oneflow/core/register/local_register_wrapper.h"
 #include "oneflow/core/register/register_manager.h"
-#include "oneflow/core/register/remote_register_wrapper.h"
 #include "oneflow/core/thread/thread_context.h"
 
 namespace oneflow {
@@ -77,9 +75,8 @@ class Actor {
       const KernelCtx&,
       std::function<Blob*(const std::string&, const ExecKernel& ek)>
           BnInOpAndEk2Blob);
-  void AsyncLaunchKernel(
-      const KernelCtx&,
-      std::function<std::shared_ptr<RegstWrapper>(int64_t)> Regst4RegstDescId);
+  void AsyncLaunchKernel(const KernelCtx&,
+                         std::function<Regst*(int64_t)> Regst4RegstDescId);
   void AsyncSendReadableRegstMsg(std::function<void(Regst*)> RegstPreProcess,
                                  std::function<bool(int64_t)> IsAllowedActor);
   void AsyncSendReadableRegstMsg(std::function<void(Regst*)> RegstPreProcess);
@@ -87,7 +84,7 @@ class Actor {
   void AsyncSendReadableRegstMsg();
   void AsyncSendEORDMsgToConsumers(int64_t regst_desc_id);
   void AsyncSendEORDMsgForAllProducedRegstDesc();
-  void AsyncSendRegstMsgToProducer(const std::shared_ptr<RegstWrapper>&);
+  void AsyncSendRegstMsgToProducer(Regst*);
   void AsyncDo(std::function<void()>);
 
   // Status of Produced Registers

@@ -27,10 +27,10 @@ class FwDataCompActor final : public CompActor {
   int64_t in_desc_id_;
   int64_t model_regst_desc_id_;
   int64_t model_tmp_regst_desc_id_;
-  std::shared_ptr<RegstWrapper> model_regst_;
-  std::shared_ptr<RegstWrapper> model_tmp_regst_;
-  std::queue<std::shared_ptr<RegstWrapper>> in_;
-  HashMap<int64_t, std::shared_ptr<RegstWrapper>> readable_regst_;
+  Regst* model_regst_;
+  Regst* model_tmp_regst_;
+  std::queue<Regst*> in_;
+  HashMap<int64_t, Regst*> readable_regst_;
   KernelCtx kernel_ctx_;
 };
 
