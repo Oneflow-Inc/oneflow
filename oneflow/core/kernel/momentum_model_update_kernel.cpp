@@ -40,10 +40,10 @@ template<DeviceType device_type, typename FloatingPointType>
 void MomentumMdUpdateKernel<device_type, FloatingPointType>::InitDataTmpBlobs(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* momentum_blob = BnInOp2Blob("momentum");
-  FloatingPointType* dptr = momentum_blob->mut_dptr<FloatingPointType>();
-  std::fill(dptr, dptr + momentum_blob->shape().elem_cnt(),
-            static_cast<FloatingPointType>(0));
+  FillConf momentum_fill_conf;
+  momentum_fill_conf.mutable_constant_conf()->set_value(0.0f);
+  KernelUtil<device_type, FloatingPointType>::Fill(ctx, momentum_fill_conf, 0,
+                                                   BnInOp2Blob("momentum"));
 }
 
 INSTANTIATE_KERNEL_CLASS(MomentumMdUpdateKernel);
