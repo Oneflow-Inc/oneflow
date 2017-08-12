@@ -27,5 +27,6 @@ message JobConf {
     NormalModelUpdateOpConf normal_mdupdt_conf = 1000;
     MomentumModelUpdateOpConf momentum_mdupdt_conf = 1001;
     RMSPropModelUpdateOpConf rmsprop_mdupdt_conf = 1002;
+    SALRModelUpdateOpConf salr_mdupdt_conf = 1003;
   }
 }
