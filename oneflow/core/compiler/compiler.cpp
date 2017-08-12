@@ -49,6 +49,7 @@ void Compiler::Compile(const JobDescProto& job_desc, Plan* plan) {
   BuildGraphs();
   InferShape4Regsts();
   EraseMeaningLessRegsts();
+  GenPlan(plan);
   // GenPlanFile(plan_filepath);
 }
 
