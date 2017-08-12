@@ -1,11 +1,11 @@
 #ifndef ONEFLOW_CORE_OPERATOR_MOMENTUM_MODEL_UPDATE_OP_H_
 #define ONEFLOW_CORE_OPERATOR_MOMENTUM_MODEL_UPDATE_OP_H_
 
-#include "oneflow/core/operator/operator_manager.h"
+#include "oneflow/core/operator/model_update_op.h"
 
 namespace oneflow {
 
-class MomentumModelUpdateOp final : public SysOperator {
+class MomentumModelUpdateOp final : public ModelUpdtOp {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MomentumModelUpdateOp);
   MomentumModelUpdateOp() = default;

@@ -1,6 +1,6 @@
 #include "oneflow/core/actor/copy_comm_net_actor.h"
 #include "oneflow/core/actor/actor_registry.h"
-#include "oneflow/core/register/local_register_wrapper.h"
+#include "oneflow/core/register/register.h"
 
 namespace oneflow {
 
@@ -19,13 +19,11 @@ int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     ProcessEord();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    auto regst_wp = msg.regst_wrapper();
-    if (TryUpdtStateAsProducedRegst(regst_wp->regst_raw_ptr()) != 0) {
+    Regst* regst = msg.regst();
+    if (TryUpdtStateAsProducedRegst(regst) != 0) {
       mut_num_of_read_empty() = 0;
-      CHECK(piece_id2waiting_in_regst_.emplace(regst_wp->piece_id(), regst_wp)
-                .second);
-    } else {
-      // do nothing
+      CHECK(
+          piece_id2waiting_in_regst_.emplace(regst->piece_id(), regst).second);
     }
     ActUntilFail();
   }
@@ -33,8 +31,7 @@ int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
 }
 
 int CopyCommNetActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
-  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
-           0);
+  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
   ActUntilFail();
   if (piece_id2waiting_in_regst_.empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
@@ -45,23 +42,21 @@ int CopyCommNetActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
 
 void CopyCommNetActor::Act() {
   auto next_regst_it = piece_id2waiting_in_regst_.find(expected_piece_id());
-  std::shared_ptr<RegstWrapper> regst_wp = next_regst_it->second;
-  AsyncLaunchKernel(
-      GenDefaultKernelCtx(),
-      [this,
-       &regst_wp](uint64_t regst_desc_id) -> std::shared_ptr<RegstWrapper> {
-        Regst* regst = GetCurWriteableRegst(regst_desc_id);
-        if (regst == nullptr) {
-          return regst_wp;
-        } else {
-          return std::make_shared<LocalRegstWrapper>(regst);
-        }
-      });
-  AsyncSendReadableRegstMsg([&regst_wp](Regst* regst) {
-    regst->set_piece_id(regst_wp->piece_id());
-    regst->set_model_version_id(regst_wp->model_version_id());
+  Regst* regst = next_regst_it->second;
+  AsyncLaunchKernel(GenDefaultKernelCtx(),
+                    [&](uint64_t regst_desc_id) -> Regst* {
+                      Regst* regst = GetCurWriteableRegst(regst_desc_id);
+                      if (regst == nullptr) {
+                        return regst;
+                      } else {
+                        return regst;
+                      }
+                    });
+  AsyncSendReadableRegstMsg([&regst](Regst* regst) {
+    regst->set_piece_id(regst->piece_id());
+    regst->set_model_version_id(regst->model_version_id());
   });
-  AsyncSendRegstMsgToProducer(regst_wp);
+  AsyncSendRegstMsgToProducer(regst);
   piece_id2waiting_in_regst_.erase(next_regst_it);
   mut_num_of_read_empty() = piece_id2waiting_in_regst_.empty();
 }

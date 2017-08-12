@@ -19,10 +19,13 @@ class InnerProductKernel final : public Kernel {
   void Backward(const KernelCtx&,
                 std::function<Blob*(const std::string&)>) const override;
 
- protected:
-  void InitModelAndModelTmpBlobsWithoutSnapshot(
-      const KernelCtx&,
+ private:
+  void InitModelBlobsWithRandomSeed(
+      const KernelCtx&, std::mt19937,
       std::function<Blob*(const std::string&)>) const override;
+  void InitModelTmpBlobs(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 }  // namespace oneflow
