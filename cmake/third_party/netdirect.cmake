@@ -14,7 +14,10 @@ ExternalProject_Add(netdirect
     INSTALL_COMMAND ""
 )
 
+if(BUILD_THIRD_PARTY)
+
 add_custom_target(network_copy_headers_to_destination
   COMMAND ${CMAKE_COMMAND} -E copy_directory ${NETDIRECT_INSTALL} ${NETDIRECT_INCLUDE_DIR}
   DEPENDS netdirect)
 
+endif(BUILD_THIRD_PARTY)
