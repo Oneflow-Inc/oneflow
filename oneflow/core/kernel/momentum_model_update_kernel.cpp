@@ -29,21 +29,11 @@ void MomentumMdUpdateKernel<device_type, FloatingPointType>::Forward(
       model_diffs_blob->dptr<FloatingPointType>(), 1,
       momentum_blob->mut_dptr<FloatingPointType>(), 1);
 
-  // model = model + momentum
+  // model = model - momentum
   KernelUtil<device_type, FloatingPointType>::BlasAxpy(
-      ctx, model_blob->shape().elem_cnt(), static_cast<FloatingPointType>(1),
+      ctx, model_blob->shape().elem_cnt(), static_cast<FloatingPointType>(-1),
       momentum_blob->dptr<FloatingPointType>(), 1,
       model_blob->mut_dptr<FloatingPointType>(), 1);
-}
-
-template<DeviceType device_type, typename FloatingPointType>
-void MomentumMdUpdateKernel<device_type, FloatingPointType>::InitDataTmpBlobs(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* momentum_blob = BnInOp2Blob("momentum");
-  FloatingPointType* dptr = momentum_blob->mut_dptr<FloatingPointType>();
-  std::fill(dptr, dptr + momentum_blob->shape().elem_cnt(),
-            static_cast<FloatingPointType>(0));
 }
 
 INSTANTIATE_KERNEL_CLASS(MomentumMdUpdateKernel);
