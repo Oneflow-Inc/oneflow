@@ -8,7 +8,7 @@ op {
       dim: 28
     }
     label: "label"
-    data_dir: "D:/users/jiyuan/oss/mnist/"
+    data_dir: "C:/dev/private/sandbox/oneflow_test/mnist/"
   }
 }
 
