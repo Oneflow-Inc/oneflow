@@ -179,6 +179,10 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
       UniformFill(fill_conf.uniform_conf(), random_seed, blob);
     } else if (fill_conf.has_gaussian_conf()) {
       GaussianFill(fill_conf.gaussian_conf(), random_seed, blob);
+    } else if (fill_conf.has_xarier_conf()) {
+      XarierFill(fill_conf.xarier_conf(), random_seed, blob);
+    } else if (fill_conf.has_msra_conf()) {
+      MSRAFill(fill_conf.msra_conf(), random_seed, blob);
     } else {
       UNEXPECTED_RUN();
     }
@@ -215,6 +219,44 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
         blob->shape().elem_cnt(),
         static_cast<FloatingPointType>(fill_conf.mean()),
         static_cast<FloatingPointType>(fill_conf.std()), random_seed,
+        blob->mut_dptr<FloatingPointType>());
+  }
+
+  static FloatingPointType GetFillFan(VarianceNorm variance_norm, Blob* blob) {
+    int64_t fan_in = blob->shape().elem_cnt() / blob->shape().At(0);
+    int64_t fan_out = blob->shape().elem_cnt() / blob->shape().At(1);
+    FloatingPointType n = fan_in;
+    if (variance_norm == VarianceNorm::AVERAGE) {
+      n = (fan_in + fan_out) / static_cast<FloatingPointType>(2);
+    } else if (variance_norm == VarianceNorm::FAN_OUT) {
+      n = fan_out;
+    }
+    return n;
+  }
+
+  static void XarierFill(const XarierFillConf& fill_conf, uint32_t random_seed,
+                         Blob* blob) {
+    CHECK(blob->shape().elem_cnt());
+    FloatingPointType scale = std::sqrt(
+        static_cast<FloatingPointType>(3)
+        / GetFillFan(static_cast<VarianceNorm>(fill_conf.variance_norm()),
+                     blob));
+    RngUniform<FloatingPointType>(
+        blob->shape().elem_cnt(), static_cast<FloatingPointType>(-scale),
+        static_cast<FloatingPointType>(scale), random_seed,
+        blob->mut_dptr<FloatingPointType>());
+  }
+
+  static void MSRAFill(const MSRAFillConf& fill_conf, uint32_t random_seed,
+                       Blob* blob) {
+    CHECK(blob->shape().elem_cnt());
+    FloatingPointType std = std::sqrt(
+        static_cast<FloatingPointType>(2)
+        / GetFillFan(static_cast<VarianceNorm>(fill_conf.variance_norm()),
+                     blob));
+    RngGaussian<FloatingPointType>(
+        blob->shape().elem_cnt(), static_cast<FloatingPointType>(0),
+        static_cast<FloatingPointType>(std), random_seed,
         blob->mut_dptr<FloatingPointType>());
   }
 };
