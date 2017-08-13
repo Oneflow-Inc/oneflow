@@ -23,9 +23,9 @@ Master::~Master() {}
   ::oneflow::compiler::Compiler::Singleton()->Compile(job_desc,
                                                       response->mutable_plan());
 
-  //std::string str_request;
-  //PrintProtoToString(*request, &str_request);
-  //LOG(INFO) << str_request;
+  // std::string str_request;
+  // PrintProtoToString(*request, &str_request);
+  // LOG(INFO) << str_request;
   std::string str_plan;
   PrintProtoToString(response->plan(), &str_plan);
   LOG(INFO) << str_plan;
