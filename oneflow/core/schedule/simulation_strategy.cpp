@@ -102,10 +102,10 @@ TaskInstance* DirectionSimulationStrategy::PickInstanceToRun(
 }
 
 void ResourceSimulationStrategy::InitFuncs() {
-  auto direction = scheduler_engine()->direction();
-  get_node_instance_ =
-      std::bind(&DirectionSimulationStrategy::GetNextNodeInstance, direction,
-                std::placeholders::_1);
+  get_node_instance_ = [&](TaskArcInstance* arc) {
+    auto direction = scheduler_engine()->direction();
+    return direction->GetNextNodeInstance(arc);
+  };
   is_instance_ready_ = std::bind(&ResourceSimulationStrategy::IsInstanceReady,
                                  this, std::placeholders::_1);
   get_instance_device_ = std::bind(&SimulatorSchedulerEngine::GetInstanceDevice,
@@ -113,9 +113,10 @@ void ResourceSimulationStrategy::InitFuncs() {
   get_ascendent_ended_at_ =
       std::bind(&ResourceSimulationStrategy::GetAscendentEndedAt, this,
                 std::placeholders::_1);
-  pick_instance_to_run_ =
-      std::bind(&DirectionSimulationStrategy::PickInstanceToRun, direction,
-                std::placeholders::_1);
+  pick_instance_to_run_ = [&](const std::list<TaskInstance*>& instances) {
+    auto direction = scheduler_engine()->direction();
+    return direction->PickInstanceToRun(instances);
+  };
 }
 
 TaskInstance* NegativeDirectionStrategy::GetNextNodeInstance(

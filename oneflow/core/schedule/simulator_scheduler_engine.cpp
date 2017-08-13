@@ -284,7 +284,13 @@ void SimulatorSchedulerEngine::InitStrategies() {
 
 std::unique_ptr<Schedule> SimulatorSchedulerEngine::StaticSchedule(
     const std::function<uint32_t(uint64_t)>& get_regst_num) {
-  return Run(get_regst_num);
+  SetStrategy(unique_ptr_new<PositiveDirectionStrategy>(this));
+  auto positive_schedule = Run(get_regst_num);
+  SetStrategy(unique_ptr_new<NegativeDirectionStrategy>(this));
+  auto negative_schedule = Run(get_regst_num);
+  positive_schedule->MergeTimeGapToLossInPlace(negative_schedule.get());
+  positive_schedule->UpdateDuration(this);
+  return std::move(positive_schedule);
 }
 
 std::unique_ptr<SimulatorSchedule> SimulatorSchedulerEngine::Run(
