@@ -102,8 +102,9 @@ TaskInstance* DirectionSimulationStrategy::PickInstanceToRun(
 }
 
 void ResourceSimulationStrategy::InitFuncs() {
+  auto direction = scheduler_engine()->direction();
   get_node_instance_ =
-      std::bind(&DirectionSimulationStrategy::GetNextNodeInstance, direction_,
+      std::bind(&DirectionSimulationStrategy::GetNextNodeInstance, direction,
                 std::placeholders::_1);
   is_instance_ready_ = std::bind(&ResourceSimulationStrategy::IsInstanceReady,
                                  this, std::placeholders::_1);
@@ -113,7 +114,7 @@ void ResourceSimulationStrategy::InitFuncs() {
       std::bind(&ResourceSimulationStrategy::GetAscendentEndedAt, this,
                 std::placeholders::_1);
   pick_instance_to_run_ =
-      std::bind(&DirectionSimulationStrategy::PickInstanceToRun, direction_,
+      std::bind(&DirectionSimulationStrategy::PickInstanceToRun, direction,
                 std::placeholders::_1);
 }
 
@@ -136,7 +137,8 @@ void PositiveDirectionStrategy::NewStartTokens() {
 bool ResourceSimulationStrategy::IsInstanceReady(TaskInstance* instance) {
   bool ready = true;
   auto session = scheduler_engine()->session();
-  direction_->PrevArc(instance->to(), [&](TaskArc* arc) {
+  auto direction = scheduler_engine()->direction();
+  direction->PrevArc(instance->to(), [&](TaskArc* arc) {
     auto instance_input =
         session->task_arc_instance_mgr().Find(instance->from(), arc);
     if (scheduler_engine()->mut_tokens().find(instance_input)
@@ -204,7 +206,8 @@ void LimitedResourceStrategy::InitFuncIsInstanceReady() {
     return IsInstanceReady(instance) && IsAllRegstDescReady(instance);
   };
   get_ascendent_ended_at_ = [&](TaskInstance* instance) {
-    return std::max(evaluation_->GetAscendentEndedAt(instance),
+    auto evaluation = scheduler_engine()->evaluation();
+    return std::max(evaluation->GetAscendentEndedAt(instance),
                     RegstDescEndedAt(instance));
   };
 }
@@ -236,7 +239,8 @@ int32_t EvaluationSimulationStrategy::GetAscendentEndedAt(
   int32_t ended_at = 0;
   auto session = scheduler_engine()->session();
   auto schedule = scheduler_engine()->schedule();
-  direction_->Prev(instance->to(), [&](STask* node) {
+  auto direction = scheduler_engine()->direction();
+  direction->Prev(instance->to(), [&](STask* node) {
     auto instance_input =
         session->task_instance_mgr().Find(instance->from(), node);
     auto itt = schedule->instance2ended_at().find(instance_input);
@@ -252,13 +256,15 @@ int32_t EvaluationSimulationStrategy::GetAscendentEndedAt(
 
 int32_t ResourceSimulationStrategy::GetAscendentEndedAt(
     TaskInstance* instance) {
-  return evaluation_->GetAscendentEndedAt(instance);
+  auto evaluation = scheduler_engine()->evaluation();
+  return evaluation->GetAscendentEndedAt(instance);
 }
 
 int32_t LimitedResourceStrategy::RegstDescEndedAt(TaskInstance* instance) {
   int32_t ended_at = 0;
   auto schedule = scheduler_engine()->schedule();
-  direction_->HoldingRegstDesc(instance->to(), [&](SRegstDesc* regst_desc) {
+  auto direction = scheduler_engine()->direction();
+  direction->HoldingRegstDesc(instance->to(), [&](SRegstDesc* regst_desc) {
     auto regst = FindFreeRegst(regst_desc, instance->from());
     ended_at = std::max(ended_at, schedule->mut_regst2ended_at()[regst]);
   });
@@ -268,7 +274,8 @@ int32_t LimitedResourceStrategy::RegstDescEndedAt(TaskInstance* instance) {
 void LimitedResourceStrategy::BeforeRun(TaskInstance* instance) {
   auto session = scheduler_engine()->session();
   auto schedule = scheduler_engine()->schedule();
-  direction_->HoldingRegstDesc(instance->to(), [&](SRegstDesc* regst_desc) {
+  auto direction = scheduler_engine()->direction();
+  direction->HoldingRegstDesc(instance->to(), [&](SRegstDesc* regst_desc) {
     auto regst = FindFreeRegst(regst_desc, instance->from());
     auto regst_desc_instance =
         session->regst_desc_instance_mgr().Find(instance->from(), regst_desc);
@@ -277,7 +284,7 @@ void LimitedResourceStrategy::BeforeRun(TaskInstance* instance) {
       return;
     }
     schedule->mut_regst_desc_instance2regst()[regst_desc_instance] = regst;
-    direction_->RegstDescReleasingNode(regst_desc, [&](STask* node) {
+    direction->RegstDescReleasingNode(regst_desc, [&](STask* node) {
       TaskInstance* subscriber_instance =
           session->task_instance_mgr().Find(instance->from(), node);
       schedule->mut_regst_arc_mgr().CreateIfNotFound(subscriber_instance,
@@ -299,7 +306,8 @@ void LimitedResourceStrategy::AfterRun(TaskInstance* instance) {
 
 bool LimitedResourceStrategy::IsAllRegstDescReady(TaskInstance* instance) {
   bool all_ready = true;
-  direction_->HoldingRegstDesc(instance->to(), [&](SRegstDesc* regst_desc) {
+  auto direction = scheduler_engine()->direction();
+  direction->HoldingRegstDesc(instance->to(), [&](SRegstDesc* regst_desc) {
     all_ready = (all_ready && IsRegstDescReady(regst_desc, instance->from()));
   });
   return all_ready;

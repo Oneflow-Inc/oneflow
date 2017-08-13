@@ -22,10 +22,7 @@ class SchedulerEngineFactory {
   DEFINE_FACTORY_PURE_VIRTUAL_CLONE(SchedulerEngineFactory);
 
   virtual std::unique_ptr<SchedulerEngine> CreateSchedulerEngine(
-      const Session& session,
-      const std::function<uint32_t(uint64_t)>& get_regst_num) const = 0;
-  virtual std::unique_ptr<SchedulerEngine> CreateSchedulerEngine(
-      const Session& session, uint32_t regst_num_max = 3u) const = 0;
+      const Session& session) const = 0;
 };
 
 template<typename SchedulerEngineType>
@@ -39,16 +36,8 @@ class SchedulerEngineConcreteFactory : public SchedulerEngineFactory {
                               SchedulerEngineFactory);
 
   std::unique_ptr<SchedulerEngine> CreateSchedulerEngine(
-      const Session& session, uint32_t regst_num_max) const {
-    return unique_ptr_new<SchedulerEngineType>(const_cast<Session*>(&session),
-                                               regst_num_max);
-  }
-
-  std::unique_ptr<SchedulerEngine> CreateSchedulerEngine(
-      const Session& session,
-      const std::function<uint32_t(uint64_t)>& get_regst_num) const {
-    return unique_ptr_new<SchedulerEngineType>(const_cast<Session*>(&session),
-                                               get_regst_num);
+      const Session& session) const {
+    return unique_ptr_new<SchedulerEngineType>(const_cast<Session*>(&session));
   }
 };
 

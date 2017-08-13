@@ -142,22 +142,19 @@ class NegativeDirectionStrategy : public DirectionSimulationStrategy {
 
 class EvaluationSimulationStrategy : public SimulationStrategy {
  public:
-  explicit EvaluationSimulationStrategy(DirectionSimulationStrategy* direction)
-      : SimulationStrategy(direction->scheduler_engine()),
-        direction_(direction) {}
+  explicit EvaluationSimulationStrategy(
+      SimulatorSchedulerEngine* scheduler_engine)
+      : SimulationStrategy(scheduler_engine) {}
   ~EvaluationSimulationStrategy() = default;
   virtual int32_t GetAscendentEndedAt(TaskInstance* instance);
   virtual void TimeLinePushBack(TaskInstance*, SDevice*) = 0;
   virtual void Retiming() = 0;
-
- protected:
-  DirectionSimulationStrategy* direction_;
 };
 
 class EagerEvaluationStrategy : public EvaluationSimulationStrategy {
  public:
-  explicit EagerEvaluationStrategy(DirectionSimulationStrategy* direction)
-      : EvaluationSimulationStrategy(direction) {}
+  explicit EagerEvaluationStrategy(SimulatorSchedulerEngine* scheduler_engine)
+      : EvaluationSimulationStrategy(scheduler_engine) {}
   virtual ~EagerEvaluationStrategy() = default;
   void TimeLinePushBack(TaskInstance* instance, SDevice* device) {}
   void Retiming() {}
@@ -165,8 +162,8 @@ class EagerEvaluationStrategy : public EvaluationSimulationStrategy {
 
 class LazyEvaluationStrategy : public EvaluationSimulationStrategy {
  public:
-  explicit LazyEvaluationStrategy(DirectionSimulationStrategy* direction)
-      : EvaluationSimulationStrategy(direction) {}
+  explicit LazyEvaluationStrategy(SimulatorSchedulerEngine* scheduler_engine)
+      : EvaluationSimulationStrategy(scheduler_engine) {}
   ~LazyEvaluationStrategy() = default;
 
   void TimeLinePushBack(TaskInstance* instance, SDevice* device);
@@ -178,11 +175,8 @@ class LazyEvaluationStrategy : public EvaluationSimulationStrategy {
 
 class ResourceSimulationStrategy : public SimulationStrategy {
  public:
-  ResourceSimulationStrategy(DirectionSimulationStrategy* direction,
-                             EvaluationSimulationStrategy* evaluation)
-      : SimulationStrategy(direction->scheduler_engine()),
-        evaluation_(evaluation),
-        direction_(direction) {
+  ResourceSimulationStrategy(SimulatorSchedulerEngine* scheduler_engine)
+      : SimulationStrategy(scheduler_engine) {
     InitFuncs();
   }
   virtual ~ResourceSimulationStrategy() {}
@@ -203,19 +197,14 @@ class ResourceSimulationStrategy : public SimulationStrategy {
   std::function<TaskInstance*(TaskArcInstance*)> get_node_instance_;
   std::function<bool(TaskInstance*)> is_instance_ready_;
   std::function<SDevice*(TaskInstance*)> get_instance_device_;
-  EvaluationSimulationStrategy* evaluation_;
-  DirectionSimulationStrategy* direction_;
   std::function<TaskInstance*(const std::list<TaskInstance*>&)>
       pick_instance_to_run_;
 };
 
 class UnlimitedResourceStrategy : public ResourceSimulationStrategy {
  public:
-  UnlimitedResourceStrategy(
-      DirectionSimulationStrategy* direction,
-      EvaluationSimulationStrategy* evalution,
-      const std::function<uint32_t(uint64_t)>& get_regst_num)
-      : ResourceSimulationStrategy(direction, evalution) {}
+  UnlimitedResourceStrategy(SimulatorSchedulerEngine* scheduler_engine)
+      : ResourceSimulationStrategy(scheduler_engine) {}
   virtual void BeforeRun(TaskInstance* instance) {}
   virtual void AfterRun(TaskInstance* instance) {}
   void InitRegst(const std::function<uint32_t(uint64_t)>& get_regst_num) {}
@@ -223,11 +212,8 @@ class UnlimitedResourceStrategy : public ResourceSimulationStrategy {
 
 class LimitedResourceStrategy : public ResourceSimulationStrategy {
  public:
-  LimitedResourceStrategy(
-      DirectionSimulationStrategy* direction,
-      EvaluationSimulationStrategy* evaluation,
-      const std::function<uint32_t(uint64_t)>& get_regst_num)
-      : ResourceSimulationStrategy(direction, evaluation) {
+  LimitedResourceStrategy(SimulatorSchedulerEngine* scheduler_engine)
+      : ResourceSimulationStrategy(scheduler_engine) {
     InitFuncIsInstanceReady();
   }
   void BeforeRun(TaskInstance* instance);

@@ -96,34 +96,13 @@ class SimulatorSchedule : public Schedule {
 class SimulatorSchedulerEngine : public SchedulerEngine {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SimulatorSchedulerEngine);
-  SimulatorSchedulerEngine(
-      Session* session, const std::function<uint32_t(uint64_t)>& get_regst_num)
+  SimulatorSchedulerEngine(Session* session)
       : SchedulerEngine(session),
         schedule_(unique_ptr_new<SimulatorSchedule>(session)) {
-    InitStrategies(get_regst_num);
-  }
-
-  SimulatorSchedulerEngine(Session* session, uint32_t regst_max = 3u)
-      : SchedulerEngine(session),
-        schedule_(unique_ptr_new<SimulatorSchedule>(session)) {
-    InitStrategies([=](uint64_t id) { return regst_max; });
+    InitStrategies();
   }
 
   virtual ~SimulatorSchedulerEngine() = default;
-
-  void InitStrategies(const std::function<uint32_t(uint64_t)>& get_regst_num);
-
-  void SetStrategy(std::unique_ptr<DirectionSimulationStrategy>&& direction) {
-    direction_ = std::move(direction);
-  }
-
-  void SetStrategy(std::unique_ptr<EvaluationSimulationStrategy>&& evaluation) {
-    evaluation_ = std::move(evaluation);
-  }
-
-  void SetStrategy(std::unique_ptr<ResourceSimulationStrategy>&& resource) {
-    resource_ = std::move(resource);
-  }
 
   SDevice* GetInstanceDevice(TaskInstance* instance);
   void NewSourceTokens();
@@ -147,8 +126,6 @@ class SimulatorSchedulerEngine : public SchedulerEngine {
   std::unique_ptr<SimulatorSchedule> Run(
       const std::function<uint32_t(uint64_t)>& get_regst_num);
 
-  inline SimulatorSchedule* schedule() const { return schedule_.get(); }
-
   inline int32_t GetTime(int32_t x) { return direction_->GetTime(x); }
   inline int32_t GetStartTime(const std::pair<int32_t, int32_t>& p) {
     return direction_->GetStartTime(p);
@@ -159,9 +136,32 @@ class SimulatorSchedulerEngine : public SchedulerEngine {
 
   inline std::unordered_set<TaskArcInstance*>& mut_tokens() { return tokens_; }
 
+  //	getter
+  inline SimulatorSchedule* schedule() const { return schedule_.get(); }
+  inline DirectionSimulationStrategy* direction() const {
+    return direction_.get();
+  }
+  inline EvaluationSimulationStrategy* evaluation() const {
+    return evaluation_.get();
+  }
+  inline ResourceSimulationStrategy* resource() const {
+    return resource_.get();
+  }
+
   friend class SimulatorSchedule;
 
  private:
+  void InitStrategies();
+  void SetStrategy(std::unique_ptr<DirectionSimulationStrategy>&& direction) {
+    direction_ = std::move(direction);
+  }
+  void SetStrategy(std::unique_ptr<EvaluationSimulationStrategy>&& evaluation) {
+    evaluation_ = std::move(evaluation);
+  }
+  void SetStrategy(std::unique_ptr<ResourceSimulationStrategy>&& resource) {
+    resource_ = std::move(resource);
+  }
+
   void InitRegst(const std::function<uint32_t(uint64_t)>& get_regst_num) {
     resource_->InitRegst(get_regst_num);
   }

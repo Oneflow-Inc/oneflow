@@ -272,16 +272,14 @@ SDevice* SimulatorSchedulerEngine::GetInstanceDevice(TaskInstance* instance) {
   return ret;
 }
 
-void SimulatorSchedulerEngine::InitStrategies(
-    const std::function<uint32_t(uint64_t)>& get_regst_num) {
+void SimulatorSchedulerEngine::InitStrategies() {
   SetStrategy(unique_ptr_new<PositiveDirectionStrategy>(this));
   //  SetStrategy(unique_ptr_new<NegativeDirectionStrategy>(this));
   //  SetStrategy(unique_ptr_new<EagerEvaluationStrategy>(direction_.get()));
-  SetStrategy(unique_ptr_new<LazyEvaluationStrategy>(direction_.get()));
+  SetStrategy(unique_ptr_new<LazyEvaluationStrategy>(this));
   //  SetStrategy(unique_ptr_new<UnlimitedResourceStrategy>(
   //      direction_.get(), evaluation_.get(), get_regst_num));
-  SetStrategy(unique_ptr_new<LimitedResourceStrategy>(
-      direction_.get(), evaluation_.get(), get_regst_num));
+  SetStrategy(unique_ptr_new<LimitedResourceStrategy>(this));
 }
 
 std::unique_ptr<Schedule> SimulatorSchedulerEngine::StaticSchedule(
