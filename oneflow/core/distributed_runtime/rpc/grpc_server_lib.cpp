@@ -60,7 +60,7 @@ GrpcServer::~GrpcServer() {
   TF_CHECK_OK(Join());
 
   delete master_service_;
-  // delete worker_service_;
+  delete worker_service_;
 }
 
 ::tensorflow::Status GrpcServer::Init() {
@@ -180,7 +180,7 @@ std::unique_ptr<Master> GrpcServer::CreateMaster() {
 }
 
 std::unique_ptr<Worker> GrpcServer::CreateWorker() {
-  return std::unique_ptr<Worker>(new Worker());
+  return std::unique_ptr<Worker>(new Worker(this_node_name_));
 }
 
 /* static */

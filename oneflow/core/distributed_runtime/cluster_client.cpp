@@ -66,43 +66,24 @@ int main(int argc, char** argv) {
     LOG(INFO) << "SendJob RPC fails";
   }
 
-  s = remote_master->SendJob(&req, &resp);
-  if (s.ok()) {
-    LOG(INFO) << "SendJob RPC succeeds";
+  Plan plan = resp.plan();
+
+   std::string worker_address = FLAGS_server_addr;
+   std::shared_ptr<::grpc::Channel> worker_channel = ::grpc::CreateChannel(
+      worker_address, ::grpc::InsecureChannelCredentials());
+
+   std::shared_ptr<GrpcRemoteWorker> remote_worker(
+      new GrpcRemoteWorker(worker_channel));
+   SendPlanRequest plan_req;
+  *(plan_req.mutable_plan()) = plan;
+   SendPlanResponse plan_resp;
+
+   s = remote_worker->SendPlan(&plan_req, &plan_resp);
+   if (s.ok()) {
+    LOG(INFO) << "SendPlan RPC succeeds";
   } else {
-    LOG(INFO) << "SendJob RPC fails";
+    LOG(INFO) << "SendPlan RPC fails";
   }
-
-  Plan plan;
-  ParseProtoFromTextFile(FLAGS_plan_filepath, &plan);
-
-  // PrintProtoToTextFile(plan, "tmp_plan");
-
-  // std::string worker_address = "11.11.1.109:5551";
-  // std::string worker_address = "11.11.1.11:5551";
-  // std::string worker_address = FLAGS_server_addr;
-  // std::shared_ptr<::grpc::Channel> worker_channel = ::grpc::CreateChannel(
-  //    worker_address, ::grpc::InsecureChannelCredentials());
-
-  // std::shared_ptr<GrpcRemoteWorker> remote_worker(
-  //    new GrpcRemoteWorker(worker_channel));
-  // SendPlanRequest plan_req;
-  //*(plan_req.mutable_plan()) = plan;
-  // SendPlanResponse plan_resp;
-
-  // s = remote_worker->SendPlan(&plan_req, &plan_resp);
-  // if (s.ok()) {
-  //  LOG(INFO) << "SendPlan RPC succeeds";
-  //} else {
-  //  LOG(INFO) << "SendPlan RPC fails";
-  //}
-
-  // s = remote_worker->SendPlan(&plan_req, &plan_resp);
-  // if (s.ok()) {
-  //  LOG(INFO) << "SendPlan RPC succeeds";
-  //} else {
-  //  LOG(INFO) << "SendPlan RPC fails";
-  //}
 
   return 0;
 }
