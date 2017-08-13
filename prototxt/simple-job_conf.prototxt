@@ -1,6 +1,0 @@
-train_dlnet_conf_filepath: "../prototxt/simple.prototxt"
-resource_filepath: "../prototxt/simple-resource.prototxt"
-placement_filepath: "../prototxt/simple-placement.prototxt"
-model_load_machine: "centos-0"
-model_save_machine: "centos-0"
-is_train: true

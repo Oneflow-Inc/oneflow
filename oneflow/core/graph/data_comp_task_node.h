@@ -29,7 +29,11 @@ class DataCompTaskNode final : public CompTaskNode {
 
   bool IsMeaningLess() const override {
     if (IsFwNode()) {
-      return TaskNode::IsMeaningLess();
+      if (chain_node()->IsLogNode()) {
+        return false;
+      } else {
+        return TaskNode::IsMeaningLess();
+      }
     } else {
       return TaskNode::IsMeaningLess() || GetFwNode()->IsMeaningLess();
     }

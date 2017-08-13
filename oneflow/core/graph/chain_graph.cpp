@@ -202,7 +202,7 @@ void DataMergeChains(const LogicalGraph& logical_gph,
   for (const auto& pair : *logical2chain_it) {
     const LogicalNode* cur_logi_node = pair.first;
     if (cur_logi_node->parallel_desc()->policy() != kDataParallel) { continue; }
-    if (cur_logi_node->IsLossNode()) { continue; }
+    if (!cur_logi_node->IsChainMergeable()) { continue; }
     data_parallel_node.push_back(cur_logi_node);
   }
   while (DoOneDataMerge(data_parallel_node, chain_list, logical2chain_it)) {}

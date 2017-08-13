@@ -202,6 +202,10 @@ message ModelSaveOpConf {
   repeated string lbns = 1;
 }
 
+message LogOpConf {
+  repeated string lbn = 1;
+}
+
 message OperatorConf {
   string name = 1;
   oneof op_type {
@@ -223,5 +227,6 @@ message OperatorConf {
     MomentumModelUpdateOpConf momentum_mdupdt_conf = 115;
     RMSPropModelUpdateOpConf rmsprop_mdupdt_conf = 116;
     SoftmaxLossOpConf softmax_loss_conf = 117;
+    LogOpConf log_conf = 118;
   }
 }
