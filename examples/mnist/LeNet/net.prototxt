@@ -1,0 +1,110 @@
+op {
+  name: "mnist"
+  data_loader_conf {
+    feature: "feature"
+    shape_of_one_feature_ins {
+      dim: 1
+      dim: 28
+      dim: 28
+    }
+    label: "label"
+    data_dir: "/tmp/normalized_mnist/"
+  }
+}
+op {
+  name: "conv1"
+  convolution_conf {
+    in: "mnist/feature"
+    out: "out"
+    out_num: 20
+    has_bias_term: true
+    pad: 0
+    pad: 0
+    kernel_size: 5
+    kernel_size: 5
+    stride: 1
+    stride: 1
+    dilation: 1
+    dilation: 1
+  }
+}
+op {
+  name: "pool1"
+  pooling_conf {
+    in: "conv1/out"
+    out: "out"
+    pool: kAve
+    pad: 0
+    pad: 0
+    kernel_size: 2
+    kernel_size: 2
+    stride: 2
+    stride: 2
+  }
+}
+op {
+  name: "conv2"
+  convolution_conf {
+    in: "pool1/out"
+    out: "out"
+    out_num: 50
+    has_bias_term: true
+    pad: 0
+    pad: 0
+    kernel_size: 5
+    kernel_size: 5
+    stride: 1
+    stride: 1
+    dilation: 1
+    dilation: 1
+  }
+}
+op {
+  name: "pool2"
+  pooling_conf {
+    in: "conv2/out"
+    out: "out"
+    pool: kAve
+    pad: 0
+    pad: 0
+    kernel_size: 2
+    kernel_size: 2
+    stride: 2
+    stride: 2
+  }
+}
+op {
+  name: "ip1"
+  innerproduct_conf {
+    in: "pool2/out"
+    out: "out"
+    out_num: 500
+    has_bias_term: true
+    axis: 1
+  }
+}
+op {
+  name: "relu1"
+  relu_conf {
+    in: "ip1/out"
+    out: "out"
+  }
+}
+op {
+  name: "ip2"
+  innerproduct_conf {
+    in: "relu1/out"
+    out: "out"
+    out_num: 10
+    has_bias_term: true
+    axis: 1
+  }
+}
+op {
+  name: "softmax_loss"
+  softmax_loss_conf {
+    prediction: "ip2/out"
+    label: "mnist/label"
+    loss: "loss"
+  }
+}
