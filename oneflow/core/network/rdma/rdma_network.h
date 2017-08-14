@@ -30,7 +30,7 @@ class RdmaNetwork final : public Network {
   void Barrier() override;
 
  private:
-  Connection* NewConnection();
+  Connection* NewConnection(const std::string& my_ip, int32_t my_port);
   // passive side listens for connections requests initiated by active
   // side(smaller id/rank)
   void EstablishConnection();

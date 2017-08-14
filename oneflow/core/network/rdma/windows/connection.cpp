@@ -21,6 +21,18 @@ sockaddr_in GetAddress(const char* ip, int32_t port) {
 Connection::Connection(int64_t my_machine_id)
     : Connection::Connection(my_machine_id, -1) {}
 
+Connection::Connection(int64_t my_machine_id, const std::string& my_ip,
+                       int32_t my_port)
+    : my_machine_id_(my_machine_id),
+      my_ip_(my_ip),
+      my_port_(my_port),
+      connector_(nullptr),
+      queue_pair_(nullptr),
+      ov_(new OVERLAPPED) {
+  ov_->hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+  my_sock_ = GetAddress(my_ip_.c_str(), my_port_);
+}
+
 Connection::Connection(int64_t my_machine_id, int64_t peer_machine_id)
     : my_machine_id_(my_machine_id),
       peer_machine_id_(peer_machine_id),
@@ -33,8 +45,12 @@ Connection::Connection(int64_t my_machine_id, int64_t peer_machine_id)
 Connection::~Connection() { Destroy(); }
 
 bool Connection::TryConnectTo(const char* peer_ip, int32_t peer_port) {
+  HRESULT hr;
+  hr = connector_->Bind(reinterpret_cast<const sockaddr*>(&my_sock_),
+                        sizeof(my_sock_));
+  CHECK(!FAILED(hr)) << "Connector bind failed";
   sockaddr_in peer_addr = GetAddress(peer_ip, peer_port);
-  HRESULT hr = connector_->Connect(
+  hr = connector_->Connect(
       queue_pair_, reinterpret_cast<const sockaddr*>(&peer_addr),
       sizeof(peer_addr),
       10,               // inbound read limit, max in-flight number

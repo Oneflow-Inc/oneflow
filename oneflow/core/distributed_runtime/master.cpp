@@ -79,15 +79,6 @@ Master::~Master() {}
     };
 
     pair.second->SendPlanAsync(&call->plan_req, &call->plan_resp, cb);
-
-    //*(plan_req.mutable_plan()) = response->plan();
-
-    //::tensorflow::Status s = pair.second->SendPlan(&plan_req, &plan_resp);
-    // if (s.ok()) {
-    //  LOG(INFO) << "SendPlan RPC succeeds";
-    //} else {
-    //  LOG(INFO) << "SendPlan RPC fails";
-    //}
   }
 
   done(::tensorflow::Status());

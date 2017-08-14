@@ -9,6 +9,7 @@
 #include <tchar.h>
 #include <cstdint>
 #include <new>
+#include <string>
 #include "oneflow/core/network/network_memory.h"
 #include "oneflow/core/network/rdma/windows/rdma_memory.h"
 
@@ -19,6 +20,7 @@ struct Request;
 class Connection {
  public:
   explicit Connection(int64_t my_machine_id);
+  Connection(int64_t my_machine_id, const std::string& my_ip, int32_t my_port);
   Connection(int64_t my_machine_id, int64_t peer_machine_id);
   ~Connection();
 
@@ -45,6 +47,10 @@ class Connection {
  private:
   int64_t my_machine_id_;
   int64_t peer_machine_id_;
+
+  std::string my_ip_;
+  int32_t my_port_;
+  sockaddr_in my_sock_;
 
   IND2Connector* connector_;
   IND2QueuePair* queue_pair_;

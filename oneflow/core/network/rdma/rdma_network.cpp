@@ -139,8 +139,9 @@ void RdmaNetwork::Barrier() {
   printf("Barrier send all reply barrier over\n");
 }
 
-Connection* RdmaNetwork::NewConnection() {
-  Connection* conn = new Connection(my_machine_id_);
+Connection* RdmaNetwork::NewConnection(const std::string& my_ip,
+                                       int32_t my_port) {
+  Connection* conn = new Connection(my_machine_id_, my_ip, my_port);
   CHECK(conn);
 
   endpoint_manager_->CreateConnector(conn);
@@ -185,7 +186,8 @@ void RdmaNetwork::EstablishConnection() {  // TODO(shiyuan)
   Request* receive_request = nullptr;
   for (auto peer_machine_id : net_topo_.all_nodes[my_machine_id_].neighbors) {
     if (peer_machine_id > my_machine_id_) {
-      conn = NewConnection();
+      conn = NewConnection(net_topo_.all_nodes[my_machine_id_].address,
+                           net_topo_.all_nodes[my_machine_id_].port);
       CHECK(conn);
       receive_request = request_pool_->AllocRequest(false);
       CHECK(receive_request);
@@ -208,7 +210,8 @@ void RdmaNetwork::EstablishConnection() {  // TODO(shiyuan)
   for (auto peer_machine_id : net_topo_.all_nodes[my_machine_id_].neighbors) {
     // peer_machine_id means nothing here, just counting.
     if (peer_machine_id < my_machine_id_) {
-      conn = NewConnection();
+      conn = NewConnection(net_topo_.all_nodes[my_machine_id_].address,
+                           net_topo_.all_nodes[my_machine_id_].port);
       CHECK(conn);
       receive_request = request_pool_->AllocRequest(false);
       CHECK(receive_request);
