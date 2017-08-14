@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include "oneflow/core/actor/actor_message.h"
-#include "oneflow/core/comm_network/comm_network.h"
+#include "oneflow/core/network/network.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
