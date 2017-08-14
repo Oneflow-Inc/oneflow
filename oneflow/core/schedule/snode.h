@@ -1,8 +1,8 @@
 /**
  * Copyright 2017 Xinqi Li
  */
-#ifndef ONEFLOW_CORE_SCHEDULE_DATA_STRUCTURE_NODE_H_
-#define ONEFLOW_CORE_SCHEDULE_DATA_STRUCTURE_NODE_H_
+#ifndef ONEFLOW_CORE_SCHEDULE_SNODE_H_
+#define ONEFLOW_CORE_SCHEDULE_SNODE_H_
 
 #include <limits.h>
 #include <algorithm>
@@ -390,4 +390,4 @@ class HasOneArcMgr : public ArcMgr<ArcType> {
 }  // namespace schedule
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_SCHEDULE_DATA_STRUCTURE_NODE_H_
+#endif  // ONEFLOW_CORE_SCHEDULE_SNODE_H_
