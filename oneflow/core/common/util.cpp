@@ -4,45 +4,35 @@
 
 namespace oneflow {
 
-template<>
-int32_t oneflow_cast(const std::string& s) {
-  int32_t ret = 0;
-  CHECK(tensorflow::strings::safe_strto32(s, &ret));
-  return ret;
-}
+#define DEFINE_ONEFLOW_STR2INT_CAST(dst_type, cast_func) \
+  template<>                                             \
+  dst_type oneflow_cast(const std::string& s) {          \
+    char* end_ptr = nullptr;                             \
+    dst_type ret = cast_func(s.c_str(), &end_ptr, 0);    \
+    CHECK_EQ(*end_ptr, '\0');                            \
+    return ret;                                          \
+  }
 
-template<>
-uint32_t oneflow_cast(const std::string& s) {
-  uint32_t ret = 0;
-  CHECK(tensorflow::strings::safe_strtou32(s, &ret));
-  return ret;
-}
+DEFINE_ONEFLOW_STR2INT_CAST(long, strtol);
+DEFINE_ONEFLOW_STR2INT_CAST(unsigned long, strtoul);
+DEFINE_ONEFLOW_STR2INT_CAST(long long, strtoll);
+DEFINE_ONEFLOW_STR2INT_CAST(unsigned long long, strtoull);
 
-template<>
-int64_t oneflow_cast(const std::string& s) {
-  tensorflow::int64 ret = 0;
-  CHECK(tensorflow::strings::safe_strto64(s, &ret));
-  return ret;
-}
-
-template<>
-uint64_t oneflow_cast(const std::string& s) {
-  tensorflow::uint64 ret = 0;
-  CHECK(tensorflow::strings::safe_strtou64(s, &ret));
-  return ret;
-}
+DEFINE_ONEFLOW_STR2INT_CAST(int, strtol);
 
 template<>
 float oneflow_cast(const std::string& s) {
-  float ret = 0.0f;
-  CHECK(tensorflow::strings::safe_strtof(s.c_str(), &ret));
+  char* end_ptr = nullptr;
+  float ret = strtof(s.c_str(), &end_ptr);
+  CHECK_EQ(*end_ptr, '\0');
   return ret;
 }
 
 template<>
 double oneflow_cast(const std::string& s) {
-  double ret = 0.0;
-  CHECK(tensorflow::strings::safe_strtod(s.c_str(), &ret));
+  char* end_ptr = nullptr;
+  double ret = strtod(s.c_str(), &end_ptr);
+  CHECK_EQ(*end_ptr, '\0');
   return ret;
 }
 
