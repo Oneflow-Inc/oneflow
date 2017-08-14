@@ -19,7 +19,9 @@ class SGraphFactory {
   virtual ~SGraphFactory() = default;
   DEFINE_FACTORY_PURE_VIRTUAL_CLONE(SGraphFactory);
 
-  virtual std::unique_ptr<SGraph> CreateSGraph(const Plan& plan) = 0;
+  virtual std::unique_ptr<SGraph> CreateSGraph(const Plan& plan) const = 0;
+  virtual std::unique_ptr<SGraph> CreateSGraph(
+      const std::string& name) const = 0;
 };
 
 template<typename SGraphType>
@@ -31,8 +33,12 @@ class SGraphConcreteFactory : public SGraphFactory {
   virtual ~SGraphConcreteFactory() = default;
   DEFINE_FACTORY_METHOD_CLONE(SGraphConcreteFactory, SGraphFactory);
 
-  std::unique_ptr<SGraph> CreateSGraph(const Plan& plan) {
-    return SGraphType::CreateFromPlan(plan);
+  std::unique_ptr<SGraph> CreateSGraph(const Plan& plan) const {
+    return unique_ptr_new<SGraphType>(plan);
+  }
+
+  std::unique_ptr<SGraph> CreateSGraph(const std::string& name) const {
+    return unique_ptr_new<SGraphType>(name);
   }
 };
 

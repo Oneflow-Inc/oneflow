@@ -83,9 +83,8 @@ class SGraph : public SNode {
   DEFINE_METHOD_TYPE();
 
   explicit SGraph(std::string name) : SNode(name) { InitSourceAndSink(); }
-
-  static std::unique_ptr<SGraph> CreateFromPlan(const Plan& plan) {
-    return unique_ptr_new<SGraph>("plan");
+  explicit SGraph(const Plan& plan) : SNode("plan-graph") {
+    InitSourceAndSink();
   }
 
   void Update() {

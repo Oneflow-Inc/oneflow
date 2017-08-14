@@ -15,24 +15,30 @@ namespace oneflow {
 namespace schedule {
 
 void SimulatorPolicyDemo() {
-  auto ph = PH("naive");
-  auto graph = ph->DemoGraph();
-  ph->PrintGraph(*graph, "");
-  auto session = ph->MakeSession(*graph);
-  auto schedule_result = ph->Schedule(*session);
-  ph->Retiming(*session, schedule_result.get());
-  ph->AllocateFromSchedule(*session, schedule_result.get());
-  bool success = ph->ValidateAllocation(*session, *schedule_result);
-  std::cout << "allocation is " << (success ? "" : "NOT ") << "optimal"
-            << std::endl;
+  //  auto ph = PH("naive");
+  //  auto graph = ph->DemoGraph();
+  //  ph->PrintGraph(*graph, "");
+  //  auto session = ph->MakeSession(*graph);
+  //  auto schedule_result = ph->Schedule(*session);
+  //  ph->Retiming(*session, schedule_result.get());
+  //  ph->AllocateFromSchedule(*session, schedule_result.get());
+  //  bool success = ph->ValidateAllocation(*session, *schedule_result);
+  //  std::cout << "allocation is " << (success ? "" : "NOT ") << "optimal"
+  //            << std::endl;
 
-  auto sfp = ScheduleFactoryConfigure::Provider("default");
-  auto sess = sfp->session_factory()->CreateSession(*graph);
-  auto scheduler_engine =
-      sfp->scheduler_engine_factory()->CreateSchedulerEngine(*sess);
+  auto sfp = ScheduleFactoryConfigure::Provider("demo");
+  auto sgraph_factory = sfp->sgraph_factory();
+  auto session_factory = sfp->session_factory();
+  auto engine_factory = sfp->scheduler_engine_factory();
+  auto validator_factory = sfp->validator_factory();
+
+  auto sgraph = sgraph_factory->CreateSGraph("demo");
+  auto sess = session_factory->CreateSession(*sgraph);
+  auto scheduler_engine = engine_factory->CreateSchedulerEngine(*sess);
+  auto validator = validator_factory->CreateValidator();
+
   auto schedule = scheduler_engine->StaticSchedule();
   std::cout << "max-interval: " << schedule->max_interval() << std::endl;
-  auto validator = sfp->validator_factory()->CreateValidator();
   auto is_valid = validator->ValidateAllocation(*schedule);
   std::cout << "allocation is " << (is_valid ? "" : "NOT ") << "optimal"
             << std::endl;
