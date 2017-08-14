@@ -26,8 +26,11 @@ void TestDemo() {
 
   auto schedule = schedule_engine->StaticSchedule();
   std::cout << "max-interval: " << schedule->max_interval() << std::endl;
-  auto is_valid = validator->ValidateAllocation(*schedule);
-  std::cout << "allocation is " << (is_valid ? "" : "NOT ") << "optimal"
+  auto is_allocation_valid = validator->ValidateAllocation(*schedule);
+  std::cout << "allocation is " << (is_allocation_valid ? "" : "NOT ")
+            << "optimal" << std::endl;
+  auto is_memory_valid = validator->ValidateMemory(*schedule);
+  std::cout << "memory is " << (is_memory_valid ? "" : "NOT ") << "valid"
             << std::endl;
 }
 

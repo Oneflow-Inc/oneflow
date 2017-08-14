@@ -35,17 +35,9 @@ class Schedule {
   instance2ended_at() const {
     return instance2ended_at_;
   }
-  inline std::unordered_map<TaskInstance*, std::pair<int32_t, int32_t>>&
-  mut_instance2ended_at() {
-    return instance2ended_at_;
-  }
   inline const std::unordered_map<TaskInstance*,
                                   std::unordered_map<STask*, float>>&
   start_time_gap_to_loss() const {
-    return start_time_gap_to_loss_;
-  };
-  inline std::unordered_map<TaskInstance*, std::unordered_map<STask*, float>>&
-  mut_start_time_gap_to_loss() {
     return start_time_gap_to_loss_;
   };
   inline const std::unordered_map<TaskInstance*,
@@ -53,36 +45,45 @@ class Schedule {
   end_time_gap_to_loss() const {
     return end_time_gap_to_loss_;
   };
-  inline std::unordered_map<TaskInstance*, std::unordered_map<STask*, float>>&
-  mut_end_time_gap_to_loss() {
-    return end_time_gap_to_loss_;
-  };
   inline const std::unordered_map<SDevice*, int32_t>& device2ended_at() const {
     return device2ended_at_;
   }
-  inline std::unordered_map<SDevice*, int32_t>& mut_device2ended_at() {
-    return device2ended_at_;
-  }
-
   inline const std::unordered_map<STask*, float>& node2interval() const {
     return node2interval_;
   }
-  inline std::unordered_map<STask*, float>& mut_node2interval() {
-    return node2interval_;
-  }
-  inline float& mut_max_interval() { return max_interval_; }
   inline const float max_interval() const { return max_interval_; }
 
   inline const std::unordered_map<SRegstDesc*, float>& regst_desc2duration()
       const {
     return regst_desc2duration_;
   }
-  inline std::unordered_map<SRegstDesc*, float>& mut_regst_desc2duration() {
-    return regst_desc2duration_;
-  }
   inline const std::unordered_map<SRegstDesc*, int32_t>& regst_desc2count()
       const {
     return regst_desc2count_;
+  }
+
+  //	setter
+  inline std::unordered_map<TaskInstance*, std::pair<int32_t, int32_t>>&
+  mut_instance2ended_at() {
+    return instance2ended_at_;
+  }
+  inline std::unordered_map<TaskInstance*, std::unordered_map<STask*, float>>&
+  mut_start_time_gap_to_loss() {
+    return start_time_gap_to_loss_;
+  };
+  inline std::unordered_map<TaskInstance*, std::unordered_map<STask*, float>>&
+  mut_end_time_gap_to_loss() {
+    return end_time_gap_to_loss_;
+  };
+  inline std::unordered_map<SDevice*, int32_t>& mut_device2ended_at() {
+    return device2ended_at_;
+  }
+  inline std::unordered_map<STask*, float>& mut_node2interval() {
+    return node2interval_;
+  }
+  inline float& mut_max_interval() { return max_interval_; }
+  inline std::unordered_map<SRegstDesc*, float>& mut_regst_desc2duration() {
+    return regst_desc2duration_;
   }
   inline std::unordered_map<SRegstDesc*, int32_t>& mut_regst_desc2count() {
     return regst_desc2count_;

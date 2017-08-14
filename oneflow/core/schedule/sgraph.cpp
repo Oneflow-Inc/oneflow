@@ -159,5 +159,21 @@ void SGraph::InitDepth() {
   });
 }
 
+void SGraph::UpdateTask() {
+  ForeachNode([&](STask* task) {
+    SDevice* device = nullptr;
+    device_arc_mgr().Output(task, &device);
+    task->mut_device() = device;
+  });
+}
+
+void SGraph::UpdateRegstDesc() {
+  ForeachRegstDesc([&](SRegstDesc* regst_desc) {
+    STask* task = nullptr;
+    produced_regst_desc_mgr().Input(regst_desc, &task);
+    regst_desc->mut_owner_task() = task;
+  });
+}
+
 }  // namespace schedule
 }  // namespace oneflow

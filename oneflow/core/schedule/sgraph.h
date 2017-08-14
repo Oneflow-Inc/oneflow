@@ -44,19 +44,6 @@ class SDevice : public SNode {
   uint64_t memory_limit_ = ULLONG_MAX;
 };
 
-class SRegstDesc : public SNode {
- public:
-  SRegstDesc(const std::string name) : SNode(name) {}
-  SRegstDesc() : SNode() {}
-  virtual ~SRegstDesc() {}
-
-  uint64_t regst_size() const { return regst_size_; }
-  uint64_t& mut_regst_size() { return regst_size_; }
-
- private:
-  uint64_t regst_size_ = 1u;
-};
-
 //	static schedule task
 
 class STask : public SNode {
@@ -66,11 +53,31 @@ class STask : public SNode {
   virtual ~STask() {}
   DEFINE_METHOD_TYPE();
   inline int depth() const { return depth_; }
+  inline const SDevice* device() const { return device_; }
+
   inline int& mut_depth() { return depth_; }
+  inline SDevice*& mut_device() { return device_; }
 
  protected:
   int depth_;
   SDevice* device_;
+};
+
+class SRegstDesc : public SNode {
+ public:
+  SRegstDesc(const std::string name) : SNode(name) {}
+  SRegstDesc() : SNode() {}
+  virtual ~SRegstDesc() {}
+
+  inline uint64_t regst_memory_size() const { return regst_memory_size_; }
+  inline const STask* owner_task() const { return owner_task_; }
+
+  inline uint64_t& mut_regst_memory_size() { return regst_memory_size_; }
+  inline STask*& mut_owner_task() { return owner_task_; }
+
+ private:
+  uint64_t regst_memory_size_ = 1u;
+  STask* owner_task_;
 };
 
 //	static schedule graph
@@ -86,15 +93,6 @@ class SGraph : public SNode {
   explicit SGraph(const Plan& plan) : SNode("plan-graph") {
     InitSourceAndSink();
   }
-
-  void Update() {
-    UpdateSourceAndSink();
-    InitDepth();
-    InitAscendentArc();
-  }
-
-  void InitSourceAndSink();
-  void InitDepth();
 
   static bool DescNodeOrder(STask* a, STask* b) {
     return a->depth() < b->depth();
@@ -120,7 +118,6 @@ class SGraph : public SNode {
   void WalkReverse(const std::function<void(STask*)>& cb);
   void WalkArcReverse(const std::function<void(Arc<STask>*)>& cb);
   void ForeachArc(const std::function<void(Arc<STask>*)>& cb) const;
-  void UpdateSourceAndSink();
   int LossNodes(std::list<STask*>* l) const;
   STask* source() const { return source_; }
   STask*& mut_source() { return source_; }
@@ -182,6 +179,20 @@ class SGraph : public SNode {
   inline ArcMgr<Arc<STask, SRegstDesc>>& mut_subscribed_regst_desc_mgr() {
     return subscribed_regst_desc_mgr_;
   }
+
+ protected:
+  void Update() {
+    UpdateSourceAndSink();
+    InitDepth();
+    InitAscendentArc();
+    UpdateTask();
+    UpdateRegstDesc();
+  }
+  void UpdateSourceAndSink();
+  void InitSourceAndSink();
+  void InitDepth();
+  void UpdateTask();
+  void UpdateRegstDesc();
 
  private:
   STask* source_;

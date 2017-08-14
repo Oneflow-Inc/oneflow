@@ -19,6 +19,7 @@ class Validator {
   Validator() = default;
 
   virtual bool ValidateAllocation(const Schedule& schedule);
+  virtual bool ValidateMemory(const Schedule& schedule);
 
   //	getter
   inline ScheduleFactoryProvider* schedule_factory_provider() const {
