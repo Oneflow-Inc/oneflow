@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_SCHEDULE_DATA_STRUCTURE_SESSION_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/schedule/node.h"
+#include "oneflow/core/schedule/sgraph.h"
 
 namespace oneflow {
 namespace schedule {

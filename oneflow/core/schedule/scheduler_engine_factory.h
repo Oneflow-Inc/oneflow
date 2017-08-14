@@ -4,9 +4,9 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/schedule/factory_util.h"
-#include "oneflow/core/schedule/node.h"
 #include "oneflow/core/schedule/scheduler_engine.h"
 #include "oneflow/core/schedule/session.h"
+#include "oneflow/core/schedule/sgraph.h"
 #include "oneflow/core/schedule/util.h"
 
 namespace oneflow {

@@ -1,7 +1,7 @@
 /**
  * Copyright 2017 Xinqi Li
  */
-#include "oneflow/core/schedule/node.h"
+#include "oneflow/core/schedule/sgraph.h"
 
 namespace oneflow {
 namespace schedule {

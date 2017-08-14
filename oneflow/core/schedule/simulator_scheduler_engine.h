@@ -19,11 +19,11 @@
 #include <utility>
 #include <vector>
 
-#include "oneflow/core/schedule/node.h"
 #include "oneflow/core/schedule/policy.h"
 #include "oneflow/core/schedule/schedule.h"
 #include "oneflow/core/schedule/scheduler_engine.h"
 #include "oneflow/core/schedule/session.h"
+#include "oneflow/core/schedule/sgraph.h"
 #include "oneflow/core/schedule/simulation_strategy.h"
 #include "oneflow/core/schedule/util.h"
 
