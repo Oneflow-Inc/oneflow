@@ -7,7 +7,9 @@
 
 namespace oneflow {
 
-Master::Master(const ServerDef& server_def) : server_def_(server_def) {
+Master::Master(const ServerDef& server_def,
+               ::grpc::CompletionQueue* completion_queue)
+    : server_def_(server_def), cq_(completion_queue) {
   ParseServerDef();
   CreateWorkerCache();
 }
@@ -36,7 +38,7 @@ void Master::CreateWorkerCache() {
     std::shared_ptr<::grpc::Channel> worker_channel = ::grpc::CreateChannel(
         worker_addr, ::grpc::InsecureChannelCredentials());
     std::shared_ptr<GrpcRemoteWorker> remote_worker(
-        new GrpcRemoteWorker(worker_channel));
+        new GrpcRemoteWorker(worker_channel, cq_));
     CHECK(name2worker_.insert(std::make_pair(name, remote_worker)).second);
   }
 }
@@ -61,17 +63,31 @@ Master::~Master() {}
   // LOG(INFO) << str_plan;
 
   for (auto& pair : name2worker_) {
-    SendPlanRequest plan_req;
-    SendPlanResponse plan_resp;
+    struct Call {
+      SendPlanRequest plan_req;
+      SendPlanResponse plan_resp;
+    };
+    Call* call = new Call;
+    *(call->plan_req.mutable_plan()) = response->plan();
 
-    *(plan_req.mutable_plan()) = response->plan();
+    auto cb = [](const ::tensorflow::Status& s) {
+      if (s.ok()) {
+        LOG(INFO) << "SendPlan RPC succeeds";
+      } else {
+        LOG(INFO) << "SendPlan RPC fails";
+      }
+    };
 
-    ::tensorflow::Status s = pair.second->SendPlan(&plan_req, &plan_resp);
-    if (s.ok()) {
-      LOG(INFO) << "SendPlan RPC succeeds";
-    } else {
-      LOG(INFO) << "SendPlan RPC fails";
-    }
+    pair.second->SendPlanAsync(&call->plan_req, &call->plan_resp, cb);
+
+    //*(plan_req.mutable_plan()) = response->plan();
+
+    //::tensorflow::Status s = pair.second->SendPlan(&plan_req, &plan_resp);
+    // if (s.ok()) {
+    //  LOG(INFO) << "SendPlan RPC succeeds";
+    //} else {
+    //  LOG(INFO) << "SendPlan RPC fails";
+    //}
   }
 
   done(::tensorflow::Status());

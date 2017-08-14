@@ -26,4 +26,10 @@ namespace oneflow {
   return FromGrpcStatus(stub_->SendPlan(&ctx, *request, response));
 }
 
+void GrpcRemoteWorker::SendPlanAsync(const SendPlanRequest* request,
+                                     SendPlanResponse* response,
+                                     ::tensorflow::StatusCallback done) {
+  IssueRequest(request, response, sendplan_, std::move(done));
+}
+
 }  // namespace oneflow

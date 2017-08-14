@@ -109,6 +109,9 @@ class GrpcServer : public ServerInterface {
   std::thread worker_thread_;
   std::thread worker_do_thread_;
 
+  ::grpc::CompletionQueue completion_queue_;
+  std::thread async_request_done_thread_;
+
   std::unique_ptr<::grpc::Server> server_;
 };
 

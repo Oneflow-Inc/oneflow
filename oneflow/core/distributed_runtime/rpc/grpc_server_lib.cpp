@@ -126,6 +126,16 @@ void GrpcServer::GetCtrlPlaneAddr() {
           std::thread(&AsyncServiceInterface::HandleRPCsLoop, worker_service_);
       worker_do_thread_ =
           std::thread(&AsyncServiceInterface::DoWorkLoop, worker_service_);
+
+      async_request_done_thread_ = std::thread([this]() {
+        void* tag;
+        bool ok;
+        while (completion_queue_.Next(&tag, &ok)) {
+          GrpcClientCQTag* callback_tag = static_cast<GrpcClientCQTag*>(tag);
+          callback_tag->OnCompleted(ok);
+        }
+      });
+
       state_ = STARTED;
       LOG(INFO) << "Started server with target: " << target();
       return ::tensorflow::Status::OK();
@@ -149,6 +159,7 @@ void GrpcServer::GetCtrlPlaneAddr() {
       //    "Clean shutdown is not currently implemented");
       master_service_->Shutdown();
       worker_service_->Shutdown();
+      completion_queue_.Shutdown();
       return ::tensorflow::Status::OK();
     case STOPPED:
       LOG(INFO) << "Server already stopped (target: " << target() << ")";
@@ -171,6 +182,7 @@ void GrpcServer::GetCtrlPlaneAddr() {
       master_do_thread_.join();
       worker_thread_.join();
       worker_do_thread_.join();
+      async_request_done_thread_.join();
       return ::tensorflow::Status::OK();
     default: CHECK(false);
   }
@@ -182,7 +194,7 @@ const std::string GrpcServer::target() const {
 }
 
 std::unique_ptr<Master> GrpcServer::CreateMaster() {
-  return std::unique_ptr<Master>(new Master(server_def_));
+  return std::unique_ptr<Master>(new Master(server_def_, &completion_queue_));
 }
 
 std::unique_ptr<Worker> GrpcServer::CreateWorker() {

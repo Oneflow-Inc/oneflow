@@ -10,7 +10,8 @@ namespace oneflow {
 
 class Master {
  public:
-  Master(const ServerDef& server_def);
+  Master(const ServerDef& server_def,
+         ::grpc::CompletionQueue* completion_queue);
   ~Master();
 
   // Convenient typedef for a closure passing a Status
@@ -29,6 +30,8 @@ class Master {
   std::unordered_map<std::string, ClusterNode> name2node_def_;
   std::unordered_map<std::string, std::shared_ptr<GrpcRemoteWorker>>
       name2worker_;
+
+  ::grpc::CompletionQueue* cq_;
 };  // Master
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_DISTRIBUTED_RUNTIME_MASTER_H_
