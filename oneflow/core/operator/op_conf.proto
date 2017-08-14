@@ -108,14 +108,12 @@ message PoolingOpConf {
     kStochastic = 2;
   }
   PoolMethod pool = 3; // The pooling method
-  // Pad, kernel size, and stride are all given as a repeated value
-  // dimensions in height and width or 3D
-  int32 pad_h = 5; // The padding size; defaults to 0
-  int32 pad_w = 6;
-  int32 kernel_size_h = 7; // The kernel size
-  int32 kernel_size_w = 8;
-  int32 stride_h = 9; // The stride; defaults to 1
-  int32 stride_w = 10;
+  int32 pad_h = 4; // The padding size; defaults to 0
+  int32 pad_w = 5;
+  int32 kernel_size_h = 6; // The kernel size
+  int32 kernel_size_w = 7;
+  int32 stride_h = 8; // The stride; defaults to 1
+  int32 stride_w = 9;
 }
 
 message ReluOpConf {
