@@ -127,6 +127,63 @@ inline uint32_t NewRandomSeed() {
 #define MAX_WITH_LOG_THRESHOLD(x) ((x) > LOG_THRESHOLD ? (x) : LOG_THRESHOLD)
 #define SAFE_LOG(x) logf(MAX_WITH_LOG_THRESHOLD(x))
 
+namespace io {
+
+// Return true if path is absolute.
+inline bool IsAbsolutePath(std::string path) {
+  return !path.empty() && path[0] == '/';
+}
+
+namespace {
+
+std::string JoinPathImpl(std::initializer_list<std::string> paths) {
+  std::string result;
+  for (std::string path : paths) {
+    if (path.empty()) continue;
+    if (result.empty()) {
+      result = path;
+      continue;
+    }
+    if (result[result.size() - 1] == '/') {
+      if (IsAbsolutePath(path)) {
+        result.append(path.substr(1));
+      } else {
+        result.append(path);
+      }
+    } else {
+      if (IsAbsolutePath(path)) {
+        result.append(path);
+      } else {
+        result += ("/" + path);
+      }
+    }
+  }
+  return result;
+}
+
+}  // namespace
+
+// Join multiple paths together, without introducing unnecessary path
+// separators.
+// For example:
+//
+//  Arguments                  | JoinPath
+//  ---------------------------+----------
+//  '/foo', 'bar'              | /foo/bar
+//  '/foo/', 'bar'             | /foo/bar
+//  '/foo', '/bar'             | /foo/bar
+//
+// Usage:
+// string path = io::JoinPath("/mydir", filename);
+// string path = io::JoinPath(FLAGS_test_srcdir, filename);
+// string path = io::JoinPath("/full", "path", "to", "filename);
+template<typename... T>
+std::string JoinPath(const T&... args) {
+  return JoinPathImpl({args...});
+}
+
+}  // namespace io
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_UTIL_H_

@@ -1,6 +1,6 @@
 #include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/common/balanced_splitter.h"
-#include "tensorflow/core/lib/io/path.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
@@ -36,19 +36,18 @@ void Snapshot::CheckAndConcat() {
   std::vector<std::string> sub_dir_names;
   TF_CHECK_OK(env_->GetChildren(root_path_, &sub_dir_names));
   for (std::string sub_dir_name : sub_dir_names) {
-    std::string sub_dir = tensorflow::io::JoinPath(root_path_, sub_dir_name);
+    std::string sub_dir = io::JoinPath(root_path_, sub_dir_name);
     TF_CHECK_OK(env_->IsDirectory(sub_dir));
     // for the children of the sub_dir
     std::vector<std::string> file_names;
     TF_CHECK_OK(env_->GetChildren(sub_dir, &file_names));
     CHECK_NE(file_names.size(), 0);
-    std::string concat_file_path =
-        tensorflow::io::JoinPath(sub_dir, concat_file_name_);
+    std::string concat_file_path = io::JoinPath(sub_dir, concat_file_name_);
     // for condition after concat
     // if the children number is 1 , the child must be the concated file named
     // "all"
     if (file_names.size() == 1) {
-      std::string file_path = tensorflow::io::JoinPath(sub_dir, file_names[0]);
+      std::string file_path = io::JoinPath(sub_dir, file_names[0]);
       TF_CHECK_OK(env_->FileExists(file_path));
       CHECK_EQ(file_names[0], concat_file_name_);
       continue;
@@ -60,8 +59,7 @@ void Snapshot::CheckAndConcat() {
     // and then CONCAT the files to one file, delete origin files and Dir
     //
     // first: check key_info
-    std::string key_info_dir_path =
-        tensorflow::io::JoinPath(sub_dir, key_info_dir_name_);
+    std::string key_info_dir_path = io::JoinPath(sub_dir, key_info_dir_name_);
     TF_CHECK_OK(env_->IsDirectory(key_info_dir_path));
     std::vector<std::string> key_info_subs;
     TF_CHECK_OK(env_->GetChildren(key_info_dir_path, &key_info_subs));
@@ -76,8 +74,8 @@ void Snapshot::CheckAndConcat() {
     CHECK_EQ(part_num, key_info_subs.size() - 1);
     CHECK_EQ(part_num, file_names.size() - 1);
     for (size_t i = 0; i < part_num; ++i) {
-      std::string done_file_path = tensorflow::io::JoinPath(
-          key_info_dir_path, "done_" + std::to_string(i));
+      std::string done_file_path =
+          io::JoinPath(key_info_dir_path, "done_" + std::to_string(i));
       TF_CHECK_OK(env_->FileExists(done_file_path));
     }
     tensorflow::int64 undeletefiles, undeletedirs;
@@ -87,8 +85,7 @@ void Snapshot::CheckAndConcat() {
     std::unique_ptr<tensorflow::WritableFile> concat_file;
     TF_CHECK_OK(env_->NewWritableFile(concat_file_path, &concat_file));
     for (int32_t i = 0; i < part_num; ++i) {
-      std::string file_path =
-          tensorflow::io::JoinPath(sub_dir, std::to_string(i));
+      std::string file_path = io::JoinPath(sub_dir, std::to_string(i));
       TF_CHECK_OK(env_->FileExists(file_path));
       const tensorflow::uint64 batch_size = 64 * 1024 * 1024;
       char* scratch = new char[batch_size];
@@ -113,8 +110,8 @@ void Snapshot::CheckAndConcat() {
 
 std::unique_ptr<PersistentInStream> Snapshot::GetInStream(
     const std::string& key, size_t begin_pos) const {
-  std::string file_path = tensorflow::io::JoinPath(
-      root_path_, MakeValidFileName(key), concat_file_name_);
+  std::string file_path =
+      io::JoinPath(root_path_, MakeValidFileName(key), concat_file_name_);
   PersistentInStream* ret = new PersistentInStream(file_path, begin_pos);
   return std::unique_ptr<PersistentInStream>(ret);
 }
@@ -122,8 +119,8 @@ std::unique_ptr<PersistentInStream> Snapshot::GetInStream(
 std::unique_ptr<PersistentInStream> Snapshot::GetInStream(
     const std::string& key, int32_t part_id, int32_t part_num, int32_t dim_num,
     int64_t byte_size_of_each_dim) const {
-  std::string file_path = tensorflow::io::JoinPath(
-      root_path_, MakeValidFileName(key), concat_file_name_);
+  std::string file_path =
+      io::JoinPath(root_path_, MakeValidFileName(key), concat_file_name_);
   tensorflow::uint64 file_size = 0;
   TF_CHECK_OK(env_->GetFileSize(file_path, &file_size));
   CHECK_GT(file_size, 0);
@@ -135,14 +132,12 @@ std::unique_ptr<PersistentInStream> Snapshot::GetInStream(
 
 std::unique_ptr<PersistentOutStream> Snapshot::GetOutStream(
     const std::string& key, int32_t part_id, int32_t part_num) {
-  std::string dir_path =
-      tensorflow::io::JoinPath(root_path_, MakeValidFileName(key));
+  std::string dir_path = io::JoinPath(root_path_, MakeValidFileName(key));
   if (env_->IsDirectory(dir_path).code() == tensorflow::error::NOT_FOUND) {
     TF_CHECK_OK(env_->CreateDir(dir_path));
   }
   TF_CHECK_OK(env_->IsDirectory(dir_path));
-  std::string key_info_dir_path =
-      tensorflow::io::JoinPath(dir_path, key_info_dir_name_);
+  std::string key_info_dir_path = io::JoinPath(dir_path, key_info_dir_name_);
   if (env_->IsDirectory(key_info_dir_path).code()
       == tensorflow::error::NOT_FOUND) {
     TF_CHECK_OK(env_->CreateDir(key_info_dir_path));
@@ -150,20 +145,19 @@ std::unique_ptr<PersistentOutStream> Snapshot::GetOutStream(
   TF_CHECK_OK(env_->IsDirectory(key_info_dir_path));
   if (part_id == 0) {
     std::unique_ptr<tensorflow::WritableFile> part_num_file;
-    std::string part_num_file_path = tensorflow::io::JoinPath(
-        key_info_dir_path, "total_" + std::to_string(part_num));
+    std::string part_num_file_path =
+        io::JoinPath(key_info_dir_path, "total_" + std::to_string(part_num));
     TF_CHECK_OK(env_->NewWritableFile(part_num_file_path, &part_num_file));
   }
-  std::string file_path =
-      tensorflow::io::JoinPath(dir_path, std::to_string(part_id));
+  std::string file_path = io::JoinPath(dir_path, std::to_string(part_id));
   PersistentOutStream* ret = new PersistentOutStream(file_path);
   return std::unique_ptr<PersistentOutStream>(ret);
 }
 
 void Snapshot::OnePartDone4Key(const std::string& key, const int32_t part_id) {
-  std::string done_file_path = tensorflow::io::JoinPath(
-      root_path_, MakeValidFileName(key), key_info_dir_name_,
-      "done_" + std::to_string(part_id));
+  std::string done_file_path =
+      io::JoinPath(root_path_, MakeValidFileName(key), key_info_dir_name_,
+                   "done_" + std::to_string(part_id));
   CHECK(env_->FileExists(done_file_path).code()
         == tensorflow::error::NOT_FOUND);
   PersistentOutStream out_stream(done_file_path);
