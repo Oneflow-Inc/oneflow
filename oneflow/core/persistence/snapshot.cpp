@@ -119,19 +119,18 @@ std::unique_ptr<PersistentInStream> Snapshot::GetInStream(
   return std::unique_ptr<PersistentInStream>(ret);
 }
 
-std::unique_ptr<PersistentInStream> Snapshot::GetInStreamByPardId(
-    const std::string& key, int32_t part_id, int32_t part_num, int32_t out_num,
-    int64_t other_num) const {
+std::unique_ptr<PersistentInStream> Snapshot::GetInStream(
+    const std::string& key, int32_t part_id, int32_t part_num, int32_t dim_num,
+    int64_t byte_size_of_each_dim) const {
   std::string file_path = tensorflow::io::JoinPath(
       root_path_, MakeValidFileName(key), concat_file_name_);
   tensorflow::uint64 file_size = 0;
   TF_CHECK_OK(env_->GetFileSize(file_path, &file_size));
   CHECK_GT(file_size, 0);
-  CHECK_EQ(file_size, out_num * other_num);
-  BalancedSplitter splitter = BalancedSplitter(out_num, part_num);
-  int64_t begin_pos = splitter.At(part_id).begin() * other_num;
-  PersistentInStream* ret = new PersistentInStream(file_path, begin_pos);
-  return std::unique_ptr<PersistentInStream>(ret);
+  CHECK_EQ(file_size, dim_num * byte_size_of_each_dim);
+  BalancedSplitter splitter = BalancedSplitter(dim_num, part_num);
+  int64_t begin_pos = splitter.At(part_id).begin() * byte_size_of_each_dim;
+  return GetInStream(key, begin_pos);
 }
 
 std::unique_ptr<PersistentOutStream> Snapshot::GetOutStream(

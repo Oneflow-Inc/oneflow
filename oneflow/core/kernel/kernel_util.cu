@@ -158,11 +158,11 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
   static void FillWithSnapshot(const KernelCtx& ctx, int32_t part_id,
                                int32_t part_num, const Snapshot* snapshot,
                                Blob* blob, const std::string& lbn,
-                               int32_t out_num, int64_t other_num) {
+                               int32_t dim_num, int64_t num_in_each_dim) {
     int64_t blob_size = blob->shape().elem_cnt() * sizeof(FloatingPointType);
     std::unique_ptr<PersistentInStream> in_stream =
-        snapshot->GetInStreamByPardId(lbn, part_id, part_num, out_num,
-                                      other_num);
+        snapshot->GetInStream(lbn, part_id, part_num, dim_num,
+                              num_in_each_dim * sizeof(FloatingPointType));
     // read model from disk to host_blob synchronously
     void* host_raw_dptr;
     CudaCheck(cudaMallocHost(&host_raw_dptr, blob_size));
