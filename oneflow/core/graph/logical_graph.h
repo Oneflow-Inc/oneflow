@@ -28,6 +28,7 @@ class LogicalNode final : public Node<LogicalNode, LogicalEdge> {
   }
 
   bool IsLossNode() const { return op_->IsLossOp(); }
+  bool IsChainMergeable() const { return op_->IsChainMergeable(); }
 
   std::string VisualStr() const override { return op_->op_name(); }
 

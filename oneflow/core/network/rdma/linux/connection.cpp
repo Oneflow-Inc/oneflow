@@ -154,7 +154,7 @@ void Connection::Destroy() {
   delete connector_;
   connector_ = nullptr;
   if (queue_pair_ != nullptr) {
-    // CHECK_EQ(ibv_destroy_qp(queue_pair_), 0); TODO(shiyuan)
+    CHECK_EQ(ibv_destroy_qp(queue_pair_), 0);
   }
 }
 

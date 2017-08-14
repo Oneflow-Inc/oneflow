@@ -172,7 +172,6 @@ int main(int argc, char** argv) {
 
   delete []src_buffer;
   delete []dst_buffer;
-  
 
   LOG(INFO) << "Network Shutting Down..." << endl;
   gflags::ShutDownCommandLineFlags();

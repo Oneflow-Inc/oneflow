@@ -40,6 +40,9 @@ class ChainNode final : public Node<ChainNode, ChainEdge> {
   bool IsLossNode() const {
     return op_vec_.size() == 1 && op_vec_.front()->IsLossOp();
   }
+  bool IsLogNode() const {
+    return op_vec_.size() == 1 && op_vec_.front()->IsLogOp();
+  }
 
   std::string VisualStr() const { return ConcatedOpsName(); }
 

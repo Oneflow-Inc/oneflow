@@ -1,6 +1,5 @@
 #include "oneflow/core/actor/fw_data_comp_actor.h"
 #include "oneflow/core/actor/actor_registry.h"
-#include "oneflow/core/register/local_register_wrapper.h"
 
 namespace oneflow {
 
@@ -11,6 +10,8 @@ void FwDataCompActor::Init(const TaskProto& task_proto,
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
   expected_model_version_id_ = 0;
+  model_regst_ = nullptr;
+  model_tmp_regst_ = nullptr;
   if (thread_ctx.cpu_stream) {
     mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
   } else {
@@ -79,26 +80,25 @@ int FwDataCompActor::HandlerNormal(const ActorMsg& msg) {
       AsyncSendMsgToModelAndModelTmpProducer();
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    if (TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr())
-        != 0) {
-      std::shared_ptr<RegstWrapper> regst_wp = msg.regst_wrapper();
-      if (regst_wp->regst_desc_id() == model_tmp_regst_desc_id_) {
+    Regst* regst = msg.regst();
+    if (TryUpdtStateAsProducedRegst(regst) != 0) {
+      if (regst->regst_desc_id() == model_tmp_regst_desc_id_) {
         CHECK(!model_tmp_regst_);
-        model_tmp_regst_ = regst_wp;
-        readable_regst_[model_tmp_regst_desc_id_] = regst_wp;
-      } else if (regst_wp->regst_desc_id() == model_regst_desc_id_) {
-        CHECK_EQ(regst_wp->model_version_id(), expected_model_version_id_);
+        model_tmp_regst_ = regst;
+        readable_regst_[model_tmp_regst_desc_id_] = regst;
+      } else if (regst->regst_desc_id() == model_regst_desc_id_) {
+        CHECK_EQ(regst->model_version_id(), expected_model_version_id_);
         if (model_regst_) { AsyncSendRegstMsgToProducer(model_regst_); }
-        model_regst_ = regst_wp;
-        readable_regst_[model_regst_desc_id_] = regst_wp;
+        model_regst_ = regst;
+        readable_regst_[model_regst_desc_id_] = regst;
         expected_model_version_id_ += 1;
       } else {
-        in_.push(regst_wp);
+        in_.push(regst);
         mut_num_of_read_empty() = 0;
       }
       VLOG(4) << "fw data compute actor " << actor_id() << " "
-              << "receive readable regst " << regst_wp->regst_raw_ptr() << ", "
-              << "regst_desc_id:" << regst_wp->regst_desc_id() << ", "
+              << "receive readable regst " << regst << ", "
+              << "regst_desc_id:" << regst->regst_desc_id() << ", "
               << "current num_of_read_empty:" << num_of_read_empty();
     }
     ActUntilFail();
@@ -109,8 +109,7 @@ int FwDataCompActor::HandlerNormal(const ActorMsg& msg) {
 }
 
 int FwDataCompActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
-  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
-           0);
+  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
   ActUntilFail();
   CHECK_NE(in_desc_id_, -1);
   if (in_.empty()) {
@@ -129,16 +128,14 @@ void FwDataCompActor::Act() {
   }
   int64_t model_version_id = -1;
   if (model_regst_) { model_version_id = model_regst_->model_version_id(); }
-  AsyncLaunchKernel(
-      kernel_ctx_,
-      [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWrapper> {
-        Regst* regst = GetCurWriteableRegst(regst_desc_id);
-        if (regst == nullptr) {
-          return readable_regst_.at(regst_desc_id);
-        } else {
-          return std::make_shared<LocalRegstWrapper>(regst);
-        }
-      });
+  AsyncLaunchKernel(kernel_ctx_, [this](int64_t regst_desc_id) -> Regst* {
+    Regst* regst = GetCurWriteableRegst(regst_desc_id);
+    if (regst == nullptr) {
+      return readable_regst_.at(regst_desc_id);
+    } else {
+      return regst;
+    }
+  });
   AsyncSendReadableRegstMsg([piece_id, model_version_id](Regst* regst) {
     regst->set_piece_id(piece_id);
     regst->set_model_version_id(model_version_id);
