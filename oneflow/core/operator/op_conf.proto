@@ -18,16 +18,16 @@ message GaussianFillConf {
 }
 
 enum VarianceNorm {
-  FAN_IN = 0;
-  FAN_OUT = 1;
-  AVERAGE = 2;
+  kFanIn = 0;
+  kFanOut = 1;
+  kAverage = 2;
 }
 
 message XarierFillConf {
   VarianceNorm variance_norm = 1;
 }
 
-message MSRAFillConf {
+message MsraFillConf {
   VarianceNorm variance_norm = 1;
 }
 
@@ -37,7 +37,7 @@ message FillConf {
     UniformFillConf uniform_conf = 2;
     GaussianFillConf gaussian_conf = 3;
     XarierFillConf xarier_conf = 4;
-    MSRAFillConf msra_conf = 5;
+    MsraFillConf msra_conf = 5;
   }
 }
 

@@ -182,7 +182,7 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
     } else if (fill_conf.has_xarier_conf()) {
       XarierFill(fill_conf.xarier_conf(), random_seed, blob);
     } else if (fill_conf.has_msra_conf()) {
-      MSRAFill(fill_conf.msra_conf(), random_seed, blob);
+      MsraFill(fill_conf.msra_conf(), random_seed, blob);
     } else {
       UNEXPECTED_RUN();
     }
@@ -226,9 +226,9 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
     int64_t fan_in = blob->shape().elem_cnt() / blob->shape().At(0);
     int64_t fan_out = blob->shape().elem_cnt() / blob->shape().At(1);
     FloatingPointType n = fan_in;
-    if (variance_norm == VarianceNorm::AVERAGE) {
+    if (variance_norm == VarianceNorm::kAverage) {
       n = (fan_in + fan_out) / static_cast<FloatingPointType>(2);
-    } else if (variance_norm == VarianceNorm::FAN_OUT) {
+    } else if (variance_norm == VarianceNorm::kFanOut) {
       n = fan_out;
     }
     return n;
@@ -247,7 +247,7 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
         blob->mut_dptr<FloatingPointType>());
   }
 
-  static void MSRAFill(const MSRAFillConf& fill_conf, uint32_t random_seed,
+  static void MsraFill(const MsraFillConf& fill_conf, uint32_t random_seed,
                        Blob* blob) {
     CHECK(blob->shape().elem_cnt());
     FloatingPointType std = std::sqrt(
