@@ -2,11 +2,11 @@
 #define ONEFLOW_CORE_NETWORK_RDMA_LINUX_CONNECTION_H_
 
 #include <infiniband/verbs.h>
-#include <netdb.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include <stdlib.h>
 #include <unistd.h>
+#include <netdb.h>
 #include "oneflow/core/network/network_memory.h"
 #include "oneflow/core/network/rdma/linux/rdma_memory.h"
 
@@ -34,7 +34,6 @@ class Connection {
   Connection(int64_t my_machine_id, int64_t peer_machine_id);
   ~Connection();
 
-  void Bind(const char* my_ip, int32_t my_port);
   bool TryConnectTo(const char* peer_ip, int32_t peer_port);
   void CompleteConnection();
   void AcceptConnect();
@@ -47,17 +46,18 @@ class Connection {
 
   void Destroy();
 
+  void set_connector(Connector* connector) { connector_ = connector; }
+  void set_queue_pair(ibv_qp* queue_pair) {
+    queue_pair_ = queue_pair;
+    connector_->my_qpn = queue_pair_->qp_num;
+  }
+
   Connector* mutable_connector() { return connector_; }
   ibv_qp* mutable_queue_pair() { return queue_pair_; }
-  
-  void set_connector(Connector* connector);
-  void set_queue_pair(ibv_qp* queue_pair);
-  
-  const Connector& connector() { return *connector_; }
-  const ibv_qp& queue_pair() { return *queue_pair_; }
 
  private:
   void TransQueuePairState();
+
   int64_t my_machine_id_;
   int64_t peer_machine_id_;
 
