@@ -16,8 +16,10 @@ Worker::~Worker() {}
   std::string str_plan;
   PrintProtoToString(request->plan(), &str_plan);
   LOG(INFO) << str_plan;
-  Plan plan = request->plan();
-  oneflow::runtime::Runtime::Singleton()->Run(plan, this_node_name_);
+
+  // Plan plan = request->plan();
+  // oneflow::runtime::Runtime::Singleton()->Run(plan, this_node_name_);
+
   done(::tensorflow::Status());
   return ::tensorflow::Status::OK();
 }

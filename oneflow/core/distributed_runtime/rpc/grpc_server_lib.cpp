@@ -66,7 +66,10 @@ GrpcServer::~GrpcServer() {
 ::tensorflow::Status GrpcServer::Init() {
   ::tensorflow::mutex_lock l(mu_);
   CHECK_EQ(state_, NEW);
+
+  ParseServerDef();
   GetCtrlPlaneAddr();
+
   std::string server_address =
       ::tensorflow::strings::StrCat(bound_ip_, ":", bound_port_);
   ::grpc::ServerBuilder builder;
@@ -88,26 +91,29 @@ GrpcServer::~GrpcServer() {
   return ::tensorflow::Status::OK();
 }
 
-void GrpcServer::GetCtrlPlaneAddr() {
+void GrpcServer::ParseServerDef() {
   this_node_name_ = server_def_.this_node_name();
 
-  std::unordered_map<std::string, ClusterNode> name2node;
   int32_t node_num = server_def_.cluster_def().cluster_node_size();
   for (int32_t i = 0; i < node_num; ++i) {
     std::string node_name =
         server_def_.cluster_def().cluster_node(i).node_name();
     ClusterNode cluster_node = server_def_.cluster_def().cluster_node(i);
-    CHECK(name2node.insert(std::make_pair(node_name, cluster_node)).second);
+    CHECK(
+        name2node_def_.insert(std::make_pair(node_name, cluster_node)).second);
   }
+}
 
-  auto node_it = name2node.find(this_node_name_);
-  CHECK(node_it != name2node.end());
+void GrpcServer::GetCtrlPlaneAddr() {
+  auto node_it = name2node_def_.find(this_node_name_);
+  CHECK(node_it != name2node_def_.end());
   bound_ip_ = node_it->second.ctrl_plane_addr().addr();
   std::string port = node_it->second.ctrl_plane_addr().port();
   if (!::tensorflow::strings::safe_strto32(port, &bound_port_)) {
     LOG(FATAL) << "Could not parse port for local server from " << port;
   }
 }
+
 ::tensorflow::Status GrpcServer::Start() {
   ::tensorflow::mutex_lock l(mu_);
   switch (state_) {
@@ -176,7 +182,7 @@ const std::string GrpcServer::target() const {
 }
 
 std::unique_ptr<Master> GrpcServer::CreateMaster() {
-  return std::unique_ptr<Master>(new Master());
+  return std::unique_ptr<Master>(new Master(server_def_));
 }
 
 std::unique_ptr<Worker> GrpcServer::CreateWorker() {
