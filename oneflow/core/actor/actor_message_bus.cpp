@@ -13,7 +13,7 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
         IDMgr::Singleton()->ThrdLocId4ActorId(msg.dst_actor_id());
     ThreadMgr::Singleton()->GetThrd(thrd_loc_id)->GetMsgChannelPtr()->Send(msg);
   } else {
-    CommNetwork::Singleton()->SendActorMsg(dst_machine_id, msg);
+    // TODO(shiyuan): Network::Singleton()->SendMsg(dst_machine_id, msg);
   }
 }
 

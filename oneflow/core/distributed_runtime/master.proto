@@ -1,0 +1,18 @@
+syntax = "proto3";
+package oneflow;
+
+import "oneflow/core/job/job_conf.proto";
+import "oneflow/core/job/dlnet_conf.proto";
+import "oneflow/core/job/resource.proto";
+import "oneflow/core/job/placement.proto";
+
+message SendJobRequest {
+  JobConf job_conf = 1;
+  DLNetConf dlnet_conf = 2;
+  Resource resource_conf = 3;
+  Placement placement_conf = 4;
+}
+
+// Empty response
+message SendJobResponse {
+}
