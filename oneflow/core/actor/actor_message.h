@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_ACTOR_ACTOR_MESSAGE_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/register/register_wrapper.h"
+#include "oneflow/core/register/register.h"
 
 namespace oneflow {
 
@@ -32,9 +32,9 @@ class ActorMsg final {
   // Getters
   int64_t dst_actor_id() const { return dst_actor_id_; }
   ActorMsgType msg_type() const { return msg_type_; }
-  std::shared_ptr<RegstWrapper> regst_wrapper() const {
+  Regst* regst() const {
     CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
-    return regst_wrapper_;
+    return regst_;
   }
   ActorCmd actor_cmd() const {
     CHECK_EQ(msg_type_, ActorMsgType::kCmdMsg);
@@ -43,9 +43,9 @@ class ActorMsg final {
 
   // Setters
   void set_dst_actor_id(int64_t val) { dst_actor_id_ = val; }
-  void set_regst_wrapper(std::shared_ptr<RegstWrapper> val) {
+  void set_regst(Regst* val) {
     msg_type_ = ActorMsgType::kRegstMsg;
-    regst_wrapper_ = val;
+    regst_ = val;
   }
   void set_actor_cmd(ActorCmd val) {
     msg_type_ = ActorMsgType::kCmdMsg;
@@ -66,7 +66,7 @@ class ActorMsg final {
   int64_t dst_actor_id_;
   ActorMsgType msg_type_;
 
-  std::shared_ptr<RegstWrapper> regst_wrapper_;
+  Regst* regst_;
   ActorCmd actor_cmd_;
 };
 

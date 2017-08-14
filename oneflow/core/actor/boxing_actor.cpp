@@ -1,6 +1,6 @@
 #include "oneflow/core/actor/boxing_actor.h"
 #include "oneflow/core/actor/actor_registry.h"
-#include "oneflow/core/register/local_register_wrapper.h"
+#include "oneflow/core/register/register.h"
 
 namespace oneflow {
 
@@ -20,14 +20,13 @@ int BoxingActor::HandlerNormal(const ActorMsg& msg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD) << actor_id();
     ProcessEord();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    if (TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr())
-        != 0) {
-      std::shared_ptr<RegstWrapper> regst_wp = msg.regst_wrapper();
-      mut_num_of_read_empty() -= read_regst_[regst_wp->regst_desc_id()].empty();
-      read_regst_.at(regst_wp->regst_desc_id()).push(regst_wp);
+    Regst* regst = msg.regst();
+    if (TryUpdtStateAsProducedRegst(regst) != 0) {
+      mut_num_of_read_empty() -= read_regst_[regst->regst_desc_id()].empty();
+      read_regst_.at(regst->regst_desc_id()).push(regst);
       VLOG(4) << "boxing actor " << actor_id() << " "
-              << "receive readable regst " << regst_wp->regst_raw_ptr() << ", "
-              << "regst_desc_id:" << regst_wp->regst_desc_id() << ", "
+              << "receive readable regst " << regst << ", "
+              << "regst_desc_id:" << regst->regst_desc_id() << ", "
               << "current num_of_read_empty:" << num_of_read_empty();
     }
     ActUntilFail();
@@ -38,8 +37,7 @@ int BoxingActor::HandlerNormal(const ActorMsg& msg) {
 }
 
 int BoxingActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
-  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
-           0);
+  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
   ActUntilFail();
   if (num_of_read_empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
@@ -53,16 +51,15 @@ void BoxingActor::Act() {
   for (const auto& pair : read_regst_) {
     CHECK_EQ(pair.second.front()->piece_id(), piece_id);
   }
-  AsyncLaunchKernel(
-      GenDefaultKernelCtx(),
-      [this](int64_t regst_desc_id) -> std::shared_ptr<RegstWrapper> {
-        Regst* regst = GetCurWriteableRegst(regst_desc_id);
-        if (regst == nullptr) {
-          return read_regst_.at(regst_desc_id).front();
-        } else {
-          return std::make_shared<LocalRegstWrapper>(regst);
-        }
-      });
+  AsyncLaunchKernel(GenDefaultKernelCtx(),
+                    [this](int64_t regst_desc_id) -> Regst* {
+                      Regst* regst = GetCurWriteableRegst(regst_desc_id);
+                      if (regst == nullptr) {
+                        return read_regst_.at(regst_desc_id).front();
+                      } else {
+                        return regst;
+                      }
+                    });
   AsyncSendReadableRegstMsg(
       [piece_id](Regst* regst) { regst->set_piece_id(piece_id); });
   for (auto& pair : read_regst_) {

@@ -85,9 +85,7 @@ void Compiler::BuildGraphs() {
       data_chain2sorted_fw_comp_tasks;
   data_task_gph->ForEachNode([&](TaskNode* node) {
     auto fw_node = dynamic_cast<CompTaskNode*>(node);
-    if (fw_node == nullptr || fw_node->IsBpNode() || fw_node->IsLossNode()) {
-      return;
-    }
+    if (fw_node == nullptr || fw_node->IsBpNode()) { return; }
     data_chain2sorted_fw_comp_tasks[fw_node->chain_node()].push_back(fw_node);
   });
   for (auto& pair : data_chain2sorted_fw_comp_tasks) {

@@ -15,6 +15,10 @@ class MomentumMdUpdateKernel final : public ModelUpdtKernel {
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
 
+  void InitDataTmpBlobs(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)>) const override;
+
  private:
 };
 

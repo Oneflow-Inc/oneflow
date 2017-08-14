@@ -23,7 +23,7 @@ class CopyCommNetActor final : public Actor {
   }
   void Act() override;
 
-  HashMap<int64_t, std::shared_ptr<RegstWrapper>> piece_id2waiting_in_regst_;
+  HashMap<int64_t, Regst*> piece_id2waiting_in_regst_;
 };
 
 }  // namespace oneflow

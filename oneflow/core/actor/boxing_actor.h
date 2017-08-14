@@ -20,8 +20,8 @@ class BoxingActor final : public Actor {
   bool IsReadReady() override { return !mut_num_of_read_empty(); }
   void Act() override;
 
-  // <regst_desc_id, queue<regst_wp>>
-  HashMap<int64_t, std::queue<std::shared_ptr<RegstWrapper>>> read_regst_;
+  // <regst_desc_id, queue<regst>>
+  HashMap<int64_t, std::queue<Regst*>> read_regst_;
 };
 
 }  // namespace oneflow
