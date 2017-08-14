@@ -1,0 +1,9 @@
+machine {
+  addr : "11.11.1.109"
+  port : "5551"
+  name: "win-oneflow2"
+}
+
+device_num_per_machine: 4
+
+device_type: kCPU
