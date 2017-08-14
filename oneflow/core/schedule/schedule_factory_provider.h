@@ -3,7 +3,7 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/schedule/allocator_factory.h"
-#include "oneflow/core/schedule/scheduler_engine_factory.h"
+#include "oneflow/core/schedule/schedule_engine_factory.h"
 #include "oneflow/core/schedule/session_factory.h"
 #include "oneflow/core/schedule/sgraph_factory.h"
 #include "oneflow/core/schedule/validator_factory.h"
@@ -19,7 +19,7 @@ class ScheduleFactoryProvider final {
   ScheduleFactoryProvider* Merge(const ScheduleFactoryProvider* sfp) {
     CLONE_FACTORY(sfp, sgraph_factory());
     CLONE_FACTORY(sfp, session_factory());
-    CLONE_FACTORY(sfp, scheduler_engine_factory());
+    CLONE_FACTORY(sfp, schedule_engine_factory());
     CLONE_FACTORY(sfp, validator_factory());
     CLONE_FACTORY(sfp, allocator_factory());
     return this;
@@ -34,8 +34,8 @@ class ScheduleFactoryProvider final {
     return this;
   }
   ScheduleFactoryProvider* Set(
-      std::unique_ptr<SchedulerEngineFactory>&& factory) {
-    scheduler_engine_factory_ = std::move(factory);
+      std::unique_ptr<ScheduleEngineFactory>&& factory) {
+    schedule_engine_factory_ = std::move(factory);
     return this;
   }
   ScheduleFactoryProvider* Set(std::unique_ptr<ValidatorFactory>&& factory) {
@@ -56,9 +56,9 @@ class ScheduleFactoryProvider final {
     CHECK(session_factory_.get());
     return session_factory_.get();
   }
-  inline const SchedulerEngineFactory* scheduler_engine_factory() const {
-    CHECK(scheduler_engine_factory_.get());
-    return scheduler_engine_factory_.get();
+  inline const ScheduleEngineFactory* schedule_engine_factory() const {
+    CHECK(schedule_engine_factory_.get());
+    return schedule_engine_factory_.get();
   }
   inline const ValidatorFactory* validator_factory() const {
     CHECK(validator_factory_.get());
@@ -77,9 +77,8 @@ class ScheduleFactoryProvider final {
   inline std::unique_ptr<SessionFactory>& mut_session_factory() {
     return session_factory_;
   }
-  inline std::unique_ptr<SchedulerEngineFactory>&
-  mut_scheduler_engine_factory() {
-    return scheduler_engine_factory_;
+  inline std::unique_ptr<ScheduleEngineFactory>& mut_schedule_engine_factory() {
+    return schedule_engine_factory_;
   }
   inline std::unique_ptr<ValidatorFactory>& mut_validator_factory() {
     return validator_factory_;
@@ -90,7 +89,7 @@ class ScheduleFactoryProvider final {
   std::string name_;
   std::unique_ptr<SGraphFactory> sgraph_factory_;
   std::unique_ptr<SessionFactory> session_factory_;
-  std::unique_ptr<SchedulerEngineFactory> scheduler_engine_factory_;
+  std::unique_ptr<ScheduleEngineFactory> schedule_engine_factory_;
   std::unique_ptr<ValidatorFactory> validator_factory_;
   std::unique_ptr<AllocatorFactory> allocator_factory_;
 };

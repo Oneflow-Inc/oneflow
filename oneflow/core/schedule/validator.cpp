@@ -1,15 +1,15 @@
 #include "oneflow/core/schedule/validator.h"
 #include "oneflow/core/schedule/policy_hub.h"
+#include "oneflow/core/schedule/schedule_engine_factory.h"
 #include "oneflow/core/schedule/schedule_factory_provider.h"
-#include "oneflow/core/schedule/scheduler_engine_factory.h"
 #include "oneflow/core/schedule/simulator_session.h"
 namespace oneflow {
 namespace schedule {
 
 bool Validator::ValidateAllocation(const Schedule& schedule) {
   auto sess = schedule.session();
-  auto engine_factory = schedule_factory_provider()->scheduler_engine_factory();
-  auto scheduler_engine = engine_factory->CreateSchedulerEngine(*sess);
+  auto engine_factory = schedule_factory_provider()->schedule_engine_factory();
+  auto schedule_engine = engine_factory->CreateScheduleEngine(*sess);
   int target = 0;
   int failed = 0;
   for (int i = 0; i < schedule.regst_desc2count().size(); i++) {
@@ -28,7 +28,7 @@ bool Validator::ValidateAllocation(const Schedule& schedule) {
     target++;
     if (declined) {
       std::cout << "---------------" << std::endl;
-      auto limited_schedule = scheduler_engine->StaticSchedule(get_regst_num);
+      auto limited_schedule = schedule_engine->StaticSchedule(get_regst_num);
       if (limited_schedule->max_interval() <= schedule.max_interval()) {
         failed++;
       }

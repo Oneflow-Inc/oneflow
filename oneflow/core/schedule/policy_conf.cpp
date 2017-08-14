@@ -7,7 +7,7 @@ namespace oneflow {
 namespace schedule {
 
 REGISTER_POLICY_HUB("simulator-policy")
-    ->Add(unique_ptr_new<SchedulerEngineSimulatorPolicy>())
+    ->Add(unique_ptr_new<ScheduleEngineSimulatorPolicy>())
     ->Add(unique_ptr_new<RetimingSimulatorPolicy>())
     ->Add(unique_ptr_new<AllocatorSimulatorPolicy>())
     ->Add(unique_ptr_new<AllocationValidatorSimplePolicy>());

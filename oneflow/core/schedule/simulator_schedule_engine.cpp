@@ -1,7 +1,7 @@
 /**
  * Copyright 2017 Xinqi Li
  */
-#include "oneflow/core/schedule/simulator_scheduler_engine.h"
+#include "oneflow/core/schedule/simulator_schedule_engine.h"
 #include "oneflow/core/schedule/sgraph.h"
 #include "oneflow/core/schedule/simulation_strategy.h"
 
@@ -16,12 +16,12 @@ void SimulatorSchedule::TimeLinePushBack(TaskInstance* instance,
 }
 
 void SimulatorSchedule::WalkTimeNetReverse(
-    SimulatorSchedulerEngine* scheduler_engine,
+    SimulatorScheduleEngine* schedule_engine,
     const std::function<void(TaskInstance*)>& cb) {
-  CHECK(session() == scheduler_engine->session());
-  CHECK(this == scheduler_engine->schedule());
-  auto last_batch = scheduler_engine->direction_->EndBatch();
-  auto last_node = scheduler_engine->direction_->EndNode();
+  CHECK(session() == schedule_engine->session());
+  CHECK(this == schedule_engine->schedule());
+  auto last_batch = schedule_engine->direction_->EndBatch();
+  auto last_node = schedule_engine->direction_->EndNode();
   auto last_instance =
       session()->task_instance_mgr().Find(last_batch, last_node);
   auto next = std::unordered_set<TaskInstance*>{last_instance};
@@ -47,17 +47,16 @@ void SimulatorSchedule::WalkTimeNetReverse(
   }
 }
 
-void SimulatorSchedule::InitTimeNet(
-    SimulatorSchedulerEngine* scheduler_engine) {
-  CHECK(session() == scheduler_engine->session());
-  CHECK(this == scheduler_engine->schedule());
+void SimulatorSchedule::InitTimeNet(SimulatorScheduleEngine* schedule_engine) {
+  CHECK(session() == schedule_engine->session());
+  CHECK(this == schedule_engine->schedule());
   session()->graph()->ForeachArc([&](TaskArc* arc) {
     uint32_t start = 0;
     uint32_t end = session()->nr_batch();
     for (uint32_t i = start; i < end; i++) {
       auto batch = session()->batch_node_mgr().Find(i);
-      auto from_node = scheduler_engine->direction_->GetFrom(arc);
-      auto to_node = scheduler_engine->direction_->GetTo(arc);
+      auto from_node = schedule_engine->direction_->GetFrom(arc);
+      auto to_node = schedule_engine->direction_->GetTo(arc);
       auto from = session()->task_instance_mgr().Find(batch, from_node);
       auto to = session()->task_instance_mgr().Find(batch, to_node);
       mut_timenet_arc_mgr().CreateIfNotFound(from, to);
@@ -65,23 +64,23 @@ void SimulatorSchedule::InitTimeNet(
   });
 }
 
-void SimulatorSchedule::Retiming(SimulatorSchedulerEngine* scheduler_engine) {
-  InitTimeNet(scheduler_engine);
-  CHECK(session() == scheduler_engine->session());
-  CHECK(this == scheduler_engine->schedule());
+void SimulatorSchedule::Retiming(SimulatorScheduleEngine* schedule_engine) {
+  InitTimeNet(schedule_engine);
+  CHECK(session() == schedule_engine->session());
+  CHECK(this == schedule_engine->schedule());
   float ii = max_interval();
   auto get_next_instance = [&](TaskInstance* instance) {
     TaskInstance* next = nullptr;
     if (instance->to() != session()->graph()->sink()) {
       auto batch = instance->from();
       auto next_batch_id =
-          scheduler_engine->direction_->NextBatchId(batch->id());
+          schedule_engine->direction_->NextBatchId(batch->id());
       auto next_batch = session()->batch_node_mgr().Find(next_batch_id);
       next = session()->task_instance_mgr().Find(next_batch, instance->to());
     }
     return next;
   };
-  WalkTimeNetReverse(scheduler_engine, [&](TaskInstance* instance) {
+  WalkTimeNetReverse(schedule_engine, [&](TaskInstance* instance) {
     auto lazy_end = INT_MAX;
     int count = timenet_arc_mgr().Output(instance, [&](TaskInstance* instance) {
       const auto& p = mut_instance2ended_at()[instance];
@@ -115,9 +114,9 @@ float SimulatorSchedule::GetDurationByTimeGapToLoss(TaskInstance* from,
 }
 
 void SimulatorSchedule::UpdateDuration(
-    SimulatorSchedulerEngine* scheduler_engine) {
-  CHECK(session() == scheduler_engine->session());
-  auto session = scheduler_engine->session();
+    SimulatorScheduleEngine* schedule_engine) {
+  CHECK(session() == schedule_engine->session());
+  auto session = schedule_engine->session();
   session->graph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
     STask* owner = nullptr;
     session->graph()->produced_regst_desc_mgr().Input(regst_desc, &owner);
@@ -158,8 +157,8 @@ void SimulatorSchedule::UpdateRegstCount() {
 }
 
 void SimulatorSchedule::UpdateInterval(
-    SimulatorSchedulerEngine* scheduler_engine) {
-  auto session = scheduler_engine->session();
+    SimulatorScheduleEngine* schedule_engine) {
+  auto session = schedule_engine->session();
   session->graph()->ForeachNode([&](STask* node) {
     uint32_t sum = 0;
     uint32_t last = 0;
@@ -169,7 +168,7 @@ void SimulatorSchedule::UpdateInterval(
       auto batch = session->batch_node_mgr().Find(i);
       auto instance = session->task_instance_mgr().Find(batch, node);
       auto start =
-          scheduler_engine->GetTime(mut_instance2ended_at()[instance].first);
+          schedule_engine->GetTime(mut_instance2ended_at()[instance].first);
       if (last) { sum += start - last; }
       last = start;
     }
@@ -180,7 +179,7 @@ void SimulatorSchedule::UpdateInterval(
   });
 }
 
-void SimulatorSchedulerEngine::ClearTmpData() {
+void SimulatorScheduleEngine::ClearTmpData() {
   tokens_.clear();
   schedule()->Clear();
 }
@@ -213,8 +212,8 @@ void SimulatorSchedule::MergeTimeGapToLossInPlace(SimulatorSchedule* schedule) {
 }
 
 void SimulatorSchedule::UpdateTimeGapToLoss(
-    SimulatorSchedulerEngine* scheduler_engine) {
-  auto session = scheduler_engine->session();
+    SimulatorScheduleEngine* schedule_engine) {
+  auto session = schedule_engine->session();
   std::list<STask*> loss_nodes;
   session->graph()->LossNodes(&loss_nodes);
   uint32_t start = 0;
@@ -223,18 +222,18 @@ void SimulatorSchedule::UpdateTimeGapToLoss(
     auto batch = session->batch_node_mgr().Find(i);
     for (STask* loss : loss_nodes) {
       auto loss_instance = session->task_instance_mgr().Find(batch, loss);
-      auto loss_start_time = scheduler_engine->GetStartTime(
-          mut_instance2ended_at()[loss_instance]);
+      auto loss_start_time =
+          schedule_engine->GetStartTime(mut_instance2ended_at()[loss_instance]);
       auto loss_end_time =
-          scheduler_engine->GetEndTime(mut_instance2ended_at()[loss_instance]);
+          schedule_engine->GetEndTime(mut_instance2ended_at()[loss_instance]);
       float loss_middle_time =
           ((float)loss_start_time + (float)loss_end_time) / 2;
       auto set_time_gap = [&](STask* node) {
         auto node_instance = session->task_instance_mgr().Find(batch, node);
-        float start_time = scheduler_engine->GetStartTime(
+        float start_time = schedule_engine->GetStartTime(
             mut_instance2ended_at()[node_instance]);
-        float end_time = scheduler_engine->GetEndTime(
-            mut_instance2ended_at()[node_instance]);
+        float end_time =
+            schedule_engine->GetEndTime(mut_instance2ended_at()[node_instance]);
         mut_start_time_gap_to_loss()[node_instance][loss] =
             start_time - loss_middle_time;
         mut_end_time_gap_to_loss()[node_instance][loss] =
@@ -247,7 +246,7 @@ void SimulatorSchedule::UpdateTimeGapToLoss(
   }
 }
 
-void SimulatorSchedulerEngine::NewSinkTokens() {
+void SimulatorScheduleEngine::NewSinkTokens() {
   ClearTmpData();
   std::list<TaskArc*> arcs;
   auto graph = session()->graph();
@@ -259,7 +258,7 @@ void SimulatorSchedulerEngine::NewSinkTokens() {
   InitNodeBatchInstance(graph->sink());
 }
 
-void SimulatorSchedulerEngine::InitNodeBatchInstance(STask* node) {
+void SimulatorScheduleEngine::InitNodeBatchInstance(STask* node) {
   for (uint32_t i = 0; i < session()->nr_batch(); i++) {
     auto batch = session()->batch_node_mgr().Find(i);
     auto start_instance = session()->mut_task_instance_mgr().Find(batch, node);
@@ -268,7 +267,7 @@ void SimulatorSchedulerEngine::InitNodeBatchInstance(STask* node) {
   }
 }
 
-void SimulatorSchedulerEngine::NewSourceTokens() {
+void SimulatorScheduleEngine::NewSourceTokens() {
   ClearTmpData();
   std::list<TaskArc*> arcs;
   auto graph = session()->graph();
@@ -280,19 +279,19 @@ void SimulatorSchedulerEngine::NewSourceTokens() {
   InitNodeBatchInstance(graph->source());
 }
 
-SDevice* SimulatorSchedulerEngine::GetInstanceDevice(TaskInstance* instance) {
+SDevice* SimulatorScheduleEngine::GetInstanceDevice(TaskInstance* instance) {
   SDevice* ret = nullptr;
   session()->graph()->device_arc_mgr().Output(instance->to(), &ret);
   return ret;
 }
 
-void SimulatorSchedulerEngine::InitStrategies() {
+void SimulatorScheduleEngine::InitStrategies() {
   SetStrategy(unique_ptr_new<PositiveDirectionStrategy>(this));
   SetStrategy(unique_ptr_new<LazyEvaluationStrategy>(this));
   SetStrategy(unique_ptr_new<LimitedResourceStrategy>(this));
 }
 
-std::unique_ptr<Schedule> SimulatorSchedulerEngine::RunInTwoDirections(
+std::unique_ptr<Schedule> SimulatorScheduleEngine::RunInTwoDirections(
     const std::function<uint32_t(uint64_t)>& get_regst_num) {
   SetStrategy(unique_ptr_new<PositiveDirectionStrategy>(this));
   auto positive_schedule = Run(get_regst_num);
@@ -304,18 +303,18 @@ std::unique_ptr<Schedule> SimulatorSchedulerEngine::RunInTwoDirections(
   return std::move(positive_schedule);
 }
 
-std::unique_ptr<Schedule> SimulatorSchedulerEngine::StaticSchedule(
+std::unique_ptr<Schedule> SimulatorScheduleEngine::StaticSchedule(
     const std::function<uint32_t(uint64_t)>& get_regst_num) {
   SetStrategy(unique_ptr_new<LimitedResourceStrategy>(this));
   return RunInTwoDirections(get_regst_num);
 }
 
-std::unique_ptr<Schedule> SimulatorSchedulerEngine::StaticSchedule() {
+std::unique_ptr<Schedule> SimulatorScheduleEngine::StaticSchedule() {
   SetStrategy(unique_ptr_new<UnlimitedResourceStrategy>(this));
   return RunInTwoDirections([](uint64_t) { return (uint32_t)1u; });
 }
 
-std::unique_ptr<SimulatorSchedule> SimulatorSchedulerEngine::Run(
+std::unique_ptr<SimulatorSchedule> SimulatorScheduleEngine::Run(
     const std::function<uint32_t(uint64_t)>& get_regst_num) {
   InitRegst(get_regst_num);
   NewStartTokens();

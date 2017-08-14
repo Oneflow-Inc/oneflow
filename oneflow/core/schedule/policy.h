@@ -46,9 +46,9 @@ class GraphBuilderPolicy : public Policy {
   virtual std::unique_ptr<SGraph> BuildeGraph(const Plan& plan) = 0;
 };
 
-class SchedulerEnginePolicy : public Policy {
+class ScheduleEnginePolicy : public Policy {
  public:
-  POLICY_INTERFACE_BOILERPLATE(SchedulerEnginePolicy);
+  POLICY_INTERFACE_BOILERPLATE(ScheduleEnginePolicy);
 
   virtual std::unique_ptr<Session> MakeSession(const SGraph& graph) = 0;
   virtual std::unique_ptr<ScheduleResult> Schedule(const Session& session) = 0;

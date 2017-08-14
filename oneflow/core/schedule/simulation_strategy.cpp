@@ -3,50 +3,50 @@
  */
 #include "oneflow/core/schedule/simulation_strategy.h"
 #include "oneflow/core/schedule/sgraph.h"
-#include "oneflow/core/schedule/simulator_scheduler_engine.h"
+#include "oneflow/core/schedule/simulator_schedule_engine.h"
 
 namespace oneflow {
 namespace schedule {
 
 void LazyEvaluationStrategy::TimeLinePushBack(TaskInstance* instance,
                                               SDevice* device) {
-  scheduler_engine()->schedule()->TimeLinePushBack(instance, device);
+  schedule_engine()->schedule()->TimeLinePushBack(instance, device);
 }
 
 int PositiveDirectionStrategy::HoldingRegstDesc(
     STask* node, const std::function<void(SRegstDesc*)>& cb) {
-  auto graph = scheduler_engine()->session()->graph();
+  auto graph = schedule_engine()->session()->graph();
   return graph->produced_regst_desc_mgr().Output(node, cb);
 }
 
 int PositiveDirectionStrategy::RegstDescReleasingNode(
     SRegstDesc* regst_desc, const std::function<void(STask*)>& cb) {
-  auto graph = scheduler_engine()->session()->graph();
+  auto graph = schedule_engine()->session()->graph();
   return graph->subscribed_regst_desc_mgr().Input(regst_desc, cb);
 }
 
 int NegativeDirectionStrategy::HoldingRegstDesc(
     STask* node, const std::function<void(SRegstDesc*)>& cb) {
-  auto graph = scheduler_engine()->session()->graph();
+  auto graph = schedule_engine()->session()->graph();
   return graph->subscribed_regst_desc_mgr().Output(node, cb);
 }
 
 int NegativeDirectionStrategy::RegstDescReleasingNode(
     SRegstDesc* regst_desc, const std::function<void(STask*)>& cb) {
-  auto graph = scheduler_engine()->session()->graph();
+  auto graph = schedule_engine()->session()->graph();
   return graph->produced_regst_desc_mgr().Input(regst_desc, cb);
 }
 
 STask* PositiveDirectionStrategy::StartNode() {
-  return scheduler_engine()->session()->graph()->source();
+  return schedule_engine()->session()->graph()->source();
 }
 
 STask* PositiveDirectionStrategy::EndNode() {
-  return scheduler_engine()->session()->graph()->sink();
+  return schedule_engine()->session()->graph()->sink();
 }
 
 Batch* PositiveDirectionStrategy::EndBatch() {
-  auto session = scheduler_engine()->session();
+  auto session = schedule_engine()->session();
   return session->batch_node_mgr().Find(session->nr_batch() - 1);
 }
 
@@ -64,15 +64,15 @@ bool PositiveDirectionStrategy::CompareInstanceOrder(TaskInstance* instance_a,
 }
 
 STask* NegativeDirectionStrategy::StartNode() {
-  return scheduler_engine()->session()->graph()->sink();
+  return schedule_engine()->session()->graph()->sink();
 }
 
 STask* NegativeDirectionStrategy::EndNode() {
-  return scheduler_engine()->session()->graph()->source();
+  return schedule_engine()->session()->graph()->source();
 }
 
 Batch* NegativeDirectionStrategy::EndBatch() {
-  return scheduler_engine()->session()->batch_node_mgr().Find(0u);
+  return schedule_engine()->session()->batch_node_mgr().Find(0u);
 }
 
 bool NegativeDirectionStrategy::CompareInstanceOrder(TaskInstance* instance_a,
@@ -103,47 +103,47 @@ TaskInstance* DirectionSimulationStrategy::PickInstanceToRun(
 
 void ResourceSimulationStrategy::InitFuncs() {
   get_node_instance_ = [&](TaskArcInstance* arc) {
-    auto direction = scheduler_engine()->direction();
+    auto direction = schedule_engine()->direction();
     return direction->GetNextNodeInstance(arc);
   };
   is_instance_ready_ = std::bind(&ResourceSimulationStrategy::IsInstanceReady,
                                  this, std::placeholders::_1);
-  get_instance_device_ = std::bind(&SimulatorSchedulerEngine::GetInstanceDevice,
-                                   scheduler_engine(), std::placeholders::_1);
+  get_instance_device_ = std::bind(&SimulatorScheduleEngine::GetInstanceDevice,
+                                   schedule_engine(), std::placeholders::_1);
   get_ascendent_ended_at_ =
       std::bind(&ResourceSimulationStrategy::GetAscendentEndedAt, this,
                 std::placeholders::_1);
   pick_instance_to_run_ = [&](const std::list<TaskInstance*>& instances) {
-    auto direction = scheduler_engine()->direction();
+    auto direction = schedule_engine()->direction();
     return direction->PickInstanceToRun(instances);
   };
 }
 
 TaskInstance* NegativeDirectionStrategy::GetNextNodeInstance(
     TaskArcInstance* arc) {
-  auto session = scheduler_engine()->session();
+  auto session = schedule_engine()->session();
   return session->task_instance_mgr().Find(arc->from(), arc->to()->from());
 }
 
 TaskInstance* PositiveDirectionStrategy::GetNextNodeInstance(
     TaskArcInstance* arc) {
-  auto session = scheduler_engine()->session();
+  auto session = schedule_engine()->session();
   return session->task_instance_mgr().Find(arc->from(), arc->to()->to());
 }
 
 void PositiveDirectionStrategy::NewStartTokens() {
-  scheduler_engine()->NewSourceTokens();
+  schedule_engine()->NewSourceTokens();
 }
 
 bool ResourceSimulationStrategy::IsInstanceReady(TaskInstance* instance) {
   bool ready = true;
-  auto session = scheduler_engine()->session();
-  auto direction = scheduler_engine()->direction();
+  auto session = schedule_engine()->session();
+  auto direction = schedule_engine()->direction();
   direction->PrevArc(instance->to(), [&](TaskArc* arc) {
     auto instance_input =
         session->task_arc_instance_mgr().Find(instance->from(), arc);
-    if (scheduler_engine()->mut_tokens().find(instance_input)
-        == scheduler_engine()->mut_tokens().end()) {
+    if (schedule_engine()->mut_tokens().find(instance_input)
+        == schedule_engine()->mut_tokens().end()) {
       ready = false;
     }
   });
@@ -151,54 +151,54 @@ bool ResourceSimulationStrategy::IsInstanceReady(TaskInstance* instance) {
 }
 
 void NegativeDirectionStrategy::NewStartTokens() {
-  scheduler_engine()->NewSinkTokens();
+  schedule_engine()->NewSinkTokens();
 }
 
 unsigned int PositiveDirectionStrategy::PrevArc(
     STask* node, const std::function<void(TaskArc*)>& cb) {
-  auto graph = scheduler_engine()->session()->graph();
+  auto graph = schedule_engine()->session()->graph();
   return graph->arc_mgr().InputArc(node, cb);
 }
 
 unsigned int PositiveDirectionStrategy::Prev(
     STask* node, const std::function<void(STask*)>& cb) {
-  auto graph = scheduler_engine()->session()->graph();
+  auto graph = schedule_engine()->session()->graph();
   return graph->arc_mgr().Input(node, cb);
 }
 
 unsigned int PositiveDirectionStrategy::NextArc(
     STask* node, const std::function<void(TaskArc*)>& cb) {
-  auto graph = scheduler_engine()->session()->graph();
+  auto graph = schedule_engine()->session()->graph();
   return graph->arc_mgr().OutputArc(node, cb);
 }
 
 unsigned int PositiveDirectionStrategy::Next(
     STask* node, const std::function<void(STask*)>& cb) {
-  auto graph = scheduler_engine()->session()->graph();
+  auto graph = schedule_engine()->session()->graph();
   return graph->arc_mgr().Output(node, cb);
 }
 
 unsigned int NegativeDirectionStrategy::PrevArc(
     STask* node, const std::function<void(TaskArc*)>& cb) {
-  auto graph = scheduler_engine()->session()->graph();
+  auto graph = schedule_engine()->session()->graph();
   return graph->arc_mgr().OutputArc(node, cb);
 }
 
 unsigned int NegativeDirectionStrategy::Prev(
     STask* node, const std::function<void(STask*)>& cb) {
-  auto graph = scheduler_engine()->session()->graph();
+  auto graph = schedule_engine()->session()->graph();
   return graph->arc_mgr().Output(node, cb);
 }
 
 unsigned int NegativeDirectionStrategy::NextArc(
     STask* node, const std::function<void(TaskArc*)>& cb) {
-  auto graph = scheduler_engine()->session()->graph();
+  auto graph = schedule_engine()->session()->graph();
   return graph->arc_mgr().InputArc(node, cb);
 }
 
 unsigned int NegativeDirectionStrategy::Next(
     STask* node, const std::function<void(STask*)>& cb) {
-  auto graph = scheduler_engine()->session()->graph();
+  auto graph = schedule_engine()->session()->graph();
   return graph->arc_mgr().Input(node, cb);
 }
 
@@ -207,24 +207,24 @@ void LimitedResourceStrategy::InitFuncIsInstanceReady() {
     return IsInstanceReady(instance) && IsAllRegstDescReady(instance);
   };
   get_ascendent_ended_at_ = [&](TaskInstance* instance) {
-    auto evaluation = scheduler_engine()->evaluation();
+    auto evaluation = schedule_engine()->evaluation();
     return std::max(evaluation->GetAscendentEndedAt(instance),
                     RegstDescEndedAt(instance));
   };
 }
 
 void LazyEvaluationStrategy::Retiming() {
-  return scheduler_engine()->schedule()->Retiming(scheduler_engine());
+  return schedule_engine()->schedule()->Retiming(schedule_engine());
 }
 
 void LazyEvaluationStrategy::InitTimeNet() {
-  return scheduler_engine()->schedule()->InitTimeNet(scheduler_engine());
+  return schedule_engine()->schedule()->InitTimeNet(schedule_engine());
 }
 
 void LimitedResourceStrategy::InitRegst(
     const std::function<uint32_t(uint64_t)>& get_regst_num) {
-  auto session = scheduler_engine()->session();
-  auto schedule = scheduler_engine()->schedule();
+  auto session = schedule_engine()->session();
+  auto schedule = schedule_engine()->schedule();
   session->graph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
     auto count = get_regst_num(regst_desc->id());
     for (uint32_t i = 0; i < count; i++) {
@@ -238,9 +238,9 @@ void LimitedResourceStrategy::InitRegst(
 int32_t EvaluationSimulationStrategy::GetAscendentEndedAt(
     TaskInstance* instance) {
   int32_t ended_at = 0;
-  auto session = scheduler_engine()->session();
-  auto schedule = scheduler_engine()->schedule();
-  auto direction = scheduler_engine()->direction();
+  auto session = schedule_engine()->session();
+  auto schedule = schedule_engine()->schedule();
+  auto direction = schedule_engine()->direction();
   direction->Prev(instance->to(), [&](STask* node) {
     auto instance_input =
         session->task_instance_mgr().Find(instance->from(), node);
@@ -251,20 +251,20 @@ int32_t EvaluationSimulationStrategy::GetAscendentEndedAt(
     }
     ended_at = std::max(ended_at, token_ended_at);
   });
-  auto dev = scheduler_engine()->GetInstanceDevice(instance);
+  auto dev = schedule_engine()->GetInstanceDevice(instance);
   return std::max(ended_at, schedule->mut_device2ended_at()[dev]);
 }
 
 int32_t ResourceSimulationStrategy::GetAscendentEndedAt(
     TaskInstance* instance) {
-  auto evaluation = scheduler_engine()->evaluation();
+  auto evaluation = schedule_engine()->evaluation();
   return evaluation->GetAscendentEndedAt(instance);
 }
 
 int32_t LimitedResourceStrategy::RegstDescEndedAt(TaskInstance* instance) {
   int32_t ended_at = 0;
-  auto schedule = scheduler_engine()->schedule();
-  auto direction = scheduler_engine()->direction();
+  auto schedule = schedule_engine()->schedule();
+  auto direction = schedule_engine()->direction();
   direction->HoldingRegstDesc(instance->to(), [&](SRegstDesc* regst_desc) {
     auto regst = FindFreeRegst(regst_desc, instance->from());
     ended_at = std::max(ended_at, schedule->mut_regst2ended_at()[regst]);
@@ -273,9 +273,9 @@ int32_t LimitedResourceStrategy::RegstDescEndedAt(TaskInstance* instance) {
 }
 
 void LimitedResourceStrategy::BeforeRun(TaskInstance* instance) {
-  auto session = scheduler_engine()->session();
-  auto schedule = scheduler_engine()->schedule();
-  auto direction = scheduler_engine()->direction();
+  auto session = schedule_engine()->session();
+  auto schedule = schedule_engine()->schedule();
+  auto direction = schedule_engine()->direction();
   direction->HoldingRegstDesc(instance->to(), [&](SRegstDesc* regst_desc) {
     auto regst = FindFreeRegst(regst_desc, instance->from());
     auto regst_desc_instance =
@@ -296,7 +296,7 @@ void LimitedResourceStrategy::BeforeRun(TaskInstance* instance) {
 
 void LimitedResourceStrategy::AfterRun(TaskInstance* instance) {
   std::list<Arc<TaskInstance, SRegst>*> occupied_arcs;
-  auto schedule = scheduler_engine()->schedule();
+  auto schedule = schedule_engine()->schedule();
   schedule->regst_arc_mgr().OutputArc(instance, &occupied_arcs);
   for (auto arc : occupied_arcs) {
     schedule->mut_regst2ended_at()[arc->to()] =
@@ -307,7 +307,7 @@ void LimitedResourceStrategy::AfterRun(TaskInstance* instance) {
 
 bool LimitedResourceStrategy::IsAllRegstDescReady(TaskInstance* instance) {
   bool all_ready = true;
-  auto direction = scheduler_engine()->direction();
+  auto direction = schedule_engine()->direction();
   direction->HoldingRegstDesc(instance->to(), [&](SRegstDesc* regst_desc) {
     all_ready = (all_ready && IsRegstDescReady(regst_desc, instance->from()));
   });
@@ -315,14 +315,14 @@ bool LimitedResourceStrategy::IsAllRegstDescReady(TaskInstance* instance) {
 }
 
 bool LimitedResourceStrategy::IsRegstFree(SRegst* regst) {
-  auto schedule = scheduler_engine()->schedule();
+  auto schedule = schedule_engine()->schedule();
   return schedule->regst_arc_mgr().Input(regst) == 0;
 }
 
 bool LimitedResourceStrategy::IsRegstDescReady(SRegstDesc* regst_desc,
                                                Batch* batch) {
-  auto sess = scheduler_engine()->session();
-  auto schedule = scheduler_engine()->schedule();
+  auto sess = schedule_engine()->session();
+  auto schedule = schedule_engine()->schedule();
   auto regst_desc_instance =
       sess->regst_desc_instance_mgr().Find(batch, regst_desc);
   bool free = schedule->mut_regst_desc_instance2regst()[regst_desc_instance];
@@ -336,8 +336,8 @@ bool LimitedResourceStrategy::IsRegstDescReady(SRegstDesc* regst_desc,
 
 SRegst* LimitedResourceStrategy::FindFreeRegst(SRegstDesc* regst_desc,
                                                Batch* batch) {
-  auto sess = scheduler_engine()->session();
-  auto schedule = scheduler_engine()->schedule();
+  auto sess = schedule_engine()->session();
+  auto schedule = schedule_engine()->schedule();
   auto regst_desc_instance =
       sess->regst_desc_instance_mgr().Find(batch, regst_desc);
   SRegst* ret = schedule->mut_regst_desc_instance2regst()[regst_desc_instance];

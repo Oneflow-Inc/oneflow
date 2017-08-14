@@ -21,7 +21,7 @@
 
 #include "oneflow/core/schedule/policy.h"
 #include "oneflow/core/schedule/schedule.h"
-#include "oneflow/core/schedule/scheduler_engine.h"
+#include "oneflow/core/schedule/schedule_engine.h"
 #include "oneflow/core/schedule/session.h"
 #include "oneflow/core/schedule/sgraph.h"
 #include "oneflow/core/schedule/util.h"
@@ -29,26 +29,24 @@
 namespace oneflow {
 namespace schedule {
 
-class SimulatorSchedulerEngine;
+class SimulatorScheduleEngine;
 
 class SimulationStrategy {
  public:
-  SimulationStrategy(SimulatorSchedulerEngine* scheduler_engine)
-      : scheduler_engine_(scheduler_engine) {}
+  SimulationStrategy(SimulatorScheduleEngine* schedule_engine)
+      : schedule_engine_(schedule_engine) {}
   virtual ~SimulationStrategy() {}
 
-  inline SimulatorSchedulerEngine* scheduler_engine() {
-    return scheduler_engine_;
-  }
+  inline SimulatorScheduleEngine* schedule_engine() { return schedule_engine_; }
 
  protected:
-  SimulatorSchedulerEngine* scheduler_engine_;
+  SimulatorScheduleEngine* schedule_engine_;
 };
 
 class DirectionSimulationStrategy : public SimulationStrategy {
  public:
-  DirectionSimulationStrategy(SimulatorSchedulerEngine* scheduler_engine)
-      : SimulationStrategy(scheduler_engine) {}
+  DirectionSimulationStrategy(SimulatorScheduleEngine* schedule_engine)
+      : SimulationStrategy(schedule_engine) {}
   virtual ~DirectionSimulationStrategy() {}
 
   virtual int32_t GetTime(int32_t x) = 0;
@@ -82,8 +80,8 @@ class DirectionSimulationStrategy : public SimulationStrategy {
 
 class PositiveDirectionStrategy : public DirectionSimulationStrategy {
  public:
-  PositiveDirectionStrategy(SimulatorSchedulerEngine* scheduler_engine)
-      : DirectionSimulationStrategy(scheduler_engine) {}
+  PositiveDirectionStrategy(SimulatorScheduleEngine* schedule_engine)
+      : DirectionSimulationStrategy(schedule_engine) {}
   virtual ~PositiveDirectionStrategy() {}
   int32_t GetTime(int32_t x) { return x; }
   int32_t GetStartTime(const std::pair<int32_t, int32_t>& p) {
@@ -112,8 +110,8 @@ class PositiveDirectionStrategy : public DirectionSimulationStrategy {
 
 class NegativeDirectionStrategy : public DirectionSimulationStrategy {
  public:
-  NegativeDirectionStrategy(SimulatorSchedulerEngine* scheduler_engine)
-      : DirectionSimulationStrategy(scheduler_engine) {}
+  NegativeDirectionStrategy(SimulatorScheduleEngine* schedule_engine)
+      : DirectionSimulationStrategy(schedule_engine) {}
   virtual ~NegativeDirectionStrategy() {}
   virtual int32_t GetTime(int32_t x) { return -x; }
   virtual int32_t GetStartTime(const std::pair<int32_t, int32_t>& p) {
@@ -143,8 +141,8 @@ class NegativeDirectionStrategy : public DirectionSimulationStrategy {
 class EvaluationSimulationStrategy : public SimulationStrategy {
  public:
   explicit EvaluationSimulationStrategy(
-      SimulatorSchedulerEngine* scheduler_engine)
-      : SimulationStrategy(scheduler_engine) {}
+      SimulatorScheduleEngine* schedule_engine)
+      : SimulationStrategy(schedule_engine) {}
   ~EvaluationSimulationStrategy() = default;
   virtual int32_t GetAscendentEndedAt(TaskInstance* instance);
   virtual void TimeLinePushBack(TaskInstance*, SDevice*) = 0;
@@ -153,8 +151,8 @@ class EvaluationSimulationStrategy : public SimulationStrategy {
 
 class EagerEvaluationStrategy : public EvaluationSimulationStrategy {
  public:
-  explicit EagerEvaluationStrategy(SimulatorSchedulerEngine* scheduler_engine)
-      : EvaluationSimulationStrategy(scheduler_engine) {}
+  explicit EagerEvaluationStrategy(SimulatorScheduleEngine* schedule_engine)
+      : EvaluationSimulationStrategy(schedule_engine) {}
   virtual ~EagerEvaluationStrategy() = default;
   void TimeLinePushBack(TaskInstance* instance, SDevice* device) {}
   void Retiming() {}
@@ -162,8 +160,8 @@ class EagerEvaluationStrategy : public EvaluationSimulationStrategy {
 
 class LazyEvaluationStrategy : public EvaluationSimulationStrategy {
  public:
-  explicit LazyEvaluationStrategy(SimulatorSchedulerEngine* scheduler_engine)
-      : EvaluationSimulationStrategy(scheduler_engine) {}
+  explicit LazyEvaluationStrategy(SimulatorScheduleEngine* schedule_engine)
+      : EvaluationSimulationStrategy(schedule_engine) {}
   ~LazyEvaluationStrategy() = default;
 
   void TimeLinePushBack(TaskInstance* instance, SDevice* device);
@@ -175,8 +173,8 @@ class LazyEvaluationStrategy : public EvaluationSimulationStrategy {
 
 class ResourceSimulationStrategy : public SimulationStrategy {
  public:
-  ResourceSimulationStrategy(SimulatorSchedulerEngine* scheduler_engine)
-      : SimulationStrategy(scheduler_engine) {
+  ResourceSimulationStrategy(SimulatorScheduleEngine* schedule_engine)
+      : SimulationStrategy(schedule_engine) {
     InitFuncs();
   }
   virtual ~ResourceSimulationStrategy() {}
@@ -203,8 +201,8 @@ class ResourceSimulationStrategy : public SimulationStrategy {
 
 class UnlimitedResourceStrategy : public ResourceSimulationStrategy {
  public:
-  UnlimitedResourceStrategy(SimulatorSchedulerEngine* scheduler_engine)
-      : ResourceSimulationStrategy(scheduler_engine) {}
+  UnlimitedResourceStrategy(SimulatorScheduleEngine* schedule_engine)
+      : ResourceSimulationStrategy(schedule_engine) {}
   virtual void BeforeRun(TaskInstance* instance) {}
   virtual void AfterRun(TaskInstance* instance) {}
   void InitRegst(const std::function<uint32_t(uint64_t)>& get_regst_num) {}
@@ -212,8 +210,8 @@ class UnlimitedResourceStrategy : public ResourceSimulationStrategy {
 
 class LimitedResourceStrategy : public ResourceSimulationStrategy {
  public:
-  LimitedResourceStrategy(SimulatorSchedulerEngine* scheduler_engine)
-      : ResourceSimulationStrategy(scheduler_engine) {
+  LimitedResourceStrategy(SimulatorScheduleEngine* schedule_engine)
+      : ResourceSimulationStrategy(schedule_engine) {
     InitFuncIsInstanceReady();
   }
   void BeforeRun(TaskInstance* instance);

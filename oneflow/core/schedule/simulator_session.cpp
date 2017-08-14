@@ -568,13 +568,13 @@ void Mode::Run() {
   sess_logger->UpdateDuration(Sess(), this);
 }
 
-std::unique_ptr<Session> SchedulerEngineSimulatorPolicy::MakeSession(
+std::unique_ptr<Session> ScheduleEngineSimulatorPolicy::MakeSession(
     const SGraph& graph) {
   auto graph_ptr = const_cast<SGraph*>(&graph);
   return unique_ptr_new<SimulatorSession>(graph_ptr);
 }
 
-std::unique_ptr<ScheduleResult> SchedulerEngineSimulatorPolicy::Schedule(
+std::unique_ptr<ScheduleResult> ScheduleEngineSimulatorPolicy::Schedule(
     const Session& session) {
   auto session_ptr = const_cast<Session*>(&session);
   auto sess = dynamic_cast<SimulatorSession*>(session_ptr);

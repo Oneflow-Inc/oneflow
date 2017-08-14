@@ -21,7 +21,7 @@
 
 #include "oneflow/core/schedule/policy.h"
 #include "oneflow/core/schedule/schedule.h"
-#include "oneflow/core/schedule/scheduler_engine.h"
+#include "oneflow/core/schedule/schedule_engine.h"
 #include "oneflow/core/schedule/session.h"
 #include "oneflow/core/schedule/sgraph.h"
 #include "oneflow/core/schedule/simulation_strategy.h"
@@ -30,23 +30,23 @@
 namespace oneflow {
 namespace schedule {
 
-class SimulatorSchedulerEngine;
+class SimulatorScheduleEngine;
 
 class SimulatorSchedule : public Schedule {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SimulatorSchedule);
   explicit SimulatorSchedule(Session* session) : Schedule(session) {}
   void Clear();
-  void UpdateTimeGapToLoss(SimulatorSchedulerEngine* scheduler_engine);
-  void UpdateDuration(SimulatorSchedulerEngine* scheduler_engine);
+  void UpdateTimeGapToLoss(SimulatorScheduleEngine* schedule_engine);
+  void UpdateDuration(SimulatorScheduleEngine* schedule_engine);
   void UpdateRegstCount();
-  void UpdateInterval(SimulatorSchedulerEngine* scheduler_engine);
+  void UpdateInterval(SimulatorScheduleEngine* schedule_engine);
   float GetDurationByTimeGapToLoss(TaskInstance* from, TaskInstance* to);
   void MergeTimeGapToLossInPlace(SimulatorSchedule* logger);
 
   void TimeLinePushBack(TaskInstance* instance, SDevice* device);
-  void Retiming(SimulatorSchedulerEngine* scheduler_engine);
-  void InitTimeNet(SimulatorSchedulerEngine* scheduler_engine);
+  void Retiming(SimulatorScheduleEngine* schedule_engine);
+  void InitTimeNet(SimulatorScheduleEngine* schedule_engine);
 
   inline const NodeMgr<SRegst>& regst_node_mgr() const {
     return regst_node_mgr_;
@@ -81,7 +81,7 @@ class SimulatorSchedule : public Schedule {
   inline ArcMgr<Arc<TaskInstance>>& mut_timenet_arc_mgr() {
     return timenet_arc_mgr_;
   }
-  void WalkTimeNetReverse(SimulatorSchedulerEngine* scheduler_engine,
+  void WalkTimeNetReverse(SimulatorScheduleEngine* schedule_engine,
                           const std::function<void(TaskInstance*)>& cb);
 
   std::unordered_map<SRegst*, int32_t> regst2ended_at_;
@@ -94,16 +94,16 @@ class SimulatorSchedule : public Schedule {
   std::unordered_map<SDevice*, TaskInstance*> dev2current_instance_;
 };
 
-class SimulatorSchedulerEngine : public SchedulerEngine {
+class SimulatorScheduleEngine : public ScheduleEngine {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(SimulatorSchedulerEngine);
-  SimulatorSchedulerEngine(Session* session)
-      : SchedulerEngine(session),
+  OF_DISALLOW_COPY_AND_MOVE(SimulatorScheduleEngine);
+  SimulatorScheduleEngine(Session* session)
+      : ScheduleEngine(session),
         schedule_(unique_ptr_new<SimulatorSchedule>(session)) {
     InitStrategies();
   }
 
-  virtual ~SimulatorSchedulerEngine() = default;
+  virtual ~SimulatorScheduleEngine() = default;
 
   SDevice* GetInstanceDevice(TaskInstance* instance);
   void NewSourceTokens();

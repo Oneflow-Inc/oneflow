@@ -386,10 +386,10 @@ class LimitedMode : public Mode {
   DEFINE_METHOD_TYPE();
 };
 
-class SchedulerEngineSimulatorPolicy : public SchedulerEnginePolicy {
+class ScheduleEngineSimulatorPolicy : public ScheduleEnginePolicy {
  public:
-  POLICY_IMPLEMENT_BOILERPLATE(SchedulerEngineSimulatorPolicy,
-                               SchedulerEnginePolicy);
+  POLICY_IMPLEMENT_BOILERPLATE(ScheduleEngineSimulatorPolicy,
+                               ScheduleEnginePolicy);
   virtual std::unique_ptr<Session> MakeSession(const SGraph& graph);
   virtual std::unique_ptr<ScheduleResult> Schedule(const Session& session);
 };

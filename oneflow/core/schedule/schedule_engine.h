@@ -6,11 +6,11 @@
 namespace oneflow {
 namespace schedule {
 
-class SchedulerEngine {
+class ScheduleEngine {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(SchedulerEngine);
-  virtual ~SchedulerEngine() = default;
-  explicit SchedulerEngine(Session* session) : session_(session) {}
+  OF_DISALLOW_COPY_AND_MOVE(ScheduleEngine);
+  virtual ~ScheduleEngine() = default;
+  explicit ScheduleEngine(Session* session) : session_(session) {}
 
   virtual std::unique_ptr<Schedule> StaticSchedule(
       const std::function<uint32_t(uint64_t)>& get_regst_num) = 0;
