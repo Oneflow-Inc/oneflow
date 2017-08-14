@@ -22,7 +22,6 @@ class Connection {
   Connection(int64_t my_machine_id, int64_t peer_machine_id);
   ~Connection();
 
-  void Bind(const char* my_ip, int32_t my_port);
   bool TryConnectTo(const char* peer_ip, int32_t peer_port);
   void CompleteConnection();
   void AcceptConnect();
@@ -39,13 +38,9 @@ class Connection {
   IND2QueuePair* mutable_queue_pair() { return queue_pair_; }
   OVERLAPPED* mutable_overlapped() { return ov_; }
 
-  void set_connector(IND2Connector* connector);
-  void set_queue_pair(IND2QueuePair* queue_pair);
-  void set_overlapped(OVERLAPPED* ov);
-
-  const IND2Connector& connector() { return *connector_; }
-  const IND2QueuePair& queue_pair() { return *queue_pair_; }
-  const OVERLAPPED& overlapped() { return *ov_; }
+  void set_connector(IND2Connector* connector) { connector_ = connector; }
+  void set_queue_pair(IND2QueuePair* queue_pair) { queue_pair_ = queue_pair; }
+  void set_overlapped(OVERLAPPED* ov) { ov_ = ov; }
 
  private:
   int64_t my_machine_id_;
