@@ -20,7 +20,8 @@ void TestDemo() {
   auto allocator_factory = sfp->allocator_factory();
   auto validator_factory = sfp->validator_factory();
 
-  auto sgraph = sgraph_factory->CreateSGraph("demo");
+  Plan* plan = nullptr;
+  auto sgraph = sgraph_factory->CreateSGraph(*plan);
   auto sess = session_factory->CreateSession(*sgraph);
   // auto schedule_engine = engine_factory->CreateScheduleEngine(*sess);
   auto allocator = allocator_factory->CreateAllocator();

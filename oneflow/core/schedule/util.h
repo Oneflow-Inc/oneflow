@@ -22,11 +22,6 @@ inline std::string GetClassName(const std::string& prettyFunction) {
 #define __CLASS_NAME__ GetClassName(__PRETTY_FUNCTION__)
 #endif
 
-#define DEFINE_PURE_VIRTUAL_TYPE() virtual const std::string type() const = 0
-
-#define DEFINE_METHOD_TYPE() \
-  virtual const std::string type() const { return __CLASS_NAME__; }
-
 template<typename T, typename... Args>
 inline std::unique_ptr<T> unique_ptr_new(Args&&... args) {
   return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
@@ -42,30 +37,6 @@ inline uint64_t GetAutoIncrementId() {
   counter++;
   return counter;
 }
-
-#define DEFINE_POLICY_METHOD_CLONE(class_name, base)   \
-  virtual std::unique_ptr<base> Clone(PolicyHub* ph) { \
-    return unique_ptr_new<class_name>(ph);             \
-  }
-
-#define DEFINE_POLICY_PURE_VIRTUAL_CLONE(class_name) \
-  virtual std::unique_ptr<class_name> Clone(PolicyHub* ph) = 0
-
-#define POLICY_INTERFACE_BOILERPLATE(class_name)     \
-  class_name() = default;                            \
-  explicit class_name(PolicyHub* ph) : Policy(ph) {} \
-  virtual ~class_name() = default;                   \
-  OF_DISALLOW_COPY_AND_MOVE(class_name);             \
-  DEFINE_PURE_VIRTUAL_TYPE();                        \
-  DEFINE_POLICY_PURE_VIRTUAL_CLONE(class_name)
-
-#define POLICY_IMPLEMENT_BOILERPLATE(class_name, base) \
-  class_name() = default;                              \
-  explicit class_name(PolicyHub* ph) : base(ph) {}     \
-  virtual ~class_name() = default;                     \
-  OF_DISALLOW_COPY_AND_MOVE(class_name);               \
-  DEFINE_METHOD_TYPE();                                \
-  DEFINE_POLICY_METHOD_CLONE(class_name, base)
 
 template<typename K, typename C, typename E = typename C::value_type,
          typename F = std::function<K(const E&)>>

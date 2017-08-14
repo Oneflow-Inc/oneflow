@@ -29,7 +29,6 @@ namespace schedule {
 class Schedule {
  public:
   explicit Schedule(Session* session) : session_(session) {}
-  DEFINE_METHOD_TYPE();
 
   inline const std::unordered_map<TaskInstance*, std::pair<int32_t, int32_t>>&
   instance2ended_at() const {

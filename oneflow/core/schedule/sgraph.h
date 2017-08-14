@@ -37,8 +37,6 @@ class SDevice : public SNode {
   uint64_t memory_limit() const { return memory_limit_; }
   uint64_t& mut_memory_limit() { return memory_limit_; }
 
-  DEFINE_METHOD_TYPE();
-
  private:
   unsigned int time_;
   uint64_t memory_limit_ = ULLONG_MAX;
@@ -51,7 +49,6 @@ class STask : public SNode {
   explicit STask(const std::string name) : SNode(name) {}
   STask() {}
   virtual ~STask() {}
-  DEFINE_METHOD_TYPE();
   inline int depth() const { return depth_; }
   inline const SDevice* device() const { return device_; }
 
@@ -86,10 +83,8 @@ class SGraph : public SNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SGraph);
   SGraph() = default;
-  ~SGraph() = default;
-  DEFINE_METHOD_TYPE();
+  virtual ~SGraph() = default;
 
-  explicit SGraph(std::string name) : SNode(name) { InitSourceAndSink(); }
   explicit SGraph(const Plan& plan) : SNode("plan-graph") {
     InitSourceAndSink();
   }

@@ -38,8 +38,6 @@ class SNode {
   virtual uint64_t id() const { return id_; }
   virtual uint64_t& mut_id() { return id_; }
 
-  DEFINE_METHOD_TYPE();
-
  protected:
   uint64_t id_;
   std::string name_;

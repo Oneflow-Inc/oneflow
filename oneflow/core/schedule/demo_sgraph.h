@@ -9,11 +9,6 @@ namespace schedule {
 class DemoSGraph final : public SGraph {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DemoSGraph);
-  explicit DemoSGraph(const std::string& name) : SGraph(name) {
-    InitSourceAndSink();
-    InitFromDemo();
-    Update();
-  }
   explicit DemoSGraph(const Plan& plan) : SGraph(plan) {
     InitSourceAndSink();
     InitFromDemo();
