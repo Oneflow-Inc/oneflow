@@ -15,6 +15,10 @@ class RMSPropMdUpdateKernel final : public ModelUpdtKernel {
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
 
+  void InitDataTmpBlobs(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)>) const override;
+
  private:
 };
 
@@ -33,7 +37,6 @@ class RMSPropMdUpdateKernelUtil final {
                           FloatingPointType* model,
                           const FloatingPointType* model_diff,
                           const FloatingPointType* mean_square,
-                          const FloatingPointType epsilon,
                           FloatingPointType alpha);
 };
 

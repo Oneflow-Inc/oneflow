@@ -20,7 +20,7 @@ class MdDiffAccActor final : public CompActor {
   bool IsReadReady() override { return !waiting_in_regst_.empty(); }
   void Act() override;
 
-  std::queue<std::shared_ptr<RegstWrapper>> waiting_in_regst_;
+  std::queue<Regst*> waiting_in_regst_;
 
   void (*MemsetFunc)(const KernelCtx& ctx, void* dst, const char value,
                      size_t sz);

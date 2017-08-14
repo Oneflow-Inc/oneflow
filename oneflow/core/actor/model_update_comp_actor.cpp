@@ -111,13 +111,13 @@ int MdUpdtCompActor::HandlerNormal(const ActorMsg& actor_msg) {
     CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kEORD);
     ProcessEord();
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
-    auto regst_wp = actor_msg.regst_wrapper();
-    if (TryUpdtStateAsProducedRegst(regst_wp->regst_raw_ptr()) != 0) {
-      waiting_model_diff_acc_queue_.push(regst_wp);
+    Regst* regst = actor_msg.regst();
+    if (TryUpdtStateAsProducedRegst(regst) != 0) {
+      waiting_model_diff_acc_queue_.push(regst);
       mut_num_of_read_empty() = 0;
       VLOG(4) << "model update actor " << actor_id() << " "
-              << "receive readable regst " << regst_wp->regst_raw_ptr() << ", "
-              << "regst_desc_id:" << regst_wp->regst_desc_id() << ", "
+              << "receive readable regst " << regst << ", "
+              << "regst_desc_id:" << regst->regst_desc_id() << ", "
               << "current num_of_read_empty:" << num_of_read_empty();
     }
     ActUntilFail();
@@ -129,9 +129,7 @@ int MdUpdtCompActor::HandlerNormal(const ActorMsg& actor_msg) {
 
 int MdUpdtCompActor::HandlerWaitUntilNoReadableRegst(
     const ActorMsg& actor_msg) {
-  CHECK_EQ(
-      TryUpdtStateAsProducedRegst(actor_msg.regst_wrapper()->regst_raw_ptr()),
-      0);
+  CHECK_EQ(TryUpdtStateAsProducedRegst(actor_msg.regst()), 0);
   ActUntilFail();
   if (waiting_model_diff_acc_queue_.empty()) {
     AsyncSendEORDMsgToConsumers(model_regst_desc_id_);
@@ -145,22 +143,21 @@ void MdUpdtCompActor::Act() {
   waiting_model_diff_acc_queue_.pop();
   mut_num_of_read_empty() = waiting_model_diff_acc_queue_.empty();
   Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
-  auto model_wpr = std::make_shared<LocalRegstWrapper>(model_regst);
+  auto model_wpr = model_regst;
   model_regst->set_model_version_id(next_model_version_id_);
   Regst* data_tmp_regst = GetCurWriteableRegst(data_tmp_regst_desc_id_);
-  auto data_tmp_wpr = std::make_shared<LocalRegstWrapper>(data_tmp_regst);
+  auto data_tmp_wpr = data_tmp_regst;
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   kernel_ctx.other = &next_model_version_id_;
-  AsyncLaunchKernel(
-      kernel_ctx, [&](int64_t regst_desc_id) -> std::shared_ptr<RegstWrapper> {
-        if (regst_desc_id == model_regst_desc_id_) {
-          return model_wpr;
-        } else if (regst_desc_id == data_tmp_regst_desc_id_) {
-          return data_tmp_wpr;
-        } else {
-          return model_diff_acc_wpr;
-        }
-      });
+  AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {
+    if (regst_desc_id == model_regst_desc_id_) {
+      return model_wpr;
+    } else if (regst_desc_id == data_tmp_regst_desc_id_) {
+      return data_tmp_wpr;
+    } else {
+      return model_diff_acc_wpr;
+    }
+  });
   AsyncSendRegstMsgToProducer(model_diff_acc_wpr);
   AsyncCopyModelFromCurToNext();
   if (next_model_version_id_ == JobDesc::Singleton()->total_batch_num()) {

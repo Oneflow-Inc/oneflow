@@ -25,9 +25,6 @@ class RMSPropModelUpdateOp final : public ModelUpdtOp {
   std::string obn2lbn(const std::string& output_bn) const override {
     return kPackedBlobName;
   }
-  std::string mtbn2lbn(const std::string& output_bn) const override {
-    return kPackedBlobName;
-  }
 };
 
 }  // namespace oneflow

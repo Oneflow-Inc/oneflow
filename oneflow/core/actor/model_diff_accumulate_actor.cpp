@@ -27,14 +27,13 @@ int MdDiffAccActor::HandlerNormal(const ActorMsg& msg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     ProcessEord();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    if (TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr())
-        != 0) {
-      auto regst_wp = msg.regst_wrapper();
+    Regst* regst = msg.regst();
+    if (TryUpdtStateAsProducedRegst(regst) != 0) {
       mut_num_of_read_empty() = 0;
-      waiting_in_regst_.push(regst_wp);
+      waiting_in_regst_.push(regst);
       VLOG(4) << "model diff accumulate actor " << actor_id() << " "
-              << "receive readable regst " << regst_wp->regst_raw_ptr() << ", "
-              << "regst_desc_id:" << regst_wp->regst_desc_id() << ", "
+              << "receive readable regst " << regst << ", "
+              << "regst_desc_id:" << regst->regst_desc_id() << ", "
               << "current num_of_read_empty:" << num_of_read_empty();
     }
     ActUntilFail();
@@ -45,8 +44,7 @@ int MdDiffAccActor::HandlerNormal(const ActorMsg& msg) {
 }
 
 int MdDiffAccActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
-  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
-           0);
+  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
   ActUntilFail();
   if (waiting_in_regst_.empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
@@ -56,8 +54,8 @@ int MdDiffAccActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
 }
 
 void MdDiffAccActor::Act() {
-  std::shared_ptr<RegstWrapper> regst_wp = waiting_in_regst_.front();
-  CHECK_EQ(regst_wp->piece_id(), expected_piece_id());
+  Regst* in_regst = waiting_in_regst_.front();
+  CHECK_EQ(in_regst->piece_id(), expected_piece_id());
   KernelCtx ctx = GenDefaultKernelCtx();
   ForEachCurWriteableRegst([&](Regst* regst) {
     if (diff_acc_cnt_ != JobDesc::Singleton()->num_of_pieces_in_batch()) {
@@ -69,21 +67,20 @@ void MdDiffAccActor::Act() {
                    * JobDesc::Singleton()->FloatingPointSize());
     diff_acc_cnt_ = 0;
   });
-  AsyncLaunchKernel(
-      ctx, [this](uint64_t regst_desc_id) -> std::shared_ptr<RegstWrapper> {
-        Regst* regst = GetCurWriteableRegst(regst_desc_id);
-        if (regst == nullptr) {
-          CHECK_EQ(regst_desc_id, waiting_in_regst_.front()->regst_desc_id());
-          return waiting_in_regst_.front();
-        } else {
-          return std::make_shared<LocalRegstWrapper>(regst);
-        }
-      });
+  AsyncLaunchKernel(ctx, [this](uint64_t regst_desc_id) -> Regst* {
+    Regst* regst = GetCurWriteableRegst(regst_desc_id);
+    if (regst == nullptr) {
+      CHECK_EQ(regst_desc_id, waiting_in_regst_.front()->regst_desc_id());
+      return waiting_in_regst_.front();
+    } else {
+      return regst;
+    }
+  });
   diff_acc_cnt_ += 1;
   if (diff_acc_cnt_ == JobDesc::Singleton()->num_of_pieces_in_batch()) {
     AsyncSendReadableRegstMsg();
   }
-  AsyncSendRegstMsgToProducer(regst_wp);
+  AsyncSendRegstMsgToProducer(in_regst);
   waiting_in_regst_.pop();
   mut_num_of_read_empty() = waiting_in_regst_.empty();
 }
