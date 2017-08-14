@@ -117,7 +117,8 @@ void SplitAndParseAs(const std::string& text, const std::string& delims,
 
 inline uint32_t NewRandomSeed() {
   static std::mt19937 gen{std::random_device{}()};
-  return gen();
+  // return gen();
+  return 1;
 }
 
 // Work around the following issue on Windows
