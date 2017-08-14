@@ -32,21 +32,6 @@ Connection::Connection(int64_t my_machine_id, int64_t peer_machine_id)
 
 Connection::~Connection() { Destroy(); }
 
-void Connection::set_connector(IND2Connector* connector) {
-  CHECK(!connector_);
-  connector_ = connector;
-}
-
-void Connection::set_queue_pair(IND2QueuePair* queue_pair) {
-  CHECK(!queue_pair_);
-  queue_pair_ = queue_pair;
-}
-
-void Connection::set_overlapped(OVERLAPPED* ov) {
-  CHECK(!ov_);
-  ov_ = ov;
-}
-
 bool Connection::TryConnectTo(const char* peer_ip, int32_t peer_port) {
   sockaddr_in peer_addr = GetAddress(peer_ip, peer_port);
   HRESULT hr = connector_->Connect(

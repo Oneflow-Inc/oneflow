@@ -16,9 +16,9 @@ using namespace oneflow;
 using namespace std;
 
 DEFINE_int32(my_machine_id, 0, "local machine id");
-DEFINE_string(my_ip, "11.11.1.11", "local machine ip");
+DEFINE_string(my_ip, "11.11.1.109", "local machine ip");
 DEFINE_int32(peer_machine_id, 1, "peer machine id");
-DEFINE_string(peer_ip, "11.11.1.13", "peer machine ip");
+DEFINE_string(peer_ip, "11.11.1.132", "peer machine ip");
 DEFINE_int64(transfer_size, 1024, "transfer data size");
 DEFINE_int32(transfer_times, 1, "transfer data times");
 
