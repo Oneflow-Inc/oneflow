@@ -15,9 +15,11 @@ class SchedulerEngine {
   virtual std::unique_ptr<Schedule> StaticSchedule(
       const std::function<uint32_t(uint64_t)>& get_regst_num) = 0;
 
-  std::unique_ptr<Schedule> StaticSchedule(uint32_t regst_max = 3u) {
+  std::unique_ptr<Schedule> StaticSchedule(uint32_t regst_max) {
     return StaticSchedule([=](uint64_t id) { return regst_max; });
   }
+
+  virtual std::unique_ptr<Schedule> StaticSchedule() = 0;
 
   //	getter
   inline Session* session() const { return session_; }

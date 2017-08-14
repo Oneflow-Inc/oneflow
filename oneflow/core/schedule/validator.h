@@ -31,7 +31,7 @@ class Validator {
   virtual bool ValidateAllocation(const Schedule& schedule);
 
   //	getter
-  inline const ScheduleFactoryProvider* schedule_factory_provider() const {
+  inline ScheduleFactoryProvider* schedule_factory_provider() const {
     return schedule_factory_provider_;
   }
 

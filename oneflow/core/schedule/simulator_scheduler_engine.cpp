@@ -116,6 +116,7 @@ float SimulatorSchedule::GetDurationByTimeGapToLoss(TaskInstance* from,
 
 void SimulatorSchedule::UpdateDuration(
     SimulatorSchedulerEngine* scheduler_engine) {
+  CHECK(session() == scheduler_engine->session());
   auto session = scheduler_engine->session();
   session->graph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
     STask* owner = nullptr;
@@ -140,6 +141,19 @@ void SimulatorSchedule::UpdateDuration(
           duration = std::max(duration, avg);
         });
     mut_regst_desc2duration()[regst_desc] = std::round(duration);
+  });
+}
+
+void SimulatorSchedule::UpdateRegstCount() {
+  session()->graph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
+    STask* owner = nullptr;
+    session()->graph()->produced_regst_desc_mgr().Input(regst_desc, &owner);
+    auto duration = mut_regst_desc2duration()[regst_desc];
+    auto interval = max_interval();
+    auto count = (uint32_t)ceil(duration / std::max(interval, 1.0f));
+    mut_regst_desc2count()[regst_desc] = count;
+    std::cout << "Allocation\t" << regst_desc->id() << "\t" << count << "\t"
+              << duration << "," << interval << std::endl;
   });
 }
 
@@ -274,15 +288,11 @@ SDevice* SimulatorSchedulerEngine::GetInstanceDevice(TaskInstance* instance) {
 
 void SimulatorSchedulerEngine::InitStrategies() {
   SetStrategy(unique_ptr_new<PositiveDirectionStrategy>(this));
-  //  SetStrategy(unique_ptr_new<NegativeDirectionStrategy>(this));
-  //  SetStrategy(unique_ptr_new<EagerEvaluationStrategy>(direction_.get()));
   SetStrategy(unique_ptr_new<LazyEvaluationStrategy>(this));
-  //  SetStrategy(unique_ptr_new<UnlimitedResourceStrategy>(
-  //      direction_.get(), evaluation_.get(), get_regst_num));
   SetStrategy(unique_ptr_new<LimitedResourceStrategy>(this));
 }
 
-std::unique_ptr<Schedule> SimulatorSchedulerEngine::StaticSchedule(
+std::unique_ptr<Schedule> SimulatorSchedulerEngine::RunInTwoDirections(
     const std::function<uint32_t(uint64_t)>& get_regst_num) {
   SetStrategy(unique_ptr_new<PositiveDirectionStrategy>(this));
   auto positive_schedule = Run(get_regst_num);
@@ -290,7 +300,19 @@ std::unique_ptr<Schedule> SimulatorSchedulerEngine::StaticSchedule(
   auto negative_schedule = Run(get_regst_num);
   positive_schedule->MergeTimeGapToLossInPlace(negative_schedule.get());
   positive_schedule->UpdateDuration(this);
+  positive_schedule->UpdateRegstCount();
   return std::move(positive_schedule);
+}
+
+std::unique_ptr<Schedule> SimulatorSchedulerEngine::StaticSchedule(
+    const std::function<uint32_t(uint64_t)>& get_regst_num) {
+  SetStrategy(unique_ptr_new<LimitedResourceStrategy>(this));
+  return RunInTwoDirections(get_regst_num);
+}
+
+std::unique_ptr<Schedule> SimulatorSchedulerEngine::StaticSchedule() {
+  SetStrategy(unique_ptr_new<UnlimitedResourceStrategy>(this));
+  return RunInTwoDirections([](uint64_t) { return (uint32_t)1u; });
 }
 
 std::unique_ptr<SimulatorSchedule> SimulatorSchedulerEngine::Run(

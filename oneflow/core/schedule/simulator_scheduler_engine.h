@@ -39,6 +39,7 @@ class SimulatorSchedule : public Schedule {
   void Clear();
   void UpdateTimeGapToLoss(SimulatorSchedulerEngine* scheduler_engine);
   void UpdateDuration(SimulatorSchedulerEngine* scheduler_engine);
+  void UpdateRegstCount();
   void UpdateInterval(SimulatorSchedulerEngine* scheduler_engine);
   float GetDurationByTimeGapToLoss(TaskInstance* from, TaskInstance* to);
   void MergeTimeGapToLossInPlace(SimulatorSchedule* logger);
@@ -116,12 +117,12 @@ class SimulatorSchedulerEngine : public SchedulerEngine {
     return ret;
   }
 
+  std::unique_ptr<Schedule> StaticSchedule();
+  std::unique_ptr<Schedule> StaticSchedule(
+      const std::function<uint32_t(uint64_t)>& get_regst_num);
   std::unique_ptr<Schedule> StaticSchedule(uint32_t regst_max = 3u) {
     return StaticSchedule([=](uint64_t id) { return regst_max; });
   }
-
-  std::unique_ptr<Schedule> StaticSchedule(
-      const std::function<uint32_t(uint64_t)>& get_regst_num);
 
   std::unique_ptr<SimulatorSchedule> Run(
       const std::function<uint32_t(uint64_t)>& get_regst_num);
@@ -152,6 +153,9 @@ class SimulatorSchedulerEngine : public SchedulerEngine {
 
  private:
   void InitStrategies();
+  std::unique_ptr<Schedule> RunInTwoDirections(
+      const std::function<uint32_t(uint64_t)>& get_regst_num);
+
   void SetStrategy(std::unique_ptr<DirectionSimulationStrategy>&& direction) {
     direction_ = std::move(direction);
   }
