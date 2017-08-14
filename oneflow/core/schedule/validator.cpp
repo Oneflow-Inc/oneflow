@@ -10,7 +10,8 @@ bool Validator::ValidateMemory(const Schedule& schedule) {
   auto graph = schedule.session()->graph();
   graph->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
     auto device = regst_desc->owner_task()->device();
-    auto regst_count = GetOrDefault(schedule.regst_desc2count(), regst_desc, 0);
+    auto regst_count =
+        GetOrDefault(schedule.regst_desc2count(), regst_desc, 0u);
     auto memory_size = regst_count * regst_desc->regst_memory_size();
     device2total_memory_size[device] += memory_size;
   });

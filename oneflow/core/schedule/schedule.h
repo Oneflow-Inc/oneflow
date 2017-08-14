@@ -57,9 +57,16 @@ class Schedule {
       const {
     return regst_desc2duration_;
   }
-  inline const std::unordered_map<SRegstDesc*, int32_t>& regst_desc2count()
+  inline const std::unordered_map<SRegstDesc*, uint32_t>& regst_desc2count()
       const {
     return regst_desc2count_;
+  }
+  inline const uint32_t max_regst_count() {
+    uint32_t max_count = 0;
+    for (const auto& p : regst_desc2count_) {
+      max_count = std::max(max_count, p.second);
+    }
+    return max_count;
   }
 
   //	setter
@@ -85,7 +92,7 @@ class Schedule {
   inline std::unordered_map<SRegstDesc*, float>& mut_regst_desc2duration() {
     return regst_desc2duration_;
   }
-  inline std::unordered_map<SRegstDesc*, int32_t>& mut_regst_desc2count() {
+  inline std::unordered_map<SRegstDesc*, uint32_t>& mut_regst_desc2count() {
     return regst_desc2count_;
   }
 
@@ -103,7 +110,7 @@ class Schedule {
   std::unordered_map<STask*, float> node2interval_;
   float max_interval_ = 0.0;
   std::unordered_map<SRegstDesc*, float> regst_desc2duration_;
-  std::unordered_map<SRegstDesc*, int32_t> regst_desc2count_;
+  std::unordered_map<SRegstDesc*, uint32_t> regst_desc2count_;
 };
 
 }  // namespace schedule

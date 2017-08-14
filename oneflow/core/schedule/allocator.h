@@ -17,7 +17,9 @@ class Allocator {
       : schedule_factory_provider_(schedule_factory_provider) {}
   Allocator() = default;
 
-  void Allocate(Plan* plan) {}
+  virtual void Allocate(Plan* plan) {}
+  virtual std::unique_ptr<Schedule> MemoryLimitedStaticSchedule(
+      const Session& session);
 
   //	getter
   inline const ScheduleFactoryProvider* schedule_factory_provider() const {
