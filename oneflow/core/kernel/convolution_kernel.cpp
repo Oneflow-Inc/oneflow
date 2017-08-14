@@ -118,10 +118,10 @@ void ConvolutionKernel<device_type, FloatingPointType>::Forward(
   for (size_t i = 0; i < in_shape.At(0); ++i) {
     ConvolutionKernelUtil<device_type, FloatingPointType>::Im2Col(
         ctx, in->dptr<FloatingPointType>() + i * in_im_sz, in_shape.At(1),
-        in_shape.At(2), in_shape.At(3), conv_conf.kernel_size(0),
-        conv_conf.kernel_size(1), conv_conf.pad(0), conv_conf.pad(1),
-        conv_conf.stride(0), conv_conf.stride(1), conv_conf.dilation(0),
-        conv_conf.dilation(1),
+        in_shape.At(2), in_shape.At(3), conv_conf.kernel_size_h(),
+        conv_conf.kernel_size_w(), conv_conf.pad_h(), conv_conf.pad_w(),
+        conv_conf.stride_h(), conv_conf.stride_w(), conv_conf.dilation_h(),
+        conv_conf.dilation_w(),
         col_buf->mut_dptr<FloatingPointType>() + i * col_im_sz);
 
     KernelUtil<device_type, FloatingPointType>::BlasGemm(
@@ -236,9 +236,9 @@ void ConvolutionKernel<device_type, FloatingPointType>::ComputeInputDiff(
     ConvolutionKernelUtil<device_type, FloatingPointType>::Col2Im(
         ctx, col_buf->dptr<FloatingPointType>() + i * col_buf->shape().Count(1),
         in_diff_shape.At(1), in_diff_shape.At(2), in_diff_shape.At(3),
-        conv_conf.kernel_size(0), conv_conf.kernel_size(1), conv_conf.pad(0),
-        conv_conf.pad(1), conv_conf.stride(0), conv_conf.stride(1),
-        conv_conf.dilation(0), conv_conf.dilation(1),
+        conv_conf.kernel_size_h(), conv_conf.kernel_size_w(), conv_conf.pad_h(),
+        conv_conf.pad_w(), conv_conf.stride_h(), conv_conf.stride_w(),
+        conv_conf.dilation_h(), conv_conf.dilation_w(),
         in_diff->mut_dptr<FloatingPointType>() + i * in_diff_shape.Count(1));
   }
 }

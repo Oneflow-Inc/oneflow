@@ -34,18 +34,23 @@ message ConvolutionOpConf {
 
   // Pad, kernel size, and stride are all given as a single value for equal
   // dimensions in all spatial dimensions, or once per spatial dimension.
-  repeated int32 pad = 5; // The padding size; defaults to 0
-  repeated int32 kernel_size = 6; // The kernel size
-  repeated int32 stride = 7; // The stride; defaults to 1
+  int32 pad_h = 5; // The padding size; defaults to 0
+  int32 pad_w = 6;
+  int32 kernel_size_h = 7; // The kernel size
+  int32 kernel_size_w = 8;
+  int32 stride_h = 9; // The stride; defaults to 1
+  int32 stride_w = 10;
   // Factor used to dilate the kernel, (implicitly) zero-filling the resulting
   // holes. (Kernel dilation is sometimes referred to by its use in the
   // algorithme ид trous from Holschneider et al. 1987.)
-  repeated int32 dilation = 8; // The dilation; defaults to 1
+  int32 dilation_h = 11; // The dilation; defaults to 1
+  int32 dilation_w = 12;
 
-  int32 group = 15; // The group size for group conv
 
-  FillConf weight_fill = 16; // The fill for the weight
-  FillConf bias_fill = 17; // The fill for the bias
+  int32 group = 13;// The group size for group conv
+
+  FillConf weight_fill = 14; // The fill for the weight
+  FillConf bias_fill = 15; // The fill for the bias
 
   // The axis to interpret as "channels" when performing convolution.
   // Preceding dimensions are treated as independent inputs;
@@ -56,14 +61,14 @@ message ConvolutionOpConf {
   // With (N, C, D, H, W) inputs, and axis == 1, we perform
   // N independent 3D convolutions, sliding (C/g)-channels
   // filters across the spatial axes (D, H, W) of the input.
-  int32 axis = 18;
+  int32 axis = 16;
 
   // Whether to force use of the general ND convolution, even if a specific
   // implementation for blobs of the appropriate number of spatial dimensions
   // is available. (Currently, there is only a 2D-specific convolution
   // implementation; for input blobs with num_axes != 2, this option is
   // ignored and the ND implementation will be used.)
-  bool force_nd_im2col = 19;
+  bool force_nd_im2col = 17;
 }
 
 message InnerProductOpConf {
@@ -103,11 +108,12 @@ message PoolingOpConf {
     kStochastic = 2;
   }
   PoolMethod pool = 3; // The pooling method
-  // Pad, kernel size, and stride are all given as a repeated value
-  // dimensions in height and width or 3D
-  repeated int32 pad = 4; // The padding size {H, W} or {D, H, W}
-  repeated int32 kernel_size = 7; // The kernel size
-  repeated int32 stride = 10; // The stride
+  int32 pad_h = 4; // The padding size; defaults to 0
+  int32 pad_w = 5;
+  int32 kernel_size_h = 6; // The kernel size
+  int32 kernel_size_w = 7;
+  int32 stride_h = 8; // The stride; defaults to 1
+  int32 stride_w = 9;
 }
 
 message ReluOpConf {

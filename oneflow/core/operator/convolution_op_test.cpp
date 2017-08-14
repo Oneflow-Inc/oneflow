@@ -10,12 +10,13 @@ TEST(ConvolutionOp, TestForInferShape4FwBlobs) {
   op_conf.mutable_convolution_conf()->set_in("convolution/in");
   op_conf.mutable_convolution_conf()->set_out("convolution/out");
   op_conf.mutable_convolution_conf()->set_out_num(16);
-  op_conf.mutable_convolution_conf()->add_pad(4);
-  op_conf.mutable_convolution_conf()->add_pad(4);
-  op_conf.mutable_convolution_conf()->add_kernel_size(20);
-  op_conf.mutable_convolution_conf()->add_kernel_size(20);
-  op_conf.mutable_convolution_conf()->add_stride(3);
-  op_conf.mutable_convolution_conf()->add_stride(3);
+  op_conf.mutable_convolution_conf()->set_pad_h(4);
+  op_conf.mutable_convolution_conf()->set_pad_w(4);
+
+  op_conf.mutable_convolution_conf()->set_kernel_size_h(20);
+  op_conf.mutable_convolution_conf()->set_kernel_size_w(20);
+  op_conf.mutable_convolution_conf()->set_stride_h(3);
+  op_conf.mutable_convolution_conf()->set_stride_w(3);
   auto convolution_op = ConstructOp(op_conf);
   std::vector<int64_t> input_vec = {100, 64, 256, 256};
   HashMap<std::string, Shape*> bn2shape_ptr{
