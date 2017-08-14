@@ -15,8 +15,4 @@
   virtual std::unique_ptr<class_name> Clone(ScheduleFactoryProvider* ph) \
       const = 0
 
-namespace oneflow {
-namespace schedule {}  // namespace schedule
-}  // namespace oneflow
-
 #endif  // ONEFLOW_CORE_SCHEDULE_FACTORY_UTIL_H_

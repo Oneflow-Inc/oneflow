@@ -19,7 +19,6 @@
 #include <utility>
 #include <vector>
 
-#include "oneflow/core/schedule/policy.h"
 #include "oneflow/core/schedule/schedule.h"
 #include "oneflow/core/schedule/schedule_engine.h"
 #include "oneflow/core/schedule/session.h"
