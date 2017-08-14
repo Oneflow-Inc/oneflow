@@ -26,7 +26,7 @@ void Master::ParseServerDef() {
 }
 
 void Master::CreateWorkerCache() {
-  for (auto& pair : name2worker_) {
+  for (auto& pair : name2node_def_) {
     auto& name = pair.first;
     auto node_def_it = name2node_def_.find(name);
     CHECK(node_def_it != name2node_def_.end());
