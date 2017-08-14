@@ -68,23 +68,22 @@ int main(int argc, char** argv) {
 
   Plan plan = resp.plan();
 
-   std::string worker_address = FLAGS_server_addr;
-   std::shared_ptr<::grpc::Channel> worker_channel = ::grpc::CreateChannel(
+  std::string worker_address = FLAGS_server_addr;
+  std::shared_ptr<::grpc::Channel> worker_channel = ::grpc::CreateChannel(
       worker_address, ::grpc::InsecureChannelCredentials());
 
-   std::shared_ptr<GrpcRemoteWorker> remote_worker(
+  std::shared_ptr<GrpcRemoteWorker> remote_worker(
       new GrpcRemoteWorker(worker_channel));
-   SendPlanRequest plan_req;
+  SendPlanRequest plan_req;
   *(plan_req.mutable_plan()) = plan;
-   SendPlanResponse plan_resp;
+  SendPlanResponse plan_resp;
 
-   s = remote_worker->SendPlan(&plan_req, &plan_resp);
-   if (s.ok()) {
+  s = remote_worker->SendPlan(&plan_req, &plan_resp);
+  if (s.ok()) {
     LOG(INFO) << "SendPlan RPC succeeds";
   } else {
     LOG(INFO) << "SendPlan RPC fails";
   }
-
 
   // PrintProtoToTextFile(plan, "tmp_plan");
 

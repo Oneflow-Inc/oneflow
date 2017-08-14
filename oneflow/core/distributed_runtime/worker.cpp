@@ -1,11 +1,12 @@
 #include "oneflow/core/distributed_runtime/worker.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/distributed_runtime/worker.pb.h"
 #include "oneflow/core/common_runtime/runtime.h"
+#include "oneflow/core/distributed_runtime/worker.pb.h"
 
 namespace oneflow {
 
-Worker::Worker(const std::string& this_node_name) : this_node_name_(this_node_name) {}
+Worker::Worker(const std::string& this_node_name)
+    : this_node_name_(this_node_name) {}
 
 Worker::~Worker() {}
 

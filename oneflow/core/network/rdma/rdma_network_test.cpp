@@ -55,6 +55,7 @@ int main(int argc, char** argv) {
   NetworkMessage msg;
   NetworkResult result;
 
+  /*
   msg.src_machine_id = my_machine_id;
   msg.type = NetworkMessageType::kBarrier;
   msg.dst_machine_id = peer_machine_id;
@@ -84,20 +85,21 @@ int main(int argc, char** argv) {
   }
 
   cout << "Send/Recv test success." << endl;
+  */
 
-  /*
   clock_t start_time, current_time;
 
   // useful for my_machine_id == 0
   char* dst_buffer = new char[FLAGS_transfer_size];
-  NetworkMemory* dst_memory = net->RegisterMemory(dst_buffer,
-  FLAGS_transfer_size); MemoryDescriptor* remote_memory_descriptor = new
-  MemoryDescriptor(); remote_memory_descriptor->address = 0;
+  NetworkMemory* dst_memory =
+      net->RegisterMemory(dst_buffer, FLAGS_transfer_size);
+  MemoryDescriptor* remote_memory_descriptor = new MemoryDescriptor();
+  remote_memory_descriptor->address = 0;
 
   // useful for my_machine_id == 1
   char* src_buffer = new char[FLAGS_transfer_size];
-  NetworkMemory* src_memory = net->RegisterMemory(src_buffer,
-  FLAGS_transfer_size);
+  NetworkMemory* src_memory =
+      net->RegisterMemory(src_buffer, FLAGS_transfer_size);
   // send memory descriptor to peer
   if (my_machine_id == 1) {
     NetworkMessage memory_msg;
@@ -113,13 +115,16 @@ int main(int argc, char** argv) {
   int i = 0;
   while (i < FLAGS_transfer_times) {
     while (!net->Poll(&result)) {
-      // sleep(1);
-      // cout << "Poll result false" << endl;
+#ifdef WIN32
+      Sleep(1000);
+#else
+      sleep(1);
+#endif
+      cout << "Poll result false" << endl;
     }
     if (result.type == NetworkResultType::kSendOk) {
       LOG(INFO) << "send ok" << endl;
-    }
-    else if (result.type == NetworkResultType::kReceiveMsg) {
+    } else if (result.type == NetworkResultType::kReceiveMsg) {
       if (result.net_msg.type == NetworkMessageType::kRemoteMemoryDescriptor) {
         LOG(INFO) << "recv descriptor" << endl;
         remote_memory_descriptor->machine_id = result.net_msg.src_machine_id;
@@ -129,11 +134,16 @@ int main(int argc, char** argv) {
           LOG(INFO) << "address error" << endl;
           exit(1);
         }
-        net->Read(*remote_memory_descriptor, dst_memory, [](){});
+        std::cout << "remote_machine_id: "
+                  << remote_memory_descriptor->machine_id
+                  << ", remote_address: " << remote_memory_descriptor->address
+                  << ", remote_token: "
+                  << remote_memory_descriptor->remote_token << std::endl;
+        std::cout << "before post read" << std::endl;
+        net->Read(*remote_memory_descriptor, dst_memory, []() {});
         LOG(INFO) << "async read issued" << endl;
         start_time = clock();
-      }
-      else if (result.net_msg.type == NetworkMessageType::kRequestAck) {
+      } else if (result.net_msg.type == NetworkMessageType::kRequestAck) {
         LOG(INFO) << "Send next memory descriptor" << endl;
         NetworkMessage memory_msg;
         memory_msg.type = NetworkMessageType::kRemoteMemoryDescriptor;
@@ -143,12 +153,10 @@ int main(int argc, char** argv) {
         memory_msg.token = src_memory->memory_discriptor().remote_token;
         net->SendMsg(memory_msg);
       }
-    }
-    else if (result.type == NetworkResultType::kReadOk) {
+    } else if (result.type == NetworkResultType::kReadOk) {
       current_time = clock();
-      LOG(INFO) << "READ OK. TIMES: " << i
-        << ", cost time: " << (double)(current_time - start_time)/CLOCKS_PER_SEC
-        << endl;
+      LOG(INFO) << "READ OK. TIMES: " << i << ", cost time: "
+                << (double)(current_time - start_time) / CLOCKS_PER_SEC << endl;
       start_time = current_time;
       NetworkMessage read_ok_msg;
       read_ok_msg.type = NetworkMessageType::kRequestAck;
@@ -159,9 +167,8 @@ int main(int argc, char** argv) {
     }
   }
 
-  delete []src_buffer;
-  delete []dst_buffer;
-  */
+  delete[] src_buffer;
+  delete[] dst_buffer;
 
   LOG(INFO) << "Network Shutting Down..." << endl;
   gflags::ShutDownCommandLineFlags();

@@ -18,7 +18,7 @@ class Worker {
                                 SendPlanResponse* response, MyClosure done);
 
  private:
-   std::string this_node_name_;
+  std::string this_node_name_;
 };  // Worker
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_DISTRIBUTED_RUNTIME_WORKER_H_
