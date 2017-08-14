@@ -69,14 +69,14 @@ Kernel* BuildConvolutionKernel(bool has_bias_term) {
   op_conf.mutable_convolution_conf()->set_in("convolution/in");
   op_conf.mutable_convolution_conf()->set_out("convolution/out");
   op_conf.mutable_convolution_conf()->set_out_num(1);
-  op_conf.mutable_convolution_conf()->add_pad(0);
-  op_conf.mutable_convolution_conf()->add_pad(0);
-  op_conf.mutable_convolution_conf()->add_kernel_size(2);
-  op_conf.mutable_convolution_conf()->add_kernel_size(2);
-  op_conf.mutable_convolution_conf()->add_stride(1);
-  op_conf.mutable_convolution_conf()->add_stride(1);
-  op_conf.mutable_convolution_conf()->add_dilation(1);
-  op_conf.mutable_convolution_conf()->add_dilation(1);
+  op_conf.mutable_convolution_conf()->set_pad_h(0);
+  op_conf.mutable_convolution_conf()->set_pad_w(0);
+  op_conf.mutable_convolution_conf()->set_kernel_size_h(2);
+  op_conf.mutable_convolution_conf()->set_kernel_size_w(2);
+  op_conf.mutable_convolution_conf()->set_stride_h(1);
+  op_conf.mutable_convolution_conf()->set_stride_w(1);
+  op_conf.mutable_convolution_conf()->set_dilation_h(1);
+  op_conf.mutable_convolution_conf()->set_dilation_w(1);
   op_conf.mutable_convolution_conf()->set_has_bias_term(has_bias_term);
   auto convolution_op = ConstructOp(op_conf);
 
