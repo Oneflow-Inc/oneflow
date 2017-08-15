@@ -147,7 +147,7 @@ Connection* RdmaNetwork::NewConnection(const std::string& my_ip,
   endpoint_manager_->CreateConnector(conn);
   endpoint_manager_->CreateQueuePair(conn);
   
-  conn->Bind(my_ip, my_port);
+  // conn->Bind(my_ip, my_port);
   return conn;
 }
 
@@ -193,6 +193,8 @@ void RdmaNetwork::EstablishConnection() {  // TODO(shiyuan)
       CHECK(conn);
       receive_request = request_pool_->AllocRequest(false);
       CHECK(receive_request);
+      conn->Bind(net_topo_.all_nodes[my_machine_id_].address,
+        net_topo_.all_nodes[my_machine_id_].port);
       while (!conn->TryConnectTo(
           net_topo_.all_nodes[peer_machine_id].address.c_str(), port_))
         ;                                       // TODO(shiyuan)
