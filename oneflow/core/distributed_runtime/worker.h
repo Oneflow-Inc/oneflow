@@ -2,8 +2,8 @@
 #define ONEFLOW_CORE_DISTRIBUTED_RUNTIME_WORKER_H_
 
 #include "oneflow/core/distributed_runtime/worker.pb.h"
-#include "tensorflow/core/lib/core/status.h"
 #include "oneflow/core/job/plan.pb.h"
+#include "tensorflow/core/lib/core/status.h"
 
 namespace oneflow {
 
@@ -17,6 +17,10 @@ class Worker {
 
   ::tensorflow::Status SendPlan(SendPlanRequest* request,
                                 SendPlanResponse* response, MyClosure done);
+
+  ::tensorflow::Status WorkerInitDataPlane(
+      WorkerInitDataPlaneRequest* request,
+      WorkerInitDataPlaneResponse* response, MyClosure done);
 
  private:
   std::string this_node_name_;

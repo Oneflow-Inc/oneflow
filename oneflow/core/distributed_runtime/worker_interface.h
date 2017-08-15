@@ -35,6 +35,10 @@ class WorkerInterface {
   virtual void SendPlanAsync(const SendPlanRequest* request,
                              SendPlanResponse* response,
                              ::tensorflow::StatusCallback done) = 0;
+
+  virtual ::tensorflow::Status WorkerInitDataPlane(
+      const WorkerInitDataPlaneRequest* request,
+      WorkerInitDataPlaneResponse* response) = 0;
 };
 
 }  // namespace oneflow

@@ -32,6 +32,10 @@ class MasterInterface {
   virtual ~MasterInterface() {}
   virtual ::tensorflow::Status SendJob(const SendJobRequest* request,
                                        SendJobResponse* response) = 0;
+
+  virtual ::tensorflow::Status MasterInitDataPlane(
+      const MasterInitDataPlaneRequest* request,
+      MasterInitDataPlaneResponse* response) = 0;
 };
 
 }  // namespace oneflow

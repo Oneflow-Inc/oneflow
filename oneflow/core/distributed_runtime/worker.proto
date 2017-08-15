@@ -9,3 +9,9 @@ message SendPlanRequest {
 
 message SendPlanResponse {
 }
+
+message WorkerInitDataPlaneRequest {
+}
+
+message WorkerInitDataPlaneResponse {
+}

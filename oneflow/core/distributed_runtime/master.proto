@@ -18,3 +18,9 @@ message SendJobRequest {
 message SendJobResponse {
   Plan plan = 1;
 }
+
+message MasterInitDataPlaneRequest {
+}
+
+message MasterInitDataPlaneResponse {
+}

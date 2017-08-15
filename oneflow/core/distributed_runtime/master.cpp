@@ -62,7 +62,7 @@ Master::~Master() {}
   // PrintProtoToString(response->plan(), &str_plan);
   // LOG(INFO) << str_plan;
 
-  //for (auto& pair : name2worker_) {
+  // for (auto& pair : name2worker_) {
   //  struct Call {
   //    SendPlanRequest plan_req;
   //    SendPlanResponse plan_resp;
@@ -85,9 +85,24 @@ Master::~Master() {}
     SendPlanRequest plan_req;
     SendPlanResponse plan_resp;
     *(plan_req.mutable_plan()) = response->plan();
-    pair.second->SendPlan(&plan_req, &plan_resp);
+    ::tensorflow::Status s = pair.second->SendPlan(&plan_req, &plan_resp);
+    CHECK(s.ok());
   }
 
+  done(::tensorflow::Status());
+  return ::tensorflow::Status::OK();
+}
+
+::tensorflow::Status Master::MasterInitDataPlane(
+    MasterInitDataPlaneRequest* request, MasterInitDataPlaneResponse* response,
+    MyClosure done) {
+  for (auto& pair : name2worker_) {
+    WorkerInitDataPlaneRequest init_dp_req;
+    WorkerInitDataPlaneResponse init_dp_resp;
+    ::tensorflow::Status s =
+        pair.second->WorkerInitDataPlane(&init_dp_req, &init_dp_resp);
+    CHECK(s.ok());
+  }
   done(::tensorflow::Status());
   return ::tensorflow::Status::OK();
 }

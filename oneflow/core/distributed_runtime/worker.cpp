@@ -18,10 +18,18 @@ Worker::~Worker() {}
   LOG(INFO) << str_plan;
 
   plan_ = request->plan();
-  //Plan plan = request->plan();
-  //oneflow::runtime::Runtime::Singleton()->Run(plan, this_node_name_);
+  // Plan plan = request->plan();
+  // oneflow::runtime::Runtime::Singleton()->Run(plan, this_node_name_);
 
   done(::tensorflow::Status());
   return ::tensorflow::Status::OK();
 }
+
+::tensorflow::Status Worker::WorkerInitDataPlane(
+    WorkerInitDataPlaneRequest* request, WorkerInitDataPlaneResponse* response,
+    MyClosure done) {
+  done(::tensorflow::Status());
+  return ::tensorflow::Status::OK();
+}
+
 }  // namespace oneflow
