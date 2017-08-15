@@ -18,6 +18,7 @@ DEFINE_string(my_ip, "11.11.1.109", "my machine ip");
 DEFINE_string(peer_ip, "11.11.1.132", "peer machine ip");
 DEFINE_int64(transfer_size, 1024, "transfer data size");
 DEFINE_int32(transfer_times, 1, "transfer data times");
+DEFINE_int32(port, 5551, "default port");
 
 namespace oneflow {
 
@@ -143,11 +144,11 @@ int main(int argc, char** argv) {
   net_topo.all_nodes.resize(2);
   net_topo.all_nodes[client_id].machine_id = client_id;
   net_topo.all_nodes[client_id].address = client_ip;
-  net_topo.all_nodes[client_id].port = 53433;
+  net_topo.all_nodes[client_id].port = FLAGS_port;
   net_topo.all_nodes[client_id].neighbors.insert(server_id);
   net_topo.all_nodes[server_id].machine_id = server_id;
   net_topo.all_nodes[server_id].address = server_ip;
-  net_topo.all_nodes[server_id].port = 53433;
+  net_topo.all_nodes[server_id].port = FLAGS_port;
   net_topo.all_nodes[server_id].neighbors.insert(client_id);
 
   oneflow::RDMATest rdma_test(my_machine_id, peer_machine_id, net_topo);
