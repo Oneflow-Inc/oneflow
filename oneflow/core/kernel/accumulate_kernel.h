@@ -1,16 +1,16 @@
-#ifndef ONEFLOW_CORE_KERNEL_MODEL_DIFF_ACCUMULATE_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_MODEL_DIFF_ACCUMULATE_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_ACCUMULATE_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_ACCUMULATE_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel_manager.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename FloatingPointType>
-class MdDiffAccKernel final : public Kernel {
+class AccumulateKernel final : public Kernel {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(MdDiffAccKernel);
-  MdDiffAccKernel() = default;
-  ~MdDiffAccKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(AccumulateKernel);
+  AccumulateKernel() = default;
+  ~AccumulateKernel() = default;
 
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
@@ -25,4 +25,4 @@ class MdDiffAccKernel final : public Kernel {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_MODEL_DIFF_ACCUMULATE_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_ACCUMULATE_KERNEL_H_

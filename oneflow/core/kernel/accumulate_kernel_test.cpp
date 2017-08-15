@@ -1,4 +1,4 @@
-#include "oneflow/core/kernel/model_diff_accumulate_kernel.h"
+#include "oneflow/core/kernel/accumulate_kernel.h"
 #include <random>
 #include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/core/device/cuda_device_context.h"
@@ -35,14 +35,14 @@ template<DeviceType device_type, typename FloatingPointType>
 Kernel* BuildMdDiffAccKernel() {
   OperatorConf op_conf;
   op_conf.set_name("model_diff_acc");
-  op_conf.mutable_model_diff_acc_conf();
+  op_conf.mutable_accumulate_conf();
   auto model_diff_acc_op = ConstructOp(op_conf);
 
   OperatorProto op_proto;
   model_diff_acc_op->ToProto(&op_proto);
 
   auto model_diff_acc_kernel =
-      new MdDiffAccKernel<device_type, FloatingPointType>();
+      new AccumulateKernel<device_type, FloatingPointType>();
   model_diff_acc_kernel->InitFromOpProto(op_proto);
 
   return model_diff_acc_kernel;

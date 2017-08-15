@@ -3,6 +3,8 @@
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/graph/data_comp_task_node.h"
 #include "oneflow/core/graph/data_task_graph.h"
+#include "oneflow/core/graph/loss_accumulate_task_graph.h"
+#include "oneflow/core/graph/loss_record_task_graph.h"
 #include "oneflow/core/graph/model_diff_accumulate_task_graph.h"
 #include "oneflow/core/graph/model_save_comp_task_node.h"
 #include "oneflow/core/graph/model_save_task_graph.h"
@@ -32,6 +34,8 @@ class Compiler final {
   void BuildGraphs();
   void BuildModelGraphs(
       const std::pair<const ChainNode*, std::vector<CompTaskNode*>>&);
+  void BuildLossGraph(
+      const std::pair<const ChainNode*, std::vector<CompTaskNode*>>& pair);
   void InferShape4Regsts();
   void EraseMeaningLessRegsts();
   void GenPlanFile(const std::string& plan_filepath);
@@ -94,7 +98,8 @@ void Compiler::BuildGraphs() {
   }
   // model graph
   for (const auto& pair : data_chain2sorted_fw_comp_tasks) {
-    BuildModelGraphs(pair);
+    if (pair.first->HasOpWithModelOrModelTmpBlob()) { BuildModelGraphs(pair); }
+    if (pair.first->IsLossNode()) { BuildLossGraph(pair); }
   }
   // all exec_graph 2 dot
   ForEachTaskNode(
@@ -103,9 +108,7 @@ void Compiler::BuildGraphs() {
 
 void Compiler::BuildModelGraphs(
     const std::pair<const ChainNode*, std::vector<CompTaskNode*>>& pair) {
-  if (pair.first->HasOpWithModelOrModelTmpBlob() == false) { return; }
-  std::string chain_tag = pair.first->op_vec().front()->op_name();
-  StringReplace(&chain_tag, '/', '_');
+  std::string chain_tag = pair.first->ChainTag();
   ParallelPolicy policy = pair.first->parallel_desc()->policy();
 
   bool is_train = JobDesc::Singleton()->is_train();
@@ -146,6 +149,20 @@ void Compiler::BuildModelGraphs(
       ordered_task_gphs_.emplace_back(save_gph);
     }
   }
+}
+
+void Compiler::BuildLossGraph(
+    const std::pair<const ChainNode*, std::vector<CompTaskNode*>>& pair) {
+  std::vector<TaskNode*> loss_acc_tasks;
+  for (CompTaskNode* loss_task : pair.second) {
+    auto loss_acc_gph =
+        new LossAccTaskGraph("loss_acc_" + loss_task->node_id_str(), loss_task);
+    ordered_task_gphs_.emplace_back(loss_acc_gph);
+    loss_acc_tasks.push_back(loss_acc_gph->SoleSinkNode());
+  }
+  auto loss_record_gph = new LossRecordTaskGraph(
+      "loss_record_" + pair.first->ChainTag(), loss_acc_tasks);
+  ordered_task_gphs_.emplace_back(loss_record_gph);
 }
 
 void Compiler::InferShape4Regsts() {
