@@ -10,10 +10,14 @@
 #include <Windows.h>
 #endif
 
-#define BUFFER_SIZE 50
-
 using namespace oneflow;
 using namespace std;
+
+DEFINE_bool(is_client, true, "whether i am the client");
+DEFINE_string(my_ip, "11.11.1.109", "my machine ip");
+DEFINE_string(peer_ip, "11.11.1.132", "peer machine ip");
+DEFINE_int64(transfer_size, 1024, "transfer data size");
+DEFINE_int32(transfer_times, 1, "transfer data times");
 
 namespace oneflow {
 
@@ -122,12 +126,6 @@ void RDMATest::ProcessReadOk(const NetworkResult& result) {
 }
 
 }  // namespace oneflow
-
-DEFINE_bool(is_client, true, "whether i am the client");
-DEFINE_string(my_ip, "11.11.1.109", "my machine ip");
-DEFINE_string(peer_ip, "11.11.1.132", "peer machine ip");
-DEFINE_int64(transfer_size, 1024, "transfer data size");
-DEFINE_int32(transfer_times, 1, "transfer data times");
 
 int main(int argc, char** argv) {
   google::InitGoogleLogging((const char*)argv[0]);
