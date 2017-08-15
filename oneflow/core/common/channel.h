@@ -1,7 +1,6 @@
 #ifndef ONEFLOW_CORE_COMMON_CHANNEL_H_
 #define ONEFLOW_CORE_COMMON_CHANNEL_H_
 
-#include <atomic>
 #include "oneflow/core/common/concurrent_queue.h"
 #include "oneflow/core/common/util.h"
 

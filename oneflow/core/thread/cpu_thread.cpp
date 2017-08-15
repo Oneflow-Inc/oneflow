@@ -16,8 +16,10 @@ CpuThread::CpuThread(int64_t thrd_loc_id) {
           work();
         } else if (of_likely(res == 1)) {
           continue;
-        } else {
+        } else if (of_likely(res == -1)) {
           break;
+        } else {
+          UNEXPECTED_RUN();
         }
       }
     }));
