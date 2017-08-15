@@ -1,5 +1,6 @@
 #include "gflags/gflags.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/str_util.h"
 #include "oneflow/core/graph/data_comp_task_node.h"
 #include "oneflow/core/graph/data_task_graph.h"
 #include "oneflow/core/graph/loss_accumulate_task_graph.h"

@@ -16,7 +16,7 @@ class ChainNode final : public Node<ChainNode, ChainEdge> {
   std::string ConcatedOpsName() const;
   std::string ChainTag() const {
     std::string chain_tag = op_vec_.front()->op_name();
-    str_replace(&chain_tag, '/', '_');
+    StringReplace(&chain_tag, '/', '_');
     return chain_tag;
   }
 
