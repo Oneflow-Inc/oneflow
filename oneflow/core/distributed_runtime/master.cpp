@@ -62,23 +62,30 @@ Master::~Master() {}
   // PrintProtoToString(response->plan(), &str_plan);
   // LOG(INFO) << str_plan;
 
+  //for (auto& pair : name2worker_) {
+  //  struct Call {
+  //    SendPlanRequest plan_req;
+  //    SendPlanResponse plan_resp;
+  //  };
+  //  Call* call = new Call;
+  //  *(call->plan_req.mutable_plan()) = response->plan();
+
+  //  auto cb = [call](const ::tensorflow::Status& s) {
+  //    if (s.ok()) {
+  //      LOG(INFO) << "SendPlan RPC succeeds";
+  //    } else {
+  //      LOG(INFO) << "SendPlan RPC fails";
+  //    }
+  //    delete call;
+  //  };
+  //  pair.second->SendPlanAsync(&call->plan_req, &call->plan_resp, cb);
+  //}
+
   for (auto& pair : name2worker_) {
-    struct Call {
-      SendPlanRequest plan_req;
-      SendPlanResponse plan_resp;
-    };
-    Call* call = new Call;
-    *(call->plan_req.mutable_plan()) = response->plan();
-
-    auto cb = [](const ::tensorflow::Status& s) {
-      if (s.ok()) {
-        LOG(INFO) << "SendPlan RPC succeeds";
-      } else {
-        LOG(INFO) << "SendPlan RPC fails";
-      }
-    };
-
-    pair.second->SendPlanAsync(&call->plan_req, &call->plan_resp, cb);
+    SendPlanRequest plan_req;
+    SendPlanResponse plan_resp;
+    *(plan_req.mutable_plan()) = response->plan();
+    pair.second->SendPlan(&plan_req, &plan_resp);
   }
 
   done(::tensorflow::Status());

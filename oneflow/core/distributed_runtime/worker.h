@@ -3,6 +3,7 @@
 
 #include "oneflow/core/distributed_runtime/worker.pb.h"
 #include "tensorflow/core/lib/core/status.h"
+#include "oneflow/core/job/plan.pb.h"
 
 namespace oneflow {
 
@@ -19,6 +20,7 @@ class Worker {
 
  private:
   std::string this_node_name_;
+  Plan plan_;
 };  // Worker
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_DISTRIBUTED_RUNTIME_WORKER_H_
