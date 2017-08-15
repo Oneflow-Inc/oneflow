@@ -1,0 +1,82 @@
+#include "oneflow/core/common_runtime/runtime.h"
+#include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/plan.pb.h"
+#include "oneflow/core/job/runtime_context.h"
+#include "oneflow/core/kernel/kernel_manager.h"
+#include "oneflow/core/thread/thread_manager.h"
+
+namespace oneflow {
+
+namespace runtime {
+
+void Runtime::Run(const Plan& plan, const std::string& this_machine_name) {
+  InitSingleton(plan, this_machine_name);
+  std::vector<const TaskProto*> mdupdt_tasks;
+  std::vector<const TaskProto*> source_tasks;
+  std::vector<const TaskProto*> other_tasks;
+  for (const TaskProto& task : plan.task()) {
+    if (task.machine_id() != RuntimeCtx::Singleton()->this_machine_id()) {
+      continue;
+    }
+    if (task.type() == kMdUpdtCompTask) {
+      mdupdt_tasks.push_back(&task);
+    } else if (task.consumed_regst_desc_id().empty()) {
+      source_tasks.push_back(&task);
+    } else {
+      other_tasks.push_back(&task);
+    }
+  }
+  LOG(INFO) << "number of mdupdt tasks is " << mdupdt_tasks.size();
+  LOG(INFO) << "number of source tasks is " << source_tasks.size();
+  LOG(INFO) << "number of other  tasks is " << other_tasks.size();
+  RuntimeCtx::Singleton()->mut_active_actor_cnt().Init(
+      "active_actor_cnt",
+      mdupdt_tasks.size() + source_tasks.size() + other_tasks.size());
+  HandoutTasks(mdupdt_tasks);
+  RuntimeCtx::Singleton()->mut_model_init_cnt().Init("model_init_cnt",
+                                                     mdupdt_tasks.size());
+  SendCmdMsg(mdupdt_tasks, ActorCmd::kInitializeModel);
+  HandoutTasks(source_tasks);
+  HandoutTasks(other_tasks);
+  RuntimeCtx::Singleton()->mut_model_init_cnt().WaitUntilCntEqualZero();
+  LOG(INFO) << "InitModel on this machine done";
+  // OF_BARRIER();
+  LOG(INFO) << "InitModel on all machine done";
+  SendCmdMsg(mdupdt_tasks, ActorCmd::kSendInitialModel);
+  SendCmdMsg(source_tasks, ActorCmd::kStart);
+  RuntimeCtx::Singleton()->mut_active_actor_cnt().WaitUntilCntEqualZero();
+  DeleteSingleton();
+}
+
+void Runtime::InitSingleton(const Plan& plan,
+                            const std::string& this_machine_name) {
+  JobDesc::Singleton()->InitFromProto(plan.job_desc());
+  IDMgr::Singleton()->InitFromResource(JobDesc::Singleton()->resource());
+  RuntimeCtx::Singleton()->set_this_machine_name(this_machine_name);
+  KernelMgr::Singleton()->InitFromPlan(plan);
+  SnapshotMgr::Singleton()->Init();
+  ActorMsgBus::Singleton()->Init();
+  ThreadMgr::Singleton();
+}
+void Runtime::DeleteSingleton() {
+  delete ThreadMgr::Singleton();
+  delete ActorMsgBus::Singleton();
+  delete SnapshotMgr::Singleton();
+}
+void Runtime::HandoutTasks(const std::vector<const TaskProto*>& tasks) {
+  for (const TaskProto* task : tasks) {
+    ThreadMgr::Singleton()->GetThrd(task->thrd_local_id())->AddTask(*task);
+  }
+}
+void Runtime::SendCmdMsg(const std::vector<const TaskProto*>& tasks,
+                         ActorCmd cmd) {
+  for (const TaskProto* task : tasks) {
+    ActorMsg msg;
+    msg.set_dst_actor_id(IDMgr::Singleton()->ActorId4TaskId(task->id()));
+    msg.set_actor_cmd(cmd);
+    ActorMsgBus::Singleton()->SendMsg(msg);
+  }
+}
+
+}  // namespace runtime
+}  // namespace oneflow

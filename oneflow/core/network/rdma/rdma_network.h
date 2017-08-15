@@ -3,10 +3,10 @@
 
 #include "oneflow/core/network/network.h"
 #include "oneflow/core/network/network_memory.h"
-#include "oneflow/core/network/rdma/switch.h"
 #include "oneflow/core/network/rdma/connection_pool.h"
 #include "oneflow/core/network/rdma/message_pool.h"
 #include "oneflow/core/network/rdma/request_pool.h"
+#include "oneflow/core/network/rdma/switch.h"
 
 namespace oneflow {
 
@@ -21,18 +21,18 @@ class RdmaNetwork final : public Network {
   NetworkMemory* RegisterMemory(void* dptr, size_t len) override;
 
   void SendMsg(const NetworkMessage& msg) override;
-  void SetCallbackForReceivedActorMsg(
-      std::function<void()> callback) override;
+  void SetCallbackForReceivedActorMsg(std::function<void()> callback) override;
   void Read(const MemoryDescriptor& remote_memory_descriptor,  // TODO(shiyuan)
             NetworkMemory* local_memory,
             std::function<void()> callback) override;
-  
+
   bool Poll(NetworkResult* result) override;
   void Barrier() override;
 
  private:
-  Connection* NewConnection();
-  // passive side listens for connections requests initiated by active side(smaller id/rank)
+  Connection* NewConnection(const std::string& my_ip, int32_t my_port);
+  // passive side listens for connections requests initiated by active
+  // side(smaller id/rank)
   void EstablishConnection();
 
   // |result| is owned by the caller, and the received message will be held in

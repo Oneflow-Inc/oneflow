@@ -17,6 +17,8 @@ limitations under the License.
 
 #include <memory>
 #include "grpc++/grpc++.h"
+#include "oneflow/core/distributed_runtime/call_options.h"
+#include "oneflow/core/distributed_runtime/rpc/grpc_client_cq_tag.h"
 #include "oneflow/core/distributed_runtime/rpc/grpc_util.h"
 #include "oneflow/core/distributed_runtime/rpc/grpc_worker_service_impl.h"
 #include "oneflow/core/distributed_runtime/worker.pb.h"
@@ -28,16 +30,90 @@ namespace oneflow {
 class GrpcRemoteWorker : public WorkerInterface {
  public:
   explicit GrpcRemoteWorker(
-      const std::shared_ptr<::grpc::Channel>& client_channel)
-      : stub_(grpc::WorkerService::NewStub(client_channel)) {}
+      const std::shared_ptr<::grpc::Channel>& client_channel,
+      ::grpc::CompletionQueue* completion_queue)
+      : stub_(grpc::WorkerService::NewStub(client_channel)),
+        channel_(client_channel),
+        cq_(completion_queue),
+        sendplan_(Method(GrpcWorkerMethod::kSendPlan)) {}
 
   ~GrpcRemoteWorker() {}
 
   ::tensorflow::Status SendPlan(const SendPlanRequest* request,
                                 SendPlanResponse* response) override;
+  void SendPlanAsync(const SendPlanRequest* request, SendPlanResponse* response,
+                     ::tensorflow::StatusCallback done) override;
 
  private:
   std::unique_ptr<grpc::WorkerService::Stub> stub_;
+
+  // Object allocated per active RPC.
+  template<class RequestMessage, class ResponseMessage>
+  class RPCState final : public GrpcClientCQTag {
+   public:
+    RPCState(::grpc::ChannelInterface* channel, ::grpc::CompletionQueue* cq,
+             const ::grpc::RpcMethod& method, const RequestMessage& request,
+             ::tensorflow::StatusCallback done, CallOptions* call_opts)
+        : call_opts_(call_opts),
+          reader_(channel, cq, method, InitContext(call_opts), request),
+          done_(std::move(done)) {}
+
+    ~RPCState() override {}
+
+    void StartRPC(ResponseMessage* response) {
+      reader_.Finish(response, &status_, this);
+    }
+
+    void OnCompleted(bool ok) override {
+      if (!ok) {
+        VLOG(2) << "Call returned with non-ok status: "
+                << status_.error_message();
+      }
+      if (call_opts_) { call_opts_->ClearCancelCallback(); }
+      done_(FromGrpcStatus(status_));
+      delete this;
+    }
+
+   private:
+    CallOptions* call_opts_;
+    ::grpc::ClientContext context_;
+    ::grpc::ClientAsyncResponseReader<ResponseMessage> reader_;
+    ::grpc::Status status_;
+    ::tensorflow::StatusCallback done_;
+
+    ::grpc::ClientContext* InitContext(CallOptions* call_opts) {
+      // The initialization and recovery protocols rely on blocking
+      // until we get a response.
+      context_.set_fail_fast(false);
+      if (call_opts) {
+        call_opts->SetCancelCallback([this]() { context_.TryCancel(); });
+      }
+      return &context_;
+    }
+  };
+
+  // Utility method for issuing a generic asynchronous request. The
+  // given callback, `done`, will be called when the RPC completes.
+  template<class RequestMessage, class ResponseMessage>
+  void IssueRequest(const RequestMessage* request, ResponseMessage* response,
+                    const ::grpc::RpcMethod& method,
+                    ::tensorflow::StatusCallback done,
+                    CallOptions* call_opts = nullptr) {
+    auto state = new RPCState<RequestMessage, ResponseMessage>(
+        channel_.get(), cq_, method, *request, std::move(done), call_opts);
+    state->StartRPC(response);
+  }
+
+  // Helper function for initializing the RpcMethod objects below.
+  ::grpc::RpcMethod Method(GrpcWorkerMethod id) {
+    return ::grpc::RpcMethod(GrpcWorkerMethodName(id),
+                             ::grpc::RpcMethod::NORMAL_RPC, channel_);
+  }
+
+  std::shared_ptr<::grpc::Channel> channel_;
+  ::grpc::CompletionQueue* cq_;
+
+  const ::grpc::RpcMethod sendplan_;
 };  // GrpcRemoteWorker
 
 }  // namespace oneflow

@@ -5,9 +5,7 @@ namespace oneflow {
 ConnectionPool::ConnectionPool() : conn_num_(0) {}
 
 ConnectionPool::~ConnectionPool() {
-  for (auto& pair : connection_dict_) {
-    CleanConnection(pair.first);
-  }
+  for (auto& pair : connection_dict_) { CleanConnection(pair.first); }
   connection_dict_.clear();
 }
 

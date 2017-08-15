@@ -60,13 +60,16 @@ GrpcServer::~GrpcServer() {
   TF_CHECK_OK(Join());
 
   delete master_service_;
-  // delete worker_service_;
+  delete worker_service_;
 }
 
 ::tensorflow::Status GrpcServer::Init() {
   ::tensorflow::mutex_lock l(mu_);
   CHECK_EQ(state_, NEW);
+
+  ParseServerDef();
   GetCtrlPlaneAddr();
+
   std::string server_address =
       ::tensorflow::strings::StrCat(bound_ip_, ":", bound_port_);
   ::grpc::ServerBuilder builder;
@@ -88,26 +91,29 @@ GrpcServer::~GrpcServer() {
   return ::tensorflow::Status::OK();
 }
 
-void GrpcServer::GetCtrlPlaneAddr() {
+void GrpcServer::ParseServerDef() {
   this_node_name_ = server_def_.this_node_name();
 
-  std::unordered_map<std::string, ClusterNode> name2node;
   int32_t node_num = server_def_.cluster_def().cluster_node_size();
   for (int32_t i = 0; i < node_num; ++i) {
     std::string node_name =
         server_def_.cluster_def().cluster_node(i).node_name();
     ClusterNode cluster_node = server_def_.cluster_def().cluster_node(i);
-    CHECK(name2node.insert(std::make_pair(node_name, cluster_node)).second);
+    CHECK(
+        name2node_def_.insert(std::make_pair(node_name, cluster_node)).second);
   }
+}
 
-  auto node_it = name2node.find(this_node_name_);
-  CHECK(node_it != name2node.end());
+void GrpcServer::GetCtrlPlaneAddr() {
+  auto node_it = name2node_def_.find(this_node_name_);
+  CHECK(node_it != name2node_def_.end());
   bound_ip_ = node_it->second.ctrl_plane_addr().addr();
   std::string port = node_it->second.ctrl_plane_addr().port();
   if (!::tensorflow::strings::safe_strto32(port, &bound_port_)) {
     LOG(FATAL) << "Could not parse port for local server from " << port;
   }
 }
+
 ::tensorflow::Status GrpcServer::Start() {
   ::tensorflow::mutex_lock l(mu_);
   switch (state_) {
@@ -120,6 +126,16 @@ void GrpcServer::GetCtrlPlaneAddr() {
           std::thread(&AsyncServiceInterface::HandleRPCsLoop, worker_service_);
       worker_do_thread_ =
           std::thread(&AsyncServiceInterface::DoWorkLoop, worker_service_);
+
+      async_request_done_thread_ = std::thread([this]() {
+        void* tag;
+        bool ok;
+        while (completion_queue_.Next(&tag, &ok)) {
+          GrpcClientCQTag* callback_tag = static_cast<GrpcClientCQTag*>(tag);
+          callback_tag->OnCompleted(ok);
+        }
+      });
+
       state_ = STARTED;
       LOG(INFO) << "Started server with target: " << target();
       return ::tensorflow::Status::OK();
@@ -143,6 +159,7 @@ void GrpcServer::GetCtrlPlaneAddr() {
       //    "Clean shutdown is not currently implemented");
       master_service_->Shutdown();
       worker_service_->Shutdown();
+      completion_queue_.Shutdown();
       return ::tensorflow::Status::OK();
     case STOPPED:
       LOG(INFO) << "Server already stopped (target: " << target() << ")";
@@ -165,6 +182,7 @@ void GrpcServer::GetCtrlPlaneAddr() {
       master_do_thread_.join();
       worker_thread_.join();
       worker_do_thread_.join();
+      async_request_done_thread_.join();
       return ::tensorflow::Status::OK();
     default: CHECK(false);
   }
@@ -176,11 +194,11 @@ const std::string GrpcServer::target() const {
 }
 
 std::unique_ptr<Master> GrpcServer::CreateMaster() {
-  return std::unique_ptr<Master>(new Master());
+  return std::unique_ptr<Master>(new Master(server_def_, &completion_queue_));
 }
 
 std::unique_ptr<Worker> GrpcServer::CreateWorker() {
-  return std::unique_ptr<Worker>(new Worker());
+  return std::unique_ptr<Worker>(new Worker(this_node_name_));
 }
 
 /* static */

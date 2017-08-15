@@ -58,6 +58,7 @@ class GrpcServer : public ServerInterface {
 
   virtual std::unique_ptr<Worker> CreateWorker();
 
+  void ParseServerDef();
   void GetCtrlPlaneAddr();
 
   // Returns the port to which this server is bound.
@@ -77,6 +78,8 @@ class GrpcServer : public ServerInterface {
   std::string bound_ip_;
   // The port to which this server is bound.
   int bound_port_ = 0;
+
+  std::unordered_map<std::string, ClusterNode> name2node_def_;
 
   // Guards state transitions.
   ::tensorflow::mutex mu_;
@@ -105,6 +108,9 @@ class GrpcServer : public ServerInterface {
   AsyncServiceInterface* worker_service_ = nullptr;
   std::thread worker_thread_;
   std::thread worker_do_thread_;
+
+  ::grpc::CompletionQueue completion_queue_;
+  std::thread async_request_done_thread_;
 
   std::unique_ptr<::grpc::Server> server_;
 };

@@ -1,0 +1,14 @@
+cluster_def {
+  cluster_node {
+    ctrl_plane_addr {
+      addr : "192.168.1.5"
+      port : "5551"
+    }
+    data_plane_addr {
+      addr : "192.168.1.5"
+      port : "5552"
+    }
+    node_name: "xps"
+  }
+}
+this_node_name : "xps"

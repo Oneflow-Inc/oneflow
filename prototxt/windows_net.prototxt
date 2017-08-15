@@ -8,7 +8,7 @@ op {
       dim: 28
     }
     label: "label"
-    data_dir: "/tmp/normalized_mnist/"
+    data_dir: "D:/users/jiyuan/oss/mnist/"
   }
 }
 

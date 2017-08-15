@@ -1,8 +1,8 @@
 #ifndef ONEFLOW_CORE_NETWORK_RDMA_REQUEST_POOL_H_
 #define ONEFLOW_CORE_NETWORK_RDMA_REQUEST_POOL_H_
 
-#include "oneflow/core/network/rdma/switch.h"
 #include "oneflow/core/network/rdma/message_pool.h"
+#include "oneflow/core/network/rdma/switch.h"
 
 namespace oneflow {
 
