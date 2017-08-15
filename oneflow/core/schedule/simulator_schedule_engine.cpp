@@ -149,7 +149,7 @@ void SimulatorSchedule::UpdateRegstCount() {
     session()->graph()->produced_regst_desc_mgr().Input(regst_desc, &owner);
     auto duration = mut_regst_desc2duration()[regst_desc];
     auto interval = max_interval();
-    auto count = (uint32_t)ceil(duration / std::max(interval, 1.0f));
+    uint32_t count = ceil(duration / std::max(interval, 1.0f));
     mut_regst_desc2count()[regst_desc] = count;
     std::cout << "Allocation\t" << regst_desc->id() << "\t" << count << "\t"
               << duration << "," << interval << std::endl;
@@ -311,7 +311,7 @@ std::unique_ptr<Schedule> SimulatorScheduleEngine::StaticSchedule(
 
 std::unique_ptr<Schedule> SimulatorScheduleEngine::StaticSchedule() {
   SetStrategy(unique_ptr_new<UnlimitedMemoryStrategy>(this));
-  return RunInTwoDirections([](uint64_t) { return (uint32_t)1u; });
+  return RunInTwoDirections([](uint64_t) { return static_cast<uint32_t>(1u); });
 }
 
 std::unique_ptr<SimulatorSchedule> SimulatorScheduleEngine::Run(
