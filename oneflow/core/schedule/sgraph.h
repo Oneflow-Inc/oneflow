@@ -30,6 +30,9 @@ namespace schedule {
 //	static schedule device
 class SDevice : public SNode {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(SDevice);
+  SDevice() = default;
+  ~SDevice() = default;
   SDevice(std::string name, uint32_t time) : SNode(name), time_(time) {}
   uint32_t time() const { return time_; }
   uint32_t& mut_time() { return time_; }
@@ -46,6 +49,7 @@ class SDevice : public SNode {
 
 class STask : public SNode {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(STask);
   explicit STask(const std::string name) : SNode(name) {}
   STask() {}
   virtual ~STask() {}
@@ -62,6 +66,7 @@ class STask : public SNode {
 
 class SRegstDesc : public SNode {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(SRegstDesc);
   SRegstDesc(const std::string name) : SNode(name) {}
   SRegstDesc() : SNode() {}
   virtual ~SRegstDesc() {}
@@ -158,6 +163,9 @@ class SGraph : public SNode {
     return children_arc_mgr_;
   }
 
+  inline const NodeMgr<SRegstDesc>& regst_desc_mgr() const {
+    return regst_desc_mgr_;
+  }
   inline NodeMgr<SRegstDesc>& mut_regst_desc_mgr() { return regst_desc_mgr_; }
 
   inline const ArcMgr<Arc<STask, SRegstDesc>>& produced_regst_desc_mgr() const {

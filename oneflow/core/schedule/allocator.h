@@ -17,7 +17,7 @@ class Allocator {
       : schedule_factory_provider_(schedule_factory_provider) {}
   Allocator() = default;
 
-  virtual void Allocate(Plan* plan) {}
+  virtual void Allocate(Plan* plan);
   virtual std::unique_ptr<Schedule> MemoryLimitedStaticSchedule(
       const Session& session);
 
@@ -27,6 +27,7 @@ class Allocator {
   }
 
  private:
+  void SetRegstNum(const Schedule& schedule, Plan* plan);
   ScheduleFactoryProvider* schedule_factory_provider_;
 };
 

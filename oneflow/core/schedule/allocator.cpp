@@ -6,6 +6,31 @@
 #include "oneflow/core/schedule/simulator_schedule_engine.h"
 namespace oneflow {
 namespace schedule {
+
+void Allocator::Allocate(Plan* plan) {
+  auto sgraph_factory = schedule_factory_provider()->sgraph_factory();
+  auto session_factory = schedule_factory_provider()->session_factory();
+
+  auto sgraph = sgraph_factory->CreateSGraph(*plan);
+  auto session = session_factory->CreateSession(*sgraph);
+  auto schedule = MemoryLimitedStaticSchedule(*session);
+  SetRegstNum(*schedule, plan);
+}
+
+void Allocator::SetRegstNum(const Schedule& schedule, Plan* plan) {
+  auto graph = schedule.session()->graph();
+  auto get_regst_num = [&](int64_t id) {
+    SRegstDesc* regst_desc = graph->regst_desc_mgr().Find(id);
+    return GetOrDefault(schedule.regst_desc2count(), regst_desc, 2u);
+  };
+  for (auto& task_proto : plan->task()) {
+    for (auto& pair : task_proto.produced_regst_desc()) {
+      auto regst_desc = const_cast<RegstDescProto*>(&pair.second);
+      regst_desc->set_register_num(get_regst_num(regst_desc->regst_desc_id()));
+    }
+  }
+}
+
 std::unique_ptr<Schedule> Allocator::MemoryLimitedStaticSchedule(
     const Session& session) {
   auto engine_factory = schedule_factory_provider()->schedule_engine_factory();
