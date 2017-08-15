@@ -96,12 +96,30 @@ Master::~Master() {}
 ::tensorflow::Status Master::MasterInitDataPlane(
     MasterInitDataPlaneRequest* request, MasterInitDataPlaneResponse* response,
     MyClosure done) {
+  // for (auto& pair : name2worker_) {
+  //  WorkerInitDataPlaneRequest init_dp_req;
+  //  WorkerInitDataPlaneResponse init_dp_resp;
+  //  ::tensorflow::Status s =
+  //      pair.second->WorkerInitDataPlane(&init_dp_req, &init_dp_resp);
+  //  CHECK(s.ok());
+  //}
   for (auto& pair : name2worker_) {
-    WorkerInitDataPlaneRequest init_dp_req;
-    WorkerInitDataPlaneResponse init_dp_resp;
-    ::tensorflow::Status s =
-        pair.second->WorkerInitDataPlane(&init_dp_req, &init_dp_resp);
-    CHECK(s.ok());
+    struct Call {
+      WorkerInitDataPlaneRequest init_dp_req;
+      WorkerInitDataPlaneResponse init_dp_resp;
+    };
+    Call* call = new Call;
+
+    auto cb = [call](const ::tensorflow::Status& s) {
+      if (s.ok()) {
+        LOG(INFO) << "Worker Init Dataplane RPC succeeds";
+      } else {
+        LOG(INFO) << "Worker Init Dataplane RPC fails";
+      }
+      delete call;
+    };
+    pair.second->WorkerInitDataPlaneAsync(&call->init_dp_req,
+                                          &call->init_dp_resp, cb);
   }
   done(::tensorflow::Status());
   return ::tensorflow::Status::OK();

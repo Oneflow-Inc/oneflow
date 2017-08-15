@@ -50,6 +50,10 @@ class GrpcRemoteWorker : public WorkerInterface {
       const WorkerInitDataPlaneRequest* request,
       WorkerInitDataPlaneResponse* response) override;
 
+  void WorkerInitDataPlaneAsync(const WorkerInitDataPlaneRequest* request,
+                                WorkerInitDataPlaneResponse* response,
+                                ::tensorflow::StatusCallback done) override;
+
  private:
   std::unique_ptr<grpc::WorkerService::Stub> stub_;
 

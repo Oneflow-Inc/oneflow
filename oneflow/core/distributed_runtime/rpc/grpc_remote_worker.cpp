@@ -39,4 +39,10 @@ void GrpcRemoteWorker::SendPlanAsync(const SendPlanRequest* request,
   return FromGrpcStatus(stub_->WorkerInitDataPlane(&ctx, *request, response));
 }
 
+void GrpcRemoteWorker::WorkerInitDataPlaneAsync(
+    const WorkerInitDataPlaneRequest* request,
+    WorkerInitDataPlaneResponse* response, ::tensorflow::StatusCallback done) {
+  IssueRequest(request, response, worker_init_data_plane_, std::move(done));
+}
+
 }  // namespace oneflow
