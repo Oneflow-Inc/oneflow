@@ -5,8 +5,8 @@
 
 namespace oneflow {
 
-Worker::Worker(const std::string& this_node_name)
-    : this_node_name_(this_node_name) {}
+Worker::Worker(const std::string& this_node_name, Network* data_net)
+    : this_node_name_(this_node_name), data_net_(data_net) {}
 
 Worker::~Worker() {}
 
@@ -28,6 +28,8 @@ Worker::~Worker() {}
 ::tensorflow::Status Worker::WorkerInitDataPlane(
     WorkerInitDataPlaneRequest* request, WorkerInitDataPlaneResponse* response,
     MyClosure done) {
+  data_net_->ConnectTopology();
+
   done(::tensorflow::Status());
   return ::tensorflow::Status::OK();
 }

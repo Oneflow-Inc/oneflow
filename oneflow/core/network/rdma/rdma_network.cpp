@@ -17,6 +17,20 @@ void RdmaNetwork::Init(int64_t my_machine_id, const NetworkTopology& net_topo) {
   EstablishConnection();
 }
 
+void RdmaNetwork::InitOnly(int64_t my_machine_id,
+                           const NetworkTopology& net_topo) {
+  net_topo_ = net_topo;
+  my_machine_id_ = my_machine_id;
+  port_ = net_topo.all_nodes[my_machine_id].port;
+  endpoint_manager_.reset(new EndpointManager());
+  endpoint_manager_->Init(net_topo.all_nodes[my_machine_id].address.c_str(),
+                          port_);
+  request_pool_.reset(new RequestPool());
+  connection_pool_.reset(new ConnectionPool());
+}
+
+void RdmaNetwork::ConnectTopology() { EstablishConnection(); }
+
 NetworkMemory* RdmaNetwork::RegisterMemory(void* dptr, size_t len) {
   NetworkMemory* net_memory =
       endpoint_manager_->NewNetworkMemory();  // TODO(shiyuan)

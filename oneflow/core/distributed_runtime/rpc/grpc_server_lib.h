@@ -24,6 +24,8 @@ limitations under the License.
 #include "oneflow/core/distributed_runtime/rpc/async_service_interface.h"
 #include "oneflow/core/distributed_runtime/server_def.pb.h"
 #include "oneflow/core/distributed_runtime/server_lib.h"
+#include "oneflow/core/network/network.h"
+#include "oneflow/core/network/network_topology.h"
 
 #include "tensorflow/core/platform/mutex.h"
 
@@ -80,6 +82,10 @@ class GrpcServer : public ServerInterface {
   int bound_port_ = 0;
 
   std::unordered_map<std::string, ClusterNode> name2node_def_;
+
+  NetworkTopology net_topo_;
+  int64_t my_machine_id_;
+  Network* data_net_;
 
   // Guards state transitions.
   ::tensorflow::mutex mu_;

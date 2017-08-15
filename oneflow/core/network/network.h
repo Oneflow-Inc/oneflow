@@ -16,6 +16,9 @@ class Network {
   // Init the network environment and connect with each other based on the
   // network topo. Suppose net_topo is a connected graph
   virtual void Init(int64_t my_machine_id, const NetworkTopology& net_topo) = 0;
+  virtual void InitOnly(int64_t my_machine_id,
+                        const NetworkTopology& net_topo) = 0;
+  virtual void ConnectTopology() = 0;
 
   virtual NetworkMemory* RegisterMemory(void* dptr, size_t len) = 0;
 

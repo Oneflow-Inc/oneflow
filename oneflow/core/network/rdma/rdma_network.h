@@ -17,6 +17,9 @@ class RdmaNetwork final : public Network {
   ~RdmaNetwork() = default;
 
   void Init(int64_t my_machine_id, const NetworkTopology& net_topo) override;
+  void InitOnly(int64_t my_machine_id,
+                const NetworkTopology& net_topo) override;
+  void ConnectTopology() override;
 
   NetworkMemory* RegisterMemory(void* dptr, size_t len) override;
 

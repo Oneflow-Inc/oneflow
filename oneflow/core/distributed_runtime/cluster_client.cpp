@@ -59,6 +59,8 @@ int main(int argc, char** argv) {
     std::string str_plan;
     PrintProtoToString(resp.plan(), &str_plan);
     LOG(INFO) << str_plan;
+    std::ofstream fout("plan_test");
+    fout << str_plan << std::endl;
   } else {
     LOG(INFO) << "SendJob RPC fails";
   }

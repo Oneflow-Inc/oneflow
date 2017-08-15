@@ -70,6 +70,9 @@ GrpcServer::~GrpcServer() {
   ParseServerDef();
   GetCtrlPlaneAddr();
 
+  data_net_ = GetRdmaInstance();
+  data_net_->InitOnly(my_machine_id_, net_topo_);
+
   std::string server_address =
       ::tensorflow::strings::StrCat(bound_ip_, ":", bound_port_);
   ::grpc::ServerBuilder builder;
@@ -101,6 +104,21 @@ void GrpcServer::ParseServerDef() {
     ClusterNode cluster_node = server_def_.cluster_def().cluster_node(i);
     CHECK(
         name2node_def_.insert(std::make_pair(node_name, cluster_node)).second);
+
+    if (node_name == this_node_name_) { my_machine_id_ = i; }
+    NetworkTopology::Node node;
+    node.machine_id = i;
+    node.address = cluster_node.data_plane_addr().addr();
+    node.port = std::stoi(cluster_node.data_plane_addr().port());
+    net_topo_.all_nodes.push_back(node);
+  }
+
+  for (auto& node : net_topo_.all_nodes) {
+    for (auto& neighbor : net_topo_.all_nodes) {
+      if (neighbor.machine_id != node.machine_id) {
+        node.neighbors.insert(neighbor.machine_id);
+      }
+    }
   }
 }
 
@@ -198,7 +216,7 @@ std::unique_ptr<Master> GrpcServer::CreateMaster() {
 }
 
 std::unique_ptr<Worker> GrpcServer::CreateWorker() {
-  return std::unique_ptr<Worker>(new Worker(this_node_name_));
+  return std::unique_ptr<Worker>(new Worker(this_node_name_, data_net_));
 }
 
 /* static */
