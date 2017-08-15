@@ -8,7 +8,7 @@ namespace oneflow {
 
 class Worker {
  public:
-  Worker();
+  Worker(const std::string& this_node_name);
   ~Worker();
 
   // Convenient typedef for a closure passing a Status
@@ -18,6 +18,7 @@ class Worker {
                                 SendPlanResponse* response, MyClosure done);
 
  private:
+  std::string this_node_name_;
 };  // Worker
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_DISTRIBUTED_RUNTIME_WORKER_H_

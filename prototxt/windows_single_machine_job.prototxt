@@ -1,6 +1,6 @@
-train_dlnet_conf_filepath: "D:/users/jiyuan/oss/oneflow/prototxt/naive_net.prototxt"
-resource_filepath: "D:/users/jiyuan/oss/oneflow/prototxt/naive_resource.prototxt"
-placement_filepath: "D:/users/jiyuan/oss/oneflow/prototxt/naive_placement.prototxt"
+train_dlnet_conf_filepath: "D:/users/jiyuan/oss/oneflow/prototxt/windows_net.prototxt"
+resource_filepath: "D:/users/jiyuan/oss/oneflow/prototxt/windows_single_machine_resource.prototxt"
+placement_filepath: "D:/users/jiyuan/oss/oneflow/prototxt/windows_single_machine_placement.prototxt"
 model_load_snapshot_path: ""
 model_save_snapshots_path: "./snapshots"
 piece_size: 100

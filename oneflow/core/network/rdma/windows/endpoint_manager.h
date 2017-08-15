@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 #include "oneflow/core/network/network_message.h"
-#include "oneflow/core/network/rdma/windows/ndsupport.h"
 #include "oneflow/core/network/rdma/windows/connection.h"
+#include "oneflow/core/network/rdma/windows/ndsupport.h"
 #include "oneflow/core/network/rdma/windows/rdma_memory.h"
 
 namespace oneflow {
@@ -17,7 +17,7 @@ class EndpointManager {
   EndpointManager() = default;
   ~EndpointManager();
 
-  void Init(const char* my_ip, int32_t my_port);
+  void Init(const std::string& my_ip, int32_t my_port);
   void Destroy();
 
   void CreateConnector(Connection* conn);

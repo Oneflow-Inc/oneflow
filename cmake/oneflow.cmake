@@ -39,11 +39,11 @@ foreach(oneflow_single_file ${oneflow_all_src})
   endif()
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cuh$")
-    list(APPEND of_all_obj_cc ${oneflow_single_file})
+    # list(APPEND of_all_obj_cc ${oneflow_single_file})
   endif()
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cu$")
-    list(APPEND of_all_obj_cc ${oneflow_single_file})
+    # list(APPEND of_all_obj_cc ${oneflow_single_file})
   endif()
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.proto")
@@ -63,6 +63,14 @@ foreach(oneflow_single_file ${oneflow_all_src})
       endif()
     endif()
   endif()
+endforeach()
+
+# clang format
+add_custom_target(of_format)
+
+foreach(source_file ${of_all_obj_cc} ${of_main_cc} ${of_all_test_cc})
+    add_custom_command(TARGET of_format PRE_BUILD
+    COMMAND clang-format -i -style=file ${source_file})
 endforeach()
 
 # proto obj lib

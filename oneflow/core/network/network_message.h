@@ -27,11 +27,7 @@ struct NetworkMessage {
   uint32_t token;
 };
 
-enum NetworkResultType {
-  kReadOk = 0,
-  kSendOk = 1,
-  kReceiveMsg = 2
-};
+enum NetworkResultType { kReadOk = 0, kSendOk = 1, kReceiveMsg = 2 };
 
 struct NetworkResult {
   NetworkResultType type;

@@ -1,14 +1,15 @@
 #ifndef ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_CONNECTION_H_
 #define ONEFLOW_CORE_NETWORK_RDMA_WINDOWS_CONNECTION_H_
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <tchar.h>
 #include <process.h>
 #include <sal.h>
-#include <new>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string>
+#include <tchar.h>
 #include <cstdint>
+#include <new>
+#include <string>
 #include "oneflow/core/network/network_memory.h"
 #include "oneflow/core/network/rdma/windows/rdma_memory.h"
 
@@ -19,10 +20,10 @@ struct Request;
 class Connection {
  public:
   explicit Connection(int64_t my_machine_id);
-  Connection(int64_t my_machine_id, int64_t peer_machine_id);
   ~Connection();
 
-  bool TryConnectTo(const char* peer_ip, int32_t peer_port);
+  void Bind(const std::string& my_ip, int32_t my_port);
+  bool TryConnectTo(const std::string& peer_ip, int32_t peer_port);
   void CompleteConnection();
   void AcceptConnect();
 
@@ -34,9 +35,9 @@ class Connection {
 
   void Destroy();
 
-  IND2Connector* mutable_connector() { return connector_; }
-  IND2QueuePair* mutable_queue_pair() { return queue_pair_; }
-  OVERLAPPED* mutable_overlapped() { return ov_; }
+  IND2Connector* connector() { return connector_; }
+  IND2QueuePair* queue_pair() { return queue_pair_; }
+  OVERLAPPED* overlapped() { return ov_; }
 
   void set_connector(IND2Connector* connector) { connector_ = connector; }
   void set_queue_pair(IND2QueuePair* queue_pair) { queue_pair_ = queue_pair; }
@@ -44,8 +45,6 @@ class Connection {
 
  private:
   int64_t my_machine_id_;
-  int64_t peer_machine_id_;
-  
   IND2Connector* connector_;
   IND2QueuePair* queue_pair_;
   OVERLAPPED* ov_;

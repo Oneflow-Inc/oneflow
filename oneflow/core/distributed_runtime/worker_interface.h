@@ -32,6 +32,9 @@ class WorkerInterface {
   virtual ~WorkerInterface() {}
   virtual ::tensorflow::Status SendPlan(const SendPlanRequest* request,
                                         SendPlanResponse* response) = 0;
+  virtual void SendPlanAsync(const SendPlanRequest* request,
+                             SendPlanResponse* response,
+                             ::tensorflow::StatusCallback done) = 0;
 };
 
 }  // namespace oneflow

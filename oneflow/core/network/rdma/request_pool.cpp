@@ -18,11 +18,11 @@ RequestPool::~RequestPool() {
 Request* RequestPool::AllocRequest(bool is_send) {
   Request* request = new Request();
   request->is_send = is_send;
+  request->rdma_msg = msg_pool_->Alloc();
   if (is_send == false) {
     request->callback = callback4recv_msg_;
+    request_vector_.push_back(request);
   }
-  request->rdma_msg = msg_pool_->Alloc();
-  request_vector_.push_back(request);
   return request;
 }
 
