@@ -19,9 +19,7 @@ struct Request;
 
 class Connection {
  public:
-  explicit Connection(int64_t my_machine_id);
   Connection(int64_t my_machine_id, const std::string& my_ip, int32_t my_port);
-  Connection(int64_t my_machine_id, int64_t peer_machine_id);
   ~Connection();
 
   bool TryConnectTo(const char* peer_ip, int32_t peer_port);
@@ -35,18 +33,15 @@ class Connection {
                        RdmaMemory* dst_memory);
 
   void Destroy();
-
   IND2Connector* mutable_connector() { return connector_; }
   IND2QueuePair* mutable_queue_pair() { return queue_pair_; }
   OVERLAPPED* mutable_overlapped() { return ov_; }
 
   void set_connector(IND2Connector* connector) { connector_ = connector; }
   void set_queue_pair(IND2QueuePair* queue_pair) { queue_pair_ = queue_pair; }
-  void set_overlapped(OVERLAPPED* ov) { ov_ = ov; }
 
  private:
   int64_t my_machine_id_;
-  int64_t peer_machine_id_;
 
   std::string my_ip_;
   int32_t my_port_;
