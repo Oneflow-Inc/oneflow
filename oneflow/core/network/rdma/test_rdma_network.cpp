@@ -154,15 +154,19 @@ int main(int argc, char** argv) {
   NetworkResult result;
 
   if (FLAGS_is_client) {
-    while (rdma_test.Poll(&result)) {
-      rdma_test.ProcessNetworkResult(result);
-      if (rdma_test.round_trip() >= FLAGS_transfer_size) break;
+    for (;;) {
+      if (rdma_test.Poll(&result)) {
+        rdma_test.ProcessNetworkResult(result);
+        if (rdma_test.round_trip() >= FLAGS_transfer_size) break;
+      }
     }
   } else {
     rdma_test.SendMemoryDescriptor();
-    while (rdma_test.Poll(&result)) {
-      rdma_test.ProcessNetworkResult(result);
-      if (rdma_test.round_trip() >= FLAGS_transfer_size) break;
+    for (;;) {
+      if (rdma_test.Poll(&result)) {
+        rdma_test.ProcessNetworkResult(result);
+        if (rdma_test.round_trip() >= FLAGS_transfer_size) break;
+      }
     }
   }
 
