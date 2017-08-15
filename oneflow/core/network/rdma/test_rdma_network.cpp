@@ -130,6 +130,8 @@ void RDMATest::ProcessReadOk(const NetworkResult& result) {
 
 int main(int argc, char** argv) {
   google::InitGoogleLogging((const char*)argv[0]);
+  google::SetLogDestination(google::GLOG_INFO, "./rdma_info");
+  gflags::SetUsageMessage("Usage: ./rdma_network_test");
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   FLAGS_logtostderr = 1;
 
