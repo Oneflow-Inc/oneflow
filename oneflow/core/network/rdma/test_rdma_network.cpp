@@ -157,7 +157,7 @@ int main(int argc, char** argv) {
     for (;;) {
       if (rdma_test.Poll(&result)) {
         rdma_test.ProcessNetworkResult(result);
-        if (rdma_test.round_trip() >= FLAGS_transfer_size) break;
+        if (rdma_test.round_trip() >= FLAGS_transfer_times) break;
       }
     }
   } else {
@@ -165,14 +165,16 @@ int main(int argc, char** argv) {
     for (;;) {
       if (rdma_test.Poll(&result)) {
         rdma_test.ProcessNetworkResult(result);
-        if (rdma_test.round_trip() >= FLAGS_transfer_size) break;
+        if (rdma_test.round_trip() >= FLAGS_transfer_times) break;
       }
     }
   }
 
   if (FLAGS_is_client) {
     // The client has a last msg from the server
-    while (!rdma_test.Poll(&result)) { break; }
+    for (;;) {
+      if (rdma_test.Poll(&result)) break;
+    }
   }
 
   gflags::ShutDownCommandLineFlags();
