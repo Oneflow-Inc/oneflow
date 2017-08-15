@@ -18,9 +18,6 @@ sockaddr_in GetAddress(const char* ip, int32_t port) {
 
 }  // namespace
 
-Connection::Connection(int64_t my_machine_id)
-    : Connection::Connection(my_machine_id, -1) {}
-
 Connection::Connection(int64_t my_machine_id, const std::string& my_ip,
                        int32_t my_port)
     : my_machine_id_(my_machine_id),
@@ -31,15 +28,6 @@ Connection::Connection(int64_t my_machine_id, const std::string& my_ip,
       ov_(new OVERLAPPED) {
   ov_->hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
   my_sock_ = GetAddress(my_ip_.c_str(), my_port_);
-}
-
-Connection::Connection(int64_t my_machine_id, int64_t peer_machine_id)
-    : my_machine_id_(my_machine_id),
-      peer_machine_id_(peer_machine_id),
-      connector_(nullptr),
-      queue_pair_(nullptr),
-      ov_(new OVERLAPPED) {
-  ov_->hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 }
 
 Connection::~Connection() { Destroy(); }
