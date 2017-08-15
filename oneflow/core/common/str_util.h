@@ -22,7 +22,7 @@ void SplitAndParseAs(const std::string& text, const std::string& delims,
 }
 
 // Return true if path is absolute.
-inline bool IsAbsolutePath(std::string path) {
+inline bool IsAbsolutePath(const std::string& path) {
   return !path.empty() && path[0] == '/';
 }
 
@@ -50,6 +50,11 @@ template<typename... T>
 std::string JoinPath(const T&... args) {
   return internal::JoinPathImpl({args...});
 }
+
+// Returns the part of the path before the final "/".  If there is a single
+// leading "/" in the path, the result will be the leading "/".  If there is
+// no "/" in the path, the result is the empty prefix of the input.
+std::string Dirname(const std::string& path);
 
 }  // namespace oneflow
 

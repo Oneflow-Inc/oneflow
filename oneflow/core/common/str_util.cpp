@@ -14,6 +14,13 @@ void Split(const std::string& text, const std::string& delims,
   }
 }
 
+std::string Dirname(const std::string& path) {
+  size_t found = path.rfind('/');
+  if (found == std::string::npos) { return ""; }
+  if (found == 0) { return "/"; }
+  return path.substr(0, found);
+}
+
 namespace internal {
 
 std::string JoinPathImpl(std::initializer_list<std::string> paths) {

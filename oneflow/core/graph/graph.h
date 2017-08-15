@@ -2,9 +2,9 @@
 #define ONEFLOW_CORE_GRAPH_GRAPH_H_
 
 #include "gflags/gflags.h"
+#include "oneflow/core/common/str_util.h"
 #include "oneflow/core/graph/node.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
-#include "tensorflow/core/lib/io/path.h"
 #include "tensorflow/core/platform/env.h"
 
 namespace oneflow {
@@ -250,7 +250,7 @@ void Graph<NodeType, EdgeType>::ToDotWithStream(StreamT& out_stream) const {
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ToDotWithFilePath(
     const std::string& file_path) const {
-  std::string dir_name = tensorflow::io::Dirname(file_path).ToString();
+  std::string dir_name = Dirname(file_path);
   tensorflow::Env* env = tensorflow::Env::Default();
   if (env->IsDirectory(dir_name).code() != tensorflow::error::OK) {
     TF_CHECK_OK(env->RecursivelyCreateDir(dir_name));
