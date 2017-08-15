@@ -41,7 +41,7 @@ class Channel final {
 
 template<typename T>
 int Channel<T>::Send(const T& item) {
-  if (is_send_closed_) { return -1; }
+  if (of_unlikely(is_send_closed_)) { return -1; }
   item_cnt_ += val_.enqueue(item);
 
   return 0;
@@ -49,11 +49,10 @@ int Channel<T>::Send(const T& item) {
 
 template<typename T>
 int Channel<T>::Receive(T* item) {
-  if (is_receive_closed_ || (is_send_closed_ && item_cnt_ == 0)) { return -1; }
-  if (val_.try_dequeue(*item)) {
-    return 0;
-  } else
-    return 1;
+  if (of_unlikely(is_receive_closed_ || (is_send_closed_ && item_cnt_ == 0))) {
+    return -1;
+  }
+  return !val_.try_dequeue(*item);
 }
 
 template<typename T>

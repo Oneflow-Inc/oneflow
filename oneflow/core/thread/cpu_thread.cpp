@@ -12,9 +12,9 @@ CpuThread::CpuThread(int64_t thrd_loc_id) {
       std::function<void()> work;
       while (true) {
         int res = cpu_stream_->ReceiveWork(&work);
-        if (res == 0) {
+        if (of_likely(res == 0)) {
           work();
-        } else if (res == 1) {
+        } else if (of_likely(res == 1)) {
           continue;
         } else {
           break;

@@ -43,6 +43,10 @@ namespace oneflow {
     return ptr;                            \
   }
 
+#define of_likely(x) __builtin_expect((x), 1)
+
+#define of_unlikely(x) __builtin_expect((x), 0)
+
 template<typename T>
 bool operator==(const std::weak_ptr<T>& lhs, const std::weak_ptr<T>& rhs) {
   return lhs.lock().get() == rhs.lock().get();
