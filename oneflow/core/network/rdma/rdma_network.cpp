@@ -139,15 +139,13 @@ void RdmaNetwork::Barrier() {
   printf("Barrier send all reply barrier over\n");
 }
 
-Connection* RdmaNetwork::NewConnection(const std::string& my_ip,
-                                       int32_t my_port) {
+Connection* RdmaNetwork::NewConnection() {
   Connection* conn = new Connection(my_machine_id_);
   CHECK(conn);
 
   endpoint_manager_->CreateConnector(conn);
   endpoint_manager_->CreateQueuePair(conn);
   
-  conn->Bind(my_ip, my_port);
   return conn;
 }
 
@@ -188,14 +186,19 @@ void RdmaNetwork::EstablishConnection() {  // TODO(shiyuan)
   Request* receive_request = nullptr;
   for (auto peer_machine_id : net_topo_.all_nodes[my_machine_id_].neighbors) {
     if (peer_machine_id > my_machine_id_) {
-      conn = NewConnection(net_topo_.all_nodes[my_machine_id_].address,
-                           net_topo_.all_nodes[my_machine_id_].port);
+      conn = NewConnection();
       CHECK(conn);
       receive_request = request_pool_->AllocRequest(false);
       CHECK(receive_request);
+      conn->Bind(net_topo_.all_nodes[my_machine_id_].address,
+                 net_topo_.all_nodes[my_machine_id_].port);
       while (!conn->TryConnectTo(
-          net_topo_.all_nodes[peer_machine_id].address.c_str(), port_))
-        ;                                       // TODO(shiyuan)
+          net_topo_.all_nodes[peer_machine_id].address.c_str(), port_)) {
+        delete conn;
+        conn = NewConnection();
+        conn->Bind(net_topo_.all_nodes[my_machine_id_].address,
+                   net_topo_.all_nodes[my_machine_id_].port);
+      }
       conn->PostRecvRequest(*receive_request);  // TODO(shiyuan)
       conn->CompleteConnection();
       connection_pool_->AddConnection(peer_machine_id, conn);
@@ -212,8 +215,7 @@ void RdmaNetwork::EstablishConnection() {  // TODO(shiyuan)
   for (auto peer_machine_id : net_topo_.all_nodes[my_machine_id_].neighbors) {
     // peer_machine_id means nothing here, just counting.
     if (peer_machine_id < my_machine_id_) {
-      conn = NewConnection(net_topo_.all_nodes[my_machine_id_].address,
-                           net_topo_.all_nodes[my_machine_id_].port);
+      conn = NewConnection();
       CHECK(conn);
       receive_request = request_pool_->AllocRequest(false);
       CHECK(receive_request);
