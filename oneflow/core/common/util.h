@@ -76,12 +76,6 @@ inline std::string LogDir() {
   return log_dir;
 }
 
-inline void str_replace(std::string* str, char old_ch, char new_ch) {
-  for (size_t i = 0; i < str->size(); ++i) {
-    if (str->at(i) == old_ch) { str->at(i) = new_ch; }
-  }
-}
-
 template<typename K, typename V>
 void EraseIf(HashMap<K, V>* hash_map,
              std::function<bool(typename HashMap<K, V>::iterator)> cond) {
@@ -106,15 +100,6 @@ void EraseIf(HashMap<K, V>* hash_map,
 template<typename OutType, typename InType>
 OutType oneflow_cast(const InType&);
 
-void Split(const std::string& text, const std::string& delims,
-           std::function<void(std::string&&)> Func);
-
-template<typename T>
-void SplitAndParseAs(const std::string& text, const std::string& delims,
-                     std::function<void(T&&)> Func) {
-  Split(text, delims, [&Func](std::string&& s) { Func(oneflow_cast<T>(s)); });
-}
-
 inline uint32_t NewRandomSeed() {
   static std::mt19937 gen{std::random_device{}()};
   return gen();
@@ -126,63 +111,6 @@ inline uint32_t NewRandomSeed() {
 #define LOG_THRESHOLD (1e-20)
 #define MAX_WITH_LOG_THRESHOLD(x) ((x) > LOG_THRESHOLD ? (x) : LOG_THRESHOLD)
 #define SAFE_LOG(x) logf(MAX_WITH_LOG_THRESHOLD(x))
-
-namespace io {
-
-// Return true if path is absolute.
-inline bool IsAbsolutePath(std::string path) {
-  return !path.empty() && path[0] == '/';
-}
-
-namespace {
-
-std::string JoinPathImpl(std::initializer_list<std::string> paths) {
-  std::string result;
-  for (std::string path : paths) {
-    if (path.empty()) continue;
-    if (result.empty()) {
-      result = path;
-      continue;
-    }
-    if (result[result.size() - 1] == '/') {
-      if (IsAbsolutePath(path)) {
-        result.append(path.substr(1));
-      } else {
-        result.append(path);
-      }
-    } else {
-      if (IsAbsolutePath(path)) {
-        result.append(path);
-      } else {
-        result += ("/" + path);
-      }
-    }
-  }
-  return result;
-}
-
-}  // namespace
-
-// Join multiple paths together, without introducing unnecessary path
-// separators.
-// For example:
-//
-//  Arguments                  | JoinPath
-//  ---------------------------+----------
-//  '/foo', 'bar'              | /foo/bar
-//  '/foo/', 'bar'             | /foo/bar
-//  '/foo', '/bar'             | /foo/bar
-//
-// Usage:
-// string path = io::JoinPath("/mydir", filename);
-// string path = io::JoinPath(FLAGS_test_srcdir, filename);
-// string path = io::JoinPath("/full", "path", "to", "filename);
-template<typename... T>
-std::string JoinPath(const T&... args) {
-  return JoinPathImpl({args...});
-}
-
-}  // namespace io
 
 }  // namespace oneflow
 

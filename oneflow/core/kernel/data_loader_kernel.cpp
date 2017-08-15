@@ -1,4 +1,5 @@
 #include "oneflow/core/kernel/data_loader_kernel.h"
+#include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/runtime_context.h"
 
 namespace oneflow {
