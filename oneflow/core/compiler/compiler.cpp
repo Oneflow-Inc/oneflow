@@ -5,6 +5,7 @@
 #include "oneflow/core/graph/model_save_comp_task_node.h"
 #include "oneflow/core/graph/model_save_task_graph.h"
 #include "oneflow/core/graph/model_update_task_graph.h"
+#include "oneflow/core/common/str_util.h"
 
 namespace oneflow {
 
@@ -87,7 +88,7 @@ void Compiler::BuildModelGraphs(
     const std::pair<const ChainNode*, std::vector<CompTaskNode*>>& pair) {
   if (pair.first->HasOpWithModelOrModelTmpBlob() == false) { return; }
   std::string chain_tag = pair.first->op_vec().front()->op_name();
-  str_replace(&chain_tag, '/', '_');
+  StringReplace(&chain_tag, '/', '_');
   ParallelPolicy policy = pair.first->parallel_desc()->policy();
 
   bool is_train = JobDesc::Singleton()->is_train();
