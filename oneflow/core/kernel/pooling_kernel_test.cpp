@@ -17,12 +17,12 @@ Kernel* BuildPoolingKernel(const PoolingOpConf::PoolMethod& pooling_method) {
   pooling_conf->set_in("pooling_in");
   pooling_conf->set_out("pooling_out");
   pooling_conf->set_pool(pooling_method);
-  pooling_conf->add_pad(1);
-  pooling_conf->add_pad(1);
-  pooling_conf->add_kernel_size(3);
-  pooling_conf->add_kernel_size(3);
-  pooling_conf->add_stride(2);
-  pooling_conf->add_stride(2);
+  pooling_conf->set_pad_h(1);
+  pooling_conf->set_pad_w(1);
+  pooling_conf->set_kernel_size_h(3);
+  pooling_conf->set_kernel_size_w(3);
+  pooling_conf->set_stride_h(2);
+  pooling_conf->set_stride_w(2);
 
   auto pooling_op = ConstructOp(op_conf);
   OperatorProto op_proto;
