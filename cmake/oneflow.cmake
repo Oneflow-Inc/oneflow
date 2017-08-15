@@ -1,6 +1,9 @@
 # main cpp
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/compiler.cpp)
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/runtime.cpp)
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/distributed_runtime/cluster_node.cpp)
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/distributed_runtime/cluster_client.cpp)
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/network/rdma/test_rdma_network.cpp)
 
 # source_group
 if(WIN32)
@@ -36,11 +39,11 @@ foreach(oneflow_single_file ${oneflow_all_src})
   endif()
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cuh$")
-    list(APPEND of_all_obj_cc ${oneflow_single_file})
+    # list(APPEND of_all_obj_cc ${oneflow_single_file})
   endif()
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cu$")
-    list(APPEND of_all_obj_cc ${oneflow_single_file})
+    # list(APPEND of_all_obj_cc ${oneflow_single_file})
   endif()
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.proto")
@@ -80,7 +83,7 @@ RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
                                ${PROJECT_SOURCE_DIR}
                                ${of_all_rel_protos})
 
-cuda_add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
+add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(of_protoobj ${oneflow_third_party_libs})
 
 # cc obj lib
@@ -89,7 +92,6 @@ include_directories(${PROJECT_BINARY_DIR})
 cuda_add_library(of_ccobj ${of_all_obj_cc})
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})
 add_dependencies(of_ccobj of_protoobj)
-add_dependencies(of_ccobj of_format)
 
 if(APPLE)
   set(of_libs -Wl,-force_load of_ccobj of_protoobj)

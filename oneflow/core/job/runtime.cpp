@@ -1,11 +1,11 @@
 #include "gflags/gflags.h"
 #include "oneflow/core/actor/actor_message_bus.h"
-#include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/kernel/kernel_manager.h"
+#include "oneflow/core/network/network.h"
 #include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {

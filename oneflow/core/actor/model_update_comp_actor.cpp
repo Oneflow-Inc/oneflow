@@ -23,13 +23,14 @@ void MdUpdtCompActor::Init(const TaskProto& task_proto,
                            std::placeholders::_3, std::placeholders::_4,
                            cudaMemcpyKind::cudaMemcpyHostToHost);
   } else {
-    mut_device_ctx().reset(new CudaDeviceCtx(cuda_handle_.cuda_stream(),
-                                             cuda_handle_.cublas_handle(),
-                                             cuda_handle_.cudnn_handle()));
-    MemcpyFunc = std::bind(&KernelUtil<DeviceType::kGPU, float>::Memcpy,
-                           std::placeholders::_1, std::placeholders::_2,
-                           std::placeholders::_3, std::placeholders::_4,
-                           cudaMemcpyKind::cudaMemcpyDeviceToDevice);
+    // mut_device_ctx().reset(new CudaDeviceCtx(cuda_handle_.cuda_stream(),
+    //                                         cuda_handle_.cublas_handle(),
+    //                                         cuda_handle_.cudnn_handle()));
+    // MemcpyFunc = std::bind(&KernelUtil<DeviceType::kGPU, float>::Memcpy,
+    //                       std::placeholders::_1, std::placeholders::_2,
+    //                       std::placeholders::_3, std::placeholders::_4,
+    //                       cudaMemcpyKind::cudaMemcpyDeviceToDevice);
+    TODO();
   }
   OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerBeforeInitializeModel);
 }

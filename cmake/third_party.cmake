@@ -42,6 +42,7 @@ set(oneflow_third_party_libs
 if(WIN32)
   # static gflags lib requires "PathMatchSpecA" defined in "ShLwApi.Lib"
   list(APPEND oneflow_third_party_libs "ShLwApi.Lib")
+  list(APPEND oneflow_third_party_libs "Ws2_32.lib")
 endif()
 
 set(oneflow_third_party_dependencies
@@ -97,3 +98,10 @@ include_directories(
     ${CUDNN_INCLUDE_DIRS}
     ${CUB_INCLUDE_DIR}
 )
+if (ONEFLOW_USE_RDMA)
+  if(WIN32)
+    include(netdirect)
+    list(APPEND oneflow_third_party_dependencies network_copy_headers_to_destination)
+    include_directories(${NETDIRECT_INCLUDE_DIR})
+  endif()
+endif()
