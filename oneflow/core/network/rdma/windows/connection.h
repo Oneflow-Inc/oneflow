@@ -41,7 +41,6 @@ class Connection {
 
   void set_connector(IND2Connector* connector) { connector_ = connector; }
   void set_queue_pair(IND2QueuePair* queue_pair) { queue_pair_ = queue_pair; }
-  void set_overlapped(OVERLAPPED* ov) { ov_ = ov; }
 
  private:
   int64_t my_machine_id_;
