@@ -14,6 +14,11 @@ class ChainNode final : public Node<ChainNode, ChainEdge> {
   ~ChainNode() = default;
 
   std::string ConcatedOpsName() const;
+  std::string ChainTag() const {
+    std::string chain_tag = op_vec_.front()->op_name();
+    str_replace(&chain_tag, '/', '_');
+    return chain_tag;
+  }
 
   std::shared_ptr<const Operator> SoleOp() const {
     CHECK_EQ(op_vec_.size(), 1);

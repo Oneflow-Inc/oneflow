@@ -5,6 +5,7 @@ enum ParallelPolicy {
   kDataParallel = 0;
   kModelParallel = 1;
   kFakerMdUpdt = 2;
+  kFakerLossRecord = 3;
 }
 
 message DeviceSet {

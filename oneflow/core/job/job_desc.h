@@ -59,6 +59,9 @@ class JobDesc final {
     return OF_PB_POINTER_GET(job_conf_, default_fill_conf);
   }
   bool use_async_cpu_stream() const { return job_conf_.use_async_cpu_stream(); }
+  int32_t piece_num_of_record_loss() const {
+    return job_conf_.piece_num_of_record_loss();
+  }
 
  private:
   JobDesc() = default;

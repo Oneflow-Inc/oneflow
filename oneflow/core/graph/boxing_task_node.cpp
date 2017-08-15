@@ -26,7 +26,7 @@ void FwCompleteBoxOpConfModelModel(BoxingOpConf* conf) {
   conf->mutable_clone_box();
 }
 
-void FwCompleteBoxOpConfFakerMdUpdt(BoxingOpConf* conf) {
+void FwCompleteBoxOpConfAddClone(BoxingOpConf* conf) {
   conf->mutable_add_box();
   conf->mutable_clone_box();
 }
@@ -119,10 +119,13 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
     CompleteBoxOp = &FwCompleteBoxOpConfModelData;
   } else if (in_policy == kModelParallel && out_policy == kModelParallel) {
     CompleteBoxOp = &FwCompleteBoxOpConfModelModel;
-  } else {
-    CHECK_EQ(in_policy, kFakerMdUpdt);
+  } else if (in_policy == kFakerMdUpdt) {
     CHECK_EQ(out_policy, kModelParallel);
-    CompleteBoxOp = &FwCompleteBoxOpConfFakerMdUpdt;
+    CompleteBoxOp = &FwCompleteBoxOpConfAddClone;
+  } else {
+    CHECK_EQ(in_policy, kFakerLossRecord);
+    CHECK_EQ(out_policy, kDataParallel);
+    CompleteBoxOp = &FwCompleteBoxOpConfAddClone;
   }
   // func 4 construct boxing_op in this node
   auto ConstructBoxingOp = [&](const std::string& lbn) {
