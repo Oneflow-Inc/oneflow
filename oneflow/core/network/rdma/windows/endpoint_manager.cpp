@@ -12,10 +12,10 @@ namespace oneflow {
 
 namespace {
 
-sockaddr_in GetAddress(const char* ip, int32_t port) {
+sockaddr_in GetAddress(const std::string& ip, int32_t port) {
   sockaddr_in addr = sockaddr_in();
   memset(&addr, 0, sizeof(sockaddr_in));
-  inet_pton(AF_INET, ip, &addr.sin_addr);
+  inet_pton(AF_INET, ip.c_str(), &addr.sin_addr);
   addr.sin_family = AF_INET;
   addr.sin_port = htons(static_cast<u_short>(port));
   return addr;
@@ -25,7 +25,7 @@ sockaddr_in GetAddress(const char* ip, int32_t port) {
 
 EndpointManager::~EndpointManager() { Destroy(); }
 
-void EndpointManager::Init(const char* my_ip, int32_t my_port) {
+void EndpointManager::Init(const std::string& my_ip, int32_t my_port) {
   my_addr_ = GetAddress(my_ip, my_port);
 
   HRESULT hr = NdStartup();
@@ -130,8 +130,8 @@ int64_t EndpointManager::WaitForConnection(Connection* conn) {
   int64_t peer_machine_id;
   ULONG size = sizeof(peer_machine_id);
 
-  IND2Connector* connector = conn->mutable_connector();
-  OVERLAPPED* ov = conn->mutable_overlapped();
+  IND2Connector* connector = conn->connector();
+  OVERLAPPED* ov = conn->overlapped();
   HRESULT hr = listener_->GetConnectionRequest(connector, ov);
   if (hr == ND_PENDING) { hr = listener_->GetOverlappedResult(ov, TRUE); }
   CHECK(SUCCEEDED(hr));

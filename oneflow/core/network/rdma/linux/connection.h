@@ -3,7 +3,7 @@
 
 #include <infiniband/verbs.h>
 #include <stdio.h>
-#include <string.h>
+#include <string>
 #include <stdlib.h>
 #include <unistd.h>
 #include <netdb.h>
@@ -31,10 +31,10 @@ struct Connector {
 class Connection {
  public:
   explicit Connection(int64_t my_machine_id);
-  Connection(int64_t my_machine_id, int64_t peer_machine_id);
   ~Connection();
 
-  bool TryConnectTo(const char* peer_ip, int32_t peer_port);
+  void Bind(const std::string& my_ip, int32_t my_port);
+  bool TryConnectTo(const std::string& peer_ip, int32_t peer_port);
   void CompleteConnection();
   void AcceptConnect();
 
@@ -46,26 +46,21 @@ class Connection {
 
   void Destroy();
 
+  Connector* connector() { return connector_; }
+  ibv_qp* queue_pair() { return queue_pair_; }
+
   void set_connector(Connector* connector) { connector_ = connector; }
   void set_queue_pair(ibv_qp* queue_pair) {
     queue_pair_ = queue_pair;
     connector_->my_qpn = queue_pair_->qp_num;
   }
 
-  Connector* mutable_connector() { return connector_; }
-  ibv_qp* mutable_queue_pair() { return queue_pair_; }
-
  private:
   void TransQueuePairState();
 
   int64_t my_machine_id_;
-  int64_t peer_machine_id_;
-
   Connector* connector_;
   ibv_qp* queue_pair_;
-
-  sockaddr_in my_addr_;
-  int32_t my_sock_;
 };
 
 }  // namespace oneflow

@@ -9,10 +9,10 @@ namespace oneflow {
 
 namespace {
 
-sockaddr_in GetAddress(const char* ip, int32_t port) {
+sockaddr_in GetAddress(const std::string& ip, int32_t port) {
   sockaddr_in addr = sockaddr_in();
   memset(&addr, 0, sizeof(sockaddr_in));
-  inet_pton(AF_INET, ip, &addr.sin_addr);
+  inet_pton(AF_INET, ip.c_str(), &addr.sin_addr);
   addr.sin_family = AF_INET;
   addr.sin_port = htons(static_cast<u_short>(port));
   return addr;
@@ -21,19 +21,17 @@ sockaddr_in GetAddress(const char* ip, int32_t port) {
 }  // namespace
 
 Connection::Connection(int64_t my_machine_id)
-    : Connection::Connection(my_machine_id, -1) {}
-
-Connection::Connection(int64_t my_machine_id, int64_t peer_machine_id)
     : my_machine_id_(my_machine_id),
-      peer_machine_id_(peer_machine_id),
       connector_(nullptr),
       queue_pair_(nullptr) {}
 
-Connection::~Connection() {
-  Destroy();
+Connection::~Connection() { Destroy(); }
+
+void Connection::Bind(const std::string& my_ip, int32_t my_port) {
+  // TODO(shiyuan)
 }
 
-bool Connection::TryConnectTo(const char* peer_ip, int32_t peer_port) {
+bool Connection::TryConnectTo(const std::string& peer_ip, int32_t peer_port) {
   sockaddr_in peer_addr = GetAddress(peer_ip, peer_port);
   Connector peer_connector;
   int64_t read_bytes = 0;

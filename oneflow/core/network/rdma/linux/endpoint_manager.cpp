@@ -11,10 +11,10 @@ namespace oneflow {
 
 namespace {
 
-sockaddr_in GetAddress(const char* ip, int port) {
+sockaddr_in GetAddress(const std::string& ip, int32_t port) {
   sockaddr_in addr = sockaddr_in();
   memset(&addr, 0, sizeof(sockaddr_in));
-  inet_pton(AF_INET, ip, &addr.sin_addr);
+  inet_pton(AF_INET, ip.c_str(), &addr.sin_addr);
   addr.sin_family = AF_INET;
   addr.sin_port = htons(static_cast<u_short>(port));
   return addr;
@@ -22,11 +22,9 @@ sockaddr_in GetAddress(const char* ip, int port) {
 
 }  // namespace
 
-EndpointManager::~EndpointManager() {
-  Destroy();
-}
+EndpointManager::~EndpointManager() { Destroy(); }
 
-void EndpointManager::Init(const char* my_ip, int32_t my_port) {
+void EndpointManager::Init(const std::string& my_ip, int32_t my_port) {
   my_addr_ = GetAddress(my_ip, my_port);
 
   // Init Adapter
@@ -120,7 +118,7 @@ RdmaMemory* EndpointManager::NewNetworkMemory() {
 
 int64_t EndpointManager::WaitForConnection(Connection* conn) {
   int64_t peer_machine_id;
-  Connector* connector = conn->mutable_connector();
+  Connector* connector = conn->connector();
   Connector peer_connector;
   int read_bytes = 0;
   int total_read_bytes = 0;

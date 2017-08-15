@@ -5,7 +5,7 @@
 #include <sal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <string>
 #include <tchar.h>
 #include <cstdint>
 #include <new>
@@ -19,10 +19,11 @@ struct Request;
 
 class Connection {
  public:
-  Connection(int64_t my_machine_id, const std::string& my_ip, int32_t my_port);
+  explicit Connection(int64_t my_machine_id);
   ~Connection();
 
-  bool TryConnectTo(const char* peer_ip, int32_t peer_port);
+  void Bind(const std::string& my_ip, int32_t my_port);
+  bool TryConnectTo(const std::string& peer_ip, int32_t peer_port);
   void CompleteConnection();
   void AcceptConnect();
 
@@ -33,20 +34,16 @@ class Connection {
                        RdmaMemory* dst_memory);
 
   void Destroy();
-  IND2Connector* mutable_connector() { return connector_; }
-  IND2QueuePair* mutable_queue_pair() { return queue_pair_; }
-  OVERLAPPED* mutable_overlapped() { return ov_; }
+
+  IND2Connector* connector() { return connector_; }
+  IND2QueuePair* queue_pair() { return queue_pair_; }
+  OVERLAPPED* overlapped() { return ov_; }
 
   void set_connector(IND2Connector* connector) { connector_ = connector; }
   void set_queue_pair(IND2QueuePair* queue_pair) { queue_pair_ = queue_pair; }
 
  private:
   int64_t my_machine_id_;
-
-  std::string my_ip_;
-  int32_t my_port_;
-  sockaddr_in my_sock_;
-
   IND2Connector* connector_;
   IND2QueuePair* queue_pair_;
   OVERLAPPED* ov_;

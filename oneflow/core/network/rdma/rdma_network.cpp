@@ -141,11 +141,13 @@ void RdmaNetwork::Barrier() {
 
 Connection* RdmaNetwork::NewConnection(const std::string& my_ip,
                                        int32_t my_port) {
-  Connection* conn = new Connection(my_machine_id_, my_ip, my_port);
+  Connection* conn = new Connection(my_machine_id_);
   CHECK(conn);
 
   endpoint_manager_->CreateConnector(conn);
   endpoint_manager_->CreateQueuePair(conn);
+  
+  conn->Bind(my_ip, my_port);
   return conn;
 }
 

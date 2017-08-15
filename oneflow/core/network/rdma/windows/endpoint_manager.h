@@ -17,7 +17,7 @@ class EndpointManager {
   EndpointManager() = default;
   ~EndpointManager();
 
-  void Init(const char* my_ip, int32_t my_port);
+  void Init(const std::string& my_ip, int32_t my_port);
   void Destroy();
 
   void CreateConnector(Connection* conn);
