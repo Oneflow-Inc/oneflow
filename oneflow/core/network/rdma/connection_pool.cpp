@@ -17,7 +17,6 @@ void ConnectionPool::AddConnection(int64_t peer_machine_id, Connection* conn) {
 void ConnectionPool::CleanConnection(int64_t peer_machine_id) {
   Connection* conn = GetConnection(peer_machine_id);
   if (conn != nullptr) {
-    conn->Destroy();
     delete conn;
     conn = nullptr;
     conn_num_--;
