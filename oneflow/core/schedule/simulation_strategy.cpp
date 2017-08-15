@@ -101,17 +101,17 @@ TaskInstance* DirectionSimulationStrategy::PickInstanceToRun(
   return ret;
 }
 
-void ResourceSimulationStrategy::InitFuncs() {
+void MemorySimulationStrategy::InitFuncs() {
   get_node_instance_ = [&](TaskArcInstance* arc) {
     auto direction = schedule_engine()->direction();
     return direction->GetNextNodeInstance(arc);
   };
-  is_instance_ready_ = std::bind(&ResourceSimulationStrategy::IsInstanceReady,
+  is_instance_ready_ = std::bind(&MemorySimulationStrategy::IsInstanceReady,
                                  this, std::placeholders::_1);
   get_instance_device_ = std::bind(&SimulatorScheduleEngine::GetInstanceDevice,
                                    schedule_engine(), std::placeholders::_1);
   get_ascendent_ended_at_ =
-      std::bind(&ResourceSimulationStrategy::GetAscendentEndedAt, this,
+      std::bind(&MemorySimulationStrategy::GetAscendentEndedAt, this,
                 std::placeholders::_1);
   pick_instance_to_run_ = [&](const std::list<TaskInstance*>& instances) {
     auto direction = schedule_engine()->direction();
@@ -135,7 +135,7 @@ void PositiveDirectionStrategy::NewStartTokens() {
   schedule_engine()->NewSourceTokens();
 }
 
-bool ResourceSimulationStrategy::IsInstanceReady(TaskInstance* instance) {
+bool MemorySimulationStrategy::IsInstanceReady(TaskInstance* instance) {
   bool ready = true;
   auto session = schedule_engine()->session();
   auto direction = schedule_engine()->direction();
@@ -202,7 +202,7 @@ unsigned int NegativeDirectionStrategy::Next(
   return graph->arc_mgr().Input(node, cb);
 }
 
-void LimitedResourceStrategy::InitFuncIsInstanceReady() {
+void LimitedMemoryStrategy::InitFuncIsInstanceReady() {
   is_instance_ready_ = [&](TaskInstance* instance) {
     return IsInstanceReady(instance) && IsAllRegstDescReady(instance);
   };
@@ -221,7 +221,7 @@ void LazyEvaluationStrategy::InitTimeNet() {
   return schedule_engine()->schedule()->InitTimeNet(schedule_engine());
 }
 
-void LimitedResourceStrategy::InitRegst(
+void LimitedMemoryStrategy::InitRegst(
     const std::function<uint32_t(uint64_t)>& get_regst_num) {
   auto session = schedule_engine()->session();
   auto schedule = schedule_engine()->schedule();
@@ -255,13 +255,12 @@ int32_t EvaluationSimulationStrategy::GetAscendentEndedAt(
   return std::max(ended_at, schedule->mut_device2ended_at()[dev]);
 }
 
-int32_t ResourceSimulationStrategy::GetAscendentEndedAt(
-    TaskInstance* instance) {
+int32_t MemorySimulationStrategy::GetAscendentEndedAt(TaskInstance* instance) {
   auto evaluation = schedule_engine()->evaluation();
   return evaluation->GetAscendentEndedAt(instance);
 }
 
-int32_t LimitedResourceStrategy::RegstDescEndedAt(TaskInstance* instance) {
+int32_t LimitedMemoryStrategy::RegstDescEndedAt(TaskInstance* instance) {
   int32_t ended_at = 0;
   auto schedule = schedule_engine()->schedule();
   auto direction = schedule_engine()->direction();
@@ -272,7 +271,7 @@ int32_t LimitedResourceStrategy::RegstDescEndedAt(TaskInstance* instance) {
   return ended_at;
 }
 
-void LimitedResourceStrategy::BeforeRun(TaskInstance* instance) {
+void LimitedMemoryStrategy::BeforeRun(TaskInstance* instance) {
   auto session = schedule_engine()->session();
   auto schedule = schedule_engine()->schedule();
   auto direction = schedule_engine()->direction();
@@ -294,7 +293,7 @@ void LimitedResourceStrategy::BeforeRun(TaskInstance* instance) {
   });
 }
 
-void LimitedResourceStrategy::AfterRun(TaskInstance* instance) {
+void LimitedMemoryStrategy::AfterRun(TaskInstance* instance) {
   std::list<Arc<TaskInstance, SRegst>*> occupied_arcs;
   auto schedule = schedule_engine()->schedule();
   schedule->regst_arc_mgr().OutputArc(instance, &occupied_arcs);
@@ -305,7 +304,7 @@ void LimitedResourceStrategy::AfterRun(TaskInstance* instance) {
   }
 }
 
-bool LimitedResourceStrategy::IsAllRegstDescReady(TaskInstance* instance) {
+bool LimitedMemoryStrategy::IsAllRegstDescReady(TaskInstance* instance) {
   bool all_ready = true;
   auto direction = schedule_engine()->direction();
   direction->HoldingRegstDesc(instance->to(), [&](SRegstDesc* regst_desc) {
@@ -314,13 +313,13 @@ bool LimitedResourceStrategy::IsAllRegstDescReady(TaskInstance* instance) {
   return all_ready;
 }
 
-bool LimitedResourceStrategy::IsRegstFree(SRegst* regst) {
+bool LimitedMemoryStrategy::IsRegstFree(SRegst* regst) {
   auto schedule = schedule_engine()->schedule();
   return schedule->regst_arc_mgr().Input(regst) == 0;
 }
 
-bool LimitedResourceStrategy::IsRegstDescReady(SRegstDesc* regst_desc,
-                                               Batch* batch) {
+bool LimitedMemoryStrategy::IsRegstDescReady(SRegstDesc* regst_desc,
+                                             Batch* batch) {
   auto sess = schedule_engine()->session();
   auto schedule = schedule_engine()->schedule();
   auto regst_desc_instance =
@@ -334,8 +333,8 @@ bool LimitedResourceStrategy::IsRegstDescReady(SRegstDesc* regst_desc,
   return free;
 }
 
-SRegst* LimitedResourceStrategy::FindFreeRegst(SRegstDesc* regst_desc,
-                                               Batch* batch) {
+SRegst* LimitedMemoryStrategy::FindFreeRegst(SRegstDesc* regst_desc,
+                                             Batch* batch) {
   auto sess = schedule_engine()->session();
   auto schedule = schedule_engine()->schedule();
   auto regst_desc_instance =
@@ -357,7 +356,7 @@ SRegst* LimitedResourceStrategy::FindFreeRegst(SRegstDesc* regst_desc,
 }
 
 std::unique_ptr<std::unordered_map<SDevice*, TaskInstance*>>
-ResourceSimulationStrategy::Pick(std::unordered_set<TaskArcInstance*>* tokens) {
+MemorySimulationStrategy::Pick(std::unordered_set<TaskArcInstance*>* tokens) {
   auto all_instances = XDistinct<TaskInstance*>(*tokens, get_node_instance_);
   auto ready_instances =
       XFilter<TaskInstance*>(*all_instances, is_instance_ready_);

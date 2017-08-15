@@ -288,7 +288,7 @@ SDevice* SimulatorScheduleEngine::GetInstanceDevice(TaskInstance* instance) {
 void SimulatorScheduleEngine::InitStrategies() {
   SetStrategy(unique_ptr_new<PositiveDirectionStrategy>(this));
   SetStrategy(unique_ptr_new<LazyEvaluationStrategy>(this));
-  SetStrategy(unique_ptr_new<LimitedResourceStrategy>(this));
+  SetStrategy(unique_ptr_new<LimitedMemoryStrategy>(this));
 }
 
 std::unique_ptr<Schedule> SimulatorScheduleEngine::RunInTwoDirections(
@@ -305,12 +305,12 @@ std::unique_ptr<Schedule> SimulatorScheduleEngine::RunInTwoDirections(
 
 std::unique_ptr<Schedule> SimulatorScheduleEngine::StaticSchedule(
     const std::function<uint32_t(uint64_t)>& get_regst_num) {
-  SetStrategy(unique_ptr_new<LimitedResourceStrategy>(this));
+  SetStrategy(unique_ptr_new<LimitedMemoryStrategy>(this));
   return RunInTwoDirections(get_regst_num);
 }
 
 std::unique_ptr<Schedule> SimulatorScheduleEngine::StaticSchedule() {
-  SetStrategy(unique_ptr_new<UnlimitedResourceStrategy>(this));
+  SetStrategy(unique_ptr_new<UnlimitedMemoryStrategy>(this));
   return RunInTwoDirections([](uint64_t) { return (uint32_t)1u; });
 }
 

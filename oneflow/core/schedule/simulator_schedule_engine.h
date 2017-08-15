@@ -144,9 +144,7 @@ class SimulatorScheduleEngine : public ScheduleEngine {
   inline EvaluationSimulationStrategy* evaluation() const {
     return evaluation_.get();
   }
-  inline ResourceSimulationStrategy* resource() const {
-    return resource_.get();
-  }
+  inline MemorySimulationStrategy* memory() const { return memory_.get(); }
 
   friend class SimulatorSchedule;
 
@@ -161,12 +159,12 @@ class SimulatorScheduleEngine : public ScheduleEngine {
   void SetStrategy(std::unique_ptr<EvaluationSimulationStrategy>&& evaluation) {
     evaluation_ = std::move(evaluation);
   }
-  void SetStrategy(std::unique_ptr<ResourceSimulationStrategy>&& resource) {
-    resource_ = std::move(resource);
+  void SetStrategy(std::unique_ptr<MemorySimulationStrategy>&& memory) {
+    memory_ = std::move(memory);
   }
 
   void InitRegst(const std::function<uint32_t(uint64_t)>& get_regst_num) {
-    resource_->InitRegst(get_regst_num);
+    memory_->InitRegst(get_regst_num);
   }
 
   inline void NewStartTokens() { return direction_->NewStartTokens(); }
@@ -180,7 +178,7 @@ class SimulatorScheduleEngine : public ScheduleEngine {
   }
   inline std::unique_ptr<std::unordered_map<SDevice*, TaskInstance*>> Pick(
       std::unordered_set<TaskArcInstance*>* tokens) {
-    return resource_->Pick(tokens);
+    return memory_->Pick(tokens);
   }
   inline void TimeLinePushBack(TaskInstance* instance, SDevice* dev) {
     return evaluation_->TimeLinePushBack(instance, dev);
@@ -188,19 +186,19 @@ class SimulatorScheduleEngine : public ScheduleEngine {
   inline void Retiming() { return evaluation_->Retiming(); }
   inline void BeforeRun(TaskInstance* instance) {
     //    evaluation_->BeforeRun(instance);
-    resource_->BeforeRun(instance);
+    memory_->BeforeRun(instance);
   }
   inline void AfterRun(TaskInstance* instance) {
     //    evaluation_->AfterRun(instance);
-    resource_->AfterRun(instance);
+    memory_->AfterRun(instance);
   }
   inline int32_t GetAscendentEndedAt(TaskInstance* instance) {
-    return resource_->get_ascendent_ended_at_(instance);
+    return memory_->get_ascendent_ended_at_(instance);
   }
   std::unique_ptr<SimulatorSchedule> schedule_;
   std::unique_ptr<DirectionSimulationStrategy> direction_;
   std::unique_ptr<EvaluationSimulationStrategy> evaluation_;
-  std::unique_ptr<ResourceSimulationStrategy> resource_;
+  std::unique_ptr<MemorySimulationStrategy> memory_;
   std::unordered_set<TaskArcInstance*> tokens_;
 };
 

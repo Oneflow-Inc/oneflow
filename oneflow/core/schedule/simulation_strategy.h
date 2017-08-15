@@ -170,13 +170,13 @@ class LazyEvaluationStrategy : public EvaluationSimulationStrategy {
   void InitTimeNet();
 };
 
-class ResourceSimulationStrategy : public SimulationStrategy {
+class MemorySimulationStrategy : public SimulationStrategy {
  public:
-  ResourceSimulationStrategy(SimulatorScheduleEngine* schedule_engine)
+  MemorySimulationStrategy(SimulatorScheduleEngine* schedule_engine)
       : SimulationStrategy(schedule_engine) {
     InitFuncs();
   }
-  virtual ~ResourceSimulationStrategy() {}
+  virtual ~MemorySimulationStrategy() {}
   virtual std::unique_ptr<std::unordered_map<SDevice*, TaskInstance*>> Pick(
       std::unordered_set<TaskArcInstance*>* tokens);
   virtual void BeforeRun(TaskInstance* instance) = 0;
@@ -198,19 +198,19 @@ class ResourceSimulationStrategy : public SimulationStrategy {
       pick_instance_to_run_;
 };
 
-class UnlimitedResourceStrategy : public ResourceSimulationStrategy {
+class UnlimitedMemoryStrategy : public MemorySimulationStrategy {
  public:
-  UnlimitedResourceStrategy(SimulatorScheduleEngine* schedule_engine)
-      : ResourceSimulationStrategy(schedule_engine) {}
+  UnlimitedMemoryStrategy(SimulatorScheduleEngine* schedule_engine)
+      : MemorySimulationStrategy(schedule_engine) {}
   virtual void BeforeRun(TaskInstance* instance) {}
   virtual void AfterRun(TaskInstance* instance) {}
   void InitRegst(const std::function<uint32_t(uint64_t)>& get_regst_num) {}
 };
 
-class LimitedResourceStrategy : public ResourceSimulationStrategy {
+class LimitedMemoryStrategy : public MemorySimulationStrategy {
  public:
-  LimitedResourceStrategy(SimulatorScheduleEngine* schedule_engine)
-      : ResourceSimulationStrategy(schedule_engine) {
+  LimitedMemoryStrategy(SimulatorScheduleEngine* schedule_engine)
+      : MemorySimulationStrategy(schedule_engine) {
     InitFuncIsInstanceReady();
   }
   void BeforeRun(TaskInstance* instance);
