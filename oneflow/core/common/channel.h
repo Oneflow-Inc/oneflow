@@ -1,6 +1,8 @@
 #ifndef ONEFLOW_CORE_COMMON_CHANNEL_H_
 #define ONEFLOW_CORE_COMMON_CHANNEL_H_
 
+#include <atomic>
+#include "oneflow/core/common/concurrent_queue.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -31,46 +33,37 @@ class Channel final {
   void CloseReceiveEnd();
 
  private:
-  std::queue<T> val_;
-  mutable std::mutex mutex_;
-  bool is_send_closed_;
-  bool is_receive_closed_;
-  std::condition_variable cond_;
+  moodycamel::ConcurrentQueue<T> val_;
+  std::atomic<bool> is_send_closed_;
+  std::atomic<int64_t> item_cnt_;
+  std::atomic<bool> is_receive_closed_;
 };
 
 template<typename T>
 int Channel<T>::Send(const T& item) {
-  std::unique_lock<std::mutex> lock(mutex_);
   if (is_send_closed_) { return -1; }
-  val_.push(item);
-  cond_.notify_one();
+  item_cnt_ += val_.enqueue(item);
+
   return 0;
 }
 
 template<typename T>
 int Channel<T>::Receive(T* item) {
-  std::unique_lock<std::mutex> lock(mutex_);
-  cond_.wait(lock, [this]() {
-    return !val_.empty() || is_receive_closed_ || is_send_closed_;
-  });
-  if (val_.empty() || is_receive_closed_) { return -1; }
-  *item = val_.front();
-  val_.pop();
-  return 0;
+  if (is_receive_closed_ || (is_send_closed_ && item_cnt_ == 0)) { return -1; }
+  if (val_.try_dequeue(*item)) {
+    return 0;
+  } else
+    return 1;
 }
 
 template<typename T>
 void Channel<T>::CloseSendEnd() {
-  std::unique_lock<std::mutex> lock(mutex_);
   is_send_closed_ = true;
-  cond_.notify_all();
 }
 
 template<typename T>
 void Channel<T>::CloseReceiveEnd() {
-  std::unique_lock<std::mutex> lock(mutex_);
   is_receive_closed_ = true;
-  cond_.notify_all();
 }
 
 }  // namespace oneflow
