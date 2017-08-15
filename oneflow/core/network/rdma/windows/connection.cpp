@@ -30,8 +30,8 @@ Connection::~Connection() { Destroy(); }
 
 void Connection::Bind(const std::string& my_ip, int32_t my_port) {
   sockaddr_in my_sock = GetAddress(my_ip, my_port);
-  HRESULT hr = connector_->Bind(reinterpret_cast<const sockaddr*>(&my_sock_),
-                                sizeof(my_sock_));
+  HRESULT hr = connector_->Bind(reinterpret_cast<const sockaddr*>(&my_sock),
+                                sizeof(my_sock));
   CHECK(!FAILED(hr)) << "Connector bind failed";
 }
 
