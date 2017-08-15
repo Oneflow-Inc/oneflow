@@ -10,7 +10,18 @@ CpuThread::CpuThread(int64_t thrd_loc_id) {
     cpu_stream_.reset(new AsyncCpuStream);
     cpu_device_.reset(new std::thread([this]() {
       std::function<void()> work;
-      while (cpu_stream_->ReceiveWork(&work) == 0) { work(); }
+      while (true) {
+        int res = cpu_stream_->ReceiveWork(&work);
+        if (of_likely(res == 0)) {
+          work();
+        } else if (of_likely(res == 1)) {
+          continue;
+        } else if (of_likely(res == -1)) {
+          break;
+        } else {
+          UNEXPECTED_RUN();
+        }
+      }
     }));
   } else {
     cpu_stream_.reset(new SyncCpuStream);
