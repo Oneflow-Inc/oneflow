@@ -30,15 +30,15 @@ namespace schedule {
 //	static schedule device
 class SDevice : public SNode {
  public:
-  SDevice(std::string name, unsigned int time) : SNode(name), time_(time) {}
-  unsigned int time() const { return time_; }
-  unsigned int& mut_time() { return time_; }
+  SDevice(std::string name, uint32_t time) : SNode(name), time_(time) {}
+  uint32_t time() const { return time_; }
+  uint32_t& mut_time() { return time_; }
 
   uint64_t memory_limit() const { return memory_limit_; }
   uint64_t& mut_memory_limit() { return memory_limit_; }
 
  private:
-  unsigned int time_;
+  uint32_t time_;
   uint64_t memory_limit_ = ULLONG_MAX;
 };
 
@@ -49,14 +49,14 @@ class STask : public SNode {
   explicit STask(const std::string name) : SNode(name) {}
   STask() {}
   virtual ~STask() {}
-  inline int depth() const { return depth_; }
+  inline int32_t depth() const { return depth_; }
   inline const SDevice* device() const { return device_; }
 
-  inline int& mut_depth() { return depth_; }
+  inline int32_t& mut_depth() { return depth_; }
   inline SDevice*& mut_device() { return device_; }
 
  protected:
-  int depth_;
+  int32_t depth_;
   SDevice* device_;
 };
 
@@ -113,7 +113,7 @@ class SGraph : public SNode {
   void WalkReverse(const std::function<void(STask*)>& cb);
   void WalkArcReverse(const std::function<void(Arc<STask>*)>& cb);
   void ForeachArc(const std::function<void(Arc<STask>*)>& cb) const;
-  int LossNodes(std::list<STask*>* l) const;
+  uint32_t LossNodes(std::list<STask*>* l) const;
   STask* source() const { return source_; }
   STask*& mut_source() { return source_; }
 

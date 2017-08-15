@@ -26,11 +26,11 @@ bool Validator::ValidateAllocation(const Schedule& schedule) {
   auto sess = schedule.session();
   auto engine_factory = schedule_factory_provider()->schedule_engine_factory();
   auto schedule_engine = engine_factory->CreateScheduleEngine(*sess);
-  int target = 0;
-  int failed = 0;
-  for (int i = 0; i < schedule.regst_desc2count().size(); i++) {
+  uint32_t target = 0;
+  uint32_t failed = 0;
+  for (uint32_t i = 0; i < schedule.regst_desc2count().size(); i++) {
     std::unordered_map<uint64_t, uint32_t> limited;
-    int count = 0;
+    uint32_t count = 0;
     bool declined = false;
     for (const auto& p : schedule.regst_desc2count()) {
       limited[p.first->id()] = p.second;

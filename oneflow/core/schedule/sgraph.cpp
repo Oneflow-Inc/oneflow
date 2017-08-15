@@ -11,7 +11,7 @@ void SGraph::InitSourceAndSink() {
   mut_sink() = mut_fake_node_mgr().Create("sink");
 }
 
-int SGraph::LossNodes(std::list<STask*>* l) const {
+uint32_t SGraph::LossNodes(std::list<STask*>* l) const {
   return loss_arc_mgr().Output(this, l);
 }
 
@@ -152,7 +152,7 @@ void SGraph::ForeachDescendent(STask* node,
 
 void SGraph::InitDepth() {
   WalkReverse([&](STask* node) {
-    int depth = -1;
+    int32_t depth = -1;
     arc_mgr().Output(node,
                      [&](STask* to) { depth = std::max(depth, to->depth()); });
     node->mut_depth() = depth + 1;

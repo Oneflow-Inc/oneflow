@@ -52,23 +52,21 @@ class DirectionSimulationStrategy : public SimulationStrategy {
   virtual int32_t GetStartTime(const std::pair<int32_t, int32_t>& p) = 0;
   virtual int32_t GetEndTime(const std::pair<int32_t, int32_t>& p) = 0;
   virtual void NewStartTokens() = 0;
-  virtual unsigned int NextArc(STask* node,
-                               const std::function<void(TaskArc*)>& cb) = 0;
-  virtual unsigned int Next(STask* node,
-                            const std::function<void(STask*)>& cb) = 0;
-  virtual unsigned int PrevArc(STask* node,
-                               const std::function<void(TaskArc*)>& cb) = 0;
-  virtual unsigned int Prev(STask* node,
-                            const std::function<void(STask*)>& cb) = 0;
+  virtual uint32_t NextArc(STask* node,
+                           const std::function<void(TaskArc*)>& cb) = 0;
+  virtual uint32_t Next(STask* node, const std::function<void(STask*)>& cb) = 0;
+  virtual uint32_t PrevArc(STask* node,
+                           const std::function<void(TaskArc*)>& cb) = 0;
+  virtual uint32_t Prev(STask* node, const std::function<void(STask*)>& cb) = 0;
   virtual TaskInstance* GetNextNodeInstance(TaskArcInstance* arc) = 0;
   virtual bool CompareInstanceOrder(TaskInstance* instance_a,
                                     TaskInstance* instance_b) = 0;
   virtual TaskInstance* PickInstanceToRun(
       const std::list<TaskInstance*>& instances);
-  virtual int HoldingRegstDesc(STask* node,
-                               const std::function<void(SRegstDesc*)>& cb) = 0;
-  virtual int RegstDescReleasingNode(SRegstDesc* regst_desc,
-                                     const std::function<void(STask*)>& cb) = 0;
+  virtual uint32_t HoldingRegstDesc(
+      STask* node, const std::function<void(SRegstDesc*)>& cb) = 0;
+  virtual uint32_t RegstDescReleasingNode(
+      SRegstDesc* regst_desc, const std::function<void(STask*)>& cb) = 0;
   virtual STask* StartNode() = 0;
   virtual STask* EndNode() = 0;
   virtual Batch* EndBatch() = 0;
@@ -90,15 +88,16 @@ class PositiveDirectionStrategy : public DirectionSimulationStrategy {
     return GetTime(p.second);
   }
   void NewStartTokens();
-  unsigned int NextArc(STask* node, const std::function<void(TaskArc*)>& cb);
-  unsigned int Next(STask* node, const std::function<void(STask*)>& cb);
-  unsigned int PrevArc(STask* node, const std::function<void(TaskArc*)>& cb);
-  unsigned int Prev(STask* node, const std::function<void(STask*)>& cb);
+  uint32_t NextArc(STask* node, const std::function<void(TaskArc*)>& cb);
+  uint32_t Next(STask* node, const std::function<void(STask*)>& cb);
+  uint32_t PrevArc(STask* node, const std::function<void(TaskArc*)>& cb);
+  uint32_t Prev(STask* node, const std::function<void(STask*)>& cb);
   TaskInstance* GetNextNodeInstance(TaskArcInstance* arc);
   bool CompareInstanceOrder(TaskInstance* instance_a, TaskInstance* instance_b);
-  int HoldingRegstDesc(STask* node, const std::function<void(SRegstDesc*)>& cb);
-  int RegstDescReleasingNode(SRegstDesc* regst_desc,
-                             const std::function<void(STask*)>& cb);
+  uint32_t HoldingRegstDesc(STask* node,
+                            const std::function<void(SRegstDesc*)>& cb);
+  uint32_t RegstDescReleasingNode(SRegstDesc* regst_desc,
+                                  const std::function<void(STask*)>& cb);
   STask* StartNode();
   STask* EndNode();
   Batch* EndBatch();
@@ -120,15 +119,16 @@ class NegativeDirectionStrategy : public DirectionSimulationStrategy {
     return GetTime(p.first);
   }
   void NewStartTokens();
-  unsigned int NextArc(STask* node, const std::function<void(TaskArc*)>& cb);
-  unsigned int Next(STask* node, const std::function<void(STask*)>& cb);
-  unsigned int PrevArc(STask* node, const std::function<void(TaskArc*)>& cb);
-  unsigned int Prev(STask* node, const std::function<void(STask*)>& cb);
+  uint32_t NextArc(STask* node, const std::function<void(TaskArc*)>& cb);
+  uint32_t Next(STask* node, const std::function<void(STask*)>& cb);
+  uint32_t PrevArc(STask* node, const std::function<void(TaskArc*)>& cb);
+  uint32_t Prev(STask* node, const std::function<void(STask*)>& cb);
   TaskInstance* GetNextNodeInstance(TaskArcInstance* arc);
   bool CompareInstanceOrder(TaskInstance* instance_a, TaskInstance* instance_b);
-  int HoldingRegstDesc(STask* node, const std::function<void(SRegstDesc*)>& cb);
-  int RegstDescReleasingNode(SRegstDesc* regst_desc,
-                             const std::function<void(STask*)>& cb);
+  uint32_t HoldingRegstDesc(STask* node,
+                            const std::function<void(SRegstDesc*)>& cb);
+  uint32_t RegstDescReleasingNode(SRegstDesc* regst_desc,
+                                  const std::function<void(STask*)>& cb);
   STask* StartNode();
   STask* EndNode();
   Batch* EndBatch();

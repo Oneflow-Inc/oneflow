@@ -82,10 +82,11 @@ void SimulatorSchedule::Retiming(SimulatorScheduleEngine* schedule_engine) {
   };
   WalkTimeNetReverse(schedule_engine, [&](TaskInstance* instance) {
     auto lazy_end = INT_MAX;
-    int count = timenet_arc_mgr().Output(instance, [&](TaskInstance* instance) {
-      const auto& p = mut_instance2ended_at()[instance];
-      lazy_end = std::min(lazy_end, p.first);
-    });
+    uint32_t count =
+        timenet_arc_mgr().Output(instance, [&](TaskInstance* instance) {
+          const auto& p = mut_instance2ended_at()[instance];
+          lazy_end = std::min(lazy_end, p.first);
+        });
     auto& p = mut_instance2ended_at()[instance];
     if (!count) { lazy_end = p.second; }
     auto next_instance = get_next_instance(instance);

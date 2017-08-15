@@ -13,25 +13,25 @@ void LazyEvaluationStrategy::TimeLinePushBack(TaskInstance* instance,
   schedule_engine()->schedule()->TimeLinePushBack(instance, device);
 }
 
-int PositiveDirectionStrategy::HoldingRegstDesc(
+uint32_t PositiveDirectionStrategy::HoldingRegstDesc(
     STask* node, const std::function<void(SRegstDesc*)>& cb) {
   auto graph = schedule_engine()->session()->graph();
   return graph->produced_regst_desc_mgr().Output(node, cb);
 }
 
-int PositiveDirectionStrategy::RegstDescReleasingNode(
+uint32_t PositiveDirectionStrategy::RegstDescReleasingNode(
     SRegstDesc* regst_desc, const std::function<void(STask*)>& cb) {
   auto graph = schedule_engine()->session()->graph();
   return graph->subscribed_regst_desc_mgr().Input(regst_desc, cb);
 }
 
-int NegativeDirectionStrategy::HoldingRegstDesc(
+uint32_t NegativeDirectionStrategy::HoldingRegstDesc(
     STask* node, const std::function<void(SRegstDesc*)>& cb) {
   auto graph = schedule_engine()->session()->graph();
   return graph->subscribed_regst_desc_mgr().Output(node, cb);
 }
 
-int NegativeDirectionStrategy::RegstDescReleasingNode(
+uint32_t NegativeDirectionStrategy::RegstDescReleasingNode(
     SRegstDesc* regst_desc, const std::function<void(STask*)>& cb) {
   auto graph = schedule_engine()->session()->graph();
   return graph->produced_regst_desc_mgr().Input(regst_desc, cb);
@@ -154,49 +154,49 @@ void NegativeDirectionStrategy::NewStartTokens() {
   schedule_engine()->NewSinkTokens();
 }
 
-unsigned int PositiveDirectionStrategy::PrevArc(
+uint32_t PositiveDirectionStrategy::PrevArc(
     STask* node, const std::function<void(TaskArc*)>& cb) {
   auto graph = schedule_engine()->session()->graph();
   return graph->arc_mgr().InputArc(node, cb);
 }
 
-unsigned int PositiveDirectionStrategy::Prev(
+uint32_t PositiveDirectionStrategy::Prev(
     STask* node, const std::function<void(STask*)>& cb) {
   auto graph = schedule_engine()->session()->graph();
   return graph->arc_mgr().Input(node, cb);
 }
 
-unsigned int PositiveDirectionStrategy::NextArc(
+uint32_t PositiveDirectionStrategy::NextArc(
     STask* node, const std::function<void(TaskArc*)>& cb) {
   auto graph = schedule_engine()->session()->graph();
   return graph->arc_mgr().OutputArc(node, cb);
 }
 
-unsigned int PositiveDirectionStrategy::Next(
+uint32_t PositiveDirectionStrategy::Next(
     STask* node, const std::function<void(STask*)>& cb) {
   auto graph = schedule_engine()->session()->graph();
   return graph->arc_mgr().Output(node, cb);
 }
 
-unsigned int NegativeDirectionStrategy::PrevArc(
+uint32_t NegativeDirectionStrategy::PrevArc(
     STask* node, const std::function<void(TaskArc*)>& cb) {
   auto graph = schedule_engine()->session()->graph();
   return graph->arc_mgr().OutputArc(node, cb);
 }
 
-unsigned int NegativeDirectionStrategy::Prev(
+uint32_t NegativeDirectionStrategy::Prev(
     STask* node, const std::function<void(STask*)>& cb) {
   auto graph = schedule_engine()->session()->graph();
   return graph->arc_mgr().Output(node, cb);
 }
 
-unsigned int NegativeDirectionStrategy::NextArc(
+uint32_t NegativeDirectionStrategy::NextArc(
     STask* node, const std::function<void(TaskArc*)>& cb) {
   auto graph = schedule_engine()->session()->graph();
   return graph->arc_mgr().InputArc(node, cb);
 }
 
-unsigned int NegativeDirectionStrategy::Next(
+uint32_t NegativeDirectionStrategy::Next(
     STask* node, const std::function<void(STask*)>& cb) {
   auto graph = schedule_engine()->session()->graph();
   return graph->arc_mgr().Input(node, cb);

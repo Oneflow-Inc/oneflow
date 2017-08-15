@@ -168,12 +168,12 @@ class SimulatorScheduleEngine : public ScheduleEngine {
   }
 
   inline void NewStartTokens() { return direction_->NewStartTokens(); }
-  inline unsigned int NextArc(STask* node,
-                              const std::function<void(TaskArc*)>& cb) {
+  inline uint32_t NextArc(STask* node,
+                          const std::function<void(TaskArc*)>& cb) {
     return direction_->NextArc(node, cb);
   }
-  inline unsigned int PrevArc(STask* node,
-                              const std::function<void(TaskArc*)>& cb) {
+  inline uint32_t PrevArc(STask* node,
+                          const std::function<void(TaskArc*)>& cb) {
     return direction_->PrevArc(node, cb);
   }
   inline std::unique_ptr<std::unordered_map<SDevice*, TaskInstance*>> Pick(
