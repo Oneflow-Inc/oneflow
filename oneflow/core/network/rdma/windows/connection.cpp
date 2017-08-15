@@ -48,7 +48,6 @@ bool Connection::TryConnectTo(const std::string& peer_ip, int32_t peer_port) {
 
   if (hr == ND_PENDING) {
     hr = connector_->GetOverlappedResult(ov_, TRUE);
-    std::cout << "ND_PENDING" << std::endl;
   }
 
   if (SUCCEEDED(hr)) {
