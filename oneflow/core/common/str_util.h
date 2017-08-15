@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <string>
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
