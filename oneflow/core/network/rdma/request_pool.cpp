@@ -30,8 +30,10 @@ void RequestPool::ReleaseRequest(Request* request) {
   // Return the registered message to |msg_pool_|
   msg_pool_->Free(request->rdma_msg);
   // Destroy the Request object
-  delete request;
-  request = nullptr;
+  if (request != nullptr) {
+    delete request;
+    request = nullptr;
+  }
 }
 
 }  // namespace oneflow

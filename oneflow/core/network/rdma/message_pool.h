@@ -31,8 +31,10 @@ MessagePool<MessageType>::~MessagePool() {
   while (!empty_buffer_.empty()) {
     MessageType* buffer = empty_buffer_.front();
     empty_buffer_.pop();
-    delete buffer;
-    buffer = nullptr;
+    if (buffer != nullptr) {
+      delete buffer;
+      buffer = nullptr;
+    }
   }
 }
 

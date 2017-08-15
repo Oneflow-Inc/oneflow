@@ -3,17 +3,41 @@
 namespace oneflow {
 
 RdmaNetwork::RdmaNetwork()
-    : my_machine_id_(-1), port_(-1), endpoint_manager_(nullptr) {}
+    : my_machine_id_(-1), port_(-1), endpoint_manager_(nullptr),
+      request_pool_(nullptr), connection_pool_(nullptr) {}
+
+RdmaNetwork::~RdmaNetwork() {
+  if (connection_pool_ != nullptr) {
+    delete connection_pool_;
+    connection_pool_ = nullptr;
+  }
+  if (request_pool_ != nullptr) {
+    delete request_pool_;
+    request_pool_ = nullptr;
+  }
+
+  for (auto& rdma_memory : rdma_memory_vector_) {
+    if (rdma_memory != nullptr) {
+      delete rdma_memory;
+      rdma_memory = nullptr;
+    }
+  }
+
+  if (endpoint_manager_ != nullptr) {
+    delete endpoint_manager_;
+    endpoint_manager_ = nullptr;
+  }
+}
 
 void RdmaNetwork::Init(int64_t my_machine_id, const NetworkTopology& net_topo) {
   net_topo_ = net_topo;
   my_machine_id_ = my_machine_id;
   port_ = net_topo.all_nodes[my_machine_id].port;
-  endpoint_manager_.reset(new EndpointManager());
+  endpoint_manager_ = new EndpointManager();
   endpoint_manager_->Init(net_topo.all_nodes[my_machine_id].address.c_str(),
-                          port_);
-  request_pool_.reset(new RequestPool());
-  connection_pool_.reset(new ConnectionPool());
+                          net_topo.all_nodes[my_machine_id].port);
+  request_pool_ = new RequestPool();
+  connection_pool_ = new ConnectionPool();
   EstablishConnection();
 }
 
@@ -22,6 +46,7 @@ NetworkMemory* RdmaNetwork::RegisterMemory(void* dptr, size_t len) {
       endpoint_manager_->NewNetworkMemory();  // TODO(shiyuan)
   net_memory->Reset(dptr, len);
   net_memory->Register();
+  rdma_memory_vector_.push_back(static_cast<RdmaMemory*>(net_memory));
   return net_memory;
 }
 
