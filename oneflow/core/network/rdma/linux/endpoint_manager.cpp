@@ -62,7 +62,7 @@ void EndpointManager::Destroy() {
   }
 
   if (protect_domain_ != nullptr) {
-  // TODO(shiyuan)  CHECK_EQ(ibv_dealloc_pd(protect_domain_), 0);
+    CHECK_EQ(ibv_dealloc_pd(protect_domain_), 0);
   }
 
   if (context_ != nullptr) {
