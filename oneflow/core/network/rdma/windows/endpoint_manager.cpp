@@ -130,7 +130,7 @@ int64_t EndpointManager::WaitForConnection(Connection* conn) {
   int64_t peer_machine_id;
   ULONG size = sizeof(peer_machine_id);
 
-  IND2Connector* connector;
+  IND2Connector* connector = conn->mutable_connector();
   OVERLAPPED* ov = conn->mutable_overlapped();
   HRESULT hr = listener_->GetConnectionRequest(connector, ov);
   if (hr == ND_PENDING) { hr = listener_->GetOverlappedResult(ov, TRUE); }

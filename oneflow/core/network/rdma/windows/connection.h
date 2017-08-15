@@ -33,7 +33,7 @@ class Connection {
                        RdmaMemory* dst_memory);
 
   void Destroy();
-
+  IND2Connector* mutable_connector() { return connector_; }
   IND2QueuePair* mutable_queue_pair() { return queue_pair_; }
   OVERLAPPED* mutable_overlapped() { return ov_; }
 
