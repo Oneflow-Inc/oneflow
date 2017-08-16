@@ -62,7 +62,7 @@ void EndpointManager::Destroy() {
   }
 
   if (protect_domain_ != nullptr) {
-  // TODO(shiyuan)  CHECK_EQ(ibv_dealloc_pd(protect_domain_), 0);
+    CHECK_EQ(ibv_dealloc_pd(protect_domain_), 0);
   }
 
   if (context_ != nullptr) {
@@ -154,7 +154,6 @@ Request* EndpointManager::PollRecvQueue(NetworkResult* result) {
   ibv_wc wc;
   int32_t len = ibv_poll_cq(recv_cq_, 1, &wc);
 
-  // return number of CQEs in array wc or -1 on error
   if (len <= 0) { return nullptr; }
 
   if (wc.status != IBV_WC_SUCCESS) { return nullptr; }
@@ -167,7 +166,6 @@ Request* EndpointManager::PollSendQueue(NetworkResult* result) {
   ibv_wc wc;
   int32_t len = ibv_poll_cq(send_cq_, 1, &wc);
 
-  // return number of CQEs in array wc or -1 on error
   if (len <= 0) { return nullptr; }
 
   if (wc.status != IBV_WC_SUCCESS) { return nullptr; }
@@ -175,18 +173,10 @@ Request* EndpointManager::PollSendQueue(NetworkResult* result) {
   switch (wc.opcode) {
     case IBV_WC_SEND: {
       result->type = NetworkResultType::kSendOk;
-      // The context is the message timestamp in Send request.
-      // Tehe network object does not have additional information
-      // to convey to outside caller, it just recycle the
-      // registered_message used in sending out.
       return reinterpret_cast<Request*>(wc.wr_id);
     }
     case IBV_WC_RDMA_READ: {
       result->type = NetworkResultType::kReadOk;
-      // The context is the message timestamp in Read request.
-      // The network object needs to convey the information about
-      // "what data have been read" to external caller.
-      // The context is the message
       return reinterpret_cast<Request*>(wc.wr_id);
     }
     default: return nullptr;

@@ -64,7 +64,6 @@ RDMATest::RDMATest(int64_t my_machine_id, int64_t peer_machine_id,
 
 RDMATest::~RDMATest() {
   delete[] buffer_;
-  delete network_buffer_;
   LOG(INFO) << "Network Shutting Down..." << endl;
 }
 

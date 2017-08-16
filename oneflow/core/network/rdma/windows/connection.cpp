@@ -79,8 +79,11 @@ void Connection::Destroy() {
     if (hr == ND_PENDING) { hr = connector_->GetOverlappedResult(ov_, TRUE); }
     connector_->Release();
   }
-  delete ov_;
-  ov_ = nullptr;
+
+  if (ov_ != nullptr) {
+    delete ov_;
+    ov_ = nullptr;
+  }
   if (queue_pair_ != nullptr) { queue_pair_->Release(); }
 }
 

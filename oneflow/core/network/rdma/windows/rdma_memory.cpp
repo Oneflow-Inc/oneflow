@@ -10,11 +10,9 @@ RdmaMemory::~RdmaMemory() {
   if (registered_ == true) { Unregister(); }
 }
 
-// Register as ND memory region
 void RdmaMemory::Register() {
   OVERLAPPED ov;
   ov.hEvent = CreateEvent(NULL, false, false, NULL);
-  // CHECK(ov.hEvent);
 
   HRESULT hr = memory_region_->Register(memory_, size_,
                                         ND_MR_FLAG_ALLOW_LOCAL_WRITE
@@ -25,7 +23,6 @@ void RdmaMemory::Register() {
   if (hr == ND_PENDING) { hr = memory_region_->GetOverlappedResult(&ov, TRUE); }
   CHECK(SUCCEEDED(hr));
 
-  // Set ND2_SGE
   sge_.Buffer = memory_;
   sge_.BufferLength = size_;
   sge_.MemoryRegionToken = memory_region_->GetLocalToken();

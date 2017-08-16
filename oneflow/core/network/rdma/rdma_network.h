@@ -14,7 +14,7 @@ class RdmaNetwork final : public Network {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RdmaNetwork);
   RdmaNetwork();
-  ~RdmaNetwork() = default;
+  ~RdmaNetwork();
 
   void Init(int64_t my_machine_id, const NetworkTopology& net_topo) override;
   void InitOnly(int64_t my_machine_id,
@@ -25,7 +25,7 @@ class RdmaNetwork final : public Network {
 
   void SendMsg(const NetworkMessage& msg) override;
   void SetCallbackForReceivedActorMsg(std::function<void()> callback) override;
-  void Read(const MemoryDescriptor& remote_memory_descriptor,  // TODO(shiyuan)
+  void Read(const MemoryDescriptor& remote_memory_descriptor,
             NetworkMemory* local_memory,
             std::function<void()> callback) override;
 
@@ -54,6 +54,7 @@ class RdmaNetwork final : public Network {
   std::unique_ptr<EndpointManager> endpoint_manager_;
   std::unique_ptr<RequestPool> request_pool_;
   std::unique_ptr<ConnectionPool> connection_pool_;
+  std::vector<RdmaMemory*> rdma_memory_vector_;
 };
 
 }  // namespace oneflow
