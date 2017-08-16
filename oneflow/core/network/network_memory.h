@@ -23,9 +23,7 @@ class NetworkMemory {
   bool registered() const { return registered_; }
   const MemoryDescriptor& memory_discriptor() const { return descriptor_; }
 
-  // Register memory for network transportation
   virtual void Register() = 0;
-  // Unregister memory after finishing network transportation
   virtual void Unregister() = 0;
   virtual void* sge() = 0;
 

@@ -22,7 +22,7 @@ class RdmaNetwork final : public Network {
 
   void SendMsg(const NetworkMessage& msg) override;
   void SetCallbackForReceivedActorMsg(std::function<void()> callback) override;
-  void Read(const MemoryDescriptor& remote_memory_descriptor,  // TODO(shiyuan)
+  void Read(const MemoryDescriptor& remote_memory_descriptor,
             NetworkMemory* local_memory,
             std::function<void()> callback) override;
 

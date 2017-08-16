@@ -27,9 +27,7 @@ Connection::Connection(int64_t my_machine_id)
 
 Connection::~Connection() { Destroy(); }
 
-void Connection::Bind(const std::string& my_ip, int32_t my_port) {
-  // TODO(shiyuan)
-}
+void Connection::Bind(const std::string& my_ip, int32_t my_port) {}
 
 bool Connection::TryConnectTo(const std::string& peer_ip, int32_t peer_port) {
   sockaddr_in peer_addr = GetAddress(peer_ip, peer_port);
@@ -38,7 +36,8 @@ bool Connection::TryConnectTo(const std::string& peer_ip, int32_t peer_port) {
   int64_t total_read_bytes = 0;
   int64_t rc = 0;
   int32_t peer_sock = socket(AF_INET, SOCK_STREAM, 0);
-  int32_t ret = connect(peer_sock, reinterpret_cast<sockaddr*>(&peer_addr), sizeof(peer_addr));
+  int32_t ret = connect(peer_sock, reinterpret_cast<sockaddr*>(&peer_addr),
+                        sizeof(peer_addr));
   if ((ret != 0) || (peer_sock < 0)) {
     CHECK_EQ(close(peer_sock), 0);
     return false;
@@ -89,8 +88,8 @@ void Connection::TransQueuePairState() {
                             IBV_ACCESS_REMOTE_READ;
 
   CHECK_EQ(ibv_modify_qp(queue_pair_, &qp_attr,
-                IBV_QP_STATE | IBV_QP_PKEY_INDEX |
-                IBV_QP_PORT | IBV_QP_ACCESS_FLAGS),
+                         IBV_QP_STATE | IBV_QP_PKEY_INDEX |
+                         IBV_QP_PORT | IBV_QP_ACCESS_FLAGS),
            0);
 
   qp_attr.qp_state = IBV_QPS_RTR;
@@ -110,9 +109,9 @@ void Connection::TransQueuePairState() {
   qp_attr.ah_attr.port_num = 1;
 
   CHECK_EQ(ibv_modify_qp(queue_pair_, &qp_attr,
-                IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU | IBV_QP_DEST_QPN |
-                IBV_QP_RQ_PSN | IBV_QP_MAX_DEST_RD_ATOMIC |
-                IBV_QP_MIN_RNR_TIMER),
+                         IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU | IBV_QP_DEST_QPN |
+                         IBV_QP_RQ_PSN | IBV_QP_MAX_DEST_RD_ATOMIC |
+                         IBV_QP_MIN_RNR_TIMER),
            0);
 
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));
@@ -124,8 +123,8 @@ void Connection::TransQueuePairState() {
   qp_attr.max_rd_atomic = 1;
 
   CHECK_EQ(ibv_modify_qp(queue_pair_, &qp_attr,
-                IBV_QP_STATE | IBV_QP_TIMEOUT | IBV_QP_RETRY_CNT |
-                IBV_QP_RNR_RETRY | IBV_QP_SQ_PSN | IBV_QP_MAX_QP_RD_ATOMIC),
+                         IBV_QP_STATE | IBV_QP_TIMEOUT | IBV_QP_RETRY_CNT |
+                         IBV_QP_RNR_RETRY | IBV_QP_SQ_PSN | IBV_QP_MAX_QP_RD_ATOMIC),
            0);
 }
 
@@ -158,8 +157,6 @@ void Connection::PostSendRequest(const Request& send_request) {
   wr.opcode = IBV_WR_SEND;
   wr.send_flags = IBV_SEND_SIGNALED;
   
-  // CHECK(queue_pair_);  TODO(shiyuan)
-  // CHECK_EQ(ibv_post_send(queue_pair_, &wr, &bad_wr), 0);
   ibv_post_send(queue_pair_, &wr, &bad_wr);
 }
 
@@ -171,7 +168,6 @@ void Connection::PostRecvRequest(const Request& recv_request) {
       recv_request.rdma_msg->net_memory()->sge());
   wr.num_sge = 1;
 
-  // CHECK(queue_pair_);
   ibv_post_recv(queue_pair_, &wr, &bad_wr);
 }
 
@@ -188,7 +184,6 @@ void Connection::PostReadRequest(
   wr.wr.rdma.remote_addr = remote_memory_descriptor.address;
   wr.wr.rdma.rkey = remote_memory_descriptor.remote_token;
 
-  // CHECK(queue_pair_);
   ibv_post_send(queue_pair_, &wr, &bad_wr);
 }
 

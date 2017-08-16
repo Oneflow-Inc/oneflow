@@ -10,12 +10,6 @@ RdmaMessage::RdmaMessage() {
 
 RdmaMessage::~RdmaMessage() {
   net_memory_->Unregister();
-  /*
-  if (net_memory_ != nullptr) {
-    delete net_memory_;
-    net_memory_ = nullptr;
-  }
-  */
 }
 
 }  // namespace oneflow

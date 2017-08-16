@@ -43,7 +43,7 @@ void RdmaNetwork::Init(int64_t my_machine_id, const NetworkTopology& net_topo) {
 
 NetworkMemory* RdmaNetwork::RegisterMemory(void* dptr, size_t len) {
   NetworkMemory* net_memory =
-      endpoint_manager_->NewNetworkMemory();  // TODO(shiyuan)
+      endpoint_manager_->NewNetworkMemory();
   net_memory->Reset(dptr, len);
   net_memory->Register();
   rdma_memory_vector_.push_back(static_cast<RdmaMemory*>(net_memory));
@@ -61,7 +61,7 @@ void RdmaNetwork::SendMsg(const NetworkMessage& msg) {
 
   send_request->rdma_msg->mutable_msg() = msg;
 
-  conn->PostSendRequest(*send_request);  // TODO(shiyuan)
+  conn->PostSendRequest(*send_request);
 }
 
 void RdmaNetwork::SetCallbackForReceivedActorMsg(
@@ -84,7 +84,7 @@ void RdmaNetwork::Read(const MemoryDescriptor& remote_memory_descriptor,
   CHECK(dst_memory);
 
   conn->PostReadRequest(*read_request, remote_memory_descriptor,
-                        dst_memory);  // TODO(shiyuan)
+                        dst_memory);
 }
 
 bool RdmaNetwork::Poll(NetworkResult* result) {
@@ -131,8 +131,9 @@ void RdmaNetwork::Barrier() {
     if (peer_machine_id < my_machine_id_) {
       barrier_msg.dst_machine_id = peer_machine_id;
       SendMsg(barrier_msg);
-      while (!PollSendQueue(&result))  // TODO(shiyuan)
+      while (!PollSendQueue(&result)) {
         CHECK(result.type == NetworkResultType::kSendOk);
+      }
     }
   }
   printf("Barrier send all barrier over\n");
@@ -141,7 +142,7 @@ void RdmaNetwork::Barrier() {
   // we shall poll 2 * n (num_predecessors) net event,
   // n for SEND_OK, n for RECEIVE_MSG
   for (int32_t i = 0; i < num_predecessors; ++i) {
-    while (!PollRecvQueue(&result)) {  // TODO(shiyuan)
+    while (!PollRecvQueue(&result)) {
       CHECK(result.type == NetworkResultType::kReceiveMsg);
       CHECK(result.net_msg.type == NetworkMessageType::kReplyBarrier);
     }
@@ -187,7 +188,7 @@ bool RdmaNetwork::PollRecvQueue(NetworkResult* result) {
       connection_pool_->GetConnection(result->net_msg.src_machine_id);
   CHECK(conn);
   CHECK(request);
-  conn->PostRecvRequest(*request);  // TODO(shiyuan)
+  conn->PostRecvRequest(*request);
 
   return true;
 }
@@ -203,7 +204,7 @@ bool RdmaNetwork::PollSendQueue(NetworkResult* result) {
   return true;
 }
 
-void RdmaNetwork::EstablishConnection() {  // TODO(shiyuan)
+void RdmaNetwork::EstablishConnection() {
   // Connect to neighboring nodes with larger rank actively
   // For node with small rank, the connection will fail until its peer with
   // larger rank has established its own active connections
@@ -224,13 +225,13 @@ void RdmaNetwork::EstablishConnection() {  // TODO(shiyuan)
         conn->Bind(net_topo_.all_nodes[my_machine_id_].address,
                    net_topo_.all_nodes[my_machine_id_].port);
       }
-      conn->PostRecvRequest(*receive_request);  // TODO(shiyuan)
+      conn->PostRecvRequest(*receive_request);
       conn->CompleteConnection();
       connection_pool_->AddConnection(peer_machine_id, conn);
       for (int k = 0; k < kPrePostRecvNumber; ++k) {
         receive_request = request_pool_->AllocRequest(false);
         CHECK(receive_request);
-        conn->PostRecvRequest(*receive_request);  // TODO(shiyuan)
+        conn->PostRecvRequest(*receive_request);
       }
     }
   }
@@ -247,14 +248,14 @@ void RdmaNetwork::EstablishConnection() {  // TODO(shiyuan)
       // connecting with src_machine_id
       int64_t src_machine_id = endpoint_manager_->WaitForConnection(conn);
       CHECK_NE(src_machine_id, -1);
-      conn->PostRecvRequest(*receive_request);  // TODO(shiyuan)
+      conn->PostRecvRequest(*receive_request);
       conn->AcceptConnect();
       connection_pool_->AddConnection(src_machine_id, conn);
       // Pre-post Receive issue before connect
       for (int k = 0; k < kPrePostRecvNumber; ++k) {
         receive_request = request_pool_->AllocRequest(false);
         CHECK(receive_request);
-        conn->PostRecvRequest(*receive_request);  // TODO(shiyuan)
+        conn->PostRecvRequest(*receive_request);
       }
     }
   }

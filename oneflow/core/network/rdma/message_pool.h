@@ -10,7 +10,7 @@ class MessagePool {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MessagePool);
   explicit MessagePool(int32_t initial_size);
-  ~MessagePool();
+  ~MessagePool() = default;
 
   MessageType* Alloc();
   void Free(MessageType* buffer);
@@ -23,20 +23,6 @@ template<typename MessageType>
 MessagePool<MessageType>::MessagePool(int32_t initial_size) {
   for (int i = 0; i < initial_size; ++i) {
     empty_buffer_.push(new MessageType());
-  }
-}
-
-template<typename MessageType>
-MessagePool<MessageType>::~MessagePool() {
-  while (!empty_buffer_.empty()) {
-    MessageType* buffer = empty_buffer_.front();
-    empty_buffer_.pop();
-    /*
-    if (buffer != nullptr) {
-      delete buffer;
-      buffer = nullptr;
-    }
-    */
   }
 }
 

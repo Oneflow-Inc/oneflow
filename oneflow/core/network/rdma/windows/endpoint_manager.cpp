@@ -125,7 +125,6 @@ RdmaMemory* EndpointManager::NewNetworkMemory() {
   return rdma_memory;
 }
 
-// XXX(shiyuan)
 int64_t EndpointManager::WaitForConnection(Connection* conn) {
   int64_t peer_machine_id;
   ULONG size = sizeof(peer_machine_id);
@@ -137,11 +136,7 @@ int64_t EndpointManager::WaitForConnection(Connection* conn) {
   CHECK(SUCCEEDED(hr));
 
   hr = connector->GetPrivateData(&peer_machine_id, &size);
-  // LOG(INFO) << "peer_machine_id = " << peer_machine_id << " size = " << size
-  //           << "\n";
-  // The author of NDSPI says it's normal for this check failed
-  // So just ignore it.
-  // CHECK(!FAILED(hr)) << "Failed to get private data. hr = " << hr << "\n";
+  CHECK(SUCCEEDED(hr));
 
   conn->set_connector(connector);
 
@@ -155,13 +150,11 @@ Request* EndpointManager::PollRecvQueue(NetworkResult* result) {
   uint32_t len = recv_cq_->GetResults(&nd2_result, 1);
   if (len == 0) return nullptr;
 
-  if (nd2_result.Status != ND_SUCCESS) {  // TODO(shiyuan)
+  if (nd2_result.Status != ND_SUCCESS) {
     return nullptr;
   }
 
   result->type = NetworkResultType::kReceiveMsg;
-  // TODO(shiyuan) result
-  // The context is the message timestamp in Recv Request.
   return reinterpret_cast<Request*>(nd2_result.RequestContext);
 }
 
@@ -170,24 +163,17 @@ Request* EndpointManager::PollSendQueue(NetworkResult* result) {
   uint32_t len = send_cq_->GetResults(&nd2_result, 1);
   if (len == 0) return nullptr;
 
-  if (nd2_result.Status != ND_SUCCESS) {  // TODO(shiyuan)
+  if (nd2_result.Status != ND_SUCCESS) {
     return nullptr;
   }
 
   switch (nd2_result.RequestType) {
     case ND2_REQUEST_TYPE::Nd2RequestTypeSend: {
       result->type = NetworkResultType::kSendOk;
-      // The context is the message timestamp in Send request.
-      // The network object does not have additional information
-      // to convey to outside caller, it just recycle the
-      // registered_message used in sending out.
       return reinterpret_cast<Request*>(nd2_result.RequestContext);
     }
     case ND2_REQUEST_TYPE::Nd2RequestTypeRead: {
       result->type = NetworkResultType::kReadOk;
-      // The context is the message timestamp in Read request.
-      // The network object needs to convey the information about
-      // "what data have been read" to external caller.
       return reinterpret_cast<Request*>(nd2_result.RequestContext);
     }
     default: return nullptr;
