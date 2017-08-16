@@ -49,7 +49,9 @@ std::unique_ptr<Plan> LoadPlan(const std::string& file) {
 }
 
 void TestPlan(const std::string& file) {
-  auto sfp = ScheduleFactoryConfigure::Provider("default");
+  //	auto conf = "default";
+  auto conf = "small-batch-num";
+  auto sfp = ScheduleFactoryConfigure::Provider(conf);
   auto allocator_factory = sfp->allocator_factory();
   auto allocator = allocator_factory->CreateAllocator();
   auto plan = LoadPlan(file);

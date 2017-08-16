@@ -24,6 +24,18 @@ class SessionFactory {
   }
 };
 
+template<typename SessionType>
+class SessionConcreteFactory : public SessionFactory {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SessionConcreteFactory);
+  SessionConcreteFactory() = default;
+  explicit SessionConcreteFactory(ScheduleFactoryProvider*){};
+  virtual ~SessionConcreteFactory() = default;
+  std::unique_ptr<Session> CreateSession(const SGraph& graph) const {
+    return unique_ptr_new<SessionType>(const_cast<SGraph*>(&graph));
+  }
+};
+
 }  // namespace schedule
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_SCHEDULE_SESSION_FACTORY_H_

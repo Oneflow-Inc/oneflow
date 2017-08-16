@@ -23,14 +23,20 @@ typedef Arc<Batch, TaskArc> TaskArcInstance;
 
 class Session {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(Session);
   Session() = delete;
   virtual ~Session() = default;
-  OF_DISALLOW_COPY_AND_MOVE(Session);
-  explicit Session(SGraph* graph, uint32_t nr_batch = 2u) : graph_(graph) {
+  explicit Session(SGraph* graph, uint32_t nr_base_batch)
+      : graph_(graph),
+        nr_base_batch_(nr_base_batch),
+        nr_batch_(nr_base_batch * 3) {
+    NewBatchs();
+  }
+  explicit Session(SGraph* graph) : graph_(graph) {
     auto nr_device = graph->DeviceCount();
     auto depth = graph->Depth();
     nr_base_batch_ = std::min(nr_device, depth);
-    nr_batch_ = std::max(nr_batch, nr_device * 3);
+    nr_batch_ = nr_base_batch_ * 3;
     NewBatchs();
   }
 
@@ -73,12 +79,21 @@ class Session {
 
  protected:
   SGraph* graph_;
-  uint32_t nr_batch_;
   uint32_t nr_base_batch_;
+  uint32_t nr_batch_;
   NodeMgr<Batch> batch_node_mgr_;
   ArcMgr<TaskInstance> task_instance_mgr_;
   ArcMgr<RegstDescInstance> regst_desc_instance_mgr_;
   ArcMgr<TaskArcInstance> task_arc_instance_mgr_;
+};
+
+template<uint32_t nr_base_batch = 1u>
+class FixedBatchSession final : public Session {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(FixedBatchSession);
+  FixedBatchSession() = delete;
+  virtual ~FixedBatchSession() = default;
+  explicit FixedBatchSession(SGraph* graph) : Session(graph, nr_base_batch) {}
 };
 
 }  // namespace schedule

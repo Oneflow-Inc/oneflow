@@ -21,5 +21,9 @@ REGISTER_SCHEDULE_FACTORY_PROVIDER("demo")
     ->Merge(ScheduleFactoryConfigure::Provider("base"))
     ->Set(unique_ptr_new<SGraphConcreteFactory<DemoSGraph>>());
 
+REGISTER_SCHEDULE_FACTORY_PROVIDER("small-batch-num")
+    ->Merge(ScheduleFactoryConfigure::Provider("base"))
+    ->Set(unique_ptr_new<SessionConcreteFactory<FixedBatchSession<1u>>>());
+
 }  // namespace schedule
 }  // namespace oneflow
