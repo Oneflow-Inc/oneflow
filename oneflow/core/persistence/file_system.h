@@ -19,7 +19,8 @@ enum Status {
   PERMISSION_DENIED = 4,
   OUT_OF_RANGE = 5,
   FILE_OPERATION_FAILED = 6,
-  UNIMPLEMENTED = 7,
+  DIR_OPERATION_FAILED = 7,
+  UNIMPLEMENTED = 8,
 };
 
 class RandomAccessFile;
