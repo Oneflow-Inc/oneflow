@@ -18,7 +18,8 @@ enum Status {
   ALREADY_EXISTS = 3,
   PERMISSION_DENIED = 4,
   OUT_OF_RANGE = 5,
-  UNIMPLEMENTED = 6,
+  FILE_OPERATION_FAILED = 6,
+  UNIMPLEMENTED = 7,
 };
 
 class RandomAccessFile;
