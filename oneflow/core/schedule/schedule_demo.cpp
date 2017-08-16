@@ -4,13 +4,17 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/schedule/schedule_factory_configure.h"
 #include "oneflow/core/schedule/session.h"
 #include "oneflow/core/schedule/sgraph.h"
 #include "oneflow/core/schedule/simulator_schedule_engine.h"
+#include "oneflow/core/schedule/util.h"
 
 namespace oneflow {
 namespace schedule {
+
+namespace {
 
 void TestDemo() {
   auto sfp = ScheduleFactoryConfigure::Provider("demo");
@@ -38,10 +42,26 @@ void TestDemo() {
             << std::endl;
 }
 
+std::unique_ptr<Plan> LoadPlan(const std::string& file) {
+  auto plan = unique_ptr_new<Plan>();
+  ParseProtoFromTextFile(file, &*plan);
+  return std::move(plan);
+}
+
+void TestPlan(const std::string& file) {
+  auto sfp = ScheduleFactoryConfigure::Provider("default");
+  auto allocator_factory = sfp->allocator_factory();
+  auto allocator = allocator_factory->CreateAllocator();
+  auto plan = LoadPlan(file);
+  allocator->Allocate(&*plan);
+}
+
+}  // namespace
 }  // namespace schedule
 }  // namespace oneflow
 
 int main(int argc, char* argv[]) {
-  oneflow::schedule::TestDemo();
+  //  oneflow::schedule::TestDemo();
+  if (argc > 1) { oneflow::schedule::TestPlan(std::string(argv[1])); }
   return 0;
 }

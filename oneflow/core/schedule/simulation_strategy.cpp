@@ -360,6 +360,7 @@ MemorySimulationStrategy::Pick(std::unordered_set<TaskArcInstance*>* tokens) {
   auto all_instances = XDistinct<TaskInstance*>(*tokens, get_node_instance_);
   auto ready_instances =
       XFilter<TaskInstance*>(*all_instances, is_instance_ready_);
+  CHECK(ready_instances->size());
   auto instances_groupby_ended_at =
       XGroupBy<int32_t>(*ready_instances, get_ascendent_ended_at_);
   auto first_finished = XAssocKMin(*instances_groupby_ended_at);

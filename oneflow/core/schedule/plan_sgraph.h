@@ -18,7 +18,15 @@ class PlanSGraph final : public SGraph {
 
  private:
   void InitFromPlan(const Plan& plan);
-  void InitDevice();
+  void InitRegstDesc(const Plan& plan);
+  void InitTask(const Plan& plan);
+  void InitLoss(const Plan& plan);
+  void GenerateOpName2IsLoss(
+      const Plan& plan,
+      std::unordered_map<std::string, bool>* op_name2is_loss) const;
+  void GenerateTaskId2IsLoss(
+      const Plan& plan,
+      std::unordered_map<int64_t, bool>* task_id2is_loss) const;
 };
 
 }  // namespace schedule
