@@ -179,8 +179,8 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
       UniformFill(fill_conf.uniform_conf(), random_seed, blob);
     } else if (fill_conf.has_gaussian_conf()) {
       GaussianFill(fill_conf.gaussian_conf(), random_seed, blob);
-    } else if (fill_conf.has_xarier_conf()) {
-      XarierFill(fill_conf.xarier_conf(), random_seed, blob);
+    } else if (fill_conf.has_xavier_conf()) {
+      XavierFill(fill_conf.xavier_conf(), random_seed, blob);
     } else if (fill_conf.has_msra_conf()) {
       MsraFill(fill_conf.msra_conf(), random_seed, blob);
     } else {
@@ -222,19 +222,35 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
         blob->mut_dptr<FloatingPointType>());
   }
 
+  /*  You should make sure input blob shape has shape (n, c, h, w)
+   *  where fan_in = c * h * w
+   *  and   fan_out = n * h * w
+   */
   static FloatingPointType GetFillFan(VarianceNorm variance_norm, Blob* blob) {
+    CHECK_EQ(blob->shape().size(), 4);
     int64_t fan_in = blob->shape().elem_cnt() / blob->shape().At(0);
     int64_t fan_out = blob->shape().elem_cnt() / blob->shape().At(1);
-    FloatingPointType n = fan_in;
+    FloatingPointType n = static_cast<FloatingPointType>(0);
     if (variance_norm == VarianceNorm::kAverage) {
       n = (fan_in + fan_out) / static_cast<FloatingPointType>(2);
+    } else if (variance_norm == VarianceNorm::kFanIn) {
+      n = fan_in;
     } else if (variance_norm == VarianceNorm::kFanOut) {
       n = fan_out;
+    } else {
+      UNEXPECTED_RUN();
     }
     return n;
   }
 
-  static void XarierFill(const XarierFillConf& fill_conf, uint32_t random_seed,
+  /*
+   *  Note that this is currently not the case for innerproduct layers
+   *
+   *  A Filler based on the paper [Bengio and Glorot 2010]: Understanding
+   *  the difficulty of training deep feedforward neuralnetworks.*
+   *
+   */
+  static void XavierFill(const XavierFillConf& fill_conf, uint32_t random_seed,
                          Blob* blob) {
     CHECK(blob->shape().elem_cnt());
     FloatingPointType scale = std::sqrt(
@@ -247,6 +263,13 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
         blob->mut_dptr<FloatingPointType>());
   }
 
+  /*
+   *  Note that this is currently not the case for innerproduct layers
+   *
+   *  A Filler based on the paper [He, Zhang, Ren and Sun 2015]: Specifically
+   *  accounts for ReLU nonlinearities.
+   *
+   */
   static void MsraFill(const MsraFillConf& fill_conf, uint32_t random_seed,
                        Blob* blob) {
     CHECK(blob->shape().elem_cnt());
