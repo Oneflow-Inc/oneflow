@@ -48,9 +48,9 @@ class RdmaNetwork final : public Network {
   int64_t my_machine_id_;
   int port_;
 
-  EndpointManager* endpoint_manager_;
-  RequestPool* request_pool_;
-  ConnectionPool* connection_pool_;
+  std::unique_ptr<EndpointManager> endpoint_manager_;
+  std::unique_ptr<RequestPool> request_pool_;
+  std::unique_ptr<ConnectionPool> connection_pool_;
   std::vector<RdmaMemory*> rdma_memory_vector_;
 };
 

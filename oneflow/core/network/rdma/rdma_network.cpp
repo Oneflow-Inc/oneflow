@@ -7,15 +7,9 @@ RdmaNetwork::RdmaNetwork()
       request_pool_(nullptr), connection_pool_(nullptr) {}
 
 RdmaNetwork::~RdmaNetwork() {
-  if (connection_pool_ != nullptr) {
-    delete connection_pool_;
-    connection_pool_ = nullptr;
-  }
-  if (request_pool_ != nullptr) {
-    delete request_pool_;
-    request_pool_ = nullptr;
-  }
-
+  connection_pool_.reset(nullptr);
+  request_pool_.reset(nullptr);
+  
   for (auto& rdma_memory : rdma_memory_vector_) {
     if (rdma_memory != nullptr) {
       delete rdma_memory;
@@ -23,21 +17,18 @@ RdmaNetwork::~RdmaNetwork() {
     }
   }
 
-  if (endpoint_manager_ != nullptr) {
-    delete endpoint_manager_;
-    endpoint_manager_ = nullptr;
-  }
+  endpoint_manager_.reset(nullptr);
 }
 
 void RdmaNetwork::Init(int64_t my_machine_id, const NetworkTopology& net_topo) {
   net_topo_ = net_topo;
   my_machine_id_ = my_machine_id;
   port_ = net_topo.all_nodes[my_machine_id].port;
-  endpoint_manager_ = new EndpointManager();
+  endpoint_manager_.reset(new EndpointManager());
   endpoint_manager_->Init(net_topo.all_nodes[my_machine_id].address.c_str(),
                           net_topo.all_nodes[my_machine_id].port);
-  request_pool_ = new RequestPool();
-  connection_pool_ = new ConnectionPool();
+  request_pool_.reset(new RequestPool());
+  connection_pool_.reset(new ConnectionPool());
   EstablishConnection();
 }
 
