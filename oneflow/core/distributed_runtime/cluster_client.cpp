@@ -46,6 +46,18 @@ int main(int argc, char** argv) {
 
   std::shared_ptr<GrpcRemoteMaster> remote_master(
       new GrpcRemoteMaster(channel));
+
+  MasterInitDataPlaneRequest master_init_dp_req;
+  MasterInitDataPlaneResponse master_init_dp_resp;
+  s = remote_master->MasterInitDataPlane(&master_init_dp_req,
+                                         &master_init_dp_resp);
+
+  if (s.ok()) {
+    LOG(INFO) << "MasterInitDataPlane RPC succeeds";
+  } else {
+    LOG(INFO) << "MasterInitDataPlane RPC fails";
+  }
+
   SendJobRequest req;
   *(req.mutable_job_conf()) = job_conf;
   *(req.mutable_dlnet_conf()) = dlnet_conf;
@@ -58,23 +70,13 @@ int main(int argc, char** argv) {
     LOG(INFO) << "SendJob RPC succeeds";
     std::string str_plan;
     PrintProtoToString(resp.plan(), &str_plan);
-    LOG(INFO) << str_plan;
+    //LOG(INFO) << str_plan;
     std::ofstream fout("plan_test");
     fout << str_plan << std::endl;
   } else {
     LOG(INFO) << "SendJob RPC fails";
   }
 
-  MasterInitDataPlaneRequest master_init_dp_req;
-  MasterInitDataPlaneResponse master_init_dp_resp;
-  s = remote_master->MasterInitDataPlane(&master_init_dp_req,
-                                         &master_init_dp_resp);
-
-  if (s.ok()) {
-    LOG(INFO) << "MasterInitDataPlane RPC succeeds";
-  } else {
-    LOG(INFO) << "MasterInitDataPlane RPC fails";
-  }
 
   return 0;
 }
