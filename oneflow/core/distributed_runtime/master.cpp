@@ -5,6 +5,8 @@
 #include "oneflow/core/distributed_runtime/server_def.pb.h"
 #include "oneflow/core/job/job_desc.pb.h"
 
+#include "tensorflow/core/lib/core/blocking_counter.h"
+
 namespace oneflow {
 
 Master::Master(const ServerDef& server_def,
@@ -96,6 +98,7 @@ Master::~Master() {}
 ::tensorflow::Status Master::MasterInitDataPlane(
     MasterInitDataPlaneRequest* request, MasterInitDataPlaneResponse* response,
     MyClosure done) {
+  // Synchronous RPC call
   // for (auto& pair : name2worker_) {
   //  WorkerInitDataPlaneRequest init_dp_req;
   //  WorkerInitDataPlaneResponse init_dp_resp;
@@ -103,6 +106,9 @@ Master::~Master() {}
   //      pair.second->WorkerInitDataPlane(&init_dp_req, &init_dp_resp);
   //  CHECK(s.ok());
   //}
+
+  ::tensorflow::BlockingCounter blocking_counter(name2worker_.size());
+
   for (auto& pair : name2worker_) {
     struct Call {
       WorkerInitDataPlaneRequest init_dp_req;
@@ -110,10 +116,12 @@ Master::~Master() {}
     };
     Call* call = new Call;
 
-    auto cb = [call](const ::tensorflow::Status& s) {
+    auto cb = [call, &blocking_counter](const ::tensorflow::Status& s) {
       if (s.ok()) {
         LOG(INFO) << "Worker Init Dataplane RPC succeeds";
+        blocking_counter.DecrementCount();
       } else {
+        // NOTE(jiyuan): What if fails?
         LOG(INFO) << "Worker Init Dataplane RPC fails";
       }
       delete call;
@@ -121,6 +129,8 @@ Master::~Master() {}
     pair.second->WorkerInitDataPlaneAsync(&call->init_dp_req,
                                           &call->init_dp_resp, cb);
   }
+
+  blocking_counter.Wait();
   done(::tensorflow::Status());
   return ::tensorflow::Status::OK();
 }
