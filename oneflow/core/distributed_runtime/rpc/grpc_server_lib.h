@@ -22,6 +22,7 @@ limitations under the License.
 #include "grpc++/security/credentials.h"
 
 #include "oneflow/core/distributed_runtime/rpc/async_service_interface.h"
+#include "oneflow/core/distributed_runtime/rpc/grpc_remote_worker.h"
 #include "oneflow/core/distributed_runtime/server_def.pb.h"
 #include "oneflow/core/distributed_runtime/server_lib.h"
 #include "oneflow/core/network/network.h"
@@ -58,6 +59,8 @@ class GrpcServer : public ServerInterface {
   void ParseServerDef();
   virtual std::unique_ptr<Master> CreateMaster();
   virtual std::unique_ptr<Worker> CreateWorker();
+
+  void CreateWorkerCache();
 
   // Returns the port to which this server is bound.
   // This method may only be called after `this->Init()` returns successfully.
@@ -111,6 +114,10 @@ class GrpcServer : public ServerInterface {
   // CQ used for async request from master to workers
   ::grpc::CompletionQueue completion_queue_;
   std::thread async_request_done_thread_;
+
+  std::unordered_map<std::string, ClusterNode> name2node_def_;
+  std::unordered_map<std::string, std::shared_ptr<GrpcRemoteWorker>>
+      name2worker_;
 
   std::unique_ptr<::grpc::Server> server_;
 };

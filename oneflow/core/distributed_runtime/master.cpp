@@ -9,41 +9,10 @@
 
 namespace oneflow {
 
-Master::Master(const ServerDef& server_def,
-               ::grpc::CompletionQueue* completion_queue)
-    : server_def_(server_def), cq_(completion_queue) {
-  ParseServerDef();
-  CreateWorkerCache();
-}
-
-void Master::ParseServerDef() {
-  this_node_name_ = server_def_.this_node_name();
-
-  int32_t node_num = server_def_.cluster_def().cluster_node_size();
-  for (int32_t i = 0; i < node_num; ++i) {
-    std::string node_name =
-        server_def_.cluster_def().cluster_node(i).node_name();
-    ClusterNode cluster_node = server_def_.cluster_def().cluster_node(i);
-    CHECK(
-        name2node_def_.insert(std::make_pair(node_name, cluster_node)).second);
-  }
-}
-
-void Master::CreateWorkerCache() {
-  for (auto& pair : name2node_def_) {
-    auto& name = pair.first;
-    auto node_def_it = name2node_def_.find(name);
-    CHECK(node_def_it != name2node_def_.end());
-    auto& node_def = node_def_it->second;
-    auto& ctrl_addr = node_def.ctrl_plane_addr();
-    std::string worker_addr = ctrl_addr.addr() + ":" + ctrl_addr.port();
-    std::shared_ptr<::grpc::Channel> worker_channel = ::grpc::CreateChannel(
-        worker_addr, ::grpc::InsecureChannelCredentials());
-    std::shared_ptr<GrpcRemoteWorker> remote_worker(
-        new GrpcRemoteWorker(worker_channel, cq_));
-    CHECK(name2worker_.insert(std::make_pair(name, remote_worker)).second);
-  }
-}
+Master::Master(
+    const std::unordered_map<std::string, std::shared_ptr<GrpcRemoteWorker>>&
+        name2worker)
+    : name2worker_(name2worker) {}
 
 Master::~Master() {}
 

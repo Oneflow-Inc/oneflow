@@ -68,6 +68,7 @@ GrpcServer::~GrpcServer() {
   CHECK_EQ(state_, NEW);
 
   ParseServerDef();
+  CreateWorkerCache();
 
   data_net_ = GetRdmaInstance();
   data_net_->InitOnly(my_machine_id_, net_topo_);
@@ -101,6 +102,8 @@ void GrpcServer::ParseServerDef() {
     std::string node_name =
         server_def_.cluster_def().cluster_node(i).node_name();
     ClusterNode cluster_node = server_def_.cluster_def().cluster_node(i);
+    CHECK(
+        name2node_def_.insert(std::make_pair(node_name, cluster_node)).second);
 
     int32_t ctrl_port_n;
     std::string ctrl_port_str = cluster_node.ctrl_plane_addr().port();
@@ -134,6 +137,22 @@ void GrpcServer::ParseServerDef() {
         node.neighbors.insert(neighbor.machine_id);
       }
     }
+  }
+}
+
+void GrpcServer::CreateWorkerCache() {
+  for (auto& pair : name2node_def_) {
+    auto& name = pair.first;
+    auto node_def_it = name2node_def_.find(name);
+    CHECK(node_def_it != name2node_def_.end());
+    auto& node_def = node_def_it->second;
+    auto& ctrl_addr = node_def.ctrl_plane_addr();
+    std::string worker_addr = ctrl_addr.addr() + ":" + ctrl_addr.port();
+    std::shared_ptr<::grpc::Channel> worker_channel = ::grpc::CreateChannel(
+        worker_addr, ::grpc::InsecureChannelCredentials());
+    std::shared_ptr<GrpcRemoteWorker> remote_worker(
+        new GrpcRemoteWorker(worker_channel, &completion_queue_));
+    CHECK(name2worker_.insert(std::make_pair(name, remote_worker)).second);
   }
 }
 
@@ -217,11 +236,12 @@ const std::string GrpcServer::target() const {
 }
 
 std::unique_ptr<Master> GrpcServer::CreateMaster() {
-  return std::unique_ptr<Master>(new Master(server_def_, &completion_queue_));
+  return std::unique_ptr<Master>(new Master(name2worker_));
 }
 
 std::unique_ptr<Worker> GrpcServer::CreateWorker() {
-  return std::unique_ptr<Worker>(new Worker(this_node_name_, data_net_));
+  return std::unique_ptr<Worker>(
+      new Worker(this_node_name_, data_net_, name2worker_));
 }
 
 /* static */

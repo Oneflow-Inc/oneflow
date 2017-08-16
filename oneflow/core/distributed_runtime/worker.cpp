@@ -5,8 +5,13 @@
 
 namespace oneflow {
 
-Worker::Worker(const std::string& this_node_name, Network* data_net)
-    : this_node_name_(this_node_name), data_net_(data_net) {}
+Worker::Worker(
+    const std::string& this_node_name, Network* data_net,
+    const std::unordered_map<std::string, std::shared_ptr<GrpcRemoteWorker>>&
+        name2worker)
+    : this_node_name_(this_node_name),
+      data_net_(data_net),
+      name2worker_(name2worker) {}
 
 Worker::~Worker() {}
 
