@@ -53,9 +53,9 @@ class Runtime final {
     HandoutTasks(source_tasks);
     HandoutTasks(other_tasks);
     RuntimeCtx::Singleton()->mut_inactive_actor_cnt().WaitUntilCntEqualZero();
-    LOG(INFO) << "All actor on this machine are constructed";
+    LOG(INFO) << "All actor on this machine are activated";
     // OF_BARRIER();
-    LOG(INFO) << "All actor on all machine are constructed";
+    LOG(INFO) << "All actor on all machine are activated";
     // Network Swap Memory Message
     RuntimeCtx::Singleton()->mut_active_actor_cnt().Init("active_actor_cnt",
                                                          this_machine_task_num);
