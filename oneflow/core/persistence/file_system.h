@@ -13,8 +13,9 @@ enum Status {
   OK = 0,
   FAILED_PRECONDITION = 1,
   NOT_FOUND = 2,
-  PERMISSION_DENIED = 3,
-  UNIMPLEMENTED = 4,
+  ALREADY_EXISTS = 3,
+  PERMISSION_DENIED = 4,
+  UNIMPLEMENTED = 5,
 };
 
 class RandomAccessFile;
@@ -131,7 +132,7 @@ class FileSystem {
   //
   // The implementation in this class cleans up the path, removing
   // duplicate /'s, resolving .. and . (more details in
-  // tensorflow::lib::io::CleanPath).
+  // str_util.h CleanPath).
   virtual std::string TranslateName(const std::string& name) const;
 
   // Returns whether the given path is a directory or not.

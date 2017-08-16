@@ -57,6 +57,19 @@ std::string JoinPath(const T&... args) {
 // no "/" in the path, the result is the empty prefix of the input.
 std::string Dirname(const std::string& path);
 
+// Returns the part of the path after the final "/".  If there is no
+// "/" in the path, the result is the same as the input.
+std::string Basename(const std::string& path);
+
+// Collapse duplicate "/"s, resolve ".." and "." path elements, remove
+// trailing "/".
+//
+// NOTE: This respects relative vs. absolute paths, but does not
+// invoke any system calls (getcwd(2)) in order to resolve relative
+// paths with respect to the actual working directory.  That is, this is purely
+// string manipulation, completely independent of process state.
+std::string CleanPath(const std::string& path);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_STR_UTIL_H_
