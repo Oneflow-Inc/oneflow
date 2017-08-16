@@ -55,20 +55,14 @@ class GrpcServer : public ServerInterface {
 
  protected:
   ::tensorflow::Status Init();
-
-  virtual std::unique_ptr<Master> CreateMaster();
-
-  virtual std::unique_ptr<Worker> CreateWorker();
-
   void ParseServerDef();
-  void GetCtrlPlaneAddr();
+  virtual std::unique_ptr<Master> CreateMaster();
+  virtual std::unique_ptr<Worker> CreateWorker();
 
   // Returns the port to which this server is bound.
   // This method may only be called after `this->Init()` returns successfully.
   int bound_port() const { return bound_port_; }
-
   std::string bound_ip() const { return bound_ip_; }
-
   const ServerDef& server_def() const { return server_def_; }
 
  private:
@@ -81,8 +75,7 @@ class GrpcServer : public ServerInterface {
   // The port to which this server is bound.
   int bound_port_ = 0;
 
-  std::unordered_map<std::string, ClusterNode> name2node_def_;
-
+  // For data plane network
   NetworkTopology net_topo_;
   int64_t my_machine_id_;
   Network* data_net_;
@@ -115,6 +108,7 @@ class GrpcServer : public ServerInterface {
   std::thread worker_thread_;
   std::thread worker_do_thread_;
 
+  // CQ used for async request from master to workers
   ::grpc::CompletionQueue completion_queue_;
   std::thread async_request_done_thread_;
 
