@@ -26,7 +26,7 @@ class Network {
       std::function<void()> callback) = 0;
 
   virtual void Read(
-      const MemoryDescriptor& remote_memory_descriptor,  // TODO(shiyuan)
+      const MemoryDescriptor& remote_memory_descriptor,
       NetworkMemory* local_memory, std::function<void()> callback) = 0;
 
   // Poll a result from completion queue if have. Return true if get result,

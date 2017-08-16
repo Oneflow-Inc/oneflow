@@ -4,7 +4,7 @@
 
 namespace oneflow {
 
-typedef std::shared_ptr<ActorMsg> MsgPtr;  // TODO(shiyuan)
+typedef std::shared_ptr<ActorMsg> MsgPtr;
 
 enum NetworkMessageType {
   kBarrier = 0,
@@ -18,8 +18,7 @@ struct NetworkMessage {
   int64_t src_machine_id;
   int64_t dst_machine_id;
 
-  // Request/ack ActorMessage between send/recv actors for kReadOk or
-  // MSG_TYPE_ACK_CONSUMED TODO(shiyuan)
+  // Request/ack ActorMessage between send/recv actors for kReadOk
   ActorMsg actor_msg;
 
   // Optional for REMOTE_MEMORY_DESCRIPTOR message

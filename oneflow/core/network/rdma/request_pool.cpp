@@ -11,8 +11,6 @@ RequestPool::~RequestPool() {
     CHECK(elemt);
     ReleaseRequest(elemt);
   }
-  // There are also some registered_message in |msg_pool_|, however, which will
-  // be released in the desctructor of MessagePool.
 }
 
 Request* RequestPool::AllocRequest(bool is_send) {
@@ -27,11 +25,11 @@ Request* RequestPool::AllocRequest(bool is_send) {
 }
 
 void RequestPool::ReleaseRequest(Request* request) {
-  // Return the registered message to |msg_pool_|
   msg_pool_->Free(request->rdma_msg);
-  // Destroy the Request object
-  delete request;
-  request = nullptr;
+  if (request != nullptr) {
+    delete request;
+    request = nullptr;
+  }
 }
 
 }  // namespace oneflow
