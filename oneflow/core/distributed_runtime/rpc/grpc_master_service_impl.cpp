@@ -28,6 +28,8 @@ namespace oneflow {
 const char* GrpcMasterMethodName(GrpcMasterMethod id) {
   switch (id) {
     case GrpcMasterMethod::kSendJob: return "/oneflow.MasterService/SendJob";
+    case GrpcMasterMethod::kMasterConnectDataPlane:
+      return "/oneflow.MasterService/MasterConnectDataPlane";
     case GrpcMasterMethod::kMasterInitDataPlane:
       return "/oneflow.MasterService/MasterInitDataPlane";
   }
