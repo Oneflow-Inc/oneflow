@@ -18,8 +18,8 @@ placement_group {
   parallel_conf {
     policy: kDataParallel
     device_set {
-      device_name: "win-oneflow2:0-3"
-      device_name: "win-oneflow1:0-3"
+      device_name: "win-oneflow2:0-1"
+      device_name: "win-oneflow1:0-1"
     }
   }
 }
