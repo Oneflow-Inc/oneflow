@@ -136,7 +136,6 @@ int64_t EndpointManager::WaitForConnection(Connection* conn) {
   CHECK(SUCCEEDED(hr));
 
   hr = connector->GetPrivateData(&peer_machine_id, &size);
-  CHECK(SUCCEEDED(hr));
 
   conn->set_connector(connector);
 
