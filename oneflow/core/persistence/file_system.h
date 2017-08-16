@@ -3,9 +3,11 @@
 
 #include "oneflow/core/common/util.h"
 
-#ifdef PLATFORM_WINDOWS
+#if defined(_WIN32)
 #undef DeleteFile
 #endif
+
+#define STATUS_TO_STR(ENUM) std::string(#ENUM)
 
 namespace oneflow {
 
@@ -15,7 +17,8 @@ enum Status {
   NOT_FOUND = 2,
   ALREADY_EXISTS = 3,
   PERMISSION_DENIED = 4,
-  UNIMPLEMENTED = 5,
+  OUT_OF_RANGE = 5,
+  UNIMPLEMENTED = 6,
 };
 
 class RandomAccessFile;
@@ -23,7 +26,6 @@ class WritableFile;
 
 class FileSystem {
  public:
-  FileSystem() = default;
   virtual ~FileSystem() = default;
 
   // Creates a brand new random access read-only file with the
@@ -144,6 +146,9 @@ class FileSystem {
   //  * PERMISSION_DENIED - Insufficient permissions.
   //  * UNIMPLEMENTED - The file factory doesn't support directories.
   virtual Status IsDirectory(const std::string& fname) = 0;
+
+ protected:
+  FileSystem() = default;
 };
 
 // A file abstraction for randomly reading the contents of a file.
@@ -215,11 +220,13 @@ class WritableFile {
  private:
 };
 
-std::string StatusToString(Status s);
+// If `current_status` is OK, stores `new_status` into `current_status`.
+// If `current_status` is NOT OK, preserves the current status,
+void StatusUpdate(Status* current_status, const Status& new_status);
 
 // file system check status is ok
 #define FS_CHECK_OK(val) \
-  if (val != Status::OK) { LOG(FATAL) << StatusToString(val); }
+  if (val != Status::OK) { LOG(FATAL) << STATUS_TO_STR(val); }
 
 }  // namespace oneflow
 

@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class PosixFileSystem : public FileSystem {
+class PosixFileSystem final : public FileSystem {
  public:
   OF_DISALLOW_COPY_AND_MOVE(PosixFileSystem);
   PosixFileSystem() = default;

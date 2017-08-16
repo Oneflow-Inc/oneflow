@@ -3,20 +3,6 @@
 
 namespace oneflow {
 
-std::string StatusToString(Status s) {
-  std::string result;
-  switch (s) {
-    case Status::OK: result = "OK"; break;
-    case Status::FAILED_PRECONDITION: result = "Failed precondition"; break;
-    case Status::NOT_FOUND: result = "Already exists"; break;
-    case Status::ALREADY_EXISTS: result = "Not found"; break;
-    case Status::PERMISSION_DENIED: result = "Permission denied"; break;
-    case Status::UNIMPLEMENTED: result = "Unimplemented"; break;
-    default: result = "Unknown code " + std::to_string(s); break;
-  }
-  return result;
-}
-
 std::string FileSystem::TranslateName(const std::string& name) const {
   return CleanPath(name);
 }
@@ -66,8 +52,7 @@ Status FileSystem::DeleteRecursively(const std::string& dirname,
     std::vector<std::string> children;
     // GetChildren might fail if we don't have appropriate permissions.
     Status s = GetChildren(dir, &children);
-    // update ret
-    if (ret == Status::OK) { ret = s; }
+    StatusUpdate(&ret, s);
     if (s != Status::OK) {
       (*undeleted_dirs)++;
       continue;
@@ -81,8 +66,7 @@ Status FileSystem::DeleteRecursively(const std::string& dirname,
         // Delete file might fail because of permissions issues or might be
         // unimplemented.
         Status del_status = DeleteFile(child_path);
-        // update ret
-        if (ret == Status::OK) { ret = del_status; }
+        StatusUpdate(&ret, del_status);
         if (del_status != Status::OK) { (*undeleted_files)++; }
       }
     }
@@ -94,8 +78,7 @@ Status FileSystem::DeleteRecursively(const std::string& dirname,
     // Delete dir might fail because of permissions issues or might be
     // unimplemented.
     Status s = DeleteDir(dir);
-    // update ret
-    if (ret == Status::OK) { ret = s; }
+    StatusUpdate(&ret, s);
     if (s != Status::OK) { (*undeleted_dirs)++; }
   }
   return ret;
@@ -128,6 +111,10 @@ Status FileSystem::RecursivelyCreateDir(const std::string& dirname) {
     }
   }
   return Status::OK;
+}
+
+void StatusUpdate(Status* current_status, const Status& new_status) {
+  if (*current_status == Status::OK) { *current_status = new_status; }
 }
 
 }  // namespace oneflow

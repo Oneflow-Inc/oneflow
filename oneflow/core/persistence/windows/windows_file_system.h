@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class WindowsFileSystem : public FileSystem {
+class WindowsFileSystem final : public FileSystem {
  public:
   OF_DISALLOW_COPY_AND_MOVE(WindowsFileSystem);
   WindowsFileSystem() = default;
