@@ -34,15 +34,22 @@ void ConvolutionOp::InferShape4FwBlobs(
   int64_t kernel_size = 1;
   int64_t output_size = 1;
   std::vector<int64_t> output_shape_vec = {batch_size, c_o};
-  for (int64_t i = 0; i < input_shape_ptr->NumAxes() - 2; ++i) {
-    int64_t len = (input_shape_ptr->At(i + 2) + 2 * conv_conf.pad(i)
-                   - conv_conf.kernel_size(i))
-                      / conv_conf.stride(i)
+
+  int64_t h_len = (input_shape_ptr->At(2) + 2 * conv_conf.pad_h()
+                   - conv_conf.kernel_size_h())
+                      / conv_conf.stride_h()
                   + 1;
-    output_shape_vec.push_back(len);
-    kernel_size *= conv_conf.kernel_size(i);
-    output_size *= len;
-  }
+  output_shape_vec.push_back(h_len);
+  int64_t w_len = (input_shape_ptr->At(3) + 2 * conv_conf.pad_w()
+                   - conv_conf.kernel_size_w())
+                      / conv_conf.stride_w()
+                  + 1;
+  output_shape_vec.push_back(w_len);
+  kernel_size *= conv_conf.kernel_size_h();
+  kernel_size *= conv_conf.kernel_size_w();
+  output_size *= h_len;
+  output_size *= w_len;
+
   *output_shape_ptr = Shape(output_shape_vec);
   CHECK_EQ(output_shape_ptr->NumAxes(), input_shape_ptr->NumAxes());
   *colbuf_shape_ptr = Shape({batch_size, output_size, c_i * kernel_size});

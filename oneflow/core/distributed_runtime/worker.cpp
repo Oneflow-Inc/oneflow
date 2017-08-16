@@ -5,8 +5,8 @@
 
 namespace oneflow {
 
-Worker::Worker(const std::string& this_node_name)
-    : this_node_name_(this_node_name) {}
+Worker::Worker(const std::string& this_node_name, Network* data_net)
+    : this_node_name_(this_node_name), data_net_(data_net) {}
 
 Worker::~Worker() {}
 
@@ -17,10 +17,31 @@ Worker::~Worker() {}
   PrintProtoToString(request->plan(), &str_plan);
   LOG(INFO) << str_plan;
 
-  Plan plan = request->plan();
-  oneflow::runtime::Runtime::Singleton()->Run(plan, this_node_name_);
+  plan_ = request->plan();
+  // Plan plan = request->plan();
+  // oneflow::runtime::Runtime::Singleton()->Run(plan, this_node_name_);
 
   done(::tensorflow::Status());
   return ::tensorflow::Status::OK();
 }
+
+::tensorflow::Status Worker::WorkerConnectDataPlane(
+    WorkerConnectDataPlaneRequest* request,
+    WorkerConnectDataPlaneResponse* response, MyClosure done) {
+  data_net_->ConnectTopology();
+
+  done(::tensorflow::Status());
+  return ::tensorflow::Status::OK();
+}
+
+::tensorflow::Status Worker::WorkerInitDataPlane(
+    WorkerInitDataPlaneRequest* request, WorkerInitDataPlaneResponse* response,
+    MyClosure done) {
+  // data_net_->ConnectTopology();
+  LOG(INFO) << "Worker Init DataPlane done";
+
+  done(::tensorflow::Status());
+  return ::tensorflow::Status::OK();
+}
+
 }  // namespace oneflow

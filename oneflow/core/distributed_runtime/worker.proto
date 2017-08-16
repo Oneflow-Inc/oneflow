@@ -9,3 +9,15 @@ message SendPlanRequest {
 
 message SendPlanResponse {
 }
+
+message WorkerConnectDataPlaneRequest {
+}
+
+message WorkerConnectDataPlaneResponse {
+}
+
+message WorkerInitDataPlaneRequest {
+}
+
+message WorkerInitDataPlaneResponse {
+}

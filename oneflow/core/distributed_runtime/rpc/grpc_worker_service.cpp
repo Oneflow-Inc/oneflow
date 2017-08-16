@@ -63,6 +63,8 @@ void GrpcWorkerService::Shutdown() {
 
 void GrpcWorkerService::HandleRPCsLoop() {
   ENQUEUE_REQUEST(SendPlan, false);
+  ENQUEUE_REQUEST(WorkerConnectDataPlane, false);
+  ENQUEUE_REQUEST(WorkerInitDataPlane, false);
 
   void* tag;
   bool ok;
@@ -94,6 +96,31 @@ void GrpcWorkerService::SendPlanHandler(
                            });
   });
   ENQUEUE_REQUEST(SendPlan, true);
+}
+
+void GrpcWorkerService::WorkerConnectDataPlaneHandler(
+    WorkerCall<WorkerConnectDataPlaneRequest, WorkerConnectDataPlaneResponse>*
+        call) {
+  cpu_stream_->SendWork([this, call]() {
+    worker_impl_->WorkerConnectDataPlane(
+        &call->request, &call->response,
+        [call](const ::tensorflow::Status& status) {
+          call->SendResponse(ToGrpcStatus(status));
+        });
+  });
+  ENQUEUE_REQUEST(WorkerInitDataPlane, true);
+}
+
+void GrpcWorkerService::WorkerInitDataPlaneHandler(
+    WorkerCall<WorkerInitDataPlaneRequest, WorkerInitDataPlaneResponse>* call) {
+  cpu_stream_->SendWork([this, call]() {
+    worker_impl_->WorkerInitDataPlane(
+        &call->request, &call->response,
+        [call](const ::tensorflow::Status& status) {
+          call->SendResponse(ToGrpcStatus(status));
+        });
+  });
+  ENQUEUE_REQUEST(WorkerInitDataPlane, true);
 }
 
 #undef ENQUEUE_REQUEST

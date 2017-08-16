@@ -95,6 +95,14 @@ class GrpcWorkerService : public AsyncServiceInterface {
 
   void SendPlanHandler(WorkerCall<SendPlanRequest, SendPlanResponse>* call);
 
+  void WorkerConnectDataPlaneHandler(
+      WorkerCall<WorkerConnectDataPlaneRequest, WorkerConnectDataPlaneResponse>*
+          call);
+
+  void WorkerInitDataPlaneHandler(
+      WorkerCall<WorkerInitDataPlaneRequest, WorkerInitDataPlaneResponse>*
+          call);
+
   TF_DISALLOW_COPY_AND_ASSIGN(GrpcWorkerService);
 };
 AsyncServiceInterface* NewGrpcWorkerService(Worker* worker,

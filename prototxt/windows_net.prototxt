@@ -19,14 +19,14 @@ op {
     in: "mnist/feature"
     out: "out"
     out_num: 1
-    pad: 0
-    pad: 0
-    kernel_size: 5
-    kernel_size: 5
-    stride: 1
-    stride: 1
-    dilation: 1
-    dilation: 1
+    pad_h: 0
+    pad_w: 0
+    kernel_size_h: 5
+    kernel_size_w: 5
+    stride_h: 1
+    stride_w: 1
+    dilation_h: 1
+    dilation_w: 1
   }
 }
 

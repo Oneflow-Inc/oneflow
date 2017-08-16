@@ -68,7 +68,9 @@ GrpcServer::~GrpcServer() {
   CHECK_EQ(state_, NEW);
 
   ParseServerDef();
-  GetCtrlPlaneAddr();
+
+  data_net_ = GetRdmaInstance();
+  data_net_->InitOnly(my_machine_id_, net_topo_);
 
   std::string server_address =
       ::tensorflow::strings::StrCat(bound_ip_, ":", bound_port_);
@@ -99,18 +101,39 @@ void GrpcServer::ParseServerDef() {
     std::string node_name =
         server_def_.cluster_def().cluster_node(i).node_name();
     ClusterNode cluster_node = server_def_.cluster_def().cluster_node(i);
-    CHECK(
-        name2node_def_.insert(std::make_pair(node_name, cluster_node)).second);
-  }
-}
 
-void GrpcServer::GetCtrlPlaneAddr() {
-  auto node_it = name2node_def_.find(this_node_name_);
-  CHECK(node_it != name2node_def_.end());
-  bound_ip_ = node_it->second.ctrl_plane_addr().addr();
-  std::string port = node_it->second.ctrl_plane_addr().port();
-  if (!::tensorflow::strings::safe_strto32(port, &bound_port_)) {
-    LOG(FATAL) << "Could not parse port for local server from " << port;
+    int32_t ctrl_port_n;
+    std::string ctrl_port_str = cluster_node.ctrl_plane_addr().port();
+    if (!::tensorflow::strings::safe_strto32(ctrl_port_str, &ctrl_port_n)) {
+      LOG(FATAL) << "Could not parse port for local server from "
+                 << ctrl_port_str;
+    }
+
+    int32_t data_port_n;
+    std::string data_port_str = cluster_node.data_plane_addr().port();
+    if (!::tensorflow::strings::safe_strto32(data_port_str, &data_port_n)) {
+      LOG(FATAL) << "Could not parse port for local server from "
+                 << data_port_str;
+    }
+
+    if (node_name == this_node_name_) {
+      my_machine_id_ = i;
+      bound_ip_ = cluster_node.ctrl_plane_addr().addr();
+      bound_port_ = ctrl_port_n;
+    }
+    NetworkTopology::Node node;
+    node.machine_id = i;
+    node.address = cluster_node.data_plane_addr().addr();
+    node.port = data_port_n;
+    net_topo_.all_nodes.push_back(node);
+  }
+
+  for (auto& node : net_topo_.all_nodes) {
+    for (auto& neighbor : net_topo_.all_nodes) {
+      if (neighbor.machine_id != node.machine_id) {
+        node.neighbors.insert(neighbor.machine_id);
+      }
+    }
   }
 }
 
@@ -198,7 +221,7 @@ std::unique_ptr<Master> GrpcServer::CreateMaster() {
 }
 
 std::unique_ptr<Worker> GrpcServer::CreateWorker() {
-  return std::unique_ptr<Worker>(new Worker(this_node_name_));
+  return std::unique_ptr<Worker>(new Worker(this_node_name_, data_net_));
 }
 
 /* static */

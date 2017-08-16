@@ -28,6 +28,10 @@ namespace oneflow {
 const char* GrpcMasterMethodName(GrpcMasterMethod id) {
   switch (id) {
     case GrpcMasterMethod::kSendJob: return "/oneflow.MasterService/SendJob";
+    case GrpcMasterMethod::kMasterConnectDataPlane:
+      return "/oneflow.MasterService/MasterConnectDataPlane";
+    case GrpcMasterMethod::kMasterInitDataPlane:
+      return "/oneflow.MasterService/MasterInitDataPlane";
   }
 }  // GrpcMasterMethodName
 
@@ -43,12 +47,34 @@ MasterService::Stub::Stub(
     const std::shared_ptr<::grpc::ChannelInterface>& channel)
     : channel_(channel),
       rpcmethod_SendJob_(GrpcMasterMethodName(static_cast<GrpcMasterMethod>(0)),
-                         ::grpc::RpcMethod::NORMAL_RPC, channel) {}
+                         ::grpc::RpcMethod::NORMAL_RPC, channel),
+      rpcmethod_MasterConnectDataPlane_(
+          GrpcMasterMethodName(static_cast<GrpcMasterMethod>(1)),
+          ::grpc::RpcMethod::NORMAL_RPC, channel),
+      rpcmethod_MasterInitDataPlane_(
+          GrpcMasterMethodName(static_cast<GrpcMasterMethod>(2)),
+          ::grpc::RpcMethod::NORMAL_RPC, channel) {}
 
 ::grpc::Status MasterService::Stub::SendJob(::grpc::ClientContext* context,
                                             const SendJobRequest& request,
                                             SendJobResponse* response) {
   return ::grpc::BlockingUnaryCall(channel_.get(), rpcmethod_SendJob_, context,
+                                   request, response);
+}
+
+::grpc::Status MasterService::Stub::MasterConnectDataPlane(
+    ::grpc::ClientContext* context,
+    const MasterConnectDataPlaneRequest& request,
+    MasterConnectDataPlaneResponse* response) {
+  return ::grpc::BlockingUnaryCall(channel_.get(),
+                                   rpcmethod_MasterConnectDataPlane_, context,
+                                   request, response);
+}
+::grpc::Status MasterService::Stub::MasterInitDataPlane(
+    ::grpc::ClientContext* context, const MasterInitDataPlaneRequest& request,
+    MasterInitDataPlaneResponse* response) {
+  return ::grpc::BlockingUnaryCall(channel_.get(),
+                                   rpcmethod_MasterInitDataPlane_, context,
                                    request, response);
 }
 

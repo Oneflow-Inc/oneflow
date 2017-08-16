@@ -49,8 +49,8 @@ class Kernel {
   const Operator* op() const { return op_.get(); }
 
   virtual void InitModelBlobsWithSnapshot(
-      const KernelCtx& ctx, ParallelPolicy policy, int64_t parallel_id,
-      int64_t parallel_num, const Snapshot*,
+      const KernelCtx& ctx, int32_t part_id, int32_t part_num,
+      const Snapshot* snapshot,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNEXPECTED_RUN();
   }

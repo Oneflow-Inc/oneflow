@@ -95,6 +95,14 @@ class GrpcMasterService : public AsyncServiceInterface {
 
   void SendJobHandler(MasterCall<SendJobRequest, SendJobResponse>* call);
 
+  void MasterConnectDataPlaneHandler(
+      MasterCall<MasterConnectDataPlaneRequest, MasterConnectDataPlaneResponse>*
+          call);
+
+  void MasterInitDataPlaneHandler(
+      MasterCall<MasterInitDataPlaneRequest, MasterInitDataPlaneResponse>*
+          call);
+
   TF_DISALLOW_COPY_AND_ASSIGN(GrpcMasterService);
 };
 AsyncServiceInterface* NewGrpcMasterService(Master* master,

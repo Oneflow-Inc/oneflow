@@ -35,7 +35,11 @@ class GrpcRemoteWorker : public WorkerInterface {
       : stub_(grpc::WorkerService::NewStub(client_channel)),
         channel_(client_channel),
         cq_(completion_queue),
-        sendplan_(Method(GrpcWorkerMethod::kSendPlan)) {}
+        sendplan_(Method(GrpcWorkerMethod::kSendPlan)),
+        worker_connect_data_plane_(
+            Method(GrpcWorkerMethod::kWorkerConnectDataPlane)),
+        worker_init_data_plane_(
+            Method(GrpcWorkerMethod::kWorkerInitDataPlane)) {}
 
   ~GrpcRemoteWorker() {}
 
@@ -43,6 +47,22 @@ class GrpcRemoteWorker : public WorkerInterface {
                                 SendPlanResponse* response) override;
   void SendPlanAsync(const SendPlanRequest* request, SendPlanResponse* response,
                      ::tensorflow::StatusCallback done) override;
+
+  ::tensorflow::Status WorkerConnectDataPlane(
+      const WorkerConnectDataPlaneRequest* request,
+      WorkerConnectDataPlaneResponse* response) override;
+
+  void WorkerConnectDataPlaneAsync(const WorkerConnectDataPlaneRequest* request,
+                                   WorkerConnectDataPlaneResponse* response,
+                                   ::tensorflow::StatusCallback done) override;
+
+  ::tensorflow::Status WorkerInitDataPlane(
+      const WorkerInitDataPlaneRequest* request,
+      WorkerInitDataPlaneResponse* response) override;
+
+  void WorkerInitDataPlaneAsync(const WorkerInitDataPlaneRequest* request,
+                                WorkerInitDataPlaneResponse* response,
+                                ::tensorflow::StatusCallback done) override;
 
  private:
   std::unique_ptr<grpc::WorkerService::Stub> stub_;
@@ -114,6 +134,8 @@ class GrpcRemoteWorker : public WorkerInterface {
   ::grpc::CompletionQueue* cq_;
 
   const ::grpc::RpcMethod sendplan_;
+  const ::grpc::RpcMethod worker_connect_data_plane_;
+  const ::grpc::RpcMethod worker_init_data_plane_;
 };  // GrpcRemoteWorker
 
 }  // namespace oneflow

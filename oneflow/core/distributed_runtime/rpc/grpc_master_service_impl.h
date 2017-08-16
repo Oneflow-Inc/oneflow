@@ -39,10 +39,12 @@ namespace oneflow {
 
 enum class GrpcMasterMethod {
   kSendJob,
+  kMasterConnectDataPlane,
+  kMasterInitDataPlane,
 };
 
 static const int32_t kGrpcNumMasterMethods =
-    static_cast<int32_t>(GrpcMasterMethod::kSendJob) + 1;
+    static_cast<int32_t>(GrpcMasterMethod::kMasterInitDataPlane) + 1;
 
 const char* GrpcMasterMethodName(GrpcMasterMethod id);
 
@@ -56,6 +58,14 @@ class MasterService GRPC_FINAL {
     virtual ::grpc::Status SendJob(::grpc::ClientContext* context,
                                    const SendJobRequest& request,
                                    SendJobResponse* response) = 0;
+    virtual ::grpc::Status MasterConnectDataPlane(
+        ::grpc::ClientContext* context,
+        const MasterConnectDataPlaneRequest& request,
+        MasterConnectDataPlaneResponse* response) = 0;
+    virtual ::grpc::Status MasterInitDataPlane(
+        ::grpc::ClientContext* context,
+        const MasterInitDataPlaneRequest& request,
+        MasterInitDataPlaneResponse* response) = 0;
   };  // Stubinterface
   class Stub GRPC_FINAL : public StubInterface {
    public:
@@ -63,10 +73,20 @@ class MasterService GRPC_FINAL {
     ::grpc::Status SendJob(::grpc::ClientContext* context,
                            const SendJobRequest& request,
                            SendJobResponse* response) GRPC_OVERRIDE;
+    ::grpc::Status MasterConnectDataPlane(
+        ::grpc::ClientContext* context,
+        const MasterConnectDataPlaneRequest& request,
+        MasterConnectDataPlaneResponse* response) GRPC_OVERRIDE;
+    ::grpc::Status MasterInitDataPlane(
+        ::grpc::ClientContext* context,
+        const MasterInitDataPlaneRequest& request,
+        MasterInitDataPlaneResponse* response) GRPC_OVERRIDE;
 
    private:
     std::shared_ptr<::grpc::ChannelInterface> channel_;
     const ::grpc::RpcMethod rpcmethod_SendJob_;
+    const ::grpc::RpcMethod rpcmethod_MasterConnectDataPlane_;
+    const ::grpc::RpcMethod rpcmethod_MasterInitDataPlane_;
   };  // Stub
 
   static std::unique_ptr<Stub> NewStub(

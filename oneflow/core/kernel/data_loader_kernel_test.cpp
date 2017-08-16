@@ -1,9 +1,8 @@
 #include "oneflow/core/kernel/data_loader_kernel.h"
 #include "oneflow/core/common/process_state.h"
+#include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/kernel/kernel_test_common.h"
-#include "tensorflow/core/lib/io/path.h"
-#include "tensorflow/core/lib/strings/str_util.h"
 
 namespace oneflow {
 
@@ -65,12 +64,11 @@ void TestDataLoaderKernel() {
   KTCommon::BuildKernelCtx(&ctx);
 
   std::string current_dir = GetCwd();
-  current_dir =
-      tensorflow::str_util::StringReplace(current_dir, "\\", "/", true);
+  StringReplace(&current_dir, '\\', '/');
   std::string data_loader_root_dir =
-      tensorflow::io::JoinPath(current_dir, "/data_loader_test_tmp_dir");
+      JoinPath(current_dir, "/data_loader_test_tmp_dir");
   TF_CHECK_OK(tensorflow::Env::Default()->CreateDir(data_loader_root_dir));
-  std::string filepath = tensorflow::io::JoinPath(current_dir, "/tmp_file");
+  std::string filepath = JoinPath(current_dir, "/tmp_file");
   InitFile(filepath);
   RuntimeCtx::Singleton()->InitDataReader(filepath);
 

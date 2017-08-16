@@ -149,9 +149,7 @@ Request* EndpointManager::PollRecvQueue(NetworkResult* result) {
   uint32_t len = recv_cq_->GetResults(&nd2_result, 1);
   if (len == 0) return nullptr;
 
-  if (nd2_result.Status != ND_SUCCESS) {
-    return nullptr;
-  }
+  if (nd2_result.Status != ND_SUCCESS) { return nullptr; }
 
   result->type = NetworkResultType::kReceiveMsg;
   return reinterpret_cast<Request*>(nd2_result.RequestContext);
@@ -162,9 +160,7 @@ Request* EndpointManager::PollSendQueue(NetworkResult* result) {
   uint32_t len = send_cq_->GetResults(&nd2_result, 1);
   if (len == 0) return nullptr;
 
-  if (nd2_result.Status != ND_SUCCESS) {
-    return nullptr;
-  }
+  if (nd2_result.Status != ND_SUCCESS) { return nullptr; }
 
   switch (nd2_result.RequestType) {
     case ND2_REQUEST_TYPE::Nd2RequestTypeSend: {

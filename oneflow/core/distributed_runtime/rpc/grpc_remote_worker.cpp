@@ -32,4 +32,32 @@ void GrpcRemoteWorker::SendPlanAsync(const SendPlanRequest* request,
   IssueRequest(request, response, sendplan_, std::move(done));
 }
 
+::tensorflow::Status GrpcRemoteWorker::WorkerConnectDataPlane(
+    const WorkerConnectDataPlaneRequest* request,
+    WorkerConnectDataPlaneResponse* response) {
+  ::grpc::ClientContext ctx;
+  return FromGrpcStatus(
+      stub_->WorkerConnectDataPlane(&ctx, *request, response));
+}
+
+void GrpcRemoteWorker::WorkerConnectDataPlaneAsync(
+    const WorkerConnectDataPlaneRequest* request,
+    WorkerConnectDataPlaneResponse* response,
+    ::tensorflow::StatusCallback done) {
+  IssueRequest(request, response, worker_connect_data_plane_, std::move(done));
+}
+
+::tensorflow::Status GrpcRemoteWorker::WorkerInitDataPlane(
+    const WorkerInitDataPlaneRequest* request,
+    WorkerInitDataPlaneResponse* response) {
+  ::grpc::ClientContext ctx;
+  return FromGrpcStatus(stub_->WorkerInitDataPlane(&ctx, *request, response));
+}
+
+void GrpcRemoteWorker::WorkerInitDataPlaneAsync(
+    const WorkerInitDataPlaneRequest* request,
+    WorkerInitDataPlaneResponse* response, ::tensorflow::StatusCallback done) {
+  IssueRequest(request, response, worker_init_data_plane_, std::move(done));
+}
+
 }  // namespace oneflow

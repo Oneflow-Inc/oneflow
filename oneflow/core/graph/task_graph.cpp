@@ -261,7 +261,7 @@ void TaskGraph::GenerateRelatedBpNodes(std::vector<TaskNode*>* loss_node_vec) {
         loss_node_vec->push_back(task_node);
         return;
       }
-      if (comp_task_node->chain_node()->IsLogNode()) { return; }
+      if (comp_task_node->chain_node()->IsRecordNode()) { return; }
       if (comp_task_node->chain_node()->HasOpWithModelOrModelTmpBlob()) {
         EnrollNode(comp_task_node->BuildAndConnectBpNode());
         return;

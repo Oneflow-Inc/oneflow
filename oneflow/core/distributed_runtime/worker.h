@@ -2,13 +2,15 @@
 #define ONEFLOW_CORE_DISTRIBUTED_RUNTIME_WORKER_H_
 
 #include "oneflow/core/distributed_runtime/worker.pb.h"
+#include "oneflow/core/job/plan.pb.h"
+#include "oneflow/core/network/network.h"
 #include "tensorflow/core/lib/core/status.h"
 
 namespace oneflow {
 
 class Worker {
  public:
-  Worker(const std::string& this_node_name);
+  Worker(const std::string& this_node_name, Network* data_net);
   ~Worker();
 
   // Convenient typedef for a closure passing a Status
@@ -17,8 +19,18 @@ class Worker {
   ::tensorflow::Status SendPlan(SendPlanRequest* request,
                                 SendPlanResponse* response, MyClosure done);
 
+  ::tensorflow::Status WorkerConnectDataPlane(
+      WorkerConnectDataPlaneRequest* request,
+      WorkerConnectDataPlaneResponse* response, MyClosure done);
+
+  ::tensorflow::Status WorkerInitDataPlane(
+      WorkerInitDataPlaneRequest* request,
+      WorkerInitDataPlaneResponse* response, MyClosure done);
+
  private:
   std::string this_node_name_;
+  Plan plan_;
+  Network* data_net_;
 };  // Worker
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_DISTRIBUTED_RUNTIME_WORKER_H_

@@ -46,9 +46,7 @@ bool Connection::TryConnectTo(const std::string& peer_ip, int32_t peer_port) {
                         // tell the passive side who is the sender.
       sizeof(int64_t), ov_);
 
-  if (hr == ND_PENDING) {
-    hr = connector_->GetOverlappedResult(ov_, TRUE);
-  }
+  if (hr == ND_PENDING) { hr = connector_->GetOverlappedResult(ov_, TRUE); }
 
   if (SUCCEEDED(hr)) {
     return true;

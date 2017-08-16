@@ -10,6 +10,6 @@ machine {
   name: "win-oneflow1"
 }
 
-device_num_per_machine: 4
+device_num_per_machine: 2
 
 device_type: kCPU

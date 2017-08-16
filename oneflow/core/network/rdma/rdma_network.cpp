@@ -3,13 +3,16 @@
 namespace oneflow {
 
 RdmaNetwork::RdmaNetwork()
-    : my_machine_id_(-1), port_(-1), endpoint_manager_(nullptr),
-      request_pool_(nullptr), connection_pool_(nullptr) {}
+    : my_machine_id_(-1),
+      port_(-1),
+      endpoint_manager_(nullptr),
+      request_pool_(nullptr),
+      connection_pool_(nullptr) {}
 
 RdmaNetwork::~RdmaNetwork() {
   connection_pool_.reset(nullptr);
   request_pool_.reset(nullptr);
-  
+
   for (auto& rdma_memory : rdma_memory_vector_) {
     if (rdma_memory != nullptr) {
       delete rdma_memory;
@@ -32,9 +35,22 @@ void RdmaNetwork::Init(int64_t my_machine_id, const NetworkTopology& net_topo) {
   EstablishConnection();
 }
 
+void RdmaNetwork::InitOnly(int64_t my_machine_id,
+                           const NetworkTopology& net_topo) {
+  net_topo_ = net_topo;
+  my_machine_id_ = my_machine_id;
+  port_ = net_topo.all_nodes[my_machine_id].port;
+  endpoint_manager_.reset(new EndpointManager());
+  endpoint_manager_->Init(net_topo.all_nodes[my_machine_id].address.c_str(),
+                          port_);
+  request_pool_.reset(new RequestPool());
+  connection_pool_.reset(new ConnectionPool());
+}
+
+void RdmaNetwork::ConnectTopology() { EstablishConnection(); }
+
 NetworkMemory* RdmaNetwork::RegisterMemory(void* dptr, size_t len) {
-  NetworkMemory* net_memory =
-      endpoint_manager_->NewNetworkMemory();
+  NetworkMemory* net_memory = endpoint_manager_->NewNetworkMemory();
   net_memory->Reset(dptr, len);
   net_memory->Register();
   rdma_memory_vector_.push_back(static_cast<RdmaMemory*>(net_memory));
@@ -74,8 +90,7 @@ void RdmaNetwork::Read(const MemoryDescriptor& remote_memory_descriptor,
   RdmaMemory* dst_memory = static_cast<RdmaMemory*>(local_memory);
   CHECK(dst_memory);
 
-  conn->PostReadRequest(*read_request, remote_memory_descriptor,
-                        dst_memory);
+  conn->PostReadRequest(*read_request, remote_memory_descriptor, dst_memory);
 }
 
 bool RdmaNetwork::Poll(NetworkResult* result) {
@@ -162,7 +177,7 @@ Connection* RdmaNetwork::NewConnection() {
 
   endpoint_manager_->CreateConnector(conn);
   endpoint_manager_->CreateQueuePair(conn);
-  
+
   return conn;
 }
 

@@ -24,8 +24,8 @@ class Operator {
   virtual void InitFromOpConf(const OperatorConf& op_conf) = 0;
   virtual bool IsElemWise() const { return false; }
   virtual bool IsLossOp() const { return false; }
-  virtual bool IsLogOp() const { return false; }
-  bool IsChainMergeable() const { return !IsLossOp() && !IsLogOp(); }
+  virtual bool IsRecordOp() const { return false; }
+  bool IsChainMergeable() const { return !IsLossOp() && !IsRecordOp(); }
 
   // this <-> OpProto
   void InitFromProto(const OperatorProto& operatorproto);

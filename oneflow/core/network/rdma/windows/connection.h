@@ -5,7 +5,6 @@
 #include <sal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string>
 #include <tchar.h>
 #include <cstdint>
 #include <new>

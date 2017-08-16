@@ -36,6 +36,14 @@ class GrpcRemoteMaster : public MasterInterface {
   ::tensorflow::Status SendJob(const SendJobRequest* request,
                                SendJobResponse* response) override;
 
+  ::tensorflow::Status MasterConnectDataPlane(
+      const MasterConnectDataPlaneRequest* request,
+      MasterConnectDataPlaneResponse* response) override;
+
+  ::tensorflow::Status MasterInitDataPlane(
+      const MasterInitDataPlaneRequest* request,
+      MasterInitDataPlaneResponse* response) override;
+
  private:
   std::unique_ptr<grpc::MasterService::Stub> stub_;
 };  // GrpcRemoteMaster
