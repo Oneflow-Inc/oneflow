@@ -19,6 +19,10 @@ class Worker {
   ::tensorflow::Status SendPlan(SendPlanRequest* request,
                                 SendPlanResponse* response, MyClosure done);
 
+  ::tensorflow::Status WorkerConnectDataPlane(
+      WorkerConnectDataPlaneRequest* request,
+      WorkerConnectDataPlaneResponse* response, MyClosure done);
+
   ::tensorflow::Status WorkerInitDataPlane(
       WorkerInitDataPlaneRequest* request,
       WorkerInitDataPlaneResponse* response, MyClosure done);

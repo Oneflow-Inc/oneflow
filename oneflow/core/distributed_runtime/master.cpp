@@ -60,37 +60,60 @@ Master::~Master() {}
   ::oneflow::compiler::Compiler::Singleton()->Compile(job_desc,
                                                       response->mutable_plan());
 
-  // std::string str_plan;
-  // PrintProtoToString(response->plan(), &str_plan);
-  // LOG(INFO) << str_plan;
-
-  // for (auto& pair : name2worker_) {
-  //  struct Call {
-  //    SendPlanRequest plan_req;
-  //    SendPlanResponse plan_resp;
-  //  };
-  //  Call* call = new Call;
-  //  *(call->plan_req.mutable_plan()) = response->plan();
-
-  //  auto cb = [call](const ::tensorflow::Status& s) {
-  //    if (s.ok()) {
-  //      LOG(INFO) << "SendPlan RPC succeeds";
-  //    } else {
-  //      LOG(INFO) << "SendPlan RPC fails";
-  //    }
-  //    delete call;
-  //  };
-  //  pair.second->SendPlanAsync(&call->plan_req, &call->plan_resp, cb);
-  //}
+  ::tensorflow::BlockingCounter blocking_counter(name2worker_.size());
 
   for (auto& pair : name2worker_) {
-    SendPlanRequest plan_req;
-    SendPlanResponse plan_resp;
-    *(plan_req.mutable_plan()) = response->plan();
-    ::tensorflow::Status s = pair.second->SendPlan(&plan_req, &plan_resp);
-    CHECK(s.ok());
+    struct Call {
+      SendPlanRequest plan_req;
+      SendPlanResponse plan_resp;
+    };
+    Call* call = new Call;
+    *(call->plan_req.mutable_plan()) = response->plan();
+
+    auto cb = [call, &blocking_counter, &pair](const ::tensorflow::Status& s) {
+      if (s.ok()) {
+        LOG(INFO) << "SendPlan RPC succeeds";
+        blocking_counter.DecrementCount();
+      } else {
+        LOG(FATAL) << "SendPlan RPC fails: " << pair.first;
+      }
+      delete call;
+    };
+    pair.second->SendPlanAsync(&call->plan_req, &call->plan_resp, cb);
   }
 
+  blocking_counter.Wait();
+
+  done(::tensorflow::Status());
+  return ::tensorflow::Status::OK();
+}
+
+::tensorflow::Status Master::MasterConnectDataPlane(
+    MasterConnectDataPlaneRequest* request,
+    MasterConnectDataPlaneResponse* response, MyClosure done) {
+  ::tensorflow::BlockingCounter blocking_counter(name2worker_.size());
+
+  for (auto& pair : name2worker_) {
+    struct Call {
+      WorkerConnectDataPlaneRequest connect_dp_req;
+      WorkerConnectDataPlaneResponse connect_dp_resp;
+    };
+    Call* call = new Call;
+
+    auto cb = [call, &blocking_counter, &pair](const ::tensorflow::Status& s) {
+      if (s.ok()) {
+        LOG(INFO) << "Worker Connect Dataplane RPC succeeds";
+        blocking_counter.DecrementCount();
+      } else {
+        LOG(FATAL) << "Worker Connect Dataplane RPC fails" << pair.first;
+      }
+      delete call;
+    };
+    pair.second->WorkerConnectDataPlaneAsync(&call->connect_dp_req,
+                                             &call->connect_dp_resp, cb);
+  }
+
+  blocking_counter.Wait();
   done(::tensorflow::Status());
   return ::tensorflow::Status::OK();
 }
@@ -98,15 +121,6 @@ Master::~Master() {}
 ::tensorflow::Status Master::MasterInitDataPlane(
     MasterInitDataPlaneRequest* request, MasterInitDataPlaneResponse* response,
     MyClosure done) {
-  // Synchronous RPC call
-  // for (auto& pair : name2worker_) {
-  //  WorkerInitDataPlaneRequest init_dp_req;
-  //  WorkerInitDataPlaneResponse init_dp_resp;
-  //  ::tensorflow::Status s =
-  //      pair.second->WorkerInitDataPlane(&init_dp_req, &init_dp_resp);
-  //  CHECK(s.ok());
-  //}
-
   ::tensorflow::BlockingCounter blocking_counter(name2worker_.size());
 
   for (auto& pair : name2worker_) {
@@ -116,13 +130,12 @@ Master::~Master() {}
     };
     Call* call = new Call;
 
-    auto cb = [call, &blocking_counter](const ::tensorflow::Status& s) {
+    auto cb = [call, &blocking_counter, &pair](const ::tensorflow::Status& s) {
       if (s.ok()) {
         LOG(INFO) << "Worker Init Dataplane RPC succeeds";
         blocking_counter.DecrementCount();
       } else {
-        // NOTE(jiyuan): What if fails?
-        LOG(INFO) << "Worker Init Dataplane RPC fails";
+        LOG(FATAL) << "Worker Init Dataplane RPC fails" << pair.first;
       }
       delete call;
     };

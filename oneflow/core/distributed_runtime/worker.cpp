@@ -25,10 +25,20 @@ Worker::~Worker() {}
   return ::tensorflow::Status::OK();
 }
 
+::tensorflow::Status Worker::WorkerConnectDataPlane(
+    WorkerConnectDataPlaneRequest* request,
+    WorkerConnectDataPlaneResponse* response, MyClosure done) {
+  data_net_->ConnectTopology();
+
+  done(::tensorflow::Status());
+  return ::tensorflow::Status::OK();
+}
+
 ::tensorflow::Status Worker::WorkerInitDataPlane(
     WorkerInitDataPlaneRequest* request, WorkerInitDataPlaneResponse* response,
     MyClosure done) {
-  data_net_->ConnectTopology();
+  // data_net_->ConnectTopology();
+  LOG(INFO) << "Worker Init DataPlane done";
 
   done(::tensorflow::Status());
   return ::tensorflow::Status::OK();

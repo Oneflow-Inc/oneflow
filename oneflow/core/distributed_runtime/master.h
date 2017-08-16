@@ -20,6 +20,10 @@ class Master {
   ::tensorflow::Status SendJob(SendJobRequest* request,
                                SendJobResponse* response, MyClosure done);
 
+  ::tensorflow::Status MasterConnectDataPlane(
+      MasterConnectDataPlaneRequest* request,
+      MasterConnectDataPlaneResponse* response, MyClosure done);
+
   ::tensorflow::Status MasterInitDataPlane(
       MasterInitDataPlaneRequest* request,
       MasterInitDataPlaneResponse* response, MyClosure done);

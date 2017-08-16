@@ -26,6 +26,14 @@ namespace oneflow {
   return FromGrpcStatus(stub_->SendJob(&ctx, *request, response));
 }
 
+::tensorflow::Status GrpcRemoteMaster::MasterConnectDataPlane(
+    const MasterConnectDataPlaneRequest* request,
+    MasterConnectDataPlaneResponse* response) {
+  ::grpc::ClientContext ctx;
+  return FromGrpcStatus(
+      stub_->MasterConnectDataPlane(&ctx, *request, response));
+}
+
 ::tensorflow::Status GrpcRemoteMaster::MasterInitDataPlane(
     const MasterInitDataPlaneRequest* request,
     MasterInitDataPlaneResponse* response) {

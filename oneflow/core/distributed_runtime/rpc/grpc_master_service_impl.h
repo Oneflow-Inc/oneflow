@@ -39,6 +39,7 @@ namespace oneflow {
 
 enum class GrpcMasterMethod {
   kSendJob,
+  kMasterConnectDataPlane,
   kMasterInitDataPlane,
 };
 
@@ -57,6 +58,10 @@ class MasterService GRPC_FINAL {
     virtual ::grpc::Status SendJob(::grpc::ClientContext* context,
                                    const SendJobRequest& request,
                                    SendJobResponse* response) = 0;
+    virtual ::grpc::Status MasterConnectDataPlane(
+        ::grpc::ClientContext* context,
+        const MasterConnectDataPlaneRequest& request,
+        MasterConnectDataPlaneResponse* response) = 0;
     virtual ::grpc::Status MasterInitDataPlane(
         ::grpc::ClientContext* context,
         const MasterInitDataPlaneRequest& request,
@@ -68,6 +73,10 @@ class MasterService GRPC_FINAL {
     ::grpc::Status SendJob(::grpc::ClientContext* context,
                            const SendJobRequest& request,
                            SendJobResponse* response) GRPC_OVERRIDE;
+    ::grpc::Status MasterConnectDataPlane(
+        ::grpc::ClientContext* context,
+        const MasterConnectDataPlaneRequest& request,
+        MasterConnectDataPlaneResponse* response) GRPC_OVERRIDE;
     ::grpc::Status MasterInitDataPlane(
         ::grpc::ClientContext* context,
         const MasterInitDataPlaneRequest& request,
@@ -76,6 +85,7 @@ class MasterService GRPC_FINAL {
    private:
     std::shared_ptr<::grpc::ChannelInterface> channel_;
     const ::grpc::RpcMethod rpcmethod_SendJob_;
+    const ::grpc::RpcMethod rpcmethod_MasterConnectDataPlane_;
     const ::grpc::RpcMethod rpcmethod_MasterInitDataPlane_;
   };  // Stub
 

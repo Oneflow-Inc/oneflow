@@ -26,6 +26,7 @@ namespace oneflow {
 
 enum class GrpcWorkerMethod {
   kSendPlan,
+  kWorkerConnectDataPlane,
   kWorkerInitDataPlane,
 };
 static const int kGrpcNumWorkerMethods =
@@ -43,6 +44,10 @@ class WorkerService GRPC_FINAL {
     virtual ::grpc::Status SendPlan(::grpc::ClientContext* context,
                                     const SendPlanRequest& request,
                                     SendPlanResponse* response) = 0;
+    virtual ::grpc::Status WorkerConnectDataPlane(
+        ::grpc::ClientContext* context,
+        const WorkerConnectDataPlaneRequest& request,
+        WorkerConnectDataPlaneResponse* response) = 0;
     virtual ::grpc::Status WorkerInitDataPlane(
         ::grpc::ClientContext* context,
         const WorkerInitDataPlaneRequest& request,
@@ -57,6 +62,11 @@ class WorkerService GRPC_FINAL {
                             const SendPlanRequest& request,
                             SendPlanResponse* response) GRPC_OVERRIDE;
 
+    ::grpc::Status WorkerConnectDataPlane(
+        ::grpc::ClientContext* context,
+        const WorkerConnectDataPlaneRequest& request,
+        WorkerConnectDataPlaneResponse* response) GRPC_OVERRIDE;
+
     ::grpc::Status WorkerInitDataPlane(
         ::grpc::ClientContext* context,
         const WorkerInitDataPlaneRequest& request,
@@ -65,6 +75,7 @@ class WorkerService GRPC_FINAL {
    private:
     std::shared_ptr<::grpc::ChannelInterface> channel_;
     const ::grpc::RpcMethod rpcmethod_SendPlan_;
+    const ::grpc::RpcMethod rpcmethod_WorkerConnectDataPlane_;
     const ::grpc::RpcMethod rpcmethod_WorkerInitDataPlane_;
   };  // class Stub
 

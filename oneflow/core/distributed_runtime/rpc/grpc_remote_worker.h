@@ -36,6 +36,8 @@ class GrpcRemoteWorker : public WorkerInterface {
         channel_(client_channel),
         cq_(completion_queue),
         sendplan_(Method(GrpcWorkerMethod::kSendPlan)),
+        worker_connect_data_plane_(
+            Method(GrpcWorkerMethod::kWorkerConnectDataPlane)),
         worker_init_data_plane_(
             Method(GrpcWorkerMethod::kWorkerInitDataPlane)) {}
 
@@ -45,6 +47,14 @@ class GrpcRemoteWorker : public WorkerInterface {
                                 SendPlanResponse* response) override;
   void SendPlanAsync(const SendPlanRequest* request, SendPlanResponse* response,
                      ::tensorflow::StatusCallback done) override;
+
+  ::tensorflow::Status WorkerConnectDataPlane(
+      const WorkerConnectDataPlaneRequest* request,
+      WorkerConnectDataPlaneResponse* response) override;
+
+  void WorkerConnectDataPlaneAsync(const WorkerConnectDataPlaneRequest* request,
+                                   WorkerConnectDataPlaneResponse* response,
+                                   ::tensorflow::StatusCallback done) override;
 
   ::tensorflow::Status WorkerInitDataPlane(
       const WorkerInitDataPlaneRequest* request,
@@ -124,6 +134,7 @@ class GrpcRemoteWorker : public WorkerInterface {
   ::grpc::CompletionQueue* cq_;
 
   const ::grpc::RpcMethod sendplan_;
+  const ::grpc::RpcMethod worker_connect_data_plane_;
   const ::grpc::RpcMethod worker_init_data_plane_;
 };  // GrpcRemoteWorker
 

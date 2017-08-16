@@ -63,6 +63,7 @@ void GrpcMasterService::Shutdown() {
 
 void GrpcMasterService::HandleRPCsLoop() {
   ENQUEUE_REQUEST(SendJob, false);
+  ENQUEUE_REQUEST(MasterConnectDataPlane, false);
   ENQUEUE_REQUEST(MasterInitDataPlane, false);
 
   void* tag;
@@ -95,6 +96,19 @@ void GrpcMasterService::SendJobHandler(
                           });
   });
   ENQUEUE_REQUEST(SendJob, true);
+}
+
+void GrpcMasterService::MasterConnectDataPlaneHandler(
+    MasterCall<MasterConnectDataPlaneRequest, MasterConnectDataPlaneResponse>*
+        call) {
+  cpu_stream_->SendWork([this, call]() {
+    master_impl_->MasterConnectDataPlane(
+        &call->request, &call->response,
+        [call](const ::tensorflow::Status& status) {
+          call->SendResponse(ToGrpcStatus(status));
+        });
+  });
+  ENQUEUE_REQUEST(MasterConnectDataPlane, true);
 }
 
 void GrpcMasterService::MasterInitDataPlaneHandler(

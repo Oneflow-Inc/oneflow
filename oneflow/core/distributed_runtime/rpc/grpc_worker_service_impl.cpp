@@ -14,6 +14,8 @@ namespace oneflow {
 const char* GrpcWorkerMethodName(GrpcWorkerMethod id) {
   switch (id) {
     case GrpcWorkerMethod::kSendPlan: return "/oneflow.WorkerService/SendPlan";
+    case GrpcWorkerMethod::kWorkerConnectDataPlane:
+      return "/oneflow.WorkerService/WorkerConnectDataPlane";
     case GrpcWorkerMethod::kWorkerInitDataPlane:
       return "/oneflow.WorkerService/WorkerInitDataPlane";
   }
@@ -34,14 +36,26 @@ WorkerService::Stub::Stub(
       rpcmethod_SendPlan_(
           GrpcWorkerMethodName(static_cast<GrpcWorkerMethod>(0)),
           ::grpc::RpcMethod::NORMAL_RPC, channel),
-      rpcmethod_WorkerInitDataPlane_(
+      rpcmethod_WorkerConnectDataPlane_(
           GrpcWorkerMethodName(static_cast<GrpcWorkerMethod>(1)),
+          ::grpc::RpcMethod::NORMAL_RPC, channel),
+      rpcmethod_WorkerInitDataPlane_(
+          GrpcWorkerMethodName(static_cast<GrpcWorkerMethod>(2)),
           ::grpc::RpcMethod::NORMAL_RPC, channel) {}
 
 ::grpc::Status WorkerService::Stub::SendPlan(::grpc::ClientContext* context,
                                              const SendPlanRequest& request,
                                              SendPlanResponse* response) {
   return ::grpc::BlockingUnaryCall(channel_.get(), rpcmethod_SendPlan_, context,
+                                   request, response);
+}
+
+::grpc::Status WorkerService::Stub::WorkerConnectDataPlane(
+    ::grpc::ClientContext* context,
+    const WorkerConnectDataPlaneRequest& request,
+    WorkerConnectDataPlaneResponse* response) {
+  return ::grpc::BlockingUnaryCall(channel_.get(),
+                                   rpcmethod_WorkerConnectDataPlane_, context,
                                    request, response);
 }
 

@@ -105,13 +105,15 @@ void GrpcServer::ParseServerDef() {
     int32_t ctrl_port_n;
     std::string ctrl_port_str = cluster_node.ctrl_plane_addr().port();
     if (!::tensorflow::strings::safe_strto32(ctrl_port_str, &ctrl_port_n)) {
-      LOG(FATAL) << "Could not parse port for local server from " << ctrl_port_str;
+      LOG(FATAL) << "Could not parse port for local server from "
+                 << ctrl_port_str;
     }
 
     int32_t data_port_n;
     std::string data_port_str = cluster_node.data_plane_addr().port();
     if (!::tensorflow::strings::safe_strto32(data_port_str, &data_port_n)) {
-      LOG(FATAL) << "Could not parse port for local server from " << data_port_str;
+      LOG(FATAL) << "Could not parse port for local server from "
+                 << data_port_str;
     }
 
     if (node_name == this_node_name_) {

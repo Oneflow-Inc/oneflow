@@ -46,8 +46,11 @@ MasterService::Stub::Stub(
     : channel_(channel),
       rpcmethod_SendJob_(GrpcMasterMethodName(static_cast<GrpcMasterMethod>(0)),
                          ::grpc::RpcMethod::NORMAL_RPC, channel),
-      rpcmethod_MasterInitDataPlane_(
+      rpcmethod_MasterConnectDataPlane_(
           GrpcMasterMethodName(static_cast<GrpcMasterMethod>(1)),
+          ::grpc::RpcMethod::NORMAL_RPC, channel),
+      rpcmethod_MasterInitDataPlane_(
+          GrpcMasterMethodName(static_cast<GrpcMasterMethod>(2)),
           ::grpc::RpcMethod::NORMAL_RPC, channel) {}
 
 ::grpc::Status MasterService::Stub::SendJob(::grpc::ClientContext* context,
@@ -57,6 +60,14 @@ MasterService::Stub::Stub(
                                    request, response);
 }
 
+::grpc::Status MasterService::Stub::MasterConnectDataPlane(
+    ::grpc::ClientContext* context,
+    const MasterConnectDataPlaneRequest& request,
+    MasterConnectDataPlaneResponse* response) {
+  return ::grpc::BlockingUnaryCall(channel_.get(),
+                                   rpcmethod_MasterConnectDataPlane_, context,
+                                   request, response);
+}
 ::grpc::Status MasterService::Stub::MasterInitDataPlane(
     ::grpc::ClientContext* context, const MasterInitDataPlaneRequest& request,
     MasterInitDataPlaneResponse* response) {
