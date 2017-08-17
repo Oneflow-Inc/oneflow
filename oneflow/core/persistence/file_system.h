@@ -13,14 +13,22 @@ namespace oneflow {
 
 enum Status {
   OK = 0,
-  FAILED_PRECONDITION = 1,
-  NOT_FOUND = 2,
-  ALREADY_EXISTS = 3,
-  PERMISSION_DENIED = 4,
-  OUT_OF_RANGE = 5,
-  FILE_OPERATION_FAILED = 6,
-  DIR_OPERATION_FAILED = 7,
-  UNIMPLEMENTED = 8,
+  CANCELLED = 1,
+  UNKNOWN = 2,
+  INVALID_ARGUMENT = 3,
+  DEADLINE_EXCEEDED = 4,
+  NOT_FOUND = 5,
+  ALREADY_EXISTS = 6,
+  PERMISSION_DENIED = 7,
+  UNAUTHENTICATED = 16,
+  RESOURCE_EXHAUSTED = 8,
+  FAILED_PRECONDITION = 9,
+  ABORTED = 10,
+  OUT_OF_RANGE = 11,
+  UNIMPLEMENTED = 12,
+  INTERNAL = 13,
+  UNAVAILABLE = 14,
+  DATA_LOSS = 15,
 };
 
 class RandomAccessFile;
@@ -225,6 +233,8 @@ class WritableFile {
 // If `current_status` is OK, stores `new_status` into `current_status`.
 // If `current_status` is NOT OK, preserves the current status,
 void StatusUpdate(Status* current_status, const Status& new_status);
+
+Status ErrnoToStatus(int err_number);
 
 // file system check status is ok
 #define FS_CHECK_OK(val) \
