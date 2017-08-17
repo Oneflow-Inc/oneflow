@@ -126,7 +126,7 @@ void ConvolutionKernel<device_type, FloatingPointType>::Forward(
 
     KernelUtil<device_type, FloatingPointType>::BlasGemm(
         ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasTrans,
-        out->shape().At(1), out->shape().Count(2), weight->shape().At(1),
+        out->shape().At(1), out->shape().Count(2), weight->shape().Count(1),
         static_cast<FloatingPointType>(1.0), weight->dptr<FloatingPointType>(),
         weight->shape().Count(1),
         col_buf->dptr<FloatingPointType>() + i * col_im_sz,
