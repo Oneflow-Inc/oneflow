@@ -13,10 +13,12 @@ RdmaNetwork::~RdmaNetwork() {
   connection_pool_.reset(nullptr);
   request_pool_.reset(nullptr);
 
-  for (auto& rdma_memory : rdma_memory_vector_) {
-    if (rdma_memory != nullptr) {
-      delete rdma_memory;
-      rdma_memory = nullptr;
+  // Release the ptr to RdmaMemory object
+  // for (auto& rdma_memory : rdma_memory_vector_) {
+  for (auto& rdma_memory : rdma_memory_) {
+    if (rdma_memory.second != nullptr) {
+      delete rdma_memory.second;
+      rdma_memory.second = nullptr;
     }
   }
 
@@ -53,8 +55,19 @@ NetworkMemory* RdmaNetwork::RegisterMemory(void* dptr, size_t len) {
   NetworkMemory* net_memory = endpoint_manager_->NewNetworkMemory();
   net_memory->Reset(dptr, len);
   net_memory->Register();
-  rdma_memory_vector_.push_back(static_cast<RdmaMemory*>(net_memory));
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    // rdma_memory_vector_.push_back(static_cast<RdmaMemory*>(net_memory));
+    rdma_memory_.insert({dptr, static_cast<RdmaMemory*>(net_memory)});
+  }
   return net_memory;
+}
+
+void RdmaNetwork::UnRegisterMemory(void* dptr) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  auto net_memory_ptr_it = rdma_memory_.find(dptr);
+  CHECK(net_memory_ptr_it != rdma_memory_.end());
+  net_memory_ptr_it->second->Unregister();
 }
 
 // |msg| contains src_machine_id and dst_machine_id

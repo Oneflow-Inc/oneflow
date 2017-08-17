@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_NETWORK_RDMA_REQUEST_POOL_H_
 #define ONEFLOW_CORE_NETWORK_RDMA_REQUEST_POOL_H_
 
+#include <mutex>
 #include "oneflow/core/network/rdma/message_pool.h"
 #include "oneflow/core/network/rdma/switch.h"
 
@@ -29,6 +30,7 @@ class RequestPool {
   }
 
  private:
+  std::mutex mutex_;  // Protect request_vector_
   std::vector<Request*> request_vector_;
   std::unique_ptr<MessagePool<RdmaMessage>> msg_pool_;
   static const int32_t kBufferSize = 64;

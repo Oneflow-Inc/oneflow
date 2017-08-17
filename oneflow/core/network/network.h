@@ -21,6 +21,7 @@ class Network {
   virtual void ConnectTopology() = 0;
 
   virtual NetworkMemory* RegisterMemory(void* dptr, size_t len) = 0;
+  virtual void UnRegisterMemory(void* dptr) = 0;
 
   // |msg| is owned by the caller and can be released once |Send| returns, even
   // though the actual transmission of the |msg| content has not occurred.

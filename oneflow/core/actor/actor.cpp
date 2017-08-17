@@ -22,9 +22,20 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   }
   // produced_regsts_
   for (const auto& pair : task_proto.produced_regst_desc()) {
-    RegstMgr::Singleton()->NewRegsts(pair.second, [this](Regst* regst) {
-      produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
-    });
+    std::vector<NetMemoryDescriptor> net_memory_descs =
+        RegstMgr::Singleton()->NewRegsts(pair.second, [this](Regst* regst) {
+          produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
+        });
+    // Handle with net_memory_descs
+    for (auto& net_memory_desc : net_memory_descs) {
+      net_memory_desc.this_machine_id = task_proto.machine_id();
+      for (auto& consumer_task_id : pair.second.consumer_task_id()) {
+        int64_t consumer_machine_id =
+            IDMgr::Singleton()->MachineId4ActorId(consumer_task_id);
+        net_memory_desc.consumer_machine_ids.push_back(consumer_machine_id);
+      }
+      RuntimeCtx::Singleton()->AddNetMemoryDesc(net_memory_desc);
+    }
   }
   // name2regst_desc_id_
   for (const auto& pair : task_proto.produced_regst_desc()) {

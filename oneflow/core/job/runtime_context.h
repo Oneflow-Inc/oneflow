@@ -1,11 +1,20 @@
 #ifndef ONEFLOW_CORE_JOB_RUNTIME_CONTEXT_H_
 #define ONEFLOW_CORE_JOB_RUNTIME_CONTEXT_H_
 
+#include <mutex>
 #include "oneflow/core/common/thread_safe_counter.h"
 #include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/network/network_memory.h"
 #include "oneflow/core/persistence/persistent_circular_line_reader.h"
 
 namespace oneflow {
+
+struct NetMemoryDescriptor {
+  void* local_ptr;
+  void* network_ptr;
+  int64_t this_machine_id;
+  std::vector<int64_t> consumer_machine_ids;
+};
 
 class RuntimeCtx final {
  public:
@@ -26,6 +35,9 @@ class RuntimeCtx final {
   ThreadSafeCounter& mut_active_actor_cnt() { return active_actor_cnt_; }
   ThreadSafeCounter& mut_inactive_actor_cnt() { return inactive_actor_cnt_; }
 
+  void AddNetMemoryDesc(const NetMemoryDescriptor& net_memory_desc);
+  const std::vector<NetMemoryDescriptor>& net_memory_descs() const;
+
  private:
   RuntimeCtx() { LOG(INFO) << "RuntimeCtx Init"; }
 
@@ -38,6 +50,9 @@ class RuntimeCtx final {
 
   ThreadSafeCounter active_actor_cnt_;
   ThreadSafeCounter inactive_actor_cnt_;
+
+  std::mutex mutex_;
+  std::vector<NetMemoryDescriptor> net_memory_descs_;
 };
 
 }  // namespace oneflow

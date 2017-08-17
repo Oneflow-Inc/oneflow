@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_NETWORK_RDMA_RDMA_NETWORK_H_
 #define ONEFLOW_CORE_NETWORK_RDMA_RDMA_NETWORK_H_
 
+#include <mutex>
 #include "oneflow/core/network/network.h"
 #include "oneflow/core/network/network_memory.h"
 #include "oneflow/core/network/rdma/connection_pool.h"
@@ -22,6 +23,7 @@ class RdmaNetwork final : public Network {
   void ConnectTopology() override;
 
   NetworkMemory* RegisterMemory(void* dptr, size_t len) override;
+  void UnRegisterMemory(void* dptr) override;
 
   void SendMsg(const NetworkMessage& msg) override;
   void SetCallbackForReceivedActorMsg(std::function<void()> callback) override;
@@ -54,7 +56,10 @@ class RdmaNetwork final : public Network {
   std::unique_ptr<EndpointManager> endpoint_manager_;
   std::unique_ptr<RequestPool> request_pool_;
   std::unique_ptr<ConnectionPool> connection_pool_;
-  std::vector<RdmaMemory*> rdma_memory_vector_;
+
+  std::mutex mutex_;
+  // std::vector<RdmaMemory*> rdma_memory_vector_;
+  std::unordered_map<void*, RdmaMemory*> rdma_memory_;
 };
 
 }  // namespace oneflow

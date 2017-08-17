@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_NETWORK_RDMA_MESSAGE_POOL_H_
 #define ONEFLOW_CORE_NETWORK_RDMA_MESSAGE_POOL_H_
 
+#include <mutex>
 #include "oneflow/core/network/rdma/switch.h"
 
 namespace oneflow {
@@ -16,6 +17,7 @@ class MessagePool {
   void Free(MessageType* buffer);
 
  private:
+  std::mutex mutex_;
   std::queue<MessageType*> empty_buffer_;
 };
 
@@ -32,6 +34,7 @@ MessageType* MessagePool<MessageType>::Alloc() {
   // if no available buffer.
   // Or we can return nullptr, implying no available buffer, then application
   // shall try to Alloc and Send later.
+  std::lock_guard<std::mutex> lock(mutex_);
   if (empty_buffer_.empty()) {
     // verify whether the |new| succeeds
     empty_buffer_.push(new MessageType());
@@ -43,6 +46,7 @@ MessageType* MessagePool<MessageType>::Alloc() {
 
 template<typename MessageType>
 void MessagePool<MessageType>::Free(MessageType* buffer) {
+  std::lock_guard<std::mutex> lock(mutex_);
   if (buffer != nullptr) empty_buffer_.push(buffer);
 }
 

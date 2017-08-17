@@ -1,12 +1,15 @@
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/register/blob.h"
 
 namespace oneflow {
 
-void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
-                         std::function<void(Regst*)> OneRegstDone) {
+std::vector<NetMemoryDescriptor> RegstMgr::NewRegsts(
+    const RegstDescProto& regst_desc_proto,
+    std::function<void(Regst*)> OneRegstDone) {
+  std::vector<NetMemoryDescriptor> net_memory_descs;
   const RtRegstDesc* runtime_regst_desc = new RtRegstDesc(regst_desc_proto);
   rt_regst_descs_.emplace_back(runtime_regst_desc);
   for (int64_t i = 0; i < regst_desc_proto.register_num(); ++i) {
@@ -27,7 +30,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
       elem_cnt += shape_ptr->elem_cnt();
     }
     std::sort(lbns.begin(), lbns.end());
-    std::pair<char*, std::function<void()>> allocation =
+    std::tuple<char*, std::function<void()>, void*> allocation =
         MemoryAllocator::Singleton()->Allocate(regst_desc_proto.mem_case(),
                                                elem_cnt * elem_size);
 
@@ -35,18 +38,26 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     for (const std::string& lbn : lbns) {
       const Shape* shape_ptr = runtime_regst_desc->GetShapePtrFromLbn(lbn);
       auto blob_ptr =
-          of_make_unique<Blob>(allocation.first + blob_idx, shape_ptr);
+          of_make_unique<Blob>(std::get<0>(allocation) + blob_idx, shape_ptr);
       CHECK(regst->lbn2blob_.emplace(lbn, std::move(blob_ptr)).second);
       blob_idx += shape_ptr->elem_cnt() * elem_size;
     }
     Shape* packed_blob_shape = new Shape({elem_cnt});
-    regst->packed_blob_.reset(new Blob(allocation.first, packed_blob_shape));
+    regst->packed_blob_.reset(
+        new Blob(std::get<0>(allocation), packed_blob_shape));
     regst->deleter_ = [allocation, packed_blob_shape]() {
-      allocation.second();
+      std::get<1>(allocation)();
       delete packed_blob_shape;
     };
+    if (std::get<2>(allocation) != nullptr) {
+      NetMemoryDescriptor net_memory_desc{
+          std::get<0>(allocation), std::get<2>(allocation), 1, {0}};
+      // RuntimeCtx::Singleton()->AddNetMemoryDesc(net_memory_desc);
+      net_memory_descs.push_back(net_memory_desc);
+    }
     OneRegstDone(regst);
   }
+  return net_memory_descs;
 }
 
 }  // namespace oneflow

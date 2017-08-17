@@ -13,4 +13,13 @@ void RuntimeCtx::InitDataReader(const std::string& filepath) {
   data_reader_.reset(new PersistentCircularLineReader(filepath));
 }
 
+void RuntimeCtx::AddNetMemoryDesc(const NetMemoryDescriptor& net_memory_desc) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  net_memory_descs_.push_back(net_memory_desc);
+}
+
+const std::vector<NetMemoryDescriptor>& RuntimeCtx::net_memory_descs() const {
+  return net_memory_descs_;
+}
+
 }  // namespace oneflow
