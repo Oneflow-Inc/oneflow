@@ -2,37 +2,104 @@
 #define ONEFLOW_CORE_PERSISTENCE_FILE_SYSTEM_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/persistence/platform.h"
 
 #if defined(_WIN32)
 #undef DeleteFile
 #endif
 
-#define STATUS_TO_STR(ENUM) std::string(#ENUM)
-
 namespace oneflow {
 
-enum Status {
+namespace fs {
+
+enum class Status {
   OK = 0,
-  CANCELLED = 1,
-  UNKNOWN = 2,
-  INVALID_ARGUMENT = 3,
-  DEADLINE_EXCEEDED = 4,
-  NOT_FOUND = 5,
-  ALREADY_EXISTS = 6,
-  PERMISSION_DENIED = 7,
-  UNAUTHENTICATED = 16,
-  RESOURCE_EXHAUSTED = 8,
-  FAILED_PRECONDITION = 9,
-  ABORTED = 10,
-  OUT_OF_RANGE = 11,
-  UNIMPLEMENTED = 12,
-  INTERNAL = 13,
-  UNAVAILABLE = 14,
-  DATA_LOSS = 15,
+  CANCELLED,
+  UNKNOWN,
+  INVALID_ARGUMENT,
+  DEADLINE_EXCEEDED,
+  NOT_FOUND,
+  ALREADY_EXISTS,
+  PERMISSION_DENIED,
+  UNAUTHENTICATED,
+  RESOURCE_EXHAUSTED,
+  FAILED_PRECONDITION,
+  ABORTED,
+  OUT_OF_RANGE,
+  UNIMPLEMENTED,
+  INTERNAL,
+  UNAVAILABLE,
+  DATA_LOSS,
 };
 
-class RandomAccessFile;
-class WritableFile;
+// A file abstraction for randomly reading the contents of a file.
+class RandomAccessFile {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(RandomAccessFile);
+  RandomAccessFile() = default;
+  virtual ~RandomAccessFile() = default;
+
+  // Reads up to `n` bytes from the file starting at `offset`.
+  //
+  // Sets `*result` to the data that was read (including if fewer
+  // than `n` bytes were successfully read).
+  //
+  // On OK returned status: `n` bytes have been stored in `*result`.
+  // On non-OK returned status: `[0..n]` bytes have been stored in `*result`.
+  //
+  // Returns `OUT_OF_RANGE` if fewer than n bytes were stored in `*result`
+  // because of EOF.
+  //
+  // Safe for concurrent use by multiple threads.
+  virtual Status Read(uint64_t offset, size_t n, char* result) const = 0;
+
+ private:
+};
+
+//  A file abstraction for sequential writing.
+//
+// The implementation must provide buffering since callers may append
+// small fragments at a time to the file.
+class WritableFile {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(WritableFile);
+  WritableFile() = default;
+  virtual ~WritableFile() = default;
+
+  // Append 'data' to the file.
+  virtual Status Append(const char* data, size_t n) = 0;
+
+  // Close the file.
+  //
+  // Flush() and de-allocate resources associated with this file
+  //
+  // Typical return codes (not guaranteed to be exhaustive):
+  //  * OK
+  //  * Other codes, as returned from Flush()
+  virtual Status Close() = 0;
+
+  //  Flushes the file and optionally syncs contents to filesystem.
+  //
+  // This should flush any local buffers whose contents have not been
+  // delivered to the filesystem.
+  //
+  // If the process terminates after a successful flush, the contents
+  // may still be persisted, since the underlying filesystem may
+  // eventually flush the contents.  If the OS or machine crashes
+  // after a successful flush, the contents may or may not be
+  // persisted, depending on the implementation.
+  virtual Status Flush() = 0;
+
+  // Syncs contents of file to filesystem.
+  //
+  // This waits for confirmation from the filesystem that the contents
+  // of the file have been persisted to the filesystem; if the OS
+  // or machine crashes after a successful Sync, the contents should
+  // be properly saved.
+  virtual Status Sync() = 0;
+
+ private:
+};
 
 class FileSystem {
  public:
@@ -161,84 +228,17 @@ class FileSystem {
   FileSystem() = default;
 };
 
-// A file abstraction for randomly reading the contents of a file.
-class RandomAccessFile {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(RandomAccessFile);
-  RandomAccessFile() = default;
-  virtual ~RandomAccessFile() = default;
-
-  // Reads up to `n` bytes from the file starting at `offset`.
-  //
-  // Sets `*result` to the data that was read (including if fewer
-  // than `n` bytes were successfully read).
-  //
-  // On OK returned status: `n` bytes have been stored in `*result`.
-  // On non-OK returned status: `[0..n]` bytes have been stored in `*result`.
-  //
-  // Returns `OUT_OF_RANGE` if fewer than n bytes were stored in `*result`
-  // because of EOF.
-  //
-  // Safe for concurrent use by multiple threads.
-  virtual Status Read(uint64_t offset, size_t n, char* result) const = 0;
-
- private:
-};
-
-//  A file abstraction for sequential writing.
-//
-// The implementation must provide buffering since callers may append
-// small fragments at a time to the file.
-class WritableFile {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(WritableFile);
-  WritableFile() = default;
-  virtual ~WritableFile() = default;
-
-  // Append 'data' to the file.
-  virtual Status Append(const char* data, size_t n) = 0;
-
-  // Close the file.
-  //
-  // Flush() and de-allocate resources associated with this file
-  //
-  // Typical return codes (not guaranteed to be exhaustive):
-  //  * OK
-  //  * Other codes, as returned from Flush()
-  virtual Status Close() = 0;
-
-  //  Flushes the file and optionally syncs contents to filesystem.
-  //
-  // This should flush any local buffers whose contents have not been
-  // delivered to the filesystem.
-  //
-  // If the process terminates after a successful flush, the contents
-  // may still be persisted, since the underlying filesystem may
-  // eventually flush the contents.  If the OS or machine crashes
-  // after a successful flush, the contents may or may not be
-  // persisted, depending on the implementation.
-  virtual Status Flush() = 0;
-
-  // Syncs contents of file to filesystem.
-  //
-  // This waits for confirmation from the filesystem that the contents
-  // of the file have been persisted to the filesystem; if the OS
-  // or machine crashes after a successful Sync, the contents should
-  // be properly saved.
-  virtual Status Sync() = 0;
-
- private:
-};
-
 // If `current_status` is OK, stores `new_status` into `current_status`.
 // If `current_status` is NOT OK, preserves the current status,
-void StatusUpdate(Status* current_status, const Status& new_status);
+void TryStatusUpdate(Status* current_status, const Status& new_status);
 
 Status ErrnoToStatus(int err_number);
 
+}  // namespace fs
+
 // file system check status is ok
 #define FS_CHECK_OK(val) \
-  if (val != Status::OK) { LOG(FATAL) << STATUS_TO_STR(val); }
+  if (val != Status::OK) { LOG(FATAL) << std::to_string(val); }
 
 }  // namespace oneflow
 
