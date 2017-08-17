@@ -90,14 +90,6 @@ class WritableFile {
   // persisted, depending on the implementation.
   virtual Status Flush() = 0;
 
-  // Syncs contents of file to filesystem.
-  //
-  // This waits for confirmation from the filesystem that the contents
-  // of the file have been persisted to the filesystem; if the OS
-  // or machine crashes after a successful Sync, the contents should
-  // be properly saved.
-  virtual Status Sync() = 0;
-
  private:
 };
 

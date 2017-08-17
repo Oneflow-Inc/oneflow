@@ -148,8 +148,6 @@ class WindowsWritableFile : public WritableFile {
     }
     return Status::OK;
   }
-
-  Status Sync() override { return Flush(); }
 };
 
 }  // namespace
