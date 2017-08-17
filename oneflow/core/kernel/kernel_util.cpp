@@ -227,7 +227,7 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
    *  and   fan_out = n * h * w
    */
   static FloatingPointType GetFillFan(VarianceNorm variance_norm, Blob* blob) {
-    CHECK_EQ(blob->shape().size(), 4);
+    CHECK_EQ(blob->shape().NumAxes(), 4);
     int64_t fan_in = blob->shape().elem_cnt() / blob->shape().At(0);
     int64_t fan_out = blob->shape().elem_cnt() / blob->shape().At(1);
     FloatingPointType n = static_cast<FloatingPointType>(0);

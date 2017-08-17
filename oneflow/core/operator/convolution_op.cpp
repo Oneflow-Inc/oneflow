@@ -34,12 +34,14 @@ void ConvolutionOp::InferShape4FwBlobs(
   int64_t kernel_size = 1;
   int64_t output_size = 1;
   std::vector<int64_t> output_shape_vec = {batch_size, c_o};
+  std::vector<int64_t> weight_shape_vec = {c_o, c_i};
   for (int64_t i = 0; i < input_shape_ptr->NumAxes() - 2; ++i) {
     int64_t len = (input_shape_ptr->At(i + 2) + 2 * conv_conf.pad(i)
                    - conv_conf.kernel_size(i))
                       / conv_conf.stride(i)
                   + 1;
     output_shape_vec.push_back(len);
+    weight_shape_vec.push_back(conv_conf.kernel_size(i));
     kernel_size *= conv_conf.kernel_size(i);
     output_size *= len;
   }
@@ -47,7 +49,7 @@ void ConvolutionOp::InferShape4FwBlobs(
   CHECK_EQ(output_shape_ptr->NumAxes(), input_shape_ptr->NumAxes());
   *colbuf_shape_ptr = Shape({batch_size, output_size, c_i * kernel_size});
   Shape* weight = GetShapePtr4BnInOp("weight");
-  *weight = Shape({c_o, c_i * kernel_size});
+  *weight = Shape(weight_shape_vec);
 
   if (GetBoolFromSpecialConf("has_bias_term")) {
     Shape* bias = GetShapePtr4BnInOp("bias");

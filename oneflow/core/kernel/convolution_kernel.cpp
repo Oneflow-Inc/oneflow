@@ -128,9 +128,9 @@ void ConvolutionKernel<device_type, FloatingPointType>::Forward(
         ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasTrans,
         out->shape().At(1), out->shape().Count(2), weight->shape().At(1),
         static_cast<FloatingPointType>(1.0), weight->dptr<FloatingPointType>(),
-        weight->shape().At(1),
+        weight->shape().Count(1),
         col_buf->dptr<FloatingPointType>() + i * col_im_sz,
-        weight->shape().At(1), static_cast<FloatingPointType>(0.0),
+        weight->shape().Count(1), static_cast<FloatingPointType>(0.0),
         out->mut_dptr<FloatingPointType>() + i * out_im_sz,
         col_buf->shape().At(1));
 
@@ -225,7 +225,7 @@ void ConvolutionKernel<device_type, FloatingPointType>::ComputeInputDiff(
         static_cast<FloatingPointType>(1.0),
         out_diff->dptr<FloatingPointType>() + i * out_im_sz,
         out_diff->shape().Count(2), weight->dptr<FloatingPointType>(),
-        weight->shape().At(1), static_cast<FloatingPointType>(0.0),
+        weight->shape().Count(1), static_cast<FloatingPointType>(0.0),
         col_buf->mut_dptr<FloatingPointType>() + i * col_buf->shape().Count(1),
         col_buf->shape().At(2));
   }
