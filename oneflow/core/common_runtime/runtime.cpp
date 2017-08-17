@@ -15,9 +15,18 @@ void Runtime::SetThisMachineName(const std::string& this_machine_name) {
   this_machine_name_ = this_machine_name;
 }
 
-void Runtime::InitRuntime() { InitSingleton(plan_, this_machine_name_); }
+void Runtime::InitRuntime() {
+  InitSingleton(plan_, this_machine_name_);
+  FindTasksOnThisMachine();
+}
 
-void Runtime::InitModel() {}
+void Runtime::InitModel() {
+  RuntimeCtx::Singleton()->mut_model_init_cnt().Init("model_init_cnt",
+    mdupdt_tasks_.size());
+  HandoutTasks(mdupdt_tasks_);
+  SendCmdMsg(mdupdt_tasks_, ActorCmd::kInitializeModel);
+  RuntimeCtx::Singleton()->mut_model_init_cnt().WaitUntilCntEqualZero();
+}
 
 void Runtime::ActivateActor() {}
 
@@ -26,6 +35,27 @@ void Runtime::SendRemoteRegstToInc() {}
 void Runtime::SendRemoteRegstToDec() {}
 
 void Runtime::StartActor() {}
+
+void Runtime::FindTasksOnThisMachine() {
+  for (const TaskProto& task : plan_.task()) {
+    if (task.machine_id() != RuntimeCtx::Singleton()->this_machine_id()) {
+      continue;
+    }
+    if (task.type() == kMdUpdtCompTask) {
+      mdupdt_tasks_.push_back(&task);
+    } else if (task.consumed_regst_desc_id().empty()) {
+      source_tasks_.push_back(&task);
+    } else {
+      other_tasks_.push_back(&task);
+    }
+  }
+
+  this_machine_task_num_ =
+    mdupdt_tasks_.size() + source_tasks_.size() + other_tasks_.size();
+  LOG(INFO) << "number of mdupdt tasks is " << mdupdt_tasks_.size();
+  LOG(INFO) << "number of source tasks is " << source_tasks_.size();
+  LOG(INFO) << "number of other  tasks is " << other_tasks_.size();
+}
 
 void Runtime::Run(const Plan& plan, const std::string& this_machine_name) {
   InitSingleton(plan, this_machine_name);

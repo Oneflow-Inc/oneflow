@@ -32,8 +32,16 @@ class Runtime final {
   void HandoutTasks(const std::vector<const TaskProto*>& tasks);
   void SendCmdMsg(const std::vector<const TaskProto*>& tasks, ActorCmd cmd);
 
+  void FindTasksOnThisMachine();
+
   Plan plan_;
   std::string this_machine_name_;
+
+  std::vector<const TaskProto*> mdupdt_tasks_;
+  std::vector<const TaskProto*> source_tasks_;
+  std::vector<const TaskProto*> other_tasks_;
+  size_t this_machine_task_num_;
+
 };
 }  // namespace runtime
 }  // namespace oneflow
