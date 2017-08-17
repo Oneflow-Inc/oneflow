@@ -229,9 +229,7 @@ Status ErrnoToStatus(int err_number);
 }  // namespace fs
 
 // file system check status is ok
-#define FS_CHECK_OK(val) \
-  if (val != Status::OK) { LOG(FATAL) << std::to_string(val); }
-
+#define FS_CHECK_OK(val) CHECK_NE(val, fs::Status::OK);
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_PERSISTENCE_FILE_SYSTEM_H_

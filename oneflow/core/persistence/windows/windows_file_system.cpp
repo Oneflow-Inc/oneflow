@@ -1,7 +1,7 @@
-#ifdef PLATFORM_WINDOWS
-
 #include "oneflow/core/persistence/windows/windows_file_system.h"
 #include <Windows.h>
+
+#ifdef PLATFORM_WINDOWS
 
 #undef DeleteFile
 

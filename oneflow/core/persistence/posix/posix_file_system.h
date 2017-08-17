@@ -1,9 +1,9 @@
 #ifndef ONEFLOW_CORE_PERSISTENCE_POSIX_POSIX_FILE_SYSTEM_H_
 #define ONEFLOW_CORE_PERSISTENCE_POSIX_POSIX_FILE_SYSTEM_H_
 
-#ifdef PLATFORM_POSIX
-
 #include "oneflow/core/persistence/file_system.h"
+
+#ifdef PLATFORM_POSIX
 
 namespace oneflow {
 
