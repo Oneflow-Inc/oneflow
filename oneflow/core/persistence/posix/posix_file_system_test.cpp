@@ -1,13 +1,9 @@
 #include "oneflow/core/persistence/posix/posix_file_system.h"
-#include "oneflow/core/persistence/windows/windows_file_system.h"
 #include "oneflow/core/common/process_state.h"
 #include "oneflow/core/common/str_util.h"
 
 namespace oneflow {
-
-namespace fs {
-
-  TestFileSystem(FileSystem* file_system) {
+  TEST(PosixFileSystem, write_and_read) {
     oneflow::PosixFileSystem* file_system = new oneflow::PosixFileSystem();
     std::string current_dir = GetCwd();
     StringReplace(&current_dir, '\\', '/');
@@ -21,14 +17,11 @@ namespace fs {
       ASSERT_TRUE(file_system->CreateDir(test_root_path)
           == oneflow::Status::OK);
     }
-    std::string file_name = JoinPath(current_dir, "/tmp_test_file"); 
+    std::string file_name = 
     // write
     std::unique_ptr<WritableFile>* writable_file;
     ASSERT_TRUE(file_system->NewWritableFile(
 
     delete file_system;
   }
-
-}
-
 }  // namespace oneflow
