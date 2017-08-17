@@ -11,7 +11,8 @@ enum class ActorCmd {
   kSendInitialModel,     // MdUpdt Actor
   kEORD,                 // End Of Register Desc, All Actor except Source Actor
   kStart,                // Source Actor
-  kStopThread
+  kStopThread,
+  kActivateActor
 };
 
 OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ActorCmd);

@@ -14,6 +14,8 @@ enum TaskType {
   kCopyHdTask = 5;
   kCopyCommNetTask = 6;
   kBoxingTask = 7;
+  kLossAccCompTask = 8;
+  kLossRecordCompTask = 9;
 }
 
 message TaskProto {

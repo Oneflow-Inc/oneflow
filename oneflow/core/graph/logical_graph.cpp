@@ -58,6 +58,7 @@ void LogicalGraph::FillNodeWithParallelDesc(const Placement& placement) {
       auto it = op_name2node.find(op_name);
       CHECK(it != op_name2node.end());
       auto parallel_desc_raw_ptr = new ParallelDesc(cur_group.parallel_conf());
+      it->second->op()->FixParallelDesc(parallel_desc_raw_ptr);
       it->second->mut_parallel_desc().reset(parallel_desc_raw_ptr);
     }
   }

@@ -187,10 +187,24 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
       UNEXPECTED_RUN();
     }
   }
+
   static void Fill(const KernelCtx& ctx, const FillConf& fill_conf,
                    uint32_t random_seed, Blob* blob) {
     ctx.device_ctx->cpu_stream()->SendWork(
         [=]() { Fill(fill_conf, random_seed, blob); });
+  }
+
+  static void FillWithSnapshot(const KernelCtx& ctx, int32_t part_id,
+                               int32_t part_num, const Snapshot* snapshot,
+                               Blob* blob, const std::string& lbn,
+                               int32_t dim_num, int64_t num_in_each_dim) {
+    int64_t blob_size = blob->shape().elem_cnt() * sizeof(FloatingPointType);
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+      std::unique_ptr<PersistentInStream> in_stream =
+          snapshot->GetInStream(lbn, part_id, part_num, dim_num,
+                                num_in_each_dim * sizeof(FloatingPointType));
+      in_stream->Read(blob->mut_dptr<char>(), blob_size);
+    });
   }
 
  private:

@@ -6,7 +6,7 @@ namespace oneflow {
 void JobDesc::InitFromJobConf(const JobConf& conf) {
   LOG(INFO) << "Read JobConf";
   job_conf_ = conf;
-  ParseProtoFromTextFile(conf.train_dlnet_conf_filepath(), &train_dlnet_conf_);
+  ParseProtoFromTextFile(conf.dlnet_filepath(), &train_dlnet_conf_);
   ParseProtoFromTextFile(conf.resource_filepath(), &resource_);
   ParseProtoFromTextFile(conf.placement_filepath(), &placement_);
 }
