@@ -2,12 +2,34 @@
 namespace oneflow {
 namespace schedule {
 
+TEST(SccVisitor, none) {
+  std::unordered_map<int, int> data{
+      {1, 2}, {2, 3}, {3, 4},
+  };
+  auto foreach_next = [&](int x, const std::function<void(int)>& cb) {
+    if (data[x]) { cb(data[x]); }
+  };
+  SccVisitor<int> scc(foreach_next);
+  ASSERT_TRUE(scc(1) == 0);
+}
+
+TEST(SccVisitor, weakly_connected) {
+  std::unordered_map<int, std::list<int>> data{
+      {1, {2, 3}}, {2, {4}}, {3, {4}},
+  };
+  auto foreach_next = [&](int x, const std::function<void(int)>& cb) {
+    for (int n : data[x]) { cb(n); }
+  };
+  SccVisitor<int> scc(foreach_next);
+  ASSERT_TRUE(scc(1) == 0);
+}
+
 TEST(SccVisitor, self_loop) {
   std::unordered_map<int, int> data{
       {1, 1},
   };
   auto foreach_next = [&](int x, const std::function<void(int)>& cb) {
-    cb(data[x]);
+    if (data[x]) { cb(data[x]); }
   };
   SccVisitor<int> scc(foreach_next);
   uint32_t cnt = scc(1, [&](const std::list<int>& l) {
@@ -22,7 +44,7 @@ TEST(SccVisitor, loop) {
       {1, 2}, {2, 3}, {3, 1},
   };
   auto foreach_next = [&](int x, const std::function<void(int)>& cb) {
-    cb(data[x]);
+    if (data[x]) { cb(data[x]); }
   };
   SccVisitor<int> scc(foreach_next);
   uint32_t cnt = scc(1, [&](const std::list<int>& l) {
@@ -54,7 +76,7 @@ TEST(SccVisitor, forest) {
       {1, 2}, {2, 3}, {3, 1}, {4, 5}, {5, 6}, {6, 4},
   };
   auto foreach_next = [&](int x, const std::function<void(int)>& cb) {
-    cb(data[x]);
+    if (data[x]) { cb(data[x]); }
   };
   SccVisitor<int> scc(foreach_next);
   std::list<int> starts{1, 4};

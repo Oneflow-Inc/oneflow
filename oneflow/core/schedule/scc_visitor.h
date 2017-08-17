@@ -44,6 +44,9 @@ class SccVisitor {
     Walk(start);
     return component_cnt_;
   }
+  uint32_t operator()(NodeType start) {
+    return (*this)(start, [](const std::list<NodeType>&) {});
+  }
 
   template<template<class, class...> class C, typename... Args>
   uint32_t operator()(const C<NodeType, Args...>& starts,
@@ -51,6 +54,10 @@ class SccVisitor {
     Reset(component_visitor);
     for (NodeType start : starts) { Walk(start); }
     return component_cnt_;
+  }
+  template<template<class, class...> class C, typename... Args>
+  uint32_t operator()(const C<NodeType, Args...>& starts) {
+    return (*this)(starts, [](const std::list<NodeType>&) {});
   }
 
  private:
@@ -68,6 +75,7 @@ class SccVisitor {
     node2index_[node] = node2low_[node] = ++index_;
     stack_.push_front(node);
     node2is_on_stack_[node] = true;
+    bool is_self_loop = false;
     foreach_next_(node, [&](NodeType next) {
       if (!node2index_[next]) {
         Walk(next);
@@ -75,6 +83,7 @@ class SccVisitor {
       } else if (node2is_on_stack_[next]) {
         node2low_[node] = std::min(node2low_[node], node2low_[next]);
       }
+      is_self_loop = (is_self_loop || node == next);
     });
     if (node2index_[node] == node2low_[node]) {
       std::list<NodeType> scc;
@@ -85,10 +94,13 @@ class SccVisitor {
         node2is_on_stack_[w] = false;
         scc.push_front(w);
       } while (w != node);
-      component_visitor_(scc);
-      ++component_cnt_;
+      if (scc.size() > 1 || is_self_loop) {
+        component_visitor_(scc);
+        ++component_cnt_;
+      }
     }
   }
+
   ComponentVisitor component_visitor_;
   ForEachNode foreach_next_;
   std::unordered_map<NodeType, uint32_t> node2index_;
