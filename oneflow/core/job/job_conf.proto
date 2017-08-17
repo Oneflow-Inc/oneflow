@@ -23,6 +23,7 @@ message JobConf {
   int64 total_batch_num = 13;
   FillConf default_fill_conf = 14;
   bool use_async_cpu_stream = 15;
+  int32 piece_num_of_record_loss = 16;
   oneof ModelUpdateCase {
     NormalModelUpdateOpConf normal_mdupdt_conf = 1000;
     MomentumModelUpdateOpConf momentum_mdupdt_conf = 1001;

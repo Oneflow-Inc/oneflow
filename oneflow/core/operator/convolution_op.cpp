@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/convolution_op.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
@@ -30,7 +31,14 @@ void ConvolutionOp::InferShape4FwBlobs(
   auto conv_conf = op_conf().convolution_conf();
   int64_t batch_size = input_shape_ptr->At(0);
   int64_t c_i = input_shape_ptr->At(1);
-  int64_t c_o = conv_conf.out_num();
+
+  int32_t out_num = GetInt32FromSpecialConf("out_num");
+  if (policy == kModelParallel) {
+    BalancedSplitter splitter(out_num, parallel_num);
+    out_num = splitter.At(parallel_id).size();
+  }
+  int64_t c_o = out_num;
+
   int64_t kernel_size = 1;
   int64_t output_size = 1;
   std::vector<int64_t> output_shape_vec = {batch_size, c_o};

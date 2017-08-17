@@ -5,6 +5,7 @@
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/keyword.h"
+#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/operator.pb.h"
@@ -82,6 +83,9 @@ class Operator {
       std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
       ParallelPolicy policy, int64_t parallel_id,
       int64_t parallel_num) const = 0;
+
+  //
+  virtual void FixParallelDesc(ParallelDesc* pr_desc) const {}
 
  protected:
   virtual std::string ibn2lbn(const std::string& input_bn) const = 0;
