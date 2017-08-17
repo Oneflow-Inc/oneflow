@@ -16,7 +16,7 @@ void DataCompTaskNode::FwBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   NewProducedRegstDesc("data_tmp");
   NewProducedRegstDesc("model_tmp");
   NewProducedRegstDesc("model");
-  NewProducedRegstDesc("log");
+  NewProducedRegstDesc("loss");
   // Enroll Lbn
   FwSetExecNodeFromInRegst(extern_in_lbn2consumer);
   FwEnrollLbn2OutRegst(lbn2producer);
@@ -87,11 +87,11 @@ void DataCompTaskNode::FwEnrollLbn2OutRegst(const Lbn2NodeBnMap& lbn2producer) {
 
 void DataCompTaskNode::FwEnrollLbn2OutRegstWhenLoss() {
   ExecNode* exec_node = exec_gph().SoleNode();
-  // log regst
-  std::shared_ptr<RegstDesc> log_regst = GetProducedRegstDesc("log");
+  // loss regst
+  std::shared_ptr<RegstDesc> loss_regst = GetProducedRegstDesc("loss");
   for (const std::string& obn : exec_node->op()->output_bns()) {
-    log_regst->EnrollLbn(exec_node->op()->Lbn4BnInOp(obn));
-    exec_node->BindBnInOpAndRegst(obn, log_regst);
+    loss_regst->EnrollLbn(exec_node->op()->Lbn4BnInOp(obn));
+    exec_node->BindBnInOpAndRegst(obn, loss_regst);
   }
   // out regst
   if (!out_edges().empty()) {

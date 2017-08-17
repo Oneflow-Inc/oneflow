@@ -88,22 +88,46 @@ void InnerProductKernel<device_type, FloatingPointType>::Backward(
 
 template<DeviceType device_type, typename FloatingPointType>
 void InnerProductKernel<device_type, FloatingPointType>::
-    InitModelAndModelTmpBlobsWithoutSnapshot(
-        const KernelCtx& ctx,
+    InitModelBlobsWithRandomSeed(
+        const KernelCtx& ctx, std::mt19937 random_seed_gen,
         std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   KernelUtil<device_type, FloatingPointType>::FillWithProperConf(
       ctx, OF_PB_POINTER_GET(op()->op_conf().innerproduct_conf(), weight_fill),
-      BnInOp2Blob("weight"));
+      random_seed_gen(), BnInOp2Blob("weight"));
 
   if (op()->GetBoolFromSpecialConf("has_bias_term")) {
     KernelUtil<device_type, FloatingPointType>::FillWithProperConf(
         ctx, OF_PB_POINTER_GET(op()->op_conf().innerproduct_conf(), bias_fill),
-        BnInOp2Blob("bias"));
+        random_seed_gen(), BnInOp2Blob("bias"));
+  }
+}
+template<DeviceType device_type, typename FloatingPointType>
+void InnerProductKernel<device_type, FloatingPointType>::
+    InitModelBlobsWithSnapshot(
+        const KernelCtx& ctx, int32_t part_id, int32_t part_num,
+        const Snapshot* snapshot,
+        std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  Blob* weight_blob = BnInOp2Blob("weight");
+  int32_t dim_num = op()->GetInt32FromSpecialConf("out_num");
+  KernelUtil<device_type, FloatingPointType>::FillWithSnapshot(
+      ctx, part_id, part_num, snapshot, weight_blob, op()->Lbn4BnInOp("weight"),
+      dim_num, weight_blob->shape().Count(1));
+  if (op()->GetBoolFromSpecialConf("has_bias_term")) {
+    KernelUtil<device_type, FloatingPointType>::FillWithSnapshot(
+        ctx, part_id, part_num, snapshot, BnInOp2Blob("bias"),
+        op()->Lbn4BnInOp("bias"), dim_num, 1);
+  }
+}
 
+template<DeviceType device_type, typename FloatingPointType>
+void InnerProductKernel<device_type, FloatingPointType>::InitModelTmpBlobs(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (op()->GetBoolFromSpecialConf("has_bias_term")) {
     FillConf bias_multiplier_fill_conf;
     bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.0f);
     KernelUtil<device_type, FloatingPointType>::Fill(
-        ctx, bias_multiplier_fill_conf, BnInOp2Blob("bias_multiplier"));
+        ctx, bias_multiplier_fill_conf, 0, BnInOp2Blob("bias_multiplier"));
   }
 }
 

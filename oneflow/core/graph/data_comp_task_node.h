@@ -11,16 +11,29 @@ class DataCompTaskNode final : public CompTaskNode {
   DataCompTaskNode() = default;
   ~DataCompTaskNode() = default;
 
-  void ToProto(TaskProto* proto) const override {
-    TaskNode::ToProto(proto);
-    proto->set_parallel_policy(chain_node()->parallel_desc()->policy());
+  void ToProto(TaskProto* proto, std::function<int64_t(const ChainNode*)>
+                                     MeaninglessTaskCnt4Chain) const override {
+    TaskNode::ToProto(proto, MeaninglessTaskCnt4Chain);
+    FillProtoWithParallelInfo(proto, MeaninglessTaskCnt4Chain);
+  }
+
+  void FillProtoWithParallelInfo(TaskProto* proto,
+                                 std::function<int64_t(const ChainNode*)>
+                                     MeaninglessTaskCnt4Chain) const override {
+    auto parallel_desc = chain_node()->parallel_desc();
+    proto->set_parallel_policy(parallel_desc->policy());
     proto->set_parallel_id(parallel_id());
-    proto->set_parallel_num(chain_node()->parallel_desc()->parallel_num());
+    proto->set_parallel_num(parallel_desc->parallel_num()
+                            - MeaninglessTaskCnt4Chain(chain_node()));
   }
 
   bool IsMeaningLess() const override {
     if (IsFwNode()) {
-      return TaskNode::IsMeaningLess();
+      if (chain_node()->IsRecordNode()) {
+        return false;
+      } else {
+        return TaskNode::IsMeaningLess();
+      }
     } else {
       return TaskNode::IsMeaningLess() || GetFwNode()->IsMeaningLess();
     }

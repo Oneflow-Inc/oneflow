@@ -24,6 +24,7 @@ class RuntimeCtx final {
   void InitDataReader(const std::string& filepath);
 
   ThreadSafeCounter& mut_active_actor_cnt() { return active_actor_cnt_; }
+  ThreadSafeCounter& mut_inactive_actor_cnt() { return inactive_actor_cnt_; }
 
  private:
   RuntimeCtx() { LOG(INFO) << "RuntimeCtx Init"; }
@@ -36,6 +37,7 @@ class RuntimeCtx final {
   std::unique_ptr<PersistentCircularLineReader> data_reader_;
 
   ThreadSafeCounter active_actor_cnt_;
+  ThreadSafeCounter inactive_actor_cnt_;
 };
 
 }  // namespace oneflow

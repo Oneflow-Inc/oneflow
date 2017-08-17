@@ -17,6 +17,11 @@ class InnerProductOp final : public UserOperator {
       std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
       ParallelPolicy policy, int64_t parallel_id,
       int64_t parallel_num) const override;
+  void FixParallelDesc(ParallelDesc* pr_desc) const override {
+    if (pr_desc->policy() == kModelParallel) {
+      pr_desc->RemoveNeedlessDevice(GetInt32FromSpecialConf("out_num"));
+    }
+  }
 };
 
 }  // namespace oneflow

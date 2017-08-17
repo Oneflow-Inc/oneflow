@@ -42,7 +42,7 @@ void InnerProductOp::InferShape4FwBlobs(
   if (GetBoolFromSpecialConf("has_bias_term")) {
     // model bn
     Shape* bias_shape_ptr = GetShapePtr4BnInOp("bias");
-    *bias_shape_ptr = Shape({out_num});
+    *bias_shape_ptr = Shape({1, out_num});
 
     // model tmp bn
     CHECK_EQ(model_tmp_bns().size(), 1);

@@ -34,16 +34,16 @@ std::shared_ptr<const Operator> OpMgr::ModelUpdateOp() {
   if (!model_update_op_) {
     OperatorConf mdupdt_conf;
     mdupdt_conf.set_name("model_update");
-    const JobConf& job_conf = JobDesc::Singleton()->job_conf();
-    if (job_conf.has_normal_mdupdt_conf()) {
+    const TrainConf& train_conf = JobDesc::Singleton()->job_conf().train_conf();
+    if (train_conf.has_normal_mdupdt_conf()) {
       *(mdupdt_conf.mutable_normal_mdupdt_conf()) =
-          job_conf.normal_mdupdt_conf();
-    } else if (job_conf.has_momentum_mdupdt_conf()) {
+          train_conf.normal_mdupdt_conf();
+    } else if (train_conf.has_momentum_mdupdt_conf()) {
       *(mdupdt_conf.mutable_momentum_mdupdt_conf()) =
-          job_conf.momentum_mdupdt_conf();
-    } else if (job_conf.has_rmsprop_mdupdt_conf()) {
+          train_conf.momentum_mdupdt_conf();
+    } else if (train_conf.has_rmsprop_mdupdt_conf()) {
       *(mdupdt_conf.mutable_rmsprop_mdupdt_conf()) =
-          job_conf.rmsprop_mdupdt_conf();
+          train_conf.rmsprop_mdupdt_conf();
     } else {
       UNEXPECTED_RUN();
     }

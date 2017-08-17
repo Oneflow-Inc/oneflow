@@ -12,23 +12,24 @@ namespace {
 template<DeviceType device_type, typename FloatingPointType>
 std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
   using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
-  FloatingPointType in_mat[8] = {1, 2, 3, 4, 0, 0, 0, 0};
+  FloatingPointType prediction_mat[8] = {1, 2, 3, 4, 0, 0, 0, 0};
   FloatingPointType label_mat[2] = {2, 0};
-  FloatingPointType expected_loss_mat[1] = {1.413242};
-  FloatingPointType expected_in_diff_mat[8] = {
-      0.0160293, 0.04357215, -0.3815586, 0.32195715,
-      -0.375,    0.125,      0.125,      0.125};
+  FloatingPointType expected_loss_mat[1] = {2.826484};
+  FloatingPointType expected_prediction_diff_mat[8] = {
+      0.0320586, 0.0871443, -0.7631172, 0.6439143, -0.75, 0.25, 0.25, 0.25};
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
-  (*bn2blob_ptr)["in"] = KTCommon::CreateBlobWithVector({2, 4}, in_mat);
+  (*bn2blob_ptr)["prediction"] =
+      KTCommon::CreateBlobWithVector({2, 4}, prediction_mat);
   (*bn2blob_ptr)["label"] = KTCommon::CreateBlobWithVector({2}, label_mat);
   (*bn2blob_ptr)["prob"] = KTCommon::CreateBlobWithRandomValue({2, 4});
   (*bn2blob_ptr)["tmp_1D"] = KTCommon::CreateBlobWithRandomValue({2});
   (*bn2blob_ptr)["loss"] = KTCommon::CreateBlobWithRandomValue({1});
-  (*bn2blob_ptr)["in_diff"] = KTCommon::CreateBlobWithRandomValue({2, 4});
+  (*bn2blob_ptr)["prediction_diff"] =
+      KTCommon::CreateBlobWithRandomValue({2, 4});
   (*bn2blob_ptr)["expected_loss"] =
       KTCommon::CreateBlobWithVector({1}, expected_loss_mat);
-  (*bn2blob_ptr)["expected_in_diff"] =
-      KTCommon::CreateBlobWithVector({2, 4}, expected_in_diff_mat);
+  (*bn2blob_ptr)["expected_prediction_diff"] =
+      KTCommon::CreateBlobWithVector({2, 4}, expected_prediction_diff_mat);
   return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
 }
 
@@ -37,7 +38,7 @@ Kernel* BuildSoftmaxLossKernel() {
   OperatorConf op_conf;
   op_conf.set_name("softmax_loss_op_test");
   SoftmaxLossOpConf* softmax_loss_conf = op_conf.mutable_softmax_loss_conf();
-  softmax_loss_conf->set_in("softmax_loss/in");
+  softmax_loss_conf->set_prediction("softmax_loss/prediction");
   softmax_loss_conf->set_label("softmax_loss/label");
   softmax_loss_conf->set_loss("softmax_loss/loss");
   auto softmax_loss_op = ConstructOp(op_conf);
@@ -60,7 +61,8 @@ void TestSoftmaxLossKernel() {
   softmax_loss_kernel->Forward(ctx, BnInOp2BlobPtr);
   KTCommon::SyncStream(&ctx);
   KTCommon::CheckResult(BnInOp2BlobPtr, "loss", "expected_loss");
-  KTCommon::CheckResult(BnInOp2BlobPtr, "in_diff", "expected_in_diff");
+  KTCommon::CheckResult(BnInOp2BlobPtr, "prediction_diff",
+                        "expected_prediction_diff");
 }
 
 }  // namespace

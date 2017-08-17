@@ -20,15 +20,32 @@ class MdUpdtCompActor final : public CompActor {
   int HandlerNormal(const ActorMsg&) override;
   int HandlerWaitUntilNoReadableRegst(const ActorMsg&) override;
 
+  bool IsWriteReady() const override {
+    return Actor::IsWriteReady()
+           && CurWriteableRegstNum4DescId(model_regst_desc_id_) >= 2;
+  }
   bool IsReadReady() override { return !waiting_model_diff_acc_queue_.empty(); }
   void Act() override;
+  void AsyncCopyModelFromCurToNext() {
+    Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
+    Regst* next_model_regst = GetNextWriteableRegst(model_regst_desc_id_);
+    MemcpyFunc(GenDefaultKernelCtx(),
+               next_model_regst->packed_blob()->mut_dptr(),
+               model_regst->packed_blob()->dptr(),
+               next_model_regst->packed_blob()->shape().elem_cnt()
+                   * JobDesc::Singleton()->FloatingPointSize());
+  }
 
   CudaStreamHandle cuda_handle_;
   int64_t model_regst_desc_id_;
   int64_t model_tmp_regst_desc_id_;
-  std::queue<std::shared_ptr<RegstWrapper>> waiting_model_diff_acc_queue_;
+  int64_t data_tmp_regst_desc_id_;
+  std::queue<Regst*> waiting_model_diff_acc_queue_;
   int64_t next_model_version_id_;
   int64_t related_save_task_id_;
+  uint32_t random_seed_;
+
+  std::function<void(const KernelCtx&, void*, const void*, size_t)> MemcpyFunc;
 };
 
 }  // namespace oneflow

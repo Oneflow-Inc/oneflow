@@ -1,18 +1,15 @@
 #include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/common/process_state.h"
-#include "tensorflow/core/framework/graph.pb.h"
-#include "tensorflow/core/lib/io/path.h"
-#include "tensorflow/core/lib/strings/str_util.h"
+#include "oneflow/core/common/str_util.h"
 
 namespace oneflow {
 
 TEST(Snapshot, write_and_read) {
   tensorflow::Env* env = tensorflow::Env::Default();
   std::string current_dir = GetCwd();
-  current_dir =
-      tensorflow::str_util::StringReplace(current_dir, "\\", "/", true);
+  StringReplace(&current_dir, '\\', '/');
   std::string snapshot_root_path =
-      tensorflow::io::JoinPath(current_dir, "/tmp_snapshot_test_asdfasdf");
+      JoinPath(current_dir, "/tmp_snapshot_test_asdfasdf");
   if (env->IsDirectory(snapshot_root_path).code() == tensorflow::error::OK) {
     std::vector<std::string> children;
     TF_CHECK_OK(env->GetChildren(snapshot_root_path, &children));
@@ -28,11 +25,13 @@ TEST(Snapshot, write_and_read) {
     auto write_stream1_ptr = snapshot_write.GetOutStream(key, 0, 2);
     auto write_stream2_ptr = snapshot_write.GetOutStream(key, 1, 2);
     (*write_stream1_ptr) << 'a';
+    snapshot_write.OnePartDone4Key(key, 0);
     (*write_stream2_ptr) << 'b';
+    snapshot_write.OnePartDone4Key(key, 1);
   }
   // test write
-  std::string file1 = tensorflow::io::JoinPath(snapshot_root_path, key, "0");
-  std::string file2 = tensorflow::io::JoinPath(snapshot_root_path, key, "1");
+  std::string file1 = JoinPath(snapshot_root_path, key, "0");
+  std::string file2 = JoinPath(snapshot_root_path, key, "1");
   std::string data1;
   std::string data2;
   TF_CHECK_OK(tensorflow::ReadFileToString(env, file1, &data1));

@@ -17,12 +17,12 @@ Kernel* BuildPoolingKernel(const PoolingOpConf::PoolMethod& pooling_method) {
   pooling_conf->set_in("pooling_in");
   pooling_conf->set_out("pooling_out");
   pooling_conf->set_pool(pooling_method);
-  pooling_conf->add_pad(1);
-  pooling_conf->add_pad(1);
-  pooling_conf->add_kernel_size(3);
-  pooling_conf->add_kernel_size(3);
-  pooling_conf->add_stride(2);
-  pooling_conf->add_stride(2);
+  pooling_conf->set_pad_h(1);
+  pooling_conf->set_pad_w(1);
+  pooling_conf->set_kernel_size_h(3);
+  pooling_conf->set_kernel_size_w(3);
+  pooling_conf->set_stride_h(2);
+  pooling_conf->set_stride_w(2);
 
   auto pooling_op = ConstructOp(op_conf);
   OperatorProto op_proto;
@@ -80,12 +80,12 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
   (*bn2blob_ptr)["out_diff"] = (*bn2blob_ptr)["out"];
   (*bn2blob_ptr)["in_diff"] =
       KTCommon::CreateBlobWithSameValue({1, 1, 5, 5}, 0);
-  if (pooling_method == PoolingOpConf::MAX) {
+  if (pooling_method == PoolingOpConf::kMax) {
     (*bn2blob_ptr)["expected_out"] =
         KTCommon::CreateBlobWithVector({1, 1, 3, 3}, expected_max_out_mat);
     (*bn2blob_ptr)["expected_in_diff"] =
         KTCommon::CreateBlobWithVector({1, 1, 5, 5}, expected_max_in_diff_mat);
-  } else if (pooling_method == PoolingOpConf::AVE) {
+  } else if (pooling_method == PoolingOpConf::kAve) {
     (*bn2blob_ptr)["expected_out"] =
         KTCommon::CreateBlobWithVector({1, 1, 3, 3}, expected_ave_out_mat);
     (*bn2blob_ptr)["expected_in_diff"] =
@@ -121,23 +121,23 @@ void TestPoolingKernel(const PoolingOpConf::PoolMethod& pooling_method) {
 }  // namespace test
 
 TEST(PoolingKernel, pooling_max_cpu) {
-  test::TestPoolingKernel<DeviceType::kCPU, float>(PoolingOpConf::MAX);
-  test::TestPoolingKernel<DeviceType::kCPU, double>(PoolingOpConf::MAX);
+  test::TestPoolingKernel<DeviceType::kCPU, float>(PoolingOpConf::kMax);
+  test::TestPoolingKernel<DeviceType::kCPU, double>(PoolingOpConf::kMax);
 }
 
 TEST(PoolingKernel, pooling_ave_cpu) {
-  test::TestPoolingKernel<DeviceType::kCPU, float>(PoolingOpConf::AVE);
-  test::TestPoolingKernel<DeviceType::kCPU, double>(PoolingOpConf::AVE);
+  test::TestPoolingKernel<DeviceType::kCPU, float>(PoolingOpConf::kAve);
+  test::TestPoolingKernel<DeviceType::kCPU, double>(PoolingOpConf::kAve);
 }
 
 TEST(PoolingKernel, pooling_max_gpu) {
-  test::TestPoolingKernel<DeviceType::kGPU, float>(PoolingOpConf::MAX);
-  test::TestPoolingKernel<DeviceType::kGPU, double>(PoolingOpConf::MAX);
+  test::TestPoolingKernel<DeviceType::kGPU, float>(PoolingOpConf::kMax);
+  test::TestPoolingKernel<DeviceType::kGPU, double>(PoolingOpConf::kMax);
 }
 
 TEST(PoolingKernel, pooling_ave_gpu) {
-  test::TestPoolingKernel<DeviceType::kGPU, float>(PoolingOpConf::AVE);
-  test::TestPoolingKernel<DeviceType::kGPU, double>(PoolingOpConf::AVE);
+  test::TestPoolingKernel<DeviceType::kGPU, float>(PoolingOpConf::kAve);
+  test::TestPoolingKernel<DeviceType::kGPU, double>(PoolingOpConf::kAve);
 }
 
 }  // namespace oneflow

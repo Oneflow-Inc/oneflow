@@ -9,9 +9,7 @@
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/kernel/kernel_manager.h"
 #include "oneflow/core/persistence/snapshot_manager.h"
-#include "oneflow/core/register/local_register_wrapper.h"
 #include "oneflow/core/register/register_manager.h"
-#include "oneflow/core/register/remote_register_wrapper.h"
 #include "oneflow/core/thread/thread_context.h"
 
 namespace oneflow {
@@ -75,7 +73,10 @@ class Actor {
   // Async Do on KernelCtx
   void AsyncLaunchKernel(
       const KernelCtx&,
-      std::function<std::shared_ptr<RegstWrapper>(int64_t)> Regst4RegstDescId);
+      std::function<Blob*(const std::string&, const ExecKernel& ek)>
+          BnInOpAndEk2Blob);
+  void AsyncLaunchKernel(const KernelCtx&,
+                         std::function<Regst*(int64_t)> Regst4RegstDescId);
   void AsyncSendReadableRegstMsg(std::function<void(Regst*)> RegstPreProcess,
                                  std::function<bool(int64_t)> IsAllowedActor);
   void AsyncSendReadableRegstMsg(std::function<void(Regst*)> RegstPreProcess);
@@ -83,7 +84,7 @@ class Actor {
   void AsyncSendReadableRegstMsg();
   void AsyncSendEORDMsgToConsumers(int64_t regst_desc_id);
   void AsyncSendEORDMsgForAllProducedRegstDesc();
-  void AsyncSendRegstMsgToProducer(const std::shared_ptr<RegstWrapper>&);
+  void AsyncSendRegstMsgToProducer(Regst*);
   void AsyncDo(std::function<void()>);
 
   // Status of Produced Registers
@@ -95,9 +96,16 @@ class Actor {
   int64_t total_reading_cnt() const { return total_reading_cnt_; }
   int64_t expected_piece_id() const { return expected_piece_id_; }
 
- private:
-  bool IsWriteReady();
+  // IsWriteReady
+  virtual bool IsWriteReady() const;
+  size_t CurWriteableRegstNum4DescId(int64_t regst_desc_id) const {
+    return writeable_produced_regst_.at(regst_desc_id).size();
+  }
+  Regst* GetNextWriteableRegst(int64_t regst_desc_id) {
+    return writeable_produced_regst_.at(regst_desc_id).at(1);
+  }
 
+ private:
   int64_t actor_id_;
   KernelLaunchFunc launch_func_;
   std::vector<ExecKernel> exec_kernel_vec_;
@@ -111,7 +119,7 @@ class Actor {
 
   // Status of Produced Registers
   int64_t expected_piece_id_;
-  HashMap<int64_t, std::queue<Regst*>>
+  HashMap<int64_t, std::deque<Regst*>>
       writeable_produced_regst_;  // <regst_desc_id, regst>
   int64_t writeable_produced_regst_desc_num_;
   HashMap<Regst*, int64_t> produced_regst2reading_cnt_;

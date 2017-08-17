@@ -1,11 +1,11 @@
 #ifndef ONEFLOW_CORE_OPERATOR_RMSPROP_MODEL_UPDATE_OP_H_
 #define ONEFLOW_CORE_OPERATOR_RMSPROP_MODEL_UPDATE_OP_H_
 
-#include "oneflow/core/operator/operator_manager.h"
+#include "oneflow/core/operator/model_update_op.h"
 
 namespace oneflow {
 
-class RMSPropModelUpdateOp final : public SysOperator {
+class RMSPropModelUpdateOp final : public ModelUpdtOp {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RMSPropModelUpdateOp);
   RMSPropModelUpdateOp() = default;
@@ -23,9 +23,6 @@ class RMSPropModelUpdateOp final : public SysOperator {
     return kPackedBlobName;
   }
   std::string obn2lbn(const std::string& output_bn) const override {
-    return kPackedBlobName;
-  }
-  std::string mtbn2lbn(const std::string& output_bn) const override {
     return kPackedBlobName;
   }
 };

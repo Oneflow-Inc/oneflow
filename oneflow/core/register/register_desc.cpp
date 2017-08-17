@@ -32,7 +32,7 @@ void SetHostPinnedMemoryAccordingToConsumers(
 
 RegstDesc::RegstDesc() {
   producer_ = nullptr;
-  register_num_ = 2;  // TODO
+  register_num_ = 3;  // TODO
 }
 
 void RegstDesc::AddConsumer(const TaskNode* new_consumer) {

@@ -42,7 +42,7 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
   (*bn2blob_ptr)["momentum"] = KTCommon::CreateBlobWithSameValue(dim_vec, 4);
   (*bn2blob_ptr)["model_diffs"] = KTCommon::CreateBlobWithSameValue(dim_vec, 4);
   (*bn2blob_ptr)["model_expected"] =
-      KTCommon::CreateBlobWithSameValue(dim_vec, 1);
+      KTCommon::CreateBlobWithSameValue(dim_vec, 3);
   (*bn2blob_ptr)["momentum_expected"] =
       KTCommon::CreateBlobWithSameValue(dim_vec, 1);
   return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };

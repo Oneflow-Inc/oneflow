@@ -8,24 +8,34 @@ enum FloatingPointTypeProto {
   kDouble = 1;
 }
 
-message JobConf {
-  string train_dlnet_conf_filepath = 1;
-  string resource_filepath = 2;
-  string placement_filepath = 3;
-  string model_load_snapshot_path = 4;
-  string model_save_snapshots_path = 5;
-  int32 piece_size = 7;
-  int32 num_of_pieces_in_batch = 8;
-  bool is_train = 9;
-  FloatingPointTypeProto floating_point_type = 10;
-  int32 num_of_batches_in_snapshot = 11;
-  int32 staleness = 12; // at least 0. If set as 0, then it's BSP
-  int64 total_batch_num = 13;
-  FillConf default_fill_conf = 14;
-  bool use_async_cpu_stream = 15;
+message TrainConf {
+  string model_save_snapshots_path = 1;
+  int32 num_of_batches_in_snapshot = 2;
+  int32 staleness = 3; // at least 0. If set as 0, then it's BSP
+  int64 total_batch_num = 4;
+  FillConf default_fill_conf = 5;
+  int32 piece_num_of_record_loss = 6;
   oneof ModelUpdateCase {
     NormalModelUpdateOpConf normal_mdupdt_conf = 1000;
     MomentumModelUpdateOpConf momentum_mdupdt_conf = 1001;
     RMSPropModelUpdateOpConf rmsprop_mdupdt_conf = 1002;
+  }
+}
+
+message PredictConf {
+}
+
+message JobConf {
+  string dlnet_filepath = 1;
+  string resource_filepath = 2;
+  string placement_filepath = 3;
+  string model_load_snapshot_path = 4;
+  int32 piece_size = 5;
+  int32 num_of_pieces_in_batch = 6;
+  FloatingPointTypeProto floating_point_type = 7;
+  bool use_async_cpu_stream = 8;
+  oneof JobType {
+    TrainConf train_conf = 1000;
+    PredictConf predict_conf = 1001;
   }
 }
