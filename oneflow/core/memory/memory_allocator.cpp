@@ -16,6 +16,10 @@ std::tuple<char*, std::function<void()>, void*> MemoryAllocator::Allocate(
   } else if (mem_case.has_host_pinned_mem()) {
     if (mem_case.host_pinned_mem().need_cuda()) {
       CudaCheck(cudaMallocHost(&dptr, size));
+    } else {
+      dptr = (char*)malloc(size);
+      CHECK(dptr != nullptr);
+      memset(dptr, memset_val, size);
     }
     if (mem_case.host_pinned_mem().need_rdma()) {
       // TODO();
