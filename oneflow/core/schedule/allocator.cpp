@@ -10,8 +10,12 @@ namespace schedule {
 void Allocator::Allocate(Plan* plan) {
   auto sgraph_factory = schedule_factory_provider()->sgraph_factory();
   auto session_factory = schedule_factory_provider()->session_factory();
+  auto validator_factory = schedule_factory_provider()->validator_factory();
+  auto validator = validator_factory->CreateValidator();
 
   auto sgraph = sgraph_factory->CreateSGraph(*plan);
+  CHECK(validator->ValidateGraph(*sgraph));
+
   auto session = session_factory->CreateSession(*sgraph);
   auto schedule = MemoryLimitedStaticSchedule(*session);
   SetRegstNum(*schedule, plan);

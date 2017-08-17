@@ -19,7 +19,7 @@ class SessionFactory {
   virtual ~SessionFactory() = default;
   DEFINE_FACTORY_METHOD_CLONE(SessionFactory, SessionFactory);
 
-  std::unique_ptr<Session> CreateSession(const SGraph& graph) const {
+  virtual std::unique_ptr<Session> CreateSession(const SGraph& graph) const {
     return unique_ptr_new<Session>(const_cast<SGraph*>(&graph));
   }
 };

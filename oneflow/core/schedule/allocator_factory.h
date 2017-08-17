@@ -16,7 +16,7 @@ class AllocatorFactory {
   AllocatorFactory() = default;
   DEFINE_FACTORY_METHOD_CLONE(AllocatorFactory, AllocatorFactory);
 
-  std::unique_ptr<Allocator> CreateAllocator() const {
+  virtual std::unique_ptr<Allocator> CreateAllocator() const {
     return unique_ptr_new<Allocator>(schedule_factory_provider_);
   }
 

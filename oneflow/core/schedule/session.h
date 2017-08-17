@@ -87,13 +87,14 @@ class Session {
   ArcMgr<TaskArcInstance> task_arc_instance_mgr_;
 };
 
-template<uint32_t nr_base_batch = 1u>
+template<uint32_t tpl_nr_base_batch>
 class FixedBatchSession final : public Session {
  public:
   OF_DISALLOW_COPY_AND_MOVE(FixedBatchSession);
   FixedBatchSession() = delete;
   virtual ~FixedBatchSession() = default;
-  explicit FixedBatchSession(SGraph* graph) : Session(graph, nr_base_batch) {}
+  explicit FixedBatchSession(SGraph* graph)
+      : Session(graph, tpl_nr_base_batch) {}
 };
 
 }  // namespace schedule

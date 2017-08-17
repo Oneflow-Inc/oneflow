@@ -1,9 +1,28 @@
 #include "oneflow/core/schedule/validator.h"
+#include "oneflow/core/schedule/scc_visitor.h"
 #include "oneflow/core/schedule/schedule_engine_factory.h"
 #include "oneflow/core/schedule/schedule_factory_provider.h"
 
 namespace oneflow {
 namespace schedule {
+
+bool Validator::ValidateGraphArc(
+    const SGraph& sgraph, const std::function<void(const Arc<STask>&)>& cb) {
+  typedef std::function<void(STask * task)> TaskVisitor;
+  auto foreach_next = [&](STask* task, const TaskVisitor& cb) {
+    sgraph.arc_mgr().Output(task, cb);
+  };
+  SccVisitor<STask*> scc(foreach_next);
+  auto print_component = [&](const std::list<STask*> l) {
+    for (STask* task : l) {
+      if (task != l.front()) { std::cout << ","; }
+      std::cout << task->id();
+    }
+    std::cout << std::endl;
+  };
+  auto scc_cnt = scc(sgraph.source(), print_component);
+  return scc_cnt == 0u;
+}
 
 bool Validator::ValidateMemory(const Schedule& schedule) {
   std::unordered_map<const SDevice*, uint64_t> device2total_memory_size;
@@ -37,13 +56,15 @@ bool Validator::ValidateAllocation(const Schedule& schedule) {
       if (count == target && limited[p.first->id()] > 1) {
         limited[p.first->id()] -= 1;
         declined = true;
+        std::cout << "---------------" << std::endl;
+        std::cout << p.first->id() << ": " << limited[p.first->id()]
+                  << std::endl;
       }
       count++;
     }
     auto get_regst_num = [&](uint64_t id) { return limited[id]; };
     target++;
     if (declined) {
-      std::cout << "---------------" << std::endl;
       auto limited_schedule = schedule_engine->StaticSchedule(get_regst_num);
       if (limited_schedule->max_interval() <= schedule.max_interval()) {
         failed++;

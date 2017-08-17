@@ -5,6 +5,11 @@ namespace oneflow {
 namespace schedule {
 
 void PlanSGraph::InitRegstDesc(const Plan& plan) {
+  std::unordered_map<int64_t, const TaskProto*> id2task_proto;
+  for (const TaskProto& task_proto : plan.task()) {
+    id2task_proto[task_proto.id()] = &task_proto;
+  }
+
   for (const TaskProto& task_proto : plan.task()) {
     for (const auto& pair : task_proto.produced_regst_desc()) {
       uint64_t regst_desc_id = pair.second.regst_desc_id();
@@ -21,7 +26,12 @@ void PlanSGraph::InitRegstDesc(const Plan& plan) {
           mut_subscribed_regst_desc_mgr().CreateIfNotFound(consumer,
                                                            regst_desc);
         }
-        if (consumer && producer) {
+        const TaskProto* consumer_task_proto = id2task_proto[consumer_id];
+        CHECK(consumer);
+        CHECK(producer);
+        CHECK(consumer_task_proto);
+        if (!(task_proto.type() == kMdUpdtCompTask
+              && consumer_task_proto->type() == kDataCompTask)) {
           mut_arc_mgr().CreateIfNotFound(producer, consumer);
         }
       }
@@ -32,8 +42,10 @@ void PlanSGraph::InitRegstDesc(const Plan& plan) {
 void PlanSGraph::InitTask(const Plan& plan) {
   for (const TaskProto& task_proto : plan.task()) {
     uint64_t task_id = task_proto.id();
+    std::string name =
+        TaskType_Name(task_proto.type()) + "-" + std::to_string(task_id);
     //	STask
-    STask* node = mut_node_mgr().CreateWithId(task_id);
+    STask* node = mut_node_mgr().CreateWithId(task_id, name);
     if (node) { mut_children_arc_mgr().CreateIfNotFound(this, node); }
     bool is_copy_hd = (task_proto.type() == kCopyHdTask);
     //	SDevice
