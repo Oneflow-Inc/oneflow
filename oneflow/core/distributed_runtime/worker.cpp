@@ -22,9 +22,8 @@ Worker::~Worker() {}
   PrintProtoToString(request->plan(), &str_plan);
   LOG(INFO) << str_plan;
 
-  plan_ = request->plan();
-  // Plan plan = request->plan();
-  // oneflow::runtime::Runtime::Singleton()->Run(plan, this_node_name_);
+  ::oneflow::runtime::Runtime::Singleton()->SetPlan(request->plan());
+  ::oneflow::runtime::Runtime::Singleton()->SetThisMachineName(this_node_name_);
 
   done(::tensorflow::Status());
   return ::tensorflow::Status::OK();
@@ -43,6 +42,9 @@ Worker::~Worker() {}
     WorkerInitRuntimeRequest* request, WorkerInitRuntimeResponse* response,
     MyClosure done) {
   LOG(INFO) << "WorkerInitRuntime";
+
+  ::oneflow::runtime::Runtime::Singleton()->InitRuntime();
+
   done(::tensorflow::Status());
   return ::tensorflow::Status::OK();
 }
@@ -51,6 +53,7 @@ Worker::~Worker() {}
                                              WorkerInitModelResponse* response,
                                              MyClosure done) {
   LOG(INFO) << "WorkerInitModel";
+  ::oneflow::runtime::Runtime::Singleton()->InitModel();
   done(::tensorflow::Status());
   return ::tensorflow::Status::OK();
 }
@@ -59,6 +62,7 @@ Worker::~Worker() {}
     WorkerActivateActorRequest* request, WorkerActivateActorResponse* response,
     MyClosure done) {
   LOG(INFO) << "WorkerActivateActor";
+  ::oneflow::runtime::Runtime::Singleton()->ActivateActor();
   done(::tensorflow::Status());
   return ::tensorflow::Status::OK();
 }
@@ -67,6 +71,7 @@ Worker::~Worker() {}
     WorkerSendRemoteRegstToIncRequest* request,
     WorkerSendRemoteRegstToIncResponse* response, MyClosure done) {
   LOG(INFO) << "WorkerSendRemoteRegstToInc";
+  ::oneflow::runtime::Runtime::Singleton()->SendRemoteRegstToInc();
   done(::tensorflow::Status());
   return ::tensorflow::Status::OK();
 }
@@ -75,6 +80,7 @@ Worker::~Worker() {}
     WorkerSendRemoteRegstToDecRequest* request,
     WorkerSendRemoteRegstToDecResponse* response, MyClosure done) {
   LOG(INFO) << "WorkerSendRemoteRegstToDec";
+  ::oneflow::runtime::Runtime::Singleton()->SendRemoteRegstToDec();
   done(::tensorflow::Status());
   return ::tensorflow::Status::OK();
 }
@@ -83,6 +89,7 @@ Worker::~Worker() {}
     WorkerStartActorRequest* request, WorkerStartActorResponse* response,
     MyClosure done) {
   LOG(INFO) << "WorkerStartActor";
+  ::oneflow::runtime::Runtime::Singleton()->StartActor();
   done(::tensorflow::Status());
   return ::tensorflow::Status::OK();
 }

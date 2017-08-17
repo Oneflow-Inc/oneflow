@@ -57,7 +57,6 @@ class Worker {
 
  private:
   std::string this_node_name_;
-  Plan plan_;
   Network* data_net_;
 
   const std::unordered_map<std::string, std::shared_ptr<GrpcRemoteWorker>>&

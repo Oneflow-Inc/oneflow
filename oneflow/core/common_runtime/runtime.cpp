@@ -9,6 +9,24 @@ namespace oneflow {
 
 namespace runtime {
 
+void Runtime::SetPlan(const Plan& plan) { plan_ = plan; }
+
+void Runtime::SetThisMachineName(const std::string& this_machine_name) {
+  this_machine_name_ = this_machine_name;
+}
+
+void Runtime::InitRuntime() { InitSingleton(plan_, this_machine_name_); }
+
+void Runtime::InitModel() {}
+
+void Runtime::ActivateActor() {}
+
+void Runtime::SendRemoteRegstToInc() {}
+
+void Runtime::SendRemoteRegstToDec() {}
+
+void Runtime::StartActor() {}
+
 void Runtime::Run(const Plan& plan, const std::string& this_machine_name) {
   InitSingleton(plan, this_machine_name);
   std::vector<const TaskProto*> mdupdt_tasks;

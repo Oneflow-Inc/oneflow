@@ -15,12 +15,25 @@ class Runtime final {
   OF_SINGLETON(Runtime);
   void Run(const Plan& plan, const std::string& this_machine_name);
 
+  void SetPlan(const Plan& plan);
+  void SetThisMachineName(const std::string& this_machine_name);
+
+  void InitRuntime();
+  void InitModel();
+  void ActivateActor();
+  void SendRemoteRegstToInc();
+  void SendRemoteRegstToDec();
+  void StartActor();
+
  private:
   Runtime() = default;
   void InitSingleton(const Plan& plan, const std::string& this_machine_name);
   void DeleteSingleton();
   void HandoutTasks(const std::vector<const TaskProto*>& tasks);
   void SendCmdMsg(const std::vector<const TaskProto*>& tasks, ActorCmd cmd);
+
+  Plan plan_;
+  std::string this_machine_name_;
 };
 }  // namespace runtime
 }  // namespace oneflow
