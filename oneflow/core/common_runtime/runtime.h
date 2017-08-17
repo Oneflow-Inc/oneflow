@@ -41,7 +41,6 @@ class Runtime final {
   std::vector<const TaskProto*> source_tasks_;
   std::vector<const TaskProto*> other_tasks_;
   size_t this_machine_task_num_;
-
 };
 }  // namespace runtime
 }  // namespace oneflow

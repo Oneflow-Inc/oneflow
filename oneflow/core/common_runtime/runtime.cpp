@@ -22,13 +22,22 @@ void Runtime::InitRuntime() {
 
 void Runtime::InitModel() {
   RuntimeCtx::Singleton()->mut_model_init_cnt().Init("model_init_cnt",
-    mdupdt_tasks_.size());
+                                                     mdupdt_tasks_.size());
   HandoutTasks(mdupdt_tasks_);
   SendCmdMsg(mdupdt_tasks_, ActorCmd::kInitializeModel);
   RuntimeCtx::Singleton()->mut_model_init_cnt().WaitUntilCntEqualZero();
 }
 
-void Runtime::ActivateActor() {}
+void Runtime::ActivateActor() {
+  RuntimeCtx::Singleton()->mut_inactive_actor_cnt().Init(
+      "inactive_actor_cnt", this_machine_task_num_ - mdupdt_tasks_.size());
+  HandoutTasks(source_tasks_);
+  HandoutTasks(other_tasks_);
+  RuntimeCtx::Singleton()->mut_inactive_actor_cnt().WaitUntilCntEqualZero();
+  LOG(INFO) << "All actor on this machine are activated";
+  // OF_BARRIER();
+  LOG(INFO) << "All actor on all machine are activated";
+}
 
 void Runtime::SendRemoteRegstToInc() {}
 
@@ -51,7 +60,7 @@ void Runtime::FindTasksOnThisMachine() {
   }
 
   this_machine_task_num_ =
-    mdupdt_tasks_.size() + source_tasks_.size() + other_tasks_.size();
+      mdupdt_tasks_.size() + source_tasks_.size() + other_tasks_.size();
   LOG(INFO) << "number of mdupdt tasks is " << mdupdt_tasks_.size();
   LOG(INFO) << "number of source tasks is " << source_tasks_.size();
   LOG(INFO) << "number of other  tasks is " << other_tasks_.size();
