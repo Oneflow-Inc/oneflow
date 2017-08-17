@@ -51,8 +51,7 @@ std::vector<NetMemoryDescriptor> RegstMgr::NewRegsts(
     };
     if (std::get<2>(allocation) != nullptr) {
       NetMemoryDescriptor net_memory_desc{
-          std::get<0>(allocation), std::get<2>(allocation), 1, {0}};
-      // RuntimeCtx::Singleton()->AddNetMemoryDesc(net_memory_desc);
+          regst, std::get<0>(allocation), std::get<2>(allocation), 1, {0}};
       net_memory_descs.push_back(net_memory_desc);
     }
     OneRegstDone(regst);

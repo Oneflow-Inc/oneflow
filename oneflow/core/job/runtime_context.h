@@ -10,6 +10,7 @@
 namespace oneflow {
 
 struct NetMemoryDescriptor {
+  void* regst_ptr;
   void* local_ptr;
   void* network_ptr;
   int64_t this_machine_id;
