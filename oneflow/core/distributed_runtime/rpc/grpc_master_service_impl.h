@@ -40,6 +40,11 @@ namespace oneflow {
 enum class GrpcMasterMethod {
   kSendJob,
   kMasterConnectDataPlane,
+  kMasterInitRuntime,
+  kMasterInitModel,
+  kMasterActivateActor,
+  kMasterSendRemoteRegst,
+  kMasterStartActor,
   kMasterInitDataPlane,
 };
 
@@ -62,6 +67,23 @@ class MasterService GRPC_FINAL {
         ::grpc::ClientContext* context,
         const MasterConnectDataPlaneRequest& request,
         MasterConnectDataPlaneResponse* response) = 0;
+    virtual ::grpc::Status MasterInitRuntime(
+        ::grpc::ClientContext* context, const MasterInitRuntimeRequest& request,
+        MasterInitRuntimeResponse* response) = 0;
+    virtual ::grpc::Status MasterInitModel(
+        ::grpc::ClientContext* context, const MasterInitModelRequest& request,
+        MasterInitModelResponse* response) = 0;
+    virtual ::grpc::Status MasterActivateActor(
+        ::grpc::ClientContext* context,
+        const MasterActivateActorRequest& request,
+        MasterActivateActorResponse* response) = 0;
+    virtual ::grpc::Status MasterSendRemoteRegst(
+        ::grpc::ClientContext* context,
+        const MasterSendRemoteRegstRequest& request,
+        MasterSendRemoteRegstResponse* response) = 0;
+    virtual ::grpc::Status MasterStartActor(
+        ::grpc::ClientContext* context, const MasterStartActorRequest& request,
+        MasterStartActorResponse* response) = 0;
     virtual ::grpc::Status MasterInitDataPlane(
         ::grpc::ClientContext* context,
         const MasterInitDataPlaneRequest& request,
@@ -77,6 +99,23 @@ class MasterService GRPC_FINAL {
         ::grpc::ClientContext* context,
         const MasterConnectDataPlaneRequest& request,
         MasterConnectDataPlaneResponse* response) GRPC_OVERRIDE;
+    ::grpc::Status MasterInitRuntime(
+        ::grpc::ClientContext* context, const MasterInitRuntimeRequest& request,
+        MasterInitRuntimeResponse* response) GRPC_OVERRIDE;
+    ::grpc::Status MasterInitModel(
+        ::grpc::ClientContext* context, const MasterInitModelRequest& request,
+        MasterInitModelResponse* response) GRPC_OVERRIDE;
+    ::grpc::Status MasterActivateActor(
+        ::grpc::ClientContext* context,
+        const MasterActivateActorRequest& request,
+        MasterActivateActorResponse* response) GRPC_OVERRIDE;
+    ::grpc::Status MasterSendRemoteRegst(
+        ::grpc::ClientContext* context,
+        const MasterSendRemoteRegstRequest& request,
+        MasterSendRemoteRegstResponse* response) GRPC_OVERRIDE;
+    ::grpc::Status MasterStartActor(
+        ::grpc::ClientContext* context, const MasterStartActorRequest& request,
+        MasterStartActorResponse* response) GRPC_OVERRIDE;
     ::grpc::Status MasterInitDataPlane(
         ::grpc::ClientContext* context,
         const MasterInitDataPlaneRequest& request,
@@ -86,6 +125,11 @@ class MasterService GRPC_FINAL {
     std::shared_ptr<::grpc::ChannelInterface> channel_;
     const ::grpc::RpcMethod rpcmethod_SendJob_;
     const ::grpc::RpcMethod rpcmethod_MasterConnectDataPlane_;
+    const ::grpc::RpcMethod rpcmethod_MasterInitRuntime_;
+    const ::grpc::RpcMethod rpcmethod_MasterInitModel_;
+    const ::grpc::RpcMethod rpcmethod_MasterActivateActor_;
+    const ::grpc::RpcMethod rpcmethod_MasterSendRemoteRegst_;
+    const ::grpc::RpcMethod rpcmethod_MasterStartActor_;
     const ::grpc::RpcMethod rpcmethod_MasterInitDataPlane_;
   };  // Stub
 

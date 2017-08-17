@@ -45,6 +45,28 @@ class WorkerInterface {
       WorkerConnectDataPlaneResponse* response,
       ::tensorflow::StatusCallback done) = 0;
 
+  virtual void WorkerInitRuntimeAsync(const WorkerInitRuntimeRequest* request,
+                                      WorkerInitRuntimeResponse* response,
+                                      ::tensorflow::StatusCallback done) = 0;
+
+  virtual void WorkerInitModelAsync(const WorkerInitModelRequest* request,
+                                    WorkerInitModelResponse* response,
+                                    ::tensorflow::StatusCallback done) = 0;
+
+  virtual void WorkerActivateActorAsync(
+      const WorkerActivateActorRequest* request,
+      WorkerActivateActorResponse* response,
+      ::tensorflow::StatusCallback done) = 0;
+
+  virtual void WorkerSendRemoteRegstAsync(
+      const WorkerSendRemoteRegstRequest* request,
+      WorkerSendRemoteRegstResponse* response,
+      ::tensorflow::StatusCallback done) = 0;
+
+  virtual void WorkerStartActorAsync(const WorkerStartActorRequest* request,
+                                     WorkerStartActorResponse* response,
+                                     ::tensorflow::StatusCallback done) = 0;
+
   virtual ::tensorflow::Status WorkerInitDataPlane(
       const WorkerInitDataPlaneRequest* request,
       WorkerInitDataPlaneResponse* response) = 0;

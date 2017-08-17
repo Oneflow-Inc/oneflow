@@ -34,6 +34,40 @@ namespace oneflow {
       stub_->MasterConnectDataPlane(&ctx, *request, response));
 }
 
+::tensorflow::Status GrpcRemoteMaster::MasterInitRuntime(
+    const MasterInitRuntimeRequest* request,
+    MasterInitRuntimeResponse* response) {
+  ::grpc::ClientContext ctx;
+  return FromGrpcStatus(stub_->MasterInitRuntime(&ctx, *request, response));
+}
+
+::tensorflow::Status GrpcRemoteMaster::MasterInitModel(
+    const MasterInitModelRequest* request, MasterInitModelResponse* response) {
+  ::grpc::ClientContext ctx;
+  return FromGrpcStatus(stub_->MasterInitModel(&ctx, *request, response));
+}
+
+::tensorflow::Status GrpcRemoteMaster::MasterActivateActor(
+    const MasterActivateActorRequest* request,
+    MasterActivateActorResponse* response) {
+  ::grpc::ClientContext ctx;
+  return FromGrpcStatus(stub_->MasterActivateActor(&ctx, *request, response));
+}
+
+::tensorflow::Status GrpcRemoteMaster::MasterSendRemoteRegst(
+    const MasterSendRemoteRegstRequest* request,
+    MasterSendRemoteRegstResponse* response) {
+  ::grpc::ClientContext ctx;
+  return FromGrpcStatus(stub_->MasterSendRemoteRegst(&ctx, *request, response));
+}
+
+::tensorflow::Status GrpcRemoteMaster::MasterStartActor(
+    const MasterStartActorRequest* request,
+    MasterStartActorResponse* response) {
+  ::grpc::ClientContext ctx;
+  return FromGrpcStatus(stub_->MasterStartActor(&ctx, *request, response));
+}
+
 ::tensorflow::Status GrpcRemoteMaster::MasterInitDataPlane(
     const MasterInitDataPlaneRequest* request,
     MasterInitDataPlaneResponse* response) {

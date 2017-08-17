@@ -12,12 +12,35 @@ message SendPlanResponse {
 
 message WorkerConnectDataPlaneRequest {
 }
-
 message WorkerConnectDataPlaneResponse {
+}
+
+message WorkerInitRuntimeRequest {
+}
+message WorkerInitRuntimeResponse {
+}
+
+message WorkerInitModelRequest {
+}
+message WorkerInitModelResponse {
+}
+
+message WorkerActivateActorRequest {
+}
+message WorkerActivateActorResponse {
+}
+
+message WorkerSendRemoteRegstRequest {
+}
+message WorkerSendRemoteRegstResponse {
+}
+
+message WorkerStartActorRequest {
+}
+message WorkerStartActorResponse {
 }
 
 message WorkerInitDataPlaneRequest {
 }
-
 message WorkerInitDataPlaneResponse {
 }

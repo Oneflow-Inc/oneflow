@@ -99,6 +99,23 @@ class GrpcMasterService : public AsyncServiceInterface {
       MasterCall<MasterConnectDataPlaneRequest, MasterConnectDataPlaneResponse>*
           call);
 
+  void MasterInitRuntimeHandler(
+      MasterCall<MasterInitRuntimeRequest, MasterInitRuntimeResponse>* call);
+
+  void MasterInitModelHandler(
+      MasterCall<MasterInitModelRequest, MasterInitModelResponse>* call);
+
+  void MasterActivateActorHandler(
+      MasterCall<MasterActivateActorRequest, MasterActivateActorResponse>*
+          call);
+
+  void MasterSendRemoteRegstHandler(
+      MasterCall<MasterSendRemoteRegstRequest, MasterSendRemoteRegstResponse>*
+          call);
+
+  void MasterStartActorHandler(
+      MasterCall<MasterStartActorRequest, MasterStartActorResponse>* call);
+
   void MasterInitDataPlaneHandler(
       MasterCall<MasterInitDataPlaneRequest, MasterInitDataPlaneResponse>*
           call);

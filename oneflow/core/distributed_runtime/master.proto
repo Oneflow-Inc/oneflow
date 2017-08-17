@@ -21,13 +21,35 @@ message SendJobResponse {
 
 message MasterConnectDataPlaneRequest {
 }
-
 message MasterConnectDataPlaneResponse {
 }
 
+message MasterInitRuntimeRequest {
+}
+message MasterInitRuntimeResponse {
+}
+
+message MasterInitModelRequest {
+}
+message MasterInitModelResponse {
+}
+
+message MasterActivateActorRequest {
+}
+message MasterActivateActorResponse {
+}
+
+message MasterSendRemoteRegstRequest {
+}
+message MasterSendRemoteRegstResponse {
+}
+
+message MasterStartActorRequest {
+}
+message MasterStartActorResponse {
+}
 
 message MasterInitDataPlaneRequest {
 }
-
 message MasterInitDataPlaneResponse {
 }

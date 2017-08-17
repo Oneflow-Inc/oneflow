@@ -40,6 +40,26 @@ class GrpcRemoteMaster : public MasterInterface {
       const MasterConnectDataPlaneRequest* request,
       MasterConnectDataPlaneResponse* response) override;
 
+  ::tensorflow::Status MasterInitRuntime(
+      const MasterInitRuntimeRequest* request,
+      MasterInitRuntimeResponse* response) override;
+
+  ::tensorflow::Status MasterInitModel(
+      const MasterInitModelRequest* request,
+      MasterInitModelResponse* response) override;
+
+  ::tensorflow::Status MasterActivateActor(
+      const MasterActivateActorRequest* request,
+      MasterActivateActorResponse* response) override;
+
+  ::tensorflow::Status MasterSendRemoteRegst(
+      const MasterSendRemoteRegstRequest* request,
+      MasterSendRemoteRegstResponse* response) override;
+
+  ::tensorflow::Status MasterStartActor(
+      const MasterStartActorRequest* request,
+      MasterStartActorResponse* response) override;
+
   ::tensorflow::Status MasterInitDataPlane(
       const MasterInitDataPlaneRequest* request,
       MasterInitDataPlaneResponse* response) override;

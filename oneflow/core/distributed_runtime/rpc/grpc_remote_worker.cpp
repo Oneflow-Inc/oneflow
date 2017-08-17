@@ -47,6 +47,37 @@ void GrpcRemoteWorker::WorkerConnectDataPlaneAsync(
   IssueRequest(request, response, worker_connect_data_plane_, std::move(done));
 }
 
+void GrpcRemoteWorker::WorkerInitRuntimeAsync(
+    const WorkerInitRuntimeRequest* request,
+    WorkerInitRuntimeResponse* response, ::tensorflow::StatusCallback done) {
+  IssueRequest(request, response, worker_init_runtime_, std::move(done));
+}
+
+void GrpcRemoteWorker::WorkerInitModelAsync(
+    const WorkerInitModelRequest* request, WorkerInitModelResponse* response,
+    ::tensorflow::StatusCallback done) {
+  IssueRequest(request, response, worker_init_model_, std::move(done));
+}
+
+void GrpcRemoteWorker::WorkerActivateActorAsync(
+    const WorkerActivateActorRequest* request,
+    WorkerActivateActorResponse* response, ::tensorflow::StatusCallback done) {
+  IssueRequest(request, response, worker_activate_actor_, std::move(done));
+}
+
+void GrpcRemoteWorker::WorkerSendRemoteRegstAsync(
+    const WorkerSendRemoteRegstRequest* request,
+    WorkerSendRemoteRegstResponse* response,
+    ::tensorflow::StatusCallback done) {
+  IssueRequest(request, response, worker_send_remote_regst_, std::move(done));
+}
+
+void GrpcRemoteWorker::WorkerStartActorAsync(
+    const WorkerStartActorRequest* request, WorkerStartActorResponse* response,
+    ::tensorflow::StatusCallback done) {
+  IssueRequest(request, response, worker_start_actor_, std::move(done));
+}
+
 ::tensorflow::Status GrpcRemoteWorker::WorkerInitDataPlane(
     const WorkerInitDataPlaneRequest* request,
     WorkerInitDataPlaneResponse* response) {

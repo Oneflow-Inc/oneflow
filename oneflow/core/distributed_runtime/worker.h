@@ -27,6 +27,26 @@ class Worker {
       WorkerConnectDataPlaneRequest* request,
       WorkerConnectDataPlaneResponse* response, MyClosure done);
 
+  ::tensorflow::Status WorkerInitRuntime(WorkerInitRuntimeRequest* request,
+                                         WorkerInitRuntimeResponse* response,
+                                         MyClosure done);
+
+  ::tensorflow::Status WorkerInitModel(WorkerInitModelRequest* request,
+                                       WorkerInitModelResponse* response,
+                                       MyClosure done);
+
+  ::tensorflow::Status WorkerActivateActor(
+      WorkerActivateActorRequest* request,
+      WorkerActivateActorResponse* response, MyClosure done);
+
+  ::tensorflow::Status WorkerSendRemoteRegst(
+      WorkerSendRemoteRegstRequest* request,
+      WorkerSendRemoteRegstResponse* response, MyClosure done);
+
+  ::tensorflow::Status WorkerStartActor(WorkerStartActorRequest* request,
+                                        WorkerStartActorResponse* response,
+                                        MyClosure done);
+
   ::tensorflow::Status WorkerInitDataPlane(
       WorkerInitDataPlaneRequest* request,
       WorkerInitDataPlaneResponse* response, MyClosure done);

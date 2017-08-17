@@ -16,6 +16,16 @@ const char* GrpcWorkerMethodName(GrpcWorkerMethod id) {
     case GrpcWorkerMethod::kSendPlan: return "/oneflow.WorkerService/SendPlan";
     case GrpcWorkerMethod::kWorkerConnectDataPlane:
       return "/oneflow.WorkerService/WorkerConnectDataPlane";
+    case GrpcWorkerMethod::kWorkerInitRuntime:
+      return "/oneflow.WorkerService/WorkerInitRuntime";
+    case GrpcWorkerMethod::kWorkerInitModel:
+      return "/oneflow.WorkerService/WorkerInitModel";
+    case GrpcWorkerMethod::kWorkerActivateActor:
+      return "/oneflow.WorkerService/WorkerActivateActor";
+    case GrpcWorkerMethod::kWorkerSendRemoteRegst:
+      return "/oneflow.WorkerService/WorkerSendRemoteRegst";
+    case GrpcWorkerMethod::kWorkerStartActor:
+      return "/oneflow.WorkerService/WorkerStartActor";
     case GrpcWorkerMethod::kWorkerInitDataPlane:
       return "/oneflow.WorkerService/WorkerInitDataPlane";
   }
@@ -39,8 +49,23 @@ WorkerService::Stub::Stub(
       rpcmethod_WorkerConnectDataPlane_(
           GrpcWorkerMethodName(static_cast<GrpcWorkerMethod>(1)),
           ::grpc::RpcMethod::NORMAL_RPC, channel),
-      rpcmethod_WorkerInitDataPlane_(
+      rpcmethod_WorkerInitRuntime_(
           GrpcWorkerMethodName(static_cast<GrpcWorkerMethod>(2)),
+          ::grpc::RpcMethod::NORMAL_RPC, channel),
+      rpcmethod_WorkerInitModel_(
+          GrpcWorkerMethodName(static_cast<GrpcWorkerMethod>(3)),
+          ::grpc::RpcMethod::NORMAL_RPC, channel),
+      rpcmethod_WorkerActivateActor_(
+          GrpcWorkerMethodName(static_cast<GrpcWorkerMethod>(4)),
+          ::grpc::RpcMethod::NORMAL_RPC, channel),
+      rpcmethod_WorkerSendRemoteRegst_(
+          GrpcWorkerMethodName(static_cast<GrpcWorkerMethod>(5)),
+          ::grpc::RpcMethod::NORMAL_RPC, channel),
+      rpcmethod_WorkerStartActor_(
+          GrpcWorkerMethodName(static_cast<GrpcWorkerMethod>(6)),
+          ::grpc::RpcMethod::NORMAL_RPC, channel),
+      rpcmethod_WorkerInitDataPlane_(
+          GrpcWorkerMethodName(static_cast<GrpcWorkerMethod>(7)),
           ::grpc::RpcMethod::NORMAL_RPC, channel) {}
 
 ::grpc::Status WorkerService::Stub::SendPlan(::grpc::ClientContext* context,

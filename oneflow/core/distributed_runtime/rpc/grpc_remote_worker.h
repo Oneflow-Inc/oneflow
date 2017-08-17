@@ -38,6 +38,12 @@ class GrpcRemoteWorker : public WorkerInterface {
         sendplan_(Method(GrpcWorkerMethod::kSendPlan)),
         worker_connect_data_plane_(
             Method(GrpcWorkerMethod::kWorkerConnectDataPlane)),
+        worker_init_runtime_(Method(GrpcWorkerMethod::kWorkerInitRuntime)),
+        worker_init_model_(Method(GrpcWorkerMethod::kWorkerInitModel)),
+        worker_activate_actor_(Method(GrpcWorkerMethod::kWorkerActivateActor)),
+        worker_send_remote_regst_(
+            Method(GrpcWorkerMethod::kWorkerSendRemoteRegst)),
+        worker_start_actor_(Method(GrpcWorkerMethod::kWorkerStartActor)),
         worker_init_data_plane_(
             Method(GrpcWorkerMethod::kWorkerInitDataPlane)) {}
 
@@ -55,6 +61,26 @@ class GrpcRemoteWorker : public WorkerInterface {
   void WorkerConnectDataPlaneAsync(const WorkerConnectDataPlaneRequest* request,
                                    WorkerConnectDataPlaneResponse* response,
                                    ::tensorflow::StatusCallback done) override;
+
+  void WorkerInitRuntimeAsync(const WorkerInitRuntimeRequest* request,
+                              WorkerInitRuntimeResponse* response,
+                              ::tensorflow::StatusCallback done) override;
+
+  void WorkerInitModelAsync(const WorkerInitModelRequest* request,
+                            WorkerInitModelResponse* response,
+                            ::tensorflow::StatusCallback done) override;
+
+  void WorkerActivateActorAsync(const WorkerActivateActorRequest* request,
+                                WorkerActivateActorResponse* response,
+                                ::tensorflow::StatusCallback done) override;
+
+  void WorkerSendRemoteRegstAsync(const WorkerSendRemoteRegstRequest* request,
+                                  WorkerSendRemoteRegstResponse* response,
+                                  ::tensorflow::StatusCallback done) override;
+
+  void WorkerStartActorAsync(const WorkerStartActorRequest* request,
+                             WorkerStartActorResponse* response,
+                             ::tensorflow::StatusCallback done) override;
 
   ::tensorflow::Status WorkerInitDataPlane(
       const WorkerInitDataPlaneRequest* request,
@@ -135,6 +161,11 @@ class GrpcRemoteWorker : public WorkerInterface {
 
   const ::grpc::RpcMethod sendplan_;
   const ::grpc::RpcMethod worker_connect_data_plane_;
+  const ::grpc::RpcMethod worker_init_runtime_;
+  const ::grpc::RpcMethod worker_init_model_;
+  const ::grpc::RpcMethod worker_activate_actor_;
+  const ::grpc::RpcMethod worker_send_remote_regst_;
+  const ::grpc::RpcMethod worker_start_actor_;
   const ::grpc::RpcMethod worker_init_data_plane_;
 };  // GrpcRemoteWorker
 

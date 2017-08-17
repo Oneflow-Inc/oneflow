@@ -39,6 +39,46 @@ Worker::~Worker() {}
   return ::tensorflow::Status::OK();
 }
 
+::tensorflow::Status Worker::WorkerInitRuntime(
+    WorkerInitRuntimeRequest* request, WorkerInitRuntimeResponse* response,
+    MyClosure done) {
+  LOG(INFO) << "WorkerInitRuntime";
+  done(::tensorflow::Status());
+  return ::tensorflow::Status::OK();
+}
+
+::tensorflow::Status Worker::WorkerInitModel(WorkerInitModelRequest* request,
+                                             WorkerInitModelResponse* response,
+                                             MyClosure done) {
+  LOG(INFO) << "WorkerInitModel";
+  done(::tensorflow::Status());
+  return ::tensorflow::Status::OK();
+}
+
+::tensorflow::Status Worker::WorkerActivateActor(
+    WorkerActivateActorRequest* request, WorkerActivateActorResponse* response,
+    MyClosure done) {
+  LOG(INFO) << "WorkerActivateActor";
+  done(::tensorflow::Status());
+  return ::tensorflow::Status::OK();
+}
+
+::tensorflow::Status Worker::WorkerSendRemoteRegst(
+    WorkerSendRemoteRegstRequest* request,
+    WorkerSendRemoteRegstResponse* response, MyClosure done) {
+  LOG(INFO) << "WorkerSendRemoteRegst";
+  done(::tensorflow::Status());
+  return ::tensorflow::Status::OK();
+}
+
+::tensorflow::Status Worker::WorkerStartActor(
+    WorkerStartActorRequest* request, WorkerStartActorResponse* response,
+    MyClosure done) {
+  LOG(INFO) << "WorkerStartActor";
+  done(::tensorflow::Status());
+  return ::tensorflow::Status::OK();
+}
+
 ::tensorflow::Status Worker::WorkerInitDataPlane(
     WorkerInitDataPlaneRequest* request, WorkerInitDataPlaneResponse* response,
     MyClosure done) {

@@ -25,6 +25,26 @@ class Master {
       MasterConnectDataPlaneRequest* request,
       MasterConnectDataPlaneResponse* response, MyClosure done);
 
+  ::tensorflow::Status MasterInitRuntime(MasterInitRuntimeRequest* request,
+                                         MasterInitRuntimeResponse* response,
+                                         MyClosure done);
+
+  ::tensorflow::Status MasterInitModel(MasterInitModelRequest* request,
+                                       MasterInitModelResponse* response,
+                                       MyClosure done);
+
+  ::tensorflow::Status MasterActivateActor(
+      MasterActivateActorRequest* request,
+      MasterActivateActorResponse* response, MyClosure done);
+
+  ::tensorflow::Status MasterSendRemoteRegst(
+      MasterSendRemoteRegstRequest* request,
+      MasterSendRemoteRegstResponse* response, MyClosure done);
+
+  ::tensorflow::Status MasterStartActor(MasterStartActorRequest* request,
+                                        MasterStartActorResponse* response,
+                                        MyClosure done);
+
   ::tensorflow::Status MasterInitDataPlane(
       MasterInitDataPlaneRequest* request,
       MasterInitDataPlaneResponse* response, MyClosure done);

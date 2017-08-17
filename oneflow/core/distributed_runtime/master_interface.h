@@ -37,6 +37,26 @@ class MasterInterface {
       const MasterConnectDataPlaneRequest* request,
       MasterConnectDataPlaneResponse* response) = 0;
 
+  virtual ::tensorflow::Status MasterInitRuntime(
+      const MasterInitRuntimeRequest* request,
+      MasterInitRuntimeResponse* response) = 0;
+
+  virtual ::tensorflow::Status MasterInitModel(
+      const MasterInitModelRequest* request,
+      MasterInitModelResponse* response) = 0;
+
+  virtual ::tensorflow::Status MasterActivateActor(
+      const MasterActivateActorRequest* request,
+      MasterActivateActorResponse* response) = 0;
+
+  virtual ::tensorflow::Status MasterSendRemoteRegst(
+      const MasterSendRemoteRegstRequest* request,
+      MasterSendRemoteRegstResponse* response) = 0;
+
+  virtual ::tensorflow::Status MasterStartActor(
+      const MasterStartActorRequest* request,
+      MasterStartActorResponse* response) = 0;
+
   virtual ::tensorflow::Status MasterInitDataPlane(
       const MasterInitDataPlaneRequest* request,
       MasterInitDataPlaneResponse* response) = 0;
