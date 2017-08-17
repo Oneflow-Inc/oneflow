@@ -29,6 +29,7 @@ class RMSPropMdUpdateKernelUtil final {
   RMSPropMdUpdateKernelUtil() = delete;
 
   static void UpdateMeanSquare(const KernelCtx& ctx, const int64_t n,
+                               const FloatingPointType alpha,
                                const FloatingPointType decay_rate,
                                FloatingPointType* mean_square,
                                const FloatingPointType* model_diff);
@@ -37,7 +38,8 @@ class RMSPropMdUpdateKernelUtil final {
                           FloatingPointType* model,
                           const FloatingPointType* model_diff,
                           const FloatingPointType* mean_square,
-                          FloatingPointType alpha);
+                          const FloatingPointType epsilon,
+                          const FloatingPointType alpha);
 };
 
 }  // namespace oneflow

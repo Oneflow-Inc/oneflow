@@ -5,26 +5,29 @@ namespace oneflow {
 
 namespace {
 
-// mean_square = decay_rate * mean_square + (1 - decay_rate) * model_diff ^ 2
+// alpha = (1 - decay_rate) / batch_size^2
+// mean_square = alpha * model_diff ^ 2 + decay_rate * mean_square
 template<typename FloatingPointType>
 __global__ void UpdateMeanSquareGpu(const int64_t n,
+                                    const FloatingPointType alpha,
                                     const FloatingPointType decay_rate,
                                     FloatingPointType* mean_square,
                                     const FloatingPointType* model_diff) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    mean_square[i] +=
-        (1 - decay_rate) * (model_diff[i] * model_diff[i] - mean_square[i]);
+    mean_square[i] =
+        alpha * std::pow(model_diff[i], 2) + decay_rate * mean_square[i];
   }
 }
 
-// model -= alpha * model_diff / sqrt(mean_square)
+// model -= alpha * model_diff / sqrt(mean_square + epsilon)
 template<typename FloatingPointType>
 __global__ void UpdateModelGpu(const int64_t n, FloatingPointType* model,
                                const FloatingPointType* model_diff,
                                const FloatingPointType* mean_square,
+                               const FloatingPointType epsilon,
                                const FloatingPointType alpha) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    model[i] -= alpha * model_diff[i] / std::sqrt(mean_square[i]);
+    model[i] -= alpha * model_diff[i] / std::sqrt(mean_square[i] + epsilon);
   }
 }
 
@@ -37,12 +40,13 @@ class RMSPropMdUpdateKernelUtil<DeviceType::kGPU, FloatingPointType> final {
   RMSPropMdUpdateKernelUtil() = delete;
 
   static void UpdateMeanSquare(const KernelCtx& ctx, const int64_t n,
+                               const FloatingPointType alpha,
                                const FloatingPointType decay_rate,
                                FloatingPointType* mean_square,
                                const FloatingPointType* model_diff) {
     UpdateMeanSquareGpu<FloatingPointType>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-           ctx.device_ctx->cuda_stream()>>>(n, decay_rate, mean_square,
+           ctx.device_ctx->cuda_stream()>>>(n, alpha, decay_rate, mean_square,
                                             model_diff);
   }
 
@@ -50,11 +54,12 @@ class RMSPropMdUpdateKernelUtil<DeviceType::kGPU, FloatingPointType> final {
                           FloatingPointType* model,
                           const FloatingPointType* model_diff,
                           const FloatingPointType* mean_square,
+                          const FloatingPointType epsilon,
                           const FloatingPointType alpha) {
     UpdateModelGpu<FloatingPointType>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
            ctx.device_ctx->cuda_stream()>>>(n, model, model_diff, mean_square,
-                                            alpha);
+                                            epsilon, alpha);
   }
 };
 
