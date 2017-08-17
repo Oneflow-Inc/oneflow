@@ -1,3 +1,5 @@
+#ifdef PLATFORM_WINDOWS
+
 #include "oneflow/core/persistence/windows/windows_file_system.h"
 #include <Windows.h>
 
@@ -155,3 +157,5 @@ class WindowsWritableFile : public WritableFile {
 }  // namespace fs
 
 }  // namespace oneflow
+
+#endif  // PLATFORM_WINDOWS
