@@ -1,9 +1,13 @@
 #ifndef ONEFLOW_CORE_PERSISTENCE_WINDOWS_WINDOWS_FILE_SYSTEM_H_
 #define ONEFLOW_CORE_PERSISTENCE_WINDOWS_WINDOWS_FILE_SYSTEM_H_
 
+#ifdef PLATFORM_WINDOWS
+
 #include "oneflow/core/persistence/file_system.h"
 
 namespace oneflow {
+
+namespace fs {
 
 class WindowsFileSystem final : public FileSystem {
  public:
@@ -41,6 +45,10 @@ class WindowsFileSystem final : public FileSystem {
  private:
 };
 
+}  // namespace fs
+
 }  // namespace oneflow
+
+#endif  // PLATFORM_WINDOWS
 
 #endif  // ONEFLOW_CORE_PERSISTENCE_WINDOWS_WINDOWS_FILE_SYSTEM_H_

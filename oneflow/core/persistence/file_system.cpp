@@ -4,6 +4,8 @@
 
 namespace oneflow {
 
+namespace fs {
+
 std::string FileSystem::TranslateName(const std::string& name) const {
   return CleanPath(name);
 }
@@ -53,7 +55,7 @@ Status FileSystem::DeleteRecursively(const std::string& dirname,
     std::vector<std::string> children;
     // GetChildren might fail if we don't have appropriate permissions.
     Status s = GetChildren(dir, &children);
-    StatusUpdate(&ret, s);
+    TryStatusUpdate(&ret, s);
     if (s != Status::OK) {
       (*undeleted_dirs)++;
       continue;
@@ -67,7 +69,7 @@ Status FileSystem::DeleteRecursively(const std::string& dirname,
         // Delete file might fail because of permissions issues or might be
         // unimplemented.
         Status del_status = DeleteFile(child_path);
-        StatusUpdate(&ret, del_status);
+        TryStatusUpdate(&ret, del_status);
         if (del_status != Status::OK) { (*undeleted_files)++; }
       }
     }
@@ -79,7 +81,7 @@ Status FileSystem::DeleteRecursively(const std::string& dirname,
     // Delete dir might fail because of permissions issues or might be
     // unimplemented.
     Status s = DeleteDir(dir);
-    StatusUpdate(&ret, s);
+    TryStatusUpdate(&ret, s);
     if (s != Status::OK) { (*undeleted_dirs)++; }
   }
   return ret;
@@ -114,7 +116,7 @@ Status FileSystem::RecursivelyCreateDir(const std::string& dirname) {
   return Status::OK;
 }
 
-void StatusUpdate(Status* current_status, const Status& new_status) {
+void TryStatusUpdate(Status* current_status, const Status& new_status) {
   if (*current_status == Status::OK) { *current_status = new_status; }
 }
 
@@ -261,5 +263,7 @@ Status ErrnoToStatus(int err_number) {
   }
   return ret;
 }
+
+}  // namespace fs
 
 }  // namespace oneflow
