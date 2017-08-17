@@ -35,6 +35,7 @@ class Runtime final {
         other_tasks.push_back(&task);
       }
     }
+
     size_t this_machine_task_num =
         mdupdt_tasks.size() + source_tasks.size() + other_tasks.size();
     LOG(INFO) << "number of mdupdt tasks is " << mdupdt_tasks.size();
