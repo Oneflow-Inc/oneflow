@@ -20,7 +20,7 @@ void LossAccTaskGraph::BuildTaskGraph() {
   // parallel_desc
   ParallelConf pr_conf;
   pr_conf.set_policy(kDataParallel);
-  pr_conf.mutable_device_set()->add_device_name(loss_task_->device_name());
+  pr_conf.add_device_name(loss_task_->device_name());
   auto pr_desc = std::make_shared<ParallelDesc>(pr_conf);
   // faker chain
   auto chain_gph = of_make_unique<ChainGraph>();

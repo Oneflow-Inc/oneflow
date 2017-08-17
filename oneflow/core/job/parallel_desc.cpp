@@ -13,8 +13,8 @@ std::pair<std::string, std::string> ParseDeviceNameConf(
 ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
   policy_ = user_conf.policy();
   device_type_ = JobDesc::Singleton()->resource().device_type();
-  for (int64_t i = 0; i < user_conf.device_set().device_name_size(); ++i) {
-    const std::string& device_name = user_conf.device_set().device_name(i);
+  for (int64_t i = 0; i < user_conf.device_name_size(); ++i) {
+    const std::string& device_name = user_conf.device_name(i);
     std::pair<std::string, std::string> machine_name_device_id =
         ParseDeviceNameConf(device_name);
     std::string machine_name = machine_name_device_id.first;

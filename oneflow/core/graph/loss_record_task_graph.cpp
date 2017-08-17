@@ -18,8 +18,7 @@ void LossRecordTaskGraph::BuildTaskGraph(
   faker_pr_conf.set_policy(kFakerLossRecord);
   for (TaskNode* task : sorted_loss_acc_task) {
     auto loss_acc_task = static_cast<CompTaskNode*>(task);
-    faker_pr_conf.mutable_device_set()->add_device_name(
-        loss_acc_task->device_name());
+    faker_pr_conf.add_device_name(loss_acc_task->device_name());
     sorted_loss_acc_tasks_.push_back(loss_acc_task);
   }
   // faker chain
@@ -31,7 +30,7 @@ void LossRecordTaskGraph::BuildTaskGraph(
   // loss_record_pr_conf
   ParallelConf loss_record_pr_conf;
   loss_record_pr_conf.set_policy(kDataParallel);
-  loss_record_pr_conf.mutable_device_set()->add_device_name(
+  loss_record_pr_conf.add_device_name(
       IDMgr::Singleton()->MachineName4MachineId(0) + ":persistence");
   // loss record op
   OperatorConf op_conf;
