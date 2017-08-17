@@ -41,8 +41,10 @@ class GrpcRemoteWorker : public WorkerInterface {
         worker_init_runtime_(Method(GrpcWorkerMethod::kWorkerInitRuntime)),
         worker_init_model_(Method(GrpcWorkerMethod::kWorkerInitModel)),
         worker_activate_actor_(Method(GrpcWorkerMethod::kWorkerActivateActor)),
-        worker_send_remote_regst_(
-            Method(GrpcWorkerMethod::kWorkerSendRemoteRegst)),
+        worker_send_remote_regst_to_inc_(
+            Method(GrpcWorkerMethod::kWorkerSendRemoteRegstToInc)),
+        worker_send_remote_regst_to_dec_(
+            Method(GrpcWorkerMethod::kWorkerSendRemoteRegstToDec)),
         worker_start_actor_(Method(GrpcWorkerMethod::kWorkerStartActor)),
         worker_init_data_plane_(
             Method(GrpcWorkerMethod::kWorkerInitDataPlane)) {}
@@ -74,9 +76,15 @@ class GrpcRemoteWorker : public WorkerInterface {
                                 WorkerActivateActorResponse* response,
                                 ::tensorflow::StatusCallback done) override;
 
-  void WorkerSendRemoteRegstAsync(const WorkerSendRemoteRegstRequest* request,
-                                  WorkerSendRemoteRegstResponse* response,
-                                  ::tensorflow::StatusCallback done) override;
+  void WorkerSendRemoteRegstToIncAsync(
+      const WorkerSendRemoteRegstToIncRequest* request,
+      WorkerSendRemoteRegstToIncResponse* response,
+      ::tensorflow::StatusCallback done) override;
+
+  void WorkerSendRemoteRegstToDecAsync(
+      const WorkerSendRemoteRegstToDecRequest* request,
+      WorkerSendRemoteRegstToDecResponse* response,
+      ::tensorflow::StatusCallback done) override;
 
   void WorkerStartActorAsync(const WorkerStartActorRequest* request,
                              WorkerStartActorResponse* response,
@@ -164,7 +172,8 @@ class GrpcRemoteWorker : public WorkerInterface {
   const ::grpc::RpcMethod worker_init_runtime_;
   const ::grpc::RpcMethod worker_init_model_;
   const ::grpc::RpcMethod worker_activate_actor_;
-  const ::grpc::RpcMethod worker_send_remote_regst_;
+  const ::grpc::RpcMethod worker_send_remote_regst_to_inc_;
+  const ::grpc::RpcMethod worker_send_remote_regst_to_dec_;
   const ::grpc::RpcMethod worker_start_actor_;
   const ::grpc::RpcMethod worker_init_data_plane_;
 };  // GrpcRemoteWorker

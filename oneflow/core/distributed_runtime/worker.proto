@@ -30,9 +30,14 @@ message WorkerActivateActorRequest {
 message WorkerActivateActorResponse {
 }
 
-message WorkerSendRemoteRegstRequest {
+message WorkerSendRemoteRegstToIncRequest {
 }
-message WorkerSendRemoteRegstResponse {
+message WorkerSendRemoteRegstToIncResponse {
+}
+
+message WorkerSendRemoteRegstToDecRequest {
+}
+message WorkerSendRemoteRegstToDecResponse {
 }
 
 message WorkerStartActorRequest {

@@ -177,28 +177,50 @@ Master::~Master() {}
 ::tensorflow::Status Master::MasterSendRemoteRegst(
     MasterSendRemoteRegstRequest* request,
     MasterSendRemoteRegstResponse* response, MyClosure done) {
-  ::tensorflow::BlockingCounter blocking_counter(name2worker_.size());
-
+  ::tensorflow::BlockingCounter inc_blocking_counter(name2worker_.size());
   for (auto& pair : name2worker_) {
     struct Call {
-      WorkerSendRemoteRegstRequest req;
-      WorkerSendRemoteRegstResponse resp;
+      WorkerSendRemoteRegstToIncRequest req;
+      WorkerSendRemoteRegstToIncResponse resp;
     };
     Call* call = new Call;
 
-    auto cb = [call, &blocking_counter, &pair](const ::tensorflow::Status& s) {
+    auto cb = [call, &inc_blocking_counter,
+               &pair](const ::tensorflow::Status& s) {
       if (s.ok()) {
-        LOG(INFO) << "Worker SendRemoteRegst RPC succeeds";
-        blocking_counter.DecrementCount();
+        LOG(INFO) << "Worker SendRemoteRegstToInc RPC succeeds";
+        inc_blocking_counter.DecrementCount();
       } else {
-        LOG(FATAL) << "Worker SendRemoteRegst RPC fails" << pair.first;
+        LOG(FATAL) << "Worker SendRemoteRegstToInc RPC fails" << pair.first;
       }
       delete call;
     };
-    pair.second->WorkerSendRemoteRegstAsync(&call->req, &call->resp, cb);
+    pair.second->WorkerSendRemoteRegstToIncAsync(&call->req, &call->resp, cb);
   }
+  inc_blocking_counter.Wait();
 
-  blocking_counter.Wait();
+  ::tensorflow::BlockingCounter dec_blocking_counter(name2worker_.size());
+  for (auto& pair : name2worker_) {
+    struct Call {
+      WorkerSendRemoteRegstToDecRequest req;
+      WorkerSendRemoteRegstToDecResponse resp;
+    };
+    Call* call = new Call;
+
+    auto cb = [call, &dec_blocking_counter,
+               &pair](const ::tensorflow::Status& s) {
+      if (s.ok()) {
+        LOG(INFO) << "Worker SendRemoteRegstToDec RPC succeeds";
+        dec_blocking_counter.DecrementCount();
+      } else {
+        LOG(FATAL) << "Worker SendRemoteRegstToDec RPC fails" << pair.first;
+      }
+      delete call;
+    };
+    pair.second->WorkerSendRemoteRegstToDecAsync(&call->req, &call->resp, cb);
+  }
+  dec_blocking_counter.Wait();
+
   done(::tensorflow::Status());
   return ::tensorflow::Status::OK();
 }

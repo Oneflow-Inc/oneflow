@@ -30,7 +30,8 @@ enum class GrpcWorkerMethod {
   kWorkerInitRuntime,
   kWorkerInitModel,
   kWorkerActivateActor,
-  kWorkerSendRemoteRegst,
+  kWorkerSendRemoteRegstToInc,
+  kWorkerSendRemoteRegstToDec,
   kWorkerStartActor,
   kWorkerInitDataPlane,
 };
@@ -84,7 +85,8 @@ class WorkerService GRPC_FINAL {
     const ::grpc::RpcMethod rpcmethod_WorkerInitRuntime_;
     const ::grpc::RpcMethod rpcmethod_WorkerInitModel_;
     const ::grpc::RpcMethod rpcmethod_WorkerActivateActor_;
-    const ::grpc::RpcMethod rpcmethod_WorkerSendRemoteRegst_;
+    const ::grpc::RpcMethod rpcmethod_WorkerSendRemoteRegstToInc_;
+    const ::grpc::RpcMethod rpcmethod_WorkerSendRemoteRegstToDec_;
     const ::grpc::RpcMethod rpcmethod_WorkerStartActor_;
     const ::grpc::RpcMethod rpcmethod_WorkerInitDataPlane_;
   };  // class Stub

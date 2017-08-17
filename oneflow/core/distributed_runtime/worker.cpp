@@ -63,10 +63,18 @@ Worker::~Worker() {}
   return ::tensorflow::Status::OK();
 }
 
-::tensorflow::Status Worker::WorkerSendRemoteRegst(
-    WorkerSendRemoteRegstRequest* request,
-    WorkerSendRemoteRegstResponse* response, MyClosure done) {
-  LOG(INFO) << "WorkerSendRemoteRegst";
+::tensorflow::Status Worker::WorkerSendRemoteRegstToInc(
+    WorkerSendRemoteRegstToIncRequest* request,
+    WorkerSendRemoteRegstToIncResponse* response, MyClosure done) {
+  LOG(INFO) << "WorkerSendRemoteRegstToInc";
+  done(::tensorflow::Status());
+  return ::tensorflow::Status::OK();
+}
+
+::tensorflow::Status Worker::WorkerSendRemoteRegstToDec(
+    WorkerSendRemoteRegstToDecRequest* request,
+    WorkerSendRemoteRegstToDecResponse* response, MyClosure done) {
+  LOG(INFO) << "WorkerSendRemoteRegstToDec";
   done(::tensorflow::Status());
   return ::tensorflow::Status::OK();
 }

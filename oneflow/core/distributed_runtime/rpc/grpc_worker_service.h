@@ -109,9 +109,13 @@ class GrpcWorkerService : public AsyncServiceInterface {
       WorkerCall<WorkerActivateActorRequest, WorkerActivateActorResponse>*
           call);
 
-  void WorkerSendRemoteRegstHandler(
-      WorkerCall<WorkerSendRemoteRegstRequest, WorkerSendRemoteRegstResponse>*
-          call);
+  void WorkerSendRemoteRegstToIncHandler(
+      WorkerCall<WorkerSendRemoteRegstToIncRequest,
+                 WorkerSendRemoteRegstToIncResponse>* call);
+
+  void WorkerSendRemoteRegstToDecHandler(
+      WorkerCall<WorkerSendRemoteRegstToDecRequest,
+                 WorkerSendRemoteRegstToDecResponse>* call);
 
   void WorkerStartActorHandler(
       WorkerCall<WorkerStartActorRequest, WorkerStartActorResponse>* call);

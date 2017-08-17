@@ -67,7 +67,8 @@ void GrpcWorkerService::HandleRPCsLoop() {
   ENQUEUE_REQUEST(WorkerInitRuntime, false);
   ENQUEUE_REQUEST(WorkerInitModel, false);
   ENQUEUE_REQUEST(WorkerActivateActor, false);
-  ENQUEUE_REQUEST(WorkerSendRemoteRegst, false);
+  ENQUEUE_REQUEST(WorkerSendRemoteRegstToInc, false);
+  ENQUEUE_REQUEST(WorkerSendRemoteRegstToDec, false);
   ENQUEUE_REQUEST(WorkerStartActor, false);
   ENQUEUE_REQUEST(WorkerInitDataPlane, false);
 
@@ -150,17 +151,30 @@ void GrpcWorkerService::WorkerActivateActorHandler(
   ENQUEUE_REQUEST(WorkerActivateActor, true);
 }
 
-void GrpcWorkerService::WorkerSendRemoteRegstHandler(
-    WorkerCall<WorkerSendRemoteRegstRequest, WorkerSendRemoteRegstResponse>*
-        call) {
+void GrpcWorkerService::WorkerSendRemoteRegstToIncHandler(
+    WorkerCall<WorkerSendRemoteRegstToIncRequest,
+               WorkerSendRemoteRegstToIncResponse>* call) {
   cpu_stream_->SendWork([this, call]() {
-    worker_impl_->WorkerSendRemoteRegst(
+    worker_impl_->WorkerSendRemoteRegstToInc(
         &call->request, &call->response,
         [call](const ::tensorflow::Status& status) {
           call->SendResponse(ToGrpcStatus(status));
         });
   });
-  ENQUEUE_REQUEST(WorkerSendRemoteRegst, true);
+  ENQUEUE_REQUEST(WorkerSendRemoteRegstToInc, true);
+}
+
+void GrpcWorkerService::WorkerSendRemoteRegstToDecHandler(
+    WorkerCall<WorkerSendRemoteRegstToDecRequest,
+               WorkerSendRemoteRegstToDecResponse>* call) {
+  cpu_stream_->SendWork([this, call]() {
+    worker_impl_->WorkerSendRemoteRegstToDec(
+        &call->request, &call->response,
+        [call](const ::tensorflow::Status& status) {
+          call->SendResponse(ToGrpcStatus(status));
+        });
+  });
+  ENQUEUE_REQUEST(WorkerSendRemoteRegstToDec, true);
 }
 
 void GrpcWorkerService::WorkerStartActorHandler(
