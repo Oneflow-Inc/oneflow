@@ -179,6 +179,10 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
       UniformFill(fill_conf.uniform_conf(), random_seed, blob);
     } else if (fill_conf.has_gaussian_conf()) {
       GaussianFill(fill_conf.gaussian_conf(), random_seed, blob);
+    } else if (fill_conf.has_xavier_conf()) {
+      XavierFill(fill_conf.xavier_conf(), random_seed, blob);
+    } else if (fill_conf.has_msra_conf()) {
+      MsraFill(fill_conf.msra_conf(), random_seed, blob);
     } else {
       UNEXPECTED_RUN();
     }
@@ -229,6 +233,67 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
         blob->shape().elem_cnt(),
         static_cast<FloatingPointType>(fill_conf.mean()),
         static_cast<FloatingPointType>(fill_conf.std()), random_seed,
+        blob->mut_dptr<FloatingPointType>());
+  }
+
+  /*  You should make sure input blob shape has shape (n, c, h, w)
+   *  where fan_in = c * h * w
+   *  and   fan_out = n * h * w
+   */
+  static FloatingPointType GetFillFan(VarianceNorm variance_norm, Blob* blob) {
+    CHECK_EQ(blob->shape().NumAxes(), 4);
+    int64_t fan_in = blob->shape().elem_cnt() / blob->shape().At(0);
+    int64_t fan_out = blob->shape().elem_cnt() / blob->shape().At(1);
+    FloatingPointType n = static_cast<FloatingPointType>(0);
+    if (variance_norm == VarianceNorm::kAverage) {
+      n = (fan_in + fan_out) / static_cast<FloatingPointType>(2);
+    } else if (variance_norm == VarianceNorm::kFanIn) {
+      n = fan_in;
+    } else if (variance_norm == VarianceNorm::kFanOut) {
+      n = fan_out;
+    } else {
+      UNEXPECTED_RUN();
+    }
+    return n;
+  }
+
+  /*
+   *  Note that this is currently not the case for innerproduct layers
+   *
+   *  A Filler based on the paper [Bengio and Glorot 2010]: Understanding
+   *  the difficulty of training deep feedforward neuralnetworks.*
+   *
+   */
+  static void XavierFill(const XavierFillConf& fill_conf, uint32_t random_seed,
+                         Blob* blob) {
+    CHECK(blob->shape().elem_cnt());
+    FloatingPointType scale = std::sqrt(
+        static_cast<FloatingPointType>(3)
+        / GetFillFan(static_cast<VarianceNorm>(fill_conf.variance_norm()),
+                     blob));
+    RngUniform<FloatingPointType>(
+        blob->shape().elem_cnt(), static_cast<FloatingPointType>(-scale),
+        static_cast<FloatingPointType>(scale), random_seed,
+        blob->mut_dptr<FloatingPointType>());
+  }
+
+  /*
+   *  Note that this is currently not the case for innerproduct layers
+   *
+   *  A Filler based on the paper [He, Zhang, Ren and Sun 2015]: Specifically
+   *  accounts for ReLU nonlinearities.
+   *
+   */
+  static void MsraFill(const MsraFillConf& fill_conf, uint32_t random_seed,
+                       Blob* blob) {
+    CHECK(blob->shape().elem_cnt());
+    FloatingPointType std = std::sqrt(
+        static_cast<FloatingPointType>(2)
+        / GetFillFan(static_cast<VarianceNorm>(fill_conf.variance_norm()),
+                     blob));
+    RngGaussian<FloatingPointType>(
+        blob->shape().elem_cnt(), static_cast<FloatingPointType>(0),
+        static_cast<FloatingPointType>(std), random_seed,
         blob->mut_dptr<FloatingPointType>());
   }
 };

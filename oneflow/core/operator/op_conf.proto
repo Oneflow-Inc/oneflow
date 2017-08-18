@@ -17,11 +17,27 @@ message GaussianFillConf {
   float std = 2;
 }
 
+enum VarianceNorm {
+  kFanIn = 0;
+  kFanOut = 1;
+  kAverage = 2;
+}
+
+message XavierFillConf {
+  VarianceNorm variance_norm = 1;
+}
+
+message MsraFillConf {
+  VarianceNorm variance_norm = 1;
+}
+
 message FillConf {
   oneof type {
     ConstantFillConf constant_conf = 1;
     UniformFillConf uniform_conf = 2;
     GaussianFillConf gaussian_conf = 3;
+    XavierFillConf xavier_conf = 4;
+    MsraFillConf msra_conf = 5;
   }
 }
 
