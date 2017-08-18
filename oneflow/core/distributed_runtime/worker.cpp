@@ -84,9 +84,10 @@ Worker::~Worker() {}
   std::unordered_map<int64_t, std::vector<RemoteRegstDesc>>
       consumer2regst_descs;
 
-  const std::vector<NetMemoryDescriptor>& net_memory_descs =
-      RuntimeCtx::Singleton()->net_memory_descs();
-  for (auto& net_memory_desc : net_memory_descs) {
+  const std::vector<NetMemoryDescriptor>& local_net_memory_descs =
+      RuntimeCtx::Singleton()->local_net_memory_descs();
+  for (auto& net_memory_desc : local_net_memory_descs) {
+    int index = 0;
     for (auto consumer_machine_id : net_memory_desc.consumer_machine_ids) {
       bool is_ascending = net_memory_desc.this_machine_id < consumer_machine_id;
       if (request->ascending_order() == is_ascending) {
@@ -101,6 +102,8 @@ Worker::~Worker() {}
             (uint64_t)net_memory_desc.regst_ptr);
         remote_regst_desc.set_remote_token(
             net_memory->memory_discriptor().remote_token);
+        remote_regst_desc.set_consumer_task_id(
+            net_memory_desc.consumer_task_ids[index]);
         auto& regst_desc_it = consumer2regst_descs.find(consumer_machine_id);
         if (regst_desc_it == consumer2regst_descs.end()) {
           std::vector<RemoteRegstDesc> remote_regst_descs;
@@ -111,6 +114,7 @@ Worker::~Worker() {}
           regst_desc_it->second.push_back(remote_regst_desc);
         }
       }
+      ++index;
     }
   }
   int32_t rpc_count = consumer2regst_descs.size();
@@ -172,6 +176,8 @@ Worker::~Worker() {}
               << request->remote_regst_descs(i).data_address();
     LOG(INFO) << "Remote token:  "
               << request->remote_regst_descs(i).remote_token();
+    LOG(INFO) << "Consumer task_id: "
+              << request->remote_regst_descs(i).consumer_task_id();
   }
 
   done(::tensorflow::Status());

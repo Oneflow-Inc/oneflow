@@ -15,6 +15,7 @@ struct NetMemoryDescriptor {
   void* network_ptr;
   int64_t this_machine_id;
   std::vector<int64_t> consumer_machine_ids;
+  std::vector<int64_t> consumer_task_ids;
 };
 
 class RuntimeCtx final {
@@ -36,8 +37,8 @@ class RuntimeCtx final {
   ThreadSafeCounter& mut_active_actor_cnt() { return active_actor_cnt_; }
   ThreadSafeCounter& mut_inactive_actor_cnt() { return inactive_actor_cnt_; }
 
-  void AddNetMemoryDesc(const NetMemoryDescriptor& net_memory_desc);
-  const std::vector<NetMemoryDescriptor>& net_memory_descs() const;
+  void AddLocalNetMemoryDesc(const NetMemoryDescriptor& net_memory_desc);
+  const std::vector<NetMemoryDescriptor>& local_net_memory_descs() const;
 
  private:
   RuntimeCtx() { LOG(INFO) << "RuntimeCtx Init"; }
@@ -53,7 +54,8 @@ class RuntimeCtx final {
   ThreadSafeCounter inactive_actor_cnt_;
 
   std::mutex mutex_;
-  std::vector<NetMemoryDescriptor> net_memory_descs_;
+  std::vector<NetMemoryDescriptor> local_net_memory_descs_;
+  std::unordered_map<uint64_t, MemoryDescriptor> remote_net_memory_descs_;
 };
 
 }  // namespace oneflow

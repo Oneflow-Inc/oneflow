@@ -36,9 +36,10 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
           // The regst of CopyCommNetActor will be consumed by the actors on the
           // machine, we need not to send its memory descriptor to remote.
           net_memory_desc.consumer_machine_ids.push_back(consumer_machine_id);
+          net_memory_desc.consumer_task_ids.push_back(consumer_task_id);
         }
       }
-      RuntimeCtx::Singleton()->AddNetMemoryDesc(net_memory_desc);
+      RuntimeCtx::Singleton()->AddLocalNetMemoryDesc(net_memory_desc);
     }
   }
   // name2regst_desc_id_

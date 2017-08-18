@@ -40,6 +40,7 @@ message RemoteRegstDesc {
   uint64 regst_address = 1;
   uint64 data_address = 2;
   uint32 remote_token = 3;
+  int64 consumer_task_id = 4;
 }
 message WorkerSendRemoteRegstToConsumerRequest {
   repeated RemoteRegstDesc remote_regst_descs = 1;
