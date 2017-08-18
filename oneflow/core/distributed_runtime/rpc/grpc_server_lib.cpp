@@ -129,6 +129,7 @@ void GrpcServer::ParseServerDef() {
     node.address = cluster_node.data_plane_addr().addr();
     node.port = data_port_n;
     net_topo_.all_nodes.push_back(node);
+    name2id_.insert({node_name, i});
   }
 
   for (auto& node : net_topo_.all_nodes) {
@@ -153,6 +154,9 @@ void GrpcServer::CreateWorkerCache() {
     std::shared_ptr<GrpcRemoteWorker> remote_worker(
         new GrpcRemoteWorker(worker_channel, &completion_queue_));
     CHECK(name2worker_.insert(std::make_pair(name, remote_worker)).second);
+    CHECK(name2id_.count(name));
+    int64_t machine_id = name2id_[name];
+    CHECK(id2worker_.insert(std::make_pair(machine_id, remote_worker)).second);
   }
 }
 
@@ -236,12 +240,12 @@ const std::string GrpcServer::target() const {
 }
 
 std::unique_ptr<Master> GrpcServer::CreateMaster() {
-  return std::unique_ptr<Master>(new Master(name2worker_));
+  return std::unique_ptr<Master>(new Master(id2worker_));
 }
 
 std::unique_ptr<Worker> GrpcServer::CreateWorker() {
   return std::unique_ptr<Worker>(
-      new Worker(this_node_name_, data_net_, name2worker_));
+      new Worker(my_machine_id_, this_node_name_, data_net_, id2worker_));
 }
 
 /* static */

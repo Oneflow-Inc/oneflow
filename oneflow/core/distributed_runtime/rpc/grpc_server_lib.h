@@ -118,6 +118,8 @@ class GrpcServer : public ServerInterface {
   std::unordered_map<std::string, ClusterNode> name2node_def_;
   std::unordered_map<std::string, std::shared_ptr<GrpcRemoteWorker>>
       name2worker_;
+  std::unordered_map<int64_t, std::shared_ptr<GrpcRemoteWorker>> id2worker_;
+  std::unordered_map<std::string, int64_t> name2id_;
 
   std::unique_ptr<::grpc::Server> server_;
 };

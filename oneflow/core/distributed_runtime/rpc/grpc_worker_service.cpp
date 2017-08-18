@@ -152,8 +152,8 @@ void GrpcWorkerService::WorkerActivateActorHandler(
 }
 
 void GrpcWorkerService::WorkerSendRemoteRegstHandler(
-    WorkerCall<WorkerSendRemoteRegstRequest,
-               WorkerSendRemoteRegstResponse>* call) {
+    WorkerCall<WorkerSendRemoteRegstRequest, WorkerSendRemoteRegstResponse>*
+        call) {
   cpu_stream_->SendWork([this, call]() {
     worker_impl_->WorkerSendRemoteRegst(
         &call->request, &call->response,

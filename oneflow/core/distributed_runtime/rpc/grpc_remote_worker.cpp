@@ -69,8 +69,7 @@ void GrpcRemoteWorker::WorkerSendRemoteRegstAsync(
     const WorkerSendRemoteRegstRequest* request,
     WorkerSendRemoteRegstResponse* response,
     ::tensorflow::StatusCallback done) {
-  IssueRequest(request, response, worker_send_remote_regst_,
-               std::move(done));
+  IssueRequest(request, response, worker_send_remote_regst_, std::move(done));
 }
 
 void GrpcRemoteWorker::WorkerSendRemoteRegstToConsumerAsync(

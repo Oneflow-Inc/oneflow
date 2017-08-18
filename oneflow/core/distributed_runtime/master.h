@@ -10,9 +10,8 @@ namespace oneflow {
 
 class Master {
  public:
-  Master(
-      const std::unordered_map<std::string, std::shared_ptr<GrpcRemoteWorker>>&
-          name2worker);
+  Master(const std::unordered_map<int64_t, std::shared_ptr<GrpcRemoteWorker>>&
+             id2worker);
   ~Master();
 
   // Convenient typedef for a closure passing a Status
@@ -50,8 +49,8 @@ class Master {
       MasterInitDataPlaneResponse* response, MyClosure done);
 
  private:
-  const std::unordered_map<std::string, std::shared_ptr<GrpcRemoteWorker>>&
-      name2worker_;
+  const std::unordered_map<int64_t, std::shared_ptr<GrpcRemoteWorker>>&
+      id2worker_;
 };  // Master
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_DISTRIBUTED_RUNTIME_MASTER_H_

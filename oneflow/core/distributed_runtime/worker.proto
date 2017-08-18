@@ -36,11 +36,15 @@ message WorkerSendRemoteRegstRequest {
 message WorkerSendRemoteRegstResponse {
 }
 
-message WorkerSendRemoteRegstToConsumerRequest {
+message RemoteRegstDesc {
   uint64 regst_address = 1;
   uint64 data_address = 2;
   uint32 remote_token = 3;
-  int64 machine_id = 4;
+}
+message WorkerSendRemoteRegstToConsumerRequest {
+  repeated RemoteRegstDesc remote_regst_descs = 1;
+  int64 producer_machine_id = 2;
+  int64 consumer_machine_id = 3;
 }
 message WorkerSendRemoteRegstToConsumerResponse {
 }

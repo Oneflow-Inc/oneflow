@@ -11,10 +11,10 @@ namespace oneflow {
 
 class Worker {
  public:
-  Worker(
-      const std::string& this_node_name, Network* data_net,
-      const std::unordered_map<std::string, std::shared_ptr<GrpcRemoteWorker>>&
-          name2worker);
+  Worker(int64_t this_machine_id, const std::string& this_machine_name,
+         Network* data_net,
+         const std::unordered_map<int64_t, std::shared_ptr<GrpcRemoteWorker>>&
+             id2worker);
   ~Worker();
 
   // Convenient typedef for a closure passing a Status
@@ -56,11 +56,12 @@ class Worker {
       WorkerInitDataPlaneResponse* response, MyClosure done);
 
  private:
-  std::string this_node_name_;
+  std::string this_machine_name_;
+  int64_t this_machine_id_;
   Network* data_net_;
 
-  const std::unordered_map<std::string, std::shared_ptr<GrpcRemoteWorker>>&
-      name2worker_;
+  const std::unordered_map<int64_t, std::shared_ptr<GrpcRemoteWorker>>&
+      id2worker_;
 };  // Worker
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_DISTRIBUTED_RUNTIME_WORKER_H_

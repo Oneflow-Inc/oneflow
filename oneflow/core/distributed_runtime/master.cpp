@@ -10,9 +10,9 @@
 namespace oneflow {
 
 Master::Master(
-    const std::unordered_map<std::string, std::shared_ptr<GrpcRemoteWorker>>&
-        name2worker)
-    : name2worker_(name2worker) {}
+    const std::unordered_map<int64_t, std::shared_ptr<GrpcRemoteWorker>>&
+        id2worker)
+    : id2worker_(id2worker) {}
 
 Master::~Master() {}
 
@@ -29,9 +29,9 @@ Master::~Master() {}
   ::oneflow::compiler::Compiler::Singleton()->Compile(job_desc,
                                                       response->mutable_plan());
 
-  ::tensorflow::BlockingCounter blocking_counter(name2worker_.size());
+  ::tensorflow::BlockingCounter blocking_counter(id2worker_.size());
 
-  for (auto& pair : name2worker_) {
+  for (auto& pair : id2worker_) {
     struct Call {
       SendPlanRequest plan_req;
       SendPlanResponse plan_resp;
@@ -60,9 +60,9 @@ Master::~Master() {}
 ::tensorflow::Status Master::MasterConnectDataPlane(
     MasterConnectDataPlaneRequest* request,
     MasterConnectDataPlaneResponse* response, MyClosure done) {
-  ::tensorflow::BlockingCounter blocking_counter(name2worker_.size());
+  ::tensorflow::BlockingCounter blocking_counter(id2worker_.size());
 
-  for (auto& pair : name2worker_) {
+  for (auto& pair : id2worker_) {
     struct Call {
       WorkerConnectDataPlaneRequest connect_dp_req;
       WorkerConnectDataPlaneResponse connect_dp_resp;
@@ -90,9 +90,9 @@ Master::~Master() {}
 ::tensorflow::Status Master::MasterInitRuntime(
     MasterInitRuntimeRequest* request, MasterInitRuntimeResponse* response,
     MyClosure done) {
-  ::tensorflow::BlockingCounter blocking_counter(name2worker_.size());
+  ::tensorflow::BlockingCounter blocking_counter(id2worker_.size());
 
-  for (auto& pair : name2worker_) {
+  for (auto& pair : id2worker_) {
     struct Call {
       WorkerInitRuntimeRequest req;
       WorkerInitRuntimeResponse resp;
@@ -119,9 +119,9 @@ Master::~Master() {}
 ::tensorflow::Status Master::MasterInitModel(MasterInitModelRequest* request,
                                              MasterInitModelResponse* response,
                                              MyClosure done) {
-  ::tensorflow::BlockingCounter blocking_counter(name2worker_.size());
+  ::tensorflow::BlockingCounter blocking_counter(id2worker_.size());
 
-  for (auto& pair : name2worker_) {
+  for (auto& pair : id2worker_) {
     struct Call {
       WorkerInitModelRequest req;
       WorkerInitModelResponse resp;
@@ -148,9 +148,9 @@ Master::~Master() {}
 ::tensorflow::Status Master::MasterActivateActor(
     MasterActivateActorRequest* request, MasterActivateActorResponse* response,
     MyClosure done) {
-  ::tensorflow::BlockingCounter blocking_counter(name2worker_.size());
+  ::tensorflow::BlockingCounter blocking_counter(id2worker_.size());
 
-  for (auto& pair : name2worker_) {
+  for (auto& pair : id2worker_) {
     struct Call {
       WorkerActivateActorRequest req;
       WorkerActivateActorResponse resp;
@@ -177,13 +177,14 @@ Master::~Master() {}
 ::tensorflow::Status Master::MasterSendRemoteRegst(
     MasterSendRemoteRegstRequest* request,
     MasterSendRemoteRegstResponse* response, MyClosure done) {
-  ::tensorflow::BlockingCounter inc_blocking_counter(name2worker_.size());
-  for (auto& pair : name2worker_) {
+  ::tensorflow::BlockingCounter inc_blocking_counter(id2worker_.size());
+  for (auto& pair : id2worker_) {
     struct Call {
       WorkerSendRemoteRegstRequest req;
       WorkerSendRemoteRegstResponse resp;
     };
     Call* call = new Call;
+    call->req.set_ascending_order(true);
 
     auto cb = [call, &inc_blocking_counter,
                &pair](const ::tensorflow::Status& s) {
@@ -199,13 +200,14 @@ Master::~Master() {}
   }
   inc_blocking_counter.Wait();
 
-  ::tensorflow::BlockingCounter dec_blocking_counter(name2worker_.size());
-  for (auto& pair : name2worker_) {
+  ::tensorflow::BlockingCounter dec_blocking_counter(id2worker_.size());
+  for (auto& pair : id2worker_) {
     struct Call {
       WorkerSendRemoteRegstRequest req;
       WorkerSendRemoteRegstResponse resp;
     };
     Call* call = new Call;
+    call->req.set_ascending_order(false);
 
     auto cb = [call, &dec_blocking_counter,
                &pair](const ::tensorflow::Status& s) {
@@ -228,9 +230,9 @@ Master::~Master() {}
 ::tensorflow::Status Master::MasterStartActor(
     MasterStartActorRequest* request, MasterStartActorResponse* response,
     MyClosure done) {
-  ::tensorflow::BlockingCounter blocking_counter(name2worker_.size());
+  ::tensorflow::BlockingCounter blocking_counter(id2worker_.size());
 
-  for (auto& pair : name2worker_) {
+  for (auto& pair : id2worker_) {
     struct Call {
       WorkerStartActorRequest req;
       WorkerStartActorResponse resp;
@@ -257,9 +259,9 @@ Master::~Master() {}
 ::tensorflow::Status Master::MasterInitDataPlane(
     MasterInitDataPlaneRequest* request, MasterInitDataPlaneResponse* response,
     MyClosure done) {
-  ::tensorflow::BlockingCounter blocking_counter(name2worker_.size());
+  ::tensorflow::BlockingCounter blocking_counter(id2worker_.size());
 
-  for (auto& pair : name2worker_) {
+  for (auto& pair : id2worker_) {
     struct Call {
       WorkerInitDataPlaneRequest init_dp_req;
       WorkerInitDataPlaneResponse init_dp_resp;

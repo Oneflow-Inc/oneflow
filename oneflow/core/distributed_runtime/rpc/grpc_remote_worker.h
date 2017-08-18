@@ -76,10 +76,9 @@ class GrpcRemoteWorker : public WorkerInterface {
                                 WorkerActivateActorResponse* response,
                                 ::tensorflow::StatusCallback done) override;
 
-  void WorkerSendRemoteRegstAsync(
-      const WorkerSendRemoteRegstRequest* request,
-      WorkerSendRemoteRegstResponse* response,
-      ::tensorflow::StatusCallback done) override;
+  void WorkerSendRemoteRegstAsync(const WorkerSendRemoteRegstRequest* request,
+                                  WorkerSendRemoteRegstResponse* response,
+                                  ::tensorflow::StatusCallback done) override;
 
   void WorkerSendRemoteRegstToConsumerAsync(
       const WorkerSendRemoteRegstToConsumerRequest* request,
