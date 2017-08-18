@@ -54,8 +54,8 @@ void ConvolutionOp::InferShape4FwBlobs(
                       / conv_conf.stride_w()
                   + 1;
   output_shape_vec.push_back(w_len);
-  weight_shape_vec.push_back(conv_conf.kerel_size_h());
-  weight_shape_vec.push_back(conv_conf.kerel_size_w());
+  weight_shape_vec.push_back(conv_conf.kernel_size_h());
+  weight_shape_vec.push_back(conv_conf.kernel_size_w());
   kernel_size *= conv_conf.kernel_size_h();
   kernel_size *= conv_conf.kernel_size_w();
   output_size *= h_len;
