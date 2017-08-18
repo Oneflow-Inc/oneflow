@@ -7,19 +7,10 @@ namespace oneflow {
 
 namespace fs {
 
-void TestFileSystem(FileSystem* file_system) {
+void TestFileOperation(FileSystem* file_system) {
   std::string current_dir = GetCwd();
   StringReplace(&current_dir, '\\', '/');
-  std::string test_root_path =
-      JoinPath(current_dir, "/tmp_file_system_test_asdfasdf");
-  if (file_system->IsDirectory(test_root_path) == Status::OK) {
-    std::vector<std::string> children;
-    file_system->GetChildren(test_root_path, &children);
-    ASSERT_EQ(children.size(), 0);
-  } else {
-    ASSERT_TRUE(file_system->CreateDir(test_root_path) == Status::OK);
-  }
-  std::string file_name = JoinPath(current_dir, "/tmp_test_file");
+  std::string file_name = JoinPath(current_dir, "/tmp_test_file_asdfasdf");
   // write
   std::unique_ptr<WritableFile> writable_file;
   ASSERT_TRUE(file_system->NewWritableFile(file_name, &writable_file)
@@ -47,9 +38,52 @@ void TestFileSystem(FileSystem* file_system) {
   std::string read_content(read_array, file_size);
   ASSERT_EQ(write_content, read_content);
   ASSERT_TRUE(file_system->DeleteFile(file_name) == Status::OK);
-  ASSERT_TRUE(file_system->DeleteDir(test_root_path) == Status::OK);
-  ASSERT_TRUE(file_system->IsDirectory(test_root_path) != Status::OK);
   delete[] read_array;
+}
+
+void TestDirOperation(FileSystem* file_system) {
+  std::string current_dir = GetCwd();
+  StringReplace(&current_dir, '\\', '/');
+  std::string test_root_path = JoinPath(current_dir, "/tmp_test_dir_asdfasdf");
+  if (file_system->IsDirectory(test_root_path) == Status::OK) {
+    std::vector<std::string> children;
+    file_system->GetChildren(test_root_path, &children);
+    ASSERT_EQ(children.size(), 0);
+  } else {
+    ASSERT_TRUE(file_system->CreateDir(test_root_path) == Status::OK);
+  }
+  std::string file_name = JoinPath(test_root_path, "/direct_file_");
+  std::string content = "test_file";
+  std::unique_ptr<WritableFile> file_a;
+  std::unique_ptr<WritableFile> file_b;
+  ASSERT_TRUE(file_system->NewWritableFile(file_name + "_a", &file_a)
+              == Status::OK);
+  ASSERT_TRUE(file_a->Append(content.c_str(), 9) == Status::OK);
+  ASSERT_TRUE(file_a->Close() == Status::OK);
+  ASSERT_TRUE(file_system->NewWritableFile(file_name + "_b", &file_b)
+              == Status::OK);
+  ASSERT_TRUE(file_b->Append(content.c_str(), 9) == Status::OK);
+  ASSERT_TRUE(file_b->Close() == Status::OK);
+  std::string child_dir = JoinPath(test_root_path, "/direct_dir");
+  ASSERT_TRUE(file_system->CreateDir(child_dir) == Status::OK);
+  std::vector<std::string> direct_children;
+  file_system->GetChildren(test_root_path, &direct_children);
+  ASSERT_EQ(direct_children.size(), 3);
+  int64_t undeleted_files = 0;
+  int64_t undeleted_dirs = 0;
+  ASSERT_TRUE(file_system->DeleteDir(child_dir) == Status::OK);
+  ASSERT_TRUE(file_system->IsDirectory(child_dir) != Status::OK);
+  ASSERT_TRUE(file_system->DeleteRecursively(test_root_path, &undeleted_files,
+                                             &undeleted_dirs)
+              == Status::OK);
+  ASSERT_EQ(undeleted_files, 0);
+  ASSERT_EQ(undeleted_dirs, 0);
+  ASSERT_TRUE(file_system->IsDirectory(test_root_path) != Status::OK);
+}
+
+void TestFileSystem(FileSystem* file_system) {
+  TestFileOperation(file_system);
+  TestDirOperation(file_system);
 }
 
 }  // namespace fs
