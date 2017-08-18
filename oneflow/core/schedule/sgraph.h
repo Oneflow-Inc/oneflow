@@ -33,15 +33,16 @@ class SDevice : public SNode {
   OF_DISALLOW_COPY_AND_MOVE(SDevice);
   SDevice() = default;
   ~SDevice() = default;
-  SDevice(std::string name, uint32_t time) : SNode(name), time_(time) {}
-  uint32_t time() const { return time_; }
-  uint32_t& mut_time() { return time_; }
+  SDevice(std::string name, float time) : SNode(name), time_(time) {}
 
+  float time() const { return time_; }
   uint64_t memory_limit() const { return memory_limit_; }
+
+  float& mut_time() { return time_; }
   uint64_t& mut_memory_limit() { return memory_limit_; }
 
  private:
-  uint32_t time_;
+  float time_;
   uint64_t memory_limit_ = ULLONG_MAX;
 };
 

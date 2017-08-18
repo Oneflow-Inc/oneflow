@@ -3,7 +3,7 @@ namespace oneflow {
 namespace schedule {
 
 void Session::NewBatchs() {
-  for (int32_t i = 0; i < nr_batch(); i++) {
+  for (uint32_t i = 0u; i < nr_batch(); i++) {
     auto batch = mut_batch_node_mgr().CreateWithId(i, std::to_string(i));
     graph()->ForeachNodeWithSourceAndSink([&](STask* node) {
       mut_task_instance_mgr().CreateIfNotFound(batch, node);
@@ -19,7 +19,7 @@ void Session::NewBatchs() {
 
 std::unique_ptr<std::list<Batch*>> Session::GetBatchNodes() {
   auto batchs = unique_ptr_new<std::list<Batch*>>();
-  for (uint32_t i = 0; i < nr_batch(); i++) {
+  for (uint32_t i = 0u; i < nr_batch(); i++) {
     batchs->push_back(batch_node_mgr().Find(i));
   }
   return batchs;

@@ -36,6 +36,7 @@ class Session {
     auto nr_device = graph->DeviceCount();
     auto depth = graph->Depth();
     nr_base_batch_ = std::min(nr_device, depth);
+    nr_base_batch_ = std::max(nr_base_batch_, 12u);
     nr_batch_ = nr_base_batch_ * 3;
     NewBatchs();
   }

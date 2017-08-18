@@ -48,9 +48,9 @@ class DirectionSimulationStrategy : public SimulationStrategy {
       : SimulationStrategy(schedule_engine) {}
   virtual ~DirectionSimulationStrategy() {}
 
-  virtual int32_t GetTime(int32_t x) = 0;
-  virtual int32_t GetStartTime(const std::pair<int32_t, int32_t>& p) = 0;
-  virtual int32_t GetEndTime(const std::pair<int32_t, int32_t>& p) = 0;
+  virtual float GetTime(float x) = 0;
+  virtual float GetStartTime(const std::pair<float, float>& p) = 0;
+  virtual float GetEndTime(const std::pair<float, float>& p) = 0;
   virtual void NewStartTokens() = 0;
   virtual uint32_t NextArc(STask* node,
                            const std::function<void(TaskArc*)>& cb) = 0;
@@ -80,11 +80,11 @@ class PositiveDirectionStrategy : public DirectionSimulationStrategy {
   PositiveDirectionStrategy(SimulatorScheduleEngine* schedule_engine)
       : DirectionSimulationStrategy(schedule_engine) {}
   virtual ~PositiveDirectionStrategy() {}
-  int32_t GetTime(int32_t x) { return x; }
-  int32_t GetStartTime(const std::pair<int32_t, int32_t>& p) {
+  float GetTime(float x) { return x; }
+  float GetStartTime(const std::pair<float, float>& p) {
     return GetTime(p.first);
   }
-  int32_t GetEndTime(const std::pair<int32_t, int32_t>& p) {
+  float GetEndTime(const std::pair<float, float>& p) {
     return GetTime(p.second);
   }
   void NewStartTokens();
@@ -111,11 +111,11 @@ class NegativeDirectionStrategy : public DirectionSimulationStrategy {
   NegativeDirectionStrategy(SimulatorScheduleEngine* schedule_engine)
       : DirectionSimulationStrategy(schedule_engine) {}
   virtual ~NegativeDirectionStrategy() {}
-  virtual int32_t GetTime(int32_t x) { return -x; }
-  virtual int32_t GetStartTime(const std::pair<int32_t, int32_t>& p) {
+  virtual float GetTime(float x) { return -x; }
+  virtual float GetStartTime(const std::pair<float, float>& p) {
     return GetTime(p.second);
   }
-  virtual int32_t GetEndTime(const std::pair<int32_t, int32_t>& p) {
+  virtual float GetEndTime(const std::pair<float, float>& p) {
     return GetTime(p.first);
   }
   void NewStartTokens();
@@ -143,7 +143,7 @@ class EvaluationSimulationStrategy : public SimulationStrategy {
       SimulatorScheduleEngine* schedule_engine)
       : SimulationStrategy(schedule_engine) {}
   ~EvaluationSimulationStrategy() = default;
-  virtual int32_t GetAscendentEndedAt(TaskInstance* instance);
+  virtual float GetAscendentEndedAt(TaskInstance* instance);
   virtual void TimeLinePushBack(TaskInstance*, SDevice*) = 0;
   virtual void Retiming() = 0;
 };
@@ -183,9 +183,9 @@ class MemorySimulationStrategy : public SimulationStrategy {
   virtual void AfterRun(TaskInstance* instance) = 0;
   virtual void InitRegst(
       const std::function<uint32_t(uint64_t)>& get_regst_num) = 0;
-  virtual int32_t GetAscendentEndedAt(TaskInstance* instance);
+  virtual float GetAscendentEndedAt(TaskInstance* instance);
 
-  std::function<int32_t(TaskInstance*)> get_ascendent_ended_at_;
+  std::function<float(TaskInstance*)> get_ascendent_ended_at_;
 
  protected:
   void InitFuncs();
@@ -223,7 +223,7 @@ class LimitedMemoryStrategy : public MemorySimulationStrategy {
   bool IsRegstDescReady(SRegstDesc* regst_desc, Batch* batch);
   SRegst* FindFreeRegst(SRegstDesc* regst_desc, Batch* batch);
   bool IsRegstFree(SRegst* regst);
-  int32_t RegstDescEndedAt(TaskInstance* instance);
+  float RegstDescEndedAt(TaskInstance* instance);
 };
 
 }  // namespace schedule

@@ -64,7 +64,7 @@ class SimulatorSchedule : public Schedule {
     return r2rd_arc_mgr_;
   }
 
-  inline std::unordered_map<SRegst*, int32_t>& mut_regst2ended_at() {
+  inline std::unordered_map<SRegst*, float>& mut_regst2ended_at() {
     return regst2ended_at_;
   }
 
@@ -83,7 +83,7 @@ class SimulatorSchedule : public Schedule {
   void WalkTimeNetReverse(SimulatorScheduleEngine* schedule_engine,
                           const std::function<void(TaskInstance*)>& cb);
 
-  std::unordered_map<SRegst*, int32_t> regst2ended_at_;
+  std::unordered_map<SRegst*, float> regst2ended_at_;
   std::unordered_map<RegstDescInstance*, SRegst*> regst_desc_instance2regst_;
   NodeMgr<SRegst> regst_node_mgr_;
   ArcMgr<Arc<TaskInstance, SRegst>> regst_arc_mgr_;
@@ -126,11 +126,13 @@ class SimulatorScheduleEngine : public ScheduleEngine {
   std::unique_ptr<SimulatorSchedule> Run(
       const std::function<uint32_t(uint64_t)>& get_regst_num);
 
-  inline int32_t GetTime(int32_t x) { return direction_->GetTime(x); }
-  inline int32_t GetStartTime(const std::pair<int32_t, int32_t>& p) {
+  STask* EndNode() { return direction_->EndNode(); }
+
+  inline float GetTime(float x) { return direction_->GetTime(x); }
+  inline float GetStartTime(const std::pair<float, float>& p) {
     return direction_->GetStartTime(p);
   }
-  inline int32_t GetEndTime(const std::pair<int32_t, int32_t>& p) {
+  inline float GetEndTime(const std::pair<float, float>& p) {
     return direction_->GetEndTime(p);
   }
 
@@ -192,7 +194,7 @@ class SimulatorScheduleEngine : public ScheduleEngine {
     //    evaluation_->AfterRun(instance);
     memory_->AfterRun(instance);
   }
-  inline int32_t GetAscendentEndedAt(TaskInstance* instance) {
+  inline float GetAscendentEndedAt(TaskInstance* instance) {
     return memory_->get_ascendent_ended_at_(instance);
   }
   std::unique_ptr<SimulatorSchedule> schedule_;

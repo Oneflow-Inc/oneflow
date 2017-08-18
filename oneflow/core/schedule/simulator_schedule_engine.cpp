@@ -82,7 +82,7 @@ void SimulatorSchedule::Retiming(SimulatorScheduleEngine* schedule_engine) {
     return next;
   };
   WalkTimeNetReverse(schedule_engine, [&](TaskInstance* instance) {
-    auto lazy_end = INT_MAX;
+    float lazy_end = INT_MAX;
     uint32_t count =
         timenet_arc_mgr().Output(instance, [&](TaskInstance* instance) {
           const auto& p = mut_instance2ended_at()[instance];
@@ -155,9 +155,8 @@ void SimulatorSchedule::UpdateRegstCount() {
     uint32_t count = ceil(duration / std::max(interval, 1.0f));
     count = std::max(count, regst_desc->min_regst_count());
     mut_regst_desc2count()[regst_desc] = count;
-    //    std::cout << "Allocation\t" << regst_desc->id() << "\t" << count <<
-    //    "\t"
-    //              << duration << "," << interval << std::endl;
+    std::cout << "Allocation\t" << regst_desc->id() << "\t" << count << "\t"
+              << duration << "," << interval << std::endl;
   });
 }
 
@@ -334,7 +333,7 @@ std::unique_ptr<SimulatorSchedule> SimulatorScheduleEngine::Run(
       auto dev = dynamic_cast<SDevice*>(p.first);
       auto batch = p.second->from();
       BeforeRun(p.second);
-      int32_t ended_at = GetAscendentEndedAt(p.second);
+      float ended_at = GetAscendentEndedAt(p.second);
       schedule()->mut_instance2ended_at()[p.second].first = ended_at;
       ended_at += (dev ? dev->time() : 0);
       schedule()->mut_device2ended_at()[p.first] = ended_at;

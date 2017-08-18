@@ -235,9 +235,9 @@ void LimitedMemoryStrategy::InitRegst(
   });
 }
 
-int32_t EvaluationSimulationStrategy::GetAscendentEndedAt(
+float EvaluationSimulationStrategy::GetAscendentEndedAt(
     TaskInstance* instance) {
-  int32_t ended_at = 0;
+  float ended_at = 0;
   auto session = schedule_engine()->session();
   auto schedule = schedule_engine()->schedule();
   auto direction = schedule_engine()->direction();
@@ -245,7 +245,7 @@ int32_t EvaluationSimulationStrategy::GetAscendentEndedAt(
     auto instance_input =
         session->task_instance_mgr().Find(instance->from(), node);
     auto itt = schedule->instance2ended_at().find(instance_input);
-    auto token_ended_at = INT_MAX;
+    float token_ended_at = INT_MAX;
     if (itt != schedule->instance2ended_at().end()) {
       token_ended_at = itt->second.second;
     }
@@ -255,13 +255,13 @@ int32_t EvaluationSimulationStrategy::GetAscendentEndedAt(
   return std::max(ended_at, schedule->mut_device2ended_at()[dev]);
 }
 
-int32_t MemorySimulationStrategy::GetAscendentEndedAt(TaskInstance* instance) {
+float MemorySimulationStrategy::GetAscendentEndedAt(TaskInstance* instance) {
   auto evaluation = schedule_engine()->evaluation();
   return evaluation->GetAscendentEndedAt(instance);
 }
 
-int32_t LimitedMemoryStrategy::RegstDescEndedAt(TaskInstance* instance) {
-  int32_t ended_at = 0;
+float LimitedMemoryStrategy::RegstDescEndedAt(TaskInstance* instance) {
+  float ended_at = 0;
   auto schedule = schedule_engine()->schedule();
   auto direction = schedule_engine()->direction();
   direction->HoldingRegstDesc(instance->to(), [&](SRegstDesc* regst_desc) {
@@ -341,7 +341,7 @@ SRegst* LimitedMemoryStrategy::FindFreeRegst(SRegstDesc* regst_desc,
       sess->regst_desc_instance_mgr().Find(batch, regst_desc);
   SRegst* ret = schedule->mut_regst_desc_instance2regst()[regst_desc_instance];
   if (!ret) {
-    int32_t ended_at = INT_MAX;
+    float ended_at = INT_MAX;
     schedule->r2rd_arc_mgr().Input(regst_desc, [&](SRegst* regst) {
       if (IsRegstFree(regst)) {
         if (schedule->mut_regst2ended_at()[regst] < ended_at) {
@@ -362,7 +362,7 @@ MemorySimulationStrategy::Pick(std::unordered_set<TaskArcInstance*>* tokens) {
       XFilter<TaskInstance*>(*all_instances, is_instance_ready_);
   CHECK(ready_instances->size());
   auto instances_groupby_ended_at =
-      XGroupBy<int32_t>(*ready_instances, get_ascendent_ended_at_);
+      XGroupBy<float>(*ready_instances, get_ascendent_ended_at_);
   auto first_finished = XAssocKMin(*instances_groupby_ended_at);
   auto instances_groupby_dev =
       XGroupBy<SDevice*>(first_finished->second, get_instance_device_);
