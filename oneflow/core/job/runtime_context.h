@@ -9,6 +9,19 @@
 #include "oneflow/core/persistence/persistent_circular_line_reader.h"
 
 namespace oneflow {
+// Only for pairs of std::hash-able types for simplicity.
+// You can of course template this struct to allow other hash functions
+struct pair_hash {
+  template <class T1, class T2>
+  std::size_t operator () (const std::pair<T1, T2> &p) const {
+    auto h1 = std::hash<T1>{}(p.first);
+    auto h2 = std::hash<T2>{}(p.second);
+
+    // Mainly for demonstration purposes, i.e. works but is overly simple
+    // In the real world, use sth. like boost.hash_combine
+    return h1 ^ h2;
+  }
+};
 
 struct NetMemoryDescriptor {
   void* regst_ptr;
@@ -62,7 +75,7 @@ class RuntimeCtx final {
   mutable std::mutex mutex_;
   std::vector<NetMemoryDescriptor> local_net_memory_descs_;
   // <consumer_task_id, regst_address>
-  std::unordered_map<std::pair<int64_t, uint64_t>, MemoryDescriptor>
+  std::unordered_map<std::pair<int64_t, uint64_t>, MemoryDescriptor, pair_hash>
       remote_net_memory_descs_;
 };
 
