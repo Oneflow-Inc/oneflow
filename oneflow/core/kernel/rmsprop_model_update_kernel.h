@@ -28,12 +28,16 @@ class RMSPropMdUpdateKernelUtil final {
   OF_DISALLOW_COPY_AND_MOVE(RMSPropMdUpdateKernelUtil);
   RMSPropMdUpdateKernelUtil() = delete;
 
+  // alpha = (1 - decay_rate) / batch_size ^ 2
+  // mean_square = alpha * model_diff ^ 2 + decay_rate * mean_square
   static void UpdateMeanSquare(const KernelCtx& ctx, const int64_t n,
                                const FloatingPointType alpha,
                                const FloatingPointType decay_rate,
                                FloatingPointType* mean_square,
                                const FloatingPointType* model_diff);
 
+  // alpha = learning_rate / batch_size
+  // model -= alpha * model_diff / sqrt(mean_square + epsilon)
   static void UpdateModel(const KernelCtx& ctx, const int64_t n,
                           FloatingPointType* model,
                           const FloatingPointType* model_diff,

@@ -5,8 +5,6 @@ namespace oneflow {
 
 namespace {
 
-// alpha = (1 - decay_rate) / batch_size^2
-// mean_square = alpha * model_diff ^ 2 + decay_rate * mean_square
 template<typename FloatingPointType>
 __global__ void UpdateMeanSquareGpu(const int64_t n,
                                     const FloatingPointType alpha,
@@ -15,11 +13,10 @@ __global__ void UpdateMeanSquareGpu(const int64_t n,
                                     const FloatingPointType* model_diff) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     mean_square[i] =
-        alpha * std::pow(model_diff[i], 2) + decay_rate * mean_square[i];
+        alpha * model_diff[i] * model_diff[i] + decay_rate * mean_square[i];
   }
 }
 
-// model -= alpha * model_diff / sqrt(mean_square + epsilon)
 template<typename FloatingPointType>
 __global__ void UpdateModelGpu(const int64_t n, FloatingPointType* model,
                                const FloatingPointType* model_diff,
