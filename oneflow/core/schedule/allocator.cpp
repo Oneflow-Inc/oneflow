@@ -30,7 +30,10 @@ void Allocator::SetRegstNum(const Schedule& schedule, Plan* plan) {
   for (auto& task_proto : plan->task()) {
     for (auto& pair : task_proto.produced_regst_desc()) {
       auto regst_desc = const_cast<RegstDescProto*>(&pair.second);
-      regst_desc->set_register_num(get_regst_num(regst_desc->regst_desc_id()));
+      auto regst_num = get_regst_num(regst_desc->regst_desc_id());
+      //      std::cout << regst_desc->regst_desc_id() << ": " << regst_num
+      //                << std::endl;
+      regst_desc->set_register_num(regst_num);
     }
   }
 }

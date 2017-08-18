@@ -11,8 +11,13 @@ namespace schedule {
 class ScheduleFacade final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ScheduleFacade);
-  ScheduleFacade(const std::string& name = "default")
+  ScheduleFacade(const std::string& name)
       : sfp_(ScheduleFactoryConfigure::Provider(name)) {}
+
+  static ScheduleFacade* Default() {
+    static ScheduleFacade* facade = new ScheduleFacade(DefaultName());
+    return facade;
+  }
 
   void Allocate(Plan* plan) {
     auto allocator = sfp_->allocator_factory()->CreateAllocator();
@@ -20,6 +25,10 @@ class ScheduleFacade final {
   }
 
  private:
+  static std::string DefaultName() {
+    //		return "default";
+    return "empty_allocator";
+  }
   ScheduleFactoryProvider* sfp_;
 };
 

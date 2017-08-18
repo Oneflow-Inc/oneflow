@@ -94,7 +94,7 @@ class FixedBatchSession final : public Session {
   FixedBatchSession() = delete;
   virtual ~FixedBatchSession() = default;
   explicit FixedBatchSession(SGraph* graph)
-      : Session(graph, tpl_nr_base_batch) {}
+      : Session(graph, std::max(tpl_nr_base_batch, 2u)) {}
 };
 
 }  // namespace schedule

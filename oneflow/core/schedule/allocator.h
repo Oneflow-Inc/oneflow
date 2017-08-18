@@ -16,6 +16,7 @@ class Allocator {
   explicit Allocator(ScheduleFactoryProvider* schedule_factory_provider)
       : schedule_factory_provider_(schedule_factory_provider) {}
   Allocator() = default;
+  virtual ~Allocator() = default;
 
   virtual void Allocate(Plan* plan);
   virtual std::unique_ptr<Schedule> MemoryLimitedStaticSchedule(
@@ -29,6 +30,16 @@ class Allocator {
  private:
   void SetRegstNum(const Schedule& schedule, Plan* plan);
   ScheduleFactoryProvider* schedule_factory_provider_;
+};
+
+class EmptyAllocator : public Allocator {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(EmptyAllocator);
+  explicit EmptyAllocator(ScheduleFactoryProvider* schedule_factory_provider)
+      : Allocator(schedule_factory_provider) {}
+  EmptyAllocator() = default;
+  virtual ~EmptyAllocator() = default;
+  virtual void Allocate(Plan* plan) {}
 };
 
 }  // namespace schedule

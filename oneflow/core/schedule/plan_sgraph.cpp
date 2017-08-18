@@ -9,23 +9,25 @@ void PlanSGraph::InitRegstDesc(const Plan& plan) {
   for (const TaskProto& task_proto : plan.task()) {
     id2task_proto[task_proto.id()] = &task_proto;
   }
-
   for (const TaskProto& task_proto : plan.task()) {
     for (const auto& pair : task_proto.produced_regst_desc()) {
-      uint64_t regst_desc_id = pair.second.regst_desc_id();
       uint64_t producer_id = pair.second.producer_task_id();
       STask* producer = mut_node_mgr().Find(producer_id);
+      CHECK(producer);
+      uint64_t regst_desc_id = pair.second.regst_desc_id();
       SRegstDesc* regst_desc =
           mut_regst_desc_mgr().CreateIfNotFound(regst_desc_id);
-      if (producer) {
-        mut_produced_regst_desc_mgr().CreateIfNotFound(producer, regst_desc);
+      if (task_proto.type() == kMdUpdtCompTask) {
+        regst_desc->mut_min_regst_count() = 3u;
+      }
+      mut_produced_regst_desc_mgr().CreateIfNotFound(producer, regst_desc);
+      if (!pair.second.consumer_task_id().size()) {
+        mut_subscribed_regst_desc_mgr().CreateIfNotFound(producer, regst_desc);
       }
       for (int64_t consumer_id : pair.second.consumer_task_id()) {
         STask* consumer = mut_node_mgr().Find(consumer_id);
-        if (consumer) {
-          mut_subscribed_regst_desc_mgr().CreateIfNotFound(consumer,
-                                                           regst_desc);
-        }
+        CHECK(consumer);
+        mut_subscribed_regst_desc_mgr().CreateIfNotFound(consumer, regst_desc);
         const TaskProto* consumer_task_proto = id2task_proto[consumer_id];
         CHECK(consumer);
         CHECK(producer);

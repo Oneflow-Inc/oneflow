@@ -13,6 +13,7 @@
 #include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/register/register_desc.h"
+#include "oneflow/core/schedule/schedule_facade.h"
 
 namespace oneflow {
 
@@ -225,6 +226,7 @@ void Compiler::GenPlanFile(const std::string& plan_filepath) {
       // TODO: unique
     });
   });
+  schedule::ScheduleFacade::Default()->Allocate(&plan);
   PrintProtoToTextFile(plan, plan_filepath);
   Plan2DotFile(plan);
 }

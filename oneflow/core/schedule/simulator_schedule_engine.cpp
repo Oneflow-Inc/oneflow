@@ -141,7 +141,8 @@ void SimulatorSchedule::UpdateDuration(
           float avg = sum / std::max(1u, (end - start));
           duration = std::max(duration, avg);
         });
-    mut_regst_desc2duration()[regst_desc] = std::round(duration);
+    //		duration = std::round(duration);
+    mut_regst_desc2duration()[regst_desc] = duration;
   });
 }
 
@@ -152,9 +153,11 @@ void SimulatorSchedule::UpdateRegstCount() {
     auto duration = mut_regst_desc2duration()[regst_desc];
     auto interval = max_interval();
     uint32_t count = ceil(duration / std::max(interval, 1.0f));
+    count = std::max(count, regst_desc->min_regst_count());
     mut_regst_desc2count()[regst_desc] = count;
-    std::cout << "Allocation\t" << regst_desc->id() << "\t" << count << "\t"
-              << duration << "," << interval << std::endl;
+    //    std::cout << "Allocation\t" << regst_desc->id() << "\t" << count <<
+    //    "\t"
+    //              << duration << "," << interval << std::endl;
   });
 }
 
@@ -166,6 +169,7 @@ void SimulatorSchedule::UpdateInterval(
     uint32_t last = 0;
     uint32_t start = session->nr_base_batch();
     uint32_t end = start + session->nr_base_batch();
+    CHECK(end - start > 1);
     for (uint32_t i = start; i < end; i++) {
       auto batch = session->batch_node_mgr().Find(i);
       auto instance = session->task_instance_mgr().Find(batch, node);
@@ -298,17 +302,13 @@ std::unique_ptr<Schedule> SimulatorScheduleEngine::RunInTwoDirections(
   SetStrategy(unique_ptr_new<PositiveDirectionStrategy>(this));
   auto positive_schedule = Run(get_regst_num);
   positive_schedule->UpdateDuration(this);
-  //  std::cout << "positive:\n";
   positive_schedule->UpdateRegstCount();
-  TODO();
   //  SetStrategy(unique_ptr_new<NegativeDirectionStrategy>(this));
   //  auto negative_schedule = Run(get_regst_num);
   //  negative_schedule->UpdateDuration(this);
-  //  std::cout << "negative:\n";
   //  negative_schedule->UpdateRegstCount();
   //  positive_schedule->MergeTimeGapToLossInPlace(negative_schedule.get());
   //  positive_schedule->UpdateDuration(this);
-  //  std::cout << "merged:\n";
   //  positive_schedule->UpdateRegstCount();
   return std::move(positive_schedule);
 }
@@ -328,19 +328,8 @@ std::unique_ptr<SimulatorSchedule> SimulatorScheduleEngine::Run(
     const std::function<uint32_t(uint64_t)>& get_regst_num) {
   InitRegst(get_regst_num);
   NewStartTokens();
-  for (const auto& task_arc_instance : mut_tokens()) {
-    std::cout << "token-batch-id=" << task_arc_instance->from()->id()
-              << std::endl;
-    std::cout << "token-from-name=" << task_arc_instance->to()->from()->name()
-              << std::endl;
-    std::cout << "token-to-name=" << task_arc_instance->to()->to()->name()
-              << std::endl;
-  }
   while (mut_tokens().size()) {
-    std::cout << "mut_tokens().size()=" << mut_tokens().size() << std::endl;
     auto instances_picked = Pick(&mut_tokens());
-    std::cout << "instances_picked->size()=" << instances_picked->size()
-              << std::endl;
     for (const auto& p : *instances_picked) {
       auto dev = dynamic_cast<SDevice*>(p.first);
       auto batch = p.second->from();
@@ -363,17 +352,7 @@ std::unique_ptr<SimulatorSchedule> SimulatorScheduleEngine::Run(
         mut_tokens().insert(instance_output);
       });
     }
-    if (!instances_picked->size()) {
-      for (const auto& task_arc_instance : mut_tokens()) {
-        std::cout << "token-batch-id=" << task_arc_instance->from()->id()
-                  << std::endl;
-        std::cout << "token-from-id=" << task_arc_instance->to()->from()->id()
-                  << std::endl;
-        std::cout << "token-to-id=" << task_arc_instance->to()->to()->id()
-                  << std::endl;
-      }
-      break;
-    }
+    if (!instances_picked->size()) { break; }
   }
   schedule()->UpdateInterval(this);
   Retiming();

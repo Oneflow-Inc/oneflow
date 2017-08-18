@@ -73,12 +73,15 @@ class SRegstDesc : public SNode {
 
   inline uint64_t regst_memory_size() const { return regst_memory_size_; }
   inline const STask* owner_task() const { return owner_task_; }
+  inline uint32_t min_regst_count() const { return min_regst_count_; }
 
   inline uint64_t& mut_regst_memory_size() { return regst_memory_size_; }
   inline STask*& mut_owner_task() { return owner_task_; }
+  inline uint32_t& mut_min_regst_count() { return min_regst_count_; }
 
  private:
   uint64_t regst_memory_size_ = 1u;
+  uint32_t min_regst_count_ = 0u;
   STask* owner_task_;
 };
 

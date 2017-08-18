@@ -161,7 +161,9 @@ class Arc : public SNode {
   DstNodeType* to() const { return to_; }
   DstNodeType*& mut_to() { return to_; }
 
-  std::string name() const { return from()->name() + "->" + to()->name(); }
+  std::string name() const {
+    return "[" + from()->name() + "]->[" + to()->name() + "]";
+  }
 
  private:
   SrcNodeType* from_;
