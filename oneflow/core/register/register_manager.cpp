@@ -50,8 +50,9 @@ std::vector<NetMemoryDescriptor> RegstMgr::NewRegsts(
       delete packed_blob_shape;
     };
     if (std::get<2>(allocation) != nullptr) {
+      // Leave this_machine_id and the consumer_machine_ids as uninitialized
       NetMemoryDescriptor net_memory_desc{
-          regst, std::get<0>(allocation), std::get<2>(allocation), 1, {0}};
+          regst, std::get<0>(allocation), std::get<2>(allocation), -1, {}};
       net_memory_descs.push_back(net_memory_desc);
     }
     OneRegstDone(regst);

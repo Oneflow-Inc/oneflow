@@ -189,16 +189,17 @@ Master::~Master() {}
     auto cb = [call, &inc_blocking_counter,
                &pair](const ::tensorflow::Status& s) {
       if (s.ok()) {
-        LOG(INFO) << "Worker SendRemoteRegstToInc RPC succeeds";
+        LOG(INFO) << "Master SendRemoteRegstToInc RPC succeeds:" << pair.first;
         inc_blocking_counter.DecrementCount();
       } else {
-        LOG(FATAL) << "Worker SendRemoteRegstToInc RPC fails" << pair.first;
+        LOG(FATAL) << "Master SendRemoteRegstToInc RPC fails:" << pair.first;
       }
       delete call;
     };
     pair.second->WorkerSendRemoteRegstAsync(&call->req, &call->resp, cb);
   }
   inc_blocking_counter.Wait();
+  LOG(INFO) << "Master SendRemoteRegstToInc succeeds";
 
   ::tensorflow::BlockingCounter dec_blocking_counter(id2worker_.size());
   for (auto& pair : id2worker_) {
@@ -222,6 +223,7 @@ Master::~Master() {}
     pair.second->WorkerSendRemoteRegstAsync(&call->req, &call->resp, cb);
   }
   dec_blocking_counter.Wait();
+  LOG(INFO) << "Master SendRemoteRegstToDec succeeds";
 
   done(::tensorflow::Status());
   return ::tensorflow::Status::OK();
