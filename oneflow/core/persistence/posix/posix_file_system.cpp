@@ -13,7 +13,7 @@
 
 namespace oneflow {
 
-namespace fs{
+namespace fs {
 
 class PosixRandomAccessFile : public RandomAccessFile {
  private:
