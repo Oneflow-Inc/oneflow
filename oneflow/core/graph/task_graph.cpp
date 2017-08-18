@@ -2,6 +2,8 @@
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/graph/data_comp_task_node.h"
 #include "oneflow/core/graph/in_boxing_task_node.h"
+#include "oneflow/core/graph/loss_accumulate_comp_task_node.h"
+#include "oneflow/core/graph/loss_record_comp_task_node.h"
 #include "oneflow/core/graph/model_diff_accumulate_comp_task_node.h"
 #include "oneflow/core/graph/model_save_comp_task_node.h"
 #include "oneflow/core/graph/model_update_comp_task_node.h"
@@ -13,7 +15,9 @@ namespace oneflow {
   template void TaskGraph::func<DataCompTaskNode>(__VA_ARGS__);      \
   template void TaskGraph::func<MdUpdtCompTaskNode>(__VA_ARGS__);    \
   template void TaskGraph::func<MdDiffAccCompTaskNode>(__VA_ARGS__); \
-  template void TaskGraph::func<MdSaveCompTaskNode>(__VA_ARGS__);
+  template void TaskGraph::func<MdSaveCompTaskNode>(__VA_ARGS__);    \
+  template void TaskGraph::func<LossAccCompTaskNode>(__VA_ARGS__);   \
+  template void TaskGraph::func<LossRecordCompTaskNode>(__VA_ARGS__);
 
 namespace {
 
@@ -261,7 +265,7 @@ void TaskGraph::GenerateRelatedBpNodes(std::vector<TaskNode*>* loss_node_vec) {
         loss_node_vec->push_back(task_node);
         return;
       }
-      if (comp_task_node->chain_node()->IsLogNode()) { return; }
+      if (comp_task_node->chain_node()->IsRecordNode()) { return; }
       if (comp_task_node->chain_node()->HasOpWithModelOrModelTmpBlob()) {
         EnrollNode(comp_task_node->BuildAndConnectBpNode());
         return;

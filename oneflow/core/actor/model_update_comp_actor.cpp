@@ -44,19 +44,21 @@ int MdUpdtCompActor::HandlerBeforeInitializeModel(const ActorMsg& actor_msg) {
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   kernel_ctx.other = reinterpret_cast<void*>(random_seed_);
   // model_regst
-  Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
-  model_regst->set_model_version_id(next_model_version_id_++);
-  model_regst->ForEachLbn(CollectKernelsFromLbn);
-  for (const Kernel* kernel : kernels) {
-    kernel->InitModelBlobs(
-        kernel_ctx, parallel_policy(), parallel_id(), parallel_num(),
-        SnapshotMgr::Singleton()->GetReadableSnapshot(),
-        [&](const std::string& bn_in_op) {
-          const std::string& lbn = kernel->Lbn4BnInOp(bn_in_op);
-          return model_regst->GetBlobPtrFromLbn(lbn);
-        });
+  if (model_regst_desc_id_ != -1) {
+    Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
+    model_regst->set_model_version_id(next_model_version_id_++);
+    model_regst->ForEachLbn(CollectKernelsFromLbn);
+    for (const Kernel* kernel : kernels) {
+      kernel->InitModelBlobs(
+          kernel_ctx, parallel_policy(), parallel_id(), parallel_num(),
+          SnapshotMgr::Singleton()->GetReadableSnapshot(),
+          [&](const std::string& bn_in_op) {
+            const std::string& lbn = kernel->Lbn4BnInOp(bn_in_op);
+            return model_regst->GetBlobPtrFromLbn(lbn);
+          });
+    }
+    if (JobDesc::Singleton()->is_train()) { AsyncCopyModelFromCurToNext(); }
   }
-  if (JobDesc::Singleton()->is_train()) { AsyncCopyModelFromCurToNext(); }
   kernels.clear();
   // model_tmp_regst
   Regst* model_tmp_regst = GetCurWriteableRegst(model_tmp_regst_desc_id_);

@@ -29,6 +29,8 @@ class Thread {
   void set_thrd_loc_id(int64_t val) { thrd_loc_id_ = val; }
 
  private:
+  void ActivateActor(int64_t actor_id, const ThreadCtx& thread_ctx);
+
   HashMap<int64_t, TaskProto> id2task_;
   std::mutex id2task_mtx_;
 

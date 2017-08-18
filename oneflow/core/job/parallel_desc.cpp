@@ -13,8 +13,8 @@ std::pair<std::string, std::string> ParseDeviceNameConf(
 ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
   policy_ = user_conf.policy();
   device_type_ = JobDesc::Singleton()->resource().device_type();
-  for (int64_t i = 0; i < user_conf.device_set().device_name_size(); ++i) {
-    const std::string& device_name = user_conf.device_set().device_name(i);
+  for (int64_t i = 0; i < user_conf.device_name_size(); ++i) {
+    const std::string& device_name = user_conf.device_name(i);
     std::pair<std::string, std::string> machine_name_device_id =
         ParseDeviceNameConf(device_name);
     std::string machine_name = machine_name_device_id.first;
@@ -49,6 +49,43 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
   for (auto const& pair : machine_id2sorted_device_phy_ids_) {
     parallel_num_ += pair.second.size();
   }
+}
+
+void ParallelDesc::RemoveNeedlessDevice(int32_t max_device_num) {
+  if (max_device_num >= parallel_num_) { return; }
+  int32_t device_cnt = 0;
+  int64_t max_machine_id = -1;
+  for (int64_t machine_id : sorted_machine_ids_) {
+    auto it = machine_id2sorted_device_phy_ids_.find(machine_id);
+    int32_t cur_device_num = it->second.size();
+    int32_t cur_device_max_num = max_device_num - device_cnt;
+    if (cur_device_num > cur_device_max_num) {
+      it->second.erase(it->second.begin() + cur_device_max_num,
+                       it->second.end());
+      if (it->second.empty()) {
+        max_machine_id = machine_id - 1;
+      } else {
+        max_machine_id = machine_id;
+      }
+      break;
+    } else {
+      device_cnt += cur_device_num;
+    }
+  }
+  CHECK_NE(max_machine_id, -1);
+  for (auto it = sorted_machine_ids_.begin(); it != sorted_machine_ids_.end();
+       ++it) {
+    if (*it > max_machine_id) {
+      sorted_machine_ids_.erase(it, sorted_machine_ids_.end());
+      break;
+    }
+  }
+  EraseIf<int64_t, std::vector<int64_t>>(
+      &machine_id2sorted_device_phy_ids_,
+      [&](HashMap<int64_t, std::vector<int64_t>>::iterator it) {
+        return it->first > max_machine_id;
+      });
+  parallel_num_ = max_device_num;
 }
 
 std::string ParallelDesc::VisualStr() const {

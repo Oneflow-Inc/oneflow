@@ -21,13 +21,13 @@ void MdDiffAccCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
 
   ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = chain_node()->SoleOp();
-  const std::string ibn = "model_diff";
   if (in_edges().empty()) {
-    exec_node->BindBnInOpAndRegst(ibn, model_diff_regst);
-    ConsumeRegstDesc(ibn, model_diff_regst);
+    exec_node->BindBnInOpAndRegst(exec_node->op()->SoleIbn(), model_diff_regst);
+    ConsumeRegstDesc("model_diff", model_diff_regst);
   } else {
-    exec_node->BindBnInOpAndRegst(ibn, GetRelatedRegst(SoleInEdge()));
-    ConsumeRegstDesc(ibn, GetRelatedRegst(SoleInEdge()));
+    exec_node->BindBnInOpAndRegst(exec_node->op()->SoleIbn(),
+                                  GetRelatedRegst(SoleInEdge()));
+    ConsumeRegstDesc("model_diff", GetRelatedRegst(SoleInEdge()));
   }
   model_diff_acc_regst->CopyLbnFrom(GetConsumedRegstDesc("model_diff").get());
   exec_node->BindBnInOpAndRegst(exec_node->op()->SoleObn(),
