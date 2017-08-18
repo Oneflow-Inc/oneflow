@@ -187,9 +187,9 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
                 mask_blob->mut_dptr<uint32_t>(), in_blob->shape().At(1),
                 in_blob->shape().At(2), in_blob->shape().At(3),
                 out_blob->shape().At(2), out_blob->shape().At(3),
-                pooling_conf.kernel_size(0), pooling_conf.kernel_size(1),
-                pooling_conf.stride(0), pooling_conf.stride(1),
-                pooling_conf.pad(0), pooling_conf.pad(1));
+                pooling_conf.kernel_size_h(), pooling_conf.kernel_size_w(),
+                pooling_conf.stride_h(), pooling_conf.stride_w(),
+                pooling_conf.pad_h(), pooling_conf.pad_w());
         break;
       }
       case PoolingOpConf::kAve: {
@@ -200,9 +200,9 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
                 out_blob->mut_dptr<FloatingPointType>(), in_blob->shape().At(1),
                 in_blob->shape().At(2), in_blob->shape().At(3),
                 out_blob->shape().At(2), out_blob->shape().At(3),
-                pooling_conf.kernel_size(0), pooling_conf.kernel_size(1),
-                pooling_conf.stride(0), pooling_conf.stride(1),
-                pooling_conf.pad(0), pooling_conf.pad(1));
+                pooling_conf.kernel_size_h(), pooling_conf.kernel_size_w(),
+                pooling_conf.stride_h(), pooling_conf.stride_w(),
+                pooling_conf.pad_h(), pooling_conf.pad_w());
         break;
       }
       case PoolingOpConf::kStochastic: {
@@ -230,10 +230,10 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
                 in_diff_blob->mut_dptr<FloatingPointType>(),
                 in_diff_blob->shape().At(1), in_diff_blob->shape().At(2),
                 in_diff_blob->shape().At(3), out_diff_blob->shape().At(2),
-                out_diff_blob->shape().At(3), pooling_conf.kernel_size(0),
-                pooling_conf.kernel_size(1), pooling_conf.stride(0),
-                pooling_conf.stride(1), pooling_conf.pad(0),
-                pooling_conf.pad(1));
+                out_diff_blob->shape().At(3), pooling_conf.kernel_size_h(),
+                pooling_conf.kernel_size_w(), pooling_conf.stride_h(),
+                pooling_conf.stride_w(), pooling_conf.pad_h(),
+                pooling_conf.pad_w());
         break;
       }
       case PoolingOpConf::kAve: {
@@ -244,10 +244,10 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
                 in_diff_blob->mut_dptr<FloatingPointType>(),
                 in_diff_blob->shape().At(1), in_diff_blob->shape().At(2),
                 in_diff_blob->shape().At(3), out_diff_blob->shape().At(2),
-                out_diff_blob->shape().At(3), pooling_conf.kernel_size(0),
-                pooling_conf.kernel_size(1), pooling_conf.stride(0),
-                pooling_conf.stride(1), pooling_conf.pad(0),
-                pooling_conf.pad(1));
+                out_diff_blob->shape().At(3), pooling_conf.kernel_size_h(),
+                pooling_conf.kernel_size_w(), pooling_conf.stride_h(),
+                pooling_conf.stride_w(), pooling_conf.pad_h(),
+                pooling_conf.pad_w());
         break;
       }
       case PoolingOpConf::kStochastic: {

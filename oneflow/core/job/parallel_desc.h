@@ -30,8 +30,11 @@ class ParallelDesc {
   }
   int64_t parallel_num() const { return parallel_num_; }
 
-  //
+  // Setters
   ParallelPolicy& mut_policy() { return policy_; }
+  void RemoveNeedlessDevice(int32_t max_device_num);
+
+  //
   bool Equal(const ParallelDesc& rhs) const {
     return policy_ == rhs.policy_ && device_type_ == rhs.device_type_
            && sorted_machine_ids_ == rhs.sorted_machine_ids_
