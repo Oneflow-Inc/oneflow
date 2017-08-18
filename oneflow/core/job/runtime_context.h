@@ -3,6 +3,7 @@
 
 #include <mutex>
 #include "oneflow/core/common/thread_safe_counter.h"
+#include "oneflow/core/distributed_runtime/worker.pb.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/network/network_memory.h"
 #include "oneflow/core/persistence/persistent_circular_line_reader.h"
@@ -40,6 +41,11 @@ class RuntimeCtx final {
   void AddLocalNetMemoryDesc(const NetMemoryDescriptor& net_memory_desc);
   const std::vector<NetMemoryDescriptor>& local_net_memory_descs() const;
 
+  void AddRemoteMemoryDescriptor(int64_t machine_id,
+                                 const RemoteRegstDesc& remote_regst_desc);
+  const MemoryDescriptor& memory_descriptor(int64_t consumer_task_id,
+                                            uint64_t regst_address) const;
+
  private:
   RuntimeCtx() { LOG(INFO) << "RuntimeCtx Init"; }
 
@@ -53,9 +59,11 @@ class RuntimeCtx final {
   ThreadSafeCounter active_actor_cnt_;
   ThreadSafeCounter inactive_actor_cnt_;
 
-  std::mutex mutex_;
+  mutable std::mutex mutex_;
   std::vector<NetMemoryDescriptor> local_net_memory_descs_;
-  std::unordered_map<uint64_t, MemoryDescriptor> remote_net_memory_descs_;
+  // <consumer_task_id, regst_address>
+  std::unordered_map<std::pair<int64_t, uint64_t>, MemoryDescriptor>
+      remote_net_memory_descs_;
 };
 
 }  // namespace oneflow

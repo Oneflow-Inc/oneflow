@@ -132,8 +132,7 @@ Worker::~Worker() {}
       for (auto& regst_desc : pair.second) {
         auto remote_regst_desc = call->req.add_remote_regst_descs();
         remote_regst_desc->set_data_address(regst_desc.data_address());
-        remote_regst_desc->set_regst_address(
-            regst_desc.regst_address());
+        remote_regst_desc->set_regst_address(regst_desc.regst_address());
         remote_regst_desc->set_remote_token(regst_desc.remote_token());
         remote_regst_desc->set_consumer_task_id(regst_desc.consumer_task_id());
       }
@@ -179,6 +178,8 @@ Worker::~Worker() {}
               << request->remote_regst_descs(i).remote_token();
     LOG(INFO) << "Consumer task_id: "
               << request->remote_regst_descs(i).consumer_task_id();
+    RuntimeCtx::Singleton()->AddRemoteMemoryDescriptor(
+        request->producer_machine_id(), request->remote_regst_descs(i));
   }
 
   done(::tensorflow::Status());

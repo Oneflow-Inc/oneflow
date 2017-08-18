@@ -24,4 +24,31 @@ const std::vector<NetMemoryDescriptor>& RuntimeCtx::local_net_memory_descs()
   return local_net_memory_descs_;
 }
 
+void RuntimeCtx::AddRemoteMemoryDescriptor(
+    int64_t machine_id, const RemoteRegstDesc& remote_regst_desc) {
+  MemoryDescriptor mem_desc;
+  mem_desc.address = remote_regst_desc.data_address();
+  mem_desc.machine_id = machine_id;
+  mem_desc.remote_token = remote_regst_desc.remote_token();
+
+  int64_t consumer_task_id = remote_regst_desc.consumer_task_id();
+  uint64_t regst_address = remote_regst_desc.regst_address();
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    CHECK(remote_net_memory_descs_
+              .insert({{consumer_task_id, regst_address}, mem_desc})
+              .second);
+  }
+  return;
+}
+
+const MemoryDescriptor& RuntimeCtx::memory_descriptor(
+    int64_t consumer_task_id, uint64_t regst_address) const {
+  std::lock_guard<std::mutex> lock(mutex_);
+  auto key = std::make_pair(consumer_task_id, regst_address);
+  auto mem_desc_it = remote_net_memory_descs_.find(key);
+  CHECK(mem_desc_it != remote_net_memory_descs_.end());
+  return mem_desc_it->second;
+}
+
 }  // namespace oneflow
