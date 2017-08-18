@@ -76,11 +76,6 @@ class PosixWritableFile : public WritableFile {
     return Status::OK;
   }
 
-  Status Sync() {
-    Status s = Status::OK;
-    if (fflush(file_) != 0) { s = ErrnoToStatus(errno); }
-    return s;
-  }
 };
 
 Status PosixFileSystem::NewRandomAccessFile(
