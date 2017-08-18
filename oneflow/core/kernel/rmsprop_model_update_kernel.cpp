@@ -19,7 +19,7 @@ void RMSPropMdUpdateKernel<device_type, FloatingPointType>::Forward(
   RMSPropMdUpdateKernelUtil<device_type, FloatingPointType>::UpdateMeanSquare(
       ctx, mean_square_blob->shape().elem_cnt(),
       static_cast<FloatingPointType>((1 - decay_rate)
-                                     / std::pow(batch_size, 2)),
+                                     / (batch_size * batch_size)),
       static_cast<FloatingPointType>(decay_rate),
       mean_square_blob->mut_dptr<FloatingPointType>(),
       model_diffs_blob->dptr<FloatingPointType>());
