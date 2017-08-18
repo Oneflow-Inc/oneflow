@@ -65,19 +65,19 @@ void GrpcRemoteWorker::WorkerActivateActorAsync(
   IssueRequest(request, response, worker_activate_actor_, std::move(done));
 }
 
-void GrpcRemoteWorker::WorkerSendRemoteRegstToIncAsync(
-    const WorkerSendRemoteRegstToIncRequest* request,
-    WorkerSendRemoteRegstToIncResponse* response,
+void GrpcRemoteWorker::WorkerSendRemoteRegstAsync(
+    const WorkerSendRemoteRegstRequest* request,
+    WorkerSendRemoteRegstResponse* response,
     ::tensorflow::StatusCallback done) {
-  IssueRequest(request, response, worker_send_remote_regst_to_inc_,
+  IssueRequest(request, response, worker_send_remote_regst_,
                std::move(done));
 }
 
-void GrpcRemoteWorker::WorkerSendRemoteRegstToDecAsync(
-    const WorkerSendRemoteRegstToDecRequest* request,
-    WorkerSendRemoteRegstToDecResponse* response,
+void GrpcRemoteWorker::WorkerSendRemoteRegstToConsumerAsync(
+    const WorkerSendRemoteRegstToConsumerRequest* request,
+    WorkerSendRemoteRegstToConsumerResponse* response,
     ::tensorflow::StatusCallback done) {
-  IssueRequest(request, response, worker_send_remote_regst_to_dec_,
+  IssueRequest(request, response, worker_send_remote_regst_to_consumer_,
                std::move(done));
 }
 

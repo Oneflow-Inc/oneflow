@@ -180,8 +180,8 @@ Master::~Master() {}
   ::tensorflow::BlockingCounter inc_blocking_counter(name2worker_.size());
   for (auto& pair : name2worker_) {
     struct Call {
-      WorkerSendRemoteRegstToIncRequest req;
-      WorkerSendRemoteRegstToIncResponse resp;
+      WorkerSendRemoteRegstRequest req;
+      WorkerSendRemoteRegstResponse resp;
     };
     Call* call = new Call;
 
@@ -195,15 +195,15 @@ Master::~Master() {}
       }
       delete call;
     };
-    pair.second->WorkerSendRemoteRegstToIncAsync(&call->req, &call->resp, cb);
+    pair.second->WorkerSendRemoteRegstAsync(&call->req, &call->resp, cb);
   }
   inc_blocking_counter.Wait();
 
   ::tensorflow::BlockingCounter dec_blocking_counter(name2worker_.size());
   for (auto& pair : name2worker_) {
     struct Call {
-      WorkerSendRemoteRegstToDecRequest req;
-      WorkerSendRemoteRegstToDecResponse resp;
+      WorkerSendRemoteRegstRequest req;
+      WorkerSendRemoteRegstResponse resp;
     };
     Call* call = new Call;
 
@@ -217,7 +217,7 @@ Master::~Master() {}
       }
       delete call;
     };
-    pair.second->WorkerSendRemoteRegstToDecAsync(&call->req, &call->resp, cb);
+    pair.second->WorkerSendRemoteRegstAsync(&call->req, &call->resp, cb);
   }
   dec_blocking_counter.Wait();
 

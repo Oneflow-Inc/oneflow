@@ -58,14 +58,14 @@ class WorkerInterface {
       WorkerActivateActorResponse* response,
       ::tensorflow::StatusCallback done) = 0;
 
-  virtual void WorkerSendRemoteRegstToIncAsync(
-      const WorkerSendRemoteRegstToIncRequest* request,
-      WorkerSendRemoteRegstToIncResponse* response,
+  virtual void WorkerSendRemoteRegstAsync(
+      const WorkerSendRemoteRegstRequest* request,
+      WorkerSendRemoteRegstResponse* response,
       ::tensorflow::StatusCallback done) = 0;
 
-  virtual void WorkerSendRemoteRegstToDecAsync(
-      const WorkerSendRemoteRegstToDecRequest* request,
-      WorkerSendRemoteRegstToDecResponse* response,
+  virtual void WorkerSendRemoteRegstToConsumerAsync(
+      const WorkerSendRemoteRegstToConsumerRequest* request,
+      WorkerSendRemoteRegstToConsumerResponse* response,
       ::tensorflow::StatusCallback done) = 0;
 
   virtual void WorkerStartActorAsync(const WorkerStartActorRequest* request,

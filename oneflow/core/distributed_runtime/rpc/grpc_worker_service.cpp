@@ -67,8 +67,8 @@ void GrpcWorkerService::HandleRPCsLoop() {
   ENQUEUE_REQUEST(WorkerInitRuntime, false);
   ENQUEUE_REQUEST(WorkerInitModel, false);
   ENQUEUE_REQUEST(WorkerActivateActor, false);
-  ENQUEUE_REQUEST(WorkerSendRemoteRegstToInc, false);
-  ENQUEUE_REQUEST(WorkerSendRemoteRegstToDec, false);
+  ENQUEUE_REQUEST(WorkerSendRemoteRegst, false);
+  ENQUEUE_REQUEST(WorkerSendRemoteRegstToConsumer, false);
   ENQUEUE_REQUEST(WorkerStartActor, false);
   ENQUEUE_REQUEST(WorkerInitDataPlane, false);
 
@@ -151,30 +151,30 @@ void GrpcWorkerService::WorkerActivateActorHandler(
   ENQUEUE_REQUEST(WorkerActivateActor, true);
 }
 
-void GrpcWorkerService::WorkerSendRemoteRegstToIncHandler(
-    WorkerCall<WorkerSendRemoteRegstToIncRequest,
-               WorkerSendRemoteRegstToIncResponse>* call) {
+void GrpcWorkerService::WorkerSendRemoteRegstHandler(
+    WorkerCall<WorkerSendRemoteRegstRequest,
+               WorkerSendRemoteRegstResponse>* call) {
   cpu_stream_->SendWork([this, call]() {
-    worker_impl_->WorkerSendRemoteRegstToInc(
+    worker_impl_->WorkerSendRemoteRegst(
         &call->request, &call->response,
         [call](const ::tensorflow::Status& status) {
           call->SendResponse(ToGrpcStatus(status));
         });
   });
-  ENQUEUE_REQUEST(WorkerSendRemoteRegstToInc, true);
+  ENQUEUE_REQUEST(WorkerSendRemoteRegst, true);
 }
 
-void GrpcWorkerService::WorkerSendRemoteRegstToDecHandler(
-    WorkerCall<WorkerSendRemoteRegstToDecRequest,
-               WorkerSendRemoteRegstToDecResponse>* call) {
+void GrpcWorkerService::WorkerSendRemoteRegstToConsumerHandler(
+    WorkerCall<WorkerSendRemoteRegstToConsumerRequest,
+               WorkerSendRemoteRegstToConsumerResponse>* call) {
   cpu_stream_->SendWork([this, call]() {
-    worker_impl_->WorkerSendRemoteRegstToDec(
+    worker_impl_->WorkerSendRemoteRegstToConsumer(
         &call->request, &call->response,
         [call](const ::tensorflow::Status& status) {
           call->SendResponse(ToGrpcStatus(status));
         });
   });
-  ENQUEUE_REQUEST(WorkerSendRemoteRegstToDec, true);
+  ENQUEUE_REQUEST(WorkerSendRemoteRegstToConsumer, true);
 }
 
 void GrpcWorkerService::WorkerStartActorHandler(

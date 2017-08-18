@@ -39,13 +39,13 @@ class Worker {
       WorkerActivateActorRequest* request,
       WorkerActivateActorResponse* response, MyClosure done);
 
-  ::tensorflow::Status WorkerSendRemoteRegstToInc(
-      WorkerSendRemoteRegstToIncRequest* request,
-      WorkerSendRemoteRegstToIncResponse* response, MyClosure done);
+  ::tensorflow::Status WorkerSendRemoteRegst(
+      WorkerSendRemoteRegstRequest* request,
+      WorkerSendRemoteRegstResponse* response, MyClosure done);
 
-  ::tensorflow::Status WorkerSendRemoteRegstToDec(
-      WorkerSendRemoteRegstToDecRequest* request,
-      WorkerSendRemoteRegstToDecResponse* response, MyClosure done);
+  ::tensorflow::Status WorkerSendRemoteRegstToConsumer(
+      WorkerSendRemoteRegstToConsumerRequest* request,
+      WorkerSendRemoteRegstToConsumerResponse* response, MyClosure done);
 
   ::tensorflow::Status WorkerStartActor(WorkerStartActorRequest* request,
                                         WorkerStartActorResponse* response,

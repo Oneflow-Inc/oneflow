@@ -67,18 +67,18 @@ Worker::~Worker() {}
   return ::tensorflow::Status::OK();
 }
 
-::tensorflow::Status Worker::WorkerSendRemoteRegstToInc(
-    WorkerSendRemoteRegstToIncRequest* request,
-    WorkerSendRemoteRegstToIncResponse* response, MyClosure done) {
-  LOG(INFO) << "WorkerSendRemoteRegstToInc";
+::tensorflow::Status Worker::WorkerSendRemoteRegst(
+    WorkerSendRemoteRegstRequest* request,
+    WorkerSendRemoteRegstResponse* response, MyClosure done) {
+  LOG(INFO) << "WorkerSendRemoteRegst";
   ::oneflow::runtime::Runtime::Singleton()->SendRemoteRegstToInc();
   done(::tensorflow::Status());
   return ::tensorflow::Status::OK();
 }
 
-::tensorflow::Status Worker::WorkerSendRemoteRegstToDec(
-    WorkerSendRemoteRegstToDecRequest* request,
-    WorkerSendRemoteRegstToDecResponse* response, MyClosure done) {
+::tensorflow::Status Worker::WorkerSendRemoteRegstToConsumer(
+    WorkerSendRemoteRegstToConsumerRequest* request,
+    WorkerSendRemoteRegstToConsumerResponse* response, MyClosure done) {
   LOG(INFO) << "WorkerSendRemoteRegstToDec";
   ::oneflow::runtime::Runtime::Singleton()->SendRemoteRegstToDec();
   done(::tensorflow::Status());

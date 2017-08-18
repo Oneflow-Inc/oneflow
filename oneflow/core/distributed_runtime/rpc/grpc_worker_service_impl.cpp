@@ -22,10 +22,10 @@ const char* GrpcWorkerMethodName(GrpcWorkerMethod id) {
       return "/oneflow.WorkerService/WorkerInitModel";
     case GrpcWorkerMethod::kWorkerActivateActor:
       return "/oneflow.WorkerService/WorkerActivateActor";
-    case GrpcWorkerMethod::kWorkerSendRemoteRegstToInc:
-      return "/oneflow.WorkerService/WorkerSendRemoteRegstToInc";
-    case GrpcWorkerMethod::kWorkerSendRemoteRegstToDec:
-      return "/oneflow.WorkerService/WorkerSendRemoteRegstToDec";
+    case GrpcWorkerMethod::kWorkerSendRemoteRegst:
+      return "/oneflow.WorkerService/WorkerSendRemoteRegst";
+    case GrpcWorkerMethod::kWorkerSendRemoteRegstToConsumer:
+      return "/oneflow.WorkerService/WorkerSendRemoteRegstToConsumer";
     case GrpcWorkerMethod::kWorkerStartActor:
       return "/oneflow.WorkerService/WorkerStartActor";
     case GrpcWorkerMethod::kWorkerInitDataPlane:
@@ -60,10 +60,10 @@ WorkerService::Stub::Stub(
       rpcmethod_WorkerActivateActor_(
           GrpcWorkerMethodName(static_cast<GrpcWorkerMethod>(4)),
           ::grpc::RpcMethod::NORMAL_RPC, channel),
-      rpcmethod_WorkerSendRemoteRegstToInc_(
+      rpcmethod_WorkerSendRemoteRegst_(
           GrpcWorkerMethodName(static_cast<GrpcWorkerMethod>(5)),
           ::grpc::RpcMethod::NORMAL_RPC, channel),
-      rpcmethod_WorkerSendRemoteRegstToDec_(
+      rpcmethod_WorkerSendRemoteRegstToConsumer_(
           GrpcWorkerMethodName(static_cast<GrpcWorkerMethod>(6)),
           ::grpc::RpcMethod::NORMAL_RPC, channel),
       rpcmethod_WorkerStartActor_(
