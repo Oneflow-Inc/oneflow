@@ -1,14 +1,10 @@
 #ifndef ONEFLOW_CORE_REGISTER_REGISTER_DESC_H_
 #define ONEFLOW_CORE_REGISTER_REGISTER_DESC_H_
 
-#include "oneflow/core/common/shape.h"
-#include "oneflow/core/common/util.h"
+#include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/register/register_desc.pb.h"
 
 namespace oneflow {
-
-// Regst  : Register
-// Contig : Contiguous
 
 class TaskNode;
 
@@ -27,28 +23,29 @@ class RegstDesc final {
   const HashSet<const TaskNode*>& consumers() const { return consumers_; }
   void AddConsumer(const TaskNode*);
 
-  // Lbn and Shape
+  // Lbn and BlobDesc
   void CopyLbnFrom(const RegstDesc*);
-  void CopyShapeFrom(const RegstDesc*);
+  void CopyBlobDescFrom(const RegstDesc*);
   void EnrollLbn(const std::string& lbn);
-  const Shape& GetShape(const std::string& lbn) const;
-  Shape* GetMutShapePtr(const std::string& lbn);
+  const BlobDesc& GetBlobDesc(const std::string& lbn) const;
+  BlobDesc* GetMutBlobDesc(const std::string& lbn);
   void ForEachLbn(std::function<void(const std::string&)> func) const;
-  size_t NumOfLbn() const { return lbn2shape_.size(); }
+  size_t NumOfLbn() const { return lbn2blob_desc_.size(); }
 
   //
   void EraseZeroSizeBlob();
-  int64_t CompElemCntOfAllBlob() const;
   std::string DebugStr() const;
   void ToProto(RegstDescProto*) const;
   MemoryCase InferMemCase() const;
+  BlobDesc CompPackedBlobDesc() const;
 
  private:
+  int64_t CompElemCntOfAllBlob() const;
   int64_t regst_desc_id_;
   const TaskNode* producer_;
   HashSet<const TaskNode*> consumers_;
 
-  HashMap<std::string, std::unique_ptr<Shape>> lbn2shape_;
+  HashMap<std::string, std::unique_ptr<BlobDesc>> lbn2blob_desc_;
   int64_t register_num_;
 };
 

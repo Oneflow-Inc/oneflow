@@ -32,7 +32,7 @@ void MdSaveCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   }
 }
 
-void MdSaveCompTaskNode::InferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
+void MdSaveCompTaskNode::InferBlobDescInProducedRegsts(TaskGraph* gph) {
   CHECK(IsFwNode());
 }
 

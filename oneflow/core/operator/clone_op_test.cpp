@@ -18,7 +18,7 @@ TEST(CloneOp, clone_4x3_3_times) {
     return bn2shape_ptr.at(bn);
   };
 
-  clone_op->InferShape4FwBlobs(fp, kDataParallel, 3, 10);
+  clone_op->InferBlobDesc4FwBlobs(fp, kDataParallel, 3, 10);
 
   Shape* input_shape_ptr = bn2shape_ptr.at(clone_op->SoleIbn());
   for (std::string obn : clone_op->output_bns()) {

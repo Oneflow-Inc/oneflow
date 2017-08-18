@@ -6,7 +6,7 @@
 
 namespace oneflow {
 
-class Blob {
+class Blob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
   Blob(void* dptr, const Shape* shape) : dptr_(dptr), shape_(shape) {}

@@ -55,7 +55,7 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
     return bn_in_op2regst_;
   }
 
-  std::function<Shape*(const std::string&)> GetMutShapePtr4BnInOpFunc() const;
+  std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOpFunc() const;
 
   std::string VisualStr() const { return op_->op_name(); }
 

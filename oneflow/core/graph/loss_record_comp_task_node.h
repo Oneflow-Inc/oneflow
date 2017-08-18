@@ -13,7 +13,7 @@ class LossRecordCompTaskNode final : public CompTaskNode {
 
  private:
   void BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) override;
-  void InferShapeOfBlobsInProducedRegsts(TaskGraph* gph) override;
+  void InferBlobDescInProducedRegsts(TaskGraph* gph) override;
   bool IsMeaningLess() const override {
     return !GetConsumedRegstDesc("loss_acc");
   }

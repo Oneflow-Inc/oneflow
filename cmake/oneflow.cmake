@@ -108,6 +108,8 @@ foreach(cc ${of_main_cc})
 endforeach()
 
 # build test
-cuda_add_executable(oneflow_testexe ${of_all_test_cc})
-target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs})
-add_test(NAME oneflow_test COMMAND oneflow_testexe)
+if(BUILD_TESTING)
+  cuda_add_executable(oneflow_testexe ${of_all_test_cc})
+  target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs})
+  add_test(NAME oneflow_test COMMAND oneflow_testexe)
+endif()

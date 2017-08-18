@@ -17,7 +17,7 @@ TEST(SoftmaxOp, softmax_3x5) {
     return bn2shape_ptr.at(bn);
   };
   // infershape
-  softmax_op->InferShape4FwBlobs(fp, kDataParallel, 0, 1);
+  softmax_op->InferBlobDesc4FwBlobs(fp, kDataParallel, 0, 1);
   // test
   Shape* output_shape_ptr = fp(softmax_op->SoleObn());
   Shape* tmp_shape_ptr = fp(softmax_op->SoleDtbn());

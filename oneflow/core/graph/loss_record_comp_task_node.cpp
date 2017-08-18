@@ -20,7 +20,6 @@ void LossRecordCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   mut_exec_gph().UpdateSourceAndSink();
 }
 
-void LossRecordCompTaskNode::InferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
-}
+void LossRecordCompTaskNode::InferBlobDescInProducedRegsts(TaskGraph* gph) {}
 
 }  // namespace oneflow

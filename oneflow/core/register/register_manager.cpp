@@ -19,12 +19,12 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     }
     int64_t elem_cnt = 0;
     std::vector<std::string> lbns;
-    lbns.reserve(regst_desc_proto.lbn2shape().size());
-    for (const auto& pair : regst_desc_proto.lbn2shape()) {
-      const Shape* shape_ptr =
-          runtime_regst_desc->GetShapePtrFromLbn(pair.first);
+    lbns.reserve(regst_desc_proto.lbn2blob_desc().size());
+    for (const auto& pair : regst_desc_proto.lbn2blob_desc()) {
+      const Shape& shape_ptr =
+          runtime_regst_desc->GetBlobDescFromLbn(pair.first)->shape();
       lbns.push_back(pair.first);
-      elem_cnt += shape_ptr->elem_cnt();
+      elem_cnt += shape_ptr.elem_cnt();
     }
     std::sort(lbns.begin(), lbns.end());
     std::pair<char*, std::function<void()>> allocation =
@@ -33,7 +33,8 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
 
     int64_t blob_idx = 0;
     for (const std::string& lbn : lbns) {
-      const Shape* shape_ptr = runtime_regst_desc->GetShapePtrFromLbn(lbn);
+      const Shape* shape_ptr =
+          &(runtime_regst_desc->GetBlobDescFromLbn(lbn)->shape());
       auto blob_ptr =
           of_make_unique<Blob>(allocation.first + blob_idx, shape_ptr);
       CHECK(regst->lbn2blob_.emplace(lbn, std::move(blob_ptr)).second);

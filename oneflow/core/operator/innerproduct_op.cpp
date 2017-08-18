@@ -21,10 +21,10 @@ const PbMessage& InnerProductOp::GetSpecialConf() const {
   return op_conf().innerproduct_conf();
 }
 
-void InnerProductOp::InferShape4FwBlobs(
-    std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+void InnerProductOp::InferBlobDesc4FwBlobs(
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
-  Shape* in_shape_ptr = GetShapePtr4BnInOp(SoleIbn());
+  const Shape& in_shape = GetBlobDesc4BnInOp(SoleIbn())->shape();
   int32_t out_num = GetInt32FromSpecialConf("out_num");
   if (policy == kModelParallel) {
     BalancedSplitter splitter(out_num, parallel_num);
@@ -32,22 +32,20 @@ void InnerProductOp::InferShape4FwBlobs(
   }
 
   // output bn
-  Shape* out_shape_ptr = GetShapePtr4BnInOp(SoleObn());
-  *out_shape_ptr = Shape({in_shape_ptr->At(0), out_num});
+  GetBlobDesc4BnInOp(SoleObn())->mut_shape() = Shape({in_shape.At(0), out_num});
 
   // model bn
-  Shape* weight_shape_ptr = GetShapePtr4BnInOp("weight");
-  *weight_shape_ptr = Shape({out_num, in_shape_ptr->Count(1)});
+  GetBlobDesc4BnInOp("weight")->mut_shape() =
+      Shape({out_num, in_shape.Count(1)});
 
   if (GetBoolFromSpecialConf("has_bias_term")) {
     // model bn
-    Shape* bias_shape_ptr = GetShapePtr4BnInOp("bias");
-    *bias_shape_ptr = Shape({1, out_num});
+    GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({1, out_num});
 
     // model tmp bn
     CHECK_EQ(model_tmp_bns().size(), 1);
-    Shape* bias_multiplier_shape_ptr = GetShapePtr4BnInOp("bias_multiplier");
-    *bias_multiplier_shape_ptr = Shape({in_shape_ptr->At(0), 1});
+    GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() =
+        Shape({in_shape.At(0), 1});
   }
 }
 

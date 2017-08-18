@@ -168,7 +168,7 @@ void Compiler::BuildLossGraph(
 void Compiler::InferShape4Regsts() {
   for (auto& task_gph : ordered_task_gphs_) {
     LOG(INFO) << "InferShape for " << task_gph->name();
-    task_gph->InferShapeOfBlobsInProducedRegsts();
+    task_gph->InferBlobDescInProducedRegsts();
   }
 }
 

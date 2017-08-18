@@ -15,8 +15,9 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& regst_desc_proto) {
     consumers_actor_id_.push_back(IDMgr::Singleton()->ActorId4TaskId(task_id));
   }
 
-  for (const auto& pair : regst_desc_proto.lbn2shape()) {
-    CHECK(lbn2shape_.emplace(pair.first, of_make_unique<Shape>(pair.second))
+  for (const auto& pair : regst_desc_proto.lbn2blob_desc()) {
+    CHECK(lbn2blob_desc_
+              .emplace(pair.first, of_make_unique<BlobDesc>(pair.second))
               .second);
   }
   mem_case_ = regst_desc_proto.mem_case();
