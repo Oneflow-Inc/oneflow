@@ -47,9 +47,6 @@ class Schedule {
   inline const std::unordered_map<SDevice*, float>& device2ended_at() const {
     return device2ended_at_;
   }
-  inline const std::unordered_map<STask*, float>& node2interval() const {
-    return node2interval_;
-  }
   inline const float max_interval() const { return max_interval_; }
 
   inline const std::unordered_map<SRegstDesc*, float>& regst_desc2duration()
@@ -84,9 +81,6 @@ class Schedule {
   inline std::unordered_map<SDevice*, float>& mut_device2ended_at() {
     return device2ended_at_;
   }
-  inline std::unordered_map<STask*, float>& mut_node2interval() {
-    return node2interval_;
-  }
   inline float& mut_max_interval() { return max_interval_; }
   inline std::unordered_map<SRegstDesc*, float>& mut_regst_desc2duration() {
     return regst_desc2duration_;
@@ -105,7 +99,6 @@ class Schedule {
   std::unordered_map<TaskInstance*, std::unordered_map<STask*, float>>
       end_time_gap_to_loss_;
   std::unordered_map<SDevice*, float> device2ended_at_;
-  std::unordered_map<STask*, float> node2interval_;
   float max_interval_ = 0.0;
   std::unordered_map<SRegstDesc*, float> regst_desc2duration_;
   std::unordered_map<SRegstDesc*, uint32_t> regst_desc2count_;

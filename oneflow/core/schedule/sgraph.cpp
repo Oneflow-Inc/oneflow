@@ -152,7 +152,7 @@ void SGraph::ForeachDescendent(STask* node,
 
 void SGraph::InitDepth() {
   WalkReverse([&](STask* node) {
-    int32_t depth = -1;
+    int32_t depth = 0;
     arc_mgr().Output(node,
                      [&](STask* to) { depth = std::max(depth, to->depth()); });
     node->mut_depth() = depth + 1;

@@ -125,23 +125,24 @@ void SimulatorSchedule::UpdateDuration(
     float duration = 0;
     uint32_t start = session->nr_base_batch();
     uint32_t end = start + session->nr_base_batch();
-    //    uint32_t start = 0;
-    //    uint32_t end = start + 1;
     session->graph()->subscribed_regst_desc_mgr().Input(
         regst_desc, [&](STask* node) {
           float sum = 0;
+          std::set<float> cases;
           for (uint32_t i = start; i < end; i++) {
             auto batch = session->batch_node_mgr().Find(i);
             TaskInstance* owner_instance =
                 session->task_instance_mgr().Find(batch, owner);
             TaskInstance* node_instance =
                 session->task_instance_mgr().Find(batch, node);
-            sum += GetDurationByTimeGapToLoss(owner_instance, node_instance);
+            float d = GetDurationByTimeGapToLoss(owner_instance, node_instance);
+            cases.insert(d);
           }
-          float avg = sum / std::max(1u, (end - start));
+          CHECK(cases.size());
+          for (float x : cases) { sum += x; }
+          float avg = sum / cases.size();
           duration = std::max(duration, avg);
         });
-    //		duration = std::round(duration);
     mut_regst_desc2duration()[regst_desc] = duration;
   });
 }
@@ -163,25 +164,23 @@ void SimulatorSchedule::UpdateRegstCount() {
 void SimulatorSchedule::UpdateInterval(
     SimulatorScheduleEngine* schedule_engine) {
   auto session = schedule_engine->session();
-  session->graph()->ForeachNode([&](STask* node) {
-    uint32_t sum = 0;
-    uint32_t last = 0;
-    uint32_t start = session->nr_base_batch();
-    uint32_t end = start + session->nr_base_batch();
-    CHECK(end - start > 1);
-    for (uint32_t i = start; i < end; i++) {
-      auto batch = session->batch_node_mgr().Find(i);
-      auto instance = session->task_instance_mgr().Find(batch, node);
-      auto start =
-          schedule_engine->GetTime(mut_instance2ended_at()[instance].first);
-      if (last) { sum += start - last; }
-      last = start;
-    }
-    mut_node2interval()[node] = 1.0 * sum / (end - 1 - start);
-  });
-  session->graph()->ForeachNode([&](STask* node) {
-    mut_max_interval() = std::max(max_interval(), mut_node2interval()[node]);
-  });
+  STask* end_node = schedule_engine->EndNode();
+  float sum = 0.0;
+  float last_time = 0.0;
+  uint32_t start = session->nr_base_batch();
+  uint32_t end = start + session->nr_base_batch();
+  CHECK(end - start > 1);
+  std::set<float> cases;
+  for (uint32_t i = start; i < end; i++) {
+    auto batch = session->batch_node_mgr().Find(i);
+    auto instance = session->task_instance_mgr().Find(batch, end_node);
+    auto start_time =
+        schedule_engine->GetTime(mut_instance2ended_at()[instance].first);
+    if (i > start) { cases.insert(start_time - last_time); }
+    last_time = start_time;
+  }
+  for (float x : cases) { sum += x; }
+  mut_max_interval() = sum / cases.size();
 }
 
 void SimulatorScheduleEngine::ClearTmpData() {
@@ -192,7 +191,6 @@ void SimulatorScheduleEngine::ClearTmpData() {
 void SimulatorSchedule::Clear() {
   mut_instance2ended_at().clear();
   mut_device2ended_at().clear();
-  mut_node2interval().clear();
   mut_regst_desc2duration().clear();
 }
 
