@@ -1,9 +1,9 @@
 #ifndef ONEFLOW_CORE_PERSISTENCE_WINDOWS_WINDOWS_FILE_SYSTEM_H_
 #define ONEFLOW_CORE_PERSISTENCE_WINDOWS_WINDOWS_FILE_SYSTEM_H_
 
-#ifdef PLATFORM_WINDOWS
-
 #include "oneflow/core/persistence/file_system.h"
+
+#ifdef PLATFORM_WINDOWS
 
 namespace oneflow {
 

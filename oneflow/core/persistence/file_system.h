@@ -90,14 +90,6 @@ class WritableFile {
   // persisted, depending on the implementation.
   virtual Status Flush() = 0;
 
-  // Syncs contents of file to filesystem.
-  //
-  // This waits for confirmation from the filesystem that the contents
-  // of the file have been persisted to the filesystem; if the OS
-  // or machine crashes after a successful Sync, the contents should
-  // be properly saved.
-  virtual Status Sync() = 0;
-
  private:
 };
 
@@ -237,9 +229,7 @@ Status ErrnoToStatus(int err_number);
 }  // namespace fs
 
 // file system check status is ok
-#define FS_CHECK_OK(val) \
-  if (val != Status::OK) { LOG(FATAL) << std::to_string(val); }
-
+#define FS_CHECK_OK(val) CHECK_NE(val, fs::Status::OK);
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_PERSISTENCE_FILE_SYSTEM_H_

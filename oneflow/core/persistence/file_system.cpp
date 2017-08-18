@@ -6,6 +6,8 @@ namespace oneflow {
 
 namespace fs {
 
+OF_DEFINE_ENUM_TO_OSTREAM_FUNC(Status);
+
 std::string FileSystem::TranslateName(const std::string& name) const {
   return CleanPath(name);
 }
