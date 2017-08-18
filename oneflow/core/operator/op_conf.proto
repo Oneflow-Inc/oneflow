@@ -199,6 +199,7 @@ message MomentumModelUpdateOpConf {
 message RMSPropModelUpdateOpConf {
   float learning_rate = 1;
   float decay_rate = 2;
+  float epsilon = 3;
 }
 
 message AccumulateOpConf {
