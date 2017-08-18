@@ -129,12 +129,13 @@ Worker::~Worker() {}
       call->req.set_producer_machine_id(this_machine_id_);
       call->req.set_consumer_machine_id(pair.first);
 
-      for (auto& remote_regst_desc : pair.second) {
-        auto remote_regst_descs = call->req.add_remote_regst_descs();
-        remote_regst_descs->set_data_address(remote_regst_desc.data_address());
-        remote_regst_descs->set_regst_address(
-            remote_regst_desc.regst_address());
-        remote_regst_descs->set_remote_token(remote_regst_desc.remote_token());
+      for (auto& regst_desc : pair.second) {
+        auto remote_regst_desc = call->req.add_remote_regst_descs();
+        remote_regst_desc->set_data_address(regst_desc.data_address());
+        remote_regst_desc->set_regst_address(
+            regst_desc.regst_address());
+        remote_regst_desc->set_remote_token(regst_desc.remote_token());
+        remote_regst_desc->set_consumer_task_id(regst_desc.consumer_task_id());
       }
 
       auto cb = [call, pair, &blocking_counter](const ::tensorflow::Status& s) {
