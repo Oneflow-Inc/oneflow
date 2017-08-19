@@ -31,13 +31,13 @@ void NetworkMessageQueue::ProcessReceiveOK(MsgPtr& msg) {
   // There is only one expected type of message: MSG_TYPE_REQUEST_ACK
   CHECK(net_msg.type == NetworkMessageType::kRequestAck);
   *msg = net_msg.actor_msg;
-  result_.callback();
+  result_.callback(net_msg);
 }
 
 // TODO(shiyuan)
 void NetworkMessageQueue::ProcessReadOK(MsgPtr& msg) {
   *msg = result_.net_msg.actor_msg;
-  result_.callback();
+  result_.callback(result_.net_msg);
 }
 
 }  // namespace oneflow

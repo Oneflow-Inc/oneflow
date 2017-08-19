@@ -9,7 +9,7 @@ namespace oneflow {
 
 struct Request {
   RdmaMessage* rdma_msg;
-  std::function<void()> callback;
+  std::function<void(const NetworkMessage& net_msg)> callback;
   bool is_send;
 };
 
@@ -25,7 +25,8 @@ class RequestPool {
 
   void ReleaseRequest(Request* request);
 
-  void set_callback4recv_msg(std::function<void()> callback) {
+  void set_callback4recv_msg(
+      std::function<void(const NetworkMessage& net_msg)> callback) {
     callback4recv_msg_ = callback;
   }
 
@@ -34,7 +35,7 @@ class RequestPool {
   std::vector<Request*> request_vector_;
   std::unique_ptr<MessagePool<RdmaMessage>> msg_pool_;
   static const int32_t kBufferSize = 64;
-  std::function<void()> callback4recv_msg_;
+  std::function<void(const NetworkMessage& net_msg)> callback4recv_msg_;
 };
 
 }  // namespace oneflow

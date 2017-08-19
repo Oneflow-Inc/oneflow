@@ -21,8 +21,6 @@ class Runtime final {
   void InitRuntime();
   void InitModel();
   void ActivateActor();
-  void SendRemoteRegstToInc();
-  void SendRemoteRegstToDec();
   void StartActor();
 
  private:

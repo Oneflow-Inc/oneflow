@@ -35,6 +35,8 @@ limitations under the License.
 #include "tensorflow/core/lib/strings/strcat.h"
 #include "tensorflow/core/platform/mem.h"
 
+#include "oneflow/core/actor/actor_message_bus.h"
+
 namespace oneflow {
 
 namespace {
@@ -160,6 +162,27 @@ void GrpcServer::CreateWorkerCache() {
   }
 }
 
+void GrpcServer::ProcessNetworkResult(const NetworkResult& result) {
+  switch (result.type) {
+    case NetworkResultType::kSendOk: ProcessSendOk(result); break;
+    case NetworkResultType::kReceiveMsg: ProcessReceiveMsg(result); break;
+    case NetworkResultType::kReadOk: ProcessReadOk(result); break;
+  }
+}
+
+void GrpcServer::ProcessSendOk(const NetworkResult& result) {
+  LOG(INFO) << "Dataplane send network msg ok";
+}
+
+void GrpcServer::ProcessReceiveMsg(const NetworkResult& result) {
+  CHECK(result.net_msg.type == NetworkMessageType::kRequestAck);
+  result.callback(result.net_msg);
+}
+
+void GrpcServer::ProcessReadOk(const NetworkResult& result) {
+  LOG(INFO) << "Dataplane read OK";
+  result.callback(result.net_msg);
+}
 ::tensorflow::Status GrpcServer::Start() {
   ::tensorflow::mutex_lock l(mu_);
   switch (state_) {
@@ -179,6 +202,20 @@ void GrpcServer::CreateWorkerCache() {
         while (completion_queue_.Next(&tag, &ok)) {
           GrpcClientCQTag* callback_tag = static_cast<GrpcClientCQTag*>(tag);
           callback_tag->OnCompleted(ok);
+        }
+      });
+
+      data_net_->SetCallbackForReceivedActorMsg(
+          [](const NetworkMessage& net_msg) {
+            ActorMsg msg = net_msg.actor_msg;
+            msg.set_piece_id(net_msg.piece_id);
+            ActorMsgBus::Singleton()->SendMsg(msg);
+          });
+
+      data_plane_thread_ = std::thread([this]() {
+        NetworkResult result;
+        for (;;) {
+          if (data_net_->Poll(&result)) { ProcessNetworkResult(result); }
         }
       });
 
@@ -206,6 +243,7 @@ void GrpcServer::CreateWorkerCache() {
       master_service_->Shutdown();
       worker_service_->Shutdown();
       completion_queue_.Shutdown();
+      // TODO(jiyuan): shutdown the data plane cq
       return ::tensorflow::Status::OK();
     case STOPPED:
       LOG(INFO) << "Server already stopped (target: " << target() << ")";
@@ -229,6 +267,7 @@ void GrpcServer::CreateWorkerCache() {
       worker_thread_.join();
       worker_do_thread_.join();
       async_request_done_thread_.join();
+      data_plane_thread_.join();
       return ::tensorflow::Status::OK();
     default: CHECK(false);
   }

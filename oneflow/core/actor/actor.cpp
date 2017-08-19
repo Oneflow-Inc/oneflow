@@ -158,8 +158,9 @@ void Actor::AsyncSendReadableRegstMsg(
       if (!IsAllowedActor(consumer)) { continue; }
       total_reading_cnt_ += 1;
       regst_reading_cnt_it->second += 1;
-      device_ctx_->AddCallBack([consumer, regst]() {
-        ActorMsg msg = ActorMsg::BuildReadableRegstMsg(consumer, regst);
+      device_ctx_->AddCallBack([this, consumer, regst]() {
+        ActorMsg msg =
+            ActorMsg::BuildReadableRegstMsg(actor_id_, consumer, regst);
         ActorMsgBus::Singleton()->SendMsg(std::move(msg));
       });
     }
@@ -192,9 +193,10 @@ void Actor::AsyncSendEORDMsgToConsumers(int64_t regst_desc_id) {
           << "send eord for regst_desc_id:" << regst_desc_id;
   const RtRegstDesc* regst_desc =
       produced_regsts_.at(regst_desc_id).front()->regst_desc();
-  device_ctx_->AddCallBack([regst_desc]() {
+  device_ctx_->AddCallBack([this, regst_desc]() {
     for (int64_t consumer : regst_desc->consumers_actor_id()) {
       ActorMsg msg;
+      msg.set_src_actor_id(actor_id_);
       msg.set_dst_actor_id(consumer);
       msg.set_actor_cmd(ActorCmd::kEORD);
       ActorMsgBus::Singleton()->SendMsg(std::move(msg));
@@ -217,8 +219,8 @@ void Actor::AsyncSendRegstMsgToProducer(Regst* regst) {
           << "return register " << regst << " "
           << "to actor " << regst->producer_actor_id() << ", "
           << "regst_desc_id:" << regst->regst_desc_id();
-  ActorMsg msg =
-      ActorMsg::BuildRegstMsgToProducer(regst->producer_actor_id(), regst);
+  ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(regst->producer_actor_id(),
+                                                   actor_id_, regst);
   AsyncDo([msg]() { ActorMsgBus::Singleton()->SendMsg(msg); });
 }
 

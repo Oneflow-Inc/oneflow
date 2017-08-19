@@ -12,8 +12,8 @@ namespace oneflow {
 // Only for pairs of std::hash-able types for simplicity.
 // You can of course template this struct to allow other hash functions
 struct pair_hash {
-  template <class T1, class T2>
-  std::size_t operator () (const std::pair<T1, T2> &p) const {
+  template<class T1, class T2>
+  std::size_t operator()(const std::pair<T1, T2>& p) const {
     auto h1 = std::hash<T1>{}(p.first);
     auto h2 = std::hash<T2>{}(p.second);
 

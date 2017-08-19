@@ -22,8 +22,12 @@ int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
     Regst* regst = msg.regst();
     if (TryUpdtStateAsProducedRegst(regst) != 0) {
       mut_num_of_read_empty() = 0;
-      CHECK(
-          piece_id2waiting_in_regst_.emplace(regst->piece_id(), regst).second);
+      CHECK(piece_id2waiting_in_regst_.emplace(msg.piece_id(), regst).second);
+      if (producer_actor_id_ == -1) {
+        producer_actor_id_ = msg.src_actor_id();
+      } else {
+        CHECK(producer_actor_id_ == msg.src_actor_id());
+      }
     }
     ActUntilFail();
   }
@@ -41,22 +45,38 @@ int CopyCommNetActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
 }
 
 void CopyCommNetActor::Act() {
+  // TODO(jiyuan)
   auto next_regst_it = piece_id2waiting_in_regst_.find(expected_piece_id());
-  Regst* regst = next_regst_it->second;
-  AsyncLaunchKernel(GenDefaultKernelCtx(),
-                    [&](uint64_t regst_desc_id) -> Regst* {
-                      Regst* regst = GetCurWriteableRegst(regst_desc_id);
-                      if (regst == nullptr) {
-                        return regst;
-                      } else {
-                        return regst;
-                      }
-                    });
-  AsyncSendReadableRegstMsg([&regst](Regst* regst) {
-    regst->set_piece_id(regst->piece_id());
-    regst->set_model_version_id(regst->model_version_id());
+  Regst* in_regst = next_regst_it->second;
+
+  // AsyncLaunchKernel(GenDefaultKernelCtx(),
+  //                  [&](uint64_t regst_desc_id) -> Regst* {
+  //                    Regst* regst = GetCurWriteableRegst(regst_desc_id);
+  //                    if (regst == nullptr) {
+  //                      return in_regst;
+  //                    } else {
+  //                      return regst;
+  //                    }
+  //                  });
+  // AsyncSendReadableRegstMsg([&in_regst](Regst* regst) {
+  //  regst->set_piece_id(in_regst->piece_id());
+  //  regst->set_model_version_id(in_regst->model_version_id());
+  //});
+  // AsyncSendRegstMsgToProducer(in_regst);
+
+  int64_t piece_id = expected_piece_id();
+  int64_t model_version_id = 0;
+  AsyncSendReadableRegstMsg([piece_id, model_version_id](Regst* regst) {
+    regst->set_piece_id(piece_id);
+    regst->set_model_version_id(model_version_id);
   });
-  AsyncSendRegstMsgToProducer(regst);
+
+  // AsyncSendRegstMsgToProducer(in_regst);
+  ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(producer_actor_id_,
+                                                   actor_id(), in_regst);
+  AsyncDo([msg]() { ActorMsgBus::Singleton()->SendMsg(msg); });
+  // ActorMsgBus::Singleton()->SendMsg(msg);
+
   piece_id2waiting_in_regst_.erase(next_regst_it);
   mut_num_of_read_empty() = piece_id2waiting_in_regst_.empty();
 }

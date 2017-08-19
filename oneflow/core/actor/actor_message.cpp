@@ -12,9 +12,11 @@ ActorMsg::ActorMsg() {
   regst_ = nullptr;
 }
 
-ActorMsg ActorMsg::BuildReadableRegstMsg(int64_t reader_actor_id,
+ActorMsg ActorMsg::BuildReadableRegstMsg(int64_t writer_actor_id,
+                                         int64_t reader_actor_id,
                                          Regst* regst_raw_ptr) {
   ActorMsg msg;
+  msg.src_actor_id_ = writer_actor_id;
   msg.dst_actor_id_ = reader_actor_id;
   msg.msg_type_ = ActorMsgType::kRegstMsg;
   if (IDMgr::Singleton()->MachineId4ActorId(reader_actor_id)
@@ -27,8 +29,10 @@ ActorMsg ActorMsg::BuildReadableRegstMsg(int64_t reader_actor_id,
 }
 
 ActorMsg ActorMsg::BuildRegstMsgToProducer(int64_t writer_actor_id,
+                                           int64_t reader_actor_id,
                                            Regst* regst_raw_ptr) {
   ActorMsg msg;
+  msg.src_actor_id_ = reader_actor_id;
   msg.dst_actor_id_ = writer_actor_id;
   msg.msg_type_ = ActorMsgType::kRegstMsg;
   msg.regst_ = regst_raw_ptr;

@@ -78,11 +78,6 @@ class GrpcServer : public ServerInterface {
   // The port to which this server is bound.
   int bound_port_ = 0;
 
-  // For data plane network
-  NetworkTopology net_topo_;
-  int64_t my_machine_id_;
-  Network* data_net_;
-
   // Guards state transitions.
   ::tensorflow::mutex mu_;
 
@@ -115,6 +110,12 @@ class GrpcServer : public ServerInterface {
   ::grpc::CompletionQueue completion_queue_;
   std::thread async_request_done_thread_;
 
+  // For data plane network
+  NetworkTopology net_topo_;
+  int64_t my_machine_id_;
+  Network* data_net_;
+  std::thread data_plane_thread_;
+
   std::unordered_map<std::string, ClusterNode> name2node_def_;
   std::unordered_map<std::string, std::shared_ptr<GrpcRemoteWorker>>
       name2worker_;
@@ -122,6 +123,11 @@ class GrpcServer : public ServerInterface {
   std::unordered_map<std::string, int64_t> name2id_;
 
   std::unique_ptr<::grpc::Server> server_;
+
+  void ProcessNetworkResult(const NetworkResult& result);
+  void ProcessSendOk(const NetworkResult& result);
+  void ProcessReceiveMsg(const NetworkResult& result);
+  void ProcessReadOk(const NetworkResult& result);
 };
 
 }  // namespace oneflow

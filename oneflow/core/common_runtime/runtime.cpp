@@ -39,10 +39,6 @@ void Runtime::ActivateActor() {
   LOG(INFO) << "All actor on all machine are activated";
 }
 
-void Runtime::SendRemoteRegstToInc() {}
-
-void Runtime::SendRemoteRegstToDec() {}
-
 void Runtime::StartActor() {}
 
 void Runtime::FindTasksOnThisMachine() {

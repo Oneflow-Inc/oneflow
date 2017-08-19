@@ -27,11 +27,12 @@ class Network {
   // though the actual transmission of the |msg| content has not occurred.
   virtual void SendMsg(const NetworkMessage& msg) = 0;
   virtual void SetCallbackForReceivedActorMsg(
-      std::function<void()> callback) = 0;
+      std::function<void(const NetworkMessage& net_msg)> callback) = 0;
 
-  virtual void Read(const MemoryDescriptor& remote_memory_descriptor,
-                    NetworkMemory* local_memory,
-                    std::function<void()> callback) = 0;
+  virtual void Read(
+      const MemoryDescriptor& remote_memory_descriptor,
+      NetworkMemory* local_memory,
+      std::function<void(const NetworkMessage& net_msg)> callback) = 0;
 
   // Poll a result from completion queue if have. Return true if get result,
   // false otherwise.

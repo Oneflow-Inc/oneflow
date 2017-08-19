@@ -85,13 +85,14 @@ void RdmaNetwork::SendMsg(const NetworkMessage& msg) {
 }
 
 void RdmaNetwork::SetCallbackForReceivedActorMsg(
-    std::function<void()> callback) {
+    std::function<void(const NetworkMessage& net_msg)> callback) {
   request_pool_->set_callback4recv_msg(callback);
 }
 
-void RdmaNetwork::Read(const MemoryDescriptor& remote_memory_descriptor,
-                       NetworkMemory* local_memory,
-                       std::function<void()> callback) {
+void RdmaNetwork::Read(
+    const MemoryDescriptor& remote_memory_descriptor,
+    NetworkMemory* local_memory,
+    std::function<void(const NetworkMessage& net_msg)> callback) {
   Connection* conn =
       connection_pool_->GetConnection(remote_memory_descriptor.machine_id);
   CHECK(conn);

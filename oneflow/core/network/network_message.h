@@ -20,6 +20,7 @@ struct NetworkMessage {
 
   // Request/ack ActorMessage between send/recv actors for kReadOk
   ActorMsg actor_msg;
+  int64_t piece_id;
 
   // Optional for REMOTE_MEMORY_DESCRIPTOR message
   uint64_t address;
@@ -32,7 +33,7 @@ struct NetworkResult {
   NetworkResultType type;
   // Used when type == kReceiveMsg, or type == kReadOk, msg.
   NetworkMessage net_msg;
-  std::function<void()> callback;
+  std::function<void(const NetworkMessage& net_msg)> callback;
 };
 
 }  // namespace oneflow

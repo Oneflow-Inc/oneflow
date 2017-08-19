@@ -27,10 +27,13 @@ class ActorMsg final {
   ActorMsg();
   ~ActorMsg() = default;
 
-  static ActorMsg BuildReadableRegstMsg(int64_t reader_actor_id, Regst*);
-  static ActorMsg BuildRegstMsgToProducer(int64_t writer_actor_id, Regst*);
+  static ActorMsg BuildReadableRegstMsg(int64_t writer_actor_id,
+                                        int64_t reader_actor_id, Regst*);
+  static ActorMsg BuildRegstMsgToProducer(int64_t writer_actor_id,
+                                          int64_t reader_actor_id, Regst*);
 
   // Getters
+  int64_t src_actor_id() const { return src_actor_id_; }
   int64_t dst_actor_id() const { return dst_actor_id_; }
   ActorMsgType msg_type() const { return msg_type_; }
   Regst* regst() const {
@@ -43,6 +46,7 @@ class ActorMsg final {
   }
 
   // Setters
+  void set_src_actor_id(int64_t val) { src_actor_id_ = val; }
   void set_dst_actor_id(int64_t val) { dst_actor_id_ = val; }
   void set_regst(Regst* val) {
     msg_type_ = ActorMsgType::kRegstMsg;
@@ -52,6 +56,9 @@ class ActorMsg final {
     msg_type_ = ActorMsgType::kCmdMsg;
     actor_cmd_ = val;
   }
+
+  void set_piece_id(int64_t piece_id) { piece_id_ = piece_id; }
+  int64_t piece_id() const { return piece_id_; }
 
   // Serialize
   template<typename StreamT>
@@ -64,11 +71,14 @@ class ActorMsg final {
   }
 
  private:
+  int64_t src_actor_id_;
   int64_t dst_actor_id_;
   ActorMsgType msg_type_;
 
   Regst* regst_;
   ActorCmd actor_cmd_;
+
+  int64_t piece_id_;
 };
 
 template<typename StreamT>

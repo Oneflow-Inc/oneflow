@@ -26,10 +26,12 @@ class RdmaNetwork final : public Network {
   void UnRegisterMemory(void* dptr) override;
 
   void SendMsg(const NetworkMessage& msg) override;
-  void SetCallbackForReceivedActorMsg(std::function<void()> callback) override;
-  void Read(const MemoryDescriptor& remote_memory_descriptor,
-            NetworkMemory* local_memory,
-            std::function<void()> callback) override;
+  void SetCallbackForReceivedActorMsg(
+      std::function<void(const NetworkMessage& net_msg)> callback) override;
+  void Read(
+      const MemoryDescriptor& remote_memory_descriptor,
+      NetworkMemory* local_memory,
+      std::function<void(const NetworkMessage& net_msg)> callback) override;
 
   bool Poll(NetworkResult* result) override;
   void Barrier() override;
