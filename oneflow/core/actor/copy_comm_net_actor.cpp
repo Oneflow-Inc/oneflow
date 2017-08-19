@@ -65,7 +65,6 @@ void CopyCommNetActor::Act() {
   //  regst->set_model_version_id(in_regst->model_version_id());
   //});
   // AsyncSendRegstMsgToProducer(in_regst);
-  inc_expected_piece_id();
 
   int64_t piece_id = expected_piece_id();
   int64_t model_version_id = 0;
@@ -81,6 +80,8 @@ void CopyCommNetActor::Act() {
 
   piece_id2waiting_in_regst_.erase(next_regst_it);
   mut_num_of_read_empty() = piece_id2waiting_in_regst_.empty();
+
+  inc_expected_piece_id();
 }
 
 REGISTER_ACTOR(kCopyCommNetTask, true, CopyCommNetActor);
