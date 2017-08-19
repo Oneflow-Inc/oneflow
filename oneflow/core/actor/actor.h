@@ -47,6 +47,7 @@ class Actor {
   void set_num_of_remaining_eord(int val) { num_of_remaining_eord_ = val; }
   int64_t num_of_read_empty() const { return num_of_read_empty_; }
   int64_t& mut_num_of_read_empty() { return num_of_read_empty_; }
+  void inc_expected_piece_id() { ++expected_piece_id_; }
 
   // Msg Handler
   using MsgHandler = int (Actor::*)(const ActorMsg&);
