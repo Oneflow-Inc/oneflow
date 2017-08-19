@@ -16,7 +16,7 @@ placement_group {
     op_name: "ip10"
   }
   parallel_conf {
-    policy: kDataParallel
+    policy: kModelParallel
     device_set {
       device_name: "win-oneflow2:0-1"
       device_name: "win-oneflow1:0-1"
