@@ -19,12 +19,13 @@ ActorMsg ActorMsg::BuildReadableRegstMsg(int64_t writer_actor_id,
   msg.src_actor_id_ = writer_actor_id;
   msg.dst_actor_id_ = reader_actor_id;
   msg.msg_type_ = ActorMsgType::kRegstMsg;
-  if (IDMgr::Singleton()->MachineId4ActorId(reader_actor_id)
-      == RuntimeCtx::Singleton()->this_machine_id()) {
-    msg.regst_ = regst_raw_ptr;
-  } else {
-    TODO();
-  }
+  msg.regst_ = regst_raw_ptr;
+  //if (IDMgr::Singleton()->MachineId4ActorId(reader_actor_id)
+  //    == RuntimeCtx::Singleton()->this_machine_id()) {
+  //  msg.regst_ = regst_raw_ptr;
+  //} else {
+  //  TODO();
+  //}
   return msg;
 }
 
