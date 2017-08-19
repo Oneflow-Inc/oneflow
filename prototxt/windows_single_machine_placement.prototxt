@@ -12,7 +12,6 @@ placement_group {
 
 placement_group {
   op_set {
-    op_name: "conv"
     op_name: "ip10"
   }
   parallel_conf {

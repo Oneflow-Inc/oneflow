@@ -1,4 +1,4 @@
-train_dlnet_conf_filepath: "D:/users/jiyuan/oss/oneflow/prototxt/windows_net.prototxt"
+train_dlnet_conf_filepath: "D:/users/jiyuan/oss/oneflow/prototxt/windows_net_ip.prototxt"
 resource_filepath: "D:/users/jiyuan/oss/oneflow/prototxt/windows_multi_machine_resource.prototxt"
 placement_filepath: "D:/users/jiyuan/oss/oneflow/prototxt/windows_multi_machine_placement.prototxt"
 model_load_snapshot_path: ""

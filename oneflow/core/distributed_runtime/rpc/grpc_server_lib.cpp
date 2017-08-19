@@ -171,7 +171,7 @@ void GrpcServer::ProcessNetworkResult(const NetworkResult& result) {
 }
 
 void GrpcServer::ProcessSendOk(const NetworkResult& result) {
-  LOG(INFO) << "Dataplane send network msg ok";
+  // LOG(INFO) << "Dataplane send network msg ok";
 }
 
 void GrpcServer::ProcessReceiveMsg(const NetworkResult& result) {
