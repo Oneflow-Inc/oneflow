@@ -33,10 +33,13 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
         int64_t consumer_machine_id =
             IDMgr::Singleton()->MachineId4ActorId(consumer_task_id);
         if (consumer_machine_id != net_memory_desc.this_machine_id) {
-          // The regst of CopyCommNetActor will be consumed by the actors on the
-          // machine, we need not to send its memory descriptor to remote.
           net_memory_desc.consumer_machine_ids.push_back(consumer_machine_id);
           net_memory_desc.consumer_task_ids.push_back(consumer_task_id);
+        } else {
+          // The regst of CopyCommNetActor will be consumed by the actors on the
+          // machine, we need not to send its memory descriptor to remote.
+          RuntimeCtx::Singleton()->AddRegst2NetMemory(
+              net_memory_desc.regst_ptr, net_memory_desc.network_ptr);
         }
       }
       RuntimeCtx::Singleton()->AddLocalNetMemoryDesc(net_memory_desc);

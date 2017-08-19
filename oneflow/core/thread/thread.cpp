@@ -29,11 +29,11 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
       CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
       continue;
     }
-    LOG(INFO) << "New received:";
-    LOG(INFO) << "From:        " << msg.src_actor_id();
-    LOG(INFO) << "To:          " << msg.dst_actor_id();
-    LOG(INFO) << "Piece id:    " << msg.piece_id();
-    LOG(INFO) << "Type:        " << msg.msg_type();
+    // LOG(INFO) << "New received:";
+    // LOG(INFO) << "From:        " << msg.src_actor_id();
+    // LOG(INFO) << "To:          " << msg.dst_actor_id();
+    // LOG(INFO) << "Piece id:    " << msg.piece_id();
+    // LOG(INFO) << "Type:        " << msg.msg_type();
     int process_msg_ret = actor_it->second->ProcessMsg(msg);
     if (process_msg_ret == 1) {
       LOG(INFO) << "thread " << thrd_loc_id_ << " deconstruct actor "

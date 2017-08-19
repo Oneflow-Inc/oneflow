@@ -24,6 +24,17 @@ const std::vector<NetMemoryDescriptor>& RuntimeCtx::local_net_memory_descs()
   return local_net_memory_descs_;
 }
 
+void RuntimeCtx::AddRegst2NetMemory(void* regst, void* net_memory) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  CHECK(regst2net_memory_.insert({regst, net_memory}).second);
+}
+
+void* RuntimeCtx::net_memory_from_regst(void* regst) {
+  auto net_memory_it = regst2net_memory_.find(regst);
+  CHECK(net_memory_it != regst2net_memory_.end());
+  return net_memory_it->second;
+}
+
 void RuntimeCtx::AddRemoteMemoryDescriptor(
     int64_t machine_id, const RemoteRegstDesc& remote_regst_desc) {
   MemoryDescriptor mem_desc;

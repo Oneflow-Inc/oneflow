@@ -54,6 +54,9 @@ class RuntimeCtx final {
   void AddLocalNetMemoryDesc(const NetMemoryDescriptor& net_memory_desc);
   const std::vector<NetMemoryDescriptor>& local_net_memory_descs() const;
 
+  void AddRegst2NetMemory(void* regst, void* net_memory);
+  void* net_memory_from_regst(void* regst);
+
   void AddRemoteMemoryDescriptor(int64_t machine_id,
                                  const RemoteRegstDesc& remote_regst_desc);
   const MemoryDescriptor& memory_descriptor(int64_t consumer_task_id,
@@ -77,6 +80,7 @@ class RuntimeCtx final {
   // <consumer_task_id, regst_address>
   std::unordered_map<std::pair<int64_t, uint64_t>, MemoryDescriptor, pair_hash>
       remote_net_memory_descs_;
+  std::unordered_map<void*, void*> regst2net_memory_;
 };
 
 }  // namespace oneflow

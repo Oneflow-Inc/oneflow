@@ -25,6 +25,7 @@ class CopyCommNetActor final : public Actor {
 
   HashMap<int64_t, Regst*> piece_id2waiting_in_regst_;
   int64_t producer_actor_id_ = -1;
+  int64_t out_regst_desc_id_;
 };
 
 }  // namespace oneflow
