@@ -180,7 +180,6 @@ void GrpcServer::ProcessReceiveMsg(const NetworkResult& result) {
 }
 
 void GrpcServer::ProcessReadOk(const NetworkResult& result) {
-  LOG(INFO) << "Dataplane read OK";
   result.callback(result.net_msg);
 }
 ::tensorflow::Status GrpcServer::Start() {
