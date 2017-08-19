@@ -19,7 +19,8 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
     net_msg.actor_msg = msg;
     net_msg.src_machine_id = RuntimeCtx::Singleton()->this_machine_id();
     net_msg.dst_machine_id = dst_machine_id;
-    net_msg.piece_id = msg.regst()->piece_id();
+    // net_msg.piece_id = msg.regst()->piece_id();
+    net_msg.piece_id = msg.piece_id();
     net->SendMsg(net_msg);
   }
 }

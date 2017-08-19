@@ -31,6 +31,9 @@ class ActorMsg final {
                                         int64_t reader_actor_id, Regst*);
   static ActorMsg BuildRegstMsgToProducer(int64_t writer_actor_id,
                                           int64_t reader_actor_id, Regst*);
+  static ActorMsg BuildRegstMsgToProducer(int64_t writer_actor_id,
+                                          int64_t reader_actor_id, Regst*,
+                                          int64_t piece_id);
 
   // Getters
   int64_t src_actor_id() const { return src_actor_id_; }

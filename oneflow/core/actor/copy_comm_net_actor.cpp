@@ -74,8 +74,8 @@ void CopyCommNetActor::Act() {
   });
 
   // AsyncSendRegstMsgToProducer(in_regst);
-  ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(producer_actor_id_,
-                                                   actor_id(), in_regst);
+  ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(
+      producer_actor_id_, actor_id(), in_regst, piece_id);
   AsyncDo([msg]() { ActorMsgBus::Singleton()->SendMsg(msg); });
   // ActorMsgBus::Singleton()->SendMsg(msg);
 
