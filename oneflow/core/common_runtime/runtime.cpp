@@ -39,7 +39,14 @@ void Runtime::ActivateActor() {
   LOG(INFO) << "All actor on all machine are activated";
 }
 
-void Runtime::StartActor() {}
+void Runtime::StartActor() {
+  // RuntimeCtx::Singleton()->mut_active_actor_cnt().Init("active_actor_cnt",
+  //                                                     this_machine_task_num);
+  SendCmdMsg(mdupdt_tasks_, ActorCmd::kSendInitialModel);
+  SendCmdMsg(source_tasks_, ActorCmd::kStart);
+  // RuntimeCtx::Singleton()->mut_active_actor_cnt().WaitUntilCntEqualZero();
+  // DeleteSingleton();
+}
 
 void Runtime::FindTasksOnThisMachine() {
   for (const TaskProto& task : plan_.task()) {

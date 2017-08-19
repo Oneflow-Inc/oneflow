@@ -48,6 +48,8 @@ void CopyCommNetActor::Act() {
   // TODO(jiyuan)
   auto next_regst_it = piece_id2waiting_in_regst_.find(expected_piece_id());
   Regst* in_regst = next_regst_it->second;
+  LOG(INFO) << "CopyCommNetActor: " << actor_id();
+  LOG(INFO) << "Read from: " << producer_actor_id_;
 
   // AsyncLaunchKernel(GenDefaultKernelCtx(),
   //                  [&](uint64_t regst_desc_id) -> Regst* {
