@@ -15,6 +15,7 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
   } else {
     Network* net = GetRdmaInstance();
     NetworkMessage net_msg;
+    net_msg.type = NetworkMessageType::kRequestAck;
     net_msg.actor_msg = msg;
     net_msg.src_machine_id = RuntimeCtx::Singleton()->this_machine_id();
     net_msg.dst_machine_id = dst_machine_id;
