@@ -4,20 +4,6 @@
 #ifndef ONEFLOW_CORE_SCHEDULE_SCC_VISITOR_H_
 #define ONEFLOW_CORE_SCHEDULE_SCC_VISITOR_H_
 
-#include <limits.h>
-#include <algorithm>
-#include <functional>
-#include <iostream>
-#include <list>
-#include <memory>
-#include <set>
-#include <sstream>
-#include <string>
-#include <typeinfo>
-#include <unordered_map>
-#include <unordered_set>
-#include <utility>
-
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/schedule/snode.h"
@@ -28,7 +14,7 @@ namespace schedule {
 
 //	strongly connected component visitor
 template<typename NodeType>
-class SccVisitor {
+class SccVisitor final {
  public:
   typedef std::function<void(NodeType)> NodeVisitor;
   typedef std::function<void(const std::list<NodeType>&)> ComponentVisitor;
@@ -40,29 +26,27 @@ class SccVisitor {
 
   uint32_t operator()(NodeType start,
                       const ComponentVisitor& component_visitor) {
-    Reset(component_visitor);
-    Walk(start);
+    Reset();
+    Walk(start, component_visitor);
     return component_cnt_;
   }
   uint32_t operator()(NodeType start) {
     return (*this)(start, [](const std::list<NodeType>&) {});
   }
 
-  template<template<class, class...> class C, typename... Args>
-  uint32_t operator()(const C<NodeType, Args...>& starts,
+  uint32_t operator()(const std::list<NodeType>& starts,
                       const ComponentVisitor& component_visitor) {
-    Reset(component_visitor);
-    for (NodeType start : starts) { Walk(start); }
+    Reset();
+    for (NodeType start : starts) { Walk(start, component_visitor); }
     return component_cnt_;
   }
-  template<template<class, class...> class C, typename... Args>
-  uint32_t operator()(const C<NodeType, Args...>& starts) {
+
+  uint32_t operator()(const std::list<NodeType>& starts) {
     return (*this)(starts, [](const std::list<NodeType>&) {});
   }
 
  private:
-  void Reset(const ComponentVisitor& component_visitor) {
-    component_visitor_ = component_visitor;
+  void Reset() {
     node2index_.clear();
     node2low_.clear();
     stack_.clear();
@@ -70,7 +54,7 @@ class SccVisitor {
     component_cnt_ = 0u;
   }
 
-  void Walk(NodeType node) {
+  void Walk(NodeType node, const ComponentVisitor& do_each_component) {
     if (node2index_[node]) { return; }
     node2index_[node] = node2low_[node] = ++index_;
     stack_.push_front(node);
@@ -78,7 +62,7 @@ class SccVisitor {
     bool is_self_loop = false;
     foreach_next_(node, [&](NodeType next) {
       if (!node2index_[next]) {
-        Walk(next);
+        Walk(next, do_each_component);
         node2low_[node] = std::min(node2low_[node], node2low_[next]);
       } else if (node2is_on_stack_[next]) {
         node2low_[node] = std::min(node2low_[node], node2low_[next]);
@@ -95,13 +79,12 @@ class SccVisitor {
         scc.push_front(w);
       } while (w != node);
       if (scc.size() > 1 || is_self_loop) {
-        component_visitor_(scc);
+        do_each_component(scc);
         ++component_cnt_;
       }
     }
   }
 
-  ComponentVisitor component_visitor_;
   ForEachNode foreach_next_;
   std::unordered_map<NodeType, uint32_t> node2index_;
   std::unordered_map<NodeType, uint32_t> node2low_;
