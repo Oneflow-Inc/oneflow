@@ -42,6 +42,8 @@ class Session {
   }
 
   void NewBatchs();
+  TaskInstance* GetNextBatchInstance(TaskInstance* instance, int32_t step = 1);
+  TaskInstance* GetPrevBatchInstance(TaskInstance* instance);
   std::unique_ptr<std::list<Batch*>> GetBatchNodes();
 
   inline const SGraph* graph() const { return graph_; }

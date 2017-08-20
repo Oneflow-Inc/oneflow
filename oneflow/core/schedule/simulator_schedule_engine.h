@@ -92,6 +92,8 @@ class SimulatorSchedule : public Schedule {
   }
   void WalkTimeNetReverse(SimulatorScheduleEngine* schedule_engine,
                           const std::function<void(TaskInstance*)>& cb);
+  void WalkBpTimeNet(SimulatorScheduleEngine* schedule_engine,
+                     const std::function<void(TaskInstance*)>& cb);
 
   std::unordered_map<SRegst*, float> regst2ended_at_;
   std::unordered_map<RegstDescInstance*, SRegst*> regst_desc_instance2regst_;

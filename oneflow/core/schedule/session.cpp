@@ -25,5 +25,19 @@ std::unique_ptr<std::list<Batch*>> Session::GetBatchNodes() {
   return batchs;
 }
 
+TaskInstance* Session::GetPrevBatchInstance(TaskInstance* instance) {
+  return GetNextBatchInstance(instance, static_cast<int32_t>(-1));
+}  // namespace schedule
+
+TaskInstance* Session::GetNextBatchInstance(TaskInstance* instance,
+                                            int32_t step) {
+  TaskInstance* next = nullptr;
+  auto batch = instance->from();
+  auto next_batch_id = batch->id() + step;
+  auto next_batch = batch_node_mgr().Find(next_batch_id);
+  next = task_instance_mgr().Find(next_batch, instance->to());
+  return next;
+}
+
 }  // namespace schedule
 }  // namespace oneflow
