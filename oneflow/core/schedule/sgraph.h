@@ -54,14 +54,14 @@ class STask : public SNode {
   explicit STask(const std::string name) : SNode(name) {}
   STask() {}
   virtual ~STask() {}
-  inline int32_t depth() const { return depth_; }
+  inline uint32_t depth() const { return depth_; }
   inline const SDevice* device() const { return device_; }
 
-  inline int32_t& mut_depth() { return depth_; }
+  inline uint32_t& mut_depth() { return depth_; }
   inline SDevice*& mut_device() { return device_; }
 
  protected:
-  int32_t depth_;
+  uint32_t depth_;
   SDevice* device_;
 };
 
