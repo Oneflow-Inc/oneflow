@@ -141,8 +141,15 @@ MemoryCase RegstDesc::InferMemCase() const {
 }
 
 BlobDesc RegstDesc::CompPackedBlobDesc() const {
-  BlobDesc packed_blob_desc;
-  packed_blob_desc.mut_shape() = Shape({CompElemCntOfAllBlob()});
+  auto it = lbn2blob_desc_.begin();
+  return ComputePackedBlobDesc([&]() {
+    const BlobDesc* ret = nullptr;
+    if (it != lbn2blob_desc_.end()) {
+      ret = it->second.get();
+      ++it;
+    }
+    return ret;
+  });
 }
 
 }  // namespace oneflow

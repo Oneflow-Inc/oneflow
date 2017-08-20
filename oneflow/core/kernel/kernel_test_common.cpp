@@ -5,7 +5,7 @@
 namespace oneflow {
 
 namespace test {
-
+/*
 template<typename FloatingPointType>
 class KernelTestCommon<DeviceType::kCPU, FloatingPointType> final {
  public:
@@ -91,6 +91,6 @@ class KernelTestCommon<DeviceType::kCPU, FloatingPointType> final {
 
 template class KernelTestCommon<DeviceType::kCPU, float>;
 template class KernelTestCommon<DeviceType::kCPU, double>;
-
+*/
 }  // namespace test
 }  // namespace oneflow

@@ -23,17 +23,17 @@ class RtRegstDesc {
   int64_t register_num() const { return register_num_; }
   const MemoryCase& mem_case() const { return mem_case_; }
 
-  const BlobDesc* GetBlobDescFromLbn(const std::string& lbn) const {
-    return lbn2blob_desc_.at(lbn).get();
-  }
+  const BlobDesc* GetBlobDescFromLbn(const std::string& lbn) const;
+  const BlobDesc* packed_blob_desc() const { return &packed_blob_desc_; }
 
  private:
   int64_t regst_desc_id_;
   int64_t producer_actor_id_;
   std::vector<int64_t> consumers_actor_id_;
-  std::unordered_map<std::string, std::unique_ptr<BlobDesc>> lbn2blob_desc_;
   int64_t register_num_;
   MemoryCase mem_case_;
+  std::unordered_map<std::string, std::unique_ptr<BlobDesc>> lbn2blob_desc_;
+  BlobDesc packed_blob_desc_;
 };
 
 }  // namespace oneflow

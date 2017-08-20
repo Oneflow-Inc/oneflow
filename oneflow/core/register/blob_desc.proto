@@ -3,6 +3,22 @@ package oneflow;
 
 import "oneflow/core/common/shape.proto";
 
+enum DataType {
+  kChar = 0;
+  kFloat = 1;
+  kDouble = 2;
+  kInt8 = 3;
+  kInt16 = 4;
+  kInt32 = 5;
+  kInt64 = 6;
+  kUInt8 = 7;
+  kUInt16 = 8;
+  kUInt32 = 9;
+  kUInt64 = 10;
+}
+
 message BlobDescProto {
   ShapeProto shape = 1;
+  DataType data_type = 2;
+  bool has_data_id = 3;
 }

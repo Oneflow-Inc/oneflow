@@ -35,18 +35,7 @@ class JobDesc final {
   }
   int32_t batch_size() const { return piece_size() * num_of_pieces_in_batch(); }
   bool is_train() const { return job_conf_.has_train_conf(); }
-  FloatingPointTypeProto floating_point_type() const {
-    return job_conf_.floating_point_type();
-  }
-  size_t FloatingPointSize() const {
-    if (floating_point_type() == FloatingPointTypeProto::kFloat) {
-      return sizeof(float);
-    } else if (floating_point_type() == FloatingPointTypeProto::kDouble) {
-      return sizeof(double);
-    } else {
-      UNEXPECTED_RUN();
-    }
-  }
+  DataType default_data_type() const { return job_conf_.default_data_type(); }
   int32_t num_of_batches_in_snapshot() const {
     return job_conf_.train_conf().num_of_batches_in_snapshot();
   }
@@ -63,6 +52,9 @@ class JobDesc final {
   bool use_async_cpu_stream() const { return job_conf_.use_async_cpu_stream(); }
   int32_t piece_num_of_record_loss() const {
     return job_conf_.train_conf().piece_num_of_record_loss();
+  }
+  size_t SizeOfOneDataId() const {
+    return job_conf_.max_data_id_length() * sizeof(char);
   }
 
  private:
