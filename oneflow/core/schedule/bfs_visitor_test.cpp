@@ -5,7 +5,7 @@ namespace schedule {
 TEST(BfsVisitor, one_vertix) {
   auto foreach_prev = [&](int, const std::function<void(int)>&) {};
   auto foreach_next = [&](int, const std::function<void(int)>&) {};
-  BfsVisitor<int> bfs_foreach_node(foreach_prev, foreach_next);
+  BfsVisitor<int> bfs_foreach_node(foreach_next, foreach_prev);
 
   auto cnt = bfs_foreach_node(1, [&](int node) { ASSERT_TRUE(node == 1); });
   ASSERT_TRUE(cnt == 1);
@@ -27,7 +27,7 @@ TEST(BfsVisitor, diamond) {
   auto foreach_next = [&](int id, const std::function<void(int)>& cb) {
     for (int x : next_nodes[id]) { cb(x); }
   };
-  BfsVisitor<int> bfs_foreach_node(foreach_prev, foreach_next);
+  BfsVisitor<int> bfs_foreach_node(foreach_next, foreach_prev);
 
   int index = 0;
   std::vector<int> order{1, 2, 3, 4};
@@ -56,7 +56,7 @@ TEST(BfsVisitor, linked_list) {
   auto foreach_next = [&](int id, const std::function<void(int)>& cb) {
     for (int x : next_nodes[id]) { cb(x); }
   };
-  BfsVisitor<int> bfs_foreach_node(foreach_prev, foreach_next);
+  BfsVisitor<int> bfs_foreach_node(foreach_next, foreach_prev);
 
   int counter = 1;
   uint32_t cnt = bfs_foreach_node(1, [&](int x) {
@@ -85,7 +85,7 @@ TEST(BfsVisitor, multiple_linked_list) {
   auto foreach_next = [&](int id, const std::function<void(int)>& cb) {
     for (int x : next_nodes[id]) { cb(x); }
   };
-  BfsVisitor<int> bfs_foreach_node(foreach_prev, foreach_next);
+  BfsVisitor<int> bfs_foreach_node(foreach_next, foreach_prev);
 
   int index = 0;
   std::vector<int> order{1, 7, 2, 8, 3, 9, 4, 10, 5, 11, 6, 12};
@@ -115,7 +115,7 @@ TEST(BfsVisitor, binary_tree) {
   auto foreach_next = [&](int id, const std::function<void(int)>& cb) {
     for (int x : next_nodes[id]) { cb(x); }
   };
-  BfsVisitor<int> bfs_foreach_node(foreach_prev, foreach_next);
+  BfsVisitor<int> bfs_foreach_node(foreach_next, foreach_prev);
 
   int counter = 1;
   uint32_t cnt = bfs_foreach_node(1, [&](int x) {
@@ -144,7 +144,7 @@ TEST(BfsVisitor, start_from_middle) {
   auto foreach_next = [&](int id, const std::function<void(int)>& cb) {
     for (int x : next_nodes[id]) { cb(x); }
   };
-  BfsVisitor<int> bfs_foreach_node(foreach_prev, foreach_next);
+  BfsVisitor<int> bfs_foreach_node(foreach_next, foreach_prev);
 
   int index = 0;
   std::vector<int> order{3, 9, 4, 10, 5, 11, 6, 12};

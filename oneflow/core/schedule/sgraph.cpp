@@ -2,6 +2,7 @@
  * Copyright 2017 Xinqi Li
  */
 #include "oneflow/core/schedule/sgraph.h"
+#include "oneflow/core/schedule/bfs_visitor.h"
 
 namespace oneflow {
 namespace schedule {
@@ -76,27 +77,12 @@ void SGraph::WalkArcReverse(const std::function<void(Arc<STask>*)>& cb) {
 }
 
 void SGraph::WalkReverse(const std::function<void(STask*)>& cb) {
-  auto next = std::unordered_set<STask*>{sink()};
-  auto marked = std::unordered_set<STask*>{};
-  while (next.size()) {
-    auto queue = std::list<STask*>(next.begin(), next.end());
-    for (const auto& node : queue) {
-      cb(node);
-      marked.insert(node);
-      next.erase(node);
-      arc_mgr().InputArc(node, [&](Arc<STask>* arc) {
-        bool all_marked = true;
-        arc_mgr().Output(arc->from(), [&](STask* from) {
-          if (all_marked && marked.find(from) == marked.end()) {
-            all_marked = false;
-          }
-        });
-        if (all_marked && marked.find(arc->from()) == marked.end()) {
-          next.insert(arc->from());
-        }
-      });
-    }
-  }
+  auto foreach_next = std::bind(&SGraph::ForeachPrev, this,
+                                std::placeholders::_1, std::placeholders::_2);
+  auto foreach_prev = std::bind(&SGraph::ForeachNext, this,
+                                std::placeholders::_1, std::placeholders::_2);
+  BfsVisitor<STask*> bfs_foreach(foreach_next, foreach_prev);
+  bfs_foreach(sink(), cb);
 }
 
 void SGraph::WalkArc(const std::function<void(Arc<STask>*)>& cb) {
@@ -104,27 +90,12 @@ void SGraph::WalkArc(const std::function<void(Arc<STask>*)>& cb) {
 }
 
 void SGraph::Walk(const std::function<void(STask*)>& cb) {
-  auto next = std::unordered_set<STask*>{source()};
-  auto marked = std::unordered_set<STask*>{};
-  while (next.size()) {
-    auto queue = std::list<STask*>(next.begin(), next.end());
-    for (const auto& node : queue) {
-      cb(node);
-      marked.insert(node);
-      next.erase(node);
-      arc_mgr().OutputArc(node, [&](Arc<STask>* arc) {
-        bool all_marked = true;
-        arc_mgr().Input(arc->to(), [&](STask* from) {
-          if (all_marked && marked.find(from) == marked.end()) {
-            all_marked = false;
-          }
-        });
-        if (all_marked && marked.find(arc->to()) == marked.end()) {
-          next.insert(arc->to());
-        }
-      });
-    }
-  }
+  auto foreach_next = std::bind(&SGraph::ForeachNext, this,
+                                std::placeholders::_1, std::placeholders::_2);
+  auto foreach_prev = std::bind(&SGraph::ForeachPrev, this,
+                                std::placeholders::_1, std::placeholders::_2);
+  BfsVisitor<STask*> bfs_foreach(foreach_next, foreach_prev);
+  bfs_foreach(source(), cb);
 }
 
 void SGraph::InitAscendentArc() {

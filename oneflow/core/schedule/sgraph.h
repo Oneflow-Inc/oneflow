@@ -108,6 +108,13 @@ class SGraph : public SNode {
 
   void InitAscendentArc();
 
+  void ForeachNext(STask* node, const std::function<void(STask*)>& cb) {
+    arc_mgr().Output(node, cb);
+  }
+  void ForeachPrev(STask* node, const std::function<void(STask*)>& cb) {
+    arc_mgr().Input(node, cb);
+  }
+
   void ForeachNode(const std::function<void(STask*)>& cb) const;
   void ForeachAscendent(STask*, const std::function<void(STask*)>& cb) const;
   void ForeachDescendent(STask*, const std::function<void(STask*)>& cb) const;

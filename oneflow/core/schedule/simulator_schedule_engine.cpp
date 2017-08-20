@@ -3,6 +3,7 @@
  */
 #include "oneflow/core/schedule/simulator_schedule_engine.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/schedule/bfs_visitor.h"
 #include "oneflow/core/schedule/sgraph.h"
 #include "oneflow/core/schedule/simulation_strategy.h"
 
@@ -25,27 +26,15 @@ void SimulatorSchedule::WalkTimeNetReverse(
   auto last_node = schedule_engine->direction_->EndNode();
   auto last_instance =
       session()->task_instance_mgr().Find(last_batch, last_node);
-  auto next = std::unordered_set<TaskInstance*>{last_instance};
-  auto marked = std::unordered_set<TaskInstance*>{};
-  while (next.size()) {
-    auto queue = std::list<TaskInstance*>(next.begin(), next.end());
-    for (const auto& instance : queue) {
-      cb(instance);
-      marked.insert(instance);
-      next.erase(instance);
-      timenet_arc_mgr().Input(instance, [&](TaskInstance* prev) {
-        bool all_marked = true;
-        timenet_arc_mgr().Output(prev, [&](TaskInstance* to) {
-          if (all_marked && marked.find(to) == marked.end()) {
-            all_marked = false;
-          }
-        });
-        if (all_marked && marked.find(prev) == marked.end()) {
-          next.insert(prev);
-        }
-      });
-    }
-  }
+
+  auto foreach_next =
+      std::bind(&SimulatorSchedule::ForeachPrevTaskInstance, this,
+                std::placeholders::_1, std::placeholders::_2);
+  auto foreach_prev =
+      std::bind(&SimulatorSchedule::ForeachNextTaskInstance, this,
+                std::placeholders::_1, std::placeholders::_2);
+  BfsVisitor<TaskInstance*> bfs_foreach(foreach_next, foreach_prev);
+  bfs_foreach(last_instance, cb);
 }
 
 void SimulatorSchedule::InitTimeNet(SimulatorScheduleEngine* schedule_engine) {

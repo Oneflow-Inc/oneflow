@@ -15,8 +15,8 @@ class BfsVisitor final {
   typedef std::function<void(NodeType, const NodeVisitor&)> ForEachNode;
 
   OF_DISALLOW_COPY_AND_MOVE(BfsVisitor);
-  BfsVisitor(const ForEachNode& foreach_prev, const ForEachNode& foreach_next)
-      : foreach_prev_(foreach_prev), foreach_next_(foreach_next) {}
+  BfsVisitor(const ForEachNode& foreach_next, const ForEachNode& foreach_prev)
+      : foreach_next_(foreach_next), foreach_prev_(foreach_prev) {}
   ~BfsVisitor() = default;
 
   uint32_t operator()(NodeType start, const NodeVisitor& visitor) {
@@ -74,8 +74,8 @@ class BfsVisitor final {
     }
   }
 
-  ForEachNode foreach_prev_;
   ForEachNode foreach_next_;
+  ForEachNode foreach_prev_;
   std::unordered_map<NodeType, bool> visited_or_visiting_soon_;
 };
 

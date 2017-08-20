@@ -73,6 +73,16 @@ class SimulatorSchedule : public Schedule {
     return regst_desc_instance2regst_;
   }
 
+  void ForeachNextTaskInstance(TaskInstance* task_instance,
+                               const std::function<void(TaskInstance*)>& cb) {
+    timenet_arc_mgr().Output(task_instance, cb);
+  }
+
+  void ForeachPrevTaskInstance(TaskInstance* task_instance,
+                               const std::function<void(TaskInstance*)>& cb) {
+    timenet_arc_mgr().Input(task_instance, cb);
+  }
+
  protected:
   inline const ArcMgr<Arc<TaskInstance>>& timenet_arc_mgr() const {
     return timenet_arc_mgr_;
