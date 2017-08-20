@@ -103,18 +103,6 @@ void SimulatorSchedule::Retiming(SimulatorScheduleEngine* schedule_engine) {
   CHECK(session() == schedule_engine->session());
   CHECK(this == schedule_engine->schedule());
   float ii = max_interval();
-  //  auto get_next_instance = [&](TaskInstance* instance) {
-  //    TaskInstance* next = nullptr;
-  //    if (instance->to() != session()->graph()->sink()) {
-  //      auto batch = instance->from();
-  //      auto next_batch_id =
-  //          schedule_engine->direction_->NextBatchId(batch->id());
-  //      auto next_batch = session()->batch_node_mgr().Find(next_batch_id);
-  //      next = session()->task_instance_mgr().Find(next_batch,
-  //      instance->to());
-  //    }
-  //    return next;
-  //  };
   WalkTimeNetReverse(schedule_engine, [&](TaskInstance* instance) {
     float lazy_end = INT_MAX;
     uint32_t count =
@@ -136,7 +124,6 @@ void SimulatorSchedule::Retiming(SimulatorScheduleEngine* schedule_engine) {
     p.first = lazy_start;
   });
   WalkBpTimeNet(schedule_engine, [&](TaskInstance* instance) {
-    std::cout << instance->to()->name() << std::endl;
     float eager_start = 0;
     timenet_arc_mgr().Input(instance, [&](TaskInstance* prev) {
       if (prev->from() == instance->from()) {
