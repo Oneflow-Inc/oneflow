@@ -207,7 +207,7 @@ void GrpcServer::ProcessReadOk(const NetworkResult& result) {
       data_net_->SetCallbackForReceivedActorMsg(
           [](const NetworkMessage& net_msg) {
             ActorMsg msg = net_msg.actor_msg;
-            msg.set_piece_id(net_msg.piece_id);
+            // msg.set_piece_id(net_msg.piece_id);
             ActorMsgBus::Singleton()->SendMsg(msg);
           });
 

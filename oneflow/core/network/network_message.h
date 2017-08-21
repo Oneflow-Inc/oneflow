@@ -20,7 +20,7 @@ struct NetworkMessage {
 
   // Request/ack ActorMessage between send/recv actors for kReadOk
   ActorMsg actor_msg;
-  int64_t piece_id;
+  // int64_t piece_id;
 
   // Optional for REMOTE_MEMORY_DESCRIPTOR message
   uint64_t address;
