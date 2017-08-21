@@ -2,7 +2,7 @@ syntax = "proto3";
 package oneflow;
 
 import "oneflow/core/operator/op_conf.proto";
-import "oneflow/core/register/blob_desc.proto";
+import "oneflow/core/common/data_type.proto";
 
 message TrainConf {
   string model_save_snapshots_path = 1;
