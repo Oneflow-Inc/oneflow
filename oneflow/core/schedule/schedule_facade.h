@@ -26,8 +26,7 @@ class ScheduleFacade final {
 
  private:
   static std::string DefaultName() {
-    //		return "default";
-    return "empty_allocator";
+    return "default";
   }
   ScheduleFactoryProvider* sfp_;
 };
