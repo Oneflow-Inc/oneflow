@@ -32,10 +32,10 @@ TaskInstance* Session::GetPrevBatchInstance(TaskInstance* instance) {
 TaskInstance* Session::GetNextBatchInstance(TaskInstance* instance,
                                             int32_t step) {
   TaskInstance* next = nullptr;
-  auto batch = instance->from();
+  auto batch = instance->src_node();
   auto next_batch_id = batch->id() + step;
   auto next_batch = batch_node_mgr().Find(next_batch_id);
-  next = task_instance_mgr().Find(next_batch, instance->to());
+  next = task_instance_mgr().Find(next_batch, instance->dst_node());
   return next;
 }
 

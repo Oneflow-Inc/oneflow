@@ -130,9 +130,11 @@ void DemoSGraph::InitFromDemo() {
       ss << arg1 << "\t" << arg2;
       ss >> from_id >> to_id;
 
-      STask* from = mut_node_mgr().Find(get_id(from_id));
-      STask* to = mut_node_mgr().Find(get_id(to_id));
-      if (from && to) { mut_arc_mgr().CreateIfNotFound(from, to); }
+      STask* src_node = mut_node_mgr().Find(get_id(from_id));
+      STask* dst_node = mut_node_mgr().Find(get_id(to_id));
+      if (src_node && dst_node) {
+        mut_arc_mgr().CreateIfNotFound(src_node, dst_node);
+      }
     } else if (arg0 == "dt") {
       uint64_t time;
       std::string name;
@@ -157,10 +159,11 @@ void DemoSGraph::InitFromDemo() {
       ss << arg1 << "\t" << arg2;
       ss >> from_id >> to_id;
 
-      STask* from = mut_node_mgr().Find(get_id(from_id));
-      SRegstDesc* to = mut_regst_desc_mgr().CreateIfNotFound(get_id(to_id));
-      if (from && to) {
-        mut_produced_regst_desc_mgr().CreateIfNotFound(from, to);
+      STask* src_node = mut_node_mgr().Find(get_id(from_id));
+      SRegstDesc* dst_node =
+          mut_regst_desc_mgr().CreateIfNotFound(get_id(to_id));
+      if (src_node && dst_node) {
+        mut_produced_regst_desc_mgr().CreateIfNotFound(src_node, dst_node);
       }
     } else if (arg0 == "sr") {
       uint64_t from_id;
@@ -169,10 +172,11 @@ void DemoSGraph::InitFromDemo() {
       ss << arg1 << "\t" << arg2;
       ss >> from_id >> to_id;
 
-      STask* from = mut_node_mgr().Find(get_id(from_id));
-      SRegstDesc* to = mut_regst_desc_mgr().CreateIfNotFound(get_id(to_id));
-      if (from && to) {
-        mut_subscribed_regst_desc_mgr().CreateIfNotFound(from, to);
+      STask* src_node = mut_node_mgr().Find(get_id(from_id));
+      SRegstDesc* dst_node =
+          mut_regst_desc_mgr().CreateIfNotFound(get_id(to_id));
+      if (src_node && dst_node) {
+        mut_subscribed_regst_desc_mgr().CreateIfNotFound(src_node, dst_node);
       }
     }
   }

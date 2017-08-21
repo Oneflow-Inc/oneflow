@@ -16,7 +16,8 @@ void LazyEvaluationStrategy::TimeLinePushBack(TaskInstance* instance,
 void MemorySimulationStrategy::InitFuncs() {
   get_node_instance_ = [&](TaskArcInstance* arc) {
     auto session = schedule_engine()->session();
-    return session->task_instance_mgr().Find(arc->from(), arc->to()->to());
+    return session->task_instance_mgr().Find(arc->src_node(),
+                                             arc->dst_node()->dst_node());
   };
 
   is_instance_ready_ = std::bind(&MemorySimulationStrategy::IsInstanceReady,
@@ -35,9 +36,9 @@ bool MemorySimulationStrategy::IsInstanceReady(TaskInstance* instance) {
   bool ready = true;
   auto session = schedule_engine()->session();
   auto graph = session->graph();
-  graph->arc_mgr().InputArc(instance->to(), [&](TaskArc* arc) {
+  graph->arc_mgr().InputArc(instance->dst_node(), [&](TaskArc* arc) {
     auto instance_input =
-        session->task_arc_instance_mgr().Find(instance->from(), arc);
+        session->task_arc_instance_mgr().Find(instance->src_node(), arc);
     if (schedule_engine()->mut_tokens().find(instance_input)
         == schedule_engine()->mut_tokens().end()) {
       ready = false;
@@ -85,9 +86,9 @@ float EvaluationSimulationStrategy::GetAscendentEndedAt(
   auto session = schedule_engine()->session();
   auto schedule = schedule_engine()->schedule();
   auto graph = session->graph();
-  graph->arc_mgr().Input(instance->to(), [&](STask* node) {
+  graph->arc_mgr().Input(instance->dst_node(), [&](STask* node) {
     auto instance_input =
-        session->task_instance_mgr().Find(instance->from(), node);
+        session->task_instance_mgr().Find(instance->src_node(), node);
     auto itt = schedule->instance2ended_at().find(instance_input);
     float token_ended_at = INT_MAX;
     if (itt != schedule->instance2ended_at().end()) {
@@ -109,8 +110,8 @@ float LimitedMemoryStrategy::RegstDescEndedAt(TaskInstance* instance) {
   auto schedule = schedule_engine()->schedule();
   auto graph = schedule->session()->graph();
   graph->produced_regst_desc_mgr().Output(
-      instance->to(), [&](SRegstDesc* regst_desc) {
-        auto regst = FindFreeRegst(regst_desc, instance->from());
+      instance->dst_node(), [&](SRegstDesc* regst_desc) {
+        auto regst = FindFreeRegst(regst_desc, instance->src_node());
         ended_at = std::max(ended_at, schedule->mut_regst2ended_at()[regst]);
       });
   return ended_at;
@@ -121,10 +122,10 @@ void LimitedMemoryStrategy::BeforeRun(TaskInstance* instance) {
   auto schedule = schedule_engine()->schedule();
   auto graph = schedule->session()->graph();
   graph->produced_regst_desc_mgr().Output(
-      instance->to(), [&](SRegstDesc* regst_desc) {
-        auto regst = FindFreeRegst(regst_desc, instance->from());
+      instance->dst_node(), [&](SRegstDesc* regst_desc) {
+        auto regst = FindFreeRegst(regst_desc, instance->src_node());
         auto regst_desc_instance = session->regst_desc_instance_mgr().Find(
-            instance->from(), regst_desc);
+            instance->src_node(), regst_desc);
         if (!regst) {
           // BUG
           return;
@@ -132,7 +133,7 @@ void LimitedMemoryStrategy::BeforeRun(TaskInstance* instance) {
         schedule->mut_regst_desc_instance2regst()[regst_desc_instance] = regst;
         graph->subscribed_regst_desc_mgr().Input(regst_desc, [&](STask* node) {
           TaskInstance* subscriber_instance =
-              session->task_instance_mgr().Find(instance->from(), node);
+              session->task_instance_mgr().Find(instance->src_node(), node);
           schedule->mut_regst_arc_mgr().CreateIfNotFound(subscriber_instance,
                                                          regst);
         });
@@ -144,7 +145,7 @@ void LimitedMemoryStrategy::AfterRun(TaskInstance* instance) {
   auto schedule = schedule_engine()->schedule();
   schedule->regst_arc_mgr().OutputArc(instance, &occupied_arcs);
   for (auto arc : occupied_arcs) {
-    schedule->mut_regst2ended_at()[arc->to()] =
+    schedule->mut_regst2ended_at()[arc->dst_node()] =
         schedule->mut_instance2ended_at()[instance].second;
     schedule->mut_regst_arc_mgr().Delete(arc->id());
   }
@@ -154,9 +155,9 @@ bool LimitedMemoryStrategy::IsAllRegstDescReady(TaskInstance* instance) {
   bool all_ready = true;
   auto graph = schedule_engine()->session()->graph();
   graph->produced_regst_desc_mgr().Output(
-      instance->to(), [&](SRegstDesc* regst_desc) {
+      instance->dst_node(), [&](SRegstDesc* regst_desc) {
         all_ready =
-            (all_ready && IsRegstDescReady(regst_desc, instance->from()));
+            (all_ready && IsRegstDescReady(regst_desc, instance->src_node()));
       });
   return all_ready;
 }

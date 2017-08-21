@@ -25,14 +25,14 @@ void SimulatorSchedule::WalkBpTimeNet(
   auto foreach_next = [&](TaskInstance* instance,
                           const std::function<void(TaskInstance*)>& cb) {
     ForeachNextTaskInstance(instance, [&](TaskInstance* next) {
-      if (next->from() == instance->from()) { cb(next); }
+      if (next->src_node() == instance->src_node()) { cb(next); }
     });
   };
 
   auto foreach_prev = [&](TaskInstance* instance,
                           const std::function<void(TaskInstance*)>& cb) {
     ForeachPrevTaskInstance(instance, [&](TaskInstance* prev) {
-      if (prev->from() == instance->from()) { cb(prev); }
+      if (prev->src_node() == instance->src_node()) { cb(prev); }
     });
   };
 
@@ -74,11 +74,11 @@ void SimulatorSchedule::InitTimeNet() {
     uint32_t end = session()->nr_batch();
     for (uint32_t i = start; i < end; i++) {
       auto batch = session()->batch_node_mgr().Find(i);
-      auto from_node = arc->from();
-      auto to_node = arc->to();
-      auto from = session()->task_instance_mgr().Find(batch, from_node);
-      auto to = session()->task_instance_mgr().Find(batch, to_node);
-      mut_timenet_arc_mgr().CreateIfNotFound(from, to);
+      auto from_node = arc->src_node();
+      auto to_node = arc->dst_node();
+      auto src_node = session()->task_instance_mgr().Find(batch, from_node);
+      auto dst_node = session()->task_instance_mgr().Find(batch, to_node);
+      mut_timenet_arc_mgr().CreateIfNotFound(src_node, dst_node);
     }
   });
 }
@@ -108,7 +108,7 @@ void SimulatorSchedule::Retiming() {
   WalkBpTimeNet([&](TaskInstance* instance) {
     float eager_start = 0;
     timenet_arc_mgr().Input(instance, [&](TaskInstance* prev) {
-      if (prev->from() == instance->from()) {
+      if (prev->src_node() == instance->src_node()) {
         const auto& p = mut_instance2ended_at()[prev];
         eager_start = std::max(eager_start, p.second);
       }

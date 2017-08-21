@@ -13,9 +13,9 @@ void Schedule::PrintRegstNum() {
   });
 }
 
-float Schedule::GetDuration(TaskInstance* from, TaskInstance* to) {
-  auto end = mut_instance2ended_at()[to].second;
-  auto start = mut_instance2ended_at()[from].first;
+float Schedule::GetDuration(TaskInstance* src_node, TaskInstance* dst_node) {
+  auto end = mut_instance2ended_at()[dst_node].second;
+  auto start = mut_instance2ended_at()[src_node].first;
   return end - start;
 }
 

@@ -34,7 +34,7 @@ class Schedule {
   void UpdateDuration();
   void UpdateRegstCount();
   void UpdateInterval();
-  float GetDuration(TaskInstance* from, TaskInstance* to);
+  float GetDuration(TaskInstance* src_node, TaskInstance* dst_node);
 
   //	getter
   inline Session* session() const { return session_; }

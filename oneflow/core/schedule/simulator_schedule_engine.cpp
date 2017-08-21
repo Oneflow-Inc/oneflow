@@ -50,7 +50,7 @@ void SimulatorScheduleEngine::NewSourceTokens() {
 
 SDevice* SimulatorScheduleEngine::GetInstanceDevice(TaskInstance* instance) {
   SDevice* ret = nullptr;
-  session()->graph()->device_arc_mgr().Output(instance->to(), &ret);
+  session()->graph()->device_arc_mgr().Output(instance->dst_node(), &ret);
   return ret;
 }
 
@@ -61,15 +61,15 @@ void SimulatorScheduleEngine::InitStrategies() {
 
 bool SimulatorScheduleEngine::CompareInstanceOrder(TaskInstance* instance_a,
                                                    TaskInstance* instance_b) {
-  if (instance_a->to() == instance_b->to()) {
+  if (instance_a->dst_node() == instance_b->dst_node()) {
     // same node
-    return instance_a->from()->id() < instance_b->from()->id();
+    return instance_a->src_node()->id() < instance_b->src_node()->id();
   }
-  if (instance_a->from() == instance_b->from()) {
+  if (instance_a->src_node() == instance_b->src_node()) {
     // same batch
-    return instance_a->to()->depth() > instance_b->to()->depth();
+    return instance_a->dst_node()->depth() > instance_b->dst_node()->depth();
   }
-  return instance_a->to()->depth() < instance_b->to()->depth();
+  return instance_a->dst_node()->depth() < instance_b->dst_node()->depth();
 }
 
 TaskInstance* SimulatorScheduleEngine::PickInstanceToRun(
@@ -105,7 +105,7 @@ std::unique_ptr<SimulatorSchedule> SimulatorScheduleEngine::Run(
     auto instances_picked = Pick(&mut_tokens());
     for (const auto& p : *instances_picked) {
       auto dev = dynamic_cast<SDevice*>(p.first);
-      auto batch = p.second->from();
+      auto batch = p.second->src_node();
       BeforeRun(p.second);
       float ended_at = GetAscendentEndedAt(p.second);
       schedule()->mut_instance2ended_at()[p.second].first = ended_at;
@@ -114,12 +114,12 @@ std::unique_ptr<SimulatorSchedule> SimulatorScheduleEngine::Run(
       schedule()->mut_instance2ended_at()[p.second].second = ended_at;
       TimeLinePushBack(p.second, dev);
       AfterRun(p.second);
-      graph->arc_mgr().InputArc(p.second->to(), [&](TaskArc* arc) {
+      graph->arc_mgr().InputArc(p.second->dst_node(), [&](TaskArc* arc) {
         auto instance_input =
             session()->task_arc_instance_mgr().Find(batch, arc);
         mut_tokens().erase(instance_input);
       });
-      graph->arc_mgr().OutputArc(p.second->to(), [&](TaskArc* arc) {
+      graph->arc_mgr().OutputArc(p.second->dst_node(), [&](TaskArc* arc) {
         auto instance_output =
             session()->task_arc_instance_mgr().Find(batch, arc);
         mut_tokens().insert(instance_output);
