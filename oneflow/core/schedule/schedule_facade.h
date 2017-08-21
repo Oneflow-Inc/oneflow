@@ -25,9 +25,7 @@ class ScheduleFacade final {
   }
 
  private:
-  static std::string DefaultName() {
-    return "default";
-  }
+  static std::string DefaultName() { return "default"; }
   ScheduleFactoryProvider* sfp_;
 };
 
