@@ -16,8 +16,9 @@ class RegstMgr final {
 
   OF_SINGLETON(RegstMgr);
 
-  void NewRegsts(const RegstDescProto& regst_desc_proto,
-                 std::function<void(Regst*)> OneRegstDone);
+  std::vector<NetMemoryDescriptor> NewRegsts(
+      const RegstDescProto& regst_desc_proto,
+      std::function<void(Regst*)> OneRegstDone);
 
  private:
   RegstMgr() = default;

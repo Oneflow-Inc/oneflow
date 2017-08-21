@@ -31,13 +31,13 @@ std::string BoxingOp::obn2lbn(const std::string& output_bn) const {
   return GetStringFromSpecialConf("lbn");
 }
 
-void BoxingOp::InferShape4FwBlobs(
-    std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+void BoxingOp::InferBlobDesc4FwBlobs(
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
   auto boxing_conf = op_conf().boxing_conf();
   auto in_box_case = boxing_conf.in_box_case();
   std::vector<int64_t> data_tmp_blob_shape_vec =
-      GetShapePtr4BnInOp(input_bns().at(0))->dim_vec();
+      GetBlobDesc4BnInOp(input_bns().at(0))->shape().dim_vec();
 
   // if it is a concat-box, accumulate the dimensions on concat-axis.
   // otherwise only check all boxes are in the same shape.
@@ -47,7 +47,8 @@ void BoxingOp::InferShape4FwBlobs(
     CHECK(concat_axis == 0 || concat_axis == 1);
   }
   for (size_t ib_idx = 1; ib_idx < input_bns().size(); ++ib_idx) {
-    auto ib_shape_vec = GetShapePtr4BnInOp(input_bns().at(ib_idx))->dim_vec();
+    auto ib_shape_vec =
+        GetBlobDesc4BnInOp(input_bns().at(ib_idx))->shape().dim_vec();
     for (size_t i = 0; i < ib_shape_vec.size(); ++i) {
       if (in_box_case == BoxingOpConf::kConcatBox && i == concat_axis) {
         data_tmp_blob_shape_vec[i] += ib_shape_vec[i];
@@ -61,7 +62,8 @@ void BoxingOp::InferShape4FwBlobs(
   // it is stored back if and only if this is a concat-clone box
   if (in_box_case == BoxingOpConf::kConcatBox
       && out_box_case == BoxingOpConf::kCloneBox) {
-    *GetShapePtr4BnInOp(SoleDtbn()) = Shape(data_tmp_blob_shape_vec);
+    GetBlobDesc4BnInOp(SoleDtbn())->mut_shape() =
+        Shape(data_tmp_blob_shape_vec);
   }
   CHECK_NE(out_box_case, BoxingOpConf::OUT_BOX_NOT_SET);
   if (out_box_case == BoxingOpConf::kDataSplitBox) {
@@ -70,11 +72,12 @@ void BoxingOp::InferShape4FwBlobs(
     auto output_shape_vec = data_tmp_blob_shape_vec;
     for (size_t i = 0; i < out_num; ++i) {
       output_shape_vec[0] = splitter.At(i).size();
-      *GetShapePtr4BnInOp(output_bns()[i]) = Shape(output_shape_vec);
+      GetBlobDesc4BnInOp(output_bns()[i])->mut_shape() =
+          Shape(output_shape_vec);
     }
   } else if (out_box_case == BoxingOpConf::kCloneBox) {
     for (auto obn : output_bns()) {
-      *GetShapePtr4BnInOp(obn) = Shape(data_tmp_blob_shape_vec);
+      GetBlobDesc4BnInOp(obn)->mut_shape() = Shape(data_tmp_blob_shape_vec);
     }
   } else {
     UNEXPECTED_RUN();

@@ -16,7 +16,7 @@ class CopyTaskNode : public TaskNode {
 
  private:
   void BuildExecAndEnrollLbn2Regsts(TaskGraph*) override;
-  void InferShapeOfBlobsInProducedRegsts(TaskGraph*) override;
+  void InferBlobDescInProducedRegsts(TaskGraph*) override;
 };
 
 class CopyHDTaskNode final : public CopyTaskNode {

@@ -4,6 +4,7 @@
 namespace oneflow {
 
 extern const char* kPackedBlobName;
+extern const char* kNullDataId;
 
 }  // namespace oneflow
 

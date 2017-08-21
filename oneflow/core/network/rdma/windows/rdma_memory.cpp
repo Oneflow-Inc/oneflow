@@ -7,7 +7,7 @@ RdmaMemory::RdmaMemory(IND2MemoryRegion* memory_region)
     : memory_region_(memory_region) {}
 
 RdmaMemory::~RdmaMemory() {
-  if (registered_ == true) { Unregister(); }
+  // if (registered_ == true) { Unregister(); }
 }
 
 void RdmaMemory::Register() {

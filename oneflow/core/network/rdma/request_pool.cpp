@@ -19,6 +19,8 @@ Request* RequestPool::AllocRequest(bool is_send) {
   request->rdma_msg = msg_pool_->Alloc();
   if (is_send == false) {
     request->callback = callback4recv_msg_;
+
+    std::lock_guard<std::mutex> lock(mutex_);
     request_vector_.push_back(request);
   }
   return request;

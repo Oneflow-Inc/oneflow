@@ -64,6 +64,11 @@ void GrpcMasterService::Shutdown() {
 void GrpcMasterService::HandleRPCsLoop() {
   ENQUEUE_REQUEST(SendJob, false);
   ENQUEUE_REQUEST(MasterConnectDataPlane, false);
+  ENQUEUE_REQUEST(MasterInitRuntime, false);
+  ENQUEUE_REQUEST(MasterInitModel, false);
+  ENQUEUE_REQUEST(MasterActivateActor, false);
+  ENQUEUE_REQUEST(MasterSendRemoteRegst, false);
+  ENQUEUE_REQUEST(MasterStartActor, false);
   ENQUEUE_REQUEST(MasterInitDataPlane, false);
 
   void* tag;
@@ -109,6 +114,64 @@ void GrpcMasterService::MasterConnectDataPlaneHandler(
         });
   });
   ENQUEUE_REQUEST(MasterConnectDataPlane, true);
+}
+
+void GrpcMasterService::MasterInitRuntimeHandler(
+    MasterCall<MasterInitRuntimeRequest, MasterInitRuntimeResponse>* call) {
+  cpu_stream_->SendWork([this, call]() {
+    master_impl_->MasterInitRuntime(&call->request, &call->response,
+                                    [call](const ::tensorflow::Status& status) {
+                                      call->SendResponse(ToGrpcStatus(status));
+                                    });
+  });
+  ENQUEUE_REQUEST(MasterInitRuntime, true);
+}
+
+void GrpcMasterService::MasterInitModelHandler(
+    MasterCall<MasterInitModelRequest, MasterInitModelResponse>* call) {
+  cpu_stream_->SendWork([this, call]() {
+    master_impl_->MasterInitModel(&call->request, &call->response,
+                                  [call](const ::tensorflow::Status& status) {
+                                    call->SendResponse(ToGrpcStatus(status));
+                                  });
+  });
+  ENQUEUE_REQUEST(MasterInitModel, true);
+}
+
+void GrpcMasterService::MasterActivateActorHandler(
+    MasterCall<MasterActivateActorRequest, MasterActivateActorResponse>* call) {
+  cpu_stream_->SendWork([this, call]() {
+    master_impl_->MasterActivateActor(
+        &call->request, &call->response,
+        [call](const ::tensorflow::Status& status) {
+          call->SendResponse(ToGrpcStatus(status));
+        });
+  });
+  ENQUEUE_REQUEST(MasterActivateActor, true);
+}
+
+void GrpcMasterService::MasterSendRemoteRegstHandler(
+    MasterCall<MasterSendRemoteRegstRequest, MasterSendRemoteRegstResponse>*
+        call) {
+  cpu_stream_->SendWork([this, call]() {
+    master_impl_->MasterSendRemoteRegst(
+        &call->request, &call->response,
+        [call](const ::tensorflow::Status& status) {
+          call->SendResponse(ToGrpcStatus(status));
+        });
+  });
+  ENQUEUE_REQUEST(MasterSendRemoteRegst, true);
+}
+
+void GrpcMasterService::MasterStartActorHandler(
+    MasterCall<MasterStartActorRequest, MasterStartActorResponse>* call) {
+  cpu_stream_->SendWork([this, call]() {
+    master_impl_->MasterStartActor(&call->request, &call->response,
+                                   [call](const ::tensorflow::Status& status) {
+                                     call->SendResponse(ToGrpcStatus(status));
+                                   });
+  });
+  ENQUEUE_REQUEST(MasterStartActor, true);
 }
 
 void GrpcMasterService::MasterInitDataPlaneHandler(

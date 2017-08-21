@@ -27,6 +27,12 @@ namespace oneflow {
 enum class GrpcWorkerMethod {
   kSendPlan,
   kWorkerConnectDataPlane,
+  kWorkerInitRuntime,
+  kWorkerInitModel,
+  kWorkerActivateActor,
+  kWorkerSendRemoteRegst,
+  kWorkerSendRemoteRegstToConsumer,
+  kWorkerStartActor,
   kWorkerInitDataPlane,
 };
 static const int kGrpcNumWorkerMethods =
@@ -76,6 +82,12 @@ class WorkerService GRPC_FINAL {
     std::shared_ptr<::grpc::ChannelInterface> channel_;
     const ::grpc::RpcMethod rpcmethod_SendPlan_;
     const ::grpc::RpcMethod rpcmethod_WorkerConnectDataPlane_;
+    const ::grpc::RpcMethod rpcmethod_WorkerInitRuntime_;
+    const ::grpc::RpcMethod rpcmethod_WorkerInitModel_;
+    const ::grpc::RpcMethod rpcmethod_WorkerActivateActor_;
+    const ::grpc::RpcMethod rpcmethod_WorkerSendRemoteRegst_;
+    const ::grpc::RpcMethod rpcmethod_WorkerSendRemoteRegstToConsumer_;
+    const ::grpc::RpcMethod rpcmethod_WorkerStartActor_;
     const ::grpc::RpcMethod rpcmethod_WorkerInitDataPlane_;
   };  // class Stub
 

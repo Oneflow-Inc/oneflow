@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
   google::ParseCommandLineFlags(&argc, &argv, true);
   JobConf job_conf;
   ParseProtoFromTextFile(FLAGS_job_conf_filepath, &job_conf);
-  std::string dlnet_conf_filepath = job_conf.train_dlnet_conf_filepath();
+  std::string dlnet_conf_filepath = job_conf.dlnet_filepath();
   std::string resource_filepath = job_conf.resource_filepath();
   std::string placement_filepath = job_conf.placement_filepath();
 
@@ -75,6 +75,61 @@ int main(int argc, char** argv) {
     fout << str_plan << std::endl;
   } else {
     LOG(INFO) << "SendJob RPC fails";
+  }
+
+  MasterInitRuntimeRequest master_init_runtime_req;
+  MasterInitRuntimeResponse master_init_runtime_resp;
+  s = remote_master->MasterInitRuntime(&master_init_runtime_req,
+                                       &master_init_runtime_resp);
+
+  if (s.ok()) {
+    LOG(INFO) << "MasterInitRuntime RPC succeeds";
+  } else {
+    LOG(FATAL) << "MasterInitRuntime RPC fails";
+  }
+
+  MasterInitModelRequest master_init_model_req;
+  MasterInitModelResponse master_init_model_resp;
+  s = remote_master->MasterInitModel(&master_init_model_req,
+                                     &master_init_model_resp);
+
+  if (s.ok()) {
+    LOG(INFO) << "MasterInitModel RPC succeeds";
+  } else {
+    LOG(FATAL) << "MasterInitModel RPC fails";
+  }
+
+  MasterActivateActorRequest master_activate_actor_req;
+  MasterActivateActorResponse master_activate_actor_resp;
+  s = remote_master->MasterActivateActor(&master_activate_actor_req,
+                                         &master_activate_actor_resp);
+
+  if (s.ok()) {
+    LOG(INFO) << "MasterActivateActor RPC succeeds";
+  } else {
+    LOG(FATAL) << "MasterActivateActor RPC fails";
+  }
+
+  MasterSendRemoteRegstRequest master_send_remote_regst_req;
+  MasterSendRemoteRegstResponse master_send_remote_regst_resp;
+  s = remote_master->MasterSendRemoteRegst(&master_send_remote_regst_req,
+                                           &master_send_remote_regst_resp);
+
+  if (s.ok()) {
+    LOG(INFO) << "MasterSendRemoteRegst RPC succeeds";
+  } else {
+    LOG(FATAL) << "MasterSendRemoteRegst RPC fails";
+  }
+
+  MasterStartActorRequest master_start_actor_req;
+  MasterStartActorResponse master_start_actor_resp;
+  s = remote_master->MasterStartActor(&master_start_actor_req,
+                                      &master_start_actor_resp);
+
+  if (s.ok()) {
+    LOG(INFO) << "MasterStartActor RPC succeeds";
+  } else {
+    LOG(FATAL) << "MasterStartActor RPC fails";
   }
 
   MasterInitDataPlaneRequest master_init_dp_req;

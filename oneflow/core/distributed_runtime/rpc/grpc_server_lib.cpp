@@ -35,6 +35,8 @@ limitations under the License.
 #include "tensorflow/core/lib/strings/strcat.h"
 #include "tensorflow/core/platform/mem.h"
 
+#include "oneflow/core/actor/actor_message_bus.h"
+
 namespace oneflow {
 
 namespace {
@@ -68,6 +70,7 @@ GrpcServer::~GrpcServer() {
   CHECK_EQ(state_, NEW);
 
   ParseServerDef();
+  CreateWorkerCache();
 
   data_net_ = GetRdmaInstance();
   data_net_->InitOnly(my_machine_id_, net_topo_);
@@ -101,6 +104,8 @@ void GrpcServer::ParseServerDef() {
     std::string node_name =
         server_def_.cluster_def().cluster_node(i).node_name();
     ClusterNode cluster_node = server_def_.cluster_def().cluster_node(i);
+    CHECK(
+        name2node_def_.insert(std::make_pair(node_name, cluster_node)).second);
 
     int32_t ctrl_port_n;
     std::string ctrl_port_str = cluster_node.ctrl_plane_addr().port();
@@ -126,6 +131,7 @@ void GrpcServer::ParseServerDef() {
     node.address = cluster_node.data_plane_addr().addr();
     node.port = data_port_n;
     net_topo_.all_nodes.push_back(node);
+    name2id_.insert({node_name, i});
   }
 
   for (auto& node : net_topo_.all_nodes) {
@@ -137,6 +143,45 @@ void GrpcServer::ParseServerDef() {
   }
 }
 
+void GrpcServer::CreateWorkerCache() {
+  for (auto& pair : name2node_def_) {
+    auto& name = pair.first;
+    auto node_def_it = name2node_def_.find(name);
+    CHECK(node_def_it != name2node_def_.end());
+    auto& node_def = node_def_it->second;
+    auto& ctrl_addr = node_def.ctrl_plane_addr();
+    std::string worker_addr = ctrl_addr.addr() + ":" + ctrl_addr.port();
+    std::shared_ptr<::grpc::Channel> worker_channel = ::grpc::CreateChannel(
+        worker_addr, ::grpc::InsecureChannelCredentials());
+    std::shared_ptr<GrpcRemoteWorker> remote_worker(
+        new GrpcRemoteWorker(worker_channel, &completion_queue_));
+    CHECK(name2worker_.insert(std::make_pair(name, remote_worker)).second);
+    CHECK(name2id_.count(name));
+    int64_t machine_id = name2id_[name];
+    CHECK(id2worker_.insert(std::make_pair(machine_id, remote_worker)).second);
+  }
+}
+
+void GrpcServer::ProcessNetworkResult(const NetworkResult& result) {
+  switch (result.type) {
+    case NetworkResultType::kSendOk: ProcessSendOk(result); break;
+    case NetworkResultType::kReceiveMsg: ProcessReceiveMsg(result); break;
+    case NetworkResultType::kReadOk: ProcessReadOk(result); break;
+  }
+}
+
+void GrpcServer::ProcessSendOk(const NetworkResult& result) {
+  // LOG(INFO) << "Dataplane send network msg ok";
+}
+
+void GrpcServer::ProcessReceiveMsg(const NetworkResult& result) {
+  CHECK(result.net_msg.type == NetworkMessageType::kRequestAck);
+  result.callback(result.net_msg);
+}
+
+void GrpcServer::ProcessReadOk(const NetworkResult& result) {
+  result.callback(result.net_msg);
+}
 ::tensorflow::Status GrpcServer::Start() {
   ::tensorflow::mutex_lock l(mu_);
   switch (state_) {
@@ -156,6 +201,20 @@ void GrpcServer::ParseServerDef() {
         while (completion_queue_.Next(&tag, &ok)) {
           GrpcClientCQTag* callback_tag = static_cast<GrpcClientCQTag*>(tag);
           callback_tag->OnCompleted(ok);
+        }
+      });
+
+      data_net_->SetCallbackForReceivedActorMsg(
+          [](const NetworkMessage& net_msg) {
+            ActorMsg msg = net_msg.actor_msg;
+            msg.set_piece_id(net_msg.piece_id);
+            ActorMsgBus::Singleton()->SendMsg(msg);
+          });
+
+      data_plane_thread_ = std::thread([this]() {
+        NetworkResult result;
+        for (;;) {
+          if (data_net_->Poll(&result)) { ProcessNetworkResult(result); }
         }
       });
 
@@ -183,6 +242,7 @@ void GrpcServer::ParseServerDef() {
       master_service_->Shutdown();
       worker_service_->Shutdown();
       completion_queue_.Shutdown();
+      // TODO(jiyuan): shutdown the data plane cq
       return ::tensorflow::Status::OK();
     case STOPPED:
       LOG(INFO) << "Server already stopped (target: " << target() << ")";
@@ -206,6 +266,7 @@ void GrpcServer::ParseServerDef() {
       worker_thread_.join();
       worker_do_thread_.join();
       async_request_done_thread_.join();
+      data_plane_thread_.join();
       return ::tensorflow::Status::OK();
     default: CHECK(false);
   }
@@ -217,11 +278,12 @@ const std::string GrpcServer::target() const {
 }
 
 std::unique_ptr<Master> GrpcServer::CreateMaster() {
-  return std::unique_ptr<Master>(new Master(server_def_, &completion_queue_));
+  return std::unique_ptr<Master>(new Master(id2worker_));
 }
 
 std::unique_ptr<Worker> GrpcServer::CreateWorker() {
-  return std::unique_ptr<Worker>(new Worker(this_node_name_, data_net_));
+  return std::unique_ptr<Worker>(
+      new Worker(my_machine_id_, this_node_name_, data_net_, id2worker_));
 }
 
 /* static */

@@ -199,9 +199,10 @@ message MomentumModelUpdateOpConf {
 message RMSPropModelUpdateOpConf {
   float learning_rate = 1;
   float decay_rate = 2;
+  float epsilon = 3;
 }
 
-message ModelDiffAccOpConf {
+message AccumulateOpConf {
 }
 
 message ModelSaveOpConf {
@@ -211,6 +212,9 @@ message ModelSaveOpConf {
 message RecordOpConf {
   repeated string lbn = 1;
   string record_path = 2;
+}
+
+message LossRecordOpConf {
 }
 
 message OperatorConf {
@@ -228,12 +232,13 @@ message OperatorConf {
     BoxingOpConf boxing_conf = 109;
     NormalModelUpdateOpConf normal_mdupdt_conf = 110;
     ModelSaveOpConf model_save_conf = 111;
-    ModelDiffAccOpConf model_diff_acc_conf = 112;
+    AccumulateOpConf accumulate_conf = 112;
     ConcatOpConf concat_conf = 113;
     CopyCommNetOpConf copy_comm_net_conf = 114;
     MomentumModelUpdateOpConf momentum_mdupdt_conf = 115;
     RMSPropModelUpdateOpConf rmsprop_mdupdt_conf = 116;
     SoftmaxLossOpConf softmax_loss_conf = 117;
     RecordOpConf record_conf = 118;
+    LossRecordOpConf loss_record_conf = 119;
   }
 }

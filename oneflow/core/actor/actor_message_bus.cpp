@@ -13,7 +13,15 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
         IDMgr::Singleton()->ThrdLocId4ActorId(msg.dst_actor_id());
     ThreadMgr::Singleton()->GetThrd(thrd_loc_id)->GetMsgChannelPtr()->Send(msg);
   } else {
-    // TODO(shiyuan): Network::Singleton()->SendMsg(dst_machine_id, msg);
+    Network* net = GetRdmaInstance();
+    NetworkMessage net_msg;
+    net_msg.type = NetworkMessageType::kRequestAck;
+    net_msg.actor_msg = msg;
+    net_msg.src_machine_id = RuntimeCtx::Singleton()->this_machine_id();
+    net_msg.dst_machine_id = dst_machine_id;
+    // net_msg.piece_id = msg.regst()->piece_id();
+    net_msg.piece_id = msg.piece_id();
+    net->SendMsg(net_msg);
   }
 }
 

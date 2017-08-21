@@ -22,7 +22,7 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   const ChainGraph* chain_gph() const { return stage_gph_->chain_gph(); }
   std::vector<CompTaskNode*> CompTasksInChain(const ChainNode*);
 
-  void InferShapeOfBlobsInProducedRegsts();
+  void InferBlobDescInProducedRegsts();
 
   const std::string& name() const { return name_; }
 

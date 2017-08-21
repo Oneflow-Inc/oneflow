@@ -9,41 +9,10 @@
 
 namespace oneflow {
 
-Master::Master(const ServerDef& server_def,
-               ::grpc::CompletionQueue* completion_queue)
-    : server_def_(server_def), cq_(completion_queue) {
-  ParseServerDef();
-  CreateWorkerCache();
-}
-
-void Master::ParseServerDef() {
-  this_node_name_ = server_def_.this_node_name();
-
-  int32_t node_num = server_def_.cluster_def().cluster_node_size();
-  for (int32_t i = 0; i < node_num; ++i) {
-    std::string node_name =
-        server_def_.cluster_def().cluster_node(i).node_name();
-    ClusterNode cluster_node = server_def_.cluster_def().cluster_node(i);
-    CHECK(
-        name2node_def_.insert(std::make_pair(node_name, cluster_node)).second);
-  }
-}
-
-void Master::CreateWorkerCache() {
-  for (auto& pair : name2node_def_) {
-    auto& name = pair.first;
-    auto node_def_it = name2node_def_.find(name);
-    CHECK(node_def_it != name2node_def_.end());
-    auto& node_def = node_def_it->second;
-    auto& ctrl_addr = node_def.ctrl_plane_addr();
-    std::string worker_addr = ctrl_addr.addr() + ":" + ctrl_addr.port();
-    std::shared_ptr<::grpc::Channel> worker_channel = ::grpc::CreateChannel(
-        worker_addr, ::grpc::InsecureChannelCredentials());
-    std::shared_ptr<GrpcRemoteWorker> remote_worker(
-        new GrpcRemoteWorker(worker_channel, cq_));
-    CHECK(name2worker_.insert(std::make_pair(name, remote_worker)).second);
-  }
-}
+Master::Master(
+    const std::unordered_map<int64_t, std::shared_ptr<GrpcRemoteWorker>>&
+        id2worker)
+    : id2worker_(id2worker) {}
 
 Master::~Master() {}
 
@@ -60,9 +29,9 @@ Master::~Master() {}
   ::oneflow::compiler::Compiler::Singleton()->Compile(job_desc,
                                                       response->mutable_plan());
 
-  ::tensorflow::BlockingCounter blocking_counter(name2worker_.size());
+  ::tensorflow::BlockingCounter blocking_counter(id2worker_.size());
 
-  for (auto& pair : name2worker_) {
+  for (auto& pair : id2worker_) {
     struct Call {
       SendPlanRequest plan_req;
       SendPlanResponse plan_resp;
@@ -91,9 +60,9 @@ Master::~Master() {}
 ::tensorflow::Status Master::MasterConnectDataPlane(
     MasterConnectDataPlaneRequest* request,
     MasterConnectDataPlaneResponse* response, MyClosure done) {
-  ::tensorflow::BlockingCounter blocking_counter(name2worker_.size());
+  ::tensorflow::BlockingCounter blocking_counter(id2worker_.size());
 
-  for (auto& pair : name2worker_) {
+  for (auto& pair : id2worker_) {
     struct Call {
       WorkerConnectDataPlaneRequest connect_dp_req;
       WorkerConnectDataPlaneResponse connect_dp_resp;
@@ -118,12 +87,183 @@ Master::~Master() {}
   return ::tensorflow::Status::OK();
 }
 
+::tensorflow::Status Master::MasterInitRuntime(
+    MasterInitRuntimeRequest* request, MasterInitRuntimeResponse* response,
+    MyClosure done) {
+  ::tensorflow::BlockingCounter blocking_counter(id2worker_.size());
+
+  for (auto& pair : id2worker_) {
+    struct Call {
+      WorkerInitRuntimeRequest req;
+      WorkerInitRuntimeResponse resp;
+    };
+    Call* call = new Call;
+
+    auto cb = [call, &blocking_counter, &pair](const ::tensorflow::Status& s) {
+      if (s.ok()) {
+        LOG(INFO) << "Worker InitRuntime RPC succeeds";
+        blocking_counter.DecrementCount();
+      } else {
+        LOG(FATAL) << "Worker InitRuntime RPC fails" << pair.first;
+      }
+      delete call;
+    };
+    pair.second->WorkerInitRuntimeAsync(&call->req, &call->resp, cb);
+  }
+
+  blocking_counter.Wait();
+  done(::tensorflow::Status());
+  return ::tensorflow::Status::OK();
+}
+
+::tensorflow::Status Master::MasterInitModel(MasterInitModelRequest* request,
+                                             MasterInitModelResponse* response,
+                                             MyClosure done) {
+  ::tensorflow::BlockingCounter blocking_counter(id2worker_.size());
+
+  for (auto& pair : id2worker_) {
+    struct Call {
+      WorkerInitModelRequest req;
+      WorkerInitModelResponse resp;
+    };
+    Call* call = new Call;
+
+    auto cb = [call, &blocking_counter, &pair](const ::tensorflow::Status& s) {
+      if (s.ok()) {
+        LOG(INFO) << "Worker InitModel RPC succeeds";
+        blocking_counter.DecrementCount();
+      } else {
+        LOG(FATAL) << "Worker InitModel RPC fails" << pair.first;
+      }
+      delete call;
+    };
+    pair.second->WorkerInitModelAsync(&call->req, &call->resp, cb);
+  }
+
+  blocking_counter.Wait();
+  done(::tensorflow::Status());
+  return ::tensorflow::Status::OK();
+}
+
+::tensorflow::Status Master::MasterActivateActor(
+    MasterActivateActorRequest* request, MasterActivateActorResponse* response,
+    MyClosure done) {
+  ::tensorflow::BlockingCounter blocking_counter(id2worker_.size());
+
+  for (auto& pair : id2worker_) {
+    struct Call {
+      WorkerActivateActorRequest req;
+      WorkerActivateActorResponse resp;
+    };
+    Call* call = new Call;
+
+    auto cb = [call, &blocking_counter, &pair](const ::tensorflow::Status& s) {
+      if (s.ok()) {
+        LOG(INFO) << "Worker ActivateActor RPC succeeds";
+        blocking_counter.DecrementCount();
+      } else {
+        LOG(FATAL) << "Worker ActivateActor RPC fails" << pair.first;
+      }
+      delete call;
+    };
+    pair.second->WorkerActivateActorAsync(&call->req, &call->resp, cb);
+  }
+
+  blocking_counter.Wait();
+  done(::tensorflow::Status());
+  return ::tensorflow::Status::OK();
+}
+
+::tensorflow::Status Master::MasterSendRemoteRegst(
+    MasterSendRemoteRegstRequest* request,
+    MasterSendRemoteRegstResponse* response, MyClosure done) {
+  ::tensorflow::BlockingCounter inc_blocking_counter(id2worker_.size());
+  for (auto& pair : id2worker_) {
+    struct Call {
+      WorkerSendRemoteRegstRequest req;
+      WorkerSendRemoteRegstResponse resp;
+    };
+    Call* call = new Call;
+    call->req.set_ascending_order(true);
+
+    auto cb = [call, &inc_blocking_counter,
+               &pair](const ::tensorflow::Status& s) {
+      if (s.ok()) {
+        LOG(INFO) << "Master SendRemoteRegstToInc RPC succeeds:" << pair.first;
+        inc_blocking_counter.DecrementCount();
+      } else {
+        LOG(FATAL) << "Master SendRemoteRegstToInc RPC fails:" << pair.first;
+      }
+      delete call;
+    };
+    pair.second->WorkerSendRemoteRegstAsync(&call->req, &call->resp, cb);
+  }
+  inc_blocking_counter.Wait();
+  LOG(INFO) << "Master SendRemoteRegstToInc succeeds";
+
+  ::tensorflow::BlockingCounter dec_blocking_counter(id2worker_.size());
+  for (auto& pair : id2worker_) {
+    struct Call {
+      WorkerSendRemoteRegstRequest req;
+      WorkerSendRemoteRegstResponse resp;
+    };
+    Call* call = new Call;
+    call->req.set_ascending_order(false);
+
+    auto cb = [call, &dec_blocking_counter,
+               &pair](const ::tensorflow::Status& s) {
+      if (s.ok()) {
+        LOG(INFO) << "Worker SendRemoteRegstToDec RPC succeeds";
+        dec_blocking_counter.DecrementCount();
+      } else {
+        LOG(FATAL) << "Worker SendRemoteRegstToDec RPC fails" << pair.first;
+      }
+      delete call;
+    };
+    pair.second->WorkerSendRemoteRegstAsync(&call->req, &call->resp, cb);
+  }
+  dec_blocking_counter.Wait();
+  LOG(INFO) << "Master SendRemoteRegstToDec succeeds";
+
+  done(::tensorflow::Status());
+  return ::tensorflow::Status::OK();
+}
+
+::tensorflow::Status Master::MasterStartActor(
+    MasterStartActorRequest* request, MasterStartActorResponse* response,
+    MyClosure done) {
+  ::tensorflow::BlockingCounter blocking_counter(id2worker_.size());
+
+  for (auto& pair : id2worker_) {
+    struct Call {
+      WorkerStartActorRequest req;
+      WorkerStartActorResponse resp;
+    };
+    Call* call = new Call;
+
+    auto cb = [call, &blocking_counter, &pair](const ::tensorflow::Status& s) {
+      if (s.ok()) {
+        LOG(INFO) << "Worker StartActor RPC succeeds";
+        blocking_counter.DecrementCount();
+      } else {
+        LOG(FATAL) << "Worker StartActor RPC fails" << pair.first;
+      }
+      delete call;
+    };
+    pair.second->WorkerStartActorAsync(&call->req, &call->resp, cb);
+  }
+
+  blocking_counter.Wait();
+  done(::tensorflow::Status());
+  return ::tensorflow::Status::OK();
+}
+
 ::tensorflow::Status Master::MasterInitDataPlane(
     MasterInitDataPlaneRequest* request, MasterInitDataPlaneResponse* response,
     MyClosure done) {
-  ::tensorflow::BlockingCounter blocking_counter(name2worker_.size());
+  ::tensorflow::BlockingCounter blocking_counter(id2worker_.size());
 
-  for (auto& pair : name2worker_) {
+  for (auto& pair : id2worker_) {
     struct Call {
       WorkerInitDataPlaneRequest init_dp_req;
       WorkerInitDataPlaneResponse init_dp_resp;

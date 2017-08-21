@@ -22,9 +22,28 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   }
   // produced_regsts_
   for (const auto& pair : task_proto.produced_regst_desc()) {
-    RegstMgr::Singleton()->NewRegsts(pair.second, [this](Regst* regst) {
-      produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
-    });
+    std::vector<NetMemoryDescriptor> net_memory_descs =
+        RegstMgr::Singleton()->NewRegsts(pair.second, [this](Regst* regst) {
+          produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
+        });
+    // Handle with net_memory_descs
+    for (auto& net_memory_desc : net_memory_descs) {
+      net_memory_desc.this_machine_id = task_proto.machine_id();
+      for (auto& consumer_task_id : pair.second.consumer_task_id()) {
+        int64_t consumer_machine_id =
+            IDMgr::Singleton()->MachineId4ActorId(consumer_task_id);
+        if (consumer_machine_id != net_memory_desc.this_machine_id) {
+          net_memory_desc.consumer_machine_ids.push_back(consumer_machine_id);
+          net_memory_desc.consumer_task_ids.push_back(consumer_task_id);
+        } else {
+          // The regst of CopyCommNetActor will be consumed by the actors on the
+          // machine, we need not to send its memory descriptor to remote.
+          RuntimeCtx::Singleton()->AddRegst2NetMemory(
+              net_memory_desc.regst_ptr, net_memory_desc.network_ptr);
+        }
+      }
+      RuntimeCtx::Singleton()->AddLocalNetMemoryDesc(net_memory_desc);
+    }
   }
   // name2regst_desc_id_
   for (const auto& pair : task_proto.produced_regst_desc()) {
@@ -142,8 +161,9 @@ void Actor::AsyncSendReadableRegstMsg(
       if (!IsAllowedActor(consumer)) { continue; }
       total_reading_cnt_ += 1;
       regst_reading_cnt_it->second += 1;
-      device_ctx_->AddCallBack([consumer, regst]() {
-        ActorMsg msg = ActorMsg::BuildReadableRegstMsg(consumer, regst);
+      device_ctx_->AddCallBack([this, consumer, regst]() {
+        ActorMsg msg =
+            ActorMsg::BuildReadableRegstMsg(actor_id_, consumer, regst);
         ActorMsgBus::Singleton()->SendMsg(std::move(msg));
       });
     }
@@ -176,9 +196,10 @@ void Actor::AsyncSendEORDMsgToConsumers(int64_t regst_desc_id) {
           << "send eord for regst_desc_id:" << regst_desc_id;
   const RtRegstDesc* regst_desc =
       produced_regsts_.at(regst_desc_id).front()->regst_desc();
-  device_ctx_->AddCallBack([regst_desc]() {
+  device_ctx_->AddCallBack([this, regst_desc]() {
     for (int64_t consumer : regst_desc->consumers_actor_id()) {
       ActorMsg msg;
+      msg.set_src_actor_id(actor_id_);
       msg.set_dst_actor_id(consumer);
       msg.set_actor_cmd(ActorCmd::kEORD);
       ActorMsgBus::Singleton()->SendMsg(std::move(msg));
@@ -201,8 +222,8 @@ void Actor::AsyncSendRegstMsgToProducer(Regst* regst) {
           << "return register " << regst << " "
           << "to actor " << regst->producer_actor_id() << ", "
           << "regst_desc_id:" << regst->regst_desc_id();
-  ActorMsg msg =
-      ActorMsg::BuildRegstMsgToProducer(regst->producer_actor_id(), regst);
+  ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(regst->producer_actor_id(),
+                                                   actor_id_, regst);
   AsyncDo([msg]() { ActorMsgBus::Singleton()->SendMsg(msg); });
 }
 

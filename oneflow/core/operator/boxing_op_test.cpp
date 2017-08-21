@@ -36,7 +36,7 @@ TEST(BoxingOp, box_4_10x5x6x6) {
   };
 
   // do infer shape
-  boxing_op->InferShape4FwBlobs(fp, kModelParallel, 0, 1);
+  boxing_op->InferBlobDesc4FwBlobs(fp, kModelParallel, 0, 1);
 
   // test results
   // output_shape should be:
@@ -58,7 +58,7 @@ TEST(BoxingOp, box_4_10x5x6x6) {
   boxing_op = ConstructOp(op_conf);
 
   // do infer shape
-  boxing_op->InferShape4FwBlobs(fp, kModelParallel, 0, 1);
+  boxing_op->InferBlobDesc4FwBlobs(fp, kModelParallel, 0, 1);
 
   // test results
   // output shape should be the same as input
@@ -75,7 +75,7 @@ TEST(BoxingOp, box_4_10x5x6x6) {
   boxing_op = ConstructOp(op_conf);
 
   // do infer shape
-  boxing_op->InferShape4FwBlobs(fp, kModelParallel, 0, 1);
+  boxing_op->InferBlobDesc4FwBlobs(fp, kModelParallel, 0, 1);
 
   // data_tmp_shape is {10, 17, 6, 6}, and the 17 = 4 + 4 + 4 + 5
   Shape* data_tmp_shape_ptr = bn2shape_ptr.at(boxing_op->SoleDtbn());

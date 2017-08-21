@@ -15,11 +15,10 @@ const PbMessage& RMSPropModelUpdateOp::GetSpecialConf() const {
   return op_conf().rmsprop_mdupdt_conf();
 }
 
-void RMSPropModelUpdateOp::InferShape4FwBlobs(
-    std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+void RMSPropModelUpdateOp::InferBlobDesc4FwBlobs(
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
-  Shape* input_shape_ptr = GetShapePtr4BnInOp("model_diffs");
-  *GetShapePtr4BnInOp("mean_square") = *input_shape_ptr;
+  TODO();
 }
 
 REGISTER_OP(OperatorConf::kRmspropMdupdtConf, RMSPropModelUpdateOp);

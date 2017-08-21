@@ -13,8 +13,8 @@ class MemoryAllocator final {
 
   OF_SINGLETON(MemoryAllocator);
 
-  std::pair<char*, std::function<void()>> Allocate(MemoryCase mem_case,
-                                                   std::size_t size);
+  std::tuple<char*, std::function<void()>, void*> Allocate(MemoryCase mem_case,
+                                                           std::size_t size);
 
  private:
   MemoryAllocator() = default;

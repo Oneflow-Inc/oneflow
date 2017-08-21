@@ -22,6 +22,7 @@ limitations under the License.
 #include "grpc++/security/credentials.h"
 
 #include "oneflow/core/distributed_runtime/rpc/async_service_interface.h"
+#include "oneflow/core/distributed_runtime/rpc/grpc_remote_worker.h"
 #include "oneflow/core/distributed_runtime/server_def.pb.h"
 #include "oneflow/core/distributed_runtime/server_lib.h"
 #include "oneflow/core/network/network.h"
@@ -59,6 +60,8 @@ class GrpcServer : public ServerInterface {
   virtual std::unique_ptr<Master> CreateMaster();
   virtual std::unique_ptr<Worker> CreateWorker();
 
+  void CreateWorkerCache();
+
   // Returns the port to which this server is bound.
   // This method may only be called after `this->Init()` returns successfully.
   int bound_port() const { return bound_port_; }
@@ -74,11 +77,6 @@ class GrpcServer : public ServerInterface {
   std::string bound_ip_;
   // The port to which this server is bound.
   int bound_port_ = 0;
-
-  // For data plane network
-  NetworkTopology net_topo_;
-  int64_t my_machine_id_;
-  Network* data_net_;
 
   // Guards state transitions.
   ::tensorflow::mutex mu_;
@@ -112,7 +110,24 @@ class GrpcServer : public ServerInterface {
   ::grpc::CompletionQueue completion_queue_;
   std::thread async_request_done_thread_;
 
+  // For data plane network
+  NetworkTopology net_topo_;
+  int64_t my_machine_id_;
+  Network* data_net_;
+  std::thread data_plane_thread_;
+
+  std::unordered_map<std::string, ClusterNode> name2node_def_;
+  std::unordered_map<std::string, std::shared_ptr<GrpcRemoteWorker>>
+      name2worker_;
+  std::unordered_map<int64_t, std::shared_ptr<GrpcRemoteWorker>> id2worker_;
+  std::unordered_map<std::string, int64_t> name2id_;
+
   std::unique_ptr<::grpc::Server> server_;
+
+  void ProcessNetworkResult(const NetworkResult& result);
+  void ProcessSendOk(const NetworkResult& result);
+  void ProcessReceiveMsg(const NetworkResult& result);
+  void ProcessReadOk(const NetworkResult& result);
 };
 
 }  // namespace oneflow

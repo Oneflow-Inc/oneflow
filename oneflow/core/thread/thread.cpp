@@ -12,28 +12,28 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
   ActorMsg msg;
   while (true) {
     CHECK_EQ(msg_channel_.Receive(&msg), 0);
-    if (msg.msg_type() == ActorMsgType::kCmdMsg
-        && msg.actor_cmd() == ActorCmd::kStopThread) {
-      CHECK(id2actor_ptr_.empty());
-      break;
+    if (msg.msg_type() == ActorMsgType::kCmdMsg) {
+      if (msg.actor_cmd() == ActorCmd::kStopThread) {
+        CHECK(id2actor_ptr_.empty());
+        break;
+      } else if (msg.actor_cmd() == ActorCmd::kActivateActor) {
+        ActivateActor(msg.dst_actor_id(), thread_ctx);
+        continue;
+      } else {
+        // do nothing
+      }
     }
     int64_t actor_id = msg.dst_actor_id();
     auto actor_it = id2actor_ptr_.find(actor_id);
     if (actor_it == id2actor_ptr_.end()) {
-      if (msg.msg_type() == ActorMsgType::kCmdMsg
-          && msg.actor_cmd() == ActorCmd::kEORD) {
-        continue;
-      }
-      LOG(INFO) << "thread " << thrd_loc_id_ << " construct actor " << actor_id;
-      std::unique_lock<std::mutex> lck(id2task_mtx_);
-      int64_t task_id = IDMgr::Singleton()->TaskId4ActorId(actor_id);
-      auto task_it = id2task_.find(task_id);
-      auto emplace_ret = id2actor_ptr_.emplace(
-          actor_id, ConstructActor(task_it->second, thread_ctx));
-      id2task_.erase(task_it);
-      actor_it = emplace_ret.first;
-      CHECK(emplace_ret.second);
+      CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
+      continue;
     }
+    // LOG(INFO) << "New received:";
+    // LOG(INFO) << "From:        " << msg.src_actor_id();
+    // LOG(INFO) << "To:          " << msg.dst_actor_id();
+    // LOG(INFO) << "Piece id:    " << msg.piece_id();
+    // LOG(INFO) << "Type:        " << msg.msg_type();
     int process_msg_ret = actor_it->second->ProcessMsg(msg);
     if (process_msg_ret == 1) {
       LOG(INFO) << "thread " << thrd_loc_id_ << " deconstruct actor "
@@ -52,6 +52,18 @@ void Thread::Deconstruct() {
   msg_channel_.CloseSendEnd();
   msg_channel_.CloseReceiveEnd();
   CHECK(id2actor_ptr_.empty());
+}
+
+void Thread::ActivateActor(int64_t actor_id, const ThreadCtx& thread_ctx) {
+  LOG(INFO) << "thread " << thrd_loc_id_ << " construct actor " << actor_id;
+  std::unique_lock<std::mutex> lck(id2task_mtx_);
+  int64_t task_id = IDMgr::Singleton()->TaskId4ActorId(actor_id);
+  auto task_it = id2task_.find(task_id);
+  CHECK(id2actor_ptr_
+            .emplace(actor_id, ConstructActor(task_it->second, thread_ctx))
+            .second);
+  id2task_.erase(task_it);
+  RuntimeCtx::Singleton()->mut_inactive_actor_cnt().MinusOne();
 }
 
 }  // namespace oneflow

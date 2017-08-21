@@ -30,6 +30,16 @@ const char* GrpcMasterMethodName(GrpcMasterMethod id) {
     case GrpcMasterMethod::kSendJob: return "/oneflow.MasterService/SendJob";
     case GrpcMasterMethod::kMasterConnectDataPlane:
       return "/oneflow.MasterService/MasterConnectDataPlane";
+    case GrpcMasterMethod::kMasterInitRuntime:
+      return "/oneflow.MasterService/MasterInitRuntime";
+    case GrpcMasterMethod::kMasterInitModel:
+      return "/oneflow.MasterService/MasterInitModel";
+    case GrpcMasterMethod::kMasterActivateActor:
+      return "/oneflow.MasterService/MasterActivateActor";
+    case GrpcMasterMethod::kMasterSendRemoteRegst:
+      return "/oneflow.MasterService/MasterSendRemoteRegst";
+    case GrpcMasterMethod::kMasterStartActor:
+      return "/oneflow.MasterService/MasterStartActor";
     case GrpcMasterMethod::kMasterInitDataPlane:
       return "/oneflow.MasterService/MasterInitDataPlane";
   }
@@ -51,8 +61,23 @@ MasterService::Stub::Stub(
       rpcmethod_MasterConnectDataPlane_(
           GrpcMasterMethodName(static_cast<GrpcMasterMethod>(1)),
           ::grpc::RpcMethod::NORMAL_RPC, channel),
-      rpcmethod_MasterInitDataPlane_(
+      rpcmethod_MasterInitRuntime_(
           GrpcMasterMethodName(static_cast<GrpcMasterMethod>(2)),
+          ::grpc::RpcMethod::NORMAL_RPC, channel),
+      rpcmethod_MasterInitModel_(
+          GrpcMasterMethodName(static_cast<GrpcMasterMethod>(3)),
+          ::grpc::RpcMethod::NORMAL_RPC, channel),
+      rpcmethod_MasterActivateActor_(
+          GrpcMasterMethodName(static_cast<GrpcMasterMethod>(4)),
+          ::grpc::RpcMethod::NORMAL_RPC, channel),
+      rpcmethod_MasterSendRemoteRegst_(
+          GrpcMasterMethodName(static_cast<GrpcMasterMethod>(5)),
+          ::grpc::RpcMethod::NORMAL_RPC, channel),
+      rpcmethod_MasterStartActor_(
+          GrpcMasterMethodName(static_cast<GrpcMasterMethod>(6)),
+          ::grpc::RpcMethod::NORMAL_RPC, channel),
+      rpcmethod_MasterInitDataPlane_(
+          GrpcMasterMethodName(static_cast<GrpcMasterMethod>(7)),
           ::grpc::RpcMethod::NORMAL_RPC, channel) {}
 
 ::grpc::Status MasterService::Stub::SendJob(::grpc::ClientContext* context,
@@ -70,6 +95,44 @@ MasterService::Stub::Stub(
                                    rpcmethod_MasterConnectDataPlane_, context,
                                    request, response);
 }
+
+::grpc::Status MasterService::Stub::MasterInitRuntime(
+    ::grpc::ClientContext* context, const MasterInitRuntimeRequest& request,
+    MasterInitRuntimeResponse* response) {
+  return ::grpc::BlockingUnaryCall(channel_.get(), rpcmethod_MasterInitRuntime_,
+                                   context, request, response);
+}
+
+::grpc::Status MasterService::Stub::MasterInitModel(
+    ::grpc::ClientContext* context, const MasterInitModelRequest& request,
+    MasterInitModelResponse* response) {
+  return ::grpc::BlockingUnaryCall(channel_.get(), rpcmethod_MasterInitModel_,
+                                   context, request, response);
+}
+
+::grpc::Status MasterService::Stub::MasterActivateActor(
+    ::grpc::ClientContext* context, const MasterActivateActorRequest& request,
+    MasterActivateActorResponse* response) {
+  return ::grpc::BlockingUnaryCall(channel_.get(),
+                                   rpcmethod_MasterActivateActor_, context,
+                                   request, response);
+}
+
+::grpc::Status MasterService::Stub::MasterSendRemoteRegst(
+    ::grpc::ClientContext* context, const MasterSendRemoteRegstRequest& request,
+    MasterSendRemoteRegstResponse* response) {
+  return ::grpc::BlockingUnaryCall(channel_.get(),
+                                   rpcmethod_MasterSendRemoteRegst_, context,
+                                   request, response);
+}
+
+::grpc::Status MasterService::Stub::MasterStartActor(
+    ::grpc::ClientContext* context, const MasterStartActorRequest& request,
+    MasterStartActorResponse* response) {
+  return ::grpc::BlockingUnaryCall(channel_.get(), rpcmethod_MasterStartActor_,
+                                   context, request, response);
+}
+
 ::grpc::Status MasterService::Stub::MasterInitDataPlane(
     ::grpc::ClientContext* context, const MasterInitDataPlaneRequest& request,
     MasterInitDataPlaneResponse* response) {

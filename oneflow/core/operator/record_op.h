@@ -15,8 +15,8 @@ class RecordOp final : public SysOperator {
   const PbMessage& GetSpecialConf() const override;
   bool IsRecordOp() const override { return true; }
 
-  void InferShape4FwBlobs(
-      std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+  void InferBlobDesc4FwBlobs(
+      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       ParallelPolicy policy, int64_t parallel_id,
       int64_t parallel_num) const override {}
 

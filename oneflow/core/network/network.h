@@ -21,16 +21,18 @@ class Network {
   virtual void ConnectTopology() = 0;
 
   virtual NetworkMemory* RegisterMemory(void* dptr, size_t len) = 0;
+  virtual void UnRegisterMemory(void* dptr) = 0;
 
   // |msg| is owned by the caller and can be released once |Send| returns, even
   // though the actual transmission of the |msg| content has not occurred.
   virtual void SendMsg(const NetworkMessage& msg) = 0;
   virtual void SetCallbackForReceivedActorMsg(
-      std::function<void()> callback) = 0;
+      std::function<void(const NetworkMessage& net_msg)> callback) = 0;
 
-  virtual void Read(const MemoryDescriptor& remote_memory_descriptor,
-                    NetworkMemory* local_memory,
-                    std::function<void()> callback) = 0;
+  virtual void Read(
+      const MemoryDescriptor& remote_memory_descriptor,
+      NetworkMemory* local_memory,
+      std::function<void(const NetworkMessage& net_msg)> callback) = 0;
 
   // Poll a result from completion queue if have. Return true if get result,
   // false otherwise.

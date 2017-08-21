@@ -4,6 +4,5 @@ package oneflow;
 import "oneflow/core/operator/op_conf.proto";
 
 message DLNetConf {
-  string name = 1;
   repeated OperatorConf op = 100;
 }

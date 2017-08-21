@@ -10,8 +10,8 @@ namespace oneflow {
 
 class Master {
  public:
-  Master(const ServerDef& server_def,
-         ::grpc::CompletionQueue* completion_queue);
+  Master(const std::unordered_map<int64_t, std::shared_ptr<GrpcRemoteWorker>>&
+             id2worker);
   ~Master();
 
   // Convenient typedef for a closure passing a Status
@@ -24,22 +24,33 @@ class Master {
       MasterConnectDataPlaneRequest* request,
       MasterConnectDataPlaneResponse* response, MyClosure done);
 
+  ::tensorflow::Status MasterInitRuntime(MasterInitRuntimeRequest* request,
+                                         MasterInitRuntimeResponse* response,
+                                         MyClosure done);
+
+  ::tensorflow::Status MasterInitModel(MasterInitModelRequest* request,
+                                       MasterInitModelResponse* response,
+                                       MyClosure done);
+
+  ::tensorflow::Status MasterActivateActor(
+      MasterActivateActorRequest* request,
+      MasterActivateActorResponse* response, MyClosure done);
+
+  ::tensorflow::Status MasterSendRemoteRegst(
+      MasterSendRemoteRegstRequest* request,
+      MasterSendRemoteRegstResponse* response, MyClosure done);
+
+  ::tensorflow::Status MasterStartActor(MasterStartActorRequest* request,
+                                        MasterStartActorResponse* response,
+                                        MyClosure done);
+
   ::tensorflow::Status MasterInitDataPlane(
       MasterInitDataPlaneRequest* request,
       MasterInitDataPlaneResponse* response, MyClosure done);
 
  private:
-  void ParseServerDef();
-  void CreateWorkerCache();
-
-  // The overall server configuration.
-  const ServerDef server_def_;
-  std::string this_node_name_;
-  std::unordered_map<std::string, ClusterNode> name2node_def_;
-  std::unordered_map<std::string, std::shared_ptr<GrpcRemoteWorker>>
-      name2worker_;
-
-  ::grpc::CompletionQueue* cq_;
+  const std::unordered_map<int64_t, std::shared_ptr<GrpcRemoteWorker>>&
+      id2worker_;
 };  // Master
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_DISTRIBUTED_RUNTIME_MASTER_H_

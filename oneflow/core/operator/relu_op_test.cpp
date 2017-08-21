@@ -17,7 +17,7 @@ TEST(ReluOp, relu_3x5x4) {
     return bn2shape_ptr.at(bn);
   };
   // do infer shape
-  relu_op->InferShape4FwBlobs(fp, kDataParallel, 0, 1);
+  relu_op->InferBlobDesc4FwBlobs(fp, kDataParallel, 0, 1);
   // test
   Shape* input_shape_ptr = bn2shape_ptr.at(relu_op->SoleIbn());
   Shape* output_shape_ptr = bn2shape_ptr.at(relu_op->SoleObn());

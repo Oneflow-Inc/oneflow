@@ -64,6 +64,12 @@ void GrpcWorkerService::Shutdown() {
 void GrpcWorkerService::HandleRPCsLoop() {
   ENQUEUE_REQUEST(SendPlan, false);
   ENQUEUE_REQUEST(WorkerConnectDataPlane, false);
+  ENQUEUE_REQUEST(WorkerInitRuntime, false);
+  ENQUEUE_REQUEST(WorkerInitModel, false);
+  ENQUEUE_REQUEST(WorkerActivateActor, false);
+  ENQUEUE_REQUEST(WorkerSendRemoteRegst, false);
+  ENQUEUE_REQUEST(WorkerSendRemoteRegstToConsumer, false);
+  ENQUEUE_REQUEST(WorkerStartActor, false);
   ENQUEUE_REQUEST(WorkerInitDataPlane, false);
 
   void* tag;
@@ -108,7 +114,78 @@ void GrpcWorkerService::WorkerConnectDataPlaneHandler(
           call->SendResponse(ToGrpcStatus(status));
         });
   });
-  ENQUEUE_REQUEST(WorkerInitDataPlane, true);
+  ENQUEUE_REQUEST(WorkerConnectDataPlane, true);
+}
+
+void GrpcWorkerService::WorkerInitRuntimeHandler(
+    WorkerCall<WorkerInitRuntimeRequest, WorkerInitRuntimeResponse>* call) {
+  cpu_stream_->SendWork([this, call]() {
+    worker_impl_->WorkerInitRuntime(&call->request, &call->response,
+                                    [call](const ::tensorflow::Status& status) {
+                                      call->SendResponse(ToGrpcStatus(status));
+                                    });
+  });
+  ENQUEUE_REQUEST(WorkerInitRuntime, true);
+}
+
+void GrpcWorkerService::WorkerInitModelHandler(
+    WorkerCall<WorkerInitModelRequest, WorkerInitModelResponse>* call) {
+  cpu_stream_->SendWork([this, call]() {
+    worker_impl_->WorkerInitModel(&call->request, &call->response,
+                                  [call](const ::tensorflow::Status& status) {
+                                    call->SendResponse(ToGrpcStatus(status));
+                                  });
+  });
+  ENQUEUE_REQUEST(WorkerInitModel, true);
+}
+
+void GrpcWorkerService::WorkerActivateActorHandler(
+    WorkerCall<WorkerActivateActorRequest, WorkerActivateActorResponse>* call) {
+  cpu_stream_->SendWork([this, call]() {
+    worker_impl_->WorkerActivateActor(
+        &call->request, &call->response,
+        [call](const ::tensorflow::Status& status) {
+          call->SendResponse(ToGrpcStatus(status));
+        });
+  });
+  ENQUEUE_REQUEST(WorkerActivateActor, true);
+}
+
+void GrpcWorkerService::WorkerSendRemoteRegstHandler(
+    WorkerCall<WorkerSendRemoteRegstRequest, WorkerSendRemoteRegstResponse>*
+        call) {
+  cpu_stream_->SendWork([this, call]() {
+    worker_impl_->WorkerSendRemoteRegst(
+        &call->request, &call->response,
+        [call](const ::tensorflow::Status& status) {
+          call->SendResponse(ToGrpcStatus(status));
+        });
+  });
+  ENQUEUE_REQUEST(WorkerSendRemoteRegst, true);
+}
+
+void GrpcWorkerService::WorkerSendRemoteRegstToConsumerHandler(
+    WorkerCall<WorkerSendRemoteRegstToConsumerRequest,
+               WorkerSendRemoteRegstToConsumerResponse>* call) {
+  cpu_stream_->SendWork([this, call]() {
+    worker_impl_->WorkerSendRemoteRegstToConsumer(
+        &call->request, &call->response,
+        [call](const ::tensorflow::Status& status) {
+          call->SendResponse(ToGrpcStatus(status));
+        });
+  });
+  ENQUEUE_REQUEST(WorkerSendRemoteRegstToConsumer, true);
+}
+
+void GrpcWorkerService::WorkerStartActorHandler(
+    WorkerCall<WorkerStartActorRequest, WorkerStartActorResponse>* call) {
+  cpu_stream_->SendWork([this, call]() {
+    worker_impl_->WorkerStartActor(&call->request, &call->response,
+                                   [call](const ::tensorflow::Status& status) {
+                                     call->SendResponse(ToGrpcStatus(status));
+                                   });
+  });
+  ENQUEUE_REQUEST(WorkerStartActor, true);
 }
 
 void GrpcWorkerService::WorkerInitDataPlaneHandler(
