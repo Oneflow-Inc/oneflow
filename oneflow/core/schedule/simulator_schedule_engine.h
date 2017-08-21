@@ -138,23 +138,13 @@ class SimulatorScheduleEngine : public ScheduleEngine {
   std::unique_ptr<SimulatorSchedule> Run(
       const std::function<uint32_t(uint64_t)>& get_regst_num);
 
-  STask* EndNode() { return direction_->EndNode(); }
-
-  inline float GetTime(float x) { return direction_->GetTime(x); }
-  inline float GetStartTime(const std::pair<float, float>& p) {
-    return direction_->GetStartTime(p);
-  }
-  inline float GetEndTime(const std::pair<float, float>& p) {
-    return direction_->GetEndTime(p);
-  }
+  TaskInstance* PickInstanceToRun(const std::list<TaskInstance*>& instances);
+  bool CompareInstanceOrder(TaskInstance* instance_a, TaskInstance* instance_b);
 
   inline std::unordered_set<TaskArcInstance*>& mut_tokens() { return tokens_; }
 
   //	getter
   inline SimulatorSchedule* schedule() const { return schedule_.get(); }
-  inline DirectionSimulationStrategy* direction() const {
-    return direction_.get();
-  }
   inline EvaluationSimulationStrategy* evaluation() const {
     return evaluation_.get();
   }
@@ -164,12 +154,7 @@ class SimulatorScheduleEngine : public ScheduleEngine {
 
  private:
   void InitStrategies();
-  std::unique_ptr<Schedule> RunInTwoDirections(
-      const std::function<uint32_t(uint64_t)>& get_regst_num);
 
-  void SetStrategy(std::unique_ptr<DirectionSimulationStrategy>&& direction) {
-    direction_ = std::move(direction);
-  }
   void SetStrategy(std::unique_ptr<EvaluationSimulationStrategy>&& evaluation) {
     evaluation_ = std::move(evaluation);
   }
@@ -181,15 +166,6 @@ class SimulatorScheduleEngine : public ScheduleEngine {
     memory_->InitRegst(get_regst_num);
   }
 
-  inline void NewStartTokens() { return direction_->NewStartTokens(); }
-  inline uint32_t NextArc(STask* node,
-                          const std::function<void(TaskArc*)>& cb) {
-    return direction_->NextArc(node, cb);
-  }
-  inline uint32_t PrevArc(STask* node,
-                          const std::function<void(TaskArc*)>& cb) {
-    return direction_->PrevArc(node, cb);
-  }
   inline std::unique_ptr<std::unordered_map<SDevice*, TaskInstance*>> Pick(
       std::unordered_set<TaskArcInstance*>* tokens) {
     return memory_->Pick(tokens);
@@ -210,7 +186,6 @@ class SimulatorScheduleEngine : public ScheduleEngine {
     return memory_->get_ascendent_ended_at_(instance);
   }
   std::unique_ptr<SimulatorSchedule> schedule_;
-  std::unique_ptr<DirectionSimulationStrategy> direction_;
   std::unique_ptr<EvaluationSimulationStrategy> evaluation_;
   std::unique_ptr<MemorySimulationStrategy> memory_;
   std::unordered_set<TaskArcInstance*> tokens_;

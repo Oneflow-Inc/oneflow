@@ -42,6 +42,7 @@ class Session {
   }
 
   void NewBatchs();
+  Batch* EndBatch() { return batch_node_mgr().Find(nr_batch() - 1); }
   TaskInstance* GetNextBatchInstance(TaskInstance* instance, int32_t step = 1);
   TaskInstance* GetPrevBatchInstance(TaskInstance* instance);
   std::unique_ptr<std::list<Batch*>> GetBatchNodes();

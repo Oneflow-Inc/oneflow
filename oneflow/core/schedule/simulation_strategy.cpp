@@ -13,99 +13,12 @@ void LazyEvaluationStrategy::TimeLinePushBack(TaskInstance* instance,
   schedule_engine()->schedule()->TimeLinePushBack(instance, device);
 }
 
-uint32_t PositiveDirectionStrategy::HoldingRegstDesc(
-    STask* node, const std::function<void(SRegstDesc*)>& cb) {
-  auto graph = schedule_engine()->session()->graph();
-  return graph->produced_regst_desc_mgr().Output(node, cb);
-}
-
-uint32_t PositiveDirectionStrategy::RegstDescReleasingNode(
-    SRegstDesc* regst_desc, const std::function<void(STask*)>& cb) {
-  auto graph = schedule_engine()->session()->graph();
-  return graph->subscribed_regst_desc_mgr().Input(regst_desc, cb);
-}
-
-uint32_t NegativeDirectionStrategy::HoldingRegstDesc(
-    STask* node, const std::function<void(SRegstDesc*)>& cb) {
-  auto graph = schedule_engine()->session()->graph();
-  return graph->subscribed_regst_desc_mgr().Output(node, cb);
-}
-
-uint32_t NegativeDirectionStrategy::RegstDescReleasingNode(
-    SRegstDesc* regst_desc, const std::function<void(STask*)>& cb) {
-  auto graph = schedule_engine()->session()->graph();
-  return graph->produced_regst_desc_mgr().Input(regst_desc, cb);
-}
-
-STask* PositiveDirectionStrategy::StartNode() {
-  return schedule_engine()->session()->graph()->source();
-}
-
-STask* PositiveDirectionStrategy::EndNode() {
-  return schedule_engine()->session()->graph()->sink();
-}
-
-Batch* PositiveDirectionStrategy::EndBatch() {
-  auto session = schedule_engine()->session();
-  return session->batch_node_mgr().Find(session->nr_batch() - 1);
-}
-
-bool PositiveDirectionStrategy::CompareInstanceOrder(TaskInstance* instance_a,
-                                                     TaskInstance* instance_b) {
-  if (instance_a->to() == instance_b->to()) {
-    // same node
-    return instance_a->from()->id() < instance_b->from()->id();
-  }
-  if (instance_a->from() == instance_b->from()) {
-    // same batch
-    return instance_a->to()->depth() > instance_b->to()->depth();
-  }
-  return instance_a->to()->depth() < instance_b->to()->depth();
-}
-
-STask* NegativeDirectionStrategy::StartNode() {
-  return schedule_engine()->session()->graph()->sink();
-}
-
-STask* NegativeDirectionStrategy::EndNode() {
-  return schedule_engine()->session()->graph()->source();
-}
-
-Batch* NegativeDirectionStrategy::EndBatch() {
-  return schedule_engine()->session()->batch_node_mgr().Find(0u);
-}
-
-bool NegativeDirectionStrategy::CompareInstanceOrder(TaskInstance* instance_a,
-                                                     TaskInstance* instance_b) {
-  if (instance_a->to() == instance_b->to()) {
-    // same node
-    return instance_a->from()->id() > instance_b->from()->id();
-  }
-  if (instance_a->from() == instance_b->from()) {
-    // same batch
-    return instance_a->to()->depth() < instance_b->to()->depth();
-  }
-  return instance_a->to()->depth() > instance_b->to()->depth();
-}
-
-TaskInstance* DirectionSimulationStrategy::PickInstanceToRun(
-    const std::list<TaskInstance*>& instances) {
-  TaskInstance* ret = nullptr;
-  if (instances.size()) {
-    auto itt = instances.begin();
-    ret = *itt;
-    for (; itt != instances.end(); itt++) {
-      if (CompareInstanceOrder(*itt, ret)) { ret = *itt; }
-    }
-  }
-  return ret;
-}
-
 void MemorySimulationStrategy::InitFuncs() {
   get_node_instance_ = [&](TaskArcInstance* arc) {
-    auto direction = schedule_engine()->direction();
-    return direction->GetNextNodeInstance(arc);
+    auto session = schedule_engine()->session();
+    return session->task_instance_mgr().Find(arc->from(), arc->to()->to());
   };
+
   is_instance_ready_ = std::bind(&MemorySimulationStrategy::IsInstanceReady,
                                  this, std::placeholders::_1);
   get_instance_device_ = std::bind(&SimulatorScheduleEngine::GetInstanceDevice,
@@ -114,32 +27,15 @@ void MemorySimulationStrategy::InitFuncs() {
       std::bind(&MemorySimulationStrategy::GetAscendentEndedAt, this,
                 std::placeholders::_1);
   pick_instance_to_run_ = [&](const std::list<TaskInstance*>& instances) {
-    auto direction = schedule_engine()->direction();
-    return direction->PickInstanceToRun(instances);
+    return schedule_engine()->PickInstanceToRun(instances);
   };
-}
-
-TaskInstance* NegativeDirectionStrategy::GetNextNodeInstance(
-    TaskArcInstance* arc) {
-  auto session = schedule_engine()->session();
-  return session->task_instance_mgr().Find(arc->from(), arc->to()->from());
-}
-
-TaskInstance* PositiveDirectionStrategy::GetNextNodeInstance(
-    TaskArcInstance* arc) {
-  auto session = schedule_engine()->session();
-  return session->task_instance_mgr().Find(arc->from(), arc->to()->to());
-}
-
-void PositiveDirectionStrategy::NewStartTokens() {
-  schedule_engine()->NewSourceTokens();
 }
 
 bool MemorySimulationStrategy::IsInstanceReady(TaskInstance* instance) {
   bool ready = true;
   auto session = schedule_engine()->session();
-  auto direction = schedule_engine()->direction();
-  direction->PrevArc(instance->to(), [&](TaskArc* arc) {
+  auto graph = session->graph();
+  graph->arc_mgr().InputArc(instance->to(), [&](TaskArc* arc) {
     auto instance_input =
         session->task_arc_instance_mgr().Find(instance->from(), arc);
     if (schedule_engine()->mut_tokens().find(instance_input)
@@ -148,58 +44,6 @@ bool MemorySimulationStrategy::IsInstanceReady(TaskInstance* instance) {
     }
   });
   return ready;
-}
-
-void NegativeDirectionStrategy::NewStartTokens() {
-  schedule_engine()->NewSinkTokens();
-}
-
-uint32_t PositiveDirectionStrategy::PrevArc(
-    STask* node, const std::function<void(TaskArc*)>& cb) {
-  auto graph = schedule_engine()->session()->graph();
-  return graph->arc_mgr().InputArc(node, cb);
-}
-
-uint32_t PositiveDirectionStrategy::Prev(
-    STask* node, const std::function<void(STask*)>& cb) {
-  auto graph = schedule_engine()->session()->graph();
-  return graph->arc_mgr().Input(node, cb);
-}
-
-uint32_t PositiveDirectionStrategy::NextArc(
-    STask* node, const std::function<void(TaskArc*)>& cb) {
-  auto graph = schedule_engine()->session()->graph();
-  return graph->arc_mgr().OutputArc(node, cb);
-}
-
-uint32_t PositiveDirectionStrategy::Next(
-    STask* node, const std::function<void(STask*)>& cb) {
-  auto graph = schedule_engine()->session()->graph();
-  return graph->arc_mgr().Output(node, cb);
-}
-
-uint32_t NegativeDirectionStrategy::PrevArc(
-    STask* node, const std::function<void(TaskArc*)>& cb) {
-  auto graph = schedule_engine()->session()->graph();
-  return graph->arc_mgr().OutputArc(node, cb);
-}
-
-uint32_t NegativeDirectionStrategy::Prev(
-    STask* node, const std::function<void(STask*)>& cb) {
-  auto graph = schedule_engine()->session()->graph();
-  return graph->arc_mgr().Output(node, cb);
-}
-
-uint32_t NegativeDirectionStrategy::NextArc(
-    STask* node, const std::function<void(TaskArc*)>& cb) {
-  auto graph = schedule_engine()->session()->graph();
-  return graph->arc_mgr().InputArc(node, cb);
-}
-
-uint32_t NegativeDirectionStrategy::Next(
-    STask* node, const std::function<void(STask*)>& cb) {
-  auto graph = schedule_engine()->session()->graph();
-  return graph->arc_mgr().Input(node, cb);
 }
 
 void LimitedMemoryStrategy::InitFuncIsInstanceReady() {
@@ -240,8 +84,8 @@ float EvaluationSimulationStrategy::GetAscendentEndedAt(
   float ended_at = 0;
   auto session = schedule_engine()->session();
   auto schedule = schedule_engine()->schedule();
-  auto direction = schedule_engine()->direction();
-  direction->Prev(instance->to(), [&](STask* node) {
+  auto graph = session->graph();
+  graph->arc_mgr().Input(instance->to(), [&](STask* node) {
     auto instance_input =
         session->task_instance_mgr().Find(instance->from(), node);
     auto itt = schedule->instance2ended_at().find(instance_input);
@@ -263,34 +107,36 @@ float MemorySimulationStrategy::GetAscendentEndedAt(TaskInstance* instance) {
 float LimitedMemoryStrategy::RegstDescEndedAt(TaskInstance* instance) {
   float ended_at = 0;
   auto schedule = schedule_engine()->schedule();
-  auto direction = schedule_engine()->direction();
-  direction->HoldingRegstDesc(instance->to(), [&](SRegstDesc* regst_desc) {
-    auto regst = FindFreeRegst(regst_desc, instance->from());
-    ended_at = std::max(ended_at, schedule->mut_regst2ended_at()[regst]);
-  });
+  auto graph = schedule->session()->graph();
+  graph->produced_regst_desc_mgr().Output(
+      instance->to(), [&](SRegstDesc* regst_desc) {
+        auto regst = FindFreeRegst(regst_desc, instance->from());
+        ended_at = std::max(ended_at, schedule->mut_regst2ended_at()[regst]);
+      });
   return ended_at;
 }
 
 void LimitedMemoryStrategy::BeforeRun(TaskInstance* instance) {
   auto session = schedule_engine()->session();
   auto schedule = schedule_engine()->schedule();
-  auto direction = schedule_engine()->direction();
-  direction->HoldingRegstDesc(instance->to(), [&](SRegstDesc* regst_desc) {
-    auto regst = FindFreeRegst(regst_desc, instance->from());
-    auto regst_desc_instance =
-        session->regst_desc_instance_mgr().Find(instance->from(), regst_desc);
-    if (!regst) {
-      // BUG
-      return;
-    }
-    schedule->mut_regst_desc_instance2regst()[regst_desc_instance] = regst;
-    direction->RegstDescReleasingNode(regst_desc, [&](STask* node) {
-      TaskInstance* subscriber_instance =
-          session->task_instance_mgr().Find(instance->from(), node);
-      schedule->mut_regst_arc_mgr().CreateIfNotFound(subscriber_instance,
-                                                     regst);
-    });
-  });
+  auto graph = schedule->session()->graph();
+  graph->produced_regst_desc_mgr().Output(
+      instance->to(), [&](SRegstDesc* regst_desc) {
+        auto regst = FindFreeRegst(regst_desc, instance->from());
+        auto regst_desc_instance = session->regst_desc_instance_mgr().Find(
+            instance->from(), regst_desc);
+        if (!regst) {
+          // BUG
+          return;
+        }
+        schedule->mut_regst_desc_instance2regst()[regst_desc_instance] = regst;
+        graph->subscribed_regst_desc_mgr().Input(regst_desc, [&](STask* node) {
+          TaskInstance* subscriber_instance =
+              session->task_instance_mgr().Find(instance->from(), node);
+          schedule->mut_regst_arc_mgr().CreateIfNotFound(subscriber_instance,
+                                                         regst);
+        });
+      });
 }
 
 void LimitedMemoryStrategy::AfterRun(TaskInstance* instance) {
@@ -306,10 +152,12 @@ void LimitedMemoryStrategy::AfterRun(TaskInstance* instance) {
 
 bool LimitedMemoryStrategy::IsAllRegstDescReady(TaskInstance* instance) {
   bool all_ready = true;
-  auto direction = schedule_engine()->direction();
-  direction->HoldingRegstDesc(instance->to(), [&](SRegstDesc* regst_desc) {
-    all_ready = (all_ready && IsRegstDescReady(regst_desc, instance->from()));
-  });
+  auto graph = schedule_engine()->session()->graph();
+  graph->produced_regst_desc_mgr().Output(
+      instance->to(), [&](SRegstDesc* regst_desc) {
+        all_ready =
+            (all_ready && IsRegstDescReady(regst_desc, instance->from()));
+      });
   return all_ready;
 }
 
