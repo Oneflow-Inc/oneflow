@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
   google::ParseCommandLineFlags(&argc, &argv, true);
   JobConf job_conf;
   ParseProtoFromTextFile(FLAGS_job_conf_filepath, &job_conf);
-  std::string dlnet_conf_filepath = job_conf.train_dlnet_conf_filepath();
+  std::string dlnet_conf_filepath = job_conf.dlnet_filepath();
   std::string resource_filepath = job_conf.resource_filepath();
   std::string placement_filepath = job_conf.placement_filepath();
 
