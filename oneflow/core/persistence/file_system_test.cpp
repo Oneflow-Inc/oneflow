@@ -66,16 +66,17 @@ void TestDirOperation(FileSystem* file_system) {
   ASSERT_TRUE(file_b->Close() == Status::OK);
   std::string child_dir = JoinPath(test_root_path, "/direct_dir");
   ASSERT_TRUE(file_system->CreateDir(child_dir) == Status::OK);
-  std::vector<std::string> direct_children;
-  file_system->GetChildren(test_root_path, &direct_children);
-  ASSERT_EQ(direct_children.size(), 3);
+  {
+    std::vector<std::string> children;
+    file_system->GetChildren(test_root_path, &children);
+    ASSERT_EQ(direct_children.size(), 3);
+  }
   int64_t undeleted_files = 0;
   int64_t undeleted_dirs = 0;
   ASSERT_TRUE(file_system->DeleteDir(child_dir) == Status::OK);
   ASSERT_TRUE(file_system->IsDirectory(child_dir) != Status::OK);
-  ASSERT_TRUE(file_system->DeleteRecursively(test_root_path, &undeleted_files,
-                                             &undeleted_dirs)
-              == Status::OK);
+  ASSERT_TRUE(file_system->DeleteRecursively(
+        test_root_path, &undeleted_files,&undeleted_dirs) == Status::OK);
   ASSERT_EQ(undeleted_files, 0);
   ASSERT_EQ(undeleted_dirs, 0);
   ASSERT_TRUE(file_system->IsDirectory(test_root_path) != Status::OK);
