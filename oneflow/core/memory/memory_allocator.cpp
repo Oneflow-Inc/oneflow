@@ -44,13 +44,14 @@ void MemoryAllocator::Deallocate(char* dptr, MemoryCase mem_case) {
   if (mem_case.has_host_pageable_mem()) {
     free(dptr);
   } else if (mem_case.has_host_pinned_mem()) {
-    if (mem_case.host_pinned_mem().need_cuda()) {
-      CudaCheck(cudaFreeHost(&dptr));
-    }
     if (mem_case.host_pinned_mem().need_rdma()) {
-      // TODO();
       Network* net = GetRdmaInstance();
       net->UnRegisterMemory(dptr);
+    }
+    if (mem_case.host_pinned_mem().need_cuda()) {
+      CudaCheck(cudaFreeHost(&dptr));
+    } else {
+      free(dptr);
     }
   } else if (mem_case.has_device_cuda_mem()) {
     int32_t current_device_id;
