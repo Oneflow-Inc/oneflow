@@ -67,7 +67,8 @@ void RdmaNetwork::UnRegisterMemory(void* dptr) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto net_memory_ptr_it = rdma_memory_.find(dptr);
   CHECK(net_memory_ptr_it != rdma_memory_.end());
-  net_memory_ptr_it->second->Unregister();
+  delete net_memory_ptr_it->second;
+  rdma_memory_.erase(net_memory_ptr_it);
 }
 
 // |msg| contains src_machine_id and dst_machine_id
