@@ -15,13 +15,14 @@ const PbMessage& SoftmaxOp::GetSpecialConf() const {
   return op_conf().softmax_conf();
 }
 
-void SoftmaxOp::InferShape4FwBlobs(
-    std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+void SoftmaxOp::InferBlobDesc4FwBlobs(
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
-  std::vector<int64_t> vec = GetShapePtr4BnInOp(SoleIbn())->dim_vec();
+  const std::vector<int64_t>& vec =
+      GetBlobDesc4BnInOp(SoleIbn())->shape().dim_vec();
   CHECK_EQ(vec.size(), 2);
-  *GetShapePtr4BnInOp(SoleObn()) = Shape(vec);
-  *GetShapePtr4BnInOp(SoleDtbn()) = Shape({vec[0]});
+  GetBlobDesc4BnInOp(SoleObn())->mut_shape() = Shape(vec);
+  GetBlobDesc4BnInOp(SoleDtbn())->mut_shape() = Shape({vec[0]});
 }
 
 REGISTER_OP(OperatorConf::kSoftmaxConf, SoftmaxOp);

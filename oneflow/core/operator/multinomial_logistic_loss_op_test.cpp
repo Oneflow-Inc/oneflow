@@ -21,7 +21,7 @@ TEST(MultinomialLogisticLossOp, test_loss_op) {
     return bn2shape_ptr.at(bn);
   };
 
-  loss_op->InferShape4FwBlobs(fp, kDataParallel, 2, 10);
+  loss_op->InferBlobDesc4FwBlobs(fp, kDataParallel, 2, 10);
 
   Shape* loss_shape_ptr = bn2shape_ptr.at(loss_op->SoleObn());
   Shape* loss_buffer_shape_ptr = bn2shape_ptr.at(loss_op->SoleDtbn());

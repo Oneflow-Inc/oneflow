@@ -2,11 +2,7 @@ syntax = "proto3";
 package oneflow;
 
 import "oneflow/core/operator/op_conf.proto";
-
-enum FloatingPointTypeProto {
-  kFloat = 0;
-  kDouble = 1;
-}
+import "oneflow/core/common/data_type.proto";
 
 message TrainConf {
   string model_save_snapshots_path = 1;
@@ -32,8 +28,9 @@ message JobConf {
   string model_load_snapshot_path = 4;
   int32 piece_size = 5;
   int32 num_of_pieces_in_batch = 6;
-  FloatingPointTypeProto floating_point_type = 7;
+  DataType default_data_type = 7; // kFloat or kDouble
   bool use_async_cpu_stream = 8;
+  int32 max_data_id_length = 9;
   oneof JobType {
     TrainConf train_conf = 1000;
     PredictConf predict_conf = 1001;

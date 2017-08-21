@@ -16,11 +16,11 @@ const PbMessage& MultinomialLogisticLossOp::GetSpecialConf() const {
   return op_conf().multinomial_logistic_loss_conf();
 }
 
-void MultinomialLogisticLossOp::InferShape4FwBlobs(
-    std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+void MultinomialLogisticLossOp::InferBlobDesc4FwBlobs(
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
-  *GetShapePtr4BnInOp("loss") = Shape({1});
-  *GetShapePtr4BnInOp("loss_buffer") = Shape({1});
+  GetBlobDesc4BnInOp("loss")->mut_shape() = Shape({1});
+  GetBlobDesc4BnInOp("loss_buffer")->mut_shape() = Shape({1});
 }
 
 REGISTER_OP(OperatorConf::kMultinomialLogisticLossConf,

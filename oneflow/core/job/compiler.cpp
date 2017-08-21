@@ -37,7 +37,7 @@ class Compiler final {
       const std::pair<const ChainNode*, std::vector<CompTaskNode*>>&);
   void BuildLossGraph(
       const std::pair<const ChainNode*, std::vector<CompTaskNode*>>& pair);
-  void InferShape4Regsts();
+  void InferBlobDesc4Regsts();
   void EraseMeaningLessRegsts();
   void GenPlanFile(const std::string& plan_filepath);
   void Plan2DotFile(const Plan& plan);
@@ -73,7 +73,7 @@ void Compiler::Compile(const JobConf& job_conf,
   JobDesc::Singleton()->InitFromJobConf(job_conf);
   IDMgr::Singleton()->InitFromResource(JobDesc::Singleton()->resource());
   BuildGraphs();
-  InferShape4Regsts();
+  InferBlobDesc4Regsts();
   EraseMeaningLessRegsts();
   GenPlanFile(plan_filepath);
 }
@@ -166,10 +166,10 @@ void Compiler::BuildLossGraph(
   ordered_task_gphs_.emplace_back(loss_record_gph);
 }
 
-void Compiler::InferShape4Regsts() {
+void Compiler::InferBlobDesc4Regsts() {
   for (auto& task_gph : ordered_task_gphs_) {
-    LOG(INFO) << "InferShape for " << task_gph->name();
-    task_gph->InferShapeOfBlobsInProducedRegsts();
+    LOG(INFO) << "Inference BlobDesc for " << task_gph->name();
+    task_gph->InferBlobDescInProducedRegsts();
   }
 }
 

@@ -29,7 +29,7 @@ void TestModelParallelInnerProductOp(bool has_bias_term) {
     return bn2shape_ptr.at(bn);
   };
 
-  ip_op->InferShape4FwBlobs(fp, kModelParallel, 3, 10);
+  ip_op->InferBlobDesc4FwBlobs(fp, kModelParallel, 3, 10);
 
   BalancedSplitter splitter(40, 10);
   int out_num = splitter.At(3).size();
@@ -70,7 +70,7 @@ void TestDataParallelInnerProductOp(bool has_bias_term) {
     return bn2shape_ptr.at(bn);
   };
 
-  ip_op->InferShape4FwBlobs(fp, kDataParallel, 3, 10);
+  ip_op->InferBlobDesc4FwBlobs(fp, kDataParallel, 3, 10);
 
   Shape* out_shape_ptr = bn2shape_ptr.at(ip_op->SoleObn());
   CHECK_EQ(*out_shape_ptr, Shape({1000, 40}));

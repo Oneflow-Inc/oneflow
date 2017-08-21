@@ -35,13 +35,13 @@ void MdDiffAccCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   mut_exec_gph().UpdateSourceAndSink();
 }
 
-void MdDiffAccCompTaskNode::InferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
+void MdDiffAccCompTaskNode::InferBlobDescInProducedRegsts(TaskGraph* gph) {
   CHECK(IsFwNode());
   if (!chain_node()->op_vec().empty()) {
     std::shared_ptr<RegstDesc> in_regst = GetConsumedRegstDesc("model_diff");
     std::shared_ptr<RegstDesc> out_regst =
         GetProducedRegstDesc("model_diff_acc");
-    out_regst->CopyShapeFrom(in_regst.get());
+    out_regst->CopyBlobDescFrom(in_regst.get());
   }
 }
 
