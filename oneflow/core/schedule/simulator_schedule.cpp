@@ -86,18 +86,20 @@ void SimulatorSchedule::InitTimeNet() {
 void SimulatorSchedule::Retiming() {
   InitTimeNet();
   float ii = max_interval();
+  std::pair<float, float> defval(0, 0);
   WalkTimeNetReverse([&](TaskInstance* instance) {
     float lazy_end = INT_MAX;
     uint32_t count =
         timenet_arc_mgr().Output(instance, [&](TaskInstance* instance) {
-          const auto& p = mut_instance2ended_at()[instance];
+          const auto& p = GetOrDefault(instance2ended_at(), instance, defval);
           lazy_end = std::min(lazy_end, p.first);
         });
     auto& p = mut_instance2ended_at()[instance];
     if (!count) { lazy_end = p.second; }
     auto next_instance = session()->GetNextBatchInstance(instance);
     if (next_instance) {
-      auto next_instance_end = mut_instance2ended_at()[next_instance].second;
+      auto next_instance_end =
+          GetOrDefault(instance2ended_at(), next_instance, defval).second;
       lazy_end = std::min((float)lazy_end, next_instance_end - ii);
     }
     lazy_end = std::max(lazy_end, p.second);
@@ -109,14 +111,14 @@ void SimulatorSchedule::Retiming() {
     float eager_start = 0;
     timenet_arc_mgr().Input(instance, [&](TaskInstance* prev) {
       if (prev->src_node() == instance->src_node()) {
-        const auto& p = mut_instance2ended_at()[prev];
+        const auto& p = GetOrDefault(instance2ended_at(), prev, defval);
         eager_start = std::max(eager_start, p.second);
       }
     });
     auto prev_batch_instance = session()->GetPrevBatchInstance(instance);
     if (prev_batch_instance) {
       auto prev_batch_start =
-          mut_instance2ended_at()[prev_batch_instance].first;
+          GetOrDefault(instance2ended_at(), prev_batch_instance, defval).first;
       eager_start = std::max(eager_start, prev_batch_start + ii);
     }
     auto& p = mut_instance2ended_at()[instance];

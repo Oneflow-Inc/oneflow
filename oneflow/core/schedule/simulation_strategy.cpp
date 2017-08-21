@@ -39,8 +39,8 @@ bool MemorySimulationStrategy::IsInstanceReady(TaskInstance* instance) {
   graph->arc_mgr().InputArc(instance->dst_node(), [&](TaskArc* arc) {
     auto instance_input =
         session->task_arc_instance_mgr().Find(instance->src_node(), arc);
-    if (schedule_engine()->mut_tokens().find(instance_input)
-        == schedule_engine()->mut_tokens().end()) {
+    if (schedule_engine()->tokens().find(instance_input)
+        == schedule_engine()->tokens().end()) {
       ready = false;
     }
   });
@@ -97,7 +97,9 @@ float EvaluationSimulationStrategy::GetAscendentEndedAt(
     ended_at = std::max(ended_at, token_ended_at);
   });
   auto dev = schedule_engine()->GetInstanceDevice(instance);
-  return std::max(ended_at, schedule->mut_device2ended_at()[dev]);
+  auto dev_ended_at =
+      GetOrDefault(schedule->device2ended_at(), dev, static_cast<float>(0));
+  return std::max(ended_at, dev_ended_at);
 }
 
 float MemorySimulationStrategy::GetAscendentEndedAt(TaskInstance* instance) {
@@ -112,7 +114,9 @@ float LimitedMemoryStrategy::RegstDescEndedAt(TaskInstance* instance) {
   graph->produced_regst_desc_mgr().Output(
       instance->dst_node(), [&](SRegstDesc* regst_desc) {
         auto regst = FindFreeRegst(regst_desc, instance->src_node());
-        ended_at = std::max(ended_at, schedule->mut_regst2ended_at()[regst]);
+        auto regst_ended_at = GetOrDefault(schedule->regst2ended_at(), regst,
+                                           static_cast<float>(0));
+        ended_at = std::max(ended_at, regst_ended_at);
       });
   return ended_at;
 }
@@ -144,9 +148,11 @@ void LimitedMemoryStrategy::AfterRun(TaskInstance* instance) {
   std::list<Arc<TaskInstance, SRegst>*> occupied_arcs;
   auto schedule = schedule_engine()->schedule();
   schedule->regst_arc_mgr().OutputArc(instance, &occupied_arcs);
+  std::pair<float, float> zero_range;
   for (auto arc : occupied_arcs) {
     schedule->mut_regst2ended_at()[arc->dst_node()] =
-        schedule->mut_instance2ended_at()[instance].second;
+        GetOrDefault(schedule->instance2ended_at(), instance, zero_range)
+            .second;
     schedule->mut_regst_arc_mgr().Delete(arc->id());
   }
 }
@@ -173,7 +179,8 @@ bool LimitedMemoryStrategy::IsRegstDescReady(SRegstDesc* regst_desc,
   auto schedule = schedule_engine()->schedule();
   auto regst_desc_instance =
       sess->regst_desc_instance_mgr().Find(batch, regst_desc);
-  bool free = schedule->mut_regst_desc_instance2regst()[regst_desc_instance];
+  bool free = GetOrDefault(schedule->regst_desc_instance2regst(),
+                           regst_desc_instance, static_cast<SRegst*>(nullptr));
   if (!free) {
     schedule->r2rd_arc_mgr().Input(regst_desc, [&](SRegst* regst) {
       free = (free || IsRegstFree(regst));
@@ -188,14 +195,18 @@ SRegst* LimitedMemoryStrategy::FindFreeRegst(SRegstDesc* regst_desc,
   auto schedule = schedule_engine()->schedule();
   auto regst_desc_instance =
       sess->regst_desc_instance_mgr().Find(batch, regst_desc);
-  SRegst* ret = schedule->mut_regst_desc_instance2regst()[regst_desc_instance];
+  SRegst* ret =
+      GetOrDefault(schedule->regst_desc_instance2regst(), regst_desc_instance,
+                   static_cast<SRegst*>(nullptr));
+  float defval = 0;
   if (!ret) {
     float ended_at = INT_MAX;
     schedule->r2rd_arc_mgr().Input(regst_desc, [&](SRegst* regst) {
       if (IsRegstFree(regst)) {
-        if (schedule->mut_regst2ended_at()[regst] < ended_at) {
+        if (GetOrDefault(schedule->regst2ended_at(), regst, defval)
+            < ended_at) {
           // first recycled register
-          ended_at = schedule->mut_regst2ended_at()[regst];
+          ended_at = GetOrDefault(schedule->regst2ended_at(), regst, defval);
           ret = regst;
         }
       }
@@ -205,10 +216,11 @@ SRegst* LimitedMemoryStrategy::FindFreeRegst(SRegstDesc* regst_desc,
 }
 
 std::unique_ptr<std::unordered_map<SDevice*, TaskInstance*>>
-MemorySimulationStrategy::Pick(std::unordered_set<TaskArcInstance*>* tokens) {
+MemorySimulationStrategy::Pick(
+    const std::unordered_set<TaskArcInstance*>& tokens) {
   std::unordered_map<float, std::list<TaskInstance*>>
       instances_groupby_ended_at;
-  for (const auto& elem : *tokens) {
+  for (const auto& elem : tokens) {
     auto node_instance = get_node_instance_(elem);
     auto is_ready = is_instance_ready_(node_instance);
     if (is_ready) {

@@ -66,6 +66,9 @@ class SimulatorScheduleEngine : public ScheduleEngine {
   TaskInstance* PickInstanceToRun(const std::list<TaskInstance*>& instances);
   bool CompareInstanceOrder(TaskInstance* instance_a, TaskInstance* instance_b);
 
+  inline const std::unordered_set<TaskArcInstance*>& tokens() const {
+    return tokens_;
+  }
   inline std::unordered_set<TaskArcInstance*>& mut_tokens() { return tokens_; }
 
   //	getter
@@ -92,7 +95,7 @@ class SimulatorScheduleEngine : public ScheduleEngine {
   }
 
   inline std::unique_ptr<std::unordered_map<SDevice*, TaskInstance*>> Pick(
-      std::unordered_set<TaskArcInstance*>* tokens) {
+      const std::unordered_set<TaskArcInstance*>& tokens) {
     return memory_->Pick(tokens);
   }
   inline void TimeLinePushBack(TaskInstance* instance, SDevice* dev) {

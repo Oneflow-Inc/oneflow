@@ -40,27 +40,35 @@ class SimulatorSchedule : public Schedule {
   void Retiming();
   void InitTimeNet();
 
+  //	getter
+  inline const std::unordered_map<SRegst*, float>& regst2ended_at() const {
+    return regst2ended_at_;
+  }
   inline const NodeMgr<SRegst>& regst_node_mgr() const {
     return regst_node_mgr_;
   }
-  inline NodeMgr<SRegst>& mut_regst_node_mgr() { return regst_node_mgr_; }
   inline const ArcMgr<Arc<TaskInstance, SRegst>>& regst_arc_mgr() const {
-    return regst_arc_mgr_;
-  }
-  inline ArcMgr<Arc<TaskInstance, SRegst>>& mut_regst_arc_mgr() {
     return regst_arc_mgr_;
   }
   inline const HasOneArcMgr<Arc<SRegst, SRegstDesc>>& r2rd_arc_mgr() const {
     return r2rd_arc_mgr_;
   }
+  inline const std::unordered_map<RegstDescInstance*, SRegst*>&
+  regst_desc_instance2regst() const {
+    return regst_desc_instance2regst_;
+  }
+
+  //	setter
+  inline ArcMgr<Arc<TaskInstance, SRegst>>& mut_regst_arc_mgr() {
+    return regst_arc_mgr_;
+  }
   inline HasOneArcMgr<Arc<SRegst, SRegstDesc>>& mut_r2rd_arc_mgr() {
     return r2rd_arc_mgr_;
   }
-
+  inline NodeMgr<SRegst>& mut_regst_node_mgr() { return regst_node_mgr_; }
   inline std::unordered_map<SRegst*, float>& mut_regst2ended_at() {
     return regst2ended_at_;
   }
-
   inline std::unordered_map<RegstDescInstance*, SRegst*>&
   mut_regst_desc_instance2regst() {
     return regst_desc_instance2regst_;

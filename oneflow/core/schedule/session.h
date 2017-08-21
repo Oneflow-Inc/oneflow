@@ -48,7 +48,6 @@ class Session {
   std::unique_ptr<std::list<Batch*>> GetBatchNodes();
 
   inline const SGraph* graph() const { return graph_; }
-  inline SGraph* mut_graph() { return graph_; }
 
   inline const NodeMgr<Batch>& batch_node_mgr() const {
     return batch_node_mgr_;

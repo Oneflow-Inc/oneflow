@@ -83,7 +83,7 @@ class MemorySimulationStrategy : public SimulationStrategy {
   }
   virtual ~MemorySimulationStrategy() {}
   virtual std::unique_ptr<std::unordered_map<SDevice*, TaskInstance*>> Pick(
-      std::unordered_set<TaskArcInstance*>* tokens);
+      const std::unordered_set<TaskArcInstance*>& tokens);
   virtual void BeforeRun(TaskInstance* instance) = 0;
   virtual void AfterRun(TaskInstance* instance) = 0;
   virtual void InitRegst(

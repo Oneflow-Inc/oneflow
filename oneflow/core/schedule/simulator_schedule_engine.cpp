@@ -30,9 +30,9 @@ void SimulatorScheduleEngine::NewSinkTokens() {
 void SimulatorScheduleEngine::InitNodeBatchInstance(STask* node) {
   for (uint32_t i = 0; i < session()->nr_batch(); i++) {
     auto batch = session()->batch_node_mgr().Find(i);
-    auto start_instance = session()->mut_task_instance_mgr().Find(batch, node);
+    auto start_instance = session()->task_instance_mgr().Find(batch, node);
     schedule()->mut_instance2ended_at()[start_instance] =
-        std::make_pair(0u, 0u);
+        std::make_pair(0.0, 0.0);
   }
 }
 
@@ -101,8 +101,8 @@ std::unique_ptr<SimulatorSchedule> SimulatorScheduleEngine::Run(
   InitRegst(get_regst_num);
   NewSourceTokens();
   auto graph = session()->graph();
-  while (mut_tokens().size()) {
-    auto instances_picked = Pick(&mut_tokens());
+  while (tokens().size()) {
+    auto instances_picked = Pick(tokens());
     for (const auto& p : *instances_picked) {
       auto dev = dynamic_cast<SDevice*>(p.first);
       auto batch = p.second->src_node();
