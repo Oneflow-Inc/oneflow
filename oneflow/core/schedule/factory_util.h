@@ -8,7 +8,7 @@
 
 #define DEFINE_FACTORY_METHOD_CLONE(class_name, base)                      \
   virtual std::unique_ptr<base> Clone(ScheduleFactoryProvider* ph) const { \
-    return unique_ptr_new<class_name>(ph);                                 \
+    return of_make_unique<class_name>(ph);                                 \
   }
 
 #define DEFINE_FACTORY_PURE_VIRTUAL_CLONE(class_name)                    \

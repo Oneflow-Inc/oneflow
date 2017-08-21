@@ -32,7 +32,7 @@ class SGraphConcreteFactory : public SGraphFactory {
   DEFINE_FACTORY_METHOD_CLONE(SGraphConcreteFactory, SGraphFactory);
 
   std::unique_ptr<SGraph> CreateSGraph(const Plan& plan) const {
-    return unique_ptr_new<SGraphType>(plan);
+    return of_make_unique<SGraphType>(plan);
   }
 };
 

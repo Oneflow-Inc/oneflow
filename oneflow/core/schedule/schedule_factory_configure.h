@@ -20,7 +20,7 @@ class ScheduleFactoryConfigure final {
   static ScheduleFactoryProvider* Default() { return Provider("default"); }
 
   static ScheduleFactoryProvider* EnrollProvider(const std::string& name) {
-    providers().emplace(name, unique_ptr_new<ScheduleFactoryProvider>(name));
+    providers().emplace(name, of_make_unique<ScheduleFactoryProvider>(name));
     return Provider(name);
   }
 

@@ -18,7 +18,7 @@ void Session::NewBatchs() {
 }
 
 std::unique_ptr<std::list<Batch*>> Session::GetBatchNodes() {
-  auto batchs = unique_ptr_new<std::list<Batch*>>();
+  auto batchs = of_make_unique<std::list<Batch*>>();
   for (uint32_t i = 0u; i < nr_batch(); i++) {
     batchs->push_back(batch_node_mgr().Find(i));
   }

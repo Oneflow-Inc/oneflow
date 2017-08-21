@@ -21,7 +21,7 @@ class ValidatorFactory {
   }
 
   virtual std::unique_ptr<Validator> CreateValidator() const {
-    return unique_ptr_new<Validator>(schedule_factory_provider_);
+    return of_make_unique<Validator>(schedule_factory_provider_);
   }
 
  private:

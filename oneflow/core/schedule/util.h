@@ -1,6 +1,8 @@
 #ifndef ONEFLOW_CORE_SCHEDULE_UTILS_UTILS_H_
 #define ONEFLOW_CORE_SCHEDULE_UTILS_UTILS_H_
 
+#include "oneflow/core/common/util.h"
+
 namespace oneflow {
 namespace schedule {
 
@@ -23,11 +25,6 @@ inline std::string GetClassName(const std::string& prettyFunction) {
 #endif
 
 template<typename T, typename... Args>
-inline std::unique_ptr<T> unique_ptr_new(Args&&... args) {
-  return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
-}
-
-template<typename T, typename... Args>
 inline std::shared_ptr<T> shared_ptr_new(Args&&... args) {
   return std::shared_ptr<T>(new T(std::forward<Args>(args)...));
 }
@@ -42,7 +39,7 @@ template<typename K, typename C, typename E = typename C::value_type,
          typename F = std::function<K(const E&)>>
 std::unique_ptr<std::unordered_map<K, std::list<E>>> XGroupBy(
     const C& container, const F& f) {
-  auto collect = unique_ptr_new<std::unordered_map<K, std::list<E>>>();
+  auto collect = of_make_unique<std::unordered_map<K, std::list<E>>>();
   for (const E& elem : container) { (*collect)[f(elem)].push_back(elem); }
   return collect;
 }
@@ -52,7 +49,7 @@ template<typename NV, typename C, typename K = typename C::key_type,
          typename F = std::function<NV(const V&)>>
 std::unique_ptr<std::unordered_map<K, NV>> XAssocVMap(const C& container,
                                                       const F& f) {
-  auto collect = unique_ptr_new<std::unordered_map<K, NV>>();
+  auto collect = of_make_unique<std::unordered_map<K, NV>>();
   for (const auto& p : container) { (*collect)[p.first] = f(p.second); }
   return collect;
 }
@@ -73,7 +70,7 @@ T XAssocKMin(const C& container) {
 
 template<typename E, typename C, typename F = std::function<bool(const E&)>>
 std::unique_ptr<std::list<E>> XFilter(const C& container, const F& f) {
-  auto collect = unique_ptr_new<std::list<E>>();
+  auto collect = of_make_unique<std::list<E>>();
   for (const E& elem : container) {
     if (f(elem)) { collect->push_back(elem); }
   }
@@ -85,7 +82,7 @@ template<typename K, typename C,
          typename F = std::function<K(const E&)>>
 std::unique_ptr<std::unordered_set<K>> XAssocDistinct(const C& container,
                                                       const F& f) {
-  auto collect = unique_ptr_new<std::unordered_set<K>>();
+  auto collect = of_make_unique<std::unordered_set<K>>();
   for (const E& elem : container) { collect->insert(f(elem)); }
   return collect;
 }
@@ -94,7 +91,7 @@ template<typename K, typename C, typename E = typename C::value_type,
          typename F = std::function<K(const E&)>>
 std::unique_ptr<std::unordered_set<K>> XDistinct(const C& container,
                                                  const F& f) {
-  auto collect = unique_ptr_new<std::unordered_set<K>>();
+  auto collect = of_make_unique<std::unordered_set<K>>();
   for (const E& elem : container) { collect->insert(f(elem)); }
   return collect;
 }

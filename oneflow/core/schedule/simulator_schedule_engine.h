@@ -35,7 +35,7 @@ class SimulatorScheduleEngine : public ScheduleEngine {
   OF_DISALLOW_COPY_AND_MOVE(SimulatorScheduleEngine);
   SimulatorScheduleEngine(Session* session)
       : ScheduleEngine(session),
-        schedule_(unique_ptr_new<SimulatorSchedule>(session)) {
+        schedule_(of_make_unique<SimulatorSchedule>(session)) {
     InitStrategies();
   }
 
@@ -49,7 +49,7 @@ class SimulatorScheduleEngine : public ScheduleEngine {
 
   std::unique_ptr<SimulatorSchedule> GetSchedule() {
     auto ret = std::move(schedule_);
-    schedule_ = unique_ptr_new<SimulatorSchedule>(session());
+    schedule_ = of_make_unique<SimulatorSchedule>(session());
     return ret;
   }
 

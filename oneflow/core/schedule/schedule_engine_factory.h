@@ -37,7 +37,7 @@ class ScheduleEngineConcreteFactory : public ScheduleEngineFactory {
 
   std::unique_ptr<ScheduleEngine> CreateScheduleEngine(
       const Session& session) const {
-    return unique_ptr_new<ScheduleEngineType>(const_cast<Session*>(&session));
+    return of_make_unique<ScheduleEngineType>(const_cast<Session*>(&session));
   }
 };
 

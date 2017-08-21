@@ -18,7 +18,7 @@ class AllocatorFactory {
   DEFINE_FACTORY_METHOD_CLONE(AllocatorFactory, AllocatorFactory);
 
   virtual std::unique_ptr<Allocator> CreateAllocator() const {
-    return unique_ptr_new<Allocator>(schedule_factory_provider_);
+    return of_make_unique<Allocator>(schedule_factory_provider_);
   }
 
   //	getter
@@ -41,7 +41,7 @@ class AllocatorConcreteFactory : public AllocatorFactory {
   virtual std::unique_ptr<Allocator> CreateAllocator() const {
     auto const_sfp = schedule_factory_provider();
     auto sfp = const_cast<ScheduleFactoryProvider*>(const_sfp);
-    return unique_ptr_new<AllocatorType>(sfp);
+    return of_make_unique<AllocatorType>(sfp);
   }
 };
 

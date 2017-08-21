@@ -55,8 +55,8 @@ SDevice* SimulatorScheduleEngine::GetInstanceDevice(TaskInstance* instance) {
 }
 
 void SimulatorScheduleEngine::InitStrategies() {
-  SetStrategy(unique_ptr_new<LazyEvaluationStrategy>(this));
-  SetStrategy(unique_ptr_new<LimitedMemoryStrategy>(this));
+  SetStrategy(of_make_unique<LazyEvaluationStrategy>(this));
+  SetStrategy(of_make_unique<LimitedMemoryStrategy>(this));
 }
 
 bool SimulatorScheduleEngine::CompareInstanceOrder(TaskInstance* instance_a,
@@ -87,12 +87,12 @@ TaskInstance* SimulatorScheduleEngine::PickInstanceToRun(
 
 std::unique_ptr<Schedule> SimulatorScheduleEngine::StaticSchedule(
     const std::function<uint32_t(uint64_t)>& get_regst_num) {
-  SetStrategy(unique_ptr_new<LimitedMemoryStrategy>(this));
+  SetStrategy(of_make_unique<LimitedMemoryStrategy>(this));
   return Run(get_regst_num);
 }
 
 std::unique_ptr<Schedule> SimulatorScheduleEngine::StaticSchedule() {
-  SetStrategy(unique_ptr_new<UnlimitedMemoryStrategy>(this));
+  SetStrategy(of_make_unique<UnlimitedMemoryStrategy>(this));
   return Run([](uint64_t) { return static_cast<uint32_t>(2u); });
 }
 

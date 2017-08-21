@@ -43,7 +43,7 @@ void TestDemo() {
 }
 
 std::unique_ptr<Plan> LoadPlan(const std::string& file) {
-  auto plan = unique_ptr_new<Plan>();
+  auto plan = of_make_unique<Plan>();
   ParseProtoFromTextFile(file, &*plan);
   return std::move(plan);
 }
