@@ -4,7 +4,6 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/schedule/factory_util.h"
 #include "oneflow/core/schedule/sgraph.h"
-#include "oneflow/core/schedule/util.h"
 
 namespace oneflow {
 namespace schedule {

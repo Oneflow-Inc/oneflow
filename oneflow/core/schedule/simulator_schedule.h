@@ -19,12 +19,12 @@
 #include <utility>
 #include <vector>
 
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/schedule/schedule.h"
 #include "oneflow/core/schedule/schedule_engine.h"
 #include "oneflow/core/schedule/session.h"
 #include "oneflow/core/schedule/sgraph.h"
 #include "oneflow/core/schedule/simulation_strategy.h"
-#include "oneflow/core/schedule/util.h"
 
 namespace oneflow {
 namespace schedule {

@@ -21,6 +21,9 @@
 
 namespace oneflow {
 
+#define MACRO_CONCAT_(a, b) a##b
+#define MACRO_CONCAT(a, b) MACRO_CONCAT_(a, b)
+
 #define OF_DISALLOW_COPY(ClassName)     \
   ClassName(const ClassName&) = delete; \
   ClassName& operator=(const ClassName&) = delete;
@@ -88,6 +91,17 @@ void EraseIf(HashMap<K, V>* hash_map,
   }
 }
 
+template<template<class, class, class...> class C, typename K, typename V,
+         typename... Args>
+V GetOrDefault(const C<K, V, Args...>& m, K const& key, const V& defval) {
+  typename C<K, V, Args...>::const_iterator it = m.find(key);
+  if (it == m.end()) {
+    return defval;
+  } else {
+    return it->second;
+  }
+}
+
 #define OF_DECLARE_ENUM_TO_OSTREAM_FUNC(EnumType) \
   std::ostream& operator<<(std::ostream& out_stream, const EnumType&)
 
@@ -111,6 +125,21 @@ inline uint32_t NewRandomSeed() {
 #define LOG_THRESHOLD (1e-20)
 #define MAX_WITH_LOG_THRESHOLD(x) ((x) > LOG_THRESHOLD ? (x) : LOG_THRESHOLD)
 #define SAFE_LOG(x) logf(MAX_WITH_LOG_THRESHOLD(x))
+
+inline std::string _GetClassName_(const std::string& prettyFunction) {
+  size_t colons = prettyFunction.rfind("::");
+  if (colons == std::string::npos) return "::";
+  size_t begin = prettyFunction.substr(0, colons).rfind("::") + 2;
+  size_t end = colons - begin;
+
+  return prettyFunction.substr(begin, end);
+}
+
+#ifdef _MSC_VER
+#define __CLASS_NAME__ _GetClassName_(__FUNCSIG__)
+#else
+#define __CLASS_NAME__ _GetClassName_(__PRETTY_FUNCTION__)
+#endif
 
 }  // namespace oneflow
 

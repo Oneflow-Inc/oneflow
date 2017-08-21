@@ -5,11 +5,11 @@
 #include <sstream>
 #include <string>
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/schedule/schedule_factory_configure.h"
 #include "oneflow/core/schedule/session.h"
 #include "oneflow/core/schedule/sgraph.h"
 #include "oneflow/core/schedule/simulator_schedule_engine.h"
-#include "oneflow/core/schedule/util.h"
 
 namespace oneflow {
 namespace schedule {

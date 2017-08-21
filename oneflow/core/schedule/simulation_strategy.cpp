@@ -205,17 +205,35 @@ SRegst* LimitedMemoryStrategy::FindFreeRegst(SRegstDesc* regst_desc,
 
 std::unique_ptr<std::unordered_map<SDevice*, TaskInstance*>>
 MemorySimulationStrategy::Pick(std::unordered_set<TaskArcInstance*>* tokens) {
-  auto all_instances = XDistinct<TaskInstance*>(*tokens, get_node_instance_);
-  auto ready_instances =
-      XFilter<TaskInstance*>(*all_instances, is_instance_ready_);
-  CHECK(ready_instances->size());
-  auto instances_groupby_ended_at =
-      XGroupBy<float>(*ready_instances, get_ascendent_ended_at_);
-  auto first_finished = XAssocKMin(*instances_groupby_ended_at);
-  auto instances_groupby_dev =
-      XGroupBy<SDevice*>(first_finished->second, get_instance_device_);
+  std::unordered_map<float, std::list<TaskInstance*>>
+      instances_groupby_ended_at;
+  for (const auto& elem : *tokens) {
+    auto node_instance = get_node_instance_(elem);
+    auto is_ready = is_instance_ready_(node_instance);
+    if (is_ready) {
+      auto ended_at = get_ascendent_ended_at_(node_instance);
+      instances_groupby_ended_at[ended_at].push_back(node_instance);
+    }
+  }
+  CHECK(instances_groupby_ended_at.size());
+  //	pick firstly finished instances
+  auto first_finished = instances_groupby_ended_at.begin();
+  auto itt = first_finished;
+  for (itt++; itt != instances_groupby_ended_at.end(); itt++) {
+    if (first_finished->first > itt->first) { first_finished = itt; }
+  }
+  //	group instances by device
+  std::unordered_map<SDevice*, std::list<TaskInstance*>> dev2instances;
+  for (const auto& instance : first_finished->second) {
+    auto dev = get_instance_device_(instance);
+    dev2instances[dev].push_back(instance);
+  }
+  // 	pick instances to run
   auto instances_picked =
-      XAssocVMap<TaskInstance*>(*instances_groupby_dev, pick_instance_to_run_);
+      of_make_unique<std::unordered_map<SDevice*, TaskInstance*>>();
+  for (const auto& pair : dev2instances) {
+    (*instances_picked)[pair.first] = pick_instance_to_run_(pair.second);
+  }
   return instances_picked;
 }
 

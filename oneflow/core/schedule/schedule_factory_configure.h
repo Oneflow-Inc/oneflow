@@ -1,8 +1,8 @@
 #ifndef ONEFLOW_CORE_SCHEDULE_SCHEDULE_FACTORY_CONFIGURE_H_
 #define ONEFLOW_CORE_SCHEDULE_SCHEDULE_FACTORY_CONFIGURE_H_
 
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/schedule/schedule_factory_provider.h"
-#include "oneflow/core/schedule/util.h"
 
 namespace oneflow {
 namespace schedule {

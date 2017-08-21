@@ -1,10 +1,10 @@
 #ifndef ONEFLOW_CORE_SCHEDULE_VALIDATOR_H_
 #define ONEFLOW_CORE_SCHEDULE_VALIDATOR_H_
 
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/schedule/factory_util.h"
 #include "oneflow/core/schedule/schedule.h"
 #include "oneflow/core/schedule/session.h"
-#include "oneflow/core/schedule/util.h"
 
 namespace oneflow {
 namespace schedule {

@@ -21,7 +21,6 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/plan.pb.h"
-#include "oneflow/core/schedule/util.h"
 
 namespace oneflow {
 namespace schedule {
@@ -47,6 +46,12 @@ template<typename NodeType = SNode>
 class NodeMgr {
  public:
   NodeMgr() {}
+
+  inline uint64_t GetAutoIncrementId() {
+    static uint64_t counter = 0;
+    counter++;
+    return counter;
+  }
 
   template<typename... Args>
   NodeType* Create(Args&&... args) {
@@ -177,6 +182,12 @@ class ArcMgr {
  public:
   ArcMgr() = default;
   virtual ~ArcMgr() = default;
+
+  inline uint64_t GetAutoIncrementId() {
+    static uint64_t counter = 0;
+    counter++;
+    return counter;
+  }
 
   template<typename... Args>
   ArcType* CreateIfNotFound(SrcNodeType* from, DstNodeType* to,

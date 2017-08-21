@@ -7,7 +7,6 @@
 #include "oneflow/core/schedule/schedule_engine.h"
 #include "oneflow/core/schedule/session.h"
 #include "oneflow/core/schedule/sgraph.h"
-#include "oneflow/core/schedule/util.h"
 
 namespace oneflow {
 namespace schedule {

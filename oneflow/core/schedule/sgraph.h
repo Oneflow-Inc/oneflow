@@ -22,7 +22,6 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/schedule/snode.h"
-#include "oneflow/core/schedule/util.h"
 
 namespace oneflow {
 namespace schedule {
