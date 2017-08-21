@@ -55,7 +55,7 @@ void PlanSGraph::InitTask(const Plan& plan) {
         IDMgr::Singleton()->UUDeviceId4TaskId(task_proto.id(), is_copy_hd);
     std::string device_name = std::to_string(device_id);
     SDevice* device = mut_device_mgr().CreateIfNotFound(device_id);
-    device->mut_time() = 1;
+    device->set_time(1);
     mut_device_arc_mgr().CreateIfNotFound(node, device);
   }
 }

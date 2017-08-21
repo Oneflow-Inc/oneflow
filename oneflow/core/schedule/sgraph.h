@@ -33,16 +33,20 @@ class SDevice : public SNode {
   OF_DISALLOW_COPY_AND_MOVE(SDevice);
   SDevice() = default;
   ~SDevice() = default;
-  SDevice(std::string name, float time) : SNode(name), time_(time) {}
+  SDevice(std::string name, float bandwidth)
+      : SNode(name), bandwidth_(bandwidth) {}
 
-  float time() const { return time_; }
+  float time() const { return 1 / bandwidth_; }
+  float bandwith() const { return bandwidth_; }
   uint64_t memory_limit() const { return memory_limit_; }
 
-  float& mut_time() { return time_; }
+  float& mut_bandwith() { return bandwidth_; }
   uint64_t& mut_memory_limit() { return memory_limit_; }
 
+  void set_time(float t) { bandwidth_ = 1 / t; }
+
  private:
-  float time_;
+  float bandwidth_;
   uint64_t memory_limit_ = ULLONG_MAX;
 };
 
@@ -54,14 +58,18 @@ class STask : public SNode {
   explicit STask(const std::string name) : SNode(name) {}
   STask() {}
   virtual ~STask() {}
+
+  inline float workload() const { return workload_; }
   inline uint32_t depth() const { return depth_; }
   inline const SDevice* device() const { return device_; }
 
+  inline float& mut_workload() { return workload_; }
   inline uint32_t& mut_depth() { return depth_; }
   inline SDevice*& mut_device() { return device_; }
 
  protected:
   uint32_t depth_;
+  float workload_;
   SDevice* device_;
 };
 

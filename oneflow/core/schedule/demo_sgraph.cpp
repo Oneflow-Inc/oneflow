@@ -140,7 +140,7 @@ void DemoSGraph::InitFromDemo() {
       ss << arg1 << "\t" << arg2;
       ss >> name >> time;
       auto dev = mut_device_mgr().CreateIfNotFound(name, 1);
-      dev->mut_time() = time;
+      dev->set_time(time);
     } else if (arg0 == "dn") {
       uint64_t id;
       std::string name;
