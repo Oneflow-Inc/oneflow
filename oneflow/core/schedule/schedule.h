@@ -30,20 +30,18 @@ class Schedule {
  public:
   explicit Schedule(Session* session) : session_(session) {}
 
+  void Clear();
+  void UpdateDuration();
+  void UpdateRegstCount();
+  void UpdateInterval();
+  float GetDuration(TaskInstance* from, TaskInstance* to);
+
+  //	getter
+  inline Session* session() const { return session_; }
   inline const std::unordered_map<TaskInstance*, std::pair<float, float>>&
   instance2ended_at() const {
     return instance2ended_at_;
   }
-  inline const std::unordered_map<TaskInstance*,
-                                  std::unordered_map<STask*, float>>&
-  start_time_gap_to_loss() const {
-    return start_time_gap_to_loss_;
-  };
-  inline const std::unordered_map<TaskInstance*,
-                                  std::unordered_map<STask*, float>>&
-  end_time_gap_to_loss() const {
-    return end_time_gap_to_loss_;
-  };
   inline const std::unordered_map<SDevice*, float>& device2ended_at() const {
     return device2ended_at_;
   }
@@ -70,14 +68,6 @@ class Schedule {
   mut_instance2ended_at() {
     return instance2ended_at_;
   }
-  inline std::unordered_map<TaskInstance*, std::unordered_map<STask*, float>>&
-  mut_start_time_gap_to_loss() {
-    return start_time_gap_to_loss_;
-  };
-  inline std::unordered_map<TaskInstance*, std::unordered_map<STask*, float>>&
-  mut_end_time_gap_to_loss() {
-    return end_time_gap_to_loss_;
-  };
   inline std::unordered_map<SDevice*, float>& mut_device2ended_at() {
     return device2ended_at_;
   }
@@ -89,15 +79,11 @@ class Schedule {
     return regst_desc2count_;
   }
 
-  inline Session* session() const { return session_; }
+  void PrintRegstNum();
 
  protected:
   Session* session_;
   std::unordered_map<TaskInstance*, std::pair<float, float>> instance2ended_at_;
-  std::unordered_map<TaskInstance*, std::unordered_map<STask*, float>>
-      start_time_gap_to_loss_;
-  std::unordered_map<TaskInstance*, std::unordered_map<STask*, float>>
-      end_time_gap_to_loss_;
   std::unordered_map<SDevice*, float> device2ended_at_;
   float max_interval_ = 0.0;
   std::unordered_map<SRegstDesc*, float> regst_desc2duration_;

@@ -35,17 +35,10 @@ class SimulatorSchedule : public Schedule {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SimulatorSchedule);
   explicit SimulatorSchedule(Session* session) : Schedule(session) {}
-  void Clear();
-  void UpdateTimeGapToLoss(SimulatorScheduleEngine* schedule_engine);
-  void UpdateDuration(SimulatorScheduleEngine* schedule_engine);
-  void UpdateRegstCount();
-  void UpdateInterval(SimulatorScheduleEngine* schedule_engine);
-  float GetDurationByTimeGapToLoss(TaskInstance* from, TaskInstance* to);
-  void MergeTimeGapToLossInPlace(SimulatorSchedule* logger);
 
   void TimeLinePushBack(TaskInstance* instance, SDevice* device);
-  void Retiming(SimulatorScheduleEngine* schedule_engine);
-  void InitTimeNet(SimulatorScheduleEngine* schedule_engine);
+  void Retiming();
+  void InitTimeNet();
 
   inline const NodeMgr<SRegst>& regst_node_mgr() const {
     return regst_node_mgr_;
@@ -90,10 +83,8 @@ class SimulatorSchedule : public Schedule {
   inline ArcMgr<Arc<TaskInstance>>& mut_timenet_arc_mgr() {
     return timenet_arc_mgr_;
   }
-  void WalkTimeNetReverse(SimulatorScheduleEngine* schedule_engine,
-                          const std::function<void(TaskInstance*)>& cb);
-  void WalkBpTimeNet(SimulatorScheduleEngine* schedule_engine,
-                     const std::function<void(TaskInstance*)>& cb);
+  void WalkTimeNetReverse(const std::function<void(TaskInstance*)>& cb);
+  void WalkBpTimeNet(const std::function<void(TaskInstance*)>& cb);
 
   std::unordered_map<SRegst*, float> regst2ended_at_;
   std::unordered_map<RegstDescInstance*, SRegst*> regst_desc_instance2regst_;

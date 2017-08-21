@@ -55,8 +55,17 @@ void TestPlan(const std::string& file) {
   auto sfp = ScheduleFactoryConfigure::Provider(conf);
   auto allocator_factory = sfp->allocator_factory();
   auto allocator = allocator_factory->CreateAllocator();
+  auto sgraph_factory = sfp->sgraph_factory();
+  auto session_factory = sfp->session_factory();
+  auto validator_factory = sfp->validator_factory();
+  auto validator = validator_factory->CreateValidator();
+
   auto plan = LoadPlan(file);
-  allocator->Allocate(&*plan);
+  auto sgraph = sgraph_factory->CreateSGraph(*plan);
+  CHECK(validator->ValidateGraph(*sgraph));
+  auto session = session_factory->CreateSession(*sgraph);
+  auto schedule = allocator->MemoryLimitedStaticSchedule(*session);
+  schedule->PrintRegstNum();
 }
 
 }  // namespace

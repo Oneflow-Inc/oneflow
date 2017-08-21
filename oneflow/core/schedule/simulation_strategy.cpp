@@ -58,11 +58,11 @@ void LimitedMemoryStrategy::InitFuncIsInstanceReady() {
 }
 
 void LazyEvaluationStrategy::Retiming() {
-  return schedule_engine()->schedule()->Retiming(schedule_engine());
+  return schedule_engine()->schedule()->Retiming();
 }
 
 void LazyEvaluationStrategy::InitTimeNet() {
-  return schedule_engine()->schedule()->InitTimeNet(schedule_engine());
+  return schedule_engine()->schedule()->InitTimeNet();
 }
 
 void LimitedMemoryStrategy::InitRegst(

@@ -22,6 +22,7 @@ void Allocator::Allocate(Plan* plan) {
 }
 
 void Allocator::SetRegstNum(const Schedule& schedule, Plan* plan) {
+  if (!plan) return;
   auto graph = schedule.session()->graph();
   auto get_regst_num = [&](int64_t id) {
     SRegstDesc* regst_desc = graph->regst_desc_mgr().Find(id);

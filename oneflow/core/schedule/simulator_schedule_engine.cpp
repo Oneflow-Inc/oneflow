@@ -127,10 +127,9 @@ std::unique_ptr<SimulatorSchedule> SimulatorScheduleEngine::Run(
     }
     if (!instances_picked->size()) { break; }
   }
-  schedule()->UpdateInterval(this);
+  schedule()->UpdateInterval();
   Retiming();
-  schedule()->UpdateTimeGapToLoss(this);
-  schedule()->UpdateDuration(this);
+  schedule()->UpdateDuration();
   schedule()->UpdateRegstCount();
   return GetSchedule();
 }
