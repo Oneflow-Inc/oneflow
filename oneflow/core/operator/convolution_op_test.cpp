@@ -37,7 +37,7 @@ void TestDataParallelConvolutionOp() {
   };
 
   // infershape
-  convolution_op->InferShape4FwBlobs(fp, kDataParallel, 0, 1);
+  convolution_op->InferBlobDesc4FwBlobs(fp, kDataParallel, 0, 1);
 
   // test
   Shape* output_shape_ptr = fp(convolution_op->SoleObn());
@@ -71,7 +71,7 @@ void TestModelParallelConvolutionOp() {
   };
 
   // infershape
-  convolution_op->InferShape4FwBlobs(fp, kModelParallel, 3, 8);
+  convolution_op->InferBlobDesc4FwBlobs(fp, kModelParallel, 3, 8);
 
   // test
   Shape* output_shape_ptr = fp(convolution_op->SoleObn());

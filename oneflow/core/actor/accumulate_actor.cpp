@@ -62,9 +62,7 @@ void AccumulateActor::Act() {
   ForEachCurWriteableRegst([&](Regst* regst) {
     if (acc_cnt_ != max_acc_cnt_) { return; }
     Blob* packed_blob = regst->GetBlobPtrFromLbn(kPackedBlobName);
-    MemsetFunc(ctx, packed_blob->mut_dptr(), 0,
-               packed_blob->shape().elem_cnt()
-                   * JobDesc::Singleton()->FloatingPointSize());
+    MemsetFunc(ctx, packed_blob->mut_dptr(), 0, packed_blob->TotalByteSize());
     acc_cnt_ = 0;
   });
   AsyncLaunchKernel(ctx, [this](uint64_t regst_desc_id) -> Regst* {

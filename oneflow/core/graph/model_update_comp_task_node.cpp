@@ -34,17 +34,17 @@ void MdUpdtCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   mut_exec_gph().UpdateSourceAndSink();
 }
 
-void MdUpdtCompTaskNode::InferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
+void MdUpdtCompTaskNode::InferBlobDescInProducedRegsts(TaskGraph* gph) {
   CHECK(IsFwNode());
   ExecNode* exec_node = exec_gph().SoleNode();
   auto model_diffs_regst = GetConsumedRegstDesc("model_diffs");
-  Shape packed_model_diffs_shape({model_diffs_regst->CompElemCntOfAllBlob()});
-  exec_node->op()->InferShape4FwBlobs(
-      [&](const std::string& bn_in_op) -> Shape* {
+  BlobDesc packed_blob_desc = model_diffs_regst->CompPackedBlobDesc();
+  exec_node->op()->InferBlobDesc4FwBlobs(
+      [&](const std::string& bn_in_op) -> BlobDesc* {
         if (bn_in_op == "model_diffs") {
-          return &packed_model_diffs_shape;
+          return &packed_blob_desc;
         } else {
-          return exec_node->GetMutShapePtr4BnInOpFunc()(bn_in_op);
+          return exec_node->GetBlobDesc4BnInOpFunc()(bn_in_op);
         }
       },
       kDataParallel, 0, 0);

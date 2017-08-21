@@ -13,7 +13,7 @@ class LossAccCompTaskNode final : public CompTaskNode {
 
  private:
   void BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) override;
-  void InferShapeOfBlobsInProducedRegsts(TaskGraph* gph) override;
+  void InferBlobDescInProducedRegsts(TaskGraph* gph) override;
   TaskType task_type() const override { return kLossAccCompTask; }
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return of_make_unique<LossAccCompTaskNode>();

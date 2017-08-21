@@ -22,11 +22,11 @@ void LossAccCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   mut_exec_gph().UpdateSourceAndSink();
 }
 
-void LossAccCompTaskNode::InferShapeOfBlobsInProducedRegsts(TaskGraph* gph) {
+void LossAccCompTaskNode::InferBlobDescInProducedRegsts(TaskGraph* gph) {
   if (!chain_node()->op_vec().empty()) {
     auto loss_regst = GetConsumedRegstDesc("loss");
     auto loss_acc_regst = GetProducedRegstDesc("loss_acc");
-    loss_acc_regst->CopyShapeFrom(loss_regst.get());
+    loss_acc_regst->CopyBlobDescFrom(loss_regst.get());
   }
 }
 

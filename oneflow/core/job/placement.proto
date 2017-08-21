@@ -8,13 +8,9 @@ enum ParallelPolicy {
   kFakerLossRecord = 3;
 }
 
-message DeviceSet {
-  repeated string device_name = 1;
-}
-
 message ParallelConf {
   ParallelPolicy policy = 1;
-  DeviceSet device_set = 2;
+  repeated string device_name = 2;
 }
 
 message OpNameSet {

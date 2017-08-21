@@ -32,8 +32,7 @@ class MdUpdtCompActor final : public CompActor {
     MemcpyFunc(GenDefaultKernelCtx(),
                next_model_regst->packed_blob()->mut_dptr(),
                model_regst->packed_blob()->dptr(),
-               next_model_regst->packed_blob()->shape().elem_cnt()
-                   * JobDesc::Singleton()->FloatingPointSize());
+               next_model_regst->packed_blob()->TotalByteSize());
   }
 
   CudaStreamHandle cuda_handle_;

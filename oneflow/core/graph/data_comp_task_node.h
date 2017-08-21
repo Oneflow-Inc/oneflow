@@ -41,12 +41,12 @@ class DataCompTaskNode final : public CompTaskNode {
 
  private:
   OVERRIDE_IF_FW_BP_FOR_FUNC(BuildExecAndEnrollLbn2Regsts);
-  OVERRIDE_IF_FW_BP_FOR_FUNC(InferShapeOfBlobsInProducedRegsts);
+  OVERRIDE_IF_FW_BP_FOR_FUNC(InferBlobDescInProducedRegsts);
 
   using Lbn2NodeBnMap = HashMap<std::string, std::pair<ExecNode*, std::string>>;
 
   void FwBuildExecAndEnrollLbn2Regsts(TaskGraph* gph);
-  void FwInferShapeOfBlobsInProducedRegsts(TaskGraph* gph);
+  void FwInferBlobDescInProducedRegsts(TaskGraph* gph);
   void FwBuildFromUserOps(Lbn2NodeBnMap* lbn2producer,
                           Lbn2NodeBnMap* extern_in_lbn2consumer);
   void FwSetExecNodeFromInRegst(const Lbn2NodeBnMap& extern_in_lbn2consumer);
@@ -56,7 +56,7 @@ class DataCompTaskNode final : public CompTaskNode {
   void FwEnrollLbn2ActivationRegst();
   void FwEnrollLbn2ModelAndTmpRegsts();
   void BpBuildExecAndEnrollLbn2Regsts(TaskGraph*);
-  void BpInferShapeOfBlobsInProducedRegsts(TaskGraph*);
+  void BpInferBlobDescInProducedRegsts(TaskGraph*);
   void BpBuildExecGraph();
   void BpEnrollLbn2ProducedRegst();
   void BpEnrollLbn2ActivationDiffRegst();

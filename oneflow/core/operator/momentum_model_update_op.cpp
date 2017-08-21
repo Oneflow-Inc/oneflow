@@ -15,11 +15,10 @@ const PbMessage& MomentumModelUpdateOp::GetSpecialConf() const {
   return op_conf().momentum_mdupdt_conf();
 }
 
-void MomentumModelUpdateOp::InferShape4FwBlobs(
-    std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+void MomentumModelUpdateOp::InferBlobDesc4FwBlobs(
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
-  Shape* input_shape_ptr = GetShapePtr4BnInOp("model_diffs");
-  *GetShapePtr4BnInOp("momentum") = *input_shape_ptr;
+  TODO();
 }
 
 REGISTER_OP(OperatorConf::kMomentumMdupdtConf, MomentumModelUpdateOp);

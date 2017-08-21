@@ -25,10 +25,10 @@ void CopyTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   mut_exec_gph().UpdateSourceAndSink();
 }
 
-void CopyTaskNode::InferShapeOfBlobsInProducedRegsts(TaskGraph*) {
+void CopyTaskNode::InferBlobDescInProducedRegsts(TaskGraph*) {
   std::shared_ptr<RegstDesc> in_regst = GetRelatedRegst(SoleInEdge());
   std::shared_ptr<RegstDesc> out_regst = GetRelatedRegst(SoleOutEdge());
-  out_regst->CopyShapeFrom(in_regst.get());
+  out_regst->CopyBlobDescFrom(in_regst.get());
 }
 
 void CopyHDTaskNode::SetFwInCopy() {

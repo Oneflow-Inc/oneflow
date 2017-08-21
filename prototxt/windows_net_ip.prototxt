@@ -1,0 +1,31 @@
+op {
+  name: "mnist"
+  data_loader_conf {
+    feature: "feature"
+    shape_of_one_feature_ins {
+      dim: 1
+      dim: 28
+      dim: 28
+    }
+    label: "label"
+    data_dir: "D:/users/jiyuan/oss/mnist/"
+  }
+}
+
+op {
+  name: "ip10"
+  innerproduct_conf {
+    in: "mnist/feature"
+    out: "out"
+    out_num: 10
+  }
+}
+
+op {
+  name: "softmax_loss"
+  softmax_loss_conf {
+    prediction: "ip10/out"
+    label: "mnist/label"
+    loss: "loss"
+  }
+}

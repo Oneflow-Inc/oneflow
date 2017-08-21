@@ -20,7 +20,7 @@ TEST(SoftmaxLossOp, softmax_loss_3x5) {
     return bn2shape_ptr.at(bn);
   };
   // infershape
-  softmax_loss_op->InferShape4FwBlobs(fp, kDataParallel, 0, 1);
+  softmax_loss_op->InferBlobDesc4FwBlobs(fp, kDataParallel, 0, 1);
   // test
   ASSERT_EQ(*fp("loss"), Shape({1}));
   ASSERT_EQ(*fp("prob"), Shape({3, 5}));

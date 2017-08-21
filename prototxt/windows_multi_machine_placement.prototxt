@@ -4,9 +4,7 @@ placement_group {
   }
   parallel_conf {
     policy: kDataParallel
-    device_set: {
-      device_name: "win-oneflow2:persistence"
-    }
+    device_name: "win-oneflow2:persistence"
   }
 }
 
@@ -15,11 +13,9 @@ placement_group {
     op_name: "ip10"
   }
   parallel_conf {
-    policy: kModelParallel
-    device_set {
-      device_name: "win-oneflow2:0-1"
-      device_name: "win-oneflow1:0-1"
-    }
+    policy: kDataParallel
+    device_name: "win-oneflow2:0-1"
+    device_name: "win-oneflow1:0-1"
   }
 }
 
@@ -29,8 +25,6 @@ placement_group {
   }
   parallel_conf {
     policy: kDataParallel
-    device_set {
-      device_name: "win-oneflow2:0"
-    }
+    device_name: "win-oneflow2:0"
   }
 }

@@ -13,8 +13,8 @@ class InnerProductOp final : public UserOperator {
 
   void InitFromOpConf(const OperatorConf& op_conf) override;
   const PbMessage& GetSpecialConf() const override;
-  void InferShape4FwBlobs(
-      std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+  void InferBlobDesc4FwBlobs(
+      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       ParallelPolicy policy, int64_t parallel_id,
       int64_t parallel_num) const override;
   void FixParallelDesc(ParallelDesc* pr_desc) const override {

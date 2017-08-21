@@ -1,21 +1,24 @@
-train_dlnet_conf_filepath: "D:/users/jiyuan/oss/oneflow/prototxt/windows_net_ip.prototxt"
+dlnet_filepath: "D:/users/jiyuan/oss/oneflow/prototxt/windows_net_ip.prototxt"
 resource_filepath: "D:/users/jiyuan/oss/oneflow/prototxt/windows_single_machine_resource.prototxt"
 placement_filepath: "D:/users/jiyuan/oss/oneflow/prototxt/windows_single_machine_placement.prototxt"
 model_load_snapshot_path: ""
-model_save_snapshots_path: "./snapshots"
 piece_size: 100
 num_of_pieces_in_batch: 10
-is_train: true
-floating_point_type: kFloat
-num_of_batches_in_snapshot: 60
-staleness: 5
-total_batch_num: 300
-default_fill_conf {
-  gaussian_conf {
-    mean: 0.0
-    std: 1.0
+default_data_type: kFloat
+use_async_cpu_stream: true
+train_conf {
+  model_save_snapshots_path: "./snapshots"
+  num_of_batches_in_snapshot: 10
+  staleness: 5
+  total_batch_num: 180
+  default_fill_conf {
+    gaussian_conf {
+      mean: 0.0
+      std: 0.1
+    }
   }
-}
-normal_mdupdt_conf {
-  learning_rate: 0.01
+  piece_num_of_record_loss: 100
+  normal_mdupdt_conf {
+    learning_rate: 0.01
+  }
 }
