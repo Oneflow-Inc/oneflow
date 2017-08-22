@@ -1,8 +1,9 @@
 #ifndef ONEFLOW_CORE_REGISTER_BLOB_DESC_H_
 #define ONEFLOW_CORE_REGISTER_BLOB_DESC_H_
 
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
-#include "oneflow/core/register/data_type.h"
+#include "oneflow/core/register/blob_desc.pb.h"
 
 namespace oneflow {
 
