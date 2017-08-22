@@ -1,0 +1,9 @@
+machine {
+  addr : "11.11.1.11"
+  port : "5551"
+  name: "centos-0"
+}
+
+device_num_per_machine: 4
+
+device_type: kCPU
