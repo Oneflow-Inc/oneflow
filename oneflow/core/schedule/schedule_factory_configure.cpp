@@ -1,0 +1,34 @@
+#include "oneflow/core/schedule/schedule_factory_configure.h"
+#include "oneflow/core/schedule/allocator.h"
+#include "oneflow/core/schedule/demo_sgraph.h"
+#include "oneflow/core/schedule/plan_sgraph.h"
+#include "oneflow/core/schedule/simulator_schedule_engine.h"
+
+namespace oneflow {
+namespace schedule {
+
+REGISTER_SCHEDULE_FACTORY_PROVIDER("base")
+    ->Set(of_make_unique<SGraphConcreteFactory<PlanSGraph>>())
+    ->Set(of_make_unique<SessionFactory>())
+    ->Set(of_make_unique<
+          ScheduleEngineConcreteFactory<SimulatorScheduleEngine>>())
+    ->Set(of_make_unique<ValidatorFactory>())
+    ->Set(of_make_unique<AllocatorFactory>());
+
+REGISTER_SCHEDULE_FACTORY_PROVIDER("default")->Merge(
+    ScheduleFactoryConfigure::Provider("base"));
+
+REGISTER_SCHEDULE_FACTORY_PROVIDER("empty_allocator")
+    ->Merge(ScheduleFactoryConfigure::Provider("base"))
+    ->Set(of_make_unique<AllocatorConcreteFactory<EmptyAllocator>>());
+
+REGISTER_SCHEDULE_FACTORY_PROVIDER("demo")
+    ->Merge(ScheduleFactoryConfigure::Provider("base"))
+    ->Set(of_make_unique<SGraphConcreteFactory<DemoSGraph>>());
+
+REGISTER_SCHEDULE_FACTORY_PROVIDER("small_batch_num")
+    ->Merge(ScheduleFactoryConfigure::Provider("base"))
+    ->Set(of_make_unique<SessionConcreteFactory<FixedBatchSession<1u>>>());
+
+}  // namespace schedule
+}  // namespace oneflow

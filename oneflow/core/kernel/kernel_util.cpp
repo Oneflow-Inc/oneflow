@@ -7,11 +7,12 @@ namespace {
 
 template<typename FloatingPointType>
 void RngUniform(const int64_t elem_cnt, const FloatingPointType min,
-                const FloatingPointType max, FloatingPointType* dptr) {
+                const FloatingPointType max, uint32_t random_seed,
+                FloatingPointType* dptr) {
   CHECK_GE(elem_cnt, 0);
   CHECK(dptr);
   CHECK_LE(min, max);
-  std::mt19937 generator(NewRandomSeed());
+  std::mt19937 generator(random_seed);
   std::uniform_real_distribution<FloatingPointType> random_distribution(
       min, std::nextafter(max, std::numeric_limits<FloatingPointType>::max()));
 
@@ -22,11 +23,12 @@ void RngUniform(const int64_t elem_cnt, const FloatingPointType min,
 
 template<typename FloatingPointType>
 void RngGaussian(const int64_t elem_cnt, const FloatingPointType mean,
-                 const FloatingPointType std, FloatingPointType* dptr) {
+                 const FloatingPointType std, uint32_t random_seed,
+                 FloatingPointType* dptr) {
   CHECK_GE(elem_cnt, 0);
   CHECK(dptr);
   CHECK_GT(std, 0.0);
-  std::mt19937 generator(NewRandomSeed());
+  std::mt19937 generator(random_seed);
   std::normal_distribution<FloatingPointType> random_distribution(mean, std);
 
   for (int64_t i = 0; i < elem_cnt; ++i) {
@@ -169,20 +171,36 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
         [=]() { cblas_copy(n, x, incx, y, incy); });
   }
 
-  static void Fill(const FillConf& fill_conf, Blob* blob) {
+  static void Fill(const FillConf& fill_conf, uint32_t random_seed,
+                   Blob* blob) {
     if (fill_conf.has_constant_conf()) {
       ConstantFill(fill_conf.constant_conf(), blob);
     } else if (fill_conf.has_uniform_conf()) {
-      UniformFill(fill_conf.uniform_conf(), blob);
+      UniformFill(fill_conf.uniform_conf(), random_seed, blob);
     } else if (fill_conf.has_gaussian_conf()) {
-      GaussianFill(fill_conf.gaussian_conf(), blob);
+      GaussianFill(fill_conf.gaussian_conf(), random_seed, blob);
     } else {
       UNEXPECTED_RUN();
     }
   }
+
   static void Fill(const KernelCtx& ctx, const FillConf& fill_conf,
-                   Blob* blob) {
-    ctx.device_ctx->cpu_stream()->SendWork([=]() { Fill(fill_conf, blob); });
+                   uint32_t random_seed, Blob* blob) {
+    ctx.device_ctx->cpu_stream()->SendWork(
+        [=]() { Fill(fill_conf, random_seed, blob); });
+  }
+
+  static void FillWithSnapshot(const KernelCtx& ctx, int32_t part_id,
+                               int32_t part_num, const Snapshot* snapshot,
+                               Blob* blob, const std::string& lbn,
+                               int32_t dim_num, int64_t num_in_each_dim) {
+    int64_t blob_size = blob->shape().elem_cnt() * sizeof(FloatingPointType);
+    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+      std::unique_ptr<PersistentInStream> in_stream =
+          snapshot->GetInStream(lbn, part_id, part_num, dim_num,
+                                num_in_each_dim * sizeof(FloatingPointType));
+      in_stream->Read(blob->mut_dptr<char>(), blob_size);
+    });
   }
 
  private:
@@ -194,21 +212,23 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
     for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = value; }
   }
 
-  static void UniformFill(const UniformFillConf& fill_conf, Blob* blob) {
+  static void UniformFill(const UniformFillConf& fill_conf,
+                          uint32_t random_seed, Blob* blob) {
     CHECK(blob->shape().elem_cnt());
     RngUniform<FloatingPointType>(
         blob->shape().elem_cnt(),
         static_cast<FloatingPointType>(fill_conf.min()),
-        static_cast<FloatingPointType>(fill_conf.max()),
+        static_cast<FloatingPointType>(fill_conf.max()), random_seed,
         blob->mut_dptr<FloatingPointType>());
   }
 
-  static void GaussianFill(const GaussianFillConf& fill_conf, Blob* blob) {
+  static void GaussianFill(const GaussianFillConf& fill_conf,
+                           uint32_t random_seed, Blob* blob) {
     CHECK(blob->shape().elem_cnt());
     RngGaussian<FloatingPointType>(
         blob->shape().elem_cnt(),
         static_cast<FloatingPointType>(fill_conf.mean()),
-        static_cast<FloatingPointType>(fill_conf.std()),
+        static_cast<FloatingPointType>(fill_conf.std()), random_seed,
         blob->mut_dptr<FloatingPointType>());
   }
 };

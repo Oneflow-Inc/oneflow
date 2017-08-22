@@ -59,6 +59,12 @@ class IDMgr final {
   }
   int64_t NewRegstDescId() { return regst_desc_id_count_++; }
 
+  // Schedule
+  int64_t UUDeviceId4TaskId(int64_t task_id, bool is_copy_hd) {
+    int64_t mask = ~((static_cast<int64_t>(1) << task_id_bit_num_) - 1);
+    return (task_id & mask) + (is_copy_hd ? 1 : 0);
+  }
+
   // Runtime
   int64_t ActorId4TaskId(int64_t task_id) { return task_id; }
   int64_t TaskId4ActorId(int64_t actor_id) { return actor_id; }

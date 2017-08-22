@@ -8,14 +8,14 @@ template<DeviceType device_type, typename FloatingPointType>
 void SoftmaxLossKernel<device_type, FloatingPointType>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  Blob* in_blob = BnInOp2BlobPtr("in");
-  Blob* label_blob = BnInOp2BlobPtr("label");
+  const Blob* prediction_blob = BnInOp2BlobPtr("prediction");
+  const Blob* label_blob = BnInOp2BlobPtr("label");
   Blob* prob_blob = BnInOp2BlobPtr("prob");
   Blob* tmp_blob = BnInOp2BlobPtr("tmp_1D");
   Blob* loss_blob = BnInOp2BlobPtr("loss");
-  const int64_t n = in_blob->shape().At(0);
-  const int64_t w = in_blob->shape().At(1);
-  const FloatingPointType* in = in_blob->dptr<FloatingPointType>();
+  const int64_t n = prediction_blob->shape().At(0);
+  const int64_t w = prediction_blob->shape().Count(1);
+  const FloatingPointType* in = prediction_blob->dptr<FloatingPointType>();
   const FloatingPointType* label = label_blob->dptr<FloatingPointType>();
   FloatingPointType* tmp = tmp_blob->mut_dptr<FloatingPointType>();
   FloatingPointType* prob = prob_blob->mut_dptr<FloatingPointType>();
@@ -25,17 +25,15 @@ void SoftmaxLossKernel<device_type, FloatingPointType>::Forward(
   SoftmaxLossKernelUtil<device_type, FloatingPointType>::ComputeLoss(
       ctx, n, w, label, prob, tmp, loss);
   // backward
-  // if in_diff_blob is not null , then do backward
-  Blob* in_diff_blob = BnInOp2BlobPtr("in_diff");
-  if (in_diff_blob != nullptr) {
-    FloatingPointType* in_diff = in_diff_blob->mut_dptr<FloatingPointType>();
+  // if prediction_diff_blob is not null , then do backward
+  Blob* prediction_diff_blob = BnInOp2BlobPtr(GenDiffBn("prediction"));
+  if (prediction_diff_blob != nullptr) {
+    FloatingPointType* in_diff =
+        prediction_diff_blob->mut_dptr<FloatingPointType>();
     KernelUtil<device_type, FloatingPointType>::BlasCopy(ctx, n * w, prob, 1,
                                                          in_diff, 1);
     SoftmaxLossKernelUtil<device_type, FloatingPointType>::BackwardSub(
         ctx, n, w, label, in_diff);
-    // loss weight is 1 / n
-    KernelUtil<device_type, FloatingPointType>::BlasScal(ctx, n * w, 1.0 / n,
-                                                         in_diff, 1);
   }
 }
 
@@ -54,7 +52,6 @@ class SoftmaxLossKernelUtil<DeviceType::kCPU, FloatingPointType> final {
       for (int64_t i = 0; i < n; ++i) {
         *loss -= SAFE_LOG(prob[i * w + static_cast<int64_t>(label[i])]);
       }
-      *loss /= n;
     });
   }
 

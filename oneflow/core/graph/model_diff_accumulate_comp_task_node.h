@@ -11,18 +11,15 @@ class MdDiffAccCompTaskNode final : public CompTaskNode {
   MdDiffAccCompTaskNode() = default;
   ~MdDiffAccCompTaskNode() = default;
 
-  void ToProto(TaskProto* proto) const override {
-    TaskNode::ToProto(proto);
-    proto->set_parallel_policy(
-        fw_task_->chain_node()->parallel_desc()->policy());
-    proto->set_parallel_id(fw_task_->parallel_id());
-    proto->set_parallel_num(
-        fw_task_->chain_node()->parallel_desc()->parallel_num());
+  void ToProto(TaskProto* proto, std::function<int64_t(const ChainNode*)>
+                                     MeaninglessTaskCnt4Chain) const override {
+    TaskNode::ToProto(proto, MeaninglessTaskCnt4Chain);
+    fw_task_->FillProtoWithParallelInfo(proto, MeaninglessTaskCnt4Chain);
   }
 
  private:
   void BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) override;
-  void InferShapeOfBlobsInProducedRegsts(TaskGraph* gph) override;
+  void InferBlobDescInProducedRegsts(TaskGraph* gph) override;
   TaskType task_type() const override { return kMdDiffAccCompTask; }
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return of_make_unique<MdDiffAccCompTaskNode>();

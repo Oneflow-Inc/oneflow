@@ -14,6 +14,8 @@ enum TaskType {
   kCopyHdTask = 5;
   kCopyCommNetTask = 6;
   kBoxingTask = 7;
+  kLossAccCompTask = 8;
+  kLossRecordCompTask = 9;
 }
 
 message TaskProto {
@@ -32,4 +34,5 @@ message TaskProto {
   int64 parallel_num = 1002;
   // For Model Update Comp Task
   int64 related_save_task_id = 3000;
+  uint32 random_seed = 3001;
 }

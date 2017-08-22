@@ -1,7 +1,7 @@
 # main cpp
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/compiler.cpp)
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/runtime.cpp)
-list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/schedule/scheduler_demo.cpp)
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/schedule/schedule_demo.cpp)
 
 # source_group
 if(WIN32)
@@ -109,6 +109,14 @@ foreach(cc ${of_main_cc})
 endforeach()
 
 # build test
-cuda_add_executable(oneflow_testexe ${of_all_test_cc})
-target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs})
-add_test(NAME oneflow_test COMMAND oneflow_testexe)
+if(BUILD_TESTING)
+  cuda_add_executable(oneflow_testexe ${of_all_test_cc})
+  target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs})
+  add_test(NAME oneflow_test COMMAND oneflow_testexe)
+  foreach(cc ${of_all_test_cc})
+    get_filename_component(test_name ${cc} NAME_WE)
+    string(CONCAT test_exe_name ${test_name} exe)
+    cuda_add_executable(${test_exe_name} ${cc})
+    target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
+  endforeach()
+endif()

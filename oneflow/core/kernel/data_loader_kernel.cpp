@@ -1,4 +1,5 @@
 #include "oneflow/core/kernel/data_loader_kernel.h"
+#include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/runtime_context.h"
 
 namespace oneflow {
@@ -36,24 +37,28 @@ void DataLoaderKernel<DeviceType::kCPU, FloatingPointType>::Forward(
   Blob* feature_blob = BnInOp2BlobPtr("feature");
 
   kernel_ctx.device_ctx->cpu_stream()->SendWork([=]() {
-    int64_t piece_size = label_blob->shape().elem_cnt();
+    int64_t piece_size = feature_blob->shape().At(0);
     FloatingPointType* label_dptr = label_blob->mut_dptr<FloatingPointType>();
     FloatingPointType* feature_dptr =
         feature_blob->mut_dptr<FloatingPointType>();
 
     std::string line;
+    std::string token;
+    token.reserve(29);
     for (int64_t i = 0; i != piece_size; ++i) {
-      bool is_new_line = true;
       reader->ReadLine(&line);
-      SplitAndParseAs<FloatingPointType>(line, ",",
-                                         [&](FloatingPointType data) {
-                                           if (is_new_line) {
-                                             *label_dptr++ = data;
-                                             is_new_line = false;
-                                             return;
-                                           }
-                                           *feature_dptr++ = data;
-                                         });
+      const char* line_ptr = line.c_str();
+      line_ptr = StrToToken(line_ptr, ",", &token) + 1;
+      // TODO: set data id
+      line_ptr = StrToToken(line_ptr, ",", &token) + 1;
+      *label_dptr++ = oneflow_cast<FloatingPointType>(token);
+      int debug = 0;
+      for (int64_t j = 0; j < feature_blob->shape().Count(1); ++j) {
+        line_ptr = StrToToken(line_ptr, ",", &token) + 1;
+        *feature_dptr++ = oneflow_cast<FloatingPointType>(token);
+        debug++;
+      }
+      CHECK_EQ(*(line_ptr - 1), '\0');
     }
   });
 }

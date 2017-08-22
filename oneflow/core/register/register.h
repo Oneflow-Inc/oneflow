@@ -22,6 +22,7 @@ class Regst final {
   const RtRegstDesc* regst_desc() const { return regst_desc_; }
   void ForEachLbn(std::function<void(const std::string&)>);
   Blob* GetBlobPtrFromLbn(const std::string& lbn);
+  Blob* packed_blob() { return packed_blob_.get(); }
 
   // Setters
   void set_piece_id(int64_t val) { piece_id_ = val; }

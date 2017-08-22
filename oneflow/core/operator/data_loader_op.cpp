@@ -15,8 +15,8 @@ const PbMessage& DataLoaderOp::GetSpecialConf() const {
   return op_conf().data_loader_conf();
 }
 
-void DataLoaderOp::InferShape4FwBlobs(
-    std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+void DataLoaderOp::InferBlobDesc4FwBlobs(
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
   // useful vars
   int32_t piece_size = JobDesc::Singleton()->piece_size();
@@ -27,9 +27,9 @@ void DataLoaderOp::InferShape4FwBlobs(
   feature_shape.insert(feature_shape.end(),
                        feature_shape_of_one_ins.dim_vec().begin(),
                        feature_shape_of_one_ins.dim_vec().end());
-  *GetShapePtr4BnInOp("feature") = Shape(feature_shape);
+  GetBlobDesc4BnInOp("feature")->mut_shape() = Shape(feature_shape);
   // label shape
-  *GetShapePtr4BnInOp("label") = Shape({piece_size});
+  GetBlobDesc4BnInOp("label")->mut_shape() = Shape({piece_size});
 }
 
 REGISTER_OP(OperatorConf::kDataLoaderConf, DataLoaderOp);

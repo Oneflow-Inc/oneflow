@@ -16,7 +16,7 @@ void DataCompTaskNode::FwBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   NewProducedRegstDesc("data_tmp");
   NewProducedRegstDesc("model_tmp");
   NewProducedRegstDesc("model");
-  NewProducedRegstDesc("log");
+  NewProducedRegstDesc("loss");
   // Enroll Lbn
   FwSetExecNodeFromInRegst(extern_in_lbn2consumer);
   FwEnrollLbn2OutRegst(lbn2producer);
@@ -24,17 +24,16 @@ void DataCompTaskNode::FwBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   FwEnrollLbn2ModelAndTmpRegsts();  // model model_tmp data_tmp
 }
 
-void DataCompTaskNode::FwInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
+void DataCompTaskNode::FwInferBlobDescInProducedRegsts(TaskGraph*) {
   exec_gph().ConstTopoForEachNode([this](const ExecNode* node) {
-    node->op()->InferShape4FwBlobs(
-        node->GetMutShapePtr4BnInOpFunc(),
-        chain_node()->parallel_desc()->policy(), parallel_id(),
-        chain_node()->parallel_desc()->parallel_num());
+    node->op()->InferBlobDesc4FwBlobs(
+        node->GetBlobDesc4BnInOpFunc(), chain_node()->parallel_desc()->policy(),
+        parallel_id(), chain_node()->parallel_desc()->parallel_num());
   });
   if (IsLossNode()) {
     auto out_regst = GetRelatedRegst(SoleOutEdge());
     auto in_regst = GetRelatedRegst(SoleInEdge());
-    out_regst->CopyShapeFrom(in_regst.get());
+    out_regst->CopyBlobDescFrom(in_regst.get());
   }
 }
 
@@ -87,11 +86,11 @@ void DataCompTaskNode::FwEnrollLbn2OutRegst(const Lbn2NodeBnMap& lbn2producer) {
 
 void DataCompTaskNode::FwEnrollLbn2OutRegstWhenLoss() {
   ExecNode* exec_node = exec_gph().SoleNode();
-  // log regst
-  std::shared_ptr<RegstDesc> log_regst = GetProducedRegstDesc("log");
+  // loss regst
+  std::shared_ptr<RegstDesc> loss_regst = GetProducedRegstDesc("loss");
   for (const std::string& obn : exec_node->op()->output_bns()) {
-    log_regst->EnrollLbn(exec_node->op()->Lbn4BnInOp(obn));
-    exec_node->BindBnInOpAndRegst(obn, log_regst);
+    loss_regst->EnrollLbn(exec_node->op()->Lbn4BnInOp(obn));
+    exec_node->BindBnInOpAndRegst(obn, loss_regst);
   }
   // out regst
   if (!out_edges().empty()) {
@@ -173,20 +172,20 @@ void DataCompTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   BpEnrollLbn2ProducedRegst();
 }
 
-void DataCompTaskNode::BpInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
+void DataCompTaskNode::BpInferBlobDescInProducedRegsts(TaskGraph*) {
   // in_diff_regst
   auto in_diff_regst = GetProducedRegstDesc("in_diff");
   auto in_regst = GetRelatedRegst(GetFwNode()->SoleInEdge());
-  in_diff_regst->CopyShapeFrom(in_regst.get());
+  in_diff_regst->CopyBlobDescFrom(in_regst.get());
   // model_diff_regst
   if (auto md_diff_regst = GetProducedRegstDesc("model_diff")) {
-    md_diff_regst->CopyShapeFrom(
+    md_diff_regst->CopyBlobDescFrom(
         GetFwNode()->GetConsumedRegstDesc("model").get());
   }
   // activation_diff_regst
   if (auto acti_diff_regst = GetProducedRegstDesc("activation_diff")) {
     auto acti_regst = GetFwNode()->GetProducedRegstDesc("activation");
-    acti_diff_regst->CopyShapeFrom(acti_regst.get());
+    acti_diff_regst->CopyBlobDescFrom(acti_regst.get());
   }
 }
 

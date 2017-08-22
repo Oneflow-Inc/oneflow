@@ -1,0 +1,11 @@
+syntax = "proto3";
+package oneflow;
+
+import "oneflow/core/common/shape.proto";
+import "oneflow/core/common/data_type.proto";
+
+message BlobDescProto {
+  ShapeProto shape = 1;
+  DataType data_type = 2;
+  bool has_data_id = 3;
+}

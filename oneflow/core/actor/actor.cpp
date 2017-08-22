@@ -38,7 +38,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   expected_piece_id_ = 0;
   for (const auto& pair : produced_regsts_) {
     for (const auto& regst : pair.second) {
-      writeable_produced_regst_[regst->regst_desc_id()].push(regst.get());
+      writeable_produced_regst_[regst->regst_desc_id()].push_back(regst.get());
       produced_regst2reading_cnt_[regst.get()] = 0;
     }
   }
@@ -88,8 +88,7 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     return 0;
   }
-  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst_wrapper()->regst_raw_ptr()),
-           0);
+  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
   if (total_reading_cnt_ == 0) {
     msg_handler_ = nullptr;
     return 1;
@@ -103,22 +102,32 @@ void Actor::ActUntilFail() {
 
 void Actor::AsyncLaunchKernel(
     const KernelCtx& kernel_ctx,
-    std::function<std::shared_ptr<RegstWrapper>(int64_t)> Regst4RegstDescId) {
+    std::function<Blob*(const std::string&, const ExecKernel& ek)>
+        BnInOpAndEk2Blob) {
   for (const ExecKernel& ek : exec_kernel_vec_) {
-    (ek.kernel->*launch_func_)(
-        kernel_ctx, [&](const std::string& bn_in_op) -> Blob* {
-          auto regst_desc_id_it = ek.bn_in_op2regst_desc_id.find(bn_in_op);
-          if (regst_desc_id_it == ek.bn_in_op2regst_desc_id.end()) {
-            return nullptr;
-          }
-          auto regst = Regst4RegstDescId(regst_desc_id_it->second);
-          const std::string& lbn = ek.kernel->Lbn4BnInOp(bn_in_op);
-          return regst->GetBlobPtrFromLbn(lbn);
-        });
+    (ek.kernel->*launch_func_)(kernel_ctx, [&](const std::string& bn_in_op) {
+      return BnInOpAndEk2Blob(bn_in_op, ek);
+    });
   }
   VLOG(4) << "actor " << actor_id_ << " launch kernel for piece_id "
           << expected_piece_id_;
   expected_piece_id_ += 1;
+}
+
+void Actor::AsyncLaunchKernel(
+    const KernelCtx& kernel_ctx,
+    std::function<Regst*(int64_t)> Regst4RegstDescId) {
+  AsyncLaunchKernel(
+      kernel_ctx,
+      [&](const std::string& bn_in_op, const ExecKernel& ek) -> Blob* {
+        auto regst_desc_id_it = ek.bn_in_op2regst_desc_id.find(bn_in_op);
+        if (regst_desc_id_it == ek.bn_in_op2regst_desc_id.end()) {
+          return nullptr;
+        }
+        auto regst = Regst4RegstDescId(regst_desc_id_it->second);
+        const std::string& lbn = ek.kernel->Lbn4BnInOp(bn_in_op);
+        return regst->GetBlobPtrFromLbn(lbn);
+      });
 }
 
 void Actor::AsyncSendReadableRegstMsg(
@@ -138,7 +147,7 @@ void Actor::AsyncSendReadableRegstMsg(
         ActorMsgBus::Singleton()->SendMsg(std::move(msg));
       });
     }
-    if (!regst->consumers_actor_id().empty()) { pair.second.pop(); }
+    if (!regst->consumers_actor_id().empty()) { pair.second.pop_front(); }
     if (pair.second.empty()) { writeable_produced_regst_desc_num_ -= 1; }
     VLOG(4) << "actor " << actor_id() << " "
             << "send readable register " << regst << ", "
@@ -187,14 +196,13 @@ void Actor::AsyncDo(std::function<void()> func) {
   device_ctx_->AddCallBack(func);
 }
 
-void Actor::AsyncSendRegstMsgToProducer(
-    const std::shared_ptr<RegstWrapper>& wp) {
+void Actor::AsyncSendRegstMsgToProducer(Regst* regst) {
   VLOG(4) << "actor " << actor_id_ << " "
-          << "return register " << wp->regst_raw_ptr() << " "
-          << "to actor " << wp->producer_actor_id() << ", "
-          << "regst_desc_id:" << wp->regst_desc_id();
-  ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(wp->producer_actor_id(),
-                                                   wp->regst_raw_ptr());
+          << "return register " << regst << " "
+          << "to actor " << regst->producer_actor_id() << ", "
+          << "regst_desc_id:" << regst->regst_desc_id();
+  ActorMsg msg =
+      ActorMsg::BuildRegstMsgToProducer(regst->producer_actor_id(), regst);
   AsyncDo([msg]() { ActorMsgBus::Singleton()->SendMsg(msg); });
 }
 
@@ -213,7 +221,7 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   auto writeable_it = writeable_produced_regst_.find(regst->regst_desc_id());
   if (writeable_it == writeable_produced_regst_.end()) { return 0; }
   if (writeable_it->second.empty()) { writeable_produced_regst_desc_num_ += 1; }
-  writeable_it->second.push(regst);
+  writeable_it->second.push_back(regst);
   return 0;
 }
 
@@ -233,7 +241,7 @@ void Actor::ForEachCurWriteableRegst(std::function<void(Regst*)> func) {
   }
 }
 
-bool Actor::IsWriteReady() {
+bool Actor::IsWriteReady() const {
   return writeable_produced_regst_desc_num_ == writeable_produced_regst_.size();
 }
 

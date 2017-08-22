@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/convolution_op.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
@@ -11,45 +12,59 @@ void ConvolutionOp::InitFromOpConf(const OperatorConf& op_conf) {
   EnrollDataTmpBn("col_buf");
 
   EnrollModelBn("weight");
-  EnrollModelBn("bias");
-  EnrollModelTmpBn("bias_multiplier");
+  if (GetBoolFromSpecialConf("has_bias_term")) {
+    EnrollModelBn("bias");
+    EnrollModelTmpBn("bias_multiplier");
+  }
 }
 
 const PbMessage& ConvolutionOp::GetSpecialConf() const {
   return op_conf().convolution_conf();
 }
 
-void ConvolutionOp::InferShape4FwBlobs(
-    std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+void ConvolutionOp::InferBlobDesc4FwBlobs(
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
-  Shape* input_shape_ptr = GetShapePtr4BnInOp(SoleIbn());
-  Shape* output_shape_ptr = GetShapePtr4BnInOp(SoleObn());
-  Shape* colbuf_shape_ptr = GetShapePtr4BnInOp("col_buf");
+  const Shape& input_shape = GetBlobDesc4BnInOp(SoleIbn())->shape();
   auto conv_conf = op_conf().convolution_conf();
-  int64_t batch_size = input_shape_ptr->At(0);
-  int64_t c_i = input_shape_ptr->At(1);
-  int64_t c_o = conv_conf.out_num();
+  int64_t batch_size = input_shape.At(0);
+  int64_t c_i = input_shape.At(1);
+
+  int32_t out_num = GetInt32FromSpecialConf("out_num");
+  if (policy == kModelParallel) {
+    BalancedSplitter splitter(out_num, parallel_num);
+    out_num = splitter.At(parallel_id).size();
+  }
+  int64_t c_o = out_num;
+
   int64_t kernel_size = 1;
   int64_t output_size = 1;
   std::vector<int64_t> output_shape_vec = {batch_size, c_o};
-  for (int64_t i = 0; i < input_shape_ptr->NumAxes() - 2; ++i) {
-    int64_t len = (input_shape_ptr->At(i + 2) + 2 * conv_conf.pad(i)
-                   - conv_conf.kernel_size(i))
-                      / conv_conf.stride(i)
-                  + 1;
-    output_shape_vec.push_back(len);
-    kernel_size *= conv_conf.kernel_size(i);
-    output_size *= len;
+
+  int64_t h_len =
+      (input_shape.At(2) + 2 * conv_conf.pad_h() - conv_conf.kernel_size_h())
+          / conv_conf.stride_h()
+      + 1;
+  output_shape_vec.push_back(h_len);
+  int64_t w_len =
+      (input_shape.At(3) + 2 * conv_conf.pad_w() - conv_conf.kernel_size_w())
+          / conv_conf.stride_w()
+      + 1;
+  output_shape_vec.push_back(w_len);
+  kernel_size *= conv_conf.kernel_size_h();
+  kernel_size *= conv_conf.kernel_size_w();
+  output_size *= h_len;
+  output_size *= w_len;
+
+  GetBlobDesc4BnInOp(SoleObn())->mut_shape() = Shape(output_shape_vec);
+  GetBlobDesc4BnInOp("col_buf")->mut_shape() =
+      Shape({batch_size, output_size, c_i * kernel_size});
+  GetBlobDesc4BnInOp("weight")->mut_shape() = Shape({c_o, c_i * kernel_size});
+
+  if (GetBoolFromSpecialConf("has_bias_term")) {
+    GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({c_o});
+    GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape({output_size});
   }
-  *output_shape_ptr = Shape(output_shape_vec);
-  CHECK_EQ(output_shape_ptr->NumAxes(), input_shape_ptr->NumAxes());
-  *colbuf_shape_ptr = Shape({batch_size, output_size, c_i * kernel_size});
-  Shape* weight = GetShapePtr4BnInOp("weight");
-  Shape* bias = GetShapePtr4BnInOp("bias");
-  Shape* biasmult_shape_ptr = GetShapePtr4BnInOp("bias_multiplier");
-  *weight = Shape({c_o, c_i * kernel_size});
-  *bias = Shape({c_o});
-  *biasmult_shape_ptr = Shape({output_size});
 }
 
 REGISTER_OP(OperatorConf::kConvolutionConf, ConvolutionOp);

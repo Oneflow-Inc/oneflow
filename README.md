@@ -22,12 +22,3 @@ cmake -DBUILD_THIRD_PARTY=OFF .. && make
 ./build_xcode.sh third_party
 ./build_xcode.sh
 ```
-
-## 2. Compile GoogleNet
-
-### 2.1 Linux
-
-```
-cd build && make
-../run.sh
-```

@@ -1,7 +1,8 @@
 #include "oneflow/core/kernel/data_loader_kernel.h"
+#include "oneflow/core/common/process_state.h"
+#include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/kernel/kernel_test_common.h"
-#include "tensorflow/core/lib/io/path.h"
 
 namespace oneflow {
 
@@ -62,7 +63,12 @@ void TestDataLoaderKernel() {
   KernelCtx ctx;
   KTCommon::BuildKernelCtx(&ctx);
 
-  std::string filepath = "data_loader_test_tmp";
+  std::string current_dir = GetCwd();
+  StringReplace(&current_dir, '\\', '/');
+  std::string data_loader_root_dir =
+      JoinPath(current_dir, "/data_loader_test_tmp_dir");
+  TF_CHECK_OK(tensorflow::Env::Default()->CreateDir(data_loader_root_dir));
+  std::string filepath = JoinPath(current_dir, "/tmp_file");
   InitFile(filepath);
   RuntimeCtx::Singleton()->InitDataReader(filepath);
 
@@ -75,7 +81,9 @@ void TestDataLoaderKernel() {
   KTCommon::CheckResult(BnInOp2BlobPtr, "label", "label_expected");
   KTCommon::CheckResult(BnInOp2BlobPtr, "feature", "feature_expected");
 
-  tensorflow::Env::Default()->DeleteFile(filepath);
+  tensorflow::int64 undeletefiles, undeletedirs;
+  TF_CHECK_OK(tensorflow::Env::Default()->DeleteRecursively(
+      data_loader_root_dir, &undeletefiles, &undeletedirs));
 }
 
 }  // namespace

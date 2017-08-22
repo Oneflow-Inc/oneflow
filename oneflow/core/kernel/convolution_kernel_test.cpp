@@ -17,14 +17,14 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
                                     -0.3, 0.1, 0.1, 0.2};  // 2x(1*2*2)
   FloatingPointType bias_mat[2] = {0};                     // 1
   FloatingPointType bias_multiplier_mat[] = {1, 1, 1, 1};  // 2*2
-  FloatingPointType out_mat[8] = {0};                      // 1x2x2x2
-  FloatingPointType in_diff_mat[9] = {0};                  // 1x1x3x3
-  FloatingPointType weight_diff_mat[8] = {0};              // 2x(1*2*2)
-  FloatingPointType expected_weight_diff_mat[] = {6, 5, 12, -4,
-                                                  5, 0, 10, 0};  // 2x(1*2*2)
-  FloatingPointType bias_diff_mat[2] = {0};                      // 2
-  FloatingPointType expected_bias_diff_mat[] = {8, 5};           // 2
-  FloatingPointType out_diff_mat[] = {1, 3, 2, 2, 2, 1, 1, 1};   // 1x2x2x2
+  FloatingPointType out_mat[8] = {100};                    // 1x2x2x2
+  FloatingPointType in_diff_mat[9] = {10000};              // 1x1x3x3
+  FloatingPointType weight_diff_mat[8] = {40};             // 2x(1*2*2)
+  FloatingPointType expected_weight_diff_mat[] = {1.5, 1.25, 3, -1, 1.25,
+                                                  0,   2.5,  0};  // 2x(1*2*2)
+  FloatingPointType bias_diff_mat[2] = {0};                       // 2
+  FloatingPointType expected_bias_diff_mat[] = {2, 1.25};         // 2
+  FloatingPointType out_diff_mat[] = {1, 3, 2, 2, 2, 1, 1, 1};    // 1x2x2x2
   FloatingPointType expected_out_mat[] = {0.9, 0.1, 1.3,  -0.7,
                                           0.1, 0.4, -0.4, -0.7};  // 1x2x2x2
   FloatingPointType expected_in_diff_mat[] = {-0.5, 0.4, 0.7, 0.3, 1.9,
@@ -69,14 +69,14 @@ Kernel* BuildConvolutionKernel(bool has_bias_term) {
   op_conf.mutable_convolution_conf()->set_in("convolution/in");
   op_conf.mutable_convolution_conf()->set_out("convolution/out");
   op_conf.mutable_convolution_conf()->set_out_num(1);
-  op_conf.mutable_convolution_conf()->add_pad(0);
-  op_conf.mutable_convolution_conf()->add_pad(0);
-  op_conf.mutable_convolution_conf()->add_kernel_size(2);
-  op_conf.mutable_convolution_conf()->add_kernel_size(2);
-  op_conf.mutable_convolution_conf()->add_stride(1);
-  op_conf.mutable_convolution_conf()->add_stride(1);
-  op_conf.mutable_convolution_conf()->add_dilation(1);
-  op_conf.mutable_convolution_conf()->add_dilation(1);
+  op_conf.mutable_convolution_conf()->set_pad_h(0);
+  op_conf.mutable_convolution_conf()->set_pad_w(0);
+  op_conf.mutable_convolution_conf()->set_kernel_size_h(2);
+  op_conf.mutable_convolution_conf()->set_kernel_size_w(2);
+  op_conf.mutable_convolution_conf()->set_stride_h(1);
+  op_conf.mutable_convolution_conf()->set_stride_w(1);
+  op_conf.mutable_convolution_conf()->set_dilation_h(1);
+  op_conf.mutable_convolution_conf()->set_dilation_w(1);
   op_conf.mutable_convolution_conf()->set_has_bias_term(has_bias_term);
   auto convolution_op = ConstructOp(op_conf);
 

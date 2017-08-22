@@ -2,12 +2,13 @@
 #define ONEFLOW_CORE_OPERATOR_OPERATOR_H_
 
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/keyword.h"
+#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/operator.pb.h"
+#include "oneflow/core/register/blob_desc.h"
 
 namespace oneflow {
 
@@ -24,6 +25,8 @@ class Operator {
   virtual void InitFromOpConf(const OperatorConf& op_conf) = 0;
   virtual bool IsElemWise() const { return false; }
   virtual bool IsLossOp() const { return false; }
+  virtual bool IsRecordOp() const { return false; }
+  bool IsChainMergeable() const { return !IsLossOp() && !IsRecordOp(); }
 
   // this <-> OpProto
   void InitFromProto(const OperatorProto& operatorproto);
@@ -76,10 +79,13 @@ class Operator {
 
   // Read: shape of input_blobs
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, model_tmp_blobs
-  virtual void InferShape4FwBlobs(
-      std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+  virtual void InferBlobDesc4FwBlobs(
+      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       ParallelPolicy policy, int64_t parallel_id,
       int64_t parallel_num) const = 0;
+
+  //
+  virtual void FixParallelDesc(ParallelDesc* pr_desc) const {}
 
  protected:
   virtual std::string ibn2lbn(const std::string& input_bn) const = 0;
@@ -138,8 +144,8 @@ class SysOperator : public Operator {
   SysOperator() = default;
   virtual ~SysOperator() = default;
 
-  virtual void InferShape4FwBlobs(
-      std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+  virtual void InferBlobDesc4FwBlobs(
+      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       ParallelPolicy policy, int64_t parallel_id,
       int64_t parallel_num) const override {
     UNEXPECTED_RUN();

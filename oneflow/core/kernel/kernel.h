@@ -20,10 +20,16 @@ class Kernel {
 
   virtual void InitFromOpProto(const OperatorProto& op_proto);
 
-  void InitModelAndModelTmpBlobs(
+  void InitModelBlobs(
       const KernelCtx& ctx, ParallelPolicy policy, int64_t parallel_id,
       int64_t parallel_num, const Snapshot*,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+
+  virtual void InitModelTmpBlobs(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    UNEXPECTED_RUN();
+  }
 
   // for Forward / Bp Calculation in FwExecGragh node and BpExecGragh node
   // through bn_in_op2blob_ptr function get the input blob and output blob
@@ -42,14 +48,14 @@ class Kernel {
   Kernel() = default;
   const Operator* op() const { return op_.get(); }
 
-  virtual void InitModelAndModelTmpBlobsWithSnapshot(
-      const KernelCtx& ctx, ParallelPolicy policy, int64_t parallel_id,
-      int64_t parallel_num, const Snapshot*,
+  virtual void InitModelBlobsWithSnapshot(
+      const KernelCtx& ctx, int32_t part_id, int32_t part_num,
+      const Snapshot* snapshot,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNEXPECTED_RUN();
   }
-  virtual void InitModelAndModelTmpBlobsWithoutSnapshot(
-      const KernelCtx& ctx,
+  virtual void InitModelBlobsWithRandomSeed(
+      const KernelCtx& ctx, std::mt19937 random_seed_gen,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNEXPECTED_RUN();
   }

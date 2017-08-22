@@ -42,8 +42,6 @@ class SoftmaxLossKernelUtil<DeviceType::kGPU, FloatingPointType> final {
            ctx.device_ctx->cuda_stream()>>>(n, w, label, prob, tmp);
     KernelUtil<DeviceType::kGPU, FloatingPointType>::Sum(
         ctx, n, tmp, loss, tmp, sizeof(FloatingPointType) * n);
-    KernelUtil<DeviceType::kGPU, FloatingPointType>::BlasScal(ctx, 1, 1.0 / n,
-                                                              loss, 1);
   }
 
   static void BackwardSub(const KernelCtx& ctx, const int64_t n,

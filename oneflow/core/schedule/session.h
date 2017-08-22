@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_SCHEDULE_DATA_STRUCTURE_SESSION_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/schedule/node.h"
+#include "oneflow/core/schedule/sgraph.h"
 
 namespace oneflow {
 namespace schedule {
@@ -23,23 +23,31 @@ typedef Arc<Batch, TaskArc> TaskArcInstance;
 
 class Session {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(Session);
   Session() = delete;
   virtual ~Session() = default;
-  OF_DISALLOW_COPY_AND_MOVE(Session);
-  explicit Session(SGraph* graph, uint32_t nr_batch = 2u) : graph_(graph) {
+  explicit Session(SGraph* graph, uint32_t nr_base_batch)
+      : graph_(graph),
+        nr_base_batch_(nr_base_batch),
+        nr_batch_(nr_base_batch * 3) {
+    NewBatchs();
+  }
+  explicit Session(SGraph* graph) : graph_(graph) {
     auto nr_device = graph->DeviceCount();
     auto depth = graph->Depth();
     nr_base_batch_ = std::min(nr_device, depth);
-    nr_batch_ = std::max(nr_batch, nr_device * 3);
+    nr_base_batch_ = std::max(nr_base_batch_, 12u);
+    nr_batch_ = nr_base_batch_ * 3;
     NewBatchs();
   }
 
   void NewBatchs();
-  void InitNodeBatchInstance(STask* node);
+  Batch* EndBatch() { return batch_node_mgr().Find(nr_batch() - 1); }
+  TaskInstance* GetNextBatchInstance(TaskInstance* instance, int32_t step = 1);
+  TaskInstance* GetPrevBatchInstance(TaskInstance* instance);
   std::unique_ptr<std::list<Batch*>> GetBatchNodes();
 
   inline const SGraph* graph() const { return graph_; }
-  inline SGraph* mut_graph() { return graph_; }
 
   inline const NodeMgr<Batch>& batch_node_mgr() const {
     return batch_node_mgr_;
@@ -74,12 +82,22 @@ class Session {
 
  protected:
   SGraph* graph_;
-  uint32_t nr_batch_;
   uint32_t nr_base_batch_;
+  uint32_t nr_batch_;
   NodeMgr<Batch> batch_node_mgr_;
   ArcMgr<TaskInstance> task_instance_mgr_;
   ArcMgr<RegstDescInstance> regst_desc_instance_mgr_;
   ArcMgr<TaskArcInstance> task_arc_instance_mgr_;
+};
+
+template<uint32_t tpl_nr_base_batch>
+class FixedBatchSession final : public Session {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(FixedBatchSession);
+  FixedBatchSession() = delete;
+  virtual ~FixedBatchSession() = default;
+  explicit FixedBatchSession(SGraph* graph)
+      : Session(graph, std::max(tpl_nr_base_batch, 2u)) {}
 };
 
 }  // namespace schedule

@@ -1,6 +1,10 @@
 #include "gflags/gflags.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/str_util.h"
+#include "oneflow/core/graph/data_comp_task_node.h"
 #include "oneflow/core/graph/data_task_graph.h"
+#include "oneflow/core/graph/loss_accumulate_task_graph.h"
+#include "oneflow/core/graph/loss_record_task_graph.h"
 #include "oneflow/core/graph/model_diff_accumulate_task_graph.h"
 #include "oneflow/core/graph/model_save_comp_task_node.h"
 #include "oneflow/core/graph/model_save_task_graph.h"
@@ -9,6 +13,7 @@
 #include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/register/register_desc.h"
+#include "oneflow/core/schedule/schedule_facade.h"
 
 namespace oneflow {
 
@@ -30,7 +35,9 @@ class Compiler final {
   void BuildGraphs();
   void BuildModelGraphs(
       const std::pair<const ChainNode*, std::vector<CompTaskNode*>>&);
-  void InferShape4Regsts();
+  void BuildLossGraph(
+      const std::pair<const ChainNode*, std::vector<CompTaskNode*>>& pair);
+  void InferBlobDesc4Regsts();
   void EraseMeaningLessRegsts();
   void GenPlanFile(const std::string& plan_filepath);
   void Plan2DotFile(const Plan& plan);
@@ -66,7 +73,7 @@ void Compiler::Compile(const JobConf& job_conf,
   JobDesc::Singleton()->InitFromJobConf(job_conf);
   IDMgr::Singleton()->InitFromResource(JobDesc::Singleton()->resource());
   BuildGraphs();
-  InferShape4Regsts();
+  InferBlobDesc4Regsts();
   EraseMeaningLessRegsts();
   GenPlanFile(plan_filepath);
 }
@@ -84,9 +91,7 @@ void Compiler::BuildGraphs() {
       data_chain2sorted_fw_comp_tasks;
   data_task_gph->ForEachNode([&](TaskNode* node) {
     auto fw_node = dynamic_cast<CompTaskNode*>(node);
-    if (fw_node == nullptr || fw_node->IsBpNode() || fw_node->IsLossNode()) {
-      return;
-    }
+    if (fw_node == nullptr || fw_node->IsBpNode()) { return; }
     data_chain2sorted_fw_comp_tasks[fw_node->chain_node()].push_back(fw_node);
   });
   for (auto& pair : data_chain2sorted_fw_comp_tasks) {
@@ -94,7 +99,8 @@ void Compiler::BuildGraphs() {
   }
   // model graph
   for (const auto& pair : data_chain2sorted_fw_comp_tasks) {
-    BuildModelGraphs(pair);
+    if (pair.first->HasOpWithModelOrModelTmpBlob()) { BuildModelGraphs(pair); }
+    if (pair.first->IsLossNode()) { BuildLossGraph(pair); }
   }
   // all exec_graph 2 dot
   ForEachTaskNode(
@@ -103,9 +109,7 @@ void Compiler::BuildGraphs() {
 
 void Compiler::BuildModelGraphs(
     const std::pair<const ChainNode*, std::vector<CompTaskNode*>>& pair) {
-  if (pair.first->HasOpWithModelOrModelTmpBlob() == false) { return; }
-  std::string chain_tag = pair.first->op_vec().front()->op_name();
-  str_replace(&chain_tag, '/', '_');
+  std::string chain_tag = pair.first->ChainTag();
   ParallelPolicy policy = pair.first->parallel_desc()->policy();
 
   bool is_train = JobDesc::Singleton()->is_train();
@@ -124,11 +128,12 @@ void Compiler::BuildModelGraphs(
   LOG(INFO) << "Build MdUpdtTaskGraph for " << chain_tag;
   std::vector<CompTaskNode*> updt_tasks;
   updt_tasks.reserve(pair.second.size());
+  uint32_t random_seed = NewRandomSeed();
   for (size_t i = 0; i < pair.second.size(); ++i) {
     CompTaskNode* data_fw_task = pair.second[i];
     auto updt_gph = new MdUpdtTaskGraph(
         "md_updt_" + data_fw_task->node_id_str(), data_fw_task,
-        is_train ? sorted_diff_acc_tasks[i] : nullptr);
+        is_train ? sorted_diff_acc_tasks[i] : nullptr, random_seed);
     ordered_task_gphs_.emplace_back(updt_gph);
     ChainNode* updt_chain = updt_gph->chain_gph()->SoleSinkNode();
     auto updt_tasks_in_chain = updt_gph->CompTasksInChain(updt_chain);
@@ -147,10 +152,24 @@ void Compiler::BuildModelGraphs(
   }
 }
 
-void Compiler::InferShape4Regsts() {
+void Compiler::BuildLossGraph(
+    const std::pair<const ChainNode*, std::vector<CompTaskNode*>>& pair) {
+  std::vector<TaskNode*> loss_acc_tasks;
+  for (CompTaskNode* loss_task : pair.second) {
+    auto loss_acc_gph =
+        new LossAccTaskGraph("loss_acc_" + loss_task->node_id_str(), loss_task);
+    ordered_task_gphs_.emplace_back(loss_acc_gph);
+    loss_acc_tasks.push_back(loss_acc_gph->SoleSinkNode());
+  }
+  auto loss_record_gph = new LossRecordTaskGraph(
+      "loss_record_" + pair.first->ChainTag(), loss_acc_tasks);
+  ordered_task_gphs_.emplace_back(loss_record_gph);
+}
+
+void Compiler::InferBlobDesc4Regsts() {
   for (auto& task_gph : ordered_task_gphs_) {
-    LOG(INFO) << "InferShape for " << task_gph->name();
-    task_gph->InferShapeOfBlobsInProducedRegsts();
+    LOG(INFO) << "Inference BlobDesc for " << task_gph->name();
+    task_gph->InferBlobDescInProducedRegsts();
   }
 }
 
@@ -162,13 +181,28 @@ void Compiler::EraseMeaningLessRegsts() {
 }
 
 void Compiler::GenPlanFile(const std::string& plan_filepath) {
-  Plan plan;
-  ForEachTaskNode([&plan](const TaskNode* node) {
-    if (!node->IsMeaningLess()) {
-      node->ToProto(plan.mutable_task()->Add());
-    } else {
-      LOG(INFO) << "Removed Task " << node->task_id();
+  HashMap<const ChainNode*, int64_t> chain2meaningless_task_cnt;
+  ForEachTaskNode([&](const TaskNode* node) {
+    auto comp_task_node = dynamic_cast<const DataCompTaskNode*>(node);
+    if (comp_task_node && node->IsFwNode() && node->IsMeaningLess()) {
+      chain2meaningless_task_cnt[node->chain_node()] += 1;
     }
+  });
+  auto MeaninglessTaskCnt4Chain = [&](const ChainNode* chain) -> int64_t {
+    auto it = chain2meaningless_task_cnt.find(chain);
+    if (it != chain2meaningless_task_cnt.end()) {
+      return it->second;
+    } else {
+      return 0;
+    }
+  };
+  Plan plan;
+  ForEachTaskNode([&](const TaskNode* node) {
+    if (node->IsMeaningLess()) {
+      LOG(INFO) << "MeaningLess Task Id: " << node->task_id();
+      return;
+    }
+    node->ToProto(plan.mutable_task()->Add(), MeaninglessTaskCnt4Chain);
   });
 
   OpMgr::Singleton()->AllOpToProto(plan.mutable_op());
@@ -192,6 +226,7 @@ void Compiler::GenPlanFile(const std::string& plan_filepath) {
       // TODO: unique
     });
   });
+  schedule::ScheduleFacade::Default()->Allocate(&plan);
   PrintProtoToTextFile(plan, plan_filepath);
   Plan2DotFile(plan);
 }

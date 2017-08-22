@@ -175,7 +175,7 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
     const int64_t count = out_blob->shape().elem_cnt();
 
     switch (pooling_conf.pool()) {
-      case PoolingOpConf::MAX: {
+      case PoolingOpConf::kMax: {
         static_assert(sizeof(FloatingPointType) >= sizeof(uint32_t),
                       "sizeof(FloatingPointType) is not greater than or equal "
                       "to sizeof(uint32_t) in max pooling.");
@@ -187,12 +187,12 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
                 mask_blob->mut_dptr<uint32_t>(), in_blob->shape().At(1),
                 in_blob->shape().At(2), in_blob->shape().At(3),
                 out_blob->shape().At(2), out_blob->shape().At(3),
-                pooling_conf.kernel_size(0), pooling_conf.kernel_size(1),
-                pooling_conf.stride(0), pooling_conf.stride(1),
-                pooling_conf.pad(0), pooling_conf.pad(1));
+                pooling_conf.kernel_size_h(), pooling_conf.kernel_size_w(),
+                pooling_conf.stride_h(), pooling_conf.stride_w(),
+                pooling_conf.pad_h(), pooling_conf.pad_w());
         break;
       }
-      case PoolingOpConf::AVE: {
+      case PoolingOpConf::kAve: {
         AvePoolForward<FloatingPointType>
             <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
                ctx.device_ctx->cuda_stream()>>>(
@@ -200,12 +200,12 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
                 out_blob->mut_dptr<FloatingPointType>(), in_blob->shape().At(1),
                 in_blob->shape().At(2), in_blob->shape().At(3),
                 out_blob->shape().At(2), out_blob->shape().At(3),
-                pooling_conf.kernel_size(0), pooling_conf.kernel_size(1),
-                pooling_conf.stride(0), pooling_conf.stride(1),
-                pooling_conf.pad(0), pooling_conf.pad(1));
+                pooling_conf.kernel_size_h(), pooling_conf.kernel_size_w(),
+                pooling_conf.stride_h(), pooling_conf.stride_w(),
+                pooling_conf.pad_h(), pooling_conf.pad_w());
         break;
       }
-      case PoolingOpConf::STOCHASTIC: {
+      case PoolingOpConf::kStochastic: {
         TODO();
       }
       default: { UNEXPECTED_RUN(); }
@@ -218,7 +218,7 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
     const int64_t count = in_diff_blob->shape().elem_cnt();
 
     switch (pooling_conf.pool()) {
-      case PoolingOpConf::MAX: {
+      case PoolingOpConf::kMax: {
         static_assert(sizeof(FloatingPointType) >= sizeof(uint32_t),
                       "sizeof(FloatingPointType) is not greater than or equal "
                       "to sizeof(uint32_t) in max pooling.");
@@ -230,13 +230,13 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
                 in_diff_blob->mut_dptr<FloatingPointType>(),
                 in_diff_blob->shape().At(1), in_diff_blob->shape().At(2),
                 in_diff_blob->shape().At(3), out_diff_blob->shape().At(2),
-                out_diff_blob->shape().At(3), pooling_conf.kernel_size(0),
-                pooling_conf.kernel_size(1), pooling_conf.stride(0),
-                pooling_conf.stride(1), pooling_conf.pad(0),
-                pooling_conf.pad(1));
+                out_diff_blob->shape().At(3), pooling_conf.kernel_size_h(),
+                pooling_conf.kernel_size_w(), pooling_conf.stride_h(),
+                pooling_conf.stride_w(), pooling_conf.pad_h(),
+                pooling_conf.pad_w());
         break;
       }
-      case PoolingOpConf::AVE: {
+      case PoolingOpConf::kAve: {
         AvePoolBackward<FloatingPointType>
             <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
                ctx.device_ctx->cuda_stream()>>>(
@@ -244,13 +244,13 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
                 in_diff_blob->mut_dptr<FloatingPointType>(),
                 in_diff_blob->shape().At(1), in_diff_blob->shape().At(2),
                 in_diff_blob->shape().At(3), out_diff_blob->shape().At(2),
-                out_diff_blob->shape().At(3), pooling_conf.kernel_size(0),
-                pooling_conf.kernel_size(1), pooling_conf.stride(0),
-                pooling_conf.stride(1), pooling_conf.pad(0),
-                pooling_conf.pad(1));
+                out_diff_blob->shape().At(3), pooling_conf.kernel_size_h(),
+                pooling_conf.kernel_size_w(), pooling_conf.stride_h(),
+                pooling_conf.stride_w(), pooling_conf.pad_h(),
+                pooling_conf.pad_w());
         break;
       }
-      case PoolingOpConf::STOCHASTIC: {
+      case PoolingOpConf::kStochastic: {
         TODO();
       }
       default: { UNEXPECTED_RUN(); }

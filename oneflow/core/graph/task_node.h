@@ -42,7 +42,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   //
   virtual void BuildExecAndEnrollLbn2Regsts(TaskGraph*) = 0;
-  virtual void InferShapeOfBlobsInProducedRegsts(TaskGraph*) = 0;
+  virtual void InferBlobDescInProducedRegsts(TaskGraph*) = 0;
 
 #define OVERRIDE_IF_FW_BP_FOR_FUNC(func_name) \
   void func_name(TaskGraph* gph) override {   \
@@ -72,7 +72,12 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   std::shared_ptr<RegstDesc> GetProducedRegst4OutEdge(const TaskEdge*) const;
 
   //
-  virtual void ToProto(TaskProto*) const;
+  virtual void ToProto(TaskProto* proto) const {
+    ToProto(proto, [](const ChainNode*) { return 0; });
+  }
+  virtual void ToProto(
+      TaskProto*,
+      std::function<int64_t(const ChainNode*)> MeaninglessTaskCnt4Chain) const;
   virtual std::string VisualStr() const override;
   virtual TaskType task_type() const = 0;
   std::string DebugStr() const;

@@ -21,7 +21,7 @@ TEST(ConcatOp, concat_two_3x3) {
     return bn2shape_ptr.at(bn);
   };
   // infershape
-  concat_op->InferShape4FwBlobs(fp, kDataParallel, 0, 1);
+  concat_op->InferBlobDesc4FwBlobs(fp, kDataParallel, 0, 1);
   // test
   Shape* output_shape_ptr = fp(concat_op->SoleObn());
   ASSERT_EQ(*output_shape_ptr, Shape({3, 6}));

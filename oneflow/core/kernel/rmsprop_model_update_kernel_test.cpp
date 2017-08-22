@@ -34,19 +34,18 @@ void InitJobDesc(int32_t piece_size, int32_t num_of_pieces_in_batch) {
 }
 
 template<DeviceType device_type, typename FloatingPointType>
-std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
+std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
+    std::vector<int64_t>& dim_vec) {
   using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
 
-  std::vector<int64_t> dim_vec = {1, 3, 2};
-
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
-  (*bn2blob_ptr)["model"] = KTCommon::CreateBlobWithSameValue(dim_vec, 3);
-  (*bn2blob_ptr)["mean_square"] = KTCommon::CreateBlobWithSameValue(dim_vec, 2);
+  (*bn2blob_ptr)["model"] = KTCommon::CreateBlobWithSameValue(dim_vec, 2);
+  (*bn2blob_ptr)["mean_square"] = KTCommon::CreateBlobWithSameValue(dim_vec, 0);
   (*bn2blob_ptr)["model_diffs"] = KTCommon::CreateBlobWithSameValue(dim_vec, 2);
   (*bn2blob_ptr)["model_expected"] =
-      KTCommon::CreateBlobWithSameValue(dim_vec, 2);
+      KTCommon::CreateBlobWithSameValue(dim_vec, 0);
   (*bn2blob_ptr)["mean_square_expected"] =
-      KTCommon::CreateBlobWithSameValue(dim_vec, 3);
+      KTCommon::CreateBlobWithSameValue(dim_vec, 1);
   return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
 }
 
@@ -55,11 +54,14 @@ void TestRMSPropMdUpdateKernel() {
   using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
   KernelCtx ctx;
   KTCommon::BuildKernelCtx(&ctx);
+  ctx.other = new int64_t(1);
 
+  std::vector<int64_t> dim_vec = {1, 3, 2};
   const float learning_rate = {2.0f};
-  const float decay_rate = {0.5f};
-  const float epsilon = {1.0f};
-  auto BnInOp2BlobPtr = BuildBnInOp2BlobPtr<device_type, FloatingPointType>();
+  const float decay_rate = 1.0f / 2;
+  const float epsilon = 3.0f;
+  auto BnInOp2BlobPtr =
+      BuildBnInOp2BlobPtr<device_type, FloatingPointType>(dim_vec);
   auto rmsprop_md_update_kernel =
       BuildRMSPropMdUpdateKernel<device_type, FloatingPointType>(
           learning_rate, decay_rate, epsilon);
@@ -67,6 +69,8 @@ void TestRMSPropMdUpdateKernel() {
   int32_t num_of_pieces_in_batch = 2;
   InitJobDesc(piece_size, num_of_pieces_in_batch);
 
+  rmsprop_md_update_kernel->Forward(ctx, BnInOp2BlobPtr);
+  ctx.other = new int64_t(2);
   rmsprop_md_update_kernel->Forward(ctx, BnInOp2BlobPtr);
   KTCommon::SyncStream(&ctx);
 
