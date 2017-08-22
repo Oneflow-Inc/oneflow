@@ -4,20 +4,17 @@
 namespace oneflow {
 
 RdmaMemory::RdmaMemory(ibv_pd* protect_domain)
-    : protect_domain_(protect_domain),
-      memory_region_(nullptr) {}
+    : protect_domain_(protect_domain), memory_region_(nullptr) {}
 
 RdmaMemory::~RdmaMemory() {
-  if (registered_ == true) {
-    Unregister();
-  }
+  if (registered_ == true) { Unregister(); }
 }
 
 void RdmaMemory::Register() {
   CHECK(protect_domain_);
   memory_region_ = ibv_reg_mr(protect_domain_, memory_, size_,
-                              IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE |
-                              IBV_ACCESS_REMOTE_READ);
+                              IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE
+                                  | IBV_ACCESS_REMOTE_READ);
   CHECK(memory_region_);
 
   sge_.addr = (uint64_t)memory_;

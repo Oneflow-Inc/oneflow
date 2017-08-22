@@ -44,30 +44,24 @@ void EndpointManager::Init(const std::string& my_ip, int32_t my_port) {
   my_sock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   CHECK(my_sock_);
 
-  CHECK_EQ(bind(my_sock_, reinterpret_cast<sockaddr*>(&my_addr_), sizeof(my_addr_)), 0);
+  CHECK_EQ(
+      bind(my_sock_, reinterpret_cast<sockaddr*>(&my_addr_), sizeof(my_addr_)),
+      0);
   CHECK_EQ(listen(my_sock_, 100), 0);  // TODO(shiyuan) backlog
   ibv_free_device_list(device_list);
   device_list = nullptr;
 }
 
 void EndpointManager::Destroy() {
-  if (my_sock_) {
-    CHECK_EQ(close(my_sock_), 0);
-  }
-  if (send_cq_ != nullptr) {
-    CHECK_EQ(ibv_destroy_cq(send_cq_), 0);
-  }
-  if (recv_cq_ != nullptr) {
-    CHECK_EQ(ibv_destroy_cq(recv_cq_), 0);
-  }
+  if (my_sock_) { CHECK_EQ(close(my_sock_), 0); }
+  if (send_cq_ != nullptr) { CHECK_EQ(ibv_destroy_cq(send_cq_), 0); }
+  if (recv_cq_ != nullptr) { CHECK_EQ(ibv_destroy_cq(recv_cq_), 0); }
 
   if (protect_domain_ != nullptr) {
     CHECK_EQ(ibv_dealloc_pd(protect_domain_), 0);
   }
 
-  if (context_ != nullptr) {
-    CHECK_EQ(ibv_close_device(context_), 0);
-  }
+  if (context_ != nullptr) { CHECK_EQ(ibv_close_device(context_), 0); }
 }
 
 void EndpointManager::CreateConnector(Connection* conn) {

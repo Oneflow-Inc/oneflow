@@ -102,7 +102,8 @@ void RDMATest::ProcessReceiveMsg(const NetworkResult& result) {
     LOG(INFO) << "remote_address:    " << remote_memory_descriptor.address;
     LOG(INFO) << "remote_token:      " << remote_memory_descriptor.remote_token;
 
-    net_->Read(remote_memory_descriptor, network_buffer_, []() {});
+    net_->Read(remote_memory_descriptor, network_buffer_,
+               [](const NetworkMessage& net_msg) {});
     LOG(INFO) << "async read issued";
   } else if (result.net_msg.type == NetworkMessageType::kRequestAck) {
     LOG(INFO) << "Send next memory descriptor";

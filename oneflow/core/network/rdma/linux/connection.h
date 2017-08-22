@@ -2,11 +2,11 @@
 #define ONEFLOW_CORE_NETWORK_RDMA_LINUX_CONNECTION_H_
 
 #include <infiniband/verbs.h>
+#include <netdb.h>
 #include <stdio.h>
-#include <string>
 #include <stdlib.h>
 #include <unistd.h>
-#include <netdb.h>
+#include <string>
 #include "oneflow/core/network/network_memory.h"
 #include "oneflow/core/network/rdma/linux/rdma_memory.h"
 

@@ -6,8 +6,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "oneflow/core/network/network_message.h"
-#include "oneflow/core/network/rdma/linux/rdma_memory.h"
 #include "oneflow/core/network/rdma/linux/connection.h"
+#include "oneflow/core/network/rdma/linux/rdma_memory.h"
 
 namespace oneflow {
 

@@ -104,7 +104,7 @@ Worker::~Worker() {}
             net_memory->memory_discriptor().remote_token);
         remote_regst_desc.set_consumer_task_id(
             net_memory_desc.consumer_task_ids[index]);
-        auto& regst_desc_it = consumer2regst_descs.find(consumer_machine_id);
+        auto regst_desc_it = consumer2regst_descs.find(consumer_machine_id);
         if (regst_desc_it == consumer2regst_descs.end()) {
           std::vector<RemoteRegstDesc> remote_regst_descs;
           remote_regst_descs.push_back(remote_regst_desc);

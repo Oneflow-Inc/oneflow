@@ -36,8 +36,10 @@ std::tuple<char*, std::function<void()>, void*> MemoryAllocator::Allocate(
   } else {
     UNEXPECTED_RUN();
   }
-  return {dptr, std::bind(&MemoryAllocator::Deallocate, this, dptr, mem_case),
-          net_memory_ptr};
+  std::tuple<char*, std::function<void()>, void*> result{
+      dptr, std::bind(&MemoryAllocator::Deallocate, this, dptr, mem_case),
+      net_memory_ptr};
+  return result;
 }
 
 void MemoryAllocator::Deallocate(char* dptr, MemoryCase mem_case) {
