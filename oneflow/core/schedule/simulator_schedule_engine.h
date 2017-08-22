@@ -33,7 +33,7 @@ namespace schedule {
 class SimulatorScheduleEngine : public ScheduleEngine {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SimulatorScheduleEngine);
-  SimulatorScheduleEngine(Session* session)
+  SimulatorScheduleEngine(const Session* session)
       : ScheduleEngine(session),
         schedule_(of_make_unique<SimulatorSchedule>(session)) {
     InitStrategies();
@@ -48,7 +48,7 @@ class SimulatorScheduleEngine : public ScheduleEngine {
   void InitNodeBatchInstance(STask* node);
 
   std::unique_ptr<SimulatorSchedule> GetSchedule() {
-    auto ret = std::move(schedule_);
+    std::unique_ptr<SimulatorSchedule> ret = std::move(schedule_);
     schedule_ = of_make_unique<SimulatorSchedule>(session());
     return ret;
   }

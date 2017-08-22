@@ -25,19 +25,18 @@ void TestDemo() {
   auto validator_factory = sfp->validator_factory();
 
   Plan* plan = nullptr;
-  auto sgraph = sgraph_factory->CreateSGraph(*plan);
-  auto sess = session_factory->CreateSession(*sgraph);
+  std::unique_ptr<SGraph> sgraph = sgraph_factory->CreateSGraph(*plan);
+  std::unique_ptr<Session> sess = session_factory->CreateSession(*sgraph);
   auto schedule_engine = engine_factory->CreateScheduleEngine(*sess);
-  auto allocator = allocator_factory->CreateAllocator();
-  auto validator = validator_factory->CreateValidator();
+  std::unique_ptr<Allocator> allocator = allocator_factory->CreateAllocator();
+  std::unique_ptr<Validator> validator = validator_factory->CreateValidator();
 
-  auto schedule = schedule_engine->StaticSchedule();
-  //  auto schedule = allocator->MemoryLimitedStaticSchedule(*sess);
+  std::unique_ptr<Schedule> schedule = schedule_engine->StaticSchedule();
   std::cout << "max-interval: " << schedule->max_interval() << std::endl;
-  auto is_allocation_valid = validator->ValidateAllocation(*schedule);
+  bool is_allocation_valid = validator->ValidateAllocation(*schedule);
   std::cout << "allocation is " << (is_allocation_valid ? "" : "NOT ")
             << "optimal" << std::endl;
-  auto is_memory_valid = validator->ValidateMemory(*schedule);
+  bool is_memory_valid = validator->ValidateMemory(*schedule);
   std::cout << "memory is " << (is_memory_valid ? "" : "NOT ") << "valid"
             << std::endl;
 }
@@ -49,22 +48,23 @@ std::unique_ptr<Plan> LoadPlan(const std::string& file) {
 }
 
 void TestPlan(const std::string& file) {
-  //  auto conf = "default";
-  //  auto conf = "small_batch_num";
-  auto conf = "demo";
+  //  std::string conf = "default";
+  //  std::string conf = "small_batch_num";
+  std::string conf = "demo";
   auto sfp = ScheduleFactoryConfigure::Provider(conf);
   auto allocator_factory = sfp->allocator_factory();
-  auto allocator = allocator_factory->CreateAllocator();
+  std::unique_ptr<Allocator> allocator = allocator_factory->CreateAllocator();
   auto sgraph_factory = sfp->sgraph_factory();
   auto session_factory = sfp->session_factory();
   auto validator_factory = sfp->validator_factory();
-  auto validator = validator_factory->CreateValidator();
+  std::unique_ptr<Validator> validator = validator_factory->CreateValidator();
 
-  auto plan = LoadPlan(file);
-  auto sgraph = sgraph_factory->CreateSGraph(*plan);
+  std::unique_ptr<Plan> plan = LoadPlan(file);
+  std::unique_ptr<SGraph> sgraph = sgraph_factory->CreateSGraph(*plan);
   CHECK(validator->ValidateGraph(*sgraph));
-  auto session = session_factory->CreateSession(*sgraph);
-  auto schedule = allocator->MemoryLimitedStaticSchedule(*session);
+  std::unique_ptr<Session> session = session_factory->CreateSession(*sgraph);
+  std::unique_ptr<Schedule> schedule =
+      allocator->MemoryLimitedStaticSchedule(*session);
   schedule->PrintRegstNum();
 }
 

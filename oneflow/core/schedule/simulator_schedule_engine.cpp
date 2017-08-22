@@ -18,7 +18,7 @@ void SimulatorScheduleEngine::ClearTmpData() {
 void SimulatorScheduleEngine::NewSinkTokens() {
   ClearTmpData();
   std::list<TaskArc*> arcs;
-  auto graph = session()->graph();
+  const SGraph* graph = session()->graph();
   graph->arc_mgr().InputArc(graph->sink(), &arcs);
   auto batchs = session()->GetBatchNodes();
   session()->task_arc_instance_mgr().Find(
@@ -29,8 +29,9 @@ void SimulatorScheduleEngine::NewSinkTokens() {
 
 void SimulatorScheduleEngine::InitNodeBatchInstance(STask* node) {
   for (uint32_t i = 0; i < session()->nr_batch(); i++) {
-    auto batch = session()->batch_node_mgr().Find(i);
-    auto start_instance = session()->task_instance_mgr().Find(batch, node);
+    Batch* batch = session()->batch_node_mgr().Find(i);
+    TaskInstance* start_instance =
+        session()->task_instance_mgr().Find(batch, node);
     schedule()->mut_instance2ended_at()[start_instance] =
         std::make_pair(0.0, 0.0);
   }
@@ -39,7 +40,7 @@ void SimulatorScheduleEngine::InitNodeBatchInstance(STask* node) {
 void SimulatorScheduleEngine::NewSourceTokens() {
   ClearTmpData();
   std::list<TaskArc*> arcs;
-  auto graph = session()->graph();
+  const SGraph* graph = session()->graph();
   graph->arc_mgr().OutputArc(graph->source(), &arcs);
   auto batchs = session()->GetBatchNodes();
   session()->task_arc_instance_mgr().Find(
@@ -100,12 +101,12 @@ std::unique_ptr<SimulatorSchedule> SimulatorScheduleEngine::Run(
     const std::function<uint32_t(uint64_t)>& get_regst_num) {
   InitRegst(get_regst_num);
   NewSourceTokens();
-  auto graph = session()->graph();
+  const SGraph* graph = session()->graph();
   while (tokens().size()) {
     auto instances_picked = Pick(tokens());
     for (const auto& p : *instances_picked) {
-      auto dev = dynamic_cast<SDevice*>(p.first);
-      auto batch = p.second->src_node();
+      SDevice* dev = dynamic_cast<SDevice*>(p.first);
+      Batch* batch = p.second->src_node();
       BeforeRun(p.second);
       float ended_at = GetAscendentEndedAt(p.second);
       schedule()->mut_instance2ended_at()[p.second].first = ended_at;
@@ -115,12 +116,12 @@ std::unique_ptr<SimulatorSchedule> SimulatorScheduleEngine::Run(
       TimeLinePushBack(p.second, dev);
       AfterRun(p.second);
       graph->arc_mgr().InputArc(p.second->dst_node(), [&](TaskArc* arc) {
-        auto instance_input =
+        TaskArcInstance* instance_input =
             session()->task_arc_instance_mgr().Find(batch, arc);
         mut_tokens().erase(instance_input);
       });
       graph->arc_mgr().OutputArc(p.second->dst_node(), [&](TaskArc* arc) {
-        auto instance_output =
+        TaskArcInstance* instance_output =
             session()->task_arc_instance_mgr().Find(batch, arc);
         mut_tokens().insert(instance_output);
       });

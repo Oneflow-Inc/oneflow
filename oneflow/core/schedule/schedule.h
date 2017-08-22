@@ -28,7 +28,7 @@ namespace schedule {
 
 class Schedule {
  public:
-  explicit Schedule(Session* session) : session_(session) {}
+  explicit Schedule(const Session* session) : session_(session) {}
 
   void Clear();
   void UpdateDuration();
@@ -37,7 +37,7 @@ class Schedule {
   float GetDuration(TaskInstance* src_node, TaskInstance* dst_node);
 
   //	getter
-  inline Session* session() const { return session_; }
+  inline const Session* session() const { return session_; }
   inline const std::unordered_map<TaskInstance*, std::pair<float, float>>&
   instance2ended_at() const {
     return instance2ended_at_;
@@ -82,7 +82,7 @@ class Schedule {
   void PrintRegstNum();
 
  protected:
-  Session* session_;
+  const Session* session_;
   std::unordered_map<TaskInstance*, std::pair<float, float>> instance2ended_at_;
   std::unordered_map<SDevice*, float> device2ended_at_;
   float max_interval_ = 0.0;

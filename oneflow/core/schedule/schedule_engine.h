@@ -10,7 +10,7 @@ class ScheduleEngine {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ScheduleEngine);
   virtual ~ScheduleEngine() = default;
-  explicit ScheduleEngine(Session* session) : session_(session) {}
+  explicit ScheduleEngine(const Session* session) : session_(session) {}
 
   virtual std::unique_ptr<Schedule> StaticSchedule(
       const std::function<uint32_t(uint64_t)>& get_regst_num) = 0;
@@ -22,10 +22,10 @@ class ScheduleEngine {
   virtual std::unique_ptr<Schedule> StaticSchedule() = 0;
 
   //	getter
-  inline Session* session() const { return session_; }
+  inline const Session* session() const { return session_; }
 
  protected:
-  Session* session_;
+  const Session* session_;
 };
 
 }  // namespace schedule

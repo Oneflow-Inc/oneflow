@@ -72,6 +72,8 @@ class STask : public SNode {
   SDevice* device_;
 };
 
+typedef Arc<STask> TaskArc;
+
 class SRegstDesc : public SNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SRegstDesc);
@@ -223,7 +225,7 @@ class SGraph : public SNode {
   NodeMgr<STask> fake_node_mgr_;
   NodeMgr<SRegstDesc> regst_desc_mgr_;
   NodeMgr<SDevice> device_mgr_;
-  ArcMgr<Arc<STask>> arc_mgr_;
+  ArcMgr<TaskArc> arc_mgr_;
   ArcMgr<Arc<SGraph, STask>> loss_arc_mgr_;
   ArcMgr<Arc<SGraph, STask>> children_arc_mgr_;
   ArcMgr<Arc<STask>> ascendent_arc_mgr_;

@@ -34,7 +34,7 @@ class BfsVisitor final {
     MarkAllPrevVisited(init_nodes);
     uint32_t cnt = 0;
     std::queue<NodeType> queue;
-    for (auto node : init_nodes) { queue.push(node); }
+    for (NodeType node : init_nodes) { queue.push(node); }
     while (queue.size()) {
       NodeType node = queue.front();
       cb(node);
@@ -60,7 +60,7 @@ class BfsVisitor final {
 
   void MarkAllPrevVisited(const std::list<NodeType>& init_nodes) {
     std::queue<NodeType> queue;
-    for (auto node : init_nodes) { queue.push(node); }
+    for (NodeType node : init_nodes) { queue.push(node); }
     while (queue.size()) {
       NodeType node = queue.front();
       visited_or_visiting_soon_[node] = true;

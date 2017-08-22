@@ -7,7 +7,7 @@ TEST(BfsVisitor, one_vertix) {
   auto foreach_next = [&](int, const std::function<void(int)>&) {};
   BfsVisitor<int> bfs_foreach_node(foreach_next, foreach_prev);
 
-  auto cnt = bfs_foreach_node(1, [&](int node) { ASSERT_TRUE(node == 1); });
+  uint32_t cnt = bfs_foreach_node(1, [&](int node) { ASSERT_TRUE(node == 1); });
   ASSERT_TRUE(cnt == 1);
 }
 

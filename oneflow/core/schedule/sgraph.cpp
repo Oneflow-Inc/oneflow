@@ -20,7 +20,7 @@ void SGraph::UpdateSourceAndSink() {
   std::list<Arc<STask>*> arcs;
   arc_mgr().OutputArc(source(), &arcs);
   arc_mgr().InputArc(sink(), &arcs);
-  for (auto arc : arcs) { mut_arc_mgr().Delete(arc->id()); }
+  for (TaskArc* arc : arcs) { mut_arc_mgr().Delete(arc->id()); }
   children_arc_mgr().Output(this, [&](STask* leaf) {
     if (!arc_mgr().Input(leaf)) {
       mut_arc_mgr().CreateIfNotFound(source(), leaf);
@@ -56,7 +56,7 @@ void SGraph::ForeachRegstDesc(
 }
 
 uint32_t SGraph::Depth() const {
-  auto depth = source()->depth();
+  uint32_t depth = source()->depth();
   return depth ? depth - 1 : 0;
 }
 

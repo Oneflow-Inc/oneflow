@@ -20,18 +20,18 @@ bool Validator::ValidateGraphArc(
     }
     std::cout << std::endl;
   };
-  auto scc_cnt = scc(sgraph.source(), print_component);
+  uint32_t scc_cnt = scc(sgraph.source(), print_component);
   return scc_cnt == 0u;
 }
 
 bool Validator::ValidateMemory(const Schedule& schedule) {
   std::unordered_map<const SDevice*, uint64_t> device2total_memory_size;
-  auto graph = schedule.session()->graph();
+  const SGraph* graph = schedule.session()->graph();
   graph->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
-    auto device = regst_desc->owner_task()->device();
-    auto regst_count =
+    const SDevice* device = regst_desc->owner_task()->device();
+    uint32_t regst_count =
         GetOrDefault(schedule.regst_desc2count(), regst_desc, 0u);
-    auto memory_size = regst_count * regst_desc->regst_memory_size();
+    uint32_t memory_size = regst_count * regst_desc->regst_memory_size();
     device2total_memory_size[device] += memory_size;
   });
 
@@ -42,7 +42,7 @@ bool Validator::ValidateMemory(const Schedule& schedule) {
 }
 
 bool Validator::ValidateAllocation(const Schedule& schedule) {
-  auto sess = schedule.session();
+  const Session* sess = schedule.session();
   auto engine_factory = schedule_factory_provider()->schedule_engine_factory();
   auto schedule_engine = engine_factory->CreateScheduleEngine(*sess);
   uint32_t target = 0;
@@ -65,7 +65,8 @@ bool Validator::ValidateAllocation(const Schedule& schedule) {
     auto get_regst_num = [&](uint64_t id) { return limited[id]; };
     target++;
     if (declined) {
-      auto limited_schedule = schedule_engine->StaticSchedule(get_regst_num);
+      std::unique_ptr<Schedule> limited_schedule =
+          schedule_engine->StaticSchedule(get_regst_num);
       if (limited_schedule->max_interval() <= schedule.max_interval()) {
         failed++;
       }

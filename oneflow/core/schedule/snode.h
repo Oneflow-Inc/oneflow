@@ -55,9 +55,8 @@ class NodeMgr {
 
   template<typename... Args>
   NodeType* Create(Args&&... args) {
-    auto node =
-        std::unique_ptr<NodeType>(new NodeType(std::forward<Args>(args)...));
-    auto ret = node.get();
+    std::unique_ptr<NodeType> node(new NodeType(std::forward<Args>(args)...));
+    NodeType* ret = node.get();
     do { node->mut_id() = GetAutoIncrementId(); } while (Find(node->id()));
     if (!Insert(std::move(node))) { ret = nullptr; }
     return ret;
@@ -66,10 +65,9 @@ class NodeMgr {
   template<typename... Args>
   NodeType* CreateWithId(uint64_t id, Args&&... args) {
     if (Find(id)) { return nullptr; }
-    auto node =
-        std::unique_ptr<NodeType>(new NodeType(std::forward<Args>(args)...));
+    std::unique_ptr<NodeType> node(new NodeType(std::forward<Args>(args)...));
     node->mut_id() = id;
-    auto ret = node.get();
+    NodeType* ret = node.get();
     if (!Insert(std::move(node))) { ret = nullptr; }
     return ret;
   }
@@ -118,13 +116,13 @@ class NodeMgr {
   }
 
   NodeType* Find(uint64_t id) const {
-    auto ret = id2node_.find(id);
-    if (id2node_.end() == ret) { return nullptr; }
-    return ret->second.get();
+    auto ret_itt = id2node_.find(id);
+    if (id2node_.end() == ret_itt) { return nullptr; }
+    return ret_itt->second.get();
   }
 
   void Delete(uint64_t id) {
-    auto node = Find(id);
+    NodeType* node = Find(id);
     if (node) {
       name2id2node_[node->name()].erase(id);
       id2node_.erase(id);
@@ -191,7 +189,7 @@ class ArcMgr {
   template<typename... Args>
   ArcType* CreateIfNotFound(SrcNodeType* src_node, DstNodeType* dst_node,
                             Args&&... args) {
-    auto node = Find(src_node, dst_node);
+    ArcType* node = Find(src_node, dst_node);
     return node ? node
                 : Create(src_node, dst_node, std::forward<Args>(args)...);
   }
@@ -318,10 +316,10 @@ class ArcMgr {
   void Find(const std::list<SrcNodeType*>& from_nodes,
             const std::list<DstNodeType*>& to_nodes,
             const std::function<void(ArcType*)>& cb) const {
-    for (auto src_node : from_nodes) {
+    for (SrcNodeType* src_node : from_nodes) {
       auto itt = from2to2arc_.find(src_node);
       if (itt == from2to2arc_.end()) { continue; }
-      for (auto dst_node : to_nodes) {
+      for (DstNodeType* dst_node : to_nodes) {
         auto jtt = itt->second.find(dst_node);
         if (jtt == itt->second.end()) { continue; }
         cb(jtt->second);
@@ -344,7 +342,7 @@ class ArcMgr {
   }
 
   void Delete(uint64_t id) {
-    auto arcp = Find(id);
+    ArcType* arcp = Find(id);
     if (!arcp) { return; }
     from2to2arc_[arcp->src_node()].erase(arcp->dst_node());
     if (!from2to2arc_[arcp->src_node()].size()) {
@@ -358,7 +356,7 @@ class ArcMgr {
   }
 
   void Delete(SrcNodeType* src_node, DstNodeType* dst_node) {
-    auto arcp = Find(src_node, dst_node);
+    ArcType* arcp = Find(src_node, dst_node);
     if (!arcp) { return; }
     Delete(arcp->id());
   }
@@ -371,8 +369,8 @@ class ArcMgr {
 
   template<typename... Args>
   ArcType* Create(Args&&... args) {
-    auto p = std::unique_ptr<ArcType>(new ArcType(std::forward<Args>(args)...));
-    auto ret = p.get();
+    std::unique_ptr<ArcType> p(new ArcType(std::forward<Args>(args)...));
+    ArcType* ret = p.get();
     p->mut_id() = GetAutoIncrementId();
     if (!Insert(std::move(p))) { ret = nullptr; }
     return ret;
@@ -396,10 +394,10 @@ class HasOneArcMgr : public ArcMgr<ArcType> {
   template<typename... Args>
   ArcType* CreateIfNotFound(SrcNodeType* src_node, DstNodeType* dst_node,
                             Args&&... args) {
-    std::list<DstNodeType*> to_nodes;
-    this->Output(src_node, &to_nodes);
+    std::list<DstNodeType*> dst_nodes;
+    this->Output(src_node, &dst_nodes);
 
-    for (auto node : to_nodes) { this->Delete(src_node, node); }
+    for (DstNodeType* node : dst_nodes) { this->Delete(src_node, node); }
     return ArcMgr<ArcType>::CreateIfNotFound(src_node, dst_node,
                                              std::forward<Args>(args)...);
   }

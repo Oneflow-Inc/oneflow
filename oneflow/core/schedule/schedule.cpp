@@ -6,9 +6,9 @@ namespace schedule {
 
 void Schedule::PrintRegstNum() {
   session()->graph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
-    auto duration =
+    float duration =
         GetOrDefault(regst_desc2duration(), regst_desc, static_cast<float>(0));
-    auto interval = max_interval();
+    float interval = max_interval();
     uint32_t count = GetOrDefault(regst_desc2count(), regst_desc, 1u);
     std::cout << "Allocation\t" << regst_desc->id() << "\t" << count << "\t"
               << duration << "," << interval << std::endl;
@@ -17,8 +17,8 @@ void Schedule::PrintRegstNum() {
 
 float Schedule::GetDuration(TaskInstance* src_node, TaskInstance* dst_node) {
   std::pair<float, float> default_pair;
-  auto end = GetOrDefault(instance2ended_at(), dst_node, default_pair).second;
-  auto start = GetOrDefault(instance2ended_at(), src_node, default_pair).first;
+  float end = GetOrDefault(instance2ended_at(), dst_node, default_pair).second;
+  float start = GetOrDefault(instance2ended_at(), src_node, default_pair).first;
   return end - start;
 }
 
@@ -34,7 +34,7 @@ void Schedule::UpdateDuration() {
           float sum = 0;
           std::set<float> cases;
           for (uint32_t i = start; i < end; i++) {
-            auto batch = session()->batch_node_mgr().Find(i);
+            Batch* batch = session()->batch_node_mgr().Find(i);
             TaskInstance* owner_instance =
                 session()->task_instance_mgr().Find(batch, owner);
             TaskInstance* node_instance =
@@ -55,9 +55,9 @@ void Schedule::UpdateRegstCount() {
   session()->graph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
     STask* owner = nullptr;
     session()->graph()->produced_regst_desc_mgr().Input(regst_desc, &owner);
-    auto duration =
+    float duration =
         GetOrDefault(regst_desc2duration(), regst_desc, static_cast<float>(0));
-    auto interval = max_interval();
+    float interval = max_interval();
     uint32_t count = ceil(duration / std::max(interval, 1.0f));
     count = std::max(count, regst_desc->min_regst_count());
     mut_regst_desc2count()[regst_desc] = count;
@@ -74,9 +74,10 @@ void Schedule::UpdateInterval() {
   std::set<float> cases;
   std::pair<float, float> default_range;
   for (uint32_t i = start; i < end; i++) {
-    auto batch = session()->batch_node_mgr().Find(i);
-    auto instance = session()->task_instance_mgr().Find(batch, end_node);
-    auto start_time =
+    Batch* batch = session()->batch_node_mgr().Find(i);
+    TaskInstance* instance =
+        session()->task_instance_mgr().Find(batch, end_node);
+    float start_time =
         GetOrDefault(instance2ended_at(), instance, default_range).first;
     if (i > start) { cases.insert(start_time - last_time); }
     last_time = start_time;

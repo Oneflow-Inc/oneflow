@@ -34,7 +34,7 @@ class SimulatorScheduleEngine;
 class SimulatorSchedule : public Schedule {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SimulatorSchedule);
-  explicit SimulatorSchedule(Session* session) : Schedule(session) {}
+  explicit SimulatorSchedule(const Session* session) : Schedule(session) {}
 
   void TimeLinePushBack(TaskInstance* instance, SDevice* device);
   void Retiming();
