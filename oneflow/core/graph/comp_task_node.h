@@ -22,9 +22,6 @@ class CompTaskNode : public TaskNode {
       std::function<int64_t(const ChainNode*)> MeaninglessTaskCnt4Chain) const {
     UNEXPECTED_RUN();
   }
-  DeviceType GetDeviceType() const override {
-    return chain_node()->parallel_desc()->device_type();
-  }
 
  protected:
   virtual void InitWithFwNode(TaskNode* fw_node) override {
