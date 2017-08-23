@@ -6,65 +6,31 @@ namespace oneflow {
 
 namespace {
 
-#define DEFINE_STATIC_CASE2KERNEL_MAP(DeviceType, DataType) \
-  HashMap<int, std::function<Kernel*()>>&                   \
-      TypeCase2##DeviceType##DataType##KernelCreator() {    \
-    static HashMap<int, std::function<Kernel*()>> obj;      \
-    return obj;                                             \
-  }
+std::string ComputeTag(OperatorConf::OpTypeCase op_case,
+                       DeviceType device_type) {
+  std::stringstream ss;
+  ss << op_case << "," << device_type;
+  return ss.str();
+}
 
-DEFINE_STATIC_CASE2KERNEL_MAP(Cpu, Float);
-DEFINE_STATIC_CASE2KERNEL_MAP(Gpu, Float);
-DEFINE_STATIC_CASE2KERNEL_MAP(Cpu, Double);
-DEFINE_STATIC_CASE2KERNEL_MAP(Gpu, Double);
+HashMap<std::string, std::function<Kernel*(const OperatorConf&)>>&
+Tag2Creator() {
+  static HashMap<std::string, std::function<Kernel*(const OperatorConf&)>> obj;
+  return obj;
+}
 
-#undef DEFINE_STATIC_CASE2KERNEL_MAP
-
-Kernel* CreateKernel(OperatorConf::OpTypeCase op_type_case,
-                     DeviceType device_type, DataType default_data_type) {
-  if (device_type == DeviceType::kCPU) {
-    if (default_data_type == DataType::kFloat) {
-      return TypeCase2CpuFloatKernelCreator().at(op_type_case)();
-    } else if (default_data_type == DataType::kDouble) {
-      return TypeCase2CpuDoubleKernelCreator().at(op_type_case)();
-    } else {
-      UNEXPECTED_RUN();
-    }
-  } else if (device_type == DeviceType::kGPU) {
-    if (default_data_type == DataType::kFloat) {
-      return TypeCase2GpuFloatKernelCreator().at(op_type_case)();
-    } else if (default_data_type == DataType::kDouble) {
-      return TypeCase2GpuDoubleKernelCreator().at(op_type_case)();
-    } else {
-      UNEXPECTED_RUN();
-    }
-  } else {
-    UNEXPECTED_RUN();
-  }
+Kernel* CreateKernel(OperatorConf::OpTypeCase op_case, DeviceType device_type,
+                     const OperatorConf& op_conf) {
+  std::string tag = ComputeTag(op_case, device_type);
+  return Tag2Creator().at(tag)(op_conf);
 }
 
 }  // namespace
 
-void AddCpuFloatKernelCreator(OperatorConf::OpTypeCase op_type_case,
-                              std::function<Kernel*()> creator) {
-  CHECK(TypeCase2CpuFloatKernelCreator().emplace(op_type_case, creator).second);
-}
-
-void AddGpuFloatKernelCreator(OperatorConf::OpTypeCase op_type_case,
-                              std::function<Kernel*()> creator) {
-  CHECK(TypeCase2GpuFloatKernelCreator().emplace(op_type_case, creator).second);
-}
-
-void AddCpuDoubleKernelCreator(OperatorConf::OpTypeCase op_type_case,
-                               std::function<Kernel*()> creator) {
-  CHECK(
-      TypeCase2CpuDoubleKernelCreator().emplace(op_type_case, creator).second);
-}
-
-void AddGpuDoubleKernelCreator(OperatorConf::OpTypeCase op_type_case,
-                               std::function<Kernel*()> creator) {
-  CHECK(
-      TypeCase2GpuDoubleKernelCreator().emplace(op_type_case, creator).second);
+void AddKernelCreator(OperatorConf::OpTypeCase op_case, DeviceType device_type,
+                      std::function<Kernel*(const OperatorConf&)> creator) {
+  std::string tag = ComputeTag(op_case, device_type);
+  CHECK(Tag2Creator().emplace(tag, creator).second);
 }
 
 void KernelMgr::InitFromPlan(const Plan& plan) {
@@ -78,9 +44,8 @@ void KernelMgr::InitFromPlan(const Plan& plan) {
     if (op_name_set.find(op_name) == op_name_set.end()) { continue; }
     DeviceType device_type = plan.op_name2device_type().at(op_name);
     LOG(INFO) << "construct kernel: " << op_name;
-    std::unique_ptr<Kernel> kernel_ptr(
-        CreateKernel(op_proto.op_conf().op_type_case(), device_type,
-                     JobDesc::Singleton()->default_data_type()));
+    std::unique_ptr<Kernel> kernel_ptr(CreateKernel(
+        op_proto.op_conf().op_type_case(), device_type, op_proto.op_conf()));
     kernel_ptr->InitFromOpProto(op_proto);
     CHECK(op_name2kernel_ptr_.emplace(op_name, std::move(kernel_ptr)).second);
   }

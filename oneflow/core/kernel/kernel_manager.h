@@ -26,62 +26,8 @@ class KernelMgr final {
   HashMap<std::string, std::unique_ptr<const Kernel>> op_name2kernel_ptr_;
 };
 
-void AddCpuFloatKernelCreator(OperatorConf::OpTypeCase op_type_case,
-                              std::function<Kernel*()> creator);
-void AddGpuFloatKernelCreator(OperatorConf::OpTypeCase op_type_case,
-                              std::function<Kernel*()> creator);
-void AddCpuDoubleKernelCreator(OperatorConf::OpTypeCase op_type_case,
-                               std::function<Kernel*()> creator);
-void AddGpuDoubleKernelCreator(OperatorConf::OpTypeCase op_type_case,
-                               std::function<Kernel*()> creator);
-
-template<OperatorConf::OpTypeCase op_type_case, typename KernelType>
-struct CpuFloatKernelRegister {
-  CpuFloatKernelRegister() {
-    AddCpuFloatKernelCreator(op_type_case, []() { return new KernelType; });
-  }
-};
-
-template<OperatorConf::OpTypeCase op_type_case, typename KernelType>
-struct GpuFloatKernelRegister {
-  GpuFloatKernelRegister() {
-    AddGpuFloatKernelCreator(op_type_case, []() { return new KernelType; });
-  }
-};
-
-template<OperatorConf::OpTypeCase op_type_case, typename KernelType>
-struct CpuDoubleKernelRegister {
-  CpuDoubleKernelRegister() {
-    AddCpuDoubleKernelCreator(op_type_case, []() { return new KernelType; });
-  }
-};
-
-template<OperatorConf::OpTypeCase op_type_case, typename KernelType>
-struct GpuDoubleKernelRegister {
-  GpuDoubleKernelRegister() {
-    AddGpuDoubleKernelCreator(op_type_case, []() { return new KernelType; });
-  }
-};
-
-#define REGISTER_CPU_KERNEL(OpTypeCase, KernelType)                    \
-  static CpuFloatKernelRegister<OpTypeCase,                            \
-                                KernelType<DeviceType::kCPU, float>>   \
-      g_##KernelType##_cpu_float_regst_var;                            \
-  static CpuDoubleKernelRegister<OpTypeCase,                           \
-                                 KernelType<DeviceType::kCPU, double>> \
-      g_##KernelType##_cpu_double_regst_var;
-
-#define REGISTER_GPU_KERNEL(OpTypeCase, KernelType)                    \
-  static GpuFloatKernelRegister<OpTypeCase,                            \
-                                KernelType<DeviceType::kGPU, float>>   \
-      g_##KernelType##_gpu_float_regst_var;                            \
-  static GpuDoubleKernelRegister<OpTypeCase,                           \
-                                 KernelType<DeviceType::kGPU, double>> \
-      g_##KernelType##_gpu_double_regst_var;
-
-#define REGISTER_KERNEL(OpTypeCase, KernelType) \
-  REGISTER_CPU_KERNEL(OpTypeCase, KernelType)   \
-  REGISTER_GPU_KERNEL(OpTypeCase, KernelType)
+void AddKernelCreator(OperatorConf::OpTypeCase, DeviceType,
+                      std::function<Kernel*(const OperatorConf&)> creator);
 
 }  // namespace oneflow
 
