@@ -28,7 +28,7 @@ REGISTER_SCHEDULE_FACTORY_PROVIDER("demo")
 
 REGISTER_SCHEDULE_FACTORY_PROVIDER("small_batch_num")
     ->Merge(ScheduleFactoryConfigure::Provider("base"))
-    ->Set(of_make_unique<SessionConcreteFactory<FixedBatchSession<1u>>>());
+    ->Set(of_make_unique<SessionConcreteFactory<FixedBatchSession<2u>>>());
 
 }  // namespace schedule
 }  // namespace oneflow

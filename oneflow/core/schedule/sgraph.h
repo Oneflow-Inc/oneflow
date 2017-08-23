@@ -32,7 +32,7 @@ class SDevice : public SNode {
   OF_DISALLOW_COPY_AND_MOVE(SDevice);
   SDevice() = default;
   ~SDevice() = default;
-  SDevice(std::string name, float bandwidth)
+  SDevice(std::string name, float bandwidth = 1.0)
       : SNode(name), bandwidth_(bandwidth) {}
 
   float time() const { return 1 / bandwidth_; }
@@ -55,6 +55,8 @@ class STask : public SNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(STask);
   explicit STask(const std::string name) : SNode(name) {}
+  STask(const std::string name, float wl) : SNode(name), workload_(wl) {}
+
   STask() {}
   virtual ~STask() {}
 
@@ -68,7 +70,7 @@ class STask : public SNode {
 
  protected:
   uint32_t depth_;
-  float workload_;
+  float workload_ = 1.0;
   SDevice* device_;
 };
 
