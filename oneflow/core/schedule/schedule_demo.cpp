@@ -48,9 +48,9 @@ std::unique_ptr<Plan> LoadPlan(const std::string& file) {
 }
 
 void TestPlan(const std::string& file) {
-  //  std::string conf = "default";
-  //  std::string conf = "small_batch_num";
-  std::string conf = "demo";
+  std::string conf = "default";
+  //	std::string conf = "small_batch_num";
+  //	std::string conf = "demo";
   auto sfp = ScheduleFactoryConfigure::Provider(conf);
   auto allocator_factory = sfp->allocator_factory();
   std::unique_ptr<Allocator> allocator = allocator_factory->CreateAllocator();
@@ -66,6 +66,9 @@ void TestPlan(const std::string& file) {
   std::unique_ptr<Schedule> schedule =
       allocator->MemoryLimitedStaticSchedule(*session);
   schedule->PrintRegstNum();
+  bool is_optimal = validator->ValidateAllocation(*schedule);
+  std::cout << "allocation is " << (is_optimal ? "" : "NOT ") << "optimal"
+            << std::endl;
 }
 
 }  // namespace

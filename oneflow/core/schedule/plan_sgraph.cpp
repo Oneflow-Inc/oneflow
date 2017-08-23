@@ -27,13 +27,14 @@ void PlanSGraph::InitRegstDesc(const Plan& plan) {
       for (int64_t consumer_id : pair.second.consumer_task_id()) {
         STask* consumer = node_mgr().Find(consumer_id);
         CHECK(consumer);
-        mut_subscribed_regst_desc_mgr().CreateIfNotFound(consumer, regst_desc);
         const TaskProto* consumer_task_proto = id2task_proto[consumer_id];
         CHECK(consumer);
         CHECK(producer);
         CHECK(consumer_task_proto);
         if (!(task_proto.type() == kMdUpdtCompTask
               && consumer_task_proto->type() == kDataCompTask)) {
+          mut_subscribed_regst_desc_mgr().CreateIfNotFound(consumer,
+                                                           regst_desc);
           mut_arc_mgr().CreateIfNotFound(producer, consumer);
         }
       }
@@ -44,18 +45,22 @@ void PlanSGraph::InitRegstDesc(const Plan& plan) {
 void PlanSGraph::InitTask(const Plan& plan) {
   for (const TaskProto& task_proto : plan.task()) {
     uint64_t task_id = task_proto.id();
+    float workload = task_proto.exec_sequence().exec_node().size();
     std::string name =
         TaskType_Name(task_proto.type()) + "-" + std::to_string(task_id);
     //	STask
-    STask* node = mut_node_mgr().CreateWithId(task_id, name);
-    if (node) { mut_children_arc_mgr().CreateIfNotFound(this, node); }
+    STask* node = mut_node_mgr().CreateWithId(task_id, name, workload);
+    CHECK(node);
+    mut_children_arc_mgr().CreateIfNotFound(this, node);
     bool is_copy_hd = (task_proto.type() == kCopyHdTask);
     //	SDevice
     uint64_t device_id =
         IDMgr::Singleton()->UUDeviceId4TaskId(task_proto.id(), is_copy_hd);
     std::string device_name = std::to_string(device_id);
-    SDevice* device = mut_device_mgr().CreateIfNotFound(device_id);
-    device->set_time(1);
+    float defval = 1.0;
+    std::string dev_name = std::to_string(device_id);
+    SDevice* device =
+        mut_device_mgr().CreateIfNotFound(device_id, dev_name, defval);
     mut_device_arc_mgr().CreateIfNotFound(node, device);
   }
 }

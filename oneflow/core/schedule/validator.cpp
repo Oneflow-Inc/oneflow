@@ -69,6 +69,7 @@ bool Validator::ValidateAllocation(const Schedule& schedule) {
           schedule_engine->StaticSchedule(get_regst_num);
       if (limited_schedule->max_interval() <= schedule.max_interval()) {
         failed++;
+        limited_schedule->PrintRegstNum();
       }
     }
   }

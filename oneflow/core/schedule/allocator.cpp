@@ -26,14 +26,14 @@ void Allocator::SetRegstNum(const Schedule& schedule, Plan* plan) {
   const SGraph* graph = schedule.session()->graph();
   auto get_regst_num = [&](int64_t id) {
     SRegstDesc* regst_desc = graph->regst_desc_mgr().Find(id);
-    return GetOrDefault(schedule.regst_desc2count(), regst_desc, 2u);
+    uint32_t count = GetOrDefault(schedule.regst_desc2count(), regst_desc, 2u);
+    count = std::max(count, regst_desc->min_regst_count());
+    return count;
   };
   for (auto& task_proto : plan->task()) {
     for (auto& pair : task_proto.produced_regst_desc()) {
       auto regst_desc = const_cast<RegstDescProto*>(&pair.second);
       uint32_t regst_num = get_regst_num(regst_desc->regst_desc_id());
-      //      std::cout << regst_desc->regst_desc_id() << ": " << regst_num
-      //                << std::endl;
       regst_desc->set_register_num(regst_num);
     }
   }

@@ -59,8 +59,7 @@ void Schedule::UpdateRegstCount() {
         GetOrDefault(regst_desc2duration(), regst_desc, static_cast<float>(0));
     float interval = max_interval();
     uint32_t count = ceil(duration / std::max(interval, 1.0f));
-    count = std::max(count, regst_desc->min_regst_count());
-    mut_regst_desc2count()[regst_desc] = count;
+    mut_regst_desc2count()[regst_desc] = std::max(count, 1u);
   });
 }
 
