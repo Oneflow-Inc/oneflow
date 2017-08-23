@@ -1,3 +1,4 @@
+#include "gtest/gtest.h"
 #include "oneflow/core/common/process_state.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/persistence/posix/posix_file_system.h"
@@ -69,7 +70,7 @@ void TestDirOperation(FileSystem* file_system) {
   {
     std::vector<std::string> children;
     file_system->GetChildren(test_root_path, &children);
-    ASSERT_EQ(direct_children.size(), 3);
+    ASSERT_EQ(children.size(), 3);
   }
   int64_t undeleted_files = 0;
   int64_t undeleted_dirs = 0;
@@ -98,6 +99,13 @@ TEST(file_system, write_and_read) {
   fs::FileSystem* file_system = new fs::WindowsFileSystem();
   fs::TestFileSystem(file_system);
 #endif
+}
+
+int main(int argc, char** argv) {
+  testing::InitGoogleTest(&argc, argv);
+  RUN_ALL_TESTS();
+  std::getchar();  // keep console window open until Return keystroke
+  return 0;
 }
 
 }  // namespace oneflow
