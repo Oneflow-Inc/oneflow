@@ -1,3 +1,7 @@
+#include "oneflow/core/persistence/posix/posix_file_system.h"
+
+#ifdef PLATFORM_POSIX
+
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -8,8 +12,6 @@
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
-
-#include "oneflow/core/persistence/posix/posix_file_system.h"
 
 namespace oneflow {
 
@@ -192,3 +194,5 @@ Status PosixFileSystem::IsDirectory(const std::string& fname) {
 }  // namespace fs
 
 }  // namespace oneflow
+
+#endif  // PLATFORM_POSIX

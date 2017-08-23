@@ -75,8 +75,9 @@ void TestDirOperation(FileSystem* file_system) {
   int64_t undeleted_dirs = 0;
   ASSERT_TRUE(file_system->DeleteDir(child_dir) == Status::OK);
   ASSERT_TRUE(file_system->IsDirectory(child_dir) != Status::OK);
-  ASSERT_TRUE(file_system->DeleteRecursively(
-        test_root_path, &undeleted_files,&undeleted_dirs) == Status::OK);
+  ASSERT_TRUE(file_system->DeleteRecursively(test_root_path, &undeleted_files,
+                                             &undeleted_dirs)
+              == Status::OK);
   ASSERT_EQ(undeleted_files, 0);
   ASSERT_EQ(undeleted_dirs, 0);
   ASSERT_TRUE(file_system->IsDirectory(test_root_path) != Status::OK);
