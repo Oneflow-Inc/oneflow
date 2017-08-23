@@ -48,7 +48,7 @@ class NodeMgr {
   NodeMgr() {}
 
   inline uint64_t GetAutoIncrementId() {
-    static uint64_t counter = 0;
+    static uint64_t counter = 1;
     counter++;
     return counter;
   }

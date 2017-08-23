@@ -47,7 +47,7 @@ std::unique_ptr<Plan> LoadPlan(const std::string& file) {
   return std::move(plan);
 }
 
-void TestPlan(const std::string& file) {
+void TestPlan(const std::string& file, const std::string& dot_file) {
   std::string conf = "default";
   //	std::string conf = "small_batch_num";
   //	std::string conf = "demo";
@@ -61,7 +61,8 @@ void TestPlan(const std::string& file) {
 
   std::unique_ptr<Plan> plan = LoadPlan(file);
   std::unique_ptr<SGraph> sgraph = sgraph_factory->CreateSGraph(*plan);
-  CHECK(validator->ValidateGraph(*sgraph));
+  std::ofstream(dot_file, std::ofstream::out) << sgraph->ToDotString();
+  validator->ValidateGraph(*sgraph);
   std::unique_ptr<Session> session = session_factory->CreateSession(*sgraph);
   std::unique_ptr<Schedule> schedule =
       allocator->MemoryLimitedStaticSchedule(*session);
@@ -77,6 +78,11 @@ void TestPlan(const std::string& file) {
 
 int main(int argc, char* argv[]) {
   //  oneflow::schedule::TestDemo();
-  if (argc > 1) { oneflow::schedule::TestPlan(std::string(argv[1])); }
+  std::string dot_file = "/tmp/a.dot";
+  if (argc > 2) { dot_file = argv[2]; }
+  if (argc > 1) {
+    std::string plan_file = argv[1];
+    oneflow::schedule::TestPlan(plan_file, dot_file);
+  }
   return 0;
 }

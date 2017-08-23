@@ -2,10 +2,22 @@
  * Copyright 2017 Xinqi Li
  */
 #include "oneflow/core/schedule/sgraph.h"
+#include <sstream>
 #include "oneflow/core/schedule/bfs_visitor.h"
 
 namespace oneflow {
 namespace schedule {
+
+std::string SGraph::ToDotString() {
+  std::stringstream ss;
+  ss << "digraph {" << std::endl;
+  ForeachArc([&](TaskArc* arc) {
+    ss << "\t\"" << arc->src_node()->name() << "\" -> \""
+       << arc->dst_node()->name() << "\";" << std::endl;
+  });
+  ss << "}" << std::endl;
+  return ss.str();
+}
 
 void SGraph::InitSourceAndSink() {
   mut_source() = mut_fake_node_mgr().Create("source");
@@ -32,17 +44,9 @@ void SGraph::UpdateSourceAndSink() {
 }
 
 void SGraph::ForeachArc(const std::function<void(Arc<STask>*)>& cb) const {
-  arc_mgr().OutputArc(source(), cb);
-  children_arc_mgr().Output(
-      this, [&](STask* child) { arc_mgr().OutputArc(child, cb); });
+  ForeachNode([&](STask* child) { arc_mgr().OutputArc(child, cb); });
 }
 
-void SGraph::ForeachNodeWithSourceAndSink(
-    const std::function<void(STask*)>& cb) const {
-  cb(source());
-  ForeachNode(cb);
-  cb(sink());
-}
 void SGraph::ForeachNode(const std::function<void(STask*)>& cb) const {
   cb(source());
   children_arc_mgr().Output(this, cb);

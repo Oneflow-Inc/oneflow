@@ -5,7 +5,7 @@ namespace schedule {
 void Session::NewBatchs() {
   for (uint32_t i = 0u; i < nr_batch(); i++) {
     Batch* batch = mut_batch_node_mgr().CreateWithId(i, std::to_string(i));
-    graph()->ForeachNodeWithSourceAndSink([&](STask* node) {
+    graph()->ForeachNode([&](STask* node) {
       mut_task_instance_mgr().CreateIfNotFound(batch, node);
     });
     graph()->ForeachArc([&](TaskArc* arc) {

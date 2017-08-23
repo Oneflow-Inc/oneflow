@@ -46,8 +46,9 @@ void PlanSGraph::InitTask(const Plan& plan) {
   for (const TaskProto& task_proto : plan.task()) {
     uint64_t task_id = task_proto.id();
     float workload = task_proto.exec_sequence().exec_node().size();
-    std::string name =
-        TaskType_Name(task_proto.type()) + "-" + std::to_string(task_id);
+    std::string name = TaskType_Name(task_proto.type()) + "\\n"
+                       + std::to_string(task_id) + "\\n"
+                       + +(task_proto.is_forward() ? "fw-or-loss" : "bp");
     //	STask
     STask* node = mut_node_mgr().CreateWithId(task_id, name, workload);
     CHECK(node);

@@ -21,7 +21,13 @@ bool Validator::ValidateGraphArc(
     std::cout << std::endl;
   };
   uint32_t scc_cnt = scc(sgraph.source(), print_component);
-  return scc_cnt == 0u;
+  CHECK(scc_cnt == 0u);
+
+  sgraph.ForeachArc([&](TaskArc* arc) {
+    CHECK(arc->dst_node() != sgraph.source());
+    CHECK(arc->src_node() != sgraph.sink());
+  });
+  return true;
 }
 
 bool Validator::ValidateMemory(const Schedule& schedule) {
