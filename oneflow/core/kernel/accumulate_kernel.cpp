@@ -10,9 +10,9 @@ void AccumulateKernel<device_type, T>::Forward(
   Blob* out_blob = BnInOp2Blob("acc");
   CHECK_EQ(in_blob->data_type(), GetDataType<T>::val);
   CHECK_EQ(out_blob->data_type(), GetDataType<T>::val);
-  KernelUtil<device_type, T>::BlasAxpy(ctx, in_blob->shape().elem_cnt(),
-                                       static_cast<T>(1.0), in_blob->dptr<T>(),
-                                       1, out_blob->mut_dptr<T>(), 1);
+  KernelUtil<device_type, T>::BlasAxpy(
+      ctx.device_ctx, in_blob->shape().elem_cnt(), static_cast<T>(1.0),
+      in_blob->dptr<T>(), 1, out_blob->mut_dptr<T>(), 1);
 }
 
 namespace {

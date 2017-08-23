@@ -29,7 +29,11 @@ void DataLoaderKernel<T>::Forward(
       reader->ReadLine(&line);
       const char* line_ptr = line.c_str();
       line_ptr = StrToToken(line_ptr, ",", &token) + 1;
-      // TODO: out_blob->SetDataId(i, token);
+      if (out_blob->has_data_id()) {
+        memset(out_blob->mut_data_id(), '\0',
+               JobDesc::Singleton()->SizeOfOneDataId());
+        memcpy(out_blob->mut_data_id(i), token.c_str(), token.size());
+      }
       for (int64_t j = 0; j < out_blob->shape().Count(1); ++j) {
         line_ptr = StrToToken(line_ptr, ",", &token) + 1;
         *out_dptr++ = oneflow_cast<T>(token);

@@ -44,99 +44,85 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
   OF_DISALLOW_COPY_AND_MOVE(KernelUtil);
   KernelUtil() = delete;
 
-  static void Memcpy(
-      const KernelCtx& ctx, void* dst, const void* src, size_t sz,
-      cudaMemcpyKind kind = cudaMemcpyKind::cudaMemcpyHostToHost) {
-    ctx.device_ctx->cpu_stream()->SendWork(
-        [dst, src, sz]() { memcpy(dst, src, sz); });
-  }
-
-  static void Memset(const KernelCtx& ctx, void* dst, const char value,
-                     size_t sz) {
-    ctx.device_ctx->cpu_stream()->SendWork(
-        [dst, value, sz]() { memset(dst, value, sz); });
-  }
-
-  static void BlasAxpy(const KernelCtx& ctx, const int n,
+  static void BlasAxpy(DeviceCtx* ctx, const int n,
                        const FloatingPointType alpha,
                        const FloatingPointType* x, const int incx,
                        FloatingPointType* y, const int incy) {
-    ctx.device_ctx->cpu_stream()->SendWork([n, alpha, x, incx, y, incy]() {
+    ctx->cpu_stream()->SendWork([n, alpha, x, incx, y, incy]() {
       cblas_axpy(n, alpha, x, incx, y, incy);
     });
   }
 
-  static void BlasScal(const KernelCtx& ctx, const int n,
+  static void BlasScal(DeviceCtx* ctx, const int n,
                        const FloatingPointType alpha, FloatingPointType* x,
                        const int incx) {
-    ctx.device_ctx->cpu_stream()->SendWork(
+    ctx->cpu_stream()->SendWork(
         [n, alpha, x, incx]() { cblas_scal(n, alpha, x, incx); });
   }
 
-  static void Max(const KernelCtx& ctx, const int64_t n,
-                  const FloatingPointType* x, FloatingPointType* max_ptr) {
+  static void Max(DeviceCtx* ctx, const int64_t n, const FloatingPointType* x,
+                  FloatingPointType* max_ptr) {
     Max(ctx, n, x, max_ptr, nullptr, 0);
   }
 
-  static void Max(const KernelCtx& ctx, const int64_t n,
-                  const FloatingPointType* x, FloatingPointType* max_ptr,
-                  FloatingPointType* temp_storage, size_t temp_storage_bytes) {
-    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+  static void Max(DeviceCtx* ctx, const int64_t n, const FloatingPointType* x,
+                  FloatingPointType* max_ptr, FloatingPointType* temp_storage,
+                  size_t temp_storage_bytes) {
+    ctx->cpu_stream()->SendWork([=]() {
       *max_ptr = x[0];
       for (int64_t i = 0; i < n; ++i) { *max_ptr = std::max(*max_ptr, x[i]); }
     });
   }
 
-  static void Exp(const KernelCtx& ctx, const int64_t n,
-                  const FloatingPointType* x, FloatingPointType* y) {
-    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+  static void Exp(DeviceCtx* ctx, const int64_t n, const FloatingPointType* x,
+                  FloatingPointType* y) {
+    ctx->cpu_stream()->SendWork([=]() {
       for (int64_t i = 0; i < n; ++i) { y[i] = std::exp(x[i]); }
     });
   }
 
-  static void Sum(const KernelCtx& ctx, const int64_t n,
-                  const FloatingPointType* x, FloatingPointType* sum_ptr) {
+  static void Sum(DeviceCtx* ctx, const int64_t n, const FloatingPointType* x,
+                  FloatingPointType* sum_ptr) {
     Sum(ctx, n, x, sum_ptr, nullptr, 0);
   }
 
-  static void Sum(const KernelCtx& ctx, const int64_t n,
-                  const FloatingPointType* x, FloatingPointType* sum_ptr,
-                  FloatingPointType* temp_storage, size_t temp_storage_bytes) {
-    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+  static void Sum(DeviceCtx* ctx, const int64_t n, const FloatingPointType* x,
+                  FloatingPointType* sum_ptr, FloatingPointType* temp_storage,
+                  size_t temp_storage_bytes) {
+    ctx->cpu_stream()->SendWork([=]() {
       *sum_ptr = 0;
       for (int64_t i = 0; i < n; ++i) { *sum_ptr += x[i]; }
     });
   }
 
-  static void Div(const KernelCtx& ctx, const int64_t n, FloatingPointType* x,
+  static void Div(DeviceCtx* ctx, const int64_t n, FloatingPointType* x,
                   const FloatingPointType* alpha_ptr) {
-    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+    ctx->cpu_stream()->SendWork([=]() {
       for (int64_t i = 0; i < n; ++i) { x[i] = x[i] / (*alpha_ptr); }
     });
   }
 
-  static void Mul(const KernelCtx& ctx, const int64_t n,
-                  const FloatingPointType* x, const FloatingPointType* y,
-                  FloatingPointType* z) {
-    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+  static void Mul(DeviceCtx* ctx, const int64_t n, const FloatingPointType* x,
+                  const FloatingPointType* y, FloatingPointType* z) {
+    ctx->cpu_stream()->SendWork([=]() {
       for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }
     });
   }
 
-  static void BlasGemv(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans,
-                       int m, int n, const FloatingPointType alpha,
+  static void BlasGemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
+                       int n, const FloatingPointType alpha,
                        const FloatingPointType* a, int lda,
                        const FloatingPointType* x, const int incx,
                        const FloatingPointType beta, FloatingPointType* y,
                        const int incy) {
-    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+    ctx->cpu_stream()->SendWork([=]() {
       // Set col major to keep it as the same with cublas
       cblas_gemv(CBLAS_ORDER::CblasColMajor, trans, m, n, alpha, a, lda, x,
                  incx, beta, y, incy);
     });
   }
 
-  static void BlasGemm(const KernelCtx& ctx, const enum CBLAS_ORDER order,
+  static void BlasGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
                        const enum CBLAS_TRANSPOSE trans_a,
                        const enum CBLAS_TRANSPOSE trans_b, const int m,
                        const int n, const int k, const FloatingPointType alpha,
@@ -144,31 +130,27 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
                        const FloatingPointType* b, const int ldb,
                        const FloatingPointType beta, FloatingPointType* c,
                        const int ldc) {
-    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+    ctx->cpu_stream()->SendWork([=]() {
       cblas_gemm(order, trans_a, trans_b, m, n, k, alpha, a, lda, b, ldb, beta,
                  c, ldc);
     });
   }
 
-  static void BlasDot(const KernelCtx& ctx, const int n,
-                      const FloatingPointType* x, const int incx,
-                      const FloatingPointType* y, const int incy,
-                      FloatingPointType* result) {
-    ctx.device_ctx->cpu_stream()->SendWork(
+  static void BlasDot(DeviceCtx* ctx, const int n, const FloatingPointType* x,
+                      const int incx, const FloatingPointType* y,
+                      const int incy, FloatingPointType* result) {
+    ctx->cpu_stream()->SendWork(
         [=]() { *result = cblas_dot(n, x, incx, y, incy); });
   }
 
-  static void BlasSwap(const KernelCtx& ctx, const int n, FloatingPointType* x,
+  static void BlasSwap(DeviceCtx* ctx, const int n, FloatingPointType* x,
                        const int incx, FloatingPointType* y, const int incy) {
-    ctx.device_ctx->cpu_stream()->SendWork(
-        [=]() { cblas_swap(n, x, incx, y, incy); });
+    ctx->cpu_stream()->SendWork([=]() { cblas_swap(n, x, incx, y, incy); });
   }
 
-  static void BlasCopy(const KernelCtx& ctx, const int n,
-                       const FloatingPointType* x, const int incx,
-                       FloatingPointType* y, const int incy) {
-    ctx.device_ctx->cpu_stream()->SendWork(
-        [=]() { cblas_copy(n, x, incx, y, incy); });
+  static void BlasCopy(DeviceCtx* ctx, const int n, const FloatingPointType* x,
+                       const int incx, FloatingPointType* y, const int incy) {
+    ctx->cpu_stream()->SendWork([=]() { cblas_copy(n, x, incx, y, incy); });
   }
 
   static void Fill(const FillConf& fill_conf, uint32_t random_seed,
@@ -184,18 +166,17 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
     }
   }
 
-  static void Fill(const KernelCtx& ctx, const FillConf& fill_conf,
+  static void Fill(DeviceCtx* ctx, const FillConf& fill_conf,
                    uint32_t random_seed, Blob* blob) {
-    ctx.device_ctx->cpu_stream()->SendWork(
-        [=]() { Fill(fill_conf, random_seed, blob); });
+    ctx->cpu_stream()->SendWork([=]() { Fill(fill_conf, random_seed, blob); });
   }
 
-  static void FillWithSnapshot(const KernelCtx& ctx, int32_t part_id,
+  static void FillWithSnapshot(DeviceCtx* ctx, int32_t part_id,
                                int32_t part_num, const Snapshot* snapshot,
                                Blob* blob, const std::string& lbn,
                                int32_t dim_num, int64_t num_in_each_dim) {
     int64_t blob_size = blob->shape().elem_cnt() * sizeof(FloatingPointType);
-    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+    ctx->cpu_stream()->SendWork([=]() {
       std::unique_ptr<PersistentInStream> in_stream =
           snapshot->GetInStream(lbn, part_id, part_num, dim_num,
                                 num_in_each_dim * sizeof(FloatingPointType));
@@ -233,6 +214,19 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
   }
 };
 
-INSTANTIATE_CPU_KERNEL_UTIL_CLASS(KernelUtil);
+template class KernelUtil<DeviceType::kCPU, float>;
+template class KernelUtil<DeviceType::kCPU, double>;
+
+template<>
+void Memcpy<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const void* src,
+                              size_t sz, cudaMemcpyKind kind) {
+  ctx->cpu_stream()->SendWork([dst, src, sz]() { memcpy(dst, src, sz); });
+}
+
+template<>
+void Memset<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const char value,
+                              size_t sz) {
+  ctx->cpu_stream()->SendWork([dst, value, sz]() { memset(dst, value, sz); });
+}
 
 }  //  namespace oneflow

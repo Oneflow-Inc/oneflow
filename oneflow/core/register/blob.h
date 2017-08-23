@@ -1,6 +1,8 @@
 #ifndef ONEFLOW_CORE_REGISTER_BLOB_H_
 #define ONEFLOW_CORE_REGISTER_BLOB_H_
 
+#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/register/blob_desc.h"
 
 namespace oneflow {
@@ -33,10 +35,13 @@ class Blob final {
   const BlobDesc& blob_desc() const { return *blob_desc_; }
   const Shape& shape() const { return blob_desc_->shape(); }
   DataType data_type() const { return blob_desc_->data_type(); }
+  bool has_data_id() const { return blob_desc_->has_data_id(); }
   size_t ByteSizeOfDataIdField() const {
     return blob_desc_->ByteSizeOfDataIdField();
   }
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
+  template<DeviceType device_type>
+  void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs);
 
  private:
   template<typename T>
