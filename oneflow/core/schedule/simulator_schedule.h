@@ -84,7 +84,7 @@ class SimulatorSchedule : public Schedule {
     timenet_arc_mgr().Input(task_instance, cb);
   }
 
- protected:
+ private:
   inline const ArcMgr<Arc<TaskInstance>>& timenet_arc_mgr() const {
     return timenet_arc_mgr_;
   }
@@ -92,7 +92,13 @@ class SimulatorSchedule : public Schedule {
     return timenet_arc_mgr_;
   }
   void WalkTimeNetReverse(const std::function<void(TaskInstance*)>& cb);
-  void WalkBpTimeNet(const std::function<void(TaskInstance*)>& cb);
+  void WalkFromLossToSink(const std::function<void(TaskInstance*)>& cb);
+  void WalkFromLossToSource(const std::function<void(TaskInstance*)>& cb);
+  void WalkFromLoss(bool direction,
+                    const std::function<void(TaskInstance*)>& cb);
+  void LazyRetimingAllNode();
+  void EagerRetimingBpNodeWithSplitDeviceHypothesis();
+  void LazyRetimingFwNodeWithSplitDeviceHypothesis();
 
   std::unordered_map<SRegst*, float> regst2ended_at_;
   std::unordered_map<RegstDescInstance*, SRegst*> regst_desc_instance2regst_;

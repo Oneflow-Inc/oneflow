@@ -53,6 +53,22 @@ bool Validator::ValidateAllocation(const Schedule& schedule) {
   auto schedule_engine = engine_factory->CreateScheduleEngine(*sess);
   uint32_t target = 0;
   uint32_t failed = 0;
+
+  std::cout << "-------[ more ]-------" << std::endl;
+  std::unordered_map<uint64_t, uint32_t> more_regst;
+  for (const auto& p : schedule.regst_desc2count()) {
+    more_regst[p.first->id()] = p.second + 1;
+  }
+  auto get_regst_num = [&](uint64_t id) { return more_regst[id]; };
+  std::unique_ptr<Schedule> more_memory_schedule =
+      schedule_engine->StaticSchedule(get_regst_num);
+  std::cout << "ii = " << more_memory_schedule->max_interval() << std::endl;
+  if (more_memory_schedule->max_interval() < schedule.max_interval()) {
+    failed++;
+    more_memory_schedule->PrintRegstNum();
+    more_memory_schedule->PrintSchedule();
+  }
+
   for (uint32_t i = 0; i < schedule.regst_desc2count().size(); i++) {
     std::unordered_map<uint64_t, uint32_t> limited;
     uint32_t count = 0;
@@ -62,7 +78,7 @@ bool Validator::ValidateAllocation(const Schedule& schedule) {
       if (count == target && limited[p.first->id()] > 1) {
         limited[p.first->id()] -= 1;
         declined = true;
-        std::cout << "---------------" << std::endl;
+        std::cout << "-------[ less ]--------" << std::endl;
         std::cout << p.first->id() << ": " << limited[p.first->id()]
                   << std::endl;
       }
@@ -75,7 +91,9 @@ bool Validator::ValidateAllocation(const Schedule& schedule) {
           schedule_engine->StaticSchedule(get_regst_num);
       if (limited_schedule->max_interval() <= schedule.max_interval()) {
         failed++;
+        std::cout << "ii = " << limited_schedule->max_interval();
         limited_schedule->PrintRegstNum();
+        limited_schedule->PrintSchedule();
       }
     }
   }

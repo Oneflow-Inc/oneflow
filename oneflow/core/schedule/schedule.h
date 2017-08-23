@@ -80,6 +80,7 @@ class Schedule {
   }
 
   void PrintRegstNum();
+  void PrintSchedule();
 
  protected:
   const Session* session_;

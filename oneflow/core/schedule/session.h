@@ -34,8 +34,8 @@ class Session {
   explicit Session(const SGraph* graph) : graph_(graph) {
     uint32_t nr_device = graph->DeviceCount();
     uint32_t depth = graph->Depth();
-    nr_base_batch_ = std::min(nr_device, depth);
-    nr_base_batch_ = std::max(nr_base_batch_, 12u);
+    nr_base_batch_ = std::max(nr_device, depth);
+    nr_base_batch_ = std::max(nr_base_batch_, 6u);
     nr_batch_ = nr_base_batch_ * 3;
     NewBatchs();
   }

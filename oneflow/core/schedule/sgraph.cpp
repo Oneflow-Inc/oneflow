@@ -91,13 +91,13 @@ uint32_t SGraph::DeviceCount() const {
   return devices.size();
 }
 
-void SGraph::WalkArcReverse(const std::function<void(Arc<STask>*)>& cb) {
+void SGraph::WalkArcReverse(const std::function<void(Arc<STask>*)>& cb) const {
   WalkReverse([&](STask* node) {
     arc_mgr().OutputArc(node, [&](Arc<STask>* arc) { cb(arc); });
   });
 }
 
-void SGraph::WalkReverse(const std::function<void(STask*)>& cb) {
+void SGraph::WalkReverse(const std::function<void(STask*)>& cb) const {
   auto foreach_next = std::bind(&SGraph::ForeachPrev, this,
                                 std::placeholders::_1, std::placeholders::_2);
   auto foreach_prev = std::bind(&SGraph::ForeachNext, this,
@@ -106,11 +106,11 @@ void SGraph::WalkReverse(const std::function<void(STask*)>& cb) {
   bfs_foreach(sink(), cb);
 }
 
-void SGraph::WalkArc(const std::function<void(Arc<STask>*)>& cb) {
+void SGraph::WalkArc(const std::function<void(Arc<STask>*)>& cb) const {
   Walk([&](STask* node) { arc_mgr().InputArc(node, cb); });
 }
 
-void SGraph::Walk(const std::function<void(STask*)>& cb) {
+void SGraph::Walk(const std::function<void(STask*)>& cb) const {
   auto foreach_next = std::bind(&SGraph::ForeachNext, this,
                                 std::placeholders::_1, std::placeholders::_2);
   auto foreach_prev = std::bind(&SGraph::ForeachPrev, this,
