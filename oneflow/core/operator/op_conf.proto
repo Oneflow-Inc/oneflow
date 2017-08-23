@@ -122,15 +122,15 @@ message SoftmaxOpConf {
 }
 
 message SoftmaxLossOpConf {
-  string prediction = 1;
-  string label = 3;
-  string loss = 4;
+  LogicalBlob prediction = 1;
+  LogicalBlob label = 3;
+  LogicalBlob loss = 4;
 }
 
 message MultinomialLogisticLossOpConf {
-  string prediction = 1;
-  string label = 2;
-  string loss = 3;
+  LogicalBlob prediction = 1;
+  LogicalBlob label = 2;
+  LogicalBlob loss = 3;
 }
 
 message ConcatOpConf {
