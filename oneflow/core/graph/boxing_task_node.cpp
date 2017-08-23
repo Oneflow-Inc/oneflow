@@ -26,7 +26,7 @@ void FwCompleteBoxOpConfModelModel(BoxingOpConf* conf) {
   conf->mutable_clone_box();
 }
 
-void FwCompleteBoxOpConfFakerMdUpdt(BoxingOpConf* conf) {
+void FwCompleteBoxOpConfAddClone(BoxingOpConf* conf) {
   conf->mutable_add_box();
   conf->mutable_clone_box();
 }
@@ -119,10 +119,13 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
     CompleteBoxOp = &FwCompleteBoxOpConfModelData;
   } else if (in_policy == kModelParallel && out_policy == kModelParallel) {
     CompleteBoxOp = &FwCompleteBoxOpConfModelModel;
-  } else {
-    CHECK_EQ(in_policy, kFakerMdUpdt);
+  } else if (in_policy == kFakerMdUpdt) {
     CHECK_EQ(out_policy, kModelParallel);
-    CompleteBoxOp = &FwCompleteBoxOpConfFakerMdUpdt;
+    CompleteBoxOp = &FwCompleteBoxOpConfAddClone;
+  } else {
+    CHECK_EQ(in_policy, kFakerLossRecord);
+    CHECK_EQ(out_policy, kDataParallel);
+    CompleteBoxOp = &FwCompleteBoxOpConfAddClone;
   }
   // func 4 construct boxing_op in this node
   auto ConstructBoxingOp = [&](const std::string& lbn) {
@@ -170,11 +173,11 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
   }
 }
 
-void BoxingTaskNode::FwInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
+void BoxingTaskNode::FwInferBlobDescInProducedRegsts(TaskGraph*) {
   exec_gph().ConstForEachNode([this](const ExecNode* exec_node) {
-    exec_node->op()->InferShape4FwBlobs(exec_node->GetMutShapePtr4BnInOpFunc(),
-                                        chain_node()->parallel_desc()->policy(),
-                                        0, 0);
+    exec_node->op()->InferBlobDesc4FwBlobs(
+        exec_node->GetBlobDesc4BnInOpFunc(),
+        chain_node()->parallel_desc()->policy(), 0, 0);
   });
 }
 
@@ -229,16 +232,16 @@ void BoxingTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   mut_exec_gph().UpdateSourceAndSink();
 }
 
-void BoxingTaskNode::BpInferShapeOfBlobsInProducedRegsts(TaskGraph*) {
+void BoxingTaskNode::BpInferBlobDescInProducedRegsts(TaskGraph*) {
   for (TaskEdge* fw_in_edge : GetFwNode()->in_edges()) {
     auto in_regst = GetRelatedRegst(fw_in_edge);
     if (auto in_diff_regst = GetBpRegstFromFwRegst(in_regst)) {
-      in_diff_regst->CopyShapeFrom(in_regst.get());
+      in_diff_regst->CopyBlobDescFrom(in_regst.get());
     }
   }
   auto fw_middle_regst = GetFwNode()->GetProducedRegstDesc("middle");
   auto bp_middle_regst = GetProducedRegstDesc("middle");
-  bp_middle_regst->CopyShapeFrom(fw_middle_regst.get());
+  bp_middle_regst->CopyBlobDescFrom(fw_middle_regst.get());
 }
 
 }  // namespace oneflow

@@ -13,6 +13,9 @@ inline void StringReplace(std::string* str, char old_ch, char new_ch) {
   }
 }
 
+const char* StrToToken(const char* text, const std::string& delims,
+                       std::string* token);
+
 void Split(const std::string& text, const std::string& delims,
            std::function<void(std::string&&)> Func);
 

@@ -16,12 +16,12 @@ const PbMessage& CloneOp::GetSpecialConf() const {
   return op_conf().clone_conf();
 }
 
-void CloneOp::InferShape4FwBlobs(
-    std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+void CloneOp::InferBlobDesc4FwBlobs(
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
-  Shape* input_shape_ptr = GetShapePtr4BnInOp(SoleIbn());
+  const BlobDesc* input_blob_desc = GetBlobDesc4BnInOp(SoleIbn());
   for (std::string obn : output_bns()) {
-    *GetShapePtr4BnInOp(obn) = *input_shape_ptr;
+    *GetBlobDesc4BnInOp(obn) = *input_blob_desc;
   }
 }
 

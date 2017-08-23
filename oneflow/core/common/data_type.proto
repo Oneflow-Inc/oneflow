@@ -1,0 +1,16 @@
+syntax = "proto3";
+package oneflow;
+
+enum DataType {
+  kChar = 0;
+  kFloat = 1;
+  kDouble = 2;
+  kInt8 = 3;
+  kInt16 = 4;
+  kInt32 = 5;
+  kInt64 = 6;
+  kUInt8 = 7;
+  kUInt16 = 8;
+  kUInt32 = 9;
+  kUInt64 = 10;
+}
