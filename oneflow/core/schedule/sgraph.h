@@ -201,6 +201,7 @@ class SGraph : public SNode {
     UpdateSourceAndSink();
     InitDepth();
     InitAscendentArc();
+    RemoveUselessArc();
     UpdateTask();
     UpdateRegstDesc();
   }
@@ -210,6 +211,8 @@ class SGraph : public SNode {
   void InitDepth();
   void UpdateTask();
   void UpdateRegstDesc();
+  void RemoveUselessArc();
+  bool ReachableWithoutArc(const TaskArc* arc) const;
 
  private:
   STask* source_;

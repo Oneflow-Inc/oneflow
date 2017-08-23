@@ -43,6 +43,23 @@ void SGraph::UpdateSourceAndSink() {
   });
 }
 
+bool SGraph::ReachableWithoutArc(const TaskArc* arc) const {
+  bool reachable = false;
+  arc_mgr().Input(arc->dst_node(), [&](STask* prev) {
+    TaskArc* asc = ascendent_arc_mgr().Find(prev, arc->src_node());
+    reachable = reachable || asc != nullptr;
+  });
+  return reachable;
+}
+
+void SGraph::RemoveUselessArc() {
+  std::unordered_set<uint64_t> useless_arc_ids;
+  ForeachArc([&](TaskArc* arc) {
+    if (ReachableWithoutArc(arc)) useless_arc_ids.insert(arc->id());
+  });
+  for (uint64_t id : useless_arc_ids) { mut_arc_mgr().Delete(id); }
+}
+
 void SGraph::ForeachArc(const std::function<void(Arc<STask>*)>& cb) const {
   ForeachNode([&](STask* child) { arc_mgr().OutputArc(child, cb); });
 }

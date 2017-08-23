@@ -10,8 +10,9 @@ void Schedule::PrintRegstNum() {
         GetOrDefault(regst_desc2duration(), regst_desc, static_cast<float>(0));
     float interval = max_interval();
     uint32_t count = GetOrDefault(regst_desc2count(), regst_desc, 1u);
-    std::cout << "Allocation\t" << regst_desc->id() << "\t" << count << "\t"
-              << duration << "," << interval << std::endl;
+    std::cout << "Allocation\t" << regst_desc->owner_task()->id() << "\t"
+              << regst_desc->id() << "\t" << count << "\t" << duration << ","
+              << interval << std::endl;
   });
 }
 
