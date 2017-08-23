@@ -39,7 +39,7 @@ class SDevice : public SNode {
   float bandwith() const { return bandwidth_; }
   uint64_t memory_limit() const { return memory_limit_; }
 
-  float& mut_bandwith() { return bandwidth_; }
+  float& mut_bandwidth() { return bandwidth_; }
   uint64_t& mut_memory_limit() { return memory_limit_; }
 
   void set_time(float t) { bandwidth_ = 1 / t; }

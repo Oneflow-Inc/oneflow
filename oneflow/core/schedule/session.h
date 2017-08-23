@@ -35,7 +35,7 @@ class Session {
     uint32_t nr_device = graph->DeviceCount();
     uint32_t depth = graph->Depth();
     nr_base_batch_ = std::max(nr_device, depth);
-    nr_base_batch_ = std::max(nr_base_batch_, 6u);
+    nr_base_batch_ = std::max(nr_base_batch_, 12u);
     nr_batch_ = nr_base_batch_ * 3;
     NewBatchs();
   }
@@ -78,9 +78,12 @@ class Session {
   }
 
   inline uint32_t nr_batch() const { return nr_batch_; }
-  inline uint32_t& nr_batch() { return nr_batch_; }
   inline uint32_t nr_base_batch() const { return nr_base_batch_; }
-  inline uint32_t& nr_base_batch() { return nr_base_batch_; }
+  inline uint32_t nr_stable_batch() const { return nr_base_batch_; }
+  inline uint32_t nr_unstable_batch() const { return nr_base_batch_; }
+
+  inline uint32_t& mut_nr_batch() { return nr_batch_; }
+  inline uint32_t& mut_nr_base_batch() { return nr_base_batch_; }
 
  protected:
   const SGraph* graph_;

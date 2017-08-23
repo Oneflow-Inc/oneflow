@@ -58,11 +58,12 @@ void PlanSGraph::InitTask(const Plan& plan) {
     uint64_t device_id =
         IDMgr::Singleton()->UUDeviceId4TaskId(task_proto.id(), is_copy_hd);
     std::string device_name = std::to_string(device_id);
-    float defval = 1.0;
+    float defval = 0.0;
     std::string dev_name = std::to_string(device_id);
     SDevice* device =
         mut_device_mgr().CreateIfNotFound(device_id, dev_name, defval);
     mut_device_arc_mgr().CreateIfNotFound(node, device);
+    device->mut_bandwidth() += workload;
   }
 }
 
