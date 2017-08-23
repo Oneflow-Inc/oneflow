@@ -213,10 +213,9 @@ void Compiler::GenPlanFile(const std::string& plan_filepath) {
       auto it = plan.mutable_op_name2device_type()->find(op_name);
       if (it == plan.mutable_op_name2device_type()->end()) {
         plan.mutable_op_name2device_type()->insert(
-            {op_name, task_node->chain_node()->parallel_desc()->device_type()});
+            {op_name, task_node->GetDeviceType()});
       } else {
-        CHECK_EQ(it->second,
-                 task_node->chain_node()->parallel_desc()->device_type());
+        CHECK_EQ(it->second, task_node->GetDeviceType());
       }
       // machine_id2op_name_set
       int64_t machine_id = task_node->stage_node()->machine_id();
