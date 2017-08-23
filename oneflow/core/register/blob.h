@@ -30,7 +30,6 @@ class Blob final {
     CheckDataType<T>();
     return static_cast<T*>(dptr_);
   }
-#undef CHECK_DATA_TYPE
 
   const BlobDesc& blob_desc() const { return *blob_desc_; }
   const Shape& shape() const { return blob_desc_->shape(); }
