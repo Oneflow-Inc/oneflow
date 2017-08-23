@@ -43,6 +43,14 @@ namespace oneflow {
     return ptr;                            \
   }
 
+#define COMMAND(...)            \
+  namespace {                   \
+  struct CommandT {             \
+    CommandT() { __VA_ARGS__; } \
+  };                            \
+  CommandT g_command_var;       \
+  }
+
 template<typename T>
 bool operator==(const std::weak_ptr<T>& lhs, const std::weak_ptr<T>& rhs) {
   return lhs.lock().get() == rhs.lock().get();
