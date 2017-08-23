@@ -23,6 +23,15 @@ void TestFileOperation(FileSystem* file_system) {
   ASSERT_TRUE(writable_file->Append(write_content.substr(10, 14).c_str(), 14)
               == Status::OK);
   ASSERT_TRUE(writable_file->Close() == Status::OK);
+  // write append
+  std::string append_content = "append-text";
+  std::unique_ptr<WritableFile> appendable_file;
+  ASSERT_TRUE(file_system->NewAppendableFile(file_name, &appendable_file)
+              == Status::OK);
+  ASSERT_TRUE(appendable_file->Append(append_content.c_str(), 11)
+              == Status::OK);
+  ASSERT_TRUE(appendable_file->Flush() == Status::OK);
+  ASSERT_TRUE(appendable_file->Close() == Status::OK);
   // rename
   std::string new_file_name = file_name + "_new";
   ASSERT_TRUE(file_system->RenameFile(file_name, new_file_name) == Status::OK);
@@ -33,11 +42,11 @@ void TestFileOperation(FileSystem* file_system) {
               == Status::OK);
   uint64_t file_size = 0;
   ASSERT_TRUE(file_system->GetFileSize(file_name, &file_size) == Status::OK);
-  ASSERT_EQ(file_size, 24);
+  ASSERT_EQ(file_size, 35);
   char* read_array = new char[file_size];
   ASSERT_TRUE(random_access_file->Read(0, file_size, read_array) == Status::OK);
   std::string read_content(read_array, file_size);
-  ASSERT_EQ(write_content, read_content);
+  ASSERT_EQ(write_content + append_content, read_content);
   ASSERT_TRUE(file_system->DeleteFile(file_name) == Status::OK);
   delete[] read_array;
 }
