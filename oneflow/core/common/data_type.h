@@ -22,14 +22,20 @@ namespace oneflow {
   MACRO_PAIR(uint32_t, DataType::kUInt32) \
   MACRO_PAIR(uint64_t, DataType::kUInt64)
 
+#define INT_DATA_TYPE_PAIR()  \
+  SIGNED_INT_DATA_TYPE_PAIR() \
+  UNSIGNED_INT_DATA_TYPE_PAIR()
+
 #define ARITHMETIC_DATA_TYPE_PAIR() \
   FLOATING_DATA_TYPE_PAIR()         \
-  SIGNED_INT_DATA_TYPE_PAIR()       \
-  UNSIGNED_INT_DATA_TYPE_PAIR()
+  INT_DATA_TYPE_PAIR()
 
 #define ALL_DATA_TYPE_PAIR()  \
   ARITHMETIC_DATA_TYPE_PAIR() \
   MACRO_PAIR(char, DataType::kChar)
+
+bool IsIntegral(DataType data_type);
+bool IsFloatingPoint(DataType data_type);
 
 template<typename T>
 struct GetDataType;
