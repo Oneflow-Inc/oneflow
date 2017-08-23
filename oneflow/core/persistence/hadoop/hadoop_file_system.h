@@ -4,8 +4,8 @@
 #include "oneflow/core/persistence/file_system.h"
 
 extern "C" {
-  struct hdfs_internal;
-  typedef hdfs_internal* hdfsFS;
+struct hdfs_internal;
+typedef hdfs_internal* hdfsFS;
 }
 
 namespace oneflow {
@@ -15,14 +15,14 @@ namespace fs {
 class LibHDFS;
 
 class HadoopFileSystem final : public FileSystem {
-public:
+ public:
   OF_DISALLOW_COPY_AND_MOVE(HadoopFileSystem);
   HadoopFileSystem() = default;
   ~HadoopFileSystem() = default;
 
   Status NewRandomAccessFile(
-    const std::string& fname,
-    std::unique_ptr<RandomAccessFile>* result) override;
+      const std::string& fname,
+      std::unique_ptr<RandomAccessFile>* result) override;
 
   Status NewWritableFile(const std::string& fname,
                          std::unique_ptr<WritableFile>* result) override;
@@ -47,7 +47,7 @@ public:
 
   Status IsDirectory(const std::string& fname) override;
 
-private:
+ private:
   Status Connect(std::string fname, hdfsFS* fs);
   LibHDFS* hdfs_;
 };
@@ -55,6 +55,5 @@ private:
 }  // namespace fs
 
 }  // namespace oneflow
-
 
 #endif  // ONEFLOW_CORE_PERSISTENCE_HADOOP_HADOOP_FILE_SYSTEM_H_
