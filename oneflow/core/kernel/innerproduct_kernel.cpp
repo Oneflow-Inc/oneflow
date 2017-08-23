@@ -142,9 +142,7 @@ Kernel* CreateInnerProductKernel(const OperatorConf& op_conf) {
 
 }  // namespace
 
-COMMAND(AddKernelCreator(OperatorConf::kInnerproductConf, DeviceType::kCPU,
-                         CreateInnerProductKernel<DeviceType::kCPU>);
-        AddKernelCreator(OperatorConf::kInnerproductConf, DeviceType::kGPU,
-                         CreateInnerProductKernel<DeviceType::kGPU>));
+REIGSTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kInnerproductConf,
+                                 CreateInnerProductKernel);
 
 }  // namespace oneflow

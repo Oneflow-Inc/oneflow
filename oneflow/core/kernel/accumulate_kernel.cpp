@@ -26,9 +26,7 @@ Kernel* CreateAccKernel(const OperatorConf& op_conf) {
 }
 }  // namespace
 
-COMMAND(AddKernelCreator(OperatorConf::kAccumulateConf, DeviceType::kCPU,
-                         CreateAccKernel<DeviceType::kCPU>);
-        AddKernelCreator(OperatorConf::kAccumulateConf, DeviceType::kGPU,
-                         CreateAccKernel<DeviceType::kGPU>));
+REIGSTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kAccumulateConf,
+                                 CreateAccKernel);
 
 }  // namespace oneflow

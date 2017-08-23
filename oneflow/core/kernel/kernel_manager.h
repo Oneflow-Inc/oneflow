@@ -32,6 +32,12 @@ void AddKernelCreator(OperatorConf::OpTypeCase, DeviceType,
 void AddKernelCreator(OperatorConf::OpTypeCase, DeviceType,
                       Kernel* (*creator)(const OperatorConf&));
 
+#define REIGSTER_TEMPLATE_KERNEL_CREATOR(op_type_case, kernel_creator) \
+  COMMAND(AddKernelCreator(op_type_case, DeviceType::kCPU,             \
+                           kernel_creator<DeviceType::kCPU>);          \
+          AddKernelCreator(op_type_case, DeviceType::kGPU,             \
+                           kernel_creator<DeviceType::kGPU>));
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_MANAGER_H_
