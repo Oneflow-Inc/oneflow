@@ -113,7 +113,8 @@ std::unique_ptr<SimulatorSchedule> SimulatorScheduleEngine::Run(
       schedule()->mut_instance2ended_at()[p.second].first = ended_at;
       ended_at += task->workload() * (dev ? dev->time() : 0.0);
       schedule()->mut_device2ended_at()[p.first] = ended_at;
-      schedule()->mut_instance2ended_at()[p.second].second = ended_at;
+      schedule()->mut_instance2ended_at()[p.second].second =
+          ended_at + (dev ? dev->delay() : 0.0);
       TimeLinePushBack(p.second, dev);
       AfterRun(p.second);
       graph->arc_mgr().InputArc(p.second->dst_node(), [&](TaskArc* arc) {

@@ -37,15 +37,18 @@ class SDevice : public SNode {
 
   float time() const { return 1 / bandwidth_; }
   float bandwith() const { return bandwidth_; }
+  float delay() const { return delay_; }
   uint64_t memory_limit() const { return memory_limit_; }
 
   float& mut_bandwidth() { return bandwidth_; }
+  float& mut_delay() { return delay_; }
   uint64_t& mut_memory_limit() { return memory_limit_; }
 
   void set_time(float t) { bandwidth_ = 1 / t; }
 
  private:
-  float bandwidth_;
+  float bandwidth_ = 1;
+  float delay_ = 0.5;
   uint64_t memory_limit_ = ULLONG_MAX;
 };
 

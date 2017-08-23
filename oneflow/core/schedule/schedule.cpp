@@ -47,26 +47,25 @@ void Schedule::UpdateDuration() {
   session()->graph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
     STask* owner = nullptr;
     session()->graph()->produced_regst_desc_mgr().Input(regst_desc, &owner);
-    float duration = 0;
     uint32_t start = session()->nr_unstable_batch();
     uint32_t end = start + session()->nr_stable_batch();
     CHECK(end - start > 0);
-    session()->graph()->subscribed_regst_desc_mgr().Input(
-        regst_desc, [&](STask* node) {
-          float sum = 0;
-          for (uint32_t i = start; i <= end; i++) {
-            Batch* batch = session()->batch_node_mgr().Find(i);
-            TaskInstance* owner_instance =
-                session()->task_instance_mgr().Find(batch, owner);
+    float sum = 0;
+    for (uint32_t i = start; i <= end; i++) {
+      Batch* batch = session()->batch_node_mgr().Find(i);
+      TaskInstance* owner_instance =
+          session()->task_instance_mgr().Find(batch, owner);
+      float duration = 0;
+      session()->graph()->subscribed_regst_desc_mgr().Input(
+          regst_desc, [&](STask* node) {
             TaskInstance* node_instance =
                 session()->task_instance_mgr().Find(batch, node);
             float d = GetDuration(owner_instance, node_instance);
-            sum += d;
-          }
-          float avg = sum / (end - start);
-          duration = std::max(duration, avg);
-        });
-    mut_regst_desc2duration()[regst_desc] = duration;
+            duration = std::max(duration, d);
+          });
+      sum += duration;
+    }
+    mut_regst_desc2duration()[regst_desc] = sum / (end + 1 - start);
   });
 }
 
