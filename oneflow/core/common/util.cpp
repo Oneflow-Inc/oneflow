@@ -17,7 +17,13 @@ DEFINE_ONEFLOW_STR2INT_CAST(unsigned long, strtoul);
 DEFINE_ONEFLOW_STR2INT_CAST(long long, strtoll);
 DEFINE_ONEFLOW_STR2INT_CAST(unsigned long long, strtoull);
 
+DEFINE_ONEFLOW_STR2INT_CAST(signed char, strtol);
+DEFINE_ONEFLOW_STR2INT_CAST(short, strtol);
 DEFINE_ONEFLOW_STR2INT_CAST(int, strtol);
+
+DEFINE_ONEFLOW_STR2INT_CAST(unsigned char, strtoul);
+DEFINE_ONEFLOW_STR2INT_CAST(unsigned short, strtoul);
+DEFINE_ONEFLOW_STR2INT_CAST(unsigned int, strtoul);
 
 template<>
 float oneflow_cast(const std::string& s) {

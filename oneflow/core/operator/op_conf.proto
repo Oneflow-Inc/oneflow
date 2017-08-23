@@ -26,6 +26,11 @@ message FillConf {
   }
 }
 
+message LogicalBlob {
+  string name = 1;
+  DataType data_type = 2;
+}
+
 message ConvolutionOpConf {
   string in = 1;
   string out = 2;
@@ -93,10 +98,9 @@ message InnerProductOpConf {
 }
 
 message DataLoaderOpConf {
-  string feature = 1;
-  ShapeProto shape_of_one_feature_ins = 2;
-  string label = 3;
-  string data_dir = 4;
+  LogicalBlob out = 1;
+  ShapeProto shape = 2;
+  string data_dir = 3;
 }
 
 message PoolingOpConf {

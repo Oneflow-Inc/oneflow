@@ -22,10 +22,13 @@ namespace oneflow {
   MACRO_PAIR(uint32_t, DataType::kUInt32) \
   MACRO_PAIR(uint64_t, DataType::kUInt64)
 
-#define ALL_DATA_TYPE_PAIR()    \
-  FLOATING_DATA_TYPE_PAIR()     \
-  SIGNED_INT_DATA_TYPE_PAIR()   \
-  UNSIGNED_INT_DATA_TYPE_PAIR() \
+#define ARITHMETIC_DATA_TYPE_PAIR() \
+  FLOATING_DATA_TYPE_PAIR()         \
+  SIGNED_INT_DATA_TYPE_PAIR()       \
+  UNSIGNED_INT_DATA_TYPE_PAIR()
+
+#define ALL_DATA_TYPE_PAIR()  \
+  ARITHMETIC_DATA_TYPE_PAIR() \
   MACRO_PAIR(char, DataType::kChar)
 
 template<typename T>
@@ -33,13 +36,13 @@ struct GetDataType;
 
 template<>
 struct GetDataType<void> {
-  static const DataType val = DataType::kChar;
+  static const DataType val;
 };
 
-#define MACRO_PAIR(type_cpp, type_proto)    \
-  template<>                                \
-  struct GetDataType<type_cpp> {            \
-    static const DataType val = type_proto; \
+#define MACRO_PAIR(type_cpp, type_proto) \
+  template<>                             \
+  struct GetDataType<type_cpp> {         \
+    static const DataType val;           \
   };
 ALL_DATA_TYPE_PAIR();
 #undef MACRO_PAIR
@@ -47,10 +50,10 @@ ALL_DATA_TYPE_PAIR();
 template<DataType data_type>
 struct GetSizeOf;
 
-#define MACRO_PAIR(type_cpp, type_proto)        \
-  template<>                                    \
-  struct GetSizeOf<type_proto> {                \
-    static const size_t val = sizeof(type_cpp); \
+#define MACRO_PAIR(type_cpp, type_proto) \
+  template<>                             \
+  struct GetSizeOf<type_proto> {         \
+    static const size_t val;             \
   };
 ALL_DATA_TYPE_PAIR();
 #undef MACRO_PAIR

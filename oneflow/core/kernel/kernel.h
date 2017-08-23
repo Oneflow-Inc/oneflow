@@ -37,7 +37,9 @@ class Kernel {
   virtual void Forward(const KernelCtx& ctx,
                        std::function<Blob*(const std::string&)>) const = 0;
   virtual void Backward(const KernelCtx& ctx,
-                        std::function<Blob*(const std::string&)>) const = 0;
+                        std::function<Blob*(const std::string&)>) const {
+    UNEXPECTED_RUN();
+  }
 
   //
   const std::string& Lbn4BnInOp(const std::string& bn_in_op) const {

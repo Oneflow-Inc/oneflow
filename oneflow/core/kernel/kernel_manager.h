@@ -29,6 +29,9 @@ class KernelMgr final {
 void AddKernelCreator(OperatorConf::OpTypeCase, DeviceType,
                       std::function<Kernel*(const OperatorConf&)> creator);
 
+void AddKernelCreator(OperatorConf::OpTypeCase, DeviceType,
+                      Kernel* (*creator)(const OperatorConf&));
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_MANAGER_H_
