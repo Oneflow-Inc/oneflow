@@ -208,6 +208,7 @@ message RMSPropModelUpdateOpConf {
 }
 
 message AccumulateOpConf {
+  DataType data_type = 1;
 }
 
 message ModelSaveOpConf {

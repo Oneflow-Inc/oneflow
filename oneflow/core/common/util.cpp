@@ -41,14 +41,8 @@ double oneflow_cast(const std::string& s) {
   return ret;
 }
 
-struct SetProcessEnvT {
-  SetProcessEnvT() {
 #ifdef __linux__
-    feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW);
+COMMAND(feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW));
 #endif
-  }
-};
-
-static SetProcessEnvT g_set_process_env_var;
 
 }  // namespace oneflow
