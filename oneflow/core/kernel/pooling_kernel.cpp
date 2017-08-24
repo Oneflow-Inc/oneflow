@@ -275,7 +275,7 @@ Kernel* CreatePoolingKernel(const OperatorConf& op_conf) {
 
 }  // namespace
 
-REIGSTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kPoolingConf,
+REGISTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kPoolingConf,
                                  CreatePoolingKernel);
 
 }  // namespace oneflow

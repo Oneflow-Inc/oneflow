@@ -32,7 +32,7 @@ void AddKernelCreator(OperatorConf::OpTypeCase, DeviceType,
 void AddKernelCreator(OperatorConf::OpTypeCase, DeviceType,
                       Kernel* (*creator)(const OperatorConf&));
 
-#define REIGSTER_TEMPLATE_KERNEL_CREATOR(op_type_case, kernel_creator) \
+#define REGISTER_TEMPLATE_KERNEL_CREATOR(op_type_case, kernel_creator) \
   COMMAND(AddKernelCreator(op_type_case, DeviceType::kCPU,             \
                            kernel_creator<DeviceType::kCPU>);          \
           AddKernelCreator(op_type_case, DeviceType::kGPU,             \
