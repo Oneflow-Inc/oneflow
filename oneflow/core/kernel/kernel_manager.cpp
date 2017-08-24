@@ -34,6 +34,12 @@ void AddKernelCreator(OperatorConf::OpTypeCase op_case, DeviceType device_type,
 }
 
 void AddKernelCreator(OperatorConf::OpTypeCase op_case, DeviceType device_type,
+                      std::function<Kernel*()> creator) {
+  AddKernelCreator(op_case, device_type,
+                   [=](const OperatorConf&) { return creator(); });
+}
+
+void AddKernelCreator(OperatorConf::OpTypeCase op_case, DeviceType device_type,
                       Kernel* (*creator)(const OperatorConf&)) {
   AddKernelCreator(op_case, device_type,
                    std::bind(creator, std::placeholders::_1));
