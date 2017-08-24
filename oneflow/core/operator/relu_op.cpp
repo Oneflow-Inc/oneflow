@@ -6,7 +6,6 @@ namespace oneflow {
 void ReluOp::InitFromOpConf(const OperatorConf& op_conf) {
   CHECK(op_conf.has_relu_conf());
   mut_op_conf() = op_conf;
-
   EnrollInputBn("in");
   EnrollOutputBn("out");
 }
@@ -21,8 +20,6 @@ void ReluOp::InferBlobDesc4FwBlobs(
   const ReluOpConf& conf = op_conf().relu_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   CHECK_EQ(in_blob_desc->data_type(), conf.in().data_type());
-  CHECK_EQ(conf.in().data_type(), JobDesc::Singleton()->default_data_type());
-  CHECK_EQ(conf.in().data_type(), JobDesc::Singleton()->default_data_type());
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   out_blob_desc->mut_shape() = in_blob_desc->shape();
   out_blob_desc->set_data_type(conf.out().data_type());
