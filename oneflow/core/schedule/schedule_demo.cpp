@@ -67,7 +67,7 @@ void TestPlan(const std::string& file, const std::string& dot_file) {
   std::unique_ptr<Schedule> schedule =
       allocator->MemoryLimitedStaticSchedule(*session);
   schedule->PrintRegstNum();
-  schedule->PrintSchedule();
+  //  schedule->PrintSchedule();
   bool is_optimal = validator->ValidateAllocation(*schedule);
   std::cout << "allocation is " << (is_optimal ? "" : "NOT ") << "optimal"
             << std::endl;

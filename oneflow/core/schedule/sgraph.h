@@ -48,7 +48,7 @@ class SDevice : public SNode {
 
  private:
   float bandwidth_ = 1;
-  float delay_ = 0.5;
+  float delay_ = 0;
   uint64_t memory_limit_ = ULLONG_MAX;
 };
 

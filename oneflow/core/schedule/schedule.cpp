@@ -51,7 +51,7 @@ void Schedule::UpdateDuration() {
     uint32_t end = start + session()->nr_stable_batch();
     CHECK(end - start > 0);
     float sum = 0;
-    for (uint32_t i = start; i <= end; i++) {
+    for (uint32_t i = start; i < end; i++) {
       Batch* batch = session()->batch_node_mgr().Find(i);
       TaskInstance* owner_instance =
           session()->task_instance_mgr().Find(batch, owner);
@@ -65,7 +65,8 @@ void Schedule::UpdateDuration() {
           });
       sum += duration;
     }
-    mut_regst_desc2duration()[regst_desc] = sum / (end + 1 - start);
+    CHECK(end + 1 - start > 0);
+    mut_regst_desc2duration()[regst_desc] = sum / (end - start);
   });
 }
 
@@ -83,32 +84,29 @@ void Schedule::UpdateRegstCount() {
 
 void Schedule::UpdateInterval() {
   STask* end_node = session()->graph()->sink();
-  uint32_t start = session()->nr_unstable_batch();
-  uint32_t end = start + session()->nr_stable_batch();
-  CHECK(end - start > 1);
   std::pair<float, float> default_range;
-  std::unordered_map<float, uint32_t> interval2count;
   float last_batch_ended_at = 0;
-  for (uint32_t i = start; i <= end; ++i) {
+  std::vector<float> intervals;
+  for (uint32_t i = 0; i < session()->nr_batch(); ++i) {
     Batch* batch = session()->batch_node_mgr().Find(i);
     TaskInstance* instance =
         session()->task_instance_mgr().Find(batch, end_node);
-    float currrent_batch_ended_at =
+    float current =
         GetOrDefault(instance2ended_at(), instance, default_range).second;
-    if (i > start) {
-      ++interval2count[currrent_batch_ended_at - last_batch_ended_at];
-    }
-    last_batch_ended_at = currrent_batch_ended_at;
+    if (i) { intervals.push_back(current - last_batch_ended_at); }
+    last_batch_ended_at = current;
   }
-  float confident_interval_sum;
-  uint32_t confident_interval_count = 0u;
-  for (const auto& pair : interval2count) {
-    if (pair.second * 10 > session()->nr_stable_batch()) {
-      confident_interval_sum += pair.first * pair.second;
-      confident_interval_count += pair.second;
-    }
+  std::sort(intervals.begin(), intervals.end());
+  float sum = 0;
+  uint32_t count = 0;
+  uint32_t start = session()->nr_unstable_batch();
+  uint32_t end = intervals.size() - session()->nr_unstable_batch();
+  for (uint32_t i = start; i < end; ++i) {
+    sum += intervals[i];
+    ++count;
   }
-  mut_max_interval() = confident_interval_sum / confident_interval_count;
+  float ii = sum / count;
+  mut_max_interval() = ii;
 }
 
 void Schedule::Clear() {

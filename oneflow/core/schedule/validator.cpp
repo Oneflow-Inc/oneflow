@@ -54,6 +54,7 @@ bool Validator::ValidateAllocation(const Schedule& schedule) {
   uint32_t target = 0;
   uint32_t failed = 0;
 
+  std::cout << "origin ii = " << schedule.max_interval() << std::endl;
   std::cout << "-------[ more ]-------" << std::endl;
   std::unordered_map<uint64_t, uint32_t> more_regst;
   for (const auto& p : schedule.regst_desc2count()) {
