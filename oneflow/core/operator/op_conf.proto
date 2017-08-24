@@ -94,8 +94,8 @@ message DataLoaderOpConf {
 }
 
 message PoolingOpConf {
-  string in = 1;
-  string out = 2;
+  LogicalBlob in = 1;
+  LogicalBlob out = 2;
 
   enum PoolMethod {
     kMax = 0;
@@ -112,8 +112,8 @@ message PoolingOpConf {
 }
 
 message ReluOpConf {
-  string in = 1;
-  string out = 2;
+  LogicalBlob in = 1;
+  LogicalBlob out = 2;
 }
 
 message SoftmaxOpConf {
