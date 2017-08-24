@@ -77,7 +77,9 @@ void Schedule::UpdateRegstCount() {
     float duration =
         GetOrDefault(regst_desc2duration(), regst_desc, static_cast<float>(0));
     float interval = max_interval();
-    uint32_t count = ceil(duration / std::max(interval, 1.0f));
+    float ratio = duration / std::max(interval, 1.0f);
+    uint32_t count = ceil(ratio);
+    if ((ratio - floor(ratio)) * 50 < interval) { count = floor(ratio); }
     mut_regst_desc2count()[regst_desc] = std::max(count, 1u);
   });
 }
@@ -96,15 +98,30 @@ void Schedule::UpdateInterval() {
     if (i) { intervals.push_back(current - last_batch_ended_at); }
     last_batch_ended_at = current;
   }
-  std::sort(intervals.begin(), intervals.end());
+
+  // guassion convoluted intervals
+  std::vector<float> gi;
+  uint32_t middle = intervals.size() / 2;
+  for (int radius = 0;
+       middle - radius >= 0 && middle + radius < intervals.size(); ++radius) {
+    float sum = 0;
+    for (int i = middle - radius; i <= middle + radius; ++i) {
+      sum += intervals[i];
+    }
+    float x = sum / (radius * 2 + 1);
+    gi.push_back(x);
+  }
+
+  std::sort(gi.begin(), gi.end(), std::less<float>());
   float sum = 0;
   uint32_t count = 0;
-  uint32_t start = session()->nr_unstable_batch();
-  uint32_t end = intervals.size() - session()->nr_unstable_batch();
-  for (uint32_t i = start; i < end; ++i) {
-    sum += intervals[i];
+  uint32_t margin = gi.size() / 3;
+  for (int i = margin; i < gi.size() - margin; ++i) {
+    float x = gi[i];
+    sum += x;
     ++count;
   }
+
   float ii = sum / count;
   mut_max_interval() = ii;
 }

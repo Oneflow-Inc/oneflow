@@ -64,7 +64,7 @@ bool Validator::ValidateAllocation(const Schedule& schedule) {
   std::unique_ptr<Schedule> more_memory_schedule =
       schedule_engine->StaticSchedule(get_regst_num);
   std::cout << "ii = " << more_memory_schedule->max_interval() << std::endl;
-  if (more_memory_schedule->max_interval() < schedule.max_interval()) {
+  if (more_memory_schedule->max_interval() > schedule.max_interval() * 1.1) {
     failed++;
     more_memory_schedule->PrintRegstNum();
     more_memory_schedule->PrintSchedule();
@@ -92,7 +92,7 @@ bool Validator::ValidateAllocation(const Schedule& schedule) {
           schedule_engine->StaticSchedule(get_regst_num);
       if (limited_schedule->max_interval() <= schedule.max_interval()) {
         failed++;
-        std::cout << "ii = " << limited_schedule->max_interval();
+        std::cout << "ii = " << limited_schedule->max_interval() << std::endl;
         limited_schedule->PrintRegstNum();
         limited_schedule->PrintSchedule();
       }

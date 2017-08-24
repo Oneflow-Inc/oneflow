@@ -128,6 +128,7 @@ void SimulatorSchedule::InitTimeNet() {
 
 void SimulatorSchedule::Retiming() {
   InitTimeNet();
+  //  PrintSchedule();
   LazyRetimingAllNode();
   EagerRetimingBpNodeWithSplitDeviceHypothesis();
   LazyRetimingFwNodeWithSplitDeviceHypothesis();
