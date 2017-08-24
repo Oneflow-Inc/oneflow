@@ -19,7 +19,7 @@ const PbMessage& MultinomialLogisticLossOp::GetSpecialConf() const {
 void MultinomialLogisticLossOp::InferBlobDesc4FwBlobs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
-  const MultinomialLogisticLossOpConf conf =
+  const MultinomialLogisticLossOpConf& conf =
       op_conf().multinomial_logistic_loss_conf();
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
   CHECK_EQ(pred_blob_desc->data_type(), conf.prediction().data_type());
@@ -34,7 +34,7 @@ void MultinomialLogisticLossOp::InferBlobDesc4FwBlobs(
   BlobDesc* loss_blob_desc = GetBlobDesc4BnInOp("loss");
   loss_blob_desc->mut_shape() = Shape({1});
   loss_blob_desc->set_data_type(conf.loss().data_type());
-  loss_blob_desc->set_has_data_id(pred_blob_desc->has_data_id());
+  loss_blob_desc->set_has_data_id(false);
   // loss_buffer
   BlobDesc* loss_buffer_blob_desc = GetBlobDesc4BnInOp("loss");
   loss_buffer_blob_desc->mut_shape() = Shape({1});
