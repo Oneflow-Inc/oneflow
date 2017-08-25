@@ -9,6 +9,6 @@ void RecordKernel::Forward(
 }
 
 COMMAND(AddKernelCreator(OperatorConf::kRecordConf, DeviceType::kCPU,
-                         [](const OperatorConf&) { return new RecordKernel; }));
+                         []() { return new RecordKernel; }));
 
 }  // namespace oneflow

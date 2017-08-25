@@ -22,7 +22,8 @@ class Operator {
   virtual ~Operator() = default;
 
   //
-  virtual void InitFromOpConf(const OperatorConf& op_conf) = 0;
+  void InitFromOpConf(const OperatorConf& op_conf);
+  virtual void InitFromOpConf() = 0;
   virtual bool IsElemWise() const { return false; }
   virtual bool IsLossOp() const { return false; }
   virtual bool IsRecordOp() const { return false; }
