@@ -136,7 +136,8 @@ message MultinomialLogisticLossOpConf {
 message ConcatOpConf {
   repeated string in = 1;
   string out = 2;
-  int32 axis = 3;
+  DataType data_type = 3;
+  int32 axis = 4;
 }
 
 message CopyCommNetOpConf {
