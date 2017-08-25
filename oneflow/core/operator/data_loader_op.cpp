@@ -3,9 +3,8 @@
 
 namespace oneflow {
 
-void DataLoaderOp::InitFromOpConf(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_data_loader_conf());
-  mut_op_conf() = op_conf;
+void DataLoaderOp::InitFromOpConf() {
+  CHECK(op_conf().has_data_loader_conf());
 
   EnrollOutputBn("out", false);
 }

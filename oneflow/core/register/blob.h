@@ -38,7 +38,11 @@ class Blob final {
   size_t ByteSizeOfDataIdField() const {
     return blob_desc_->ByteSizeOfDataIdField();
   }
+  size_t ByteSizeOfDataField() const {
+    return blob_desc_->ByteSizeOfDataField();
+  }
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
+
   template<DeviceType device_type>
   void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs);
 

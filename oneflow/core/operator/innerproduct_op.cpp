@@ -3,9 +3,8 @@
 
 namespace oneflow {
 
-void InnerProductOp::InitFromOpConf(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_innerproduct_conf());
-  mut_op_conf() = op_conf;
+void InnerProductOp::InitFromOpConf() {
+  CHECK(op_conf().has_innerproduct_conf());
 
   EnrollInputBn("in");
   EnrollOutputBn("out");
