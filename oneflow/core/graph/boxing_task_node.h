@@ -16,7 +16,6 @@ class BoxingTaskNode : public TaskNode {
   }
 
   void ToProto(TaskProto* ret) const override { TaskNode::ToProto(ret); };
-  DeviceType GetDeviceType() const override { return DeviceType::kCPU; }
 
  protected:
   virtual void InitWithFwNode(TaskNode* fw_node) override {
