@@ -19,7 +19,7 @@ void MultinomialLogisticLossKernel<device_type, T>::Forward(
   Blob* prediction_diff = BnInOp2BlobPtr(GenDiffBn("prediction"));
   if (prediction_diff != nullptr) {
     Memset<device_type>(ctx.device_ctx, prediction_diff->mut_dptr<T>(), 0,
-                        prediction_diff->shape().elem_cnt() * sizeof(T));
+                        prediction_diff->TotalByteSize());
     MultinomialLogisticLossKernelUtil<device_type, T>::Backward(
         ctx.device_ctx, prediction->shape().At(0), prediction->shape().At(1),
         prediction->dptr<T>(), label->dptr<int32_t>(),

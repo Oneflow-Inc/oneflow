@@ -62,7 +62,6 @@ class MultinomialLogisticLossKernelUtil<DeviceType::kGPU, T> final {
   }
 };
 
-template class MultinomialLogisticLossKernelUtil<DeviceType::kGPU, float>;
-template class MultinomialLogisticLossKernelUtil<DeviceType::kGPU, double>;
+INSTANTIATE_GPU_KERNEL_UTIL_FLOATING_TYPE(MultinomialLogisticLossKernelUtil);
 
 }  // namespace oneflow

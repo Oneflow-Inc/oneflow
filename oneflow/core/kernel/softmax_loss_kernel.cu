@@ -47,7 +47,6 @@ class SoftmaxLossKernelUtil<DeviceType::kGPU, T> final {
   }
 };
 
-template class SoftmaxLossKernelUtil<DeviceType::kGPU, float>;
-template class SoftmaxLossKernelUtil<DeviceType::kGPU, double>;
+INSTANTIATE_GPU_KERNEL_UTIL_FLOATING_TYPE(SoftmaxLossKernelUtil);
 
 }  // namespace oneflow

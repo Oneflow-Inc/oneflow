@@ -117,8 +117,8 @@ message ReluOpConf {
 }
 
 message SoftmaxOpConf {
-  string in = 1;
-  string out = 2;
+  LogicalBlob in = 1;
+  LogicalBlob out = 2;
 }
 
 message SoftmaxLossOpConf {

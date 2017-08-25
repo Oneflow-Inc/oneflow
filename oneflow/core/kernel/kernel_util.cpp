@@ -175,7 +175,7 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
                                int32_t part_num, const Snapshot* snapshot,
                                Blob* blob, const std::string& lbn,
                                int32_t dim_num, int64_t num_in_each_dim) {
-    int64_t blob_size = blob->shape().elem_cnt() * sizeof(FloatingPointType);
+    int64_t blob_size = blob->TotalByteSize();
     ctx->cpu_stream()->SendWork([=]() {
       std::unique_ptr<PersistentInStream> in_stream =
           snapshot->GetInStream(lbn, part_id, part_num, dim_num,
@@ -214,8 +214,7 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
   }
 };
 
-template class KernelUtil<DeviceType::kCPU, float>;
-template class KernelUtil<DeviceType::kCPU, double>;
+INSTANTIATE_CPU_KERNEL_UTIL_FLOATING_TYPE(KernelUtil);
 
 template<>
 void Memcpy<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const void* src,

@@ -128,5 +128,13 @@ void Memcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
 template<DeviceType device_type>
 void Memset(DeviceCtx* ctx, void* dst, const char value, size_t sz);
 
+#define INSTANTIATE_CPU_KERNEL_UTIL_FLOATING_TYPE(classname) \
+  template class classname<DeviceType::kCPU, float>;         \
+  template class classname<DeviceType::kCPU, double>;
+
+#define INSTANTIATE_GPU_KERNEL_UTIL_FLOATING_TYPE(classname) \
+  template class classname<DeviceType::kGPU, float>;         \
+  template class classname<DeviceType::kGPU, double>;
+
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_UTIL_H_
