@@ -104,7 +104,6 @@ void ConvolutionKernel<device_type, T>::Forward(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in = BnInOp2Blob("in");
   const Shape& in_shape = in->shape();
-  CHECK_EQ(in_shape.NumAxes(), 4);
   Blob* out = BnInOp2Blob("out");
   Blob* col_buf = BnInOp2Blob("col_buf");
   const Blob* weight = BnInOp2Blob("weight");
@@ -151,12 +150,12 @@ void ConvolutionKernel<device_type, T>::ComputeWeightDiff(
   const Blob* col_buf = BnInOp2Blob("col_buf");
   const Blob* out_diff = BnInOp2Blob("out_diff");
   const int64_t out_im_sz = out_diff->shape().Count(1);
-  const int64_t batch_sz = out_diff->shape().At(0);
+  const int64_t data_num = out_diff->shape().At(0);
   const int64_t conv_sliding_window_steps = out_diff->shape().Count(2);
 
   Memset<device_type>(ctx.device_ctx, weight_diff->mut_dptr(), 0,
                       weight_diff->ByteSizeOfDataField());
-  for (size_t i = 0; i < batch_sz; ++i) {
+  for (size_t i = 0; i < data_num; ++i) {
     KernelUtil<device_type, T>::BlasGemm(
         ctx.device_ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasNoTrans,
         weight_diff->shape().At(0), weight_diff->shape().At(1),
@@ -175,14 +174,14 @@ void ConvolutionKernel<device_type, T>::ComputeBiasDiff(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* out_diff = BnInOp2Blob("out_diff");
   const int64_t out_im_sz = out_diff->shape().Count(1);
-  const int64_t batch_sz = out_diff->shape().At(0);
+  const int64_t data_num = out_diff->shape().At(0);
   const Blob* bias_mul = BnInOp2Blob("bias_multiplier");
   Blob* bias_diff = BnInOp2Blob("bias_diff");
   const int64_t conv_sliding_window_steps = out_diff->shape().Count(2);
 
   Memset<device_type>(ctx.device_ctx, bias_diff->mut_dptr(), 0,
                       bias_diff->ByteSizeOfDataField());
-  for (size_t i = 0; i < batch_sz; ++i) {
+  for (size_t i = 0; i < data_num; ++i) {
     KernelUtil<device_type, T>::BlasGemm(
         ctx.device_ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasNoTrans,
         bias_diff->shape().At(0), 1, bias_mul->shape().At(0),
@@ -205,8 +204,8 @@ void ConvolutionKernel<device_type, T>::ComputeInputDiff(
   Blob* col_buf = BnInOp2Blob("col_buf");
 
   const int64_t out_im_sz = out_diff->shape().Count(1);
-  const int64_t batch_sz = out_diff->shape().At(0);
-  for (size_t i = 0; i < batch_sz; ++i) {
+  const int64_t data_num = out_diff->shape().At(0);
+  for (size_t i = 0; i < data_num; ++i) {
     KernelUtil<device_type, T>::BlasGemm(
         ctx.device_ctx, CBLAS_ORDER::CblasRowMajor, CblasTrans, CblasNoTrans,
         col_buf->shape().At(1), col_buf->shape().At(2), weight->shape().At(0),
@@ -218,8 +217,8 @@ void ConvolutionKernel<device_type, T>::ComputeInputDiff(
   }
 
   const Shape& in_diff_shape = in_diff->shape();
-  auto conv_conf = op()->op_conf().convolution_conf();
-  for (size_t i = 0; i < batch_sz; ++i) {
+  const ConvolutionOpConf& conv_conf = op()->op_conf().convolution_conf();
+  for (size_t i = 0; i < data_num; ++i) {
     ConvolutionKernelUtil<device_type, T>::Col2Im(
         ctx, col_buf->dptr<T>() + i * col_buf->shape().Count(1),
         in_diff_shape.At(1), in_diff_shape.At(2), in_diff_shape.At(3),
