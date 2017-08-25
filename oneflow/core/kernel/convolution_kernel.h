@@ -5,24 +5,22 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename FloatingPointType>
+template<DeviceType device_type, typename T>
 class ConvolutionKernelUtil final {
  public:
-  static void Im2Col(const KernelCtx& ctx, const FloatingPointType* data_im,
+  static void Im2Col(const KernelCtx& ctx, const T* data_im, const int channels,
+                     const int height, const int width, const int kernel_h,
+                     const int kernel_w, const int pad_h, const int pad_w,
+                     const int stride_h, const int stride_w,
+                     const int dilation_h, const int dilation_w, T* data_col);
+  static void Col2Im(const KernelCtx& ctx, const T* data_col,
                      const int channels, const int height, const int width,
                      const int kernel_h, const int kernel_w, const int pad_h,
                      const int pad_w, const int stride_h, const int stride_w,
-                     const int dilation_h, const int dilation_w,
-                     FloatingPointType* data_col);
-  static void Col2Im(const KernelCtx& ctx, const FloatingPointType* data_col,
-                     const int channels, const int height, const int width,
-                     const int kernel_h, const int kernel_w, const int pad_h,
-                     const int pad_w, const int stride_h, const int stride_w,
-                     const int dilation_h, const int dilation_w,
-                     FloatingPointType* data_im);
+                     const int dilation_h, const int dilation_w, T* data_im);
 };
 
-template<DeviceType device_type, typename FloatingPointType>
+template<DeviceType device_type, typename T>
 class ConvolutionKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvolutionKernel);
