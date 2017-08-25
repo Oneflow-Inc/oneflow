@@ -83,6 +83,7 @@ class Schedule {
   void PrintSchedule();
 
  protected:
+  float GetInitiationIntervalFromIntervals(const std::vector<float>& intervals);
   const Session* session_;
   std::unordered_map<TaskInstance*, std::pair<float, float>> instance2ended_at_;
   std::unordered_map<SDevice*, float> device2ended_at_;

@@ -99,31 +99,37 @@ void Schedule::UpdateInterval() {
     last_batch_ended_at = current;
   }
 
+  mut_max_interval() = GetInitiationIntervalFromIntervals(intervals);
+}
+
+float Schedule::GetInitiationIntervalFromIntervals(
+    const std::vector<float>& intervals) {
   // guassion convoluted intervals
-  std::vector<float> gi;
-  uint32_t middle = intervals.size() / 2;
-  for (int radius = 0;
-       middle - radius >= 0 && middle + radius < intervals.size(); ++radius) {
+  std::vector<float> gci;
+  uint32_t radius = intervals.size() / 6;
+  for (int middle = intervals.size() / 4;
+       middle - radius >= 0 && middle + radius < intervals.size(); ++middle) {
     float sum = 0;
     for (int i = middle - radius; i <= middle + radius; ++i) {
       sum += intervals[i];
     }
     float x = sum / (radius * 2 + 1);
-    gi.push_back(x);
+    gci.push_back(x);
   }
 
-  std::sort(gi.begin(), gi.end(), std::less<float>());
+  // drop the outlier
+  std::sort(gci.begin(), gci.end(), std::less<float>());
   float sum = 0;
   uint32_t count = 0;
-  uint32_t margin = gi.size() / 3;
-  for (int i = margin; i < gi.size() - margin; ++i) {
-    float x = gi[i];
+  uint32_t start_margin = gci.size() / 4;
+  uint32_t end_margin = gci.size() / 4;
+  for (int i = start_margin; i < gci.size() - end_margin; ++i) {
+    float x = gci[i];
     sum += x;
     ++count;
   }
 
-  float ii = sum / count;
-  mut_max_interval() = ii;
+  return sum / count;
 }
 
 void Schedule::Clear() {
