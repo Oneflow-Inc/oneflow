@@ -11,7 +11,7 @@ class DataLoaderOp final : public SysOperator {
   DataLoaderOp() = default;
   ~DataLoaderOp() = default;
 
-  void InitFromOpConf(const OperatorConf& op_conf) override;
+  void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
 
   void InferBlobDesc4FwBlobs(
@@ -21,7 +21,8 @@ class DataLoaderOp final : public SysOperator {
 
  private:
   std::string obn2lbn(const std::string& output_bn) const override {
-    return op_name() + "/" + GetStringFromSpecialConf(output_bn);
+    return op_name() + "/"
+           + GetMsgFromSpecialConf<LogicalBlob>(output_bn).name();
   }
 };
 

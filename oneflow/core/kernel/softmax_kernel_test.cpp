@@ -50,8 +50,12 @@ Kernel* BuildSoftmaxKernel() {
   OperatorConf op_conf;
   op_conf.set_name("softmax_op_test");
   SoftmaxOpConf* softmax_conf = op_conf.mutable_softmax_conf();
-  softmax_conf->set_in("softmax/in");
-  softmax_conf->set_out("softmax/out");
+  softmax_conf->mutable_in()->set_name(std::string("softmax/in"));
+  softmax_conf->mutable_in()->set_data_type(
+      GetDataType<FloatingPointType>::val);
+  softmax_conf->mutable_out()->set_name(std::string("softmax/out"));
+  softmax_conf->mutable_out()->set_data_type(
+      GetDataType<FloatingPointType>::val);
   auto softmax_op = ConstructOp(op_conf);
   OperatorProto op_proto;
   softmax_op->ToProto(&op_proto);

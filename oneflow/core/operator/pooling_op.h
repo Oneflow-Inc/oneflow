@@ -13,7 +13,7 @@ class PoolingOp final : public UserOperator {
 
   bool IsElemWise() const override { return true; }
 
-  void InitFromOpConf(const OperatorConf& op_conf) override;
+  void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
 
   void InferBlobDesc4FwBlobs(

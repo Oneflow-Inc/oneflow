@@ -11,7 +11,7 @@ class SoftmaxLossOp final : public UserOperator {
   SoftmaxLossOp() = default;
   ~SoftmaxLossOp() = default;
 
-  void InitFromOpConf(const OperatorConf& op_conf) override;
+  void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
   bool IsLossOp() const override { return true; }
 

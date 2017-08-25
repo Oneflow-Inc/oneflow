@@ -33,78 +33,66 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
   OF_DISALLOW_COPY_AND_MOVE(KernelUtil);
   KernelUtil() = delete;
 
-  static void Memcpy(const KernelCtx& ctx, void* dst, const void* src,
-                     size_t sz, cudaMemcpyKind kind) {
-    CudaCheck(
-        cudaMemcpyAsync(dst, src, sz, kind, ctx.device_ctx->cuda_stream()));
-  }
-
-  static void Memset(const KernelCtx& ctx, void* dst, const char value,
-                     size_t sz) {
-    CudaCheck(cudaMemsetAsync(dst, value, sz, ctx.device_ctx->cuda_stream()));
-  }
-
-  static void BlasAxpy(const KernelCtx& ctx, const int n,
+  static void BlasAxpy(DeviceCtx* ctx, const int n,
                        const FloatingPointType alpha,
                        const FloatingPointType* x, const int incx,
                        FloatingPointType* y, const int incy) {
-    cublas_axpy(ctx.device_ctx->cublas_handle(), n, &alpha, x, incx, y, incy);
+    cublas_axpy(ctx->cublas_handle(), n, &alpha, x, incx, y, incy);
   }
 
-  static void BlasScal(const KernelCtx& ctx, const int n,
+  static void BlasScal(DeviceCtx* ctx, const int n,
                        const FloatingPointType alpha, FloatingPointType* x,
                        const int incx) {
-    cublas_scal(ctx.device_ctx->cublas_handle(), n, &alpha, x, incx);
+    cublas_scal(ctx->cublas_handle(), n, &alpha, x, incx);
   }
 
-  static void Max(const KernelCtx& ctx, const int64_t n,
-                  const FloatingPointType* x, FloatingPointType* max_ptr,
-                  FloatingPointType* temp_storage, size_t temp_storage_bytes) {
+  static void Max(DeviceCtx* ctx, const int64_t n, const FloatingPointType* x,
+                  FloatingPointType* max_ptr, FloatingPointType* temp_storage,
+                  size_t temp_storage_bytes) {
     cub::DeviceReduce::Max(temp_storage, temp_storage_bytes, x, max_ptr, n,
-                           ctx.device_ctx->cuda_stream());
+                           ctx->cuda_stream());
   }
 
-  static void Exp(const KernelCtx& ctx, const int64_t n,
-                  const FloatingPointType* x, FloatingPointType* y) {
+  static void Exp(DeviceCtx* ctx, const int64_t n, const FloatingPointType* x,
+                  FloatingPointType* y) {
     ExpGpu<FloatingPointType>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-           ctx.device_ctx->cuda_stream()>>>(n, x, y);
+           ctx->cuda_stream()>>>(n, x, y);
   }
 
-  static void Sum(const KernelCtx& ctx, const int64_t n,
-                  const FloatingPointType* x, FloatingPointType* sum_ptr,
-                  FloatingPointType* temp_storage, size_t temp_storage_bytes) {
+  static void Sum(DeviceCtx* ctx, const int64_t n, const FloatingPointType* x,
+                  FloatingPointType* sum_ptr, FloatingPointType* temp_storage,
+                  size_t temp_storage_bytes) {
     cub::DeviceReduce::Sum(temp_storage, temp_storage_bytes, x, sum_ptr, n,
-                           ctx.device_ctx->cuda_stream());
+                           ctx->cuda_stream());
   }
 
-  static void Div(const KernelCtx& ctx, const int64_t n, FloatingPointType* x,
+  static void Div(DeviceCtx* ctx, const int64_t n, FloatingPointType* x,
                   const FloatingPointType* alpha_ptr) {
     DivGpu<FloatingPointType>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-           ctx.device_ctx->cuda_stream()>>>(n, x, alpha_ptr);
+           ctx->cuda_stream()>>>(n, x, alpha_ptr);
   }
 
-  static void Mul(const KernelCtx& ctx, const int64_t n,
-                  const FloatingPointType* x, const FloatingPointType* y,
-                  FloatingPointType* z) {
+  static void Mul(DeviceCtx* ctx, const int64_t n, const FloatingPointType* x,
+                  const FloatingPointType* y, FloatingPointType* z) {
     MulGpu<FloatingPointType>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-           ctx.device_ctx->cuda_stream()>>>(n, x, y, z);
+           ctx->cuda_stream()>>>(n, x, y, z);
   }
 
-  static void BlasGemv(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans,
-                       int m, int n, const FloatingPointType alpha,
+  static void BlasGemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
+                       int n, const FloatingPointType alpha,
                        const FloatingPointType* a, int lda,
                        const FloatingPointType* x, const int incx,
                        const FloatingPointType beta, FloatingPointType* y,
                        const int incy) {
     cublasOperation_t cublas_trans = CblasTrans2CublasTrans(trans);
-    cublas_gemv(ctx.device_ctx->cublas_handle(), cublas_trans, n, m, &alpha, a,
-                lda, x, incx, &beta, y, incy);
+    cublas_gemv(ctx->cublas_handle(), cublas_trans, n, m, &alpha, a, lda, x,
+                incx, &beta, y, incy);
   }
 
-  static void BlasGemm(const KernelCtx& ctx, const enum CBLAS_ORDER order,
+  static void BlasGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
                        const enum CBLAS_TRANSPOSE trans_a,
                        const enum CBLAS_TRANSPOSE trans_b, const int m,
                        const int n, const int k, const FloatingPointType alpha,
@@ -114,34 +102,32 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
                        const int ldc) {
     cublasOperation_t cublas_trans_a = CblasTrans2CublasTrans(trans_a);
     cublasOperation_t cublas_trans_b = CblasTrans2CublasTrans(trans_b);
-    cublas_gemm(ctx.device_ctx->cublas_handle(), cublas_trans_b, cublas_trans_a,
-                n, m, k, &alpha, b, ldb, a, lda, &beta, c, ldc);
+    cublas_gemm(ctx->cublas_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
+                &alpha, b, ldb, a, lda, &beta, c, ldc);
   }
 
-  static void BlasDot(const KernelCtx& ctx, const int n,
-                      const FloatingPointType* x, const int incx,
-                      const FloatingPointType* y, const int incy,
-                      FloatingPointType* result) {
-    cublas_dot(ctx.device_ctx->cublas_handle(), n, x, incx, y, incy, result);
+  static void BlasDot(DeviceCtx* ctx, const int n, const FloatingPointType* x,
+                      const int incx, const FloatingPointType* y,
+                      const int incy, FloatingPointType* result) {
+    cublas_dot(ctx->cublas_handle(), n, x, incx, y, incy, result);
   }
 
-  static void BlasSwap(const KernelCtx& ctx, const int n, FloatingPointType* x,
+  static void BlasSwap(DeviceCtx* ctx, const int n, FloatingPointType* x,
                        const int incx, FloatingPointType* y, const int incy) {
-    cublas_swap(ctx.device_ctx->cublas_handle(), n, x, incx, y, incy);
+    cublas_swap(ctx->cublas_handle(), n, x, incx, y, incy);
   }
 
-  static void BlasCopy(const KernelCtx& ctx, const int n,
-                       const FloatingPointType* x, const int incx,
-                       FloatingPointType* y, const int incy) {
-    cublas_copy(ctx.device_ctx->cublas_handle(), n, x, incx, y, incy);
+  static void BlasCopy(DeviceCtx* ctx, const int n, const FloatingPointType* x,
+                       const int incx, FloatingPointType* y, const int incy) {
+    cublas_copy(ctx->cublas_handle(), n, x, incx, y, incy);
   }
 
-  static void Fill(const KernelCtx& ctx, const FillConf& fill_conf,
+  static void Fill(DeviceCtx* ctx, const FillConf& fill_conf,
                    uint32_t random_seed, Blob* blob) {
     TODO();
   }
 
-  static void FillWithSnapshot(const KernelCtx& ctx, int32_t part_id,
+  static void FillWithSnapshot(DeviceCtx* ctx, int32_t part_id,
                                int32_t part_num, const Snapshot* snapshot,
                                Blob* blob, const std::string& lbn,
                                int32_t dim_num, int64_t num_in_each_dim) {
@@ -183,5 +169,19 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
   }
 };
 
-INSTANTIATE_GPU_KERNEL_UTIL_CLASS(KernelUtil);
+template class KernelUtil<DeviceType::kGPU, float>;
+template class KernelUtil<DeviceType::kGPU, double>;
+
+template<>
+void Memcpy<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const void* src,
+                              size_t sz, cudaMemcpyKind kind) {
+  CudaCheck(cudaMemcpyAsync(dst, src, sz, kind, ctx->cuda_stream()));
+}
+
+template<>
+void Memset<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const char value,
+                              size_t sz) {
+  CudaCheck(cudaMemsetAsync(dst, value, sz, ctx->cuda_stream()));
+}
+
 }  // namespace oneflow

@@ -2,9 +2,8 @@
 
 namespace oneflow {
 
-void LossRecordOp::InitFromOpConf(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_loss_record_conf());
-  mut_op_conf() = op_conf;
+void LossRecordOp::InitFromOpConf() {
+  CHECK(op_conf().has_loss_record_conf());
   EnrollInputBn("loss_acc");
 }
 

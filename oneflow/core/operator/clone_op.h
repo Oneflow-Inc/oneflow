@@ -13,7 +13,7 @@ class CloneOp final : public SysOperator {
 
   bool IsElemWise() const override { return true; }
 
-  void InitFromOpConf(const OperatorConf& op_conf) override;
+  void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
   void InferBlobDesc4FwBlobs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
