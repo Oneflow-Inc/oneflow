@@ -2,6 +2,8 @@
 #define ONEFLOW_CORE_KERNEL_RELU_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/kernel/kernel_context.h"
+#include "oneflow/core/kernel/kernel_manager.h"
 
 namespace oneflow {
 

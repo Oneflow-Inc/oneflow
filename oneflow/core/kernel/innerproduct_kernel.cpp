@@ -142,7 +142,7 @@ Kernel* CreateInnerProductKernel(const OperatorConf& op_conf) {
 
 }  // namespace
 
-REIGSTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kInnerproductConf,
+REGISTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kInnerproductConf,
                                  CreateInnerProductKernel);
 
 }  // namespace oneflow

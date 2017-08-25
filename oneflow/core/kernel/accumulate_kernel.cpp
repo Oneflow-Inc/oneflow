@@ -26,7 +26,7 @@ Kernel* CreateAccKernel(const OperatorConf& op_conf) {
 }
 }  // namespace
 
-REIGSTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kAccumulateConf,
+REGISTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kAccumulateConf,
                                  CreateAccKernel);
 
 }  // namespace oneflow
