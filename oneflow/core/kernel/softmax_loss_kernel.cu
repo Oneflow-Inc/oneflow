@@ -47,6 +47,9 @@ class SoftmaxLossKernelUtil<DeviceType::kGPU, T> final {
   }
 };
 
-INSTANTIATE_GPU_KERNEL_UTIL_FLOATING_TYPE(SoftmaxLossKernelUtil);
+#define MACRO_PAIR(type_cpp, type_proto) \
+  template class SoftmaxLossKernelUtil<DeviceType::kGPU, type_cpp>;
+FLOATING_DATA_TYPE_PAIR()
+#undef MACRO_PAIR
 
 }  // namespace oneflow

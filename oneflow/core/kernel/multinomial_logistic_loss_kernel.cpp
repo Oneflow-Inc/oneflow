@@ -1,4 +1,5 @@
 #include "oneflow/core/kernel/multinomial_logistic_loss_kernel.h"
+#include "oneflow/core/kernel/kernel_manager.h"
 
 namespace oneflow {
 
@@ -76,7 +77,7 @@ Kernel* CreateMultinomialLogisticLossKernel(const OperatorConf& op_conf) {
 
 }  // namespace
 
-REIGSTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kMultinomialLogisticLossConf,
+REGISTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kMultinomialLogisticLossConf,
                                  CreateMultinomialLogisticLossKernel);
 
 }  // namespace oneflow

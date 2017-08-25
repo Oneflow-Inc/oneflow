@@ -169,7 +169,8 @@ class KernelUtil<DeviceType::kGPU, FloatingPointType> final {
   }
 };
 
-INSTANTIATE_GPU_KERNEL_UTIL_FLOATING_TYPE(KernelUtil);
+template class KernelUtil<DeviceType::kGPU, float>;
+template class KernelUtil<DeviceType::kGPU, double>;
 
 template<>
 void Memcpy<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const void* src,

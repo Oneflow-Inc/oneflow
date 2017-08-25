@@ -214,7 +214,8 @@ class KernelUtil<DeviceType::kCPU, FloatingPointType> final {
   }
 };
 
-INSTANTIATE_CPU_KERNEL_UTIL_FLOATING_TYPE(KernelUtil);
+template class KernelUtil<DeviceType::kCPU, float>;
+template class KernelUtil<DeviceType::kCPU, double>;
 
 template<>
 void Memcpy<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const void* src,

@@ -79,7 +79,7 @@ Kernel* CreateSoftmaxLossKernel(const OperatorConf& op_conf) {
 
 }  // namespace
 
-REIGSTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kSoftmaxLossConf,
+REGISTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kSoftmaxLossConf,
                                  CreateSoftmaxLossKernel);
 
 }  // namespace oneflow

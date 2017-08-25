@@ -1,3 +1,4 @@
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
@@ -62,6 +63,9 @@ class MultinomialLogisticLossKernelUtil<DeviceType::kGPU, T> final {
   }
 };
 
-INSTANTIATE_GPU_KERNEL_UTIL_FLOATING_TYPE(MultinomialLogisticLossKernelUtil);
+#define MACRO_PAIR(type_cpp, type_proto) \
+  template class MultinomialLogisticLossKernelUtil<DeviceType::kGPU, type_cpp>;
+FLOATING_DATA_TYPE_PAIR()
+#undef MACRO_PAIR
 
 }  // namespace oneflow
