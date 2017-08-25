@@ -3,9 +3,8 @@
 
 namespace oneflow {
 
-void ConvolutionOp::InitFromOpConf(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_convolution_conf());
-  mut_op_conf() = op_conf;
+void ConvolutionOp::InitFromOpConf() {
+  CHECK(op_conf().has_convolution_conf());
 
   EnrollInputBn("in");
   EnrollOutputBn("out");
