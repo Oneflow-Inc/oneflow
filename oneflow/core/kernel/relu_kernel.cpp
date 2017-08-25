@@ -17,8 +17,8 @@ template<DeviceType device_type, typename T>
 void ReluKernel<device_type, T>::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  Blob* in_data = BnInOp2BlobPtr("in");
-  Blob* out_diff = BnInOp2BlobPtr("out_diff");
+  const Blob* in_data = BnInOp2BlobPtr("in");
+  const Blob* out_diff = BnInOp2BlobPtr("out_diff");
   Blob* in_diff = BnInOp2BlobPtr("in_diff");
   ReluKernelUtil<device_type, T>::Backward(
       ctx, in_data->shape().elem_cnt(), out_diff->dptr<T>(), in_data->dptr<T>(),

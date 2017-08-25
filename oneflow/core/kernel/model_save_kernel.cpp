@@ -4,10 +4,10 @@
 
 namespace oneflow {
 
-template<typename FloatingPointType>
-void ModelSaveKernel<FloatingPointType>::Forward(
+template<typename T>
+void ModelSaveKernel<T>::Forward(
     const KernelCtx& kernel_ctx,
-    std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto save_ctx =
       static_cast<std::tuple<Snapshot*, int64_t, int64_t, ParallelPolicy>*>(
           kernel_ctx.other);
@@ -29,14 +29,13 @@ void ModelSaveKernel<FloatingPointType>::Forward(
   }
   for (const std::string& ibn : op()->input_bns()) {
     const std::string& lbn = op()->Lbn4BnInOp(ibn);
-    Blob* blob_ptr = BnInOp2BlobPtr(ibn);
+    Blob* blob_ptr = BnInOp2Blob(ibn);
     kernel_ctx.device_ctx->cpu_stream()->SendWork([=]() {
       {
         std::unique_ptr<PersistentOutStream> out_stream =
             snapshot->GetOutStream(lbn, part_id, total_part_num);
-        out_stream->Write(
-            blob_ptr->dptr<char>(),
-            blob_ptr->shape().elem_cnt() * sizeof(FloatingPointType));
+        out_stream->Write(blob_ptr->dptr<char>(),
+                          blob_ptr->shape().elem_cnt() * sizeof(T));
       }
       snapshot->OnePartDone4Key(lbn, part_id);
     });

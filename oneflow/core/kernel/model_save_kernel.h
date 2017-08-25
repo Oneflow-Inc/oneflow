@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-template<typename FloatingPointType>
+template<typename T>
 class ModelSaveKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ModelSaveKernel);
@@ -14,12 +14,7 @@ class ModelSaveKernel final : public Kernel {
 
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
-  void Backward(
-      const KernelCtx& kernel_ctx,
-      std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const override {
-    UNEXPECTED_RUN();
-  }
-};
+};  // namespace oneflow
 
 }  // namespace oneflow
 
