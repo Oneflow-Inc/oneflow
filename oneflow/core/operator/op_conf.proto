@@ -169,16 +169,19 @@ message BoxCloneConf {
 }
 
 message BoxingOpConf {
-  string lbn = 1;
-  int32 in_num = 2;
-  int32 out_num = 3;
+  LogicalBlob in = 1;
+  LogicalBlob out = 2;
+  string lbn = 3;
+  int32 in_num = 4;
+  int32 out_num = 5;
+
   oneof in_box {
-    BoxConcatConf concat_box = 4;
-    BoxAddConf add_box = 5;
+    BoxConcatConf concat_box = 6;
+    BoxAddConf add_box = 7;
   }
   oneof out_box {
-    BoxDataSplitConf data_split_box = 6;
-    BoxCloneConf clone_box = 7;
+    BoxDataSplitConf data_split_box = 8;
+    BoxCloneConf clone_box = 9;
   }
 }
 
