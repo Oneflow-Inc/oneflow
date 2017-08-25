@@ -2,6 +2,11 @@
 
 namespace oneflow {
 
+void Operator::InitFromOpConf(const OperatorConf& op_conf) {
+  op_conf_ = op_conf;
+  InitFromOpConf();
+}
+
 void Operator::InitFromProto(const OperatorProto& op_proto) {
   op_conf_ = op_proto.op_conf();
   bn_in_op2lbn_ = PbMap2HashMap(op_proto.bn_in_op2lbn());
@@ -112,11 +117,11 @@ std::string Operator::dtbn2lbn(const std::string& data_tmp_bn) const {
 }
 
 std::string UserOperator::ibn2lbn(const std::string& input_bn) const {
-  return GetStringFromSpecialConf(input_bn);
+  return GetMsgFromSpecialConf<LogicalBlob>(input_bn).name();
 }
 
 std::string UserOperator::obn2lbn(const std::string& output_bn) const {
-  return op_name() + "/" + GetStringFromSpecialConf(output_bn);
+  return op_name() + "/" + GetMsgFromSpecialConf<LogicalBlob>(output_bn).name();
 }
 
 std::string UserOperator::mtbn2lbn(const std::string& model_tmp_bn) const {

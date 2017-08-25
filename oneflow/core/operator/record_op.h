@@ -11,7 +11,7 @@ class RecordOp final : public SysOperator {
   RecordOp() = default;
   ~RecordOp() = default;
 
-  void InitFromOpConf(const OperatorConf& op_conf) override;
+  void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
   bool IsRecordOp() const override { return true; }
 

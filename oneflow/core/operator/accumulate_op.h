@@ -11,7 +11,7 @@ class AccumulateOp final : public SysOperator {
   AccumulateOp() = default;
   ~AccumulateOp() = default;
 
-  void InitFromOpConf(const OperatorConf& op_conf) override;
+  void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
 
  private:

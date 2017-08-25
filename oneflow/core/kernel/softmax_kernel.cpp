@@ -6,10 +6,10 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 void SoftmaxKernel<device_type, T>::Forward(
     const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  const Blob* in_blob = BnInOp2BlobPtr(op()->SoleIbn());
-  Blob* out_blob = BnInOp2BlobPtr(op()->SoleObn());
-  Blob* tmp_blob = BnInOp2BlobPtr(op()->SoleDtbn());
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in_blob = BnInOp2Blob(op()->SoleIbn());
+  Blob* out_blob = BnInOp2Blob(op()->SoleObn());
+  Blob* tmp_blob = BnInOp2Blob(op()->SoleDtbn());
   const int64_t n = out_blob->shape().At(0);
   const int64_t w = out_blob->shape().At(1);
   const T* in = in_blob->dptr<T>();
@@ -21,11 +21,11 @@ void SoftmaxKernel<device_type, T>::Forward(
 template<DeviceType device_type, typename T>
 void SoftmaxKernel<device_type, T>::Backward(
     const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  const Blob* out_blob = BnInOp2BlobPtr(op()->SoleObn());
-  const Blob* out_diff_blob = BnInOp2BlobPtr(op()->SoleOdbn());
-  Blob* in_diff_blob = BnInOp2BlobPtr(op()->SoleIdbn());
-  Blob* tmp_blob = BnInOp2BlobPtr(op()->SoleDtbn());
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* out_blob = BnInOp2Blob(op()->SoleObn());
+  const Blob* out_diff_blob = BnInOp2Blob(op()->SoleOdbn());
+  Blob* in_diff_blob = BnInOp2Blob(op()->SoleIdbn());
+  Blob* tmp_blob = BnInOp2Blob(op()->SoleDtbn());
   const int64_t n = out_blob->shape().At(0);
   const int64_t w = out_blob->shape().At(1);
   T* in_diff = in_diff_blob->mut_dptr<T>();
@@ -96,7 +96,7 @@ Kernel* CreateSoftmaxKernel(const OperatorConf& op_conf) {
 
 }  // namespace
 
-REIGSTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kSoftmaxConf,
+REGISTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kSoftmaxConf,
                                  CreateSoftmaxKernel);
 
 }  // namespace oneflow

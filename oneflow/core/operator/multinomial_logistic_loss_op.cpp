@@ -2,9 +2,8 @@
 
 namespace oneflow {
 
-void MultinomialLogisticLossOp::InitFromOpConf(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_multinomial_logistic_loss_conf());
-  mut_op_conf() = op_conf;
+void MultinomialLogisticLossOp::InitFromOpConf() {
+  CHECK(op_conf().has_multinomial_logistic_loss_conf());
 
   EnrollInputBn("prediction");
   EnrollInputBn("label", false);

@@ -94,8 +94,8 @@ message DataLoaderOpConf {
 }
 
 message PoolingOpConf {
-  string in = 1;
-  string out = 2;
+  LogicalBlob in = 1;
+  LogicalBlob out = 2;
 
   enum PoolMethod {
     kMax = 0;
@@ -112,8 +112,8 @@ message PoolingOpConf {
 }
 
 message ReluOpConf {
-  string in = 1;
-  string out = 2;
+  LogicalBlob in = 1;
+  LogicalBlob out = 2;
 }
 
 message SoftmaxOpConf {
@@ -136,7 +136,8 @@ message MultinomialLogisticLossOpConf {
 message ConcatOpConf {
   repeated string in = 1;
   string out = 2;
-  int32 axis = 3;
+  DataType data_type = 3;
+  int32 axis = 4;
 }
 
 message CopyCommNetOpConf {
@@ -211,6 +212,7 @@ message RecordOpConf {
 }
 
 message LossRecordOpConf {
+  DataType data_type = 1;
 }
 
 message OperatorConf {

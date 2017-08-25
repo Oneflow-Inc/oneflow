@@ -79,6 +79,9 @@ class SoftmaxKernelUtil<DeviceType::kGPU, T> final {
   }
 };
 
-INSTANTIATE_GPU_KERNEL_UTIL_FLOATING_TYPE(SoftmaxKernelUtil)
+#define MACRO_PAIR(type_cpp, type_proto) \
+  template class SoftmaxKernelUtil<DeviceType::kGPU, type_cpp>;
+FLOATING_DATA_TYPE_PAIR()
+#undef MACRO_PAIR
 
 }  // namespace oneflow
