@@ -11,7 +11,7 @@ class ConcatOp final : public UserOperator {
   ConcatOp() = default;
   ~ConcatOp() = default;
 
-  void InitFromOpConf(const OperatorConf& op_conf) override;
+  void InitFromOpConf() override;
 
   const PbMessage& GetSpecialConf() const override;
 
