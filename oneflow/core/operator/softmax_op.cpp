@@ -2,9 +2,8 @@
 
 namespace oneflow {
 
-void SoftmaxOp::InitFromOpConf(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_softmax_conf());
-  mut_op_conf() = op_conf;
+void SoftmaxOp::InitFromOpConf() {
+  CHECK(op_conf().has_softmax_conf());
 
   EnrollInputBn("in");
   EnrollOutputBn("out");

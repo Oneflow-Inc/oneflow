@@ -2,9 +2,8 @@
 
 namespace oneflow {
 
-void PoolingOp::InitFromOpConf(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_pooling_conf());
-  mut_op_conf() = op_conf;
+void PoolingOp::InitFromOpConf() {
+  CHECK(op_conf().has_pooling_conf());
 
   EnrollInputBn("in");
   EnrollOutputBn("out");

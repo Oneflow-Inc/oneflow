@@ -3,9 +3,8 @@
 
 namespace oneflow {
 
-void ReluOp::InitFromOpConf(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_relu_conf());
-  mut_op_conf() = op_conf;
+void ReluOp::InitFromOpConf() {
+  CHECK(op_conf().has_relu_conf());
   EnrollInputBn("in");
   EnrollOutputBn("out");
 }

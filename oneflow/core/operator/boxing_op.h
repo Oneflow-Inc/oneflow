@@ -11,7 +11,7 @@ class BoxingOp final : public SysOperator {
   BoxingOp() = default;
   ~BoxingOp() = default;
 
-  void InitFromOpConf(const OperatorConf& op_conf) override;
+  void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
 
   void InferBlobDesc4FwBlobs(

@@ -3,10 +3,8 @@
 
 namespace oneflow {
 
-void SoftmaxLossOp::InitFromOpConf(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_softmax_loss_conf());
-  mut_op_conf() = op_conf;
-
+void SoftmaxLossOp::InitFromOpConf() {
+  CHECK(op_conf().has_softmax_loss_conf());
   EnrollInputBn("prediction");
   EnrollInputBn("label", false);
   EnrollDataTmpBn("prob");
