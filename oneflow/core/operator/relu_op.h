@@ -11,7 +11,7 @@ class ReluOp final : public UserOperator {
   ReluOp() = default;
   ~ReluOp() = default;
 
-  void InitFromOpConf(const OperatorConf& op_conf) override;
+  void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
   bool IsElemWise() const override { return true; }
 
