@@ -1,4 +1,6 @@
 #include "oneflow/core/kernel/softmax_kernel.h"
+#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/core/device/cuda_device_context.h"
 #include "oneflow/core/kernel/kernel_test_common.h"
@@ -20,17 +22,27 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
       -0.0737048, -0.1306350, -0.1182198, 0.3225595,
       -0.875,     0.875,      -0.375,     0.375};
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
-  (*bn2blob_ptr)["in"] = KTCommon::CreateBlobWithVector({2, 4}, in_mat);
-  (*bn2blob_ptr)["out"] = KTCommon::CreateBlobWithSameValue({2, 4}, 0.0);
-  (*bn2blob_ptr)["tmp"] = KTCommon::CreateBlobWithSameValue({2}, 0.0);
-  (*bn2blob_ptr)["in_diff"] = KTCommon::CreateBlobWithSameValue({2, 4}, 0.0);
+  auto blob_desc =
+      KTCommon::CreateBlobDesc({2, 4}, GetDataType<FloatingPointType>::val);
+  auto tmp_blob_desc =
+      KTCommon::CreateBlobDesc({2}, GetDataType<FloatingPointType>::val);
+  (*bn2blob_ptr)["in"] =
+      KTCommon::CreateBlobWithVector(blob_desc.get(), in_mat);
+  (*bn2blob_ptr)["out"] =
+      KTCommon::CreateBlobWithSameValue(blob_desc.get(), 0.0);
+  (*bn2blob_ptr)["tmp"] =
+      KTCommon::CreateBlobWithSameValue(tmp_blob_desc.get(), 0.0);
+  (*bn2blob_ptr)["in_diff"] =
+      KTCommon::CreateBlobWithSameValue(blob_desc.get(), 0.0);
   (*bn2blob_ptr)["out_diff"] =
-      KTCommon::CreateBlobWithVector({2, 4}, out_diff_mat);
+      KTCommon::CreateBlobWithVector(blob_desc.get(), out_diff_mat);
   (*bn2blob_ptr)["expected_out"] =
-      KTCommon::CreateBlobWithVector({2, 4}, expected_out_mat);
+      KTCommon::CreateBlobWithVector(blob_desc.get(), expected_out_mat);
   (*bn2blob_ptr)["expected_in_diff"] =
-      KTCommon::CreateBlobWithVector({2, 4}, expected_in_diff_mat);
-  return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
+      KTCommon::CreateBlobWithVector(blob_desc.get(), expected_in_diff_mat);
+  return [bn2blob_ptr, blob_desc, tmp_blob_desc](const std::string& bn) {
+    return bn2blob_ptr->at(bn);
+  };
 }
 
 template<DeviceType device_type, typename FloatingPointType>

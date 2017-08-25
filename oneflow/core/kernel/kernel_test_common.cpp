@@ -1,43 +1,44 @@
 #include "oneflow/core/kernel/kernel_test_common.h"
 #include <random>
 #include "oneflow/core/device/cpu_device_context.h"
+#include "oneflow/core/register/blob_desc.h"
 
 namespace oneflow {
 
 namespace test {
-/*
+
 template<typename FloatingPointType>
 class KernelTestCommon<DeviceType::kCPU, FloatingPointType> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelTestCommon);
   KernelTestCommon() = delete;
 
-  static Blob* CreateBlobWithVector(const std::vector<int64_t>& dim_vec,
+  static Blob* CreateBlobWithVector(const BlobDesc* blob_desc,
                                     FloatingPointType* data_vec) {
-    void* dptr;
-    Shape* shape = new Shape(dim_vec);
-    size_t dptr_size = shape->elem_cnt() * sizeof(FloatingPointType);
+    char* dptr;
+    int64_t elem_cnt = blob_desc->shape().elem_cnt();
+    size_t dptr_size = elem_cnt * sizeof(FloatingPointType);
     CudaCheck(cudaMallocHost(&dptr, dptr_size));
     CudaCheck(cudaMemcpy(dptr, data_vec, dptr_size, cudaMemcpyHostToHost));
-    return new Blob(dptr, shape);
+    return new Blob(blob_desc, dptr);
   }
 
-  static Blob* CreateBlobWithSameValue(const std::vector<int64_t>& dim_vec,
+  static Blob* CreateBlobWithSameValue(const BlobDesc* blob_desc,
                                        FloatingPointType value) {
-    Shape* shape = new Shape(dim_vec);
-    FloatingPointType* data_vec = new FloatingPointType[shape->elem_cnt()];
-    std::fill(data_vec, data_vec + shape->elem_cnt(), value);
-    return CreateBlobWithVector(dim_vec, data_vec);
+    int64_t elem_cnt = blob_desc->shape().elem_cnt();
+    FloatingPointType* data_vec = new FloatingPointType[elem_cnt];
+    std::fill(data_vec, data_vec + elem_cnt, value);
+    return CreateBlobWithVector(blob_desc, data_vec);
   }
 
-  static Blob* CreateBlobWithRandomValue(const std::vector<int64_t>& dim_vec) {
-    Shape* shape = new Shape(dim_vec);
+  static Blob* CreateBlobWithRandomValue(const BlobDesc* blob_desc) {
+    int64_t elem_cnt = blob_desc->shape().elem_cnt();
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<FloatingPointType> dis(0, 10);
-    FloatingPointType* data_vec = new FloatingPointType[shape->elem_cnt()];
-    for (int64_t i = 0; i != shape->elem_cnt(); ++i) { data_vec[i] = dis(gen); }
-    return CreateBlobWithVector(dim_vec, data_vec);
+    FloatingPointType* data_vec = new FloatingPointType[elem_cnt];
+    for (int64_t i = 0; i != elem_cnt; ++i) { data_vec[i] = dis(gen); }
+    return CreateBlobWithVector(blob_desc, data_vec);
   }
 
   static void BuildKernelCtx(KernelCtx* ctx) {
@@ -91,6 +92,6 @@ class KernelTestCommon<DeviceType::kCPU, FloatingPointType> final {
 
 template class KernelTestCommon<DeviceType::kCPU, float>;
 template class KernelTestCommon<DeviceType::kCPU, double>;
-*/
+
 }  // namespace test
 }  // namespace oneflow
