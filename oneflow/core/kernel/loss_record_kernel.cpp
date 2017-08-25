@@ -22,6 +22,7 @@ Kernel* CreateLossRecordKernel(const OperatorConf& op_conf) {
       FLOATING_DATA_TYPE_PAIR()
 #undef MACRO_PAIR
   };
+  return data_type2creator.at(op_conf.loss_record_conf().data_type())();
 }
 
 }  // namespace
