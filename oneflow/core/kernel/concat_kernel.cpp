@@ -103,6 +103,7 @@ Kernel* CreateConcatKernel(const OperatorConf& op_conf) {
       ALL_DATA_TYPE_PAIR()
 #undef MACRO_PAIR
   };
+  return data_type2creator.at(op_conf.concat_conf().data_type())();
 }
 
 REGISTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kConcatConf, CreateConcatKernel);
