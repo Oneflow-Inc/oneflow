@@ -3,6 +3,8 @@
 
 #include "oneflow/core/blas/cblas_template.h"
 #include "oneflow/core/blas/cublas_template.h"
+#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/kernel/kernel_context.h"

@@ -30,8 +30,8 @@ void SoftmaxLossOp::InferBlobDesc4FwBlobs(
   CHECK_EQ(conf.loss().data_type(), JobDesc::Singleton()->default_data_type());
   const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
   CHECK_EQ(pred_blob_desc->has_data_id(), label_blob_desc->has_data_id());
-  // CHECK label data type is int
-  CHECK(IsIntegral(label_blob_desc->data_type()));
+  // CHECK label data type is int32_t
+  CHECK_EQ(label_blob_desc->data_type(), DataType::kInt32);
   // CHECK shape
   CHECK_EQ(pred_blob_desc->shape().NumAxes(), 2);
   CHECK_EQ(label_blob_desc->shape(), Shape({pred_blob_desc->shape().At(0)}));
