@@ -55,11 +55,9 @@ namespace {
 template<DeviceType device_type>
 Kernel* CreateReluKernel(const OperatorConf& op_conf) {
   static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
-#define MACRO_PAIR(type_cpp, type_proto) \
+#define RELU_KERNEL_ENTRY(type_cpp, type_proto) \
   {type_proto, []() { return new ReluKernel<device_type, type_cpp>; }},
-      ARITHMETIC_DATA_TYPE_PAIR()
-#undef MACRO_PAIR
-  };
+      FOR_EACH_PAIR(RELU_KERNEL_ENTRY, ARITHMETIC_DATA_TYPE_PAIR())};
   return data_type2creator.at(op_conf.relu_conf().in().data_type())();
 }
 

@@ -192,10 +192,9 @@ class KernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
-#define MACRO_PAIR(type_cpp, type_proto) \
+#define DECLARE_KERNEL_UTIL(type_cpp, type_proto) \
   template class KernelUtil<DeviceType::kCPU, type_cpp>;
-FLOATING_DATA_TYPE_PAIR()
-#undef MACRO_PAIR
+FOR_EACH_PAIR(DECLARE_KERNEL_UTIL, FLOATING_DATA_TYPE_PAIR())
 
 template<>
 void Memcpy<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const void* src,
