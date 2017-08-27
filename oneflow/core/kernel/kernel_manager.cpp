@@ -39,12 +39,6 @@ void AddKernelCreator(OperatorConf::OpTypeCase op_case, DeviceType device_type,
                    [=](const OperatorConf&) { return creator(); });
 }
 
-void AddKernelCreator(OperatorConf::OpTypeCase op_case, DeviceType device_type,
-                      Kernel* (*creator)(const OperatorConf&)) {
-  AddKernelCreator(op_case, device_type,
-                   function_cast<Kernel*(const OperatorConf&)>(creator));
-}
-
 void KernelMgr::InitFromPlan(const Plan& plan) {
   int64_t this_machine_id = RuntimeCtx::Singleton()->this_machine_id();
   const PbRpf<std::string>& op_names_rpf =
