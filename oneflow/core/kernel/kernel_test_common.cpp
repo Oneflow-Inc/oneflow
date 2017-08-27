@@ -39,30 +39,12 @@ class KTCommon<DeviceType::kCPU, T> final {
     return ret;
   }
 
-  Blob* CreateBlobWithSameVal(const BlobDesc* blob_desc, T val) {
-    Blob* ret = CreateBlob<DeviceType::kCPU>(blob_desc);
-    std::fill(ret->mut_dptr<T>, ret->mut_dptr<T> + ret->shape().elem_cnt(),
-              val);
-    return ret;
-  }
-
-  Blob* CreateBlobWithRandomVal(const BlobDesc* blob_desc) {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<T> dis(0, 10);
-    Blob* ret = CreateBlob<DeviceType::kCPU>(blob_desc);
-    for (int64_t i = 0; i != blob_desc->shape().elem_cnt(); ++i) {
-      ret->mut_dptr<T>()[i] = static_cast<T>(dis(gen));
-    }
-    return ret;
-  }
-
-  void BlobCmp(const Blob* lhs, const Blob* rhs) {
+  static void BlobCmp(const Blob* lhs, const Blob* rhs) {
     ASSERT_TRUE(lhs->blob_desc() == rhs->blob_desc());
     CHECK_EQ(lhs->data_type(), GetDataType<T>::val);
     if (IsFloatingPoint(lhs->data_type())) {
       for (int64_t i = 0; i < lhs->shape().elem_cnt(); ++i) {
-        ASSERT_DOUBLE_EQ(lhs->mut_dptr<T>()[i], rhs->mut_dptr<T>()[i]);
+        ASSERT_DOUBLE_EQ(lhs->dptr<T>()[i], rhs->dptr<T>()[i]);
       }
     } else {
       ASSERT_EQ(memcmp(lhs->dptr(), rhs->dptr(), lhs->ByteSizeOfDataField()),
@@ -70,12 +52,7 @@ class KTCommon<DeviceType::kCPU, T> final {
     }
   }
 
-  void CheckResult(std::function<Blob*(const std::string&)> BnInOp2Blob,
-                   const std::string& check, const std::string& expected) {
-    BlobCmp(BnInOp2Blob(check), BnInOp2Blob(expected));
-  }
-
-  void CheckFillResult(const Blob* blob, const FillConf& fill_conf) {
+  static void CheckFillResult(const Blob* blob, const FillConf& fill_conf) {
     if (fill_conf.has_constant_conf()) {
       for (int64_t i = 0; i < blob->shape().elem_cnt(); ++i) {
         ASSERT_DOUBLE_EQ(blob->dptr<T>()[i], fill_conf.constant_conf().value());
@@ -92,6 +69,7 @@ class KTCommon<DeviceType::kCPU, T> final {
 
 #define MACRO_PAIR(type_cpp, type_proto) \
   template class KTCommon<DeviceType::kCPU, type_cpp>;
+ALL_DATA_TYPE_PAIR()
 #undef MACRO_PAIR
 
 }  // namespace test

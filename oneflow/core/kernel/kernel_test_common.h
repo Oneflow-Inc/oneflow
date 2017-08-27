@@ -28,15 +28,30 @@ class KTCommon final {
 
   static Blob* CreateBlobWithSpecifiedVal(const BlobDesc*, T* val);
 
-  static Blob* CreateBlobWithSameVal(const BlobDesc*, T val);
+  static Blob* CreateBlobWithSameVal(const BlobDesc* blob_desc, T val) {
+    T* val_vec = new T[blob_desc->shape().elem_cnt()];
+    std::fill(val_vec, val_vec + blob_desc->shape().elem_cnt(), val);
+    return CreateBlobWithSpecifiedVal(blob_desc, val_vec);
+  }
 
-  static Blob* CreateBlobWithRandomVal(const BlobDesc*);
+  static Blob* CreateBlobWithRandomVal(const BlobDesc* blob_desc) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> dis(0, 10);
+    T* val_vec = new T[blob_desc->shape().elem_cnt()];
+    for (int64_t i = 0; i < blob_desc->shape().elem_cnt(); ++i) {
+      val_vec[i] = static_cast<T>(dis(gen));
+    }
+    return CreateBlobWithSpecifiedVal(blob_desc, val_vec);
+  }
 
   static void BlobCmp(const Blob* lhs, const Blob* rhs);
 
   static void CheckResult(std::function<Blob*(const std::string&)> BnInOp2Blob,
-                          const std::string& check,
-                          const std::string& expected);
+                          const std::string& result,
+                          const std::string& expected_result) {
+    BlobCmp(BnInOp2Blob(result), BnInOp2Blob(expected_result));
+  }
 
   static void CheckFillResult(const Blob* blob, const FillConf& fill_conf);
 };
