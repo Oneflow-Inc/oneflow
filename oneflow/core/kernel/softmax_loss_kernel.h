@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename FloatingPointType>
+template<DeviceType device_type, typename T>
 class SoftmaxLossKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SoftmaxLossKernel);
@@ -20,20 +20,17 @@ class SoftmaxLossKernel final : public Kernel {
   }
 };
 
-template<DeviceType device_type, typename FloatingPointType>
+template<DeviceType device_type, typename T>
 class SoftmaxLossKernelUtil final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SoftmaxLossKernelUtil);
   SoftmaxLossKernelUtil() = delete;
 
-  static void ComputeLoss(const KernelCtx& ctx, const int64_t n,
-                          const int64_t w, const FloatingPointType* label,
-                          const FloatingPointType* prob, FloatingPointType* tmp,
-                          FloatingPointType* loss);
+  static void ComputeLoss(DeviceCtx* ctx, const int64_t n, const int64_t w,
+                          const int32_t* label, const T* prob, T* tmp, T* loss);
 
-  static void BackwardSub(const KernelCtx& ctx, const int64_t n,
-                          const int64_t w, const FloatingPointType* label,
-                          FloatingPointType* in_diff);
+  static void BackwardSub(DeviceCtx* ctx, const int64_t n, const int64_t w,
+                          const int32_t* label, T* in_diff);
 };
 
 }  // namespace oneflow

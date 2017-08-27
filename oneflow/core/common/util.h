@@ -108,6 +108,11 @@ void EraseIf(HashMap<K, V>* hash_map,
 template<typename OutType, typename InType>
 OutType oneflow_cast(const InType&);
 
+template<typename Signature>
+std::function<Signature> function_cast(void* f) {
+  return static_cast<Signature*>(f);
+}
+
 inline uint32_t NewRandomSeed() {
   static std::mt19937 gen{std::random_device{}()};
   return gen();

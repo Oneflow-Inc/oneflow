@@ -42,7 +42,7 @@ void AddKernelCreator(OperatorConf::OpTypeCase op_case, DeviceType device_type,
 void AddKernelCreator(OperatorConf::OpTypeCase op_case, DeviceType device_type,
                       Kernel* (*creator)(const OperatorConf&)) {
   AddKernelCreator(op_case, device_type,
-                   std::bind(creator, std::placeholders::_1));
+                   function_cast<Kernel*(const OperatorConf&)>(creator));
 }
 
 void KernelMgr::InitFromPlan(const Plan& plan) {
