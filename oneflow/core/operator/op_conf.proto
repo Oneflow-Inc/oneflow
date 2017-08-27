@@ -212,7 +212,6 @@ message RecordOpConf {
 }
 
 message LossRecordOpConf {
-  DataType data_type = 1;
 }
 
 message OperatorConf {
