@@ -32,9 +32,6 @@ void AddKernelCreator(OperatorConf::OpTypeCase, DeviceType,
 void AddKernelCreator(OperatorConf::OpTypeCase, DeviceType,
                       std::function<Kernel*()> creator);
 
-void AddKernelCreator(OperatorConf::OpTypeCase, DeviceType,
-                      Kernel* (*creator)(const OperatorConf&));
-
 #define REGISTER_TEMPLATE_KERNEL_CREATOR(op_type_case, kernel_creator) \
   COMMAND(AddKernelCreator(op_type_case, DeviceType::kCPU,             \
                            kernel_creator<DeviceType::kCPU>);          \

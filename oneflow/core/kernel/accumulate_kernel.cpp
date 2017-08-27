@@ -22,7 +22,7 @@ Kernel* CreateAccKernel(const OperatorConf& op_conf) {
       FLOATING_DATA_TYPE_PAIR()
 #undef MACRO_PAIR
   };
-  return data_type2creator.at(op_conf.accumulate_conf().data_type())();
+  return data_type2creator.at(JobDesc::Singleton()->default_data_type())();
 }
 }  // namespace
 

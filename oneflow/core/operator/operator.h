@@ -88,8 +88,7 @@ class Operator {
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, model_tmp_blobs
   virtual void InferBlobDesc4FwBlobs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      ParallelPolicy policy, int64_t parallel_id,
-      int64_t parallel_num) const = 0;
+      ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) = 0;
 
   //
   virtual void FixParallelDesc(ParallelDesc* pr_desc) const {}
@@ -154,7 +153,7 @@ class SysOperator : public Operator {
   virtual void InferBlobDesc4FwBlobs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       ParallelPolicy policy, int64_t parallel_id,
-      int64_t parallel_num) const override {
+      int64_t parallel_num) override {
     UNEXPECTED_RUN();
   }
 

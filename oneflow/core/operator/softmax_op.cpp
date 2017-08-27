@@ -16,7 +16,7 @@ const PbMessage& SoftmaxOp::GetSpecialConf() const {
 
 void SoftmaxOp::InferBlobDesc4FwBlobs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
+    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) {
   const SoftmaxOpConf& conf = op_conf().softmax_conf();
   // in
   const BlobDesc* in = GetBlobDesc4BnInOp("in");

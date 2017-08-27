@@ -18,8 +18,6 @@ void MdDiffAccTaskGraph::BuildTaskGraph(const ChainNode* data_chain) {
   // Construct ModelDiffAccOp
   OperatorConf op_conf;
   op_conf.set_name("model_diff_acc_" + NewUniqueId());
-  op_conf.mutable_accumulate_conf()->set_data_type(
-      JobDesc::Singleton()->default_data_type());
   auto model_diff_acc_op = OpMgr::Singleton()->AddOp(op_conf);
   // ModelDiffAccChain
   auto chain_gph = of_make_unique<ChainGraph>();
