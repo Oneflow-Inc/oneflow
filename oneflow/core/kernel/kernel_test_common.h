@@ -11,32 +11,34 @@ namespace oneflow {
 
 namespace test {
 
-template<DeviceType device_type, typename FloatingPointType>
-class KernelTestCommon final {
+template<DeviceType device_type>
+Blob* CreateBlob(const BlobDesc*);
+
+template<DeviceType device_type>
+void BuildKernelCtx(KernelCtx* ctx);
+
+template<DeviceType device_type>
+void SyncStream(KernelCtx* ctx);
+
+template<DeviceType device_type, typename T>
+class KTCommon final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(KernelTestCommon);
-  KernelTestCommon() = delete;
+  OF_DISALLOW_COPY_AND_MOVE(KTCommon);
+  KTCommon() = delete;
 
-  static Blob* CreateBlobWithVector(const std::vector<int64_t>& dim_vec,
-                                    FloatingPointType* data_vec);
+  static Blob* CreateBlobWithSpecifiedVal(const BlobDesc*, T* val);
 
-  static Blob* CreateBlobWithSameValue(const std::vector<int64_t>& dim_vec,
-                                       FloatingPointType value);
+  static Blob* CreateBlobWithSameVal(const BlobDesc*, T val);
 
-  static Blob* CreateBlobWithRandomValue(const std::vector<int64_t>& dim_vec);
+  static Blob* CreateBlobWithRandomVal(const BlobDesc*);
 
-  static void BuildKernelCtx(KernelCtx* ctx);
+  static void BlobCmp(const Blob* lhs, const Blob* rhs);
 
-  static void SyncStream(KernelCtx* ctx);
+  static void CheckResult(std::function<Blob*(const std::string&)> BnInOp2Blob,
+                          const std::string& check,
+                          const std::string& expected);
 
-  static void BlobCmp(Blob* lhs, Blob* rhs);
-
-  static void CheckResult(
-      std::function<Blob*(const std::string&)> BnInOp2BlobPtr,
-      const std::string& check, const std::string& expected);
-
-  static void CheckFillResult(const Blob& check_blob,
-                              const FillConf& fill_conf);
+  static void CheckFillResult(const Blob* blob, const FillConf& fill_conf);
 };
 
 }  // namespace test
