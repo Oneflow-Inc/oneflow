@@ -23,7 +23,7 @@ const PbMessage& ConvolutionOp::GetSpecialConf() const {
 
 void ConvolutionOp::InferBlobDesc4FwBlobs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
+    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) {
   const ConvolutionOpConf& conf = op_conf().convolution_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(SoleIbn());
   CHECK_EQ(in_blob_desc->shape().NumAxes(), 4);

@@ -19,7 +19,7 @@ const PbMessage& ConcatOp::GetSpecialConf() const {
 
 void ConcatOp::InferBlobDesc4FwBlobs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
+    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) {
   const ConcatOpConf& conf = op_conf().concat_conf();
   const BlobDesc* in_0_blob_desc = GetBlobDesc4BnInOp(input_bns().at(0));
   CHECK_EQ(in_0_blob_desc->data_type(), conf.data_type());

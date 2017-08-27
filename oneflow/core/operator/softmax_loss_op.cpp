@@ -18,7 +18,7 @@ const PbMessage& SoftmaxLossOp::GetSpecialConf() const {
 
 void SoftmaxLossOp::InferBlobDesc4FwBlobs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
+    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) {
   const SoftmaxLossOpConf& conf = op_conf().softmax_loss_conf();
   // CHECK data type
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");

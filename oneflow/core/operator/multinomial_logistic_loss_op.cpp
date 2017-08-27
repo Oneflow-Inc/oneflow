@@ -17,7 +17,7 @@ const PbMessage& MultinomialLogisticLossOp::GetSpecialConf() const {
 
 void MultinomialLogisticLossOp::InferBlobDesc4FwBlobs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
+    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) {
   const MultinomialLogisticLossOpConf& conf =
       op_conf().multinomial_logistic_loss_conf();
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");

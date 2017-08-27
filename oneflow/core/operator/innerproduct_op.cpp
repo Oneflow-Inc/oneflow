@@ -22,7 +22,7 @@ const PbMessage& InnerProductOp::GetSpecialConf() const {
 
 void InnerProductOp::InferBlobDesc4FwBlobs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
+    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) {
   // useful vars
   const InnerProductOpConf& conf = op_conf().innerproduct_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
