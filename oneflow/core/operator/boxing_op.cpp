@@ -3,18 +3,18 @@
 
 namespace oneflow {
 
-void BoxingOp::InitFromOpConf(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_boxing_conf());
-  mut_op_conf() = op_conf;
+void BoxingOp::InitFromOpConf() {
+  CHECK(op_conf().has_boxing_conf());
+  auto boxing_conf = op_conf().boxing_conf();
 
-  for (int64_t i = 0; i < op_conf.boxing_conf().in_num(); ++i) {
+  for (int64_t i = 0; i < boxing_conf.in_num(); ++i) {
     EnrollInputBn("in_" + std::to_string(i));
   }
-  if (op_conf.boxing_conf().in_box_case() == BoxingOpConf::kConcatBox
-      && op_conf.boxing_conf().out_box_case() == BoxingOpConf::kCloneBox) {
+  if (boxing_conf.in_box_case() == BoxingOpConf::kConcatBox
+      && boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
     EnrollDataTmpBn("middle");
   }
-  for (int64_t i = 0; i < op_conf.boxing_conf().out_num(); ++i) {
+  for (int64_t i = 0; i < boxing_conf.out_num(); ++i) {
     EnrollOutputBn("out_" + std::to_string(i));
   }
 }
@@ -33,7 +33,7 @@ std::string BoxingOp::obn2lbn(const std::string& output_bn) const {
 
 void BoxingOp::InferBlobDesc4FwBlobs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
+    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) {
   // check boxing conf
   auto conf = op_conf().boxing_conf();
   auto in_box_case = conf.in_box_case();
