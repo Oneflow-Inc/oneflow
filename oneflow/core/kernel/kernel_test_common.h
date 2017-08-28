@@ -26,6 +26,15 @@ class KTCommon final {
   OF_DISALLOW_COPY_AND_MOVE(KTCommon);
   KTCommon() = delete;
 
+  static BlobDesc* BuildBlobDesc(const std::vector<int64_t>& dim_vec,
+                                 DataType data_type) {
+    BlobDesc* blob_desc = new BlobDesc();
+    blob_desc->mut_shape() = Shape(dim_vec);
+    blob_desc->set_data_type(data_type);
+    blob_desc->set_has_data_id(false);
+    return blob_desc;
+  }
+
   static Blob* CreateBlobWithSpecifiedVal(const BlobDesc*, T* val);
 
   static Blob* CreateBlobWithSameVal(const BlobDesc* blob_desc, T val) {
