@@ -5,10 +5,10 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 void MomentumMdUpdateKernel<device_type, T>::Forward(
     const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  Blob* model_blob = BnInOp2BlobPtr("model");
-  Blob* momentum_blob = BnInOp2BlobPtr("momentum");
-  const Blob* model_diffs_blob = BnInOp2BlobPtr("model_diffs");
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  Blob* model_blob = BnInOp2Blob("model");
+  Blob* momentum_blob = BnInOp2Blob("momentum");
+  const Blob* model_diffs_blob = BnInOp2Blob("model_diffs");
   float learning_rate = op()->op_conf().momentum_mdupdt_conf().learning_rate();
   float beta = op()->op_conf().momentum_mdupdt_conf().beta();
   float alpha = learning_rate / JobDesc::Singleton()->batch_size();
@@ -45,12 +45,10 @@ namespace {
 template<DeviceType device_type>
 Kernel* CreateMomentumMdUpdateKernel(const OperatorConf& op_conf) {
   static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
-#define MACRO_PAIR(type_cpp, type_proto) \
-  {type_proto,                           \
+#define MOMENTUM_MDUPDATE_KERNEL_ENTRY(type_cpp, type_proto) \
+  {type_proto,                                               \
    []() { return new MomentumMdUpdateKernel<device_type, type_cpp>; }},
-      FLOATING_DATA_TYPE_PAIR()
-#undef MACRO_PAIR
-  };
+      FOR_EACH_PAIR(MOMENTUM_MDUPDATE_KERNEL_ENTRY, FLOATING_DATA_TYPE_PAIR())};
   return data_type2creator.at(JobDesc::Singleton()->default_data_type())();
 }
 
