@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename FloatingPointType>
+template<DeviceType device_type, typename T>
 class MomentumMdUpdateKernel final : public ModelUpdtKernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MomentumMdUpdateKernel);
