@@ -124,8 +124,8 @@ class ConvolutionKernelUtil<DeviceType::kGPU, T> final {
   }
 };
 
-#define DECLARE_CONVOLUTION_KERNEL_UTIL(type_cpp, type_proto) \
+#define INSTANTIATE_CONVOLUTION_KERNEL_UTIL(type_cpp, type_proto) \
   template class ConvolutionKernelUtil<DeviceType::kGPU, type_cpp>;
-FOR_EACH_PAIR(DECLARE_CONVOLUTION_KERNEL_UTIL, FLOATING_DATA_TYPE_PAIR())
+FOR_EACH_PAIR(INSTANTIATE_CONVOLUTION_KERNEL_UTIL, FLOATING_DATA_TYPE_PAIR())
 
 }  // namespace oneflow

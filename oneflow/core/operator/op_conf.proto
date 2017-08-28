@@ -154,6 +154,7 @@ message CopyHdOpConf {
 message CloneOpConf {
   int32 out_num = 1;
   string lbn = 2;
+  DataType data_type = 3;
 }
 
 message BoxConcatConf {
@@ -170,16 +171,18 @@ message BoxCloneConf {
 }
 
 message BoxingOpConf {
-  string lbn = 1;
-  int32 in_num = 2;
-  int32 out_num = 3;
+  DataType data_type = 1;
+  string lbn = 2;
+  int32 in_num = 3;
+  int32 out_num = 4;
+
   oneof in_box {
-    BoxConcatConf concat_box = 4;
-    BoxAddConf add_box = 5;
+    BoxConcatConf concat_box = 5;
+    BoxAddConf add_box = 6;
   }
   oneof out_box {
-    BoxDataSplitConf data_split_box = 6;
-    BoxCloneConf clone_box = 7;
+    BoxDataSplitConf data_split_box = 7;
+    BoxCloneConf clone_box = 8;
   }
 }
 

@@ -55,9 +55,9 @@ class KTCommon<DeviceType::kGPU, T> final {
   }
 };  // namespace test
 
-#define DECLARE_KTCOMMON(type_cpp, type_proto) \
+#define INSTANTIATE_KTCOMMON(type_cpp, type_proto) \
   template class KTCommon<DeviceType::kGPU, type_cpp>;
-FOR_EACH_PAIR(DECLARE_KTCOMMON, ALL_DATA_TYPE_PAIR())
+FOR_EACH_PAIR(INSTANTIATE_KTCOMMON, ALL_DATA_TYPE_PAIR())
 
 }  // namespace test
 }  // namespace oneflow
