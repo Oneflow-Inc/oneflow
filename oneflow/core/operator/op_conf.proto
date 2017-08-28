@@ -32,8 +32,8 @@ message LogicalBlob {
 }
 
 message ConvolutionOpConf {
-  string in = 1;
-  string out = 2;
+  LogicalBlob in = 1;
+  LogicalBlob out = 2;
 
   int32 out_num = 3; // The number of outputs for the layer
   bool has_bias_term = 4; // whether to have bias terms
@@ -136,7 +136,8 @@ message MultinomialLogisticLossOpConf {
 message ConcatOpConf {
   repeated string in = 1;
   string out = 2;
-  int32 axis = 3;
+  DataType data_type = 3;
+  int32 axis = 4;
 }
 
 message CopyCommNetOpConf {
@@ -169,16 +170,18 @@ message BoxCloneConf {
 }
 
 message BoxingOpConf {
-  string lbn = 1;
-  int32 in_num = 2;
-  int32 out_num = 3;
+  DataType data_type = 3;
+  string lbn = 4;
+  int32 in_num = 5;
+  int32 out_num = 6;
+
   oneof in_box {
-    BoxConcatConf concat_box = 4;
-    BoxAddConf add_box = 5;
+    BoxConcatConf concat_box = 7;
+    BoxAddConf add_box = 8;
   }
   oneof out_box {
-    BoxDataSplitConf data_split_box = 6;
-    BoxCloneConf clone_box = 7;
+    BoxDataSplitConf data_split_box = 9;
+    BoxCloneConf clone_box = 10;
   }
 }
 
@@ -198,7 +201,6 @@ message RMSPropModelUpdateOpConf {
 }
 
 message AccumulateOpConf {
-  DataType data_type = 1;
 }
 
 message ModelSaveOpConf {
