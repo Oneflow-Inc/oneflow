@@ -34,13 +34,13 @@ std::string BoxingOp::obn2lbn(const std::string& output_bn) const {
 void BoxingOp::InferBlobDesc4FwBlobs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) {
+  mut_op_conf().mutable_boxing_conf()->set_data_type(
+      GetBlobDesc4BnInOp(input_bns().at(0))->data_type());
   // check boxing conf
   auto conf = op_conf().boxing_conf();
   auto in_box_case = conf.in_box_case();
   std::vector<int64_t> data_tmp_blob_shape_vec =
       GetBlobDesc4BnInOp(input_bns().at(0))->shape().dim_vec();
-  CHECK_EQ(conf.in().data_type(), JobDesc::Singleton()->default_data_type());
-  CHECK_EQ(conf.out().data_type(), JobDesc::Singleton()->default_data_type());
   int32_t concat_axis = 0;
   if (in_box_case == BoxingOpConf::kConcatBox) {
     concat_axis = conf.concat_box().axis();
@@ -50,7 +50,7 @@ void BoxingOp::InferBlobDesc4FwBlobs(
   // check datatype of input desc && calculate the shape of data_tmp
   for (size_t ib_idx = 1; ib_idx < input_bns().size(); ++ib_idx) {
     const BlobDesc* ib_desc = GetBlobDesc4BnInOp(input_bns().at(ib_idx));
-    CHECK_EQ(ib_desc->data_type(), conf.in().data_type());
+    CHECK_EQ(ib_desc->data_type(), conf.data_type());
     auto ib_shape_vec = ib_desc->shape().dim_vec();
     // if it is a concat-box, accumulate the dimensions on concat-axis.
     // otherwise only check all boxes are in the same shape.
@@ -73,6 +73,7 @@ void BoxingOp::InferBlobDesc4FwBlobs(
     BlobDesc* dtb_desc = GetBlobDesc4BnInOp(SoleDtbn());
     dtb_desc->set_has_data_id(has_data_id);
     dtb_desc->mut_shape() = Shape(data_tmp_blob_shape_vec);
+    dtb_desc->set_data_type(conf.data_type());
   }
 
   // infer desc of out blobs
@@ -82,7 +83,7 @@ void BoxingOp::InferBlobDesc4FwBlobs(
     auto output_shape_vec = data_tmp_blob_shape_vec;
     for (size_t i = 0; i < out_num; ++i) {
       BlobDesc* ob_desc = GetBlobDesc4BnInOp(output_bns().at(i));
-      ob_desc->set_data_type(conf.out().data_type());
+      ob_desc->set_data_type(conf.data_type());
       ob_desc->set_has_data_id(has_data_id);
       output_shape_vec[0] = splitter.At(i).size();
       ob_desc->mut_shape() = Shape(output_shape_vec);

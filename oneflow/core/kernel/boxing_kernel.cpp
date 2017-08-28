@@ -395,19 +395,16 @@ void BoxingKernel<T>::AddBoxBackward(
 
 namespace {
 
+template<DeviceType device_type>
 Kernel* CreateBoxingKernel(const OperatorConf& op_conf) {
   static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
-#define MACRO_PAIR(type_cpp, type_proto) \
+#define BOXING_KERNEL_ENTRY(type_cpp, type_proto) \
   {type_proto, []() { return new BoxingKernel<type_cpp>; }},
-      FLOATING_DATA_TYPE_PAIR()
-#undef MACRO_PAIR
-  };
+      FOR_EACH_PAIR(BOXING_KERNEL_ENTRY, FLOATING_DATA_TYPE_PAIR())};
   return data_type2creator.at(op_conf.boxing_conf().in().data_type())();
 }
 
 }  // namespace
 
-COMMAND(AddKernelCreator(OperatorConf::kBoxingConf, DeviceType::kCPU,
-                         CreateBoxingKernel));
-
+REGISTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kBoxingConf, CreateBoxingKernel);
 }  // namespace oneflow
