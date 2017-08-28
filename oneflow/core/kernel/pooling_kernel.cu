@@ -247,8 +247,8 @@ class PoolingKernelUtil<DeviceType::kGPU, T> final {
   }
 };
 
-#define DECLARE_POOLING_KERNEL_UTIL(type_cpp, type_proto) \
+#define INSTANTIATE_POOLING_KERNEL_UTIL(type_cpp, type_proto) \
   template class PoolingKernelUtil<DeviceType::kGPU, type_cpp>;
-FOR_EACH_PAIR(DECLARE_POOLING_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_PAIR())
+FOR_EACH_PAIR(INSTANTIATE_POOLING_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_PAIR())
 
 }  // namespace oneflow
