@@ -35,7 +35,6 @@ void LossRecordTaskGraph::BuildTaskGraph(
   // loss record op
   OperatorConf op_conf;
   op_conf.set_name("loss_record_" + NewUniqueId());
-  op_conf.mutable_loss_record_conf();
   auto loss_record_op = OpMgr::Singleton()->AddOp(op_conf);
   // loss record chain
   ChainNode* loss_record_chain = chain_gph->NewNode();

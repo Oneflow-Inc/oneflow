@@ -2,9 +2,8 @@
 
 namespace oneflow {
 
-void PoolingOp::InitFromOpConf(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_pooling_conf());
-  mut_op_conf() = op_conf;
+void PoolingOp::InitFromOpConf() {
+  CHECK(op_conf().has_pooling_conf());
 
   EnrollInputBn("in");
   EnrollOutputBn("out");
@@ -17,7 +16,7 @@ const PbMessage& PoolingOp::GetSpecialConf() const {
 
 void PoolingOp::InferBlobDesc4FwBlobs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
+    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) {
   const PoolingOpConf& conf = op_conf().pooling_conf();
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");

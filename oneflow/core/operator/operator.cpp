@@ -2,6 +2,11 @@
 
 namespace oneflow {
 
+void Operator::InitFromOpConf(const OperatorConf& op_conf) {
+  op_conf_ = op_conf;
+  InitFromOpConf();
+}
+
 void Operator::InitFromProto(const OperatorProto& op_proto) {
   op_conf_ = op_proto.op_conf();
   bn_in_op2lbn_ = PbMap2HashMap(op_proto.bn_in_op2lbn());

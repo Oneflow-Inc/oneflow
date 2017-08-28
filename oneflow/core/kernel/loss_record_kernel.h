@@ -5,12 +5,8 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename FloatingPointType>
-class LossRecordKernel;
-
-template<typename FloatingPointType>
-class LossRecordKernel<DeviceType::kCPU, FloatingPointType> final
-    : public Kernel {
+template<typename T>
+class LossRecordKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LossRecordKernel);
   LossRecordKernel() = default;
@@ -18,12 +14,6 @@ class LossRecordKernel<DeviceType::kCPU, FloatingPointType> final
 
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
-
-  void Backward(
-      const KernelCtx& kernel_ctx,
-      std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const override {
-    UNEXPECTED_RUN();
-  }
 
  private:
 };
