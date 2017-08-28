@@ -21,6 +21,8 @@ namespace oneflow {
       OF_PP_MAKE_PAIR(uint32_t, DataType::kUInt32))( \
       OF_PP_MAKE_PAIR(uint64_t, DataType::kUInt64))
 
+#define CHAR_DATA_TYPE_PAIR() (OF_PP_MAKE_PAIR(char, DataType::kChar))
+
 #define INT_DATA_TYPE_PAIR()  \
   SIGNED_INT_DATA_TYPE_PAIR() \
   UNSIGNED_INT_DATA_TYPE_PAIR()
@@ -31,7 +33,7 @@ namespace oneflow {
 
 #define ALL_DATA_TYPE_PAIR()  \
   ARITHMETIC_DATA_TYPE_PAIR() \
-  (OF_PP_MAKE_PAIR(char, DataType::kChar))
+  CHAR_DATA_TYPE_PAIR()
 
 #define FOR_EACH_PAIR OF_PP_SEQ_FOR_EACH_PAIR
 
