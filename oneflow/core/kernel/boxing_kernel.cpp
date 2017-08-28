@@ -393,6 +393,24 @@ void BoxingKernel<T>::AddBoxBackward(
   UNEXPECTED_RUN();
 }
 
+#define BOXING_KERNEL_ADD_BOX_FORWARD(type_cpp, type_proto)         \
+  template<>                                                        \
+  void BoxingKernel<type_cpp>::AddBoxForward(                       \
+      const KernelCtx& ctx,                                         \
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const { \
+    UNEXPECTED_RUN();                                               \
+  }
+FOR_EACH_PAIR(BOXING_KERNEL_ADD_BOX_FORWARD, INT_DATA_TYPE_PAIR());
+
+#define BOXING_KERNEL_CONCAT_BOX_BACKWARD(type_cpp, type_proto)     \
+  template<>                                                        \
+  void BoxingKernel<type_cpp>::ConcatBoxBackward(                   \
+      const KernelCtx& ctx,                                         \
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const { \
+    UNEXPECTED_RUN();                                               \
+  }
+FOR_EACH_PAIR(BOXING_KERNEL_CONCAT_BOX_BACKWARD, INT_DATA_TYPE_PAIR());
+
 namespace {
 
 template<DeviceType device_type>
@@ -400,7 +418,7 @@ Kernel* CreateBoxingKernel(const OperatorConf& op_conf) {
   static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
 #define BOXING_KERNEL_ENTRY(type_cpp, type_proto) \
   {type_proto, []() { return new BoxingKernel<type_cpp>; }},
-      FOR_EACH_PAIR(BOXING_KERNEL_ENTRY, FLOATING_DATA_TYPE_PAIR())};
+      FOR_EACH_PAIR(BOXING_KERNEL_ENTRY, ARITHMETIC_DATA_TYPE_PAIR())};
   return data_type2creator.at(op_conf.boxing_conf().in().data_type())();
 }
 
