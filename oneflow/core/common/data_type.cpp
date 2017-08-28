@@ -6,8 +6,7 @@ bool IsIntegral(DataType data_type) {
   switch (data_type) {
 #define IS_INTERGRAL_CASE(type_cpp, type_proto) \
   case type_proto: return true;
-    FOR_EACH_PAIR(IS_INTERGRAL_CASE,
-                  SIGNED_INT_DATA_TYPE_PAIR() UNSIGNED_INT_DATA_TYPE_PAIR())
+    FOR_EACH_PAIR(IS_INTERGRAL_CASE, INT_DATA_TYPE_PAIR())
     default: return false;
   }
 }
