@@ -9,13 +9,13 @@ void DataLoaderKernel<T>::Forward(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
   PersistentCircularLineReader* reader =
-      RuntimeCtx::Singleton()->GetDataReader();
+      RuntimeCtx::Singleton()->GetDataReader(op()->op_name());
   if (reader == nullptr) {
     std::string data_dir = op()->GetStringFromSpecialConf("data_dir");
     int64_t parallel_id = reinterpret_cast<int64_t>(kernel_ctx.other);
     std::string file_path = data_dir + "part-" + std::to_string(parallel_id);
-    RuntimeCtx::Singleton()->InitDataReader(file_path);
-    reader = RuntimeCtx::Singleton()->GetDataReader();
+    RuntimeCtx::Singleton()->AddDataReader(file_path, op()->op_name());
+    reader = RuntimeCtx::Singleton()->GetDataReader(op()->op_name());
   }
   Blob* out_blob = BnInOp2BlobPtr("out");
   CHECK_EQ(GetDataType<T>::val, out_blob->data_type());
