@@ -23,10 +23,7 @@ void MomentumModelUpdateOp::InferBlobDesc4FwBlobs(
   CHECK_EQ(md_diff_blob_desc->has_data_id(), false);
 
   // momentum
-  BlobDesc* momentum_blob_desc = GetBlobDesc4BnInOp("momentum");
-  momentum_blob_desc->mut_shape() = md_diff_blob_desc->shape();
-  momentum_blob_desc->set_data_type(md_diff_blob_desc->data_type());
-  momentum_blob_desc->set_has_data_id(false);
+  *GetBlobDesc4BnInOp("momentum") = *md_diff_blob_desc;
 }
 
 REGISTER_OP(OperatorConf::kMomentumMdupdtConf, MomentumModelUpdateOp);
