@@ -1,81 +1,85 @@
-//#include "oneflow/core/kernel/accumulate_kernel.h"
-//#include <random>
-//#include "oneflow/core/device/cpu_device_context.h"
-//#include "oneflow/core/device/cuda_device_context.h"
-//#include "oneflow/core/kernel/kernel_test_common.h"
-//
-// namespace oneflow {
-//
-// namespace test {
-//
-// namespace {
-//
-// template<DeviceType device_type, typename FloatingPointType>
-// std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
-//  using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
-//
-//  std::vector<int64_t> dim_vec = {2, 4};
-//  FloatingPointType diff_data[] = {1, 2, 3, 4, 5, 6, 7, 8};
-//  FloatingPointType diff_acc_data[] = {5, 3, 2, 1, 7, 0, 1, 1};
-//
-//  FloatingPointType expected_data[] = {6, 5, 5, 5, 12, 6, 8, 9};
-//
-//  auto bn2blob_ptr = new HashMap<std::string, Blob*>;
-//
-//  (*bn2blob_ptr)["one"] = KTCommon::CreateBlobWithVector(dim_vec, diff_data);
-//  (*bn2blob_ptr)["acc"] =
-//      KTCommon::CreateBlobWithVector(dim_vec, diff_acc_data);
-//  (*bn2blob_ptr)["expected_acc"] =
-//      KTCommon::CreateBlobWithVector(dim_vec, expected_data);
-//  return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
-//}
-//
-// template<DeviceType device_type, typename FloatingPointType>
-// Kernel* BuildAccumulateKernel() {
-//  OperatorConf op_conf;
-//  op_conf.set_name("model_diff_acc");
-//  op_conf.mutable_accumulate_conf();
-//  auto model_diff_acc_op = ConstructOp(op_conf);
-//
-//  OperatorProto op_proto;
-//  model_diff_acc_op->ToProto(&op_proto);
-//
-//  auto model_diff_acc_kernel =
-//      new AccumulateKernel<device_type, FloatingPointType>();
-//  model_diff_acc_kernel->InitFromOpProto(op_proto);
-//
-//  return model_diff_acc_kernel;
-//}
-//
-// template<DeviceType device_type, typename FloatingPointType>
-// void TestAccumulateKernel() {
-//  using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
-//  KernelCtx ctx;
-//  KTCommon::BuildKernelCtx(&ctx);
-//
-//  auto BnInOp2BlobPtr = BuildBnInOp2BlobPtr<device_type, FloatingPointType>();
-//
-//  auto model_diff_acc_kernel =
-//      BuildAccumulateKernel<device_type, FloatingPointType>();
-//
-//  model_diff_acc_kernel->Forward(ctx, BnInOp2BlobPtr);
-//  KTCommon::SyncStream(&ctx);
-//
-//  KTCommon::CheckResult(BnInOp2BlobPtr, "acc", "expected_acc");
-//}
-//
-//}  // namespace
-//
-//}  // namespace test
-//
-// TEST(AccumulateKernel, model_diff_acc_kernel_cpu) {
-//  test::TestAccumulateKernel<DeviceType::kCPU, float>();
-//  test::TestAccumulateKernel<DeviceType::kCPU, double>();
-//}
-//
-// TEST(AccumulateKernel, model_diff_acc_kernel_gpu) {
-//  test::TestAccumulateKernel<DeviceType::kGPU, float>();
-//  test::TestAccumulateKernel<DeviceType::kGPU, double>();
-//}
-//
-//}  // namespace oneflow
+#include "oneflow/core/kernel/accumulate_kernel.h"
+#include <random>
+#include "oneflow/core/device/cpu_device_context.h"
+#include "oneflow/core/device/cuda_device_context.h"
+#include "oneflow/core/kernel/kernel_test_common.h"
+
+namespace oneflow {
+
+namespace test {
+
+namespace {
+
+template<DeviceType device_type, typename T>
+std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
+  using KTCommon = KTCommon<device_type, T>;
+
+  std::vector<int64_t> dim_vec = {2, 4};
+  BlobDesc* blob_desc;
+  blob_desc->set_data_type(GetDataType<T>::val);
+  blob_desc->mut_shape = Shape(dim_vec);
+
+  T diff_data[] = {1, 2, 3, 4, 5, 6, 7, 8};
+  T diff_acc_data[] = {5, 3, 2, 1, 7, 0, 1, 1};
+
+  T expected_data[] = {6, 5, 5, 5, 12, 6, 8, 9};
+
+  auto bn2blob_ptr = new HashMap<std::string, Blob*>;
+
+  (*bn2blob_ptr)["one"] =
+      KTCommon::CreateBlobWithSpecifiedVal(blob_desc, diff_data);
+
+  (*bn2blob_ptr)["acc"] =
+      KTCommon::CreateBlobWithSpecifiedVal(blob_desc, diff_acc_data);
+  (*bn2blob_ptr)["expected_acc"] =
+      KTCommon::CreateBlobWithSpecifiedVal(blob_desc, expected_data);
+  return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
+}
+
+template<DeviceType device_type, typename T>
+Kernel* BuildAccumulateKernel() {
+  OperatorConf op_conf;
+  op_conf.set_name("model_diff_acc");
+  op_conf.mutable_accumulate_conf();
+  auto model_diff_acc_op = ConstructOp(op_conf);
+
+  OperatorProto op_proto;
+  model_diff_acc_op->ToProto(&op_proto);
+
+  auto model_diff_acc_kernel = new AccumulateKernel<device_type, T>();
+  model_diff_acc_kernel->InitFromOpProto(op_proto);
+
+  return model_diff_acc_kernel;
+}
+
+template<DeviceType device_type, typename T>
+void TestAccumulateKernel() {
+  using KTCommon = KTCommon<device_type, T>;
+  KernelCtx ctx;
+  BuildKernelCtx(&ctx);
+
+  auto BnInOp2BlobPtr = BuildBnInOp2BlobPtr<device_type, T>();
+
+  auto model_diff_acc_kernel = BuildAccumulateKernel<device_type, T>();
+
+  model_diff_acc_kernel->Forward(ctx, BnInOp2BlobPtr);
+  SyncStream(&ctx);
+
+  KTCommon::CheckResult(BnInOp2BlobPtr, "acc", "expected_acc");
+}
+
+}  // namespace
+
+}  // namespace test
+
+TEST(AccumulateKernel, model_diff_acc_kernel_cpu) {
+  test::TestAccumulateKernel<DeviceType::kCPU, float>();
+  test::TestAccumulateKernel<DeviceType::kCPU, double>();
+}
+
+TEST(AccumulateKernel, model_diff_acc_kernel_gpu) {
+  test::TestAccumulateKernel<DeviceType::kGPU, float>();
+  test::TestAccumulateKernel<DeviceType::kGPU, double>();
+}
+
+}  // namespace oneflow
