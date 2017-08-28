@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename FloatingPointType>
+template<DeviceType device_type, typename T>
 class NormalMdUpdateKernel final : public ModelUpdtKernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NormalMdUpdateKernel);
