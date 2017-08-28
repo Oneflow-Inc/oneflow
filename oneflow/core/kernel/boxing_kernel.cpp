@@ -344,72 +344,75 @@ void BoxingKernel<T>::ConcatBoxForward(
 }
 
 template<typename T>
-void BoxingKernel<T>::ConcatBoxBackward(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  auto boxing_conf = op()->op_conf().boxing_conf();
-  if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
-    // Add all the out-diff blobs into data_tmp blob
-    Blob* middle = BnInOp2Blob("middle");
-    Memset<DeviceType::kCPU>(ctx.device_ctx, middle->mut_dptr(), 0,
-                             middle->ByteSizeOfDataField());
-    for (const std::string& bn : op()->output_diff_bns()) {
-      Blob* blob = BnInOp2Blob(bn);
-      KernelUtil<DeviceType::kCPU, T>::BlasAxpy(
-          ctx.device_ctx, blob->shape().elem_cnt(), static_cast<T>(1.0),
-          blob->dptr<T>(), 1, middle->mut_dptr<T>(), 1);
-    }
-  }
-
-  CopyDataFromRules(ctx, BnInOp2Blob, bw_copy_rules_);
-}
-
-template<typename T>
-void BoxingKernel<T>::AddBoxForward(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  // Copy blob in_0 to out_0
-  Blob* out_0 = BnInOp2Blob("out_0");
-  Blob* in_0 = BnInOp2Blob("in_0");
-  Memcpy<DeviceType::kCPU>(ctx.device_ctx, out_0->mut_dptr(), in_0->dptr(),
-                           out_0->ByteSizeOfDataField(),
-                           cudaMemcpyKind::cudaMemcpyHostToHost);
-  // Add remaining input blobs to out_0
-  for (size_t i = 1; i < op()->input_bns().size(); ++i) {
-    Blob* in_i = BnInOp2Blob("in_" + std::to_string(i));
-    KernelUtil<DeviceType::kCPU, T>::BlasAxpy(
-        ctx.device_ctx, out_0->shape().elem_cnt(), static_cast<T>(1.0),
-        in_i->dptr<T>(), 1, out_0->mut_dptr<T>(), 1);
-  }
-
-  // The data in out_0 will be copied to other output blobs.
-  CopyDataFromRules(ctx, BnInOp2Blob, fw_copy_rules_);
-}
-
-template<typename T>
 void BoxingKernel<T>::AddBoxBackward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   UNEXPECTED_RUN();
 }
 
-#define BOXING_KERNEL_ADD_BOX_FORWARD(type_cpp, type_proto)         \
-  template<>                                                        \
-  void BoxingKernel<type_cpp>::AddBoxForward(                       \
-      const KernelCtx& ctx,                                         \
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const { \
-    UNEXPECTED_RUN();                                               \
+#define FLOATING_BOXING_KERNEL_CONCAT_BOX_BACKWARD(type_cpp, type_proto) \
+  template<>                                                             \
+  void BoxingKernel<type_cpp>::ConcatBoxBackward(                        \
+      const KernelCtx& ctx,                                              \
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {      \
+    auto boxing_conf = op()->op_conf().boxing_conf();                    \
+    if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {         \
+      Blob* middle = BnInOp2Blob("middle");                              \
+      Memset<DeviceType::kCPU>(ctx.device_ctx, middle->mut_dptr(), 0,    \
+                               middle->ByteSizeOfDataField());           \
+      for (const std::string& bn : op()->output_diff_bns()) {            \
+        Blob* blob = BnInOp2Blob(bn);                                    \
+        KernelUtil<DeviceType::kCPU, type_cpp>::BlasAxpy(                \
+            ctx.device_ctx, blob->shape().elem_cnt(),                    \
+            static_cast<type_cpp>(1.0), blob->dptr<type_cpp>(), 1,       \
+            middle->mut_dptr<type_cpp>(), 1);                            \
+      }                                                                  \
+    }                                                                    \
+    CopyDataFromRules(ctx, BnInOp2Blob, bw_copy_rules_);                 \
   }
-FOR_EACH_PAIR(BOXING_KERNEL_ADD_BOX_FORWARD, INT_DATA_TYPE_PAIR());
+FOR_EACH_PAIR(FLOATING_BOXING_KERNEL_CONCAT_BOX_BACKWARD,
+              FLOATING_DATA_TYPE_PAIR());
 
-#define BOXING_KERNEL_CONCAT_BOX_BACKWARD(type_cpp, type_proto)     \
-  template<>                                                        \
-  void BoxingKernel<type_cpp>::ConcatBoxBackward(                   \
-      const KernelCtx& ctx,                                         \
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const { \
-    UNEXPECTED_RUN();                                               \
+#define FLOATING_BOXING_KERNEL_ADD_BOX_FORWARD(type_cpp, type_proto)          \
+  template<>                                                                  \
+  void BoxingKernel<type_cpp>::AddBoxForward(                                 \
+      const KernelCtx& ctx,                                                   \
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {           \
+    Blob* out_0 = BnInOp2Blob("out_0");                                       \
+    Blob* in_0 = BnInOp2Blob("in_0");                                         \
+    Memcpy<DeviceType::kCPU>(ctx.device_ctx, out_0->mut_dptr(), in_0->dptr(), \
+                             out_0->ByteSizeOfDataField(),                    \
+                             cudaMemcpyKind::cudaMemcpyHostToHost);           \
+    for (size_t i = 1; i < op()->input_bns().size(); ++i) {                   \
+      Blob* in_i = BnInOp2Blob("in_" + std::to_string(i));                    \
+      KernelUtil<DeviceType::kCPU, type_cpp>::BlasAxpy(                       \
+          ctx.device_ctx, out_0->shape().elem_cnt(),                          \
+          static_cast<type_cpp>(1.0), in_i->dptr<type_cpp>(), 1,              \
+          out_0->mut_dptr<type_cpp>(), 1);                                    \
+    }                                                                         \
+    CopyDataFromRules(ctx, BnInOp2Blob, fw_copy_rules_);                      \
   }
-FOR_EACH_PAIR(BOXING_KERNEL_CONCAT_BOX_BACKWARD, INT_DATA_TYPE_PAIR());
+FOR_EACH_PAIR(FLOATING_BOXING_KERNEL_ADD_BOX_FORWARD,
+              FLOATING_DATA_TYPE_PAIR());
+
+#define NON_FLOATING_BOXING_KERNEL_ADD_BOX_FORWARD(type_cpp, type_proto) \
+  template<>                                                             \
+  void BoxingKernel<type_cpp>::AddBoxForward(                            \
+      const KernelCtx& ctx,                                              \
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {      \
+    UNEXPECTED_RUN();                                                    \
+  }
+FOR_EACH_PAIR(NON_FLOATING_BOXING_KERNEL_ADD_BOX_FORWARD, INT_DATA_TYPE_PAIR());
+
+#define NON_FLOATING_BOXING_KERNEL_CONCAT_BOX_BACKWARD(type_cpp, type_proto) \
+  template<>                                                                 \
+  void BoxingKernel<type_cpp>::ConcatBoxBackward(                            \
+      const KernelCtx& ctx,                                                  \
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {          \
+    UNEXPECTED_RUN();                                                        \
+  }
+FOR_EACH_PAIR(NON_FLOATING_BOXING_KERNEL_CONCAT_BOX_BACKWARD,
+              INT_DATA_TYPE_PAIR());
 
 namespace {
 
