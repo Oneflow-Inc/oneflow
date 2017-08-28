@@ -67,10 +67,9 @@ class KTCommon<DeviceType::kCPU, T> final {
   }
 };
 
-#define MACRO_PAIR(type_cpp, type_proto) \
+#define DECLARE_KTCOMMON(type_cpp, type_proto) \
   template class KTCommon<DeviceType::kCPU, type_cpp>;
-ALL_DATA_TYPE_PAIR()
-#undef MACRO_PAIR
+FOR_EACH_PAIR(DECLARE_KTCOMMON, ALL_DATA_TYPE_PAIR())
 
 }  // namespace test
 

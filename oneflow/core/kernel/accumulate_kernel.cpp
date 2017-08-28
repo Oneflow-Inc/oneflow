@@ -17,11 +17,9 @@ namespace {
 template<DeviceType device_type>
 Kernel* CreateAccKernel(const OperatorConf& op_conf) {
   static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
-#define MACRO_PAIR(type_cpp, type_proto) \
+#define ACCUMULATE_KERNEL_ENTRY(type_cpp, type_proto) \
   {type_proto, []() { return new AccumulateKernel<device_type, type_cpp>; }},
-      FLOATING_DATA_TYPE_PAIR()
-#undef MACRO_PAIR
-  };
+      FOR_EACH_PAIR(ACCUMULATE_KERNEL_ENTRY, FLOATING_DATA_TYPE_PAIR())};
   return data_type2creator.at(JobDesc::Singleton()->default_data_type())();
 }
 }  // namespace

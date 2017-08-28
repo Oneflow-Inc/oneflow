@@ -65,12 +65,11 @@ namespace {
 template<DeviceType device_type>
 Kernel* CreateMultinomialLogisticLossKernel(const OperatorConf& op_conf) {
   static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
-#define MACRO_PAIR(type_cpp, type_proto) \
-  {type_proto,                           \
+#define MULTINOMIAL_LOGISTIC_LOSS_KERNEL_ENTRY(type_cpp, type_proto) \
+  {type_proto,                                                       \
    []() { return new MultinomialLogisticLossKernel<device_type, type_cpp>; }},
-      FLOATING_DATA_TYPE_PAIR()
-#undef MACRO_PAIR
-  };
+      FOR_EACH_PAIR(MULTINOMIAL_LOGISTIC_LOSS_KERNEL_ENTRY,
+                    FLOATING_DATA_TYPE_PAIR())};
   return data_type2creator.at(
       op_conf.multinomial_logistic_loss_conf().prediction().data_type())();
 }
