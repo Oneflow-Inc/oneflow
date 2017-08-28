@@ -63,9 +63,8 @@ class MultinomialLogisticLossKernelUtil<DeviceType::kGPU, T> final {
   }
 };
 
-#define MACRO_PAIR(type_cpp, type_proto) \
+#define INSTANTIATE_M11L_LOGISTIC_LOSS_KERNEL(type_cpp, type_proto) \
   template class MultinomialLogisticLossKernelUtil<DeviceType::kGPU, type_cpp>;
-FLOATING_DATA_TYPE_PAIR()
-#undef MACRO_PAIR
+FOR_EACH_PAIR(INSTANTIATE_M11L_LOGISTIC_LOSS_KERNEL, FLOATING_DATA_TYPE_PAIR())
 
 }  // namespace oneflow

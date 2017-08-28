@@ -98,11 +98,9 @@ void ConcatKernel<device_type, T>::Backward(
 template<DeviceType device_type>
 Kernel* CreateConcatKernel(const OperatorConf& op_conf) {
   static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
-#define MACRO_PAIR(type_cpp, type_proto) \
+#define CREATE_CONCATE_KERNEL(type_cpp, type_proto) \
   {type_proto, []() { return new ConcatKernel<device_type, type_cpp>; }},
-      ALL_DATA_TYPE_PAIR()
-#undef MACRO_PAIR
-  };
+      FOR_EACH_PAIR(CREATE_CONCATE_KERNEL, ALL_DATA_TYPE_PAIR())};
   return data_type2creator.at(op_conf.concat_conf().data_type())();
 }
 
