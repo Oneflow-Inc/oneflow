@@ -37,6 +37,8 @@ namespace oneflow {
 #define FOR_EACH_PAIR FOR_EACH_TUPLE
 
 #define FOR_EACH_TUPLE(macro, seq) OF_PP_SEQ_FOR_EACH_TUPLE(macro, _, seq)
+#define SEQ_PRODUCT_FOR_EACH_TUPLE(macro, ...) \
+  OF_PP_SEQ_FOR_EACH_TUPLE(macro, _, OF_PP_SEQ_PRODUCT(__VA_ARGS__))
 
 bool IsIntegral(DataType data_type);
 bool IsFloatingPoint(DataType data_type);

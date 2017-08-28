@@ -1,6 +1,9 @@
 #ifndef ONEFLOW_CORE_COMMON_PP_BASE_H_
 #define ONEFLOW_CORE_COMMON_PP_BASE_H_
 
+#define OF_PP_STRINGIZE(text) OF_PP_STRINGIZE_I(text)
+#define OF_PP_STRINGIZE_I(text) #text
+
 #define OF_PP_CAT(a, b) OF_PP_CAT_I(a, b)
 #define OF_PP_CAT_I(a, b) a##b
 
