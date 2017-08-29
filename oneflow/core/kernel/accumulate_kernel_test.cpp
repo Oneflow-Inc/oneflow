@@ -15,9 +15,9 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
   using KTCommon = KTCommon<device_type, T>;
 
   std::vector<int64_t> dim_vec = {2, 4};
-  BlobDesc* blob_desc;
+  BlobDesc* blob_desc = new BlobDesc;
   blob_desc->set_data_type(GetDataType<T>::val);
-  blob_desc->mut_shape = Shape(dim_vec);
+  blob_desc->mut_shape() = Shape(dim_vec);
 
   T diff_data[] = {1, 2, 3, 4, 5, 6, 7, 8};
   T diff_acc_data[] = {5, 3, 2, 1, 7, 0, 1, 1};
@@ -56,14 +56,14 @@ template<DeviceType device_type, typename T>
 void TestAccumulateKernel() {
   using KTCommon = KTCommon<device_type, T>;
   KernelCtx ctx;
-  BuildKernelCtx(&ctx);
+  BuildKernelCtx<device_type>(&ctx);
 
   auto BnInOp2BlobPtr = BuildBnInOp2BlobPtr<device_type, T>();
 
   auto model_diff_acc_kernel = BuildAccumulateKernel<device_type, T>();
 
   model_diff_acc_kernel->Forward(ctx, BnInOp2BlobPtr);
-  SyncStream(&ctx);
+  SyncStream<device_type>(&ctx);
 
   KTCommon::CheckResult(BnInOp2BlobPtr, "acc", "expected_acc");
 }
