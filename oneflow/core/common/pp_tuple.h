@@ -7,9 +7,9 @@
   OF_PP_CAT(OF_PP_TUPLE_PUSH_FRONT_, OF_PP_IS_TUPLE_EMPTY(tuple))(tuple, x)
 
 #define OF_PP_TUPLE_PUSH_FRONT_1(tuple, x) (x)
-#define OF_PP_TUPLE_PUSH_FRONT_0(tuple, x) (x, OF_PP_TUPLE_TUPLE_TO_ARGS(tuple))
+#define OF_PP_TUPLE_PUSH_FRONT_0(tuple, x) (x, OF_PP_TUPLE_TO_ARGS(tuple))
 
-#define OF_PP_TUPLE_TUPLE_TO_ARGS(t) OF_PP_TUPLE_TUPLE_TO_ARGS_ t
+#define OF_PP_TUPLE_TO_ARGS(t) OF_PP_TUPLE_TUPLE_TO_ARGS_ t
 #define OF_PP_TUPLE_TUPLE_TO_ARGS_(...) __VA_ARGS__
 
 #define OF_PP_TUPLE_SIZE(tuple) \
@@ -32,8 +32,7 @@
     e62, e63, size, ...)                                                       \
   size
 
-#define OF_PP_IS_TUPLE_EMPTY(t) \
-  OF_PP_IS_VARIADIC_EMPTY(OF_PP_TUPLE_TUPLE_TO_ARGS(t))
+#define OF_PP_IS_TUPLE_EMPTY(t) OF_PP_IS_VARIADIC_EMPTY(OF_PP_TUPLE_TO_ARGS(t))
 
 #define OF_PP_IS_VARIADIC_EMPTY(...)                                           \
   OF_PP_IS_VARIADIC_EMPTY_(/* test if there is just one argument, eventually   \
