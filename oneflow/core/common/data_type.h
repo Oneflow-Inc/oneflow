@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_COMMON_DATA_TYPE_H_
 
 #include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -37,9 +38,8 @@ namespace oneflow {
   CHAR_DATA_TYPE_PAIR()
 
 #define FOR_EACH_PAIR FOR_EACH_TUPLE
-#define FOR_EACH_TUPLE(macro, seq) OF_PP_SEQ_FOR_EACH_TUPLE(macro, _, seq)
-#define SEQ_PRODUCT_FOR_EACH_TUPLE(macro, ...) \
-  OF_PP_SEQ_FOR_EACH_TUPLE(macro, _, OF_PP_SEQ_PRODUCT(__VA_ARGS__))
+#define FOR_EACH_TUPLE OF_PP_FOR_EACH_TUPLE
+#define SEQ_PRODUCT_FOR_EACH_TUPLE OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE
 
 bool IsIntegral(DataType data_type);
 bool IsFloatingPoint(DataType data_type);

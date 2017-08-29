@@ -19,8 +19,6 @@
 #include "glog/logging.h"
 #include "gtest/gtest.h"
 
-#include "oneflow/core/common/pp_seq.h"
-
 namespace oneflow {
 
 #define OF_DISALLOW_COPY(ClassName)     \
