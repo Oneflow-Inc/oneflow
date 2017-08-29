@@ -9,14 +9,16 @@
 #define OF_PP_TUPLE_PUSH_FRONT_1(tuple, x) (x)
 #define OF_PP_TUPLE_PUSH_FRONT_0(tuple, x) (x, OF_PP_TUPLE_TUPLE_TO_ARGS(tuple))
 
-#define OF_PP_TUPLE_TUPLE_TO_ARGS(t) OF_PP_TUPLE_TUPLE_TO_ARGS_ t
+#define OF_PP_TUPLE_TUPLE_TO_ARGS(t) OF_PP_TUPLE_TUPLE_TO_ARGS_I(t)
+#define OF_PP_TUPLE_TUPLE_TO_ARGS_I(t) OF_PP_TUPLE_TUPLE_TO_ARGS_ t
 #define OF_PP_TUPLE_TUPLE_TO_ARGS_(...) __VA_ARGS__
 
 #define OF_PP_TUPLE_SIZE(tuple) \
   OF_PP_CAT(OF_PP_TUPLE_SIZE_, OF_PP_IS_TUPLE_EMPTY(tuple))(tuple)
 
 #define OF_PP_TUPLE_SIZE_1(t) 0
-#define OF_PP_TUPLE_SIZE_0(t) OF_PP_VARIADIC_SIZE t
+#define OF_PP_TUPLE_SIZE_0(t) OF_PP_TUPLE_SIZE_0_I(t)
+#define OF_PP_TUPLE_SIZE_0_I(t) OF_PP_VARIADIC_SIZE t
 
 #define OF_PP_VARIADIC_SIZE(...)                                             \
   OF_PP_VARIADIC_SIZE_I(__VA_ARGS__, 64, 63, 62, 61, 60, 59, 58, 57, 56, 55, \
