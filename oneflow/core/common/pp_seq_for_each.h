@@ -17,7 +17,8 @@
 #define OF_PP_D2_SEQ_FOR_EACH_ATOMIC(m, d, seq) \
   OF_PP_D2_SEQ_FOR_EACH(OF_PP_APPLY_ATOMIC, m, d, seq)
 
-#define OF_PP_APPLY_TUPLE(m, d, t) m t
+#define OF_PP_APPLY_TUPLE(m, d, t) OF_PP_APPLY_TUPLE_I(m, d, t)
+#define OF_PP_APPLY_TUPLE_I(m, d, t) m t
 #define OF_PP_APPLY_ATOMIC(m, d, x) m(x)
 #define OF_PP_APPLY_ATOMIC_WITH_DATA(m, d, x) m(d, x)
 
