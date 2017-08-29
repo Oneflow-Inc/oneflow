@@ -12,7 +12,7 @@ void TestCloneOp() {
   auto clone_op = ConstructOp(op_conf);
   HashMap<std::string, BlobDesc*> bn2blobdesc_map;
   bn2blobdesc_map[clone_op->SoleIbn()] =
-      new BlobDesc{{4, 3}, GetDataType<T>::val, has_data_id};
+      new BlobDesc(Shape({4, 3}), GetDataType<T>::val, has_data_id);
   for (const std::string& obn : clone_op->output_bns()) {
     bn2blobdesc_map[obn] = new BlobDesc;
   }
@@ -29,7 +29,7 @@ void TestCloneOp() {
 
 TEST(CloneOp, infer_blob_desc) {
 #define SEQ (true)(false)
-#define MAKE_ENTRY(x, y) TestCloneOp<x, y>();
+#define MAKE_ENTRY(x, y) TestCloneOp<OF_PP_INTERNAL_FIRST_ARG x, y>();
   SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, ALL_DATA_TYPE_PAIR(), SEQ)
 }
 
