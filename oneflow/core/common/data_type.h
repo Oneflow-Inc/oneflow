@@ -6,22 +6,23 @@
 
 namespace oneflow {
 
-#define FLOATING_DATA_TYPE_PAIR()             \
-  (OF_PP_MAKE_PAIR(float, DataType::kFloat))( \
-      OF_PP_MAKE_PAIR(double, DataType::kDouble))
+#define FLOATING_DATA_TYPE_PAIR()               \
+  OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat) \
+  OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
 
-#define SIGNED_INT_DATA_TYPE_PAIR()                                            \
-  (OF_PP_MAKE_PAIR(int8_t, DataType::kInt8))(OF_PP_MAKE_PAIR(                  \
-      int16_t, DataType::kInt16))(OF_PP_MAKE_PAIR(int32_t, DataType::kInt32))( \
-      OF_PP_MAKE_PAIR(int64_t, DataType::kInt64))
+#define SIGNED_INT_DATA_TYPE_PAIR()               \
+  OF_PP_MAKE_TUPLE_SEQ(int8_t, DataType::kInt8)   \
+  OF_PP_MAKE_TUPLE_SEQ(int16_t, DataType::kInt16) \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
 
-#define UNSIGNED_INT_DATA_TYPE_PAIR()                \
-  (OF_PP_MAKE_PAIR(uint8_t, DataType::kUInt8))(      \
-      OF_PP_MAKE_PAIR(uint16_t, DataType::kUInt16))( \
-      OF_PP_MAKE_PAIR(uint32_t, DataType::kUInt32))( \
-      OF_PP_MAKE_PAIR(uint64_t, DataType::kUInt64))
+#define UNSIGNED_INT_DATA_TYPE_PAIR()               \
+  OF_PP_MAKE_TUPLE_SEQ(uint8_t, DataType::kUInt8)   \
+  OF_PP_MAKE_TUPLE_SEQ(uint16_t, DataType::kUInt16) \
+  OF_PP_MAKE_TUPLE_SEQ(uint32_t, DataType::kUInt32) \
+  OF_PP_MAKE_TUPLE_SEQ(uint64_t, DataType::kUInt64)
 
-#define CHAR_DATA_TYPE_PAIR() (OF_PP_MAKE_PAIR(char, DataType::kChar))
+#define CHAR_DATA_TYPE_PAIR() OF_PP_MAKE_TUPLE_SEQ(char, DataType::kChar)
 
 #define INT_DATA_TYPE_PAIR()  \
   SIGNED_INT_DATA_TYPE_PAIR() \
@@ -35,7 +36,10 @@ namespace oneflow {
   ARITHMETIC_DATA_TYPE_PAIR() \
   CHAR_DATA_TYPE_PAIR()
 
-#define FOR_EACH_PAIR OF_PP_SEQ_FOR_EACH_PAIR
+#define FOR_EACH_PAIR FOR_EACH_TUPLE
+#define FOR_EACH_TUPLE(macro, seq) OF_PP_SEQ_FOR_EACH_TUPLE(macro, _, seq)
+#define SEQ_PRODUCT_FOR_EACH_TUPLE(macro, ...) \
+  OF_PP_SEQ_FOR_EACH_TUPLE(macro, _, OF_PP_SEQ_PRODUCT(__VA_ARGS__))
 
 bool IsIntegral(DataType data_type);
 bool IsFloatingPoint(DataType data_type);
