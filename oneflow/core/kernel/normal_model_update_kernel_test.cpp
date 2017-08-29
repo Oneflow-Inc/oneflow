@@ -29,21 +29,12 @@ void InitJobDesc(int32_t piece_size, int32_t num_of_pieces_in_batch) {
   JobDesc::Singleton()->InitFromJobConf(job_conf);
 }
 
-BlobDesc* BuildBlobDesc(const std::vector<int64_t>& dim_vec,
-                        DataType data_type) {
-  BlobDesc* blob_desc = new BlobDesc();
-  blob_desc->mut_shape() = Shape(dim_vec);
-  blob_desc->set_data_type(data_type);
-  blob_desc->set_has_data_id(false);
-  return blob_desc;
-}
-
 template<DeviceType device_type, typename T>
 std::function<Blob*(const std::string&)> BuildBnInOp2Blob() {
   using KTCommon = KTCommon<device_type, T>;
 
-  std::vector<int64_t> dim_vec = {1, 3, 2};
-  BlobDesc* blob_desc = BuildBlobDesc(dim_vec, GetDataType<T>::val);
+  BlobDesc* blob_desc =
+      new BlobDesc(Shape({1, 3, 2}), GetDataType<T>::val, false);
 
   auto bn2blob = new HashMap<std::string, Blob*>;
   (*bn2blob)["model"] = KTCommon::CreateBlobWithSameVal(blob_desc, 2);
@@ -76,11 +67,11 @@ void TestMdUpdateKernel() {
 }  // namespace test
 
 TEST(MdUpdateKernel, model_update) {
-#define SEQ                                                \
-  ((DeviceType::kCPU, float))((DeviceType::kCPU, double))( \
-      (DeviceType::kGPU, float))((DeviceType::kGPU, double))
-#define MAKE_PAIR(x, y) test::TestMdUpdateKernel<x, y>();
-  OF_PP_SEQ_FOR_EACH_TUPLE(MAKE_PAIR, _, SEQ)
+#define FLOATINGPOINTTYPE (double)(float)
+#define DEVICETYPE (DeviceType::kCPU)(DeviceType::kGPU)
+#define TESTMdUpdateKernel(x, y) test::TestMdUpdateKernel<x, y>();
+  FOR_EACH_TUPLE(TESTMdUpdateKernel,
+                 OF_PP_INTERNAL_SEQ_PRODUCT(DEVICETYPE, FLOATINGPOINTTYPE));
 }
 
 }  // namespace oneflow
