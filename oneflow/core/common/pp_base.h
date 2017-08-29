@@ -14,11 +14,14 @@
 #define OF_PP_SEQ_TO_PAIR_(x) x, OF_PP_NIL
 #define OF_PP_NIL
 
-#define OF_PP_PAIR_FIRST(t) OF_PP_FIRST_ARG t
-#define OF_PP_PAIR_SECOND(t) OF_PP_SECOND_ARG t
+#define OF_PP_PAIR_FIRST(t) OF_PP_PAIR_FIRST_I(t)
+#define OF_PP_PAIR_FIRST_I(t) OF_PP_FIRST_ARG t
 
-#define OF_PP_FIRST_ARG(x, args...) x
-#define OF_PP_SECOND_ARG(x, y, args...) y
+#define OF_PP_PAIR_SECOND(t) OF_PP_PAIR_SECOND_I(t)
+#define OF_PP_PAIR_SECOND_I(t) OF_PP_SECOND_ARG t
+
+#define OF_PP_FIRST_ARG(x, ...) x
+#define OF_PP_SECOND_ARG(x, y, ...) y
 
 #define OF_PP_MAKE_TUPLE(...) (__VA_ARGS__)
 #define OF_PP_MAKE_TUPLE_SEQ(...) (OF_PP_MAKE_TUPLE(__VA_ARGS__))
