@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_COMMON_PREPROCESSOR_H_
 #define ONEFLOW_CORE_COMMON_PREPROCESSOR_H_
-#include "oneflow/core/common/pp_internal.h"
+
+#include "oneflow/core/common/preprocessor_internal.h"
 
 #define OF_PP_CAT OF_PP_INTERNAL_CAT
 
