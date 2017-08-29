@@ -20,8 +20,8 @@ class RuntimeCtx final {
 
   ThreadSafeCounter& mut_model_init_cnt() { return model_init_cnt_; }
 
-  PersistentCircularLineReader* GetDataReader() { return data_reader_.get(); }
-  void InitDataReader(const std::string& filepath);
+  PersistentCircularLineReader* GetDataReader(const std::string& name);
+  void AddDataReader(const std::string& filepath, const std::string& name);
 
   ThreadSafeCounter& mut_active_actor_cnt() { return active_actor_cnt_; }
   ThreadSafeCounter& mut_inactive_actor_cnt() { return inactive_actor_cnt_; }
@@ -34,7 +34,8 @@ class RuntimeCtx final {
 
   ThreadSafeCounter model_init_cnt_;
 
-  std::unique_ptr<PersistentCircularLineReader> data_reader_;
+  HashMap<std::string, std::unique_ptr<PersistentCircularLineReader>>
+      data_reader_;
 
   ThreadSafeCounter active_actor_cnt_;
   ThreadSafeCounter inactive_actor_cnt_;
