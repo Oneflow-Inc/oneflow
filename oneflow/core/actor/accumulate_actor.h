@@ -22,8 +22,7 @@ class AccumulateActor : public CompActor {
 
   std::queue<Regst*> waiting_in_regst_;
 
-  void (*MemsetFunc)(const KernelCtx& ctx, void* dst, const char value,
-                     size_t sz);
+  void (*MemsetFunc)(DeviceCtx* ctx, void* dst, const char value, size_t sz);
 
   CudaStreamHandle cuda_handle_;
   int32_t acc_cnt_;

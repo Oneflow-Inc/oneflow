@@ -7,7 +7,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename FloatingPointType>
+template<DeviceType device_type, typename T>
 class MultinomialLogisticLossKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MultinomialLogisticLossKernel);
@@ -22,22 +22,18 @@ class MultinomialLogisticLossKernel final : public Kernel {
   }
 };
 
-template<DeviceType device_type, typename FloatingPointType>
+template<DeviceType device_type, typename T>
 class MultinomialLogisticLossKernelUtil final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MultinomialLogisticLossKernelUtil);
   MultinomialLogisticLossKernelUtil() = delete;
 
-  static void Forward(const KernelCtx& ctx, const int64_t instance_num,
-                      const int64_t num_of_classes,
-                      const FloatingPointType* prediction,
-                      const FloatingPointType* labels, FloatingPointType* loss,
-                      FloatingPointType* loss_buff);
-  static void Backward(const KernelCtx& ctx, const int64_t instance_num,
-                       const int64_t num_of_classes,
-                       const FloatingPointType* prediction,
-                       const FloatingPointType* labels,
-                       FloatingPointType* prediction_diff);
+  static void Forward(DeviceCtx* ctx, const int64_t instance_num,
+                      const int64_t num_of_classes, const T* prediction,
+                      const int32_t* labels, T* loss, T* loss_buff);
+  static void Backward(DeviceCtx* ctx, const int64_t instance_num,
+                       const int64_t num_of_classes, const T* prediction,
+                       const int32_t* labels, T* prediction_diff);
 };
 
 }  // namespace oneflow

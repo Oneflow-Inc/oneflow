@@ -20,14 +20,14 @@ class ChainNode final : public Node<ChainNode, ChainEdge> {
     return chain_tag;
   }
 
-  std::shared_ptr<const Operator> SoleOp() const {
+  std::shared_ptr<Operator> SoleOp() const {
     CHECK_EQ(op_vec_.size(), 1);
     return op_vec_.front();
   }
-  const std::vector<std::shared_ptr<const Operator>>& op_vec() const {
+  const std::vector<std::shared_ptr<Operator>>& op_vec() const {
     return op_vec_;
   }
-  std::vector<std::shared_ptr<const Operator>>& mut_op_vec() { return op_vec_; }
+  std::vector<std::shared_ptr<Operator>>& mut_op_vec() { return op_vec_; }
 
   std::shared_ptr<const ParallelDesc> parallel_desc() const {
     return parallel_desc_;
@@ -54,7 +54,7 @@ class ChainNode final : public Node<ChainNode, ChainEdge> {
   bool HasOpWithModelOrModelTmpBlob() const;
 
  private:
-  std::vector<std::shared_ptr<const Operator>> op_vec_;
+  std::vector<std::shared_ptr<Operator>> op_vec_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
   std::vector<std::string> input_lbns_;
   std::vector<std::string> output_lbns_;

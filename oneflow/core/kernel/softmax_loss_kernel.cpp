@@ -4,8 +4,8 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename FloatingPointType>
-void SoftmaxLossKernel<device_type, FloatingPointType>::Forward(
+template<DeviceType device_type, typename T>
+void SoftmaxLossKernel<device_type, T>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
   const Blob* prediction_blob = BnInOp2BlobPtr("prediction");
@@ -15,39 +15,37 @@ void SoftmaxLossKernel<device_type, FloatingPointType>::Forward(
   Blob* loss_blob = BnInOp2BlobPtr("loss");
   const int64_t n = prediction_blob->shape().At(0);
   const int64_t w = prediction_blob->shape().Count(1);
-  const FloatingPointType* in = prediction_blob->dptr<FloatingPointType>();
-  const FloatingPointType* label = label_blob->dptr<FloatingPointType>();
-  FloatingPointType* tmp = tmp_blob->mut_dptr<FloatingPointType>();
-  FloatingPointType* prob = prob_blob->mut_dptr<FloatingPointType>();
-  FloatingPointType* loss = loss_blob->mut_dptr<FloatingPointType>();
+  const T* in = prediction_blob->dptr<T>();
+  const int32_t* label = label_blob->dptr<int32_t>();
+  T* tmp = tmp_blob->mut_dptr<T>();
+  T* prob = prob_blob->mut_dptr<T>();
+  T* loss = loss_blob->mut_dptr<T>();
   // forward
-  SoftmaxComputeProb<device_type, FloatingPointType>(ctx, n, w, in, tmp, prob);
-  SoftmaxLossKernelUtil<device_type, FloatingPointType>::ComputeLoss(
-      ctx, n, w, label, prob, tmp, loss);
+  SoftmaxComputeProb<device_type, T>(ctx.device_ctx, n, w, in, tmp, prob);
+  SoftmaxLossKernelUtil<device_type, T>::ComputeLoss(ctx.device_ctx, n, w,
+                                                     label, prob, tmp, loss);
   // backward
   // if prediction_diff_blob is not null , then do backward
   Blob* prediction_diff_blob = BnInOp2BlobPtr(GenDiffBn("prediction"));
   if (prediction_diff_blob != nullptr) {
-    FloatingPointType* in_diff =
-        prediction_diff_blob->mut_dptr<FloatingPointType>();
-    KernelUtil<device_type, FloatingPointType>::BlasCopy(ctx, n * w, prob, 1,
-                                                         in_diff, 1);
-    SoftmaxLossKernelUtil<device_type, FloatingPointType>::BackwardSub(
-        ctx, n, w, label, in_diff);
+    T* in_diff = prediction_diff_blob->mut_dptr<T>();
+    KernelUtil<device_type, T>::BlasCopy(ctx.device_ctx, n * w, prob, 1,
+                                         in_diff, 1);
+    SoftmaxLossKernelUtil<device_type, T>::BackwardSub(ctx.device_ctx, n, w,
+                                                       label, in_diff);
   }
 }
 
-template<typename FloatingPointType>
-class SoftmaxLossKernelUtil<DeviceType::kCPU, FloatingPointType> final {
+template<typename T>
+class SoftmaxLossKernelUtil<DeviceType::kCPU, T> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SoftmaxLossKernelUtil);
   SoftmaxLossKernelUtil() = delete;
 
-  static void ComputeLoss(const KernelCtx& ctx, const int64_t n,
-                          const int64_t w, const FloatingPointType* label,
-                          const FloatingPointType* prob, FloatingPointType* tmp,
-                          FloatingPointType* loss) {
-    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+  static void ComputeLoss(DeviceCtx* ctx, const int64_t n, const int64_t w,
+                          const int32_t* label, const T* prob, T* tmp,
+                          T* loss) {
+    ctx->cpu_stream()->SendWork([=]() {
       *loss = 0;
       for (int64_t i = 0; i < n; ++i) {
         *loss -= SAFE_LOG(prob[i * w + static_cast<int64_t>(label[i])]);
@@ -55,10 +53,9 @@ class SoftmaxLossKernelUtil<DeviceType::kCPU, FloatingPointType> final {
     });
   }
 
-  static void BackwardSub(const KernelCtx& ctx, const int64_t n,
-                          const int64_t w, const FloatingPointType* label,
-                          FloatingPointType* in_diff) {
-    ctx.device_ctx->cpu_stream()->SendWork([=]() {
+  static void BackwardSub(DeviceCtx* ctx, const int64_t n, const int64_t w,
+                          const int32_t* label, T* in_diff) {
+    ctx->cpu_stream()->SendWork([=]() {
       for (int64_t i = 0; i < n; ++i) {
         in_diff[i * w + static_cast<int64_t>(label[i])] -= 1;
       }
@@ -66,8 +63,21 @@ class SoftmaxLossKernelUtil<DeviceType::kCPU, FloatingPointType> final {
   }
 };
 
-INSTANTIATE_CPU_KERNEL_UTIL_CLASS(SoftmaxLossKernelUtil);
-INSTANTIATE_KERNEL_CLASS(SoftmaxLossKernel);
-REGISTER_KERNEL(OperatorConf::kSoftmaxLossConf, SoftmaxLossKernel);
+namespace {
+
+template<DeviceType device_type>
+Kernel* CreateSoftmaxLossKernel(const OperatorConf& op_conf) {
+  static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
+#define SOFTMAX_LOSS_KERNEL_ENTRY(type_cpp, type_proto) \
+  {type_proto, []() { return new SoftmaxLossKernel<device_type, type_cpp>; }},
+      FOR_EACH_PAIR(SOFTMAX_LOSS_KERNEL_ENTRY, FLOATING_DATA_TYPE_PAIR())};
+  return data_type2creator.at(
+      op_conf.softmax_loss_conf().prediction().data_type())();
+}
+
+}  // namespace
+
+REGISTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kSoftmaxLossConf,
+                                 CreateSoftmaxLossKernel);
 
 }  // namespace oneflow

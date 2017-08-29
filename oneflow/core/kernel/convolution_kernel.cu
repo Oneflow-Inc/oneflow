@@ -5,15 +5,14 @@
 namespace oneflow {
 
 namespace {
-template<typename FloatingPointType>
-__global__ void Im2ColGpuKernel(const int n, const FloatingPointType* data_im,
-                                const int height, const int width,
-                                const int kernel_h, const int kernel_w,
-                                const int pad_h, const int pad_w,
-                                const int stride_h, const int stride_w,
-                                const int dilation_h, const int dilation_w,
-                                const int height_col, const int width_col,
-                                FloatingPointType* data_col) {
+template<typename T>
+__global__ void Im2ColGpuKernel(const int n, const T* data_im, const int height,
+                                const int width, const int kernel_h,
+                                const int kernel_w, const int pad_h,
+                                const int pad_w, const int stride_h,
+                                const int stride_w, const int dilation_h,
+                                const int dilation_w, const int height_col,
+                                const int width_col, T* data_col) {
   CUDA_1D_KERNEL_LOOP(index, n) {
     const int h_index = index / width_col;
     const int h_col = h_index % height_col;
@@ -22,9 +21,9 @@ __global__ void Im2ColGpuKernel(const int n, const FloatingPointType* data_im,
     const int c_col = c_im * kernel_h * kernel_w;
     const int h_offset = h_col * stride_h - pad_h;
     const int w_offset = w_col * stride_w - pad_w;
-    FloatingPointType* data_col_ptr = data_col;
+    T* data_col_ptr = data_col;
     data_col_ptr += (c_col * height_col + h_col) * width_col + w_col;
-    const FloatingPointType* data_im_ptr = data_im;
+    const T* data_im_ptr = data_im;
     data_im_ptr += (c_im * height + h_offset) * width + w_offset;
     for (int i = 0; i < kernel_h; ++i) {
       for (int j = 0; j < kernel_w; ++j) {
@@ -40,15 +39,17 @@ __global__ void Im2ColGpuKernel(const int n, const FloatingPointType* data_im,
   }
 }
 
-template<typename FloatingPointType>
-__global__ void Col2ImGpuKernel(
-    const int n, const FloatingPointType* data_col, const int height,
-    const int width, const int channels, const int kernel_h, const int kernel_w,
-    const int pad_h, const int pad_w, const int stride_h, const int stride_w,
-    const int dilation_h, const int dilation_w, const int height_col,
-    const int width_col, FloatingPointType* data_im) {
+template<typename T>
+__global__ void Col2ImGpuKernel(const int n, const T* data_col,
+                                const int height, const int width,
+                                const int channels, const int kernel_h,
+                                const int kernel_w, const int pad_h,
+                                const int pad_w, const int stride_h,
+                                const int stride_w, const int dilation_h,
+                                const int dilation_w, const int height_col,
+                                const int width_col, T* data_im) {
   CUDA_1D_KERNEL_LOOP(index, n) {
-    FloatingPointType val = 0;
+    T val = 0;
     const int w_im = index % width + pad_w;
     const int h_im = (index / width) % height + pad_h;
     const int c_im = index / (width * height);
@@ -81,23 +82,22 @@ __global__ void Col2ImGpuKernel(
 
 }  // namespace
 
-template<typename FloatingPointType>
-class ConvolutionKernelUtil<DeviceType::kGPU, FloatingPointType> final {
+template<typename T>
+class ConvolutionKernelUtil<DeviceType::kGPU, T> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvolutionKernelUtil);
   ConvolutionKernelUtil() = delete;
-  static void Im2Col(const KernelCtx& ctx, const FloatingPointType* data_im,
-                     const int channels, const int height, const int width,
-                     const int kernel_h, const int kernel_w, const int pad_h,
-                     const int pad_w, const int stride_h, const int stride_w,
-                     const int dilation_h, const int dilation_w,
-                     FloatingPointType* data_col) {
+  static void Im2Col(const KernelCtx& ctx, const T* data_im, const int channels,
+                     const int height, const int width, const int kernel_h,
+                     const int kernel_w, const int pad_h, const int pad_w,
+                     const int stride_h, const int stride_w,
+                     const int dilation_h, const int dilation_w, T* data_col) {
     int height_col =
         (height + 2 * pad_h - (dilation_h * (kernel_h - 1) + 1)) / stride_h + 1;
     int width_col =
         (width + 2 * pad_w - (dilation_w * (kernel_w - 1) + 1)) / stride_w + 1;
     int num_kernels = channels * height_col * width_col;
-    Im2ColGpuKernel<FloatingPointType>
+    Im2ColGpuKernel<T>
         <<<BlocksNum4ThreadsNum(num_kernels), kCudaThreadsNumPerBlock, 0,
            ctx.device_ctx->cuda_stream()>>>(
             num_kernels, data_im, height, width, kernel_h, kernel_w, pad_h,
@@ -105,18 +105,17 @@ class ConvolutionKernelUtil<DeviceType::kGPU, FloatingPointType> final {
             width_col, data_col);
   }
 
-  static void Col2Im(const KernelCtx& ctx, const FloatingPointType* data_col,
+  static void Col2Im(const KernelCtx& ctx, const T* data_col,
                      const int channels, const int height, const int width,
                      const int kernel_h, const int kernel_w, const int pad_h,
                      const int pad_w, const int stride_h, const int stride_w,
-                     const int dilation_h, const int dilation_w,
-                     FloatingPointType* data_im) {
+                     const int dilation_h, const int dilation_w, T* data_im) {
     int height_col =
         (height + 2 * pad_h - (dilation_h * (kernel_h - 1) + 1)) / stride_h + 1;
     int width_col =
         (width + 2 * pad_w - (dilation_w * (kernel_w - 1) + 1)) / stride_w + 1;
     int num_kernels = channels * height * width;
-    Col2ImGpuKernel<FloatingPointType>
+    Col2ImGpuKernel<T>
         <<<BlocksNum4ThreadsNum(num_kernels), kCudaThreadsNumPerBlock, 0,
            ctx.device_ctx->cuda_stream()>>>(
             num_kernels, data_col, height, width, channels, kernel_h, kernel_w,
@@ -125,5 +124,8 @@ class ConvolutionKernelUtil<DeviceType::kGPU, FloatingPointType> final {
   }
 };
 
-INSTANTIATE_GPU_KERNEL_UTIL_CLASS(ConvolutionKernelUtil);
+#define INSTANTIATE_CONVOLUTION_KERNEL_UTIL(type_cpp, type_proto) \
+  template class ConvolutionKernelUtil<DeviceType::kGPU, type_cpp>;
+FOR_EACH_PAIR(INSTANTIATE_CONVOLUTION_KERNEL_UTIL, FLOATING_DATA_TYPE_PAIR())
+
 }  // namespace oneflow

@@ -17,13 +17,13 @@ class OpMgr final {
 
   void AllOpToProto(PbRpf<OperatorProto>*);
 
-  std::shared_ptr<const Operator> ModelUpdateOp();
+  std::shared_ptr<Operator> ModelUpdateOp();
 
  private:
   OpMgr() = default;
 
   std::list<std::weak_ptr<const Operator>> op_list_;
-  std::shared_ptr<const Operator> model_update_op_;
+  std::shared_ptr<Operator> model_update_op_;
 };
 
 void AddOpCreator(OperatorConf::OpTypeCase op_type_case,

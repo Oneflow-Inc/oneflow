@@ -39,7 +39,7 @@ void DataCompTaskNode::FwInferBlobDescInProducedRegsts(TaskGraph*) {
 
 void DataCompTaskNode::FwBuildFromUserOps(
     Lbn2NodeBnMap* lbn2producer, Lbn2NodeBnMap* extern_in_lbn2consumer) {
-  for (std::shared_ptr<const Operator> op : chain_node()->op_vec()) {
+  for (std::shared_ptr<Operator> op : chain_node()->op_vec()) {
     ExecNode* cur_node = mut_exec_gph().NewNode();
     cur_node->mut_op() = op;
     for (const std::string& obn : op->output_bns()) {
