@@ -32,6 +32,7 @@ void SyncStream<DeviceType::kCPU>(KernelCtx* ctx) {
 
 template<typename T>
 class KTCommon<DeviceType::kCPU, T> final {
+ public:
   static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc, T* val) {
     Blob* ret = CreateBlob<DeviceType::kCPU>(blob_desc);
     CudaCheck(cudaMemcpy(ret->mut_dptr(), val, ret->ByteSizeOfDataField(),
