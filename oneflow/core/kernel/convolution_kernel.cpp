@@ -293,7 +293,7 @@ Kernel* CreateConvolutionKernel(const OperatorConf& op_conf) {
   static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
 #define CONVOLUTION_KERNEL_ENTRY(type_cpp, type_proto) \
   {type_proto, []() { return new ConvolutionKernel<device_type, type_cpp>; }},
-      FOR_EACH_PAIR(CONVOLUTION_KERNEL_ENTRY, FLOATING_DATA_TYPE_PAIR())};
+      FOR_EACH_PAIR(CONVOLUTION_KERNEL_ENTRY, FLOATING_DATA_TYPE_SEQ)};
   return data_type2creator.at(op_conf.convolution_conf().in().data_type())();
 }
 

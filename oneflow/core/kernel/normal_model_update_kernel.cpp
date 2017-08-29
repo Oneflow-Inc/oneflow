@@ -26,7 +26,7 @@ Kernel* CreateNormalMdUpdtKernel(const OperatorConf& op_conf) {
 #define NORMAL_MDUPDT_KERNEL_ENTRY(type_cpp, type_proto) \
   {type_proto,                                           \
    []() { return new NormalMdUpdateKernel<device_type, type_cpp>; }},
-      FOR_EACH_PAIR(NORMAL_MDUPDT_KERNEL_ENTRY, FLOATING_DATA_TYPE_PAIR())};
+      FOR_EACH_PAIR(NORMAL_MDUPDT_KERNEL_ENTRY, FLOATING_DATA_TYPE_SEQ)};
   return data_type2creator.at(JobDesc::Singleton()->default_data_type())();
 }
 
