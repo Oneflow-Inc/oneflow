@@ -30,7 +30,7 @@ void OpMgr::AllOpToProto(PbRpf<OperatorProto>* ret) {
   }
 }
 
-std::shared_ptr<const Operator> OpMgr::ModelUpdateOp() {
+std::shared_ptr<Operator> OpMgr::ModelUpdateOp() {
   if (!model_update_op_) {
     OperatorConf mdupdt_conf;
     mdupdt_conf.set_name("model_update");

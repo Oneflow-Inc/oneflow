@@ -2,10 +2,7 @@
 
 namespace oneflow {
 
-void NormalModelUpdateOp::InitFromOpConf(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_normal_mdupdt_conf());
-  mut_op_conf() = op_conf;
-
+void NormalModelUpdateOp::InitFromOpConf() {
   EnrollInputBn("model_diffs", false);
   EnrollOutputBn("model", false);
 }

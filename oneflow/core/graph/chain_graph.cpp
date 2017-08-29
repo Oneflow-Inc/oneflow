@@ -221,7 +221,7 @@ std::string ChainNode::ConcatedOpsName() const {
 }
 
 bool ChainNode::HasOpWithModelOrModelTmpBlob() const {
-  for (std::shared_ptr<const Operator> op : op_vec_) {
+  for (std::shared_ptr<Operator> op : op_vec_) {
     if (!op->model_bns().empty() || !op->model_tmp_bns().empty()) {
       return true;
     }
@@ -283,13 +283,13 @@ void ChainGraph::SetInOutLbn4AllChainNodeInDataTaskGraph() {
   // Init chain2produced_lbns and Set InputLbns
   ForEachNode([&](ChainNode* cur_node) {
     auto& produced_lbns = chain2produced_lbns[cur_node];
-    for (std::shared_ptr<const Operator> op : cur_node->op_vec()) {
+    for (std::shared_ptr<Operator> op : cur_node->op_vec()) {
       for (const std::string& obn : op->output_bns()) {
         const std::string& lbn = op->Lbn4BnInOp(obn);
         produced_lbns.insert(lbn);
       }
     }
-    for (std::shared_ptr<const Operator> op : cur_node->op_vec()) {
+    for (std::shared_ptr<Operator> op : cur_node->op_vec()) {
       for (const std::string& ibn : op->input_bns()) {
         const std::string& lbn = op->Lbn4BnInOp(ibn);
         if (produced_lbns.find(lbn) == produced_lbns.end()) {

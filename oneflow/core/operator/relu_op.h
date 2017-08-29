@@ -11,14 +11,14 @@ class ReluOp final : public UserOperator {
   ReluOp() = default;
   ~ReluOp() = default;
 
-  void InitFromOpConf(const OperatorConf& op_conf) override;
+  void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
   bool IsElemWise() const override { return true; }
 
   void InferBlobDesc4FwBlobs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       ParallelPolicy policy, int64_t parallel_id,
-      int64_t parallel_num) const override;
+      int64_t parallel_num) override;
 
  private:
 };

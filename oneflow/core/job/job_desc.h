@@ -35,6 +35,7 @@ class JobDesc final {
   }
   int32_t batch_size() const { return piece_size() * num_of_pieces_in_batch(); }
   bool is_train() const { return job_conf_.has_train_conf(); }
+  bool is_predict() const { return job_conf_.has_predict_conf(); }
   DataType default_data_type() const { return job_conf_.default_data_type(); }
   int32_t num_of_batches_in_snapshot() const {
     return job_conf_.train_conf().num_of_batches_in_snapshot();
