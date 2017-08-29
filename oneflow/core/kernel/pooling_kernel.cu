@@ -6,10 +6,9 @@ namespace oneflow {
 
 namespace {
 
-template<typename FloatingPointType>
-__global__ void MaxPoolForward(const int64_t nthreads,
-                               const FloatingPointType* in_dptr,
-                               FloatingPointType* out_dptr, uint32_t* mask_dptr,
+template<typename T>
+__global__ void MaxPoolForward(const int64_t nthreads, const T* in_dptr,
+                               T* out_dptr, uint32_t* mask_dptr,
                                const int64_t channels, const int64_t height,
                                const int64_t width, const int64_t pooled_height,
                                const int64_t pooled_width,
@@ -29,9 +28,8 @@ __global__ void MaxPoolForward(const int64_t nthreads,
         (wstart + kernel_w < width) ? (wstart + kernel_w) : width;
     hstart = (hstart > 0) ? hstart : 0;
     wstart = (wstart > 0) ? wstart : 0;
-    const FloatingPointType* const in_slice =
-        in_dptr + (n * channels + c) * height * width;
-    FloatingPointType maxval = in_slice[hstart * width + wstart];
+    const T* const in_slice = in_dptr + (n * channels + c) * height * width;
+    T maxval = in_slice[hstart * width + wstart];
     uint32_t maxidx = hstart * width + wstart;
     for (int64_t h = hstart; h < hend; ++h) {
       for (int64_t w = wstart; w < wend; ++w) {
@@ -46,12 +44,11 @@ __global__ void MaxPoolForward(const int64_t nthreads,
   }
 }
 
-template<typename FloatingPointType>
-__global__ void AvePoolForward(const int64_t nthreads,
-                               const FloatingPointType* in_dptr,
-                               FloatingPointType* out_dptr,
-                               const int64_t channels, const int64_t height,
-                               const int64_t width, const int64_t pooled_height,
+template<typename T>
+__global__ void AvePoolForward(const int64_t nthreads, const T* in_dptr,
+                               T* out_dptr, const int64_t channels,
+                               const int64_t height, const int64_t width,
+                               const int64_t pooled_height,
                                const int64_t pooled_width,
                                const int64_t kernel_h, const int64_t kernel_w,
                                const int64_t stride_h, const int64_t stride_w,
@@ -72,9 +69,8 @@ __global__ void AvePoolForward(const int64_t nthreads,
     wstart = (wstart > 0) ? wstart : 0;
     hend = (hend < height) ? hend : height;
     wend = (wend < width) ? wend : width;
-    FloatingPointType aveval = 0;
-    const FloatingPointType* const in_slice =
-        in_dptr + (n * channels + c) * height * width;
+    T aveval = 0;
+    const T* const in_slice = in_dptr + (n * channels + c) * height * width;
     for (int64_t h = hstart; h < hend; ++h) {
       for (int64_t w = wstart; w < wend; ++w) {
         aveval += in_slice[h * width + w];
@@ -84,14 +80,16 @@ __global__ void AvePoolForward(const int64_t nthreads,
   }
 }
 
-template<typename FloatingPointType>
-__global__ void MaxPoolBackward(
-    const int64_t nthreads, const FloatingPointType* out_diff_dptr,
-    const uint32_t* mask_dptr, FloatingPointType* in_diff_dptr,
-    const int64_t channels, const int64_t height, const int64_t width,
-    const int64_t pooled_height, const int64_t pooled_width,
-    const int64_t kernel_h, const int64_t kernel_w, const int64_t stride_h,
-    const int64_t stride_w, const int64_t pad_h, const int64_t pad_w) {
+template<typename T>
+__global__ void MaxPoolBackward(const int64_t nthreads, const T* out_diff_dptr,
+                                const uint32_t* mask_dptr, T* in_diff_dptr,
+                                const int64_t channels, const int64_t height,
+                                const int64_t width,
+                                const int64_t pooled_height,
+                                const int64_t pooled_width,
+                                const int64_t kernel_h, const int64_t kernel_w,
+                                const int64_t stride_h, const int64_t stride_w,
+                                const int64_t pad_h, const int64_t pad_w) {
   CUDA_1D_KERNEL_LOOP(index, nthreads) {
     const int64_t w = index % width;
     const int64_t h = (index / width) % height;
@@ -107,9 +105,9 @@ __global__ void MaxPoolBackward(
     const int64_t pwend = ((w + pad_w) / stride_w + 1 < pooled_width)
                               ? ((w + pad_w) / stride_w + 1)
                               : pooled_width;
-    FloatingPointType gradient = 0;
+    T gradient = 0;
     const int64_t offset = (n * channels + c) * pooled_height * pooled_width;
-    const FloatingPointType* const out_diff_slice = out_diff_dptr + offset;
+    const T* const out_diff_slice = out_diff_dptr + offset;
     const uint32_t* const mask_slice = mask_dptr + offset;
     for (int64_t ph = phstart; ph < phend; ++ph) {
       for (int64_t pw = pwstart; pw < pwend; ++pw) {
@@ -122,14 +120,15 @@ __global__ void MaxPoolBackward(
   }
 }
 
-template<typename FloatingPointType>
-__global__ void AvePoolBackward(
-    const int64_t nthreads, const FloatingPointType* out_diff_dptr,
-    FloatingPointType* in_diff_dptr, const int64_t channels,
-    const int64_t height, const int64_t width, const int64_t pooled_height,
-    const int64_t pooled_width, const int64_t kernel_h, const int64_t kernel_w,
-    const int64_t stride_h, const int64_t stride_w, const int64_t pad_h,
-    const int64_t pad_w) {
+template<typename T>
+__global__ void AvePoolBackward(const int64_t nthreads, const T* out_diff_dptr,
+                                T* in_diff_dptr, const int64_t channels,
+                                const int64_t height, const int64_t width,
+                                const int64_t pooled_height,
+                                const int64_t pooled_width,
+                                const int64_t kernel_h, const int64_t kernel_w,
+                                const int64_t stride_h, const int64_t stride_w,
+                                const int64_t pad_h, const int64_t pad_w) {
   CUDA_1D_KERNEL_LOOP(index, nthreads) {
     const int64_t w = index % width + pad_w;
     const int64_t h = (index / width) % height + pad_h;
@@ -141,9 +140,9 @@ __global__ void AvePoolBackward(
         (h / stride_h + 1 < pooled_height) ? (h / stride_h + 1) : pooled_height;
     const int64_t pwend =
         (w / stride_w + 1 < pooled_width) ? (w / stride_w + 1) : pooled_width;
-    FloatingPointType gradient = 0;
+    T gradient = 0;
     const int64_t offset = (n * channels + c) * pooled_height * pooled_width;
-    const FloatingPointType* const out_diff_slice = out_diff_dptr + offset;
+    const T* const out_diff_slice = out_diff_dptr + offset;
     for (int64_t ph = phstart; ph < phend; ++ph) {
       for (int64_t pw = pwstart; pw < pwend; ++pw) {
         int64_t hstart = ph * stride_h - pad_h;
@@ -163,8 +162,8 @@ __global__ void AvePoolBackward(
 
 }  // namespace
 
-template<typename FloatingPointType>
-class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
+template<typename T>
+class PoolingKernelUtil<DeviceType::kGPU, T> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(PoolingKernelUtil);
   PoolingKernelUtil() = delete;
@@ -176,14 +175,10 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
 
     switch (pooling_conf.pool()) {
       case PoolingOpConf::kMax: {
-        static_assert(sizeof(FloatingPointType) >= sizeof(uint32_t),
-                      "sizeof(FloatingPointType) is not greater than or equal "
-                      "to sizeof(uint32_t) in max pooling.");
-        MaxPoolForward<FloatingPointType>
+        MaxPoolForward<T>
             <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
                ctx.device_ctx->cuda_stream()>>>(
-                count, in_blob->dptr<FloatingPointType>(),
-                out_blob->mut_dptr<FloatingPointType>(),
+                count, in_blob->dptr<T>(), out_blob->mut_dptr<T>(),
                 mask_blob->mut_dptr<uint32_t>(), in_blob->shape().At(1),
                 in_blob->shape().At(2), in_blob->shape().At(3),
                 out_blob->shape().At(2), out_blob->shape().At(3),
@@ -193,16 +188,16 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
         break;
       }
       case PoolingOpConf::kAve: {
-        AvePoolForward<FloatingPointType>
+        AvePoolForward<T>
             <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
                ctx.device_ctx->cuda_stream()>>>(
-                count, in_blob->dptr<FloatingPointType>(),
-                out_blob->mut_dptr<FloatingPointType>(), in_blob->shape().At(1),
-                in_blob->shape().At(2), in_blob->shape().At(3),
-                out_blob->shape().At(2), out_blob->shape().At(3),
-                pooling_conf.kernel_size_h(), pooling_conf.kernel_size_w(),
-                pooling_conf.stride_h(), pooling_conf.stride_w(),
-                pooling_conf.pad_h(), pooling_conf.pad_w());
+                count, in_blob->dptr<T>(), out_blob->mut_dptr<T>(),
+                in_blob->shape().At(1), in_blob->shape().At(2),
+                in_blob->shape().At(3), out_blob->shape().At(2),
+                out_blob->shape().At(3), pooling_conf.kernel_size_h(),
+                pooling_conf.kernel_size_w(), pooling_conf.stride_h(),
+                pooling_conf.stride_w(), pooling_conf.pad_h(),
+                pooling_conf.pad_w());
         break;
       }
       case PoolingOpConf::kStochastic: {
@@ -219,29 +214,23 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
 
     switch (pooling_conf.pool()) {
       case PoolingOpConf::kMax: {
-        static_assert(sizeof(FloatingPointType) >= sizeof(uint32_t),
-                      "sizeof(FloatingPointType) is not greater than or equal "
-                      "to sizeof(uint32_t) in max pooling.");
-        MaxPoolBackward<FloatingPointType>
+        MaxPoolBackward<T>
             <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
                ctx.device_ctx->cuda_stream()>>>(
-                count, out_diff_blob->dptr<FloatingPointType>(),
-                mask_blob->dptr<uint32_t>(),
-                in_diff_blob->mut_dptr<FloatingPointType>(),
-                in_diff_blob->shape().At(1), in_diff_blob->shape().At(2),
-                in_diff_blob->shape().At(3), out_diff_blob->shape().At(2),
-                out_diff_blob->shape().At(3), pooling_conf.kernel_size_h(),
-                pooling_conf.kernel_size_w(), pooling_conf.stride_h(),
-                pooling_conf.stride_w(), pooling_conf.pad_h(),
-                pooling_conf.pad_w());
+                count, out_diff_blob->dptr<T>(), mask_blob->dptr<uint32_t>(),
+                in_diff_blob->mut_dptr<T>(), in_diff_blob->shape().At(1),
+                in_diff_blob->shape().At(2), in_diff_blob->shape().At(3),
+                out_diff_blob->shape().At(2), out_diff_blob->shape().At(3),
+                pooling_conf.kernel_size_h(), pooling_conf.kernel_size_w(),
+                pooling_conf.stride_h(), pooling_conf.stride_w(),
+                pooling_conf.pad_h(), pooling_conf.pad_w());
         break;
       }
       case PoolingOpConf::kAve: {
-        AvePoolBackward<FloatingPointType>
+        AvePoolBackward<T>
             <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
                ctx.device_ctx->cuda_stream()>>>(
-                count, out_diff_blob->dptr<FloatingPointType>(),
-                in_diff_blob->mut_dptr<FloatingPointType>(),
+                count, out_diff_blob->dptr<T>(), in_diff_blob->mut_dptr<T>(),
                 in_diff_blob->shape().At(1), in_diff_blob->shape().At(2),
                 in_diff_blob->shape().At(3), out_diff_blob->shape().At(2),
                 out_diff_blob->shape().At(3), pooling_conf.kernel_size_h(),
@@ -258,6 +247,8 @@ class PoolingKernelUtil<DeviceType::kGPU, FloatingPointType> final {
   }
 };
 
-INSTANTIATE_GPU_KERNEL_UTIL_CLASS(PoolingKernelUtil);
+#define DECLARE_POOLING_KERNEL_UTIL(type_cpp, type_proto) \
+  template class PoolingKernelUtil<DeviceType::kGPU, type_cpp>;
+FOR_EACH_PAIR(DECLARE_POOLING_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_PAIR())
 
 }  // namespace oneflow

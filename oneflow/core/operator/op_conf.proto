@@ -26,9 +26,14 @@ message FillConf {
   }
 }
 
+message LogicalBlob {
+  string name = 1;
+  DataType data_type = 2;
+}
+
 message ConvolutionOpConf {
-  string in = 1;
-  string out = 2;
+  LogicalBlob in = 1;
+  LogicalBlob out = 2;
 
   int32 out_num = 3; // The number of outputs for the layer
   bool has_bias_term = 4; // whether to have bias terms
@@ -73,35 +78,24 @@ message ConvolutionOpConf {
 }
 
 message InnerProductOpConf {
-  string in = 1;
-  string out = 2;
+  LogicalBlob in = 1;
+  LogicalBlob out = 2;
 
   int32 out_num = 3; // The number of outputs for the layer
-  bool has_bias_term = 4; // whether to have bias terms
-  FillConf weight_fill = 5; // The fill for the weight
-  FillConf bias_fill = 6; // The fill for the bias
-
-  // The first axis to be lumped into a single inner product computation;
-  // all preceding axes are retained in the output.
-  // May be negative to index from the end (e.g., -1 for the last axis).
-  int32 axis = 7;
-  // Specify whether to transpose the weight matrix or not.
-  // If transpose == true, any operations will be performed on the transpose
-  // of the weight matrix. The weight matrix itself is not going to be transposed
-  // but rather the transfer flag of operations will be toggled accordingly.
-  bool need_transpose = 8;
+  bool has_bias_term = 4;
+  FillConf weight_fill = 5; 
+  FillConf bias_fill = 6; 
 }
 
 message DataLoaderOpConf {
-  string feature = 1;
-  ShapeProto shape_of_one_feature_ins = 2;
-  string label = 3;
-  string data_dir = 4;
+  LogicalBlob out = 1;
+  ShapeProto shape = 2;
+  string data_dir = 3;
 }
 
 message PoolingOpConf {
-  string in = 1;
-  string out = 2;
+  LogicalBlob in = 1;
+  LogicalBlob out = 2;
 
   enum PoolMethod {
     kMax = 0;
@@ -118,31 +112,32 @@ message PoolingOpConf {
 }
 
 message ReluOpConf {
-  string in = 1;
-  string out = 2;
+  LogicalBlob in = 1;
+  LogicalBlob out = 2;
 }
 
 message SoftmaxOpConf {
-  string in = 1;
-  string out = 2;
+  LogicalBlob in = 1;
+  LogicalBlob out = 2;
 }
 
 message SoftmaxLossOpConf {
-  string prediction = 1;
-  string label = 3;
-  string loss = 4;
+  LogicalBlob prediction = 1;
+  LogicalBlob label = 3;
+  LogicalBlob loss = 4;
 }
 
 message MultinomialLogisticLossOpConf {
-  string prediction = 1;
-  string label = 2;
-  string loss = 3;
+  LogicalBlob prediction = 1;
+  LogicalBlob label = 2;
+  LogicalBlob loss = 3;
 }
 
 message ConcatOpConf {
   repeated string in = 1;
   string out = 2;
-  int32 axis = 3;
+  DataType data_type = 3;
+  int32 axis = 4;
 }
 
 message CopyCommNetOpConf {

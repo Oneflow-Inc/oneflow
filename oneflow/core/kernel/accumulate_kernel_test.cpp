@@ -10,27 +10,33 @@ namespace test {
 
 namespace {
 
-template<DeviceType device_type, typename FloatingPointType>
+template<DeviceType device_type, typename T>
 std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
-  using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
+  using KTCommon = KTCommon<device_type, T>;
 
   std::vector<int64_t> dim_vec = {2, 4};
-  FloatingPointType diff_data[] = {1, 2, 3, 4, 5, 6, 7, 8};
-  FloatingPointType diff_acc_data[] = {5, 3, 2, 1, 7, 0, 1, 1};
+  BlobDesc* blob_desc = new BlobDesc;
+  blob_desc->set_data_type(GetDataType<T>::val);
+  blob_desc->mut_shape() = Shape(dim_vec);
 
-  FloatingPointType expected_data[] = {6, 5, 5, 5, 12, 6, 8, 9};
+  T diff_data[] = {1, 2, 3, 4, 5, 6, 7, 8};
+  T diff_acc_data[] = {5, 3, 2, 1, 7, 0, 1, 1};
+
+  T expected_data[] = {6, 5, 5, 5, 12, 6, 8, 9};
 
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
 
-  (*bn2blob_ptr)["one"] = KTCommon::CreateBlobWithVector(dim_vec, diff_data);
+  (*bn2blob_ptr)["one"] =
+      KTCommon::CreateBlobWithSpecifiedVal(blob_desc, diff_data);
+
   (*bn2blob_ptr)["acc"] =
-      KTCommon::CreateBlobWithVector(dim_vec, diff_acc_data);
+      KTCommon::CreateBlobWithSpecifiedVal(blob_desc, diff_acc_data);
   (*bn2blob_ptr)["expected_acc"] =
-      KTCommon::CreateBlobWithVector(dim_vec, expected_data);
+      KTCommon::CreateBlobWithSpecifiedVal(blob_desc, expected_data);
   return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
 }
 
-template<DeviceType device_type, typename FloatingPointType>
+template<DeviceType device_type, typename T>
 Kernel* BuildAccumulateKernel() {
   OperatorConf op_conf;
   op_conf.set_name("model_diff_acc");
@@ -40,26 +46,24 @@ Kernel* BuildAccumulateKernel() {
   OperatorProto op_proto;
   model_diff_acc_op->ToProto(&op_proto);
 
-  auto model_diff_acc_kernel =
-      new AccumulateKernel<device_type, FloatingPointType>();
+  auto model_diff_acc_kernel = new AccumulateKernel<device_type, T>();
   model_diff_acc_kernel->InitFromOpProto(op_proto);
 
   return model_diff_acc_kernel;
 }
 
-template<DeviceType device_type, typename FloatingPointType>
+template<DeviceType device_type, typename T>
 void TestAccumulateKernel() {
-  using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
+  using KTCommon = KTCommon<device_type, T>;
   KernelCtx ctx;
-  KTCommon::BuildKernelCtx(&ctx);
+  BuildKernelCtx<device_type>(&ctx);
 
-  auto BnInOp2BlobPtr = BuildBnInOp2BlobPtr<device_type, FloatingPointType>();
+  auto BnInOp2BlobPtr = BuildBnInOp2BlobPtr<device_type, T>();
 
-  auto model_diff_acc_kernel =
-      BuildAccumulateKernel<device_type, FloatingPointType>();
+  auto model_diff_acc_kernel = BuildAccumulateKernel<device_type, T>();
 
   model_diff_acc_kernel->Forward(ctx, BnInOp2BlobPtr);
-  KTCommon::SyncStream(&ctx);
+  SyncStream<device_type>(&ctx);
 
   KTCommon::CheckResult(BnInOp2BlobPtr, "acc", "expected_acc");
 }

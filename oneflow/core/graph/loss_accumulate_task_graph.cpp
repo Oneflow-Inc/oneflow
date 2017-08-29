@@ -15,7 +15,6 @@ void LossAccTaskGraph::BuildTaskGraph() {
   // loss acc op
   OperatorConf op_conf;
   op_conf.set_name("loss_acc_" + NewUniqueId());
-  op_conf.mutable_accumulate_conf();
   auto loss_acc_op = OpMgr::Singleton()->AddOp(op_conf);
   // parallel_desc
   ParallelConf pr_conf;

@@ -7,10 +7,10 @@ void AccumulateActor::Init(const TaskProto& task_proto,
                            const ThreadCtx& thread_ctx, int32_t max_acc_cnt) {
   CompActor::Init(task_proto, thread_ctx);
   if (thread_ctx.cpu_stream) {
-    MemsetFunc = &KernelUtil<DeviceType::kCPU, float>::Memset;
+    MemsetFunc = &Memset<DeviceType::kCPU>;
     mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
   } else {
-    MemsetFunc = &KernelUtil<DeviceType::kGPU, float>::Memset;
+    MemsetFunc = &Memset<DeviceType::kGPU>;
     mut_device_ctx().reset(new CudaDeviceCtx(cuda_handle_.cuda_stream(),
                                              cuda_handle_.cublas_handle(),
                                              cuda_handle_.cudnn_handle()));
@@ -61,7 +61,8 @@ void AccumulateActor::Act() {
   ForEachCurWriteableRegst([&](Regst* regst) {
     if (acc_cnt_ != max_acc_cnt_) { return; }
     Blob* packed_blob = regst->GetBlobPtrFromLbn(kPackedBlobName);
-    MemsetFunc(ctx, packed_blob->mut_dptr(), 0, packed_blob->TotalByteSize());
+    MemsetFunc(ctx.device_ctx, packed_blob->mut_dptr(), 0,
+               packed_blob->TotalByteSize());
     acc_cnt_ = 0;
   });
   AsyncLaunchKernel(ctx, [this](uint64_t regst_desc_id) -> Regst* {

@@ -22,7 +22,8 @@ class Operator {
   virtual ~Operator() = default;
 
   //
-  virtual void InitFromOpConf(const OperatorConf& op_conf) = 0;
+  void InitFromOpConf(const OperatorConf& op_conf);
+  virtual void InitFromOpConf() = 0;
   virtual bool IsElemWise() const { return false; }
   virtual bool IsLossOp() const { return false; }
   virtual bool IsRecordOp() const { return false; }
@@ -54,6 +55,12 @@ class Operator {
   DEFINE_GET_VAL_FROM_SPECIAL_CONF(int32_t, Int32);
   DEFINE_GET_VAL_FROM_SPECIAL_CONF(int64_t, Int64);
   DEFINE_GET_VAL_FROM_SPECIAL_CONF(bool, Bool);
+  DEFINE_GET_VAL_FROM_SPECIAL_CONF(const PbMessage&, Message);
+
+  template<typename T>
+  const T& GetMsgFromSpecialConf(const std::string& field_name) const {
+    return static_cast<const T&>(GetMessageFromSpecialConf(field_name));
+  }
 
 #undef DEFINE_GET_VAL_FROM_SPECIAL_CONF
 
@@ -81,8 +88,7 @@ class Operator {
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, model_tmp_blobs
   virtual void InferBlobDesc4FwBlobs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      ParallelPolicy policy, int64_t parallel_id,
-      int64_t parallel_num) const = 0;
+      ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) = 0;
 
   //
   virtual void FixParallelDesc(ParallelDesc* pr_desc) const {}
@@ -147,7 +153,7 @@ class SysOperator : public Operator {
   virtual void InferBlobDesc4FwBlobs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       ParallelPolicy policy, int64_t parallel_id,
-      int64_t parallel_num) const override {
+      int64_t parallel_num) override {
     UNEXPECTED_RUN();
   }
 
