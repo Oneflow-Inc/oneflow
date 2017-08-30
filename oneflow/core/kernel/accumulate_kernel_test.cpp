@@ -1,5 +1,4 @@
 #include "oneflow/core/kernel/accumulate_kernel.h"
-#include <random>
 #include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/core/device/cuda_device_context.h"
 #include "oneflow/core/kernel/kernel_test_common.h"
@@ -71,14 +70,10 @@ void TestAccumulateKernel() {
 
 }  // namespace test
 
-TEST(AccumulateKernel, model_diff_acc_kernel_cpu) {
-  test::TestAccumulateKernel<DeviceType::kCPU, float>();
-  test::TestAccumulateKernel<DeviceType::kCPU, double>();
-}
-
-TEST(AccumulateKernel, model_diff_acc_kernel_gpu) {
-  test::TestAccumulateKernel<DeviceType::kGPU, float>();
-  test::TestAccumulateKernel<DeviceType::kGPU, double>();
+TEST(AccumulateKernel, accumulate) {
+#define MAKE_ENTRY(x, y) test::TestAccumulateKernel<x, OF_PP_FIRST_ARG y>();
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, DeviceTypeSeq,
+                                   FLOATING_DATA_TYPE_SEQ)
 }
 
 }  // namespace oneflow
