@@ -27,6 +27,10 @@ class KTCommon final {
   KTCommon() = delete;
 
   static Blob* CreateBlobWithSpecifiedVal(const BlobDesc*, T* val);
+  static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc,
+                                          std::vector<T> val) {
+    return CreateBlobWithSpecifiedVal(blob_desc, &(val[0]));
+  }
 
   static Blob* CreateBlobWithSameVal(const BlobDesc* blob_desc, T val) {
     T* val_vec = new T[blob_desc->shape().elem_cnt()];
