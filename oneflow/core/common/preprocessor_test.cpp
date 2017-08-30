@@ -65,7 +65,7 @@ TEST(PP_SEQ, internal_seq_product_for_each) {
 #define SEQ (0)(1)
 #define MAKE_ENTRY(x, y) {OF_PP_STRINGIZE(OF_PP_CAT(x, y)), x || y},
   std::unordered_map<std::string, bool> or_table = {
-      FOR_EACH_TUPLE(MAKE_ENTRY, OF_PP_INTERNAL_SEQ_PRODUCT(SEQ, SEQ))};
+      OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, OF_PP_INTERNAL_SEQ_PRODUCT(SEQ, SEQ))};
 #undef MAKE_ENTRY
 #undef SEQ
   ASSERT_EQ(or_table["00"], false);
@@ -91,7 +91,8 @@ TEST(PP_SEQ, make_tuple_seq) {
 TEST(PP_SEQ, for_each_tuple) {
 #define SEQ ((1, 1))((2, 2))((3, 3))((4, 4))
 #define MAKE_ENTRY(x, y) {x, y},
-  std::unordered_map<int, int> identity = {FOR_EACH_TUPLE(MAKE_ENTRY, SEQ)};
+  std::unordered_map<int, int> identity = {
+      OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SEQ)};
 #undef MAKE_ENTRY
 #undef SEQ
   for (int i = 1; i <= 4; ++i) { ASSERT_EQ(i, identity[i]); }
