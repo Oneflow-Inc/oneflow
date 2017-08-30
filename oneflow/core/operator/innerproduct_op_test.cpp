@@ -73,8 +73,9 @@ void TestInnerProductOp(ParallelPolicy policy, bool has_bias_term,
 }  // namespace
 
 TEST(InnerProductOp, innerproduct) {
-#define MAKE_ENTRY(data_type, policy, has_bias, has_data_id) \
-  TestInnerProductOp<OF_PP_FIRST_ARG data_type>(policy, has_bias, has_data_id);
+#define MAKE_ENTRY(data_type, policy, has_bias, has_data_id)        \
+  TestInnerProductOp<OF_PP_PAIR_FIRST(data_type)>(policy, has_bias, \
+                                                  has_data_id);
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, FLOATING_DATA_TYPE_SEQ,
                                    PARALLEL_POLICY_SEQ, BOOL_SEQ, BOOL_SEQ)
 }
