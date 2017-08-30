@@ -76,22 +76,14 @@ void TestInnerProductOp(ParallelPolicy policy, bool has_bias_term,
 
 }  // namespace
 
-TEST(InnerProductOp, modelparallel_innerproduct_op_test) {
-  for (bool with_bias : {false, true}) {
-    for (bool with_data_id : {false, true}) {
-      TestInnerProductOp<float>(kModelParallel, with_bias, with_data_id);
-      TestInnerProductOp<double>(kModelParallel, with_bias, with_data_id);
-    }
-  }
-}
-
-TEST(InnerProductOp, dataparallel_innerproduct_op_test) {
-  for (bool with_bias : {false, true}) {
-    for (bool with_data_id : {false, true}) {
-      TestInnerProductOp<float>(kDataParallel, with_bias, with_data_id);
-      TestInnerProductOp<double>(kDataParallel, with_bias, with_data_id);
-    }
-  }
+TEST(InnerProductOp, innerproduct) {
+// suggest to move PARALLEL_POLICY_SEQ to util.h
+#define PARALLEL_POLICY_SEQ \
+  (ParallelPolicy::kModelParallel)(ParallelPolicy::kDataParallel)
+#define MAKE_ENTRY(data_type, policy, has_bias, has_data_id) \
+  TestInnerProductOp<OF_PP_FIRST_ARG data_type>(policy, has_bias, has_data_id);
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, FLOATING_DATA_TYPE_SEQ,
+                                   PARALLEL_POLICY_SEQ, BOOL_SEQ, BOOL_SEQ)
 }
 
 }  // namespace oneflow
