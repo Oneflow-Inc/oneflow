@@ -8,13 +8,6 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-void CheckBlobDesc(BlobDesc blob_desc, Shape shape, bool has_data_id) {
-  CHECK_EQ(blob_desc.shape(), shape);
-  CHECK_EQ(blob_desc.data_type(), GetDataType<T>::val);
-  CHECK_EQ(blob_desc.has_data_id(), has_data_id);
-}
-
-template<typename T>
 void TestInnerProductOp(ParallelPolicy policy, bool has_bias_term,
                         bool has_data_id) {
   int out_num = 40;
@@ -58,17 +51,22 @@ void TestInnerProductOp(ParallelPolicy policy, bool has_bias_term,
   }
 
   // check out blob
-  CheckBlobDesc<T>(*bn2blobdesc_ptr.at(ip_op->SoleObn()),
-                   Shape({1000, out_num}), has_data_id);
+  BlobDesc out_blob_desc =
+      BlobDesc(Shape({1000, out_num}), GetDataType<T>::val, has_data_id);
+  CHECK(*bn2blobdesc_ptr.at(ip_op->SoleObn()) == out_blob_desc);
 
   // check weight blob
-  CheckBlobDesc<T>(*bn2blobdesc_ptr.at(ip_op->model_bns().at(0)),
-                   Shape({out_num, 3 * 256 * 256}), false);
+  BlobDesc weight_blob_desc =
+      BlobDesc(Shape({out_num, 3 * 256 * 256}), GetDataType<T>::val, false);
+  CHECK(*bn2blobdesc_ptr.at(ip_op->model_bns().at(0)) == weight_blob_desc);
   if (has_bias_term) {
-    CheckBlobDesc<T>(*bn2blobdesc_ptr.at(ip_op->model_bns().at(1)),
-                     Shape({1, out_num}), false);
-    CheckBlobDesc<T>(*bn2blobdesc_ptr.at(ip_op->model_tmp_bns().at(0)),
-                     Shape({1000, 1}), false);
+    BlobDesc bias_blob_desc =
+        BlobDesc(Shape({1, out_num}), GetDataType<T>::val, false);
+    CHECK(*bn2blobdesc_ptr.at(ip_op->model_bns().at(1)) == bias_blob_desc);
+    BlobDesc bias_tmp_blob_desc =
+        BlobDesc(Shape({1000, 1}), GetDataType<T>::val, false);
+    CHECK(*bn2blobdesc_ptr.at(ip_op->model_tmp_bns().at(0))
+          == bias_tmp_blob_desc);
   }
 }
 
