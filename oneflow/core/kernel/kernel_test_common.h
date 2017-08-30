@@ -20,7 +20,6 @@ void BuildKernelCtx(KernelCtx* ctx);
 template<DeviceType device_type>
 void SyncStream(KernelCtx* ctx);
 
-
 template<DeviceType device_type, typename T>
 class KTCommon final {
  public:

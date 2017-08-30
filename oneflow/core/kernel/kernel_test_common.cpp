@@ -31,7 +31,6 @@ void SyncStream<DeviceType::kCPU>(KernelCtx* ctx) {
   ctx->device_ctx->cpu_stream()->CloseReceiveEnd();
 }
 
-
 template<typename T>
 class KTCommon<DeviceType::kCPU, T> final {
  public:
