@@ -9,105 +9,81 @@ namespace oneflow {
 
 namespace test {
 
+template<typename T>
+std::map<std::string, std::vector<T>> GenerateBlobMat();
+
+template<>
+std::map<std::string, std::vector<int32_t>> GenerateBlobMat<int32_t>() {
+  std::map<std::string, std::vector<int32_t>> ret;
+  std::vector<int32_t> in_mat = {1, -1, -2, 2, 0, 5, -10, 100};
+  std::vector<int32_t> out_diff_mat = {-8, 7, -6, 5, -4, 3, -2, 1};
+  std::vector<int32_t> out_mat(8, 0);
+  std::vector<int32_t> in_diff_mat(8, 0);
+  std::vector<int32_t> expected_out_mat = {1, 0, 0, 2, 0, 5, 0, 100};
+  std::vector<int32_t> expected_in_diff_mat = {-8, 0, 0, 5, 0, 3, 0, 1};
+  ret["in"] = in_mat;
+  ret["out"] = out_mat;
+  ret["in_diff"] = in_diff_mat;
+  ret["out_diff"] = out_diff_mat;
+  ret["expected_out"] = expected_out_mat;
+  ret["expected_in_diff"] = expected_in_diff_mat;
+  return ret;
+}
+
+template<>
+std::map<std::string, std::vector<float>> GenerateBlobMat<float>() {
+  std::map<std::string, std::vector<float>> ret;
+  std::vector<float> in_mat = {1, -1, -2, 2, 0, 0.5, -10, 100};
+  std::vector<float> out_diff_mat = {-8, 7, -6, 5, -4, 3, -2, 1};
+  std::vector<float> out_mat(8, 0);
+  std::vector<float> in_diff_mat(8, 0);
+  std::vector<float> expected_out_mat = {1, 0, 0, 2, 0, 0.5, 0, 100};
+  std::vector<float> expected_in_diff_mat = {-8, 0, 0, 5, 0, 3, 0, 1};
+  ret["in"] = in_mat;
+  ret["out"] = out_mat;
+  ret["in_diff"] = in_diff_mat;
+  ret["out_diff"] = out_diff_mat;
+  ret["expected_out"] = expected_out_mat;
+  ret["expected_in_diff"] = expected_in_diff_mat;
+  return ret;
+}
+
 template<DeviceType device_type, typename T>
-class ReluTestUtil final {
- public:
-  static std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr();
-};
-
-template<DeviceType device_type>
-class ReluTestUtil<device_type, float> final {
- public:
-  static std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
-    DataType data_type = DataType::kFloat;
-    BlobDesc* blob_desc = new BlobDesc();
-    blob_desc->mut_shape() = Shape({1, 8});
-    blob_desc->set_data_type(data_type);
-    blob_desc->set_has_data_id(true);
-    using KTCommon = KTCommon<device_type, float>;
-    JobConf tmp_job_conf;
-    tmp_job_conf.set_max_data_id_length(12);
-    JobDesc::Singleton()->InitFromJobConf(tmp_job_conf);
-    std::string data_id = "123456";
-    float in_mat[8] = {1.0, -1.0, -2.0, 2.0, 0.0, 0.5, -10.0, 100.0};
-    float out_diff_mat[8] = {-8.0, 7.0, -6.0, 5.0, -4.0, 3.0, -2.0, 1.0};
-    float out_mat[8] = {0};
-    float in_diff_mat[8] = {0};
-    float expected_out_mat[8] = {1.0, 0, 0, 2.0, 0, 0.5, 0, 100.0};
-    float expected_in_diff_mat[8] = {-8.0, 0, 0, 5.0, 0, 3.0, 0, 1.0};
-    auto in_blob = KTCommon::CreateBlobWithSpecifiedVal(blob_desc, in_mat);
-    auto out_diff_blob =
-        KTCommon::CreateBlobWithSpecifiedVal(blob_desc, out_diff_mat);
-    auto out_blob = KTCommon::CreateBlobWithSpecifiedVal(blob_desc, out_mat);
-    auto in_diff_blob =
-        KTCommon::CreateBlobWithSpecifiedVal(blob_desc, in_diff_mat);
-    auto expected_out_blob =
-        KTCommon::CreateBlobWithSpecifiedVal(blob_desc, expected_out_mat);
-    auto expected_in_diff_blob =
-        KTCommon::CreateBlobWithSpecifiedVal(blob_desc, expected_in_diff_mat);
-    in_blob->set_data_id(0, data_id);
-    out_blob->set_data_id(0, data_id);
-    in_diff_blob->set_data_id(0, data_id);
-    out_diff_blob->set_data_id(0, data_id);
-    expected_out_blob->set_data_id(0, data_id);
-    expected_in_diff_blob->set_data_id(0, data_id);
-    auto bn2blob_ptr = new HashMap<std::string, Blob*>;
-    (*bn2blob_ptr)["in"] = in_blob;
-    (*bn2blob_ptr)["out"] = out_blob;
-    (*bn2blob_ptr)["in_diff"] = in_diff_blob;
-    (*bn2blob_ptr)["out_diff"] = out_diff_blob;
-    (*bn2blob_ptr)["expected_out"] = expected_out_blob;
-    (*bn2blob_ptr)["expected_in_diff"] = expected_in_diff_blob;
-    return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
-  }
-};
-
-template<DeviceType device_type>
-class ReluTestUtil<device_type, int32_t> final {
- public:
-  static std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
-    DataType data_type = DataType::kInt32;
-    BlobDesc* blob_desc = new BlobDesc();
-    blob_desc->mut_shape() = Shape({1, 8});
-    blob_desc->set_data_type(data_type);
-    blob_desc->set_has_data_id(true);
-    using KTCommon = KTCommon<device_type, int32_t>;
-    std::string data_id = "123456";
-    JobConf tmp_job_conf;
-    tmp_job_conf.set_max_data_id_length(12);
-    JobDesc::Singleton()->InitFromJobConf(tmp_job_conf);
-    int32_t in_mat[8] = {1, -1, -2, 2, 0, 5, -10, 100};
-    int32_t out_diff_mat[8] = {-8, 7, -6, 5, -4, 3, -2, 1};
-    int32_t out_mat[8] = {0};
-    int32_t in_diff_mat[8] = {0};
-    int32_t expected_out_mat[8] = {1, 0, 0, 2, 0, 5, 0, 100};
-    int32_t expected_in_diff_mat[8] = {-8, 0, 0, 5, 0, 3, 0, 1};
-    auto in_blob = KTCommon::CreateBlobWithSpecifiedVal(blob_desc, in_mat);
-    auto out_diff_blob =
-        KTCommon::CreateBlobWithSpecifiedVal(blob_desc, out_diff_mat);
-    auto out_blob = KTCommon::CreateBlobWithSpecifiedVal(blob_desc, out_mat);
-    auto in_diff_blob =
-        KTCommon::CreateBlobWithSpecifiedVal(blob_desc, in_diff_mat);
-    auto expected_out_blob =
-        KTCommon::CreateBlobWithSpecifiedVal(blob_desc, expected_out_mat);
-    auto expected_in_diff_blob =
-        KTCommon::CreateBlobWithSpecifiedVal(blob_desc, expected_in_diff_mat);
-    in_blob->set_data_id(0, data_id);
-    out_blob->set_data_id(0, data_id);
-    in_diff_blob->set_data_id(0, data_id);
-    out_diff_blob->set_data_id(0, data_id);
-    expected_out_blob->set_data_id(0, data_id);
-    expected_in_diff_blob->set_data_id(0, data_id);
-    auto bn2blob_ptr = new HashMap<std::string, Blob*>;
-    (*bn2blob_ptr)["in"] = in_blob;
-    (*bn2blob_ptr)["out"] = out_blob;
-    (*bn2blob_ptr)["in_diff"] = in_diff_blob;
-    (*bn2blob_ptr)["out_diff"] = out_diff_blob;
-    (*bn2blob_ptr)["expected_out"] = expected_out_blob;
-    (*bn2blob_ptr)["expected_in_diff"] = expected_in_diff_blob;
-    return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
-  }
-};
+std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
+  DataType data_type = GetDataType<T>::val;
+  BlobDesc* blob_desc = new BlobDesc(Shape({1, 8}), data_type, true);
+  using KTC = KTCommon<device_type, T>;
+  std::string data_id = "123456";
+  JobConf tmp_job_conf;
+  tmp_job_conf.set_max_data_id_length(12);
+  JobDesc::Singleton()->InitFromJobConf(tmp_job_conf);
+  auto blob_mat = GenerateBlobMat<T>();
+  auto in_blob = KTC::CreateBlobWithSpecifiedVal(blob_desc, &blob_mat["in"][0]);
+  auto out_diff_blob =
+      KTC::CreateBlobWithSpecifiedVal(blob_desc, &blob_mat["out_diff"][0]);
+  auto out_blob =
+      KTC::CreateBlobWithSpecifiedVal(blob_desc, &blob_mat["out"][0]);
+  auto in_diff_blob =
+      KTC::CreateBlobWithSpecifiedVal(blob_desc, &blob_mat["in_diff"][0]);
+  auto expected_out_blob =
+      KTC::CreateBlobWithSpecifiedVal(blob_desc, &blob_mat["expected_out"][0]);
+  auto expected_in_diff_blob = KTC::CreateBlobWithSpecifiedVal(
+      blob_desc, &blob_mat["expected_in_diff"][0]);
+  in_blob->template SetDataId<device_type>(0, data_id);
+  out_blob->template SetDataId<device_type>(0, data_id);
+  in_diff_blob->template SetDataId<device_type>(0, data_id);
+  out_diff_blob->template SetDataId<device_type>(0, data_id);
+  expected_out_blob->template SetDataId<device_type>(0, data_id);
+  expected_in_diff_blob->template SetDataId<device_type>(0, data_id);
+  auto bn2blob_ptr = new HashMap<std::string, Blob*>;
+  (*bn2blob_ptr)["in"] = in_blob;
+  (*bn2blob_ptr)["out"] = out_blob;
+  (*bn2blob_ptr)["in_diff"] = in_diff_blob;
+  (*bn2blob_ptr)["out_diff"] = out_diff_blob;
+  (*bn2blob_ptr)["expected_out"] = expected_out_blob;
+  (*bn2blob_ptr)["expected_in_diff"] = expected_in_diff_blob;
+  return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
+}
 
 template<DeviceType device_type, typename T>
 Kernel* BuildReluKernel() {
@@ -115,14 +91,10 @@ Kernel* BuildReluKernel() {
   OperatorConf op_conf;
   op_conf.set_name("relu_op_test");
   ReluOpConf* relu_conf = op_conf.mutable_relu_conf();
-  LogicalBlob* in_blob = new LogicalBlob();
-  in_blob->set_name("relu/in");
-  in_blob->set_data_type(data_type);
-  LogicalBlob* out_blob = new LogicalBlob();
-  out_blob->set_name("relu/out");
-  out_blob->set_data_type(data_type);
-  *(relu_conf->mutable_in()) = *in_blob;
-  *(relu_conf->mutable_out()) = *out_blob;
+  relu_conf->mutable_in()->set_name("relu/in");
+  relu_conf->mutable_in()->set_data_type(data_type);
+  relu_conf->mutable_out()->set_name("relu/out");
+  relu_conf->mutable_out()->set_data_type(data_type);
   auto relu_op = ConstructOp(op_conf);
   OperatorProto op_proto;
   relu_op->ToProto(&op_proto);
@@ -133,16 +105,16 @@ Kernel* BuildReluKernel() {
 
 template<DeviceType device_type, typename T>
 void TestReluKernel() {
-  using KTCommon = KTCommon<device_type, T>;
+  using KTC = KTCommon<device_type, T>;
   KernelCtx ctx;
   BuildKernelCtx<device_type>(&ctx);
-  auto BnInOp2BlobPtr = ReluTestUtil<device_type, T>::BuildBnInOp2BlobPtr();
+  auto BnInOp2BlobPtr = BuildBnInOp2BlobPtr<device_type, T>();
   auto relu_kernel = BuildReluKernel<device_type, T>();
   relu_kernel->Forward(ctx, BnInOp2BlobPtr);
   relu_kernel->Backward(ctx, BnInOp2BlobPtr);
   SyncStream<device_type>(&ctx);
-  KTCommon::CheckResult(BnInOp2BlobPtr, "out", "expected_out");
-  KTCommon::CheckResult(BnInOp2BlobPtr, "in_diff", "expected_in_diff");
+  KTC::CheckResult(BnInOp2BlobPtr, "out", "expected_out");
+  KTC::CheckResult(BnInOp2BlobPtr, "in_diff", "expected_in_diff");
 }
 
 }  // namespace test

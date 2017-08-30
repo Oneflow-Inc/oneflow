@@ -15,15 +15,23 @@ const char* Blob::data_id(int32_t no) const {
   return data_id_ptr_ + no * JobDesc::Singleton()->SizeOfOneDataId();
 }
 
-void Blob::set_data_id(int32_t no, const std::string& data_id) {
+template<>
+void Blob::SetDataId<DeviceType::kCPU>(int32_t no, const std::string& data_id) {
   size_t max_length = JobDesc::Singleton()->SizeOfOneDataId();
-  char* ptr = new char[max_length];
-  for (size_t i = 0; i < data_id.length() && i < max_length; ++i) {
-    *(ptr + i) = data_id[i];
-  }
-  for (size_t i = data_id.length(); i < max_length; ++i) { *(ptr + i) = '\0'; }
-  CudaCheck(cudaMemcpy(mut_data_id(no), ptr, max_length, cudaMemcpyHostToHost));
-  delete ptr;
+  CHECK_GE(max_length, data_id.length());
+  memcpy(mut_data_id(no), data_id.c_str(), data_id.length());
+  memset(mut_data_id(no) + data_id.length(), '\0',
+         max_length - data_id.length());
+}
+
+template<>
+void Blob::SetDataId<DeviceType::kGPU>(int32_t no, const std::string& data_id) {
+  size_t max_length = JobDesc::Singleton()->SizeOfOneDataId();
+  CHECK_GE(max_length, data_id.length());
+  CudaCheck(cudaMemcpy(mut_data_id(no), data_id.c_str(), data_id.length(),
+                       cudaMemcpyHostToHost));
+  CudaCheck(cudaMemset(mut_data_id(no) + data_id.length(), '\0',
+                       max_length - data_id.length()));
 }
 
 template<>
