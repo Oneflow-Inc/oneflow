@@ -68,7 +68,7 @@ void TestMdUpdateKernel() {
 
 TEST(MdUpdateKernel, model_update) {
 #define MAKE_ENTRY(device_type, type_pair) \
-  test::TestMdUpdateKernel<device_type, OF_PP_FIRST_ARG type_pair>();
+  test::TestMdUpdateKernel<device_type, OF_PP_PAIR_FIRST(type_pair)>();
   OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, OF_PP_INTERNAL_SEQ_PRODUCT(
                                        DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ))
 }
