@@ -77,9 +77,6 @@ void TestInnerProductOp(ParallelPolicy policy, bool has_bias_term,
 }  // namespace
 
 TEST(InnerProductOp, innerproduct) {
-// suggest to move PARALLEL_POLICY_SEQ to util.h
-#define PARALLEL_POLICY_SEQ \
-  (ParallelPolicy::kModelParallel)(ParallelPolicy::kDataParallel)
 #define MAKE_ENTRY(data_type, policy, has_bias, has_data_id) \
   TestInnerProductOp<OF_PP_FIRST_ARG data_type>(policy, has_bias, has_data_id);
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, FLOATING_DATA_TYPE_SEQ,

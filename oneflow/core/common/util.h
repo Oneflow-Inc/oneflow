@@ -122,6 +122,8 @@ inline uint32_t NewRandomSeed() {
 
 #define DEVICE_TYPE_SEQ (DeviceType::kCPU)(DeviceType::kGPU)
 #define BOOL_SEQ (true)(false)
+#define PARALLEL_POLICY_SEQ \
+  (ParallelPolicy::kModelParallel)(ParallelPolicy::kDataParallel)
 
 }  // namespace oneflow
 
