@@ -72,7 +72,8 @@ Kernel* CreateRmspropMdUpdateKernel(const OperatorConf& op_conf) {
 #define RMSPROP_MDUPDATE_KERNEL_ENTRY(type_cpp, type_proto) \
   {type_proto,                                              \
    []() { return new RMSPropMdUpdateKernel<device_type, type_cpp>; }},
-      FOR_EACH_PAIR(RMSPROP_MDUPDATE_KERNEL_ENTRY, FLOATING_DATA_TYPE_SEQ)};
+      OF_PP_FOR_EACH_TUPLE(RMSPROP_MDUPDATE_KERNEL_ENTRY,
+                           FLOATING_DATA_TYPE_SEQ)};
   return data_type2creator.at(JobDesc::Singleton()->default_data_type())();
 }
 

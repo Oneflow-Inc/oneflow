@@ -50,7 +50,7 @@ void CloneKernel<device_type, T>::Backward(
     }                                                                     \
   };
 
-FOR_EACH_PAIR(DEFINE_FLOATING_CLONE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(DEFINE_FLOATING_CLONE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 #define DEFINE_NONFLOAT_CLONE_KERNEL_UTIL(type_cpp, type_proto)      \
   template<DeviceType device_type>                                   \
@@ -62,8 +62,8 @@ FOR_EACH_PAIR(DEFINE_FLOATING_CLONE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
     }                                                                \
   };
 
-FOR_EACH_PAIR(DEFINE_NONFLOAT_CLONE_KERNEL_UTIL,
-              INT_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(DEFINE_NONFLOAT_CLONE_KERNEL_UTIL,
+                     INT_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ)
 
 namespace {
 
@@ -72,7 +72,7 @@ Kernel* CreateCloneKernel(const OperatorConf& op_conf) {
   static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
 #define CLONE_KERNEL_ENTRY(type_cpp, type_proto) \
   {type_proto, []() { return new CloneKernel<device_type, type_cpp>; }},
-      FOR_EACH_PAIR(CLONE_KERNEL_ENTRY, ALL_DATA_TYPE_SEQ)};
+      OF_PP_FOR_EACH_TUPLE(CLONE_KERNEL_ENTRY, ALL_DATA_TYPE_SEQ)};
   return data_type2creator.at(op_conf.clone_conf().data_type())();
 }
 

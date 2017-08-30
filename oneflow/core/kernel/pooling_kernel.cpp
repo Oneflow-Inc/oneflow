@@ -267,7 +267,7 @@ Kernel* CreatePoolingKernel(const OperatorConf& op_conf) {
   static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
 #define POOLING_KERNEL_ENTRY(type_cpp, type_proto) \
   {type_proto, []() { return new PoolingKernel<device_type, type_cpp>; }},
-      FOR_EACH_PAIR(POOLING_KERNEL_ENTRY, ARITHMETIC_DATA_TYPE_SEQ)};
+      OF_PP_FOR_EACH_TUPLE(POOLING_KERNEL_ENTRY, ARITHMETIC_DATA_TYPE_SEQ)};
   return data_type2creator.at(op_conf.pooling_conf().in().data_type())();
 }
 

@@ -49,7 +49,7 @@ Kernel* CreateDataLoaderKernel(const OperatorConf& op_conf) {
   static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
 #define DATA_LOADER_KERNEL_ENTRY(type_cpp, type_proto) \
   {type_proto, []() { return new DataLoaderKernel<type_cpp>; }},
-      FOR_EACH_PAIR(DATA_LOADER_KERNEL_ENTRY, ARITHMETIC_DATA_TYPE_SEQ)};
+      OF_PP_FOR_EACH_TUPLE(DATA_LOADER_KERNEL_ENTRY, ARITHMETIC_DATA_TYPE_SEQ)};
   return data_type2creator.at(op_conf.data_loader_conf().out().data_type())();
 }
 

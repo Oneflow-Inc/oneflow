@@ -37,7 +37,6 @@ namespace oneflow {
   ARITHMETIC_DATA_TYPE_SEQ \
   CHAR_DATA_TYPE_SEQ
 
-#define FOR_EACH_PAIR OF_PP_FOR_EACH_TUPLE
 #define SEQ_PRODUCT_FOR_EACH_TUPLE OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE
 
 bool IsIntegral(DataType data_type);
@@ -56,7 +55,7 @@ struct GetDataType<void> {
   struct GetDataType<type_cpp> {                    \
     static const DataType val;                      \
   };
-FOR_EACH_PAIR(DECLARE_GET_DATA_TYPE, ALL_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(DECLARE_GET_DATA_TYPE, ALL_DATA_TYPE_SEQ);
 
 template<DataType data_type>
 struct GetSizeOf;
@@ -66,13 +65,13 @@ struct GetSizeOf;
   struct GetSizeOf<type_proto> {                  \
     static const size_t val;                      \
   };
-FOR_EACH_PAIR(DECLARE_GET_SIZE_OF, ALL_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(DECLARE_GET_SIZE_OF, ALL_DATA_TYPE_SEQ);
 
 inline size_t GetSizeOfDataType(DataType data_type) {
   static const HashMap<int, size_t> data_type2size = {
 #define SIZE_OF_DATA_TYPE_ENTRY(type_cpp, type_proto) \
   {type_proto, sizeof(type_cpp)},
-      FOR_EACH_PAIR(SIZE_OF_DATA_TYPE_ENTRY, ALL_DATA_TYPE_SEQ)};
+      OF_PP_FOR_EACH_TUPLE(SIZE_OF_DATA_TYPE_ENTRY, ALL_DATA_TYPE_SEQ)};
   return data_type2size.at(data_type);
 }
 

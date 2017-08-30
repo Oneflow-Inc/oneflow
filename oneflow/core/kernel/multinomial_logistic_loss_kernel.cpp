@@ -68,8 +68,8 @@ Kernel* CreateMultinomialLogisticLossKernel(const OperatorConf& op_conf) {
 #define MULTINOMIAL_LOGISTIC_LOSS_KERNEL_ENTRY(type_cpp, type_proto) \
   {type_proto,                                                       \
    []() { return new MultinomialLogisticLossKernel<device_type, type_cpp>; }},
-      FOR_EACH_PAIR(MULTINOMIAL_LOGISTIC_LOSS_KERNEL_ENTRY,
-                    FLOATING_DATA_TYPE_SEQ)};
+      OF_PP_FOR_EACH_TUPLE(MULTINOMIAL_LOGISTIC_LOSS_KERNEL_ENTRY,
+                           FLOATING_DATA_TYPE_SEQ)};
   return data_type2creator.at(
       op_conf.multinomial_logistic_loss_conf().prediction().data_type())();
 }

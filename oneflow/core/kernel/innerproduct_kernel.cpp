@@ -134,7 +134,7 @@ Kernel* CreateInnerProductKernel(const OperatorConf& op_conf) {
   static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
 #define INNER_PRODUCT_KERNEL_ENTRY(type_cpp, type_proto) \
   {type_proto, []() { return new InnerProductKernel<device_type, type_cpp>; }},
-      FOR_EACH_PAIR(INNER_PRODUCT_KERNEL_ENTRY, FLOATING_DATA_TYPE_SEQ)};
+      OF_PP_FOR_EACH_TUPLE(INNER_PRODUCT_KERNEL_ENTRY, FLOATING_DATA_TYPE_SEQ)};
   return data_type2creator.at(op_conf.innerproduct_conf().in().data_type())();
 }
 
