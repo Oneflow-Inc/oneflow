@@ -56,9 +56,6 @@ class KTCommon final {
   static void CheckFillResult(const Blob* blob, const FillConf& fill_conf);
 };
 
-#define DeviceTypeSeq (DeviceType::kCPU)(DeviceType::kGPU)
-#define BoolSeq (true)(false)
-
 }  // namespace test
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_TEST_COMMON_H_
