@@ -59,6 +59,6 @@ class RMSPropMdUpdateKernelUtil<DeviceType::kGPU, FloatingPointType> final {
 
 #define INSTANTIATE_GPU_KERNEL_UTIL(type_cpp, type_proto) \
   template class RMSPropMdUpdateKernelUtil<DeviceType::kGPU, type_cpp>;
-FOR_EACH_PAIR(INSTANTIATE_GPU_KERNEL_UTIL, FLOATING_DATA_TYPE_PAIR())
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_GPU_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
