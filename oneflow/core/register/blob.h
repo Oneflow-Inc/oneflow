@@ -19,6 +19,8 @@ class Blob final {
   const char* data_id() const { return data_id(0); }
   char* mut_data_id() { return mut_data_id(0); }
 
+  void set_data_id(int32_t no, const std::string& data_id);
+
   template<typename T = void>
   const T* dptr() const {
     CheckDataType<T>();
