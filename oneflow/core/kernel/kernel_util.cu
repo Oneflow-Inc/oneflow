@@ -176,6 +176,6 @@ class KernelUtil<DeviceType::kGPU, T> final {
 
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto) \
   template class KernelUtil<DeviceType::kGPU, type_cpp>;
-FOR_EACH_PAIR(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_PAIR())
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

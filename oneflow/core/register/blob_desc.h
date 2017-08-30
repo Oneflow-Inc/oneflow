@@ -18,6 +18,8 @@ class BlobDesc final {
     data_type_ = proto.data_type();
     has_data_id_ = proto.has_data_id();
   }
+  BlobDesc(Shape shape, DataType data_type, bool has_data_id)
+      : shape_(shape), data_type_(data_type), has_data_id_(has_data_id) {}
 
   const Shape& shape() const { return shape_; }
   Shape& mut_shape() { return shape_; }
