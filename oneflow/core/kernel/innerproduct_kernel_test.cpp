@@ -31,55 +31,55 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
 
   (*bn2blob_ptr)["in"] = KTCommon<device_type, T>::CreateBlobWithSpecifiedVal(
-      CreateDefaultBlobDescWithShape<T>({2, 1, 2, 2}), in_mat);
+      new BlobDesc(Shape({2, 1, 2, 2}),GetDataType<T>::val, false), in_mat);
   (*bn2blob_ptr)["weight"] =
       KTCommon<device_type, T>::CreateBlobWithSpecifiedVal(
-          CreateDefaultBlobDescWithShape<T>({3, 4}), weight_mat);
+          new BlobDesc(Shape({3, 4}),GetDataType<T>::val, false), weight_mat);
   (*bn2blob_ptr)["out"] = KTCommon<device_type, T>::CreateBlobWithRandomVal(
-      CreateDefaultBlobDescWithShape<T>({2, 3}));
+      new BlobDesc(Shape({2, 3}),GetDataType<T>::val, false));
   (*bn2blob_ptr)["out_diff"] = (*bn2blob_ptr)["out"];
   (*bn2blob_ptr)["in_diff"] = KTCommon<device_type, T>::CreateBlobWithRandomVal(
-      CreateDefaultBlobDescWithShape<T>({2, 1, 2, 2}));
+      new BlobDesc(Shape({2, 1, 2, 2}),GetDataType<T>::val, false));
   (*bn2blob_ptr)["weight_diff"] =
       KTCommon<device_type, T>::CreateBlobWithRandomVal(
-          CreateDefaultBlobDescWithShape<T>({3, 4}));
+          new BlobDesc(Shape({3, 4}),GetDataType<T>::val, false));
 
   if (has_bias_term) {
     (*bn2blob_ptr)["bias"] =
         KTCommon<device_type, T>::CreateBlobWithSpecifiedVal(
-            CreateDefaultBlobDescWithShape<T>({1, 3}), bias_mat);
+            new BlobDesc(Shape({1, 3}),GetDataType<T>::val, false), bias_mat);
     (*bn2blob_ptr)["bias_multiplier"] =
         KTCommon<device_type, T>::CreateBlobWithSpecifiedVal(
-            CreateDefaultBlobDescWithShape<T>({2, 1}), bias_multiplier_mat);
+            new BlobDesc(Shape({2, 1}),GetDataType<T>::val, false), bias_multiplier_mat);
     (*bn2blob_ptr)["bias_diff"] =
         KTCommon<device_type, T>::CreateBlobWithRandomVal(
-            CreateDefaultBlobDescWithShape<T>({1, 3}));
+            new BlobDesc(Shape({1, 3}),GetDataType<T>::val, false));
     (*bn2blob_ptr)["expected_bias_diff"] =
         KTCommon<device_type, T>::CreateBlobWithSpecifiedVal(
-            CreateDefaultBlobDescWithShape<T>({1, 3}), expected_bias_diff_mat);
+            new BlobDesc(Shape({1, 3}),GetDataType<T>::val, false), expected_bias_diff_mat);
     (*bn2blob_ptr)["expected_out"] =
         KTCommon<device_type, T>::CreateBlobWithSpecifiedVal(
-            CreateDefaultBlobDescWithShape<T>({2, 3}), expected_out_mat);
+            new BlobDesc(Shape({2, 3}),GetDataType<T>::val, false), expected_out_mat);
     (*bn2blob_ptr)["expected_in_diff"] =
         KTCommon<device_type, T>::CreateBlobWithSpecifiedVal(
-            CreateDefaultBlobDescWithShape<T>({2, 1, 2, 2}),
+            new BlobDesc(Shape({2, 1, 2, 2}),GetDataType<T>::val, false),
             expected_in_diff_mat);
     (*bn2blob_ptr)["expected_weight_diff"] =
         KTCommon<device_type, T>::CreateBlobWithSpecifiedVal(
-            CreateDefaultBlobDescWithShape<T>({3, 4}),
+            new BlobDesc(Shape({3, 4}),GetDataType<T>::val, false),
             expected_weight_diff_mat);
   } else {
     (*bn2blob_ptr)["expected_out"] =
         KTCommon<device_type, T>::CreateBlobWithSpecifiedVal(
-            CreateDefaultBlobDescWithShape<T>({2, 3}),
+            new BlobDesc(Shape({2, 3}),GetDataType<T>::val, false),
             expected_out_without_bias_mat);
     (*bn2blob_ptr)["expected_in_diff"] =
         KTCommon<device_type, T>::CreateBlobWithSpecifiedVal(
-            CreateDefaultBlobDescWithShape<T>({2, 1, 2, 2}),
+            new BlobDesc(Shape({2, 1, 2, 2}),GetDataType<T>::val, false),
             expected_in_diff_without_bias_mat);
     (*bn2blob_ptr)["expected_weight_diff"] =
         KTCommon<device_type, T>::CreateBlobWithSpecifiedVal(
-            CreateDefaultBlobDescWithShape<T>({3, 4}),
+            new BlobDesc(Shape({3, 4}),GetDataType<T>::val, false),
             expected_weight_diff_without_bias_mat);
   }
   return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
@@ -90,12 +90,12 @@ std::function<Blob*(const std::string&)> BuildEmptyMdlForFill() {
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
 
   (*bn2blob_ptr)["weight"] = KTCommon<device_type, T>::CreateBlobWithRandomVal(
-      CreateDefaultBlobDescWithShape<T>({100, 100}));
+      new BlobDesc(Shape({100, 100}),GetDataType<T>::val, false));
   (*bn2blob_ptr)["bias"] = KTCommon<device_type, T>::CreateBlobWithRandomVal(
-      CreateDefaultBlobDescWithShape<T>({100, 100}));
+      new BlobDesc(Shape({100, 100}),GetDataType<T>::val, false));
   (*bn2blob_ptr)["bias_multiplier"] =
       KTCommon<device_type, T>::CreateBlobWithRandomVal(
-          CreateDefaultBlobDescWithShape<T>({100, 100}));
+          new BlobDesc(Shape({100, 100}),GetDataType<T>::val, false));
 
   return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
 }

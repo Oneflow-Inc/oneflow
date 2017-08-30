@@ -20,8 +20,6 @@ void BuildKernelCtx(KernelCtx* ctx);
 template<DeviceType device_type>
 void SyncStream(KernelCtx* ctx);
 
-template<typename T>
-BlobDesc* CreateDefaultBlobDescWithShape(const std::vector<int64_t>& v);
 
 template<DeviceType device_type, typename T>
 class KTCommon final {
