@@ -38,8 +38,8 @@ class ReluKernelUtil<DeviceType::kGPU, T> final {
   }
 };
 
-#define DECLARE_RELU_KERNEL_UTIL(type_cpp, type_proto) \
+#define INSTANTIATE_RELU_KERNEL_UTIL(type_cpp, type_proto) \
   template class ReluKernelUtil<DeviceType::kGPU, type_cpp>;
-FOR_EACH_PAIR(DECLARE_RELU_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_PAIR())
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_RELU_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

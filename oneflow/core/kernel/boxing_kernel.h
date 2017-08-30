@@ -6,7 +6,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename FloatingPointType>
+template<typename T>
 class BoxingKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BoxingKernel);
@@ -69,6 +69,14 @@ class BoxingKernel final : public Kernel {
                                      const int32_t src_concat_axis,
                                      const int32_t dst_split_axis,
                                      std::vector<CopyRule>* copy_rules) const;
+  // Infer copy rules for data id
+  void InferDataIdCopyRules(const std::vector<std::string>& src_bns,
+                            const std::vector<std::string>& dst_bns,
+                            const std::vector<Blob*> src_blobs,
+                            const std::vector<Blob*> dst_blobs,
+                            const int32_t src_concat_axis,
+                            const int32_t dst_split_axis,
+                            std::vector<CopyRule>* rules) const;
 
   // Do direct memory copy from saved rules
   void CopyDataFromRules(const KernelCtx& ctx,
@@ -87,7 +95,7 @@ class BoxingKernel final : public Kernel {
   void ConcatBoxBackward(const KernelCtx& ctx,
                          std::function<Blob*(const std::string&)>) const;
 
-  using WardFunc = void (BoxingKernel<device_type, FloatingPointType>::*)(
+  using WardFunc = void (BoxingKernel<T>::*)(
       const KernelCtx&, std::function<Blob*(const std::string&)>) const;
 
   // NOTE: Due to current design, there is only one boxing thread, thus no
