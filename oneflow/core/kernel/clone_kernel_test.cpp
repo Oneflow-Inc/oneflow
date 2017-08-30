@@ -76,7 +76,8 @@ TEST(CloneKernel, clone) {
 #define MAKE_ENTRY(device_type, type_pair)                       \
   test::TestCloneKernel<device_type, OF_PP_FIRST_ARG type_pair>( \
       IsFloatingPoint(OF_PP_SECOND_ARG type_pair));
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, DeviceTypeSeq, ALL_DATA_TYPE_SEQ)
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, DEVICE_TYPE_SEQ,
+                                   ALL_DATA_TYPE_SEQ)
 }
 
 }  // namespace oneflow
