@@ -19,8 +19,6 @@
 #include "glog/logging.h"
 #include "gtest/gtest.h"
 
-#include "oneflow/core/common/pp_seq.h"
-
 namespace oneflow {
 
 #define OF_DISALLOW_COPY(ClassName)     \
@@ -121,6 +119,9 @@ inline uint32_t NewRandomSeed() {
 #define LOG_THRESHOLD (1e-20)
 #define MAX_WITH_LOG_THRESHOLD(x) ((x) > LOG_THRESHOLD ? (x) : LOG_THRESHOLD)
 #define SAFE_LOG(x) logf(MAX_WITH_LOG_THRESHOLD(x))
+
+#define DEVICE_TYPE_SEQ (DeviceType::kCPU)(DeviceType::kGPU)
+#define BOOL_SEQ (true)(false)
 
 }  // namespace oneflow
 
