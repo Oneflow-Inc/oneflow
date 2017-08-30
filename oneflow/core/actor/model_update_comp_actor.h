@@ -29,7 +29,7 @@ class MdUpdtCompActor final : public CompActor {
   void AsyncCopyModelFromCurToNext() {
     Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
     Regst* next_model_regst = GetNextWriteableRegst(model_regst_desc_id_);
-    MemcpyFunc(GenDefaultKernelCtx(),
+    MemcpyFunc(GenDefaultKernelCtx().device_ctx,
                next_model_regst->packed_blob()->mut_dptr(),
                model_regst->packed_blob()->dptr(),
                next_model_regst->packed_blob()->TotalByteSize());
@@ -44,7 +44,7 @@ class MdUpdtCompActor final : public CompActor {
   int64_t related_save_task_id_;
   uint32_t random_seed_;
 
-  std::function<void(const KernelCtx&, void*, const void*, size_t)> MemcpyFunc;
+  std::function<void(DeviceCtx*, void*, const void*, size_t)> MemcpyFunc;
 };
 
 }  // namespace oneflow

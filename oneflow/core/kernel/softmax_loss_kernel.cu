@@ -6,20 +6,18 @@ namespace oneflow {
 
 namespace {
 
-template<typename FloatingPointType>
+template<typename T>
 __global__ void SoftmaxLossForwardTmp(const int64_t n, const int64_t w,
-                                      const FloatingPointType* label,
-                                      const FloatingPointType* prob,
-                                      FloatingPointType* tmp) {
+                                      const int32_t* label, const T* prob,
+                                      T* tmp) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     tmp[i] = -SAFE_LOG(prob[i * w + static_cast<int64_t>(label[i])]);
   }
 }
 
-template<typename FloatingPointType>
+template<typename T>
 __global__ void SoftmaxLossBackwardSub(const int64_t n, const int64_t w,
-                                       const FloatingPointType* label,
-                                       FloatingPointType* in_diff) {
+                                       const int32_t* label, T* in_diff) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     in_diff[i * w + static_cast<int64_t>(label[i])] -= 1;
   }
@@ -27,32 +25,31 @@ __global__ void SoftmaxLossBackwardSub(const int64_t n, const int64_t w,
 
 }  // namespace
 
-template<typename FloatingPointType>
-class SoftmaxLossKernelUtil<DeviceType::kGPU, FloatingPointType> final {
+template<typename T>
+class SoftmaxLossKernelUtil<DeviceType::kGPU, T> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SoftmaxLossKernelUtil);
   SoftmaxLossKernelUtil() = delete;
 
-  static void ComputeLoss(const KernelCtx& ctx, const int64_t n,
-                          const int64_t w, const FloatingPointType* label,
-                          const FloatingPointType* prob, FloatingPointType* tmp,
-                          FloatingPointType* loss) {
-    SoftmaxLossForwardTmp<FloatingPointType>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-           ctx.device_ctx->cuda_stream()>>>(n, w, label, prob, tmp);
-    KernelUtil<DeviceType::kGPU, FloatingPointType>::Sum(
-        ctx, n, tmp, loss, tmp, sizeof(FloatingPointType) * n);
+  static void ComputeLoss(DeviceCtx* ctx, const int64_t n, const int64_t w,
+                          const int32_t* label, const T* prob, T* tmp,
+                          T* loss) {
+    SoftmaxLossForwardTmp<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock,
+                               0, ctx->cuda_stream()>>>(n, w, label, prob, tmp);
+    KernelUtil<DeviceType::kGPU, T>::Sum(ctx, n, tmp, loss, tmp, sizeof(T) * n);
   }
 
-  static void BackwardSub(const KernelCtx& ctx, const int64_t n,
-                          const int64_t w, const FloatingPointType* label,
-                          FloatingPointType* in_diff) {
-    SoftmaxLossBackwardSub<FloatingPointType>
+  static void BackwardSub(DeviceCtx* ctx, const int64_t n, const int64_t w,
+                          const int32_t* label, T* in_diff) {
+    SoftmaxLossBackwardSub<T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-           ctx.device_ctx->cuda_stream()>>>(n, w, label, in_diff);
+           ctx->cuda_stream()>>>(n, w, label, in_diff);
   }
 };
 
-INSTANTIATE_GPU_KERNEL_UTIL_CLASS(SoftmaxLossKernelUtil);
+#define INSTANTIATE_SOFTMAX_LOSS_KERNEL_UTIL(type_cpp, type_proto) \
+  template class SoftmaxLossKernelUtil<DeviceType::kGPU, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_SOFTMAX_LOSS_KERNEL_UTIL,
+                     FLOATING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

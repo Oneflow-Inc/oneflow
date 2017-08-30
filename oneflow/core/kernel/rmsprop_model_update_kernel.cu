@@ -33,9 +33,6 @@ __global__ void UpdateModelGpu(const int64_t n, FloatingPointType* model,
 template<typename FloatingPointType>
 class RMSPropMdUpdateKernelUtil<DeviceType::kGPU, FloatingPointType> final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(RMSPropMdUpdateKernelUtil);
-  RMSPropMdUpdateKernelUtil() = delete;
-
   static void UpdateMeanSquare(const KernelCtx& ctx, const int64_t n,
                                const FloatingPointType alpha,
                                const FloatingPointType decay_rate,
@@ -60,6 +57,8 @@ class RMSPropMdUpdateKernelUtil<DeviceType::kGPU, FloatingPointType> final {
   }
 };
 
-INSTANTIATE_GPU_KERNEL_UTIL_CLASS(RMSPropMdUpdateKernelUtil);
+#define INSTANTIATE_GPU_KERNEL_UTIL(type_cpp, type_proto) \
+  template class RMSPropMdUpdateKernelUtil<DeviceType::kGPU, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_GPU_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
