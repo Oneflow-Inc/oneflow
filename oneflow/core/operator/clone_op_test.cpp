@@ -28,9 +28,8 @@ void TestCloneOp() {
 }
 
 TEST(CloneOp, infer_blob_desc) {
-#define SEQ (true)(false)
-#define MAKE_ENTRY(x, y) TestCloneOp<OF_PP_INTERNAL_FIRST_ARG x, y>();
-  SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, ALL_DATA_TYPE_PAIR(), SEQ)
+#define MAKE_ENTRY(x, y) TestCloneOp<OF_PP_FIRST_ARG x, y>();
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, ALL_DATA_TYPE_SEQ, BOOL_SEQ)
 }
 
 }  // namespace oneflow

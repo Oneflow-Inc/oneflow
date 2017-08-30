@@ -1,10 +1,8 @@
 #ifndef ONEFLOW_CORE_COMMON_PREPROCESSOR_INTERNAL_H_
 #define ONEFLOW_CORE_COMMON_PREPROCESSOR_INTERNAL_H_
 
-// seq example0: (0)(1)(2)
-// seq example1: (0)(1)(2)
+// Base
 
-//	pp base
 #define OF_PP_INTERNAL_STRINGIZE(text) OF_PP_INTERNAL_STRINGIZE_I(text)
 #define OF_PP_INTERNAL_STRINGIZE_I(text) #text
 
@@ -32,7 +30,8 @@
 #define OF_PP_INTERNAL_MAKE_TUPLE_SEQ(...) \
   (OF_PP_INTERNAL_MAKE_TUPLE(__VA_ARGS__))
 
-//	tuple
+// Tuple
+
 #define OF_PP_INTERNAL_TUPLE_PUSH_FRONT(tuple, x)          \
   OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_TUPLE_PUSH_FRONT_,     \
                      OF_PP_INTERNAL_IS_TUPLE_EMPTY(tuple)) \
@@ -123,7 +122,7 @@
 #define OF_PP_INTERNAL_CAT5(e0, e1, e2, e3, e4) e0##e1##e2##e3##e4
 #define OF_PP_INTERNAL_IS_EMPTY_CASE_0001 ,
 
-//	pp seq product
+// Seq Product
 
 #define OF_PP_INTERNAL_SEQ_PRODUCT_FOR_EACH_TUPLE(macro, ...) \
   OF_PP_INTERNAL_SEQ_FOR_EACH_TUPLE(macro, _,                 \
@@ -150,7 +149,8 @@
   OF_PP_INTERNAL_TUPLE_SEQ_X_ATOMIC_SEQ(                           \
       OF_PP_INTERNAL_SEQ_PRODUCT_4(seq1, seq2, seq3, seq4), seq0)
 
-//	pp seq for each
+// Seq ForEach
+
 #define OF_PP_INTERNAL_FOR_EACH_TUPLE(macro, seq) \
   OF_PP_INTERNAL_SEQ_FOR_EACH_TUPLE(macro, _, seq)
 #define OF_PP_INTERNAL_TUPLE_SEQ_X_ATOMIC_SEQ(tuple_seq, atomic_seq)       \
@@ -169,7 +169,8 @@
 #define OF_PP_INTERNAL_MAKE_SEQ_TUPLE_PUSH_FRONT(tuple, x) \
   (OF_PP_INTERNAL_TUPLE_PUSH_FRONT(tuple, x))
 
-//	pp seq size
+// Seq Size
+
 #define OF_PP_INTERNAL_SEQ_SIZE(seq) OF_PP_INTERNAL_SEQ_SIZE_I(seq)
 #define OF_PP_INTERNAL_SEQ_SIZE_I(seq) \
   OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_SEQ_SIZE_, OF_PP_INTERNAL_SEQ_SIZE_0 seq)

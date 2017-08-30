@@ -120,6 +120,9 @@ inline uint32_t NewRandomSeed() {
 #define MAX_WITH_LOG_THRESHOLD(x) ((x) > LOG_THRESHOLD ? (x) : LOG_THRESHOLD)
 #define SAFE_LOG(x) logf(MAX_WITH_LOG_THRESHOLD(x))
 
+#define DEVICE_TYPE_SEQ (DeviceType::kCPU)(DeviceType::kGPU)
+#define BOOL_SEQ (true)(false)
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_UTIL_H_

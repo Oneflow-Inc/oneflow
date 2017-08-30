@@ -70,7 +70,7 @@ Kernel* CreateSoftmaxLossKernel(const OperatorConf& op_conf) {
   static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
 #define SOFTMAX_LOSS_KERNEL_ENTRY(type_cpp, type_proto) \
   {type_proto, []() { return new SoftmaxLossKernel<device_type, type_cpp>; }},
-      FOR_EACH_PAIR(SOFTMAX_LOSS_KERNEL_ENTRY, FLOATING_DATA_TYPE_PAIR())};
+      OF_PP_FOR_EACH_TUPLE(SOFTMAX_LOSS_KERNEL_ENTRY, FLOATING_DATA_TYPE_SEQ)};
   return data_type2creator.at(
       op_conf.softmax_loss_conf().prediction().data_type())();
 }

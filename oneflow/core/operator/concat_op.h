@@ -24,6 +24,9 @@ class ConcatOp final : public UserOperator {
   std::string ibn2lbn(const std::string& input_bn) const override {
     return ibn2lbn_.at(input_bn);
   }
+  std::string obn2lbn(const std::string& output_bn) const override {
+    return op_name() + "/" + GetStringFromSpecialConf(output_bn);
+  }
 
   std::unordered_map<std::string, std::string> ibn2lbn_;
 };

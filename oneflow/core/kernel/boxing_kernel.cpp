@@ -370,8 +370,8 @@ void BoxingKernel<T>::AddBoxBackward(
     }                                                                    \
     CopyDataFromRules(ctx, BnInOp2Blob, bw_copy_rules_);                 \
   }
-FOR_EACH_PAIR(FLOATING_BOXING_KERNEL_CONCAT_BOX_BACKWARD,
-              FLOATING_DATA_TYPE_PAIR());
+OF_PP_FOR_EACH_TUPLE(FLOATING_BOXING_KERNEL_CONCAT_BOX_BACKWARD,
+                     FLOATING_DATA_TYPE_SEQ);
 
 #define FLOATING_BOXING_KERNEL_ADD_BOX_FORWARD(type_cpp, type_proto)          \
   template<>                                                                  \
@@ -392,8 +392,8 @@ FOR_EACH_PAIR(FLOATING_BOXING_KERNEL_CONCAT_BOX_BACKWARD,
     }                                                                         \
     CopyDataFromRules(ctx, BnInOp2Blob, fw_copy_rules_);                      \
   }
-FOR_EACH_PAIR(FLOATING_BOXING_KERNEL_ADD_BOX_FORWARD,
-              FLOATING_DATA_TYPE_PAIR());
+OF_PP_FOR_EACH_TUPLE(FLOATING_BOXING_KERNEL_ADD_BOX_FORWARD,
+                     FLOATING_DATA_TYPE_SEQ);
 
 #define NON_FLOATING_BOXING_KERNEL_ADD_BOX_FORWARD(type_cpp, type_proto) \
   template<>                                                             \
@@ -402,7 +402,8 @@ FOR_EACH_PAIR(FLOATING_BOXING_KERNEL_ADD_BOX_FORWARD,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {      \
     UNEXPECTED_RUN();                                                    \
   }
-FOR_EACH_PAIR(NON_FLOATING_BOXING_KERNEL_ADD_BOX_FORWARD, INT_DATA_TYPE_PAIR());
+OF_PP_FOR_EACH_TUPLE(NON_FLOATING_BOXING_KERNEL_ADD_BOX_FORWARD,
+                     INT_DATA_TYPE_SEQ);
 
 #define NON_FLOATING_BOXING_KERNEL_CONCAT_BOX_BACKWARD(type_cpp, type_proto) \
   template<>                                                                 \
@@ -411,8 +412,8 @@ FOR_EACH_PAIR(NON_FLOATING_BOXING_KERNEL_ADD_BOX_FORWARD, INT_DATA_TYPE_PAIR());
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {          \
     UNEXPECTED_RUN();                                                        \
   }
-FOR_EACH_PAIR(NON_FLOATING_BOXING_KERNEL_CONCAT_BOX_BACKWARD,
-              INT_DATA_TYPE_PAIR());
+OF_PP_FOR_EACH_TUPLE(NON_FLOATING_BOXING_KERNEL_CONCAT_BOX_BACKWARD,
+                     INT_DATA_TYPE_SEQ);
 
 namespace {
 
@@ -421,7 +422,7 @@ Kernel* CreateBoxingKernel(const OperatorConf& op_conf) {
   static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
 #define BOXING_KERNEL_ENTRY(type_cpp, type_proto) \
   {type_proto, []() { return new BoxingKernel<type_cpp>; }},
-      FOR_EACH_PAIR(BOXING_KERNEL_ENTRY, ARITHMETIC_DATA_TYPE_PAIR())};
+      OF_PP_FOR_EACH_TUPLE(BOXING_KERNEL_ENTRY, ARITHMETIC_DATA_TYPE_SEQ)};
   return data_type2creator.at(op_conf.boxing_conf().data_type())();
 }
 
