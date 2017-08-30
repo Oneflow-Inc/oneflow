@@ -102,7 +102,7 @@ TEST(PP_SEQ, seq_product_for_each) {
 #define SEQ (0)(1)
 #define MAKE_ENTRY(x, y) {OF_PP_STRINGIZE(OF_PP_CAT(x, y)), x || y},
   std::unordered_map<std::string, bool> or_table = {
-      SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, SEQ, SEQ)};
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, SEQ, SEQ)};
 #undef MAKE_ENTRY
 #undef SEQ
   ASSERT_EQ(or_table["00"], false);

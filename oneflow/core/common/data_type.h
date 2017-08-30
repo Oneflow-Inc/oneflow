@@ -37,8 +37,6 @@ namespace oneflow {
   ARITHMETIC_DATA_TYPE_SEQ \
   CHAR_DATA_TYPE_SEQ
 
-#define SEQ_PRODUCT_FOR_EACH_TUPLE OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE
-
 bool IsIntegral(DataType data_type);
 bool IsFloatingPoint(DataType data_type);
 
