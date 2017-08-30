@@ -12,7 +12,7 @@ namespace {
 
 template<DeviceType device_type, typename T>
 std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
-  using KTCommon = KTCommon<device_type, T>;
+  using KTC = KTCommon<device_type, T>;
 
   std::vector<int64_t> dim_vec = {2, 4};
   BlobDesc* blob_desc = new BlobDesc;
@@ -26,13 +26,12 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
 
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
 
-  (*bn2blob_ptr)["one"] =
-      KTCommon::CreateBlobWithSpecifiedVal(blob_desc, diff_data);
+  (*bn2blob_ptr)["one"] = KTC::CreateBlobWithSpecifiedVal(blob_desc, diff_data);
 
   (*bn2blob_ptr)["acc"] =
-      KTCommon::CreateBlobWithSpecifiedVal(blob_desc, diff_acc_data);
+      KTC::CreateBlobWithSpecifiedVal(blob_desc, diff_acc_data);
   (*bn2blob_ptr)["expected_acc"] =
-      KTCommon::CreateBlobWithSpecifiedVal(blob_desc, expected_data);
+      KTC::CreateBlobWithSpecifiedVal(blob_desc, expected_data);
   return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
 }
 
@@ -54,7 +53,7 @@ Kernel* BuildAccumulateKernel() {
 
 template<DeviceType device_type, typename T>
 void TestAccumulateKernel() {
-  using KTCommon = KTCommon<device_type, T>;
+  using KTC = KTCommon<device_type, T>;
   KernelCtx ctx;
   BuildKernelCtx<device_type>(&ctx);
 
@@ -65,7 +64,7 @@ void TestAccumulateKernel() {
   model_diff_acc_kernel->Forward(ctx, BnInOp2BlobPtr);
   SyncStream<device_type>(&ctx);
 
-  KTCommon::CheckResult(BnInOp2BlobPtr, "acc", "expected_acc");
+  KTC::CheckResult(BnInOp2BlobPtr, "acc", "expected_acc");
 }
 
 }  // namespace
