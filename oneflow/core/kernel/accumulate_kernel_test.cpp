@@ -72,7 +72,7 @@ void TestAccumulateKernel() {
 
 TEST(AccumulateKernel, accumulate) {
 #define MAKE_ENTRY(x, y) test::TestAccumulateKernel<x, OF_PP_FIRST_ARG y>();
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, DeviceTypeSeq,
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, DEVICE_TYPE_SEQ,
                                    FLOATING_DATA_TYPE_SEQ)
 }
 
