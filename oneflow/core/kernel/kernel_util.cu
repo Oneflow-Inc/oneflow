@@ -24,6 +24,18 @@ __global__ void MulGpu(const int64_t n, const T* x, const T* y, T* z) {
 
 }  // namespace
 
+template<>
+void Memcpy<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const void* src,
+                              size_t sz, cudaMemcpyKind kind) {
+  CudaCheck(cudaMemcpyAsync(dst, src, sz, kind, ctx->cuda_stream()));
+}
+
+template<>
+void Memset<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const char value,
+                              size_t sz) {
+  CudaCheck(cudaMemsetAsync(dst, value, sz, ctx->cuda_stream()));
+}
+
 template<typename T>
 class KernelUtil<DeviceType::kGPU, T> final {
  public:
@@ -105,7 +117,19 @@ class KernelUtil<DeviceType::kGPU, T> final {
 
   static void Fill(DeviceCtx* ctx, const FillConf& fill_conf,
                    uint32_t random_seed, Blob* blob) {
-    TODO();
+    // create temporary host blob store fill
+    BlobDesc blob_desc = BlobDesc(blob->blob_desc());
+    char* host_raw_dptr;
+    size_t byte_size = blob->TotalByteSize();
+    CudaCheck(cudaMallocHost(&host_raw_dptr, byte_size));
+    Blob host_blob(&blob_desc, host_raw_dptr);
+    // synchronous fill the host blob
+    KernelUtil<DeviceType::kCPU, T>::Fill(fill_conf, random_seed, &host_blob);
+    // asynchronous copy to device
+    Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob.dptr(), byte_size,
+                             cudaMemcpyHostToDevice);
+    cudaStreamSynchronize(ctx->cuda_stream());
+    CudaCheck(cudaFreeHost(host_raw_dptr));
   }
 
   static void FillWithSnapshot(DeviceCtx* ctx, int32_t part_id,
@@ -153,17 +177,5 @@ class KernelUtil<DeviceType::kGPU, T> final {
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto) \
   template class KernelUtil<DeviceType::kGPU, type_cpp>;
 FOR_EACH_PAIR(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_PAIR())
-
-template<>
-void Memcpy<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const void* src,
-                              size_t sz, cudaMemcpyKind kind) {
-  CudaCheck(cudaMemcpyAsync(dst, src, sz, kind, ctx->cuda_stream()));
-}
-
-template<>
-void Memset<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const char value,
-                              size_t sz) {
-  CudaCheck(cudaMemsetAsync(dst, value, sz, ctx->cuda_stream()));
-}
 
 }  // namespace oneflow

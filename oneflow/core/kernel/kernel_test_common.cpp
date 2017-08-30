@@ -1,5 +1,6 @@
 #include "oneflow/core/kernel/kernel_test_common.h"
 #include <random>
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/device/cpu_device_context.h"
 
 namespace oneflow {
@@ -31,7 +32,23 @@ void SyncStream<DeviceType::kCPU>(KernelCtx* ctx) {
 }
 
 template<typename T>
+BlobDesc* CreateDefaultBlobDescWithShape(const std::vector<int64_t>& v) {
+  BlobDesc* ret = new BlobDesc();
+  ret->mut_shape() = Shape(v);
+  ret->set_data_type(GetDataType<T>::val);
+  return ret;
+}
+
+#define INSTANTIATE_TEMPLATE_MEM_FUNC(func, type_cpp, ...) \
+  template BlobDesc* func<type_cpp>(__VA_ARGS__);
+#define BLOB_DESC_FUNC_DATA_TYPE(type_cpp, type_proto)                    \
+  INSTANTIATE_TEMPLATE_MEM_FUNC(CreateDefaultBlobDescWithShape, type_cpp, \
+                                const std::vector<int64_t>&)
+FOR_EACH_PAIR(BLOB_DESC_FUNC_DATA_TYPE, ALL_DATA_TYPE_PAIR());
+
+template<typename T>
 class KTCommon<DeviceType::kCPU, T> final {
+ public:
   static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc, T* val) {
     Blob* ret = CreateBlob<DeviceType::kCPU>(blob_desc);
     CudaCheck(cudaMemcpy(ret->mut_dptr(), val, ret->ByteSizeOfDataField(),
@@ -40,7 +57,9 @@ class KTCommon<DeviceType::kCPU, T> final {
   }
 
   static void BlobCmp(const Blob* lhs, const Blob* rhs) {
-    ASSERT_TRUE(lhs->blob_desc() == rhs->blob_desc());
+    ASSERT_EQ(lhs->blob_desc().data_type(), rhs->blob_desc().data_type());
+    ASSERT_EQ(lhs->blob_desc().shape(), rhs->blob_desc().shape());
+    ASSERT_EQ(lhs->blob_desc().has_data_id(), rhs->blob_desc().has_data_id());
     CHECK_EQ(lhs->data_type(), GetDataType<T>::val);
     if (IsFloatingPoint(lhs->data_type())) {
       for (int64_t i = 0; i < lhs->shape().elem_cnt(); ++i) {

@@ -14,6 +14,13 @@
 
 namespace oneflow {
 
+template<DeviceType device_type>
+void Memcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
+            cudaMemcpyKind kind = cudaMemcpyKind::cudaMemcpyHostToHost);
+
+template<DeviceType device_type>
+void Memset(DeviceCtx* ctx, void* dst, const char value, size_t sz);
+
 template<DeviceType device_type, typename T>
 class KernelUtil final {
  public:
@@ -105,13 +112,6 @@ class KernelUtil final {
                                Blob* blob, const std::string& lbn,
                                int32_t dim_num, int64_t num_in_each_dim);
 };
-
-template<DeviceType device_type>
-void Memcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
-            cudaMemcpyKind kind = cudaMemcpyKind::cudaMemcpyHostToHost);
-
-template<DeviceType device_type>
-void Memset(DeviceCtx* ctx, void* dst, const char value, size_t sz);
 
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_UTIL_H_

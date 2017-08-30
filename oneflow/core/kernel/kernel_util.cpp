@@ -36,6 +36,18 @@ void RngGaussian(const int64_t elem_cnt, const T mean, const T std,
 
 }  // namespace
 
+template<>
+void Memcpy<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const void* src,
+                              size_t sz, cudaMemcpyKind kind) {
+  ctx->cpu_stream()->SendWork([dst, src, sz]() { memcpy(dst, src, sz); });
+}
+
+template<>
+void Memset<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const char value,
+                              size_t sz) {
+  ctx->cpu_stream()->SendWork([dst, value, sz]() { memset(dst, value, sz); });
+}
+
 template<typename T>
 class KernelUtil<DeviceType::kCPU, T> final {
  public:
@@ -195,17 +207,5 @@ class KernelUtil<DeviceType::kCPU, T> final {
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto) \
   template class KernelUtil<DeviceType::kCPU, type_cpp>;
 FOR_EACH_PAIR(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_PAIR())
-
-template<>
-void Memcpy<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const void* src,
-                              size_t sz, cudaMemcpyKind kind) {
-  ctx->cpu_stream()->SendWork([dst, src, sz]() { memcpy(dst, src, sz); });
-}
-
-template<>
-void Memset<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const char value,
-                              size_t sz) {
-  ctx->cpu_stream()->SendWork([dst, value, sz]() { memset(dst, value, sz); });
-}
 
 }  //  namespace oneflow
