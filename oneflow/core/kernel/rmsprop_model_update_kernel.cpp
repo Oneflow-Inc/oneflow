@@ -16,16 +16,12 @@ void RMSPropMdUpdateKernel<device_type, T>::Forward(
   float decay_rate = conf.decay_rate();
   if (*reinterpret_cast<int64_t*>(ctx.other) == 1) { decay_rate = 0.0f; }
 
-  RMSPropMdUpdateKernelUtil<device_type, T>::UpdateMeanSquare(
-      ctx, mean_square_blob->shape().elem_cnt(),
-      static_cast<T>((1.0f - decay_rate) / (batch_size * batch_size)),
-      static_cast<T>(decay_rate), mean_square_blob->mut_dptr<T>(),
-      model_diffs_blob->dptr<T>());
-
   RMSPropMdUpdateKernelUtil<device_type, T>::UpdateModel(
-      ctx, model_blob->shape().elem_cnt(), model_blob->mut_dptr<T>(),
-      model_diffs_blob->dptr<T>(), mean_square_blob->dptr<T>(),
-      static_cast<T>(epsilon), static_cast<T>(learning_rate / batch_size));
+      ctx, model_blob->shape().elem_cnt(),
+      static_cast<T>((1.0f - decay_rate) / (batch_size * batch_size)),
+      static_cast<T>(learning_rate / batch_size), static_cast<T>(decay_rate),
+      static_cast<T>(epsilon), model_blob->mut_dptr<T>(),
+      mean_square_blob->mut_dptr<T>(), model_diffs_blob->dptr<T>());
 }
 
 template<DeviceType device_type, typename T>
@@ -41,24 +37,16 @@ void RMSPropMdUpdateKernel<device_type, T>::InitDataTmpBlobs(
 template<typename T>
 class RMSPropMdUpdateKernelUtil<DeviceType::kCPU, T> final {
  public:
-  static void UpdateMeanSquare(const KernelCtx& ctx, const int64_t n,
-                               const T alpha, const T decay_rate,
-                               T* mean_square, const T* model_diff) {
+  static void UpdateModel(const KernelCtx& ctx, const int64_t n, const T alpha,
+                          const T learning_rate, const T decay_rate,
+                          const T epsilon, T* model, T* mean_square,
+                          const T* model_diff) {
     ctx.device_ctx->cpu_stream()->SendWork([=]() {
       for (int64_t i = 0; i < n; ++i) {
         mean_square[i] =
             alpha * model_diff[i] * model_diff[i] + decay_rate * mean_square[i];
-      }
-    });
-  }
-
-  static void UpdateModel(const KernelCtx& ctx, const int64_t n, T* model,
-                          const T* model_diff, const T* mean_square,
-                          const T epsilon, const T alpha) {
-    ctx.device_ctx->cpu_stream()->SendWork([=]() {
-      for (int64_t i = 0; i < n; ++i) {
-        model[i] -=
-            alpha * model_diff[i] / (std::sqrt(mean_square[i] + epsilon));
+        model[i] -= learning_rate * model_diff[i]
+                    / (std::sqrt(mean_square[i] + epsilon));
       }
     });
   }
