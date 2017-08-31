@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename FloatingPointType>
+template<DeviceType device_type, typename T>
 class SoftmaxKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SoftmaxKernel);
@@ -18,7 +18,7 @@ class SoftmaxKernel final : public Kernel {
                 std::function<Blob*(const std::string&)>) const override;
 };
 
-template<DeviceType device_type, typename FloatingPointType>
+template<DeviceType device_type, typename T>
 class SoftmaxKernelUtil final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SoftmaxKernelUtil);
@@ -26,47 +26,40 @@ class SoftmaxKernelUtil final {
 
   // n = number of data sample
   // w = number of (input/output) neuron
-  static void ForwardMax(const KernelCtx& ctx, const int64_t n, const int64_t w,
-                         const FloatingPointType* out, FloatingPointType* tmp);
+  static void ForwardMax(DeviceCtx* ctx, const int64_t n, const int64_t w,
+                         const T* out, T* tmp);
 
-  static void ForwardSum(const KernelCtx& ctx, const int64_t n, const int64_t w,
-                         const FloatingPointType* out, FloatingPointType* tmp);
+  static void ForwardSum(DeviceCtx* ctx, const int64_t n, const int64_t w,
+                         const T* out, T* tmp);
 
   // matrix[i][j] -= vector[i]
   // matrix shape = n*w, vector shape = n
-  static void Sub(const KernelCtx& ctx, const int64_t n, const int64_t w,
-                  FloatingPointType* matrix, const FloatingPointType* vector);
+  static void Sub(DeviceCtx* ctx, const int64_t n, const int64_t w, T* matrix,
+                  const T* vector);
 
-  static void BackwardDot(const KernelCtx& ctx, const int64_t n,
-                          const int64_t w, const FloatingPointType* out,
-                          const FloatingPointType* out_diff,
-                          FloatingPointType* tmp);
+  static void BackwardDot(DeviceCtx* ctx, const int64_t n, const int64_t w,
+                          const T* out, const T* out_diff, T* tmp);
 };
 
-template<DeviceType device_type, typename FloatingPointType>
-void SoftmaxComputeProb(const KernelCtx& ctx, const int64_t n, const int64_t w,
-                        const FloatingPointType* in, FloatingPointType* tmp,
-                        FloatingPointType* prob) {
+template<DeviceType device_type, typename T>
+void SoftmaxComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w,
+                        const T* in, T* tmp, T* prob) {
   // copy in blob to prob blob
-  KernelUtil<device_type, FloatingPointType>::BlasCopy(ctx, n * w, in, 1, prob,
-                                                       1);
+  KernelUtil<device_type, T>::BlasCopy(ctx, n * w, in, 1, prob, 1);
   // max | calculate max of every sample vector prob[i], store in tmp[i]
   //       the prob[i] now is store the data of in[i]
-  SoftmaxKernelUtil<device_type, FloatingPointType>::ForwardMax(ctx, n, w, prob,
-                                                                tmp);
+  SoftmaxKernelUtil<device_type, T>::ForwardMax(ctx, n, w, prob, tmp);
   // sub | every element of prob blob subract the max value of the same sample
-  SoftmaxKernelUtil<device_type, FloatingPointType>::Sub(ctx, n, w, prob, tmp);
+  SoftmaxKernelUtil<device_type, T>::Sub(ctx, n, w, prob, tmp);
   // exp | exponentiation every element
-  KernelUtil<device_type, FloatingPointType>::Exp(ctx, n * w, prob, prob);
+  KernelUtil<device_type, T>::Exp(ctx, n * w, prob, prob);
   // sum | calculate sum of every sample vector prob[i], store in tmp[i]
   //       the prob[i] now is store the tmp data after exp
-  SoftmaxKernelUtil<device_type, FloatingPointType>::ForwardSum(ctx, n, w, prob,
-                                                                tmp);
+  SoftmaxKernelUtil<device_type, T>::ForwardSum(ctx, n, w, prob, tmp);
   // div | every element of prob[i] divided by the data of tmp[i] (the sum
   // value)
   for (int64_t i = 0; i < n; ++i) {
-    KernelUtil<device_type, FloatingPointType>::Div(ctx, w, prob + i * w,
-                                                    tmp + i);
+    KernelUtil<device_type, T>::Div(ctx, w, prob + i * w, tmp + i);
   }
 }
 

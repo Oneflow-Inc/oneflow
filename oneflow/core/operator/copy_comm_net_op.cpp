@@ -2,9 +2,8 @@
 
 namespace oneflow {
 
-void CopyCommNetOp::InitFromOpConf(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_copy_comm_net_conf());
-  mut_op_conf() = op_conf;
+void CopyCommNetOp::InitFromOpConf() {
+  CHECK(op_conf().has_copy_comm_net_conf());
   EnrollInputBn("in");
   EnrollOutputBn("out");
 }

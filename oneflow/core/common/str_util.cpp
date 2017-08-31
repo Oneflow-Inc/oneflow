@@ -130,6 +130,12 @@ std::string JoinPathImpl(std::initializer_list<std::string> paths) {
   return result;
 }
 
+std::string GetHashKeyImpl(std::initializer_list<int> integers) {
+  std::string result = "";
+  for (int integer : integers) { result += std::to_string(integer) + ","; }
+  return result;
+}
+
 }  // namespace internal
 
 }  // namespace oneflow

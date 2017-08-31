@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_OPERATOR_LOSS_RECORD_H_
-#define ONEFLOW_CORE_OPERATOR_LOSS_RECORD_H_
+#ifndef ONEFLOW_CORE_OPERATOR_LOSS_RECORD_OP_H_
+#define ONEFLOW_CORE_OPERATOR_LOSS_RECORD_OP_H_
 
 #include "oneflow/core/operator/operator_manager.h"
 
@@ -11,7 +11,7 @@ class LossRecordOp final : public SysOperator {
   LossRecordOp() = default;
   ~LossRecordOp() = default;
 
-  void InitFromOpConf(const OperatorConf& op_conf) override;
+  void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
 
  private:
@@ -22,4 +22,4 @@ class LossRecordOp final : public SysOperator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_LOSS_RECORD_H_
+#endif  // ONEFLOW_CORE_OPERATOR_LOSS_RECORD_OP_H_

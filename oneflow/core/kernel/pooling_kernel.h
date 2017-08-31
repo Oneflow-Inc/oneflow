@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename FloatingPointType>
+template<DeviceType device_type, typename T>
 class PoolingKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(PoolingKernel);
@@ -18,7 +18,7 @@ class PoolingKernel final : public Kernel {
                 std::function<Blob*(const std::string&)>) const override;
 };
 
-template<DeviceType device_type, typename FloatingPointType>
+template<DeviceType device_type, typename T>
 class PoolingKernelUtil {
  public:
   OF_DISALLOW_COPY_AND_MOVE(PoolingKernelUtil);

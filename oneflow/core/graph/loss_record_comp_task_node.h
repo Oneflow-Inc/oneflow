@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_LOSS_RECORD_COMP_TASK_NODE_H_
-#define ONEFLOW_CORE_LOSS_RECORD_COMP_TASK_NODE_H_
+#ifndef ONEFLOW_CORE_GRAPH_LOSS_RECORD_COMP_TASK_NODE_H_
+#define ONEFLOW_CORE_GRAPH_LOSS_RECORD_COMP_TASK_NODE_H_
 
 #include "oneflow/core/graph/comp_task_node.h"
 
@@ -25,4 +25,4 @@ class LossRecordCompTaskNode final : public CompTaskNode {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_LOSS_RECORD_COMP_TASK_NODE_H_
+#endif  // ONEFLOW_CORE_GRAPH_LOSS_RECORD_COMP_TASK_NODE_H_

@@ -46,6 +46,14 @@ namespace oneflow {
     return ptr;                            \
   }
 
+#define COMMAND(...)            \
+  namespace {                   \
+  struct CommandT {             \
+    CommandT() { __VA_ARGS__; } \
+  };                            \
+  CommandT g_command_var;       \
+  }
+
 template<typename T>
 bool operator==(const std::weak_ptr<T>& lhs, const std::weak_ptr<T>& rhs) {
   return lhs.lock().get() == rhs.lock().get();
@@ -126,7 +134,7 @@ inline uint32_t NewRandomSeed() {
 #define MAX_WITH_LOG_THRESHOLD(x) ((x) > LOG_THRESHOLD ? (x) : LOG_THRESHOLD)
 #define SAFE_LOG(x) logf(MAX_WITH_LOG_THRESHOLD(x))
 
-inline std::string _GetClassName_(const std::string& prettyFunction) {
+inline std::string GetClassName(const std::string& prettyFunction) {
   size_t colons = prettyFunction.rfind("::");
   if (colons == std::string::npos) return "::";
   size_t begin = prettyFunction.substr(0, colons).rfind("::") + 2;
@@ -136,10 +144,13 @@ inline std::string _GetClassName_(const std::string& prettyFunction) {
 }
 
 #ifdef _MSC_VER
-#define __CLASS_NAME__ _GetClassName_(__FUNCSIG__)
+#define __CLASS_NAME__ GetClassName(__FUNCSIG__)
 #else
-#define __CLASS_NAME__ _GetClassName_(__PRETTY_FUNCTION__)
+#define __CLASS_NAME__ GetClassName(__PRETTY_FUNCTION__)
 #endif
+
+#define DEVICE_TYPE_SEQ (DeviceType::kCPU)(DeviceType::kGPU)
+#define BOOL_SEQ (true)(false)
 
 }  // namespace oneflow
 
