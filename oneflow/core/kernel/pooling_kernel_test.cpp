@@ -122,26 +122,6 @@ void TestPoolingKernel(const PoolingOpConf::PoolMethod& pooling_method) {
 
 }  // namespace test
 
-TEST(PoolingKernel, pooling_max_cpu) {
-  test::TestPoolingKernel<DeviceType::kCPU, float>(PoolingOpConf::kMax);
-  test::TestPoolingKernel<DeviceType::kCPU, double>(PoolingOpConf::kMax);
-}
-
-TEST(PoolingKernel, pooling_ave_cpu) {
-  test::TestPoolingKernel<DeviceType::kCPU, float>(PoolingOpConf::kAve);
-  test::TestPoolingKernel<DeviceType::kCPU, double>(PoolingOpConf::kAve);
-}
-
-TEST(PoolingKernel, pooling_max_gpu) {
-  test::TestPoolingKernel<DeviceType::kGPU, float>(PoolingOpConf::kMax);
-  test::TestPoolingKernel<DeviceType::kGPU, double>(PoolingOpConf::kMax);
-}
-
-TEST(PoolingKernel, pooling_ave_gpu) {
-  test::TestPoolingKernel<DeviceType::kGPU, float>(PoolingOpConf::kAve);
-  test::TestPoolingKernel<DeviceType::kGPU, double>(PoolingOpConf::kAve);
-}
-/*
 TEST(PoolingKernel, pooling) {
 #define POOLINGOPCONF (PoolingOpConf::kAve)(PoolingOpConf::kMax)
 #define MAKE_ENTRY(device_datatype_pair, poolingop_conf)          \
@@ -154,5 +134,5 @@ TEST(PoolingKernel, pooling) {
           OF_PP_INTERNAL_SEQ_PRODUCT(DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ),
           POOLINGOPCONF))
 }
-*/
+
 }  // namespace oneflow
