@@ -10,7 +10,7 @@ namespace test {
 namespace {
 
 template<DeviceType device_type, typename T>
-std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
+std::function<Blob*(const std::string&)> BuildBnInOp2BlobMap() {
   using KTC = KTCommon<device_type, T>;
 
   std::vector<int64_t> dim_vec = {2, 4};
@@ -56,7 +56,7 @@ void TestAccumulateKernel() {
   KernelCtx ctx;
   BuildKernelCtx<device_type>(&ctx);
 
-  auto BnInOp2BlobPtr = BuildBnInOp2BlobPtr<device_type, T>();
+  auto BnInOp2BlobPtr = BuildBnInOp2BlobMap<device_type, T>();
 
   auto model_diff_acc_kernel = BuildAccumulateKernel<device_type, T>();
 
