@@ -63,14 +63,12 @@ void TestReluKernel() {
 
 }  // namespace test
 
-TEST(ReluKernel, relu_kernel_cpu) {
-  test::TestReluKernel<DeviceType::kCPU, float>();
-  test::TestReluKernel<DeviceType::kCPU, int32_t>();
-}
-
-TEST(ReluKernel, relu_kernel_gpu) {
-  test::TestReluKernel<DeviceType::kGPU, float>();
-  test::TestReluKernel<DeviceType::kGPU, int32_t>();
+TEST(ReluKernel, relu) {
+#define MAKE_ENTRY(device_type, data_type_pair) \
+  test::TestReluKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>();
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+      MAKE_ENTRY, DEVICE_TYPE_SEQ,
+      FLOATING_DATA_TYPE_SEQ SIGNED_INT_DATA_TYPE_SEQ)
 }
 
 }  // namespace oneflow
