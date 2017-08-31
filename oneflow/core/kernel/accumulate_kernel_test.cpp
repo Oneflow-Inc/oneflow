@@ -23,15 +23,15 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobMap() {
 
   T expected_data[] = {6, 5, 5, 5, 12, 6, 8, 9};
 
-  auto bn2blob_ptr = new HashMap<std::string, Blob*>;
+  auto bn2blob = new HashMap<std::string, Blob*>;
 
-  (*bn2blob_ptr)["one"] = KTC::CreateBlobWithSpecifiedVal(blob_desc, diff_data);
+  (*bn2blob)["one"] = KTC::CreateBlobWithSpecifiedVal(blob_desc, diff_data);
 
-  (*bn2blob_ptr)["acc"] =
+  (*bn2blob)["acc"] =
       KTC::CreateBlobWithSpecifiedVal(blob_desc, diff_acc_data);
-  (*bn2blob_ptr)["expected_acc"] =
+  (*bn2blob)["expected_acc"] =
       KTC::CreateBlobWithSpecifiedVal(blob_desc, expected_data);
-  return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
+  return [bn2blob](const std::string& bn) { return bn2blob_ptr->at(bn); };
 }
 
 template<DeviceType device_type, typename T>
