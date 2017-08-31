@@ -44,7 +44,7 @@ class KTCommon<DeviceType::kCPU, T> final {
     CHECK_EQ(lhs->data_type(), GetDataType<T>::val);
     if (IsFloatingPoint(lhs->data_type())) {
       for (int64_t i = 0; i < lhs->shape().elem_cnt(); ++i) {
-        ASSERT_DOUBLE_EQ(lhs->dptr<T>()[i], rhs->dptr<T>()[i]);
+        ASSERT_FLOAT_EQ(lhs->dptr<T>()[i], rhs->dptr<T>()[i]);
       }
     } else {
       ASSERT_EQ(memcmp(lhs->dptr(), rhs->dptr(), lhs->ByteSizeOfDataField()),
@@ -55,7 +55,7 @@ class KTCommon<DeviceType::kCPU, T> final {
   static void CheckFillResult(const Blob* blob, const FillConf& fill_conf) {
     if (fill_conf.has_constant_conf()) {
       for (int64_t i = 0; i < blob->shape().elem_cnt(); ++i) {
-        ASSERT_DOUBLE_EQ(blob->dptr<T>()[i], fill_conf.constant_conf().value());
+        ASSERT_FLOAT_EQ(blob->dptr<T>()[i], fill_conf.constant_conf().value());
       }
     } else if (fill_conf.has_uniform_conf()) {
       TODO();
