@@ -1,6 +1,0 @@
-#ifndef ONEFLOW_CORE_SCHEDULE_UTILS_UTILS_H_
-#define ONEFLOW_CORE_SCHEDULE_UTILS_UTILS_H_
-
-#include "oneflow/core/common/util.h"
-
-#endif  // ONEFLOW_CORE_SCHEDULE_UTILS_UTILS_H_

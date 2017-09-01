@@ -1,0 +1,14 @@
+syntax = "proto3";
+package oneflow.schedule;
+
+enum UtilizationEventType {
+	kStartEvent = 0;
+	kEndEvent = 1;
+}
+
+message UtilizationEventProto {
+	int64 resource_id = 1;
+	int64 batch_id = 2;
+	UtilizationEventType type = 3;
+	float time = 4;	
+}
