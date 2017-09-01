@@ -24,6 +24,7 @@ void TestInnerProductOp(ParallelPolicy policy, bool has_bias_term,
   op_conf.mutable_innerproduct_conf()->set_has_bias_term(has_bias_term);
   op_conf.mutable_innerproduct_conf()->set_out_num(out_num);
   auto ip_op = ConstructOp(op_conf);
+
   HashMap<std::string, BlobDesc*> bn2blob_desc = {
       {"in", new BlobDesc(Shape({1000, 3, 256, 256}), GetDataType<T>::val,
                           has_data_id)},
@@ -45,17 +46,18 @@ void TestInnerProductOp(ParallelPolicy policy, bool has_bias_term,
     out_num = splitter.At(3).size();
   }
 
-  ASSERT_EQ(*bn2blob_desc.at(ip_op->SoleObn()),
-            BlobDesc(Shape({1000, out_num}), GetDataType<T>::val, has_data_id));
+  ASSERT_TRUE(
+      *bn2blob_desc.at("out")
+      == BlobDesc(Shape({1000, out_num}), GetDataType<T>::val, has_data_id));
 
-  ASSERT_EQ(
-      *bn2blob_desc.at("weight"),
-      BlobDesc(Shape({out_num, 3 * 256 * 256}), GetDataType<T>::val, false));
+  ASSERT_TRUE(
+      *bn2blob_desc.at("weight")
+      == BlobDesc(Shape({out_num, 3 * 256 * 256}), GetDataType<T>::val, false));
   if (has_bias_term) {
-    ASSERT_EQ(*bn2blob_desc.at("bias"),
-              BlobDesc(Shape({1, out_num}), GetDataType<T>::val, false));
-    ASSERT_EQ(*bn2blob_desc.at("bias_multiplier"),
-              BlobDesc(Shape({1000, 1}), GetDataType<T>::val, false));
+    ASSERT_TRUE(*bn2blob_desc.at("bias")
+                == BlobDesc(Shape({1, out_num}), GetDataType<T>::val, false));
+    ASSERT_TRUE(*bn2blob_desc.at("bias_multiplier")
+                == BlobDesc(Shape({1000, 1}), GetDataType<T>::val, false));
   }
 }
 
