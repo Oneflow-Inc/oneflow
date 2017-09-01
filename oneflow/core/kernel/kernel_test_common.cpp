@@ -1,5 +1,6 @@
 #include "oneflow/core/kernel/kernel_test_common.h"
 #include <random>
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/device/cpu_device_context.h"
 
 namespace oneflow {
@@ -32,6 +33,7 @@ void SyncStream<DeviceType::kCPU>(KernelCtx* ctx) {
 
 template<typename T>
 class KTCommon<DeviceType::kCPU, T> final {
+ public:
   static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc, T* val) {
     Blob* ret = CreateBlob<DeviceType::kCPU>(blob_desc);
     CudaCheck(cudaMemcpy(ret->mut_dptr(), val, ret->ByteSizeOfDataField(),
@@ -40,7 +42,7 @@ class KTCommon<DeviceType::kCPU, T> final {
   }
 
   static void BlobCmp(const Blob* lhs, const Blob* rhs) {
-    ASSERT_TRUE(lhs->blob_desc() == rhs->blob_desc());
+    ASSERT_EQ(lhs->blob_desc(), rhs->blob_desc());
     CHECK_EQ(lhs->data_type(), GetDataType<T>::val);
     if (IsFloatingPoint(lhs->data_type())) {
       for (int64_t i = 0; i < lhs->shape().elem_cnt(); ++i) {
