@@ -52,14 +52,16 @@
 
 #define OF_PP_INTERNAL_TUPLE_SIZE_1(t) 0
 #define OF_PP_INTERNAL_TUPLE_SIZE_0(t) OF_PP_INTERNAL_TUPLE_SIZE_0_I(t)
-#define OF_PP_INTERNAL_TUPLE_SIZE_0_I(t) OF_PP_INTERNAL_VARIADIC_SIZE t
+#define OF_PP_INTERNAL_TUPLE_SIZE_0_I(t) \
+  OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_VARIADIC_SIZE t, )
 
 #define OF_PP_INTERNAL_VARIADIC_SIZE(...)                                      \
-  OF_PP_INTERNAL_VARIADIC_SIZE_I(                                              \
-      __VA_ARGS__, 64, 63, 62, 61, 60, 59, 58, 57, 56, 55, 54, 53, 52, 51, 50, \
-      49, 48, 47, 46, 45, 44, 43, 42, 41, 40, 39, 38, 37, 36, 35, 34, 33, 32,  \
-      31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14,  \
-      13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, )
+  OF_PP_INTERNAL_CAT(                                                          \
+      OF_PP_INTERNAL_VARIADIC_SIZE_I(                                          \
+          __VA_ARGS__, 64, 63, 62, 61, 60, 59, 58, 57, 56, 55, 54, 53, 52, 51, \
+          50, 49, 48, 47, 46, 45, 44, 43, 42, 41, 40, 39, 38, 37, 36, 35, 34,  \
+          33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17,  \
+          16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, ), )
 #define OF_PP_INTERNAL_VARIADIC_SIZE_I(                                        \
     e0, e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12, e13, e14, e15, e16, \
     e17, e18, e19, e20, e21, e22, e23, e24, e25, e26, e27, e28, e29, e30, e31, \
@@ -68,8 +70,9 @@
     e62, e63, size, ...)                                                       \
   size
 
-#define OF_PP_INTERNAL_IS_TUPLE_EMPTY(t) \
-  OF_PP_INTERNAL_IS_VARIADIC_EMPTY(OF_PP_INTERNAL_TUPLE_TO_ARGS(t))
+#define OF_PP_INTERNAL_IS_TUPLE_EMPTY(t) OF_PP_INTERNAL_IS_TUPLE_EMPTY_I(t)
+#define OF_PP_INTERNAL_IS_TUPLE_EMPTY_I(t) \
+  OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_IS_VARIADIC_EMPTY t, )
 
 #define OF_PP_INTERNAL_IS_VARIADIC_EMPTY(...)                                                    \
   OF_PP_INTERNAL_IS_VARIADIC_EMPTY_(/* test if there is just one argument,                       \
@@ -105,10 +108,11 @@
       OF_PP_INTERNAL_CAT5(OF_PP_INTERNAL_IS_EMPTY_CASE_, e0, e1, e2, e3))
 
 #define OF_PP_INTERNAL_VARIADIC_HAS_COMMA(...)                                 \
-  OF_PP_INTERNAL_VARIADIC_HAS_COMMA_I(                                         \
-      __VA_ARGS__, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, \
-      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  \
-      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+  OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_VARIADIC_HAS_COMMA_I(                      \
+                         __VA_ARGS__, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,   \
+                         1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, \
+                         1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, \
+                         1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0), )
 #define OF_PP_INTERNAL_VARIADIC_HAS_COMMA_I(                                   \
     e0, e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12, e13, e14, e15, e16, \
     e17, e18, e19, e20, e21, e22, e23, e24, e25, e26, e27, e28, e29, e30, e31, \
@@ -124,14 +128,15 @@
 
 // Seq Product
 
-#define OF_PP_INTERNAL_SEQ_PRODUCT_FOR_EACH_TUPLE(macro, ...) \
-  OF_PP_INTERNAL_SEQ_FOR_EACH_TUPLE(macro, _,                 \
-                                    OF_PP_INTERNAL_SEQ_PRODUCT(__VA_ARGS__))
+#define OF_PP_INTERNAL_SEQ_PRODUCT_FOR_EACH_TUPLE(macro, seq0, ...) \
+  OF_PP_INTERNAL_SEQ_FOR_EACH_TUPLE(                                \
+      macro, _, OF_PP_INTERNAL_SEQ_PRODUCT(seq0, __VA_ARGS__))
 
-#define OF_PP_INTERNAL_SEQ_PRODUCT(...)                        \
-  OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_SEQ_PRODUCT_,              \
-                     OF_PP_INTERNAL_TUPLE_SIZE((__VA_ARGS__))) \
-  (__VA_ARGS__)
+#define OF_PP_INTERNAL_SEQ_PRODUCT(seq0, ...)                              \
+  OF_PP_INTERNAL_CAT(                                                      \
+      OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_SEQ_PRODUCT_,                      \
+                         OF_PP_INTERNAL_VARIADIC_SIZE(seq0, __VA_ARGS__))( \
+          seq0, __VA_ARGS__), )
 
 #define OF_PP_INTERNAL_SEQ_PRODUCT_0()
 #define OF_PP_INTERNAL_SEQ_PRODUCT_1(seq0) \
