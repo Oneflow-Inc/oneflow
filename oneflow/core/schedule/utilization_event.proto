@@ -18,3 +18,7 @@ message UtilizationEventProto {
 	int64 batch_id = 4;
 	float time = 5;	
 }
+
+message UtilizationEventPackageProto {
+	repeated UtilizationEventProto events = 1;
+}
