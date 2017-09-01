@@ -26,10 +26,9 @@ void TestInnerProductOp(ParallelPolicy policy, bool has_bias_term,
   op_conf.mutable_innerproduct_conf()->set_has_bias_term(has_bias_term);
   op_conf.mutable_innerproduct_conf()->set_out_num(out_num);
   auto ip_op = ConstructOp(op_conf);
-  BlobDesc* blob_desc = new BlobDesc(Shape({1000, 3, 256, 256}),
-                                     GetDataType<T>::val, has_data_id);
   HashMap<std::string, BlobDesc*> bn2blobdesc = {
-      {ip_op->SoleIbn(), blob_desc},
+      {ip_op->SoleIbn(), new BlobDesc(Shape({1000, 3, 256, 256}),
+                                      GetDataType<T>::val, has_data_id)},
       {ip_op->SoleObn(), new BlobDesc},
       {ip_op->model_bns().at(0), new BlobDesc},
   };
