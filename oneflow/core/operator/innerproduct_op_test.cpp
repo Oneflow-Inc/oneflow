@@ -1,6 +1,4 @@
 #include "oneflow/core/operator/innerproduct_op.h"
-#include <string>
-#include <vector>
 #include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
@@ -26,36 +24,37 @@ void TestInnerProductOp(ParallelPolicy policy, bool has_bias_term,
   op_conf.mutable_innerproduct_conf()->set_has_bias_term(has_bias_term);
   op_conf.mutable_innerproduct_conf()->set_out_num(out_num);
   auto ip_op = ConstructOp(op_conf);
-  HashMap<std::string, BlobDesc*> bn2blobdesc = {
-      {ip_op->SoleIbn(), new BlobDesc(Shape({1000, 3, 256, 256}),
-                                      GetDataType<T>::val, has_data_id)},
-      {ip_op->SoleObn(), new BlobDesc},
-      {ip_op->model_bns().at(0), new BlobDesc},
+  HashMap<std::string, BlobDesc*> bn2blob_desc = {
+      {"in", new BlobDesc(Shape({1000, 3, 256, 256}), GetDataType<T>::val,
+                          has_data_id)},
+      {"out", new BlobDesc},
+      {"weight", new BlobDesc},
   };
   if (has_bias_term) {
-    bn2blobdesc[ip_op->model_bns().at(1)] = new BlobDesc;
-    bn2blobdesc[ip_op->model_tmp_bns().at(0)] = new BlobDesc;
+    bn2blob_desc["bias"] = new BlobDesc;
+    bn2blob_desc["bias_multiplier"] = new BlobDesc;
   }
-  auto fp = [&bn2blobdesc](const std::string& bn) {
-    return bn2blobdesc.at(bn);
+  auto bn2blob_desc_func = [&](const std::string& bn) {
+    return bn2blob_desc.at(bn);
   };
 
-  ip_op->InferBlobDesc4FwBlobs(fp, policy, 3, 10);
+  ip_op->InferBlobDesc4FwBlobs(bn2blob_desc_func, policy, 3, 10);
 
   if (policy == kModelParallel) {
     BalancedSplitter splitter(out_num, 10);
     out_num = splitter.At(3).size();
   }
 
-  ASSERT_EQ(*bn2blobdesc.at(ip_op->SoleObn()),
+  ASSERT_EQ(*bn2blob_desc.at(ip_op->SoleObn()),
             BlobDesc(Shape({1000, out_num}), GetDataType<T>::val, has_data_id));
 
-  ASSERT_EQ(*bn2blobdesc.at("weight"), BlobDesc(Shape({out_num, 3 * 256 * 256}),
-                                                GetDataType<T>::val, false));
+  ASSERT_EQ(
+      *bn2blob_desc.at("weight"),
+      BlobDesc(Shape({out_num, 3 * 256 * 256}), GetDataType<T>::val, false));
   if (has_bias_term) {
-    ASSERT_EQ(*bn2blobdesc.at("bias"),
+    ASSERT_EQ(*bn2blob_desc.at("bias"),
               BlobDesc(Shape({1, out_num}), GetDataType<T>::val, false));
-    ASSERT_EQ(*bn2blobdesc.at("bias_multiplier"),
+    ASSERT_EQ(*bn2blob_desc.at("bias_multiplier"),
               BlobDesc(Shape({1000, 1}), GetDataType<T>::val, false));
   }
 }
