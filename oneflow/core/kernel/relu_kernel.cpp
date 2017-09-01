@@ -8,6 +8,7 @@ void ReluKernel<device_type, T>::Forward(
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
   const Blob* in_data = BnInOp2BlobPtr("in");
   Blob* out_data = BnInOp2BlobPtr("out");
+  out_data->CopyDataIdFrom<device_type>(ctx.device_ctx, in_data);
   ReluKernelUtil<device_type, T>::Forward(ctx, out_data->shape().elem_cnt(),
                                           in_data->dptr<T>(),
                                           out_data->mut_dptr<T>());
@@ -20,6 +21,7 @@ void ReluKernel<device_type, T>::Backward(
   const Blob* in_data = BnInOp2BlobPtr("in");
   const Blob* out_diff = BnInOp2BlobPtr("out_diff");
   Blob* in_diff = BnInOp2BlobPtr("in_diff");
+  in_diff->CopyDataIdFrom<device_type>(ctx.device_ctx, out_diff);
   ReluKernelUtil<device_type, T>::Backward(
       ctx, in_data->shape().elem_cnt(), out_diff->dptr<T>(), in_data->dptr<T>(),
       in_diff->mut_dptr<T>());
