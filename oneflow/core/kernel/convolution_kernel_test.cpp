@@ -20,7 +20,7 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobFunc(
       new BlobDesc(Shape({1, 4, 4}), GetDataType<T>::val, false));
   (*bn2blob)["weight"] = KTC::CreateBlobWithSpecifiedVal(
       new BlobDesc(Shape({2, 4}), GetDataType<T>::val, false),
-      {0.1, 0.2, 0.2, 0.4, -0.3, 0.1, 0.1, 0.2});
+      {0.1f, 0.2f, 0.2f, 0.4f, -0.3f, 0.1f, 0.1f, 0.2f});
   (*bn2blob)["out"] = KTC::CreateBlobWithRandomVal(
       new BlobDesc(Shape({1, 2, 2, 2}), GetDataType<T>::val, false));
   (*bn2blob)["bias"] = KTC::CreateBlobWithSpecifiedVal(
@@ -38,15 +38,15 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobFunc(
       new BlobDesc(Shape({4}), GetDataType<T>::val, false), {1, 1, 1, 1});
   (*bn2blob)["expected_out"] = KTC::CreateBlobWithSpecifiedVal(
       new BlobDesc(Shape({1, 2, 2, 2}), GetDataType<T>::val, false),
-      {0.9, 0.1, 1.3, -0.7, 0.1, 0.4, -0.4, -0.7});
+      {0.9f, 0.1f, 1.3f, -0.7f, 0.1f, 0.4f, -0.4f, -0.7f});
   (*bn2blob)["expected_bias_diff"] = KTC::CreateBlobWithSpecifiedVal(
-      new BlobDesc(Shape({2}), GetDataType<T>::val, false), {2, 1.25});
+      new BlobDesc(Shape({2}), GetDataType<T>::val, false), {2, 1.25f});
   (*bn2blob)["expected_in_diff"] = KTC::CreateBlobWithSpecifiedVal(
       new BlobDesc(Shape({1, 1, 3, 3}), GetDataType<T>::val, false),
-      {-0.5, 0.4, 0.7, 0.3, 1.9, 1.9, 0.5, 1.5, 1.0});
+      {-0.5f, 0.4f, 0.7f, 0.3f, 1.9f, 1.9f, 0.5f, 1.5f, 1.0f});
   (*bn2blob)["expected_weight_diff"] = KTC::CreateBlobWithSpecifiedVal(
       new BlobDesc(Shape({2, 4}), GetDataType<T>::val, false),
-      {1.5, 1.25, 3, -1, 1.25, 0, 2.5, 0});
+      {1.5f, 1.25f, 3, -1, 1.25f, 0, 2.5f, 0});
   return [bn2blob](const std::string& bn) { return bn2blob->at(bn); };
 }
 
