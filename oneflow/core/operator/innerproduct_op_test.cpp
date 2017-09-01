@@ -26,21 +26,19 @@ void TestInnerProductOp(ParallelPolicy policy, bool has_bias_term,
   op_conf.mutable_innerproduct_conf()->set_has_bias_term(has_bias_term);
   op_conf.mutable_innerproduct_conf()->set_out_num(out_num);
   auto ip_op = ConstructOp(op_conf);
-
-  std::vector<int64_t> shape_vec = {1000, 3, 256, 256};
-  BlobDesc* blob_desc =
-      new BlobDesc(Shape(shape_vec), GetDataType<T>::val, has_data_id);
-  HashMap<std::string, BlobDesc*> bn2blobdesc_ptr = {
+  BlobDesc* blob_desc = new BlobDesc(Shape({1000, 3, 256, 256}),
+                                     GetDataType<T>::val, has_data_id);
+  HashMap<std::string, BlobDesc*> bn2blobdesc = {
       {ip_op->SoleIbn(), blob_desc},
       {ip_op->SoleObn(), new BlobDesc},
       {ip_op->model_bns().at(0), new BlobDesc},
   };
   if (has_bias_term) {
-    bn2blobdesc_ptr[ip_op->model_bns().at(1)] = new BlobDesc;
-    bn2blobdesc_ptr[ip_op->model_tmp_bns().at(0)] = new BlobDesc;
+    bn2blobdesc[ip_op->model_bns().at(1)] = new BlobDesc;
+    bn2blobdesc[ip_op->model_tmp_bns().at(0)] = new BlobDesc;
   }
-  auto fp = [&bn2blobdesc_ptr](const std::string& bn) {
-    return bn2blobdesc_ptr.at(bn);
+  auto fp = [&bn2blobdesc](const std::string& bn) {
+    return bn2blobdesc.at(bn);
   };
 
   ip_op->InferBlobDesc4FwBlobs(fp, policy, 3, 10);
@@ -50,23 +48,16 @@ void TestInnerProductOp(ParallelPolicy policy, bool has_bias_term,
     out_num = splitter.At(3).size();
   }
 
-  // check out blob
-  BlobDesc out_blob_desc =
-      BlobDesc(Shape({1000, out_num}), GetDataType<T>::val, has_data_id);
-  CHECK(*bn2blobdesc_ptr.at(ip_op->SoleObn()) == out_blob_desc);
+  ASSERT_EQ(*bn2blobdesc.at(ip_op->SoleObn()),
+            BlobDesc(Shape({1000, out_num}), GetDataType<T>::val, has_data_id));
 
-  // check weight blob
-  BlobDesc weight_blob_desc =
-      BlobDesc(Shape({out_num, 3 * 256 * 256}), GetDataType<T>::val, false);
-  CHECK(*bn2blobdesc_ptr.at(ip_op->model_bns().at(0)) == weight_blob_desc);
+  ASSERT_EQ(*bn2blobdesc.at("weight"), BlobDesc(Shape({out_num, 3 * 256 * 256}),
+                                                GetDataType<T>::val, false));
   if (has_bias_term) {
-    BlobDesc bias_blob_desc =
-        BlobDesc(Shape({1, out_num}), GetDataType<T>::val, false);
-    CHECK(*bn2blobdesc_ptr.at(ip_op->model_bns().at(1)) == bias_blob_desc);
-    BlobDesc bias_tmp_blob_desc =
-        BlobDesc(Shape({1000, 1}), GetDataType<T>::val, false);
-    CHECK(*bn2blobdesc_ptr.at(ip_op->model_tmp_bns().at(0))
-          == bias_tmp_blob_desc);
+    ASSERT_EQ(*bn2blobdesc.at("bias"),
+              BlobDesc(Shape({1, out_num}), GetDataType<T>::val, false));
+    ASSERT_EQ(*bn2blobdesc.at("bias_multiplier"),
+              BlobDesc(Shape({1000, 1}), GetDataType<T>::val, false));
   }
 }
 
