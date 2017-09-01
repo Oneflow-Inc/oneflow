@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename T, typename LabelType>
 class SoftmaxLossKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SoftmaxLossKernel);
@@ -20,17 +20,18 @@ class SoftmaxLossKernel final : public Kernel {
   }
 };
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename T, typename LabelType>
 class SoftmaxLossKernelUtil final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SoftmaxLossKernelUtil);
   SoftmaxLossKernelUtil() = delete;
 
   static void ComputeLoss(DeviceCtx* ctx, const int64_t n, const int64_t w,
-                          const int32_t* label, const T* prob, T* tmp, T* loss);
+                          const LabelType* label, const T* prob, T* tmp,
+                          T* loss);
 
   static void BackwardSub(DeviceCtx* ctx, const int64_t n, const int64_t w,
-                          const int32_t* label, T* in_diff);
+                          const LabelType* label, T* in_diff);
 };
 
 }  // namespace oneflow
