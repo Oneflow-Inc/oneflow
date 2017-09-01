@@ -43,7 +43,7 @@ void TestInnerProductOp(ParallelPolicy policy, bool has_bias_term,
   ip_op->InferBlobDesc4FwBlobs(fp, policy, 3, 10);
 
   if (policy == kModelParallel) {
-    BalancedSplitter splitter(40, 10);
+    BalancedSplitter splitter(out_num, 10);
     out_num = splitter.At(3).size();
   }
 
