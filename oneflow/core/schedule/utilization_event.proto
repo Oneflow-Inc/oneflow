@@ -6,9 +6,15 @@ enum UtilizationEventType {
 	kEndEvent = 1;
 }
 
+enum ResourceType {
+	kStream = 0;
+	kRegister = 1;
+};
+
 message UtilizationEventProto {
-	int64 resource_id = 1;
-	int64 batch_id = 2;
-	UtilizationEventType type = 3;
-	float time = 4;	
+	ResourceType resource_type = 1;
+	UtilizationEventType event_type = 2;
+	int64 resource_id = 3;
+	int64 batch_id = 4;
+	float time = 5;	
 }
