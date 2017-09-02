@@ -50,7 +50,7 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
       in_blob_desc, {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13,
                      14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25});
   (*bn2blob_ptr)["out"] = KTC::CreateBlobWithRandomVal(out_blob_desc);
-  (*bn2blob_ptr)["idx"] = KTC::CreateBlobWithSameVal(idx_blob_desc, 0);
+  (*bn2blob_ptr)["idx"] = KTC::CreateBlobWithRandomVal(idx_blob_desc);
   (*bn2blob_ptr)["out_diff"] = (*bn2blob_ptr)["out"];
   (*bn2blob_ptr)["in_diff"] = KTC::CreateBlobWithRandomVal(in_blob_desc);
   if (pooling_method == PoolingOpConf::kMax) {
