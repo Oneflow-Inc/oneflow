@@ -7,7 +7,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename PredType, typename LabelType>
 class MultinomialLogisticLossKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MultinomialLogisticLossKernel);
@@ -22,18 +22,19 @@ class MultinomialLogisticLossKernel final : public Kernel {
   }
 };
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename PredType, typename LabelType>
 class MultinomialLogisticLossKernelUtil final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MultinomialLogisticLossKernelUtil);
   MultinomialLogisticLossKernelUtil() = delete;
 
   static void Forward(DeviceCtx* ctx, const int64_t instance_num,
-                      const int64_t num_of_classes, const T* prediction,
-                      const int32_t* labels, T* loss, T* loss_buff);
+                      const int64_t num_of_classes, const PredType* prediction,
+                      const LabelType* labels, PredType* loss,
+                      PredType* loss_buff);
   static void Backward(DeviceCtx* ctx, const int64_t instance_num,
-                       const int64_t num_of_classes, const T* prediction,
-                       const int32_t* labels, T* prediction_diff);
+                       const int64_t num_of_classes, const PredType* prediction,
+                       const LabelType* labels, PredType* prediction_diff);
 };
 
 }  // namespace oneflow

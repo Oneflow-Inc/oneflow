@@ -3,8 +3,8 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
-void MultinomialLogisticLossKernel<device_type, T>::Forward(
+template<DeviceType device_type, typename PredType, typename LabelType>
+void MultinomialLogisticLossKernel<device_type, PredType, LabelType>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
   const Blob* prediction = BnInOp2BlobPtr("prediction");
@@ -12,35 +12,38 @@ void MultinomialLogisticLossKernel<device_type, T>::Forward(
   Blob* loss = BnInOp2BlobPtr("loss");
   Blob* loss_buff = BnInOp2BlobPtr("loss_buffer");
 
-  MultinomialLogisticLossKernelUtil<device_type, T>::Forward(
+  MultinomialLogisticLossKernelUtil<device_type, PredType, LabelType>::Forward(
       ctx.device_ctx, prediction->shape().At(0), prediction->shape().At(1),
-      prediction->dptr<T>(), label->dptr<int32_t>(), loss->mut_dptr<T>(),
-      loss_buff->mut_dptr<T>());
+      prediction->dptr<PredType>(), label->dptr<LabelType>(),
+      loss->mut_dptr<PredType>(), loss_buff->mut_dptr<PredType>());
 
   Blob* prediction_diff = BnInOp2BlobPtr(GenDiffBn("prediction"));
   if (prediction_diff != nullptr) {
-    Memset<device_type>(ctx.device_ctx, prediction_diff->mut_dptr<T>(), 0,
-                        prediction_diff->TotalByteSize());
-    MultinomialLogisticLossKernelUtil<device_type, T>::Backward(
-        ctx.device_ctx, prediction->shape().At(0), prediction->shape().At(1),
-        prediction->dptr<T>(), label->dptr<int32_t>(),
-        prediction_diff->mut_dptr<T>());
+    Memset<device_type>(ctx.device_ctx, prediction_diff->mut_dptr<PredType>(),
+                        0, prediction_diff->TotalByteSize());
+    MultinomialLogisticLossKernelUtil<device_type, PredType, LabelType>::
+        Backward(ctx.device_ctx, prediction->shape().At(0),
+                 prediction->shape().At(1), prediction->dptr<PredType>(),
+                 label->dptr<LabelType>(),
+                 prediction_diff->mut_dptr<PredType>());
   }
 }
 
-template<typename T>
-class MultinomialLogisticLossKernelUtil<DeviceType::kCPU, T> final {
+template<typename PredType, typename LabelType>
+class MultinomialLogisticLossKernelUtil<DeviceType::kCPU, PredType, LabelType>
+    final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MultinomialLogisticLossKernelUtil);
   MultinomialLogisticLossKernelUtil() = delete;
 
   static void Forward(DeviceCtx* ctx, const int64_t instance_num,
-                      const int64_t num_of_classes, const T* prediction,
-                      const int32_t* labels, T* loss, T* loss_buff) {
+                      const int64_t num_of_classes, const PredType* prediction,
+                      const LabelType* labels, PredType* loss,
+                      PredType* loss_buff) {
     ctx->cpu_stream()->SendWork([=]() {
       loss[0] = 0;
       for (int64_t i = 0; i < instance_num; ++i) {
-        T prob =
+        PredType prob =
             prediction[i * num_of_classes + static_cast<int64_t>(labels[i])];
         loss[0] -= SAFE_LOG(prob);
       }
@@ -48,12 +51,13 @@ class MultinomialLogisticLossKernelUtil<DeviceType::kCPU, T> final {
   }
 
   static void Backward(DeviceCtx* ctx, const int64_t instance_num,
-                       const int64_t num_of_classes, const T* prediction,
-                       const int32_t* labels, T* prediction_diff) {
+                       const int64_t num_of_classes, const PredType* prediction,
+                       const LabelType* labels, PredType* prediction_diff) {
     ctx->cpu_stream()->SendWork([=]() {
       for (int64_t i = 0; i < instance_num; ++i) {
         int64_t label = static_cast<int64_t>(labels[i]);
-        T prob = MAX_WITH_LOG_THRESHOLD(prediction[i * num_of_classes + label]);
+        PredType prob =
+            MAX_WITH_LOG_THRESHOLD(prediction[i * num_of_classes + label]);
         prediction_diff[i * num_of_classes + label] = -1 / prob;
       }
     });
@@ -64,14 +68,22 @@ namespace {
 
 template<DeviceType device_type>
 Kernel* CreateMultinomialLogisticLossKernel(const OperatorConf& op_conf) {
-  static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
-#define MULTINOMIAL_LOGISTIC_LOSS_KERNEL_ENTRY(type_cpp, type_proto) \
-  {type_proto,                                                       \
-   []() { return new MultinomialLogisticLossKernel<device_type, type_cpp>; }},
-      OF_PP_FOR_EACH_TUPLE(MULTINOMIAL_LOGISTIC_LOSS_KERNEL_ENTRY,
-                           FLOATING_DATA_TYPE_SEQ)};
-  return data_type2creator.at(
-      op_conf.multinomial_logistic_loss_conf().prediction().data_type())();
+  static const HashMap<std::string, std::function<Kernel*()>>
+      data_type2creator = {
+#define MULTI_LOG_LOSS_KERNEL_ENTRY(data_type_pair, label_type_pair) \
+  {GetHashKey(OF_PP_PAIR_SECOND(data_type_pair),                     \
+              OF_PP_PAIR_SECOND(label_type_pair)),                   \
+   []() {                                                            \
+     return new MultinomialLogisticLossKernel<                       \
+         device_type, OF_PP_PAIR_FIRST(data_type_pair),              \
+         OF_PP_PAIR_FIRST(label_type_pair)>;                         \
+   }},
+          OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MULTI_LOG_LOSS_KERNEL_ENTRY,
+                                           FLOATING_DATA_TYPE_SEQ,
+                                           INT_DATA_TYPE_SEQ)};
+  return data_type2creator.at(GetHashKey(
+      op_conf.multinomial_logistic_loss_conf().prediction().data_type(),
+      op_conf.multinomial_logistic_loss_conf().label().data_type()))();
 }
 
 }  // namespace

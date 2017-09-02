@@ -25,14 +25,15 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobMap() {
       new BlobDesc(Shape({2, 4}), data_type, false));
   (*bn2blob)["out_diff"] = KTC::CreateBlobWithSpecifiedVal(
       new BlobDesc(Shape({2, 4}), data_type, false),
-      {0.2, 1, 2, 3, -4.0, 3.0, -2.0, 1.0});
+      {0.2f, 1, 2, 3, -4, 3, -2, 1});
   (*bn2blob)["expected_out"] = KTC::CreateBlobWithSpecifiedVal(
       new BlobDesc(Shape({2, 4}), data_type, false),
-      {0.0320586, 0.0871443, 0.2368828, 0.6439143, 0.25, 0.25, 0.25, 0.25});
+      {0.0320586f, 0.0871443f, 0.2368828f, 0.6439143f, 0.25f, 0.25f, 0.25f,
+       0.25f});
   (*bn2blob)["expected_in_diff"] = KTC::CreateBlobWithSpecifiedVal(
       new BlobDesc(Shape({2, 4}), data_type, false),
-      {-0.0737048, -0.1306350, -0.1182198, 0.3225595, -0.875, 0.875, -0.375,
-       0.375});
+      {-0.0737048f, -0.1306350f, -0.1182198f, 0.3225595f, -0.875f, 0.875f,
+       -0.375f, 0.375f});
   return [bn2blob](const std::string& bn) { return bn2blob->at(bn); };
 }
 
