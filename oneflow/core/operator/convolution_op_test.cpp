@@ -43,7 +43,7 @@ TEST(ConvolutionOp, dataparallel_convolution) {
   auto Bn2BlobDescFunc = [&bn2blob_desc_map](const std::string& bn) {
     return bn2blob_desc_map.at(bn);
   };
-  convolution_op->InferBlobDesc4FwBlobs(Bn2BlobDescFunc, kDataParallel, 1, 0);
+  convolution_op->InferBlobDesc4FwBlobs(Bn2BlobDescFunc, kDataParallel, 0, 1);
   ASSERT_EQ(*Bn2BlobDescFunc("out"),
             BlobDesc(Shape({100, 16, 82, 82}), DataType::kFloat, false));
   ASSERT_EQ(
