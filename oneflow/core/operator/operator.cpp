@@ -117,11 +117,11 @@ std::string Operator::dtbn2lbn(const std::string& data_tmp_bn) const {
 }
 
 std::string UserOperator::ibn2lbn(const std::string& input_bn) const {
-  return GetMsgFromSpecialConf<LogicalBlob>(input_bn).name();
+  return GetStringFromSpecialConf(input_bn);
 }
 
 std::string UserOperator::obn2lbn(const std::string& output_bn) const {
-  return op_name() + "/" + GetMsgFromSpecialConf<LogicalBlob>(output_bn).name();
+  return op_name() + "/" + GetStringFromSpecialConf(output_bn);
 }
 
 std::string UserOperator::mtbn2lbn(const std::string& model_tmp_bn) const {

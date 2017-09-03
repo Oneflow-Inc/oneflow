@@ -20,10 +20,6 @@ class DataLoaderOp final : public SysOperator {
       int64_t parallel_num) override;
 
  private:
-  std::string obn2lbn(const std::string& output_bn) const override {
-    return op_name() + "/"
-           + GetMsgFromSpecialConf<LogicalBlob>(output_bn).name();
-  }
 };
 
 }  // namespace oneflow

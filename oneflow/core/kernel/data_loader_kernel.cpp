@@ -43,4 +43,19 @@ void DataLoaderKernel<T>::Forward(
   });
 }
 
+namespace {
+
+Kernel* CreateDataLoaderKernel(const OperatorConf& op_conf) {
+  static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
+#define DATA_LOADER_KERNEL_ENTRY(type_cpp, type_proto) \
+  {type_proto, []() { return new DataLoaderKernel<type_cpp>; }},
+      OF_PP_FOR_EACH_TUPLE(DATA_LOADER_KERNEL_ENTRY, ARITHMETIC_DATA_TYPE_SEQ)};
+  return data_type2creator.at(op_conf.data_loader_conf().data_type())();
+}
+
+}  // namespace
+
+COMMAND(AddKernelCreator(OperatorConf::kDataLoaderConf,
+                         CreateDataLoaderKernel));
+
 }  // namespace oneflow
