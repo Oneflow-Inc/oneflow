@@ -119,15 +119,11 @@ void TestPoolingKernel(const PoolingOpConf::PoolMethod& pooling_method) {
 
 TEST(PoolingKernel, pooling) {
 #define POOLINGOPCONF (PoolingOpConf::kAve)(PoolingOpConf::kMax)
-#define MAKE_ENTRY(device_datatype_pair, poolingop_conf)          \
-  test::TestPoolingKernel<OF_PP_PAIR_FIRST(device_datatype_pair), \
-                          OF_PP_PAIR_FIRST(OF_PP_PAIR_SECOND(     \
-                              device_datatype_pair))>(poolingop_conf);
-  OF_PP_FOR_EACH_TUPLE(
-      MAKE_ENTRY,
-      OF_PP_INTERNAL_SEQ_PRODUCT(
-          OF_PP_INTERNAL_SEQ_PRODUCT(DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ),
-          POOLINGOPCONF))
+#define MAKE_ENTRY(device_type, data_pair, poolingop_conf)           \
+  test::TestPoolingKernel<device_type, OF_PP_PAIR_FIRST(data_pair)>( \
+      poolingop_conf);
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, DEVICE_TYPE_SEQ,
+                                   FLOATING_DATA_TYPE_SEQ, POOLINGOPCONF)
 }
 
 }  // namespace oneflow
