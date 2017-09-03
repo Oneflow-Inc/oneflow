@@ -88,9 +88,10 @@ message InnerProductOpConf {
 }
 
 message DataLoaderOpConf {
-  LogicalBlob out = 1;
-  ShapeProto shape = 2;
-  string data_dir = 3;
+  string out = 1;
+  DataType data_type = 2;
+  ShapeProto shape = 3;
+  string data_dir = 4;
 }
 
 message PoolingOpConf {
