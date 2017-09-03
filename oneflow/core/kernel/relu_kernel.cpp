@@ -52,19 +52,4 @@ class ReluKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
-namespace {
-
-template<DeviceType device_type>
-Kernel* CreateReluKernel(const OperatorConf& op_conf) {
-  static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
-#define RELU_KERNEL_ENTRY(type_cpp, type_proto) \
-  {type_proto, []() { return new ReluKernel<device_type, type_cpp>; }},
-      OF_PP_FOR_EACH_TUPLE(RELU_KERNEL_ENTRY, ARITHMETIC_DATA_TYPE_SEQ)};
-  return data_type2creator.at(op_conf.relu_conf().in().data_type())();
-}
-
-}  // namespace
-
-REGISTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kReluConf, CreateReluKernel);
-
 }  // namespace oneflow

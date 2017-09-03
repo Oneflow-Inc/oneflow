@@ -260,20 +260,4 @@ class PoolingKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
-namespace {
-
-template<DeviceType device_type>
-Kernel* CreatePoolingKernel(const OperatorConf& op_conf) {
-  static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
-#define POOLING_KERNEL_ENTRY(type_cpp, type_proto) \
-  {type_proto, []() { return new PoolingKernel<device_type, type_cpp>; }},
-      OF_PP_FOR_EACH_TUPLE(POOLING_KERNEL_ENTRY, ARITHMETIC_DATA_TYPE_SEQ)};
-  return data_type2creator.at(op_conf.pooling_conf().in().data_type())();
-}
-
-}  // namespace
-
-REGISTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kPoolingConf,
-                                 CreatePoolingKernel);
-
 }  // namespace oneflow

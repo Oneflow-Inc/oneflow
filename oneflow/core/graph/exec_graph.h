@@ -56,6 +56,7 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   }
 
   std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOpFunc() const;
+  void GetBnInOp2DataType(google::protobuf::Map<std::string, DataType>*) const;
 
   std::string VisualStr() const { return op_->op_name(); }
 

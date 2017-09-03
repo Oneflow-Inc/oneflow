@@ -286,20 +286,4 @@ void ConvolutionKernel<device_type, T>::InitModelTmpBlobs(
   }
 }
 
-namespace {
-
-template<DeviceType device_type>
-Kernel* CreateConvolutionKernel(const OperatorConf& op_conf) {
-  static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
-#define CONVOLUTION_KERNEL_ENTRY(type_cpp, type_proto) \
-  {type_proto, []() { return new ConvolutionKernel<device_type, type_cpp>; }},
-      OF_PP_FOR_EACH_TUPLE(CONVOLUTION_KERNEL_ENTRY, FLOATING_DATA_TYPE_SEQ)};
-  return data_type2creator.at(op_conf.convolution_conf().in().data_type())();
-}
-
-}  // namespace
-
-REGISTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kConvolutionConf,
-                                 CreateConvolutionKernel);
-
 }  // namespace oneflow

@@ -26,17 +26,16 @@ class KernelMgr final {
   HashMap<std::string, std::unique_ptr<const Kernel>> op_name2kernel_ptr_;
 };
 
-void AddKernelCreator(OperatorConf::OpTypeCase, DeviceType,
-                      std::function<Kernel*(const OperatorConf&)> creator);
+using KernelCreator1 =
+    std::function<Kernel*(const OperatorConf&, const OpContext&)>;
+using KernelCreator2 = std::function<Kernel*(const OperatorConf&)>;
+using KernelCreator3 = std::function<Kernel*(const OpContext&)>;
+using KernelCreator4 = std::function<Kernel*()>;
 
-void AddKernelCreator(OperatorConf::OpTypeCase, DeviceType,
-                      std::function<Kernel*()> creator);
-
-#define REGISTER_TEMPLATE_KERNEL_CREATOR(op_type_case, kernel_creator) \
-  COMMAND(AddKernelCreator(op_type_case, DeviceType::kCPU,             \
-                           kernel_creator<DeviceType::kCPU>);          \
-          AddKernelCreator(op_type_case, DeviceType::kGPU,             \
-                           kernel_creator<DeviceType::kGPU>));
+void AddKernelCreator(OperatorConf::OpTypeCase, KernelCreator1);
+void AddKernelCreator(OperatorConf::OpTypeCase, KernelCreator2);
+void AddKernelCreator(OperatorConf::OpTypeCase, KernelCreator3);
+void AddKernelCreator(OperatorConf::OpTypeCase, KernelCreator4);
 
 }  // namespace oneflow
 

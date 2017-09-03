@@ -64,31 +64,4 @@ class MultinomialLogisticLossKernelUtil<DeviceType::kCPU, PredType, LabelType>
   }
 };  // namespace oneflow
 
-namespace {
-
-template<DeviceType device_type>
-Kernel* CreateMultinomialLogisticLossKernel(const OperatorConf& op_conf) {
-  static const HashMap<std::string, std::function<Kernel*()>>
-      data_type2creator = {
-#define MULTI_LOG_LOSS_KERNEL_ENTRY(data_type_pair, label_type_pair) \
-  {GetHashKey(OF_PP_PAIR_SECOND(data_type_pair),                     \
-              OF_PP_PAIR_SECOND(label_type_pair)),                   \
-   []() {                                                            \
-     return new MultinomialLogisticLossKernel<                       \
-         device_type, OF_PP_PAIR_FIRST(data_type_pair),              \
-         OF_PP_PAIR_FIRST(label_type_pair)>;                         \
-   }},
-          OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MULTI_LOG_LOSS_KERNEL_ENTRY,
-                                           FLOATING_DATA_TYPE_SEQ,
-                                           INT_DATA_TYPE_SEQ)};
-  return data_type2creator.at(GetHashKey(
-      op_conf.multinomial_logistic_loss_conf().prediction().data_type(),
-      op_conf.multinomial_logistic_loss_conf().label().data_type()))();
-}
-
-}  // namespace
-
-REGISTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kMultinomialLogisticLossConf,
-                                 CreateMultinomialLogisticLossKernel);
-
 }  // namespace oneflow

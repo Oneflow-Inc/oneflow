@@ -40,22 +40,4 @@ void MomentumMdUpdateKernel<device_type, T>::InitDataTmpBlobs(
                                    BnInOp2Blob("momentum"));
 }
 
-namespace {
-
-template<DeviceType device_type>
-Kernel* CreateMomentumMdUpdateKernel(const OperatorConf& op_conf) {
-  static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
-#define MOMENTUM_MDUPDATE_KERNEL_ENTRY(type_cpp, type_proto) \
-  {type_proto,                                               \
-   []() { return new MomentumMdUpdateKernel<device_type, type_cpp>; }},
-      OF_PP_FOR_EACH_TUPLE(MOMENTUM_MDUPDATE_KERNEL_ENTRY,
-                           FLOATING_DATA_TYPE_SEQ)};
-  return data_type2creator.at(JobDesc::Singleton()->default_data_type())();
-}
-
-}  // namespace
-
-REGISTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kMomentumMdupdtConf,
-                                 CreateMomentumMdUpdateKernel);
-
 }  // namespace oneflow

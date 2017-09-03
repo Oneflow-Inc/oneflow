@@ -95,15 +95,4 @@ void ConcatKernel<device_type, T>::Backward(
                    copy_out2in);
 }
 
-template<DeviceType device_type>
-Kernel* CreateConcatKernel(const OperatorConf& op_conf) {
-  static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
-#define CREATE_CONCATE_KERNEL(type_cpp, type_proto) \
-  {type_proto, []() { return new ConcatKernel<device_type, type_cpp>; }},
-      OF_PP_FOR_EACH_TUPLE(CREATE_CONCATE_KERNEL, ALL_DATA_TYPE_SEQ)};
-  return data_type2creator.at(op_conf.concat_conf().data_type())();
-}
-
-REGISTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kConcatConf, CreateConcatKernel);
-
 }  // namespace oneflow

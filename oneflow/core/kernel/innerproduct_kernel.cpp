@@ -127,20 +127,4 @@ void InnerProductKernel<device_type, T>::InitModelTmpBlobs(
   }
 }
 
-namespace {
-
-template<DeviceType device_type>
-Kernel* CreateInnerProductKernel(const OperatorConf& op_conf) {
-  static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
-#define INNER_PRODUCT_KERNEL_ENTRY(type_cpp, type_proto) \
-  {type_proto, []() { return new InnerProductKernel<device_type, type_cpp>; }},
-      OF_PP_FOR_EACH_TUPLE(INNER_PRODUCT_KERNEL_ENTRY, FLOATING_DATA_TYPE_SEQ)};
-  return data_type2creator.at(op_conf.innerproduct_conf().in().data_type())();
-}
-
-}  // namespace
-
-REGISTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kInnerproductConf,
-                                 CreateInnerProductKernel);
-
 }  // namespace oneflow

@@ -25,7 +25,4 @@ Kernel* CreateLossRecordKernel(const OperatorConf& op_conf) {
 
 }  // namespace
 
-COMMAND(AddKernelCreator(OperatorConf::kLossRecordConf, DeviceType::kCPU,
-                         CreateLossRecordKernel));
-
 }  // namespace oneflow

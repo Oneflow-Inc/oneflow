@@ -15,6 +15,11 @@ std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc()
   };
 }
 
+void ExecNode::GetBnInOp2DataType(
+    google::protobuf::Map<std::string, DataType>*) const {
+  TODO();
+}
+
 void ExecNode::ToProto(ExecNodeProto* ret) const {
   ret->set_op_name(op_->op_name());
   for (const auto& bn_regst : bn_in_op2regst_) {

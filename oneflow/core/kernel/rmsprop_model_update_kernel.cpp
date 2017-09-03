@@ -52,22 +52,4 @@ class RMSPropMdUpdateKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
-namespace {
-
-template<DeviceType device_type>
-Kernel* CreateRmspropMdUpdateKernel(const OperatorConf& op_conf) {
-  static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
-#define RMSPROP_MDUPDATE_KERNEL_ENTRY(type_cpp, type_proto) \
-  {type_proto,                                              \
-   []() { return new RMSPropMdUpdateKernel<device_type, type_cpp>; }},
-      OF_PP_FOR_EACH_TUPLE(RMSPROP_MDUPDATE_KERNEL_ENTRY,
-                           FLOATING_DATA_TYPE_SEQ)};
-  return data_type2creator.at(JobDesc::Singleton()->default_data_type())();
-}
-
-}  // namespace
-
-REGISTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kRmspropMdupdtConf,
-                                 CreateRmspropMdUpdateKernel);
-
 }  // namespace oneflow

@@ -54,7 +54,4 @@ Kernel* CreateModelSaveKernel(const OperatorConf& op_conf) {
 
 }  // namespace
 
-COMMAND(AddKernelCreator(OperatorConf::kModelSaveConf, DeviceType::kCPU,
-                         CreateModelSaveKernel));
-
 }  // namespace oneflow
