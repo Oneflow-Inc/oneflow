@@ -35,7 +35,7 @@ void MultinomialLogisticLossOp::InferBlobDesc4FwBlobs(
   loss_blob_desc->set_data_type(conf.loss().data_type());
   loss_blob_desc->set_has_data_id(false);
   // loss_buffer
-  BlobDesc* loss_buffer_blob_desc = GetBlobDesc4BnInOp("loss");
+  BlobDesc* loss_buffer_blob_desc = GetBlobDesc4BnInOp("loss_buffer");
   loss_buffer_blob_desc->mut_shape() = Shape({1});
   loss_buffer_blob_desc->set_data_type(conf.loss().data_type());
   loss_buffer_blob_desc->set_has_data_id(false);
