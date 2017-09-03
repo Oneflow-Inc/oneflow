@@ -8,7 +8,7 @@ namespace oneflow {
 struct KernelCtx {
   KernelCtx() : device_ctx(nullptr), other(nullptr) {}
 
-  const DeviceCtx* device_ctx;
+  DeviceCtx* device_ctx;
   void* other;
 };
 

@@ -11,7 +11,7 @@ class CopyHdOp final : public SysOperator {
   CopyHdOp() = default;
   ~CopyHdOp() = default;
 
-  void InitFromOpConf(const OperatorConf& op_conf) override;
+  void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
 
  private:
