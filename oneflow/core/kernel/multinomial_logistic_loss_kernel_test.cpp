@@ -13,45 +13,38 @@ template<DeviceType device_type, typename PredType, typename LabelType>
 std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
 
-  (*bn2blob_ptr)["prediction"] =
-      KTCommon<device_type, PredType>::CreateBlobWithSpecifiedVal(
-          new BlobDesc(Shape({4, 10}), GetDataType<PredType>::val, false),
-          {1.314913e-05, 4.500352e-05, 3.436922e-06, 9.997171e-01,
-           1.758189e-08, 8.714826e-06, 1.898432e-08, 1.979446e-07,
-           2.107414e-04, 1.660027e-06, 7.234089e-06, 2.464892e-06,
-           4.696337e-07, 9.974370e-01, 6.605830e-06, 2.160112e-03,
-           2.135477e-07, 2.358040e-04, 1.226367e-04, 2.739524e-05,
-           1.980253e-06, 2.231704e-05, 9.996368e-01, 2.880224e-04,
-           4.716213e-06, 3.297473e-07, 8.703138e-08, 1.498134e-06,
-           4.409142e-05, 1.453549e-07, 5.988552e-04, 3.569204e-05,
-           4.662264e-04, 2.320096e-04, 6.499564e-02, 6.946083e-04,
-           6.789275e-04, 7.571414e-03, 6.086799e-03, 9.186398e-01});
+  using KTC_PRED = KTCommon<device_type, PredType>;
+  using KTC_LABEL = KTCommon<device_type, LabelType>;
+  (*bn2blob_ptr)["prediction"] = KTC_PRED::CreateBlobWithSpecifiedVal(
+      new BlobDesc(Shape({4, 10}), GetDataType<PredType>::val, false),
+      {1.314913e-05, 4.500352e-05, 3.436922e-06, 9.997171e-01, 1.758189e-08,
+       8.714826e-06, 1.898432e-08, 1.979446e-07, 2.107414e-04, 1.660027e-06,
+       7.234089e-06, 2.464892e-06, 4.696337e-07, 9.974370e-01, 6.605830e-06,
+       2.160112e-03, 2.135477e-07, 2.358040e-04, 1.226367e-04, 2.739524e-05,
+       1.980253e-06, 2.231704e-05, 9.996368e-01, 2.880224e-04, 4.716213e-06,
+       3.297473e-07, 8.703138e-08, 1.498134e-06, 4.409142e-05, 1.453549e-07,
+       5.988552e-04, 3.569204e-05, 4.662264e-04, 2.320096e-04, 6.499564e-02,
+       6.946083e-04, 6.789275e-04, 7.571414e-03, 6.086799e-03, 9.186398e-01});
 
-  (*bn2blob_ptr)["loss"] =
-      KTCommon<device_type, PredType>::CreateBlobWithSpecifiedVal(
-          new BlobDesc(Shape({1, 1}), GetDataType<PredType>::val, false),
-          {0.0});
+  (*bn2blob_ptr)["loss"] = KTC_PRED::CreateBlobWithSpecifiedVal(
+      new BlobDesc(Shape({1, 1}), GetDataType<PredType>::val, false), {0.0});
 
-  (*bn2blob_ptr)["loss_buffer"] =
-      KTCommon<device_type, PredType>::CreateBlobWithRandomVal(
-          new BlobDesc(Shape({4, 1}), GetDataType<PredType>::val, false));
+  (*bn2blob_ptr)["loss_buffer"] = KTC_PRED::CreateBlobWithRandomVal(
+      new BlobDesc(Shape({4, 1}), GetDataType<PredType>::val, false));
 
-  (*bn2blob_ptr)["expected_loss"] =
-      KTCommon<device_type, PredType>::CreateBlobWithSpecifiedVal(
-          new BlobDesc(Shape({1, 1}), GetDataType<PredType>::val, false),
-          {8.807367e-02});
+  (*bn2blob_ptr)["expected_loss"] = KTC_PRED::CreateBlobWithSpecifiedVal(
+      new BlobDesc(Shape({1, 1}), GetDataType<PredType>::val, false),
+      {8.807367e-02});
 
-  (*bn2blob_ptr)["label"] =
-      KTCommon<device_type, LabelType>::CreateBlobWithSpecifiedVal(
-          new BlobDesc(Shape({1, 4}), GetDataType<LabelType>::val, false),
-          {3, 3, 2, 9});
+  (*bn2blob_ptr)["label"] = KTC_LABEL::CreateBlobWithSpecifiedVal(
+      new BlobDesc(Shape({1, 4}), GetDataType<LabelType>::val, false),
+      {3, 3, 2, 9});
 
-  (*bn2blob_ptr)["prediction_diff"] =
-      KTCommon<device_type, PredType>::CreateBlobWithRandomVal(
-          new BlobDesc(Shape({4, 10}), GetDataType<PredType>::val, false));
+  (*bn2blob_ptr)["prediction_diff"] = KTC_PRED::CreateBlobWithRandomVal(
+      new BlobDesc(Shape({4, 10}), GetDataType<PredType>::val, false));
 
   (*bn2blob_ptr)["expected_prediction_diff"] =
-      KTCommon<device_type, PredType>::CreateBlobWithSpecifiedVal(
+      KTC_PRED::CreateBlobWithSpecifiedVal(
           new BlobDesc(Shape({4, 10}), GetDataType<PredType>::val, false),
           {-0.000000e+00, -0.000000e+00, -0.000000e+00, -1.000283e+00,
            -0.000000e+00, -0.000000e+00, -0.000000e+00, -0.000000e+00,
