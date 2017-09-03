@@ -63,6 +63,8 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   void ToProto(ExecNodeProto* ret) const;
 
  private:
+  BlobDesc* GetBlobDesc4BnInOp(const std::string&) const;
+
   std::shared_ptr<Operator> op_;
   HashMap<std::string, std::weak_ptr<RegstDesc>> bn_in_op2regst_;
 };

@@ -6,18 +6,20 @@ void ExecEdge::set_lbn(const std::string& lbn) { lbn_ = lbn; }
 
 std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc()
     const {
-  return [this](const std::string& bn_in_op) -> BlobDesc* {
-    auto it = this->bn_in_op2regst_.find(bn_in_op);
-    if (it == this->bn_in_op2regst_.end()) { return nullptr; }
-    std::shared_ptr<RegstDesc> regst = it->second.lock();
-    const std::string& lbn = this->op()->Lbn4BnInOp(bn_in_op);
-    return regst->GetMutBlobDesc(lbn);
+  return [this](const std::string& bn_in_op) {
+    return GetBlobDesc4BnInOp(bn_in_op);
   };
 }
 
 void ExecNode::GetBnInOp2DataType(
-    google::protobuf::Map<std::string, DataType>*) const {
-  TODO();
+    google::protobuf::Map<std::string, DataType>* pbmap) const {
+  for (const auto& pair : bn_in_op2regst_) {
+    const std::string& bn_in_op = pair.first;
+    BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
+    if (blob_desc) {
+      CHECK(pbmap->insert({bn_in_op, blob_desc->data_type()}).second);
+    }
+  }
 }
 
 void ExecNode::ToProto(ExecNodeProto* ret) const {
@@ -29,6 +31,14 @@ void ExecNode::ToProto(ExecNodeProto* ret) const {
           {bn_regst.first, regst->regst_desc_id()});
     }
   }
+}
+
+BlobDesc* ExecNode::GetBlobDesc4BnInOp(const std::string& bn_in_op) const {
+  auto it = this->bn_in_op2regst_.find(bn_in_op);
+  if (it == this->bn_in_op2regst_.end()) { return nullptr; }
+  std::shared_ptr<RegstDesc> regst = it->second.lock();
+  const std::string& lbn = this->op()->Lbn4BnInOp(bn_in_op);
+  return regst->GetMutBlobDesc(lbn);
 }
 
 void ExecGraph::ToExecSequence(ExecSequence* ret) const {
