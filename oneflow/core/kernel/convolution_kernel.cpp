@@ -286,4 +286,19 @@ void ConvolutionKernel<device_type, T>::InitModelTmpBlobs(
   }
 }
 
+namespace {
+
+Kernel* CreateConvolutionKenrel(const OperatorContext& op_ctx) {
+  static const HashMap<OperatorContext, std::function<Kernel*()>> data_type2creator = {
+#define CONVOLUTION_KERNEL_ENTRY(type_cpp, type_proto) \
+  {type_proto, []() { return new ConvolutionKernel<device_type, type_cpp>; }},
+      OF_PP_FOR_EACH_TUPLE(CONVOLUTION_KERNEL_ENTRY, FLOATING_DATA_TYPE_SEQ)};
+  return data_type2creator.at(op_ctx)();
+}
+
+COMMAND(AddKernelCreator(OperatorConf::kConvolutionConf,
+                         CreateConvolutionKenrel))
+
+}  // namespace
+
 }  // namespace oneflow
