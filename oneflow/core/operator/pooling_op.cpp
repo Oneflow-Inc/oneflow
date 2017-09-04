@@ -37,7 +37,6 @@ void PoolingOp::InferBlobDesc4FwBlobs(
       Shape({in_blob_desc->shape().At(0), in_blob_desc->shape().At(1), shape_h,
              shape_w});
   out_blob_desc->set_data_type(in_blob_desc->data_type());
-  // CHECK_EQ(out_blob_desc->data_type(), conf.out().data_type());
   out_blob_desc->set_has_data_id(in_blob_desc->has_data_id());
   // idx
   BlobDesc* idx_blob_desc = GetBlobDesc4BnInOp("idx");
