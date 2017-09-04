@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_SCHEDULE_SCHEDULE_FACTORY_CONFIGURE_H_
 #define ONEFLOW_CORE_SCHEDULE_SCHEDULE_FACTORY_CONFIGURE_H_
 
+#include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/schedule/schedule_factory_provider.h"
 
@@ -34,8 +35,8 @@ class ScheduleFactoryConfigure final {
   }
 };
 
-#define REGISTER_SCHEDULE_FACTORY_PROVIDER(name)           \
-  static auto MACRO_CONCAT(var_policy_hub_, __COUNTER__) = \
+#define REGISTER_SCHEDULE_FACTORY_PROVIDER(name)        \
+  static auto OF_PP_CAT(var_policy_hub_, __COUNTER__) = \
       ScheduleFactoryConfigure::EnrollProvider(name)
 
 }  // namespace schedule
