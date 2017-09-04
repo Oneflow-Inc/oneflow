@@ -30,6 +30,7 @@ void SyncStream<DeviceType::kGPU>(KernelCtx* ctx) {
 
 template<typename T>
 class KTCommon<DeviceType::kGPU, T> final {
+ public:
   static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc, T* val) {
     Blob* ret = CreateBlob<DeviceType::kGPU>(blob_desc);
     CudaCheck(cudaMemcpy(ret->mut_dptr(), val, ret->ByteSizeOfDataField(),
@@ -53,11 +54,12 @@ class KTCommon<DeviceType::kGPU, T> final {
                          blob->ByteSizeOfDataField(), cudaMemcpyDeviceToHost));
     KTCommon<DeviceType::kCPU, T>::CheckFillResult(cpu_blob, fill_conf);
   }
-};  // namespace test
+};
 
 #define INSTANTIATE_KTCOMMON(type_cpp, type_proto) \
   template class KTCommon<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KTCOMMON, ALL_DATA_TYPE_SEQ)
 
 }  // namespace test
+
 }  // namespace oneflow

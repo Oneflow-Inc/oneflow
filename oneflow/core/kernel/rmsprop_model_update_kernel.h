@@ -27,15 +27,12 @@ class RMSPropMdUpdateKernelUtil final {
  public:
   // alpha = (1 - decay_rate) / batch_size ^ 2
   // mean_square = alpha * model_diff ^ 2 + decay_rate * mean_square
-  static void UpdateMeanSquare(const KernelCtx& ctx, const int64_t n,
-                               const T alpha, const T decay_rate,
-                               T* mean_square, const T* model_diff);
-
-  // alpha = learning_rate / batch_size
-  // model -= alpha * model_diff / sqrt(mean_square + epsilon)
-  static void UpdateModel(const KernelCtx& ctx, const int64_t n, T* model,
-                          const T* model_diff, const T* mean_square,
-                          const T epsilon, const T alpha);
+  // learning_rate = learning_rate / batch_size
+  // model -= learning_rate * model_diff / sqrt(mean_square + epsilon)
+  static void UpdateModel(const KernelCtx& ctx, const int64_t n, const T alpha,
+                          const T learning_rate, const T decay_rate,
+                          const T epsilon, T* model, T* mean_square,
+                          const T* model_diff);
 };
 
 }  // namespace oneflow

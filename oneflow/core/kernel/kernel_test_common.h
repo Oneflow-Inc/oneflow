@@ -61,5 +61,7 @@ class KTCommon final {
 };
 
 }  // namespace test
+
 }  // namespace oneflow
+
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_TEST_COMMON_H_

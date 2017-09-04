@@ -68,6 +68,8 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
 
   void ToProto(TaskProto* ret) const override { TaskNode::ToProto(ret); };
 
+  DeviceType GetDeviceType() const override { return DeviceType::kCPU; }
+
  private:
   std::shared_ptr<Operator> AddOp() const override;
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {

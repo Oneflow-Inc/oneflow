@@ -27,15 +27,15 @@ void MultinomialLogisticLossOp::InferBlobDesc4FwBlobs(
   CHECK_EQ(conf.loss().data_type(), JobDesc::Singleton()->default_data_type());
   const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
   CHECK_EQ(pred_blob_desc->has_data_id(), label_blob_desc->has_data_id());
-  // CHECK label data type is int32_t
-  CHECK_EQ(label_blob_desc->data_type(), DataType::kInt32);
+  // CHECK label data type is integral type
+  CHECK(IsIntegral(label_blob_desc->data_type()));
   // loss
   BlobDesc* loss_blob_desc = GetBlobDesc4BnInOp("loss");
   loss_blob_desc->mut_shape() = Shape({1});
   loss_blob_desc->set_data_type(conf.loss().data_type());
   loss_blob_desc->set_has_data_id(false);
   // loss_buffer
-  BlobDesc* loss_buffer_blob_desc = GetBlobDesc4BnInOp("loss");
+  BlobDesc* loss_buffer_blob_desc = GetBlobDesc4BnInOp("loss_buffer");
   loss_buffer_blob_desc->mut_shape() = Shape({1});
   loss_buffer_blob_desc->set_data_type(conf.loss().data_type());
   loss_buffer_blob_desc->set_has_data_id(false);
