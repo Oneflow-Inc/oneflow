@@ -1,6 +1,3 @@
-/**
- * Copyright 2017 Xinqi Li
- */
 #include "oneflow/core/schedule/simulation_strategy.h"
 #include "oneflow/core/schedule/sgraph.h"
 #include "oneflow/core/schedule/simulator_schedule_engine.h"

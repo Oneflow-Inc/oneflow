@@ -1,8 +1,4 @@
-/**
- * Copyright 2017 Xinqi Li
- */
 #include "oneflow/core/schedule/sgraph.h"
-#include <sstream>
 #include "oneflow/core/schedule/bfs_visitor.h"
 
 namespace oneflow {

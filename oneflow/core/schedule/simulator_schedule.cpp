@@ -1,6 +1,3 @@
-/**
- * Copyright 2017 Xinqi Li
- */
 #include "oneflow/core/schedule/simulator_schedule.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/schedule/bfs_visitor.h"

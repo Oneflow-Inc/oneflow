@@ -1,6 +1,3 @@
-/**
- * Copyright 2017 Xinqi Li
- */
 #ifndef ONEFLOW_CORE_SCHEDULE_SCC_VISITOR_H_
 #define ONEFLOW_CORE_SCHEDULE_SCC_VISITOR_H_
 

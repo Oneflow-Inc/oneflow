@@ -1,9 +1,3 @@
-/**
- * Copyright 2017 Xinqi Li
- */
-#include <fstream>
-#include <sstream>
-#include <string>
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/schedule/schedule_factory_configure.h"

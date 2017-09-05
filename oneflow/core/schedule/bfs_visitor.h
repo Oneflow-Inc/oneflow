@@ -1,8 +1,6 @@
 #ifndef ONEFLOW_CORE_SCHEDULE_BFS_VISITOR_H_
 #define ONEFLOW_CORE_SCHEDULE_BFS_VISITOR_H_
 
-#include <queue>
-
 #include "oneflow/core/schedule/snode.h"
 
 namespace oneflow {

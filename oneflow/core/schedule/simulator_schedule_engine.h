@@ -1,23 +1,5 @@
-/**
- * Copyright 2017 Xinqi Li
- */
 #ifndef ONEFLOW_CORE_SCHEDULE_SIMULATOR_SCHEDULE_ENGINE_H_
 #define ONEFLOW_CORE_SCHEDULE_SIMULATOR_SCHEDULE_ENGINE_H_
-
-#include <limits.h>
-#include <algorithm>
-#include <functional>
-#include <iostream>
-#include <list>
-#include <memory>
-#include <set>
-#include <sstream>
-#include <string>
-#include <typeinfo>
-#include <unordered_map>
-#include <unordered_set>
-#include <utility>
-#include <vector>
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/schedule/schedule.h"
