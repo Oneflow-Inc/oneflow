@@ -7,7 +7,7 @@ namespace test {
 
 namespace {
 
-template<DeviceType device_type, typename FloatingPointType>
+template<DeviceType device_type, typename T>
 Kernel* BuildRMSPropMdUpdateKernel(float learning_rate, float decay_rate,
                                    float epsilon) {
   OperatorConf op_conf;
@@ -20,8 +20,7 @@ Kernel* BuildRMSPropMdUpdateKernel(float learning_rate, float decay_rate,
   auto rmsprop_md_update_op = ConstructOp(op_conf);
   OperatorProto op_proto;
   rmsprop_md_update_op->ToProto(&op_proto);
-  auto rmsprop_md_update_kernel =
-      new RMSPropMdUpdateKernel<device_type, FloatingPointType>();
+  auto rmsprop_md_update_kernel = new RMSPropMdUpdateKernel<device_type, T>();
   rmsprop_md_update_kernel->InitFromOpProto(op_proto);
   return rmsprop_md_update_kernel;
 }
@@ -33,63 +32,59 @@ void InitJobDesc(int32_t piece_size, int32_t num_of_pieces_in_batch) {
   JobDesc::Singleton()->InitFromJobConf(job_conf);
 }
 
-template<DeviceType device_type, typename FloatingPointType>
-std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
+template<DeviceType device_type, typename T>
+std::function<Blob*(const std::string&)> BuildBnInOp2Blob(
     std::vector<int64_t>& dim_vec) {
-  using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
+  using KTC = KTCommon<device_type, T>;
 
-  auto bn2blob_ptr = new HashMap<std::string, Blob*>;
-  (*bn2blob_ptr)["model"] = KTCommon::CreateBlobWithSameValue(dim_vec, 2);
-  (*bn2blob_ptr)["mean_square"] = KTCommon::CreateBlobWithSameValue(dim_vec, 0);
-  (*bn2blob_ptr)["model_diffs"] = KTCommon::CreateBlobWithSameValue(dim_vec, 2);
-  (*bn2blob_ptr)["model_expected"] =
-      KTCommon::CreateBlobWithSameValue(dim_vec, 0);
-  (*bn2blob_ptr)["mean_square_expected"] =
-      KTCommon::CreateBlobWithSameValue(dim_vec, 1);
-  return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
+  BlobDesc* blob_desc =
+      new BlobDesc(Shape(dim_vec), GetDataType<T>::val, false);
+
+  auto bn2blob = new HashMap<std::string, Blob*>;
+  (*bn2blob)["model"] = KTC::CreateBlobWithSameVal(blob_desc, 2);
+  (*bn2blob)["mean_square"] = KTC::CreateBlobWithSameVal(blob_desc, 0);
+  (*bn2blob)["model_diffs"] = KTC::CreateBlobWithSameVal(blob_desc, 2);
+  (*bn2blob)["model_expected"] = KTC::CreateBlobWithSameVal(blob_desc, 0);
+  (*bn2blob)["mean_square_expected"] = KTC::CreateBlobWithSameVal(blob_desc, 1);
+  return [bn2blob](const std::string& bn) { return bn2blob->at(bn); };
 }
 
-template<DeviceType device_type, typename FloatingPointType>
+template<DeviceType device_type, typename T>
 void TestRMSPropMdUpdateKernel() {
-  using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
+  using KTC = KTCommon<device_type, T>;
   KernelCtx ctx;
-  KTCommon::BuildKernelCtx(&ctx);
+  BuildKernelCtx<device_type>(&ctx);
   ctx.other = new int64_t(1);
 
   std::vector<int64_t> dim_vec = {1, 3, 2};
   const float learning_rate = {2.0f};
   const float decay_rate = 1.0f / 2;
   const float epsilon = 3.0f;
-  auto BnInOp2BlobPtr =
-      BuildBnInOp2BlobPtr<device_type, FloatingPointType>(dim_vec);
-  auto rmsprop_md_update_kernel =
-      BuildRMSPropMdUpdateKernel<device_type, FloatingPointType>(
-          learning_rate, decay_rate, epsilon);
+  auto BnInOp2Blob = BuildBnInOp2Blob<device_type, T>(dim_vec);
+  auto rmsprop_md_update_kernel = BuildRMSPropMdUpdateKernel<device_type, T>(
+      learning_rate, decay_rate, epsilon);
   int32_t piece_size = 1;
   int32_t num_of_pieces_in_batch = 2;
   InitJobDesc(piece_size, num_of_pieces_in_batch);
 
-  rmsprop_md_update_kernel->Forward(ctx, BnInOp2BlobPtr);
+  rmsprop_md_update_kernel->Forward(ctx, BnInOp2Blob);
   ctx.other = new int64_t(2);
-  rmsprop_md_update_kernel->Forward(ctx, BnInOp2BlobPtr);
-  KTCommon::SyncStream(&ctx);
+  rmsprop_md_update_kernel->Forward(ctx, BnInOp2Blob);
+  SyncStream<device_type>(&ctx);
 
-  KTCommon::CheckResult(BnInOp2BlobPtr, "mean_square", "mean_square_expected");
-  KTCommon::CheckResult(BnInOp2BlobPtr, "model", "model_expected");
+  KTC::CheckResult(BnInOp2Blob, "mean_square", "mean_square_expected");
+  KTC::CheckResult(BnInOp2Blob, "model", "model_expected");
 }
 
 }  // namespace
 
 }  // namespace test
 
-TEST(RMSPropMdUpdateKernel, model_update_cpu) {
-  test::TestRMSPropMdUpdateKernel<DeviceType::kCPU, float>();
-  test::TestRMSPropMdUpdateKernel<DeviceType::kCPU, double>();
-}
-
-TEST(RMSPropMdUpdateKernel, model_update_gpu) {
-  test::TestRMSPropMdUpdateKernel<DeviceType::kGPU, float>();
-  test::TestRMSPropMdUpdateKernel<DeviceType::kGPU, double>();
+TEST(RMSPropMdUpdateKernel, model_update) {
+#define MAKE_ENTRY(device_type, type_pair) \
+  test::TestRMSPropMdUpdateKernel<device_type, OF_PP_PAIR_FIRST(type_pair)>();
+  OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, OF_PP_INTERNAL_SEQ_PRODUCT(
+                                       DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ))
 }
 
 }  // namespace oneflow

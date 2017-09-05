@@ -209,14 +209,13 @@ void Compiler::GenPlanFile(const std::string& plan_filepath) {
   ForEachTaskNode([&](const TaskNode* task_node) {
     task_node->exec_gph().ConstForEachNode([&](const ExecNode* exec_node) {
       const std::string& op_name = exec_node->op()->op_name();
-      // op_name2device_type
-      auto it = plan.mutable_op_name2device_type()->find(op_name);
-      if (it == plan.mutable_op_name2device_type()->end()) {
-        plan.mutable_op_name2device_type()->insert(
-            {op_name, task_node->chain_node()->parallel_desc()->device_type()});
-      } else {
-        CHECK_EQ(it->second,
-                 task_node->chain_node()->parallel_desc()->device_type());
+      // op_name2context
+      auto it = plan.mutable_op_name2context()->find(op_name);
+      if (it == plan.mutable_op_name2context()->end()) {
+        OpContext op_ctx;
+        op_ctx.set_device_type(task_node->GetDeviceType());
+        exec_node->GetBnInOp2DataType(op_ctx.mutable_bn_in_op2data_type());
+        CHECK(plan.mutable_op_name2context()->insert({op_name, op_ctx}).second);
       }
       // machine_id2op_name_set
       int64_t machine_id = task_node->stage_node()->machine_id();

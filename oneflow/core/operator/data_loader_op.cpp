@@ -3,12 +3,10 @@
 
 namespace oneflow {
 
-void DataLoaderOp::InitFromOpConf(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_data_loader_conf());
-  mut_op_conf() = op_conf;
+void DataLoaderOp::InitFromOpConf() {
+  CHECK(op_conf().has_data_loader_conf());
 
-  EnrollOutputBn("feature", false);
-  EnrollOutputBn("label", false);
+  EnrollOutputBn("out", false);
 }
 
 const PbMessage& DataLoaderOp::GetSpecialConf() const {
@@ -17,19 +15,13 @@ const PbMessage& DataLoaderOp::GetSpecialConf() const {
 
 void DataLoaderOp::InferBlobDesc4FwBlobs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) const {
-  // useful vars
-  int32_t piece_size = JobDesc::Singleton()->piece_size();
-  auto op_conf = static_cast<const DataLoaderOpConf*>(&GetSpecialConf());
-  // feature shape
-  Shape feature_shape_of_one_ins(op_conf->shape_of_one_feature_ins());
-  std::vector<int64_t> feature_shape = {piece_size};
-  feature_shape.insert(feature_shape.end(),
-                       feature_shape_of_one_ins.dim_vec().begin(),
-                       feature_shape_of_one_ins.dim_vec().end());
-  GetBlobDesc4BnInOp("feature")->mut_shape() = Shape(feature_shape);
-  // label shape
-  GetBlobDesc4BnInOp("label")->mut_shape() = Shape({piece_size});
+    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) {
+  const DataLoaderOpConf& conf = op_conf().data_loader_conf();
+  BlobDesc* out = GetBlobDesc4BnInOp("out");
+  out->mut_shape() = Shape(conf.shape());
+  out->mut_shape().Set(0, JobDesc::Singleton()->piece_size());
+  out->set_data_type(conf.data_type());
+  out->set_has_data_id(JobDesc::Singleton()->is_predict());
 }
 
 REGISTER_OP(OperatorConf::kDataLoaderConf, DataLoaderOp);

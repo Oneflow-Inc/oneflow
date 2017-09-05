@@ -40,8 +40,8 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   ExecNode() = default;
   ~ExecNode() = default;
 
-  std::shared_ptr<const Operator> op() const { return op_; }
-  std::shared_ptr<const Operator>& mut_op() { return op_; }
+  std::shared_ptr<Operator> op() const { return op_; }
+  std::shared_ptr<Operator>& mut_op() { return op_; }
 
   void BindBnInOpAndRegst(const std::string& bn_in_op,
                           std::weak_ptr<RegstDesc> regst) {
@@ -56,13 +56,16 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   }
 
   std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOpFunc() const;
+  void GetBnInOp2DataType(google::protobuf::Map<std::string, DataType>*) const;
 
   std::string VisualStr() const { return op_->op_name(); }
 
   void ToProto(ExecNodeProto* ret) const;
 
  private:
-  std::shared_ptr<const Operator> op_;
+  BlobDesc* GetBlobDesc4BnInOp(const std::string&) const;
+
+  std::shared_ptr<Operator> op_;
   HashMap<std::string, std::weak_ptr<RegstDesc>> bn_in_op2regst_;
 };
 

@@ -11,34 +11,57 @@ namespace oneflow {
 
 namespace test {
 
-template<DeviceType device_type, typename FloatingPointType>
-class KernelTestCommon final {
+template<DeviceType device_type>
+Blob* CreateBlob(const BlobDesc*);
+
+template<DeviceType device_type>
+void BuildKernelCtx(KernelCtx* ctx);
+
+template<DeviceType device_type>
+void SyncStream(KernelCtx* ctx);
+
+template<DeviceType device_type, typename T>
+class KTCommon final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(KernelTestCommon);
-  KernelTestCommon() = delete;
+  OF_DISALLOW_COPY_AND_MOVE(KTCommon);
+  KTCommon() = delete;
 
-  static Blob* CreateBlobWithVector(const std::vector<int64_t>& dim_vec,
-                                    FloatingPointType* data_vec);
+  static Blob* CreateBlobWithSpecifiedVal(const BlobDesc*, T* val);
+  static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc,
+                                          std::vector<T> val) {
+    return CreateBlobWithSpecifiedVal(blob_desc, &(val[0]));
+  }
 
-  static Blob* CreateBlobWithSameValue(const std::vector<int64_t>& dim_vec,
-                                       FloatingPointType value);
+  static Blob* CreateBlobWithSameVal(const BlobDesc* blob_desc, T val) {
+    T* val_vec = new T[blob_desc->shape().elem_cnt()];
+    std::fill(val_vec, val_vec + blob_desc->shape().elem_cnt(), val);
+    return CreateBlobWithSpecifiedVal(blob_desc, val_vec);
+  }
 
-  static Blob* CreateBlobWithRandomValue(const std::vector<int64_t>& dim_vec);
+  static Blob* CreateBlobWithRandomVal(const BlobDesc* blob_desc) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> dis(0, 10);
+    T* val_vec = new T[blob_desc->shape().elem_cnt()];
+    for (int64_t i = 0; i < blob_desc->shape().elem_cnt(); ++i) {
+      val_vec[i] = static_cast<T>(dis(gen));
+    }
+    return CreateBlobWithSpecifiedVal(blob_desc, val_vec);
+  }
 
-  static void BuildKernelCtx(KernelCtx* ctx);
+  static void BlobCmp(const Blob* lhs, const Blob* rhs);
 
-  static void SyncStream(KernelCtx* ctx);
+  static void CheckResult(std::function<Blob*(const std::string&)> BnInOp2Blob,
+                          const std::string& result,
+                          const std::string& expected_result) {
+    BlobCmp(BnInOp2Blob(result), BnInOp2Blob(expected_result));
+  }
 
-  static void BlobCmp(Blob* lhs, Blob* rhs);
-
-  static void CheckResult(
-      std::function<Blob*(const std::string&)> BnInOp2BlobPtr,
-      const std::string& check, const std::string& expected);
-
-  static void CheckFillResult(const Blob& check_blob,
-                              const FillConf& fill_conf);
+  static void CheckFillResult(const Blob* blob, const FillConf& fill_conf);
 };
 
 }  // namespace test
+
 }  // namespace oneflow
+
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_TEST_COMMON_H_

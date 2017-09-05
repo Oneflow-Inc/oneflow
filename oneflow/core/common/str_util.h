@@ -34,6 +34,8 @@ namespace internal {
 
 std::string JoinPathImpl(std::initializer_list<std::string> paths);
 
+std::string GetHashKeyImpl(std::initializer_list<int> integers);
+
 }  // namespace internal
 
 // Join multiple paths together, without introducing unnecessary path
@@ -72,6 +74,11 @@ std::string Basename(const std::string& path);
 // paths with respect to the actual working directory.  That is, this is purely
 // string manipulation, completely independent of process state.
 std::string CleanPath(const std::string& path);
+
+template<typename... T>
+std::string GetHashKey(const T&... args) {
+  return internal::GetHashKeyImpl({args...});
+}
 
 }  // namespace oneflow
 

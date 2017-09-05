@@ -11,7 +11,7 @@ class NormalModelUpdateOp final : public ModelUpdtOp {
   NormalModelUpdateOp() = default;
   ~NormalModelUpdateOp() = default;
 
-  void InitFromOpConf(const OperatorConf& op_conf) override;
+  void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
 
  private:
