@@ -90,9 +90,9 @@ bool Validator::ValidateAllocation(const Schedule& schedule) {
     if (declined) {
       std::unique_ptr<Schedule> limited_schedule =
           schedule_engine->StaticSchedule(get_regst_num);
+      std::cout << "ii = " << limited_schedule->max_interval() << std::endl;
       if (limited_schedule->max_interval() <= schedule.max_interval()) {
         failed++;
-        std::cout << "ii = " << limited_schedule->max_interval() << std::endl;
         limited_schedule->PrintRegstNum();
         limited_schedule->PrintSchedule();
       }
