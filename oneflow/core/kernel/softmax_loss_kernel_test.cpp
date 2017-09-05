@@ -43,7 +43,7 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
 }
 
 template<DeviceType device_type, typename PredType, typename LabelType>
-Kernel* BuildMultinomialLogisticLossKernel() {
+Kernel* BuildSoftmaxLossKernel() {
   OperatorConf op_conf;
   op_conf.set_name("softmax_loss_op_test");
   SoftmaxLossOpConf* softmax_loss_conf = op_conf.mutable_softmax_loss_conf();
@@ -59,18 +59,18 @@ Kernel* BuildMultinomialLogisticLossKernel() {
   OperatorProto op_proto;
   softmax_loss_op->ToProto(&op_proto);
   auto softmax_loss_kernel =
-      new MultinomialLogisticLossKernel<device_type, PredType, LabelType>();
+      new SoftmaxLossKernel<device_type, PredType, LabelType>();
   softmax_loss_kernel->InitFromOpProto(op_proto);
   return softmax_loss_kernel;
 }
 
 template<DeviceType device_type, typename PredType, typename LabelType>
-void TestMultinomialLogisticLossKernel() {
+void TestSoftmaxLossKernel() {
   KernelCtx ctx;
   BuildKernelCtx<device_type>(&ctx);
   auto BnInOp2BlobPtr = BuildBnInOp2BlobPtr<device_type, PredType, LabelType>();
   auto softmax_loss_kernel =
-      BuildMultinomialLogisticLossKernel<device_type, PredType, LabelType>();
+      BuildSoftmaxLossKernel<device_type, PredType, LabelType>();
   softmax_loss_kernel->Forward(ctx, BnInOp2BlobPtr);
   SyncStream<device_type>(&ctx);
   KTCommon<device_type, PredType>::CheckResult(BnInOp2BlobPtr, "loss",
@@ -83,11 +83,10 @@ void TestMultinomialLogisticLossKernel() {
 
 }  // namespace test
 
-TEST(MultinomialLogisticLossKernel, softmax_loss_kernel_fw_and_bp) {
-#define MAKE_ENTRY(device_type, pred_type_pair, label_type_pair) \
-  test::TestMultinomialLogisticLossKernel<                       \
-      device_type, OF_PP_PAIR_FIRST(pred_type_pair),             \
-      OF_PP_PAIR_FIRST(label_type_pair)>();
+TEST(SoftmaxLossKernel, softmax_loss_kernel_fw_and_bp) {
+#define MAKE_ENTRY(device_type, pred_type_pair, label_type_pair)             \
+  test::TestSoftmaxLossKernel<device_type, OF_PP_PAIR_FIRST(pred_type_pair), \
+                              OF_PP_PAIR_FIRST(label_type_pair)>();
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, DEVICE_TYPE_SEQ,
                                    FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
 #undef MAKE_ENTRY
