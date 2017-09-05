@@ -43,11 +43,11 @@ void ModelSaveKernel<T>::Forward(
 }
 
 Kernel* CreateModelSaveKernel() {
-  static const HashMap<int, std::function<Kernel*()>> creator = {
+  static const HashMap<int, std::function<Kernel*()>> creators = {
 #define MODEL_SAVE_KERNEL_ENTRY(type_cpp, type_proto) \
   {type_proto, []() { return new ModelSaveKernel<type_cpp>; }},
       OF_PP_FOR_EACH_TUPLE(MODEL_SAVE_KERNEL_ENTRY, FLOATING_DATA_TYPE_SEQ)};
-  return creator.at(JobDesc::Singleton()->default_data_type())();
+  return creators.at(JobDesc::Singleton()->default_data_type())();
 }
 
 COMMAND(AddKernelCreator(OperatorConf::kModelSaveConf, CreateModelSaveKernel));

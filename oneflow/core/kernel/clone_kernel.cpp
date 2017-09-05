@@ -67,7 +67,7 @@ OF_PP_FOR_EACH_TUPLE(DEFINE_NONFLOAT_CLONE_KERNEL_UTIL,
 
 Kernel* CreateCloneKernel(const OperatorConf& op_conf,
                           const OpContext& op_ctx) {
-  static const HashMap<std::string, std::function<Kernel*()>> creator = {
+  static const HashMap<std::string, std::function<Kernel*()>> creators = {
 #define CLONE_KERNEL_ENTRY(device_type, data_type_pair)                     \
   {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {       \
      return new CloneKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>; \
@@ -75,7 +75,7 @@ Kernel* CreateCloneKernel(const OperatorConf& op_conf,
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(CLONE_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
                                        ALL_DATA_TYPE_SEQ)};
 
-  return creator.at(
+  return creators.at(
       GetHashKey(op_ctx.device_type(), op_conf.clone_conf().data_type()))();
 }
 

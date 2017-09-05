@@ -14,7 +14,7 @@ void AccumulateKernel<device_type, T>::Forward(
 }
 
 Kernel* CreateAccumulateKernel(const OpContext& op_ctx) {
-  static const HashMap<std::string, std::function<Kernel*()>> creator = {
+  static const HashMap<std::string, std::function<Kernel*()>> creators = {
 #define ACCUMULATE_KERNEL_ENTRY(device_type, data_type_pair)          \
   {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() { \
      return new AccumulateKernel<device_type,                         \
@@ -23,8 +23,8 @@ Kernel* CreateAccumulateKernel(const OpContext& op_ctx) {
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(ACCUMULATE_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
                                        FLOATING_DATA_TYPE_SEQ)};
 
-  return creator.at(GetHashKey(op_ctx.device_type(),
-                               JobDesc::Singleton()->default_data_type()))();
+  return creators.at(GetHashKey(op_ctx.device_type(),
+                                JobDesc::Singleton()->default_data_type()))();
 }
 
 COMMAND(AddKernelCreator(OperatorConf::kAccumulateConf,
