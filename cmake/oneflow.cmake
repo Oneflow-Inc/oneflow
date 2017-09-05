@@ -1,7 +1,6 @@
 # main cpp
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/compiler.cpp)
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/runtime.cpp)
-list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/persistence/test_file_system.cpp)
 
 # source_group
 if(WIN32)

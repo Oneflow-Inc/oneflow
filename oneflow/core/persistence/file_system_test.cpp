@@ -110,11 +110,4 @@ TEST(file_system, write_and_read) {
 #endif
 }
 
-int main(int argc, char** argv) {
-  testing::InitGoogleTest(&argc, argv);
-  RUN_ALL_TESTS();
-  std::getchar();  // keep console window open until Return keystroke
-  return 0;
-}
-
 }  // namespace oneflow
