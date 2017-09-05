@@ -67,6 +67,34 @@ TEST(BfsVisitor, linked_list) {
   ASSERT_TRUE(cnt == 6);
 }
 
+TEST(BfsVisitor, linked_list) {
+  std::unordered_map<int, std::list<int>> next_nodes{
+      {1, {2}}, {2, {3}}, {3, {4}}, {4, {5}}, {5, {6}}};
+  std::unordered_map<int, std::list<int>> prev_nodes;
+  for (const auto& pair : next_nodes) {
+    int prev = pair.first;
+    for (int next : pair.second) { prev_nodes[next].push_back(prev); }
+  }
+
+  auto foreach_prev = [&](int id, const std::function<void(int)>& cb) {
+    for (int x : prev_nodes[id]) { cb(x); }
+  };
+
+  auto foreach_next = [&](int id, const std::function<void(int)>& cb) {
+    for (int x : next_nodes[id]) { cb(x); }
+  };
+  BfsVisitor<int> bfs_foreach_node(foreach_next, foreach_prev);
+
+  int counter = 1;
+  uint32_t cnt = bfs_foreach_node(1, [&](int x) {
+    ASSERT_TRUE(x == counter);
+    ++counter;
+  });
+
+  ASSERT_TRUE(cnt == 6);
+}
+
+
 TEST(BfsVisitor, multiple_linked_list) {
   std::unordered_map<int, std::list<int>> next_nodes{
       {1, {2}}, {2, {3}}, {3, {4}},  {4, {5}},   {5, {6}},

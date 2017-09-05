@@ -10,24 +10,27 @@ template<typename NodeType>
 class BfsVisitor final {
  public:
   typedef std::function<void(NodeType)> NodeVisitor;
+  typedef std::function<bool(NodeType)> FinalNodeIndicator;
   typedef std::function<void(NodeType, const NodeVisitor&)> ForEachNode;
 
   OF_DISALLOW_COPY_AND_MOVE(BfsVisitor);
   BfsVisitor(const ForEachNode& foreach_next, const ForEachNode& foreach_prev)
       : foreach_next_(foreach_next), foreach_prev_(foreach_prev) {}
-  ~BfsVisitor() = default;
+  virtual ~BfsVisitor() = default;
 
   uint32_t operator()(NodeType start, const NodeVisitor& visitor) {
-    return Walk(std::list<NodeType>{start}, visitor);
+    auto is_final = [](NodeType) { return false; };
+    return Walk(std::list<NodeType>{start}, is_final, visitor);
   }
 
   uint32_t operator()(const std::list<NodeType>& starts,
                       const NodeVisitor& visitor) {
-    return Walk(starts, visitor);
+    auto is_final = [](NodeType) { return false; };
+    return Walk(starts, is_final, visitor);
   }
 
- private:
-  uint32_t Walk(const std::list<NodeType>& init_nodes, const NodeVisitor& cb) {
+  uint32_t Walk(const std::list<NodeType>& init_nodes,
+                const FinalNodeIndicator& is_final, const NodeVisitor& cb) {
     Reset();
     MarkAllPrevVisited(init_nodes);
     uint32_t cnt = 0;
@@ -37,6 +40,7 @@ class BfsVisitor final {
       NodeType node = queue.front();
       cb(node);
       ++cnt;
+      if (is_final(node)) break;
       queue.pop();
       foreach_next_(node, [&](NodeType next) {
         bool all_marked = true;
@@ -54,6 +58,10 @@ class BfsVisitor final {
     return cnt;
   }
 
+	inline ForEachNode foreach_prev() const { return foreach_prev_; }
+	inline ForEachNode& mut_foreach_prev() { return foreach_prev_; }
+
+ private:
   void Reset() { visited_or_visiting_soon_.clear(); }
 
   void MarkAllPrevVisited(const std::list<NodeType>& init_nodes) {
