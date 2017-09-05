@@ -52,13 +52,13 @@ void TestReluKernel() {
   using KTC = KTCommon<device_type, T>;
   KernelCtx ctx;
   BuildKernelCtx<device_type>(&ctx);
-  auto BnInOp2BlobPtr = BuildBnInOp2BlobMap<device_type, T>();
+  auto BnInOp2Blob = BuildBnInOp2BlobMap<device_type, T>();
   auto relu_kernel = BuildReluKernel<device_type, T>();
-  relu_kernel->Forward(ctx, BnInOp2BlobPtr);
-  relu_kernel->Backward(ctx, BnInOp2BlobPtr);
+  relu_kernel->Forward(ctx, BnInOp2Blob);
+  relu_kernel->Backward(ctx, BnInOp2Blob);
   SyncStream<device_type>(&ctx);
-  KTC::CheckResult(BnInOp2BlobPtr, "out", "expected_out");
-  KTC::CheckResult(BnInOp2BlobPtr, GenDiffBn("in"), "expected_in_diff");
+  KTC::CheckResult(BnInOp2Blob, "out", "expected_out");
+  KTC::CheckResult(BnInOp2Blob, GenDiffBn("in"), "expected_in_diff");
 }
 
 }  // namespace test

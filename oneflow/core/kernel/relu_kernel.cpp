@@ -5,9 +5,9 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 void ReluKernel<device_type, T>::Forward(
     const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  const Blob* in_data = BnInOp2BlobPtr("in");
-  Blob* out_data = BnInOp2BlobPtr("out");
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in_data = BnInOp2Blob("in");
+  Blob* out_data = BnInOp2Blob("out");
   out_data->CopyDataIdFrom<device_type>(ctx.device_ctx, in_data);
   ReluKernelUtil<device_type, T>::Forward(ctx, out_data->shape().elem_cnt(),
                                           in_data->dptr<T>(),
@@ -17,10 +17,10 @@ void ReluKernel<device_type, T>::Forward(
 template<DeviceType device_type, typename T>
 void ReluKernel<device_type, T>::Backward(
     const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  const Blob* in_data = BnInOp2BlobPtr("in");
-  const Blob* out_diff = BnInOp2BlobPtr("out_diff");
-  Blob* in_diff = BnInOp2BlobPtr("in_diff");
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in_data = BnInOp2Blob("in");
+  const Blob* out_diff = BnInOp2Blob("out_diff");
+  Blob* in_diff = BnInOp2Blob("in_diff");
   in_diff->CopyDataIdFrom<device_type>(ctx.device_ctx, out_diff);
   ReluKernelUtil<device_type, T>::Backward(
       ctx, in_data->shape().elem_cnt(), out_diff->dptr<T>(), in_data->dptr<T>(),

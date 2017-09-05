@@ -35,7 +35,7 @@ Kernel* BuildPoolingKernel(const PoolingOpConf::PoolMethod& pooling_method) {
 }
 
 template<DeviceType device_type, typename T>
-std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
+std::function<Blob*(const std::string&)> BuildBnInOp2Blob(
     const PoolingOpConf::PoolMethod& pooling_method) {
   using KTC = KTCommon<device_type, T>;
 
@@ -102,15 +102,15 @@ void TestPoolingKernel(const PoolingOpConf::PoolMethod& pooling_method) {
   KernelCtx ctx;
   BuildKernelCtx<device_type>(&ctx);
 
-  auto BnInOp2BlobPtr = BuildBnInOp2BlobPtr<device_type, T>(pooling_method);
+  auto BnInOp2Blob = BuildBnInOp2Blob<device_type, T>(pooling_method);
   auto pooling_kernel = BuildPoolingKernel<device_type, T>(pooling_method);
 
-  pooling_kernel->Forward(ctx, BnInOp2BlobPtr);
-  pooling_kernel->Backward(ctx, BnInOp2BlobPtr);
+  pooling_kernel->Forward(ctx, BnInOp2Blob);
+  pooling_kernel->Backward(ctx, BnInOp2Blob);
   SyncStream<device_type>(&ctx);
 
-  KTC::CheckResult(BnInOp2BlobPtr, "out", "expected_out");
-  KTC::CheckResult(BnInOp2BlobPtr, "in_diff", "expected_in_diff");
+  KTC::CheckResult(BnInOp2Blob, "out", "expected_out");
+  KTC::CheckResult(BnInOp2Blob, "in_diff", "expected_in_diff");
 }
 
 }  // namespace

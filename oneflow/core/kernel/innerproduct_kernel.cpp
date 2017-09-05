@@ -27,10 +27,10 @@ void BlasMatrixMatrix(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans_a,
 template<DeviceType device_type, typename T>
 void InnerProductKernel<device_type, T>::Forward(
     const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  const Blob* in = BnInOp2BlobPtr("in");
-  const Blob* weight = BnInOp2BlobPtr("weight");
-  Blob* out = BnInOp2BlobPtr("out");
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in = BnInOp2Blob("in");
+  const Blob* weight = BnInOp2Blob("weight");
+  Blob* out = BnInOp2Blob("out");
 
   // out = in * weight
   BlasMatrixMatrix<device_type, T>(ctx, CblasNoTrans, CblasTrans,
@@ -38,8 +38,8 @@ void InnerProductKernel<device_type, T>::Forward(
                                    weight, out);
 
   if (op()->GetBoolFromSpecialConf("has_bias_term")) {
-    const Blob* bias = BnInOp2BlobPtr("bias");
-    const Blob* bias_multiplier = BnInOp2BlobPtr("bias_multiplier");
+    const Blob* bias = BnInOp2Blob("bias");
+    const Blob* bias_multiplier = BnInOp2Blob("bias_multiplier");
 
     // out = bias_multiplier * bias + out
     BlasMatrixMatrix<device_type, T>(ctx, CblasNoTrans, CblasNoTrans,
@@ -51,13 +51,13 @@ void InnerProductKernel<device_type, T>::Forward(
 template<DeviceType device_type, typename T>
 void InnerProductKernel<device_type, T>::Backward(
     const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  const Blob* in = BnInOp2BlobPtr("in");
-  const Blob* out_diff = BnInOp2BlobPtr("out_diff");
-  Blob* in_diff = BnInOp2BlobPtr("in_diff");
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in = BnInOp2Blob("in");
+  const Blob* out_diff = BnInOp2Blob("out_diff");
+  Blob* in_diff = BnInOp2Blob("in_diff");
 
-  const Blob* weight = BnInOp2BlobPtr("weight");
-  Blob* weight_diff = BnInOp2BlobPtr("weight_diff");
+  const Blob* weight = BnInOp2Blob("weight");
+  Blob* weight_diff = BnInOp2Blob("weight_diff");
 
   // in_diff = out_diff * weight
   if (in_diff != nullptr) {
@@ -72,8 +72,8 @@ void InnerProductKernel<device_type, T>::Backward(
                                    out_diff, in, weight_diff);
 
   if (op()->GetBoolFromSpecialConf("has_bias_term")) {
-    const Blob* bias_multiplier = BnInOp2BlobPtr("bias_multiplier");
-    Blob* bias_diff = BnInOp2BlobPtr("bias_diff");
+    const Blob* bias_multiplier = BnInOp2Blob("bias_multiplier");
+    Blob* bias_diff = BnInOp2Blob("bias_diff");
 
     // bias_diff = bias_multiplier * out_diff
     BlasMatrixMatrix<device_type, T>(ctx, CblasTrans, CblasNoTrans,
@@ -126,5 +126,23 @@ void InnerProductKernel<device_type, T>::InitModelTmpBlobs(
                                      0, BnInOp2Blob("bias_multiplier"));
   }
 }
+
+namespace {
+
+Kernel* CreateInnerProductKernel(const OpContext& op_ctx) {
+  static const HashMap<std::string, std::function<Kernel*()>> creators = {
+
+#define INNER_PRODUCT_KERNEL_ENTRY(device_type, data_type_pair)       \
+  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() { \
+     return new InnerProductKernel<device_type,                       \
+                                   OF_PP_PAIR_FIRST(data_type_pair)>; \
+   }},
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+          INNER_PRODUCT_KERNEL_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};
+  return creators.at(GetHashKey(op_ctx.device_type(),
+                                JobDesc::Singleton()->default_data_type()))();
+}
+
+}  // namespace
 
 }  // namespace oneflow

@@ -10,7 +10,7 @@ namespace test {
 namespace {
 
 template<DeviceType device_type, typename PredType, typename LabelType>
-std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
+std::function<Blob*(const std::string&)> BuildBnInOp2Blob() {
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
 
   using KTC_PRED = KTCommon<device_type, PredType>;
@@ -89,15 +89,15 @@ template<DeviceType device_type, typename PredType, typename LabelType>
 void TestMultinomialLogisticLossKernel() {
   KernelCtx ctx;
   BuildKernelCtx<device_type>(&ctx);
-  auto BnInOp2BlobPtr = BuildBnInOp2BlobPtr<device_type, PredType, LabelType>();
+  auto BnInOp2Blob = BuildBnInOp2Blob<device_type, PredType, LabelType>();
   auto multinomial_logistic_loss_kernel =
       BuildMultinomialLogisticLossKernel<device_type, PredType, LabelType>();
-  multinomial_logistic_loss_kernel->Forward(ctx, BnInOp2BlobPtr);
+  multinomial_logistic_loss_kernel->Forward(ctx, BnInOp2Blob);
   SyncStream<device_type>(&ctx);
-  KTCommon<device_type, PredType>::CheckResult(BnInOp2BlobPtr, "loss",
+  KTCommon<device_type, PredType>::CheckResult(BnInOp2Blob, "loss",
                                                "expected_loss");
-  KTCommon<device_type, PredType>::CheckResult(
-      BnInOp2BlobPtr, "prediction_diff", "expected_prediction_diff");
+  KTCommon<device_type, PredType>::CheckResult(BnInOp2Blob, "prediction_diff",
+                                               "expected_prediction_diff");
 }
 
 }  // namespace

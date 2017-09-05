@@ -6,18 +6,18 @@ namespace oneflow {
 template<DeviceType device_type, typename PredType, typename LabelType>
 void MultinomialLogisticLossKernel<device_type, PredType, LabelType>::Forward(
     const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  const Blob* prediction = BnInOp2BlobPtr("prediction");
-  const Blob* label = BnInOp2BlobPtr("label");
-  Blob* loss = BnInOp2BlobPtr("loss");
-  Blob* loss_buff = BnInOp2BlobPtr("loss_buffer");
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* prediction = BnInOp2Blob("prediction");
+  const Blob* label = BnInOp2Blob("label");
+  Blob* loss = BnInOp2Blob("loss");
+  Blob* loss_buff = BnInOp2Blob("loss_buffer");
 
   MultinomialLogisticLossKernelUtil<device_type, PredType, LabelType>::Forward(
       ctx.device_ctx, prediction->shape().At(0), prediction->shape().At(1),
       prediction->dptr<PredType>(), label->dptr<LabelType>(),
       loss->mut_dptr<PredType>(), loss_buff->mut_dptr<PredType>());
 
-  Blob* prediction_diff = BnInOp2BlobPtr(GenDiffBn("prediction"));
+  Blob* prediction_diff = BnInOp2Blob(GenDiffBn("prediction"));
   if (prediction_diff != nullptr) {
     Memset<device_type>(ctx.device_ctx, prediction_diff->mut_dptr<PredType>(),
                         0, prediction_diff->TotalByteSize());

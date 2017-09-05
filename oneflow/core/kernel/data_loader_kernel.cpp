@@ -7,7 +7,7 @@ namespace oneflow {
 template<typename T>
 void DataLoaderKernel<T>::Forward(
     const KernelCtx& kernel_ctx,
-    std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   PersistentCircularLineReader* reader =
       RuntimeCtx::Singleton()->GetDataReader(op()->op_name());
   if (reader == nullptr) {
@@ -17,7 +17,7 @@ void DataLoaderKernel<T>::Forward(
     RuntimeCtx::Singleton()->AddDataReader(file_path, op()->op_name());
     reader = RuntimeCtx::Singleton()->GetDataReader(op()->op_name());
   }
-  Blob* out_blob = BnInOp2BlobPtr("out");
+  Blob* out_blob = BnInOp2Blob("out");
   CHECK_EQ(GetDataType<T>::val, out_blob->data_type());
 
   kernel_ctx.device_ctx->cpu_stream()->SendWork([=]() {
