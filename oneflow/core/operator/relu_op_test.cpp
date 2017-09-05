@@ -8,10 +8,8 @@ void TestReluOp() {
   OperatorConf op_conf;
   DataType data_type = GetDataType<T>::val;
   op_conf.set_name("relu_test");
-  op_conf.mutable_relu_conf()->mutable_in()->set_name("relu/in");
-  op_conf.mutable_relu_conf()->mutable_in()->set_data_type(data_type);
-  op_conf.mutable_relu_conf()->mutable_out()->set_name("relu/out");
-  op_conf.mutable_relu_conf()->mutable_out()->set_data_type(data_type);
+  op_conf.mutable_relu_conf()->set_in("relu/in");
+  op_conf.mutable_relu_conf()->set_out("relu/out");
   auto relu_op = ConstructOp(op_conf);
   HashMap<std::string, BlobDesc*> bn2blobdesc_map{
       {relu_op->SoleIbn(),

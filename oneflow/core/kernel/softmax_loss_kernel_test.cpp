@@ -47,14 +47,9 @@ Kernel* BuildSoftmaxLossKernel() {
   OperatorConf op_conf;
   op_conf.set_name("softmax_loss_op_test");
   SoftmaxLossOpConf* softmax_loss_conf = op_conf.mutable_softmax_loss_conf();
-  softmax_loss_conf->mutable_prediction()->set_name("softmax_loss/prediction");
-  softmax_loss_conf->mutable_prediction()->set_data_type(
-      GetDataType<PredType>::val);
-  softmax_loss_conf->mutable_label()->set_name("softmax_loss/label");
-  softmax_loss_conf->mutable_label()->set_data_type(
-      GetDataType<LabelType>::val);
-  softmax_loss_conf->mutable_loss()->set_name("softmax_loss/loss");
-  softmax_loss_conf->mutable_loss()->set_data_type(GetDataType<PredType>::val);
+  softmax_loss_conf->set_prediction("softmax_loss/prediction");
+  softmax_loss_conf->set_label("softmax_loss/label");
+  softmax_loss_conf->set_loss("softmax_loss/loss");
   auto softmax_loss_op = ConstructOp(op_conf);
   OperatorProto op_proto;
   softmax_loss_op->ToProto(&op_proto);

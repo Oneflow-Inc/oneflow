@@ -23,10 +23,28 @@ void AddKernelCreator(OperatorConf::OpTypeCase op_case,
   CHECK(OpCase2Creator().emplace(op_case, creator).second);
 }
 
-void AddKernelCreator(OperatorConf::OpTypeCase, KernelCreator2) { TODO(); }
+void AddKernelCreator(OperatorConf::OpTypeCase op_case,
+                      KernelCreator2 creator) {
+  AddKernelCreator(op_case,
+                   [creator](const OperatorConf& op_conf, const OpContext&) {
+                     return creator(op_conf);
+                   });
+}
 
-void AddKernelCreator(OperatorConf::OpTypeCase, KernelCreator3) { TODO(); }
-void AddKernelCreator(OperatorConf::OpTypeCase, KernelCreator4) { TODO(); }
+void AddKernelCreator(OperatorConf::OpTypeCase op_case,
+                      KernelCreator3 creator) {
+  AddKernelCreator(op_case,
+                   [creator](const OperatorConf&, const OpContext& op_ctx) {
+                     return creator(op_ctx);
+                   });
+}
+
+void AddKernelCreator(OperatorConf::OpTypeCase op_case,
+                      KernelCreator4 creator) {
+  AddKernelCreator(op_case, [creator](const OperatorConf&, const OpContext&) {
+    return creator();
+  });
+}
 
 void KernelMgr::InitFromPlan(const Plan& plan) {
   int64_t this_machine_id = RuntimeCtx::Singleton()->this_machine_id();

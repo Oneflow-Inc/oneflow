@@ -66,16 +66,9 @@ Kernel* BuildMultinomialLogisticLossKernel() {
   op_conf.set_name("multinomial_logistic_loss_test");
   MultinomialLogisticLossOpConf* multinomial_logistic_loss_conf =
       op_conf.mutable_multinomial_logistic_loss_conf();
-  multinomial_logistic_loss_conf->mutable_prediction()->set_name(
-      "mll/prediction");
-  multinomial_logistic_loss_conf->mutable_prediction()->set_data_type(
-      GetDataType<PredType>::val);
-  multinomial_logistic_loss_conf->mutable_label()->set_name("mll/label");
-  multinomial_logistic_loss_conf->mutable_label()->set_data_type(
-      GetDataType<LabelType>::val);
-  multinomial_logistic_loss_conf->mutable_loss()->set_name("mll/loss");
-  multinomial_logistic_loss_conf->mutable_loss()->set_data_type(
-      GetDataType<PredType>::val);
+  multinomial_logistic_loss_conf->set_prediction("mll/prediction");
+  multinomial_logistic_loss_conf->set_label("mll/label");
+  multinomial_logistic_loss_conf->set_loss("mll/loss");
   auto multinomial_logistic_loss_op = ConstructOp(op_conf);
   OperatorProto op_proto;
   multinomial_logistic_loss_op->ToProto(&op_proto);

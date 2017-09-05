@@ -6,18 +6,10 @@ TEST(SoftmaxLossOp, softmax_loss_3x5) {
   // create softmax_loss_op
   OperatorConf op_conf;
   op_conf.set_name("softmax_loss_test");
-  op_conf.mutable_softmax_loss_conf()->mutable_prediction()->set_name(
+  op_conf.mutable_softmax_loss_conf()->set_prediction(
       "softmax_loss/prediction");
-  op_conf.mutable_softmax_loss_conf()->mutable_prediction()->set_data_type(
-      DataType::kFloat);
-  op_conf.mutable_softmax_loss_conf()->mutable_label()->set_name(
-      "softmax_loss/label");
-  op_conf.mutable_softmax_loss_conf()->mutable_label()->set_data_type(
-      DataType::kInt32);
-  op_conf.mutable_softmax_loss_conf()->mutable_loss()->set_name(
-      "softmax_loss/loss");
-  op_conf.mutable_softmax_loss_conf()->mutable_loss()->set_data_type(
-      DataType::kFloat);
+  op_conf.mutable_softmax_loss_conf()->set_label("softmax_loss/label");
+  op_conf.mutable_softmax_loss_conf()->set_loss("softmax_loss/loss");
   auto softmax_loss_op = ConstructOp(op_conf);
   JobConf job_conf;
   job_conf.set_default_data_type(DataType::kFloat);

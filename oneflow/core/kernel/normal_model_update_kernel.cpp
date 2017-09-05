@@ -29,8 +29,8 @@ Kernel* CreateNormalMdUpdateKernel(const OpContext& op_ctx) {
    }},
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
           MODEL_UPDATE_KERNEL_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};
-  return creators.at(GetHashKey(
-      op_ctx.device_type(), op_ctx.bn_in_op2data_type().at("model_diffs")))();
+  return creators.at(GetHashKey(op_ctx.device_type(),
+                                JobDesc::Singleton()->default_data_type()))();
 }
 
 }  // namespace
