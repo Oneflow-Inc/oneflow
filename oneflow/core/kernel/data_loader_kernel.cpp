@@ -7,7 +7,7 @@ namespace oneflow {
 template<typename T>
 void DataLoaderKernel<T>::Forward(
     const KernelCtx& kernel_ctx,
-    std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   PersistentCircularLineReader* reader =
       RuntimeCtx::Singleton()->GetDataReader(op()->op_name());
   if (reader == nullptr) {
@@ -17,7 +17,7 @@ void DataLoaderKernel<T>::Forward(
     RuntimeCtx::Singleton()->AddDataReader(file_path, op()->op_name());
     reader = RuntimeCtx::Singleton()->GetDataReader(op()->op_name());
   }
-  Blob* out_blob = BnInOp2BlobPtr("out");
+  Blob* out_blob = BnInOp2Blob("out");
   CHECK_EQ(GetDataType<T>::val, out_blob->data_type());
 
   kernel_ctx.device_ctx->cpu_stream()->SendWork([=]() {
@@ -46,11 +46,11 @@ void DataLoaderKernel<T>::Forward(
 namespace {
 
 Kernel* CreateDataLoaderKernel(const OperatorConf& op_conf) {
-  static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
+  static const HashMap<int, std::function<Kernel*()>> creator = {
 #define DATA_LOADER_KERNEL_ENTRY(type_cpp, type_proto) \
   {type_proto, []() { return new DataLoaderKernel<type_cpp>; }},
       OF_PP_FOR_EACH_TUPLE(DATA_LOADER_KERNEL_ENTRY, ARITHMETIC_DATA_TYPE_SEQ)};
-  return data_type2creator.at(op_conf.data_loader_conf().data_type())();
+  return creator.at(op_conf.data_loader_conf().data_type())();
 }
 
 }  // namespace

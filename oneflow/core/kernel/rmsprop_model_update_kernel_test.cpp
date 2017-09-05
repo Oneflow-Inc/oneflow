@@ -33,7 +33,7 @@ void InitJobDesc(int32_t piece_size, int32_t num_of_pieces_in_batch) {
 }
 
 template<DeviceType device_type, typename T>
-std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
+std::function<Blob*(const std::string&)> BuildBnInOp2Blob(
     std::vector<int64_t>& dim_vec) {
   using KTC = KTCommon<device_type, T>;
 
@@ -60,7 +60,7 @@ void TestRMSPropMdUpdateKernel() {
   const float learning_rate = {2.0f};
   const float decay_rate = 1.0f / 2;
   const float epsilon = 3.0f;
-  auto BnInOp2Blob = BuildBnInOp2BlobPtr<device_type, T>(dim_vec);
+  auto BnInOp2Blob = BuildBnInOp2Blob<device_type, T>(dim_vec);
   auto rmsprop_md_update_kernel = BuildRMSPropMdUpdateKernel<device_type, T>(
       learning_rate, decay_rate, epsilon);
   int32_t piece_size = 1;

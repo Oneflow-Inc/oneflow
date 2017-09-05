@@ -14,11 +14,11 @@ void LossRecordKernel<T>::Forward(
 }
 
 Kernel* CreateLossRecordKernel() {
-  static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
+  static const HashMap<int, std::function<Kernel*()>> creator = {
 #define LOSS_RECORD_KERNEL_ENTRY(type_cpp, type_proto) \
   {type_proto, []() { return new LossRecordKernel<type_cpp>; }},
       OF_PP_FOR_EACH_TUPLE(LOSS_RECORD_KERNEL_ENTRY, FLOATING_DATA_TYPE_SEQ)};
-  return data_type2creator.at(JobDesc::Singleton()->default_data_type())();
+  return creator.at(JobDesc::Singleton()->default_data_type())();
 }
 
 COMMAND(AddKernelCreator(OperatorConf::kLossRecordConf,

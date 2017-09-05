@@ -97,16 +97,15 @@ void ConcatKernel<device_type, T>::Backward(
 
 Kernel* CreateConcatKernel(const OperatorConf& op_conf,
                            const OpContext& op_ctx) {
-  static const HashMap<std::string, std::function<Kernel*()>>
-      data_type2creator = {
+  static const HashMap<std::string, std::function<Kernel*()>> creator = {
 #define CONCAT_KERNEL_ENTRY(device_type, data_type_pair)                     \
   {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {        \
      return new ConcatKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>; \
    }},
-          OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(CONCAT_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
-                                           ALL_DATA_TYPE_SEQ)};
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(CONCAT_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
+                                       ALL_DATA_TYPE_SEQ)};
 
-  return data_type2creator.at(
+  return creator.at(
       GetHashKey(op_ctx.device_type(), op_conf.concat_conf().data_type()))();
 }
 

@@ -11,8 +11,7 @@ namespace test {
 namespace {
 
 template<DeviceType device_type, typename T>
-std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
-    bool has_bias_term) {
+std::function<Blob*(const std::string&)> BuildBnInOp2Blob(bool has_bias_term) {
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
   BlobDesc* blob_desc2122 =
       new BlobDesc(Shape({2, 1, 2, 2}), GetDataType<T>::val, false);
@@ -122,7 +121,7 @@ void IpKernelFwAndBp(bool has_bias_term) {
   KernelCtx ctx;
   BuildKernelCtx<device_type>(&ctx);
 
-  auto BnInOp2Blob = BuildBnInOp2BlobPtr<device_type, T>(has_bias_term);
+  auto BnInOp2Blob = BuildBnInOp2Blob<device_type, T>(has_bias_term);
 
   auto inner_product_kernel =
       BuildInnerProductKernel<device_type, T>(has_bias_term, nullptr);
