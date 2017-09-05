@@ -62,15 +62,9 @@ void SimulatorScheduleEngine::InitStrategies() {
 
 bool SimulatorScheduleEngine::CompareInstanceOrder(TaskInstance* instance_a,
                                                    TaskInstance* instance_b) {
-  if (instance_a->dst_node() == instance_b->dst_node()) {
-    // same node
-    return instance_a->src_node()->id() < instance_b->src_node()->id();
-  }
-  if (instance_a->src_node() == instance_b->src_node()) {
-    // same batch
-    return instance_a->dst_node()->depth() > instance_b->dst_node()->depth();
-  }
-  return instance_a->dst_node()->depth() < instance_b->dst_node()->depth();
+  if (instance_a->src_node()->id() < instance_b->src_node()->id()) return true;
+  return (instance_a->src_node() == instance_b->src_node())
+         && (instance_a->dst_node()->depth() > instance_b->dst_node()->depth());
 }
 
 TaskInstance* SimulatorScheduleEngine::PickInstanceToRun(

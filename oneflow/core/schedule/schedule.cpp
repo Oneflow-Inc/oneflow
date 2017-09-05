@@ -121,8 +121,8 @@ float Schedule::GetInitiationIntervalFromIntervals(
   std::sort(gci.begin(), gci.end(), std::less<float>());
   float sum = 0;
   uint32_t count = 0;
-  uint32_t start_margin = gci.size() / 4;
-  uint32_t end_margin = gci.size() / 4;
+  uint32_t start_margin = gci.size() / 5;
+  uint32_t end_margin = gci.size() / 5;
   for (int i = start_margin; i < gci.size() - end_margin; ++i) {
     float x = gci[i];
     sum += x;

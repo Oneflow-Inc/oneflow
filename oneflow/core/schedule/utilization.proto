@@ -1,0 +1,43 @@
+syntax = "proto3";
+package oneflow.schedule;
+
+enum UtilizationResourceType {
+	kTask = 0;
+	kRegister = 1;
+}
+
+message UtilizationResourceProto {
+	UtilizationResourceType resource_type = 1;
+	// only parent resource_id is set to 0
+	uint64 resource_id = 2;
+	//	slice_id is basically assigned the address of event-emitting object
+	//	only parent is set to 0
+	uint64 slice_id = 3;
+}
+
+enum UtilizationEventType {
+	kStartEvent = 0;
+	kEndEvent = 1;
+}
+
+message UtilizationEventProto {
+	UtilizationEventType event_type = 1;
+	UtilizationResourceProto resource = 2;
+	uint64 batch_id = 3;
+	float time = 4;	
+}
+
+message UtilizationEventPackageProto {
+	repeated UtilizationEventProto event = 1;
+}
+
+message UtilizationProto {
+	UtilizationResourceProto resource = 1;
+	float start_at = 2;	
+	float end_at = 3;	
+	float	utilization = 4;
+}
+
+message UtilizationPackageProto {
+	repeated UtilizationProto utilization = 1;
+}
