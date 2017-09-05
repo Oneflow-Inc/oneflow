@@ -415,4 +415,14 @@ OF_PP_FOR_EACH_TUPLE(NON_FLOATING_BOXING_KERNEL_ADD_BOX_FORWARD,
 OF_PP_FOR_EACH_TUPLE(NON_FLOATING_BOXING_KERNEL_CONCAT_BOX_BACKWARD,
                      INT_DATA_TYPE_SEQ);
 
+Kernel* CreateBoxingKernel(const OpContext& op_ctx) {
+  static const HashMap<int, std::function<Kernel*()>> creators = {
+#define BOXING_KERNEL_ENTRY(type_cpp, type_proto) \
+  {type_proto, []() { return new BoxingKernel<type_cpp>; }},
+      OF_PP_FOR_EACH_TUPLE(BOXING_KERNEL_ENTRY, ALL_DATA_TYPE_SEQ)};
+  return creators.at(op_ctx.bn_in_op2data_type().at("in_0"))();
+}
+
+COMMAND(AddKernelCreator(OperatorConf::kBoxingConf, CreateBoxingKernel));
+
 }  // namespace oneflow

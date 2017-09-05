@@ -42,16 +42,14 @@ void ModelSaveKernel<T>::Forward(
   }
 }
 
-namespace {
-
-Kernel* CreateModelSaveKernel(const OperatorConf& op_conf) {
-  static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
+Kernel* CreateModelSaveKernel() {
+  static const HashMap<int, std::function<Kernel*()>> creators = {
 #define MODEL_SAVE_KERNEL_ENTRY(type_cpp, type_proto) \
   {type_proto, []() { return new ModelSaveKernel<type_cpp>; }},
       OF_PP_FOR_EACH_TUPLE(MODEL_SAVE_KERNEL_ENTRY, FLOATING_DATA_TYPE_SEQ)};
-  return data_type2creator.at(JobDesc::Singleton()->default_data_type())();
+  return creators.at(JobDesc::Singleton()->default_data_type())();
 }
 
-}  // namespace
+COMMAND(AddKernelCreator(OperatorConf::kModelSaveConf, CreateModelSaveKernel));
 
 }  // namespace oneflow

@@ -37,4 +37,13 @@ void CopyHdKernel::Backward(
                            out_diff_blob->TotalByteSize(), bw_kind_);
 }
 
+Kernel* CreateCopyHdKernel() {
+  static const std::function<Kernel*()> creator = []() {
+    return new CopyHdKernel;
+  };
+  return creator();
+}
+
+COMMAND(AddKernelCreator(OperatorConf::kCopyHdConf, CreateCopyHdKernel));
+
 }  // namespace oneflow
