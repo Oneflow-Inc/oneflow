@@ -3,7 +3,7 @@
 
 #include "oneflow/core/common/thread_safe_counter.h"
 #include "oneflow/core/job/id_manager.h"
-#include "oneflow/core/persistence/persistent_circular_line_reader.h"
+#include "oneflow/core/persistence/data_reader.h"
 
 namespace oneflow {
 
@@ -20,7 +20,7 @@ class RuntimeCtx final {
 
   ThreadSafeCounter& mut_model_init_cnt() { return model_init_cnt_; }
 
-  PersistentCircularLineReader* GetDataReader(const std::string& name);
+  DataReader* GetDataReader(const std::string& name);
   void AddDataReader(const std::string& filepath, const std::string& name);
 
   ThreadSafeCounter& mut_active_actor_cnt() { return active_actor_cnt_; }
@@ -34,8 +34,7 @@ class RuntimeCtx final {
 
   ThreadSafeCounter model_init_cnt_;
 
-  HashMap<std::string, std::unique_ptr<PersistentCircularLineReader>>
-      data_reader_;
+  HashMap<std::string, std::unique_ptr<DataReader>> data_reader_;
 
   ThreadSafeCounter active_actor_cnt_;
   ThreadSafeCounter inactive_actor_cnt_;

@@ -8,8 +8,7 @@ template<typename T>
 void DataLoaderKernel<T>::Forward(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  PersistentCircularLineReader* reader =
-      RuntimeCtx::Singleton()->GetDataReader(op()->op_name());
+  DataReader* reader = RuntimeCtx::Singleton()->GetDataReader(op()->op_name());
   if (reader == nullptr) {
     std::string data_dir = op()->GetStringFromSpecialConf("data_dir");
     int64_t parallel_id = reinterpret_cast<int64_t>(kernel_ctx.other);
