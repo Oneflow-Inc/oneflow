@@ -92,8 +92,8 @@ class SimulatorScheduleEngine : public ScheduleEngine {
     //    evaluation_->AfterRun(instance);
     memory_->AfterRun(instance);
   }
-  inline float GetAscendentEndedAt(TaskInstance* instance) {
-    return memory_->get_ascendent_ended_at_(instance);
+  inline float GetAscendantEndedAt(TaskInstance* instance) {
+    return memory_->get_ascendant_ended_at_(instance);
   }
   std::unique_ptr<SimulatorSchedule> schedule_;
   std::unique_ptr<EvaluationSimulationStrategy> evaluation_;

@@ -33,7 +33,7 @@ void FormulaScheduleEngine::ForEachRegstDescDuration(
   auto foreach_prev = std::bind(&SGraph::ForeachPrev, graph(),
                                 std::placeholders::_1, std::placeholders::_2);
   auto is_ascendant = [&](STask* asc, STask* node) {
-    return graph()->ascendent_arc_mgr().Find(node, asc) > 0u;
+    return graph()->ascendant_arc_mgr().Find(node, asc) > 0u;
   };
   LongestPathVisitor<STask*> lpath(foreach_next, foreach_prev, is_ascendant);
   graph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {

@@ -100,7 +100,7 @@ std::unique_ptr<SimulatorSchedule> SimulatorScheduleEngine::Run(
       Batch* batch = p.second->src_node();
       STask* task = p.second->dst_node();
       BeforeRun(p.second);
-      float ended_at = GetAscendentEndedAt(p.second);
+      float ended_at = GetAscendantEndedAt(p.second);
       schedule()->mut_instance2ended_at()[p.second].first = ended_at;
       ended_at += task->workload() * (dev ? dev->time() : 0.0);
       schedule()->mut_device2ended_at()[p.first] = ended_at;

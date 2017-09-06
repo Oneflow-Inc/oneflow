@@ -21,8 +21,8 @@ void MemorySimulationStrategy::InitFuncs() {
                                  this, std::placeholders::_1);
   get_instance_device_ = std::bind(&SimulatorScheduleEngine::GetInstanceDevice,
                                    schedule_engine(), std::placeholders::_1);
-  get_ascendent_ended_at_ =
-      std::bind(&MemorySimulationStrategy::GetAscendentEndedAt, this,
+  get_ascendant_ended_at_ =
+      std::bind(&MemorySimulationStrategy::GetAscendantEndedAt, this,
                 std::placeholders::_1);
   pick_instance_to_run_ = [&](const std::list<TaskInstance*>& instances) {
     return schedule_engine()->PickInstanceToRun(instances);
@@ -48,9 +48,9 @@ void LimitedMemoryStrategy::InitFuncIsInstanceReady() {
   is_instance_ready_ = [&](TaskInstance* instance) {
     return IsInstanceReady(instance) && IsAllRegstDescReady(instance);
   };
-  get_ascendent_ended_at_ = [&](TaskInstance* instance) {
+  get_ascendant_ended_at_ = [&](TaskInstance* instance) {
     EvaluationSimulationStrategy* evaluation = schedule_engine()->evaluation();
-    return std::max(evaluation->GetAscendentEndedAt(instance),
+    return std::max(evaluation->GetAscendantEndedAt(instance),
                     RegstDescEndedAt(instance));
   };
 }
@@ -77,7 +77,7 @@ void LimitedMemoryStrategy::InitRegst(
   });
 }
 
-float EvaluationSimulationStrategy::GetAscendentEndedAt(
+float EvaluationSimulationStrategy::GetAscendantEndedAt(
     TaskInstance* instance) {
   float ended_at = 0;
   const Session* session = schedule_engine()->session();
@@ -99,9 +99,9 @@ float EvaluationSimulationStrategy::GetAscendentEndedAt(
   return std::max(ended_at, dev_ended_at);
 }
 
-float MemorySimulationStrategy::GetAscendentEndedAt(TaskInstance* instance) {
+float MemorySimulationStrategy::GetAscendantEndedAt(TaskInstance* instance) {
   EvaluationSimulationStrategy* evaluation = schedule_engine()->evaluation();
-  return evaluation->GetAscendentEndedAt(instance);
+  return evaluation->GetAscendantEndedAt(instance);
 }
 
 float LimitedMemoryStrategy::RegstDescEndedAt(TaskInstance* instance) {
@@ -222,7 +222,7 @@ MemorySimulationStrategy::Pick(
     TaskInstance* node_instance = get_node_instance_(elem);
     bool is_ready = is_instance_ready_(node_instance);
     if (is_ready) {
-      float ended_at = get_ascendent_ended_at_(node_instance);
+      float ended_at = get_ascendant_ended_at_(node_instance);
       instances_groupby_ended_at[ended_at].push_back(node_instance);
     }
   }

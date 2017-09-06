@@ -30,7 +30,7 @@ class EvaluationSimulationStrategy : public SimulationStrategy {
       SimulatorScheduleEngine* schedule_engine)
       : SimulationStrategy(schedule_engine) {}
   ~EvaluationSimulationStrategy() = default;
-  virtual float GetAscendentEndedAt(TaskInstance* instance);
+  virtual float GetAscendantEndedAt(TaskInstance* instance);
   virtual void TimeLinePushBack(TaskInstance*, SDevice*) = 0;
   virtual void Retiming() = 0;
 };
@@ -70,9 +70,9 @@ class MemorySimulationStrategy : public SimulationStrategy {
   virtual void AfterRun(TaskInstance* instance) = 0;
   virtual void InitRegst(
       const std::function<uint32_t(uint64_t)>& get_regst_num) = 0;
-  virtual float GetAscendentEndedAt(TaskInstance* instance);
+  virtual float GetAscendantEndedAt(TaskInstance* instance);
 
-  std::function<float(TaskInstance*)> get_ascendent_ended_at_;
+  std::function<float(TaskInstance*)> get_ascendant_ended_at_;
 
  protected:
   void InitFuncs();

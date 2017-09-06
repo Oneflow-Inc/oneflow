@@ -42,7 +42,7 @@ void SGraph::UpdateSourceAndSink() {
 bool SGraph::ReachableWithoutArc(const TaskArc* arc) const {
   bool reachable = false;
   arc_mgr().Input(arc->dst_node(), [&](STask* prev) {
-    TaskArc* asc = ascendent_arc_mgr().Find(prev, arc->src_node());
+    TaskArc* asc = ascendant_arc_mgr().Find(prev, arc->src_node());
     reachable = reachable || asc != nullptr;
   });
   return reachable;
@@ -115,27 +115,27 @@ void SGraph::Walk(const std::function<void(STask*)>& cb) const {
   bfs_foreach(source(), cb);
 }
 
-void SGraph::InitAscendentArc() {
+void SGraph::InitAscendantArc() {
   Walk([&](STask* node) {
     arc_mgr().Input(node, [&](STask* prev) {
       std::list<STask*> l;
-      ascendent_arc_mgr().Output(prev, &l);
+      ascendant_arc_mgr().Output(prev, &l);
       for (STask* asc : l) {
-        mut_ascendent_arc_mgr().CreateIfNotFound(node, asc);
+        mut_ascendant_arc_mgr().CreateIfNotFound(node, asc);
       }
-      mut_ascendent_arc_mgr().CreateIfNotFound(node, prev);
+      mut_ascendant_arc_mgr().CreateIfNotFound(node, prev);
     });
   });
 }
 
-void SGraph::ForeachAscendent(STask* node,
+void SGraph::ForeachAscendant(STask* node,
                               const std::function<void(STask*)>& cb) const {
-  ascendent_arc_mgr().Output(node, cb);
+  ascendant_arc_mgr().Output(node, cb);
 }
 
-void SGraph::ForeachDescendent(STask* node,
+void SGraph::ForeachDescendant(STask* node,
                                const std::function<void(STask*)>& cb) const {
-  ascendent_arc_mgr().Input(node, cb);
+  ascendant_arc_mgr().Input(node, cb);
 }
 
 void SGraph::InitDepth() {

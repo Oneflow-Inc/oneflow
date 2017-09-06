@@ -113,8 +113,8 @@ class SGraph : public SNode {
   }
 
   void ForeachNode(const std::function<void(STask*)>& cb) const;
-  void ForeachAscendent(STask*, const std::function<void(STask*)>& cb) const;
-  void ForeachDescendent(STask*, const std::function<void(STask*)>& cb) const;
+  void ForeachAscendant(STask*, const std::function<void(STask*)>& cb) const;
+  void ForeachDescendant(STask*, const std::function<void(STask*)>& cb) const;
   void ForeachRegstDesc(const std::function<void(SRegstDesc*)>& cb) const;
 
   void Walk(const std::function<void(STask*)>& cb) const;
@@ -137,8 +137,8 @@ class SGraph : public SNode {
   inline const ArcMgr<Arc<SGraph, STask>>& loss_arc_mgr() const {
     return loss_arc_mgr_;
   }
-  inline const ArcMgr<Arc<STask>>& ascendent_arc_mgr() const {
-    return ascendent_arc_mgr_;
+  inline const ArcMgr<Arc<STask>>& ascendant_arc_mgr() const {
+    return ascendant_arc_mgr_;
   }
   inline const ArcMgr<Arc<SGraph, STask>>& children_arc_mgr() const {
     return children_arc_mgr_;
@@ -167,8 +167,8 @@ class SGraph : public SNode {
   inline ArcMgr<Arc<SGraph, STask>>& mut_loss_arc_mgr() {
     return loss_arc_mgr_;
   }
-  inline ArcMgr<Arc<STask>>& mut_ascendent_arc_mgr() {
-    return ascendent_arc_mgr_;
+  inline ArcMgr<Arc<STask>>& mut_ascendant_arc_mgr() {
+    return ascendant_arc_mgr_;
   }
   inline ArcMgr<Arc<SGraph, STask>>& mut_children_arc_mgr() {
     return children_arc_mgr_;
@@ -185,12 +185,12 @@ class SGraph : public SNode {
   void Update() {
     UpdateSourceAndSink();
     InitDepth();
-    InitAscendentArc();
+    InitAscendantArc();
     RemoveUselessArc();
     UpdateTask();
     UpdateRegstDesc();
   }
-  void InitAscendentArc();
+  void InitAscendantArc();
   void UpdateSourceAndSink();
   void InitSourceAndSink();
   void InitDepth();
@@ -209,7 +209,7 @@ class SGraph : public SNode {
   ArcMgr<TaskArc> arc_mgr_;
   ArcMgr<Arc<SGraph, STask>> loss_arc_mgr_;
   ArcMgr<Arc<SGraph, STask>> children_arc_mgr_;
-  ArcMgr<Arc<STask>> ascendent_arc_mgr_;
+  ArcMgr<Arc<STask>> ascendant_arc_mgr_;
   ArcMgr<Arc<STask, SRegstDesc>> produced_regst_desc_mgr_;
   ArcMgr<Arc<STask, SRegstDesc>> subscribed_regst_desc_mgr_;
   HasOneArcMgr<Arc<STask, SDevice>> device_arc_mgr_;
