@@ -58,8 +58,8 @@ class BfsVisitor final {
     return cnt;
   }
 
-	inline ForEachNode foreach_prev() const { return foreach_prev_; }
-	inline ForEachNode& mut_foreach_prev() { return foreach_prev_; }
+  inline ForEachNode foreach_prev() const { return foreach_prev_; }
+  inline ForEachNode& mut_foreach_prev() { return foreach_prev_; }
 
  private:
   void Reset() { visited_or_visiting_soon_.clear(); }

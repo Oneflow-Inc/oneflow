@@ -3,8 +3,8 @@ namespace oneflow {
 namespace schedule {
 
 TEST(BfsVisitor, one_vertix) {
-  auto foreach_prev = [&](int, const std::function<void(int)>&) {};
   auto foreach_next = [&](int, const std::function<void(int)>&) {};
+  auto foreach_prev = [&](int, const std::function<void(int)>&) {};
   BfsVisitor<int> bfs_foreach_node(foreach_next, foreach_prev);
 
   uint32_t cnt = bfs_foreach_node(1, [&](int node) { ASSERT_TRUE(node == 1); });
@@ -67,7 +67,7 @@ TEST(BfsVisitor, linked_list) {
   ASSERT_TRUE(cnt == 6);
 }
 
-TEST(BfsVisitor, linked_list) {
+TEST(BfsVisitor, linked_list_break_in_while) {
   std::unordered_map<int, std::list<int>> next_nodes{
       {1, {2}}, {2, {3}}, {3, {4}}, {4, {5}}, {5, {6}}};
   std::unordered_map<int, std::list<int>> prev_nodes;
@@ -85,15 +85,16 @@ TEST(BfsVisitor, linked_list) {
   };
   BfsVisitor<int> bfs_foreach_node(foreach_next, foreach_prev);
 
+  auto is_final = [](int) { return true; };
+
   int counter = 1;
-  uint32_t cnt = bfs_foreach_node(1, [&](int x) {
+  uint32_t cnt = bfs_foreach_node.Walk({1}, is_final, [&](int x) {
     ASSERT_TRUE(x == counter);
     ++counter;
   });
 
-  ASSERT_TRUE(cnt == 6);
+  ASSERT_TRUE(cnt == 1);
 }
-
 
 TEST(BfsVisitor, multiple_linked_list) {
   std::unordered_map<int, std::list<int>> next_nodes{
