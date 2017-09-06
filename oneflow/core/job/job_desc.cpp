@@ -27,18 +27,4 @@ void JobDesc::ToProto(JobDescProto* proto) const {
   *(proto->mutable_placement()) = placement_;
 }
 
-fs::FileSystem* JobDesc::GetGlobalFS() const {
-  const GlobalFSConf& gfs_conf = job_conf_.global_fs_conf();
-  if (gfs_conf.has_localfs_conf()) {
-    CHECK_EQ(resource_.machine().size(), 1);
-    return fs::GetLocalFS();
-  } else if (gfs_conf.has_hdfs_conf()) {
-    // static fs::FileSystem* fs = new
-    // fs::HadoopFileSystem(gfs_conf.hdfs_conf()); return fs;
-  } else {
-    UNEXPECTED_RUN();
-  }
-  return nullptr;
-}
-
 }  // namespace oneflow

@@ -230,9 +230,10 @@ void TryUpdateStatus(Status* current_status, const Status& new_status);
 
 Status ErrnoToStatus(int err_number);
 
-FileSystem* GetLocalFS();
-
 }  // namespace fs
+
+fs::FileSystem* LocalFS();
+fs::FileSystem* GlobalFS();
 
 #define FS_CHECK_OK(val) CHECK_EQ(val, fs::Status::OK);
 

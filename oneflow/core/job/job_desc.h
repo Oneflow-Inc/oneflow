@@ -58,7 +58,6 @@ class JobDesc final {
   size_t SizeOfOneDataId() const {
     return job_conf_.max_data_id_length() * sizeof(char);
   }
-  fs::FileSystem* GetGlobalFS() const;
 
  private:
   JobDesc() = default;

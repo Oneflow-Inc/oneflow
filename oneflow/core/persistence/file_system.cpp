@@ -1,6 +1,7 @@
 #include "oneflow/core/persistence/file_system.h"
 #include <errno.h>
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/persistence/posix/posix_file_system.h"
 #include "oneflow/core/persistence/windows/windows_file_system.h"
 
@@ -278,15 +279,37 @@ Status ErrnoToStatus(int err_number) {
   return ret;
 }
 
-FileSystem* GetLocalFS() {
+struct GlobalFSConstructor {
+  GlobalFSConstructor() {
+    const GlobalFSConf& gfs_conf =
+        JobDesc::Singleton()->job_conf().global_fs_conf();
+    if (gfs_conf.has_localfs_conf()) {
+      CHECK_EQ(JobDesc::Singleton()->resource().machine().size(), 1);
+      gfs = LocalFS();
+    } else if (gfs_conf.has_hdfs_conf()) {
+      // static fs::FileSystem* fs = new
+      // fs::HadoopFileSystem(gfs_conf.hdfs_conf()); return fs;
+    } else {
+      UNEXPECTED_RUN();
+    }
+  }
+  FileSystem* gfs;
+};
+
+}  // namespace fs
+
+fs::FileSystem* LocalFS() {
 #ifdef PLATFORM_POSIX
-  static FileSystem* fs = new PosixFileSystem;
+  static fs::FileSystem* fs = new fs::PosixFileSystem;
 #elif PLATFORM_WINDOWS
-  static FileSystem* fs = new WindowsFileSystem;
+  static fs::FileSystem* fs = new fs::WindowsFileSystem;
 #endif
   return fs;
 }
 
-}  // namespace fs
+fs::FileSystem* GlobalFS() {
+  static fs::GlobalFSConstructor gfs_constructor;
+  return gfs_constructor.gfs;
+}
 
 }  // namespace oneflow
