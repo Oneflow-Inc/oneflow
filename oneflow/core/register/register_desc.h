@@ -17,6 +17,13 @@ class RegstDesc final {
   // regst_desc_id
   int64_t regst_desc_id() const { return regst_desc_id_; }
   void set_regst_desc_id(int64_t val) { regst_desc_id_ = val; }
+
+  //
+  int64_t min_register_num() const { return min_register_num_; }
+  void set_min_register_num(int64_t val) { min_register_num_ = val; }
+  int64_t max_register_num() const { return max_register_num_; }
+  void set_max_register_num(int64_t val) { max_register_num_ = val; }
+
   // Producer
   const TaskNode* GetProducer() const { return producer_; }
   void SetProducer(const TaskNode* task_node) { producer_ = task_node; }
@@ -44,6 +51,8 @@ class RegstDesc final {
   int64_t regst_desc_id_;
   const TaskNode* producer_;
   HashSet<const TaskNode*> consumers_;
+  int64_t min_register_num_;
+  int64_t max_register_num_;
 
   HashMap<std::string, std::unique_ptr<BlobDesc>> lbn2blob_desc_;
   int64_t register_num_;

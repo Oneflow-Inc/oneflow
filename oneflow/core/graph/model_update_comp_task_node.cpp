@@ -25,7 +25,7 @@ void MdUpdtCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
     ConsumeRegstDesc(ibn, model_diff_acc_regst);
   }
   exec_node->BindBnInOpAndRegst(exec_node->op()->SoleObn(), model_regst);
-  auto data_tmp_regst = NewProducedRegstDesc("data_tmp");
+  auto data_tmp_regst = NewProducedRegstDesc("data_tmp", 1);
   for (const std::string& dtbn : exec_node->op()->data_tmp_bns()) {
     const std::string& lbn = exec_node->op()->Lbn4BnInOp(dtbn);
     data_tmp_regst->EnrollLbn(lbn);

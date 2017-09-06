@@ -10,7 +10,7 @@ void LossAccCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
     BindProducedRegstAndOutEdge(loss_regst, SoleOutEdge());
     return;
   }
-  NewProducedRegstDesc("loss_acc");
+  NewProducedRegstDesc("loss_acc", 1);
   auto loss_regst = GetRelatedRegst(SoleInEdge());
   auto loss_acc_regst = GetProducedRegstDesc("loss_acc");
   ExecNode* exec_node = mut_exec_gph().NewNode();
