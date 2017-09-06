@@ -7,13 +7,12 @@ namespace oneflow {
 void SnapshotMgr::Init() {
   LOG(INFO) << "SnapshotMgr Init";
   model_save_snapshots_path_ = JobDesc::Singleton()->md_save_snapshots_path();
-  tensorflow::Env* env = tensorflow::Env::Default();
-  if (env->IsDirectory(model_save_snapshots_path_).code()
-      != tensorflow::error::OK) {
-    TF_CHECK_OK(env->CreateDir(model_save_snapshots_path_));
+  fs::FileSystem* file_system = fs::GetFileSystem();
+  if (file_system->IsDirectory(model_save_snapshots_path_) != fs::Status::OK) {
+    FS_CHECK_OK(file_system->CreateDir(model_save_snapshots_path_));
   }
   std::vector<std::string> result;
-  TF_CHECK_OK(env->GetChildren(model_save_snapshots_path_, &result));
+  FS_CHECK_OK(file_system->GetChildren(model_save_snapshots_path_, &result));
   CHECK_EQ(result.size(), 0);
   const std::string& load_path = JobDesc::Singleton()->md_load_snapshot_path();
   if (load_path != "") {
@@ -26,8 +25,8 @@ Snapshot* SnapshotMgr::GetWriteableSnapshot(int64_t snapshot_id) {
   if (it == snapshot_id2writeable_snapshot_.end()) {
     std::string snapshot_root_path = JoinPath(
         model_save_snapshots_path_, "snapshot_" + std::to_string(snapshot_id));
-    tensorflow::Env* env = tensorflow::Env::Default();
-    TF_CHECK_OK(env->CreateDir(snapshot_root_path));
+    fs::FileSystem* file_system = fs::GetFileSystem();
+    FS_CHECK_OK(file_system->CreateDir(snapshot_root_path));
     std::unique_ptr<Snapshot> ret(new Snapshot(snapshot_root_path));
     auto emplace_ret =
         snapshot_id2writeable_snapshot_.emplace(snapshot_id, std::move(ret));

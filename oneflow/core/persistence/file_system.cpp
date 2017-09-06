@@ -1,6 +1,8 @@
 #include "oneflow/core/persistence/file_system.h"
 #include <errno.h>
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/persistence/posix/posix_file_system.h"
+#include "oneflow/core/persistence/windows/windows_file_system.h"
 
 namespace oneflow {
 
@@ -264,6 +266,15 @@ Status ErrnoToStatus(int err_number) {
     }
   }
   return ret;
+}
+
+FileSystem* GetFileSystem() {
+#if defined(__linux__)
+  static FileSystem* file_system = new PosixFileSystem();
+#elif defined(_WIN32)
+  static FileSystem* file_system = new WindowsFileSystem();
+#endif
+  return file_system;
 }
 
 }  // namespace fs

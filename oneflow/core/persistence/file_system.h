@@ -226,10 +226,12 @@ void TryStatusUpdate(Status* current_status, const Status& new_status);
 
 Status ErrnoToStatus(int err_number);
 
+FileSystem* GetFileSystem();
+
 }  // namespace fs
 
 // file system check status is ok
-#define FS_CHECK_OK(val) CHECK_NE(val, fs::Status::OK);
+#define FS_CHECK_OK(val) CHECK(fs::Status::OK == val)
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_PERSISTENCE_FILE_SYSTEM_H_

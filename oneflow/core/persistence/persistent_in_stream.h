@@ -1,8 +1,7 @@
 #ifndef ONEFLOW_CORE_PERSISTENCE_PERSISTENT_IN_STREAM_H_
 #define ONEFLOW_CORE_PERSISTENCE_PERSISTENT_IN_STREAM_H_
 
-#include "oneflow/core/common/util.h"
-#include "tensorflow/core/platform/env.h"
+#include "oneflow/core/persistence/file_system.h"
 
 namespace oneflow {
 
@@ -12,7 +11,8 @@ class PersistentInStream final {
   PersistentInStream() = delete;
   ~PersistentInStream() = default;
 
-  PersistentInStream(const std::string& file_path, uint64_t offset);
+  PersistentInStream(fs::FileSystem* file_system, const std::string& file_path,
+                     uint64_t offset);
 
   template<typename T>
   PersistentInStream& operator>>(T& x) {
@@ -30,8 +30,8 @@ class PersistentInStream final {
   bool eof() const { return is_eof_; }
 
  private:
-  std::unique_ptr<tensorflow::RandomAccessFile> file_;
-  tensorflow::uint64 file_size_;
+  std::unique_ptr<fs::RandomAccessFile> file_;
+  uint64_t file_size_;
   uint64_t offset_;
   bool is_eof_;
 };
