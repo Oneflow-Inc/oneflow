@@ -255,7 +255,7 @@ void Graph<NodeType, EdgeType>::ToDotWithFilePath(
   if (env->IsDirectory(dir_name).code() != tensorflow::error::OK) {
     TF_CHECK_OK(env->RecursivelyCreateDir(dir_name));
   }
-  PersistentOutStream out_stream(file_path);
+  PersistentOutStream out_stream(fs::GetGlobalFileSystem(), file_path);
   ToDotWithStream(out_stream);
 }
 

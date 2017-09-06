@@ -39,7 +39,7 @@ class Snapshot final {
   //  2. every part file is writed done
   static const char* key_info_dir_name_;
   std::string root_path_;
-  tensorflow::Env* env_;
+  fs::FileSystem* file_system_;
 };
 
 }  // namespace oneflow

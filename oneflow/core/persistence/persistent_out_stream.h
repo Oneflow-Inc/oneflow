@@ -1,8 +1,7 @@
 #ifndef ONEFLOW_CORE_PERSISTENCE_PERSISTENT_OUT_STREAM_H_
 #define ONEFLOW_CORE_PERSISTENCE_PERSISTENT_OUT_STREAM_H_
 
-#include "oneflow/core/common/util.h"
-#include "tensorflow/core/platform/env.h"
+#include "oneflow/core/persistence/file_system.h"
 
 namespace oneflow {
 
@@ -10,16 +9,17 @@ class PersistentOutStream final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(PersistentOutStream);
   PersistentOutStream() = delete;
-  ~PersistentOutStream() { TF_CHECK_OK(file_->Close()); }
+  ~PersistentOutStream() { CHECK(file_->Close() == fs::Status::OK); }
 
-  PersistentOutStream(const std::string& file_path);
+  PersistentOutStream(fs::FileSystem* file_system,
+                      const std::string& file_path);
 
   // Write block of data
   // Inserts the first n characters of the array pointed by s into the stream.
   PersistentOutStream& Write(const char* s, size_t n);
 
  private:
-  std::unique_ptr<tensorflow::WritableFile> file_;
+  std::unique_ptr<fs::WritableFile> file_;
 };
 
 template<typename T>

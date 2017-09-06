@@ -230,7 +230,7 @@ void Compiler::GenPlanFile(const std::string& plan_filepath) {
 
 void Compiler::Plan2DotFile(const Plan& plan) {
   const std::string file_path = LogDir() + "/dot/plan.dot";
-  PersistentOutStream out_stream(file_path);
+  PersistentOutStream out_stream(fs::GetGlobalFileSystem(), file_path);
   out_stream << "digraph {\n";
   HashSet<int64_t> regst_desc_ids;
   for (const TaskProto& task_proto : plan.task()) {
