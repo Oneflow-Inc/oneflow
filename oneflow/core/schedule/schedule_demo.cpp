@@ -43,6 +43,7 @@ std::unique_ptr<Plan> LoadPlan(const std::string& file) {
 
 void TestPlan(const std::string& file, const std::string& dot_file) {
   std::string conf = "default";
+  //	std::string conf = "simulator_schedule_engine";
   //	std::string conf = "small_batch_num";
   //	std::string conf = "demo";
   auto sfp = ScheduleFactoryConfigure::Provider(conf);

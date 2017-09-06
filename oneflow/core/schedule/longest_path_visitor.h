@@ -26,14 +26,14 @@ class LongestPathVisitor final {
 
   uint32_t operator()(NodeType src_node, NodeType dst_node,
                       const NodeWeight& get_node_weight,
-                      const PathVisitor& visitor) {
+                      const PathVisitor& visitor) const {
     return WalkPath(src_node, dst_node, get_node_weight, visitor);
   }
 
  private:
   uint32_t WalkPath(NodeType src_node, NodeType dst_node,
                     const NodeWeight& get_node_weight,
-                    const PathVisitor& path_visitor) {
+                    const PathVisitor& path_visitor) const {
     std::list<NodeType> starts{src_node};
     std::unordered_map<NodeType, std::list<NodeType>> end2path;
     std::unordered_map<NodeType, float> end2weight;

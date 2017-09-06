@@ -33,6 +33,10 @@ class Schedule {
       const {
     return regst_desc2duration_;
   }
+  inline const float GetRegstDescDuration(SRegstDesc* regst_desc) const {
+    return GetOrDefault(regst_desc2duration(), regst_desc,
+                        static_cast<float>(0));
+  }
   inline const std::unordered_map<SRegstDesc*, uint32_t>& regst_desc2count()
       const {
     return regst_desc2count_;
