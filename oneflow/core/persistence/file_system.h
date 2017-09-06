@@ -32,6 +32,8 @@ enum class Status {
   DATA_LOSS,
 };
 
+OF_DECLARE_ENUM_TO_OSTREAM_FUNC(Status);
+
 // A file abstraction for randomly reading the contents of a file.
 class RandomAccessFile {
  public:

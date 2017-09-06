@@ -1,6 +1,7 @@
 #include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
@@ -150,7 +151,8 @@ std::unique_ptr<PersistentOutStream> Snapshot::GetOutStream(
     TF_CHECK_OK(env_->NewWritableFile(part_num_file_path, &part_num_file));
   }
   std::string file_path = JoinPath(dir_path, std::to_string(part_id));
-  PersistentOutStream* ret = new PersistentOutStream(file_path);
+  PersistentOutStream* ret =
+      new PersistentOutStream(JobDesc::Singleton()->GetGlobalFS(), file_path);
   return std::unique_ptr<PersistentOutStream>(ret);
 }
 
@@ -160,7 +162,8 @@ void Snapshot::OnePartDone4Key(const std::string& key, const int32_t part_id) {
                "done_" + std::to_string(part_id));
   CHECK(env_->FileExists(done_file_path).code()
         == tensorflow::error::NOT_FOUND);
-  PersistentOutStream out_stream(done_file_path);
+  PersistentOutStream out_stream(JobDesc::Singleton()->GetGlobalFS(),
+                                 done_file_path);
 }
 
 }  // namespace oneflow
