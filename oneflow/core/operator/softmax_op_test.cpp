@@ -8,10 +8,8 @@ void TestSoftmaxOp() {
   OperatorConf op_conf;
   DataType data_type = GetDataType<T>::val;
   op_conf.set_name("softmax_test");
-  op_conf.mutable_softmax_conf()->mutable_in()->set_name("softmax/in");
-  op_conf.mutable_softmax_conf()->mutable_in()->set_data_type(data_type);
-  op_conf.mutable_softmax_conf()->mutable_out()->set_name("softmax/out");
-  op_conf.mutable_softmax_conf()->mutable_out()->set_data_type(data_type);
+  op_conf.mutable_softmax_conf()->set_in("softmax/in");
+  op_conf.mutable_softmax_conf()->set_out("softmax/out");
   auto softmax_op = ConstructOp(op_conf);
   HashMap<std::string, BlobDesc*> bn2blobdesc_map{
       {softmax_op->SoleIbn(),

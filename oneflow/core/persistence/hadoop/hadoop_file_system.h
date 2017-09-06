@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_PERSISTENCE_HADOOP_HADOOP_FILE_SYSTEM_H_
 #define ONEFLOW_CORE_PERSISTENCE_HADOOP_HADOOP_FILE_SYSTEM_H_
 
+#include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/persistence/hadoop/hdfs.h"
 
@@ -57,8 +58,10 @@ class LibHDFS {
 class HadoopFileSystem final : public FileSystem {
  public:
   OF_DISALLOW_COPY_AND_MOVE(HadoopFileSystem);
-  HadoopFileSystem(std::string namenode);
+  HadoopFileSystem() = delete;
   ~HadoopFileSystem() = default;
+
+  HadoopFileSystem(const HdfsConf&);
 
   Status NewRandomAccessFile(
       const std::string& fname,

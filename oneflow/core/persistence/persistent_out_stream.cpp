@@ -2,13 +2,15 @@
 
 namespace oneflow {
 
-PersistentOutStream::PersistentOutStream(const std::string& file_path) {
-  TF_CHECK_OK(tensorflow::Env::Default()->NewWritableFile(file_path, &file_));
+PersistentOutStream::PersistentOutStream(fs::FileSystem* fs,
+                                         const std::string& file_path) {
+  FS_CHECK_OK(fs->NewWritableFile(file_path, &file_));
 }
 
+PersistentOutStream::~PersistentOutStream() { FS_CHECK_OK(file_->Close()); }
+
 PersistentOutStream& PersistentOutStream::Write(const char* s, size_t n) {
-  auto data = tensorflow::StringPiece(s, n);
-  TF_CHECK_OK(file_->Append(data));
+  FS_CHECK_OK(file_->Append(s, n));
   return *this;
 }
 

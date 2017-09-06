@@ -14,10 +14,8 @@ Kernel* BuildPoolingKernel(const PoolingOpConf::PoolMethod& pooling_method) {
   OperatorConf op_conf;
   op_conf.set_name("pooling_test");
   PoolingOpConf* pooling_conf = op_conf.mutable_pooling_conf();
-  pooling_conf->mutable_in()->set_name("pooling_in");
-  pooling_conf->mutable_in()->set_data_type(GetDataType<T>::val);
-  pooling_conf->mutable_out()->set_name("pooling_out");
-  pooling_conf->mutable_out()->set_data_type(GetDataType<T>::val);
+  pooling_conf->set_in("pooling_in");
+  pooling_conf->set_out("pooling_out");
   pooling_conf->set_pool(pooling_method);
   pooling_conf->set_pad_h(1);
   pooling_conf->set_pad_w(1);

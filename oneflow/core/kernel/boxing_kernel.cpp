@@ -419,7 +419,7 @@ Kernel* CreateBoxingKernel(const OpContext& op_ctx) {
   static const HashMap<int, std::function<Kernel*()>> creators = {
 #define BOXING_KERNEL_ENTRY(type_cpp, type_proto) \
   {type_proto, []() { return new BoxingKernel<type_cpp>; }},
-      OF_PP_FOR_EACH_TUPLE(BOXING_KERNEL_ENTRY, ALL_DATA_TYPE_SEQ)};
+      OF_PP_FOR_EACH_TUPLE(BOXING_KERNEL_ENTRY, ARITHMETIC_DATA_TYPE_SEQ)};
   return creators.at(op_ctx.bn_in_op2data_type().at("in_0"))();
 }
 

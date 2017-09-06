@@ -4,6 +4,7 @@
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/job_desc.pb.h"
+#include "oneflow/core/persistence/file_system.h"
 
 namespace oneflow {
 

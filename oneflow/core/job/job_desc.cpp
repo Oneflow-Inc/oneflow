@@ -1,5 +1,6 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/persistence/hadoop/hadoop_file_system.h"
 
 namespace oneflow {
 

@@ -26,10 +26,6 @@ message FillConf {
   }
 }
 
-message LogicalBlob {
-  string name = 1;
-  DataType data_type = 2;
-}
 
 message ConvolutionOpConf {
   string in = 1;
@@ -113,25 +109,25 @@ message PoolingOpConf {
 }
 
 message ReluOpConf {
-  LogicalBlob in = 1;
-  LogicalBlob out = 2;
+  string in = 1;
+  string out = 2;
 }
 
 message SoftmaxOpConf {
-  LogicalBlob in = 1;
-  LogicalBlob out = 2;
+  string in = 1;
+  string out = 2;
 }
 
 message SoftmaxLossOpConf {
-  LogicalBlob prediction = 1;
-  LogicalBlob label = 3;
-  LogicalBlob loss = 4;
+  string prediction = 1;
+  string label = 3;
+  string loss = 4;
 }
 
 message MultinomialLogisticLossOpConf {
-  LogicalBlob prediction = 1;
-  LogicalBlob label = 2;
-  LogicalBlob loss = 3;
+  string prediction = 1;
+  string label = 2;
+  string loss = 3;
 }
 
 message ConcatOpConf {

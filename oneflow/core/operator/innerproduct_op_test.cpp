@@ -15,12 +15,8 @@ void TestInnerProductOp(ParallelPolicy policy, bool has_bias_term,
 
   OperatorConf op_conf;
   op_conf.set_name("innerproduct_test");
-  op_conf.mutable_innerproduct_conf()->mutable_in()->set_name("ip_in");
-  op_conf.mutable_innerproduct_conf()->mutable_in()->set_data_type(
-      GetDataType<T>::val);
-  op_conf.mutable_innerproduct_conf()->mutable_out()->set_name("ip_out");
-  op_conf.mutable_innerproduct_conf()->mutable_out()->set_data_type(
-      GetDataType<T>::val);
+  op_conf.mutable_innerproduct_conf()->set_in("ip_in");
+  op_conf.mutable_innerproduct_conf()->set_out("ip_out");
   op_conf.mutable_innerproduct_conf()->set_has_bias_term(has_bias_term);
   op_conf.mutable_innerproduct_conf()->set_out_num(out_num);
   auto ip_op = ConstructOp(op_conf);

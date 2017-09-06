@@ -93,10 +93,8 @@ Kernel* BuildInnerProductKernel(bool has_bias_term, const FillConf* fill_conf) {
   OperatorConf op_conf;
   op_conf.set_name("inner_product_test");
   InnerProductOpConf* inner_product_conf = op_conf.mutable_innerproduct_conf();
-  inner_product_conf->mutable_in()->set_name("ip_in");
-  inner_product_conf->mutable_in()->set_data_type(GetDataType<T>::val);
-  inner_product_conf->mutable_out()->set_name("ip_out");
-  inner_product_conf->mutable_out()->set_data_type(GetDataType<T>::val);
+  inner_product_conf->set_in("ip_in");
+  inner_product_conf->set_out("ip_out");
   inner_product_conf->set_out_num(3);
   inner_product_conf->set_has_bias_term(has_bias_term);
 

@@ -137,8 +137,8 @@ void LibHDFS::LoadAndBind() {
   }
 }
 
-HadoopFileSystem::HadoopFileSystem(std::string namenode)
-    : hdfs_(LibHDFS::Load()), namenode_(namenode) {}
+HadoopFileSystem::HadoopFileSystem(const HdfsConf& hdfs_conf)
+    : hdfs_(LibHDFS::Load()), namenode_(hdfs_conf.namenode()) {}
 
 Status HadoopFileSystem::Connect(hdfsFS* fs) {
   FS_RETURN_IF_ERR(hdfs_->status());

@@ -32,6 +32,8 @@ enum class Status {
   DATA_LOSS,
 };
 
+OF_DECLARE_ENUM_TO_OSTREAM_FUNC(Status);
+
 // A file abstraction for randomly reading the contents of a file.
 class RandomAccessFile {
  public:
@@ -166,6 +168,8 @@ class FileSystem {
   //  * PERMISSION_DENIED - dirname is not writable.
   virtual Status CreateDir(const std::string& dirname) = 0;
 
+  void CreateDirIfNotExist(const std::string& dirname);
+
   // Creates the specified directory and all the necessary
   // subdirectories.
   // Typical return codes:
@@ -222,7 +226,7 @@ class FileSystem {
 
 // If `current_status` is OK, stores `new_status` into `current_status`.
 // If `current_status` is NOT OK, preserves the current status,
-void TryStatusUpdate(Status* current_status, const Status& new_status);
+void TryUpdateStatus(Status* current_status, const Status& new_status);
 
 Status ErrnoToStatus(int err_number);
 
@@ -238,7 +242,10 @@ Status ErrnoToStatus(int err_number);
 }  // namespace fs
 
 // file system check status is ok
-#define FS_CHECK_OK(val) CHECK_NE(val, fs::Status::OK);
+#define FS_CHECK_OK(val) CHECK_EQ(val, fs::Status::OK);
+
+fs::FileSystem* LocalFS();
+fs::FileSystem* GlobalFS();
 
 }  // namespace oneflow
 

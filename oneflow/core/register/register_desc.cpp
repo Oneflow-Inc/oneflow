@@ -63,7 +63,12 @@ const BlobDesc& RegstDesc::GetBlobDesc(const std::string& lbn) const {
 }
 
 BlobDesc* RegstDesc::GetMutBlobDesc(const std::string& lbn) {
-  return lbn2blob_desc_.at(lbn).get();
+  auto it = lbn2blob_desc_.find(lbn);
+  if (it != lbn2blob_desc_.end()) {
+    return it->second.get();
+  } else {
+    return nullptr;
+  }
 }
 
 void RegstDesc::ForEachLbn(std::function<void(const std::string&)> func) const {

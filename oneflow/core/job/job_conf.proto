@@ -21,6 +21,20 @@ message TrainConf {
 message PredictConf {
 }
 
+message LocalFsConf {
+}
+
+message HdfsConf {
+  string namenode = 1;
+}
+
+message GlobalFSConf {
+  oneof fs_type {
+    LocalFsConf localfs_conf = 1;
+    HdfsConf hdfs_conf = 2;
+  }
+}
+
 message JobConf {
   string dlnet_filepath = 1;
   string resource_filepath = 2;
@@ -31,6 +45,7 @@ message JobConf {
   DataType default_data_type = 7; // kFloat or kDouble
   bool use_async_cpu_stream = 8;
   int32 max_data_id_length = 9;
+  GlobalFSConf global_fs_conf = 10;
   oneof JobType {
     TrainConf train_conf = 1000;
     PredictConf predict_conf = 1001;
