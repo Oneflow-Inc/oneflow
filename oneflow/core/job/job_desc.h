@@ -4,6 +4,7 @@
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/job_desc.pb.h"
+#include "oneflow/core/persistence/file_system.h"
 
 namespace oneflow {
 
@@ -57,6 +58,7 @@ class JobDesc final {
   size_t SizeOfOneDataId() const {
     return job_conf_.max_data_id_length() * sizeof(char);
   }
+  fs::FileSystem* GetGlobalFS() const;
 
  private:
   JobDesc() = default;

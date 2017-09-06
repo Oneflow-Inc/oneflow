@@ -1,12 +1,24 @@
 #include "oneflow/core/persistence/file_system.h"
 #include <errno.h>
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/persistence/posix/posix_file_system.h"
+#include "oneflow/core/persistence/windows/windows_file_system.h"
 
 namespace oneflow {
 
 namespace fs {
 
 OF_DEFINE_ENUM_TO_OSTREAM_FUNC(Status);
+
+void FileSystem::CreateDirIfNotExist(const std::string& dirname) {
+  if (IsDirectory(dirname) == Status::OK) { return; }
+  Status st = CreateDir(dirname);
+  if (st == Status::ALREADY_EXISTS) {
+    FS_CHECK_OK(IsDirectory(dirname));
+  } else {
+    FS_CHECK_OK(st);
+  }
+}
 
 std::string FileSystem::TranslateName(const std::string& name) const {
   return CleanPath(name);
@@ -57,7 +69,7 @@ Status FileSystem::DeleteRecursively(const std::string& dirname,
     std::vector<std::string> children;
     // GetChildren might fail if we don't have appropriate permissions.
     Status s = GetChildren(dir, &children);
-    TryStatusUpdate(&ret, s);
+    TryUpdateStatus(&ret, s);
     if (s != Status::OK) {
       (*undeleted_dirs)++;
       continue;
@@ -71,7 +83,7 @@ Status FileSystem::DeleteRecursively(const std::string& dirname,
         // Delete file might fail because of permissions issues or might be
         // unimplemented.
         Status del_status = DeleteFile(child_path);
-        TryStatusUpdate(&ret, del_status);
+        TryUpdateStatus(&ret, del_status);
         if (del_status != Status::OK) { (*undeleted_files)++; }
       }
     }
@@ -83,7 +95,7 @@ Status FileSystem::DeleteRecursively(const std::string& dirname,
     // Delete dir might fail because of permissions issues or might be
     // unimplemented.
     Status s = DeleteDir(dir);
-    TryStatusUpdate(&ret, s);
+    TryUpdateStatus(&ret, s);
     if (s != Status::OK) { (*undeleted_dirs)++; }
   }
   return ret;
@@ -118,7 +130,7 @@ Status FileSystem::RecursivelyCreateDir(const std::string& dirname) {
   return Status::OK;
 }
 
-void TryStatusUpdate(Status* current_status, const Status& new_status) {
+void TryUpdateStatus(Status* current_status, const Status& new_status) {
   if (*current_status == Status::OK) { *current_status = new_status; }
 }
 
@@ -264,6 +276,15 @@ Status ErrnoToStatus(int err_number) {
     }
   }
   return ret;
+}
+
+FileSystem* GetLocalFS() {
+#ifdef PLATFORM_POSIX
+  static FileSystem* fs = new PosixFileSystem;
+#elif PLATFORM_WINDOWS
+  static FileSystem* fs = new WindowsFileSystem;
+#endif
+  return fs;
 }
 
 }  // namespace fs
