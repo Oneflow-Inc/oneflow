@@ -3,8 +3,6 @@
 
 #include "oneflow/core/persistence/data_reader.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
-#include "tensorflow/core/lib/io/inputbuffer.h"
-#include "tensorflow/core/platform/env.h"
 
 namespace oneflow {
 
@@ -12,7 +10,7 @@ class CyclicDataReader final : public DataReader {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CyclicDataReader);
   CyclicDataReader() = delete;
-  ~CyclicDataReader() = default;
+  ~CyclicDataReader();
 
   CyclicDataReader(const std::string& filepath);
 
@@ -20,8 +18,17 @@ class CyclicDataReader final : public DataReader {
   int32_t Read(char* s, size_t n) override { UNEXPECTED_RUN(); }
 
  private:
-  std::unique_ptr<tensorflow::RandomAccessFile> file_;
-  std::unique_ptr<tensorflow::io::InputBuffer> in_;
+  void UpdateBuffer();
+
+  // file
+  std::unique_ptr<fs::RandomAccessFile> file_;
+  uint64_t file_size_;
+  uint64_t cur_file_pos_;
+  // buffer
+  char* buffer_;
+  char* cur_buf_begin_;
+  char* cur_buf_end_;
+  static const size_t buffer_size_;
 };
 
 }  // namespace oneflow
