@@ -7,7 +7,7 @@ namespace oneflow {
 void SnapshotMgr::Init() {
   LOG(INFO) << "SnapshotMgr Init";
   model_save_snapshots_path_ = JobDesc::Singleton()->md_save_snapshots_path();
-  fs::FileSystem* file_system = fs::GetFileSystem();
+  fs::FileSystem* file_system = fs::GetGlobalFileSystem();
   if (file_system->IsDirectory(model_save_snapshots_path_) != fs::Status::OK) {
     FS_CHECK_OK(file_system->CreateDir(model_save_snapshots_path_));
   }
@@ -25,7 +25,7 @@ Snapshot* SnapshotMgr::GetWriteableSnapshot(int64_t snapshot_id) {
   if (it == snapshot_id2writeable_snapshot_.end()) {
     std::string snapshot_root_path = JoinPath(
         model_save_snapshots_path_, "snapshot_" + std::to_string(snapshot_id));
-    fs::FileSystem* file_system = fs::GetFileSystem();
+    fs::FileSystem* file_system = fs::GetGlobalFileSystem();
     FS_CHECK_OK(file_system->CreateDir(snapshot_root_path));
     std::unique_ptr<Snapshot> ret(new Snapshot(snapshot_root_path));
     auto emplace_ret =

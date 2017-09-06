@@ -25,7 +25,7 @@ const char* Snapshot::concat_file_name_ = "all";
 const char* Snapshot::key_info_dir_name_ = "key_info";
 
 Snapshot::Snapshot(const std::string& snapshot_root_path) {
-  file_system_ = fs::GetFileSystem();
+  file_system_ = fs::GetGlobalFileSystem();
   FS_CHECK_OK(file_system_->IsDirectory(snapshot_root_path));
   root_path_ = snapshot_root_path;
   CheckAndConcat();

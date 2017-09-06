@@ -5,7 +5,7 @@
 namespace oneflow {
 
 TEST(Snapshot, write_and_read) {
-  fs::FileSystem* file_system = fs::GetFileSystem();
+  fs::FileSystem* file_system = fs::GetGlobalFileSystem();
   std::string current_dir = GetCwd();
   StringReplace(&current_dir, '\\', '/');
   std::string snapshot_root_path =

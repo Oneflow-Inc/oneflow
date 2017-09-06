@@ -226,7 +226,9 @@ void TryStatusUpdate(Status* current_status, const Status& new_status);
 
 Status ErrnoToStatus(int err_number);
 
-FileSystem* GetFileSystem();
+FileSystem* GetLocalFileSystem();
+
+FileSystem* GetGlobalFileSystem();
 
 }  // namespace fs
 
