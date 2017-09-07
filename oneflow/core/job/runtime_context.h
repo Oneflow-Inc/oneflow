@@ -21,7 +21,7 @@ class RuntimeCtx final {
   ThreadSafeCounter& mut_model_init_cnt() { return model_init_cnt_; }
 
   DataReader* GetDataReader(const std::string& name);
-  void AddDataReader(const std::string& filepath, const std::string& name);
+  void AddDataReader(const std::string& name, DataReader* data_reader);
 
   ThreadSafeCounter& mut_active_actor_cnt() { return active_actor_cnt_; }
   ThreadSafeCounter& mut_inactive_actor_cnt() { return inactive_actor_cnt_; }

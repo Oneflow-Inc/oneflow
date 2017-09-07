@@ -1,5 +1,4 @@
 #include "oneflow/core/job/runtime_context.h"
-#include "oneflow/core/persistence/cyclic_data_reader.h"
 
 namespace oneflow {
 
@@ -19,11 +18,10 @@ DataReader* RuntimeCtx::GetDataReader(const std::string& name) {
   }
 }
 
-void RuntimeCtx::AddDataReader(const std::string& filepath,
-                               const std::string& name) {
-  LOG(INFO) << "Add Data Reader " << name << " " << filepath;
-  CHECK(data_reader_.emplace(name, of_make_unique<CyclicDataReader>(filepath))
-            .second);
+void RuntimeCtx::AddDataReader(const std::string& name,
+                               DataReader* data_reader) {
+  CHECK(data_reader_.find(name) == data_reader_.end());
+  data_reader_[name].reset(data_reader);
 }
 
 }  // namespace oneflow
