@@ -5,7 +5,7 @@
 namespace oneflow {
 
 void CopyTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph*) {
-  auto out_regst = NewProducedRegstDesc("copy_out", 1, 5);
+  auto out_regst = NewProducedRegstDesc("copy_out", 1, kMaxRegisterNum);
   BindProducedRegstAndOutEdge(out_regst, SoleOutEdge());
   std::shared_ptr<RegstDesc> in_regst = GetRelatedRegst(SoleInEdge());
   ConsumeRegstDesc("copy_in", in_regst);

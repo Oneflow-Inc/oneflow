@@ -9,13 +9,13 @@ void DataCompTaskNode::FwBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   mut_exec_gph().UpdateSourceAndSink();
   // Enroll Produced Regsts
   if (!out_edges().empty()) {
-    auto out_regst = NewProducedRegstDesc("out", 1, 5);
+    auto out_regst = NewProducedRegstDesc("out", 1, kMaxRegisterNum);
     BindProducedRegstAndOutEdge(out_regst, SoleOutEdge());
   }
-  NewProducedRegstDesc("activation", 1);
-  NewProducedRegstDesc("data_tmp", 1);
+  NewProducedRegstDesc("activation", 1, kMaxRegisterNum);
+  NewProducedRegstDesc("data_tmp", 1, kMaxRegisterNum);
   NewProducedRegstDesc("model_tmp", 1);
-  NewProducedRegstDesc("model", 1);
+  NewProducedRegstDesc("model", 1, kMaxRegisterNum);
   NewProducedRegstDesc("loss", 1);
   // Enroll Lbn
   FwSetExecNodeFromInRegst(extern_in_lbn2consumer);
@@ -153,12 +153,12 @@ void DataCompTaskNode::FwEnrollLbn2ModelAndTmpRegsts() {
 void DataCompTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   BpBuildExecGraph();
   // New produced registers
-  auto in_diff_regst = NewProducedRegstDesc("in_diff", 1, 5);
+  auto in_diff_regst = NewProducedRegstDesc("in_diff", 1, kMaxRegisterNum);
   if (!out_edges().empty()) {
     BindProducedRegstAndOutEdge(in_diff_regst, SoleOutEdge());
   }
-  NewProducedRegstDesc("model_diff", 1);
-  NewProducedRegstDesc("activation_diff", 1);
+  NewProducedRegstDesc("model_diff", 1, kMaxRegisterNum);
+  NewProducedRegstDesc("activation_diff", 1, kMaxRegisterNum);
   // Subscribe
   ConsumeRegstDesc("activation",
                    GetFwNode()->GetProducedRegstDesc("activation"));

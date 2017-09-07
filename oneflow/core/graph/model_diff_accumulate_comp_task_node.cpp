@@ -16,7 +16,7 @@ void MdDiffAccCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
     return;
   }
   // comp task node
-  NewProducedRegstDesc("model_diff_acc", 1);
+  NewProducedRegstDesc("model_diff_acc", 1, kMaxRegisterNum);
   auto model_diff_acc_regst = GetProducedRegstDesc("model_diff_acc");
 
   ExecNode* exec_node = mut_exec_gph().NewNode();

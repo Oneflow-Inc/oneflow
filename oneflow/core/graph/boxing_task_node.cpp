@@ -45,7 +45,7 @@ void BoxingTaskNode::EnrollAllRegstAndBindRelatedEdge() {
   }
   for (TaskEdge* edge : out_edges()) {
     std::string name = "boxing_out_" + edge->edge_id_str();
-    auto regst_desc = NewProducedRegstDesc(name, 1, 5);
+    auto regst_desc = NewProducedRegstDesc(name, 1, kMaxRegisterNum);
     BindProducedRegstAndOutEdge(regst_desc, edge);
   }
   NewProducedRegstDesc("middle", 1);

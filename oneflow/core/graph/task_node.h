@@ -94,8 +94,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void BindProducedRegstAndOutEdge(std::weak_ptr<RegstDesc>, const TaskEdge*);
 
   std::shared_ptr<RegstDesc> NewProducedRegstDesc(
-      const std::string& regst_desc_name, int64_t min_register_num,
-      int64_t max_register_num = 0);
+      const std::string& regst_desc_name, int32_t min_register_num,
+      int32_t max_register_num = 0);
   void ConsumeRegstDesc(const std::string& regst_desc_name,
                         std::shared_ptr<RegstDesc> regst_desc);
 
