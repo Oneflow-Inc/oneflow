@@ -172,8 +172,9 @@ class KernelUtil<DeviceType::kCPU, T> final {
                                int32_t dim_num, int64_t num_in_each_dim) {
     int64_t blob_size = blob->TotalByteSize();
     ctx->cpu_stream()->SendWork([=]() {
-      std::unique_ptr<PersistentInStream> in_stream = snapshot->GetInStream(
-          lbn, part_id, part_num, dim_num, num_in_each_dim * sizeof(T));
+      std::unique_ptr<NormalPersistentInStream> in_stream =
+          snapshot->GetInStream(lbn, part_id, part_num, dim_num,
+                                num_in_each_dim * sizeof(T));
       in_stream->Read(blob->mut_dptr<char>(), blob_size);
     });
   }

@@ -1,8 +1,8 @@
 #include "oneflow/core/kernel/data_loader_kernel.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/runtime_context.h"
-#include "oneflow/core/persistence/cyclic_data_reader.h"
-#include "oneflow/core/persistence/normal_data_reader.h"
+#include "oneflow/core/persistence/cyclic_persistent_in_stream.h"
+#include "oneflow/core/persistence/normal_persistent_in_stream.h"
 
 namespace oneflow {
 
@@ -10,17 +10,18 @@ template<typename T>
 void DataLoaderKernel<T>::Forward(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  DataReader* reader = RuntimeCtx::Singleton()->GetDataReader(op()->op_name());
-  if (reader == nullptr) {
+  PersistentInStream* in_stream =
+      RuntimeCtx::Singleton()->GetDataInStream(op()->op_name());
+  if (in_stream == nullptr) {
     std::string data_dir = op()->GetStringFromSpecialConf("data_dir");
     int64_t parallel_id = reinterpret_cast<int64_t>(kernel_ctx.other);
     std::string file_path = data_dir + "part-" + std::to_string(parallel_id);
     if (JobDesc::Singleton()->is_train()) {
-      reader = new CyclicDataReader(GlobalFS(), file_path);
+      in_stream = new CyclicPersistentInStream(GlobalFS(), file_path);
     } else {
-      reader = new NormalDataReader(GlobalFS(), file_path);
+      in_stream = new NormalPersistentInStream(GlobalFS(), file_path);
     }
-    RuntimeCtx::Singleton()->AddDataReader(op()->op_name(), reader);
+    RuntimeCtx::Singleton()->AddDataInStream(op()->op_name(), in_stream);
   }
   Blob* out_blob = BnInOp2Blob("out");
   CHECK_EQ(GetDataType<T>::val, out_blob->data_type());
@@ -31,7 +32,7 @@ void DataLoaderKernel<T>::Forward(
     std::string line;
     std::string token;
     for (int64_t i = 0; i != piece_size; ++i) {
-      int32_t read_status = reader->ReadLine(&line);
+      int32_t read_status = in_stream->ReadLine(&line);
       if (read_status == 0) {
         const char* line_ptr = line.c_str();
         line_ptr = StrToToken(line_ptr, ",", &token) + 1;

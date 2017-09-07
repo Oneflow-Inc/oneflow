@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_PERSISTENCE_SNAPSHOT_H_
 #define ONEFLOW_CORE_PERSISTENCE_SNAPSHOT_H_
 
-#include "oneflow/core/persistence/persistent_in_stream.h"
+#include "oneflow/core/persistence/normal_persistent_in_stream.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
 
 namespace oneflow {
@@ -15,9 +15,9 @@ class Snapshot final {
   Snapshot(const std::string& snapshot_root_path);
 
   // Get Stream
-  std::unique_ptr<PersistentInStream> GetInStream(const std::string& key,
-                                                  size_t begin_pos) const;
-  std::unique_ptr<PersistentInStream> GetInStream(
+  std::unique_ptr<NormalPersistentInStream> GetInStream(const std::string& key,
+                                                        size_t begin_pos) const;
+  std::unique_ptr<NormalPersistentInStream> GetInStream(
       const std::string& key, int32_t part_id, int32_t part_num,
       int32_t dim_num, int64_t byte_size_of_each_dim) const;
   std::unique_ptr<PersistentOutStream> GetOutStream(const std::string& key,

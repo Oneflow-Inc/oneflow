@@ -107,16 +107,16 @@ void Snapshot::CheckAndConcat() {
   }
 }
 
-std::unique_ptr<PersistentInStream> Snapshot::GetInStream(
+std::unique_ptr<NormalPersistentInStream> Snapshot::GetInStream(
     const std::string& key, size_t begin_pos) const {
   std::string file_path =
       JoinPath(root_path_, MakeValidFileName(key), concat_file_name_);
-  PersistentInStream* ret =
-      new PersistentInStream(GlobalFS(), file_path, begin_pos);
-  return std::unique_ptr<PersistentInStream>(ret);
+  NormalPersistentInStream* ret =
+      new NormalPersistentInStream(GlobalFS(), file_path, begin_pos);
+  return std::unique_ptr<NormalPersistentInStream>(ret);
 }
 
-std::unique_ptr<PersistentInStream> Snapshot::GetInStream(
+std::unique_ptr<NormalPersistentInStream> Snapshot::GetInStream(
     const std::string& key, int32_t part_id, int32_t part_num, int32_t dim_num,
     int64_t byte_size_of_each_dim) const {
   std::string file_path =
