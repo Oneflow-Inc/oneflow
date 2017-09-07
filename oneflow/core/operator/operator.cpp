@@ -140,9 +140,17 @@ std::string GenUnDiffBn(const std::string& diff_bn) {
 }
 
 std::string GetOpNameFromLbn(const std::string& lbn) {
+  return ParseLbn(lbn).first;
+}
+
+std::string GetBnInOpFromLbn(const std::string& lbn) {
+  return ParseLbn(lbn).second;
+}
+
+std::pair<std::string, std::string> ParseLbn(const std::string& lbn) {
   size_t pos = lbn.find('/');
   CHECK_NE(pos, std::string::npos);
-  return lbn.substr(0, pos);
+  return {lbn.substr(0, pos), lbn.substr(pos + 1)};
 }
 
 }  // namespace oneflow
