@@ -230,12 +230,22 @@ void TryUpdateStatus(Status* current_status, const Status& new_status);
 
 Status ErrnoToStatus(int err_number);
 
+#define FS_RETURN_IF_ERR(val)        \
+  {                                  \
+    const Status _ret_if_err = val;  \
+    if (_ret_if_err != Status::OK) { \
+      PLOG(WARNING);                 \
+      return _ret_if_err;            \
+    }                                \
+  }
+
 }  // namespace fs
+
+// file system check status is ok
+#define FS_CHECK_OK(val) CHECK_EQ(val, fs::Status::OK);
 
 fs::FileSystem* LocalFS();
 fs::FileSystem* GlobalFS();
-
-#define FS_CHECK_OK(val) CHECK_EQ(val, fs::Status::OK);
 
 }  // namespace oneflow
 
