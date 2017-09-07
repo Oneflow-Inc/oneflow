@@ -33,9 +33,6 @@ class RdmaCommNetwork final : public CommNetwork {
       std::function<void(const ActorMsg&)> callback) override {
     // TODO
   }
-  void Barrier(const std::string& barrier_name) override {
-    // TODO
-  }
 
  private:
   RdmaCommNetwork() = default;

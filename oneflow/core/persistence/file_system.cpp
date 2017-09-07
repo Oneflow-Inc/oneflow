@@ -13,12 +13,7 @@ OF_DEFINE_ENUM_TO_OSTREAM_FUNC(Status);
 
 void FileSystem::CreateDirIfNotExist(const std::string& dirname) {
   if (IsDirectory(dirname) == Status::OK) { return; }
-  Status st = CreateDir(dirname);
-  if (st == Status::ALREADY_EXISTS) {
-    FS_CHECK_OK(IsDirectory(dirname));
-  } else {
-    FS_CHECK_OK(st);
-  }
+  FS_CHECK_OK(CreateDir(dirname));
 }
 
 std::string FileSystem::TranslateName(const std::string& name) const {

@@ -23,7 +23,13 @@ class CommNetwork {
   virtual void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) = 0;
   virtual void SetCallbackForReceivedActorMsg(
       std::function<void(const ActorMsg&)> callback) = 0;
-  virtual void Barrier(const std::string& barrier_name) = 0;
+
+  //
+  void Barrier(const std::string& barrier_name) {}
+  bool TryLock(const std::string& name) {
+    return true;  // TODO
+  }
+  void UnLock(const std::string& name) {}
 
  protected:
   CommNetwork() = default;
@@ -35,10 +41,17 @@ class CommNetwork {
   static CommNetwork* comm_network_ptr_;
 };
 
-#define OF_MACRO_TRICK1(x) #x
-#define OF_MACRO_TRICK2(x) OF_MACRO_TRICK1(x)
-#define OF_BARRIER() \
-  CommNetwork::Singleton()->Barrier(__FILE__ ":" OF_MACRO_TRICK2(__LINE__))
+#define FILE_LINE_STR __FILE__ ":" OF_PP_STRINGIZE(__LINE__)
+
+#define OF_BARRIER() CommNetwork::Singleton()->Barrier(FILE_LINE_STR)
+
+#define OF_ONCE_GUARD(...)                                           \
+  do {                                                               \
+    bool locked = CommNetwork::Singleton()->TryLock(FILE_LINE_STR);  \
+    if (locked) { __VA_ARGS__; }                                     \
+    CommNetwork::Singleton()->Barrier(FILE_LINE_STR);                \
+    if (locked) { CommNetwork::Singleton()->UnLock(FILE_LINE_STR); } \
+  } while (0)
 
 }  // namespace oneflow
 

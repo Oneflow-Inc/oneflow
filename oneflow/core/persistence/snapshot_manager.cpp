@@ -7,7 +7,7 @@ namespace oneflow {
 void SnapshotMgr::Init() {
   LOG(INFO) << "SnapshotMgr Init";
   model_save_snapshots_path_ = JobDesc::Singleton()->md_save_snapshots_path();
-  GlobalFS()->CreateDirIfNotExist(model_save_snapshots_path_);
+  OF_ONCE_GUARD(GlobalFS()->CreateDirIfNotExist(model_save_snapshots_path_));
   std::vector<std::string> result;
   FS_CHECK_OK(GlobalFS()->GetChildren(model_save_snapshots_path_, &result));
   CHECK_EQ(result.size(), 0);
