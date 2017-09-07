@@ -25,6 +25,7 @@ message LocalFsConf {
 }
 
 message HdfsConf {
+  string namenode = 1;
 }
 
 message GlobalFSConf {
