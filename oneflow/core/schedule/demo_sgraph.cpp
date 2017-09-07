@@ -141,7 +141,7 @@ void DemoSGraph::InitFromDemo() {
       ss.clear();
       ss << arg1 << "\t" << arg2;
       ss >> name >> time;
-      SDevice* dev = mut_device_mgr().CreateIfNotFound(name, 1);
+      SDevice* dev = mut_device_mgr().CreateIfNotFound(name, name, 1);
       dev->set_time(time);
     } else if (arg0 == "dn") {
       uint64_t id;
@@ -149,7 +149,7 @@ void DemoSGraph::InitFromDemo() {
       ss.clear();
       ss << arg1 << "\t" << arg2;
       ss >> id >> name;
-      SDevice* dev = mut_device_mgr().CreateIfNotFound(name, 1);
+      SDevice* dev = mut_device_mgr().CreateIfNotFound(name, name, 1);
       STask* node = mut_node_mgr().CreateIfNotFound(get_id(id));
       mut_device_arc_mgr().CreateIfNotFound(node, dev);
     } else if (arg0 == "pr") {

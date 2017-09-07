@@ -6,6 +6,10 @@ enum UtilizationResourceType {
 	kRegister = 1;
 }
 
+message TaskResource {
+	uint64 task_id = 1;
+}
+
 message TaskStreamResource {
 	uint64 task_id = 1;
 	uint64 stream_id = 2;
@@ -16,7 +20,7 @@ message StreamResource {
 	uint64 stream_id = 2;
 }
 
-message ComputationResource {
+message DeviceComputationResource {
 	uint64 device_id = 1;
 }
 
@@ -29,7 +33,7 @@ message RegstDescResource {
 	uint64 regst_desc_id = 1;
 }
 
-message MemoryResource {
+message DeviceMemoryResource {
 	uint64 device_id = 1;
 }
 
@@ -59,12 +63,13 @@ message UtilizationProto {
 	uint64 start_batch_id = 4;
 	uint64 end_batch_id = 5;
 	oneof resource_type {
-		TaskStreamResource task_stream = 6;
-		StreamResource stream = 7;
-		ComputationResource computation = 8;
-		RegstResource regst = 9;
-		RegstDescResource regst_desc = 10;
-		MemoryResource memory = 11;
+		DeviceComputationResource dev_computation_resource = 6;
+		StreamResource stream_resource = 7;
+		TaskResource task_resource = 8;
+		TaskStreamResource task_stream_resource = 9;
+		DeviceMemoryResource dev_memory_resource = 10;
+		RegstDescResource regst_desc_resource = 11;
+		RegstResource regst_resource = 12;
 	}
 }
 

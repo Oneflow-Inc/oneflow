@@ -10,9 +10,10 @@ namespace schedule {
 // static schedule node
 class SNode {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(SNode);
   explicit SNode(const std::string name) : name_(name) {}
-  SNode() {}
-  virtual ~SNode() {}
+  SNode() = default;
+  virtual ~SNode() = default;
 
   virtual std::string name() const { return name_; }
   virtual std::string& mut_name() { return name_; }
@@ -57,13 +58,7 @@ class NodeMgr {
   template<typename... Args>
   NodeType* CreateIfNotFound(const std::string& name, Args&&... args) {
     NodeType* node = Find(name);
-    NodeType* ret = nullptr;
-    if (node) {
-      ret = dynamic_cast<NodeType*>(node);
-    } else {
-      ret = Create(name, std::forward<Args>(args)...);
-    }
-    return ret;
+    return node ? node : Create(std::forward<Args>(args)...);
   }
 
   template<typename... Args>
