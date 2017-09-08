@@ -4,13 +4,14 @@ namespace oneflow {
 
 PersistentOutStream::PersistentOutStream(fs::FileSystem* fs,
                                          const std::string& file_path) {
-  FS_CHECK_OK(fs->NewWritableFile(file_path, &file_));
+  fs->NewWritableFile(file_path, &file_);
+  CHECK(file_.get() != NULL);
 }
 
-PersistentOutStream::~PersistentOutStream() { FS_CHECK_OK(file_->Close()); }
+PersistentOutStream::~PersistentOutStream() { CHECK(file_->Close()); }
 
 PersistentOutStream& PersistentOutStream::Write(const char* s, size_t n) {
-  FS_CHECK_OK(file_->Append(s, n));
+  CHECK(file_->Append(s, n));
   return *this;
 }
 

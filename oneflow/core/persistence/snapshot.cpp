@@ -7,7 +7,7 @@
 namespace oneflow {
 
 Snapshot::Snapshot(const std::string& snapshot_root_path) {
-  FS_CHECK_OK(GlobalFS()->IsDirectory(snapshot_root_path));
+  CHECK(GlobalFS()->IsDirectory(snapshot_root_path));
   root_path_ = snapshot_root_path;
 }
 
@@ -23,11 +23,11 @@ std::unique_ptr<PersistentOutStream> Snapshot::GetOutStream(
   const std::string& bn_in_op = parsed_lbn.second;
   // op_name_dir
   std::string op_name_dir = JoinPath(root_path_, op_name);
-  OF_ONCE_GUARD(op_name_dir, FS_CHECK_OK(GlobalFS()->CreateDir(op_name_dir)));
+  OF_ONCE_GUARD(op_name_dir, CHECK(GlobalFS()->CreateDir(op_name_dir)));
   // bn_in_op_tmp_dir
   std::string bn_in_op_tmp_dir = JoinPath(op_name_dir, bn_in_op + "_tmp");
   OF_ONCE_GUARD(bn_in_op_tmp_dir,
-                FS_CHECK_OK(GlobalFS()->CreateDir(bn_in_op_tmp_dir)));
+                CHECK(GlobalFS()->CreateDir(bn_in_op_tmp_dir)));
   // part_file
   std::string part_file =
       JoinPath(bn_in_op_tmp_dir, "part_" + std::to_string(part_id));
@@ -37,14 +37,13 @@ std::unique_ptr<PersistentOutStream> Snapshot::GetOutStream(
 void Snapshot::OnePartDone(const std::string& lbn, int32_t part_id,
                            int32_t part_num) {
   std::string done_dir = JoinPath(root_path_, lbn + "_done");
-  OF_ONCE_GUARD(done_dir, FS_CHECK_OK(GlobalFS()->CreateDir(done_dir)));
+  OF_ONCE_GUARD(done_dir, CHECK(GlobalFS()->CreateDir(done_dir)));
   std::string done_file_path = JoinPath(done_dir, std::to_string(part_id));
-  CHECK_EQ(GlobalFS()->FileExists(done_file_path), fs::Status::NOT_FOUND);
+  CHECK_EQ(GlobalFS()->FileExists(done_file_path), false);
   { PersistentOutStream out_stream(GlobalFS(), done_file_path); }
   if (GlobalFS()->GetChildrenNumOfDir(done_dir) == part_num) {
     std::string concat_file = JoinPath(root_path_, lbn);
-    OF_ONCE_GUARD(concat_file,
-                  FS_CHECK_OK(GlobalFS()->DeleteRecursively(done_dir));
+    OF_ONCE_GUARD(concat_file, GlobalFS()->DeleteRecursively(done_dir);
                   ConcatLbnFile(lbn, part_num, concat_file));
   }
 }
@@ -63,22 +62,22 @@ void Snapshot::ConcatLbnFile(const std::string& lbn, int32_t part_num,
       std::unique_ptr<fs::RandomAccessFile> part_file;
       std::string part_file_path =
           JoinPath(part_dir, "part_" + std::to_string(i));
-      FS_CHECK_OK(GlobalFS()->NewRandomAccessFile(part_file_path, &part_file));
+      GlobalFS()->NewRandomAccessFile(part_file_path, &part_file);
       uint64_t part_file_size = 0;
-      FS_CHECK_OK(GlobalFS()->GetFileSize(part_file_path, &part_file_size));
+      GlobalFS()->GetFileSize(part_file_path, &part_file_size);
       uint64_t offset = 0;
       while (offset < part_file_size) {
         uint64_t n = std::min(buffer_size, part_file_size - offset);
-        FS_CHECK_OK(part_file->Read(offset, n, buffer));
+        CHECK_EQ(part_file->Read(offset, n, buffer), n);
         out_stream.Write(buffer, n);
         offset += n;
       }
-      FS_CHECK_OK(GlobalFS()->DeleteFile(part_file_path));
+      CHECK(GlobalFS()->DeleteFile(part_file_path));
     }
   }
-  FS_CHECK_OK(GlobalFS()->DeleteDir(part_dir));
+  CHECK(GlobalFS()->DeleteDir(part_dir));
   std::string done_dir = JoinPath(root_path_, "snapshot_done_tmp");
-  OF_ONCE_GUARD(done_dir, FS_CHECK_OK(GlobalFS()->CreateDir(done_dir)));
+  OF_ONCE_GUARD(done_dir, CHECK(GlobalFS()->CreateDir(done_dir)));
   {
     PersistentOutStream out_stream(
         GlobalFS(), JoinPath(done_dir, op_name + "_" + bn_in_op));
@@ -86,8 +85,7 @@ void Snapshot::ConcatLbnFile(const std::string& lbn, int32_t part_num,
   if (GlobalFS()->GetChildrenNumOfDir(done_dir)
       == SnapshotMgr::Singleton()->num_of_model_blobs()) {
     std::string done_file = JoinPath(root_path_, "snapshot_done");
-    OF_ONCE_GUARD(done_file,
-                  FS_CHECK_OK(GlobalFS()->DeleteRecursively(done_dir));
+    OF_ONCE_GUARD(done_file, GlobalFS()->DeleteRecursively(done_dir);
                   { PersistentOutStream out_stream(GlobalFS(), done_file); });
   }
 }

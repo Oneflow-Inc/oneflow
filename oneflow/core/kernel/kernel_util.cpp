@@ -176,7 +176,7 @@ class KernelUtil<DeviceType::kCPU, T> final {
       int64_t byte_size_of_each_dim = num_in_each_dim * sizeof(T);
       std::string file_path = JoinPath(model_dir, lbn);
       uint64_t file_size = 0;
-      FS_CHECK_OK(GlobalFS()->GetFileSize(file_path, &file_size));
+      GlobalFS()->GetFileSize(file_path, &file_size);
       CHECK_EQ(file_size, dim_num * byte_size_of_each_dim);
       BalancedSplitter splitter = BalancedSplitter(dim_num, part_num);
       int64_t begin_pos = splitter.At(part_id).begin() * byte_size_of_each_dim;

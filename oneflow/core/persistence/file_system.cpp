@@ -12,8 +12,8 @@ namespace fs {
 OF_DEFINE_ENUM_TO_OSTREAM_FUNC(Status);
 
 void FileSystem::CreateDirIfNotExist(const std::string& dirname) {
-  if (IsDirectory(dirname) == Status::OK) { return; }
-  FS_CHECK_OK(CreateDir(dirname));
+  if (IsDirectory(dirname)) { return; }
+  CHECK(CreateDir(dirname));
 }
 
 bool FileSystem::IsDirEmpty(const std::string& dirname) {
@@ -22,7 +22,7 @@ bool FileSystem::IsDirEmpty(const std::string& dirname) {
 
 size_t FileSystem::GetChildrenNumOfDir(const std::string& dirname) {
   std::vector<std::string> result;
-  FS_CHECK_OK(GetChildren(dirname, &result));
+  GetChildren(dirname, &result);
   return result.size();
 }
 
@@ -31,23 +31,18 @@ std::string FileSystem::TranslateName(const std::string& name) const {
 }
 
 bool FileSystem::FilesExist(const std::vector<std::string>& files,
-                            std::vector<Status>* status) {
+                            std::vector<bool>* ret) {
   bool result = true;
   for (const auto& file : files) {
-    Status s = FileExists(file);
-    result &= (s == Status::OK);
-    if (status != nullptr) {
-      status->push_back(s);
-    } else if (!result) {
-      // Return early since there is no need to check other files.
-      return false;
-    }
+    bool s = FileExists(file);
+    result &= s;
+    if (ret != nullptr) { ret->push_back(s); }
   }
   return result;
 }
 
-Status FileSystem::DeleteRecursively(const std::string& dirname) {
-  FS_CHECK_OK(FileExists(dirname));
+void FileSystem::DeleteRecursively(const std::string& dirname) {
+  CHECK(FileExists(dirname));
   std::deque<std::string> dir_q;      // Queue for the BFS
   std::vector<std::string> dir_list;  // List of all dirs discovered
   dir_q.push_back(dirname);
@@ -55,27 +50,22 @@ Status FileSystem::DeleteRecursively(const std::string& dirname) {
   // Do a BFS on the directory to discover all the sub-directories. Remove all
   // children that are files along the way. Then cleanup and remove the
   // directories in reverse order.;
-  Status ret = Status::OK;
   while (!dir_q.empty()) {
     std::string dir = dir_q.front();
     dir_q.pop_front();
     dir_list.push_back(dir);
     std::vector<std::string> children;
     // GetChildren might fail if we don't have appropriate permissions.
-    Status s = GetChildren(dir, &children);
-    TryUpdateStatus(&ret, s);
-    FS_CHECK_OK(s);
+    GetChildren(dir, &children);
     for (const std::string& child : children) {
       const std::string child_path = JoinPath(dir, child);
       // If the child is a directory add it to the queue, otherwise delete it.
-      if (IsDirectory(child_path) == Status::OK) {
+      if (IsDirectory(child_path)) {
         dir_q.push_back(child_path);
       } else {
         // Delete file might fail because of permissions issues or might be
         // unimplemented.
-        Status del_status = DeleteFile(child_path);
-        TryUpdateStatus(&ret, del_status);
-        CHECK_EQ(del_status, Status::OK);
+        CHECK(DeleteFile(child_path));
       }
     }
   }
@@ -85,20 +75,16 @@ Status FileSystem::DeleteRecursively(const std::string& dirname) {
   for (const std::string& dir : dir_list) {
     // Delete dir might fail because of permissions issues or might be
     // unimplemented.
-    Status s = DeleteDir(dir);
-    TryUpdateStatus(&ret, s);
-    FS_CHECK_OK(s);
+    CHECK(DeleteDir(dir));
   }
-  return ret;
 }
 
-Status FileSystem::RecursivelyCreateDir(const std::string& dirname) {
+void FileSystem::RecursivelyCreateDir(const std::string& dirname) {
   std::string remaining_dir = dirname;
   std::vector<std::string> sub_dirs;
   while (!remaining_dir.empty()) {
-    Status status = FileExists(remaining_dir);
-    if (status == Status::OK) { break; }
-    if (status != Status::NOT_FOUND) { return status; }
+    bool status = FileExists(remaining_dir);
+    if (status) { break; }
     // Basename returns "" for / ending dirs.
     if (remaining_dir[remaining_dir.length() - 1] != '/') {
       sub_dirs.push_back(Basename(remaining_dir));
@@ -113,12 +99,8 @@ Status FileSystem::RecursivelyCreateDir(const std::string& dirname) {
   std::string built_path = remaining_dir;
   for (const std::string& sub_dir : sub_dirs) {
     built_path = JoinPath(built_path, sub_dir);
-    Status status = CreateDir(built_path);
-    if (status != Status::OK && status != Status::ALREADY_EXISTS) {
-      return status;
-    }
+    CHECK(CreateDir(built_path));
   }
-  return Status::OK;
 }
 
 void TryUpdateStatus(Status* current_status, const Status& new_status) {
