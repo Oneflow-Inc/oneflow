@@ -24,6 +24,7 @@ class Utilization : public SNode {
   }
 
   virtual void CreateAscendantIfNotFound(UtilizationGraph* graph) const = 0;
+  virtual bool IsLeaf() const { return false; }
 
  private:
   UtilizationProto utilization_proto_;
@@ -79,7 +80,7 @@ class StreamUtilization : public Utilization {
   }
   void CreateAscendantIfNotFound(UtilizationGraph* graph) const override;
   static std::string MakeUniqueName(uint64_t device_id, uint64_t stream_id) {
-    return std::to_string(device_id) + std::to_string(stream_id);
+    return std::to_string(device_id) + "," + std::to_string(stream_id);
   }
 };
 
@@ -119,8 +120,9 @@ class TaskStreamUtilization : public Utilization {
     return utilization_proto().task_stream_resource().stream_id();
   }
   void CreateAscendantIfNotFound(UtilizationGraph* graph) const override;
+  virtual bool IsLeaf() const override { return false; }
   static std::string MakeUniqueName(uint64_t task_id, uint64_t stream_id) {
-    return std::to_string(task_id) + std::to_string(stream_id);
+    return std::to_string(task_id) + "," + std::to_string(stream_id);
   }
 };
 
@@ -193,8 +195,9 @@ class RegstUtilization : public Utilization {
     return utilization_proto().regst_resource().regst_id();
   }
   void CreateAscendantIfNotFound(UtilizationGraph* graph) const override;
+  virtual bool IsLeaf() const override { return false; }
   static std::string MakeUniqueName(uint64_t regst_desc_id, uint64_t regst_id) {
-    return std::to_string(regst_desc_id) + std::to_string(regst_id);
+    return std::to_string(regst_desc_id) + "," + std::to_string(regst_id);
   }
 };
 

@@ -47,8 +47,8 @@ message UtilizationEventProto {
 	uint64 batch_id = 2;
 	float time = 3;	
 	oneof resource_type {
-		TaskStreamResource task_stream = 4;
-		RegstResource regst = 5;
+		TaskStreamResource task_stream_resource = 4;
+		RegstResource regst_resource = 5;
 	}
 }
 
