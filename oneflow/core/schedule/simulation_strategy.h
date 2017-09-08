@@ -66,8 +66,8 @@ class MemorySimulationStrategy : public SimulationStrategy {
   virtual ~MemorySimulationStrategy() {}
   virtual std::unique_ptr<std::unordered_map<SDevice*, TaskInstance*>> Pick(
       const std::unordered_set<TaskArcInstance*>& tokens);
-  virtual void BeforeRun(TaskInstance* instance) = 0;
-  virtual void AfterRun(TaskInstance* instance) = 0;
+  virtual void BeforeRun(TaskInstance* instance, float time) = 0;
+  virtual void AfterRun(TaskInstance* instance, float time) = 0;
   virtual void InitRegst(
       const std::function<uint32_t(uint64_t)>& get_regst_num) = 0;
   virtual float GetAscendantEndedAt(TaskInstance* instance);
@@ -89,8 +89,8 @@ class UnlimitedMemoryStrategy : public MemorySimulationStrategy {
  public:
   UnlimitedMemoryStrategy(SimulatorScheduleEngine* schedule_engine)
       : MemorySimulationStrategy(schedule_engine) {}
-  virtual void BeforeRun(TaskInstance* instance) {}
-  virtual void AfterRun(TaskInstance* instance) {}
+  virtual void BeforeRun(TaskInstance* instance, float time) {}
+  virtual void AfterRun(TaskInstance* instance, float time) {}
   void InitRegst(const std::function<uint32_t(uint64_t)>& get_regst_num) {}
 };
 
@@ -100,8 +100,8 @@ class LimitedMemoryStrategy : public MemorySimulationStrategy {
       : MemorySimulationStrategy(schedule_engine) {
     InitFuncIsInstanceReady();
   }
-  void BeforeRun(TaskInstance* instance);
-  void AfterRun(TaskInstance* instance);
+  void BeforeRun(TaskInstance* instance, float time);
+  void AfterRun(TaskInstance* instance, float time);
   void InitRegst(const std::function<uint32_t(uint64_t)>& get_regst_num);
 
  private:

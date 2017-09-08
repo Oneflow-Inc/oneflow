@@ -7,6 +7,7 @@
 #include "oneflow/core/schedule/session.h"
 #include "oneflow/core/schedule/sgraph.h"
 #include "oneflow/core/schedule/simulation_strategy.h"
+#include "oneflow/core/schedule/utilization.pb.h"
 
 namespace oneflow {
 namespace schedule {
@@ -21,7 +22,12 @@ class SimulatorSchedule : public Schedule {
   void TimeLinePushBack(TaskInstance* instance, SDevice* device);
   void Retiming();
   void InitTimeNet();
-
+  void EmitBeforeRunEvent(TaskInstance* instance, float time) {
+    EmitEvent(UtilizationEventType::kStartEvent, instance, time);
+  }
+  void EmitAfterRunEvent(TaskInstance* instance, float time) {
+    EmitEvent(UtilizationEventType::kEndEvent, instance, time);
+  }
   //	getter
   inline const std::unordered_map<SRegst*, float>& regst2ended_at() const {
     return regst2ended_at_;
@@ -39,6 +45,9 @@ class SimulatorSchedule : public Schedule {
   regst_desc_instance2regst() const {
     return regst_desc_instance2regst_;
   }
+  inline const UtilizationEventPackageProto& utilization_event_package() const {
+    return utilization_event_package_;
+  }
 
   //	setter
   inline ArcMgr<Arc<TaskInstance, SRegst>>& mut_regst_arc_mgr() {
@@ -55,6 +64,9 @@ class SimulatorSchedule : public Schedule {
   mut_regst_desc_instance2regst() {
     return regst_desc_instance2regst_;
   }
+  inline UtilizationEventPackageProto* mut_utilization_event_package() {
+    return &utilization_event_package_;
+  }
 
   void ForeachNextTaskInstance(TaskInstance* task_instance,
                                const std::function<void(TaskInstance*)>& cb) {
@@ -67,6 +79,8 @@ class SimulatorSchedule : public Schedule {
   }
 
  private:
+  void EmitEvent(UtilizationEventType event_type, TaskInstance* instance,
+                 float time);
   inline const ArcMgr<Arc<TaskInstance>>& timenet_arc_mgr() const {
     return timenet_arc_mgr_;
   }
@@ -90,6 +104,7 @@ class SimulatorSchedule : public Schedule {
 
   ArcMgr<Arc<TaskInstance>> timenet_arc_mgr_;
   std::unordered_map<SDevice*, TaskInstance*> dev2current_instance_;
+  UtilizationEventPackageProto utilization_event_package_;
 };
 
 }  // namespace schedule

@@ -92,6 +92,10 @@ class NodeMgr {
     return count;
   }
 
+  void ForEach(const std::function<void(NodeType*)>& cb) const {
+    for (const auto& pair : id2node_) { cb(pair.second.get()); }
+  }
+
   NodeType* Find(uint64_t id) const {
     auto ret_itt = id2node_.find(id);
     if (id2node_.end() == ret_itt) { return nullptr; }

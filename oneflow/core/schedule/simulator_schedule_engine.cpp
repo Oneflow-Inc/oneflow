@@ -99,15 +99,15 @@ std::unique_ptr<SimulatorSchedule> SimulatorScheduleEngine::Run(
       SDevice* dev = dynamic_cast<SDevice*>(p.first);
       Batch* batch = p.second->src_node();
       STask* task = p.second->dst_node();
-      BeforeRun(p.second);
       float ended_at = GetAscendantEndedAt(p.second);
+      BeforeRun(p.second, ended_at);
       schedule()->mut_instance2ended_at()[p.second].first = ended_at;
       ended_at += task->workload() * (dev ? dev->time() : 0.0);
       schedule()->mut_device2ended_at()[p.first] = ended_at;
-      schedule()->mut_instance2ended_at()[p.second].second =
-          ended_at + (dev ? dev->delay() : 0.0);
+      ended_at = ended_at + (dev ? dev->delay() : 0.0);
+      schedule()->mut_instance2ended_at()[p.second].second = ended_at;
       TimeLinePushBack(p.second, dev);
-      AfterRun(p.second);
+      AfterRun(p.second, ended_at);
       graph->arc_mgr().InputArc(p.second->dst_node(), [&](TaskArc* arc) {
         TaskArcInstance* instance_input =
             session()->task_arc_instance_mgr().Find(batch, arc);

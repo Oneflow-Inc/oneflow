@@ -13,6 +13,8 @@ class UtilizationGraph final {
   explicit UtilizationGraph(const SGraph* sgraph) : sgraph_(sgraph) {}
   ~UtilizationGraph() = default;
 
+  void ForEachUtilization(const std::function<void(Utilization*)>& cb) const;
+
   //	getter
   inline const SGraph* sgraph() const { return sgraph_; }
   inline const ComputationUtilization& computation() const {
@@ -41,36 +43,44 @@ class UtilizationGraph final {
   }
   inline const ArcMgr<
       Arc<ComputationUtilization, DeviceComputationUtilization>>&
-  c2dc_arc_mgr() {
-    return c2dc_arc_mgr_;
+  root2dc_arc_mgr() const {
+    return root2dc_arc_mgr_;
   }
   inline const ArcMgr<Arc<DeviceComputationUtilization, StreamUtilization>>&
-  dc2s_arc_mgr() {
+  dc2s_arc_mgr() const {
     return dc2s_arc_mgr_;
   }
   inline const ArcMgr<Arc<DeviceComputationUtilization, TaskUtilization>>&
-  dc2t_arc_mgr() {
+  dc2t_arc_mgr() const {
     return dc2t_arc_mgr_;
   }
   inline const ArcMgr<Arc<StreamUtilization, TaskStreamUtilization>>&
-  s2ts_arc_mgr() {
+  s2ts_arc_mgr() const {
     return s2ts_arc_mgr_;
   }
   inline const ArcMgr<Arc<TaskUtilization, TaskStreamUtilization>>&
-  t2ts_arc_mgr() {
+  t2ts_arc_mgr() const {
     return t2ts_arc_mgr_;
   }
   inline const ArcMgr<Arc<MemoryUtilization, DeviceMemoryUtilization>>&
-  m2dm_arc_mgr() {
-    return m2dm_arc_mgr_;
+  root2dm_arc_mgr() const {
+    return root2dm_arc_mgr_;
   }
   inline const ArcMgr<Arc<DeviceMemoryUtilization, RegstDescUtilization>>&
-  dm2rd_arc_mgr() {
+  dm2rd_arc_mgr() const {
     return dm2rd_arc_mgr_;
   }
   inline const ArcMgr<Arc<RegstDescUtilization, RegstUtilization>>&
-  rd2r_arc_mgr() {
+  rd2r_arc_mgr() const {
     return rd2r_arc_mgr_;
+  }
+  inline const ArcMgr<Arc<ComputationUtilization, TaskStreamUtilization>>&
+  c2leaf_arc_mgr() const {
+    return c2leaf_arc_mgr_;
+  }
+  inline const ArcMgr<Arc<MemoryUtilization, RegstUtilization>>&
+  m2leaf_arc_mgr() const {
+    return m2leaf_arc_mgr_;
   }
 
   //	setter
@@ -90,8 +100,8 @@ class UtilizationGraph final {
   }
   inline NodeMgr<RegstUtilization>* mut_regst_mgr() { return &regst_mgr_; }
   inline ArcMgr<Arc<ComputationUtilization, DeviceComputationUtilization>>*
-  mut_c2dc_arc_mgr() {
-    return &c2dc_arc_mgr_;
+  mut_root2dc_arc_mgr() {
+    return &root2dc_arc_mgr_;
   }
   inline ArcMgr<Arc<DeviceComputationUtilization, StreamUtilization>>*
   mut_dc2s_arc_mgr() {
@@ -110,8 +120,8 @@ class UtilizationGraph final {
     return &t2ts_arc_mgr_;
   }
   inline ArcMgr<Arc<MemoryUtilization, DeviceMemoryUtilization>>*
-  mut_m2dm_arc_mgr() {
-    return &m2dm_arc_mgr_;
+  mut_root2dm_arc_mgr() {
+    return &root2dm_arc_mgr_;
   }
   inline ArcMgr<Arc<DeviceMemoryUtilization, RegstDescUtilization>>*
   mut_dm2rd_arc_mgr() {
@@ -121,11 +131,26 @@ class UtilizationGraph final {
   mut_rd2r_arc_mgr() {
     return &rd2r_arc_mgr_;
   }
+  inline ArcMgr<Arc<ComputationUtilization, TaskStreamUtilization>>*
+  mut_c2leaf_arc_mgr() {
+    return &c2leaf_arc_mgr_;
+  }
+  inline ArcMgr<Arc<MemoryUtilization, RegstUtilization>>*
+  mut_m2leaf_arc_mgr() {
+    return &m2leaf_arc_mgr_;
+  }
+  inline HashMap<UtilizationProto*, std::unique_ptr<UtilizationProto>>*
+  mut_utilization_proto_store() {
+    return &utilization_proto_store_;
+  }
 
  private:
   const SGraph* sgraph_;
   ComputationUtilization computation_;
   MemoryUtilization memory_;
+  HashMap<UtilizationProto*, std::unique_ptr<UtilizationProto>>
+      utilization_proto_store_;
+
   NodeMgr<DeviceComputationUtilization> dev_computation_mgr_;
   NodeMgr<StreamUtilization> stream_mgr_;
   NodeMgr<TaskUtilization> task_mgr_;
@@ -133,15 +158,19 @@ class UtilizationGraph final {
   NodeMgr<DeviceMemoryUtilization> dev_memory_mgr_;
   NodeMgr<RegstDescUtilization> regst_desc_mgr_;
   NodeMgr<RegstUtilization> regst_mgr_;
+
   ArcMgr<Arc<ComputationUtilization, DeviceComputationUtilization>>
-      c2dc_arc_mgr_;
+      root2dc_arc_mgr_;
   ArcMgr<Arc<DeviceComputationUtilization, StreamUtilization>> dc2s_arc_mgr_;
   ArcMgr<Arc<DeviceComputationUtilization, TaskUtilization>> dc2t_arc_mgr_;
   ArcMgr<Arc<StreamUtilization, TaskStreamUtilization>> s2ts_arc_mgr_;
   ArcMgr<Arc<TaskUtilization, TaskStreamUtilization>> t2ts_arc_mgr_;
-  ArcMgr<Arc<MemoryUtilization, DeviceMemoryUtilization>> m2dm_arc_mgr_;
+  ArcMgr<Arc<MemoryUtilization, DeviceMemoryUtilization>> root2dm_arc_mgr_;
   ArcMgr<Arc<DeviceMemoryUtilization, RegstDescUtilization>> dm2rd_arc_mgr_;
   ArcMgr<Arc<RegstDescUtilization, RegstUtilization>> rd2r_arc_mgr_;
+
+  ArcMgr<Arc<ComputationUtilization, TaskStreamUtilization>> c2leaf_arc_mgr_;
+  ArcMgr<Arc<MemoryUtilization, RegstUtilization>> m2leaf_arc_mgr_;
 };
 
 }  // namespace schedule

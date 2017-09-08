@@ -118,7 +118,7 @@ float LimitedMemoryStrategy::RegstDescEndedAt(TaskInstance* instance) {
   return ended_at;
 }
 
-void LimitedMemoryStrategy::BeforeRun(TaskInstance* instance) {
+void LimitedMemoryStrategy::BeforeRun(TaskInstance* instance, float time) {
   const Session* session = schedule_engine()->session();
   SimulatorSchedule* schedule = schedule_engine()->schedule();
   const SGraph* graph = schedule->session()->graph();
@@ -128,10 +128,7 @@ void LimitedMemoryStrategy::BeforeRun(TaskInstance* instance) {
         RegstDescInstance* regst_desc_instance =
             session->regst_desc_instance_mgr().Find(instance->src_node(),
                                                     regst_desc);
-        if (!regst) {
-          // BUG
-          return;
-        }
+        if (!regst) { return; }
         schedule->mut_regst_desc_instance2regst()[regst_desc_instance] = regst;
         graph->subscribed_regst_desc_mgr().Input(regst_desc, [&](STask* node) {
           TaskInstance* subscriber_instance =
@@ -140,11 +137,13 @@ void LimitedMemoryStrategy::BeforeRun(TaskInstance* instance) {
                                                          regst);
         });
       });
+  schedule->EmitBeforeRunEvent(instance, time);
 }
 
-void LimitedMemoryStrategy::AfterRun(TaskInstance* instance) {
+void LimitedMemoryStrategy::AfterRun(TaskInstance* instance, float time) {
   std::list<Arc<TaskInstance, SRegst>*> occupied_arcs;
   SimulatorSchedule* schedule = schedule_engine()->schedule();
+  schedule->EmitAfterRunEvent(instance, time);
   schedule->regst_arc_mgr().OutputArc(instance, &occupied_arcs);
   std::pair<float, float> zero_range;
   for (Arc<TaskInstance, SRegst>* arc : occupied_arcs) {

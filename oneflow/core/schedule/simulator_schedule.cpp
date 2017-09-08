@@ -8,6 +8,33 @@
 namespace oneflow {
 namespace schedule {
 
+void SimulatorSchedule::EmitEvent(UtilizationEventType event_type,
+                                  TaskInstance* instance, float time) {
+  uint64_t batch_id = instance->src_node()->id();
+  uint64_t task_id = instance->dst_node()->id();
+  uint64_t stream_id = instance->dst_node()->device()->id();
+  auto event = utilization_event_package_.add_event();
+  event->set_event_type(event_type);
+  event->set_batch_id(batch_id);
+  event->set_time(time);
+  event->mutable_task_stream_resource()->set_task_id(task_id);
+  event->mutable_task_stream_resource()->set_stream_id(stream_id);
+  session()->graph()->produced_regst_desc_mgr().Output(
+      instance->dst_node(), [&](SRegstDesc* regst_desc) {
+        RegstDescInstance* regst_desc_instance =
+            session()->regst_desc_instance_mgr().Find(instance->src_node(),
+                                                      regst_desc);
+        SRegst* regst = mut_regst_desc_instance2regst()[regst_desc_instance];
+        CHECK(regst);
+        auto event = utilization_event_package_.add_event();
+        event->set_event_type(event_type);
+        event->set_batch_id(batch_id);
+        event->set_time(time);
+        event->mutable_regst_resource()->set_regst_desc_id(regst_desc->id());
+        event->mutable_regst_resource()->set_regst_id(regst->id());
+      });
+}
+
 void SimulatorSchedule::TimeLinePushBack(TaskInstance* instance,
                                          SDevice* device) {
   TaskInstance* last = dev2current_instance_[device];

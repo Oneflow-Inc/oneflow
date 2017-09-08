@@ -16,14 +16,27 @@ class UtilizationAnalyzer {
   ~UtilizationAnalyzer() = default;
 
   inline const SGraph* sgraph() const { return sgraph_; }
-  virtual void CreateUtilizationFromEvent(
-      const UtilizationEventPackageProto& event_package,
-      UtilizationPackageProto* utilization_package) const;
-  virtual void CreateUtilizationGraph(
-      const UtilizationPackageProto& utilization_package,
-      UtilizationGraph* ugraph) const;
+
+  virtual std::unique_ptr<UtilizationGraph> Analyze(
+      const UtilizationPackageProto& utilization_package) const;
+
+  std::unique_ptr<UtilizationGraph> Analyze(
+      const UtilizationEventPackageProto& event_package) const;
 
  private:
+  void GetUtilizationPackageFromEvent(
+      const UtilizationEventPackageProto& event_package,
+      UtilizationPackageProto* utilization_package) const;
+  void ApplyUtilizationPackageProto(
+      const UtilizationPackageProto& utilization_package,
+      UtilizationGraph* ugraph) const;
+  void Analyze(UtilizationGraph* ugraph) const;
+  void ApplyLeafUtilizationProto(const UtilizationProto& utilization_proto,
+                                 UtilizationGraph* graph) const;
+  void ApplyRegstUtilizationProto(const UtilizationProto& utilization_proto,
+                                  UtilizationGraph* graph) const;
+  void ApplyTaskStreamUtilizationProto(
+      const UtilizationProto& utilization_proto, UtilizationGraph* graph) const;
   void AddUtilizationProto(
       const std::list<const UtilizationEventProto*>& event_pair,
       UtilizationPackageProto* utilization_package) const;

@@ -84,13 +84,11 @@ class SimulatorScheduleEngine : public ScheduleEngine {
     return evaluation_->TimeLinePushBack(instance, dev);
   }
   inline void Retiming() { return evaluation_->Retiming(); }
-  inline void BeforeRun(TaskInstance* instance) {
-    //    evaluation_->BeforeRun(instance);
-    memory_->BeforeRun(instance);
+  inline void BeforeRun(TaskInstance* instance, float time) {
+    memory_->BeforeRun(instance, time);
   }
-  inline void AfterRun(TaskInstance* instance) {
-    //    evaluation_->AfterRun(instance);
-    memory_->AfterRun(instance);
+  inline void AfterRun(TaskInstance* instance, float time) {
+    memory_->AfterRun(instance, time);
   }
   inline float GetAscendantEndedAt(TaskInstance* instance) {
     return memory_->get_ascendant_ended_at_(instance);

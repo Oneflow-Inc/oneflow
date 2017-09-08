@@ -6,6 +6,7 @@
 #include "oneflow/core/schedule/schedule_engine_factory.h"
 #include "oneflow/core/schedule/session_factory.h"
 #include "oneflow/core/schedule/sgraph_factory.h"
+#include "oneflow/core/schedule/utilization_analyzer_factory.h"
 #include "oneflow/core/schedule/validator_factory.h"
 
 namespace oneflow {
@@ -22,6 +23,7 @@ class ScheduleFactoryProvider final {
     CLONE_FACTORY(sfp, schedule_engine_factory());
     CLONE_FACTORY(sfp, validator_factory());
     CLONE_FACTORY(sfp, allocator_factory());
+    CLONE_FACTORY(sfp, utilization_analyzer_factory());
     return this;
   }
 
@@ -46,6 +48,11 @@ class ScheduleFactoryProvider final {
     allocator_factory_ = factory->Clone(this);
     return this;
   }
+  ScheduleFactoryProvider* Set(
+      std::unique_ptr<UtilizationAnalyzerFactory>&& factory) {
+    utilization_analyzer_factory_ = factory->Clone(this);
+    return this;
+  }
 
   //	getter
   inline const SGraphFactory* sgraph_factory() const {
@@ -68,6 +75,11 @@ class ScheduleFactoryProvider final {
     CHECK(allocator_factory_.get());
     return allocator_factory_.get();
   }
+  inline const UtilizationAnalyzerFactory* utilization_analyzer_factory()
+      const {
+    CHECK(utilization_analyzer_factory_.get());
+    return utilization_analyzer_factory_.get();
+  }
 
  private:
   //	setter
@@ -86,12 +98,17 @@ class ScheduleFactoryProvider final {
   inline std::unique_ptr<AllocatorFactory>& mut_allocator_factory() {
     return allocator_factory_;
   }
+  inline std::unique_ptr<UtilizationAnalyzerFactory>&
+  mut_utilization_analyzer_factory() {
+    return utilization_analyzer_factory_;
+  }
   std::string name_;
   std::unique_ptr<SGraphFactory> sgraph_factory_;
   std::unique_ptr<SessionFactory> session_factory_;
   std::unique_ptr<ScheduleEngineFactory> schedule_engine_factory_;
   std::unique_ptr<ValidatorFactory> validator_factory_;
   std::unique_ptr<AllocatorFactory> allocator_factory_;
+  std::unique_ptr<UtilizationAnalyzerFactory> utilization_analyzer_factory_;
 };
 
 }  // namespace schedule
