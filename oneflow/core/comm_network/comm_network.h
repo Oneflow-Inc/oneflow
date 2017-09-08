@@ -26,10 +26,14 @@ class CommNetwork {
 
   //
   void Barrier(const std::string& barrier_name) {}
-  bool TryLock(const std::string& name) {
-    return true;  // TODO
+  // 0 : locked
+  // 1 : done
+  // 2 : doing
+  int32_t TryLock(const std::string& name) {
+    return 0;  // TODO
   }
   void UnLock(const std::string& name) {}
+  void WaitForLockDone(const std::string& name) {}
 
  protected:
   CommNetwork() = default;
@@ -45,12 +49,18 @@ class CommNetwork {
 
 #define OF_BARRIER() CommNetwork::Singleton()->Barrier(FILE_LINE_STR)
 
-#define OF_ONCE_GUARD(...)                                           \
-  do {                                                               \
-    bool locked = CommNetwork::Singleton()->TryLock(FILE_LINE_STR);  \
-    if (locked) { __VA_ARGS__; }                                     \
-    CommNetwork::Singleton()->Barrier(FILE_LINE_STR);                \
-    if (locked) { CommNetwork::Singleton()->UnLock(FILE_LINE_STR); } \
+#define OF_ONCE_GUARD(name, ...)                                \
+  do {                                                          \
+    int32_t lock_ret = CommNetwork::Singleton()->TryLock(name); \
+    if (lock_ret == 0) {                                        \
+      __VA_ARGS__;                                              \
+      CommNetwork::Singleton()->UnLock(name);                   \
+    } else if (lock_ret == 1) {                                 \
+    } else if (lock_ret == 2) {                                 \
+      CommNetwork::Singleton()->WaitForLockDone(name);          \
+    } else {                                                    \
+      UNEXPECTED_RUN();                                         \
+    }                                                           \
   } while (0)
 
 }  // namespace oneflow
