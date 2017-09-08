@@ -1,8 +1,8 @@
-#include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/persistence/snapshot_manager.h"
 
 namespace oneflow {
 
@@ -56,15 +56,10 @@ void Snapshot::OnePartDone(const std::string& lbn, int32_t part_id,
   std::string done_file_path = JoinPath(done_dir, std::to_string(part_id));
   CHECK_EQ(GlobalFS()->FileExists(done_file_path), fs::Status::NOT_FOUND);
   { PersistentOutStream out_stream(GlobalFS(), done_file_path); }
-  std::vector<std::string> done_files;
-  GlobalFS()->GetChildren(done_dir, &done_files);
-  if (done_files.size() == part_num) {
+  if (GlobalFS()->GetChildrenNumOfDir(done_dir) == part_num) {
     std::string concat_file = JoinPath(root_path_, lbn);
-    OF_ONCE_GUARD(concat_file, int64_t undeleted_files = 0;
-                  int64_t undeleted_dirs = 0;
-                  FS_CHECK_OK(GlobalFS()->DeleteRecursively(
-                      done_dir, &undeleted_files, &undeleted_dirs));
-                  CHECK_EQ(undeleted_files, 0); CHECK_EQ(undeleted_dirs, 0);
+    OF_ONCE_GUARD(concat_file,
+                  FS_CHECK_OK(GlobalFS()->DeleteRecursively(done_dir));
                   ConcatLbnFile(lbn, part_num, concat_file));
   }
 }
@@ -97,9 +92,19 @@ void Snapshot::ConcatLbnFile(const std::string& lbn, int32_t part_num,
     }
   }
   FS_CHECK_OK(GlobalFS()->DeleteDir(part_dir));
-  std::string done_dir = JoinPath(root_path_, op_name, "done");
+  std::string done_dir = JoinPath(root_path_, "snapshot_done_tmp");
   OF_ONCE_GUARD(done_dir, FS_CHECK_OK(GlobalFS()->CreateDir(done_dir)));
-  PersistentOutStream out_stream(GlobalFS(), JoinPath(done_dir, bn_in_op));
+  {
+    PersistentOutStream out_stream(
+        GlobalFS(), JoinPath(done_dir, op_name + "_" + bn_in_op));
+  }
+  if (GlobalFS()->GetChildrenNumOfDir(done_dir)
+      == SnapshotMgr::Singleton()->num_of_model_blobs()) {
+    std::string done_file = JoinPath(root_path_, "snapshot_done");
+    OF_ONCE_GUARD(done_file,
+                  FS_CHECK_OK(GlobalFS()->DeleteRecursively(done_dir));
+                  { PersistentOutStream out_stream(GlobalFS(), done_file); });
+  }
 }
 
 }  // namespace oneflow

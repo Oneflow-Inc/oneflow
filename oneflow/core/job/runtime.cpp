@@ -73,7 +73,7 @@ class Runtime final {
     RuntimeCtx::Singleton()->set_this_machine_name(this_machine_name);
     KernelMgr::Singleton()->InitFromPlan(plan);
     RdmaCommNet::Init();
-    SnapshotMgr::Singleton()->Init();
+    SnapshotMgr::Singleton()->Init(plan);
     ActorMsgBus::Singleton()->Init();
     ThreadMgr::Singleton();
   }

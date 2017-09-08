@@ -170,6 +170,7 @@ class FileSystem {
 
   void CreateDirIfNotExist(const std::string& dirname);
   bool IsDirEmpty(const std::string& dirname);
+  size_t GetChildrenNumOfDir(const std::string& dirname);
 
   // Creates the specified directory and all the necessary
   // subdirectories.
@@ -193,9 +194,7 @@ class FileSystem {
   //  * PERMISSION_DENIED - dirname or some descendant is not writable
   //  * UNIMPLEMENTED - Some underlying functions (like Delete) are not
   //                    implemented
-  virtual Status DeleteRecursively(const std::string& dirname,
-                                   int64_t* undeleted_files,
-                                   int64_t* undeleted_dirs);
+  virtual Status DeleteRecursively(const std::string& dirname);
 
   // Stores the size of `fname` in `*file_size`.
   virtual Status GetFileSize(const std::string& fname, uint64_t* file_size) = 0;

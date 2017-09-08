@@ -4,7 +4,7 @@
 
 namespace oneflow {
 
-void SnapshotMgr::Init() {
+void SnapshotMgr::Init(const Plan& plan) {
   LOG(INFO) << "SnapshotMgr Init";
   model_save_snapshots_path_ = JobDesc::Singleton()->md_save_snapshots_path();
   OF_ONCE_GUARD(model_save_snapshots_path_,
@@ -14,6 +14,16 @@ void SnapshotMgr::Init() {
   if (load_path != "") {
     readable_snapshot_ptr_.reset(new Snapshot(load_path));
   }
+  HashSet<std::string> model_blob_set;
+  for (const OperatorProto& op_proto : plan.op()) {
+    if (op_proto.op_conf().has_model_save_conf()) {
+      for (const std::string& lbn :
+           op_proto.op_conf().model_save_conf().lbns()) {
+        model_blob_set.insert(lbn);
+      }
+    }
+  }
+  num_of_model_blobs_ = model_blob_set.size();
 }
 
 Snapshot* SnapshotMgr::GetWriteableSnapshot(int64_t snapshot_id) {
