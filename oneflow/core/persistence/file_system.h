@@ -169,6 +169,7 @@ class FileSystem {
   virtual Status CreateDir(const std::string& dirname) = 0;
 
   void CreateDirIfNotExist(const std::string& dirname);
+  bool IsDirEmpty(const std::string& dirname);
 
   // Creates the specified directory and all the necessary
   // subdirectories.

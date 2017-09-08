@@ -16,6 +16,12 @@ void FileSystem::CreateDirIfNotExist(const std::string& dirname) {
   FS_CHECK_OK(CreateDir(dirname));
 }
 
+bool FileSystem::IsDirEmpty(const std::string& dirname) {
+  std::vector<std::string> result;
+  FS_CHECK_OK(GetChildren(dirname, &result));
+  return result.size() == 0;
+}
+
 std::string FileSystem::TranslateName(const std::string& name) const {
   return CleanPath(name);
 }
