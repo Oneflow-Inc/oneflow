@@ -1,6 +1,6 @@
 #include "gflags/gflags.h"
 #include "oneflow/core/actor/actor_message_bus.h"
-#include "oneflow/core/comm_network/comm_network.h"
+#include "oneflow/core/comm_network/rdma_comm_network.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/plan.pb.h"
@@ -72,6 +72,7 @@ class Runtime final {
     IDMgr::Singleton()->InitFromResource(JobDesc::Singleton()->resource());
     RuntimeCtx::Singleton()->set_this_machine_name(this_machine_name);
     KernelMgr::Singleton()->InitFromPlan(plan);
+    RdmaCommNet::Init();
     SnapshotMgr::Singleton()->Init();
     ActorMsgBus::Singleton()->Init();
     ThreadMgr::Singleton();

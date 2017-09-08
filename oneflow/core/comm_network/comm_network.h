@@ -5,12 +5,12 @@
 
 namespace oneflow {
 
-class CommNetwork {
+class CommNet {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CommNetwork);
-  virtual ~CommNetwork() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CommNet);
+  virtual ~CommNet() = default;
 
-  static CommNetwork* Singleton() { return comm_network_ptr_; }
+  static CommNet* Singleton() { return comm_network_ptr_; }
 
   // "RegisterMemory" will return a Token, after "RegisterMemoryDone",
   // we can use this token to use the "Read"
@@ -30,37 +30,42 @@ class CommNetwork {
   // 1 : done
   // 2 : doing
   int32_t TryLock(const std::string& name) {
-    return 0;  // TODO
+    // TODO
+    static HashSet<std::string> locked_name;
+    if (locked_name.find(name) != locked_name.end()) {
+      return 1;
+    } else {
+      locked_name.insert(name);
+      return 0;
+    }
   }
-  void UnLock(const std::string& name) {}
+  void NotifyDone(const std::string& name) {}
   void WaitForLockDone(const std::string& name) {}
 
  protected:
-  CommNetwork() = default;
-  static void set_comm_network_ptr(CommNetwork* val) {
-    comm_network_ptr_ = val;
-  }
+  CommNet() = default;
+  static void set_comm_network_ptr(CommNet* val) { comm_network_ptr_ = val; }
 
  private:
-  static CommNetwork* comm_network_ptr_;
+  static CommNet* comm_network_ptr_;
 };
 
 #define FILE_LINE_STR __FILE__ ":" OF_PP_STRINGIZE(__LINE__)
 
-#define OF_BARRIER() CommNetwork::Singleton()->Barrier(FILE_LINE_STR)
+#define OF_BARRIER() CommNet::Singleton()->Barrier(FILE_LINE_STR)
 
-#define OF_ONCE_GUARD(name, ...)                                \
-  do {                                                          \
-    int32_t lock_ret = CommNetwork::Singleton()->TryLock(name); \
-    if (lock_ret == 0) {                                        \
-      __VA_ARGS__;                                              \
-      CommNetwork::Singleton()->UnLock(name);                   \
-    } else if (lock_ret == 1) {                                 \
-    } else if (lock_ret == 2) {                                 \
-      CommNetwork::Singleton()->WaitForLockDone(name);          \
-    } else {                                                    \
-      UNEXPECTED_RUN();                                         \
-    }                                                           \
+#define OF_ONCE_GUARD(name, ...)                            \
+  do {                                                      \
+    int32_t lock_ret = CommNet::Singleton()->TryLock(name); \
+    if (lock_ret == 0) {                                    \
+      __VA_ARGS__;                                          \
+      CommNet::Singleton()->NotifyDone(name);               \
+    } else if (lock_ret == 1) {                             \
+    } else if (lock_ret == 2) {                             \
+      CommNet::Singleton()->WaitForLockDone(name);          \
+    } else {                                                \
+      UNEXPECTED_RUN();                                     \
+    }                                                       \
   } while (0)
 
 }  // namespace oneflow
