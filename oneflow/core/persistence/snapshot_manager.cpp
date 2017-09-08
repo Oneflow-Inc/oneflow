@@ -6,24 +6,27 @@ namespace oneflow {
 
 void SnapshotMgr::Init(const Plan& plan) {
   LOG(INFO) << "SnapshotMgr Init";
-  model_save_snapshots_path_ = JobDesc::Singleton()->md_save_snapshots_path();
-  OF_ONCE_GUARD(model_save_snapshots_path_,
-                GlobalFS()->CreateDirIfNotExist(model_save_snapshots_path_);
-                CHECK(GlobalFS()->IsDirEmpty(model_save_snapshots_path_)););
+  num_of_model_blobs_ = 0;
+  if (JobDesc::Singleton()->is_train()) {
+    model_save_snapshots_path_ = JobDesc::Singleton()->md_save_snapshots_path();
+    OF_ONCE_GUARD(model_save_snapshots_path_,
+                  GlobalFS()->CreateDirIfNotExist(model_save_snapshots_path_);
+                  CHECK(GlobalFS()->IsDirEmpty(model_save_snapshots_path_)););
+    HashSet<std::string> model_blob_set;
+    for (const OperatorProto& op_proto : plan.op()) {
+      if (op_proto.op_conf().has_model_save_conf()) {
+        for (const std::string& lbn :
+             op_proto.op_conf().model_save_conf().lbns()) {
+          model_blob_set.insert(lbn);
+        }
+      }
+    }
+    num_of_model_blobs_ = model_blob_set.size();
+  }
   const std::string& load_path = JobDesc::Singleton()->md_load_snapshot_path();
   if (load_path != "") {
     readable_snapshot_ptr_.reset(new Snapshot(load_path));
   }
-  HashSet<std::string> model_blob_set;
-  for (const OperatorProto& op_proto : plan.op()) {
-    if (op_proto.op_conf().has_model_save_conf()) {
-      for (const std::string& lbn :
-           op_proto.op_conf().model_save_conf().lbns()) {
-        model_blob_set.insert(lbn);
-      }
-    }
-  }
-  num_of_model_blobs_ = model_blob_set.size();
 }
 
 Snapshot* SnapshotMgr::GetWriteableSnapshot(int64_t snapshot_id) {

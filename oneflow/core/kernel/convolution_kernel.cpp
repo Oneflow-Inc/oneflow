@@ -258,18 +258,18 @@ void ConvolutionKernel<device_type, T>::InitModelBlobsWithRandomSeed(
 }
 
 template<DeviceType device_type, typename T>
-void ConvolutionKernel<device_type, T>::InitModelBlobsWithSnapshot(
+void ConvolutionKernel<device_type, T>::InitModelBlobsWithDir(
     const KernelCtx& ctx, int32_t part_id, int32_t part_num,
-    const Snapshot* snapshot,
+    const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* weight_blob = BnInOp2Blob("weight");
   int32_t dim_num = op()->GetInt32FromSpecialConf("out_num");
-  KernelUtil<device_type, T>::FillWithSnapshot(
-      ctx.device_ctx, part_id, part_num, snapshot, weight_blob,
+  KernelUtil<device_type, T>::FillWithModelDir(
+      ctx.device_ctx, part_id, part_num, model_load_dir, weight_blob,
       op()->Lbn4BnInOp("weight"), dim_num, weight_blob->shape().Count(1));
   if (op()->GetBoolFromSpecialConf("has_bias_term")) {
-    KernelUtil<device_type, T>::FillWithSnapshot(
-        ctx.device_ctx, part_id, part_num, snapshot, BnInOp2Blob("bias"),
+    KernelUtil<device_type, T>::FillWithModelDir(
+        ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias"),
         op()->Lbn4BnInOp("bias"), dim_num, 1);
   }
 }

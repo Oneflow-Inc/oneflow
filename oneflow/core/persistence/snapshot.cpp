@@ -11,23 +11,8 @@ Snapshot::Snapshot(const std::string& snapshot_root_path) {
   root_path_ = snapshot_root_path;
 }
 
-std::unique_ptr<NormalPersistentInStream> Snapshot::GetInStream(
-    const std::string& lbn, size_t begin_pos) const {
-  std::string file_path = JoinPath(root_path_, lbn);
-  return of_make_unique<NormalPersistentInStream>(GlobalFS(), file_path,
-                                                  begin_pos);
-}
-
-std::unique_ptr<NormalPersistentInStream> Snapshot::GetInStream(
-    const std::string& lbn, int32_t part_id, int32_t part_num, int32_t dim_num,
-    int64_t byte_size_of_each_dim) const {
-  std::string file_path = JoinPath(root_path_, lbn);
-  uint64_t file_size = 0;
-  FS_CHECK_OK(GlobalFS()->GetFileSize(file_path, &file_size));
-  CHECK_EQ(file_size, dim_num * byte_size_of_each_dim);
-  BalancedSplitter splitter = BalancedSplitter(dim_num, part_num);
-  int64_t begin_pos = splitter.At(part_id).begin() * byte_size_of_each_dim;
-  return GetInStream(lbn, begin_pos);
+std::string Snapshot::GetDirFromOpName(const std::string& op_name) const {
+  return JoinPath(root_path_, op_name);
 }
 
 std::unique_ptr<PersistentOutStream> Snapshot::GetOutStream(

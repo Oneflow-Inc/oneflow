@@ -50,9 +50,9 @@ class Kernel {
   Kernel() = default;
   const Operator* op() const { return op_.get(); }
 
-  virtual void InitModelBlobsWithSnapshot(
+  virtual void InitModelBlobsWithDir(
       const KernelCtx& ctx, int32_t part_id, int32_t part_num,
-      const Snapshot* snapshot,
+      const std::string& model_load_dir,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNEXPECTED_RUN();
   }

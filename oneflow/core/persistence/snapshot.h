@@ -15,16 +15,12 @@ class Snapshot final {
 
   Snapshot(const std::string& snapshot_root_path);
 
-  std::unique_ptr<NormalPersistentInStream> GetInStream(const std::string& lbn,
-                                                        size_t begin_pos) const;
-  std::unique_ptr<NormalPersistentInStream> GetInStream(
-      const std::string& lbn, int32_t part_id, int32_t part_num,
-      int32_t dim_num, int64_t byte_size_of_each_dim) const;
-
   std::unique_ptr<PersistentOutStream> GetOutStream(const std::string& lbn,
                                                     int32_t part_id);
 
   void OnePartDone(const std::string& lbn, int32_t part_id, int32_t part_num);
+
+  std::string GetDirFromOpName(const std::string& op_name) const;
 
  private:
   void ConcatLbnFile(const std::string& lbn, int32_t part_num,

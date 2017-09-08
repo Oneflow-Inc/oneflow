@@ -105,10 +105,9 @@ class KernelUtil final {
     Fill(ctx, *fill_conf, random_seed, blob);
   }
 
-  // fill blob with snapshot
-  //
-  static void FillWithSnapshot(DeviceCtx* ctx, int32_t part_id,
-                               int32_t part_num, const Snapshot* snapshot,
+  // fill blob with model dir
+  static void FillWithModelDir(DeviceCtx* ctx, int32_t part_id,
+                               int32_t part_num, const std::string& model_dir,
                                Blob* blob, const std::string& lbn,
                                int32_t dim_num, int64_t num_in_each_dim);
 };
