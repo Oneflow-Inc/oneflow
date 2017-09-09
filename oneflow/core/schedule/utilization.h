@@ -5,6 +5,21 @@
 #include "oneflow/core/schedule/snode.h"
 #include "oneflow/core/schedule/utilization.pb.h"
 
+#define UTILIZATION_TYPE_SEQ                                                  \
+  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kComputation,                     \
+                       ComputationUtilization)                                \
+  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kDevComputation,                  \
+                       DeviceComputationUtilization)                          \
+  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kStream, StreamUtilization)       \
+  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kTask, TaskUtilization)           \
+  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kTaskStream,                      \
+                       TaskStreamUtilization)                                 \
+  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kMemory, MemoryUtilization)       \
+  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kDevMemory,                       \
+                       DeviceMemoryUtilization)                               \
+  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kRegstDesc, RegstDescUtilization) \
+  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kRegst, RegstUtilization)
+
 namespace oneflow {
 namespace schedule {
 

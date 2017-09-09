@@ -1,5 +1,5 @@
-#ifndef	ONEFLOW_CORE_SCHEDULE_UTILIZATION_ANALYZER_FACTORY_H_
-#define	ONEFLOW_CORE_SCHEDULE_UTILIZATION_ANALYZER_FACTORY_H_
+#ifndef ONEFLOW_CORE_SCHEDULE_UTILIZATION_ANALYZER_FACTORY_H_
+#define ONEFLOW_CORE_SCHEDULE_UTILIZATION_ANALYZER_FACTORY_H_
 
 #include "oneflow/core/schedule/utilization_analyzer.h"
 
@@ -10,18 +10,18 @@ class UtilizationAnalyzerFactory {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UtilizationAnalyzerFactory);
   UtilizationAnalyzerFactory() = default;
-	explicit UtilizationAnalyzerFactory(ScheduleFactoryProvider*) {}
+  explicit UtilizationAnalyzerFactory(ScheduleFactoryProvider*) {}
   virtual ~UtilizationAnalyzerFactory() = default;
   DEFINE_FACTORY_METHOD_CLONE(UtilizationAnalyzerFactory,
-			UtilizationAnalyzerFactory);
+                              UtilizationAnalyzerFactory);
 
   virtual std::unique_ptr<UtilizationAnalyzer> CreateUtilizationAnalyzer(
       const SGraph* sgraph) const {
-		return of_make_unique<UtilizationAnalyzer>(sgraph);
-	}
+    return of_make_unique<UtilizationAnalyzer>(sgraph);
+  }
 };
 
 }  // namespace schedule
 }  // namespace oneflow
 
-#endif	// ONEFLOW_CORE_SCHEDULE_UTILIZATION_ANALYZER_FACTORY_H_
+#endif  // ONEFLOW_CORE_SCHEDULE_UTILIZATION_ANALYZER_FACTORY_H_

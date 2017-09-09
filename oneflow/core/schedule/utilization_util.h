@@ -3,7 +3,8 @@
 
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/schedule/utilization.pb.h"
+#include "oneflow/core/schedule/utilization.h"
+#include "oneflow/core/schedule/utilization_graph.h"
 
 namespace oneflow {
 namespace schedule {
@@ -17,6 +18,20 @@ class UtilizationUtil final {
   static void SetResourceType(const UtilizationEventProto& event_proto,
                               UtilizationProto* utilization_proto);
   static std::string CreateUniqueName(const UtilizationEventProto& event_proto);
+
+  template<UtilizationResource::ResourceTypeCase resource_type_case>
+  static std::string GetResourceUniqueName(const UtilizationResource& resource);
+
+  static std::string GetUniqueName(const UtilizationResource& resource);
+
+  template<UtilizationResource::ResourceTypeCase resource_type_case>
+  static void ForEachGroupedResource(
+      const UtilizationResource& resource, const UtilizationGraph& ugraph,
+      const std::function<void(const UtilizationResource&)>& cb);
+
+  static void ForEachGrouped(
+      const UtilizationResource& resource, const UtilizationGraph& ugraph,
+      const std::function<void(const UtilizationResource&)>& cb);
 
  private:
   static std::string CreateUniqueName(

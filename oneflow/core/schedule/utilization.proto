@@ -20,6 +20,9 @@ message StreamResource {
 	uint64 stream_id = 2;
 }
 
+message ComputationResource {
+}
+
 message DeviceComputationResource {
 	uint64 device_id = 1;
 }
@@ -33,8 +36,25 @@ message RegstDescResource {
 	uint64 regst_desc_id = 1;
 }
 
+message MemoryResource {
+}
+
 message DeviceMemoryResource {
 	uint64 device_id = 1;
+}
+
+message UtilizationResource {
+	oneof resource_type {
+		ComputationResource computation = 1;
+		DeviceComputationResource dev_computation = 2;
+		StreamResource stream = 3;
+		TaskResource task = 4;
+		TaskStreamResource task_stream = 5;
+		MemoryResource memory = 6;
+		DeviceMemoryResource dev_memory = 7;
+		RegstDescResource regst_desc = 8;
+		RegstResource regst = 9;
+	}
 }
 
 enum UtilizationEventType {
@@ -50,6 +70,7 @@ message UtilizationEventProto {
 		TaskStreamResource task_stream_resource = 4;
 		RegstResource regst_resource = 5;
 	}
+	UtilizationResource resource = 6;
 }
 
 message UtilizationEventPackageProto {
@@ -71,6 +92,7 @@ message UtilizationProto {
 		RegstDescResource regst_desc_resource = 11;
 		RegstResource regst_resource = 12;
 	}
+	UtilizationResource resource = 13;
 }
 
 message UtilizationPackageProto {

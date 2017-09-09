@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_SCHEDULE_UTILIZATION_GRAPH_H_
 #define ONEFLOW_CORE_SCHEDULE_UTILIZATION_GRAPH_H_
 
+#include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/schedule/sgraph.h"
 #include "oneflow/core/schedule/utilization.h"
 
@@ -8,6 +9,37 @@ namespace oneflow {
 namespace schedule {
 
 class UtilizationGraph final {
+#define UTILIZATION_NODE_SEQ                                              \
+  OF_PP_MAKE_TUPLE_SEQ(dev_computation_mgr, DeviceComputationUtilization) \
+  OF_PP_MAKE_TUPLE_SEQ(stream_mgr, StreamUtilization)                     \
+  OF_PP_MAKE_TUPLE_SEQ(task_mgr, TaskUtilization)                         \
+  OF_PP_MAKE_TUPLE_SEQ(task_stream_mgr, TaskStreamUtilization)            \
+  OF_PP_MAKE_TUPLE_SEQ(dev_memory_mgr, DeviceMemoryUtilization)           \
+  OF_PP_MAKE_TUPLE_SEQ(regst_desc_mgr, RegstDescUtilization)              \
+  OF_PP_MAKE_TUPLE_SEQ(regst_mgr, RegstUtilization)
+
+#define UTILIZATION_DIRECT_ARC_SEQ                                             \
+  OF_PP_MAKE_TUPLE_SEQ(root2dc_arc_mgr, ComputationUtilization,                \
+                       DeviceComputationUtilization)                           \
+  OF_PP_MAKE_TUPLE_SEQ(dc2s_arc_mgr, DeviceComputationUtilization,             \
+                       StreamUtilization)                                      \
+  OF_PP_MAKE_TUPLE_SEQ(dc2t_arc_mgr, DeviceComputationUtilization,             \
+                       TaskUtilization)                                        \
+  OF_PP_MAKE_TUPLE_SEQ(s2ts_arc_mgr, StreamUtilization, TaskStreamUtilization) \
+  OF_PP_MAKE_TUPLE_SEQ(t2ts_arc_mgr, TaskUtilization, TaskStreamUtilization)   \
+  OF_PP_MAKE_TUPLE_SEQ(root2dm_arc_mgr, MemoryUtilization,                     \
+                       DeviceMemoryUtilization)                                \
+  OF_PP_MAKE_TUPLE_SEQ(dm2rd_arc_mgr, DeviceMemoryUtilization,                 \
+                       RegstDescUtilization)                                   \
+  OF_PP_MAKE_TUPLE_SEQ(rd2r_arc_mgr, RegstDescUtilization, RegstUtilization)
+
+#define UTILIZATION_LEAF_ARC_SEQ                               \
+  OF_PP_MAKE_TUPLE_SEQ(c2leaf_arc_mgr, ComputationUtilization, \
+                       TaskStreamUtilization)                  \
+  OF_PP_MAKE_TUPLE_SEQ(m2leaf_arc_mgr, MemoryUtilization, RegstUtilization)
+
+#define UTILIZATION_ARC_SEQ UTILIZATION_DIRECT_ARC_SEQ UTILIZATION_LEAF_ARC_SEQ
+
  public:
   OF_DISALLOW_COPY_AND_MOVE(UtilizationGraph);
   explicit UtilizationGraph(const SGraph* sgraph) : sgraph_(sgraph) {}
@@ -20,125 +52,32 @@ class UtilizationGraph final {
   inline const ComputationUtilization& computation() const {
     return computation_;
   }
-  inline const NodeMgr<DeviceComputationUtilization>& dev_computation_mgr()
-      const {
-    return dev_computation_mgr_;
-  }
-  inline const NodeMgr<StreamUtilization>& stream_mgr() const {
-    return stream_mgr_;
-  }
-  inline const NodeMgr<TaskUtilization>& task_mgr() const { return task_mgr_; }
-  inline const NodeMgr<TaskStreamUtilization>& task_stream_mgr() const {
-    return task_stream_mgr_;
-  }
   inline const MemoryUtilization& memory() const { return memory_; }
-  inline const NodeMgr<DeviceMemoryUtilization>& dev_memory_mgr() const {
-    return dev_memory_mgr_;
+#define UTILIZATION_NODE_MGR_GETTER(field, class_name) \
+  inline const NodeMgr<class_name>& field() const {    \
+    return OF_PP_CAT(field, _);                        \
   }
-  inline const NodeMgr<RegstDescUtilization>& regst_desc_mgr() const {
-    return regst_desc_mgr_;
-  }
-  inline const NodeMgr<RegstUtilization>& regst_mgr() const {
-    return regst_mgr_;
-  }
-  inline const ArcMgr<
-      Arc<ComputationUtilization, DeviceComputationUtilization>>&
-  root2dc_arc_mgr() const {
-    return root2dc_arc_mgr_;
-  }
-  inline const ArcMgr<Arc<DeviceComputationUtilization, StreamUtilization>>&
-  dc2s_arc_mgr() const {
-    return dc2s_arc_mgr_;
-  }
-  inline const ArcMgr<Arc<DeviceComputationUtilization, TaskUtilization>>&
-  dc2t_arc_mgr() const {
-    return dc2t_arc_mgr_;
-  }
-  inline const ArcMgr<Arc<StreamUtilization, TaskStreamUtilization>>&
-  s2ts_arc_mgr() const {
-    return s2ts_arc_mgr_;
-  }
-  inline const ArcMgr<Arc<TaskUtilization, TaskStreamUtilization>>&
-  t2ts_arc_mgr() const {
-    return t2ts_arc_mgr_;
-  }
-  inline const ArcMgr<Arc<MemoryUtilization, DeviceMemoryUtilization>>&
-  root2dm_arc_mgr() const {
-    return root2dm_arc_mgr_;
-  }
-  inline const ArcMgr<Arc<DeviceMemoryUtilization, RegstDescUtilization>>&
-  dm2rd_arc_mgr() const {
-    return dm2rd_arc_mgr_;
-  }
-  inline const ArcMgr<Arc<RegstDescUtilization, RegstUtilization>>&
-  rd2r_arc_mgr() const {
-    return rd2r_arc_mgr_;
-  }
-  inline const ArcMgr<Arc<ComputationUtilization, TaskStreamUtilization>>&
-  c2leaf_arc_mgr() const {
-    return c2leaf_arc_mgr_;
-  }
-  inline const ArcMgr<Arc<MemoryUtilization, RegstUtilization>>&
-  m2leaf_arc_mgr() const {
-    return m2leaf_arc_mgr_;
-  }
+  OF_PP_FOR_EACH_TUPLE(UTILIZATION_NODE_MGR_GETTER, UTILIZATION_NODE_SEQ)
 
-  //	setter
-  inline NodeMgr<DeviceComputationUtilization>* mut_dev_computation_mgr() {
-    return &dev_computation_mgr_;
+#define UTILIZATION_ARC_MGR_GETTER(field, src_node_type, dst_node_type)   \
+  inline const ArcMgr<Arc<src_node_type, dst_node_type>>& field() const { \
+    return OF_PP_CAT(field, _);                                           \
   }
-  inline NodeMgr<StreamUtilization>* mut_stream_mgr() { return &stream_mgr_; }
-  inline NodeMgr<TaskUtilization>* mut_task_mgr() { return &task_mgr_; }
-  inline NodeMgr<TaskStreamUtilization>* mut_task_stream_mgr() {
-    return &task_stream_mgr_;
+  OF_PP_FOR_EACH_TUPLE(UTILIZATION_ARC_MGR_GETTER, UTILIZATION_ARC_SEQ);
+
+//	setter
+#define UTILIZATION_NODE_MGR_SETTER(field, class_name)   \
+  inline NodeMgr<class_name>* OF_PP_CAT(mut_, field)() { \
+    return &OF_PP_CAT(field, _);                         \
   }
-  inline NodeMgr<DeviceMemoryUtilization>* mut_dev_memory_mgr() {
-    return &dev_memory_mgr_;
+  OF_PP_FOR_EACH_TUPLE(UTILIZATION_NODE_MGR_SETTER, UTILIZATION_NODE_SEQ)
+
+#define UTILIZATION_ARC_MGR_SETTER(field, src_node_type, dst_node_type)        \
+  inline ArcMgr<Arc<src_node_type, dst_node_type>>* OF_PP_CAT(mut_, field)() { \
+    return &OF_PP_CAT(field, _);                                               \
   }
-  inline NodeMgr<RegstDescUtilization>* mut_regst_desc_mgr() {
-    return &regst_desc_mgr_;
-  }
-  inline NodeMgr<RegstUtilization>* mut_regst_mgr() { return &regst_mgr_; }
-  inline ArcMgr<Arc<ComputationUtilization, DeviceComputationUtilization>>*
-  mut_root2dc_arc_mgr() {
-    return &root2dc_arc_mgr_;
-  }
-  inline ArcMgr<Arc<DeviceComputationUtilization, StreamUtilization>>*
-  mut_dc2s_arc_mgr() {
-    return &dc2s_arc_mgr_;
-  }
-  inline ArcMgr<Arc<DeviceComputationUtilization, TaskUtilization>>*
-  mut_dc2t_arc_mgr() {
-    return &dc2t_arc_mgr_;
-  }
-  inline ArcMgr<Arc<StreamUtilization, TaskStreamUtilization>>*
-  mut_s2ts_arc_mgr() {
-    return &s2ts_arc_mgr_;
-  }
-  inline ArcMgr<Arc<TaskUtilization, TaskStreamUtilization>>*
-  mut_t2ts_arc_mgr() {
-    return &t2ts_arc_mgr_;
-  }
-  inline ArcMgr<Arc<MemoryUtilization, DeviceMemoryUtilization>>*
-  mut_root2dm_arc_mgr() {
-    return &root2dm_arc_mgr_;
-  }
-  inline ArcMgr<Arc<DeviceMemoryUtilization, RegstDescUtilization>>*
-  mut_dm2rd_arc_mgr() {
-    return &dm2rd_arc_mgr_;
-  }
-  inline ArcMgr<Arc<RegstDescUtilization, RegstUtilization>>*
-  mut_rd2r_arc_mgr() {
-    return &rd2r_arc_mgr_;
-  }
-  inline ArcMgr<Arc<ComputationUtilization, TaskStreamUtilization>>*
-  mut_c2leaf_arc_mgr() {
-    return &c2leaf_arc_mgr_;
-  }
-  inline ArcMgr<Arc<MemoryUtilization, RegstUtilization>>*
-  mut_m2leaf_arc_mgr() {
-    return &m2leaf_arc_mgr_;
-  }
+  OF_PP_FOR_EACH_TUPLE(UTILIZATION_ARC_MGR_SETTER, UTILIZATION_ARC_SEQ);
+
   inline HashMap<UtilizationProto*, std::unique_ptr<UtilizationProto>>*
   mut_utilization_proto_store() {
     return &utilization_proto_store_;
@@ -151,26 +90,13 @@ class UtilizationGraph final {
   HashMap<UtilizationProto*, std::unique_ptr<UtilizationProto>>
       utilization_proto_store_;
 
-  NodeMgr<DeviceComputationUtilization> dev_computation_mgr_;
-  NodeMgr<StreamUtilization> stream_mgr_;
-  NodeMgr<TaskUtilization> task_mgr_;
-  NodeMgr<TaskStreamUtilization> task_stream_mgr_;
-  NodeMgr<DeviceMemoryUtilization> dev_memory_mgr_;
-  NodeMgr<RegstDescUtilization> regst_desc_mgr_;
-  NodeMgr<RegstUtilization> regst_mgr_;
+#define UTILIZATION_NODE_MGR_MEMBER(field, class_name) \
+  NodeMgr<class_name> OF_PP_CAT(field, _);
+  OF_PP_FOR_EACH_TUPLE(UTILIZATION_NODE_MGR_MEMBER, UTILIZATION_NODE_SEQ);
 
-  ArcMgr<Arc<ComputationUtilization, DeviceComputationUtilization>>
-      root2dc_arc_mgr_;
-  ArcMgr<Arc<DeviceComputationUtilization, StreamUtilization>> dc2s_arc_mgr_;
-  ArcMgr<Arc<DeviceComputationUtilization, TaskUtilization>> dc2t_arc_mgr_;
-  ArcMgr<Arc<StreamUtilization, TaskStreamUtilization>> s2ts_arc_mgr_;
-  ArcMgr<Arc<TaskUtilization, TaskStreamUtilization>> t2ts_arc_mgr_;
-  ArcMgr<Arc<MemoryUtilization, DeviceMemoryUtilization>> root2dm_arc_mgr_;
-  ArcMgr<Arc<DeviceMemoryUtilization, RegstDescUtilization>> dm2rd_arc_mgr_;
-  ArcMgr<Arc<RegstDescUtilization, RegstUtilization>> rd2r_arc_mgr_;
-
-  ArcMgr<Arc<ComputationUtilization, TaskStreamUtilization>> c2leaf_arc_mgr_;
-  ArcMgr<Arc<MemoryUtilization, RegstUtilization>> m2leaf_arc_mgr_;
+#define UTILIZATION_ARC_MGR_MEMBER(field, src_node_type, dst_node_type) \
+  ArcMgr<Arc<src_node_type, dst_node_type>> OF_PP_CAT(field, _);
+  OF_PP_FOR_EACH_TUPLE(UTILIZATION_ARC_MGR_MEMBER, UTILIZATION_ARC_SEQ);
 };
 
 }  // namespace schedule
