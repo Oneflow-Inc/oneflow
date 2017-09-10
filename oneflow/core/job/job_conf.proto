@@ -11,6 +11,7 @@ message TrainConf {
   int64 total_batch_num = 4;
   FillConf default_fill_conf = 5;
   int32 piece_num_of_record_loss = 6;
+  int32 num_of_pieces_in_batch = 7;
   oneof ModelUpdateCase {
     NormalModelUpdateOpConf normal_mdupdt_conf = 1000;
     MomentumModelUpdateOpConf momentum_mdupdt_conf = 1001;
@@ -41,7 +42,6 @@ message JobConf {
   string placement_filepath = 3;
   string model_load_snapshot_path = 4;
   int32 piece_size = 5;
-  int32 num_of_pieces_in_batch = 6;
   DataType default_data_type = 7; // kFloat or kDouble
   bool use_async_cpu_stream = 8;
   int32 max_data_id_length = 9;

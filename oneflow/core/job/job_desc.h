@@ -32,7 +32,7 @@ class JobDesc final {
   }
   int32_t piece_size() const { return job_conf_.piece_size(); }
   int32_t num_of_pieces_in_batch() const {
-    return job_conf_.num_of_pieces_in_batch();
+    return job_conf_.train_conf().num_of_pieces_in_batch();
   }
   int32_t batch_size() const { return piece_size() * num_of_pieces_in_batch(); }
   bool is_train() const { return job_conf_.has_train_conf(); }
