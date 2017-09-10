@@ -10,4 +10,5 @@ global_fs_conf {
   }
 }
 predict_conf {
+  total_data_num: 60000
 }

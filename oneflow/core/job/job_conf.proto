@@ -20,6 +20,7 @@ message TrainConf {
 }
 
 message PredictConf {
+  int64 total_data_num = 1;
 }
 
 message LocalFsConf {
