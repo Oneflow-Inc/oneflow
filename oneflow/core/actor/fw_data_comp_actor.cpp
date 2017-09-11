@@ -40,7 +40,7 @@ bool FwDataCompActor::IsReadReady() {
       || (model_tmp_regst_desc_id_ != -1 && !model_tmp_regst_)) {
     return false;
   }
-  if (model_regst_desc_id_ != -1) {
+  if (JobDesc::Singleton()->is_train() && model_regst_desc_id_ != -1) {
     // Ho Q, Cipar J, Cui H, et al. More effective distributed ml via a stale
     // synchronous parallel parameter server
     int32_t staleness = JobDesc::Singleton()->staleness();

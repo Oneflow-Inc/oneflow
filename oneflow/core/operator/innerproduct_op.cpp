@@ -26,9 +26,8 @@ void InnerProductOp::InferBlobDesc4FwBlobs(
   // useful vars
   const InnerProductOpConf& conf = op_conf().innerproduct_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  CHECK_EQ(in_blob_desc->data_type(), conf.in().data_type());
-  CHECK_EQ(conf.in().data_type(), JobDesc::Singleton()->default_data_type());
-  CHECK_EQ(conf.out().data_type(), JobDesc::Singleton()->default_data_type());
+  CHECK_EQ(in_blob_desc->data_type(),
+           JobDesc::Singleton()->default_data_type());
   int32_t out_num = conf.out_num();
   if (policy == kModelParallel) {
     BalancedSplitter splitter(out_num, parallel_num);
@@ -37,7 +36,7 @@ void InnerProductOp::InferBlobDesc4FwBlobs(
   // out
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   out_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(0), out_num});
-  out_blob_desc->set_data_type(conf.out().data_type());
+  out_blob_desc->set_data_type(JobDesc::Singleton()->default_data_type());
   out_blob_desc->set_has_data_id(in_blob_desc->has_data_id());
 
   // weight

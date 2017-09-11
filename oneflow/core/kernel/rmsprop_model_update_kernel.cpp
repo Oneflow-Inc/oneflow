@@ -54,20 +54,22 @@ class RMSPropMdUpdateKernelUtil<DeviceType::kCPU, T> final {
 
 namespace {
 
-template<DeviceType device_type>
-Kernel* CreateRmspropMdUpdateKernel(const OperatorConf& op_conf) {
-  static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
-#define RMSPROP_MDUPDATE_KERNEL_ENTRY(type_cpp, type_proto) \
-  {type_proto,                                              \
-   []() { return new RMSPropMdUpdateKernel<device_type, type_cpp>; }},
-      OF_PP_FOR_EACH_TUPLE(RMSPROP_MDUPDATE_KERNEL_ENTRY,
-                           FLOATING_DATA_TYPE_SEQ)};
-  return data_type2creator.at(JobDesc::Singleton()->default_data_type())();
+Kernel* CreateRMSPropMdUpdateKernel(const OpContext& op_ctx) {
+  static const HashMap<std::string, std::function<Kernel*()>> creators = {
+#define MODEL_UPDATE_KERNEL_ENTRY(device_type, data_type_pair)             \
+  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {      \
+     return new RMSPropMdUpdateKernel<device_type,                         \
+                                      OF_PP_PAIR_FIRST(data_type_pair)>(); \
+   }},
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+          MODEL_UPDATE_KERNEL_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};
+  return creators.at(GetHashKey(
+      op_ctx.device_type(), op_ctx.bn_in_op2data_type().at("model_diffs")))();
 }
 
 }  // namespace
 
-REGISTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kRmspropMdupdtConf,
-                                 CreateRmspropMdUpdateKernel);
+COMMAND(AddKernelCreator(OperatorConf::kRmspropMdupdtConf,
+                         CreateRMSPropMdUpdateKernel))
 
 }  // namespace oneflow
