@@ -69,7 +69,7 @@ class WritableFile {
   virtual ~WritableFile() = default;
 
   // Append 'data' to the file.
-  virtual bool Append(const char* data, size_t n) = 0;
+  virtual size_t Append(const char* data, size_t n) = 0;
 
   // Close the file.
   //
@@ -78,7 +78,7 @@ class WritableFile {
   // Typical return codes (not guaranteed to be exhaustive):
   //  * OK
   //  * Other codes, as returned from Flush()
-  virtual bool Close() = 0;
+  virtual void Close() = 0;
 
   //  Flushes the file and optionally syncs contents to filesystem.
   //
@@ -90,7 +90,7 @@ class WritableFile {
   // eventually flush the contents.  If the OS or machine crashes
   // after a successful flush, the contents may or may not be
   // persisted, depending on the implementation.
-  virtual bool Flush() = 0;
+  virtual void Flush() = 0;
 
  private:
 };
@@ -159,7 +159,7 @@ class FileSystem {
                            std::vector<std::string>* result) = 0;
 
   // Deletes the named file.
-  virtual bool DeleteFile(const std::string& fname) = 0;
+  virtual void DeleteFile(const std::string& fname) = 0;
 
   // Creates the specified directory.
   // Typical return codes:
@@ -181,7 +181,7 @@ class FileSystem {
   virtual void RecursivelyCreateDir(const std::string& dirname);
 
   // Deletes the specified directory.
-  virtual bool DeleteDir(const std::string& dirname) = 0;
+  virtual void DeleteDir(const std::string& dirname) = 0;
 
   // Deletes the specified directory and all subdirectories and files
   // underneath it. undeleted_files and undeleted_dirs stores the number of

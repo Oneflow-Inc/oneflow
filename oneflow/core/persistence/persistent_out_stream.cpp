@@ -8,7 +8,7 @@ PersistentOutStream::PersistentOutStream(fs::FileSystem* fs,
   CHECK(file_.get() != NULL);
 }
 
-PersistentOutStream::~PersistentOutStream() { CHECK(file_->Close()); }
+PersistentOutStream::~PersistentOutStream() { file_->Close(); }
 
 PersistentOutStream& PersistentOutStream::Write(const char* s, size_t n) {
   CHECK(file_->Append(s, n));

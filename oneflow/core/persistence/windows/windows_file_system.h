@@ -34,11 +34,11 @@ class WindowsFileSystem final : public FileSystem {
   void GetChildren(const std::string& dir,
                      std::vector<std::string>* result) override;
 
-  bool DeleteFile(const std::string& fname) override;
+  void DeleteFile(const std::string& fname) override;
 
   bool CreateDir(const std::string& dirname) override;
 
-  bool DeleteDir(const std::string& dirname) override;
+  void DeleteDir(const std::string& dirname) override;
 
   void GetFileSize(const std::string& fname, uint64_t* file_size) override;
 

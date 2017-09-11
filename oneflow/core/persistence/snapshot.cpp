@@ -72,10 +72,10 @@ void Snapshot::ConcatLbnFile(const std::string& lbn, int32_t part_num,
         out_stream.Write(buffer, n);
         offset += n;
       }
-      CHECK(GlobalFS()->DeleteFile(part_file_path));
+      GlobalFS()->DeleteFile(part_file_path);
     }
   }
-  CHECK(GlobalFS()->DeleteDir(part_dir));
+  GlobalFS()->DeleteDir(part_dir);
   std::string done_dir = JoinPath(root_path_, "snapshot_done_tmp");
   OF_ONCE_GUARD(done_dir, CHECK(GlobalFS()->CreateDir(done_dir)));
   {
