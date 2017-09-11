@@ -122,12 +122,9 @@ std::shared_ptr<RegstDesc> TaskNode::NewProducedRegstDesc(
   regst_desc->SetProducer(this);
   regst_desc->set_regst_desc_id(IDMgr::Singleton()->NewRegstDescId());
   regst_desc->set_min_register_num(min_register_num);
-  if (max_register_num == 0) {
-    regst_desc->set_max_register_num(min_register_num);
-  } else {
-    CHECK_LE(min_register_num, max_register_num);
-    regst_desc->set_max_register_num(max_register_num);
-  }
+  regst_desc->set_max_register_num(min_register_num);
+  regst_desc->set_max_register_num(max_register_num);
+  CHECK_LE(min_register_num, max_register_num);
   CHECK(produced_regst_descs_.emplace(regst_desc_name, regst_desc).second);
   return regst_desc;
 }
