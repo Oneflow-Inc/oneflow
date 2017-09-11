@@ -28,101 +28,36 @@ void Utilization::Reduce(const UtilizationGraph& graph) {
 }
 
 uint32_t MemoryUtilization::ParallelNum(const UtilizationGraph& graph) const {
-  return graph.m2leaf_arc_mgr().Output(const_cast<MemoryUtilization*>(this));
+  return graph.inner2leaf_arc_mgr().Output(
+      const_cast<MemoryUtilization*>(this));
+}
+
+uint32_t ComputationUtilization::ParallelNum(
+    const UtilizationGraph& graph) const {
+  uint64_t stream_cnt = 0;
+  graph.arc_mgr<ComputationUtilization, DeviceComputationUtilization>().Output(
+      const_cast<ComputationUtilization*>(this),
+      [&](DeviceComputationUtilization* dev_c_utilization) {
+        stream_cnt += dev_c_utilization->ParallelNum(graph);
+      });
+  return stream_cnt;
 }
 
 uint32_t DeviceComputationUtilization::ParallelNum(
     const UtilizationGraph& graph) const {
-  return graph.dc2s_arc_mgr().Output(
-      const_cast<DeviceComputationUtilization*>(this));
+  return graph.arc_mgr<DeviceComputationUtilization, StreamUtilization>()
+      .Output(const_cast<DeviceComputationUtilization*>(this));
 }
 
-void DeviceComputationUtilization::CreateAscendantIfNotFound(
-    UtilizationGraph* graph, TaskStreamUtilization* leaf) const {
-  graph->mut_root2dc_arc_mgr()->CreateIfNotFound(
-      const_cast<ComputationUtilization*>(&graph->computation()),
-      const_cast<DeviceComputationUtilization*>(this));
-  graph->mut_c2leaf_arc_mgr()->CreateIfNotFound(
-      const_cast<ComputationUtilization*>(&graph->computation()), leaf);
-}
-
-void StreamUtilization::CreateAscendantIfNotFound(
-    UtilizationGraph* graph, TaskStreamUtilization* leaf) const {
-  auto name = DeviceComputationUtilization::MakeUniqueName(device_id());
-  if (graph->dev_computation_mgr().Find(name)) return;
-  auto node = graph->mut_dev_computation_mgr()->Create(device_id());
-  graph->mut_dc2s_arc_mgr()->CreateIfNotFound(
-      node, const_cast<StreamUtilization*>(this));
-  graph->mut_c2leaf_arc_mgr()->CreateIfNotFound(node, leaf);
-  node->CreateAscendantIfNotFound(graph, leaf);
-}
-
-void TaskUtilization::CreateAscendantIfNotFound(
-    UtilizationGraph* graph, TaskStreamUtilization* leaf) const {
-  auto task = graph->sgraph()->node_mgr().Find(task_id());
-  uint64_t device_id = task->device()->id();
-  auto name = DeviceComputationUtilization::MakeUniqueName(device_id);
-  if (graph->dev_computation_mgr().Find(name)) return;
-  auto node = graph->mut_dev_computation_mgr()->Create(device_id);
-  graph->mut_dc2t_arc_mgr()->CreateIfNotFound(
-      node, const_cast<TaskUtilization*>(this));
-  graph->mut_c2leaf_arc_mgr()->CreateIfNotFound(node, leaf);
-  node->CreateAscendantIfNotFound(graph, leaf);
-}
-
-void TaskStreamUtilization::CreateAscendantIfNotFound(
-    UtilizationGraph* graph, TaskStreamUtilization* leaf) const {
-  auto task_name = TaskUtilization::MakeUniqueName(task_id());
-  if (graph->task_mgr().Find(task_name)) return;
-  auto task_node = graph->mut_task_mgr()->Create(task_id());
-  graph->mut_t2ts_arc_mgr()->CreateIfNotFound(
-      task_node, const_cast<TaskStreamUtilization*>(this));
-  graph->mut_c2leaf_arc_mgr()->CreateIfNotFound(task_node, leaf);
-  task_node->CreateAscendantIfNotFound(graph, leaf);
-
-  auto task = graph->sgraph()->node_mgr().Find(task_id());
-  uint64_t device_id = task->device()->id();
-  auto stream_name = StreamUtilization::MakeUniqueName(device_id, stream_id());
-  if (graph->stream_mgr().Find(stream_name)) return;
-  auto stream_node = graph->mut_stream_mgr()->Create(device_id, stream_id());
-  graph->mut_s2ts_arc_mgr()->CreateIfNotFound(
-      stream_node, const_cast<TaskStreamUtilization*>(this));
-  graph->mut_c2leaf_arc_mgr()->CreateIfNotFound(stream_node, leaf);
-  stream_node->CreateAscendantIfNotFound(graph, leaf);
-}
-
-void DeviceMemoryUtilization::CreateAscendantIfNotFound(
-    UtilizationGraph* graph, RegstUtilization* leaf) const {
-  graph->mut_root2dm_arc_mgr()->CreateIfNotFound(
-      const_cast<MemoryUtilization*>(&graph->memory()),
-      const_cast<DeviceMemoryUtilization*>(this));
-  graph->mut_m2leaf_arc_mgr()->CreateIfNotFound(
-      const_cast<MemoryUtilization*>(&graph->memory()), leaf);
-}
-
-void RegstDescUtilization::CreateAscendantIfNotFound(
-    UtilizationGraph* graph, RegstUtilization* leaf) const {
-  auto regst_desc = graph->sgraph()->regst_desc_mgr().Find(regst_desc_id());
-  uint64_t device_id = regst_desc->owner_task()->device()->id();
-  auto name = DeviceMemoryUtilization::MakeUniqueName(device_id);
-  if (graph->dev_memory_mgr().Find(name)) return;
-  auto node = graph->mut_dev_memory_mgr()->Create(device_id);
-  graph->mut_dm2rd_arc_mgr()->CreateIfNotFound(
-      node, const_cast<RegstDescUtilization*>(this));
-  graph->mut_m2leaf_arc_mgr()->CreateIfNotFound(node, leaf);
-  node->CreateAscendantIfNotFound(graph, leaf);
-}
-
-void RegstUtilization::CreateAscendantIfNotFound(UtilizationGraph* graph,
-                                                 RegstUtilization* leaf) const {
-  leaf = const_cast<RegstUtilization*>(this);
-  auto name = RegstDescUtilization::MakeUniqueName(regst_desc_id());
-  if (graph->regst_desc_mgr().Find(name)) return;
-  auto node = graph->mut_regst_desc_mgr()->Create(regst_desc_id());
-  graph->mut_rd2r_arc_mgr()->CreateIfNotFound(
-      node, const_cast<RegstUtilization*>(this));
-  graph->mut_m2leaf_arc_mgr()->CreateIfNotFound(node, leaf);
-  node->CreateAscendantIfNotFound(graph, leaf);
+void Utilization::CreateAscendantIfNotFound(UtilizationGraph* ugraph) const {
+  auto nonconst_this = const_cast<Utilization*>(this);
+  UtilizationUtil::ForEachGrouped(
+      utilization_proto().resource(), *ugraph,
+      [&](const UtilizationResource& grouped_resource) {
+        Utilization* grouped =
+            ugraph->FindOrCreateUtilization(grouped_resource);
+        ugraph->Connect(grouped, nonconst_this);
+      });
 }
 
 }  // namespace schedule

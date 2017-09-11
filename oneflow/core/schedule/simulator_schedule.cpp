@@ -17,8 +17,8 @@ void SimulatorSchedule::EmitEvent(UtilizationEventType event_type,
   event->set_event_type(event_type);
   event->set_batch_id(batch_id);
   event->set_time(time);
-  event->mutable_task_stream_resource()->set_task_id(task_id);
-  event->mutable_task_stream_resource()->set_stream_id(stream_id);
+  event->mutable_resource()->mutable_task_stream()->set_task_id(task_id);
+  event->mutable_resource()->mutable_task_stream()->set_stream_id(stream_id);
   session()->graph()->produced_regst_desc_mgr().Output(
       instance->dst_node(), [&](SRegstDesc* regst_desc) {
         RegstDescInstance* regst_desc_instance =
@@ -30,8 +30,9 @@ void SimulatorSchedule::EmitEvent(UtilizationEventType event_type,
         event->set_event_type(event_type);
         event->set_batch_id(batch_id);
         event->set_time(time);
-        event->mutable_regst_resource()->set_regst_desc_id(regst_desc->id());
-        event->mutable_regst_resource()->set_regst_id(regst->id());
+        event->mutable_resource()->mutable_regst()->set_regst_desc_id(
+            regst_desc->id());
+        event->mutable_resource()->mutable_regst()->set_regst_id(regst->id());
       });
 }
 
