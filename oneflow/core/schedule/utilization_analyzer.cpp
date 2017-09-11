@@ -53,8 +53,8 @@ void UtilizationAnalyzer::PackUtilizationProto(
     const std::list<const UtilizationEventProto*>& event_pair,
     UtilizationPackageProto* utilization_package) const {
   CHECK(event_pair.size() == 2);
-  const auto& start_event = event_pair.front();
-  const auto& end_event = event_pair.back();
+  auto start_event = event_pair.front();
+  auto end_event = event_pair.back();
   CHECK(start_event->time() < end_event->time());
   CHECK(start_event->event_type() == kStartEvent);
   CHECK(end_event->event_type() == kEndEvent);

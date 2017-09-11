@@ -17,7 +17,7 @@ void Utilization::Reduce(const UtilizationGraph& graph) {
     end_batch_id = std::max(end_batch_id, u->end_batch_id());
   }
   CHECK(end_at > start_at);
-  float utilization = total_time / parallel_num * (end_at - start_at);
+  float utilization = total_time / (parallel_num * (end_at - start_at));
   CHECK(total_time < 1);
   utilization_proto_.set_utilization(utilization);
   utilization_proto_.set_start_at(start_at);
@@ -49,6 +49,17 @@ uint32_t DeviceComputationUtilization::ParallelNum(
       .Output(const_cast<DeviceComputationUtilization*>(this));
 }
 
+float Utilization::GetTimePerBatch(const UtilizationGraph& ugraph) const {
+  float total_time =
+      utilization_proto().utilization() * ParallelNum(ugraph)
+      * (utilization_proto().end_at() - utilization_proto().start_at());
+  int32_t batch_num = utilization_proto().end_batch_id()
+                      - utilization_proto().start_batch_id() + 1;
+  CHECK(batch_num > 0);
+  CHECK(batch_num <= utilization_proto().end_batch_id());
+  return total_time / batch_num;
+}
+
 void Utilization::CreateAscendantIfNotFound(UtilizationGraph* ugraph) const {
   auto nonconst_this = const_cast<Utilization*>(this);
   UtilizationUtil::ForEachGrouped(
@@ -58,6 +69,13 @@ void Utilization::CreateAscendantIfNotFound(UtilizationGraph* ugraph) const {
             ugraph->FindOrCreateUtilization(grouped_resource);
         ugraph->Connect(grouped, nonconst_this);
       });
+}
+
+uint32_t TaskUtilization::ParallelNum(const UtilizationGraph& ugraph) const {
+  std::list<TaskStreamUtilization*> l;
+  ugraph.arc_mgr<TaskUtilization, TaskStreamUtilization>().Output(
+      const_cast<TaskUtilization*>(this), &l);
+  return ugraph.arc_mgr<StreamUtilization, TaskStreamUtilization>().Input(l);
 }
 
 }  // namespace schedule

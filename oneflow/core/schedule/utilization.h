@@ -33,8 +33,6 @@ class UtilizationGraph;
 class Utilization : public SNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Utilization);
-  explicit Utilization(const UtilizationResource& resource)
-      : SNode(UtilizationUtil::GetUniqueName(resource)) {}
   virtual ~Utilization() = default;
 
   inline const UtilizationProto& utilization_proto() const {
@@ -49,11 +47,15 @@ class Utilization : public SNode {
     return &raw_protos_;
   }
 
+  float GetTimePerBatch(const UtilizationGraph& ugraph) const;
+
   UtilizationResource::ResourceTypeCase GetResourceTypeCase() {
     return utilization_proto().resource().resource_type_case();
   }
 
  protected:
+  explicit Utilization(const UtilizationResource& resource)
+      : SNode(UtilizationUtil::GetUniqueName(resource)) {}
   inline UtilizationProto* mut_utilization_proto() {
     return &utilization_proto_;
   }
@@ -101,11 +103,21 @@ class DeviceComputationUtilization : public ComputationUtilization {
 class StreamUtilization : public ComputationUtilization {
  public:
   UTILIZATION_BOILERPLATE(StreamUtilization, ComputationUtilization);
+	float GetInitiationInterval(const UtilizationGraph& ugraph) {
+		return GetTimePerBatch(ugraph);
+	}
 };
 
 class TaskUtilization : public ComputationUtilization {
  public:
   UTILIZATION_BOILERPLATE(TaskUtilization, ComputationUtilization);
+  inline uint64_t task_id() const {
+    return utilization_proto().resource().task().task_id();
+  }
+  uint32_t ParallelNum(const UtilizationGraph& ugraph) const override;
+	float GetDuration(const UtilizationGraph& ugraph) {
+		return GetTimePerBatch(ugraph);
+	}
 };
 
 class TaskStreamUtilization : public ComputationUtilization {
