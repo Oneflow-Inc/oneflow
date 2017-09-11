@@ -125,7 +125,7 @@ std::shared_ptr<RegstDesc> TaskNode::NewProducedRegstDesc(
   if (max_register_num == 0) {
     regst_desc->set_max_register_num(min_register_num);
   } else {
-    CHECK(min_register_num <= max_register_num);
+    CHECK_LE(min_register_num, max_register_num);
     regst_desc->set_max_register_num(max_register_num);
   }
   CHECK(produced_regst_descs_.emplace(regst_desc_name, regst_desc).second);

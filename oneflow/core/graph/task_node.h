@@ -95,7 +95,13 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   std::shared_ptr<RegstDesc> NewProducedRegstDesc(
       const std::string& regst_desc_name, int32_t min_register_num,
-      int32_t max_register_num = 0);
+      int32_t max_register_num);
+
+  std::shared_ptr<RegstDesc> NewProducedRegstDesc(
+      const std::string& regst_desc_name, int32_t register_num) {
+    return NewProducedRegstDesc(regst_desc_name, register_num, register_num);
+  }
+
   void ConsumeRegstDesc(const std::string& regst_desc_name,
                         std::shared_ptr<RegstDesc> regst_desc);
 

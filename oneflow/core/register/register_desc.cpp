@@ -102,8 +102,8 @@ std::string RegstDesc::DebugStr() const {
 }
 
 void RegstDesc::ToProto(RegstDescProto* ret) const {
-  CHECK(min_register_num_ <= register_num_);
-  CHECK(register_num_ <= max_register_num_);
+  CHECK_LE(min_register_num_, register_num_);
+  CHECK_LE(register_num_, max_register_num_);
   ret->set_regst_desc_id(regst_desc_id_);
   ret->set_producer_task_id(producer_->task_id());
   for (const TaskNode* consumer : consumers_) {

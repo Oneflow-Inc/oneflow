@@ -22,9 +22,9 @@ class RegstDesc final {
 
   //
   int32_t min_register_num() const { return min_register_num_; }
-  void set_min_register_num(int64_t val) { min_register_num_ = val; }
+  void set_min_register_num(int32_t val) { min_register_num_ = val; }
   int32_t max_register_num() const { return max_register_num_; }
-  void set_max_register_num(int64_t val) { max_register_num_ = val; }
+  void set_max_register_num(int32_t val) { max_register_num_ = val; }
 
   // Producer
   const TaskNode* GetProducer() const { return producer_; }
