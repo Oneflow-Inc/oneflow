@@ -1,83 +1,63 @@
 #include "oneflow/core/kernel/kernel_test_common.h"
 #include <random>
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/device/cpu_device_context.h"
 
 namespace oneflow {
 
 namespace test {
 
-template<typename FloatingPointType>
-class KernelTestCommon<DeviceType::kCPU, FloatingPointType> final {
+template<>
+Blob* CreateBlob<DeviceType::kCPU>(const BlobDesc* blob_desc) {
+  void* mem_ptr = nullptr;
+  CudaCheck(cudaMallocHost(&mem_ptr, blob_desc->TotalByteSize()));
+  return new Blob(blob_desc, static_cast<char*>(mem_ptr));
+}
+
+template<>
+void BuildKernelCtx<DeviceType::kCPU>(KernelCtx* ctx) {
+  auto cpu_stream = new AsyncCpuStream;
+  ctx->device_ctx = new CpuDeviceCtx(cpu_stream);
+}
+
+template<>
+void SyncStream<DeviceType::kCPU>(KernelCtx* ctx) {
+  ctx->device_ctx->cpu_stream()->CloseSendEnd();
+  auto cpu_thread = std::thread([&] {
+    std::function<void()> work;
+    while (ctx->device_ctx->cpu_stream()->ReceiveWork(&work) == 0) { work(); }
+  });
+  cpu_thread.join();
+  ctx->device_ctx->cpu_stream()->CloseReceiveEnd();
+}
+
+template<typename T>
+class KTCommon<DeviceType::kCPU, T> final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(KernelTestCommon);
-  KernelTestCommon() = delete;
-
-  static Blob* CreateBlobWithVector(const std::vector<int64_t>& dim_vec,
-                                    FloatingPointType* data_vec) {
-    void* dptr;
-    Shape* shape = new Shape(dim_vec);
-    size_t dptr_size = shape->elem_cnt() * sizeof(FloatingPointType);
-    CudaCheck(cudaMallocHost(&dptr, dptr_size));
-    CudaCheck(cudaMemcpy(dptr, data_vec, dptr_size, cudaMemcpyHostToHost));
-    return new Blob(dptr, shape);
+  static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc, T* val) {
+    Blob* ret = CreateBlob<DeviceType::kCPU>(blob_desc);
+    CudaCheck(cudaMemcpy(ret->mut_dptr(), val, ret->ByteSizeOfDataField(),
+                         cudaMemcpyHostToHost));
+    return ret;
   }
 
-  static Blob* CreateBlobWithSameValue(const std::vector<int64_t>& dim_vec,
-                                       FloatingPointType value) {
-    Shape* shape = new Shape(dim_vec);
-    FloatingPointType* data_vec = new FloatingPointType[shape->elem_cnt()];
-    std::fill(data_vec, data_vec + shape->elem_cnt(), value);
-    return CreateBlobWithVector(dim_vec, data_vec);
-  }
-
-  static Blob* CreateBlobWithRandomValue(const std::vector<int64_t>& dim_vec) {
-    Shape* shape = new Shape(dim_vec);
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<FloatingPointType> dis(0, 10);
-    FloatingPointType* data_vec = new FloatingPointType[shape->elem_cnt()];
-    for (int64_t i = 0; i != shape->elem_cnt(); ++i) { data_vec[i] = dis(gen); }
-    return CreateBlobWithVector(dim_vec, data_vec);
-  }
-
-  static void BuildKernelCtx(KernelCtx* ctx) {
-    auto cpu_stream = new AsyncCpuStream;
-    ctx->device_ctx = new CpuDeviceCtx(cpu_stream);
-  }
-
-  static void SyncStream(KernelCtx* ctx) {
-    ctx->device_ctx->cpu_stream()->CloseSendEnd();
-    auto cpu_thread = std::thread([&] {
-      std::function<void()> work;
-      while (ctx->device_ctx->cpu_stream()->ReceiveWork(&work) == 0) { work(); }
-    });
-    cpu_thread.join();
-  }
-
-  static void BlobCmp(Blob* lhs, Blob* rhs) {
-    const FloatingPointType* dptr_lhs = lhs->dptr<FloatingPointType>();
-    const FloatingPointType* dptr_rhs = rhs->dptr<FloatingPointType>();
-    size_t dptr_size = lhs->shape().elem_cnt();
-
-    for (size_t i = 0; i < dptr_size; ++i) {
-      ASSERT_FLOAT_EQ(dptr_lhs[i], dptr_rhs[i]);
+  static void BlobCmp(const Blob* lhs, const Blob* rhs) {
+    ASSERT_EQ(lhs->blob_desc(), rhs->blob_desc());
+    CHECK_EQ(lhs->data_type(), GetDataType<T>::val);
+    if (IsFloatingPoint(lhs->data_type())) {
+      for (int64_t i = 0; i < lhs->shape().elem_cnt(); ++i) {
+        ASSERT_FLOAT_EQ(lhs->dptr<T>()[i], rhs->dptr<T>()[i]);
+      }
+    } else {
+      ASSERT_EQ(memcmp(lhs->dptr(), rhs->dptr(), lhs->ByteSizeOfDataField()),
+                0);
     }
   }
 
-  static void CheckResult(
-      std::function<Blob*(const std::string&)> BnInOp2BlobPtr,
-      const std::string& check, const std::string& expected) {
-    return BlobCmp(BnInOp2BlobPtr(check), BnInOp2BlobPtr(expected));
-  }
-
-  static void CheckFillResult(const Blob& check_blob,
-                              const FillConf& fill_conf) {
-    size_t dptr_size = check_blob.shape().elem_cnt();
-    const FloatingPointType* dptr =
-        static_cast<const FloatingPointType*>(check_blob.dptr());
+  static void CheckFillResult(const Blob* blob, const FillConf& fill_conf) {
     if (fill_conf.has_constant_conf()) {
-      for (size_t i = 0; i < dptr_size; ++i) {
-        ASSERT_FLOAT_EQ(dptr[i], fill_conf.constant_conf().value());
+      for (int64_t i = 0; i < blob->shape().elem_cnt(); ++i) {
+        ASSERT_FLOAT_EQ(blob->dptr<T>()[i], fill_conf.constant_conf().value());
       }
     } else if (fill_conf.has_uniform_conf()) {
       TODO();
@@ -89,8 +69,10 @@ class KernelTestCommon<DeviceType::kCPU, FloatingPointType> final {
   }
 };
 
-template class KernelTestCommon<DeviceType::kCPU, float>;
-template class KernelTestCommon<DeviceType::kCPU, double>;
+#define INSTANTIATE_KTCOMMON(type_cpp, type_proto) \
+  template class KTCommon<DeviceType::kCPU, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KTCOMMON, ALL_DATA_TYPE_SEQ)
 
 }  // namespace test
+
 }  // namespace oneflow

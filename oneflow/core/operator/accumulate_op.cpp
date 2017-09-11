@@ -2,9 +2,8 @@
 
 namespace oneflow {
 
-void AccumulateOp::InitFromOpConf(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_accumulate_conf());
-  mut_op_conf() = op_conf;
+void AccumulateOp::InitFromOpConf() {
+  CHECK(op_conf().has_accumulate_conf());
 
   EnrollInputBn("one", false);
   EnrollOutputBn("acc", false);

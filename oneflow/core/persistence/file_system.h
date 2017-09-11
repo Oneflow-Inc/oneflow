@@ -32,6 +32,8 @@ enum class Status {
   DATA_LOSS,
 };
 
+OF_DECLARE_ENUM_TO_OSTREAM_FUNC(Status);
+
 // A file abstraction for randomly reading the contents of a file.
 class RandomAccessFile {
  public:
@@ -166,6 +168,10 @@ class FileSystem {
   //  * PERMISSION_DENIED - dirname is not writable.
   virtual Status CreateDir(const std::string& dirname) = 0;
 
+  void CreateDirIfNotExist(const std::string& dirname);
+  bool IsDirEmpty(const std::string& dirname);
+  size_t GetChildrenNumOfDir(const std::string& dirname);
+
   // Creates the specified directory and all the necessary
   // subdirectories.
   // Typical return codes:
@@ -188,9 +194,7 @@ class FileSystem {
   //  * PERMISSION_DENIED - dirname or some descendant is not writable
   //  * UNIMPLEMENTED - Some underlying functions (like Delete) are not
   //                    implemented
-  virtual Status DeleteRecursively(const std::string& dirname,
-                                   int64_t* undeleted_files,
-                                   int64_t* undeleted_dirs);
+  virtual Status DeleteRecursively(const std::string& dirname);
 
   // Stores the size of `fname` in `*file_size`.
   virtual Status GetFileSize(const std::string& fname, uint64_t* file_size) = 0;
@@ -222,14 +226,27 @@ class FileSystem {
 
 // If `current_status` is OK, stores `new_status` into `current_status`.
 // If `current_status` is NOT OK, preserves the current status,
-void TryStatusUpdate(Status* current_status, const Status& new_status);
+void TryUpdateStatus(Status* current_status, const Status& new_status);
 
 Status ErrnoToStatus(int err_number);
+
+#define FS_RETURN_IF_ERR(val)        \
+  {                                  \
+    const Status _ret_if_err = val;  \
+    if (_ret_if_err != Status::OK) { \
+      PLOG(WARNING);                 \
+      return _ret_if_err;            \
+    }                                \
+  }
 
 }  // namespace fs
 
 // file system check status is ok
-#define FS_CHECK_OK(val) CHECK_NE(val, fs::Status::OK);
+#define FS_CHECK_OK(val) CHECK_EQ(val, fs::Status::OK);
+
+fs::FileSystem* LocalFS();
+fs::FileSystem* GlobalFS();
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_PERSISTENCE_FILE_SYSTEM_H_

@@ -1,11 +1,13 @@
 #include "oneflow/core/kernel/model_save_kernel.h"
+#include "oneflow/core/job/job_conf.pb.h"
+#include "oneflow/core/job/job_desc.pb.h"
 
 namespace oneflow {
 
-template<typename FloatingPointType>
-void ModelSaveKernel<DeviceType::kCPU, FloatingPointType>::Forward(
+template<typename T>
+void ModelSaveKernel<T>::Forward(
     const KernelCtx& kernel_ctx,
-    std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto save_ctx =
       static_cast<std::tuple<Snapshot*, int64_t, int64_t, ParallelPolicy>*>(
           kernel_ctx.other);
@@ -27,21 +29,27 @@ void ModelSaveKernel<DeviceType::kCPU, FloatingPointType>::Forward(
   }
   for (const std::string& ibn : op()->input_bns()) {
     const std::string& lbn = op()->Lbn4BnInOp(ibn);
-    Blob* blob_ptr = BnInOp2BlobPtr(ibn);
+    Blob* blob_ptr = BnInOp2Blob(ibn);
     kernel_ctx.device_ctx->cpu_stream()->SendWork([=]() {
       {
         std::unique_ptr<PersistentOutStream> out_stream =
-            snapshot->GetOutStream(lbn, part_id, total_part_num);
-        out_stream->Write(
-            blob_ptr->dptr<char>(),
-            blob_ptr->shape().elem_cnt() * sizeof(FloatingPointType));
+            snapshot->GetOutStream(lbn, part_id);
+        out_stream->Write(blob_ptr->dptr<char>(),
+                          blob_ptr->shape().elem_cnt() * sizeof(T));
       }
-      snapshot->OnePartDone4Key(lbn, part_id);
+      snapshot->OnePartDone(lbn, part_id, total_part_num);
     });
   }
 }
 
-INSTANTIATE_CPU_KERNEL_CLASS(ModelSaveKernel);
-REGISTER_CPU_KERNEL(OperatorConf::kModelSaveConf, ModelSaveKernel);
+Kernel* CreateModelSaveKernel() {
+  static const HashMap<int, std::function<Kernel*()>> creators = {
+#define MODEL_SAVE_KERNEL_ENTRY(type_cpp, type_proto) \
+  {type_proto, []() { return new ModelSaveKernel<type_cpp>; }},
+      OF_PP_FOR_EACH_TUPLE(MODEL_SAVE_KERNEL_ENTRY, FLOATING_DATA_TYPE_SEQ)};
+  return creators.at(JobDesc::Singleton()->default_data_type())();
+}
+
+COMMAND(AddKernelCreator(OperatorConf::kModelSaveConf, CreateModelSaveKernel));
 
 }  // namespace oneflow

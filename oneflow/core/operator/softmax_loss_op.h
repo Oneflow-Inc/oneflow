@@ -11,14 +11,14 @@ class SoftmaxLossOp final : public UserOperator {
   SoftmaxLossOp() = default;
   ~SoftmaxLossOp() = default;
 
-  void InitFromOpConf(const OperatorConf& op_conf) override;
+  void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
   bool IsLossOp() const override { return true; }
 
-  void InferShape4FwBlobs(
-      std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+  void InferBlobDesc4FwBlobs(
+      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       ParallelPolicy policy, int64_t parallel_id,
-      int64_t parallel_num) const override;
+      int64_t parallel_num) override;
 
  private:
 };

@@ -39,6 +39,7 @@ DECLARE_GET_VAL_FROM_PBMESSAGE(uint32_t, UInt32);
 DECLARE_GET_VAL_FROM_PBMESSAGE(int64_t, Int64);
 DECLARE_GET_VAL_FROM_PBMESSAGE(uint64_t, UInt64);
 DECLARE_GET_VAL_FROM_PBMESSAGE(bool, Bool);
+DECLARE_GET_VAL_FROM_PBMESSAGE(const PbMessage&, Message);
 
 #undef DECLARE_GET_VAL_FROM_PBMESSAGE
 
@@ -53,12 +54,27 @@ ALIAS_PB_TYPE(uint64, UInt64);
 
 #undef ALIAS_PB_TYPE
 
-// PbRpf <-> std::vector
-inline std::vector<std::string> PbVec2StdVec(const PbRpf<std::string>& rpf) {
-  return std::vector<std::string>(rpf.begin(), rpf.end());
+// PbRf <-> std::vector
+
+template<typename T>
+inline std::vector<T> PbRf2StdVec(const PbRf<T>& rf) {
+  return std::vector<T>(rf.begin(), rf.end());
 }
-inline PbRpf<std::string> StdVec2PbVec(const std::vector<std::string>& vec) {
-  using RetType = PbRpf<std::string>;
+
+template<typename T>
+inline PbRf<T> StdVec2PbRf(const std::vector<T>& vec) {
+  return PbRf<T>(vec.begin(), vec.end());
+}
+
+// PbRpf <-> std::vector
+template<typename T>
+inline std::vector<T> PbRpf2StdVec(const PbRpf<T>& rpf) {
+  return std::vector<T>(rpf.begin(), rpf.end());
+}
+
+template<typename T>
+inline PbRpf<T> StdVec2PbRpf(const std::vector<T>& vec) {
+  using RetType = PbRpf<T>;
   return RetType(vec.begin(), vec.end());
 }
 
@@ -70,7 +86,7 @@ HashMap<K, V> PbMap2HashMap(const google::protobuf::Map<K, V>& pb_map) {
 
 template<typename K, typename V>
 google::protobuf::Map<K, V> HashMap2PbMap(const HashMap<K, V>& hash_map) {
-  using RetType = google::protobuf::Map<std::string, std::string>;
+  using RetType = google::protobuf::Map<K, V>;
   return RetType(hash_map.begin(), hash_map.end());
 }
 

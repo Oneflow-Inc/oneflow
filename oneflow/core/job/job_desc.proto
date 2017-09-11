@@ -8,7 +8,7 @@ import "oneflow/core/job/job_conf.proto";
 
 message JobDescProto {
   JobConf job_conf = 1;
-  DLNetConf train_dlnet_conf = 2;
+  DLNetConf dlnet_conf = 2;
   Resource resource = 3;
   Placement placement = 4;
 }

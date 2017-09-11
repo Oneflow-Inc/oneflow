@@ -5,24 +5,22 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename FloatingPointType>
+template<DeviceType device_type, typename T>
 class ConvolutionKernelUtil final {
  public:
-  static void Im2Col(const KernelCtx& ctx, const FloatingPointType* data_im,
+  static void Im2Col(const KernelCtx& ctx, const T* data_im, const int channels,
+                     const int height, const int width, const int kernel_h,
+                     const int kernel_w, const int pad_h, const int pad_w,
+                     const int stride_h, const int stride_w,
+                     const int dilation_h, const int dilation_w, T* data_col);
+  static void Col2Im(const KernelCtx& ctx, const T* data_col,
                      const int channels, const int height, const int width,
                      const int kernel_h, const int kernel_w, const int pad_h,
                      const int pad_w, const int stride_h, const int stride_w,
-                     const int dilation_h, const int dilation_w,
-                     FloatingPointType* data_col);
-  static void Col2Im(const KernelCtx& ctx, const FloatingPointType* data_col,
-                     const int channels, const int height, const int width,
-                     const int kernel_h, const int kernel_w, const int pad_h,
-                     const int pad_w, const int stride_h, const int stride_w,
-                     const int dilation_h, const int dilation_w,
-                     FloatingPointType* data_im);
+                     const int dilation_h, const int dilation_w, T* data_im);
 };
 
-template<DeviceType device_type, typename FloatingPointType>
+template<DeviceType device_type, typename T>
 class ConvolutionKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvolutionKernel);
@@ -38,9 +36,9 @@ class ConvolutionKernel final : public Kernel {
   void InitModelBlobsWithRandomSeed(
       const KernelCtx&, std::mt19937 random_seed_gen,
       std::function<Blob*(const std::string&)>) const override;
-  void InitModelBlobsWithSnapshot(
+  void InitModelBlobsWithDir(
       const KernelCtx& ctx, int32_t part_id, int32_t part_num,
-      const Snapshot* snapshot,
+      const std::string& model_load_dir,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void InitModelTmpBlobs(
       const KernelCtx& ctx,

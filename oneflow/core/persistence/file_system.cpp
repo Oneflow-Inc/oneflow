@@ -1,12 +1,30 @@
 #include "oneflow/core/persistence/file_system.h"
 #include <errno.h>
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/persistence/posix/posix_file_system.h"
+#include "oneflow/core/persistence/windows/windows_file_system.h"
 
 namespace oneflow {
 
 namespace fs {
 
 OF_DEFINE_ENUM_TO_OSTREAM_FUNC(Status);
+
+void FileSystem::CreateDirIfNotExist(const std::string& dirname) {
+  if (IsDirectory(dirname) == Status::OK) { return; }
+  FS_CHECK_OK(CreateDir(dirname));
+}
+
+bool FileSystem::IsDirEmpty(const std::string& dirname) {
+  return GetChildrenNumOfDir(dirname) == 0;
+}
+
+size_t FileSystem::GetChildrenNumOfDir(const std::string& dirname) {
+  std::vector<std::string> result;
+  FS_CHECK_OK(GetChildren(dirname, &result));
+  return result.size();
+}
 
 std::string FileSystem::TranslateName(const std::string& name) const {
   return CleanPath(name);
@@ -28,20 +46,8 @@ bool FileSystem::FilesExist(const std::vector<std::string>& files,
   return result;
 }
 
-Status FileSystem::DeleteRecursively(const std::string& dirname,
-                                     int64_t* undeleted_files,
-                                     int64_t* undeleted_dirs) {
-  CHECK_NOTNULL(undeleted_files);
-  CHECK_NOTNULL(undeleted_dirs);
-
-  *undeleted_files = 0;
-  *undeleted_dirs = 0;
-  // Make sure that dirname exists;
-  Status exists_status = FileExists(dirname);
-  if (exists_status != Status::OK) {
-    (*undeleted_dirs)++;
-    return exists_status;
-  }
+Status FileSystem::DeleteRecursively(const std::string& dirname) {
+  FS_CHECK_OK(FileExists(dirname));
   std::deque<std::string> dir_q;      // Queue for the BFS
   std::vector<std::string> dir_list;  // List of all dirs discovered
   dir_q.push_back(dirname);
@@ -57,11 +63,8 @@ Status FileSystem::DeleteRecursively(const std::string& dirname,
     std::vector<std::string> children;
     // GetChildren might fail if we don't have appropriate permissions.
     Status s = GetChildren(dir, &children);
-    TryStatusUpdate(&ret, s);
-    if (s != Status::OK) {
-      (*undeleted_dirs)++;
-      continue;
-    }
+    TryUpdateStatus(&ret, s);
+    FS_CHECK_OK(s);
     for (const std::string& child : children) {
       const std::string child_path = JoinPath(dir, child);
       // If the child is a directory add it to the queue, otherwise delete it.
@@ -71,8 +74,8 @@ Status FileSystem::DeleteRecursively(const std::string& dirname,
         // Delete file might fail because of permissions issues or might be
         // unimplemented.
         Status del_status = DeleteFile(child_path);
-        TryStatusUpdate(&ret, del_status);
-        if (del_status != Status::OK) { (*undeleted_files)++; }
+        TryUpdateStatus(&ret, del_status);
+        CHECK_EQ(del_status, Status::OK);
       }
     }
   }
@@ -83,8 +86,8 @@ Status FileSystem::DeleteRecursively(const std::string& dirname,
     // Delete dir might fail because of permissions issues or might be
     // unimplemented.
     Status s = DeleteDir(dir);
-    TryStatusUpdate(&ret, s);
-    if (s != Status::OK) { (*undeleted_dirs)++; }
+    TryUpdateStatus(&ret, s);
+    FS_CHECK_OK(s);
   }
   return ret;
 }
@@ -118,7 +121,7 @@ Status FileSystem::RecursivelyCreateDir(const std::string& dirname) {
   return Status::OK;
 }
 
-void TryStatusUpdate(Status* current_status, const Status& new_status) {
+void TryUpdateStatus(Status* current_status, const Status& new_status) {
   if (*current_status == Status::OK) { *current_status = new_status; }
 }
 
@@ -266,6 +269,37 @@ Status ErrnoToStatus(int err_number) {
   return ret;
 }
 
+struct GlobalFSConstructor {
+  GlobalFSConstructor() {
+    const GlobalFSConf& gfs_conf =
+        JobDesc::Singleton()->job_conf().global_fs_conf();
+    if (gfs_conf.has_localfs_conf()) {
+      CHECK_EQ(JobDesc::Singleton()->resource().machine().size(), 1);
+      gfs = LocalFS();
+    } else if (gfs_conf.has_hdfs_conf()) {
+      // static fs::FileSystem* fs = new
+      // fs::HadoopFileSystem(gfs_conf.hdfs_conf()); return fs;
+    } else {
+      UNEXPECTED_RUN();
+    }
+  }
+  FileSystem* gfs;
+};
+
 }  // namespace fs
+
+fs::FileSystem* LocalFS() {
+#ifdef PLATFORM_POSIX
+  static fs::FileSystem* fs = new fs::PosixFileSystem;
+#elif PLATFORM_WINDOWS
+  static fs::FileSystem* fs = new fs::WindowsFileSystem;
+#endif
+  return fs;
+}
+
+fs::FileSystem* GlobalFS() {
+  static fs::GlobalFSConstructor gfs_constructor;
+  return gfs_constructor.gfs;
+}
 
 }  // namespace oneflow

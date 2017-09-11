@@ -43,6 +43,14 @@ namespace oneflow {
     return ptr;                            \
   }
 
+#define COMMAND(...)            \
+  namespace {                   \
+  struct CommandT {             \
+    CommandT() { __VA_ARGS__; } \
+  };                            \
+  CommandT g_command_var;       \
+  }
+
 template<typename T>
 bool operator==(const std::weak_ptr<T>& lhs, const std::weak_ptr<T>& rhs) {
   return lhs.lock().get() == rhs.lock().get();
@@ -111,6 +119,11 @@ inline uint32_t NewRandomSeed() {
 #define LOG_THRESHOLD (1e-20)
 #define MAX_WITH_LOG_THRESHOLD(x) ((x) > LOG_THRESHOLD ? (x) : LOG_THRESHOLD)
 #define SAFE_LOG(x) logf(MAX_WITH_LOG_THRESHOLD(x))
+
+#define DEVICE_TYPE_SEQ (DeviceType::kCPU)(DeviceType::kGPU)
+#define BOOL_SEQ (true)(false)
+#define PARALLEL_POLICY_SEQ \
+  (ParallelPolicy::kModelParallel)(ParallelPolicy::kDataParallel)
 
 }  // namespace oneflow
 

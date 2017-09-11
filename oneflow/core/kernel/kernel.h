@@ -37,7 +37,9 @@ class Kernel {
   virtual void Forward(const KernelCtx& ctx,
                        std::function<Blob*(const std::string&)>) const = 0;
   virtual void Backward(const KernelCtx& ctx,
-                        std::function<Blob*(const std::string&)>) const = 0;
+                        std::function<Blob*(const std::string&)>) const {
+    UNEXPECTED_RUN();
+  }
 
   //
   const std::string& Lbn4BnInOp(const std::string& bn_in_op) const {
@@ -48,9 +50,9 @@ class Kernel {
   Kernel() = default;
   const Operator* op() const { return op_.get(); }
 
-  virtual void InitModelBlobsWithSnapshot(
+  virtual void InitModelBlobsWithDir(
       const KernelCtx& ctx, int32_t part_id, int32_t part_num,
-      const Snapshot* snapshot,
+      const std::string& model_load_dir,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNEXPECTED_RUN();
   }
@@ -59,6 +61,16 @@ class Kernel {
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNEXPECTED_RUN();
   }
+  template<DeviceType device_type>
+  void CopyDataIdFromIbToAllOb(
+      const DeviceCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) {
+    Blob* input_blob = BnInOp2Blob(op_->SoleIbn());
+    for (const std::string& obn : op_->output_bns()) {
+      Blob* output_blob = BnInOp2Blob(obn);
+      output_blob->CopyDataIdFrom<device_type>(ctx, input_blob);
+    }
+  }
 
  private:
   std::unique_ptr<const Operator> op_;
@@ -66,32 +78,6 @@ class Kernel {
 
 using KernelLaunchFunc = void (Kernel::*)(
     const KernelCtx&, std::function<Blob*(const std::string&)>) const;
-
-#define INSTANTIATE_CPU_KERNEL_CLASS(classname)      \
-  char gInstantiationGuardCPU##classname;            \
-  template class classname<DeviceType::kCPU, float>; \
-  template class classname<DeviceType::kCPU, double>;
-#define INSTANTIATE_GPU_KERNEL_CLASS(classname)      \
-  char gInstantiationGuardGPU##classname;            \
-  template class classname<DeviceType::kGPU, float>; \
-  template class classname<DeviceType::kGPU, double>;
-
-#define INSTANTIATE_KERNEL_CLASS(classname) \
-  INSTANTIATE_CPU_KERNEL_CLASS(classname)   \
-  INSTANTIATE_GPU_KERNEL_CLASS(classname)
-
-#define INSTANTIATE_CPU_KERNEL_UTIL_CLASS(classname) \
-  char gInstantiationGuardCPU##classname;            \
-  template class classname<DeviceType::kCPU, float>; \
-  template class classname<DeviceType::kCPU, double>;
-#define INSTANTIATE_GPU_KERNEL_UTIL_CLASS(classname) \
-  char gInstantiationGuardGPU##classname;            \
-  template class classname<DeviceType::kGPU, float>; \
-  template class classname<DeviceType::kGPU, double>;
-
-#define INSTANTIATE_KERNEL_UTIL_CLASS(classname) \
-  INSTANTIATE_CPU_KERNEL_UTIL_CLASS(classname)   \
-  INSTANTIATE_GPU_KERNEL_UTIL_CLASS(classname)
 
 }  // namespace oneflow
 

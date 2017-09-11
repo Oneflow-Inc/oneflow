@@ -33,10 +33,9 @@ void TaskGraph::BuildExecAndEnrollLbn2Regsts() {
       [this](TaskNode* node) { node->BuildExecAndEnrollLbn2Regsts(this); });
 }
 
-void TaskGraph::InferShapeOfBlobsInProducedRegsts() {
-  TopoForEachNode([this](TaskNode* node) {
-    node->InferShapeOfBlobsInProducedRegsts(this);
-  });
+void TaskGraph::InferBlobDescInProducedRegsts() {
+  TopoForEachNode(
+      [this](TaskNode* node) { node->InferBlobDescInProducedRegsts(this); });
 }
 
 std::vector<CompTaskNode*> TaskGraph::CompTasksInChain(const ChainNode* chain) {

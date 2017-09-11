@@ -2,11 +2,10 @@
 
 namespace oneflow {
 
-void RecordOp::InitFromOpConf(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_record_conf());
-  mut_op_conf() = op_conf;
+void RecordOp::InitFromOpConf() {
+  CHECK(op_conf().has_record_conf());
   int32_t i = 0;
-  for (const std::string& lbn : op_conf.record_conf().lbn()) {
+  for (const std::string& lbn : op_conf().record_conf().lbn()) {
     std::string ibn = "in_" + std::to_string(i++);
     CHECK(ibn2lbn_.emplace(ibn, lbn).second);
     EnrollInputBn(ibn, false);

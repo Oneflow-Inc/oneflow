@@ -12,11 +12,11 @@ class CopyTaskNode : public TaskNode {
   virtual ~CopyTaskNode() = default;
 
  protected:
-  virtual std::shared_ptr<const Operator> AddOp() const = 0;
+  virtual std::shared_ptr<Operator> AddOp() const = 0;
 
  private:
   void BuildExecAndEnrollLbn2Regsts(TaskGraph*) override;
-  void InferShapeOfBlobsInProducedRegsts(TaskGraph*) override;
+  void InferBlobDescInProducedRegsts(TaskGraph*) override;
 };
 
 class CopyHDTaskNode final : public CopyTaskNode {
@@ -42,7 +42,7 @@ class CopyHDTaskNode final : public CopyTaskNode {
   void ToProto(TaskProto* ret) const override { TaskNode::ToProto(ret); };
 
  private:
-  std::shared_ptr<const Operator> AddOp() const override;
+  std::shared_ptr<Operator> AddOp() const override;
 
   void InitWithFwNode(TaskNode* fw_node) override {
     TaskNode::InitWithFwNode(fw_node);
@@ -68,8 +68,10 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
 
   void ToProto(TaskProto* ret) const override { TaskNode::ToProto(ret); };
 
+  DeviceType GetDeviceType() const override { return DeviceType::kCPU; }
+
  private:
-  std::shared_ptr<const Operator> AddOp() const override;
+  std::shared_ptr<Operator> AddOp() const override;
   std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
     return of_make_unique<CopyCommNetTaskNode>();
   }

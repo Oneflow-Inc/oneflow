@@ -10,10 +10,10 @@ class ModelUpdtOp : public SysOperator {
   OF_DISALLOW_COPY_AND_MOVE(ModelUpdtOp);
   virtual ~ModelUpdtOp() = default;
 
-  virtual void InferShape4FwBlobs(
-      std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+  virtual void InferBlobDesc4FwBlobs(
+      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       ParallelPolicy policy, int64_t parallel_id,
-      int64_t parallel_num) const override {
+      int64_t parallel_num) override {
     // do nothing
   }
 

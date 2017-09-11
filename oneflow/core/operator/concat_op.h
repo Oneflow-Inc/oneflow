@@ -11,18 +11,21 @@ class ConcatOp final : public UserOperator {
   ConcatOp() = default;
   ~ConcatOp() = default;
 
-  void InitFromOpConf(const OperatorConf& op_conf) override;
+  void InitFromOpConf() override;
 
   const PbMessage& GetSpecialConf() const override;
 
-  void InferShape4FwBlobs(
-      std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+  void InferBlobDesc4FwBlobs(
+      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       ParallelPolicy policy, int64_t parallel_id,
-      int64_t parallel_num) const override;
+      int64_t parallel_num) override;
 
  private:
   std::string ibn2lbn(const std::string& input_bn) const override {
     return ibn2lbn_.at(input_bn);
+  }
+  std::string obn2lbn(const std::string& output_bn) const override {
+    return op_name() + "/" + GetStringFromSpecialConf(output_bn);
   }
 
   std::unordered_map<std::string, std::string> ibn2lbn_;

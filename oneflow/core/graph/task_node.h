@@ -30,6 +30,9 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t task_id() const { return task_id_; }
   std::string task_id_str() const { return std::to_string(task_id_); }
   virtual bool IsMeaningLess() const { return produced_regst_descs_.empty(); }
+  virtual DeviceType GetDeviceType() const {
+    return chain_node()->parallel_desc()->device_type();
+  }
 
   // Setters
   void SetFwNode() { is_fw_node_ = true; }
@@ -42,7 +45,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   //
   virtual void BuildExecAndEnrollLbn2Regsts(TaskGraph*) = 0;
-  virtual void InferShapeOfBlobsInProducedRegsts(TaskGraph*) = 0;
+  virtual void InferBlobDescInProducedRegsts(TaskGraph*) = 0;
 
 #define OVERRIDE_IF_FW_BP_FOR_FUNC(func_name) \
   void func_name(TaskGraph* gph) override {   \

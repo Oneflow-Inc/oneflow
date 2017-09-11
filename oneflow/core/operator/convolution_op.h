@@ -11,12 +11,12 @@ class ConvolutionOp final : public UserOperator {
   ConvolutionOp() = default;
   ~ConvolutionOp() = default;
 
-  void InitFromOpConf(const OperatorConf& op_conf) override;
+  void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
-  void InferShape4FwBlobs(
-      std::function<Shape*(const std::string&)> GetShapePtr4BnInOp,
+  void InferBlobDesc4FwBlobs(
+      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       ParallelPolicy policy, int64_t parallel_id,
-      int64_t parallel_num) const override;
+      int64_t parallel_num) override;
   void FixParallelDesc(ParallelDesc* pr_desc) const override {
     if (pr_desc->policy() == kModelParallel) {
       pr_desc->RemoveNeedlessDevice(GetInt32FromSpecialConf("out_num"));

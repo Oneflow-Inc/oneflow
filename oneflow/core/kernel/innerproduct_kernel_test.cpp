@@ -1,4 +1,5 @@
 #include "oneflow/core/kernel/innerproduct_kernel.h"
+#include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/core/device/cuda_device_context.h"
 #include "oneflow/core/kernel/kernel_test_common.h"
@@ -9,82 +10,92 @@ namespace test {
 
 namespace {
 
-template<DeviceType device_type, typename FloatingPointType>
-std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
-    bool has_bias_term) {
-  using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
-  FloatingPointType in_mat[] = {1, 2, 3, 4, 5, 6, 7, 8};
-  FloatingPointType weight_mat[] = {5, 4, 5, 3, 2, 1, 7, 0, 1, 1, 9, 8};
-  FloatingPointType bias_mat[] = {2, 3, 5};
-  FloatingPointType bias_multiplier_mat[] = {1, 1};
-
-  FloatingPointType expected_out_without_bias_mat[] = {40,  25, 62,
-                                                       108, 65, 138};
-  FloatingPointType expected_in_diff_without_bias_mat[] = {
-      312, 247, 933, 616, 808, 635, 2237, 1428};
-  FloatingPointType expected_weight_diff_without_bias_mat[] = {
-      580, 728, 876, 1024, 350, 440, 530, 620, 752, 952, 1152, 1352};
-  FloatingPointType expected_out_mat[] = {42, 28, 67, 110, 68, 143};
-  FloatingPointType expected_in_diff_mat[] = {333, 263, 1009, 662,
-                                              829, 651, 2313, 1474};
-  FloatingPointType expected_weight_diff_mat[] = {
-      592, 744, 896, 1048, 368, 464, 560, 656, 782, 992, 1202, 1412};
-  FloatingPointType expected_bias_diff_mat[] = {152, 96, 210};
-
+template<DeviceType device_type, typename T>
+std::function<Blob*(const std::string&)> BuildBnInOp2Blob(bool has_bias_term) {
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
-
-  (*bn2blob_ptr)["in"] = KTCommon::CreateBlobWithVector({2, 1, 2, 2}, in_mat);
-  (*bn2blob_ptr)["weight"] = KTCommon::CreateBlobWithVector({3, 4}, weight_mat);
-  (*bn2blob_ptr)["out"] = KTCommon::CreateBlobWithRandomValue({2, 3});
-  (*bn2blob_ptr)["out_diff"] = (*bn2blob_ptr)["out"];
-  (*bn2blob_ptr)["in_diff"] = KTCommon::CreateBlobWithRandomValue({2, 1, 2, 2});
-  (*bn2blob_ptr)["weight_diff"] = KTCommon::CreateBlobWithRandomValue({3, 4});
+  BlobDesc* blob_desc2122 =
+      new BlobDesc(Shape({2, 1, 2, 2}), GetDataType<T>::val, false);
+  BlobDesc* blob_desc34 =
+      new BlobDesc(Shape({3, 4}), GetDataType<T>::val, false);
+  BlobDesc* blob_desc23 =
+      new BlobDesc(Shape({2, 3}), GetDataType<T>::val, false);
+  BlobDesc* blob_desc13 =
+      new BlobDesc(Shape({1, 3}), GetDataType<T>::val, false);
+  BlobDesc* blob_desc21 =
+      new BlobDesc(Shape({2, 1}), GetDataType<T>::val, false);
+  (*bn2blob_ptr)["in"] = KTCommon<device_type, T>::CreateBlobWithSpecifiedVal(
+      blob_desc2122, {1, 2, 3, 4, 5, 6, 7, 8});
+  (*bn2blob_ptr)["weight"] =
+      KTCommon<device_type, T>::CreateBlobWithSpecifiedVal(
+          blob_desc34, {5, 4, 5, 3, 2, 1, 7, 0, 1, 1, 9, 8});
+  (*bn2blob_ptr)["out"] =
+      KTCommon<device_type, T>::CreateBlobWithRandomVal(blob_desc23);
+  (*bn2blob_ptr)[GenDiffBn("out")] = (*bn2blob_ptr)["out"];
+  (*bn2blob_ptr)[GenDiffBn("in")] =
+      KTCommon<device_type, T>::CreateBlobWithRandomVal(blob_desc2122);
+  (*bn2blob_ptr)[GenDiffBn("weight")] =
+      KTCommon<device_type, T>::CreateBlobWithRandomVal(blob_desc34);
 
   if (has_bias_term) {
-    (*bn2blob_ptr)["bias"] = KTCommon::CreateBlobWithVector({1, 3}, bias_mat);
+    (*bn2blob_ptr)["bias"] =
+        KTCommon<device_type, T>::CreateBlobWithSpecifiedVal(blob_desc13,
+                                                             {2, 3, 5});
     (*bn2blob_ptr)["bias_multiplier"] =
-        KTCommon::CreateBlobWithVector({2, 1}, bias_multiplier_mat);
-    (*bn2blob_ptr)["bias_diff"] = KTCommon::CreateBlobWithRandomValue({1, 3});
+        KTCommon<device_type, T>::CreateBlobWithSpecifiedVal(blob_desc21,
+                                                             {1, 1});
+    (*bn2blob_ptr)[GenDiffBn("bias")] =
+        KTCommon<device_type, T>::CreateBlobWithRandomVal(blob_desc13);
     (*bn2blob_ptr)["expected_bias_diff"] =
-        KTCommon::CreateBlobWithVector({1, 3}, expected_bias_diff_mat);
+        KTCommon<device_type, T>::CreateBlobWithSpecifiedVal(blob_desc13,
+                                                             {152, 96, 210});
     (*bn2blob_ptr)["expected_out"] =
-        KTCommon::CreateBlobWithVector({2, 3}, expected_out_mat);
+        KTCommon<device_type, T>::CreateBlobWithSpecifiedVal(
+            blob_desc23, {42, 28, 67, 110, 68, 143});
     (*bn2blob_ptr)["expected_in_diff"] =
-        KTCommon::CreateBlobWithVector({2, 1, 2, 2}, expected_in_diff_mat);
+        KTCommon<device_type, T>::CreateBlobWithSpecifiedVal(
+            blob_desc2122, {333, 263, 1009, 662, 829, 651, 2313, 1474});
     (*bn2blob_ptr)["expected_weight_diff"] =
-        KTCommon::CreateBlobWithVector({3, 4}, expected_weight_diff_mat);
+        KTCommon<device_type, T>::CreateBlobWithSpecifiedVal(
+            blob_desc34,
+            {592, 744, 896, 1048, 368, 464, 560, 656, 782, 992, 1202, 1412});
   } else {
     (*bn2blob_ptr)["expected_out"] =
-        KTCommon::CreateBlobWithVector({2, 3}, expected_out_without_bias_mat);
-    (*bn2blob_ptr)["expected_in_diff"] = KTCommon::CreateBlobWithVector(
-        {2, 4}, expected_in_diff_without_bias_mat);
-    (*bn2blob_ptr)["expected_weight_diff"] = KTCommon::CreateBlobWithVector(
-        {3, 4}, expected_weight_diff_without_bias_mat);
+        KTCommon<device_type, T>::CreateBlobWithSpecifiedVal(
+            blob_desc23, {40, 25, 62, 108, 65, 138});
+    (*bn2blob_ptr)["expected_in_diff"] =
+        KTCommon<device_type, T>::CreateBlobWithSpecifiedVal(
+            blob_desc2122, {312, 247, 933, 616, 808, 635, 2237, 1428});
+    (*bn2blob_ptr)["expected_weight_diff"] =
+        KTCommon<device_type, T>::CreateBlobWithSpecifiedVal(
+            blob_desc34,
+            {580, 728, 876, 1024, 350, 440, 530, 620, 752, 952, 1152, 1352});
   }
   return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
 }
 
-template<DeviceType device_type, typename FloatingPointType>
+template<DeviceType device_type, typename T>
 std::function<Blob*(const std::string&)> BuildEmptyMdlForFill() {
-  using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
-
-  (*bn2blob_ptr)["weight"] = KTCommon::CreateBlobWithRandomValue({100, 100});
-  (*bn2blob_ptr)["bias"] = KTCommon::CreateBlobWithRandomValue({100, 100});
+  BlobDesc* blob_desc_fill =
+      new BlobDesc(Shape({100, 100}), GetDataType<T>::val, false);
+  (*bn2blob_ptr)["weight"] =
+      KTCommon<device_type, T>::CreateBlobWithRandomVal(blob_desc_fill);
+  (*bn2blob_ptr)["bias"] =
+      KTCommon<device_type, T>::CreateBlobWithRandomVal(blob_desc_fill);
   (*bn2blob_ptr)["bias_multiplier"] =
-      KTCommon::CreateBlobWithRandomValue({100, 100});
+      KTCommon<device_type, T>::CreateBlobWithRandomVal(blob_desc_fill);
 
   return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
 }
 
-template<DeviceType device_type, typename FloatingPointType>
-Kernel* BuildInnerProductKernel(bool has_bias_term, FillConf* fill_conf) {
+template<DeviceType device_type, typename T>
+Kernel* BuildInnerProductKernel(bool has_bias_term, const FillConf* fill_conf) {
   OperatorConf op_conf;
   op_conf.set_name("inner_product_test");
   InnerProductOpConf* inner_product_conf = op_conf.mutable_innerproduct_conf();
   inner_product_conf->set_in("ip_in");
   inner_product_conf->set_out("ip_out");
-  inner_product_conf->set_out_num(40);
+  inner_product_conf->set_out_num(3);
   inner_product_conf->set_has_bias_term(has_bias_term);
 
   if (fill_conf != nullptr) {
@@ -97,97 +108,80 @@ Kernel* BuildInnerProductKernel(bool has_bias_term, FillConf* fill_conf) {
   OperatorProto op_proto;
   inner_product_op->ToProto(&op_proto);
 
-  auto inner_product_kernel =
-      new InnerProductKernel<device_type, FloatingPointType>();
+  auto inner_product_kernel = new InnerProductKernel<device_type, T>();
   inner_product_kernel->InitFromOpProto(op_proto);
 
   return inner_product_kernel;
 }
 
-template<DeviceType device_type, typename FloatingPointType>
+template<DeviceType device_type, typename T>
 void IpKernelFwAndBp(bool has_bias_term) {
-  using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
   KernelCtx ctx;
-  KTCommon::BuildKernelCtx(&ctx);
+  BuildKernelCtx<device_type>(&ctx);
 
-  auto BnInOp2Blob =
-      BuildBnInOp2BlobPtr<device_type, FloatingPointType>(has_bias_term);
+  auto BnInOp2Blob = BuildBnInOp2Blob<device_type, T>(has_bias_term);
 
   auto inner_product_kernel =
-      BuildInnerProductKernel<device_type, FloatingPointType>(has_bias_term,
-                                                              nullptr);
+      BuildInnerProductKernel<device_type, T>(has_bias_term, nullptr);
 
   inner_product_kernel->Forward(ctx, BnInOp2Blob);
   inner_product_kernel->Backward(ctx, BnInOp2Blob);
 
-  KTCommon::SyncStream(&ctx);
+  SyncStream<device_type>(&ctx);
 
-  KTCommon::CheckResult(BnInOp2Blob, "out", "expected_out");
-  KTCommon::CheckResult(BnInOp2Blob, "in_diff", "expected_in_diff");
-  KTCommon::CheckResult(BnInOp2Blob, "weight_diff", "expected_weight_diff");
+  KTCommon<device_type, T>::CheckResult(BnInOp2Blob, "out", "expected_out");
+  KTCommon<device_type, T>::CheckResult(BnInOp2Blob, "in_diff",
+                                        "expected_in_diff");
+  KTCommon<device_type, T>::CheckResult(BnInOp2Blob, "weight_diff",
+                                        "expected_weight_diff");
   if (has_bias_term) {
-    KTCommon::CheckResult(BnInOp2Blob, "bias_diff", "expected_bias_diff");
+    KTCommon<device_type, T>::CheckResult(BnInOp2Blob, "bias_diff",
+                                          "expected_bias_diff");
   }
 }
 
-template<DeviceType device_type, typename FloatingPointType>
-void IpKernelFillMdlAndMdlTmp(FillConf* fill_conf) {
-  /*
-  using KTCommon = KernelTestCommon<device_type, FloatingPointType>;
+template<DeviceType device_type, typename T>
+void IpKernelFillMdlAndMdlTmp(const FillConf* fill_conf) {
   KernelCtx ctx;
-  KTCommon::BuildKernelCtx(&ctx);
+  BuildKernelCtx<device_type>(&ctx);
 
-  auto BnInOp2Blob = BuildEmptyMdlForFill<device_type, FloatingPointType>();
+  auto BnInOp2Blob = BuildEmptyMdlForFill<device_type, T>();
 
   auto inner_product_kernel =
-      BuildInnerProductKernel<device_type, FloatingPointType>(true, fill_conf);
-  inner_product_kernel->InitModelAndModelTmpBlobs(
-      ctx, ParallelPolicy::kDataParallel, 0, 0, nullptr, BnInOp2Blob);
+      BuildInnerProductKernel<device_type, T>(true, fill_conf);
+  inner_product_kernel->InitModelBlobs(ctx, ParallelPolicy::kDataParallel, 0, 0,
+                                       nullptr, BnInOp2Blob);
+  inner_product_kernel->InitModelTmpBlobs(ctx, BnInOp2Blob);
 
-  KTCommon::SyncStream(&ctx);
+  SyncStream<device_type>(&ctx);
 
-  KTCommon::CheckFillResult(*BnInOp2Blob("weight"), *fill_conf);
-  KTCommon::CheckFillResult(*BnInOp2Blob("bias"), *fill_conf);
-  KTCommon::CheckFillResult(*BnInOp2Blob("bias_multiplier"), *fill_conf);
-  */
+  KTCommon<device_type, T>::CheckFillResult(BnInOp2Blob("weight"), *fill_conf);
+  KTCommon<device_type, T>::CheckFillResult(BnInOp2Blob("bias"), *fill_conf);
+  KTCommon<device_type, T>::CheckFillResult(BnInOp2Blob("bias_multiplier"),
+                                            *fill_conf);
 }
 
 }  // namespace
 
 }  // namespace test
 
-TEST(InnerProductKernel, inner_product_kernel_cpu_with_bias) {
-  test::IpKernelFwAndBp<DeviceType::kCPU, float>(true);
-  test::IpKernelFwAndBp<DeviceType::kCPU, double>(true);
+TEST(InnerProductKernel, IpKernelFwAndBp) {
+#define MAKE_ENTRY(device_type, type_pair, has_bias_term)          \
+  test::IpKernelFwAndBp<device_type, OF_PP_PAIR_FIRST(type_pair)>( \
+      has_bias_term);
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, DEVICE_TYPE_SEQ,
+                                   FLOATING_DATA_TYPE_SEQ, BOOL_SEQ)
+#undef MAKE_ENTRY
 }
 
-TEST(InnerProductKernel, inner_product_kernel_cpu_without_bias) {
-  test::IpKernelFwAndBp<DeviceType::kCPU, float>(false);
-  test::IpKernelFwAndBp<DeviceType::kCPU, double>(false);
-}
-
-TEST(InnerProductKernel, inner_product_kernel_gpu_with_bias) {
-  test::IpKernelFwAndBp<DeviceType::kGPU, float>(true);
-  test::IpKernelFwAndBp<DeviceType::kGPU, double>(true);
-}
-
-TEST(InnerProductKernel, inner_product_kernel_gpu_without_bias) {
-  test::IpKernelFwAndBp<DeviceType::kGPU, float>(false);
-  test::IpKernelFwAndBp<DeviceType::kGPU, double>(false);
-}
-
-TEST(InnerProductKernel, fill_model_in_cpu_with_constant) {
+TEST(InnerProductKernel, FillModelConstant) {
   FillConf fill_conf;
   fill_conf.mutable_constant_conf()->set_value(1.0f);
-  test::IpKernelFillMdlAndMdlTmp<DeviceType::kCPU, float>(&fill_conf);
-  test::IpKernelFillMdlAndMdlTmp<DeviceType::kCPU, double>(&fill_conf);
-}
-
-TEST(InnerProductKernel, fill_model_in_gpu_with_constant) {
-  FillConf fill_conf;
-  fill_conf.mutable_constant_conf()->set_value(1.0f);
-  test::IpKernelFillMdlAndMdlTmp<DeviceType::kGPU, float>(&fill_conf);
-  test::IpKernelFillMdlAndMdlTmp<DeviceType::kGPU, double>(&fill_conf);
+#define MAKE_ENTRY(device_type, type_pair)                                  \
+  test::IpKernelFillMdlAndMdlTmp<device_type, OF_PP_PAIR_FIRST(type_pair)>( \
+      &fill_conf);
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, DEVICE_TYPE_SEQ,
+                                   FLOATING_DATA_TYPE_SEQ)
 }
 
 }  // namespace oneflow

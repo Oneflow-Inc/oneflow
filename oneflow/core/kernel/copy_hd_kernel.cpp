@@ -2,63 +2,48 @@
 
 namespace oneflow {
 
-namespace {
-
-template<DeviceType device_type, typename FloatingPointType>
-void CopyH2DAsync(const KernelCtx& ctx, Blob* out_blob, Blob* in_blob,
-                  const size_t type_size) {
-  KernelUtil<device_type, FloatingPointType>::Memcpy(
-      ctx, out_blob->mut_dptr(), in_blob->dptr(),
-      in_blob->shape().elem_cnt() * type_size, cudaMemcpyHostToDevice);
-}
-
-template<DeviceType device_type, typename FloatingPointType>
-void CopyD2HAsync(const KernelCtx& ctx, Blob* out_blob, Blob* in_blob,
-                  const size_t type_size) {
-  KernelUtil<device_type, FloatingPointType>::Memcpy(
-      ctx, out_blob->mut_dptr(), in_blob->dptr(),
-      in_blob->shape().elem_cnt() * type_size, cudaMemcpyDeviceToHost);
-}
-
-}  // namespace
-
-template<DeviceType device_type, typename FloatingPointType>
-void CopyHdKernel<device_type, FloatingPointType>::InitFromOpProto(
-    const OperatorProto& op_proto) {
+void CopyHdKernel::InitFromOpProto(const OperatorProto& op_proto) {
   Kernel::InitFromOpProto(op_proto);
 
   const CopyHdOpConf& copy_hd_conf = op()->op_conf().copy_hd_conf();
 
   if (copy_hd_conf.type() == CopyHdOpConf::H2D) {
-    ForwardCopyFunc_ = &CopyH2DAsync<device_type, FloatingPointType>;
-    BackwardCopyFunc_ = &CopyD2HAsync<device_type, FloatingPointType>;
+    fw_kind_ = cudaMemcpyKind::cudaMemcpyHostToDevice;
+    bw_kind_ = cudaMemcpyKind::cudaMemcpyDeviceToHost;
   } else {
-    ForwardCopyFunc_ = &CopyD2HAsync<device_type, FloatingPointType>;
-    BackwardCopyFunc_ = &CopyH2DAsync<device_type, FloatingPointType>;
+    fw_kind_ = cudaMemcpyKind::cudaMemcpyDeviceToHost;
+    bw_kind_ = cudaMemcpyKind::cudaMemcpyHostToDevice;
   }
 }
 
-template<DeviceType device_type, typename FloatingPointType>
-void CopyHdKernel<device_type, FloatingPointType>::Forward(
+void CopyHdKernel::Forward(
     const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  Blob* in_blob = BnInOp2BlobPtr(op()->SoleIbn());
-  Blob* out_blob = BnInOp2BlobPtr(op()->SoleObn());
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in_blob = BnInOp2Blob(op()->SoleIbn());
+  Blob* out_blob = BnInOp2Blob(op()->SoleObn());
 
-  ForwardCopyFunc_(ctx, out_blob, in_blob, sizeof(FloatingPointType));
+  Memcpy<DeviceType::kGPU>(ctx.device_ctx, out_blob->mut_dptr(),
+                           in_blob->dptr(), in_blob->TotalByteSize(), fw_kind_);
 }
 
-template<DeviceType device_type, typename FloatingPointType>
-void CopyHdKernel<device_type, FloatingPointType>::Backward(
+void CopyHdKernel::Backward(
     const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  Blob* in_blob = BnInOp2BlobPtr(op()->SoleOdbn());
-  Blob* out_blob = BnInOp2BlobPtr(op()->SoleIdbn());
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* out_diff_blob = BnInOp2Blob(op()->SoleOdbn());
+  Blob* in_diff_blob = BnInOp2Blob(op()->SoleIdbn());
 
-  BackwardCopyFunc_(ctx, out_blob, in_blob, sizeof(FloatingPointType));
+  Memcpy<DeviceType::kGPU>(ctx.device_ctx, in_diff_blob->mut_dptr(),
+                           out_diff_blob->dptr(),
+                           out_diff_blob->TotalByteSize(), bw_kind_);
 }
 
-INSTANTIATE_GPU_KERNEL_CLASS(CopyHdKernel);
-REGISTER_GPU_KERNEL(OperatorConf::kCopyHdConf, CopyHdKernel);
+Kernel* CreateCopyHdKernel() {
+  static const std::function<Kernel*()> creator = []() {
+    return new CopyHdKernel;
+  };
+  return creator();
+}
+
+COMMAND(AddKernelCreator(OperatorConf::kCopyHdConf, CreateCopyHdKernel));
 
 }  // namespace oneflow

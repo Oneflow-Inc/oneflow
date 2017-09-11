@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_LOSS_RECORD_TASK_GRAPH_H_
-#define ONEFLOW_CORE_LOSS_RECORD_TASK_GRAPH_H_
+#ifndef ONEFLOW_CORE_GRAPH_LOSS_RECORD_TASK_GRAPH_H_
+#define ONEFLOW_CORE_GRAPH_LOSS_RECORD_TASK_GRAPH_H_
 
 #include "oneflow/core/graph/task_graph.h"
 
@@ -27,4 +27,4 @@ class LossRecordTaskGraph final : public TaskGraph {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_LOSS_RECORD_TASK_GRAPH_H_
+#endif  // ONEFLOW_CORE_GRAPH_LOSS_RECORD_TASK_GRAPH_H_

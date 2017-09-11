@@ -40,57 +40,62 @@ void RegstDesc::AddConsumer(const TaskNode* new_consumer) {
 }
 
 void RegstDesc::CopyLbnFrom(const RegstDesc* rhs) {
-  lbn2shape_.clear();
-  for (const auto& pair : rhs->lbn2shape_) {
+  CHECK(lbn2blob_desc_.empty());
+  for (const auto& pair : rhs->lbn2blob_desc_) {
     const std::string& lbn = pair.first;
-    auto shape = of_make_unique<Shape>();
-    CHECK(lbn2shape_.emplace(lbn, std::move(shape)).second);
+    CHECK(lbn2blob_desc_.emplace(lbn, of_make_unique<BlobDesc>()).second);
   }
 }
 
-void RegstDesc::CopyShapeFrom(const RegstDesc* rhs) {
-  for (const auto& pair : lbn2shape_) {
+void RegstDesc::CopyBlobDescFrom(const RegstDesc* rhs) {
+  for (const auto& pair : lbn2blob_desc_) {
     const std::string& lbn = pair.first;
-    *(lbn2shape_.at(lbn)) = rhs->GetShape(lbn);
+    *(lbn2blob_desc_.at(lbn)) = rhs->GetBlobDesc(lbn);
   }
 }
 
 void RegstDesc::EnrollLbn(const std::string& lbn) {
-  std::unique_ptr<Shape> ptr(new Shape);
-  CHECK(lbn2shape_.emplace(lbn, std::move(ptr)).second) << lbn;
+  CHECK(lbn2blob_desc_.emplace(lbn, of_make_unique<BlobDesc>()).second) << lbn;
 }
 
-const Shape& RegstDesc::GetShape(const std::string& lbn) const {
-  return *(lbn2shape_.at(lbn));
+const BlobDesc& RegstDesc::GetBlobDesc(const std::string& lbn) const {
+  return *(lbn2blob_desc_.at(lbn));
 }
 
-Shape* RegstDesc::GetMutShapePtr(const std::string& lbn) {
-  return lbn2shape_.at(lbn).get();
+BlobDesc* RegstDesc::GetMutBlobDesc(const std::string& lbn) {
+  auto it = lbn2blob_desc_.find(lbn);
+  if (it != lbn2blob_desc_.end()) {
+    return it->second.get();
+  } else {
+    return nullptr;
+  }
 }
 
 void RegstDesc::ForEachLbn(std::function<void(const std::string&)> func) const {
-  for (const auto& p : lbn2shape_) { func(p.first); }
+  for (const auto& p : lbn2blob_desc_) { func(p.first); }
 }
 
 void RegstDesc::EraseZeroSizeBlob() {
-  EraseIf<std::string, std::unique_ptr<Shape>>(
-      &lbn2shape_,
-      [](HashMap<std::string, std::unique_ptr<Shape>>::iterator it) {
-        return it->second->elem_cnt() == 0;
+  EraseIf<std::string, std::unique_ptr<BlobDesc>>(
+      &lbn2blob_desc_,
+      [](HashMap<std::string, std::unique_ptr<BlobDesc>>::iterator it) {
+        return it->second->shape().elem_cnt() == 0;
       });
 }
 
 int64_t RegstDesc::CompElemCntOfAllBlob() const {
   int64_t sum = 0;
-  for (const auto& pair : lbn2shape_) { sum += pair.second->elem_cnt(); }
+  for (const auto& pair : lbn2blob_desc_) {
+    sum += pair.second->shape().elem_cnt();
+  }
   return sum;
 }
 
 std::string RegstDesc::DebugStr() const {
   std::stringstream ss;
   ss << "{";
-  for (const auto& pair : lbn2shape_) {
-    ss << "{" << pair.first << ":" << pair.second->DebugStr() << "}";
+  for (const auto& pair : lbn2blob_desc_) {
+    ss << "{" << pair.first << ":" << pair.second->shape().DebugStr() << "}";
   }
   ss << "}";
   return ss.str();
@@ -104,10 +109,10 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
       ret->add_consumer_task_id(consumer->task_id());
     }
   }
-  for (const auto& pair : lbn2shape_) {
-    PbMapPair<std::string, ShapeProto> pb_pair(pair.first);
+  for (const auto& pair : lbn2blob_desc_) {
+    PbMapPair<std::string, BlobDescProto> pb_pair(pair.first);
     pair.second->ToProto(&(pb_pair.second));
-    ret->mutable_lbn2shape()->insert(pb_pair);
+    ret->mutable_lbn2blob_desc()->insert(pb_pair);
   }
   ret->set_register_num(register_num_);
   *(ret->mutable_mem_case()) = InferMemCase();
@@ -138,6 +143,18 @@ MemoryCase RegstDesc::InferMemCase() const {
     }
   }
   return mem_case;
+}
+
+BlobDesc RegstDesc::CompPackedBlobDesc() const {
+  auto it = lbn2blob_desc_.begin();
+  return ComputePackedBlobDesc([&]() {
+    const BlobDesc* ret = nullptr;
+    if (it != lbn2blob_desc_.end()) {
+      ret = it->second.get();
+      ++it;
+    }
+    return ret;
+  });
 }
 
 }  // namespace oneflow

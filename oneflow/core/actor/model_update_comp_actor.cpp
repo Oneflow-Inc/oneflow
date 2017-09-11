@@ -18,17 +18,17 @@ void MdUpdtCompActor::Init(const TaskProto& task_proto,
   mut_num_of_read_empty() = 1;
   if (thread_ctx.cpu_stream) {
     mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
-    MemcpyFunc = std::bind(&KernelUtil<DeviceType::kCPU, float>::Memcpy,
-                           std::placeholders::_1, std::placeholders::_2,
-                           std::placeholders::_3, std::placeholders::_4,
-                           cudaMemcpyKind::cudaMemcpyHostToHost);
+    MemcpyFunc =
+        std::bind(&Memcpy<DeviceType::kCPU>, std::placeholders::_1,
+                  std::placeholders::_2, std::placeholders::_3,
+                  std::placeholders::_4, cudaMemcpyKind::cudaMemcpyHostToHost);
   } else {
     mut_device_ctx().reset(new CudaDeviceCtx(cuda_handle_.cuda_stream(),
                                              cuda_handle_.cublas_handle(),
                                              cuda_handle_.cudnn_handle()));
-    MemcpyFunc = std::bind(&KernelUtil<DeviceType::kGPU, float>::Memcpy,
-                           std::placeholders::_1, std::placeholders::_2,
-                           std::placeholders::_3, std::placeholders::_4,
+    MemcpyFunc = std::bind(&Memcpy<DeviceType::kGPU>, std::placeholders::_1,
+                           std::placeholders::_2, std::placeholders::_3,
+                           std::placeholders::_4,
                            cudaMemcpyKind::cudaMemcpyDeviceToDevice);
   }
   OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerBeforeInitializeModel);

@@ -36,7 +36,7 @@ class Compiler final {
       const std::pair<const ChainNode*, std::vector<CompTaskNode*>>&);
   void BuildLossGraph(
       const std::pair<const ChainNode*, std::vector<CompTaskNode*>>& pair);
-  void InferShape4Regsts();
+  void InferBlobDesc4Regsts();
   void EraseMeaningLessRegsts();
   void GenPlanFile(const std::string& plan_filepath);
   void Plan2DotFile(const Plan& plan);
@@ -72,7 +72,7 @@ void Compiler::Compile(const JobConf& job_conf,
   JobDesc::Singleton()->InitFromJobConf(job_conf);
   IDMgr::Singleton()->InitFromResource(JobDesc::Singleton()->resource());
   BuildGraphs();
-  InferShape4Regsts();
+  InferBlobDesc4Regsts();
   EraseMeaningLessRegsts();
   GenPlanFile(plan_filepath);
 }
@@ -82,7 +82,7 @@ void Compiler::BuildGraphs() {
   // data graph
   LOG(INFO) << "Build DataTaskGraph";
   auto data_task_gph = new DataTaskGraph(
-      "data", JobDesc::Singleton()->train_dlnet_conf(),
+      "data", JobDesc::Singleton()->dlnet_conf(),
       JobDesc::Singleton()->placement(), JobDesc::Singleton()->is_train());
   ordered_task_gphs_.emplace_back(data_task_gph);
   // construct data_chain2sorted_fw_comp_tasks
@@ -165,10 +165,10 @@ void Compiler::BuildLossGraph(
   ordered_task_gphs_.emplace_back(loss_record_gph);
 }
 
-void Compiler::InferShape4Regsts() {
+void Compiler::InferBlobDesc4Regsts() {
   for (auto& task_gph : ordered_task_gphs_) {
-    LOG(INFO) << "InferShape for " << task_gph->name();
-    task_gph->InferShapeOfBlobsInProducedRegsts();
+    LOG(INFO) << "Inference BlobDesc for " << task_gph->name();
+    task_gph->InferBlobDescInProducedRegsts();
   }
 }
 
@@ -209,14 +209,13 @@ void Compiler::GenPlanFile(const std::string& plan_filepath) {
   ForEachTaskNode([&](const TaskNode* task_node) {
     task_node->exec_gph().ConstForEachNode([&](const ExecNode* exec_node) {
       const std::string& op_name = exec_node->op()->op_name();
-      // op_name2device_type
-      auto it = plan.mutable_op_name2device_type()->find(op_name);
-      if (it == plan.mutable_op_name2device_type()->end()) {
-        plan.mutable_op_name2device_type()->insert(
-            {op_name, task_node->chain_node()->parallel_desc()->device_type()});
-      } else {
-        CHECK_EQ(it->second,
-                 task_node->chain_node()->parallel_desc()->device_type());
+      // op_name2context
+      auto it = plan.mutable_op_name2context()->find(op_name);
+      if (it == plan.mutable_op_name2context()->end()) {
+        OpContext op_ctx;
+        op_ctx.set_device_type(task_node->GetDeviceType());
+        exec_node->GetBnInOp2DataType(op_ctx.mutable_bn_in_op2data_type());
+        CHECK(plan.mutable_op_name2context()->insert({op_name, op_ctx}).second);
       }
       // machine_id2op_name_set
       int64_t machine_id = task_node->stage_node()->machine_id();
@@ -231,7 +230,7 @@ void Compiler::GenPlanFile(const std::string& plan_filepath) {
 
 void Compiler::Plan2DotFile(const Plan& plan) {
   const std::string file_path = LogDir() + "/dot/plan.dot";
-  PersistentOutStream out_stream(file_path);
+  PersistentOutStream out_stream(LocalFS(), file_path);
   out_stream << "digraph {\n";
   HashSet<int64_t> regst_desc_ids;
   for (const TaskProto& task_proto : plan.task()) {

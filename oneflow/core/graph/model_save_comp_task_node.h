@@ -22,7 +22,7 @@ class MdSaveCompTaskNode final : public CompTaskNode {
 
  private:
   void BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) override;
-  void InferShapeOfBlobsInProducedRegsts(TaskGraph* gph) override;
+  void InferBlobDescInProducedRegsts(TaskGraph* gph) override;
   bool IsMeaningLess() const override { return !GetConsumedRegstDesc("model"); }
 
   TaskType task_type() const override { return kMdSaveCompTask; }

@@ -17,7 +17,13 @@ DEFINE_ONEFLOW_STR2INT_CAST(unsigned long, strtoul);
 DEFINE_ONEFLOW_STR2INT_CAST(long long, strtoll);
 DEFINE_ONEFLOW_STR2INT_CAST(unsigned long long, strtoull);
 
+DEFINE_ONEFLOW_STR2INT_CAST(signed char, strtol);
+DEFINE_ONEFLOW_STR2INT_CAST(short, strtol);
 DEFINE_ONEFLOW_STR2INT_CAST(int, strtol);
+
+DEFINE_ONEFLOW_STR2INT_CAST(unsigned char, strtoul);
+DEFINE_ONEFLOW_STR2INT_CAST(unsigned short, strtoul);
+DEFINE_ONEFLOW_STR2INT_CAST(unsigned int, strtoul);
 
 template<>
 float oneflow_cast(const std::string& s) {
@@ -35,14 +41,8 @@ double oneflow_cast(const std::string& s) {
   return ret;
 }
 
-struct SetProcessEnvT {
-  SetProcessEnvT() {
 #ifdef __linux__
-    feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW);
+COMMAND(feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW));
 #endif
-  }
-};
-
-static SetProcessEnvT g_set_process_env_var;
 
 }  // namespace oneflow

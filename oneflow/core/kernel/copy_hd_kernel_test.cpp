@@ -8,33 +8,34 @@ namespace test {
 
 namespace {
 
-template<typename FloatingPointType>
-std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
+template<typename T>
+std::function<Blob*(const std::string&)> BuildBnInOp2BlobFunc(
     CopyHdOpConf::Type hd_type) {
-  using KTCommonCpu = KernelTestCommon<DeviceType::kCPU, FloatingPointType>;
-  using KTCommonGpu = KernelTestCommon<DeviceType::kGPU, FloatingPointType>;
+  BlobDesc* blob_desc =
+      new BlobDesc(Shape({3, 4, 5, 6}), GetDataType<T>::val, false);
 
-  std::vector<int64_t> dim_vec = {3, 4, 5, 6};
-
-  auto bn2blob_ptr = new HashMap<std::string, Blob*>;
+  auto bn2blob = new HashMap<std::string, Blob*>;
 
   if (hd_type == CopyHdOpConf::H2D) {
-    (*bn2blob_ptr)["in"] = KTCommonCpu::CreateBlobWithSameValue(dim_vec, 1);
-    (*bn2blob_ptr)["out"] = KTCommonGpu::CreateBlobWithSameValue(dim_vec, 2);
-    (*bn2blob_ptr)["in_diff"] =
-        KTCommonCpu::CreateBlobWithSameValue(dim_vec, 3);
-    (*bn2blob_ptr)["out_diff"] = (*bn2blob_ptr)["out"];
+    (*bn2blob)["in"] =
+        KTCommon<DeviceType::kCPU, T>::CreateBlobWithRandomVal(blob_desc);
+    (*bn2blob)["out"] =
+        KTCommon<DeviceType::kGPU, T>::CreateBlobWithRandomVal(blob_desc);
+    (*bn2blob)[GenDiffBn("in")] =
+        KTCommon<DeviceType::kCPU, T>::CreateBlobWithRandomVal(blob_desc);
   } else {
-    (*bn2blob_ptr)["in"] = KTCommonGpu::CreateBlobWithSameValue(dim_vec, 1);
-    (*bn2blob_ptr)["out"] = KTCommonCpu::CreateBlobWithSameValue(dim_vec, 2);
-    (*bn2blob_ptr)["in_diff"] =
-        KTCommonGpu::CreateBlobWithSameValue(dim_vec, 3);
-    (*bn2blob_ptr)["out_diff"] = (*bn2blob_ptr)["out"];
+    (*bn2blob)["in"] =
+        KTCommon<DeviceType::kGPU, T>::CreateBlobWithRandomVal(blob_desc);
+    (*bn2blob)["out"] =
+        KTCommon<DeviceType::kCPU, T>::CreateBlobWithRandomVal(blob_desc);
+    (*bn2blob)[GenDiffBn("in")] =
+        KTCommon<DeviceType::kGPU, T>::CreateBlobWithRandomVal(blob_desc);
   }
-  return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
+  (*bn2blob)["out_diff"] = (*bn2blob)["out"];
+  return [bn2blob](const std::string& bn) { return bn2blob->at(bn); };
 }
 
-template<typename FloatingPointType>
+template<typename T>
 Kernel* BuildCopyHdKernel(CopyHdOpConf::Type hd_type) {
   OperatorConf op_conf;
   op_conf.set_name("copy_hd_test");
@@ -44,31 +45,27 @@ Kernel* BuildCopyHdKernel(CopyHdOpConf::Type hd_type) {
 
   OperatorProto op_proto;
   copy_hd_op->ToProto(&op_proto);
-  auto copy_hd_kernel = new CopyHdKernel<kGPU, FloatingPointType>();
+  auto copy_hd_kernel = new CopyHdKernel();
   copy_hd_kernel->InitFromOpProto(op_proto);
   return copy_hd_kernel;
 }
 
-template<typename FloatingPointType>
+template<typename T>
 void TestCopyHdKernel(CopyHdOpConf::Type hd_type) {
-  using KTCommonCpu = KernelTestCommon<DeviceType::kCPU, FloatingPointType>;
-  using KTCommonGpu = KernelTestCommon<DeviceType::kGPU, FloatingPointType>;
-
   KernelCtx ctx;
-  KTCommonGpu::BuildKernelCtx(&ctx);
+  BuildKernelCtx<DeviceType::kGPU>(&ctx);
+  auto BnInOp2BlobFunc = BuildBnInOp2BlobFunc<T>(hd_type);
+  auto copy_hd_kernel = BuildCopyHdKernel<T>(hd_type);
 
-  auto BnInOp2BlobPtr = BuildBnInOp2BlobPtr<FloatingPointType>(hd_type);
-
-  auto copy_hd_kernel = BuildCopyHdKernel<FloatingPointType>(hd_type);
-
-  copy_hd_kernel->Forward(ctx, BnInOp2BlobPtr);
-  copy_hd_kernel->Backward(ctx, BnInOp2BlobPtr);
-  KTCommonGpu::SyncStream(&ctx);
-
+  copy_hd_kernel->Forward(ctx, BnInOp2BlobFunc);
+  copy_hd_kernel->Backward(ctx, BnInOp2BlobFunc);
+  SyncStream<DeviceType::kGPU>(&ctx);
   if (hd_type == CopyHdOpConf::H2D) {
-    KTCommonCpu::CheckResult(BnInOp2BlobPtr, "in", "in_diff");
+    KTCommon<DeviceType::kCPU, T>::CheckResult(BnInOp2BlobFunc, "in",
+                                               "in_diff");
   } else {
-    KTCommonGpu::CheckResult(BnInOp2BlobPtr, "in", "in_diff");
+    KTCommon<DeviceType::kGPU, T>::CheckResult(BnInOp2BlobFunc, "in",
+                                               "in_diff");
   }
 }
 
@@ -77,13 +74,9 @@ void TestCopyHdKernel(CopyHdOpConf::Type hd_type) {
 }  // namespace test
 
 TEST(CopyHdKernel, copy_d2h) {
-  test::TestCopyHdKernel<float>(CopyHdOpConf::D2H);
-  test::TestCopyHdKernel<double>(CopyHdOpConf::D2H);
-}
-
-TEST(CopyHdKernel, copy_h2d) {
-  test::TestCopyHdKernel<float>(CopyHdOpConf::H2D);
-  test::TestCopyHdKernel<double>(CopyHdOpConf::H2D);
+#define COPY_TYPE_SEQ (CopyHdOpConf::D2H)(CopyHdOpConf::H2D)
+#define MAKE_ENTRY(x, y) test::TestCopyHdKernel<OF_PP_PAIR_FIRST(x)>(y);
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, ALL_DATA_TYPE_SEQ, COPY_TYPE_SEQ)
 }
 
 }  // namespace oneflow

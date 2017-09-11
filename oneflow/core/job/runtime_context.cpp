@@ -9,8 +9,19 @@ void RuntimeCtx::set_this_machine_name(const std::string& name) {
   LOG(INFO) << "this machine id: " << this_machine_id_;
 }
 
-void RuntimeCtx::InitDataReader(const std::string& filepath) {
-  data_reader_.reset(new PersistentCircularLineReader(filepath));
+PersistentInStream* RuntimeCtx::GetDataInStream(const std::string& name) {
+  auto it = data_in_streams_.find(name);
+  if (it == data_in_streams_.end()) {
+    return nullptr;
+  } else {
+    return it->second.get();
+  }
+}
+
+void RuntimeCtx::AddDataInStream(const std::string& name,
+                                 PersistentInStream* data_in_stream) {
+  CHECK(data_in_streams_.find(name) == data_in_streams_.end());
+  data_in_streams_[name].reset(data_in_stream);
 }
 
 }  // namespace oneflow

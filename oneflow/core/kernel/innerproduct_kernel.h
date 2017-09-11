@@ -7,7 +7,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename FloatingPointType>
+template<DeviceType device_type, typename T>
 class InnerProductKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(InnerProductKernel);
@@ -23,9 +23,9 @@ class InnerProductKernel final : public Kernel {
   void InitModelBlobsWithRandomSeed(
       const KernelCtx&, std::mt19937,
       std::function<Blob*(const std::string&)>) const override;
-  void InitModelBlobsWithSnapshot(
+  void InitModelBlobsWithDir(
       const KernelCtx& ctx, int32_t part_id, int32_t part_num,
-      const Snapshot* snapshot,
+      const std::string& model_load_dir,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void InitModelTmpBlobs(
       const KernelCtx& ctx,

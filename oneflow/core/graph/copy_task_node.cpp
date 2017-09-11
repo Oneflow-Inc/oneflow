@@ -25,10 +25,10 @@ void CopyTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph*) {
   mut_exec_gph().UpdateSourceAndSink();
 }
 
-void CopyTaskNode::InferShapeOfBlobsInProducedRegsts(TaskGraph*) {
+void CopyTaskNode::InferBlobDescInProducedRegsts(TaskGraph*) {
   std::shared_ptr<RegstDesc> in_regst = GetRelatedRegst(SoleInEdge());
   std::shared_ptr<RegstDesc> out_regst = GetRelatedRegst(SoleOutEdge());
-  out_regst->CopyShapeFrom(in_regst.get());
+  out_regst->CopyBlobDescFrom(in_regst.get());
 }
 
 void CopyHDTaskNode::SetFwInCopy() {
@@ -41,7 +41,7 @@ void CopyHDTaskNode::SetFwOutCopy() {
   is_fw_in_copy_ = false;
 }
 
-std::shared_ptr<const Operator> CopyHDTaskNode::AddOp() const {
+std::shared_ptr<Operator> CopyHDTaskNode::AddOp() const {
   OperatorConf op_conf;
   op_conf.set_name("copy_hd_" + NewUniqueId());
   CopyHdOpConf* copy_hd_conf = op_conf.mutable_copy_hd_conf();
@@ -49,7 +49,7 @@ std::shared_ptr<const Operator> CopyHDTaskNode::AddOp() const {
   return OpMgr::Singleton()->AddOp(op_conf);
 }
 
-std::shared_ptr<const Operator> CopyCommNetTaskNode::AddOp() const {
+std::shared_ptr<Operator> CopyCommNetTaskNode::AddOp() const {
   OperatorConf op_conf;
   op_conf.set_name("comm_net_" + NewUniqueId());
   op_conf.mutable_copy_comm_net_conf();

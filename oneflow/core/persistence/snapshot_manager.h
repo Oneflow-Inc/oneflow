@@ -18,13 +18,16 @@ class SnapshotMgr {
 
   const Snapshot* GetReadableSnapshot() { return readable_snapshot_ptr_.get(); }
 
-  void Init();
+  void Init(const Plan& plan);
+
+  size_t num_of_model_blobs() const { return num_of_model_blobs_; }
 
  private:
   SnapshotMgr() = default;
   std::string model_save_snapshots_path_;
   std::unique_ptr<const Snapshot> readable_snapshot_ptr_;
   HashMap<int64_t, std::unique_ptr<Snapshot>> snapshot_id2writeable_snapshot_;
+  size_t num_of_model_blobs_;
 };
 
 }  // namespace oneflow

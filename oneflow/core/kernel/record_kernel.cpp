@@ -2,12 +2,13 @@
 
 namespace oneflow {
 
-template<typename FloatingPointType>
-void RecordKernel<DeviceType::kCPU, FloatingPointType>::Forward(
+void RecordKernel::Forward(
     const KernelCtx& kernel_ctx,
-    std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {}
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  // TODO
+}
 
-INSTANTIATE_CPU_KERNEL_CLASS(RecordKernel);
-REGISTER_CPU_KERNEL(OperatorConf::kRecordConf, RecordKernel);
+COMMAND(AddKernelCreator(OperatorConf::kRecordConf,
+                         []() { return new RecordKernel; }));
 
 }  // namespace oneflow
