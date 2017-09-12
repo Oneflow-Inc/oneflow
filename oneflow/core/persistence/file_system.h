@@ -53,7 +53,7 @@ class RandomAccessFile {
   // because of EOF.
   //
   // Safe for concurrent use by multiple threads.
-  virtual Status Read(uint64_t offset, size_t n, char* result) const = 0;
+  virtual size_t Read(uint64_t offset, size_t n, char* result) const = 0;
 
  private:
 };
@@ -69,7 +69,7 @@ class WritableFile {
   virtual ~WritableFile() = default;
 
   // Append 'data' to the file.
-  virtual Status Append(const char* data, size_t n) = 0;
+  virtual size_t Append(const char* data, size_t n) = 0;
 
   // Close the file.
   //
@@ -78,7 +78,7 @@ class WritableFile {
   // Typical return codes (not guaranteed to be exhaustive):
   //  * OK
   //  * Other codes, as returned from Flush()
-  virtual Status Close() = 0;
+  virtual void Close() = 0;
 
   //  Flushes the file and optionally syncs contents to filesystem.
   //
@@ -90,7 +90,7 @@ class WritableFile {
   // eventually flush the contents.  If the OS or machine crashes
   // after a successful flush, the contents may or may not be
   // persisted, depending on the implementation.
-  virtual Status Flush() = 0;
+  virtual void Flush() = 0;
 
  private:
 };
@@ -111,7 +111,7 @@ class FileSystem {
   //
   // The ownership of the returned RandomAccessFile is passed to the caller
   // and the object should be deleted when is not used.
-  virtual Status NewRandomAccessFile(
+  virtual void NewRandomAccessFile(
       const std::string& fname, std::unique_ptr<RandomAccessFile>* result) = 0;
 
   // Creates an object that writes to a new file with the specified
@@ -126,8 +126,8 @@ class FileSystem {
   //
   // The ownership of the returned WritableFile is passed to the caller
   // and the object should be deleted when is not used.
-  virtual Status NewWritableFile(const std::string& fname,
-                                 std::unique_ptr<WritableFile>* result) = 0;
+  virtual void NewWritableFile(const std::string& fname,
+                               std::unique_ptr<WritableFile>* result) = 0;
 
   // Creates an object that either appends to an existing file, or
   // writes to a new file (if the file does not exist to begin with).
@@ -140,33 +140,33 @@ class FileSystem {
   //
   // The ownership of the returned WritableFile is passed to the caller
   // and the object should be deleted when is not used.
-  virtual Status NewAppendableFile(const std::string& fname,
-                                   std::unique_ptr<WritableFile>* result) = 0;
+  virtual void NewAppendableFile(const std::string& fname,
+                                 std::unique_ptr<WritableFile>* result) = 0;
 
   // Returns OK if the named path exists and NOT_FOUND otherwise.
-  virtual Status FileExists(const std::string& fname) = 0;
+  virtual bool FileExists(const std::string& fname) = 0;
 
   // Returns true if all the listed files exist, false otherwise.
   // if status is not null, populate the vector with a detailed status
   // for each file.
   virtual bool FilesExist(const std::vector<std::string>& files,
-                          std::vector<Status>* status);
+                          std::vector<bool>* ret);
 
   // Returns the immediate children in the given directory.
   //
   // The returned paths are relative to 'dir'.
-  virtual Status GetChildren(const std::string& dir,
-                             std::vector<std::string>* result) = 0;
+  virtual void GetChildren(const std::string& dir,
+                           std::vector<std::string>* result) = 0;
 
   // Deletes the named file.
-  virtual Status DeleteFile(const std::string& fname) = 0;
+  virtual void DeleteFile(const std::string& fname) = 0;
 
   // Creates the specified directory.
   // Typical return codes:
   //  * OK - successfully created the directory.
   //  * ALREADY_EXISTS - directory with name dirname already exists.
   //  * PERMISSION_DENIED - dirname is not writable.
-  virtual Status CreateDir(const std::string& dirname) = 0;
+  virtual bool CreateDir(const std::string& dirname) = 0;
 
   void CreateDirIfNotExist(const std::string& dirname);
   bool IsDirEmpty(const std::string& dirname);
@@ -175,13 +175,13 @@ class FileSystem {
   // Creates the specified directory and all the necessary
   // subdirectories.
   // Typical return codes:
-  //  * OK - successfully created the directory and sub directories, even if
+  //  * true - successfully created the directory and sub directories, even if
   //         they were already created.
-  //  * PERMISSION_DENIED - dirname or some subdirectory is not writable.
-  virtual Status RecursivelyCreateDir(const std::string& dirname);
+  //  * false - dirname or some subdirectory is not writable.
+  virtual void RecursivelyCreateDir(const std::string& dirname);
 
   // Deletes the specified directory.
-  virtual Status DeleteDir(const std::string& dirname) = 0;
+  virtual void DeleteDir(const std::string& dirname) = 0;
 
   // Deletes the specified directory and all subdirectories and files
   // underneath it. undeleted_files and undeleted_dirs stores the number of
@@ -194,14 +194,14 @@ class FileSystem {
   //  * PERMISSION_DENIED - dirname or some descendant is not writable
   //  * UNIMPLEMENTED - Some underlying functions (like Delete) are not
   //                    implemented
-  virtual Status DeleteRecursively(const std::string& dirname);
+  virtual void DeleteRecursively(const std::string& dirname);
 
   // Stores the size of `fname` in `*file_size`.
-  virtual Status GetFileSize(const std::string& fname, uint64_t* file_size) = 0;
+  virtual void GetFileSize(const std::string& fname, uint64_t* file_size) = 0;
 
   // Overwrites the target if it exists.
-  virtual Status RenameFile(const std::string& src,
-                            const std::string& target) = 0;
+  virtual void RenameFile(const std::string& src,
+                          const std::string& target) = 0;
 
   // Translate an URI to a filename for the FileSystem implementation.
   //
@@ -218,7 +218,7 @@ class FileSystem {
   //  * NOT_FOUND - The path entry does not exist.
   //  * PERMISSION_DENIED - Insufficient permissions.
   //  * UNIMPLEMENTED - The file factory doesn't support directories.
-  virtual Status IsDirectory(const std::string& fname) = 0;
+  virtual bool IsDirectory(const std::string& fname) = 0;
 
  protected:
   FileSystem() = default;
