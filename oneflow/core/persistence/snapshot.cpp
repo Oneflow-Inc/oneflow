@@ -23,11 +23,10 @@ std::unique_ptr<PersistentOutStream> Snapshot::GetOutStream(
   const std::string& bn_in_op = parsed_lbn.second;
   // op_name_dir
   std::string op_name_dir = JoinPath(root_path_, op_name);
-  OF_ONCE_GUARD(op_name_dir, CHECK(GlobalFS()->CreateDir(op_name_dir)));
+  OF_ONCE_GUARD(op_name_dir, GlobalFS()->CreateDir(op_name_dir));
   // bn_in_op_tmp_dir
   std::string bn_in_op_tmp_dir = JoinPath(op_name_dir, bn_in_op + "_tmp");
-  OF_ONCE_GUARD(bn_in_op_tmp_dir,
-                CHECK(GlobalFS()->CreateDir(bn_in_op_tmp_dir)));
+  OF_ONCE_GUARD(bn_in_op_tmp_dir, GlobalFS()->CreateDir(bn_in_op_tmp_dir));
   // part_file
   std::string part_file =
       JoinPath(bn_in_op_tmp_dir, "part_" + std::to_string(part_id));
@@ -37,7 +36,7 @@ std::unique_ptr<PersistentOutStream> Snapshot::GetOutStream(
 void Snapshot::OnePartDone(const std::string& lbn, int32_t part_id,
                            int32_t part_num) {
   std::string done_dir = JoinPath(root_path_, lbn + "_done");
-  OF_ONCE_GUARD(done_dir, CHECK(GlobalFS()->CreateDir(done_dir)));
+  OF_ONCE_GUARD(done_dir, GlobalFS()->CreateDir(done_dir));
   std::string done_file_path = JoinPath(done_dir, std::to_string(part_id));
   CHECK_EQ(GlobalFS()->FileExists(done_file_path), false);
   { PersistentOutStream out_stream(GlobalFS(), done_file_path); }
@@ -68,7 +67,7 @@ void Snapshot::ConcatLbnFile(const std::string& lbn, int32_t part_num,
       uint64_t offset = 0;
       while (offset < part_file_size) {
         uint64_t n = std::min(buffer_size, part_file_size - offset);
-        CHECK_EQ(part_file->Read(offset, n, buffer), n);
+        part_file->Read(offset, n, buffer);
         out_stream.Write(buffer, n);
         offset += n;
       }
@@ -77,7 +76,7 @@ void Snapshot::ConcatLbnFile(const std::string& lbn, int32_t part_num,
   }
   GlobalFS()->DeleteDir(part_dir);
   std::string done_dir = JoinPath(root_path_, "snapshot_done_tmp");
-  OF_ONCE_GUARD(done_dir, CHECK(GlobalFS()->CreateDir(done_dir)));
+  OF_ONCE_GUARD(done_dir, GlobalFS()->CreateDir(done_dir));
   {
     PersistentOutStream out_stream(
         GlobalFS(), JoinPath(done_dir, op_name + "_" + bn_in_op));

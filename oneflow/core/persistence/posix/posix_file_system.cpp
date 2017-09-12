@@ -27,27 +27,24 @@ class PosixRandomAccessFile : public RandomAccessFile {
       : fname_(fname), fd_(fd) {}
   ~PosixRandomAccessFile() override { close(fd_); }
 
-  size_t Read(uint64_t offset, size_t n, char* result) const override {
+  void Read(uint64_t offset, size_t n, char* result) const override {
     char* dst = result;
-    size_t read_count = 0;
     while (n > 0) {
       ssize_t r = pread(fd_, dst, n, static_cast<off_t>(offset));
       if (r > 0) {
         dst += r;
         n -= r;
         offset += r;
-        read_count += r;
       } else if (r == 0) {
-        LOG(FATAL) << "OUT OF RANGE";
-        return read_count;
+        LOG(FATAL) << "Read EOF";
+        return;
       } else if (errno == EINTR || errno == EAGAIN) {
         // Retry
       } else {
-        LOG(FATAL) << "FAIL TO READ FILE";
-        return read_count;
+        LOG(FATAL) << "Fail to read file " << fname_;
+        return;
       }
     }
-    return read_count;
   }
 };
 
@@ -64,18 +61,20 @@ class PosixWritableFile : public WritableFile {
     if (file_ != nullptr) { fclose(file_); }
   }
 
-  size_t Append(const char* data, size_t n) override {
-    return fwrite(data, sizeof(char), n, file_);
+  void Append(const char* data, size_t n) override {
+    if (fwrite(data, sizeof(char), n, file_) != n) {
+      LOG(FATAL) << "Fail to append to file " << fname_;
+    }
   }
 
   void Close() override {
     Flush();
-    if (fclose(file_) != 0) { LOG(FATAL) << "FAIL TO CLOSE FILE"; }
+    if (fclose(file_) != 0) { LOG(FATAL) << "Fail to close file " << fname_; }
     file_ = nullptr;
   }
 
   void Flush() override {
-    if (fflush(file_) != 0) { LOG(FATAL) << "FAIL TO FLUSH FILE"; }
+    if (fflush(file_) != 0) { LOG(FATAL) << "Fail to flush file " << fname_; }
   }
 };
 
@@ -84,7 +83,7 @@ void PosixFileSystem::NewRandomAccessFile(
   std::string translated_fname = TranslateName(fname);
   int fd = open(translated_fname.c_str(), O_RDONLY);
   if (fd < 0) {
-    LOG(FATAL) << "FAIL TO OPEN FILE";
+    LOG(FATAL) << "Fail to open file " << fname;
   } else {
     result->reset(new PosixRandomAccessFile(fname, fd));
   }
@@ -95,7 +94,7 @@ void PosixFileSystem::NewWritableFile(const std::string& fname,
   std::string translated_fname = TranslateName(fname);
   FILE* f = fopen(translated_fname.c_str(), "w");
   if (f == nullptr) {
-    LOG(FATAL) << "FAIL TO OPEN FILE";
+    LOG(FATAL) << "Fail to open file " << fname;
   } else {
     result->reset(new PosixWritableFile(translated_fname, f));
   }
@@ -106,7 +105,7 @@ void PosixFileSystem::NewAppendableFile(const std::string& fname,
   std::string translated_name = TranslateName(fname);
   FILE* f = fopen(translated_name.c_str(), "a");
   if (f == nullptr) {
-    LOG(FATAL) << "FAIL TO OPEN FILE";
+    LOG(FATAL) << "Fail to open file " << fname;
   } else {
     result->reset(new PosixWritableFile(translated_name, f));
   }
@@ -117,12 +116,12 @@ bool PosixFileSystem::FileExists(const std::string& fname) {
   return false;
 }
 
-void PosixFileSystem::GetChildren(const std::string& dir,
-                                  std::vector<std::string>* result) {
+void PosixFileSystem::ListDir(const std::string& dir,
+                              std::vector<std::string>* result) {
   std::string translated_dir = TranslateName(dir);
   result->clear();
   DIR* d = opendir(translated_dir.c_str());
-  if (d == nullptr) { LOG(FATAL) << "FAIL TO OPEN DIR"; }
+  if (d == nullptr) { LOG(FATAL) << "Fail to open dir " << dir; }
   struct dirent* entry;
   while ((entry = readdir(d)) != nullptr) {
     if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
@@ -135,18 +134,19 @@ void PosixFileSystem::GetChildren(const std::string& dir,
 
 void PosixFileSystem::DeleteFile(const std::string& fname) {
   if (unlink(TranslateName(fname).c_str()) != 0) {
-    LOG(FATAL) << "FAIL TO DELETE FILE";
+    LOG(FATAL) << "Fail to delete file " << fname;
   }
 }
 
-bool PosixFileSystem::CreateDir(const std::string& dirname) {
-  if (mkdir(TranslateName(dirname).c_str(), 0755) != 0) { return false; }
-  return true;
+void PosixFileSystem::CreateDir(const std::string& dirname) {
+  if (mkdir(TranslateName(dirname).c_str(), 0755) != 0) {
+    LOG(FATAL) << "Fail to create dir " << dirname;
+  }
 }
 
 void PosixFileSystem::DeleteDir(const std::string& dirname) {
   if (rmdir(TranslateName(dirname).c_str()) != 0) {
-    LOG(FATAL) << "FAIL TO DELETE DIR";
+    LOG(FATAL) << "Fail to delete dir " << dirname;
   }
 }
 
@@ -155,7 +155,7 @@ void PosixFileSystem::GetFileSize(const std::string& fname,
   struct stat sbuf;
   if (stat(TranslateName(fname).c_str(), &sbuf) != 0) {
     *file_size = 0;
-    LOG(FATAL) << "FAIL TO LOAD FILE STATISTICS";
+    LOG(FATAL) << "Fail to load statistics of " << fname;
   } else {
     *file_size = sbuf.st_size;
   }
@@ -164,7 +164,7 @@ void PosixFileSystem::GetFileSize(const std::string& fname,
 void PosixFileSystem::RenameFile(const std::string& src,
                                  const std::string& target) {
   if (rename(TranslateName(src).c_str(), TranslateName(target).c_str()) != 0) {
-    LOG(FATAL) << "FAIL TO RENAME FILE";
+    LOG(FATAL) << "Fail to rename file from " << src << " to " << target;
   }
 }
 

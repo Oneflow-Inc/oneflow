@@ -11,7 +11,7 @@ PersistentOutStream::PersistentOutStream(fs::FileSystem* fs,
 PersistentOutStream::~PersistentOutStream() { file_->Close(); }
 
 PersistentOutStream& PersistentOutStream::Write(const char* s, size_t n) {
-  CHECK(file_->Append(s, n));
+  file_->Append(s, n);
   return *this;
 }
 

@@ -41,19 +41,11 @@ class RandomAccessFile {
   RandomAccessFile() = default;
   virtual ~RandomAccessFile() = default;
 
-  // Reads up to `n` bytes from the file starting at `offset`.
-  //
-  // Sets `*result` to the data that was read (including if fewer
-  // than `n` bytes were successfully read).
-  //
-  // On OK returned status: `n` bytes have been stored in `*result`.
-  // On non-OK returned status: `[0..n]` bytes have been stored in `*result`.
-  //
-  // Returns `OUT_OF_RANGE` if fewer than n bytes were stored in `*result`
-  // because of EOF.
+  // Reads `n` bytes from the file starting at `offset`.
+  // Sets `*result` to the data that was read.
   //
   // Safe for concurrent use by multiple threads.
-  virtual size_t Read(uint64_t offset, size_t n, char* result) const = 0;
+  virtual void Read(uint64_t offset, size_t n, char* result) const = 0;
 
  private:
 };
@@ -69,15 +61,11 @@ class WritableFile {
   virtual ~WritableFile() = default;
 
   // Append 'data' to the file.
-  virtual size_t Append(const char* data, size_t n) = 0;
+  virtual void Append(const char* data, size_t n) = 0;
 
   // Close the file.
   //
   // Flush() and de-allocate resources associated with this file
-  //
-  // Typical return codes (not guaranteed to be exhaustive):
-  //  * OK
-  //  * Other codes, as returned from Flush()
   virtual void Close() = 0;
 
   //  Flushes the file and optionally syncs contents to filesystem.
@@ -103,9 +91,7 @@ class FileSystem {
   // specified name.
   //
   // On success, stores a pointer to the new file in
-  // *result and returns OK.  On failure stores NULL in *result and
-  // returns non-OK.  If the file does not exist, returns a non-OK
-  // status.
+  // *result.  On failure stores NULL in *result.
   //
   // The returned file may be concurrently accessed by multiple threads.
   //
@@ -119,8 +105,7 @@ class FileSystem {
   //
   // Deletes any existing file with the same name and creates a
   // new file.  On success, stores a pointer to the new file in
-  // *result and returns OK.  On failure stores NULL in *result and
-  // returns non-OK.
+  // *result.  On failure stores NULL in *result.
   //
   // The returned file will only be accessed by one thread at a time.
   //
@@ -132,9 +117,8 @@ class FileSystem {
   // Creates an object that either appends to an existing file, or
   // writes to a new file (if the file does not exist to begin with).
   //
-  // On success, stores a pointer to the new file in *result and
-  // returns OK.  On failure stores NULL in *result and returns
-  // non-OK.
+  // On success, stores a pointer to the new file in *result.
+  // On failure stores NULL in *result.
   //
   // The returned file will only be accessed by one thread at a time.
   //
@@ -143,30 +127,20 @@ class FileSystem {
   virtual void NewAppendableFile(const std::string& fname,
                                  std::unique_ptr<WritableFile>* result) = 0;
 
-  // Returns OK if the named path exists and NOT_FOUND otherwise.
+  // Returns true if the named path exists and false otherwise.
   virtual bool FileExists(const std::string& fname) = 0;
 
-  // Returns true if all the listed files exist, false otherwise.
-  // if status is not null, populate the vector with a detailed status
-  // for each file.
-  virtual bool FilesExist(const std::vector<std::string>& files,
-                          std::vector<bool>* ret);
-
-  // Returns the immediate children in the given directory.
+  // Store the immediate children in the `dir` in `result`.
   //
   // The returned paths are relative to 'dir'.
-  virtual void GetChildren(const std::string& dir,
-                           std::vector<std::string>* result) = 0;
+  virtual void ListDir(const std::string& dir,
+                       std::vector<std::string>* result) = 0;
 
   // Deletes the named file.
   virtual void DeleteFile(const std::string& fname) = 0;
 
   // Creates the specified directory.
-  // Typical return codes:
-  //  * OK - successfully created the directory.
-  //  * ALREADY_EXISTS - directory with name dirname already exists.
-  //  * PERMISSION_DENIED - dirname is not writable.
-  virtual bool CreateDir(const std::string& dirname) = 0;
+  virtual void CreateDir(const std::string& dirname) = 0;
 
   void CreateDirIfNotExist(const std::string& dirname);
   bool IsDirEmpty(const std::string& dirname);
@@ -174,10 +148,6 @@ class FileSystem {
 
   // Creates the specified directory and all the necessary
   // subdirectories.
-  // Typical return codes:
-  //  * true - successfully created the directory and sub directories, even if
-  //         they were already created.
-  //  * false - dirname or some subdirectory is not writable.
   virtual void RecursivelyCreateDir(const std::string& dirname);
 
   // Deletes the specified directory.
@@ -185,15 +155,9 @@ class FileSystem {
 
   // Deletes the specified directory and all subdirectories and files
   // underneath it. undeleted_files and undeleted_dirs stores the number of
-  // files and directories that weren't deleted (unspecified if the return
-  // status is not OK).
+  // files and directories that weren't deleted.
+  //
   // REQUIRES: undeleted_files, undeleted_dirs to be not null.
-  // Typical return codes:
-  //  * OK - dirname exists and we were able to delete everything underneath.
-  //  * NOT_FOUND - dirname doesn't exist
-  //  * PERMISSION_DENIED - dirname or some descendant is not writable
-  //  * UNIMPLEMENTED - Some underlying functions (like Delete) are not
-  //                    implemented
   virtual void DeleteRecursively(const std::string& dirname);
 
   // Stores the size of `fname` in `*file_size`.
@@ -211,13 +175,6 @@ class FileSystem {
   virtual std::string TranslateName(const std::string& name) const;
 
   // Returns whether the given path is a directory or not.
-  //
-  // Typical return codes (not guaranteed exhaustive):
-  //  * OK - The path exists and is a directory.
-  //  * FAILED_PRECONDITION - The path exists and is not a directory.
-  //  * NOT_FOUND - The path entry does not exist.
-  //  * PERMISSION_DENIED - Insufficient permissions.
-  //  * UNIMPLEMENTED - The file factory doesn't support directories.
   virtual bool IsDirectory(const std::string& fname) = 0;
 
  protected:

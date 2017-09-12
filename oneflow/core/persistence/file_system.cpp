@@ -13,7 +13,7 @@ OF_DEFINE_ENUM_TO_OSTREAM_FUNC(Status);
 
 void FileSystem::CreateDirIfNotExist(const std::string& dirname) {
   if (IsDirectory(dirname)) { return; }
-  CHECK(CreateDir(dirname));
+  CreateDir(dirname);
 }
 
 bool FileSystem::IsDirEmpty(const std::string& dirname) {
@@ -22,23 +22,12 @@ bool FileSystem::IsDirEmpty(const std::string& dirname) {
 
 size_t FileSystem::GetChildrenNumOfDir(const std::string& dirname) {
   std::vector<std::string> result;
-  GetChildren(dirname, &result);
+  ListDir(dirname, &result);
   return result.size();
 }
 
 std::string FileSystem::TranslateName(const std::string& name) const {
   return CleanPath(name);
-}
-
-bool FileSystem::FilesExist(const std::vector<std::string>& files,
-                            std::vector<bool>* ret) {
-  bool result = true;
-  for (const auto& file : files) {
-    bool s = FileExists(file);
-    result &= s;
-    if (ret != nullptr) { ret->push_back(s); }
-  }
-  return result;
 }
 
 void FileSystem::DeleteRecursively(const std::string& dirname) {
@@ -56,7 +45,7 @@ void FileSystem::DeleteRecursively(const std::string& dirname) {
     dir_list.push_back(dir);
     std::vector<std::string> children;
     // GetChildren might fail if we don't have appropriate permissions.
-    GetChildren(dir, &children);
+    ListDir(dir, &children);
     for (const std::string& child : children) {
       const std::string child_path = JoinPath(dir, child);
       // If the child is a directory add it to the queue, otherwise delete it.
@@ -99,7 +88,7 @@ void FileSystem::RecursivelyCreateDir(const std::string& dirname) {
   std::string built_path = remaining_dir;
   for (const std::string& sub_dir : sub_dirs) {
     built_path = JoinPath(built_path, sub_dir);
-    CHECK(CreateDir(built_path));
+    CreateDir(built_path);
   }
 }
 

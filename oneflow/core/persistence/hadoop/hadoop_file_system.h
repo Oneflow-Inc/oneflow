@@ -74,12 +74,12 @@ class HadoopFileSystem final : public FileSystem {
 
   bool FileExists(const std::string& fname) override;
 
-  void GetChildren(const std::string& dir,
-                   std::vector<std::string>* result) override;
+  void ListDir(const std::string& dir,
+               std::vector<std::string>* result) override;
 
   void DeleteFile(const std::string& fname) override;
 
-  bool CreateDir(const std::string& dirname) override;
+  void CreateDir(const std::string& dirname) override;
 
   void DeleteDir(const std::string& dirname) override;
 
