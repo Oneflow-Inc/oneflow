@@ -9,19 +9,19 @@ void RuntimeCtx::set_this_machine_name(const std::string& name) {
   LOG(INFO) << "this machine id: " << this_machine_id_;
 }
 
-DataReader* RuntimeCtx::GetDataReader(const std::string& name) {
-  auto it = data_reader_.find(name);
-  if (it == data_reader_.end()) {
+PersistentInStream* RuntimeCtx::GetDataInStream(const std::string& name) {
+  auto it = data_in_streams_.find(name);
+  if (it == data_in_streams_.end()) {
     return nullptr;
   } else {
     return it->second.get();
   }
 }
 
-void RuntimeCtx::AddDataReader(const std::string& name,
-                               DataReader* data_reader) {
-  CHECK(data_reader_.find(name) == data_reader_.end());
-  data_reader_[name].reset(data_reader);
+void RuntimeCtx::AddDataInStream(const std::string& name,
+                                 PersistentInStream* data_in_stream) {
+  CHECK(data_in_streams_.find(name) == data_in_streams_.end());
+  data_in_streams_[name].reset(data_in_stream);
 }
 
 }  // namespace oneflow

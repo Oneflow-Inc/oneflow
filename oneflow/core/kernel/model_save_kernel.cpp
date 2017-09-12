@@ -33,11 +33,11 @@ void ModelSaveKernel<T>::Forward(
     kernel_ctx.device_ctx->cpu_stream()->SendWork([=]() {
       {
         std::unique_ptr<PersistentOutStream> out_stream =
-            snapshot->GetOutStream(lbn, part_id, total_part_num);
+            snapshot->GetOutStream(lbn, part_id);
         out_stream->Write(blob_ptr->dptr<char>(),
                           blob_ptr->shape().elem_cnt() * sizeof(T));
       }
-      snapshot->OnePartDone4Key(lbn, part_id);
+      snapshot->OnePartDone(lbn, part_id, total_part_num);
     });
   }
 }

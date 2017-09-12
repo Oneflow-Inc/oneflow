@@ -1,2 +1,8 @@
 /build
 /third_party/
+/examples/*/compiler
+/examples/*/runtime
+/examples/*/*log*
+/examples/*/*snapshot*
+*plan*
+core.*

@@ -36,9 +36,9 @@ class ConvolutionKernel final : public Kernel {
   void InitModelBlobsWithRandomSeed(
       const KernelCtx&, std::mt19937 random_seed_gen,
       std::function<Blob*(const std::string&)>) const override;
-  void InitModelBlobsWithSnapshot(
+  void InitModelBlobsWithDir(
       const KernelCtx& ctx, int32_t part_id, int32_t part_num,
-      const Snapshot* snapshot,
+      const std::string& model_load_dir,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void InitModelTmpBlobs(
       const KernelCtx& ctx,

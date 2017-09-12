@@ -1,5 +1,5 @@
-#ifndef LIBHDFS_HDFS_H
-#define LIBHDFS_HDFS_H
+#ifndef ONEFLOW_CORE_PERSISTENCE_HADOOP_HDFS_H_
+#define ONEFLOW_CORE_PERSISTENCE_HADOOP_HDFS_H_
 
 #include <errno.h>  /* for EINTERNAL, etc. */
 #include <fcntl.h>  /* for O_RDONLY, O_WRONLY */
@@ -886,7 +886,7 @@ void hadoopRzBufferFree(hdfsFile file, struct hadoopRzBuffer *buffer);
 #endif
 
 #undef LIBHDFS_EXTERNAL
-#endif /*LIBHDFS_HDFS_H*/
+#endif /*ONEFLOW_CORE_PERSISTENCE_HADOOP_HDFS_H_*/
 
 /**
  * vim: ts=4: sw=4: et

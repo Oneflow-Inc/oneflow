@@ -34,16 +34,23 @@ std::shared_ptr<Operator> OpMgr::ModelUpdateOp() {
   if (!model_update_op_) {
     OperatorConf mdupdt_conf;
     mdupdt_conf.set_name("model_update");
-    const TrainConf& train_conf = JobDesc::Singleton()->job_conf().train_conf();
-    if (train_conf.has_normal_mdupdt_conf()) {
-      *(mdupdt_conf.mutable_normal_mdupdt_conf()) =
-          train_conf.normal_mdupdt_conf();
-    } else if (train_conf.has_momentum_mdupdt_conf()) {
-      *(mdupdt_conf.mutable_momentum_mdupdt_conf()) =
-          train_conf.momentum_mdupdt_conf();
-    } else if (train_conf.has_rmsprop_mdupdt_conf()) {
-      *(mdupdt_conf.mutable_rmsprop_mdupdt_conf()) =
-          train_conf.rmsprop_mdupdt_conf();
+    if (JobDesc::Singleton()->is_train()) {
+      const TrainConf& train_conf =
+          JobDesc::Singleton()->job_conf().train_conf();
+      if (train_conf.has_normal_mdupdt_conf()) {
+        *(mdupdt_conf.mutable_normal_mdupdt_conf()) =
+            train_conf.normal_mdupdt_conf();
+      } else if (train_conf.has_momentum_mdupdt_conf()) {
+        *(mdupdt_conf.mutable_momentum_mdupdt_conf()) =
+            train_conf.momentum_mdupdt_conf();
+      } else if (train_conf.has_rmsprop_mdupdt_conf()) {
+        *(mdupdt_conf.mutable_rmsprop_mdupdt_conf()) =
+            train_conf.rmsprop_mdupdt_conf();
+      } else {
+        UNEXPECTED_RUN();
+      }
+    } else if (JobDesc::Singleton()->is_predict()) {
+      mdupdt_conf.mutable_normal_mdupdt_conf();
     } else {
       UNEXPECTED_RUN();
     }

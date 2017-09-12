@@ -8,4 +8,7 @@ void RecordKernel::Forward(
   // TODO
 }
 
+COMMAND(AddKernelCreator(OperatorConf::kRecordConf,
+                         []() { return new RecordKernel; }));
+
 }  // namespace oneflow

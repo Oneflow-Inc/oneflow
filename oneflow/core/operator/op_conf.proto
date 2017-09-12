@@ -215,6 +215,7 @@ message LossRecordOpConf {
 
 message OperatorConf {
   string name = 1;
+  string model_load_dir = 2;
   oneof op_type {
     ConvolutionOpConf convolution_conf = 100;
     InnerProductOpConf innerproduct_conf = 101;

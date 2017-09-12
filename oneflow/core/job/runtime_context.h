@@ -3,7 +3,7 @@
 
 #include "oneflow/core/common/thread_safe_counter.h"
 #include "oneflow/core/job/id_manager.h"
-#include "oneflow/core/persistence/data_reader.h"
+#include "oneflow/core/persistence/persistent_in_stream.h"
 
 namespace oneflow {
 
@@ -20,8 +20,8 @@ class RuntimeCtx final {
 
   ThreadSafeCounter& mut_model_init_cnt() { return model_init_cnt_; }
 
-  DataReader* GetDataReader(const std::string& name);
-  void AddDataReader(const std::string& name, DataReader* data_reader);
+  PersistentInStream* GetDataInStream(const std::string& name);
+  void AddDataInStream(const std::string& name, PersistentInStream*);
 
   ThreadSafeCounter& mut_active_actor_cnt() { return active_actor_cnt_; }
   ThreadSafeCounter& mut_inactive_actor_cnt() { return inactive_actor_cnt_; }
@@ -34,7 +34,7 @@ class RuntimeCtx final {
 
   ThreadSafeCounter model_init_cnt_;
 
-  HashMap<std::string, std::unique_ptr<DataReader>> data_reader_;
+  HashMap<std::string, std::unique_ptr<PersistentInStream>> data_in_streams_;
 
   ThreadSafeCounter active_actor_cnt_;
   ThreadSafeCounter inactive_actor_cnt_;
