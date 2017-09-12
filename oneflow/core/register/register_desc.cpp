@@ -18,11 +18,11 @@ void SetHostPinnedMemoryAccordingToConsumers(
     MemoryCase& mem_case, const HashSet<const TaskNode*>& subs) {
   for (const TaskNode* sub : subs) {
     if (sub->task_type() == kCopyCommNetTask) {
-      mem_case.mutable_host_pinned_mem()->set_need_rdma(true);
+      mem_case.mutable_host_pinned_mem()->set_used_by_network(true);
     }
     if (auto cp_hd_sub = dynamic_cast<const CopyHDTaskNode*>(sub)) {
       if (cp_hd_sub->IsH2D()) {
-        mem_case.mutable_host_pinned_mem()->set_need_cuda(true);
+        mem_case.mutable_host_pinned_mem()->set_used_by_device(true);
       }
     }
   }
@@ -127,11 +127,11 @@ MemoryCase RegstDesc::InferMemCase() const {
       SetDeviceCudaMemoryAccordingToThrdLocId(mem_case,
                                               producer_->thrd_loc_id());
     } else {
-      mem_case.mutable_host_pinned_mem()->set_need_cuda(true);
+      mem_case.mutable_host_pinned_mem()->set_used_by_device(true);
       SetHostPinnedMemoryAccordingToConsumers(mem_case, consumers_);
     }
   } else if (producer_->task_type() == kCopyCommNetTask) {
-    mem_case.mutable_host_pinned_mem()->set_need_rdma(true);
+    mem_case.mutable_host_pinned_mem()->set_used_by_network(true);
     SetHostPinnedMemoryAccordingToConsumers(mem_case, consumers_);
   } else {
     if (device_type == kGPU && producer_->task_type() != kBoxingTask) {

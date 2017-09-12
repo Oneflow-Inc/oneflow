@@ -26,6 +26,8 @@ int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
           piece_id2waiting_in_regst_.emplace(regst->piece_id(), regst).second);
     }
     ActUntilFail();
+  } else {
+    UNEXPECTED_RUN();
   }
   return msg_handler() == nullptr;
 }
@@ -42,21 +44,21 @@ int CopyCommNetActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
 
 void CopyCommNetActor::Act() {
   auto next_regst_it = piece_id2waiting_in_regst_.find(expected_piece_id());
-  Regst* regst = next_regst_it->second;
+  Regst* next_regst = next_regst_it->second;
   AsyncLaunchKernel(GenDefaultKernelCtx(),
                     [&](uint64_t regst_desc_id) -> Regst* {
                       Regst* regst = GetCurWriteableRegst(regst_desc_id);
                       if (regst == nullptr) {
-                        return regst;
+                        return next_regst;
                       } else {
                         return regst;
                       }
                     });
-  AsyncSendReadableRegstMsg([&regst](Regst* regst) {
-    regst->set_piece_id(regst->piece_id());
-    regst->set_model_version_id(regst->model_version_id());
+  AsyncSendRegstMsgToConsumer([&next_regst](Regst* regst) {
+    regst->set_piece_id(next_regst->piece_id());
+    regst->set_model_version_id(next_regst->model_version_id());
   });
-  AsyncSendRegstMsgToProducer(regst);
+  AsyncSendRegstMsgToProducer(next_regst);
   piece_id2waiting_in_regst_.erase(next_regst_it);
   mut_num_of_read_empty() = piece_id2waiting_in_regst_.empty();
 }

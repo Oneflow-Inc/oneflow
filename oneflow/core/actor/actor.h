@@ -81,11 +81,11 @@ class Actor {
           BnInOpAndEk2Blob);
   void AsyncLaunchKernel(const KernelCtx&,
                          std::function<Regst*(int64_t)> Regst4RegstDescId);
-  void AsyncSendReadableRegstMsg(std::function<void(Regst*)> RegstPreProcess,
-                                 std::function<bool(int64_t)> IsAllowedActor);
-  void AsyncSendReadableRegstMsg(std::function<void(Regst*)> RegstPreProcess);
-  void AsyncSendReadableRegstMsg(std::function<bool(int64_t)> IsAllowedActor);
-  void AsyncSendReadableRegstMsg();
+  void AsyncSendRegstMsgToConsumer(std::function<void(Regst*)> RegstPreProcess,
+                                   std::function<bool(int64_t)> IsAllowedActor);
+  void AsyncSendRegstMsgToConsumer(std::function<void(Regst*)> RegstPreProcess);
+  void AsyncSendRegstMsgToConsumer(std::function<bool(int64_t)> IsAllowedActor);
+  void AsyncSendRegstMsgToConsumer();
   void AsyncSendEORDMsgToConsumers(int64_t regst_desc_id);
   void AsyncSendEORDMsgForAllProducedRegstDesc();
   void AsyncSendRegstMsgToProducer(Regst*);
