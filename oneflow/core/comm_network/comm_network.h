@@ -15,6 +15,7 @@ class CommNet {
   // "RegisterMemory" will return a Token, after "RegisterMemoryDone",
   // we can use this token to use the "Read"
   virtual const void* RegisterMemory(void* dptr) = 0;
+  virtual void UnRegisterMemory(const void* token) = 0;
   virtual void RegisterMemoryDone() = 0;
   virtual void Read(const void* src_token, const void* dst_token,
                     std::function<void()> callback) = 0;

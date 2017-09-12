@@ -106,12 +106,12 @@ void InnerProductKernel<device_type, T>::InitModelBlobsWithDir(
   Blob* weight_blob = BnInOp2Blob("weight");
   int32_t dim_num = op()->GetInt32FromSpecialConf("out_num");
   KernelUtil<device_type, T>::FillWithModelDir(
-      ctx.device_ctx, part_id, part_num, model_load_dir, weight_blob,
-      op()->Lbn4BnInOp("weight"), dim_num, weight_blob->shape().Count(1));
+      ctx.device_ctx, part_id, part_num, model_load_dir, weight_blob, "weight",
+      dim_num, weight_blob->shape().Count(1));
   if (op()->GetBoolFromSpecialConf("has_bias_term")) {
     KernelUtil<device_type, T>::FillWithModelDir(
         ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias"),
-        op()->Lbn4BnInOp("bias"), dim_num, 1);
+        "bias", dim_num, 1);
   }
 }
 

@@ -7,8 +7,7 @@ namespace oneflow {
 
 ThreadMgr::~ThreadMgr() {
   for (size_t i = 0; i < threads_.size(); ++i) {
-    ActorMsg msg;
-    msg.set_actor_cmd(ActorCmd::kStopThread);
+    ActorMsg msg = ActorMsg::BuildCommandMsg(-1, ActorCmd::kStopThread);
     threads_[i]->GetMsgChannelPtr()->Send(msg);
     threads_[i].reset();
     LOG(INFO) << "thread " << i << " finish";

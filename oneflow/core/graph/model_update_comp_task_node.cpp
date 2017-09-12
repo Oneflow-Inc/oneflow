@@ -38,7 +38,14 @@ void MdUpdtCompTaskNode::InferBlobDescInProducedRegsts(TaskGraph* gph) {
   CHECK(IsFwNode());
   ExecNode* exec_node = exec_gph().SoleNode();
   auto model_diffs_regst = GetConsumedRegstDesc("model_diffs");
-  BlobDesc packed_blob_desc = model_diffs_regst->CompPackedBlobDesc();
+  BlobDesc packed_blob_desc;
+  if (model_diffs_regst) {
+    packed_blob_desc = model_diffs_regst->CompPackedBlobDesc();
+  } else {
+    CHECK(JobDesc::Singleton()->is_predict());
+    packed_blob_desc =
+        BlobDesc(Shape(), JobDesc::Singleton()->default_data_type(), false);
+  }
   exec_node->op()->InferBlobDesc4FwBlobs(
       [&](const std::string& bn_in_op) -> BlobDesc* {
         if (bn_in_op == "model_diffs") {

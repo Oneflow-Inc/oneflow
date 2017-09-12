@@ -1,21 +1,27 @@
 #include "oneflow/core/memory/memory_allocator.h"
+#include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
-std::pair<char*, std::function<void()>> MemoryAllocator::Allocate(
+std::tuple<char*, const void*, std::function<void()>> MemoryAllocator::Allocate(
     MemoryCase mem_case, std::size_t size) {
   const int memset_val = 255;
   char* dptr = nullptr;
+  const void* comm_net_token = nullptr;
   if (mem_case.has_host_pageable_mem()) {
     dptr = (char*)malloc(size);
-    CHECK(dptr != nullptr);
+    CHECK_NOTNULL(dptr);
     memset(dptr, memset_val, size);
   } else if (mem_case.has_host_pinned_mem()) {
-    if (mem_case.host_pinned_mem().need_cuda()) {
+    if (mem_case.host_pinned_mem().used_by_device()) {
       CudaCheck(cudaMallocHost(&dptr, size));
+    } else {
+      dptr = (char*)malloc(size);
     }
-    if (mem_case.host_pinned_mem().need_rdma()) { TODO(); }
+    if (mem_case.host_pinned_mem().used_by_network()) {
+      comm_net_token = CommNet::Singleton()->RegisterMemory(dptr);
+    }
     memset(dptr, memset_val, size);
   } else if (mem_case.has_device_cuda_mem()) {
     int32_t current_device_id;
@@ -26,17 +32,24 @@ std::pair<char*, std::function<void()>> MemoryAllocator::Allocate(
   } else {
     UNEXPECTED_RUN();
   }
-  return {dptr, std::bind(&MemoryAllocator::Deallocate, this, dptr, mem_case)};
+  return std::make_tuple(dptr, comm_net_token,
+                         std::bind(&MemoryAllocator::Deallocate, this, dptr,
+                                   comm_net_token, mem_case));
 }
 
-void MemoryAllocator::Deallocate(char* dptr, MemoryCase mem_case) {
+void MemoryAllocator::Deallocate(char* dptr, const void* comm_net_token,
+                                 MemoryCase mem_case) {
   if (mem_case.has_host_pageable_mem()) {
     free(dptr);
   } else if (mem_case.has_host_pinned_mem()) {
-    if (mem_case.host_pinned_mem().need_cuda()) {
-      CudaCheck(cudaFreeHost(&dptr));
+    if (mem_case.host_pinned_mem().used_by_network()) {
+      CommNet::Singleton()->UnRegisterMemory(comm_net_token);
     }
-    if (mem_case.host_pinned_mem().need_rdma()) { TODO(); }
+    if (mem_case.host_pinned_mem().used_by_device()) {
+      CudaCheck(cudaFreeHost(&dptr));
+    } else {
+      free(dptr);
+    }
   } else if (mem_case.has_device_cuda_mem()) {
     int32_t current_device_id;
     CudaCheck(cudaGetDevice(&current_device_id));

@@ -169,7 +169,7 @@ class KernelUtil<DeviceType::kCPU, T> final {
 
   static void FillWithModelDir(DeviceCtx* ctx, int32_t part_id,
                                int32_t part_num, const std::string& model_dir,
-                               Blob* blob, const std::string& lbn,
+                               Blob* blob, const std::string& bn_in_op,
                                int32_t dim_num, int64_t num_in_each_dim) {
     int64_t blob_size = blob->TotalByteSize();
     ctx->cpu_stream()->SendWork([=]() {

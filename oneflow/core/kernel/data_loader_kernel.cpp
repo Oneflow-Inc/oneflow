@@ -26,7 +26,7 @@ void DataLoaderKernel<T>::Forward(
   Blob* out_blob = BnInOp2Blob("out");
   CHECK_EQ(GetDataType<T>::val, out_blob->data_type());
 
-  kernel_ctx.device_ctx->cpu_stream()->SendWork([=]() {
+  kernel_ctx.device_ctx->cpu_stream()->SendWork([out_blob, in_stream]() {
     int64_t piece_size = out_blob->shape().At(0);
     T* out_dptr = out_blob->mut_dptr<T>();
     std::string line;

@@ -60,7 +60,7 @@ void BoxingActor::Act() {
                         return regst;
                       }
                     });
-  AsyncSendReadableRegstMsg(
+  AsyncSendRegstMsgToConsumer(
       [piece_id](Regst* regst) { regst->set_piece_id(piece_id); });
   for (auto& pair : read_regst_) {
     AsyncSendRegstMsgToProducer(pair.second.front());

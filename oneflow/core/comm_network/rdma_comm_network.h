@@ -16,6 +16,9 @@ class RdmaCommNet final : public CommNet {
     // TODO
     return nullptr;
   }
+  void UnRegisterMemory(const void* comm_net_token) override {
+    // TODO
+  }
   void RegisterMemoryDone() override {
     // TODO
   }
