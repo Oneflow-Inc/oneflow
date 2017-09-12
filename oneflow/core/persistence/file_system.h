@@ -12,28 +12,6 @@ namespace oneflow {
 
 namespace fs {
 
-enum class Status {
-  OK = 0,
-  CANCELLED,
-  UNKNOWN,
-  INVALID_ARGUMENT,
-  DEADLINE_EXCEEDED,
-  NOT_FOUND,
-  ALREADY_EXISTS,
-  PERMISSION_DENIED,
-  UNAUTHENTICATED,
-  RESOURCE_EXHAUSTED,
-  FAILED_PRECONDITION,
-  ABORTED,
-  OUT_OF_RANGE,
-  UNIMPLEMENTED,
-  INTERNAL,
-  UNAVAILABLE,
-  DATA_LOSS,
-};
-
-OF_DECLARE_ENUM_TO_OSTREAM_FUNC(Status);
-
 // A file abstraction for randomly reading the contents of a file.
 class RandomAccessFile {
  public:
@@ -181,25 +159,7 @@ class FileSystem {
   FileSystem() = default;
 };
 
-// If `current_status` is OK, stores `new_status` into `current_status`.
-// If `current_status` is NOT OK, preserves the current status,
-void TryUpdateStatus(Status* current_status, const Status& new_status);
-
-Status ErrnoToStatus(int err_number);
-
-#define FS_RETURN_IF_ERR(val)        \
-  {                                  \
-    const Status _ret_if_err = val;  \
-    if (_ret_if_err != Status::OK) { \
-      PLOG(WARNING);                 \
-      return _ret_if_err;            \
-    }                                \
-  }
-
 }  // namespace fs
-
-// file system check status is ok
-#define FS_CHECK_OK(val) CHECK_EQ(val, fs::Status::OK);
 
 fs::FileSystem* LocalFS();
 fs::FileSystem* GlobalFS();

@@ -26,7 +26,7 @@ class LibHDFS {
   }
 
   // The status, if any, from failure to load.
-  Status status() { return status_; }
+  bool status() { return status_; }
 
   std::function<hdfsFS(hdfsBuilder*)> hdfsBuilderConnect;
   std::function<hdfsBuilder*()> hdfsNewBuilder;
@@ -51,7 +51,7 @@ class LibHDFS {
 
  private:
   void LoadAndBind();
-  Status status_;
+  bool status_;
   void* handle_ = nullptr;
 };
 
@@ -90,7 +90,7 @@ class HadoopFileSystem final : public FileSystem {
   bool IsDirectory(const std::string& fname) override;
 
  private:
-  Status Connect(hdfsFS* fs);
+  bool Connect(hdfsFS* fs);
   std::string namenode_;
   LibHDFS* hdfs_;
 };
