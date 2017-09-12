@@ -40,9 +40,9 @@ void Snapshot::OnePartDone(const std::string& lbn, int32_t part_id,
   std::string done_file_path = JoinPath(done_dir, std::to_string(part_id));
   CHECK_EQ(GlobalFS()->FileExists(done_file_path), false);
   { PersistentOutStream out_stream(GlobalFS(), done_file_path); }
-  if (GlobalFS()->GetChildrenNumOfDir(done_dir) == part_num) {
+  if (GlobalFS()->ListDir(done_dir).size() == part_num) {
     std::string concat_file = JoinPath(root_path_, lbn);
-    OF_ONCE_GUARD(concat_file, GlobalFS()->DeleteRecursively(done_dir);
+    OF_ONCE_GUARD(concat_file, GlobalFS()->RecursivelyDeleteDir(done_dir);
                   ConcatLbnFile(lbn, part_num, concat_file));
   }
 }
@@ -62,8 +62,7 @@ void Snapshot::ConcatLbnFile(const std::string& lbn, int32_t part_num,
       std::string part_file_path =
           JoinPath(part_dir, "part_" + std::to_string(i));
       GlobalFS()->NewRandomAccessFile(part_file_path, &part_file);
-      uint64_t part_file_size = 0;
-      GlobalFS()->GetFileSize(part_file_path, &part_file_size);
+      uint64_t part_file_size = GlobalFS()->GetFileSize(part_file_path);
       uint64_t offset = 0;
       while (offset < part_file_size) {
         uint64_t n = std::min(buffer_size, part_file_size - offset);
@@ -81,10 +80,10 @@ void Snapshot::ConcatLbnFile(const std::string& lbn, int32_t part_num,
     PersistentOutStream out_stream(
         GlobalFS(), JoinPath(done_dir, op_name + "_" + bn_in_op));
   }
-  if (GlobalFS()->GetChildrenNumOfDir(done_dir)
+  if (GlobalFS()->ListDir(done_dir).size()
       == SnapshotMgr::Singleton()->num_of_model_blobs()) {
     std::string done_file = JoinPath(root_path_, "snapshot_done");
-    OF_ONCE_GUARD(done_file, GlobalFS()->DeleteRecursively(done_dir);
+    OF_ONCE_GUARD(done_file, GlobalFS()->RecursivelyDeleteDir(done_dir);
                   { PersistentOutStream out_stream(GlobalFS(), done_file); });
   }
 }

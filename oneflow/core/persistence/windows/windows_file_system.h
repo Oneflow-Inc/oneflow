@@ -31,8 +31,7 @@ class WindowsFileSystem final : public FileSystem {
 
   bool FileExists(const std::string& fname) override;
 
-  void ListDir(const std::string& dir,
-                     std::vector<std::string>* result) override;
+  std::vector<std::string> ListDir(const std::string& dir) override;
 
   void DeleteFile(const std::string& fname) override;
 
@@ -40,7 +39,7 @@ class WindowsFileSystem final : public FileSystem {
 
   void DeleteDir(const std::string& dirname) override;
 
-  void GetFileSize(const std::string& fname, uint64_t* file_size) override;
+  uint64_t GetFileSize(const std::string& fname) override;
 
   void RenameFile(const std::string& src, const std::string& target) override;
 

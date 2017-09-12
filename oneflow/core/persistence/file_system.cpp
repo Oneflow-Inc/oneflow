@@ -15,20 +15,14 @@ void FileSystem::CreateDirIfNotExist(const std::string& dirname) {
 }
 
 bool FileSystem::IsDirEmpty(const std::string& dirname) {
-  return GetChildrenNumOfDir(dirname) == 0;
-}
-
-size_t FileSystem::GetChildrenNumOfDir(const std::string& dirname) {
-  std::vector<std::string> result;
-  ListDir(dirname, &result);
-  return result.size();
+  return ListDir(dirname).empty();
 }
 
 std::string FileSystem::TranslateName(const std::string& name) const {
   return CleanPath(name);
 }
 
-void FileSystem::DeleteRecursively(const std::string& dirname) {
+void FileSystem::RecursivelyDeleteDir(const std::string& dirname) {
   CHECK(FileExists(dirname));
   std::deque<std::string> dir_q;      // Queue for the BFS
   std::vector<std::string> dir_list;  // List of all dirs discovered
@@ -41,9 +35,8 @@ void FileSystem::DeleteRecursively(const std::string& dirname) {
     std::string dir = dir_q.front();
     dir_q.pop_front();
     dir_list.push_back(dir);
-    std::vector<std::string> children;
     // GetChildren might fail if we don't have appropriate permissions.
-    ListDir(dir, &children);
+    std::vector<std::string> children = ListDir(dir);
     for (const std::string& child : children) {
       const std::string child_path = JoinPath(dir, child);
       // If the child is a directory add it to the queue, otherwise delete it.

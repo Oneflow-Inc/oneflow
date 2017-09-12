@@ -111,8 +111,7 @@ class FileSystem {
   // Store the immediate children in the `dir` in `result`.
   //
   // The returned paths are relative to 'dir'.
-  virtual void ListDir(const std::string& dir,
-                       std::vector<std::string>* result) = 0;
+  virtual std::vector<std::string> ListDir(const std::string& dir) = 0;
 
   // Deletes the named file.
   virtual void DeleteFile(const std::string& fname) = 0;
@@ -122,7 +121,6 @@ class FileSystem {
 
   void CreateDirIfNotExist(const std::string& dirname);
   bool IsDirEmpty(const std::string& dirname);
-  size_t GetChildrenNumOfDir(const std::string& dirname);
 
   // Creates the specified directory and all the necessary
   // subdirectories.
@@ -136,10 +134,10 @@ class FileSystem {
   // files and directories that weren't deleted.
   //
   // REQUIRES: undeleted_files, undeleted_dirs to be not null.
-  virtual void DeleteRecursively(const std::string& dirname);
+  virtual void RecursivelyDeleteDir(const std::string& dirname);
 
   // Stores the size of `fname` in `*file_size`.
-  virtual void GetFileSize(const std::string& fname, uint64_t* file_size) = 0;
+  virtual uint64_t GetFileSize(const std::string& fname) = 0;
 
   // Overwrites the target if it exists.
   virtual void RenameFile(const std::string& src,

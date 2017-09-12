@@ -116,20 +116,23 @@ bool PosixFileSystem::FileExists(const std::string& fname) {
   return false;
 }
 
-void PosixFileSystem::ListDir(const std::string& dir,
-                              std::vector<std::string>* result) {
+std::vector<std::string> PosixFileSystem::ListDir(const std::string& dir) {
   std::string translated_dir = TranslateName(dir);
-  result->clear();
+  std::vector<std::string> result;
   DIR* d = opendir(translated_dir.c_str());
-  if (d == nullptr) { LOG(FATAL) << "Fail to open dir " << dir; }
+  if (d == nullptr) {
+    LOG(FATAL) << "Fail to open dir " << dir;
+    return result;
+  }
   struct dirent* entry;
   while ((entry = readdir(d)) != nullptr) {
     if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
       continue;
     }
-    result->push_back(entry->d_name);
+    result.push_back(entry->d_name);
   }
   closedir(d);
+  return result;
 }
 
 void PosixFileSystem::DeleteFile(const std::string& fname) {
@@ -150,14 +153,13 @@ void PosixFileSystem::DeleteDir(const std::string& dirname) {
   }
 }
 
-void PosixFileSystem::GetFileSize(const std::string& fname,
-                                  uint64_t* file_size) {
+uint64_t PosixFileSystem::GetFileSize(const std::string& fname) {
   struct stat sbuf;
   if (stat(TranslateName(fname).c_str(), &sbuf) != 0) {
-    *file_size = 0;
     LOG(FATAL) << "Fail to load statistics of " << fname;
+    return 0;
   } else {
-    *file_size = sbuf.st_size;
+    return sbuf.st_size;
   }
 }
 

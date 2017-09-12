@@ -39,7 +39,7 @@ PersistentInStream::PersistentInStream(fs::FileSystem* fs,
                                        uint64_t offset) {
   fs->NewRandomAccessFile(file_path, &file_);
   CHECK(file_.get() != NULL);
-  fs->GetFileSize(file_path, &file_size_);
+  file_size_ = fs->GetFileSize(file_path);
   cur_file_pos_ = offset;
   buffer_ = new char[buffer_size_ + 1];
   cur_buf_begin_ = buffer_;
