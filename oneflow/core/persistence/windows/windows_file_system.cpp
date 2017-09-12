@@ -4,19 +4,20 @@
 //
 //#include <Shlwapi.h>
 //
-//namespace oneflow {
+// namespace oneflow {
 //
-//namespace fs {
+// namespace fs {
 //
-//namespace {
+// namespace {
 //
 //// RAII helpers for HANDLEs
-//const auto CloseHandleFunc = [](HANDLE h) { ::CloseHandle(h); };
-//typedef std::unique_ptr<void, decltype(CloseHandleFunc)> UniqueCloseHandlePtr;
+// const auto CloseHandleFunc = [](HANDLE h) { ::CloseHandle(h); };
+// typedef std::unique_ptr<void, decltype(CloseHandleFunc)>
+// UniqueCloseHandlePtr;
 //
 //// PLEASE NOTE: hfile is expected to be an async handle
 //// (i.e. opened with FILE_FLAG_OVERLAPPED)
-//SSIZE_T pread(HANDLE hfile, char* src, size_t num_bytes, uint64_t offset) {
+// SSIZE_T pread(HANDLE hfile, char* src, size_t num_bytes, uint64_t offset) {
 //  assert(num_bytes <= std::numeric_limits<DWORD>::max());
 //  OVERLAPPED overlapped = {0};
 //  ULARGE_INTEGER offset_union;
@@ -59,7 +60,7 @@
 //}
 //
 //// read() based random-access
-//class WindowsRandomAccessFile : public RandomAccessFile {
+// class WindowsRandomAccessFile : public RandomAccessFile {
 // private:
 //  std::string filename_;
 //  HANDLE hfile_;
@@ -96,7 +97,7 @@
 //  }
 //};
 //
-//class WindowsWritableFile : public WritableFile {
+// class WindowsWritableFile : public WritableFile {
 // private:
 //  std::string filename_;
 //  HANDLE hfile_;
@@ -149,7 +150,7 @@
 //
 //}  // namespace
 //
-//Status WindowsFileSystem::NewRandomAccessFile(
+// Status WindowsFileSystem::NewRandomAccessFile(
 //    const std::string& fname, std::unique_ptr<RandomAccessFile>* result) {
 //  std::string translated_fname = TranslateName(fname);
 //  std::wstring ws_translated_fname = Utf8ToWideChar(translated_fname);
@@ -164,20 +165,20 @@
 //  DWORD share_mode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
 //
 //  HANDLE hfile =
-//      ::CreateFileW(ws_translated_fname.c_str(), GENERIC_READ, share_mode, NULL,
+//      ::CreateFileW(ws_translated_fname.c_str(), GENERIC_READ, share_mode,
+//      NULL,
 //                    OPEN_EXISTING, file_flags, NULL);
 //
 //  if (INVALID_HANDLE_VALUE == hfile) {
-//    std::string context = "NewRandomAccessFile failed to Create/Open: " + fname;
-//    LOG(WARNING) << context;
-//    return ErrnoToStatus(::GetLastError());
+//    std::string context = "NewRandomAccessFile failed to Create/Open: " +
+//    fname; LOG(WARNING) << context; return ErrnoToStatus(::GetLastError());
 //  }
 //
 //  result->reset(new WindowsRandomAccessFile(translated_fname, hfile));
 //  return Status::OK;
 //}
 //
-//Status WindowsFileSystem::NewWritableFile(
+// Status WindowsFileSystem::NewWritableFile(
 //    const std::string& fname, std::unique_ptr<WritableFile>* result) {
 //  std::string translated_fname = TranslateName(fname);
 //  std::wstring ws_translated_fname = Utf8ToWideChar(translated_fname);
@@ -198,7 +199,7 @@
 //  return Status::OK;
 //}
 //
-//Status WindowsFileSystem::NewAppendableFile(
+// Status WindowsFileSystem::NewAppendableFile(
 //    const std::string& fname, std::unique_ptr<WritableFile>* result) {
 //  std::string translated_fname = TranslateName(fname);
 //  std::wstring ws_translated_fname = Utf8ToWideChar(translated_fname);
@@ -230,14 +231,14 @@
 //  return Status::OK;
 //}
 //
-//Status WindowsFileSystem::FileExists(const std::string& fname) {
+// Status WindowsFileSystem::FileExists(const std::string& fname) {
 //  constexpr int kOk = 0;
 //  if (_access(TranslateName(fname).c_str(), kOk) == 0) { return Status::OK; }
 //  LOG(WARNING) << fname << " not found";
 //  return Status::NOT_FOUND;
 //}
 //
-//Status WindowsFileSystem::GetChildren(const std::string& dir,
+// Status WindowsFileSystem::GetChildren(const std::string& dir,
 //                                      std::vector<std::string>* result) {
 //  std::string translated_dir = TranslateName(dir);
 //  std::wstring ws_translated_dir = Utf8ToWideChar(translated_dir);
@@ -260,7 +261,8 @@
 //
 //  do {
 //    std::string file_name = WideCharToUtf8(find_data.cFileName);
-//    if (file_name != "." && file_name != "..") { result->push_back(file_name); }
+//    if (file_name != "." && file_name != "..") { result->push_back(file_name);
+//    }
 //  } while (::FindNextFileW(find_handle, &find_data));
 //
 //  if (!::FindClose(find_handle)) {
@@ -272,7 +274,7 @@
 //  return Status::OK;
 //}
 //
-//Status WindowsFileSystem::DeleteFile(const std::string& fname) {
+// Status WindowsFileSystem::DeleteFile(const std::string& fname) {
 //  std::wstring file_name = Utf8ToWideChar(fname);
 //  if (_wunlink(file_name.c_str()) != 0) {
 //    std::string context = "Failed to delete a file: " + fname;
@@ -282,7 +284,7 @@
 //  return Status::OK;
 //}
 //
-//Status WindowsFileSystem::CreateDir(const std::string& name) {
+// Status WindowsFileSystem::CreateDir(const std::string& name) {
 //  std::wstring ws_name = Utf8ToWideChar(name);
 //  if (_wmkdir(ws_name.c_str()) != 0) {
 //    std::string context = "Failed to create a directory: " + name;
@@ -292,7 +294,7 @@
 //  return Status::OK;
 //}
 //
-//Status WindowsFileSystem::DeleteDir(const std::string& name) {
+// Status WindowsFileSystem::DeleteDir(const std::string& name) {
 //  std::wstring ws_name = Utf8ToWideChar(name);
 //  if (_wrmdir(ws_name.c_str()) != 0) {
 //    std::string context = "Failed to remove a directory: " + name;
@@ -302,7 +304,7 @@
 //  return Status::OK;
 //}
 //
-//Status WindowsFileSystem::GetFileSize(const std::string& fname,
+// Status WindowsFileSystem::GetFileSize(const std::string& fname,
 //                                      uint64_t* size) {
 //  std::string translated_fname = TranslateName(fname);
 //  std::wstring ws_translated_dir = Utf8ToWideChar(translated_fname);
@@ -322,7 +324,7 @@
 //  return Status::OK;
 //}
 //
-//Status WindowsFileSystem::RenameFile(const std::string& src,
+// Status WindowsFileSystem::RenameFile(const std::string& src,
 //                                     const std::string& target) {
 //  // rename() is not capable of replacing the existing file as on Linux
 //  // so use OS API directly
@@ -337,7 +339,7 @@
 //  return Status::OK;
 //}
 //
-//Status WindowsFileSystem::IsDirectory(const std::string& fname) {
+// Status WindowsFileSystem::IsDirectory(const std::string& fname) {
 //  struct _stat sbuf;
 //  std::wstring ws_translated_fname = Utf8ToWideChar(TranslateName(fname));
 //  if (_wstat(ws_translated_fname.c_str(), &sbuf) != 0) {

@@ -19,20 +19,19 @@ class WindowsFileSystem final : public FileSystem {
   WindowsFileSystem() = default;
   ~WindowsFileSystem() = default;
 
-  void NewRandomAccessFile(
-      const std::string& fname,
-      std::unique_ptr<RandomAccessFile>* result) override;
+  void NewRandomAccessFile(const std::string& fname,
+                           std::unique_ptr<RandomAccessFile>* result) override;
 
   void NewWritableFile(const std::string& fname,
-                         std::unique_ptr<WritableFile>* result) override;
+                       std::unique_ptr<WritableFile>* result) override;
 
   void NewAppendableFile(const std::string& fname,
-                           std::unique_ptr<WritableFile>* result) override;
+                         std::unique_ptr<WritableFile>* result) override;
 
   bool FileExists(const std::string& fname) override;
 
   void GetChildren(const std::string& dir,
-                     std::vector<std::string>* result) override;
+                   std::vector<std::string>* result) override;
 
   void DeleteFile(const std::string& fname) override;
 

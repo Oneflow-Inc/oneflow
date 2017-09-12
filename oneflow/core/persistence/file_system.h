@@ -12,28 +12,6 @@ namespace oneflow {
 
 namespace fs {
 
-enum class Status {
-  OK = 0,
-  CANCELLED,
-  UNKNOWN,
-  INVALID_ARGUMENT,
-  DEADLINE_EXCEEDED,
-  NOT_FOUND,
-  ALREADY_EXISTS,
-  PERMISSION_DENIED,
-  UNAUTHENTICATED,
-  RESOURCE_EXHAUSTED,
-  FAILED_PRECONDITION,
-  ABORTED,
-  OUT_OF_RANGE,
-  UNIMPLEMENTED,
-  INTERNAL,
-  UNAVAILABLE,
-  DATA_LOSS,
-};
-
-OF_DECLARE_ENUM_TO_OSTREAM_FUNC(Status);
-
 // A file abstraction for randomly reading the contents of a file.
 class RandomAccessFile {
  public:
@@ -46,10 +24,9 @@ class RandomAccessFile {
   // Sets `*result` to the data that was read (including if fewer
   // than `n` bytes were successfully read).
   //
-  // On OK returned status: `n` bytes have been stored in `*result`.
-  // On non-OK returned status: `[0..n]` bytes have been stored in `*result`.
+  // return size_t m is the bytes successfully read. m is [0..n]
   //
-  // Returns `OUT_OF_RANGE` if fewer than n bytes were stored in `*result`
+  // PLOG(WARNING) `OUT_OF_RANGE` if fewer than n bytes were stored in `*result`
   // because of EOF.
   //
   // Safe for concurrent use by multiple threads.
@@ -69,15 +46,12 @@ class WritableFile {
   virtual ~WritableFile() = default;
 
   // Append 'data' to the file.
+  // Return the size_t successfully appended to file
   virtual size_t Append(const char* data, size_t n) = 0;
 
   // Close the file.
   //
   // Flush() and de-allocate resources associated with this file
-  //
-  // Typical return codes (not guaranteed to be exhaustive):
-  //  * OK
-  //  * Other codes, as returned from Flush()
   virtual void Close() = 0;
 
   //  Flushes the file and optionally syncs contents to filesystem.
@@ -102,10 +76,8 @@ class FileSystem {
   // Creates a brand new random access read-only file with the
   // specified name.
   //
-  // On success, stores a pointer to the new file in
-  // *result and returns OK.  On failure stores NULL in *result and
-  // returns non-OK.  If the file does not exist, returns a non-OK
-  // status.
+  // On success, stores a pointer to the new file in *result.
+  // On failure stores NULL in *result and PLOG(FATAL)
   //
   // The returned file may be concurrently accessed by multiple threads.
   //
@@ -119,8 +91,7 @@ class FileSystem {
   //
   // Deletes any existing file with the same name and creates a
   // new file.  On success, stores a pointer to the new file in
-  // *result and returns OK.  On failure stores NULL in *result and
-  // returns non-OK.
+  // *result.  On failure stores NULL in *result and PLOG(FATAL)
   //
   // The returned file will only be accessed by one thread at a time.
   //
@@ -132,9 +103,8 @@ class FileSystem {
   // Creates an object that either appends to an existing file, or
   // writes to a new file (if the file does not exist to begin with).
   //
-  // On success, stores a pointer to the new file in *result and
-  // returns OK.  On failure stores NULL in *result and returns
-  // non-OK.
+  // On success, stores a pointer to the new file in *result
+  // On failure stores NULL in *result and PLOG(FATAL)
   //
   // The returned file will only be accessed by one thread at a time.
   //
@@ -143,11 +113,11 @@ class FileSystem {
   virtual void NewAppendableFile(const std::string& fname,
                                  std::unique_ptr<WritableFile>* result) = 0;
 
-  // Returns OK if the named path exists and NOT_FOUND otherwise.
+  // Returns TRUE if the named path exists and FALSE otherwise.
   virtual bool FileExists(const std::string& fname) = 0;
 
   // Returns true if all the listed files exist, false otherwise.
-  // if status is not null, populate the vector with a detailed status
+  // if ret is not null, populate the vector with a detailed result
   // for each file.
   virtual bool FilesExist(const std::vector<std::string>& files,
                           std::vector<bool>* ret);
@@ -162,14 +132,16 @@ class FileSystem {
   virtual void DeleteFile(const std::string& fname) = 0;
 
   // Creates the specified directory.
-  // Typical return codes:
-  //  * OK - successfully created the directory.
+  // if successfully created the directory, return TRUE
+  // else return false, may because :
   //  * ALREADY_EXISTS - directory with name dirname already exists.
   //  * PERMISSION_DENIED - dirname is not writable.
   virtual bool CreateDir(const std::string& dirname) = 0;
 
   void CreateDirIfNotExist(const std::string& dirname);
+
   bool IsDirEmpty(const std::string& dirname);
+
   size_t GetChildrenNumOfDir(const std::string& dirname);
 
   // Creates the specified directory and all the necessary
@@ -185,11 +157,11 @@ class FileSystem {
 
   // Deletes the specified directory and all subdirectories and files
   // underneath it. undeleted_files and undeleted_dirs stores the number of
-  // files and directories that weren't deleted (unspecified if the return
-  // status is not OK).
+  // files and directories that weren't deleted (unspecified if ERROR return).
   // REQUIRES: undeleted_files, undeleted_dirs to be not null.
-  // Typical return codes:
+  // if successfully done ,
   //  * OK - dirname exists and we were able to delete everything underneath.
+  // else may because :
   //  * NOT_FOUND - dirname doesn't exist
   //  * PERMISSION_DENIED - dirname or some descendant is not writable
   //  * UNIMPLEMENTED - Some underlying functions (like Delete) are not
@@ -213,7 +185,9 @@ class FileSystem {
   // Returns whether the given path is a directory or not.
   //
   // Typical return codes (not guaranteed exhaustive):
+  // return TRUE:
   //  * OK - The path exists and is a directory.
+  // return FALSE , may because :
   //  * FAILED_PRECONDITION - The path exists and is not a directory.
   //  * NOT_FOUND - The path entry does not exist.
   //  * PERMISSION_DENIED - Insufficient permissions.
@@ -224,25 +198,7 @@ class FileSystem {
   FileSystem() = default;
 };
 
-// If `current_status` is OK, stores `new_status` into `current_status`.
-// If `current_status` is NOT OK, preserves the current status,
-void TryUpdateStatus(Status* current_status, const Status& new_status);
-
-Status ErrnoToStatus(int err_number);
-
-#define FS_RETURN_IF_ERR(val)        \
-  {                                  \
-    const Status _ret_if_err = val;  \
-    if (_ret_if_err != Status::OK) { \
-      PLOG(WARNING);                 \
-      return _ret_if_err;            \
-    }                                \
-  }
-
 }  // namespace fs
-
-// file system check status is ok
-#define FS_CHECK_OK(val) CHECK_EQ(val, fs::Status::OK);
 
 fs::FileSystem* LocalFS();
 fs::FileSystem* GlobalFS();
