@@ -48,15 +48,15 @@ class Runtime final {
     SendCmdMsg(mdupdt_tasks, ActorCmd::kInitializeModel);
     RuntimeCtx::Singleton()->mut_model_init_cnt().WaitUntilCntEqualZero();
     LOG(INFO) << "InitModel on this machine done";
-    // OF_BARRIER();
+    OF_BARRIER();
     LOG(INFO) << "InitModel on all machine done";
     HandoutTasks(source_tasks);
     HandoutTasks(other_tasks);
     RuntimeCtx::Singleton()->mut_inactive_actor_cnt().WaitUntilCntEqualZero();
     LOG(INFO) << "All actor on this machine are activated";
-    // OF_BARRIER();
+    OF_BARRIER();
     LOG(INFO) << "All actor on all machine are activated";
-    // Network Swap Memory Message
+    CommNet::Singleton()->RegisterMemoryDone();
     RuntimeCtx::Singleton()->mut_active_actor_cnt().Init("active_actor_cnt",
                                                          this_machine_task_num);
     SendCmdMsg(mdupdt_tasks, ActorCmd::kSendInitialModel);
