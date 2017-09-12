@@ -10,7 +10,9 @@ namespace oneflow {
 class Blob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
-  Blob(const BlobDesc* blob_desc, char* mem_ptr);
+  Blob(const BlobDesc* blob_desc, char* mem_ptr)
+      : Blob(blob_desc, mem_ptr, nullptr) {}
+  Blob(const BlobDesc* blob_desc, char* mem_ptr, const void* comm_net_token);
   ~Blob() = default;
 
   const char* data_id(int32_t no) const;
@@ -59,6 +61,7 @@ class Blob final {
 
   char* data_id_ptr_;
   void* dptr_;
+  const void* comm_net_token_;
   const BlobDesc* blob_desc_;
 };
 

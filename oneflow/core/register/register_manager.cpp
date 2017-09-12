@@ -19,11 +19,11 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
       lbns.push_back(pair.first);
     }
     std::sort(lbns.begin(), lbns.end());
-    std::pair<char*, std::function<void()>> allocation_result =
+    std::tuple<char*, const void*, std::function<void()>> allocation_result =
         MemoryAllocator::Singleton()->Allocate(
             regst_desc_proto.mem_case(),
             runtime_regst_desc->packed_blob_desc()->TotalByteSize());
-    char* cur_pointer = allocation_result.first;
+    char* cur_pointer = std::get<0>(allocation_result);
     for (const std::string& lbn : lbns) {
       const BlobDesc* blob_desc = runtime_regst_desc->GetBlobDescFromLbn(lbn);
       auto blob_ptr = of_make_unique<Blob>(blob_desc, cur_pointer);
@@ -31,8 +31,9 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
       cur_pointer += blob_desc->TotalByteSize();
     }
     regst->packed_blob_.reset(new Blob(runtime_regst_desc->packed_blob_desc(),
-                                       allocation_result.first));
-    regst->deleter_ = allocation_result.second;
+                                       std::get<0>(allocation_result),
+                                       std::get<1>(allocation_result)));
+    regst->deleter_ = std::get<2>(allocation_result);
     OneRegstDone(regst);
   }
 }

@@ -5,8 +5,8 @@ message HostPageableMemory {
 }
 
 message HostPinnedMemory {
-  bool need_cuda = 1;
-  bool need_rdma = 2;
+  bool used_by_device = 1;
+  bool used_by_network = 2;
 }
 
 message DeviceCudaMemory {
