@@ -69,6 +69,7 @@ class PosixWritableFile : public WritableFile {
   }
 
   void Close() override {
+    Flush();
     if (fclose(file_) != 0) { LOG(FATAL) << "FAIL TO CLOSE FILE"; }
     file_ = nullptr;
   }
