@@ -33,6 +33,8 @@ class Blob final {
     return static_cast<T*>(dptr_);
   }
 
+  const void* comm_net_token() const { return comm_net_token_; }
+
   const BlobDesc& blob_desc() const { return *blob_desc_; }
   const BlobDesc* blob_desc_ptr() const { return blob_desc_; }
   const Shape& shape() const { return blob_desc_->shape(); }

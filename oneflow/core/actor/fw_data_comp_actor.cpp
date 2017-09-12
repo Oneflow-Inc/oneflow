@@ -136,7 +136,7 @@ void FwDataCompActor::Act() {
       return regst;
     }
   });
-  AsyncSendReadableRegstMsg([piece_id, model_version_id](Regst* regst) {
+  AsyncSendRegstMsgToConsumer([piece_id, model_version_id](Regst* regst) {
     regst->set_piece_id(piece_id);
     regst->set_model_version_id(model_version_id);
   });

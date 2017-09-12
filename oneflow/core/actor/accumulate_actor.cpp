@@ -76,7 +76,7 @@ void AccumulateActor::Act() {
   });
   acc_cnt_ += 1;
   if (acc_cnt_ == max_acc_cnt_) {
-    AsyncSendReadableRegstMsg([&](Regst* acc_regst) {
+    AsyncSendRegstMsgToConsumer([&](Regst* acc_regst) {
       acc_regst->set_piece_id(next_acc_piece_id_++);
     });
   }

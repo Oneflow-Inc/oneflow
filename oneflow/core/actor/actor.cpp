@@ -130,9 +130,10 @@ void Actor::AsyncLaunchKernel(
       });
 }
 
-void Actor::AsyncSendReadableRegstMsg(
+void Actor::AsyncSendRegstMsgToConsumer(
     std::function<void(Regst*)> RegstPreProcess,
     std::function<bool(int64_t)> IsAllowedActor) {
+  int64_t this_actor_id = actor_id_;
   for (auto& pair : writeable_produced_regst_) {
     Regst* regst = pair.second.front();
     RegstPreProcess(regst);
@@ -142,8 +143,9 @@ void Actor::AsyncSendReadableRegstMsg(
       if (!IsAllowedActor(consumer)) { continue; }
       total_reading_cnt_ += 1;
       regst_reading_cnt_it->second += 1;
-      device_ctx_->AddCallBack([consumer, regst]() {
-        ActorMsg msg = ActorMsg::BuildReadableRegstMsg(consumer, regst);
+      device_ctx_->AddCallBack([consumer, regst, this_actor_id]() {
+        ActorMsg msg =
+            ActorMsg::BuildRegstMsgToConsumer(this_actor_id, consumer, regst);
         ActorMsgBus::Singleton()->SendMsg(std::move(msg));
       });
     }
@@ -157,18 +159,18 @@ void Actor::AsyncSendReadableRegstMsg(
   }
 }
 
-void Actor::AsyncSendReadableRegstMsg(
+void Actor::AsyncSendRegstMsgToConsumer(
     std::function<void(Regst*)> RegstPreProcess) {
-  AsyncSendReadableRegstMsg(RegstPreProcess, [](int64_t) { return true; });
+  AsyncSendRegstMsgToConsumer(RegstPreProcess, [](int64_t) { return true; });
 }
 
-void Actor::AsyncSendReadableRegstMsg(
+void Actor::AsyncSendRegstMsgToConsumer(
     std::function<bool(int64_t)> IsAllowedActor) {
-  AsyncSendReadableRegstMsg([](Regst*) {}, IsAllowedActor);
+  AsyncSendRegstMsgToConsumer([](Regst*) {}, IsAllowedActor);
 }
 
-void Actor::AsyncSendReadableRegstMsg() {
-  AsyncSendReadableRegstMsg([](Regst*) {});
+void Actor::AsyncSendRegstMsgToConsumer() {
+  AsyncSendRegstMsgToConsumer([](Regst*) {});
 }
 
 void Actor::AsyncSendEORDMsgToConsumers(int64_t regst_desc_id) {
@@ -178,9 +180,7 @@ void Actor::AsyncSendEORDMsgToConsumers(int64_t regst_desc_id) {
       produced_regsts_.at(regst_desc_id).front()->regst_desc();
   device_ctx_->AddCallBack([regst_desc]() {
     for (int64_t consumer : regst_desc->consumers_actor_id()) {
-      ActorMsg msg;
-      msg.set_dst_actor_id(consumer);
-      msg.set_actor_cmd(ActorCmd::kEORD);
+      ActorMsg msg = ActorMsg::BuildCommandMsg(consumer, ActorCmd::kEORD);
       ActorMsgBus::Singleton()->SendMsg(std::move(msg));
     }
   });
@@ -201,8 +201,8 @@ void Actor::AsyncSendRegstMsgToProducer(Regst* regst) {
           << "return register " << regst << " "
           << "to actor " << regst->producer_actor_id() << ", "
           << "regst_desc_id:" << regst->regst_desc_id();
-  ActorMsg msg =
-      ActorMsg::BuildRegstMsgToProducer(regst->producer_actor_id(), regst);
+  ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(
+      actor_id_, regst->producer_actor_id(), regst);
   AsyncDo([msg]() { ActorMsgBus::Singleton()->SendMsg(msg); });
 }
 

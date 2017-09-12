@@ -26,6 +26,8 @@ int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
           piece_id2waiting_in_regst_.emplace(regst->piece_id(), regst).second);
     }
     ActUntilFail();
+  } else {
+    UNEXPECTED_RUN();
   }
   return msg_handler() == nullptr;
 }
@@ -52,7 +54,7 @@ void CopyCommNetActor::Act() {
                         return regst;
                       }
                     });
-  AsyncSendReadableRegstMsg([&next_regst](Regst* regst) {
+  AsyncSendRegstMsgToConsumer([&next_regst](Regst* regst) {
     regst->set_piece_id(next_regst->piece_id());
     regst->set_model_version_id(next_regst->model_version_id());
   });

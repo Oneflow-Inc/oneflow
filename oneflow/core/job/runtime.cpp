@@ -90,9 +90,9 @@ class Runtime final {
   }
   void SendCmdMsg(const std::vector<const TaskProto*>& tasks, ActorCmd cmd) {
     for (const TaskProto* task : tasks) {
-      ActorMsg msg;
-      msg.set_dst_actor_id(IDMgr::Singleton()->ActorId4TaskId(task->id()));
-      msg.set_actor_cmd(cmd);
+      ActorMsg msg = ActorMsg::BuildCommandMsg(
+          IDMgr::Singleton()->ActorId4TaskId(task->id()), cmd);
+      ;
       ActorMsgBus::Singleton()->SendMsg(msg);
     }
   }
