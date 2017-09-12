@@ -2,6 +2,7 @@ placement_group {
   op_set {
     op_name: "feature"
     op_name: "label"
+    op_name: "record"
   }
   parallel_conf {
     policy: kDataParallel
@@ -14,7 +15,6 @@ placement_group {
     op_name: "conv"
     op_name: "ip10"
     op_name: "softmax"
-    op_name: "record"
   }
   parallel_conf {
     policy: kDataParallel
