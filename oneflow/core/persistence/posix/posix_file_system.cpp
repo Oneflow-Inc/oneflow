@@ -36,12 +36,12 @@ class PosixRandomAccessFile : public RandomAccessFile {
         n -= r;
         offset += r;
       } else if (r == 0) {
-        LOG(FATAL) << "Read EOF";
+        PLOG(FATAL) << "Read EOF";
         return;
       } else if (errno == EINTR || errno == EAGAIN) {
         // Retry
       } else {
-        LOG(FATAL) << "Fail to read file " << fname_;
+        PLOG(FATAL) << "Fail to read file " << fname_;
         return;
       }
     }
@@ -63,18 +63,18 @@ class PosixWritableFile : public WritableFile {
 
   void Append(const char* data, size_t n) override {
     if (fwrite(data, sizeof(char), n, file_) != n) {
-      LOG(FATAL) << "Fail to append to file " << fname_;
+      PLOG(FATAL) << "Fail to append to file " << fname_;
     }
   }
 
   void Close() override {
     Flush();
-    if (fclose(file_) != 0) { LOG(FATAL) << "Fail to close file " << fname_; }
+    if (fclose(file_) != 0) { PLOG(FATAL) << "Fail to close file " << fname_; }
     file_ = nullptr;
   }
 
   void Flush() override {
-    if (fflush(file_) != 0) { LOG(FATAL) << "Fail to flush file " << fname_; }
+    if (fflush(file_) != 0) { PLOG(FATAL) << "Fail to flush file " << fname_; }
   }
 };
 
@@ -83,7 +83,7 @@ void PosixFileSystem::NewRandomAccessFile(
   std::string translated_fname = TranslateName(fname);
   int fd = open(translated_fname.c_str(), O_RDONLY);
   if (fd < 0) {
-    LOG(FATAL) << "Fail to open file " << fname;
+    PLOG(FATAL) << "Fail to open file " << fname;
   } else {
     result->reset(new PosixRandomAccessFile(fname, fd));
   }
@@ -94,7 +94,7 @@ void PosixFileSystem::NewWritableFile(const std::string& fname,
   std::string translated_fname = TranslateName(fname);
   FILE* f = fopen(translated_fname.c_str(), "w");
   if (f == nullptr) {
-    LOG(FATAL) << "Fail to open file " << fname;
+    PLOG(FATAL) << "Fail to open file " << fname;
   } else {
     result->reset(new PosixWritableFile(translated_fname, f));
   }
@@ -105,7 +105,7 @@ void PosixFileSystem::NewAppendableFile(const std::string& fname,
   std::string translated_name = TranslateName(fname);
   FILE* f = fopen(translated_name.c_str(), "a");
   if (f == nullptr) {
-    LOG(FATAL) << "Fail to open file " << fname;
+    PLOG(FATAL) << "Fail to open file " << fname;
   } else {
     result->reset(new PosixWritableFile(translated_name, f));
   }
@@ -121,7 +121,7 @@ std::vector<std::string> PosixFileSystem::ListDir(const std::string& dir) {
   std::vector<std::string> result;
   DIR* d = opendir(translated_dir.c_str());
   if (d == nullptr) {
-    LOG(FATAL) << "Fail to open dir " << dir;
+    PLOG(FATAL) << "Fail to open dir " << dir;
     return result;
   }
   struct dirent* entry;
@@ -137,26 +137,26 @@ std::vector<std::string> PosixFileSystem::ListDir(const std::string& dir) {
 
 void PosixFileSystem::DeleteFile(const std::string& fname) {
   if (unlink(TranslateName(fname).c_str()) != 0) {
-    LOG(FATAL) << "Fail to delete file " << fname;
+    PLOG(FATAL) << "Fail to delete file " << fname;
   }
 }
 
 void PosixFileSystem::CreateDir(const std::string& dirname) {
   if (mkdir(TranslateName(dirname).c_str(), 0755) != 0) {
-    LOG(FATAL) << "Fail to create dir " << dirname;
+    PLOG(FATAL) << "Fail to create dir " << dirname;
   }
 }
 
 void PosixFileSystem::DeleteDir(const std::string& dirname) {
   if (rmdir(TranslateName(dirname).c_str()) != 0) {
-    LOG(FATAL) << "Fail to delete dir " << dirname;
+    PLOG(FATAL) << "Fail to delete dir " << dirname;
   }
 }
 
 uint64_t PosixFileSystem::GetFileSize(const std::string& fname) {
   struct stat sbuf;
   if (stat(TranslateName(fname).c_str(), &sbuf) != 0) {
-    LOG(FATAL) << "Fail to load statistics of " << fname;
+    PLOG(FATAL) << "Fail to load statistics of " << fname;
     return 0;
   } else {
     return sbuf.st_size;
@@ -166,7 +166,7 @@ uint64_t PosixFileSystem::GetFileSize(const std::string& fname) {
 void PosixFileSystem::RenameFile(const std::string& src,
                                  const std::string& target) {
   if (rename(TranslateName(src).c_str(), TranslateName(target).c_str()) != 0) {
-    LOG(FATAL) << "Fail to rename file from " << src << " to " << target;
+    PLOG(FATAL) << "Fail to rename file from " << src << " to " << target;
   }
 }
 
