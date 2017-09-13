@@ -4,13 +4,33 @@
 
 namespace oneflow {
 
+namespace {
+
+class CommNetDeviceCtx final : public DeviceCtx {
+ public:
+  // OF_DISALLOW_COPY_AND_MOVE(CommNetDeviceCtx);
+  CommNetDeviceCtx() = delete;
+  ~CommNetDeviceCtx() = default;
+
+  CommNetDeviceCtx(void* stream_id) : DeviceCtx(), stream_id_(stream_id) {}
+
+  void AddCallBack(std::function<void()> callback) const override {
+    CommNet::Singleton()->AddCallBack(stream_id_, callback);
+  }
+
+ private:
+  void* stream_id_;
+};
+
+}  // namespace
+
 void CopyCommNetActor::Init(const TaskProto& task_proto,
                             const ThreadCtx& thread_ctx) {
   Actor::Init(task_proto, thread_ctx);
-  CHECK(thread_ctx.cpu_stream);
   set_num_of_remaining_eord(1);
   mut_num_of_read_empty() = 1;
-  mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
+  stream_id_ = CommNet::Singleton()->CreateStream();
+  mut_device_ctx().reset(new CommNetDeviceCtx(stream_id_));
   OF_SET_MSG_HANDLER(&CopyCommNetActor::HandlerNormal);
 }
 
@@ -19,11 +39,15 @@ int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     ProcessEord();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    Regst* regst = msg.regst();
-    if (TryUpdtStateAsProducedRegst(regst) != 0) {
+    if (msg.SrcMachineId() == RuntimeCtx::Singleton()->this_machine_id()) {
+      CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
+    } else {
       mut_num_of_read_empty() = 0;
-      CHECK(
-          piece_id2waiting_in_regst_.emplace(regst->piece_id(), regst).second);
+      RegstCtx regst_ctx;
+      regst_ctx.comm_net_token = msg.comm_net_token();
+      regst_ctx.regst_raw_ptr = msg.regst();
+      regst_ctx.producer = msg.src_actor_id();
+      CHECK(piece_id2regst_ctx.emplace(msg.piece_id(), regst_ctx).second);
     }
     ActUntilFail();
   } else {
@@ -35,7 +59,7 @@ int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
 int CopyCommNetActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
   ActUntilFail();
-  if (piece_id2waiting_in_regst_.empty()) {
+  if (piece_id2regst_ctx.empty()) {
     AsyncSendEORDMsgForAllProducedRegstDesc();
     OF_SET_MSG_HANDLER(&CopyCommNetActor::HandlerZombie);
   }
@@ -43,24 +67,26 @@ int CopyCommNetActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
 }
 
 void CopyCommNetActor::Act() {
-  auto next_regst_it = piece_id2waiting_in_regst_.find(expected_piece_id());
-  Regst* next_regst = next_regst_it->second;
-  AsyncLaunchKernel(GenDefaultKernelCtx(),
-                    [&](uint64_t regst_desc_id) -> Regst* {
-                      Regst* regst = GetCurWriteableRegst(regst_desc_id);
-                      if (regst == nullptr) {
-                        return next_regst;
-                      } else {
-                        return regst;
-                      }
-                    });
-  AsyncSendRegstMsgToConsumer([&next_regst](Regst* regst) {
-    regst->set_piece_id(next_regst->piece_id());
-    regst->set_model_version_id(next_regst->model_version_id());
-  });
-  AsyncSendRegstMsgToProducer(next_regst);
-  piece_id2waiting_in_regst_.erase(next_regst_it);
-  mut_num_of_read_empty() = piece_id2waiting_in_regst_.empty();
+  int64_t cur_piece_id = expected_piece_id();
+  // readable
+  auto readable_it = piece_id2regst_ctx.find(cur_piece_id);
+  const void* readable_token = readable_it->second.comm_net_token;
+  Regst* readable_regst = readable_it->second.regst_raw_ptr;
+  // writeable
+  Regst* writeable_regst = GetCurSoleWriteableRegst();
+  const void* writeable_token =
+      writeable_regst->packed_blob()->comm_net_token();
+  // Async
+  KernelCtx kernel_ctx = GenDefaultKernelCtx();
+  auto other_val = std::make_tuple(stream_id_, readable_token, writeable_token);
+  kernel_ctx.other = &other_val;
+  AsyncLaunchKernel(kernel_ctx);
+  AsyncSendRegstMsgToConsumer(
+      [&](Regst* regst) { regst->set_piece_id(cur_piece_id); });
+  AsyncSendRegstMsgToProducer(readable_regst, readable_it->second.producer);
+  // Finish
+  piece_id2regst_ctx.erase(readable_it);
+  mut_num_of_read_empty() = piece_id2regst_ctx.empty();
 }
 
 REGISTER_ACTOR(kCopyCommNetTask, true, CopyCommNetActor);

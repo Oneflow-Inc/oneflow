@@ -102,32 +102,26 @@ void Actor::ActUntilFail() {
 
 void Actor::AsyncLaunchKernel(
     const KernelCtx& kernel_ctx,
-    std::function<Blob*(const std::string&, const ExecKernel& ek)>
-        BnInOpAndEk2Blob) {
+    std::function<Regst*(int64_t)> Regst4RegstDescId) {
   for (const ExecKernel& ek : exec_kernel_vec_) {
-    (ek.kernel->*launch_func_)(kernel_ctx, [&](const std::string& bn_in_op) {
-      return BnInOpAndEk2Blob(bn_in_op, ek);
-    });
+    (ek.kernel->*launch_func_)(
+        kernel_ctx, [&](const std::string& bn_in_op) -> Blob* {
+          auto regst_desc_id_it = ek.bn_in_op2regst_desc_id.find(bn_in_op);
+          if (regst_desc_id_it == ek.bn_in_op2regst_desc_id.end()) {
+            return nullptr;
+          }
+          auto regst = Regst4RegstDescId(regst_desc_id_it->second);
+          const std::string& lbn = ek.kernel->Lbn4BnInOp(bn_in_op);
+          return regst->GetBlobPtrFromLbn(lbn);
+        });
   }
   VLOG(4) << "actor " << actor_id_ << " launch kernel for piece_id "
           << expected_piece_id_;
   expected_piece_id_ += 1;
 }
 
-void Actor::AsyncLaunchKernel(
-    const KernelCtx& kernel_ctx,
-    std::function<Regst*(int64_t)> Regst4RegstDescId) {
-  AsyncLaunchKernel(
-      kernel_ctx,
-      [&](const std::string& bn_in_op, const ExecKernel& ek) -> Blob* {
-        auto regst_desc_id_it = ek.bn_in_op2regst_desc_id.find(bn_in_op);
-        if (regst_desc_id_it == ek.bn_in_op2regst_desc_id.end()) {
-          return nullptr;
-        }
-        auto regst = Regst4RegstDescId(regst_desc_id_it->second);
-        const std::string& lbn = ek.kernel->Lbn4BnInOp(bn_in_op);
-        return regst->GetBlobPtrFromLbn(lbn);
-      });
+void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx) {
+  AsyncLaunchKernel(kernel_ctx, [](int64_t) -> Regst* { return nullptr; });
 }
 
 void Actor::AsyncSendRegstMsgToConsumer(
@@ -197,12 +191,11 @@ void Actor::AsyncDo(std::function<void()> func) {
 }
 
 void Actor::AsyncSendRegstMsgToProducer(Regst* regst) {
-  VLOG(4) << "actor " << actor_id_ << " "
-          << "return register " << regst << " "
-          << "to actor " << regst->producer_actor_id() << ", "
-          << "regst_desc_id:" << regst->regst_desc_id();
-  ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(
-      actor_id_, regst->producer_actor_id(), regst);
+  AsyncSendRegstMsgToProducer(regst, regst->producer_actor_id());
+}
+
+void Actor::AsyncSendRegstMsgToProducer(Regst* regst, int64_t producer) {
+  ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(actor_id_, producer, regst);
   AsyncDo([msg]() { ActorMsgBus::Singleton()->SendMsg(msg); });
 }
 
@@ -233,6 +226,11 @@ Regst* Actor::GetCurWriteableRegst(int64_t regst_desc_id) {
 
 Regst* Actor::GetCurWriteableRegst(const std::string& name) {
   return GetCurWriteableRegst(RegstDescId4Name(name));
+}
+
+Regst* Actor::GetCurSoleWriteableRegst() {
+  CHECK_EQ(writeable_produced_regst_.size(), 1);
+  return writeable_produced_regst_.begin()->second.front();
 }
 
 void Actor::ForEachCurWriteableRegst(std::function<void(Regst*)> func) {
