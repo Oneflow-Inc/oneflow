@@ -44,7 +44,7 @@ void RecordKernel::Forward(
           const std::string& op_name = parsed_lbn.first;
           const std::string& bn_in_op = parsed_lbn.second;
           std::string op_dir = JoinPath(root_path, op_name);
-          OF_ONCE_GUARD(op_dir, GlobalFS()->CreateDirIfNotExist(op_dir));
+          OF_ONCE_GUARD(op_dir, GlobalFS()->CreateDir(op_dir));
           std::string bn_in_op_dir = JoinPath(op_dir, bn_in_op);
           OF_ONCE_GUARD(bn_in_op_dir, GlobalFS()->CreateDir(bn_in_op_dir));
           std::string file_path =
