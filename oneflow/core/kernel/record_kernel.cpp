@@ -34,7 +34,7 @@ void RecordKernel::Forward(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   int64_t parallel_id = reinterpret_cast<int64_t>(kernel_ctx.other);
   const std::string& root_path = op()->op_conf().record_conf().record_path();
-  OF_ONCE_GUARD(root_path, GlobalFS()->CreateDir(root_path));
+  OF_ONCE_GUARD(root_path, GlobalFS()->CreateDirIfNotExist(root_path));
   for (const std::string& ibn : op()->input_bns()) {
     const std::string& lbn = op()->Lbn4BnInOp(ibn);
     const Blob* blob = BnInOp2Blob(ibn);
