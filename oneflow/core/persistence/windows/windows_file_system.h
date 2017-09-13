@@ -19,32 +19,31 @@ class WindowsFileSystem final : public FileSystem {
   WindowsFileSystem() = default;
   ~WindowsFileSystem() = default;
 
-  Status NewRandomAccessFile(
+  void NewRandomAccessFile(
       const std::string& fname,
       std::unique_ptr<RandomAccessFile>* result) override;
 
-  Status NewWritableFile(const std::string& fname,
+  void NewWritableFile(const std::string& fname,
                          std::unique_ptr<WritableFile>* result) override;
 
-  Status NewAppendableFile(const std::string& fname,
+  void NewAppendableFile(const std::string& fname,
                            std::unique_ptr<WritableFile>* result) override;
 
-  Status FileExists(const std::string& fname) override;
+  bool FileExists(const std::string& fname) override;
 
-  Status GetChildren(const std::string& dir,
-                     std::vector<std::string>* result) override;
+  std::vector<std::string> ListDir(const std::string& dir) override;
 
-  Status DeleteFile(const std::string& fname) override;
+  void DeleteFile(const std::string& fname) override;
 
-  Status CreateDir(const std::string& dirname) override;
+  void CreateDir(const std::string& dirname) override;
 
-  Status DeleteDir(const std::string& dirname) override;
+  void DeleteDir(const std::string& dirname) override;
 
-  Status GetFileSize(const std::string& fname, uint64_t* file_size) override;
+  uint64_t GetFileSize(const std::string& fname) override;
 
-  Status RenameFile(const std::string& src, const std::string& target) override;
+  void RenameFile(const std::string& old_name, const std::string& new_name) override;
 
-  Status IsDirectory(const std::string& fname) override;
+  bool IsDirectory(const std::string& fname) override;
 
   static std::wstring Utf8ToWideChar(const std::string& utf8str) {
     int size_required = MultiByteToWideChar(CP_UTF8, 0, utf8str.c_str(),

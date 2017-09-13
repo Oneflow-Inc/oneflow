@@ -4,5 +4,6 @@
 /examples/*/runtime
 /examples/*/*log*
 /examples/*/*snapshot*
+/examples/*/predict_result
 *plan*
 core.*

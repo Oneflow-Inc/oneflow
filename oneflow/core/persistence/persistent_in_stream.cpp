@@ -37,8 +37,8 @@ int32_t PersistentInStream::Read(char* s, size_t n) {
 PersistentInStream::PersistentInStream(fs::FileSystem* fs,
                                        const std::string& file_path,
                                        uint64_t offset) {
-  FS_CHECK_OK(fs->NewRandomAccessFile(file_path, &file_));
-  FS_CHECK_OK(fs->GetFileSize(file_path, &file_size_));
+  fs->NewRandomAccessFile(file_path, &file_);
+  file_size_ = fs->GetFileSize(file_path);
   cur_file_pos_ = offset;
   buffer_ = new char[buffer_size_ + 1];
   cur_buf_begin_ = buffer_;
