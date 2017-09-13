@@ -5,7 +5,6 @@ namespace oneflow {
 PersistentOutStream::PersistentOutStream(fs::FileSystem* fs,
                                          const std::string& file_path) {
   fs->NewWritableFile(file_path, &file_);
-  CHECK(file_.get() != NULL);
 }
 
 PersistentOutStream::~PersistentOutStream() { file_->Close(); }

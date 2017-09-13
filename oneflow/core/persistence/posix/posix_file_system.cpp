@@ -87,6 +87,7 @@ void PosixFileSystem::NewRandomAccessFile(
   } else {
     result->reset(new PosixRandomAccessFile(fname, fd));
   }
+  CHECK_NOTNULL(result->get());
 }
 
 void PosixFileSystem::NewWritableFile(const std::string& fname,
@@ -98,6 +99,7 @@ void PosixFileSystem::NewWritableFile(const std::string& fname,
   } else {
     result->reset(new PosixWritableFile(translated_fname, f));
   }
+  CHECK_NOTNULL(result->get());
 }
 
 void PosixFileSystem::NewAppendableFile(const std::string& fname,
@@ -109,6 +111,7 @@ void PosixFileSystem::NewAppendableFile(const std::string& fname,
   } else {
     result->reset(new PosixWritableFile(translated_name, f));
   }
+  CHECK_NOTNULL(result->get());
 }
 
 bool PosixFileSystem::FileExists(const std::string& fname) {
@@ -163,10 +166,12 @@ uint64_t PosixFileSystem::GetFileSize(const std::string& fname) {
   }
 }
 
-void PosixFileSystem::RenameFile(const std::string& src,
-                                 const std::string& target) {
-  if (rename(TranslateName(src).c_str(), TranslateName(target).c_str()) != 0) {
-    PLOG(FATAL) << "Fail to rename file from " << src << " to " << target;
+void PosixFileSystem::RenameFile(const std::string& old_name,
+                                 const std::string& new_name) {
+  if (rename(TranslateName(old_name).c_str(), TranslateName(new_name).c_str())
+      != 0) {
+    PLOG(FATAL) << "Fail to rename file from " << old_name << " to "
+                << new_name;
   }
 }
 

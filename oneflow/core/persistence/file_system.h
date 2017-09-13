@@ -120,6 +120,7 @@ class FileSystem {
   virtual void CreateDir(const std::string& dirname) = 0;
 
   void CreateDirIfNotExist(const std::string& dirname);
+
   bool IsDirEmpty(const std::string& dirname);
 
   // Creates the specified directory and all the necessary
@@ -140,8 +141,8 @@ class FileSystem {
   virtual uint64_t GetFileSize(const std::string& fname) = 0;
 
   // Overwrites the target if it exists.
-  virtual void RenameFile(const std::string& src,
-                          const std::string& target) = 0;
+  virtual void RenameFile(const std::string& old_name,
+                          const std::string& new_name) = 0;
 
   // Translate an URI to a filename for the FileSystem implementation.
   //

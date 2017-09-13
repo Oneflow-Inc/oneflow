@@ -36,7 +36,8 @@ class PosixFileSystem final : public FileSystem {
 
   uint64_t GetFileSize(const std::string& fname) override;
 
-  void RenameFile(const std::string& src, const std::string& target) override;
+  void RenameFile(const std::string& old_name,
+                  const std::string& new_name) override;
 
   bool IsDirectory(const std::string& fname) override;
 
