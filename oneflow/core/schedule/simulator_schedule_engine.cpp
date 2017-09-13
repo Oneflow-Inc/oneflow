@@ -15,7 +15,7 @@ void SimulatorScheduleEngine::ClearTmpData() {
 void SimulatorScheduleEngine::NewSinkTokens() {
   ClearTmpData();
   std::list<TaskArc*> arcs;
-  const SGraph* graph = session()->graph();
+  const SGraph* graph = session()->sgraph();
   graph->arc_mgr().InputArc(graph->sink(), &arcs);
   auto batchs = session()->GetBatchNodes();
   session()->task_arc_instance_mgr().Find(
@@ -37,7 +37,7 @@ void SimulatorScheduleEngine::InitNodeBatchInstance(STask* node) {
 void SimulatorScheduleEngine::NewSourceTokens() {
   ClearTmpData();
   std::list<TaskArc*> arcs;
-  const SGraph* graph = session()->graph();
+  const SGraph* graph = session()->sgraph();
   graph->arc_mgr().OutputArc(graph->source(), &arcs);
   auto batchs = session()->GetBatchNodes();
   session()->task_arc_instance_mgr().Find(
@@ -48,7 +48,7 @@ void SimulatorScheduleEngine::NewSourceTokens() {
 
 SDevice* SimulatorScheduleEngine::GetInstanceDevice(TaskInstance* instance) {
   SDevice* ret = nullptr;
-  session()->graph()->device_arc_mgr().Output(instance->dst_node(), &ret);
+  session()->sgraph()->device_arc_mgr().Output(instance->dst_node(), &ret);
   return ret;
 }
 
@@ -92,7 +92,7 @@ std::unique_ptr<SimulatorSchedule> SimulatorScheduleEngine::Run(
     const std::function<uint32_t(uint64_t)>& get_regst_num) {
   InitRegst(get_regst_num);
   NewSourceTokens();
-  const SGraph* graph = session()->graph();
+  const SGraph* graph = session()->sgraph();
   while (tokens().size()) {
     auto instances_picked = Pick(tokens());
     for (const auto& p : *instances_picked) {

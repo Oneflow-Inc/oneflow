@@ -4,11 +4,15 @@
 #include "oneflow/core/schedule/session.h"
 #include "oneflow/core/schedule/sgraph.h"
 #include "oneflow/core/schedule/simulator_schedule_engine.h"
+#include "oneflow/core/schedule/utilization_graph.h"
 namespace oneflow {
 namespace schedule {
 
-void Allocator::Allocate(Plan* plan) {
+void Allocator::Allocate(Plan* plan,
+                         const std::string& dev_info_proto_log_file) const {
   auto sgraph_factory = schedule_factory_provider()->sgraph_factory();
+  auto analyzer_factory =
+      schedule_factory_provider()->utilization_analyzer_factory();
   auto session_factory = schedule_factory_provider()->session_factory();
   auto validator_factory = schedule_factory_provider()->validator_factory();
   std::unique_ptr<Validator> validator = validator_factory->CreateValidator();
@@ -16,14 +20,20 @@ void Allocator::Allocate(Plan* plan) {
   std::unique_ptr<SGraph> sgraph = sgraph_factory->CreateSGraph(*plan);
   CHECK(validator->ValidateGraph(*sgraph));
 
-  std::unique_ptr<Session> session = session_factory->CreateSession(*sgraph);
+  std::unique_ptr<UtilizationAnalyzer> analyzer =
+      analyzer_factory->CreateUtilizationAnalyzer(*sgraph);
+
+  std::unique_ptr<UtilizationGraph> ugraph =
+      analyzer->CreateUtilizationGraph(dev_info_proto_log_file);
+  std::unique_ptr<Session> session =
+      session_factory->CreateSession(*sgraph, *ugraph);
   std::unique_ptr<Schedule> schedule = MemoryLimitedStaticSchedule(*session);
   SetRegstNum(*schedule, plan);
 }
 
-void Allocator::SetRegstNum(const Schedule& schedule, Plan* plan) {
+void Allocator::SetRegstNum(const Schedule& schedule, Plan* plan) const {
   if (!plan) return;
-  const SGraph* graph = schedule.session()->graph();
+  const SGraph* graph = schedule.session()->sgraph();
   auto get_regst_num = [&](int64_t id) {
     SRegstDesc* regst_desc = graph->regst_desc_mgr().Find(id);
     uint32_t count = GetOrDefault(schedule.regst_desc2count(), regst_desc, 2u);
@@ -40,7 +50,7 @@ void Allocator::SetRegstNum(const Schedule& schedule, Plan* plan) {
 }
 
 std::unique_ptr<Schedule> Allocator::MemoryLimitedStaticSchedule(
-    const Session& session) {
+    const Session& session) const {
   auto engine_factory = schedule_factory_provider()->schedule_engine_factory();
   auto validator_factory = schedule_factory_provider()->validator_factory();
 

@@ -5,7 +5,7 @@ namespace oneflow {
 namespace schedule {
 
 void Schedule::PrintRegstNum() {
-  session()->graph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
+  session()->sgraph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
     float duration =
         GetOrDefault(regst_desc2duration(), regst_desc, static_cast<float>(0));
     float interval = max_interval();
@@ -25,7 +25,7 @@ void Schedule::PrintSchedule() {
     std::cout << std::setw(4) << batch->id() << " ";
   }
   std::cout << std::endl;
-  session()->graph()->Walk([&](STask* task) {
+  session()->sgraph()->Walk([&](STask* task) {
     std::cout << std::setw(15) << task->id() << " ";
     for (Batch* batch : *batches) {
       TaskInstance* instance = session()->task_instance_mgr().Find(batch, task);
@@ -44,9 +44,9 @@ float Schedule::GetDuration(TaskInstance* src_node, TaskInstance* dst_node) {
 }
 
 void Schedule::UpdateDuration() {
-  session()->graph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
+  session()->sgraph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
     STask* owner = nullptr;
-    session()->graph()->produced_regst_desc_mgr().Input(regst_desc, &owner);
+    session()->sgraph()->produced_regst_desc_mgr().Input(regst_desc, &owner);
     uint32_t start = session()->nr_unstable_batch();
     uint32_t end = start + session()->nr_stable_batch();
     CHECK(end - start > 0);
@@ -56,7 +56,7 @@ void Schedule::UpdateDuration() {
       TaskInstance* owner_instance =
           session()->task_instance_mgr().Find(batch, owner);
       float duration = 0;
-      session()->graph()->subscribed_regst_desc_mgr().Input(
+      session()->sgraph()->subscribed_regst_desc_mgr().Input(
           regst_desc, [&](STask* node) {
             TaskInstance* node_instance =
                 session()->task_instance_mgr().Find(batch, node);
@@ -71,9 +71,9 @@ void Schedule::UpdateDuration() {
 }
 
 void Schedule::UpdateRegstCount() {
-  session()->graph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
+  session()->sgraph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
     STask* owner = nullptr;
-    session()->graph()->produced_regst_desc_mgr().Input(regst_desc, &owner);
+    session()->sgraph()->produced_regst_desc_mgr().Input(regst_desc, &owner);
     float duration =
         GetOrDefault(regst_desc2duration(), regst_desc, static_cast<float>(0));
     float interval = max_interval();
@@ -85,7 +85,7 @@ void Schedule::UpdateRegstCount() {
 }
 
 void Schedule::UpdateInterval() {
-  STask* end_node = session()->graph()->sink();
+  STask* end_node = session()->sgraph()->sink();
   std::pair<float, float> default_range;
   float last_batch_ended_at = 0;
   std::vector<float> intervals;

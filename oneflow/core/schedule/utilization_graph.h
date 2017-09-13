@@ -21,7 +21,7 @@ class UtilizationGraph final {
 
  public:
   OF_DISALLOW_COPY_AND_MOVE(UtilizationGraph);
-  explicit UtilizationGraph(const SGraph* sgraph) : sgraph_(sgraph) {
+  explicit UtilizationGraph(const SGraph& sgraph) : sgraph_(&sgraph) {
     InitRoot();
   }
   ~UtilizationGraph() = default;

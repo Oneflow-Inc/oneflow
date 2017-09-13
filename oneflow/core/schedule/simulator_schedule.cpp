@@ -19,7 +19,7 @@ void SimulatorSchedule::EmitEvent(UtilizationEventType event_type,
   event->set_time(time);
   event->mutable_resource()->mutable_task_stream()->set_task_id(task_id);
   event->mutable_resource()->mutable_task_stream()->set_stream_id(stream_id);
-  session()->graph()->produced_regst_desc_mgr().Output(
+  session()->sgraph()->produced_regst_desc_mgr().Output(
       instance->dst_node(), [&](SRegstDesc* regst_desc) {
         RegstDescInstance* regst_desc_instance =
             session()->regst_desc_instance_mgr().Find(instance->src_node(),
@@ -46,7 +46,7 @@ void SimulatorSchedule::TimeLinePushBack(TaskInstance* instance,
 void SimulatorSchedule::WalkTimeNetReverse(
     const std::function<void(TaskInstance*)>& cb) {
   Batch* last_batch = const_cast<Batch*>(session()->EndBatch());
-  STask* last_node = session()->graph()->sink();
+  STask* last_node = session()->sgraph()->sink();
   TaskInstance* last_instance =
       session()->task_instance_mgr().Find(last_batch, last_node);
 
@@ -98,7 +98,7 @@ void SimulatorSchedule::WalkFromLoss(
   BfsVisitor<TaskInstance*> bfs_foreach(foreach_next, foreach_prev);
 
   std::list<STask*> loss_nodes;
-  session()->graph()->LossNodes(&loss_nodes);
+  session()->sgraph()->LossNodes(&loss_nodes);
   std::list<TaskInstance*> loss_instances;
   for (int32_t i = 0; i < session()->nr_batch(); ++i) {
     Batch* batch = session()->batch_node_mgr().Find(i);
@@ -121,7 +121,7 @@ void SimulatorSchedule::WalkFromLossToSource(
 }
 
 void SimulatorSchedule::InitTimeNet() {
-  session()->graph()->ForeachArc([&](TaskArc* arc) {
+  session()->sgraph()->ForeachArc([&](TaskArc* arc) {
     uint32_t start = 0;
     uint32_t end = session()->nr_batch();
     for (uint32_t i = start; i < end; i++) {
@@ -136,7 +136,7 @@ void SimulatorSchedule::InitTimeNet() {
     }
   });
 
-  session()->graph()->ForeachNode([&](STask* node) {
+  session()->sgraph()->ForeachNode([&](STask* node) {
     uint32_t start = 0;
     uint32_t end = session()->nr_batch();
     for (uint32_t i = start; i < end - 1; i++) {

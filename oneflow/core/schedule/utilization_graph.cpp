@@ -70,7 +70,7 @@ void UtilizationGraph::InitRoot() {
       CreateConcreteUtilization<ComputationUtilization>(computation_resource);
   CHECK(computation_);
   UtilizationResource memory_resource;
-  computation_resource.mutable_memory();
+  memory_resource.mutable_memory();
   memory_ = CreateConcreteUtilization<MemoryUtilization>(memory_resource);
   CHECK(memory_);
 }

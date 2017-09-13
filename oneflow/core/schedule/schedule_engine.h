@@ -22,7 +22,7 @@ class ScheduleEngine {
 
   //	getter
   inline const Session* session() const { return session_; }
-  inline const SGraph* graph() const { return session_->graph(); }
+  inline const SGraph* graph() const { return session_->sgraph(); }
 
  protected:
   const Session* session_;

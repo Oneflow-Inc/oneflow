@@ -4,12 +4,15 @@
 #include "oneflow/core/schedule/formula_schedule_engine.h"
 #include "oneflow/core/schedule/plan_sgraph.h"
 #include "oneflow/core/schedule/simulator_schedule_engine.h"
+#include "oneflow/core/schedule/utilization_analyzer_factory.h"
 
 namespace oneflow {
 namespace schedule {
 
 REGISTER_SCHEDULE_FACTORY_PROVIDER("base")
     ->Set(of_make_unique<SGraphConcreteFactory<PlanSGraph>>())
+    ->Set(of_make_unique<
+          UtilizationAnalyzerConcreteFactory<EmptyUtilizationAnalyzer>>())
     ->Set(of_make_unique<SessionConcreteFactory<FixedBatchSession<2u>>>())
     ->Set(
         of_make_unique<ScheduleEngineConcreteFactory<FormulaScheduleEngine>>())

@@ -24,8 +24,16 @@ class ScheduleFacade final {
     allocator->Allocate(plan);
   }
 
+  void Allocate(Plan* plan, const std::string& dev_info_proto_log_file) {
+    auto allocator = sfp_->allocator_factory()->CreateAllocator();
+    allocator->Allocate(plan, dev_info_proto_log_file);
+  }
+
  private:
-  static std::string DefaultName() { return "default"; }
+  static std::string DefaultName() {
+    //		return "default";
+    return "empty_allocator";
+  }
   ScheduleFactoryProvider* sfp_;
 };
 

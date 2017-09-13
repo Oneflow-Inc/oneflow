@@ -32,7 +32,7 @@ bool Validator::ValidateGraphArc(
 
 bool Validator::ValidateMemory(const Schedule& schedule) {
   std::unordered_map<const SDevice*, uint64_t> device2total_memory_size;
-  const SGraph* graph = schedule.session()->graph();
+  const SGraph* graph = schedule.session()->sgraph();
   graph->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
     const SDevice* device = regst_desc->owner_task()->device();
     uint32_t regst_count =

@@ -1,18 +1,32 @@
 #include "oneflow/core/schedule/utilization_analyzer.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/schedule/utilization_util.h"
 
 namespace oneflow {
 namespace schedule {
 
+void UtilizationAnalyzer::ParseDeviceInfoProto(
+    const std::string& log_file, DeviceInfoProto* device_info_proto) const {
+  ParseProtoFromTextFile(log_file, device_info_proto);
+}
+
+std::unique_ptr<UtilizationGraph> UtilizationAnalyzer::CreateUtilizationGraph(
+    std::string log_file) {
+  DeviceInfoProto device_info_proto;
+  ParseDeviceInfoProto(log_file, &device_info_proto);
+  return Analyze(device_info_proto);
+}
+
 std::unique_ptr<UtilizationGraph> UtilizationAnalyzer::Analyze(
     const UtilizationPackageProto& utilization_package) const {
-  auto ugraph = of_make_unique<UtilizationGraph>(sgraph());
+  auto ugraph = of_make_unique<UtilizationGraph>(*sgraph());
   Analyze(ugraph.get());
   return ugraph;
 }
 
 std::unique_ptr<UtilizationGraph> UtilizationAnalyzer::Analyze(
     const DeviceInfoProto& device_info) const {
+  CHECK(device_info.event_size());
   UtilizationPackageProto utilization_package;
   GetUtilizationPackageFromEvent(device_info, &utilization_package);
   return Analyze(utilization_package);
