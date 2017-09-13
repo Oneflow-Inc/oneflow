@@ -14,16 +14,23 @@ class CopyCommNetActor final : public Actor {
   void Init(const TaskProto&, const ThreadCtx&) override;
 
  private:
+  struct RegstCtx {
+    const void* comm_net_token;
+    Regst* regst_raw_ptr;
+    int64_t producer;
+  };
+
   int HandlerNormal(const ActorMsg&) override;
   int HandlerWaitUntilNoReadableRegst(const ActorMsg&) override;
 
   bool IsReadReady() override {
-    return piece_id2waiting_in_regst_.find(expected_piece_id())
-           != piece_id2waiting_in_regst_.end();
+    return piece_id2regst_ctx.find(expected_piece_id())
+           != piece_id2regst_ctx.end();
   }
   void Act() override;
 
-  HashMap<int64_t, Regst*> piece_id2waiting_in_regst_;
+  HashMap<int64_t, RegstCtx> piece_id2regst_ctx;
+  void* stream_id_;
 };
 
 }  // namespace oneflow

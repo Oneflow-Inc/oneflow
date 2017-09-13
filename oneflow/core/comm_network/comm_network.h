@@ -17,8 +17,12 @@ class CommNet {
   virtual const void* RegisterMemory(void* dptr) = 0;
   virtual void UnRegisterMemory(const void* token) = 0;
   virtual void RegisterMemoryDone() = 0;
-  virtual void Read(const void* src_token, const void* dst_token,
-                    std::function<void()> callback) = 0;
+
+  // Stream
+  virtual void* CreateStream() = 0;
+  virtual void Read(void* stream_id, const void* src_token,
+                    const void* dst_token) = 0;
+  virtual void AddCallBack(void* stream_id, std::function<void()>) = 0;
 
   //
   virtual void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) = 0;

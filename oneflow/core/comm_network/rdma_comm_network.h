@@ -23,8 +23,14 @@ class RdmaCommNet final : public CommNet {
     // TODO
   }
 
-  void Read(const void* src_token, const void* dst_token,
-            std::function<void()> callback) override {
+  void* CreateStream() override {
+    // TODO
+    return nullptr;
+  }
+  void Read(void* stream_id, const void* src_token, const void* dst_token) {
+    // TODO
+  }
+  void AddCallBack(void* stream_id, std::function<void()>) {
     // TODO
   }
 

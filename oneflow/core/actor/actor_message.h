@@ -35,11 +35,13 @@ class ActorMsg final {
   static ActorMsg BuildCommandMsg(int64_t dst_actor_id, ActorCmd cmd);
 
   // Getters
+  int64_t SrcMachineId() const;
   int64_t src_actor_id() const { return src_actor_id_; }
   int64_t dst_actor_id() const { return dst_actor_id_; }
   ActorMsgType msg_type() const { return msg_type_; }
   ActorCmd actor_cmd() const;
   Regst* regst() const;
+  int64_t piece_id() const;
   const void* comm_net_token() const;
 
   // Serialize
@@ -53,15 +55,18 @@ class ActorMsg final {
   }
 
  private:
+  struct RegstWrapper {
+    Regst* regst;
+    const void* comm_net_token;
+    int64_t piece_id;
+  };
+
   int64_t src_actor_id_;
   int64_t dst_actor_id_;
   ActorMsgType msg_type_;
   union {
     ActorCmd actor_cmd_;
-    union {
-      Regst* regst_;
-      const void* comm_net_token_;
-    };
+    RegstWrapper regst_wrapper_;
   };
 };
 
