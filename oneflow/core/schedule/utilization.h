@@ -103,9 +103,9 @@ class DeviceComputationUtilization : public ComputationUtilization {
 class StreamUtilization : public ComputationUtilization {
  public:
   UTILIZATION_BOILERPLATE(StreamUtilization, ComputationUtilization);
-	float GetInitiationInterval(const UtilizationGraph& ugraph) {
-		return GetTimePerBatch(ugraph);
-	}
+  float GetInitiationInterval(const UtilizationGraph& ugraph) {
+    return GetTimePerBatch(ugraph);
+  }
 };
 
 class TaskUtilization : public ComputationUtilization {
@@ -115,9 +115,9 @@ class TaskUtilization : public ComputationUtilization {
     return utilization_proto().resource().task().task_id();
   }
   uint32_t ParallelNum(const UtilizationGraph& ugraph) const override;
-	float GetDuration(const UtilizationGraph& ugraph) {
-		return GetTimePerBatch(ugraph);
-	}
+  float GetDuration(const UtilizationGraph& ugraph) {
+    return GetTimePerBatch(ugraph);
+  }
 };
 
 class TaskStreamUtilization : public ComputationUtilization {

@@ -45,8 +45,8 @@ class SimulatorSchedule : public Schedule {
   regst_desc_instance2regst() const {
     return regst_desc_instance2regst_;
   }
-  inline const UtilizationEventPackageProto& utilization_event_package() const {
-    return utilization_event_package_;
+  inline const DeviceInfoProto& device_info_proto() const {
+    return device_info_proto_;
   }
 
   //	setter
@@ -64,8 +64,8 @@ class SimulatorSchedule : public Schedule {
   mut_regst_desc_instance2regst() {
     return regst_desc_instance2regst_;
   }
-  inline UtilizationEventPackageProto* mut_utilization_event_package() {
-    return &utilization_event_package_;
+  inline DeviceInfoProto* mut_device_info_proto() {
+    return &device_info_proto_;
   }
 
   void ForeachNextTaskInstance(TaskInstance* task_instance,
@@ -104,7 +104,7 @@ class SimulatorSchedule : public Schedule {
 
   ArcMgr<Arc<TaskInstance>> timenet_arc_mgr_;
   std::unordered_map<SDevice*, TaskInstance*> dev2current_instance_;
-  UtilizationEventPackageProto utilization_event_package_;
+  DeviceInfoProto device_info_proto_;
 };
 
 }  // namespace schedule

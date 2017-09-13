@@ -12,9 +12,9 @@ std::unique_ptr<UtilizationGraph> UtilizationAnalyzer::Analyze(
 }
 
 std::unique_ptr<UtilizationGraph> UtilizationAnalyzer::Analyze(
-    const UtilizationEventPackageProto& event_package) const {
+    const DeviceInfoProto& device_info) const {
   UtilizationPackageProto utilization_package;
-  GetUtilizationPackageFromEvent(event_package, &utilization_package);
+  GetUtilizationPackageFromEvent(device_info, &utilization_package);
   return Analyze(utilization_package);
 }
 
@@ -33,7 +33,7 @@ void UtilizationAnalyzer::AddUtilizationPackageProto(
 }
 
 void UtilizationAnalyzer::GetUtilizationPackageFromEvent(
-    const UtilizationEventPackageProto& event_package,
+    const DeviceInfoProto& event_package,
     UtilizationPackageProto* utilization_package) const {
   std::unordered_map<std::string, std::list<const UtilizationEventProto*>>
       grouped_events;

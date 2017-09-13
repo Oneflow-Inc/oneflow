@@ -71,8 +71,9 @@ message UtilizationEventProto {
 	UtilizationResource resource = 4;
 }
 
-message UtilizationEventPackageProto {
+message DeviceInfoProto {
 	repeated UtilizationEventProto event = 1;
+	map<string, float> device_name2memory_size = 2; 
 }
 
 message UtilizationProto {

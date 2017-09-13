@@ -44,8 +44,11 @@ class Session {
   const Batch* EndBatch() const {
     return batch_node_mgr().Find(nr_batch() - 1);
   }
+  TaskInstance* GetNextBatchInstance(TaskInstance* instance) const {
+    return GetNextBatchInstance(instance, 1);
+  }
   TaskInstance* GetNextBatchInstance(TaskInstance* instance,
-                                     int32_t step = 1) const;
+                                     int32_t step) const;
   TaskInstance* GetPrevBatchInstance(TaskInstance* instance) const;
   std::unique_ptr<std::list<Batch*>> GetBatchNodes() const;
 

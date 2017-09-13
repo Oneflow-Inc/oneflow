@@ -13,7 +13,7 @@ void SimulatorSchedule::EmitEvent(UtilizationEventType event_type,
   uint64_t batch_id = instance->src_node()->id();
   uint64_t task_id = instance->dst_node()->id();
   uint64_t stream_id = instance->dst_node()->device()->id();
-  auto event = utilization_event_package_.add_event();
+  auto event = mut_device_info_proto()->add_event();
   event->set_event_type(event_type);
   event->set_batch_id(batch_id);
   event->set_time(time);
@@ -26,7 +26,7 @@ void SimulatorSchedule::EmitEvent(UtilizationEventType event_type,
                                                       regst_desc);
         SRegst* regst = mut_regst_desc_instance2regst()[regst_desc_instance];
         CHECK(regst);
-        auto event = utilization_event_package_.add_event();
+        auto event = mut_device_info_proto()->add_event();
         event->set_event_type(event_type);
         event->set_batch_id(batch_id);
         event->set_time(time);

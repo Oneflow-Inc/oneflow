@@ -21,11 +21,11 @@ class UtilizationAnalyzer {
       const UtilizationPackageProto& utilization_package) const;
 
   std::unique_ptr<UtilizationGraph> Analyze(
-      const UtilizationEventPackageProto& event_package) const;
+      const DeviceInfoProto& event_package) const;
 
  private:
   void GetUtilizationPackageFromEvent(
-      const UtilizationEventPackageProto& event_package,
+      const DeviceInfoProto& event_package,
       UtilizationPackageProto* utilization_package) const;
   void Analyze(UtilizationGraph* ugraph) const;
   void AddUtilizationPackageProto(
