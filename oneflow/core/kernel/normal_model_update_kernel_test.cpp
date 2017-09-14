@@ -25,7 +25,8 @@ Kernel* BuildMdUpdateKernel(float learning_rate) {
 void InitJobDesc(int32_t piece_size, int32_t num_of_pieces_in_batch) {
   JobConf job_conf;
   job_conf.set_piece_size(piece_size);
-  job_conf.set_num_of_pieces_in_batch(num_of_pieces_in_batch);
+  auto train_conf = job_conf.mutable_train_conf();
+  train_conf->set_num_of_pieces_in_batch(num_of_pieces_in_batch);
   JobDesc::Singleton()->InitFromJobConf(job_conf);
 }
 
