@@ -66,7 +66,7 @@ void LazyEvaluationStrategy::InitTimeNet() {
 void LimitedMemoryStrategy::InitRegst(
     const std::function<uint32_t(uint64_t)>& get_regst_num) {
   SimulatorSchedule* schedule = schedule_engine()->schedule();
-  schedule_engine()->sgraph().ForeachRegstDesc([&](SRegstDesc* regst_desc) {
+  schedule_engine()->sgraph().ForEachRegstDesc([&](SRegstDesc* regst_desc) {
     uint32_t count = get_regst_num(regst_desc->id());
     for (uint32_t i = 0; i < count; i++) {
       SRegst* regst = schedule->mut_regst_node_mgr()->Create(

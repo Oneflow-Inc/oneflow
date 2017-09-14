@@ -104,18 +104,20 @@ class SGraph : public SNode {
     return a->depth() > b->depth();
   }
 
-  void ForeachNext(STask* node, const std::function<void(STask*)>& cb) const {
+  void ForEachNext(STask* node, const std::function<void(STask*)>& cb) const {
     arc_mgr().Output(node, cb);
   }
 
-  void ForeachPrev(STask* node, const std::function<void(STask*)>& cb) const {
+  void ForEachPrev(STask* node, const std::function<void(STask*)>& cb) const {
     arc_mgr().Input(node, cb);
   }
 
-  void ForeachNode(const std::function<void(STask*)>& cb) const;
-  void ForeachAscendant(STask*, const std::function<void(STask*)>& cb) const;
-  void ForeachDescendant(STask*, const std::function<void(STask*)>& cb) const;
-  void ForeachRegstDesc(const std::function<void(SRegstDesc*)>& cb) const;
+  void ForEachNode(const std::function<void(STask*)>& cb) const;
+  void ForEachChild(const std::function<void(STask*)>& cb) const;
+  void ForEachChild(const std::function<void(const STask&)>& cb) const;
+  void ForEachAscendant(STask*, const std::function<void(STask*)>& cb) const;
+  void ForEachDescendant(STask*, const std::function<void(STask*)>& cb) const;
+  void ForEachRegstDesc(const std::function<void(SRegstDesc*)>& cb) const;
 
   void Walk(const std::function<void(STask*)>& cb) const;
   void WalkArc(const std::function<void(Arc<STask>*)>& cb) const;
@@ -123,7 +125,7 @@ class SGraph : public SNode {
   uint32_t Depth() const;
   void WalkReverse(const std::function<void(STask*)>& cb) const;
   void WalkArcReverse(const std::function<void(Arc<STask>*)>& cb) const;
-  void ForeachArc(const std::function<void(Arc<STask>*)>& cb) const;
+  void ForEachArc(const std::function<void(Arc<STask>*)>& cb) const;
   uint32_t LossNodes(std::list<STask*>* l) const;
 
   //	getter

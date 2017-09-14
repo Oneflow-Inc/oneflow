@@ -16,7 +16,7 @@ std::unique_ptr<Schedule> FormulaScheduleEngine::StaticSchedule(
     const std::function<uint32_t(uint64_t)>& get_regst_num) {
   auto schedule = StaticSchedule();
   float initiation_interval = 0;
-  sgraph().ForeachRegstDesc([&](SRegstDesc* regst_desc) {
+  sgraph().ForEachRegstDesc([&](SRegstDesc* regst_desc) {
     uint32_t count = std::max(get_regst_num(regst_desc->id()), 1u);
     float ii = schedule->GetRegstDescDuration(regst_desc) / count;
     initiation_interval = std::max(initiation_interval, ii);
@@ -27,22 +27,22 @@ std::unique_ptr<Schedule> FormulaScheduleEngine::StaticSchedule(
 }
 
 void FormulaScheduleEngine::ForEachRegstDescDuration(
-    const std::function<void(SRegstDesc*, float)>& cb) {
-  auto foreach_next = std::bind(&SGraph::ForeachNext, &sgraph(),
+    const std::function<void(SRegstDesc*, float)>& cb) const {
+  auto foreach_next = std::bind(&SGraph::ForEachNext, &sgraph(),
                                 std::placeholders::_1, std::placeholders::_2);
-  auto foreach_prev = std::bind(&SGraph::ForeachPrev, &sgraph(),
+  auto foreach_prev = std::bind(&SGraph::ForEachPrev, &sgraph(),
                                 std::placeholders::_1, std::placeholders::_2);
   auto is_ascendant = [&](STask* asc, STask* node) {
     return sgraph().ascendant_arc_mgr().Find(node, asc) > 0u;
   };
   LongestPathVisitor<STask*> lpath(foreach_next, foreach_prev, is_ascendant);
-  sgraph().ForeachRegstDesc([&](SRegstDesc* regst_desc) {
+  sgraph().ForEachRegstDesc([&](SRegstDesc* regst_desc) {
     cb(regst_desc, GetRegstDescDuration(lpath, regst_desc));
   });
 }
 
 float FormulaScheduleEngine::GetRegstDescDuration(
-    const LongestPathVisitor<STask*>& lpath, SRegstDesc* regst_desc) {
+    const LongestPathVisitor<STask*>& lpath, SRegstDesc* regst_desc) const {
   auto get_node_weight = [&](STask* task) { return GetSTaskWeight(task); };
   float duration = 0;
   STask* owner = const_cast<STask*>(&regst_desc->owner_task());
@@ -60,11 +60,11 @@ float FormulaScheduleEngine::GetRegstDescDuration(
   return duration;
 }
 
-float FormulaScheduleEngine::GetSTaskWeight(STask* task) {
+float FormulaScheduleEngine::GetSTaskWeight(STask* task) const {
   return static_cast<float>(1);
 }
 
-float FormulaScheduleEngine::EvaluateInitiationInterval() {
+float FormulaScheduleEngine::EvaluateInitiationInterval() const {
   return static_cast<float>(1);
 }
 

@@ -35,22 +35,27 @@ class Utilization : public SNode {
   OF_DISALLOW_COPY_AND_MOVE(Utilization);
   virtual ~Utilization() = default;
 
-  inline const UtilizationProto& utilization_proto() const {
-    return utilization_proto_;
-  }
-
   virtual uint32_t ParallelNum(const UtilizationGraph&) const { return 1u; }
   void Reduce(const UtilizationGraph&);
   void CreateAscendantIfNotFound(UtilizationGraph* ugraph) const;
-
-  inline std::list<const UtilizationProto*>* mut_raw_protos() {
-    return &raw_protos_;
-  }
 
   float GetTimePerBatch(const UtilizationGraph& ugraph) const;
 
   UtilizationResource::ResourceTypeCase GetResourceTypeCase() {
     return utilization_proto().resource().resource_type_case();
+  }
+
+  //	getter
+  inline const UtilizationProto& utilization_proto() const {
+    return utilization_proto_;
+  }
+  inline const std::list<const UtilizationProto*>& raw_protos() const {
+    return raw_protos_;
+  }
+
+  //	setter
+  inline std::list<const UtilizationProto*>* mut_raw_protos() {
+    return &raw_protos_;
   }
 
  protected:

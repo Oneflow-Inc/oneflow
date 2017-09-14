@@ -73,12 +73,12 @@ class SimulatorSchedule : public Schedule {
     return device_info_proto_.get();
   }
 
-  void ForeachNextTaskInstance(TaskInstance* task_instance,
+  void ForEachNextTaskInstance(TaskInstance* task_instance,
                                const std::function<void(TaskInstance*)>& cb) {
     timenet_arc_mgr().Output(task_instance, cb);
   }
 
-  void ForeachPrevTaskInstance(TaskInstance* task_instance,
+  void ForEachPrevTaskInstance(TaskInstance* task_instance,
                                const std::function<void(TaskInstance*)>& cb) {
     timenet_arc_mgr().Input(task_instance, cb);
   }

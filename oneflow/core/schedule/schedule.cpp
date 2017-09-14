@@ -5,7 +5,7 @@ namespace oneflow {
 namespace schedule {
 
 void Schedule::PrintRegstNum() {
-  sgraph().ForeachRegstDesc([&](SRegstDesc* regst_desc) {
+  sgraph().ForEachRegstDesc([&](SRegstDesc* regst_desc) {
     float duration =
         GetOrDefault(regst_desc2duration(), regst_desc, static_cast<float>(0));
     float interval = max_interval();
@@ -44,7 +44,7 @@ float Schedule::GetDuration(TaskInstance* src_node, TaskInstance* dst_node) {
 }
 
 void Schedule::UpdateDuration() {
-  sgraph().ForeachRegstDesc([&](SRegstDesc* regst_desc) {
+  sgraph().ForEachRegstDesc([&](SRegstDesc* regst_desc) {
     STask* owner = nullptr;
     sgraph().produced_regst_desc_mgr().Input(regst_desc, &owner);
     uint32_t start = session().nr_unstable_batch();
@@ -70,7 +70,7 @@ void Schedule::UpdateDuration() {
 }
 
 void Schedule::UpdateRegstCount() {
-  sgraph().ForeachRegstDesc([&](SRegstDesc* regst_desc) {
+  sgraph().ForEachRegstDesc([&](SRegstDesc* regst_desc) {
     STask* owner = nullptr;
     sgraph().produced_regst_desc_mgr().Input(regst_desc, &owner);
     float duration =

@@ -58,6 +58,7 @@ class Session {
 
   //	getter
   inline const SGraph& sgraph() const { return *sgraph_; }
+  inline const UtilizationGraph& ugraph() const { return *ugraph_; }
   inline const NodeMgr<Batch>& batch_node_mgr() const {
     return batch_node_mgr_;
   }

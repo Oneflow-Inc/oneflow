@@ -51,10 +51,10 @@ void SimulatorSchedule::WalkTimeNetReverse(
       session().task_instance_mgr().Find(last_batch, last_node);
 
   auto foreach_next =
-      std::bind(&SimulatorSchedule::ForeachPrevTaskInstance, this,
+      std::bind(&SimulatorSchedule::ForEachPrevTaskInstance, this,
                 std::placeholders::_1, std::placeholders::_2);
   auto foreach_prev =
-      std::bind(&SimulatorSchedule::ForeachNextTaskInstance, this,
+      std::bind(&SimulatorSchedule::ForEachNextTaskInstance, this,
                 std::placeholders::_1, std::placeholders::_2);
 
   BfsVisitor<TaskInstance*> bfs_foreach(foreach_next, foreach_prev);
@@ -70,7 +70,7 @@ void SimulatorSchedule::WalkFromLoss(
   //	dependences between different batches
   auto foreach_nature_next = [&](TaskInstance* instance,
                                  const std::function<void(TaskInstance*)>& cb) {
-    ForeachNextTaskInstance(instance, [&](TaskInstance* next) {
+    ForEachNextTaskInstance(instance, [&](TaskInstance* next) {
       if (next->src_node() == instance->src_node()
           || next->dst_node() == instance->dst_node()) {
         cb(next);
@@ -80,7 +80,7 @@ void SimulatorSchedule::WalkFromLoss(
 
   auto foreach_nature_prev = [&](TaskInstance* instance,
                                  const std::function<void(TaskInstance*)>& cb) {
-    ForeachPrevTaskInstance(instance, [&](TaskInstance* prev) {
+    ForEachPrevTaskInstance(instance, [&](TaskInstance* prev) {
       if (prev->src_node() == instance->src_node()
           || prev->dst_node() == instance->dst_node()) {
         cb(prev);
@@ -121,7 +121,7 @@ void SimulatorSchedule::WalkFromLossToSource(
 }
 
 void SimulatorSchedule::InitTimeNet() {
-  sgraph().ForeachArc([&](TaskArc* arc) {
+  sgraph().ForEachArc([&](TaskArc* arc) {
     uint32_t start = 0;
     uint32_t end = session().nr_batch();
     for (uint32_t i = start; i < end; i++) {
@@ -136,7 +136,7 @@ void SimulatorSchedule::InitTimeNet() {
     }
   });
 
-  sgraph().ForeachNode([&](STask* node) {
+  sgraph().ForEachNode([&](STask* node) {
     uint32_t start = 0;
     uint32_t end = session().nr_batch();
     for (uint32_t i = start; i < end - 1; i++) {

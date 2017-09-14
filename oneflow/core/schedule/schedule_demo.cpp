@@ -69,7 +69,7 @@ void TestPlan(const std::string& file, const std::string& dot_file) {
       analyzer_factory.CreateUtilizationAnalyzer(*sgraph);
   std::unique_ptr<UtilizationGraph> ugraph =
       analyzer->CreateUtilizationGraph("");
-  validator->ValidateGraph(*sgraph);
+  validator->ValidateSGraph(*sgraph);
   std::unique_ptr<Session> session =
       session_factory.CreateSession(*sgraph, *ugraph);
   std::unique_ptr<Schedule> schedule =

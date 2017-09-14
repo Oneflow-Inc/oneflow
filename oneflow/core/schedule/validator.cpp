@@ -7,7 +7,8 @@ namespace oneflow {
 namespace schedule {
 
 bool Validator::ValidateGraphArc(
-    const SGraph& sgraph, const std::function<void(const Arc<STask>&)>& cb) {
+    const SGraph& sgraph,
+    const std::function<void(const Arc<STask>&)>& cb) const {
   typedef std::function<void(STask * task)> TaskVisitor;
   auto foreach_next = [&](STask* task, const TaskVisitor& cb) {
     sgraph.arc_mgr().Output(task, cb);
@@ -23,16 +24,29 @@ bool Validator::ValidateGraphArc(
   uint32_t scc_cnt = scc(sgraph.source(), print_component);
   CHECK(scc_cnt == 0u);
 
-  sgraph.ForeachArc([&](TaskArc* arc) {
+  sgraph.ForEachArc([&](TaskArc* arc) {
     CHECK(arc->dst_node() != sgraph.source());
     CHECK(arc->src_node() != sgraph.sink());
   });
   return true;
 }
 
-bool Validator::ValidateMemory(const Schedule& schedule) {
+bool Validator::ValidateUtilizationGraph(const UtilizationGraph& ugraph) const {
+  ugraph.ForEachUtilization(
+      [](const Utilization& u) { CHECK(u.raw_protos().size()); });
+  std::unordered_map<const STask*, float> task2utilization;
+  ugraph.node_mgr<TaskUtilization>().ForEach([&](const TaskUtilization& tu) {
+    const STask* task = ugraph.sgraph().node_mgr().Find(tu.task_id());
+    task2utilization[task] = tu.utilization_proto().utilization();
+  });
+  ugraph.sgraph().ForEachChild(
+      [&](const STask& task) { CHECK(task2utilization[&task]); });
+  return true;
+}
+
+bool Validator::ValidateMemory(const Schedule& schedule) const {
   std::unordered_map<const SDevice*, uint64_t> device2total_memory_size;
-  schedule.sgraph().ForeachRegstDesc([&](SRegstDesc* regst_desc) {
+  schedule.sgraph().ForEachRegstDesc([&](SRegstDesc* regst_desc) {
     const SDevice& device = regst_desc->owner_task().device();
     uint32_t regst_count =
         GetOrDefault(schedule.regst_desc2count(), regst_desc, 0u);
@@ -46,9 +60,8 @@ bool Validator::ValidateMemory(const Schedule& schedule) {
   return true;
 }
 
-bool Validator::ValidateAllocation(const Schedule& schedule) {
-  const auto& engine_factory =
-      schedule_factory_provider().schedule_engine_factory();
+bool Validator::ValidateAllocation(const Schedule& schedule) const {
+  const auto& engine_factory = sfp().schedule_engine_factory();
   auto schedule_engine =
       engine_factory.CreateScheduleEngine(schedule.session());
   uint32_t target = 0;
