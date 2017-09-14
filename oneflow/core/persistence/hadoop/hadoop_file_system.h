@@ -26,6 +26,8 @@ class LibHDFS {
   }
 
   // The status, if any, from failure to load.
+  // true is OK
+  // false is non-OK
   bool status() { return status_; }
 
   std::function<hdfsFS(hdfsBuilder*)> hdfsBuilderConnect;
