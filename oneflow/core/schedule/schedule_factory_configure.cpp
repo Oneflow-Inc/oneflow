@@ -1,9 +1,11 @@
 #include "oneflow/core/schedule/schedule_factory_configure.h"
 #include "oneflow/core/schedule/allocator.h"
 #include "oneflow/core/schedule/demo_sgraph.h"
+#include "oneflow/core/schedule/empty_utilization_analyzer.h"
 #include "oneflow/core/schedule/formula_schedule_engine.h"
 #include "oneflow/core/schedule/plan_sgraph.h"
 #include "oneflow/core/schedule/simulator_schedule_engine.h"
+#include "oneflow/core/schedule/simulator_utilization_analyzer.h"
 #include "oneflow/core/schedule/utilization_analyzer_factory.h"
 
 namespace oneflow {

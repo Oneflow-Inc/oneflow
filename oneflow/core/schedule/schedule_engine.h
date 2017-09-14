@@ -10,7 +10,7 @@ class ScheduleEngine {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ScheduleEngine);
   virtual ~ScheduleEngine() = default;
-  explicit ScheduleEngine(const Session* session) : session_(session) {}
+  explicit ScheduleEngine(const Session& session) : session_(&session) {}
 
   virtual std::unique_ptr<Schedule> StaticSchedule() = 0;
   virtual std::unique_ptr<Schedule> StaticSchedule(

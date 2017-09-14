@@ -21,8 +21,8 @@ class UtilizationAnalyzer {
       std::string log_file);
 
  protected:
-  virtual void ParseDeviceInfoProto(const std::string& log_file,
-                                    DeviceInfoProto* device_info_proto) const;
+  virtual std::unique_ptr<DeviceInfoProto> ParseDeviceInfoProto(
+      const std::string& log_file) const;
   virtual std::unique_ptr<UtilizationGraph> Analyze(
       const DeviceInfoProto& dev_info_package) const;
 
@@ -46,20 +46,6 @@ class UtilizationAnalyzer {
       const std::list<const UtilizationEventProto*>& event_pair,
       UtilizationPackageProto* utilization_package) const;
   const SGraph* sgraph_;
-};
-
-class EmptyUtilizationAnalyzer : public UtilizationAnalyzer {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(EmptyUtilizationAnalyzer);
-  explicit EmptyUtilizationAnalyzer(const SGraph& sgraph)
-      : UtilizationAnalyzer(sgraph) {}
-  ~EmptyUtilizationAnalyzer() = default;
-
- protected:
-  std::unique_ptr<UtilizationGraph> Analyze(
-      const DeviceInfoProto& dev_info_package) const override {
-    return of_make_unique<UtilizationGraph>(*sgraph());
-  }
 };
 
 }  // namespace schedule

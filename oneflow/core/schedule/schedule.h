@@ -10,7 +10,8 @@ namespace schedule {
 
 class Schedule {
  public:
-  explicit Schedule(const Session* session) : session_(session) {}
+  explicit Schedule(const Session& session) : session_(&session) {}
+  virtual ~Schedule() = default;
 
   void Clear();
   void UpdateDuration();

@@ -5,16 +5,17 @@
 namespace oneflow {
 namespace schedule {
 
-void UtilizationAnalyzer::ParseDeviceInfoProto(
-    const std::string& log_file, DeviceInfoProto* device_info_proto) const {
-  ParseProtoFromTextFile(log_file, device_info_proto);
+std::unique_ptr<DeviceInfoProto> UtilizationAnalyzer::ParseDeviceInfoProto(
+    const std::string& log_file) const {
+  auto device_info_proto = of_make_unique<DeviceInfoProto>();
+  ParseProtoFromTextFile(log_file, device_info_proto.get());
+  return std::move(device_info_proto);
 }
 
 std::unique_ptr<UtilizationGraph> UtilizationAnalyzer::CreateUtilizationGraph(
     std::string log_file) {
-  DeviceInfoProto device_info_proto;
-  ParseDeviceInfoProto(log_file, &device_info_proto);
-  return Analyze(device_info_proto);
+  auto device_info_proto = ParseDeviceInfoProto(log_file);
+  return Analyze(*device_info_proto);
 }
 
 std::unique_ptr<UtilizationGraph> UtilizationAnalyzer::Analyze(

@@ -17,7 +17,9 @@ class SimulatorScheduleEngine;
 class SimulatorSchedule : public Schedule {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SimulatorSchedule);
-  explicit SimulatorSchedule(const Session* session) : Schedule(session) {}
+  explicit SimulatorSchedule(const Session& session)
+      : Schedule(session),
+        device_info_proto_(of_make_unique<DeviceInfoProto>()) {}
 
   void TimeLinePushBack(TaskInstance* instance, SDevice* device);
   void Retiming();
@@ -46,7 +48,10 @@ class SimulatorSchedule : public Schedule {
     return regst_desc_instance2regst_;
   }
   inline const DeviceInfoProto& device_info_proto() const {
-    return device_info_proto_;
+    return *device_info_proto_;
+  }
+  inline std::unique_ptr<DeviceInfoProto> move_device_info_proto() {
+    return std::move(device_info_proto_);
   }
 
   //	setter
@@ -65,7 +70,7 @@ class SimulatorSchedule : public Schedule {
     return regst_desc_instance2regst_;
   }
   inline DeviceInfoProto* mut_device_info_proto() {
-    return &device_info_proto_;
+    return device_info_proto_.get();
   }
 
   void ForeachNextTaskInstance(TaskInstance* task_instance,
@@ -104,7 +109,7 @@ class SimulatorSchedule : public Schedule {
 
   ArcMgr<Arc<TaskInstance>> timenet_arc_mgr_;
   std::unordered_map<SDevice*, TaskInstance*> dev2current_instance_;
-  DeviceInfoProto device_info_proto_;
+  std::unique_ptr<DeviceInfoProto> device_info_proto_;
 };
 
 }  // namespace schedule

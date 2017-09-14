@@ -9,7 +9,7 @@ namespace schedule {
 class FormulaScheduleEngine : public ScheduleEngine {
  public:
   OF_DISALLOW_COPY_AND_MOVE(FormulaScheduleEngine);
-  FormulaScheduleEngine(const Session* session) : ScheduleEngine(session) {}
+  FormulaScheduleEngine(const Session& session) : ScheduleEngine(session) {}
   ~FormulaScheduleEngine() = default;
   std::unique_ptr<Schedule> StaticSchedule();
   std::unique_ptr<Schedule> StaticSchedule(

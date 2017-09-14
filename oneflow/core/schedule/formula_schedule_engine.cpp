@@ -3,7 +3,7 @@ namespace oneflow {
 namespace schedule {
 
 std::unique_ptr<Schedule> FormulaScheduleEngine::StaticSchedule() {
-  auto schedule = of_make_unique<Schedule>(session());
+  auto schedule = of_make_unique<Schedule>(*session());
   schedule->mut_max_interval() = EvaluateInitiationInterval();
   ForEachRegstDescDuration([&](SRegstDesc* regst_desc, float duration) {
     schedule->mut_regst_desc2duration()[regst_desc] = duration;
