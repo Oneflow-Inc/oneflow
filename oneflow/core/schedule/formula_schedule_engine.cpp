@@ -45,7 +45,7 @@ float FormulaScheduleEngine::GetRegstDescDuration(
     const LongestPathVisitor<STask*>& lpath, SRegstDesc* regst_desc) {
   auto get_node_weight = [&](STask* task) { return GetSTaskWeight(task); };
   float duration = 0;
-  STask* owner = const_cast<STask*>(regst_desc->owner_task());
+  STask* owner = const_cast<STask*>(&regst_desc->owner_task());
   sgraph().subscribed_regst_desc_mgr().Input(
       regst_desc, [&](STask* subscriber) {
         auto path_handler = [&](const std::list<STask*>& path) {

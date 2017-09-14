@@ -33,8 +33,8 @@ class Validator {
   virtual bool ValidateMemory(const Schedule& schedule);
 
   //	getter
-  inline ScheduleFactoryProvider* schedule_factory_provider() const {
-    return schedule_factory_provider_;
+  inline ScheduleFactoryProvider& schedule_factory_provider() const {
+    return *schedule_factory_provider_;
   }
 
  private:

@@ -10,12 +10,12 @@ namespace schedule {
 
 void Allocator::Allocate(Plan* plan,
                          const std::string& dev_info_proto_log_file) const {
-  const auto& sgraph_factory = schedule_factory_provider()->sgraph_factory();
+  const auto& sgraph_factory = schedule_factory_provider().sgraph_factory();
   const auto& analyzer_factory =
-      schedule_factory_provider()->utilization_analyzer_factory();
-  const auto& session_factory = schedule_factory_provider()->session_factory();
+      schedule_factory_provider().utilization_analyzer_factory();
+  const auto& session_factory = schedule_factory_provider().session_factory();
   const auto& validator_factory =
-      schedule_factory_provider()->validator_factory();
+      schedule_factory_provider().validator_factory();
   std::unique_ptr<Validator> validator = validator_factory.CreateValidator();
 
   std::unique_ptr<SGraph> sgraph = sgraph_factory.CreateSGraph(*plan);
@@ -52,9 +52,9 @@ void Allocator::SetRegstNum(const Schedule& schedule, Plan* plan) const {
 std::unique_ptr<Schedule> Allocator::MemoryLimitedStaticSchedule(
     const Session& session) const {
   const auto& engine_factory =
-      schedule_factory_provider()->schedule_engine_factory();
+      schedule_factory_provider().schedule_engine_factory();
   const auto& validator_factory =
-      schedule_factory_provider()->validator_factory();
+      schedule_factory_provider().validator_factory();
 
   std::unique_ptr<ScheduleEngine> schedule_engine =
       engine_factory.CreateScheduleEngine(session);

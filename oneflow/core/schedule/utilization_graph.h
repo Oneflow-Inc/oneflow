@@ -33,7 +33,7 @@ class UtilizationGraph final {
                                 const std::function<void(Utilization*)>& cb);
 
   //	getter
-  inline const SGraph* sgraph() const { return sgraph_; }
+  inline const SGraph& sgraph() const { return *sgraph_; }
   inline const ComputationUtilization& computation() const {
     return *computation_;
   }

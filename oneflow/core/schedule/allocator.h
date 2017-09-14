@@ -25,8 +25,8 @@ class Allocator {
       const Session& session) const;
 
   //	getter
-  inline const ScheduleFactoryProvider* schedule_factory_provider() const {
-    return schedule_factory_provider_;
+  inline const ScheduleFactoryProvider& schedule_factory_provider() const {
+    return *schedule_factory_provider_;
   }
 
  private:

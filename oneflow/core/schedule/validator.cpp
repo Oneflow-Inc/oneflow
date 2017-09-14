@@ -33,11 +33,11 @@ bool Validator::ValidateGraphArc(
 bool Validator::ValidateMemory(const Schedule& schedule) {
   std::unordered_map<const SDevice*, uint64_t> device2total_memory_size;
   schedule.sgraph().ForeachRegstDesc([&](SRegstDesc* regst_desc) {
-    const SDevice* device = regst_desc->owner_task()->device();
+    const SDevice& device = regst_desc->owner_task().device();
     uint32_t regst_count =
         GetOrDefault(schedule.regst_desc2count(), regst_desc, 0u);
     uint32_t memory_size = regst_count * regst_desc->regst_memory_size();
-    device2total_memory_size[device] += memory_size;
+    device2total_memory_size[&device] += memory_size;
   });
 
   for (const auto& p : device2total_memory_size) {
@@ -48,7 +48,7 @@ bool Validator::ValidateMemory(const Schedule& schedule) {
 
 bool Validator::ValidateAllocation(const Schedule& schedule) {
   const auto& engine_factory =
-      schedule_factory_provider()->schedule_engine_factory();
+      schedule_factory_provider().schedule_engine_factory();
   auto schedule_engine =
       engine_factory.CreateScheduleEngine(schedule.session());
   uint32_t target = 0;

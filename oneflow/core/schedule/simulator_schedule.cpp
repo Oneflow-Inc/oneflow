@@ -12,7 +12,7 @@ void SimulatorSchedule::EmitEvent(UtilizationEventType event_type,
                                   TaskInstance* instance, float time) {
   uint64_t batch_id = instance->src_node()->id();
   uint64_t task_id = instance->dst_node()->id();
-  uint64_t stream_id = instance->dst_node()->device()->id();
+  uint64_t stream_id = instance->dst_node()->device().id();
   auto event = mut_device_info_proto()->add_event();
   event->set_event_type(event_type);
   event->set_batch_id(batch_id);

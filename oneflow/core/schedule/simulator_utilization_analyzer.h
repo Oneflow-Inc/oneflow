@@ -19,8 +19,8 @@ class SimulatorUtilizationAnalyzer : public UtilizationAnalyzer {
  protected:
   std::unique_ptr<DeviceInfoProto> ParseDeviceInfoProto(
       const std::string& log_file) const {
-    UtilizationGraph ugraph(*sgraph());
-    Session session(*sgraph(), ugraph);
+    UtilizationGraph ugraph(sgraph());
+    Session session(sgraph(), ugraph);
     SimulatorScheduleEngine engine(session);
     auto get_regst_num = [](uint64_t) -> uint32_t { return 3u; };
     auto schedule = engine.StaticSchedule(get_regst_num);

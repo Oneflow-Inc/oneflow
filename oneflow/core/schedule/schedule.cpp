@@ -11,7 +11,7 @@ void Schedule::PrintRegstNum() {
     float interval = max_interval();
     uint32_t count = GetOrDefault(regst_desc2count(), regst_desc, 1u);
     std::cout << "Allocation\t" << std::setw(15)
-              << regst_desc->owner_task()->id() << "\t" << std::setw(5)
+              << regst_desc->owner_task().id() << "\t" << std::setw(5)
               << regst_desc->id() << "\t" << count << "\t" << duration << ","
               << interval << std::endl;
   });

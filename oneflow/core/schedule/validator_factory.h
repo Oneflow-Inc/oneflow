@@ -16,8 +16,8 @@ class ValidatorFactory {
   ValidatorFactory() = default;
   DEFINE_FACTORY_METHOD_CLONE(ValidatorFactory, ValidatorFactory);
 
-  inline const ScheduleFactoryProvider* schedule_factory_provider() const {
-    return schedule_factory_provider_;
+  inline const ScheduleFactoryProvider& schedule_factory_provider() const {
+    return *schedule_factory_provider_;
   }
 
   virtual std::unique_ptr<Validator> CreateValidator() const {

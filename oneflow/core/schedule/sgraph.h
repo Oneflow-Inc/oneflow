@@ -47,7 +47,7 @@ class STask : public SNode {
 
   inline float workload() const { return workload_; }
   inline uint32_t depth() const { return depth_; }
-  inline const SDevice* device() const { return device_; }
+  inline const SDevice& device() const { return *device_; }
 
   inline float& mut_workload() { return workload_; }
   inline uint32_t& mut_depth() { return depth_; }
@@ -69,7 +69,7 @@ class SRegstDesc : public SNode {
   virtual ~SRegstDesc() {}
 
   inline uint64_t regst_memory_size() const { return regst_memory_size_; }
-  inline const STask* owner_task() const { return owner_task_; }
+  inline const STask& owner_task() const { return *owner_task_; }
   inline uint32_t min_regst_count() const { return min_regst_count_; }
 
   inline uint64_t& mut_regst_memory_size() { return regst_memory_size_; }
