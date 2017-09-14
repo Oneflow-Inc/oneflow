@@ -41,9 +41,9 @@ class ScheduleFactoryProvider final {
 
 //	getter
 #define PROVIDER_FACTORY_GETTER(class_name, field) \
-  inline const class_name* field() const {         \
+  inline const class_name& field() const {         \
     CHECK(OF_PP_CAT(field, _).get());              \
-    return OF_PP_CAT(field, _).get();              \
+    return *OF_PP_CAT(field, _).get();             \
   }
   OF_PP_FOR_EACH_TUPLE(PROVIDER_FACTORY_GETTER, SCHEDULE_FACTORY_SEQ);
 

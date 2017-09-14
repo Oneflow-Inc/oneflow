@@ -47,9 +47,10 @@ bool Validator::ValidateMemory(const Schedule& schedule) {
 }
 
 bool Validator::ValidateAllocation(const Schedule& schedule) {
-  auto engine_factory = schedule_factory_provider()->schedule_engine_factory();
+  const auto& engine_factory =
+      schedule_factory_provider()->schedule_engine_factory();
   auto schedule_engine =
-      engine_factory->CreateScheduleEngine(schedule.session());
+      engine_factory.CreateScheduleEngine(schedule.session());
   uint32_t target = 0;
   uint32_t failed = 0;
 

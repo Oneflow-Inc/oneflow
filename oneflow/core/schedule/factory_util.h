@@ -3,7 +3,7 @@
 
 #define CLONE_FACTORY(obj, getter)                                \
   do {                                                            \
-    if (obj->getter) { mut_##getter = obj->getter->Clone(this); } \
+    if (&obj->getter) { mut_##getter = obj->getter.Clone(this); } \
   } while (0)
 
 #define DEFINE_FACTORY_METHOD_CLONE(class_name, base)                      \
