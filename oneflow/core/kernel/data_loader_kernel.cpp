@@ -39,7 +39,8 @@ void DataLoaderKernel<T>::Forward(
         if (out_blob->has_data_id()) {
           memset(out_blob->mut_data_id(i), '\0',
                  JobDesc::Singleton()->SizeOfOneDataId());
-          memcpy(out_blob->mut_data_id(i), token.c_str(), token.size());
+          memcpy(out_blob->mut_data_id(i), token.c_str(),
+                 JobDesc::Singleton()->SizeOfOneDataId());
         }
         for (int64_t j = 0; j < out_blob->shape().Count(1); ++j) {
           line_ptr = StrToToken(line_ptr, ",", &token) + 1;
@@ -52,7 +53,8 @@ void DataLoaderKernel<T>::Forward(
         memset(out_blob->mut_data_id(i), '\0',
                JobDesc::Singleton()->SizeOfOneDataId());
         for (int64_t j = 0; j < out_blob->shape().Count(1); ++j) {
-          *out_dptr++ = static_cast<T>(0);
+          *out_dptr = static_cast<T>(0);
+          out_dptr++;
         }
       }
     }
