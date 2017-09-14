@@ -19,15 +19,14 @@ class WindowsFileSystem final : public FileSystem {
   WindowsFileSystem() = default;
   ~WindowsFileSystem() = default;
 
-  void NewRandomAccessFile(
-      const std::string& fname,
-      std::unique_ptr<RandomAccessFile>* result) override;
+  void NewRandomAccessFile(const std::string& fname,
+                           std::unique_ptr<RandomAccessFile>* result) override;
 
   void NewWritableFile(const std::string& fname,
-                         std::unique_ptr<WritableFile>* result) override;
+                       std::unique_ptr<WritableFile>* result) override;
 
   void NewAppendableFile(const std::string& fname,
-                           std::unique_ptr<WritableFile>* result) override;
+                         std::unique_ptr<WritableFile>* result) override;
 
   bool FileExists(const std::string& fname) override;
 
@@ -41,7 +40,8 @@ class WindowsFileSystem final : public FileSystem {
 
   uint64_t GetFileSize(const std::string& fname) override;
 
-  void RenameFile(const std::string& old_name, const std::string& new_name) override;
+  void RenameFile(const std::string& old_name,
+                  const std::string& new_name) override;
 
   bool IsDirectory(const std::string& fname) override;
 
