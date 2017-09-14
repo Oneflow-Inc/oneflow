@@ -31,7 +31,7 @@ class SimulatorScheduleEngine : public ScheduleEngine {
 
   std::unique_ptr<SimulatorSchedule> GetSchedule() {
     std::unique_ptr<SimulatorSchedule> ret = std::move(schedule_);
-    schedule_ = of_make_unique<SimulatorSchedule>(*session());
+    schedule_ = of_make_unique<SimulatorSchedule>(session());
     return ret;
   }
 

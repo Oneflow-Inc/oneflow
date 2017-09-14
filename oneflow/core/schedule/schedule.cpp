@@ -5,7 +5,7 @@ namespace oneflow {
 namespace schedule {
 
 void Schedule::PrintRegstNum() {
-  session()->sgraph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
+  sgraph().ForeachRegstDesc([&](SRegstDesc* regst_desc) {
     float duration =
         GetOrDefault(regst_desc2duration(), regst_desc, static_cast<float>(0));
     float interval = max_interval();
@@ -18,17 +18,17 @@ void Schedule::PrintRegstNum() {
 }
 
 void Schedule::PrintSchedule() {
-  auto batches = session()->GetBatchNodes();
+  auto batches = session().GetBatchNodes();
   std::cout << std::setw(15) << ""
             << " ";
   for (Batch* batch : *batches) {
     std::cout << std::setw(4) << batch->id() << " ";
   }
   std::cout << std::endl;
-  session()->sgraph()->Walk([&](STask* task) {
+  sgraph().Walk([&](STask* task) {
     std::cout << std::setw(15) << task->id() << " ";
     for (Batch* batch : *batches) {
-      TaskInstance* instance = session()->task_instance_mgr().Find(batch, task);
+      TaskInstance* instance = session().task_instance_mgr().Find(batch, task);
       float start = instance2ended_at_[instance].first;
       std::cout << std::setw(4) << start << " ";
     }
@@ -44,25 +44,24 @@ float Schedule::GetDuration(TaskInstance* src_node, TaskInstance* dst_node) {
 }
 
 void Schedule::UpdateDuration() {
-  session()->sgraph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
+  sgraph().ForeachRegstDesc([&](SRegstDesc* regst_desc) {
     STask* owner = nullptr;
-    session()->sgraph()->produced_regst_desc_mgr().Input(regst_desc, &owner);
-    uint32_t start = session()->nr_unstable_batch();
-    uint32_t end = start + session()->nr_stable_batch();
+    sgraph().produced_regst_desc_mgr().Input(regst_desc, &owner);
+    uint32_t start = session().nr_unstable_batch();
+    uint32_t end = start + session().nr_stable_batch();
     CHECK(end - start > 0);
     float sum = 0;
     for (uint32_t i = start; i < end; i++) {
-      Batch* batch = session()->batch_node_mgr().Find(i);
+      Batch* batch = session().batch_node_mgr().Find(i);
       TaskInstance* owner_instance =
-          session()->task_instance_mgr().Find(batch, owner);
+          session().task_instance_mgr().Find(batch, owner);
       float duration = 0;
-      session()->sgraph()->subscribed_regst_desc_mgr().Input(
-          regst_desc, [&](STask* node) {
-            TaskInstance* node_instance =
-                session()->task_instance_mgr().Find(batch, node);
-            float d = GetDuration(owner_instance, node_instance);
-            duration = std::max(duration, d);
-          });
+      sgraph().subscribed_regst_desc_mgr().Input(regst_desc, [&](STask* node) {
+        TaskInstance* node_instance =
+            session().task_instance_mgr().Find(batch, node);
+        float d = GetDuration(owner_instance, node_instance);
+        duration = std::max(duration, d);
+      });
       sum += duration;
     }
     CHECK(end + 1 - start > 0);
@@ -71,9 +70,9 @@ void Schedule::UpdateDuration() {
 }
 
 void Schedule::UpdateRegstCount() {
-  session()->sgraph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
+  sgraph().ForeachRegstDesc([&](SRegstDesc* regst_desc) {
     STask* owner = nullptr;
-    session()->sgraph()->produced_regst_desc_mgr().Input(regst_desc, &owner);
+    sgraph().produced_regst_desc_mgr().Input(regst_desc, &owner);
     float duration =
         GetOrDefault(regst_desc2duration(), regst_desc, static_cast<float>(0));
     float interval = max_interval();
@@ -85,14 +84,14 @@ void Schedule::UpdateRegstCount() {
 }
 
 void Schedule::UpdateInterval() {
-  STask* end_node = session()->sgraph()->sink();
+  STask* end_node = sgraph().sink();
   std::pair<float, float> default_range;
   float last_batch_ended_at = 0;
   std::vector<float> intervals;
-  for (uint32_t i = 0; i < session()->nr_batch(); ++i) {
-    Batch* batch = session()->batch_node_mgr().Find(i);
+  for (uint32_t i = 0; i < session().nr_batch(); ++i) {
+    Batch* batch = session().batch_node_mgr().Find(i);
     TaskInstance* instance =
-        session()->task_instance_mgr().Find(batch, end_node);
+        session().task_instance_mgr().Find(batch, end_node);
     float current =
         GetOrDefault(instance2ended_at(), instance, default_range).second;
     if (i) { intervals.push_back(current - last_batch_ended_at); }

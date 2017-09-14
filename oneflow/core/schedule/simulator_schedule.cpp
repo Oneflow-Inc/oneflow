@@ -19,11 +19,11 @@ void SimulatorSchedule::EmitEvent(UtilizationEventType event_type,
   event->set_time(time);
   event->mutable_resource()->mutable_task_stream()->set_task_id(task_id);
   event->mutable_resource()->mutable_task_stream()->set_stream_id(stream_id);
-  session()->sgraph()->produced_regst_desc_mgr().Output(
+  sgraph().produced_regst_desc_mgr().Output(
       instance->dst_node(), [&](SRegstDesc* regst_desc) {
         RegstDescInstance* regst_desc_instance =
-            session()->regst_desc_instance_mgr().Find(instance->src_node(),
-                                                      regst_desc);
+            session().regst_desc_instance_mgr().Find(instance->src_node(),
+                                                     regst_desc);
         SRegst* regst = mut_regst_desc_instance2regst()[regst_desc_instance];
         CHECK(regst);
         auto event = mut_device_info_proto()->add_event();
@@ -45,10 +45,10 @@ void SimulatorSchedule::TimeLinePushBack(TaskInstance* instance,
 
 void SimulatorSchedule::WalkTimeNetReverse(
     const std::function<void(TaskInstance*)>& cb) {
-  Batch* last_batch = const_cast<Batch*>(session()->EndBatch());
-  STask* last_node = session()->sgraph()->sink();
+  Batch* last_batch = const_cast<Batch*>(session().EndBatch());
+  STask* last_node = sgraph().sink();
   TaskInstance* last_instance =
-      session()->task_instance_mgr().Find(last_batch, last_node);
+      session().task_instance_mgr().Find(last_batch, last_node);
 
   auto foreach_next =
       std::bind(&SimulatorSchedule::ForeachPrevTaskInstance, this,
@@ -98,12 +98,12 @@ void SimulatorSchedule::WalkFromLoss(
   BfsVisitor<TaskInstance*> bfs_foreach(foreach_next, foreach_prev);
 
   std::list<STask*> loss_nodes;
-  session()->sgraph()->LossNodes(&loss_nodes);
+  sgraph().LossNodes(&loss_nodes);
   std::list<TaskInstance*> loss_instances;
-  for (int32_t i = 0; i < session()->nr_batch(); ++i) {
-    Batch* batch = session()->batch_node_mgr().Find(i);
+  for (int32_t i = 0; i < session().nr_batch(); ++i) {
+    Batch* batch = session().batch_node_mgr().Find(i);
     for (STask* loss : loss_nodes) {
-      TaskInstance* instance = session()->task_instance_mgr().Find(batch, loss);
+      TaskInstance* instance = session().task_instance_mgr().Find(batch, loss);
       loss_instances.push_back(instance);
     }
   }
@@ -121,31 +121,31 @@ void SimulatorSchedule::WalkFromLossToSource(
 }
 
 void SimulatorSchedule::InitTimeNet() {
-  session()->sgraph()->ForeachArc([&](TaskArc* arc) {
+  sgraph().ForeachArc([&](TaskArc* arc) {
     uint32_t start = 0;
-    uint32_t end = session()->nr_batch();
+    uint32_t end = session().nr_batch();
     for (uint32_t i = start; i < end; i++) {
-      Batch* batch = const_cast<Batch*>(session()->batch_node_mgr().Find(i));
+      Batch* batch = const_cast<Batch*>(session().batch_node_mgr().Find(i));
       STask* from_node = arc->src_node();
       STask* to_node = arc->dst_node();
       TaskInstance* src_node =
-          session()->task_instance_mgr().Find(batch, from_node);
+          session().task_instance_mgr().Find(batch, from_node);
       TaskInstance* dst_node =
-          session()->task_instance_mgr().Find(batch, to_node);
+          session().task_instance_mgr().Find(batch, to_node);
       mut_timenet_arc_mgr().CreateIfNotFound(src_node, dst_node);
     }
   });
 
-  session()->sgraph()->ForeachNode([&](STask* node) {
+  sgraph().ForeachNode([&](STask* node) {
     uint32_t start = 0;
-    uint32_t end = session()->nr_batch();
+    uint32_t end = session().nr_batch();
     for (uint32_t i = start; i < end - 1; i++) {
-      Batch* batch = const_cast<Batch*>(session()->batch_node_mgr().Find(i));
+      Batch* batch = const_cast<Batch*>(session().batch_node_mgr().Find(i));
       Batch* next_batch =
-          const_cast<Batch*>(session()->batch_node_mgr().Find(i + 1));
-      TaskInstance* src_node = session()->task_instance_mgr().Find(batch, node);
+          const_cast<Batch*>(session().batch_node_mgr().Find(i + 1));
+      TaskInstance* src_node = session().task_instance_mgr().Find(batch, node);
       TaskInstance* dst_node =
-          session()->task_instance_mgr().Find(next_batch, node);
+          session().task_instance_mgr().Find(next_batch, node);
       mut_timenet_arc_mgr().CreateIfNotFound(src_node, dst_node);
     }
   });
@@ -171,7 +171,7 @@ void SimulatorSchedule::EagerRetimingBpNodeWithSplitDeviceHypothesis() {
       }
     });
     TaskInstance* prev_batch_instance =
-        session()->GetPrevBatchInstance(instance);
+        session().GetPrevBatchInstance(instance);
     if (prev_batch_instance) {
       float prev_batch_start =
           GetOrDefault(instance2ended_at(), prev_batch_instance, defval).first;
@@ -197,7 +197,7 @@ void SimulatorSchedule::LazyRetimingFwNodeWithSplitDeviceHypothesis() {
       }
     });
     TaskInstance* next_batch_instance =
-        session()->GetNextBatchInstance(instance);
+        session().GetNextBatchInstance(instance);
     if (next_batch_instance) {
       float next_instance_end =
           GetOrDefault(instance2ended_at(), next_batch_instance, defval).second;
@@ -223,7 +223,7 @@ void SimulatorSchedule::LazyRetimingAllNode() {
         });
     auto& p = mut_instance2ended_at()[instance];
     if (!count) { lazy_end = p.second; }
-    TaskInstance* next_instance = session()->GetNextBatchInstance(instance);
+    TaskInstance* next_instance = session().GetNextBatchInstance(instance);
     if (next_instance) {
       float next_instance_end =
           GetOrDefault(instance2ended_at(), next_instance, defval).second;

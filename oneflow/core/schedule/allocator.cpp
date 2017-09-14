@@ -33,9 +33,8 @@ void Allocator::Allocate(Plan* plan,
 
 void Allocator::SetRegstNum(const Schedule& schedule, Plan* plan) const {
   if (!plan) return;
-  const SGraph* graph = schedule.session()->sgraph();
   auto get_regst_num = [&](int64_t id) {
-    SRegstDesc* regst_desc = graph->regst_desc_mgr().Find(id);
+    SRegstDesc* regst_desc = schedule.sgraph().regst_desc_mgr().Find(id);
     uint32_t count = GetOrDefault(schedule.regst_desc2count(), regst_desc, 2u);
     count = std::max(count, regst_desc->min_regst_count());
     return count;

@@ -6,12 +6,12 @@ namespace oneflow {
 namespace schedule {
 
 void UtilizationAnalyzer::ForEachDeviceMemory(
-			const std::function<void(const std::string&, uint64_t)>& cb) const {
-	//	TODO:
-	//	cb(device_name0, memory_size0);
-	//	cb(device_name1, memory_size1);
-	//	cb(device_name2, memory_size2);
-	//	and so on;
+    const std::function<void(const std::string&, uint64_t)>& cb) const {
+  //	TODO:
+  //	cb(device_name0, memory_size0);
+  //	cb(device_name1, memory_size1);
+  //	cb(device_name2, memory_size2);
+  //	and so on;
 }
 
 std::unique_ptr<DeviceInfoProto> UtilizationAnalyzer::ParseDeviceInfoProto(

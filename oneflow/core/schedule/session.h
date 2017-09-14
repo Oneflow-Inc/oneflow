@@ -56,7 +56,7 @@ class Session {
   TaskInstance* GetPrevBatchInstance(TaskInstance* instance) const;
   std::unique_ptr<std::list<Batch*>> GetBatchNodes() const;
 
-  inline const SGraph* sgraph() const { return sgraph_; }
+  inline const SGraph& sgraph() const { return *sgraph_; }
 
   inline const NodeMgr<Batch>& batch_node_mgr() const {
     return batch_node_mgr_;

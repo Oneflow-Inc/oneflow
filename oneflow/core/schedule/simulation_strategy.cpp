@@ -12,9 +12,9 @@ void LazyEvaluationStrategy::TimeLinePushBack(TaskInstance* instance,
 
 void MemorySimulationStrategy::InitFuncs() {
   get_node_instance_ = [&](TaskArcInstance* arc) {
-    const Session* session = schedule_engine()->session();
-    return session->task_instance_mgr().Find(arc->src_node(),
-                                             arc->dst_node()->dst_node());
+    const Session& session = schedule_engine()->session();
+    return session.task_instance_mgr().Find(arc->src_node(),
+                                            arc->dst_node()->dst_node());
   };
 
   is_instance_ready_ = std::bind(&MemorySimulationStrategy::IsInstanceReady,
@@ -31,11 +31,11 @@ void MemorySimulationStrategy::InitFuncs() {
 
 bool MemorySimulationStrategy::IsInstanceReady(TaskInstance* instance) {
   bool ready = true;
-  const Session* session = schedule_engine()->session();
-  const SGraph* graph = session->sgraph();
-  graph->arc_mgr().InputArc(instance->dst_node(), [&](TaskArc* arc) {
+  const Session& sess = schedule_engine()->session();
+  const SGraph& graph = sess.sgraph();
+  graph.arc_mgr().InputArc(instance->dst_node(), [&](TaskArc* arc) {
     TaskArcInstance* instance_input =
-        session->task_arc_instance_mgr().Find(instance->src_node(), arc);
+        sess.task_arc_instance_mgr().Find(instance->src_node(), arc);
     if (schedule_engine()->tokens().find(instance_input)
         == schedule_engine()->tokens().end()) {
       ready = false;
@@ -65,9 +65,8 @@ void LazyEvaluationStrategy::InitTimeNet() {
 
 void LimitedMemoryStrategy::InitRegst(
     const std::function<uint32_t(uint64_t)>& get_regst_num) {
-  const Session* session = schedule_engine()->session();
   SimulatorSchedule* schedule = schedule_engine()->schedule();
-  session->sgraph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
+  schedule_engine()->sgraph().ForeachRegstDesc([&](SRegstDesc* regst_desc) {
     uint32_t count = get_regst_num(regst_desc->id());
     for (uint32_t i = 0; i < count; i++) {
       SRegst* regst = schedule->mut_regst_node_mgr().Create(
@@ -80,12 +79,11 @@ void LimitedMemoryStrategy::InitRegst(
 float EvaluationSimulationStrategy::GetAscendantEndedAt(
     TaskInstance* instance) {
   float ended_at = 0;
-  const Session* session = schedule_engine()->session();
+  const Session& session = schedule_engine()->session();
   SimulatorSchedule* schedule = schedule_engine()->schedule();
-  const SGraph* graph = session->sgraph();
-  graph->arc_mgr().Input(instance->dst_node(), [&](STask* node) {
+  session.sgraph().arc_mgr().Input(instance->dst_node(), [&](STask* node) {
     TaskInstance* instance_input =
-        session->task_instance_mgr().Find(instance->src_node(), node);
+        session.task_instance_mgr().Find(instance->src_node(), node);
     auto itt = schedule->instance2ended_at().find(instance_input);
     float token_ended_at = INT_MAX;
     if (itt != schedule->instance2ended_at().end()) {
@@ -107,8 +105,7 @@ float MemorySimulationStrategy::GetAscendantEndedAt(TaskInstance* instance) {
 float LimitedMemoryStrategy::RegstDescEndedAt(TaskInstance* instance) {
   float ended_at = 0;
   SimulatorSchedule* schedule = schedule_engine()->schedule();
-  const SGraph* graph = schedule->session()->sgraph();
-  graph->produced_regst_desc_mgr().Output(
+  schedule_engine()->sgraph().produced_regst_desc_mgr().Output(
       instance->dst_node(), [&](SRegstDesc* regst_desc) {
         SRegst* regst = FindFreeRegst(regst_desc, instance->src_node());
         float regst_ended_at = GetOrDefault(schedule->regst2ended_at(), regst,
@@ -119,20 +116,20 @@ float LimitedMemoryStrategy::RegstDescEndedAt(TaskInstance* instance) {
 }
 
 void LimitedMemoryStrategy::BeforeRun(TaskInstance* instance, float time) {
-  const Session* session = schedule_engine()->session();
+  const Session& session = schedule_engine()->session();
   SimulatorSchedule* schedule = schedule_engine()->schedule();
-  const SGraph* graph = schedule->session()->sgraph();
-  graph->produced_regst_desc_mgr().Output(
+  const SGraph& graph = schedule_engine()->sgraph();
+  graph.produced_regst_desc_mgr().Output(
       instance->dst_node(), [&](SRegstDesc* regst_desc) {
         SRegst* regst = FindFreeRegst(regst_desc, instance->src_node());
         RegstDescInstance* regst_desc_instance =
-            session->regst_desc_instance_mgr().Find(instance->src_node(),
-                                                    regst_desc);
+            session.regst_desc_instance_mgr().Find(instance->src_node(),
+                                                   regst_desc);
         if (!regst) { return; }
         schedule->mut_regst_desc_instance2regst()[regst_desc_instance] = regst;
-        graph->subscribed_regst_desc_mgr().Input(regst_desc, [&](STask* node) {
+        graph.subscribed_regst_desc_mgr().Input(regst_desc, [&](STask* node) {
           TaskInstance* subscriber_instance =
-              session->task_instance_mgr().Find(instance->src_node(), node);
+              session.task_instance_mgr().Find(instance->src_node(), node);
           schedule->mut_regst_arc_mgr().CreateIfNotFound(subscriber_instance,
                                                          regst);
         });
@@ -156,8 +153,7 @@ void LimitedMemoryStrategy::AfterRun(TaskInstance* instance, float time) {
 
 bool LimitedMemoryStrategy::IsAllRegstDescReady(TaskInstance* instance) {
   bool all_ready = true;
-  const SGraph* graph = schedule_engine()->session()->sgraph();
-  graph->produced_regst_desc_mgr().Output(
+  schedule_engine()->sgraph().produced_regst_desc_mgr().Output(
       instance->dst_node(), [&](SRegstDesc* regst_desc) {
         all_ready =
             (all_ready && IsRegstDescReady(regst_desc, instance->src_node()));
@@ -172,10 +168,10 @@ bool LimitedMemoryStrategy::IsRegstFree(SRegst* regst) {
 
 bool LimitedMemoryStrategy::IsRegstDescReady(SRegstDesc* regst_desc,
                                              Batch* batch) {
-  const Session* sess = schedule_engine()->session();
+  const Session& sess = schedule_engine()->session();
   SimulatorSchedule* schedule = schedule_engine()->schedule();
   RegstDescInstance* regst_desc_instance =
-      sess->regst_desc_instance_mgr().Find(batch, regst_desc);
+      sess.regst_desc_instance_mgr().Find(batch, regst_desc);
   bool free = GetOrDefault(schedule->regst_desc_instance2regst(),
                            regst_desc_instance, static_cast<SRegst*>(nullptr));
   if (!free) {
@@ -188,10 +184,10 @@ bool LimitedMemoryStrategy::IsRegstDescReady(SRegstDesc* regst_desc,
 
 SRegst* LimitedMemoryStrategy::FindFreeRegst(SRegstDesc* regst_desc,
                                              Batch* batch) {
-  const Session* sess = schedule_engine()->session();
+  const Session& sess = schedule_engine()->session();
   SimulatorSchedule* schedule = schedule_engine()->schedule();
   RegstDescInstance* regst_desc_instance =
-      sess->regst_desc_instance_mgr().Find(batch, regst_desc);
+      sess.regst_desc_instance_mgr().Find(batch, regst_desc);
   SRegst* ret =
       GetOrDefault(schedule->regst_desc_instance2regst(), regst_desc_instance,
                    static_cast<SRegst*>(nullptr));
