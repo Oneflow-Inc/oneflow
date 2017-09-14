@@ -78,7 +78,7 @@ void UtilizationGraph::InitRoot() {
 void UtilizationGraph::ForEachUtilization(
     const std::function<void(Utilization*)>& cb) const {
 #define UTILIZATION_MGR_FOR_EACH_ENTRY(type_case, class_name) \
-  node_mgr<class_name>().ForEach(cb);
+  node_mgr<class_name>().MutForEach(cb);
   OF_PP_FOR_EACH_TUPLE(UTILIZATION_MGR_FOR_EACH_ENTRY, UTILIZATION_TYPE_SEQ);
 }
 

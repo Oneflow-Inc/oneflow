@@ -113,7 +113,7 @@ class SGraph : public SNode {
   }
 
   void ForEachNode(const std::function<void(STask*)>& cb) const;
-  void ForEachChild(const std::function<void(STask*)>& cb) const;
+  void MutForEachChild(const std::function<void(STask*)>& cb) const;
   void ForEachChild(const std::function<void(const STask&)>& cb) const;
   void ForEachAscendant(STask*, const std::function<void(STask*)>& cb) const;
   void ForEachDescendant(STask*, const std::function<void(STask*)>& cb) const;

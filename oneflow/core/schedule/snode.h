@@ -97,9 +97,9 @@ class NodeMgr {
   }
 
   void ForEach(const std::function<void(const NodeType&)>& cb) const {
-    ForEach([&](NodeType* node) { cb(*node); });
+    MutForEach([&](NodeType* node) { cb(*node); });
   }
-  void ForEach(const std::function<void(NodeType*)>& cb) const {
+  void MutForEach(const std::function<void(NodeType*)>& cb) const {
     for (const auto& pair : id2node_) { cb(pair.second.get()); }
   }
 
@@ -331,6 +331,7 @@ class ArcMgr {
                      std::function<void(const ArcType&)> cb) const {
     return OutputArc(src_node, [&](ArcType* arc) { cb(*arc); });
   }
+
   uint32_t OutputArc(const SrcNodeType* src_node,
                      std::function<void(ArcType*)> cb) const {
     uint32_t count = 0;

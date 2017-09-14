@@ -64,7 +64,7 @@ void SGraph::ForEachChild(const std::function<void(const STask&)>& cb) const {
   children_arc_mgr().Output(this, cb);
 }
 
-void SGraph::ForEachChild(const std::function<void(STask*)>& cb) const {
+void SGraph::MutForEachChild(const std::function<void(STask*)>& cb) const {
   children_arc_mgr().Output(this, cb);
 }
 
