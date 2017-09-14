@@ -39,7 +39,7 @@ void SimulatorSchedule::EmitEvent(UtilizationEventType event_type,
 void SimulatorSchedule::TimeLinePushBack(TaskInstance* instance,
                                          SDevice* device) {
   TaskInstance* last = dev2current_instance_[device];
-  if (last) { mut_timenet_arc_mgr().CreateIfNotFound(last, instance); }
+  if (last) { mut_timenet_arc_mgr()->CreateIfNotFound(last, instance); }
   dev2current_instance_[device] = instance;
 }
 
@@ -132,7 +132,7 @@ void SimulatorSchedule::InitTimeNet() {
           session().task_instance_mgr().Find(batch, from_node);
       TaskInstance* dst_node =
           session().task_instance_mgr().Find(batch, to_node);
-      mut_timenet_arc_mgr().CreateIfNotFound(src_node, dst_node);
+      mut_timenet_arc_mgr()->CreateIfNotFound(src_node, dst_node);
     }
   });
 
@@ -146,7 +146,7 @@ void SimulatorSchedule::InitTimeNet() {
       TaskInstance* src_node = session().task_instance_mgr().Find(batch, node);
       TaskInstance* dst_node =
           session().task_instance_mgr().Find(next_batch, node);
-      mut_timenet_arc_mgr().CreateIfNotFound(src_node, dst_node);
+      mut_timenet_arc_mgr()->CreateIfNotFound(src_node, dst_node);
     }
   });
 }

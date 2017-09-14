@@ -69,9 +69,9 @@ void LimitedMemoryStrategy::InitRegst(
   schedule_engine()->sgraph().ForeachRegstDesc([&](SRegstDesc* regst_desc) {
     uint32_t count = get_regst_num(regst_desc->id());
     for (uint32_t i = 0; i < count; i++) {
-      SRegst* regst = schedule->mut_regst_node_mgr().Create(
+      SRegst* regst = schedule->mut_regst_node_mgr()->Create(
           std::to_string(regst_desc->id()));
-      schedule->mut_r2rd_arc_mgr().CreateIfNotFound(regst, regst_desc);
+      schedule->mut_r2rd_arc_mgr()->CreateIfNotFound(regst, regst_desc);
     }
   });
 }
@@ -130,8 +130,8 @@ void LimitedMemoryStrategy::BeforeRun(TaskInstance* instance, float time) {
         graph.subscribed_regst_desc_mgr().Input(regst_desc, [&](STask* node) {
           TaskInstance* subscriber_instance =
               session.task_instance_mgr().Find(instance->src_node(), node);
-          schedule->mut_regst_arc_mgr().CreateIfNotFound(subscriber_instance,
-                                                         regst);
+          schedule->mut_regst_arc_mgr()->CreateIfNotFound(subscriber_instance,
+                                                          regst);
         });
       });
   schedule->EmitBeforeRunEvent(instance, time);
@@ -147,7 +147,7 @@ void LimitedMemoryStrategy::AfterRun(TaskInstance* instance, float time) {
     schedule->mut_regst2ended_at()[arc->dst_node()] =
         GetOrDefault(schedule->instance2ended_at(), instance, zero_range)
             .second;
-    schedule->mut_regst_arc_mgr().Delete(arc->id());
+    schedule->mut_regst_arc_mgr()->Delete(arc->id());
   }
 }
 

@@ -157,28 +157,28 @@ class SGraph : public SNode {
   //	setter
   STask*& mut_source() { return source_; }
   STask*& mut_sink() { return sink_; }
-  inline NodeMgr<STask>& mut_node_mgr() { return node_mgr_; }
-  inline NodeMgr<STask>& mut_fake_node_mgr() { return fake_node_mgr_; }
-  inline ArcMgr<Arc<STask>>& mut_arc_mgr() { return arc_mgr_; }
-  inline HasOneArcMgr<Arc<STask, SDevice>>& mut_device_arc_mgr() {
-    return device_arc_mgr_;
+  inline NodeMgr<STask>* mut_node_mgr() { return &node_mgr_; }
+  inline NodeMgr<STask>* mut_fake_node_mgr() { return &fake_node_mgr_; }
+  inline ArcMgr<Arc<STask>>* mut_arc_mgr() { return &arc_mgr_; }
+  inline HasOneArcMgr<Arc<STask, SDevice>>* mut_device_arc_mgr() {
+    return &device_arc_mgr_;
   }
-  inline NodeMgr<SDevice>& mut_device_mgr() { return device_mgr_; }
-  inline ArcMgr<Arc<SGraph, STask>>& mut_loss_arc_mgr() {
-    return loss_arc_mgr_;
+  inline NodeMgr<SDevice>* mut_device_mgr() { return &device_mgr_; }
+  inline ArcMgr<Arc<SGraph, STask>>* mut_loss_arc_mgr() {
+    return &loss_arc_mgr_;
   }
-  inline ArcMgr<Arc<STask>>& mut_ascendant_arc_mgr() {
-    return ascendant_arc_mgr_;
+  inline ArcMgr<Arc<STask>>* mut_ascendant_arc_mgr() {
+    return &ascendant_arc_mgr_;
   }
-  inline ArcMgr<Arc<SGraph, STask>>& mut_children_arc_mgr() {
-    return children_arc_mgr_;
+  inline ArcMgr<Arc<SGraph, STask>>* mut_children_arc_mgr() {
+    return &children_arc_mgr_;
   }
-  inline NodeMgr<SRegstDesc>& mut_regst_desc_mgr() { return regst_desc_mgr_; }
-  inline ArcMgr<Arc<STask, SRegstDesc>>& mut_produced_regst_desc_mgr() {
-    return produced_regst_desc_mgr_;
+  inline NodeMgr<SRegstDesc>* mut_regst_desc_mgr() { return &regst_desc_mgr_; }
+  inline ArcMgr<Arc<STask, SRegstDesc>>* mut_produced_regst_desc_mgr() {
+    return &produced_regst_desc_mgr_;
   }
-  inline ArcMgr<Arc<STask, SRegstDesc>>& mut_subscribed_regst_desc_mgr() {
-    return subscribed_regst_desc_mgr_;
+  inline ArcMgr<Arc<STask, SRegstDesc>>* mut_subscribed_regst_desc_mgr() {
+    return &subscribed_regst_desc_mgr_;
   }
 
  protected:

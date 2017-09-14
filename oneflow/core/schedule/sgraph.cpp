@@ -16,8 +16,8 @@ std::string SGraph::ToDotString() {
 }
 
 void SGraph::InitSourceAndSink() {
-  mut_source() = mut_fake_node_mgr().Create("source");
-  mut_sink() = mut_fake_node_mgr().Create("sink");
+  mut_source() = mut_fake_node_mgr()->Create("source");
+  mut_sink() = mut_fake_node_mgr()->Create("sink");
 }
 
 uint32_t SGraph::LossNodes(std::list<STask*>* l) const {
@@ -28,13 +28,13 @@ void SGraph::UpdateSourceAndSink() {
   std::list<Arc<STask>*> arcs;
   arc_mgr().OutputArc(source(), &arcs);
   arc_mgr().InputArc(sink(), &arcs);
-  for (TaskArc* arc : arcs) { mut_arc_mgr().Delete(arc->id()); }
+  for (TaskArc* arc : arcs) { mut_arc_mgr()->Delete(arc->id()); }
   children_arc_mgr().Output(this, [&](STask* leaf) {
     if (!arc_mgr().Input(leaf)) {
-      mut_arc_mgr().CreateIfNotFound(source(), leaf);
+      mut_arc_mgr()->CreateIfNotFound(source(), leaf);
     }
     if (!arc_mgr().Output(leaf)) {
-      mut_arc_mgr().CreateIfNotFound(leaf, sink());
+      mut_arc_mgr()->CreateIfNotFound(leaf, sink());
     }
   });
 }
@@ -53,7 +53,7 @@ void SGraph::RemoveUselessArc() {
   ForeachArc([&](TaskArc* arc) {
     if (ReachableWithoutArc(arc)) useless_arc_ids.insert(arc->id());
   });
-  for (uint64_t id : useless_arc_ids) { mut_arc_mgr().Delete(id); }
+  for (uint64_t id : useless_arc_ids) { mut_arc_mgr()->Delete(id); }
 }
 
 void SGraph::ForeachArc(const std::function<void(Arc<STask>*)>& cb) const {
@@ -121,9 +121,9 @@ void SGraph::InitAscendantArc() {
       std::list<STask*> l;
       ascendant_arc_mgr().Output(prev, &l);
       for (STask* asc : l) {
-        mut_ascendant_arc_mgr().CreateIfNotFound(node, asc);
+        mut_ascendant_arc_mgr()->CreateIfNotFound(node, asc);
       }
-      mut_ascendant_arc_mgr().CreateIfNotFound(node, prev);
+      mut_ascendant_arc_mgr()->CreateIfNotFound(node, prev);
     });
   });
 }
