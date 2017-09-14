@@ -21,6 +21,8 @@ class UtilizationAnalyzer {
       std::string log_file);
 
  protected:
+	virtual void ForEachDeviceMemory(
+			const std::function<void(const std::string&, uint64_t)>& cb) const;
   virtual std::unique_ptr<DeviceInfoProto> ParseDeviceInfoProto(
       const std::string& log_file) const;
   virtual std::unique_ptr<UtilizationGraph> Analyze(

@@ -73,7 +73,7 @@ message UtilizationEventProto {
 
 message DeviceInfoProto {
 	repeated UtilizationEventProto event = 1;
-	map<string, float> device_name2memory_size = 2; 
+	map<string, uint64> device_name2memory_size = 2; 
 }
 
 message UtilizationProto {
