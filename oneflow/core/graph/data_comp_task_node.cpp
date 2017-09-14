@@ -13,7 +13,7 @@ void DataCompTaskNode::FwBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
     BindProducedRegstAndOutEdge(out_regst, SoleOutEdge());
   }
   NewProducedRegstDesc("activation", 1, kMaxRegisterNum);
-  NewProducedRegstDesc("data_tmp", 1);
+  NewProducedRegstDesc("data_tmp", 1, kMaxRegisterNum);
   NewProducedRegstDesc("model_tmp", 1);
   NewProducedRegstDesc("model", 3, kMaxRegisterNum);
   NewProducedRegstDesc("loss", 1, kMaxRegisterNum);
