@@ -1,17 +1,20 @@
 #include "oneflow/core/schedule/utilization_analyzer.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/schedule/mem_info.h"
 #include "oneflow/core/schedule/utilization_util.h"
 
 namespace oneflow {
 namespace schedule {
 
 void UtilizationAnalyzer::ForEachDeviceMemory(
-			const std::function<void(const std::string&, uint64_t)>& cb) const {
-	//	TODO:
-	//	cb(device_name0, memory_size0);
-	//	cb(device_name1, memory_size1);
-	//	cb(device_name2, memory_size2);
-	//	and so on;
+    const std::function<void(const std::string&, uint64_t)>& provide) const {
+  MemInfo mem_info;
+  provide(mem_info.this_machine_name() + ":host",
+          mem_info.total_cpu_ram_sz() / mem_info.cpu_num());
+  for (int idx = 0; idx < mem_info.gpu_num(); ++idx) {
+    provide(mem_info.this_machine_name() + ":kGPU" + std::to_string(idx),
+            mem_info.gpu_ram_sz(idx));
+  }
 }
 
 std::unique_ptr<DeviceInfoProto> UtilizationAnalyzer::ParseDeviceInfoProto(

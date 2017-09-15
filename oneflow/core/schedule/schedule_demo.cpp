@@ -1,5 +1,7 @@
+#include "gflags/gflags.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/schedule/mem_info.h"
 #include "oneflow/core/schedule/schedule_factory_configure.h"
 #include "oneflow/core/schedule/session.h"
 #include "oneflow/core/schedule/sgraph.h"
@@ -48,7 +50,9 @@ std::unique_ptr<Plan> LoadPlan(const std::string& file) {
   return std::move(plan);
 }
 
-void TestPlan(const std::string& file, const std::string& dot_file) {
+void TestPlan(const std::string& file, const std::string& dot_file,
+              const std::string& this_machine_name) {
+  MemInfo::Singleton()->set_this_machine_name(this_machine_name);
   std::string conf = "default";
   //	std::string conf = "simulator_schedule_engine";
   //	std::string conf = "small_batch_num";
@@ -85,13 +89,16 @@ void TestPlan(const std::string& file, const std::string& dot_file) {
 }  // namespace schedule
 }  // namespace oneflow
 
+DEFINE_string(this_machine_name, "", "");
+
 int main(int argc, char* argv[]) {
+  google::ParseCommandLineFlags(&argc, &argv, true);
   //  oneflow::schedule::TestDemo();
   std::string dot_file = "/tmp/a.dot";
   if (argc > 2) { dot_file = argv[2]; }
   if (argc > 1) {
     std::string plan_file = argv[1];
-    oneflow::schedule::TestPlan(plan_file, dot_file);
+    oneflow::schedule::TestPlan(plan_file, dot_file, FLAGS_this_machine_name);
   }
   return 0;
 }
