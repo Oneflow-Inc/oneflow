@@ -30,6 +30,7 @@ std::unique_ptr<UtilizationGraph> UtilizationAnalyzer::CreateUtilizationGraph(
 std::unique_ptr<UtilizationGraph> UtilizationAnalyzer::Analyze(
     const UtilizationPackageProto& utilization_package) const {
   auto ugraph = of_make_unique<UtilizationGraph>(sgraph());
+  AddUtilizationPackageProto(utilization_package, ugraph.get());
   Analyze(ugraph.get());
   return ugraph;
 }
@@ -101,12 +102,14 @@ void UtilizationAnalyzer::AddUtilizationProto(
   auto ptr = new UtilizationProto(utilization_proto);
   graph->mut_utilization_proto_store()->emplace(
       ptr, std::unique_ptr<UtilizationProto>(ptr));
-  graph->ForEachUtilizationInPath(utilization, [&](Utilization* u) {
-    u->mut_raw_protos()->push_back(ptr);
-    if (u != utilization) {
-      graph->mut_inner2leaf_arc_mgr()->CreateIfNotFound(u, utilization);
-    }
-  });
+  uint32_t path_node_count =
+      graph->ForEachUtilizationInPath(utilization, [&](Utilization* u) {
+        u->mut_raw_protos()->push_back(ptr);
+        if (u != utilization) {
+          graph->mut_inner2leaf_arc_mgr()->CreateIfNotFound(u, utilization);
+        }
+      });
+  CHECK(path_node_count > 3);
 }
 
 void UtilizationAnalyzer::AddLeafUtilizationProto(

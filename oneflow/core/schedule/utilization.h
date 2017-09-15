@@ -35,7 +35,7 @@ class Utilization : public SNode {
   OF_DISALLOW_COPY_AND_MOVE(Utilization);
   virtual ~Utilization() = default;
 
-  virtual uint32_t ParallelNum(const UtilizationGraph&) const { return 1u; }
+  virtual uint32_t ParallelNum(const UtilizationGraph&) const = 0;
   void Reduce(const UtilizationGraph&);
   void CreateAscendantIfNotFound(UtilizationGraph* ugraph) const;
 
@@ -45,6 +45,7 @@ class Utilization : public SNode {
     return utilization_proto().resource().resource_type_case();
   }
 
+  std::string VisualStr() const;
   //	getter
   inline const UtilizationProto& utilization_proto() const {
     return utilization_proto_;
@@ -53,6 +54,8 @@ class Utilization : public SNode {
     return raw_protos_;
   }
 
+  virtual std::string type() const = 0;
+
   //	setter
   inline std::list<const UtilizationProto*>* mut_raw_protos() {
     return &raw_protos_;
@@ -60,7 +63,9 @@ class Utilization : public SNode {
 
  protected:
   explicit Utilization(const UtilizationResource& resource)
-      : SNode(UtilizationUtil::GetUniqueName(resource)) {}
+      : SNode(UtilizationUtil::GetUniqueName(resource)) {
+    *utilization_proto_.mutable_resource() = resource;
+  }
   inline UtilizationProto* mut_utilization_proto() {
     return &utilization_proto_;
   }
@@ -90,7 +95,8 @@ OF_PP_FOR_EACH_TUPLE(SPECIALIZE_UTILIZATION_RESOURCE_TYPE, UTILIZATION_TYPE_SEQ)
       GetUtilizationResourceTypeCase<class_name>::resource_type_case;       \
   OF_DISALLOW_COPY_AND_MOVE(class_name);                                    \
   class_name(const UtilizationResource& resource) : base_class(resource) {} \
-  ~class_name() = default;
+  ~class_name() = default;                                                  \
+  std::string type() const override { return __CLASS_NAME__; }
 
 class ComputationUtilization : public Utilization {
  public:
@@ -108,6 +114,7 @@ class DeviceComputationUtilization : public ComputationUtilization {
 class StreamUtilization : public ComputationUtilization {
  public:
   UTILIZATION_BOILERPLATE(StreamUtilization, ComputationUtilization);
+  uint32_t ParallelNum(const UtilizationGraph&) const override { return 1u; }
   float GetInitiationInterval(const UtilizationGraph& ugraph) const {
     return GetTimePerBatch(ugraph);
   }
@@ -128,6 +135,7 @@ class TaskUtilization : public ComputationUtilization {
 class TaskStreamUtilization : public ComputationUtilization {
  public:
   UTILIZATION_BOILERPLATE(TaskStreamUtilization, ComputationUtilization);
+  uint32_t ParallelNum(const UtilizationGraph&) const override { return 1u; }
 };
 
 class MemoryUtilization : public Utilization {
@@ -150,6 +158,7 @@ class RegstDescUtilization : public MemoryUtilization {
 class RegstUtilization : public MemoryUtilization {
  public:
   UTILIZATION_BOILERPLATE(RegstUtilization, MemoryUtilization);
+  uint32_t ParallelNum(const UtilizationGraph&) const override { return 1u; }
 };
 
 }  // namespace schedule

@@ -4,6 +4,19 @@
 namespace oneflow {
 namespace schedule {
 
+std::string Utilization::VisualStr() const {
+  std::stringstream ss;
+  ss << UtilizationUtil::GetUniqueName(utilization_proto().resource(), "\\n")
+     << "\\nTime: " << std::setprecision(3) << utilization_proto().start_at()
+     << "-" << std::setprecision(3) << utilization_proto().end_at()
+     << "\\nUtilization: " << std::setprecision(3)
+     << utilization_proto().utilization()
+     << "\\nBatch: " << utilization_proto().start_batch_id() << "-"
+     << utilization_proto().end_batch_id()
+     << "\\nRecordCount: " << raw_protos().size();
+  return ss.str();
+}
+
 void Utilization::Reduce(const UtilizationGraph& graph) {
   uint32_t parallel_num = ParallelNum(graph);
   CHECK(parallel_num);
@@ -18,7 +31,8 @@ void Utilization::Reduce(const UtilizationGraph& graph) {
   }
   CHECK(end_at > start_at);
   float utilization = total_time / (parallel_num * (end_at - start_at));
-  CHECK(total_time < 1);
+  CHECK(utilization >= 0);
+  CHECK(utilization <= 1);
   utilization_proto_.set_utilization(utilization);
   utilization_proto_.set_start_at(start_at);
   utilization_proto_.set_start_at(start_at);

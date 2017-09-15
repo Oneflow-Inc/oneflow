@@ -17,6 +17,7 @@ void PlanSGraph::InitRegstDesc(const Plan& plan) {
       uint64_t regst_desc_id = pair.second.regst_desc_id();
       SRegstDesc* regst_desc =
           mut_regst_desc_mgr()->CreateIfNotFound(regst_desc_id);
+      regst_desc->mut_origin_regst_count() = pair.second.register_num();
       if (task_proto.type() == kMdUpdtCompTask) {
         regst_desc->mut_min_regst_count() = 3u;
       }

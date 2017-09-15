@@ -5,18 +5,16 @@
 namespace oneflow {
 namespace schedule {
 
-void UtilizationGraph::ForEachUtilizationInPath(
+uint32_t UtilizationGraph::ForEachUtilizationInPath(
     Utilization* leaf, const std::function<void(Utilization*)>& cb) {
   auto foreach_next = [&](Utilization* utilization,
                           const std::function<void(Utilization*)>& cb) {
     utilization_arc_mgr().Input(utilization, cb);
   };
   auto foreach_prev = [&](Utilization* utilization,
-                          const std::function<void(Utilization*)>& cb) {
-    utilization_arc_mgr().Output(utilization, cb);
-  };
+                          const std::function<void(Utilization*)>& cb) {};
   BfsVisitor<Utilization*> bfs_visitor(foreach_next, foreach_prev);
-  bfs_visitor(leaf, cb);
+  return bfs_visitor(leaf, cb);
 }
 
 Utilization* UtilizationGraph::FindOrCreateUtilization(

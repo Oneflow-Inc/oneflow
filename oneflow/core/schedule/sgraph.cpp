@@ -18,6 +18,9 @@ std::string SGraph::ToDotString() {
 void SGraph::InitSourceAndSink() {
   mut_source() = mut_fake_node_mgr()->Create("source");
   mut_sink() = mut_fake_node_mgr()->Create("sink");
+  SDevice* device = mut_device_mgr()->Create("fake_device");
+  mut_device_arc_mgr()->CreateIfNotFound(source(), device);
+  mut_device_arc_mgr()->CreateIfNotFound(sink(), device);
 }
 
 uint32_t SGraph::LossNodes(std::list<STask*>* l) const {
@@ -72,6 +75,10 @@ void SGraph::ForEachNode(const std::function<void(STask*)>& cb) const {
   cb(source());
   children_arc_mgr().Output(this, cb);
   cb(sink());
+}
+
+void SGraph::ForEachNode(const std::function<void(const STask&)>& cb) const {
+  ForEachNode([&](STask* task) { cb(*task); });
 }
 
 void SGraph::ForEachRegstDesc(

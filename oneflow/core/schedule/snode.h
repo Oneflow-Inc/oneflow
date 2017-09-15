@@ -433,6 +433,10 @@ class ArcMgr {
     return ret;
   }
 
+  void ForEach(const std::function<void(const ArcType&)>& cb) const {
+    for (const auto& pair : id2arc_) { cb(*pair.second); }
+  }
+
  protected:
   std::unordered_map<SrcNodeType*, std::unordered_map<DstNodeType*, ArcType*>>
       from2to2arc_;

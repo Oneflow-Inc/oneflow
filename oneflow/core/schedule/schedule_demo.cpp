@@ -1,10 +1,17 @@
+#include "gflags/gflags.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/schedule/plan_sgraph.h"
 #include "oneflow/core/schedule/schedule_factory_configure.h"
 #include "oneflow/core/schedule/session.h"
 #include "oneflow/core/schedule/sgraph.h"
+#include "oneflow/core/schedule/simulator.h"
 #include "oneflow/core/schedule/simulator_schedule_engine.h"
 #include "oneflow/core/schedule/utilization_graph.h"
+#include "oneflow/core/schedule/visualization.h"
+
+DEFINE_string(plan, "", "plan file");
+DEFINE_string(dot_dir, "./tmp", "dot file directory");
 
 namespace oneflow {
 namespace schedule {
@@ -48,7 +55,7 @@ std::unique_ptr<Plan> LoadPlan(const std::string& file) {
   return std::move(plan);
 }
 
-void TestPlan(const std::string& file, const std::string& dot_file) {
+void TestPlan() {
   std::string conf = "default";
   //	std::string conf = "simulator_schedule_engine";
   //	std::string conf = "small_batch_num";
@@ -62,9 +69,10 @@ void TestPlan(const std::string& file, const std::string& dot_file) {
   const auto& validator_factory = sfp->validator_factory();
   std::unique_ptr<Validator> validator = validator_factory.CreateValidator();
 
-  std::unique_ptr<Plan> plan = LoadPlan(file);
+  std::unique_ptr<Plan> plan = LoadPlan(FLAGS_plan);
   std::unique_ptr<SGraph> sgraph = sgraph_factory.CreateSGraph(*plan);
-  std::ofstream(dot_file, std::ofstream::out) << sgraph->ToDotString();
+  std::ofstream(FLAGS_dot_dir + "/sgraph.dot", std::ofstream::out)
+      << sgraph->ToDotString();
   std::unique_ptr<UtilizationAnalyzer> analyzer =
       analyzer_factory.CreateUtilizationAnalyzer(*sgraph);
   std::unique_ptr<UtilizationGraph> ugraph =
@@ -81,17 +89,29 @@ void TestPlan(const std::string& file, const std::string& dot_file) {
             << std::endl;
 }
 
+void TestUtilizationGraph() {
+  std::unique_ptr<Plan> plan = LoadPlan(FLAGS_plan);
+  PlanSGraph sgraph(*plan);
+  Validator validator(ScheduleFactoryConfigure::Provider("default"));
+  validator.ValidateSGraph(sgraph);
+  Simulator simulator;
+  std::unique_ptr<DeviceInfoProto> device_info_proto = simulator.Run(sgraph);
+  UtilizationAnalyzer analyzer(sgraph);
+  std::unique_ptr<UtilizationGraph> ugraph =
+      analyzer.Analyze(*device_info_proto);
+  Visualization visual;
+  std::ofstream(FLAGS_dot_dir + "/ugraph.dot", std::ofstream::out)
+      << visual.UGraph2DotString(*ugraph);
+}
+
 }  // namespace
 }  // namespace schedule
 }  // namespace oneflow
 
 int main(int argc, char* argv[]) {
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
   //  oneflow::schedule::TestDemo();
-  std::string dot_file = "/tmp/a.dot";
-  if (argc > 2) { dot_file = argv[2]; }
-  if (argc > 1) {
-    std::string plan_file = argv[1];
-    oneflow::schedule::TestPlan(plan_file, dot_file);
-  }
+  //  oneflow::schedule::TestPlan();
+  oneflow::schedule::TestUtilizationGraph();
   return 0;
 }

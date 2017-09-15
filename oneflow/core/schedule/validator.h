@@ -20,13 +20,8 @@ class Validator {
   Validator() = default;
 
   //	graph
-  virtual bool ValidateGraphArc(
-      const SGraph& sgraph,
-      const std::function<void(const Arc<STask>&)>& cb) const;
-  bool ValidateGraphArc(const SGraph& sgraph) const {
-    return ValidateGraphArc(sgraph, [](const Arc<STask>&) {});
-  }
   bool ValidateSGraph(const SGraph& sgraph) const {
+    ValidateSGraphNode(sgraph);
     return ValidateGraphArc(sgraph);
   }
   bool ValidateUtilizationGraph(const UtilizationGraph& ugraph) const;
@@ -46,6 +41,8 @@ class Validator {
   }
 
  private:
+  void ValidateSGraphNode(const SGraph& sgraph) const;
+  virtual bool ValidateGraphArc(const SGraph& sgraph) const;
   ScheduleFactoryProvider* schedule_factory_provider_;
 };
 

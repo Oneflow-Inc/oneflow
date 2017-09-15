@@ -6,9 +6,11 @@
 namespace oneflow {
 namespace schedule {
 
-bool Validator::ValidateGraphArc(
-    const SGraph& sgraph,
-    const std::function<void(const Arc<STask>&)>& cb) const {
+void Validator::ValidateSGraphNode(const SGraph& sgraph) const {
+  sgraph.ForEachNode([](const STask& task) { CHECK(task.has_device()); });
+}
+
+bool Validator::ValidateGraphArc(const SGraph& sgraph) const {
   typedef std::function<void(STask * task)> TaskVisitor;
   auto foreach_next = [&](STask* task, const TaskVisitor& cb) {
     sgraph.arc_mgr().Output(task, cb);

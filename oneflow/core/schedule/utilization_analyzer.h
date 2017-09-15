@@ -19,14 +19,14 @@ class UtilizationAnalyzer {
 
   std::unique_ptr<UtilizationGraph> CreateUtilizationGraph(
       std::string log_file);
+  virtual std::unique_ptr<UtilizationGraph> Analyze(
+      const DeviceInfoProto& dev_info_package) const;
 
  protected:
   virtual void ForEachDeviceMemory(
       const std::function<void(const std::string&, uint64_t)>& cb) const;
   virtual std::unique_ptr<DeviceInfoProto> ParseDeviceInfoProto(
       const std::string& log_file) const;
-  virtual std::unique_ptr<UtilizationGraph> Analyze(
-      const DeviceInfoProto& dev_info_package) const;
 
  private:
   std::unique_ptr<UtilizationGraph> Analyze(

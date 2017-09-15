@@ -48,6 +48,7 @@ class STask : public SNode {
   inline float workload() const { return workload_; }
   inline uint32_t depth() const { return depth_; }
   inline const SDevice& device() const { return *device_; }
+  inline bool has_device() const { return device_ != nullptr; }
 
   inline float& mut_workload() { return workload_; }
   inline uint32_t& mut_depth() { return depth_; }
@@ -71,14 +72,17 @@ class SRegstDesc : public SNode {
   inline uint64_t regst_memory_size() const { return regst_memory_size_; }
   inline const STask& owner_task() const { return *owner_task_; }
   inline uint32_t min_regst_count() const { return min_regst_count_; }
+  inline uint32_t origin_regst_count() const { return origin_regst_count_; }
 
   inline uint64_t& mut_regst_memory_size() { return regst_memory_size_; }
   inline STask*& mut_owner_task() { return owner_task_; }
   inline uint32_t& mut_min_regst_count() { return min_regst_count_; }
+  inline uint32_t& mut_origin_regst_count() { return origin_regst_count_; }
 
  private:
   uint64_t regst_memory_size_ = 1u;
   uint32_t min_regst_count_ = 0u;
+  uint32_t origin_regst_count_ = 2u;
   STask* owner_task_;
 };
 
@@ -90,7 +94,7 @@ class SGraph : public SNode {
   SGraph() = default;
   virtual ~SGraph() = default;
 
-  explicit SGraph(const Plan& plan) : SNode("plan-graph") {
+  explicit SGraph(const Plan& plan) : SNode("plan-graph"), plan_(&plan) {
     InitSourceAndSink();
   }
 
@@ -113,6 +117,7 @@ class SGraph : public SNode {
   }
 
   void ForEachNode(const std::function<void(STask*)>& cb) const;
+  void ForEachNode(const std::function<void(const STask&)>& cb) const;
   void MutForEachChild(const std::function<void(STask*)>& cb) const;
   void ForEachChild(const std::function<void(const STask&)>& cb) const;
   void ForEachAscendant(STask*, const std::function<void(STask*)>& cb) const;
@@ -129,6 +134,7 @@ class SGraph : public SNode {
   uint32_t LossNodes(std::list<STask*>* l) const;
 
   //	getter
+  inline const Plan& plan() const { return *plan_; }
   STask* source() const { return source_; }
   STask* sink() const { return sink_; }
   inline const NodeMgr<STask>& node_mgr() const { return node_mgr_; }
@@ -202,6 +208,7 @@ class SGraph : public SNode {
   bool ReachableWithoutArc(const TaskArc* arc) const;
 
  private:
+  const Plan* plan_;
   STask* source_;
   STask* sink_;
   NodeMgr<STask> node_mgr_;

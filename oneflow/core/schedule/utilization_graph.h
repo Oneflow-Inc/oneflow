@@ -34,8 +34,8 @@ class UtilizationGraph final {
 
   Utilization* FindOrCreateUtilization(const UtilizationResource& resource);
   void Connect(Utilization* src, Utilization* dst);
-  void ForEachUtilizationInPath(Utilization* leaf,
-                                const std::function<void(Utilization*)>& cb);
+  uint32_t ForEachUtilizationInPath(
+      Utilization* leaf, const std::function<void(Utilization*)>& cb);
 
   //	getter
   inline const SGraph& sgraph() const { return *sgraph_; }
