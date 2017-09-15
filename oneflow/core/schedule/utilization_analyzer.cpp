@@ -32,7 +32,7 @@ std::unique_ptr<UtilizationGraph> UtilizationAnalyzer::CreateUtilizationGraph(
 
 std::unique_ptr<UtilizationGraph> UtilizationAnalyzer::Analyze(
     const UtilizationPackageProto& utilization_package) const {
-  auto ugraph = of_make_unique<UtilizationGraph>(*sgraph());
+  auto ugraph = of_make_unique<UtilizationGraph>(sgraph());
   Analyze(ugraph.get());
   return ugraph;
 }

@@ -55,13 +55,13 @@ class SimulatorSchedule : public Schedule {
   }
 
   //	setter
-  inline ArcMgr<Arc<TaskInstance, SRegst>>& mut_regst_arc_mgr() {
-    return regst_arc_mgr_;
+  inline ArcMgr<Arc<TaskInstance, SRegst>>* mut_regst_arc_mgr() {
+    return &regst_arc_mgr_;
   }
-  inline HasOneArcMgr<Arc<SRegst, SRegstDesc>>& mut_r2rd_arc_mgr() {
-    return r2rd_arc_mgr_;
+  inline HasOneArcMgr<Arc<SRegst, SRegstDesc>>* mut_r2rd_arc_mgr() {
+    return &r2rd_arc_mgr_;
   }
-  inline NodeMgr<SRegst>& mut_regst_node_mgr() { return regst_node_mgr_; }
+  inline NodeMgr<SRegst>* mut_regst_node_mgr() { return &regst_node_mgr_; }
   inline std::unordered_map<SRegst*, float>& mut_regst2ended_at() {
     return regst2ended_at_;
   }
@@ -73,12 +73,12 @@ class SimulatorSchedule : public Schedule {
     return device_info_proto_.get();
   }
 
-  void ForeachNextTaskInstance(TaskInstance* task_instance,
+  void ForEachNextTaskInstance(TaskInstance* task_instance,
                                const std::function<void(TaskInstance*)>& cb) {
     timenet_arc_mgr().Output(task_instance, cb);
   }
 
-  void ForeachPrevTaskInstance(TaskInstance* task_instance,
+  void ForEachPrevTaskInstance(TaskInstance* task_instance,
                                const std::function<void(TaskInstance*)>& cb) {
     timenet_arc_mgr().Input(task_instance, cb);
   }
@@ -89,8 +89,8 @@ class SimulatorSchedule : public Schedule {
   inline const ArcMgr<Arc<TaskInstance>>& timenet_arc_mgr() const {
     return timenet_arc_mgr_;
   }
-  inline ArcMgr<Arc<TaskInstance>>& mut_timenet_arc_mgr() {
-    return timenet_arc_mgr_;
+  inline ArcMgr<Arc<TaskInstance>>* mut_timenet_arc_mgr() {
+    return &timenet_arc_mgr_;
   }
   void WalkTimeNetReverse(const std::function<void(TaskInstance*)>& cb);
   void WalkFromLossToSink(const std::function<void(TaskInstance*)>& cb);

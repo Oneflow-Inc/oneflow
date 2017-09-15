@@ -4,15 +4,15 @@ namespace schedule {
 
 void Session::NewBatchs() {
   for (uint32_t i = 0u; i < nr_batch(); i++) {
-    Batch* batch = mut_batch_node_mgr().CreateWithId(i, std::to_string(i));
-    sgraph()->ForeachNode([&](STask* node) {
-      mut_task_instance_mgr().CreateIfNotFound(batch, node);
+    Batch* batch = mut_batch_node_mgr()->CreateWithId(i, std::to_string(i));
+    sgraph().ForEachNode([&](STask* node) {
+      mut_task_instance_mgr()->CreateIfNotFound(batch, node);
     });
-    sgraph()->ForeachArc([&](TaskArc* arc) {
-      mut_task_arc_instance_mgr().CreateIfNotFound(batch, arc);
+    sgraph().ForEachArc([&](TaskArc* arc) {
+      mut_task_arc_instance_mgr()->CreateIfNotFound(batch, arc);
     });
-    sgraph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
-      mut_regst_desc_instance_mgr().CreateIfNotFound(batch, regst_desc);
+    sgraph().ForEachRegstDesc([&](SRegstDesc* regst_desc) {
+      mut_regst_desc_instance_mgr()->CreateIfNotFound(batch, regst_desc);
     });
   }
 }

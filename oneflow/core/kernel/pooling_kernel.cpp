@@ -262,18 +262,21 @@ class PoolingKernelUtil<DeviceType::kCPU, T> final {
 
 namespace {
 
-template<DeviceType device_type>
-Kernel* CreatePoolingKernel(const OperatorConf& op_conf) {
-  static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
-#define POOLING_KERNEL_ENTRY(type_cpp, type_proto) \
-  {type_proto, []() { return new PoolingKernel<device_type, type_cpp>; }},
-      OF_PP_FOR_EACH_TUPLE(POOLING_KERNEL_ENTRY, ARITHMETIC_DATA_TYPE_SEQ)};
-  return data_type2creator.at(op_conf.pooling_conf().in().data_type())();
+Kernel* CreatePoolingKenrel(const OpContext& op_ctx) {
+  static const HashMap<std::string, std::function<Kernel*()>> creators = {
+#define POOLING_KERNEL_ENTRY(device_type, data_type_pair)             \
+  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() { \
+     return new PoolingKernel<device_type,                            \
+                              OF_PP_PAIR_FIRST(data_type_pair)>();    \
+   }},
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(POOLING_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
+                                       FLOATING_DATA_TYPE_SEQ)};
+  return creators.at(
+      GetHashKey(op_ctx.device_type(), op_ctx.bn_in_op2data_type().at("in")))();
 }
 
 }  // namespace
 
-REGISTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kPoolingConf,
-                                 CreatePoolingKernel);
+COMMAND(AddKernelCreator(OperatorConf::kPoolingConf, CreatePoolingKenrel))
 
 }  // namespace oneflow

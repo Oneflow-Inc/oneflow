@@ -1,0 +1,28 @@
+dlnet_filepath: "./train_net.prototxt"
+resource_filepath: "./resource.prototxt"
+placement_filepath: "./train_placement.prototxt"
+model_load_snapshot_path: ""
+piece_size: 1000
+default_data_type: kFloat
+use_async_cpu_stream: false
+global_fs_conf {
+  localfs_conf {
+  }
+}
+train_conf {
+  num_of_pieces_in_batch: 10
+  model_save_snapshots_path: "./snapshots"
+  num_of_batches_in_snapshot: 10
+  staleness: 0
+  total_batch_num: 35
+  default_fill_conf {
+    gaussian_conf {
+      mean: 0.0
+      std: 0.1
+    }
+  }
+  piece_num_of_record_loss: 100
+  normal_mdupdt_conf {
+    learning_rate: 0.01
+  }
+}

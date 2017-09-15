@@ -42,7 +42,8 @@ int CopyHdActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
 
 void CopyHdActor::Act() {
   Regst* in_regst = waiting_in_regst_.front();
-  CHECK_EQ(in_regst->piece_id(), expected_piece_id());
+  // CopyHdActor in model update path does not set piece_id, ommit the CHECK
+  // CHECK_EQ(in_regst->piece_id(), expected_piece_id());
   AsyncLaunchKernel(GenDefaultKernelCtx(),
                     [&](uint64_t regst_desc_id) -> Regst* {
                       Regst* regst = GetCurWriteableRegst(regst_desc_id);
@@ -53,7 +54,7 @@ void CopyHdActor::Act() {
                         return regst;
                       }
                     });
-  AsyncSendReadableRegstMsg([&](Regst* out_regst) {
+  AsyncSendRegstMsgToConsumer([&](Regst* out_regst) {
     out_regst->set_piece_id(in_regst->piece_id());
     out_regst->set_model_version_id(in_regst->model_version_id());
   });

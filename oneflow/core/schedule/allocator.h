@@ -18,15 +18,18 @@ class Allocator {
   Allocator() = default;
   virtual ~Allocator() = default;
 
-  void Allocate(Plan* plan) const { Allocate(plan, ""); }
+  void Allocate(Plan* plan) const;
   virtual void Allocate(Plan* plan,
                         const std::string& dev_info_proto_log_file) const;
   virtual std::unique_ptr<Schedule> MemoryLimitedStaticSchedule(
       const Session& session) const;
 
   //	getter
-  inline const ScheduleFactoryProvider* schedule_factory_provider() const {
-    return schedule_factory_provider_;
+  inline const ScheduleFactoryProvider& sfp() const {
+    return *schedule_factory_provider_;
+  }
+  inline const ScheduleFactoryProvider& schedule_factory_provider() const {
+    return *schedule_factory_provider_;
   }
 
  private:

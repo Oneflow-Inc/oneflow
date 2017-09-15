@@ -26,14 +26,10 @@ message FillConf {
   }
 }
 
-message LogicalBlob {
-  string name = 1;
-  DataType data_type = 2;
-}
 
 message ConvolutionOpConf {
-  LogicalBlob in = 1;
-  LogicalBlob out = 2;
+  string in = 1;
+  string out = 2;
 
   int32 out_num = 3; // The number of outputs for the layer
   bool has_bias_term = 4; // whether to have bias terms
@@ -78,8 +74,8 @@ message ConvolutionOpConf {
 }
 
 message InnerProductOpConf {
-  LogicalBlob in = 1;
-  LogicalBlob out = 2;
+  string in = 1;
+  string out = 2;
 
   int32 out_num = 3; // The number of outputs for the layer
   bool has_bias_term = 4;
@@ -88,14 +84,15 @@ message InnerProductOpConf {
 }
 
 message DataLoaderOpConf {
-  LogicalBlob out = 1;
-  ShapeProto shape = 2;
-  string data_dir = 3;
+  string out = 1;
+  DataType data_type = 2;
+  ShapeProto shape = 3;
+  string data_dir = 4;
 }
 
 message PoolingOpConf {
-  LogicalBlob in = 1;
-  LogicalBlob out = 2;
+  string in = 1;
+  string out = 2;
 
   enum PoolMethod {
     kMax = 0;
@@ -112,25 +109,25 @@ message PoolingOpConf {
 }
 
 message ReluOpConf {
-  LogicalBlob in = 1;
-  LogicalBlob out = 2;
+  string in = 1;
+  string out = 2;
 }
 
 message SoftmaxOpConf {
-  LogicalBlob in = 1;
-  LogicalBlob out = 2;
+  string in = 1;
+  string out = 2;
 }
 
 message SoftmaxLossOpConf {
-  LogicalBlob prediction = 1;
-  LogicalBlob label = 3;
-  LogicalBlob loss = 4;
+  string prediction = 1;
+  string label = 3;
+  string loss = 4;
 }
 
 message MultinomialLogisticLossOpConf {
-  LogicalBlob prediction = 1;
-  LogicalBlob label = 2;
-  LogicalBlob loss = 3;
+  string prediction = 1;
+  string label = 2;
+  string loss = 3;
 }
 
 message ConcatOpConf {
@@ -218,6 +215,7 @@ message LossRecordOpConf {
 
 message OperatorConf {
   string name = 1;
+  string model_load_dir = 2;
   oneof op_type {
     ConvolutionOpConf convolution_conf = 100;
     InnerProductOpConf innerproduct_conf = 101;

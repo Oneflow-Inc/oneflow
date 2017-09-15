@@ -27,13 +27,18 @@ class UtilizationGraph final {
   ~UtilizationGraph() = default;
 
   void ForEachUtilization(const std::function<void(Utilization*)>& cb) const;
+  void ForEachUtilization(
+      const std::function<void(const Utilization&)>& cb) const {
+    ForEachUtilization([&](Utilization* u) { cb(*u); });
+  }
+
   Utilization* FindOrCreateUtilization(const UtilizationResource& resource);
   void Connect(Utilization* src, Utilization* dst);
   void ForEachUtilizationInPath(Utilization* leaf,
                                 const std::function<void(Utilization*)>& cb);
 
   //	getter
-  inline const SGraph* sgraph() const { return sgraph_; }
+  inline const SGraph& sgraph() const { return *sgraph_; }
   inline const ComputationUtilization& computation() const {
     return *computation_;
   }

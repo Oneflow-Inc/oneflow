@@ -56,41 +56,39 @@ class Session {
   TaskInstance* GetPrevBatchInstance(TaskInstance* instance) const;
   std::unique_ptr<std::list<Batch*>> GetBatchNodes() const;
 
-  inline const SGraph* sgraph() const { return sgraph_; }
-
+  //	getter
+  inline const SGraph& sgraph() const { return *sgraph_; }
+  inline const UtilizationGraph& ugraph() const { return *ugraph_; }
   inline const NodeMgr<Batch>& batch_node_mgr() const {
     return batch_node_mgr_;
   }
-  inline NodeMgr<Batch>& mut_batch_node_mgr() { return batch_node_mgr_; }
-
   inline const ArcMgr<TaskInstance>& task_instance_mgr() const {
     return task_instance_mgr_;
   }
-  inline ArcMgr<TaskInstance>& mut_task_instance_mgr() {
-    return task_instance_mgr_;
-  }
-
   inline const ArcMgr<RegstDescInstance>& regst_desc_instance_mgr() const {
     return regst_desc_instance_mgr_;
   }
-  inline ArcMgr<RegstDescInstance>& mut_regst_desc_instance_mgr() {
-    return regst_desc_instance_mgr_;
-  }
-
   inline const ArcMgr<TaskArcInstance>& task_arc_instance_mgr() const {
     return task_arc_instance_mgr_;
   }
-  inline ArcMgr<TaskArcInstance>& mut_task_arc_instance_mgr() {
-    return task_arc_instance_mgr_;
-  }
-
   inline uint32_t nr_batch() const { return nr_batch_; }
   inline uint32_t nr_base_batch() const { return nr_base_batch_; }
   inline uint32_t nr_stable_batch() const { return nr_base_batch_; }
   inline uint32_t nr_unstable_batch() const { return nr_base_batch_; }
 
+  //	setter
   inline uint32_t& mut_nr_batch() { return nr_batch_; }
   inline uint32_t& mut_nr_base_batch() { return nr_base_batch_; }
+  inline NodeMgr<Batch>* mut_batch_node_mgr() { return &batch_node_mgr_; }
+  inline ArcMgr<TaskInstance>* mut_task_instance_mgr() {
+    return &task_instance_mgr_;
+  }
+  inline ArcMgr<RegstDescInstance>* mut_regst_desc_instance_mgr() {
+    return &regst_desc_instance_mgr_;
+  }
+  inline ArcMgr<TaskArcInstance>* mut_task_arc_instance_mgr() {
+    return &task_arc_instance_mgr_;
+  }
 
  protected:
   const SGraph* sgraph_;

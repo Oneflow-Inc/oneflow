@@ -15,7 +15,7 @@ class UtilizationAnalyzer {
   explicit UtilizationAnalyzer(const SGraph& sgraph) : sgraph_(&sgraph) {}
   virtual ~UtilizationAnalyzer() = default;
 
-  inline const SGraph* sgraph() const { return sgraph_; }
+  inline const SGraph& sgraph() const { return *sgraph_; }
 
   std::unique_ptr<UtilizationGraph> CreateUtilizationGraph(
       std::string log_file);

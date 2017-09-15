@@ -117,7 +117,7 @@ void BpDataCompActor::Act() {
                         return regst;
                       }
                     });
-  AsyncSendReadableRegstMsg(
+  AsyncSendRegstMsgToConsumer(
       [piece_id](Regst* regst) { regst->set_piece_id(piece_id); });
   for (auto& pair : read_regst_) {
     if (pair.first != model_regst_desc_id_

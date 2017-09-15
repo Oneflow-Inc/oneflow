@@ -5,6 +5,7 @@
 #include "oneflow/core/schedule/factory_util.h"
 #include "oneflow/core/schedule/schedule.h"
 #include "oneflow/core/schedule/session.h"
+#include "oneflow/core/schedule/utilization_graph.h"
 
 namespace oneflow {
 namespace schedule {
@@ -20,21 +21,28 @@ class Validator {
 
   //	graph
   virtual bool ValidateGraphArc(
-      const SGraph& sgraph, const std::function<void(const Arc<STask>&)>& cb);
-  bool ValidateGraphArc(const SGraph& sgraph) {
+      const SGraph& sgraph,
+      const std::function<void(const Arc<STask>&)>& cb) const;
+  bool ValidateGraphArc(const SGraph& sgraph) const {
     return ValidateGraphArc(sgraph, [](const Arc<STask>&) {});
   }
-  bool ValidateGraph(const SGraph& sgraph) { return ValidateGraphArc(sgraph); }
+  bool ValidateSGraph(const SGraph& sgraph) const {
+    return ValidateGraphArc(sgraph);
+  }
+  bool ValidateUtilizationGraph(const UtilizationGraph& ugraph) const;
 
   //	allocation
-  virtual bool ValidateAllocation(const Schedule& schedule);
+  virtual bool ValidateAllocation(const Schedule& schedule) const;
 
   //	memory
-  virtual bool ValidateMemory(const Schedule& schedule);
+  virtual bool ValidateMemory(const Schedule& schedule) const;
 
   //	getter
-  inline ScheduleFactoryProvider* schedule_factory_provider() const {
-    return schedule_factory_provider_;
+  inline ScheduleFactoryProvider& sfp() const {
+    return *schedule_factory_provider_;
+  }
+  inline ScheduleFactoryProvider& schedule_factory_provider() const {
+    return *schedule_factory_provider_;
   }
 
  private:

@@ -3,7 +3,7 @@ namespace oneflow {
 namespace schedule {
 
 std::unique_ptr<Schedule> FormulaScheduleEngine::StaticSchedule() {
-  auto schedule = of_make_unique<Schedule>(*session());
+  auto schedule = of_make_unique<Schedule>(session());
   schedule->mut_max_interval() = EvaluateInitiationInterval();
   ForEachRegstDescDuration([&](SRegstDesc* regst_desc, float duration) {
     schedule->mut_regst_desc2duration()[regst_desc] = duration;
@@ -16,7 +16,7 @@ std::unique_ptr<Schedule> FormulaScheduleEngine::StaticSchedule(
     const std::function<uint32_t(uint64_t)>& get_regst_num) {
   auto schedule = StaticSchedule();
   float initiation_interval = 0;
-  graph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
+  sgraph().ForEachRegstDesc([&](SRegstDesc* regst_desc) {
     uint32_t count = std::max(get_regst_num(regst_desc->id()), 1u);
     float ii = schedule->GetRegstDescDuration(regst_desc) / count;
     initiation_interval = std::max(initiation_interval, ii);
@@ -27,26 +27,26 @@ std::unique_ptr<Schedule> FormulaScheduleEngine::StaticSchedule(
 }
 
 void FormulaScheduleEngine::ForEachRegstDescDuration(
-    const std::function<void(SRegstDesc*, float)>& cb) {
-  auto foreach_next = std::bind(&SGraph::ForeachNext, graph(),
+    const std::function<void(SRegstDesc*, float)>& cb) const {
+  auto foreach_next = std::bind(&SGraph::ForEachNext, &sgraph(),
                                 std::placeholders::_1, std::placeholders::_2);
-  auto foreach_prev = std::bind(&SGraph::ForeachPrev, graph(),
+  auto foreach_prev = std::bind(&SGraph::ForEachPrev, &sgraph(),
                                 std::placeholders::_1, std::placeholders::_2);
   auto is_ascendant = [&](STask* asc, STask* node) {
-    return graph()->ascendant_arc_mgr().Find(node, asc) > 0u;
+    return sgraph().ascendant_arc_mgr().Find(node, asc) > 0u;
   };
   LongestPathVisitor<STask*> lpath(foreach_next, foreach_prev, is_ascendant);
-  graph()->ForeachRegstDesc([&](SRegstDesc* regst_desc) {
+  sgraph().ForEachRegstDesc([&](SRegstDesc* regst_desc) {
     cb(regst_desc, GetRegstDescDuration(lpath, regst_desc));
   });
 }
 
 float FormulaScheduleEngine::GetRegstDescDuration(
-    const LongestPathVisitor<STask*>& lpath, SRegstDesc* regst_desc) {
+    const LongestPathVisitor<STask*>& lpath, SRegstDesc* regst_desc) const {
   auto get_node_weight = [&](STask* task) { return GetSTaskWeight(task); };
   float duration = 0;
-  STask* owner = const_cast<STask*>(regst_desc->owner_task());
-  graph()->subscribed_regst_desc_mgr().Input(
+  STask* owner = const_cast<STask*>(&regst_desc->owner_task());
+  sgraph().subscribed_regst_desc_mgr().Input(
       regst_desc, [&](STask* subscriber) {
         auto path_handler = [&](const std::list<STask*>& path) {
           if (path.back() == subscriber) {
@@ -60,11 +60,11 @@ float FormulaScheduleEngine::GetRegstDescDuration(
   return duration;
 }
 
-float FormulaScheduleEngine::GetSTaskWeight(STask* task) {
+float FormulaScheduleEngine::GetSTaskWeight(STask* task) const {
   return static_cast<float>(1);
 }
 
-float FormulaScheduleEngine::EvaluateInitiationInterval() {
+float FormulaScheduleEngine::EvaluateInitiationInterval() const {
   return static_cast<float>(1);
 }
 

@@ -19,6 +19,9 @@ class Shape final {
 
   void ToProto(ShapeProto*) const;
 
+  template<typename StreamT>
+  void SerializeWithTextFormat(StreamT& out_stream) const;
+
   // Getters and Setters
   const std::vector<int64_t>& dim_vec() const { return dim_vec_; }
   int64_t elem_cnt() const { return elem_cnt_; }
@@ -57,6 +60,11 @@ inline void Shape::Set(int64_t index, int64_t val) {
 
 inline int64_t Shape::Count(int64_t begin_axis) const {
   return Count(begin_axis, NumAxes());
+}
+
+template<typename StreamT>
+void Shape::SerializeWithTextFormat(StreamT& out_stream) const {
+  for (int64_t dim : dim_vec_) { out_stream << std::to_string(dim) << ' '; }
 }
 
 }  // namespace oneflow

@@ -27,48 +27,42 @@ class ActorMsg final {
   ActorMsg();
   ~ActorMsg() = default;
 
-  static ActorMsg BuildReadableRegstMsg(int64_t reader_actor_id, Regst*);
-  static ActorMsg BuildRegstMsgToProducer(int64_t writer_actor_id, Regst*);
+  // Build Msg
+  static ActorMsg BuildRegstMsgToConsumer(int64_t producer, int64_t consumer,
+                                          Regst*);
+  static ActorMsg BuildRegstMsgToProducer(int64_t consumer, int64_t producer,
+                                          Regst*);
+  static ActorMsg BuildCommandMsg(int64_t dst_actor_id, ActorCmd cmd);
 
   // Getters
+  int64_t src_actor_id() const { return src_actor_id_; }
   int64_t dst_actor_id() const { return dst_actor_id_; }
   ActorMsgType msg_type() const { return msg_type_; }
-  Regst* regst() const {
-    CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
-    return regst_;
-  }
-  ActorCmd actor_cmd() const {
-    CHECK_EQ(msg_type_, ActorMsgType::kCmdMsg);
-    return actor_cmd_;
-  }
-
-  // Setters
-  void set_dst_actor_id(int64_t val) { dst_actor_id_ = val; }
-  void set_regst(Regst* val) {
-    msg_type_ = ActorMsgType::kRegstMsg;
-    regst_ = val;
-  }
-  void set_actor_cmd(ActorCmd val) {
-    msg_type_ = ActorMsgType::kCmdMsg;
-    actor_cmd_ = val;
-  }
+  ActorCmd actor_cmd() const;
+  Regst* regst() const;
+  const void* comm_net_token() const;
 
   // Serialize
   template<typename StreamT>
   void Serialize(StreamT& out_stream) const {
-    TODO();
+    out_stream.Write(this, sizeof(ActorMsg));
   }
   template<typename StreamT>
   void Deserialize(StreamT& in_stream) {
-    TODO();
+    in_stream.Read(this, sizeof(ActorMsg));
   }
 
  private:
+  int64_t src_actor_id_;
   int64_t dst_actor_id_;
   ActorMsgType msg_type_;
-
-  Regst* regst_;
-  ActorCmd actor_cmd_;
+  union {
+    ActorCmd actor_cmd_;
+    union {
+      Regst* regst_;
+      const void* comm_net_token_;
+    };
+  };
 };
 
 template<typename StreamT>

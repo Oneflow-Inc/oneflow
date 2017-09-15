@@ -16,13 +16,13 @@ void PlanSGraph::InitRegstDesc(const Plan& plan) {
       CHECK(producer);
       uint64_t regst_desc_id = pair.second.regst_desc_id();
       SRegstDesc* regst_desc =
-          mut_regst_desc_mgr().CreateIfNotFound(regst_desc_id);
+          mut_regst_desc_mgr()->CreateIfNotFound(regst_desc_id);
       if (task_proto.type() == kMdUpdtCompTask) {
         regst_desc->mut_min_regst_count() = 3u;
       }
-      mut_produced_regst_desc_mgr().CreateIfNotFound(producer, regst_desc);
+      mut_produced_regst_desc_mgr()->CreateIfNotFound(producer, regst_desc);
       if (!pair.second.consumer_task_id().size()) {
-        mut_subscribed_regst_desc_mgr().CreateIfNotFound(producer, regst_desc);
+        mut_subscribed_regst_desc_mgr()->CreateIfNotFound(producer, regst_desc);
       }
       for (int64_t consumer_id : pair.second.consumer_task_id()) {
         STask* consumer = node_mgr().Find(consumer_id);
@@ -33,9 +33,9 @@ void PlanSGraph::InitRegstDesc(const Plan& plan) {
         CHECK(consumer_task_proto);
         if (!(task_proto.type() == kMdUpdtCompTask
               && consumer_task_proto->type() == kDataCompTask)) {
-          mut_subscribed_regst_desc_mgr().CreateIfNotFound(consumer,
-                                                           regst_desc);
-          mut_arc_mgr().CreateIfNotFound(producer, consumer);
+          mut_subscribed_regst_desc_mgr()->CreateIfNotFound(consumer,
+                                                            regst_desc);
+          mut_arc_mgr()->CreateIfNotFound(producer, consumer);
         }
       }
     }
@@ -50,9 +50,9 @@ void PlanSGraph::InitTask(const Plan& plan) {
                        + std::to_string(task_id) + "\\n"
                        + +(task_proto.is_forward() ? "fw" : "bp");
     //	STask
-    STask* node = mut_node_mgr().CreateWithId(task_id, name, workload);
+    STask* node = mut_node_mgr()->CreateWithId(task_id, name, workload);
     CHECK(node);
-    mut_children_arc_mgr().CreateIfNotFound(this, node);
+    mut_children_arc_mgr()->CreateIfNotFound(this, node);
     bool is_copy_hd = (task_proto.type() == kCopyHdTask);
     //	SDevice
     uint64_t device_id =
@@ -61,8 +61,8 @@ void PlanSGraph::InitTask(const Plan& plan) {
     float defval = 0.0;
     std::string dev_name = std::to_string(device_id);
     SDevice* device =
-        mut_device_mgr().CreateIfNotFound(device_id, dev_name, defval);
-    mut_device_arc_mgr().CreateIfNotFound(node, device);
+        mut_device_mgr()->CreateIfNotFound(device_id, dev_name, defval);
+    mut_device_arc_mgr()->CreateIfNotFound(node, device);
     device->mut_bandwidth() += workload;
   }
 }
@@ -74,7 +74,7 @@ void PlanSGraph::InitLoss(const Plan& plan) {
     if (task_id2is_loss[task_proto.id()]) {
       STask* loss = node_mgr().Find(task_proto.id());
       CHECK(loss);
-      mut_loss_arc_mgr().CreateIfNotFound(this, loss);
+      mut_loss_arc_mgr()->CreateIfNotFound(this, loss);
     }
   }
 }

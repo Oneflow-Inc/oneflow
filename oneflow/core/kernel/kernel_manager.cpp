@@ -6,37 +6,44 @@ namespace oneflow {
 
 namespace {
 
-std::string ComputeTag(OperatorConf::OpTypeCase op_case,
-                       DeviceType device_type) {
-  std::stringstream ss;
-  ss << op_case << "," << device_type;
-  return ss.str();
-}
-
-HashMap<std::string, std::function<Kernel*(const OperatorConf&)>>&
-Tag2Creator() {
-  static HashMap<std::string, std::function<Kernel*(const OperatorConf&)>> obj;
+HashMap<int, KernelCreator1>& OpCase2Creator() {
+  static HashMap<int, KernelCreator1> obj;
   return obj;
 }
 
-Kernel* CreateKernel(OperatorConf::OpTypeCase op_case, DeviceType device_type,
+Kernel* CreateKernel(OperatorConf::OpTypeCase op_case, const OpContext& op_ctx,
                      const OperatorConf& op_conf) {
-  std::string tag = ComputeTag(op_case, device_type);
-  return Tag2Creator().at(tag)(op_conf);
+  return OpCase2Creator().at(op_case)(op_conf, op_ctx);
 }
 
 }  // namespace
 
-void AddKernelCreator(OperatorConf::OpTypeCase op_case, DeviceType device_type,
-                      std::function<Kernel*(const OperatorConf&)> creator) {
-  std::string tag = ComputeTag(op_case, device_type);
-  CHECK(Tag2Creator().emplace(tag, creator).second);
+void AddKernelCreator(OperatorConf::OpTypeCase op_case,
+                      KernelCreator1 creator) {
+  CHECK(OpCase2Creator().emplace(op_case, creator).second);
 }
 
-void AddKernelCreator(OperatorConf::OpTypeCase op_case, DeviceType device_type,
-                      std::function<Kernel*()> creator) {
-  AddKernelCreator(op_case, device_type,
-                   [=](const OperatorConf&) { return creator(); });
+void AddKernelCreator(OperatorConf::OpTypeCase op_case,
+                      KernelCreator2 creator) {
+  AddKernelCreator(op_case,
+                   [creator](const OperatorConf& op_conf, const OpContext&) {
+                     return creator(op_conf);
+                   });
+}
+
+void AddKernelCreator(OperatorConf::OpTypeCase op_case,
+                      KernelCreator3 creator) {
+  AddKernelCreator(op_case,
+                   [creator](const OperatorConf&, const OpContext& op_ctx) {
+                     return creator(op_ctx);
+                   });
+}
+
+void AddKernelCreator(OperatorConf::OpTypeCase op_case,
+                      KernelCreator4 creator) {
+  AddKernelCreator(op_case, [creator](const OperatorConf&, const OpContext&) {
+    return creator();
+  });
 }
 
 void KernelMgr::InitFromPlan(const Plan& plan) {
@@ -48,10 +55,10 @@ void KernelMgr::InitFromPlan(const Plan& plan) {
   for (const OperatorProto& op_proto : plan.op()) {
     const std::string& op_name = op_proto.op_conf().name();
     if (op_name_set.find(op_name) == op_name_set.end()) { continue; }
-    DeviceType device_type = plan.op_name2device_type().at(op_name);
+    OpContext op_ctx = plan.op_name2context().at(op_name);
     LOG(INFO) << "construct kernel: " << op_name;
     std::unique_ptr<Kernel> kernel_ptr(CreateKernel(
-        op_proto.op_conf().op_type_case(), device_type, op_proto.op_conf()));
+        op_proto.op_conf().op_type_case(), op_ctx, op_proto.op_conf()));
     kernel_ptr->InitFromOpProto(op_proto);
     CHECK(op_name2kernel_ptr_.emplace(op_name, std::move(kernel_ptr)).second);
   }

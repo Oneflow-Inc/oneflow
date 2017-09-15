@@ -11,6 +11,7 @@ message TrainConf {
   int64 total_batch_num = 4;
   FillConf default_fill_conf = 5;
   int32 piece_num_of_record_loss = 6;
+  int32 num_of_pieces_in_batch = 7;
   oneof ModelUpdateCase {
     NormalModelUpdateOpConf normal_mdupdt_conf = 1000;
     MomentumModelUpdateOpConf momentum_mdupdt_conf = 1001;
@@ -19,6 +20,21 @@ message TrainConf {
 }
 
 message PredictConf {
+  int64 total_data_num = 1;
+}
+
+message LocalFsConf {
+}
+
+message HdfsConf {
+  string namenode = 1;
+}
+
+message GlobalFSConf {
+  oneof fs_type {
+    LocalFsConf localfs_conf = 1;
+    HdfsConf hdfs_conf = 2;
+  }
 }
 
 message JobConf {
@@ -27,10 +43,10 @@ message JobConf {
   string placement_filepath = 3;
   string model_load_snapshot_path = 4;
   int32 piece_size = 5;
-  int32 num_of_pieces_in_batch = 6;
   DataType default_data_type = 7; // kFloat or kDouble
   bool use_async_cpu_stream = 8;
   int32 max_data_id_length = 9;
+  GlobalFSConf global_fs_conf = 10;
   oneof JobType {
     TrainConf train_conf = 1000;
     PredictConf predict_conf = 1001;

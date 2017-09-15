@@ -1,0 +1,73 @@
+op {
+  name: "feature"
+  data_loader_conf {
+    out: "out"
+    data_type: kFloat
+    shape {
+      dim: 60000
+      dim: 1
+      dim: 28
+      dim: 28
+    }
+    data_dir: "/tmp/mnist/feature/"
+  }
+}
+
+op {
+  name: "label"
+  data_loader_conf {
+    out: "out"
+    data_type: kInt32
+    shape {
+      dim: 60000
+    }
+    data_dir: "/tmp/mnist/label/"
+  }
+}
+
+op {
+  name: "conv"
+  model_load_dir: "./snapshots/snapshot_3/conv/"
+  convolution_conf {
+    in: "feature/out"
+    out: "out"
+    out_num: 1
+    has_bias_term: true
+    pad_h: 0
+    pad_w: 0
+    kernel_size_h: 5
+    kernel_size_w: 5
+    stride_h: 1
+    stride_w: 1
+    dilation_h: 1
+    dilation_w: 1
+  }
+}
+
+op {
+  name: "ip10"
+  model_load_dir: "./snapshots/snapshot_3/ip10/"
+  innerproduct_conf {
+    in: "conv/out"
+    out: "out"
+    out_num: 10
+    has_bias_term: false
+  }
+}
+
+op {
+  name: "softmax"
+  softmax_conf {
+    in: "ip10/out"
+    out: "out"
+  }
+}
+
+op {
+  name: "record"
+  record_conf {
+    lbn: "label/out"
+    lbn: "softmax/out"
+    record_path: "./predict_result"
+  }
+}

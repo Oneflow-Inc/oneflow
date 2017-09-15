@@ -16,7 +16,7 @@ class EmptyUtilizationAnalyzer : public UtilizationAnalyzer {
  protected:
   std::unique_ptr<UtilizationGraph> Analyze(
       const DeviceInfoProto& dev_info_package) const override {
-    return of_make_unique<UtilizationGraph>(*sgraph());
+    return of_make_unique<UtilizationGraph>(sgraph());
   }
 };
 
