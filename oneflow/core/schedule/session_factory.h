@@ -18,8 +18,9 @@ class SessionFactory {
   virtual ~SessionFactory() = default;
   DEFINE_FACTORY_METHOD_CLONE(SessionFactory, SessionFactory);
 
-  virtual std::unique_ptr<Session> CreateSession(const SGraph& graph) const {
-    return of_make_unique<Session>(&graph);
+  virtual std::unique_ptr<Session> CreateSession(
+      const SGraph& graph, const UtilizationGraph& ugraph) const {
+    return of_make_unique<Session>(graph, ugraph);
   }
 };
 
@@ -30,8 +31,9 @@ class SessionConcreteFactory : public SessionFactory {
   SessionConcreteFactory() = default;
   explicit SessionConcreteFactory(ScheduleFactoryProvider*){};
   virtual ~SessionConcreteFactory() = default;
-  std::unique_ptr<Session> CreateSession(const SGraph& graph) const {
-    return of_make_unique<SessionType>(&graph);
+  std::unique_ptr<Session> CreateSession(const SGraph& graph,
+                                         const UtilizationGraph& ugraph) const {
+    return of_make_unique<SessionType>(graph, ugraph);
   }
 };
 

@@ -4,28 +4,48 @@
 #include "oneflow/core/schedule/session.h"
 #include "oneflow/core/schedule/sgraph.h"
 #include "oneflow/core/schedule/simulator_schedule_engine.h"
+#include "oneflow/core/schedule/utilization_graph.h"
 namespace oneflow {
 namespace schedule {
 
-void Allocator::Allocate(Plan* plan) {
-  auto sgraph_factory = schedule_factory_provider()->sgraph_factory();
-  auto session_factory = schedule_factory_provider()->session_factory();
-  auto validator_factory = schedule_factory_provider()->validator_factory();
-  std::unique_ptr<Validator> validator = validator_factory->CreateValidator();
+void Allocator::Allocate(Plan* plan) const {
+  std::unique_ptr<Validator> validator =
+      sfp().validator_factory().CreateValidator();
 
-  std::unique_ptr<SGraph> sgraph = sgraph_factory->CreateSGraph(*plan);
-  CHECK(validator->ValidateGraph(*sgraph));
+  std::unique_ptr<SGraph> sgraph = sfp().sgraph_factory().CreateSGraph(*plan);
+  CHECK(validator->ValidateSGraph(*sgraph));
 
-  std::unique_ptr<Session> session = session_factory->CreateSession(*sgraph);
+  UtilizationGraph ugraph(*sgraph);
+  std::unique_ptr<Session> session =
+      sfp().session_factory().CreateSession(*sgraph, ugraph);
   std::unique_ptr<Schedule> schedule = MemoryLimitedStaticSchedule(*session);
   SetRegstNum(*schedule, plan);
 }
 
-void Allocator::SetRegstNum(const Schedule& schedule, Plan* plan) {
+void Allocator::Allocate(Plan* plan,
+                         const std::string& dev_info_proto_log_file) const {
+  std::unique_ptr<Validator> validator =
+      sfp().validator_factory().CreateValidator();
+
+  std::unique_ptr<SGraph> sgraph = sfp().sgraph_factory().CreateSGraph(*plan);
+  CHECK(validator->ValidateSGraph(*sgraph));
+
+  std::unique_ptr<UtilizationAnalyzer> analyzer =
+      sfp().utilization_analyzer_factory().CreateUtilizationAnalyzer(*sgraph);
+
+  std::unique_ptr<UtilizationGraph> ugraph =
+      analyzer->CreateUtilizationGraph(dev_info_proto_log_file);
+  validator->ValidateUtilizationGraph(*ugraph);
+  std::unique_ptr<Session> session =
+      sfp().session_factory().CreateSession(*sgraph, *ugraph);
+  std::unique_ptr<Schedule> schedule = MemoryLimitedStaticSchedule(*session);
+  SetRegstNum(*schedule, plan);
+}
+
+void Allocator::SetRegstNum(const Schedule& schedule, Plan* plan) const {
   if (!plan) return;
-  const SGraph* graph = schedule.session()->graph();
   auto get_regst_num = [&](int64_t id) {
-    SRegstDesc* regst_desc = graph->regst_desc_mgr().Find(id);
+    SRegstDesc* regst_desc = schedule.sgraph().regst_desc_mgr().Find(id);
     uint32_t count = GetOrDefault(schedule.regst_desc2count(), regst_desc, 2u);
     count = std::max(count, regst_desc->min_regst_count());
     return count;
@@ -40,13 +60,13 @@ void Allocator::SetRegstNum(const Schedule& schedule, Plan* plan) {
 }
 
 std::unique_ptr<Schedule> Allocator::MemoryLimitedStaticSchedule(
-    const Session& session) {
-  auto engine_factory = schedule_factory_provider()->schedule_engine_factory();
-  auto validator_factory = schedule_factory_provider()->validator_factory();
+    const Session& session) const {
+  const auto& engine_factory = sfp().schedule_engine_factory();
+  const auto& validator_factory = sfp().validator_factory();
 
   std::unique_ptr<ScheduleEngine> schedule_engine =
-      engine_factory->CreateScheduleEngine(session);
-  std::unique_ptr<Validator> validator = validator_factory->CreateValidator();
+      engine_factory.CreateScheduleEngine(session);
+  std::unique_ptr<Validator> validator = validator_factory.CreateValidator();
 
   std::unique_ptr<Schedule> schedule = schedule_engine->StaticSchedule();
   uint32_t max_regst_count = schedule->max_regst_count();

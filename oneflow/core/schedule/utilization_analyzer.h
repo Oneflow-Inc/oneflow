@@ -12,32 +12,39 @@ namespace schedule {
 class UtilizationAnalyzer {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UtilizationAnalyzer);
-  explicit UtilizationAnalyzer(const SGraph* sgraph) : sgraph_(sgraph) {}
-  ~UtilizationAnalyzer() = default;
+  explicit UtilizationAnalyzer(const SGraph& sgraph) : sgraph_(&sgraph) {}
+  virtual ~UtilizationAnalyzer() = default;
 
-  inline const SGraph* sgraph() const { return sgraph_; }
+  inline const SGraph& sgraph() const { return *sgraph_; }
 
+  std::unique_ptr<UtilizationGraph> CreateUtilizationGraph(
+      std::string log_file);
+
+ protected:
+  virtual void ForEachDeviceMemory(
+      const std::function<void(const std::string&, uint64_t)>& cb) const;
+  virtual std::unique_ptr<DeviceInfoProto> ParseDeviceInfoProto(
+      const std::string& log_file) const;
   virtual std::unique_ptr<UtilizationGraph> Analyze(
-      const UtilizationPackageProto& utilization_package) const;
-
-  std::unique_ptr<UtilizationGraph> Analyze(
-      const UtilizationEventPackageProto& event_package) const;
+      const DeviceInfoProto& dev_info_package) const;
 
  private:
+  std::unique_ptr<UtilizationGraph> Analyze(
+      const UtilizationPackageProto& utilization_package) const;
+
   void GetUtilizationPackageFromEvent(
-      const UtilizationEventPackageProto& event_package,
+      const DeviceInfoProto& event_package,
       UtilizationPackageProto* utilization_package) const;
-  void ApplyUtilizationPackageProto(
+  void Analyze(UtilizationGraph* ugraph) const;
+  void AddUtilizationPackageProto(
       const UtilizationPackageProto& utilization_package,
       UtilizationGraph* ugraph) const;
-  void Analyze(UtilizationGraph* ugraph) const;
-  void ApplyLeafUtilizationProto(const UtilizationProto& utilization_proto,
-                                 UtilizationGraph* graph) const;
-  void ApplyRegstUtilizationProto(const UtilizationProto& utilization_proto,
-                                  UtilizationGraph* graph) const;
-  void ApplyTaskStreamUtilizationProto(
-      const UtilizationProto& utilization_proto, UtilizationGraph* graph) const;
-  void AddUtilizationProto(
+  void AddLeafUtilizationProto(const UtilizationProto& utilization_proto,
+                               UtilizationGraph* graph) const;
+  template<typename U>
+  void AddUtilizationProto(const UtilizationProto& utilization_proto,
+                           UtilizationGraph* graph) const;
+  void PackUtilizationProto(
       const std::list<const UtilizationEventProto*>& event_pair,
       UtilizationPackageProto* utilization_package) const;
   const SGraph* sgraph_;

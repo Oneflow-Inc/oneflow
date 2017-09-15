@@ -113,8 +113,8 @@ void DemoSGraph::InitFromDemo() {
       ss.clear();
       ss << arg1 << "\t" << arg2;
       ss >> id >> name;
-      STask* node = mut_node_mgr().CreateWithId(get_id(id), name);
-      if (node) { mut_children_arc_mgr().CreateIfNotFound(this, node); }
+      STask* node = mut_node_mgr()->CreateWithId(get_id(id), name);
+      if (node) { mut_children_arc_mgr()->CreateIfNotFound(this, node); }
     } else if (arg0 == "gl") {
       uint64_t id;
       std::string name;
@@ -122,7 +122,7 @@ void DemoSGraph::InitFromDemo() {
       ss << arg1 << "\t" << arg2;
       ss >> id >> name;
       STask* node = node_mgr().Find(get_id(id));
-      if (node) { mut_loss_arc_mgr().CreateIfNotFound(this, node); }
+      if (node) { mut_loss_arc_mgr()->CreateIfNotFound(this, node); }
     } else if (arg0 == "ae") {
       uint64_t from_id;
       uint64_t to_id;
@@ -133,7 +133,7 @@ void DemoSGraph::InitFromDemo() {
       STask* src_node = node_mgr().Find(get_id(from_id));
       STask* dst_node = node_mgr().Find(get_id(to_id));
       if (src_node && dst_node) {
-        mut_arc_mgr().CreateIfNotFound(src_node, dst_node);
+        mut_arc_mgr()->CreateIfNotFound(src_node, dst_node);
       }
     } else if (arg0 == "dt") {
       uint64_t time;
@@ -141,7 +141,7 @@ void DemoSGraph::InitFromDemo() {
       ss.clear();
       ss << arg1 << "\t" << arg2;
       ss >> name >> time;
-      SDevice* dev = mut_device_mgr().CreateIfNotFound(name, name, 1);
+      SDevice* dev = mut_device_mgr()->CreateIfNotFound(name, name, 1);
       dev->set_time(time);
     } else if (arg0 == "dn") {
       uint64_t id;
@@ -149,9 +149,9 @@ void DemoSGraph::InitFromDemo() {
       ss.clear();
       ss << arg1 << "\t" << arg2;
       ss >> id >> name;
-      SDevice* dev = mut_device_mgr().CreateIfNotFound(name, name, 1);
-      STask* node = mut_node_mgr().CreateIfNotFound(get_id(id));
-      mut_device_arc_mgr().CreateIfNotFound(node, dev);
+      SDevice* dev = mut_device_mgr()->CreateIfNotFound(name, name, 1);
+      STask* node = mut_node_mgr()->CreateIfNotFound(get_id(id));
+      mut_device_arc_mgr()->CreateIfNotFound(node, dev);
     } else if (arg0 == "pr") {
       uint64_t from_id;
       uint64_t to_id;
@@ -161,9 +161,9 @@ void DemoSGraph::InitFromDemo() {
 
       STask* src_node = node_mgr().Find(get_id(from_id));
       SRegstDesc* dst_node =
-          mut_regst_desc_mgr().CreateIfNotFound(get_id(to_id));
+          mut_regst_desc_mgr()->CreateIfNotFound(get_id(to_id));
       if (src_node && dst_node) {
-        mut_produced_regst_desc_mgr().CreateIfNotFound(src_node, dst_node);
+        mut_produced_regst_desc_mgr()->CreateIfNotFound(src_node, dst_node);
       }
     } else if (arg0 == "sr") {
       uint64_t from_id;
@@ -174,9 +174,9 @@ void DemoSGraph::InitFromDemo() {
 
       STask* src_node = node_mgr().Find(get_id(from_id));
       SRegstDesc* dst_node =
-          mut_regst_desc_mgr().CreateIfNotFound(get_id(to_id));
+          mut_regst_desc_mgr()->CreateIfNotFound(get_id(to_id));
       if (src_node && dst_node) {
-        mut_subscribed_regst_desc_mgr().CreateIfNotFound(src_node, dst_node);
+        mut_subscribed_regst_desc_mgr()->CreateIfNotFound(src_node, dst_node);
       }
     }
   }

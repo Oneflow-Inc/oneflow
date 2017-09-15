@@ -17,7 +17,9 @@ class SimulatorScheduleEngine;
 class SimulatorSchedule : public Schedule {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SimulatorSchedule);
-  explicit SimulatorSchedule(const Session* session) : Schedule(session) {}
+  explicit SimulatorSchedule(const Session& session)
+      : Schedule(session),
+        device_info_proto_(of_make_unique<DeviceInfoProto>()) {}
 
   void TimeLinePushBack(TaskInstance* instance, SDevice* device);
   void Retiming();
@@ -45,18 +47,21 @@ class SimulatorSchedule : public Schedule {
   regst_desc_instance2regst() const {
     return regst_desc_instance2regst_;
   }
-  inline const UtilizationEventPackageProto& utilization_event_package() const {
-    return utilization_event_package_;
+  inline const DeviceInfoProto& device_info_proto() const {
+    return *device_info_proto_;
+  }
+  inline std::unique_ptr<DeviceInfoProto> move_device_info_proto() {
+    return std::move(device_info_proto_);
   }
 
   //	setter
-  inline ArcMgr<Arc<TaskInstance, SRegst>>& mut_regst_arc_mgr() {
-    return regst_arc_mgr_;
+  inline ArcMgr<Arc<TaskInstance, SRegst>>* mut_regst_arc_mgr() {
+    return &regst_arc_mgr_;
   }
-  inline HasOneArcMgr<Arc<SRegst, SRegstDesc>>& mut_r2rd_arc_mgr() {
-    return r2rd_arc_mgr_;
+  inline HasOneArcMgr<Arc<SRegst, SRegstDesc>>* mut_r2rd_arc_mgr() {
+    return &r2rd_arc_mgr_;
   }
-  inline NodeMgr<SRegst>& mut_regst_node_mgr() { return regst_node_mgr_; }
+  inline NodeMgr<SRegst>* mut_regst_node_mgr() { return &regst_node_mgr_; }
   inline std::unordered_map<SRegst*, float>& mut_regst2ended_at() {
     return regst2ended_at_;
   }
@@ -64,16 +69,16 @@ class SimulatorSchedule : public Schedule {
   mut_regst_desc_instance2regst() {
     return regst_desc_instance2regst_;
   }
-  inline UtilizationEventPackageProto* mut_utilization_event_package() {
-    return &utilization_event_package_;
+  inline DeviceInfoProto* mut_device_info_proto() {
+    return device_info_proto_.get();
   }
 
-  void ForeachNextTaskInstance(TaskInstance* task_instance,
+  void ForEachNextTaskInstance(TaskInstance* task_instance,
                                const std::function<void(TaskInstance*)>& cb) {
     timenet_arc_mgr().Output(task_instance, cb);
   }
 
-  void ForeachPrevTaskInstance(TaskInstance* task_instance,
+  void ForEachPrevTaskInstance(TaskInstance* task_instance,
                                const std::function<void(TaskInstance*)>& cb) {
     timenet_arc_mgr().Input(task_instance, cb);
   }
@@ -84,8 +89,8 @@ class SimulatorSchedule : public Schedule {
   inline const ArcMgr<Arc<TaskInstance>>& timenet_arc_mgr() const {
     return timenet_arc_mgr_;
   }
-  inline ArcMgr<Arc<TaskInstance>>& mut_timenet_arc_mgr() {
-    return timenet_arc_mgr_;
+  inline ArcMgr<Arc<TaskInstance>>* mut_timenet_arc_mgr() {
+    return &timenet_arc_mgr_;
   }
   void WalkTimeNetReverse(const std::function<void(TaskInstance*)>& cb);
   void WalkFromLossToSink(const std::function<void(TaskInstance*)>& cb);
@@ -104,7 +109,7 @@ class SimulatorSchedule : public Schedule {
 
   ArcMgr<Arc<TaskInstance>> timenet_arc_mgr_;
   std::unordered_map<SDevice*, TaskInstance*> dev2current_instance_;
-  UtilizationEventPackageProto utilization_event_package_;
+  std::unique_ptr<DeviceInfoProto> device_info_proto_;
 };
 
 }  // namespace schedule

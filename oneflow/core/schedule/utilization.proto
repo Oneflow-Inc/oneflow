@@ -49,10 +49,12 @@ message UtilizationResource {
 		DeviceComputationResource dev_computation = 2;
 		StreamResource stream = 3;
 		TaskResource task = 4;
-		TaskStreamResource task_stream = 5;
-		MemoryResource memory = 6;
-		DeviceMemoryResource dev_memory = 7;
-		RegstDescResource regst_desc = 8;
+		MemoryResource memory = 5;
+		DeviceMemoryResource dev_memory = 6;
+		RegstDescResource regst_desc = 7;
+
+		// only for UtilizationEventProto
+		TaskStreamResource task_stream = 8;
 		RegstResource regst = 9;
 	}
 }
@@ -66,15 +68,12 @@ message UtilizationEventProto {
 	UtilizationEventType event_type = 1;
 	uint64 batch_id = 2;
 	float time = 3;	
-	oneof resource_type {
-		TaskStreamResource task_stream_resource = 4;
-		RegstResource regst_resource = 5;
-	}
-	UtilizationResource resource = 6;
+	UtilizationResource resource = 4;
 }
 
-message UtilizationEventPackageProto {
+message DeviceInfoProto {
 	repeated UtilizationEventProto event = 1;
+	map<string, uint64> device_name2memory_size = 2; 
 }
 
 message UtilizationProto {
@@ -83,16 +82,7 @@ message UtilizationProto {
 	float end_at = 3;	
 	uint64 start_batch_id = 4;
 	uint64 end_batch_id = 5;
-	oneof resource_type {
-		DeviceComputationResource dev_computation_resource = 6;
-		StreamResource stream_resource = 7;
-		TaskResource task_resource = 8;
-		TaskStreamResource task_stream_resource = 9;
-		DeviceMemoryResource dev_memory_resource = 10;
-		RegstDescResource regst_desc_resource = 11;
-		RegstResource regst_resource = 12;
-	}
-	UtilizationResource resource = 13;
+	UtilizationResource resource = 6;
 }
 
 message UtilizationPackageProto {

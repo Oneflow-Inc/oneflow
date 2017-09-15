@@ -81,6 +81,10 @@ class NodeMgr {
   }
 
   int32_t Find(const std::string& name,
+               const std::function<void(const NodeType&)>& cb) const {
+    return Find(name, [&](NodeType* node) { cb(*node); });
+  }
+  int32_t Find(const std::string& name,
                const std::function<void(NodeType*)>& cb) const {
     auto itt = name2id2node_.find(name);
     int32_t count = 0;
@@ -92,6 +96,9 @@ class NodeMgr {
     return count;
   }
 
+  void ForEach(const std::function<void(const NodeType&)>& cb) const {
+    ForEach([&](NodeType* node) { cb(*node); });
+  }
   void ForEach(const std::function<void(NodeType*)>& cb) const {
     for (const auto& pair : id2node_) { cb(pair.second.get()); }
   }
@@ -194,6 +201,10 @@ class ArcMgr {
   }
 
   uint32_t Input(const DstNodeType* dst_node,
+                 const std::function<void(const SrcNodeType&)>& cb) const {
+    return Input(dst_node, [&](SrcNodeType* node) { cb(*node); });
+  }
+  uint32_t Input(const DstNodeType* dst_node,
                  const std::function<void(SrcNodeType*)>& cb) const {
     return InputArc(dst_node, [&cb](ArcType* arcp) { cb(arcp->src_node()); });
   }
@@ -203,11 +214,33 @@ class ArcMgr {
                     [src_node](ArcType* p) { *src_node = p->src_node(); });
   }
 
+  uint32_t Input(const std::list<DstNodeType*>& dst_nodes) const {
+    return Input(dst_nodes, [](SrcNodeType*) {});
+  }
+
+  uint32_t Input(const std::list<DstNodeType*>& dst_nodes,
+                 const std::function<void(const SrcNodeType&)>& cb) const {
+    return Input(dst_nodes, [&](SrcNodeType* node) { cb(*node); });
+  }
+  uint32_t Input(const std::list<DstNodeType*>& dst_nodes,
+                 const std::function<void(SrcNodeType*)>& cb) const {
+    std::unordered_set<SrcNodeType*> src_nodes;
+    InputArc(dst_nodes,
+             [&](ArcType* arc) { src_nodes.insert(arc->src_node()); });
+    for (auto node : src_nodes) { cb(node); }
+    return src_nodes.size();
+  }
+
   uint32_t InputArc(const DstNodeType* dst_node, std::list<ArcType*>* l) const {
     return InputArc(dst_node, [l](ArcType* arc) { l->push_back(arc); });
   }
 
-  uint32_t InputArc(std::list<DstNodeType*> to_nodes,
+  uint32_t InputArc(const std::list<DstNodeType*>& to_nodes,
+                    const std::function<void(const ArcType&)>& cb) const {
+    return InputArc(to_nodes, [&](ArcType* arc) { cb(*arc); });
+  }
+
+  uint32_t InputArc(const std::list<DstNodeType*>& to_nodes,
                     const std::function<void(ArcType*)>& cb) const {
     uint32_t count = 0;
     for (auto node_itt = to_nodes.begin(); node_itt != to_nodes.end();
@@ -226,6 +259,10 @@ class ArcMgr {
     return InputArc(dst_node, [&ptr](ArcType* p) { ptr = p; });
   }
 
+  uint32_t InputArc(const DstNodeType* dst_node,
+                    const std::function<void(const ArcType&)>& cb) const {
+    return InputArc(dst_node, [&](ArcType* arc) { cb(*arc); });
+  }
   uint32_t InputArc(const DstNodeType* dst_node,
                     const std::function<void(ArcType*)>& cb) const {
     uint32_t count = 0;
@@ -254,8 +291,31 @@ class ArcMgr {
   }
 
   uint32_t Output(const SrcNodeType* src_node,
+                  const std::function<void(const DstNodeType&)>& cb) const {
+    return Output(src_node, [&cb](DstNodeType* ptr) { cb(*ptr); });
+  }
+
+  uint32_t Output(const SrcNodeType* src_node,
                   const std::function<void(DstNodeType*)>& cb) const {
     return OutputArc(src_node, [&cb](ArcType* arcp) { cb(arcp->dst_node()); });
+  }
+
+  uint32_t Output(const std::list<SrcNodeType*>& src_nodes) const {
+    return Output(src_nodes, [](DstNodeType*) {});
+  }
+
+  uint32_t Output(const std::list<SrcNodeType*>& src_nodes,
+                  const std::function<void(const DstNodeType&)>& cb) const {
+    return Output(src_nodes, [&cb](DstNodeType* ptr) { cb(*ptr); });
+  }
+
+  uint32_t Output(const std::list<SrcNodeType*>& src_nodes,
+                  const std::function<void(DstNodeType*)>& cb) const {
+    std::unordered_set<DstNodeType*> dst_nodes;
+    OutputArc(src_nodes,
+              [&](ArcType* arc) { dst_nodes.insert(arc->dst_node()); });
+    for (auto node : dst_nodes) { cb(node); }
+    return dst_nodes.size();
   }
 
   uint32_t OutputArc(const SrcNodeType* src_node, ArcType* ptr) const {
@@ -268,6 +328,10 @@ class ArcMgr {
   }
 
   uint32_t OutputArc(const SrcNodeType* src_node,
+                     std::function<void(const ArcType&)> cb) const {
+    return OutputArc(src_node, [&](ArcType* arc) { cb(*arc); });
+  }
+  uint32_t OutputArc(const SrcNodeType* src_node,
                      std::function<void(ArcType*)> cb) const {
     uint32_t count = 0;
     auto itt = from2to2arc_.find(const_cast<SrcNodeType*>(src_node));
@@ -277,6 +341,11 @@ class ArcMgr {
       count++;
     }
     return count;
+  }
+
+  uint32_t OutputArc(const std::list<SrcNodeType*>& from_nodes,
+                     const std::function<void(const ArcType&)>& cb) const {
+    return OutputArc(from_nodes, [&](ArcType* arc) { cb(*arc); });
   }
 
   uint32_t OutputArc(const std::list<SrcNodeType*>& from_nodes,
@@ -292,6 +361,12 @@ class ArcMgr {
       }
     }
     return count;
+  }
+
+  void Find(const std::list<SrcNodeType*>& from_nodes,
+            const std::list<DstNodeType*>& to_nodes,
+            const std::function<void(const ArcType&)>& cb) const {
+    Find(from_nodes, to_nodes, [&](ArcType* arc) { cb(*arc); });
   }
 
   void Find(const std::list<SrcNodeType*>& from_nodes,

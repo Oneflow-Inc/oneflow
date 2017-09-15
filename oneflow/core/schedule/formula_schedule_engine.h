@@ -9,19 +9,25 @@ namespace schedule {
 class FormulaScheduleEngine : public ScheduleEngine {
  public:
   OF_DISALLOW_COPY_AND_MOVE(FormulaScheduleEngine);
-  FormulaScheduleEngine(const Session* session) : ScheduleEngine(session) {}
-  ~FormulaScheduleEngine() = default;
-  std::unique_ptr<Schedule> StaticSchedule();
-  std::unique_ptr<Schedule> StaticSchedule(
+  explicit FormulaScheduleEngine(const Session& session)
+      : ScheduleEngine(session) {}
+  virtual ~FormulaScheduleEngine() = default;
+  virtual std::unique_ptr<Schedule> StaticSchedule();
+  virtual std::unique_ptr<Schedule> StaticSchedule(
       const std::function<uint32_t(uint64_t)>& get_regst_num);
 
+ protected:
+  virtual float GetSTaskWeight(STask* task) const;
+  virtual float EvaluateInitiationInterval() const;
+
  private:
-  float EvaluateInitiationInterval();
-  float GetSTaskWeight(STask* task);
-  void ForEachRegstDescDuration(const std::function<void(SRegstDesc*, float)>&);
+  void ForEachRegstDescDuration(
+      const std::function<void(SRegstDesc*, float)>&) const;
   float GetRegstDescDuration(const LongestPathVisitor<STask*>& lpath,
-                             SRegstDesc* regst_desc);
+                             SRegstDesc* regst_desc) const;
 };
+
+typedef FormulaScheduleEngine NaiveFormulaScheduleEngine;
 
 }  // namespace schedule
 }  // namespace oneflow

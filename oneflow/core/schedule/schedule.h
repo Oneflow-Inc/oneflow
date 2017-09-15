@@ -10,7 +10,8 @@ namespace schedule {
 
 class Schedule {
  public:
-  explicit Schedule(const Session* session) : session_(session) {}
+  explicit Schedule(const Session& session) : session_(&session) {}
+  virtual ~Schedule() = default;
 
   void Clear();
   void UpdateDuration();
@@ -19,7 +20,8 @@ class Schedule {
   float GetDuration(TaskInstance* src_node, TaskInstance* dst_node);
 
   //	getter
-  inline const Session* session() const { return session_; }
+  inline const Session& session() const { return *session_; }
+  inline const SGraph& sgraph() const { return session_->sgraph(); }
   inline const std::unordered_map<TaskInstance*, std::pair<float, float>>&
   instance2ended_at() const {
     return instance2ended_at_;

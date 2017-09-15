@@ -15,7 +15,7 @@ namespace schedule {
 class SimulatorScheduleEngine : public ScheduleEngine {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SimulatorScheduleEngine);
-  SimulatorScheduleEngine(const Session* session)
+  SimulatorScheduleEngine(const Session& session)
       : ScheduleEngine(session),
         schedule_(of_make_unique<SimulatorSchedule>(session)) {
     InitStrategies();
