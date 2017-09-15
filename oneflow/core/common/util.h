@@ -37,10 +37,21 @@ namespace oneflow {
 
 #define TODO() LOG(FATAL) << "TODO";
 
-#define OF_SINGLETON(ClassName)            \
-  static ClassName* Singleton() {          \
-    static ClassName* ptr = new ClassName; \
-    return ptr;                            \
+#define OF_SINGLETON(ClassName)                              \
+  static ClassName* Singleton() { return *SingletonPPtr(); } \
+  static ClassName** SingletonPPtr() {                       \
+    static ClassName* ptr = new ClassName;                   \
+    return &ptr;                                             \
+  }                                                          \
+  static void RefreshSingleton() {                           \
+    DeleteSingleton();                                       \
+    *SingletonPPtr() = new ClassName;                        \
+  }                                                          \
+  static void DeleteSingleton() {                            \
+    if (Singleton()) {                                       \
+      delete Singleton();                                    \
+      *SingletonPPtr() = nullptr;                            \
+    }                                                        \
   }
 
 #define COMMAND(...)            \
