@@ -1,4 +1,5 @@
 #include "oneflow/core/kernel/copy_comm_net_kernel.h"
+#include "oneflow/core/comm_network/data_comm_network.h"
 
 namespace oneflow {
 
@@ -10,7 +11,7 @@ void CopyCommNetKernel::Forward(
   void* stream_id = std::get<0>(*other_val);
   const void* readable_token = std::get<1>(*other_val);
   const void* writeable_token = std::get<2>(*other_val);
-  CommNet::Singleton()->Read(stream_id, readable_token, writeable_token);
+  DataCommNet::Singleton()->Read(stream_id, readable_token, writeable_token);
 }
 
 COMMAND(AddKernelCreator(OperatorConf::kCopyCommNetConf,

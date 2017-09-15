@@ -1,5 +1,6 @@
 #include "oneflow/core/actor/copy_comm_net_actor.h"
 #include "oneflow/core/actor/actor_registry.h"
+#include "oneflow/core/comm_network/data_comm_network.h"
 #include "oneflow/core/register/register.h"
 
 namespace oneflow {
@@ -15,7 +16,7 @@ class CommNetDeviceCtx final : public DeviceCtx {
   CommNetDeviceCtx(void* stream_id) : DeviceCtx(), stream_id_(stream_id) {}
 
   void AddCallBack(std::function<void()> callback) const override {
-    CommNet::Singleton()->AddCallBack(stream_id_, callback);
+    DataCommNet::Singleton()->AddCallBack(stream_id_, callback);
   }
 
  private:
@@ -29,7 +30,7 @@ void CopyCommNetActor::Init(const TaskProto& task_proto,
   Actor::Init(task_proto, thread_ctx);
   set_num_of_remaining_eord(1);
   mut_num_of_read_empty() = 1;
-  stream_id_ = CommNet::Singleton()->CreateStream();
+  stream_id_ = DataCommNet::Singleton()->CreateStream();
   mut_device_ctx().reset(new CommNetDeviceCtx(stream_id_));
   OF_SET_MSG_HANDLER(&CopyCommNetActor::HandlerNormal);
 }

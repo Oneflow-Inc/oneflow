@@ -1,5 +1,5 @@
 #include "oneflow/core/job/scheduler.h"
-#include "oneflow/core/comm_network/rdma_comm_network.h"
+#include "oneflow/core/comm_network/rdma_data_comm_network.h"
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/runtime_context.h"
@@ -48,7 +48,7 @@ void Scheduler::Process(const JobConf& job_conf,
   LOG(INFO) << "All actor on this machine are activated";
   OF_BARRIER();
   LOG(INFO) << "All actor on all machine are activated";
-  CommNet::Singleton()->RegisterMemoryDone();
+  DataCommNet::Singleton()->RegisterMemoryDone();
   RuntimeCtx::Singleton()->mut_active_actor_cnt().Init("active_actor_cnt",
                                                        this_machine_task_num);
   SendCmdMsg(mdupdt_tasks, ActorCmd::kSendInitialModel);
@@ -72,7 +72,7 @@ Plan Scheduler::GetPlanFromJobConf(const JobConf& job_conf,
     // TODO: receive plan
   }
   KernelMgr::Singleton()->InitFromPlan(plan);
-  RdmaCommNet::Init();
+  RdmaDataCommNet::Init();
   SnapshotMgr::Singleton()->Init(plan);
   ActorMsgBus::Singleton()->Init();
   ThreadMgr::Singleton();
