@@ -114,7 +114,8 @@ void Actor::LogRegstEvent(schedule::UtilizationEventType type, Regst* regst) {
   event->set_event_type(type);
   event->set_batch_id(regst->piece_id());
   event->set_time(now());
-  schedule::RegstResource* regst_res = event->mutable_regst_resource();
+  schedule::RegstResource* regst_res =
+      event->mutable_resource()->mutable_regst();
   regst_res->set_regst_desc_id(regst->regst_desc_id());
   regst_res->set_regst_id(reinterpret_cast<uint64_t>(regst));
 }
@@ -126,7 +127,7 @@ void Actor::LogTaskEvent(schedule::UtilizationEventType type,
   event->set_batch_id(batch_id);
   event->set_time(now());
   schedule::TaskStreamResource* stream_res =
-      event->mutable_task_stream_resource();
+      event->mutable_resource()->mutable_task_stream();
   stream_res->set_task_id(actor_id());
   if (device_ctx_->cpu_stream()) {
     stream_res->set_stream_id(
