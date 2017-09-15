@@ -1,16 +1,16 @@
-#ifndef ONEFLOW_CORE_COMM_NETWORK_RDMA_COMM_NETWORK_H_
-#define ONEFLOW_CORE_COMM_NETWORK_RDMA_COMM_NETWORK_H_
+#ifndef ONEFLOW_CORE_COMM_NETWORK_RDMA_DATA_COMM_NETWORK_H_
+#define ONEFLOW_CORE_COMM_NETWORK_RDMA_DATA_COMM_NETWORK_H_
 
-#include "oneflow/core/comm_network/comm_network.h"
+#include "oneflow/core/comm_network/data_comm_network.h"
 
 namespace oneflow {
 
-class RdmaCommNet final : public CommNet {
+class RdmaDataCommNet final : public DataCommNet {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(RdmaCommNet);
-  ~RdmaCommNet() = default;
+  OF_DISALLOW_COPY_AND_MOVE(RdmaDataCommNet);
+  ~RdmaDataCommNet() = default;
 
-  static void Init() { CommNet::set_comm_network_ptr(new RdmaCommNet); }
+  static void Init() { DataCommNet::set_comm_network_ptr(new RdmaDataCommNet); }
 
   const void* RegisterMemory(void* dptr) override {
     // TODO
@@ -44,9 +44,9 @@ class RdmaCommNet final : public CommNet {
   }
 
  private:
-  RdmaCommNet() = default;
+  RdmaDataCommNet() = default;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMM_NETWORK_RDMA_COMM_NETWORK_H_
+#endif  // ONEFLOW_CORE_COMM_NETWORK_RDMA_DATA_COMM_NETWORK_H_
