@@ -14,40 +14,33 @@ void TestFileOperation(FileSystem* file_system) {
   std::string file_name = JoinPath(current_dir, "/tmp_test_file_asdfasdf");
   // write
   std::unique_ptr<WritableFile> writable_file;
-  ASSERT_TRUE(file_system->NewWritableFile(file_name, &writable_file)
-              == Status::OK);
+  file_system->NewWritableFile(file_name, &writable_file);
   std::string write_content = "oneflow-file-system-test";
-  ASSERT_TRUE(writable_file->Append(write_content.substr(0, 10).c_str(), 10)
-              == Status::OK);
-  ASSERT_TRUE(writable_file->Flush() == Status::OK);
-  ASSERT_TRUE(writable_file->Append(write_content.substr(10, 14).c_str(), 14)
-              == Status::OK);
-  ASSERT_TRUE(writable_file->Close() == Status::OK);
+  writable_file->Append(write_content.substr(0, 10).c_str(), 10);
+  writable_file->Flush();
+  writable_file->Append(write_content.substr(10, 14).c_str(), 14);
+  writable_file->Close();
   // write append
   std::string append_content = "append-text";
   std::unique_ptr<WritableFile> appendable_file;
-  ASSERT_TRUE(file_system->NewAppendableFile(file_name, &appendable_file)
-              == Status::OK);
-  ASSERT_TRUE(appendable_file->Append(append_content.c_str(), 11)
-              == Status::OK);
-  ASSERT_TRUE(appendable_file->Flush() == Status::OK);
-  ASSERT_TRUE(appendable_file->Close() == Status::OK);
+  file_system->NewAppendableFile(file_name, &appendable_file);
+  appendable_file->Append(append_content.c_str(), 11);
+  appendable_file->Flush();
+  appendable_file->Close();
   // rename
   std::string new_file_name = file_name + "_new";
-  ASSERT_TRUE(file_system->RenameFile(file_name, new_file_name) == Status::OK);
-  ASSERT_TRUE(file_system->RenameFile(new_file_name, file_name) == Status::OK);
+  file_system->RenameFile(file_name, new_file_name);
+  file_system->RenameFile(new_file_name, file_name);
   // read
   std::unique_ptr<RandomAccessFile> random_access_file;
-  ASSERT_TRUE(file_system->NewRandomAccessFile(file_name, &random_access_file)
-              == Status::OK);
-  uint64_t file_size = 0;
-  ASSERT_TRUE(file_system->GetFileSize(file_name, &file_size) == Status::OK);
+  file_system->NewRandomAccessFile(file_name, &random_access_file);
+  uint64_t file_size = file_system->GetFileSize(file_name);
   ASSERT_EQ(file_size, 35);
   char* read_array = new char[file_size];
-  ASSERT_TRUE(random_access_file->Read(0, file_size, read_array) == Status::OK);
+  random_access_file->Read(0, file_size, read_array);
   std::string read_content(read_array, file_size);
   ASSERT_EQ(write_content + append_content, read_content);
-  ASSERT_TRUE(file_system->DeleteFile(file_name) == Status::OK);
+  file_system->DeleteFile(file_name);
   delete[] read_array;
 }
 
@@ -55,42 +48,28 @@ void TestDirOperation(FileSystem* file_system) {
   std::string current_dir = GetCwd();
   StringReplace(&current_dir, '\\', '/');
   std::string test_root_path = JoinPath(current_dir, "/tmp_test_dir_asdfasdf");
-  if (file_system->IsDirectory(test_root_path) == Status::OK) {
-    std::vector<std::string> children;
-    file_system->GetChildren(test_root_path, &children);
-    ASSERT_EQ(children.size(), 0);
+  if (file_system->IsDirectory(test_root_path)) {
+    ASSERT_TRUE(file_system->ListDir(test_root_path).empty());
   } else {
-    ASSERT_TRUE(file_system->CreateDir(test_root_path) == Status::OK);
+    file_system->CreateDir(test_root_path);
   }
   std::string file_name = JoinPath(test_root_path, "/direct_file_");
   std::string content = "test_file";
   std::unique_ptr<WritableFile> file_a;
   std::unique_ptr<WritableFile> file_b;
-  ASSERT_TRUE(file_system->NewWritableFile(file_name + "_a", &file_a)
-              == Status::OK);
-  ASSERT_TRUE(file_a->Append(content.c_str(), 9) == Status::OK);
-  ASSERT_TRUE(file_a->Close() == Status::OK);
-  ASSERT_TRUE(file_system->NewWritableFile(file_name + "_b", &file_b)
-              == Status::OK);
-  ASSERT_TRUE(file_b->Append(content.c_str(), 9) == Status::OK);
-  ASSERT_TRUE(file_b->Close() == Status::OK);
+  file_system->NewWritableFile(file_name + "_a", &file_a);
+  file_a->Append(content.c_str(), 9);
+  file_a->Close();
+  file_system->NewWritableFile(file_name + "_b", &file_b);
+  file_b->Append(content.c_str(), 9);
+  file_b->Close();
   std::string child_dir = JoinPath(test_root_path, "/direct_dir");
-  ASSERT_TRUE(file_system->CreateDir(child_dir) == Status::OK);
-  {
-    std::vector<std::string> children;
-    file_system->GetChildren(test_root_path, &children);
-    ASSERT_EQ(children.size(), 3);
-  }
-  int64_t undeleted_files = 0;
-  int64_t undeleted_dirs = 0;
-  ASSERT_TRUE(file_system->DeleteDir(child_dir) == Status::OK);
-  ASSERT_TRUE(file_system->IsDirectory(child_dir) != Status::OK);
-  ASSERT_TRUE(file_system->DeleteRecursively(test_root_path, &undeleted_files,
-                                             &undeleted_dirs)
-              == Status::OK);
-  ASSERT_EQ(undeleted_files, 0);
-  ASSERT_EQ(undeleted_dirs, 0);
-  ASSERT_TRUE(file_system->IsDirectory(test_root_path) != Status::OK);
+  file_system->CreateDir(child_dir);
+  ASSERT_EQ(file_system->ListDir(test_root_path).size(), 3);
+  file_system->DeleteDir(child_dir);
+  ASSERT_TRUE(!file_system->IsDirectory(child_dir));
+  file_system->RecursivelyDeleteDir(test_root_path);
+  ASSERT_TRUE(!file_system->IsDirectory(test_root_path));
 }
 
 void TestFileSystem(FileSystem* file_system) {
@@ -101,10 +80,10 @@ void TestFileSystem(FileSystem* file_system) {
 }  // namespace fs
 
 TEST(file_system, write_and_read) {
-#if defined(__linux__)
+#ifdef PLATFORM_POSIX
   fs::FileSystem* file_system = new fs::PosixFileSystem();
   fs::TestFileSystem(file_system);
-#elif defined(_WIN32)
+#elif PLATFORM_WINDOWS
   fs::FileSystem* file_system = new fs::WindowsFileSystem();
   fs::TestFileSystem(file_system);
 #endif

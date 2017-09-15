@@ -133,8 +133,6 @@ class FileSystem {
   // Deletes the specified directory and all subdirectories and files
   // underneath it. undeleted_files and undeleted_dirs stores the number of
   // files and directories that weren't deleted.
-  //
-  // REQUIRES: undeleted_files, undeleted_dirs to be not null.
   virtual void RecursivelyDeleteDir(const std::string& dirname);
 
   // Stores the size of `fname` in `*file_size`.
