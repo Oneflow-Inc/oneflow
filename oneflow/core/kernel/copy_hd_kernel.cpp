@@ -37,7 +37,13 @@ void CopyHdKernel::Backward(
                            out_diff_blob->TotalByteSize(), bw_kind_);
 }
 
-COMMAND(AddKernelCreator(OperatorConf::kCopyHdConf, DeviceType::kGPU,
-                         []() { return new CopyHdKernel; }););
+Kernel* CreateCopyHdKernel() {
+  static const std::function<Kernel*()> creator = []() {
+    return new CopyHdKernel;
+  };
+  return creator();
+}
+
+COMMAND(AddKernelCreator(OperatorConf::kCopyHdConf, CreateCopyHdKernel));
 
 }  // namespace oneflow

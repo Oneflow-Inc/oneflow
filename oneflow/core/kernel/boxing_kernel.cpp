@@ -415,18 +415,14 @@ OF_PP_FOR_EACH_TUPLE(NON_FLOATING_BOXING_KERNEL_ADD_BOX_FORWARD,
 OF_PP_FOR_EACH_TUPLE(NON_FLOATING_BOXING_KERNEL_CONCAT_BOX_BACKWARD,
                      INT_DATA_TYPE_SEQ);
 
-namespace {
-
-template<DeviceType device_type>
-Kernel* CreateBoxingKernel(const OperatorConf& op_conf) {
-  static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
+Kernel* CreateBoxingKernel(const OpContext& op_ctx) {
+  static const HashMap<int, std::function<Kernel*()>> creators = {
 #define BOXING_KERNEL_ENTRY(type_cpp, type_proto) \
   {type_proto, []() { return new BoxingKernel<type_cpp>; }},
       OF_PP_FOR_EACH_TUPLE(BOXING_KERNEL_ENTRY, ARITHMETIC_DATA_TYPE_SEQ)};
-  return data_type2creator.at(op_conf.boxing_conf().data_type())();
+  return creators.at(op_ctx.bn_in_op2data_type().at("in_0"))();
 }
 
-}  // namespace
+COMMAND(AddKernelCreator(OperatorConf::kBoxingConf, CreateBoxingKernel));
 
-REGISTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kBoxingConf, CreateBoxingKernel);
 }  // namespace oneflow

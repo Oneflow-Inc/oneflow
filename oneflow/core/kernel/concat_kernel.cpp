@@ -95,15 +95,19 @@ void ConcatKernel<device_type, T>::Backward(
                    copy_out2in);
 }
 
-template<DeviceType device_type>
-Kernel* CreateConcatKernel(const OperatorConf& op_conf) {
-  static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
-#define CREATE_CONCATE_KERNEL(type_cpp, type_proto) \
-  {type_proto, []() { return new ConcatKernel<device_type, type_cpp>; }},
-      OF_PP_FOR_EACH_TUPLE(CREATE_CONCATE_KERNEL, ALL_DATA_TYPE_SEQ)};
-  return data_type2creator.at(op_conf.concat_conf().data_type())();
+Kernel* CreateConcatKernel(const OpContext& op_ctx) {
+  static const HashMap<std::string, std::function<Kernel*()>> creators = {
+#define CONCAT_KERNEL_ENTRY(device_type, data_type_pair)                     \
+  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {        \
+     return new ConcatKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>; \
+   }},
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(CONCAT_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
+                                       ALL_DATA_TYPE_SEQ)};
+
+  return creators.at(GetHashKey(op_ctx.device_type(),
+                                op_ctx.bn_in_op2data_type().at("in_0")))();
 }
 
-REGISTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kConcatConf, CreateConcatKernel);
+COMMAND(AddKernelCreator(OperatorConf::kConcatConf, CreateConcatKernel));
 
 }  // namespace oneflow

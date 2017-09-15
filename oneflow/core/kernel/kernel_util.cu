@@ -132,9 +132,9 @@ class KernelUtil<DeviceType::kGPU, T> final {
     CudaCheck(cudaFreeHost(host_raw_dptr));
   }
 
-  static void FillWithSnapshot(DeviceCtx* ctx, int32_t part_id,
-                               int32_t part_num, const Snapshot* snapshot,
-                               Blob* blob, const std::string& lbn,
+  static void FillWithModelDir(DeviceCtx* ctx, int32_t part_id,
+                               int32_t part_num, const std::string& model_dir,
+                               Blob* blob, const std::string& bn_in_op,
                                int32_t dim_num, int64_t num_in_each_dim) {
     TODO();
     /*

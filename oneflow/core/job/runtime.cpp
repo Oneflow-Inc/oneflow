@@ -1,6 +1,6 @@
 #include "gflags/gflags.h"
 #include "oneflow/core/actor/actor_message_bus.h"
-#include "oneflow/core/comm_network/comm_network.h"
+#include "oneflow/core/comm_network/rdma_comm_network.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/plan.pb.h"
@@ -48,15 +48,15 @@ class Runtime final {
     SendCmdMsg(mdupdt_tasks, ActorCmd::kInitializeModel);
     RuntimeCtx::Singleton()->mut_model_init_cnt().WaitUntilCntEqualZero();
     LOG(INFO) << "InitModel on this machine done";
-    // OF_BARRIER();
+    OF_BARRIER();
     LOG(INFO) << "InitModel on all machine done";
     HandoutTasks(source_tasks);
     HandoutTasks(other_tasks);
     RuntimeCtx::Singleton()->mut_inactive_actor_cnt().WaitUntilCntEqualZero();
     LOG(INFO) << "All actor on this machine are activated";
-    // OF_BARRIER();
+    OF_BARRIER();
     LOG(INFO) << "All actor on all machine are activated";
-    // Network Swap Memory Message
+    CommNet::Singleton()->RegisterMemoryDone();
     RuntimeCtx::Singleton()->mut_active_actor_cnt().Init("active_actor_cnt",
                                                          this_machine_task_num);
     SendCmdMsg(mdupdt_tasks, ActorCmd::kSendInitialModel);
@@ -72,7 +72,8 @@ class Runtime final {
     IDMgr::Singleton()->InitFromResource(JobDesc::Singleton()->resource());
     RuntimeCtx::Singleton()->set_this_machine_name(this_machine_name);
     KernelMgr::Singleton()->InitFromPlan(plan);
-    SnapshotMgr::Singleton()->Init();
+    RdmaCommNet::Init();
+    SnapshotMgr::Singleton()->Init(plan);
     ActorMsgBus::Singleton()->Init();
     ThreadMgr::Singleton();
   }
@@ -89,9 +90,9 @@ class Runtime final {
   }
   void SendCmdMsg(const std::vector<const TaskProto*>& tasks, ActorCmd cmd) {
     for (const TaskProto* task : tasks) {
-      ActorMsg msg;
-      msg.set_dst_actor_id(IDMgr::Singleton()->ActorId4TaskId(task->id()));
-      msg.set_actor_cmd(cmd);
+      ActorMsg msg = ActorMsg::BuildCommandMsg(
+          IDMgr::Singleton()->ActorId4TaskId(task->id()), cmd);
+      ;
       ActorMsgBus::Singleton()->SendMsg(msg);
     }
   }

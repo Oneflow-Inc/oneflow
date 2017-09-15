@@ -5,16 +5,19 @@
 
 namespace oneflow {
 
-class RdmaCommNetwork final : public CommNetwork {
+class RdmaCommNet final : public CommNet {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(RdmaCommNetwork);
-  ~RdmaCommNetwork() = default;
+  OF_DISALLOW_COPY_AND_MOVE(RdmaCommNet);
+  ~RdmaCommNet() = default;
 
-  static void Init() { CommNetwork::set_comm_network_ptr(new RdmaCommNetwork); }
+  static void Init() { CommNet::set_comm_network_ptr(new RdmaCommNet); }
 
   const void* RegisterMemory(void* dptr) override {
     // TODO
     return nullptr;
+  }
+  void UnRegisterMemory(const void* comm_net_token) override {
+    // TODO
   }
   void RegisterMemoryDone() override {
     // TODO
@@ -33,12 +36,9 @@ class RdmaCommNetwork final : public CommNetwork {
       std::function<void(const ActorMsg&)> callback) override {
     // TODO
   }
-  void Barrier(const std::string& barrier_name) override {
-    // TODO
-  }
 
  private:
-  RdmaCommNetwork() = default;
+  RdmaCommNet() = default;
 };
 
 }  // namespace oneflow

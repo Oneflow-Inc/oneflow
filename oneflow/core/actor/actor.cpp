@@ -1,7 +1,16 @@
 #include "oneflow/core/actor/actor.h"
+#include <chrono>
 #include "oneflow/core/kernel/kernel_manager.h"
 
+using namespace std::chrono;
+
 namespace oneflow {
+
+uint64_t now() {
+  return duration_cast<milliseconds>(
+             high_resolution_clock::now().time_since_epoch())
+      .count();
+}
 
 void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   // actor_id
@@ -100,6 +109,34 @@ void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) { Act(); }
 }
 
+void Actor::LogRegstEvent(schedule::UtilizationEventType type, Regst* regst) {
+  schedule::UtilizationEventProto* event = action_events_.add_event();
+  event->set_event_type(type);
+  event->set_batch_id(regst->piece_id());
+  event->set_time(now());
+  schedule::RegstResource* regst_res = event->mutable_regst_resource();
+  regst_res->set_regst_desc_id(regst->regst_desc_id());
+  regst_res->set_regst_id(reinterpret_cast<uint64_t>(regst));
+}
+
+void Actor::LogTaskEvent(schedule::UtilizationEventType type,
+                         uint64_t batch_id) {
+  schedule::UtilizationEventProto* event = action_events_.add_event();
+  event->set_event_type(type);
+  event->set_batch_id(batch_id);
+  event->set_time(now());
+  schedule::TaskStreamResource* stream_res =
+      event->mutable_task_stream_resource();
+  stream_res->set_task_id(actor_id());
+  if (device_ctx_->cpu_stream()) {
+    stream_res->set_stream_id(
+        reinterpret_cast<uint64_t>(device_ctx_->cpu_stream()));
+  } else if (device_ctx_->cuda_stream()) {
+    stream_res->set_stream_id(
+        reinterpret_cast<uint64_t>(device_ctx_->cuda_stream()));
+  }
+}
+
 void Actor::AsyncLaunchKernel(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&, const ExecKernel& ek)>
@@ -109,6 +146,7 @@ void Actor::AsyncLaunchKernel(
       return BnInOpAndEk2Blob(bn_in_op, ek);
     });
   }
+  LogTaskEvent(schedule::UtilizationEventType::kStartEvent, expected_piece_id_);
   VLOG(4) << "actor " << actor_id_ << " launch kernel for piece_id "
           << expected_piece_id_;
   expected_piece_id_ += 1;
@@ -125,14 +163,17 @@ void Actor::AsyncLaunchKernel(
           return nullptr;
         }
         auto regst = Regst4RegstDescId(regst_desc_id_it->second);
+        LogRegstEvent(schedule::UtilizationEventType::kStartEvent, regst);
         const std::string& lbn = ek.kernel->Lbn4BnInOp(bn_in_op);
         return regst->GetBlobPtrFromLbn(lbn);
       });
 }
 
-void Actor::AsyncSendReadableRegstMsg(
+void Actor::AsyncSendRegstMsgToConsumer(
     std::function<void(Regst*)> RegstPreProcess,
     std::function<bool(int64_t)> IsAllowedActor) {
+  uint64_t piece_id = -1;  // 0xffffffffffffffff
+  int64_t this_actor_id = actor_id_;
   for (auto& pair : writeable_produced_regst_) {
     Regst* regst = pair.second.front();
     RegstPreProcess(regst);
@@ -142,33 +183,36 @@ void Actor::AsyncSendReadableRegstMsg(
       if (!IsAllowedActor(consumer)) { continue; }
       total_reading_cnt_ += 1;
       regst_reading_cnt_it->second += 1;
-      device_ctx_->AddCallBack([consumer, regst]() {
-        ActorMsg msg = ActorMsg::BuildReadableRegstMsg(consumer, regst);
+      device_ctx_->AddCallBack([consumer, regst, this_actor_id]() {
+        ActorMsg msg =
+            ActorMsg::BuildRegstMsgToConsumer(this_actor_id, consumer, regst);
         ActorMsgBus::Singleton()->SendMsg(std::move(msg));
       });
     }
     if (!regst->consumers_actor_id().empty()) { pair.second.pop_front(); }
     if (pair.second.empty()) { writeable_produced_regst_desc_num_ -= 1; }
+    piece_id = regst->piece_id();
     VLOG(4) << "actor " << actor_id() << " "
             << "send readable register " << regst << ", "
             << "regst_desc_id:" << regst->regst_desc_id() << ", "
             << "this_regst_reading_cnt:" << regst_reading_cnt_it->second << ", "
             << "total_reading_cnt:" << total_reading_cnt_;
   }
+  LogTaskEvent(schedule::UtilizationEventType::kEndEvent, piece_id);
 }
 
-void Actor::AsyncSendReadableRegstMsg(
+void Actor::AsyncSendRegstMsgToConsumer(
     std::function<void(Regst*)> RegstPreProcess) {
-  AsyncSendReadableRegstMsg(RegstPreProcess, [](int64_t) { return true; });
+  AsyncSendRegstMsgToConsumer(RegstPreProcess, [](int64_t) { return true; });
 }
 
-void Actor::AsyncSendReadableRegstMsg(
+void Actor::AsyncSendRegstMsgToConsumer(
     std::function<bool(int64_t)> IsAllowedActor) {
-  AsyncSendReadableRegstMsg([](Regst*) {}, IsAllowedActor);
+  AsyncSendRegstMsgToConsumer([](Regst*) {}, IsAllowedActor);
 }
 
-void Actor::AsyncSendReadableRegstMsg() {
-  AsyncSendReadableRegstMsg([](Regst*) {});
+void Actor::AsyncSendRegstMsgToConsumer() {
+  AsyncSendRegstMsgToConsumer([](Regst*) {});
 }
 
 void Actor::AsyncSendEORDMsgToConsumers(int64_t regst_desc_id) {
@@ -178,9 +222,7 @@ void Actor::AsyncSendEORDMsgToConsumers(int64_t regst_desc_id) {
       produced_regsts_.at(regst_desc_id).front()->regst_desc();
   device_ctx_->AddCallBack([regst_desc]() {
     for (int64_t consumer : regst_desc->consumers_actor_id()) {
-      ActorMsg msg;
-      msg.set_dst_actor_id(consumer);
-      msg.set_actor_cmd(ActorCmd::kEORD);
+      ActorMsg msg = ActorMsg::BuildCommandMsg(consumer, ActorCmd::kEORD);
       ActorMsgBus::Singleton()->SendMsg(std::move(msg));
     }
   });
@@ -201,8 +243,8 @@ void Actor::AsyncSendRegstMsgToProducer(Regst* regst) {
           << "return register " << regst << " "
           << "to actor " << regst->producer_actor_id() << ", "
           << "regst_desc_id:" << regst->regst_desc_id();
-  ActorMsg msg =
-      ActorMsg::BuildRegstMsgToProducer(regst->producer_actor_id(), regst);
+  ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(
+      actor_id_, regst->producer_actor_id(), regst);
   AsyncDo([msg]() { ActorMsgBus::Singleton()->SendMsg(msg); });
 }
 
@@ -222,6 +264,7 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   if (writeable_it == writeable_produced_regst_.end()) { return 0; }
   if (writeable_it->second.empty()) { writeable_produced_regst_desc_num_ += 1; }
   writeable_it->second.push_back(regst);
+  LogRegstEvent(schedule::UtilizationEventType::kEndEvent, regst);
   return 0;
 }
 

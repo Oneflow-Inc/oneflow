@@ -20,19 +20,22 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
 
 namespace {
 
-template<DeviceType device_type>
-Kernel* CreateNormalMdUpdtKernel(const OperatorConf& op_conf) {
-  static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
-#define NORMAL_MDUPDT_KERNEL_ENTRY(type_cpp, type_proto) \
-  {type_proto,                                           \
-   []() { return new NormalMdUpdateKernel<device_type, type_cpp>; }},
-      OF_PP_FOR_EACH_TUPLE(NORMAL_MDUPDT_KERNEL_ENTRY, FLOATING_DATA_TYPE_SEQ)};
-  return data_type2creator.at(JobDesc::Singleton()->default_data_type())();
+Kernel* CreateNormalMdUpdateKernel(const OpContext& op_ctx) {
+  static const HashMap<std::string, std::function<Kernel*()>> creators = {
+#define MODEL_UPDATE_KERNEL_ENTRY(device_type, data_type_pair)            \
+  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {     \
+     return new NormalMdUpdateKernel<device_type,                         \
+                                     OF_PP_PAIR_FIRST(data_type_pair)>(); \
+   }},
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+          MODEL_UPDATE_KERNEL_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};
+  return creators.at(GetHashKey(op_ctx.device_type(),
+                                JobDesc::Singleton()->default_data_type()))();
 }
 
 }  // namespace
 
-REGISTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kNormalMdupdtConf,
-                                 CreateNormalMdUpdtKernel);
+COMMAND(AddKernelCreator(OperatorConf::kNormalMdupdtConf,
+                         CreateNormalMdUpdateKernel))
 
 }  // namespace oneflow

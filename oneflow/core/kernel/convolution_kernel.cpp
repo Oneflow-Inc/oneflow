@@ -258,19 +258,19 @@ void ConvolutionKernel<device_type, T>::InitModelBlobsWithRandomSeed(
 }
 
 template<DeviceType device_type, typename T>
-void ConvolutionKernel<device_type, T>::InitModelBlobsWithSnapshot(
+void ConvolutionKernel<device_type, T>::InitModelBlobsWithDir(
     const KernelCtx& ctx, int32_t part_id, int32_t part_num,
-    const Snapshot* snapshot,
+    const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* weight_blob = BnInOp2Blob("weight");
   int32_t dim_num = op()->GetInt32FromSpecialConf("out_num");
-  KernelUtil<device_type, T>::FillWithSnapshot(
-      ctx.device_ctx, part_id, part_num, snapshot, weight_blob,
-      op()->Lbn4BnInOp("weight"), dim_num, weight_blob->shape().Count(1));
+  KernelUtil<device_type, T>::FillWithModelDir(
+      ctx.device_ctx, part_id, part_num, model_load_dir, weight_blob, "weight",
+      dim_num, weight_blob->shape().Count(1));
   if (op()->GetBoolFromSpecialConf("has_bias_term")) {
-    KernelUtil<device_type, T>::FillWithSnapshot(
-        ctx.device_ctx, part_id, part_num, snapshot, BnInOp2Blob("bias"),
-        op()->Lbn4BnInOp("bias"), dim_num, 1);
+    KernelUtil<device_type, T>::FillWithModelDir(
+        ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias"),
+        "bias", dim_num, 1);
   }
 }
 
@@ -288,18 +288,22 @@ void ConvolutionKernel<device_type, T>::InitModelTmpBlobs(
 
 namespace {
 
-template<DeviceType device_type>
-Kernel* CreateConvolutionKernel(const OperatorConf& op_conf) {
-  static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
-#define CONVOLUTION_KERNEL_ENTRY(type_cpp, type_proto) \
-  {type_proto, []() { return new ConvolutionKernel<device_type, type_cpp>; }},
-      OF_PP_FOR_EACH_TUPLE(CONVOLUTION_KERNEL_ENTRY, FLOATING_DATA_TYPE_SEQ)};
-  return data_type2creator.at(op_conf.convolution_conf().in().data_type())();
+Kernel* CreateConvolutionKenrel(const OpContext& op_ctx) {
+  static const HashMap<std::string, std::function<Kernel*()>> creators = {
+#define CONVOLUTION_KERNEL_ENTRY(device_type, data_type_pair)          \
+  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {  \
+     return new ConvolutionKernel<device_type,                         \
+                                  OF_PP_PAIR_FIRST(data_type_pair)>(); \
+   }},
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+          CONVOLUTION_KERNEL_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};
+  return creators.at(
+      GetHashKey(op_ctx.device_type(), op_ctx.bn_in_op2data_type().at("in")))();
 }
 
 }  // namespace
 
-REGISTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kConvolutionConf,
-                                 CreateConvolutionKernel);
+COMMAND(AddKernelCreator(OperatorConf::kConvolutionConf,
+                         CreateConvolutionKenrel))
 
 }  // namespace oneflow

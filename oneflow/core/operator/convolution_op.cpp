@@ -27,9 +27,8 @@ void ConvolutionOp::InferBlobDesc4FwBlobs(
   const ConvolutionOpConf& conf = op_conf().convolution_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(SoleIbn());
   CHECK_EQ(in_blob_desc->shape().NumAxes(), 4);
-  CHECK_EQ(in_blob_desc->data_type(), conf.in().data_type());
-  CHECK_EQ(conf.in().data_type(), JobDesc::Singleton()->default_data_type());
-  CHECK_EQ(conf.out().data_type(), JobDesc::Singleton()->default_data_type());
+  CHECK_EQ(in_blob_desc->data_type(),
+           JobDesc::Singleton()->default_data_type());
   int64_t data_num = in_blob_desc->shape().At(0);
   int64_t c_i = in_blob_desc->shape().At(1);
 
@@ -54,7 +53,7 @@ void ConvolutionOp::InferBlobDesc4FwBlobs(
   // out
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(SoleObn());
   out_blob_desc->mut_shape() = Shape({data_num, c_o, h_len, w_len});
-  out_blob_desc->set_data_type(conf.out().data_type());
+  out_blob_desc->set_data_type(JobDesc::Singleton()->default_data_type());
   out_blob_desc->set_has_data_id(in_blob_desc->has_data_id());
 
   // col_buf

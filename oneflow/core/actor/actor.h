@@ -10,6 +10,7 @@
 #include "oneflow/core/kernel/kernel_manager.h"
 #include "oneflow/core/persistence/snapshot_manager.h"
 #include "oneflow/core/register/register_manager.h"
+#include "oneflow/core/schedule/utilization.pb.h"
 #include "oneflow/core/thread/thread_context.h"
 
 namespace oneflow {
@@ -17,7 +18,7 @@ namespace oneflow {
 class Actor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Actor);
-  virtual ~Actor() = default;
+  virtual ~Actor() { WriteEventLog("action_events.log"); }
 
   virtual void Init(const TaskProto&, const ThreadCtx&) = 0;
   // 1: success, and actor finish
@@ -30,6 +31,9 @@ class Actor {
   }
   int64_t GetThrdLocId() const {
     return IDMgr::Singleton()->ThrdLocId4ActorId(actor_id_);
+  }
+  void WriteEventLog(std::string event_log_filepath) {
+    PrintProtoToTextFile(action_events_, event_log_filepath);
   }
 
  protected:
@@ -77,11 +81,11 @@ class Actor {
           BnInOpAndEk2Blob);
   void AsyncLaunchKernel(const KernelCtx&,
                          std::function<Regst*(int64_t)> Regst4RegstDescId);
-  void AsyncSendReadableRegstMsg(std::function<void(Regst*)> RegstPreProcess,
-                                 std::function<bool(int64_t)> IsAllowedActor);
-  void AsyncSendReadableRegstMsg(std::function<void(Regst*)> RegstPreProcess);
-  void AsyncSendReadableRegstMsg(std::function<bool(int64_t)> IsAllowedActor);
-  void AsyncSendReadableRegstMsg();
+  void AsyncSendRegstMsgToConsumer(std::function<void(Regst*)> RegstPreProcess,
+                                   std::function<bool(int64_t)> IsAllowedActor);
+  void AsyncSendRegstMsgToConsumer(std::function<void(Regst*)> RegstPreProcess);
+  void AsyncSendRegstMsgToConsumer(std::function<bool(int64_t)> IsAllowedActor);
+  void AsyncSendRegstMsgToConsumer();
   void AsyncSendEORDMsgToConsumers(int64_t regst_desc_id);
   void AsyncSendEORDMsgForAllProducedRegstDesc();
   void AsyncSendRegstMsgToProducer(Regst*);
@@ -126,6 +130,10 @@ class Actor {
   int64_t total_reading_cnt_;
   int64_t num_of_remaining_eord_;
   int64_t num_of_read_empty_;
+
+  void LogTaskEvent(schedule::UtilizationEventType, uint64_t);
+  void LogRegstEvent(schedule::UtilizationEventType, Regst*);
+  schedule::UtilizationEventPackageProto action_events_;
 };
 
 }  // namespace oneflow

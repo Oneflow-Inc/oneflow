@@ -10,7 +10,7 @@ namespace test {
 namespace {
 
 template<DeviceType device_type, typename PredType, typename LabelType>
-std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
+std::function<Blob*(const std::string&)> BuildBnInOp2Blob() {
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
 
   using KTC_PRED = KTCommon<device_type, PredType>;
@@ -66,16 +66,9 @@ Kernel* BuildMultinomialLogisticLossKernel() {
   op_conf.set_name("multinomial_logistic_loss_test");
   MultinomialLogisticLossOpConf* multinomial_logistic_loss_conf =
       op_conf.mutable_multinomial_logistic_loss_conf();
-  multinomial_logistic_loss_conf->mutable_prediction()->set_name(
-      "mll/prediction");
-  multinomial_logistic_loss_conf->mutable_prediction()->set_data_type(
-      GetDataType<PredType>::val);
-  multinomial_logistic_loss_conf->mutable_label()->set_name("mll/label");
-  multinomial_logistic_loss_conf->mutable_label()->set_data_type(
-      GetDataType<LabelType>::val);
-  multinomial_logistic_loss_conf->mutable_loss()->set_name("mll/loss");
-  multinomial_logistic_loss_conf->mutable_loss()->set_data_type(
-      GetDataType<PredType>::val);
+  multinomial_logistic_loss_conf->set_prediction("mll/prediction");
+  multinomial_logistic_loss_conf->set_label("mll/label");
+  multinomial_logistic_loss_conf->set_loss("mll/loss");
   auto multinomial_logistic_loss_op = ConstructOp(op_conf);
   OperatorProto op_proto;
   multinomial_logistic_loss_op->ToProto(&op_proto);
@@ -89,15 +82,15 @@ template<DeviceType device_type, typename PredType, typename LabelType>
 void TestMultinomialLogisticLossKernel() {
   KernelCtx ctx;
   BuildKernelCtx<device_type>(&ctx);
-  auto BnInOp2BlobPtr = BuildBnInOp2BlobPtr<device_type, PredType, LabelType>();
+  auto BnInOp2Blob = BuildBnInOp2Blob<device_type, PredType, LabelType>();
   auto multinomial_logistic_loss_kernel =
       BuildMultinomialLogisticLossKernel<device_type, PredType, LabelType>();
-  multinomial_logistic_loss_kernel->Forward(ctx, BnInOp2BlobPtr);
+  multinomial_logistic_loss_kernel->Forward(ctx, BnInOp2Blob);
   SyncStream<device_type>(&ctx);
-  KTCommon<device_type, PredType>::CheckResult(BnInOp2BlobPtr, "loss",
+  KTCommon<device_type, PredType>::CheckResult(BnInOp2Blob, "loss",
                                                "expected_loss");
-  KTCommon<device_type, PredType>::CheckResult(
-      BnInOp2BlobPtr, "prediction_diff", "expected_prediction_diff");
+  KTCommon<device_type, PredType>::CheckResult(BnInOp2Blob, "prediction_diff",
+                                               "expected_prediction_diff");
 }
 
 }  // namespace
