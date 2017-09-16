@@ -16,9 +16,9 @@ std::string SGraph::ToDotString() {
 }
 
 void SGraph::InitSourceAndSink() {
-  mut_source() = mut_fake_node_mgr()->Create("source");
-  mut_sink() = mut_fake_node_mgr()->Create("sink");
-  SDevice* device = mut_device_mgr()->Create("fake_device");
+  mut_source() = mut_node_mgr<EmptyTask>()->Create("source");
+  mut_sink() = mut_node_mgr<EmptyTask>()->Create("sink");
+  SDevice* device = mut_node_mgr<SDevice>()->Create("fake_device");
   mut_device_arc_mgr()->CreateIfNotFound(source(), device);
   mut_device_arc_mgr()->CreateIfNotFound(sink(), device);
 }

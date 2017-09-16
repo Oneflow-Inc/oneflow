@@ -38,7 +38,7 @@ bool Validator::ValidateUtilizationGraph(const UtilizationGraph& ugraph) const {
       [](const Utilization& u) { CHECK(u.raw_protos().size()); });
   std::unordered_map<const STask*, float> task2utilization;
   ugraph.node_mgr<TaskUtilization>().ForEach([&](const TaskUtilization& tu) {
-    const STask* task = ugraph.sgraph().node_mgr().Find(tu.task_id());
+    const STask* task = ugraph.sgraph().node_mgr<STask>().Find(tu.task_id());
     task2utilization[task] = tu.utilization_proto().utilization();
   });
   ugraph.sgraph().ForEachChild(

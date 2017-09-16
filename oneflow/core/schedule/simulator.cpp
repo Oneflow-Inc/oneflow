@@ -12,7 +12,7 @@ std::unique_ptr<UtilizationEventPackageProto> Simulator::Run(
   Session session(sgraph, ugraph);
   SimulatorScheduleEngine engine(session);
   auto get_regst_num = [&](uint64_t id) -> uint32_t {
-    const SRegstDesc* regst_desc = sgraph.regst_desc_mgr().Find(id);
+    const SRegstDesc* regst_desc = sgraph.node_mgr<SRegstDesc>().Find(id);
     CHECK(regst_desc);
     return regst_desc->origin_regst_count();
   };

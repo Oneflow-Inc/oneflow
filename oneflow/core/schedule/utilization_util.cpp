@@ -128,7 +128,7 @@ void UtilizationUtil::ForEachGroupedResource<UtilizationResource::kTask>(
     const UtilizationResource& resource, const UtilizationGraph& ugraph,
     const std::function<void(const UtilizationResource&)>& cb) {
   CHECK(resource.has_task());
-  auto task = ugraph.sgraph().node_mgr().Find(resource.task().task_id());
+  auto task = ugraph.sgraph().node_mgr<STask>().Find(resource.task().task_id());
   CHECK(task);
   UtilizationResource dc;
   dc.mutable_dev_computation()->set_device_id(task->device().id());
@@ -144,7 +144,8 @@ void UtilizationUtil::ForEachGroupedResource<UtilizationResource::kTaskStream>(
   t.mutable_task()->set_task_id(resource.task_stream().task_id());
   cb(t);
 
-  auto task = ugraph.sgraph().node_mgr().Find(resource.task_stream().task_id());
+  auto task =
+      ugraph.sgraph().node_mgr<STask>().Find(resource.task_stream().task_id());
   CHECK(task);
 
   UtilizationResource s;
@@ -176,7 +177,7 @@ void UtilizationUtil::ForEachGroupedResource<UtilizationResource::kRegstDesc>(
     const std::function<void(const UtilizationResource&)>& cb) {
   CHECK(resource.has_regst_desc());
   UtilizationResource dm;
-  auto regst_desc = ugraph.sgraph().regst_desc_mgr().Find(
+  auto regst_desc = ugraph.sgraph().node_mgr<SRegstDesc>().Find(
       resource.regst_desc().regst_desc_id());
   CHECK(regst_desc);
   dm.mutable_dev_memory()->set_device_id(

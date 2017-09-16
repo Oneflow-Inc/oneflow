@@ -18,7 +18,7 @@ void UGraphScheduleEngine::Init() {
 void UGraphScheduleEngine::InitTaskWeight() {
   session().ugraph().node_mgr<TaskUtilization>().ForEach(
       [&](const TaskUtilization& tu) {
-        STask* task = session().sgraph().node_mgr().Find(tu.task_id());
+        STask* task = session().sgraph().node_mgr<STask>().Find(tu.task_id());
         CHECK(task);
         task2weight_[task] = tu.GetDuration(session().ugraph());
       });
