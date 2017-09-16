@@ -11,15 +11,17 @@ set(GRPC_TAG 781fd6f6ea03645a520cd5c675da67ab61f87e4b)
 
 if(WIN32)
   set(GRPC_BUILD_LIBRARY_DIR ${GRPC_BUILD}/${CMAKE_BUILD_TYPE})
-    set(GRPC_LIBRARY_NAMES gpr.lib
+    set(GRPC_LIBRARY_NAMES
+      grpc++_unsecure.lib
       grpc_unsecure.lib
-      grpc++_unsecure.lib)
+      gpr.lib)
     set(GRPC_CPP_PLUGIN_NAME grpc_cpp_plugin.exe)
 else()
   set(GRPC_BUILD_LIBRARY_DIR ${GRPC_BUILD})
-    set(GRPC_LIBRARY_NAMES libgpr.a
+    set(GRPC_LIBRARY_NAMES
+      libgrpc++_unsecure.a
       libgrpc_unsecure.a
-      libgrpc++_unsecure.a)
+      libgpr.a)
     set(GRPC_CPP_PLUGIN_NAME grpc_cpp_plugin)
 endif()
 
@@ -29,6 +31,9 @@ foreach(LIBRARY_NAME ${GRPC_LIBRARY_NAMES})
     list(APPEND GRPC_STATIC_LIBRARIES ${GRPC_LIBRARY_DIR}/${LIBRARY_NAME})
     list(APPEND GRPC_BUILD_STATIC_LIBRARIES ${GRPC_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
 endforeach()
+
+list(APPEND GRPC_STATIC_LIBRARIES ${GRPC_LIBRARY_DIR}/libcares.a)
+list(APPEND GRPC_BUILD_STATIC_LIBRARIES ${GRPC_BUILD_LIBRARY_DIR}/third_party/cares/libcares.a)
 
 if(BUILD_THIRD_PARTY)
 

@@ -12,6 +12,8 @@ class CtrlCommNet final {
 
   OF_SINGLETON(CtrlCommNet);
 
+  void Init();
+
   void Barrier(const std::string& barrier_name) {}
 
   // 0 : locked

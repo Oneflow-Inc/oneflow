@@ -17,6 +17,9 @@ class RuntimeCtx final {
   int64_t this_machine_id() const { return this_machine_id_; }
   void set_this_machine_name(const std::string& name);
   bool IsThisMachineMaster() const { return this_machine_id_ == 0; }
+  std::string GetThisCtrlAddr() const { return GetCtrlAddr(this_machine_id_); }
+  std::string GetMasterCtrlAddr() const { return GetCtrlAddr(0); }
+  std::string GetCtrlAddr(int64_t machine_id) const;
 
   ThreadSafeCounter& mut_model_init_cnt() { return model_init_cnt_; }
 
@@ -30,7 +33,6 @@ class RuntimeCtx final {
   RuntimeCtx() { LOG(INFO) << "RuntimeCtx Init"; }
 
   int64_t this_machine_id_;
-  std::string this_machine_name_;
 
   ThreadSafeCounter model_init_cnt_;
 
