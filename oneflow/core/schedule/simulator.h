@@ -15,7 +15,7 @@ class Simulator {
   Simulator() = default;
   ~Simulator() = default;
 
-  std::unique_ptr<DeviceInfoProto> Run(const SGraph& sgraph) const;
+  std::unique_ptr<UtilizationEventPackageProto> Run(const SGraph& sgraph) const;
 
  private:
 };

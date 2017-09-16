@@ -9,15 +9,20 @@ namespace oneflow {
 namespace schedule {
 
 class UtilizationGraph final {
-#define UTILIZATION_ARC_SEQ                                                  \
+#define COMPUTATION_UTILIZATION_ARC_SEQ                                      \
   OF_PP_MAKE_TUPLE_SEQ(ComputationUtilization, DeviceComputationUtilization) \
   OF_PP_MAKE_TUPLE_SEQ(DeviceComputationUtilization, StreamUtilization)      \
   OF_PP_MAKE_TUPLE_SEQ(DeviceComputationUtilization, TaskUtilization)        \
   OF_PP_MAKE_TUPLE_SEQ(StreamUtilization, TaskStreamUtilization)             \
-  OF_PP_MAKE_TUPLE_SEQ(TaskUtilization, TaskStreamUtilization)               \
-  OF_PP_MAKE_TUPLE_SEQ(MemoryUtilization, DeviceMemoryUtilization)           \
-  OF_PP_MAKE_TUPLE_SEQ(DeviceMemoryUtilization, RegstDescUtilization)        \
+  OF_PP_MAKE_TUPLE_SEQ(TaskUtilization, TaskStreamUtilization)
+
+#define MEMORY_UTILIZATION_ARC_SEQ                                    \
+  OF_PP_MAKE_TUPLE_SEQ(MemoryUtilization, DeviceMemoryUtilization)    \
+  OF_PP_MAKE_TUPLE_SEQ(DeviceMemoryUtilization, RegstDescUtilization) \
   OF_PP_MAKE_TUPLE_SEQ(RegstDescUtilization, RegstUtilization)
+
+#define UTILIZATION_ARC_SEQ \
+  COMPUTATION_UTILIZATION_ARC_SEQ MEMORY_UTILIZATION_ARC_SEQ
 
  public:
   OF_DISALLOW_COPY_AND_MOVE(UtilizationGraph);

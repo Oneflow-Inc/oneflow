@@ -14,17 +14,17 @@ void UtilizationAnalyzer::ForEachDeviceMemory(
   //	and so on;
 }
 
-std::unique_ptr<DeviceInfoProto> UtilizationAnalyzer::ParseDeviceInfoProto(
-    const std::string& log_file) const {
-  auto device_info_proto = of_make_unique<DeviceInfoProto>();
-  ParseProtoFromTextFile(log_file, device_info_proto.get());
-  return std::move(device_info_proto);
+std::unique_ptr<UtilizationEventPackageProto>
+UtilizationAnalyzer::ParseEventPackageProto(const std::string& log_file) const {
+  auto event_package = of_make_unique<UtilizationEventPackageProto>();
+  ParseProtoFromTextFile(log_file, event_package.get());
+  return std::move(event_package);
 }
 
 std::unique_ptr<UtilizationGraph> UtilizationAnalyzer::CreateUtilizationGraph(
     std::string log_file) {
-  auto device_info_proto = ParseDeviceInfoProto(log_file);
-  return Analyze(*device_info_proto);
+  auto event_package = ParseEventPackageProto(log_file);
+  return Analyze(*event_package);
 }
 
 std::unique_ptr<UtilizationGraph> UtilizationAnalyzer::Analyze(
@@ -36,10 +36,10 @@ std::unique_ptr<UtilizationGraph> UtilizationAnalyzer::Analyze(
 }
 
 std::unique_ptr<UtilizationGraph> UtilizationAnalyzer::Analyze(
-    const DeviceInfoProto& device_info) const {
-  CHECK(device_info.event_size());
+    const UtilizationEventPackageProto& event_package) const {
+  CHECK(event_package.event_size());
   UtilizationPackageProto utilization_package;
-  GetUtilizationPackageFromEvent(device_info, &utilization_package);
+  GetUtilizationPackageFromEvent(event_package, &utilization_package);
   return Analyze(utilization_package);
 }
 
@@ -58,7 +58,7 @@ void UtilizationAnalyzer::AddUtilizationPackageProto(
 }
 
 void UtilizationAnalyzer::GetUtilizationPackageFromEvent(
-    const DeviceInfoProto& event_package,
+    const UtilizationEventPackageProto& event_package,
     UtilizationPackageProto* utilization_package) const {
   std::unordered_map<std::string, std::list<const UtilizationEventProto*>>
       grouped_events;

@@ -6,20 +6,24 @@
 #include "oneflow/core/schedule/utilization.pb.h"
 #include "oneflow/core/schedule/utilization_util.h"
 
-#define UTILIZATION_TYPE_SEQ                                                  \
-  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kComputation,                     \
-                       ComputationUtilization)                                \
-  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kDevComputation,                  \
-                       DeviceComputationUtilization)                          \
-  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kStream, StreamUtilization)       \
-  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kTask, TaskUtilization)           \
-  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kTaskStream,                      \
-                       TaskStreamUtilization)                                 \
+#define COMPUTATION_UTILIZATION_TYPE_SEQ                                \
+  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kComputation,               \
+                       ComputationUtilization)                          \
+  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kDevComputation,            \
+                       DeviceComputationUtilization)                    \
+  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kStream, StreamUtilization) \
+  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kTask, TaskUtilization)     \
+  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kTaskStream, TaskStreamUtilization)
+
+#define MEMORY_UTILIZATION_TYPE_SEQ                                           \
   OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kMemory, MemoryUtilization)       \
   OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kDevMemory,                       \
                        DeviceMemoryUtilization)                               \
   OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kRegstDesc, RegstDescUtilization) \
   OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kRegst, RegstUtilization)
+
+#define UTILIZATION_TYPE_SEQ \
+  COMPUTATION_UTILIZATION_TYPE_SEQ MEMORY_UTILIZATION_TYPE_SEQ
 
 #define UTILIZATION_EVENT_SEQ                 \
   OF_PP_MAKE_TUPLE_SEQ(TaskStreamUtilization) \

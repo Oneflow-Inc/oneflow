@@ -6,7 +6,8 @@
 namespace oneflow {
 namespace schedule {
 
-std::unique_ptr<DeviceInfoProto> Simulator::Run(const SGraph& sgraph) const {
+std::unique_ptr<UtilizationEventPackageProto> Simulator::Run(
+    const SGraph& sgraph) const {
   UtilizationGraph ugraph(sgraph);
   Session session(sgraph, ugraph);
   SimulatorScheduleEngine engine(session);
@@ -18,7 +19,7 @@ std::unique_ptr<DeviceInfoProto> Simulator::Run(const SGraph& sgraph) const {
   auto schedule = engine.StaticSchedule(get_regst_num);
   auto simulator_schedule = dynamic_cast<SimulatorSchedule*>(schedule.get());
   CHECK(simulator_schedule);
-  return simulator_schedule->move_device_info_proto();
+  return simulator_schedule->move_event_package_proto();
 }
 
 }  // namespace schedule

@@ -17,7 +17,7 @@ class SimulatorUtilizationAnalyzer : public UtilizationAnalyzer {
   ~SimulatorUtilizationAnalyzer() = default;
 
  protected:
-  std::unique_ptr<DeviceInfoProto> ParseDeviceInfoProto(
+  std::unique_ptr<UtilizationEventPackageProto> ParseEventPackageProto(
       const std::string& log_file) const {
     UtilizationGraph ugraph(sgraph());
     Session session(sgraph(), ugraph);
@@ -26,7 +26,7 @@ class SimulatorUtilizationAnalyzer : public UtilizationAnalyzer {
     auto schedule = engine.StaticSchedule(get_regst_num);
     auto simulator_schedule = dynamic_cast<SimulatorSchedule*>(schedule.get());
     CHECK(simulator_schedule);
-    return simulator_schedule->move_device_info_proto();
+    return simulator_schedule->move_event_package_proto();
   }
 };
 

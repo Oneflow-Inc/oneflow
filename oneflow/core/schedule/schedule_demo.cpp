@@ -95,7 +95,8 @@ void TestUtilizationGraph() {
   Validator validator(ScheduleFactoryConfigure::Provider("default"));
   validator.ValidateSGraph(sgraph);
   Simulator simulator;
-  std::unique_ptr<DeviceInfoProto> device_info_proto = simulator.Run(sgraph);
+  std::unique_ptr<UtilizationEventPackageProto> device_info_proto =
+      simulator.Run(sgraph);
   UtilizationAnalyzer analyzer(sgraph);
   std::unique_ptr<UtilizationGraph> ugraph =
       analyzer.Analyze(*device_info_proto);
