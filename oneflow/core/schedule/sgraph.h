@@ -139,7 +139,7 @@ class SGraph : public SNode {
   STask* sink() const { return sink_; }
   inline const NodeMgr<STask>& node_mgr() const { return node_mgr_; }
   inline const ArcMgr<Arc<STask>>& arc_mgr() const { return arc_mgr_; }
-  inline const HasOneArcMgr<Arc<STask, SDevice>>& device_arc_mgr() const {
+  inline const ArcMgr<Arc<STask, SDevice>>& device_arc_mgr() const {
     return device_arc_mgr_;
   }
   inline const ArcMgr<Arc<SGraph, STask>>& loss_arc_mgr() const {
@@ -168,7 +168,7 @@ class SGraph : public SNode {
   inline NodeMgr<STask>* mut_node_mgr() { return &node_mgr_; }
   inline NodeMgr<STask>* mut_fake_node_mgr() { return &fake_node_mgr_; }
   inline ArcMgr<Arc<STask>>* mut_arc_mgr() { return &arc_mgr_; }
-  inline HasOneArcMgr<Arc<STask, SDevice>>* mut_device_arc_mgr() {
+  inline ArcMgr<Arc<STask, SDevice>>* mut_device_arc_mgr() {
     return &device_arc_mgr_;
   }
   inline NodeMgr<SDevice>* mut_device_mgr() { return &device_mgr_; }
@@ -221,7 +221,7 @@ class SGraph : public SNode {
   ArcMgr<Arc<STask>> ascendant_arc_mgr_;
   ArcMgr<Arc<STask, SRegstDesc>> produced_regst_desc_mgr_;
   ArcMgr<Arc<STask, SRegstDesc>> subscribed_regst_desc_mgr_;
-  HasOneArcMgr<Arc<STask, SDevice>> device_arc_mgr_;
+  ArcMgr<Arc<STask, SDevice>> device_arc_mgr_;
 };
 
 }  // namespace schedule

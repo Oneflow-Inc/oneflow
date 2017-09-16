@@ -445,25 +445,6 @@ class ArcMgr {
   std::unordered_map<uint64_t, std::unique_ptr<ArcType>> id2arc_;
 };
 
-template<typename ArcType,
-         typename SrcNodeType = typename ArcType::src_node_type,
-         typename DstNodeType = typename ArcType::dst_node_type>
-class HasOneArcMgr : public ArcMgr<ArcType> {
- public:
-  HasOneArcMgr() {}
-
-  template<typename... Args>
-  ArcType* CreateIfNotFound(SrcNodeType* src_node, DstNodeType* dst_node,
-                            Args&&... args) {
-    std::list<DstNodeType*> dst_nodes;
-    this->Output(src_node, &dst_nodes);
-
-    for (DstNodeType* node : dst_nodes) { this->Delete(src_node, node); }
-    return ArcMgr<ArcType>::CreateIfNotFound(src_node, dst_node,
-                                             std::forward<Args>(args)...);
-  }
-};
-
 }  // namespace schedule
 }  // namespace oneflow
 

@@ -40,7 +40,7 @@ class SimulatorSchedule : public Schedule {
   inline const ArcMgr<Arc<TaskInstance, SRegst>>& regst_arc_mgr() const {
     return regst_arc_mgr_;
   }
-  inline const HasOneArcMgr<Arc<SRegst, SRegstDesc>>& r2rd_arc_mgr() const {
+  inline const ArcMgr<Arc<SRegst, SRegstDesc>>& r2rd_arc_mgr() const {
     return r2rd_arc_mgr_;
   }
   inline const std::unordered_map<RegstDescInstance*, SRegst*>&
@@ -59,7 +59,7 @@ class SimulatorSchedule : public Schedule {
   inline ArcMgr<Arc<TaskInstance, SRegst>>* mut_regst_arc_mgr() {
     return &regst_arc_mgr_;
   }
-  inline HasOneArcMgr<Arc<SRegst, SRegstDesc>>* mut_r2rd_arc_mgr() {
+  inline ArcMgr<Arc<SRegst, SRegstDesc>>* mut_r2rd_arc_mgr() {
     return &r2rd_arc_mgr_;
   }
   inline NodeMgr<SRegst>* mut_regst_node_mgr() { return &regst_node_mgr_; }
@@ -106,7 +106,7 @@ class SimulatorSchedule : public Schedule {
   std::unordered_map<RegstDescInstance*, SRegst*> regst_desc_instance2regst_;
   NodeMgr<SRegst> regst_node_mgr_;
   ArcMgr<Arc<TaskInstance, SRegst>> regst_arc_mgr_;
-  HasOneArcMgr<Arc<SRegst, SRegstDesc>> r2rd_arc_mgr_;
+  ArcMgr<Arc<SRegst, SRegstDesc>> r2rd_arc_mgr_;
 
   ArcMgr<Arc<TaskInstance>> timenet_arc_mgr_;
   std::unordered_map<SDevice*, TaskInstance*> dev2current_instance_;
