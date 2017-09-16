@@ -3,8 +3,8 @@ package oneflow;
 
 message Machine {
   string addr = 1; // domain name or ip
-  uint32 ctrl_port = 2;
-  uint32 data_port = 3;
+  string ctrl_port = 2;
+  string data_port = 3;
   string name = 4;
 }
 

@@ -62,7 +62,7 @@ Plan Scheduler::GetPlanFromJobConf(const JobConf& job_conf,
   JobDesc::Singleton()->InitFromJobConf(job_conf);
   IDMgr::Singleton()->Init();
   RuntimeCtx::Singleton()->set_this_machine_name(this_machine_name);
-  // TODO: build rpc connect
+  CtrlCommNet::Singleton()->Init();
   Plan plan;
   if (RuntimeCtx::Singleton()->IsThisMachineMaster()) {
     plan = Compiler::Singleton()->Compile();

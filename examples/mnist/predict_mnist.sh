@@ -1,6 +1,6 @@
 set -e
 
-rm -rf ./predict_log ./core.* 
+rm -rf ./predict_log ./core.* ./predict_result/
 
 mkdir predict_log
 

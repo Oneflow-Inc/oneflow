@@ -1,7 +1,7 @@
 machine {
   addr: ""
-  data_port: 9000
-  ctrl_port: 9001
+  data_port: "9000"
+  ctrl_port: "9001"
   name: "centos-0"
 }
 
