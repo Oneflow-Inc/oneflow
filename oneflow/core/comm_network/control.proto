@@ -1,0 +1,14 @@
+syntax = "proto3";
+package oneflow;
+
+message BarrierRequest {
+}
+
+message BarrierResponse {
+}
+
+message AddWorkerRequest {
+}
+
+message AddWorkerResponse {
+}
