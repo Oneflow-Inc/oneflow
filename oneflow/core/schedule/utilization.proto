@@ -1,11 +1,6 @@
 syntax = "proto3";
 package oneflow.schedule;
 
-enum UtilizationResourceType {
-	kTask = 0;
-	kRegister = 1;
-}
-
 message TaskResource {
 	uint64 task_id = 1;
 }

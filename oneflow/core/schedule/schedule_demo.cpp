@@ -95,11 +95,11 @@ void TestUtilizationGraph() {
   Validator validator(ScheduleFactoryConfigure::Provider("default"));
   validator.ValidateSGraph(sgraph);
   Simulator simulator;
-  std::unique_ptr<UtilizationEventPackageProto> device_info_proto =
+  std::unique_ptr<UtilizationEventPackageProto> event_package =
       simulator.Run(sgraph);
+//  PrintProtoToTextFile(*event_package, "/tmp/a.proto");
   UtilizationAnalyzer analyzer(sgraph);
-  std::unique_ptr<UtilizationGraph> ugraph =
-      analyzer.Analyze(*device_info_proto);
+  std::unique_ptr<UtilizationGraph> ugraph = analyzer.Analyze(*event_package);
   Visualization visual;
   std::ofstream(FLAGS_dot_dir + "/ugraph.dot", std::ofstream::out)
       << visual.UGraph2DotString(*ugraph);

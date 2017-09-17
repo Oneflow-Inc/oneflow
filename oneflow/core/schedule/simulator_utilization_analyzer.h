@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_SCHEDULE_SIMULATOR_UTILIZATION_ANALYZER_H_
 #define ONEFLOW_CORE_SCHEDULE_SIMULATOR_UTILIZATION_ANALYZER_H_
 
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/schedule/session.h"
 #include "oneflow/core/schedule/simulator_schedule_engine.h"
 #include "oneflow/core/schedule/utilization_analyzer.h"
@@ -26,6 +27,7 @@ class SimulatorUtilizationAnalyzer : public UtilizationAnalyzer {
     auto schedule = engine.StaticSchedule(get_regst_num);
     auto simulator_schedule = dynamic_cast<SimulatorSchedule*>(schedule.get());
     CHECK(simulator_schedule);
+
     return simulator_schedule->move_event_package_proto();
   }
 };
