@@ -11,13 +11,13 @@ void Validator::ValidateSGraphNode(const SGraph& sgraph) const {
 }
 
 bool Validator::ValidateGraphArc(const SGraph& sgraph) const {
-  typedef std::function<void(STask * task)> TaskVisitor;
-  auto foreach_next = [&](STask* task, const TaskVisitor& cb) {
+  typedef std::function<void(const STask* task)> TaskVisitor;
+  auto foreach_next = [&](const STask* task, const TaskVisitor& cb) {
     sgraph.arc_mgr().Output(task, cb);
   };
-  SccVisitor<STask*> scc(foreach_next);
-  auto print_component = [&](const std::list<STask*> l) {
-    for (STask* task : l) {
+  SccVisitor<const STask*> scc(foreach_next);
+  auto print_component = [&](const std::list<const STask*> l) {
+    for (const STask* task : l) {
       if (task != l.front()) { std::cout << ","; }
       std::cout << task->id();
     }
@@ -26,7 +26,7 @@ bool Validator::ValidateGraphArc(const SGraph& sgraph) const {
   uint32_t scc_cnt = scc(sgraph.source(), print_component);
   CHECK(scc_cnt == 0u);
 
-  sgraph.ForEachArc([&](TaskArc* arc) {
+  sgraph.ForEachArc([&](const TaskArc* arc) {
     CHECK(arc->dst_node() != sgraph.source());
     CHECK(arc->src_node() != sgraph.sink());
   });
@@ -48,7 +48,7 @@ bool Validator::ValidateUtilizationGraph(const UtilizationGraph& ugraph) const {
 
 bool Validator::ValidateMemory(const Schedule& schedule) const {
   std::unordered_map<const SDevice*, uint64_t> device2total_memory_size;
-  schedule.sgraph().ForEachRegstDesc([&](SRegstDesc* regst_desc) {
+  schedule.sgraph().ForEachRegstDesc([&](const SRegstDesc* regst_desc) {
     const SDevice& device = regst_desc->owner_task().device();
     uint32_t regst_count =
         GetOrDefault(schedule.regst_desc2count(), regst_desc, 0u);

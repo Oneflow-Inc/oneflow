@@ -29,7 +29,7 @@ class ScheduleEngineConcreteFactory : public ScheduleEngineFactory {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ScheduleEngineConcreteFactory);
   ScheduleEngineConcreteFactory() = default;
-  explicit ScheduleEngineConcreteFactory(ScheduleFactoryProvider*){};
+  explicit ScheduleEngineConcreteFactory(const ScheduleFactoryProvider*){};
   virtual ~ScheduleEngineConcreteFactory() = default;
   DEFINE_FACTORY_METHOD_CLONE(ScheduleEngineConcreteFactory,
                               ScheduleEngineFactory);

@@ -14,19 +14,19 @@ void SimulatorScheduleEngine::ClearTmpData() {
 
 void SimulatorScheduleEngine::NewSinkTokens() {
   ClearTmpData();
-  std::list<TaskArc*> arcs;
+  std::list<const TaskArc*> arcs;
   sgraph().arc_mgr().InputArc(sgraph().sink(), &arcs);
   auto batchs = session().GetBatchNodes();
   session().task_arc_instance_mgr().Find(
       *batchs, arcs,
-      [&](TaskArcInstance* instance) { tokens_.insert(instance); });
+      [&](const TaskArcInstance* instance) { tokens_.insert(instance); });
   InitNodeBatchInstance(sgraph().sink());
 }
 
-void SimulatorScheduleEngine::InitNodeBatchInstance(STask* node) {
+void SimulatorScheduleEngine::InitNodeBatchInstance(const STask* node) {
   for (uint32_t i = 0; i < session().nr_batch(); i++) {
-    Batch* batch = session().batch_node_mgr().Find(i);
-    TaskInstance* start_instance =
+    const Batch* batch = session().batch_node_mgr().Find(i);
+    const TaskInstance* start_instance =
         session().task_instance_mgr().Find(batch, node);
     schedule()->mut_instance2ended_at()[start_instance] =
         std::make_pair(0.0, 0.0);
@@ -35,17 +35,18 @@ void SimulatorScheduleEngine::InitNodeBatchInstance(STask* node) {
 
 void SimulatorScheduleEngine::NewSourceTokens() {
   ClearTmpData();
-  std::list<TaskArc*> arcs;
+  std::list<const TaskArc*> arcs;
   sgraph().arc_mgr().OutputArc(sgraph().source(), &arcs);
   auto batchs = session().GetBatchNodes();
   session().task_arc_instance_mgr().Find(
       *batchs, arcs,
-      [&](TaskArcInstance* instance) { tokens_.insert(instance); });
+      [&](const TaskArcInstance* instance) { tokens_.insert(instance); });
   InitNodeBatchInstance(sgraph().source());
 }
 
-SDevice* SimulatorScheduleEngine::GetInstanceDevice(TaskInstance* instance) {
-  SDevice* ret = nullptr;
+const SDevice* SimulatorScheduleEngine::GetInstanceDevice(
+    const TaskInstance* instance) {
+  const SDevice* ret = nullptr;
   sgraph().device_arc_mgr().Output(instance->dst_node(), &ret);
   return ret;
 }
@@ -55,16 +56,16 @@ void SimulatorScheduleEngine::InitStrategies() {
   SetStrategy(of_make_unique<LimitedMemoryStrategy>(this));
 }
 
-bool SimulatorScheduleEngine::CompareInstanceOrder(TaskInstance* instance_a,
-                                                   TaskInstance* instance_b) {
+bool SimulatorScheduleEngine::CompareInstanceOrder(
+    const TaskInstance* instance_a, const TaskInstance* instance_b) {
   if (instance_a->src_node()->id() < instance_b->src_node()->id()) return true;
   return (instance_a->src_node() == instance_b->src_node())
          && (instance_a->dst_node()->depth() > instance_b->dst_node()->depth());
 }
 
-TaskInstance* SimulatorScheduleEngine::PickInstanceToRun(
-    const std::list<TaskInstance*>& instances) {
-  TaskInstance* ret = nullptr;
+const TaskInstance* SimulatorScheduleEngine::PickInstanceToRun(
+    const std::list<const TaskInstance*>& instances) {
+  const TaskInstance* ret = nullptr;
   if (instances.size()) {
     auto itt = instances.begin();
     ret = *itt;
@@ -93,9 +94,9 @@ std::unique_ptr<SimulatorSchedule> SimulatorScheduleEngine::Run(
   while (tokens().size()) {
     auto instances_picked = Pick(tokens());
     for (const auto& p : *instances_picked) {
-      SDevice* dev = dynamic_cast<SDevice*>(p.first);
-      Batch* batch = p.second->src_node();
-      STask* task = p.second->dst_node();
+      const SDevice* dev = p.first;
+      const Batch* batch = p.second->src_node();
+      const STask* task = p.second->dst_node();
       float ended_at = GetAscendantEndedAt(p.second);
       BeforeRun(p.second, ended_at);
       schedule()->mut_instance2ended_at()[p.second].first = ended_at;
@@ -105,16 +106,18 @@ std::unique_ptr<SimulatorSchedule> SimulatorScheduleEngine::Run(
       schedule()->mut_instance2ended_at()[p.second].second = ended_at;
       TimeLinePushBack(p.second, dev);
       AfterRun(p.second, ended_at);
-      sgraph().arc_mgr().InputArc(p.second->dst_node(), [&](TaskArc* arc) {
-        TaskArcInstance* instance_input =
-            session().task_arc_instance_mgr().Find(batch, arc);
-        mut_tokens().erase(instance_input);
-      });
-      sgraph().arc_mgr().OutputArc(p.second->dst_node(), [&](TaskArc* arc) {
-        TaskArcInstance* instance_output =
-            session().task_arc_instance_mgr().Find(batch, arc);
-        mut_tokens().insert(instance_output);
-      });
+      sgraph().arc_mgr().InputArc(
+          p.second->dst_node(), [&](const TaskArc* arc) {
+            const TaskArcInstance* instance_input =
+                session().task_arc_instance_mgr().Find(batch, arc);
+            mut_tokens().erase(instance_input);
+          });
+      sgraph().arc_mgr().OutputArc(
+          p.second->dst_node(), [&](const TaskArc* arc) {
+            const TaskArcInstance* instance_output =
+                session().task_arc_instance_mgr().Find(batch, arc);
+            mut_tokens().insert(instance_output);
+          });
     }
     if (!instances_picked->size()) { break; }
   }

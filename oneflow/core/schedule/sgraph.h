@@ -53,12 +53,12 @@ class STask : public SNode {
 
   inline float& mut_workload() { return workload_; }
   inline uint32_t& mut_depth() { return depth_; }
-  inline SDevice*& mut_device() { return device_; }
+  inline const SDevice*& mut_device() { return device_; }
 
  protected:
   uint32_t depth_;
   float workload_ = 1.0;
-  SDevice* device_;
+  const SDevice* device_;
 };
 
 class EmptyTask : public STask {
@@ -83,7 +83,7 @@ class SRegstDesc : public SNode {
   inline uint32_t origin_regst_count() const { return origin_regst_count_; }
 
   inline uint64_t& mut_regst_memory_size() { return regst_memory_size_; }
-  inline STask*& mut_owner_task() { return owner_task_; }
+  inline const STask*& mut_owner_task() { return owner_task_; }
   inline uint32_t& mut_min_regst_count() { return min_regst_count_; }
   inline uint32_t& mut_origin_regst_count() { return origin_regst_count_; }
 
@@ -91,7 +91,7 @@ class SRegstDesc : public SNode {
   uint64_t regst_memory_size_ = 1u;
   uint32_t min_regst_count_ = 0u;
   uint32_t origin_regst_count_ = 2u;
-  STask* owner_task_;
+  const STask* owner_task_;
 };
 
 //	static schedule graph
@@ -123,43 +123,47 @@ class SGraph : public SNode {
 
   std::string ToDotString();
 
-  static bool DescNodeOrder(STask* a, STask* b) {
+  static bool DescNodeOrder(const STask* a, const STask* b) {
     return a->depth() < b->depth();
   }
 
-  static bool AscNodeOrder(STask* a, STask* b) {
+  static bool AscNodeOrder(const STask* a, const STask* b) {
     return a->depth() > b->depth();
   }
 
-  void ForEachNext(STask* node, const std::function<void(STask*)>& cb) const {
+  void ForEachNext(const STask* node,
+                   const std::function<void(const STask*)>& cb) const {
     arc_mgr().Output(node, cb);
   }
 
-  void ForEachPrev(STask* node, const std::function<void(STask*)>& cb) const {
+  void ForEachPrev(const STask* node,
+                   const std::function<void(const STask*)>& cb) const {
     arc_mgr().Input(node, cb);
   }
 
-  void ForEachNode(const std::function<void(STask*)>& cb) const;
+  void ForEachNode(const std::function<void(const STask*)>& cb) const;
   void ForEachNode(const std::function<void(const STask&)>& cb) const;
-  void MutForEachChild(const std::function<void(STask*)>& cb) const;
+  void MutForEachChild(const std::function<void(const STask*)>& cb) const;
   void ForEachChild(const std::function<void(const STask&)>& cb) const;
-  void ForEachAscendant(STask*, const std::function<void(STask*)>& cb) const;
-  void ForEachDescendant(STask*, const std::function<void(STask*)>& cb) const;
-  void ForEachRegstDesc(const std::function<void(SRegstDesc*)>& cb) const;
+  void ForEachAscendant(STask*,
+                        const std::function<void(const STask*)>& cb) const;
+  void ForEachDescendant(STask*,
+                         const std::function<void(const STask*)>& cb) const;
+  void ForEachRegstDesc(const std::function<void(const SRegstDesc*)>& cb) const;
 
-  void Walk(const std::function<void(STask*)>& cb) const;
-  void WalkArc(const std::function<void(Arc<STask>*)>& cb) const;
+  void Walk(const std::function<void(const STask*)>& cb) const;
+  void WalkArc(const std::function<void(const Arc<STask>*)>& cb) const;
   uint32_t DeviceCount() const;
   uint32_t Depth() const;
-  void WalkReverse(const std::function<void(STask*)>& cb) const;
-  void WalkArcReverse(const std::function<void(Arc<STask>*)>& cb) const;
-  void ForEachArc(const std::function<void(Arc<STask>*)>& cb) const;
-  uint32_t LossNodes(std::list<STask*>* l) const;
+  void WalkReverse(const std::function<void(const STask*)>& cb) const;
+  void WalkArcReverse(const std::function<void(const Arc<STask>*)>& cb) const;
+  void ForEachArc(const std::function<void(const Arc<STask>*)>& cb) const;
+  uint32_t LossNodes(std::list<const STask*>* l) const;
 
   //	getter
   inline const Plan& plan() const { return *plan_; }
-  STask* source() const { return source_; }
-  STask* sink() const { return sink_; }
+  const STask* source() const { return source_; }
+  const STask* sink() const { return sink_; }
 
   template<typename node_type>
   inline const NodeMgr<node_type>& node_mgr() const;
@@ -172,8 +176,8 @@ class SGraph : public SNode {
   OF_PP_FOR_EACH_TUPLE(SGRAPH_ARC_MGR_GETTER, SGRAPH_ARC_SEQ);
 
   //	setter
-  STask*& mut_source() { return source_; }
-  STask*& mut_sink() { return sink_; }
+  const STask*& mut_source() { return source_; }
+  const STask*& mut_sink() { return sink_; }
 
   template<typename node_type>
   inline NodeMgr<node_type>* mut_node_mgr();
@@ -205,8 +209,8 @@ class SGraph : public SNode {
 
  private:
   const Plan* plan_;
-  STask* source_;
-  STask* sink_;
+  const STask* source_;
+  const STask* sink_;
 
 #define SGRAPH_NODE_MGR_MEMBER(node_type) \
   NodeMgr<node_type> OF_PP_CAT(node_type, _node_mgr_);

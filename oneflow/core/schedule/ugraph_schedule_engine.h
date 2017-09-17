@@ -16,14 +16,14 @@ class UGraphScheduleEngine : public FormulaScheduleEngine {
   virtual ~UGraphScheduleEngine() = default;
 
  protected:
-  virtual float GetSTaskWeight(STask* task) const override;
+  virtual float GetSTaskWeight(const STask* task) const override;
   virtual float EvaluateInitiationInterval() const override;
   void Init();
   void InitTaskWeight();
   void InitII();
 
  private:
-  std::unordered_map<STask*, float> task2weight_;
+  std::unordered_map<const STask*, float> task2weight_;
   float initiation_interval_;
 };
 

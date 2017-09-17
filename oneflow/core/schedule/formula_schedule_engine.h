@@ -17,14 +17,14 @@ class FormulaScheduleEngine : public ScheduleEngine {
       const std::function<uint32_t(uint64_t)>& get_regst_num);
 
  protected:
-  virtual float GetSTaskWeight(STask* task) const;
+  virtual float GetSTaskWeight(const STask* task) const;
   virtual float EvaluateInitiationInterval() const;
 
  private:
   void ForEachRegstDescDuration(
-      const std::function<void(SRegstDesc*, float)>&) const;
-  float GetRegstDescDuration(const LongestPathVisitor<STask*>& lpath,
-                             SRegstDesc* regst_desc) const;
+      const std::function<void(const SRegstDesc*, float)>&) const;
+  float GetRegstDescDuration(const LongestPathVisitor<const STask*>& lpath,
+                             const SRegstDesc* regst_desc) const;
 };
 
 typedef FormulaScheduleEngine NaiveFormulaScheduleEngine;

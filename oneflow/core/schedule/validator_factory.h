@@ -11,7 +11,8 @@ class ScheduleFactoryProvider;
 class ValidatorFactory {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ValidatorFactory);
-  explicit ValidatorFactory(ScheduleFactoryProvider* schedule_factory_provider)
+  explicit ValidatorFactory(
+      const ScheduleFactoryProvider* schedule_factory_provider)
       : schedule_factory_provider_(schedule_factory_provider) {}
   ValidatorFactory() = default;
   DEFINE_FACTORY_METHOD_CLONE(ValidatorFactory, ValidatorFactory);
@@ -25,7 +26,7 @@ class ValidatorFactory {
   }
 
  private:
-  ScheduleFactoryProvider* schedule_factory_provider_;
+  const ScheduleFactoryProvider* schedule_factory_provider_;
 };
 
 }  // namespace schedule

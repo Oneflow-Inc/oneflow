@@ -27,7 +27,7 @@ void TestDemo() {
   const auto& allocator_factory = sfp->allocator_factory();
   const auto& validator_factory = sfp->validator_factory();
 
-  Plan* plan = nullptr;
+  const Plan* plan = nullptr;
   std::unique_ptr<SGraph> sgraph = sgraph_factory.CreateSGraph(*plan);
   std::unique_ptr<UtilizationAnalyzer> analyzer =
       analyzer_factory.CreateUtilizationAnalyzer(*sgraph);
@@ -97,7 +97,7 @@ void TestUtilizationGraph() {
   Simulator simulator;
   std::unique_ptr<UtilizationEventPackageProto> event_package =
       simulator.Run(sgraph);
-//  PrintProtoToTextFile(*event_package, "/tmp/a.proto");
+  //  PrintProtoToTextFile(*event_package, "/tmp/a.proto");
   UtilizationAnalyzer analyzer(sgraph);
   std::unique_ptr<UtilizationGraph> ugraph = analyzer.Analyze(*event_package);
   Visualization visual;

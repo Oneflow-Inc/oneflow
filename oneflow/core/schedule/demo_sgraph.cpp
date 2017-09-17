@@ -121,7 +121,7 @@ void DemoSGraph::InitFromDemo() {
       ss.clear();
       ss << arg1 << "\t" << arg2;
       ss >> id >> name;
-      STask* node = node_mgr<STask>().Find(get_id(id));
+      const STask* node = node_mgr<STask>().Find(get_id(id));
       if (node) { mut_loss_arc_mgr()->CreateIfNotFound(this, node); }
     } else if (arg0 == "ae") {
       uint64_t from_id;
@@ -130,8 +130,8 @@ void DemoSGraph::InitFromDemo() {
       ss << arg1 << "\t" << arg2;
       ss >> from_id >> to_id;
 
-      STask* src_node = node_mgr<STask>().Find(get_id(from_id));
-      STask* dst_node = node_mgr<STask>().Find(get_id(to_id));
+      const STask* src_node = node_mgr<STask>().Find(get_id(from_id));
+      const STask* dst_node = node_mgr<STask>().Find(get_id(to_id));
       if (src_node && dst_node) {
         mut_arc_mgr()->CreateIfNotFound(src_node, dst_node);
       }
@@ -159,7 +159,7 @@ void DemoSGraph::InitFromDemo() {
       ss << arg1 << "\t" << arg2;
       ss >> from_id >> to_id;
 
-      STask* src_node = node_mgr<STask>().Find(get_id(from_id));
+      const STask* src_node = node_mgr<STask>().Find(get_id(from_id));
       SRegstDesc* dst_node =
           mut_node_mgr<SRegstDesc>()->CreateIfNotFound(get_id(to_id));
       if (src_node && dst_node) {
@@ -172,7 +172,7 @@ void DemoSGraph::InitFromDemo() {
       ss << arg1 << "\t" << arg2;
       ss >> from_id >> to_id;
 
-      STask* src_node = node_mgr<STask>().Find(get_id(from_id));
+      const STask* src_node = node_mgr<STask>().Find(get_id(from_id));
       SRegstDesc* dst_node =
           mut_node_mgr<SRegstDesc>()->CreateIfNotFound(get_id(to_id));
       if (src_node && dst_node) {

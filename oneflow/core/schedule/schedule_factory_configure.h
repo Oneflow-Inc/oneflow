@@ -12,17 +12,19 @@ class ScheduleFactoryConfigure final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ScheduleFactoryConfigure);
 
-  static ScheduleFactoryProvider* Provider(const std::string& name) {
-    ScheduleFactoryProvider* p = providers()[name].get();
+  static const ScheduleFactoryProvider* Provider(const std::string& name) {
+    const ScheduleFactoryProvider* p = providers()[name].get();
     CHECK(p);
     return p;
   }
 
-  static ScheduleFactoryProvider* Default() { return Provider("default"); }
+  static const ScheduleFactoryProvider* Default() {
+    return Provider("default");
+  }
 
   static ScheduleFactoryProvider* EnrollProvider(const std::string& name) {
     providers().emplace(name, of_make_unique<ScheduleFactoryProvider>(name));
-    return Provider(name);
+    return providers()[name].get();
   }
 
   static std::unordered_map<std::string,

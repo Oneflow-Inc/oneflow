@@ -103,8 +103,8 @@ void UtilizationAnalyzer::AddUtilizationProto(
   graph->mut_utilization_proto_store()->emplace(
       ptr, std::unique_ptr<UtilizationProto>(ptr));
   uint32_t path_node_count =
-      graph->ForEachUtilizationInPath(utilization, [&](Utilization* u) {
-        u->mut_raw_protos()->push_back(ptr);
+      graph->ForEachUtilizationInPath(utilization, [&](const Utilization* u) {
+        const_cast<Utilization*>(u)->mut_raw_protos()->push_back(ptr);
         if (u != utilization) {
           graph->mut_inner2leaf_arc_mgr()->CreateIfNotFound(u, utilization);
         }

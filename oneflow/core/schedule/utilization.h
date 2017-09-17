@@ -45,7 +45,7 @@ class Utilization : public SNode {
 
   float GetTimePerBatch(const UtilizationGraph& ugraph) const;
 
-  UtilizationResource::ResourceTypeCase GetResourceTypeCase() {
+  UtilizationResource::ResourceTypeCase GetResourceTypeCase() const {
     return utilization_proto().resource().resource_type_case();
   }
 

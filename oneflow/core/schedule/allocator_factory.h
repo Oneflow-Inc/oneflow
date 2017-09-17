@@ -11,7 +11,8 @@ class ScheduleFactoryProvider;
 class AllocatorFactory {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AllocatorFactory);
-  explicit AllocatorFactory(ScheduleFactoryProvider* schedule_factory_provider)
+  explicit AllocatorFactory(
+      const ScheduleFactoryProvider* schedule_factory_provider)
       : schedule_factory_provider_(schedule_factory_provider) {}
   AllocatorFactory() = default;
   virtual ~AllocatorFactory() = default;
@@ -27,14 +28,14 @@ class AllocatorFactory {
   }
 
  private:
-  ScheduleFactoryProvider* schedule_factory_provider_;
+  const ScheduleFactoryProvider* schedule_factory_provider_;
 };
 
 template<typename AllocatorType>
 class AllocatorConcreteFactory : public AllocatorFactory {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AllocatorConcreteFactory);
-  explicit AllocatorConcreteFactory(ScheduleFactoryProvider* sfp)
+  explicit AllocatorConcreteFactory(const ScheduleFactoryProvider* sfp)
       : AllocatorFactory(sfp) {}
   AllocatorConcreteFactory() = default;
   virtual ~AllocatorConcreteFactory() = default;

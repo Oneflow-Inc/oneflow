@@ -12,7 +12,7 @@ void PlanSGraph::InitRegstDesc(const Plan& plan) {
   for (const TaskProto& task_proto : plan.task()) {
     for (const auto& pair : task_proto.produced_regst_desc()) {
       uint64_t producer_id = pair.second.producer_task_id();
-      STask* producer = node_mgr<STask>().Find(producer_id);
+      const STask* producer = node_mgr<STask>().Find(producer_id);
       CHECK(producer);
       uint64_t regst_desc_id = pair.second.regst_desc_id();
       SRegstDesc* regst_desc =
@@ -26,7 +26,7 @@ void PlanSGraph::InitRegstDesc(const Plan& plan) {
         mut_subscribed_regst_desc_mgr()->CreateIfNotFound(producer, regst_desc);
       }
       for (int64_t consumer_id : pair.second.consumer_task_id()) {
-        STask* consumer = node_mgr<STask>().Find(consumer_id);
+        const STask* consumer = node_mgr<STask>().Find(consumer_id);
         CHECK(consumer);
         const TaskProto* consumer_task_proto = id2task_proto[consumer_id];
         CHECK(consumer);
@@ -73,7 +73,7 @@ void PlanSGraph::InitLoss(const Plan& plan) {
   GenerateTaskId2IsLoss(plan, &task_id2is_loss);
   for (const TaskProto& task_proto : plan.task()) {
     if (task_id2is_loss[task_proto.id()]) {
-      STask* loss = node_mgr<STask>().Find(task_proto.id());
+      const STask* loss = node_mgr<STask>().Find(task_proto.id());
       CHECK(loss);
       mut_loss_arc_mgr()->CreateIfNotFound(this, loss);
     }

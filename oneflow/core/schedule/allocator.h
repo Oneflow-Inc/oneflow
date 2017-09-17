@@ -13,7 +13,7 @@ class ScheduleFactoryProvider;
 class Allocator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Allocator);
-  explicit Allocator(ScheduleFactoryProvider* schedule_factory_provider)
+  explicit Allocator(const ScheduleFactoryProvider* schedule_factory_provider)
       : schedule_factory_provider_(schedule_factory_provider) {}
   Allocator() = default;
   virtual ~Allocator() = default;
@@ -34,13 +34,14 @@ class Allocator {
 
  private:
   void SetRegstNum(const Schedule& schedule, Plan* plan) const;
-  ScheduleFactoryProvider* schedule_factory_provider_;
+  const ScheduleFactoryProvider* schedule_factory_provider_;
 };
 
 class EmptyAllocator : public Allocator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EmptyAllocator);
-  explicit EmptyAllocator(ScheduleFactoryProvider* schedule_factory_provider)
+  explicit EmptyAllocator(
+      const ScheduleFactoryProvider* schedule_factory_provider)
       : Allocator(schedule_factory_provider) {}
   EmptyAllocator() = default;
   virtual ~EmptyAllocator() = default;

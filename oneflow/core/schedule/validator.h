@@ -15,7 +15,7 @@ class ScheduleFactoryProvider;
 class Validator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Validator);
-  explicit Validator(ScheduleFactoryProvider* schedule_factory_provider)
+  explicit Validator(const ScheduleFactoryProvider* schedule_factory_provider)
       : schedule_factory_provider_(schedule_factory_provider) {}
   Validator() = default;
 
@@ -33,17 +33,17 @@ class Validator {
   virtual bool ValidateMemory(const Schedule& schedule) const;
 
   //	getter
-  inline ScheduleFactoryProvider& sfp() const {
+  inline const ScheduleFactoryProvider& sfp() const {
     return *schedule_factory_provider_;
   }
-  inline ScheduleFactoryProvider& schedule_factory_provider() const {
+  inline const ScheduleFactoryProvider& schedule_factory_provider() const {
     return *schedule_factory_provider_;
   }
 
  private:
   void ValidateSGraphNode(const SGraph& sgraph) const;
   virtual bool ValidateGraphArc(const SGraph& sgraph) const;
-  ScheduleFactoryProvider* schedule_factory_provider_;
+  const ScheduleFactoryProvider* schedule_factory_provider_;
 };
 
 }  // namespace schedule

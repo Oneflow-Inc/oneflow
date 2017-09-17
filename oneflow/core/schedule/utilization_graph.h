@@ -38,9 +38,10 @@ class UtilizationGraph final {
   }
 
   Utilization* FindOrCreateUtilization(const UtilizationResource& resource);
-  void Connect(Utilization* src, Utilization* dst);
+  void Connect(const Utilization* src, const Utilization* dst);
   uint32_t ForEachUtilizationInPath(
-      Utilization* leaf, const std::function<void(Utilization*)>& cb);
+      const Utilization* leaf,
+      const std::function<void(const Utilization*)>& cb);
 
   //	getter
   inline const SGraph& sgraph() const { return *sgraph_; }
@@ -80,7 +81,7 @@ class UtilizationGraph final {
     return &inner2leaf_arc_mgr_;
   }
 
-  inline HashMap<UtilizationProto*, std::unique_ptr<UtilizationProto>>*
+  inline HashMap<const UtilizationProto*, std::unique_ptr<UtilizationProto>>*
   mut_utilization_proto_store() {
     return &utilization_proto_store_;
   }
@@ -88,21 +89,21 @@ class UtilizationGraph final {
  private:
   void InitRoot();
 
-  Utilization* FindUtilization(const UtilizationResource& resource) const;
+  const Utilization* FindUtilization(const UtilizationResource& resource) const;
   template<typename U>
-  U* FindConcreteUtilization(const UtilizationResource& resource) const;
+  const U* FindConcreteUtilization(const UtilizationResource& resource) const;
 
   Utilization* CreateUtilization(const UtilizationResource& resource);
   template<typename U>
   U* CreateConcreteUtilization(const UtilizationResource& resource);
 
   template<typename src_utilization, typename dst_utilization>
-  void ConnectConcreteArc(Utilization* src, Utilization* dst);
+  void ConnectConcreteArc(const Utilization* src, const Utilization* dst);
 
   const SGraph* sgraph_;
-  ComputationUtilization* computation_;
-  MemoryUtilization* memory_;
-  HashMap<UtilizationProto*, std::unique_ptr<UtilizationProto>>
+  const ComputationUtilization* computation_;
+  const MemoryUtilization* memory_;
+  HashMap<const UtilizationProto*, std::unique_ptr<UtilizationProto>>
       utilization_proto_store_;
 
 #define UTILIZATION_NODE_MGR_MEMBER(field, class_name) \

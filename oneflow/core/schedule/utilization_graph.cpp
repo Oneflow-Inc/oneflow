@@ -6,30 +6,32 @@ namespace oneflow {
 namespace schedule {
 
 uint32_t UtilizationGraph::ForEachUtilizationInPath(
-    Utilization* leaf, const std::function<void(Utilization*)>& cb) {
-  auto foreach_next = [&](Utilization* utilization,
-                          const std::function<void(Utilization*)>& cb) {
+    const Utilization* leaf,
+    const std::function<void(const Utilization*)>& cb) {
+  auto foreach_next = [&](const Utilization* utilization,
+                          const std::function<void(const Utilization*)>& cb) {
     utilization_arc_mgr().Input(utilization, cb);
   };
-  auto foreach_prev = [&](Utilization* utilization,
-                          const std::function<void(Utilization*)>& cb) {};
-  BfsVisitor<Utilization*> bfs_visitor(foreach_next, foreach_prev);
+  auto foreach_prev = [&](const Utilization* utilization,
+                          const std::function<void(const Utilization*)>& cb) {};
+  BfsVisitor<const Utilization*> bfs_visitor(foreach_next, foreach_prev);
   return bfs_visitor(leaf, cb);
 }
 
 Utilization* UtilizationGraph::FindOrCreateUtilization(
     const UtilizationResource& resource) {
-  Utilization* utilization = FindUtilization(resource);
+  Utilization* utilization =
+      const_cast<Utilization*>(FindUtilization(resource));
   return utilization ? utilization : CreateUtilization(resource);
 }
 
 template<typename class_name>
-class_name* UtilizationGraph::FindConcreteUtilization(
+const class_name* UtilizationGraph::FindConcreteUtilization(
     const UtilizationResource& resource) const {
   return node_mgr<class_name>().Find(UtilizationUtil::GetUniqueName(resource));
 }
 
-Utilization* UtilizationGraph::FindUtilization(
+const Utilization* UtilizationGraph::FindUtilization(
     const UtilizationResource& resource) const {
   switch (resource.resource_type_case()) {
 #define FIND_UTILIZATION_ENTRY(type_case, class_name) \
@@ -81,28 +83,31 @@ void UtilizationGraph::ForEachUtilization(
 }
 
 template<typename src_node_type, typename dst_node_type>
-void UtilizationGraph::ConnectConcreteArc(Utilization* src, Utilization* dst) {
-  src_node_type* src_utilization = dynamic_cast<src_node_type*>(src);
+void UtilizationGraph::ConnectConcreteArc(const Utilization* src,
+                                          const Utilization* dst) {
+  const src_node_type* src_utilization =
+      dynamic_cast<src_node_type*>(const_cast<Utilization*>(src));
   CHECK(src_utilization);
-  dst_node_type* dst_utilization = dynamic_cast<dst_node_type*>(dst);
+  const dst_node_type* dst_utilization =
+      dynamic_cast<dst_node_type*>(const_cast<Utilization*>(dst));
   CHECK(dst_utilization);
   mut_arc_mgr<src_node_type, dst_node_type>()->CreateIfNotFound(
       src_utilization, dst_utilization);
 }
 
-void UtilizationGraph::Connect(Utilization* src, Utilization* dst) {
+void UtilizationGraph::Connect(const Utilization* src, const Utilization* dst) {
   mut_utilization_arc_mgr()->CreateIfNotFound(src, dst);
   auto GetKey = [](UtilizationResource::ResourceTypeCase src_type,
                    UtilizationResource::ResourceTypeCase dst_type) {
     return std::to_string(src_type) + "-" + std::to_string(dst_type);
   };
-  static const HashMap<std::string,
-                       std::function<void(Utilization*, Utilization*)>>
+  static const HashMap<
+      std::string, std::function<void(const Utilization*, const Utilization*)>>
       entries{
 #define SPECIALIZED_CONNECT_ENTRY(src_node_type, dst_node_type)            \
   {GetKey(src_node_type::resource_type_case,                               \
           dst_node_type::resource_type_case),                              \
-   [&](Utilization* src, Utilization* dst) {                               \
+   [&](const Utilization* src, const Utilization* dst) {                   \
      return UtilizationGraph::ConnectConcreteArc<src_node_type,            \
                                                  dst_node_type>(src, dst); \
    }},

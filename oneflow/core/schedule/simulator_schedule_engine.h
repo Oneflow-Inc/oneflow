@@ -23,11 +23,11 @@ class SimulatorScheduleEngine : public ScheduleEngine {
 
   virtual ~SimulatorScheduleEngine() = default;
 
-  SDevice* GetInstanceDevice(TaskInstance* instance);
+  const SDevice* GetInstanceDevice(const TaskInstance* instance);
   void NewSourceTokens();
   void NewSinkTokens();
   void ClearTmpData();
-  void InitNodeBatchInstance(STask* node);
+  void InitNodeBatchInstance(const STask* node);
 
   std::unique_ptr<SimulatorSchedule> GetSchedule() {
     std::unique_ptr<SimulatorSchedule> ret = std::move(schedule_);
@@ -45,20 +45,26 @@ class SimulatorScheduleEngine : public ScheduleEngine {
   std::unique_ptr<SimulatorSchedule> Run(
       const std::function<uint32_t(uint64_t)>& get_regst_num);
 
-  TaskInstance* PickInstanceToRun(const std::list<TaskInstance*>& instances);
-  bool CompareInstanceOrder(TaskInstance* instance_a, TaskInstance* instance_b);
+  const TaskInstance* PickInstanceToRun(
+      const std::list<const TaskInstance*>& instances);
+  bool CompareInstanceOrder(const TaskInstance* instance_a,
+                            const TaskInstance* instance_b);
 
-  inline const std::unordered_set<TaskArcInstance*>& tokens() const {
+  inline const std::unordered_set<const TaskArcInstance*>& tokens() const {
     return tokens_;
   }
-  inline std::unordered_set<TaskArcInstance*>& mut_tokens() { return tokens_; }
+  inline std::unordered_set<const TaskArcInstance*>& mut_tokens() {
+    return tokens_;
+  }
 
   //	getter
   inline SimulatorSchedule* schedule() const { return schedule_.get(); }
-  inline EvaluationSimulationStrategy* evaluation() const {
+  inline const EvaluationSimulationStrategy* evaluation() const {
     return evaluation_.get();
   }
-  inline MemorySimulationStrategy* memory() const { return memory_.get(); }
+  inline const MemorySimulationStrategy* memory() const {
+    return memory_.get();
+  }
 
   friend class SimulatorSchedule;
 
@@ -76,27 +82,31 @@ class SimulatorScheduleEngine : public ScheduleEngine {
     memory_->InitRegst(get_regst_num);
   }
 
-  inline std::unique_ptr<std::unordered_map<SDevice*, TaskInstance*>> Pick(
-      const std::unordered_set<TaskArcInstance*>& tokens) {
+  inline std::unique_ptr<
+      std::unordered_map<const SDevice*, const TaskInstance*>>
+  Pick(const std::unordered_set<const TaskArcInstance*>& tokens) {
     return memory_->Pick(tokens);
   }
-  inline void TimeLinePushBack(TaskInstance* instance, SDevice* dev) {
+  inline void TimeLinePushBack(const TaskInstance* instance,
+                               const SDevice* dev) {
     return evaluation_->TimeLinePushBack(instance, dev);
   }
   inline void Retiming() { return evaluation_->Retiming(); }
-  inline void BeforeRun(TaskInstance* instance, float time) {
-    memory_->BeforeRun(instance, time);
+  inline void BeforeRun(const TaskInstance* instance, float time) {
+    const_cast<MemorySimulationStrategy*>(memory_.get())
+        ->BeforeRun(instance, time);
   }
-  inline void AfterRun(TaskInstance* instance, float time) {
-    memory_->AfterRun(instance, time);
+  inline void AfterRun(const TaskInstance* instance, float time) {
+    const_cast<MemorySimulationStrategy*>(memory_.get())
+        ->AfterRun(instance, time);
   }
-  inline float GetAscendantEndedAt(TaskInstance* instance) {
+  inline float GetAscendantEndedAt(const TaskInstance* instance) {
     return memory_->get_ascendant_ended_at_(instance);
   }
   std::unique_ptr<SimulatorSchedule> schedule_;
   std::unique_ptr<EvaluationSimulationStrategy> evaluation_;
   std::unique_ptr<MemorySimulationStrategy> memory_;
-  std::unordered_set<TaskArcInstance*> tokens_;
+  std::unordered_set<const TaskArcInstance*> tokens_;
 };
 
 }  // namespace schedule

@@ -48,13 +48,13 @@ class Session {
   const Batch* EndBatch() const {
     return batch_node_mgr().Find(nr_batch() - 1);
   }
-  TaskInstance* GetNextBatchInstance(TaskInstance* instance) const {
+  const TaskInstance* GetNextBatchInstance(const TaskInstance* instance) const {
     return GetNextBatchInstance(instance, 1);
   }
-  TaskInstance* GetNextBatchInstance(TaskInstance* instance,
-                                     int32_t step) const;
-  TaskInstance* GetPrevBatchInstance(TaskInstance* instance) const;
-  std::unique_ptr<std::list<Batch*>> GetBatchNodes() const;
+  const TaskInstance* GetNextBatchInstance(const TaskInstance* instance,
+                                           int32_t step) const;
+  const TaskInstance* GetPrevBatchInstance(const TaskInstance* instance) const;
+  std::unique_ptr<std::list<const Batch*>> GetBatchNodes() const;
 
   //	getter
   inline const SGraph& sgraph() const { return *sgraph_; }

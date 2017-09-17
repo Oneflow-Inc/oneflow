@@ -2,7 +2,7 @@
 namespace oneflow {
 namespace schedule {
 
-float UGraphScheduleEngine::GetSTaskWeight(STask* task) const {
+float UGraphScheduleEngine::GetSTaskWeight(const STask* task) const {
   return task2weight_.at(task);
 }
 
@@ -18,7 +18,8 @@ void UGraphScheduleEngine::Init() {
 void UGraphScheduleEngine::InitTaskWeight() {
   session().ugraph().node_mgr<TaskUtilization>().ForEach(
       [&](const TaskUtilization& tu) {
-        STask* task = session().sgraph().node_mgr<STask>().Find(tu.task_id());
+        const STask* task =
+            session().sgraph().node_mgr<STask>().Find(tu.task_id());
         CHECK(task);
         task2weight_[task] = tu.GetDuration(session().ugraph());
       });

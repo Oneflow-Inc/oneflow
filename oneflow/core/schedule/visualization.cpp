@@ -11,10 +11,8 @@ std::string Visualization::UGraph2DotString(
   };
   auto for_each_memory_utilization_arc =
       [&](const std::function<void(const Arc<Utilization, Utilization>&)>& cb) {
-        std::list<Utilization*> l;
-        auto collect = [&](const Utilization& node) {
-          l.push_back(const_cast<Utilization*>(&node));
-        };
+        std::list<const Utilization*> l;
+        auto collect = [&](const Utilization& node) { l.push_back(&node); };
         ugraph.node_mgr<MemoryUtilization>().ForEach(collect);
         ugraph.node_mgr<DeviceMemoryUtilization>().ForEach(collect);
         ugraph.node_mgr<RegstDescUtilization>().ForEach(collect);
@@ -22,10 +20,8 @@ std::string Visualization::UGraph2DotString(
       };
   auto for_each_computation_utilization_arc =
       [&](const std::function<void(const Arc<Utilization, Utilization>&)>& cb) {
-        std::list<Utilization*> l;
-        auto collect = [&](const Utilization& node) {
-          l.push_back(const_cast<Utilization*>(&node));
-        };
+        std::list<const Utilization*> l;
+        auto collect = [&](const Utilization& node) { l.push_back(&node); };
         ugraph.node_mgr<ComputationUtilization>().ForEach(collect);
         ugraph.node_mgr<DeviceComputationUtilization>().ForEach(collect);
         ugraph.node_mgr<StreamUtilization>().ForEach(collect);
@@ -36,8 +32,8 @@ std::string Visualization::UGraph2DotString(
               cb) {
         ugraph.node_mgr<TaskStreamUtilization>().ForEach(
             [&](const TaskStreamUtilization& node) {
-              StreamUtilization* src;
-              TaskUtilization* dst;
+              const StreamUtilization* src;
+              const TaskUtilization* dst;
               ugraph.arc_mgr<StreamUtilization, TaskStreamUtilization>().Input(
                   &node, &src);
               ugraph.arc_mgr<TaskUtilization, TaskStreamUtilization>().Input(
@@ -74,13 +70,13 @@ std::string Visualization::UGraph2DotString(
   ss << "\t rankdir=\"LR\";" << std::endl;
   for_each_computation_utilization_arc(
       [&](const Arc<Utilization, Utilization>& arc) {
-        render_node_pair(arc.const_src_node(), arc.const_dst_node());
+        render_node_pair(*arc.src_node(), *arc.dst_node());
       });
   for_each_stream_task_arc(render_node_pair);
   for_each_task_regst_desc_arc(render_node_pair);
   for_each_memory_utilization_arc(
       [&](const Arc<Utilization, Utilization>& arc) {
-        render_node_pair(arc.const_dst_node(), arc.const_src_node());
+        render_node_pair(*arc.dst_node(), *arc.src_node());
       });
   ss << "}" << std::endl;
   return ss.str();

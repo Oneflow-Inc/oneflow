@@ -18,7 +18,9 @@ class SimulationStrategy {
       : schedule_engine_(schedule_engine) {}
   virtual ~SimulationStrategy() {}
 
-  inline SimulatorScheduleEngine* schedule_engine() { return schedule_engine_; }
+  inline SimulatorScheduleEngine* schedule_engine() const {
+    return schedule_engine_;
+  }
 
  protected:
   SimulatorScheduleEngine* schedule_engine_;
@@ -30,8 +32,8 @@ class EvaluationSimulationStrategy : public SimulationStrategy {
       SimulatorScheduleEngine* schedule_engine)
       : SimulationStrategy(schedule_engine) {}
   ~EvaluationSimulationStrategy() = default;
-  virtual float GetAscendantEndedAt(TaskInstance* instance);
-  virtual void TimeLinePushBack(TaskInstance*, SDevice*) = 0;
+  virtual float GetAscendantEndedAt(const TaskInstance* instance) const;
+  virtual void TimeLinePushBack(const TaskInstance*, const SDevice*) = 0;
   virtual void Retiming() = 0;
 };
 
@@ -40,7 +42,7 @@ class EagerEvaluationStrategy : public EvaluationSimulationStrategy {
   explicit EagerEvaluationStrategy(SimulatorScheduleEngine* schedule_engine)
       : EvaluationSimulationStrategy(schedule_engine) {}
   virtual ~EagerEvaluationStrategy() = default;
-  void TimeLinePushBack(TaskInstance* instance, SDevice* device) {}
+  void TimeLinePushBack(const TaskInstance* instance, const SDevice* device) {}
   void Retiming() {}
 };
 
@@ -50,7 +52,7 @@ class LazyEvaluationStrategy : public EvaluationSimulationStrategy {
       : EvaluationSimulationStrategy(schedule_engine) {}
   ~LazyEvaluationStrategy() = default;
 
-  void TimeLinePushBack(TaskInstance* instance, SDevice* device);
+  void TimeLinePushBack(const TaskInstance* instance, const SDevice* device);
   void Retiming();
 
  private:
@@ -64,24 +66,25 @@ class MemorySimulationStrategy : public SimulationStrategy {
     InitFuncs();
   }
   virtual ~MemorySimulationStrategy() {}
-  virtual std::unique_ptr<std::unordered_map<SDevice*, TaskInstance*>> Pick(
-      const std::unordered_set<TaskArcInstance*>& tokens);
-  virtual void BeforeRun(TaskInstance* instance, float time) = 0;
-  virtual void AfterRun(TaskInstance* instance, float time) = 0;
+  virtual std::unique_ptr<
+      std::unordered_map<const SDevice*, const TaskInstance*>>
+  Pick(const std::unordered_set<const TaskArcInstance*>& tokens) const;
+  virtual void BeforeRun(const TaskInstance* instance, float time) = 0;
+  virtual void AfterRun(const TaskInstance* instance, float time) = 0;
   virtual void InitRegst(
       const std::function<uint32_t(uint64_t)>& get_regst_num) = 0;
-  virtual float GetAscendantEndedAt(TaskInstance* instance);
+  virtual float GetAscendantEndedAt(const TaskInstance* instance) const;
 
-  std::function<float(TaskInstance*)> get_ascendant_ended_at_;
+  std::function<float(const TaskInstance*)> get_ascendant_ended_at_;
 
  protected:
   void InitFuncs();
-  virtual bool IsInstanceReady(TaskInstance* instance);
+  virtual bool IsInstanceReady(const TaskInstance* instance) const;
 
-  std::function<TaskInstance*(TaskArcInstance*)> get_node_instance_;
-  std::function<bool(TaskInstance*)> is_instance_ready_;
-  std::function<SDevice*(TaskInstance*)> get_instance_device_;
-  std::function<TaskInstance*(const std::list<TaskInstance*>&)>
+  std::function<const TaskInstance*(const TaskArcInstance*)> get_node_instance_;
+  std::function<bool(const TaskInstance*)> is_instance_ready_;
+  std::function<const SDevice*(const TaskInstance*)> get_instance_device_;
+  std::function<const TaskInstance*(const std::list<const TaskInstance*>&)>
       pick_instance_to_run_;
 };
 
@@ -89,8 +92,8 @@ class UnlimitedMemoryStrategy : public MemorySimulationStrategy {
  public:
   UnlimitedMemoryStrategy(SimulatorScheduleEngine* schedule_engine)
       : MemorySimulationStrategy(schedule_engine) {}
-  virtual void BeforeRun(TaskInstance* instance, float time) {}
-  virtual void AfterRun(TaskInstance* instance, float time) {}
+  virtual void BeforeRun(const TaskInstance* instance, float time) {}
+  virtual void AfterRun(const TaskInstance* instance, float time) {}
   void InitRegst(const std::function<uint32_t(uint64_t)>& get_regst_num) {}
 };
 
@@ -100,17 +103,18 @@ class LimitedMemoryStrategy : public MemorySimulationStrategy {
       : MemorySimulationStrategy(schedule_engine) {
     InitFuncIsInstanceReady();
   }
-  void BeforeRun(TaskInstance* instance, float time);
-  void AfterRun(TaskInstance* instance, float time);
+  void BeforeRun(const TaskInstance* instance, float time);
+  void AfterRun(const TaskInstance* instance, float time);
   void InitRegst(const std::function<uint32_t(uint64_t)>& get_regst_num);
 
  private:
   void InitFuncIsInstanceReady();
-  bool IsAllRegstDescReady(TaskInstance* instance);
-  bool IsRegstDescReady(SRegstDesc* regst_desc, Batch* batch);
-  SRegst* FindFreeRegst(SRegstDesc* regst_desc, Batch* batch);
-  bool IsRegstFree(SRegst* regst);
-  float RegstDescEndedAt(TaskInstance* instance);
+  bool IsAllRegstDescReady(const TaskInstance* instance) const;
+  bool IsRegstDescReady(const SRegstDesc* regst_desc, const Batch* batch) const;
+  const SRegst* FindFreeRegst(const SRegstDesc* regst_desc,
+                              const Batch* batch) const;
+  bool IsRegstFree(const SRegst* regst) const;
+  float RegstDescEndedAt(const TaskInstance* instance) const;
 };
 
 }  // namespace schedule

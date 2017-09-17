@@ -42,16 +42,14 @@ void Utilization::Reduce(const UtilizationGraph& graph) {
 }
 
 uint32_t MemoryUtilization::ParallelNum(const UtilizationGraph& graph) const {
-  return graph.inner2leaf_arc_mgr().Output(
-      const_cast<MemoryUtilization*>(this));
+  return graph.inner2leaf_arc_mgr().Output(this);
 }
 
 uint32_t ComputationUtilization::ParallelNum(
     const UtilizationGraph& graph) const {
   uint64_t stream_cnt = 0;
   graph.arc_mgr<ComputationUtilization, DeviceComputationUtilization>().Output(
-      const_cast<ComputationUtilization*>(this),
-      [&](DeviceComputationUtilization* dev_c_utilization) {
+      this, [&](const DeviceComputationUtilization* dev_c_utilization) {
         stream_cnt += dev_c_utilization->ParallelNum(graph);
       });
   return stream_cnt;
@@ -60,7 +58,7 @@ uint32_t ComputationUtilization::ParallelNum(
 uint32_t DeviceComputationUtilization::ParallelNum(
     const UtilizationGraph& graph) const {
   return graph.arc_mgr<DeviceComputationUtilization, StreamUtilization>()
-      .Output(const_cast<DeviceComputationUtilization*>(this));
+      .Output(this);
 }
 
 float Utilization::GetTimePerBatch(const UtilizationGraph& ugraph) const {
@@ -75,20 +73,18 @@ float Utilization::GetTimePerBatch(const UtilizationGraph& ugraph) const {
 }
 
 void Utilization::CreateAscendantIfNotFound(UtilizationGraph* ugraph) const {
-  auto nonconst_this = const_cast<Utilization*>(this);
   UtilizationUtil::ForEachGrouped(
       utilization_proto().resource(), *ugraph,
       [&](const UtilizationResource& grouped_resource) {
-        Utilization* grouped =
+        const Utilization* grouped =
             ugraph->FindOrCreateUtilization(grouped_resource);
-        ugraph->Connect(grouped, nonconst_this);
+        ugraph->Connect(grouped, this);
       });
 }
 
 uint32_t TaskUtilization::ParallelNum(const UtilizationGraph& ugraph) const {
-  std::list<TaskStreamUtilization*> l;
-  ugraph.arc_mgr<TaskUtilization, TaskStreamUtilization>().Output(
-      const_cast<TaskUtilization*>(this), &l);
+  std::list<const TaskStreamUtilization*> l;
+  ugraph.arc_mgr<TaskUtilization, TaskStreamUtilization>().Output(this, &l);
   return ugraph.arc_mgr<StreamUtilization, TaskStreamUtilization>().Input(l);
 }
 
