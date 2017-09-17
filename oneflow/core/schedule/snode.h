@@ -150,7 +150,9 @@ class Arc : public SNode {
 
   //	getter
   SrcNodeType* src_node() const { return src_node_; }
+  const SrcNodeType& const_src_node() const { return *src_node_; }
   DstNodeType* dst_node() const { return dst_node_; }
+  const DstNodeType& const_dst_node() const { return *dst_node_; }
   std::string name() const {
     return "[" + src_node()->name() + "]->[" + dst_node()->name() + "]";
   }

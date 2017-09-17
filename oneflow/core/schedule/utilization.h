@@ -157,6 +157,9 @@ class DeviceMemoryUtilization : public MemoryUtilization {
 class RegstDescUtilization : public MemoryUtilization {
  public:
   UTILIZATION_BOILERPLATE(RegstDescUtilization, MemoryUtilization);
+  inline uint64_t regst_desc_id() const {
+    return utilization_proto().resource().regst_desc().regst_desc_id();
+  }
 };
 
 class RegstUtilization : public MemoryUtilization {
