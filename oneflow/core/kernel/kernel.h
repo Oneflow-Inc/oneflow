@@ -63,8 +63,7 @@ class Kernel {
   }
   template<DeviceType device_type>
   void CopyDataIdFromIbToAllOb(
-      const DeviceCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) {
+      DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) {
     Blob* input_blob = BnInOp2Blob(op_->SoleIbn());
     for (const std::string& obn : op_->output_bns()) {
       Blob* output_blob = BnInOp2Blob(obn);

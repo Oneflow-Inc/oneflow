@@ -111,6 +111,7 @@ void BoxingKernel<T>::InferCopyRulesFromUnequalAxis(
         for (size_t dst_idx = 0; dst_idx < dst_blobs.size(); ++dst_idx) {
           Blob* dst_b = dst_blobs.at(dst_idx);
           CopyRule cr;
+          cr.is_data_id = false;
           cr.src_bn = src_bns.at(src_idx);
           cr.dst_bn = dst_bns.at(dst_idx);
           cr.src_offset =
@@ -134,6 +135,7 @@ void BoxingKernel<T>::InferCopyRulesFromUnequalAxis(
         Blob* dst_b = dst_blobs.at(dst_idx);
         for (size_t offset = 0; offset < dst_b->shape().At(0); ++offset) {
           CopyRule cr;
+          cr.is_data_id = false;
           cr.src_bn = src_bns.at(src_idx);
           cr.dst_bn = dst_bns.at(dst_idx);
           cr.src_offset =
@@ -169,11 +171,12 @@ void BoxingKernel<T>::InferDataIdCopyRules(
       int64_t q = std::min(src_cap - src_offset, dst_cap - dst_offset);
 
       CopyRule rule;
+      rule.is_data_id = true;
       rule.src_bn = src_bns.at(src_idx);
       rule.dst_bn = dst_bns.at(dst_idx);
-      rule.src_offset = src_offset * sizeof(T);
-      rule.dst_offset = dst_offset * sizeof(T);
-      rule.copy_sz = q * sizeof(T);
+      rule.src_offset = src_offset * JobDesc::Singleton()->SizeOfOneDataId();
+      rule.dst_offset = dst_offset * JobDesc::Singleton()->SizeOfOneDataId();
+      rule.copy_sz = q * JobDesc::Singleton()->SizeOfOneDataId();
       rules->push_back(std::move(rule));
 
       src_offset += q;
@@ -190,6 +193,7 @@ void BoxingKernel<T>::InferDataIdCopyRules(
     }
   } else if (src_concat_axis == 1) {
     CopyRule rule;
+    rule.is_data_id = true;
     rule.src_bn = src_bns.at(0);
     rule.dst_bn = dst_bns.at(0);
     rule.src_offset = 0;
@@ -204,6 +208,7 @@ void BoxingKernel<T>::InferDataIdCopyRules(
     // add copy rules from first dst blob to all dst blobs
     for (size_t i = 1; i < dst_bns.size(); ++i) {
       CopyRule rule;
+      rule.is_data_id = true;
       rule.src_bn = dst_bns.at(0);
       rule.dst_bn = dst_bns.at(i);
       rule.src_offset = 0;
@@ -266,6 +271,7 @@ void BoxingKernel<T>::InferCopyRulesFromConcatDim(
                            dst_iter->second - dst_offset);
       for (size_t i = 0; i < seg_cnt; ++i) {
         CopyRule cr;
+        cr.is_data_id = false;
         cr.src_bn = *src_iter->first;
         cr.dst_bn = *dst_iter->first;
         cr.src_offset =
@@ -297,6 +303,7 @@ void BoxingKernel<T>::InferFwCloneRules(
   for (size_t i = 1; i < obns.size(); ++i) {
     if (BnInOp2Blob(obns.at(i)) == nullptr) { break; }
     CopyRule cr;
+    cr.is_data_id = false;
     cr.src_bn = obns.front();
     cr.dst_bn = obns.at(i);
     cr.src_offset = 0;
@@ -329,10 +336,17 @@ void BoxingKernel<T>::CopyDataFromRules(
   for (const CopyRule& rule : copy_rules) {
     Blob* src_blob = BnInOp2Blob(rule.src_bn);
     Blob* dst_blob = BnInOp2Blob(rule.dst_bn);
-    Memcpy<DeviceType::kCPU>(
-        ctx.device_ctx, dst_blob->mut_dptr<char>() + rule.dst_offset,
-        src_blob->dptr<char>() + rule.src_offset, rule.copy_sz,
-        cudaMemcpyKind::cudaMemcpyHostToHost);
+    if (rule.is_data_id) {
+      Memcpy<DeviceType::kCPU>(
+          ctx.device_ctx, dst_blob->mut_data_id() + rule.dst_offset,
+          src_blob->data_id() + rule.src_offset, rule.copy_sz,
+          cudaMemcpyKind::cudaMemcpyHostToHost);
+    } else {
+      Memcpy<DeviceType::kCPU>(
+          ctx.device_ctx, dst_blob->mut_dptr<char>() + rule.dst_offset,
+          src_blob->dptr<char>() + rule.src_offset, rule.copy_sz,
+          cudaMemcpyKind::cudaMemcpyHostToHost);
+    }
   }
 }
 
