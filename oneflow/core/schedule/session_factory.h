@@ -14,7 +14,7 @@ class SessionFactory {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SessionFactory);
   SessionFactory() = default;
-  explicit SessionFactory(const ScheduleFactoryProvider*){};
+  explicit SessionFactory(const ScheduleFactoryProvider&){};
   virtual ~SessionFactory() = default;
   DEFINE_FACTORY_METHOD_CLONE(SessionFactory, SessionFactory);
 
@@ -29,7 +29,7 @@ class SessionConcreteFactory : public SessionFactory {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SessionConcreteFactory);
   SessionConcreteFactory() = default;
-  explicit SessionConcreteFactory(const ScheduleFactoryProvider*){};
+  explicit SessionConcreteFactory(const ScheduleFactoryProvider&){};
   virtual ~SessionConcreteFactory() = default;
   std::unique_ptr<Session> CreateSession(const SGraph& graph,
                                          const UtilizationGraph& ugraph) const {

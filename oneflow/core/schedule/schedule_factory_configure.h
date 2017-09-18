@@ -12,13 +12,13 @@ class ScheduleFactoryConfigure final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ScheduleFactoryConfigure);
 
-  static const ScheduleFactoryProvider* Provider(const std::string& name) {
+  static const ScheduleFactoryProvider& Provider(const std::string& name) {
     const ScheduleFactoryProvider* p = providers()[name].get();
     CHECK(p);
-    return p;
+    return *p;
   }
 
-  static const ScheduleFactoryProvider* Default() {
+  static const ScheduleFactoryProvider& Default() {
     return Provider("default");
   }
 

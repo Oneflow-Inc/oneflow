@@ -19,13 +19,13 @@ namespace schedule {
 namespace {
 
 void TestDemo() {
-  auto sfp = ScheduleFactoryConfigure::Provider("demo");
-  const auto& sgraph_factory = sfp->sgraph_factory();
-  const auto& analyzer_factory = sfp->utilization_analyzer_factory();
-  const auto& session_factory = sfp->session_factory();
-  const auto& engine_factory = sfp->schedule_engine_factory();
-  const auto& allocator_factory = sfp->allocator_factory();
-  const auto& validator_factory = sfp->validator_factory();
+  const auto& sfp = ScheduleFactoryConfigure::Provider("demo");
+  const auto& sgraph_factory = sfp.sgraph_factory();
+  const auto& analyzer_factory = sfp.utilization_analyzer_factory();
+  const auto& session_factory = sfp.session_factory();
+  const auto& engine_factory = sfp.schedule_engine_factory();
+  const auto& allocator_factory = sfp.allocator_factory();
+  const auto& validator_factory = sfp.validator_factory();
 
   const Plan* plan = nullptr;
   std::unique_ptr<SGraph> sgraph = sgraph_factory.CreateSGraph(*plan);
@@ -60,13 +60,13 @@ void TestPlan() {
   //	std::string conf = "simulator_schedule_engine";
   //	std::string conf = "small_batch_num";
   //	std::string conf = "demo";
-  auto sfp = ScheduleFactoryConfigure::Provider(conf);
-  const auto& allocator_factory = sfp->allocator_factory();
+  const auto& sfp = ScheduleFactoryConfigure::Provider(conf);
+  const auto& allocator_factory = sfp.allocator_factory();
   std::unique_ptr<Allocator> allocator = allocator_factory.CreateAllocator();
-  const auto& sgraph_factory = sfp->sgraph_factory();
-  const auto& analyzer_factory = sfp->utilization_analyzer_factory();
-  const auto& session_factory = sfp->session_factory();
-  const auto& validator_factory = sfp->validator_factory();
+  const auto& sgraph_factory = sfp.sgraph_factory();
+  const auto& analyzer_factory = sfp.utilization_analyzer_factory();
+  const auto& session_factory = sfp.session_factory();
+  const auto& validator_factory = sfp.validator_factory();
   std::unique_ptr<Validator> validator = validator_factory.CreateValidator();
 
   std::unique_ptr<Plan> plan = LoadPlan(FLAGS_plan);

@@ -10,7 +10,7 @@ class UtilizationAnalyzerFactory {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UtilizationAnalyzerFactory);
   UtilizationAnalyzerFactory() = default;
-  explicit UtilizationAnalyzerFactory(const ScheduleFactoryProvider*) {}
+  explicit UtilizationAnalyzerFactory(const ScheduleFactoryProvider&) {}
   virtual ~UtilizationAnalyzerFactory() = default;
   DEFINE_FACTORY_METHOD_CLONE(UtilizationAnalyzerFactory,
                               UtilizationAnalyzerFactory);
@@ -26,7 +26,7 @@ class UtilizationAnalyzerConcreteFactory : public UtilizationAnalyzerFactory {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UtilizationAnalyzerConcreteFactory);
   UtilizationAnalyzerConcreteFactory() = default;
-  explicit UtilizationAnalyzerConcreteFactory(const ScheduleFactoryProvider*) {}
+  explicit UtilizationAnalyzerConcreteFactory(const ScheduleFactoryProvider&) {}
   virtual ~UtilizationAnalyzerConcreteFactory() = default;
   DEFINE_FACTORY_METHOD_CLONE(UtilizationAnalyzerConcreteFactory,
                               UtilizationAnalyzerFactory);

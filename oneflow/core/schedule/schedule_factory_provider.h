@@ -26,7 +26,7 @@ class ScheduleFactoryProvider final {
   OF_DISALLOW_COPY_AND_MOVE(ScheduleFactoryProvider);
   explicit ScheduleFactoryProvider(const std::string name) : name_(name) {}
 
-  ScheduleFactoryProvider* Merge(const ScheduleFactoryProvider* sfp) {
+  ScheduleFactoryProvider* Merge(const ScheduleFactoryProvider& sfp) {
 #define PROVIDER_FACTORY_CLONE(class_name, field) CLONE_FACTORY(sfp, field());
     OF_PP_FOR_EACH_TUPLE(PROVIDER_FACTORY_CLONE, SCHEDULE_FACTORY_SEQ);
     return this;
@@ -34,7 +34,7 @@ class ScheduleFactoryProvider final {
 
 #define PROVIDER_FACTORY_SET(class_name, field)                         \
   ScheduleFactoryProvider* Set(std::unique_ptr<class_name>&& factory) { \
-    OF_PP_CAT(field, _) = factory->Clone(this);                         \
+    OF_PP_CAT(field, _) = factory->Clone(*this);                        \
     return this;                                                        \
   }
   OF_PP_FOR_EACH_TUPLE(PROVIDER_FACTORY_SET, SCHEDULE_FACTORY_SEQ);

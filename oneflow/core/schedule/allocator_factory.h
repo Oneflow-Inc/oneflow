@@ -12,19 +12,22 @@ class AllocatorFactory {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AllocatorFactory);
   explicit AllocatorFactory(
-      const ScheduleFactoryProvider* schedule_factory_provider)
-      : schedule_factory_provider_(schedule_factory_provider) {}
+      const ScheduleFactoryProvider& schedule_factory_provider)
+      : schedule_factory_provider_(&schedule_factory_provider) {}
   AllocatorFactory() = default;
   virtual ~AllocatorFactory() = default;
   DEFINE_FACTORY_METHOD_CLONE(AllocatorFactory, AllocatorFactory);
 
   virtual std::unique_ptr<Allocator> CreateAllocator() const {
-    return of_make_unique<Allocator>(schedule_factory_provider_);
+    return of_make_unique<Allocator>(*schedule_factory_provider_);
   }
 
   //	getter
-  inline const ScheduleFactoryProvider* schedule_factory_provider() const {
-    return schedule_factory_provider_;
+  inline const ScheduleFactoryProvider& sfp() const {
+    return *schedule_factory_provider_;
+  }
+  inline const ScheduleFactoryProvider& schedule_factory_provider() const {
+    return *schedule_factory_provider_;
   }
 
  private:
@@ -35,14 +38,12 @@ template<typename AllocatorType>
 class AllocatorConcreteFactory : public AllocatorFactory {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AllocatorConcreteFactory);
-  explicit AllocatorConcreteFactory(const ScheduleFactoryProvider* sfp)
+  explicit AllocatorConcreteFactory(const ScheduleFactoryProvider& sfp)
       : AllocatorFactory(sfp) {}
   AllocatorConcreteFactory() = default;
   virtual ~AllocatorConcreteFactory() = default;
   virtual std::unique_ptr<Allocator> CreateAllocator() const {
-    auto const_sfp = schedule_factory_provider();
-    auto sfp = const_cast<ScheduleFactoryProvider*>(const_sfp);
-    return of_make_unique<AllocatorType>(sfp);
+    return of_make_unique<AllocatorType>(schedule_factory_provider());
   }
 };
 

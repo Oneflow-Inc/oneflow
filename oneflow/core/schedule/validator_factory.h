@@ -12,8 +12,8 @@ class ValidatorFactory {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ValidatorFactory);
   explicit ValidatorFactory(
-      const ScheduleFactoryProvider* schedule_factory_provider)
-      : schedule_factory_provider_(schedule_factory_provider) {}
+      const ScheduleFactoryProvider& schedule_factory_provider)
+      : schedule_factory_provider_(&schedule_factory_provider) {}
   ValidatorFactory() = default;
   DEFINE_FACTORY_METHOD_CLONE(ValidatorFactory, ValidatorFactory);
 
@@ -22,7 +22,7 @@ class ValidatorFactory {
   }
 
   virtual std::unique_ptr<Validator> CreateValidator() const {
-    return of_make_unique<Validator>(schedule_factory_provider_);
+    return of_make_unique<Validator>(*schedule_factory_provider_);
   }
 
  private:
