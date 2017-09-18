@@ -8,7 +8,7 @@ namespace schedule {
 
 class MemInfo final {
  public:
-  MemInfo();
+  OF_DISALLOW_COPY_AND_MOVE(MemInfo);
   ~MemInfo() = default;
 
   OF_SINGLETON(MemInfo);
@@ -19,12 +19,13 @@ class MemInfo final {
   uint64_t gpu_ram_sz(const uint32_t gpu_idx) const {
     return gpu_ram_sz_[gpu_idx];
   }
+
   const std::string& this_machine_name() const { return this_machine_name_; }
-  void set_this_machine_name(const std::string& name) {
-    this_machine_name_ = name;
-  }
+  void GetMemInfo(const std::string);
 
  private:
+  MemInfo() = default;
+
   uint32_t cpu_num_;
   uint64_t total_cpu_ram_sz_;
   std::vector<uint64_t> gpu_ram_sz_;

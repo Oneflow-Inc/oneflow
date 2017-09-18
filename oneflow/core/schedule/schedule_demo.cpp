@@ -57,8 +57,7 @@ std::unique_ptr<Plan> LoadPlan(const std::string& file) {
   return std::move(plan);
 }
 
-void TestPlan(const std::string& this_machine_name) {
-  MemInfo::Singleton()->set_this_machine_name(this_machine_name);
+void TestPlan() {
   std::string conf = "default";
   //	std::string conf = "simulator_schedule_engine";
   //	std::string conf = "small_batch_num";
@@ -92,7 +91,8 @@ void TestPlan(const std::string& this_machine_name) {
             << std::endl;
 }
 
-void TestUtilizationGraph() {
+void TestUtilizationGraph(const std::string& this_machine_name) {
+  MemInfo::Singleton()->GetMemInfo(this_machine_name);
   std::unique_ptr<Plan> plan = LoadPlan(FLAGS_plan);
   PlanSGraph sgraph(*plan);
   Validator validator(ScheduleFactoryConfigure::Provider("default"));
@@ -112,11 +112,11 @@ void TestUtilizationGraph() {
 }  // namespace schedule
 }  // namespace oneflow
 
-
 int main(int argc, char* argv[]) {
+  google::InitGoogleLogging(argv[0]);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   //  oneflow::schedule::TestDemo();
-  oneflow::schedule::TestPlan(FLAGS_this_machine_name);
-  oneflow::schedule::TestUtilizationGraph();
+  //  oneflow::schedule::TestPlan();
+  oneflow::schedule::TestUtilizationGraph(FLAGS_this_machine_name);
   return 0;
 }

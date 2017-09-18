@@ -8,12 +8,13 @@ namespace schedule {
 
 void UtilizationAnalyzer::ForEachDeviceMemory(
     const std::function<void(const std::string&, uint64_t)>& provide) const {
-  MemInfo mem_info;
-  provide(mem_info.this_machine_name() + ":host",
-          mem_info.total_cpu_ram_sz() / mem_info.cpu_num());
-  for (int idx = 0; idx < mem_info.gpu_num(); ++idx) {
-    provide(mem_info.this_machine_name() + ":kGPU" + std::to_string(idx),
-            mem_info.gpu_ram_sz(idx));
+  provide(MemInfo::Singleton()->this_machine_name() + ":host",
+          MemInfo::Singleton()->total_cpu_ram_sz()
+              / MemInfo::Singleton()->cpu_num());
+  for (int idx = 0; idx < MemInfo::Singleton()->gpu_num(); ++idx) {
+    provide(MemInfo::Singleton()->this_machine_name() + ":kGPU"
+                + std::to_string(idx),
+            MemInfo::Singleton()->gpu_ram_sz(idx));
   }
 }
 

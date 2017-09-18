@@ -9,7 +9,8 @@
 namespace oneflow {
 namespace schedule {
 
-MemInfo::MemInfo() {
+void MemInfo::GetMemInfo(const std::string this_machine_name) {
+  this_machine_name_ = this_machine_name;
 // get cpu memory info
 #if defined(_WIN32)
 // TODO
