@@ -26,7 +26,7 @@ class SGraphConcreteFactory : public SGraphFactory {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SGraphConcreteFactory);
   SGraphConcreteFactory() = default;
-  explicit SGraphConcreteFactory(ScheduleFactoryProvider*){};
+  explicit SGraphConcreteFactory(const ScheduleFactoryProvider*){};
   virtual ~SGraphConcreteFactory() = default;
   DEFINE_FACTORY_METHOD_CLONE(SGraphConcreteFactory, SGraphFactory);
 

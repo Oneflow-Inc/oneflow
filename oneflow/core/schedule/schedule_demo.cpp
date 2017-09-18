@@ -2,11 +2,18 @@
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/schedule/mem_info.h"
+#include "oneflow/core/schedule/plan_sgraph.h"
 #include "oneflow/core/schedule/schedule_factory_configure.h"
 #include "oneflow/core/schedule/session.h"
 #include "oneflow/core/schedule/sgraph.h"
+#include "oneflow/core/schedule/simulator.h"
 #include "oneflow/core/schedule/simulator_schedule_engine.h"
 #include "oneflow/core/schedule/utilization_graph.h"
+#include "oneflow/core/schedule/visualization.h"
+
+DEFINE_string(plan, "", "plan file");
+DEFINE_string(dot_dir, "./tmp", "dot file directory");
+DEFINE_string(this_machine_name, "", "");
 
 namespace oneflow {
 namespace schedule {
@@ -22,7 +29,7 @@ void TestDemo() {
   const auto& allocator_factory = sfp->allocator_factory();
   const auto& validator_factory = sfp->validator_factory();
 
-  Plan* plan = nullptr;
+  const Plan* plan = nullptr;
   std::unique_ptr<SGraph> sgraph = sgraph_factory.CreateSGraph(*plan);
   std::unique_ptr<UtilizationAnalyzer> analyzer =
       analyzer_factory.CreateUtilizationAnalyzer(*sgraph);
@@ -50,8 +57,7 @@ std::unique_ptr<Plan> LoadPlan(const std::string& file) {
   return std::move(plan);
 }
 
-void TestPlan(const std::string& file, const std::string& dot_file,
-              const std::string& this_machine_name) {
+void TestPlan(const std::string& this_machine_name) {
   MemInfo::Singleton()->set_this_machine_name(this_machine_name);
   std::string conf = "default";
   //	std::string conf = "simulator_schedule_engine";
@@ -66,9 +72,10 @@ void TestPlan(const std::string& file, const std::string& dot_file,
   const auto& validator_factory = sfp->validator_factory();
   std::unique_ptr<Validator> validator = validator_factory.CreateValidator();
 
-  std::unique_ptr<Plan> plan = LoadPlan(file);
+  std::unique_ptr<Plan> plan = LoadPlan(FLAGS_plan);
   std::unique_ptr<SGraph> sgraph = sgraph_factory.CreateSGraph(*plan);
-  std::ofstream(dot_file, std::ofstream::out) << sgraph->ToDotString();
+  std::ofstream(FLAGS_dot_dir + "/sgraph.dot", std::ofstream::out)
+      << sgraph->ToDotString();
   std::unique_ptr<UtilizationAnalyzer> analyzer =
       analyzer_factory.CreateUtilizationAnalyzer(*sgraph);
   std::unique_ptr<UtilizationGraph> ugraph =
@@ -85,20 +92,31 @@ void TestPlan(const std::string& file, const std::string& dot_file,
             << std::endl;
 }
 
+void TestUtilizationGraph() {
+  std::unique_ptr<Plan> plan = LoadPlan(FLAGS_plan);
+  PlanSGraph sgraph(*plan);
+  Validator validator(ScheduleFactoryConfigure::Provider("default"));
+  validator.ValidateSGraph(sgraph);
+  Simulator simulator;
+  std::unique_ptr<UtilizationEventPackageProto> event_package =
+      simulator.Run(sgraph);
+  //  PrintProtoToTextFile(*event_package, "/tmp/a.proto");
+  UtilizationAnalyzer analyzer(sgraph);
+  std::unique_ptr<UtilizationGraph> ugraph = analyzer.Analyze(*event_package);
+  Visualization visual;
+  std::ofstream(FLAGS_dot_dir + "/ugraph.dot", std::ofstream::out)
+      << visual.UGraph2DotString(*ugraph);
+}
+
 }  // namespace
 }  // namespace schedule
 }  // namespace oneflow
 
-DEFINE_string(this_machine_name, "", "");
 
 int main(int argc, char* argv[]) {
-  google::ParseCommandLineFlags(&argc, &argv, true);
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
   //  oneflow::schedule::TestDemo();
-  std::string dot_file = "/tmp/a.dot";
-  if (argc > 2) { dot_file = argv[2]; }
-  if (argc > 1) {
-    std::string plan_file = argv[1];
-    oneflow::schedule::TestPlan(plan_file, dot_file, FLAGS_this_machine_name);
-  }
+  oneflow::schedule::TestPlan(FLAGS_this_machine_name);
+  oneflow::schedule::TestUtilizationGraph();
   return 0;
 }

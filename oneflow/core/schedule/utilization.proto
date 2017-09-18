@@ -1,11 +1,6 @@
 syntax = "proto3";
 package oneflow.schedule;
 
-enum UtilizationResourceType {
-	kTask = 0;
-	kRegister = 1;
-}
-
 message TaskResource {
 	uint64 task_id = 1;
 }
@@ -71,9 +66,12 @@ message UtilizationEventProto {
 	UtilizationResource resource = 4;
 }
 
-message DeviceInfoProto {
+message UtilizationEventPackageProto {
 	repeated UtilizationEventProto event = 1;
-	map<string, uint64> device_name2memory_size = 2; 
+}
+
+message DeviceInfoProto {
+	map<string, uint64> device_name2memory_size = 1; 
 }
 
 message UtilizationProto {

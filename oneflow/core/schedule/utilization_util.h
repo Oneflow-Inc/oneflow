@@ -16,7 +16,11 @@ class UtilizationUtil final {
   UtilizationUtil() = delete;
   ~UtilizationUtil() = delete;
 
-  static std::string GetUniqueName(const UtilizationResource& resource);
+  static std::string GetUniqueName(const UtilizationResource& resource) {
+    return GetUniqueName(resource, "-");
+  }
+  static std::string GetUniqueName(const UtilizationResource& resource,
+                                   const std::string& sep);
 
   static void ForEachGrouped(
       const UtilizationResource& resource, const UtilizationGraph& ugraph,
@@ -24,7 +28,8 @@ class UtilizationUtil final {
 
  private:
   template<UtilizationResource::ResourceTypeCase resource_type_case>
-  static std::string GetResourceUniqueName(const UtilizationResource& resource);
+  static std::string GetResourceUniqueName(const UtilizationResource& resource,
+                                           const std::string& sep);
 
   template<UtilizationResource::ResourceTypeCase resource_type_case>
   static void ForEachGroupedResource(

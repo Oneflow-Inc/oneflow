@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_SCHEDULE_SGRAPH_H_
 #define ONEFLOW_CORE_SCHEDULE_SGRAPH_H_
 
+#include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/schedule/snode.h"
@@ -42,21 +43,29 @@ class STask : public SNode {
   explicit STask(const std::string name) : SNode(name) {}
   STask(const std::string name, float wl) : SNode(name), workload_(wl) {}
 
-  STask() {}
-  virtual ~STask() {}
+  STask() = default;
+  virtual ~STask() = default;
 
   inline float workload() const { return workload_; }
   inline uint32_t depth() const { return depth_; }
   inline const SDevice& device() const { return *device_; }
+  inline bool has_device() const { return device_ != nullptr; }
 
   inline float& mut_workload() { return workload_; }
   inline uint32_t& mut_depth() { return depth_; }
-  inline SDevice*& mut_device() { return device_; }
+  inline const SDevice*& mut_device() { return device_; }
 
  protected:
   uint32_t depth_;
   float workload_ = 1.0;
-  SDevice* device_;
+  const SDevice* device_;
+};
+
+class EmptyTask : public STask {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(EmptyTask);
+  explicit EmptyTask(const std::string name) : STask(name) {}
+  ~EmptyTask() = default;
 };
 
 typedef Arc<STask> TaskArc;
@@ -71,117 +80,114 @@ class SRegstDesc : public SNode {
   inline uint64_t regst_memory_size() const { return regst_memory_size_; }
   inline const STask& owner_task() const { return *owner_task_; }
   inline uint32_t min_regst_count() const { return min_regst_count_; }
+  inline uint32_t origin_regst_count() const { return origin_regst_count_; }
 
   inline uint64_t& mut_regst_memory_size() { return regst_memory_size_; }
-  inline STask*& mut_owner_task() { return owner_task_; }
+  inline const STask*& mut_owner_task() { return owner_task_; }
   inline uint32_t& mut_min_regst_count() { return min_regst_count_; }
+  inline uint32_t& mut_origin_regst_count() { return origin_regst_count_; }
 
  private:
   uint64_t regst_memory_size_ = 1u;
   uint32_t min_regst_count_ = 0u;
-  STask* owner_task_;
+  uint32_t origin_regst_count_ = 2u;
+  const STask* owner_task_;
 };
 
 //	static schedule graph
 
 class SGraph : public SNode {
+#define SGRAPH_NODE_SEQ           \
+  OF_PP_MAKE_TUPLE_SEQ(EmptyTask) \
+  OF_PP_MAKE_TUPLE_SEQ(STask)     \
+  OF_PP_MAKE_TUPLE_SEQ(SDevice)   \
+  OF_PP_MAKE_TUPLE_SEQ(SRegstDesc)
+
+#define SGRAPH_ARC_SEQ                                               \
+  OF_PP_MAKE_TUPLE_SEQ(arc_mgr, STask, STask)                        \
+  OF_PP_MAKE_TUPLE_SEQ(ascendant_arc_mgr, STask, STask)              \
+  OF_PP_MAKE_TUPLE_SEQ(loss_arc_mgr, SGraph, STask)                  \
+  OF_PP_MAKE_TUPLE_SEQ(children_arc_mgr, SGraph, STask)              \
+  OF_PP_MAKE_TUPLE_SEQ(produced_regst_desc_mgr, STask, SRegstDesc)   \
+  OF_PP_MAKE_TUPLE_SEQ(subscribed_regst_desc_mgr, STask, SRegstDesc) \
+  OF_PP_MAKE_TUPLE_SEQ(device_arc_mgr, STask, SDevice)
+
  public:
   OF_DISALLOW_COPY_AND_MOVE(SGraph);
   SGraph() = default;
   virtual ~SGraph() = default;
 
-  explicit SGraph(const Plan& plan) : SNode("plan-graph") {
+  explicit SGraph(const Plan& plan) : SNode("sgraph"), plan_(&plan) {
     InitSourceAndSink();
   }
 
   std::string ToDotString();
 
-  static bool DescNodeOrder(STask* a, STask* b) {
+  static bool DescNodeOrder(const STask* a, const STask* b) {
     return a->depth() < b->depth();
   }
 
-  static bool AscNodeOrder(STask* a, STask* b) {
+  static bool AscNodeOrder(const STask* a, const STask* b) {
     return a->depth() > b->depth();
   }
 
-  void ForEachNext(STask* node, const std::function<void(STask*)>& cb) const {
+  void ForEachNext(const STask* node,
+                   const std::function<void(const STask*)>& cb) const {
     arc_mgr().Output(node, cb);
   }
 
-  void ForEachPrev(STask* node, const std::function<void(STask*)>& cb) const {
+  void ForEachPrev(const STask* node,
+                   const std::function<void(const STask*)>& cb) const {
     arc_mgr().Input(node, cb);
   }
 
-  void ForEachNode(const std::function<void(STask*)>& cb) const;
-  void ForEachChild(const std::function<void(STask*)>& cb) const;
+  void ForEachNode(const std::function<void(const STask*)>& cb) const;
+  void ForEachNode(const std::function<void(const STask&)>& cb) const;
+  void MutForEachChild(const std::function<void(const STask*)>& cb) const;
   void ForEachChild(const std::function<void(const STask&)>& cb) const;
-  void ForEachAscendant(STask*, const std::function<void(STask*)>& cb) const;
-  void ForEachDescendant(STask*, const std::function<void(STask*)>& cb) const;
-  void ForEachRegstDesc(const std::function<void(SRegstDesc*)>& cb) const;
+  void ForEachAscendant(STask*,
+                        const std::function<void(const STask*)>& cb) const;
+  void ForEachDescendant(STask*,
+                         const std::function<void(const STask*)>& cb) const;
+  void ForEachRegstDesc(const std::function<void(const SRegstDesc*)>& cb) const;
 
-  void Walk(const std::function<void(STask*)>& cb) const;
-  void WalkArc(const std::function<void(Arc<STask>*)>& cb) const;
+  void Walk(const std::function<void(const STask*)>& cb) const;
+  void WalkArc(const std::function<void(const Arc<STask>*)>& cb) const;
   uint32_t DeviceCount() const;
   uint32_t Depth() const;
-  void WalkReverse(const std::function<void(STask*)>& cb) const;
-  void WalkArcReverse(const std::function<void(Arc<STask>*)>& cb) const;
-  void ForEachArc(const std::function<void(Arc<STask>*)>& cb) const;
-  uint32_t LossNodes(std::list<STask*>* l) const;
+  void WalkReverse(const std::function<void(const STask*)>& cb) const;
+  void WalkArcReverse(const std::function<void(const Arc<STask>*)>& cb) const;
+  void ForEachArc(const std::function<void(const Arc<STask>*)>& cb) const;
+  uint32_t LossNodes(std::list<const STask*>* l) const;
 
   //	getter
-  STask* source() const { return source_; }
-  STask* sink() const { return sink_; }
-  inline const NodeMgr<STask>& node_mgr() const { return node_mgr_; }
-  inline const ArcMgr<Arc<STask>>& arc_mgr() const { return arc_mgr_; }
-  inline const HasOneArcMgr<Arc<STask, SDevice>>& device_arc_mgr() const {
-    return device_arc_mgr_;
+  inline const Plan& plan() const { return *plan_; }
+  const STask* source() const { return source_; }
+  const STask* sink() const { return sink_; }
+
+  template<typename node_type>
+  inline const NodeMgr<node_type>& node_mgr() const;
+
+#define SGRAPH_ARC_MGR_GETTER(arc_mgr_field, src_node_type, dst_node_type) \
+  inline const ArcMgr<Arc<src_node_type, dst_node_type>>& arc_mgr_field()  \
+      const {                                                              \
+    return OF_PP_CAT(arc_mgr_field, _);                                    \
   }
-  inline const ArcMgr<Arc<SGraph, STask>>& loss_arc_mgr() const {
-    return loss_arc_mgr_;
-  }
-  inline const ArcMgr<Arc<STask>>& ascendant_arc_mgr() const {
-    return ascendant_arc_mgr_;
-  }
-  inline const ArcMgr<Arc<SGraph, STask>>& children_arc_mgr() const {
-    return children_arc_mgr_;
-  }
-  inline const NodeMgr<SRegstDesc>& regst_desc_mgr() const {
-    return regst_desc_mgr_;
-  }
-  inline const ArcMgr<Arc<STask, SRegstDesc>>& produced_regst_desc_mgr() const {
-    return produced_regst_desc_mgr_;
-  }
-  inline const ArcMgr<Arc<STask, SRegstDesc>>& subscribed_regst_desc_mgr()
-      const {
-    return subscribed_regst_desc_mgr_;
-  }
+  OF_PP_FOR_EACH_TUPLE(SGRAPH_ARC_MGR_GETTER, SGRAPH_ARC_SEQ);
 
   //	setter
-  STask*& mut_source() { return source_; }
-  STask*& mut_sink() { return sink_; }
-  inline NodeMgr<STask>* mut_node_mgr() { return &node_mgr_; }
-  inline NodeMgr<STask>* mut_fake_node_mgr() { return &fake_node_mgr_; }
-  inline ArcMgr<Arc<STask>>* mut_arc_mgr() { return &arc_mgr_; }
-  inline HasOneArcMgr<Arc<STask, SDevice>>* mut_device_arc_mgr() {
-    return &device_arc_mgr_;
+  const STask*& mut_source() { return source_; }
+  const STask*& mut_sink() { return sink_; }
+
+  template<typename node_type>
+  inline NodeMgr<node_type>* mut_node_mgr();
+
+#define SGRAPH_ARC_MGR_SETTER(arc_mgr_field, src_node_type, dst_node_type) \
+  inline ArcMgr<Arc<src_node_type, dst_node_type>>* OF_PP_CAT(             \
+      mut_, arc_mgr_field)() {                                             \
+    return &OF_PP_CAT(arc_mgr_field, _);                                   \
   }
-  inline NodeMgr<SDevice>* mut_device_mgr() { return &device_mgr_; }
-  inline ArcMgr<Arc<SGraph, STask>>* mut_loss_arc_mgr() {
-    return &loss_arc_mgr_;
-  }
-  inline ArcMgr<Arc<STask>>* mut_ascendant_arc_mgr() {
-    return &ascendant_arc_mgr_;
-  }
-  inline ArcMgr<Arc<SGraph, STask>>* mut_children_arc_mgr() {
-    return &children_arc_mgr_;
-  }
-  inline NodeMgr<SRegstDesc>* mut_regst_desc_mgr() { return &regst_desc_mgr_; }
-  inline ArcMgr<Arc<STask, SRegstDesc>>* mut_produced_regst_desc_mgr() {
-    return &produced_regst_desc_mgr_;
-  }
-  inline ArcMgr<Arc<STask, SRegstDesc>>* mut_subscribed_regst_desc_mgr() {
-    return &subscribed_regst_desc_mgr_;
-  }
+  OF_PP_FOR_EACH_TUPLE(SGRAPH_ARC_MGR_SETTER, SGRAPH_ARC_SEQ);
 
  protected:
   void Update() {
@@ -202,20 +208,32 @@ class SGraph : public SNode {
   bool ReachableWithoutArc(const TaskArc* arc) const;
 
  private:
-  STask* source_;
-  STask* sink_;
-  NodeMgr<STask> node_mgr_;
-  NodeMgr<STask> fake_node_mgr_;
-  NodeMgr<SRegstDesc> regst_desc_mgr_;
-  NodeMgr<SDevice> device_mgr_;
-  ArcMgr<TaskArc> arc_mgr_;
-  ArcMgr<Arc<SGraph, STask>> loss_arc_mgr_;
-  ArcMgr<Arc<SGraph, STask>> children_arc_mgr_;
-  ArcMgr<Arc<STask>> ascendant_arc_mgr_;
-  ArcMgr<Arc<STask, SRegstDesc>> produced_regst_desc_mgr_;
-  ArcMgr<Arc<STask, SRegstDesc>> subscribed_regst_desc_mgr_;
-  HasOneArcMgr<Arc<STask, SDevice>> device_arc_mgr_;
+  const Plan* plan_;
+  const STask* source_;
+  const STask* sink_;
+
+#define SGRAPH_NODE_MGR_MEMBER(node_type) \
+  NodeMgr<node_type> OF_PP_CAT(node_type, _node_mgr_);
+  OF_PP_FOR_EACH_TUPLE(SGRAPH_NODE_MGR_MEMBER, SGRAPH_NODE_SEQ);
+
+#define SGRAPH_ARC_MGR_MEMBER(arc_mgr_field, src_node_type, dst_node_type) \
+  ArcMgr<Arc<src_node_type, dst_node_type>> OF_PP_CAT(arc_mgr_field, _);
+  OF_PP_FOR_EACH_TUPLE(SGRAPH_ARC_MGR_MEMBER, SGRAPH_ARC_SEQ);
 };
+
+#define SGRAPH_NODE_MGR_GETTER(node_type)                                \
+  template<>                                                             \
+  inline const NodeMgr<node_type>& SGraph::node_mgr<node_type>() const { \
+    return OF_PP_CAT(node_type, _node_mgr_);                             \
+  }
+OF_PP_FOR_EACH_TUPLE(SGRAPH_NODE_MGR_GETTER, SGRAPH_NODE_SEQ);
+
+#define SGRAPH_NODE_MGR_SETTER(node_type)                        \
+  template<>                                                     \
+  inline NodeMgr<node_type>* SGraph::mut_node_mgr<node_type>() { \
+    return &OF_PP_CAT(node_type, _node_mgr_);                    \
+  }
+OF_PP_FOR_EACH_TUPLE(SGRAPH_NODE_MGR_SETTER, SGRAPH_NODE_SEQ);
 
 }  // namespace schedule
 }  // namespace oneflow

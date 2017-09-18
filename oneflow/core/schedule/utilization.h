@@ -6,20 +6,24 @@
 #include "oneflow/core/schedule/utilization.pb.h"
 #include "oneflow/core/schedule/utilization_util.h"
 
-#define UTILIZATION_TYPE_SEQ                                                  \
-  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kComputation,                     \
-                       ComputationUtilization)                                \
-  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kDevComputation,                  \
-                       DeviceComputationUtilization)                          \
-  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kStream, StreamUtilization)       \
-  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kTask, TaskUtilization)           \
-  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kTaskStream,                      \
-                       TaskStreamUtilization)                                 \
+#define COMPUTATION_UTILIZATION_TYPE_SEQ                                \
+  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kComputation,               \
+                       ComputationUtilization)                          \
+  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kDevComputation,            \
+                       DeviceComputationUtilization)                    \
+  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kStream, StreamUtilization) \
+  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kTask, TaskUtilization)     \
+  OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kTaskStream, TaskStreamUtilization)
+
+#define MEMORY_UTILIZATION_TYPE_SEQ                                           \
   OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kMemory, MemoryUtilization)       \
   OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kDevMemory,                       \
                        DeviceMemoryUtilization)                               \
   OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kRegstDesc, RegstDescUtilization) \
   OF_PP_MAKE_TUPLE_SEQ(UtilizationResource::kRegst, RegstUtilization)
+
+#define UTILIZATION_TYPE_SEQ \
+  COMPUTATION_UTILIZATION_TYPE_SEQ MEMORY_UTILIZATION_TYPE_SEQ
 
 #define UTILIZATION_EVENT_SEQ                 \
   OF_PP_MAKE_TUPLE_SEQ(TaskStreamUtilization) \
@@ -35,16 +39,17 @@ class Utilization : public SNode {
   OF_DISALLOW_COPY_AND_MOVE(Utilization);
   virtual ~Utilization() = default;
 
-  virtual uint32_t ParallelNum(const UtilizationGraph&) const { return 1u; }
+  virtual uint32_t ParallelNum(const UtilizationGraph&) const = 0;
   void Reduce(const UtilizationGraph&);
   void CreateAscendantIfNotFound(UtilizationGraph* ugraph) const;
 
   float GetTimePerBatch(const UtilizationGraph& ugraph) const;
 
-  UtilizationResource::ResourceTypeCase GetResourceTypeCase() {
+  UtilizationResource::ResourceTypeCase GetResourceTypeCase() const {
     return utilization_proto().resource().resource_type_case();
   }
 
+  std::string VisualStr() const;
   //	getter
   inline const UtilizationProto& utilization_proto() const {
     return utilization_proto_;
@@ -53,6 +58,8 @@ class Utilization : public SNode {
     return raw_protos_;
   }
 
+  virtual std::string type() const = 0;
+
   //	setter
   inline std::list<const UtilizationProto*>* mut_raw_protos() {
     return &raw_protos_;
@@ -60,7 +67,9 @@ class Utilization : public SNode {
 
  protected:
   explicit Utilization(const UtilizationResource& resource)
-      : SNode(UtilizationUtil::GetUniqueName(resource)) {}
+      : SNode(UtilizationUtil::GetUniqueName(resource)) {
+    *utilization_proto_.mutable_resource() = resource;
+  }
   inline UtilizationProto* mut_utilization_proto() {
     return &utilization_proto_;
   }
@@ -90,7 +99,8 @@ OF_PP_FOR_EACH_TUPLE(SPECIALIZE_UTILIZATION_RESOURCE_TYPE, UTILIZATION_TYPE_SEQ)
       GetUtilizationResourceTypeCase<class_name>::resource_type_case;       \
   OF_DISALLOW_COPY_AND_MOVE(class_name);                                    \
   class_name(const UtilizationResource& resource) : base_class(resource) {} \
-  ~class_name() = default;
+  ~class_name() = default;                                                  \
+  std::string type() const override { return __CLASS_NAME__; }
 
 class ComputationUtilization : public Utilization {
  public:
@@ -108,7 +118,8 @@ class DeviceComputationUtilization : public ComputationUtilization {
 class StreamUtilization : public ComputationUtilization {
  public:
   UTILIZATION_BOILERPLATE(StreamUtilization, ComputationUtilization);
-  float GetInitiationInterval(const UtilizationGraph& ugraph) {
+  uint32_t ParallelNum(const UtilizationGraph&) const override { return 1u; }
+  float GetInitiationInterval(const UtilizationGraph& ugraph) const {
     return GetTimePerBatch(ugraph);
   }
 };
@@ -120,7 +131,7 @@ class TaskUtilization : public ComputationUtilization {
     return utilization_proto().resource().task().task_id();
   }
   uint32_t ParallelNum(const UtilizationGraph& ugraph) const override;
-  float GetDuration(const UtilizationGraph& ugraph) {
+  float GetDuration(const UtilizationGraph& ugraph) const {
     return GetTimePerBatch(ugraph);
   }
 };
@@ -128,6 +139,7 @@ class TaskUtilization : public ComputationUtilization {
 class TaskStreamUtilization : public ComputationUtilization {
  public:
   UTILIZATION_BOILERPLATE(TaskStreamUtilization, ComputationUtilization);
+  uint32_t ParallelNum(const UtilizationGraph&) const override { return 1u; }
 };
 
 class MemoryUtilization : public Utilization {
@@ -145,11 +157,15 @@ class DeviceMemoryUtilization : public MemoryUtilization {
 class RegstDescUtilization : public MemoryUtilization {
  public:
   UTILIZATION_BOILERPLATE(RegstDescUtilization, MemoryUtilization);
+  inline uint64_t regst_desc_id() const {
+    return utilization_proto().resource().regst_desc().regst_desc_id();
+  }
 };
 
 class RegstUtilization : public MemoryUtilization {
  public:
   UTILIZATION_BOILERPLATE(RegstUtilization, MemoryUtilization);
+  uint32_t ParallelNum(const UtilizationGraph&) const override { return 1u; }
 };
 
 }  // namespace schedule

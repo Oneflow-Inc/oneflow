@@ -34,7 +34,7 @@ class ScheduleFactoryProvider final {
 
 #define PROVIDER_FACTORY_SET(class_name, field)                         \
   ScheduleFactoryProvider* Set(std::unique_ptr<class_name>&& factory) { \
-    OF_PP_CAT(field, _) = std::move(factory);                           \
+    OF_PP_CAT(field, _) = factory->Clone(this);                         \
     return this;                                                        \
   }
   OF_PP_FOR_EACH_TUPLE(PROVIDER_FACTORY_SET, SCHEDULE_FACTORY_SEQ);

@@ -4,6 +4,19 @@
 namespace oneflow {
 namespace schedule {
 
+std::string Utilization::VisualStr() const {
+  std::stringstream ss;
+  ss << UtilizationUtil::GetUniqueName(utilization_proto().resource(), "\\n")
+     << "\\nTime: " << std::setprecision(3) << utilization_proto().start_at()
+     << "-" << std::setprecision(3) << utilization_proto().end_at()
+     << "\\nUtilization: " << std::setprecision(3)
+     << utilization_proto().utilization()
+     << "\\nBatch: " << utilization_proto().start_batch_id() << "-"
+     << utilization_proto().end_batch_id()
+     << "\\nRecordCount: " << raw_protos().size();
+  return ss.str();
+}
+
 void Utilization::Reduce(const UtilizationGraph& graph) {
   uint32_t parallel_num = ParallelNum(graph);
   CHECK(parallel_num);
@@ -18,7 +31,8 @@ void Utilization::Reduce(const UtilizationGraph& graph) {
   }
   CHECK(end_at > start_at);
   float utilization = total_time / (parallel_num * (end_at - start_at));
-  CHECK(total_time < 1);
+  CHECK(utilization >= 0);
+  CHECK(utilization <= 1);
   utilization_proto_.set_utilization(utilization);
   utilization_proto_.set_start_at(start_at);
   utilization_proto_.set_start_at(start_at);
@@ -28,16 +42,14 @@ void Utilization::Reduce(const UtilizationGraph& graph) {
 }
 
 uint32_t MemoryUtilization::ParallelNum(const UtilizationGraph& graph) const {
-  return graph.inner2leaf_arc_mgr().Output(
-      const_cast<MemoryUtilization*>(this));
+  return graph.inner2leaf_arc_mgr().Output(this);
 }
 
 uint32_t ComputationUtilization::ParallelNum(
     const UtilizationGraph& graph) const {
   uint64_t stream_cnt = 0;
   graph.arc_mgr<ComputationUtilization, DeviceComputationUtilization>().Output(
-      const_cast<ComputationUtilization*>(this),
-      [&](DeviceComputationUtilization* dev_c_utilization) {
+      this, [&](const DeviceComputationUtilization* dev_c_utilization) {
         stream_cnt += dev_c_utilization->ParallelNum(graph);
       });
   return stream_cnt;
@@ -46,7 +58,7 @@ uint32_t ComputationUtilization::ParallelNum(
 uint32_t DeviceComputationUtilization::ParallelNum(
     const UtilizationGraph& graph) const {
   return graph.arc_mgr<DeviceComputationUtilization, StreamUtilization>()
-      .Output(const_cast<DeviceComputationUtilization*>(this));
+      .Output(this);
 }
 
 float Utilization::GetTimePerBatch(const UtilizationGraph& ugraph) const {
@@ -61,20 +73,18 @@ float Utilization::GetTimePerBatch(const UtilizationGraph& ugraph) const {
 }
 
 void Utilization::CreateAscendantIfNotFound(UtilizationGraph* ugraph) const {
-  auto nonconst_this = const_cast<Utilization*>(this);
   UtilizationUtil::ForEachGrouped(
       utilization_proto().resource(), *ugraph,
       [&](const UtilizationResource& grouped_resource) {
-        Utilization* grouped =
+        const Utilization* grouped =
             ugraph->FindOrCreateUtilization(grouped_resource);
-        ugraph->Connect(grouped, nonconst_this);
+        ugraph->Connect(grouped, this);
       });
 }
 
 uint32_t TaskUtilization::ParallelNum(const UtilizationGraph& ugraph) const {
-  std::list<TaskStreamUtilization*> l;
-  ugraph.arc_mgr<TaskUtilization, TaskStreamUtilization>().Output(
-      const_cast<TaskUtilization*>(this), &l);
+  std::list<const TaskStreamUtilization*> l;
+  ugraph.arc_mgr<TaskUtilization, TaskStreamUtilization>().Output(this, &l);
   return ugraph.arc_mgr<StreamUtilization, TaskStreamUtilization>().Input(l);
 }
 

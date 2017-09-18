@@ -14,17 +14,17 @@ class ScheduleFacade final {
   ScheduleFacade(const std::string& name)
       : sfp_(ScheduleFactoryConfigure::Provider(name)) {}
 
-  static ScheduleFacade* Default() {
-    static ScheduleFacade* facade = new ScheduleFacade(DefaultName());
+  static const ScheduleFacade* Default() {
+    static const ScheduleFacade* facade = new ScheduleFacade(DefaultName());
     return facade;
   }
 
-  void Allocate(Plan* plan) {
+  void Allocate(Plan* plan) const {
     auto allocator = sfp_->allocator_factory().CreateAllocator();
     allocator->Allocate(plan);
   }
 
-  void Allocate(Plan* plan, const std::string& dev_info_proto_log_file) {
+  void Allocate(Plan* plan, const std::string& dev_info_proto_log_file) const {
     auto allocator = sfp_->allocator_factory().CreateAllocator();
     allocator->Allocate(plan, dev_info_proto_log_file);
   }
@@ -34,7 +34,7 @@ class ScheduleFacade final {
     //		return "default";
     return "empty_allocator";
   }
-  ScheduleFactoryProvider* sfp_;
+  const ScheduleFactoryProvider* sfp_;
 };
 
 }  // namespace schedule
