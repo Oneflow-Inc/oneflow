@@ -15,9 +15,9 @@ class UtilizationAnalyzerFactory {
   DEFINE_FACTORY_METHOD_CLONE(UtilizationAnalyzerFactory,
                               UtilizationAnalyzerFactory);
 
-  virtual std::unique_ptr<UtilizationAnalyzer> CreateUtilizationAnalyzer(
-      const SGraph& sgraph) const {
-    return of_make_unique<UtilizationAnalyzer>(sgraph);
+  virtual std::unique_ptr<UtilizationAnalyzer> CreateUtilizationAnalyzer()
+      const {
+    return of_make_unique<UtilizationAnalyzer>();
   }
 };
 
@@ -31,9 +31,9 @@ class UtilizationAnalyzerConcreteFactory : public UtilizationAnalyzerFactory {
   DEFINE_FACTORY_METHOD_CLONE(UtilizationAnalyzerConcreteFactory,
                               UtilizationAnalyzerFactory);
 
-  virtual std::unique_ptr<UtilizationAnalyzer> CreateUtilizationAnalyzer(
-      const SGraph& sgraph) const override {
-    return of_make_unique<UA>(sgraph);
+  virtual std::unique_ptr<UtilizationAnalyzer> CreateUtilizationAnalyzer()
+      const override {
+    return of_make_unique<UA>();
   }
 };
 

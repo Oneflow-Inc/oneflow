@@ -15,32 +15,35 @@ void UtilizationAnalyzer::ForEachDeviceMemory(
 }
 
 std::unique_ptr<UtilizationEventPackageProto>
-UtilizationAnalyzer::ParseEventPackageProto(const std::string& log_file) const {
+UtilizationAnalyzer::ParseEventPackageProto(const SGraph& sgraph,
+                                            const std::string& log_file) const {
   auto event_package = of_make_unique<UtilizationEventPackageProto>();
   ParseProtoFromTextFile(log_file, event_package.get());
   return std::move(event_package);
 }
 
 std::unique_ptr<UtilizationGraph> UtilizationAnalyzer::CreateUtilizationGraph(
-    std::string log_file) {
-  auto event_package = ParseEventPackageProto(log_file);
-  return Analyze(*event_package);
+    const SGraph& sgraph, const std::string& log_file) {
+  auto event_package = ParseEventPackageProto(sgraph, log_file);
+  return Analyze(sgraph, *event_package);
 }
 
 std::unique_ptr<UtilizationGraph> UtilizationAnalyzer::Analyze(
+    const SGraph& sgraph,
     const UtilizationPackageProto& utilization_package) const {
-  auto ugraph = of_make_unique<UtilizationGraph>(sgraph());
+  auto ugraph = of_make_unique<UtilizationGraph>(sgraph);
   AddUtilizationPackageProto(utilization_package, ugraph.get());
   Analyze(ugraph.get());
   return ugraph;
 }
 
 std::unique_ptr<UtilizationGraph> UtilizationAnalyzer::Analyze(
+    const SGraph& sgraph,
     const UtilizationEventPackageProto& event_package) const {
   CHECK(event_package.event_size());
   UtilizationPackageProto utilization_package;
   GetUtilizationPackageFromEvent(event_package, &utilization_package);
-  return Analyze(utilization_package);
+  return Analyze(sgraph, utilization_package);
 }
 
 void UtilizationAnalyzer::Analyze(UtilizationGraph* ugraph) const {

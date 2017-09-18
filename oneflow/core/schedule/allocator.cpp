@@ -26,15 +26,14 @@ void Allocator::Allocate(Plan* plan,
                          const std::string& dev_info_proto_log_file) const {
   std::unique_ptr<Validator> validator =
       sfp().validator_factory().CreateValidator();
+  std::unique_ptr<UtilizationAnalyzer> analyzer =
+      sfp().utilization_analyzer_factory().CreateUtilizationAnalyzer();
 
   std::unique_ptr<SGraph> sgraph = sfp().sgraph_factory().CreateSGraph(*plan);
   CHECK(validator->ValidateSGraph(*sgraph));
 
-  std::unique_ptr<UtilizationAnalyzer> analyzer =
-      sfp().utilization_analyzer_factory().CreateUtilizationAnalyzer(*sgraph);
-
   std::unique_ptr<UtilizationGraph> ugraph =
-      analyzer->CreateUtilizationGraph(dev_info_proto_log_file);
+      analyzer->CreateUtilizationGraph(*sgraph, dev_info_proto_log_file);
   validator->ValidateUtilizationGraph(*ugraph);
   std::unique_ptr<Session> session =
       sfp().session_factory().CreateSession(*sgraph, *ugraph);

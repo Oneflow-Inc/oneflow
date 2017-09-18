@@ -26,18 +26,18 @@ void TestDemo() {
   const auto& engine_factory = sfp.schedule_engine_factory();
   const auto& allocator_factory = sfp.allocator_factory();
   const auto& validator_factory = sfp.validator_factory();
+  std::unique_ptr<Allocator> allocator = allocator_factory.CreateAllocator();
+  std::unique_ptr<Validator> validator = validator_factory.CreateValidator();
+  std::unique_ptr<UtilizationAnalyzer> analyzer =
+      analyzer_factory.CreateUtilizationAnalyzer();
 
   const Plan* plan = nullptr;
   std::unique_ptr<SGraph> sgraph = sgraph_factory.CreateSGraph(*plan);
-  std::unique_ptr<UtilizationAnalyzer> analyzer =
-      analyzer_factory.CreateUtilizationAnalyzer(*sgraph);
   std::unique_ptr<UtilizationGraph> ugraph =
-      analyzer->CreateUtilizationGraph("");
+      analyzer->CreateUtilizationGraph(*sgraph, "");
   std::unique_ptr<Session> sess =
       session_factory.CreateSession(*sgraph, *ugraph);
   auto schedule_engine = engine_factory.CreateScheduleEngine(*sess);
-  std::unique_ptr<Allocator> allocator = allocator_factory.CreateAllocator();
-  std::unique_ptr<Validator> validator = validator_factory.CreateValidator();
 
   std::unique_ptr<Schedule> schedule = schedule_engine->StaticSchedule();
   std::cout << "max-interval: " << schedule->max_interval() << std::endl;
@@ -68,15 +68,15 @@ void TestPlan() {
   const auto& session_factory = sfp.session_factory();
   const auto& validator_factory = sfp.validator_factory();
   std::unique_ptr<Validator> validator = validator_factory.CreateValidator();
+  std::unique_ptr<UtilizationAnalyzer> analyzer =
+      analyzer_factory.CreateUtilizationAnalyzer();
 
   std::unique_ptr<Plan> plan = LoadPlan(FLAGS_plan);
   std::unique_ptr<SGraph> sgraph = sgraph_factory.CreateSGraph(*plan);
   std::ofstream(FLAGS_dot_dir + "/sgraph.dot", std::ofstream::out)
       << sgraph->ToDotString();
-  std::unique_ptr<UtilizationAnalyzer> analyzer =
-      analyzer_factory.CreateUtilizationAnalyzer(*sgraph);
   std::unique_ptr<UtilizationGraph> ugraph =
-      analyzer->CreateUtilizationGraph("");
+      analyzer->CreateUtilizationGraph(*sgraph, "");
   validator->ValidateSGraph(*sgraph);
   std::unique_ptr<Session> session =
       session_factory.CreateSession(*sgraph, *ugraph);
@@ -98,8 +98,9 @@ void TestUtilizationGraph() {
   std::unique_ptr<UtilizationEventPackageProto> event_package =
       simulator.Run(sgraph);
   //  PrintProtoToTextFile(*event_package, "/tmp/a.proto");
-  UtilizationAnalyzer analyzer(sgraph);
-  std::unique_ptr<UtilizationGraph> ugraph = analyzer.Analyze(*event_package);
+  UtilizationAnalyzer analyzer;
+  std::unique_ptr<UtilizationGraph> ugraph =
+      analyzer.Analyze(sgraph, *event_package);
   Visualization visual;
   std::ofstream(FLAGS_dot_dir + "/ugraph.dot", std::ofstream::out)
       << visual.UGraph2DotString(*ugraph);

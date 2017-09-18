@@ -13,15 +13,14 @@ namespace schedule {
 class SimulatorUtilizationAnalyzer : public UtilizationAnalyzer {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SimulatorUtilizationAnalyzer);
-  explicit SimulatorUtilizationAnalyzer(const SGraph& sgraph)
-      : UtilizationAnalyzer(sgraph) {}
+  explicit SimulatorUtilizationAnalyzer() : UtilizationAnalyzer() {}
   ~SimulatorUtilizationAnalyzer() = default;
 
  protected:
   std::unique_ptr<UtilizationEventPackageProto> ParseEventPackageProto(
-      const std::string& log_file) const {
-    UtilizationGraph ugraph(sgraph());
-    Session session(sgraph(), ugraph);
+      const SGraph& sgraph, const std::string& log_file) const {
+    UtilizationGraph ugraph(sgraph);
+    Session session(sgraph, ugraph);
     SimulatorScheduleEngine engine(session);
     auto get_regst_num = [](uint64_t) -> uint32_t { return 3u; };
     auto schedule = engine.StaticSchedule(get_regst_num);
