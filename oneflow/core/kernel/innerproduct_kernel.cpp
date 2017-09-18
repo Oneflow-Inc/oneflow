@@ -31,6 +31,10 @@ void InnerProductKernel<device_type, T>::Forward(
   const Blob* in = BnInOp2Blob("in");
   const Blob* weight = BnInOp2Blob("weight");
   Blob* out = BnInOp2Blob("out");
+  if (in->has_data_id()) {
+    const_cast<InnerProductKernel<device_type, T>*>(this)
+        ->CopyDataIdFromIbToAllOb<device_type>(ctx.device_ctx, BnInOp2Blob);
+  }
 
   // out = in * weight
   BlasMatrixMatrix<device_type, T>(ctx, CblasNoTrans, CblasTrans,

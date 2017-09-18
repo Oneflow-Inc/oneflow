@@ -21,6 +21,11 @@ class Blob final {
   const char* data_id() const { return data_id(0); }
   char* mut_data_id() { return mut_data_id(0); }
 
+  const void* start_memory() const {
+    return data_id_ptr_ == nullptr ? dptr_ : static_cast<void*>(data_id_ptr_);
+  }
+  void* mut_start_memory() { return const_cast<void*>(start_memory()); }
+
   template<typename T = void>
   const T* dptr() const {
     CheckDataType<T>();

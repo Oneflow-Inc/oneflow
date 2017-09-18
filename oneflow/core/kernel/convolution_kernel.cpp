@@ -111,6 +111,10 @@ void ConvolutionKernel<device_type, T>::Forward(
   const int64_t out_im_sz = out->shape().Count(1);
   const int64_t col_im_sz = col_buf->shape().Count(1);
   auto conv_conf = op()->op_conf().convolution_conf();
+  if (in->has_data_id()) {
+    const_cast<ConvolutionKernel<device_type, T>*>(this)
+        ->CopyDataIdFromIbToAllOb<device_type>(ctx.device_ctx, BnInOp2Blob);
+  }
   for (size_t i = 0; i < in_shape.At(0); ++i) {
     ConvolutionKernelUtil<device_type, T>::Im2Col(
         ctx, in->dptr<T>() + i * in_im_sz, in_shape.At(1), in_shape.At(2),

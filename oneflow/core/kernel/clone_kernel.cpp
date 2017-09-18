@@ -7,6 +7,10 @@ void CloneKernel<device_type, T>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob(op()->SoleIbn());
+  if (in_blob->has_data_id()) {
+    const_cast<CloneKernel<device_type, T>*>(this)
+        ->CopyDataIdFromIbToAllOb<device_type>(ctx.device_ctx, BnInOp2Blob);
+  }
   for (const std::string& obn : op()->output_bns()) {
     Blob* out_blob = BnInOp2Blob(obn);
     Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr(), in_blob->dptr(),

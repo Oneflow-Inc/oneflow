@@ -11,6 +11,8 @@ void RecordBlobImpl(PersistentOutStream& out_stream, const Blob* blob) {
   out_stream << '\n';
   const T* dptr = blob->dptr<T>();
   for (int64_t i = 0; i < blob->shape().At(0); ++i) {
+    std::string tmp = std::string(blob->data_id(i));
+    out_stream << tmp << " ";
     for (int64_t j = 0; j < blob->shape().Count(1); ++j) {
       out_stream << std::to_string(*dptr++) << ' ';
     }
@@ -46,7 +48,8 @@ void RecordKernel::Forward(
           std::string op_dir = JoinPath(root_path, op_name);
           OF_ONCE_GUARD(op_dir, GlobalFS()->CreateDir(op_dir));
           std::string bn_in_op_dir = JoinPath(op_dir, bn_in_op);
-          OF_ONCE_GUARD(bn_in_op_dir, GlobalFS()->CreateDir(bn_in_op_dir));
+          OF_ONCE_GUARD(bn_in_op_dir,
+                        GlobalFS()->CreateDir(bn_in_op_dir));
           std::string file_path =
               JoinPath(bn_in_op_dir, "part_" + std::to_string(parallel_id));
           PersistentOutStream out_stream(GlobalFS(), file_path);
