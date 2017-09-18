@@ -82,8 +82,10 @@ void BoxingKernel<T>::InferCopyRulesFromBns(
     if (b == nullptr) { break; }
     dst_blobs.emplace_back(b);
   }
-  InferDataIdCopyRules(src_bns, dst_bns, src_blobs, dst_blobs, src_concat_axis,
-                       dst_split_axis, copy_rules);
+  if (src_blobs.front()->has_data_id()) {
+    InferDataIdCopyRules(src_bns, dst_bns, src_blobs, dst_blobs,
+                         src_concat_axis, dst_split_axis, copy_rules);
+  }
 
   if (src_concat_axis == dst_split_axis) {
     InferCopyRulesFromEqualAxis(BnInOp2Blob, src_bns, dst_bns, copy_rules);

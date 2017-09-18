@@ -48,8 +48,7 @@ void RecordKernel::Forward(
           std::string op_dir = JoinPath(root_path, op_name);
           OF_ONCE_GUARD(op_dir, GlobalFS()->CreateDir(op_dir));
           std::string bn_in_op_dir = JoinPath(op_dir, bn_in_op);
-          OF_ONCE_GUARD(bn_in_op_dir,
-                        GlobalFS()->CreateDir(bn_in_op_dir));
+          OF_ONCE_GUARD(bn_in_op_dir, GlobalFS()->CreateDir(bn_in_op_dir));
           std::string file_path =
               JoinPath(bn_in_op_dir, "part_" + std::to_string(parallel_id));
           PersistentOutStream out_stream(GlobalFS(), file_path);
