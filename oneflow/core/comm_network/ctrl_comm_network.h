@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_COMM_NETWORK_CTRL_COMM_NETWORK_H_
 
 #include "oneflow/core/actor/actor_message.h"
+#include "oneflow/core/comm_network/ctrl_server.h"
 
 namespace oneflow {
 
@@ -34,6 +35,10 @@ class CtrlCommNet final {
 
  private:
   CtrlCommNet() = default;
+  CtrlService::Stub* GetMasterStub() { return stubs_[0].get(); }
+
+  std::unique_ptr<CtrlServer> ctrl_server_;
+  std::vector<std::unique_ptr<CtrlService::Stub>> stubs_;
 };
 
 #define FILE_LINE_STR __FILE__ ":" OF_PP_STRINGIZE(__LINE__)

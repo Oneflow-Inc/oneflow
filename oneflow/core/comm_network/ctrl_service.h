@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_COMM_NETWORK_CTRL_SERVICE_H_
 #define ONEFLOW_CORE_COMM_NETWORK_CTRL_SERVICE_H_
 
+#include "grpc++/grpc++.h"
 #include "grpc++/impl/codegen/async_stream.h"
 #include "grpc++/impl/codegen/async_unary_call.h"
 #include "grpc++/impl/codegen/proto_utils.h"
@@ -11,6 +12,7 @@
 #include "grpc++/impl/codegen/sync_stream.h"
 #include "oneflow/core/comm_network/control.pb.h"
 #include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
@@ -31,12 +33,14 @@ class CtrlService final {
   class Stub final {
    public:
     Stub(std::shared_ptr<grpc::ChannelInterface> channel);
-    grpc::Status AddWorker(grpc::ClientContext* context,
-                           const AddWorkerRequest& request,
-                           AddWorkerResponse* response);
-    grpc::Status Barrier(grpc::ClientContext* context,
-                         const BarrierRequest& request,
-                         BarrierResponse* response);
+#define DECLARE_STUB_METHOD(method)                   \
+  grpc::Status method(grpc::ClientContext* context,   \
+                      const method##Request& request, \
+                      method##Response* response);
+
+    OF_PP_FOR_EACH_TUPLE(DECLARE_STUB_METHOD, CTRL_METHOD_SEQ);
+
+#undef DECLARE_STUB_METHOD
 
    private:
     const grpc::RpcMethod rpcmethod_AddWorker_;
@@ -44,9 +48,13 @@ class CtrlService final {
     std::shared_ptr<grpc::ChannelInterface> channel_;
   };
 
+  static std::unique_ptr<Stub> NewStub(const std::string& addr);
+
   class AsyncService final : public grpc::Service {
+   public:
     AsyncService();
     ~AsyncService() = default;
+    using grpc::Service::RequestAsyncUnary;
   };
 };
 
