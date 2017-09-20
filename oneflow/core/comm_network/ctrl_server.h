@@ -27,8 +27,10 @@ class CtrlServer final {
   std::unique_ptr<CtrlService::AsyncService> grpc_service_;
   std::unique_ptr<grpc::ServerCompletionQueue> cq_;
   std::unique_ptr<grpc::Server> grpc_server_;
-  std::list<CtrlCallIf*> added_worker_calls_;
   std::thread loop_thread_;
+  std::list<CtrlCallIf*> added_worker_calls_;
+  HashMap<std::string, std::pair<std::list<CtrlCallIf*>, int32_t>>
+      barrier_calls_;
 };
 
 }  // namespace oneflow

@@ -15,7 +15,8 @@ class CtrlCommNet final {
 
   void Init();
 
-  void Barrier(const std::string& barrier_name) {}
+  void Barrier(const std::string& barrier_name);
+  void Barrier(const std::string& barrier_name, int32_t barrier_num);
 
   // 0 : locked
   // 1 : done
@@ -36,6 +37,7 @@ class CtrlCommNet final {
  private:
   CtrlCommNet() = default;
   CtrlService::Stub* GetMasterStub() { return stubs_[0].get(); }
+  CtrlService::Stub* GetResponsibleStub(const std::string& key);
 
   std::unique_ptr<CtrlServer> ctrl_server_;
   std::vector<std::unique_ptr<CtrlService::Stub>> stubs_;

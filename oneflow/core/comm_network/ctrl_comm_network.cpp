@@ -40,4 +40,24 @@ void CtrlCommNet::Init() {
   CHECK_LT(retry_idx, max_retry_num);
 }
 
+void CtrlCommNet::Barrier(const std::string& barrier_name) {
+  Barrier(barrier_name, JobDesc::Singleton()->TotalMachineNum());
+}
+
+void CtrlCommNet::Barrier(const std::string& barrier_name,
+                          int32_t barrier_num) {
+  grpc::ClientContext client_ctx;
+  BarrierRequest request;
+  request.set_name(barrier_name);
+  request.set_num(barrier_num);
+  BarrierResponse response;
+  GetMasterStub()->Barrier(&client_ctx, request, &response);
+}
+
+CtrlService::Stub* CtrlCommNet::GetResponsibleStub(const std::string& key) {
+  int64_t machine_id =
+      (std::hash<std::string>{}(key)) % JobDesc::Singleton()->TotalMachineNum();
+  return stubs_[machine_id].get();
+}
+
 }  // namespace oneflow

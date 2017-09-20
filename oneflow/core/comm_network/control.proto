@@ -2,6 +2,8 @@ syntax = "proto3";
 package oneflow;
 
 message BarrierRequest {
+  string name = 1;
+  int32 num = 2;
 }
 
 message BarrierResponse {
