@@ -21,6 +21,8 @@
 
 namespace oneflow {
 
+#define INLINE inline
+
 #define OF_DISALLOW_COPY(ClassName)     \
   ClassName(const ClassName&) = delete; \
   ClassName& operator=(const ClassName&) = delete;
