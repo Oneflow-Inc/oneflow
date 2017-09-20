@@ -2,8 +2,9 @@ dlnet_filepath: "./predict_net.prototxt"
 resource_filepath: "./resource.prototxt"
 placement_filepath: "./predict_placement.prototxt"
 model_load_snapshot_path: ""
-piece_size: 1000
+piece_size: 60000
 default_data_type: kFloat
+max_data_id_length: 8
 use_async_cpu_stream: false
 global_fs_conf {
   localfs_conf {
