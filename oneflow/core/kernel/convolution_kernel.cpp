@@ -102,21 +102,21 @@ template<DeviceType device_type, typename T>
 void ConvolutionKernel<device_type, T>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in = BnInOp2Blob("in");
-  const Shape& in_shape = in->shape();
-  Blob* out = BnInOp2Blob("out");
+  const Blob* in_blob = BnInOp2Blob("in");
+  const Shape& in_shape = in_blob->shape();
+  Blob* out_blob = BnInOp2Blob("out");
   Blob* col_buf = BnInOp2Blob("col_buf");
   const Blob* weight = BnInOp2Blob("weight");
   const int64_t in_im_sz = in_shape.Count(1);
-  const int64_t out_im_sz = out->shape().Count(1);
+  const int64_t out_im_sz = out_blob->shape().Count(1);
   const int64_t col_im_sz = col_buf->shape().Count(1);
   auto conv_conf = op()->op_conf().convolution_conf();
-  if (in->has_data_id()) {
+  if (in_blob->has_data_id()) {
     CopyDataIdFromIbToAllOb<device_type>(ctx.device_ctx, BnInOp2Blob);
   }
   for (size_t i = 0; i < in_shape.At(0); ++i) {
     ConvolutionKernelUtil<device_type, T>::Im2Col(
-        ctx, in->dptr<T>() + i * in_im_sz, in_shape.At(1), in_shape.At(2),
+        ctx, in_blob->dptr<T>() + i * in_im_sz, in_shape.At(1), in_shape.At(2),
         in_shape.At(3), conv_conf.kernel_size_h(), conv_conf.kernel_size_w(),
         conv_conf.pad_h(), conv_conf.pad_w(), conv_conf.stride_h(),
         conv_conf.stride_w(), conv_conf.dilation_h(), conv_conf.dilation_w(),
@@ -124,10 +124,10 @@ void ConvolutionKernel<device_type, T>::Forward(
 
     KernelUtil<device_type, T>::BlasGemm(
         ctx.device_ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasTrans,
-        out->shape().At(1), out->shape().Count(2), weight->shape().At(1),
+        out_blob->shape().At(1), out_blob->shape().Count(2), weight->shape().At(1),
         static_cast<T>(1.0), weight->dptr<T>(), weight->shape().At(1),
         col_buf->dptr<T>() + i * col_im_sz, weight->shape().At(1),
-        static_cast<T>(0.0), out->mut_dptr<T>() + i * out_im_sz,
+        static_cast<T>(0.0), out_blob->mut_dptr<T>() + i * out_im_sz,
         col_buf->shape().At(1));
 
     if (op()->GetBoolFromSpecialConf("has_bias_term")) {
@@ -140,7 +140,7 @@ void ConvolutionKernel<device_type, T>::Forward(
           CblasNoTrans, bias->shape().At(0), bias_multiplier->shape().At(0), 1,
           static_cast<T>(1.0), bias->dptr<T>(), 1, bias_multiplier->dptr<T>(),
           bias_multiplier->shape().At(0), static_cast<T>(1.0),
-          out->mut_dptr<T>() + i * out_im_sz, bias_multiplier->shape().At(0));
+          out_blob->mut_dptr<T>() + i * out_im_sz, bias_multiplier->shape().At(0));
     }
   }
 }

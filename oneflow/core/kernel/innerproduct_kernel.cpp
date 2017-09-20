@@ -28,16 +28,16 @@ template<DeviceType device_type, typename T>
 void InnerProductKernel<device_type, T>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in = BnInOp2Blob("in");
+  const Blob* in_blob = BnInOp2Blob("in");
   const Blob* weight = BnInOp2Blob("weight");
   Blob* out = BnInOp2Blob("out");
-  if (in->has_data_id()) {
+  if (in_blob->has_data_id()) {
     CopyDataIdFromIbToAllOb<device_type>(ctx.device_ctx, BnInOp2Blob);
   }
 
   // out = in * weight
   BlasMatrixMatrix<device_type, T>(ctx, CblasNoTrans, CblasTrans,
-                                   static_cast<T>(1.0), static_cast<T>(0.0), in,
+                                   static_cast<T>(1.0), static_cast<T>(0.0), in_blob,
                                    weight, out);
 
   if (op()->GetBoolFromSpecialConf("has_bias_term")) {
@@ -55,7 +55,7 @@ template<DeviceType device_type, typename T>
 void InnerProductKernel<device_type, T>::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in = BnInOp2Blob("in");
+  const Blob* in_blob = BnInOp2Blob("in");
   const Blob* out_diff = BnInOp2Blob("out_diff");
   Blob* in_diff = BnInOp2Blob("in_diff");
 
@@ -72,7 +72,7 @@ void InnerProductKernel<device_type, T>::Backward(
   // weight_diff = out_diff * in
   BlasMatrixMatrix<device_type, T>(ctx, CblasTrans, CblasNoTrans,
                                    static_cast<T>(1.0), static_cast<T>(0.0),
-                                   out_diff, in, weight_diff);
+                                   out_diff, in_blob, weight_diff);
 
   if (op()->GetBoolFromSpecialConf("has_bias_term")) {
     const Blob* bias_multiplier = BnInOp2Blob("bias_multiplier");
