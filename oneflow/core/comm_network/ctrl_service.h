@@ -16,9 +16,12 @@
 
 namespace oneflow {
 
-#define CTRL_METHOD_SEQ           \
-  OF_PP_MAKE_TUPLE_SEQ(AddWorker) \
-  OF_PP_MAKE_TUPLE_SEQ(Barrier)
+#define CTRL_METHOD_SEQ            \
+  OF_PP_MAKE_TUPLE_SEQ(AddWorker)  \
+  OF_PP_MAKE_TUPLE_SEQ(Barrier)    \
+  OF_PP_MAKE_TUPLE_SEQ(TryLock)    \
+  OF_PP_MAKE_TUPLE_SEQ(NotifyDone) \
+  OF_PP_MAKE_TUPLE_SEQ(WaitUntilDone)
 
 enum class CtrlMethod {
 #define MAKE_ENTRY(method) k##method,
@@ -43,8 +46,10 @@ class CtrlService final {
 #undef DECLARE_STUB_METHOD
 
    private:
-    const grpc::RpcMethod rpcmethod_AddWorker_;
-    const grpc::RpcMethod rpcmethod_Barrier_;
+#define DECLARE_RPC_METHOD(method) const grpc::RpcMethod rpcmethod_##method##_;
+    OF_PP_FOR_EACH_TUPLE(DECLARE_RPC_METHOD, CTRL_METHOD_SEQ);
+#undef DECLARE_RPC_METHOD
+
     std::shared_ptr<grpc::ChannelInterface> channel_;
   };
 

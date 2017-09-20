@@ -15,3 +15,31 @@ message AddWorkerRequest {
 
 message AddWorkerResponse {
 }
+
+enum TryLockResult {
+  kLocked = 0;
+  kDone = 1;
+  kDoing = 2;
+}
+
+message TryLockRequest {
+  string name = 1;
+}
+
+message TryLockResponse {
+  TryLockResult result = 1;
+}
+
+message NotifyDoneRequest {
+  string name = 1;
+}
+
+message NotifyDoneResponse {
+}
+
+message WaitUntilDoneRequest {
+  string name = 1;
+}
+
+message WaitUntilDoneResponse {
+}

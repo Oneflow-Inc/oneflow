@@ -54,6 +54,31 @@ void CtrlCommNet::Barrier(const std::string& barrier_name,
   GetMasterStub()->Barrier(&client_ctx, request, &response);
 }
 
+TryLockResult CtrlCommNet::TryLock(const std::string& name) {
+  grpc::ClientContext client_ctx;
+  TryLockRequest request;
+  request.set_name(name);
+  TryLockResponse response;
+  GetResponsibleStub(name)->TryLock(&client_ctx, request, &response);
+  return response.result();
+}
+
+void CtrlCommNet::NotifyDone(const std::string& name) {
+  grpc::ClientContext client_ctx;
+  NotifyDoneRequest request;
+  request.set_name(name);
+  NotifyDoneResponse response;
+  GetResponsibleStub(name)->NotifyDone(&client_ctx, request, &response);
+}
+
+void CtrlCommNet::WaitUntilDone(const std::string& name) {
+  grpc::ClientContext client_ctx;
+  WaitUntilDoneRequest request;
+  request.set_name(name);
+  WaitUntilDoneResponse response;
+  GetResponsibleStub(name)->WaitUntilDone(&client_ctx, request, &response);
+}
+
 CtrlService::Stub* CtrlCommNet::GetResponsibleStub(const std::string& key) {
   int64_t machine_id =
       (std::hash<std::string>{}(key)) % JobDesc::Singleton()->TotalMachineNum();
