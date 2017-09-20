@@ -18,9 +18,8 @@ namespace oneflow {
 CtrlServer::~CtrlServer() {
   grpc::Alarm alarm(cq_.get(), gpr_now(GPR_CLOCK_MONOTONIC), nullptr);
   loop_thread_.join();
-  grpc_server_.reset();
-  cq_.reset();
-  grpc_service_.reset();
+  grpc_server_->Shutdown();
+  cq_->Shutdown();
 }
 
 CtrlServer::CtrlServer(const std::string& server_addr) {
@@ -48,7 +47,6 @@ void CtrlServer::HandleRpcs() {
     if (call) {
       call->Process();
     } else {
-      cq_->Shutdown();
       break;
     }
   }
@@ -61,14 +59,36 @@ void CtrlServer::AddWorkerHandler(CtrlCallIf* call) {
   auto addworker_call = static_cast<AddWorkerCtrlCall*>(call);
   LOG(INFO) << "Add Worker " << addworker_call->request().worker_ctrl_addr();
   if (added_worker_calls_.size() == JobDesc::Singleton()->TotalMachineNum()) {
-    for (CtrlCallIf* added_call : added_worker_calls_) {
-      added_call->SendResponse();
+    for (CtrlCallIf* pending_call : added_worker_calls_) {
+      pending_call->SendResponse();
     }
     added_worker_calls_.clear();
   }
   ENQUEUE_REQUEST(AddWorker);
 }
 
-void CtrlServer::BarrierHandler(CtrlCallIf* call) { TODO(); }
+void CtrlServer::BarrierHandler(CtrlCallIf* call) {
+  using BarrierCtrlCall = CtrlCall<BarrierRequest, BarrierResponse>;
+  auto barrier_call = static_cast<BarrierCtrlCall*>(call);
+  const std::string& barrier_name = barrier_call->request().name();
+  int32_t barrier_num = barrier_call->request().num();
+  auto barrier_call_it = barrier_calls_.find(barrier_name);
+  if (barrier_call_it == barrier_calls_.end()) {
+    barrier_call_it =
+        barrier_calls_
+            .emplace(barrier_name,
+                     std::make_pair(std::list<CtrlCallIf*>{}, barrier_num))
+            .first;
+  }
+  CHECK_EQ(barrier_num, barrier_call_it->second.second);
+  barrier_call_it->second.first.push_back(call);
+  if (barrier_call_it->second.first.size() == barrier_call_it->second.second) {
+    for (CtrlCallIf* pending_call : barrier_call_it->second.first) {
+      pending_call->SendResponse();
+    }
+    barrier_calls_.erase(barrier_call_it);
+  }
+  ENQUEUE_REQUEST(Barrier);
+}
 
 }  // namespace oneflow
