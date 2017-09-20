@@ -14,6 +14,7 @@ class Visualization {
   ~Visualization() = default;
 
   std::string UGraph2DotString(const UtilizationGraph& ugraph) const;
+  std::string UGraph2TaskSVGString(const UtilizationGraph& ugraph) const;
 };
 
 }  // namespace schedule

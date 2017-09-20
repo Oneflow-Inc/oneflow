@@ -1,6 +1,47 @@
 #include "oneflow/core/schedule/visualization.h"
+#include "oneflow/core/schedule/sxml.h"
 namespace oneflow {
 namespace schedule {
+
+std::string Visualization::UGraph2TaskSVGString(
+    const UtilizationGraph& ugraph) const {
+  int task_index = 0;
+  std::list<const TaskUtilization*> tasks;
+  ugraph.node_mgr<TaskUtilization>().ForEach(
+      [&](const TaskUtilization& task) { tasks.push_back(&task); });
+  float start_at = ugraph.computation().utilization_proto().start_at();
+  float end_at = ugraph.computation().utilization_proto().end_at();
+  float duration = end_at - start_at;
+  std::list<SXML> l;
+  for (auto task : tasks) {
+    for (auto u : task->raw_protos()) {
+      float x = (u->start_at() - start_at) / duration;
+      float y = 50 * task_index;
+      float w = (u->end_at() - u->start_at()) / duration;
+      float h = 50;
+      l.push_back(SXML{"rect",
+                       {{"@",
+                         {{"x", std::to_string(x * 100) + "%"},
+                          {"y", std::to_string(y) + "px"},
+                          {"width", std::to_string(w * 100) + "%"},
+                          {"height", std::to_string(h) + "px"},
+                          {"stroke", "green"},
+                          {"fill-opacity", 1}}}}});
+    }
+  }
+  // clang-format off
+	SXML svg{"svg", {
+		{"@", {
+				{"width", "100%"},
+				{"xmlns", "http://www.w3.org/2000/svg"},
+				{"xmlns:xlink", "http://www.w3.org/1999/xlink"},
+		}},
+		{"", std::move(l)}
+	}};
+  // clang-format on
+  return "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n"
+         + svg.ToString();
+}
 
 std::string Visualization::UGraph2DotString(
     const UtilizationGraph& ugraph) const {

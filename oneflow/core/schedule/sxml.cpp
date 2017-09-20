@@ -2,6 +2,16 @@
 namespace oneflow {
 namespace schedule {
 
+void SXMLNode::ForEachChild(const std::function<void(const SXML&)>& cb) const {
+  for (const auto& child : children()) {
+    if (child.node_type() == SXMLNode::kGroupNode) {
+      child.node().ForEachChild(cb);
+    } else {
+      cb(child);
+    }
+  }
+}
+
 void SXMLNode::InitChildren(std::list<SXML>&& children) {
   for (SXML& node : children) { children_.push_back(std::move(node)); }
 }
@@ -9,6 +19,12 @@ void SXMLNode::InitChildren(std::list<SXML>&& children) {
 template<>
 std::string SXMLNode::ToString<SXMLNode::kPlainNode>(int depth) const {
   return value();
+}
+
+template<>
+std::string SXMLNode::ToString<SXMLNode::kGroupNode>(int depth) const {
+  UNEXPECTED_RUN();
+  return "";
 }
 
 template<>
@@ -20,9 +36,9 @@ template<>
 std::string SXMLNode::ToString<SXMLNode::kAttributesNode>(int depth) const {
   CHECK(tag_name() == "@");
   std::string attributes;
-  for (const auto& child : children()) {
+  ForEachChild([&](const SXML& child) {
     attributes += " " + child.field() + "=\"" + child.value() + "\"";
-  }
+  });
   return attributes;
 }
 
@@ -30,15 +46,15 @@ template<>
 std::string SXMLNode::ToString<SXMLNode::kTagNode>(int depth) const {
   std::string attributes;
   std::string content;
-  for (const auto& child : children()) {
+  ForEachChild([&](const SXML& child) {
     if (child.node_type() == SXMLNode::kAttributesNode) {
       attributes += child.ToString(depth);
     } else {
       content += "\n" + std::string(depth + 1, ' ') + child.ToString(depth + 1);
     }
-  }
+  });
   return "<" + tag_name() + attributes + ">" + content
-         + (children().size() ? "\n" + std::string(depth, ' ') : "") + "</"
+         + (content.size() ? "\n" + std::string(depth, ' ') : "") + "</"
          + tag_name() + ">";
 }
 
