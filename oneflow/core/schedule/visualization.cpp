@@ -12,23 +12,6 @@ std::string Visualization::UGraph2TaskSVGString(
   float start_at = ugraph.computation().utilization_proto().start_at();
   float end_at = ugraph.computation().utilization_proto().end_at();
   float duration = end_at - start_at;
-  std::list<SXML> l;
-  for (auto task : tasks) {
-    for (auto u : task->raw_protos()) {
-      float x = (u->start_at() - start_at) / duration;
-      float y = 50 * task_index;
-      float w = (u->end_at() - u->start_at()) / duration;
-      float h = 50;
-      l.push_back(SXML{"rect",
-                       {{"@",
-                         {{"x", std::to_string(x * 100) + "%"},
-                          {"y", std::to_string(y) + "px"},
-                          {"width", std::to_string(w * 100) + "%"},
-                          {"height", std::to_string(h) + "px"},
-                          {"stroke", "green"},
-                          {"fill-opacity", 1}}}}});
-    }
-  }
   // clang-format off
 	SXML svg{"svg", {
 		{"@", {
@@ -36,7 +19,25 @@ std::string Visualization::UGraph2TaskSVGString(
 				{"xmlns", "http://www.w3.org/2000/svg"},
 				{"xmlns:xlink", "http://www.w3.org/1999/xlink"},
 		}},
-		{"", std::move(l)}
+		{"", SXML::List(tasks, [&](const TaskUtilization* task){
+			SXML svg{"", SXML::List(task->raw_protos(), [&](const UtilizationProto* u){
+				float x = (u->start_at() - start_at) / duration;
+				float y = 50 * task_index;
+				float w = (u->end_at() - u->start_at()) / duration;
+				float h = 50;
+				return SXML{"rect", {
+					{"@", {
+						{"x", std::to_string(x * 100) + "%"},
+						{"y", std::to_string(y) + "px"},
+						{"width", std::to_string(w * 100) + "%"},
+						{"height", std::to_string(h) + "px"},
+						{"stroke", "green"},
+						{"fill-opacity", 1}}}
+				}};
+			})};
+			++ task_index;
+			return svg;
+		})}
 	}};
   // clang-format on
   return "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n"

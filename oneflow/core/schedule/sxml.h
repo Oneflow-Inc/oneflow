@@ -67,8 +67,7 @@ class SXML final {
       : node_(of_make_unique<SXMLNode>(node.node())) {}
   SXML(SXML&& node) : node_(node.move_node()) {}
   explicit SXML(std::unique_ptr<SXMLNode>&& node) : node_(std::move(node)) {}
-  explicit SXML(const std::string& content)
-      : node_(of_make_unique<SXMLNode>(content)) {}
+  SXML(const std::string& content) : node_(of_make_unique<SXMLNode>(content)) {}
   SXML(const std::string& key, const std::string& value)
       : node_(of_make_unique<SXMLNode>(key, value)) {}
   SXML(const std::string& key, std::list<SXML>&& children)
@@ -90,12 +89,12 @@ class SXML final {
   INLINE const std::string& value() const { return node_->value(); }
   INLINE const std::list<SXML>& children() const { return node_->children(); }
 
-  template<template<class, class, class...> class C, typename V,
-           typename... Args>
-  SXML ForEach(const C<V, Args...>& c, const std::function<SXML(V)>& cb) {
+  template<template<typename, typename...> class C, typename V,
+           typename... Args, typename F = std::function<SXML(V)>>
+  static std::list<SXML> List(const C<V, Args...>& c, const F& cb) {
     std::list<SXML> l;
     for (V elem : c) { l.push_back(std::move(cb(elem))); }
-    return SXML{"", std::move(l)};
+    return l;
   }
 
   friend class SXMLNode;
