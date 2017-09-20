@@ -37,8 +37,8 @@ void InnerProductKernel<device_type, T>::Forward(
 
   // out = in * weight
   BlasMatrixMatrix<device_type, T>(ctx, CblasNoTrans, CblasTrans,
-                                   static_cast<T>(1.0), static_cast<T>(0.0), in_blob,
-                                   weight, out);
+                                   static_cast<T>(1.0), static_cast<T>(0.0),
+                                   in_blob, weight, out);
 
   if (op()->GetBoolFromSpecialConf("has_bias_term")) {
     const Blob* bias = BnInOp2Blob("bias");
