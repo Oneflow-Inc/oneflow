@@ -4,7 +4,7 @@ namespace oneflow {
 
 std::string RuntimeCtx::GetCtrlAddr(int64_t machine_id) const {
   const Machine& machine = JobDesc::Singleton()->resource().machine(machine_id);
-  return machine.addr() + machine.ctrl_port();
+  return machine.addr() + ":" + machine.ctrl_port();
 }
 
 void RuntimeCtx::set_this_machine_name(const std::string& name) {

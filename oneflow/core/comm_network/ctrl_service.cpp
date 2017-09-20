@@ -35,6 +35,12 @@ CtrlService::Stub::Stub(std::shared_ptr<grpc::ChannelInterface> channel)
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_STUB_METHOD, CTRL_METHOD_SEQ)
 
+std::unique_ptr<CtrlService::Stub> CtrlService::NewStub(
+    const std::string& addr) {
+  return of_make_unique<Stub>(
+      grpc::CreateChannel(addr, grpc::InsecureChannelCredentials()));
+}
+
 CtrlService::AsyncService::AsyncService() {
   for (int32_t i = 0; i < kCtrlMethodNum; ++i) {
     AddMethod(

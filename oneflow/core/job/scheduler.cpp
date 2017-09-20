@@ -79,9 +79,10 @@ Plan Scheduler::GetPlanFromJobConf(const JobConf& job_conf,
   return plan;
 }
 void Scheduler::DeleteAllSingleton() {
-  delete ThreadMgr::Singleton();
-  delete ActorMsgBus::Singleton();
-  delete SnapshotMgr::Singleton();
+  ThreadMgr::DeleteSingleton();
+  ActorMsgBus::DeleteSingleton();
+  SnapshotMgr::DeleteSingleton();
+  CtrlCommNet::DeleteSingleton();
 }
 void Scheduler::HandoutTasks(const std::vector<const TaskProto*>& tasks) {
   for (const TaskProto* task : tasks) {
