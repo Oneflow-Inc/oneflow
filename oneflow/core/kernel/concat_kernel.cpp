@@ -50,9 +50,18 @@ void ConcatKernel<device_type, T>::ConcatKernelWork(
     LOG(FATAL) << "device type has not been set";
     return;
   }
+  int64_t data_id_offset = 0;
 
   for (const std::string& in_bn : in_bns) {
     Blob* in_blob = BnInOp2Blob(in_bn);
+    if (in_blob->has_data_id()) {
+      CHECK_LE(data_id_offset + in_blob->ByteSizeOfDataIdField(),
+               out_blob->TotalByteSize());
+      Memcpy<device_type>(
+          ctx.device_ctx, out_blob->mut_data_id() + data_id_offset,
+          in_blob->data_id(), in_blob->ByteSizeOfDataIdField(), kind);
+      data_id_offset += in_blob->ByteSizeOfDataIdField();
+    }
     T* in_blob_mut_dptr = in_blob->mut_dptr<T>();
     const int64_t in_concat_axis_dim = in_blob->shape().At(concat_axis);
     const int64_t cp_sz = in_concat_axis_dim * concat_element_cnt * sizeof(T);
