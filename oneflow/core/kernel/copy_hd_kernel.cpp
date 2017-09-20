@@ -22,8 +22,8 @@ void CopyHdKernel::Forward(
   const Blob* in_blob = BnInOp2Blob(op()->SoleIbn());
   Blob* out_blob = BnInOp2Blob(op()->SoleObn());
 
-  Memcpy<DeviceType::kGPU>(ctx.device_ctx, out_blob->mut_start_memory(),
-                           in_blob->start_memory(), in_blob->TotalByteSize(),
+  Memcpy<DeviceType::kGPU>(ctx.device_ctx, out_blob->mut_memory_ptr(),
+                           in_blob->memory_ptr(), in_blob->TotalByteSize(),
                            fw_kind_);
 }
 
@@ -33,8 +33,8 @@ void CopyHdKernel::Backward(
   const Blob* out_diff_blob = BnInOp2Blob(op()->SoleOdbn());
   Blob* in_diff_blob = BnInOp2Blob(op()->SoleIdbn());
 
-  Memcpy<DeviceType::kGPU>(ctx.device_ctx, in_diff_blob->mut_start_memory(),
-                           out_diff_blob->start_memory(),
+  Memcpy<DeviceType::kGPU>(ctx.device_ctx, in_diff_blob->mut_memory_ptr(),
+                           out_diff_blob->memory_ptr(),
                            out_diff_blob->TotalByteSize(), bw_kind_);
 }
 

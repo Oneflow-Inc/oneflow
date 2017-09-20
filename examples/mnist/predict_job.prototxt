@@ -5,11 +5,11 @@ model_load_snapshot_path: ""
 piece_size: 1000
 default_data_type: kFloat
 use_async_cpu_stream: false
-max_data_id_length: 8
+max_data_id_length: 0
 global_fs_conf {
   localfs_conf {
   }
 }
 predict_conf {
-  total_data_num: 60000
+  total_data_num: 1000
 }
