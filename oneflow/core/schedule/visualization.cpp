@@ -5,39 +5,230 @@ namespace schedule {
 
 std::string Visualization::UGraph2TaskSVGString(
     const UtilizationGraph& ugraph) const {
-  int task_index = 0;
-  std::list<const TaskUtilization*> tasks;
-  ugraph.node_mgr<TaskUtilization>().ForEach(
-      [&](const TaskUtilization& task) { tasks.push_back(&task); });
   float start_at = ugraph.computation().utilization_proto().start_at();
   float end_at = ugraph.computation().utilization_proto().end_at();
   float duration = end_at - start_at;
+  float padding = 5;
+  float row_height = 40;
+
+  int stream_index = 0;
+  std::list<const TaskStreamUtilization*> tasks;
+  ugraph.node_mgr<TaskStreamUtilization>().ForEach(
+      [&](const TaskStreamUtilization& task) { tasks.push_back(&task); });
+
+  int task_index = 0;
+  std::list<const StreamUtilization*> streams;
+  ugraph.node_mgr<StreamUtilization>().ForEach(
+      [&](const StreamUtilization& stream) { streams.push_back(&stream); });
+  auto get_x = [&](const UtilizationProto* u) {
+    float x = (u->start_at() - start_at) / duration * 100;
+    return std::to_string(x) + "%";
+  };
+  auto get_w = [&](const UtilizationProto* u) {
+    float x = (u->end_at() - u->start_at()) / duration * 100;
+    return std::to_string(x) + "%";
+  };
+  int task_height = row_height * tasks.size();
+  int stream_height = row_height * streams.size();
   // clang-format off
 	SXML svg{"svg", {
 		{"@", {
-				{"width", "100%"},
-				{"xmlns", "http://www.w3.org/2000/svg"},
-				{"xmlns:xlink", "http://www.w3.org/1999/xlink"},
+			{"width", 1928},
+			{"height", task_height + row_height * 3 + stream_height},
+			{"xmlns", "http://www.w3.org/2000/svg"},
+			{"xmlns:xlink", "http://www.w3.org/1999/xlink"},
 		}},
-		{"", SXML::List(tasks, [&](const TaskUtilization* task){
-			SXML svg{"", SXML::List(task->raw_protos(), [&](const UtilizationProto* u){
-				float x = (u->start_at() - start_at) / duration;
-				float y = 50 * task_index;
-				float w = (u->end_at() - u->start_at()) / duration;
-				float h = 50;
-				return SXML{"rect", {
+		{"svg", {
+			{"@", {
+				{"x", "4%"},
+				{"y", 0},
+				{"width", "92%"},
+				{"height", "100%"},
+			}},
+			{"svg", {
+				{"@", {
+					{"x", 0},
+					{"y", 0},
+					{"width", "100%"},
+					{"height", row_height},
+				}},
+				{"text", {
 					{"@", {
-						{"x", std::to_string(x * 100) + "%"},
-						{"y", std::to_string(y) + "px"},
-						{"width", std::to_string(w * 100) + "%"},
-						{"height", std::to_string(h) + "px"},
-						{"stroke", "green"},
-						{"fill-opacity", 1}}}
-				}};
-			})};
-			++ task_index;
-			return svg;
-		})}
+						{"x", 0},
+						{"y", 25},
+						{"font-size", 20},
+					}},
+					{"", "Stream"},
+				}},
+			}},
+			{"svg", {
+				{"@", {
+					{"x", 0},
+					{"y", stream_height + row_height},
+					{"width", "100%"},
+					{"height", row_height},
+				}},
+				{"text", {
+					{"@", {
+						{"x", 0},
+						{"y", 25},
+						{"font-size", 20},
+					}},
+					{"", "Task Stream"},
+				}},
+			}},
+			{"svg", {
+				{"@", {
+					{"x", 0},
+					{"y", row_height},
+					{"width", "100%"},
+					{"height", stream_height},
+				}},
+				{"", SXML::List(streams, [&](const StreamUtilization* stream){
+					SXML svg{"svg", {
+						{"@", {
+							{"x", "0%"},
+							{"y", stream_index * row_height},
+							{"width", "100%"},
+							{"height", row_height},
+						}},
+						{"svg", {
+							{"@", {
+								{"x", "0%"},
+								{"y", 0},
+								{"width", "10%"},
+								{"height", "100%"},
+							}},
+							{"text", {
+								{"@", {
+									{"x", 0},
+									{"y", 13},
+									{"font-size", 13},
+								}},
+								{"", "device-id: " + std::to_string(stream->device_id())},
+							}},
+							{"text", {
+								{"@", {
+									{"x", 0},
+									{"y", 30},
+									{"font-size", 13},
+								}},
+								{"", "stream-id: " + std::to_string(stream->stream_id())},
+							}},
+						}},
+						{"svg", {
+							{"@", {
+								{"x", "10%"},
+								{"y", 0},
+								{"width", "90%"},
+								{"height", "100%"},
+							}},
+							{"rect", {
+								{"@", {
+									{"x", 0},
+									{"y", padding},
+									{"width", "100%"},
+									{"height", row_height - padding * 2},
+									{"stroke", "black"},
+									{"stroke-width", 1},
+									{"fill-opacity", 1},
+									{"fill", "white"},
+								}}
+							}},
+							{"", SXML::List(stream->raw_protos(), [&](const UtilizationProto* u){
+								return SXML{"rect", {
+									{"@", {
+										{"x", get_x(u)},
+										{"y", padding},
+										{"width", get_w(u)},
+										{"height", row_height - padding * 2},
+										{"stroke", "green"},
+										{"fill", "blue"}}}
+								}};
+							})}
+						}},
+					}};
+					++ stream_index;
+					return svg;
+				})}
+			}},
+			{"svg", {
+				{"@", {
+					{"x", 0},
+					{"y", row_height * 2 + stream_height},
+					{"width", "100%"},
+					{"height", task_height},
+				}},
+				{"", SXML::List(tasks, [&](const TaskStreamUtilization* task){
+					SXML svg{"svg", {
+						{"@", {
+							{"x", "0%"},
+							{"y", task_index * row_height},
+							{"width", "100%"},
+							{"height", row_height},
+						}},
+						{"svg", {
+							{"@", {
+								{"x", "0%"},
+								{"y", 0},
+								{"width", "10%"},
+								{"height", "100%"},
+							}},
+							{"text", {
+								{"@", {
+									{"x", 0},
+									{"y", 13},
+									{"font-size", 13},
+								}},
+								{"", "task-id: " + std::to_string(task->task_id())},
+							}},
+							{"text", {
+								{"@", {
+									{"x", 0},
+									{"y", 30},
+									{"font-size", 13},
+								}},
+								{"", "stream-id: " + std::to_string(task->stream_id())},
+							}},
+						}},
+						{"svg", {
+							{"@", {
+								{"x", "10%"},
+								{"y", 0},
+								{"width", "90%"},
+								{"height", "100%"},
+							}},
+							{"rect", {
+								{"@", {
+									{"x", 0},
+									{"y", padding},
+									{"width", "100%"},
+									{"height", row_height - padding * 2},
+									{"stroke", "black"},
+									{"stroke-width", 1},
+									{"fill-opacity", 1},
+									{"fill", "white"},
+								}}
+							}},
+							{"", SXML::List(task->raw_protos(), [&](const UtilizationProto* u){
+								return SXML{"rect", {
+									{"@", {
+										{"x", get_x(u)},
+										{"y", padding},
+										{"width", get_w(u)},
+										{"height", row_height - padding * 2},
+										{"stroke", "green"},
+										{"fill", "blue"}}}
+								}};
+							})}
+						}},
+					}};
+					++ task_index;
+					return svg;
+				})}
+			}},
+			
+		}},
 	}};
   // clang-format on
   return "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n"

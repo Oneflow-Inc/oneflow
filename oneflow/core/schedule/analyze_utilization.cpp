@@ -47,6 +47,8 @@ void AnalyzeUtilization() {
   Visualization visual;
   std::ofstream(FLAGS_dot_dir + "/ugraph.dot", std::ofstream::out)
       << visual.UGraph2DotString(*ugraph);
+  std::ofstream(FLAGS_dot_dir + "/task_utilization.svg", std::ofstream::out)
+      << visual.UGraph2TaskSVGString(*ugraph);
 }
 
 }  // namespace
