@@ -70,7 +70,7 @@ void Snapshot::ConcatLbnFile(const std::string& lbn, int32_t part_num,
         out_stream.Write(buffer, n);
         offset += n;
       }
-      GlobalFS()->DeleteFile(part_file_path);
+      GlobalFS()->DelFile(part_file_path);
     }
   }
   GlobalFS()->DeleteDir(part_dir);
