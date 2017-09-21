@@ -45,7 +45,7 @@ void FileSystem::RecursivelyDeleteDir(const std::string& dirname) {
       } else {
         // Delete file might fail because of permissions issues or might be
         // unimplemented.
-        DeleteFile(child_path);
+        DelFile(child_path);
       }
     }
   }

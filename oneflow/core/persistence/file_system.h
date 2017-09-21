@@ -4,10 +4,6 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/persistence/platform.h"
 
-#if defined(_WIN32)
-#undef DeleteFile
-#endif
-
 namespace oneflow {
 
 namespace fs {
@@ -114,7 +110,8 @@ class FileSystem {
   virtual std::vector<std::string> ListDir(const std::string& dir) = 0;
 
   // Deletes the named file.
-  virtual void DeleteFile(const std::string& fname) = 0;
+  // Using DelFile to avoid Windows macro
+  virtual void DelFile(const std::string& fname) = 0;
 
   // Creates the specified directory.
   virtual void CreateDir(const std::string& dirname) = 0;

@@ -40,6 +40,7 @@ set(oneflow_third_party_libs
 if(WIN32)
   # static gflags lib requires "PathMatchSpecA" defined in "ShLwApi.Lib"
   list(APPEND oneflow_third_party_libs "ShLwApi.Lib")
+  list(APPEND oneflow_third_party_libs "Ws2_32.lib")
 endif()
 
 set(oneflow_third_party_dependencies
