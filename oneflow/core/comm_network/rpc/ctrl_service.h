@@ -10,7 +10,7 @@
 #include "grpc++/impl/codegen/status.h"
 #include "grpc++/impl/codegen/stub_options.h"
 #include "grpc++/impl/codegen/sync_stream.h"
-#include "oneflow/core/comm_network/control.pb.h"
+#include "oneflow/core/comm_network/rpc/control.pb.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/util.h"
 
