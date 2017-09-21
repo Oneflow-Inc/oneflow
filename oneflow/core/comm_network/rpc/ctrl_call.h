@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_COMM_NETWORK_CTRL_CALL_H_
 #define ONEFLOW_CORE_COMM_NETWORK_CTRL_CALL_H_
 
-#include "oneflow/core/comm_network/ctrl_service.h"
+#include "oneflow/core/comm_network/rpc/ctrl_service.h"
 
 namespace oneflow {
 

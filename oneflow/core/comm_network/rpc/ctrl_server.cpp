@@ -1,4 +1,4 @@
-#include "oneflow/core/comm_network/ctrl_server.h"
+#include "oneflow/core/comm_network/rpc/ctrl_server.h"
 #include "grpc++/alarm.h"
 #include "oneflow/core/job/runtime_context.h"
 
@@ -52,12 +52,11 @@ void CtrlServer::HandleRpcs() {
   }
 }
 
-void CtrlServer::AddWorkerHandler(CtrlCallIf* call) {
-  using AddWorkerCtrlCall = CtrlCall<AddWorkerRequest, AddWorkerResponse>;
+void CtrlServer::AddWorkerHandler(
+    CtrlCall<AddWorkerRequest, AddWorkerResponse>* call) {
   CHECK(RuntimeCtx::Singleton()->IsThisMachineMaster());
   added_worker_calls_.push_back(call);
-  auto addworker_call = static_cast<AddWorkerCtrlCall*>(call);
-  LOG(INFO) << "Add Worker " << addworker_call->request().worker_ctrl_addr();
+  LOG(INFO) << "Add Worker " << call->request().worker_ctrl_addr();
   if (added_worker_calls_.size() == JobDesc::Singleton()->TotalMachineNum()) {
     for (CtrlCallIf* pending_call : added_worker_calls_) {
       pending_call->SendResponse();
@@ -67,11 +66,10 @@ void CtrlServer::AddWorkerHandler(CtrlCallIf* call) {
   ENQUEUE_REQUEST(AddWorker);
 }
 
-void CtrlServer::BarrierHandler(CtrlCallIf* call) {
-  using BarrierCtrlCall = CtrlCall<BarrierRequest, BarrierResponse>;
-  auto barrier_call = static_cast<BarrierCtrlCall*>(call);
-  const std::string& barrier_name = barrier_call->request().name();
-  int32_t barrier_num = barrier_call->request().num();
+void CtrlServer::BarrierHandler(
+    CtrlCall<BarrierRequest, BarrierResponse>* call) {
+  const std::string& barrier_name = call->request().name();
+  int32_t barrier_num = call->request().num();
   auto barrier_call_it = barrier_calls_.find(barrier_name);
   if (barrier_call_it == barrier_calls_.end()) {
     barrier_call_it =
@@ -91,31 +89,29 @@ void CtrlServer::BarrierHandler(CtrlCallIf* call) {
   ENQUEUE_REQUEST(Barrier);
 }
 
-void CtrlServer::TryLockHandler(CtrlCallIf* call) {
-  using TryLockCtrlCall = CtrlCall<TryLockRequest, TryLockResponse>;
-  auto try_lock_call = static_cast<TryLockCtrlCall*>(call);
-  const std::string& lock_name = try_lock_call->request().name();
+void CtrlServer::TryLockHandler(
+    CtrlCall<TryLockRequest, TryLockResponse>* call) {
+  const std::string& lock_name = call->request().name();
   auto name2lock_status_it = name2lock_status_.find(lock_name);
   if (name2lock_status_it == name2lock_status_.end()) {
-    try_lock_call->mut_response()->set_result(TryLockResult::kLocked);
+    call->mut_response()->set_result(TryLockResult::kLocked);
     auto waiting_until_done_calls = new std::list<CtrlCallIf*>;
     CHECK(
         name2lock_status_.emplace(lock_name, waiting_until_done_calls).second);
   } else {
     if (name2lock_status_it->second) {
-      try_lock_call->mut_response()->set_result(TryLockResult::kDoing);
+      call->mut_response()->set_result(TryLockResult::kDoing);
     } else {
-      try_lock_call->mut_response()->set_result(TryLockResult::kDone);
+      call->mut_response()->set_result(TryLockResult::kDone);
     }
   }
   call->SendResponse();
   ENQUEUE_REQUEST(TryLock);
 }
 
-void CtrlServer::NotifyDoneHandler(CtrlCallIf* call) {
-  using NotifyDoneCtrlCall = CtrlCall<NotifyDoneRequest, NotifyDoneResponse>;
-  auto notify_done_call = static_cast<NotifyDoneCtrlCall*>(call);
-  const std::string& lock_name = notify_done_call->request().name();
+void CtrlServer::NotifyDoneHandler(
+    CtrlCall<NotifyDoneRequest, NotifyDoneResponse>* call) {
+  const std::string& lock_name = call->request().name();
   auto name2lock_status_it = name2lock_status_.find(lock_name);
   auto waiting_calls =
       static_cast<std::list<CtrlCallIf*>*>(name2lock_status_it->second);
@@ -128,11 +124,9 @@ void CtrlServer::NotifyDoneHandler(CtrlCallIf* call) {
   ENQUEUE_REQUEST(NotifyDone);
 }
 
-void CtrlServer::WaitUntilDoneHandler(CtrlCallIf* call) {
-  using WaitUntilDoneCtrlCall =
-      CtrlCall<WaitUntilDoneRequest, WaitUntilDoneResponse>;
-  auto wait_until_done_call = static_cast<WaitUntilDoneCtrlCall*>(call);
-  const std::string& lock_name = wait_until_done_call->request().name();
+void CtrlServer::WaitUntilDoneHandler(
+    CtrlCall<WaitUntilDoneRequest, WaitUntilDoneResponse>* call) {
+  const std::string& lock_name = call->request().name();
   void* lock_status = name2lock_status_.at(lock_name);
   if (lock_status) {
     auto waiting_calls = static_cast<std::list<CtrlCallIf*>*>(lock_status);

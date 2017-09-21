@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_COMM_NETWORK_CTRL_COMM_NETWORK_H_
 
 #include "oneflow/core/actor/actor_message.h"
-#include "oneflow/core/comm_network/ctrl_server.h"
+#include "oneflow/core/comm_network/rpc/ctrl_server.h"
 
 namespace oneflow {
 

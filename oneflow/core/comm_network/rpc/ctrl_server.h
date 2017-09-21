@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_COMM_NETWORK_CTRL_SERVER_H_
 
 #include "grpc++/server_builder.h"
-#include "oneflow/core/comm_network/ctrl_call.h"
+#include "oneflow/core/comm_network/rpc/ctrl_call.h"
 
 namespace oneflow {
 
@@ -18,7 +18,7 @@ class CtrlServer final {
   void HandleRpcs();
 
 #define DECLARE_CTRL_METHOD_HANDLE(method) \
-  void method##Handler(CtrlCallIf* call);
+  void method##Handler(CtrlCall<method##Request, method##Response>* call);
 
   OF_PP_FOR_EACH_TUPLE(DECLARE_CTRL_METHOD_HANDLE, CTRL_METHOD_SEQ);
 
