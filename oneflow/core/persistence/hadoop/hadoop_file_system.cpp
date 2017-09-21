@@ -330,7 +330,7 @@ std::vector<std::string> HadoopFileSystem::ListDir(const std::string& dir) {
   return result;
 }
 
-void HadoopFileSystem::DeleteFile(const std::string& fname) {
+void HadoopFileSystem::DelFile(const std::string& fname) {
   hdfsFS fs = nullptr;
   CHECK(Connect(&fs));
   PCHECK(hdfs_->hdfsDelete(fs, TranslateName(fname).c_str(), /*recursive=*/0)

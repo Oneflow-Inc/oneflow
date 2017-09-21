@@ -125,7 +125,7 @@ std::vector<std::string> PosixFileSystem::ListDir(const std::string& dir) {
   return result;
 }
 
-void PosixFileSystem::DeleteFile(const std::string& fname) {
+void PosixFileSystem::DelFile(const std::string& fname) {
   PCHECK(unlink(TranslateName(fname).c_str()) == 0)
       << "Fail to delete file " << fname;
 }

@@ -222,7 +222,7 @@ std::vector<std::string> WindowsFileSystem::ListDir(const std::string& dir) {
   return result;
 }
 
-void WindowsFileSystem::DeleteFile(const std::string& fname) {
+void WindowsFileSystem::DelFile(const std::string& fname) {
   std::wstring file_name = Utf8ToWideChar(fname);
   PCHECK(_wunlink(file_name.c_str()) == 0)
       << "Failed to delete a file: " + fname;
