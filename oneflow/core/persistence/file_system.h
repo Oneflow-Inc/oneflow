@@ -1,8 +1,8 @@
 #ifndef ONEFLOW_CORE_PERSISTENCE_FILE_SYSTEM_H_
 #define ONEFLOW_CORE_PERSISTENCE_FILE_SYSTEM_H_
 
+#include "oneflow/core/common/platform.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/persistence/platform.h"
 
 namespace oneflow {
 

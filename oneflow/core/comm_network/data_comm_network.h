@@ -2,6 +2,8 @@
 #define ONEFLOW_CORE_COMM_NETWORK_DATA_COMM_NETWORK_H_
 
 #include "oneflow/core/actor/actor_message.h"
+#include "oneflow/core/common/platform.h"
+#include "oneflow/core/job/plan.pb.h"
 
 namespace oneflow {
 
@@ -14,7 +16,7 @@ class DataCommNet {
 
   // "RegisterMemory" will return a Token, after "RegisterMemoryDone",
   // we can use this token to use the "Read"
-  virtual const void* RegisterMemory(void* dptr) = 0;
+  virtual const void* RegisterMemory(void* dptr, size_t byte_size) = 0;
   virtual void UnRegisterMemory(const void* token) = 0;
   virtual void RegisterMemoryDone() = 0;
 
@@ -26,8 +28,6 @@ class DataCommNet {
 
   //
   virtual void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) = 0;
-  virtual void SetCallbackForReceivedActorMsg(
-      std::function<void(const ActorMsg&)> callback) = 0;
 
  protected:
   DataCommNet() = default;

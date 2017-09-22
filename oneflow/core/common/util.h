@@ -136,6 +136,8 @@ inline uint32_t NewRandomSeed() {
 #define PARALLEL_POLICY_SEQ \
   (ParallelPolicy::kModelParallel)(ParallelPolicy::kDataParallel)
 
+#define FOR_RANGE(type, i, begin, end) for (type i = begin; i < end; ++i)
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_UTIL_H_
