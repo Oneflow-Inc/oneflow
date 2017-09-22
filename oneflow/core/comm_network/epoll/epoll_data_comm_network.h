@@ -1,16 +1,11 @@
-#ifndef ONEFLOW_CORE_COMM_NETWORK_POSIX_POSIX_DATA_COMM_NETWORK_H_
-#define ONEFLOW_CORE_COMM_NETWORK_POSIX_POSIX_DATA_COMM_NETWORK_H_
+#ifndef ONEFLOW_CORE_COMM_NETWORK_EPOLL_EPOLL_DATA_COMM_NETWORK_H_
+#define ONEFLOW_CORE_COMM_NETWORK_EPOLL_EPOLL_DATA_COMM_NETWORK_H_
 
 #include "oneflow/core/comm_network/data_comm_network.h"
 
 #ifdef PLATFORM_POSIX
 
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <sys/epoll.h>
-#include <sys/socket.h>
-#include <sys/types.h>
+#include "oneflow/core/comm_network/epoll/socket_io_helper.h"
 
 namespace oneflow {
 
@@ -44,12 +39,12 @@ class EpollDataCommNet final : public DataCommNet {
   std::mutex mem_desc_mtx_;
   std::list<MemDesc*> mem_descs_;
   size_t unregister_mem_descs_cnt_;
-  // socket fd
-  std::vector<int> socket_fds_;
+  // Socket
+  HashMap<int, std::unique_ptr<SocketIOHelper>> socket2io_helper_;
 };
 
 }  // namespace oneflow
 
 #endif  // PLATFORM_POSIX
 
-#endif  // ONEFLOW_CORE_COMM_NETWORK_POSIX_POSIX_DATA_COMM_NETWORK_H_
+#endif  // ONEFLOW_CORE_COMM_NETWORK_EPOLL_EPOLL_DATA_COMM_NETWORK_H_
