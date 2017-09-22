@@ -71,7 +71,6 @@ EpollDataCommNet::EpollDataCommNet(const Plan& plan) {
   unregister_mem_descs_cnt_ = 0;
   int64_t this_machine_id = RuntimeCtx::Singleton()->this_machine_id();
   int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
-  socket_fds_.assign(total_machine_num, -1);
   // listen
   sockaddr_in this_sockaddr = GetSockAddr(this_machine_id);
   int listen_sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -79,7 +78,6 @@ EpollDataCommNet::EpollDataCommNet(const Plan& plan) {
               sizeof(this_sockaddr))
          == 0);
   PCHECK(listen(listen_sockfd, total_machine_num) == 0);
-  socket_fds_[this_machine_id] = listen_sockfd;
   // connect
   FOR_RANGE(int64_t, peer_machine_id, this_machine_id + 1, total_machine_num) {
     sockaddr_in peer_sockaddr = GetSockAddr(peer_machine_id);
@@ -90,7 +88,9 @@ EpollDataCommNet::EpollDataCommNet(const Plan& plan) {
               sizeof(peer_sockaddr));
     }
     PCHECK(rc == 0);
-    socket_fds_[peer_machine_id] = sockfd;
+    CHECK(socket2io_helper_
+              .emplace(sockfd, of_make_unique<SocketIOHelper>(sockfd))
+              .second);
   }
   // accept
   FOR_RANGE(int64_t, peer_machine_id, 0, this_machine_id) {
@@ -99,7 +99,9 @@ EpollDataCommNet::EpollDataCommNet(const Plan& plan) {
     int sockfd = accept(listen_sockfd,
                         reinterpret_cast<sockaddr*>(&peer_sockaddr), &len);
     PCHECK(sockfd != -1);
-    socket_fds_[peer_machine_id] = sockfd;
+    CHECK(socket2io_helper_
+              .emplace(sockfd, of_make_unique<SocketIOHelper>(sockfd))
+              .second);
   }
 }
 
