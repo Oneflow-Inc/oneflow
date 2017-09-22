@@ -12,7 +12,7 @@ class ScheduleFacade final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ScheduleFacade);
   ScheduleFacade(const std::string& name)
-      : sfp_(ScheduleFactoryConfigure::Provider(name)) {}
+      : sfp_(&ScheduleFactoryConfigure::Provider(name)) {}
 
   static const ScheduleFacade* Default() {
     static const ScheduleFacade* facade = new ScheduleFacade(DefaultName());

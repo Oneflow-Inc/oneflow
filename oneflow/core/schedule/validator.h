@@ -15,8 +15,8 @@ class ScheduleFactoryProvider;
 class Validator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Validator);
-  explicit Validator(const ScheduleFactoryProvider* schedule_factory_provider)
-      : schedule_factory_provider_(schedule_factory_provider) {}
+  explicit Validator(const ScheduleFactoryProvider& schedule_factory_provider)
+      : schedule_factory_provider_(&schedule_factory_provider) {}
   Validator() = default;
 
   //	graph

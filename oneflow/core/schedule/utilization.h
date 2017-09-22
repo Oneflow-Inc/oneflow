@@ -119,6 +119,12 @@ class StreamUtilization : public ComputationUtilization {
  public:
   UTILIZATION_BOILERPLATE(StreamUtilization, ComputationUtilization);
   uint32_t ParallelNum(const UtilizationGraph&) const override { return 1u; }
+  inline uint64_t device_id() const {
+    return utilization_proto().resource().stream().device_id();
+  }
+  inline uint64_t stream_id() const {
+    return utilization_proto().resource().stream().stream_id();
+  }
   float GetInitiationInterval(const UtilizationGraph& ugraph) const {
     return GetTimePerBatch(ugraph);
   }
@@ -140,6 +146,12 @@ class TaskStreamUtilization : public ComputationUtilization {
  public:
   UTILIZATION_BOILERPLATE(TaskStreamUtilization, ComputationUtilization);
   uint32_t ParallelNum(const UtilizationGraph&) const override { return 1u; }
+  inline uint64_t task_id() const {
+    return utilization_proto().resource().task_stream().task_id();
+  }
+  inline uint64_t stream_id() const {
+    return utilization_proto().resource().task_stream().stream_id();
+  }
 };
 
 class MemoryUtilization : public Utilization {

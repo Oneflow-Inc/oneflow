@@ -21,6 +21,8 @@
 
 namespace oneflow {
 
+#define INLINE inline
+
 #define OF_DISALLOW_COPY(ClassName)     \
   ClassName(const ClassName&) = delete; \
   ClassName& operator=(const ClassName&) = delete;
@@ -96,8 +98,8 @@ void EraseIf(HashMap<K, V>* hash_map,
   }
 }
 
-template<template<class, class, class...> class C, typename K, typename V,
-         typename... Args>
+template<template<typename, typename, typename...> class C, typename K,
+         typename V, typename... Args>
 V GetOrDefault(const C<K, V, Args...>& m, K const& key, const V& defval) {
   typename C<K, V, Args...>::const_iterator it = m.find(key);
   if (it == m.end()) {

@@ -12,24 +12,24 @@ namespace schedule {
 class UtilizationAnalyzer {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UtilizationAnalyzer);
-  explicit UtilizationAnalyzer(const SGraph& sgraph) : sgraph_(&sgraph) {}
+  UtilizationAnalyzer() = default;
   virtual ~UtilizationAnalyzer() = default;
 
-  inline const SGraph& sgraph() const { return *sgraph_; }
-
   std::unique_ptr<UtilizationGraph> CreateUtilizationGraph(
-      std::string log_file);
+      const SGraph& sgraph, const std::string& log_file);
   virtual std::unique_ptr<UtilizationGraph> Analyze(
+      const SGraph& sgraph,
       const UtilizationEventPackageProto& dev_info_package) const;
 
  protected:
   virtual void ForEachDeviceMemory(
       const std::function<void(const std::string&, uint64_t)>& cb) const;
   virtual std::unique_ptr<UtilizationEventPackageProto> ParseEventPackageProto(
-      const std::string& log_file) const;
+      const SGraph& sgraph, const std::string& log_file) const;
 
  private:
   std::unique_ptr<UtilizationGraph> Analyze(
+      const SGraph& sgraph,
       const UtilizationPackageProto& utilization_package) const;
 
   void GetUtilizationPackageFromEvent(
@@ -47,7 +47,6 @@ class UtilizationAnalyzer {
   void PackUtilizationProto(
       const std::list<const UtilizationEventProto*>& event_pair,
       UtilizationPackageProto* utilization_package) const;
-  const SGraph* sgraph_;
 };
 
 }  // namespace schedule
