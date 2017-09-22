@@ -12,14 +12,40 @@ std::string Visualization::UGraph2TaskSVGString(
   float row_height = 40;
 
   int stream_index = 0;
-  std::list<const TaskStreamUtilization*> tasks;
-  ugraph.node_mgr<TaskStreamUtilization>().ForEach(
-      [&](const TaskStreamUtilization& task) { tasks.push_back(&task); });
-
-  int task_index = 0;
   std::list<const StreamUtilization*> streams;
   ugraph.node_mgr<StreamUtilization>().ForEach(
       [&](const StreamUtilization& stream) { streams.push_back(&stream); });
+  streams.sort([&](const StreamUtilization* a, const StreamUtilization* b) {
+    return a->device_id() < b->device_id()
+           || (a->device_id() == b->device_id()
+               && a->stream_id() < b->stream_id());
+  });
+
+  int task_index = 0;
+  std::list<const TaskStreamUtilization*> tasks;
+  ugraph.node_mgr<TaskStreamUtilization>().ForEach(
+      [&](const TaskStreamUtilization& task) { tasks.push_back(&task); });
+  tasks.sort([&](const TaskStreamUtilization* a,
+                 const TaskStreamUtilization* b) {
+    return a->task_id() < b->task_id()
+           || (a->task_id() == b->task_id() && a->stream_id() < b->stream_id());
+  });
+
+  int batch_index = 0;
+  std::unordered_map<uint64_t, std::list<const UtilizationProto*>>
+      grouped_batch;
+  for (const auto* u : ugraph.computation().raw_protos()) {
+    grouped_batch[u->start_batch_id()].push_back(u);
+  }
+  std::list<const std::list<const UtilizationProto*>*> batch_groups;
+  for (const auto& pair : grouped_batch) {
+    batch_groups.push_back(&pair.second);
+  }
+  batch_groups.sort([&](const std::list<const UtilizationProto*>* a,
+                        const std::list<const UtilizationProto*>* b) {
+    return a->front()->start_batch_id() < b->front()->start_batch_id();
+  });
+
   auto get_x = [&](const UtilizationProto* u) {
     float x = (u->start_at() - start_at) / duration * 100;
     return std::to_string(x) + "%";
@@ -30,11 +56,12 @@ std::string Visualization::UGraph2TaskSVGString(
   };
   int task_height = row_height * tasks.size();
   int stream_height = row_height * streams.size();
+  int batch_height = row_height * batch_groups.size();
   // clang-format off
 	SXML svg{"svg", {
 		{"@", {
 			{"width", 1928},
-			{"height", task_height + row_height * 3 + stream_height},
+			{"height", row_height * 4 + task_height + stream_height + batch_height},
 			{"xmlns", "http://www.w3.org/2000/svg"},
 			{"xmlns:xlink", "http://www.w3.org/1999/xlink"},
 		}},
@@ -75,6 +102,22 @@ std::string Visualization::UGraph2TaskSVGString(
 						{"font-size", 20},
 					}},
 					{"", "Task Stream"},
+				}},
+			}},
+			{"svg", {
+				{"@", {
+					{"x", 0},
+					{"y", task_height + stream_height + row_height * 2},
+					{"width", "100%"},
+					{"height", row_height},
+				}},
+				{"text", {
+					{"@", {
+						{"x", 0},
+						{"y", 25},
+						{"font-size", 20},
+					}},
+					{"", "Batch"},
 				}},
 			}},
 			{"svg", {
@@ -142,7 +185,7 @@ std::string Visualization::UGraph2TaskSVGString(
 										{"y", padding},
 										{"width", get_w(u)},
 										{"height", row_height - padding * 2},
-										{"stroke", "green"},
+										{"stroke", "blue"},
 										{"fill", "blue"}}}
 								}};
 							})}
@@ -217,7 +260,7 @@ std::string Visualization::UGraph2TaskSVGString(
 										{"y", padding},
 										{"width", get_w(u)},
 										{"height", row_height - padding * 2},
-										{"stroke", "green"},
+										{"stroke", "blue"},
 										{"fill", "blue"}}}
 								}};
 							})}
@@ -227,7 +270,73 @@ std::string Visualization::UGraph2TaskSVGString(
 					return svg;
 				})}
 			}},
-			
+			{"svg", {
+				{"@", {
+					{"x", 0},
+					{"y", row_height * 3 + stream_height + task_height},
+					{"width", "100%"},
+					{"height", batch_height},
+				}},
+				{"", SXML::List(batch_groups, [&](const std::list<const UtilizationProto*>* batch){
+					SXML svg{"svg", {
+						{"@", {
+							{"x", "0%"},
+							{"y", batch_index * row_height},
+							{"width", "100%"},
+							{"height", row_height},
+						}},
+						{"svg", {
+							{"@", {
+								{"x", "0%"},
+								{"y", 0},
+								{"width", "10%"},
+								{"height", "100%"},
+							}},
+							{"text", {
+								{"@", {
+									{"x", 0},
+									{"y", 25},
+									{"font-size", 13},
+								}},
+								{"", "batch-id: " + std::to_string(batch->front()->start_batch_id())},
+							}},
+						}},
+						{"svg", {
+							{"@", {
+								{"x", "10%"},
+								{"y", 0},
+								{"width", "90%"},
+								{"height", "100%"},
+							}},
+							{"rect", {
+								{"@", {
+									{"x", 0},
+									{"y", padding},
+									{"width", "100%"},
+									{"height", row_height - padding * 2},
+									{"stroke", "black"},
+									{"stroke-width", 1},
+									{"fill-opacity", 1},
+									{"fill", "white"},
+								}}
+							}},
+							{"", SXML::List(*batch, [&](const UtilizationProto* u){
+								return SXML{"rect", {
+									{"@", {
+										{"x", get_x(u)},
+										{"y", padding},
+										{"width", get_w(u)},
+										{"height", row_height - padding * 2},
+										{"stroke", "blue"},
+										{"fill", "blue"}}}
+								}};
+							})}
+						}},
+					}};
+					++ batch_index;
+					return svg;
+				})}
+			}}
 		}},
 	}};
   // clang-format on
