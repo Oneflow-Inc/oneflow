@@ -102,8 +102,6 @@ std::string RegstDesc::DebugStr() const {
 }
 
 void RegstDesc::ToProto(RegstDescProto* ret) const {
-  CHECK_LE(min_register_num_, register_num_);
-  CHECK_LE(register_num_, max_register_num_);
   ret->set_regst_desc_id(regst_desc_id_);
   ret->set_producer_task_id(producer_->task_id());
   for (const TaskNode* consumer : consumers_) {
@@ -116,7 +114,7 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
     pair.second->ToProto(&(pb_pair.second));
     ret->mutable_lbn2blob_desc()->insert(pb_pair);
   }
-  ret->set_register_num(register_num_);
+  ret->set_register_num(min_register_num_);
   ret->set_min_register_num(min_register_num_);
   ret->set_max_register_num(max_register_num_);
   *(ret->mutable_mem_case()) = InferMemCase();

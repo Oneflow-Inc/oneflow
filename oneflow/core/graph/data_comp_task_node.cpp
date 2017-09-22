@@ -158,7 +158,7 @@ void DataCompTaskNode::BpBuildExecAndEnrollLbn2Regsts(TaskGraph*) {
     BindProducedRegstAndOutEdge(in_diff_regst, SoleOutEdge());
   }
   NewProducedRegstDesc("model_diff", 1, kMaxRegisterNum);
-  NewProducedRegstDesc("activation_diff", 1, kMaxRegisterNum);
+  NewProducedRegstDesc("activation_diff", 1);
   // Subscribe
   ConsumeRegstDesc("activation",
                    GetFwNode()->GetProducedRegstDesc("activation"));
