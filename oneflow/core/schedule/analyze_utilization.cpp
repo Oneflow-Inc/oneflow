@@ -1,6 +1,7 @@
 #include "gflags/gflags.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/schedule/mem_info.h"
 #include "oneflow/core/schedule/plan_sgraph.h"
 #include "oneflow/core/schedule/schedule_factory_configure.h"
 #include "oneflow/core/schedule/session.h"
@@ -13,6 +14,7 @@
 DEFINE_string(plan, "", "plan file");
 DEFINE_string(event_package, "", "utilization event package proto file");
 DEFINE_string(dot_dir, "./tmp", "dot file directory");
+DEFINE_string(this_machine_name, "", "the name of the current machine");
 
 namespace oneflow {
 namespace schedule {
@@ -26,6 +28,7 @@ std::unique_ptr<Plan> LoadPlan(const std::string& file) {
 }
 
 void AnalyzeUtilization() {
+  MemInfo::Singleton()->GetMemInfo(FLAGS_this_machine_name);
   const auto& sfp = ScheduleFactoryConfigure::Provider("utilization");
   const auto& allocator_factory = sfp.allocator_factory();
   std::unique_ptr<Allocator> allocator = allocator_factory.CreateAllocator();

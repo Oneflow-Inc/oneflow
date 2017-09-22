@@ -13,7 +13,7 @@
 
 DEFINE_string(plan, "", "plan file");
 DEFINE_string(dot_dir, "./tmp", "dot file directory");
-DEFINE_string(this_machine_name, "", "");
+DEFINE_string(this_machine_name, "", "the name of the current machine");
 
 namespace oneflow {
 namespace schedule {
@@ -91,8 +91,8 @@ void TestPlan() {
             << std::endl;
 }
 
-void TestUtilizationGraph(const std::string& this_machine_name) {
-  MemInfo::Singleton()->GetMemInfo(this_machine_name);
+void TestUtilizationGraph() {
+  MemInfo::Singleton()->GetMemInfo(FLAGS_this_machine_name);
   std::unique_ptr<Plan> plan = LoadPlan(FLAGS_plan);
   PlanSGraph sgraph(*plan);
   Validator validator(ScheduleFactoryConfigure::Provider("default"));
@@ -118,6 +118,6 @@ int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   //  oneflow::schedule::TestDemo();
   //  oneflow::schedule::TestPlan();
-  oneflow::schedule::TestUtilizationGraph(FLAGS_this_machine_name);
+  oneflow::schedule::TestUtilizationGraph();
   return 0;
 }

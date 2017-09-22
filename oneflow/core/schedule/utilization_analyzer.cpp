@@ -8,14 +8,14 @@ namespace schedule {
 
 void UtilizationAnalyzer::ForEachDeviceMemory(
     const std::function<void(const std::string&, uint64_t)>& provide) const {
-  // provide(MemInfo::Singleton()->this_machine_name() + ":host",
-  //         MemInfo::Singleton()->total_cpu_ram_sz()
-  //             / MemInfo::Singleton()->cpu_num());
-  // for (int idx = 0; idx < MemInfo::Singleton()->gpu_num(); ++idx) {
-  //   provide(MemInfo::Singleton()->this_machine_name() + ":kGPU"
-  //               + std::to_string(idx),
-  //           MemInfo::Singleton()->gpu_ram_sz(idx));
-  // }
+  provide(MemInfo::Singleton()->this_machine_name() + ":host",
+          MemInfo::Singleton()->total_cpu_ram_sz()
+              / MemInfo::Singleton()->cpu_num());
+  for (int idx = 0; idx < MemInfo::Singleton()->gpu_num(); ++idx) {
+    provide(MemInfo::Singleton()->this_machine_name() + ":kGPU"
+                + std::to_string(idx),
+            MemInfo::Singleton()->gpu_ram_sz(idx));
+  }
 }
 
 std::unique_ptr<UtilizationEventPackageProto>
