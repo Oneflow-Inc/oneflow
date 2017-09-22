@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_COMM_NETWORK_CTRL_SERVER_H_
-#define ONEFLOW_CORE_COMM_NETWORK_CTRL_SERVER_H_
+#ifndef ONEFLOW_CORE_COMM_NETWORK_RPC_CTRL_SERVER_H_
+#define ONEFLOW_CORE_COMM_NETWORK_RPC_CTRL_SERVER_H_
 
 #include "grpc++/server_builder.h"
 #include "oneflow/core/comm_network/rpc/ctrl_call.h"
@@ -39,4 +39,4 @@ class CtrlServer final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMM_NETWORK_CTRL_SERVER_H_
+#endif  // ONEFLOW_CORE_COMM_NETWORK_RPC_CTRL_SERVER_H_

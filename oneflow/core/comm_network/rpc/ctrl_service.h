@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_COMM_NETWORK_CTRL_SERVICE_H_
-#define ONEFLOW_CORE_COMM_NETWORK_CTRL_SERVICE_H_
+#ifndef ONEFLOW_CORE_COMM_NETWORK_RPC_CTRL_SERVICE_H_
+#define ONEFLOW_CORE_COMM_NETWORK_RPC_CTRL_SERVICE_H_
 
 #include "grpc++/grpc++.h"
 #include "grpc++/impl/codegen/async_stream.h"
@@ -65,4 +65,4 @@ class CtrlService final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMM_NETWORK_CTRL_SERVICE_H_
+#endif  // ONEFLOW_CORE_COMM_NETWORK_RPC_CTRL_SERVICE_H_

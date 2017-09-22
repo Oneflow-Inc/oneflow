@@ -20,7 +20,7 @@ std::tuple<char*, const void*, std::function<void()>> MemoryAllocator::Allocate(
       dptr = (char*)malloc(size);
     }
     if (mem_case.host_pinned_mem().used_by_network()) {
-      comm_net_token = DataCommNet::Singleton()->RegisterMemory(dptr);
+      comm_net_token = DataCommNet::Singleton()->RegisterMemory(dptr, size);
     }
     memset(dptr, memset_val, size);
   } else if (mem_case.has_device_cuda_mem()) {

@@ -12,7 +12,7 @@ class RdmaDataCommNet final : public DataCommNet {
 
   static void Init() { DataCommNet::set_comm_network_ptr(new RdmaDataCommNet); }
 
-  const void* RegisterMemory(void* dptr) override {
+  const void* RegisterMemory(void* dptr, size_t byte_size) override {
     // TODO
     return nullptr;
   }
@@ -35,11 +35,6 @@ class RdmaDataCommNet final : public DataCommNet {
   }
 
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override {
-    // TODO
-  }
-
-  void SetCallbackForReceivedActorMsg(
-      std::function<void(const ActorMsg&)> callback) override {
     // TODO
   }
 
