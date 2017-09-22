@@ -68,7 +68,7 @@ void UtilizationAnalyzer::GetUtilizationPackageFromEvent(
   for (int eid = 0; eid < event_package.event_size(); ++eid) {
     const UtilizationEventProto& event = event_package.event(eid);
     std::string key = UtilizationUtil::GetUniqueName(event.resource());
-    key += "-" + event.batch_id();
+    key += "-" + std::to_string(event.batch_id());
     grouped_events[key].push_back(&event);
   }
 
