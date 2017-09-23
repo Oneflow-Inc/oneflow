@@ -116,10 +116,14 @@ void TaskNode::BindProducedRegstAndOutEdge(std::weak_ptr<RegstDesc> regst,
 }
 
 std::shared_ptr<RegstDesc> TaskNode::NewProducedRegstDesc(
-    const std::string& regst_desc_name) {
+    const std::string& regst_desc_name, int32_t min_register_num,
+    int32_t max_register_num) {
   auto regst_desc = std::make_shared<RegstDesc>();
   regst_desc->SetProducer(this);
   regst_desc->set_regst_desc_id(IDMgr::Singleton()->NewRegstDescId());
+  CHECK_LE(min_register_num, max_register_num);
+  regst_desc->set_min_register_num(min_register_num);
+  regst_desc->set_max_register_num(max_register_num);
   CHECK(produced_regst_descs_.emplace(regst_desc_name, regst_desc).second);
   return regst_desc;
 }
