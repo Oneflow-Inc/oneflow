@@ -24,7 +24,7 @@ OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ActorMsgType);
 class ActorMsg final {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(ActorMsg);
-  ActorMsg();
+  ActorMsg() = default;
   ~ActorMsg() = default;
 
   // Build Msg

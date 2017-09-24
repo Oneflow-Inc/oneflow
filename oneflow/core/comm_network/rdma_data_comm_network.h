@@ -23,14 +23,12 @@ class RdmaDataCommNet final : public DataCommNet {
     // TODO
   }
 
-  void* CreateStream() override {
-    // TODO
-    return nullptr;
-  }
-  void Read(void* stream_id, const void* src_token, const void* dst_token) {
+  void* Read(int64_t src_machine_id, const void* src_token,
+             const void* dst_token) override {
     // TODO
   }
-  void AddCallBack(void* stream_id, std::function<void()>) {
+
+  void AddReadCallBack(void* read_id, std::function<void()> callback) override {
     // TODO
   }
 
