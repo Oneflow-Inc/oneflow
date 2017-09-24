@@ -25,7 +25,7 @@ class SocketIOWorker final {
   SocketIOWorker();
   ~SocketIOWorker();
 
-  void AddWork(SocketIOHelperIf* io_helper);
+  void ProcessReadyIOHelper(SocketIOHelperIf* io_helper);
 
  private:
   std::thread thread_;

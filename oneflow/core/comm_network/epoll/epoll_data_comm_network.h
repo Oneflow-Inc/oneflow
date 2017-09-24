@@ -3,6 +3,7 @@
 
 #include "oneflow/core/comm_network/data_comm_network.h"
 #include "oneflow/core/comm_network/epoll/socket_helper.h"
+#include "oneflow/core/comm_network/epoll/socket_memory_desc.h"
 
 #ifdef PLATFORM_POSIX
 
@@ -34,16 +35,12 @@ class EpollDataCommNet final : public DataCommNet {
   SocketWriteHelper* GetSocketWriteHelper(int64_t machine_id);
 
   // Memory Desc
-  struct MemDesc {
-    void* mem_ptr;
-    size_t byte_size;
-  };
   std::mutex mem_desc_mtx_;
-  std::list<MemDesc*> mem_descs_;
+  std::list<SocketMemDesc*> mem_descs_;
   size_t unregister_mem_descs_cnt_;
   // Threads
   std::thread epoll_thread_;
-  std::vector<SocketIOWorker> io_workers_;
+  std::vector<SocketIOWorker*> io_workers_;
   // Socket
   std::vector<int> machine_id2sockfd_;
   HashMap<int, std::unique_ptr<SocketHelper>> sockfd2io_helper_;

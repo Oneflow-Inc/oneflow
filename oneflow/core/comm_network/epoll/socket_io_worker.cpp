@@ -17,7 +17,7 @@ SocketIOWorker::~SocketIOWorker() {
   channel_.CloseReceiveEnd();
 }
 
-void AddWork(SocketIOHelperIf* io_helper) {
+void SocketIOWorker::ProcessReadyIOHelper(SocketIOHelperIf* io_helper) {
   CHECK_EQ(channel_.Send(io_helper), 0);
 }
 

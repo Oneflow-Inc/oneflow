@@ -20,14 +20,18 @@ sockaddr_in GetSockAddr(int64_t machine_id) {
 
 }  // namespace
 
-~EpollDataCommNet::EpollDataCommNet() { TODO(); }
+EpollDataCommNet::~EpollDataCommNet() {
+  for (int sockfd : machine_id2sockfd_) { PCHECK(close(sockfd) == 0); }
+  epoll_thread_.join();
+  for (SocketIOWorker* worker : io_workers_) { delete worker; }
+}
 
 void EpollDataCommNet::Init() {
   DataCommNet::Singleton()->set_comm_network_ptr(new EpollDataCommNet());
 }
 
 const void* EpollDataCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
-  auto mem_desc = new MemDesc;
+  auto mem_desc = new SocketMemDesc;
   mem_desc->mem_ptr = mem_ptr;
   mem_desc->byte_size = byte_size;
   {
@@ -42,7 +46,7 @@ void EpollDataCommNet::UnRegisterMemory(const void* token) {
   CHECK(!mem_descs_.empty());
   unregister_mem_descs_cnt_ += 1;
   if (unregister_mem_descs_cnt_ == mem_descs_.size()) {
-    for (MemDesc* mem_desc : mem_descs_) { delete mem_desc; }
+    for (SocketMemDesc* mem_desc : mem_descs_) { delete mem_desc; }
     mem_descs_.clear();
     unregister_mem_descs_cnt_ = 0;
   }
@@ -54,23 +58,39 @@ void EpollDataCommNet::RegisterMemoryDone() {
 
 void* EpollDataCommNet::Read(int64_t src_machine_id, const void* src_token,
                              const void* dst_token) {
-  TODO();
+  auto callback_list = new CallBackList;
+  SocketMsg msg;
+  msg.msg_type = SocketMsgType::kRequestWrite;
+  msg.request_write_msg.src_token = src_token;
+  msg.request_write_msg.dst_machine_id =
+      RuntimeCtx::Singleton()->this_machine_id();
+  msg.request_write_msg.dst_token = dst_token;
+  msg.request_write_msg.read_id = callback_list;
+  GetSocketWriteHelper(src_machine_id)->Write(msg);
+  return callback_list;
 }
 
 void EpollDataCommNet::AddReadCallBack(void* read_id,
                                        std::function<void()> callback) {
-  TODO();
+  auto callback_list = static_cast<CallBackList*>(read_id);
+  callback_list->push_back(callback);
 }
 
 void EpollDataCommNet::SendActorMsg(int64_t dst_machine_id,
-                                    const ActorMsg& msg) {
-  TODO();
+                                    const ActorMsg& actor_msg) {
+  SocketMsg msg;
+  msg.msg_type = SocketMsgType::kActor;
+  msg.actor_msg = actor_msg;
+  GetSocketWriteHelper(dst_machine_id)->Write(msg);
 }
 
-// TODO: read worker_num from conf
-EpollDataCommNet::EpollDataCommNet() : io_workers_(1) {
+EpollDataCommNet::EpollDataCommNet() {
   mem_descs_.clear();
   unregister_mem_descs_cnt_ = 0;
+  io_workers_.resize(JobDesc::Singleton()->CommNetIOWorkerNum(), nullptr);
+  for (size_t i = 0; i < io_workers_.size(); ++i) {
+    io_workers_[i] = new SocketIOWorker;
+  }
   InitSockets();
   epoll_thread_ = std::thread(&EpollDataCommNet::EpollLoop, this);
 }
@@ -81,12 +101,12 @@ void EpollDataCommNet::InitSockets() {
   machine_id2sockfd_.assign(total_machine_num, -1);
   sockfd2io_helper_.clear();
   size_t worker_idx = 0;
-  auto NewSocketIOHelper() = [&](int sockfd) {
-    SocketIOWorker* reader = &io_workers_[worker_idx];
+  auto NewSocketIOHelper = [&](int sockfd) {
+    SocketIOWorker* reader = io_workers_[worker_idx];
     worker_idx = (worker_idx + 1) % io_workers_.size();
-    SocketIOWorker* writer = &io_workers_[worker_idx];
+    SocketIOWorker* writer = io_workers_[worker_idx];
     worker_idx = (worker_idx + 1) % io_workers_.size();
-    return of_make_unique<SocketIOHelper>(sockfd, reader, writer);
+    return of_make_unique<SocketHelper>(sockfd, reader, writer);
   };
   // listen
   sockaddr_in this_sockaddr = GetSockAddr(this_machine_id);
@@ -95,6 +115,7 @@ void EpollDataCommNet::InitSockets() {
               sizeof(this_sockaddr))
          == 0);
   PCHECK(listen(listen_sockfd, total_machine_num) == 0);
+  machine_id2sockfd_[this_machine_id] = listen_sockfd;
   // connect
   FOR_RANGE(int64_t, peer_machine_id, this_machine_id + 1, total_machine_num) {
     sockaddr_in peer_sockaddr = GetSockAddr(peer_machine_id);
@@ -118,7 +139,6 @@ void EpollDataCommNet::InitSockets() {
     CHECK(sockfd2io_helper_.emplace(sockfd, NewSocketIOHelper(sockfd)).second);
     machine_id2sockfd_[peer_machine_id] = sockfd;
   }
-  PCHECK(close(listen_sockfd) == 0);
 }
 
 void EpollDataCommNet::EpollLoop() {
@@ -130,9 +150,10 @@ void EpollDataCommNet::EpollLoop() {
     ep_event.data.ptr = pair.second.get();
     PCHECK(epoll_ctl(epfd, EPOLL_CTL_ADD, pair.first, &ep_event) == 0);
   }
-  const int maxevents = 128;
+  const int maxevents = 32;
   std::vector<epoll_event> ep_events(maxevents);
-  while (true) {  // TODO: how to exit?
+  int64_t rdhup_cnt = 0;
+  while (rdhup_cnt < JobDesc::Singleton()->TotalMachineNum() - 1) {
     int event_num = epoll_wait(epfd, &ep_events[0], maxevents, -1);
     PCHECK(event_num >= 0);
     FOR_RANGE(int, event_idx, 0, event_num) {
@@ -140,25 +161,26 @@ void EpollDataCommNet::EpollLoop() {
       auto io_helper = static_cast<SocketHelper*>(cur_event.data.ptr);
       PCHECK(!(cur_event.events & EPOLLERR));
       if (cur_event.events & EPOLLIN) {
-        io_helper.mut_read_helper()->NotifyWorker();
+        if (cur_event.events & EPOLLRDHUP) { rdhup_cnt += 1; }
+        io_helper->mut_read_helper()->NotifyWorker();
       }
       if (cur_event.events & EPOLLOUT) {
-        io_helper.mut_write_helper()->NotifyWorker();
+        io_helper->mut_write_helper()->NotifyWorker();
       }
     }
   }
 }
 
-SocketHelper* GetSocketHelper(int64_t machine_id) {
+SocketHelper* EpollDataCommNet::GetSocketHelper(int64_t machine_id) {
   int sockfd = machine_id2sockfd_.at(machine_id);
   return sockfd2io_helper_.at(sockfd).get();
 }
 
-SocketReadHelper* GetSocketReadHelper(int64_t machine_id) {
+SocketReadHelper* EpollDataCommNet::GetSocketReadHelper(int64_t machine_id) {
   return GetSocketHelper(machine_id)->mut_read_helper();
 }
 
-SocketWriteHelper* GetSocketWriteHelper(int64_t machine_id) {
+SocketWriteHelper* EpollDataCommNet::GetSocketWriteHelper(int64_t machine_id) {
   return GetSocketHelper(machine_id)->mut_write_helper();
 }
 

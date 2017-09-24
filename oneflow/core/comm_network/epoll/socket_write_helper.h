@@ -15,9 +15,11 @@ class SocketWriteHelper final : public SocketIOHelperIf {
 
   SocketWriteHelper(int sockfd, SocketIOWorker* worker) { TODO(); }
 
+  void Write(const SocketMsg& msg) { TODO(); }
+
   void Work() override { TODO(); }
 
-  void NotifyWorker() { TOOD(); }
+  void NotifyWorker() { TODO(); }
 
  private:
 };
