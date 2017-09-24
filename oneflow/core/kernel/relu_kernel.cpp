@@ -11,7 +11,6 @@ void ReluKernel<device_type, T>::Forward(
     CopyDataIdFromIbToAllOb<device_type>(ctx.device_ctx, BnInOp2Blob);
   }
   Blob* out_blob = BnInOp2Blob("out");
-  out_blob->CopyDataIdFrom<device_type>(ctx.device_ctx, in_blob);
   ReluKernelUtil<device_type, T>::Forward(ctx, out_blob->shape().elem_cnt(),
                                           in_blob->dptr<T>(),
                                           out_blob->mut_dptr<T>());
@@ -24,7 +23,6 @@ void ReluKernel<device_type, T>::Backward(
   const Blob* in_blob = BnInOp2Blob("in");
   const Blob* out_diff = BnInOp2Blob("out_diff");
   Blob* in_diff = BnInOp2Blob("in_diff");
-  in_diff->CopyDataIdFrom<device_type>(ctx.device_ctx, out_diff);
   ReluKernelUtil<device_type, T>::Backward(
       ctx, in_blob->shape().elem_cnt(), out_diff->dptr<T>(), in_blob->dptr<T>(),
       in_diff->mut_dptr<T>());

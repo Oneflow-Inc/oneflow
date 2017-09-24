@@ -8,9 +8,13 @@ template<typename T>
 void RecordBlobImpl(PersistentOutStream& out_stream, const Blob* blob) {
   CHECK_EQ(GetDataType<T>::val, blob->data_type());
   blob->shape().SerializeWithTextFormat(out_stream);
+  out_stream << '\n';
   const T* dptr = blob->dptr<T>();
   for (int64_t i = 0; i < blob->shape().At(0); ++i) {
-    if (blob->has_data_id()) { out_stream << *(blob->data_id(i)) << " "; }
+    if (blob->has_data_id()) {
+      out_stream.Write(blob->data_id(i), blob->data_id_len(i));
+      out_stream << ' ';
+    }
     for (int64_t j = 0; j < blob->shape().Count(1); ++j) {
       out_stream << std::to_string(*dptr++) << ' ';
     }

@@ -65,7 +65,6 @@ inline int64_t Shape::Count(int64_t begin_axis) const {
 template<typename StreamT>
 void Shape::SerializeWithTextFormat(StreamT& out_stream) const {
   for (int64_t dim : dim_vec_) { out_stream << std::to_string(dim) << ' '; }
-  out_stream << '\n';
 }
 
 }  // namespace oneflow

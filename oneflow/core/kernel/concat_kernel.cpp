@@ -52,9 +52,12 @@ void ConcatKernel<device_type, T>::ConcatKernelWork(
   }
   int64_t data_id_offset = 0;
 
+  if (BnInOp2Blob(in_bns.front())->has_data_id() && concat_axis == 1) {
+    CopyDataIdFromIbToAllOb<device_type>(ctx.device_ctx, BnInOp2Blob);
+  }
   for (const std::string& in_bn : in_bns) {
     Blob* in_blob = BnInOp2Blob(in_bn);
-    if (in_blob->has_data_id()) {
+    if (in_blob->has_data_id() && concat_axis == 0) {
       CHECK_LE(data_id_offset + in_blob->ByteSizeOfDataIdField(),
                out_blob->TotalByteSize());
       Memcpy<device_type>(
