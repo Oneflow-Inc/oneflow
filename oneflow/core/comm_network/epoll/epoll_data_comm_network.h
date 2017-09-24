@@ -2,45 +2,48 @@
 #define ONEFLOW_CORE_COMM_NETWORK_EPOLL_EPOLL_DATA_COMM_NETWORK_H_
 
 #include "oneflow/core/comm_network/data_comm_network.h"
+#include "oneflow/core/comm_network/epoll/socket_helper.h"
+#include "oneflow/core/comm_network/epoll/socket_memory_desc.h"
 
 #ifdef PLATFORM_POSIX
-
-#include "oneflow/core/comm_network/epoll/socket_io_helper.h"
 
 namespace oneflow {
 
 class EpollDataCommNet final : public DataCommNet {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EpollDataCommNet);
-  EpollDataCommNet() = delete;
-  ~EpollDataCommNet() = default;
+  ~EpollDataCommNet();
 
-  static void Init(const Plan& plan);
+  static void Init();
 
   const void* RegisterMemory(void* mem_ptr, size_t byte_size) override;
   void UnRegisterMemory(const void* token) override;
   void RegisterMemoryDone() override;
 
-  void* CreateStream() override;
-  void Read(void* stream_id, const void* src_token,
-            const void* dst_token) override;
-  void AddCallBack(void* stream_id, std::function<void()>) override;
+  void* Read(int64_t src_machine_id, const void* src_token,
+             const void* dst_token) override;
+  void AddReadCallBack(void* read_id, std::function<void()> callback) override;
 
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
 
  private:
-  EpollDataCommNet(const Plan& plan);
+  EpollDataCommNet();
+  void InitSockets();
+  void EpollLoop();
+  SocketHelper* GetSocketHelper(int64_t machine_id);
+  SocketReadHelper* GetSocketReadHelper(int64_t machine_id);
+  SocketWriteHelper* GetSocketWriteHelper(int64_t machine_id);
 
   // Memory Desc
-  struct MemDesc {
-    void* mem_ptr;
-    size_t byte_size;
-  };
   std::mutex mem_desc_mtx_;
-  std::list<MemDesc*> mem_descs_;
+  std::list<SocketMemDesc*> mem_descs_;
   size_t unregister_mem_descs_cnt_;
+  // Threads
+  std::thread epoll_thread_;
+  std::vector<SocketIOWorker*> io_workers_;
   // Socket
-  HashMap<int, std::unique_ptr<SocketIOHelper>> socket2io_helper_;
+  std::vector<int> machine_id2sockfd_;
+  HashMap<int, std::unique_ptr<SocketHelper>> sockfd2io_helper_;
 };
 
 }  // namespace oneflow

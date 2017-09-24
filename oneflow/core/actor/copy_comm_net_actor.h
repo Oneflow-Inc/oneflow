@@ -14,6 +14,7 @@ class CopyCommNetActor final : public Actor {
   void Init(const TaskProto&, const ThreadCtx&) override;
 
  private:
+  class CommNetDeviceCtx;
   struct RegstCtx {
     const void* comm_net_token;
     Regst* regst_raw_ptr;
@@ -30,7 +31,7 @@ class CopyCommNetActor final : public Actor {
   void Act() override;
 
   HashMap<int64_t, RegstCtx> piece_id2regst_ctx;
-  void* stream_id_;
+  CommNetDeviceCtx* comm_net_device_ctx_;
 };
 
 }  // namespace oneflow
