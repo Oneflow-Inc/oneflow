@@ -14,7 +14,7 @@ find_package(CUDA REQUIRED)
 find_package(CuDNN REQUIRED)
 
 if (NOT WIN32)
-  set(BLA_VENDOR "Intel10_64lp_seq")
+  #set(BLA_VENDOR "Intel10_64lp_seq")
   find_package(BLAS REQUIRED)
 else()
   set(MKL_LIB_PATH "C:/Program Files (x86)/IntelSWTools/compilers_and_libraries_2017/windows/mkl/lib/intel64_win")
