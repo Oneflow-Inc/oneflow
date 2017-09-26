@@ -40,7 +40,7 @@ void TestFileOperation(FileSystem* file_system) {
   random_access_file->Read(0, file_size, read_array);
   std::string read_content(read_array, file_size);
   ASSERT_EQ(write_content + append_content, read_content);
-  file_system->DeleteFile(file_name);
+  file_system->DelFile(file_name);
   delete[] read_array;
 }
 

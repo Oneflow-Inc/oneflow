@@ -244,7 +244,7 @@ uint64_t WindowsFileSystem::GetFileSize(const std::string& fname) {
   std::string translated_fname = TranslateName(fname);
   std::wstring ws_translated_dir = Utf8ToWideChar(translated_fname);
   WIN32_FILE_ATTRIBUTE_DATA attrs;
-  PCHECK(FALSE
+  PCHECK(TRUE
          == ::GetFileAttributesExW(ws_translated_dir.c_str(),
                                    GetFileExInfoStandard, &attrs))
       << "Can not get size for: " + fname;
