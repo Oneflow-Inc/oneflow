@@ -46,7 +46,7 @@ void MemoryAllocator::Deallocate(char* dptr, const void* comm_net_token,
       DataCommNet::Singleton()->UnRegisterMemory(comm_net_token);
     }
     if (mem_case.host_pinned_mem().used_by_device()) {
-      CudaCheck(cudaFreeHost(&dptr));
+      CudaCheck(cudaFreeHost(dptr));
     } else {
       free(dptr);
     }
@@ -54,7 +54,7 @@ void MemoryAllocator::Deallocate(char* dptr, const void* comm_net_token,
     int32_t current_device_id;
     CudaCheck(cudaGetDevice(&current_device_id));
     CHECK_EQ(mem_case.device_cuda_mem().device_id(), current_device_id);
-    CudaCheck(cudaFree(&dptr));
+    CudaCheck(cudaFree(dptr));
   }
 }
 
