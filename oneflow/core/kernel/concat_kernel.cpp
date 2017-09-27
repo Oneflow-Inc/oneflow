@@ -50,21 +50,9 @@ void ConcatKernel<device_type, T>::ConcatKernelWork(
     LOG(FATAL) << "device type has not been set";
     return;
   }
-  int64_t data_id_offset = 0;
 
-  if (BnInOp2Blob(in_bns.front())->has_data_id() && concat_axis == 1) {
-    CopyDataIdFromIbToAllOb<device_type>(ctx.device_ctx, BnInOp2Blob);
-  }
   for (const std::string& in_bn : in_bns) {
     Blob* in_blob = BnInOp2Blob(in_bn);
-    if (in_blob->has_data_id() && concat_axis == 0) {
-      CHECK_LE(data_id_offset + in_blob->ByteSizeOfDataIdField(),
-               out_blob->TotalByteSize());
-      Memcpy<device_type>(
-          ctx.device_ctx, out_blob->mut_data_id() + data_id_offset,
-          in_blob->data_id(), in_blob->ByteSizeOfDataIdField(), kind);
-      data_id_offset += in_blob->ByteSizeOfDataIdField();
-    }
     T* in_blob_mut_dptr = in_blob->mut_dptr<T>();
     const int64_t in_concat_axis_dim = in_blob->shape().At(concat_axis);
     const int64_t cp_sz = in_concat_axis_dim * concat_element_cnt * sizeof(T);
@@ -80,6 +68,30 @@ void ConcatKernel<device_type, T>::ConcatKernelWork(
     }
 
     offset_concat_axis += in_concat_axis_dim;
+  }
+  if (BnInOp2Blob(in_bns.front())->has_data_id()) {
+    CopyDataIdToOb(ctx, in_bns, concat_axis, BnInOp2Blob);
+  }
+}
+
+template<DeviceType device_type, typename T>
+void ConcatKernel<device_type, T>::CopyDataIdToOb(
+    const KernelCtx& ctx, const std::vector<std::string>& ibns,
+    const int32_t concat_axis,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (concat_axis == 1) {
+    CopyDataIdFromIbToAllOb<device_type>(ctx.device_ctx, BnInOp2Blob);
+    return;
+  }
+  int64_t data_id_offset = 0;
+  for (const std::string& in_bn : in_bns) {
+    Blob* in_blob = BnInOp2Blob(in_bn);
+    CHECK_LE(data_id_offset + in_blob->ByteSizeOfDataIdField(),
+             out_blob->TotalByteSize());
+    Memcpy<device_type>(
+        ctx.device_ctx, out_blob->mut_data_id() + data_id_offset,
+        in_blob->data_id(), in_blob->ByteSizeOfDataIdField(), kind);
+    data_id_offset += in_blob->ByteSizeOfDataIdField();
   }
 }
 
