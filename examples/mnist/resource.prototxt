@@ -1,6 +1,7 @@
 machine {
-  addr: ""
-  port: ""
+  addr: "192.168.1.11"
+  data_port: "9000"
+  ctrl_port: "9001"
   name: "centos-0"
 }
 

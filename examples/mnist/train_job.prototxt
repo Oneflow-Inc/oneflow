@@ -15,7 +15,7 @@ train_conf {
   model_save_snapshots_path: "./snapshots"
   num_of_batches_in_snapshot: 10
   staleness: 0
-  total_batch_num: 35
+  total_batch_num: 6
   default_fill_conf {
     gaussian_conf {
       mean: 0.0

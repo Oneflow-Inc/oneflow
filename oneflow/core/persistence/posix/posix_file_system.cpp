@@ -62,19 +62,18 @@ class PosixWritableFile : public WritableFile {
   }
 
   void Append(const char* data, size_t n) override {
-    if (fwrite(data, sizeof(char), n, file_) != n) {
-      PLOG(FATAL) << "Fail to append to file " << fname_;
-    }
+    PCHECK(fwrite(data, sizeof(char), n, file_) == n)
+        << "Fail to append to file " << fname_;
   }
 
   void Close() override {
     Flush();
-    if (fclose(file_) != 0) { PLOG(FATAL) << "Fail to close file " << fname_; }
+    PCHECK(fclose(file_) == 0) << "Fail to close file " << fname_;
     file_ = nullptr;
   }
 
   void Flush() override {
-    if (fflush(file_) != 0) { PLOG(FATAL) << "Fail to flush file " << fname_; }
+    PCHECK(fflush(file_) == 0) << "Fail to flush file " << fname_;
   }
 };
 
@@ -82,11 +81,8 @@ void PosixFileSystem::NewRandomAccessFile(
     const std::string& fname, std::unique_ptr<RandomAccessFile>* result) {
   std::string translated_fname = TranslateName(fname);
   int fd = open(translated_fname.c_str(), O_RDONLY);
-  if (fd < 0) {
-    PLOG(FATAL) << "Fail to open file " << fname;
-  } else {
-    result->reset(new PosixRandomAccessFile(fname, fd));
-  }
+  PCHECK(fd >= 0) << "Fail to open file " << fname;
+  result->reset(new PosixRandomAccessFile(fname, fd));
   CHECK_NOTNULL(result->get());
 }
 
@@ -94,11 +90,8 @@ void PosixFileSystem::NewWritableFile(const std::string& fname,
                                       std::unique_ptr<WritableFile>* result) {
   std::string translated_fname = TranslateName(fname);
   FILE* f = fopen(translated_fname.c_str(), "w");
-  if (f == nullptr) {
-    PLOG(FATAL) << "Fail to open file " << fname;
-  } else {
-    result->reset(new PosixWritableFile(translated_fname, f));
-  }
+  PCHECK(f != nullptr) << "Fail to open file " << fname;
+  result->reset(new PosixWritableFile(translated_fname, f));
   CHECK_NOTNULL(result->get());
 }
 
@@ -106,11 +99,8 @@ void PosixFileSystem::NewAppendableFile(const std::string& fname,
                                         std::unique_ptr<WritableFile>* result) {
   std::string translated_name = TranslateName(fname);
   FILE* f = fopen(translated_name.c_str(), "a");
-  if (f == nullptr) {
-    PLOG(FATAL) << "Fail to open file " << fname;
-  } else {
-    result->reset(new PosixWritableFile(translated_name, f));
-  }
+  PCHECK(f != nullptr) << "Fail to open file " << fname;
+  result->reset(new PosixWritableFile(translated_name, f));
   CHECK_NOTNULL(result->get());
 }
 
@@ -123,10 +113,7 @@ std::vector<std::string> PosixFileSystem::ListDir(const std::string& dir) {
   std::string translated_dir = TranslateName(dir);
   std::vector<std::string> result;
   DIR* d = opendir(translated_dir.c_str());
-  if (d == nullptr) {
-    PLOG(FATAL) << "Fail to open dir " << dir;
-    return result;
-  }
+  PCHECK(d != nullptr) << "Fail to open dir " << dir;
   struct dirent* entry;
   while ((entry = readdir(d)) != nullptr) {
     if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
@@ -138,50 +125,43 @@ std::vector<std::string> PosixFileSystem::ListDir(const std::string& dir) {
   return result;
 }
 
-void PosixFileSystem::DeleteFile(const std::string& fname) {
-  if (unlink(TranslateName(fname).c_str()) != 0) {
-    PLOG(FATAL) << "Fail to delete file " << fname;
-  }
+void PosixFileSystem::DelFile(const std::string& fname) {
+  PCHECK(unlink(TranslateName(fname).c_str()) == 0)
+      << "Fail to delete file " << fname;
 }
 
 void PosixFileSystem::CreateDir(const std::string& dirname) {
-  if (mkdir(TranslateName(dirname).c_str(), 0755) != 0) {
-    PLOG(FATAL) << "Fail to create dir " << dirname;
-  }
+  PCHECK(mkdir(TranslateName(dirname).c_str(), 0755) == 0)
+      << "Fail to create dir " << dirname;
 }
 
 void PosixFileSystem::DeleteDir(const std::string& dirname) {
-  if (rmdir(TranslateName(dirname).c_str()) != 0) {
-    PLOG(FATAL) << "Fail to delete dir " << dirname;
-  }
+  PCHECK(rmdir(TranslateName(dirname).c_str()) == 0)
+      << "Fail to delete dir " << dirname;
 }
 
 uint64_t PosixFileSystem::GetFileSize(const std::string& fname) {
   struct stat sbuf;
-  if (stat(TranslateName(fname).c_str(), &sbuf) != 0) {
-    PLOG(FATAL) << "Fail to load statistics of " << fname;
-    return 0;
-  } else {
-    return sbuf.st_size;
-  }
+  PCHECK(stat(TranslateName(fname).c_str(), &sbuf) == 0)
+      << "Fail to load statistics of " << fname;
+  ;
+  return sbuf.st_size;
 }
 
 void PosixFileSystem::RenameFile(const std::string& old_name,
                                  const std::string& new_name) {
-  if (rename(TranslateName(old_name).c_str(), TranslateName(new_name).c_str())
-      != 0) {
-    PLOG(FATAL) << "Fail to rename file from " << old_name << " to "
-                << new_name;
-  }
+  PCHECK(
+      rename(TranslateName(old_name).c_str(), TranslateName(new_name).c_str())
+      == 0)
+      << "Fail to rename file from " << old_name << " to " << new_name;
 }
 
 bool PosixFileSystem::IsDirectory(const std::string& fname) {
   struct stat sbuf;
   if (stat(TranslateName(fname).c_str(), &sbuf) == 0 && S_ISDIR(sbuf.st_mode)) {
     return true;
-  } else {
-    return false;
   }
+  return false;
 }
 
 }  // namespace fs

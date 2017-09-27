@@ -37,10 +37,21 @@ namespace oneflow {
 
 #define TODO() LOG(FATAL) << "TODO";
 
-#define OF_SINGLETON(ClassName)            \
-  static ClassName* Singleton() {          \
-    static ClassName* ptr = new ClassName; \
-    return ptr;                            \
+#define OF_SINGLETON(ClassName)                              \
+  static ClassName* Singleton() { return *SingletonPPtr(); } \
+  static ClassName** SingletonPPtr() {                       \
+    static ClassName* ptr = new ClassName;                   \
+    return &ptr;                                             \
+  }                                                          \
+  static void RefreshSingleton() {                           \
+    DeleteSingleton();                                       \
+    *SingletonPPtr() = new ClassName;                        \
+  }                                                          \
+  static void DeleteSingleton() {                            \
+    if (Singleton()) {                                       \
+      delete Singleton();                                    \
+      *SingletonPPtr() = nullptr;                            \
+    }                                                        \
   }
 
 #define COMMAND(...)            \
@@ -124,6 +135,8 @@ inline uint32_t NewRandomSeed() {
 #define BOOL_SEQ (true)(false)
 #define PARALLEL_POLICY_SEQ \
   (ParallelPolicy::kModelParallel)(ParallelPolicy::kDataParallel)
+
+#define FOR_RANGE(type, i, begin, end) for (type i = begin; i < end; ++i)
 
 }  // namespace oneflow
 

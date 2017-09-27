@@ -33,6 +33,8 @@ class JobDesc final {
   size_t SizeOfOneDataId() const {
     return job_conf_.max_data_id_length() * sizeof(char);
   }
+  int64_t TotalMachineNum() const { return resource_.machine().size(); }
+  int32_t CommNetIOWorkerNum() const { return 4; }  // TODO
   // Train conf
   const std::string& md_save_snapshots_path() {
     CHECK(is_train());

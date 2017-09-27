@@ -1,0 +1,45 @@
+syntax = "proto3";
+package oneflow;
+
+message BarrierRequest {
+  string name = 1;
+  int32 num = 2;
+}
+
+message BarrierResponse {
+}
+
+message AddWorkerRequest {
+  string worker_ctrl_addr = 1;
+}
+
+message AddWorkerResponse {
+}
+
+enum TryLockResult {
+  kLocked = 0;
+  kDone = 1;
+  kDoing = 2;
+}
+
+message TryLockRequest {
+  string name = 1;
+}
+
+message TryLockResponse {
+  TryLockResult result = 1;
+}
+
+message NotifyDoneRequest {
+  string name = 1;
+}
+
+message NotifyDoneResponse {
+}
+
+message WaitUntilDoneRequest {
+  string name = 1;
+}
+
+message WaitUntilDoneResponse {
+}

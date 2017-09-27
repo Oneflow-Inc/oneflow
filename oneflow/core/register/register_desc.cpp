@@ -114,7 +114,9 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
     pair.second->ToProto(&(pb_pair.second));
     ret->mutable_lbn2blob_desc()->insert(pb_pair);
   }
-  ret->set_register_num(register_num_);
+  ret->set_register_num(min_register_num_);
+  ret->set_min_register_num(min_register_num_);
+  ret->set_max_register_num(max_register_num_);
   *(ret->mutable_mem_case()) = InferMemCase();
 }
 

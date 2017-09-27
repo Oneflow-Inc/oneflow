@@ -1,36 +1,34 @@
 #include "oneflow/core/actor/copy_comm_net_actor.h"
 #include "oneflow/core/actor/actor_registry.h"
+#include "oneflow/core/comm_network/data_comm_network.h"
 #include "oneflow/core/register/register.h"
 
 namespace oneflow {
 
-namespace {
-
-class CommNetDeviceCtx final : public DeviceCtx {
+class CopyCommNetActor::CommNetDeviceCtx final : public DeviceCtx {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(CommNetDeviceCtx);
-  CommNetDeviceCtx() = delete;
   ~CommNetDeviceCtx() = default;
 
-  CommNetDeviceCtx(void* stream_id) : DeviceCtx(), stream_id_(stream_id) {}
+  CommNetDeviceCtx() : DeviceCtx(), read_id_(nullptr) {}
 
   void AddCallBack(std::function<void()> callback) const override {
-    CommNet::Singleton()->AddCallBack(stream_id_, callback);
+    DataCommNet::Singleton()->AddReadCallBack(read_id_, callback);
   }
 
- private:
-  void* stream_id_;
-};
+  void set_read_id(void* val) { read_id_ = val; }
 
-}  // namespace
+ private:
+  void* read_id_;
+};
 
 void CopyCommNetActor::Init(const TaskProto& task_proto,
                             const ThreadCtx& thread_ctx) {
   Actor::Init(task_proto, thread_ctx);
   set_num_of_remaining_eord(1);
   mut_num_of_read_empty() = 1;
-  stream_id_ = CommNet::Singleton()->CreateStream();
-  mut_device_ctx().reset(new CommNetDeviceCtx(stream_id_));
+  comm_net_device_ctx_ = new CommNetDeviceCtx();
+  mut_device_ctx().reset(comm_net_device_ctx_);
   OF_SET_MSG_HANDLER(&CopyCommNetActor::HandlerNormal);
 }
 
@@ -72,18 +70,24 @@ void CopyCommNetActor::Act() {
   auto readable_it = piece_id2regst_ctx.find(cur_piece_id);
   const void* readable_token = readable_it->second.comm_net_token;
   Regst* readable_regst = readable_it->second.regst_raw_ptr;
+  int64_t src_machine_id =
+      IDMgr::Singleton()->MachineId4ActorId(readable_it->second.producer);
   // writeable
   Regst* writeable_regst = GetCurSoleWriteableRegst();
   const void* writeable_token =
       writeable_regst->packed_blob()->comm_net_token();
   // Async
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  auto other_val = std::make_tuple(stream_id_, readable_token, writeable_token);
+  void* read_id = nullptr;
+  auto other_val = std::make_tuple(&read_id, src_machine_id, readable_token,
+                                   writeable_token);
   kernel_ctx.other = &other_val;
   AsyncLaunchKernel(kernel_ctx);
+  comm_net_device_ctx_->set_read_id(read_id);
   AsyncSendRegstMsgToConsumer(
       [&](Regst* regst) { regst->set_piece_id(cur_piece_id); });
   AsyncSendRegstMsgToProducer(readable_regst, readable_it->second.producer);
+  comm_net_device_ctx_->set_read_id(nullptr);
   // Finish
   piece_id2regst_ctx.erase(readable_it);
   mut_num_of_read_empty() = piece_id2regst_ctx.empty();

@@ -1,48 +1,15 @@
-#include "gflags/gflags.h"
+#include "oneflow/core/job/compiler.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/str_util.h"
-#include "oneflow/core/graph/data_comp_task_node.h"
-#include "oneflow/core/graph/data_task_graph.h"
 #include "oneflow/core/graph/loss_accumulate_task_graph.h"
 #include "oneflow/core/graph/loss_record_task_graph.h"
 #include "oneflow/core/graph/model_diff_accumulate_task_graph.h"
 #include "oneflow/core/graph/model_save_comp_task_node.h"
 #include "oneflow/core/graph/model_save_task_graph.h"
 #include "oneflow/core/graph/model_update_task_graph.h"
-#include "oneflow/core/job/id_manager.h"
-#include "oneflow/core/job/job_conf.pb.h"
-#include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/register/register_desc.h"
 
 namespace oneflow {
-
-class Compiler final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(Compiler);
-  ~Compiler() = default;
-
-  OF_SINGLETON(Compiler);
-
-  void Compile(const JobConf& job_conf, const std::string& plan_filepath);
-
- private:
-  Compiler() = default;
-  void ConstForEachChainNode(std::function<void(const ChainNode*)> func);
-  void ConstForEachStageNode(std::function<void(const StageNode*)> func);
-  void ForEachTaskNode(std::function<void(TaskNode*)> func);
-
-  void BuildGraphs();
-  void BuildModelGraphs(
-      const std::pair<const ChainNode*, std::vector<CompTaskNode*>>&);
-  void BuildLossGraph(
-      const std::pair<const ChainNode*, std::vector<CompTaskNode*>>& pair);
-  void InferBlobDesc4Regsts();
-  void EraseMeaningLessRegsts();
-  void GenPlanFile(const std::string& plan_filepath);
-  void Plan2DotFile(const Plan& plan);
-
-  std::vector<std::unique_ptr<TaskGraph>> ordered_task_gphs_;
-};
 
 void Compiler::ConstForEachChainNode(
     std::function<void(const ChainNode*)> func) {
@@ -67,14 +34,11 @@ void Compiler::ForEachTaskNode(std::function<void(TaskNode*)> func) {
 }
 
 // TODO: inference "register_num for each register_desc"
-void Compiler::Compile(const JobConf& job_conf,
-                       const std::string& plan_filepath) {
-  JobDesc::Singleton()->InitFromJobConf(job_conf);
-  IDMgr::Singleton()->InitFromResource(JobDesc::Singleton()->resource());
+Plan Compiler::Compile() {
   BuildGraphs();
   InferBlobDesc4Regsts();
   EraseMeaningLessRegsts();
-  GenPlanFile(plan_filepath);
+  return GenPlanFile();
 }
 
 void Compiler::BuildGraphs() {
@@ -179,7 +143,7 @@ void Compiler::EraseMeaningLessRegsts() {
   });
 }
 
-void Compiler::GenPlanFile(const std::string& plan_filepath) {
+Plan Compiler::GenPlanFile() {
   HashMap<const ChainNode*, int64_t> chain2meaningless_task_cnt;
   ForEachTaskNode([&](const TaskNode* node) {
     auto comp_task_node = dynamic_cast<const DataCompTaskNode*>(node);
@@ -224,8 +188,9 @@ void Compiler::GenPlanFile(const std::string& plan_filepath) {
       // TODO: unique
     });
   });
-  PrintProtoToTextFile(plan, plan_filepath);
   Plan2DotFile(plan);
+  OpMgr::DeleteSingleton();
+  return plan;
 }
 
 void Compiler::Plan2DotFile(const Plan& plan) {
@@ -264,17 +229,3 @@ void Compiler::Plan2DotFile(const Plan& plan) {
 }
 
 }  // namespace oneflow
-
-DEFINE_string(job_conf_filepath, "", "");
-DEFINE_string(plan_filepath, "", "");
-
-int main(int argc, char** argv) {
-  google::InitGoogleLogging(argv[0]);
-  google::ParseCommandLineFlags(&argc, &argv, true);
-  LOG(INFO) << "Compiler Starting Up";
-  oneflow::JobConf job_conf;
-  oneflow::ParseProtoFromTextFile(FLAGS_job_conf_filepath, &job_conf);
-  oneflow::Compiler::Singleton()->Compile(job_conf, FLAGS_plan_filepath);
-  LOG(INFO) << "Compiler Shutting Down";
-  return 0;
-}

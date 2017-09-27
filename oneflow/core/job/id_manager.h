@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_JOB_ID_MANAGER_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource.pb.h"
 
 namespace oneflow {
@@ -13,9 +14,10 @@ class IDMgr final {
 
   OF_SINGLETON(IDMgr);
 
-  void InitFromResource(const Resource& resource) {
+  void Init() {
     LOG(INFO) << "Init IDManager";
     Clear();
+    const Resource& resource = JobDesc::Singleton()->resource();
     machine_num_ = resource.machine_size();
     CHECK_LT(machine_num_, static_cast<int64_t>(1) << machine_id_bit_num_);
     device_num_per_machine_ = resource.device_num_per_machine();
