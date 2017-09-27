@@ -70,19 +70,20 @@ void ConcatKernel<device_type, T>::ConcatKernelWork(
     offset_concat_axis += in_concat_axis_dim;
   }
   if (BnInOp2Blob(in_bns.front())->has_data_id()) {
-    CopyDataIdToOb(ctx, in_bns, concat_axis, BnInOp2Blob);
+    CopyDataIdToOb(ctx, in_bns, out_bn, concat_axis, kind, BnInOp2Blob);
   }
 }
 
 template<DeviceType device_type, typename T>
 void ConcatKernel<device_type, T>::CopyDataIdToOb(
-    const KernelCtx& ctx, const std::vector<std::string>& ibns,
-    const int32_t concat_axis,
+    const KernelCtx& ctx, const std::vector<std::string>& in_bns,
+    const std::string& out_bn, const int32_t concat_axis, cudaMemcpyKind kind,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (concat_axis == 1) {
     CopyDataIdFromIbToAllOb<device_type>(ctx.device_ctx, BnInOp2Blob);
     return;
   }
+  Blob* out_blob = BnInOp2Blob(out_bn);
   int64_t data_id_offset = 0;
   for (const std::string& in_bn : in_bns) {
     Blob* in_blob = BnInOp2Blob(in_bn);

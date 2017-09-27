@@ -27,7 +27,8 @@ class ConcatKernel final : public Kernel {
                         MemCopyFuncType) const;
 
   void CopyDataIdToOb(const KernelCtx&, const std::vector<std::string>&,
-                      const int32_t, std::function<Blob*(const std::string&)>) const;
+                      const std::string&, const int32_t, cudaMemcpyKind,
+                      std::function<Blob*(const std::string&)>) const;
 };
 
 }  // namespace oneflow
