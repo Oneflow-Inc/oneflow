@@ -4,14 +4,17 @@
 
 namespace oneflow {
 
-SocketHelper::SocketHelper(int sockfd, SocketIOWorker* read_worker,
-                           SocketIOWorker* write_worker) {
-  sockfd_ = sockfd;
-  int opt = fcntl(sockfd_, F_GETFL);
-  PCHECK(opt != -1);
-  PCHECK(fcntl(sockfd_, F_SETFL, opt | O_NONBLOCK) == 0);
-  read_helper_.reset(new SocketReadHelper(sockfd_, read_worker));
-  write_helper_.reset(new SocketWriteHelper(sockfd_, write_worker));
+SocketHelper::SocketHelper(int sockfd, IOEventPoller* poller,
+                           CpuStream* read_cpu_stream,
+                           CpuStream* write_cpu_stream) {
+  read_helper_ = new SocketReadHelper(sockfd, read_cpu_stream);
+  write_helper_ = new SocketWriteHelper(sockfd, write_cpu_stream);
+  poller->AddFd(sockfd, [this]() { read_helper_->NotifyMeSocketReadable(); },
+                [this]() { write_helper_->NotifyMeSocketWriteable(); });
+}
+
+void SocketHelper::AsyncWrite(const SocketMsg& msg) {
+  write_helper_->AsyncWrite(msg);
 }
 
 }  // namespace oneflow

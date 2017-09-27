@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <atomic>
 #include <condition_variable>
+#include <forward_list>
 #include <fstream>
 #include <functional>
 #include <iostream>

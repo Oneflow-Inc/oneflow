@@ -29,21 +29,17 @@ class EpollDataCommNet final : public DataCommNet {
  private:
   EpollDataCommNet();
   void InitSockets();
-  void EpollLoop();
   SocketHelper* GetSocketHelper(int64_t machine_id);
-  SocketReadHelper* GetSocketReadHelper(int64_t machine_id);
-  SocketWriteHelper* GetSocketWriteHelper(int64_t machine_id);
 
   // Memory Desc
   std::mutex mem_desc_mtx_;
   std::list<SocketMemDesc*> mem_descs_;
   size_t unregister_mem_descs_cnt_;
-  // Threads
-  std::thread epoll_thread_;
-  std::vector<SocketIOWorker*> io_workers_;
   // Socket
+  IOEventPoller* poller_;
+  std::vector<CpuDevice*> io_workers_;
   std::vector<int> machine_id2sockfd_;
-  HashMap<int, std::unique_ptr<SocketHelper>> sockfd2io_helper_;
+  HashMap<int, SocketHelper*> sockfd2helper_;
 };
 
 }  // namespace oneflow
