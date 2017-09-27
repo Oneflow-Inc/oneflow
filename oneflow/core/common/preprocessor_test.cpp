@@ -47,16 +47,20 @@ TEST(PP_TUPLE, internal_tuple_size) {
 
 TEST(PP_SEQ, internal_seq_product) {
 #define SEQ (0)(1)
-  ASSERT_EQ(OF_PP_STRINGIZE(OF_PP_INTERNAL_SEQ_PRODUCT(SEQ, SEQ)),
-            "((0, 0)) ((1, 0)) ((0, 1)) ((1, 1))");
+  ASSERT_TRUE((OF_PP_STRINGIZE(OF_PP_INTERNAL_SEQ_PRODUCT(SEQ, SEQ))
+               == "((0, 0)) ((1, 0)) ((0, 1)) ((1, 1))")
+              || (OF_PP_STRINGIZE(OF_PP_INTERNAL_SEQ_PRODUCT(SEQ, SEQ))
+                  == "((0, 0)) ((1, 0))  ((0, 1)) ((1, 1))"));
 #undef SEQ
 }
 
 TEST(PP_SEQ, internal_different_seq_product) {
 #define SEQ1 (0)(1)
 #define SEQ2 (a)(b)
-  ASSERT_EQ(OF_PP_STRINGIZE(OF_PP_INTERNAL_SEQ_PRODUCT(SEQ1, SEQ2)),
-            "((0, a)) ((1, a)) ((0, b)) ((1, b))");
+  ASSERT_TRUE((OF_PP_STRINGIZE(OF_PP_INTERNAL_SEQ_PRODUCT(SEQ1, SEQ2))
+               == "((0, a)) ((1, a)) ((0, b)) ((1, b))")
+              || (OF_PP_STRINGIZE(OF_PP_INTERNAL_SEQ_PRODUCT(SEQ1, SEQ2))
+                  == "((0, a)) ((1, a))  ((0, b)) ((1, b))"));
 #undef SEQ1
 #undef SEQ2
 }
