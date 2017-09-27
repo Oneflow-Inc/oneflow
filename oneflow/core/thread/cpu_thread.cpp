@@ -6,27 +6,18 @@ namespace oneflow {
 
 CpuThread::CpuThread(int64_t thrd_loc_id) {
   set_thrd_loc_id(thrd_loc_id);
-  if (JobDesc::Singleton()->use_async_cpu_stream()) {
-    cpu_stream_.reset(new AsyncCpuStream);
-    cpu_device_.reset(new std::thread([this]() {
-      std::function<void()> work;
-      while (cpu_stream_->ReceiveWork(&work) == 0) { work(); }
-    }));
-  } else {
-    cpu_stream_.reset(new SyncCpuStream);
-  }
+  cpu_device_.reset(
+      new CpuDevice(JobDesc::Singleton()->use_async_cpu_stream()));
   mut_actor_thread() = std::thread([this]() {
     ThreadCtx ctx;
-    ctx.cpu_stream = cpu_stream_.get();
+    ctx.cpu_stream = cpu_device_->cpu_stream();
     PollMsgChannel(ctx);
   });
 }
 
 CpuThread::~CpuThread() {
   Thread::Deconstruct();
-  cpu_stream_->CloseSendEnd();
-  if (cpu_device_) { cpu_device_->join(); }
-  cpu_stream_->CloseReceiveEnd();
+  cpu_device_.reset();
 }
 
 }  // namespace oneflow

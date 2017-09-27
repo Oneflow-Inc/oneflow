@@ -1,8 +1,10 @@
 #ifndef ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_HELPER_H_
 #define ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_HELPER_H_
 
+#include "oneflow/core/comm_network/epoll/io_event_poller.h"
 #include "oneflow/core/comm_network/epoll/socket_read_helper.h"
 #include "oneflow/core/comm_network/epoll/socket_write_helper.h"
+#include "oneflow/core/device/cpu_device.h"
 
 #ifdef PLATFORM_POSIX
 
@@ -14,16 +16,14 @@ class SocketHelper final {
   SocketHelper() = delete;
   ~SocketHelper() = default;
 
-  SocketHelper(int sockfd, SocketIOWorker* read_worker,
-               SocketIOWorker* write_worker);
+  SocketHelper(int sockfd, IOEventPoller* poller, CpuStream* read_cpu_stream,
+               CpuStream* write_cpu_stream);
 
-  SocketReadHelper* mut_read_helper() { return read_helper_.get(); }
-  SocketWriteHelper* mut_write_helper() { return write_helper_.get(); }
+  void AsyncWrite(const SocketMsg& msg);
 
  private:
-  int sockfd_;
-  std::unique_ptr<SocketReadHelper> read_helper_;
-  std::unique_ptr<SocketWriteHelper> write_helper_;
+  SocketReadHelper* read_helper_;
+  SocketWriteHelper* write_helper_;
 };
 
 }  // namespace oneflow
