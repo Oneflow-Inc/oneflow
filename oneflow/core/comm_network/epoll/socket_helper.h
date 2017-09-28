@@ -4,7 +4,6 @@
 #include "oneflow/core/comm_network/epoll/io_event_poller.h"
 #include "oneflow/core/comm_network/epoll/socket_read_helper.h"
 #include "oneflow/core/comm_network/epoll/socket_write_helper.h"
-#include "oneflow/core/device/cpu_device.h"
 
 #ifdef PLATFORM_POSIX
 
@@ -14,10 +13,9 @@ class SocketHelper final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SocketHelper);
   SocketHelper() = delete;
-  ~SocketHelper() = default;
+  ~SocketHelper();
 
-  SocketHelper(int sockfd, IOEventPoller* poller, CpuStream* read_cpu_stream,
-               CpuStream* write_cpu_stream);
+  SocketHelper(int sockfd, IOEventPoller* poller);
 
   void AsyncWrite(const SocketMsg& msg);
 

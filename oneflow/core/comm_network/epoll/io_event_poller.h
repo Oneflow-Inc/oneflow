@@ -32,6 +32,7 @@ class IOEventPoller final {
   int64_t unclosed_fd_cnt_;
   std::forward_list<IOHandler*> io_handlers_;
   std::thread thread_;
+  std::vector<int> fds_;
 };
 
 }  // namespace oneflow
