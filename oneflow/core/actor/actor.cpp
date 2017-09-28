@@ -2,6 +2,11 @@
 #include <chrono>
 #include "oneflow/core/kernel/kernel_manager.h"
 
+#include "gflags/gflags.h"
+
+DEFINE_int32(max_log_piece_id, 300,
+             "maximum logging piece id for resource utilization");
+
 namespace oneflow {
 
 void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
@@ -121,8 +126,9 @@ void Actor::AsyncLaunchKernel(
           return regst->GetBlobPtrFromLbn(lbn);
         });
   }
-  CreateStreamUtilizationLogger(schedule::UtilizationEventType::kEndEvent,
-                                expected_piece_id_, &logger);
+  CreateStreamUtilizationLogger(
+      static_schedule::UtilizationEventType::kEndEvent, expected_piece_id_,
+      &logger);
   AsyncDo(logger);
   VLOG(4) << "actor " << actor_id_ << " launch kernel for piece_id "
           << expected_piece_id_;
@@ -263,9 +269,13 @@ void Actor::SetReadOnlyForRegstDescId(int64_t regst_desc_id) {
   writeable_produced_regst_.erase(it);
 }
 
-void Actor::CreateStreamUtilizationLogger(schedule::UtilizationEventType type,
-                                          uint64_t batch_id,
-                                          std::function<void()>* logger) {
+void Actor::CreateStreamUtilizationLogger(
+    static_schedule::UtilizationEventType type, uint64_t piece_id,
+    std::function<void()>* logger) {
+  if (piece_id > FLAGS_max_log_piece_id) {
+    *logger = []() {};
+    return;
+  }
   uint64_t task_id = actor_id();
   uint64_t stream_id =
       (device_ctx_->cpu_stream()
@@ -274,11 +284,13 @@ void Actor::CreateStreamUtilizationLogger(schedule::UtilizationEventType type,
 
   static_schedule::UtilizationEventPackageProto* event_package =
       &action_events_;
-  *logger = [type, task_id, batch_id, stream_id, event_package]() {
-    schedule::UtilizationEventProto* event = event_package->add_event();
+  *logger = [type, task_id, piece_id, stream_id, event_package]() {
+    double now =
+        std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    static_schedule::UtilizationEventProto* event = event_package->add_event();
     event->set_event_type(type);
-    event->set_batch_id(batch_id);
-    event->set_time(Now());
+    event->set_piece_id(piece_id);
+    event->set_time(now);
     static_schedule::TaskStreamResource* stream_res =
         event->mutable_resource()->mutable_task_stream();
     stream_res->set_task_id(task_id);
@@ -286,12 +298,15 @@ void Actor::CreateStreamUtilizationLogger(schedule::UtilizationEventType type,
   };
 }
 
-void Actor::LogRegstUtilization(schedule::UtilizationEventType type,
+void Actor::LogRegstUtilization(static_schedule::UtilizationEventType type,
                                 Regst* regst) {
+  if (regst->piece_id() > FLAGS_max_log_piece_id) return;
+  double now =
+      std::chrono::high_resolution_clock::now().time_since_epoch().count();
   static_schedule::UtilizationEventProto* event = action_events_.add_event();
   event->set_event_type(type);
-  event->set_batch_id(regst->piece_id());
-  event->set_time(Now());
+  event->set_piece_id(regst->piece_id());
+  event->set_time(now);
   static_schedule::RegstResource* regst_res =
       event->mutable_resource()->mutable_regst();
   regst_res->set_regst_desc_id(regst->regst_desc_id());

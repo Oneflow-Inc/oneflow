@@ -61,7 +61,7 @@ enum UtilizationEventType {
 
 message UtilizationEventProto {
 	UtilizationEventType event_type = 1;
-	int64 batch_id = 2;
+	int64 piece_id = 2;
 	double time = 3;	
 	UtilizationResource resource = 4;
 }
@@ -74,8 +74,8 @@ message UtilizationProto {
 	double	utilization = 1;
 	double start_at = 2;	
 	double end_at = 3;	
-	int64 start_batch_id = 4;
-	int64 end_batch_id = 5;
+	int64 start_piece_id = 4;
+	int64 end_piece_id = 5;
 	UtilizationResource resource = 6;
 	double last_end_at = 7;	
 }
