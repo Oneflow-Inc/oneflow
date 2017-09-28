@@ -21,8 +21,8 @@ class SocketWriteHelper final {
   void NotifyMeSocketWriteable();
 
  private:
-  void SendWriteableMsgEvent();
-  void ProcessWriteableMsgEvent();
+  void SendQueueNotEmptyEvent();
+  void ProcessQueueNotEmptyEvent();
   void Work();
 
   void WriteUntilCurMsgQueueEmptyOrSocketNotWriteable();
@@ -39,7 +39,7 @@ class SocketWriteHelper final {
 #undef MAKE_ENTRY
 
   int sockfd_;
-  int writeable_msg_event_fd_;
+  int queue_not_empty_fd_;
 
   std::mutex cur_msg_queue_mtx_;
   std::queue<SocketMsg>* cur_msg_queue_;
