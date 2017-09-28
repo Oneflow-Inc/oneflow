@@ -1,4 +1,5 @@
 #include "oneflow/core/actor/actor.h"
+#include <chrono>
 #include "oneflow/core/kernel/kernel_manager.h"
 
 namespace oneflow {
@@ -103,6 +104,11 @@ void Actor::ActUntilFail() {
 void Actor::AsyncLaunchKernel(
     const KernelCtx& kernel_ctx,
     std::function<Regst*(int64_t)> Regst4RegstDescId) {
+  std::function<void()> logger;
+  CreateStreamUtilizationLogger(
+      static_schedule::UtilizationEventType::kStartEvent, expected_piece_id_,
+      &logger);
+  logger();
   for (const ExecKernel& ek : exec_kernel_vec_) {
     (ek.kernel->*launch_func_)(
         kernel_ctx, [&](const std::string& bn_in_op) -> Blob* {
@@ -115,6 +121,9 @@ void Actor::AsyncLaunchKernel(
           return regst->GetBlobPtrFromLbn(lbn);
         });
   }
+  CreateStreamUtilizationLogger(schedule::UtilizationEventType::kEndEvent,
+                                expected_piece_id_, &logger);
+  AsyncDo(logger);
   VLOG(4) << "actor " << actor_id_ << " launch kernel for piece_id "
           << expected_piece_id_;
   expected_piece_id_ += 1;
@@ -143,7 +152,11 @@ void Actor::AsyncSendRegstMsgToConsumer(
         ActorMsgBus::Singleton()->SendMsg(std::move(msg));
       });
     }
-    if (!regst->consumers_actor_id().empty()) { pair.second.pop_front(); }
+    if (!regst->consumers_actor_id().empty()) {
+      pair.second.pop_front();
+      LogRegstUtilization(static_schedule::UtilizationEventType::kStartEvent,
+                          regst);
+    }
     if (pair.second.empty()) { writeable_produced_regst_desc_num_ -= 1; }
     VLOG(4) << "actor " << actor_id() << " "
             << "send readable register " << regst << ", "
@@ -215,6 +228,7 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   if (writeable_it == writeable_produced_regst_.end()) { return 0; }
   if (writeable_it->second.empty()) { writeable_produced_regst_desc_num_ += 1; }
   writeable_it->second.push_back(regst);
+  LogRegstUtilization(static_schedule::UtilizationEventType::kEndEvent, regst);
   return 0;
 }
 
@@ -247,6 +261,41 @@ void Actor::SetReadOnlyForRegstDescId(int64_t regst_desc_id) {
   auto it = writeable_produced_regst_.find(regst_desc_id);
   if (!it->second.empty()) { writeable_produced_regst_desc_num_ -= 1; }
   writeable_produced_regst_.erase(it);
+}
+
+void Actor::CreateStreamUtilizationLogger(schedule::UtilizationEventType type,
+                                          uint64_t batch_id,
+                                          std::function<void()>* logger) {
+  uint64_t task_id = actor_id();
+  uint64_t stream_id =
+      (device_ctx_->cpu_stream()
+           ? reinterpret_cast<uint64_t>(device_ctx_->cpu_stream())
+           : reinterpret_cast<uint64_t>(&device_ctx_->cuda_stream()));
+
+  static_schedule::UtilizationEventPackageProto* event_package =
+      &action_events_;
+  *logger = [type, task_id, batch_id, stream_id, event_package]() {
+    schedule::UtilizationEventProto* event = event_package->add_event();
+    event->set_event_type(type);
+    event->set_batch_id(batch_id);
+    event->set_time(Now());
+    static_schedule::TaskStreamResource* stream_res =
+        event->mutable_resource()->mutable_task_stream();
+    stream_res->set_task_id(task_id);
+    stream_res->set_stream_id(stream_id);
+  };
+}
+
+void Actor::LogRegstUtilization(schedule::UtilizationEventType type,
+                                Regst* regst) {
+  static_schedule::UtilizationEventProto* event = action_events_.add_event();
+  event->set_event_type(type);
+  event->set_batch_id(regst->piece_id());
+  event->set_time(Now());
+  static_schedule::RegstResource* regst_res =
+      event->mutable_resource()->mutable_regst();
+  regst_res->set_regst_desc_id(regst->regst_desc_id());
+  regst_res->set_regst_id(reinterpret_cast<uint64_t>(regst));
 }
 
 }  // namespace oneflow
