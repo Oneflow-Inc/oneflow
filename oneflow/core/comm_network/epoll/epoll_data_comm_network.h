@@ -36,8 +36,7 @@ class EpollDataCommNet final : public DataCommNet {
   std::list<SocketMemDesc*> mem_descs_;
   size_t unregister_mem_descs_cnt_;
   // Socket
-  IOEventPoller* poller_;
-  std::vector<CpuDevice*> io_workers_;
+  std::vector<IOEventPoller*> pollers_;
   std::vector<int> machine_id2sockfd_;
   HashMap<int, SocketHelper*> sockfd2helper_;
 };

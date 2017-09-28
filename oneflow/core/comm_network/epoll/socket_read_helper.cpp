@@ -5,19 +5,23 @@
 
 namespace oneflow {
 
-SocketReadHelper::~SocketReadHelper() { TODO(); }
+SocketReadHelper::~SocketReadHelper() {
+  // do nothing
+}
 
-SocketReadHelper::SocketReadHelper(int sockfd, CpuStream* cpu_stream) {
+SocketReadHelper::SocketReadHelper(int sockfd) {
   sockfd_ = sockfd;
-  cpu_stream_ = cpu_stream;
-  cur_read_handle_ = &SocketReadHelper::MsgHeadReadHandle;
-  read_ptr_ = reinterpret_cast<char*>(&cur_msg_);
-  read_size_ = sizeof(cur_msg_);
+  SwitchToMsgHeadReadHandle();
 }
 
 void SocketReadHelper::NotifyMeSocketReadable() {
-  cpu_stream_->SendWork(
-      std::bind(&SocketReadHelper::ReadUntilSocketNotReadable, this));
+  ReadUntilSocketNotReadable();
+}
+
+void SocketReadHelper::SwitchToMsgHeadReadHandle() {
+  cur_read_handle_ = &SocketReadHelper::MsgHeadReadHandle;
+  read_ptr_ = reinterpret_cast<char*>(&cur_msg_);
+  read_size_ = sizeof(cur_msg_);
 }
 
 void SocketReadHelper::ReadUntilSocketNotReadable() {
@@ -25,11 +29,11 @@ void SocketReadHelper::ReadUntilSocketNotReadable() {
 }
 
 bool SocketReadHelper::MsgHeadReadHandle() {
-  DoCurRead(&SocketReadHelper::SetStatusWhenMsgHeadDone);
+  return DoCurRead(&SocketReadHelper::SetStatusWhenMsgHeadDone);
 }
 
 bool SocketReadHelper::MsgBodyReadHandle() {
-  DoCurRead(&SocketReadHelper::SetStatusWhenMsgBodyDone);
+  return DoCurRead(&SocketReadHelper::SetStatusWhenMsgBodyDone);
 }
 
 bool SocketReadHelper::DoCurRead(
@@ -56,13 +60,10 @@ bool SocketReadHelper::SetStatusWhenMsgHeadDone() {
 #undef MAKE_ENTRY
     default: UNEXPECTED_RUN();
   }
-  UNEXPECTED_RUN();
 }
 
 bool SocketReadHelper::SetStatusWhenMsgBodyDone() {
-  cur_read_handle_ = &SocketReadHelper::MsgHeadReadHandle;
-  read_ptr_ = reinterpret_cast<char*>(&cur_msg_);
-  read_size_ = sizeof(cur_msg_);
+  SwitchToMsgHeadReadHandle();
   return true;
 }
 

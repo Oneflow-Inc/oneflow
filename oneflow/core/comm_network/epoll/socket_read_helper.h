@@ -2,7 +2,6 @@
 #define ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_READ_HELPER_H_
 
 #include "oneflow/core/comm_network/epoll/socket_message.h"
-#include "oneflow/core/device/cpu_stream.h"
 
 #ifdef PLATFORM_POSIX
 
@@ -14,11 +13,12 @@ class SocketReadHelper final {
   SocketReadHelper() = delete;
   ~SocketReadHelper();
 
-  SocketReadHelper(int sockfd, CpuStream* cpu_stream);
+  SocketReadHelper(int sockfd);
 
   void NotifyMeSocketReadable();
 
  private:
+  void SwitchToMsgHeadReadHandle();
   void ReadUntilSocketNotReadable();
 
   bool MsgHeadReadHandle();
@@ -33,7 +33,6 @@ class SocketReadHelper final {
 #undef MAKE_ENTRY
 
   int sockfd_;
-  CpuStream* cpu_stream_;
 
   SocketMsg cur_msg_;
   bool (SocketReadHelper::*cur_read_handle_)();

@@ -33,12 +33,7 @@ int64_t GetMachineId(const sockaddr_in& sa) {
 }  // namespace
 
 EpollDataCommNet::~EpollDataCommNet() {
-  for (int sockfd : machine_id2sockfd_) {
-    if (sockfd == -1) { continue; }
-    PCHECK(close(sockfd) == 0);
-  }
-  delete poller_;
-  for (CpuDevice* worker : io_workers_) { delete worker; }
+  for (IOEventPoller* poller : pollers_) { delete poller; }
   for (auto& pair : sockfd2helper_) { delete pair.second; }
 }
 
@@ -103,13 +98,12 @@ void EpollDataCommNet::SendActorMsg(int64_t dst_machine_id,
 EpollDataCommNet::EpollDataCommNet() {
   mem_descs_.clear();
   unregister_mem_descs_cnt_ = 0;
-  io_workers_.resize(JobDesc::Singleton()->CommNetIOWorkerNum(), nullptr);
-  for (size_t i = 0; i < io_workers_.size(); ++i) {
-    io_workers_[i] = new CpuDevice(true);
+  pollers_.resize(JobDesc::Singleton()->CommNetIOWorkerNum(), nullptr);
+  for (size_t i = 0; i < pollers_.size(); ++i) {
+    pollers_[i] = new IOEventPoller;
   }
-  poller_ = new IOEventPoller;
   InitSockets();
-  poller_->Start();
+  for (IOEventPoller* poller : pollers_) { poller->Start(); }
 }
 
 void EpollDataCommNet::InitSockets() {
@@ -117,13 +111,11 @@ void EpollDataCommNet::InitSockets() {
   int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
   machine_id2sockfd_.assign(total_machine_num, -1);
   sockfd2helper_.clear();
-  size_t worker_idx = 0;
+  size_t poller_idx = 0;
   auto NewSocketHelper = [&](int sockfd) {
-    // same worker for reader and writer
-    CpuStream* reader = io_workers_[worker_idx]->cpu_stream();
-    CpuStream* writer = io_workers_[worker_idx]->cpu_stream();
-    worker_idx = (worker_idx + 1) % io_workers_.size();
-    return new SocketHelper(sockfd, poller_, reader, writer);
+    IOEventPoller* poller = pollers_[poller_idx];
+    poller_idx = (poller_idx + 1) % pollers_.size();
+    return new SocketHelper(sockfd, poller);
   };
   // listen
   sockaddr_in this_sockaddr = GetSockAddr(this_machine_id);

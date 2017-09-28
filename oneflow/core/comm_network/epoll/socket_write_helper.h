@@ -1,8 +1,8 @@
 #ifndef ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_WRITE_HELPER_H_
 #define ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_WRITE_HELPER_H_
 
+#include "oneflow/core/comm_network/epoll/io_event_poller.h"
 #include "oneflow/core/comm_network/epoll/socket_message.h"
-#include "oneflow/core/device/cpu_stream.h"
 
 #ifdef PLATFORM_POSIX
 
@@ -14,15 +14,18 @@ class SocketWriteHelper final {
   SocketWriteHelper() = delete;
   ~SocketWriteHelper();
 
-  SocketWriteHelper(int sockfd, CpuStream* cpu_stream);
+  SocketWriteHelper(int sockfd, IOEventPoller* poller);
 
   void AsyncWrite(const SocketMsg& msg);
 
   void NotifyMeSocketWriteable();
 
  private:
+  void SendWriteableMsgEvent();
+  void ProcessWriteableMsgEvent();
+  void Work();
+
   void WriteUntilCurMsgQueueEmptyOrSocketNotWriteable();
-  void NotifyWorker();
   bool InitMsgWriteHandle();
   bool MsgHeadWriteHandle();
   bool MsgBodyWriteHandle();
@@ -36,7 +39,7 @@ class SocketWriteHelper final {
 #undef MAKE_ENTRY
 
   int sockfd_;
-  CpuStream* cpu_stream_;
+  int writeable_msg_event_fd_;
 
   std::mutex cur_msg_queue_mtx_;
   std::queue<SocketMsg>* cur_msg_queue_;

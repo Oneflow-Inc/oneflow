@@ -11,9 +11,11 @@ IOEventPoller::IOEventPoller() {
   ep_events_ = new epoll_event[max_event_num_];
   unclosed_fd_cnt_ = 0;
   io_handlers_.clear();
+  fds_.clear();
 }
 
 IOEventPoller::~IOEventPoller() {
+  for (int fd : fds_) { PCHECK(close(fd) == 0); }
   thread_.join();
   for (IOHandler* handler : io_handlers_) { delete handler; }
   CHECK_EQ(unclosed_fd_cnt_, 0);
@@ -24,6 +26,7 @@ IOEventPoller::~IOEventPoller() {
 void IOEventPoller::AddFd(int fd, std::function<void()> read_handler,
                           std::function<void()> write_handler) {
   unclosed_fd_cnt_ += 1;
+  fds_.push_back(fd);
   // Set Fd NONBLOCK
   int opt = fcntl(fd, F_GETFL);
   PCHECK(opt != -1);
