@@ -84,7 +84,7 @@ bool SocketWriteHelper::DoCurWrite(
   if (n == write_size_) {
     return (this->*set_cur_write_done)();
   } else if (n >= 0) {
-    write_ptr_ = write_ptr_ + n;
+    write_ptr_ += n;
     write_size_ -= n;
     return true;
   } else {
