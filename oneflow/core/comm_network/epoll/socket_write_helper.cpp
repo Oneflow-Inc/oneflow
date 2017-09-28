@@ -22,11 +22,12 @@ SocketWriteHelper::~SocketWriteHelper() {
 
 SocketWriteHelper::SocketWriteHelper(int sockfd, IOEventPoller* poller) {
   sockfd_ = sockfd;
-  writeable_msg_event_fd_ = eventfd(0, 0);
-  poller->AddFd(writeable_msg_event_fd_,
-                std::bind(&SocketWriteHelper::ProcessWriteableMsgEvent, this),
+  queue_not_empty_fd_ = eventfd(0, 0);
+  poller->AddFd(queue_not_empty_fd_,
+                std::bind(&SocketWriteHelper::ProcessQueueNotEmptyEvent, this),
                 [this]() {
-                  LOG(INFO) << "fd " << writeable_msg_event_fd_ << " writeable";
+                  // TODO: delete this log
+                  LOG(INFO) << "fd " << queue_not_empty_fd_ << " writeable";
                 });
   cur_msg_queue_ = new std::queue<SocketMsg>;
   pending_msg_queue_ = new std::queue<SocketMsg>;
@@ -40,26 +41,26 @@ void SocketWriteHelper::AsyncWrite(const SocketMsg& msg) {
     bool need_send_event = cur_msg_queue_->empty();
     cur_msg_queue_->push(msg);
     cur_msg_queue_mtx_.unlock();
-    if (need_send_event) { SendWriteableMsgEvent(); }
+    if (need_send_event) { SendQueueNotEmptyEvent(); }
   } else {
     pending_msg_queue_mtx_.lock();
     bool need_send_event = pending_msg_queue_->empty();
     pending_msg_queue_->push(msg);
     pending_msg_queue_mtx_.unlock();
-    if (need_send_event) { SendWriteableMsgEvent(); }
+    if (need_send_event) { SendQueueNotEmptyEvent(); }
   }
 }
 
 void SocketWriteHelper::NotifyMeSocketWriteable() { Work(); }
 
-void SocketWriteHelper::SendWriteableMsgEvent() {
+void SocketWriteHelper::SendQueueNotEmptyEvent() {
   uint64_t event_num = 1;
-  PCHECK(write(writeable_msg_event_fd_, &event_num, 8) == 8);
+  PCHECK(write(queue_not_empty_fd_, &event_num, 8) == 8);
 }
 
-void SocketWriteHelper::ProcessWriteableMsgEvent() {
+void SocketWriteHelper::ProcessQueueNotEmptyEvent() {
   uint64_t event_num = 0;
-  PCHECK(read(writeable_msg_event_fd_, &event_num, 8) == 8);
+  PCHECK(read(queue_not_empty_fd_, &event_num, 8) == 8);
   Work();
 }
 
