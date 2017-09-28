@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_WRITE_HELPER_H_
 #define ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_WRITE_HELPER_H_
 
+#include "oneflow/core/comm_network/epoll/socket_message.h"
 #include "oneflow/core/device/cpu_stream.h"
 
 #ifdef PLATFORM_POSIX

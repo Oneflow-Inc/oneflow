@@ -1,6 +1,6 @@
 #include "oneflow/core/comm_network/epoll/socket_write_helper.h"
 
-#ifndef PLATFORM_POSIX
+#ifdef PLATFORM_POSIX
 
 namespace oneflow {
 
@@ -22,34 +22,34 @@ SocketWriteHelper::SocketWriteHelper(int sockfd, CpuStream* cpu_stream) {
   cpu_stream_ = cpu_stream;
   cur_msg_queue_ = new std::queue<SocketMsg>;
   pending_msg_queue_ = new std::queue<SocketMsg>;
-  cur_write_handle_ = &InitMsgWriteHandle();
+  cur_write_handle_ = &SocketWriteHelper::InitMsgWriteHandle;
   write_ptr_ = nullptr;
   write_size_ = 0;
 }
 
 void SocketWriteHelper::AsyncWrite(const SocketMsg& msg) {
   if (cur_msg_queue_mtx_.try_lock()) {
-    bool need_notify_worker = cur_msg_queue_.empty();
-    cur_msg_queue_.push(msg);
+    bool need_notify_worker = cur_msg_queue_->empty();
+    cur_msg_queue_->push(msg);
     cur_msg_queue_mtx_.unlock();
     if (need_notify_worker) { NotifyWorker(); }
   } else {
     std::unique_lock<std::mutex> lck(pending_msg_queue_mtx_);
-    pending_msg_queue_.push(msg);
+    pending_msg_queue_->push(msg);
   }
 }
 
 void SocketWriteHelper::NotifyMeSocketWriteable() { NotifyWorker(); }
 
-void WriteUntilCurMsgQueueEmptyOrSocketNotWriteable() {
-  while (cur_write_handle_()) {}
+void SocketWriteHelper::WriteUntilCurMsgQueueEmptyOrSocketNotWriteable() {
+  while ((this->*cur_write_handle_)()) {}
 }
 
 void SocketWriteHelper::NotifyWorker() {
   cpu_stream_->SendWork([this]() {
     std::unique_lock<std::mutex> cur_lck(cur_msg_queue_mtx_);
     WriteUntilCurMsgQueueEmptyOrSocketNotWriteable();
-    if (cur_msg_queue_.empty()) {
+    if (cur_msg_queue_->empty()) {
       {
         std::unique_lock<std::mutex> pending_lck(pending_msg_queue_mtx_);
         std::swap(cur_msg_queue_, pending_msg_queue_);
@@ -60,27 +60,28 @@ void SocketWriteHelper::NotifyWorker() {
 }
 
 bool SocketWriteHelper::InitMsgWriteHandle() {
-  if (cur_msg_queue_.empty()) { return false; }
-  cur_msg_ = cur_msg_queue_.front();
-  cur_msg_queue_.pop();
-  write_ptr_ = &cur_msg_;
+  if (cur_msg_queue_->empty()) { return false; }
+  cur_msg_ = cur_msg_queue_->front();
+  cur_msg_queue_->pop();
+  write_ptr_ = reinterpret_cast<const char*>(&cur_msg_);
   write_size_ = sizeof(cur_msg_);
-  cur_write_handle_ = &MsgHeadWriteHandle();
+  cur_write_handle_ = &SocketWriteHelper::MsgHeadWriteHandle;
+  return true;
 }
 
 bool SocketWriteHelper::MsgHeadWriteHandle() {
-  return DoCurWrite(SetStatusWhenMsgHeadDone());
+  return DoCurWrite(&SocketWriteHelper::SetStatusWhenMsgHeadDone);
 }
 
 bool SocketWriteHelper::MsgBodyWriteHandle() {
-  return DoCurWrite(SetStatusWhenMsgBodyDone());
+  return DoCurWrite(&SocketWriteHelper::SetStatusWhenMsgBodyDone);
 }
 
 bool SocketWriteHelper::DoCurWrite(
     bool (SocketWriteHelper::*set_cur_write_done)()) {
   ssize_t n = write(sockfd_, write_ptr_, write_size_);
   if (n == write_size_) {
-    return set_cur_write_done();
+    return (this->*set_cur_write_done)();
   } else if (n >= 0) {
     write_ptr_ = write_ptr_ + n;
     write_size_ -= n;
@@ -95,7 +96,7 @@ bool SocketWriteHelper::DoCurWrite(
 bool SocketWriteHelper::SetStatusWhenMsgHeadDone() { TODO(); }
 
 bool SocketWriteHelper::SetStatusWhenMsgBodyDone() {
-  cur_write_handle_ = &InitMsgWriteHandle;
+  cur_write_handle_ = &SocketWriteHelper::InitMsgWriteHandle;
   return true;
 }
 
