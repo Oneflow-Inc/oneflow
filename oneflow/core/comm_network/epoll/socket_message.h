@@ -18,7 +18,16 @@
 
 namespace oneflow {
 
-enum class SocketMsgType { kRequestWrite = 0, kActor };
+#define SOCKET_MSG_TYPE_SEQ                         \
+  OF_PP_MAKE_TUPLE_SEQ(RequestWrite, request_write) \
+  OF_PP_MAKE_TUPLE_SEQ(RequestRead, request_read)   \
+  OF_PP_MAKE_TUPLE_SEQ(Actor, actor)
+
+enum class SocketMsgType {
+#define MAKE_ENTRY(x, y) k##x,
+  OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ)
+#undef MAKE_ENTRY
+};
 
 struct RequestWriteMsg {
   const void* src_token;
@@ -27,11 +36,18 @@ struct RequestWriteMsg {
   void* read_id;
 };
 
+struct RequestReadMsg {
+  const void* src_token;
+  const void* dst_token;
+  void* read_id;
+};
+
 struct SocketMsg {
   SocketMsgType msg_type;
   union {
-    RequestWriteMsg request_write_msg;
-    ActorMsg actor_msg;
+#define MAKE_ENTRY(x, y) x##Msg y##_msg;
+    OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ)
+#undef MAKE_ENTRY
   };
 };
 
