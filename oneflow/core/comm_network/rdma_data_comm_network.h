@@ -26,6 +26,7 @@ class RdmaDataCommNet final : public DataCommNet {
   void* Read(int64_t src_machine_id, const void* src_token,
              const void* dst_token) override {
     // TODO
+    return nullptr;
   }
 
   void AddReadCallBack(void* read_id, std::function<void()> callback) override {
