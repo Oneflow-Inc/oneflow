@@ -1,4 +1,5 @@
 #include "oneflow/core/comm_network/epoll/socket_write_helper.h"
+#include "oneflow/core/comm_network/epoll/socket_memory_desc.h"
 
 #ifdef PLATFORM_POSIX
 
@@ -93,9 +94,37 @@ bool SocketWriteHelper::DoCurWrite(
   }
 }
 
-bool SocketWriteHelper::SetStatusWhenMsgHeadDone() { TODO(); }
+bool SocketWriteHelper::SetStatusWhenMsgHeadDone() {
+  switch (cur_msg_.msg_type) {
+#define MAKE_ENTRY(x, y) \
+  case SocketMsgType::k##x: return SetStatusWhen##x##MsgHeadDone();
+    OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ);
+#undef MAKE_ENTRY
+    default: UNEXPECTED_RUN();
+  }
+  UNEXPECTED_RUN();
+}
 
 bool SocketWriteHelper::SetStatusWhenMsgBodyDone() {
+  cur_write_handle_ = &SocketWriteHelper::InitMsgWriteHandle;
+  return true;
+}
+
+bool SocketWriteHelper::SetStatusWhenRequestWriteMsgHeadDone() {
+  cur_write_handle_ = &SocketWriteHelper::InitMsgWriteHandle;
+  return true;
+}
+
+bool SocketWriteHelper::SetStatusWhenRequestReadMsgHeadDone() {
+  const void* src_token = cur_msg_.request_read_msg.src_token;
+  auto src_mem_desc = static_cast<const SocketMemDesc*>(src_token);
+  write_ptr_ = reinterpret_cast<const char*>(src_mem_desc->mem_ptr);
+  write_size_ = src_mem_desc->byte_size;
+  cur_write_handle_ = &SocketWriteHelper::MsgBodyWriteHandle;
+  return true;
+}
+
+bool SocketWriteHelper::SetStatusWhenActorMsgHeadDone() {
   cur_write_handle_ = &SocketWriteHelper::InitMsgWriteHandle;
   return true;
 }
