@@ -11,15 +11,38 @@ class SocketWriteHelper final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SocketWriteHelper);
   SocketWriteHelper() = delete;
-  ~SocketWriteHelper() { TODO(); }
+  ~SocketWriteHelper();
 
-  SocketWriteHelper(int sockfd, CpuStream* cpu_stream) { TODO(); }
+  SocketWriteHelper(int sockfd, CpuStream* cpu_stream);
 
-  void AsyncWrite(const SocketMsg& msg) { TODO(); }
+  void AsyncWrite(const SocketMsg& msg);
 
-  void NotifyMeSocketWriteable() { TODO(); }
+  void NotifyMeSocketWriteable();
 
  private:
+  void WriteUntilCurMsgQueueEmptyOrSocketNotWriteable();
+  void NotifyWorker();
+  bool InitMsgWriteHandle();
+  bool MsgHeadWriteHandle();
+  bool MsgBodyWriteHandle();
+
+  bool DoCurWrite(bool (SocketWriteHelper::*set_cur_write_done)());
+  bool SetStatusWhenMsgHeadDone();
+  bool SetStatusWhenMsgBodyDone();
+
+  int sockfd_;
+  CpuStream* cpu_stream_;
+
+  std::mutex cur_msg_queue_mtx_;
+  std::queue<SocketMsg>* cur_msg_queue_;
+
+  std::mutex pending_msg_queue_mtx_;
+  std::queue<SocketMsg>* pending_msg_queue_;
+
+  SocketMsg cur_msg_;
+  bool (SocketWriteHelper::*cur_write_handle_)();
+  const char* write_ptr_;
+  size_t write_size_;
 };
 
 }  // namespace oneflow
