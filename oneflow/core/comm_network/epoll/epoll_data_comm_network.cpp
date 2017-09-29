@@ -7,10 +7,9 @@ namespace oneflow {
 
 namespace {
 
-sockaddr_in GetSockAddr(int64_t machine_id) {
+sockaddr_in GetSockAddr(int64_t machine_id, uint16_t port) {
   const Machine& machine = JobDesc::Singleton()->resource().machine(machine_id);
   const std::string& addr = machine.addr();
-  uint16_t port = oneflow_cast<uint16_t>(machine.data_port());
   sockaddr_in sa;
   sa.sin_family = AF_INET;
   sa.sin_port = htons(port);
@@ -37,8 +36,8 @@ EpollDataCommNet::~EpollDataCommNet() {
   for (auto& pair : sockfd2helper_) { delete pair.second; }
 }
 
-void EpollDataCommNet::Init() {
-  DataCommNet::Singleton()->set_comm_network_ptr(new EpollDataCommNet());
+void EpollDataCommNet::Init(uint16_t port) {
+  DataCommNet::Singleton()->set_comm_network_ptr(new EpollDataCommNet(port));
 }
 
 const void* EpollDataCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
@@ -100,18 +99,18 @@ void EpollDataCommNet::SendSocketMsg(int64_t dst_machine_id,
   GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 }
 
-EpollDataCommNet::EpollDataCommNet() {
+EpollDataCommNet::EpollDataCommNet(uint16_t port) {
   mem_descs_.clear();
   unregister_mem_descs_cnt_ = 0;
   pollers_.resize(JobDesc::Singleton()->CommNetIOWorkerNum(), nullptr);
   for (size_t i = 0; i < pollers_.size(); ++i) {
     pollers_[i] = new IOEventPoller;
   }
-  InitSockets();
+  InitSockets(port);
   for (IOEventPoller* poller : pollers_) { poller->Start(); }
 }
 
-void EpollDataCommNet::InitSockets() {
+void EpollDataCommNet::InitSockets(uint16_t port) {
   int64_t this_machine_id = RuntimeCtx::Singleton()->this_machine_id();
   int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
   machine_id2sockfd_.assign(total_machine_num, -1);
@@ -123,7 +122,7 @@ void EpollDataCommNet::InitSockets() {
     return new SocketHelper(sockfd, poller);
   };
   // listen
-  sockaddr_in this_sockaddr = GetSockAddr(this_machine_id);
+  sockaddr_in this_sockaddr = GetSockAddr(this_machine_id, port);
   int listen_sockfd = socket(AF_INET, SOCK_STREAM, 0);
   PCHECK(bind(listen_sockfd, reinterpret_cast<sockaddr*>(&this_sockaddr),
               sizeof(this_sockaddr))
@@ -131,7 +130,7 @@ void EpollDataCommNet::InitSockets() {
   PCHECK(listen(listen_sockfd, total_machine_num) == 0);
   // connect
   FOR_RANGE(int64_t, peer_machine_id, this_machine_id + 1, total_machine_num) {
-    sockaddr_in peer_sockaddr = GetSockAddr(peer_machine_id);
+    sockaddr_in peer_sockaddr = GetSockAddr(peer_machine_id, port);
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     int rc = -1;
     while (rc == -1) {

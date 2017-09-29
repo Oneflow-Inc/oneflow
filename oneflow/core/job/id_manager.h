@@ -14,25 +14,6 @@ class IDMgr final {
 
   OF_SINGLETON(IDMgr);
 
-  void Init() {
-    LOG(INFO) << "Init IDManager";
-    Clear();
-    const Resource& resource = JobDesc::Singleton()->resource();
-    machine_num_ = resource.machine_size();
-    CHECK_LT(machine_num_, static_cast<int64_t>(1) << machine_id_bit_num_);
-    device_num_per_machine_ = resource.device_num_per_machine();
-    // reserve 3 number of device_id for persistence_, boxing_ and commnet_
-    // ThrdLocId
-    CHECK_LT(device_num_per_machine_,
-             (static_cast<int64_t>(1) << device_id_bit_num_) - 3);
-    for (int64_t i = 0; i < machine_num_; ++i) {
-      const std::string& machine_name = resource.machine(i).name();
-      CHECK(machine_name2machine_id_.emplace(machine_name, i).second);
-      CHECK(machine_id2machine_name_.emplace(i, machine_name).second);
-    }
-    regst_desc_id_count_ = 0;
-  }
-
   // Compile
   int64_t MachineID4MachineName(const std::string& machine_name) const {
     return machine_name2machine_id_.at(machine_name);
@@ -74,7 +55,24 @@ class IDMgr final {
   }
 
  private:
-  IDMgr() = default;
+  IDMgr() {
+    LOG(INFO) << "Init IDManager";
+    Clear();
+    const Resource& resource = JobDesc::Singleton()->resource();
+    machine_num_ = resource.machine_size();
+    CHECK_LT(machine_num_, static_cast<int64_t>(1) << machine_id_bit_num_);
+    device_num_per_machine_ = resource.device_num_per_machine();
+    // reserve 3 number of device_id for persistence_, boxing_ and commnet_
+    // ThrdLocId
+    CHECK_LT(device_num_per_machine_,
+             (static_cast<int64_t>(1) << device_id_bit_num_) - 3);
+    for (int64_t i = 0; i < machine_num_; ++i) {
+      const std::string& machine_name = resource.machine(i).name();
+      CHECK(machine_name2machine_id_.emplace(machine_name, i).second);
+      CHECK(machine_id2machine_name_.emplace(i, machine_name).second);
+    }
+    regst_desc_id_count_ = 0;
+  }
   void Clear() {
     thread_id2num_of_tasks_.clear();
     machine_id2machine_name_.clear();

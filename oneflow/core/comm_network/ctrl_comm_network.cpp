@@ -10,19 +10,19 @@ const int64_t sleep_seconds = 10;
 
 }  // namespace
 
-void CtrlCommNet::Init() {
-  ctrl_server_.reset(
-      new CtrlServer(RuntimeCtx::Singleton()->GetThisCtrlAddr()));
+CtrlCommNet::CtrlCommNet(uint16_t port) {
+  ctrl_server_.reset(new CtrlServer(RuntimeCtx::Singleton()->GetThisAddr() + ":"
+                                    + std::to_string(port)));
   stubs_.reserve(JobDesc::Singleton()->TotalMachineNum());
   for (int64_t i = 0; i < JobDesc::Singleton()->TotalMachineNum(); ++i) {
-    stubs_.push_back(
-        CtrlService::NewStub(RuntimeCtx::Singleton()->GetCtrlAddr(i)));
+    stubs_.push_back(CtrlService::NewStub(RuntimeCtx::Singleton()->GetAddr(i)
+                                          + ":" + std::to_string(port)));
   }
   int32_t retry_idx = 0;
   for (; retry_idx < max_retry_num; ++retry_idx) {
     grpc::ClientContext client_ctx;
     AddWorkerRequest request;
-    request.set_worker_ctrl_addr(RuntimeCtx::Singleton()->GetThisCtrlAddr());
+    request.set_worker_addr(RuntimeCtx::Singleton()->GetThisAddr());
     AddWorkerResponse response;
     grpc::Status st =
         GetMasterStub()->AddWorker(&client_ctx, request, &response);

@@ -46,7 +46,7 @@ void AddKernelCreator(OperatorConf::OpTypeCase op_case,
   });
 }
 
-void KernelMgr::InitFromPlan(const Plan& plan) {
+KernelMgr::KernelMgr(const Plan& plan) {
   int64_t this_machine_id = RuntimeCtx::Singleton()->this_machine_id();
   const PbRpf<std::string>& op_names_rpf =
       plan.machine_id2op_name_set().at(this_machine_id).op_name();

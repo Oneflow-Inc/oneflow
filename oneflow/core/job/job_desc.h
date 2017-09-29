@@ -15,8 +15,6 @@ class JobDesc final {
 
   OF_SINGLETON(JobDesc);
 
-  void InitFromJobConf(const JobConf&);
-  void InitFromProto(const JobDescProto&);
   void ToProto(JobDescProto*) const;
 
   // Common
@@ -35,6 +33,7 @@ class JobDesc final {
   }
   int64_t TotalMachineNum() const { return resource_.machine().size(); }
   int32_t CommNetIOWorkerNum() const { return 4; }  // TODO
+
   // Train conf
   const std::string& md_save_snapshots_path() {
     CHECK(is_train());
@@ -78,7 +77,8 @@ class JobDesc final {
   }
 
  private:
-  JobDesc() = default;
+  JobDesc(const JobConf&);
+  JobDesc(const JobDescProto&);
 
   JobConf job_conf_;
   DLNetConf dlnet_conf_;
