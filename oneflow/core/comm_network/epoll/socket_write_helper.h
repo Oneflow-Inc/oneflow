@@ -23,9 +23,8 @@ class SocketWriteHelper final {
  private:
   void SendQueueNotEmptyEvent();
   void ProcessQueueNotEmptyEvent();
-  void Work();
 
-  void WriteUntilCurMsgQueueEmptyOrSocketNotWriteable();
+  void WriteUntilMsgQueueEmptyOrSocketNotWriteable();
   bool InitMsgWriteHandle();
   bool MsgHeadWriteHandle();
   bool MsgBodyWriteHandle();
