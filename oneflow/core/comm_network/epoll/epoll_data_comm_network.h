@@ -14,6 +14,10 @@ class EpollDataCommNet final : public DataCommNet {
   OF_DISALLOW_COPY_AND_MOVE(EpollDataCommNet);
   ~EpollDataCommNet();
 
+  static EpollDataCommNet* Singleton() {
+    return static_cast<EpollDataCommNet*>(DataCommNet::Singleton());
+  }
+
   static void Init();
 
   const void* RegisterMemory(void* mem_ptr, size_t byte_size) override;
@@ -25,6 +29,7 @@ class EpollDataCommNet final : public DataCommNet {
   void AddReadCallBack(void* read_id, std::function<void()> callback) override;
 
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
+  void SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg);
 
  private:
   EpollDataCommNet();

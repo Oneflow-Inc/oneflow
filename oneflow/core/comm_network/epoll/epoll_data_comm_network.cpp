@@ -95,6 +95,11 @@ void EpollDataCommNet::SendActorMsg(int64_t dst_machine_id,
   GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 }
 
+void EpollDataCommNet::SendSocketMsg(int64_t dst_machine_id,
+                                     const SocketMsg& msg) {
+  GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
+}
+
 EpollDataCommNet::EpollDataCommNet() {
   mem_descs_.clear();
   unregister_mem_descs_cnt_ = 0;

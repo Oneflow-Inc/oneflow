@@ -24,11 +24,11 @@ class SocketReadHelper final {
   bool MsgHeadReadHandle();
   bool MsgBodyReadHandle();
 
-  bool DoCurRead(bool (SocketReadHelper::*set_cur_read_done)());
-  bool SetStatusWhenMsgHeadDone();
-  bool SetStatusWhenMsgBodyDone();
+  bool DoCurRead(void (SocketReadHelper::*set_cur_read_done)());
+  void SetStatusWhenMsgHeadDone();
+  void SetStatusWhenMsgBodyDone();
 
-#define MAKE_ENTRY(x, y) bool SetStatusWhen##x##MsgHeadDone();
+#define MAKE_ENTRY(x, y) void SetStatusWhen##x##MsgHeadDone();
   OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ);
 #undef MAKE_ENTRY
 

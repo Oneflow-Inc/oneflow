@@ -20,6 +20,7 @@ SocketWriteHelper::~SocketWriteHelper() {
 SocketWriteHelper::SocketWriteHelper(int sockfd, IOEventPoller* poller) {
   sockfd_ = sockfd;
   queue_not_empty_fd_ = eventfd(0, 0);
+  PCHECK(queue_not_empty_fd_ != -1);
   poller->AddFd(queue_not_empty_fd_,
                 std::bind(&SocketWriteHelper::ProcessQueueNotEmptyEvent, this),
                 [this]() {
@@ -88,10 +89,11 @@ bool SocketWriteHelper::MsgBodyWriteHandle() {
 }
 
 bool SocketWriteHelper::DoCurWrite(
-    bool (SocketWriteHelper::*set_cur_write_done)()) {
+    void (SocketWriteHelper::*set_cur_write_done)()) {
   ssize_t n = write(sockfd_, write_ptr_, write_size_);
   if (n == write_size_) {
-    return (this->*set_cur_write_done)();
+    (this->*set_cur_write_done)();
+    return true;
   } else if (n >= 0) {
     write_ptr_ += n;
     write_size_ -= n;
@@ -103,7 +105,7 @@ bool SocketWriteHelper::DoCurWrite(
   }
 }
 
-bool SocketWriteHelper::SetStatusWhenMsgHeadDone() {
+void SocketWriteHelper::SetStatusWhenMsgHeadDone() {
   switch (cur_msg_.msg_type) {
 #define MAKE_ENTRY(x, y) \
   case SocketMsgType::k##x: return SetStatusWhen##x##MsgHeadDone();
@@ -111,31 +113,26 @@ bool SocketWriteHelper::SetStatusWhenMsgHeadDone() {
 #undef MAKE_ENTRY
     default: UNEXPECTED_RUN();
   }
-  UNEXPECTED_RUN();
 }
 
-bool SocketWriteHelper::SetStatusWhenMsgBodyDone() {
+void SocketWriteHelper::SetStatusWhenMsgBodyDone() {
   cur_write_handle_ = &SocketWriteHelper::InitMsgWriteHandle;
-  return true;
 }
 
-bool SocketWriteHelper::SetStatusWhenRequestWriteMsgHeadDone() {
+void SocketWriteHelper::SetStatusWhenRequestWriteMsgHeadDone() {
   cur_write_handle_ = &SocketWriteHelper::InitMsgWriteHandle;
-  return true;
 }
 
-bool SocketWriteHelper::SetStatusWhenRequestReadMsgHeadDone() {
+void SocketWriteHelper::SetStatusWhenRequestReadMsgHeadDone() {
   const void* src_token = cur_msg_.request_read_msg.src_token;
   auto src_mem_desc = static_cast<const SocketMemDesc*>(src_token);
   write_ptr_ = reinterpret_cast<const char*>(src_mem_desc->mem_ptr);
   write_size_ = src_mem_desc->byte_size;
   cur_write_handle_ = &SocketWriteHelper::MsgBodyWriteHandle;
-  return true;
 }
 
-bool SocketWriteHelper::SetStatusWhenActorMsgHeadDone() {
+void SocketWriteHelper::SetStatusWhenActorMsgHeadDone() {
   cur_write_handle_ = &SocketWriteHelper::InitMsgWriteHandle;
-  return true;
 }
 
 }  // namespace oneflow
