@@ -8,11 +8,8 @@
 namespace oneflow {
 
 SocketWriteHelper::~SocketWriteHelper() {
-  {
-    std::unique_lock<std::mutex> lck(cur_msg_queue_mtx_);
-    delete cur_msg_queue_;
-    cur_msg_queue_ = nullptr;
-  }
+  delete cur_msg_queue_;
+  cur_msg_queue_ = nullptr;
   {
     std::unique_lock<std::mutex> lck(pending_msg_queue_mtx_);
     delete pending_msg_queue_;
@@ -37,18 +34,11 @@ SocketWriteHelper::SocketWriteHelper(int sockfd, IOEventPoller* poller) {
 }
 
 void SocketWriteHelper::AsyncWrite(const SocketMsg& msg) {
-  if (cur_msg_queue_mtx_.try_lock()) {
-    bool need_send_event = cur_msg_queue_->empty();
-    cur_msg_queue_->push(msg);
-    cur_msg_queue_mtx_.unlock();
-    if (need_send_event) { SendQueueNotEmptyEvent(); }
-  } else {
-    pending_msg_queue_mtx_.lock();
-    bool need_send_event = pending_msg_queue_->empty();
-    pending_msg_queue_->push(msg);
-    pending_msg_queue_mtx_.unlock();
-    if (need_send_event) { SendQueueNotEmptyEvent(); }
-  }
+  pending_msg_queue_mtx_.lock();
+  bool need_send_event = pending_msg_queue_->empty();
+  pending_msg_queue_->push(msg);
+  pending_msg_queue_mtx_.unlock();
+  if (need_send_event) { SendQueueNotEmptyEvent(); }
 }
 
 void SocketWriteHelper::NotifyMeSocketWriteable() { Work(); }
@@ -65,7 +55,6 @@ void SocketWriteHelper::ProcessQueueNotEmptyEvent() {
 }
 
 void SocketWriteHelper::Work() {
-  std::unique_lock<std::mutex> cur_lck(cur_msg_queue_mtx_);
   WriteUntilCurMsgQueueEmptyOrSocketNotWriteable();
   if (cur_msg_queue_->empty()) {
     {
