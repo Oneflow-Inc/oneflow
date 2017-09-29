@@ -10,6 +10,7 @@
 #include "oneflow/core/kernel/kernel_manager.h"
 #include "oneflow/core/persistence/snapshot_manager.h"
 #include "oneflow/core/register/register_manager.h"
+#include "oneflow/core/static_schedule/utilization.pb.h"
 #include "oneflow/core/thread/thread_context.h"
 
 namespace oneflow {
@@ -125,6 +126,12 @@ class Actor {
   int64_t total_reading_cnt_;
   int64_t num_of_remaining_eord_;
   int64_t num_of_read_empty_;
+
+  //	resource utilization
+  void CreateStreamUtilizationLogger(static_schedule::UtilizationEventType,
+                                     uint64_t, std::function<void()>* logger);
+  void LogRegstUtilization(static_schedule::UtilizationEventType, Regst*);
+  static_schedule::UtilizationEventPackageProto action_events_;
 };
 
 }  // namespace oneflow

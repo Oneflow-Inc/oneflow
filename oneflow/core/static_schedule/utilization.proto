@@ -1,0 +1,85 @@
+syntax = "proto3";
+package oneflow.static_schedule;
+
+message TaskResource {
+	uint64 task_id = 1;
+}
+
+message TaskStreamResource {
+	uint64 task_id = 1;
+	uint64 stream_id = 2;
+}
+
+message StreamResource {
+	uint64 device_id = 1;
+	uint64 stream_id = 2;
+}
+
+message ComputationResource {
+}
+
+message DeviceComputationResource {
+	uint64 device_id = 1;
+}
+
+message RegstResource {
+	uint64 regst_desc_id = 1;
+	uint64 regst_id = 2;
+}
+
+message RegstDescResource {
+	uint64 regst_desc_id = 1;
+}
+
+message MemoryResource {
+}
+
+message DeviceMemoryResource {
+	uint64 device_id = 1;
+}
+
+message UtilizationResource {
+	oneof resource_type {
+		ComputationResource computation = 1;
+		DeviceComputationResource dev_computation = 2;
+		StreamResource stream = 3;
+		TaskResource task = 4;
+		MemoryResource memory = 5;
+		DeviceMemoryResource dev_memory = 6;
+		RegstDescResource regst_desc = 7;
+
+		// only for UtilizationEventProto
+		TaskStreamResource task_stream = 8;
+		RegstResource regst = 9;
+	}
+}
+
+enum UtilizationEventType {
+	kStartEvent = 0;
+	kEndEvent = 1;
+}
+
+message UtilizationEventProto {
+	UtilizationEventType event_type = 1;
+	int64 piece_id = 2;
+	double time = 3;	
+	UtilizationResource resource = 4;
+}
+
+message UtilizationEventPackageProto {
+	repeated UtilizationEventProto event = 1;
+}
+
+message UtilizationProto {
+	double	utilization = 1;
+	double start_at = 2;	
+	double end_at = 3;	
+	int64 start_piece_id = 4;
+	int64 end_piece_id = 5;
+	UtilizationResource resource = 6;
+	double last_end_at = 7;	
+}
+
+message UtilizationPackageProto {
+	repeated UtilizationProto utilization = 1;
+}
