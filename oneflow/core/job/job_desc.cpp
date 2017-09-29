@@ -4,15 +4,15 @@
 
 namespace oneflow {
 
-void JobDesc::InitFromJobConf(const JobConf& conf) {
-  LOG(INFO) << "Read JobConf";
+JobDesc::JobDesc(const JobConf& conf) {
+  LOG(INFO) << "Init JobDesc from JobConf";
   job_conf_ = conf;
   ParseProtoFromTextFile(conf.dlnet_filepath(), &dlnet_conf_);
   ParseProtoFromTextFile(conf.resource_filepath(), &resource_);
   ParseProtoFromTextFile(conf.placement_filepath(), &placement_);
 }
 
-void JobDesc::InitFromProto(const JobDescProto& proto) {
+JobDesc::JobDesc(const JobDescProto& proto) {
   LOG(INFO) << "Init JobDesc from Proto";
   job_conf_ = proto.job_conf();
   dlnet_conf_ = proto.dlnet_conf();

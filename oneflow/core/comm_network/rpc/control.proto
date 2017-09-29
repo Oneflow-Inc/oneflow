@@ -10,7 +10,7 @@ message BarrierResponse {
 }
 
 message AddWorkerRequest {
-  string worker_ctrl_addr = 1;
+  string worker_addr = 1;
 }
 
 message AddWorkerResponse {

@@ -4,7 +4,7 @@
 
 namespace oneflow {
 
-void SnapshotMgr::Init(const Plan& plan) {
+SnapshotMgr::SnapshotMgr(const Plan& plan) {
   LOG(INFO) << "SnapshotMgr Init";
   num_of_model_blobs_ = 0;
   if (JobDesc::Singleton()->is_train()) {

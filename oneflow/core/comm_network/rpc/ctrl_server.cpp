@@ -56,7 +56,7 @@ void CtrlServer::AddWorkerHandler(
     CtrlCall<AddWorkerRequest, AddWorkerResponse>* call) {
   CHECK(RuntimeCtx::Singleton()->IsThisMachineMaster());
   added_worker_calls_.push_back(call);
-  LOG(INFO) << "Add Worker " << call->request().worker_ctrl_addr();
+  LOG(INFO) << "Added Worker " << call->request().worker_addr();
   if (added_worker_calls_.size() == JobDesc::Singleton()->TotalMachineNum()) {
     for (CtrlCallIf* pending_call : added_worker_calls_) {
       pending_call->SendResponse();

@@ -17,11 +17,6 @@ class ActorMsgBus final {
 
   void SendMsg(const ActorMsg& msg);
 
-  void Init() {
-    // CommNetwork::Singleton()->SetCallbackForReceivedActorMsg(
-    //    [](const ActorMsg& msg) { ActorMsgBus::Singleton()->SendMsg(msg); });
-  }
-
  private:
   ActorMsgBus() = default;
 };
