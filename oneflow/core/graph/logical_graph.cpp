@@ -6,7 +6,6 @@ namespace oneflow {
 
 LogicalGraph::LogicalGraph(const DLNetConf& dl_net_conf,
                            const Placement& placement) {
-  LOG(INFO) << "Build LogicalGraph";
   HashMap<LogicalEdge*, std::string> edge2lbn;
   HashMap<LogicalEdge*, std::string> edge2ibn;
   NaiveBuildGraphStruct(dl_net_conf, &edge2lbn, &edge2ibn);

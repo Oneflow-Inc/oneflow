@@ -3,8 +3,6 @@ package oneflow;
 
 message Machine {
   string addr = 1; // domain name or ip
-  string ctrl_port = 2;
-  string data_port = 3;
   string name = 4;
 }
 
@@ -17,6 +15,8 @@ message Resource {
   repeated Machine machine = 1;
   int64 device_num_per_machine = 2;
   DeviceType device_type = 3;
+  int32 port_min = 4;
+  int32 port_max = 5;
 }
 
 // If one machine named "machine_xxx" and device_num_per_machine = 4

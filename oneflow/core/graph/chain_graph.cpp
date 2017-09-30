@@ -230,7 +230,6 @@ bool ChainNode::HasOpWithModelOrModelTmpBlob() const {
 }
 
 ChainGraph::ChainGraph(const LogicalGraph* logical_gph) {
-  LOG(INFO) << "Build ChainGraph";
   // Build Chain
   std::list<Chain> chain_list;
   Logical2ChainItMap logical2chain_it;

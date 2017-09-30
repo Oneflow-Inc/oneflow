@@ -9,11 +9,10 @@ namespace oneflow {
 class CtrlCommNet final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CtrlCommNet);
+  CtrlCommNet() = delete;
   ~CtrlCommNet() = default;
 
   OF_SINGLETON(CtrlCommNet);
-
-  void Init();
 
   void Barrier(const std::string& barrier_name);
   void Barrier(const std::string& barrier_name, int32_t barrier_num);
@@ -22,8 +21,11 @@ class CtrlCommNet final {
   void NotifyDone(const std::string& name);
   void WaitUntilDone(const std::string& name);
 
+  void PublishPlan(const Plan* plan);
+  void FetchPlan(Plan* plan);
+
  private:
-  CtrlCommNet() = default;
+  CtrlCommNet(uint16_t port);
   CtrlService::Stub* GetMasterStub() { return stubs_[0].get(); }
   CtrlService::Stub* GetResponsibleStub(const std::string& key);
 

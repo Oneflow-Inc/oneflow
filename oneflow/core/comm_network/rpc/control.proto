@@ -1,6 +1,8 @@
 syntax = "proto3";
 package oneflow;
 
+import "oneflow/core/job/plan.proto";
+
 message BarrierRequest {
   string name = 1;
   int32 num = 2;
@@ -10,7 +12,7 @@ message BarrierResponse {
 }
 
 message AddWorkerRequest {
-  string worker_ctrl_addr = 1;
+  string worker_addr = 1;
 }
 
 message AddWorkerResponse {
@@ -42,4 +44,11 @@ message WaitUntilDoneRequest {
 }
 
 message WaitUntilDoneResponse {
+}
+
+message FetchPlanRequest {
+}
+
+message FetchPlanResponse {
+  Plan plan = 1;
 }

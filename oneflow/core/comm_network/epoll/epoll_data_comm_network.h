@@ -12,9 +12,14 @@ namespace oneflow {
 class EpollDataCommNet final : public DataCommNet {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EpollDataCommNet);
+  EpollDataCommNet() = delete;
   ~EpollDataCommNet();
 
-  static void Init();
+  static EpollDataCommNet* Singleton() {
+    return static_cast<EpollDataCommNet*>(DataCommNet::Singleton());
+  }
+
+  static void Init(uint16_t port);
 
   const void* RegisterMemory(void* mem_ptr, size_t byte_size) override;
   void UnRegisterMemory(const void* token) override;
@@ -25,25 +30,21 @@ class EpollDataCommNet final : public DataCommNet {
   void AddReadCallBack(void* read_id, std::function<void()> callback) override;
 
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
+  void SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg);
 
  private:
-  EpollDataCommNet();
-  void InitSockets();
-  void EpollLoop();
+  EpollDataCommNet(uint16_t port);
+  void InitSockets(uint16_t port);
   SocketHelper* GetSocketHelper(int64_t machine_id);
-  SocketReadHelper* GetSocketReadHelper(int64_t machine_id);
-  SocketWriteHelper* GetSocketWriteHelper(int64_t machine_id);
 
   // Memory Desc
   std::mutex mem_desc_mtx_;
   std::list<SocketMemDesc*> mem_descs_;
   size_t unregister_mem_descs_cnt_;
-  // Threads
-  std::thread epoll_thread_;
-  std::vector<SocketIOWorker*> io_workers_;
   // Socket
+  std::vector<IOEventPoller*> pollers_;
   std::vector<int> machine_id2sockfd_;
-  HashMap<int, std::unique_ptr<SocketHelper>> sockfd2io_helper_;
+  HashMap<int, SocketHelper*> sockfd2helper_;
 };
 
 }  // namespace oneflow

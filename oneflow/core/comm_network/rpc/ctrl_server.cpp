@@ -32,7 +32,20 @@ CtrlServer::CtrlServer(const std::string& server_addr) {
   grpc_server_ = server_builder.BuildAndStart();
   LOG(INFO) << "Server listening on " << server_addr;
   added_worker_calls_.clear();
+  plan_ = nullptr;
+  pending_plan_calls_.clear();
   loop_thread_ = std::thread(&CtrlServer::HandleRpcs, this);
+}
+
+void CtrlServer::PublishPlan(const Plan* plan) {
+  std::unique_lock<std::mutex> lck(plan_mtx_);
+  plan_ = plan;
+  if (plan_) {
+    for (CtrlCallIf* call : pending_plan_calls_) { call->SendResponse(); }
+    pending_plan_calls_.clear();
+  } else {
+    CHECK(pending_plan_calls_.empty());
+  }
 }
 
 void CtrlServer::HandleRpcs() {
@@ -56,7 +69,7 @@ void CtrlServer::AddWorkerHandler(
     CtrlCall<AddWorkerRequest, AddWorkerResponse>* call) {
   CHECK(RuntimeCtx::Singleton()->IsThisMachineMaster());
   added_worker_calls_.push_back(call);
-  LOG(INFO) << "Add Worker " << call->request().worker_ctrl_addr();
+  LOG(INFO) << "Added Worker " << call->request().worker_addr();
   if (added_worker_calls_.size() == JobDesc::Singleton()->TotalMachineNum()) {
     for (CtrlCallIf* pending_call : added_worker_calls_) {
       pending_call->SendResponse();
@@ -135,6 +148,18 @@ void CtrlServer::WaitUntilDoneHandler(
     call->SendResponse();
   }
   ENQUEUE_REQUEST(WaitUntilDone);
+}
+
+void CtrlServer::FetchPlanHandler(
+    CtrlCall<FetchPlanRequest, FetchPlanResponse>* call) {
+  std::unique_lock<std::mutex> lck(plan_mtx_);
+  if (plan_) {
+    *(call->mut_response()->mutable_plan()) = *plan_;
+    call->SendResponse();
+  } else {
+    pending_plan_calls_.push_back(call);
+  }
+  ENQUEUE_REQUEST(FetchPlan);
 }
 
 }  // namespace oneflow

@@ -3,7 +3,6 @@
 namespace oneflow {
 
 StageGraph::StageGraph(std::unique_ptr<const ChainGraph>&& chain_gph) {
-  LOG(INFO) << "Build StageGraph";
   chain_gph_ = std::move(chain_gph);
   HashMap<const ChainNode*, std::vector<StageNode*>> chain2stages;
   // Construct Stage

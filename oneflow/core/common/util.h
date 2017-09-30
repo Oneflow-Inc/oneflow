@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <atomic>
 #include <condition_variable>
+#include <forward_list>
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -37,21 +38,22 @@ namespace oneflow {
 
 #define TODO() LOG(FATAL) << "TODO";
 
-#define OF_SINGLETON(ClassName)                              \
-  static ClassName* Singleton() { return *SingletonPPtr(); } \
-  static ClassName** SingletonPPtr() {                       \
-    static ClassName* ptr = new ClassName;                   \
-    return &ptr;                                             \
-  }                                                          \
-  static void RefreshSingleton() {                           \
-    DeleteSingleton();                                       \
-    *SingletonPPtr() = new ClassName;                        \
-  }                                                          \
-  static void DeleteSingleton() {                            \
-    if (Singleton()) {                                       \
-      delete Singleton();                                    \
-      *SingletonPPtr() = nullptr;                            \
-    }                                                        \
+#define OF_SINGLETON(ClassName)                                    \
+  static ClassName* Singleton() { return *SingletonPPtr(); }       \
+  static ClassName** SingletonPPtr() {                             \
+    static ClassName* ptr = nullptr;                               \
+    return &ptr;                                                   \
+  }                                                                \
+  template<typename... Args>                                       \
+  static void NewSingleton(Args&&... args) {                       \
+    DeleteSingleton();                                             \
+    *SingletonPPtr() = new ClassName(std::forward<Args>(args)...); \
+  }                                                                \
+  static void DeleteSingleton() {                                  \
+    if (Singleton()) {                                             \
+      delete Singleton();                                          \
+      *SingletonPPtr() = nullptr;                                  \
+    }                                                              \
   }
 
 #define COMMAND(...)            \
@@ -90,7 +92,7 @@ inline std::string NewUniqueId() {
   return std::to_string(id++);
 }
 
-inline std::string LogDir() {
+inline const std::string& LogDir() {
   static std::string log_dir = std::getenv("GLOG_log_dir");
   return log_dir;
 }

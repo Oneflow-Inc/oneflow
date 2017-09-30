@@ -10,6 +10,7 @@ namespace oneflow {
 class SnapshotMgr {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SnapshotMgr)
+  SnapshotMgr() = delete;
   ~SnapshotMgr() = default;
 
   OF_SINGLETON(SnapshotMgr);
@@ -18,12 +19,10 @@ class SnapshotMgr {
 
   const Snapshot* GetReadableSnapshot() { return readable_snapshot_ptr_.get(); }
 
-  void Init(const Plan& plan);
-
   size_t num_of_model_blobs() const { return num_of_model_blobs_; }
 
  private:
-  SnapshotMgr() = default;
+  SnapshotMgr(const Plan& plan);
   std::string model_save_snapshots_path_;
   std::unique_ptr<const Snapshot> readable_snapshot_ptr_;
   HashMap<int64_t, std::unique_ptr<Snapshot>> snapshot_id2writeable_snapshot_;

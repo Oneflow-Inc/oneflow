@@ -61,7 +61,6 @@ INSTANTIATE_TASK_GPH_MEM_FUNC(BuildFromChainGph, std::unique_ptr<ChainGraph>&&,
 
 template<typename CompTaskNodeType>
 void TaskGraph::BuildFromStageGph(bool need_bp) {
-  LOG(INFO) << "Build FwTaskGraph";
   Stage2TaskNodesMap stage2task_nodes;
   InitCompTaskNodes<CompTaskNodeType>(&stage2task_nodes);
   InitBoxingTaskNodes(&stage2task_nodes);
@@ -250,7 +249,6 @@ void TaskGraph::ConnectBoxingTaskNodes(
 }
 
 void TaskGraph::BuildBpStruct() {
-  LOG(INFO) << "Build BpTaskGraph";
   std::vector<TaskNode*> loss_node_vec;
   GenerateRelatedBpNodes(&loss_node_vec);
   BackwardConnect(loss_node_vec);
