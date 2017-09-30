@@ -17,7 +17,6 @@ class Blob final {
 
   const char* data_id(int32_t no) const;
   char* mut_data_id(int32_t no) { return const_cast<char*>(data_id(no)); }
-  size_t data_id_len(int32_t no) const;
 
   const char* data_id() const { return data_id(0); }
   char* mut_data_id() { return mut_data_id(0); }

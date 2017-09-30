@@ -12,13 +12,6 @@ Blob::Blob(const BlobDesc* blob_desc, char* mem_ptr,
   comm_net_token_ = comm_net_token;
 }
 
-size_t Blob::data_id_len(int32_t no) const {
-  if (*(data_id(no + 1) - 1) != '\0') {
-    return JobDesc::Singleton()->SizeOfOneDataId();
-  }
-  return strlen(data_id_ptr_);
-}
-
 const char* Blob::data_id(int32_t no) const {
   CHECK_NOTNULL(data_id_ptr_);
   return data_id_ptr_ + no * JobDesc::Singleton()->SizeOfOneDataId();

@@ -27,9 +27,6 @@ void DataLoaderKernel<T>::Forward(
   CHECK_EQ(GetDataType<T>::val, out_blob->data_type());
 
   kernel_ctx.device_ctx->cpu_stream()->SendWork([out_blob, in_stream]() {
-    if (out_blob->has_data_id()) {
-      memset(out_blob->mut_data_id(), '\0', out_blob->ByteSizeOfDataIdField());
-    }
     int64_t piece_size = out_blob->shape().At(0);
     T* out_dptr = out_blob->mut_dptr<T>();
     std::string line;
@@ -41,6 +38,9 @@ void DataLoaderKernel<T>::Forward(
         line_ptr = StrToToken(line_ptr, ",", &token) + 1;
         if (out_blob->has_data_id()) {
           CHECK_LE(token.size(), JobDesc::Singleton()->SizeOfOneDataId());
+          if (token.size() != JobDesc::Singleton()->SizeOfOneDataId()) {
+            token.push_back('\0');
+          }
           memcpy(out_blob->mut_data_id(i), token.c_str(), token.size());
         }
         for (int64_t j = 0; j < out_blob->shape().Count(1); ++j) {

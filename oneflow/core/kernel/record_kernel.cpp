@@ -12,8 +12,11 @@ void RecordBlobImpl(PersistentOutStream& out_stream, const Blob* blob) {
   const T* dptr = blob->dptr<T>();
   for (int64_t i = 0; i < blob->shape().At(0); ++i) {
     if (blob->has_data_id()) {
-      out_stream.Write(blob->data_id(i), blob->data_id_len(i));
-      out_stream << ' ';
+      for (size_t j = 0; j != JobDesc::Singleton()->SizeOfOneDataId(); ++j) {
+        if (*(blob->data_id(i) + j) == '\0') break;
+        out_stream.Write(blob->data_id(i) + j, 1);
+      }
+      out_stream.Write(" ", 1);
     }
     for (int64_t j = 0; j < blob->shape().Count(1); ++j) {
       out_stream << std::to_string(*dptr++) << ' ';

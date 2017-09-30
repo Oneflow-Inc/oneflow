@@ -16,7 +16,7 @@ placement_group {
   }
   parallel_conf {
     policy: kDataParallel
-    device_name: "centos-0:0-3"
+    device_name: "centos-0:0-1"
   }
 }
 
@@ -26,6 +26,6 @@ placement_group {
   }
   parallel_conf {
     policy: kDataParallel
-    device_name: "centos-0:0-3"
+    device_name: "centos-0:0-1"
   }
 }
