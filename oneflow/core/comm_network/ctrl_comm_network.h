@@ -21,6 +21,9 @@ class CtrlCommNet final {
   void NotifyDone(const std::string& name);
   void WaitUntilDone(const std::string& name);
 
+  void PublishPlan(const Plan* plan);
+  void FetchPlan(Plan* plan);
+
  private:
   CtrlCommNet(uint16_t port);
   CtrlService::Stub* GetMasterStub() { return stubs_[0].get(); }

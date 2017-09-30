@@ -44,9 +44,15 @@ void Scheduler::Process(const std::string& job_conf_filepath,
                 << "-plan_filepath=" << naive_plan_filepath;
     SystemCall(compile_cmd.str());
     ParseProtoFromTextFile(naive_plan_filepath, plan.get());
-    // TODO: send plan
+    CtrlCommNet::Singleton()->PublishPlan(plan.get());
   } else {
-    // TODO receive plan and print to naive_plan_filepath
+    CtrlCommNet::Singleton()->FetchPlan(plan.get());
+  }
+  OF_BARRIER();
+  if (RuntimeCtx::Singleton()->IsThisMachineMaster()) {
+    CtrlCommNet::Singleton()->PublishPlan(nullptr);
+  } else {
+    PrintProtoToTextFile(*plan, naive_plan_filepath);
   }
   // Runtime
   std::stringstream runtime_cmd;

@@ -79,6 +79,18 @@ void CtrlCommNet::WaitUntilDone(const std::string& name) {
   GetResponsibleStub(name)->WaitUntilDone(&client_ctx, request, &response);
 }
 
+void CtrlCommNet::PublishPlan(const Plan* plan) {
+  ctrl_server_->PublishPlan(plan);
+}
+
+void CtrlCommNet::FetchPlan(Plan* plan) {
+  grpc::ClientContext client_ctx;
+  FetchPlanRequest request;
+  FetchPlanResponse response;
+  GetMasterStub()->FetchPlan(&client_ctx, request, &response);
+  *plan = response.plan();
+}
+
 CtrlService::Stub* CtrlCommNet::GetResponsibleStub(const std::string& key) {
   int64_t machine_id =
       (std::hash<std::string>{}(key)) % JobDesc::Singleton()->TotalMachineNum();

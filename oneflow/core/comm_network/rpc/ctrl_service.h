@@ -16,12 +16,13 @@
 
 namespace oneflow {
 
-#define CTRL_METHOD_SEQ            \
-  OF_PP_MAKE_TUPLE_SEQ(AddWorker)  \
-  OF_PP_MAKE_TUPLE_SEQ(Barrier)    \
-  OF_PP_MAKE_TUPLE_SEQ(TryLock)    \
-  OF_PP_MAKE_TUPLE_SEQ(NotifyDone) \
-  OF_PP_MAKE_TUPLE_SEQ(WaitUntilDone)
+#define CTRL_METHOD_SEQ               \
+  OF_PP_MAKE_TUPLE_SEQ(AddWorker)     \
+  OF_PP_MAKE_TUPLE_SEQ(Barrier)       \
+  OF_PP_MAKE_TUPLE_SEQ(TryLock)       \
+  OF_PP_MAKE_TUPLE_SEQ(NotifyDone)    \
+  OF_PP_MAKE_TUPLE_SEQ(WaitUntilDone) \
+  OF_PP_MAKE_TUPLE_SEQ(FetchPlan)
 
 enum class CtrlMethod {
 #define MAKE_ENTRY(method) k##method,
