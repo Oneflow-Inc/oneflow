@@ -5,7 +5,8 @@ placement_group {
   }
   parallel_conf {
     policy: kDataParallel
-    device_name: "centos-0:persistence"
+    device_name: "192.168.1.11:persistence"
+    device_name: "192.168.1.13:persistence"
   }
 }
 
@@ -16,7 +17,7 @@ placement_group {
   }
   parallel_conf {
     policy: kDataParallel
-    device_name: "centos-0:0-3"
+    device_name: "192.168.1.11:0-3"
   }
 }
 
@@ -26,6 +27,6 @@ placement_group {
   }
   parallel_conf {
     policy: kDataParallel
-    device_name: "centos-0:0-3"
+    device_name: "192.168.1.13:0-3"
   }
 }

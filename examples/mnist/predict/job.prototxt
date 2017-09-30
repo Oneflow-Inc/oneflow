@@ -1,6 +1,6 @@
-dlnet_filepath: "./predict_net.prototxt"
+dlnet_filepath: "./net.prototxt"
 resource_filepath: "./resource.prototxt"
-placement_filepath: "./predict_placement.prototxt"
+placement_filepath: "./placement.prototxt"
 model_load_snapshot_path: ""
 piece_size: 1000
 default_data_type: kFloat

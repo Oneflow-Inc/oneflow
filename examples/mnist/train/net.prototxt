@@ -9,7 +9,7 @@ op {
       dim: 28
       dim: 28
     }
-    data_dir: "/tmp/mnist/feature/"
+    data_dir: "/mnist/feature/"
   }
 }
 
@@ -21,7 +21,7 @@ op {
     shape {
       dim: 60000
     }
-    data_dir: "/tmp/mnist/label/"
+    data_dir: "/mnist/label/"
   }
 }
 
