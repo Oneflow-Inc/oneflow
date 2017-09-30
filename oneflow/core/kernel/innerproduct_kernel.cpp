@@ -32,7 +32,7 @@ void InnerProductKernel<device_type, T>::Forward(
   const Blob* weight = BnInOp2Blob("weight");
   Blob* out = BnInOp2Blob("out");
   if (in_blob->has_data_id()) {
-    CopyDataIdFromIbToAllOb<device_type>(ctx.device_ctx, BnInOp2Blob);
+    CopyDataIdFromSoleIbToAllOb<device_type>(ctx.device_ctx, BnInOp2Blob);
   }
 
   // out = in * weight

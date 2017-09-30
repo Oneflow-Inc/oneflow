@@ -80,8 +80,8 @@ void ConcatKernel<device_type, T>::CopyDataIdToOb(
     const std::string& out_bn, const int32_t concat_axis, cudaMemcpyKind kind,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (concat_axis != 0) {
-    CopyDataIdFromIbToAllOb<device_type>(ctx.device_ctx, BnInOp2Blob,
-                                         BnInOp2Blob(in_bns.front()));
+    CopyDataIdToAllOb<device_type>(ctx.device_ctx, BnInOp2Blob,
+                                   BnInOp2Blob(in_bns.front()));
     return;
   }
   Blob* out_blob = BnInOp2Blob(out_bn);

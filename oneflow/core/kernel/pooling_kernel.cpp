@@ -12,7 +12,7 @@ void PoolingKernel<device_type, T>::Forward(
   Blob* out_blob = BnInOp2Blob("out");
   Blob* idx_blob = BnInOp2Blob("idx");
   if (in_blob->has_data_id()) {
-    CopyDataIdFromIbToAllOb<device_type>(ctx.device_ctx, BnInOp2Blob);
+    CopyDataIdFromSoleIbToAllOb<device_type>(ctx.device_ctx, BnInOp2Blob);
   }
 
   PoolingKernelUtil<device_type, T>::PoolingForward(ctx, in_blob, out_blob,
