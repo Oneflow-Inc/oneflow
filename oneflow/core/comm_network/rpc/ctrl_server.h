@@ -13,6 +13,7 @@ class CtrlServer final {
   ~CtrlServer();
 
   CtrlServer(const std::string& server_addr);
+  void PublishPlan(const Plan* plan);
 
  private:
   void HandleRpcs();
@@ -35,6 +36,10 @@ class CtrlServer final {
       barrier_calls_;
   // TryLock, NotifyDone, WaitUntilDone
   HashMap<std::string, void*> name2lock_status_;  // TODO: erase outdated item
+  // FetchPlan
+  std::mutex plan_mtx_;
+  const Plan* plan_;
+  std::list<CtrlCallIf*> pending_plan_calls_;
 };
 
 }  // namespace oneflow
