@@ -268,6 +268,7 @@ void Compiler::Plan2DotFile(const Plan& plan) {
 int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, true);
+  oneflow::RedirectStdoutAndStderrToGlogDir();
   LOG(INFO) << "Compile Start";
   oneflow::JobConf job_conf;
   oneflow::ParseProtoFromTextFile(FLAGS_job_conf_filepath, &job_conf);
@@ -276,6 +277,7 @@ int main(int argc, char** argv) {
   plan = oneflow::Compiler::Singleton()->Compile(job_conf);
   oneflow::PrintProtoToTextFile(plan, FLAGS_plan_filepath);
   oneflow::Compiler::DeleteSingleton();
+  oneflow::CloseStdoutAndStderr();
   LOG(INFO) << "Compile Stop";
   return 0;
 }

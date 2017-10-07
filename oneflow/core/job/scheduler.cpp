@@ -90,7 +90,7 @@ void Scheduler::NewAllSingleton(const std::string& job_conf_filepath,
 
 void Scheduler::SystemCall(const std::string& cmd) {
   LOG(INFO) << "SystemCall: [" << cmd << "]";
-  PCHECK(std::system(cmd.c_str()) == 0);
+  CHECK_EQ(std::system(cmd.c_str()), 0);
 }
 
 }  // namespace oneflow
@@ -102,11 +102,13 @@ int main(int argc, char** argv, char** env) {
   google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, true);
   oneflow::LocalFS()->CreateDirIfNotExist(oneflow::LogDir());
+  oneflow::RedirectStdoutAndStderrToGlogDir();
   LOG(INFO) << "Scheduler Start";
   oneflow::Scheduler::NewSingleton();
   oneflow::Scheduler::Singleton()->Process(FLAGS_job_conf_filepath,
                                            FLAGS_this_machine_name, env);
   oneflow::Scheduler::DeleteSingleton();
+  oneflow::CloseStdoutAndStderr();
   LOG(INFO) << "Scheduler Stop";
   return 0;
 }

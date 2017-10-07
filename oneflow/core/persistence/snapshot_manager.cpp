@@ -9,9 +9,10 @@ SnapshotMgr::SnapshotMgr(const Plan& plan) {
   num_of_model_blobs_ = 0;
   if (JobDesc::Singleton()->is_train()) {
     model_save_snapshots_path_ = JobDesc::Singleton()->md_save_snapshots_path();
-    OF_ONCE_GUARD(model_save_snapshots_path_,
-                  GlobalFS()->CreateDirIfNotExist(model_save_snapshots_path_);
-                  CHECK(GlobalFS()->IsDirEmpty(model_save_snapshots_path_)););
+    OF_CALL_ONCE(model_save_snapshots_path_, {
+      GlobalFS()->CreateDirIfNotExist(model_save_snapshots_path_);
+      CHECK(GlobalFS()->IsDirEmpty(model_save_snapshots_path_));
+    });
     HashSet<std::string> model_blob_set;
     for (const OperatorProto& op_proto : plan.op()) {
       if (op_proto.op_conf().has_model_save_conf()) {
@@ -34,8 +35,8 @@ Snapshot* SnapshotMgr::GetWriteableSnapshot(int64_t snapshot_id) {
   if (it == snapshot_id2writeable_snapshot_.end()) {
     std::string snapshot_root_path = JoinPath(
         model_save_snapshots_path_, "snapshot_" + std::to_string(snapshot_id));
-    OF_ONCE_GUARD(snapshot_root_path,
-                  GlobalFS()->CreateDirIfNotExist(snapshot_root_path));
+    OF_CALL_ONCE(snapshot_root_path,
+                 GlobalFS()->CreateDirIfNotExist(snapshot_root_path));
     std::unique_ptr<Snapshot> ret(new Snapshot(snapshot_root_path));
     auto emplace_ret =
         snapshot_id2writeable_snapshot_.emplace(snapshot_id, std::move(ret));
