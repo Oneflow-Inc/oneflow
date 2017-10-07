@@ -55,11 +55,17 @@ void CtrlCommNet::Barrier(const std::string& barrier_name,
 }
 
 TryLockResult CtrlCommNet::TryLock(const std::string& name) {
+  if (done_names_.find(name) != done_names_.end()) {
+    return TryLockResult::kDone;
+  }
   grpc::ClientContext client_ctx;
   TryLockRequest request;
   request.set_name(name);
   TryLockResponse response;
   GetResponsibleStub(name)->TryLock(&client_ctx, request, &response);
+  if (response.result() == TryLockResult::kDone) {
+    CHECK(done_names_.insert(name).second);
+  }
   return response.result();
 }
 

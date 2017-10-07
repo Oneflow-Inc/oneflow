@@ -39,7 +39,7 @@ class CtrlServer final {
   // FetchPlan
   std::mutex plan_mtx_;
   const Plan* plan_;
-  std::list<CtrlCallIf*> pending_plan_calls_;
+  std::list<CtrlCall<FetchPlanRequest, FetchPlanResponse>*> pending_plan_calls_;
 };
 
 }  // namespace oneflow

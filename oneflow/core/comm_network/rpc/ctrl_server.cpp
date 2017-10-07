@@ -30,7 +30,7 @@ CtrlServer::CtrlServer(const std::string& server_addr) {
   server_builder.RegisterService(grpc_service_.get());
   cq_ = server_builder.AddCompletionQueue();
   grpc_server_ = server_builder.BuildAndStart();
-  LOG(INFO) << "Server listening on " << server_addr;
+  LOG(INFO) << "CtrlServer listening on " << server_addr;
   added_worker_calls_.clear();
   plan_ = nullptr;
   pending_plan_calls_.clear();
@@ -41,7 +41,10 @@ void CtrlServer::PublishPlan(const Plan* plan) {
   std::unique_lock<std::mutex> lck(plan_mtx_);
   plan_ = plan;
   if (plan_) {
-    for (CtrlCallIf* call : pending_plan_calls_) { call->SendResponse(); }
+    for (auto call : pending_plan_calls_) {
+      *(call->mut_response()->mutable_plan()) = *plan;
+      call->SendResponse();
+    }
     pending_plan_calls_.clear();
   } else {
     CHECK(pending_plan_calls_.empty());

@@ -31,13 +31,14 @@ class CtrlCommNet final {
 
   std::unique_ptr<CtrlServer> ctrl_server_;
   std::vector<std::unique_ptr<CtrlService::Stub>> stubs_;
+  HashSet<std::string> done_names_;
 };
 
 #define FILE_LINE_STR __FILE__ ":" OF_PP_STRINGIZE(__LINE__)
 
 #define OF_BARRIER() CtrlCommNet::Singleton()->Barrier(FILE_LINE_STR)
 
-#define OF_ONCE_GUARD(name, ...)                                      \
+#define OF_CALL_ONCE(name, ...)                                       \
   do {                                                                \
     TryLockResult lock_ret = CtrlCommNet::Singleton()->TryLock(name); \
     if (lock_ret == TryLockResult::kLocked) {                         \

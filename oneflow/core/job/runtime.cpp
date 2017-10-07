@@ -125,12 +125,14 @@ void Runtime::SendCmdMsg(const std::vector<const TaskProto*>& tasks,
 int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, true);
+  oneflow::RedirectStdoutAndStderrToGlogDir();
   LOG(INFO) << "Runtime Start";
   oneflow::Plan plan;
   oneflow::ParseProtoFromTextFile(FLAGS_plan_filepath, &plan);
   oneflow::Runtime::NewSingleton();
   oneflow::Runtime::Singleton()->Run(plan, FLAGS_this_machine_name);
   oneflow::Runtime::DeleteSingleton();
+  oneflow::CloseStdoutAndStderr();
   LOG(INFO) << "Runtime Stop";
   return 0;
 }
