@@ -1,19 +1,6 @@
-#include "oneflow/core/comm_network/rpc/ctrl_server.h"
-#include "grpc++/alarm.h"
-#include "oneflow/core/job/runtime_context.h"
+#include "oneflow/core/control/ctrl_server.h"
 
 namespace oneflow {
-
-#define ENQUEUE_REQUEST(method)                                              \
-  do {                                                                       \
-    auto call = new CtrlCall<method##Request, method##Response>();           \
-    call->set_request_handler(                                               \
-        std::bind(&CtrlServer::method##Handler, this, call));                \
-    grpc_service_->RequestAsyncUnary(                                        \
-        static_cast<int32_t>(CtrlMethod::k##method), call->mut_server_ctx(), \
-        call->mut_request(), call->mut_responder(), cq_.get(), cq_.get(),    \
-        call);                                                               \
-  } while (0);
 
 CtrlServer::~CtrlServer() {
   grpc::Alarm alarm(cq_.get(), gpr_now(GPR_CLOCK_MONOTONIC), nullptr);
@@ -31,25 +18,21 @@ CtrlServer::CtrlServer(const std::string& server_addr) {
   cq_ = server_builder.AddCompletionQueue();
   grpc_server_ = server_builder.BuildAndStart();
   LOG(INFO) << "CtrlServer listening on " << server_addr;
-  added_worker_calls_.clear();
   plan_ = nullptr;
-  pending_plan_calls_.clear();
+  port_ = -1;
   loop_thread_ = std::thread(&CtrlServer::HandleRpcs, this);
 }
 
-void CtrlServer::PublishPlan(const Plan* plan) {
-  std::unique_lock<std::mutex> lck(plan_mtx_);
-  plan_ = plan;
-  if (plan_) {
-    for (auto call : pending_plan_calls_) {
-      *(call->mut_response()->mutable_plan()) = *plan;
-      call->SendResponse();
-    }
-    pending_plan_calls_.clear();
-  } else {
-    CHECK(pending_plan_calls_.empty());
-  }
-}
+#define ENQUEUE_REQUEST(method)                                              \
+  do {                                                                       \
+    auto call = new CtrlCall<method##Request, method##Response>();           \
+    call->set_request_handler(                                               \
+        std::bind(&CtrlServer::method##Handler, this, call));                \
+    grpc_service_->RequestAsyncUnary(                                        \
+        static_cast<int32_t>(CtrlMethod::k##method), call->mut_server_ctx(), \
+        call->mut_request(), call->mut_responder(), cq_.get(), cq_.get(),    \
+        call);                                                               \
+  } while (0);
 
 void CtrlServer::HandleRpcs() {
   OF_PP_FOR_EACH_TUPLE(ENQUEUE_REQUEST, CTRL_METHOD_SEQ);
@@ -68,18 +51,10 @@ void CtrlServer::HandleRpcs() {
   }
 }
 
-void CtrlServer::AddWorkerHandler(
-    CtrlCall<AddWorkerRequest, AddWorkerResponse>* call) {
-  CHECK(RuntimeCtx::Singleton()->IsThisMachineMaster());
-  added_worker_calls_.push_back(call);
-  LOG(INFO) << "Added Worker " << call->request().worker_addr();
-  if (added_worker_calls_.size() == JobDesc::Singleton()->TotalMachineNum()) {
-    for (CtrlCallIf* pending_call : added_worker_calls_) {
-      pending_call->SendResponse();
-    }
-    added_worker_calls_.clear();
-  }
-  ENQUEUE_REQUEST(AddWorker);
+void CtrlServer::LoadServerHandler(
+    CtrlCall<LoadServerRequest, LoadServerResponse>* call) {
+  call->SendResponse();
+  ENQUEUE_REQUEST(LoadServer);
 }
 
 void CtrlServer::BarrierHandler(
@@ -153,16 +128,58 @@ void CtrlServer::WaitUntilDoneHandler(
   ENQUEUE_REQUEST(WaitUntilDone);
 }
 
-void CtrlServer::FetchPlanHandler(
-    CtrlCall<FetchPlanRequest, FetchPlanResponse>* call) {
-  std::unique_lock<std::mutex> lck(plan_mtx_);
+void CtrlServer::PushPlanHandler(
+    CtrlCall<PushPlanRequest, PushPlanResponse>* call) {
+  plan_.reset(new Plan(call->request().plan()));
+  for (auto call : pending_plan_calls_) {
+    *(call->mut_response()->mutable_plan()) = *plan_;
+    call->SendResponse();
+  }
+  ENQUEUE_REQUEST(PushPlan);
+}
+
+void CtrlServer::ClearPlanHandler(
+    CtrlCall<ClearPlanRequest, ClearPlanResponse>* call) {
+  plan_.reset();
+  ENQUEUE_REQUEST(ClearPlan);
+}
+
+void CtrlServer::PullPlanHandler(
+    CtrlCall<PullPlanRequest, PullPlanResponse>* call) {
   if (plan_) {
     *(call->mut_response()->mutable_plan()) = *plan_;
     call->SendResponse();
   } else {
     pending_plan_calls_.push_back(call);
   }
-  ENQUEUE_REQUEST(FetchPlan);
+  ENQUEUE_REQUEST(PullPlan);
+}
+
+void CtrlServer::PushPortHandler(
+    CtrlCall<PushPortRequest, PushPortResponse>* call) {
+  port_ = call->request().port();
+  for (auto call : pending_port_calls_) {
+    call->mut_response()->set_port(port_);
+    call->SendResponse();
+  }
+  ENQUEUE_REQUEST(PushPort);
+}
+
+void CtrlServer::ClearPortHandler(
+    CtrlCall<ClearPortRequest, ClearPortResponse>* call) {
+  port_ = -1;
+  ENQUEUE_REQUEST(ClearPort);
+}
+
+void CtrlServer::PullPortHandler(
+    CtrlCall<PullPortRequest, PullPortResponse>* call) {
+  if (port_ != -1) {
+    call->mut_response()->set_port(port_);
+    call->SendResponse();
+  } else {
+    pending_port_calls_.push_back(call);
+  }
+  ENQUEUE_REQUEST(PullPort);
 }
 
 }  // namespace oneflow

@@ -1,14 +1,10 @@
 #include <gflags/gflags.h>
 #include "oneflow/core/comm_network/epoll/epoll_data_comm_network.h"
+#include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/kernel/kernel_manager.h"
 #include "oneflow/core/thread/thread_manager.h"
-
-DEFINE_string(plan_filepath, "", "");
-DEFINE_string(this_machine_name, "", "");
-DEFINE_int32(ctrl_port, -1, "");
-DEFINE_int32(data_port, -1, "");
 
 namespace oneflow {
 
@@ -82,10 +78,10 @@ void Runtime::NewAllSingleton(const Plan& plan,
   JobDesc::NewSingleton(plan.job_desc());
   IDMgr::NewSingleton();
   RuntimeCtx::NewSingleton(this_machine_name);
-  CtrlCommNet::NewSingleton(FLAGS_ctrl_port);
+  CtrlClient::NewSingleton();
   KernelMgr::NewSingleton(plan);
 #ifdef PLATFORM_POSIX
-  EpollDataCommNet::Init(FLAGS_data_port);
+  EpollDataCommNet::Init();
 #endif
   SnapshotMgr::NewSingleton(plan);
   RegstMgr::NewSingleton();
@@ -100,7 +96,7 @@ void Runtime::DeleteAllSingleton() {
   SnapshotMgr::DeleteSingleton();
   delete DataCommNet::Singleton();
   KernelMgr::DeleteSingleton();
-  CtrlCommNet::DeleteSingleton();
+  CtrlClient::DeleteSingleton();
   RuntimeCtx::DeleteSingleton();
   IDMgr::DeleteSingleton();
   JobDesc::DeleteSingleton();
@@ -121,6 +117,9 @@ void Runtime::SendCmdMsg(const std::vector<const TaskProto*>& tasks,
 }
 
 }  // namespace oneflow
+
+DEFINE_string(plan_filepath, "", "");
+DEFINE_string(this_machine_name, "", "");
 
 int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);

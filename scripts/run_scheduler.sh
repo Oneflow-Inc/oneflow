@@ -8,7 +8,7 @@ SCHEDULER_CMD='GLOG_logtostderr=0 GLOG_log_dir=./log GLOG_v=0 GLOG_logbuflevel=-
 set +e
 for host in "${hosts[@]}"
 do
-  ssh $USER@$host "/usr/sbin/fuser -k 9000/tcp 9001/tcp 9002/tcp 9003/tcp 9004/tcp"
+  ssh $USER@$host "/usr/sbin/fuser -k 9000/tcp"
 done
 set -e
 
