@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_PERSISTENCE_SNAPSHOT_H_
 #define ONEFLOW_CORE_PERSISTENCE_SNAPSHOT_H_
 
-#include "oneflow/core/comm_network/ctrl_comm_network.h"
+#include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/persistence/normal_persistent_in_stream.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
 

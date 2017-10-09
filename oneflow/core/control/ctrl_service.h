@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_COMM_NETWORK_RPC_CTRL_SERVICE_H_
-#define ONEFLOW_CORE_COMM_NETWORK_RPC_CTRL_SERVICE_H_
+#ifndef ONEFLOW_CORE_CONTROL_CTRL_SERVICE_H_
+#define ONEFLOW_CORE_CONTROL_CTRL_SERVICE_H_
 
 #include "grpc++/grpc++.h"
 #include "grpc++/impl/codegen/async_stream.h"
@@ -10,19 +10,24 @@
 #include "grpc++/impl/codegen/status.h"
 #include "grpc++/impl/codegen/stub_options.h"
 #include "grpc++/impl/codegen/sync_stream.h"
-#include "oneflow/core/comm_network/rpc/control.pb.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/control/control.pb.h"
 
 namespace oneflow {
 
 #define CTRL_METHOD_SEQ               \
-  OF_PP_MAKE_TUPLE_SEQ(AddWorker)     \
+  OF_PP_MAKE_TUPLE_SEQ(LoadServer)    \
   OF_PP_MAKE_TUPLE_SEQ(Barrier)       \
   OF_PP_MAKE_TUPLE_SEQ(TryLock)       \
   OF_PP_MAKE_TUPLE_SEQ(NotifyDone)    \
   OF_PP_MAKE_TUPLE_SEQ(WaitUntilDone) \
-  OF_PP_MAKE_TUPLE_SEQ(FetchPlan)
+  OF_PP_MAKE_TUPLE_SEQ(PushPlan)      \
+  OF_PP_MAKE_TUPLE_SEQ(ClearPlan)     \
+  OF_PP_MAKE_TUPLE_SEQ(PullPlan)      \
+  OF_PP_MAKE_TUPLE_SEQ(PushPort)      \
+  OF_PP_MAKE_TUPLE_SEQ(ClearPort)     \
+  OF_PP_MAKE_TUPLE_SEQ(PullPort)
 
 enum class CtrlMethod {
 #define MAKE_ENTRY(method) k##method,
@@ -66,4 +71,4 @@ class CtrlService final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMM_NETWORK_RPC_CTRL_SERVICE_H_
+#endif  // ONEFLOW_CORE_CONTROL_CTRL_SERVICE_H_

@@ -1,4 +1,5 @@
 #include "oneflow/core/comm_network/epoll/epoll_data_comm_network.h"
+#include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/runtime_context.h"
 
 #ifdef PLATFORM_POSIX
@@ -36,8 +37,8 @@ EpollDataCommNet::~EpollDataCommNet() {
   for (auto& pair : sockfd2helper_) { delete pair.second; }
 }
 
-void EpollDataCommNet::Init(uint16_t port) {
-  DataCommNet::Singleton()->set_comm_network_ptr(new EpollDataCommNet(port));
+void EpollDataCommNet::Init() {
+  DataCommNet::Singleton()->set_comm_network_ptr(new EpollDataCommNet());
 }
 
 const void* EpollDataCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
@@ -99,18 +100,18 @@ void EpollDataCommNet::SendSocketMsg(int64_t dst_machine_id,
   GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 }
 
-EpollDataCommNet::EpollDataCommNet(uint16_t port) {
+EpollDataCommNet::EpollDataCommNet() {
   mem_descs_.clear();
   unregister_mem_descs_cnt_ = 0;
   pollers_.resize(JobDesc::Singleton()->CommNetIOWorkerNum(), nullptr);
   for (size_t i = 0; i < pollers_.size(); ++i) {
     pollers_[i] = new IOEventPoller;
   }
-  InitSockets(port);
+  InitSockets();
   for (IOEventPoller* poller : pollers_) { poller->Start(); }
 }
 
-void EpollDataCommNet::InitSockets(uint16_t port) {
+void EpollDataCommNet::InitSockets() {
   int64_t this_machine_id = RuntimeCtx::Singleton()->this_machine_id();
   int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
   machine_id2sockfd_.assign(total_machine_num, -1);
@@ -122,22 +123,31 @@ void EpollDataCommNet::InitSockets(uint16_t port) {
     return new SocketHelper(sockfd, poller);
   };
   // listen
-  sockaddr_in this_sockaddr = GetSockAddr(this_machine_id, port);
   int listen_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  PCHECK(bind(listen_sockfd, reinterpret_cast<sockaddr*>(&this_sockaddr),
-              sizeof(this_sockaddr))
-         == 0);
-  PCHECK(listen(listen_sockfd, total_machine_num) == 0);
+  uint16_t this_listen_port = 1024;
+  uint16_t listen_port_max = std::numeric_limits<uint16_t>::max();
+  for (; this_listen_port < listen_port_max; ++this_listen_port) {
+    sockaddr_in this_sockaddr = GetSockAddr(this_machine_id, this_listen_port);
+    int bind_result =
+        bind(listen_sockfd, reinterpret_cast<sockaddr*>(&this_sockaddr),
+             sizeof(this_sockaddr));
+    if (bind_result == 0) {
+      PCHECK(listen(listen_sockfd, total_machine_num) == 0);
+      CtrlClient::Singleton()->PushPort(this_listen_port);
+      break;
+    } else {
+      PCHECK(errno == EACCES || errno == EADDRINUSE);
+    }
+  }
+  CHECK_LT(this_listen_port, listen_port_max);
   // connect
   FOR_RANGE(int64_t, peer_machine_id, this_machine_id + 1, total_machine_num) {
-    sockaddr_in peer_sockaddr = GetSockAddr(peer_machine_id, port);
+    uint16_t peer_port = CtrlClient::Singleton()->PullPort(peer_machine_id);
+    sockaddr_in peer_sockaddr = GetSockAddr(peer_machine_id, peer_port);
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    int rc = -1;
-    while (rc == -1) {
-      connect(sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr),
-              sizeof(peer_sockaddr));
-    }
-    PCHECK(rc == 0);
+    PCHECK(connect(sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr),
+                   sizeof(peer_sockaddr))
+           == 0);
     CHECK(sockfd2helper_.emplace(sockfd, NewSocketHelper(sockfd)).second);
     machine_id2sockfd_[peer_machine_id] = sockfd;
   }

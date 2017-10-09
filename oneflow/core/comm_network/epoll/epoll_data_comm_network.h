@@ -12,14 +12,13 @@ namespace oneflow {
 class EpollDataCommNet final : public DataCommNet {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EpollDataCommNet);
-  EpollDataCommNet() = delete;
   ~EpollDataCommNet();
 
   static EpollDataCommNet* Singleton() {
     return static_cast<EpollDataCommNet*>(DataCommNet::Singleton());
   }
 
-  static void Init(uint16_t port);
+  static void Init();
 
   const void* RegisterMemory(void* mem_ptr, size_t byte_size) override;
   void UnRegisterMemory(const void* token) override;
@@ -33,8 +32,8 @@ class EpollDataCommNet final : public DataCommNet {
   void SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg);
 
  private:
-  EpollDataCommNet(uint16_t port);
-  void InitSockets(uint16_t port);
+  EpollDataCommNet();
+  void InitSockets();
   SocketHelper* GetSocketHelper(int64_t machine_id);
 
   // Memory Desc
