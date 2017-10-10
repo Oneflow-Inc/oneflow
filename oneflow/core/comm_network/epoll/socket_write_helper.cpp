@@ -21,12 +21,9 @@ SocketWriteHelper::SocketWriteHelper(int sockfd, IOEventPoller* poller) {
   sockfd_ = sockfd;
   queue_not_empty_fd_ = eventfd(0, 0);
   PCHECK(queue_not_empty_fd_ != -1);
-  poller->AddFd(queue_not_empty_fd_,
-                std::bind(&SocketWriteHelper::ProcessQueueNotEmptyEvent, this),
-                [this]() {
-                  // TODO: delete this log
-                  LOG(INFO) << "fd " << queue_not_empty_fd_ << " writeable";
-                });
+  poller->AddFdWithOnlyReadHandler(
+      queue_not_empty_fd_,
+      std::bind(&SocketWriteHelper::ProcessQueueNotEmptyEvent, this));
   cur_msg_queue_ = new std::queue<SocketMsg>;
   pending_msg_queue_ = new std::queue<SocketMsg>;
   cur_write_handle_ = &SocketWriteHelper::InitMsgWriteHandle;

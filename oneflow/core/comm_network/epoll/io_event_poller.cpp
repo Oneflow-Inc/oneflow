@@ -25,26 +25,42 @@ IOEventPoller::~IOEventPoller() {
 
 void IOEventPoller::AddFd(int fd, std::function<void()> read_handler,
                           std::function<void()> write_handler) {
+  AddFd(fd, &read_handler, &write_handler);
+}
+
+void IOEventPoller::AddFdWithOnlyReadHandler(
+    int fd, std::function<void()> read_handler) {
+  AddFd(fd, &read_handler, nullptr);
+}
+
+void IOEventPoller::Start() {
+  thread_ = std::thread(&IOEventPoller::EpollLoop, this);
+}
+
+void IOEventPoller::AddFd(int fd, std::function<void()>* read_handler,
+                          std::function<void()>* write_handler) {
   unclosed_fd_cnt_ += 1;
   fds_.push_back(fd);
   // Set Fd NONBLOCK
   int opt = fcntl(fd, F_GETFL);
   PCHECK(opt != -1);
   PCHECK(fcntl(fd, F_SETFL, opt | O_NONBLOCK) == 0);
+  // Set CLOEXEC
+  opt = fcntl(fd, F_GETFD);
+  PCHECK(opt != -1);
+  PCHECK(fcntl(fd, F_SETFD, opt | FD_CLOEXEC) == 0);
   // New IOHandler on Heap
   IOHandler* io_handler = new IOHandler;
-  io_handler->read_handler = read_handler;
-  io_handler->write_handler = write_handler;
+  if (read_handler) { io_handler->read_handler = *read_handler; }
+  if (write_handler) { io_handler->write_handler = *write_handler; }
   io_handlers_.push_front(io_handler);
   // Add Fd to Epoll
   epoll_event ep_event;
-  ep_event.events = EPOLLIN | EPOLLOUT | EPOLLET;
+  ep_event.events = EPOLLET;
+  if (read_handler) { ep_event.events |= EPOLLIN; }
+  if (write_handler) { ep_event.events |= EPOLLOUT; }
   ep_event.data.ptr = io_handler;
   PCHECK(epoll_ctl(epfd_, EPOLL_CTL_ADD, fd, &ep_event) == 0);
-}
-
-void IOEventPoller::Start() {
-  thread_ = std::thread(&IOEventPoller::EpollLoop, this);
 }
 
 void IOEventPoller::EpollLoop() {

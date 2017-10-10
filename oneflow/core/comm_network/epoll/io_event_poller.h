@@ -15,14 +15,22 @@ class IOEventPoller final {
 
   void AddFd(int fd, std::function<void()> read_handler,
              std::function<void()> write_handler);
+  void AddFdWithOnlyReadHandler(int fd, std::function<void()> read_handler);
 
   void Start();
 
  private:
   struct IOHandler {
+    IOHandler() {
+      read_handler = []() { UNEXPECTED_RUN(); };
+      write_handler = []() { UNEXPECTED_RUN(); };
+    }
     std::function<void()> read_handler;
     std::function<void()> write_handler;
   };
+
+  void AddFd(int fd, std::function<void()>* read_handler,
+             std::function<void()>* write_handler);
 
   void EpollLoop();
   static const int max_event_num_;
