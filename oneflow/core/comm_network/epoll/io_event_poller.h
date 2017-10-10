@@ -24,9 +24,11 @@ class IOEventPoller final {
     IOHandler() {
       read_handler = []() { UNEXPECTED_RUN(); };
       write_handler = []() { UNEXPECTED_RUN(); };
+      fd = -1;
     }
     std::function<void()> read_handler;
     std::function<void()> write_handler;
+    int fd;
   };
 
   void AddFd(int fd, std::function<void()>* read_handler,
