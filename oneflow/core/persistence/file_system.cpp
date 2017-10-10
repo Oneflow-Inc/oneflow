@@ -2,6 +2,7 @@
 #include <errno.h>
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/persistence/hadoop/hadoop_file_system.h"
 #include "oneflow/core/persistence/posix/posix_file_system.h"
 #include "oneflow/core/persistence/windows/windows_file_system.h"
 
@@ -91,8 +92,7 @@ struct GlobalFSConstructor {
       CHECK_EQ(JobDesc::Singleton()->resource().machine().size(), 1);
       gfs = LocalFS();
     } else if (gfs_conf.has_hdfs_conf()) {
-      // static fs::FileSystem* fs = new
-      // fs::HadoopFileSystem(gfs_conf.hdfs_conf()); return fs;
+      gfs = new HadoopFileSystem(gfs_conf.hdfs_conf());
     } else {
       UNEXPECTED_RUN();
     }

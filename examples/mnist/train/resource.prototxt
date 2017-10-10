@@ -1,12 +1,12 @@
 machine {
   addr: "192.168.1.11"
-  port: 9000
+  port: 6666
   name: "192.168.1.11"
 }
 
 machine {
   addr: "192.168.1.13"
-  port: 9000
+  port: 6666
   name: "192.168.1.13"
 }
 

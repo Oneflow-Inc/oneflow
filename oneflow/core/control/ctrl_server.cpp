@@ -131,16 +131,18 @@ void CtrlServer::WaitUntilDoneHandler(
 void CtrlServer::PushPlanHandler(
     CtrlCall<PushPlanRequest, PushPlanResponse>* call) {
   plan_.reset(new Plan(call->request().plan()));
-  for (auto call : pending_plan_calls_) {
-    *(call->mut_response()->mutable_plan()) = *plan_;
-    call->SendResponse();
+  for (auto pending_call : pending_plan_calls_) {
+    *(pending_call->mut_response()->mutable_plan()) = *plan_;
+    pending_call->SendResponse();
   }
+  call->SendResponse();
   ENQUEUE_REQUEST(PushPlan);
 }
 
 void CtrlServer::ClearPlanHandler(
     CtrlCall<ClearPlanRequest, ClearPlanResponse>* call) {
   plan_.reset();
+  call->SendResponse();
   ENQUEUE_REQUEST(ClearPlan);
 }
 
@@ -158,16 +160,18 @@ void CtrlServer::PullPlanHandler(
 void CtrlServer::PushPortHandler(
     CtrlCall<PushPortRequest, PushPortResponse>* call) {
   port_ = call->request().port();
-  for (auto call : pending_port_calls_) {
-    call->mut_response()->set_port(port_);
-    call->SendResponse();
+  for (auto pending_call : pending_port_calls_) {
+    pending_call->mut_response()->set_port(port_);
+    pending_call->SendResponse();
   }
+  call->SendResponse();
   ENQUEUE_REQUEST(PushPort);
 }
 
 void CtrlServer::ClearPortHandler(
     CtrlCall<ClearPortRequest, ClearPortResponse>* call) {
   port_ = -1;
+  call->SendResponse();
   ENQUEUE_REQUEST(ClearPort);
 }
 
