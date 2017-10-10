@@ -64,15 +64,18 @@ class JobDesc final {
     return job_conf_.train_conf().piece_num_of_record_loss();
   }
   // Other
-  int32_t batch_size() const { return piece_size() * num_of_pieces_in_batch(); }
+  int32_t batch_size() const {
+    return piece_size() * num_of_pieces_in_batch() * TotalMachineNum();
+  }
   bool is_train() const { return job_conf_.has_train_conf(); }
   bool is_predict() const { return job_conf_.has_predict_conf(); }
   int64_t total_piece_num() const {
     if (is_train()) {
       return total_batch_num() * num_of_pieces_in_batch();
     } else {
-      return (job_conf_.predict_conf().total_data_num() + piece_size() - 1)
-             / piece_size();
+      TODO();
+      // return (job_conf_.predict_conf().total_data_num() + piece_size() - 1) /
+      // piece_size();
     }
   }
 

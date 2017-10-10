@@ -163,6 +163,11 @@ void EpollDataCommNet::InitSockets() {
     machine_id2sockfd_[peer_machine_id] = sockfd;
   }
   PCHECK(close(listen_sockfd) == 0);
+  // useful log
+  FOR_RANGE(int64_t, machine_id, 0, total_machine_num) {
+    LOG(INFO) << "machine " << machine_id << " sockfd "
+              << machine_id2sockfd_[machine_id];
+  }
 }
 
 SocketHelper* EpollDataCommNet::GetSocketHelper(int64_t machine_id) {
