@@ -10,8 +10,10 @@ SnapshotMgr::SnapshotMgr(const Plan& plan) {
   if (JobDesc::Singleton()->is_train()) {
     model_save_snapshots_path_ = JobDesc::Singleton()->md_save_snapshots_path();
     OF_CALL_ONCE(model_save_snapshots_path_, {
-      GlobalFS()->CreateDirIfNotExist(model_save_snapshots_path_);
-      CHECK(GlobalFS()->IsDirEmpty(model_save_snapshots_path_));
+      if (GlobalFS()->IsDirectory(model_save_snapshots_path_)) {
+        GlobalFS()->RecursivelyDeleteDir(model_save_snapshots_path_);
+      }
+      GlobalFS()->CreateDir(model_save_snapshots_path_);
     });
     HashSet<std::string> model_blob_set;
     for (const OperatorProto& op_proto : plan.op()) {

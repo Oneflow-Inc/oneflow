@@ -374,8 +374,9 @@ uint64_t HadoopFileSystem::GetFileSize(const std::string& fname) {
 
   hdfsFileInfo* info = hdfs_->hdfsGetPathInfo(fs, TranslateName(fname).c_str());
   PCHECK(info != nullptr) << fname;
+  uint64_t ret = info->mSize;
   hdfs_->hdfsFreeFileInfo(info, 1);
-  return static_cast<uint64_t>(info->mSize);
+  return ret;
 }
 
 void HadoopFileSystem::RenameFile(const std::string& old_name,
