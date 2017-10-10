@@ -7,6 +7,7 @@ default_data_type: kFloat
 use_async_cpu_stream: false
 global_fs_conf {
   hdfs_conf {
+    namenode: "hdfs://192.168.1.11:9000"
   }
 }
 train_conf {

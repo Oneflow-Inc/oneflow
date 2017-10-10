@@ -128,9 +128,9 @@ void LibHDFS::LoadAndBind() {
 #else
   const char* kLibHdfsDso = "libhdfs.so";
 #endif
-  char* hdfs_home = getenv("HADOOP_HDFS_HOME");
+  char* hdfs_home = getenv("HADOOP_HOME");
   if (hdfs_home == nullptr) {
-    PLOG(WARNING) << "Environment variable HADOOP_HDFS_HOME not set";
+    PLOG(WARNING) << "Environment variable HADOOP_HOME not set";
     status_ = false;
     return;
   }
