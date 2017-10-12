@@ -1,5 +1,6 @@
 #ifndef ONEFLOW_CORE_KERNEL_DATA_SET_FORMAT_H_
 #define ONEFLOW_CORE_KERNEL_DATA_SET_FORMAT_H_
+#include <cstdint>
 namespace oneflow {
 
 //	data set format
@@ -15,28 +16,53 @@ namespace oneflow {
 //	'-------------------------------------------------------'
 
 struct DataSetHeaderDesc final {
-  int32_t version = 0;
-  char type[12];              //  "feature" or "label"
-  int32_t header_buffer_len;  //  in bytes
-  int32_t data_item_size;     //  how many items after header
+  const uint32_t magic_code = 0xfeed;
+  const uint32_t version = 0;
+  char type[12];               //  "feature" or "label"
+  uint32_t header_buffer_len;  //  in bytes
+  uint32_t data_item_size;     //  how many items after header
+
+  size_t Size() const { return sizeof(*this); }
 };
 
 struct DataSetFeatureHeader final {
-  int32_t dim_array_size;
-  int32_t dim_vec[0];  //  shape
+  uint32_t dim_array_size = 0;
+  uint32_t dim_vec[0];  //  shape
+
+  size_t Size() const {
+    return sizeof(dim_array_size) + dim_array_size * sizeof(dim_vec[0]);
+  }
+
+  size_t ElementCount() const {
+    int count = 1;
+    for (int i = 0; i < dim_array_size; i++) { count *= dim_vec[i]; }
+    return count;
+  }
 };
 
 struct DataSetLabelHeader final {
-  int32_t label_array_size;
+  uint32_t label_array_size;
   char label_name[0][64];  // label dicription
+
+  size_t Size() const {
+    return sizeof(label_array_size) + label_array_size * sizeof(label_name[0]);
+  }
 };
 
 struct DataItem final {
-  double data[0];  //	tensor data. len = dim_vec[0] * dev_vec[1] * ...
+  uint64_t len;    //  len = dim_vec[0] * dev_vec[1] * ...
+  double data[0];  //	tensor data.
+
+  size_t Size() const { return sizeof(len) + len * sizeof(data[0]); }
 };
 
 struct DataSetLabel final {
-  int32_t data_item_label_idx[0];  //	label of data item. len = data_item_size
+  uint64_t len;                     //  len = data_item_size
+  uint32_t data_item_label_idx[0];  //	label of data item.
+
+  size_t Size() const {
+    return sizeof(len) + len * sizeof(data_item_label_idx[0]);
+  }
 };
 
 }  // namespace oneflow
