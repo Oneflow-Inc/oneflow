@@ -18,6 +18,7 @@ class IOEventPoller final {
   void AddFdWithOnlyReadHandler(int fd, std::function<void()> read_handler);
 
   void Start();
+  void Stop();
 
  private:
   struct IOHandler {
@@ -39,10 +40,9 @@ class IOEventPoller final {
 
   int epfd_;
   epoll_event* ep_events_;
-  int64_t unclosed_fd_cnt_;
   std::forward_list<IOHandler*> io_handlers_;
+  int break_epoll_loop_fd_;
   std::thread thread_;
-  std::vector<int> fds_;
 };
 
 }  // namespace oneflow

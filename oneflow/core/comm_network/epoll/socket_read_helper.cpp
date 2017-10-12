@@ -66,9 +66,7 @@ void SocketReadHelper::SetStatusWhenMsgHeadDone() {
 
 void SocketReadHelper::SetStatusWhenMsgBodyDone() {
   if (cur_msg_.msg_type == SocketMsgType::kRequestRead) {
-    auto cbl = static_cast<CallBackList*>(cur_msg_.request_read_msg.read_id);
-    for (std::function<void()>& callback : *cbl) { callback(); }
-    delete cbl;
+    EpollDataCommNet::Singleton()->ReadDone(cur_msg_.request_read_msg.read_id);
   }
   SwitchToMsgHeadReadHandle();
 }

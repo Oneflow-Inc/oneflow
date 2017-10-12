@@ -88,6 +88,7 @@ void CopyCommNetActor::Act() {
       [&](Regst* regst) { regst->set_piece_id(cur_piece_id); });
   AsyncSendRegstMsgToProducer(readable_regst, readable_it->second.producer);
   comm_net_device_ctx_->set_read_id(nullptr);
+  DataCommNet::Singleton()->AddReadCallBackDone(read_id);
   // Finish
   piece_id2regst_ctx.erase(readable_it);
   mut_num_of_read_empty() = piece_id2regst_ctx.empty();

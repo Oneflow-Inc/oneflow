@@ -163,7 +163,7 @@ void TaskNode::ToProto(
 std::string TaskNode::VisualStr() const {
   std::stringstream ss;
   ss << (is_fw_node_ ? "Fw" : "Bp");
-  ss << node_id_str() << "_";
+  ss << task_id_str() << "_";
   return ss.str();
 }
 
