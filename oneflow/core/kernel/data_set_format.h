@@ -1,6 +1,8 @@
 #ifndef ONEFLOW_CORE_KERNEL_DATA_SET_FORMAT_H_
 #define ONEFLOW_CORE_KERNEL_DATA_SET_FORMAT_H_
 #include <cstdint>
+#include <iostream>
+#include "oneflow/core/common/preprocessor.h"
 namespace oneflow {
 
 //	data set format
@@ -14,6 +16,13 @@ namespace oneflow {
 //	.-------------------------------------------------------.
 //	| DataSetHeaderDesc | DataSetLabelHeader | DataSetLabel |
 //	'-------------------------------------------------------'
+
+#define DATA_SET_FORMAT_SEQ                  \
+  OF_PP_MAKE_TUPLE_SEQ(DataSetHeaderDesc)    \
+  OF_PP_MAKE_TUPLE_SEQ(DataSetFeatureHeader) \
+  OF_PP_MAKE_TUPLE_SEQ(DataItem)             \
+  OF_PP_MAKE_TUPLE_SEQ(DataSetLabelHeader)   \
+  OF_PP_MAKE_TUPLE_SEQ(DataSetLabel)
 
 struct DataSetHeaderDesc final {
   const uint32_t magic_code = 0xfeed;
@@ -64,6 +73,10 @@ struct DataSetLabel final {
     return sizeof(len) + len * sizeof(data_item_label_idx[0]);
   }
 };
+
+#define DATA_SET_DECLARE_OFSTREAM(type) \
+  std::ostream& operator<<(std::ostream& out, const type& data);
+OF_PP_FOR_EACH_TUPLE(DATA_SET_DECLARE_OFSTREAM, DATA_SET_FORMAT_SEQ);
 
 }  // namespace oneflow
 
