@@ -73,9 +73,9 @@ class JobDesc final {
     if (is_train()) {
       return total_batch_num() * num_of_pieces_in_batch();
     } else {
-      TODO();
-      // return (job_conf_.predict_conf().total_data_num() + piece_size() - 1) /
-      // piece_size();
+      int64_t piece_size_sum = piece_size() * TotalMachineNum();
+      int64_t total_data_num = job_conf_.predict_conf().total_data_num();
+      return (total_data_num + piece_size_sum - 1) / piece_size_sum;
     }
   }
 
