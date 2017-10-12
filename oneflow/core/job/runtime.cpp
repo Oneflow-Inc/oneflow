@@ -70,6 +70,7 @@ void Runtime::Run(const Plan& plan, const std::string& this_machine_name) {
   SendCmdMsg(mdupdt_tasks, ActorCmd::kSendInitialModel);
   SendCmdMsg(source_tasks, ActorCmd::kStart);
   RuntimeCtx::Singleton()->mut_active_actor_cnt().WaitUntilCntEqualZero();
+  OF_BARRIER();
   DeleteAllSingleton();
 }
 

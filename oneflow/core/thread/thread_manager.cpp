@@ -10,7 +10,7 @@ ThreadMgr::~ThreadMgr() {
     ActorMsg msg = ActorMsg::BuildCommandMsg(-1, ActorCmd::kStopThread);
     threads_[i]->GetMsgChannelPtr()->Send(msg);
     threads_[i].reset();
-    LOG(INFO) << "thread " << i << " finish";
+    LOG(INFO) << "actor thread " << i << " finish";
   }
 }
 

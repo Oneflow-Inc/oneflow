@@ -2,6 +2,8 @@
 
 #ifdef PLATFORM_POSIX
 
+#include <sys/eventfd.h>
+
 namespace oneflow {
 
 const int IOEventPoller::max_event_num_ = 32;
@@ -9,15 +11,18 @@ const int IOEventPoller::max_event_num_ = 32;
 IOEventPoller::IOEventPoller() {
   epfd_ = epoll_create1(0);
   ep_events_ = new epoll_event[max_event_num_];
-  unclosed_fd_cnt_ = 0;
   io_handlers_.clear();
+  break_epoll_loop_fd_ = eventfd(0, 0);
+  PCHECK(break_epoll_loop_fd_ != -1);
+  AddFdWithOnlyReadHandler(break_epoll_loop_fd_,
+                           []() { LOG(INFO) << "Break Epoll Loop"; });
 }
 
 IOEventPoller::~IOEventPoller() {
-  for (IOHandler* handler : io_handlers_) { PCHECK(close(handler->fd) == 0); }
-  thread_.join();
-  for (IOHandler* handler : io_handlers_) { delete handler; }
-  CHECK_EQ(unclosed_fd_cnt_, 0);
+  for (IOHandler* handler : io_handlers_) {
+    PCHECK(close(handler->fd) == 0);
+    delete handler;
+  }
   delete[] ep_events_;
   PCHECK(close(epfd_) == 0);
 }
@@ -36,9 +41,14 @@ void IOEventPoller::Start() {
   thread_ = std::thread(&IOEventPoller::EpollLoop, this);
 }
 
+void IOEventPoller::Stop() {
+  uint64_t break_epoll_loop_event = 1;
+  PCHECK(write(break_epoll_loop_fd_, &break_epoll_loop_event, 8) == 8);
+  thread_.join();
+}
+
 void IOEventPoller::AddFd(int fd, std::function<void()>* read_handler,
                           std::function<void()>* write_handler) {
-  unclosed_fd_cnt_ += 1;
   // Set Fd NONBLOCK
   int opt = fcntl(fd, F_GETFL);
   PCHECK(opt != -1);
@@ -63,16 +73,20 @@ void IOEventPoller::AddFd(int fd, std::function<void()>* read_handler,
 }
 
 void IOEventPoller::EpollLoop() {
-  while (unclosed_fd_cnt_ > 0) {
+  while (true) {
     int event_num = epoll_wait(epfd_, ep_events_, max_event_num_, -1);
     PCHECK(event_num >= 0);
     const epoll_event* cur_event = ep_events_;
     for (int event_idx = 0; event_idx < event_num; ++event_idx, ++cur_event) {
       auto io_handler = static_cast<IOHandler*>(cur_event->data.ptr);
       PCHECK(!(cur_event->events & EPOLLERR)) << "fd: " << io_handler->fd;
+      if (io_handler->fd == break_epoll_loop_fd_) { return; }
       if (cur_event->events & EPOLLIN) {
-        if (cur_event->events & EPOLLRDHUP) { unclosed_fd_cnt_ -= 1; }
-        io_handler->read_handler();
+        if (cur_event->events & EPOLLRDHUP) {
+          LOG(FATAL) << "fd " << io_handler->fd << " closed by peer";
+        } else {
+          io_handler->read_handler();
+        }
       }
       if (cur_event->events & EPOLLOUT) { io_handler->write_handler(); }
     }
