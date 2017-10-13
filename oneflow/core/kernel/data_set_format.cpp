@@ -18,8 +18,8 @@ OF_PP_FOR_EACH_TUPLE(DEFINE_FLEXIBLE_SIZE_OF, FLAXIBLE_STRUCT_SEQ);
 OF_PP_FOR_EACH_TUPLE(DEFINE_FLEXIBLE_OBJ_SIZE_OF, FLAXIBLE_STRUCT_SEQ);
 
 template<>
-size_t FlexibleSizeOf<DataSetHeaderDesc>(const DataSetHeaderDesc& obj) {
-  return sizeof(DataSetHeaderDesc);
+size_t FlexibleSizeOf<DataSetHeader>(const DataSetHeader& obj) {
+  return sizeof(DataSetHeader);
 }
 
 #define DATA_SET_OVERRITE_OFSTREAM(type)                                   \

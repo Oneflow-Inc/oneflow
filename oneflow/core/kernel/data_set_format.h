@@ -3,65 +3,64 @@
 #include <cstdint>
 #include <iostream>
 #include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/common/util.h"
 namespace oneflow {
 
 //	data set format
 //
 //	for feature file
-//	.---------------------------------------------------------.
-//	| DataSetHeaderDesc | DataSetFeatureHeader | DataItem ... |
-//	'---------------------------------------------------------'
+//	.------------------------------.
+//	| DataSetHeader | DataItem ... |
+//	'------------------------------'
 //
 //	for label file
-//	.-------------------------------------------------------.
-//	| DataSetHeaderDesc | DataSetLabelHeader | DataSetLabel |
-//	'-------------------------------------------------------'
+//	.-------------------------------------------------.
+//	| DataSetHeader | DataSetLabelDesc | DataItem ... |
+//	'-------------------------------------------------'
 
-#define FLAXIBLE_STRUCT_SEQ                                              \
-  OF_PP_MAKE_TUPLE_SEQ(DataSetFeatureHeader, dim_array_size, dim_vec)    \
-  OF_PP_MAKE_TUPLE_SEQ(DataItem, len, data)                              \
-  OF_PP_MAKE_TUPLE_SEQ(DataSetLabelHeader, label_array_size, label_name) \
-  OF_PP_MAKE_TUPLE_SEQ(DataSetLabel, len, data_item_label_idx)
+#define FLAXIBLE_STRUCT_SEQ                                            \
+  OF_PP_MAKE_TUPLE_SEQ(DataSetLabelDesc, label_array_size, label_desc) \
+  OF_PP_MAKE_TUPLE_SEQ(DataItem, len, data)
 
-#define DATA_SET_FORMAT_SEQ                  \
-  OF_PP_MAKE_TUPLE_SEQ(DataSetHeaderDesc)    \
-  OF_PP_MAKE_TUPLE_SEQ(DataSetFeatureHeader) \
-  OF_PP_MAKE_TUPLE_SEQ(DataItem)             \
-  OF_PP_MAKE_TUPLE_SEQ(DataSetLabelHeader)   \
-  OF_PP_MAKE_TUPLE_SEQ(DataSetLabel)
+#define DATA_SET_FORMAT_SEQ              \
+  OF_PP_MAKE_TUPLE_SEQ(DataSetHeader)    \
+  OF_PP_MAKE_TUPLE_SEQ(DataSetLabelDesc) \
+  OF_PP_MAKE_TUPLE_SEQ(DataItem)
 
-struct DataSetHeaderDesc final {
+struct DataSetHeader final {
   const uint32_t magic_code = 0xfeed;
   const uint32_t version = 0;
-  char type[12];               //  "feature" or "label"
-  uint32_t header_buffer_len;  //  in bytes
-  uint32_t data_item_size;     //  how many items after header
-};
+  char type[16];                    //  "feature" or "label"
+  uint32_t label_desc_buf_len = 0;  //  in bytes, only for label
+  uint32_t data_item_count = 0;     //  how many items after header
+  uint16_t data_elem_type = 0;      // type of data element
+  uint16_t dim_array_size = 0;      // efective length of dim_array
+  uint32_t dim_array[16];           //  tensor shape
 
-struct DataSetFeatureHeader final {
-  uint32_t dim_array_size = 0;
-  uint32_t dim_vec[0];  //  shape
-
-  size_t ElementCount() const {
+  OF_DISALLOW_COPY_AND_MOVE(DataSetHeader);
+  DataSetHeader() = default;
+  size_t TensorElemCount() const {
     int count = 1;
-    for (int i = 0; i < dim_array_size; i++) { count *= dim_vec[i]; }
+    for (int i = 0; i < dim_array_size; i++) { count *= dim_array[i]; }
     return count;
   }
+  size_t DataBodyOffset() const { return sizeof(*this) + label_desc_buf_len; }
 };
 
-struct DataSetLabelHeader final {
+struct DataSetLabelDesc final {
   uint32_t label_array_size = 0;
-  char label_name[0][64];  // label dicription
+  char label_desc[0][128];  // label dicription
+
+  OF_DISALLOW_COPY_AND_MOVE(DataSetLabelDesc);
+  DataSetLabelDesc() = delete;
 };
 
 struct DataItem final {
   uint64_t len = 0;  //  len = dim_vec[0] * dev_vec[1] * ...
-  double data[0];    //	tensor data.
-};
+  uint32_t data[0];  //	tensor data.
 
-struct DataSetLabel final {
-  uint64_t len = 0;                 //  len = data_item_size
-  uint32_t data_item_label_idx[0];  //	label of data item.
+  OF_DISALLOW_COPY_AND_MOVE(DataItem);
+  DataItem() = delete;
 };
 
 template<typename data_set_class>

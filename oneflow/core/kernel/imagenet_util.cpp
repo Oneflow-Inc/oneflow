@@ -20,8 +20,7 @@ void ImageNetUtil::GetFilePaths(
       (*file_path2label_idx)[file_path] = i;
     }
   }
-  unsigned seed =
-  std::chrono::system_clock::now().time_since_epoch().count();
+  unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
   std::shuffle(img_file_paths->begin(), img_file_paths->end(),
                std::default_random_engine(seed));
 }
@@ -36,33 +35,29 @@ void ImageNetUtil::SaveLabels(
     const auto& dir = image_directories[i];
     label_names[i] = basename(const_cast<char*>(dir.c_str()));
   }
-  auto label_header = DataSetUtil::CreateClassificationLabelHeader(label_names);
-
-  auto label_header_desc =
-      DataSetUtil::CreateHeaderDesc(*label_header, img_file_paths.size());
-
-  std::vector<uint32_t> item_label_idx;
-  for (const auto& file_path : img_file_paths) {
-    item_label_idx.push_back(file_path2label_idx.at(file_path));
-  }
-  auto label_body = DataSetUtil::CreateDataSetLabel(item_label_idx);
   std::ofstream label_stream(JoinPath(output_dir, "labels"),
                              std::ofstream::out);
-  label_stream << *label_header_desc << *label_header << *label_body;
+  auto header = DataSetUtil::CreateHeader("label", img_file_paths.size(), {1});
+  auto label_desc = DataSetUtil::CreateLabelDesc(label_names);
+  header->label_desc_buf_len = FlexibleSizeOf(*label_desc);
+  label_stream << *header << *label_desc;
+  for (const auto& file_path : img_file_paths) {
+    auto item = DataSetUtil::CreateLabelItem(
+        *header, {file_path2label_idx.at(file_path)});
+    label_stream << *item;
+  }
 }
 
 void ImageNetUtil::SaveFeatures(const std::vector<std::string>& img_file_paths,
                                 uint32_t width, uint32_t height,
                                 const std::string& output_dir) {
-  auto feature_header = DataSetUtil::CreateImageFeatureHeader(width, height);
-  auto feature_header_desc =
-      DataSetUtil::CreateHeaderDesc(*feature_header, img_file_paths.size());
-
   std::ofstream feature_stream(JoinPath(output_dir, "features"),
                                std::ofstream::out);
-  feature_stream << *feature_header_desc << *feature_header;
+  auto header = DataSetUtil::CreateHeader("feature", img_file_paths.size(),
+                                          {3, width, height});
+  feature_stream << *header;
   for (const auto& file_path : img_file_paths) {
-    auto item = DataSetUtil::CreateImageDataItem(*feature_header, file_path);
+    auto item = DataSetUtil::CreateImageItem(*header, file_path);
     feature_stream << *item;
   }
 }
