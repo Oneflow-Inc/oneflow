@@ -17,6 +17,12 @@ namespace oneflow {
 //	| DataSetHeaderDesc | DataSetLabelHeader | DataSetLabel |
 //	'-------------------------------------------------------'
 
+#define FLAXIBLE_STRUCT_SEQ                                              \
+  OF_PP_MAKE_TUPLE_SEQ(DataSetFeatureHeader, dim_array_size, dim_vec)    \
+  OF_PP_MAKE_TUPLE_SEQ(DataItem, len, data)                              \
+  OF_PP_MAKE_TUPLE_SEQ(DataSetLabelHeader, label_array_size, label_name) \
+  OF_PP_MAKE_TUPLE_SEQ(DataSetLabel, len, data_item_label_idx)
+
 #define DATA_SET_FORMAT_SEQ                  \
   OF_PP_MAKE_TUPLE_SEQ(DataSetHeaderDesc)    \
   OF_PP_MAKE_TUPLE_SEQ(DataSetFeatureHeader) \
@@ -30,17 +36,11 @@ struct DataSetHeaderDesc final {
   char type[12];               //  "feature" or "label"
   uint32_t header_buffer_len;  //  in bytes
   uint32_t data_item_size;     //  how many items after header
-
-  size_t Size() const { return sizeof(*this); }
 };
 
 struct DataSetFeatureHeader final {
   uint32_t dim_array_size = 0;
   uint32_t dim_vec[0];  //  shape
-
-  size_t Size() const {
-    return sizeof(dim_array_size) + dim_array_size * sizeof(dim_vec[0]);
-  }
 
   size_t ElementCount() const {
     int count = 1;
@@ -50,29 +50,25 @@ struct DataSetFeatureHeader final {
 };
 
 struct DataSetLabelHeader final {
-  uint32_t label_array_size;
+  uint32_t label_array_size = 0;
   char label_name[0][64];  // label dicription
-
-  size_t Size() const {
-    return sizeof(label_array_size) + label_array_size * sizeof(label_name[0]);
-  }
 };
 
 struct DataItem final {
-  uint64_t len;    //  len = dim_vec[0] * dev_vec[1] * ...
-  double data[0];  //	tensor data.
-
-  size_t Size() const { return sizeof(len) + len * sizeof(data[0]); }
+  uint64_t len = 0;  //  len = dim_vec[0] * dev_vec[1] * ...
+  double data[0];    //	tensor data.
 };
 
 struct DataSetLabel final {
-  uint64_t len;                     //  len = data_item_size
+  uint64_t len = 0;                 //  len = data_item_size
   uint32_t data_item_label_idx[0];  //	label of data item.
-
-  size_t Size() const {
-    return sizeof(len) + len * sizeof(data_item_label_idx[0]);
-  }
 };
+
+template<typename data_set_class>
+size_t FlexibleSizeOf(uint32_t n);
+
+template<typename data_set_class>
+size_t FlexibleSizeOf(const data_set_class& obj);
 
 #define DATA_SET_DECLARE_OFSTREAM(type) \
   std::ostream& operator<<(std::ostream& out, const type& data);

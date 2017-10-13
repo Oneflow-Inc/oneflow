@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_KERNEL_IMAGE_NET_UTIL_H_
-#define ONEFLOW_CORE_KERNEL_IMAGE_NET_UTIL_H_
+#ifndef ONEFLOW_CORE_KERNEL_IMAGENET_UTIL_H_
+#define ONEFLOW_CORE_KERNEL_IMAGENET_UTIL_H_
 
 #include "oneflow/core/kernel/data_set_util.h"
 
@@ -29,4 +29,4 @@ class ImageNetUtil final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_IMAGE_NET_UTIL_H_
+#endif  // ONEFLOW_CORE_KERNEL_IMAGENET_UTIL_H_
