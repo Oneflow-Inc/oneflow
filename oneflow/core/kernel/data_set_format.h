@@ -32,10 +32,10 @@ struct DataSetHeader final {
   const uint32_t version = 0;
   char type[16];                    //  "feature" or "label"
   uint32_t label_desc_buf_len = 0;  //  in bytes, only for label
-  uint32_t data_item_count = 0;     //  how many items after header
   uint16_t data_elem_type = 0;      // type of data element
   uint16_t dim_array_size = 0;      // efective length of dim_array
   uint32_t dim_array[16];           //  tensor shape
+  uint64_t data_item_count = 0;     //  how many items after header
 
   OF_DISALLOW_COPY_AND_MOVE(DataSetHeader);
   DataSetHeader() = default;
