@@ -1,6 +1,5 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
-#include <iostream>
 #include "oneflow/core/kernel/imagenet_util.h"
 namespace oneflow {}
 

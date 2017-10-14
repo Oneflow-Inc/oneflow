@@ -1,7 +1,27 @@
 #include "oneflow/core/kernel/data_set_util.h"
+#include "oneflow/core/common/str_util.h"
 #include "opencv2/opencv.hpp"
 
 namespace oneflow {
+
+void DataSetUtil::ExtractImage(const DataItem& data_item,
+                               const DataSetHeader& header,
+                               const std::string& output_img_path) {
+  uint32_t width = header.dim_array[1];
+  uint32_t height = header.dim_array[2];
+  uint32_t img_size = width * height;
+  cv::Mat img(height, width, CV_8UC3);
+  CHECK(width * height * 3 == data_item.len);
+  for (int row = 0; row < height; ++row) {
+    for (int col = 0; col < width; ++col) {
+      for (int chan = 0; chan < 3; ++chan) {
+        img.at<cv::Vec3b>(row, col)[chan] =
+            data_item.data[chan * img_size + row * width + col];
+      }
+    }
+  }
+  cv::imwrite(output_img_path + ".jpg", img);
+}
 
 std::unique_ptr<DataSetHeader> DataSetUtil::CreateHeader(
     const std::string& type, uint32_t data_item_count,
@@ -12,6 +32,7 @@ std::unique_ptr<DataSetHeader> DataSetUtil::CreateHeader(
   type.copy(header->type, type.size(), 0);
   CHECK(dim_array.size() <= sizeof(header->dim_array));
   header->dim_array_size = dim_array.size();
+  memset(header->dim_array, 0, sizeof(header->dim_array));
   for (int i = 0; i < dim_array.size(); ++i) {
     header->dim_array[i] = dim_array[i];
   }

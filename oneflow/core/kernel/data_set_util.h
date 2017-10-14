@@ -32,6 +32,10 @@ class DataSetUtil final {
   static std::unique_ptr<DataItem, decltype(&free)> CreateImageItem(
       const DataSetHeader& header, const std::string& img_file_path);
 
+  static void ExtractImage(const DataItem& data_item,
+                           const DataSetHeader& header,
+                           const std::string& output_img_path);
+
  private:
   static void LoadImageData(
       DataItem* body, uint32_t width, uint32_t height,
