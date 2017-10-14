@@ -1,12 +1,8 @@
 #ifndef ONEFLOW_CORE_PERSISTENCE_FILE_SYSTEM_H_
 #define ONEFLOW_CORE_PERSISTENCE_FILE_SYSTEM_H_
 
+#include "oneflow/core/common/platform.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/persistence/platform.h"
-
-#if defined(_WIN32)
-#undef DeleteFile
-#endif
 
 namespace oneflow {
 
@@ -114,7 +110,8 @@ class FileSystem {
   virtual std::vector<std::string> ListDir(const std::string& dir) = 0;
 
   // Deletes the named file.
-  virtual void DeleteFile(const std::string& fname) = 0;
+  // Using DelFile to avoid Windows macro
+  virtual void DelFile(const std::string& fname) = 0;
 
   // Creates the specified directory.
   virtual void CreateDir(const std::string& dirname) = 0;
@@ -133,8 +130,6 @@ class FileSystem {
   // Deletes the specified directory and all subdirectories and files
   // underneath it. undeleted_files and undeleted_dirs stores the number of
   // files and directories that weren't deleted.
-  //
-  // REQUIRES: undeleted_files, undeleted_dirs to be not null.
   virtual void RecursivelyDeleteDir(const std::string& dirname);
 
   // Stores the size of `fname` in `*file_size`.

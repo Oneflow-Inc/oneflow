@@ -9,7 +9,7 @@ op {
       dim: 28
       dim: 28
     }
-    data_dir: "/tmp/mnist/feature/"
+    data_dir: "/mnist/feature/"
   }
 }
 
@@ -21,12 +21,13 @@ op {
     shape {
       dim: 60000
     }
-    data_dir: "/tmp/mnist/label/"
+    data_dir: "/mnist/label/"
   }
 }
 
 op {
   name: "conv"
+  model_load_dir: "/willzhang/snapshots/snapshot_3/conv"
   convolution_conf {
     in: "feature/out"
     out: "out"
@@ -45,6 +46,7 @@ op {
 
 op {
   name: "ip10"
+  model_load_dir: "/willzhang/snapshots/snapshot_3/ip10"
   innerproduct_conf {
     in: "conv/out"
     out: "out"
@@ -54,10 +56,18 @@ op {
 }
 
 op {
-  name: "softmax_loss"
-  softmax_loss_conf {
-    prediction: "ip10/out"
-    label: "label/out"
-    loss: "loss"
+  name: "softmax"
+  softmax_conf {
+    in: "ip10/out"
+    out: "out"
+  }
+}
+
+op {
+  name: "record"
+  record_conf {
+    lbn: "label/out"
+    lbn: "softmax/out"
+    record_path: "/willzhang/predict_result"
   }
 }

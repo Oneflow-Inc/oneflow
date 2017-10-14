@@ -15,6 +15,11 @@ class CopyCommNetKernel final : public Kernel {
 
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
+  void Backward(
+      const KernelCtx& kernel_ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    Forward(kernel_ctx, BnInOp2Blob);
+  }
 
  private:
 };

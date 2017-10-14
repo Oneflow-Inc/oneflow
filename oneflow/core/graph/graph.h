@@ -5,7 +5,6 @@
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/graph/node.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
-#include "tensorflow/core/platform/env.h"
 
 namespace oneflow {
 
@@ -251,9 +250,8 @@ template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ToDotWithFilePath(
     const std::string& file_path) const {
   std::string dir_name = Dirname(file_path);
-  tensorflow::Env* env = tensorflow::Env::Default();
-  if (env->IsDirectory(dir_name).code() != tensorflow::error::OK) {
-    TF_CHECK_OK(env->RecursivelyCreateDir(dir_name));
+  if (!LocalFS()->IsDirectory(dir_name)) {
+    LocalFS()->RecursivelyCreateDir(dir_name);
   }
   PersistentOutStream out_stream(LocalFS(), file_path);
   ToDotWithStream(out_stream);

@@ -11,6 +11,7 @@ namespace oneflow {
 class KernelMgr final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelMgr);
+  KernelMgr() = delete;
   ~KernelMgr() = default;
 
   OF_SINGLETON(KernelMgr);
@@ -19,10 +20,8 @@ class KernelMgr final {
     return op_name2kernel_ptr_.at(op_name).get();
   }
 
-  void InitFromPlan(const Plan&);
-
  private:
-  KernelMgr() = default;
+  KernelMgr(const Plan&);
   HashMap<std::string, std::unique_ptr<const Kernel>> op_name2kernel_ptr_;
 };
 

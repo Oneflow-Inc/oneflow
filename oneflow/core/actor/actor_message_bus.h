@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include "oneflow/core/actor/actor_message.h"
-#include "oneflow/core/comm_network/comm_network.h"
+#include "oneflow/core/comm_network/data_comm_network.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -16,11 +16,6 @@ class ActorMsgBus final {
   OF_SINGLETON(ActorMsgBus);
 
   void SendMsg(const ActorMsg& msg);
-
-  void Init() {
-    // CommNetwork::Singleton()->SetCallbackForReceivedActorMsg(
-    //    [](const ActorMsg& msg) { ActorMsgBus::Singleton()->SendMsg(msg); });
-  }
 
  private:
   ActorMsgBus() = default;

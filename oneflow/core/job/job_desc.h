@@ -15,8 +15,6 @@ class JobDesc final {
 
   OF_SINGLETON(JobDesc);
 
-  void InitFromJobConf(const JobConf&);
-  void InitFromProto(const JobDescProto&);
   void ToProto(JobDescProto*) const;
 
   // Common
@@ -33,6 +31,9 @@ class JobDesc final {
   size_t SizeOfOneDataId() const {
     return job_conf_.max_data_id_length() * sizeof(char);
   }
+  int64_t TotalMachineNum() const { return resource_.machine().size(); }
+  int32_t CommNetIOWorkerNum() const { return 4; }  // TODO
+
   // Train conf
   const std::string& md_save_snapshots_path() {
     CHECK(is_train());
@@ -63,20 +64,24 @@ class JobDesc final {
     return job_conf_.train_conf().piece_num_of_record_loss();
   }
   // Other
-  int32_t batch_size() const { return piece_size() * num_of_pieces_in_batch(); }
+  int32_t batch_size() const {
+    return piece_size() * num_of_pieces_in_batch() * TotalMachineNum();
+  }
   bool is_train() const { return job_conf_.has_train_conf(); }
   bool is_predict() const { return job_conf_.has_predict_conf(); }
   int64_t total_piece_num() const {
     if (is_train()) {
       return total_batch_num() * num_of_pieces_in_batch();
     } else {
-      return (job_conf_.predict_conf().total_data_num() + piece_size() - 1)
-             / piece_size();
+      int64_t piece_size_sum = piece_size() * TotalMachineNum();
+      int64_t total_data_num = job_conf_.predict_conf().total_data_num();
+      return (total_data_num + piece_size_sum - 1) / piece_size_sum;
     }
   }
 
  private:
-  JobDesc() = default;
+  JobDesc(const JobConf&);
+  JobDesc(const JobDescProto&);
 
   JobConf job_conf_;
   DLNetConf dlnet_conf_;

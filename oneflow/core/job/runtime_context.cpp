@@ -2,11 +2,9 @@
 
 namespace oneflow {
 
-void RuntimeCtx::set_this_machine_name(const std::string& name) {
-  this_machine_name_ = name;
-  this_machine_id_ = IDMgr::Singleton()->MachineID4MachineName(name);
-  LOG(INFO) << "this machine name: " << this_machine_name_;
-  LOG(INFO) << "this machine id: " << this_machine_id_;
+std::string RuntimeCtx::GetCtrlAddr(int64_t machine_id) const {
+  const Machine& mchn = JobDesc::Singleton()->resource().machine(machine_id);
+  return mchn.addr() + ":" + std::to_string(mchn.port());
 }
 
 PersistentInStream* RuntimeCtx::GetDataInStream(const std::string& name) {
@@ -22,6 +20,12 @@ void RuntimeCtx::AddDataInStream(const std::string& name,
                                  PersistentInStream* data_in_stream) {
   CHECK(data_in_streams_.find(name) == data_in_streams_.end());
   data_in_streams_[name].reset(data_in_stream);
+}
+
+RuntimeCtx::RuntimeCtx(const std::string& name) {
+  this_machine_id_ = IDMgr::Singleton()->MachineID4MachineName(name);
+  LOG(INFO) << "this machine name: " << name;
+  LOG(INFO) << "this machine id: " << this_machine_id_;
 }
 
 }  // namespace oneflow

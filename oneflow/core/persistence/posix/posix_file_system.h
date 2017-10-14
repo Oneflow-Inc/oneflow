@@ -28,7 +28,7 @@ class PosixFileSystem final : public FileSystem {
 
   std::vector<std::string> ListDir(const std::string& dir) override;
 
-  void DeleteFile(const std::string& fname) override;
+  void DelFile(const std::string& fname) override;
 
   void CreateDir(const std::string& dirname) override;
 
