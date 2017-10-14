@@ -140,6 +140,9 @@ inline uint32_t NewRandomSeed() {
 
 #define FOR_RANGE(type, i, begin, end) for (type i = begin; i < end; ++i)
 
+void RedirectStdoutAndStderrToGlogDir();
+void CloseStdoutAndStderr();
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_UTIL_H_

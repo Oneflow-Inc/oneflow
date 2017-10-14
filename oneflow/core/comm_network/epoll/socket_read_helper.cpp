@@ -57,7 +57,7 @@ bool SocketReadHelper::DoCurRead(
 void SocketReadHelper::SetStatusWhenMsgHeadDone() {
   switch (cur_msg_.msg_type) {
 #define MAKE_ENTRY(x, y) \
-  case SocketMsgType::k##x: SetStatusWhen##x##MsgHeadDone();
+  case SocketMsgType::k##x: SetStatusWhen##x##MsgHeadDone(); break;
     OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ);
 #undef MAKE_ENTRY
     default: UNEXPECTED_RUN();
@@ -66,9 +66,7 @@ void SocketReadHelper::SetStatusWhenMsgHeadDone() {
 
 void SocketReadHelper::SetStatusWhenMsgBodyDone() {
   if (cur_msg_.msg_type == SocketMsgType::kRequestRead) {
-    auto cbl = static_cast<CallBackList*>(cur_msg_.request_read_msg.read_id);
-    for (std::function<void()>& callback : *cbl) { callback(); }
-    delete cbl;
+    EpollDataCommNet::Singleton()->ReadDone(cur_msg_.request_read_msg.read_id);
   }
   SwitchToMsgHeadReadHandle();
 }

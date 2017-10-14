@@ -1,7 +1,8 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
-#include "oneflow/core/comm_network/ctrl_comm_network.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/runtime_context.h"
@@ -21,13 +22,12 @@ class Scheduler final {
 
  private:
   Scheduler() = default;
-  uint16_t GetNextPort();
   void NewAllSingleton(const std::string& job_conf_filepath,
                        const std::string& this_machine_name, char** env);
-  std::string GetEnvPrefix();
+  void DeleteAllSingleton();
   void SystemCall(const std::string& cmd);
 
-  uint16_t next_port_;
+  std::unique_ptr<CtrlServer> ctrl_server_;
   std::string env_prefix_;
 };
 
@@ -44,13 +44,13 @@ void Scheduler::Process(const std::string& job_conf_filepath,
                 << "-plan_filepath=" << naive_plan_filepath;
     SystemCall(compile_cmd.str());
     ParseProtoFromTextFile(naive_plan_filepath, plan.get());
-    CtrlCommNet::Singleton()->PublishPlan(plan.get());
+    CtrlClient::Singleton()->PushPlan(*plan);
   } else {
-    CtrlCommNet::Singleton()->FetchPlan(plan.get());
+    CtrlClient::Singleton()->PullPlan(plan.get());
   }
   OF_BARRIER();
   if (RuntimeCtx::Singleton()->IsThisMachineMaster()) {
-    CtrlCommNet::Singleton()->PublishPlan(nullptr);
+    CtrlClient::Singleton()->ClearPlan();
   } else {
     PrintProtoToTextFile(*plan, naive_plan_filepath);
   }
@@ -58,15 +58,9 @@ void Scheduler::Process(const std::string& job_conf_filepath,
   std::stringstream runtime_cmd;
   runtime_cmd << "./runtime "
               << "-plan_filepath=" << naive_plan_filepath << " "
-              << "-this_machine_name=" << this_machine_name << " "
-              << "-ctrl_port=" << GetNextPort() << " "
-              << "-data_port=" << GetNextPort();
+              << "-this_machine_name=" << this_machine_name;
   SystemCall(runtime_cmd.str());
-}
-
-uint16_t Scheduler::GetNextPort() {
-  CHECK_LE(next_port_, JobDesc::Singleton()->resource().port_max());
-  return next_port_++;
+  DeleteAllSingleton();
 }
 
 void Scheduler::NewAllSingleton(const std::string& job_conf_filepath,
@@ -75,10 +69,11 @@ void Scheduler::NewAllSingleton(const std::string& job_conf_filepath,
   oneflow::JobConf job_conf;
   oneflow::ParseProtoFromTextFile(job_conf_filepath, &job_conf);
   JobDesc::NewSingleton(job_conf);
-  next_port_ = JobDesc::Singleton()->resource().port_min();
   IDMgr::NewSingleton();
   RuntimeCtx::NewSingleton(this_machine_name);
-  CtrlCommNet::NewSingleton(GetNextPort());
+  ctrl_server_.reset(
+      new CtrlServer(RuntimeCtx::Singleton()->GetThisCtrlAddr()));
+  CtrlClient::NewSingleton();
   env_prefix_ = "";
   std::stringstream ss;
   while (*env) {
@@ -88,9 +83,17 @@ void Scheduler::NewAllSingleton(const std::string& job_conf_filepath,
   env_prefix_ = ss.str();
 }
 
+void Scheduler::DeleteAllSingleton() {
+  CtrlClient::DeleteSingleton();
+  ctrl_server_.reset();
+  RuntimeCtx::DeleteSingleton();
+  IDMgr::DeleteSingleton();
+  JobDesc::DeleteSingleton();
+}
+
 void Scheduler::SystemCall(const std::string& cmd) {
   LOG(INFO) << "SystemCall: [" << cmd << "]";
-  PCHECK(std::system(cmd.c_str()) == 0);
+  CHECK_EQ(std::system(cmd.c_str()), 0);
 }
 
 }  // namespace oneflow
@@ -102,11 +105,13 @@ int main(int argc, char** argv, char** env) {
   google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, true);
   oneflow::LocalFS()->CreateDirIfNotExist(oneflow::LogDir());
+  oneflow::RedirectStdoutAndStderrToGlogDir();
   LOG(INFO) << "Scheduler Start";
   oneflow::Scheduler::NewSingleton();
   oneflow::Scheduler::Singleton()->Process(FLAGS_job_conf_filepath,
                                            FLAGS_this_machine_name, env);
   oneflow::Scheduler::DeleteSingleton();
+  oneflow::CloseStdoutAndStderr();
   LOG(INFO) << "Scheduler Stop";
   return 0;
 }

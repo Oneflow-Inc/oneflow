@@ -1,7 +1,7 @@
-#ifndef ONEFLOW_CORE_COMM_NETWORK_RPC_CTRL_CALL_H_
-#define ONEFLOW_CORE_COMM_NETWORK_RPC_CTRL_CALL_H_
+#ifndef ONEFLOW_CORE_CONTROL_CTRL_CALL_H_
+#define ONEFLOW_CORE_CONTROL_CTRL_CALL_H_
 
-#include "oneflow/core/comm_network/rpc/ctrl_service.h"
+#include "oneflow/core/control/ctrl_service.h"
 
 namespace oneflow {
 
@@ -70,4 +70,4 @@ class CtrlCall final : public CtrlCallIf {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMM_NETWORK_RPC_CTRL_CALL_H_
+#endif  // ONEFLOW_CORE_CONTROL_CTRL_CALL_H_

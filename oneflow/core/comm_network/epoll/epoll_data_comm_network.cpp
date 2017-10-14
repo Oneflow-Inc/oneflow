@@ -1,4 +1,5 @@
 #include "oneflow/core/comm_network/epoll/epoll_data_comm_network.h"
+#include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/runtime_context.h"
 
 #ifdef PLATFORM_POSIX
@@ -32,12 +33,17 @@ int64_t GetMachineId(const sockaddr_in& sa) {
 }  // namespace
 
 EpollDataCommNet::~EpollDataCommNet() {
+  for (size_t i = 0; i < pollers_.size(); ++i) {
+    LOG(INFO) << "IOWorker " << i << " finish";
+    pollers_[i]->Stop();
+  }
+  OF_BARRIER();
   for (IOEventPoller* poller : pollers_) { delete poller; }
   for (auto& pair : sockfd2helper_) { delete pair.second; }
 }
 
-void EpollDataCommNet::Init(uint16_t port) {
-  DataCommNet::Singleton()->set_comm_network_ptr(new EpollDataCommNet(port));
+void EpollDataCommNet::Init() {
+  DataCommNet::Singleton()->set_comm_network_ptr(new EpollDataCommNet());
 }
 
 const void* EpollDataCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
@@ -68,22 +74,87 @@ void EpollDataCommNet::RegisterMemoryDone() {
 
 void* EpollDataCommNet::Read(int64_t src_machine_id, const void* src_token,
                              const void* dst_token) {
-  auto callback_list = new CallBackList;
+  // ReadContext
+  ReadContext* read_ctx = new ReadContext;
+  read_ctx->cbl.clear();
+  read_ctx->done_cnt = 0;
+  {
+    std::unique_lock<std::mutex> lck(undeleted_read_ctxs_mtx_);
+    CHECK(undeleted_read_ctxs_.insert(read_ctx).second);
+  }
+  // request write msg
   SocketMsg msg;
   msg.msg_type = SocketMsgType::kRequestWrite;
   msg.request_write_msg.src_token = src_token;
   msg.request_write_msg.dst_machine_id =
       RuntimeCtx::Singleton()->this_machine_id();
   msg.request_write_msg.dst_token = dst_token;
-  msg.request_write_msg.read_id = callback_list;
+  msg.request_write_msg.read_id = read_ctx;
   GetSocketHelper(src_machine_id)->AsyncWrite(msg);
-  return callback_list;
+  return read_ctx;
 }
 
 void EpollDataCommNet::AddReadCallBack(void* read_id,
                                        std::function<void()> callback) {
-  auto callback_list = static_cast<CallBackList*>(read_id);
-  callback_list->push_back(callback);
+  ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
+  if (read_id) {
+    read_ctx->cbl.push_back(callback);
+    return;
+  }
+  CallBackContext* cb_ctx = new CallBackContext;
+  cb_ctx->callback = callback;
+  do {
+    std::unique_lock<std::mutex> read_ctxs_lck(undeleted_read_ctxs_mtx_);
+    if (undeleted_read_ctxs_.empty()) { break; }
+    cb_ctx->cnt = undeleted_read_ctxs_.size();
+    for (ReadContext* read_ctx : undeleted_read_ctxs_) {
+      std::unique_lock<std::mutex> cbl_lck(read_ctx->cbl_mtx);
+      read_ctx->cbl.push_back([cb_ctx]() { cb_ctx->DecreaseCnt(); });
+    }
+    return;
+  } while (0);
+  delete cb_ctx;
+  callback();
+}
+
+void EpollDataCommNet::AddReadCallBackDone(void* read_id) {
+  IncreaseDoneCnt(read_id);
+}
+
+void EpollDataCommNet::ReadDone(void* read_id) { IncreaseDoneCnt(read_id); }
+
+void EpollDataCommNet::IncreaseDoneCnt(void* read_id) {
+  ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
+  do {
+    std::unique_lock<std::mutex> lck(read_ctx->done_cnt_mtx);
+    read_ctx->done_cnt += 1;
+    if (read_ctx->done_cnt == 2) {
+      break;
+    } else {
+      return;
+    }
+  } while (0);
+  std::unique_lock<std::mutex> read_ctxs_lck(undeleted_read_ctxs_mtx_);
+  CHECK_EQ(undeleted_read_ctxs_.erase(read_ctx), 1);
+  {
+    std::unique_lock<std::mutex> cbl_lck(read_ctx->cbl_mtx);
+    for (std::function<void()>& callback : read_ctx->cbl) { callback(); }
+  }
+  delete read_ctx;
+}
+
+void EpollDataCommNet::CallBackContext::DecreaseCnt() {
+  do {
+    std::unique_lock<std::mutex> lck(cnt_mtx);
+    cnt -= 1;
+    if (cnt == 0) {
+      break;
+    } else {
+      return;
+    }
+  } while (0);
+  callback();
+  delete this;
 }
 
 void EpollDataCommNet::SendActorMsg(int64_t dst_machine_id,
@@ -99,18 +170,18 @@ void EpollDataCommNet::SendSocketMsg(int64_t dst_machine_id,
   GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 }
 
-EpollDataCommNet::EpollDataCommNet(uint16_t port) {
+EpollDataCommNet::EpollDataCommNet() {
   mem_descs_.clear();
   unregister_mem_descs_cnt_ = 0;
   pollers_.resize(JobDesc::Singleton()->CommNetIOWorkerNum(), nullptr);
   for (size_t i = 0; i < pollers_.size(); ++i) {
     pollers_[i] = new IOEventPoller;
   }
-  InitSockets(port);
+  InitSockets();
   for (IOEventPoller* poller : pollers_) { poller->Start(); }
 }
 
-void EpollDataCommNet::InitSockets(uint16_t port) {
+void EpollDataCommNet::InitSockets() {
   int64_t this_machine_id = RuntimeCtx::Singleton()->this_machine_id();
   int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
   machine_id2sockfd_.assign(total_machine_num, -1);
@@ -122,22 +193,31 @@ void EpollDataCommNet::InitSockets(uint16_t port) {
     return new SocketHelper(sockfd, poller);
   };
   // listen
-  sockaddr_in this_sockaddr = GetSockAddr(this_machine_id, port);
   int listen_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  PCHECK(bind(listen_sockfd, reinterpret_cast<sockaddr*>(&this_sockaddr),
-              sizeof(this_sockaddr))
-         == 0);
-  PCHECK(listen(listen_sockfd, total_machine_num) == 0);
+  uint16_t this_listen_port = 1024;
+  uint16_t listen_port_max = std::numeric_limits<uint16_t>::max();
+  for (; this_listen_port < listen_port_max; ++this_listen_port) {
+    sockaddr_in this_sockaddr = GetSockAddr(this_machine_id, this_listen_port);
+    int bind_result =
+        bind(listen_sockfd, reinterpret_cast<sockaddr*>(&this_sockaddr),
+             sizeof(this_sockaddr));
+    if (bind_result == 0) {
+      PCHECK(listen(listen_sockfd, total_machine_num) == 0);
+      CtrlClient::Singleton()->PushPort(this_listen_port);
+      break;
+    } else {
+      PCHECK(errno == EACCES || errno == EADDRINUSE);
+    }
+  }
+  CHECK_LT(this_listen_port, listen_port_max);
   // connect
   FOR_RANGE(int64_t, peer_machine_id, this_machine_id + 1, total_machine_num) {
-    sockaddr_in peer_sockaddr = GetSockAddr(peer_machine_id, port);
+    uint16_t peer_port = CtrlClient::Singleton()->PullPort(peer_machine_id);
+    sockaddr_in peer_sockaddr = GetSockAddr(peer_machine_id, peer_port);
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    int rc = -1;
-    while (rc == -1) {
-      connect(sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr),
-              sizeof(peer_sockaddr));
-    }
-    PCHECK(rc == 0);
+    PCHECK(connect(sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr),
+                   sizeof(peer_sockaddr))
+           == 0);
     CHECK(sockfd2helper_.emplace(sockfd, NewSocketHelper(sockfd)).second);
     machine_id2sockfd_[peer_machine_id] = sockfd;
   }
@@ -153,6 +233,11 @@ void EpollDataCommNet::InitSockets(uint16_t port) {
     machine_id2sockfd_[peer_machine_id] = sockfd;
   }
   PCHECK(close(listen_sockfd) == 0);
+  // useful log
+  FOR_RANGE(int64_t, machine_id, 0, total_machine_num) {
+    LOG(INFO) << "machine " << machine_id << " sockfd "
+              << machine_id2sockfd_[machine_id];
+  }
 }
 
 SocketHelper* EpollDataCommNet::GetSocketHelper(int64_t machine_id) {

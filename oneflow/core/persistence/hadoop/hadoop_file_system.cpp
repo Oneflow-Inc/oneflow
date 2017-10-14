@@ -128,9 +128,9 @@ void LibHDFS::LoadAndBind() {
 #else
   const char* kLibHdfsDso = "libhdfs.so";
 #endif
-  char* hdfs_home = getenv("HADOOP_HDFS_HOME");
+  char* hdfs_home = getenv("HADOOP_HOME");
   if (hdfs_home == nullptr) {
-    PLOG(WARNING) << "Environment variable HADOOP_HDFS_HOME not set";
+    PLOG(WARNING) << "Environment variable HADOOP_HOME not set";
     status_ = false;
     return;
   }
@@ -374,8 +374,9 @@ uint64_t HadoopFileSystem::GetFileSize(const std::string& fname) {
 
   hdfsFileInfo* info = hdfs_->hdfsGetPathInfo(fs, TranslateName(fname).c_str());
   PCHECK(info != nullptr) << fname;
+  uint64_t ret = info->mSize;
   hdfs_->hdfsFreeFileInfo(info, 1);
-  return static_cast<uint64_t>(info->mSize);
+  return ret;
 }
 
 void HadoopFileSystem::RenameFile(const std::string& old_name,

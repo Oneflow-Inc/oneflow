@@ -8,14 +8,15 @@ use_async_cpu_stream: false
 max_data_id_length: 8
 global_fs_conf {
   hdfs_conf {
+    namenode: "hdfs://192.168.1.11:9000"
   }
 }
 train_conf {
   num_of_pieces_in_batch: 10
-  model_save_snapshots_path: "/mnist/snapshots"
+  model_save_snapshots_path: "/willzhang/snapshots"
   num_of_batches_in_snapshot: 6
   staleness: 0
-  total_batch_num: 24
+  total_batch_num: 15
   default_fill_conf {
     gaussian_conf {
       mean: 0.0

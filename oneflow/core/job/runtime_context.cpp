@@ -2,8 +2,9 @@
 
 namespace oneflow {
 
-std::string RuntimeCtx::GetAddr(int64_t machine_id) const {
-  return JobDesc::Singleton()->resource().machine(machine_id).addr();
+std::string RuntimeCtx::GetCtrlAddr(int64_t machine_id) const {
+  const Machine& mchn = JobDesc::Singleton()->resource().machine(machine_id);
+  return mchn.addr() + ":" + std::to_string(mchn.port());
 }
 
 PersistentInStream* RuntimeCtx::GetDataInStream(const std::string& name) {

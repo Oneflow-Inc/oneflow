@@ -25,6 +25,7 @@ class DataCommNet {
                      const void* dst_token) = 0;
   virtual void AddReadCallBack(void* read_id,
                                std::function<void()> callback) = 0;
+  virtual void AddReadCallBackDone(void* read_id) = 0;
 
   //
   virtual void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) = 0;
