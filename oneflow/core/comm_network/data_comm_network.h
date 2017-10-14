@@ -21,11 +21,13 @@ class DataCommNet {
   virtual void RegisterMemoryDone() = 0;
 
   // Stream
-  virtual void* Read(int64_t src_machine_id, const void* src_token,
-                     const void* dst_token) = 0;
-  virtual void AddReadCallBack(void* read_id,
+  virtual void* NewActorReadId() = 0;
+  virtual void DeleteActorReadId(void* actor_read_id) = 0;
+  virtual void* Read(void* actor_read_id, int64_t src_machine_id,
+                     const void* src_token, const void* dst_token) = 0;
+  virtual void AddReadCallBack(void* actor_read_id, void* read_id,
                                std::function<void()> callback) = 0;
-  virtual void AddReadCallBackDone(void* read_id) = 0;
+  virtual void AddReadCallBackDone(void* actor_read_id, void* read_id) = 0;
 
   //
   virtual void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) = 0;
