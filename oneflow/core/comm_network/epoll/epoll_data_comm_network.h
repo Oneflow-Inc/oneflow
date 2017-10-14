@@ -24,18 +24,30 @@ class EpollDataCommNet final : public DataCommNet {
   void UnRegisterMemory(const void* token) override;
   void RegisterMemoryDone() override;
 
-  void* Read(int64_t src_machine_id, const void* src_token,
+  void* NewActorReadId();
+  void DeleteActorReadId(void* actor_read_id);
+  void* Read(void* actor_read_id, int64_t src_machine_id, const void* src_token,
              const void* dst_token) override;
-  void AddReadCallBack(void* read_id, std::function<void()> callback) override;
-  void AddReadCallBackDone(void* read_id) override;
-  void ReadDone(void* read_id);
+  void AddReadCallBack(void* actor_read_id, void* read_id,
+                       std::function<void()> callback) override;
+  void AddReadCallBackDone(void* actor_read_id, void* read_id) override;
+  void ReadDone(void* read_done_id);
 
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
   void SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg);
 
  private:
+  struct ReadContext {
+    CallBackList cbl;
+    std::mutex done_cnt_mtx;
+    int8_t done_cnt;
+  };
+  struct ActorReadContext {
+    std::mutex read_ctx_list_mtx;
+    std::list<ReadContext*> read_ctx_list;
+  };
   EpollDataCommNet();
-  void IncreaseDoneCnt(void* read_id);
+  void IncreaseDoneCnt(ActorReadContext* actor_read_ctx, ReadContext* read_ctx);
   void InitSockets();
   SocketHelper* GetSocketHelper(int64_t machine_id);
 
@@ -43,21 +55,6 @@ class EpollDataCommNet final : public DataCommNet {
   std::mutex mem_desc_mtx_;
   std::list<SocketMemDesc*> mem_descs_;
   size_t unregister_mem_descs_cnt_;
-  // Read
-  struct ReadContext {
-    std::mutex cbl_mtx;
-    CallBackList cbl;
-    std::mutex done_cnt_mtx;
-    int8_t done_cnt;
-  };
-  struct CallBackContext {
-    void DecreaseCnt();
-    std::function<void()> callback;
-    std::mutex cnt_mtx;
-    int32_t cnt;
-  };
-  std::mutex undeleted_read_ctxs_mtx_;
-  HashSet<ReadContext*> undeleted_read_ctxs_;
   // Socket
   std::vector<IOEventPoller*> pollers_;
   std::vector<int> machine_id2sockfd_;
