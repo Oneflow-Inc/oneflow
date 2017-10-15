@@ -1,10 +1,10 @@
-syntax = "proto3";
+syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/operator/op_conf.proto";
 
 message OperatorProto {
-  OperatorConf op_conf = 1;
+  required OperatorConf op_conf = 1;
   map<string, string> bn_in_op2lbn = 3;
 
   repeated string data_tmp_bn = 4;

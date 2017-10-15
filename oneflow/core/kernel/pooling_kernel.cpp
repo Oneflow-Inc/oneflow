@@ -57,9 +57,9 @@ class PoolingKernelUtil<DeviceType::kCPU, T> final {
                       out_h * pooling_conf.stride_h() - pooling_conf.pad_h();
                   int64_t wstart =
                       out_w * pooling_conf.stride_w() - pooling_conf.pad_w();
-                  int64_t hend = std::min(hstart + pooling_conf.kernel_size_h(),
+                  int64_t hend = std::min(hstart + pooling_conf.kernel_h(),
                                           in_blob->shape().At(2));
-                  int64_t wend = std::min(wstart + pooling_conf.kernel_size_w(),
+                  int64_t wend = std::min(wstart + pooling_conf.kernel_w(),
                                           in_blob->shape().At(3));
                   hstart = std::max(hstart, static_cast<int64_t>(0));
                   wstart = std::max(wstart, static_cast<int64_t>(0));
@@ -99,10 +99,10 @@ class PoolingKernelUtil<DeviceType::kCPU, T> final {
                   int64_t wstart =
                       out_w * pooling_conf.stride_w() - pooling_conf.pad_w();
                   int64_t hend =
-                      std::min(hstart + pooling_conf.kernel_size_h(),
+                      std::min(hstart + pooling_conf.kernel_h(),
                                in_blob->shape().At(2) + pooling_conf.pad_h());
                   int64_t wend =
-                      std::min(wstart + pooling_conf.kernel_size_w(),
+                      std::min(wstart + pooling_conf.kernel_w(),
                                in_blob->shape().At(3) + pooling_conf.pad_w());
                   int64_t pool_size = (hend - hstart) * (wend - wstart);
                   hstart = std::max(hstart, static_cast<int64_t>(0));
@@ -140,8 +140,8 @@ class PoolingKernelUtil<DeviceType::kCPU, T> final {
         { int64_t hstart = out_h * pooling_conf.stride_h() -
         pooling_conf.pad_h(); int64_t wstart = out_w * pooling_conf.stride_w()
         - pooling_conf.pad_w(); int64_t hend = std::min(hstart +
-        pooling_conf.kernel_size_h(), in_blob->shape().At(2)); int64_t wend =
-                    std::min(wstart + pooling_conf.kernel_size_w(),
+        pooling_conf.kernel_h(), in_blob->shape().At(2)); int64_t wend =
+                    std::min(wstart + pooling_conf.kernel_w(),
         in_blob->shape().At(3)); hstart = std::max(hstart,
         static_cast<int64_t>(0)); wstart = std::max(wstart,
         static_cast<int64_t>(0)); const int64_t out_index = out_h *
@@ -205,10 +205,10 @@ class PoolingKernelUtil<DeviceType::kCPU, T> final {
                   int64_t wstart =
                       out_w * pooling_conf.stride_w() - pooling_conf.pad_w();
                   int64_t hend = std::min(
-                      hstart + pooling_conf.kernel_size_h(),
+                      hstart + pooling_conf.kernel_h(),
                       in_diff_blob->shape().At(2) + pooling_conf.pad_h());
                   int64_t wend = std::min(
-                      wstart + pooling_conf.kernel_size_w(),
+                      wstart + pooling_conf.kernel_w(),
                       in_diff_blob->shape().At(3) + pooling_conf.pad_w());
                   int64_t pool_size = (hend - hstart) * (wend - wstart);
                   hstart = std::max(hstart, static_cast<int64_t>(0));
