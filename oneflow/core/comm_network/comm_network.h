@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_COMM_NETWORK_DATA_COMM_NETWORK_H_
-#define ONEFLOW_CORE_COMM_NETWORK_DATA_COMM_NETWORK_H_
+#ifndef ONEFLOW_CORE_COMM_NETWORK_COMM_NETWORK_H_
+#define ONEFLOW_CORE_COMM_NETWORK_COMM_NETWORK_H_
 
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/common/platform.h"
@@ -7,12 +7,12 @@
 
 namespace oneflow {
 
-class DataCommNet {
+class CommNet {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(DataCommNet);
-  virtual ~DataCommNet() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CommNet);
+  virtual ~CommNet() = default;
 
-  static DataCommNet* Singleton() { return data_comm_network_ptr_; }
+  static CommNet* Singleton() { return comm_network_ptr_; }
 
   // "RegisterMemory" will return a Token, after "RegisterMemoryDone",
   // we can use this token to use the "Read"
@@ -33,15 +33,13 @@ class DataCommNet {
   virtual void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) = 0;
 
  protected:
-  DataCommNet() = default;
-  static void set_comm_network_ptr(DataCommNet* val) {
-    data_comm_network_ptr_ = val;
-  }
+  CommNet() = default;
+  static void set_comm_network_ptr(CommNet* val) { comm_network_ptr_ = val; }
 
  private:
-  static DataCommNet* data_comm_network_ptr_;
+  static CommNet* comm_network_ptr_;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMM_NETWORK_DATA_COMM_NETWORK_H_
+#endif  // ONEFLOW_CORE_COMM_NETWORK_COMM_NETWORK_H_
