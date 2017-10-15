@@ -47,7 +47,8 @@ class EpollDataCommNet final : public DataCommNet {
     std::list<ReadContext*> read_ctx_list;
   };
   EpollDataCommNet();
-  void IncreaseDoneCnt(ActorReadContext* actor_read_ctx, ReadContext* read_ctx);
+  int8_t IncreaseDoneCnt(ReadContext*);
+  void FinishOneReadContext(ActorReadContext*, ReadContext*);
   void InitSockets();
   SocketHelper* GetSocketHelper(int64_t machine_id);
 
