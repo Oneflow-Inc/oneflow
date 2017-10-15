@@ -1,4 +1,4 @@
-syntax = "proto3";
+syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/graph/exec_sequence.proto";
@@ -20,19 +20,19 @@ enum TaskType {
 
 message TaskProto {
   // common
-  int64 id = 1;
-  TaskType type = 2;
-  int64 machine_id = 3;
-  int64 thrd_local_id = 4;
-  bool is_forward = 5;
-  ExecSequence exec_sequence = 6;
+  required int64 id = 1;
+  required TaskType type = 2;
+  required int64 machine_id = 3;
+  required int64 thrd_local_id = 4;
+  required bool is_forward = 5;
+  required ExecSequence exec_sequence = 6;
   map<string, RegstDescProto> produced_regst_desc = 7;
   map<string, int64> consumed_regst_desc_id = 8;
   // for CompTask
-  ParallelPolicy parallel_policy = 1000;
-  int64 parallel_id = 1001;
-  int64 parallel_num = 1002;
+  optional ParallelPolicy parallel_policy = 1000;
+  optional int64 parallel_id = 1001;
+  optional int64 parallel_num = 1002;
   // For Model Update Comp Task
-  int64 related_save_task_id = 3000;
-  uint32 random_seed = 3001;
+  optional int64 related_save_task_id = 3000;
+  optional uint32 random_seed = 3001;
 }

@@ -40,15 +40,15 @@ void ConvolutionOp::InferBlobDesc4FwBlobs(
   int64_t c_o = out_num;
 
   int64_t h_len =
-      (in_blob_desc->shape().At(2) + 2 * conf.pad_h() - conf.kernel_size_h())
+      (in_blob_desc->shape().At(2) + 2 * conf.pad_h() - conf.kernel_h())
           / conf.stride_h()
       + 1;
   int64_t w_len =
-      (in_blob_desc->shape().At(3) + 2 * conf.pad_w() - conf.kernel_size_w())
+      (in_blob_desc->shape().At(3) + 2 * conf.pad_w() - conf.kernel_w())
           / conf.stride_w()
       + 1;
   int64_t output_size = h_len * w_len;
-  int64_t kernel_size = conf.kernel_size_h() * conf.kernel_size_w();
+  int64_t kernel = conf.kernel_h() * conf.kernel_w();
 
   // out
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(SoleObn());
@@ -58,14 +58,13 @@ void ConvolutionOp::InferBlobDesc4FwBlobs(
 
   // col_buf
   BlobDesc* col_buf_blob_desc = GetBlobDesc4BnInOp("col_buf");
-  col_buf_blob_desc->mut_shape() =
-      Shape({data_num, output_size, c_i * kernel_size});
+  col_buf_blob_desc->mut_shape() = Shape({data_num, output_size, c_i * kernel});
   col_buf_blob_desc->set_data_type(JobDesc::Singleton()->default_data_type());
   col_buf_blob_desc->set_has_data_id(false);
 
   // weight
   BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
-  weight_blob_desc->mut_shape() = Shape({c_o, c_i * kernel_size});
+  weight_blob_desc->mut_shape() = Shape({c_o, c_i * kernel});
   weight_blob_desc->set_data_type(JobDesc::Singleton()->default_data_type());
   weight_blob_desc->set_has_data_id(false);
 

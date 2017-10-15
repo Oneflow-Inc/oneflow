@@ -1,4 +1,4 @@
-syntax = "proto3";
+syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/operator/op_conf.proto";
