@@ -1,7 +1,7 @@
-#ifndef ONEFLOW_CORE_COMM_NETWORK_EPOLL_EPOLL_DATA_COMM_NETWORK_H_
-#define ONEFLOW_CORE_COMM_NETWORK_EPOLL_EPOLL_DATA_COMM_NETWORK_H_
+#ifndef ONEFLOW_CORE_COMM_NETWORK_EPOLL_EPOLL_COMM_NETWORK_H_
+#define ONEFLOW_CORE_COMM_NETWORK_EPOLL_EPOLL_COMM_NETWORK_H_
 
-#include "oneflow/core/comm_network/data_comm_network.h"
+#include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/comm_network/epoll/socket_helper.h"
 #include "oneflow/core/comm_network/epoll/socket_memory_desc.h"
 
@@ -9,13 +9,13 @@
 
 namespace oneflow {
 
-class EpollDataCommNet final : public DataCommNet {
+class EpollCommNet final : public CommNet {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(EpollDataCommNet);
-  ~EpollDataCommNet();
+  OF_DISALLOW_COPY_AND_MOVE(EpollCommNet);
+  ~EpollCommNet();
 
-  static EpollDataCommNet* Singleton() {
-    return static_cast<EpollDataCommNet*>(DataCommNet::Singleton());
+  static EpollCommNet* Singleton() {
+    return static_cast<EpollCommNet*>(CommNet::Singleton());
   }
 
   static void Init();
@@ -46,7 +46,7 @@ class EpollDataCommNet final : public DataCommNet {
     std::mutex read_ctx_list_mtx;
     std::list<ReadContext*> read_ctx_list;
   };
-  EpollDataCommNet();
+  EpollCommNet();
   int8_t IncreaseDoneCnt(ReadContext*);
   void FinishOneReadContext(ActorReadContext*, ReadContext*);
   void InitSockets();
@@ -66,4 +66,4 @@ class EpollDataCommNet final : public DataCommNet {
 
 #endif  // PLATFORM_POSIX
 
-#endif  // ONEFLOW_CORE_COMM_NETWORK_EPOLL_EPOLL_DATA_COMM_NETWORK_H_
+#endif  // ONEFLOW_CORE_COMM_NETWORK_EPOLL_EPOLL_COMM_NETWORK_H_

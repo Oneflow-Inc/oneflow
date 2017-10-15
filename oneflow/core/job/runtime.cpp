@@ -1,5 +1,5 @@
 #include <gflags/gflags.h>
-#include "oneflow/core/comm_network/epoll/epoll_data_comm_network.h"
+#include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/runtime_context.h"
@@ -64,7 +64,7 @@ void Runtime::Run(const Plan& plan, const std::string& this_machine_name) {
   LOG(INFO) << "All actor on this machine are activated";
   OF_BARRIER();
   LOG(INFO) << "All actor on all machine are activated";
-  DataCommNet::Singleton()->RegisterMemoryDone();
+  CommNet::Singleton()->RegisterMemoryDone();
   RuntimeCtx::Singleton()->mut_active_actor_cnt().Init("active_actor_cnt",
                                                        this_machine_task_num);
   SendCmdMsg(mdupdt_tasks, ActorCmd::kSendInitialModel);
@@ -82,7 +82,7 @@ void Runtime::NewAllSingleton(const Plan& plan,
   CtrlClient::NewSingleton();
   KernelMgr::NewSingleton(plan);
 #ifdef PLATFORM_POSIX
-  EpollDataCommNet::Init();
+  EpollCommNet::Init();
 #endif
   SnapshotMgr::NewSingleton(plan);
   RegstMgr::NewSingleton();
@@ -95,7 +95,7 @@ void Runtime::DeleteAllSingleton() {
   ActorMsgBus::DeleteSingleton();
   RegstMgr::DeleteSingleton();
   SnapshotMgr::DeleteSingleton();
-  delete DataCommNet::Singleton();
+  delete CommNet::Singleton();
   KernelMgr::DeleteSingleton();
   CtrlClient::DeleteSingleton();
   RuntimeCtx::DeleteSingleton();

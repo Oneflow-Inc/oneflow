@@ -1,6 +1,6 @@
 #include "oneflow/core/actor/copy_comm_net_actor.h"
 #include "oneflow/core/actor/actor_registry.h"
-#include "oneflow/core/comm_network/data_comm_network.h"
+#include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/register/register.h"
 
 namespace oneflow {
@@ -15,8 +15,7 @@ class CopyCommNetActor::CommNetDeviceCtx final : public DeviceCtx {
       : DeviceCtx(), actor_read_id_(actor_read_id), read_id_(nullptr) {}
 
   void AddCallBack(std::function<void()> callback) const override {
-    DataCommNet::Singleton()->AddReadCallBack(actor_read_id_, read_id_,
-                                              callback);
+    CommNet::Singleton()->AddReadCallBack(actor_read_id_, read_id_, callback);
   }
 
   void set_read_id(void* val) { read_id_ = val; }
@@ -27,7 +26,7 @@ class CopyCommNetActor::CommNetDeviceCtx final : public DeviceCtx {
 };
 
 CopyCommNetActor::~CopyCommNetActor() {
-  DataCommNet::Singleton()->DeleteActorReadId(actor_read_id_);
+  CommNet::Singleton()->DeleteActorReadId(actor_read_id_);
 }
 
 void CopyCommNetActor::Init(const TaskProto& task_proto,
@@ -35,7 +34,7 @@ void CopyCommNetActor::Init(const TaskProto& task_proto,
   Actor::Init(task_proto, thread_ctx);
   set_num_of_remaining_eord(1);
   mut_num_of_read_empty() = 1;
-  actor_read_id_ = DataCommNet::Singleton()->NewActorReadId();
+  actor_read_id_ = CommNet::Singleton()->NewActorReadId();
   comm_net_device_ctx_ = new CommNetDeviceCtx(actor_read_id_);
   mut_device_ctx().reset(comm_net_device_ctx_);
   OF_SET_MSG_HANDLER(&CopyCommNetActor::HandlerNormal);
@@ -97,7 +96,7 @@ void CopyCommNetActor::Act() {
       [&](Regst* regst) { regst->set_piece_id(cur_piece_id); });
   AsyncSendRegstMsgToProducer(readable_regst, readable_it->second.producer);
   comm_net_device_ctx_->set_read_id(nullptr);
-  DataCommNet::Singleton()->AddReadCallBackDone(actor_read_id_, read_id);
+  CommNet::Singleton()->AddReadCallBackDone(actor_read_id_, read_id);
   // Finish
   piece_id2regst_ctx.erase(readable_it);
   mut_num_of_read_empty() = piece_id2regst_ctx.empty();

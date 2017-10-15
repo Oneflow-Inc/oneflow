@@ -1,4 +1,4 @@
-#include "oneflow/core/comm_network/epoll/epoll_data_comm_network.h"
+#include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/runtime_context.h"
 
@@ -32,7 +32,7 @@ int64_t GetMachineId(const sockaddr_in& sa) {
 
 }  // namespace
 
-EpollDataCommNet::~EpollDataCommNet() {
+EpollCommNet::~EpollCommNet() {
   for (size_t i = 0; i < pollers_.size(); ++i) {
     LOG(INFO) << "IOWorker " << i << " finish";
     pollers_[i]->Stop();
@@ -42,11 +42,11 @@ EpollDataCommNet::~EpollDataCommNet() {
   for (auto& pair : sockfd2helper_) { delete pair.second; }
 }
 
-void EpollDataCommNet::Init() {
-  DataCommNet::Singleton()->set_comm_network_ptr(new EpollDataCommNet());
+void EpollCommNet::Init() {
+  CommNet::Singleton()->set_comm_network_ptr(new EpollCommNet());
 }
 
-const void* EpollDataCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
+const void* EpollCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
   auto mem_desc = new SocketMemDesc;
   mem_desc->mem_ptr = mem_ptr;
   mem_desc->byte_size = byte_size;
@@ -57,7 +57,7 @@ const void* EpollDataCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
   return mem_desc;
 }
 
-void EpollDataCommNet::UnRegisterMemory(const void* token) {
+void EpollCommNet::UnRegisterMemory(const void* token) {
   std::unique_lock<std::mutex> lck(mem_desc_mtx_);
   CHECK(!mem_descs_.empty());
   unregister_mem_descs_cnt_ += 1;
@@ -68,20 +68,20 @@ void EpollDataCommNet::UnRegisterMemory(const void* token) {
   }
 }
 
-void EpollDataCommNet::RegisterMemoryDone() {
+void EpollCommNet::RegisterMemoryDone() {
   // do nothing
 }
 
-void* EpollDataCommNet::NewActorReadId() { return new ActorReadContext; }
+void* EpollCommNet::NewActorReadId() { return new ActorReadContext; }
 
-void EpollDataCommNet::DeleteActorReadId(void* actor_read_id) {
+void EpollCommNet::DeleteActorReadId(void* actor_read_id) {
   auto actor_read_ctx = static_cast<ActorReadContext*>(actor_read_id);
   CHECK(actor_read_ctx->read_ctx_list.empty());
   delete actor_read_ctx;
 }
 
-void* EpollDataCommNet::Read(void* actor_read_id, int64_t src_machine_id,
-                             const void* src_token, const void* dst_token) {
+void* EpollCommNet::Read(void* actor_read_id, int64_t src_machine_id,
+                         const void* src_token, const void* dst_token) {
   // ReadContext
   auto actor_read_ctx = static_cast<ActorReadContext*>(actor_read_id);
   ReadContext* read_ctx = new ReadContext;
@@ -103,8 +103,8 @@ void* EpollDataCommNet::Read(void* actor_read_id, int64_t src_machine_id,
   return read_ctx;
 }
 
-void EpollDataCommNet::AddReadCallBack(void* actor_read_id, void* read_id,
-                                       std::function<void()> callback) {
+void EpollCommNet::AddReadCallBack(void* actor_read_id, void* read_id,
+                                   std::function<void()> callback) {
   auto actor_read_ctx = static_cast<ActorReadContext*>(actor_read_id);
   ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
   if (read_ctx) {
@@ -123,7 +123,7 @@ void EpollDataCommNet::AddReadCallBack(void* actor_read_id, void* read_id,
   callback();
 }
 
-void EpollDataCommNet::AddReadCallBackDone(void* actor_read_id, void* read_id) {
+void EpollCommNet::AddReadCallBackDone(void* actor_read_id, void* read_id) {
   auto actor_read_ctx = static_cast<ActorReadContext*>(actor_read_id);
   ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
   if (IncreaseDoneCnt(read_ctx) == 2) {
@@ -132,7 +132,7 @@ void EpollDataCommNet::AddReadCallBackDone(void* actor_read_id, void* read_id) {
   }
 }
 
-void EpollDataCommNet::ReadDone(void* read_done_id) {
+void EpollCommNet::ReadDone(void* read_done_id) {
   auto parsed_read_done_id =
       static_cast<std::tuple<ActorReadContext*, ReadContext*>*>(read_done_id);
   auto actor_read_ctx = std::get<0>(*parsed_read_done_id);
@@ -147,33 +147,32 @@ void EpollDataCommNet::ReadDone(void* read_done_id) {
   }
 }
 
-int8_t EpollDataCommNet::IncreaseDoneCnt(ReadContext* read_ctx) {
+int8_t EpollCommNet::IncreaseDoneCnt(ReadContext* read_ctx) {
   std::unique_lock<std::mutex> lck(read_ctx->done_cnt_mtx);
   read_ctx->done_cnt += 1;
   return read_ctx->done_cnt;
 }
 
-void EpollDataCommNet::FinishOneReadContext(ActorReadContext* actor_read_ctx,
-                                            ReadContext* read_ctx) {
+void EpollCommNet::FinishOneReadContext(ActorReadContext* actor_read_ctx,
+                                        ReadContext* read_ctx) {
   CHECK_EQ(actor_read_ctx->read_ctx_list.front(), read_ctx);
   actor_read_ctx->read_ctx_list.pop_front();
   for (std::function<void()>& callback : read_ctx->cbl) { callback(); }
 }
 
-void EpollDataCommNet::SendActorMsg(int64_t dst_machine_id,
-                                    const ActorMsg& actor_msg) {
+void EpollCommNet::SendActorMsg(int64_t dst_machine_id,
+                                const ActorMsg& actor_msg) {
   SocketMsg msg;
   msg.msg_type = SocketMsgType::kActor;
   msg.actor_msg = actor_msg;
   GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 }
 
-void EpollDataCommNet::SendSocketMsg(int64_t dst_machine_id,
-                                     const SocketMsg& msg) {
+void EpollCommNet::SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg) {
   GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 }
 
-EpollDataCommNet::EpollDataCommNet() {
+EpollCommNet::EpollCommNet() {
   mem_descs_.clear();
   unregister_mem_descs_cnt_ = 0;
   pollers_.resize(JobDesc::Singleton()->CommNetIOWorkerNum(), nullptr);
@@ -184,7 +183,7 @@ EpollDataCommNet::EpollDataCommNet() {
   for (IOEventPoller* poller : pollers_) { poller->Start(); }
 }
 
-void EpollDataCommNet::InitSockets() {
+void EpollCommNet::InitSockets() {
   int64_t this_machine_id = RuntimeCtx::Singleton()->this_machine_id();
   int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
   machine_id2sockfd_.assign(total_machine_num, -1);
@@ -243,7 +242,7 @@ void EpollDataCommNet::InitSockets() {
   }
 }
 
-SocketHelper* EpollDataCommNet::GetSocketHelper(int64_t machine_id) {
+SocketHelper* EpollCommNet::GetSocketHelper(int64_t machine_id) {
   int sockfd = machine_id2sockfd_.at(machine_id);
   return sockfd2helper_.at(sockfd);
 }
