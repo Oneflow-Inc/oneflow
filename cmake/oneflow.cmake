@@ -110,13 +110,13 @@ foreach(cc ${of_main_cc})
   list(APPEND main_targets ${main_name})
 endforeach()
 
-# build scheduler.sh
-add_custom_target(copy_raw_scheduler_sh
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/scripts/scheduler.sh ${PROJECT_BINARY_DIR})
+# build oneflow.run
+add_custom_target(copy_raw_oneflow_run
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/scripts/oneflow.run ${PROJECT_BINARY_DIR})
 
-add_custom_target(scheduler_sh ALL
-  COMMAND tar zcf - compiler runtime scheduler -C ${PROJECT_BINARY_DIR} >> ${PROJECT_BINARY_DIR}/scheduler.sh
-  DEPENDS ${main_targets} copy_raw_scheduler_sh)
+add_custom_target(oneflow_run ALL
+  COMMAND tar zcf - compiler runtime scheduler -C ${PROJECT_BINARY_DIR} >> ${PROJECT_BINARY_DIR}/oneflow.run
+  DEPENDS ${main_targets} copy_raw_oneflow_run)
 
 # build test
 if(BUILD_TESTING)
