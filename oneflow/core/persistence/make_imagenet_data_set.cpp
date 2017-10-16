@@ -1,6 +1,6 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
-#include "oneflow/core/kernel/imagenet_util.h"
+#include "oneflow/core/persistence/imagenet_util.h"
 namespace oneflow {}
 
 DEFINE_int32(width, 256, "resized width");

@@ -1,8 +1,8 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include "oneflow/core/common/str_util.h"
-#include "oneflow/core/kernel/imagenet_util.h"
-#include "oneflow/core/kernel/normal_data_set_in_stream.h"
+#include "oneflow/core/persistence/imagenet_util.h"
+#include "oneflow/core/persistence/normal_data_set_in_stream.h"
 
 DEFINE_string(label_file, "./labels", "label file");
 DEFINE_string(feature_file, "./features", "feature file");

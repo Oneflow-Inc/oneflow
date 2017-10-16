@@ -1,5 +1,5 @@
-#include "oneflow/core/kernel/data_set_in_stream.h"
-#include "oneflow/core/kernel/data_set_util.h"
+#include "oneflow/core/persistence/data_set_in_stream.h"
+#include "oneflow/core/persistence/data_set_util.h"
 namespace oneflow {
 
 void DataSetInStream::InitHeader() {

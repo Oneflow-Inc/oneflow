@@ -1,4 +1,4 @@
-#include "oneflow/core/kernel/imagenet_util.h"
+#include "oneflow/core/persistence/imagenet_util.h"
 #include <libgen.h>
 #include <chrono>
 #include <opencv2/opencv.hpp>

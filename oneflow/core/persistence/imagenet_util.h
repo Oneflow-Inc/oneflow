@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_KERNEL_IMAGENET_UTIL_H_
 #define ONEFLOW_CORE_KERNEL_IMAGENET_UTIL_H_
 
-#include "oneflow/core/kernel/data_set_util.h"
+#include "oneflow/core/persistence/data_set_util.h"
 
 namespace oneflow {
 

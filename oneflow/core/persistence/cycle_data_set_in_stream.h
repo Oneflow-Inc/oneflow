@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_KERNEL_CYCLE_DATA_SET_IN_STREAM_H_
 #define ONEFLOW_CORE_KERNEL_CYCLE_DATA_SET_IN_STREAM_H_
 
-#include "oneflow/core/kernel/data_set_in_stream.h"
+#include "oneflow/core/persistence/data_set_in_stream.h"
 namespace oneflow {
 
 class CycleDataSetInStream : public DataSetInStream {

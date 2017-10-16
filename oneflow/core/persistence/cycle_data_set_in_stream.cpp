@@ -1,4 +1,4 @@
-#include "oneflow/core/kernel/cycle_data_set_in_stream.h"
+#include "oneflow/core/persistence/cycle_data_set_in_stream.h"
 namespace oneflow {
 
 void CycleDataSetInStream::AddNForCurFilePos(uint64_t n) {
