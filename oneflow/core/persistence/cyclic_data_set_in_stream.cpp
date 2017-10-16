@@ -1,7 +1,7 @@
-#include "oneflow/core/persistence/cycle_data_set_in_stream.h"
+#include "oneflow/core/persistence/cyclic_data_set_in_stream.h"
 namespace oneflow {
 
-void CycleDataSetInStream::AddNForCurFilePos(uint64_t n) {
+void CyclicDataSetInStream::AddNForCurFilePos(uint64_t n) {
   uint64_t pos = cur_file_pos() + n;
   if (pos >= file_size()) {
     pos = (pos + header()->DataBodyOffset()) % file_size();
