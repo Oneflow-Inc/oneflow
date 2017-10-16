@@ -1,4 +1,4 @@
-syntax = "proto3";
+syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/job/plan.proto";
@@ -10,8 +10,8 @@ message LoadServerResponse {
 }
 
 message BarrierRequest {
-  string name = 1;
-  int32 num = 2;
+  required string name = 1;
+  required int32 num = 2;
 }
 
 message BarrierResponse {
@@ -24,29 +24,29 @@ enum TryLockResult {
 }
 
 message TryLockRequest {
-  string name = 1;
+  required string name = 1;
 }
 
 message TryLockResponse {
-  TryLockResult result = 1;
+  required TryLockResult result = 1;
 }
 
 message NotifyDoneRequest {
-  string name = 1;
+  required string name = 1;
 }
 
 message NotifyDoneResponse {
 }
 
 message WaitUntilDoneRequest {
-  string name = 1;
+  required string name = 1;
 }
 
 message WaitUntilDoneResponse {
 }
 
 message PushPlanRequest {
-  Plan plan = 1;
+  required Plan plan = 1;
 }
 
 message PushPlanResponse {
@@ -62,11 +62,11 @@ message PullPlanRequest {
 }
 
 message PullPlanResponse {
-  Plan plan = 1;
+  required Plan plan = 1;
 }
 
 message PushPortRequest {
-  int32 port = 1;
+  required int32 port = 1;
 }
 
 message PushPortResponse {
@@ -82,5 +82,5 @@ message PullPortRequest {
 }
 
 message PullPortResponse {
-  int32 port = 1;
+  required int32 port = 1;
 }

@@ -182,7 +182,7 @@ class PoolingKernelUtil<DeviceType::kGPU, T> final {
                 mask_blob->mut_dptr<uint32_t>(), in_blob->shape().At(1),
                 in_blob->shape().At(2), in_blob->shape().At(3),
                 out_blob->shape().At(2), out_blob->shape().At(3),
-                pooling_conf.kernel_size_h(), pooling_conf.kernel_size_w(),
+                pooling_conf.kernel_h(), pooling_conf.kernel_w(),
                 pooling_conf.stride_h(), pooling_conf.stride_w(),
                 pooling_conf.pad_h(), pooling_conf.pad_w());
         break;
@@ -194,8 +194,8 @@ class PoolingKernelUtil<DeviceType::kGPU, T> final {
                 count, in_blob->dptr<T>(), out_blob->mut_dptr<T>(),
                 in_blob->shape().At(1), in_blob->shape().At(2),
                 in_blob->shape().At(3), out_blob->shape().At(2),
-                out_blob->shape().At(3), pooling_conf.kernel_size_h(),
-                pooling_conf.kernel_size_w(), pooling_conf.stride_h(),
+                out_blob->shape().At(3), pooling_conf.kernel_h(),
+                pooling_conf.kernel_w(), pooling_conf.stride_h(),
                 pooling_conf.stride_w(), pooling_conf.pad_h(),
                 pooling_conf.pad_w());
         break;
@@ -221,7 +221,7 @@ class PoolingKernelUtil<DeviceType::kGPU, T> final {
                 in_diff_blob->mut_dptr<T>(), in_diff_blob->shape().At(1),
                 in_diff_blob->shape().At(2), in_diff_blob->shape().At(3),
                 out_diff_blob->shape().At(2), out_diff_blob->shape().At(3),
-                pooling_conf.kernel_size_h(), pooling_conf.kernel_size_w(),
+                pooling_conf.kernel_h(), pooling_conf.kernel_w(),
                 pooling_conf.stride_h(), pooling_conf.stride_w(),
                 pooling_conf.pad_h(), pooling_conf.pad_w());
         break;
@@ -233,8 +233,8 @@ class PoolingKernelUtil<DeviceType::kGPU, T> final {
                 count, out_diff_blob->dptr<T>(), in_diff_blob->mut_dptr<T>(),
                 in_diff_blob->shape().At(1), in_diff_blob->shape().At(2),
                 in_diff_blob->shape().At(3), out_diff_blob->shape().At(2),
-                out_diff_blob->shape().At(3), pooling_conf.kernel_size_h(),
-                pooling_conf.kernel_size_w(), pooling_conf.stride_h(),
+                out_diff_blob->shape().At(3), pooling_conf.kernel_h(),
+                pooling_conf.kernel_w(), pooling_conf.stride_h(),
                 pooling_conf.stride_w(), pooling_conf.pad_h(),
                 pooling_conf.pad_w());
         break;

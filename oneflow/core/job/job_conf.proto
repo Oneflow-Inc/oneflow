@@ -1,17 +1,17 @@
-syntax = "proto3";
+syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/data_type.proto";
 
 message TrainConf {
-  string model_save_snapshots_path = 1;
-  int32 num_of_batches_in_snapshot = 2;
-  int32 staleness = 3; // at least 0. If set as 0, then it's BSP
-  int64 total_batch_num = 4;
-  FillConf default_fill_conf = 5;
-  int32 piece_num_of_record_loss = 6;
-  int32 num_of_pieces_in_batch = 7;
+  required string model_save_snapshots_path = 1;
+  required int32 num_of_batches_in_snapshot = 2;
+  optional int32 staleness = 3 [default = 0]; // at least 0. If set as 0, then it's BSP
+  required int64 total_batch_num = 4;
+  optional FillConf default_fill_conf = 5;
+  optional int32 piece_num_of_record_loss = 6 [default = 1000];
+  required int32 num_of_pieces_in_batch = 7;
   oneof ModelUpdateCase {
     NormalModelUpdateOpConf normal_mdupdt_conf = 1000;
     MomentumModelUpdateOpConf momentum_mdupdt_conf = 1001;
@@ -20,14 +20,14 @@ message TrainConf {
 }
 
 message PredictConf {
-  int64 total_data_num = 1;
+  required int64 total_data_num = 1;
 }
 
 message LocalFsConf {
 }
 
 message HdfsConf {
-  string namenode = 1;
+  required string namenode = 1;
 }
 
 message GlobalFSConf {
@@ -38,15 +38,15 @@ message GlobalFSConf {
 }
 
 message JobConf {
-  string dlnet_filepath = 1;
-  string resource_filepath = 2;
-  string placement_filepath = 3;
-  string model_load_snapshot_path = 4;
-  int32 piece_size = 5;
-  DataType default_data_type = 7; // kFloat or kDouble
-  bool use_async_cpu_stream = 8;
-  int32 max_data_id_length = 9;
-  GlobalFSConf global_fs_conf = 10;
+  required string dlnet_filepath = 1;
+  required string resource_filepath = 2;
+  required string placement_filepath = 3;
+  optional string model_load_snapshot_path = 4;
+  required int32 piece_size = 5;
+  optional DataType default_data_type = 7 [default = kFloat]; // kFloat or kDouble
+  optional bool use_async_cpu_stream = 8 [default = false];
+  optional int32 max_data_id_length = 9;
+  required GlobalFSConf global_fs_conf = 10;
   oneof JobType {
     TrainConf train_conf = 1000;
     PredictConf predict_conf = 1001;

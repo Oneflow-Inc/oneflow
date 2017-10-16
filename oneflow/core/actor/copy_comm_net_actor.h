@@ -9,7 +9,7 @@ class CopyCommNetActor final : public Actor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CopyCommNetActor);
   CopyCommNetActor() = default;
-  ~CopyCommNetActor() = default;
+  ~CopyCommNetActor();
 
   void Init(const TaskProto&, const ThreadCtx&) override;
 
@@ -31,6 +31,7 @@ class CopyCommNetActor final : public Actor {
   void Act() override;
 
   HashMap<int64_t, RegstCtx> piece_id2regst_ctx;
+  void* actor_read_id_;
   CommNetDeviceCtx* comm_net_device_ctx_;
 };
 

@@ -102,11 +102,21 @@ elseif(WIN32)
 endif()
 
 # build main
+set(main_targets "")
 foreach(cc ${of_main_cc})
   get_filename_component(main_name ${cc} NAME_WE)
   cuda_add_executable(${main_name} ${cc})
   target_link_libraries(${main_name} ${of_libs} ${oneflow_third_party_libs})
+  list(APPEND main_targets ${main_name})
 endforeach()
+
+# build oneflow.run
+add_custom_target(copy_raw_oneflow_run
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/scripts/oneflow.run ${PROJECT_BINARY_DIR})
+
+add_custom_target(oneflow_run ALL
+  COMMAND tar zcf - compiler runtime scheduler -C ${PROJECT_BINARY_DIR} >> ${PROJECT_BINARY_DIR}/oneflow.run
+  DEPENDS ${main_targets} copy_raw_oneflow_run)
 
 # build test
 if(BUILD_TESTING)
