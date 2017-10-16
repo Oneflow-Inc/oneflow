@@ -14,6 +14,7 @@ class DataSetInStream : public PersistentInStream {
   DataSetInStream(fs::FileSystem* fs, const std::string& file_path)
       : PersistentInStream(fs, file_path, 0),
         header_(of_make_unique<DataSetHeader>()),
+        item_desc_(DataSetUtil::Malloc<DataItemDesc>(1)),
         label_desc_(DataSetUtil::Malloc<DataSetLabelDesc>(1)) {
     Init();
   }
@@ -29,21 +30,31 @@ class DataSetInStream : public PersistentInStream {
     CHECK(header_.get());
     return header_.get();
   }
+  const DataItemDesc* item_desc() const {
+    CHECK(item_desc_.get());
+    return item_desc_.get();
+  }
   const DataSetLabelDesc* label_desc() const {
     CHECK(label_desc_.get());
     return label_desc_.get();
   }
+  const uint32_t cur_item_pos() const { return cur_item_pos_; }
+  virtual void inc_cur_item_pos() { ++cur_item_pos_; }
 
  protected:
  private:
   void Init() {
     InitHeader();
-    ReadLabelDesc();
+    InitItemDesc();
+    InitLabelDesc();
   }
   void InitHeader();
-  void ReadLabelDesc();
+  void InitItemDesc();
+  void InitLabelDesc();
   std::unique_ptr<DataSetHeader> header_;
+  std::unique_ptr<DataItemDesc, decltype(&free)> item_desc_;
   std::unique_ptr<DataSetLabelDesc, decltype(&free)> label_desc_;
+  uint32_t cur_item_pos_;
 };
 
 }  // namespace oneflow

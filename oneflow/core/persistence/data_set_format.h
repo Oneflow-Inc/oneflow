@@ -9,21 +9,23 @@ namespace oneflow {
 //	data set format
 //
 //	for feature file
-//	.------------------------------.
-//	| DataSetHeader | DataItem ... |
-//	'------------------------------'
+//	.---------------------------------------------.
+//	| DataSetHeader | DataItemDesc | DataItem ... |
+//	'---------------------------------------------'
 //
 //	for label file
-//	.-------------------------------------------------.
-//	| DataSetHeader | DataSetLabelDesc | DataItem ... |
-//	'-------------------------------------------------'
+//	.----------------------------------------------------------------.
+//	| DataSetHeader | DataItemDesc | DataSetLabelDesc | DataItem ... |
+//	'----------------------------------------------------------------'
 
-#define FLAXIBLE_STRUCT_SEQ                                            \
-  OF_PP_MAKE_TUPLE_SEQ(DataSetLabelDesc, label_array_size, label_desc) \
+#define FLAXIBLE_STRUCT_SEQ                                              \
+  OF_PP_MAKE_TUPLE_SEQ(DataSetLabelDesc, label_array_size, label_desc)   \
+  OF_PP_MAKE_TUPLE_SEQ(DataItemDesc, data_item_count, data_item_buf_len) \
   OF_PP_MAKE_TUPLE_SEQ(DataItem, len, data)
 
 #define DATA_SET_FORMAT_SEQ              \
   OF_PP_MAKE_TUPLE_SEQ(DataSetHeader)    \
+  OF_PP_MAKE_TUPLE_SEQ(DataItemDesc)     \
   OF_PP_MAKE_TUPLE_SEQ(DataSetLabelDesc) \
   OF_PP_MAKE_TUPLE_SEQ(DataItem)
 
@@ -32,7 +34,7 @@ struct DataSetHeader final {
   const uint32_t version = 0;
   char type[16];                    //  "feature" or "label"
   uint32_t label_desc_buf_len = 0;  //  in bytes, only for label
-  uint16_t data_elem_type = 0;      // type of data element
+  uint16_t data_type = 0;           // type of data element
   uint16_t dim_array_size = 0;      // effective length of dim_array
   uint32_t dim_array[16];           //  tensor shape
   uint64_t data_item_count = 0;     //  how many items after header
@@ -44,7 +46,12 @@ struct DataSetHeader final {
     for (int i = 0; i < dim_array_size; i++) { count *= dim_array[i]; }
     return count;
   }
-  size_t DataBodyOffset() const { return sizeof(*this) + label_desc_buf_len; }
+  size_t DataBodyOffset() const;
+};
+
+struct DataItemDesc final {
+  uint64_t data_item_count = 0;   // = DataSetHeader.data_item_count;
+  uint64_t data_item_buf_len[0];  // size of each data item, in bytes
 };
 
 struct DataSetLabelDesc final {
@@ -55,19 +62,31 @@ struct DataSetLabelDesc final {
   DataSetLabelDesc() = delete;
 };
 
+enum DataCompressType {
+  kNone,
+  kJpeg,
+  kSparse,
+};
+
 struct DataItem final {
-  uint64_t len = 0;  //  len = dim_vec[0] * dev_vec[1] * ...
-  uint32_t data[0];  //	tensor data.
+  uint64_t len = 0;  //  len = sizeof(data) / sizeof(data[0])
+  uint8_t data_type = 0;
+  uint8_t data_compress_type = 0;
+  char data[0];  //	tensor data.
 
   OF_DISALLOW_COPY_AND_MOVE(DataItem);
   DataItem() = delete;
 };
 
 template<typename data_set_class>
-size_t FlexibleSizeOf(uint32_t n);
+size_t FlexibleSizeOf(uint32_t n) {
+  return sizeof(data_set_class);
+}
 
 template<typename data_set_class>
-size_t FlexibleSizeOf(const data_set_class& obj);
+size_t FlexibleSizeOf(const data_set_class& obj) {
+  return sizeof(data_set_class);
+}
 
 #define DATA_SET_DECLARE_OFSTREAM(type) \
   std::ostream& operator<<(std::ostream& out, const type& data);

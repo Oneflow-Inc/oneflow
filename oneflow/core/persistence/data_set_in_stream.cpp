@@ -13,7 +13,14 @@ void DataSetInStream::InitHeader() {
   CHECK(file_size() == header()->DataBodyOffset() + data_body_size);
 }
 
-void DataSetInStream::ReadLabelDesc() {
+void DataSetInStream::InitItemDesc() {
+  auto desc = DataSetUtil::Malloc<DataItemDesc>(header()->data_item_count);
+  CHECK(!Read(reinterpret_cast<char*>(desc.get()), FlexibleSizeOf(*desc)));
+  item_desc_ = std::move(desc);
+  CHECK(item_desc_->data_item_count == header()->data_item_count);
+}
+
+void DataSetInStream::InitLabelDesc() {
   if (header()->label_desc_buf_len) {
     size_t buf_len = header()->label_desc_buf_len;
     char* buf = reinterpret_cast<char*>(malloc(buf_len));
@@ -28,9 +35,13 @@ void DataSetInStream::ReadLabelDesc() {
 
 int32_t DataSetInStream::ReadDataItem(
     std::unique_ptr<DataItem, decltype(&free)>* data_item) {
-  *data_item = DataSetUtil::CreateDataItem(*header());
-  return Read(reinterpret_cast<char*>((*data_item).get()),
-              FlexibleSizeOf(*(*data_item)));
+  size_t buf_len = item_desc()->data_item_buf_len[cur_item_pos()];
+  char* buf = reinterpret_cast<char*>(malloc(buf_len));
+  *data_item = std::unique_ptr<DataItem, decltype(&free)>(
+      reinterpret_cast<DataItem*>(buf), &free);
+  int32_t ret = Read(buf, buf_len);
+  CHECK(FlexibleSizeOf(*(*data_item)) == buf_len);
+  return ret;
 }
 
 }  // namespace oneflow
