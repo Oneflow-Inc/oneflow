@@ -102,11 +102,21 @@ elseif(WIN32)
 endif()
 
 # build main
+set(main_targets "")
 foreach(cc ${of_main_cc})
   get_filename_component(main_name ${cc} NAME_WE)
   cuda_add_executable(${main_name} ${cc})
   target_link_libraries(${main_name} ${of_libs} ${oneflow_third_party_libs})
+  list(APPEND main_targets ${main_name})
 endforeach()
+
+# build scheduler.sh
+add_custom_target(copy_raw_scheduler_sh
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/scripts/scheduler.sh ${PROJECT_BINARY_DIR})
+
+add_custom_target(scheduler_sh ALL
+  COMMAND tar zcf - compiler runtime scheduler -C ${PROJECT_BINARY_DIR} >> ${PROJECT_BINARY_DIR}/scheduler.sh
+  DEPENDS ${main_targets} copy_raw_scheduler_sh)
 
 # build test
 if(BUILD_TESTING)
