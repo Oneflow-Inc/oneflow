@@ -64,10 +64,10 @@ class Kernel {
   template<DeviceType device_type>
   void CopyDataIdToAllOb(DeviceCtx* ctx,
                          std::function<Blob*(const std::string&)> BnInOp2Blob,
-                         Blob* input_blob) const {
+                         Blob* blob) const {
     for (const std::string& obn : op_->output_bns()) {
       Blob* output_blob = BnInOp2Blob(obn);
-      output_blob->CopyDataIdFrom<device_type>(ctx, input_blob);
+      output_blob->CopyDataIdFrom<device_type>(ctx, blob);
     }
   }
   template<DeviceType device_type>

@@ -89,7 +89,7 @@ void ConcatKernel<device_type, T>::CopyDataIdToOb(
   for (const std::string& ibn : ibns) {
     Blob* in_blob = BnInOp2Blob(ibn);
     CHECK_LE(data_id_offset + in_blob->ByteSizeOfDataIdField(),
-             out_blob->TotalByteSize());
+             out_blob->ByteSizeOfDataIdField());
     Memcpy<device_type>(
         ctx.device_ctx, out_blob->mut_data_id() + data_id_offset,
         in_blob->data_id(), in_blob->ByteSizeOfDataIdField(), kind);
