@@ -2,90 +2,76 @@
 #define ONEFLOW_CORE_KERNEL_DATA_SET_FORMAT_H_
 #include <cstdint>
 #include <iostream>
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/util.h"
 namespace oneflow {
 
 //	data set format
-//
-//	for feature file
-//	.---------------------------------------------.
-//	| DataSetHeader | DataItemDesc | DataItem ... |
-//	'---------------------------------------------'
-//
-//	for label file
-//	.----------------------------------------------------------------.
-//	| DataSetHeader | DataItemDesc | DataSetLabelDesc | DataItem ... |
-//	'----------------------------------------------------------------'
+//	.----------------------------.
+//	| DataSetHeader | Buffer ... |
+//	'----------------------------'
 
-#define FLAXIBLE_STRUCT_SEQ                                              \
-  OF_PP_MAKE_TUPLE_SEQ(DataSetLabelDesc, label_array_size, label_desc)   \
-  OF_PP_MAKE_TUPLE_SEQ(DataItemDesc, data_item_count, data_item_buf_len) \
-  OF_PP_MAKE_TUPLE_SEQ(DataItem, len, data)
+#define FLAXIBLE_STRUCT_SEQ OF_PP_MAKE_TUPLE_SEQ(Buffer, len, data)
 
-#define DATA_SET_FORMAT_SEQ              \
-  OF_PP_MAKE_TUPLE_SEQ(DataSetHeader)    \
-  OF_PP_MAKE_TUPLE_SEQ(DataItemDesc)     \
-  OF_PP_MAKE_TUPLE_SEQ(DataSetLabelDesc) \
-  OF_PP_MAKE_TUPLE_SEQ(DataItem)
-
-struct DataSetHeader final {
-  const uint32_t magic_code = 0xfeed;
-  const uint32_t version = 0;
-  char type[16];                    //  "feature" or "label"
-  uint32_t label_desc_buf_len = 0;  //  in bytes, only for label
-  uint16_t data_type = 0;           // type of data element
-  uint16_t dim_array_size = 0;      // effective length of dim_array
-  uint32_t dim_array[16];           //  tensor shape
-  uint64_t data_item_count = 0;     //  how many items after header
-
-  OF_DISALLOW_COPY_AND_MOVE(DataSetHeader);
-  DataSetHeader() = default;
-  size_t TensorElemCount() const {
-    int count = 1;
-    for (int i = 0; i < dim_array_size; i++) { count *= dim_array[i]; }
-    return count;
-  }
-  size_t DataBodyOffset() const;
-};
-
-struct DataItemDesc final {
-  uint64_t data_item_count = 0;   // = DataSetHeader.data_item_count;
-  uint64_t data_item_buf_len[0];  // size of each data item, in bytes
-};
-
-struct DataSetLabelDesc final {
-  uint32_t label_array_size = 0;
-  char label_desc[0][128];  // label dicription
-
-  OF_DISALLOW_COPY_AND_MOVE(DataSetLabelDesc);
-  DataSetLabelDesc() = delete;
-};
+#define DATA_SET_FORMAT_SEQ           \
+  OF_PP_MAKE_TUPLE_SEQ(DataSetHeader) \
+  OF_PP_MAKE_TUPLE_SEQ(Buffer)
 
 enum DataCompressType {
-  kNone,
+  kNoCompress,
   kJpeg,
   kSparse,
 };
 
-struct DataItem final {
-  uint64_t len = 0;  //  len = sizeof(data) / sizeof(data[0])
-  uint8_t data_type = 0;
-  uint8_t data_compress_type = 0;
-  char data[0];  //	tensor data.
+struct DataSetHeader final {
+  const uint16_t magic_code = 0xfeed;
+  const uint16_t version = 0;
+  uint32_t check_sum;            // check header
+  char type[16];                 //  "feature" or "label"
+  uint32_t dim_array_size = 0;   //  effective length of dim_array
+  uint32_t dim_array[16];        //  tensor shape
+  uint64_t data_item_count = 0;  //  how many items after header
 
-  OF_DISALLOW_COPY_AND_MOVE(DataItem);
-  DataItem() = delete;
+  OF_DISALLOW_COPY_AND_MOVE(DataSetHeader);
+  DataSetHeader() = default;
+  size_t TensorElemCount() const;
+  size_t DataBodyOffset() const;
 };
 
-template<typename data_set_class>
+struct Buffer final {
+  uint8_t meta_check_sum;  //	check fields except `data'
+  uint8_t data_check_sum;  //  checking `data' field when debugging
+  uint8_t data_type = DataType::kChar;
+  uint8_t data_compress_type = DataCompressType::kNoCompress;
+  uint32_t align = 0;  //  useless, only for alignment
+  uint64_t len = 0;    //  len = sizeof(data) / sizeof(data[0])
+  char data[0];        //  buffer data.
+
+  OF_DISALLOW_COPY_AND_MOVE(Buffer);
+  Buffer() = delete;
+};
+
+typedef Buffer DataItem;
+
+template<typename flexible_struct>
 size_t FlexibleSizeOf(uint32_t n) {
-  return sizeof(data_set_class);
+  return sizeof(flexible_struct);
 }
 
-template<typename data_set_class>
-size_t FlexibleSizeOf(const data_set_class& obj) {
-  return sizeof(data_set_class);
+template<typename flexible_struct>
+size_t FlexibleSizeOf(const flexible_struct& obj) {
+  return sizeof(flexible_struct);
+}
+
+template<typename flexible_struct>
+void FlexibleSetArraySize(flexible_struct* type, size_t len) {}
+
+template<typename T>
+static std::unique_ptr<T, decltype(&free)> FlexibleMalloc(size_t len) {
+  T* ptr = reinterpret_cast<T*>(malloc(FlexibleSizeOf<T>(len)));
+  FlexibleSetArraySize(ptr, len);
+  return std::unique_ptr<T, decltype(&free)>(ptr, &free);
 }
 
 #define DATA_SET_DECLARE_OFSTREAM(type) \

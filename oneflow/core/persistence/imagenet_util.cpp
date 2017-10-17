@@ -37,13 +37,12 @@ void ImageNetUtil::SaveLabels(
   }
   std::ofstream label_stream(JoinPath(output_dir, "labels"),
                              std::ofstream::out);
-  auto header = DataSetUtil::CreateHeader("label", img_file_paths.size(), {1});
-  auto label_desc = DataSetUtil::CreateLabelDesc(label_names);
-  header->label_desc_buf_len = FlexibleSizeOf(*label_desc);
-  label_stream << *header << *label_desc;
+  auto header = DataSetUtil::CreateHeader("label", DataType::kUInt32,
+                                          img_file_paths.size(), {1});
+  label_stream << *header;
   for (const auto& file_path : img_file_paths) {
-    auto item = DataSetUtil::CreateLabelItem(
-        *header, {file_path2label_idx.at(file_path)});
+    auto item = DataSetUtil::CreateLabelItem(*header,
+                                             file_path2label_idx.at(file_path));
     label_stream << *item;
   }
 }
@@ -53,10 +52,11 @@ void ImageNetUtil::SaveFeatures(const std::vector<std::string>& img_file_paths,
                                 const std::string& output_dir) {
   std::ofstream feature_stream(JoinPath(output_dir, "features"),
                                std::ofstream::out);
-  auto header = DataSetUtil::CreateHeader("feature", img_file_paths.size(),
-                                          {3, width, height});
+  auto header = DataSetUtil::CreateHeader(
+      "feature", DataType::kChar, img_file_paths.size(), {3, width, height});
   feature_stream << *header;
-  for (const auto& file_path : img_file_paths) {
+  for (int i = 0; i < img_file_paths.size(); ++i) {
+    const auto& file_path = img_file_paths.at(i);
     auto item = DataSetUtil::CreateImageItem(*header, file_path);
     feature_stream << *item;
   }

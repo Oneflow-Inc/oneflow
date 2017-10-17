@@ -10,6 +10,13 @@ namespace oneflow {
   }
 OF_PP_FOR_EACH_TUPLE(DEFINE_FLEXIBLE_SIZE_OF, FLAXIBLE_STRUCT_SEQ);
 
+#define SPEC_FLEXIBLE_SET_ARRAY_SIZE(type, len, array)    \
+  template<>                                              \
+  void FlexibleSetArraySize<type>(type * obj, size_t l) { \
+    obj->len = l;                                         \
+  }
+OF_PP_FOR_EACH_TUPLE(SPEC_FLEXIBLE_SET_ARRAY_SIZE, FLAXIBLE_STRUCT_SEQ);
+
 #define DEFINE_FLEXIBLE_OBJ_SIZE_OF(type, len, array) \
   template<>                                          \
   size_t FlexibleSizeOf<type>(const type& obj) {      \
@@ -24,9 +31,11 @@ OF_PP_FOR_EACH_TUPLE(DEFINE_FLEXIBLE_OBJ_SIZE_OF, FLAXIBLE_STRUCT_SEQ);
   }
 OF_PP_FOR_EACH_TUPLE(DATA_SET_OVERRITE_OFSTREAM, DATA_SET_FORMAT_SEQ);
 
-size_t DataSetHeader::DataBodyOffset() const {
-  return sizeof(*this) + FlexibleSizeOf<DataItemDesc>(data_item_count)
-         + label_desc_buf_len;
+size_t DataSetHeader::TensorElemCount() const {
+  int count = 1;
+  for (int i = 0; i < dim_array_size; i++) { count *= dim_array[i]; }
+  return count;
 }
+size_t DataSetHeader::DataBodyOffset() const { return sizeof(*this); }
 
 }  // namespace oneflow
