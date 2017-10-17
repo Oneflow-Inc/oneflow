@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_JOB_RUNTIME_CONTEXT_H_
 #define ONEFLOW_CORE_JOB_RUNTIME_CONTEXT_H_
 
-#include "oneflow/core/common/thread_safe_counter.h"
+#include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 
@@ -21,25 +21,19 @@ class RuntimeCtx final {
   std::string GetMasterCtrlAddr() const { return GetCtrlAddr(0); }
   std::string GetCtrlAddr(int64_t machine_id) const;
 
-  ThreadSafeCounter& mut_model_init_cnt() { return model_init_cnt_; }
-
-  PersistentInStream* GetDataInStream(const std::string& name);
-  void AddDataInStream(const std::string& name, PersistentInStream*);
-
-  ThreadSafeCounter& mut_active_actor_cnt() { return active_actor_cnt_; }
-  ThreadSafeCounter& mut_inactive_actor_cnt() { return inactive_actor_cnt_; }
+  BlockingCounter& mut_model_init_cnt() { return model_init_cnt_; }
+  BlockingCounter& mut_active_actor_cnt() { return active_actor_cnt_; }
+  BlockingCounter& mut_inactive_actor_cnt() { return inactive_actor_cnt_; }
 
  private:
   RuntimeCtx(const std::string& name);
 
   int64_t this_machine_id_;
 
-  ThreadSafeCounter model_init_cnt_;
+  BlockingCounter model_init_cnt_;
 
-  HashMap<std::string, std::unique_ptr<PersistentInStream>> data_in_streams_;
-
-  ThreadSafeCounter active_actor_cnt_;
-  ThreadSafeCounter inactive_actor_cnt_;
+  BlockingCounter active_actor_cnt_;
+  BlockingCounter inactive_actor_cnt_;
 };
 
 }  // namespace oneflow
