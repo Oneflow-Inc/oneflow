@@ -22,12 +22,12 @@ T* NextConcatAddr(T* start_addr, int64_t concat_idx, int64_t concat_axis_dim,
 
 template<DeviceType device_type, typename T>
 void ConcatKernel<device_type, T>::ConcatKernelWork(
-    const KernelCtx& ctx, const std::string& out_bn,
-    const std::vector<std::string>& in_bns,
+    const KernelCtx& ctx, const std::string& obn,
+    const std::vector<std::string>& ibns,
     std::function<Blob*(const std::string&)> BnInOp2Blob,
     MemCopyFuncType copy_func) const {
-  Blob* out_blob = BnInOp2Blob(out_bn);
-  if (in_bns.size() == 0) { return; }
+  Blob* out_blob = BnInOp2Blob(obn);
+  if (ibns.size() == 0) { return; }
   const int32_t concat_axis = op()->op_conf().concat_conf().axis();
   int64_t concat_element_cnt = 1;
   if ((concat_axis != (out_blob->shape().NumAxes() - 1))
@@ -51,8 +51,8 @@ void ConcatKernel<device_type, T>::ConcatKernelWork(
     return;
   }
 
-  for (const std::string& in_bn : in_bns) {
-    Blob* in_blob = BnInOp2Blob(in_bn);
+  for (const std::string& ibn : ibns) {
+    Blob* in_blob = BnInOp2Blob(ibn);
     T* in_blob_mut_dptr = in_blob->mut_dptr<T>();
     const int64_t in_concat_axis_dim = in_blob->shape().At(concat_axis);
     const int64_t cp_sz = in_concat_axis_dim * concat_element_cnt * sizeof(T);
@@ -69,25 +69,25 @@ void ConcatKernel<device_type, T>::ConcatKernelWork(
 
     offset_concat_axis += in_concat_axis_dim;
   }
-  if (BnInOp2Blob(in_bns.front())->has_data_id()) {
-    CopyDataIdToOb(ctx, in_bns, out_bn, concat_axis, kind, BnInOp2Blob);
+  if (BnInOp2Blob(ibns.front())->has_data_id()) {
+    CopyDataIdToOb(ctx, ibns, obn, concat_axis, kind, BnInOp2Blob);
   }
 }
 
 template<DeviceType device_type, typename T>
 void ConcatKernel<device_type, T>::CopyDataIdToOb(
-    const KernelCtx& ctx, const std::vector<std::string>& in_bns,
-    const std::string& out_bn, const int32_t concat_axis, cudaMemcpyKind kind,
+    const KernelCtx& ctx, const std::vector<std::string>& ibns,
+    const std::string& obn, const int32_t concat_axis, cudaMemcpyKind kind,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (concat_axis != 0) {
     CopyDataIdToAllOb<device_type>(ctx.device_ctx, BnInOp2Blob,
-                                   BnInOp2Blob(in_bns.front()));
+                                   BnInOp2Blob(ibns.front()));
     return;
   }
-  Blob* out_blob = BnInOp2Blob(out_bn);
+  Blob* out_blob = BnInOp2Blob(obn);
   int64_t data_id_offset = 0;
-  for (const std::string& in_bn : in_bns) {
-    Blob* in_blob = BnInOp2Blob(in_bn);
+  for (const std::string& ibn : ibns) {
+    Blob* in_blob = BnInOp2Blob(ibn);
     CHECK_LE(data_id_offset + in_blob->ByteSizeOfDataIdField(),
              out_blob->TotalByteSize());
     Memcpy<device_type>(
