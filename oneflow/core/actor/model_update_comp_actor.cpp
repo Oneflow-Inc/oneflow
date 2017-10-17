@@ -116,10 +116,6 @@ int MdUpdtCompActor::HandlerNormal(const ActorMsg& actor_msg) {
     if (TryUpdtStateAsProducedRegst(regst) != 0) {
       waiting_model_diff_acc_queue_.push(regst);
       mut_num_of_read_empty() = 0;
-      VLOG(4) << "model update actor " << actor_id() << " "
-              << "receive readable regst " << regst << ", "
-              << "regst_desc_id:" << regst->regst_desc_id() << ", "
-              << "current num_of_read_empty:" << num_of_read_empty();
     }
     ActUntilFail();
   } else {

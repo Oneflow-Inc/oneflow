@@ -8,7 +8,6 @@ ONEFLOW_CMD='GLOG_logtostderr=0 GLOG_log_dir=./log GLOG_v=0 GLOG_logbuflevel=-1 
 set +e
 for host in "${hosts[@]}"
 do
-  ssh $USER@$host "/usr/sbin/fuser -k 6666/tcp"
   ssh $USER@$host "mkdir ~/oneflow_temp"
 done
 set -e

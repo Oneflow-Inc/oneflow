@@ -10,29 +10,16 @@ template<typename T>
 void DataLoaderKernel<T>::Forward(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  PersistentInStream* in_stream =
-      RuntimeCtx::Singleton()->GetDataInStream(op()->op_name());
-  if (in_stream == nullptr) {
-    std::string data_dir = op()->GetStringFromSpecialConf("data_dir");
-    int64_t parallel_id = reinterpret_cast<int64_t>(kernel_ctx.other);
-    std::string file_path = data_dir + "part-" + std::to_string(parallel_id);
-    if (JobDesc::Singleton()->is_train()) {
-      in_stream = new CyclicPersistentInStream(GlobalFS(), file_path);
-    } else {
-      in_stream = new NormalPersistentInStream(GlobalFS(), file_path);
-    }
-    RuntimeCtx::Singleton()->AddDataInStream(op()->op_name(), in_stream);
-  }
+  InitInStream(kernel_ctx);
   Blob* out_blob = BnInOp2Blob("out");
   CHECK_EQ(GetDataType<T>::val, out_blob->data_type());
-
-  kernel_ctx.device_ctx->cpu_stream()->SendWork([out_blob, in_stream]() {
+  kernel_ctx.device_ctx->cpu_stream()->SendWork([out_blob, this]() {
     int64_t piece_size = out_blob->shape().At(0);
     T* out_dptr = out_blob->mut_dptr<T>();
     std::string line;
     std::string token;
     for (int64_t i = 0; i != piece_size; ++i) {
-      int32_t read_status = in_stream->ReadLine(&line);
+      int32_t read_status = in_stream_->ReadLine(&line);
       if (read_status == 0) {
         const char* line_ptr = line.c_str();
         line_ptr = StrToToken(line_ptr, ",", &token) + 1;
@@ -59,6 +46,19 @@ void DataLoaderKernel<T>::Forward(
       }
     }
   });
+}
+
+template<typename T>
+void DataLoaderKernel<T>::InitInStream(const KernelCtx& kernel_ctx) const {
+  if (in_stream_) { return; }
+  std::string data_dir = op()->GetStringFromSpecialConf("data_dir");
+  int64_t parallel_id = reinterpret_cast<int64_t>(kernel_ctx.other);
+  std::string file_path = data_dir + "part-" + std::to_string(parallel_id);
+  if (JobDesc::Singleton()->is_train()) {
+    in_stream_.reset(new CyclicPersistentInStream(GlobalFS(), file_path));
+  } else {
+    in_stream_.reset(new NormalPersistentInStream(GlobalFS(), file_path));
+  }
 }
 
 namespace {
