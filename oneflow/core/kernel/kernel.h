@@ -77,6 +77,14 @@ class Kernel {
     CopyDataIdToAllOb<device_type>(ctx, BnInOp2Blob,
                                    BnInOp2Blob(op_->SoleIbn()));
   }
+  template<DeviceType device_type>
+  void CopyDataIdFromSoleIbToAllObIfNeed(
+      const Blob* in_blob, const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    if (in_blob->has_data_id()) {
+      CopyDataIdFromSoleIbToAllOb<device_type>(ctx.device_ctx, BnInOp2Blob);
+    }
+  }
 
  private:
   std::unique_ptr<const Operator> op_;
