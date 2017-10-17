@@ -27,20 +27,19 @@ class DataSetUtil final {
   }
 
   static std::unique_ptr<DataSetHeader> CreateHeader(
-      const std::string& type, DataType dtype, uint32_t data_item_count,
+      const std::string& type, uint32_t data_item_count,
       const std::vector<uint32_t>& dim_array);
 
-  static std::unique_ptr<DataItem, decltype(&free)> CreateDataItem(
+  static std::unique_ptr<Buffer, decltype(&free)> CreateDataItem(
       const DataSetHeader& header);
 
-  static std::unique_ptr<DataItem, decltype(&free)> CreateLabelItem(
+  static std::unique_ptr<Buffer, decltype(&free)> CreateLabelItem(
       const DataSetHeader& header, uint32_t label);
 
-  static std::unique_ptr<DataItem, decltype(&free)> CreateImageItem(
+  static std::unique_ptr<Buffer, decltype(&free)> CreateImageItem(
       const DataSetHeader& header, const std::string& img_file_path);
 
-  static void ExtractImage(const DataItem& data_item,
-                           const DataSetHeader& header,
+  static void ExtractImage(const Buffer& data_item, const DataSetHeader& header,
                            const std::string& output_img_path);
 
  private:
@@ -48,7 +47,7 @@ class DataSetUtil final {
   static void UpdateBufferCheckSum(Buffer* buffer);
   static void UpdateBufferMetaCheckSum(Buffer* buffer);
   static void LoadImageData(
-      DataItem* body, uint32_t width, uint32_t height,
+      Buffer* body, uint32_t width, uint32_t height,
       const std::function<double(uint32_t d, uint32_t r, uint32_t c)>& Get);
 };
 

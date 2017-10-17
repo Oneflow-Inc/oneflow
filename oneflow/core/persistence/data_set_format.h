@@ -5,6 +5,7 @@
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/persistence/persistent_out_stream.h"
 namespace oneflow {
 
 //	data set format
@@ -30,7 +31,7 @@ struct DataSetHeader final {
   uint32_t check_sum;            // check header
   char type[16];                 //  "feature" or "label"
   uint32_t dim_array_size = 0;   //  effective length of dim_array
-  uint32_t dim_array[16];        //  tensor shape
+  uint32_t dim_array[15];        //  tensor shape
   uint64_t data_item_count = 0;  //  how many items after header
 
   OF_DISALLOW_COPY_AND_MOVE(DataSetHeader);
@@ -52,8 +53,6 @@ struct Buffer final {
   Buffer() = delete;
 };
 
-typedef Buffer DataItem;
-
 template<typename flexible_struct>
 size_t FlexibleSizeOf(uint32_t n) {
   return sizeof(flexible_struct);
@@ -74,9 +73,13 @@ static std::unique_ptr<T, decltype(&free)> FlexibleMalloc(size_t len) {
   return std::unique_ptr<T, decltype(&free)>(ptr, &free);
 }
 
-#define DATA_SET_DECLARE_OFSTREAM(type) \
-  std::ostream& operator<<(std::ostream& out, const type& data);
-OF_PP_FOR_EACH_TUPLE(DATA_SET_DECLARE_OFSTREAM, DATA_SET_FORMAT_SEQ);
+#define DECLARE_DATA_SET_OFSTREAM(type) \
+  std::ofstream& operator<<(std::ofstream& out, const type& data);
+OF_PP_FOR_EACH_TUPLE(DECLARE_DATA_SET_OFSTREAM, DATA_SET_FORMAT_SEQ);
+
+#define DECLARE_DATA_SET_PERSISTENCE_OUT(type) \
+  PersistentOutStream& operator<<(PersistentOutStream& out, const type& data);
+OF_PP_FOR_EACH_TUPLE(DECLARE_DATA_SET_PERSISTENCE_OUT, DATA_SET_FORMAT_SEQ);
 
 }  // namespace oneflow
 

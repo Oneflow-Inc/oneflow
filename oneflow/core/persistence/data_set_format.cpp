@@ -24,8 +24,16 @@ OF_PP_FOR_EACH_TUPLE(SPEC_FLEXIBLE_SET_ARRAY_SIZE, FLAXIBLE_STRUCT_SEQ);
   }
 OF_PP_FOR_EACH_TUPLE(DEFINE_FLEXIBLE_OBJ_SIZE_OF, FLAXIBLE_STRUCT_SEQ);
 
+#define DATA_SET_OVERRITE_PERSISTENCE(type)                                \
+  PersistentOutStream& operator<<(PersistentOutStream& out,                \
+                                  const type& data) {                      \
+    out.Write(reinterpret_cast<const char*>(&data), FlexibleSizeOf(data)); \
+    return out;                                                            \
+  }
+OF_PP_FOR_EACH_TUPLE(DATA_SET_OVERRITE_PERSISTENCE, DATA_SET_FORMAT_SEQ);
+
 #define DATA_SET_OVERRITE_OFSTREAM(type)                                   \
-  std::ostream& operator<<(std::ostream& out, const type& data) {          \
+  std::ofstream& operator<<(std::ofstream& out, const type& data) {        \
     out.write(reinterpret_cast<const char*>(&data), FlexibleSizeOf(data)); \
     return out;                                                            \
   }

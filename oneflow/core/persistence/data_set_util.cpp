@@ -6,7 +6,7 @@
 namespace oneflow {
 
 uint8_t DataSetUtil::ValidateBufferMeta(const Buffer& buffer) {
-  uint8_t check_sum;
+  uint8_t check_sum = 0;
   int meta_len = FlexibleSizeOf<Buffer>(0);
   for (int i = 0; i < meta_len; ++i) {
     check_sum += reinterpret_cast<const char*>(&buffer)[i];
@@ -24,8 +24,9 @@ std::unique_ptr<Buffer, decltype(&free)> DataSetUtil::NewBuffer(
   auto buffer = FlexibleMalloc<Buffer>(len);
   buffer->data_type = dtype;
   buffer->data_compress_type = dctype;
-  Fill(buffer->data);
+  if (len) { Fill(buffer->data); }
   UpdateBufferCheckSum(buffer.get());
+  CHECK(!ValidateBufferMeta(*buffer));
   return buffer;
 }
 
@@ -47,7 +48,7 @@ void DataSetUtil::UpdateBufferCheckSum(Buffer* buffer) {
 }
 
 std::unique_ptr<DataSetHeader> DataSetUtil::CreateHeader(
-    const std::string& type, DataType dtype, uint32_t data_item_count,
+    const std::string& type, uint32_t data_item_count,
     const std::vector<uint32_t>& dim_array) {
   std::unique_ptr<DataSetHeader> header(new DataSetHeader);
   CHECK(type.size() <= sizeof(header->type));
@@ -59,7 +60,7 @@ std::unique_ptr<DataSetHeader> DataSetUtil::CreateHeader(
   for (int i = 0; i < dim_array.size(); ++i) {
     header->dim_array[i] = dim_array[i];
   }
-  return std::move(header);
+  return header;
 }
 
 std::unique_ptr<Buffer, decltype(&free)> DataSetUtil::CreateLabelItem(

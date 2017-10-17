@@ -14,24 +14,30 @@ namespace {
 
 void ExtractImage(int num) {
   NormalDataSetInStream label_stream(LocalFS(), FLAGS_label_file);
-  NormalDataSetInStream feature_stream(LocalFS(), FLAGS_feature_file);
   auto* label_header = label_stream.header();
   CHECK(label_header->dim_array_size == 1);
   std::vector<uint32_t> item_idx2label_idx(label_header->data_item_count);
   auto buffer = FlexibleMalloc<Buffer>(0);
+  std::set<uint32_t> label_indexes;
   for (int i = 0; label_stream.ReadBuffer(&buffer) >= 0; ++i) {
     uint32_t label_idx = reinterpret_cast<uint32_t*>(buffer->data)[0];
     item_idx2label_idx[i] = label_idx;
+    label_indexes.insert(label_idx);
+  }
+
+  for (uint32_t label_idx : label_indexes) {
     LocalFS()->CreateDirIfNotExist(
         JoinPath(FLAGS_output_dir, std::to_string(label_idx)));
   }
+
+  NormalDataSetInStream feature_stream(LocalFS(), FLAGS_feature_file);
   auto* feature_header = feature_stream.header();
   CHECK(feature_header->dim_array_size == 3);
   CHECK(feature_header->data_item_count == label_header->data_item_count);
   for (int i = 0; i < num && feature_stream.ReadBuffer(&buffer) >= 0; ++i) {
     std::string file_path =
         JoinPath(FLAGS_output_dir, std::to_string(item_idx2label_idx[i]),
-                 std::to_string(i), ".jpg");
+                 std::to_string(i) + ".jpg");
     PersistentOutStream out_stream(LocalFS(), file_path);
     out_stream.Write(buffer->data, buffer->len);
   }
