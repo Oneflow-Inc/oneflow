@@ -11,7 +11,7 @@ void PoolingKernel<device_type, T>::Forward(
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
   Blob* idx_blob = BnInOp2Blob("idx");
-  CopyDataIdFromSoleIbToAllObIfNeed<device_type>(in_blob, ctx, BnInOp2Blob);
+  CopyDataIdFromSoleIbToAllObIfNeed<device_type>(ctx, BnInOp2Blob);
 
   PoolingKernelUtil<device_type, T>::PoolingForward(ctx, in_blob, out_blob,
                                                     idx_blob, pooling_conf);

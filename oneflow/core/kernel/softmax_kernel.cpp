@@ -8,7 +8,6 @@ void SoftmaxKernel<device_type, T>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob(op()->SoleIbn());
-  CopyDataIdFromSoleIbToAllObIfNeed<device_type>(in_blob, ctx, BnInOp2Blob);
   Blob* out_blob = BnInOp2Blob(op()->SoleObn());
   Blob* tmp_blob = BnInOp2Blob(op()->SoleDtbn());
   const int64_t n = out_blob->shape().At(0);
@@ -16,6 +15,7 @@ void SoftmaxKernel<device_type, T>::Forward(
   const T* in = in_blob->dptr<T>();
   T* tmp = tmp_blob->mut_dptr<T>();
   T* out = out_blob->mut_dptr<T>();
+  CopyDataIdFromSoleIbToAllObIfNeed<device_type>(ctx, BnInOp2Blob);
   SoftmaxComputeProb<device_type, T>(ctx.device_ctx, n, w, in, tmp, out);
 }
 

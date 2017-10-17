@@ -7,8 +7,8 @@ void ReluKernel<device_type, T>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
-  CopyDataIdFromSoleIbToAllObIfNeed<device_type>(in_blob, ctx, BnInOp2Blob);
   Blob* out_blob = BnInOp2Blob("out");
+  CopyDataIdFromSoleIbToAllObIfNeed<device_type>(ctx, BnInOp2Blob);
   ReluKernelUtil<device_type, T>::Forward(ctx, out_blob->shape().elem_cnt(),
                                           in_blob->dptr<T>(),
                                           out_blob->mut_dptr<T>());
