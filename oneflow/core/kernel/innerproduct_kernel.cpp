@@ -40,12 +40,12 @@ void InnerProductKernel<device_type, T>::Forward(
 
   if (op()->GetBoolFromSpecialConf("has_bias_term")) {
     const Blob* bias_blob = BnInOp2Blob("bias");
-    const Blob* bias_multiplier_blob = BnInOp2Blob("bias_multiplier");
+    const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
 
     // out = bias_multiplier * bias + out
     BlasMatrixMatrix<device_type, T>(ctx, CblasNoTrans, CblasNoTrans,
                                      static_cast<T>(1.0), static_cast<T>(1.0),
-                                     bias_multiplier_blob, bias_blob, out_blob);
+                                     bias_mul_blob, bias_blob, out_blob);
   }
 }
 
@@ -73,13 +73,13 @@ void InnerProductKernel<device_type, T>::Backward(
                                    out_diff_blob, in_blob, weight_diff_blob);
 
   if (op()->GetBoolFromSpecialConf("has_bias_term")) {
-    const Blob* bias_multiplier_blob = BnInOp2Blob("bias_multiplier");
+    const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
     Blob* bias_diff_blob = BnInOp2Blob("bias_diff");
 
     // bias_diff = bias_multiplier * out_diff
     BlasMatrixMatrix<device_type, T>(
         ctx, CblasTrans, CblasNoTrans, static_cast<T>(1.0), static_cast<T>(0.0),
-        bias_multiplier_blob, out_diff_blob, bias_diff_blob);
+        bias_mul_blob, out_diff_blob, bias_diff_blob);
   }
 }
 
