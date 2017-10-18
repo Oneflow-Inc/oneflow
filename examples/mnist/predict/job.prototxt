@@ -2,9 +2,8 @@ dlnet_filepath: "./net.prototxt"
 resource_filepath: "./resource.prototxt"
 placement_filepath: "./placement.prototxt"
 model_load_snapshot_path: ""
-piece_size: 60000
+piece_size: 1000
 default_data_type: kFloat
-max_data_id_length: 8
 use_async_cpu_stream: false
 max_data_id_length: 0
 global_fs_conf {
