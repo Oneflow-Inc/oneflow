@@ -1,10 +1,7 @@
 dlnet_filepath: "./net.prototxt"
 resource_filepath: "./resource.prototxt"
 placement_filepath: "./placement.prototxt"
-model_load_snapshot_path: ""
-piece_size: 1000
-default_data_type: kFloat
-use_async_cpu_stream: false
+piece_size: 100
 global_fs_conf {
   hdfs_conf {
     namenode: "hdfs://192.168.1.11:9000"
@@ -13,16 +10,15 @@ global_fs_conf {
 train_conf {
   num_of_pieces_in_batch: 10
   model_save_snapshots_path: "/willzhang/snapshots"
-  num_of_batches_in_snapshot: 6
-  staleness: 0
-  total_batch_num: 15
+  num_of_batches_in_snapshot: 60
+  total_batch_num: 600
   default_fill_conf {
     gaussian_conf {
       mean: 0.0
       std: 0.1
     }
   }
-  piece_num_of_record_loss: 10
+  piece_num_of_record_loss: 100
   normal_mdupdt_conf {
     learning_rate: 0.01
   }

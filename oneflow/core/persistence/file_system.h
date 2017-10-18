@@ -124,6 +124,8 @@ class FileSystem {
   // subdirectories.
   virtual void RecursivelyCreateDir(const std::string& dirname);
 
+  void MakeEmptyDir(const std::string& dirname);
+
   // Deletes the specified directory.
   virtual void DeleteDir(const std::string& dirname) = 0;
 

@@ -23,6 +23,11 @@ std::string FileSystem::TranslateName(const std::string& name) const {
   return CleanPath(name);
 }
 
+void FileSystem::MakeEmptyDir(const std::string& dirname) {
+  if (IsDirectory(dirname)) { RecursivelyDeleteDir(dirname); }
+  CreateDir(dirname);
+}
+
 void FileSystem::RecursivelyDeleteDir(const std::string& dirname) {
   CHECK(FileExists(dirname));
   std::deque<std::string> dir_q;      // Queue for the BFS
