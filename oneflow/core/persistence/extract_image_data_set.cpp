@@ -1,7 +1,6 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include "oneflow/core/common/str_util.h"
-#include "oneflow/core/persistence/imagenet_util.h"
 #include "oneflow/core/persistence/normal_data_set_in_stream.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
 

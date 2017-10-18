@@ -1,6 +1,6 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
-#include "oneflow/core/persistence/imagenet_util.h"
+#include "oneflow/core/persistence/data_set_util.h"
 namespace oneflow {}
 
 DEFINE_int32(width, 256, "resized width");
@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
   }
   CHECK(FLAGS_output_dir.size());
   std::unique(image_directories.begin(), image_directories.end());
-  oneflow::ImageNetUtil::CreateDataSetFiles(image_directories, FLAGS_width,
-                                            FLAGS_height, FLAGS_output_dir);
+  oneflow::DataSetUtil::CreateDataSetFiles(image_directories, FLAGS_width,
+                                           FLAGS_height, FLAGS_output_dir);
   return 0;
 }

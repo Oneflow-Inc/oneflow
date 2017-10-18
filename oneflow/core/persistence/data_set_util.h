@@ -30,9 +30,6 @@ class DataSetUtil final {
       const std::string& type, uint32_t data_item_count,
       const std::vector<uint32_t>& dim_array);
 
-  static std::unique_ptr<Record, decltype(&free)> CreateDataItem(
-      const DataSetHeader& header);
-
   static std::unique_ptr<Record, decltype(&free)> CreateLabelItem(
       const std::string& key, uint32_t label);
 
@@ -41,14 +38,26 @@ class DataSetUtil final {
 
   static void ExtractImage(const Record& data_item, const DataSetHeader& header,
                            const std::string& output_img_path);
+  static void CreateDataSetFiles(
+      const std::vector<std::string>& image_directories, uint32_t width,
+      uint32_t height, const std::string& output_dir);
 
  private:
   static uint8_t ValidateRecordMeta(const Record& buffer);
   static void UpdateRecordCheckSum(Record* buffer);
   static void UpdateRecordMetaCheckSum(Record* buffer);
-  static void LoadImageData(
-      Record* body, uint32_t width, uint32_t height,
-      const std::function<double(uint32_t d, uint32_t r, uint32_t c)>& Get);
+  static void GetFilePaths(
+      const std::vector<std::string>& image_directories,
+      std::vector<std::string>* img_file_paths,
+      std::unordered_map<std::string, uint32_t>* file_path2label_idx);
+  static void SaveLabels(
+      const std::vector<std::string>& image_directories,
+      const std::vector<std::string>& img_file_paths,
+      const std::unordered_map<std::string, uint32_t>& file_path2label_idx,
+      const std::string& output_dir);
+  static void SaveFeatures(const std::vector<std::string>& img_file_paths,
+                           uint32_t width, uint32_t height,
+                           const std::string& output_dir);
 };
 
 }  // namespace oneflow
