@@ -39,15 +39,15 @@ class DataSetUtil final {
   static void ExtractImage(const Record& data_item, const DataSetHeader& header,
                            const std::string& output_img_path);
   static void CreateDataSetFiles(
-      const std::vector<std::string>& image_directories, uint32_t width,
-      uint32_t height, const std::string& output_dir);
+      const std::vector<std::string>& image_directories, uint32_t limit,
+      uint32_t width, uint32_t height, const std::string& output_dir);
 
  private:
   static uint8_t ValidateRecordMeta(const Record& buffer);
   static void UpdateRecordCheckSum(Record* buffer);
   static void UpdateRecordMetaCheckSum(Record* buffer);
   static void GetFilePaths(
-      const std::vector<std::string>& image_directories,
+      const std::vector<std::string>& image_directories, uint32_t limit,
       std::vector<std::string>* img_file_paths,
       std::unordered_map<std::string, uint32_t>* file_path2label_idx);
   static void SaveLabels(

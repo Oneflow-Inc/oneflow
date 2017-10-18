@@ -111,10 +111,11 @@ std::unique_ptr<Record, decltype(&free)> DataSetUtil::CreateImageItem(
 }
 
 void DataSetUtil::GetFilePaths(
-    const std::vector<std::string>& image_directories,
+    const std::vector<std::string>& image_directories, uint32_t limit,
     std::vector<std::string>* img_file_paths,
     std::unordered_map<std::string, uint32_t>* file_path2label_idx) {
-  for (int i = 0; i < image_directories.size(); ++i) {
+  limit = std::min(limit, static_cast<uint32_t>(image_directories.size()));
+  for (int i = 0; i < limit; ++i) {
     const auto& dir = image_directories[i];
     for (const auto& file_name : LocalFS()->ListDir(dir)) {
       const auto& file_path = dir + "/" + file_name;
@@ -163,12 +164,12 @@ void DataSetUtil::SaveFeatures(const std::vector<std::string>& img_file_paths,
 }
 
 void DataSetUtil::CreateDataSetFiles(
-    const std::vector<std::string>& image_directories, uint32_t width,
-    uint32_t height, const std::string& output_dir) {
+    const std::vector<std::string>& image_directories, uint32_t limit,
+    uint32_t width, uint32_t height, const std::string& output_dir) {
   //  LocalFS()->CreateDirIfNotExist(output_dir);
   std::vector<std::string> img_file_paths;
   std::unordered_map<std::string, uint32_t> file_path2label_idx;
-  GetFilePaths(image_directories, &img_file_paths, &file_path2label_idx);
+  GetFilePaths(image_directories, limit, &img_file_paths, &file_path2label_idx);
   SaveLabels(image_directories, img_file_paths, file_path2label_idx,
              output_dir);
   SaveFeatures(img_file_paths, width, height, output_dir);
