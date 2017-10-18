@@ -1,10 +1,13 @@
 #include "oneflow/core/persistence/cyclic_data_set_in_stream.h"
 namespace oneflow {
 
-void CyclicDataSetInStream::AddNForCurFilePos(uint64_t n) {
-  uint64_t pos = cur_file_pos() + n;
-  if (pos >= file_size()) { pos = (pos + sizeof(*header())) % file_size(); }
-  set_cur_file_pos(pos);
+int32_t CyclicDataSetInStream::ReadMeta(char* s, size_t n) {
+  int ret = Read(s, n);
+  if (!ret) { return ret; }
+
+  //  this is eof, return to header by using new NormalPersistentInStream
+  Init();
+  return Read(s, n);
 }
 
 }  // namespace oneflow

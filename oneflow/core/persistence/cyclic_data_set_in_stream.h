@@ -10,7 +10,8 @@ class CyclicDataSetInStream : public DataSetInStream {
   CyclicDataSetInStream(fs::FileSystem* fs, const std::string& file_path)
       : DataSetInStream(fs, file_path) {}
 
-  virtual void AddNForCurFilePos(uint64_t n) override;
+ protected:
+  int32_t ReadMeta(char* s, size_t n) override;
 };
 
 }  // namespace oneflow
