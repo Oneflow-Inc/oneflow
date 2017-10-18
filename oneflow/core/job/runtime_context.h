@@ -4,6 +4,7 @@
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
+#include "oneflow/core/persistence/persistent_out_stream.h"
 
 namespace oneflow {
 
@@ -25,6 +26,8 @@ class RuntimeCtx final {
   BlockingCounter& mut_active_actor_cnt() { return active_actor_cnt_; }
   BlockingCounter& mut_inactive_actor_cnt() { return inactive_actor_cnt_; }
 
+  PersistentOutStream* GetPersistentOutStream(const std::string& filepath);
+
  private:
   RuntimeCtx(const std::string& name);
 
@@ -34,6 +37,8 @@ class RuntimeCtx final {
 
   BlockingCounter active_actor_cnt_;
   BlockingCounter inactive_actor_cnt_;
+
+  HashMap<std::string, std::unique_ptr<PersistentOutStream>> filepath2ostream_;
 };
 
 }  // namespace oneflow
