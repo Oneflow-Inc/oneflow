@@ -10,10 +10,8 @@ class DataSetUtil final {
  public:
   DataSetUtil() = delete;
 
-  template<typename T>
-  static std::unique_ptr<T, decltype(&free)> Malloc(size_t len) {
-    return FlexibleMalloc<T>(len);
-  }
+  static uint32_t ValidateHeader(const DataSetHeader& header);
+  static void UpdateHeaderCheckSum(DataSetHeader* header);
 
   static std::unique_ptr<Buffer, decltype(&free)> NewBuffer(
       size_t len, DataType dtype, DataCompressType dctype,

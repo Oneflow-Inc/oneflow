@@ -60,7 +60,30 @@ std::unique_ptr<DataSetHeader> DataSetUtil::CreateHeader(
   for (int i = 0; i < dim_array.size(); ++i) {
     header->dim_array[i] = dim_array[i];
   }
+  UpdateHeaderCheckSum(header.get());
+  CHECK(!ValidateHeader(*header));
   return header;
+}
+
+uint32_t DataSetUtil::ValidateHeader(const DataSetHeader& header) {
+  static_assert(!(sizeof(DataSetHeader) % sizeof(uint32_t)), "no alignment");
+  uint32_t check_sum = 0;
+  int len = sizeof(DataSetHeader) / sizeof(uint32_t);
+  for (int i = 0; i < len; ++i) {
+    check_sum += reinterpret_cast<const uint32_t*>(&header)[i];
+  }
+  return check_sum;
+}
+
+void DataSetUtil::UpdateHeaderCheckSum(DataSetHeader* header) {
+  static_assert(!(sizeof(DataSetHeader) % sizeof(uint32_t)), "no alignment");
+  uint32_t check_sum = 0;
+  int len = sizeof(DataSetHeader) / sizeof(uint32_t);
+  for (int i = 0; i < len; ++i) {
+    check_sum += reinterpret_cast<uint32_t*>(header)[i];
+  }
+  check_sum -= header->check_sum;
+  header->check_sum = -check_sum;
 }
 
 std::unique_ptr<Buffer, decltype(&free)> DataSetUtil::CreateLabelItem(

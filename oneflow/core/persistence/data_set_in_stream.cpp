@@ -7,6 +7,7 @@ void DataSetInStream::InitHeader() {
   CHECK(!cur_file_pos());
   Read(reinterpret_cast<char*>(header_.get()), sizeof(DataSetHeader));
   CHECK(header()->magic_code == 0xfeed);
+  CHECK(!DataSetUtil::ValidateHeader(*header()));
 }
 
 int32_t DataSetInStream::ReadBuffer(
