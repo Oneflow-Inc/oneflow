@@ -41,8 +41,7 @@ void DataLoaderKernel<T>::Forward(
         memset(out_blob->mut_data_id(i), '\0',
                JobDesc::Singleton()->SizeOfOneDataId());
         for (int64_t j = 0; j < out_blob->shape().Count(1); ++j) {
-          *out_dptr = static_cast<T>(0);
-          out_dptr++;
+          *out_dptr++ = static_cast<T>(0);
         }
       }
     }
