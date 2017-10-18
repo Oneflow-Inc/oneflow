@@ -15,6 +15,7 @@ void SoftmaxKernel<device_type, T>::Forward(
   const T* in = in_blob->dptr<T>();
   T* tmp = tmp_blob->mut_dptr<T>();
   T* out = out_blob->mut_dptr<T>();
+  CopyDataIdFromSoleIbToAllObIfNeed<device_type>(ctx, BnInOp2Blob);
   SoftmaxComputeProb<device_type, T>(ctx.device_ctx, n, w, in, tmp, out);
 }
 

@@ -62,13 +62,27 @@ class Kernel {
     UNEXPECTED_RUN();
   }
   template<DeviceType device_type>
-  void CopyDataIdFromIbToAllOb(
-      const DeviceCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) {
-    Blob* input_blob = BnInOp2Blob(op_->SoleIbn());
+  void CopyDataIdToAllOb(DeviceCtx* ctx,
+                         std::function<Blob*(const std::string&)> BnInOp2Blob,
+                         Blob* blob) const {
     for (const std::string& obn : op_->output_bns()) {
       Blob* output_blob = BnInOp2Blob(obn);
-      output_blob->CopyDataIdFrom<device_type>(ctx, input_blob);
+      output_blob->CopyDataIdFrom<device_type>(ctx, blob);
+    }
+  }
+  template<DeviceType device_type>
+  void CopyDataIdFromSoleIbToAllOb(
+      DeviceCtx* ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    CopyDataIdToAllOb<device_type>(ctx, BnInOp2Blob,
+                                   BnInOp2Blob(op_->SoleIbn()));
+  }
+  template<DeviceType device_type>
+  void CopyDataIdFromSoleIbToAllObIfNeed(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    if (BnInOp2Blob(op_->SoleIbn())->has_data_id()) {
+      CopyDataIdFromSoleIbToAllOb<device_type>(ctx.device_ctx, BnInOp2Blob);
     }
   }
 

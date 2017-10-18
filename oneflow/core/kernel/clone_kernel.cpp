@@ -7,6 +7,7 @@ void CloneKernel<device_type, T>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob(op()->SoleIbn());
+  CopyDataIdFromSoleIbToAllObIfNeed<device_type>(ctx, BnInOp2Blob);
   for (const std::string& obn : op()->output_bns()) {
     Blob* out_blob = BnInOp2Blob(obn);
     Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr(), in_blob->dptr(),
@@ -27,14 +28,15 @@ void CloneKernel<device_type, T>::Backward(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const std::vector<std::string>& odbns = op()->output_diff_bns();
   if (odbns.size() == 0) return;
-  Blob* idbn_blob = BnInOp2Blob(op()->SoleIdbn());
-  const Blob* odbn_blob_0 = BnInOp2Blob(odbns[0]);
-  Memcpy<device_type>(ctx.device_ctx, idbn_blob->mut_dptr(),
-                      odbn_blob_0->dptr(), odbn_blob_0->TotalByteSize());
+  Blob* in_diff_blob = BnInOp2Blob(op()->SoleIdbn());
+  const Blob* out_diff_blob_0 = BnInOp2Blob(odbns[0]);
+  Memcpy<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(),
+                      out_diff_blob_0->dptr(),
+                      out_diff_blob_0->TotalByteSize());
   for (size_t i = 1; i != odbns.size(); ++i) {
-    const Blob* odbn_blob = BnInOp2Blob(odbns[i]);
-    CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, odbn_blob,
-                                                    idbn_blob);
+    const Blob* out_diff_blob = BnInOp2Blob(odbns[i]);
+    CloneKernelUtil<device_type, T>::AdditionAssign(
+        ctx.device_ctx, out_diff_blob, in_diff_blob);
   }
 }
 
