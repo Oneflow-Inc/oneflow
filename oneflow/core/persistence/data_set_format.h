@@ -13,7 +13,7 @@ namespace oneflow {
 //	| DataSetHeader | Record ... |
 //	'----------------------------'
 
-#define FLAXIBLE_STRUCT_SEQ OF_PP_MAKE_TUPLE_SEQ(Record, len, data)
+#define FLAXIBLE_STRUCT_SEQ OF_PP_MAKE_TUPLE_SEQ(Record, len_, data_)
 
 #define DATA_SET_FORMAT_SEQ           \
   OF_PP_MAKE_TUPLE_SEQ(DataSetHeader) \
@@ -26,32 +26,31 @@ enum DataCompressType {
 };
 
 struct DataSetHeader final {
-  const uint16_t magic_code = 0xfeed;
-  const uint16_t version = 0;
-  uint32_t check_sum;            // check header
-  char type[16];                 //  "feature" or "label"
-  uint32_t dim_array_size = 0;   //  effective length of dim_array
-  uint32_t dim_array[15];        //  tensor shape
-  uint64_t data_item_count = 0;  //  how many items after header
+  const uint16_t magic_code_ = 0xfeed;
+  const uint16_t version_ = 0;
+  uint32_t check_sum_;            // check header
+  char type_[16];                 //  "feature" or "label"
+  uint32_t dim_array_size_ = 0;   //  effective length of dim_array
+  uint32_t dim_array_[15];        //  tensor shape
+  uint64_t data_item_count_ = 0;  //  how many items after header
 
   OF_DISALLOW_COPY_AND_MOVE(DataSetHeader);
   DataSetHeader() = default;
-  size_t TensorElemCount() const;
-  size_t DataBodyOffset() const;
 };
 
 //  Record is basically a key-value pair
 struct Record final {
-  uint8_t meta_check_sum;               //	check fields except `data'
-  uint8_t data_check_sum;               //  checking `data' field when debugging
-  uint8_t data_type = DataType::kChar;  // value data type
-  uint8_t data_compress_type =
+  uint8_t meta_check_sum_;  //	check fields except `data'
+  uint8_t data_check_sum_;  //  checking `data' field when debugging
+  uint8_t data_type_ = DataType::kChar;  // value data type
+  uint8_t data_compress_type_ =
       DataCompressType::kNoCompress;  // value compress type
-  uint32_t len = 0;           //  len = flexible sizeof(data) / sizeof(data[0])
-  uint16_t key_len = 0;       // key string length
-  uint16_t value_offset = 0;  //  value data offset in field `data', which is >=
-                              //  key_len and 8-byte aligned
-  uint32_t _8_byte_alignment = 0;  //  useless, only for alignment
+  uint32_t len_ = 0;      //  len = flexible sizeof(data) / sizeof(data[0])
+  uint16_t key_len_ = 0;  // key string length
+  uint16_t value_offset_ =
+      0;  //  value data offset in field `data', which is >=
+          //  key_len and 8-byte aligned
+  uint32_t _8_byte_alignment_ = 0;  //  useless, only for alignment
 
   //  data layout:
   //  |<------- value_offset ------->|
@@ -59,32 +58,19 @@ struct Record final {
   //	+------------------------+-----+-----------------------.
   //	| key data (string type) | \0* | value data (any type) |
   //	'------------------------------------------------------'
-  char data[0];  //  key string data + value data.
+  char data_[0];  //  key string data + value data.
 
   OF_DISALLOW_COPY_AND_MOVE(Record);
   Record() = delete;
   std::string GetKey() const;
 
-  size_t key_buffer_len() const { return key_len; }
+  size_t key_buffer_len() const { return key_len_; }
+  const char* key_buffer() const { return data_; }
+  size_t value_buffer_len() const { return len_ - value_offset_; }
+  const char* value_buffer() const { return data_ + value_offset_; }
 
-  const char* key_buffer() const { return data; }
-
-  char* mut_key_buffer() { return data; }
-
-  size_t value_buffer_len() const { return len - value_offset; }
-
-  const char* value_buffer() const { return data + value_offset; }
-
-  char* mut_value_buffer() { return data + value_offset; }
-
-  size_t GetKeyBuffer(const char** buf) const {
-    *buf = data;
-    return key_len;
-  }
-  size_t GetValueBuffer(const char** buf) const {
-    *buf = data + value_offset;
-    return len - value_offset;
-  }
+  char* mut_key_buffer() { return data_; }
+  char* mut_value_buffer() { return data_ + value_offset_; }
 };
 
 template<typename flexible_struct>

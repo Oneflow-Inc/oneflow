@@ -3,9 +3,7 @@ namespace oneflow {
 
 void CyclicDataSetInStream::AddNForCurFilePos(uint64_t n) {
   uint64_t pos = cur_file_pos() + n;
-  if (pos >= file_size()) {
-    pos = (pos + header()->DataBodyOffset()) % file_size();
-  }
+  if (pos >= file_size()) { pos = (pos + sizeof(*header())) % file_size(); }
   set_cur_file_pos(pos);
 }
 

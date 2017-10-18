@@ -39,13 +39,6 @@ OF_PP_FOR_EACH_TUPLE(DATA_SET_OVERRITE_PERSISTENCE, DATA_SET_FORMAT_SEQ);
   }
 OF_PP_FOR_EACH_TUPLE(DATA_SET_OVERRITE_OFSTREAM, DATA_SET_FORMAT_SEQ);
 
-size_t DataSetHeader::TensorElemCount() const {
-  int count = 1;
-  for (int i = 0; i < dim_array_size; i++) { count *= dim_array[i]; }
-  return count;
-}
-size_t DataSetHeader::DataBodyOffset() const { return sizeof(*this); }
-
 std::string Record::GetKey() const {
   return std::string(key_buffer(), key_buffer_len());
 }

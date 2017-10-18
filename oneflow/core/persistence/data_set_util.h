@@ -34,10 +34,10 @@ class DataSetUtil final {
       const DataSetHeader& header);
 
   static std::unique_ptr<Record, decltype(&free)> CreateLabelItem(
-      const DataSetHeader& header, const std::string& key, uint32_t label);
+      const std::string& key, uint32_t label);
 
   static std::unique_ptr<Record, decltype(&free)> CreateImageItem(
-      const DataSetHeader& header, const std::string& img_file_path);
+      const std::string& img_file_path);
 
   static void ExtractImage(const Record& data_item, const DataSetHeader& header,
                            const std::string& output_img_path);

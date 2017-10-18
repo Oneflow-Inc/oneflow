@@ -16,8 +16,8 @@ namespace {
 void ExtractImage(int num) {
   NormalDataSetInStream label_stream(LocalFS(), FLAGS_label_file);
   auto* label_header = label_stream.header();
-  CHECK(label_header->dim_array_size == 1);
-  std::vector<uint32_t> item_idx2label_idx(label_header->data_item_count);
+  CHECK(label_header->dim_array_size_ == 1);
+  std::vector<uint32_t> item_idx2label_idx(label_header->data_item_count_);
   auto buffer = FlexibleMalloc<Record>(0);
   std::set<uint32_t> label_indexes;
   for (int i = 0; label_stream.ReadRecord(&buffer) >= 0; ++i) {
@@ -34,8 +34,8 @@ void ExtractImage(int num) {
 
   NormalDataSetInStream feature_stream(LocalFS(), FLAGS_feature_file);
   auto* feature_header = feature_stream.header();
-  CHECK(feature_header->dim_array_size == 3);
-  CHECK(feature_header->data_item_count == label_header->data_item_count);
+  CHECK(feature_header->dim_array_size_ == 3);
+  CHECK(feature_header->data_item_count_ == label_header->data_item_count_);
   for (int i = 0; i < num && feature_stream.ReadRecord(&buffer) >= 0; ++i) {
     std::string file_path =
         JoinPath(FLAGS_output_dir, std::to_string(item_idx2label_idx[i]),

@@ -23,11 +23,11 @@ std::unique_ptr<Record, decltype(&free)> DataSetUtil::NewRecord(
     DataCompressType dctype, const std::function<void(char* buff)>& Fill) {
   size_t value_offset = RoundUp(key.size(), 8);
   auto buffer = FlexibleMalloc<Record>(value_buf_len + value_offset);
-  buffer->data_type = dtype;
-  buffer->data_compress_type = dctype;
-  buffer->key_len = key.size();
-  buffer->value_offset = value_offset;
-  memset(buffer->data, 0, value_offset);
+  buffer->data_type_ = dtype;
+  buffer->data_compress_type_ = dctype;
+  buffer->key_len_ = key.size();
+  buffer->value_offset_ = value_offset;
+  memset(buffer->data_, 0, value_offset);
   key.copy(buffer->mut_key_buffer(), key.size());
   if (value_buf_len) { Fill(const_cast<char*>(buffer->mut_value_buffer())); }
   UpdateRecordCheckSum(buffer.get());
@@ -40,14 +40,14 @@ void DataSetUtil::UpdateRecordMetaCheckSum(Record* buffer) {
   for (int i = 0; i < meta_len; ++i) {
     meta_check_sum += reinterpret_cast<char*>(buffer)[i];
   }
-  meta_check_sum -= buffer->meta_check_sum;
-  buffer->meta_check_sum = -meta_check_sum;
+  meta_check_sum -= buffer->meta_check_sum_;
+  buffer->meta_check_sum_ = -meta_check_sum;
 }
 
 void DataSetUtil::UpdateRecordCheckSum(Record* buffer) {
   uint8_t data_check_sum = 0;
-  for (int i = 0; i < buffer->len; ++i) { data_check_sum += buffer->data[i]; }
-  buffer->data_check_sum = -data_check_sum;
+  for (int i = 0; i < buffer->len_; ++i) { data_check_sum += buffer->data_[i]; }
+  buffer->data_check_sum_ = -data_check_sum;
   UpdateRecordMetaCheckSum(buffer);
 }
 
@@ -55,14 +55,14 @@ std::unique_ptr<DataSetHeader> DataSetUtil::CreateHeader(
     const std::string& type, uint32_t data_item_count,
     const std::vector<uint32_t>& dim_array) {
   std::unique_ptr<DataSetHeader> header(new DataSetHeader);
-  CHECK(type.size() <= sizeof(header->type));
-  type.copy(header->type, type.size(), 0);
-  header->data_item_count = data_item_count;
-  CHECK(dim_array.size() <= sizeof(header->dim_array));
-  header->dim_array_size = dim_array.size();
-  memset(header->dim_array, 0, sizeof(header->dim_array));
+  CHECK(type.size() <= sizeof(header->type_));
+  type.copy(header->type_, type.size(), 0);
+  header->data_item_count_ = data_item_count;
+  CHECK(dim_array.size() <= sizeof(header->dim_array_));
+  header->dim_array_size_ = dim_array.size();
+  memset(header->dim_array_, 0, sizeof(header->dim_array_));
   for (int i = 0; i < dim_array.size(); ++i) {
-    header->dim_array[i] = dim_array[i];
+    header->dim_array_[i] = dim_array[i];
   }
   UpdateHeaderCheckSum(header.get());
   CHECK(!ValidateHeader(*header));
@@ -86,12 +86,12 @@ void DataSetUtil::UpdateHeaderCheckSum(DataSetHeader* header) {
   for (int i = 0; i < len; ++i) {
     check_sum += reinterpret_cast<uint32_t*>(header)[i];
   }
-  check_sum -= header->check_sum;
-  header->check_sum = -check_sum;
+  check_sum -= header->check_sum_;
+  header->check_sum_ = -check_sum;
 }
 
 std::unique_ptr<Record, decltype(&free)> DataSetUtil::CreateLabelItem(
-    const DataSetHeader& header, const std::string& key, uint32_t label_index) {
+    const std::string& key, uint32_t label_index) {
   auto buffer = NewRecord(
       key, sizeof(uint32_t), DataType::kUInt32,
       [=](char* data) { *reinterpret_cast<uint32_t*>(data) = label_index; });
@@ -99,7 +99,7 @@ std::unique_ptr<Record, decltype(&free)> DataSetUtil::CreateLabelItem(
 }
 
 std::unique_ptr<Record, decltype(&free)> DataSetUtil::CreateImageItem(
-    const DataSetHeader& header, const std::string& img_file_path) {
+    const std::string& img_file_path) {
   cv::Mat img = cv::imread(img_file_path);
   std::vector<unsigned char> raw_buf;
   std::vector<int> param{CV_IMWRITE_JPEG_QUALITY, 95};
