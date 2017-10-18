@@ -8,6 +8,7 @@
 DEFINE_string(label_file, "./labels", "label file");
 DEFINE_string(feature_file, "./features", "feature file");
 DEFINE_string(output_dir, "./", "output direction");
+DEFINE_int32(limit, 10, "image count limit");
 
 namespace oneflow {
 namespace {
@@ -48,5 +49,5 @@ void ExtractImage(int num) {
 
 int main(int argc, char* argv[]) {
   google::ParseCommandLineFlags(&argc, &argv, true);
-  oneflow::ExtractImage(3);
+  oneflow::ExtractImage(FLAGS_limit);
 }
