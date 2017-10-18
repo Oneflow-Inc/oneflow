@@ -46,4 +46,8 @@ size_t DataSetHeader::TensorElemCount() const {
 }
 size_t DataSetHeader::DataBodyOffset() const { return sizeof(*this); }
 
+std::string Record::GetKey() const {
+  return std::string(key_buffer(), key_buffer_len());
+}
+
 }  // namespace oneflow

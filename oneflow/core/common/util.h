@@ -143,6 +143,12 @@ inline uint32_t NewRandomSeed() {
 void RedirectStdoutAndStderrToGlogDir();
 void CloseStdoutAndStderr();
 
+inline size_t RoundUp(size_t bytes, int align) {
+  return (bytes + align - 1) & ~(align - 1);
+}
+
+inline size_t RoundUp(size_t bytes) { return RoundUp(bytes, 8); }
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_UTIL_H_

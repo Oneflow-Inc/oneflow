@@ -21,7 +21,8 @@ void ExtractImage(int num) {
   auto buffer = FlexibleMalloc<Record>(0);
   std::set<uint32_t> label_indexes;
   for (int i = 0; label_stream.ReadRecord(&buffer) >= 0; ++i) {
-    uint32_t label_idx = reinterpret_cast<uint32_t*>(buffer->data)[0];
+    uint32_t label_idx =
+        reinterpret_cast<const uint32_t*>(buffer->value_buffer())[0];
     item_idx2label_idx[i] = label_idx;
     label_indexes.insert(label_idx);
   }
@@ -38,9 +39,11 @@ void ExtractImage(int num) {
   for (int i = 0; i < num && feature_stream.ReadRecord(&buffer) >= 0; ++i) {
     std::string file_path =
         JoinPath(FLAGS_output_dir, std::to_string(item_idx2label_idx[i]),
-                 std::to_string(i) + ".jpg");
+                 RemoveExtensionIfExist(Basename(buffer->GetKey()),
+                                        {"JPG", "jpg", "JPEG", "jpeg"})
+                     + ".jpg");
     PersistentOutStream out_stream(LocalFS(), file_path);
-    out_stream.Write(buffer->data, buffer->len);
+    out_stream.Write(buffer->value_buffer(), buffer->value_buffer_len());
   }
 }
 

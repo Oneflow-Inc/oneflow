@@ -19,14 +19,18 @@ uint8_t DataSetUtil::ValidateRecord(const Record& buffer) {
 }
 
 std::unique_ptr<Record, decltype(&free)> DataSetUtil::NewRecord(
-    size_t len, DataType dtype, DataCompressType dctype,
-    const std::function<void(char* buff)>& Fill) {
-  auto buffer = FlexibleMalloc<Record>(len);
+    const std::string& key, size_t value_buf_len, DataType dtype,
+    DataCompressType dctype, const std::function<void(char* buff)>& Fill) {
+  size_t value_offset = RoundUp(key.size(), 8);
+  auto buffer = FlexibleMalloc<Record>(value_buf_len + value_offset);
   buffer->data_type = dtype;
   buffer->data_compress_type = dctype;
-  if (len) { Fill(buffer->data); }
+  buffer->key_len = key.size();
+  buffer->value_offset = value_offset;
+  memset(buffer->data, 0, value_offset);
+  key.copy(buffer->mut_key_buffer(), key.size());
+  if (value_buf_len) { Fill(const_cast<char*>(buffer->mut_value_buffer())); }
   UpdateRecordCheckSum(buffer.get());
-  CHECK(!ValidateRecordMeta(*buffer));
   return buffer;
 }
 
@@ -87,10 +91,10 @@ void DataSetUtil::UpdateHeaderCheckSum(DataSetHeader* header) {
 }
 
 std::unique_ptr<Record, decltype(&free)> DataSetUtil::CreateLabelItem(
-    const DataSetHeader& header, uint32_t label_index) {
-  auto buffer = NewRecord(sizeof(uint32_t), DataType::kUInt32, [=](char* data) {
-    *reinterpret_cast<uint32_t*>(data) = label_index;
-  });
+    const DataSetHeader& header, const std::string& key, uint32_t label_index) {
+  auto buffer = NewRecord(
+      key, sizeof(uint32_t), DataType::kUInt32,
+      [=](char* data) { *reinterpret_cast<uint32_t*>(data) = label_index; });
   return buffer;
 }
 
@@ -101,7 +105,7 @@ std::unique_ptr<Record, decltype(&free)> DataSetUtil::CreateImageItem(
   std::vector<int> param{CV_IMWRITE_JPEG_QUALITY, 95};
   cv::imencode(".jpg", img, raw_buf, param);
   auto buffer = NewRecord(
-      raw_buf.size(), DataType::kChar, DataCompressType::kJpeg,
+      img_file_path, raw_buf.size(), DataType::kChar, DataCompressType::kJpeg,
       [&](char* data) { memcpy(data, raw_buf.data(), raw_buf.size()); });
   return buffer;
 }

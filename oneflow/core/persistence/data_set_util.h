@@ -14,14 +14,16 @@ class DataSetUtil final {
   static void UpdateHeaderCheckSum(DataSetHeader* header);
 
   static std::unique_ptr<Record, decltype(&free)> NewRecord(
-      size_t len, DataType dtype, DataCompressType dctype,
-      const std::function<void(char* buff)>& Fill);
+      const std::string& key, size_t value_buf_len, DataType dtype,
+      DataCompressType dctype, const std::function<void(char* buff)>& Fill);
 
   static uint8_t ValidateRecord(const Record& buff);
 
   static std::unique_ptr<Record, decltype(&free)> NewRecord(
-      size_t len, DataType dtype, const std::function<void(char* buff)>& Fill) {
-    return NewRecord(len, dtype, DataCompressType::kNoCompress, Fill);
+      const std::string& key, size_t value_buf_len, DataType dtype,
+      const std::function<void(char* buff)>& Fill) {
+    return NewRecord(key, value_buf_len, dtype, DataCompressType::kNoCompress,
+                     Fill);
   }
 
   static std::unique_ptr<DataSetHeader> CreateHeader(
@@ -32,7 +34,7 @@ class DataSetUtil final {
       const DataSetHeader& header);
 
   static std::unique_ptr<Record, decltype(&free)> CreateLabelItem(
-      const DataSetHeader& header, uint32_t label);
+      const DataSetHeader& header, const std::string& key, uint32_t label);
 
   static std::unique_ptr<Record, decltype(&free)> CreateImageItem(
       const DataSetHeader& header, const std::string& img_file_path);

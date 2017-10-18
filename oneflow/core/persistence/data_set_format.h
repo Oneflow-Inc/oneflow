@@ -40,17 +40,51 @@ struct DataSetHeader final {
   size_t DataBodyOffset() const;
 };
 
+//  Record is basically a key-value pair
 struct Record final {
-  uint8_t meta_check_sum;  //	check fields except `data'
-  uint8_t data_check_sum;  //  checking `data' field when debugging
-  uint8_t data_type = DataType::kChar;
-  uint8_t data_compress_type = DataCompressType::kNoCompress;
-  uint32_t align = 0;  //  useless, only for alignment
-  uint64_t len = 0;    //  len = sizeof(data) / sizeof(data[0])
-  char data[0];        //  buffer data.
+  uint8_t meta_check_sum;               //	check fields except `data'
+  uint8_t data_check_sum;               //  checking `data' field when debugging
+  uint8_t data_type = DataType::kChar;  // value data type
+  uint8_t data_compress_type =
+      DataCompressType::kNoCompress;  // value compress type
+  uint32_t len = 0;           //  len = flexible sizeof(data) / sizeof(data[0])
+  uint16_t key_len = 0;       // key string length
+  uint16_t value_offset = 0;  //  value data offset in field `data', which is >=
+                              //  key_len and 8-byte aligned
+  uint32_t _8_byte_alignment = 0;  //  useless, only for alignment
+
+  //  data layout:
+  //  |<------- value_offset ------->|
+  //  |<------- key_len ------>|     |
+  //	+------------------------+-----+-----------------------.
+  //	| key data (string type) | \0* | value data (any type) |
+  //	'------------------------------------------------------'
+  char data[0];  //  key string data + value data.
 
   OF_DISALLOW_COPY_AND_MOVE(Record);
   Record() = delete;
+  std::string GetKey() const;
+
+  size_t key_buffer_len() const { return key_len; }
+
+  const char* key_buffer() const { return data; }
+
+  char* mut_key_buffer() { return data; }
+
+  size_t value_buffer_len() const { return len - value_offset; }
+
+  const char* value_buffer() const { return data + value_offset; }
+
+  char* mut_value_buffer() { return data + value_offset; }
+
+  size_t GetKeyBuffer(const char** buf) const {
+    *buf = data;
+    return key_len;
+  }
+  size_t GetValueBuffer(const char** buf) const {
+    *buf = data + value_offset;
+    return len - value_offset;
+  }
 };
 
 template<typename flexible_struct>

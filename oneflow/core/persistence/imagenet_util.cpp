@@ -39,7 +39,7 @@ void ImageNetUtil::SaveLabels(
   auto header = DataSetUtil::CreateHeader("label", img_file_paths.size(), {1});
   label_stream << *header;
   for (const auto& file_path : img_file_paths) {
-    auto item = DataSetUtil::CreateLabelItem(*header,
+    auto item = DataSetUtil::CreateLabelItem(*header, file_path,
                                              file_path2label_idx.at(file_path));
     label_stream << *item;
   }
