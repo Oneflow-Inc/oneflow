@@ -28,23 +28,24 @@ template<DeviceType device_type, typename T>
 void InnerProductKernel<device_type, T>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in = BnInOp2Blob("in");
-  const Blob* weight = BnInOp2Blob("weight");
-  Blob* out = BnInOp2Blob("out");
+  const Blob* in_blob = BnInOp2Blob("in");
+  const Blob* weight_blob = BnInOp2Blob("weight");
+  Blob* out_blob = BnInOp2Blob("out");
+  CopyDataIdFromSoleIbToAllObIfNeed<device_type>(ctx, BnInOp2Blob);
 
   // out = in * weight
   BlasMatrixMatrix<device_type, T>(ctx, CblasNoTrans, CblasTrans,
-                                   static_cast<T>(1.0), static_cast<T>(0.0), in,
-                                   weight, out);
+                                   static_cast<T>(1.0), static_cast<T>(0.0),
+                                   in_blob, weight_blob, out_blob);
 
   if (op()->GetBoolFromSpecialConf("has_bias_term")) {
-    const Blob* bias = BnInOp2Blob("bias");
-    const Blob* bias_multiplier = BnInOp2Blob("bias_multiplier");
+    const Blob* bias_blob = BnInOp2Blob("bias");
+    const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
 
     // out = bias_multiplier * bias + out
     BlasMatrixMatrix<device_type, T>(ctx, CblasNoTrans, CblasNoTrans,
                                      static_cast<T>(1.0), static_cast<T>(1.0),
-                                     bias_multiplier, bias, out);
+                                     bias_mul_blob, bias_blob, out_blob);
   }
 }
 
@@ -52,33 +53,33 @@ template<DeviceType device_type, typename T>
 void InnerProductKernel<device_type, T>::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in = BnInOp2Blob("in");
-  const Blob* out_diff = BnInOp2Blob("out_diff");
-  Blob* in_diff = BnInOp2Blob("in_diff");
+  const Blob* in_blob = BnInOp2Blob("in");
+  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
+  Blob* in_diff_blob = BnInOp2Blob("in_diff");
 
-  const Blob* weight = BnInOp2Blob("weight");
-  Blob* weight_diff = BnInOp2Blob("weight_diff");
+  const Blob* weight_blob = BnInOp2Blob("weight");
+  Blob* weight_diff_blob = BnInOp2Blob("weight_diff");
 
   // in_diff = out_diff * weight
-  if (in_diff != nullptr) {
+  if (in_diff_blob != nullptr) {
     BlasMatrixMatrix<device_type, T>(ctx, CblasNoTrans, CblasNoTrans,
                                      static_cast<T>(1.0), static_cast<T>(0.0),
-                                     out_diff, weight, in_diff);
+                                     out_diff_blob, weight_blob, in_diff_blob);
   }
 
   // weight_diff = out_diff * in
   BlasMatrixMatrix<device_type, T>(ctx, CblasTrans, CblasNoTrans,
                                    static_cast<T>(1.0), static_cast<T>(0.0),
-                                   out_diff, in, weight_diff);
+                                   out_diff_blob, in_blob, weight_diff_blob);
 
   if (op()->GetBoolFromSpecialConf("has_bias_term")) {
-    const Blob* bias_multiplier = BnInOp2Blob("bias_multiplier");
-    Blob* bias_diff = BnInOp2Blob("bias_diff");
+    const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
+    Blob* bias_diff_blob = BnInOp2Blob("bias_diff");
 
     // bias_diff = bias_multiplier * out_diff
-    BlasMatrixMatrix<device_type, T>(ctx, CblasTrans, CblasNoTrans,
-                                     static_cast<T>(1.0), static_cast<T>(0.0),
-                                     bias_multiplier, out_diff, bias_diff);
+    BlasMatrixMatrix<device_type, T>(
+        ctx, CblasTrans, CblasNoTrans, static_cast<T>(1.0), static_cast<T>(0.0),
+        bias_mul_blob, out_diff_blob, bias_diff_blob);
   }
 }
 

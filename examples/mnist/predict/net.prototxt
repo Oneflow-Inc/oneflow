@@ -35,8 +35,8 @@ op {
     has_bias_term: true
     pad_h: 0
     pad_w: 0
-    kernel_size_h: 5
-    kernel_size_w: 5
+    kernel_h: 5
+    kernel_w: 5
     stride_h: 1
     stride_w: 1
     dilation_h: 1

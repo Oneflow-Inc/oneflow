@@ -47,7 +47,6 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
 }
 
 void Actor::ProcessEord() {
-  VLOG(4) << "actor " << actor_id_ << " process one eord";
   num_of_remaining_eord_ -= 1;
   if (!num_of_remaining_eord_) {
     if (num_of_read_empty_) {
@@ -115,8 +114,6 @@ void Actor::AsyncLaunchKernel(
           return regst->GetBlobPtrFromLbn(lbn);
         });
   }
-  VLOG(4) << "actor " << actor_id_ << " launch kernel for piece_id "
-          << expected_piece_id_;
   expected_piece_id_ += 1;
 }
 
@@ -145,11 +142,6 @@ void Actor::AsyncSendRegstMsgToConsumer(
     }
     if (!regst->consumers_actor_id().empty()) { pair.second.pop_front(); }
     if (pair.second.empty()) { writeable_produced_regst_desc_num_ -= 1; }
-    VLOG(4) << "actor " << actor_id() << " "
-            << "send readable register " << regst << ", "
-            << "regst_desc_id:" << regst->regst_desc_id() << ", "
-            << "this_regst_reading_cnt:" << regst_reading_cnt_it->second << ", "
-            << "total_reading_cnt:" << total_reading_cnt_;
   }
 }
 
@@ -168,8 +160,6 @@ void Actor::AsyncSendRegstMsgToConsumer() {
 }
 
 void Actor::AsyncSendEORDMsgToConsumers(int64_t regst_desc_id) {
-  VLOG(4) << "actor " << actor_id_ << " "
-          << "send eord for regst_desc_id:" << regst_desc_id;
   const RtRegstDesc* regst_desc =
       produced_regsts_.at(regst_desc_id).front()->regst_desc();
   device_ctx_->AddCallBack([regst_desc]() {
@@ -205,11 +195,6 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   CHECK_GE(reading_cnt_it->second, 1);
   reading_cnt_it->second -= 1;
   total_reading_cnt_ -= 1;
-  VLOG(4) << "actor " << actor_id() << "\'s "
-          << "reading_cnt for " << regst << " -= 1, "
-          << "current cnt:" << reading_cnt_it->second << ", "
-          << "current total_reading_cnt:" << total_reading_cnt_ << ", "
-          << "regst_desc_id: " << regst->regst_desc_id();
   if (reading_cnt_it->second != 0) { return 0; }
   auto writeable_it = writeable_produced_regst_.find(regst->regst_desc_id());
   if (writeable_it == writeable_produced_regst_.end()) { return 0; }

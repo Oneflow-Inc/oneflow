@@ -104,7 +104,7 @@ class FileSystem {
   // Returns true if the named path exists and false otherwise.
   virtual bool FileExists(const std::string& fname) = 0;
 
-  // Store the immediate children in the `dir` in `result`.
+  // Returns the immediate children in the `dir`
   //
   // The returned paths are relative to 'dir'.
   virtual std::vector<std::string> ListDir(const std::string& dir) = 0;
@@ -132,7 +132,7 @@ class FileSystem {
   // files and directories that weren't deleted.
   virtual void RecursivelyDeleteDir(const std::string& dirname);
 
-  // Stores the size of `fname` in `*file_size`.
+  // Returns the size of `fname`.
   virtual uint64_t GetFileSize(const std::string& fname) = 0;
 
   // Overwrites the target if it exists.
