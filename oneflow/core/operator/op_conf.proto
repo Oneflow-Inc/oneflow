@@ -158,16 +158,16 @@ message BoxingOpConf {
 }
 
 message NormalModelUpdateOpConf {
-  optional float learning_rate = 1 [default = 0];
+  optional float learning_rate = 1 [default = 0.01];
 }
 
 message MomentumModelUpdateOpConf {
-  optional float learning_rate = 1 [default = 0];
-  required float beta = 2; // TODO: set default val
+  optional float learning_rate = 1 [default = 0.01];
+  optional float beta = 2 [default = 0.9];
 }
 
 message RMSPropModelUpdateOpConf {
-  optional float learning_rate = 1 [default = 0];
+  optional float learning_rate = 1 [default = 0.01];
   optional float decay_rate = 2 [default = 0.99];
   optional float epsilon = 3 [default = 1e-8];
 }
