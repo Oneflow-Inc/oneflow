@@ -10,14 +10,14 @@ namespace oneflow {
 
 //	data set format
 //	.----------------------------.
-//	| DataSetHeader | Buffer ... |
+//	| DataSetHeader | Record ... |
 //	'----------------------------'
 
-#define FLAXIBLE_STRUCT_SEQ OF_PP_MAKE_TUPLE_SEQ(Buffer, len, data)
+#define FLAXIBLE_STRUCT_SEQ OF_PP_MAKE_TUPLE_SEQ(Record, len, data)
 
 #define DATA_SET_FORMAT_SEQ           \
   OF_PP_MAKE_TUPLE_SEQ(DataSetHeader) \
-  OF_PP_MAKE_TUPLE_SEQ(Buffer)
+  OF_PP_MAKE_TUPLE_SEQ(Record)
 
 enum DataCompressType {
   kNoCompress,
@@ -40,7 +40,7 @@ struct DataSetHeader final {
   size_t DataBodyOffset() const;
 };
 
-struct Buffer final {
+struct Record final {
   uint8_t meta_check_sum;  //	check fields except `data'
   uint8_t data_check_sum;  //  checking `data' field when debugging
   uint8_t data_type = DataType::kChar;
@@ -49,8 +49,8 @@ struct Buffer final {
   uint64_t len = 0;    //  len = sizeof(data) / sizeof(data[0])
   char data[0];        //  buffer data.
 
-  OF_DISALLOW_COPY_AND_MOVE(Buffer);
-  Buffer() = delete;
+  OF_DISALLOW_COPY_AND_MOVE(Record);
+  Record() = delete;
 };
 
 template<typename flexible_struct>

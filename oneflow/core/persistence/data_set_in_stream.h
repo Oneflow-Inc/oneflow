@@ -21,7 +21,7 @@ class DataSetInStream : public PersistentInStream {
     set_cur_file_pos(cur_file_pos() + n);
   }
 
-  int32_t ReadBuffer(std::unique_ptr<Buffer, decltype(&free)>* item);
+  int32_t ReadRecord(std::unique_ptr<Record, decltype(&free)>* item);
 
   //	getter
   const DataSetHeader* header() const {

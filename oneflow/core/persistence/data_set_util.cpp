@@ -5,34 +5,34 @@
 
 namespace oneflow {
 
-uint8_t DataSetUtil::ValidateBufferMeta(const Buffer& buffer) {
+uint8_t DataSetUtil::ValidateRecordMeta(const Record& buffer) {
   uint8_t check_sum = 0;
-  int meta_len = FlexibleSizeOf<Buffer>(0);
+  int meta_len = FlexibleSizeOf<Record>(0);
   for (int i = 0; i < meta_len; ++i) {
     check_sum += reinterpret_cast<const char*>(&buffer)[i];
   }
   return check_sum;
 }
 
-uint8_t DataSetUtil::ValidateBuffer(const Buffer& buffer) {
-  return ValidateBufferMeta(buffer);
+uint8_t DataSetUtil::ValidateRecord(const Record& buffer) {
+  return ValidateRecordMeta(buffer);
 }
 
-std::unique_ptr<Buffer, decltype(&free)> DataSetUtil::NewBuffer(
+std::unique_ptr<Record, decltype(&free)> DataSetUtil::NewRecord(
     size_t len, DataType dtype, DataCompressType dctype,
     const std::function<void(char* buff)>& Fill) {
-  auto buffer = FlexibleMalloc<Buffer>(len);
+  auto buffer = FlexibleMalloc<Record>(len);
   buffer->data_type = dtype;
   buffer->data_compress_type = dctype;
   if (len) { Fill(buffer->data); }
-  UpdateBufferCheckSum(buffer.get());
-  CHECK(!ValidateBufferMeta(*buffer));
+  UpdateRecordCheckSum(buffer.get());
+  CHECK(!ValidateRecordMeta(*buffer));
   return buffer;
 }
 
-void DataSetUtil::UpdateBufferMetaCheckSum(Buffer* buffer) {
+void DataSetUtil::UpdateRecordMetaCheckSum(Record* buffer) {
   uint8_t meta_check_sum = 0;
-  const int meta_len = FlexibleSizeOf<Buffer>(0);
+  const int meta_len = FlexibleSizeOf<Record>(0);
   for (int i = 0; i < meta_len; ++i) {
     meta_check_sum += reinterpret_cast<char*>(buffer)[i];
   }
@@ -40,11 +40,11 @@ void DataSetUtil::UpdateBufferMetaCheckSum(Buffer* buffer) {
   buffer->meta_check_sum = -meta_check_sum;
 }
 
-void DataSetUtil::UpdateBufferCheckSum(Buffer* buffer) {
+void DataSetUtil::UpdateRecordCheckSum(Record* buffer) {
   uint8_t data_check_sum = 0;
   for (int i = 0; i < buffer->len; ++i) { data_check_sum += buffer->data[i]; }
   buffer->data_check_sum = -data_check_sum;
-  UpdateBufferMetaCheckSum(buffer);
+  UpdateRecordMetaCheckSum(buffer);
 }
 
 std::unique_ptr<DataSetHeader> DataSetUtil::CreateHeader(
@@ -86,21 +86,21 @@ void DataSetUtil::UpdateHeaderCheckSum(DataSetHeader* header) {
   header->check_sum = -check_sum;
 }
 
-std::unique_ptr<Buffer, decltype(&free)> DataSetUtil::CreateLabelItem(
+std::unique_ptr<Record, decltype(&free)> DataSetUtil::CreateLabelItem(
     const DataSetHeader& header, uint32_t label_index) {
-  auto buffer = NewBuffer(sizeof(uint32_t), DataType::kUInt32, [=](char* data) {
+  auto buffer = NewRecord(sizeof(uint32_t), DataType::kUInt32, [=](char* data) {
     *reinterpret_cast<uint32_t*>(data) = label_index;
   });
   return buffer;
 }
 
-std::unique_ptr<Buffer, decltype(&free)> DataSetUtil::CreateImageItem(
+std::unique_ptr<Record, decltype(&free)> DataSetUtil::CreateImageItem(
     const DataSetHeader& header, const std::string& img_file_path) {
   cv::Mat img = cv::imread(img_file_path);
   std::vector<unsigned char> raw_buf;
   std::vector<int> param{CV_IMWRITE_JPEG_QUALITY, 95};
   cv::imencode(".jpg", img, raw_buf, param);
-  auto buffer = NewBuffer(
+  auto buffer = NewRecord(
       raw_buf.size(), DataType::kChar, DataCompressType::kJpeg,
       [&](char* data) { memcpy(data, raw_buf.data(), raw_buf.size()); });
   return buffer;
