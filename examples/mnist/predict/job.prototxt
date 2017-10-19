@@ -1,12 +1,9 @@
 dlnet_filepath: "./net.prototxt"
 resource_filepath: "./resource.prototxt"
 placement_filepath: "./placement.prototxt"
-model_load_snapshot_path: ""
-piece_size: 60000
-default_data_type: kFloat
-max_data_id_length: 8
-use_async_cpu_stream: false
-max_data_id_length: 0
+model_load_snapshot_path: "/willzhang/snapshots/snapshot_10"
+piece_size: 1000
+max_data_id_length: 16
 global_fs_conf {
   hdfs_conf {
     namenode: "hdfs://192.168.1.11:9000"

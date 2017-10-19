@@ -18,6 +18,8 @@ class PersistentOutStream final {
   // Inserts the first n characters of the array pointed by s into the stream.
   PersistentOutStream& Write(const char* s, size_t n);
 
+  void Flush();
+
  private:
   std::unique_ptr<fs::WritableFile> file_;
 };

@@ -27,31 +27,23 @@ op {
 
 op {
   name: "conv"
-  model_load_dir: "/willzhang/snapshots/snapshot_3/conv"
   convolution_conf {
     in: "feature/out"
     out: "out"
     out_num: 1
     has_bias_term: true
-    pad_h: 0
-    pad_w: 0
     kernel_h: 5
     kernel_w: 5
-    stride_h: 1
-    stride_w: 1
-    dilation_h: 1
-    dilation_w: 1
   }
 }
 
 op {
   name: "ip10"
-  model_load_dir: "/willzhang/snapshots/snapshot_3/ip10"
   innerproduct_conf {
     in: "conv/out"
     out: "out"
     out_num: 10
-    has_bias_term: false
+    has_bias_term: true
   }
 }
 
