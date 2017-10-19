@@ -1,8 +1,8 @@
 #ifndef ONEFLOW_CORE_CONTROL_CTRL_SERVER_H_
 #define ONEFLOW_CORE_CONTROL_CTRL_SERVER_H_
 
-#include "grpc++/alarm.h"
-#include "grpc++/server_builder.h"
+#include <grpc++/alarm.h>
+#include <grpc++/server_builder.h>
 #include "oneflow/core/control/ctrl_call.h"
 
 namespace oneflow {
