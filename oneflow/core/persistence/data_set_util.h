@@ -15,14 +15,14 @@ class DataSetUtil final {
 
   static std::unique_ptr<Record, decltype(&free)> NewRecord(
       const std::string& key, size_t value_buf_len, DataType dtype,
-      DataCompressType dctype, const std::function<void(char* buff)>& Fill);
+      DataEncodeType detype, const std::function<void(char* buff)>& Fill);
 
   static uint8_t ValidateRecord(const Record& buff);
 
   static std::unique_ptr<Record, decltype(&free)> NewRecord(
       const std::string& key, size_t value_buf_len, DataType dtype,
       const std::function<void(char* buff)>& Fill) {
-    return NewRecord(key, value_buf_len, dtype, DataCompressType::kNoCompress,
+    return NewRecord(key, value_buf_len, dtype, DataEncodeType::kNoEncode,
                      Fill);
   }
 

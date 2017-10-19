@@ -20,11 +20,11 @@ uint8_t DataSetUtil::ValidateRecord(const Record& buffer) {
 
 std::unique_ptr<Record, decltype(&free)> DataSetUtil::NewRecord(
     const std::string& key, size_t value_buf_len, DataType dtype,
-    DataCompressType dctype, const std::function<void(char* buff)>& Fill) {
+    DataEncodeType detype, const std::function<void(char* buff)>& Fill) {
   size_t value_offset = RoundUp(key.size(), 8);
   auto buffer = FlexibleMalloc<Record>(value_buf_len + value_offset);
   buffer->data_type_ = dtype;
-  buffer->data_compress_type_ = dctype;
+  buffer->data_encode_type_ = detype;
   buffer->key_len_ = key.size();
   buffer->value_offset_ = value_offset;
   memset(buffer->data_, 0, value_offset);
@@ -105,7 +105,7 @@ std::unique_ptr<Record, decltype(&free)> DataSetUtil::CreateImageItem(
   std::vector<int> param{CV_IMWRITE_JPEG_QUALITY, 95};
   cv::imencode(".jpg", img, raw_buf, param);
   auto buffer = NewRecord(
-      img_file_path, raw_buf.size(), DataType::kChar, DataCompressType::kJpeg,
+      img_file_path, raw_buf.size(), DataType::kChar, DataEncodeType::kJpeg,
       [&](char* data) { memcpy(data, raw_buf.data(), raw_buf.size()); });
   return buffer;
 }

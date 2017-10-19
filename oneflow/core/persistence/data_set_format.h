@@ -19,8 +19,8 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ(DataSetHeader) \
   OF_PP_MAKE_TUPLE_SEQ(Record)
 
-enum DataCompressType {
-  kNoCompress,
+enum DataEncodeType {
+  kNoEncode,
   kJpeg,
   kSparse,
 };
@@ -42,9 +42,8 @@ struct DataSetHeader final {
 struct Record final {
   uint8_t meta_check_sum_;  //	check fields except `data'
   uint8_t data_check_sum_;  //  checking `data' field when debugging
-  uint8_t data_type_ = DataType::kChar;  // value data type
-  uint8_t data_compress_type_ =
-      DataCompressType::kNoCompress;  // value compress type
+  uint8_t data_type_ = DataType::kChar;                   // value data type
+  uint8_t data_encode_type_ = DataEncodeType::kNoEncode;  // value encode type
   uint32_t len_ = 0;      //  len = flexible sizeof(data) / sizeof(data[0])
   uint16_t key_len_ = 0;  // key string length
   uint16_t value_offset_ =
@@ -91,6 +90,11 @@ static std::unique_ptr<T, decltype(&free)> FlexibleMalloc(size_t len) {
   T* ptr = reinterpret_cast<T*>(malloc(FlexibleSizeOf<T>(len)));
   FlexibleSetArraySize(ptr, len);
   return std::unique_ptr<T, decltype(&free)>(ptr, &free);
+}
+
+template<typename T>
+static std::unique_ptr<T, decltype(&free)> FlexibleMalloc() {
+  return FlexibleMalloc<T>(0);
 }
 
 #define DECLARE_DATA_SET_OFSTREAM(type) \
