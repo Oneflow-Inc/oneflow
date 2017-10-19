@@ -4,7 +4,8 @@
 #include <iostream>
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/preprocessor.h"
-#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/shape.h"
+#include "oneflow/core/persistence/data_encode.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
 namespace oneflow {
 
@@ -18,12 +19,6 @@ namespace oneflow {
 #define DATA_SET_FORMAT_SEQ           \
   OF_PP_MAKE_TUPLE_SEQ(DataSetHeader) \
   OF_PP_MAKE_TUPLE_SEQ(Record)
-
-enum DataEncodeType {
-  kNoEncode,
-  kJpeg,
-  kSparse,
-};
 
 struct DataSetHeader final {
   const uint16_t magic_code_ = 0xfeed;
@@ -62,6 +57,9 @@ struct Record final {
   OF_DISALLOW_COPY_AND_MOVE(Record);
   Record() = delete;
   std::string GetKey() const;
+
+  template<typename T>
+  void Decode(const Shape& shape, T* out_dptr);
 
   size_t key_buffer_len() const { return key_len_; }
   const char* key_buffer() const { return data_; }

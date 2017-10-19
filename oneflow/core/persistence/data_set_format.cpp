@@ -43,4 +43,28 @@ std::string Record::GetKey() const {
   return std::string(key_buffer(), key_buffer_len());
 }
 
+template<typename T>
+void Record::Decode(const Shape& shape, T* out_dptr) {
+  switch (data_encode_type_) {
+#define RECORD_DECODE_ENTRY(encode_type)                                       \
+  case DataEncodeType::encode_type:                                            \
+    return RecordDecoder<DataEncodeType::encode_type>::Decode<T>(*this, shape, \
+                                                                 out_dptr);
+    OF_PP_FOR_EACH_TUPLE(RECORD_DECODE_ENTRY, DATA_ENCODE_TYPE_SEQ)
+    default: UNEXPECTED_RUN();
+  }
+}
+
+namespace {
+
+//  it's only usefull for compiling
+void SepcializeTemplate() {
+#define SPECIALIZE_RECORD_DECODE(type, type_case)                      \
+  static_cast<Record*>(nullptr)->Decode(*static_cast<Shape*>(nullptr), \
+                                        static_cast<type*>(nullptr));
+  OF_PP_FOR_EACH_TUPLE(SPECIALIZE_RECORD_DECODE, ALL_DATA_TYPE_SEQ)
+}
+
+}  // namespace
+
 }  // namespace oneflow
