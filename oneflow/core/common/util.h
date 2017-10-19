@@ -1,6 +1,8 @@
 #ifndef ONEFLOW_CORE_COMMON_UTIL_H_
 #define ONEFLOW_CORE_COMMON_UTIL_H_
 
+#include <glog/logging.h>
+#include <gtest/gtest.h>
 #include <algorithm>
 #include <atomic>
 #include <condition_variable>
@@ -17,8 +19,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
-#include "glog/logging.h"
-#include "gtest/gtest.h"
 
 namespace oneflow {
 

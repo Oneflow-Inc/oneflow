@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_GRAPH_GRAPH_H_
 #define ONEFLOW_CORE_GRAPH_GRAPH_H_
 
-#include "gflags/gflags.h"
+#include <gflags/gflags.h>
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/graph/node.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
