@@ -14,6 +14,11 @@ class DataLoaderKernel final : public Kernel {
 
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
+
+ private:
+  void InitInStream(const KernelCtx&) const;
+
+  mutable std::unique_ptr<PersistentInStream> in_stream_;
 };
 
 }  // namespace oneflow

@@ -2,6 +2,15 @@
 
 namespace oneflow {
 
+namespace {
+
+int ExtractPortFromAddr(const std::string& addr) {
+  size_t pos = addr.find(':');
+  return oneflow_cast<int>(addr.substr(pos + 1));
+}
+
+}  // namespace
+
 CtrlServer::~CtrlServer() {
   grpc::Alarm alarm(cq_.get(), gpr_now(GPR_CLOCK_MONOTONIC), nullptr);
   loop_thread_.join();
@@ -10,13 +19,16 @@ CtrlServer::~CtrlServer() {
 }
 
 CtrlServer::CtrlServer(const std::string& server_addr) {
+  int port = ExtractPortFromAddr(server_addr);
   grpc::ServerBuilder server_builder;
-  server_builder.AddListeningPort(server_addr,
-                                  grpc::InsecureServerCredentials());
+  int bound_port = 0;
+  server_builder.AddListeningPort(
+      server_addr, grpc::InsecureServerCredentials(), &bound_port);
   grpc_service_.reset(new CtrlService::AsyncService);
   server_builder.RegisterService(grpc_service_.get());
   cq_ = server_builder.AddCompletionQueue();
   grpc_server_ = server_builder.BuildAndStart();
+  CHECK_EQ(port, bound_port) << "Port " << port << " is unavailable";
   LOG(INFO) << "CtrlServer listening on " << server_addr;
   plan_ = nullptr;
   port_ = -1;

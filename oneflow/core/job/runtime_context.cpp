@@ -7,19 +7,16 @@ std::string RuntimeCtx::GetCtrlAddr(int64_t machine_id) const {
   return mchn.addr() + ":" + std::to_string(mchn.port());
 }
 
-PersistentInStream* RuntimeCtx::GetDataInStream(const std::string& name) {
-  auto it = data_in_streams_.find(name);
-  if (it == data_in_streams_.end()) {
-    return nullptr;
+PersistentOutStream* RuntimeCtx::GetPersistentOutStream(
+    const std::string& filepath) {
+  auto iter = filepath2ostream_.find(filepath);
+  if (iter != filepath2ostream_.end()) {
+    return iter->second.get();
   } else {
-    return it->second.get();
+    auto ostream_ptr = new PersistentOutStream(GlobalFS(), filepath);
+    filepath2ostream_[filepath].reset(ostream_ptr);
+    return ostream_ptr;
   }
-}
-
-void RuntimeCtx::AddDataInStream(const std::string& name,
-                                 PersistentInStream* data_in_stream) {
-  CHECK(data_in_streams_.find(name) == data_in_streams_.end());
-  data_in_streams_[name].reset(data_in_stream);
 }
 
 RuntimeCtx::RuntimeCtx(const std::string& name) {

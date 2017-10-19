@@ -6,25 +6,24 @@ template<DeviceType device_type, typename T>
 void ReluKernel<device_type, T>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in_data = BnInOp2Blob("in");
-  Blob* out_data = BnInOp2Blob("out");
-  out_data->CopyDataIdFrom<device_type>(ctx.device_ctx, in_data);
-  ReluKernelUtil<device_type, T>::Forward(ctx, out_data->shape().elem_cnt(),
-                                          in_data->dptr<T>(),
-                                          out_data->mut_dptr<T>());
+  const Blob* in_blob = BnInOp2Blob("in");
+  Blob* out_blob = BnInOp2Blob("out");
+  CopyDataIdFromSoleIbToAllObIfNeed<device_type>(ctx, BnInOp2Blob);
+  ReluKernelUtil<device_type, T>::Forward(ctx, out_blob->shape().elem_cnt(),
+                                          in_blob->dptr<T>(),
+                                          out_blob->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T>
 void ReluKernel<device_type, T>::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in_data = BnInOp2Blob("in");
-  const Blob* out_diff = BnInOp2Blob("out_diff");
-  Blob* in_diff = BnInOp2Blob("in_diff");
-  in_diff->CopyDataIdFrom<device_type>(ctx.device_ctx, out_diff);
+  const Blob* in_blob = BnInOp2Blob("in");
+  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
+  Blob* in_diff_blob = BnInOp2Blob("in_diff");
   ReluKernelUtil<device_type, T>::Backward(
-      ctx, in_data->shape().elem_cnt(), out_diff->dptr<T>(), in_data->dptr<T>(),
-      in_diff->mut_dptr<T>());
+      ctx, in_blob->shape().elem_cnt(), out_diff_blob->dptr<T>(),
+      in_blob->dptr<T>(), in_diff_blob->mut_dptr<T>());
 }
 
 template<typename T>

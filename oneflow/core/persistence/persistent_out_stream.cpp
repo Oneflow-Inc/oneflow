@@ -14,4 +14,6 @@ PersistentOutStream& PersistentOutStream::Write(const char* s, size_t n) {
   return *this;
 }
 
+void PersistentOutStream::Flush() { file_->Flush(); }
+
 }  // namespace oneflow

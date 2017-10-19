@@ -17,9 +17,6 @@ int LossRecordActor::HandlerNormal(const ActorMsg& actor_msg) {
     return 1;
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
     regst_ = actor_msg.regst();
-    VLOG(4) << "LossRecordActor " << actor_id() << " "
-            << "receive readable regst " << regst_
-            << ", regst_desc_id:" << regst_->regst_desc_id();
     ActUntilFail();
   } else {
     UNEXPECTED_RUN();

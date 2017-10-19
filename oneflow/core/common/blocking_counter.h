@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_COMMON_THREAD_SAFE_COUNTER_H_
-#define ONEFLOW_CORE_COMMON_THREAD_SAFE_COUNTER_H_
+#ifndef ONEFLOW_CORE_COMMON_BLOCKING_COUNTER_H_
+#define ONEFLOW_CORE_COMMON_BLOCKING_COUNTER_H_
 
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
-class ThreadSafeCounter final {
+class BlockingCounter final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ThreadSafeCounter);
-  ThreadSafeCounter() = default;
-  ~ThreadSafeCounter() = default;
+  OF_DISALLOW_COPY_AND_MOVE(BlockingCounter);
+  BlockingCounter() = default;
+  ~BlockingCounter() = default;
 
   void Init(const std::string& cnt_name, int64_t cnt_val) {
     cnt_name_ = cnt_name;
@@ -36,4 +36,4 @@ class ThreadSafeCounter final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_THREAD_SAFE_COUNTER_H_
+#endif  // ONEFLOW_CORE_COMMON_BLOCKING_COUNTER_H_

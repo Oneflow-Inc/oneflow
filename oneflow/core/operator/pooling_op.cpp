@@ -26,11 +26,11 @@ void PoolingOp::InferBlobDesc4FwBlobs(
   // out
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   int64_t shape_h =
-      (in_blob_desc->shape().At(2) + 2 * conf.pad_h() - conf.kernel_size_h())
+      (in_blob_desc->shape().At(2) + 2 * conf.pad_h() - conf.kernel_h())
           / conf.stride_h()
       + 1;
   int64_t shape_w =
-      (in_blob_desc->shape().At(3) + 2 * conf.pad_w() - conf.kernel_size_w())
+      (in_blob_desc->shape().At(3) + 2 * conf.pad_w() - conf.kernel_w())
           / conf.stride_w()
       + 1;
   out_blob_desc->mut_shape() =

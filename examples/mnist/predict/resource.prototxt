@@ -1,15 +1,14 @@
 machine {
   addr: "192.168.1.11"
+  port: 6666
   name: "192.168.1.11"
 }
 
 machine {
   addr: "192.168.1.13"
+  port: 6666
   name: "192.168.1.13"
 }
 
 device_num_per_machine: 4
 device_type: kCPU
-
-port_min: 9000
-port_max: 9100
