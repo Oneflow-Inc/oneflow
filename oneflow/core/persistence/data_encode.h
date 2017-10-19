@@ -25,6 +25,8 @@ class RecordDecoder final {
   RecordDecoder() = delete;
   template<typename T>
   static void Decode(const Record& record, const Shape& shape, T* out_dptr);
+  template<typename src_type, typename T>
+  static void Cast(const Record& record, const Shape& shape, T* out_dptr);
 };
 }
 #endif  // ONEFLOW_CORE_PERSISTENCE_DATA_ENCODE_H_

@@ -1,13 +1,51 @@
 #include "oneflow/core/kernel/data_loader_kernel.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/runtime_context.h"
+#include "oneflow/core/persistence/cyclic_data_set_in_stream.h"
 #include "oneflow/core/persistence/cyclic_persistent_in_stream.h"
+#include "oneflow/core/persistence/normal_data_set_in_stream.h"
 #include "oneflow/core/persistence/normal_persistent_in_stream.h"
 
 namespace oneflow {
 
 template<typename T>
-void DataLoaderKernel<T>::Forward(
+void DataLoaderKernel<T>::ForwardNew(
+    const KernelCtx& kernel_ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  InitDataSetInStream(kernel_ctx);
+  Blob* out_blob = BnInOp2Blob("out");
+  CHECK_EQ(GetDataType<T>::val, out_blob->data_type());
+  kernel_ctx.device_ctx->cpu_stream()->SendWork([out_blob, this]() {
+    int64_t piece_size = out_blob->shape().At(0);
+    T* out_dptr = out_blob->mut_dptr<T>();
+    auto record = FlexibleMalloc<Record>();
+    for (int64_t i = 0; i != piece_size; ++i) {
+      int32_t read_status = data_set_in_stream_->ReadRecord(&record);
+      if (read_status == 0) {
+        if (out_blob->has_data_id()) {
+          std::string token = record->GetKey();
+          CHECK_LE(token.size(), JobDesc::Singleton()->SizeOfOneDataId());
+          memcpy(out_blob->mut_data_id(i), token.c_str(), token.size());
+          if (token.size() != JobDesc::Singleton()->SizeOfOneDataId()) {
+            *(out_blob->mut_data_id(i) + token.size()) = '\0';
+          }
+        }
+        record->Decode(out_blob->shape(), out_dptr);
+      } else {
+        CHECK_EQ(read_status, -1);
+        CHECK(out_blob->has_data_id());
+        memset(out_blob->mut_data_id(i), '\0',
+               JobDesc::Singleton()->SizeOfOneDataId());
+        for (int64_t j = 0; j < out_blob->shape().Count(1); ++j) {
+          *out_dptr++ = static_cast<T>(0);
+        }
+      }
+    }
+  });
+}
+
+template<typename T>
+void DataLoaderKernel<T>::ForwardOld(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   InitInStream(kernel_ctx);
@@ -46,6 +84,27 @@ void DataLoaderKernel<T>::Forward(
       }
     }
   });
+}
+
+template<typename T>
+void DataLoaderKernel<T>::Forward(
+    const KernelCtx& kernel_ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  //	ForwardOld(kernel_ctx, BnInOp2Blob);
+  ForwardNew(kernel_ctx, BnInOp2Blob);
+}
+
+template<typename T>
+void DataLoaderKernel<T>::InitDataSetInStream(
+    const KernelCtx& kernel_ctx) const {
+  if (data_set_in_stream_) { return; }
+  std::string data_dir = op()->GetStringFromSpecialConf("data_dir");
+  std::string file_path = data_dir;
+  if (JobDesc::Singleton()->is_train()) {
+    data_set_in_stream_.reset(new CyclicDataSetInStream(GlobalFS(), file_path));
+  } else {
+    data_set_in_stream_.reset(new NormalDataSetInStream(GlobalFS(), file_path));
+  }
 }
 
 template<typename T>

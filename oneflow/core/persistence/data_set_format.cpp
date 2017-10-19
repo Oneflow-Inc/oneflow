@@ -46,10 +46,10 @@ std::string Record::GetKey() const {
 template<typename T>
 void Record::Decode(const Shape& shape, T* out_dptr) {
   switch (data_encode_type_) {
-#define RECORD_DECODE_ENTRY(encode_type)                                       \
-  case DataEncodeType::encode_type:                                            \
-    return RecordDecoder<DataEncodeType::encode_type>::Decode<T>(*this, shape, \
-                                                                 out_dptr);
+#define RECORD_DECODE_ENTRY(encode_type)                                    \
+  case DataEncodeType::encode_type:                                         \
+    return RecordDecoder<DataEncodeType::encode_type>::Decode(*this, shape, \
+                                                              out_dptr);
     OF_PP_FOR_EACH_TUPLE(RECORD_DECODE_ENTRY, DATA_ENCODE_TYPE_SEQ)
     default: UNEXPECTED_RUN();
   }
