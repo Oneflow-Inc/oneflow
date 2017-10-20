@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_PERSISTENCE_DATA_ENCODE_H_
-#define ONEFLOW_CORE_PERSISTENCE_DATA_ENCODE_H_
+#ifndef ONEFLOW_CORE_PERSISTENCE_RECORD_DECODER_H_
+#define ONEFLOW_CORE_PERSISTENCE_RECORD_DECODER_H_
 
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/shape.h"
@@ -25,8 +25,10 @@ class RecordDecoder final {
   RecordDecoder() = delete;
   template<typename T>
   static void Decode(const Record& record, const Shape& shape, T* out_dptr);
+
+ private:
   template<typename src_type, typename T>
   static void Cast(const Record& record, const Shape& shape, T* out_dptr);
 };
 }
-#endif  // ONEFLOW_CORE_PERSISTENCE_DATA_ENCODE_H_
+#endif  // ONEFLOW_CORE_PERSISTENCE_RECORD_DECODER_H_

@@ -3,7 +3,7 @@
 #include "oneflow/core/persistence/data_set_util.h"
 namespace oneflow {}
 
-DEFINE_int32(limit, 256, "packed image count limit");
+DEFINE_int32(limit, INT_MAX, "packed image count limit");
 DEFINE_int32(width, 256, "resized width");
 DEFINE_int32(height, 256, "resized height");
 DEFINE_string(output_dir, "./", "output direction");

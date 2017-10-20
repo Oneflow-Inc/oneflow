@@ -5,8 +5,8 @@
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/shape.h"
-#include "oneflow/core/persistence/data_encode.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
+#include "oneflow/core/persistence/record_decoder.h"
 namespace oneflow {
 
 //	data set format
