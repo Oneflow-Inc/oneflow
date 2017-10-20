@@ -1,7 +1,7 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include "oneflow/core/common/str_util.h"
-#include "oneflow/core/persistence/normal_data_set_in_stream.h"
+#include "oneflow/core/persistence/normal_record_in_stream.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
 
 DEFINE_string(label_file, "./labels", "label file");
@@ -13,7 +13,7 @@ namespace oneflow {
 namespace {
 
 void ExtractImage(int num) {
-  NormalDataSetInStream label_stream(LocalFS(), FLAGS_label_file);
+  NormalRecordInStream label_stream(LocalFS(), FLAGS_label_file);
   auto* label_header = label_stream.header();
   CHECK(label_header->dim_array_size_ == 1);
   std::vector<uint32_t> item_idx2label_idx(label_header->data_item_count_);
@@ -31,7 +31,7 @@ void ExtractImage(int num) {
         JoinPath(FLAGS_output_dir, std::to_string(label_idx)));
   }
 
-  NormalDataSetInStream feature_stream(LocalFS(), FLAGS_feature_file);
+  NormalRecordInStream feature_stream(LocalFS(), FLAGS_feature_file);
   auto* feature_header = feature_stream.header();
   CHECK(feature_header->dim_array_size_ == 3);
   CHECK(feature_header->data_item_count_ == label_header->data_item_count_);

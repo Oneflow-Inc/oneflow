@@ -1,8 +1,8 @@
-#include "oneflow/core/persistence/data_set_in_stream.h"
+#include "oneflow/core/persistence/record_in_stream.h"
 #include "oneflow/core/persistence/data_set_util.h"
 namespace oneflow {
 
-void DataSetInStream::InitHeader() {
+void RecordInStream::InitHeader() {
   int ret = in_stream_->Read(reinterpret_cast<char*>(header_.get()),
                              sizeof(DataSetHeader));
   CHECK(!ret);
@@ -10,7 +10,7 @@ void DataSetInStream::InitHeader() {
   CHECK(!DataSetUtil::ValidateHeader(*header()));
 }
 
-int32_t DataSetInStream::ReadRecord(
+int32_t RecordInStream::ReadRecord(
     std::unique_ptr<Record, decltype(&free)>* buffer) {
   auto buffer_meta = FlexibleMalloc<Record>(0);
   int ret = ReadMeta(reinterpret_cast<char*>(buffer_meta.get()),

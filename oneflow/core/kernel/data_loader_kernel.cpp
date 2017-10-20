@@ -1,10 +1,10 @@
 #include "oneflow/core/kernel/data_loader_kernel.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/runtime_context.h"
-#include "oneflow/core/persistence/cyclic_data_set_in_stream.h"
 #include "oneflow/core/persistence/cyclic_persistent_in_stream.h"
-#include "oneflow/core/persistence/normal_data_set_in_stream.h"
+#include "oneflow/core/persistence/cyclic_record_in_stream.h"
 #include "oneflow/core/persistence/normal_persistent_in_stream.h"
+#include "oneflow/core/persistence/normal_record_in_stream.h"
 
 namespace oneflow {
 
@@ -12,7 +12,7 @@ template<typename T>
 void DataLoaderKernel<T>::ForwardNew(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  InitDataSetInStream(kernel_ctx);
+  InitRecordInStream(kernel_ctx);
   Blob* out_blob = BnInOp2Blob("out");
   CHECK_EQ(GetDataType<T>::val, out_blob->data_type());
   kernel_ctx.device_ctx->cpu_stream()->SendWork([out_blob, this]() {
@@ -20,7 +20,7 @@ void DataLoaderKernel<T>::ForwardNew(
     T* out_dptr = out_blob->mut_dptr<T>();
     auto record = FlexibleMalloc<Record>();
     for (int64_t i = 0; i != piece_size; ++i) {
-      int32_t read_status = data_set_in_stream_->ReadRecord(&record);
+      int32_t read_status = record_in_stream_->ReadRecord(&record);
       if (read_status == 0) {
         if (out_blob->has_data_id()) {
           std::string token = record->GetKey();
@@ -95,15 +95,15 @@ void DataLoaderKernel<T>::Forward(
 }
 
 template<typename T>
-void DataLoaderKernel<T>::InitDataSetInStream(
+void DataLoaderKernel<T>::InitRecordInStream(
     const KernelCtx& kernel_ctx) const {
-  if (data_set_in_stream_) { return; }
+  if (record_in_stream_) { return; }
   std::string data_dir = op()->GetStringFromSpecialConf("data_dir");
   std::string file_path = data_dir;
   if (JobDesc::Singleton()->is_train()) {
-    data_set_in_stream_.reset(new CyclicDataSetInStream(GlobalFS(), file_path));
+    record_in_stream_.reset(new CyclicRecordInStream(GlobalFS(), file_path));
   } else {
-    data_set_in_stream_.reset(new NormalDataSetInStream(GlobalFS(), file_path));
+    record_in_stream_.reset(new NormalRecordInStream(GlobalFS(), file_path));
   }
 }
 

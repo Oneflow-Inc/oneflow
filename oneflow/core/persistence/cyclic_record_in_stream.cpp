@@ -1,7 +1,7 @@
-#include "oneflow/core/persistence/cyclic_data_set_in_stream.h"
+#include "oneflow/core/persistence/cyclic_record_in_stream.h"
 namespace oneflow {
 
-int32_t CyclicDataSetInStream::ReadMeta(char* s, size_t n) {
+int32_t CyclicRecordInStream::ReadMeta(char* s, size_t n) {
   int ret = Read(s, n);
   if (!ret) { return ret; }
 

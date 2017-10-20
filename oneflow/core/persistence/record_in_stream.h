@@ -8,16 +8,16 @@
 
 namespace oneflow {
 
-class DataSetInStream {
+class RecordInStream {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(DataSetInStream)
-  DataSetInStream(fs::FileSystem* fs, const std::string& file_path)
+  OF_DISALLOW_COPY_AND_MOVE(RecordInStream)
+  RecordInStream(fs::FileSystem* fs, const std::string& file_path)
       : fs_(fs),
         file_path_(file_path),
         header_(of_make_unique<DataSetHeader>()) {
     Init();
   }
-  virtual ~DataSetInStream() = default;
+  virtual ~RecordInStream() = default;
 
   int32_t ReadRecord(std::unique_ptr<Record, decltype(&free)>* item);
 

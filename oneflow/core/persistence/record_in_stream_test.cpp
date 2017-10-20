@@ -1,7 +1,7 @@
 #include "oneflow/core/common/process_state.h"
 #include "oneflow/core/common/str_util.h"
-#include "oneflow/core/persistence/cyclic_data_set_in_stream.h"
-#include "oneflow/core/persistence/normal_data_set_in_stream.h"
+#include "oneflow/core/persistence/cyclic_record_in_stream.h"
+#include "oneflow/core/persistence/normal_record_in_stream.h"
 
 namespace oneflow {
 
