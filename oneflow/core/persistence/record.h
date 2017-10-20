@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <iostream>
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/flexible.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
@@ -13,8 +14,6 @@ namespace oneflow {
 //	.----------------------------.
 //	| DataSetHeader | Record ... |
 //	'----------------------------'
-
-#define FLAXIBLE_STRUCT_SEQ OF_PP_MAKE_TUPLE_SEQ(Record, len_, data_)
 
 #define DATA_SET_FORMAT_SEQ           \
   OF_PP_MAKE_TUPLE_SEQ(DataSetHeader) \
@@ -69,31 +68,6 @@ struct Record final {
   char* mut_key_buffer() { return data_; }
   char* mut_value_buffer() { return data_ + value_offset_; }
 };
-
-template<typename flexible_struct>
-size_t FlexibleSizeOf(uint32_t n) {
-  return sizeof(flexible_struct);
-}
-
-template<typename flexible_struct>
-size_t FlexibleSizeOf(const flexible_struct& obj) {
-  return sizeof(flexible_struct);
-}
-
-template<typename flexible_struct>
-void FlexibleSetArraySize(flexible_struct* type, size_t len) {}
-
-template<typename T>
-static std::unique_ptr<T, decltype(&free)> FlexibleMalloc(size_t len) {
-  T* ptr = reinterpret_cast<T*>(malloc(FlexibleSizeOf<T>(len)));
-  FlexibleSetArraySize(ptr, len);
-  return std::unique_ptr<T, decltype(&free)>(ptr, &free);
-}
-
-template<typename T>
-static std::unique_ptr<T, decltype(&free)> FlexibleMalloc() {
-  return FlexibleMalloc<T>(0);
-}
 
 #define DECLARE_DATA_SET_OFSTREAM(type) \
   std::ofstream& operator<<(std::ofstream& out, const type& data);
