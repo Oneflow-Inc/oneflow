@@ -1,7 +1,7 @@
 #include "oneflow/core/persistence/record_decoder.h"
 #include <opencv2/opencv.hpp>
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/persistence/data_set_format.h"
+#include "oneflow/core/persistence/record.h"
 
 namespace oneflow {
 

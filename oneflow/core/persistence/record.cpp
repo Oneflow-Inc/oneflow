@@ -1,4 +1,4 @@
-#include "oneflow/core/persistence/data_set_format.h"
+#include "oneflow/core/persistence/record.h"
 
 namespace oneflow {
 

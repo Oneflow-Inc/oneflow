@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_KERNEL_DATA_SET_FORMAT_H_
-#define ONEFLOW_CORE_KERNEL_DATA_SET_FORMAT_H_
+#ifndef ONEFLOW_CORE_PERSISTENCE_RECORD_H_
+#define ONEFLOW_CORE_PERSISTENCE_RECORD_H_
 #include <cstdint>
 #include <iostream>
 #include "oneflow/core/common/data_type.h"
@@ -105,4 +105,4 @@ OF_PP_FOR_EACH_TUPLE(DECLARE_DATA_SET_PERSISTENCE_OUT, DATA_SET_FORMAT_SEQ);
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_DATA_SET_FORMAT_H_
+#endif  // ONEFLOW_CORE_PERSISTENCE_RECORD_H_

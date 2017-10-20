@@ -2,9 +2,9 @@
 #define ONEFLOW_CORE_KERNEL_DATA_SET_IN_STREAM_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/persistence/data_set_format.h"
 #include "oneflow/core/persistence/data_set_util.h"
 #include "oneflow/core/persistence/normal_persistent_in_stream.h"
+#include "oneflow/core/persistence/record.h"
 
 namespace oneflow {
 
