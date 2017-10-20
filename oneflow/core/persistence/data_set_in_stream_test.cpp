@@ -9,8 +9,7 @@ std::string SavedFile(uint32_t random) {
   std::string current_dir = GetCwd();
   StringReplace(&current_dir, '\\', '/');
   std::string file_name =
-      JoinPath(current_dir,
-               "/tmp_test_cyclic_data_set_" + std::to_string(NewRandomSeed()));
+      JoinPath(current_dir, "/tmp_test_cyclic_data_set");
   PersistentOutStream out_stream(LocalFS(), file_name);
   auto header = DataSetUtil::CreateHeader("label", 1, {1});
   auto item = DataSetUtil::CreateLabelItem(std::to_string(random), random);
