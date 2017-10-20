@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_KERNEL_CYCLIC_DATA_SET_IN_STREAM_H_
-#define ONEFLOW_CORE_KERNEL_CYCLIC_DATA_SET_IN_STREAM_H_
+#ifndef ONEFLOW_CORE_PERSISTENCE_CYCLIC_DATA_SET_IN_STREAM_H_
+#define ONEFLOW_CORE_PERSISTENCE_CYCLIC_DATA_SET_IN_STREAM_H_
 
 #include "oneflow/core/persistence/record_in_stream.h"
 namespace oneflow {
@@ -15,4 +15,4 @@ class CyclicRecordInStream : public RecordInStream {
 };
 
 }  // namespace oneflow
-#endif  // ONEFLOW_CORE_KERNEL_CYCLIC_DATA_SET_IN_STREAM_H_
+#endif  // ONEFLOW_CORE_PERSISTENCE_CYCLIC_DATA_SET_IN_STREAM_H_

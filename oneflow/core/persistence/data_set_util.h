@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_KERNEL_DATA_SET_UTIL_H_
-#define ONEFLOW_CORE_KERNEL_DATA_SET_UTIL_H_
+#ifndef ONEFLOW_CORE_PERSISTENCE_DATA_SET_UTIL_H_
+#define ONEFLOW_CORE_PERSISTENCE_DATA_SET_UTIL_H_
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/persistence/record.h"
@@ -62,4 +62,4 @@ class DataSetUtil final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_DATA_SET_UTIL_H_
+#endif  // ONEFLOW_CORE_PERSISTENCE_DATA_SET_UTIL_H_
