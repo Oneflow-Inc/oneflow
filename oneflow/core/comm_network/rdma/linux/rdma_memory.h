@@ -8,11 +8,11 @@ class RdmaMemDesc {
   
 class RdmaMem {
 public:
-  void Register();
+  void Register(void* mem_ptr, size_t byte_size);
   void UnRegister();
 
 private:
-  void* mem_ptr;
+  void* mem_ptr_;
   size_t byte_size_;
 };
 

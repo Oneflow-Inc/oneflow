@@ -7,9 +7,9 @@ namespace oneflow {
 
 class Connection {
 public:
-  void PostSendRequest(
-      void* read_ctx, RdmaMem* local_mem, const RdmaMemDesc& remote_mem);
-  void PostReadRequest(RdmaMem* msg_mem);
+  void PostReadRequest(
+      void* read_ctx, RdmaMem* local_mem, RdmaMemDesc* remote_mem);
+  void PostSendRequest(RdmaMem* msg_mem);
   void PostRecvRequest(RdmaMem* msg_mem);
 };
 
