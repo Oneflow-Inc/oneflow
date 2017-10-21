@@ -1,8 +1,8 @@
 #include "oneflow/core/common/flexible.h"
 #include "oneflow/core/common/preprocessor.h"
-#include "oneflow/core/persistence/record.h"
+#include "oneflow/core/persistence/of_binary.h"
 
-#define FLAXIBLE_STRUCT_SEQ OF_PP_MAKE_TUPLE_SEQ(Record, len_, data_)
+#define FLAXIBLE_STRUCT_SEQ OF_PP_MAKE_TUPLE_SEQ(OfbItem, len_, data_)
 
 namespace oneflow {
 

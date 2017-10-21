@@ -5,56 +5,58 @@
 
 namespace oneflow {
 
-uint8_t DataSetUtil::ValidateRecordMeta(const Record& buffer) {
+uint8_t DataSetUtil::ValidateOfbItemMeta(const OfbItem& ofb_item) {
   uint8_t check_sum = 0;
-  int meta_len = FlexibleSizeOf<Record>(0);
+  int meta_len = FlexibleSizeOf<OfbItem>(0);
   for (int i = 0; i < meta_len; ++i) {
-    check_sum += reinterpret_cast<const char*>(&buffer)[i];
+    check_sum += reinterpret_cast<const char*>(&ofb_item)[i];
   }
   return check_sum;
 }
 
-uint8_t DataSetUtil::ValidateRecord(const Record& buffer) {
-  return ValidateRecordMeta(buffer);
+uint8_t DataSetUtil::ValidateOfbItem(const OfbItem& ofb_item) {
+  return ValidateOfbItemMeta(ofb_item);
 }
 
-std::unique_ptr<Record, decltype(&free)> DataSetUtil::NewRecord(
+std::unique_ptr<OfbItem, decltype(&free)> DataSetUtil::NewOfbItem(
     const std::string& key, size_t value_buf_len, DataType dtype,
     DataEncodeType detype, const std::function<void(char* buff)>& Fill) {
-  size_t value_offset = RoundUp(key.size(), 8);
-  auto buffer = FlexibleMalloc<Record>(value_buf_len + value_offset);
-  buffer->data_type_ = dtype;
-  buffer->data_encode_type_ = detype;
-  buffer->key_len_ = key.size();
-  buffer->value_offset_ = value_offset;
-  memset(buffer->data_, 0, value_offset);
-  key.copy(buffer->mut_key_buffer(), key.size());
-  if (value_buf_len) { Fill(const_cast<char*>(buffer->mut_value_buffer())); }
-  UpdateRecordCheckSum(buffer.get());
-  return buffer;
+  size_t value_offset = RoundUpToAlignment(key.size(), 8);
+  auto ofb_item = FlexibleMalloc<OfbItem>(value_buf_len + value_offset);
+  ofb_item->data_type_ = dtype;
+  ofb_item->data_encode_type_ = detype;
+  ofb_item->key_len_ = key.size();
+  ofb_item->value_offset_ = value_offset;
+  memset(ofb_item->data_, 0, value_offset);
+  key.copy(ofb_item->mut_key_buffer(), key.size());
+  if (value_buf_len) { Fill(const_cast<char*>(ofb_item->mut_value_buffer())); }
+  UpdateOfbItemCheckSum(ofb_item.get());
+  return ofb_item;
 }
 
-void DataSetUtil::UpdateRecordMetaCheckSum(Record* buffer) {
+void DataSetUtil::UpdateOfbItemMetaCheckSum(OfbItem* ofb_item) {
   uint8_t meta_check_sum = 0;
-  const int meta_len = FlexibleSizeOf<Record>(0);
+  const int meta_len = FlexibleSizeOf<OfbItem>(0);
   for (int i = 0; i < meta_len; ++i) {
-    meta_check_sum += reinterpret_cast<char*>(buffer)[i];
+    meta_check_sum += reinterpret_cast<char*>(ofb_item)[i];
   }
-  meta_check_sum -= buffer->meta_check_sum_;
-  buffer->meta_check_sum_ = -meta_check_sum;
+  meta_check_sum -= ofb_item->meta_check_sum_;
+  ofb_item->meta_check_sum_ = -meta_check_sum;
 }
 
-void DataSetUtil::UpdateRecordCheckSum(Record* buffer) {
+void DataSetUtil::UpdateOfbItemCheckSum(OfbItem* ofb_item) {
   uint8_t data_check_sum = 0;
-  for (int i = 0; i < buffer->len_; ++i) { data_check_sum += buffer->data_[i]; }
-  buffer->data_check_sum_ = -data_check_sum;
-  UpdateRecordMetaCheckSum(buffer);
+  for (int i = 0; i < ofb_item->len_; ++i) {
+    data_check_sum += ofb_item->data_[i];
+  }
+  ofb_item->data_check_sum_ = -data_check_sum;
+  UpdateOfbItemMetaCheckSum(ofb_item);
 }
 
-std::unique_ptr<DataSetHeader> DataSetUtil::CreateHeader(
+std::unique_ptr<OfbHeader> DataSetUtil::CreateHeader(
     const std::string& type, uint32_t data_item_count,
     const std::vector<uint32_t>& dim_array) {
-  std::unique_ptr<DataSetHeader> header(new DataSetHeader);
+  std::unique_ptr<OfbHeader> header(new OfbHeader);
   CHECK(type.size() <= sizeof(header->type_));
   type.copy(header->type_, type.size(), 0);
   header->data_item_count_ = data_item_count;
@@ -69,20 +71,20 @@ std::unique_ptr<DataSetHeader> DataSetUtil::CreateHeader(
   return header;
 }
 
-uint32_t DataSetUtil::ValidateHeader(const DataSetHeader& header) {
-  static_assert(!(sizeof(DataSetHeader) % sizeof(uint32_t)), "no alignment");
+uint32_t DataSetUtil::ValidateHeader(const OfbHeader& header) {
+  static_assert(!(sizeof(OfbHeader) % sizeof(uint32_t)), "no alignment");
   uint32_t check_sum = 0;
-  int len = sizeof(DataSetHeader) / sizeof(uint32_t);
+  int len = sizeof(OfbHeader) / sizeof(uint32_t);
   for (int i = 0; i < len; ++i) {
     check_sum += reinterpret_cast<const uint32_t*>(&header)[i];
   }
   return check_sum;
 }
 
-void DataSetUtil::UpdateHeaderCheckSum(DataSetHeader* header) {
-  static_assert(!(sizeof(DataSetHeader) % sizeof(uint32_t)), "no alignment");
+void DataSetUtil::UpdateHeaderCheckSum(OfbHeader* header) {
+  static_assert(!(sizeof(OfbHeader) % sizeof(uint32_t)), "no alignment");
   uint32_t check_sum = 0;
-  int len = sizeof(DataSetHeader) / sizeof(uint32_t);
+  int len = sizeof(OfbHeader) / sizeof(uint32_t);
   for (int i = 0; i < len; ++i) {
     check_sum += reinterpret_cast<uint32_t*>(header)[i];
   }
@@ -90,24 +92,24 @@ void DataSetUtil::UpdateHeaderCheckSum(DataSetHeader* header) {
   header->check_sum_ = -check_sum;
 }
 
-std::unique_ptr<Record, decltype(&free)> DataSetUtil::CreateLabelItem(
+std::unique_ptr<OfbItem, decltype(&free)> DataSetUtil::CreateLabelItem(
     const std::string& key, uint32_t label_index) {
-  auto buffer = NewRecord(
+  auto ofb_item = NewOfbItem(
       key, sizeof(uint32_t), DataType::kUInt32,
       [=](char* data) { *reinterpret_cast<uint32_t*>(data) = label_index; });
-  return buffer;
+  return ofb_item;
 }
 
-std::unique_ptr<Record, decltype(&free)> DataSetUtil::CreateImageItem(
+std::unique_ptr<OfbItem, decltype(&free)> DataSetUtil::CreateImageItem(
     const std::string& img_file_path) {
   cv::Mat img = cv::imread(img_file_path);
   std::vector<unsigned char> raw_buf;
   std::vector<int> param{CV_IMWRITE_JPEG_QUALITY, 95};
   cv::imencode(".jpg", img, raw_buf, param);
-  auto buffer = NewRecord(
+  auto ofb_item = NewOfbItem(
       img_file_path, raw_buf.size(), DataType::kChar, DataEncodeType::kJpeg,
       [&](char* data) { memcpy(data, raw_buf.data(), raw_buf.size()); });
-  return buffer;
+  return ofb_item;
 }
 
 void DataSetUtil::GetFilePaths(
@@ -116,9 +118,9 @@ void DataSetUtil::GetFilePaths(
     std::unordered_map<std::string, uint32_t>* file_path2label_idx) {
   limit = std::min(limit, static_cast<uint32_t>(image_directories.size()));
   for (int i = 0; i < limit; ++i) {
-    const auto& dir = image_directories[i];
-    for (const auto& file_name : LocalFS()->ListDir(dir)) {
-      const auto& file_path = dir + "/" + file_name;
+    const std::string& dir = image_directories[i];
+    for (const std::string& file_name : LocalFS()->ListDir(dir)) {
+      const std::string& file_path = JoinPath(dir, file_name);
       img_file_paths->push_back(file_path);
       (*file_path2label_idx)[file_path] = i;
     }
@@ -135,13 +137,13 @@ void DataSetUtil::SaveLabels(
     const std::string& output_dir) {
   std::vector<std::string> label_names(image_directories.size());
   for (int i = 0; i < image_directories.size(); ++i) {
-    const auto& dir = image_directories[i];
+    const std::string& dir = image_directories[i];
     label_names[i] = basename(const_cast<char*>(dir.c_str()));
   }
   PersistentOutStream label_stream(LocalFS(), JoinPath(output_dir, "labels"));
   auto header = DataSetUtil::CreateHeader("label", img_file_paths.size(), {1});
   label_stream << *header;
-  for (const auto& file_path : img_file_paths) {
+  for (const std::string& file_path : img_file_paths) {
     auto item = DataSetUtil::CreateLabelItem(file_path,
                                              file_path2label_idx.at(file_path));
     label_stream << *item;
@@ -157,9 +159,9 @@ void DataSetUtil::SaveFeatures(const std::vector<std::string>& img_file_paths,
                                           {3, width, height});
   feature_stream << *header;
   for (int i = 0; i < img_file_paths.size(); ++i) {
-    const auto& file_path = img_file_paths.at(i);
-    auto buffer = DataSetUtil::CreateImageItem(file_path);
-    feature_stream << *buffer;
+    const std::string& file_path = img_file_paths.at(i);
+    auto ofb_item = DataSetUtil::CreateImageItem(file_path);
+    feature_stream << *ofb_item;
   }
 }
 

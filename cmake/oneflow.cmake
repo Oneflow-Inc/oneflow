@@ -2,8 +2,7 @@
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/compiler.cpp)
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/runtime.cpp)
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/scheduler.cpp)
-list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/persistence/make_image_data_set.cpp)
-list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/persistence/extract_image_data_set.cpp)
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/persistence/ofb_in_stream_test.cpp)
 
 # source_group
 if(WIN32)
@@ -90,10 +89,6 @@ target_link_libraries(of_protoobj ${oneflow_third_party_libs})
 include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
 cuda_add_library(of_ccobj ${of_all_obj_cc})
-find_package(OpenCV REQUIRED)
-target_link_libraries(of_ccobj libopencv_core.so)
-target_link_libraries(of_ccobj libopencv_highgui.so)
-target_link_libraries(of_ccobj libopencv_imgproc.so)
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})
 add_dependencies(of_ccobj of_protoobj)
 add_dependencies(of_ccobj of_format)

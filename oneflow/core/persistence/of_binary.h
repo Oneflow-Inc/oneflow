@@ -6,20 +6,21 @@
 #include "oneflow/core/common/flexible.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/persistence/ofb_decoder.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
-#include "oneflow/core/persistence/record_decoder.h"
 namespace oneflow {
 
 //	data set format
-//	.----------------------------.
-//	| DataSetHeader | Record ... |
-//	'----------------------------'
+//	.-------------------------.
+//	| OfbHeader | OfbItem ... |
+//	'-------------------------'
 
-#define DATA_SET_FORMAT_SEQ           \
-  OF_PP_MAKE_TUPLE_SEQ(DataSetHeader) \
-  OF_PP_MAKE_TUPLE_SEQ(Record)
+#define DATA_SET_FORMAT_SEQ       \
+  OF_PP_MAKE_TUPLE_SEQ(OfbHeader) \
+  OF_PP_MAKE_TUPLE_SEQ(OfbItem)
 
-struct DataSetHeader final {
+//  oneflow binary file header
+struct OfbHeader final {
   const uint16_t magic_code_ = 0xfeed;
   const uint16_t version_ = 0;
   uint32_t check_sum_;            // check header
@@ -28,12 +29,16 @@ struct DataSetHeader final {
   uint32_t dim_array_[15];        //  tensor shape
   uint64_t data_item_count_ = 0;  //  how many items after header
 
-  OF_DISALLOW_COPY_AND_MOVE(DataSetHeader);
-  DataSetHeader() = default;
+  OF_DISALLOW_COPY_AND_MOVE(OfbHeader);
+  OfbHeader() = default;
 };
 
-//  Record is basically a key-value pair
-struct Record final {
+//  oneflow binary file item
+//  OfbItem is basically a key-value pair
+class OfbItem final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(OfbItem);
+  OfbItem() = delete;
   uint8_t meta_check_sum_;  //	check fields except `data'
   uint8_t data_check_sum_;  //  checking `data' field when debugging
   uint8_t data_type_ = DataType::kChar;                   // value data type
@@ -53,9 +58,7 @@ struct Record final {
   //	'------------------------------------------------------'
   char data_[0];  //  key string data + value data.
 
-  OF_DISALLOW_COPY_AND_MOVE(Record);
-  Record() = delete;
-  std::string GetKey() const;
+  std::string GetDataId() const;
 
   template<typename T>
   void Decode(const Shape& shape, T* out_dptr);

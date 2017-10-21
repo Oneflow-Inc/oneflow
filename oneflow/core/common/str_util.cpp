@@ -9,7 +9,7 @@ std::string RemoveExtensionIfExist(
   if (pos != std::string::npos) {
     bool found = false;
     std::string file_ext(file_name.substr(pos + 1));
-    for (const auto& ext : extensions) {
+    for (const std::string& ext : extensions) {
       if (file_ext == ext) {
         found = true;
         break;

@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_PERSISTENCE_RECORD_DECODER_H_
-#define ONEFLOW_CORE_PERSISTENCE_RECORD_DECODER_H_
+#ifndef ONEFLOW_CORE_PERSISTENCE_OFB_DECODER_H_
+#define ONEFLOW_CORE_PERSISTENCE_OFB_DECODER_H_
 
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/shape.h"
@@ -17,18 +17,18 @@ enum DataEncodeType {
   OF_PP_FOR_EACH_TUPLE(DECLARE_DATA_ENCODE_TYPE, DATA_ENCODE_TYPE_SEQ)
 };
 
-class Record;
+class OfbItem;
 template<DataEncodeType encode_type>
-class RecordDecoder final {
+class OfbDecoder final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(RecordDecoder);
-  RecordDecoder() = delete;
+  OF_DISALLOW_COPY_AND_MOVE(OfbDecoder);
+  OfbDecoder() = delete;
   template<typename T>
-  static void Decode(const Record& record, const Shape& shape, T* out_dptr);
+  static void Decode(const OfbItem& ofb_item, const Shape& shape, T* out_dptr);
 
  private:
   template<typename src_type, typename T>
-  static void Cast(const Record& record, const Shape& shape, T* out_dptr);
+  static void Cast(const OfbItem& ofb_item, const Shape& shape, T* out_dptr);
 };
 }
-#endif  // ONEFLOW_CORE_PERSISTENCE_RECORD_DECODER_H_
+#endif  // ONEFLOW_CORE_PERSISTENCE_OFB_DECODER_H_
