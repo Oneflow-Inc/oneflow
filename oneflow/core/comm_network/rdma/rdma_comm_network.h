@@ -1,9 +1,12 @@
 #ifndef ONEFLOW_CORE_COMM_NETWORK_RDMA_RDMA_COMM_NETWORK_H
 #define ONEFLOW_CORE_COMM_NETWORK_RDMA_RDMA_COMM_NETWORK_H
 
+#include <mutex>
+#include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/comm_network/comm_network.h"
-#include "oneflow/core/comm_network/connection_pool.h"
-#include "oneflow/core/comm_network/linux/endpoint_manager.h"
+#include "oneflow/core/comm_network/rdma/connection.h"
+#include "oneflow/core/comm_network/rdma/connection_pool.h"
+#include "oneflow/core/comm_network/rdma/rdma_memory.h"
 
 namespace oneflow {
 
@@ -43,19 +46,20 @@ class RdmaCommNet final : public CommNet {
     std::mutex read_ctx_list_mtx;
     std::list<ReadContext*> read_ctx_list;
   };
+  Connection* NewConnection();
   RdmaCommNet();
   int8_t IncreaseDoneCnt(ReadContext*);
   void FinishOneReadContext(ActorReadContext*, ReadContext*);
   void InitRdma();
 
-  std:mutex mem_mutex_;
+  std::mutex mem_mutex_;
   std::list<RdmaMem*> mems_;
   size_t unregister_mems_cnt_;:
 
-  std::unique_ptr<EndPointManager> endpoint_manager_;
+  std::unique_ptr<EndpointManager> endpoint_manager_;
   std::unique_ptr<ConnectionPool> connection_pool_;
 };
 
-}  // oneflow
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMM_NETWORK_RDMA_RDMA_COMM_NETWORK_H
