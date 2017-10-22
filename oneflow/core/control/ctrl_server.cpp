@@ -198,4 +198,32 @@ void CtrlServer::PullPortHandler(
   ENQUEUE_REQUEST(PullPort);
 }
 
+void CtrlServer::PushConnectionInfoHandler(
+    CtrlCall<PushConnectionInfoRequest, PushConnectionInfoResponse>* call) {
+  conn_info_ = call->request().conn_info();
+  for (auto pending_call : pending_conn_info_calls_) {
+    pending_call->SendResponse();
+  }
+  call->SendResponse();
+  ENQUEUE_REQUEST(PushConnectionInfo);
+}
+
+void CtrlServer::ClearConnectionInfoHandler(
+    CtrlCall<ClearConnectionInfoRequest, ClearConnectionInfoResponse>* call) {
+  conn_info_.set_lid(-1);
+  call->SendResponse();
+  ENQUEUE_REQUEST(ClearConnectionInfo);
+}
+
+void CtrlServer::PullConnectionInfoHandler(
+    CtrlCall<PullConnectionInfoRequest, PullConnectionInfoResponse>* call) {
+  if (conn_info_.lid() != -1) {
+    *(call->mut_response()->mutable_conn_info()) = conn_info_;
+    call->SendResponse();
+  } else {
+    pending_conn_info_calls_.push_back(call);
+  }
+  ENQUEUE_REQUEST(PullConnectionInfo);
+}
+
 }  // namespace oneflow

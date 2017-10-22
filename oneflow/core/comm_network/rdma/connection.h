@@ -3,40 +3,20 @@
 
 #include <infiniband/verbs.h>
 #include "glog/logging.h"
+#include "oneflow/core/comm_network/rdma/conn_info.pb.h"
 #include "oneflow/core/comm_network/rdma/rdma_memory.h"
-#include "oneflow/core/control/ctrl_client.h"
 
 namespace oneflow {
-
-struct ConnectorInfo {
-  ConnectorInfo& operator=(ConnectorInfo& conn_info) {
-    lid = conn_info.lid;
-    qpn = conn_info.qpn;
-    snp = conn_info.snp;
-    iid = conn_info.iid;
-  }
-  int32_t lid;
-  int32_t qpn;
-  uint32_t snp;
-  uint32_t iid;
-};
-
-struct Connector {
-  ConnectorInfo my_conn_info;
-  ConnectorInfo peer_conn_info;
-  enum ibv_mtu active_mtu;
-};
 
 class Connection {
  public:
   explicit Connection();
   ~Connection();
 
-  void set_my_conn_info(const ConnectorInfo& my_conn_info) {
-    conn_->my_conn_info = my_conn_info;
-  }
-  void set_peer_conn_info(const ConnectorInfo& peer_conn_info) {
-    conn_->peer_conn_info = peer_conn_info;
+  void set_ibv_mtu(enum ibv_mtu active_mtu) { active_mtu_ = active_mtu; }
+  void set_ibv_qp_ptr(ibv_qp* ibv_qp_ptr) { qp_ptr_ = ibv_qp_ptr; }
+  void set_peer_conn_info(ConnectionInfo& peer_conn_info) {
+    peer_conn_info_ = peer_conn_info;
   }
 
   void PostReadRequest(void* read_ctx, RdmaMem* local_mem,
@@ -44,9 +24,16 @@ class Connection {
   void PostSendRequest(RdmaMem* msg_mem);
   void PostRecvRequest(RdmaMem* msg_mem);
 
+  void PostReadRequest(void* read_ctx, const RdmaMem* local_mem,
+                       const RdmaMemDesc* remote_mem);
+  void PostSendRequest(const RdmaMem* msg_mem);
+  void PostRecvRequest(const RdmaMem* msg_mem);
+  void WaitForConnection();
+
  private:
-  Connector* conn_;
-  ibv_qp* qp_;
+  ConnectionInfo peer_conn_info_;
+  enum ibv_mtu active_mtu_;
+  ibv_qp* qp_ptr_;
 };
 
 }  // namespace oneflow

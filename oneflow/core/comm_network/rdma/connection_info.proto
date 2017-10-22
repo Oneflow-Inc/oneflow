@@ -1,9 +1,0 @@
-syntax = "proto2";
-package oneflow;
-
-message ConnectionInfo {
-  required int32 lid;
-  required int32 qpn;
-  required uint32 snp;
-  required uint32 iid;
-}

@@ -102,25 +102,25 @@ uint16_t CtrlClient::PullPort(uint64_t machine_id) {
 
 void CtrlClient::PushConnectionInfo(const ConnectionInfo& conn_info) {
   grpc::ClientContext client_ctx;
-  PushPortRequest request;
-  request.set_port(port);
-  PushPortResponse response;
+  PushConnectionInfoRequest request;
+  *(request.mutable_conn_info()) = conn_info;
+  PushConnectionInfoResponse response;
   GetThisStub()->PushConnectionInfo(&client_ctx, request, &response);
 }
 
 void CtrlClient::ClearConnectionInfo() {
   grpc::ClientContext client_ctx;
-  ClearPortRequest request;
-  ClearPortResponse response;
+  ClearConnectionInfoRequest request;
+  ClearConnectionInfoResponse response;
   GetThisStub()->ClearConnectionInfo(&client_ctx, request, &response);
 }
 
-uint16_t CtrlClient::PullConnectionInfo(uint64_t machine_id) {
+ConnectionInfo& CtrlClient::PullConnectionInfo(uint64_t machine_id) {
   grpc::ClientContext client_ctx;
-  PullPortRequest request;
-  PullPortResponse response;
+  PullConnectionInfoRequest request;
+  PullConnectionInfoResponse response;
   stubs_[machine_id]->PullConnectionInfo(&client_ctx, request, &response);
-  return response.conn_info(); 
+  return *(response.mutable_conn_info());
 }
 
 CtrlClient::CtrlClient() {

@@ -96,12 +96,12 @@ message PushConnectionInfoResponse {
 message ClearConnectionInfoRequest {
 }
 
-message ClearConnectionResponse {
+message ClearConnectionInfoResponse {
 }
 
-message PullConnectionRequest {
+message PullConnectionInfoRequest {
 }
 
-message PullConnectionResponse {
+message PullConnectionInfoResponse {
   required ConnectionInfo conn_info = 1;
 }

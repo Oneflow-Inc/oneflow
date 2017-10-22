@@ -1,4 +1,4 @@
-#include "oneflow/core/comm_network/rdma/linux/endpoint_manager.h"
+#include "oneflow/core/comm_network/rdma/endpoint_manager.h"
 #include <arpa/inet.h>
 #include "glog/logging.h"
 
@@ -18,8 +18,6 @@ sockaddr_in GetAddress(const std::string& ip, int32_t port) {
 }  // namespace
 
 void EndpointManager::Init(const std::string& my_ip, int32_t my_port) {
-  my_addr_ = GetAddress(my_ip, my_port);
-
   // Init Adapter
   ibv_device** device_list = ibv_get_device_list(NULL);
   ibv_device* device = device_list[0];
@@ -34,40 +32,32 @@ void EndpointManager::Init(const std::string& my_ip, int32_t my_port) {
   recv_cq_ = ibv_create_cq(context_, 10, NULL, NULL, 0);  // cqe
   CHECK(recv_cq_);
 
-  my_sock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  CHECK(my_sock_);
-
-  CHECK_EQ(
-      bind(my_sock_, reinterpret_cast<sockaddr*>(&my_addr_), sizeof(my_addr_)),
-      0);
-  CHECK_EQ(listen(my_sock_, 100), 0);  // TODO(shiyuan) backlog
   ibv_free_device_list(device_list);
+
+  ibv_port_attr attr;
+  CHECK_EQ(ibv_query_port(context_, (uint8_t)1, &attr), 0);
+  srand((unsigned)time(NULL));
+  conn_info_.set_lid(attr.lid);
+  conn_info_.set_qpn(0);  // Will be set up after the creation of the queue pair
+  conn_info_.set_snp(static_cast<uint32_t>(rand()) & 0xffffff);
+  union ibv_gid gid;
+  CHECK_EQ(ibv_query_gid(context_, (uint8_t)1, 0, &gid), 0);
+  conn_info_.set_psn(gid.global.subnet_prefix);
+  conn_info_.set_iid(gid.global.interface_id);
+  active_mtu_ = attr.active_mtu;
 }
 
 RdmaMem* EndpointManager::NewRdmaMem() {
-  RdmaMemory* rdma_memory = new RdmaMemory(pd_);
-  CHECK(rdma_memory);
-  return rdma_memory;
+  RdmaMem* rdma_mem = new RdmaMem(pd_);
+  CHECK(rdma_mem);
+  return rdma_mem;
 }
 
-Connector* EndpointManager::NewConnector() {
-  ibv_port_attr attr;
-  CHECK_EQ(ibv_query_port(context_, (uint8_t)1, &attr), 0);
-
-  Connector* connector = new Connector;
-  CHECK(connector);
-  spand((unsigned)time(NULL));
-  connector->my_conn_info.lid = attr.lid;
-  connector->my_conn_info.qpn =
-      0;  // Will be set up after the creation of the queue pair
-  connector->my_conn_info.psn = static_cast<uint32_t>(rand()) & 0xffffff;
-  union ibv_gid gid;
-  CHECK_EQ(ibv_query_gid(context_, (uint8_t)1, 0, &gid), 0);
-  connector->my_conn_info.snp = gid.global.subnet_prefix;
-  connector->my_conn_info.iid = gid.global.interface_id;
-  connector->peer_conn_info = nullptr;
-  connector->active_mtu = attr.active_mtu;
-  return connector;
+Connection* EndpointManager::NewConnection() {
+  Connection* conn = new Connection();
+  conn->set_ibv_mtu(active_mtu_);
+  conn->set_ibv_qp_ptr(NewQueuePair());
+  return conn;
 }
 
 ibv_qp* EndpointManager::NewQueuePair() {
