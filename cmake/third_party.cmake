@@ -12,7 +12,7 @@ include(cub)
 
 find_package(CUDA REQUIRED)
 find_package(CuDNN REQUIRED)
-#find_package(OpenCV REQUIRED)
+find_package(OpenCV REQUIRED COMPONENTS core highgui imgproc imgcodecs)
 
 if (NOT WIN32)
   set(BLA_VENDOR "Intel10_64lp_seq")
@@ -40,9 +40,7 @@ set(oneflow_third_party_libs
     ${CUDA_CUBLAS_LIBRARIES}
     ${CUDNN_LIBRARIES}
     ${BLAS_LIBRARIES}
-		libopencv_core.so
-		libopencv_highgui.so
-		libopencv_imgproc.so
+		${OpenCV_LIBS}
 )
 
 if(WIN32)

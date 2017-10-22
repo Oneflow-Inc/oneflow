@@ -17,18 +17,18 @@ enum DataEncodeType {
   OF_PP_FOR_EACH_TUPLE(DECLARE_DATA_ENCODE_TYPE, DATA_ENCODE_TYPE_SEQ)
 };
 
-class OfbItem;
+class UbfItem;
 template<DataEncodeType encode_type>
-class OfbDecoder final {
+class UbfDecoder final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(OfbDecoder);
-  OfbDecoder() = delete;
+  OF_DISALLOW_COPY_AND_MOVE(UbfDecoder);
+  UbfDecoder() = delete;
   template<typename T>
-  static void Decode(const OfbItem& ofb_item, const Shape& shape, T* out_dptr);
+  static void Decode(const UbfItem& ubf_item, const Shape& shape, T* out_dptr);
 
  private:
   template<typename src_type, typename T>
-  static void Cast(const OfbItem& ofb_item, const Shape& shape, T* out_dptr);
+  static void Cast(const UbfItem& ubf_item, const Shape& shape, T* out_dptr);
 };
 }
 #endif  // ONEFLOW_CORE_PERSISTENCE_OFB_DECODER_H_

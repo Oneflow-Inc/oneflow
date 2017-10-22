@@ -2,28 +2,29 @@
 #define ONEFLOW_CORE_PERSISTENCE_DATA_SET_IN_STREAM_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/persistence/data_set_util.h"
 #include "oneflow/core/persistence/normal_persistent_in_stream.h"
-#include "oneflow/core/persistence/of_binary.h"
+#include "oneflow/core/persistence/ubf_header.h"
+#include "oneflow/core/persistence/ubf_item.h"
+#include "oneflow/core/persistence/ubf_util.h"
 
 namespace oneflow {
 
 //  oneflow binary file input stream
-class OfbInStream {
+class UbfInStream {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(OfbInStream);
-  OfbInStream() = delete;
-  OfbInStream(fs::FileSystem* fs, const std::string& file_path)
-      : header_(of_make_unique<OfbHeader>()),
+  OF_DISALLOW_COPY_AND_MOVE(UbfInStream);
+  UbfInStream() = delete;
+  UbfInStream(fs::FileSystem* fs, const std::string& file_path)
+      : header_(of_make_unique<UbfHeader>()),
         in_stream_(of_make_unique<NormalPersistentInStream>(fs, file_path, 0)) {
     ResetHeader();
   }
-  virtual ~OfbInStream() = default;
+  virtual ~UbfInStream() = default;
 
-  int32_t ReadOfbItem(std::unique_ptr<OfbItem, decltype(&free)>* item);
+  int32_t ReadOneItem(std::unique_ptr<UbfItem, decltype(&free)>* item);
 
   //	getter
-  const OfbHeader* header() const {
+  const UbfHeader* header() const {
     CHECK(header_);
     return header_.get();
   }
@@ -37,7 +38,7 @@ class OfbInStream {
   virtual int32_t Read(char* s, size_t n) { return in_stream_->Read(s, n); }
 
  private:
-  std::unique_ptr<OfbHeader> header_;
+  std::unique_ptr<UbfHeader> header_;
   std::unique_ptr<NormalPersistentInStream> in_stream_;
 };
 

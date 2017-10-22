@@ -2,7 +2,6 @@
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/compiler.cpp)
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/runtime.cpp)
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/scheduler.cpp)
-list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/persistence/ofb_in_stream_test.cpp)
 
 # source_group
 if(WIN32)
