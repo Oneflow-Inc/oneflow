@@ -28,6 +28,10 @@ class CtrlClient final {
   void ClearPort();
   uint16_t PullPort(uint64_t machine_id);
 
+  void PushConnectionInfo(const ConnectionInfo& conn_info);
+  void ClearConnectionInfo();
+  void PullConnectionInfo(int64_t machine_id);
+
  private:
   CtrlClient();
   void LoadServer(const std::string& server_addr, CtrlService::Stub* stub);

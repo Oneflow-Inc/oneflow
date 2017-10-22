@@ -2,6 +2,7 @@ syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/job/plan.proto";
+import "oneflow/core/comm_network/rdma/conn_info.proto";
 
 message LoadServerRequest {
 }
@@ -83,4 +84,24 @@ message PullPortRequest {
 
 message PullPortResponse {
   required int32 port = 1;
+}
+
+message PushConnectionInfoRequest {
+  required ConnectionInfo conn_info = 1;
+}
+
+message PushConnectionInfoResponse {
+}
+
+message ClearConnectionInfoRequest {
+}
+
+message ClearConnectionResponse {
+}
+
+message PullConnectionRequest {
+}
+
+message PullConnectionResponse {
+  required ConnectionInfo conn_info = 1;
 }

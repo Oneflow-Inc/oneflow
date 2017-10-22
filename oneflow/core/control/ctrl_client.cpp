@@ -100,6 +100,29 @@ uint16_t CtrlClient::PullPort(uint64_t machine_id) {
   return response.port();
 }
 
+void CtrlClient::PushConnectionInfo(const ConnectionInfo& conn_info) {
+  grpc::ClientContext client_ctx;
+  PushPortRequest request;
+  request.set_port(port);
+  PushPortResponse response;
+  GetThisStub()->PushConnectionInfo(&client_ctx, request, &response);
+}
+
+void CtrlClient::ClearConnectionInfo() {
+  grpc::ClientContext client_ctx;
+  ClearPortRequest request;
+  ClearPortResponse response;
+  GetThisStub()->ClearConnectionInfo(&client_ctx, request, &response);
+}
+
+uint16_t CtrlClient::PullConnectionInfo(uint64_t machine_id) {
+  grpc::ClientContext client_ctx;
+  PullPortRequest request;
+  PullPortResponse response;
+  stubs_[machine_id]->PullConnectionInfo(&client_ctx, request, &response);
+  return response.conn_info(); 
+}
+
 CtrlClient::CtrlClient() {
   stubs_.reserve(JobDesc::Singleton()->TotalMachineNum());
   for (int64_t i = 0; i < JobDesc::Singleton()->TotalMachineNum(); ++i) {

@@ -9,6 +9,12 @@
 namespace oneflow {
 
 struct ConnectorInfo {
+  ConnectorInfo& operator=(ConnectorInfo& conn_info) {
+    lid = conn_info.lid;
+    qpn = conn_info.qpn;
+    snp = conn_info.snp;
+    iid = conn_info.iid;
+  }
   int32_t lid;
   int32_t qpn;
   uint32_t snp;
@@ -26,20 +32,12 @@ class Connection {
   explicit Connection();
   ~Connection();
 
-  void set_my_connector(const ConnectorInfo& my_conn_info) {
-    conn_->my_conn_info.lid = my_conn_info.lid;
-    conn_->my_conn_info.qpn = my_conn_info.qpn;
-    conn_->my_conn_info.snp = my_conn_info.snp;
-    conn_->my_conn_info.iid = my_conn_info.iid;
+  void set_my_conn_info(const ConnectorInfo& my_conn_info) {
+    conn_->my_conn_info = my_conn_info;
   }
-  void set_peer_connector(const ConnectorInfo& peer_conn_info) {
-    conn_->peer_conn_info.lid = peer_conn_info.lid;
-    conn_->peer_conn_info.qpn = peer_conn_info.qpn;
-    conn_->peer_conn_info.snp = peer_conn_info.snp;
-    conn_->peer_conn_info.iid = peer_conn_info.iid;
+  void set_peer_conn_info(const ConnectorInfo& peer_conn_info) {
+    conn_->peer_conn_info = peer_conn_info;
   }
-
-  void ConnectTo(int64_t peer_machine_id);
 
   void PostReadRequest(void* read_ctx, RdmaMem* local_mem,
                        RdmaMemDesc* remote_mem);
