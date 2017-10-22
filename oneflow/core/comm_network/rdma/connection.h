@@ -4,7 +4,6 @@
 #include <infiniband/verbs.h>
 #include "glog/logging.h"
 #include "oneflow/core/comm_network/rdma/rdma_memory.h"
-#include "oneflow/core/control/ctrl_client.h"
 
 namespace oneflow {
 
@@ -41,10 +40,11 @@ class Connection {
 
   void ConnectTo(int64_t peer_machine_id);
 
-  void PostReadRequest(void* read_ctx, RdmaMem* local_mem,
-                       RdmaMemDesc* remote_mem);
-  void PostSendRequest(RdmaMem* msg_mem);
-  void PostRecvRequest(RdmaMem* msg_mem);
+  void PostReadRequest(void* read_ctx, const RdmaMem* local_mem,
+                       const RdmaMemDesc* remote_mem);
+  void PostSendRequest(const RdmaMem* msg_mem);
+  void PostRecvRequest(const RdmaMem* msg_mem);
+  void WaitForConnection();
 
  private:
   Connector* conn_;

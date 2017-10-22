@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_CONTROL_CTRL_CLIENT_H_
 
 #include "oneflow/core/actor/actor_message.h"
+#include "oneflow/core/comm_network/rdma/connection.h"
 #include "oneflow/core/control/ctrl_service.h"
 
 namespace oneflow {
@@ -27,6 +28,9 @@ class CtrlClient final {
   void PushPort(uint16_t port);
   void ClearPort();
   uint16_t PullPort(uint64_t machine_id);
+
+  void PushConnectorInfo();
+  void PullConnectorInfo(uint64_t machine_id, ConnectorInfo* info);
 
  private:
   CtrlClient();

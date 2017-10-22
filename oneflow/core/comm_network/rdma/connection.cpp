@@ -1,4 +1,5 @@
 #include "oneflow/core/comm_network/rdma/connection.h"
+#include "oneflow/core/control/ctrl_client.h"
 
 namespace oneflow {
 
@@ -10,8 +11,8 @@ Connection::~Connection() {
 }
 
 void Connection::ConnectTo(int64_t peer_machine_id) {
-  ConnectorInfo peer_conn_info =
-      CtrlClient::Singleton()->PullConnectorInfo(peer_machine_id);
+  ConnectorInfo peer_conn_info;
+  CtrlClient::Singleton()->PullConnectorInfo(peer_machine_id, &peer_conn_info);
   conn_->peer_conn_info.lid = peer_conn_info.lid;
   conn_->peer_conn_info.qpn = peer_conn_info.qpn;
   conn_->peer_conn_info.snp = peer_conn_info.snp;

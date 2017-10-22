@@ -4,9 +4,11 @@
 #include <mutex>
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/comm_network/comm_network.h"
-#include "oneflow/core/comm_network/rdma/connection.h"
 #include "oneflow/core/comm_network/rdma/connection_pool.h"
+#include "oneflow/core/comm_network/rdma/endpoint_manager.h"
 #include "oneflow/core/comm_network/rdma/rdma_memory.h"
+#include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/runtime_context.h"
 
 namespace oneflow {
 
@@ -38,7 +40,7 @@ class RdmaCommNet final : public CommNet {
 
  private:
   struct ReadContext {
-    CallBackList cbl;
+    std::list<std::function<void()>> cbl;
     std::mutex done_cnt_mtx;
     int8_t done_cnt;
   };
@@ -54,7 +56,7 @@ class RdmaCommNet final : public CommNet {
 
   std::mutex mem_mutex_;
   std::list<RdmaMem*> mems_;
-  size_t unregister_mems_cnt_;:
+  size_t unregister_mems_cnt_;
 
   std::unique_ptr<EndpointManager> endpoint_manager_;
   std::unique_ptr<ConnectionPool> connection_pool_;
