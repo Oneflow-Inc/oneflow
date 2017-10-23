@@ -33,6 +33,18 @@ void EndpointManager::Init(const std::string& my_ip, int32_t my_port) {
   CHECK(recv_cq_);
 
   ibv_free_device_list(device_list);
+
+  ibv_port_attr attr;
+  CHECK_EQ(ibv_query_port(context_, (uint8_t)1, &attr), 0);
+  srand((unsigned)time(NULL));
+  conn_info_.set_lid(attr.lid);
+  conn_info_.set_qpn(0);  // Will be set up after the creation of the queue pair
+  conn_info_.set_snp(static_cast<uint32_t>(rand()) & 0xffffff);
+  union ibv_gid gid;
+  CHECK_EQ(ibv_query_gid(context_, (uint8_t)1, 0, &gid), 0);
+  conn_info_.set_psn(gid.global.subnet_prefix);
+  conn_info_.set_iid(gid.global.interface_id);
+  active_mtu_ = attr.active_mtu;
 }
 
 RdmaMem* EndpointManager::NewRdmaMem() {
@@ -41,23 +53,11 @@ RdmaMem* EndpointManager::NewRdmaMem() {
   return rdma_mem;
 }
 
-Connector* EndpointManager::NewConnector() {
-  ibv_port_attr attr;
-  CHECK_EQ(ibv_query_port(context_, (uint8_t)1, &attr), 0);
-
-  Connector* connector = new Connector;
-  CHECK(connector);
-  srand((unsigned)time(NULL));
-  connector->my_conn_info.lid = attr.lid;
-  connector->my_conn_info.qpn =
-      0;  // Will be set up after the creation of the queue pair
-  connector->my_conn_info.snp = static_cast<uint32_t>(rand()) & 0xffffff;
-  union ibv_gid gid;
-  CHECK_EQ(ibv_query_gid(context_, (uint8_t)1, 0, &gid), 0);
-  connector->my_conn_info.snp = gid.global.subnet_prefix;
-  connector->my_conn_info.iid = gid.global.interface_id;
-  connector->active_mtu = attr.active_mtu;
-  return connector;
+Connection* EndpointManager::NewConnection() {
+  Connection* conn = new Connection();
+  conn->set_ibv_mtu(active_mtu_);
+  conn->set_ibv_qp_ptr(NewQueuePair());
+  return conn;
 }
 
 ibv_qp* EndpointManager::NewQueuePair() {

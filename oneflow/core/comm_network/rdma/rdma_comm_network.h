@@ -7,6 +7,7 @@
 #include "oneflow/core/comm_network/rdma/connection_pool.h"
 #include "oneflow/core/comm_network/rdma/endpoint_manager.h"
 #include "oneflow/core/comm_network/rdma/rdma_memory.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/runtime_context.h"
 
@@ -53,6 +54,7 @@ class RdmaCommNet final : public CommNet {
   int8_t IncreaseDoneCnt(ReadContext*);
   void FinishOneReadContext(ActorReadContext*, ReadContext*);
   void InitRdma();
+  ConnectionInfo& GetMachineConnInfo();
 
   std::mutex mem_mutex_;
   std::list<RdmaMem*> mems_;

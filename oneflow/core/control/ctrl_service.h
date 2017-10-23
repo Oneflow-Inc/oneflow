@@ -16,18 +16,21 @@
 
 namespace oneflow {
 
-#define CTRL_METHOD_SEQ               \
-  OF_PP_MAKE_TUPLE_SEQ(LoadServer)    \
-  OF_PP_MAKE_TUPLE_SEQ(Barrier)       \
-  OF_PP_MAKE_TUPLE_SEQ(TryLock)       \
-  OF_PP_MAKE_TUPLE_SEQ(NotifyDone)    \
-  OF_PP_MAKE_TUPLE_SEQ(WaitUntilDone) \
-  OF_PP_MAKE_TUPLE_SEQ(PushPlan)      \
-  OF_PP_MAKE_TUPLE_SEQ(ClearPlan)     \
-  OF_PP_MAKE_TUPLE_SEQ(PullPlan)      \
-  OF_PP_MAKE_TUPLE_SEQ(PushPort)      \
-  OF_PP_MAKE_TUPLE_SEQ(ClearPort)     \
-  OF_PP_MAKE_TUPLE_SEQ(PullPort)
+#define CTRL_METHOD_SEQ                     \
+  OF_PP_MAKE_TUPLE_SEQ(LoadServer)          \
+  OF_PP_MAKE_TUPLE_SEQ(Barrier)             \
+  OF_PP_MAKE_TUPLE_SEQ(TryLock)             \
+  OF_PP_MAKE_TUPLE_SEQ(NotifyDone)          \
+  OF_PP_MAKE_TUPLE_SEQ(WaitUntilDone)       \
+  OF_PP_MAKE_TUPLE_SEQ(PushPlan)            \
+  OF_PP_MAKE_TUPLE_SEQ(ClearPlan)           \
+  OF_PP_MAKE_TUPLE_SEQ(PullPlan)            \
+  OF_PP_MAKE_TUPLE_SEQ(PushPort)            \
+  OF_PP_MAKE_TUPLE_SEQ(ClearPort)           \
+  OF_PP_MAKE_TUPLE_SEQ(PullPort)            \
+  OF_PP_MAKE_TUPLE_SEQ(PushConnectionInfo)  \
+  OF_PP_MAKE_TUPLE_SEQ(ClearConnectionInfo) \
+  OF_PP_MAKE_TUPLE_SEQ(PullConnectionInfo)
 
 enum class CtrlMethod {
 #define MAKE_ENTRY(method) k##method,

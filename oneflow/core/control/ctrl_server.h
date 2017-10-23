@@ -36,10 +36,13 @@ class CtrlServer final {
   HashMap<std::string, void*> name2lock_status_;
   // PushPlan, PullPlan
   std::unique_ptr<Plan> plan_;
+  ConnectionInfo conn_info_;
   std::list<CtrlCall<PullPlanRequest, PullPlanResponse>*> pending_plan_calls_;
   // PushPort, ClearPort, PullPort
   int32_t port_;
   std::list<CtrlCall<PullPortRequest, PullPortResponse>*> pending_port_calls_;
+  std::list<CtrlCall<PullConnectionInfoRequest, PullConnectionInfoResponse>*>
+      pending_conn_info_calls_;
 };
 
 }  // namespace oneflow

@@ -33,6 +33,7 @@ RdmaMemDesc RdmaMem::GetRegisteredRdmaMemDesc() {
   RdmaMemDesc rdma_mem_desc;
   rdma_mem_desc.mem_ptr = reinterpret_cast<void*>(sge_.addr);
   rdma_mem_desc.byte_size = sge_.length;
+  rdma_mem_desc.token = mr_->rkey;
   return rdma_mem_desc;
 }
 

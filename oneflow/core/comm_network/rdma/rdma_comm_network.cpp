@@ -14,25 +14,25 @@ RdmaCommNet::RdmaCommNet() {
 }
 
 Connection* RdmaCommNet::NewConnection() {
-  Connection* conn = new Connection();
-  // TODO
+  Connection* conn = endpoint_manager_->NewConnection();
   return conn;
 }
 
+ConnectionInfo& RdmaCommNet::GetMachineConnInfo() {
+  return endpoint_manager_->GetMachineConnInfo();
+}
+
 void RdmaCommNet::InitRdma() {
-  int64_t this_machine_id = RuntimeCtx::Singleton()->this_machine_id();
   int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
-  FOR_RANGE(int64_t, peer_machine_id, this_machine_id + 1, total_machine_num) {
+  CtrlClient::Singleton()->PushConnectionInfo(GetMachineConnInfo());
+  FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
     Connection* conn = NewConnection();
-    conn->ConnectTo(peer_machine_id);
+    conn->set_peer_conn_info(
+        CtrlClient::Singleton()->PullConnectionInfo(peer_machine_id));
     connection_pool_->AddConnection(peer_machine_id, conn);
   }
-  CtrlClient::Singleton()->PushConnectorInfo();
-  FOR_RANGE(int64_t, idx, 0, this_machine_id) {
-    Connection* conn = NewConnection();
-    conn->WaitForConnection();
-    connection_pool_->AddConnection(idx, conn);
-  }
+  OF_BARRIER();
+  CtrlClient::Singleton()->ClearConnectionInfo();
 }
 
 const void* RdmaCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
