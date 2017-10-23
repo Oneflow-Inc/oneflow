@@ -3,7 +3,7 @@
 
 namespace oneflow {
 
-RdmaMem::RdmaMem(ibv_pd* pd) : pd_(pd), is_registered_(false), mr_(nullptr) {}
+RdmaMem::RdmaMem(ibv_pd* pd) : is_registered_(false), pd_(pd), mr_(nullptr) {}
 
 RdmaMem::~RdmaMem() {
   if (is_registered_ == true) { Unregister(); }
@@ -31,7 +31,7 @@ void RdmaMem::Unregister() {
 RdmaMemDesc RdmaMem::GetRegisteredRdmaMemDesc() {
   CHECK_EQ(is_registered_, true);
   RdmaMemDesc rdma_mem_desc;
-  rdma_mem_desc.mem_ptr = reinterpret_cast<void*>(sge_.addr);
+  rdma_mem_desc.mem_addr = reinterpret_cast<uint64_t>(sge_.addr);
   rdma_mem_desc.byte_size = sge_.length;
   rdma_mem_desc.token = mr_->rkey;
   return rdma_mem_desc;
