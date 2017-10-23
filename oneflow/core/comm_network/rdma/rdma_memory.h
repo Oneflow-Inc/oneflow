@@ -6,7 +6,7 @@
 namespace oneflow {
 
 struct RdmaMemDesc {
-  void* mem_ptr;
+  uint64_t mem_addr;
   size_t byte_size;
   uint32_t token;
 };
@@ -20,7 +20,7 @@ class RdmaMem {
   void Unregister();
   RdmaMemDesc GetRegisteredRdmaMemDesc();
 
-  void* ibv_sge_ptr() { return &sge_; }
+  ibv_sge* ibv_sge_ptr() { return &sge_; }
 
  private:
   bool is_registered_;
