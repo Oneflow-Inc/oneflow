@@ -19,11 +19,6 @@ class Connection {
     peer_conn_info_ = peer_conn_info;
   }
 
-  void PostReadRequest(void* read_ctx, RdmaMem* local_mem,
-                       RdmaMemDesc* remote_mem);
-  void PostSendRequest(RdmaMem* msg_mem);
-  void PostRecvRequest(RdmaMem* msg_mem);
-
   void PostReadRequest(void* read_ctx, const RdmaMem* local_mem,
                        const RdmaMemDesc* remote_mem);
   void PostSendRequest(const RdmaMem* msg_mem);
