@@ -13,6 +13,10 @@ RdmaCommNet::RdmaCommNet() {
   InitRdma();
 }
 
+RdmaCommNet::~RdmaCommNet() {
+  // TODO
+}
+
 Connection* RdmaCommNet::NewConnection() {
   Connection* conn = endpoint_manager_->NewConnection();
   return conn;
@@ -56,7 +60,31 @@ void RdmaCommNet::UnRegisterMemory(const void* token) {
   }
 }
 
-void RdmaCommNet::RegisterMemoryDone() {}
+void RdmaCommNet::RegisterMemoryDone() {
+  // TODO
+}
+
+void* RdmaCommNet::NewActorReadId() {
+  // TODO
+  return nullptr;
+}
+
+void RdmaCommNet::DeleteActorReadId(void* actor_read_id) {
+  // TODO
+}
+
+void RdmaCommNet::AddReadCallBack(void* actor_read_id, void* read_id,
+                                  std::function<void()> callback) {
+  // TODO
+}
+
+void RdmaCommNet::AddReadCallBackDone(void* actor_read_id, void* read_id) {
+  // TODO
+}
+
+void RdmaCommNet::ReadDone(void* read_done_id) {
+  // TODO
+}
 
 void* RdmaCommNet::Read(void* actor_read_id, int64_t src_machine_id,
                         const void* src_token, const void* dst_token) {
@@ -80,6 +108,16 @@ void RdmaCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
       reinterpret_cast<void*>(const_cast<ActorMsg*>(&msg)), sizeof(msg)));
   auto conn = connection_pool_->GetConnection(dst_machine_id);
   conn->PostSendRequest(rdma_mem);
+}
+
+int8_t RdmaCommNet::IncreaseDoneCnt(ReadContext* read_ctx) {
+  // TODO
+  return 0;
+}
+
+void RdmaCommNet::FinishOneReadContext(ActorReadContext* actor_read_ctx,
+                                       ReadContext* read_ctx) {
+  // TODO
 }
 
 }  // namespace oneflow

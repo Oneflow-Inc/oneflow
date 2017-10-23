@@ -2,6 +2,7 @@
 cmake_minimum_required(VERSION 3.5)
 
 option(BUILD_THIRD_PARTY "Build third party or oneflow" OFF)
+option(ONEFLOW_USE_RDMA "Use RDMA network" ON)
 
 # Project
 if (BUILD_THIRD_PARTY)
@@ -38,6 +39,12 @@ if (WIN32)
 else()
   list(APPEND CUDA_NVCC_FLAGS "-std=c++11 -w -Wno-deprecated-gpu-targets")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wno-sign-compare -O0")
+endif()
+
+if (ONEFLOW_USE_RDMA)
+  if (UNIX)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -libverbs")
+  endif()
 endif()
 
 set(THIRD_PARTY_DIR "${PROJECT_SOURCE_DIR}/third_party"
