@@ -96,18 +96,17 @@ void* RdmaCommNet::Read(void* actor_read_id, int64_t src_machine_id,
     std::unique_lock<std::mutex> lck(actor_read_ctx->read_ctx_list_mtx);
     actor_read_ctx->read_ctx_list.push_back(read_ctx);
   }
-  auto remote_mem_desc = static_cast<const RdmaMemDesc*>(src_token);
+  // TODO
+  RdmaMemDesc* remote_mem_desc = nullptr;
   auto local_mem = static_cast<const RdmaMem*>(dst_token);
-  auto conn = connection_pool_->GetConnection(src_machine_id);
-  conn->PostReadRequest(read_ctx, local_mem, remote_mem_desc);
+  endpoint_manager_->Read(read_ctx, src_machine_id, local_mem, remote_mem_desc);
   return read_ctx;
 }
 
 void RdmaCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
-  auto rdma_mem = static_cast<const RdmaMem*>(RegisterMemory(
-      reinterpret_cast<void*>(const_cast<ActorMsg*>(&msg)), sizeof(msg)));
-  auto conn = connection_pool_->GetConnection(dst_machine_id);
-  conn->PostSendRequest(rdma_mem);
+  // auto rdma_mem = static_cast<const RdmaMem*>(RegisterMemory(
+  //    reinterpret_cast<void*>(const_cast<ActorMsg*>(&msg)), sizeof(msg)));
+  endpoint_manager_->SendActorMsg(dst_machine_id, msg);
 }
 
 int8_t RdmaCommNet::IncreaseDoneCnt(ReadContext* read_ctx) {

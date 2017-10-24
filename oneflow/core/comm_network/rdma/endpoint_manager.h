@@ -19,12 +19,19 @@ class EndpointManager {
 
   ConnectionInfo& GetMachineConnInfo() { return conn_info_; }
 
+  void Read(void* read_ctx, int64_t src_machine_id, const RdmaMem* local_mem,
+            const RdmaMemDesc* remote_mem_desc);
+
+  void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg);
+
  private:
   void PollLoop();
-  bool PollSendQueue();
-  bool PollRecvQueue();
+  void PollSendQueue();
+  void PollRecvQueue();
 
   ConnectionInfo conn_info_;
+  HashMap<ActorMsg*, RdmaMem*> recv_msg2rdma_mem_;
+
   ibv_context* context_;
   enum ibv_mtu active_mtu_;
   ibv_pd* pd_;
