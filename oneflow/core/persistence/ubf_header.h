@@ -17,23 +17,16 @@ class UbfHeader final {
   OF_DISALLOW_COPY_AND_MOVE(UbfHeader);
   UbfHeader() = default;
   ~UbfHeader() = default;
-  UbfHeader(const std::string& type, uint32_t ubf_item_num,
-            const std::vector<uint32_t>& dim_array);
+  UbfHeader(uint32_t ubf_item_num, const std::vector<uint32_t>& dim_array);
 
   bool ValidateMagicCode() const { return magic_code_ == 0xfeed; }
-  //  add all bytes one by one
-  uint32_t ComputeCheckSum() const;
-  void UpdateCheckSum();
-
   //  getter
   uint64_t ubf_item_num() const { return ubf_item_num_; }
+  uint32_t dim_array_size() const { return dim_array_size_; }
 
  private:
   const uint16_t magic_code_ = 0xfeed;
-  const uint16_t version_ = 0;
-  uint32_t check_sum_;           // check header
-  char type_[16];                //  "feature" or "label"
-  uint32_t dim_array_size_ = 0;  //  effective length of dim_array
+  uint16_t dim_array_size_ = 0;  //  effective length of dim_array
   uint32_t dim_array_[15];       //  tensor shape
   uint64_t ubf_item_num_ = 0;    //  how many items after header
 };

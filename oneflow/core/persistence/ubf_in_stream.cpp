@@ -8,7 +8,6 @@ void UbfInStream::ResetHeader() {
                              sizeof(UbfHeader));
   CHECK(!ret);
   CHECK(header()->ValidateMagicCode());
-  CHECK(!header()->ComputeCheckSum());
 }
 
 int32_t UbfInStream::ReadOneItem(std::unique_ptr<UbfItem>* ubf_item) {
