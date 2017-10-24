@@ -1,4 +1,5 @@
 #include "oneflow/core/persistence/ubf_header.h"
+
 namespace oneflow {
 
 PersistentOutStream& operator<<(PersistentOutStream& out,
@@ -7,11 +8,11 @@ PersistentOutStream& operator<<(PersistentOutStream& out,
   return out;
 }
 
-UbfHeader::UbfHeader(const std::string& type, uint32_t data_item_count,
+UbfHeader::UbfHeader(const std::string& type, uint32_t ubf_item_num,
                      const std::vector<uint32_t>& dim_array) {
   CHECK(type.size() <= sizeof(type_));
   type.copy(type_, type.size(), 0);
-  data_item_count_ = data_item_count;
+  ubf_item_num_ = ubf_item_num;
   CHECK(dim_array.size() <= sizeof(dim_array_));
   dim_array_size_ = dim_array.size();
   memset(dim_array_, 0, sizeof(dim_array_));
@@ -20,12 +21,12 @@ UbfHeader::UbfHeader(const std::string& type, uint32_t data_item_count,
 }
 
 void UbfHeader::UpdateCheckSum() {
-  uint32_t chk_sum = GetCheckSum();
+  uint32_t chk_sum = ComputeCheckSum();
   chk_sum -= check_sum_;
   check_sum_ = -chk_sum;
 }
 
-uint32_t UbfHeader::GetCheckSum() const {
+uint32_t UbfHeader::ComputeCheckSum() const {
   static_assert(!(sizeof(*this) % sizeof(uint32_t)), "no alignment");
   uint32_t chk_sum = 0;
   int len = sizeof(*this) / sizeof(uint32_t);

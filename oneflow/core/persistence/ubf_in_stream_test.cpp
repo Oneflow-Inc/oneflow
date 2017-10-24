@@ -20,7 +20,7 @@ std::string SavedFile(uint32_t random) {
 TEST(UbfInStream, normal_naive) {
   uint32_t random = NewRandomSeed();
   NormalUbfInStream in_stream(LocalFS(), SavedFile(random));
-  auto ubf_item = Flexible<UbfItem>::Malloc(sizeof(uint32_t));
+  auto ubf_item = UbfItem > ::NewEmpty();
   int ret = in_stream.ReadOneItem(&ubf_item);
   ASSERT_EQ(ret, 0);
   ASSERT_EQ(std::to_string(random), ubf_item->GetDataId());
@@ -34,7 +34,7 @@ TEST(UbfInStream, normal_naive) {
 TEST(UbfInStream, cyclic_naive) {
   uint32_t random = NewRandomSeed();
   CyclicUbfInStream in_stream(LocalFS(), SavedFile(random));
-  auto ubf_item = Flexible<UbfItem>::Malloc(sizeof(uint32_t));
+  auto ubf_item = UbfItem > ::NewEmpty();
   int ret;
   for (int i = 0; i < 10; ++i) {
     ret = in_stream.ReadOneItem(&ubf_item);

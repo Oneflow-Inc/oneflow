@@ -1,4 +1,5 @@
 #include "oneflow/core/persistence/ubf_item.h"
+#include <opencv2/opencv.hpp>
 
 namespace oneflow {
 
@@ -6,6 +7,67 @@ PersistentOutStream& operator<<(PersistentOutStream& out, const UbfItem& data) {
   out.Write(reinterpret_cast<const char*>(&data),
             Flexible<UbfItem>::SizeOf(data));
   return out;
+}
+
+template<>
+template<typename src_type, typename T>
+void UbfDecoder<DataEncodeType::kNoEncode>::Cast(const UbfItem& ubf_item,
+                                                 const Shape& shape,
+                                                 T* out_dptr) {
+  CHECK(ubf_item.data_encode_type() == DataEncodeType::kNoEncode);
+  CHECK(ubf_item.data_type() == GetDataType<src_type>::val);
+  CHECK(sizeof(src_type) * shape.Count(1) == ubf_item.value_buffer_len());
+  auto data = reinterpret_cast<const src_type*>(ubf_item.value_buffer());
+  for (int64_t i = 0; i < shape.Count(1); ++i) { out_dptr[i] = data[i]; }
+}
+
+template<>
+template<typename T>
+void UbfDecoder<DataEncodeType::kNoEncode>::Decode(const UbfItem& ubf_item,
+                                                   const Shape& shape,
+                                                   T* out_dptr) {
+  CHECK(ubf_item.data_encode_type() == DataEncodeType::kNoEncode);
+  switch (ubf_item.data_type()) {
+#define OFB_DECODE_RAW_DATA_ENTRY(type, type_case) \
+  case type_case: return Cast<type, T>(ubf_item, shape, out_dptr);
+    OF_PP_FOR_EACH_TUPLE(OFB_DECODE_RAW_DATA_ENTRY, ALL_DATA_TYPE_SEQ)
+    default: UNEXPECTED_RUN();
+  }
+}
+
+template<>
+template<typename T>
+void UbfDecoder<DataEncodeType::kJpeg>::Decode(const UbfItem& ubf_item,
+                                               const Shape& shape,
+                                               T* out_dptr) {
+  CHECK(ubf_item.data_encode_type() == DataEncodeType::kJpeg);
+  int shape_chanels = shape.At(1);
+  CHECK(shape_chanels == 3 || shape_chanels == 1);
+  int width = shape.At(2);
+  int height = shape.At(3);
+  cv::Mat img = cv::imdecode(
+      cv::_InputArray(ubf_item.value_buffer(), ubf_item.value_buffer_len()),
+      (shape_chanels == 3 ? CV_LOAD_IMAGE_COLOR : CV_LOAD_IMAGE_GRAYSCALE));
+  cv::Mat resized;
+  uint64_t size = width * height;
+  cv::resize(img, resized, cv::Size(width, height));
+  for (int64_t c = 0; c < shape_chanels; ++c) {
+    for (int row = 0; row < height; ++row) {
+      for (int col = 0; col < width; ++col) {
+        out_dptr[c * size + row * width + col] =
+            resized.at<cv::Vec3b>(row, col)[c];
+      }
+    }
+  }
+}
+
+template<>
+template<typename T>
+void UbfDecoder<DataEncodeType::kSparse>::Decode(const UbfItem& ubf_item,
+                                                 const Shape& shape,
+                                                 T* out_dptr) {
+  CHECK(ubf_item.data_encode_type() == DataEncodeType::kSparse);
+  UNEXPECTED_RUN();
 }
 
 std::unique_ptr<UbfItem, decltype(&free)> UbfItem::New(
@@ -24,7 +86,7 @@ std::unique_ptr<UbfItem, decltype(&free)> UbfItem::New(
   return ubf_item;
 }
 
-uint8_t UbfItem::GetMetaCheckSum() const {
+uint8_t UbfItem::ComputeMetaCheckSum() const {
   uint8_t chk_sum = 0;
   int meta_len = Flexible<UbfItem>::SizeOf(0);
   for (int i = 0; i < meta_len; ++i) {
@@ -34,12 +96,12 @@ uint8_t UbfItem::GetMetaCheckSum() const {
 }
 
 void UbfItem::UpdateMetaCheckSum() {
-  uint8_t meta_chk_sum = GetMetaCheckSum();
+  uint8_t meta_chk_sum = ComputeMetaCheckSum();
   meta_chk_sum -= meta_check_sum_;
   meta_check_sum_ = -meta_chk_sum;
 }
 
-uint8_t UbfItem::GetDataCheckSum() const {
+uint8_t UbfItem::ComputeDataCheckSum() const {
   uint8_t data_chk_sum = 0;
   for (int i = 0; i < len_; ++i) { data_chk_sum += data_[i]; }
   return data_chk_sum;
@@ -51,7 +113,7 @@ void UbfItem::UpdateCheckSum() {
 }
 
 void UbfItem::UpdateDataCheckSum() {
-  uint8_t data_chk_sum = GetDataCheckSum();
+  uint8_t data_chk_sum = ComputeDataCheckSum();
   data_check_sum_ = -data_chk_sum;
 }
 
@@ -60,8 +122,8 @@ std::string UbfItem::GetDataId() const {
 }
 
 template<typename T>
-void UbfItem::Decode(const Shape& shape, T* out_dptr) {
-  switch (data_encode_type_) {
+void UbfItem::Decode(const Shape& shape, T* out_dptr) const {
+  switch (data_encode_type()) {
 #define UBF_ITEM_DECODE_ENTRY(encode_type)                               \
   case DataEncodeType::encode_type:                                      \
     return UbfDecoder<DataEncodeType::encode_type>::Decode(*this, shape, \

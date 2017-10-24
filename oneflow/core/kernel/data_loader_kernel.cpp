@@ -1,9 +1,7 @@
 #include "oneflow/core/kernel/data_loader_kernel.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/runtime_context.h"
-#include "oneflow/core/persistence/cyclic_persistent_in_stream.h"
 #include "oneflow/core/persistence/cyclic_ubf_in_stream.h"
-#include "oneflow/core/persistence/normal_persistent_in_stream.h"
 #include "oneflow/core/persistence/normal_ubf_in_stream.h"
 
 namespace oneflow {

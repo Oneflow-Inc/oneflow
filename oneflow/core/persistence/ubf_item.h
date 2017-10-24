@@ -1,13 +1,24 @@
 #ifndef ONEFLOW_CORE_PERSISTENCE_UBF_ITEM_H_
 #define ONEFLOW_CORE_PERSISTENCE_UBF_ITEM_H_
+
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/flexible.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
-#include "oneflow/core/persistence/ubf_decoder.h"
+
 namespace oneflow {
+
+#define DATA_ENCODE_TYPE_SEQ      \
+  OF_PP_MAKE_TUPLE_SEQ(kNoEncode) \
+  OF_PP_MAKE_TUPLE_SEQ(kJpeg)     \
+  OF_PP_MAKE_TUPLE_SEQ(kSparse)
+
+enum DataEncodeType {
+#define DECLARE_DATA_ENCODE_TYPE(encode_type) encode_type,
+  OF_PP_FOR_EACH_TUPLE(DECLARE_DATA_ENCODE_TYPE, DATA_ENCODE_TYPE_SEQ)
+};
 
 //	binary format
 //	.-------------------------.
@@ -16,7 +27,6 @@ namespace oneflow {
 
 //  unified binary formatted item
 //  UbfItem is basically a key-value pair
-//  no virtual table
 class UbfItem final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UbfItem);
@@ -31,9 +41,10 @@ class UbfItem final {
 
   std::string GetDataId() const;
   template<typename T>
-  void Decode(const Shape& shape, T* out_dptr);
+  void Decode(const Shape& shape, T* out_dptr) const;
+
   // add all bytes except `data` field one by one
-  uint8_t GetMetaCheckSum() const;
+  uint8_t ComputeMetaCheckSum() const;
 
   //	getter
   DataType data_type() const { return static_cast<DataType>(data_type_); }
@@ -55,7 +66,7 @@ class UbfItem final {
 
  private:
   // add all bytes of `data` field one by one
-  uint8_t GetDataCheckSum() const;
+  uint8_t ComputeDataCheckSum() const;
   void UpdateCheckSum();
   void UpdateDataCheckSum();
   void UpdateMetaCheckSum();
@@ -82,5 +93,19 @@ class UbfItem final {
 
 PersistentOutStream& operator<<(PersistentOutStream& out, const UbfItem& data);
 
+template<DataEncodeType encode_type>
+class UbfDecoder final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(UbfDecoder);
+  UbfDecoder() = delete;
+  template<typename T>
+  static void Decode(const UbfItem& ubf_item, const Shape& shape, T* out_dptr);
+
+ private:
+  template<typename src_type, typename T>
+  static void Cast(const UbfItem& ubf_item, const Shape& shape, T* out_dptr);
+};
+
 }  // namespace oneflow
+
 #endif  // ONEFLOW_CORE_PERSISTENCE_UBF_ITEM_H_

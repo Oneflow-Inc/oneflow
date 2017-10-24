@@ -9,7 +9,7 @@
 
 namespace oneflow {
 
-//  oneflow binary file input stream
+//  united binary formatted file input stream
 class UbfInStream {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UbfInStream);
@@ -43,4 +43,5 @@ class UbfInStream {
 };
 
 }  // namespace oneflow
+
 #endif  // ONEFLOW_CORE_PERSISTENCE_DATA_SET_IN_STREAM_H_

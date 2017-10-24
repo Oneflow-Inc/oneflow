@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_PERSISTENCE_CYCLIC_DATA_SET_IN_STREAM_H_
 
 #include "oneflow/core/persistence/ubf_in_stream.h"
+
 namespace oneflow {
 
 class CyclicUbfInStream : public UbfInStream {
@@ -24,4 +25,5 @@ class CyclicUbfInStream : public UbfInStream {
 };
 
 }  // namespace oneflow
+
 #endif  // ONEFLOW_CORE_PERSISTENCE_CYCLIC_DATA_SET_IN_STREAM_H_

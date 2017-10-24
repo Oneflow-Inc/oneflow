@@ -1,5 +1,6 @@
 #include "oneflow/core/persistence/ubf_in_stream.h"
 #include "oneflow/core/persistence/ubf_util.h"
+
 namespace oneflow {
 
 void UbfInStream::ResetHeader() {
@@ -7,7 +8,7 @@ void UbfInStream::ResetHeader() {
                              sizeof(UbfHeader));
   CHECK(!ret);
   CHECK(header()->ValidateMagicCode());
-  CHECK(!header()->GetCheckSum());
+  CHECK(!header()->ComputeCheckSum());
 }
 
 int32_t UbfInStream::ReadOneItem(
@@ -16,14 +17,14 @@ int32_t UbfInStream::ReadOneItem(
   int ret = ReadMeta(reinterpret_cast<char*>(buffer_meta.get()),
                      Flexible<UbfItem>::SizeOf(*buffer_meta));
   if (ret < 0) { return ret; }
-  CHECK(!buffer_meta->GetMetaCheckSum());
+  CHECK(!buffer_meta->ComputeMetaCheckSum());
   *ubf_item = Flexible<UbfItem>::Malloc(buffer_meta->len());
   memcpy(reinterpret_cast<char*>((*ubf_item).get()),
          reinterpret_cast<char*>(buffer_meta.get()),
          Flexible<UbfItem>::SizeOf(*buffer_meta));
   ret = in_stream_->Read((*ubf_item)->mut_data(), (*ubf_item)->len());
   CHECK(!ret);
-  CHECK(!(*ubf_item)->GetMetaCheckSum());
+  CHECK(!(*ubf_item)->ComputeMetaCheckSum());
   return ret;
 }
 

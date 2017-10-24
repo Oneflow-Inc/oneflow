@@ -1,4 +1,5 @@
 #include "oneflow/core/persistence/cyclic_ubf_in_stream.h"
+
 namespace oneflow {
 
 int32_t CyclicUbfInStream::ReadMeta(char* s, size_t n) {

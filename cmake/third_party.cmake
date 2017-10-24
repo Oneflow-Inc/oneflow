@@ -40,7 +40,7 @@ set(oneflow_third_party_libs
     ${CUDA_CUBLAS_LIBRARIES}
     ${CUDNN_LIBRARIES}
     ${BLAS_LIBRARIES}
-		${OpenCV_LIBS}
+    ${OpenCV_LIBS}
 )
 
 if(WIN32)
