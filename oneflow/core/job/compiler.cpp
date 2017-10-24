@@ -1,6 +1,7 @@
 #include <gflags/gflags.h>
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/graph/logical_graph.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/plan.pb.h"
@@ -20,21 +21,24 @@ class Compiler final {
  private:
   Compiler() = default;
 
-  Plan DoCompile(const JobConf& job_conf);
+  Plan DoCompile();
 };
 
 Plan Compiler::Compile(const JobConf& job_conf) {
   JobDesc::NewSingleton(job_conf);
   IDMgr::NewSingleton();
   OpMgr::NewSingleton();
-  Plan plan = DoCompile(job_conf);
+  Plan plan = DoCompile();
   OpMgr::DeleteSingleton();
   IDMgr::DeleteSingleton();
   JobDesc::DeleteSingleton();
   return plan;
 }
 
-Plan Compiler::DoCompile(const JobConf& job_conf) {}
+Plan Compiler::DoCompile() {
+  LogicalGraph logical_gph(JobDesc::Singleton()->dlnet_conf(),
+                           JobDesc::Singleton()->placement());
+}
 
 }  // namespace oneflow
 

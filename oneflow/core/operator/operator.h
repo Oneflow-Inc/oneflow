@@ -28,6 +28,7 @@ class Operator {
   virtual bool IsLossOp() const { return false; }
   virtual bool IsRecordOp() const { return false; }
   bool IsChainMergeable() const { return !IsLossOp() && !IsRecordOp(); }
+  std::string GetTag(const std::string& tag_key) const { return "TODO"; }
 
   // this <-> OpProto
   void InitFromProto(const OperatorProto& operatorproto);
