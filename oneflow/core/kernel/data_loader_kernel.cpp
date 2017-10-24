@@ -16,12 +16,12 @@ void DataLoaderKernel<T>::Forward(
   kernel_ctx.device_ctx->cpu_stream()->SendWork([out_blob, this]() {
     int64_t piece_size = out_blob->shape().At(0);
     T* out_dptr = out_blob->mut_dptr<T>();
-    auto ubf_item = UbfItem::NewEmpty();
+    std::unique_ptr<UbfItem> ubf_item;
     for (int64_t i = 0; i != piece_size; ++i) {
       int32_t read_status = ubf_in_stream_->ReadOneItem(&ubf_item);
       if (read_status == 0) {
         if (out_blob->has_data_id()) {
-          std::string token = ubf_item->GetDataId();
+          std::string token = ubf_item->data_id();
           CHECK_LE(token.size(), JobDesc::Singleton()->SizeOfOneDataId());
           memcpy(out_blob->mut_data_id(i), token.c_str(), token.size());
           if (token.size() != JobDesc::Singleton()->SizeOfOneDataId()) {

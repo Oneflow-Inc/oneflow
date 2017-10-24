@@ -11,20 +11,13 @@ void UbfInStream::ResetHeader() {
   CHECK(!header()->ComputeCheckSum());
 }
 
-int32_t UbfInStream::ReadOneItem(
-    std::unique_ptr<UbfItem, decltype(&free)>* ubf_item) {
-  auto buffer_meta = UbfItem::NewEmpty();
-  int ret = ReadMeta(reinterpret_cast<char*>(buffer_meta.get()),
-                     Flexible<UbfItem>::SizeOf(*buffer_meta));
+int32_t UbfInStream::ReadOneItem(std::unique_ptr<UbfItem>* ubf_item) {
+  auto desc = of_make_unique<UbfItemDesc>();
+  int ret = ReadDesc(reinterpret_cast<char*>(desc.get()), sizeof(*desc));
   if (ret < 0) { return ret; }
-  CHECK(!buffer_meta->ComputeMetaCheckSum());
-  *ubf_item = Flexible<UbfItem>::Malloc(buffer_meta->len());
-  memcpy(reinterpret_cast<char*>((*ubf_item).get()),
-         reinterpret_cast<char*>(buffer_meta.get()),
-         Flexible<UbfItem>::SizeOf(*buffer_meta));
+  *ubf_item = of_make_unique<UbfItem>(std::move(desc));
   ret = in_stream_->Read((*ubf_item)->mut_data(), (*ubf_item)->len());
   CHECK(!ret);
-  CHECK(!(*ubf_item)->ComputeMetaCheckSum());
   return ret;
 }
 

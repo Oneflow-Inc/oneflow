@@ -18,7 +18,7 @@ class CyclicUbfInStream : public UbfInStream {
   }
 
  protected:
-  int32_t ReadMeta(char* s, size_t n) override;
+  int32_t ReadDesc(char* s, size_t n) override;
 
  private:
   std::function<void()> in_stream_resetter_;

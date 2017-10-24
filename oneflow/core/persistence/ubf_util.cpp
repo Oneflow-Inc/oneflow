@@ -5,22 +5,22 @@
 
 namespace oneflow {
 
-std::unique_ptr<UbfItem, decltype(&free)> UbfUtil::CreateLabelItem(
-    const std::string& key, uint32_t label_index) {
-  auto ubf_item = UbfItem::New(
-      key, sizeof(uint32_t), DataType::kUInt32, DataEncodeType::kNoEncode,
+std::unique_ptr<UbfItem> UbfUtil::CreateLabelItem(const std::string& key,
+                                                  uint32_t label_index) {
+  auto ubf_item = of_make_unique<UbfItem>(
+      DataType::kUInt32, DataEncodeType::kNoEncode, key, sizeof(uint32_t),
       [=](char* data) { *reinterpret_cast<uint32_t*>(data) = label_index; });
   return ubf_item;
 }
 
-std::unique_ptr<UbfItem, decltype(&free)> UbfUtil::CreateImageItem(
+std::unique_ptr<UbfItem> UbfUtil::CreateImageItem(
     const std::string& img_file_path) {
   cv::Mat img = cv::imread(img_file_path);
   std::vector<unsigned char> raw_buf;
   std::vector<int> param{CV_IMWRITE_JPEG_QUALITY, 95};
   cv::imencode(".jpg", img, raw_buf, param);
-  auto ubf_item = UbfItem::New(
-      img_file_path, raw_buf.size(), DataType::kChar, DataEncodeType::kJpeg,
+  auto ubf_item = of_make_unique<UbfItem>(
+      DataType::kChar, DataEncodeType::kJpeg, img_file_path, raw_buf.size(),
       [&](char* data) { memcpy(data, raw_buf.data(), raw_buf.size()); });
   return ubf_item;
 }

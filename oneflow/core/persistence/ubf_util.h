@@ -12,10 +12,10 @@ class UbfUtil final {
   OF_DISALLOW_COPY_AND_MOVE(UbfUtil);
   UbfUtil() = delete;
 
-  static std::unique_ptr<UbfItem, decltype(&free)> CreateLabelItem(
-      const std::string& key, uint32_t label);
+  static std::unique_ptr<UbfItem> CreateLabelItem(const std::string& key,
+                                                  uint32_t label);
 
-  static std::unique_ptr<UbfItem, decltype(&free)> CreateImageItem(
+  static std::unique_ptr<UbfItem> CreateImageItem(
       const std::string& img_file_path);
 
   static void ExtractImage(const UbfItem& data_item, const UbfHeader& header,

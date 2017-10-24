@@ -21,7 +21,7 @@ class UbfInStream {
   }
   virtual ~UbfInStream() = default;
 
-  int32_t ReadOneItem(std::unique_ptr<UbfItem, decltype(&free)>* item);
+  int32_t ReadOneItem(std::unique_ptr<UbfItem>* item);
 
   //	getter
   const UbfHeader* header() const {
@@ -34,7 +34,7 @@ class UbfInStream {
     return in_stream_;
   }
   void ResetHeader();
-  virtual int32_t ReadMeta(char* s, size_t n) { return Read(s, n); }
+  virtual int32_t ReadDesc(char* s, size_t n) { return Read(s, n); }
   virtual int32_t Read(char* s, size_t n) { return in_stream_->Read(s, n); }
 
  private:

@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-int32_t CyclicUbfInStream::ReadMeta(char* s, size_t n) {
+int32_t CyclicUbfInStream::ReadDesc(char* s, size_t n) {
   int ret = Read(s, n);
   if (!ret) { return ret; }
   in_stream_resetter_();

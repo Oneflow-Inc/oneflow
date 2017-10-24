@@ -4,8 +4,8 @@
 namespace oneflow {
 
 PersistentOutStream& operator<<(PersistentOutStream& out, const UbfItem& data) {
-  out.Write(reinterpret_cast<const char*>(&data),
-            Flexible<UbfItem>::SizeOf(data));
+  out.Write(reinterpret_cast<const char*>(data.desc()), sizeof(*data.desc()));
+  out.Write(reinterpret_cast<const char*>(data.data()), data.len());
   return out;
 }
 
@@ -16,9 +16,9 @@ void UbfDecoder<DataEncodeType::kNoEncode>::Cast(const UbfItem& ubf_item,
                                                  T* out_dptr) {
   CHECK(ubf_item.data_encode_type() == DataEncodeType::kNoEncode);
   CHECK(ubf_item.data_type() == GetDataType<src_type>::val);
-  CHECK(sizeof(src_type) * shape.Count(1) == ubf_item.value_buffer_len());
-  auto data = reinterpret_cast<const src_type*>(ubf_item.value_buffer());
-  for (int64_t i = 0; i < shape.Count(1); ++i) { out_dptr[i] = data[i]; }
+  CHECK(sizeof(src_type) * shape.Count(1) == ubf_item.body_len());
+  auto body = reinterpret_cast<const src_type*>(ubf_item.body());
+  for (int64_t i = 0; i < shape.Count(1); ++i) { out_dptr[i] = body[i]; }
 }
 
 template<>
@@ -46,7 +46,7 @@ void UbfDecoder<DataEncodeType::kJpeg>::Decode(const UbfItem& ubf_item,
   int width = shape.At(2);
   int height = shape.At(3);
   cv::Mat img = cv::imdecode(
-      cv::_InputArray(ubf_item.value_buffer(), ubf_item.value_buffer_len()),
+      cv::_InputArray(ubf_item.body(), ubf_item.body_len()),
       (shape_chanels == 3 ? CV_LOAD_IMAGE_COLOR : CV_LOAD_IMAGE_GRAYSCALE));
   cv::Mat resized;
   uint64_t size = width * height;
@@ -70,55 +70,18 @@ void UbfDecoder<DataEncodeType::kSparse>::Decode(const UbfItem& ubf_item,
   UNEXPECTED_RUN();
 }
 
-std::unique_ptr<UbfItem, decltype(&free)> UbfItem::New(
-    const std::string& key, size_t value_buf_len, DataType dtype,
-    DataEncodeType detype, const std::function<void(char* buff)>& Fill) {
-  size_t value_offset = RoundUpToAlignment(key.size(), 8);
-  auto ubf_item = Flexible<UbfItem>::Malloc(value_buf_len + value_offset);
-  ubf_item->data_type_ = dtype;
-  ubf_item->data_encode_type_ = detype;
-  ubf_item->key_len_ = key.size();
-  ubf_item->value_offset_ = value_offset;
-  memset(ubf_item->data_, 0, value_offset);
-  key.copy(ubf_item->mut_key_buffer(), key.size());
-  if (value_buf_len) { Fill(const_cast<char*>(ubf_item->mut_value_buffer())); }
-  ubf_item->UpdateCheckSum();
-  return ubf_item;
-}
-
-uint8_t UbfItem::ComputeMetaCheckSum() const {
-  uint8_t chk_sum = 0;
-  int meta_len = Flexible<UbfItem>::SizeOf(0);
-  for (int i = 0; i < meta_len; ++i) {
-    chk_sum += reinterpret_cast<const char*>(this)[i];
-  }
-  return chk_sum;
-}
-
-void UbfItem::UpdateMetaCheckSum() {
-  uint8_t meta_chk_sum = ComputeMetaCheckSum();
-  meta_chk_sum -= meta_check_sum_;
-  meta_check_sum_ = -meta_chk_sum;
-}
-
-uint8_t UbfItem::ComputeDataCheckSum() const {
-  uint8_t data_chk_sum = 0;
-  for (int i = 0; i < len_; ++i) { data_chk_sum += data_[i]; }
-  return data_chk_sum;
-}
-
-void UbfItem::UpdateCheckSum() {
-  UpdateDataCheckSum();
-  UpdateMetaCheckSum();
-}
-
-void UbfItem::UpdateDataCheckSum() {
-  uint8_t data_chk_sum = ComputeDataCheckSum();
-  data_check_sum_ = -data_chk_sum;
-}
-
-std::string UbfItem::GetDataId() const {
-  return std::string(key_buffer(), key_buffer_len());
+UbfItem::UbfItem(DataType dtype, DataEncodeType detype,
+                 const std::string& data_id, size_t body_len,
+                 const std::function<void(char*)>& Fill)
+    : desc_(
+          of_make_unique<UbfItemDesc>(dtype, detype, data_id.size(), body_len)),
+      data_(std::unique_ptr<char, decltype(&free)>(
+          static_cast<char*>(
+              malloc(UbfItemDesc::ComputeLength(data_id.size(), body_len))),
+          &free)) {
+  memset(mut_data_id(), 0, desc()->body_offset());
+  data_id.copy(mut_data_id(), data_id.size());
+  if (body_len) { Fill(mut_body()); }
 }
 
 template<typename T>

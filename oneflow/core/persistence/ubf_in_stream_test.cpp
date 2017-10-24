@@ -20,12 +20,11 @@ std::string SavedFile(uint32_t random) {
 TEST(UbfInStream, normal_naive) {
   uint32_t random = NewRandomSeed();
   NormalUbfInStream in_stream(LocalFS(), SavedFile(random));
-  auto ubf_item = UbfItem > ::NewEmpty();
+  std::unique_ptr<UbfItem> ubf_item;
   int ret = in_stream.ReadOneItem(&ubf_item);
   ASSERT_EQ(ret, 0);
-  ASSERT_EQ(std::to_string(random), ubf_item->GetDataId());
-  ASSERT_EQ(random,
-            *reinterpret_cast<const uint32_t*>(ubf_item->value_buffer()));
+  ASSERT_EQ(std::to_string(random), ubf_item->data_id());
+  ASSERT_EQ(random, *reinterpret_cast<const uint32_t*>(ubf_item->body()));
 
   ret = in_stream.ReadOneItem(&ubf_item);
   ASSERT_TRUE(ret < 0);
@@ -34,14 +33,13 @@ TEST(UbfInStream, normal_naive) {
 TEST(UbfInStream, cyclic_naive) {
   uint32_t random = NewRandomSeed();
   CyclicUbfInStream in_stream(LocalFS(), SavedFile(random));
-  auto ubf_item = UbfItem > ::NewEmpty();
+  std::unique_ptr<UbfItem> ubf_item;
   int ret;
   for (int i = 0; i < 10; ++i) {
     ret = in_stream.ReadOneItem(&ubf_item);
     ASSERT_EQ(ret, 0);
-    ASSERT_EQ(std::to_string(random), ubf_item->GetDataId());
-    ASSERT_EQ(random,
-              *reinterpret_cast<const uint32_t*>(ubf_item->value_buffer()));
+    ASSERT_EQ(std::to_string(random), ubf_item->data_id());
+    ASSERT_EQ(random, *reinterpret_cast<const uint32_t*>(ubf_item->body()));
   }
 }
 
