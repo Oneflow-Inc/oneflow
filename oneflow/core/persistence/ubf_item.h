@@ -62,12 +62,16 @@ class UbfItemDesc final {
   //	'------------------------------------------------------------------'
 };
 
-//	binary format
+//  united binary format
 //	.-------------------------.
 //	| UbfHeader | UbfItem ... |
 //	'-------------------------'
 
-//  unified binary formatted item
+//  united binary formatted item
+//  UbfItem layout
+//  .------------------------------.
+//  | UbfItemDesc | data_id + body |
+//  '------------------------------'
 //  UbfItem is basically a key-value pair
 class UbfItem final {
  public:
