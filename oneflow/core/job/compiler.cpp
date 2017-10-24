@@ -1,18 +1,10 @@
+#include <gflags/gflags.h>
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/str_util.h"
-#include "oneflow/core/graph/data_comp_task_node.h"
-#include "oneflow/core/graph/data_task_graph.h"
-#include "oneflow/core/graph/loss_accumulate_task_graph.h"
-#include "oneflow/core/graph/loss_record_task_graph.h"
-#include "oneflow/core/graph/model_diff_accumulate_task_graph.h"
-#include "oneflow/core/graph/model_save_comp_task_node.h"
-#include "oneflow/core/graph/model_save_task_graph.h"
-#include "oneflow/core/graph/model_update_task_graph.h"
+#include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/plan.pb.h"
-#include "oneflow/core/register/register_desc.h"
-
-DEFINE_string(job_conf_filepath, "", "");
-DEFINE_string(plan_filepath, "", "");
+#include "oneflow/core/operator/operator_manager.h"
 
 namespace oneflow {
 
@@ -27,243 +19,27 @@ class Compiler final {
 
  private:
   Compiler() = default;
-  void ConstForEachChainNode(std::function<void(const ChainNode*)> func);
-  void ConstForEachStageNode(std::function<void(const StageNode*)> func);
-  void ForEachTaskNode(std::function<void(TaskNode*)> func);
 
-  void BuildGraphs();
-  void BuildModelGraphs(
-      const std::pair<const ChainNode*, std::vector<CompTaskNode*>>&);
-  void BuildLossGraph(
-      const std::pair<const ChainNode*, std::vector<CompTaskNode*>>& pair);
-  void InferBlobDesc4Regsts();
-  void EraseMeaningLessRegsts();
-  Plan GenPlanFile();
-  void Plan2DotFile(const Plan& plan);
-
-  std::vector<std::unique_ptr<TaskGraph>> ordered_task_gphs_;
+  Plan DoCompile(const JobConf& job_conf);
 };
 
-void Compiler::ConstForEachChainNode(
-    std::function<void(const ChainNode*)> func) {
-  for (const auto& task_gph : ordered_task_gphs_) {
-    task_gph->chain_gph()->ConstForEachNode(
-        [&](const ChainNode* chain) { func(chain); });
-  }
-}
-
-void Compiler::ConstForEachStageNode(
-    std::function<void(const StageNode*)> func) {
-  for (const auto& task_gph : ordered_task_gphs_) {
-    task_gph->stage_gph()->ConstForEachNode(
-        [&](const StageNode* stage) { func(stage); });
-  }
-}
-
-void Compiler::ForEachTaskNode(std::function<void(TaskNode*)> func) {
-  for (const auto& task_gph : ordered_task_gphs_) {
-    task_gph->ForEachNode([&](TaskNode* task) { func(task); });
-  }
-}
-
 Plan Compiler::Compile(const JobConf& job_conf) {
-  // NewAllSingleton
   JobDesc::NewSingleton(job_conf);
   IDMgr::NewSingleton();
   OpMgr::NewSingleton();
-  // Get Plan
-  BuildGraphs();
-  InferBlobDesc4Regsts();
-  EraseMeaningLessRegsts();
-  Plan plan = GenPlanFile();
-  // DeleteAllSingleton
+  Plan plan = DoCompile(job_conf);
   OpMgr::DeleteSingleton();
   IDMgr::DeleteSingleton();
   JobDesc::DeleteSingleton();
   return plan;
 }
 
-void Compiler::BuildGraphs() {
-  ordered_task_gphs_.clear();
-  // data graph
-  auto data_task_gph = new DataTaskGraph(
-      "data", JobDesc::Singleton()->dlnet_conf(),
-      JobDesc::Singleton()->placement(), JobDesc::Singleton()->is_train());
-  ordered_task_gphs_.emplace_back(data_task_gph);
-  // construct data_chain2sorted_fw_comp_tasks
-  HashMap<const ChainNode*, std::vector<CompTaskNode*>>
-      data_chain2sorted_fw_comp_tasks;
-  data_task_gph->ForEachNode([&](TaskNode* node) {
-    auto fw_node = dynamic_cast<CompTaskNode*>(node);
-    if (fw_node == nullptr || fw_node->IsBpNode()) { return; }
-    data_chain2sorted_fw_comp_tasks[fw_node->chain_node()].push_back(fw_node);
-  });
-  for (auto& pair : data_chain2sorted_fw_comp_tasks) {
-    SortByParallelId(&(pair.second));
-  }
-  // model and loss graph
-  for (const auto& pair : data_chain2sorted_fw_comp_tasks) {
-    if (pair.first->HasOpWithModelOrModelTmpBlob()) { BuildModelGraphs(pair); }
-    if (pair.first->IsLossNode()) { BuildLossGraph(pair); }
-  }
-  // all exec_graph 2 dot
-  ForEachTaskNode(
-      [](const TaskNode* node) { node->exec_gph().ToDotWithAutoFilePath(); });
-}
-
-void Compiler::BuildModelGraphs(
-    const std::pair<const ChainNode*, std::vector<CompTaskNode*>>& pair) {
-  std::string chain_tag = pair.first->ChainTag();
-  ParallelPolicy policy = pair.first->parallel_desc()->policy();
-
-  bool is_train = JobDesc::Singleton()->is_train();
-  std::vector<CompTaskNode*> sorted_diff_acc_tasks;
-  if (is_train) {
-    auto diff_acc_gph = new MdDiffAccTaskGraph("md_diff_acc_" + chain_tag,
-                                               pair.first, pair.second);
-    ordered_task_gphs_.emplace_back(diff_acc_gph);
-
-    ChainNode* diff_acc_chain = diff_acc_gph->chain_gph()->SoleSinkNode();
-    sorted_diff_acc_tasks = diff_acc_gph->CompTasksInChain(diff_acc_chain);
-    SortByParallelId(&sorted_diff_acc_tasks);
-  }
-
-  std::vector<CompTaskNode*> updt_tasks;
-  updt_tasks.reserve(pair.second.size());
-  uint32_t random_seed = NewRandomSeed();
-  for (size_t i = 0; i < pair.second.size(); ++i) {
-    CompTaskNode* data_fw_task = pair.second[i];
-    auto updt_gph = new MdUpdtTaskGraph(
-        "md_updt_" + data_fw_task->node_id_str(), data_fw_task,
-        is_train ? sorted_diff_acc_tasks[i] : nullptr, random_seed);
-    ordered_task_gphs_.emplace_back(updt_gph);
-    ChainNode* updt_chain = updt_gph->chain_gph()->SoleSinkNode();
-    auto updt_tasks_in_chain = updt_gph->CompTasksInChain(updt_chain);
-    CHECK_EQ(updt_tasks_in_chain.size(), 1);
-    updt_tasks.push_back(updt_tasks_in_chain[0]);
-  }
-
-  if (is_train) {
-    if (policy == kDataParallel) { updt_tasks = {updt_tasks.front()}; }
-    for (CompTaskNode* update_task : updt_tasks) {
-      auto save_gph = new MdSaveTaskGraph(
-          "md_save_" + update_task->node_id_str(), update_task);
-      ordered_task_gphs_.emplace_back(save_gph);
-    }
-  }
-}
-
-void Compiler::BuildLossGraph(
-    const std::pair<const ChainNode*, std::vector<CompTaskNode*>>& pair) {
-  std::vector<TaskNode*> loss_acc_tasks;
-  for (CompTaskNode* loss_task : pair.second) {
-    auto loss_acc_gph =
-        new LossAccTaskGraph("loss_acc_" + loss_task->node_id_str(), loss_task);
-    ordered_task_gphs_.emplace_back(loss_acc_gph);
-    loss_acc_tasks.push_back(loss_acc_gph->SoleSinkNode());
-  }
-  auto loss_record_gph = new LossRecordTaskGraph(
-      "loss_record_" + pair.first->ChainTag(), loss_acc_tasks);
-  ordered_task_gphs_.emplace_back(loss_record_gph);
-}
-
-void Compiler::InferBlobDesc4Regsts() {
-  for (auto& task_gph : ordered_task_gphs_) {
-    task_gph->InferBlobDescInProducedRegsts();
-  }
-}
-
-void Compiler::EraseMeaningLessRegsts() {
-  ForEachTaskNode([](TaskNode* task_node) {
-    task_node->EraseZeroSizeBlobInProducedRegsts();
-    task_node->EraseProducedEmptyRegsts();
-  });
-}
-
-Plan Compiler::GenPlanFile() {
-  HashMap<const ChainNode*, int64_t> chain2meaningless_task_cnt;
-  ForEachTaskNode([&](const TaskNode* node) {
-    auto comp_task_node = dynamic_cast<const DataCompTaskNode*>(node);
-    if (comp_task_node && node->IsFwNode() && node->IsMeaningLess()) {
-      chain2meaningless_task_cnt[node->chain_node()] += 1;
-    }
-  });
-  auto MeaninglessTaskCnt4Chain = [&](const ChainNode* chain) -> int64_t {
-    auto it = chain2meaningless_task_cnt.find(chain);
-    if (it != chain2meaningless_task_cnt.end()) {
-      return it->second;
-    } else {
-      return 0;
-    }
-  };
-  Plan plan;
-  ForEachTaskNode([&](const TaskNode* node) {
-    if (node->IsMeaningLess()) {
-      LOG(INFO) << "MeaningLess Task Id: " << node->task_id();
-      return;
-    }
-    node->ToProto(plan.mutable_task()->Add(), MeaninglessTaskCnt4Chain);
-  });
-
-  OpMgr::Singleton()->AllOpToProto(plan.mutable_op());
-  JobDesc::Singleton()->ToProto(plan.mutable_job_desc());
-  ForEachTaskNode([&](const TaskNode* task_node) {
-    task_node->exec_gph().ConstForEachNode([&](const ExecNode* exec_node) {
-      const std::string& op_name = exec_node->op()->op_name();
-      // op_name2context
-      auto it = plan.mutable_op_name2context()->find(op_name);
-      if (it == plan.mutable_op_name2context()->end()) {
-        OpContext op_ctx;
-        op_ctx.set_device_type(task_node->GetDeviceType());
-        exec_node->GetBnInOp2DataType(op_ctx.mutable_bn_in_op2data_type());
-        CHECK(plan.mutable_op_name2context()->insert({op_name, op_ctx}).second);
-      }
-      // machine_id2op_name_set
-      int64_t machine_id = task_node->stage_node()->machine_id();
-      (*(plan.mutable_machine_id2op_name_set()))[machine_id].add_op_name(
-          op_name);
-    });
-  });
-  Plan2DotFile(plan);
-  return plan;
-}
-
-void Compiler::Plan2DotFile(const Plan& plan) {
-  const std::string file_path = LogDir() + "/dot/plan.dot";
-  PersistentOutStream out_stream(LocalFS(), file_path);
-  out_stream << "digraph {\n";
-  HashSet<int64_t> regst_desc_ids;
-  for (const TaskProto& task_proto : plan.task()) {
-    out_stream << "task" << std::to_string(task_proto.id())
-               << "[label=\"task_id:" << std::to_string(task_proto.id())
-               << "\\nthrd_loc_id:"
-               << std::to_string(task_proto.thrd_local_id())
-               << "\\nparallel_id:" << std::to_string(task_proto.parallel_id())
-               << "\", shape=ellipse];\n";
-    for (const auto& pair : task_proto.produced_regst_desc()) {
-      regst_desc_ids.insert(pair.second.regst_desc_id());
-    }
-  }
-  for (const int64_t regst_task_id : regst_desc_ids) {
-    out_stream << "regst_desc" << std::to_string(regst_task_id) << "[label=\""
-               << std::to_string(regst_task_id) << "\", shape=box];\n";
-  }
-  for (const TaskProto& task_proto : plan.task()) {
-    for (const auto& pair : task_proto.produced_regst_desc()) {
-      out_stream << "task" << std::to_string(task_proto.id()) << "->regst_desc"
-                 << std::to_string(pair.second.regst_desc_id()) << "[label=\""
-                 << pair.first << "\"];\n";
-    }
-    for (const auto& pair : task_proto.consumed_regst_desc_id()) {
-      out_stream << "regst_desc" << std::to_string(pair.second) << "->task"
-                 << std::to_string(task_proto.id()) << "[label=\"" << pair.first
-                 << "\"];\n";
-    }
-  }
-  out_stream << "}\n";
-}
+Plan Compiler::DoCompile(const JobConf& job_conf) {}
 
 }  // namespace oneflow
+
+DEFINE_string(job_conf_filepath, "", "");
+DEFINE_string(plan_filepath, "", "");
 
 int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);
