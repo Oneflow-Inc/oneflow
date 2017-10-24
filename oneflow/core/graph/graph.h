@@ -15,10 +15,12 @@ class Graph {
   virtual ~Graph() = default;
 
   // For Each
-  void ForEachNode(std::function<void(NodeType*)> NodeHandler);
+  void ForEachNode(std::function<void(NodeType*)> NodeHandler) const;
   void ForEachNode(std::function<void(NodeType*)> NodeHandler,
-                   std::function<bool(NodeType*)> IsNodeReady);
-  void ForEachEdge(std::function<void(EdgeType*)> EdgeHandler);
+                   std::function<bool(NodeType*)> IsNodeReady) const;
+  void TopoForEachNode(std::function<void(NodeType*)> NodeHandler) const;
+  void ReverseTopoForEachNode(std::function<void(NodeType*)> NodeHandler) const;
+  void ForEachEdge(std::function<void(EdgeType*)> EdgeHandler) const;
 
   // Getters
   const std::unordered_set<NodeType*>& source_nodes() const;
@@ -49,14 +51,14 @@ class Graph {
 
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ForEachNode(
-    std::function<void(NodeType*)> NodeHandler) {
+    std::function<void(NodeType*)> NodeHandler) const {
   for (auto& x : nodes_) { NodeHandler(x.get()); }
 }
 
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ForEachNode(
     std::function<void(NodeType*)> NodeHandler,
-    std::function<bool(NodeType*)> IsNodeReady) {
+    std::function<bool(NodeType*)> IsNodeReady) const {
   std::queue<NodeType*> node_queue;
   HashSet<NodeType*> nodes_pushed;
   for (auto& x : nodes_) {
@@ -80,8 +82,36 @@ void Graph<NodeType, EdgeType>::ForEachNode(
 }
 
 template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::TopoForEachNode(
+    std::function<void(NodeType*)> NodeHandler) const {
+  HashMap<NodeType*, size_t> node2cnt;
+  auto IncreaseCnt = [&](NodeType* node) { node2cnt[node] += 1; };
+  auto MyNodeHandler = [&](NodeType* node) {
+    NodeHandler(node);
+    node->ForEachNodeOnOutEdge(IncreaseCnt);
+  };
+  ForEachNode(MyNodeHandler, [&](NodeType* node) {
+    return node->in_edges().size() == node2cnt[node];
+  });
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::ReverseTopoForEachNode(
+    std::function<void(NodeType*)> NodeHandler) const {
+  HashMap<NodeType*, size_t> node2cnt;
+  auto IncreaseCnt = [&](NodeType* node) { node2cnt[node] += 1; };
+  auto MyNodeHandler = [&](NodeType* node) {
+    NodeHandler(node);
+    node->ForEachNodeOnInEdge(IncreaseCnt);
+  };
+  ForEachNode(MyNodeHandler, [&](NodeType* node) {
+    return node->out_edges().size() == node2cnt[node];
+  });
+}
+
+template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ForEachEdge(
-    std::function<void(EdgeType*)> EdgeHandler) {
+    std::function<void(EdgeType*)> EdgeHandler) const {
   for (auto& x : edges_) { EdgeHandler(x.get()); }
 }
 
