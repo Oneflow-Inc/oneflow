@@ -29,11 +29,7 @@ class UbfItemDesc final {
       : data_type_(dtype),
         data_encode_type_(detype),
         data_id_len_(data_id_len),
-        len_(ComputeLength(data_id_len, body_len)) {}
-
-  static size_t ComputeLength(size_t data_id_len, size_t body_len) {
-    return RoundUpToAlignment(data_id_len, 8) + body_len;
-  }
+        len_(data_id_len + body_len) {}
 
   //	getter
   DataType data_type() const { return static_cast<DataType>(data_type_); }
@@ -42,30 +38,29 @@ class UbfItemDesc final {
   }
   size_t len() const { return len_; }
   size_t data_id_len() const { return data_id_len_; }
-  size_t body_offset() const { return RoundUpToAlignment(data_id_len_, 8); }
+  size_t body_offset() const { return data_id_len_; }
   size_t body_len() const { return len() - body_offset(); }
 
   //	setter
   void set_body_len(size_t body_len) { len_ = body_offset() + body_len; }
 
  private:
-  uint8_t data_type_ = DataType::kChar;                   // value data type
-  uint8_t data_encode_type_ = DataEncodeType::kNoEncode;  // value encode type
-  uint16_t data_id_len_ = 0;                              // key string length
-  uint32_t len_ = 0;                                      //
+  uint8_t data_type_ = DataType::kChar;                   // body data type
+  uint8_t data_encode_type_ = DataEncodeType::kNoEncode;  // body encode type
+  uint16_t data_id_len_ = 0;
+  uint32_t len_ = 0;
   //  data layout:
-  //  |<---------------------------- len_ ------------------------------>|
-  //  |<-- RoundUpToAlignment(data_id_len_, 8)-->|                       |
-  //  |<---------- data_id_len_ ---------->|     |                       |
-  //	+------------------------------------+-----+-----------------------+
-  //	|        data id (string type)       | \0* |    body (any type)    |
-  //	'------------------------------------------------------------------'
+  //  |<------------------------ len_ ---------------------------->|
+  //  |<---------- data_id_len_ ---------->|                       |
+  //  +------------------------------------+-----------------------+
+  //  |        data id (string type)       |    body (any type)    |
+  //  '------------------------------------------------------------'
 };
 
 //  united binary format
-//	.-------------------------.
-//	| UbfHeader | UbfItem ... |
-//	'-------------------------'
+//  .-------------.
+//  | UbfItem ... |
+//  '-------------'
 
 //  united binary formatted item
 //  UbfItem layout
@@ -79,8 +74,7 @@ class UbfItem final {
   UbfItem() = delete;
   explicit UbfItem(std::unique_ptr<UbfItemDesc>&& desc)
       : desc_(std::move(desc)),
-        data_(std::unique_ptr<char, decltype(&free)>(
-            static_cast<char*>(malloc(desc_->len())), &free)) {}
+        data_(std::unique_ptr<char[]>(new char[desc_->len()])) {}
   UbfItem(DataType dtype, DataEncodeType detype, const std::string& data_id,
           size_t body_len, const std::function<void(char*)>& Fill);
 
@@ -106,23 +100,10 @@ class UbfItem final {
   char* mut_body() { return mut_data() + desc()->body_offset(); }
 
   std::unique_ptr<UbfItemDesc> desc_;
-  std::unique_ptr<char, decltype(&free)> data_;
+  std::unique_ptr<char[]> data_;
 };
 
 PersistentOutStream& operator<<(PersistentOutStream& out, const UbfItem& data);
-
-template<DataEncodeType encode_type>
-class UbfDecoder final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(UbfDecoder);
-  UbfDecoder() = delete;
-  template<typename T>
-  static void Decode(const UbfItem& ubf_item, const Shape& shape, T* out_dptr);
-
- private:
-  template<typename src_type, typename T>
-  static void Cast(const UbfItem& ubf_item, const Shape& shape, T* out_dptr);
-};
 
 }  // namespace oneflow
 

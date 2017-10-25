@@ -25,7 +25,6 @@ class UbfInStream {
   std::unique_ptr<NormalPersistentInStream>& mut_in_stream() {
     return in_stream_;
   }
-  void ResetHeader();
   virtual int32_t ReadDesc(char* s, size_t n) { return Read(s, n); }
   virtual int32_t Read(char* s, size_t n) { return in_stream_->Read(s, n); }
 
