@@ -3,13 +3,6 @@
 
 namespace oneflow {
 
-void UbfInStream::ResetHeader() {
-  int ret = in_stream_->Read(reinterpret_cast<char*>(header_.get()),
-                             sizeof(UbfHeader));
-  CHECK(!ret);
-  CHECK(header()->ValidateMagicCode());
-}
-
 int32_t UbfInStream::ReadOneItem(std::unique_ptr<UbfItem>* ubf_item) {
   auto desc = of_make_unique<UbfItemDesc>();
   int ret = ReadDesc(reinterpret_cast<char*>(desc.get()), sizeof(*desc));

@@ -3,11 +3,20 @@
 
 namespace oneflow {
 
-PersistentOutStream& operator<<(PersistentOutStream& out, const UbfItem& data) {
-  out.Write(reinterpret_cast<const char*>(data.desc()), sizeof(*data.desc()));
-  out.Write(reinterpret_cast<const char*>(data.data()), data.len());
-  return out;
-}
+namespace {
+
+template<DataEncodeType encode_type>
+class UbfDecoder final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(UbfDecoder);
+  UbfDecoder() = delete;
+  template<typename T>
+  static void Decode(const UbfItem& ubf_item, const Shape& shape, T* out_dptr);
+
+ private:
+  template<typename src_type, typename T>
+  static void Cast(const UbfItem& ubf_item, const Shape& shape, T* out_dptr);
+};
 
 template<>
 template<typename src_type, typename T>
@@ -70,15 +79,14 @@ void UbfDecoder<DataEncodeType::kSparse>::Decode(const UbfItem& ubf_item,
   UNEXPECTED_RUN();
 }
 
+}  // namespace
+
 UbfItem::UbfItem(DataType dtype, DataEncodeType detype,
                  const std::string& data_id, size_t body_len,
                  const std::function<void(char*)>& Fill)
     : desc_(
           of_make_unique<UbfItemDesc>(dtype, detype, data_id.size(), body_len)),
-      data_(std::unique_ptr<char, decltype(&free)>(
-          static_cast<char*>(
-              malloc(UbfItemDesc::ComputeLength(data_id.size(), body_len))),
-          &free)) {
+      data_(std::unique_ptr<char[]>(new char[data_id.size() + body_len])) {
   memset(mut_data_id(), 0, desc()->body_offset());
   data_id.copy(mut_data_id(), data_id.size());
   if (body_len) { Fill(mut_body()); }
@@ -94,6 +102,12 @@ void UbfItem::Decode(const Shape& shape, T* out_dptr) const {
     OF_PP_FOR_EACH_TUPLE(UBF_ITEM_DECODE_ENTRY, DATA_ENCODE_TYPE_SEQ)
     default: UNEXPECTED_RUN();
   }
+}
+
+PersistentOutStream& operator<<(PersistentOutStream& out, const UbfItem& data) {
+  out.Write(reinterpret_cast<const char*>(data.desc()), sizeof(*data.desc()));
+  out.Write(reinterpret_cast<const char*>(data.data()), data.len());
+  return out;
 }
 
 namespace {

@@ -143,18 +143,6 @@ inline uint32_t NewRandomSeed() {
 void RedirectStdoutAndStderrToGlogDir();
 void CloseStdoutAndStderr();
 
-//  round up to byte alignment
-//  RoundUpToAlignment(bytes, 8) returns 8, if bytes <= 8
-//  RoundUpToAlignment(bytes, 8) returns 16, if 9 < bytes <= 16,
-//  `align' should always be pow(2, (unsigned int)N)
-inline size_t RoundUpToAlignment(size_t bytes, size_t align) {
-  return (bytes + align - 1) & ~(align - 1);
-}
-
-inline size_t RoundUpToAlignment(size_t bytes) {
-  return RoundUpToAlignment(bytes, 8);
-}
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_UTIL_H_
