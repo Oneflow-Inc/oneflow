@@ -8,8 +8,8 @@
 #include "oneflow/core/comm_network/rdma/connection.h"
 #include "oneflow/core/comm_network/rdma/rdma_memory.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/control/ctrl_client.h"
 
 namespace oneflow {
 
@@ -35,14 +35,13 @@ class EndpointManager {
   void Stop();
 
  private:
-  Connection* GetConnection(int64_t machine_id);
   void PollLoop();
   void PollSendQueue();
   void PollRecvQueue();
 
   enum { kPrePostRecvNum = 15 };  // TODO
   ConnectionInfo conn_info_;
-  HashMap<ActorMsg*, const RdmaMem*> recv_msg2rdma_mem_;
+  HashMap<ActorMsg*, RdmaMem*> recv_msg2rdma_mem_;
   HashMap<int64_t, Connection*> connection_pool_;
 
   std::thread thread_;

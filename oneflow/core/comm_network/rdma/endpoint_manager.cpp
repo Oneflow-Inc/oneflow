@@ -103,13 +103,13 @@ ibv_qp* EndpointManager::NewQueuePair() {
 void EndpointManager::Read(void* read_ctx, int64_t src_machine_id,
                            const RdmaMem* local_mem,
                            const RdmaMemDesc& remote_mem_desc) {
-  Connection* conn = GetConnection(src_machine_id);
+  Connection* conn = connection_pool_[src_machine_id];
   conn->PostReadRequest(read_ctx, local_mem, remote_mem_desc);
 }
 
 void EndpointManager::SendActorMsg(int64_t dst_machine_id,
                                    const ActorMsg& msg) {
-  Connection* conn = GetConnection(dst_machine_id);
+  Connection* conn = connection_pool_[dst_machine_id];
   ActorMsg* msg_ptr = new ActorMsg;
   *msg_ptr = msg;
   const void* rdma_mem =
@@ -125,11 +125,6 @@ void EndpointManager::Start() {
 void EndpointManager::Stop() {
   thread_state_ = false;
   thread_.join();
-}
-
-Connection* EndpointManager::GetConnection(int64_t machine_id) {
-  // TODO
-  return nullptr;
 }
 
 void EndpointManager::PollLoop() {
