@@ -91,9 +91,11 @@ class Operator {
       ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) = 0;
 
   //
-  virtual void FixParallelDesc(ParallelDesc* pr_desc) const {}
+  void FixParallelDesc(ParallelDesc* pr_desc) const;
 
  protected:
+  virtual void VirtualFixParallelDesc(ParallelDesc* pr_desc) const {}
+
   virtual std::string ibn2lbn(const std::string& input_bn) const = 0;
   virtual std::string obn2lbn(const std::string& output_bn) const = 0;
   virtual std::string mtbn2lbn(const std::string& model_tmp_bn) const = 0;

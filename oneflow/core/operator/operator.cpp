@@ -71,6 +71,13 @@ const std::string& Operator::SoleDtbn() const {
   return *(data_tmp_bns_.begin());
 }
 
+void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
+  if (model_bns_.empty() && model_tmp_bns_.empty()) {
+    pr_desc->mut_policy() = ParallelPolicy::kDataParallel;
+  }
+  VirtualFixParallelDesc(pr_desc);
+}
+
 void Operator::EnrollDataTmpBn(const std::string& dtbn) {
   data_tmp_bns_.push_back(dtbn);
   CHECK(bn_in_op2lbn_.emplace(dtbn, dtbn2lbn(dtbn)).second);

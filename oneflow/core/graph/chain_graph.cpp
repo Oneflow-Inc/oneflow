@@ -241,7 +241,10 @@ std::string ChainEdge::VisualStr() const { return ""; }
 
 ChainGraph::ChainGraph(const LogicalGraph& logical_gph, bool is_train) {
   BuildFwStruct(logical_gph);
-  if (is_train) { BuildBwStruct(); }
+  if (is_train) {
+    BuildBwStruct();
+    BuildLossRecordStruct();
+  }
   ToDotWithAutoFilePath();
   BuildModelStruct(is_train);
   ToDotWithAutoFilePath();
@@ -334,6 +337,34 @@ void ChainGraph::BuildBwStruct() {
       Connect(bw_dst_node, NewEdge(), bw_src_node);
     }
   }
+}
+
+void ChainGraph::BuildLossRecordStruct() {
+  ForEachChainNode<LossChainNode>([&](LossChainNode* loss_chain) {
+    // Loss Accumulate Chain
+    OperatorConf loss_acc_op_conf;
+    loss_acc_op_conf.set_name("loss_acc_" + NewUniqueId());
+    loss_acc_op_conf.mutable_accumulate_conf();
+    auto loss_acc_op = OpMgr::Singleton()->AddOp(loss_acc_op_conf);
+    auto loss_acc_chain = NewChainNode<LossAccChainNode>();
+    loss_acc_chain->mut_op_vec() = {loss_acc_op};
+    loss_acc_chain->mut_parallel_desc() = loss_chain->parallel_desc();
+    Connect<ChainNode>(loss_chain, NewEdge(), loss_acc_chain);
+    // Loss Record Chain
+    OperatorConf loss_record_op_conf;
+    loss_record_op_conf.set_name("loss_record_" + NewUniqueId());
+    loss_record_op_conf.mutable_loss_record_conf();
+    auto loss_record_op = OpMgr::Singleton()->AddOp(loss_record_op_conf);
+    ParallelConf loss_record_pr_conf;
+    loss_record_pr_conf.set_policy(kDataParallel);
+    loss_record_pr_conf.add_device_name(
+        IDMgr::Singleton()->MachineName4MachineId(0) + ":persistence");
+    auto loss_record_chain = NewChainNode<LossRecordChainNode>();
+    loss_record_chain->mut_op_vec() = {loss_record_op};
+    loss_record_chain->mut_parallel_desc().reset(
+        new ParallelDesc(loss_record_pr_conf));
+    Connect<ChainNode>(loss_acc_chain, NewEdge(), loss_record_chain);
+  });
 }
 
 void ChainGraph::BuildModelStruct(bool is_train) { TODO(); }

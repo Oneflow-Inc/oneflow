@@ -17,7 +17,7 @@ class ConvolutionOp final : public UserOperator {
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       ParallelPolicy policy, int64_t parallel_id,
       int64_t parallel_num) override;
-  void FixParallelDesc(ParallelDesc* pr_desc) const override {
+  void VirtualFixParallelDesc(ParallelDesc* pr_desc) const override {
     if (pr_desc->policy() == kModelParallel) {
       pr_desc->RemoveNeedlessDevice(GetInt32FromSpecialConf("out_num"));
     }
