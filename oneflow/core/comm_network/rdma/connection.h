@@ -22,8 +22,8 @@ class Connection {
 
   void PostReadRequest(void* read_ctx, const RdmaMem* local_mem,
                        const RdmaMemDesc* remote_mem);
-  void PostSendRequest(const ActorMsg& msg, const RdmaMem* msg_mem);
-  void PostRecvRequest(const ActorMsg& msg, const RdmaMem* msg_mem);
+  void PostSendRequest(const ActorMsg* msg, const RdmaMem* msg_mem);
+  void PostRecvRequest(const ActorMsg* msg, const RdmaMem* msg_mem);
   void WaitForConnection();
 
  private:

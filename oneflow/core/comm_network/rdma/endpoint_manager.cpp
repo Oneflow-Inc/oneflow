@@ -86,16 +86,38 @@ ibv_qp* EndpointManager::NewQueuePair() {
 void EndpointManager::Read(void* read_ctx, int64_t src_machine_id,
                            const RdmaMem* local_mem,
                            const RdmaMemDesc* remote_mem_desc) {
-  // TODO
+  Connection* conn = GetConnection(src_machine_id);
+  conn->PostReadRequest(read_ctx, local_mem, remote_mem_desc);
 }
 
 void EndpointManager::SendActorMsg(int64_t dst_machine_id,
                                    const ActorMsg& msg) {
+  Connection* conn = GetConnection(dst_machine_id);
+  ActorMsg* msg_ptr = new ActorMsg;
+  *msg_ptr = msg;
+  const void* rdma_mem =
+      CommNet::Singleton()->RegisterMemory(msg_ptr, sizeof(*msg_ptr));
+  conn->PostSendRequest(msg_ptr, static_cast<const RdmaMem*>(rdma_mem));
+}
+
+void EndpointManager::Start() {
+  thread_state_ = true;
+  thread_ = std::thread(&EndpointManager::PollLoop, this);
+}
+
+void EndpointManager::Stop() {
+  thread_state_ = false;
+  thread_.join();
+}
+
+Connection* EndpointManager::GetConnection(int64_t machine_id) {
   // TODO
+  return nullptr;
 }
 
 void EndpointManager::PollLoop() {
   while (true) {
+    if (!thread_state_) { return; }
     PollSendQueue();
     PollRecvQueue();
   }
@@ -113,6 +135,7 @@ void EndpointManager::PollSendQueue() {
     case IBV_WC_SEND: {
       CommNet::Singleton()->UnRegisterMemory(
           reinterpret_cast<const void*>(wc.wr_id));
+      delete reinterpret_cast<ActorMsg*>(wc.wr_id);
       return;
     }
     case IBV_WC_RDMA_READ: {
