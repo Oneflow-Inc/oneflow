@@ -19,6 +19,14 @@ sockaddr_in GetAddress(const std::string& ip, int32_t port) {
 
 }  // namespace
 
+EndpointManager::~EndpointManager() {
+  for (auto it = recv_msg2rdma_mem_.begin(); it != recv_msg2rdma_mem_.end();
+       ++it) {
+    delete it->first;
+    CommNet::Singleton()->UnRegisterMemory(it->second);
+  }
+}
+
 void EndpointManager::Init(const std::string& my_ip, int32_t my_port) {
   // Init Adapter
   ibv_device** device_list = ibv_get_device_list(NULL);
