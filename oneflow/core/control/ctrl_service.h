@@ -30,7 +30,10 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ(PullPort)            \
   OF_PP_MAKE_TUPLE_SEQ(PushConnectionInfo)  \
   OF_PP_MAKE_TUPLE_SEQ(ClearConnectionInfo) \
-  OF_PP_MAKE_TUPLE_SEQ(PullConnectionInfo)
+  OF_PP_MAKE_TUPLE_SEQ(PullConnectionInfo)  \
+  OF_PP_MAKE_TUPLE_SEQ(PushTokenMsgs)       \
+  OF_PP_MAKE_TUPLE_SEQ(ClearTokenMsgs)      \
+  OF_PP_MAKE_TUPLE_SEQ(PullTokenMsgs)
 
 enum class CtrlMethod {
 #define MAKE_ENTRY(method) k##method,

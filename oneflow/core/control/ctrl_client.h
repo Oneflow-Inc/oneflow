@@ -33,6 +33,10 @@ class CtrlClient final {
   void ClearConnectionInfo();
   ConnectionInfo& PullConnectionInfo(uint64_t machine_id);
 
+  void PushTokenMsgs(const TokenMsgs& token_msgs);
+  void ClearTokenMsgs();
+  TokenMsgs& PullTokenMsgs(uint64_t machine_id);
+
  private:
   CtrlClient();
   void LoadServer(const std::string& server_addr, CtrlService::Stub* stub);

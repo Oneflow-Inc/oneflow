@@ -28,12 +28,11 @@ void RdmaMem::Unregister() {
   is_registered_ = false;
 }
 
-RdmaMemDesc RdmaMem::GetRegisteredRdmaMemDesc() {
+RdmaMemDesc RdmaMem::GetRdmaMemDesc() {
   CHECK_EQ(is_registered_, true);
   RdmaMemDesc rdma_mem_desc;
-  rdma_mem_desc.mem_addr = reinterpret_cast<uint64_t>(sge_.addr);
-  rdma_mem_desc.byte_size = sge_.length;
-  rdma_mem_desc.token = mr_->rkey;
+  rdma_mem_desc.set_mem_ptr(reinterpret_cast<uint64_t>(sge_.addr));
+  rdma_mem_desc.set_token(mr_->rkey);
   return rdma_mem_desc;
 }
 

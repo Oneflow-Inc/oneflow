@@ -61,7 +61,25 @@ void RdmaCommNet::UnRegisterMemory(const void* token) {
 }
 
 void RdmaCommNet::RegisterMemoryDone() {
-  // TODO
+  int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
+  HashMap<uint64_t, RdmaMemDesc> this_machine_token_msgs;
+  for (RdmaMem* mem_ptr : mems_) {
+    this_machine_token_msgs.insert(
+        {reinterpret_cast<uint64_t>(mem_ptr), mem_ptr->GetRdmaMemDesc()});
+  }
+  TokenMsgs token_msgs;
+  *(token_msgs.mutable_token2mem_desc()) =
+      HashMap2PbMap<uint64_t, RdmaMemDesc>(this_machine_token_msgs);
+  CtrlClient::Singleton()->PushTokenMsgs(token_msgs);
+  FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
+    auto& peer_token_msgs =
+        CtrlClient::Singleton()->PullTokenMsgs(peer_machine_id);
+    for (auto mem_desc_pair : peer_token_msgs.token2mem_desc()) {
+      token2mem_desc_.insert({mem_desc_pair.first, mem_desc_pair.second});
+    }
+  }
+  OF_BARRIER();
+  CtrlClient::Singleton()->ClearTokenMsgs();
 }
 
 void* RdmaCommNet::NewActorReadId() { return new ActorReadContext; }
