@@ -1,5 +1,4 @@
 #include "oneflow/core/comm_network/rdma/rdma_comm_network.h"
-#include "oneflow/core/control/ctrl_client.h"
 
 namespace oneflow {
 
@@ -10,41 +9,11 @@ void RdmaCommNet::Init() {
 RdmaCommNet::RdmaCommNet() {
   mems_.clear();
   unregister_mems_cnt_ = 0;
-  InitRdma();
+  endpoint_manager_->InitRdma();
 }
 
 RdmaCommNet::~RdmaCommNet() {
   // TODO
-}
-
-Connection* RdmaCommNet::NewConnection() {
-  Connection* conn = endpoint_manager_->NewConnection();
-  return conn;
-}
-
-ConnectionInfo& RdmaCommNet::GetMachineConnInfo() {
-  return endpoint_manager_->GetMachineConnInfo();
-}
-
-void RdmaCommNet::InitRdma() {
-  int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
-  CtrlClient::Singleton()->PushConnectionInfo(GetMachineConnInfo());
-  FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
-    Connection* conn = NewConnection();
-    conn->set_peer_conn_info(
-        CtrlClient::Singleton()->PullConnectionInfo(peer_machine_id));
-    connection_pool_.emplace(peer_machine_id, conn);
-    for (size_t i = 0; i != kPrePostRecvNum; ++i) {
-      ActorMsg* actor_msg = new ActorMsg();
-      const RdmaMem* rdma_mem = static_cast<const RdmaMem*>(
-          RegisterMemory(actor_msg, sizeof(ActorMsg)));
-      // TODO
-      conn->PostRecvRequest(actor_msg, rdma_mem);
-    }
-    conn->CompleteConnection();
-  }
-  OF_BARRIER();
-  CtrlClient::Singleton()->ClearConnectionInfo();
 }
 
 const void* RdmaCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
