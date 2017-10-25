@@ -2,7 +2,6 @@
 #define ONEFLOW_CORE_PERSISTENCE_DATA_SET_UTIL_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/persistence/ubf_header.h"
 #include "oneflow/core/persistence/ubf_item.h"
 
 namespace oneflow {
@@ -18,7 +17,7 @@ class UbfUtil final {
   static std::unique_ptr<UbfItem> CreateImageItem(
       const std::string& img_file_path);
 
-  static void ExtractImage(const UbfItem& data_item, const UbfHeader& header,
+  static void ExtractImage(const UbfItem& data_item,
                            const std::string& output_img_path);
   static void CreateUbfFiles(const std::vector<std::string>& image_directories,
                              uint32_t limit, uint32_t width, uint32_t height,

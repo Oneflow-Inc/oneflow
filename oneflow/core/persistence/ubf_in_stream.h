@@ -3,7 +3,6 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/persistence/normal_persistent_in_stream.h"
-#include "oneflow/core/persistence/ubf_header.h"
 #include "oneflow/core/persistence/ubf_item.h"
 #include "oneflow/core/persistence/ubf_util.h"
 
@@ -15,20 +14,13 @@ class UbfInStream {
   OF_DISALLOW_COPY_AND_MOVE(UbfInStream);
   UbfInStream() = delete;
   UbfInStream(fs::FileSystem* fs, const std::string& file_path)
-      : header_(of_make_unique<UbfHeader>()),
-        in_stream_(of_make_unique<NormalPersistentInStream>(fs, file_path, 0)) {
-    ResetHeader();
+      : in_stream_(of_make_unique<NormalPersistentInStream>(fs, file_path, 0)) {
   }
   virtual ~UbfInStream() = default;
 
   int32_t ReadOneItem(std::unique_ptr<UbfItem>* item);
 
   //	getter
-  const UbfHeader* header() const {
-    CHECK(header_);
-    return header_.get();
-  }
-
  protected:
   std::unique_ptr<NormalPersistentInStream>& mut_in_stream() {
     return in_stream_;
@@ -38,7 +30,6 @@ class UbfInStream {
   virtual int32_t Read(char* s, size_t n) { return in_stream_->Read(s, n); }
 
  private:
-  std::unique_ptr<UbfHeader> header_;
   std::unique_ptr<NormalPersistentInStream> in_stream_;
 };
 

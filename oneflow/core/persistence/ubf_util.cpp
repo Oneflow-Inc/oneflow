@@ -54,9 +54,6 @@ void UbfUtil::SaveLabels(
     label_names[i] = basename(const_cast<char*>(dir.c_str()));
   }
   PersistentOutStream label_stream(LocalFS(), JoinPath(output_dir, "labels"));
-  std::unique_ptr<UbfHeader> header(
-      new UbfHeader("label", img_file_paths.size(), {1}));
-  label_stream << *header;
   for (const std::string& file_path : img_file_paths) {
     auto item =
         UbfUtil::CreateLabelItem(file_path, file_path2label_idx.at(file_path));
@@ -69,9 +66,6 @@ void UbfUtil::SaveFeatures(const std::vector<std::string>& img_file_paths,
                            const std::string& output_dir) {
   PersistentOutStream feature_stream(LocalFS(),
                                      JoinPath(output_dir, "features"));
-  std::unique_ptr<UbfHeader> header(
-      new UbfHeader("feature", img_file_paths.size(), {3, width, height}));
-  feature_stream << *header;
   for (int i = 0; i < img_file_paths.size(); ++i) {
     const std::string& file_path = img_file_paths.at(i);
     auto ubf_item = UbfUtil::CreateImageItem(file_path);

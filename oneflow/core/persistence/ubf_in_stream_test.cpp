@@ -11,9 +11,8 @@ std::string SavedFile(uint32_t random) {
   StringReplace(&current_dir, '\\', '/');
   std::string file_name = JoinPath(current_dir, "/tmp_test_cyclic_data_set");
   PersistentOutStream out_stream(LocalFS(), file_name);
-  auto header = of_make_unique<UbfHeader>("label", 1, std::vector<uint32_t>{1});
   auto item = UbfUtil::CreateLabelItem(std::to_string(random), random);
-  out_stream << *header << *item;
+  out_stream << *item;
   return file_name;
 }
 

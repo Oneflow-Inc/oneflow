@@ -13,7 +13,6 @@ class CyclicUbfInStream : public UbfInStream {
       : UbfInStream(fs, file_path) {
     in_stream_resetter_ = [=]() {
       mut_in_stream().reset(new NormalPersistentInStream(fs, file_path, 0));
-      ResetHeader();
     };
   }
 
