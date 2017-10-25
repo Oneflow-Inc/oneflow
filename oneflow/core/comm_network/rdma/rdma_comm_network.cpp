@@ -78,6 +78,8 @@ void RdmaCommNet::RegisterMemoryDone() {
       token2mem_desc_.insert({mem_desc_pair.first, mem_desc_pair.second});
     }
   }
+  OF_BARRIER();
+  CtrlClient::Singleton()->ClearTokenMsgs();
 }
 
 void* RdmaCommNet::NewActorReadId() { return new ActorReadContext; }
