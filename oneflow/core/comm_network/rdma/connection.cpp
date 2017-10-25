@@ -16,8 +16,8 @@ void Connection::PostReadRequest(void* read_ctx, const RdmaMem* local_mem,
   wr.sg_list = const_cast<RdmaMem*>(local_mem)->ibv_sge_ptr();
   wr.num_sge = 1;
   wr.send_flags = IBV_SEND_SIGNALED;
-  wr.wr.rdma.remote_addr = remote_mem->mem_addr;
-  wr.wr.rdma.rkey = remote_mem->token;
+  wr.wr.rdma.remote_addr = remote_mem->mem_ptr();
+  wr.wr.rdma.rkey = remote_mem->token();
 
   ibv_post_send(qp_ptr_, &wr, &bad_wr);
 }

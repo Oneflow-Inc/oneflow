@@ -2,14 +2,9 @@
 #define ONEFLOW_CORE_COMM_NETWORK_RDMA_RDMA_MEMORY_H
 
 #include <infiniband/verbs.h>
+#include "oneflow/core/comm_network/rdma/mem_desc.pb.h"
 
 namespace oneflow {
-
-struct RdmaMemDesc {
-  uint64_t mem_addr;
-  size_t byte_size;
-  uint32_t token;
-};
 
 class RdmaMem {
  public:
@@ -18,7 +13,7 @@ class RdmaMem {
 
   void Register(void* mem_ptr, size_t byte_size);
   void Unregister();
-  RdmaMemDesc GetRegisteredRdmaMemDesc();
+  RdmaMemDesc GetRdmaMemDesc();
 
   ibv_sge* ibv_sge_ptr() { return &sge_; }
 

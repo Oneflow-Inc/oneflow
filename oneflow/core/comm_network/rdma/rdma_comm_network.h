@@ -62,6 +62,7 @@ class RdmaCommNet final : public CommNet {
 
   std::unique_ptr<EndpointManager> endpoint_manager_;
   std::unique_ptr<ConnectionPool> connection_pool_;
+  HashMap<uint64_t, RdmaMemDesc> token2mem_desc_;
 };
 
 }  // namespace oneflow

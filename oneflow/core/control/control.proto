@@ -3,6 +3,7 @@ package oneflow;
 
 import "oneflow/core/job/plan.proto";
 import "oneflow/core/comm_network/rdma/conn_info.proto";
+import "oneflow/core/comm_network/rdma/token_message.proto";
 
 message LoadServerRequest {
 }
@@ -104,4 +105,24 @@ message PullConnectionInfoRequest {
 
 message PullConnectionInfoResponse {
   required ConnectionInfo conn_info = 1;
+}
+
+message PushTokenMsgsRequest {
+  required TokenMsgs token_msgs = 1;
+}
+
+message PushTokenMsgsResponse {
+}
+
+message ClearTokenMsgsRequest {
+}
+
+message ClearTokenMsgsResponse {
+}
+
+message PullTokenMsgsRequest {
+}
+
+message PullTokenMsgsResponse {
+  required TokenMsgs token_msgs = 1;
 }

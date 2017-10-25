@@ -1,0 +1,8 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/comm_network/rdma/mem_desc.proto";
+
+message TokenMsgs {
+  map<uint64, RdmaMemDesc> token2mem_desc = 1;
+}

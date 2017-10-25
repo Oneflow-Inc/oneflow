@@ -226,4 +226,32 @@ void CtrlServer::PullConnectionInfoHandler(
   ENQUEUE_REQUEST(PullConnectionInfo);
 }
 
+void CtrlServer::PushTokenMsgsHandler(
+    CtrlCall<PushTokenMsgsRequest, PushTokenMsgsResponse>* call) {
+  token_msgs_ = call->request().token_msgs();
+  for (auto pending_call : pending_token_msgs_calls_) {
+    pending_call->SendResponse();
+  }
+  call->SendResponse();
+  ENQUEUE_REQUEST(PushTokenMsgs);
+}
+
+void CtrlServer::ClearTokenMsgsHandler(
+    CtrlCall<ClearTokenMsgsRequest, ClearTokenMsgsResponse>* call) {
+  (token_msgs_.mutable_token2mem_desc())->clear();
+  call->SendResponse();
+  ENQUEUE_REQUEST(ClearTokenMsgs);
+}
+
+void CtrlServer::PullTokenMsgsHandler(
+    CtrlCall<PullTokenMsgsRequest, PullTokenMsgsResponse>* call) {
+  if (!token_msgs_.token2mem_desc().empty()) {
+    *(call->mut_response()->mutable_token_msgs()) = token_msgs_;
+    call->SendResponse();
+  } else {
+    pending_token_msgs_calls_.push_back(call);
+  }
+  ENQUEUE_REQUEST(PullTokenMsgs);
+}
+
 }  // namespace oneflow

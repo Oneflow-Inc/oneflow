@@ -1,0 +1,7 @@
+syntax = "proto2";
+package oneflow;
+
+message RdmaMemDesc {
+  required int32 mem_ptr = 1;
+  required uint32 token = 2;
+}

@@ -123,6 +123,29 @@ ConnectionInfo& CtrlClient::PullConnectionInfo(uint64_t machine_id) {
   return *(response.mutable_conn_info());
 }
 
+void CtrlClient::PushTokenMsgs(const TokenMsgs& token_msgs) {
+  grpc::ClientContext client_ctx;
+  PushTokenMsgsRequest request;
+  *(request.mutable_token_msgs()) = token_msgs;
+  PushTokenMsgsResponse response;
+  GetThisStub()->PushTokenMsgs(&client_ctx, request, &response);
+}
+
+void CtrlClient::ClearTokenMsgs() {
+  grpc::ClientContext client_ctx;
+  ClearTokenMsgsRequest request;
+  ClearTokenMsgsResponse response;
+  GetThisStub()->ClearTokenMsgs(&client_ctx, request, &response);
+}
+
+TokenMsgs& CtrlClient::PullTokenMsgs(uint64_t machine_id) {
+  grpc::ClientContext client_ctx;
+  PullTokenMsgsRequest request;
+  PullTokenMsgsResponse response;
+  stubs_[machine_id]->PullTokenMsgs(&client_ctx, request, &response);
+  return *(response.mutable_token_msgs());
+}
+
 CtrlClient::CtrlClient() {
   stubs_.reserve(JobDesc::Singleton()->TotalMachineNum());
   for (int64_t i = 0; i < JobDesc::Singleton()->TotalMachineNum(); ++i) {
