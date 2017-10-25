@@ -93,7 +93,7 @@ ibv_qp* EndpointManager::NewQueuePair() {
 
 void EndpointManager::Read(void* read_ctx, int64_t src_machine_id,
                            const RdmaMem* local_mem,
-                           const RdmaMemDesc* remote_mem_desc) {
+                           const RdmaMemDesc& remote_mem_desc) {
   Connection* conn = GetConnection(src_machine_id);
   conn->PostReadRequest(read_ctx, local_mem, remote_mem_desc);
 }

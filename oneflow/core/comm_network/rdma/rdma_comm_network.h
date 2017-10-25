@@ -4,7 +4,6 @@
 #include <mutex>
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/comm_network/comm_network.h"
-#include "oneflow/core/comm_network/rdma/connection_pool.h"
 #include "oneflow/core/comm_network/rdma/endpoint_manager.h"
 #include "oneflow/core/comm_network/rdma/rdma_memory.h"
 #include "oneflow/core/common/util.h"
@@ -40,6 +39,7 @@ class RdmaCommNet final : public CommNet {
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
 
  private:
+  enum { kPrePostRecvNum = 15 };  // TODO
   struct ReadContext {
     std::list<std::function<void()>> cbl;
     std::mutex done_cnt_mtx;
@@ -61,7 +61,7 @@ class RdmaCommNet final : public CommNet {
   size_t unregister_mems_cnt_;
 
   std::unique_ptr<EndpointManager> endpoint_manager_;
-  std::unique_ptr<ConnectionPool> connection_pool_;
+  HashMap<int64_t, Connection*> connection_pool_;
   HashMap<uint64_t, RdmaMemDesc> token2mem_desc_;
 };
 

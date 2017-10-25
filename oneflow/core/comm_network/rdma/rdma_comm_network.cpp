@@ -33,7 +33,15 @@ void RdmaCommNet::InitRdma() {
     Connection* conn = NewConnection();
     conn->set_peer_conn_info(
         CtrlClient::Singleton()->PullConnectionInfo(peer_machine_id));
-    connection_pool_->AddConnection(peer_machine_id, conn);
+    connection_pool_.emplace(peer_machine_id, conn);
+    for (size_t i = 0; i != kPrePostRecvNum; ++i) {
+      ActorMsg* actor_msg = new ActorMsg();
+      const RdmaMem* rdma_mem = static_cast<const RdmaMem*>(
+          RegisterMemory(actor_msg, sizeof(ActorMsg)));
+      // TODO
+      conn->PostRecvRequest(actor_msg, rdma_mem);
+    }
+    conn->CompleteConnection();
   }
   OF_BARRIER();
   CtrlClient::Singleton()->ClearConnectionInfo();
@@ -144,8 +152,8 @@ void* RdmaCommNet::Read(void* actor_read_id, int64_t src_machine_id,
     std::unique_lock<std::mutex> lck(actor_read_ctx->read_ctx_list_mtx);
     actor_read_ctx->read_ctx_list.push_back(read_ctx);
   }
-  // TODO
-  RdmaMemDesc* remote_mem_desc = nullptr;
+  RdmaMemDesc& remote_mem_desc =
+      token2mem_desc_[reinterpret_cast<int64_t>(src_token)];
   auto local_mem = static_cast<const RdmaMem*>(dst_token);
   endpoint_manager_->Read(read_ctx, src_machine_id, local_mem, remote_mem_desc);
   return read_ctx;
