@@ -3,6 +3,7 @@
 
 #include <infiniband/verbs.h>
 #include "glog/logging.h"
+#include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/comm_network/rdma/conn_info.pb.h"
 #include "oneflow/core/comm_network/rdma/mem_desc.pb.h"
 #include "oneflow/core/comm_network/rdma/rdma_memory.h"
@@ -22,8 +23,8 @@ class Connection {
 
   void PostReadRequest(void* read_ctx, const RdmaMem* local_mem,
                        const RdmaMemDesc* remote_mem);
-  void PostSendRequest(const RdmaMem* msg_mem);
-  void PostRecvRequest(const RdmaMem* msg_mem);
+  void PostSendRequest(const ActorMsg* msg, const RdmaMem* msg_mem);
+  void PostRecvRequest(const ActorMsg* msg, const RdmaMem* msg_mem);
   void WaitForConnection();
 
  private:

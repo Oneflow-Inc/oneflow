@@ -1,6 +1,8 @@
 #include "oneflow/core/comm_network/rdma/endpoint_manager.h"
 #include <arpa/inet.h>
 #include "glog/logging.h"
+#include "oneflow/core/actor/actor_message_bus.h"
+#include "oneflow/core/comm_network/comm_network.h"
 
 namespace oneflow {
 
@@ -16,6 +18,14 @@ sockaddr_in GetAddress(const std::string& ip, int32_t port) {
 }
 
 }  // namespace
+
+EndpointManager::~EndpointManager() {
+  for (auto it = recv_msg2rdma_mem_.begin(); it != recv_msg2rdma_mem_.end();
+       ++it) {
+    delete it->first;
+    CommNet::Singleton()->UnRegisterMemory(it->second);
+  }
+}
 
 void EndpointManager::Init(const std::string& my_ip, int32_t my_port) {
   // Init Adapter
@@ -79,6 +89,85 @@ ibv_qp* EndpointManager::NewQueuePair() {
   ibv_qp* queue_pair = ibv_create_qp(pd_, &qp_init_attr);
   CHECK(queue_pair);
   return queue_pair;
+}
+
+void EndpointManager::Read(void* read_ctx, int64_t src_machine_id,
+                           const RdmaMem* local_mem,
+                           const RdmaMemDesc* remote_mem_desc) {
+  Connection* conn = GetConnection(src_machine_id);
+  conn->PostReadRequest(read_ctx, local_mem, remote_mem_desc);
+}
+
+void EndpointManager::SendActorMsg(int64_t dst_machine_id,
+                                   const ActorMsg& msg) {
+  Connection* conn = GetConnection(dst_machine_id);
+  ActorMsg* msg_ptr = new ActorMsg;
+  *msg_ptr = msg;
+  const void* rdma_mem =
+      CommNet::Singleton()->RegisterMemory(msg_ptr, sizeof(*msg_ptr));
+  conn->PostSendRequest(msg_ptr, static_cast<const RdmaMem*>(rdma_mem));
+}
+
+void EndpointManager::Start() {
+  thread_state_ = true;
+  thread_ = std::thread(&EndpointManager::PollLoop, this);
+}
+
+void EndpointManager::Stop() {
+  thread_state_ = false;
+  thread_.join();
+}
+
+Connection* EndpointManager::GetConnection(int64_t machine_id) {
+  // TODO
+  return nullptr;
+}
+
+void EndpointManager::PollLoop() {
+  while (true) {
+    if (!thread_state_) { return; }
+    PollSendQueue();
+    PollRecvQueue();
+  }
+}
+
+void EndpointManager::PollSendQueue() {
+  ibv_wc wc;
+  int32_t len = ibv_poll_cq(send_cq_, 1, &wc);
+
+  if (len <= 0) { return; }
+
+  if (wc.status != IBV_WC_SUCCESS) { return; }
+
+  switch (wc.opcode) {
+    case IBV_WC_SEND: {
+      CommNet::Singleton()->UnRegisterMemory(
+          reinterpret_cast<const void*>(wc.wr_id));
+      delete reinterpret_cast<ActorMsg*>(wc.wr_id);
+      return;
+    }
+    case IBV_WC_RDMA_READ: {
+      CommNet::Singleton()->ReadDone(reinterpret_cast<void*>(wc.wr_id));
+      return;
+    }
+    default: return;
+  }
+}
+
+void EndpointManager::PollRecvQueue() {
+  ibv_wc wc;
+  int32_t len = ibv_poll_cq(recv_cq_, 1, &wc);
+
+  if (len <= 0) { return; }
+
+  if (wc.status != IBV_WC_SUCCESS) { return; }
+
+  ActorMsg* msg = reinterpret_cast<ActorMsg*>(wc.wr_id);
+
+  ActorMsgBus::Singleton()->SendMsg(*msg);
+  // int64_t src_actor_id = msg->src_actor_id();
+  // auto msg2mem_it = recv_msg2rdma_mem_.find(msg);
+  // TODO
 }
 
 }  // namespace oneflow

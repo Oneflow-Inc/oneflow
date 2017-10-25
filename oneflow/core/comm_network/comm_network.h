@@ -28,6 +28,7 @@ class CommNet {
   virtual void AddReadCallBack(void* actor_read_id, void* read_id,
                                std::function<void()> callback) = 0;
   virtual void AddReadCallBackDone(void* actor_read_id, void* read_id) = 0;
+  virtual void ReadDone(void* read_done_id) = 0;
 
   //
   virtual void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) = 0;

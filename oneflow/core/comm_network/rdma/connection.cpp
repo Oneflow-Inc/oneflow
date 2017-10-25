@@ -22,9 +22,9 @@ void Connection::PostReadRequest(void* read_ctx, const RdmaMem* local_mem,
   ibv_post_send(qp_ptr_, &wr, &bad_wr);
 }
 
-void Connection::PostSendRequest(const RdmaMem* msg_mem) {
+void Connection::PostSendRequest(const ActorMsg* msg, const RdmaMem* msg_mem) {
   ibv_send_wr wr, *bad_wr = nullptr;
-  wr.wr_id = reinterpret_cast<uint64_t>(msg_mem);
+  wr.wr_id = reinterpret_cast<uint64_t>(msg);
   wr.next = nullptr;
   wr.sg_list = const_cast<RdmaMem*>(msg_mem)->ibv_sge_ptr();
   wr.num_sge = 1;
@@ -34,9 +34,9 @@ void Connection::PostSendRequest(const RdmaMem* msg_mem) {
   ibv_post_send(qp_ptr_, &wr, &bad_wr);
 }
 
-void Connection::PostRecvRequest(const RdmaMem* msg_mem) {
+void Connection::PostRecvRequest(const ActorMsg* msg, const RdmaMem* msg_mem) {
   ibv_recv_wr wr, *bad_wr = nullptr;
-  wr.wr_id = reinterpret_cast<uint64_t>(msg_mem);
+  wr.wr_id = reinterpret_cast<uint64_t>(msg);
   wr.next = nullptr;
   wr.sg_list = const_cast<RdmaMem*>(msg_mem)->ibv_sge_ptr();
   wr.num_sge = 1;

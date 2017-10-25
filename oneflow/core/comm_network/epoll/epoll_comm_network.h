@@ -31,7 +31,7 @@ class EpollCommNet final : public CommNet {
   void AddReadCallBack(void* actor_read_id, void* read_id,
                        std::function<void()> callback) override;
   void AddReadCallBackDone(void* actor_read_id, void* read_id) override;
-  void ReadDone(void* read_done_id);
+  void ReadDone(void* read_done_id) override;
 
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
   void SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg);
