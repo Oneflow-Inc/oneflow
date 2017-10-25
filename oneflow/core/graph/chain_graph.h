@@ -100,6 +100,39 @@ class LossRecordChainNode final : public ChainNode {
  private:
 };
 
+class MdUpdtChainNode final : public ChainNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(MdUpdtChainNode);
+  MdUpdtChainNode() = default;
+  ~MdUpdtChainNode() = default;
+
+  virtual const char* TypeName() const { return "MdUpdtChainNode"; }
+
+ private:
+};
+
+class MdSaveChainNode final : public ChainNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(MdSaveChainNode);
+  MdSaveChainNode() = default;
+  ~MdSaveChainNode() = default;
+
+  virtual const char* TypeName() const { return "MdSaveChainNode"; }
+
+ private:
+};
+
+class MdDiffAccChainNode final : public ChainNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(MdDiffAccChainNode);
+  MdDiffAccChainNode() = default;
+  ~MdDiffAccChainNode() = default;
+
+  virtual const char* TypeName() const { return "MdDiffAccChainNode"; }
+
+ private:
+};
+
 class ChainEdge final : public Edge<ChainNode, ChainEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ChainEdge);
@@ -144,6 +177,7 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
   void BuildBwStruct();
   void BuildLossRecordStruct();
   void BuildModelStruct(bool is_train);
+  void BuildRnnStruct();
 };
 
 }  // namespace oneflow

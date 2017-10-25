@@ -245,8 +245,8 @@ ChainGraph::ChainGraph(const LogicalGraph& logical_gph, bool is_train) {
     BuildBwStruct();
     BuildLossRecordStruct();
   }
-  ToDotWithAutoFilePath();
   BuildModelStruct(is_train);
+  BuildRnnStruct();
   ToDotWithAutoFilePath();
 }
 
@@ -367,6 +367,49 @@ void ChainGraph::BuildLossRecordStruct() {
   });
 }
 
-void ChainGraph::BuildModelStruct(bool is_train) { TODO(); }
+void ChainGraph::BuildModelStruct(bool is_train) {
+  ForEachChainNode<ForwardChainNode>([&](ForwardChainNode* fw_chain) {
+    if (fw_chain->HasOpWithModelOrModelTmpBlob() == false) { return; }
+    // Model Update Chain
+    auto md_updt_chain = NewChainNode<MdUpdtChainNode>();
+    md_updt_chain->mut_op_vec() = {OpMgr::Singleton()->ModelUpdateOp()};
+    md_updt_chain->mut_parallel_desc() = fw_chain->parallel_desc();
+    Connect<ChainNode>(md_updt_chain, NewEdge(), fw_chain);
+    // Model Save Chain
+    OperatorConf model_save_op_conf;
+    model_save_op_conf.set_name("md_save_" + NewUniqueId());
+    for (std::shared_ptr<const Operator> op : fw_chain->op_vec()) {
+      for (const std::string& mbn : op->model_bns()) {
+        const std::string& lbn = op->Lbn4BnInOp(mbn);
+        model_save_op_conf.mutable_model_save_conf()->add_lbns(lbn);
+      }
+    }
+    auto model_save_op = OpMgr::Singleton()->AddOp(model_save_op_conf);
+    auto md_save_chain = NewChainNode<MdSaveChainNode>();
+    md_save_chain->mut_op_vec() = {model_save_op};
+    if (fw_chain->parallel_desc()->policy() == ParallelPolicy::kModelParallel) {
+      md_save_chain->mut_parallel_desc() = fw_chain->parallel_desc();
+    } else {
+      auto md_save_pr_desc = new ParallelDesc(*(fw_chain->parallel_desc()));
+      md_save_pr_desc->RemoveNeedlessDevice(1);
+      md_save_chain->mut_parallel_desc().reset(md_save_pr_desc);
+    }
+    Connect<ChainNode>(md_updt_chain, NewEdge(), md_save_chain);
+    // Model Diff Accumulate Chain
+    if (is_train == false) { return; }
+    BackwardChainNode* bw_chain = fw_chain->bw_node();
+    OperatorConf md_diff_acc_op_conf;
+    md_diff_acc_op_conf.set_name("md_diff_acc_" + NewUniqueId());
+    md_diff_acc_op_conf.mutable_accumulate_conf();
+    auto md_diff_acc_op = OpMgr::Singleton()->AddOp(md_diff_acc_op_conf);
+    auto md_diff_acc_chain = NewChainNode<MdDiffAccChainNode>();
+    md_diff_acc_chain->mut_op_vec() = {md_diff_acc_op};
+    md_diff_acc_chain->mut_parallel_desc() = fw_chain->parallel_desc();
+    Connect<ChainNode>(bw_chain, NewEdge(), md_diff_acc_chain);
+    Connect<ChainNode>(md_diff_acc_chain, NewEdge(), md_updt_chain);
+  });
+}
+
+void ChainGraph::BuildRnnStruct() {}
 
 }  // namespace oneflow
