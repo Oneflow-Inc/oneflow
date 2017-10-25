@@ -7,17 +7,10 @@ namespace oneflow {
 
 class ChainEdge;
 
-class ChainNode final : public Node<ChainNode, ChainEdge> {
+class ChainNode : public Node<ChainNode, ChainEdge> {
  public:
-  enum class Type { kForward, kBackward, kLoss };
-
   OF_DISALLOW_COPY_AND_MOVE(ChainNode);
-  ChainNode() = default;
-  ~ChainNode() = default;
-
-  // type_
-  Type type() const { return type_; }
-  void set_type(Type val) { type_ = val; }
+  virtual ~ChainNode() = default;
 
   // op_vec_
   std::shared_ptr<const Operator> SoleOp() const;
@@ -29,16 +22,60 @@ class ChainNode final : public Node<ChainNode, ChainEdge> {
   std::shared_ptr<const ParallelDesc>& mut_parallel_desc();
 
   // others
+  virtual const char* TypeName() const = 0;
   std::string VisualStr() const;
   bool HasOpWithModelOrModelTmpBlob() const;
 
+ protected:
+  ChainNode() = default;
+
  private:
-  Type type_;
   std::vector<std::shared_ptr<const Operator>> op_vec_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
 };
 
-OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ChainNode::Type);
+class BackwardChainNode;
+
+class ForwardChainNode final : public ChainNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ForwardChainNode);
+  ForwardChainNode() = default;
+  ~ForwardChainNode() = default;
+
+  virtual const char* TypeName() const { return "ForwardChainNode"; }
+
+  BackwardChainNode* bw_node() const { return bw_node_; }
+  void set_bw_node(BackwardChainNode* val) { bw_node_ = val; }
+
+ private:
+  BackwardChainNode* bw_node_;
+};
+
+class BackwardChainNode final : public ChainNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(BackwardChainNode);
+  BackwardChainNode() = default;
+  ~BackwardChainNode() = default;
+
+  virtual const char* TypeName() const { return "BackwardChainNode"; }
+
+  ForwardChainNode* fw_node() const { return fw_node_; }
+  void set_fw_node(ForwardChainNode* val) { fw_node_ = val; }
+
+ private:
+  ForwardChainNode* fw_node_;
+};
+
+class LossChainNode final : public ChainNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(LossChainNode);
+  LossChainNode() = default;
+  ~LossChainNode() = default;
+
+  virtual const char* TypeName() const { return "LossChainNode"; }
+
+ private:
+};
 
 class ChainEdge final : public Edge<ChainNode, ChainEdge> {
  public:
@@ -62,8 +99,16 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
   const char* TypeName() const override { return "ChainGraph"; }
 
  private:
+  template<typename ChainNodeType>
+  ChainNodeType* NewChainNode() {
+    static_assert(std::is_base_of<ChainNode, ChainNodeType>::value, "");
+    ChainNodeType* ret = new ChainNodeType;
+    AddAllocatedNode(ret);
+    return ret;
+  }
+
   void BuildFwStruct(const LogicalGraph& logical_gph);
-  void BuildBpStruct();
+  void BuildBwStruct();
   void BuildModelStruct(bool is_train);
 };
 

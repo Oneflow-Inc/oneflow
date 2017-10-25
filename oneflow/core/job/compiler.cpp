@@ -1,9 +1,7 @@
 #include <gflags/gflags.h>
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/common/str_util.h"
+#include "oneflow/core/graph/chain_graph.h"
 #include "oneflow/core/graph/logical_graph.h"
-#include "oneflow/core/job/id_manager.h"
-#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/operator/operator_manager.h"
 
@@ -38,6 +36,7 @@ Plan Compiler::Compile(const JobConf& job_conf) {
 Plan Compiler::DoCompile() {
   LogicalGraph logical_gph(JobDesc::Singleton()->dlnet_conf(),
                            JobDesc::Singleton()->placement());
+  ChainGraph chain_gph(logical_gph, JobDesc::Singleton()->is_train());
 }
 
 }  // namespace oneflow

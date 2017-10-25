@@ -24,11 +24,10 @@ class Operator {
   //
   void InitFromOpConf(const OperatorConf& op_conf);
   virtual void InitFromOpConf() = 0;
-  virtual bool IsElemWise() const { return false; }
+  virtual bool IsElemWiseOp() const { return false; }
   virtual bool IsLossOp() const { return false; }
   virtual bool IsRecordOp() const { return false; }
   bool IsChainMergeable() const { return !IsLossOp() && !IsRecordOp(); }
-  std::string GetTag(const std::string& tag_key) const { return "TODO"; }
 
   // this <-> OpProto
   void InitFromProto(const OperatorProto& operatorproto);

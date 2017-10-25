@@ -13,7 +13,7 @@ class ReluOp final : public UserOperator {
 
   void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
-  bool IsElemWise() const override { return true; }
+  bool IsElemWiseOp() const override { return true; }
 
   void InferBlobDesc4FwBlobs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,

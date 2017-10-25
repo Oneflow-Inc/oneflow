@@ -52,9 +52,9 @@ void LogicalGraph::FillNodeWithParallelDesc(const Placement& placement) {
     }
   }
   ForEachNode([&](LogicalNode* cur_node) {
-    if (cur_node->op()->GetTag("is_element_wise") == "true") {
+    if (cur_node->op()->IsElemWiseOp()) {
       LogicalNode* pred_node = cur_node;
-      while (pred_node->op()->GetTag("is_element_wise") == "true") {
+      while (pred_node->op()->IsElemWiseOp()) {
         pred_node = pred_node->SoleInEdge()->src_node();
       }
       cur_node->mut_parallel_desc() = pred_node->parallel_desc();

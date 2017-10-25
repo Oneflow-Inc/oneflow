@@ -11,8 +11,6 @@ class CloneOp final : public SysOperator {
   CloneOp() = default;
   ~CloneOp() = default;
 
-  bool IsElemWise() const override { return true; }
-
   void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
   void InferBlobDesc4FwBlobs(

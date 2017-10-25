@@ -85,7 +85,7 @@ void ModelMergeChains(std::list<Chain>* chain_list,
   for (auto& pair : *logical2chain_it) {
     // Get cur_node, pred_node
     const LogicalNode* cur_node = pair.first;
-    if (cur_node->op()->IsElemWise() == false) { continue; }
+    if (cur_node->op()->IsElemWiseOp() == false) { continue; }
     if (cur_node->parallel_desc()->policy() != kModelParallel) { continue; }
     const LogicalNode* pred_node = cur_node->SoleInEdge()->src_node();
     CHECK(pred_node->parallel_desc()->Equal(cur_node->parallel_desc().get()));
@@ -197,15 +197,13 @@ void DataMergeChains(const LogicalGraph& logical_gph,
   for (const auto& pair : *logical2chain_it) {
     const LogicalNode* cur_logi_node = pair.first;
     if (cur_logi_node->parallel_desc()->policy() != kDataParallel) { continue; }
-    if (cur_logi_node->op()->GetTag("is_loss") == "true") { continue; }
+    if (cur_logi_node->op()->IsLossOp()) { continue; }
     data_parallel_node.push_back(cur_logi_node);
   }
   while (DoOneDataMerge(data_parallel_node, chain_list, logical2chain_it)) {}
 }
 
 }  // namespace
-
-OF_DEFINE_ENUM_TO_OSTREAM_FUNC(ChainNode::Type);
 
 std::shared_ptr<const Operator> ChainNode::SoleOp() const {
   CHECK_EQ(op_vec_.size(), 1);
@@ -224,10 +222,10 @@ std::shared_ptr<const ParallelDesc>& ChainNode::mut_parallel_desc() {
 }
 
 std::string ChainNode::VisualStr() const {
-  CHECK(op_vec_.empty() == false);
   std::stringstream ss;
+  ss << TypeName();
   for (auto op : op_vec_) { ss << "\\n" << op->op_name(); }
-  return ss.str().substr(2);
+  return ss.str();
 }
 
 bool ChainNode::HasOpWithModelOrModelTmpBlob() const {
@@ -239,11 +237,12 @@ bool ChainNode::HasOpWithModelOrModelTmpBlob() const {
   return false;
 }
 
-std::string ChainEdge::VisualStr() const { return "TODO"; }
+std::string ChainEdge::VisualStr() const { return ""; }
 
 ChainGraph::ChainGraph(const LogicalGraph& logical_gph, bool is_train) {
   BuildFwStruct(logical_gph);
-  if (is_train) { BuildBpStruct(); }
+  if (is_train) { BuildBwStruct(); }
+  ToDotWithAutoFilePath();
   BuildModelStruct(is_train);
   ToDotWithAutoFilePath();
 }
@@ -263,7 +262,12 @@ void ChainGraph::BuildFwStruct(const LogicalGraph& logical_gph) {
       11, HashChainIt);
   HashMap<ChainNode*, std::unordered_set<ChainNode*>> chain_node2pred;
   FOR_EACH(chain_it, chain_list) {
-    ChainNode* chain_node = NewNode();
+    ChainNode* chain_node = nullptr;
+    if (chain_it->nodes.size() == 1 && chain_it->nodes[0]->op()->IsLossOp()) {
+      chain_node = NewChainNode<LossChainNode>();
+    } else {
+      chain_node = NewChainNode<ForwardChainNode>();
+    }
     chain_it2chain_node[chain_it] = chain_node;
     chain_node2pred[chain_node] = {};
     SetChainNodeWithChainIt(chain_node, chain_it);
@@ -288,43 +292,46 @@ void ChainGraph::BuildFwStruct(const LogicalGraph& logical_gph) {
       Connect(pred_node, NewEdge(), cur_node);
     }
   }
-  // Set type
-  ForEachNode([](ChainNode* chain_node) {
-    if (chain_node->op_vec().size() == 1
-        && chain_node->SoleOp()->GetTag("is_loss") == "true") {
-      chain_node->set_type(ChainNode::Type::kLoss);
-    } else {
-      chain_node->set_type(ChainNode::Type::kForward);
-    }
-  });
 }
 
-void ChainGraph::BuildBpStruct() {
-  HashMap<ChainNode*, ChainNode*> fw2bw;
-  ForEachNode([&](ChainNode* fw_node) {
-    if (fw_node->type() == ChainNode::Type::kLoss) { return; }
-    CHECK_EQ(fw_node->type(), ChainNode::Type::kForward);
-    CHECK(fw2bw.emplace(fw_node, nullptr).second);
+void ChainGraph::BuildBwStruct() {
+  HashSet<ForwardChainNode*> fw_nodes_that_need_bw;
+  TopoForEachNode([&](ChainNode* chain_node) {
+    auto fw_chain_node = dynamic_cast<ForwardChainNode*>(chain_node);
+    if (fw_chain_node == nullptr) { return; }
+    if (fw_chain_node->HasOpWithModelOrModelTmpBlob()) {
+      CHECK(fw_nodes_that_need_bw.insert(fw_chain_node).second);
+      return;
+    }
+    for (ChainEdge* edge : fw_chain_node->in_edges()) {
+      auto fw_pred_node = static_cast<ForwardChainNode*>(edge->src_node());
+      if (fw_nodes_that_need_bw.find(fw_pred_node)
+          != fw_nodes_that_need_bw.end()) {
+        CHECK(fw_nodes_that_need_bw.insert(fw_chain_node).second);
+        return;
+      }
+    }
   });
-  for (auto& pair : fw2bw) {
-    ChainNode* fw_node = pair.first;
-    ChainNode* bw_node = NewNode();
-    bw_node->set_type(ChainNode::Type::kBackward);
+  for (ForwardChainNode* fw_node : fw_nodes_that_need_bw) {
+    BackwardChainNode* bw_node = NewChainNode<BackwardChainNode>();
     bw_node->mut_op_vec() = fw_node->op_vec();
     bw_node->mut_parallel_desc() = fw_node->parallel_desc();
-    CHECK(pair.second == nullptr);
-    pair.second = bw_node;
+    fw_node->set_bw_node(bw_node);
+    bw_node->set_fw_node(fw_node);
   }
   std::list<ChainEdge*> fw_edges;
   ForEachEdge([&](ChainEdge* edge) { fw_edges.push_back(edge); });
   for (ChainEdge* fw_edge : fw_edges) {
-    ChainNode* fw_src_node = fw_edge->src_node();
-    ChainNode* fw_dst_node = fw_edge->dst_node();
-    CHECK_EQ(fw_src_node->type(), ChainNode::Type::kForward);
-    if (fw_dst_node->type() == ChainNode::Type::kLoss) {
-      Connect(fw_dst_node, NewEdge(), fw2bw.at(fw_src_node));
+    auto fw_src_node = static_cast<ForwardChainNode*>(fw_edge->src_node());
+    auto fw_dst_node = dynamic_cast<ForwardChainNode*>(fw_edge->dst_node());
+    ChainNode* bw_src_node = fw_src_node->bw_node();
+    if (bw_src_node == nullptr) { continue; }
+    if (fw_dst_node == nullptr) {
+      Connect(fw_edge->dst_node(), NewEdge(), bw_src_node);
     } else {
-      Connect(fw2bw.at(fw_dst_node), NewEdge(), fw2bw.at(fw_src_node));
+      ChainNode* bw_dst_node = fw_dst_node->bw_node();
+      if (bw_dst_node == nullptr) { continue; }
+      Connect(bw_dst_node, NewEdge(), bw_src_node);
     }
   }
 }
