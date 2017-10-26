@@ -30,7 +30,7 @@ class UbfInStream {
   virtual int32_t ReadDesc(char* s, size_t n) { return Read(s, n); }
   // 0: success
   // -1: eof
-  virtual int32_t Read(char* s, size_t n) { return in_stream_->Read(s, n); }
+  int32_t Read(char* s, size_t n) { return in_stream_->Read(s, n); }
 
  private:
   std::unique_ptr<NormalPersistentInStream> in_stream_;
