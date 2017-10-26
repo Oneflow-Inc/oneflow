@@ -64,6 +64,7 @@ void EndpointManager::InitRdma() {
   }
   OF_BARRIER();
   CtrlClient::Singleton()->ClearConnectionInfo();
+  LOG(INFO) << "InitRdma finished!";
 }
 
 RdmaMem* EndpointManager::NewRdmaMem() {

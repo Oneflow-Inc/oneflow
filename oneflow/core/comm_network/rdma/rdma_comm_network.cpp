@@ -11,7 +11,6 @@ RdmaCommNet::RdmaCommNet() {
   unregister_mems_cnt_ = 0;
   rdma_established_ = false;
   endpoint_manager_.reset(new EndpointManager());
-  endpoint_manager_->Start();
 }
 
 RdmaCommNet::~RdmaCommNet() {
@@ -26,6 +25,7 @@ const void* RdmaCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
     std::unique_lock<std::mutex> lck(mem_mutex_);
     if (!rdma_established_) {
       endpoint_manager_->InitRdma();
+      endpoint_manager_->Start();
       rdma_established_ = true;
     }
     mems_.push_back(rdma_mem);
