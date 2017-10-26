@@ -14,18 +14,22 @@ class UbfInStream {
   OF_DISALLOW_COPY_AND_MOVE(UbfInStream);
   UbfInStream() = delete;
   UbfInStream(fs::FileSystem* fs, const std::string& file_path)
-      : in_stream_(of_make_unique<NormalPersistentInStream>(fs, file_path, 0)) {
-  }
+      : in_stream_(of_make_unique<NormalPersistentInStream>(fs, file_path)) {}
   virtual ~UbfInStream() = default;
 
-  int32_t ReadOneItem(std::unique_ptr<UbfItem>* item);
+  // 0: success
+  // -1: eof
+  int32_t ReadOneItem(UbfItem* item);
 
-  //	getter
  protected:
   std::unique_ptr<NormalPersistentInStream>& mut_in_stream() {
     return in_stream_;
   }
+  // 0: success
+  // -1: eof
   virtual int32_t ReadDesc(char* s, size_t n) { return Read(s, n); }
+  // 0: success
+  // -1: eof
   virtual int32_t Read(char* s, size_t n) { return in_stream_->Read(s, n); }
 
  private:

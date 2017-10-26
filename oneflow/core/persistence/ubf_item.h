@@ -19,6 +19,12 @@ enum DataEncodeType {
   OF_PP_FOR_EACH_TUPLE(DECLARE_DATA_ENCODE_TYPE, DATA_ENCODE_TYPE_SEQ)
 };
 
+//  ubf item data layout:
+//  |<------------------------ len_ ---------------------------->|
+//  |<---------- data_id_len_ ---------->|                       |
+//  +------------------------------------+-----------------------+
+//  |        data id (string type)       |    body (any type)    |
+//  '------------------------------------------------------------'
 class UbfItemDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UbfItemDesc);
@@ -41,20 +47,11 @@ class UbfItemDesc final {
   size_t body_offset() const { return data_id_len_; }
   size_t body_len() const { return len() - body_offset(); }
 
-  //	setter
-  void set_body_len(size_t body_len) { len_ = body_offset() + body_len; }
-
  private:
-  uint8_t data_type_ = DataType::kChar;                   // body data type
-  uint8_t data_encode_type_ = DataEncodeType::kNoEncode;  // body encode type
-  uint16_t data_id_len_ = 0;
-  uint32_t len_ = 0;
-  //  data layout:
-  //  |<------------------------ len_ ---------------------------->|
-  //  |<---------- data_id_len_ ---------->|                       |
-  //  +------------------------------------+-----------------------+
-  //  |        data id (string type)       |    body (any type)    |
-  //  '------------------------------------------------------------'
+  uint8_t data_type_;         // body data type
+  uint8_t data_encode_type_;  // body encode type
+  uint16_t data_id_len_;
+  uint32_t len_;
 };
 
 //  united binary format
@@ -71,10 +68,7 @@ class UbfItemDesc final {
 class UbfItem final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UbfItem);
-  UbfItem() = delete;
-  explicit UbfItem(std::unique_ptr<UbfItemDesc>&& desc)
-      : desc_(std::move(desc)),
-        data_(std::unique_ptr<char[]>(new char[desc_->len()])) {}
+  UbfItem() = default;
   UbfItem(DataType dtype, DataEncodeType detype, const std::string& data_id,
           size_t body_len, const std::function<void(char*)>& Fill);
 
@@ -92,6 +86,10 @@ class UbfItem final {
   size_t body_len() const { return desc()->body_len(); }
 
   //	setter
+  void set_desc(std::unique_ptr<UbfItemDesc>&& desc) {
+    desc_ = std::move(desc);
+    data_ = std::unique_ptr<char[]>(new char[desc_->len()]);
+  }
   char* mut_data() { return data_.get(); }
 
  private:

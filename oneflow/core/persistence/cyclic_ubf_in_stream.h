@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class CyclicUbfInStream : public UbfInStream {
+class CyclicUbfInStream final : public UbfInStream {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CyclicUbfInStream);
   CyclicUbfInStream() = delete;
@@ -17,6 +17,8 @@ class CyclicUbfInStream : public UbfInStream {
   }
 
  protected:
+  // 0: success
+  // -1: eof
   int32_t ReadDesc(char* s, size_t n) override;
 
  private:

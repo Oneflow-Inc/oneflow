@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class NormalUbfInStream : public UbfInStream {
+class NormalUbfInStream final : public UbfInStream {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NormalUbfInStream);
   NormalUbfInStream() = delete;
