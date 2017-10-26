@@ -22,10 +22,10 @@ class Connection {
   }
 
   void PostReadRequest(void* read_ctx, const RdmaMem* local_mem,
-                       const RdmaMemDesc* remote_mem);
+                       const RdmaMemDesc& remote_mem);
   void PostSendRequest(const ActorMsg* msg, const RdmaMem* msg_mem);
   void PostRecvRequest(const ActorMsg* msg, const RdmaMem* msg_mem);
-  void WaitForConnection();
+  void CompleteConnection();
 
  private:
   ConnectionInfo peer_conn_info_;

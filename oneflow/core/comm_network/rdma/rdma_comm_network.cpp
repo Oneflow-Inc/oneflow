@@ -1,5 +1,4 @@
 #include "oneflow/core/comm_network/rdma/rdma_comm_network.h"
-#include "oneflow/core/control/ctrl_client.h"
 
 namespace oneflow {
 
@@ -10,35 +9,13 @@ void RdmaCommNet::Init() {
 RdmaCommNet::RdmaCommNet() {
   mems_.clear();
   unregister_mems_cnt_ = 0;
-  InitRdma();
+  endpoint_manager_->InitRdma();
   endpoint_manager_->Start();
 }
 
 RdmaCommNet::~RdmaCommNet() {
   // TODO
   endpoint_manager_->Stop();
-}
-
-Connection* RdmaCommNet::NewConnection() {
-  Connection* conn = endpoint_manager_->NewConnection();
-  return conn;
-}
-
-ConnectionInfo& RdmaCommNet::GetMachineConnInfo() {
-  return endpoint_manager_->GetMachineConnInfo();
-}
-
-void RdmaCommNet::InitRdma() {
-  int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
-  CtrlClient::Singleton()->PushConnectionInfo(GetMachineConnInfo());
-  FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
-    Connection* conn = NewConnection();
-    conn->set_peer_conn_info(
-        CtrlClient::Singleton()->PullConnectionInfo(peer_machine_id));
-    connection_pool_->AddConnection(peer_machine_id, conn);
-  }
-  OF_BARRIER();
-  CtrlClient::Singleton()->ClearConnectionInfo();
 }
 
 const void* RdmaCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
@@ -146,8 +123,8 @@ void* RdmaCommNet::Read(void* actor_read_id, int64_t src_machine_id,
     std::unique_lock<std::mutex> lck(actor_read_ctx->read_ctx_list_mtx);
     actor_read_ctx->read_ctx_list.push_back(read_ctx);
   }
-  // TODO
-  RdmaMemDesc* remote_mem_desc = nullptr;
+  RdmaMemDesc& remote_mem_desc =
+      token2mem_desc_[reinterpret_cast<int64_t>(src_token)];
   auto local_mem = static_cast<const RdmaMem*>(dst_token);
   endpoint_manager_->Read(read_ctx, src_machine_id, local_mem, remote_mem_desc);
   return read_ctx;

@@ -6,19 +6,6 @@
 
 namespace oneflow {
 
-namespace {
-
-sockaddr_in GetAddress(const std::string& ip, int32_t port) {
-  sockaddr_in addr = sockaddr_in();
-  memset(&addr, 0, sizeof(sockaddr_in));
-  inet_pton(AF_INET, ip.c_str(), &addr.sin_addr);
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons(static_cast<u_short>(port));
-  return addr;
-}
-
-}  // namespace
-
 EndpointManager::~EndpointManager() {
   for (auto it = recv_msg2rdma_mem_.begin(); it != recv_msg2rdma_mem_.end();
        ++it) {
@@ -44,6 +31,7 @@ void EndpointManager::Init(const std::string& my_ip, int32_t my_port) {
 
   ibv_free_device_list(device_list);
 
+  // Init connection info
   ibv_port_attr attr;
   CHECK_EQ(ibv_query_port(context_, (uint8_t)1, &attr), 0);
   srand((unsigned)time(NULL));
@@ -55,6 +43,27 @@ void EndpointManager::Init(const std::string& my_ip, int32_t my_port) {
   conn_info_.set_psn(gid.global.subnet_prefix);
   conn_info_.set_iid(gid.global.interface_id);
   active_mtu_ = attr.active_mtu;
+}
+
+void EndpointManager::InitRdma() {
+  int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
+  CtrlClient::Singleton()->PushConnectionInfo(GetMachineConnInfo());
+  FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
+    Connection* conn = NewConnection();
+    conn->set_peer_conn_info(
+        CtrlClient::Singleton()->PullConnectionInfo(peer_machine_id));
+    connection_pool_.emplace(peer_machine_id, conn);
+    for (size_t i = 0; i != kPrePostRecvNum; ++i) {
+      ActorMsg* actor_msg = new ActorMsg();
+      const RdmaMem* rdma_mem = static_cast<const RdmaMem*>(
+          CommNet::Singleton()->RegisterMemory(actor_msg, sizeof(ActorMsg)));
+      recv_msg2rdma_mem_.emplace(actor_msg, rdma_mem);
+      conn->PostRecvRequest(actor_msg, rdma_mem);
+    }
+    conn->CompleteConnection();
+  }
+  OF_BARRIER();
+  CtrlClient::Singleton()->ClearConnectionInfo();
 }
 
 RdmaMem* EndpointManager::NewRdmaMem() {
@@ -93,14 +102,14 @@ ibv_qp* EndpointManager::NewQueuePair() {
 
 void EndpointManager::Read(void* read_ctx, int64_t src_machine_id,
                            const RdmaMem* local_mem,
-                           const RdmaMemDesc* remote_mem_desc) {
-  Connection* conn = GetConnection(src_machine_id);
+                           const RdmaMemDesc& remote_mem_desc) {
+  Connection* conn = connection_pool_[src_machine_id];
   conn->PostReadRequest(read_ctx, local_mem, remote_mem_desc);
 }
 
 void EndpointManager::SendActorMsg(int64_t dst_machine_id,
                                    const ActorMsg& msg) {
-  Connection* conn = GetConnection(dst_machine_id);
+  Connection* conn = connection_pool_[dst_machine_id];
   ActorMsg* msg_ptr = new ActorMsg;
   *msg_ptr = msg;
   const void* rdma_mem =
@@ -116,11 +125,6 @@ void EndpointManager::Start() {
 void EndpointManager::Stop() {
   thread_state_ = false;
   thread_.join();
-}
-
-Connection* EndpointManager::GetConnection(int64_t machine_id) {
-  // TODO
-  return nullptr;
 }
 
 void EndpointManager::PollLoop() {
