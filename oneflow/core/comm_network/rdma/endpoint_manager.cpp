@@ -7,6 +7,7 @@
 namespace oneflow {
 
 EndpointManager::~EndpointManager() {
+  CHECK(!thread_state_);
   for (auto it = recv_msg2rdma_mem_.begin(); it != recv_msg2rdma_mem_.end();
        ++it) {
     delete it->first;
