@@ -28,6 +28,7 @@ class JobDesc final {
   int32_t piece_size() const { return job_conf_.piece_size(); }
   DataType default_data_type() const { return job_conf_.default_data_type(); }
   bool use_async_cpu_stream() const { return job_conf_.use_async_cpu_stream(); }
+  bool use_rdma() const { return job_conf_.use_rdma(); }
   size_t SizeOfOneDataId() const {
     return job_conf_.max_data_id_length() * sizeof(char);
   }

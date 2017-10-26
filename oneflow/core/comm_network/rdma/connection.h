@@ -25,7 +25,7 @@ class Connection {
                        const RdmaMemDesc& remote_mem);
   void PostSendRequest(const ActorMsg* msg, const RdmaMem* msg_mem);
   void PostRecvRequest(const ActorMsg* msg, const RdmaMem* msg_mem);
-  void CompleteConnection();
+  void CompleteConnection(ConnectionInfo& my_conn_info);
 
  private:
   ConnectionInfo peer_conn_info_;

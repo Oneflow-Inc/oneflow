@@ -25,8 +25,6 @@ class EndpointManager {
   Connection* NewConnection();
   ibv_qp* NewQueuePair();
 
-  ConnectionInfo& GetMachineConnInfo() { return conn_info_; }
-
   void Read(void* read_ctx, int64_t src_machine_id, const RdmaMem* local_mem,
             const RdmaMemDesc& remote_mem_desc);
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg);
@@ -38,6 +36,8 @@ class EndpointManager {
   void PollLoop();
   void PollSendQueue();
   void PollRecvQueue();
+
+  ConnectionInfo& GetMachineConnInfo() { return conn_info_; }
 
   enum { kPrePostRecvNum = 15 };  // TODO
   ConnectionInfo conn_info_;

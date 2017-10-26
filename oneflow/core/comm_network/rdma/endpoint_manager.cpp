@@ -61,7 +61,7 @@ void EndpointManager::InitRdma() {
       recv_msg2rdma_mem_.emplace(actor_msg, const_cast<RdmaMem*>(rdma_mem));
       conn->PostRecvRequest(actor_msg, rdma_mem);
     }
-    conn->CompleteConnection();
+    conn->CompleteConnection(GetMachineConnInfo());
   }
   OF_BARRIER();
   CtrlClient::Singleton()->ClearConnectionInfo();
