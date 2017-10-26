@@ -169,9 +169,10 @@ void EndpointManager::PollRecvQueue() {
   ActorMsg* msg = reinterpret_cast<ActorMsg*>(wc.wr_id);
 
   ActorMsgBus::Singleton()->SendMsg(*msg);
-  // int64_t src_actor_id = msg->src_actor_id();
-  // auto msg2mem_it = recv_msg2rdma_mem_.find(msg);
-  // TODO
+  int64_t src_actor_id = msg->src_actor_id();
+  Connection* conn = GetConnection(src_actor_id);
+  auto msg2mem_it = recv_msg2rdma_mem_.find(msg);
+  conn->PostRecvRequest(msg, msg2mem_it->second);
 }
 
 }  // namespace oneflow

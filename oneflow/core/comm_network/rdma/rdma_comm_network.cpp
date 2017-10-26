@@ -10,10 +10,12 @@ RdmaCommNet::RdmaCommNet() {
   mems_.clear();
   unregister_mems_cnt_ = 0;
   endpoint_manager_->InitRdma();
+  endpoint_manager_->Start();
 }
 
 RdmaCommNet::~RdmaCommNet() {
   // TODO
+  endpoint_manager_->Stop();
 }
 
 const void* RdmaCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
