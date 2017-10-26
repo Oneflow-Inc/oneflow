@@ -6,16 +6,7 @@
 
 namespace oneflow {
 
-EndpointManager::~EndpointManager() {
-  CHECK(!thread_state_);
-  for (auto it = recv_msg2rdma_mem_.begin(); it != recv_msg2rdma_mem_.end();
-       ++it) {
-    delete it->first;
-    CommNet::Singleton()->UnRegisterMemory(it->second);
-  }
-}
-
-void EndpointManager::Init(const std::string& my_ip, int32_t my_port) {
+EndpointManager::EndpointManager() {
   // Init Adapter
   ibv_device** device_list = ibv_get_device_list(NULL);
   ibv_device* device = device_list[0];
@@ -46,6 +37,14 @@ void EndpointManager::Init(const std::string& my_ip, int32_t my_port) {
   active_mtu_ = attr.active_mtu;
 }
 
+EndpointManager::~EndpointManager() {
+  for (auto it = recv_msg2rdma_mem_.begin(); it != recv_msg2rdma_mem_.end();
+       ++it) {
+    delete it->first;
+    CommNet::Singleton()->UnRegisterMemory(it->second);
+  }
+}
+
 void EndpointManager::InitRdma() {
   int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
   CtrlClient::Singleton()->PushConnectionInfo(GetMachineConnInfo());
@@ -65,6 +64,7 @@ void EndpointManager::InitRdma() {
   }
   OF_BARRIER();
   CtrlClient::Singleton()->ClearConnectionInfo();
+  LOG(INFO) << "InitRdma finished!";
 }
 
 RdmaMem* EndpointManager::NewRdmaMem() {

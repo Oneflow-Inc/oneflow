@@ -16,10 +16,9 @@ namespace oneflow {
 class EndpointManager {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EndpointManager);
-  EndpointManager() = default;
+  EndpointManager();
   ~EndpointManager();
 
-  void Init(const std::string& my_ip, int32_t my_port);
   void InitRdma();
   RdmaMem* NewRdmaMem();
   Connection* NewConnection();
