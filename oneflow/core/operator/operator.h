@@ -27,6 +27,7 @@ class Operator {
   virtual bool IsElemWiseOp() const { return false; }
   virtual bool IsLossOp() const { return false; }
   virtual bool IsRecordOp() const { return false; }
+  virtual bool IsDataLoaderOp() const { return false; }
   bool IsChainMergeable() const { return !IsLossOp() && !IsRecordOp(); }
 
   // this <-> OpProto

@@ -9,6 +9,12 @@ enum ParallelPolicy {
   kFakerLossRecord = 3;
 }
 
+message ParallelContext {
+  required int64 parallel_id = 1;
+  required int64 parallel_num = 2;
+  required ParallelPolicy policy = 3;
+}
+
 message ParallelConf {
   required ParallelPolicy policy = 1;
   repeated string device_name = 2;

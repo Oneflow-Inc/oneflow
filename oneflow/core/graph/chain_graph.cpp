@@ -198,6 +198,7 @@ void DataMergeChains(const LogicalGraph& logical_gph,
     const LogicalNode* cur_logi_node = pair.first;
     if (cur_logi_node->parallel_desc()->policy() != kDataParallel) { continue; }
     if (cur_logi_node->op()->IsLossOp()) { continue; }
+    if (cur_logi_node->op()->IsDataLoaderOp()) { continue; }
     data_parallel_node.push_back(cur_logi_node);
   }
   while (DoOneDataMerge(data_parallel_node, chain_list, logical2chain_it)) {}
@@ -266,8 +267,15 @@ void ChainGraph::BuildFwStruct(const LogicalGraph& logical_gph) {
   HashMap<ChainNode*, std::unordered_set<ChainNode*>> chain_node2pred;
   FOR_EACH(chain_it, chain_list) {
     ChainNode* chain_node = nullptr;
-    if (chain_it->nodes.size() == 1 && chain_it->nodes[0]->op()->IsLossOp()) {
-      chain_node = NewChainNode<LossChainNode>();
+    if (chain_it->nodes.size() == 1) {
+      std::shared_ptr<const Operator> op = chain_it->nodes[0]->op();
+      if (op->IsLossOp()) {
+        chain_node = NewChainNode<LossChainNode>();
+      } else if (op->IsDataLoaderOp()) {
+        chain_node = NewChainNode<SourceChainNode>();
+      } else {
+        // do nothing
+      }
     } else {
       chain_node = NewChainNode<ForwardChainNode>();
     }
@@ -336,6 +344,10 @@ void ChainGraph::BuildBwStruct() {
       if (bw_dst_node == nullptr) { continue; }
       Connect(bw_dst_node, NewEdge(), bw_src_node);
     }
+  }
+  for (ForwardChainNode* fw_node : fw_nodes_that_need_bw) {
+    BackwardChainNode* bw_node = fw_node->bw_node();
+    Connect<ChainNode>(fw_node, NewEdge(), bw_node);
   }
 }
 

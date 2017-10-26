@@ -80,15 +80,15 @@ class Node {
   const std::unordered_set<EdgeType*>& in_edges() const { return in_edges_; }
   const std::unordered_set<EdgeType*>& out_edges() const { return out_edges_; }
 
-  void ForEachNodeOnInEdge(std::function<void(NodeType*)> NodeHandler) {
-    for (EdgeType* edge : in_edges_) { NodeHandler(edge->src_node()); }
+  void ForEachNodeOnInEdge(std::function<void(NodeType*)> Handler) const {
+    for (EdgeType* edge : in_edges_) { Handler(edge->src_node()); }
   }
-  void ForEachNodeOnOutEdge(std::function<void(NodeType*)> NodeHandler) {
-    for (EdgeType* edge : out_edges_) { NodeHandler(edge->dst_node()); }
+  void ForEachNodeOnOutEdge(std::function<void(NodeType*)> Handler) const {
+    for (EdgeType* edge : out_edges_) { Handler(edge->dst_node()); }
   }
-  void ForEachNodeOnInOutEdge(std::function<void(NodeType*)> NodeHandler) {
-    ForEachNodeOnInEdge(NodeHandler);
-    ForEachNodeOnOutEdge(NodeHandler);
+  void ForEachNodeOnInOutEdge(std::function<void(NodeType*)> Handler) const {
+    ForEachNodeOnInEdge(Handler);
+    ForEachNodeOnOutEdge(Handler);
   }
 
   void DisconnectAllEdges() {

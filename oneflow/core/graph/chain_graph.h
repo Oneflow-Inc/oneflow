@@ -67,6 +67,17 @@ class BackwardChainNode final : public ChainNode {
   ForwardChainNode* fw_node_;
 };
 
+class SourceChainNode final : public ChainNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SourceChainNode);
+  SourceChainNode() = default;
+  ~SourceChainNode() = default;
+
+  virtual const char* TypeName() const { return "SourceChainNode"; }
+
+ private:
+};
+
 class LossChainNode final : public ChainNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LossChainNode);

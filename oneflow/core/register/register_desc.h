@@ -18,38 +18,37 @@ class RegstDesc final {
 
   // regst_desc_id
   int64_t regst_desc_id() const { return regst_desc_id_; }
-  void set_regst_desc_id(int64_t val) { regst_desc_id_ = val; }
 
-  //
+  // producer_, consumers_
+  const TaskNode* producer() const { return producer_; }
+  void set_producer(const TaskNode* val) { producer_ = val; }
+  const HashSet<const TaskNode*>& consumers() const { return consumers_; }
+  void AddConsumer(const TaskNode*);
+
+  // min_register_num_, max_register_num_
   int32_t min_register_num() const { return min_register_num_; }
   void set_min_register_num(int32_t val) { min_register_num_ = val; }
   int32_t max_register_num() const { return max_register_num_; }
   void set_max_register_num(int32_t val) { max_register_num_ = val; }
 
-  // Producer
-  const TaskNode* GetProducer() const { return producer_; }
-  void SetProducer(const TaskNode* task_node) { producer_ = task_node; }
-  const HashSet<const TaskNode*>& consumers() const { return consumers_; }
-  void AddConsumer(const TaskNode*);
-
-  // Lbn and BlobDesc
+  // lbn2blob_desc_
   void CopyLbnFrom(const RegstDesc*);
   void CopyBlobDescFrom(const RegstDesc*);
-  void EnrollLbn(const std::string& lbn);
+  void AddLbn(const std::string& lbn);
   const BlobDesc& GetBlobDesc(const std::string& lbn) const;
-  BlobDesc* GetMutBlobDesc(const std::string& lbn);
+  BlobDesc* MutBlobDesc(const std::string& lbn);
   void ForEachLbn(std::function<void(const std::string&)> func) const;
   size_t NumOfLbn() const { return lbn2blob_desc_.size(); }
 
+  // mem_case_
+  MemoryCase& mut_mem_case() { return mem_case_; }
+
   //
   void EraseZeroSizeBlob();
-  std::string DebugStr() const;
   void ToProto(RegstDescProto*) const;
-  MemoryCase InferMemCase() const;
   BlobDesc CompPackedBlobDesc() const;
 
  private:
-  int64_t CompElemCntOfAllBlob() const;
   int64_t regst_desc_id_;
   const TaskNode* producer_;
   HashSet<const TaskNode*> consumers_;
@@ -57,7 +56,7 @@ class RegstDesc final {
   int32_t max_register_num_;
 
   HashMap<std::string, std::unique_ptr<BlobDesc>> lbn2blob_desc_;
-  int64_t register_num_;
+  MemoryCase mem_case_;
 };
 
 }  // namespace oneflow
