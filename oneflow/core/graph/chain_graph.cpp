@@ -276,7 +276,8 @@ void ChainGraph::BuildFwStruct(const LogicalGraph& logical_gph) {
       } else {
         // do nothing
       }
-    } else {
+    }
+    if (chain_node == nullptr) {
       chain_node = NewChainNode<ForwardChainNode>();
     }
     chain_it2chain_node[chain_it] = chain_node;
@@ -333,7 +334,8 @@ void ChainGraph::BuildBwStruct() {
   std::list<ChainEdge*> fw_edges;
   ForEachEdge([&](ChainEdge* edge) { fw_edges.push_back(edge); });
   for (ChainEdge* fw_edge : fw_edges) {
-    auto fw_src_node = static_cast<ForwardChainNode*>(fw_edge->src_node());
+    auto fw_src_node = dynamic_cast<ForwardChainNode*>(fw_edge->src_node());
+    if (fw_src_node == nullptr) { continue; }
     auto fw_dst_node = dynamic_cast<ForwardChainNode*>(fw_edge->dst_node());
     ChainNode* bw_src_node = fw_src_node->bw_node();
     if (bw_src_node == nullptr) { continue; }
