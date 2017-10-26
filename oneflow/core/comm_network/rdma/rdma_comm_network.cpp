@@ -15,8 +15,8 @@ RdmaCommNet::RdmaCommNet() {
 }
 
 RdmaCommNet::~RdmaCommNet() {
-  // TODO
   endpoint_manager_->Stop();
+  CHECK(mems_.empty());
 }
 
 const void* RdmaCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
