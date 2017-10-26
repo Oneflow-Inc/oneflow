@@ -57,7 +57,7 @@ void EndpointManager::InitRdma() {
       ActorMsg* actor_msg = new ActorMsg();
       const RdmaMem* rdma_mem = static_cast<const RdmaMem*>(
           CommNet::Singleton()->RegisterMemory(actor_msg, sizeof(ActorMsg)));
-      recv_msg2rdma_mem_.emplace(actor_msg, rdma_mem);
+      recv_msg2rdma_mem_.emplace(actor_msg, const_cast<RdmaMem*>(rdma_mem));
       conn->PostRecvRequest(actor_msg, rdma_mem);
     }
     conn->CompleteConnection();
@@ -170,7 +170,7 @@ void EndpointManager::PollRecvQueue() {
 
   ActorMsgBus::Singleton()->SendMsg(*msg);
   int64_t src_actor_id = msg->src_actor_id();
-  Connection* conn = GetConnection(src_actor_id);
+  Connection* conn = connection_pool_[src_actor_id];
   auto msg2mem_it = recv_msg2rdma_mem_.find(msg);
   conn->PostRecvRequest(msg, msg2mem_it->second);
 }
