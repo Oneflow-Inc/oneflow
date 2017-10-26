@@ -11,10 +11,12 @@ RdmaCommNet::RdmaCommNet() {
   mems_.clear();
   unregister_mems_cnt_ = 0;
   InitRdma();
+  endpoint_manager_->Start();
 }
 
 RdmaCommNet::~RdmaCommNet() {
   // TODO
+  endpoint_manager_->Stop();
 }
 
 Connection* RdmaCommNet::NewConnection() {
