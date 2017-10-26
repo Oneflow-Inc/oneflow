@@ -45,8 +45,9 @@ message JobConf {
   required int32 piece_size = 5;
   optional DataType default_data_type = 7 [default = kFloat]; // kFloat or kDouble
   optional bool use_async_cpu_stream = 8 [default = false];
-  optional int32 max_data_id_length = 9;
-  required GlobalFSConf global_fs_conf = 10;
+  optional bool use_rdma = 9 [default = false];
+  optional int32 max_data_id_length = 10;
+  required GlobalFSConf global_fs_conf = 11;
   oneof JobType {
     TrainConf train_conf = 1000;
     PredictConf predict_conf = 1001;
