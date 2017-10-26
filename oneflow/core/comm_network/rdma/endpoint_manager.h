@@ -8,8 +8,8 @@
 #include "oneflow/core/comm_network/rdma/connection.h"
 #include "oneflow/core/comm_network/rdma/rdma_memory.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
