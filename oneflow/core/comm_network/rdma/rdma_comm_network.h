@@ -53,6 +53,7 @@ class RdmaCommNet final : public CommNet {
   std::mutex mem_mutex_;
   std::list<RdmaMem*> mems_;
   size_t unregister_mems_cnt_;
+  bool rdma_established_;
 
   std::unique_ptr<EndpointManager> endpoint_manager_;
   HashMap<uint64_t, RdmaMemDesc> token2mem_desc_;
