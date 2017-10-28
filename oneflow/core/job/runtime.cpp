@@ -28,6 +28,7 @@ class Runtime final {
 
 void Runtime::Run(const Plan& plan, const std::string& this_machine_name) {
   NewAllSingleton(plan, this_machine_name);
+  CommNet::Singleton()->EstablishNetwork();
   // find tasks on this machine
   std::vector<const TaskProto*> mdupdt_tasks;
   std::vector<const TaskProto*> source_tasks;

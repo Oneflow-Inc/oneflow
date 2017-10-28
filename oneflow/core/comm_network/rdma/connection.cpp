@@ -31,7 +31,7 @@ void Connection::PostSendRequest(const ActorMsg* msg, const RdmaMem* msg_mem) {
   wr.opcode = IBV_WR_SEND;
   wr.send_flags = IBV_SEND_SIGNALED;
 
-  ibv_post_send(qp_ptr_, &wr, &bad_wr);
+  CHECK_EQ(ibv_post_send(qp_ptr_, &wr, &bad_wr), 0);
 }
 
 void Connection::PostRecvRequest(const ActorMsg* msg, const RdmaMem* msg_mem) {
@@ -41,7 +41,7 @@ void Connection::PostRecvRequest(const ActorMsg* msg, const RdmaMem* msg_mem) {
   wr.sg_list = const_cast<RdmaMem*>(msg_mem)->ibv_sge_ptr();
   wr.num_sge = 1;
 
-  ibv_post_recv(qp_ptr_, &wr, &bad_wr);
+  CHECK_EQ(ibv_post_recv(qp_ptr_, &wr, &bad_wr), 0);
 }
 
 void Connection::CompleteConnection(ConnectionInfo& my_conn_info) {

@@ -20,6 +20,7 @@ class RdmaCommNet final : public CommNet {
   }
 
   static void Init();
+  void EstablishNetwork() override;
 
   const void* RegisterMemory(void* mem_ptr, size_t byte_size) override;
   void UnRegisterMemory(const void* token) override;
@@ -53,7 +54,6 @@ class RdmaCommNet final : public CommNet {
   std::mutex mem_mutex_;
   std::list<RdmaMem*> mems_;
   size_t unregister_mems_cnt_;
-  bool rdma_established_;
 
   std::unique_ptr<EndpointManager> endpoint_manager_;
   HashMap<uint64_t, RdmaMemDesc> token2mem_desc_;
