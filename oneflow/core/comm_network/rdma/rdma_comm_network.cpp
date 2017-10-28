@@ -28,6 +28,11 @@ const void* RdmaCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
   rdma_mem->Register(mem_ptr, byte_size);
   {
     std::unique_lock<std::mutex> lck(mem_mutex_);
+    if (!rdma_established_) {
+      endpoint_manager_->InitRdma();
+      endpoint_manager_->Start();
+      rdma_established_ = true;
+    }
     mems_.push_back(rdma_mem);
   }
   LOG(INFO) << "Register Memory end";
