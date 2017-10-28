@@ -156,6 +156,11 @@ class MdDiffAccChainNode final : public ChainNode {
   CompTaskNode* NewCompTaskNode() const override;
 };
 
+class TaskGraph;
+
+using BuildSubTaskGraphMethod = void (TaskGraph::*)(const ChainNode* src_node,
+                                                    const ChainNode* dst_node);
+
 class ChainEdge final : public Edge<ChainNode, ChainEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ChainEdge);
@@ -163,6 +168,8 @@ class ChainEdge final : public Edge<ChainNode, ChainEdge> {
   ~ChainEdge() = default;
 
   std::string VisualStr() const override;
+
+  BuildSubTaskGraphMethod GetMethodForBuildSubTaskGraph() const;
 
  private:
 };

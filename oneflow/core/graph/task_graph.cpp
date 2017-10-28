@@ -11,6 +11,11 @@ TaskGraph::TaskGraph(std::unique_ptr<const ChainGraph>&& chain_gph) {
       chain2comp_tasks[chain_node].push_back(comp_task_node);
     });
   });
+  chain_gph_->ForEachEdge([&](const ChainEdge* chain_edge) {
+    BuildSubTaskGraphMethod method =
+        chain_edge->GetMethodForBuildSubTaskGraph();
+    (this->*method)(chain_edge->src_node(), chain_edge->dst_node());
+  });
 }
 
 }  // namespace oneflow

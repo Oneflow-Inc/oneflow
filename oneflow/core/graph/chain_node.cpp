@@ -90,4 +90,9 @@ CompTaskNode* MdDiffAccChainNode::NewCompTaskNode() const {
 }
 
 std::string ChainEdge::VisualStr() const { return ""; }
+
+BuildSubTaskGraphMethod ChainEdge::GetMethodForBuildSubTaskGraph() const {
+  return nullptr;
+}
+
 }  // namespace oneflow
