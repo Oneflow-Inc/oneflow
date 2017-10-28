@@ -50,10 +50,12 @@ EndpointManager::~EndpointManager() {
 void EndpointManager::InitRdma() {
   int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
   CtrlClient::Singleton()->PushConnectionInfo(GetMachineConnInfo());
+  LOG(INFO) << "This machine id " << RuntimeCtx::Singleton()->this_machine_id();
   FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
     if (peer_machine_id == RuntimeCtx::Singleton()->this_machine_id()) {
       continue;
     }
+    LOG(INFO) << "Peer machine id " << peer_machine_id;
     Connection* conn = NewConnection();
     LOG(INFO) << "Before PullConnectionInfo";
     conn->set_peer_conn_info(
@@ -143,6 +145,9 @@ void EndpointManager::Stop() {
 
 void EndpointManager::PollLoop() {
   LOG(INFO) << "Enter PollLoop";
+  ibv_port_attr port_attr;
+  CHECK_EQ(ibv_query_port(context_, 1, &port_attr), 0);
+  CHECK_EQ(port_attr.state, IBV_PORT_ACTIVE);
   while (true) {
     if (!thread_state_) { return; }
     PollSendQueue();

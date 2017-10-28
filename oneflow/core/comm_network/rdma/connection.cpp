@@ -45,6 +45,10 @@ void Connection::PostRecvRequest(const ActorMsg* msg, const RdmaMem* msg_mem) {
 }
 
 void Connection::CompleteConnection(ConnectionInfo& my_conn_info) {
+  LOG(INFO) << "Peer conn info: " << peer_conn_info_.qpn() << " "
+            << peer_conn_info_.psn() << " " << peer_conn_info_.snp() << " "
+            << peer_conn_info_.iid() << " " << peer_conn_info_.lid();
+  LOG(INFO) << "My conn info: " << my_conn_info.psn();
   ibv_qp_attr qp_attr;
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));
 
