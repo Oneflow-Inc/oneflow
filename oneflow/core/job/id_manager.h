@@ -30,6 +30,9 @@ class IDMgr final {
       UNEXPECTED_RUN();
     }
   }
+  bool IsInherentThrd(int64_t thrd_loc_id) const {
+    return thrd_loc_id >= device_num_per_machine_;
+  }
   int64_t ThrdLocId4DevPhyId(int64_t device_phy_id) const {
     return device_phy_id;
   }

@@ -38,10 +38,7 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
       machine_id2sorted_thrd_loc_ids_[machine_id].push_back(thrd_loc_id);
     }
   }
-  SortAndRemoveDuplication(&sorted_machine_ids_);
-  for (auto& pair : machine_id2sorted_thrd_loc_ids_) {
-    SortAndRemoveDuplication(&(pair.second));
-  }
+  Resort();
   parallel_num_ = 0;
   for (const auto& pair : machine_id2sorted_thrd_loc_ids_) {
     parallel_num_ += pair.second.size();
@@ -84,11 +81,29 @@ void ParallelDesc::RemoveNeedlessDevice(int32_t max_device_num) {
   parallel_num_ = max_device_num;
 }
 
+void ParallelDesc::ReplaceThrdLocId(int64_t old_thrd_loc_id,
+                                    int64_t new_thrd_loc_id) {
+  CHECK_EQ(IDMgr::Singleton()->IsInherentThrd(old_thrd_loc_id),
+           IDMgr::Singleton()->IsInherentThrd(new_thrd_loc_id));
+  for (auto& pair : machine_id2sorted_thrd_loc_ids_) {
+    std::replace(pair.second.begin(), pair.second.end(), old_thrd_loc_id,
+                 new_thrd_loc_id);
+  }
+  Resort();
+}
+
 bool ParallelDesc::Equal(const ParallelDesc& rhs) const {
   return policy_ == rhs.policy_ && device_type_ == rhs.device_type_
          && sorted_machine_ids_ == rhs.sorted_machine_ids_
          && machine_id2sorted_thrd_loc_ids_
                 == rhs.machine_id2sorted_thrd_loc_ids_;
+}
+
+void ParallelDesc::Resort() {
+  SortAndRemoveDuplication(&sorted_machine_ids_);
+  for (auto& pair : machine_id2sorted_thrd_loc_ids_) {
+    SortAndRemoveDuplication(&(pair.second));
+  }
 }
 
 }  // namespace oneflow

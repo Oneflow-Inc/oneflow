@@ -30,12 +30,15 @@ class ParallelDesc {
   // Setters
   void set_policy(ParallelPolicy val) { policy_ = val; }
   void RemoveNeedlessDevice(int32_t max_device_num);
+  void ReplaceThrdLocId(int64_t old_thrd_loc_id, int64_t new_thrd_loc_id);
 
   //
   bool Equal(const ParallelDesc& rhs) const;
   bool Equal(const ParallelDesc* rhs) const { return Equal(*rhs); }
 
  private:
+  void Resort();
+
   ParallelPolicy policy_;
   DeviceType device_type_;
   std::vector<int64_t> sorted_machine_ids_;
