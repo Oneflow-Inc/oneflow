@@ -3,6 +3,7 @@
 
 #include "oneflow/core/graph/exec_graph.h"
 #include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/job/task.pb.h"
 
 namespace oneflow {
 
@@ -29,7 +30,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   // Others
   virtual void NewAllProducedRegst() = 0;
 
-  virtual const char* Typename() const = 0;
+  virtual TodoTaskType GetTaskType() const = 0;
   std::string VisualStr() const override;
 
  protected:

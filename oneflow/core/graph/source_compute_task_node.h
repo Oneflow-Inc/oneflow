@@ -12,6 +12,7 @@ class SourceCompTaskNode final : public CompTaskNode {
   ~SourceCompTaskNode() = default;
 
   void NewAllProducedRegst() override;
+  TodoTaskType GetTaskType() const override { return TodoTaskType::kSource; }
 
  private:
 };

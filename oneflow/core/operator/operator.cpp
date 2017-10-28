@@ -73,7 +73,7 @@ const std::string& Operator::SoleDtbn() const {
 
 void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
   if (model_bns_.empty() && model_tmp_bns_.empty()) {
-    pr_desc->mut_policy() = ParallelPolicy::kDataParallel;
+    pr_desc->set_policy(ParallelPolicy::kDataParallel);
   }
   VirtualFixParallelDesc(pr_desc);
 }

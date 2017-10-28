@@ -4,9 +4,6 @@ package oneflow;
 enum ParallelPolicy {
   kDataParallel = 0;
   kModelParallel = 1;
-  // Follows are used by internal system
-  kFakerMdUpdt = 2;
-  kFakerLossRecord = 3;
 }
 
 message ParallelContext {

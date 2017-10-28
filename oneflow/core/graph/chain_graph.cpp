@@ -206,40 +206,6 @@ void DataMergeChains(const LogicalGraph& logical_gph,
 
 }  // namespace
 
-std::shared_ptr<const Operator> ChainNode::SoleOp() const {
-  CHECK_EQ(op_vec_.size(), 1);
-  return op_vec_.front();
-}
-
-const std::vector<std::shared_ptr<const Operator>>& ChainNode::op_vec() const {
-  return op_vec_;
-}
-
-std::shared_ptr<const ParallelDesc> ChainNode::parallel_desc() const {
-  return parallel_desc_;
-}
-std::shared_ptr<const ParallelDesc>& ChainNode::mut_parallel_desc() {
-  return parallel_desc_;
-}
-
-std::string ChainNode::VisualStr() const {
-  std::stringstream ss;
-  ss << TypeName();
-  for (auto op : op_vec_) { ss << "\\n" << op->op_name(); }
-  return ss.str();
-}
-
-bool ChainNode::HasOpWithModelOrModelTmpBlob() const {
-  for (std::shared_ptr<const Operator> op : op_vec_) {
-    if (!op->model_bns().empty() || !op->model_tmp_bns().empty()) {
-      return true;
-    }
-  }
-  return false;
-}
-
-std::string ChainEdge::VisualStr() const { return ""; }
-
 ChainGraph::ChainGraph(const LogicalGraph& logical_gph, bool is_train) {
   BuildFwStruct(logical_gph);
   if (is_train) {

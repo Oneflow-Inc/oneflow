@@ -8,10 +8,11 @@ namespace oneflow {
 class BwCompTaskNode final : public CompTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BwCompTaskNode);
-  BwCompTaskNode();
+  BwCompTaskNode() = default;
   ~BwCompTaskNode() = default;
 
   void NewAllProducedRegst() override;
+  TodoTaskType GetTaskType() const override { return TodoTaskType::kBackward; }
 
  private:
 };

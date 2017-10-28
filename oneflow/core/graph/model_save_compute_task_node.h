@@ -12,6 +12,7 @@ class MdSaveCompTaskNode final : public CompTaskNode {
   ~MdSaveCompTaskNode() = default;
 
   void NewAllProducedRegst() override;
+  TodoTaskType GetTaskType() const override { return TodoTaskType::kMdSave; }
 
  private:
 };

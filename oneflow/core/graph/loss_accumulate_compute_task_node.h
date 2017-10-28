@@ -10,6 +10,7 @@ class LossAccCompTaskNode final : public AccCompTaskNode {
   OF_DISALLOW_COPY_AND_MOVE(LossAccCompTaskNode);
   LossAccCompTaskNode() = default;
   ~LossAccCompTaskNode() = default;
+  TodoTaskType GetTaskType() const override { return TodoTaskType::kLossAcc; }
 
  private:
 };

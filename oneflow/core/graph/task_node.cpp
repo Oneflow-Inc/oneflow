@@ -21,7 +21,7 @@ void TaskNode::SetTaskId() {
 
 std::string TaskNode::VisualStr() const {
   std::stringstream ss;
-  ss << Typename() << "\\n"
+  ss << TodoTaskType_Name(GetTaskType()) << "\\n"
      << machine_id_ << "\\n"
      << thrd_loc_id_ << "\\n"
      << task_id_;
