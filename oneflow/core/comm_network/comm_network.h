@@ -21,8 +21,6 @@ class CommNet {
   virtual void UnRegisterMemory(const void* token) = 0;
   virtual void RegisterMemoryDone() = 0;
 
-  virtual void EstablishNetwork() = 0;
-
   // Stream
   virtual void* NewActorReadId() = 0;
   virtual void DeleteActorReadId(void* actor_read_id) = 0;

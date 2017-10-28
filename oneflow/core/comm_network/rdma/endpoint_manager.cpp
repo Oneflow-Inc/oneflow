@@ -107,6 +107,7 @@ ibv_qp* EndpointManager::NewQueuePair() {
   qp_init_attr.cap.max_recv_sge = 1;
 
   ibv_qp* queue_pair = ibv_create_qp(pd_, &qp_init_attr);
+  conn_info_.set_qpn(queue_pair->qp_num);
   CHECK(queue_pair);
   return queue_pair;
 }
