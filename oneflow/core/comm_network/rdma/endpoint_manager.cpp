@@ -3,6 +3,7 @@
 #include "glog/logging.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/comm_network/comm_network.h"
+#include "oneflow/core/job/runtime_context.h"
 
 namespace oneflow {
 
@@ -35,6 +36,15 @@ EndpointManager::EndpointManager() {
   conn_info_.set_psn(gid.global.subnet_prefix);
   conn_info_.set_iid(gid.global.interface_id);
   active_mtu_ = attr.active_mtu;
+  LOG(INFO) << "EndpointManager Constructed!";
+}
+
+EndpointManager::~EndpointManager() {
+  for (auto it = recv_msg2rdma_mem_.begin(); it != recv_msg2rdma_mem_.end();
+       ++it) {
+    delete it->first;
+    CommNet::Singleton()->UnRegisterMemory(it->second);
+  }
 }
 
 EndpointManager::~EndpointManager() {
@@ -49,9 +59,14 @@ void EndpointManager::InitRdma() {
   int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
   CtrlClient::Singleton()->PushConnectionInfo(GetMachineConnInfo());
   FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
+    if (peer_machine_id == RuntimeCtx::Singleton()->this_machine_id()) {
+      continue;
+    }
     Connection* conn = NewConnection();
+    LOG(INFO) << "Before PullConnectionInfo";
     conn->set_peer_conn_info(
         CtrlClient::Singleton()->PullConnectionInfo(peer_machine_id));
+    LOG(INFO) << "After PullConnectionInfo";
     connection_pool_.emplace(peer_machine_id, conn);
     for (size_t i = 0; i != kPrePostRecvNum; ++i) {
       ActorMsg* actor_msg = new ActorMsg();
@@ -62,7 +77,9 @@ void EndpointManager::InitRdma() {
     }
     conn->CompleteConnection(GetMachineConnInfo());
   }
+  LOG(INFO) << "Before barrier";
   OF_BARRIER();
+  LOG(INFO) << "After barrier";
   CtrlClient::Singleton()->ClearConnectionInfo();
   LOG(INFO) << "InitRdma finished!";
 }
@@ -77,6 +94,7 @@ Connection* EndpointManager::NewConnection() {
   Connection* conn = new Connection();
   conn->set_ibv_mtu(active_mtu_);
   conn->set_ibv_qp_ptr(NewQueuePair());
+  LOG(INFO) << "New Connection!";
   return conn;
 }
 
@@ -106,6 +124,7 @@ void EndpointManager::Read(void* read_ctx, int64_t src_machine_id,
                            const RdmaMemDesc& remote_mem_desc) {
   Connection* conn = connection_pool_[src_machine_id];
   conn->PostReadRequest(read_ctx, local_mem, remote_mem_desc);
+  LOG(INFO) << "Read";
 }
 
 void EndpointManager::SendActorMsg(int64_t dst_machine_id,
@@ -121,6 +140,7 @@ void EndpointManager::SendActorMsg(int64_t dst_machine_id,
 void EndpointManager::Start() {
   thread_state_ = true;
   thread_ = std::thread(&EndpointManager::PollLoop, this);
+  LOG(INFO) << "PollLoop start!";
 }
 
 void EndpointManager::Stop() {
@@ -129,6 +149,7 @@ void EndpointManager::Stop() {
 }
 
 void EndpointManager::PollLoop() {
+  LOG(INFO) << "Enter PollLoop";
   while (true) {
     if (!thread_state_) { return; }
     PollSendQueue();
@@ -143,12 +164,13 @@ void EndpointManager::PollSendQueue() {
   if (len <= 0) { return; }
 
   if (wc.status != IBV_WC_SUCCESS) { return; }
-
+  LOG(INFO) << "Poll Send Queue";
   switch (wc.opcode) {
     case IBV_WC_SEND: {
       CommNet::Singleton()->UnRegisterMemory(
           reinterpret_cast<const void*>(wc.wr_id));
       delete reinterpret_cast<ActorMsg*>(wc.wr_id);
+      LOG(INFO) << "Successfully send ActorMsg";
       return;
     }
     case IBV_WC_RDMA_READ: {
@@ -166,10 +188,10 @@ void EndpointManager::PollRecvQueue() {
   if (len <= 0) { return; }
 
   if (wc.status != IBV_WC_SUCCESS) { return; }
-
   ActorMsg* msg = reinterpret_cast<ActorMsg*>(wc.wr_id);
 
   ActorMsgBus::Singleton()->SendMsg(*msg);
+  LOG(INFO) << "Successfully recv ActorMsg";
   int64_t src_actor_id = msg->src_actor_id();
   Connection* conn = connection_pool_[src_actor_id];
   auto msg2mem_it = recv_msg2rdma_mem_.find(msg);

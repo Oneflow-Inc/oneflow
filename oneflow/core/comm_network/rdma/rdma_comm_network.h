@@ -20,6 +20,7 @@ class RdmaCommNet final : public CommNet {
   }
 
   static void Init();
+  void EstablishNetwork() override;
 
   const void* RegisterMemory(void* mem_ptr, size_t byte_size) override;
   void UnRegisterMemory(const void* token) override;
