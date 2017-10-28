@@ -30,12 +30,34 @@ EndpointManager::EndpointManager() {
   srand((unsigned)time(NULL));
   conn_info_.set_lid(attr.lid);
   conn_info_.set_qpn(0);  // Will be set up after the creation of the queue pair
-  conn_info_.set_snp(static_cast<uint32_t>(rand()) & 0xffffff);
+  conn_info_.set_psn(static_cast<uint32_t>(rand()) & 0xffffff);
   union ibv_gid gid;
   CHECK_EQ(ibv_query_gid(context_, (uint8_t)1, 0, &gid), 0);
-  conn_info_.set_psn(gid.global.subnet_prefix);
+  conn_info_.set_snp(gid.global.subnet_prefix);
   conn_info_.set_iid(gid.global.interface_id);
   active_mtu_ = attr.active_mtu;
+
+  // Init queue pair
+  ibv_qp_init_attr qp_init_attr;
+
+  memset(&qp_init_attr, 0, sizeof(qp_init_attr));
+  qp_init_attr.qp_context = nullptr;
+  qp_init_attr.send_cq = send_cq_;
+  qp_init_attr.recv_cq = recv_cq_;
+  qp_init_attr.qp_type = IBV_QPT_RC;
+  qp_init_attr.srq = nullptr;
+  qp_init_attr.sq_sig_all = 1;
+
+  qp_init_attr.cap.max_send_wr = 10;
+  qp_init_attr.cap.max_recv_wr = 10;
+  qp_init_attr.cap.max_send_sge = 1;
+  qp_init_attr.cap.max_recv_sge = 1;
+
+  qp_ptr_ = ibv_create_qp(pd_, &qp_init_attr);
+  LOG(INFO) << qp_ptr_->qp_num;
+  CHECK(qp_ptr_);
+  conn_info_.set_qpn(qp_ptr_->qp_num);
+
   LOG(INFO) << "EndpointManager Constructed!";
 }
 
@@ -50,12 +72,10 @@ EndpointManager::~EndpointManager() {
 void EndpointManager::InitRdma() {
   int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
   CtrlClient::Singleton()->PushConnectionInfo(GetMachineConnInfo());
-  LOG(INFO) << "This machine id " << RuntimeCtx::Singleton()->this_machine_id();
   FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
     if (peer_machine_id == RuntimeCtx::Singleton()->this_machine_id()) {
       continue;
     }
-    LOG(INFO) << "Peer machine id " << peer_machine_id;
     Connection* conn = NewConnection();
     LOG(INFO) << "Before PullConnectionInfo";
     conn->set_peer_conn_info(
@@ -87,31 +107,9 @@ RdmaMem* EndpointManager::NewRdmaMem() {
 Connection* EndpointManager::NewConnection() {
   Connection* conn = new Connection();
   conn->set_ibv_mtu(active_mtu_);
-  conn->set_ibv_qp_ptr(NewQueuePair());
+  conn->set_ibv_qp_ptr(qp_ptr_);
   LOG(INFO) << "New Connection!";
   return conn;
-}
-
-ibv_qp* EndpointManager::NewQueuePair() {
-  ibv_qp_init_attr qp_init_attr;
-
-  memset(&qp_init_attr, 0, sizeof(qp_init_attr));
-  qp_init_attr.qp_context = nullptr;
-  qp_init_attr.send_cq = send_cq_;
-  qp_init_attr.recv_cq = recv_cq_;
-  qp_init_attr.qp_type = IBV_QPT_RC;
-  qp_init_attr.srq = nullptr;
-  qp_init_attr.sq_sig_all = 1;
-
-  qp_init_attr.cap.max_send_wr = 10;
-  qp_init_attr.cap.max_recv_wr = 10;
-  qp_init_attr.cap.max_send_sge = 1;
-  qp_init_attr.cap.max_recv_sge = 1;
-
-  ibv_qp* queue_pair = ibv_create_qp(pd_, &qp_init_attr);
-  conn_info_.set_qpn(queue_pair->qp_num);
-  CHECK(queue_pair);
-  return queue_pair;
 }
 
 void EndpointManager::Read(void* read_ctx, int64_t src_machine_id,
@@ -145,9 +143,6 @@ void EndpointManager::Stop() {
 
 void EndpointManager::PollLoop() {
   LOG(INFO) << "Enter PollLoop";
-  ibv_port_attr port_attr;
-  CHECK_EQ(ibv_query_port(context_, 1, &port_attr), 0);
-  CHECK_EQ(port_attr.state, IBV_PORT_ACTIVE);
   while (true) {
     if (!thread_state_) { return; }
     PollSendQueue();

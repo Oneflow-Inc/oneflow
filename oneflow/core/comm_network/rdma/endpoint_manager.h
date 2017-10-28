@@ -22,7 +22,7 @@ class EndpointManager {
   void InitRdma();
   RdmaMem* NewRdmaMem();
   Connection* NewConnection();
-  ibv_qp* NewQueuePair();
+  // ibv_qp* NewQueuePair();
 
   void Read(void* read_ctx, int64_t src_machine_id, const RdmaMem* local_mem,
             const RdmaMemDesc& remote_mem_desc);
@@ -48,6 +48,7 @@ class EndpointManager {
 
   ibv_context* context_;
   enum ibv_mtu active_mtu_;
+  ibv_qp* qp_ptr_;
   ibv_pd* pd_;
   ibv_cq* send_cq_;
   ibv_cq* recv_cq_;
