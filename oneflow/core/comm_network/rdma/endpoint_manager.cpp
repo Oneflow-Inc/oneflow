@@ -47,6 +47,14 @@ EndpointManager::~EndpointManager() {
   }
 }
 
+EndpointManager::~EndpointManager() {
+  for (auto it = recv_msg2rdma_mem_.begin(); it != recv_msg2rdma_mem_.end();
+       ++it) {
+    delete it->first;
+    CommNet::Singleton()->UnRegisterMemory(it->second);
+  }
+}
+
 void EndpointManager::InitRdma() {
   int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
   CtrlClient::Singleton()->PushConnectionInfo(GetMachineConnInfo());
