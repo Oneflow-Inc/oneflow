@@ -44,11 +44,11 @@ void Connection::PostRecvRequest(const ActorMsg* msg, const RdmaMem* msg_mem) {
   CHECK_EQ(ibv_post_recv(qp_ptr_, &wr, &bad_wr), 0);
 }
 
-void Connection::CompleteConnection(ConnectionInfo& my_conn_info) {
+void Connection::CompleteConnection() {
   LOG(INFO) << "Peer conn info: " << peer_conn_info_.qpn() << " "
             << peer_conn_info_.psn() << " " << peer_conn_info_.snp() << " "
             << peer_conn_info_.iid() << " " << peer_conn_info_.lid();
-  LOG(INFO) << "My conn info: " << my_conn_info.psn();
+  LOG(INFO) << "My conn info: " << this_mach_conn_info_.psn();
   ibv_qp_attr qp_attr;
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));
 
@@ -88,7 +88,7 @@ void Connection::CompleteConnection(ConnectionInfo& my_conn_info) {
 
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));
   qp_attr.qp_state = IBV_QPS_RTS;
-  qp_attr.sq_psn = my_conn_info.psn();
+  qp_attr.sq_psn = this_mach_conn_info_.psn();
   qp_attr.timeout = 14;
   qp_attr.retry_cnt = 7;
   qp_attr.rnr_retry = 7;

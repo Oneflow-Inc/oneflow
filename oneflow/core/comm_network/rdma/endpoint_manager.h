@@ -10,6 +10,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/runtime_context.h"
 
 namespace oneflow {
 
@@ -22,7 +23,6 @@ class EndpointManager {
   void InitRdma();
   RdmaMem* NewRdmaMem();
   Connection* NewConnection();
-  // ibv_qp* NewQueuePair();
 
   void Read(void* read_ctx, int64_t src_machine_id, const RdmaMem* local_mem,
             const RdmaMemDesc& remote_mem_desc);
@@ -36,10 +36,16 @@ class EndpointManager {
   void PollSendQueue();
   void PollRecvQueue();
 
-  ConnectionInfo& GetMachineConnInfo() { return conn_info_; }
+  ConnectionInfo& GetMachineConnInfo() {
+    int64_t this_machine_id = RuntimeCtx::Singleton()->this_machine_id();
+    if (connection_pool_.find(this_machine_id) == connection_pool_.end()) {
+      connection_pool_.emplace(this_machine_id, NewConnection());
+    }
+    return connection_pool_.at(this_machine_id)->mut_this_mach_conn_info();
+  }
+  ibv_qp* CreateQueuePair();
 
   enum { kPrePostRecvNum = 15 };  // TODO
-  ConnectionInfo conn_info_;
   HashMap<ActorMsg*, RdmaMem*> recv_msg2rdma_mem_;
   HashMap<int64_t, Connection*> connection_pool_;
 
@@ -47,8 +53,6 @@ class EndpointManager {
   bool thread_state_;
 
   ibv_context* context_;
-  enum ibv_mtu active_mtu_;
-  ibv_qp* qp_ptr_;
   ibv_pd* pd_;
   ibv_cq* send_cq_;
   ibv_cq* recv_cq_;
