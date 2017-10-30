@@ -16,7 +16,7 @@ void RdmaMem::Register(void* mem_ptr, size_t byte_size) {
                        | IBV_ACCESS_REMOTE_READ);
   CHECK(mr_);
 
-  sge_.addr = reinterpret_cast<int64_t>(mem_ptr);
+  sge_.addr = reinterpret_cast<uint64_t>(mem_ptr);
   sge_.length = byte_size;
   sge_.lkey = mr_->lkey;
 
