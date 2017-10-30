@@ -62,7 +62,7 @@ EndpointManager::~EndpointManager() {
 void EndpointManager::InitRdma() {
   int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
   CtrlClient::Singleton()->PushConnectionInfo(GetMachineConnInfo());
-  //TODO this_mach_conn_info no difference for each connection
+  // TODO this_mach_conn_info no difference for each connection
   FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
     if (peer_machine_id == RuntimeCtx::Singleton()->this_machine_id()) {
       continue;
