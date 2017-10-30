@@ -53,11 +53,16 @@ EndpointManager::~EndpointManager() {
     delete it->first;
     CommNet::Singleton()->UnRegisterMemory(it->second);
   }
+  if (send_cq_ != nullptr) { CHECK_EQ(ibv_destroy_cq(send_cq_), 0); }
+  if (recv_cq_ != nullptr) { CHECK_EQ(ibv_destroy_cq(recv_cq_), 0); }
+  if (pd_ != nullptr) { CHECK_EQ(ibv_dealloc_pd(pd_), 0); }
+  if (context_ != nullptr) { CHECK_EQ(ibv_close_device(context_), 0); }
 }
 
 void EndpointManager::InitRdma() {
   int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
   CtrlClient::Singleton()->PushConnectionInfo(GetMachineConnInfo());
+  //TODO this_mach_conn_info no difference for each connection
   FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
     if (peer_machine_id == RuntimeCtx::Singleton()->this_machine_id()) {
       continue;
