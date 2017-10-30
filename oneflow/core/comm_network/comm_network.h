@@ -13,14 +13,13 @@ class CommNet {
   virtual ~CommNet() = default;
 
   static CommNet* Singleton() { return comm_network_ptr_; }
+  virtual void EstablishNetwork() = 0;
 
   // "RegisterMemory" will return a Token, after "RegisterMemoryDone",
   // we can use this token to use the "Read"
   virtual const void* RegisterMemory(void* dptr, size_t byte_size) = 0;
   virtual void UnRegisterMemory(const void* token) = 0;
   virtual void RegisterMemoryDone() = 0;
-
-  virtual void EstablishNetwork() = 0;
 
   // Stream
   virtual void* NewActorReadId() = 0;

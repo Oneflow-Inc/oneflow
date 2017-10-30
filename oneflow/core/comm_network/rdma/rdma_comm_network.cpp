@@ -149,7 +149,8 @@ void* RdmaCommNet::Read(void* actor_read_id, int64_t src_machine_id,
 }
 
 void RdmaCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
-  LOG(INFO) << "SendActorMsg start, MsgTye: " << msg.msg_type();
+  LOG(INFO) << "SendActorMsg start, MsgTye: " << msg.msg_type()
+            << ", Msg.dst_actor_id:" << msg.dst_actor_id();
   endpoint_manager_->SendActorMsg(dst_machine_id, msg);
   LOG(INFO) << "SendActorMsg end";
 }

@@ -16,19 +16,22 @@ class Connection {
   ~Connection();
 
   void set_ibv_mtu(enum ibv_mtu active_mtu) { active_mtu_ = active_mtu; }
-  void set_ibv_qp_ptr(ibv_qp* ibv_qp_ptr) { qp_ptr_ = ibv_qp_ptr; }
-  void set_peer_conn_info(ConnectionInfo& peer_conn_info) {
-    peer_conn_info_ = peer_conn_info;
+  void set_ibv_qp_ptr(ibv_qp* ibv_qp_ptr) {
+    this_mach_conn_info_.set_qpn(ibv_qp_ptr->qp_num);
+    qp_ptr_ = ibv_qp_ptr;
   }
+  ConnectionInfo& mut_peer_conn_info() { return peer_conn_info_; }
+  ConnectionInfo& mut_this_mach_conn_info() { return this_mach_conn_info_; }
 
   void PostReadRequest(void* read_ctx, const RdmaMem* local_mem,
                        const RdmaMemDesc& remote_mem);
   void PostSendRequest(const ActorMsg* msg, const RdmaMem* msg_mem);
   void PostRecvRequest(const ActorMsg* msg, const RdmaMem* msg_mem);
-  void CompleteConnection(ConnectionInfo& my_conn_info);
+  void CompleteConnection();
 
  private:
   ConnectionInfo peer_conn_info_;
+  ConnectionInfo this_mach_conn_info_;
   enum ibv_mtu active_mtu_;
   ibv_qp* qp_ptr_;
 };
