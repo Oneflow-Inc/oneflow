@@ -30,6 +30,13 @@ class IDMgr final {
       UNEXPECTED_RUN();
     }
   }
+  DeviceType GetDeviceTypeFromThrdLocId(int64_t thrd_loc_id) {
+    if (thrd_loc_id < device_num_per_machine_) {
+      return JobDesc::Singleton()->resource().device_type();
+    } else {
+      return DeviceType::kCPU;
+    }
+  }
   bool IsInherentThrd(int64_t thrd_loc_id) const {
     return thrd_loc_id >= device_num_per_machine_;
   }

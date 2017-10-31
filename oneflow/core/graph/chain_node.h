@@ -8,8 +8,10 @@ namespace oneflow {
 class ChainEdge;
 using CompTaskNodeHandler = std::function<void(CompTaskNode*)>;
 class TaskGraph;
-using BldSubTskGphMthd = void (TaskGraph::*)(const ChainNode* src_node,
-                                             const ChainNode* dst_node);
+using BldSubTskGphMthd = void (TaskGraph::*)(
+    const ChainNode* src_chain, const ChainNode* dst_chain,
+    const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+    const std::vector<CompTaskNode*>& sorted_dst_comp_tasks);
 
 class ChainNode : public Node<ChainNode, ChainEdge> {
  public:

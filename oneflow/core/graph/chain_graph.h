@@ -19,15 +19,8 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
 
  private:
   template<typename ChainNodeType>
-  ChainNodeType* NewChainNode() {
-    static_assert(std::is_base_of<ChainNode, ChainNodeType>::value, "");
-    ChainNodeType* ret = new ChainNodeType;
-    AddAllocatedNode(ret);
-    return ret;
-  }
-  template<typename ChainNodeType>
   void ForEachChainNode(std::function<void(ChainNodeType*)> Handler) {
-    // the Handler may call "NewChainNode"
+    // the Handler may call "NewNode"
     std::vector<ChainNodeType*> valid_nodes;
     ForEachNode([&](ChainNode* chain_node) {
       auto valid_node = dynamic_cast<ChainNodeType*>(chain_node);

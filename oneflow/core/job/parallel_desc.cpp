@@ -14,13 +14,8 @@ void ParseDeviceNameConf(const std::string& device_name, std::string* mchn_name,
 
 }  // namespace
 
-ParallelDesc::ParallelDesc(const ParallelConf& user_conf)
-    : ParallelDesc(user_conf, JobDesc::Singleton()->resource().device_type()) {}
-
-ParallelDesc::ParallelDesc(const ParallelConf& user_conf,
-                           DeviceType device_type) {
+ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
   policy_ = user_conf.policy();
-  device_type_ = device_type;
   for (const std::string& device_name : user_conf.device_name()) {
     std::string mchn_name;
     std::string device_id_str;
@@ -95,7 +90,7 @@ void ParallelDesc::RemoveInvalidDevice() {
 }
 
 bool ParallelDesc::Equal(const ParallelDesc& rhs) const {
-  return policy_ == rhs.policy_ && device_type_ == rhs.device_type_
+  return policy_ == rhs.policy_
          && sorted_machine_ids_ == rhs.sorted_machine_ids_
          && machine_id2sorted_dev_phy_ids_
                 == rhs.machine_id2sorted_dev_phy_ids_;

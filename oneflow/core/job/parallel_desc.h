@@ -15,11 +15,9 @@ class ParallelDesc {
   ~ParallelDesc() = default;
 
   ParallelDesc(const ParallelConf& user_conf);
-  ParallelDesc(const ParallelConf& user_conf, DeviceType device_type);
 
   // Getters
   ParallelPolicy policy() const { return policy_; }
-  DeviceType device_type() const { return device_type_; }
   const std::vector<int64_t>& sorted_machine_ids() const {
     return sorted_machine_ids_;
   }
@@ -30,7 +28,6 @@ class ParallelDesc {
 
   // Setters
   void set_policy(ParallelPolicy val) { policy_ = val; }
-  void set_device_type(DeviceType val) { device_type_ = val; }
   void RemoveNeedlessDevice(int32_t max_device_num);
   void RemoveInvalidDevice();
 
@@ -42,7 +39,6 @@ class ParallelDesc {
   void ClearUp();
 
   ParallelPolicy policy_;
-  DeviceType device_type_;
   std::vector<int64_t> sorted_machine_ids_;
   HashMap<int64_t, std::vector<int64_t>> machine_id2sorted_dev_phy_ids_;
   int64_t parallel_num_;

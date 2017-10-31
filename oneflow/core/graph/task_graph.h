@@ -17,13 +17,22 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   TaskGraph(std::unique_ptr<const ChainGraph>&& chain_gph);
 
-  void BldSubTskGphByNormalBoxing(const ChainNode* src, const ChainNode* dst);
-  void BldSubTskGphByAddCloneBoxing(const ChainNode* src, const ChainNode* dst);
-  void BldSubTskGphByDirectOneToOne(const ChainNode* src, const ChainNode* dst);
-  void BldSubTskGphByInDirectOneToOne(const ChainNode* src,
-                                      const ChainNode* dst);
-  void BldSubTskGphBySelectOneSourceToSoleSink(const ChainNode* src,
-                                               const ChainNode* dst);
+  void BldSubTskGphByNormalBoxing(
+      const ChainNode* src_chain, const ChainNode* dst_chain,
+      const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+      const std::vector<CompTaskNode*>& sorted_dst_comp_tasks);
+  void BldSubTskGphByAddCloneBoxing(
+      const ChainNode* src_chain, const ChainNode* dst_chain,
+      const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+      const std::vector<CompTaskNode*>& sorted_dst_comp_tasks);
+  void BldSubTskGphByOneToOne(
+      const ChainNode* src_chain, const ChainNode* dst_chain,
+      const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+      const std::vector<CompTaskNode*>& sorted_dst_comp_tasks);
+  void BldSubTskGphBySelectOneSourceToSoleSink(
+      const ChainNode* src_chain, const ChainNode* dst_chain,
+      const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+      const std::vector<CompTaskNode*>& sorted_dst_comp_tasks);
 
  private:
   std::unique_ptr<const ChainGraph> chain_gph_;

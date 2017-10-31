@@ -16,11 +16,13 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual ~TaskNode() = default;
 
   // Getters
+  int64_t machine_id() const { return machine_id_; }
   int64_t thrd_loc_id() const { return thrd_loc_id_; }
   std::string thrd_loc_id_str() const { return std::to_string(thrd_loc_id_); }
   int64_t task_id() const { return task_id_; }
   std::string task_id_str() const { return std::to_string(task_id_); }
   std::shared_ptr<RegstDesc> GetProducedRegst(const std::string& name);
+  DeviceType device_type() const;
 
   // Setters
   void set_machine_id(int64_t val);

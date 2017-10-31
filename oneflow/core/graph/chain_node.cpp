@@ -63,30 +63,39 @@ void ChainNode::GenSortedCompTaskNodes(CompTaskNodeHandler Handler) const {
 
 BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromFw() const {
   UNEXPECTED_RUN();
+  return nullptr;
 }
 BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromBw() const {
   UNEXPECTED_RUN();
+  return nullptr;
 }
 BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromSrc() const {
   UNEXPECTED_RUN();
+  return nullptr;
 }
 BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromLoss() const {
   UNEXPECTED_RUN();
+  return nullptr;
 }
 BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromLossAcc() const {
   UNEXPECTED_RUN();
+  return nullptr;
 }
 BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromLossRecord() const {
   UNEXPECTED_RUN();
+  return nullptr;
 }
 BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromMdUpdt() const {
   UNEXPECTED_RUN();
+  return nullptr;
 }
 BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromMdSave() const {
   UNEXPECTED_RUN();
+  return nullptr;
 }
 BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromMdDiffAcc() const {
   UNEXPECTED_RUN();
+  return nullptr;
 }
 
 BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphTo(
@@ -103,7 +112,7 @@ BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromSrc() const {
 }
 
 BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromMdUpdt() const {
-  return &TaskGraph::BldSubTskGphByDirectOneToOne;
+  return &TaskGraph::BldSubTskGphByOneToOne;
 }
 
 BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphTo(
@@ -112,7 +121,7 @@ BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphTo(
 }
 
 BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromFw() const {
-  return &TaskGraph::BldSubTskGphByDirectOneToOne;
+  return &TaskGraph::BldSubTskGphByOneToOne;
 }
 
 BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromLoss() const {
@@ -120,7 +129,7 @@ BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromLoss() const {
 }
 
 BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromMdUpdt() const {
-  return &TaskGraph::BldSubTskGphByDirectOneToOne;
+  return &TaskGraph::BldSubTskGphByOneToOne;
 }
 
 BldSubTskGphMthd SourceChainNode::GetMthdForBldSubTskGphTo(
@@ -147,12 +156,13 @@ BldSubTskGphMthd LossAccChainNode::GetMthdForBldSubTskGphTo(
 }
 
 BldSubTskGphMthd LossAccChainNode::GetMthdForBldSubTskGphFromLoss() const {
-  return &TaskGraph::BldSubTskGphByDirectOneToOne;
+  return &TaskGraph::BldSubTskGphByOneToOne;
 }
 
 BldSubTskGphMthd LossRecordChainNode::GetMthdForBldSubTskGphTo(
     const ChainNode*) const {
   UNEXPECTED_RUN();
+  return nullptr;
 }
 
 BldSubTskGphMthd LossRecordChainNode::GetMthdForBldSubTskGphFromLossAcc()
@@ -169,7 +179,7 @@ BldSubTskGphMthd MdUpdtChainNode::GetMthdForBldSubTskGphFromMdDiffAcc() const {
   if (parallel_desc()->policy() == ParallelPolicy::kDataParallel) {
     return &TaskGraph::BldSubTskGphByAddCloneBoxing;
   } else if (parallel_desc()->policy() == ParallelPolicy::kModelParallel) {
-    return &TaskGraph::BldSubTskGphByDirectOneToOne;
+    return &TaskGraph::BldSubTskGphByOneToOne;
   } else {
     UNEXPECTED_RUN();
   }
@@ -178,13 +188,14 @@ BldSubTskGphMthd MdUpdtChainNode::GetMthdForBldSubTskGphFromMdDiffAcc() const {
 BldSubTskGphMthd MdSaveChainNode::GetMthdForBldSubTskGphTo(
     const ChainNode*) const {
   UNEXPECTED_RUN();
+  return nullptr;
 }
 
 BldSubTskGphMthd MdSaveChainNode::GetMthdForBldSubTskGphFromMdUpdt() const {
   if (parallel_desc()->parallel_num() == 1) {
     return &TaskGraph::BldSubTskGphBySelectOneSourceToSoleSink;
   } else {
-    return &TaskGraph::BldSubTskGphByInDirectOneToOne;
+    return &TaskGraph::BldSubTskGphByOneToOne;
   }
 }
 
@@ -194,7 +205,7 @@ BldSubTskGphMthd MdDiffAccChainNode::GetMthdForBldSubTskGphTo(
 }
 
 BldSubTskGphMthd MdDiffAccChainNode::GetMthdForBldSubTskGphFromBw() const {
-  return &TaskGraph::BldSubTskGphByDirectOneToOne;
+  return &TaskGraph::BldSubTskGphByOneToOne;
 }
 
 CompTaskNode* ForwardChainNode::NewCompTaskNode() const {

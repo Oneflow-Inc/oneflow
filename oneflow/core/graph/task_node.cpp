@@ -14,6 +14,10 @@ void TaskNode::set_thrd_loc_id(int64_t val) {
   if (machine_id_ != -1) { UpdateTaskId(); }
 }
 
+DeviceType TaskNode::device_type() const {
+  return IDMgr::Singleton()->GetDeviceTypeFromThrdLocId(thrd_loc_id_);
+}
+
 void TaskNode::UpdateTaskId() {
   CHECK_NE(machine_id_, -1);
   CHECK_NE(thrd_loc_id_, -1);

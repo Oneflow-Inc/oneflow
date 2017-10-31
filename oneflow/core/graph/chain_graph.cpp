@@ -227,32 +227,21 @@ void ChainGraph::BuildFwStruct(const LogicalGraph& logical_gph) {
   HashMap<ChainNode*, std::unordered_set<ChainNode*>> chain_node2pred;
   FOR_EACH(chain_it, chain_list) {
     ChainNode* chain_node = nullptr;
-    bool is_source_chain = false;
     if (chain_it->nodes.size() == 1) {
       std::shared_ptr<const Operator> op = chain_it->nodes[0]->op();
       if (op->IsLossOp()) {
-        chain_node = NewChainNode<LossChainNode>();
+        chain_node = NewNode<LossChainNode>();
       } else if (op->IsDataLoaderOp()) {
-        chain_node = NewChainNode<SourceChainNode>();
-        is_source_chain = true;
+        chain_node = NewNode<SourceChainNode>();
       } else {
         // do nothing
       }
     }
-    if (chain_node == nullptr) {
-      chain_node = NewChainNode<ForwardChainNode>();
-    }
+    if (chain_node == nullptr) { chain_node = NewNode<ForwardChainNode>(); }
     chain_it2chain_node[chain_it] = chain_node;
     chain_node2pred[chain_node] = {};
     CHECK(!chain_it->nodes.empty());
-    auto original_pr_desc = chain_it->nodes.front()->parallel_desc();
-    if (is_source_chain) {
-      auto pr_desc = new ParallelDesc(*original_pr_desc);
-      pr_desc->set_device_type(DeviceType::kCPU);
-      chain_node->mut_parallel_desc().reset(pr_desc);
-    } else {
-      chain_node->mut_parallel_desc() = original_pr_desc;
-    }
+    chain_node->mut_parallel_desc() = chain_it->nodes.front()->parallel_desc();
     for (const LogicalNode* logical_node : chain_it->nodes) {
       chain_node->mut_op_vec().push_back(logical_node->op());
     }
@@ -298,7 +287,7 @@ void ChainGraph::BuildBwStruct() {
     }
   });
   for (ForwardChainNode* fw_node : fw_nodes_that_need_bw) {
-    BackwardChainNode* bw_node = NewChainNode<BackwardChainNode>();
+    BackwardChainNode* bw_node = NewNode<BackwardChainNode>();
     bw_node->mut_op_vec() = fw_node->op_vec();
     bw_node->mut_parallel_desc() = fw_node->parallel_desc();
     fw_node->set_bw_node(bw_node);
@@ -333,7 +322,7 @@ void ChainGraph::BuildLossRecordStruct() {
     loss_acc_op_conf.set_name("loss_acc_" + NewUniqueId());
     loss_acc_op_conf.mutable_accumulate_conf();
     auto loss_acc_op = OpMgr::Singleton()->AddOp(loss_acc_op_conf);
-    auto loss_acc_chain = NewChainNode<LossAccChainNode>();
+    auto loss_acc_chain = NewNode<LossAccChainNode>();
     loss_acc_chain->mut_op_vec() = {loss_acc_op};
     loss_acc_chain->mut_parallel_desc() = loss_chain->parallel_desc();
     Connect<ChainNode>(loss_chain, NewEdge(), loss_acc_chain);
@@ -346,10 +335,10 @@ void ChainGraph::BuildLossRecordStruct() {
     loss_record_pr_conf.set_policy(kDataParallel);
     loss_record_pr_conf.add_device_name(
         IDMgr::Singleton()->MachineName4MachineId(0) + ":0");
-    auto loss_record_chain = NewChainNode<LossRecordChainNode>();
+    auto loss_record_chain = NewNode<LossRecordChainNode>();
     loss_record_chain->mut_op_vec() = {loss_record_op};
     loss_record_chain->mut_parallel_desc().reset(
-        new ParallelDesc(loss_record_pr_conf, DeviceType::kCPU));
+        new ParallelDesc(loss_record_pr_conf));
     Connect<ChainNode>(loss_acc_chain, NewEdge(), loss_record_chain);
   });
 }
@@ -358,7 +347,7 @@ void ChainGraph::BuildModelStruct(bool is_train) {
   ForEachChainNode<ForwardChainNode>([&](ForwardChainNode* fw_chain) {
     if (fw_chain->HasOpWithModelOrModelTmpBlob() == false) { return; }
     // Model Update Chain
-    auto md_updt_chain = NewChainNode<MdUpdtChainNode>();
+    auto md_updt_chain = NewNode<MdUpdtChainNode>();
     md_updt_chain->mut_op_vec() = {OpMgr::Singleton()->ModelUpdateOp()};
     md_updt_chain->mut_parallel_desc() = fw_chain->parallel_desc();
     Connect<ChainNode>(md_updt_chain, NewEdge(), fw_chain);
@@ -372,10 +361,9 @@ void ChainGraph::BuildModelStruct(bool is_train) {
       }
     }
     auto model_save_op = OpMgr::Singleton()->AddOp(model_save_op_conf);
-    auto md_save_chain = NewChainNode<MdSaveChainNode>();
+    auto md_save_chain = NewNode<MdSaveChainNode>();
     md_save_chain->mut_op_vec() = {model_save_op};
     auto md_save_pr_desc = new ParallelDesc(*(fw_chain->parallel_desc()));
-    md_save_pr_desc->set_device_type(DeviceType::kCPU);
     if (fw_chain->parallel_desc()->policy() == ParallelPolicy::kDataParallel) {
       md_save_pr_desc->RemoveNeedlessDevice(1);
     }
@@ -384,11 +372,12 @@ void ChainGraph::BuildModelStruct(bool is_train) {
     // Model Diff Accumulate Chain
     if (is_train == false) { return; }
     BackwardChainNode* bw_chain = fw_chain->bw_node();
+    Connect<ChainNode>(md_updt_chain, NewEdge(), bw_chain);
     OperatorConf md_diff_acc_op_conf;
     md_diff_acc_op_conf.set_name("md_diff_acc_" + NewUniqueId());
     md_diff_acc_op_conf.mutable_accumulate_conf();
     auto md_diff_acc_op = OpMgr::Singleton()->AddOp(md_diff_acc_op_conf);
-    auto md_diff_acc_chain = NewChainNode<MdDiffAccChainNode>();
+    auto md_diff_acc_chain = NewNode<MdDiffAccChainNode>();
     md_diff_acc_chain->mut_op_vec() = {md_diff_acc_op};
     md_diff_acc_chain->mut_parallel_desc() = fw_chain->parallel_desc();
     Connect<ChainNode>(bw_chain, NewEdge(), md_diff_acc_chain);

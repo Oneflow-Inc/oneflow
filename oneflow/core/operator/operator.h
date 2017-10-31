@@ -28,7 +28,6 @@ class Operator {
   virtual bool IsLossOp() const { return false; }
   virtual bool IsRecordOp() const { return false; }
   virtual bool IsDataLoaderOp() const { return false; }
-  bool IsChainMergeable() const { return !IsLossOp() && !IsRecordOp(); }
 
   // this <-> OpProto
   void InitFromProto(const OperatorProto& operatorproto);

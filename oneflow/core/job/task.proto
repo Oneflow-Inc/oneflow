@@ -16,6 +16,8 @@ enum TodoTaskType {
   kMdUpdt = 7;
   kMdSave = 8;
   kMdDiffAcc = 9;
+  kCopyHd = 10;
+  kCopyCommNet = 11;
 };
 
 message TodoTaskProto {

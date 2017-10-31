@@ -33,7 +33,8 @@ class Graph {
   virtual const char* TypeName() const { return ""; }
 
   // Setters
-  NodeType* NewNode();
+  template<typename DerivedNodeType = NodeType>
+  DerivedNodeType* NewNode();
   EdgeType* NewEdge();
   void AddAllocatedNode(NodeType*);
   void AddAllocatedEdge(EdgeType*);
@@ -122,8 +123,9 @@ NodeType* Graph<NodeType, EdgeType>::SoleNode() const {
 }
 
 template<typename NodeType, typename EdgeType>
-NodeType* Graph<NodeType, EdgeType>::NewNode() {
-  NodeType* ret = new NodeType;
+template<typename DerivedNodeType>
+DerivedNodeType* Graph<NodeType, EdgeType>::NewNode() {
+  DerivedNodeType* ret = new DerivedNodeType;
   AddAllocatedNode(ret);
   return ret;
 }
