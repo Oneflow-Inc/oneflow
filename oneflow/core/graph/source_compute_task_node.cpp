@@ -6,4 +6,8 @@ void SourceCompTaskNode::NewAllProducedRegst() {
   NewProducedRegst("out", 1, kMaxRegisterNum);
 }
 
+void SourceCompTaskNode::FixThrdLocId() {
+  set_thrd_loc_id(IDMgr::Singleton()->PersistenceThrdLocId());
+}
+
 }  // namespace oneflow

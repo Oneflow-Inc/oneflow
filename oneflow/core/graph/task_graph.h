@@ -17,6 +17,14 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   TaskGraph(std::unique_ptr<const ChainGraph>&& chain_gph);
 
+  void BldSubTskGphByNormalBoxing(const ChainNode* src, const ChainNode* dst);
+  void BldSubTskGphByAddCloneBoxing(const ChainNode* src, const ChainNode* dst);
+  void BldSubTskGphByDirectOneToOne(const ChainNode* src, const ChainNode* dst);
+  void BldSubTskGphByInDirectOneToOne(const ChainNode* src,
+                                      const ChainNode* dst);
+  void BldSubTskGphBySelectOneSourceToSoleSink(const ChainNode* src,
+                                               const ChainNode* dst);
+
  private:
   std::unique_ptr<const ChainGraph> chain_gph_;
 };

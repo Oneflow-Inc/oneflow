@@ -15,6 +15,7 @@ class LossRecordCompTaskNode final : public CompTaskNode {
   TodoTaskType GetTaskType() const override {
     return TodoTaskType::kLossRecord;
   }
+  void FixThrdLocId();
 
  private:
 };

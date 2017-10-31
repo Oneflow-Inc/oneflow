@@ -15,6 +15,7 @@ class ParallelDesc {
   ~ParallelDesc() = default;
 
   ParallelDesc(const ParallelConf& user_conf);
+  ParallelDesc(const ParallelConf& user_conf, DeviceType device_type);
 
   // Getters
   ParallelPolicy policy() const { return policy_; }
@@ -22,27 +23,28 @@ class ParallelDesc {
   const std::vector<int64_t>& sorted_machine_ids() const {
     return sorted_machine_ids_;
   }
-  const std::vector<int64_t>& sorted_thrd_loc_ids(int64_t machine_id) const {
-    return machine_id2sorted_thrd_loc_ids_.at(machine_id);
+  const std::vector<int64_t>& sorted_dev_phy_ids(int64_t machine_id) const {
+    return machine_id2sorted_dev_phy_ids_.at(machine_id);
   }
   int64_t parallel_num() const { return parallel_num_; }
 
   // Setters
   void set_policy(ParallelPolicy val) { policy_ = val; }
+  void set_device_type(DeviceType val) { device_type_ = val; }
   void RemoveNeedlessDevice(int32_t max_device_num);
-  void ReplaceThrdLocId(int64_t old_thrd_loc_id, int64_t new_thrd_loc_id);
+  void RemoveInvalidDevice();
 
   //
   bool Equal(const ParallelDesc& rhs) const;
   bool Equal(const ParallelDesc* rhs) const { return Equal(*rhs); }
 
  private:
-  void Resort();
+  void ClearUp();
 
   ParallelPolicy policy_;
   DeviceType device_type_;
   std::vector<int64_t> sorted_machine_ids_;
-  HashMap<int64_t, std::vector<int64_t>> machine_id2sorted_thrd_loc_ids_;
+  HashMap<int64_t, std::vector<int64_t>> machine_id2sorted_dev_phy_ids_;
   int64_t parallel_num_;
 };
 

@@ -8,6 +8,7 @@
 #include "oneflow/core/graph/model_save_compute_task_node.h"
 #include "oneflow/core/graph/model_update_compute_task_node.h"
 #include "oneflow/core/graph/source_compute_task_node.h"
+#include "oneflow/core/graph/task_graph.h"
 
 namespace oneflow {
 
@@ -47,11 +48,10 @@ void ChainNode::GenSortedCompTaskNodes(CompTaskNodeHandler Handler) const {
   int64_t parallel_idx = 0;
   int64_t parallel_num = parallel_desc_->parallel_num();
   for (int64_t machine_id : parallel_desc_->sorted_machine_ids()) {
-    for (int64_t thrd_id : parallel_desc_->sorted_thrd_loc_ids(machine_id)) {
+    for (int64_t dev_phy_id : parallel_desc_->sorted_dev_phy_ids(machine_id)) {
       CompTaskNode* comp_task_node = NewCompTaskNode();
       comp_task_node->set_machine_id(machine_id);
-      comp_task_node->set_thrd_loc_id(thrd_id);
-      comp_task_node->SetTaskId();
+      comp_task_node->set_thrd_loc_id(dev_phy_id);
       comp_task_node->set_chain_node(this);
       comp_task_node->mut_parallel_ctx().set_parallel_id(parallel_idx++);
       comp_task_node->mut_parallel_ctx().set_parallel_num(parallel_num);
@@ -59,6 +59,142 @@ void ChainNode::GenSortedCompTaskNodes(CompTaskNodeHandler Handler) const {
       Handler(comp_task_node);
     }
   }
+}
+
+BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromFw() const {
+  UNEXPECTED_RUN();
+}
+BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromBw() const {
+  UNEXPECTED_RUN();
+}
+BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromSrc() const {
+  UNEXPECTED_RUN();
+}
+BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromLoss() const {
+  UNEXPECTED_RUN();
+}
+BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromLossAcc() const {
+  UNEXPECTED_RUN();
+}
+BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromLossRecord() const {
+  UNEXPECTED_RUN();
+}
+BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromMdUpdt() const {
+  UNEXPECTED_RUN();
+}
+BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromMdSave() const {
+  UNEXPECTED_RUN();
+}
+BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromMdDiffAcc() const {
+  UNEXPECTED_RUN();
+}
+
+BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphTo(
+    const ChainNode* node) const {
+  return node->GetMthdForBldSubTskGphFromFw();
+}
+
+BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromFw() const {
+  return &TaskGraph::BldSubTskGphByNormalBoxing;
+}
+
+BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromSrc() const {
+  return &TaskGraph::BldSubTskGphByNormalBoxing;
+}
+
+BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromMdUpdt() const {
+  return &TaskGraph::BldSubTskGphByDirectOneToOne;
+}
+
+BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphTo(
+    const ChainNode* node) const {
+  return node->GetMthdForBldSubTskGphFromBw();
+}
+
+BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromFw() const {
+  return &TaskGraph::BldSubTskGphByDirectOneToOne;
+}
+
+BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromLoss() const {
+  return &TaskGraph::BldSubTskGphByNormalBoxing;
+}
+
+BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromMdUpdt() const {
+  return &TaskGraph::BldSubTskGphByDirectOneToOne;
+}
+
+BldSubTskGphMthd SourceChainNode::GetMthdForBldSubTskGphTo(
+    const ChainNode* node) const {
+  return node->GetMthdForBldSubTskGphFromSrc();
+}
+
+BldSubTskGphMthd LossChainNode::GetMthdForBldSubTskGphTo(
+    const ChainNode* node) const {
+  return node->GetMthdForBldSubTskGphFromLoss();
+}
+
+BldSubTskGphMthd LossChainNode::GetMthdForBldSubTskGphFromFw() const {
+  return &TaskGraph::BldSubTskGphByNormalBoxing;
+}
+
+BldSubTskGphMthd LossChainNode::GetMthdForBldSubTskGphFromSrc() const {
+  return &TaskGraph::BldSubTskGphByNormalBoxing;
+}
+
+BldSubTskGphMthd LossAccChainNode::GetMthdForBldSubTskGphTo(
+    const ChainNode* node) const {
+  return node->GetMthdForBldSubTskGphFromLossAcc();
+}
+
+BldSubTskGphMthd LossAccChainNode::GetMthdForBldSubTskGphFromLoss() const {
+  return &TaskGraph::BldSubTskGphByDirectOneToOne;
+}
+
+BldSubTskGphMthd LossRecordChainNode::GetMthdForBldSubTskGphTo(
+    const ChainNode*) const {
+  UNEXPECTED_RUN();
+}
+
+BldSubTskGphMthd LossRecordChainNode::GetMthdForBldSubTskGphFromLossAcc()
+    const {
+  return &TaskGraph::BldSubTskGphByAddCloneBoxing;
+}
+
+BldSubTskGphMthd MdUpdtChainNode::GetMthdForBldSubTskGphTo(
+    const ChainNode* node) const {
+  return node->GetMthdForBldSubTskGphFromMdUpdt();
+}
+
+BldSubTskGphMthd MdUpdtChainNode::GetMthdForBldSubTskGphFromMdDiffAcc() const {
+  if (parallel_desc()->policy() == ParallelPolicy::kDataParallel) {
+    return &TaskGraph::BldSubTskGphByAddCloneBoxing;
+  } else if (parallel_desc()->policy() == ParallelPolicy::kModelParallel) {
+    return &TaskGraph::BldSubTskGphByDirectOneToOne;
+  } else {
+    UNEXPECTED_RUN();
+  }
+}
+
+BldSubTskGphMthd MdSaveChainNode::GetMthdForBldSubTskGphTo(
+    const ChainNode*) const {
+  UNEXPECTED_RUN();
+}
+
+BldSubTskGphMthd MdSaveChainNode::GetMthdForBldSubTskGphFromMdUpdt() const {
+  if (parallel_desc()->parallel_num() == 1) {
+    return &TaskGraph::BldSubTskGphBySelectOneSourceToSoleSink;
+  } else {
+    return &TaskGraph::BldSubTskGphByInDirectOneToOne;
+  }
+}
+
+BldSubTskGphMthd MdDiffAccChainNode::GetMthdForBldSubTskGphTo(
+    const ChainNode* node) const {
+  return node->GetMthdForBldSubTskGphFromMdDiffAcc();
+}
+
+BldSubTskGphMthd MdDiffAccChainNode::GetMthdForBldSubTskGphFromBw() const {
+  return &TaskGraph::BldSubTskGphByDirectOneToOne;
 }
 
 CompTaskNode* ForwardChainNode::NewCompTaskNode() const {
@@ -91,8 +227,8 @@ CompTaskNode* MdDiffAccChainNode::NewCompTaskNode() const {
 
 std::string ChainEdge::VisualStr() const { return ""; }
 
-BuildSubTaskGraphMethod ChainEdge::GetMethodForBuildSubTaskGraph() const {
-  return nullptr;
+BldSubTskGphMthd ChainEdge::GetMthdForBldSubTskGph() const {
+  return src_node()->GetMthdForBldSubTskGphTo(dst_node());
 }
 
 }  // namespace oneflow

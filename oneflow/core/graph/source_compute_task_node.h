@@ -13,6 +13,7 @@ class SourceCompTaskNode final : public CompTaskNode {
 
   void NewAllProducedRegst() override;
   TodoTaskType GetTaskType() const override { return TodoTaskType::kSource; }
+  void FixThrdLocId() override;
 
  private:
 };

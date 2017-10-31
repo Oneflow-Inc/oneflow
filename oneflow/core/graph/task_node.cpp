@@ -5,17 +5,18 @@ namespace oneflow {
 TaskNode::TaskNode() : machine_id_(-1), thrd_loc_id_(-1), task_id_(-1) {}
 
 void TaskNode::set_machine_id(int64_t val) {
-  CHECK_EQ(machine_id_, -1);
   machine_id_ = val;
+  if (thrd_loc_id_ != -1) { UpdateTaskId(); }
 }
 
 void TaskNode::set_thrd_loc_id(int64_t val) {
-  CHECK_EQ(thrd_loc_id_, -1);
   thrd_loc_id_ = val;
+  if (machine_id_ != -1) { UpdateTaskId(); }
 }
 
-void TaskNode::SetTaskId() {
-  CHECK_EQ(task_id_, -1);
+void TaskNode::UpdateTaskId() {
+  CHECK_NE(machine_id_, -1);
+  CHECK_NE(thrd_loc_id_, -1);
   task_id_ = IDMgr::Singleton()->NewTaskId(machine_id_, thrd_loc_id_);
 }
 

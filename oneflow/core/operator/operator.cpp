@@ -75,6 +75,7 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
   if (model_bns_.empty() && model_tmp_bns_.empty()) {
     pr_desc->set_policy(ParallelPolicy::kDataParallel);
   }
+  if (IsDataLoaderOp() == false) { pr_desc->RemoveInvalidDevice(); }
   VirtualFixParallelDesc(pr_desc);
 }
 

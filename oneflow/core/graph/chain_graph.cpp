@@ -19,13 +19,7 @@ struct Chain {
 using ChainIt = std::list<Chain>::iterator;
 using Logical2ChainItMap = HashMap<const LogicalNode*, ChainIt>;
 
-void SetChainNodeWithChainIt(ChainNode* chain_node, ChainIt chain_it) {
-  CHECK(!chain_it->nodes.empty());
-  chain_node->mut_parallel_desc() = chain_it->nodes.front()->parallel_desc();
-  for (const LogicalNode* logical_node : chain_it->nodes) {
-    chain_node->mut_op_vec().push_back(logical_node->op());
-  }
-}
+void SetChainNodeWithChainIt(ChainNode* chain_node, ChainIt chain_it) {}
 
 void InitChains(const LogicalGraph& logi_gph, std::list<Chain>* chain_list,
                 Logical2ChainItMap* logical2chain_it) {
@@ -233,12 +227,14 @@ void ChainGraph::BuildFwStruct(const LogicalGraph& logical_gph) {
   HashMap<ChainNode*, std::unordered_set<ChainNode*>> chain_node2pred;
   FOR_EACH(chain_it, chain_list) {
     ChainNode* chain_node = nullptr;
+    bool is_source_chain = false;
     if (chain_it->nodes.size() == 1) {
       std::shared_ptr<const Operator> op = chain_it->nodes[0]->op();
       if (op->IsLossOp()) {
         chain_node = NewChainNode<LossChainNode>();
       } else if (op->IsDataLoaderOp()) {
         chain_node = NewChainNode<SourceChainNode>();
+        is_source_chain = true;
       } else {
         // do nothing
       }
@@ -248,7 +244,18 @@ void ChainGraph::BuildFwStruct(const LogicalGraph& logical_gph) {
     }
     chain_it2chain_node[chain_it] = chain_node;
     chain_node2pred[chain_node] = {};
-    SetChainNodeWithChainIt(chain_node, chain_it);
+    CHECK(!chain_it->nodes.empty());
+    auto original_pr_desc = chain_it->nodes.front()->parallel_desc();
+    if (is_source_chain) {
+      auto pr_desc = new ParallelDesc(*original_pr_desc);
+      pr_desc->set_device_type(DeviceType::kCPU);
+      chain_node->mut_parallel_desc().reset(pr_desc);
+    } else {
+      chain_node->mut_parallel_desc() = original_pr_desc;
+    }
+    for (const LogicalNode* logical_node : chain_it->nodes) {
+      chain_node->mut_op_vec().push_back(logical_node->op());
+    }
   }
   // Record the predecessor
   FOR_EACH(chain_it, chain_list) {
@@ -338,11 +345,11 @@ void ChainGraph::BuildLossRecordStruct() {
     ParallelConf loss_record_pr_conf;
     loss_record_pr_conf.set_policy(kDataParallel);
     loss_record_pr_conf.add_device_name(
-        IDMgr::Singleton()->MachineName4MachineId(0) + ":persistence");
+        IDMgr::Singleton()->MachineName4MachineId(0) + ":0");
     auto loss_record_chain = NewChainNode<LossRecordChainNode>();
     loss_record_chain->mut_op_vec() = {loss_record_op};
     loss_record_chain->mut_parallel_desc().reset(
-        new ParallelDesc(loss_record_pr_conf));
+        new ParallelDesc(loss_record_pr_conf, DeviceType::kCPU));
     Connect<ChainNode>(loss_acc_chain, NewEdge(), loss_record_chain);
   });
 }
@@ -367,13 +374,12 @@ void ChainGraph::BuildModelStruct(bool is_train) {
     auto model_save_op = OpMgr::Singleton()->AddOp(model_save_op_conf);
     auto md_save_chain = NewChainNode<MdSaveChainNode>();
     md_save_chain->mut_op_vec() = {model_save_op};
-    if (fw_chain->parallel_desc()->policy() == ParallelPolicy::kModelParallel) {
-      md_save_chain->mut_parallel_desc() = fw_chain->parallel_desc();
-    } else {
-      auto md_save_pr_desc = new ParallelDesc(*(fw_chain->parallel_desc()));
+    auto md_save_pr_desc = new ParallelDesc(*(fw_chain->parallel_desc()));
+    md_save_pr_desc->set_device_type(DeviceType::kCPU);
+    if (fw_chain->parallel_desc()->policy() == ParallelPolicy::kDataParallel) {
       md_save_pr_desc->RemoveNeedlessDevice(1);
-      md_save_chain->mut_parallel_desc().reset(md_save_pr_desc);
     }
+    md_save_chain->mut_parallel_desc().reset(md_save_pr_desc);
     Connect<ChainNode>(md_updt_chain, NewEdge(), md_save_chain);
     // Model Diff Accumulate Chain
     if (is_train == false) { return; }

@@ -4,4 +4,8 @@ namespace oneflow {
 
 void MdSaveCompTaskNode::NewAllProducedRegst() {}
 
+void MdSaveCompTaskNode::FixThrdLocId() {
+  set_thrd_loc_id(IDMgr::Singleton()->PersistenceThrdLocId());
+}
+
 }  // namespace oneflow

@@ -13,6 +13,7 @@ class MdSaveCompTaskNode final : public CompTaskNode {
 
   void NewAllProducedRegst() override;
   TodoTaskType GetTaskType() const override { return TodoTaskType::kMdSave; }
+  void FixThrdLocId() override;
 
  private:
 };

@@ -13,6 +13,8 @@ class CompTaskNode : public TaskNode {
   CompTaskNode() = default;
   virtual ~CompTaskNode() = default;
 
+  virtual void FixThrdLocId() {}
+
   // parallel_ctx_
   const ParallelContext& parallel_ctx() const { return parallel_ctx_; }
   ParallelContext& mut_parallel_ctx() { return parallel_ctx_; }

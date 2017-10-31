@@ -2,47 +2,45 @@
 
 namespace oneflow {
 
-std::pair<std::string, std::string> ParseDeviceNameConf(
-    const std::string& device_name) {
-  int64_t delimiter_pos = device_name.rfind(":");
+namespace {
+
+void ParseDeviceNameConf(const std::string& device_name, std::string* mchn_name,
+                         std::string* device_id_str) {
+  size_t delimiter_pos = device_name.rfind(":");
   CHECK_NE(delimiter_pos, std::string::npos);
-  return {device_name.substr(0, delimiter_pos),
-          device_name.substr(delimiter_pos + 1)};
+  *mchn_name = device_name.substr(0, delimiter_pos);
+  *device_id_str = device_name.substr(delimiter_pos + 1);
 }
 
-ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
+}  // namespace
+
+ParallelDesc::ParallelDesc(const ParallelConf& user_conf)
+    : ParallelDesc(user_conf, JobDesc::Singleton()->resource().device_type()) {}
+
+ParallelDesc::ParallelDesc(const ParallelConf& user_conf,
+                           DeviceType device_type) {
   policy_ = user_conf.policy();
-  device_type_ = JobDesc::Singleton()->resource().device_type();
+  device_type_ = device_type;
   for (const std::string& device_name : user_conf.device_name()) {
-    auto machine_name_and_device_id_str = ParseDeviceNameConf(device_name);
-    std::string mchn_name = machine_name_and_device_id_str.first;
-    std::string device_id_str = machine_name_and_device_id_str.second;
+    std::string mchn_name;
+    std::string device_id_str;
+    ParseDeviceNameConf(device_name, &mchn_name, &device_id_str);
     int64_t machine_id = IDMgr::Singleton()->MachineID4MachineName(mchn_name);
     sorted_machine_ids_.push_back(machine_id);
-    if (device_id_str == "persistence" || device_id_str == "boxing") {
-      device_type_ = DeviceType::kCPU;
-      int64_t thrd_loc_id = IDMgr::Singleton()->GetThrdLocId(device_id_str);
-      machine_id2sorted_thrd_loc_ids_[machine_id] = {thrd_loc_id};
-      continue;
-    }
     int64_t minus_pos = device_id_str.rfind("-");
     if (minus_pos == std::string::npos) {
-      int64_t thrd_loc_id = oneflow_cast<int64_t>(device_id_str);
-      machine_id2sorted_thrd_loc_ids_[machine_id] = {thrd_loc_id};
+      int64_t dev_phy_id = oneflow_cast<int64_t>(device_id_str);
+      machine_id2sorted_dev_phy_ids_[machine_id] = {dev_phy_id};
       continue;
     }
     int64_t min_id = oneflow_cast<int64_t>(device_id_str.substr(0, minus_pos));
     int64_t max_id = oneflow_cast<int64_t>(device_id_str.substr(minus_pos + 1));
     CHECK_LE(min_id, max_id);
-    for (int64_t thrd_loc_id = min_id; thrd_loc_id <= max_id; ++thrd_loc_id) {
-      machine_id2sorted_thrd_loc_ids_[machine_id].push_back(thrd_loc_id);
+    for (int64_t dev_phy_id = min_id; dev_phy_id <= max_id; ++dev_phy_id) {
+      machine_id2sorted_dev_phy_ids_[machine_id].push_back(dev_phy_id);
     }
   }
-  Resort();
-  parallel_num_ = 0;
-  for (const auto& pair : machine_id2sorted_thrd_loc_ids_) {
-    parallel_num_ += pair.second.size();
-  }
+  ClearUp();
 }
 
 void ParallelDesc::RemoveNeedlessDevice(int32_t max_device_num) {
@@ -50,7 +48,7 @@ void ParallelDesc::RemoveNeedlessDevice(int32_t max_device_num) {
   int32_t device_cnt = 0;
   int64_t max_machine_id = -1;
   for (int64_t machine_id : sorted_machine_ids_) {
-    auto it = machine_id2sorted_thrd_loc_ids_.find(machine_id);
+    auto it = machine_id2sorted_dev_phy_ids_.find(machine_id);
     int32_t cur_device_num = it->second.size();
     int32_t cur_device_max_num = max_device_num - device_cnt;
     if (cur_device_num > cur_device_max_num) {
@@ -74,36 +72,49 @@ void ParallelDesc::RemoveNeedlessDevice(int32_t max_device_num) {
     }
   }
   EraseIf<int64_t, std::vector<int64_t>>(
-      &machine_id2sorted_thrd_loc_ids_,
+      &machine_id2sorted_dev_phy_ids_,
       [&](HashMap<int64_t, std::vector<int64_t>>::iterator it) {
         return it->first > max_machine_id;
       });
   parallel_num_ = max_device_num;
 }
 
-void ParallelDesc::ReplaceThrdLocId(int64_t old_thrd_loc_id,
-                                    int64_t new_thrd_loc_id) {
-  CHECK_EQ(IDMgr::Singleton()->IsInherentThrd(old_thrd_loc_id),
-           IDMgr::Singleton()->IsInherentThrd(new_thrd_loc_id));
-  for (auto& pair : machine_id2sorted_thrd_loc_ids_) {
-    std::replace(pair.second.begin(), pair.second.end(), old_thrd_loc_id,
-                 new_thrd_loc_id);
+void ParallelDesc::RemoveInvalidDevice() {
+  for (int64_t machine_id : sorted_machine_ids_) {
+    auto& sorted_dev_ids = machine_id2sorted_dev_phy_ids_.at(machine_id);
+    auto bound_it = std::lower_bound(
+        sorted_dev_ids.begin(), sorted_dev_ids.end(),
+        JobDesc::Singleton()->resource().device_num_per_machine());
+    if (bound_it == sorted_dev_ids.end()) {
+      continue;
+    } else {
+      sorted_dev_ids.erase(bound_it, sorted_dev_ids.end());
+    }
   }
-  Resort();
+  ClearUp();
 }
 
 bool ParallelDesc::Equal(const ParallelDesc& rhs) const {
   return policy_ == rhs.policy_ && device_type_ == rhs.device_type_
          && sorted_machine_ids_ == rhs.sorted_machine_ids_
-         && machine_id2sorted_thrd_loc_ids_
-                == rhs.machine_id2sorted_thrd_loc_ids_;
+         && machine_id2sorted_dev_phy_ids_
+                == rhs.machine_id2sorted_dev_phy_ids_;
 }
 
-void ParallelDesc::Resort() {
-  SortAndRemoveDuplication(&sorted_machine_ids_);
-  for (auto& pair : machine_id2sorted_thrd_loc_ids_) {
+void ParallelDesc::ClearUp() {
+  EraseIf<int64_t, std::vector<int64_t>>(
+      &machine_id2sorted_dev_phy_ids_,
+      [](HashMap<int64_t, std::vector<int64_t>>::iterator it) {
+        return it->second.empty();
+      });
+  sorted_machine_ids_.clear();
+  parallel_num_ = 0;
+  for (auto& pair : machine_id2sorted_dev_phy_ids_) {
+    sorted_machine_ids_.push_back(pair.first);
     SortAndRemoveDuplication(&(pair.second));
+    parallel_num_ += pair.second.size();
   }
+  SortAndRemoveDuplication(&sorted_machine_ids_);
 }
 
 }  // namespace oneflow

@@ -25,7 +25,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   // Setters
   void set_machine_id(int64_t val);
   void set_thrd_loc_id(int64_t val);
-  void SetTaskId();
 
   // Others
   virtual void NewAllProducedRegst() = 0;
@@ -38,6 +37,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
                         int32_t max_register_num);
 
  private:
+  void UpdateTaskId();
+
   int64_t machine_id_;
   int64_t thrd_loc_id_;
   int64_t task_id_;

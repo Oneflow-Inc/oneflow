@@ -6,8 +6,10 @@
 namespace oneflow {
 
 class ChainEdge;
-
 using CompTaskNodeHandler = std::function<void(CompTaskNode*)>;
+class TaskGraph;
+using BldSubTskGphMthd = void (TaskGraph::*)(const ChainNode* src_node,
+                                             const ChainNode* dst_node);
 
 class ChainNode : public Node<ChainNode, ChainEdge> {
  public:
@@ -28,6 +30,19 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   std::string VisualStr() const;
   bool HasOpWithModelOrModelTmpBlob() const;
   void GenSortedCompTaskNodes(CompTaskNodeHandler) const;
+
+  // Get method for build sub-taskgraph
+  virtual BldSubTskGphMthd GetMthdForBldSubTskGphTo(
+      const ChainNode* dst_node) const = 0;
+  virtual BldSubTskGphMthd GetMthdForBldSubTskGphFromFw() const;
+  virtual BldSubTskGphMthd GetMthdForBldSubTskGphFromBw() const;
+  virtual BldSubTskGphMthd GetMthdForBldSubTskGphFromSrc() const;
+  virtual BldSubTskGphMthd GetMthdForBldSubTskGphFromLoss() const;
+  virtual BldSubTskGphMthd GetMthdForBldSubTskGphFromLossAcc() const;
+  virtual BldSubTskGphMthd GetMthdForBldSubTskGphFromLossRecord() const;
+  virtual BldSubTskGphMthd GetMthdForBldSubTskGphFromMdUpdt() const;
+  virtual BldSubTskGphMthd GetMthdForBldSubTskGphFromMdSave() const;
+  virtual BldSubTskGphMthd GetMthdForBldSubTskGphFromMdDiffAcc() const;
 
  protected:
   ChainNode() = default;
@@ -50,6 +65,10 @@ class ForwardChainNode final : public ChainNode {
 
   BackwardChainNode* bw_node() const { return bw_node_; }
   void set_bw_node(BackwardChainNode* val) { bw_node_ = val; }
+  BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const override;
+  BldSubTskGphMthd GetMthdForBldSubTskGphFromFw() const override;
+  BldSubTskGphMthd GetMthdForBldSubTskGphFromSrc() const override;
+  BldSubTskGphMthd GetMthdForBldSubTskGphFromMdUpdt() const override;
 
  private:
   CompTaskNode* NewCompTaskNode() const override;
@@ -66,6 +85,10 @@ class BackwardChainNode final : public ChainNode {
 
   ForwardChainNode* fw_node() const { return fw_node_; }
   void set_fw_node(ForwardChainNode* val) { fw_node_ = val; }
+  BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const override;
+  BldSubTskGphMthd GetMthdForBldSubTskGphFromFw() const override;
+  BldSubTskGphMthd GetMthdForBldSubTskGphFromLoss() const override;
+  BldSubTskGphMthd GetMthdForBldSubTskGphFromMdUpdt() const override;
 
  private:
   CompTaskNode* NewCompTaskNode() const override;
@@ -79,6 +102,7 @@ class SourceChainNode final : public ChainNode {
   ~SourceChainNode() = default;
 
   virtual const char* TypeName() const { return "SourceChainNode"; }
+  BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const override;
 
  private:
   CompTaskNode* NewCompTaskNode() const override;
@@ -91,6 +115,9 @@ class LossChainNode final : public ChainNode {
   ~LossChainNode() = default;
 
   virtual const char* TypeName() const { return "LossChainNode"; }
+  BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const override;
+  BldSubTskGphMthd GetMthdForBldSubTskGphFromFw() const override;
+  BldSubTskGphMthd GetMthdForBldSubTskGphFromSrc() const override;
 
  private:
   CompTaskNode* NewCompTaskNode() const override;
@@ -103,6 +130,8 @@ class LossAccChainNode final : public ChainNode {
   ~LossAccChainNode() = default;
 
   virtual const char* TypeName() const { return "LossAccChainNode"; }
+  BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const override;
+  BldSubTskGphMthd GetMthdForBldSubTskGphFromLoss() const override;
 
  private:
   CompTaskNode* NewCompTaskNode() const override;
@@ -115,6 +144,8 @@ class LossRecordChainNode final : public ChainNode {
   ~LossRecordChainNode() = default;
 
   virtual const char* TypeName() const { return "LossRecordChainNode"; }
+  BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const override;
+  BldSubTskGphMthd GetMthdForBldSubTskGphFromLossAcc() const override;
 
  private:
   CompTaskNode* NewCompTaskNode() const override;
@@ -127,6 +158,8 @@ class MdUpdtChainNode final : public ChainNode {
   ~MdUpdtChainNode() = default;
 
   virtual const char* TypeName() const { return "MdUpdtChainNode"; }
+  BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const override;
+  BldSubTskGphMthd GetMthdForBldSubTskGphFromMdDiffAcc() const override;
 
  private:
   CompTaskNode* NewCompTaskNode() const override;
@@ -139,6 +172,8 @@ class MdSaveChainNode final : public ChainNode {
   ~MdSaveChainNode() = default;
 
   virtual const char* TypeName() const { return "MdSaveChainNode"; }
+  BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const override;
+  BldSubTskGphMthd GetMthdForBldSubTskGphFromMdUpdt() const override;
 
  private:
   CompTaskNode* NewCompTaskNode() const override;
@@ -151,15 +186,12 @@ class MdDiffAccChainNode final : public ChainNode {
   ~MdDiffAccChainNode() = default;
 
   virtual const char* TypeName() const { return "MdDiffAccChainNode"; }
+  BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const override;
+  BldSubTskGphMthd GetMthdForBldSubTskGphFromBw() const override;
 
  private:
   CompTaskNode* NewCompTaskNode() const override;
 };
-
-class TaskGraph;
-
-using BuildSubTaskGraphMethod = void (TaskGraph::*)(const ChainNode* src_node,
-                                                    const ChainNode* dst_node);
 
 class ChainEdge final : public Edge<ChainNode, ChainEdge> {
  public:
@@ -169,7 +201,7 @@ class ChainEdge final : public Edge<ChainNode, ChainEdge> {
 
   std::string VisualStr() const override;
 
-  BuildSubTaskGraphMethod GetMethodForBuildSubTaskGraph() const;
+  BldSubTskGphMthd GetMthdForBldSubTskGph() const;
 
  private:
 };

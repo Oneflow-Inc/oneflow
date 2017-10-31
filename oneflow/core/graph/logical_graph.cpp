@@ -103,16 +103,10 @@ void LogicalGraph::CollectCloneInfos(
 void LogicalGraph::AddOneCloneNode(
     const CloneInfo& clone_info,
     const HashMap<LogicalEdge*, std::string>& edge2ibn) {
+  if (clone_info.pred_node->op()->IsDataLoaderOp()) { return; }
   LogicalNode* clone_node = NewNode();
   clone_node->mut_op() = clone_info.clone_op;
-  if (clone_info.pred_node->op()->IsDataLoaderOp()) {
-    auto pr_desc = new ParallelDesc(*(clone_info.pred_node->parallel_desc()));
-    pr_desc->ReplaceThrdLocId(IDMgr::Singleton()->PersistenceThrdLocId(),
-                              IDMgr::Singleton()->BoxingThrdLocId());
-    clone_node->mut_parallel_desc().reset(pr_desc);
-  } else {
-    clone_node->mut_parallel_desc() = clone_info.pred_node->parallel_desc();
-  }
+  clone_node->mut_parallel_desc() = clone_info.pred_node->parallel_desc();
   Connect(clone_info.pred_node, NewEdge(), clone_node);
   CHECK_EQ(clone_node->op()->output_bns().size(), clone_info.edges.size());
   for (size_t i = 0; i < clone_info.edges.size(); ++i) {
