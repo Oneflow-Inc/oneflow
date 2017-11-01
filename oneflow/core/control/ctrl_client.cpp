@@ -138,12 +138,12 @@ void CtrlClient::ClearTokenMsgs() {
   GetThisStub()->ClearTokenMsgs(&client_ctx, request, &response);
 }
 
-TokenMsgs& CtrlClient::PullTokenMsgs(uint64_t machine_id) {
+void CtrlClient::PullTokenMsgs(uint64_t machine_id, TokenMsgs* token_msgs) {
   grpc::ClientContext client_ctx;
   PullTokenMsgsRequest request;
   PullTokenMsgsResponse response;
   stubs_[machine_id]->PullTokenMsgs(&client_ctx, request, &response);
-  return *(response.mutable_token_msgs());
+  *token_msgs = response.token_msgs();
 }
 
 CtrlClient::CtrlClient() {
