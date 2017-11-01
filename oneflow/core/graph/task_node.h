@@ -31,7 +31,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void ProduceAllRegstsAndBindEdges() {}
   virtual void ConsumeAllRegsts() {}
   virtual void Build() {}
-  virtual bool IsReadyForBuild() {}
+  virtual bool IsReadyForBuild() { return false; }
 
   virtual TodoTaskType GetTaskType() const = 0;
   std::string VisualStr() const override;

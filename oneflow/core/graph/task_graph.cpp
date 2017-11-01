@@ -189,6 +189,7 @@ void TaskGraph::BuildStruct() {
                     chain2sorted_comp_tasks.at(chain_edge->dst_node()),
                     &chain2sorted_in_box, &chain2sorted_out_box);
   });
+  // TODO: delete boxing with sole in and sole out
   ToDotWithAutoFilePath();
 }
 
