@@ -5,6 +5,6 @@ message ConnectionInfo {
   required int32 lid = 1;
   required int32 qpn = 2;
   required int32 psn = 3;
-  required uint32 snp = 4;
-  required uint32 iid = 5;
+  required uint64 snp = 4;
+  required uint64 iid = 5;
 }

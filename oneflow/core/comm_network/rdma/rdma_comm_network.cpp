@@ -53,17 +53,30 @@ void RdmaCommNet::RegisterMemoryDone() {
     this_machine_token_msgs.insert(
         {reinterpret_cast<uint64_t>(mem_ptr), mem_ptr->GetRdmaMemDesc()});
   }
+  LOG(INFO) << this_machine_token_msgs.size();
   TokenMsgs token_msgs;
   *(token_msgs.mutable_token2mem_desc()) =
       HashMap2PbMap<uint64_t, RdmaMemDesc>(this_machine_token_msgs);
+  LOG(INFO) << token_msgs.mutable_token2mem_desc()->size();
   CtrlClient::Singleton()->PushTokenMsgs(token_msgs);
-  FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
-    auto& peer_token_msgs =
-        CtrlClient::Singleton()->PullTokenMsgs(peer_machine_id);
-    for (auto mem_desc_pair : peer_token_msgs.token2mem_desc()) {
-      token2mem_desc_.insert({mem_desc_pair.first, mem_desc_pair.second});
+  FOR_RANGE(uint64_t, peer_machine_id, 0, total_machine_num) {
+    if (peer_machine_id == RuntimeCtx::Singleton()->this_machine_id()) {
+      continue;
+    }
+    TokenMsgs peer_token_msgs;
+    CtrlClient::Singleton()->PullTokenMsgs(peer_machine_id, &peer_token_msgs);
+    HashMap<uint64_t, RdmaMemDesc> peer_token2mem_desc =
+        PbMap2HashMap(peer_token_msgs.token2mem_desc());
+    LOG(INFO) << peer_machine_id << " " << peer_token2mem_desc.size();
+    for (auto pair : peer_token2mem_desc) {
+      token2mem_desc_.insert({pair.first, pair.second});
     }
   }
+  for (auto it = token2mem_desc_.begin(); it != token2mem_desc_.end(); ++it) {
+    LOG(INFO) << it->first << " " << it->second.mem_ptr() << " "
+              << it->second.token();
+  }
+  LOG(INFO) << token2mem_desc_.size();
   OF_BARRIER();
   CtrlClient::Singleton()->ClearTokenMsgs();
   LOG(INFO) << "Register memory done end";
@@ -141,7 +154,7 @@ void* RdmaCommNet::Read(void* actor_read_id, int64_t src_machine_id,
     actor_read_ctx->read_ctx_list.push_back(read_ctx);
   }
   RdmaMemDesc& remote_mem_desc =
-      token2mem_desc_[reinterpret_cast<int64_t>(src_token)];
+      token2mem_desc_[reinterpret_cast<uint64_t>(src_token)];
   auto local_mem = static_cast<const RdmaMem*>(dst_token);
   endpoint_manager_->Read(read_ctx, src_machine_id, local_mem, remote_mem_desc);
   LOG(INFO) << "Read end";

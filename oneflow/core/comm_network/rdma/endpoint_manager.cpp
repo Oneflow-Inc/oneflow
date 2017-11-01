@@ -67,7 +67,8 @@ void EndpointManager::InitRdma() {
     if (peer_machine_id == RuntimeCtx::Singleton()->this_machine_id()) {
       continue;
     }
-    Connection* conn = NewConnection();
+    Connection* conn =
+        connection_pool_[RuntimeCtx::Singleton()->this_machine_id()];
     LOG(INFO) << "Before PullConnectionInfo";
     conn->mut_peer_conn_info() =
         CtrlClient::Singleton()->PullConnectionInfo(peer_machine_id);
@@ -112,6 +113,11 @@ Connection* EndpointManager::NewConnection() {
   conn->mut_this_mach_conn_info().set_iid(gid.global.interface_id);
   conn->set_ibv_mtu(attr.active_mtu);
   conn->set_ibv_qp_ptr(CreateQueuePair());
+  LOG(INFO) << conn->mut_this_mach_conn_info().lid() << " "
+            << conn->mut_this_mach_conn_info().qpn() << " "
+            << conn->mut_this_mach_conn_info().psn() << " "
+            << conn->mut_this_mach_conn_info().snp() << " "
+            << conn->mut_this_mach_conn_info().iid();
   return conn;
 }
 
@@ -159,7 +165,10 @@ void EndpointManager::PollSendQueue() {
 
   if (len <= 0) { return; }
 
-  if (wc.status != IBV_WC_SUCCESS) { return; }
+  if (wc.status != IBV_WC_SUCCESS) {
+    LOG(INFO) << "PollSend wc.status != WC_SUCCESS " << wc.status;
+    return;
+  }
   LOG(INFO) << "Poll Send Queue";
   switch (wc.opcode) {
     case IBV_WC_SEND: {
@@ -183,7 +192,10 @@ void EndpointManager::PollRecvQueue() {
 
   if (len <= 0) { return; }
 
-  if (wc.status != IBV_WC_SUCCESS) { return; }
+  if (wc.status != IBV_WC_SUCCESS) {
+    LOG(INFO) << "PollRecv wc.status != WC_SUCCESS " << wc.status;
+    return;
+  }
   ActorMsg* msg = reinterpret_cast<ActorMsg*>(wc.wr_id);
 
   ActorMsgBus::Singleton()->SendMsg(*msg);
