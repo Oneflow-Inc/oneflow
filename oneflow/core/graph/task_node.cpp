@@ -27,8 +27,7 @@ void TaskNode::UpdateTaskId() {
 std::string TaskNode::VisualStr() const {
   std::stringstream ss;
   ss << TodoTaskType_Name(GetTaskType()) << "\\n"
-     << machine_id_ << "\\n"
-     << thrd_loc_id_ << "\\n"
+     << machine_id_ << ":" << thrd_loc_id_ << "\\n"
      << task_id_;
   return ss.str();
 }

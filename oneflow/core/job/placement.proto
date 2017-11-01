@@ -2,8 +2,9 @@ syntax = "proto2";
 package oneflow;
 
 enum ParallelPolicy {
-  kDataParallel = 0;
-  kModelParallel = 1;
+  kInvalidParallel = 0;
+  kDataParallel = 1;
+  kModelParallel = 2;
 }
 
 message ParallelContext {

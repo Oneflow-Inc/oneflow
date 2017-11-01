@@ -4,6 +4,7 @@
 #include "oneflow/core/graph/exec_graph.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/task.pb.h"
+#include "oneflow/core/operator/operator_manager.h"
 
 namespace oneflow {
 
@@ -18,9 +19,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   // Getters
   int64_t machine_id() const { return machine_id_; }
   int64_t thrd_loc_id() const { return thrd_loc_id_; }
-  std::string thrd_loc_id_str() const { return std::to_string(thrd_loc_id_); }
   int64_t task_id() const { return task_id_; }
-  std::string task_id_str() const { return std::to_string(task_id_); }
   std::shared_ptr<RegstDesc> GetProducedRegst(const std::string& name);
   DeviceType device_type() const;
 

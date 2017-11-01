@@ -3,6 +3,7 @@
 
 #include "oneflow/core/graph/chain_graph.h"
 #include "oneflow/core/graph/compute_task_node.h"
+#include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/operator_manager.h"
@@ -35,6 +36,15 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
       const std::vector<CompTaskNode*>& sorted_dst_comp_tasks);
 
  private:
+  void BldSubTskGphByBoxing(
+      const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+      const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,
+      std::function<void(BoxingOpConf*)> BoxingOpConfSetter);
+
+  TaskNode* AddCopyH2DTaskIfNotCpu(CompTaskNode*);
+  TaskNode* AddCopyD2HTaskIfNotCpu(CompTaskNode*);
+  void AddCopyCommNetTask(TaskNode* src, TaskNode* dst);
+
   std::unique_ptr<const ChainGraph> chain_gph_;
 };
 
