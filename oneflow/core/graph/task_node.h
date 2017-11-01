@@ -28,7 +28,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void set_thrd_loc_id(int64_t val);
 
   // Others
-  virtual void NewAllProducedRegst() = 0;
+  virtual void ProduceAllRegstsAndBindEdges() {}
+  virtual void ConsumeAllRegsts() {}
+  virtual void Build() {}
+  virtual bool IsReadyForBuild() {}
 
   virtual TodoTaskType GetTaskType() const = 0;
   std::string VisualStr() const override;
@@ -54,9 +57,13 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
   TaskEdge() = default;
   ~TaskEdge() = default;
 
+  std::shared_ptr<RegstDesc> GetRegst(const std::string& name_in_producer);
+  void SetRegst(const std::string& name_in_producer,
+                std::shared_ptr<RegstDesc> regst);
+  std::shared_ptr<RegstDesc> GetSoleRegst();
+
  private:
   HashMap<std::string, std::weak_ptr<RegstDesc>> name_in_producer2regst_;
-  HashMap<std::string, std::weak_ptr<RegstDesc>> name_in_consumer2regst_;
 };
 
 }  // namespace oneflow

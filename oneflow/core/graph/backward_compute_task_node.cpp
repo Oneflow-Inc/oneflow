@@ -3,7 +3,7 @@
 
 namespace oneflow {
 
-void BwCompTaskNode::NewAllProducedRegst() {
+void BwCompTaskNode::ProduceAllRegstsAndBindEdges() {
   bool need_in_diff = false;
   chain_node()->ForEachNodeOnOutEdge([&](const ChainNode* out_node) {
     if (dynamic_cast<const BackwardChainNode*>(out_node)) {

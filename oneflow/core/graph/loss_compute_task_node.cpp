@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-void LossCompTaskNode::NewAllProducedRegst() {
+void LossCompTaskNode::ProduceAllRegstsAndBindEdges() {
   NewProducedRegst("loss", 1, kMaxRegisterNum);
   NewProducedRegst("in_diff", 1, kMaxRegisterNum);
 }

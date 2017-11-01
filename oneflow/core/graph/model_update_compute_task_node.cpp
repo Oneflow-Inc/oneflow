@@ -3,7 +3,7 @@
 
 namespace oneflow {
 
-void MdUpdtCompTaskNode::NewAllProducedRegst() {
+void MdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
   NewProducedRegst("model_tmp", 1, 1);
   NewProducedRegst("model", 3, kMaxRegisterNum);
 }

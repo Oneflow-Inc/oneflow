@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-void MdSaveCompTaskNode::NewAllProducedRegst() {}
+void MdSaveCompTaskNode::ProduceAllRegstsAndBindEdges() {}
 
 void MdSaveCompTaskNode::FixThrdLocId() {
   set_thrd_loc_id(IDMgr::Singleton()->PersistenceThrdLocId());

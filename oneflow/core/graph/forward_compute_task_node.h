@@ -11,7 +11,7 @@ class FwCompTaskNode final : public CompTaskNode {
   FwCompTaskNode() = default;
   ~FwCompTaskNode() = default;
 
-  void NewAllProducedRegst() override;
+  void ProduceAllRegstsAndBindEdges() override;
   TodoTaskType GetTaskType() const override { return TodoTaskType::kForward; }
 
  private:

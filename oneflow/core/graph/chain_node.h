@@ -11,7 +11,9 @@ class TaskGraph;
 using BldSubTskGphMthd = void (TaskGraph::*)(
     const ChainNode* src_chain, const ChainNode* dst_chain,
     const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
-    const std::vector<CompTaskNode*>& sorted_dst_comp_tasks);
+    const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,
+    HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_in_box,
+    HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_out_box);
 
 class ChainNode : public Node<ChainNode, ChainEdge> {
  public:

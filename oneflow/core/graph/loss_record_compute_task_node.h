@@ -11,7 +11,7 @@ class LossRecordCompTaskNode final : public CompTaskNode {
   LossRecordCompTaskNode() = default;
   ~LossRecordCompTaskNode() = default;
 
-  void NewAllProducedRegst() override;
+  void ProduceAllRegstsAndBindEdges() override;
   TodoTaskType GetTaskType() const override {
     return TodoTaskType::kLossRecord;
   }

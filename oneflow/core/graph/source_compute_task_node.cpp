@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-void SourceCompTaskNode::NewAllProducedRegst() {
+void SourceCompTaskNode::ProduceAllRegstsAndBindEdges() {
   NewProducedRegst("out", 1, kMaxRegisterNum);
 }
 

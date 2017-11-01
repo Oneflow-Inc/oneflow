@@ -11,7 +11,7 @@ class BwCompTaskNode final : public CompTaskNode {
   BwCompTaskNode() = default;
   ~BwCompTaskNode() = default;
 
-  void NewAllProducedRegst() override;
+  void ProduceAllRegstsAndBindEdges() override;
   TodoTaskType GetTaskType() const override { return TodoTaskType::kBackward; }
 
  private:

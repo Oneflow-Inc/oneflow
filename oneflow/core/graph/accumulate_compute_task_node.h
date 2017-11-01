@@ -11,7 +11,7 @@ class AccCompTaskNode : public CompTaskNode {
   AccCompTaskNode() = default;
   virtual ~AccCompTaskNode() = default;
 
-  void NewAllProducedRegst() override;
+  void ProduceAllRegstsAndBindEdges() override;
 
  private:
 };

@@ -104,11 +104,11 @@ BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphTo(
 }
 
 BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromFw() const {
-  return &TaskGraph::BldSubTskGphByNormalBoxing;
+  return &TaskGraph::BldSubTskGphByBoxing;
 }
 
 BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromSrc() const {
-  return &TaskGraph::BldSubTskGphByNormalBoxing;
+  return &TaskGraph::BldSubTskGphByBoxing;
 }
 
 BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromMdUpdt() const {
@@ -125,7 +125,7 @@ BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromFw() const {
 }
 
 BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromLoss() const {
-  return &TaskGraph::BldSubTskGphByNormalBoxing;
+  return &TaskGraph::BldSubTskGphByBoxing;
 }
 
 BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromMdUpdt() const {
@@ -143,11 +143,11 @@ BldSubTskGphMthd LossChainNode::GetMthdForBldSubTskGphTo(
 }
 
 BldSubTskGphMthd LossChainNode::GetMthdForBldSubTskGphFromFw() const {
-  return &TaskGraph::BldSubTskGphByNormalBoxing;
+  return &TaskGraph::BldSubTskGphByBoxing;
 }
 
 BldSubTskGphMthd LossChainNode::GetMthdForBldSubTskGphFromSrc() const {
-  return &TaskGraph::BldSubTskGphByNormalBoxing;
+  return &TaskGraph::BldSubTskGphByBoxing;
 }
 
 BldSubTskGphMthd LossAccChainNode::GetMthdForBldSubTskGphTo(
@@ -167,7 +167,7 @@ BldSubTskGphMthd LossRecordChainNode::GetMthdForBldSubTskGphTo(
 
 BldSubTskGphMthd LossRecordChainNode::GetMthdForBldSubTskGphFromLossAcc()
     const {
-  return &TaskGraph::BldSubTskGphByAddCloneBoxing;
+  return &TaskGraph::BldSubTskGphByBoxing;
 }
 
 BldSubTskGphMthd MdUpdtChainNode::GetMthdForBldSubTskGphTo(
@@ -177,7 +177,7 @@ BldSubTskGphMthd MdUpdtChainNode::GetMthdForBldSubTskGphTo(
 
 BldSubTskGphMthd MdUpdtChainNode::GetMthdForBldSubTskGphFromMdDiffAcc() const {
   if (parallel_desc()->policy() == ParallelPolicy::kDataParallel) {
-    return &TaskGraph::BldSubTskGphByAddCloneBoxing;
+    return &TaskGraph::BldSubTskGphByBoxing;
   } else if (parallel_desc()->policy() == ParallelPolicy::kModelParallel) {
     return &TaskGraph::BldSubTskGphByOneToOne;
   } else {
