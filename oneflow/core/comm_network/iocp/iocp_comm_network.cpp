@@ -1,6 +1,5 @@
 #include "oneflow/core/comm_network/iocp/iocp_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/job/runtime_context.h"
 
 #ifdef PLATFORM_WINDOWS
 
@@ -138,6 +137,7 @@ IOCPCommNet::IOCPCommNet() {
   mem_descs_.clear();
   unregister_mem_descs_cnt_ = 0;
   io_worker_ptr_ = new IOWorker();
+  io_worker_ptr_->Start();
 }
 
 }  // namespace oneflow
