@@ -18,8 +18,9 @@ void Connection::PostReadRequest(void* read_ctx, const RdmaMem* local_mem,
   wr.send_flags = IBV_SEND_SIGNALED;
   wr.wr.rdma.remote_addr = remote_mem.mem_ptr();
   wr.wr.rdma.rkey = remote_mem.token();
+  LOG(INFO) << remote_mem.mem_ptr() << " " << remote_mem.token();
 
-  ibv_post_send(qp_ptr_, &wr, &bad_wr);
+  CHECK_EQ(ibv_post_send(qp_ptr_, &wr, &bad_wr), 0);
 }
 
 void Connection::PostSendRequest(const ActorMsg* msg, const RdmaMem* msg_mem) {
