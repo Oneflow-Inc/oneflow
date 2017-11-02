@@ -8,6 +8,7 @@
 #include <Windows.h>
 #include <WinBase.h>
 #include <WS2tcpip.h>
+#include "oneflow/core/actor/actor_message.h"
 
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "Kernel32.lib")
@@ -22,6 +23,7 @@ struct SocketMemDesc {
 enum IOType {
   kMsgHead,
   kMsgBody,
+  kStop,
 };
 
 enum SocketMsgType {
@@ -30,24 +32,16 @@ enum SocketMsgType {
   kActor,
 };
 
-struct RequestWriteMsg {
-  const void* write_token;
-  int64_t read_machine_id;
-  const void* read_token;
-  void* read_done_id;
-};
-
-struct RequestReadMsg {
-  const void* read_token;
-  const void* write_token;
+struct SocketToken {
+  const void* write_machine_mem_desc_;
+  const void* read_machine_mem_desc_;
   void* read_done_id;
 };
 
 struct SocketMsg {
   SocketMsgType msg_type;
   union {
-    RequestWriteMsg request_write_msg;
-    RequestReadMsg request_read_msg;
+    SocketToken socket_token;
     ActorMsg actor_msg;
   };
 };
@@ -57,6 +51,8 @@ struct IOData {
   IOType IO_type;
   WSABUF data_buff;
   SocketMsg socket_msg;
+  SOCKET target_socket_fd;
+  int64_t target_machine_id;
 };
 
 struct ReadContext {
@@ -70,6 +66,7 @@ struct ActorReadContext {
 };
 
 using CallBackList = std::list<std::function<void()>>;
+using ReadDoneContext = std::tuple<ActorReadContext*, ReadContext*>;
 
 }  // namespace oneflow
 

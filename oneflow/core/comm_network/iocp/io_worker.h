@@ -23,7 +23,10 @@ class IOWorker final {
 
   std::vector<SOCKET> machine_id2socket_;
 
-  std::vector<IOData*> machine_id2io_data_;
+  std::vector<IOData*> machine_id2io_data_recv_;
+
+  std::mutex send_que_mtx_;
+  std::vector<std::queue<IOData*>> machine_id2io_data_send_que_;
 
   HANDLE completion_port_;
   int32_t num_of_concurrent_threads_;
