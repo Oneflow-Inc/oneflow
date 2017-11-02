@@ -133,6 +133,7 @@ void RdmaCommNet::ReadDone(void* read_done_id) {
   auto actor_read_ctx = std::get<0>(*parsed_read_done_id);
   auto read_ctx = std::get<1>(*parsed_read_done_id);
   delete parsed_read_done_id;
+  LOG(INFO) << "before lock";
   if (IncreaseDoneCnt(read_ctx) == 2) {
     {
       std::unique_lock<std::mutex> lck(actor_read_ctx->read_ctx_list_mtx);
@@ -148,7 +149,6 @@ void* RdmaCommNet::Read(void* actor_read_id, int64_t src_machine_id,
   LOG(INFO) << "Read start";
   auto actor_read_ctx = static_cast<ActorReadContext*>(actor_read_id);
   ReadContext* read_ctx = new ReadContext;
-  ;
   read_ctx->done_cnt = 0;
   {
     std::unique_lock<std::mutex> lck(actor_read_ctx->read_ctx_list_mtx);
@@ -157,7 +157,10 @@ void* RdmaCommNet::Read(void* actor_read_id, int64_t src_machine_id,
   RdmaMemDesc& remote_mem_desc =
       token2mem_desc_[reinterpret_cast<uint64_t>(src_token)];
   auto local_mem = static_cast<const RdmaMem*>(dst_token);
-  endpoint_manager_->Read(read_ctx, src_machine_id, local_mem, remote_mem_desc);
+  void* read_done_id =
+      new std::tuple<ActorReadContext*, ReadContext*>(actor_read_ctx, read_ctx);
+  endpoint_manager_->Read(read_done_id, src_machine_id, local_mem,
+                          remote_mem_desc);
   LOG(INFO) << "Read end";
   return read_ctx;
 }
@@ -170,10 +173,10 @@ void RdmaCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
 }
 
 int8_t RdmaCommNet::IncreaseDoneCnt(ReadContext* read_ctx) {
-  LOG(INFO) << "IncreaseDoneCnt start";
+  LOG(INFO) << "IncreaseDoneCnt start " << reinterpret_cast<uint64_t>(read_ctx);
   std::unique_lock<std::mutex> lck(read_ctx->done_cnt_mtx);
   read_ctx->done_cnt += 1;
-  LOG(INFO) << "IncreaseDoneCnt start";
+  LOG(INFO) << "IncreaseDoneCnt end";
   return read_ctx->done_cnt;
 }
 

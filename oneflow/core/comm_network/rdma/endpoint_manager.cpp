@@ -1,5 +1,7 @@
 #include "oneflow/core/comm_network/rdma/endpoint_manager.h"
 #include <arpa/inet.h>
+#include <chrono>
+#include <thread>
 #include "glog/logging.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/comm_network/comm_network.h"
@@ -68,7 +70,7 @@ void EndpointManager::InitRdma() {
       continue;
     }
     Connection* conn =
-        connection_pool_[RuntimeCtx::Singleton()->this_machine_id()];
+        connection_pool_.at(RuntimeCtx::Singleton()->this_machine_id());
     LOG(INFO) << "Before PullConnectionInfo";
     conn->mut_peer_conn_info() =
         CtrlClient::Singleton()->PullConnectionInfo(peer_machine_id);
@@ -124,18 +126,18 @@ Connection* EndpointManager::NewConnection() {
 void EndpointManager::Read(void* read_ctx, int64_t src_machine_id,
                            const RdmaMem* local_mem,
                            const RdmaMemDesc& remote_mem_desc) {
-  Connection* conn = connection_pool_[src_machine_id];
+  Connection* conn = connection_pool_.at(src_machine_id);
   conn->PostReadRequest(read_ctx, local_mem, remote_mem_desc);
   LOG(INFO) << "Read";
 }
 
 void EndpointManager::SendActorMsg(int64_t dst_machine_id,
                                    const ActorMsg& msg) {
-  Connection* conn = connection_pool_[dst_machine_id];
+  Connection* conn = connection_pool_.at(dst_machine_id);
   ActorMsg* msg_ptr = new ActorMsg;
   *msg_ptr = msg;
   const void* rdma_mem =
-      CommNet::Singleton()->RegisterMemory(msg_ptr, sizeof(*msg_ptr));
+      CommNet::Singleton()->RegisterMemory(msg_ptr, sizeof(ActorMsg));
   conn->PostSendRequest(msg_ptr, static_cast<const RdmaMem*>(rdma_mem));
 }
 
@@ -169,7 +171,7 @@ void EndpointManager::PollSendQueue() {
     LOG(INFO) << "PollSend wc.status != WC_SUCCESS " << wc.status;
     return;
   }
-  LOG(INFO) << "Poll Send Queue";
+  LOG(INFO) << "Poll Send Queue " << wc.opcode;
   switch (wc.opcode) {
     case IBV_WC_SEND: {
       CommNet::Singleton()->UnRegisterMemory(
@@ -196,12 +198,14 @@ void EndpointManager::PollRecvQueue() {
     LOG(INFO) << "PollRecv wc.status != WC_SUCCESS " << wc.status;
     return;
   }
-  ActorMsg* msg = reinterpret_cast<ActorMsg*>(wc.wr_id);
+  const ActorMsg* msg = reinterpret_cast<const ActorMsg*>(wc.wr_id);
 
   ActorMsgBus::Singleton()->SendMsg(*msg);
   LOG(INFO) << "Successfully recv ActorMsg";
   int64_t src_actor_id = msg->src_actor_id();
-  Connection* conn = connection_pool_[src_actor_id];
+  Connection* conn =
+      connection_pool_.at(IDMgr::Singleton()->MachineId4ActorId(src_actor_id));
+  CHECK(conn);
   auto msg2mem_it = recv_msg2rdma_mem_.find(msg);
   conn->PostRecvRequest(msg, msg2mem_it->second);
 }
