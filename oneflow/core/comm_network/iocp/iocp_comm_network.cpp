@@ -63,10 +63,9 @@ void* IOCPCommNet::Read(void* actor_read_id, int64_t write_machine_id,
   // request write msg
   SocketMsg msg;
   msg.msg_type = SocketMsgType::kRequestWrite;
-  msg.request_write_msg.write_token = write_token;
-  msg.request_write_msg.read_machine_id = RuntimeCtx::Singleton()->this_machine_id();
-  msg.request_write_msg.read_token = read_token;
-  msg.request_write_msg.read_done_id = ReadDoneContext(actor_read_ctx, read_ctx);
+  msg.socket_token.write_machine_mem_desc_ = write_token;
+  msg.socket_token.read_machine_mem_desc_ = read_token;
+  msg.socket_token.read_done_id = new ReadDoneContext(actor_read_ctx, read_ctx);
   io_worker_ptr_->PostSendMsgRequest(write_machine_id, msg);
   return read_ctx;
 }
