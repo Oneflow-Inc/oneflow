@@ -18,18 +18,23 @@ class IOWorker final {
   void Start();
   void Stop();
  private:
-  DWORD WINAPI IOWorkerThreadProc(LPVOID pParam);
+  static DWORD WINAPI StartThreadProc(LPVOID pParam) {
+    IOWorker* this_worker = static_cast<IOWorker*>(pParam);
+    return this_worker->ThreadProc();
+  }
+  DWORD ThreadProc();
+
   void InitSockets();
 
   std::vector<SOCKET> machine_id2socket_;
-
   std::vector<IOData*> machine_id2io_data_recv_;
-
   std::mutex send_que_mtx_;
   std::vector<std::queue<IOData*>> machine_id2io_data_send_que_;
 
   HANDLE completion_port_;
   int32_t num_of_concurrent_threads_;
+  int64_t this_machine_id_;
+  int64_t total_machine_num_;
 };
 
 }  // namespace oneflow

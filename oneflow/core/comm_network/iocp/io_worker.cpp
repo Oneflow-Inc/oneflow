@@ -1,6 +1,7 @@
 #include "oneflow/core/comm_network/iocp/io_worker.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/runtime_context.h"
 
 #ifdef PLATFORM_WINDOWS
 
@@ -32,6 +33,28 @@ int64_t GetMachineId(const sockaddr_in& sa) {
 
 }  // namespace
 
+IOWorker::IOWorker() {
+  num_of_concurrent_threads_ = JobDesc::Singleton()->CommNetIOWorkerNum();
+  this_machine_id_ = RuntimeCtx::Singleton()->this_machine_id();
+  total_machine_num_ = JobDesc::Singleton()->TotalMachineNum();
+  // create completion port and start N worker thread for it
+  // N = num_of_concurrent_threads_
+  completion_port_ = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, num_of_concurrent_threads_);
+  CHECK(completion_port_ != NULL) << "CreateIoCompletionPort failed. Error:" << GetLastError() << "\n";
+
+}
+
+IOWorker::~IOWorker() {
+
+}
+
+void IOWorker::Start() {
+  for(size_t i = 0; i < num_of_concurrent_threads_; ++i) {
+    HANDLE worker_thread_handle = CreateThread(NULL, 0, IOWorker::StartThreadProc, this, 0, NULL);
+    CHECK(worker_thread_handle != NULL) << "Create Thread Handle failed. Error:" << GetLastError() << "\n";
+    CloseHandle(worker_thread_handle);
+  }
+}
    /*
    void IOCPCommNet::SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg) {
    IOData* io_data_ptr = new IOData;
