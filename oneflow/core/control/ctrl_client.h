@@ -35,7 +35,7 @@ class CtrlClient final {
 
   void PushTokenMsgs(const TokenMsgs& token_msgs);
   void ClearTokenMsgs();
-  void PullTokenMsgs(uint64_t machine_id, TokenMsgs* token_msgs);
+  void PullTokenMsgs(int64_t machine_id, TokenMsgs* token_msgs);
 
  private:
   CtrlClient();

@@ -23,7 +23,8 @@ RdmaCommNet::~RdmaCommNet() {
 }
 
 const void* RdmaCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
-  LOG(INFO) << "Register Memory start";
+  LOG(INFO) << "Register Memory start" << reinterpret_cast<uint64_t>(mem_ptr)
+            << " " << byte_size;
   RdmaMem* rdma_mem = endpoint_manager_->NewRdmaMem();
   rdma_mem->Register(mem_ptr, byte_size);
   {
@@ -59,7 +60,7 @@ void RdmaCommNet::RegisterMemoryDone() {
       HashMap2PbMap<uint64_t, RdmaMemDesc>(this_machine_token_msgs);
   LOG(INFO) << token_msgs.mutable_token2mem_desc()->size();
   CtrlClient::Singleton()->PushTokenMsgs(token_msgs);
-  FOR_RANGE(uint64_t, peer_machine_id, 0, total_machine_num) {
+  FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
     if (peer_machine_id == RuntimeCtx::Singleton()->this_machine_id()) {
       continue;
     }

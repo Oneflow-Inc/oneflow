@@ -138,7 +138,7 @@ void CtrlClient::ClearTokenMsgs() {
   GetThisStub()->ClearTokenMsgs(&client_ctx, request, &response);
 }
 
-void CtrlClient::PullTokenMsgs(uint64_t machine_id, TokenMsgs* token_msgs) {
+void CtrlClient::PullTokenMsgs(int64_t machine_id, TokenMsgs* token_msgs) {
   grpc::ClientContext client_ctx;
   PullTokenMsgsRequest request;
   PullTokenMsgsResponse response;
