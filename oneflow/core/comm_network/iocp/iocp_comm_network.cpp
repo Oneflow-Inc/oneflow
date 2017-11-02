@@ -66,8 +66,7 @@ void* IOCPCommNet::Read(void* actor_read_id, int64_t write_machine_id,
   msg.request_write_msg.write_token = write_token;
   msg.request_write_msg.read_machine_id = RuntimeCtx::Singleton()->this_machine_id();
   msg.request_write_msg.read_token = read_token;
-  msg.request_write_msg.read_done_id =
-    new std::tuple<ActorReadContext*, ReadContext*>(actor_read_ctx, read_ctx);
+  msg.request_write_msg.read_done_id = ReadDoneContext(actor_read_ctx, read_ctx);
   io_worker_ptr_->PostSendMsgRequest(write_machine_id, msg);
   return read_ctx;
 }
@@ -102,8 +101,7 @@ void IOCPCommNet::AddReadCallBackDone(void* actor_read_id, void* read_id) {
 }
 
 void IOCPCommNet::ReadDone(void* read_done_id) {
-  auto parsed_read_done_id =
-    static_cast<std::tuple<ActorReadContext*, ReadContext*>*>(read_done_id);
+  auto parsed_read_done_id = static_cast<ReadDoneContext*>(read_done_id);
   auto actor_read_ctx = std::get<0>(*parsed_read_done_id);
   auto read_ctx = std::get<1>(*parsed_read_done_id);
   delete parsed_read_done_id;
