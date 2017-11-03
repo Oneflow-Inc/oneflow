@@ -13,7 +13,6 @@ class IOWorker final {
   IOWorker();
   ~IOWorker();
 
-  void AddSocket(SOCKET s, int64_t machine_id);
   void PostSendMsgRequest(int64_t dst_machine_id, SocketMsg socket_msg);
   void Start();
   void Stop();
@@ -25,6 +24,7 @@ class IOWorker final {
   DWORD ThreadProc();
 
   void InitSockets();
+  void PostWSARecv2Socket();
 
   std::vector<SOCKET> machine_id2socket_;
   std::vector<IOData*> machine_id2io_data_recv_;

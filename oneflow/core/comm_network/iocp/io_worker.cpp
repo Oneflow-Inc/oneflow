@@ -46,6 +46,7 @@ IOWorker::IOWorker() {
   completion_port_ = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, num_of_concurrent_threads_);
   PCHECK(completion_port_ != NULL) << "CreateIoCompletionPort failed. Error:" << GetLastError() << "\n";
   InitSockets();
+  PostWSARecv2Socket();
 }
 
 IOWorker::~IOWorker() {
@@ -55,6 +56,20 @@ IOWorker::~IOWorker() {
     }
   }
   WSACleanup();
+}
+
+void IOWorker::PostSendMsgRequest(int64_t dst_machine_id, SocketMsg socket_msg) {
+  SOCKET s = machine_id2socket_[dst_machine_id];
+  IOData* io_data_ptr = new IOData;
+  memset(&(io_data_ptr->overlapped), 0, sizeof(OVERLAPPED));
+  io_data_ptr->socket_msg = socket_msg;
+  io_data_ptr->IO_type = IOType::kMsgHead;
+  io_data_ptr->data_buff.buf = reinterpret_cast<char*>(&(io_data_ptr->socket_msg));
+  io_data_ptr->data_buff.len = sizeof(SocketMsg);
+  io_data_ptr->target_machine_id = dst_machine_id;
+  io_data_ptr->target_socket_fd = s;
+  PostQueuedCompletionStatus(completion_port_, 0, s, reinterpret_cast<LPOVERLAPPED>(io_data_ptr));
+  // WSASend(machine_id2socket_[dst_machine_id], &(io_data_ptr->data_buff), 1, NULL, 0, reinterpret_cast<LPOVERLAPPED>(io_data_ptr), CompletionROUTINE);
 }
 
 void IOWorker::Start() {
@@ -122,87 +137,6 @@ void IOWorker::InitSockets() {
       << machine_id2socket_[machine_id];
   }
 }
-   /*
-   void IOCPCommNet::SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg) {
-   IOData* io_data_ptr = new IOData;
-   memset(&(io_data_ptr->overlapped), 0,sizeof(OVERLAPPED));
-   io_data_ptr->socket_msg = msg;
-   io_data_ptr->IO_type = IOType::kMsgHead;
-   io_data_ptr->data_buff.buf = reinterpret_cast<char*>(&(io_data_ptr->socket_msg));
-   io_data_ptr->data_buff.len = sizeof(SocketMsg);
-   // WSASend(machine_id2socket_[dst_machine_id], &(io_data_ptr->data_buff), 1, NULL, 0, reinterpret_cast<LPOVERLAPPED>(io_data_ptr), CompletionROUTINE);
-   }
-   */
-
-   /*
-   num_of_concurrent_threads_ = JobDesc::Singleton()->CommNetIOWorkerNum();
-   this_machine_id_ = RuntimeCtx::Singleton()->this_machine_id();
-   total_machine_num_ = JobDesc::Singleton()->TotalMachineNum();
-   // create completion port and start N worker thread for it
-   // N = num_of_concurrent_threads_
-   completion_port_ = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, num_of_concurrent_threads_);
-   CHECK(completion_port_ != NULL) << "CreateIoCompletionPort failed. Error:" << GetLastError() << "\n";
-   for(size_t i = 0; i < num_of_concurrent_threads_; ++i) {
-   HANDLE worker_thread_handle = CreateThread(NULL, 0, IOworkerThread, completion_port_, 0, NULL);
-   CHECK(worker_thread_handle != NULL) << "Create Thread Handle failed. Error:" << GetLastError() << "\n";
-   CloseHandle(worker_thread_handle);
-   }
-
-   InitSockets();
-   */
-
-   /*
-   void IOCPCommNet::InitSockets() {
-   machine_id2socket_.assign(total_machine_num_, -1);
-   // listen
-   SOCKET listen_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-   uint16_t this_listen_port = 1024;
-   uint16_t listen_port_max = std::numeric_limits<uint16_t>::max();
-   for(; this_listen_port < listen_port_max; ++this_listen_port) {
-   sockaddr_in this_sockaddr = GetSockAddr(this_machine_id_, this_listen_port);
-   int bind_result =
-   bind(listen_sockfd, reinterpret_cast<sockaddr*>(&this_sockaddr),
-   sizeof(this_sockaddr));
-   if(bind_result == 0) {
-   PCHECK(listen(listen_sockfd, total_machine_num_) == 0);
-   CtrlClient::Singleton()->PushPort(this_listen_port);
-   break;
-   } else {
-   PCHECK(errno == EACCES || errno == EADDRINUSE);
-   }
-   }
-   CHECK_LT(this_listen_port, listen_port_max);
-   // connect
-   FOR_RANGE(int64_t, peer_machine_id, this_machine_id_ + 1, total_machine_num_) {
-   uint16_t peer_port = CtrlClient::Singleton()->PullPort(peer_machine_id);
-   sockaddr_in peer_sockaddr = GetSockAddr(peer_machine_id, peer_port);
-   SOCKET s = socket(AF_INET, SOCK_STREAM, 0);
-   PCHECK(connect(s, reinterpret_cast<sockaddr*>(&peer_sockaddr),
-   sizeof(peer_sockaddr))
-   == 0);
-   machine_id2socket_[peer_machine_id] = s;
-   }
-   // accept
-   FOR_RANGE(int64_t, idx, 0, this_machine_id_) {
-   sockaddr_in peer_sockaddr;
-   socklen_t len = sizeof(peer_sockaddr);
-   SOCKET s = accept(listen_sockfd,
-   reinterpret_cast<sockaddr*>(&peer_sockaddr), &len);
-   PCHECK(s != INVALID_SOCKET) << "socket accept error: " << WSAGetLastError() << "\n";
-   int64_t peer_machine_id = GetMachineId(peer_sockaddr);
-   machine_id2socket_[peer_machine_id] = s;
-   }
-   PCHECK(close(listen_sockfd) == 0);
-   // bind to completion port
-   FOR_RANGE(int64_t, machine_id, 0, total_machine_num_) {
-   SOCKET s = machine_id2socket_[machine_id];
-   CHECK(CreateIoCompletionPort((HANDLE)s,completion_port_,s,0) != NULL) << "bind to completion port err:" << GetLastError() << "\n";
-   LOG(INFO) << "machine " << machine_id << " sockfd "
-   << s;
-   }
-   }
-   */
-
 
 }  // namespace oneflow
 
