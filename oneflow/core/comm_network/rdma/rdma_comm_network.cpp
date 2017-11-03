@@ -19,6 +19,7 @@ RdmaCommNet::RdmaCommNet() {
 
 RdmaCommNet::~RdmaCommNet() {
   endpoint_manager_->Stop();
+  endpoint_manager_.release();
   CHECK(mems_.empty());
 }
 
@@ -102,6 +103,7 @@ void RdmaCommNet::AddReadCallBack(void* actor_read_id, void* read_id,
     read_ctx->cbl.push_back(callback);
     return;
   }
+  LOG(INFO) << "AddEORDCallback";
   do {
     std::unique_lock<std::mutex> lck(actor_read_ctx->read_ctx_list_mtx);
     if (actor_read_ctx->read_ctx_list.empty()) {
@@ -112,7 +114,6 @@ void RdmaCommNet::AddReadCallBack(void* actor_read_id, void* read_id,
     }
   } while (0);
   callback();
-  LOG(INFO) << "AddReadCallBack end";
 }
 
 void RdmaCommNet::AddReadCallBackDone(void* actor_read_id, void* read_id) {
@@ -186,7 +187,7 @@ void RdmaCommNet::FinishOneReadContext(ActorReadContext* actor_read_ctx,
   CHECK_EQ(actor_read_ctx->read_ctx_list.front(), read_ctx);
   actor_read_ctx->read_ctx_list.pop_front();
   for (std::function<void()>& callback : read_ctx->cbl) { callback(); }
-  LOG(INFO) << "FinishOneReadContext start";
+  LOG(INFO) << "FinishOneReadContext end";
 }
 
 }  // namespace oneflow

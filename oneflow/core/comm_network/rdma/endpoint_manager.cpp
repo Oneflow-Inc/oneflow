@@ -124,14 +124,18 @@ Connection* EndpointManager::NewConnection() {
 void EndpointManager::Read(void* read_ctx, int64_t src_machine_id,
                            const RdmaMem* local_mem,
                            const RdmaMemDesc& remote_mem_desc) {
-  Connection* conn = connection_pool_.at(src_machine_id);
+  auto iter = connection_pool_.find(src_machine_id);
+  CHECK(iter != connection_pool_.end());
+  Connection* conn = iter->second;
   conn->PostReadRequest(read_ctx, local_mem, remote_mem_desc);
   LOG(INFO) << "Read";
 }
 
 void EndpointManager::SendActorMsg(int64_t dst_machine_id,
                                    const ActorMsg& msg) {
-  Connection* conn = connection_pool_.at(dst_machine_id);
+  auto iter = connection_pool_.find(dst_machine_id);
+  CHECK(iter != connection_pool_.end());
+  Connection* conn = iter->second;
   ActorMsg* msg_ptr = new ActorMsg;
   *msg_ptr = msg;
   const void* rdma_mem =
@@ -201,9 +205,11 @@ void EndpointManager::PollRecvQueue() {
   ActorMsgBus::Singleton()->SendMsg(*msg);
   LOG(INFO) << "Successfully recv ActorMsg";
   int64_t src_actor_id = msg->src_actor_id();
-  Connection* conn =
-      connection_pool_.at(IDMgr::Singleton()->MachineId4ActorId(src_actor_id));
-  CHECK(conn);
+  if (src_actor_id == -1) { return; }
+  int64_t src_machine_id = IDMgr::Singleton()->MachineId4ActorId(src_actor_id);
+  auto iter = connection_pool_.find(src_machine_id);
+  CHECK(iter != connection_pool_.end());
+  Connection* conn = iter->second;
   auto msg2mem_it = recv_msg2rdma_mem_.find(msg);
   conn->PostRecvRequest(msg, msg2mem_it->second);
 }
