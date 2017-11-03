@@ -14,12 +14,12 @@ void RdmaCommNet::EstablishNetwork() {
 RdmaCommNet::RdmaCommNet() {
   mems_.clear();
   unregister_mems_cnt_ = 0;
-  endpoint_manager_.reset(new EndpointManager());
+  endpoint_manager_ = new EndpointManager();
 }
 
 RdmaCommNet::~RdmaCommNet() {
   endpoint_manager_->Stop();
-  endpoint_manager_.release();
+  delete endpoint_manager_;
   CHECK(mems_.empty());
 }
 

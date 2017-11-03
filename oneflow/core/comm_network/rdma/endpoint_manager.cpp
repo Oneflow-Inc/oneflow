@@ -53,10 +53,15 @@ EndpointManager::~EndpointManager() {
     delete it->first;
     CommNet::Singleton()->UnRegisterMemory(it->second);
   }
-  if (send_cq_ != nullptr) { CHECK_EQ(ibv_destroy_cq(send_cq_), 0); }
-  if (recv_cq_ != nullptr) { CHECK_EQ(ibv_destroy_cq(recv_cq_), 0); }
-  if (pd_ != nullptr) { CHECK_EQ(ibv_dealloc_pd(pd_), 0); }
-  if (context_ != nullptr) { CHECK_EQ(ibv_close_device(context_), 0); }
+  // for (auto it = connection_pool_.begin(); it != connection_pool_.end();
+  // ++it) {
+  //  delete it->second;
+  //}
+  // connection_pool_.clear();
+  // if (send_cq_ != nullptr) { CHECK_EQ(ibv_destroy_cq(send_cq_), 0); }
+  // if (recv_cq_ != nullptr) { CHECK_EQ(ibv_destroy_cq(recv_cq_), 0); }
+  // if (pd_ != nullptr) { CHECK_EQ(ibv_dealloc_pd(pd_), 0); }
+  // if (context_ != nullptr) { CHECK_EQ(ibv_close_device(context_), 0); }
 }
 
 void EndpointManager::InitRdma() {

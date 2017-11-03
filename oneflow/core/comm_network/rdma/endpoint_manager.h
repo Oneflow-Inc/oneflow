@@ -45,7 +45,7 @@ class EndpointManager {
   }
   ibv_qp* CreateQueuePair();
 
-  enum { kPrePostRecvNum = 15 };  // TODO
+  enum { kPrePostRecvNum = 200 };  // TODO
   HashMap<const ActorMsg*, RdmaMem*> recv_msg2rdma_mem_;
   HashMap<int64_t, Connection*> connection_pool_;
 
