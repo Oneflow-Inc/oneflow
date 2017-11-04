@@ -29,9 +29,9 @@ class CtrlClient final {
   void ClearPort();
   uint16_t PullPort(uint64_t machine_id);
 
-  void PushConnectionInfo(const ConnectionInfo& conn_info);
-  void ClearConnectionInfo();
-  void PullConnectionInfo(int64_t machine_id, ConnectionInfo* conn_info);
+  void PushAllConnInfo(const AllConnInfo& all_conn_info);
+  void ClearAllConnInfo();
+  void PullConnectionInfo(int64_t peer_machine_id, ConnectionInfo* conn_info);
 
   void PushTokenMsgs(const TokenMsgs& token_msgs);
   void ClearTokenMsgs();

@@ -36,13 +36,15 @@ class CtrlServer final {
   HashMap<std::string, void*> name2lock_status_;
   // PushPlan, PullPlan
   std::unique_ptr<Plan> plan_;
-  ConnectionInfo conn_info_;
+  AllConnInfo all_conn_info_;
   TokenMsgs token_msgs_;
   std::list<CtrlCall<PullPlanRequest, PullPlanResponse>*> pending_plan_calls_;
   // PushPort, ClearPort, PullPort
   int32_t port_;
   std::list<CtrlCall<PullPortRequest, PullPortResponse>*> pending_port_calls_;
-  std::list<CtrlCall<PullConnectionInfoRequest, PullConnectionInfoResponse>*>
+  std::list<std::pair<
+      CtrlCall<PullConnectionInfoRequest, PullConnectionInfoResponse>*,
+      int64_t>>
       pending_conn_info_calls_;
   std::list<CtrlCall<PullTokenMsgsRequest, PullTokenMsgsResponse>*>
       pending_token_msgs_calls_;

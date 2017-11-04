@@ -31,35 +31,37 @@ EndpointManager::~EndpointManager() {
     delete it->first;
     CommNet::Singleton()->UnRegisterMemory(it->second);
   }
-  // for (auto it = connection_pool_.begin(); it != connection_pool_.end();
-  // ++it) {
-  //  delete it->second;
-  //}
-  // connection_pool_.clear();
-  // if (send_cq_ != nullptr) { CHECK_EQ(ibv_destroy_cq(send_cq_), 0); }
-  // if (recv_cq_ != nullptr) { CHECK_EQ(ibv_destroy_cq(recv_cq_), 0); }
-  // if (pd_ != nullptr) { CHECK_EQ(ibv_dealloc_pd(pd_), 0); }
-  // if (context_ != nullptr) { CHECK_EQ(ibv_close_device(context_), 0); }
+  for (auto it = connection_pool_.begin(); it != connection_pool_.end(); ++it) {
+    delete it->second;
+  }
+  connection_pool_.clear();
+  if (send_cq_ != nullptr) { CHECK_EQ(ibv_destroy_cq(send_cq_), 0); }
+  if (recv_cq_ != nullptr) { CHECK_EQ(ibv_destroy_cq(recv_cq_), 0); }
+  if (pd_ != nullptr) { CHECK_EQ(ibv_dealloc_pd(pd_), 0); }
+  if (context_ != nullptr) { CHECK_EQ(ibv_close_device(context_), 0); }
 }
 
 void EndpointManager::InitRdma() {
   int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
-  CtrlClient::Singleton()->PushConnectionInfo(GetMachineConnInfo());
-  // TODO this_mach_conn_info no difference for each connection
-  OF_BARRIER();
+  std::vector<ConnectionInfo> conn_infos(total_machine_num);
+  FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
+    Connection* conn = NewConnection();
+    connection_pool_.emplace(peer_machine_id, conn);
+    conn_infos[peer_machine_id] = conn->mut_this_mach_conn_info();
+  }
+  AllConnInfo all_conn_info;
+  *(all_conn_info.mutable_conn_infos()) =
+      StdVec2PbRpf<ConnectionInfo>(conn_infos);
+  CtrlClient::Singleton()->PushAllConnInfo(all_conn_info);
   FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
     if (peer_machine_id == RuntimeCtx::Singleton()->this_machine_id()) {
       continue;
     }
-    Connection* conn =
-        connection_pool_.at(RuntimeCtx::Singleton()->this_machine_id());
+    Connection* conn = connection_pool_[peer_machine_id];
     LOG(INFO) << "Before PullConnectionInfo";
-    // conn->mut_peer_conn_info() =
-    //    CtrlClient::Singleton()->PullConnectionInfo(peer_machine_id);
     CtrlClient::Singleton()->PullConnectionInfo(peer_machine_id,
                                                 conn->mut_peer_conn_info_ptr());
     LOG(INFO) << "After PullConnectionInfo";
-    connection_pool_.emplace(peer_machine_id, conn);
     for (size_t i = 0; i != kPrePostRecvNum; ++i) {
       ActorMsg* actor_msg = new ActorMsg();
       const RdmaMem* rdma_mem = static_cast<const RdmaMem*>(
@@ -72,7 +74,7 @@ void EndpointManager::InitRdma() {
   LOG(INFO) << "Before barrier";
   OF_BARRIER();
   LOG(INFO) << "After barrier";
-  CtrlClient::Singleton()->ClearConnectionInfo();
+  CtrlClient::Singleton()->ClearAllConnInfo();
   LOG(INFO) << "InitRdma finished!";
 }
 

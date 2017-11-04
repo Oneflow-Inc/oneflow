@@ -198,31 +198,36 @@ void CtrlServer::PullPortHandler(
   ENQUEUE_REQUEST(PullPort);
 }
 
-void CtrlServer::PushConnectionInfoHandler(
-    CtrlCall<PushConnectionInfoRequest, PushConnectionInfoResponse>* call) {
-  conn_info_ = call->request().conn_info();
-  for (auto pending_call : pending_conn_info_calls_) {
-    *(pending_call->mut_response()->mutable_conn_info()) = conn_info_;
+void CtrlServer::PushAllConnInfoHandler(
+    CtrlCall<PushAllConnInfoRequest, PushAllConnInfoResponse>* call) {
+  all_conn_info_ = call->request().all_conn_info();
+  for (auto pending_call_pair : pending_conn_info_calls_) {
+    auto pending_call = pending_call_pair.first;
+    int64_t machine_id = pending_call_pair.second;
+    *(pending_call->mut_response()->mutable_conn_info()) =
+        all_conn_info_.conn_infos(machine_id);
     pending_call->SendResponse();
   }
   call->SendResponse();
-  ENQUEUE_REQUEST(PushConnectionInfo);
+  ENQUEUE_REQUEST(PushAllConnInfo);
 }
 
-void CtrlServer::ClearConnectionInfoHandler(
-    CtrlCall<ClearConnectionInfoRequest, ClearConnectionInfoResponse>* call) {
-  conn_info_.set_lid(-1);
+void CtrlServer::ClearAllConnInfoHandler(
+    CtrlCall<ClearAllConnInfoRequest, ClearAllConnInfoResponse>* call) {
+  all_conn_info_.clear_conn_infos();
   call->SendResponse();
-  ENQUEUE_REQUEST(ClearConnectionInfo);
+  ENQUEUE_REQUEST(ClearAllConnInfo);
 }
 
 void CtrlServer::PullConnectionInfoHandler(
     CtrlCall<PullConnectionInfoRequest, PullConnectionInfoResponse>* call) {
-  if (conn_info_.lid() != -1) {
-    *(call->mut_response()->mutable_conn_info()) = conn_info_;
+  int64_t machine_id = call->request().machine_id();
+  if (!all_conn_info_.conn_infos().empty()) {
+    *(call->mut_response()->mutable_conn_info()) =
+        all_conn_info_.conn_infos(machine_id);
     call->SendResponse();
   } else {
-    pending_conn_info_calls_.push_back(call);
+    pending_conn_info_calls_.push_back(std::make_pair(call, machine_id));
   }
   ENQUEUE_REQUEST(PullConnectionInfo);
 }
