@@ -31,7 +31,7 @@ class CtrlClient final {
 
   void PushConnectionInfo(const ConnectionInfo& conn_info);
   void ClearConnectionInfo();
-  ConnectionInfo& PullConnectionInfo(uint64_t machine_id);
+  void PullConnectionInfo(int64_t machine_id, ConnectionInfo* conn_info);
 
   void PushTokenMsgs(const TokenMsgs& token_msgs);
   void ClearTokenMsgs();

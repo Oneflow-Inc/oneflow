@@ -23,6 +23,8 @@ class Connection {
   ConnectionInfo& mut_peer_conn_info() { return peer_conn_info_; }
   ConnectionInfo& mut_this_mach_conn_info() { return this_mach_conn_info_; }
 
+  ConnectionInfo* mut_peer_conn_info_ptr() { return &peer_conn_info_; }
+
   void PostReadRequest(void* read_ctx, const RdmaMem* local_mem,
                        const RdmaMemDesc& remote_mem);
   void PostSendRequest(const ActorMsg* msg, const RdmaMem* msg_mem);

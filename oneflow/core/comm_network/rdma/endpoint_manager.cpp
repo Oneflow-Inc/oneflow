@@ -68,6 +68,7 @@ void EndpointManager::InitRdma() {
   int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
   CtrlClient::Singleton()->PushConnectionInfo(GetMachineConnInfo());
   // TODO this_mach_conn_info no difference for each connection
+  OF_BARRIER();
   FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
     if (peer_machine_id == RuntimeCtx::Singleton()->this_machine_id()) {
       continue;
@@ -75,8 +76,10 @@ void EndpointManager::InitRdma() {
     Connection* conn =
         connection_pool_.at(RuntimeCtx::Singleton()->this_machine_id());
     LOG(INFO) << "Before PullConnectionInfo";
-    conn->mut_peer_conn_info() =
-        CtrlClient::Singleton()->PullConnectionInfo(peer_machine_id);
+    // conn->mut_peer_conn_info() =
+    //    CtrlClient::Singleton()->PullConnectionInfo(peer_machine_id);
+    CtrlClient::Singleton()->PullConnectionInfo(peer_machine_id,
+                                                conn->mut_peer_conn_info_ptr());
     LOG(INFO) << "After PullConnectionInfo";
     connection_pool_.emplace(peer_machine_id, conn);
     for (size_t i = 0; i != kPrePostRecvNum; ++i) {

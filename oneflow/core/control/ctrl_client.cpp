@@ -115,12 +115,13 @@ void CtrlClient::ClearConnectionInfo() {
   GetThisStub()->ClearConnectionInfo(&client_ctx, request, &response);
 }
 
-ConnectionInfo& CtrlClient::PullConnectionInfo(uint64_t machine_id) {
+void CtrlClient::PullConnectionInfo(int64_t machine_id,
+                                    ConnectionInfo* conn_info) {
   grpc::ClientContext client_ctx;
   PullConnectionInfoRequest request;
   PullConnectionInfoResponse response;
   stubs_[machine_id]->PullConnectionInfo(&client_ctx, request, &response);
-  return *(response.mutable_conn_info());
+  *conn_info = response.conn_info();
 }
 
 void CtrlClient::PushTokenMsgs(const TokenMsgs& token_msgs) {

@@ -202,6 +202,7 @@ void CtrlServer::PushConnectionInfoHandler(
     CtrlCall<PushConnectionInfoRequest, PushConnectionInfoResponse>* call) {
   conn_info_ = call->request().conn_info();
   for (auto pending_call : pending_conn_info_calls_) {
+    *(pending_call->mut_response()->mutable_conn_info()) = conn_info_;
     pending_call->SendResponse();
   }
   call->SendResponse();
@@ -231,6 +232,7 @@ void CtrlServer::PushTokenMsgsHandler(
   token_msgs_ = call->request().token_msgs();
   for (auto pending_call : pending_token_msgs_calls_) {
     pending_call->SendResponse();
+    *(pending_call->mut_response()->mutable_token_msgs()) = token_msgs_;
   }
   call->SendResponse();
   ENQUEUE_REQUEST(PushTokenMsgs);
