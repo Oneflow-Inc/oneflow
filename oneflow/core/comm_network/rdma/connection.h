@@ -16,13 +16,13 @@ class Connection {
   ~Connection();
 
   void set_ibv_mtu(enum ibv_mtu active_mtu) { active_mtu_ = active_mtu; }
-  void set_ibv_qp_ptr(ibv_qp* ibv_qp_ptr) {
-    this_mach_conn_info_.set_qpn(ibv_qp_ptr->qp_num);
-    qp_ptr_ = ibv_qp_ptr;
-  }
+  void set_ibv_qp_ptr(ibv_qp* ibv_qp_ptr) { qp_ptr_ = ibv_qp_ptr; }
   ConnectionInfo& mut_peer_conn_info() { return peer_conn_info_; }
   ConnectionInfo& mut_this_mach_conn_info() { return this_mach_conn_info_; }
 
+  ConnectionInfo* mut_this_mach_conn_info_ptr() {
+    return &this_mach_conn_info_;
+  }
   ConnectionInfo* mut_peer_conn_info_ptr() { return &peer_conn_info_; }
 
   void PostReadRequest(void* read_ctx, const RdmaMem* local_mem,

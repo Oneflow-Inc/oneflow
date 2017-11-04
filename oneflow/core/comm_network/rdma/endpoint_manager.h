@@ -43,7 +43,6 @@ class EndpointManager {
     }
     return connection_pool_.at(this_machine_id)->mut_this_mach_conn_info();
   }
-  ibv_qp* CreateQueuePair();
 
   enum { kPrePostRecvNum = 200 };  // TODO
   HashMap<const ActorMsg*, RdmaMem*> recv_msg2rdma_mem_;

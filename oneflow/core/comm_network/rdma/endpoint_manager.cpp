@@ -25,28 +25,6 @@ EndpointManager::EndpointManager() {
   LOG(INFO) << "EndpointManager Constructed!";
 }
 
-ibv_qp* EndpointManager::CreateQueuePair() {
-  // Init queue pair
-  ibv_qp_init_attr qp_init_attr;
-
-  memset(&qp_init_attr, 0, sizeof(qp_init_attr));
-  qp_init_attr.qp_context = nullptr;
-  qp_init_attr.send_cq = send_cq_;
-  qp_init_attr.recv_cq = recv_cq_;
-  qp_init_attr.qp_type = IBV_QPT_RC;
-  qp_init_attr.srq = nullptr;
-  qp_init_attr.sq_sig_all = 1;
-
-  qp_init_attr.cap.max_send_wr = 10;
-  qp_init_attr.cap.max_recv_wr = 10;
-  qp_init_attr.cap.max_send_sge = 1;
-  qp_init_attr.cap.max_recv_sge = 1;
-
-  ibv_qp* qp_ptr_ = ibv_create_qp(pd_, &qp_init_attr);
-  CHECK(qp_ptr_);
-  return qp_ptr_;
-}
-
 EndpointManager::~EndpointManager() {
   for (auto it = recv_msg2rdma_mem_.begin(); it != recv_msg2rdma_mem_.end();
        ++it) {
@@ -106,21 +84,40 @@ RdmaMem* EndpointManager::NewRdmaMem() {
 
 Connection* EndpointManager::NewConnection() {
   Connection* conn = new Connection();
+
+  // Init queue pair
+  ibv_qp_init_attr qp_init_attr;
+
+  memset(&qp_init_attr, 0, sizeof(qp_init_attr));
+  qp_init_attr.qp_context = nullptr;
+  qp_init_attr.send_cq = send_cq_;
+  qp_init_attr.recv_cq = recv_cq_;
+  qp_init_attr.qp_type = IBV_QPT_RC;
+  qp_init_attr.srq = nullptr;
+  qp_init_attr.sq_sig_all = 1;
+
+  qp_init_attr.cap.max_send_wr = 10;
+  qp_init_attr.cap.max_recv_wr = 10;
+  qp_init_attr.cap.max_send_sge = 1;
+  qp_init_attr.cap.max_recv_sge = 1;
+
+  ibv_qp* qp_ptr = ibv_create_qp(pd_, &qp_init_attr);
+  CHECK(qp_ptr);
+
   // Init connection info
   ibv_port_attr attr;
   CHECK_EQ(ibv_query_port(context_, (uint8_t)1, &attr), 0);
   srand((unsigned)time(NULL));
-  conn->mut_this_mach_conn_info().set_lid(attr.lid);
-  // Will be set up after the creation of the queue pair
-  conn->mut_this_mach_conn_info().set_qpn(0);
-  conn->mut_this_mach_conn_info().set_psn(static_cast<uint32_t>(rand())
-                                          & 0xffffff);
+  conn->mut_this_mach_conn_info_ptr()->set_lid(attr.lid);
+  conn->mut_this_mach_conn_info_ptr()->set_qpn(qp_ptr->qp_num);
+  conn->mut_this_mach_conn_info_ptr()->set_psn(static_cast<uint32_t>(rand())
+                                               & 0xffffff);
   union ibv_gid gid;
   CHECK_EQ(ibv_query_gid(context_, (uint8_t)1, 0, &gid), 0);
-  conn->mut_this_mach_conn_info().set_snp(gid.global.subnet_prefix);
-  conn->mut_this_mach_conn_info().set_iid(gid.global.interface_id);
+  conn->mut_this_mach_conn_info_ptr()->set_snp(gid.global.subnet_prefix);
+  conn->mut_this_mach_conn_info_ptr()->set_iid(gid.global.interface_id);
   conn->set_ibv_mtu(attr.active_mtu);
-  conn->set_ibv_qp_ptr(CreateQueuePair());
+  conn->set_ibv_qp_ptr(qp_ptr);
   LOG(INFO) << conn->mut_this_mach_conn_info().lid() << " "
             << conn->mut_this_mach_conn_info().qpn() << " "
             << conn->mut_this_mach_conn_info().psn() << " "
