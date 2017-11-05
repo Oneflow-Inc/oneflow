@@ -100,27 +100,28 @@ uint16_t CtrlClient::PullPort(uint64_t machine_id) {
   return response.port();
 }
 
-void CtrlClient::PushConnectionInfo(const ConnectionInfo& conn_info) {
+void CtrlClient::PushAllConnInfo(const AllConnInfo& all_conn_info) {
   grpc::ClientContext client_ctx;
-  PushConnectionInfoRequest request;
-  *(request.mutable_conn_info()) = conn_info;
-  PushConnectionInfoResponse response;
-  GetThisStub()->PushConnectionInfo(&client_ctx, request, &response);
+  PushAllConnInfoRequest request;
+  *(request.mutable_all_conn_info()) = all_conn_info;
+  PushAllConnInfoResponse response;
+  GetThisStub()->PushAllConnInfo(&client_ctx, request, &response);
 }
 
-void CtrlClient::ClearConnectionInfo() {
+void CtrlClient::ClearAllConnInfo() {
   grpc::ClientContext client_ctx;
-  ClearConnectionInfoRequest request;
-  ClearConnectionInfoResponse response;
-  GetThisStub()->ClearConnectionInfo(&client_ctx, request, &response);
+  ClearAllConnInfoRequest request;
+  ClearAllConnInfoResponse response;
+  GetThisStub()->ClearAllConnInfo(&client_ctx, request, &response);
 }
 
-void CtrlClient::PullConnectionInfo(int64_t machine_id,
+void CtrlClient::PullConnectionInfo(int64_t peer_machine_id,
                                     ConnectionInfo* conn_info) {
   grpc::ClientContext client_ctx;
   PullConnectionInfoRequest request;
+  request.set_machine_id(RuntimeCtx::Singleton()->this_machine_id());
   PullConnectionInfoResponse response;
-  stubs_[machine_id]->PullConnectionInfo(&client_ctx, request, &response);
+  stubs_[peer_machine_id]->PullConnectionInfo(&client_ctx, request, &response);
   *conn_info = response.conn_info();
 }
 

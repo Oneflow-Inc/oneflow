@@ -87,20 +87,21 @@ message PullPortResponse {
   required int32 port = 1;
 }
 
-message PushConnectionInfoRequest {
-  required ConnectionInfo conn_info = 1;
+message PushAllConnInfoRequest {
+  required AllConnInfo all_conn_info = 1;
 }
 
-message PushConnectionInfoResponse {
+message PushAllConnInfoResponse {
 }
 
-message ClearConnectionInfoRequest {
+message ClearAllConnInfoRequest {
 }
 
-message ClearConnectionInfoResponse {
+message ClearAllConnInfoResponse {
 }
 
 message PullConnectionInfoRequest {
+  required int64 machine_id = 1;
 }
 
 message PullConnectionInfoResponse {
