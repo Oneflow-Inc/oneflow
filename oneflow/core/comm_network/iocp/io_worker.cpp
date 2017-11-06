@@ -67,6 +67,7 @@ IOWorker::IOWorker() {
     std::queue<IOData*> q;
     machine_id2io_data_send_que_.push_back(q);
   }
+  machine_id2send_que_mtx_ = std::vector<std::mutex>(total_machine_num_);
 }
 
 IOWorker::~IOWorker() {
@@ -84,7 +85,7 @@ void IOWorker::PostSendMsgRequest(int64_t dst_machine_id,
   IOData* io_data_ptr = new IOData;
   memset(&(io_data_ptr->overlapped), 0, sizeof(OVERLAPPED));
   io_data_ptr->socket_msg = socket_msg;
-  io_data_ptr->IO_type = IOType::kSendMsgHead;
+  io_data_ptr->IO_type = IOType::kFirstSendMsgHead;
   io_data_ptr->data_buff.buf =
       reinterpret_cast<char*>(&(io_data_ptr->socket_msg));
   io_data_ptr->data_buff.len = sizeof(SocketMsg);
@@ -215,12 +216,24 @@ DWORD IOWorker::ThreadProc() {
         WSARecvFromIOData(io_data_ptr);
         break;
       }
+      case IOType::kFirstSendMsgHead: {
+        OnFirstSendMsgHead(io_data_ptr);
+        break;
+      }
       case IOType::kSendMsgHead: {
-        OnSendMsgHead(io_data_ptr);
+        if (io_data_ptr->data_buff.len == 0) {
+          OnSendMsgHeadDone(io_data_ptr);
+        } else {
+          WSASendFromIOData(io_data_ptr);
+        }
         break;
       }
       case IOType::kSendMsgBody: {
-        OnSendMsgBody(io_data_ptr);
+        if (io_data_ptr->data_buff.len == 0) {
+          OnSendDone(io_data_ptr);
+        } else {
+          WSASendFromIOData(io_data_ptr);
+        }
         break;
       }
       default: UNEXPECTED_RUN()
@@ -251,6 +264,7 @@ void IOWorker::OnRecvMsgHeadDone(IOData* io_data_ptr) {
       msg.socket_token = io_data_ptr->socket_msg.socket_token;
       PostSendMsgRequest(io_data_ptr->target_machine_id, msg);
       ResetIODataBuff(io_data_ptr);
+      break;
     }
     default: UNEXPECTED_RUN()
   }
@@ -264,12 +278,56 @@ void IOWorker::OnRecvMsgBodyDone(IOData* io_data_ptr) {
   io_data_ptr->IO_type = IOType::kRecvMsgHead;
 }
 
-void IOWorker::OnSendMsgHead(IOData* io_data_ptr) {
-  // TO DO
+void IOWorker::OnFirstSendMsgHead(IOData* io_data_ptr) {
+  {
+    std::unique_lock<std::mutex> lck(
+        machine_id2send_que_mtx_[io_data_ptr->target_machine_id]);
+    std::queue<IOData*>& send_que =
+        machine_id2io_data_send_que_[io_data_ptr->target_machine_id];
+    io_data_ptr->IO_type = IOType::kSendMsgHead;
+    send_que.push(io_data_ptr);
+    if (send_que.size() == 1) { WSASendFromIOData(io_data_ptr); }
+  }
 }
 
-void IOWorker::OnSendMsgBody(IOData* io_data_ptr) {
-  // TO DO
+void IOWorker::OnSendMsgHeadDone(IOData* io_data_ptr) {
+  switch (io_data_ptr->socket_msg.msg_type) {
+    case SocketMsgType::kActor: {
+      OnSendDone(io_data_ptr);
+      break;
+    }
+    case SocketMsgType::kRequsetRead: {
+      auto mem_desc_ptr = static_cast<const SocketMemDesc*>(
+          io_data_ptr->socket_msg.socket_token.write_machine_mem_desc_);
+      io_data_ptr->data_buff.buf =
+          reinterpret_cast<char*>(mem_desc_ptr->mem_ptr);
+      io_data_ptr->data_buff.len = mem_desc_ptr->byte_size;
+      io_data_ptr->IO_type = IOType::kSendMsgBody;
+      WSASendFromIOData(io_data_ptr);
+      break;
+    }
+    case SocketMsgType::kRequestWrite: {
+      OnSendDone(io_data_ptr);
+      break;
+    }
+    default: UNEXPECTED_RUN()
+  }
+}
+
+void IOWorker::OnSendDone(IOData* io_data_ptr) {
+  {
+    std::unique_lock<std::mutex> lck(
+        machine_id2send_que_mtx_[io_data_ptr->target_machine_id]);
+    std::queue<IOData*>& send_que =
+        machine_id2io_data_send_que_[io_data_ptr->target_machine_id];
+    CHECK(io_data_ptr == send_que.front());
+    send_que.pop();
+    delete io_data_ptr;
+    if (!send_que.empty()) {
+      IOData* next_io_data_ptr = send_que.front();
+      WSASendFromIOData(next_io_data_ptr);
+    }
+  }
 }
 
 void IOWorker::ResetIODataBuff(IOData* io_data_ptr) {
@@ -281,6 +339,12 @@ void IOWorker::ResetIODataBuff(IOData* io_data_ptr) {
 void IOWorker::WSARecvFromIOData(IOData* io_data_ptr) {
   WSARecv(io_data_ptr->target_socket_fd, &(io_data_ptr->data_buff), 1, NULL,
           &(io_data_ptr->flags), reinterpret_cast<LPOVERLAPPED>(io_data_ptr),
+          NULL);
+}
+
+void IOWorker::WSASendFromIOData(IOData* io_data_ptr) {
+  WSASend(io_data_ptr->target_socket_fd, &(io_data_ptr->data_buff), 1, NULL,
+          io_data_ptr->flags, reinterpret_cast<LPOVERLAPPED>(io_data_ptr),
           NULL);
 }
 

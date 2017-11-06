@@ -21,6 +21,7 @@ struct SocketMemDesc {
 };
 
 enum IOType {
+  kFirstSendMsgHead,
   kSendMsgHead,
   kSendMsgBody,
   kRecvMsgHead,
