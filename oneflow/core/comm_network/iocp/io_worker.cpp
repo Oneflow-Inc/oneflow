@@ -95,8 +95,6 @@ void IOWorker::PostSendMsgRequest(int64_t dst_machine_id,
   io_data_ptr->flags = 0;
   PostQueuedCompletionStatus(completion_port_, 0, s,
                              reinterpret_cast<LPOVERLAPPED>(io_data_ptr));
-  // WSASend(machine_id2socket_[dst_machine_id], &(io_data_ptr->data_buff), 1,
-  // NULL, 0, reinterpret_cast<LPOVERLAPPED>(io_data_ptr), CompletionROUTINE);
 }
 
 void IOWorker::Start() {
