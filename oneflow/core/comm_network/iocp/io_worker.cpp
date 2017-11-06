@@ -1,4 +1,5 @@
 #include "oneflow/core/comm_network/iocp/io_worker.h"
+#include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource.pb.h"
@@ -108,6 +109,8 @@ void IOWorker::Start() {
 void IOWorker::Stop() {
   IOData* stop_io_data = new IOData;
   stop_io_data->IO_type = IOType::kStop;
+  memset(&(stop_io_data->overlapped), 0, sizeof(OVERLAPPED));
+  ResetIODataBuff(stop_io_data);
   PostQueuedCompletionStatus(completion_port_, 0,
                              machine_id2socket_[this_machine_id_],
                              reinterpret_cast<LPOVERLAPPED>(stop_io_data));
@@ -176,9 +179,7 @@ void IOWorker::PostNewWSARecv2Socket(int64_t dst_machine_id) {
   IOData* io_data_ptr = machine_id2io_data_recv_[dst_machine_id];
   memset(&(io_data_ptr->overlapped), 0, sizeof(OVERLAPPED));
   io_data_ptr->IO_type = IOType::kRecvMsgHead;
-  io_data_ptr->data_buff.buf =
-      reinterpret_cast<char*>(&(io_data_ptr->socket_msg));
-  io_data_ptr->data_buff.len = sizeof(SocketMsg);
+  ResetIODataBuff(io_data_ptr);
   io_data_ptr->target_machine_id = dst_machine_id;
   io_data_ptr->target_socket_fd = s;
   io_data_ptr->flags = 0;
@@ -196,25 +197,28 @@ DWORD IOWorker::ThreadProc() {
               reinterpret_cast<LPOVERLAPPED*>(&io_data_ptr), INFINITE)
           == true)
         << "GetQueuedCompletionStatus Error: " << GetLastError() << "\n";
+    io_data_ptr->data_buff.buf += bytes_transferred;
+    io_data_ptr->data_buff.len -= bytes_transferred;
+    CHECK_GE(io_data_ptr->data_buff.len, 0);
     switch (io_data_ptr->IO_type) {
       case IOType::kStop: {
         delete io_data_ptr;
         return 0;
       }
       case IOType::kRecvMsgHead: {
-        OnRecvMsgHead(bytes_transferred, io_data_ptr);
+        OnRecvMsgHead(io_data_ptr);
         break;
       }
       case IOType::kRecvMsgBody: {
-        OnRecvMsgBody(bytes_transferred, io_data_ptr);
+        OnRecvMsgBody(io_data_ptr);
         break;
       }
       case IOType::kSendMsgHead: {
-        OnSendMsgHead(bytes_transferred, io_data_ptr);
+        OnSendMsgHead(io_data_ptr);
         break;
       }
       case IOType::kSendMsgBody: {
-        OnSendMsgBody(bytes_transferred, io_data_ptr);
+        OnSendMsgBody(io_data_ptr);
         break;
       }
       default: UNEXPECTED_RUN()
@@ -223,20 +227,54 @@ DWORD IOWorker::ThreadProc() {
   return 0;
 }
 
-void IOWorker::OnRecvMsgHead(DWORD bytes_transferred, IOData* io_data_ptr) {
+void IOWorker::OnRecvMsgHead(IOData* io_data_ptr) {
+  if (io_data_ptr->data_buff.len == 0) {
+    switch (io_data_ptr->socket_msg.msg_type) {
+      case SocketMsgType::kActor: {
+        ActorMsgBus::Singleton()->SendMsg(io_data_ptr->socket_msg.actor_msg);
+        ResetIODataBuff(io_data_ptr);
+        break;
+      }
+      case SocketMsgType::kRequsetRead: {
+        auto mem_desc_ptr = static_cast<const SocketMemDesc*>(
+            io_data_ptr->socket_msg.socket_token.read_machine_mem_desc_);
+        io_data_ptr->data_buff.buf =
+            reinterpret_cast<char*>(mem_desc_ptr->mem_ptr);
+        io_data_ptr->data_buff.len = mem_desc_ptr->byte_size;
+        io_data_ptr->IO_type = IOType::kRecvMsgBody;
+        break;
+      }
+      case SocketMsgType::kRequestWrite: {
+        SocketMsg msg;
+        msg.msg_type = SocketMsgType::kRequsetRead;
+        msg.socket_token = io_data_ptr->socket_msg.socket_token;
+        PostSendMsgRequest(io_data_ptr->target_machine_id, msg);
+        ResetIODataBuff(io_data_ptr);
+      }
+      default: UNEXPECTED_RUN()
+    }
+  }
+  WSARecv(io_data_ptr->target_socket_fd, &(io_data_ptr->data_buff), 1, NULL,
+          &(io_data_ptr->flags), reinterpret_cast<LPOVERLAPPED>(io_data_ptr),
+          NULL);
+}
+
+void IOWorker::OnRecvMsgBody(IOData* io_data_ptr) {
   // TO DO
 }
 
-void IOWorker::OnRecvMsgBody(DWORD bytes_transferred, IOData* io_data_ptr) {
+void IOWorker::OnSendMsgHead(IOData* io_data_ptr) {
   // TO DO
 }
 
-void IOWorker::OnSendMsgHead(DWORD bytes_transferred, IOData* io_data_ptr) {
+void IOWorker::OnSendMsgBody(IOData* io_data_ptr) {
   // TO DO
 }
 
-void IOWorker::OnSendMsgBody(DWORD bytes_transferred, IOData* io_data_ptr) {
-  // TO DO
+void IOWorker::ResetIODataBuff(IOData* io_data_ptr) {
+  io_data_ptr->data_buff.buf =
+      reinterpret_cast<char*>(&(io_data_ptr->socket_msg));
+  io_data_ptr->data_buff.len = sizeof(SocketMsg);
 }
 
 }  // namespace oneflow

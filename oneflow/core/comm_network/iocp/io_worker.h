@@ -27,10 +27,13 @@ class IOWorker final {
   void InitSockets();
   void PostNewWSARecv2Socket(int64_t dst_machine_id);
 
-  void OnRecvMsgHead(DWORD bytes_transferred, IOData* io_data_ptr);
-  void OnRecvMsgBody(DWORD bytes_transferred, IOData* io_data_ptr);
-  void OnSendMsgHead(DWORD bytes_transferred, IOData* io_data_ptr);
-  void OnSendMsgBody(DWORD bytes_transferred, IOData* io_data_ptr);
+  void OnRecvMsgHead(IOData* io_data_ptr);
+  void OnRecvMsgBody(IOData* io_data_ptr);
+  void OnSendMsgHead(IOData* io_data_ptr);
+  void OnSendMsgBody(IOData* io_data_ptr);
+
+  // reset a IOData->data_buff to this IOData->SocketMsg
+  void ResetIODataBuff(IOData* io_data_ptr);
 
   std::vector<SOCKET> machine_id2socket_;
   std::vector<IOData*> machine_id2io_data_recv_;
