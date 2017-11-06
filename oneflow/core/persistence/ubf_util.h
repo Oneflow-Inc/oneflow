@@ -21,7 +21,8 @@ class UbfUtil final {
                            const std::string& output_img_path);
   static void CreateUbfFiles(const std::vector<std::string>& image_directories,
                              uint32_t limit, uint32_t width, uint32_t height,
-                             const std::string& output_dir);
+                             const std::string& output_dir,
+                             const bool use_hadoop_stream);
 
  private:
   static void GetFilePaths(
@@ -36,6 +37,9 @@ class UbfUtil final {
   static void SaveFeatures(const std::vector<std::string>& img_file_paths,
                            uint32_t width, uint32_t height,
                            const std::string& output_dir);
+  static void SaveFeaturesAndLabels(
+      const std::vector<std::string>& img_file_paths, uint32_t width,
+      uint32_t height, const std::string& output_dir);
 };
 
 }  // namespace oneflow

@@ -73,16 +73,33 @@ void UbfUtil::SaveFeatures(const std::vector<std::string>& img_file_paths,
   }
 }
 
+void UbfUtil::SaveFeaturesAndLabels(
+    const std::vector<std::string>& img_file_paths, uint32_t width,
+    uint32_t height, const std::string& output_dir) {
+  PersistentOutStream feature_stream(LocalFS(),
+                                     JoinPath(output_dir, "features"));
+  PersistentOutStream label_stream(LocalFS(), JoinPath(output_dir, "labels"));
+  for (int i = 0; i < img_file_paths.size(); ++i) {
+    const std::string& file_path = img_file_paths.at(i);
+  }
+}
+
 void UbfUtil::CreateUbfFiles(const std::vector<std::string>& image_directories,
                              uint32_t limit, uint32_t width, uint32_t height,
-                             const std::string& output_dir) {
+                             const std::string& output_dir,
+                             const bool use_hadoop_stream) {
   //  LocalFS()->CreateDirIfNotExist(output_dir);
   std::vector<std::string> img_file_paths;
-  std::unordered_map<std::string, uint32_t> file_path2label_idx;
-  GetFilePaths(image_directories, limit, &img_file_paths, &file_path2label_idx);
-  SaveLabels(image_directories, img_file_paths, file_path2label_idx,
-             output_dir);
-  SaveFeatures(img_file_paths, width, height, output_dir);
+  if (use_hadoop_stream) {
+    SaveFeaturesAndLabels(img_file_paths, width, height, output_dir);
+  } else {
+    std::unordered_map<std::string, uint32_t> file_path2label_idx;
+    GetFilePaths(image_directories, limit, &img_file_paths,
+                 &file_path2label_idx);
+    SaveLabels(image_directories, img_file_paths, file_path2label_idx,
+               output_dir);
+    SaveFeatures(img_file_paths, width, height, output_dir);
+  }
 }
 
 }  // namespace oneflow
