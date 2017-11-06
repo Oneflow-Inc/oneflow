@@ -30,17 +30,21 @@ class IOWorker final {
   // On...Done() will change the IOData* content according to some conditions
   void OnRecvMsgHeadDone(IOData* io_data_ptr);
   void OnRecvMsgBodyDone(IOData* io_data_ptr);
-  void OnSendMsgHead(IOData* io_data_ptr);
-  void OnSendMsgBody(IOData* io_data_ptr);
+  void OnSendMsgHeadDone(IOData* io_data_ptr);
+  void OnSendDone(IOData* io_data_ptr);
+  // when post send msg request to completion port, need check send queue for
+  // send order
+  void OnFirstSendMsgHead(IOData* io_data_ptr);
 
   // reset a IOData->data_buff to this IOData->SocketMsg
   void ResetIODataBuff(IOData* io_data_ptr);
 
   void WSARecvFromIOData(IOData* io_data_ptr);
+  void WSASendFromIOData(IOData* io_data_ptr);
 
   std::vector<SOCKET> machine_id2socket_;
   std::vector<IOData*> machine_id2io_data_recv_;
-  std::mutex send_que_mtx_;
+  std::vector<std::mutex> machine_id2send_que_mtx_;
   std::vector<std::queue<IOData*>> machine_id2io_data_send_que_;
 
   HANDLE completion_port_;
