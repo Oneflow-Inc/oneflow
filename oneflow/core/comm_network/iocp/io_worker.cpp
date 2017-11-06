@@ -75,6 +75,7 @@ IOWorker::~IOWorker() {
     if (i != this_machine_id_) {
       PCHECK(closesocket(machine_id2socket_[i]) == 0);
     }
+    delete machine_id2io_data_recv_[i];
   }
   WSACleanup();
 }
