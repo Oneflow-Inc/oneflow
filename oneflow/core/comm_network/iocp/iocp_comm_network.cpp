@@ -30,8 +30,8 @@ void IOCPCommNet::UnRegisterMemory(const void* token) {
   std::unique_lock<std::mutex> lck(mem_desc_mtx_);
   CHECK(!mem_descs_.empty());
   unregister_mem_descs_cnt_ += 1;
-  if(unregister_mem_descs_cnt_ == mem_descs_.size()) {
-    for(SocketMemDesc* mem_desc : mem_descs_) { delete mem_desc; }
+  if (unregister_mem_descs_cnt_ == mem_descs_.size()) {
+    for (SocketMemDesc* mem_desc : mem_descs_) { delete mem_desc; }
     mem_descs_.clear();
     unregister_mem_descs_cnt_ = 0;
   }
@@ -50,7 +50,7 @@ void IOCPCommNet::DeleteActorReadId(void* actor_read_id) {
 }
 
 void* IOCPCommNet::Read(void* actor_read_id, int64_t write_machine_id,
-                         const void* write_token, const void* read_token) {
+                        const void* write_token, const void* read_token) {
   // ReadContext
   auto actor_read_ctx = static_cast<ActorReadContext*>(actor_read_id);
   ReadContext* read_ctx = new ReadContext;
@@ -70,29 +70,29 @@ void* IOCPCommNet::Read(void* actor_read_id, int64_t write_machine_id,
 }
 
 void IOCPCommNet::AddReadCallBack(void* actor_read_id, void* read_id,
-                                   std::function<void()> callback) {
+                                  std::function<void()> callback) {
   auto actor_read_ctx = static_cast<ActorReadContext*>(actor_read_id);
   ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
-  if(read_ctx) {
+  if (read_ctx) {
     read_ctx->cbl.push_back(callback);
     return;
   }
   do {
     std::unique_lock<std::mutex> lck(actor_read_ctx->read_ctx_list_mtx);
-    if(actor_read_ctx->read_ctx_list.empty()) {
+    if (actor_read_ctx->read_ctx_list.empty()) {
       break;
     } else {
       actor_read_ctx->read_ctx_list.back()->cbl.push_back(callback);
       return;
     }
-  } while(0);
+  } while (0);
   callback();
 }
 
 void IOCPCommNet::AddReadCallBackDone(void* actor_read_id, void* read_id) {
   auto actor_read_ctx = static_cast<ActorReadContext*>(actor_read_id);
   ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
-  if(IncreaseDoneCnt(read_ctx) == 2) {
+  if (IncreaseDoneCnt(read_ctx) == 2) {
     FinishOneReadContext(actor_read_ctx, read_ctx);
     delete read_ctx;
   }
@@ -103,7 +103,7 @@ void IOCPCommNet::ReadDone(void* read_done_id) {
   auto actor_read_ctx = std::get<0>(*parsed_read_done_id);
   auto read_ctx = std::get<1>(*parsed_read_done_id);
   delete parsed_read_done_id;
-  if(IncreaseDoneCnt(read_ctx) == 2) {
+  if (IncreaseDoneCnt(read_ctx) == 2) {
     {
       std::unique_lock<std::mutex> lck(actor_read_ctx->read_ctx_list_mtx);
       FinishOneReadContext(actor_read_ctx, read_ctx);
@@ -119,14 +119,14 @@ int8_t IOCPCommNet::IncreaseDoneCnt(ReadContext* read_ctx) {
 }
 
 void IOCPCommNet::FinishOneReadContext(ActorReadContext* actor_read_ctx,
-                                        ReadContext* read_ctx) {
+                                       ReadContext* read_ctx) {
   CHECK_EQ(actor_read_ctx->read_ctx_list.front(), read_ctx);
   actor_read_ctx->read_ctx_list.pop_front();
-  for(std::function<void()>& callback : read_ctx->cbl) { callback(); }
+  for (std::function<void()>& callback : read_ctx->cbl) { callback(); }
 }
 
 void IOCPCommNet::SendActorMsg(int64_t dst_machine_id,
-                                const ActorMsg& actor_msg) {
+                               const ActorMsg& actor_msg) {
   SocketMsg msg;
   msg.msg_type = SocketMsgType::kActor;
   msg.actor_msg = actor_msg;
@@ -142,4 +142,4 @@ IOCPCommNet::IOCPCommNet() {
 
 }  // namespace oneflow
 
-#endif // PLATFORM_WINDOWS
+#endif  // PLATFORM_WINDOWS

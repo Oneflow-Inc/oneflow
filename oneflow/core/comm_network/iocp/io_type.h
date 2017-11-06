@@ -1,13 +1,13 @@
-#ifndef  ONEFLOW_CORE_COMM_NETWORK_IOCP_IO_TYPE_H_
+#ifndef ONEFLOW_CORE_COMM_NETWORK_IOCP_IO_TYPE_H_
 #define ONEFLOW_CORE_COMM_NETWORK_IOCP_IO_TYPE_H_
 
 #ifdef PLATFORM_WINDOWS
 
-#include <mutex>
+#include <WS2tcpip.h>
+#include <WinBase.h>
 #include <WinSock2.h>
 #include <Windows.h>
-#include <WinBase.h>
-#include <WS2tcpip.h>
+#include <mutex>
 #include "oneflow/core/actor/actor_message.h"
 
 #pragma comment(lib, "Ws2_32.lib")
@@ -21,8 +21,10 @@ struct SocketMemDesc {
 };
 
 enum IOType {
-  kMsgHead,
-  kMsgBody,
+  kSendMsgHead,
+  kSendMsgBody,
+  kRecvMsgHead,
+  kRecvMsgBody,
   kStop,
 };
 
@@ -50,10 +52,13 @@ struct IOData {
   OVERLAPPED overlapped;
   IOType IO_type;
   WSABUF data_buff;
+  DWORD flags;
   SocketMsg socket_msg;
   SOCKET target_socket_fd;
   int64_t target_machine_id;
 };
+
+using CallBackList = std::list<std::function<void()>>;
 
 struct ReadContext {
   CallBackList cbl;
@@ -65,7 +70,6 @@ struct ActorReadContext {
   std::list<ReadContext*> read_ctx_list;
 };
 
-using CallBackList = std::list<std::function<void()>>;
 using ReadDoneContext = std::tuple<ActorReadContext*, ReadContext*>;
 
 }  // namespace oneflow
