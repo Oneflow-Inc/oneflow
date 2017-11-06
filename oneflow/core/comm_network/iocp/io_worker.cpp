@@ -1,5 +1,6 @@
 #include "oneflow/core/comm_network/iocp/io_worker.h"
 #include "oneflow/core/actor/actor_message_bus.h"
+#include "oneflow/core/comm_network/iocp/iocp_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource.pb.h"
@@ -183,8 +184,7 @@ void IOWorker::PostNewWSARecv2Socket(int64_t dst_machine_id) {
   io_data_ptr->target_machine_id = dst_machine_id;
   io_data_ptr->target_socket_fd = s;
   io_data_ptr->flags = 0;
-  WSARecv(s, &(io_data_ptr->data_buff), 1, NULL, &(io_data_ptr->flags),
-          reinterpret_cast<LPOVERLAPPED>(io_data_ptr), NULL);
+  WSARecvFromIOData(io_data_ptr);
 }
 
 DWORD IOWorker::ThreadProc() {
@@ -206,11 +206,13 @@ DWORD IOWorker::ThreadProc() {
         return 0;
       }
       case IOType::kRecvMsgHead: {
-        OnRecvMsgHead(io_data_ptr);
+        if (io_data_ptr->data_buff.len == 0) { OnRecvMsgHeadDone(io_data_ptr); }
+        WSARecvFromIOData(io_data_ptr);
         break;
       }
       case IOType::kRecvMsgBody: {
-        OnRecvMsgBody(io_data_ptr);
+        if (io_data_ptr->data_buff.len == 0) { OnRecvMsgBodyDone(io_data_ptr); }
+        WSARecvFromIOData(io_data_ptr);
         break;
       }
       case IOType::kSendMsgHead: {
@@ -227,40 +229,39 @@ DWORD IOWorker::ThreadProc() {
   return 0;
 }
 
-void IOWorker::OnRecvMsgHead(IOData* io_data_ptr) {
-  if (io_data_ptr->data_buff.len == 0) {
-    switch (io_data_ptr->socket_msg.msg_type) {
-      case SocketMsgType::kActor: {
-        ActorMsgBus::Singleton()->SendMsg(io_data_ptr->socket_msg.actor_msg);
-        ResetIODataBuff(io_data_ptr);
-        break;
-      }
-      case SocketMsgType::kRequsetRead: {
-        auto mem_desc_ptr = static_cast<const SocketMemDesc*>(
-            io_data_ptr->socket_msg.socket_token.read_machine_mem_desc_);
-        io_data_ptr->data_buff.buf =
-            reinterpret_cast<char*>(mem_desc_ptr->mem_ptr);
-        io_data_ptr->data_buff.len = mem_desc_ptr->byte_size;
-        io_data_ptr->IO_type = IOType::kRecvMsgBody;
-        break;
-      }
-      case SocketMsgType::kRequestWrite: {
-        SocketMsg msg;
-        msg.msg_type = SocketMsgType::kRequsetRead;
-        msg.socket_token = io_data_ptr->socket_msg.socket_token;
-        PostSendMsgRequest(io_data_ptr->target_machine_id, msg);
-        ResetIODataBuff(io_data_ptr);
-      }
-      default: UNEXPECTED_RUN()
+void IOWorker::OnRecvMsgHeadDone(IOData* io_data_ptr) {
+  switch (io_data_ptr->socket_msg.msg_type) {
+    case SocketMsgType::kActor: {
+      ActorMsgBus::Singleton()->SendMsg(io_data_ptr->socket_msg.actor_msg);
+      ResetIODataBuff(io_data_ptr);
+      break;
     }
+    case SocketMsgType::kRequsetRead: {
+      auto mem_desc_ptr = static_cast<const SocketMemDesc*>(
+          io_data_ptr->socket_msg.socket_token.read_machine_mem_desc_);
+      io_data_ptr->data_buff.buf =
+          reinterpret_cast<char*>(mem_desc_ptr->mem_ptr);
+      io_data_ptr->data_buff.len = mem_desc_ptr->byte_size;
+      io_data_ptr->IO_type = IOType::kRecvMsgBody;
+      break;
+    }
+    case SocketMsgType::kRequestWrite: {
+      SocketMsg msg;
+      msg.msg_type = SocketMsgType::kRequsetRead;
+      msg.socket_token = io_data_ptr->socket_msg.socket_token;
+      PostSendMsgRequest(io_data_ptr->target_machine_id, msg);
+      ResetIODataBuff(io_data_ptr);
+    }
+    default: UNEXPECTED_RUN()
   }
-  WSARecv(io_data_ptr->target_socket_fd, &(io_data_ptr->data_buff), 1, NULL,
-          &(io_data_ptr->flags), reinterpret_cast<LPOVERLAPPED>(io_data_ptr),
-          NULL);
 }
 
-void IOWorker::OnRecvMsgBody(IOData* io_data_ptr) {
-  // TO DO
+void IOWorker::OnRecvMsgBodyDone(IOData* io_data_ptr) {
+  CHECK(io_data_ptr->socket_msg.msg_type == SocketMsgType::kRequsetRead);
+  IOCPCommNet::Singleton()->ReadDone(
+      io_data_ptr->socket_msg.socket_token.read_done_id);
+  ResetIODataBuff(io_data_ptr);
+  io_data_ptr->IO_type = IOType::kRecvMsgHead;
 }
 
 void IOWorker::OnSendMsgHead(IOData* io_data_ptr) {
@@ -275,6 +276,12 @@ void IOWorker::ResetIODataBuff(IOData* io_data_ptr) {
   io_data_ptr->data_buff.buf =
       reinterpret_cast<char*>(&(io_data_ptr->socket_msg));
   io_data_ptr->data_buff.len = sizeof(SocketMsg);
+}
+
+void IOWorker::WSARecvFromIOData(IOData* io_data_ptr) {
+  WSARecv(io_data_ptr->target_socket_fd, &(io_data_ptr->data_buff), 1, NULL,
+          &(io_data_ptr->flags), reinterpret_cast<LPOVERLAPPED>(io_data_ptr),
+          NULL);
 }
 
 }  // namespace oneflow
