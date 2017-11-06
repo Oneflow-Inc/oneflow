@@ -10,7 +10,7 @@
 namespace oneflow {
 
 class IOCPCommNet final : public CommNet {
-public:
+ public:
   OF_DISALLOW_COPY_AND_MOVE(IOCPCommNet);
   ~IOCPCommNet();
 
@@ -26,8 +26,8 @@ public:
 
   void* NewActorReadId() override;
   void DeleteActorReadId(void* actor_read_id) override;
-  void* Read(void* actor_read_id, int64_t write_machine_id, const void* write_token,
-             const void* read_token) override;
+  void* Read(void* actor_read_id, int64_t write_machine_id,
+             const void* write_token, const void* read_token) override;
   void AddReadCallBack(void* actor_read_id, void* read_id,
                        std::function<void()> callback) override;
   void AddReadCallBackDone(void* actor_read_id, void* read_id) override;
@@ -35,7 +35,7 @@ public:
 
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
 
-private:
+ private:
   IOCPCommNet();
   int8_t IncreaseDoneCnt(ReadContext*);
   void FinishOneReadContext(ActorReadContext*, ReadContext*);

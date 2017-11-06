@@ -16,6 +16,7 @@ class IOWorker final {
   void PostSendMsgRequest(int64_t dst_machine_id, SocketMsg socket_msg);
   void Start();
   void Stop();
+
  private:
   static DWORD WINAPI StartThreadProc(LPVOID pParam) {
     IOWorker* this_worker = static_cast<IOWorker*>(pParam);
@@ -24,7 +25,12 @@ class IOWorker final {
   DWORD ThreadProc();
 
   void InitSockets();
-  void PostWSARecv2Socket();
+  void PostNewWSARecv2Socket(int64_t dst_machine_id);
+
+  void OnRecvMsgHead(DWORD bytes_transferred, IOData* io_data_ptr);
+  void OnRecvMsgBody(DWORD bytes_transferred, IOData* io_data_ptr);
+  void OnSendMsgHead(DWORD bytes_transferred, IOData* io_data_ptr);
+  void OnSendMsgBody(DWORD bytes_transferred, IOData* io_data_ptr);
 
   std::vector<SOCKET> machine_id2socket_;
   std::vector<IOData*> machine_id2io_data_recv_;
@@ -41,4 +47,4 @@ class IOWorker final {
 
 #endif  // PLATFORM_WINDOW
 
-#endif  //ONEFLOW_CORE_COMM_NETWORK_IOCP_IO_WORKER_H_
+#endif  // ONEFLOW_CORE_COMM_NETWORK_IOCP_IO_WORKER_H_
