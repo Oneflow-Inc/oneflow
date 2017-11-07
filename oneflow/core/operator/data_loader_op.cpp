@@ -13,9 +13,9 @@ const PbMessage& DataLoaderOp::GetSpecialConf() const {
   return op_conf().data_loader_conf();
 }
 
-void DataLoaderOp::InferBlobDesc4FwBlobs(
+void DataLoaderOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) {
+    const ParallelContext* parallel_ctx) {
   const DataLoaderOpConf& conf = op_conf().data_loader_conf();
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   out->mut_shape() = Shape(conf.shape());

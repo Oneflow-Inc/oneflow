@@ -3,7 +3,7 @@
 namespace oneflow {
 
 void AccCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  NewProducedRegst("acc", 1, kMaxRegisterNum);
+  ProduceRegst("acc", 1, kMaxRegisterNum);
 }
 
 }  // namespace oneflow

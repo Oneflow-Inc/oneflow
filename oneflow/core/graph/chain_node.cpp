@@ -12,6 +12,27 @@
 
 namespace oneflow {
 
+namespace {
+
+BldBoxingOpMthd GetBldBoxingOpMethodByFwParallelPolicy(
+    const ChainNode* in_chain, const ChainNode* out_chain) {
+  TODO();
+}
+BldBoxingOpMthd GetBldBoxingOpMethodByBwParallelPolicy(
+    const ChainNode* in_chain, const ChainNode* out_chain) {
+  TODO();
+}
+std::vector<std::string> FindLbnsBetweenFw(const ChainNode* in_chain,
+                                           const ChainNode* out_chain) {
+  TODO();
+}
+std::vector<std::string> FindLbnsBetweenBw(const ChainNode* in_chain,
+                                           const ChainNode* out_chain) {
+  TODO();
+}
+
+}  // namespace
+
 std::shared_ptr<const Operator> ChainNode::SoleOp() const {
   CHECK_EQ(op_vec_.size(), 1);
   return op_vec_.front();
@@ -61,121 +82,153 @@ void ChainNode::GenSortedCompTaskNodes(CompTaskNodeHandler Handler) const {
   }
 }
 
-BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromFw() const {
-  UNEXPECTED_RUN();
-  return nullptr;
-}
-BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromBw() const {
-  UNEXPECTED_RUN();
-  return nullptr;
-}
-BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromSrc() const {
-  UNEXPECTED_RUN();
-  return nullptr;
-}
-BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromLoss() const {
-  UNEXPECTED_RUN();
-  return nullptr;
-}
-BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromLossAcc() const {
-  UNEXPECTED_RUN();
-  return nullptr;
-}
-BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromLossRecord() const {
-  UNEXPECTED_RUN();
-  return nullptr;
-}
-BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromMdUpdt() const {
-  UNEXPECTED_RUN();
-  return nullptr;
-}
-BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromMdSave() const {
-  UNEXPECTED_RUN();
-  return nullptr;
-}
-BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFromMdDiffAcc() const {
-  UNEXPECTED_RUN();
-  return nullptr;
-}
+#define DEFINE_VIRTUAL_METHOD(x)                                               \
+  const char* x##ChainNode::TypeName() const { return #x "ChainNode"; }        \
+  BldSubTskGphMthd x##ChainNode::GetMthdForBldSubTskGphTo(                     \
+      const ChainNode* node) const {                                           \
+    return node->GetMthdForBldSubTskGphFrom##x(this);                          \
+  }                                                                            \
+  BldBoxingOpMthd x##ChainNode::GetMthdForBldBoxingOpTo(const ChainNode* node) \
+      const {                                                                  \
+    return node->GetMthdForBldBoxingOpFrom##x(this);                           \
+  }                                                                            \
+  std::vector<std::string> x##ChainNode::FindLbnsTo(const ChainNode* node)     \
+      const {                                                                  \
+    return node->FindLbnsFrom##x(this);                                        \
+  }                                                                            \
+  BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFrom##x(const ChainNode*)  \
+      const {                                                                  \
+    UNEXPECTED_RUN();                                                          \
+    return nullptr;                                                            \
+  }                                                                            \
+  BldBoxingOpMthd ChainNode::GetMthdForBldBoxingOpFrom##x(const ChainNode*)    \
+      const {                                                                  \
+    UNEXPECTED_RUN();                                                          \
+    return nullptr;                                                            \
+  }                                                                            \
+  std::vector<std::string> ChainNode::FindLbnsFrom##x(const ChainNode*)        \
+      const {                                                                  \
+    UNEXPECTED_RUN();                                                          \
+    return {};                                                                 \
+  }                                                                            \
+  CompTaskNode* x##ChainNode::NewCompTaskNode() const {                        \
+    return new x##CompTaskNode;                                                \
+  }
+OF_PP_FOR_EACH_TUPLE(DEFINE_VIRTUAL_METHOD, CHAIN_TYPE_SEQ)
 
-BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphTo(
-    const ChainNode* node) const {
-  return node->GetMthdForBldSubTskGphFromFw();
-}
-
-BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromFw() const {
-  return &TaskGraph::BldSubTskGphByBoxing;
-}
-
-BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromSrc() const {
-  return &TaskGraph::BldSubTskGphByBoxing;
-}
-
-BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromMdUpdt() const {
-  return &TaskGraph::BldSubTskGphByOneToOne;
-}
-
-BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphTo(
-    const ChainNode* node) const {
-  return node->GetMthdForBldSubTskGphFromBw();
-}
-
-BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromFw() const {
-  return &TaskGraph::BldSubTskGphByOneToOne;
-}
-
-BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromLoss() const {
-  return &TaskGraph::BldSubTskGphByBoxing;
-}
-
-BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromMdUpdt() const {
-  return &TaskGraph::BldSubTskGphByOneToOne;
-}
-
-BldSubTskGphMthd SourceChainNode::GetMthdForBldSubTskGphTo(
-    const ChainNode* node) const {
-  return node->GetMthdForBldSubTskGphFromSrc();
-}
-
-BldSubTskGphMthd LossChainNode::GetMthdForBldSubTskGphTo(
-    const ChainNode* node) const {
-  return node->GetMthdForBldSubTskGphFromLoss();
-}
-
-BldSubTskGphMthd LossChainNode::GetMthdForBldSubTskGphFromFw() const {
-  return &TaskGraph::BldSubTskGphByBoxing;
-}
-
-BldSubTskGphMthd LossChainNode::GetMthdForBldSubTskGphFromSrc() const {
-  return &TaskGraph::BldSubTskGphByBoxing;
-}
-
-BldSubTskGphMthd LossAccChainNode::GetMthdForBldSubTskGphTo(
-    const ChainNode* node) const {
-  return node->GetMthdForBldSubTskGphFromLossAcc();
-}
-
-BldSubTskGphMthd LossAccChainNode::GetMthdForBldSubTskGphFromLoss() const {
-  return &TaskGraph::BldSubTskGphByOneToOne;
-}
-
-BldSubTskGphMthd LossRecordChainNode::GetMthdForBldSubTskGphTo(
+// ForwardChainNode
+BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromForward(
     const ChainNode*) const {
-  UNEXPECTED_RUN();
-  return nullptr;
-}
-
-BldSubTskGphMthd LossRecordChainNode::GetMthdForBldSubTskGphFromLossAcc()
-    const {
   return &TaskGraph::BldSubTskGphByBoxing;
 }
-
-BldSubTskGphMthd MdUpdtChainNode::GetMthdForBldSubTskGphTo(
+BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromSource(
+    const ChainNode*) const {
+  return &TaskGraph::BldSubTskGphByBoxing;
+}
+BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromMdUpdt(
+    const ChainNode*) const {
+  return &TaskGraph::BldSubTskGphByOneToOne;
+}
+BldBoxingOpMthd ForwardChainNode::GetMthdForBldBoxingOpFromForward(
     const ChainNode* node) const {
-  return node->GetMthdForBldSubTskGphFromMdUpdt();
+  return GetBldBoxingOpMethodByFwParallelPolicy(node, this);
+}
+BldBoxingOpMthd ForwardChainNode::GetMthdForBldBoxingOpFromSource(
+    const ChainNode* node) const {
+  return GetBldBoxingOpMethodByFwParallelPolicy(node, this);
+}
+std::vector<std::string> ForwardChainNode::FindLbnsFromForward(
+    const ChainNode* node) const {
+  return FindLbnsBetweenFw(node, this);
+}
+std::vector<std::string> ForwardChainNode::FindLbnsFromSource(
+    const ChainNode* node) const {
+  return FindLbnsBetweenFw(node, this);
 }
 
-BldSubTskGphMthd MdUpdtChainNode::GetMthdForBldSubTskGphFromMdDiffAcc() const {
+// BackwardChainNode
+BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromForward(
+    const ChainNode*) const {
+  return &TaskGraph::BldSubTskGphByOneToOne;
+}
+BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromBackward(
+    const ChainNode*) const {
+  return &TaskGraph::BldSubTskGphByBoxing;
+}
+BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromLoss(
+    const ChainNode*) const {
+  return &TaskGraph::BldSubTskGphByBoxing;
+}
+BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromMdUpdt(
+    const ChainNode*) const {
+  return &TaskGraph::BldSubTskGphByOneToOne;
+}
+BldBoxingOpMthd BackwardChainNode::GetMthdForBldBoxingOpFromBackward(
+    const ChainNode* node) const {
+  return GetBldBoxingOpMethodByBwParallelPolicy(node, this);
+}
+BldBoxingOpMthd BackwardChainNode::GetMthdForBldBoxingOpFromLoss(
+    const ChainNode* node) const {
+  return GetBldBoxingOpMethodByBwParallelPolicy(node, this);
+}
+std::vector<std::string> BackwardChainNode::FindLbnsFromBackward(
+    const ChainNode* node) const {
+  return FindLbnsBetweenBw(node, this);
+}
+std::vector<std::string> BackwardChainNode::FindLbnsFromLoss(
+    const ChainNode* node) const {
+  return FindLbnsBetweenBw(node, this);
+}
+
+// LossChainNode
+BldSubTskGphMthd LossChainNode::GetMthdForBldSubTskGphFromForward(
+    const ChainNode*) const {
+  return &TaskGraph::BldSubTskGphByBoxing;
+}
+BldSubTskGphMthd LossChainNode::GetMthdForBldSubTskGphFromSource(
+    const ChainNode*) const {
+  return &TaskGraph::BldSubTskGphByBoxing;
+}
+BldBoxingOpMthd LossChainNode::GetMthdForBldBoxingOpFromForward(
+    const ChainNode* node) const {
+  return GetBldBoxingOpMethodByFwParallelPolicy(node, this);
+}
+BldBoxingOpMthd LossChainNode::GetMthdForBldBoxingOpFromSource(
+    const ChainNode* node) const {
+  return GetBldBoxingOpMethodByFwParallelPolicy(node, this);
+}
+std::vector<std::string> LossChainNode::FindLbnsFromForward(
+    const ChainNode* node) const {
+  return FindLbnsBetweenFw(node, this);
+}
+std::vector<std::string> LossChainNode::FindLbnsFromSource(
+    const ChainNode* node) const {
+  return FindLbnsBetweenFw(node, this);
+}
+
+// LossAccChainNode
+BldSubTskGphMthd LossAccChainNode::GetMthdForBldSubTskGphFromLoss(
+    const ChainNode*) const {
+  return &TaskGraph::BldSubTskGphByOneToOne;
+}
+
+// LossRecordChainNode
+BldSubTskGphMthd LossRecordChainNode::GetMthdForBldSubTskGphFromLossAcc(
+    const ChainNode*) const {
+  return &TaskGraph::BldSubTskGphByBoxing;
+}
+BldBoxingOpMthd LossRecordChainNode::GetMthdForBldBoxingOpFromLossAcc(
+    const ChainNode*) const {
+  return &BoxingTaskNode::BldBoxingOpWithAddClone;
+}
+std::vector<std::string> LossRecordChainNode::FindLbnsFromLossAcc(
+    const ChainNode*) const {
+  return {kPackedBlobName};
+}
+
+// MdUpdtChainNode
+BldSubTskGphMthd MdUpdtChainNode::GetMthdForBldSubTskGphFromMdDiffAcc(
+    const ChainNode*) const {
   if (parallel_desc()->policy() == ParallelPolicy::kDataParallel) {
     return &TaskGraph::BldSubTskGphByBoxing;
   } else if (parallel_desc()->policy() == ParallelPolicy::kModelParallel) {
@@ -184,14 +237,18 @@ BldSubTskGphMthd MdUpdtChainNode::GetMthdForBldSubTskGphFromMdDiffAcc() const {
     UNEXPECTED_RUN();
   }
 }
-
-BldSubTskGphMthd MdSaveChainNode::GetMthdForBldSubTskGphTo(
+BldBoxingOpMthd MdUpdtChainNode::GetMthdForBldBoxingOpFromMdDiffAcc(
     const ChainNode*) const {
-  UNEXPECTED_RUN();
-  return nullptr;
+  return &BoxingTaskNode::BldBoxingOpWithAddClone;
+}
+std::vector<std::string> MdUpdtChainNode::FindLbnsFromMdDiffAcc(
+    const ChainNode*) const {
+  return {kPackedBlobName};
 }
 
-BldSubTskGphMthd MdSaveChainNode::GetMthdForBldSubTskGphFromMdUpdt() const {
+// MdSaveChainNode
+BldSubTskGphMthd MdSaveChainNode::GetMthdForBldSubTskGphFromMdUpdt(
+    const ChainNode*) const {
   if (parallel_desc()->parallel_num() == 1) {
     return &TaskGraph::BldSubTskGphBySelectOneSourceToSoleSink;
   } else {
@@ -199,41 +256,15 @@ BldSubTskGphMthd MdSaveChainNode::GetMthdForBldSubTskGphFromMdUpdt() const {
   }
 }
 
-BldSubTskGphMthd MdDiffAccChainNode::GetMthdForBldSubTskGphTo(
-    const ChainNode* node) const {
-  return node->GetMthdForBldSubTskGphFromMdDiffAcc();
-}
-
-BldSubTskGphMthd MdDiffAccChainNode::GetMthdForBldSubTskGphFromBw() const {
+// MdDiffAccChainNode
+BldSubTskGphMthd MdDiffAccChainNode::GetMthdForBldSubTskGphFromBackward(
+    const ChainNode*) const {
   return &TaskGraph::BldSubTskGphByOneToOne;
 }
 
-CompTaskNode* ForwardChainNode::NewCompTaskNode() const {
-  return new FwCompTaskNode;
-}
-CompTaskNode* BackwardChainNode::NewCompTaskNode() const {
-  return new BwCompTaskNode;
-}
-CompTaskNode* SourceChainNode::NewCompTaskNode() const {
-  return new SourceCompTaskNode;
-}
-CompTaskNode* LossChainNode::NewCompTaskNode() const {
-  return new LossCompTaskNode;
-}
-CompTaskNode* LossAccChainNode::NewCompTaskNode() const {
-  return new LossAccCompTaskNode;
-}
-CompTaskNode* LossRecordChainNode::NewCompTaskNode() const {
-  return new LossRecordCompTaskNode;
-}
-CompTaskNode* MdUpdtChainNode::NewCompTaskNode() const {
-  return new MdUpdtCompTaskNode;
-}
-CompTaskNode* MdSaveChainNode::NewCompTaskNode() const {
-  return new MdSaveCompTaskNode;
-}
-CompTaskNode* MdDiffAccChainNode::NewCompTaskNode() const {
-  return new MdDiffAccCompTaskNode;
+std::vector<std::string> FindLbnsBetween(const ChainNode* in_chain,
+                                         const ChainNode* out_chain) {
+  return in_chain->FindLbnsTo(out_chain);
 }
 
 std::string ChainEdge::VisualStr() const { return ""; }

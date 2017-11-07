@@ -44,7 +44,6 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   std::shared_ptr<Operator>& mut_op() { return op_; }
 
   void BindBnInOpAndRegst(const std::string&, std::weak_ptr<RegstDesc>);
-  std::shared_ptr<RegstDesc> GetRegstFromBnInOp(const std::string&) const;
 
   std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOpFunc() const;
 

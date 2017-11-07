@@ -86,9 +86,9 @@ class Operator {
 
   // Read: shape of input_blobs
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, model_tmp_blobs
-  virtual void InferBlobDesc4FwBlobs(
+  virtual void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) = 0;
+      const ParallelContext* parallel_ctx) {}
 
   //
   void FixParallelDesc(ParallelDesc* pr_desc) const;
@@ -96,10 +96,10 @@ class Operator {
  protected:
   virtual void VirtualFixParallelDesc(ParallelDesc* pr_desc) const {}
 
-  virtual std::string ibn2lbn(const std::string& input_bn) const = 0;
-  virtual std::string obn2lbn(const std::string& output_bn) const = 0;
-  virtual std::string mtbn2lbn(const std::string& model_tmp_bn) const = 0;
-  virtual std::string mbn2lbn(const std::string& model_bn) const = 0;
+  virtual std::string ibn2lbn(const std::string& input_bn) const;
+  virtual std::string obn2lbn(const std::string& output_bn) const;
+  virtual std::string mtbn2lbn(const std::string& model_tmp_bn) const;
+  virtual std::string mbn2lbn(const std::string& model_bn) const;
 
   OperatorConf& mut_op_conf() { return op_conf_; }
 
@@ -133,50 +133,8 @@ class Operator {
   std::vector<std::string> model_tmp_bns_;
 };
 
-class UserOperator : public Operator {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(UserOperator);
-  UserOperator() = default;
-  virtual ~UserOperator() = default;
-
- private:
-  std::string ibn2lbn(const std::string& input_bn) const override;
-  std::string obn2lbn(const std::string& output_bn) const override;
-  std::string mtbn2lbn(const std::string& model_tmp_bn) const override;
-  std::string mbn2lbn(const std::string& model_bn) const override;
-};
-
-class SysOperator : public Operator {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(SysOperator);
-  SysOperator() = default;
-  virtual ~SysOperator() = default;
-
-  virtual void InferBlobDesc4FwBlobs(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      ParallelPolicy policy, int64_t parallel_id,
-      int64_t parallel_num) override {
-    UNEXPECTED_RUN();
-  }
-
- private:
-#define SET_INSIGNIFICANT(func_name)                                 \
-  virtual std::string func_name(const std::string&) const override { \
-    LOG(FATAL) << #func_name << " is insignificant for "             \
-               << typeid(*this).name();                              \
-  }
-
-  SET_INSIGNIFICANT(ibn2lbn);
-  SET_INSIGNIFICANT(obn2lbn);
-  SET_INSIGNIFICANT(mtbn2lbn);
-  SET_INSIGNIFICANT(mbn2lbn);
-
-#undef SET_INSIGNIFICANT
-};
-
 std::string GenDiffBn(const std::string& bn);
 std::string GenUnDiffBn(const std::string& diff_bn);
-
 std::string GetOpNameFromLbn(const std::string& lbn);
 std::string GetBnInOpFromLbn(const std::string& lbn);
 std::pair<std::string, std::string> ParseLbn(const std::string& lbn);

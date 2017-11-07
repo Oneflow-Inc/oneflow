@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class ConvolutionOp final : public UserOperator {
+class ConvolutionOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvolutionOp);
   ConvolutionOp() = default;
@@ -13,15 +13,11 @@ class ConvolutionOp final : public UserOperator {
 
   void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
-  void InferBlobDesc4FwBlobs(
+  void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      ParallelPolicy policy, int64_t parallel_id,
-      int64_t parallel_num) override;
-  void VirtualFixParallelDesc(ParallelDesc* pr_desc) const override {
-    if (pr_desc->policy() == kModelParallel) {
-      pr_desc->RemoveNeedlessDevice(GetInt32FromSpecialConf("out_num"));
-    }
-  }
+      const ParallelContext* parallel_ctx);
+
+  void VirtualFixParallelDesc(ParallelDesc* pr_desc) const override;
 
  private:
 };

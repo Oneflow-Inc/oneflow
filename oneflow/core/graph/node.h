@@ -40,7 +40,6 @@ class Edge {
   virtual ~Edge() = default;
 
   int64_t edge_id() const { return edge_id_; }
-  std::string edge_id_str() const { return std::to_string(edge_id_); }
 
   NodeType* src_node() const { return src_node_; }
   NodeType* dst_node() const { return dst_node_; }

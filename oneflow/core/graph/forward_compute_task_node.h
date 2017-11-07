@@ -5,11 +5,11 @@
 
 namespace oneflow {
 
-class FwCompTaskNode final : public CompTaskNode {
+class ForwardCompTaskNode final : public CompTaskNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(FwCompTaskNode);
-  FwCompTaskNode() = default;
-  ~FwCompTaskNode() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ForwardCompTaskNode);
+  ForwardCompTaskNode() = default;
+  ~ForwardCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
   TodoTaskType GetTaskType() const override { return TodoTaskType::kForward; }

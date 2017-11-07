@@ -7,29 +7,29 @@ namespace oneflow {
 
 RegstDesc::RegstDesc() {
   regst_desc_id_ = IDMgr::Singleton()->NewRegstDescId();
+  is_blob_desc_locked_ = false;
 }
 
 void RegstDesc::AddConsumer(const TaskNode* new_consumer) {
   CHECK(consumers_.insert(new_consumer).second);
 }
 
-void RegstDesc::CopyLbnFrom(const RegstDesc* rhs) {
+void RegstDesc::CopyBlobDescFrom(const RegstDesc* rhs) {
+  CHECK_EQ(is_blob_desc_locked_, false);
   CHECK(lbn2blob_desc_.empty());
   for (const auto& pair : rhs->lbn2blob_desc_) {
     const std::string& lbn = pair.first;
-    CHECK(lbn2blob_desc_.emplace(lbn, of_make_unique<BlobDesc>()).second);
+    auto blob_desc = of_make_unique<BlobDesc>(*(pair.second));
+    CHECK(lbn2blob_desc_.emplace(lbn, std::move(blob_desc)).second);
   }
 }
 
-void RegstDesc::CopyBlobDescFrom(const RegstDesc* rhs) {
-  for (const auto& pair : lbn2blob_desc_) {
-    const std::string& lbn = pair.first;
-    *(lbn2blob_desc_.at(lbn)) = rhs->GetBlobDesc(lbn);
-  }
-}
-
-void RegstDesc::AddLbn(const std::string& lbn) {
-  CHECK(lbn2blob_desc_.emplace(lbn, of_make_unique<BlobDesc>()).second) << lbn;
+BlobDesc* RegstDesc::AddLbn(const std::string& lbn) {
+  CHECK_EQ(is_blob_desc_locked_, false);
+  CHECK(lbn2blob_desc_.find(lbn) == lbn2blob_desc_.end()) << lbn;
+  BlobDesc* blob_desc = new BlobDesc;
+  lbn2blob_desc_[lbn].reset(blob_desc);
+  return blob_desc;
 }
 
 const BlobDesc& RegstDesc::GetBlobDesc(const std::string& lbn) const {
@@ -53,7 +53,7 @@ void RegstDesc::EraseZeroSizeBlob() {
   EraseIf<std::string, std::unique_ptr<BlobDesc>>(
       &lbn2blob_desc_,
       [](HashMap<std::string, std::unique_ptr<BlobDesc>>::iterator it) {
-        return it->second->shape().elem_cnt() == 0;
+        return it->second->ByteSizeOfDataField() == 0;
       });
 }
 

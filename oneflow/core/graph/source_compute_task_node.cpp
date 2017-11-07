@@ -3,7 +3,7 @@
 namespace oneflow {
 
 void SourceCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  NewProducedRegst("out", 1, kMaxRegisterNum);
+  ProduceRegst("out", 1, kMaxRegisterNum);
 }
 
 void SourceCompTaskNode::FixThrdLocId() {

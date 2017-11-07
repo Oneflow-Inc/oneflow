@@ -28,17 +28,21 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void set_thrd_loc_id(int64_t val);
 
   // Others
-  virtual void ProduceAllRegstsAndBindEdges() {}
-  virtual void ConsumeAllRegsts() {}
-  virtual void Build() {}
-  virtual bool IsReadyForBuild() { return false; }
+  virtual void ProduceAllRegstsAndBindEdges() { TODO(); }
+  virtual void ConsumeAllRegsts() { TODO(); }
+  virtual void Build() { TODO(); }
+  virtual bool IsReadyForBuild() { return IsAllConsumedRegstLocked(); }
 
   virtual TodoTaskType GetTaskType() const = 0;
   std::string VisualStr() const override;
 
  protected:
-  void NewProducedRegst(const std::string& name, int32_t min_register_num,
-                        int32_t max_register_num);
+  std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name,
+                                          int32_t min_register_num,
+                                          int32_t max_register_num);
+  void ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc>);
+  bool IsAllConsumedRegstLocked();
+  ExecGraph& mut_exec_gph() { return exec_gph_; }
 
  private:
   void UpdateTaskId();
@@ -49,6 +53,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   ExecGraph exec_gph_;
   HashMap<std::string, std::shared_ptr<RegstDesc>> produced_regsts_;
+  HashMap<std::string, std::weak_ptr<RegstDesc>> consumed_regsts_;
 };
 
 class TaskEdge final : public Edge<TaskNode, TaskEdge> {
@@ -57,10 +62,11 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
   TaskEdge() = default;
   ~TaskEdge() = default;
 
-  std::shared_ptr<RegstDesc> GetRegst(const std::string& name_in_producer);
-  void SetRegst(const std::string& name_in_producer,
+  std::shared_ptr<RegstDesc> GetRegst(
+      const std::string& name_in_producer) const;
+  void AddRegst(const std::string& name_in_producer,
                 std::shared_ptr<RegstDesc> regst);
-  std::shared_ptr<RegstDesc> GetSoleRegst();
+  std::shared_ptr<RegstDesc> GetSoleRegst() const;
 
  private:
   HashMap<std::string, std::weak_ptr<RegstDesc>> name_in_producer2regst_;

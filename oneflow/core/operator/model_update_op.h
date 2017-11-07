@@ -5,17 +5,14 @@
 
 namespace oneflow {
 
-class ModelUpdtOp : public SysOperator {
+class ModelUpdtOp : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ModelUpdtOp);
   virtual ~ModelUpdtOp() = default;
 
-  virtual void InferBlobDesc4FwBlobs(
+  virtual void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      ParallelPolicy policy, int64_t parallel_id,
-      int64_t parallel_num) override {
-    // do nothing
-  }
+      const ParallelContext* parallel_ctx) {}
 
  protected:
   ModelUpdtOp() = default;

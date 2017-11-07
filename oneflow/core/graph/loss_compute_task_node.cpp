@@ -3,8 +3,8 @@
 namespace oneflow {
 
 void LossCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  NewProducedRegst("loss", 1, kMaxRegisterNum);
-  NewProducedRegst("in_diff", 1, kMaxRegisterNum);
+  ProduceRegst("loss", 1, kMaxRegisterNum);
+  ProduceRegst("in_diff", 1, kMaxRegisterNum);
 }
 
 }  // namespace oneflow

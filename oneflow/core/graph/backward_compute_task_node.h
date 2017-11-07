@@ -5,11 +5,11 @@
 
 namespace oneflow {
 
-class BwCompTaskNode final : public CompTaskNode {
+class BackwardCompTaskNode final : public CompTaskNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BwCompTaskNode);
-  BwCompTaskNode() = default;
-  ~BwCompTaskNode() = default;
+  OF_DISALLOW_COPY_AND_MOVE(BackwardCompTaskNode);
+  BackwardCompTaskNode() = default;
+  ~BackwardCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
   TodoTaskType GetTaskType() const override { return TodoTaskType::kBackward; }

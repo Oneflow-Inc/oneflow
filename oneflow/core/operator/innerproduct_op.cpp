@@ -20,18 +20,18 @@ const PbMessage& InnerProductOp::GetSpecialConf() const {
   return op_conf().innerproduct_conf();
 }
 
-void InnerProductOp::InferBlobDesc4FwBlobs(
+void InnerProductOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) {
+    const ParallelContext* parallel_ctx) {
   // useful vars
   const InnerProductOpConf& conf = op_conf().innerproduct_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   CHECK_EQ(in_blob_desc->data_type(),
            JobDesc::Singleton()->default_data_type());
   int32_t out_num = conf.out_num();
-  if (policy == kModelParallel) {
-    BalancedSplitter splitter(out_num, parallel_num);
-    out_num = splitter.At(parallel_id).size();
+  if (parallel_ctx->policy() == kModelParallel) {
+    BalancedSplitter splitter(out_num, parallel_ctx->parallel_num());
+    out_num = splitter.At(parallel_ctx->parallel_id()).size();
   }
   // out
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
@@ -58,6 +58,12 @@ void InnerProductOp::InferBlobDesc4FwBlobs(
     bias_mt_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(0), 1});
     bias_mt_blob_desc->set_data_type(JobDesc::Singleton()->default_data_type());
     bias_mt_blob_desc->set_has_data_id(false);
+  }
+}
+
+void InnerProductOp::VirtualFixParallelDesc(ParallelDesc* pr_desc) const {
+  if (pr_desc->policy() == kModelParallel) {
+    pr_desc->RemoveNeedlessDevice(GetInt32FromSpecialConf("out_num"));
   }
 }
 

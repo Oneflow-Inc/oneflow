@@ -7,7 +7,6 @@ namespace oneflow {
 TaskGraph::TaskGraph(std::unique_ptr<const ChainGraph>&& chain_gph) {
   chain_gph_ = std::move(chain_gph);
   BuildStruct();
-  TODO();
   ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges,
                         std::placeholders::_1));
   ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, std::placeholders::_1));

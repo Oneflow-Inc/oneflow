@@ -16,9 +16,9 @@ const PbMessage& SoftmaxLossOp::GetSpecialConf() const {
   return op_conf().softmax_loss_conf();
 }
 
-void SoftmaxLossOp::InferBlobDesc4FwBlobs(
+void SoftmaxLossOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) {
+    const ParallelContext* parallel_ctx) {
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
   const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
   CHECK_EQ(pred_blob_desc->has_data_id(), label_blob_desc->has_data_id());

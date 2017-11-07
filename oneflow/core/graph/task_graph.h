@@ -2,8 +2,6 @@
 #define ONEFLOW_CORE_GRAPH_TASK_GRAPH_H_
 
 #include "oneflow/core/graph/chain_graph.h"
-#include "oneflow/core/graph/compute_task_node.h"
-#include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/operator_manager.h"

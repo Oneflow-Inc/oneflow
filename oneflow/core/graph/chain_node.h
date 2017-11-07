@@ -1,19 +1,38 @@
 #ifndef ONEFLOW_CORE_GRAPH_CHAIN_NODE_H_
 #define ONEFLOW_CORE_GRAPH_CHAIN_NODE_H_
 
+#include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/graph/compute_task_node.h"
+#include "oneflow/core/operator/operator_manager.h"
 
 namespace oneflow {
 
 class ChainEdge;
-using CompTaskNodeHandler = std::function<void(CompTaskNode*)>;
 class TaskGraph;
+
+using CompTaskNodeHandler = std::function<void(CompTaskNode*)>;
 using BldSubTskGphMthd = void (TaskGraph::*)(
     const ChainNode* src_chain, const ChainNode* dst_chain,
     const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
     const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,
     HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_in_box,
     HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_out_box);
+
+using BldBoxingOpMthd = std::shared_ptr<Operator> (BoxingTaskNode::*)(
+    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
+    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
+    int64_t* used_in_edge_begin, int64_t* used_out_edge_begin);
+
+#define CHAIN_TYPE_SEQ             \
+  OF_PP_MAKE_TUPLE_SEQ(Forward)    \
+  OF_PP_MAKE_TUPLE_SEQ(Backward)   \
+  OF_PP_MAKE_TUPLE_SEQ(Source)     \
+  OF_PP_MAKE_TUPLE_SEQ(Loss)       \
+  OF_PP_MAKE_TUPLE_SEQ(LossAcc)    \
+  OF_PP_MAKE_TUPLE_SEQ(LossRecord) \
+  OF_PP_MAKE_TUPLE_SEQ(MdUpdt)     \
+  OF_PP_MAKE_TUPLE_SEQ(MdSave)     \
+  OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc)
 
 class ChainNode : public Node<ChainNode, ChainEdge> {
  public:
@@ -29,24 +48,27 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   std::shared_ptr<const ParallelDesc> parallel_desc() const;
   std::shared_ptr<const ParallelDesc>& mut_parallel_desc();
 
-  // others
+  // util
   virtual const char* TypeName() const = 0;
   std::string VisualStr() const;
   bool HasOpWithModelOrModelTmpBlob() const;
   void GenSortedCompTaskNodes(CompTaskNodeHandler) const;
 
-  // Get method for build sub-taskgraph
-  virtual BldSubTskGphMthd GetMthdForBldSubTskGphTo(
-      const ChainNode* dst_node) const = 0;
-  virtual BldSubTskGphMthd GetMthdForBldSubTskGphFromFw() const;
-  virtual BldSubTskGphMthd GetMthdForBldSubTskGphFromBw() const;
-  virtual BldSubTskGphMthd GetMthdForBldSubTskGphFromSrc() const;
-  virtual BldSubTskGphMthd GetMthdForBldSubTskGphFromLoss() const;
-  virtual BldSubTskGphMthd GetMthdForBldSubTskGphFromLossAcc() const;
-  virtual BldSubTskGphMthd GetMthdForBldSubTskGphFromLossRecord() const;
-  virtual BldSubTskGphMthd GetMthdForBldSubTskGphFromMdUpdt() const;
-  virtual BldSubTskGphMthd GetMthdForBldSubTskGphFromMdSave() const;
-  virtual BldSubTskGphMthd GetMthdForBldSubTskGphFromMdDiffAcc() const;
+  // To
+  virtual BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const = 0;
+  virtual BldBoxingOpMthd GetMthdForBldBoxingOpTo(const ChainNode*) const = 0;
+  virtual std::vector<std::string> FindLbnsTo(const ChainNode*) const = 0;
+
+// From
+#define DECLARE_VIRTUAL_FROM_METHOD(x)                                     \
+  virtual BldSubTskGphMthd GetMthdForBldSubTskGphFrom##x(const ChainNode*) \
+      const;                                                               \
+  virtual BldBoxingOpMthd GetMthdForBldBoxingOpFrom##x(const ChainNode*)   \
+      const;                                                               \
+  virtual std::vector<std::string> FindLbnsFrom##x(const ChainNode*) const;
+
+  OF_PP_FOR_EACH_TUPLE(DECLARE_VIRTUAL_FROM_METHOD, CHAIN_TYPE_SEQ);
+#undef DECLARE_VIRTUAL_METHOD
 
  protected:
   ChainNode() = default;
@@ -59,23 +81,37 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
 
 class BackwardChainNode;
 
+#define OVERRIDE_PURE_VIRTUAL_METHOD()                                        \
+  const char* TypeName() const override;                                      \
+  BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const override; \
+  BldBoxingOpMthd GetMthdForBldBoxingOpTo(const ChainNode*) const override;   \
+  std::vector<std::string> FindLbnsTo(const ChainNode*) const override;       \
+  CompTaskNode* NewCompTaskNode() const override;
+
+#define OVERRIDE_FROM_METHOD(x, y) x##From##y(const ChainNode*) const override;
+
 class ForwardChainNode final : public ChainNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ForwardChainNode);
   ForwardChainNode() = default;
   ~ForwardChainNode() = default;
 
-  virtual const char* TypeName() const { return "ForwardChainNode"; }
+  OVERRIDE_PURE_VIRTUAL_METHOD();
 
   BackwardChainNode* bw_node() const { return bw_node_; }
   void set_bw_node(BackwardChainNode* val) { bw_node_ = val; }
-  BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const override;
-  BldSubTskGphMthd GetMthdForBldSubTskGphFromFw() const override;
-  BldSubTskGphMthd GetMthdForBldSubTskGphFromSrc() const override;
-  BldSubTskGphMthd GetMthdForBldSubTskGphFromMdUpdt() const override;
+
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (BldSubTskGphMthd GetMthdForBldSubTskGph),
+                                   (Forward)(Source)(MdUpdt));
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (BldBoxingOpMthd GetMthdForBldBoxingOp),
+                                   (Forward)(Source));
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (std::vector<std::string> FindLbns),
+                                   (Forward)(Source));
 
  private:
-  CompTaskNode* NewCompTaskNode() const override;
   BackwardChainNode* bw_node_;
 };
 
@@ -85,17 +121,22 @@ class BackwardChainNode final : public ChainNode {
   BackwardChainNode() = default;
   ~BackwardChainNode() = default;
 
-  virtual const char* TypeName() const { return "BackwardChainNode"; }
+  OVERRIDE_PURE_VIRTUAL_METHOD();
 
   ForwardChainNode* fw_node() const { return fw_node_; }
   void set_fw_node(ForwardChainNode* val) { fw_node_ = val; }
-  BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const override;
-  BldSubTskGphMthd GetMthdForBldSubTskGphFromFw() const override;
-  BldSubTskGphMthd GetMthdForBldSubTskGphFromLoss() const override;
-  BldSubTskGphMthd GetMthdForBldSubTskGphFromMdUpdt() const override;
+
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (BldSubTskGphMthd GetMthdForBldSubTskGph),
+                                   (Forward)(Backward)(Loss)(MdUpdt));
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (BldBoxingOpMthd GetMthdForBldBoxingOp),
+                                   (Backward)(Loss));
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (std::vector<std::string> FindLbns),
+                                   (Backward)(Loss));
 
  private:
-  CompTaskNode* NewCompTaskNode() const override;
   ForwardChainNode* fw_node_;
 };
 
@@ -105,11 +146,7 @@ class SourceChainNode final : public ChainNode {
   SourceChainNode() = default;
   ~SourceChainNode() = default;
 
-  virtual const char* TypeName() const { return "SourceChainNode"; }
-  BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const override;
-
- private:
-  CompTaskNode* NewCompTaskNode() const override;
+  OVERRIDE_PURE_VIRTUAL_METHOD();
 };
 
 class LossChainNode final : public ChainNode {
@@ -118,13 +155,17 @@ class LossChainNode final : public ChainNode {
   LossChainNode() = default;
   ~LossChainNode() = default;
 
-  virtual const char* TypeName() const { return "LossChainNode"; }
-  BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const override;
-  BldSubTskGphMthd GetMthdForBldSubTskGphFromFw() const override;
-  BldSubTskGphMthd GetMthdForBldSubTskGphFromSrc() const override;
+  OVERRIDE_PURE_VIRTUAL_METHOD();
 
- private:
-  CompTaskNode* NewCompTaskNode() const override;
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (BldSubTskGphMthd GetMthdForBldSubTskGph),
+                                   (Forward)(Source));
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (BldBoxingOpMthd GetMthdForBldBoxingOp),
+                                   (Forward)(Source));
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (std::vector<std::string> FindLbns),
+                                   (Forward)(Source));
 };
 
 class LossAccChainNode final : public ChainNode {
@@ -133,12 +174,11 @@ class LossAccChainNode final : public ChainNode {
   LossAccChainNode() = default;
   ~LossAccChainNode() = default;
 
-  virtual const char* TypeName() const { return "LossAccChainNode"; }
-  BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const override;
-  BldSubTskGphMthd GetMthdForBldSubTskGphFromLoss() const override;
+  OVERRIDE_PURE_VIRTUAL_METHOD();
 
- private:
-  CompTaskNode* NewCompTaskNode() const override;
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (BldSubTskGphMthd GetMthdForBldSubTskGph),
+                                   (Loss));
 };
 
 class LossRecordChainNode final : public ChainNode {
@@ -147,12 +187,17 @@ class LossRecordChainNode final : public ChainNode {
   LossRecordChainNode() = default;
   ~LossRecordChainNode() = default;
 
-  virtual const char* TypeName() const { return "LossRecordChainNode"; }
-  BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const override;
-  BldSubTskGphMthd GetMthdForBldSubTskGphFromLossAcc() const override;
+  OVERRIDE_PURE_VIRTUAL_METHOD();
 
- private:
-  CompTaskNode* NewCompTaskNode() const override;
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (BldSubTskGphMthd GetMthdForBldSubTskGph),
+                                   (LossAcc));
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (BldBoxingOpMthd GetMthdForBldBoxingOp),
+                                   (LossAcc));
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (std::vector<std::string> FindLbns),
+                                   (LossAcc));
 };
 
 class MdUpdtChainNode final : public ChainNode {
@@ -161,12 +206,17 @@ class MdUpdtChainNode final : public ChainNode {
   MdUpdtChainNode() = default;
   ~MdUpdtChainNode() = default;
 
-  virtual const char* TypeName() const { return "MdUpdtChainNode"; }
-  BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const override;
-  BldSubTskGphMthd GetMthdForBldSubTskGphFromMdDiffAcc() const override;
+  OVERRIDE_PURE_VIRTUAL_METHOD();
 
- private:
-  CompTaskNode* NewCompTaskNode() const override;
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (BldSubTskGphMthd GetMthdForBldSubTskGph),
+                                   (MdDiffAcc));
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (BldBoxingOpMthd GetMthdForBldBoxingOp),
+                                   (MdDiffAcc));
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (std::vector<std::string> FindLbns),
+                                   (MdDiffAcc));
 };
 
 class MdSaveChainNode final : public ChainNode {
@@ -175,12 +225,11 @@ class MdSaveChainNode final : public ChainNode {
   MdSaveChainNode() = default;
   ~MdSaveChainNode() = default;
 
-  virtual const char* TypeName() const { return "MdSaveChainNode"; }
-  BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const override;
-  BldSubTskGphMthd GetMthdForBldSubTskGphFromMdUpdt() const override;
+  OVERRIDE_PURE_VIRTUAL_METHOD();
 
- private:
-  CompTaskNode* NewCompTaskNode() const override;
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (BldSubTskGphMthd GetMthdForBldSubTskGph),
+                                   (MdUpdt));
 };
 
 class MdDiffAccChainNode final : public ChainNode {
@@ -189,13 +238,15 @@ class MdDiffAccChainNode final : public ChainNode {
   MdDiffAccChainNode() = default;
   ~MdDiffAccChainNode() = default;
 
-  virtual const char* TypeName() const { return "MdDiffAccChainNode"; }
-  BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const override;
-  BldSubTskGphMthd GetMthdForBldSubTskGphFromBw() const override;
+  OVERRIDE_PURE_VIRTUAL_METHOD();
 
- private:
-  CompTaskNode* NewCompTaskNode() const override;
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (BldSubTskGphMthd GetMthdForBldSubTskGph),
+                                   (Backward));
 };
+
+std::vector<std::string> FindLbnsBetween(const ChainNode* in_chain,
+                                         const ChainNode* out_chain);
 
 class ChainEdge final : public Edge<ChainNode, ChainEdge> {
  public:

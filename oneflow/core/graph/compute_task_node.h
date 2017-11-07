@@ -16,6 +16,7 @@ class CompTaskNode : public TaskNode {
   virtual void FixThrdLocId() {}
 
   // parallel_ctx_
+  int64_t parallel_id() const { return parallel_ctx_.parallel_id(); }
   const ParallelContext& parallel_ctx() const { return parallel_ctx_; }
   ParallelContext& mut_parallel_ctx() { return parallel_ctx_; }
 

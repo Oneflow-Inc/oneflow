@@ -4,8 +4,8 @@
 namespace oneflow {
 
 void MdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  NewProducedRegst("model_tmp", 1, 1);
-  NewProducedRegst("model", 3, kMaxRegisterNum);
+  ProduceRegst("model_tmp", 1, 1);
+  ProduceRegst("model", 3, kMaxRegisterNum);
 }
 
 }  // namespace oneflow
