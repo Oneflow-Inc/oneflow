@@ -66,8 +66,8 @@ void EndpointManager::InitRdma() {
       ActorMsg* actor_msg = new ActorMsg();
       const RdmaMem* rdma_mem = static_cast<const RdmaMem*>(
           CommNet::Singleton()->RegisterMemory(actor_msg, sizeof(ActorMsg)));
-      recv_msg2rdma_mem_.emplace(actor_msg, const_cast<RdmaMem*>(rdma_mem));
       recv_msg2conn_ptr_.emplace(actor_msg, conn);
+      recv_msg2rdma_mem_.emplace(actor_msg, rdma_mem);
       conn->PostRecvRequest(actor_msg, rdma_mem);
     }
     conn->CompleteConnection();
