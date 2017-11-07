@@ -61,7 +61,6 @@ void RdmaCommNet::RegisterMemoryDone() {
       HashMap2PbMap<uint64_t, RdmaMemDesc>(this_machine_token_msgs);
   LOG(INFO) << token_msgs.mutable_token2mem_desc()->size();
   CtrlClient::Singleton()->PushTokenMsgs(token_msgs);
-  OF_BARRIER();
   FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
     if (peer_machine_id == RuntimeCtx::Singleton()->this_machine_id()) {
       continue;

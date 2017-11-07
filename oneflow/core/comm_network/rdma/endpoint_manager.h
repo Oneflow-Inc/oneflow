@@ -36,16 +36,8 @@ class EndpointManager {
   void PollSendQueue();
   void PollRecvQueue();
 
-  ConnectionInfo& GetMachineConnInfo() {
-    int64_t this_machine_id = RuntimeCtx::Singleton()->this_machine_id();
-    if (connection_pool_.find(this_machine_id) == connection_pool_.end()) {
-      connection_pool_.emplace(this_machine_id, NewConnection());
-    }
-    return connection_pool_.at(this_machine_id)->mut_this_mach_conn_info();
-  }
-
   enum { kPrePostRecvNum = 200 };  // TODO
-  HashMap<const ActorMsg*, RdmaMem*> recv_msg2rdma_mem_;
+  HashMap<const ActorMsg*, const RdmaMem*> recv_msg2rdma_mem_;
   HashMap<int64_t, Connection*> connection_pool_;
 
   std::thread thread_;
