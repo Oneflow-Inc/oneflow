@@ -44,7 +44,8 @@ class EndpointManager {
     return connection_pool_.at(this_machine_id)->mut_this_mach_conn_info();
   }
 
-  enum { kPrePostRecvNum = 200 };  // TODO
+  enum { kPrePostRecvNum = 15 };  // TODO
+  HashMap<const ActorMsg*, Connection*> recv_msg2conn_ptr_;
   HashMap<const ActorMsg*, RdmaMem*> recv_msg2rdma_mem_;
   HashMap<int64_t, Connection*> connection_pool_;
 
