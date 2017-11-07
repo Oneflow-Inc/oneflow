@@ -1,4 +1,4 @@
-#include "cub/cub.cuh"
+#include <cub/cub.cuh>
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
