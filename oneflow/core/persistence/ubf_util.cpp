@@ -4,6 +4,7 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/persistence/normal_persistent_in_stream.h"
 #include "opencv2/opencv.hpp"
+#include "base64.h"
 
 namespace oneflow {
 
@@ -75,19 +76,6 @@ void UbfUtil::SaveFeatures(const std::vector<std::string>& img_file_paths,
   }
 }
 
-// template<typename Out>
-// void split(const std::string& s, char delim, Out result) {
-//   std::stringstream ss(s);
-//   std::string item;
-//   while (std::getline(ss, item, delim)) { *(result++) = item; }
-// }
-
-// std::vector<std::string> split(const std::string& s, char delim) {
-//   std::vector<std::string> elems;
-//   split(s, delim, std::back_inserter(elems));
-//   return elems;
-// }
-
 void UbfUtil::SaveFeaturesAndLabels(
     const std::vector<std::string>& img_file_paths, uint32_t width,
     uint32_t height, const std::string& output_dir) {
@@ -108,17 +96,21 @@ void UbfUtil::SaveFeaturesAndLabels(
     const std::string& file_path = img_file_paths.at(i);
     std::cout << file_path << std::endl;
     NormalPersistentInStream in_stream(GlobalFS(), file_path);
-    while (in_stream.ReadLine(&line) == 0 && q < 10) {
-      // std::vector<std::string> subs;
-      // split(line, "\t", std::back_inserter(subs));
-      // std::cout << subs[0] << ": " << subs[1] << std::endl;
+    while (in_stream.ReadLine(&line) == 0 && q < 1) {
       std::vector<std::string> tokens;
       std::istringstream iss(line);
       std::string token;
-      while (
-          std::getline(iss, token, '\t'))  // but we can specify a different one
+      while(std::getline(iss, token, '\t'))   // but we can specify a different one
         tokens.push_back(token);
-      std::cout << tokens[0] << ": " << tokens[1] << std::endl;
+      //std::cout << tokens[0] <<": " << tokens[1] << "---" << tokens[2] << std::endl;
+      token = base64_decode(tokens[2]);
+
+      // save decode data for check 
+      //const char* bin_ptr = token.c_str();
+      //std::ofstream output( "example.jpg", std::ios::out | std::ios::binary );
+      //output.write( bin_ptr, token.length() );
+      
+
       ++q;
     }
   }
