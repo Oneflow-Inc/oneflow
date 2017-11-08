@@ -1,6 +1,7 @@
 #include "oneflow/core/persistence/ubf_util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/persistence/normal_persistent_in_stream.h"
 #include "opencv2/opencv.hpp"
 
@@ -95,7 +96,14 @@ void UbfUtil::SaveFeaturesAndLabels(
   PersistentOutStream label_stream(LocalFS(), JoinPath(output_dir, "labels"));
   std::string line;
   int q = 0;
-  std::cout << img_file_paths.size() << std::endl;
+  JobDescProto jb_desc_proto;
+  auto job_conf = jb_desc_proto.mutable_job_conf();
+  auto gfs_conf = job_conf->mutable_global_fs_conf();
+  gfs_conf->mutable_hdfs_conf()->set_namenode("hdfs://192.168.1.11:9000");
+  auto resource = jb_desc_proto.mutable_resource();
+  resource->add_machine();
+  JobDesc::NewSingleton(jb_desc_proto);
+
   for (int i = 0; i < img_file_paths.size(); ++i) {
     const std::string& file_path = img_file_paths.at(i);
     std::cout << file_path << std::endl;
@@ -104,10 +112,17 @@ void UbfUtil::SaveFeaturesAndLabels(
       // std::vector<std::string> subs;
       // split(line, "\t", std::back_inserter(subs));
       // std::cout << subs[0] << ": " << subs[1] << std::endl;
-      std::cout << ": " << q << std::endl;
+      std::vector<std::string> tokens;
+      std::istringstream iss(line);
+      std::string token;
+      while (
+          std::getline(iss, token, '\t'))  // but we can specify a different one
+        tokens.push_back(token);
+      std::cout << tokens[0] << ": " << tokens[1] << std::endl;
       ++q;
     }
   }
+  JobDesc::DeleteSingleton();
 }
 
 void UbfUtil::CreateUbfFiles(const std::vector<std::string>& image_directories,
