@@ -1,10 +1,10 @@
 #include "oneflow/core/persistence/ubf_util.h"
+#include "base64.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/persistence/normal_persistent_in_stream.h"
 #include "opencv2/opencv.hpp"
-#include "base64.h"
 
 namespace oneflow {
 
@@ -96,19 +96,36 @@ void UbfUtil::SaveFeaturesAndLabels(
     const std::string& file_path = img_file_paths.at(i);
     std::cout << file_path << std::endl;
     NormalPersistentInStream in_stream(GlobalFS(), file_path);
-    while (in_stream.ReadLine(&line) == 0 && q < 1) {
+    while (in_stream.ReadLine(&line) == 0 && q < 10) {
       std::vector<std::string> tokens;
       std::istringstream iss(line);
       std::string token;
-      while(std::getline(iss, token, '\t'))   // but we can specify a different one
+      while (
+          std::getline(iss, token, '\t'))  // but we can specify a different one
         tokens.push_back(token);
-      //std::cout << tokens[0] <<": " << tokens[1] << "---" << tokens[2] << std::endl;
+      // std::cout << tokens[0] <<": " << tokens[1] << "---" << tokens[2] <<
+      // std::endl;
       token = base64_decode(tokens[2]);
 
-      // save decode data for check 
-      //const char* bin_ptr = token.c_str();
-      //std::ofstream output( "example.jpg", std::ios::out | std::ios::binary );
-      //output.write( bin_ptr, token.length() );
+      // save decode data for check
+      // const char* bin_ptr = token.c_str();
+      // std::ofstream output( "example.jpg", std::ios::out | std::ios::binary
+      // );  output.write( bin_ptr, token.length() );
+
+      // construct feature file
+      const char* buffer = token.c_str();
+      std::vector<char> src_vec(buffer, buffer + token.length());
+      cv::Mat m_img = cv::Mat(src_vec);
+      cv::Mat img = cv::imdecode(m_img, 1);
+      std::vector<unsigned char> raw_buf;
+      std::vector<int> param{CV_IMWRITE_JPEG_QUALITY, 95};
+      cv::imencode(".jpg", img, raw_buf, param);
+      auto ubf_item = of_make_unique<UbfItem>(
+          DataType::kChar, DataEncodeType::kJpeg, tokens[0], raw_buf.size(),
+          [&](char* data) { memcpy(data, raw_buf.data(), raw_buf.size()); });
+      feature_stream << *ubf_item;
+    
+      // construct label file
       
 
       ++q;
