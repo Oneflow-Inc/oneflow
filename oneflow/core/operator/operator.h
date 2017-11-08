@@ -92,6 +92,8 @@ class Operator {
 
   //
   void FixParallelDesc(ParallelDesc* pr_desc) const;
+  virtual int32_t ModelSplitAxis() const { return -1; }
+  virtual int32_t MaxModelSplitNum() const { return -1; }
 
  protected:
   virtual void VirtualFixParallelDesc(ParallelDesc* pr_desc) const {}

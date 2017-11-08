@@ -75,6 +75,9 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
     pr_desc->set_policy(ParallelPolicy::kDataParallel);
   }
   if (IsDataLoaderOp() == false) { pr_desc->RemoveInvalidDevice(); }
+  if (pr_desc->policy() == kModelParallel && MaxModelSplitNum() != -1) {
+    pr_desc->RemoveNeedlessDevice(MaxModelSplitNum());
+  }
   VirtualFixParallelDesc(pr_desc);
 }
 

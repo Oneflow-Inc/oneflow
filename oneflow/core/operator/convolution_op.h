@@ -17,7 +17,10 @@ class ConvolutionOp final : public Operator {
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx);
 
-  void VirtualFixParallelDesc(ParallelDesc* pr_desc) const override;
+  int32_t ModelSplitAxis() const override { return 1; }
+  int32_t MaxModelSplitNum() const override {
+    return op_conf().convolution_conf().out_num();
+  }
 
  private:
 };

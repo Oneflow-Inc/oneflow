@@ -84,12 +84,6 @@ void ConvolutionOp::InferBlobDescs(
   }
 }
 
-void ConvolutionOp::VirtualFixParallelDesc(ParallelDesc* pr_desc) const {
-  if (pr_desc->policy() == kModelParallel) {
-    pr_desc->RemoveNeedlessDevice(GetInt32FromSpecialConf("out_num"));
-  }
-}
-
 REGISTER_OP(OperatorConf::kConvolutionConf, ConvolutionOp);
 
 }  // namespace oneflow
