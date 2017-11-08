@@ -124,9 +124,15 @@ void UbfUtil::SaveFeaturesAndLabels(
           DataType::kChar, DataEncodeType::kJpeg, tokens[0], raw_buf.size(),
           [&](char* data) { memcpy(data, raw_buf.data(), raw_buf.size()); });
       feature_stream << *ubf_item;
-    
+
       // construct label file
-      
+      int32_t label_index = std::stoi(tokens[1]);
+      auto label_ubf_item = of_make_unique<UbfItem>(
+          DataType::kUInt32, DataEncodeType::kNoEncode, tokens[0],
+          sizeof(uint32_t), [=](char* data) {
+            *reinterpret_cast<uint32_t*>(data) = label_index;
+          });
+      label_stream << *label_ubf_item;
 
       ++q;
     }
