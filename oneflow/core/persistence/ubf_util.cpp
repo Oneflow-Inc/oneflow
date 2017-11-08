@@ -78,33 +78,49 @@ void UbfUtil::SaveFeatures(const std::vector<std::string>& img_file_paths,
 
 void UbfUtil::SaveFeaturesAndLabels(
     const std::vector<std::string>& img_file_paths, uint32_t width,
-    uint32_t height, const std::string& output_dir) {
-  PersistentOutStream feature_stream(LocalFS(),
-                                     JoinPath(output_dir, "features"));
-  PersistentOutStream label_stream(LocalFS(), JoinPath(output_dir, "labels"));
-  std::string line;
-  int q = 0;
+    uint32_t height, const std::string& output_dir, uint32_t limit,
+    const std::string& hadoop_namenode, const bool output_2_hadoop) {
   JobDescProto jb_desc_proto;
   auto job_conf = jb_desc_proto.mutable_job_conf();
   auto gfs_conf = job_conf->mutable_global_fs_conf();
-  gfs_conf->mutable_hdfs_conf()->set_namenode("hdfs://192.168.1.11:9000");
+  gfs_conf->mutable_hdfs_conf()->set_namenode(hadoop_namenode);
   auto resource = jb_desc_proto.mutable_resource();
   resource->add_machine();
   JobDesc::NewSingleton(jb_desc_proto);
 
+  fs::FileSystem* fs;
+  if (output_2_hadoop) {
+    fs = GlobalFS();
+  } else {
+    fs = LocalFS();
+  }
+
+  PersistentOutStream feature_stream(fs,
+                                     JoinPath(output_dir, "feature/part-0"));
+  PersistentOutStream label_stream(fs, JoinPath(output_dir, "label/part-0"));
+  std::string line;
+  uint32_t q = 0;
   for (int i = 0; i < img_file_paths.size(); ++i) {
     const std::string& file_path = img_file_paths.at(i);
     std::cout << file_path << std::endl;
     NormalPersistentInStream in_stream(GlobalFS(), file_path);
-    while (in_stream.ReadLine(&line) == 0 && q < 10) {
+    while (in_stream.ReadLine(&line) == 0 && q < limit) {
+      ++q;
+      if ((q % 1000) == 0) {
+        if (limit == INT_MAX)
+          LOG(INFO)
+              << q
+              << " of unknown number of images";  // << limit;  // << std::endl;
+        else
+          LOG(INFO) << q << " of " << limit;  // << std::endl;
+      }
+
       std::vector<std::string> tokens;
       std::istringstream iss(line);
       std::string token;
       while (
           std::getline(iss, token, '\t'))  // but we can specify a different one
         tokens.push_back(token);
-      // std::cout << tokens[0] <<": " << tokens[1] << "---" << tokens[2] <<
-      // std::endl;
       token = base64_decode(tokens[2]);
 
       // save decode data for check
@@ -112,29 +128,34 @@ void UbfUtil::SaveFeaturesAndLabels(
       // std::ofstream output( "example.jpg", std::ios::out | std::ios::binary
       // );  output.write( bin_ptr, token.length() );
 
-      // construct feature file
-      const char* buffer = token.c_str();
-      std::vector<char> src_vec(buffer, buffer + token.length());
-      cv::Mat m_img = cv::Mat(src_vec);
-      cv::Mat img = cv::imdecode(m_img, 1);
-      std::vector<unsigned char> raw_buf;
-      std::vector<int> param{CV_IMWRITE_JPEG_QUALITY, 95};
-      cv::imencode(".jpg", img, raw_buf, param);
-      auto ubf_item = of_make_unique<UbfItem>(
-          DataType::kChar, DataEncodeType::kJpeg, tokens[0], raw_buf.size(),
-          [&](char* data) { memcpy(data, raw_buf.data(), raw_buf.size()); });
-      feature_stream << *ubf_item;
+      try {
+        // construct feature file
+        const char* buffer = token.c_str();
+        std::vector<char> src_vec(buffer, buffer + token.length());
+        cv::Mat m_img = cv::Mat(src_vec);
+        cv::Mat img = cv::imdecode(m_img, 1);
+        std::vector<unsigned char> raw_buf;
+        std::vector<int> param{CV_IMWRITE_JPEG_QUALITY, 95};
+        cv::imencode(".jpg", img, raw_buf, param);
+        auto ubf_item = of_make_unique<UbfItem>(
+            DataType::kChar, DataEncodeType::kJpeg, tokens[0], raw_buf.size(),
+            [&](char* data) { memcpy(data, raw_buf.data(), raw_buf.size()); });
+        feature_stream << *ubf_item;
 
-      // construct label file
-      int32_t label_index = std::stoi(tokens[1]);
-      auto label_ubf_item = of_make_unique<UbfItem>(
-          DataType::kUInt32, DataEncodeType::kNoEncode, tokens[0],
-          sizeof(uint32_t), [=](char* data) {
-            *reinterpret_cast<uint32_t*>(data) = label_index;
-          });
-      label_stream << *label_ubf_item;
-
-      ++q;
+        // construct label file
+        int32_t label_index = std::stoi(tokens[1]);
+        auto label_ubf_item = of_make_unique<UbfItem>(
+            DataType::kUInt32, DataEncodeType::kNoEncode, tokens[0],
+            sizeof(uint32_t), [=](char* data) {
+              *reinterpret_cast<uint32_t*>(data) = label_index;
+            });
+        label_stream << *label_ubf_item;
+      } catch (cv::Exception& e) {
+        const char* err_msg = e.what();
+        LOG(INFO) << "Exception on image:" << tokens[0] << " " << tokens[1]
+                  << " " << err_msg;  // << std::endl;
+      }
+      //++q;
     }
   }
   JobDesc::DeleteSingleton();
@@ -143,11 +164,13 @@ void UbfUtil::SaveFeaturesAndLabels(
 void UbfUtil::CreateUbfFiles(const std::vector<std::string>& image_directories,
                              uint32_t limit, uint32_t width, uint32_t height,
                              const std::string& output_dir,
-                             const bool use_hadoop_stream) {
+                             const std::string& hadoop_namenode,
+                             const bool output_2_hadoop) {
   //  LocalFS()->CreateDirIfNotExist(output_dir);
   std::vector<std::string> img_file_paths;
-  if (use_hadoop_stream) {
-    SaveFeaturesAndLabels(image_directories, width, height, output_dir);
+  if (hadoop_namenode.length() > 0) {
+    SaveFeaturesAndLabels(image_directories, width, height, output_dir, limit,
+                          hadoop_namenode, output_2_hadoop);
   } else {
     std::unordered_map<std::string, uint32_t> file_path2label_idx;
     GetFilePaths(image_directories, limit, &img_file_paths,

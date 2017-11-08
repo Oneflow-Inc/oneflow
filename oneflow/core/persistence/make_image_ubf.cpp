@@ -7,10 +7,15 @@ DEFINE_int32(limit, INT_MAX, "packed image count limit");
 DEFINE_int32(width, 256, "resized width");
 DEFINE_int32(height, 256, "resized height");
 DEFINE_string(output_dir, "./", "output direction");
-DEFINE_bool(use_hadoop_stream, false, "use hadoop stream file as input");
+DEFINE_string(
+    hadoop_namenode, "",
+    "null-local file system; not null-use hadoop stream file as input");
+DEFINE_bool(output_2_hadoop, false, "output to hadoop");
 
 int main(int argc, char* argv[]) {
+  google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, true);
+  oneflow::LocalFS()->CreateDirIfNotExist(oneflow::LogDir());
 
   std::vector<std::string> image_directories;
   for (int i = 1; i < argc; ++i) {
@@ -18,9 +23,11 @@ int main(int argc, char* argv[]) {
     std::cout << argv[i] << std::endl;
   }
   CHECK(FLAGS_output_dir.size());
+  LOG(INFO) << "make_image_ubf start";
   std::unique(image_directories.begin(), image_directories.end());
-  oneflow::UbfUtil::CreateUbfFiles(image_directories, FLAGS_limit, FLAGS_width,
-                                   FLAGS_height, FLAGS_output_dir,
-                                   FLAGS_use_hadoop_stream);
+  oneflow::UbfUtil::CreateUbfFiles(
+      image_directories, FLAGS_limit, FLAGS_width, FLAGS_height,
+      FLAGS_output_dir, FLAGS_hadoop_namenode, FLAGS_output_2_hadoop);
+  LOG(INFO) << "make_image_ubf done!";
   return 0;
 }
