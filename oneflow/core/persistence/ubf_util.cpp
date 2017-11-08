@@ -1,6 +1,7 @@
 #include "oneflow/core/persistence/ubf_util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/persistence/normal_persistent_in_stream.h"
 #include "opencv2/opencv.hpp"
 
 namespace oneflow {
@@ -73,14 +74,39 @@ void UbfUtil::SaveFeatures(const std::vector<std::string>& img_file_paths,
   }
 }
 
+// template<typename Out>
+// void split(const std::string& s, char delim, Out result) {
+//   std::stringstream ss(s);
+//   std::string item;
+//   while (std::getline(ss, item, delim)) { *(result++) = item; }
+// }
+
+// std::vector<std::string> split(const std::string& s, char delim) {
+//   std::vector<std::string> elems;
+//   split(s, delim, std::back_inserter(elems));
+//   return elems;
+// }
+
 void UbfUtil::SaveFeaturesAndLabels(
     const std::vector<std::string>& img_file_paths, uint32_t width,
     uint32_t height, const std::string& output_dir) {
   PersistentOutStream feature_stream(LocalFS(),
                                      JoinPath(output_dir, "features"));
   PersistentOutStream label_stream(LocalFS(), JoinPath(output_dir, "labels"));
+  std::string line;
+  int q = 0;
+  std::cout << img_file_paths.size() << std::endl;
   for (int i = 0; i < img_file_paths.size(); ++i) {
     const std::string& file_path = img_file_paths.at(i);
+    std::cout << file_path << std::endl;
+    NormalPersistentInStream in_stream(GlobalFS(), file_path);
+    while (in_stream.ReadLine(&line) == 0 && q < 10) {
+      // std::vector<std::string> subs;
+      // split(line, "\t", std::back_inserter(subs));
+      // std::cout << subs[0] << ": " << subs[1] << std::endl;
+      std::cout << ": " << q << std::endl;
+      ++q;
+    }
   }
 }
 
@@ -91,7 +117,7 @@ void UbfUtil::CreateUbfFiles(const std::vector<std::string>& image_directories,
   //  LocalFS()->CreateDirIfNotExist(output_dir);
   std::vector<std::string> img_file_paths;
   if (use_hadoop_stream) {
-    SaveFeaturesAndLabels(img_file_paths, width, height, output_dir);
+    SaveFeaturesAndLabels(image_directories, width, height, output_dir);
   } else {
     std::unordered_map<std::string, uint32_t> file_path2label_idx;
     GetFilePaths(image_directories, limit, &img_file_paths,

@@ -15,6 +15,7 @@ int main(int argc, char* argv[]) {
   std::vector<std::string> image_directories;
   for (int i = 1; i < argc; ++i) {
     image_directories.push_back(std::string(argv[i]));
+    std::cout << argv[i] << std::endl;
   }
   CHECK(FLAGS_output_dir.size());
   std::unique(image_directories.begin(), image_directories.end());
