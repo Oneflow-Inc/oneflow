@@ -26,7 +26,35 @@ class BoxingTaskNode : public TaskNode {
   void ConsumeAllRegsts() override;
   void Build() override;
 
-  std::shared_ptr<Operator> BldBoxingOpWithAddClone(
+  std::shared_ptr<Operator> BldBoxingOpWithDataConcatAndDataSplit(
+      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
+      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
+      int64_t* used_in_edge_begin, int64_t* used_out_edge_begin);
+  std::shared_ptr<Operator> BldBoxingOpWithDataConcatAndClone(
+      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
+      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
+      int64_t* used_in_edge_begin, int64_t* used_out_edge_begin);
+  std::shared_ptr<Operator> BldBoxingOpWithDataConcatAndModelSplit(
+      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
+      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
+      int64_t* used_in_edge_begin, int64_t* used_out_edge_begin);
+  std::shared_ptr<Operator> BldBoxingOpWithModelConcatAndDataSplit(
+      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
+      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
+      int64_t* used_in_edge_begin, int64_t* used_out_edge_begin);
+  std::shared_ptr<Operator> BldBoxingOpWithModelConcatAndClone(
+      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
+      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
+      int64_t* used_in_edge_begin, int64_t* used_out_edge_begin);
+  std::shared_ptr<Operator> BldBoxingOpWithAddAndDataSplit(
+      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
+      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
+      int64_t* used_in_edge_begin, int64_t* used_out_edge_begin);
+  std::shared_ptr<Operator> BldBoxingOpWithAddAndModelSplit(
+      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
+      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
+      int64_t* used_in_edge_begin, int64_t* used_out_edge_begin);
+  std::shared_ptr<Operator> BldBoxingOpWithAddAndClone(
       const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
       const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
       int64_t* used_in_edge_begin, int64_t* used_out_edge_begin);

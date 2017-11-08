@@ -16,19 +16,71 @@ namespace {
 
 BldBoxingOpMthd GetBldBoxingOpMethodByFwParallelPolicy(
     const ChainNode* in_chain, const ChainNode* out_chain) {
-  TODO();
+  ParallelPolicy in_policy = in_chain->parallel_desc()->policy();
+  ParallelPolicy out_policy = out_chain->parallel_desc()->policy();
+  if (in_policy == kDataParallel && out_policy == kDataParallel) {
+    return &BoxingTaskNode::BldBoxingOpWithDataConcatAndDataSplit;
+  } else if (in_policy == kDataParallel && out_policy == kModelParallel) {
+    return &BoxingTaskNode::BldBoxingOpWithDataConcatAndClone;
+  } else if (in_policy == kModelParallel && out_policy == kDataParallel) {
+    return &BoxingTaskNode::BldBoxingOpWithModelConcatAndDataSplit;
+  } else if (in_policy == kModelParallel && out_policy == kModelParallel) {
+    return &BoxingTaskNode::BldBoxingOpWithModelConcatAndClone;
+  } else {
+    LOG(FATAL) << "in " << in_policy << " out " << out_policy;
+  }
 }
 BldBoxingOpMthd GetBldBoxingOpMethodByBwParallelPolicy(
     const ChainNode* in_chain, const ChainNode* out_chain) {
-  TODO();
+  ParallelPolicy in_policy = in_chain->parallel_desc()->policy();
+  ParallelPolicy out_policy = out_chain->parallel_desc()->policy();
+  if (in_policy == kDataParallel && out_policy == kDataParallel) {
+    return &BoxingTaskNode::BldBoxingOpWithDataConcatAndDataSplit;
+  } else if (in_policy == kDataParallel && out_policy == kModelParallel) {
+    return &BoxingTaskNode::BldBoxingOpWithAddAndDataSplit;
+  } else if (in_policy == kModelParallel && out_policy == kDataParallel) {
+    return &BoxingTaskNode::BldBoxingOpWithDataConcatAndModelSplit;
+  } else if (in_policy == kModelParallel && out_policy == kModelParallel) {
+    return &BoxingTaskNode::BldBoxingOpWithAddAndModelSplit;
+  } else {
+    LOG(FATAL) << "out_diff " << in_policy << " in_diff " << out_policy;
+  }
 }
+
+std::vector<std::string> FindLbnsBetweenChainPair(
+    const ChainNode* in_chain,
+    const std::vector<std::string>& (Operator::*GetOutLbns)() const,
+    const ChainNode* out_chain,
+    const std::vector<std::string>& (Operator::*GetInLbns)() const) {
+  HashSet<std::string> out_lbns_in_chain;
+  for (std::shared_ptr<const Operator> op : in_chain->op_vec()) {
+    for (const std::string& bn_in_op : (op.get()->*GetOutLbns)()) {
+      const std::string& lbn = op->Lbn4BnInOp(bn_in_op);
+      CHECK(out_lbns_in_chain.insert(lbn).second);
+    }
+  }
+  std::vector<std::string> result;
+  for (std::shared_ptr<const Operator> op : out_chain->op_vec()) {
+    for (const std::string& bn_in_op : (op.get()->*GetInLbns)()) {
+      const std::string& lbn = op->Lbn4BnInOp(bn_in_op);
+      if (out_lbns_in_chain.find(lbn) != out_lbns_in_chain.end()) {
+        result.push_back(lbn);
+      }
+    }
+  }
+  SortAndRemoveDuplication(&result);
+  return result;
+}
+
 std::vector<std::string> FindLbnsBetweenFw(const ChainNode* in_chain,
                                            const ChainNode* out_chain) {
-  TODO();
+  return FindLbnsBetweenChainPair(in_chain, &Operator::output_bns, out_chain,
+                                  &Operator::input_bns);
 }
 std::vector<std::string> FindLbnsBetweenBw(const ChainNode* in_chain,
                                            const ChainNode* out_chain) {
-  TODO();
+  return FindLbnsBetweenChainPair(in_chain, &Operator::input_diff_bns,
+                                  out_chain, &Operator::output_diff_bns);
 }
 
 }  // namespace
@@ -219,7 +271,7 @@ BldSubTskGphMthd LossRecordChainNode::GetMthdForBldSubTskGphFromLossAcc(
 }
 BldBoxingOpMthd LossRecordChainNode::GetMthdForBldBoxingOpFromLossAcc(
     const ChainNode*) const {
-  return &BoxingTaskNode::BldBoxingOpWithAddClone;
+  return &BoxingTaskNode::BldBoxingOpWithAddAndClone;
 }
 std::vector<std::string> LossRecordChainNode::FindLbnsFromLossAcc(
     const ChainNode*) const {
@@ -239,7 +291,7 @@ BldSubTskGphMthd MdUpdtChainNode::GetMthdForBldSubTskGphFromMdDiffAcc(
 }
 BldBoxingOpMthd MdUpdtChainNode::GetMthdForBldBoxingOpFromMdDiffAcc(
     const ChainNode*) const {
-  return &BoxingTaskNode::BldBoxingOpWithAddClone;
+  return &BoxingTaskNode::BldBoxingOpWithAddAndClone;
 }
 std::vector<std::string> MdUpdtChainNode::FindLbnsFromMdDiffAcc(
     const ChainNode*) const {
