@@ -100,23 +100,24 @@ void UbfUtil::SaveFeaturesAndLabels(
     return;
   }
 
-  std::vector<PersistentOutStream> feature_streams;
-  std::vector<PersistentOutStream> label_streams;
+  std::vector<std::unique_ptr<PersistentOutStream>> feature_streams;
+  std::vector<std::unique_ptr<PersistentOutStream>> label_streams;
   for (int i = 0; i < part_num; ++i) {
     std::string filename = "part-";
     filename += std::to_string(i);
-    feature_streams.push_back(
-        PersistentOutStream(fs, JoinPath(output_dir, "feature", filename)));
-    label_streams.push_back(
-        PersistentOutStream(fs, JoinPath(output_dir, "label", filename)));
+    feature_streams.push_back(of_make_unique<PersistentOutStream>(
+        fs, JoinPath(output_dir, "feature", filename)));
+    label_streams.push_back(of_make_unique<PersistentOutStream>(
+        fs, JoinPath(output_dir, "label", filename)));
     LOG(INFO) << filename;
   }
-  return;
-  PersistentOutStream feature_stream(fs,
-                                     JoinPath(output_dir, "feature/part-0"));
-  PersistentOutStream label_stream(fs, JoinPath(output_dir, "label/part-0"));
+  // return;
+  // PersistentOutStream feature_stream(fs,
+  //                                    JoinPath(output_dir, "feature/part-0"));
+  // PersistentOutStream label_stream(fs, JoinPath(output_dir, "label/part-0"));
   std::string line;
   uint32_t q = 0;
+  uint32_t part_id = 0;
   for (int i = 0; i < img_file_paths.size(); ++i) {
     const std::string& file_path = img_file_paths.at(i);
     std::cout << file_path << std::endl;
@@ -155,7 +156,8 @@ void UbfUtil::SaveFeaturesAndLabels(
         auto ubf_item = of_make_unique<UbfItem>(
             DataType::kChar, DataEncodeType::kJpeg, tokens[0], raw_buf.size(),
             [&](char* data) { memcpy(data, raw_buf.data(), raw_buf.size()); });
-        feature_stream << *ubf_item;
+        *feature_streams[part_id] << *ubf_item;
+        // feature_stream << *ubf_item;
 
         // construct label file
         int32_t label_index = std::stoi(tokens[1]);
@@ -164,7 +166,10 @@ void UbfUtil::SaveFeaturesAndLabels(
             sizeof(uint32_t), [=](char* data) {
               *reinterpret_cast<uint32_t*>(data) = label_index;
             });
-        label_stream << *label_ubf_item;
+        *label_streams[part_id] << *label_ubf_item;
+        // label_stream << *label_ubf_item;
+        ++part_id;
+        part_id = part_id % part_num;
       } catch (cv::Exception& e) {
         const char* err_msg = e.what();
         LOG(INFO) << "Exception on image:" << tokens[0] << " " << tokens[1]
