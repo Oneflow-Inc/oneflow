@@ -11,6 +11,7 @@ DEFINE_string(
     hadoop_namenode, "",
     "null-local file system; not null-use hadoop stream file as input");
 DEFINE_bool(output_2_hadoop, false, "output to hadoop");
+DEFINE_int32(part_num, 1, "part number for data parallel");
 
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
@@ -25,9 +26,10 @@ int main(int argc, char* argv[]) {
   CHECK(FLAGS_output_dir.size());
   LOG(INFO) << "make_image_ubf start";
   std::unique(image_directories.begin(), image_directories.end());
-  oneflow::UbfUtil::CreateUbfFiles(
-      image_directories, FLAGS_limit, FLAGS_width, FLAGS_height,
-      FLAGS_output_dir, FLAGS_hadoop_namenode, FLAGS_output_2_hadoop);
+  oneflow::UbfUtil::CreateUbfFiles(image_directories, FLAGS_limit, FLAGS_width,
+                                   FLAGS_height, FLAGS_output_dir,
+                                   FLAGS_hadoop_namenode, FLAGS_output_2_hadoop,
+                                   FLAGS_part_num);
   LOG(INFO) << "make_image_ubf done!";
   return 0;
 }

@@ -79,7 +79,8 @@ void UbfUtil::SaveFeatures(const std::vector<std::string>& img_file_paths,
 void UbfUtil::SaveFeaturesAndLabels(
     const std::vector<std::string>& img_file_paths, uint32_t width,
     uint32_t height, const std::string& output_dir, uint32_t limit,
-    const std::string& hadoop_namenode, const bool output_2_hadoop) {
+    const std::string& hadoop_namenode, const bool output_2_hadoop,
+    const uint32_t part_num) {
   JobDescProto jb_desc_proto;
   auto job_conf = jb_desc_proto.mutable_job_conf();
   auto gfs_conf = job_conf->mutable_global_fs_conf();
@@ -94,7 +95,23 @@ void UbfUtil::SaveFeaturesAndLabels(
   } else {
     fs = LocalFS();
   }
+  if (part_num < 1) {
+    LOG(INFO) << "part_num should be bigger than 0, but it is: " << part_num;
+    return;
+  }
 
+  std::vector<PersistentOutStream> feature_streams;
+  std::vector<PersistentOutStream> label_streams;
+  for (int i = 0; i < part_num; ++i) {
+    std::string filename = "part-";
+    filename += std::to_string(i);
+    feature_streams.push_back(
+        PersistentOutStream(fs, JoinPath(output_dir, "feature", filename)));
+    label_streams.push_back(
+        PersistentOutStream(fs, JoinPath(output_dir, "label", filename)));
+    LOG(INFO) << filename;
+  }
+  return;
   PersistentOutStream feature_stream(fs,
                                      JoinPath(output_dir, "feature/part-0"));
   PersistentOutStream label_stream(fs, JoinPath(output_dir, "label/part-0"));
@@ -108,9 +125,7 @@ void UbfUtil::SaveFeaturesAndLabels(
       ++q;
       if ((q % 1000) == 0) {
         if (limit == INT_MAX)
-          LOG(INFO)
-              << q
-              << " of unknown number of images";  // << limit;  // << std::endl;
+          LOG(INFO) << q << " of unknown number of images";
         else
           LOG(INFO) << q << " of " << limit;  // << std::endl;
       }
@@ -165,12 +180,13 @@ void UbfUtil::CreateUbfFiles(const std::vector<std::string>& image_directories,
                              uint32_t limit, uint32_t width, uint32_t height,
                              const std::string& output_dir,
                              const std::string& hadoop_namenode,
-                             const bool output_2_hadoop) {
+                             const bool output_2_hadoop,
+                             const uint32_t part_num) {
   //  LocalFS()->CreateDirIfNotExist(output_dir);
   std::vector<std::string> img_file_paths;
   if (hadoop_namenode.length() > 0) {
     SaveFeaturesAndLabels(image_directories, width, height, output_dir, limit,
-                          hadoop_namenode, output_2_hadoop);
+                          hadoop_namenode, output_2_hadoop, part_num);
   } else {
     std::unordered_map<std::string, uint32_t> file_path2label_idx;
     GetFilePaths(image_directories, limit, &img_file_paths,
