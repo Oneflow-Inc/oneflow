@@ -7,6 +7,7 @@ void LARSModelUpdateOp::InitFromOpConf() {
 
   EnrollInputBn("model_diffs", false);
   EnrollDataTmpBn("momentum");
+  EnrollDataTmpBn("temp");
   EnrollOutputBn("model", false);
 }
 
@@ -24,6 +25,12 @@ void LARSModelUpdateOp::InferBlobDesc4FwBlobs(
 
   // momentum
   *GetBlobDesc4BnInOp("momentum") = *md_diff_blob_desc;
+
+  // temp
+  BlobDesc* temp_blob_desc = GetBlobDesc4BnInOp("temp");
+  temp_blob_desc->mut_shape() = Shape({md_diff_blob_desc->shape().At(0) * 2});
+  temp_blob_desc->set_data_type(JobDesc::Singleton()->default_data_type());
+  temp_blob_desc->set_has_data_id(false);
 }
 
 REGISTER_OP(OperatorConf::kLarsMdupdtConf, LARSModelUpdateOp);

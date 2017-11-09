@@ -28,7 +28,7 @@ class LARSMdUpdateKernelUtil final {
   static void UpdateModel(const KernelCtx& ctx, const int64_t n,
                           const T lars_coefficient, const T learning_rate,
                           const T m, const T weight_decay, T* model,
-                          T* momentum, const T* model_diff);
+                          T* momentum, T* temp, const T* model_diff);
 };
 
 }  // namespace oneflow
