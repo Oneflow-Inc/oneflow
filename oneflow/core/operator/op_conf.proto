@@ -172,6 +172,13 @@ message RMSPropModelUpdateOpConf {
   optional float epsilon = 3 [default = 1e-8];
 }
 
+message LARSModelUpdateOpConf {
+  required float learning_rate = 1 [default = 0.01];
+  required float momentum = 2;
+  required float weight_decay = 3;
+  required float lars_coefficient = 4;
+}
+
 message AccumulateOpConf {
 }
 
@@ -208,8 +215,9 @@ message OperatorConf {
     CopyCommNetOpConf copy_comm_net_conf = 114;
     MomentumModelUpdateOpConf momentum_mdupdt_conf = 115;
     RMSPropModelUpdateOpConf rmsprop_mdupdt_conf = 116;
-    SoftmaxLossOpConf softmax_loss_conf = 117;
-    RecordOpConf record_conf = 118;
-    LossRecordOpConf loss_record_conf = 119;
+    LARSModelUpdateOpConf lars_mdupdt_conf = 117;
+    SoftmaxLossOpConf softmax_loss_conf = 118;
+    RecordOpConf record_conf = 119;
+    LossRecordOpConf loss_record_conf = 120;
   }
 }
