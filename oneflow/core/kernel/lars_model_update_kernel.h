@@ -25,6 +25,10 @@ class LARSMdUpdateKernel final : public ModelUpdtKernel {
 template<DeviceType device_type, typename T>
 class LARSMdUpdateKernelUtil final {
  public:
+  //  local_lr = lars_coefficient * ||model|| / ( ||model_diff|| + ||model||)
+  //  momentum[i] = m * momentum[i] + local_lr
+  //                + learning_rate * (model_diff[i] + weight_decay * model[i])
+  //  model[i] = model[i] - momentum[i]
   static void UpdateModel(const KernelCtx& ctx, const int64_t n,
                           const T lars_coefficient, const T learning_rate,
                           const T m, const T weight_decay, T* model,

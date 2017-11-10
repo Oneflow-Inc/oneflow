@@ -14,6 +14,9 @@ void LARSMdUpdateKernel<device_type, T>::Forward(
   const int64_t batch_num = *reinterpret_cast<int64_t*>(ctx.other) - 1;
   const int64_t total_batch_num = JobDesc::Singleton()->total_batch_num();
   const float batch_size = JobDesc::Singleton()->batch_size();
+  // t = batch_size
+  // T = total_batch_size
+  // learning_rate = base_learning_rate * (1 - t / T) ^ 2
   const float learning_rate =
       conf.learning_rate()
       * (1 - static_cast<float>(batch_num) / total_batch_num)
