@@ -16,6 +16,7 @@ message TrainConf {
     NormalModelUpdateOpConf normal_mdupdt_conf = 1000;
     MomentumModelUpdateOpConf momentum_mdupdt_conf = 1001;
     RMSPropModelUpdateOpConf rmsprop_mdupdt_conf = 1002;
+    LARSModelUpdateOpConf lars_mdupdt_conf = 1003;
   }
 }
 

@@ -46,6 +46,9 @@ std::shared_ptr<Operator> OpMgr::ModelUpdateOp() {
       } else if (train_conf.has_rmsprop_mdupdt_conf()) {
         *(mdupdt_conf.mutable_rmsprop_mdupdt_conf()) =
             train_conf.rmsprop_mdupdt_conf();
+      } else if (train_conf.has_lars_mdupdt_conf()) {
+        *(mdupdt_conf.mutable_lars_mdupdt_conf()) =
+            train_conf.lars_mdupdt_conf();
       } else {
         UNEXPECTED_RUN();
       }
