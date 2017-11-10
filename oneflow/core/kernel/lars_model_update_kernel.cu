@@ -21,6 +21,15 @@ __global__ void UpdateModelGpu(const int64_t n, const T local_lr, const T m,
   }
 }
 
+template<typename T>
+T GetNorm(DeviceCtx* ctx, const int64_t n, const T* data, T* temp) {
+  GetSquareGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                    ctx->cuda_stream()>>>(n, data, temp);
+  KernelUtil<DeviceType::kGPU, T>::Sum(ctx, n, temp, temp + n, temp + n + 1,
+                                       (n - 1) * sizeof(T));
+  return std::sqrt(*(temp + n) / n);
+}
+
 }  // namespace
 
 template<typename T>
@@ -30,17 +39,8 @@ class LARSMdUpdateKernelUtil<DeviceType::kGPU, T> final {
                           const T lars_coefficient, const T learning_rate,
                           const T m, const T weight_decay, T* model,
                           T* momentum, T* temp, const T* model_diff) {
-    GetSquareGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                      ctx.device_ctx->cuda_stream()>>>(n, model, temp);
-    KernelUtil<DeviceType::kGPU, T>::Sum(ctx.device_ctx, n, temp, temp + n,
-                                         temp + n + 1, (n - 1) * sizeof(T));
-    T model_norm = std::sqrt(*(temp + n) / n);
-
-    GetSquareGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                      ctx.device_ctx->cuda_stream()>>>(n, model_diff, temp);
-    KernelUtil<DeviceType::kGPU, T>::Sum(ctx.device_ctx, n, temp, temp + n,
-                                         temp + n + 1, (n - 1) * sizeof(T));
-    T model_diff_norm = std::sqrt(*(temp + n) / n);
+    T model_norm = GetNorm(ctx.device_ctx, n, model, temp);
+    T model_diff_norm = GetNorm(ctx.device_ctx, n, model_diff, temp);
 
     const T local_lr = learning_rate * lars_coefficient * model_norm
                        / (model_diff_norm + weight_decay * model_norm);
