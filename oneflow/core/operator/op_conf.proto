@@ -173,7 +173,7 @@ message RMSPropModelUpdateOpConf {
 }
 
 message LARSModelUpdateOpConf {
-  required float learning_rate = 1 [default = 0.01];
+  optional float learning_rate = 1 [default = 0.01];
   required float momentum = 2;
   required float weight_decay = 3;
   required float lars_coefficient = 4;
