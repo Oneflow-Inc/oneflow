@@ -36,11 +36,16 @@ void Scheduler::Process(const std::string& job_conf_filepath,
   NewAllSingleton(job_conf_filepath, this_machine_name, env);
   auto plan = of_make_unique<Plan>();
   std::string naive_plan_filepath = JoinPath(LogDir(), "naive_plan");
+  //#ifdef PLATFORM_WINDOWS
+  //  char current_dir[128];
+  //  GetCurrentDirectory(100, current_dir);
+  //  LOG(INFO) << "current_dir is " << current_dir << "\n";
+  //#endif  // PLATFORM_WINDOWS
   // Compile
   if (RuntimeCtx::Singleton()->IsThisMachineMaster()) {
     std::stringstream compile_cmd;
 #ifdef PLATFORM_WINDOWS
-    compile_cmd << "./Debug/compiler.exe "
+    compile_cmd << "compiler.exe "
                 << "-job_conf_filepath=\"" << job_conf_filepath << "\" "
                 << "-plan_filepath=\"" << naive_plan_filepath << "\"";
 #else
@@ -63,7 +68,7 @@ void Scheduler::Process(const std::string& job_conf_filepath,
   // Runtime
   std::stringstream runtime_cmd;
 #ifdef PLATFORM_WINDOWS
-  runtime_cmd << "./Debug/runtime.exe "
+  runtime_cmd << "runtime.exe "
               << "-plan_filepath=\"" << naive_plan_filepath << "\" "
               << "-this_machine_name=\"" << this_machine_name << "\"";
 #else
