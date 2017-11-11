@@ -94,7 +94,7 @@ struct GlobalFSConstructor {
     const GlobalFSConf& gfs_conf =
         JobDesc::Singleton()->job_conf().global_fs_conf();
     if (gfs_conf.has_localfs_conf()) {
-      CHECK_EQ(JobDesc::Singleton()->resource().machine().size(), 1);
+      // CHECK_EQ(JobDesc::Singleton()->resource().machine().size(), 1);
       gfs = LocalFS();
     } else if (gfs_conf.has_hdfs_conf()) {
       gfs = new HadoopFileSystem(gfs_conf.hdfs_conf());
