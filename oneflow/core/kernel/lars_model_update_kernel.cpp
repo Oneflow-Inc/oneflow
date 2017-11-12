@@ -13,7 +13,6 @@ void LARSMdUpdateKernel<device_type, T>::Forward(
   const LARSModelUpdateOpConf& conf = op()->op_conf().lars_mdupdt_conf();
   const int64_t batch_num = *reinterpret_cast<int64_t*>(ctx.other) - 1;
   const int64_t total_batch_num = JobDesc::Singleton()->total_batch_num();
-  const float batch_size = JobDesc::Singleton()->batch_size();
   // t = batch_size
   // T = total_batch_size
   // learning_rate = base_learning_rate * (1 - t / T) ^ 2
@@ -24,11 +23,12 @@ void LARSMdUpdateKernel<device_type, T>::Forward(
   const float lars_coefficient = conf.lars_coefficient();
   const float momentum = conf.momentum();
   const float weight_decay = conf.weight_decay();
+  int64_t batch_size = JobDesc::Singleton()->batch_size();
 
   LARSMdUpdateKernelUtil<device_type, T>::UpdateModel(
       ctx, model_blob->shape().elem_cnt(), static_cast<T>(lars_coefficient),
-      static_cast<T>(learning_rate / batch_size), static_cast<T>(momentum),
-      static_cast<T>(weight_decay), model_blob->mut_dptr<T>(),
+      static_cast<T>(learning_rate), static_cast<T>(momentum),
+      static_cast<T>(weight_decay * batch_size), model_blob->mut_dptr<T>(),
       momentum_blob->mut_dptr<T>(), temp_blob->mut_dptr<T>(),
       model_diffs_blob->dptr<T>());
 }
