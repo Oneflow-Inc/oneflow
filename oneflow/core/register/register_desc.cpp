@@ -7,15 +7,20 @@ namespace oneflow {
 
 RegstDesc::RegstDesc() {
   regst_desc_id_ = IDMgr::Singleton()->NewRegstDescId();
-  is_blob_desc_locked_ = false;
+  is_locked_ = false;
 }
 
 void RegstDesc::AddConsumer(const TaskNode* new_consumer) {
   CHECK(consumers_.insert(new_consumer).second);
 }
 
+void RegstDesc::Lock() {
+  CHECK_EQ(is_locked_, false);
+  is_locked_ = true;
+}
+
 void RegstDesc::CopyBlobDescFrom(const RegstDesc* rhs) {
-  CHECK_EQ(is_blob_desc_locked_, false);
+  CHECK_EQ(is_locked_, false);
   CHECK(lbn2blob_desc_.empty());
   for (const auto& pair : rhs->lbn2blob_desc_) {
     const std::string& lbn = pair.first;
@@ -25,15 +30,15 @@ void RegstDesc::CopyBlobDescFrom(const RegstDesc* rhs) {
 }
 
 BlobDesc* RegstDesc::AddLbn(const std::string& lbn) {
-  CHECK_EQ(is_blob_desc_locked_, false);
+  CHECK_EQ(is_locked_, false);
   CHECK(lbn2blob_desc_.find(lbn) == lbn2blob_desc_.end()) << lbn;
   BlobDesc* blob_desc = new BlobDesc;
   lbn2blob_desc_[lbn].reset(blob_desc);
   return blob_desc;
 }
 
-const BlobDesc& RegstDesc::GetBlobDesc(const std::string& lbn) const {
-  return *(lbn2blob_desc_.at(lbn));
+const BlobDesc* RegstDesc::GetBlobDesc(const std::string& lbn) const {
+  return const_cast<RegstDesc*>(this)->MutBlobDesc(lbn);
 }
 
 BlobDesc* RegstDesc::MutBlobDesc(const std::string& lbn) {

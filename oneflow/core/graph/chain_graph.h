@@ -13,7 +13,7 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
   ChainGraph() = default;
   ~ChainGraph() = default;
 
-  ChainGraph(const LogicalGraph& logical_gph, bool is_train);
+  ChainGraph(bool is_train);
 
   const char* TypeName() const override { return "ChainGraph"; }
 
@@ -29,7 +29,7 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
     for (ChainNodeType* valid_node : valid_nodes) { Handler(valid_node); }
   }
 
-  void BuildFwStruct(const LogicalGraph& logical_gph);
+  void BuildFwStruct();
   void BuildBwStruct();
   void BuildLossRecordStruct();
   void BuildModelStruct(bool is_train);

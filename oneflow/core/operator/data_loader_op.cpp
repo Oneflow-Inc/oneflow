@@ -19,7 +19,7 @@ void DataLoaderOp::InferBlobDescs(
   const DataLoaderOpConf& conf = op_conf().data_loader_conf();
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   out->mut_shape() = Shape(conf.shape());
-  out->mut_shape().Set(0, JobDesc::Singleton()->piece_size());
+  out->mut_shape().Set(0, JobDesc::Singleton()->SinglePieceSize());
   out->set_data_type(conf.data_type());
   out->set_has_data_id(JobDesc::Singleton()->is_predict()
                        && JobDesc::Singleton()->SizeOfOneDataId() != 0);

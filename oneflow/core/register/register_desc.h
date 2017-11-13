@@ -32,11 +32,11 @@ class RegstDesc final {
   void set_max_register_num(int32_t val) { max_register_num_ = val; }
 
   // lbn2blob_desc_
-  bool is_blob_desc_locked() const { return is_blob_desc_locked_; }
-  void LockBlobDesc() { is_blob_desc_locked_ = true; }
+  bool IsLocked() const { return is_locked_; }
+  void Lock();
   void CopyBlobDescFrom(const RegstDesc*);
   BlobDesc* AddLbn(const std::string& lbn);
-  const BlobDesc& GetBlobDesc(const std::string& lbn) const;
+  const BlobDesc* GetBlobDesc(const std::string& lbn) const;
   BlobDesc* MutBlobDesc(const std::string& lbn);
   void ForEachLbn(std::function<void(const std::string&)> func) const;
   size_t NumOfLbn() const { return lbn2blob_desc_.size(); }
@@ -57,7 +57,7 @@ class RegstDesc final {
   int32_t max_register_num_;
 
   HashMap<std::string, std::unique_ptr<BlobDesc>> lbn2blob_desc_;
-  bool is_blob_desc_locked_;
+  bool is_locked_;
 
   MemoryCase mem_case_;
 };

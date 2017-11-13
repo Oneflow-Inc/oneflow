@@ -26,38 +26,26 @@ class BoxingTaskNode : public TaskNode {
   void ConsumeAllRegsts() override;
   void Build() override;
 
-  std::shared_ptr<Operator> BldBoxingOpWithDataConcatAndDataSplit(
-      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
-      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
-      int64_t* used_in_edge_begin, int64_t* used_out_edge_begin);
-  std::shared_ptr<Operator> BldBoxingOpWithDataConcatAndClone(
-      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
-      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
-      int64_t* used_in_edge_begin, int64_t* used_out_edge_begin);
-  std::shared_ptr<Operator> BldBoxingOpWithDataConcatAndModelSplit(
-      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
-      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
-      int64_t* used_in_edge_begin, int64_t* used_out_edge_begin);
-  std::shared_ptr<Operator> BldBoxingOpWithModelConcatAndDataSplit(
-      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
-      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
-      int64_t* used_in_edge_begin, int64_t* used_out_edge_begin);
-  std::shared_ptr<Operator> BldBoxingOpWithModelConcatAndClone(
-      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
-      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
-      int64_t* used_in_edge_begin, int64_t* used_out_edge_begin);
-  std::shared_ptr<Operator> BldBoxingOpWithAddAndDataSplit(
-      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
-      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
-      int64_t* used_in_edge_begin, int64_t* used_out_edge_begin);
-  std::shared_ptr<Operator> BldBoxingOpWithAddAndModelSplit(
-      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
-      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
-      int64_t* used_in_edge_begin, int64_t* used_out_edge_begin);
-  std::shared_ptr<Operator> BldBoxingOpWithAddAndClone(
-      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
-      const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
-      int64_t* used_in_edge_begin, int64_t* used_out_edge_begin);
+#define DECLARE_BLD_BOXING_OP_CONF_METHOD(x)                                   \
+  void BldBoxingOpConfWith##x(                                                 \
+      const std::string& lbn, const std::vector<EdgeInfo>& sorted_in_edges,    \
+      int64_t in_parallel_num, int64_t in_edge_first, int64_t in_edge_last,    \
+      const std::vector<EdgeInfo>& sorted_out_edges, int64_t out_parallel_num, \
+      int64_t* used_out_edge_begin, BoxingOpConf*)
+
+#define DECLARE_VIRTUAL_BLD_BOXING_OP_CONF_METHOD(x) \
+  virtual DECLARE_BLD_BOXING_OP_CONF_METHOD(x) = 0
+
+  DECLARE_BLD_BOXING_OP_CONF_METHOD();
+
+  DECLARE_VIRTUAL_BLD_BOXING_OP_CONF_METHOD(DataConcatAndDataSplit);
+  DECLARE_BLD_BOXING_OP_CONF_METHOD(DataConcatAndClone);
+  DECLARE_BLD_BOXING_OP_CONF_METHOD(DataConcatAndModelSplit);
+  DECLARE_BLD_BOXING_OP_CONF_METHOD(ModelConcatAndDataSplit);
+  DECLARE_BLD_BOXING_OP_CONF_METHOD(ModelConcatAndClone);
+  DECLARE_BLD_BOXING_OP_CONF_METHOD(AddAndDataSplit);
+  DECLARE_BLD_BOXING_OP_CONF_METHOD(AddAndModelSplit);
+  DECLARE_BLD_BOXING_OP_CONF_METHOD(AddAndClone);
 
  private:
   void InitChain2SortedEdgeInfo(
@@ -70,17 +58,22 @@ class BoxingTaskNode : public TaskNode {
                           const ChainNode* out_chain,
                           const std::vector<EdgeInfo>& sorted_out_edges);
   std::shared_ptr<Operator> NewBoxingOp(
-      const ChainNode* in_chain, const ChainNode* out_chain,
-      const std::vector<EdgeInfo>& sorted_in_edges,
+      const std::string& lbn, const ChainNode* in_chain,
+      const ChainNode* out_chain, const std::vector<EdgeInfo>& sorted_in_edges,
       const std::vector<EdgeInfo>& sorted_out_edges,
       int64_t* used_in_edge_begin, int64_t* used_out_edge_begin);
 };
+
+#define OVERRIDE_BLD_BOXING_OP_METHOD(x) \
+  DECLARE_BLD_BOXING_OP_CONF_METHOD(x) override
 
 class InBoxingTaskNode final : public BoxingTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(InBoxingTaskNode);
   InBoxingTaskNode() = default;
   ~InBoxingTaskNode() = default;
+
+  OVERRIDE_BLD_BOXING_OP_METHOD(DataConcatAndDataSplit);
 
  private:
 };
@@ -90,6 +83,8 @@ class OutBoxingTaskNode final : public BoxingTaskNode {
   OF_DISALLOW_COPY_AND_MOVE(OutBoxingTaskNode);
   OutBoxingTaskNode() = default;
   ~OutBoxingTaskNode() = default;
+
+  OVERRIDE_BLD_BOXING_OP_METHOD(DataConcatAndDataSplit);
 
  private:
 };

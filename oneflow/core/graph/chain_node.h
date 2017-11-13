@@ -18,10 +18,12 @@ using BldSubTskGphMthd = void (TaskGraph::*)(
     HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_in_box,
     HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_out_box);
 
-using BldBoxingOpMthd = std::shared_ptr<Operator> (BoxingTaskNode::*)(
+using BldBoxingOpConfMthd = void (BoxingTaskNode::*)(
+    const std::string& lbn,
     const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
+    int64_t in_parallel_num, int64_t in_edge_first, int64_t in_edge_last,
     const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
-    int64_t* used_in_edge_begin, int64_t* used_out_edge_begin);
+    int64_t out_parallel_num, int64_t* used_out_edge_begin, BoxingOpConf*);
 
 #define CHAIN_TYPE_SEQ             \
   OF_PP_MAKE_TUPLE_SEQ(Forward)    \
@@ -56,15 +58,16 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
 
   // To
   virtual BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const = 0;
-  virtual BldBoxingOpMthd GetMthdForBldBoxingOpTo(const ChainNode*) const = 0;
+  virtual BldBoxingOpConfMthd GetMthdForBldBoxingOpConfTo(
+      const ChainNode*) const = 0;
   virtual std::vector<std::string> FindLbnsTo(const ChainNode*) const = 0;
 
 // From
 #define DECLARE_VIRTUAL_FROM_METHOD(x)                                     \
   virtual BldSubTskGphMthd GetMthdForBldSubTskGphFrom##x(const ChainNode*) \
       const;                                                               \
-  virtual BldBoxingOpMthd GetMthdForBldBoxingOpFrom##x(const ChainNode*)   \
-      const;                                                               \
+  virtual BldBoxingOpConfMthd GetMthdForBldBoxingOpConfFrom##x(            \
+      const ChainNode*) const;                                             \
   virtual std::vector<std::string> FindLbnsFrom##x(const ChainNode*) const;
 
   OF_PP_FOR_EACH_TUPLE(DECLARE_VIRTUAL_FROM_METHOD, CHAIN_TYPE_SEQ);
@@ -84,7 +87,8 @@ class BackwardChainNode;
 #define OVERRIDE_PURE_VIRTUAL_METHOD()                                        \
   const char* TypeName() const override;                                      \
   BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const override; \
-  BldBoxingOpMthd GetMthdForBldBoxingOpTo(const ChainNode*) const override;   \
+  BldBoxingOpConfMthd GetMthdForBldBoxingOpConfTo(const ChainNode*)           \
+      const override;                                                         \
   std::vector<std::string> FindLbnsTo(const ChainNode*) const override;       \
   CompTaskNode* NewCompTaskNode() const override;
 
@@ -104,9 +108,9 @@ class ForwardChainNode final : public ChainNode {
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
                                    (Forward)(Source)(MdUpdt));
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
-                                   (BldBoxingOpMthd GetMthdForBldBoxingOp),
-                                   (Forward)(Source));
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+      OVERRIDE_FROM_METHOD, (BldBoxingOpConfMthd GetMthdForBldBoxingOpConf),
+      (Forward)(Source));
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (std::vector<std::string> FindLbns),
                                    (Forward)(Source));
@@ -129,9 +133,9 @@ class BackwardChainNode final : public ChainNode {
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
                                    (Forward)(Backward)(Loss)(MdUpdt));
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
-                                   (BldBoxingOpMthd GetMthdForBldBoxingOp),
-                                   (Backward)(Loss));
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+      OVERRIDE_FROM_METHOD, (BldBoxingOpConfMthd GetMthdForBldBoxingOpConf),
+      (Backward)(Loss));
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (std::vector<std::string> FindLbns),
                                    (Backward)(Loss));
@@ -160,9 +164,9 @@ class LossChainNode final : public ChainNode {
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
                                    (Forward)(Source));
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
-                                   (BldBoxingOpMthd GetMthdForBldBoxingOp),
-                                   (Forward)(Source));
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+      OVERRIDE_FROM_METHOD, (BldBoxingOpConfMthd GetMthdForBldBoxingOpConf),
+      (Forward)(Source));
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (std::vector<std::string> FindLbns),
                                    (Forward)(Source));
@@ -192,9 +196,9 @@ class LossRecordChainNode final : public ChainNode {
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
                                    (LossAcc));
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
-                                   (BldBoxingOpMthd GetMthdForBldBoxingOp),
-                                   (LossAcc));
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+      OVERRIDE_FROM_METHOD, (BldBoxingOpConfMthd GetMthdForBldBoxingOpConf),
+      (LossAcc));
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (std::vector<std::string> FindLbns),
                                    (LossAcc));
@@ -211,9 +215,9 @@ class MdUpdtChainNode final : public ChainNode {
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
                                    (MdDiffAcc));
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
-                                   (BldBoxingOpMthd GetMthdForBldBoxingOp),
-                                   (MdDiffAcc));
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+      OVERRIDE_FROM_METHOD, (BldBoxingOpConfMthd GetMthdForBldBoxingOpConf),
+      (MdDiffAcc));
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (std::vector<std::string> FindLbns),
                                    (MdDiffAcc));

@@ -21,11 +21,11 @@ using Logical2ChainItMap = HashMap<const LogicalNode*, ChainIt>;
 
 void SetChainNodeWithChainIt(ChainNode* chain_node, ChainIt chain_it) {}
 
-void InitChains(const LogicalGraph& logi_gph, std::list<Chain>* chain_list,
+void InitChains(std::list<Chain>* chain_list,
                 Logical2ChainItMap* logical2chain_it) {
   chain_list->clear();
   logical2chain_it->clear();
-  logi_gph.ForEachNode([&](const LogicalNode* node) {
+  LogicalGraph::Singleton()->ForEachNode([&](const LogicalNode* node) {
     // Init one Chain with one Node
     chain_list->emplace_back();
     logical2chain_it->insert({node, --chain_list->end()});
@@ -33,8 +33,8 @@ void InitChains(const LogicalGraph& logi_gph, std::list<Chain>* chain_list,
     cur_chain.nodes = {node};
   });
   // Init ancestors
-  logi_gph.TopoForEachNode([&](LogicalNode* node) {
-    ChainIt cur_chain = logical2chain_it->at(&(*node));
+  LogicalGraph::Singleton()->TopoForEachNode([&](LogicalNode* node) {
+    ChainIt cur_chain = logical2chain_it->at(node);
     cur_chain->ancestors.clear();
     cur_chain->ancestors_and_this.clear();
     cur_chain->ancestors_and_this.insert(cur_chain->nodes.begin(),
@@ -53,8 +53,8 @@ void InitChains(const LogicalGraph& logi_gph, std::list<Chain>* chain_list,
                                          cur_chain->ancestors.end());
   });
   // Init descendants
-  logi_gph.ReverseTopoForEachNode([&](LogicalNode* node) {
-    ChainIt cur_chain = logical2chain_it->at(&(*node));
+  LogicalGraph::Singleton()->ReverseTopoForEachNode([&](LogicalNode* node) {
+    ChainIt cur_chain = logical2chain_it->at(node);
     cur_chain->descendants.clear();
     cur_chain->descendants_and_this.clear();
     cur_chain->descendants_and_this.insert(cur_chain->nodes.begin(),
@@ -184,8 +184,7 @@ bool DoOneDataMerge(const std::vector<const LogicalNode*>& data_parallel_node,
   return false;
 }
 
-void DataMergeChains(const LogicalGraph& logical_gph,
-                     std::list<Chain>* chain_list,
+void DataMergeChains(std::list<Chain>* chain_list,
                      Logical2ChainItMap* logical2chain_it) {
   std::vector<const LogicalNode*> data_parallel_node;
   for (const auto& pair : *logical2chain_it) {
@@ -200,8 +199,8 @@ void DataMergeChains(const LogicalGraph& logical_gph,
 
 }  // namespace
 
-ChainGraph::ChainGraph(const LogicalGraph& logical_gph, bool is_train) {
-  BuildFwStruct(logical_gph);
+ChainGraph::ChainGraph(bool is_train) {
+  BuildFwStruct();
   if (is_train) {
     BuildBwStruct();
     BuildLossRecordStruct();
@@ -211,13 +210,13 @@ ChainGraph::ChainGraph(const LogicalGraph& logical_gph, bool is_train) {
   ToDotWithAutoFilePath();
 }
 
-void ChainGraph::BuildFwStruct(const LogicalGraph& logical_gph) {
+void ChainGraph::BuildFwStruct() {
   // Build Chain
   std::list<Chain> chain_list;
   Logical2ChainItMap logical2chain_it;
-  InitChains(logical_gph, &chain_list, &logical2chain_it);
+  InitChains(&chain_list, &logical2chain_it);
   ModelMergeChains(&chain_list, &logical2chain_it);
-  DataMergeChains(logical_gph, &chain_list, &logical2chain_it);
+  DataMergeChains(&chain_list, &logical2chain_it);
   // Init chain_nodes
   auto HashChainIt = [](const ChainIt& chain_it) {
     return std::hash<Chain*>()(&(*chain_it));

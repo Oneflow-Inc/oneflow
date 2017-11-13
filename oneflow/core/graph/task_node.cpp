@@ -55,7 +55,7 @@ void TaskNode::ConsumeRegst(const std::string& name,
 
 bool TaskNode::IsAllConsumedRegstLocked() {
   for (auto& pair : consumed_regsts_) {
-    if (pair.second.lock()->is_blob_desc_locked() == false) { return false; }
+    if (pair.second.lock()->IsLocked() == false) { return false; }
   }
   return true;
 }

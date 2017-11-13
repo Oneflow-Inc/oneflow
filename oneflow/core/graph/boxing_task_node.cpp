@@ -1,5 +1,6 @@
 #include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/graph/chain_node.h"
+#include "oneflow/core/operator/operator_manager.h"
 
 namespace oneflow {
 
@@ -40,56 +41,37 @@ void BoxingTaskNode::Build() {
   }
 }
 
-std::shared_ptr<Operator> BoxingTaskNode::BldBoxingOpWithDataConcatAndDataSplit(
-    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
-    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
-    int64_t* used_in_edge_begin, int64_t* used_out_edge_begin) {
+#define DEFINE_BLD_BOXING_OP_CONF_METHOD(x, y)                                 \
+  void x::BldBoxingOpConfWith##y(                                              \
+      const std::string& lbn, const std::vector<EdgeInfo>& sorted_in_edges,    \
+      int64_t in_parallel_num, int64_t in_edge_first, int64_t in_edge_last,    \
+      const std::vector<EdgeInfo>& sorted_out_edges, int64_t out_parallel_num, \
+      int64_t* used_out_edge_begin, BoxingOpConf* conf)
+
+DEFINE_BLD_BOXING_OP_CONF_METHOD(InBoxingTaskNode, DataConcatAndDataSplit) {
+  *used_out_edge_begin = 0;
+  conf->set_out_num(sorted_out_edges.size());
+  conf->mutable_concat_box()->set_axis(0);
+  BoxSplitConf* split_conf = conf->mutable_split_box();
+  split_conf->set_axis(0);
   TODO();
 }
-std::shared_ptr<Operator> BoxingTaskNode::BldBoxingOpWithDataConcatAndClone(
-    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
-    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
-    int64_t* used_in_edge_begin, int64_t* used_out_edge_begin) {
+DEFINE_BLD_BOXING_OP_CONF_METHOD(OutBoxingTaskNode, DataConcatAndDataSplit) {
   TODO();
 }
-std::shared_ptr<Operator>
-BoxingTaskNode::BldBoxingOpWithDataConcatAndModelSplit(
-    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
-    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
-    int64_t* used_in_edge_begin, int64_t* used_out_edge_begin) {
+DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, DataConcatAndClone) { TODO(); }
+DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, DataConcatAndModelSplit) {
   TODO();
 }
-std::shared_ptr<Operator>
-BoxingTaskNode::BldBoxingOpWithModelConcatAndDataSplit(
-    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
-    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
-    int64_t* used_in_edge_begin, int64_t* used_out_edge_begin) {
+DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, ModelConcatAndDataSplit) {
   TODO();
 }
-std::shared_ptr<Operator> BoxingTaskNode::BldBoxingOpWithModelConcatAndClone(
-    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
-    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
-    int64_t* used_in_edge_begin, int64_t* used_out_edge_begin) {
+DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, ModelConcatAndClone) {
   TODO();
 }
-std::shared_ptr<Operator> BoxingTaskNode::BldBoxingOpWithAddAndDataSplit(
-    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
-    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
-    int64_t* used_in_edge_begin, int64_t* used_out_edge_begin) {
-  TODO();
-}
-std::shared_ptr<Operator> BoxingTaskNode::BldBoxingOpWithAddAndModelSplit(
-    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
-    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
-    int64_t* used_in_edge_begin, int64_t* used_out_edge_begin) {
-  TODO();
-}
-std::shared_ptr<Operator> BoxingTaskNode::BldBoxingOpWithAddAndClone(
-    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
-    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
-    int64_t* used_in_edge_begin, int64_t* used_out_edge_begin) {
-  TODO();
-}
+DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, AddAndDataSplit) { TODO(); }
+DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, AddAndModelSplit) { TODO(); }
+DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, AddAndClone) { TODO(); }
 
 void BoxingTaskNode::InitChain2SortedEdgeInfo(
     const std::unordered_set<TaskEdge*>& (TaskNode::*GetEdges)() const,
@@ -142,7 +124,7 @@ void BoxingTaskNode::BuildWithChainPair(
     int64_t used_in_edge_begin = -1;
     int64_t used_out_edge_begin = -1;
     node->mut_op() =
-        NewBoxingOp(in_chain, out_chain, sorted_in_edges, sorted_out_edges,
+        NewBoxingOp(lbn, in_chain, out_chain, sorted_in_edges, sorted_out_edges,
                     &used_in_edge_begin, &used_out_edge_begin);
     CHECK_NE(used_in_edge_begin, -1);
     CHECK_NE(used_out_edge_begin, -1);
@@ -167,13 +149,30 @@ void BoxingTaskNode::BuildWithChainPair(
 }
 
 std::shared_ptr<Operator> BoxingTaskNode::NewBoxingOp(
-    const ChainNode* in_chain, const ChainNode* out_chain,
-    const std::vector<EdgeInfo>& sorted_in_edges,
+    const std::string& lbn, const ChainNode* in_chain,
+    const ChainNode* out_chain, const std::vector<EdgeInfo>& sorted_in_edges,
     const std::vector<EdgeInfo>& sorted_out_edges, int64_t* used_in_edge_begin,
     int64_t* used_out_edge_begin) {
-  BldBoxingOpMthd method = in_chain->GetMthdForBldBoxingOpTo(out_chain);
-  return (this->*method)(sorted_in_edges, sorted_out_edges, used_in_edge_begin,
-                         used_out_edge_begin);
+  BldBoxingOpConfMthd method = in_chain->GetMthdForBldBoxingOpConfTo(out_chain);
+  OperatorConf op_conf;
+  op_conf.set_name("boxing_op_" + NewUniqueId());
+  BoxingOpConf* boxing_conf = op_conf.mutable_boxing_conf();
+  boxing_conf->set_lbn(lbn);
+  int64_t in_edge_last = -1;
+  for (int64_t i = 0; i < sorted_in_edges.size(); ++i) {
+    auto in_regst = sorted_in_edges[i].edge->GetSoleRegst();
+    if (in_regst->GetBlobDesc(lbn) == nullptr) { continue; }
+    if (*used_in_edge_begin == -1) { *used_in_edge_begin = i; }
+    in_edge_last = i;
+  }
+  CHECK_NE(in_edge_last, -1);
+  boxing_conf->set_in_num(in_edge_last - (*used_in_edge_begin) + 1);
+  (this->*method)(lbn, sorted_in_edges,
+                  in_chain->parallel_desc()->parallel_num(),
+                  *used_in_edge_begin, in_edge_last, sorted_out_edges,
+                  out_chain->parallel_desc()->parallel_num(),
+                  used_out_edge_begin, boxing_conf);
+  return OpMgr::Singleton()->AddOp(op_conf);
 }
 
 }  // namespace oneflow

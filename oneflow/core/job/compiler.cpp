@@ -25,7 +25,9 @@ Plan Compiler::Compile(const JobConf& job_conf) {
   JobDesc::NewSingleton(job_conf);
   IDMgr::NewSingleton();
   OpMgr::NewSingleton();
+  LogicalGraph::NewSingleton();
   Plan plan = DoCompile();
+  LogicalGraph::DeleteSingleton();
   OpMgr::DeleteSingleton();
   IDMgr::DeleteSingleton();
   JobDesc::DeleteSingleton();
@@ -33,10 +35,7 @@ Plan Compiler::Compile(const JobConf& job_conf) {
 }
 
 Plan Compiler::DoCompile() {
-  LogicalGraph logical_gph(JobDesc::Singleton()->dlnet_conf(),
-                           JobDesc::Singleton()->placement());
-  auto chain_gph =
-      of_make_unique<ChainGraph>(logical_gph, JobDesc::Singleton()->is_train());
+  auto chain_gph = of_make_unique<ChainGraph>(JobDesc::Singleton()->is_train());
   auto task_gph = of_make_unique<TaskGraph>(std::move(chain_gph));
 }
 
