@@ -10,7 +10,7 @@ void RMSPropMdUpdateKernel<device_type, T>::Forward(
   Blob* model_blob = BnInOp2Blob("model");
   Blob* mean_square_blob = BnInOp2Blob("mean_square");
   const RMSPropModelUpdateOpConf& conf = op()->op_conf().rmsprop_mdupdt_conf();
-  const float batch_size = JobDesc::Singleton()->batch_size();
+  const float batch_size = JobDesc::Singleton()->BatchSize();
   const float learning_rate = conf.learning_rate();
   const float epsilon = conf.epsilon();
   float decay_rate = conf.decay_rate();

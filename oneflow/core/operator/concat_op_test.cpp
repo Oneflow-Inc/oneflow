@@ -25,7 +25,7 @@ TEST(ConcatOp, concat_two_3x3) {
   auto bn2blob_desc_func = [&](const std::string& bn) {
     return bn2blob_desc_map.at(bn);
   };
-  concat_op->InferBlobDesc4FwBlobs(bn2blob_desc_func, kDataParallel, 0, 1);
+  concat_op->InferBlobDescs(bn2blob_desc_func, kDataParallel, 0, 1);
   ASSERT_TRUE(*(bn2blob_desc_map.at(concat_op->SoleObn()))
               == BlobDesc(Shape({2, 3, 14, 5}), DataType::kFloat, false));
 }

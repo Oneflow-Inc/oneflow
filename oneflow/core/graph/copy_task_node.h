@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_GRAPH_COPY_TASK_NODE_H_
 #define ONEFLOW_CORE_GRAPH_COPY_TASK_NODE_H_
 
-#include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/graph/compute_task_node.h"
 
 namespace oneflow {
 
@@ -11,49 +11,22 @@ class CopyTaskNode : public TaskNode {
   CopyTaskNode() = default;
   virtual ~CopyTaskNode() = default;
 
- protected:
-  virtual std::shared_ptr<Operator> AddOp() const = 0;
+  void ProduceAllRegstsAndBindEdges() override { TODO(); }
 
  private:
-  void BuildExecAndEnrollLbn2Regsts(TaskGraph*) override;
-  void InferBlobDescInProducedRegsts(TaskGraph*) override;
 };
 
-class CopyHDTaskNode final : public CopyTaskNode {
+class CopyHdTaskNode final : public CopyTaskNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CopyHDTaskNode);
-  CopyHDTaskNode() = default;
-  ~CopyHDTaskNode() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CopyHdTaskNode);
+  CopyHdTaskNode() = default;
+  ~CopyHdTaskNode() = default;
 
-  bool IsH2D() const {
-    return ((IsFwInCopy() && IsFwNode()) || (IsFwOutCopy() && IsBpNode()));
-  }
-  bool IsD2H() const { return !IsH2D(); }
+  TodoTaskType GetTaskType() const override { return TodoTaskType::kCopyHd; }
 
-  bool IsFwInCopy() const { return is_fw_in_copy_; }
-  bool IsFwOutCopy() const { return !is_fw_in_copy_; }
-  void SetFwInCopy();
-  void SetFwOutCopy();
-
-  std::string VisualStr() const override {
-    return TaskNode::VisualStr() + "CopyHD";
-  }
-
-  void ToProto(TaskProto* ret) const override { TaskNode::ToProto(ret); };
+  void Init(const CompTaskNode*, CopyHdOpConf::Type);
 
  private:
-  std::shared_ptr<Operator> AddOp() const override;
-
-  void InitWithFwNode(TaskNode* fw_node) override {
-    TaskNode::InitWithFwNode(fw_node);
-    is_fw_in_copy_ = static_cast<CopyHDTaskNode*>(fw_node)->is_fw_in_copy_;
-  }
-  std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    return of_make_unique<CopyHDTaskNode>();
-  }
-  TaskType task_type() const override { return kCopyHdTask; }
-
-  bool is_fw_in_copy_;
 };
 
 class CopyCommNetTaskNode final : public CopyTaskNode {
@@ -62,25 +35,13 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
   CopyCommNetTaskNode() = default;
   ~CopyCommNetTaskNode() = default;
 
-  std::string VisualStr() const override {
-    return TaskNode::VisualStr() + "CommNet";
+  TodoTaskType GetTaskType() const override {
+    return TodoTaskType::kCopyCommNet;
   }
 
-  void ToProto(TaskProto* ret) const override { TaskNode::ToProto(ret); };
-
-  DeviceType GetDeviceType() const override { return DeviceType::kCPU; }
+  void Init(int64_t machine_id);
 
  private:
-  std::shared_ptr<Operator> AddOp() const override;
-  std::unique_ptr<TaskNode> CreateSameTypeNode() const override {
-    return of_make_unique<CopyCommNetTaskNode>();
-  }
-  void InitWithFwNode(TaskNode* fw_node) override {
-    TaskNode::InitWithFwNode(fw_node);
-    set_stage_node(fw_node->SoleInEdge()->src_node()->stage_node());
-    set_task_id();
-  }
-  TaskType task_type() const override { return kCopyCommNetTask; }
 };
 
 }  // namespace oneflow

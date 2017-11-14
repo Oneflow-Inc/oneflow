@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class DataLoaderOp final : public SysOperator {
+class DataLoaderOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DataLoaderOp);
   DataLoaderOp() = default;
@@ -13,17 +13,11 @@ class DataLoaderOp final : public SysOperator {
 
   void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
+  bool IsDataLoaderOp() const override { return true; }
 
-  void InferBlobDesc4FwBlobs(
+  void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      ParallelPolicy policy, int64_t parallel_id,
-      int64_t parallel_num) override;
-
-  std::string obn2lbn(const std::string& output_bn) const override {
-    return op_name() + "/" + GetStringFromSpecialConf(output_bn);
-  }
-
- private:
+      const ParallelContext* parallel_ctx) override;
 };
 
 }  // namespace oneflow
