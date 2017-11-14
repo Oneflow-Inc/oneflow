@@ -21,6 +21,25 @@ class IDMgr final {
   std::string MachineName4MachineId(int64_t machine_id) const {
     return machine_id2machine_name_.at(machine_id);
   }
+  int64_t GetThrdLocId(const std::string& name) const {
+    if (name == "persistence") {
+      return PersistenceThrdLocId();
+    } else if (name == "boxing") {
+      return BoxingThrdLocId();
+    } else {
+      UNEXPECTED_RUN();
+    }
+  }
+  DeviceType GetDeviceTypeFromThrdLocId(int64_t thrd_loc_id) {
+    if (thrd_loc_id < device_num_per_machine_) {
+      return JobDesc::Singleton()->resource().device_type();
+    } else {
+      return DeviceType::kCPU;
+    }
+  }
+  bool IsInherentThrd(int64_t thrd_loc_id) const {
+    return thrd_loc_id >= device_num_per_machine_;
+  }
   int64_t ThrdLocId4DevPhyId(int64_t device_phy_id) const {
     return device_phy_id;
   }

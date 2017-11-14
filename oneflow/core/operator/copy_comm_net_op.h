@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class CopyCommNetOp final : public SysOperator {
+class CopyCommNetOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CopyCommNetOp);
   CopyCommNetOp() = default;
