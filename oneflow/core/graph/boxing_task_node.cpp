@@ -1,4 +1,5 @@
 #include "oneflow/core/graph/boxing_task_node.h"
+#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/graph/chain_node.h"
 #include "oneflow/core/operator/operator_manager.h"
 
@@ -54,11 +55,28 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(InBoxingTaskNode, DataConcatAndDataSplit) {
   conf->mutable_concat_box()->set_axis(0);
   BoxSplitConf* split_conf = conf->mutable_split_box();
   split_conf->set_axis(0);
-  TODO();
+  split_conf->set_left_bound_size(0);
+  split_conf->set_right_bound_size(0);
+  BalancedSplitter bs(JobDesc::Singleton()->ParallelPieceSize(),
+                      out_parallel_num);
+  split_conf->set_base_part_size(bs.BasePartSize());
+  int64_t out_prlll_id_min = sorted_out_edges.front().parallel_id_min;
+  int64_t out_prlll_id_max = sorted_out_edges.back().parallel_id_max;
+  if (bs.BaseBeginIdx() <= out_prlll_id_min) {
+    split_conf->set_bigger_part_num(0);
+    split_conf->set_base_part_num(out_prlll_id_max - out_prlll_id_min + 1);
+  } else if (out_prlll_id_min < bs.BaseBeginIdx()
+             && bs.BaseBeginIdx() <= out_prlll_id_max) {
+    split_conf->set_bigger_part_num(bs.BaseBeginIdx() - out_prlll_id_min);
+    split_conf->set_base_part_num(out_prlll_id_max - bs.BaseBeginIdx() + 1);
+  } else if (out_prlll_id_max < bs.BaseBeginIdx()) {
+    split_conf->set_bigger_part_num(out_prlll_id_max - out_prlll_id_min + 1);
+    split_conf->set_base_part_num(0);
+  } else {
+    UNEXPECTED_RUN();
+  }
 }
-DEFINE_BLD_BOXING_OP_CONF_METHOD(OutBoxingTaskNode, DataConcatAndDataSplit) {
-  TODO();
-}
+DEFINE_BLD_BOXING_OP_CONF_METHOD(OutBoxingTaskNode, DataConcatAndDataSplit) {}
 DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, DataConcatAndClone) { TODO(); }
 DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, DataConcatAndModelSplit) {
   TODO();
