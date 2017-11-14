@@ -141,12 +141,13 @@ void FwDataCompActor::Act() {
     in_.pop();
     mut_num_of_read_empty() = in_.empty();
   }
-  if (expected_piece_id() == JobDesc::Singleton()->total_piece_num()) {
-    in_desc_id_ = -2;
-    AsyncSendMsgToModelAndModelTmpProducer();
-    AsyncSendEORDMsgForAllProducedRegstDesc();
-    TrySwitchToZombie();
-  }
+  TODO();
+  // if (expected_piece_id() == JobDesc::Singleton()->total_piece_num()) {
+  //  in_desc_id_ = -2;
+  //  AsyncSendMsgToModelAndModelTmpProducer();
+  //  AsyncSendEORDMsgForAllProducedRegstDesc();
+  //  TrySwitchToZombie();
+  //}
 }
 
 REGISTER_ACTOR(kDataCompTask, true, FwDataCompActor);

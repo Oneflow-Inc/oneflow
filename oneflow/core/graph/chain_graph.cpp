@@ -19,19 +19,13 @@ struct Chain {
 using ChainIt = std::list<Chain>::iterator;
 using Logical2ChainItMap = HashMap<const LogicalNode*, ChainIt>;
 
-void SetChainNodeWithChainIt(ChainNode* chain_node, ChainIt chain_it) {
-  CHECK(!chain_it->nodes.empty());
-  chain_node->mut_parallel_desc() = chain_it->nodes.front()->parallel_desc();
-  for (const LogicalNode* logical_node : chain_it->nodes) {
-    chain_node->mut_op_vec().push_back(logical_node->op());
-  }
-}
+void SetChainNodeWithChainIt(ChainNode* chain_node, ChainIt chain_it) {}
 
-void InitChains(const LogicalGraph& logi_gph, std::list<Chain>* chain_list,
+void InitChains(std::list<Chain>* chain_list,
                 Logical2ChainItMap* logical2chain_it) {
   chain_list->clear();
   logical2chain_it->clear();
-  logi_gph.ConstForEachNode([&](const LogicalNode* node) {
+  LogicalGraph::Singleton()->ForEachNode([&](const LogicalNode* node) {
     // Init one Chain with one Node
     chain_list->emplace_back();
     logical2chain_it->insert({node, --chain_list->end()});
@@ -39,8 +33,8 @@ void InitChains(const LogicalGraph& logi_gph, std::list<Chain>* chain_list,
     cur_chain.nodes = {node};
   });
   // Init ancestors
-  logi_gph.ConstTopoForEachNode([&](const LogicalNode* node) {
-    ChainIt cur_chain = logical2chain_it->at(&(*node));
+  LogicalGraph::Singleton()->TopoForEachNode([&](LogicalNode* node) {
+    ChainIt cur_chain = logical2chain_it->at(node);
     cur_chain->ancestors.clear();
     cur_chain->ancestors_and_this.clear();
     cur_chain->ancestors_and_this.insert(cur_chain->nodes.begin(),
@@ -59,8 +53,8 @@ void InitChains(const LogicalGraph& logi_gph, std::list<Chain>* chain_list,
                                          cur_chain->ancestors.end());
   });
   // Init descendants
-  logi_gph.ConstReverseTopoForEachNode([&](const LogicalNode* node) {
-    ChainIt cur_chain = logical2chain_it->at(&(*node));
+  LogicalGraph::Singleton()->ReverseTopoForEachNode([&](LogicalNode* node) {
+    ChainIt cur_chain = logical2chain_it->at(node);
     cur_chain->descendants.clear();
     cur_chain->descendants_and_this.clear();
     cur_chain->descendants_and_this.insert(cur_chain->nodes.begin(),
@@ -85,15 +79,10 @@ void ModelMergeChains(std::list<Chain>* chain_list,
   for (auto& pair : *logical2chain_it) {
     // Get cur_node, pred_node
     const LogicalNode* cur_node = pair.first;
-    if (cur_node->op()->IsElemWise() == false) { continue; }
+    if (cur_node->op()->IsElemWiseOp() == false) { continue; }
     if (cur_node->parallel_desc()->policy() != kModelParallel) { continue; }
     const LogicalNode* pred_node = cur_node->SoleInEdge()->src_node();
-    CHECK(pred_node->parallel_desc()->Equal(cur_node->parallel_desc().get()))
-        << "the ParallelConf of "
-        << "\"" << pred_node->op()->op_name() << "\" "
-        << "and "
-        << "\"" << cur_node->op()->op_name() << "\" "
-        << "should be the same";
+    CHECK(pred_node->parallel_desc()->Equal(cur_node->parallel_desc().get()));
     // Get chain
     ChainIt pred_chain = logical2chain_it->at(pred_node);
     ChainIt cur_chain = pair.second;
@@ -195,14 +184,14 @@ bool DoOneDataMerge(const std::vector<const LogicalNode*>& data_parallel_node,
   return false;
 }
 
-void DataMergeChains(const LogicalGraph& logical_gph,
-                     std::list<Chain>* chain_list,
+void DataMergeChains(std::list<Chain>* chain_list,
                      Logical2ChainItMap* logical2chain_it) {
   std::vector<const LogicalNode*> data_parallel_node;
   for (const auto& pair : *logical2chain_it) {
     const LogicalNode* cur_logi_node = pair.first;
     if (cur_logi_node->parallel_desc()->policy() != kDataParallel) { continue; }
-    if (!cur_logi_node->IsChainMergeable()) { continue; }
+    if (cur_logi_node->op()->IsLossOp()) { continue; }
+    if (cur_logi_node->op()->IsDataLoaderOp()) { continue; }
     data_parallel_node.push_back(cur_logi_node);
   }
   while (DoOneDataMerge(data_parallel_node, chain_list, logical2chain_it)) {}
@@ -210,32 +199,24 @@ void DataMergeChains(const LogicalGraph& logical_gph,
 
 }  // namespace
 
-std::string ChainNode::ConcatedOpsName() const {
-  std::stringstream ss;
-  for (auto op : op_vec_) { ss << "\\n" << op->op_name(); }
-  if (!op_vec_.empty()) {
-    return ss.str().substr(2);
-  } else {
-    return node_id_str();
+ChainGraph::ChainGraph(bool is_train) {
+  BuildFwStruct();
+  if (is_train) {
+    BuildBwStruct();
+    BuildLossRecordStruct();
   }
+  BuildModelStruct(is_train);
+  BuildRnnStruct();
+  ToDotWithAutoFilePath();
 }
 
-bool ChainNode::HasOpWithModelOrModelTmpBlob() const {
-  for (std::shared_ptr<Operator> op : op_vec_) {
-    if (!op->model_bns().empty() || !op->model_tmp_bns().empty()) {
-      return true;
-    }
-  }
-  return false;
-}
-
-ChainGraph::ChainGraph(const LogicalGraph* logical_gph) {
+void ChainGraph::BuildFwStruct() {
   // Build Chain
   std::list<Chain> chain_list;
   Logical2ChainItMap logical2chain_it;
-  InitChains(*logical_gph, &chain_list, &logical2chain_it);
+  InitChains(&chain_list, &logical2chain_it);
   ModelMergeChains(&chain_list, &logical2chain_it);
-  DataMergeChains(*logical_gph, &chain_list, &logical2chain_it);
+  DataMergeChains(&chain_list, &logical2chain_it);
   // Init chain_nodes
   auto HashChainIt = [](const ChainIt& chain_it) {
     return std::hash<Chain*>()(&(*chain_it));
@@ -243,16 +224,29 @@ ChainGraph::ChainGraph(const LogicalGraph* logical_gph) {
   HashMap<ChainIt, ChainNode*, decltype(HashChainIt)> chain_it2chain_node(
       11, HashChainIt);
   HashMap<ChainNode*, std::unordered_set<ChainNode*>> chain_node2pred;
-  for (auto chain_it = chain_list.begin(); chain_it != chain_list.end();
-       ++chain_it) {
-    ChainNode* chain_node = NewNode();
+  FOR_EACH(chain_it, chain_list) {
+    ChainNode* chain_node = nullptr;
+    if (chain_it->nodes.size() == 1) {
+      std::shared_ptr<const Operator> op = chain_it->nodes[0]->op();
+      if (op->IsLossOp()) {
+        chain_node = NewNode<LossChainNode>();
+      } else if (op->IsDataLoaderOp()) {
+        chain_node = NewNode<SourceChainNode>();
+      } else {
+        // do nothing
+      }
+    }
+    if (chain_node == nullptr) { chain_node = NewNode<ForwardChainNode>(); }
     chain_it2chain_node[chain_it] = chain_node;
     chain_node2pred[chain_node] = {};
-    SetChainNodeWithChainIt(chain_node, chain_it);
+    CHECK(!chain_it->nodes.empty());
+    chain_node->mut_parallel_desc() = chain_it->nodes.front()->parallel_desc();
+    for (const LogicalNode* logical_node : chain_it->nodes) {
+      chain_node->mut_op_vec().push_back(logical_node->op());
+    }
   }
   // Record the predecessor
-  for (auto chain_it = chain_list.begin(); chain_it != chain_list.end();
-       ++chain_it) {
+  FOR_EACH(chain_it, chain_list) {
     ChainNode* chain_node = chain_it2chain_node.at(chain_it);
     for (const LogicalNode* logi_node : chain_it->nodes) {
       for (auto logi_in_edge : logi_node->in_edges()) {
@@ -271,66 +265,125 @@ ChainGraph::ChainGraph(const LogicalGraph* logical_gph) {
       Connect(pred_node, NewEdge(), cur_node);
     }
   }
-  // Post processing
-  UpdateSourceAndSink();
-  SetInOutLbn4AllChainNodeInDataTaskGraph();
-  ToDotWithAutoFilePath();
 }
 
-void ChainGraph::SetInOutLbn4AllChainNodeInDataTaskGraph() {
-  HashMap<ChainNode*, std::unordered_set<std::string>> chain2produced_lbns;
-  // Init chain2produced_lbns and Set InputLbns
-  ForEachNode([&](ChainNode* cur_node) {
-    auto& produced_lbns = chain2produced_lbns[cur_node];
-    for (std::shared_ptr<Operator> op : cur_node->op_vec()) {
-      for (const std::string& obn : op->output_bns()) {
-        const std::string& lbn = op->Lbn4BnInOp(obn);
-        produced_lbns.insert(lbn);
+void ChainGraph::BuildBwStruct() {
+  HashSet<ForwardChainNode*> fw_nodes_that_need_bw;
+  TopoForEachNode([&](ChainNode* chain_node) {
+    auto fw_chain_node = dynamic_cast<ForwardChainNode*>(chain_node);
+    if (fw_chain_node == nullptr) { return; }
+    if (fw_chain_node->HasOpWithModelOrModelTmpBlob()) {
+      CHECK(fw_nodes_that_need_bw.insert(fw_chain_node).second);
+      return;
+    }
+    for (ChainEdge* edge : fw_chain_node->in_edges()) {
+      auto fw_pred_node = static_cast<ForwardChainNode*>(edge->src_node());
+      if (fw_nodes_that_need_bw.find(fw_pred_node)
+          != fw_nodes_that_need_bw.end()) {
+        CHECK(fw_nodes_that_need_bw.insert(fw_chain_node).second);
+        return;
       }
     }
-    for (std::shared_ptr<Operator> op : cur_node->op_vec()) {
-      for (const std::string& ibn : op->input_bns()) {
-        const std::string& lbn = op->Lbn4BnInOp(ibn);
-        if (produced_lbns.find(lbn) == produced_lbns.end()) {
-          cur_node->mut_input_lbns().push_back(lbn);
-        }
-      }
-    }
-    SortAndRemoveDuplication(&(cur_node->mut_input_lbns()));
   });
-  // Set OutputLbns
-  ForEachNode([&](ChainNode* cur_node) {
-    const auto& produced_lbns = chain2produced_lbns.at(cur_node);
-    for (ChainEdge* out_edge : cur_node->out_edges()) {
-      for (const std::string& lbn : out_edge->dst_node()->input_lbns()) {
-        if (produced_lbns.find(lbn) != produced_lbns.end()) {
-          cur_node->mut_output_lbns().push_back(lbn);
-        }
-      }
-    }
-    SortAndRemoveDuplication(&(cur_node->mut_output_lbns()));
-  });
-}
-
-std::vector<std::string> FindLbnsBetween(const ChainNode* src_node,
-                                         const ChainNode* dst_node) {
-  std::vector<std::string> matching_lbns;
-  for (const std::string& src_node_output_lbn : src_node->output_lbns()) {
-    for (const std::string& dst_node_input_lbn : dst_node->input_lbns()) {
-      if (src_node_output_lbn != dst_node_input_lbn) { continue; }
-      matching_lbns.push_back(src_node_output_lbn);
-      break;
+  for (ForwardChainNode* fw_node : fw_nodes_that_need_bw) {
+    BackwardChainNode* bw_node = NewNode<BackwardChainNode>();
+    bw_node->mut_op_vec() = fw_node->op_vec();
+    bw_node->mut_parallel_desc() = fw_node->parallel_desc();
+    fw_node->set_bw_node(bw_node);
+    bw_node->set_fw_node(fw_node);
+  }
+  std::list<ChainEdge*> fw_edges;
+  ForEachEdge([&](ChainEdge* edge) { fw_edges.push_back(edge); });
+  for (ChainEdge* fw_edge : fw_edges) {
+    auto fw_src_node = dynamic_cast<ForwardChainNode*>(fw_edge->src_node());
+    if (fw_src_node == nullptr) { continue; }
+    auto fw_dst_node = dynamic_cast<ForwardChainNode*>(fw_edge->dst_node());
+    ChainNode* bw_src_node = fw_src_node->bw_node();
+    if (bw_src_node == nullptr) { continue; }
+    if (fw_dst_node == nullptr) {
+      Connect(fw_edge->dst_node(), NewEdge(), bw_src_node);
+    } else {
+      ChainNode* bw_dst_node = fw_dst_node->bw_node();
+      if (bw_dst_node == nullptr) { continue; }
+      Connect(bw_dst_node, NewEdge(), bw_src_node);
     }
   }
-  CHECK_NE(matching_lbns.size(), 0);
-  return matching_lbns;
+  for (ForwardChainNode* fw_node : fw_nodes_that_need_bw) {
+    BackwardChainNode* bw_node = fw_node->bw_node();
+    Connect<ChainNode>(fw_node, NewEdge(), bw_node);
+  }
 }
 
-std::string ChainEdge::VisualStr() const {
-  std::vector<std::string> lbns = FindLbnsBetween(src_node(), dst_node());
-  std::stringstream ss;
-  for (const std::string& lbn : lbns) { ss << "\\n" << lbn; }
-  return ss.str().substr(2);
+void ChainGraph::BuildLossRecordStruct() {
+  ForEachChainNode<LossChainNode>([&](LossChainNode* loss_chain) {
+    // Loss Accumulate Chain
+    OperatorConf loss_acc_op_conf;
+    loss_acc_op_conf.set_name("loss_acc_" + NewUniqueId());
+    loss_acc_op_conf.mutable_accumulate_conf();
+    auto loss_acc_op = OpMgr::Singleton()->AddOp(loss_acc_op_conf);
+    auto loss_acc_chain = NewNode<LossAccChainNode>();
+    loss_acc_chain->mut_op_vec() = {loss_acc_op};
+    loss_acc_chain->mut_parallel_desc() = loss_chain->parallel_desc();
+    Connect<ChainNode>(loss_chain, NewEdge(), loss_acc_chain);
+    // Loss Record Chain
+    OperatorConf loss_record_op_conf;
+    loss_record_op_conf.set_name("loss_record_" + NewUniqueId());
+    loss_record_op_conf.mutable_loss_record_conf();
+    auto loss_record_op = OpMgr::Singleton()->AddOp(loss_record_op_conf);
+    ParallelConf loss_record_pr_conf;
+    loss_record_pr_conf.set_policy(kDataParallel);
+    loss_record_pr_conf.add_device_name(
+        IDMgr::Singleton()->MachineName4MachineId(0) + ":0");
+    auto loss_record_chain = NewNode<LossRecordChainNode>();
+    loss_record_chain->mut_op_vec() = {loss_record_op};
+    loss_record_chain->mut_parallel_desc().reset(
+        new ParallelDesc(loss_record_pr_conf));
+    Connect<ChainNode>(loss_acc_chain, NewEdge(), loss_record_chain);
+  });
 }
+
+void ChainGraph::BuildModelStruct(bool is_train) {
+  ForEachChainNode<ForwardChainNode>([&](ForwardChainNode* fw_chain) {
+    if (fw_chain->HasOpWithModelOrModelTmpBlob() == false) { return; }
+    // Model Update Chain
+    auto md_updt_chain = NewNode<MdUpdtChainNode>();
+    md_updt_chain->mut_op_vec() = {OpMgr::Singleton()->ModelUpdateOp()};
+    md_updt_chain->mut_parallel_desc() = fw_chain->parallel_desc();
+    Connect<ChainNode>(md_updt_chain, NewEdge(), fw_chain);
+    // Model Save Chain
+    OperatorConf model_save_op_conf;
+    model_save_op_conf.set_name("md_save_" + NewUniqueId());
+    for (std::shared_ptr<const Operator> op : fw_chain->op_vec()) {
+      for (const std::string& mbn : op->model_bns()) {
+        const std::string& lbn = op->Lbn4BnInOp(mbn);
+        model_save_op_conf.mutable_model_save_conf()->add_lbns(lbn);
+      }
+    }
+    auto model_save_op = OpMgr::Singleton()->AddOp(model_save_op_conf);
+    auto md_save_chain = NewNode<MdSaveChainNode>();
+    md_save_chain->mut_op_vec() = {model_save_op};
+    auto md_save_pr_desc = new ParallelDesc(*(fw_chain->parallel_desc()));
+    if (fw_chain->parallel_desc()->policy() == ParallelPolicy::kDataParallel) {
+      md_save_pr_desc->RemoveNeedlessDevice(1);
+    }
+    md_save_chain->mut_parallel_desc().reset(md_save_pr_desc);
+    Connect<ChainNode>(md_updt_chain, NewEdge(), md_save_chain);
+    // Model Diff Accumulate Chain
+    if (is_train == false) { return; }
+    BackwardChainNode* bw_chain = fw_chain->bw_node();
+    Connect<ChainNode>(md_updt_chain, NewEdge(), bw_chain);
+    OperatorConf md_diff_acc_op_conf;
+    md_diff_acc_op_conf.set_name("md_diff_acc_" + NewUniqueId());
+    md_diff_acc_op_conf.mutable_accumulate_conf();
+    auto md_diff_acc_op = OpMgr::Singleton()->AddOp(md_diff_acc_op_conf);
+    auto md_diff_acc_chain = NewNode<MdDiffAccChainNode>();
+    md_diff_acc_chain->mut_op_vec() = {md_diff_acc_op};
+    md_diff_acc_chain->mut_parallel_desc() = fw_chain->parallel_desc();
+    Connect<ChainNode>(bw_chain, NewEdge(), md_diff_acc_chain);
+    Connect<ChainNode>(md_diff_acc_chain, NewEdge(), md_updt_chain);
+  });
+}
+
+void ChainGraph::BuildRnnStruct() {}
 
 }  // namespace oneflow

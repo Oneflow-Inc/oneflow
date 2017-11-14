@@ -7,7 +7,7 @@ namespace oneflow {
 
 // MLLoss = MultinomialLogisticLoss
 
-class MultinomialLogisticLossOp final : public UserOperator {
+class MultinomialLogisticLossOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MultinomialLogisticLossOp);
   MultinomialLogisticLossOp() = default;
@@ -17,12 +17,9 @@ class MultinomialLogisticLossOp final : public UserOperator {
   const PbMessage& GetSpecialConf() const override;
   bool IsLossOp() const override { return true; }
 
-  void InferBlobDesc4FwBlobs(
+  void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      ParallelPolicy policy, int64_t parallel_id,
-      int64_t parallel_num) override;
-
- private:
+      const ParallelContext* parallel_ctx) override;
 };
 
 }  // namespace oneflow

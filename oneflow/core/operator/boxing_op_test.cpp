@@ -43,7 +43,7 @@ void TestBoxingOp() {
   };
 
   // do infer shape
-  boxing_op->InferBlobDesc4FwBlobs(fp, kModelParallel, 0, 1);
+  boxing_op->InferBlobDescs(fp, kModelParallel, 0, 1);
 
   // test results
   // output_shape should be:
@@ -67,7 +67,7 @@ void TestBoxingOp() {
   boxing_op = ConstructOp(op_conf);
 
   // do infer shape
-  boxing_op->InferBlobDesc4FwBlobs(fp, kModelParallel, 0, 1);
+  boxing_op->InferBlobDescs(fp, kModelParallel, 0, 1);
 
   // test results
   // output shape should be the same as input
@@ -86,7 +86,7 @@ void TestBoxingOp() {
   boxing_op = ConstructOp(op_conf);
 
   // do infer shape
-  boxing_op->InferBlobDesc4FwBlobs(fp, kModelParallel, 0, 1);
+  boxing_op->InferBlobDescs(fp, kModelParallel, 0, 1);
 
   // data_tmp_shape is {10, 17, 6, 6}, and the 17 = 4 + 4 + 4 + 5
   BlobDesc* data_tmp_blobdesc = bn2blobdesc_map.at(boxing_op->SoleDtbn());

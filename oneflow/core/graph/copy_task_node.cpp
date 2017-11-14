@@ -1,59 +1,16 @@
 #include "oneflow/core/graph/copy_task_node.h"
-#include "oneflow/core/operator/copy_comm_net_op.h"
-#include "oneflow/core/operator/copy_hd_op.h"
 
 namespace oneflow {
 
-void CopyTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph*) {
-  auto out_regst = NewProducedRegstDesc("copy_out", 1, kMaxRegisterNum);
-  BindProducedRegstAndOutEdge(out_regst, SoleOutEdge());
-  std::shared_ptr<RegstDesc> in_regst = GetRelatedRegst(SoleInEdge());
-  ConsumeRegstDesc("copy_in", in_regst);
-  out_regst->CopyLbnFrom(in_regst.get());
-
-  ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = AddOp();
-
-  if (IsFwNode()) {
-    node->BindBnInOpAndRegst(node->op()->SoleIbn(), in_regst);
-    node->BindBnInOpAndRegst(node->op()->SoleObn(), out_regst);
-  } else {
-    node->BindBnInOpAndRegst(node->op()->SoleOdbn(), in_regst);
-    node->BindBnInOpAndRegst(node->op()->SoleIdbn(), out_regst);
-  }
-
-  mut_exec_gph().UpdateSourceAndSink();
+void CopyHdTaskNode::Init(const CompTaskNode* comp_task,
+                          CopyHdOpConf::Type copy_type) {
+  set_machine_id(comp_task->machine_id());
+  set_thrd_loc_id(comp_task->thrd_loc_id());
 }
 
-void CopyTaskNode::InferBlobDescInProducedRegsts(TaskGraph*) {
-  std::shared_ptr<RegstDesc> in_regst = GetRelatedRegst(SoleInEdge());
-  std::shared_ptr<RegstDesc> out_regst = GetRelatedRegst(SoleOutEdge());
-  out_regst->CopyBlobDescFrom(in_regst.get());
-}
-
-void CopyHDTaskNode::SetFwInCopy() {
-  CHECK(IsFwNode());
-  is_fw_in_copy_ = true;
-}
-
-void CopyHDTaskNode::SetFwOutCopy() {
-  CHECK(IsFwNode());
-  is_fw_in_copy_ = false;
-}
-
-std::shared_ptr<Operator> CopyHDTaskNode::AddOp() const {
-  OperatorConf op_conf;
-  op_conf.set_name("copy_hd_" + NewUniqueId());
-  CopyHdOpConf* copy_hd_conf = op_conf.mutable_copy_hd_conf();
-  copy_hd_conf->set_type(IsH2D() ? CopyHdOpConf::H2D : CopyHdOpConf::D2H);
-  return OpMgr::Singleton()->AddOp(op_conf);
-}
-
-std::shared_ptr<Operator> CopyCommNetTaskNode::AddOp() const {
-  OperatorConf op_conf;
-  op_conf.set_name("comm_net_" + NewUniqueId());
-  op_conf.mutable_copy_comm_net_conf();
-  return OpMgr::Singleton()->AddOp(op_conf);
+void CopyCommNetTaskNode::Init(int64_t machine_id) {
+  set_machine_id(machine_id);
+  set_thrd_loc_id(IDMgr::Singleton()->CommNetThrdLocId());
 }
 
 }  // namespace oneflow

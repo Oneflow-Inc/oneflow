@@ -5,23 +5,18 @@
 
 namespace oneflow {
 
-class PoolingOp final : public UserOperator {
+class PoolingOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(PoolingOp);
   PoolingOp() = default;
   ~PoolingOp() = default;
 
-  bool IsElemWise() const override { return true; }
-
   void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
 
-  void InferBlobDesc4FwBlobs(
+  void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      ParallelPolicy policy, int64_t parallel_id,
-      int64_t parallel_num) override;
-
- private:
+      const ParallelContext* parallel_ctx) override;
 };
 
 }  // namespace oneflow

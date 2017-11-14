@@ -12,9 +12,9 @@ const PbMessage& RMSPropModelUpdateOp::GetSpecialConf() const {
   return op_conf().rmsprop_mdupdt_conf();
 }
 
-void RMSPropModelUpdateOp::InferBlobDesc4FwBlobs(
+void RMSPropModelUpdateOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) {
+    const ParallelContext* parallel_ctx) {
   // model_diffs
   const BlobDesc* model_diffs_blob_desc = GetBlobDesc4BnInOp("model_diffs");
   CHECK_EQ(model_diffs_blob_desc->data_type(),

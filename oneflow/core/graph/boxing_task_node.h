@@ -1,56 +1,92 @@
 #ifndef ONEFLOW_CORE_GRAPH_BOXING_TASK_NODE_H_
 #define ONEFLOW_CORE_GRAPH_BOXING_TASK_NODE_H_
 
-#include "oneflow/core/graph/comp_task_node.h"
+#include "oneflow/core/graph/compute_task_node.h"
 
 namespace oneflow {
 
+class ChainNode;
+
 class BoxingTaskNode : public TaskNode {
  public:
+  struct EdgeInfo {
+    const TaskEdge* edge;
+    int64_t parallel_id_min;
+    int64_t parallel_id_max;
+  };
+
   OF_DISALLOW_COPY_AND_MOVE(BoxingTaskNode);
   BoxingTaskNode() = default;
   virtual ~BoxingTaskNode() = default;
 
-  std::string VisualStr() const override {
-    return TaskNode::VisualStr() + "Boxing";
-  }
+  void Init(int64_t machine_id);
+  TodoTaskType GetTaskType() const override { return TodoTaskType::kBoxing; }
 
-  void ToProto(TaskProto* ret) const override { TaskNode::ToProto(ret); };
-  DeviceType GetDeviceType() const override { return DeviceType::kCPU; }
+  void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override;
+  void Build() override;
 
- protected:
-  virtual void InitWithFwNode(TaskNode* fw_node) override {
-    TaskNode::InitWithFwNode(fw_node);
-  }
+#define DECLARE_BLD_BOXING_OP_CONF_METHOD(x)                                   \
+  void BldBoxingOpConfWith##x(                                                 \
+      const std::string& lbn, const std::vector<EdgeInfo>& sorted_in_edges,    \
+      int64_t in_parallel_num, int64_t in_edge_first, int64_t in_edge_last,    \
+      const std::vector<EdgeInfo>& sorted_out_edges, int64_t out_parallel_num, \
+      int64_t* used_out_edge_begin, BoxingOpConf*)
 
-  using ChainEdgesPair =
-      std::pair<const ChainNode*, std::vector<const TaskEdge*>>;
-  using Chain2EdgesMap =
-      HashMap<const ChainNode*, std::vector<const TaskEdge*>>;
-  void FwInitChain2SortedEdgesMaps(
-      Chain2EdgesMap* chain2sorted_edges,
-      const std::unordered_set<TaskEdge*>& (TaskNode::*in_out_edges)() const,
-      TaskNode* (TaskEdge::*src_dst_node)() const,
-      TaskEdge* (TaskNode::*SoleEdge)() const);
-  void FwSortEdgesInnerStage(std::vector<const TaskEdge*>* edges_to_be_sorted,
-                             TaskNode* (TaskEdge::*src_dst_node)() const,
-                             TaskEdge* (TaskNode::*SoleEdge)() const);
-  void FwBuildChainSortedEdgesPair(
-      const ChainEdgesPair& chain_sorted_in_edges,
-      const ChainEdgesPair& chain_sorted_out_edges);
-  virtual void FwVirtualBuild() = 0;
+#define DECLARE_VIRTUAL_BLD_BOXING_OP_CONF_METHOD(x) \
+  virtual DECLARE_BLD_BOXING_OP_CONF_METHOD(x) = 0
+
+  DECLARE_BLD_BOXING_OP_CONF_METHOD();
+
+  DECLARE_VIRTUAL_BLD_BOXING_OP_CONF_METHOD(DataConcatAndDataSplit);
+  DECLARE_BLD_BOXING_OP_CONF_METHOD(DataConcatAndClone);
+  DECLARE_BLD_BOXING_OP_CONF_METHOD(DataConcatAndModelSplit);
+  DECLARE_BLD_BOXING_OP_CONF_METHOD(ModelConcatAndDataSplit);
+  DECLARE_BLD_BOXING_OP_CONF_METHOD(ModelConcatAndClone);
+  DECLARE_BLD_BOXING_OP_CONF_METHOD(AddAndDataSplit);
+  DECLARE_BLD_BOXING_OP_CONF_METHOD(AddAndModelSplit);
+  DECLARE_BLD_BOXING_OP_CONF_METHOD(AddAndClone);
 
  private:
-  OVERRIDE_IF_FW_BP_FOR_FUNC(BuildExecAndEnrollLbn2Regsts);
-  OVERRIDE_IF_FW_BP_FOR_FUNC(InferBlobDescInProducedRegsts);
+  void InitChain2SortedEdgeInfo(
+      const std::unordered_set<TaskEdge*>& (TaskNode::*GetEdges)() const,
+      TaskEdge* (TaskNode::*SoleEdge)() const,
+      TaskNode* (TaskEdge::*SoleNode)() const,
+      HashMap<const ChainNode*, std::vector<EdgeInfo>>*);
+  void BuildWithChainPair(const ChainNode* in_chain,
+                          const std::vector<EdgeInfo>& sorted_in_edges,
+                          const ChainNode* out_chain,
+                          const std::vector<EdgeInfo>& sorted_out_edges);
+  std::shared_ptr<Operator> NewBoxingOp(
+      const std::string& lbn, const ChainNode* in_chain,
+      const ChainNode* out_chain, const std::vector<EdgeInfo>& sorted_in_edges,
+      const std::vector<EdgeInfo>& sorted_out_edges,
+      int64_t* used_in_edge_begin, int64_t* used_out_edge_begin);
+};
 
-  void FwBuildExecAndEnrollLbn2Regsts(TaskGraph*);
-  void FwInferBlobDescInProducedRegsts(TaskGraph*);
-  void BpBuildExecAndEnrollLbn2Regsts(TaskGraph*);
-  void BpInferBlobDescInProducedRegsts(TaskGraph*);
+#define OVERRIDE_BLD_BOXING_OP_METHOD(x) \
+  DECLARE_BLD_BOXING_OP_CONF_METHOD(x) override
 
-  void EnrollAllRegstAndBindRelatedEdge();
-  TaskType task_type() const override { return kBoxingTask; }
+class InBoxingTaskNode final : public BoxingTaskNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(InBoxingTaskNode);
+  InBoxingTaskNode() = default;
+  ~InBoxingTaskNode() = default;
+
+  OVERRIDE_BLD_BOXING_OP_METHOD(DataConcatAndDataSplit);
+
+ private:
+};
+
+class OutBoxingTaskNode final : public BoxingTaskNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(OutBoxingTaskNode);
+  OutBoxingTaskNode() = default;
+  ~OutBoxingTaskNode() = default;
+
+  OVERRIDE_BLD_BOXING_OP_METHOD(DataConcatAndDataSplit);
+
+ private:
 };
 
 }  // namespace oneflow

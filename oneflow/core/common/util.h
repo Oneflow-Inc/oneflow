@@ -139,6 +139,8 @@ inline uint32_t NewRandomSeed() {
   (ParallelPolicy::kModelParallel)(ParallelPolicy::kDataParallel)
 
 #define FOR_RANGE(type, i, begin, end) for (type i = begin; i < end; ++i)
+#define FOR_EACH(it, container) \
+  for (auto it = container.begin(); it != container.end(); ++it)
 
 void RedirectStdoutAndStderrToGlogDir();
 void CloseStdoutAndStderr();

@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class CopyHdOp final : public SysOperator {
+class CopyHdOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CopyHdOp);
   CopyHdOp() = default;

@@ -20,7 +20,7 @@ void TestSoftmaxOp() {
     return bn2blobdesc_map.at(bn);
   };
   // infershape
-  softmax_op->InferBlobDesc4FwBlobs(fp, kDataParallel, 0, 1);
+  softmax_op->InferBlobDescs(fp, kDataParallel, 0, 1);
   // test
   BlobDesc* in_blobdesc = fp(softmax_op->SoleIbn());
   BlobDesc* out_blobdesc = fp(softmax_op->SoleObn());

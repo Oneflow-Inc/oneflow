@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class SoftmaxOp final : public UserOperator {
+class SoftmaxOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SoftmaxOp);
   SoftmaxOp() = default;
@@ -14,10 +14,9 @@ class SoftmaxOp final : public UserOperator {
   void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
 
-  void InferBlobDesc4FwBlobs(
+  void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      ParallelPolicy policy, int64_t parallel_id,
-      int64_t parallel_num) override;
+      const ParallelContext* parallel_ctx) override;
 
  private:
 };

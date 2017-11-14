@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class ModelSaveOp final : public SysOperator {
+class ModelSaveOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ModelSaveOp);
   ModelSaveOp() = default;

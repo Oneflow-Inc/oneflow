@@ -2,11 +2,15 @@ syntax = "proto2";
 package oneflow;
 
 enum ParallelPolicy {
-  kDataParallel = 0;
-  kModelParallel = 1;
-  // Follows are used by internal system
-  kFakerMdUpdt = 2;
-  kFakerLossRecord = 3;
+  kInvalidParallel = 0;
+  kDataParallel = 1;
+  kModelParallel = 2;
+}
+
+message ParallelContext {
+  required int64 parallel_id = 1;
+  required int64 parallel_num = 2;
+  required ParallelPolicy policy = 3;
 }
 
 message ParallelConf {

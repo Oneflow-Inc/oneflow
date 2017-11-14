@@ -25,7 +25,7 @@ TEST(MultinomialLogisticLossOp, test_loss_op) {
     return bn2blob_desc_map.at(bn);
   };
 
-  loss_op->InferBlobDesc4FwBlobs(Bn2BlobDescFunc, kDataParallel, 2, 10);
+  loss_op->InferBlobDescs(Bn2BlobDescFunc, kDataParallel, 2, 10);
   ASSERT_EQ(*Bn2BlobDescFunc("loss"),
             BlobDesc(Shape({1}), DataType::kFloat, false));
   ASSERT_EQ(*Bn2BlobDescFunc("loss_buffer"),

@@ -107,7 +107,6 @@ message MultinomialLogisticLossOpConf {
 message ConcatOpConf {
   repeated string in = 1;
   required string out = 2;
-  required DataType data_type = 3;
   required int32 axis = 4;
 }
 
@@ -135,14 +134,20 @@ message BoxConcatConf {
 message BoxAddConf {
 }
 
-message BoxDataSplitConf {
+message BoxSplitConf {
+  required int32 axis = 1;
+  // left_bound_size, (base_part_size + 1) * bigger_part_num, base_part_size * base_part_num, right_bound_size
+  required int32 left_bound_size = 2;
+  required int32 bigger_part_num = 3;
+  required int32 base_part_size = 4;
+  required int32 base_part_num = 5;
+  required int32 right_bound_size = 6;
 }
 
 message BoxCloneConf {
 }
 
 message BoxingOpConf {
-  required DataType data_type = 1;
   required string lbn = 2;
   required int32 in_num = 3;
   required int32 out_num = 4;
@@ -152,7 +157,7 @@ message BoxingOpConf {
     BoxAddConf add_box = 6;
   }
   oneof out_box {
-    BoxDataSplitConf data_split_box = 7;
+    BoxSplitConf split_box = 7;
     BoxCloneConf clone_box = 8;
   }
 }

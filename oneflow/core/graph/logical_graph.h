@@ -17,7 +17,7 @@ class LogicalNode final : public Node<LogicalNode, LogicalEdge> {
   LogicalNode() = default;
   ~LogicalNode() = default;
 
-  std::shared_ptr<Operator> op() const { return op_; }
+  std::shared_ptr<const Operator> op() const { return op_; }
   std::shared_ptr<Operator>& mut_op() { return op_; }
 
   std::shared_ptr<const ParallelDesc> parallel_desc() const {
@@ -26,9 +26,6 @@ class LogicalNode final : public Node<LogicalNode, LogicalEdge> {
   std::shared_ptr<const ParallelDesc>& mut_parallel_desc() {
     return parallel_desc_;
   }
-
-  bool IsLossNode() const { return op_->IsLossOp(); }
-  bool IsChainMergeable() const { return op_->IsChainMergeable(); }
 
   std::string VisualStr() const override { return op_->op_name(); }
 
@@ -49,18 +46,18 @@ class LogicalEdge final : public Edge<LogicalNode, LogicalEdge> {
 class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LogicalGraph);
-  LogicalGraph() = delete;
   ~LogicalGraph() = default;
 
-  LogicalGraph(const DLNetConf& dl_net_conf, const Placement& placement);
+  OF_SINGLETON(LogicalGraph);
 
   const char* TypeName() const override { return "LogicalGraph"; }
+  const LogicalNode* GetProducerNode(const std::string& lbn);
 
  private:
-  void NaiveBuildGraphStruct(const DLNetConf& dl_net_conf,
-                             HashMap<LogicalEdge*, std::string>* edge2lbn,
+  LogicalGraph();
+  void NaiveBuildGraphStruct(HashMap<LogicalEdge*, std::string>* edge2lbn,
                              HashMap<LogicalEdge*, std::string>* edge2ibn);
-  void FillNodeWithParallelDesc(const Placement& placement);
+  void FillNodeWithParallelDesc();
 
   struct CloneInfo {
     std::shared_ptr<Operator> clone_op;
@@ -73,6 +70,8 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
                          const HashMap<LogicalEdge*, std::string>& edge2lbn);
   void AddOneCloneNode(const CloneInfo& clone_info,
                        const HashMap<LogicalEdge*, std::string>& edge2ibn);
+
+  HashMap<std::string, const LogicalNode*> lbn2producer_;
 };
 
 }  // namespace oneflow

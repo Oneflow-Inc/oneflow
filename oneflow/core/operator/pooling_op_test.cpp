@@ -32,7 +32,7 @@ void TestPoolingOp(ParallelPolicy policy, bool has_data_id) {
   auto Bn2BlobDescFunc = [&bn2blob_desc_map](const std::string& bn) {
     return bn2blob_desc_map.at(bn);
   };
-  pooling_op->InferBlobDesc4FwBlobs(Bn2BlobDescFunc, policy, 0, 1);
+  pooling_op->InferBlobDescs(Bn2BlobDescFunc, policy, 0, 1);
   ASSERT_EQ(*Bn2BlobDescFunc("out"),
             BlobDesc(Shape({100, 64, 6, 6}), GetDataType<T>::val, has_data_id));
   ASSERT_EQ(*Bn2BlobDescFunc("idx"),
