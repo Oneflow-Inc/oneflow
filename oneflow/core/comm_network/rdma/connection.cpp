@@ -10,7 +10,6 @@ Connection::~Connection() {
 
 void Connection::PostReadRequest(void* read_ctx, const RdmaMem* local_mem,
                                  const RdmaMemDesc& remote_mem) {
-  LOG(INFO) << "PostReadRequest begin";
   ibv_send_wr wr, *bad_wr = nullptr;
   wr.wr_id = reinterpret_cast<uint64_t>(read_ctx);
   wr.opcode = IBV_WR_RDMA_READ;
@@ -19,14 +18,12 @@ void Connection::PostReadRequest(void* read_ctx, const RdmaMem* local_mem,
   wr.send_flags = IBV_SEND_SIGNALED;
   wr.wr.rdma.remote_addr = remote_mem.mem_ptr();
   wr.wr.rdma.rkey = remote_mem.token();
-  LOG(INFO) << remote_mem.mem_ptr() << " " << remote_mem.token();
 
+  // return val may be incorrect when successfully executed
   ibv_post_send(qp_ptr_, &wr, &bad_wr);
-  LOG(INFO) << "PostReadRequest Done";
 }
 
 void Connection::PostSendRequest(const ActorMsg* msg, const RdmaMem* msg_mem) {
-  LOG(INFO) << "PostSendRequest begin";
   ibv_send_wr wr, *bad_wr = nullptr;
   wr.wr_id = reinterpret_cast<uint64_t>(msg);
   wr.next = nullptr;
@@ -35,20 +32,17 @@ void Connection::PostSendRequest(const ActorMsg* msg, const RdmaMem* msg_mem) {
   wr.opcode = IBV_WR_SEND;
   wr.send_flags = IBV_SEND_SIGNALED;
 
-  ibv_post_send(qp_ptr_, &wr, &bad_wr);
-  LOG(INFO) << "PostSendRequest Done";
+  CHECK_EQ(ibv_post_send(qp_ptr_, &wr, &bad_wr), 0);
 }
 
 void Connection::PostRecvRequest(const ActorMsg* msg, const RdmaMem* msg_mem) {
-  LOG(INFO) << "PostRecvRequest begin";
   ibv_recv_wr wr, *bad_wr = nullptr;
   wr.wr_id = reinterpret_cast<uint64_t>(msg);
   wr.next = nullptr;
   wr.sg_list = const_cast<RdmaMem*>(msg_mem)->ibv_sge_ptr();
   wr.num_sge = 1;
 
-  ibv_post_recv(qp_ptr_, &wr, &bad_wr);
-  LOG(INFO) << "PostRecvRequest Done";
+  CHECK_EQ(ibv_post_recv(qp_ptr_, &wr, &bad_wr), 0);
 }
 
 void Connection::CompleteConnection() {

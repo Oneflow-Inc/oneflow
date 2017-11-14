@@ -22,7 +22,7 @@ EndpointManager::EndpointManager() {
   CHECK(recv_cq_);
 
   ibv_free_device_list(device_list);
-  LOG(INFO) << "EndpointManager Constructed!";
+  LOG(INFO) << "Finish EndpointManager Constructor";
 }
 
 EndpointManager::~EndpointManager() {
@@ -58,10 +58,8 @@ void EndpointManager::InitRdma() {
       continue;
     }
     Connection* conn = connection_pool_[peer_machine_id];
-    LOG(INFO) << "Before PullConnectionInfo";
     CtrlClient::Singleton()->PullConnectionInfo(peer_machine_id,
                                                 conn->mut_peer_conn_info_ptr());
-    LOG(INFO) << "After PullConnectionInfo";
     for (size_t i = 0; i != kPrePostRecvNum; ++i) {
       ActorMsg* actor_msg = new ActorMsg();
       const RdmaMem* rdma_mem = static_cast<const RdmaMem*>(
@@ -72,11 +70,9 @@ void EndpointManager::InitRdma() {
     }
     conn->CompleteConnection();
   }
-  LOG(INFO) << "Before barrier";
   OF_BARRIER();
-  LOG(INFO) << "After barrier";
   CtrlClient::Singleton()->ClearAllConnInfo();
-  LOG(INFO) << "InitRdma finished!";
+  LOG(INFO) << "Finish InitRdma";
 }
 
 RdmaMem* EndpointManager::NewRdmaMem() {
@@ -121,7 +117,8 @@ Connection* EndpointManager::NewConnection() {
   conn->mut_this_mach_conn_info_ptr()->set_iid(gid.global.interface_id);
   conn->set_ibv_mtu(attr.active_mtu);
   conn->set_ibv_qp_ptr(qp_ptr);
-  LOG(INFO) << conn->mut_this_mach_conn_info().lid() << " "
+  LOG(INFO) << "Connection " << reinterpret_cast<uint64_t>(conn)
+            << " info: " << conn->mut_this_mach_conn_info().lid() << " "
             << conn->mut_this_mach_conn_info().qpn() << " "
             << conn->mut_this_mach_conn_info().psn() << " "
             << conn->mut_this_mach_conn_info().snp() << " "
@@ -136,7 +133,6 @@ void EndpointManager::Read(void* read_ctx, int64_t src_machine_id,
   CHECK(iter != connection_pool_.end());
   Connection* conn = iter->second;
   conn->PostReadRequest(read_ctx, local_mem, remote_mem_desc);
-  LOG(INFO) << "Read";
 }
 
 void EndpointManager::SendActorMsg(int64_t dst_machine_id,
@@ -154,7 +150,6 @@ void EndpointManager::SendActorMsg(int64_t dst_machine_id,
 void EndpointManager::Start() {
   thread_state_ = true;
   thread_ = std::thread(&EndpointManager::PollLoop, this);
-  LOG(INFO) << "PollLoop start!";
 }
 
 void EndpointManager::Stop() {
@@ -163,7 +158,6 @@ void EndpointManager::Stop() {
 }
 
 void EndpointManager::PollLoop() {
-  LOG(INFO) << "Enter PollLoop";
   while (true) {
     if (!thread_state_) { return; }
     PollSendQueue();
@@ -181,13 +175,11 @@ void EndpointManager::PollSendQueue() {
     LOG(INFO) << "PollSend wc.status != WC_SUCCESS " << wc.status;
     return;
   }
-  LOG(INFO) << "Poll Send Queue " << wc.opcode;
   switch (wc.opcode) {
     case IBV_WC_SEND: {
       CommNet::Singleton()->UnRegisterMemory(
           reinterpret_cast<const void*>(wc.wr_id));
       delete reinterpret_cast<ActorMsg*>(wc.wr_id);
-      LOG(INFO) << "Successfully send ActorMsg";
       return;
     }
     case IBV_WC_RDMA_READ: {
@@ -211,7 +203,6 @@ void EndpointManager::PollRecvQueue() {
   const ActorMsg* msg = reinterpret_cast<const ActorMsg*>(wc.wr_id);
 
   ActorMsgBus::Singleton()->SendMsg(*msg);
-  LOG(INFO) << "Successfully recv ActorMsg";
   CHECK(recv_msg2conn_ptr_.find(msg) != recv_msg2conn_ptr_.end());
   Connection* conn = recv_msg2conn_ptr_.at(msg);
   auto msg2mem_it = recv_msg2rdma_mem_.find(msg);
