@@ -52,6 +52,39 @@ const char* CurandGetErrorString(curandStatus_t error) {
 
 }  // namespace
 
+#ifdef USE_CUDNN
+namespace cudnn {
+
+float DataType<float>::oneval = 1.0;
+float DataType<float>::zeroval = 0.0;
+const void* DataType<float>::one = static_cast<void*>(&DataType<float>::oneval);
+const void* DataType<float>::zero =
+    static_cast<void*>(&DataType<float>::zeroval);
+
+double DataType<double>::oneval = 1.0;
+double DataType<double>::zeroval = 0.0;
+const void* DataType<double>::one =
+    static_cast<void*>(&DataType<double>::oneval);
+const void* DataType<double>::zero =
+    static_cast<void*>(&DataType<double>::zeroval);
+
+/*
+signed char DataType<signed char>::oneval = 1.0;
+signed char DataType<signed char>::zeroval = 0.0;
+const void* DataType<signed char>::one =
+    static_cast<void*>(&DataType<signed char>::oneval);
+const void* DataType<signed char>::zero =
+    static_cast<void*>(&DataType<signed char>::zeroval);
+
+int DataType<int>::oneval = 1.0;
+int DataType<int>::zeroval = 0.0;
+const void* DataType<int>::one = static_cast<void*>(&DataType<int>::oneval);
+const void* DataType<int>::zero = static_cast<void*>(&DataType<int>::zeroval);
+*/
+
+}  // namespace cudnn
+#endif  // USE_CUDNN
+
 template<>
 void CudaCheck(cudaError_t error) {
   CHECK_EQ(error, cudaSuccess) << cudaGetErrorString(error);

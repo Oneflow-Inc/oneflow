@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_KERNEL_CONVOLUTION_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_CONVOLUTION_KERNEL_H_
 
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel_manager.h"
 
 namespace oneflow {
@@ -24,9 +25,10 @@ template<DeviceType device_type, typename T>
 class ConvolutionKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvolutionKernel);
-  ConvolutionKernel() = default;
-  ~ConvolutionKernel() = default;
+  ConvolutionKernel();
+  ~ConvolutionKernel();
 
+  void InitFromOpProto(const OperatorProto& op_proto) override;
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
   void Backward(const KernelCtx&,
@@ -53,6 +55,14 @@ class ConvolutionKernel final : public Kernel {
   void ComputeBiasDiff(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+
+#ifdef USE_CUDNN
+  cudnnTensorDescriptor_t in_desc_;
+  cudnnTensorDescriptor_t out_desc_;
+  cudnnConvolutionDescriptor_t conv_desc_;
+  cudnnFilterDescriptor_t weight_desc_;
+  cudnnTensorDescriptor_t bias_desc_;
+#endif  // USE_CUDNN
 };
 
 }  // namespace oneflow

@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_KERNEL_SOFTMAX_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_SOFTMAX_KERNEL_H_
 
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
@@ -9,13 +10,19 @@ template<DeviceType device_type, typename T>
 class SoftmaxKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SoftmaxKernel);
-  SoftmaxKernel() = default;
-  ~SoftmaxKernel() = default;
+  SoftmaxKernel();
+  ~SoftmaxKernel();
 
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
   void Backward(const KernelCtx&,
                 std::function<Blob*(const std::string&)>) const override;
+
+ private:
+#ifdef USE_CUDNN
+  cudnnTensorDescriptor_t in_desc_;
+  cudnnTensorDescriptor_t out_desc_;
+#endif  // USE_CUDNN
 };
 
 template<DeviceType device_type, typename T>

@@ -10,6 +10,53 @@
 
 namespace oneflow {
 
+#ifdef USE_CUDNN
+namespace cudnn {
+
+template<typename T>
+class DataType;
+
+template<>
+class DataType<float> {
+ public:
+  static const cudnnDataType_t type = CUDNN_DATA_FLOAT;
+  static float oneval, zeroval;
+  static const void* one;
+  static const void* zero;
+};
+
+template<>
+class DataType<double> {
+ public:
+  static const cudnnDataType_t type = CUDNN_DATA_DOUBLE;
+  static double oneval, zeroval;
+  static const void* one;
+  static const void* zero;
+};
+
+/*
+template<>
+class DataType<signed char> {
+ public:
+  static const cudnnDataType_t type = CUDNN_DATA_INT8;
+  static signed char oneval, zeroval;
+  static const void* one;
+  static const void* zero;
+};
+
+template<>
+class DataType<int> {
+ public:
+  static const cudnnDataType_t type = CUDNN_DATA_INT32;
+  static int oneval, zeroval;
+  static const void* one;
+  static const void* zero;
+};
+*/
+
+}  // namespace cudnn
+#endif  // USE_CUDNN
+
 template<typename T>
 void CudaCheck(T error);
 
