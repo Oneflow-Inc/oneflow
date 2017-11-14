@@ -1,7 +1,7 @@
 set -e
 set -x
 
-declare -a hosts=("192.168.1.11" "192.168.1.13")
+declare -a hosts=("192.168.1.11" "192.168.1.12" "192.168.1.13")
 
 ONEFLOW_CMD='GLOG_logtostderr=0 GLOG_log_dir=./log GLOG_v=0 GLOG_logbuflevel=-1 nohup ./oneflow.run -job_conf_filepath=./job.prototxt'
 
