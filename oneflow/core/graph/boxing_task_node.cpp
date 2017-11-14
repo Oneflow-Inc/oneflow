@@ -51,32 +51,39 @@ void BoxingTaskNode::Build() {
 
 DEFINE_BLD_BOXING_OP_CONF_METHOD(InBoxingTaskNode, DataConcatAndDataSplit) {
   *used_out_edge_begin = 0;
+  conf->mutable_concat_box()->set_axis(0);
   conf->set_out_num(sorted_out_edges.size());
+  BoxSplitConf* split_conf = conf->mutable_split_box();
+  split_conf->set_axis(0);
+  BalancedSplitter bs(JobDesc::Singleton()->ParallelPieceSize(),
+                      out_parallel_num);
+  for (const EdgeInfo& edge_info : sorted_out_edges) {
+    Range range = bs.At(edge_info.parallel_id_min, edge_info.parallel_id_max);
+    split_conf->add_part_num(range.size());
+  }
+}
+DEFINE_BLD_BOXING_OP_CONF_METHOD(OutBoxingTaskNode, DataConcatAndDataSplit) {
   conf->mutable_concat_box()->set_axis(0);
   BoxSplitConf* split_conf = conf->mutable_split_box();
   split_conf->set_axis(0);
-  split_conf->set_left_bound_size(0);
-  split_conf->set_right_bound_size(0);
-  BalancedSplitter bs(JobDesc::Singleton()->ParallelPieceSize(),
-                      out_parallel_num);
-  split_conf->set_base_part_size(bs.BasePartSize());
-  int64_t out_prlll_id_min = sorted_out_edges.front().parallel_id_min;
-  int64_t out_prlll_id_max = sorted_out_edges.back().parallel_id_max;
-  if (bs.BaseBeginIdx() <= out_prlll_id_min) {
-    split_conf->set_bigger_part_num(0);
-    split_conf->set_base_part_num(out_prlll_id_max - out_prlll_id_min + 1);
-  } else if (out_prlll_id_min < bs.BaseBeginIdx()
-             && bs.BaseBeginIdx() <= out_prlll_id_max) {
-    split_conf->set_bigger_part_num(bs.BaseBeginIdx() - out_prlll_id_min);
-    split_conf->set_base_part_num(out_prlll_id_max - bs.BaseBeginIdx() + 1);
-  } else if (out_prlll_id_max < bs.BaseBeginIdx()) {
-    split_conf->set_bigger_part_num(out_prlll_id_max - out_prlll_id_min + 1);
-    split_conf->set_base_part_num(0);
-  } else {
-    UNEXPECTED_RUN();
+  BalancedSplitter in_bs(JobDesc::Singleton()->ParallelPieceSize(),
+                         in_parallel_num);
+  Range in_range = in_bs.At(sorted_in_edges[in_edge_first].parallel_id_min,
+                            sorted_in_edges[in_edge_last].parallel_id_max);
+  BalancedSplitter out_bs(JobDesc::Singleton()->ParallelPieceSize(),
+                          out_parallel_num);
+  conf->set_out_num(0);
+  for (int64_t i = 0; i < sorted_out_edges.size(); ++i) {
+    const EdgeInfo& out_edge = sorted_out_edges[i];
+    Range out_range =
+        out_bs.At(out_edge.parallel_id_min, out_edge.parallel_id_max);
+    Range intersectant_range = FindIntersectant(in_range, out_range);
+    if (intersectant_range.size() == 0) { continue; }
+    if (*used_out_edge_begin == -1) { *used_out_edge_begin = i; }
+    conf->set_out_num(conf->out_num() + 1);
+    split_conf->add_part_num(intersectant_range.size());
   }
 }
-DEFINE_BLD_BOXING_OP_CONF_METHOD(OutBoxingTaskNode, DataConcatAndDataSplit) {}
 DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, DataConcatAndClone) { TODO(); }
 DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, DataConcatAndModelSplit) {
   TODO();
