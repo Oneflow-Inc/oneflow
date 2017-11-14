@@ -1,315 +1,195 @@
 #include "oneflow/core/graph/task_graph.h"
+#include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/graph/copy_task_node.h"
-#include "oneflow/core/graph/data_comp_task_node.h"
-#include "oneflow/core/graph/in_boxing_task_node.h"
-#include "oneflow/core/graph/loss_accumulate_comp_task_node.h"
-#include "oneflow/core/graph/loss_record_comp_task_node.h"
-#include "oneflow/core/graph/model_diff_accumulate_comp_task_node.h"
-#include "oneflow/core/graph/model_save_comp_task_node.h"
-#include "oneflow/core/graph/model_update_comp_task_node.h"
-#include "oneflow/core/graph/out_boxing_task_node.h"
 
 namespace oneflow {
 
-#define INSTANTIATE_TASK_GPH_MEM_FUNC(func, ...)                     \
-  template void TaskGraph::func<DataCompTaskNode>(__VA_ARGS__);      \
-  template void TaskGraph::func<MdUpdtCompTaskNode>(__VA_ARGS__);    \
-  template void TaskGraph::func<MdDiffAccCompTaskNode>(__VA_ARGS__); \
-  template void TaskGraph::func<MdSaveCompTaskNode>(__VA_ARGS__);    \
-  template void TaskGraph::func<LossAccCompTaskNode>(__VA_ARGS__);   \
-  template void TaskGraph::func<LossRecordCompTaskNode>(__VA_ARGS__);
-
-namespace {
-
-inline void TaskConnect(TaskNode* src_node, TaskEdge* edge,
-                        TaskNode* dst_node) {
-  Connect<TaskNode, TaskEdge>(src_node, edge, dst_node);
+TaskGraph::TaskGraph(std::unique_ptr<const ChainGraph>&& chain_gph) {
+  chain_gph_ = std::move(chain_gph);
+  BuildStruct();
+  ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges,
+                        std::placeholders::_1));
+  ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, std::placeholders::_1));
+  ForEachNode(std::bind(&TaskNode::Build, std::placeholders::_1),
+              std::bind(&TaskNode::IsReadyForBuild, std::placeholders::_1));
 }
 
-}  // namespace
-
-void TaskGraph::BuildExecAndEnrollLbn2Regsts() {
-  TopoForEachNode(
-      [this](TaskNode* node) { node->BuildExecAndEnrollLbn2Regsts(this); });
-}
-
-void TaskGraph::InferBlobDescInProducedRegsts() {
-  TopoForEachNode(
-      [this](TaskNode* node) { node->InferBlobDescInProducedRegsts(this); });
-}
-
-std::vector<CompTaskNode*> TaskGraph::CompTasksInChain(const ChainNode* chain) {
-  std::vector<CompTaskNode*> ret;
-  ForEachNode([&](TaskNode* node) {
-    auto comp_node = dynamic_cast<CompTaskNode*>(node);
-    if (comp_node && comp_node->chain_node() == chain) {
-      ret.push_back(comp_node);
-    }
-  });
-  return ret;
-}
-
-template<typename CompTaskNodeType>
-void TaskGraph::BuildFromChainGph(std::unique_ptr<ChainGraph>&& chain_gph,
-                                  bool need_bp) {
-  stage_gph_.reset(new StageGraph(std::move(chain_gph)));
-  BuildFromStageGph<CompTaskNodeType>(need_bp);
-}
-
-INSTANTIATE_TASK_GPH_MEM_FUNC(BuildFromChainGph, std::unique_ptr<ChainGraph>&&,
-                              bool);
-
-template<typename CompTaskNodeType>
-void TaskGraph::BuildFromStageGph(bool need_bp) {
-  Stage2TaskNodesMap stage2task_nodes;
-  InitCompTaskNodes<CompTaskNodeType>(&stage2task_nodes);
-  InitBoxingTaskNodes(&stage2task_nodes);
-  ConnectBoxingTaskNodes(&stage2task_nodes);
-  UpdateSourceAndSink();
-  ToDotWithAutoFilePath();
-  if (need_bp) {
-    BuildBpStruct();
-    ToDotWithAutoFilePath();
-  }
-}
-
-INSTANTIATE_TASK_GPH_MEM_FUNC(BuildFromStageGph, bool);
-
-template<typename CompTaskNodeType>
-void TaskGraph::InitCompTaskNodes(Stage2TaskNodesMap* stage2task_nodes) {
-  stage_gph_->ConstForEachNode([&](const StageNode* stage) {
-    if (stage->chain_node()->parallel_desc()->device_type() == kGPU) {
-      Stage2DeviceCompTaskNodes<CompTaskNodeType>(
-          stage, &((*stage2task_nodes)[stage]));
-    } else {
-      Stage2HostCompTaskNodes<CompTaskNodeType>(stage,
-                                                &((*stage2task_nodes)[stage]));
-    }
-  });
-}
-
-INSTANTIATE_TASK_GPH_MEM_FUNC(InitCompTaskNodes, Stage2TaskNodesMap*);
-
-template<typename CompTaskNodeType>
-void TaskGraph::Stage2DeviceCompTaskNodes(
-    const StageNode* stage, TaskNodesInStage* task_nodes_in_stage) {
-  int64_t parallel_idx = stage->parallel_range().begin();
-  for (auto device_phy_id : stage->SortedDevicePhyIds()) {
-    int64_t thread_local_id =
-        IDMgr::Singleton()->ThrdLocId4DevPhyId(device_phy_id);
-    // comp_task_node
-    CompTaskNodeType* comp_task_node = NewTaskNode<CompTaskNodeType>();
-    comp_task_node->SetFwNode();
-    comp_task_node->set_stage_node(stage);
-    comp_task_node->mut_thrd_loc_id() = thread_local_id;
-    comp_task_node->set_parallel_id(parallel_idx++);
-    comp_task_node->set_task_id();
-    // comp_in_task_node
-    if (!stage->in_edges().empty()) {
-      CopyHDTaskNode* comp_in_task_node = NewTaskNode<CopyHDTaskNode>();
-      comp_in_task_node->SetFwNode();
-      comp_in_task_node->set_stage_node(stage);
-      comp_in_task_node->mut_thrd_loc_id() = thread_local_id;
-      comp_in_task_node->SetFwInCopy();
-      comp_in_task_node->set_task_id();
-      TaskConnect(comp_in_task_node, NewEdge(), comp_task_node);
-      task_nodes_in_stage->comp_in_task_nodes.push_back(comp_in_task_node);
-    } else {
-      task_nodes_in_stage->comp_in_task_nodes.push_back(comp_task_node);
-    }
-    // comp_out_task_node
-    if (!stage->out_edges().empty()) {
-      CopyHDTaskNode* comp_out_task_node = NewTaskNode<CopyHDTaskNode>();
-      comp_out_task_node->SetFwNode();
-      comp_out_task_node->set_stage_node(stage);
-      comp_out_task_node->mut_thrd_loc_id() = thread_local_id;
-      comp_out_task_node->SetFwOutCopy();
-      comp_out_task_node->set_task_id();
-      TaskConnect(comp_task_node, NewEdge(), comp_out_task_node);
-      task_nodes_in_stage->comp_out_task_nodes.push_back(comp_out_task_node);
-    } else {
-      task_nodes_in_stage->comp_out_task_nodes.push_back(comp_task_node);
-    }
-  }
-  CHECK_EQ(parallel_idx, stage->parallel_range().end())
-      << stage->chain_node()->VisualStr();
-}
-
-INSTANTIATE_TASK_GPH_MEM_FUNC(Stage2DeviceCompTaskNodes, const StageNode* stage,
-                              TaskNodesInStage* task_nodes_in_stage);
-
-template<typename CompTaskNodeType>
-void TaskGraph::Stage2HostCompTaskNodes(const StageNode* stage,
-                                        TaskNodesInStage* task_nodes_in_stage) {
-  const int64_t parallel_begin = stage->parallel_range().begin();
-  const int64_t parallel_end = stage->parallel_range().end();
-  int64_t parallel_idx = parallel_begin;
-  while (parallel_idx < parallel_end) {
-    CompTaskNodeType* comp_task_node = NewTaskNode<CompTaskNodeType>();
-    comp_task_node->SetFwNode();
-    comp_task_node->set_stage_node(stage);
-    comp_task_node->set_parallel_id(parallel_idx);
-    if (stage->SortedDevicePhyIds().empty()) {
-      comp_task_node->mut_thrd_loc_id() =
-          IDMgr::Singleton()->PersistenceThrdLocId();
-    } else {
-      auto device_id =
-          stage->SortedDevicePhyIds().at(parallel_idx - parallel_begin);
-      comp_task_node->mut_thrd_loc_id() =
-          IDMgr::Singleton()->ThrdLocId4DevPhyId(device_id);
-    }
-    comp_task_node->set_task_id();
-
-    task_nodes_in_stage->comp_in_task_nodes.push_back(comp_task_node);
-    task_nodes_in_stage->comp_out_task_nodes.push_back(comp_task_node);
-    parallel_idx += 1;
-  }
-}
-
-INSTANTIATE_TASK_GPH_MEM_FUNC(Stage2HostCompTaskNodes, const StageNode* stage,
-                              TaskNodesInStage* task_nodes_in_stage);
-
-void TaskGraph::InitBoxingTaskNodes(Stage2TaskNodesMap* stage2task_nodes) {
-  stage_gph_->ConstForEachNode([&](const StageNode* stage) {
-    InitInboxingTaskNode(stage, &(stage2task_nodes->at(stage)));
-    InitOutBoxingTaskNode(stage, &(stage2task_nodes->at(stage)));
-  });
-}
-
-void TaskGraph::InitInboxingTaskNode(const StageNode* stage,
-                                     TaskNodesInStage* task_nodes_in_stage) {
-  task_nodes_in_stage->in_boxing_task_node = nullptr;
-  if (stage->in_edges().empty()) { return; }
-  if (stage->in_edges().size() == 1
-      && task_nodes_in_stage->comp_in_task_nodes.size() == 1) {
-    return;
-  }
-  InBoxingTaskNode* boxing_task = NewTaskNode<InBoxingTaskNode>();
-  boxing_task->SetFwNode();
-  boxing_task->set_stage_node(stage);
-  boxing_task->mut_thrd_loc_id() = IDMgr::Singleton()->BoxingThrdLocId();
-  boxing_task->set_task_id();
-  for (TaskNode* comp_in_task : task_nodes_in_stage->comp_in_task_nodes) {
-    TaskConnect(boxing_task, NewEdge(), comp_in_task);
-  }
-  task_nodes_in_stage->in_boxing_task_node = boxing_task;
-}
-
-void TaskGraph::InitOutBoxingTaskNode(const StageNode* stage,
-                                      TaskNodesInStage* task_nodes_in_stage) {
-  task_nodes_in_stage->out_boxing_task_node = nullptr;
-  if (stage->out_edges().empty()) { return; }
-  if (stage->out_edges().size() == 1
-      && task_nodes_in_stage->comp_out_task_nodes.size() == 1) {
-    return;
-  }
-  OutBoxingTaskNode* boxing_task = NewTaskNode<OutBoxingTaskNode>();
-  boxing_task->SetFwNode();
-  boxing_task->set_stage_node(stage);
-  boxing_task->mut_thrd_loc_id() = IDMgr::Singleton()->BoxingThrdLocId();
-  boxing_task->set_task_id();
-  for (TaskNode* comp_out_task : task_nodes_in_stage->comp_out_task_nodes) {
-    TaskConnect(comp_out_task, NewEdge(), boxing_task);
-  }
-  task_nodes_in_stage->out_boxing_task_node = boxing_task;
-}
-
-void TaskGraph::ConnectBoxingTaskNodes(
-    const Stage2TaskNodesMap* stage2task_nodes) {
-  stage_gph_->ConstForEachNode([&](const StageNode* cur_stage) {
-    if (cur_stage->out_edges().empty()) { return; }
-    const TaskNodesInStage& cur_tasks = stage2task_nodes->at(cur_stage);
-    TaskNode* out_node = cur_tasks.out_boxing_task_node;
-    if (out_node == nullptr) {
-      CHECK_EQ(cur_tasks.comp_out_task_nodes.size(), 1);
-      out_node = cur_tasks.comp_out_task_nodes[0];
-    }
-    for (const StageEdge* edge : cur_stage->out_edges()) {
-      StageNode* succ_stage = edge->dst_node();
-      const TaskNodesInStage& succ_tasks = stage2task_nodes->at(succ_stage);
-      TaskNode* in_node = succ_tasks.in_boxing_task_node;
-      if (in_node == nullptr) {
-        CHECK_EQ(succ_tasks.comp_in_task_nodes.size(), 1);
-        in_node = succ_tasks.comp_in_task_nodes[0];
+void TaskGraph::BldSubTskGphByBoxing(
+    const ChainNode* src_chain, const ChainNode* dst_chain,
+    const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+    const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,
+    HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_in_box,
+    HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_out_box) {
+  BuildOutBoxingIfNeed(src_chain, sorted_src_comp_tasks, chain2sorted_out_box);
+  BuildInBoxingIfNeed(dst_chain, sorted_dst_comp_tasks, chain2sorted_in_box);
+  for (TaskNode* src_box : chain2sorted_out_box->at(src_chain)) {
+    for (TaskNode* dst_box : chain2sorted_in_box->at(dst_chain)) {
+      if (src_box->machine_id() == dst_box->machine_id()) {
+        Connect<TaskNode>(src_box, NewEdge(), dst_box);
+      } else {
+        AddCopyCommNetTask(src_box, dst_box);
       }
-      if (cur_stage->machine_id() == succ_stage->machine_id()) {
-        TaskConnect(out_node, NewEdge(), in_node);
+    }
+  }
+}
+
+void TaskGraph::BldSubTskGphByOneToOne(
+    const ChainNode* src_chain, const ChainNode* dst_chain,
+    const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+    const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,
+    HashMap<const ChainNode*, std::vector<TaskNode*>>*,
+    HashMap<const ChainNode*, std::vector<TaskNode*>>*) {
+  CHECK_EQ(sorted_src_comp_tasks.size(), sorted_dst_comp_tasks.size());
+  FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
+    CompTaskNode* src_comp_task = sorted_src_comp_tasks[i];
+    CompTaskNode* dst_comp_task = sorted_dst_comp_tasks[i];
+    if (src_comp_task->machine_id() == dst_comp_task->machine_id()) {
+      if (src_comp_task->device_type() == dst_comp_task->device_type()) {
+        if (src_comp_task->device_type() != DeviceType::kCPU) {
+          CHECK_EQ(src_comp_task->thrd_loc_id(), dst_comp_task->thrd_loc_id());
+        }
+        Connect<TaskNode>(src_comp_task, NewEdge(), dst_comp_task);
+      } else {
+        CopyHdTaskNode* copy_hd_task = NewNode<CopyHdTaskNode>();
+        if (src_comp_task->device_type() == DeviceType::kCPU) {
+          copy_hd_task->Init(dst_comp_task, CopyHdOpConf::H2D);
+        } else {
+          copy_hd_task->Init(src_comp_task, CopyHdOpConf::D2H);
+        }
+        Connect<TaskNode>(src_comp_task, NewEdge(), copy_hd_task);
+        Connect<TaskNode>(copy_hd_task, NewEdge(), dst_comp_task);
+      }
+    } else {
+      TaskNode* src_bound_task = AddCopyD2HTaskIfNotCpu(src_comp_task);
+      TaskNode* dst_bound_task = AddCopyH2DTaskIfNotCpu(dst_comp_task);
+      AddCopyCommNetTask(src_bound_task, dst_bound_task);
+    }
+  }
+}
+
+void TaskGraph::BldSubTskGphBySelectOneSourceToSoleSink(
+    const ChainNode* src_chain, const ChainNode* dst_chain,
+    const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+    const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,
+    HashMap<const ChainNode*, std::vector<TaskNode*>>*,
+    HashMap<const ChainNode*, std::vector<TaskNode*>>*) {
+  CHECK_EQ(sorted_dst_comp_tasks.size(), 1);
+  CompTaskNode* sole_dst_comp_task = sorted_dst_comp_tasks.front();
+  CompTaskNode* selected_src_comp_task = nullptr;
+  bool is_same_machine = false;
+  auto UpdateSelected = [&](CompTaskNode* node) {
+    selected_src_comp_task = node;
+    is_same_machine = (node->machine_id() == sole_dst_comp_task->machine_id());
+  };
+  for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
+    if (selected_src_comp_task == nullptr) {
+      UpdateSelected(src_comp_task);
+      continue;
+    }
+    if (src_comp_task->machine_id() == sole_dst_comp_task->machine_id()) {
+      if (is_same_machine == false) {
+        UpdateSelected(src_comp_task);
         continue;
       }
-      CopyCommNetTaskNode* comm_net_node = NewTaskNode<CopyCommNetTaskNode>();
-      comm_net_node->SetFwNode();
-      comm_net_node->set_stage_node(succ_stage);
-      comm_net_node->mut_thrd_loc_id() = IDMgr::Singleton()->CommNetThrdLocId();
-      comm_net_node->set_task_id();
-
-      TaskConnect(out_node, NewEdge(), comm_net_node);
-      TaskConnect(comm_net_node, NewEdge(), in_node);
-    }
-  });
-}
-
-void TaskGraph::BuildBpStruct() {
-  std::vector<TaskNode*> loss_node_vec;
-  GenerateRelatedBpNodes(&loss_node_vec);
-  BackwardConnect(loss_node_vec);
-  UpdateSourceAndSink();
-}
-
-void TaskGraph::GenerateRelatedBpNodes(std::vector<TaskNode*>* loss_node_vec) {
-  TopoForEachNode([&](TaskNode* task_node) {
-    if (auto comp_task_node = dynamic_cast<CompTaskNode*>(task_node)) {
-      if (comp_task_node->IsLossNode()) {
-        loss_node_vec->push_back(task_node);
-        return;
-      }
-      if (comp_task_node->chain_node()->IsRecordNode()) { return; }
-      if (comp_task_node->chain_node()->HasOpWithModelOrModelTmpBlob()) {
-        EnrollNode(comp_task_node->BuildAndConnectBpNode());
-        return;
-      }
-    }
-    for (TaskEdge* edge : task_node->in_edges()) {
-      if (edge->src_node()->GetBpNode() != nullptr) {
-        EnrollNode(task_node->BuildAndConnectBpNode());
+      if (src_comp_task->thrd_loc_id() == sole_dst_comp_task->thrd_loc_id()) {
+        UpdateSelected(src_comp_task);
         break;
       }
     }
-  });
+  }
+  CHECK_NOTNULL(selected_src_comp_task);
+  BldSubTskGphByOneToOne(nullptr, nullptr, {selected_src_comp_task},
+                         sorted_dst_comp_tasks, nullptr, nullptr);
 }
 
-void TaskGraph::BackwardConnect(const std::vector<TaskNode*>& loss_node_vec) {
-  std::queue<TaskNode*> bp_node_queue;
-  std::unordered_set<TaskNode*> has_been_enqueued;
-  auto TryEnqueue = [&bp_node_queue, &has_been_enqueued](TaskNode* node) {
-    if (has_been_enqueued.find(node) == has_been_enqueued.end()) {
-      bp_node_queue.push(node);
-      has_been_enqueued.insert(node);
-    }
-  };
-  for (TaskNode* loss_node : loss_node_vec) {
-    for (TaskEdge* fw_edge : loss_node->in_edges()) {
-      TaskNode* bp_pred_node = fw_edge->src_node()->GetBpNode();
-      if (bp_pred_node == nullptr) { continue; }
-      TaskEdge* bp_edge = NewEdge();
-      TaskConnect(loss_node, bp_edge, bp_pred_node);
-      fw_edge->set_related_fwbp_edge(bp_edge);
-      bp_edge->set_related_fwbp_edge(fw_edge);
-      TryEnqueue(bp_pred_node);
-    }
+TaskNode* TaskGraph::AddCopyH2DTaskIfNotCpu(CompTaskNode* comp_task) {
+  if (comp_task->device_type() == DeviceType::kCPU) { return comp_task; }
+  CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
+  copy_task->Init(comp_task, CopyHdOpConf::H2D);
+  Connect<TaskNode>(copy_task, NewEdge(), comp_task);
+  return copy_task;
+}
+
+TaskNode* TaskGraph::AddCopyD2HTaskIfNotCpu(CompTaskNode* comp_task) {
+  if (comp_task->device_type() == DeviceType::kCPU) { return comp_task; }
+  CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
+  copy_task->Init(comp_task, CopyHdOpConf::D2H);
+  Connect<TaskNode>(comp_task, NewEdge(), copy_task);
+  return copy_task;
+}
+
+void TaskGraph::AddCopyCommNetTask(TaskNode* src, TaskNode* dst) {
+  CHECK_NE(src->machine_id(), dst->machine_id());
+  CHECK_EQ(src->device_type(), DeviceType::kCPU);
+  CHECK_EQ(dst->device_type(), DeviceType::kCPU);
+  CopyCommNetTaskNode* copy_comm_net_task = NewNode<CopyCommNetTaskNode>();
+  copy_comm_net_task->Init(dst->machine_id());
+  Connect<TaskNode>(src, NewEdge(), copy_comm_net_task);
+  Connect<TaskNode>(copy_comm_net_task, NewEdge(), dst);
+}
+
+void TaskGraph::BuildOutBoxingIfNeed(
+    const ChainNode* chain, const std::vector<CompTaskNode*>& sorted_comp_tasks,
+    HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_out_box) {
+  if (chain2sorted_out_box->find(chain) != chain2sorted_out_box->end()) {
+    return;
   }
-  while (!bp_node_queue.empty()) {
-    TaskNode* bp_cur_node = bp_node_queue.front();
-    bp_node_queue.pop();
-    for (TaskEdge* fw_edge : bp_cur_node->GetFwNode()->in_edges()) {
-      TaskNode* bp_pred_node = fw_edge->src_node()->GetBpNode();
-      if (bp_pred_node == nullptr) { continue; }
-      TaskEdge* bp_edge = NewEdge();
-      TaskConnect(bp_cur_node, bp_edge, bp_pred_node);
-      fw_edge->set_related_fwbp_edge(bp_edge);
-      bp_edge->set_related_fwbp_edge(fw_edge);
-      TryEnqueue(bp_pred_node);
-    }
+  std::map<int64_t, std::vector<TaskNode*>> machine_id2bound_task;
+  for (CompTaskNode* comp_task : sorted_comp_tasks) {
+    TaskNode* task = AddCopyD2HTaskIfNotCpu(comp_task);
+    machine_id2bound_task[task->machine_id()].push_back(task);
   }
+  for (const auto& pair : machine_id2bound_task) {
+    OutBoxingTaskNode* boxing_task = NewNode<OutBoxingTaskNode>();
+    boxing_task->Init(pair.second.front()->machine_id());
+    for (TaskNode* task : pair.second) {
+      Connect<TaskNode>(task, NewEdge(), boxing_task);
+    }
+    (*chain2sorted_out_box)[chain].push_back(boxing_task);
+  }
+}
+
+void TaskGraph::BuildInBoxingIfNeed(
+    const ChainNode* chain, const std::vector<CompTaskNode*>& sorted_comp_tasks,
+    HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_in_box) {
+  if (chain2sorted_in_box->find(chain) != chain2sorted_in_box->end()) {
+    return;
+  }
+  std::map<int64_t, std::vector<TaskNode*>> machine_id2bound_task;
+  for (CompTaskNode* comp_task : sorted_comp_tasks) {
+    TaskNode* task = AddCopyH2DTaskIfNotCpu(comp_task);
+    machine_id2bound_task[task->machine_id()].push_back(task);
+  }
+  for (const auto& pair : machine_id2bound_task) {
+    InBoxingTaskNode* boxing_task = NewNode<InBoxingTaskNode>();
+    boxing_task->Init(pair.second.front()->machine_id());
+    for (TaskNode* task : pair.second) {
+      Connect<TaskNode>(boxing_task, NewEdge(), task);
+    }
+    (*chain2sorted_in_box)[chain].push_back(boxing_task);
+  }
+}
+
+void TaskGraph::BuildStruct() {
+  HashMap<const ChainNode*, std::vector<CompTaskNode*>> chain2sorted_comp_tasks;
+  HashMap<const ChainNode*, std::vector<TaskNode*>> chain2sorted_in_box;
+  HashMap<const ChainNode*, std::vector<TaskNode*>> chain2sorted_out_box;
+  chain_gph_->ForEachNode([&](const ChainNode* chain_node) {
+    chain_node->GenSortedCompTaskNodes([&](CompTaskNode* comp_task_node) {
+      comp_task_node->FixThrdLocId();
+      AddAllocatedNode(comp_task_node);
+      chain2sorted_comp_tasks[chain_node].push_back(comp_task_node);
+    });
+  });
+  chain_gph_->ForEachEdge([&](const ChainEdge* chain_edge) {
+    BldSubTskGphMthd method = chain_edge->GetMthdForBldSubTskGph();
+    (this->*method)(chain_edge->src_node(), chain_edge->dst_node(),
+                    chain2sorted_comp_tasks.at(chain_edge->src_node()),
+                    chain2sorted_comp_tasks.at(chain_edge->dst_node()),
+                    &chain2sorted_in_box, &chain2sorted_out_box);
+  });
+  // TODO: delete boxing with sole in and sole out
+  ToDotWithAutoFilePath();
 }
 
 }  // namespace oneflow

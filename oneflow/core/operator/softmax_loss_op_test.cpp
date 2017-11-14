@@ -24,7 +24,7 @@ TEST(SoftmaxLossOp, softmax_loss_3x5) {
     return bn2blob_desc_map.at(bn);
   };
   // infershape
-  softmax_loss_op->InferBlobDesc4FwBlobs(fp, kDataParallel, 0, 1);
+  softmax_loss_op->InferBlobDescs(fp, kDataParallel, 0, 1);
   // test
   ASSERT_EQ(*fp("loss"), BlobDesc(Shape({1}), DataType::kFloat, false));
   ASSERT_EQ(*fp("prob"), BlobDesc(Shape({3, 5}), DataType::kFloat, false));

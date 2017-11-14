@@ -14,9 +14,9 @@ const PbMessage& PoolingOp::GetSpecialConf() const {
   return op_conf().pooling_conf();
 }
 
-void PoolingOp::InferBlobDesc4FwBlobs(
+void PoolingOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) {
+    const ParallelContext* parallel_ctx) {
   const PoolingOpConf& conf = op_conf().pooling_conf();
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");

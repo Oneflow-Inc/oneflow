@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class LossRecordOp final : public SysOperator {
+class LossRecordOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LossRecordOp);
   LossRecordOp() = default;

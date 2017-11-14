@@ -11,7 +11,7 @@ void MomentumMdUpdateKernel<device_type, T>::Forward(
   const Blob* model_diffs_blob = BnInOp2Blob("model_diffs");
   float learning_rate = op()->op_conf().momentum_mdupdt_conf().learning_rate();
   float beta = op()->op_conf().momentum_mdupdt_conf().beta();
-  float alpha = learning_rate / JobDesc::Singleton()->batch_size();
+  float alpha = learning_rate / JobDesc::Singleton()->BatchSize();
   CHECK(std::isfinite(alpha));
 
   // momentum = beta * momentum

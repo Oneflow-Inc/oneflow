@@ -5,6 +5,31 @@ import "oneflow/core/graph/exec_sequence.proto";
 import "oneflow/core/register/register_desc.proto";
 import "oneflow/core/job/placement.proto";
 
+enum TodoTaskType {
+  kInvalid = 0;
+  kForward = 1;
+  kBackward = 2;
+  kSource = 3;
+  kLoss = 4;
+  kLossAcc = 5;
+  kLossRecord = 6;
+  kMdUpdt = 7;
+  kMdSave = 8;
+  kMdDiffAcc = 9;
+  kCopyHd = 10;
+  kCopyCommNet = 11;
+  kBoxing = 12;
+};
+
+message TodoTaskProto {
+  required TodoTaskType task_type = 1;
+  required int64 machine_id = 2;
+  required int64 thrd_local_id = 3;
+  required int64 task_id = 4;
+  optional ParallelContext parallel_ctx = 5;
+  optional uint32 random_seed = 6;
+};
+
 enum TaskType {
   kInvalidTaskType = 0;
   kDataCompTask = 1;
