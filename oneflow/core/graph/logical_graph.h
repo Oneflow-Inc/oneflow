@@ -51,7 +51,8 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   OF_SINGLETON(LogicalGraph);
 
   const char* TypeName() const override { return "LogicalGraph"; }
-  const LogicalNode* GetProducerNode(const std::string& lbn);
+  std::shared_ptr<const Operator> GetProducerOp(const std::string& lbn);
+  void SetProducerOp(const std::string& lbn, std::weak_ptr<const Operator> op);
 
  private:
   LogicalGraph();
@@ -71,7 +72,7 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void AddOneCloneNode(const CloneInfo& clone_info,
                        const HashMap<LogicalEdge*, std::string>& edge2ibn);
 
-  HashMap<std::string, const LogicalNode*> lbn2producer_;
+  HashMap<std::string, std::weak_ptr<const Operator>> lbn2producer_;
 };
 
 }  // namespace oneflow
