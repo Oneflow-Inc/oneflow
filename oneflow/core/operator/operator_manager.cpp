@@ -22,7 +22,6 @@ void OpMgr::AllOpToProto(PbRpf<OperatorProto>* ret) {
   ret->Clear();
   for (auto it = op_list_.begin(); it != op_list_.end();) {
     if (std::shared_ptr<const Operator> op = it->lock()) {
-      op->ToProto(ret->Add());
       ++it;
     } else {
       op_list_.erase(it++);

@@ -1,0 +1,6 @@
+syntax = "proto2";
+package oneflow;
+
+message KernelConf {
+  map<string, string> bn_in_op2lbn = 3;
+}

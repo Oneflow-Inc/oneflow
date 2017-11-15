@@ -6,6 +6,7 @@
 #include "oneflow/core/job/keyword.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/placement.pb.h"
+#include "oneflow/core/kernel/kernel.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/operator.pb.h"
 #include "oneflow/core/register/blob_desc.h"
@@ -28,10 +29,6 @@ class Operator {
   virtual bool IsLossOp() const { return false; }
   virtual bool IsRecordOp() const { return false; }
   virtual bool IsDataLoaderOp() const { return false; }
-
-  // this <-> OpProto
-  void InitFromProto(const OperatorProto& operatorproto);
-  void ToProto(OperatorProto* ret) const;
 
   // bn_in_op <-> lbn
   const std::string& Lbn4BnInOp(const std::string& bn_in_op) const;
@@ -88,15 +85,22 @@ class Operator {
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, model_tmp_blobs
   virtual void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) {}
+      const ParallelContext* parallel_ctx) const {
+    TODO();
+  }
 
-  //
   void FixParallelDesc(ParallelDesc* pr_desc) const;
   virtual int32_t ModelSplitAxis() const { return -1; }
   virtual int32_t MaxModelSplitNum() const { return -1; }
+  void GenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      KernelConf* kernel_conf) const;
 
  protected:
   virtual void VirtualFixParallelDesc(ParallelDesc* pr_desc) const {}
+  virtual void VirtualGenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      KernelConf* kernel_conf) const {}
 
   virtual std::string ibn2lbn(const std::string& input_bn) const;
   virtual std::string obn2lbn(const std::string& output_bn) const;
