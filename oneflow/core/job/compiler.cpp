@@ -42,6 +42,7 @@ Plan Compiler::DoCompile() {
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::Build, _1),
                         std::bind(&TaskNode::IsReadyForBuild, _1));
+  task_gph->ForEachNode(std::bind(&TaskNode::EraseEmptyProducedRegst, _1));
 }
 
 }  // namespace oneflow

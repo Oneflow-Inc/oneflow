@@ -32,6 +32,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void ConsumeAllRegsts() { TODO(); }
   void Build();
   virtual bool IsReadyForBuild() { return IsAllConsumedRegstLocked(); }
+  void EraseEmptyProducedRegst();
 
   // Others
   virtual TodoTaskType GetTaskType() const = 0;

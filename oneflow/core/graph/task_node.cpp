@@ -27,6 +27,15 @@ void TaskNode::Build() {
   LockRegsts();
 }
 
+void TaskNode::EraseEmptyProducedRegst() {
+  for (auto& pair : produced_regsts_) { pair.second->EraseZeroSizeBlob(); }
+  EraseIf<std::string, std::shared_ptr<RegstDesc>>(
+      &produced_regsts_,
+      [](HashMap<std::string, std::shared_ptr<RegstDesc>>::iterator it) {
+        return it->second->NumOfLbn() == 0;
+      });
+}
+
 void TaskNode::UpdateTaskId() {
   CHECK_NE(machine_id_, -1);
   CHECK_NE(thrd_loc_id_, -1);

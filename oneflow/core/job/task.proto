@@ -22,12 +22,17 @@ enum TodoTaskType {
 };
 
 message TodoTaskProto {
+  // common
   required TodoTaskType task_type = 1;
   required int64 machine_id = 2;
   required int64 thrd_local_id = 3;
   required int64 task_id = 4;
-  optional ParallelContext parallel_ctx = 5;
-  optional uint32 random_seed = 6;
+  required TodoExecSequence exec_sequence = 5;
+  map<string, RegstDescProto> produced_regst_desc = 6;
+  map<string, int64> consumed_regst_desc_id = 7;
+  // compute task
+  optional ParallelContext parallel_ctx = 1000; // CompTask
+  optional uint32 random_seed = 1001; // MdUpdtCompTask
 };
 
 enum TaskType {
