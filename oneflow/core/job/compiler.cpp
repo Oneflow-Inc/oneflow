@@ -37,6 +37,11 @@ Plan Compiler::Compile(const JobConf& job_conf) {
 Plan Compiler::DoCompile() {
   auto chain_gph = of_make_unique<ChainGraph>(JobDesc::Singleton()->is_train());
   auto task_gph = of_make_unique<TaskGraph>(std::move(chain_gph));
+  using std::placeholders::_1;
+  task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
+  task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
+  task_gph->ForEachNode(std::bind(&TaskNode::Build, _1),
+                        std::bind(&TaskNode::IsReadyForBuild, _1));
 }
 
 }  // namespace oneflow

@@ -6,12 +6,25 @@ namespace oneflow {
 
 TaskGraph::TaskGraph(std::unique_ptr<const ChainGraph>&& chain_gph) {
   chain_gph_ = std::move(chain_gph);
-  BuildStruct();
-  ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges,
-                        std::placeholders::_1));
-  ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, std::placeholders::_1));
-  ForEachNode(std::bind(&TaskNode::Build, std::placeholders::_1),
-              std::bind(&TaskNode::IsReadyForBuild, std::placeholders::_1));
+  HashMap<const ChainNode*, std::vector<CompTaskNode*>> chain2sorted_comp_tasks;
+  HashMap<const ChainNode*, std::vector<TaskNode*>> chain2sorted_in_box;
+  HashMap<const ChainNode*, std::vector<TaskNode*>> chain2sorted_out_box;
+  chain_gph_->ForEachNode([&](const ChainNode* chain_node) {
+    chain_node->GenSortedCompTaskNodes([&](CompTaskNode* comp_task_node) {
+      comp_task_node->FixThrdLocId();
+      AddAllocatedNode(comp_task_node);
+      chain2sorted_comp_tasks[chain_node].push_back(comp_task_node);
+    });
+  });
+  chain_gph_->ForEachEdge([&](const ChainEdge* chain_edge) {
+    BldSubTskGphMthd method = chain_edge->GetMthdForBldSubTskGph();
+    (this->*method)(chain_edge->src_node(), chain_edge->dst_node(),
+                    chain2sorted_comp_tasks.at(chain_edge->src_node()),
+                    chain2sorted_comp_tasks.at(chain_edge->dst_node()),
+                    &chain2sorted_in_box, &chain2sorted_out_box);
+  });
+  // TODO: delete boxing with sole in and sole out
+  ToDotWithAutoFilePath();
 }
 
 void TaskGraph::BldSubTskGphByBoxing(
@@ -168,28 +181,6 @@ void TaskGraph::BuildInBoxingIfNeed(
     }
     (*chain2sorted_in_box)[chain].push_back(boxing_task);
   }
-}
-
-void TaskGraph::BuildStruct() {
-  HashMap<const ChainNode*, std::vector<CompTaskNode*>> chain2sorted_comp_tasks;
-  HashMap<const ChainNode*, std::vector<TaskNode*>> chain2sorted_in_box;
-  HashMap<const ChainNode*, std::vector<TaskNode*>> chain2sorted_out_box;
-  chain_gph_->ForEachNode([&](const ChainNode* chain_node) {
-    chain_node->GenSortedCompTaskNodes([&](CompTaskNode* comp_task_node) {
-      comp_task_node->FixThrdLocId();
-      AddAllocatedNode(comp_task_node);
-      chain2sorted_comp_tasks[chain_node].push_back(comp_task_node);
-    });
-  });
-  chain_gph_->ForEachEdge([&](const ChainEdge* chain_edge) {
-    BldSubTskGphMthd method = chain_edge->GetMthdForBldSubTskGph();
-    (this->*method)(chain_edge->src_node(), chain_edge->dst_node(),
-                    chain2sorted_comp_tasks.at(chain_edge->src_node()),
-                    chain2sorted_comp_tasks.at(chain_edge->dst_node()),
-                    &chain2sorted_in_box, &chain2sorted_out_box);
-  });
-  // TODO: delete boxing with sole in and sole out
-  ToDotWithAutoFilePath();
 }
 
 }  // namespace oneflow
