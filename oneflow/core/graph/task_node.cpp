@@ -23,7 +23,7 @@ void TaskNode::set_thrd_loc_id(int64_t val) {
 }
 
 void TaskNode::Build() {
-  BuildRegsts();
+  BuildExecGphAndRegst();
   LockRegsts();
 }
 

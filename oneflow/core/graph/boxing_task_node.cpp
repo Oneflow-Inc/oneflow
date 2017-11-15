@@ -28,7 +28,7 @@ void BoxingTaskNode::ConsumeAllRegsts() {
   }
 }
 
-void BoxingTaskNode::BuildRegsts() {
+void BoxingTaskNode::BuildExecGphAndRegst() {
   HashMap<const ChainNode*, std::vector<EdgeInfo>> in_chain2edge_info;
   InitChain2SortedEdgeInfo(&TaskNode::in_edges, &TaskNode::SoleInEdge,
                            &TaskEdge::src_node, &in_chain2edge_info);
