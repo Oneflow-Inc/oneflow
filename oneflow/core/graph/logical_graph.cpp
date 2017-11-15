@@ -3,8 +3,14 @@
 
 namespace oneflow {
 
-const LogicalNode* LogicalGraph::GetProducerNode(const std::string& lbn) {
-  return lbn2producer_.at(lbn);
+std::shared_ptr<const Operator> LogicalGraph::GetProducerOp(
+    const std::string& lbn) {
+  return lbn2producer_.at(lbn).lock();
+}
+
+void LogicalGraph::SetProducerOp(const std::string& lbn,
+                                 std::weak_ptr<const Operator> op) {
+  CHECK(lbn2producer_.emplace(lbn, op).second);
 }
 
 LogicalGraph::LogicalGraph() {
@@ -16,7 +22,7 @@ LogicalGraph::LogicalGraph() {
   ForEachNode([&](LogicalNode* node) {
     for (const std::string& obn : node->op()->output_bns()) {
       const std::string& lbn = node->op()->Lbn4BnInOp(obn);
-      CHECK(lbn2producer_.emplace(lbn, node).second);
+      CHECK(lbn2producer_.emplace(lbn, node->op()).second);
     }
   });
   ToDotWithAutoFilePath();

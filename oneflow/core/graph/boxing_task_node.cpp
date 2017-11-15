@@ -84,7 +84,12 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(OutBoxingTaskNode, DataConcatAndDataSplit) {
     split_conf->add_part_num(intersectant_range.size());
   }
 }
-DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, DataConcatAndClone) { TODO(); }
+DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, DataConcatAndClone) {
+  *used_out_edge_begin = 0;
+  conf->set_out_num(sorted_out_edges.size());
+  conf->mutable_concat_box()->set_axis(0);
+  conf->mutable_clone_box();
+}
 DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, DataConcatAndModelSplit) {
   TODO();
 }
