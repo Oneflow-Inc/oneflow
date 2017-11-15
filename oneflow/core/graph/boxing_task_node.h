@@ -26,12 +26,11 @@ class BoxingTaskNode : public TaskNode {
   void ConsumeAllRegsts() override;
   void Build() override;
 
-#define DECLARE_BLD_BOXING_OP_CONF_METHOD(x)                                   \
-  void BldBoxingOpConfWith##x(                                                 \
-      const std::string& lbn, const std::vector<EdgeInfo>& sorted_in_edges,    \
-      int64_t in_parallel_num, int64_t in_edge_first, int64_t in_edge_last,    \
-      const std::vector<EdgeInfo>& sorted_out_edges, int64_t out_parallel_num, \
-      int64_t* used_out_edge_begin, BoxingOpConf*)
+#define DECLARE_BLD_BOXING_OP_CONF_METHOD(x)                                  \
+  void BldBoxingOpConfWith##x(                                                \
+      const std::string& lbn, const std::vector<EdgeInfo>& sorted_in_edges,   \
+      int64_t in_parallel_num, const std::vector<EdgeInfo>& sorted_out_edges, \
+      int64_t out_parallel_num, BoxingOpConf*)
 
 #define DECLARE_VIRTUAL_BLD_BOXING_OP_CONF_METHOD(x) \
   virtual DECLARE_BLD_BOXING_OP_CONF_METHOD(x) = 0
@@ -58,8 +57,7 @@ class BoxingTaskNode : public TaskNode {
   std::shared_ptr<Operator> NewBoxingOp(
       const std::string& lbn, const ChainNode* in_chain,
       const ChainNode* out_chain, const std::vector<EdgeInfo>& sorted_in_edges,
-      const std::vector<EdgeInfo>& sorted_out_edges,
-      int64_t* used_in_edge_begin, int64_t* used_out_edge_begin);
+      const std::vector<EdgeInfo>& sorted_out_edges);
 };
 
 #define OVERRIDE_BLD_BOXING_OP_METHOD(x) \
