@@ -76,10 +76,6 @@ int BpDataCompActor::HandlerNormal(const ActorMsg& msg) {
       }
       mut_num_of_read_empty() -= read_regst_[regst->regst_desc_id()].empty();
       read_regst_.at(regst->regst_desc_id()).push(regst);
-      VLOG(4) << "bp data compute actor " << actor_id() << " "
-              << "receive readable regst " << regst << ", "
-              << "regst_desc_id:" << regst->regst_desc_id() << ", "
-              << "current num_of_read_empty:" << num_of_read_empty();
     }
     ActUntilFail();
   } else {
@@ -117,7 +113,7 @@ void BpDataCompActor::Act() {
                         return regst;
                       }
                     });
-  AsyncSendReadableRegstMsg(
+  AsyncSendRegstMsgToConsumer(
       [piece_id](Regst* regst) { regst->set_piece_id(piece_id); });
   for (auto& pair : read_regst_) {
     if (pair.first != model_regst_desc_id_

@@ -14,10 +14,8 @@ Kernel* BuildPoolingKernel(const PoolingOpConf::PoolMethod& pooling_method) {
   OperatorConf op_conf;
   op_conf.set_name("pooling_test");
   PoolingOpConf* pooling_conf = op_conf.mutable_pooling_conf();
-  pooling_conf->mutable_in()->set_name("pooling_in");
-  pooling_conf->mutable_in()->set_data_type(GetDataType<T>::val);
-  pooling_conf->mutable_out()->set_name("pooling_out");
-  pooling_conf->mutable_out()->set_data_type(GetDataType<T>::val);
+  pooling_conf->set_in("pooling_in");
+  pooling_conf->set_out("pooling_out");
   pooling_conf->set_pool(pooling_method);
   pooling_conf->set_pad_h(1);
   pooling_conf->set_pad_w(1);
@@ -35,7 +33,7 @@ Kernel* BuildPoolingKernel(const PoolingOpConf::PoolMethod& pooling_method) {
 }
 
 template<DeviceType device_type, typename T>
-std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
+std::function<Blob*(const std::string&)> BuildBnInOp2Blob(
     const PoolingOpConf::PoolMethod& pooling_method) {
   using KTC = KTCommon<device_type, T>;
 
@@ -61,34 +59,35 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr(
                        0, 0, 0, 17, 0, 19, 20, 0, 22, 0,  24, 25});
   } else if (pooling_method == PoolingOpConf::kAve) {
     (*bn2blob_ptr)["expected_out"] = KTC::CreateBlobWithSpecifiedVal(
-        out_blob_desc, {16.0 / 9, 33.0 / 9, 28.0 / 9, 69.0 / 9, 13, 87.0 / 9,
-                        76.0 / 9, 123.0 / 9, 88.0 / 9});
+        out_blob_desc, {16.0f / 9, 33.0f / 9, 28.0f / 9, 69.0f / 9, 13,
+                        87.0f / 9, 76.0f / 9, 123.0f / 9, 88.0f / 9});
     (*bn2blob_ptr)["expected_in_diff"] = KTC::CreateBlobWithSpecifiedVal(
-        in_blob_desc, {16.0 / 9 / 9,
-                       16.0 / 9 / 9 + 33.0 / 9 / 9,
-                       33.0 / 9 / 9,
-                       33.0 / 9 / 9 + 28.0 / 9 / 9,
-                       28.0 / 9 / 9,
-                       16.0 / 9 / 9 + 69.0 / 9 / 9,
-                       16.0 / 9 / 9 + 33.0 / 9 / 9 + 69.0 / 9 / 9 + 13.0 / 9,
-                       33.0 / 9 / 9 + 13.0 / 9,
-                       33.0 / 9 / 9 + 28.0 / 9 / 9 + 13.0 / 9 + 87.0 / 9 / 9,
-                       28.0 / 9 / 9 + 87.0 / 9 / 9,
-                       69.0 / 9 / 9,
-                       69.0 / 9 / 9 + 13.0 / 9,
-                       13.0 / 9,
-                       13.0 / 9 + 87.0 / 9 / 9,
-                       87.0 / 9 / 9,
-                       69.0 / 9 / 9 + 76.0 / 9 / 9,
-                       69.0 / 9 / 9 + 13.0 / 9 + 76.0 / 9 / 9 + 123.0 / 9 / 9,
-                       13.0 / 9 + 123.0 / 9 / 9,
-                       13.0 / 9 + 87.0 / 9 / 9 + 123.0 / 9 / 9 + 88.0 / 9 / 9,
-                       87.0 / 9 / 9 + 88.0 / 9 / 9,
-                       76.0 / 9 / 9,
-                       76.0 / 9 / 9 + 123.0 / 9 / 9,
-                       123.0 / 9 / 9,
-                       123.0 / 9 / 9 + 88.0 / 9 / 9,
-                       88.0 / 9 / 9});
+        in_blob_desc,
+        {16.0f / 9 / 9,
+         16.0f / 9 / 9 + 33.0f / 9 / 9,
+         33.0f / 9 / 9,
+         33.0f / 9 / 9 + 28.0f / 9 / 9,
+         28.0f / 9 / 9,
+         16.0f / 9 / 9 + 69.0f / 9 / 9,
+         16.0f / 9 / 9 + 33.0f / 9 / 9 + 69.0f / 9 / 9 + 13.0f / 9,
+         33.0f / 9 / 9 + 13.0f / 9,
+         33.0f / 9 / 9 + 28.0f / 9 / 9 + 13.0f / 9 + 87.0f / 9 / 9,
+         28.0f / 9 / 9 + 87.0f / 9 / 9,
+         69.0f / 9 / 9,
+         69.0f / 9 / 9 + 13.0f / 9,
+         13.0f / 9,
+         13.0f / 9 + 87.0f / 9 / 9,
+         87.0f / 9 / 9,
+         69.0f / 9 / 9 + 76.0f / 9 / 9,
+         69.0f / 9 / 9 + 13.0f / 9 + 76.0f / 9 / 9 + 123.0f / 9 / 9,
+         13.0f / 9 + 123.0f / 9 / 9,
+         13.0f / 9 + 87.0f / 9 / 9 + 123.0f / 9 / 9 + 88.0f / 9 / 9,
+         87.0f / 9 / 9 + 88.0f / 9 / 9,
+         76.0f / 9 / 9,
+         76.0f / 9 / 9 + 123.0f / 9 / 9,
+         123.0f / 9 / 9,
+         123.0f / 9 / 9 + 88.0f / 9 / 9,
+         88.0f / 9 / 9});
   } else {
     TODO();
   }
@@ -102,15 +101,15 @@ void TestPoolingKernel(const PoolingOpConf::PoolMethod& pooling_method) {
   KernelCtx ctx;
   BuildKernelCtx<device_type>(&ctx);
 
-  auto BnInOp2BlobPtr = BuildBnInOp2BlobPtr<device_type, T>(pooling_method);
+  auto BnInOp2Blob = BuildBnInOp2Blob<device_type, T>(pooling_method);
   auto pooling_kernel = BuildPoolingKernel<device_type, T>(pooling_method);
 
-  pooling_kernel->Forward(ctx, BnInOp2BlobPtr);
-  pooling_kernel->Backward(ctx, BnInOp2BlobPtr);
+  pooling_kernel->Forward(ctx, BnInOp2Blob);
+  pooling_kernel->Backward(ctx, BnInOp2Blob);
   SyncStream<device_type>(&ctx);
 
-  KTC::CheckResult(BnInOp2BlobPtr, "out", "expected_out");
-  KTC::CheckResult(BnInOp2BlobPtr, "in_diff", "expected_in_diff");
+  KTC::CheckResult(BnInOp2Blob, "out", "expected_out");
+  KTC::CheckResult(BnInOp2Blob, "in_diff", "expected_in_diff");
 }
 
 }  // namespace

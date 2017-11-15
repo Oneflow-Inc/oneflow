@@ -17,15 +17,12 @@ const PbMessage& SoftmaxOp::GetSpecialConf() const {
 void SoftmaxOp::InferBlobDesc4FwBlobs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) {
-  const SoftmaxOpConf& conf = op_conf().softmax_conf();
   // in
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
-  CHECK_EQ(in->data_type(), conf.in().data_type());
-  CHECK(IsFloatingPoint(in->data_type()));
   // out
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   out->mut_shape() = Shape({in->shape().At(0), in->shape().Count(1)});
-  out->set_data_type(conf.out().data_type());
+  out->set_data_type(in->data_type());
   out->set_has_data_id(in->has_data_id());
   CHECK_EQ(in->data_type(), out->data_type());
   // tmp

@@ -1,16 +1,16 @@
-syntax = "proto3";
+syntax = "proto2";
 package oneflow;
 
 message HostPageableMemory {
 }
 
 message HostPinnedMemory {
-  bool need_cuda = 1;
-  bool need_rdma = 2;
+  optional bool used_by_device = 1 [default = false];
+  optional bool used_by_network = 2 [default = false];
 }
 
 message DeviceCudaMemory {
-  int64 device_id = 1;
+  required int64 device_id = 1;
 }
 
 message MemoryCase {

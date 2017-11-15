@@ -1,4 +1,3 @@
-#include "gflags/gflags.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/graph/data_comp_task_node.h"
@@ -9,10 +8,11 @@
 #include "oneflow/core/graph/model_save_comp_task_node.h"
 #include "oneflow/core/graph/model_save_task_graph.h"
 #include "oneflow/core/graph/model_update_task_graph.h"
-#include "oneflow/core/job/id_manager.h"
-#include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/register/register_desc.h"
+
+DEFINE_string(job_conf_filepath, "", "");
+DEFINE_string(plan_filepath, "", "");
 
 namespace oneflow {
 
@@ -23,7 +23,7 @@ class Compiler final {
 
   OF_SINGLETON(Compiler);
 
-  void Compile(const JobConf& job_conf, const std::string& plan_filepath);
+  Plan Compile(const JobConf& job_conf);
 
  private:
   Compiler() = default;
@@ -38,7 +38,7 @@ class Compiler final {
       const std::pair<const ChainNode*, std::vector<CompTaskNode*>>& pair);
   void InferBlobDesc4Regsts();
   void EraseMeaningLessRegsts();
-  void GenPlanFile(const std::string& plan_filepath);
+  Plan GenPlanFile();
   void Plan2DotFile(const Plan& plan);
 
   std::vector<std::unique_ptr<TaskGraph>> ordered_task_gphs_;
@@ -66,23 +66,28 @@ void Compiler::ForEachTaskNode(std::function<void(TaskNode*)> func) {
   }
 }
 
-// TODO: inference "register_num for each register_desc"
-void Compiler::Compile(const JobConf& job_conf,
-                       const std::string& plan_filepath) {
-  JobDesc::Singleton()->InitFromJobConf(job_conf);
-  IDMgr::Singleton()->InitFromResource(JobDesc::Singleton()->resource());
+Plan Compiler::Compile(const JobConf& job_conf) {
+  // NewAllSingleton
+  JobDesc::NewSingleton(job_conf);
+  IDMgr::NewSingleton();
+  OpMgr::NewSingleton();
+  // Get Plan
   BuildGraphs();
   InferBlobDesc4Regsts();
   EraseMeaningLessRegsts();
-  GenPlanFile(plan_filepath);
+  Plan plan = GenPlanFile();
+  // DeleteAllSingleton
+  OpMgr::DeleteSingleton();
+  IDMgr::DeleteSingleton();
+  JobDesc::DeleteSingleton();
+  return plan;
 }
 
 void Compiler::BuildGraphs() {
   ordered_task_gphs_.clear();
   // data graph
-  LOG(INFO) << "Build DataTaskGraph";
   auto data_task_gph = new DataTaskGraph(
-      "data", JobDesc::Singleton()->train_dlnet_conf(),
+      "data", JobDesc::Singleton()->dlnet_conf(),
       JobDesc::Singleton()->placement(), JobDesc::Singleton()->is_train());
   ordered_task_gphs_.emplace_back(data_task_gph);
   // construct data_chain2sorted_fw_comp_tasks
@@ -96,7 +101,7 @@ void Compiler::BuildGraphs() {
   for (auto& pair : data_chain2sorted_fw_comp_tasks) {
     SortByParallelId(&(pair.second));
   }
-  // model graph
+  // model and loss graph
   for (const auto& pair : data_chain2sorted_fw_comp_tasks) {
     if (pair.first->HasOpWithModelOrModelTmpBlob()) { BuildModelGraphs(pair); }
     if (pair.first->IsLossNode()) { BuildLossGraph(pair); }
@@ -113,10 +118,10 @@ void Compiler::BuildModelGraphs(
 
   bool is_train = JobDesc::Singleton()->is_train();
   std::vector<CompTaskNode*> sorted_diff_acc_tasks;
+  MdDiffAccTaskGraph* diff_acc_gph = nullptr;
   if (is_train) {
-    LOG(INFO) << "Build MdDiffAccTaskGraph for " << chain_tag;
-    auto diff_acc_gph = new MdDiffAccTaskGraph("md_diff_acc_" + chain_tag,
-                                               pair.first, pair.second);
+    diff_acc_gph = new MdDiffAccTaskGraph("md_diff_acc_" + chain_tag,
+                                          pair.first, pair.second);
     ordered_task_gphs_.emplace_back(diff_acc_gph);
 
     ChainNode* diff_acc_chain = diff_acc_gph->chain_gph()->SoleSinkNode();
@@ -124,24 +129,18 @@ void Compiler::BuildModelGraphs(
     SortByParallelId(&sorted_diff_acc_tasks);
   }
 
-  LOG(INFO) << "Build MdUpdtTaskGraph for " << chain_tag;
   std::vector<CompTaskNode*> updt_tasks;
   updt_tasks.reserve(pair.second.size());
   uint32_t random_seed = NewRandomSeed();
-  for (size_t i = 0; i < pair.second.size(); ++i) {
-    CompTaskNode* data_fw_task = pair.second[i];
-    auto updt_gph = new MdUpdtTaskGraph(
-        "md_updt_" + data_fw_task->node_id_str(), data_fw_task,
-        is_train ? sorted_diff_acc_tasks[i] : nullptr, random_seed);
-    ordered_task_gphs_.emplace_back(updt_gph);
-    ChainNode* updt_chain = updt_gph->chain_gph()->SoleSinkNode();
-    auto updt_tasks_in_chain = updt_gph->CompTasksInChain(updt_chain);
-    CHECK_EQ(updt_tasks_in_chain.size(), 1);
-    updt_tasks.push_back(updt_tasks_in_chain[0]);
-  }
+
+  auto updt_gph = new MdUpdtTaskGraph(
+      "md_updt_" + pair.second[0]->node_id_str(), random_seed, pair.first,
+      sorted_diff_acc_tasks, pair.second);
+  ordered_task_gphs_.emplace_back(updt_gph);
+  ChainNode* updt_chain = updt_gph->chain_gph()->SoleSinkNode();
+  updt_tasks = updt_gph->CompTasksInChain(updt_chain);
 
   if (is_train) {
-    LOG(INFO) << "Build MdSaveTaskGraph for " << chain_tag;
     if (policy == kDataParallel) { updt_tasks = {updt_tasks.front()}; }
     for (CompTaskNode* update_task : updt_tasks) {
       auto save_gph = new MdSaveTaskGraph(
@@ -167,7 +166,6 @@ void Compiler::BuildLossGraph(
 
 void Compiler::InferBlobDesc4Regsts() {
   for (auto& task_gph : ordered_task_gphs_) {
-    LOG(INFO) << "Inference BlobDesc for " << task_gph->name();
     task_gph->InferBlobDescInProducedRegsts();
   }
 }
@@ -179,7 +177,7 @@ void Compiler::EraseMeaningLessRegsts() {
   });
 }
 
-void Compiler::GenPlanFile(const std::string& plan_filepath) {
+Plan Compiler::GenPlanFile() {
   HashMap<const ChainNode*, int64_t> chain2meaningless_task_cnt;
   ForEachTaskNode([&](const TaskNode* node) {
     auto comp_task_node = dynamic_cast<const DataCompTaskNode*>(node);
@@ -209,28 +207,38 @@ void Compiler::GenPlanFile(const std::string& plan_filepath) {
   ForEachTaskNode([&](const TaskNode* task_node) {
     task_node->exec_gph().ConstForEachNode([&](const ExecNode* exec_node) {
       const std::string& op_name = exec_node->op()->op_name();
-      // op_name2device_type
-      auto it = plan.mutable_op_name2device_type()->find(op_name);
-      if (it == plan.mutable_op_name2device_type()->end()) {
-        plan.mutable_op_name2device_type()->insert(
-            {op_name, task_node->GetDeviceType()});
-      } else {
-        CHECK_EQ(it->second, task_node->GetDeviceType());
+      // op_name2context
+      auto it = plan.mutable_op_name2context()->find(op_name);
+      if (it == plan.mutable_op_name2context()->end()) {
+        OpContext op_ctx;
+        op_ctx.set_device_type(task_node->GetDeviceType());
+        exec_node->GetBnInOp2DataType(op_ctx.mutable_bn_in_op2data_type());
+        CHECK(plan.mutable_op_name2context()->insert({op_name, op_ctx}).second);
       }
       // machine_id2op_name_set
       int64_t machine_id = task_node->stage_node()->machine_id();
       (*(plan.mutable_machine_id2op_name_set()))[machine_id].add_op_name(
           op_name);
-      // TODO: unique
     });
   });
-  PrintProtoToTextFile(plan, plan_filepath);
+
+  // for (int i = 0; i < plan.task_size(); ++i) {
+  //   auto task = plan.mutable_task(i);
+  //   // if (task->type() == TaskType::kDataCompTask && task->is_forward()
+  //   //   && task->exec_sequence().exec_node_size() > 5) {
+  //   for (auto& pair : *task->mutable_produced_regst_desc()) {
+  //     pair.second.set_register_num(std::max(3, pair.second.register_num()));
+  //   }
+  //   //}
+  // }
+
   Plan2DotFile(plan);
+  return plan;
 }
 
 void Compiler::Plan2DotFile(const Plan& plan) {
   const std::string file_path = LogDir() + "/dot/plan.dot";
-  PersistentOutStream out_stream(file_path);
+  PersistentOutStream out_stream(LocalFS(), file_path);
   out_stream << "digraph {\n";
   HashSet<int64_t> regst_desc_ids;
   for (const TaskProto& task_proto : plan.task()) {
@@ -265,16 +273,19 @@ void Compiler::Plan2DotFile(const Plan& plan) {
 
 }  // namespace oneflow
 
-DEFINE_string(job_conf_filepath, "", "");
-DEFINE_string(plan_filepath, "", "");
-
 int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, true);
-  LOG(INFO) << "Compiler Starting Up";
+  oneflow::RedirectStdoutAndStderrToGlogDir();
+  LOG(INFO) << "Compile Start";
   oneflow::JobConf job_conf;
   oneflow::ParseProtoFromTextFile(FLAGS_job_conf_filepath, &job_conf);
-  oneflow::Compiler::Singleton()->Compile(job_conf, FLAGS_plan_filepath);
-  LOG(INFO) << "Compiler Shutting Down";
+  oneflow::Compiler::NewSingleton();
+  oneflow::Plan plan;
+  plan = oneflow::Compiler::Singleton()->Compile(job_conf);
+  oneflow::PrintProtoToTextFile(plan, FLAGS_plan_filepath);
+  oneflow::Compiler::DeleteSingleton();
+  oneflow::CloseStdoutAndStderr();
+  LOG(INFO) << "Compile Stop";
   return 0;
 }

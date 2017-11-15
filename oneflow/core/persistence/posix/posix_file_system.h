@@ -15,32 +15,31 @@ class PosixFileSystem final : public FileSystem {
   PosixFileSystem() = default;
   ~PosixFileSystem() = default;
 
-  Status NewRandomAccessFile(
-      const std::string& fname,
-      std::unique_ptr<RandomAccessFile>* result) override;
+  void NewRandomAccessFile(const std::string& fname,
+                           std::unique_ptr<RandomAccessFile>* result) override;
 
-  Status NewWritableFile(const std::string& fname,
+  void NewWritableFile(const std::string& fname,
+                       std::unique_ptr<WritableFile>* result) override;
+
+  void NewAppendableFile(const std::string& fname,
                          std::unique_ptr<WritableFile>* result) override;
 
-  Status NewAppendableFile(const std::string& fname,
-                           std::unique_ptr<WritableFile>* result) override;
+  bool FileExists(const std::string& fname) override;
 
-  Status FileExists(const std::string& fname) override;
+  std::vector<std::string> ListDir(const std::string& dir) override;
 
-  Status GetChildren(const std::string& dir,
-                     std::vector<std::string>* result) override;
+  void DelFile(const std::string& fname) override;
 
-  Status DeleteFile(const std::string& fname) override;
+  void CreateDir(const std::string& dirname) override;
 
-  Status CreateDir(const std::string& dirname) override;
+  void DeleteDir(const std::string& dirname) override;
 
-  Status DeleteDir(const std::string& dirname) override;
+  uint64_t GetFileSize(const std::string& fname) override;
 
-  Status GetFileSize(const std::string& fname, uint64_t* file_size) override;
+  void RenameFile(const std::string& old_name,
+                  const std::string& new_name) override;
 
-  Status RenameFile(const std::string& src, const std::string& target) override;
-
-  Status IsDirectory(const std::string& fname) override;
+  bool IsDirectory(const std::string& fname) override;
 
  private:
 };

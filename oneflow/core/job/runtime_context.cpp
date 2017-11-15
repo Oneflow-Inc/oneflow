@@ -2,30 +2,27 @@
 
 namespace oneflow {
 
-void RuntimeCtx::set_this_machine_name(const std::string& name) {
-  this_machine_name_ = name;
-  this_machine_id_ = IDMgr::Singleton()->MachineID4MachineName(name);
-  LOG(INFO) << "this machine name: " << this_machine_name_;
-  LOG(INFO) << "this machine id: " << this_machine_id_;
+std::string RuntimeCtx::GetCtrlAddr(int64_t machine_id) const {
+  const Machine& mchn = JobDesc::Singleton()->resource().machine(machine_id);
+  return mchn.addr() + ":" + std::to_string(mchn.port());
 }
 
-PersistentCircularLineReader* RuntimeCtx::GetDataReader(
-    const std::string& name) {
-  auto it = data_reader_.find(name);
-  if (it == data_reader_.end()) {
-    return nullptr;
+PersistentOutStream* RuntimeCtx::GetPersistentOutStream(
+    const std::string& filepath) {
+  auto iter = filepath2ostream_.find(filepath);
+  if (iter != filepath2ostream_.end()) {
+    return iter->second.get();
   } else {
-    return it->second.get();
+    auto ostream_ptr = new PersistentOutStream(GlobalFS(), filepath);
+    filepath2ostream_[filepath].reset(ostream_ptr);
+    return ostream_ptr;
   }
 }
 
-void RuntimeCtx::AddDataReader(const std::string& filepath,
-                               const std::string& name) {
-  LOG(INFO) << "Add Data Reader " << name << " " << filepath;
-  CHECK(
-      data_reader_
-          .emplace(name, of_make_unique<PersistentCircularLineReader>(filepath))
-          .second);
+RuntimeCtx::RuntimeCtx(const std::string& name) {
+  this_machine_id_ = IDMgr::Singleton()->MachineID4MachineName(name);
+  LOG(INFO) << "this machine name: " << name;
+  LOG(INFO) << "this machine id: " << this_machine_id_;
 }
 
 }  // namespace oneflow

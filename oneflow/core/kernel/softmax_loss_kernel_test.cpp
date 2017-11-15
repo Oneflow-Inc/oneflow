@@ -10,7 +10,7 @@ namespace test {
 namespace {
 
 template<DeviceType device_type, typename PredType, typename LabelType>
-std::function<Blob*(const std::string&)> BuildBnInOp2BlobPtr() {
+std::function<Blob*(const std::string&)> BuildBnInOp2Blob() {
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
   BlobDesc* blob_desc24 =
       new BlobDesc(Shape({2, 4}), GetDataType<PredType>::val, false);
@@ -47,14 +47,9 @@ Kernel* BuildSoftmaxLossKernel() {
   OperatorConf op_conf;
   op_conf.set_name("softmax_loss_op_test");
   SoftmaxLossOpConf* softmax_loss_conf = op_conf.mutable_softmax_loss_conf();
-  softmax_loss_conf->mutable_prediction()->set_name("softmax_loss/prediction");
-  softmax_loss_conf->mutable_prediction()->set_data_type(
-      GetDataType<PredType>::val);
-  softmax_loss_conf->mutable_label()->set_name("softmax_loss/label");
-  softmax_loss_conf->mutable_label()->set_data_type(
-      GetDataType<LabelType>::val);
-  softmax_loss_conf->mutable_loss()->set_name("softmax_loss/loss");
-  softmax_loss_conf->mutable_loss()->set_data_type(GetDataType<PredType>::val);
+  softmax_loss_conf->set_prediction("softmax_loss/prediction");
+  softmax_loss_conf->set_label("softmax_loss/label");
+  softmax_loss_conf->set_loss("softmax_loss/loss");
   auto softmax_loss_op = ConstructOp(op_conf);
   OperatorProto op_proto;
   softmax_loss_op->ToProto(&op_proto);
@@ -68,15 +63,15 @@ template<DeviceType device_type, typename PredType, typename LabelType>
 void TestSoftmaxLossKernel() {
   KernelCtx ctx;
   BuildKernelCtx<device_type>(&ctx);
-  auto BnInOp2BlobPtr = BuildBnInOp2BlobPtr<device_type, PredType, LabelType>();
+  auto BnInOp2Blob = BuildBnInOp2Blob<device_type, PredType, LabelType>();
   auto softmax_loss_kernel =
       BuildSoftmaxLossKernel<device_type, PredType, LabelType>();
-  softmax_loss_kernel->Forward(ctx, BnInOp2BlobPtr);
+  softmax_loss_kernel->Forward(ctx, BnInOp2Blob);
   SyncStream<device_type>(&ctx);
-  KTCommon<device_type, PredType>::CheckResult(BnInOp2BlobPtr, "loss",
+  KTCommon<device_type, PredType>::CheckResult(BnInOp2Blob, "loss",
                                                "expected_loss");
-  KTCommon<device_type, PredType>::CheckResult(
-      BnInOp2BlobPtr, "prediction_diff", "expected_prediction_diff");
+  KTCommon<device_type, PredType>::CheckResult(BnInOp2Blob, "prediction_diff",
+                                               "expected_prediction_diff");
 }
 
 }  // namespace
