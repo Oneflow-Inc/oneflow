@@ -4,6 +4,14 @@ namespace oneflow {
 
 TaskNode::TaskNode() : machine_id_(-1), thrd_loc_id_(-1), task_id_(-1) {}
 
+std::shared_ptr<RegstDesc> TaskNode::GetProducedRegst(const std::string& name) {
+  return produced_regsts_.at(name);
+}
+
+DeviceType TaskNode::device_type() const {
+  return IDMgr::Singleton()->GetDeviceTypeFromThrdLocId(thrd_loc_id_);
+}
+
 void TaskNode::set_machine_id(int64_t val) {
   machine_id_ = val;
   if (thrd_loc_id_ != -1) { UpdateTaskId(); }
@@ -14,12 +22,9 @@ void TaskNode::set_thrd_loc_id(int64_t val) {
   if (machine_id_ != -1) { UpdateTaskId(); }
 }
 
-std::shared_ptr<RegstDesc> TaskNode::GetProducedRegst(const std::string& name) {
-  return produced_regsts_.at(name);
-}
-
-DeviceType TaskNode::device_type() const {
-  return IDMgr::Singleton()->GetDeviceTypeFromThrdLocId(thrd_loc_id_);
+void TaskNode::Build() {
+  BuildRegsts();
+  LockRegsts();
 }
 
 void TaskNode::UpdateTaskId() {
@@ -58,6 +63,10 @@ bool TaskNode::IsAllConsumedRegstLocked() {
     if (pair.second.lock()->IsLocked() == false) { return false; }
   }
   return true;
+}
+
+void TaskNode::LockRegsts() {
+  for (auto& pair : produced_regsts_) { pair.second->Lock(); }
 }
 
 std::shared_ptr<RegstDesc> TaskEdge::GetRegst(

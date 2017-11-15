@@ -28,7 +28,7 @@ void BoxingTaskNode::ConsumeAllRegsts() {
   }
 }
 
-void BoxingTaskNode::Build() {
+void BoxingTaskNode::BuildRegsts() {
   HashMap<const ChainNode*, std::vector<EdgeInfo>> in_chain2edge_info;
   InitChain2SortedEdgeInfo(&TaskNode::in_edges, &TaskNode::SoleInEdge,
                            &TaskEdge::src_node, &in_chain2edge_info);
@@ -49,16 +49,22 @@ void BoxingTaskNode::Build() {
       int64_t in_parallel_num, const std::vector<EdgeInfo>& sorted_out_edges, \
       int64_t out_parallel_num, BoxingOpConf* conf)
 
+static void SetBoxSplitPart(
+    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_edges,
+    const BalancedSplitter& bs, BoxSplitConf* split_conf) {
+  for (const BoxingTaskNode::EdgeInfo& edge_info : sorted_edges) {
+    Range range = bs.At(edge_info.parallel_id_min, edge_info.parallel_id_max);
+    split_conf->add_part_num(range.size());
+  }
+}
+
 DEFINE_BLD_BOXING_OP_CONF_METHOD(InBoxingTaskNode, DataConcatAndDataSplit) {
   conf->mutable_concat_box()->set_axis(0);
   BoxSplitConf* split_conf = conf->mutable_split_box();
   split_conf->set_axis(0);
   BalancedSplitter bs(JobDesc::Singleton()->ParallelPieceSize(),
                       out_parallel_num);
-  for (const EdgeInfo& edge_info : sorted_out_edges) {
-    Range range = bs.At(edge_info.parallel_id_min, edge_info.parallel_id_max);
-    split_conf->add_part_num(range.size());
-  }
+  SetBoxSplitPart(sorted_out_edges, bs, split_conf);
 }
 DEFINE_BLD_BOXING_OP_CONF_METHOD(OutBoxingTaskNode, DataConcatAndDataSplit) {
   conf->mutable_concat_box()->set_axis(0);
@@ -70,8 +76,7 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(OutBoxingTaskNode, DataConcatAndDataSplit) {
                             sorted_in_edges.back().parallel_id_max);
   BalancedSplitter out_bs(JobDesc::Singleton()->ParallelPieceSize(),
                           out_parallel_num);
-  for (int64_t i = 0; i < sorted_out_edges.size(); ++i) {
-    const EdgeInfo& out_edge = sorted_out_edges[i];
+  for (const EdgeInfo& out_edge : sorted_out_edges) {
     Range out_range =
         out_bs.At(out_edge.parallel_id_min, out_edge.parallel_id_max);
     Range intersectant_range = FindIntersectant(in_range, out_range);
@@ -88,20 +93,42 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, DataConcatAndModelSplit) {
   auto producer_op = LogicalGraph::Singleton()->GetProducerOp(lbn);
   split_conf->set_axis(producer_op->ModelSplitAxis());
   BalancedSplitter bs(producer_op->MaxModelSplitNum(), out_parallel_num);
-  for (const EdgeInfo& edge_info : sorted_out_edges) {
-    Range range = bs.At(edge_info.parallel_id_min, edge_info.parallel_id_max);
-    split_conf->add_part_num(range.size());
-  }
+  SetBoxSplitPart(sorted_out_edges, bs, split_conf);
 }
 DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, ModelConcatAndDataSplit) {
-  TODO();
+  auto producer_op = LogicalGraph::Singleton()->GetProducerOp(lbn);
+  conf->mutable_concat_box()->set_axis(producer_op->ModelSplitAxis());
+  BoxSplitConf* split_conf = conf->mutable_split_box();
+  split_conf->set_axis(0);
+  BalancedSplitter bs(JobDesc::Singleton()->ParallelPieceSize(),
+                      out_parallel_num);
+  SetBoxSplitPart(sorted_out_edges, bs, split_conf);
 }
 DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, ModelConcatAndClone) {
-  TODO();
+  auto producer_op = LogicalGraph::Singleton()->GetProducerOp(lbn);
+  conf->mutable_concat_box()->set_axis(producer_op->ModelSplitAxis());
+  conf->mutable_clone_box();
 }
-DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, AddAndDataSplit) { TODO(); }
-DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, AddAndModelSplit) { TODO(); }
-DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, AddAndClone) { TODO(); }
+DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, AddAndDataSplit) {
+  conf->mutable_add_box();
+  BoxSplitConf* split_conf = conf->mutable_split_box();
+  split_conf->set_axis(0);
+  BalancedSplitter bs(JobDesc::Singleton()->ParallelPieceSize(),
+                      out_parallel_num);
+  SetBoxSplitPart(sorted_out_edges, bs, split_conf);
+}
+DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, AddAndModelSplit) {
+  auto producer_op = LogicalGraph::Singleton()->GetProducerOp(lbn);
+  conf->mutable_add_box();
+  BoxSplitConf* split_conf = conf->mutable_split_box();
+  split_conf->set_axis(producer_op->ModelSplitAxis());
+  BalancedSplitter bs(producer_op->MaxModelSplitNum(), out_parallel_num);
+  SetBoxSplitPart(sorted_out_edges, bs, split_conf);
+}
+DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, AddAndClone) {
+  conf->mutable_add_box();
+  conf->mutable_clone_box();
+}
 
 void BoxingTaskNode::InitChain2SortedEdgeInfo(
     const std::unordered_set<TaskEdge*>& (TaskNode::*GetEdges)() const,
