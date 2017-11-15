@@ -11,7 +11,9 @@ class CopyTaskNode : public TaskNode {
   CopyTaskNode() = default;
   virtual ~CopyTaskNode() = default;
 
-  void ProduceAllRegstsAndBindEdges() override { TODO(); }
+  void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override;
+  void BuildRegsts() override;
 
  private:
 };
