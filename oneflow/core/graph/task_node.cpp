@@ -65,6 +65,10 @@ bool TaskNode::IsAllConsumedRegstLocked() {
   return true;
 }
 
+std::shared_ptr<RegstDesc> TaskNode::GetConsumedRegst(const std::string& name) {
+  return consumed_regsts_.at(name).lock();
+}
+
 void TaskNode::LockRegsts() {
   for (auto& pair : produced_regsts_) { pair.second->Lock(); }
 }

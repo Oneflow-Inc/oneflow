@@ -2,6 +2,21 @@
 
 namespace oneflow {
 
+void CopyTaskNode::ProduceAllRegstsAndBindEdges() {
+  std::string name("copy_out");
+  auto out_regst = ProduceRegst(name, 1, kMaxRegisterNum);
+  SoleOutEdge()->AddRegst(name, out_regst);
+}
+
+void CopyTaskNode::ConsumeAllRegsts() {
+  ConsumeRegst("copy_in", SoleInEdge()->GetSoleRegst());
+}
+void CopyTaskNode::BuildRegsts() {
+  auto out_regst = GetProducedRegst("copy_out");
+  auto in_regst = GetConsumedRegst("copy_in");
+  out_regst->CopyBlobDescFrom(in_regst.get());
+}
+
 void CopyHdTaskNode::Init(const CompTaskNode* comp_task,
                           CopyHdOpConf::Type copy_type) {
   set_machine_id(comp_task->machine_id());
