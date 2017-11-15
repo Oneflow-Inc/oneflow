@@ -25,14 +25,11 @@ class BalancedSplitter final {
   BalancedSplitter(int64_t total_num, int64_t split_num);
 
   Range At(int64_t idx) const;
-
-  int64_t BaseBeginIdx() const { return change_pos_; }
-  int64_t BasePartSize() const { return size_per_range_; }
-  int64_t BiggerPartSize() const { return size_per_range_ + 1; }
+  Range At(int64_t first_idx, int64_t last_idx) const;
 
  private:
-  int64_t size_per_range_;
-  int64_t change_pos_;
+  int64_t base_part_size_;
+  int64_t base_begin_idx_;
   int64_t split_num_;
 };
 

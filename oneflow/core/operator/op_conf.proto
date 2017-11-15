@@ -135,12 +135,7 @@ message BoxAddConf {
 
 message BoxSplitConf {
   required int32 axis = 1;
-  // left_bound_size, (base_part_size + 1) * bigger_part_num, base_part_size * base_part_num, right_bound_size
-  required int32 left_bound_size = 2;
-  required int32 bigger_part_num = 3;
-  required int32 base_part_size = 4;
-  required int32 base_part_num = 5;
-  required int32 right_bound_size = 6;
+  repeated int32 part_num = 2;
 }
 
 message BoxCloneConf {

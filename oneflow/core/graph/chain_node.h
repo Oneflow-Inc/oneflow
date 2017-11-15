@@ -21,9 +21,9 @@ using BldSubTskGphMthd = void (TaskGraph::*)(
 using BldBoxingOpConfMthd = void (BoxingTaskNode::*)(
     const std::string& lbn,
     const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
-    int64_t in_parallel_num, int64_t in_edge_first, int64_t in_edge_last,
+    int64_t in_parallel_num,
     const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
-    int64_t out_parallel_num, int64_t* used_out_edge_begin, BoxingOpConf*);
+    int64_t out_parallel_num, BoxingOpConf*);
 
 #define CHAIN_TYPE_SEQ             \
   OF_PP_MAKE_TUPLE_SEQ(Forward)    \
