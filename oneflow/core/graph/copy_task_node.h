@@ -13,7 +13,10 @@ class CopyTaskNode : public TaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
-  void BuildRegsts() override;
+  void BuildExecGphAndRegst() override;
+
+ protected:
+  virtual OperatorConf NewCopyOpConf() = 0;
 
  private:
 };
@@ -29,6 +32,9 @@ class CopyHdTaskNode final : public CopyTaskNode {
   void Init(const CompTaskNode*, CopyHdOpConf::Type);
 
  private:
+  OperatorConf NewCopyOpConf() override;
+
+  CopyHdOpConf::Type copy_type_;
 };
 
 class CopyCommNetTaskNode final : public CopyTaskNode {
@@ -44,6 +50,7 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
   void Init(int64_t machine_id);
 
  private:
+  OperatorConf NewCopyOpConf() override;
 };
 
 }  // namespace oneflow

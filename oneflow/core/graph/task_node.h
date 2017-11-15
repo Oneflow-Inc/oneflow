@@ -46,7 +46,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   ExecGraph& mut_exec_gph() { return exec_gph_; }
   std::shared_ptr<RegstDesc> GetConsumedRegst(const std::string& name);
 
-  virtual void BuildRegsts() { TODO(); }
+  virtual void BuildExecGphAndRegst() { TODO(); }
   virtual void LockRegsts();
 
  private:

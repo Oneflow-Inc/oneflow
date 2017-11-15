@@ -24,7 +24,7 @@ class BoxingTaskNode : public TaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
-  void BuildRegsts() override;
+  void BuildExecGphAndRegst() override;
 
 #define DECLARE_BLD_BOXING_OP_CONF_METHOD(x)                                  \
   void BldBoxingOpConfWith##x(                                                \
