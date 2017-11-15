@@ -16,7 +16,7 @@ class SoftmaxOp final : public Operator {
 
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) override;
+      const ParallelContext* parallel_ctx) const override;
 
  private:
 };

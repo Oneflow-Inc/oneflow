@@ -19,7 +19,7 @@ const PbMessage& ConcatOp::GetSpecialConf() const {
 
 void ConcatOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) {
+    const ParallelContext* parallel_ctx) const {
   const ConcatOpConf& conf = op_conf().concat_conf();
   const BlobDesc* in_0_blob_desc = GetBlobDesc4BnInOp(input_bns().at(0));
   std::vector<int64_t> out_dim_vec = in_0_blob_desc->shape().dim_vec();
