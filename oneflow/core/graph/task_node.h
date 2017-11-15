@@ -27,12 +27,13 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void set_machine_id(int64_t val);
   void set_thrd_loc_id(int64_t val);
 
-  // Others
+  // Build
   virtual void ProduceAllRegstsAndBindEdges() { TODO(); }
   virtual void ConsumeAllRegsts() { TODO(); }
-  virtual void Build() { TODO(); }
+  void Build();
   virtual bool IsReadyForBuild() { return IsAllConsumedRegstLocked(); }
 
+  // Others
   virtual TodoTaskType GetTaskType() const = 0;
   std::string VisualStr() const override;
 
@@ -43,6 +44,9 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc>);
   bool IsAllConsumedRegstLocked();
   ExecGraph& mut_exec_gph() { return exec_gph_; }
+
+  virtual void BuildRegsts() { TODO(); }
+  virtual void LockRegsts();
 
  private:
   void UpdateTaskId();
