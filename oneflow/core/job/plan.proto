@@ -20,3 +20,8 @@ message Plan {
   map<string, OpContext> op_name2context = 5;
   map<int64, OpNameSet> machine_id2op_name_set = 6;
 }
+
+message TodoPlan {
+  repeated TaskProto task = 1;
+  required JobDescProto job_desc = 2;
+}
