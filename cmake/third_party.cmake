@@ -9,10 +9,10 @@ include(glog)
 include(gflags)
 include(grpc)
 include(cub)
+include(opencv)
 
 find_package(CUDA REQUIRED)
 find_package(CuDNN REQUIRED)
-find_package(OpenCV REQUIRED COMPONENTS core highgui imgproc imgcodecs)
 
 if (NOT WIN32)
   set(BLA_VENDOR "Intel10_64lp_seq")
@@ -40,7 +40,7 @@ set(oneflow_third_party_libs
     ${CUDA_CUBLAS_LIBRARIES}
     ${CUDNN_LIBRARIES}
     ${BLAS_LIBRARIES}
-    ${OpenCV_LIBS}
+    ${OPENCV_STATIC_LIBRARIES}
 )
 
 if(WIN32)
@@ -66,6 +66,8 @@ set(oneflow_third_party_dependencies
   grpc_copy_headers_to_destination
   grpc_copy_libs_to_destination
   cub_copy_headers_to_destination
+  opencv_copy_headers_to_destination
+  opencv_copy_libs_to_destination
 )
 
 include_directories(
@@ -78,4 +80,5 @@ include_directories(
     ${GRPC_INCLUDE_DIR}
     ${CUDNN_INCLUDE_DIRS}
     ${CUB_INCLUDE_DIR}
+    ${OPENCV_INCLUDE_DIR}
 )
