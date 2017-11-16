@@ -4,7 +4,7 @@
 #include "oneflow/core/graph/exec_graph.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/task.pb.h"
-#include "oneflow/core/operator/operator_manager.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 

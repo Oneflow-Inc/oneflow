@@ -1,5 +1,5 @@
 #include "oneflow/core/graph/copy_task_node.h"
-#include "oneflow/core/operator/operator_manager.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -17,7 +17,7 @@ void CopyTaskNode::BuildExecGphAndRegst() {
   auto in_regst = GetConsumedRegst("copy_in");
   out_regst->CopyBlobDescFrom(in_regst.get());
   ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = OpMgr::Singleton()->AddOp(NewCopyOpConf());
+  node->mut_op() = ConstructOp(NewCopyOpConf());
   node->BindBnInOpAndRegst(node->op()->SoleIbn(), in_regst);
   node->BindBnInOpAndRegst(node->op()->SoleObn(), out_regst);
 }

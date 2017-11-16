@@ -145,6 +145,21 @@ std::string GetOpNameFromLbn(const std::string& lbn);
 std::string GetBnInOpFromLbn(const std::string& lbn);
 std::pair<std::string, std::string> ParseLbn(const std::string& lbn);
 
+void AddOpCreator(OperatorConf::OpTypeCase op_type_case,
+                  std::function<Operator*()> creator);
+
+std::shared_ptr<Operator> ConstructOp(const OperatorConf&);
+
+template<OperatorConf::OpTypeCase op_type_case, typename OpType>
+struct OpRegister {
+  OpRegister() {
+    AddOpCreator(op_type_case, []() { return new OpType; });
+  }
+};
+
+#define REGISTER_OP(OpTypeCase, OpType) \
+  static OpRegister<OpTypeCase, OpType> g_##OpType##_register_var;
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_OPERATOR_OPERATOR_H_

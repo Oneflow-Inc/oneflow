@@ -2,7 +2,7 @@
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/job/plan.pb.h"
-#include "oneflow/core/operator/operator_manager.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -24,11 +24,9 @@ class Compiler final {
 TodoPlan Compiler::Compile(const JobConf& job_conf) {
   JobDesc::NewSingleton(job_conf);
   IDMgr::NewSingleton();
-  OpMgr::NewSingleton();
   LogicalGraph::NewSingleton();
   TodoPlan plan = DoCompile();
   LogicalGraph::DeleteSingleton();
-  OpMgr::DeleteSingleton();
   IDMgr::DeleteSingleton();
   JobDesc::DeleteSingleton();
   return plan;

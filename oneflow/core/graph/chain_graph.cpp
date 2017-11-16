@@ -320,7 +320,7 @@ void ChainGraph::BuildLossRecordStruct() {
     OperatorConf loss_acc_op_conf;
     loss_acc_op_conf.set_name("loss_acc_" + NewUniqueId());
     loss_acc_op_conf.mutable_accumulate_conf();
-    auto loss_acc_op = OpMgr::Singleton()->AddOp(loss_acc_op_conf);
+    auto loss_acc_op = ConstructOp(loss_acc_op_conf);
     auto loss_acc_chain = NewNode<LossAccChainNode>();
     loss_acc_chain->mut_op_vec() = {loss_acc_op};
     loss_acc_chain->mut_parallel_desc() = loss_chain->parallel_desc();
@@ -329,7 +329,7 @@ void ChainGraph::BuildLossRecordStruct() {
     OperatorConf loss_record_op_conf;
     loss_record_op_conf.set_name("loss_record_" + NewUniqueId());
     loss_record_op_conf.mutable_loss_record_conf();
-    auto loss_record_op = OpMgr::Singleton()->AddOp(loss_record_op_conf);
+    auto loss_record_op = ConstructOp(loss_record_op_conf);
     ParallelConf loss_record_pr_conf;
     loss_record_pr_conf.set_policy(kDataParallel);
     loss_record_pr_conf.add_device_name(
@@ -342,12 +342,38 @@ void ChainGraph::BuildLossRecordStruct() {
   });
 }
 
+std::shared_ptr<const Operator> ConstructModelUpdateOp() {
+  OperatorConf mdupdt_conf;
+  mdupdt_conf.set_name("model_update_" + NewUniqueId());
+  const JobDesc* job_desc = JobDesc::Singleton();
+  if (job_desc->is_train()) {
+    const TrainConf& train_conf = job_desc->job_conf().train_conf();
+    if (train_conf.has_normal_mdupdt_conf()) {
+      *(mdupdt_conf.mutable_normal_mdupdt_conf()) =
+          train_conf.normal_mdupdt_conf();
+    } else if (train_conf.has_momentum_mdupdt_conf()) {
+      *(mdupdt_conf.mutable_momentum_mdupdt_conf()) =
+          train_conf.momentum_mdupdt_conf();
+    } else if (train_conf.has_rmsprop_mdupdt_conf()) {
+      *(mdupdt_conf.mutable_rmsprop_mdupdt_conf()) =
+          train_conf.rmsprop_mdupdt_conf();
+    } else {
+      UNEXPECTED_RUN();
+    }
+  } else if (job_desc->is_predict()) {
+    mdupdt_conf.mutable_normal_mdupdt_conf();
+  } else {
+    UNEXPECTED_RUN();
+  }
+  return ConstructOp(mdupdt_conf);
+}
+
 void ChainGraph::BuildModelStruct(bool is_train) {
   ForEachChainNode<ForwardChainNode>([&](ForwardChainNode* fw_chain) {
     if (fw_chain->HasOpWithModelOrModelTmpBlob() == false) { return; }
     // Model Update Chain
     auto md_updt_chain = NewNode<MdUpdtChainNode>();
-    md_updt_chain->mut_op_vec() = {OpMgr::Singleton()->ModelUpdateOp()};
+    md_updt_chain->mut_op_vec() = {ConstructModelUpdateOp()};
     md_updt_chain->mut_parallel_desc() = fw_chain->parallel_desc();
     Connect<ChainNode>(md_updt_chain, NewEdge(), fw_chain);
     // Model Save Chain
@@ -359,7 +385,7 @@ void ChainGraph::BuildModelStruct(bool is_train) {
         model_save_op_conf.mutable_model_save_conf()->add_lbns(lbn);
       }
     }
-    auto model_save_op = OpMgr::Singleton()->AddOp(model_save_op_conf);
+    auto model_save_op = ConstructOp(model_save_op_conf);
     auto md_save_chain = NewNode<MdSaveChainNode>();
     md_save_chain->mut_op_vec() = {model_save_op};
     auto md_save_pr_desc = new ParallelDesc(*(fw_chain->parallel_desc()));
@@ -375,7 +401,7 @@ void ChainGraph::BuildModelStruct(bool is_train) {
     OperatorConf md_diff_acc_op_conf;
     md_diff_acc_op_conf.set_name("md_diff_acc_" + NewUniqueId());
     md_diff_acc_op_conf.mutable_accumulate_conf();
-    auto md_diff_acc_op = OpMgr::Singleton()->AddOp(md_diff_acc_op_conf);
+    auto md_diff_acc_op = ConstructOp(md_diff_acc_op_conf);
     auto md_diff_acc_chain = NewNode<MdDiffAccChainNode>();
     md_diff_acc_chain->mut_op_vec() = {md_diff_acc_op};
     md_diff_acc_chain->mut_parallel_desc() = fw_chain->parallel_desc();
