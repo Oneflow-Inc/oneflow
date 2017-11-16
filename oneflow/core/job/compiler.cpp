@@ -13,20 +13,20 @@ class Compiler final {
 
   OF_SINGLETON(Compiler);
 
-  Plan Compile(const JobConf& job_conf);
+  TodoPlan Compile(const JobConf& job_conf);
 
  private:
   Compiler() = default;
 
-  Plan DoCompile();
+  TodoPlan DoCompile();
 };
 
-Plan Compiler::Compile(const JobConf& job_conf) {
+TodoPlan Compiler::Compile(const JobConf& job_conf) {
   JobDesc::NewSingleton(job_conf);
   IDMgr::NewSingleton();
   OpMgr::NewSingleton();
   LogicalGraph::NewSingleton();
-  Plan plan = DoCompile();
+  TodoPlan plan = DoCompile();
   LogicalGraph::DeleteSingleton();
   OpMgr::DeleteSingleton();
   IDMgr::DeleteSingleton();
@@ -34,7 +34,7 @@ Plan Compiler::Compile(const JobConf& job_conf) {
   return plan;
 }
 
-Plan Compiler::DoCompile() {
+TodoPlan Compiler::DoCompile() {
   auto chain_gph = of_make_unique<ChainGraph>(JobDesc::Singleton()->is_train());
   auto task_gph = of_make_unique<TaskGraph>(std::move(chain_gph));
   using std::placeholders::_1;
@@ -43,6 +43,14 @@ Plan Compiler::DoCompile() {
   task_gph->ForEachNode(std::bind(&TaskNode::Build, _1),
                         std::bind(&TaskNode::IsReadyForBuild, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::EraseEmptyProducedRegst, _1));
+  task_gph->ForEachNode(std::bind(&TaskNode::InferMemCaseOfProducedRegst, _1));
+  TodoPlan plan;
+  JobDesc::Singleton()->ToProto(plan.mutable_job_desc());
+  task_gph->ForEachNode([&](TaskNode* task_node) {
+    if (task_node->IsMeaningLess()) { return; }
+    task_node->ToProto(plan.mutable_task()->Add());
+  });
+  return plan;
 }
 
 }  // namespace oneflow
@@ -58,8 +66,7 @@ int main(int argc, char** argv) {
   oneflow::JobConf job_conf;
   oneflow::ParseProtoFromTextFile(FLAGS_job_conf_filepath, &job_conf);
   oneflow::Compiler::NewSingleton();
-  oneflow::Plan plan;
-  plan = oneflow::Compiler::Singleton()->Compile(job_conf);
+  oneflow::TodoPlan plan = oneflow::Compiler::Singleton()->Compile(job_conf);
   oneflow::PrintProtoToTextFile(plan, FLAGS_plan_filepath);
   oneflow::Compiler::DeleteSingleton();
   oneflow::CloseStdoutAndStderr();

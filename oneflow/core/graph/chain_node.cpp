@@ -129,6 +129,7 @@ void ChainNode::GenSortedCompTaskNodes(CompTaskNodeHandler Handler) const {
       comp_task_node->mut_parallel_ctx().set_parallel_id(parallel_idx++);
       comp_task_node->mut_parallel_ctx().set_parallel_num(parallel_num);
       comp_task_node->mut_parallel_ctx().set_policy(parallel_desc_->policy());
+      FixCompTaskNode(comp_task_node);
       Handler(comp_task_node);
     }
   }
@@ -296,6 +297,17 @@ BldBoxingOpConfMthd MdUpdtChainNode::GetMthdForBldBoxingOpConfFromMdDiffAcc(
 std::vector<std::string> MdUpdtChainNode::FindLbnsFromMdDiffAcc(
     const ChainNode*) const {
   return {kPackedBlobName};
+}
+
+void MdUpdtChainNode::FixCompTaskNode(CompTaskNode* node) const {
+  MdUpdtCompTaskNode* mdupdt_node = static_cast<MdUpdtCompTaskNode*>(node);
+  if (parallel_desc()->policy() == ParallelPolicy::kDataParallel) {
+    mdupdt_node->set_random_seed(random_seed_);
+  } else if (parallel_desc()->policy() == ParallelPolicy::kModelParallel) {
+    mdupdt_node->set_random_seed(NewRandomSeed());
+  } else {
+    UNEXPECTED_RUN();
+  }
 }
 
 // MdSaveChainNode

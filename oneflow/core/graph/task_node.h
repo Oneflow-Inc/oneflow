@@ -33,10 +33,13 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void Build();
   virtual bool IsReadyForBuild() { return IsAllConsumedRegstLocked(); }
   void EraseEmptyProducedRegst();
+  void InferMemCaseOfProducedRegst();
 
   // Others
   virtual TodoTaskType GetTaskType() const = 0;
   std::string VisualStr() const override;
+  virtual bool IsMeaningLess();
+  virtual void ToProto(TodoTaskProto*);
 
  protected:
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name,

@@ -22,6 +22,6 @@ message Plan {
 }
 
 message TodoPlan {
-  repeated TaskProto task = 1;
+  repeated TodoTaskProto task = 1;
   required JobDescProto job_desc = 2;
 }

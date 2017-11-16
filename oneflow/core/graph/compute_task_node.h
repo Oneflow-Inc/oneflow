@@ -14,6 +14,7 @@ class CompTaskNode : public TaskNode {
   virtual ~CompTaskNode() = default;
 
   virtual void FixThrdLocId() {}
+  virtual void ToProto(TodoTaskProto*) override;
 
   // parallel_ctx_
   int64_t parallel_id() const { return parallel_ctx_.parallel_id(); }

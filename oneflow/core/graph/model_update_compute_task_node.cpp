@@ -8,4 +8,9 @@ void MdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("model", 3, kMaxRegisterNum);
 }
 
+void MdUpdtCompTaskNode::ToProto(TodoTaskProto* task_proto) {
+  CompTaskNode::ToProto(task_proto);
+  task_proto->set_random_seed(random_seed_);
+}
+
 }  // namespace oneflow
