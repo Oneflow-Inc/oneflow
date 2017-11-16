@@ -7,7 +7,6 @@
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/operator.pb.h"
-#include "oneflow/core/operator/operator_manager.h"
 #include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/register/blob.h"
 

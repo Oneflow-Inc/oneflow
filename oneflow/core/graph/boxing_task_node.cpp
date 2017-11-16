@@ -2,7 +2,7 @@
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/graph/chain_node.h"
 #include "oneflow/core/graph/logical_graph.h"
-#include "oneflow/core/operator/operator_manager.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -213,7 +213,7 @@ std::shared_ptr<Operator> BoxingTaskNode::NewBoxingOp(
   (this->*method)(lbn, sorted_in_edges,
                   in_chain->parallel_desc()->parallel_num(), sorted_out_edges,
                   out_chain->parallel_desc()->parallel_num(), boxing_conf);
-  return OpMgr::Singleton()->AddOp(op_conf);
+  return ConstructOp(op_conf);
 }
 
 }  // namespace oneflow

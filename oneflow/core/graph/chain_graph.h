@@ -3,7 +3,7 @@
 
 #include "oneflow/core/graph/chain_node.h"
 #include "oneflow/core/graph/logical_graph.h"
-#include "oneflow/core/operator/operator_manager.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
