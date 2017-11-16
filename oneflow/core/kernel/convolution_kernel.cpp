@@ -99,44 +99,6 @@ class ConvolutionKernelUtil<DeviceType::kCPU, T> final {
 };
 
 template<DeviceType device_type, typename T>
-ConvolutionKernel<device_type, T>::ConvolutionKernel() {
-#ifdef USE_CUDNN
-  CudaCheck(cudnnCreateTensorDescriptor(&in_desc_));
-  CudaCheck(cudnnCreateTensorDescriptor(&out_desc_));
-  CudaCheck(cudnnCreateFilterDescriptor(&weight_desc_));
-  CudaCheck(cudnnCreateConvolutionDescriptor(&conv_desc_));
-  if (op()->GetBoolFromSpecialConf("has_bias_term")) {
-    CudaCheck(cudnnCreateTensorDescriptor(&bias_desc_));
-  }
-#endif  // USE_CUDNN
-}
-
-template<DeviceType device_type, typename T>
-ConvolutionKernel<device_type, T>::~ConvolutionKernel() {
-#ifdef USE_CUDNN
-  CudaCheck(cudnnDestroyTensorDescriptor(in_desc_));
-  CudaCheck(cudnnDestroyTensorDescriptor(out_desc_));
-  CudaCheck(cudnnDestroyFilterDescriptor(weight_desc_));
-  CudaCheck(cudnnDestroyConvolutionDescriptor(conv_desc_));
-  if (op()->GetBoolFromSpecialConf("has_bias_term")) {
-    CudaCheck(cudnnDestroyTensorDescriptor(bias_desc_));
-  }
-#endif  // USE_CUDNN
-}
-
-template<DeviceType device_type, typename T>
-void ConvolutionKernel<device_type, T>::InitFromOpProto(
-    const OperatorProto& op_proto) {
-#ifdef USE_CUDNN
-  Kernel::InitFromOpProto(op_proto);
-  const auto conv_conf = op()->op_conf().convolution_conf();
-  CudaCheck(cudnnSetConvolution2dDescriptor(
-      conv_desc_, conv_conf.pad_h(), conv_conf.pad_w(), conv_conf.stride_h(),
-      conv_conf.stride_w(), 1, 1, CUDNN_CROSS_CORRELATION));
-#endif
-}
-
-template<DeviceType device_type, typename T>
 void ConvolutionKernel<device_type, T>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -147,43 +109,6 @@ void ConvolutionKernel<device_type, T>::Forward(
   auto conv_conf = op()->op_conf().convolution_conf();
   CopyDataIdFromSoleIbToAllObIfNeed<device_type>(ctx, BnInOp2Blob);
 
-#ifdef USE_CUDNN
-  CudaCheck(cudnnSetTensor4dDescriptor(
-      in_desc_, CUDNN_TENSOR_NCHW, cudnn::DataType<T>::type,
-      in_blob->shape().At(0), in_blob->shape().At(1), in_blob->shape().At(2),
-      in_blob->shape().At(3)));
-  CudaCheck(cudnnSetTensor4dDescriptor(
-      out_desc_, CUDNN_TENSOR_NCHW, cudnn::DataType<T>::type,
-      out_blob->shape().At(0), out_blob->shape().At(1), out_blob->shape().At(2),
-      out_blob->shape().At(3)));
-  CudaCheck(cudnnSetFilter4dDescriptor(
-      weight_desc_, cudnn::DataType<T>::type, CUDNN_TENSOR_NCHW,
-      weight_blob->shape().At(0), weight_blob->shape().At(1),
-      weight_blob->shape().At(2), weight_blob->shape().At(3)));
-
-  cudnnConvolutionFwdAlgo_t cudnn_fwd_algo =
-      (cudnnConvolutionFwdAlgo_t)(conv_conf.cudnn_fwd_algo());
-
-  Blob* fwd_workspace = BnInOp2Blob("fwd_workspace");
-
-  CudaCheck(cudnnConvolutionForward(
-      ctx.device_ctx->cudnn_handle(), cudnn::DataType<T>::one, in_desc_,
-      in_blob->dptr<T>(), weight_desc_, weight_blob->dptr<T>(), conv_desc_,
-      cudnn_fwd_algo, fwd_workspace->mut_dptr<T>(),
-      fwd_workspace->shape().At(0), cudnn::DataType<T>::zero, out_desc_,
-      out_blob->mut_dptr<T>()));
-
-  if (op()->GetBoolFromSpecialConf("has_bias_term")) {
-    CudaCheck(cudnnSetTensor4dDescriptor(bias_desc_, CUDNN_TENSOR_NCHW,
-                                         cudnn::DataType<T>::type, 1,
-                                         out_blob->shape().At(1), 1, 1));
-    const Blob* bias_blob = BnInOp2Blob("bias");
-    CudaCheck(cudnnAddTensor(ctx.device_ctx->cudnn_handle(),
-                             cudnn::DataType<T>::one, bias_desc_,
-                             bias_blob->dptr<T>(), cudnn::DataType<T>::one,
-                             out_desc_, out_blob->mut_dptr<T>()));
-  }
-#else
   Blob* col_buf_blob = BnInOp2Blob("col_buf");
   const int64_t in_im_sz = in_shape.Count(1);
   const int64_t out_im_sz = out_blob->shape().Count(1);
@@ -218,7 +143,6 @@ void ConvolutionKernel<device_type, T>::Forward(
           bias_mul_blob->shape().At(0));
     }
   }
-#endif  // USE_CUDNN
 }
 
 template<DeviceType device_type, typename T>
@@ -229,21 +153,6 @@ void ConvolutionKernel<device_type, T>::ComputeWeightDiff(
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   auto conv_conf = op()->op_conf().convolution_conf();
 
-#ifdef USE_CUDNN
-  const Blob* in_blob = BnInOp2Blob("in");
-  const Blob* out_blob = BnInOp2Blob("out");
-  Blob* bwd_weight_workspace = BnInOp2Blob("bwd_weight_workspace");
-
-  cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_weight_algo =
-      (cudnnConvolutionBwdFilterAlgo_t)(conv_conf.cudnn_bwd_weight_algo());
-
-  CudaCheck(cudnnConvolutionBackwardFilter(
-      ctx.device_ctx->cudnn_handle(), cudnn::DataType<T>::one, in_desc_,
-      in_blob->dptr<T>(), out_desc_, out_blob->dptr<T>(), conv_desc_,
-      cudnn_bwd_weight_algo, bwd_weight_workspace->mut_dptr<T>(),
-      bwd_weight_workspace->shape().At(0), cudnn::DataType<T>::one,
-      weight_desc_, weight_diff_blob->mut_dptr<T>()));
-#else
   const Blob* col_buf_blob = BnInOp2Blob("col_buf");
   const int64_t out_im_sz = out_diff_blob->shape().Count(1);
   const int64_t data_num = out_diff_blob->shape().At(0);
@@ -263,7 +172,6 @@ void ConvolutionKernel<device_type, T>::ComputeWeightDiff(
         col_buf_blob->shape().At(2), static_cast<T>(1.0),
         weight_diff_blob->mut_dptr<T>(), weight_diff_blob->shape().At(1));
   }
-#endif  // USE_CUDNN
 }
 
 template<DeviceType device_type, typename T>
@@ -273,12 +181,6 @@ void ConvolutionKernel<device_type, T>::ComputeBiasDiff(
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   Blob* bias_diff_blob = BnInOp2Blob("bias_diff");
 
-#ifdef USE_CUDNN
-  CudaCheck(cudnnConvolutionBackwardBias(
-      ctx.device_ctx->cudnn_handle(), cudnn::DataType<T>::one, out_desc_,
-      out_diff_blob->dptr<T>(), cudnn::DataType<T>::one, bias_desc_,
-      bias_diff_blob->mut_dptr<T>()));
-#else
   const int64_t out_im_sz = out_diff_blob->shape().Count(1);
   const int64_t data_num = out_diff_blob->shape().At(0);
   const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
@@ -295,7 +197,6 @@ void ConvolutionKernel<device_type, T>::ComputeBiasDiff(
         out_diff_blob->shape().Count(2), bias_mul_blob->dptr<T>(), 1,
         static_cast<T>(1.0), bias_diff_blob->mut_dptr<T>(), 1);
   }
-#endif  // USE_CUDNN
 }
 
 template<DeviceType device_type, typename T>
@@ -307,20 +208,7 @@ void ConvolutionKernel<device_type, T>::ComputeInputDiff(
 
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   const Blob* weight_blob = BnInOp2Blob("weight");
-  auto conv_conf = op()->op_conf().convolution_conf();
 
-#ifdef USE_CUDNN
-  Blob* bwd_data_workspace = BnInOp2Blob("bwd_data_workspace");
-  cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo =
-      (cudnnConvolutionBwdDataAlgo_t)(conv_conf.cudnn_bwd_data_algo());
-
-  CudaCheck(cudnnConvolutionBackwardData(
-      ctx.device_ctx->cudnn_handle(), cudnn::DataType<T>::one, weight_desc_,
-      weight_blob->dptr<T>(), out_desc_, out_diff_blob->dptr<T>(), conv_desc_,
-      cudnn_bwd_data_algo, bwd_data_workspace->mut_dptr<T>(),
-      bwd_data_workspace->shape().At(0), cudnn::DataType<T>::zero, in_desc_,
-      in_diff_blob->mut_dptr<T>()));
-#else
   Blob* col_buf_blob = BnInOp2Blob("col_buf");
 
   const int64_t out_im_sz = out_diff_blob->shape().Count(1);
@@ -348,7 +236,6 @@ void ConvolutionKernel<device_type, T>::ComputeInputDiff(
         conv_conf.dilation_h(), conv_conf.dilation_w(),
         in_diff_blob->mut_dptr<T>() + i * in_diff_shape.Count(1));
   }
-#endif  // USE_CUDNN
 }
 
 template<DeviceType device_type, typename T>
@@ -410,12 +297,18 @@ void ConvolutionKernel<device_type, T>::InitModelTmpBlobs(
 
 namespace {
 
+#ifdef USE_CUDNN
+#define CONVOLUTION_KERNEL CudnnConvolutionKernel
+#else
+#define CONVOLUTION_KERNEL ConvolutionKernel
+#endif  // USE_CUDNN
+
 Kernel* CreateConvolutionKenrel(const OpContext& op_ctx) {
   static const HashMap<std::string, std::function<Kernel*()>> creators = {
-#define CONVOLUTION_KERNEL_ENTRY(device_type, data_type_pair)          \
-  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {  \
-     return new ConvolutionKernel<device_type,                         \
-                                  OF_PP_PAIR_FIRST(data_type_pair)>(); \
+#define CONVOLUTION_KERNEL_ENTRY(device_type, data_type_pair)           \
+  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {   \
+     return new CONVOLUTION_KERNEL<device_type,                         \
+                                   OF_PP_PAIR_FIRST(data_type_pair)>(); \
    }},
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
           CONVOLUTION_KERNEL_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};

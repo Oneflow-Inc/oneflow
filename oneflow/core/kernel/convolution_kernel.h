@@ -25,10 +25,9 @@ template<DeviceType device_type, typename T>
 class ConvolutionKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvolutionKernel);
-  ConvolutionKernel();
-  ~ConvolutionKernel();
+  ConvolutionKernel() = default;
+  ~ConvolutionKernel() = default;
 
-  void InitFromOpProto(const OperatorProto& op_proto) override;
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
   void Backward(const KernelCtx&,
@@ -55,14 +54,61 @@ class ConvolutionKernel final : public Kernel {
   void ComputeBiasDiff(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+};
 
-#ifdef USE_CUDNN
+template<DeviceType device_type, typename T>
+class CudnnConvolutionKernel final : public Kernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnConvolutionKernel);
+  CudnnConvolutionKernel();
+  ~CudnnConvolutionKernel();
+
+  void InitFromOpProto(const OperatorProto& op_proto) override;
+  void Forward(const KernelCtx&,
+               std::function<Blob*(const std::string&)>) const override;
+  void Backward(const KernelCtx&,
+                std::function<Blob*(const std::string&)>) const override;
+};
+
+template<typename T>
+class CudnnConvolutionKernel<DeviceType::kCPU, T> final : public Kernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnConvolutionKernel);
+  CudnnConvolutionKernel() = default;
+  ~CudnnConvolutionKernel() = default;
+
+  void InitFromOpProto(const OperatorProto& op_proto) override {
+    UNEXPECTED_RUN();
+  }
+  void Forward(const KernelCtx&,
+               std::function<Blob*(const std::string&)>) const override {
+    UNEXPECTED_RUN();
+  }
+  void Backward(const KernelCtx&,
+                std::function<Blob*(const std::string&)>) const override {
+    UNEXPECTED_RUN();
+  }
+};
+
+template<typename T>
+class CudnnConvolutionKernel<DeviceType::kGPU, T> final : public Kernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnConvolutionKernel);
+  CudnnConvolutionKernel();
+  ~CudnnConvolutionKernel();
+
+  void InitFromOpProto(const OperatorProto& op_proto) override;
+  void Forward(const KernelCtx&,
+               std::function<Blob*(const std::string&)>) const override;
+  void Backward(const KernelCtx&,
+                std::function<Blob*(const std::string&)>) const override;
+
+ private:
   cudnnTensorDescriptor_t in_desc_;
   cudnnTensorDescriptor_t out_desc_;
   cudnnConvolutionDescriptor_t conv_desc_;
   cudnnFilterDescriptor_t weight_desc_;
   cudnnTensorDescriptor_t bias_desc_;
-#endif  // USE_CUDNN
 };
 
 }  // namespace oneflow

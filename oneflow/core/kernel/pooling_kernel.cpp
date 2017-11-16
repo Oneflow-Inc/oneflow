@@ -3,51 +3,6 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-PoolingKernel<device_type, T>::PoolingKernel() {
-#ifdef USE_CUDNN
-  CudaCheck(cudnnCreateTensorDescriptor(&in_desc_));
-  CudaCheck(cudnnCreateTensorDescriptor(&out_desc_));
-  CudaCheck(cudnnCreatePoolingDescriptor(&pooling_desc_));
-#endif
-}
-
-template<DeviceType device_type, typename T>
-PoolingKernel<device_type, T>::~PoolingKernel() {
-#ifdef USE_CUDNN
-  CudaCheck(cudnnDestroyTensorDescriptor(in_desc_));
-  CudaCheck(cudnnDestroyTensorDescriptor(out_desc_));
-  CudaCheck(cudnnDestroyPoolingDescriptor(pooling_desc_));
-#endif
-}
-
-template<DeviceType device_type, typename T>
-void PoolingKernel<device_type, T>::InitFromOpProto(
-    const OperatorProto& op_proto) {
-#ifdef USE_CUDNN
-  Kernel::InitFromOpProto(op_proto);
-
-  const auto pooling_conf = op()->op_conf().pooling_conf();
-
-  switch (pooling_conf.pool()) {
-    case PoolingOpConf::kMax: {
-      pooling_mode_ = CUDNN_POOLING_MAX;
-      break;
-    }
-    case PoolingOpConf::kAve: {
-      pooling_mode_ = CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING;
-      break;
-    }
-    default: { UNEXPECTED_RUN(); }
-  }
-
-  CudaCheck(cudnnSetPooling2dDescriptor(
-      pooling_desc_, pooling_mode_, CUDNN_PROPAGATE_NAN,
-      pooling_conf.kernel_h(), pooling_conf.kernel_w(), pooling_conf.pad_h(),
-      pooling_conf.pad_w(), pooling_conf.stride_h(), pooling_conf.stride_w()));
-#endif
-}
-
-template<DeviceType device_type, typename T>
 void PoolingKernel<device_type, T>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -58,25 +13,9 @@ void PoolingKernel<device_type, T>::Forward(
   CopyDataIdFromSoleIbToAllObIfNeed<device_type>(ctx,
                                                  BnInOp2Blob);  // TODO(shiyuan)
 
-#ifdef USE_CUDNN
-  CudaCheck(cudnnSetTensor4dDescriptor(
-      in_desc_, CUDNN_TENSOR_NCHW, cudnn::DataType<T>::type,
-      in_blob->shape().At(0), in_blob->shape().At(1), in_blob->shape().At(2),
-      in_blob->shape().At(3)));
-  CudaCheck(cudnnSetTensor4dDescriptor(
-      out_desc_, CUDNN_TENSOR_NCHW, cudnn::DataType<T>::type,
-      out_blob->shape().At(0), out_blob->shape().At(1), out_blob->shape().At(3),
-      out_blob->shape().At(3)));
-
-  CudaCheck(cudnnPoolingForward(ctx.device_ctx->cudnn_handle(), pooling_desc_,
-                                cudnn::DataType<T>::one, in_desc_,
-                                in_blob->dptr<T>(), cudnn::DataType<T>::zero,
-                                out_desc_, out_blob->mut_dptr<T>()));
-#else
   Blob* idx_blob = BnInOp2Blob("idx");
   PoolingKernelUtil<device_type, T>::PoolingForward(ctx, in_blob, out_blob,
                                                     idx_blob, pooling_conf);
-#endif
 }
 
 template<DeviceType device_type, typename T>
@@ -89,20 +28,10 @@ void PoolingKernel<device_type, T>::Backward(
                       in_diff_blob->ByteSizeOfDataField());  // TODO(shiyuan)
   const PoolingOpConf& pooling_conf = op()->op_conf().pooling_conf();
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
-
-#ifdef USE_CUDNN
-  const Blob* in_blob = BnInOp2Blob("in");
-  const Blob* out_blob = BnInOp2Blob("out");
-  CudaCheck(cudnnPoolingBackward(
-      ctx.device_ctx->cudnn_handle(), pooling_desc_, cudnn::DataType<T>::one,
-      out_desc_, out_blob->dptr<T>(), out_desc_, out_diff_blob->dptr<T>(),
-      in_desc_, in_blob->dptr<T>(), cudnn::DataType<T>::zero, in_desc_,
-      in_diff_blob->mut_dptr<T>()));
-#else
   const Blob* idx_blob = BnInOp2Blob("idx");
+
   PoolingKernelUtil<device_type, T>::PoolingBackward(
       ctx, out_diff_blob, idx_blob, in_diff_blob, pooling_conf);
-#endif
 }
 
 template<typename T>
@@ -334,14 +263,23 @@ class PoolingKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
+/*
+ */
+
 namespace {
+
+#ifdef USE_CUDNN
+#define POOLING_KERNEL CudnnPoolingKernel
+#else
+#define POOLING_KERNEL PoolingKernel
+#endif  // USE_CUDNN
 
 Kernel* CreatePoolingKenrel(const OpContext& op_ctx) {
   static const HashMap<std::string, std::function<Kernel*()>> creators = {
 #define POOLING_KERNEL_ENTRY(device_type, data_type_pair)             \
   {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() { \
-     return new PoolingKernel<device_type,                            \
-                              OF_PP_PAIR_FIRST(data_type_pair)>();    \
+     return new POOLING_KERNEL<device_type,                           \
+                               OF_PP_PAIR_FIRST(data_type_pair)>();   \
    }},
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(POOLING_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
                                        FLOATING_DATA_TYPE_SEQ)};

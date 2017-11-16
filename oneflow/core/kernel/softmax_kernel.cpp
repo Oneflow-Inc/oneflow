@@ -4,22 +4,6 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-SoftmaxKernel<device_type, T>::SoftmaxKernel() {
-#ifdef USE_CUDNN
-  CudaCheck(cudnnCreateTensorDescriptor(&in_desc_));
-  CudaCheck(cudnnCreateTensorDescriptor(&out_desc_));
-#endif  // USE_CUDNN
-}
-
-template<DeviceType device_type, typename T>
-SoftmaxKernel<device_type, T>::~SoftmaxKernel() {
-#ifdef USE_CUDNN
-  CudaCheck(cudnnDestroyTensorDescriptor(in_desc_));
-  CudaCheck(cudnnDestroyTensorDescriptor(out_desc_));
-#endif  // USE_CUDNN
-}
-
-template<DeviceType device_type, typename T>
 void SoftmaxKernel<device_type, T>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -32,24 +16,7 @@ void SoftmaxKernel<device_type, T>::Forward(
   T* tmp = tmp_blob->mut_dptr<T>();
   T* out = out_blob->mut_dptr<T>();
   CopyDataIdFromSoleIbToAllObIfNeed<device_type>(ctx, BnInOp2Blob);
-#ifdef USE_CUDNN
-  CudaCheck(cudnnSetTensor4dDescriptor(
-      in_desc_, CUDNN_TENSOR_NCHW, cudnn::DataType<T>::type,
-      in_blob->shape().At(0), in_blob->shape().At(1), in_blob->shape().At(2),
-      in_blob->shape().At(3)));
-  CudaCheck(cudnnSetTensor4dDescriptor(
-      out_desc_, CUDNN_TENSOR_NCHW, cudnn::DataType<T>::type,
-      out_blob->shape().At(0), out_blob->shape().At(1), out_blob->shape().At(2),
-      out_blob->shape().At(3)));
-
-  CudaCheck(cudnnSoftmaxForward(
-      ctx.device_ctx->cudnn_handle(), CUDNN_SOFTMAX_ACCURATE,
-      CUDNN_SOFTMAX_MODE_CHANNEL, cudnn::DataType<T>::one, in_desc_,
-      in_blob->dptr<T>(), cudnn::DataType<T>::zero, out_desc_,
-      out_blob->mut_dptr<T>()));
-#else
   SoftmaxComputeProb<device_type, T>(ctx.device_ctx, n, w, in, tmp, out);
-#endif  // USE_CUDNN
 }
 
 template<DeviceType device_type, typename T>
@@ -64,12 +31,6 @@ void SoftmaxKernel<device_type, T>::Backward(
   T* in_diff = in_diff_blob->mut_dptr<T>();
   const T* out = out_blob->dptr<T>();
   const T* out_diff = out_diff_blob->dptr<T>();
-#ifdef USE_CUDNN
-  CudaCheck(cudnnSoftmaxBackward(
-      ctx.device_ctx->cudnn_handle(), CUDNN_SOFTMAX_ACCURATE,
-      CUDNN_SOFTMAX_MODE_CHANNEL, cudnn::DataType<T>::one, out_desc_, out,
-      out_desc_, out_diff, cudnn::DataType<T>::zero, in_desc_, in_diff));
-#else
   Blob* tmp_blob = BnInOp2Blob(op()->SoleDtbn());
   T* tmp = tmp_blob->mut_dptr<T>();
   // copy out_diff to in_diff
@@ -82,7 +43,6 @@ void SoftmaxKernel<device_type, T>::Backward(
   SoftmaxKernelUtil<device_type, T>::Sub(ctx.device_ctx, n, w, in_diff, tmp);
   // elementwise multiplication | in_diff[i][j] *= out[i][j]
   KernelUtil<device_type, T>::Mul(ctx.device_ctx, n * w, in_diff, out, in_diff);
-#endif  // USE_CUDNN
 }
 
 template<typename T>
@@ -122,11 +82,17 @@ class SoftmaxKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
+#ifdef USE_CUDNN
+#define SOFTMAX_KERNEL CudnnSoftmaxKernel
+#else
+#define SOFTMAX_KERNEL SoftmaxKernel
+#endif
+
 Kernel* CreateSoftmaxKernel(const OpContext& op_ctx) {
   static const HashMap<std::string, std::function<Kernel*()>> creators = {
-#define SOFTMAX_KERNEL_ENTRY(device_type, data_type_pair)                     \
-  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {         \
-     return new SoftmaxKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>; \
+#define SOFTMAX_KERNEL_ENTRY(device_type, data_type_pair)                      \
+  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {          \
+     return new SOFTMAX_KERNEL<device_type, OF_PP_PAIR_FIRST(data_type_pair)>; \
    }},
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(SOFTMAX_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
                                        FLOATING_DATA_TYPE_SEQ)};
@@ -136,5 +102,9 @@ Kernel* CreateSoftmaxKernel(const OpContext& op_ctx) {
 }
 
 COMMAND(AddKernelCreator(OperatorConf::kSoftmaxConf, CreateSoftmaxKernel));
+
+#define INSTANTIATE_SOFTMAX_KERNEL_UTIL(type_cpp, type_proto) \
+  template class SoftmaxKernelUtil<DeviceType::kCPU, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_SOFTMAX_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

@@ -145,7 +145,7 @@ void ConvolutionOp::InferBlobDesc4FwBlobs(
                                        w_len));
   CudaCheck(cudnnSetConvolution2dDescriptor(
       conv_desc, conf.pad_h(), conf.pad_w(), conf.stride_h(), conf.stride_w(),
-      1, 1, CUDNN_CROSS_CORRELATION));
+      1, 1, CUDNN_CROSS_CORRELATION, cudnn_data_type));
   CudaCheck(cudnnSetFilter4dDescriptor(weight_desc, cudnn_data_type,
                                        CUDNN_TENSOR_NCHW, data_num, c_o,
                                        conf.kernel_h(), conf.kernel_w()));
