@@ -2,6 +2,11 @@
 
 namespace oneflow {
 
+void CompTaskNode::ToProto(TodoTaskProto* task_proto) {
+  TaskNode::ToProto(task_proto);
+  *(task_proto->mutable_parallel_ctx()) = parallel_ctx_;
+}
+
 void SortByParallelId(std::vector<CompTaskNode*>* node_vec) {
   std::sort(node_vec->begin(), node_vec->end(),
             [](const CompTaskNode* lhs, const CompTaskNode* rhs) {

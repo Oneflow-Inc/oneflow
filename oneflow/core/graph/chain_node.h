@@ -76,6 +76,7 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
  protected:
   ChainNode() = default;
   virtual CompTaskNode* NewCompTaskNode() const = 0;
+  virtual void FixCompTaskNode(CompTaskNode*) const {}
 
  private:
   std::vector<std::shared_ptr<const Operator>> op_vec_;
@@ -207,7 +208,7 @@ class LossRecordChainNode final : public ChainNode {
 class MdUpdtChainNode final : public ChainNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MdUpdtChainNode);
-  MdUpdtChainNode() = default;
+  MdUpdtChainNode() : random_seed_(NewRandomSeed()) {}
   ~MdUpdtChainNode() = default;
 
   OVERRIDE_PURE_VIRTUAL_METHOD();
@@ -221,6 +222,11 @@ class MdUpdtChainNode final : public ChainNode {
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (std::vector<std::string> FindLbns),
                                    (MdDiffAcc));
+
+ private:
+  void FixCompTaskNode(CompTaskNode*) const override;
+
+  uint32_t random_seed_;
 };
 
 class MdSaveChainNode final : public ChainNode {

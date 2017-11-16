@@ -12,8 +12,7 @@ std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc()
   return std::bind(&ExecNode::GetBlobDesc4BnInOp, this, std::placeholders::_1);
 }
 
-void ExecNode::ToProto(ExecNodeProto* ret) const {
-  ret->set_op_name(op_->op_name());
+void ExecNode::ToProto(TodoExecNodeProto* ret) const {
   for (const auto& bn_regst : bn_in_op2regst_) {
     auto regst = bn_regst.second.lock();
     if (regst) {
@@ -31,7 +30,7 @@ BlobDesc* ExecNode::GetBlobDesc4BnInOp(const std::string& bn_in_op) const {
   return regst->MutBlobDesc(lbn);
 }
 
-void ExecGraph::ToExecSequence(ExecSequence* ret) const {
+void ExecGraph::ToExecSequence(TodoExecSequence* ret) const {
   TopoForEachNode([&](ExecNode* node) { node->ToProto(ret->add_exec_node()); });
 }
 

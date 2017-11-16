@@ -31,6 +31,8 @@ class CopyHdTaskNode final : public CopyTaskNode {
 
   void Init(const CompTaskNode*, CopyHdOpConf::Type);
 
+  CopyHdOpConf::Type copy_type() const { return copy_type_; }
+
  private:
   OperatorConf NewCopyOpConf() override;
 

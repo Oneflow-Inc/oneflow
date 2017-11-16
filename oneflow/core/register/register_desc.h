@@ -41,10 +41,8 @@ class RegstDesc final {
   void ForEachLbn(std::function<void(const std::string&)> func) const;
   size_t NumOfLbn() const { return lbn2blob_desc_.size(); }
 
-  // mem_case_
-  MemoryCase* mut_mem_case() { return &mem_case_; }
-
-  //
+  // util
+  void InferMemCase();
   void EraseZeroSizeBlob();
   void ToProto(RegstDescProto*) const;
   BlobDesc CompPackedBlobDesc() const;
