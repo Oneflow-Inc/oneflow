@@ -40,8 +40,8 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   ExecNode() = default;
   ~ExecNode() = default;
 
-  std::shared_ptr<Operator> op() const { return op_; }
-  std::shared_ptr<Operator>& mut_op() { return op_; }
+  std::shared_ptr<const Operator> op() const { return op_; }
+  std::shared_ptr<const Operator>& mut_op() { return op_; }
 
   void BindBnInOpAndRegst(const std::string&, std::weak_ptr<RegstDesc>);
 
@@ -53,7 +53,7 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
  private:
   BlobDesc* GetBlobDesc4BnInOp(const std::string&) const;
 
-  std::shared_ptr<Operator> op_;
+  std::shared_ptr<const Operator> op_;
   HashMap<std::string, std::weak_ptr<RegstDesc>> bn_in_op2regst_;
 };
 

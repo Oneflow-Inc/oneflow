@@ -13,19 +13,21 @@ std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc()
 }
 
 void ExecNode::ToProto(TodoExecNodeProto* ret) const {
+  op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), ret->mutable_kernel_conf());
   for (const auto& bn_regst : bn_in_op2regst_) {
+    const std::string& bn_in_op = bn_regst.first;
     auto regst = bn_regst.second.lock();
-    if (regst) {
-      ret->mutable_bn_in_op2regst_desc_id()->insert(
-          {bn_regst.first, regst->regst_desc_id()});
-    }
+    if (!regst) { continue; }
+    PbMapPair<std::string, int64_t> pair{bn_in_op, regst->regst_desc_id()};
+    CHECK(ret->mutable_bn_in_op2regst_desc_id()->insert(pair).second);
   }
 }
 
 BlobDesc* ExecNode::GetBlobDesc4BnInOp(const std::string& bn_in_op) const {
-  auto it = this->bn_in_op2regst_.find(bn_in_op);
-  if (it == this->bn_in_op2regst_.end()) { return nullptr; }
+  auto it = bn_in_op2regst_.find(bn_in_op);
+  if (it == bn_in_op2regst_.end()) { return nullptr; }
   std::shared_ptr<RegstDesc> regst = it->second.lock();
+  if (!regst) { return nullptr; }
   const std::string& lbn = this->op()->Lbn4BnInOp(bn_in_op);
   return regst->MutBlobDesc(lbn);
 }
