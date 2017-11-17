@@ -32,18 +32,56 @@
 
 // Tuple
 
-#define OF_PP_INTERNAL_TUPLE_PUSH_FRONT(tuple, x)          \
-  OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_TUPLE_PUSH_FRONT_,     \
-                     OF_PP_INTERNAL_IS_TUPLE_EMPTY(tuple)) \
+#define OF_PP_INTERNAL_TUPLE_PUSH_FRONT(tuple, x)      \
+  OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_TUPLE_PUSH_FRONT_, \
+                     OF_PP_INTERNAL_TUPLE_SIZE(tuple)) \
   (tuple, x)
 
-#define OF_PP_INTERNAL_TUPLE_PUSH_FRONT_1(tuple, x) (x)
-#define OF_PP_INTERNAL_TUPLE_PUSH_FRONT_0(tuple, x) \
-  (x, OF_PP_INTERNAL_TUPLE_TO_ARGS(tuple))
+#define OF_PP_INTERNAL_TUPLE_PUSH_FRONT_0(tuple, x) (x)
+#define OF_PP_INTERNAL_TUPLE_PUSH_FRONT_1(tuple, x) \
+  (x, OF_PP_INTERNAL_TUPLE_ELEM(0, tuple))
+#define OF_PP_INTERNAL_TUPLE_PUSH_FRONT_2(tuple, x) \
+  (x, OF_PP_INTERNAL_TUPLE_ELEM(0, tuple), OF_PP_INTERNAL_TUPLE_ELEM(1, tuple))
+#define OF_PP_INTERNAL_TUPLE_PUSH_FRONT_3(tuple, x) \
+  (x, OF_PP_INTERNAL_TUPLE_ELEM(0, tuple),          \
+   OF_PP_INTERNAL_TUPLE_ELEM(1, tuple), OF_PP_INTERNAL_TUPLE_ELEM(2, tuple))
+#define OF_PP_INTERNAL_TUPLE_PUSH_FRONT_4(tuple, x)                          \
+  (x, OF_PP_INTERNAL_TUPLE_ELEM(0, tuple),                                   \
+   OF_PP_INTERNAL_TUPLE_ELEM(1, tuple), OF_PP_INTERNAL_TUPLE_ELEM(2, tuple), \
+   OF_PP_INTERNAL_TUPLE_ELEM(3, tuple))
+#define OF_PP_INTERNAL_TUPLE_PUSH_FRONT_5(tuple, x)                          \
+  (x, OF_PP_INTERNAL_TUPLE_ELEM(0, tuple),                                   \
+   OF_PP_INTERNAL_TUPLE_ELEM(1, tuple), OF_PP_INTERNAL_TUPLE_ELEM(2, tuple), \
+   OF_PP_INTERNAL_TUPLE_ELEM(3, tuple), OF_PP_INTERNAL_TUPLE_ELEM(4, tuple))
+#define OF_PP_INTERNAL_TUPLE_PUSH_FRONT_6(tuple, x)                          \
+  (x, OF_PP_INTERNAL_TUPLE_ELEM(0, tuple),                                   \
+   OF_PP_INTERNAL_TUPLE_ELEM(1, tuple), OF_PP_INTERNAL_TUPLE_ELEM(2, tuple), \
+   OF_PP_INTERNAL_TUPLE_ELEM(3, tuple), OF_PP_INTERNAL_TUPLE_ELEM(4, tuple), \
+   OF_PP_INTERNAL_TUPLE_ELEM(5, tuple))
+#define OF_PP_INTERNAL_TUPLE_PUSH_FRONT_7(tuple, x)                          \
+  (x, OF_PP_INTERNAL_TUPLE_ELEM(0, tuple),                                   \
+   OF_PP_INTERNAL_TUPLE_ELEM(1, tuple), OF_PP_INTERNAL_TUPLE_ELEM(2, tuple), \
+   OF_PP_INTERNAL_TUPLE_ELEM(3, tuple), OF_PP_INTERNAL_TUPLE_ELEM(4, tuple), \
+   OF_PP_INTERNAL_TUPLE_ELEM(5, tuple), OF_PP_INTERNAL_TUPLE_ELEM(6, tuple))
+#define OF_PP_INTERNAL_TUPLE_PUSH_FRONT_8(tuple, x)                          \
+  (x, OF_PP_INTERNAL_TUPLE_ELEM(0, tuple),                                   \
+   OF_PP_INTERNAL_TUPLE_ELEM(1, tuple), OF_PP_INTERNAL_TUPLE_ELEM(2, tuple), \
+   OF_PP_INTERNAL_TUPLE_ELEM(3, tuple), OF_PP_INTERNAL_TUPLE_ELEM(4, tuple), \
+   OF_PP_INTERNAL_TUPLE_ELEM(5, tuple), OF_PP_INTERNAL_TUPLE_ELEM(6, tuple), \
+   OF_PP_INTERNAL_TUPLE_ELEM(7, tuple))
 
-#define OF_PP_INTERNAL_TUPLE_TO_ARGS(t) OF_PP_INTERNAL_TUPLE_TO_ARGS_I(t)
-#define OF_PP_INTERNAL_TUPLE_TO_ARGS_I(t) OF_PP_INTERNAL_TUPLE_TO_ARGS_ t
-#define OF_PP_INTERNAL_TUPLE_TO_ARGS_(...) __VA_ARGS__
+#define OF_PP_INTERNAL_TUPLE_ELEM(n, t) OF_PP_INTERNAL_TUPLE_ELEM_I(n, t)
+#define OF_PP_INTERNAL_TUPLE_ELEM_I(n, t) \
+  OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_ARG_, n) t, )
+
+#define OF_PP_INTERNAL_ARG_0(a0, ...) a0
+#define OF_PP_INTERNAL_ARG_1(a0, a1, ...) a1
+#define OF_PP_INTERNAL_ARG_2(a0, a1, a2, ...) a2
+#define OF_PP_INTERNAL_ARG_3(a0, a1, a2, a3, ...) a3
+#define OF_PP_INTERNAL_ARG_4(a0, a1, a2, a3, a4, ...) a4
+#define OF_PP_INTERNAL_ARG_5(a0, a1, a2, a3, a4, a5, ...) a5
+#define OF_PP_INTERNAL_ARG_6(a0, a1, a2, a3, a4, a5, a6, ...) a6
+#define OF_PP_INTERNAL_ARG_7(a0, a1, a2, a3, a4, a5, a6, a7, ...) a7
 
 #define OF_PP_INTERNAL_TUPLE_SIZE(tuple)                   \
   OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_TUPLE_SIZE_,           \

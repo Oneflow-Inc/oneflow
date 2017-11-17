@@ -10,17 +10,25 @@ Resource GetResource() {
     Machine* machine = ret.add_machine();
     machine->set_addr("192.168.1." + std::to_string(i));
     machine->set_name("machine_" + std::to_string(i));
-    machine->set_port(std::to_string(i + 8080));
+    machine->set_ctrl_port(std::to_string(i + 8080));
+    machine->set_data_port(std::to_string(i + 8081));
   }
   ret.set_device_type(DeviceType::kCPU);
   ret.set_device_num_per_machine(8);
   return ret;
 }
 
+void Init() {
+  JobDescProto proto;
+  *proto.mutable_resource() = GetResource();
+  JobDesc::Singleton()->InitFromProto(proto);
+  IDMgr::Singleton()->Init();
+}
+
 }  // namespace
 
 TEST(IDMgr, compile_machine_id_and_name) {
-  IDMgr::Singleton()->InitFromResource(GetResource());
+  Init();
   ASSERT_EQ(IDMgr::Singleton()->MachineID4MachineName("machine_0"), 0);
   ASSERT_EQ(IDMgr::Singleton()->MachineID4MachineName("machine_1"), 1);
   ASSERT_EQ(IDMgr::Singleton()->MachineID4MachineName("machine_5"), 5);
@@ -30,14 +38,14 @@ TEST(IDMgr, compile_machine_id_and_name) {
 }
 
 TEST(IDMgr, compile_special_thrd_loc_id) {
-  IDMgr::Singleton()->InitFromResource(GetResource());
+  Init();
   ASSERT_EQ(IDMgr::Singleton()->PersistenceThrdLocId(), 8);
   ASSERT_EQ(IDMgr::Singleton()->BoxingThrdLocId(), 9);
   ASSERT_EQ(IDMgr::Singleton()->CommNetThrdLocId(), 10);
 }
 
 TEST(IDMgr, compile_task_id) {
-  IDMgr::Singleton()->InitFromResource(GetResource());
+  Init();
   int64_t machine1device2 =
       (static_cast<int64_t>(1) << (8 + 39)) + (static_cast<int64_t>(2) << 39);
   ASSERT_EQ(IDMgr::Singleton()->NewTaskId(1, 2), machine1device2);
@@ -51,14 +59,14 @@ TEST(IDMgr, compile_task_id) {
 }
 
 TEST(IDMgr, compile_regst_desc_id) {
-  IDMgr::Singleton()->InitFromResource(GetResource());
+  Init();
   ASSERT_EQ(IDMgr::Singleton()->NewRegstDescId(), 0);
   ASSERT_EQ(IDMgr::Singleton()->NewRegstDescId(), 1);
   ASSERT_EQ(IDMgr::Singleton()->NewRegstDescId(), 2);
 }
 
 TEST(IDMgr, runtime_machine_id) {
-  IDMgr::Singleton()->InitFromResource(GetResource());
+  Init();
   int64_t actor_id5_machine1device3 =
       (static_cast<int64_t>(1) << (8 + 39))  // machine_id_1
       + (static_cast<int64_t>(3) << 39)      // device_id_3
@@ -68,7 +76,7 @@ TEST(IDMgr, runtime_machine_id) {
 }
 
 TEST(IDMgr, runtime_thrd_loc_id) {
-  IDMgr::Singleton()->InitFromResource(GetResource());
+  Init();
   int64_t actor_id5_machine1device3 =
       (static_cast<int64_t>(1) << (8 + 39))  // machine_id_1
       + (static_cast<int64_t>(3) << 39)      // device_id_3

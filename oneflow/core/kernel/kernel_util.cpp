@@ -1,4 +1,5 @@
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
@@ -166,15 +167,20 @@ class KernelUtil<DeviceType::kCPU, T> final {
     ctx->cpu_stream()->SendWork([=]() { Fill(fill_conf, random_seed, blob); });
   }
 
-  static void FillWithSnapshot(DeviceCtx* ctx, int32_t part_id,
-                               int32_t part_num, const Snapshot* snapshot,
-                               Blob* blob, const std::string& lbn,
+  static void FillWithModelDir(DeviceCtx* ctx, int32_t part_id,
+                               int32_t part_num, const std::string& model_dir,
+                               Blob* blob, const std::string& bn_in_op,
                                int32_t dim_num, int64_t num_in_each_dim) {
     int64_t blob_size = blob->TotalByteSize();
     ctx->cpu_stream()->SendWork([=]() {
-      std::unique_ptr<PersistentInStream> in_stream = snapshot->GetInStream(
-          lbn, part_id, part_num, dim_num, num_in_each_dim * sizeof(T));
-      in_stream->Read(blob->mut_dptr<char>(), blob_size);
+      int64_t byte_size_of_each_dim = num_in_each_dim * sizeof(T);
+      std::string file_path = JoinPath(model_dir, bn_in_op);
+      uint64_t file_size = GlobalFS()->GetFileSize(file_path);
+      CHECK_EQ(file_size, dim_num * byte_size_of_each_dim);
+      BalancedSplitter splitter = BalancedSplitter(dim_num, part_num);
+      int64_t begin_pos = splitter.At(part_id).begin() * byte_size_of_each_dim;
+      NormalPersistentInStream in_stream(GlobalFS(), file_path, begin_pos);
+      in_stream.Read(blob->mut_dptr<char>(), blob_size);
     });
   }
 

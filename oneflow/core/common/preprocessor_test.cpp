@@ -1,5 +1,5 @@
+#include <gtest/gtest.h>
 #include <unordered_map>
-#include "gtest/gtest.h"
 #include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
@@ -47,18 +47,20 @@ TEST(PP_TUPLE, internal_tuple_size) {
 
 TEST(PP_SEQ, internal_seq_product) {
 #define SEQ (0)(1)
-  ASSERT_EQ(OF_PP_STRINGIZE(OF_PP_INTERNAL_SEQ_PRODUCT(SEQ, SEQ)),
-            "((0, 0)) ((1, 0)) ((0, 1)) ((1, 1))");
+  std::string expanded(OF_PP_STRINGIZE(OF_PP_INTERNAL_SEQ_PRODUCT(SEQ, SEQ)));
 #undef SEQ
+  ASSERT_TRUE((expanded == "((0, 0)) ((1, 0)) ((0, 1)) ((1, 1))")
+              || (expanded == "((0, 0)) ((1, 0))  ((0, 1)) ((1, 1))"));
 }
 
 TEST(PP_SEQ, internal_different_seq_product) {
 #define SEQ1 (0)(1)
 #define SEQ2 (a)(b)
-  ASSERT_EQ(OF_PP_STRINGIZE(OF_PP_INTERNAL_SEQ_PRODUCT(SEQ1, SEQ2)),
-            "((0, a)) ((1, a)) ((0, b)) ((1, b))");
+  std::string expanded(OF_PP_STRINGIZE(OF_PP_INTERNAL_SEQ_PRODUCT(SEQ1, SEQ2)));
 #undef SEQ1
 #undef SEQ2
+  ASSERT_TRUE((expanded == "((0, a)) ((1, a)) ((0, b)) ((1, b))")
+              || (expanded == "((0, a)) ((1, a))  ((0, b)) ((1, b))"));
 }
 
 TEST(PP_SEQ, internal_seq_product_for_each) {

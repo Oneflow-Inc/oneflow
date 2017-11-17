@@ -1,10 +1,10 @@
-syntax = "proto3";
+syntax = "proto2";
 package oneflow;
 
 message Machine {
-  string addr = 1; // domain name or ip
-  string port = 2;
-  string name = 3;
+  required string addr = 1; // domain name or ip
+  required int32 port = 2;
+  required string name = 3;
 }
 
 enum DeviceType {
@@ -14,8 +14,8 @@ enum DeviceType {
 
 message Resource {
   repeated Machine machine = 1;
-  int64 device_num_per_machine = 2;
-  DeviceType device_type = 3;
+  required int64 device_num_per_machine = 2;
+  required DeviceType device_type = 3;
 }
 
 // If one machine named "machine_xxx" and device_num_per_machine = 4

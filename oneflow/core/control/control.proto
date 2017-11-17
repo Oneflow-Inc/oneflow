@@ -1,0 +1,86 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/job/plan.proto";
+
+message LoadServerRequest {
+}
+
+message LoadServerResponse {
+}
+
+message BarrierRequest {
+  required string name = 1;
+  required int32 num = 2;
+}
+
+message BarrierResponse {
+}
+
+enum TryLockResult {
+  kLocked = 0;
+  kDone = 1;
+  kDoing = 2;
+}
+
+message TryLockRequest {
+  required string name = 1;
+}
+
+message TryLockResponse {
+  required TryLockResult result = 1;
+}
+
+message NotifyDoneRequest {
+  required string name = 1;
+}
+
+message NotifyDoneResponse {
+}
+
+message WaitUntilDoneRequest {
+  required string name = 1;
+}
+
+message WaitUntilDoneResponse {
+}
+
+message PushPlanRequest {
+  required Plan plan = 1;
+}
+
+message PushPlanResponse {
+}
+
+message ClearPlanRequest {
+}
+
+message ClearPlanResponse {
+}
+
+message PullPlanRequest {
+}
+
+message PullPlanResponse {
+  required Plan plan = 1;
+}
+
+message PushPortRequest {
+  required int32 port = 1;
+}
+
+message PushPortResponse {
+}
+
+message ClearPortRequest {
+}
+
+message ClearPortResponse {
+}
+
+message PullPortRequest {
+}
+
+message PullPortResponse {
+  required int32 port = 1;
+}

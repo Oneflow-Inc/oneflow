@@ -71,26 +71,25 @@ class Actor {
   void TrySwitchToZombie();
 
   // Async Do on KernelCtx
-  void AsyncLaunchKernel(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&, const ExecKernel& ek)>
-          BnInOpAndEk2Blob);
   void AsyncLaunchKernel(const KernelCtx&,
                          std::function<Regst*(int64_t)> Regst4RegstDescId);
-  void AsyncSendReadableRegstMsg(std::function<void(Regst*)> RegstPreProcess,
-                                 std::function<bool(int64_t)> IsAllowedActor);
-  void AsyncSendReadableRegstMsg(std::function<void(Regst*)> RegstPreProcess);
-  void AsyncSendReadableRegstMsg(std::function<bool(int64_t)> IsAllowedActor);
-  void AsyncSendReadableRegstMsg();
+  void AsyncLaunchKernel(const KernelCtx&);
+  void AsyncSendRegstMsgToConsumer(std::function<void(Regst*)> RegstPreProcess,
+                                   std::function<bool(int64_t)> IsAllowedActor);
+  void AsyncSendRegstMsgToConsumer(std::function<void(Regst*)> RegstPreProcess);
+  void AsyncSendRegstMsgToConsumer(std::function<bool(int64_t)> IsAllowedActor);
+  void AsyncSendRegstMsgToConsumer();
   void AsyncSendEORDMsgToConsumers(int64_t regst_desc_id);
   void AsyncSendEORDMsgForAllProducedRegstDesc();
   void AsyncSendRegstMsgToProducer(Regst*);
+  void AsyncSendRegstMsgToProducer(Regst*, int64_t producer);
   void AsyncDo(std::function<void()>);
 
   // Status of Produced Registers
   int TryUpdtStateAsProducedRegst(Regst* regst);
   Regst* GetCurWriteableRegst(int64_t regst_desc_id);
   Regst* GetCurWriteableRegst(const std::string& name);
+  Regst* GetCurSoleWriteableRegst();
   void ForEachCurWriteableRegst(std::function<void(Regst*)> func);
   void SetReadOnlyForRegstDescId(int64_t regst_desc_id);
   int64_t total_reading_cnt() const { return total_reading_cnt_; }

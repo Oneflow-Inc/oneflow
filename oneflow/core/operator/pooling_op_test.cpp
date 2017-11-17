@@ -5,16 +5,12 @@ namespace oneflow {
 template<typename T>
 std::shared_ptr<Operator> GetTestPoolingOp() {
   JobConf job_conf;
-  job_conf.set_default_data_type(DataType::kFloat);
+  job_conf.set_default_data_type(GetDataType<T>::val);
   JobDesc::Singleton()->InitFromJobConf(job_conf);
   OperatorConf op_conf;
   op_conf.set_name("pooling_test");
-  op_conf.mutable_pooling_conf()->mutable_in()->set_name("pooling_in");
-  op_conf.mutable_pooling_conf()->mutable_in()->set_data_type(
-      GetDataType<T>::val);
-  op_conf.mutable_pooling_conf()->mutable_out()->set_name("pooling_out");
-  op_conf.mutable_pooling_conf()->mutable_out()->set_data_type(
-      GetDataType<T>::val);
+  op_conf.mutable_pooling_conf()->set_in("pooling_in");
+  op_conf.mutable_pooling_conf()->set_out("pooling_out");
   op_conf.mutable_pooling_conf()->set_pool(PoolingOpConf_PoolMethod_kMax);
   op_conf.mutable_pooling_conf()->set_pad_h(1);
   op_conf.mutable_pooling_conf()->set_pad_w(1);

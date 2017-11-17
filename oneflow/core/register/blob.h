@@ -10,7 +10,9 @@ namespace oneflow {
 class Blob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
-  Blob(const BlobDesc* blob_desc, char* mem_ptr);
+  Blob(const BlobDesc* blob_desc, char* mem_ptr)
+      : Blob(blob_desc, mem_ptr, nullptr) {}
+  Blob(const BlobDesc* blob_desc, char* mem_ptr, const void* comm_net_token);
   ~Blob() = default;
 
   const char* data_id(int32_t no) const;
@@ -18,6 +20,11 @@ class Blob final {
 
   const char* data_id() const { return data_id(0); }
   char* mut_data_id() { return mut_data_id(0); }
+
+  const void* memory_ptr() const {
+    return data_id_ptr_ == nullptr ? dptr_ : static_cast<void*>(data_id_ptr_);
+  }
+  void* mut_memory_ptr() { return const_cast<void*>(memory_ptr()); }
 
   template<typename T = void>
   const T* dptr() const {
@@ -30,6 +37,8 @@ class Blob final {
     CheckDataType<T>();
     return static_cast<T*>(dptr_);
   }
+
+  const void* comm_net_token() const { return comm_net_token_; }
 
   const BlobDesc& blob_desc() const { return *blob_desc_; }
   const BlobDesc* blob_desc_ptr() const { return blob_desc_; }
@@ -59,6 +68,7 @@ class Blob final {
 
   char* data_id_ptr_;
   void* dptr_;
+  const void* comm_net_token_;
   const BlobDesc* blob_desc_;
 };
 

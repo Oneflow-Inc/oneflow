@@ -1,15 +1,16 @@
-syntax = "proto3";
+syntax = "proto2";
 package oneflow;
 
 enum ParallelPolicy {
   kDataParallel = 0;
   kModelParallel = 1;
+  // Follows are used by internal system
   kFakerMdUpdt = 2;
   kFakerLossRecord = 3;
 }
 
 message ParallelConf {
-  ParallelPolicy policy = 1;
+  required ParallelPolicy policy = 1;
   repeated string device_name = 2;
 }
 
@@ -18,8 +19,8 @@ message OpNameSet {
 }
 
 message PlacementGroup {
-  OpNameSet op_set = 1;
-  ParallelConf parallel_conf = 2;
+  required OpNameSet op_set = 1;
+  required ParallelConf parallel_conf = 2;
 }
 
 message Placement {

@@ -27,6 +27,7 @@ class BoxingKernel final : public Kernel {
   // of each blob in the first time, and directly use these records to do
   // memory-copy in the next running.
   struct CopyRule {
+    bool is_data_id;
     std::string src_bn;
     std::string dst_bn;
     uint64_t src_offset;

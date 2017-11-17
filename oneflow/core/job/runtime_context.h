@@ -1,44 +1,44 @@
 #ifndef ONEFLOW_CORE_JOB_RUNTIME_CONTEXT_H_
 #define ONEFLOW_CORE_JOB_RUNTIME_CONTEXT_H_
 
-#include "oneflow/core/common/thread_safe_counter.h"
+#include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/job/id_manager.h"
-#include "oneflow/core/persistence/persistent_circular_line_reader.h"
+#include "oneflow/core/persistence/persistent_in_stream.h"
+#include "oneflow/core/persistence/persistent_out_stream.h"
 
 namespace oneflow {
 
 class RuntimeCtx final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RuntimeCtx);
+  RuntimeCtx() = delete;
   ~RuntimeCtx() = default;
 
   OF_SINGLETON(RuntimeCtx);
 
   int64_t this_machine_id() const { return this_machine_id_; }
+  bool IsThisMachineMaster() const { return this_machine_id_ == 0; }
+  std::string GetThisCtrlAddr() const { return GetCtrlAddr(this_machine_id_); }
+  std::string GetMasterCtrlAddr() const { return GetCtrlAddr(0); }
+  std::string GetCtrlAddr(int64_t machine_id) const;
 
-  void set_this_machine_name(const std::string& name);
+  BlockingCounter& mut_model_init_cnt() { return model_init_cnt_; }
+  BlockingCounter& mut_active_actor_cnt() { return active_actor_cnt_; }
+  BlockingCounter& mut_inactive_actor_cnt() { return inactive_actor_cnt_; }
 
-  ThreadSafeCounter& mut_model_init_cnt() { return model_init_cnt_; }
-
-  PersistentCircularLineReader* GetDataReader(const std::string& name);
-  void AddDataReader(const std::string& filepath, const std::string& name);
-
-  ThreadSafeCounter& mut_active_actor_cnt() { return active_actor_cnt_; }
-  ThreadSafeCounter& mut_inactive_actor_cnt() { return inactive_actor_cnt_; }
+  PersistentOutStream* GetPersistentOutStream(const std::string& filepath);
 
  private:
-  RuntimeCtx() { LOG(INFO) << "RuntimeCtx Init"; }
+  RuntimeCtx(const std::string& name);
 
   int64_t this_machine_id_;
-  std::string this_machine_name_;
 
-  ThreadSafeCounter model_init_cnt_;
+  BlockingCounter model_init_cnt_;
 
-  HashMap<std::string, std::unique_ptr<PersistentCircularLineReader>>
-      data_reader_;
+  BlockingCounter active_actor_cnt_;
+  BlockingCounter inactive_actor_cnt_;
 
-  ThreadSafeCounter active_actor_cnt_;
-  ThreadSafeCounter inactive_actor_cnt_;
+  HashMap<std::string, std::unique_ptr<PersistentOutStream>> filepath2ostream_;
 };
 
 }  // namespace oneflow

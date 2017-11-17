@@ -2,43 +2,43 @@
 #define ONEFLOW_CORE_COMM_NETWORK_COMM_NETWORK_H_
 
 #include "oneflow/core/actor/actor_message.h"
+#include "oneflow/core/common/platform.h"
+#include "oneflow/core/job/plan.pb.h"
 
 namespace oneflow {
 
-class CommNetwork {
+class CommNet {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CommNetwork);
-  virtual ~CommNetwork() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CommNet);
+  virtual ~CommNet() = default;
 
-  static CommNetwork* Singleton() { return comm_network_ptr_; }
+  static CommNet* Singleton() { return comm_network_ptr_; }
 
   // "RegisterMemory" will return a Token, after "RegisterMemoryDone",
   // we can use this token to use the "Read"
-  virtual const void* RegisterMemory(void* dptr) = 0;
+  virtual const void* RegisterMemory(void* dptr, size_t byte_size) = 0;
+  virtual void UnRegisterMemory(const void* token) = 0;
   virtual void RegisterMemoryDone() = 0;
-  virtual void Read(const void* src_token, const void* dst_token,
-                    std::function<void()> callback) = 0;
+
+  // Stream
+  virtual void* NewActorReadId() = 0;
+  virtual void DeleteActorReadId(void* actor_read_id) = 0;
+  virtual void* Read(void* actor_read_id, int64_t src_machine_id,
+                     const void* src_token, const void* dst_token) = 0;
+  virtual void AddReadCallBack(void* actor_read_id, void* read_id,
+                               std::function<void()> callback) = 0;
+  virtual void AddReadCallBackDone(void* actor_read_id, void* read_id) = 0;
 
   //
   virtual void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) = 0;
-  virtual void SetCallbackForReceivedActorMsg(
-      std::function<void(const ActorMsg&)> callback) = 0;
-  virtual void Barrier(const std::string& barrier_name) = 0;
 
  protected:
-  CommNetwork() = default;
-  static void set_comm_network_ptr(CommNetwork* val) {
-    comm_network_ptr_ = val;
-  }
+  CommNet() = default;
+  static void set_comm_network_ptr(CommNet* val) { comm_network_ptr_ = val; }
 
  private:
-  static CommNetwork* comm_network_ptr_;
+  static CommNet* comm_network_ptr_;
 };
-
-#define OF_MACRO_TRICK1(x) #x
-#define OF_MACRO_TRICK2(x) OF_MACRO_TRICK1(x)
-#define OF_BARRIER() \
-  CommNetwork::Singleton()->Barrier(__FILE__ ":" OF_MACRO_TRICK2(__LINE__))
 
 }  // namespace oneflow
 

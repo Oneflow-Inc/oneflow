@@ -1,21 +1,21 @@
-syntax = "proto3";
+syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 
 message ConstantFillConf {
-  float value = 1;
+  optional float value = 1 [default = 0];
 }
 
 message UniformFillConf {
-  float min = 1;
-  float max = 2;
+  optional float min = 1 [default = 0];
+  optional float max = 2 [default = 1];
 }
 
 message GaussianFillConf {
-  float mean = 1;
-  float std = 2;
+  optional float mean = 1 [default = 0];
+  optional float std = 2 [default = 1];
 }
 
 message FillConf {
@@ -26,118 +26,93 @@ message FillConf {
   }
 }
 
-message LogicalBlob {
-  string name = 1;
-  DataType data_type = 2;
-}
 
 message ConvolutionOpConf {
-  LogicalBlob in = 1;
-  LogicalBlob out = 2;
+  required string in = 1;
+  required string out = 2;
 
-  int32 out_num = 3; // The number of outputs for the layer
-  bool has_bias_term = 4; // whether to have bias terms
+  optional int32 out_num = 3 [default = 1];
+  optional bool has_bias_term = 4 [default = true];
 
-  // Pad, kernel size, and stride are all given as a single value for equal
-  // dimensions in all spatial dimensions, or once per spatial dimension.
-  int32 pad_h = 5; // The padding size; defaults to 0
-  int32 pad_w = 6;
-  int32 kernel_size_h = 7; // The kernel size
-  int32 kernel_size_w = 8;
-  int32 stride_h = 9; // The stride; defaults to 1
-  int32 stride_w = 10;
-  // Factor used to dilate the kernel, (implicitly) zero-filling the resulting
-  // holes. (Kernel dilation is sometimes referred to by its use in the
-  // algorithme ид trous from Holschneider et al. 1987.)
-  int32 dilation_h = 11; // The dilation; defaults to 1
-  int32 dilation_w = 12;
+  optional int32 pad_h = 5 [default = 0];
+  optional int32 pad_w = 6 [default = 0];
+  required int32 kernel_h = 7;
+  required int32 kernel_w = 8;
+  optional int32 stride_h = 9 [default = 1];
+  optional int32 stride_w = 10 [default = 1];
+  optional int32 dilation_h = 11 [default = 1];
+  optional int32 dilation_w = 12 [default = 1];
 
+  optional int32 cudnn_fwd_algo = 13 [default = 0];
+  optional int32 cudnn_bwd_weight_algo = 14 [default = 0];
+  optional int32 cudnn_bwd_data_algo = 15 [default = 0];
 
-  int32 group = 13;// The group size for group conv
-
-  FillConf weight_fill = 14; // The fill for the weight
-  FillConf bias_fill = 15; // The fill for the bias
-
-  // The axis to interpret as "channels" when performing convolution.
-  // Preceding dimensions are treated as independent inputs;
-  // succeeding dimensions are treated as "spatial".
-  // With (N, C, H, W) inputs, and axis == 1 (the default), we perform
-  // N independent 2D convolutions, sliding C-channel (or (C/g)-channels, for
-  // groups g>1) filters across the spatial axes (H, W) of the input.
-  // With (N, C, D, H, W) inputs, and axis == 1, we perform
-  // N independent 3D convolutions, sliding (C/g)-channels
-  // filters across the spatial axes (D, H, W) of the input.
-  int32 axis = 16;
-
-  // Whether to force use of the general ND convolution, even if a specific
-  // implementation for blobs of the appropriate number of spatial dimensions
-  // is available. (Currently, there is only a 2D-specific convolution
-  // implementation; for input blobs with num_axes != 2, this option is
-  // ignored and the ND implementation will be used.)
-  bool force_nd_im2col = 17;
+  optional FillConf weight_fill = 16;
+  optional FillConf bias_fill = 17;
 }
 
 message InnerProductOpConf {
-  LogicalBlob in = 1;
-  LogicalBlob out = 2;
+  required string in = 1;
+  required string out = 2;
 
-  int32 out_num = 3; // The number of outputs for the layer
-  bool has_bias_term = 4;
-  FillConf weight_fill = 5; 
-  FillConf bias_fill = 6; 
+  required int32 out_num = 3;
+  optional bool has_bias_term = 4 [default = true];
+  optional FillConf weight_fill = 5; 
+  optional FillConf bias_fill = 6; 
 }
 
 message DataLoaderOpConf {
-  LogicalBlob out = 1;
-  ShapeProto shape = 2;
-  string data_dir = 3;
+  required string out = 1;
+  required DataType data_type = 2;
+  required ShapeProto shape = 3;
+  required string data_dir = 4;
 }
 
 message PoolingOpConf {
-  LogicalBlob in = 1;
-  LogicalBlob out = 2;
+  required string in = 1;
+  required string out = 2;
 
   enum PoolMethod {
     kMax = 0;
     kAve = 1;
     kStochastic = 2;
   }
-  PoolMethod pool = 3; // The pooling method
-  int32 pad_h = 4; // The padding size; defaults to 0
-  int32 pad_w = 5;
-  int32 kernel_size_h = 6; // The kernel size
-  int32 kernel_size_w = 7;
-  int32 stride_h = 8; // The stride; defaults to 1
-  int32 stride_w = 9;
+  required PoolMethod pool = 3;
+  optional int32 pad_h = 4 [default = 0];
+  optional int32 pad_w = 5 [default = 0];
+  required int32 kernel_h = 6;
+  required int32 kernel_w = 7;
+  optional int32 stride_h = 8 [default = 1];
+  optional int32 stride_w = 9 [default = 1];
 }
 
 message ReluOpConf {
-  LogicalBlob in = 1;
-  LogicalBlob out = 2;
+  required string in = 1;
+  required string out = 2;
 }
 
 message SoftmaxOpConf {
-  LogicalBlob in = 1;
-  LogicalBlob out = 2;
+  required string in = 1;
+  required string out = 2;
 }
 
 message SoftmaxLossOpConf {
-  LogicalBlob prediction = 1;
-  LogicalBlob label = 3;
-  LogicalBlob loss = 4;
+  required string prediction = 1;
+  required string label = 3;
+  required string loss = 4;
 }
 
 message MultinomialLogisticLossOpConf {
-  LogicalBlob prediction = 1;
-  LogicalBlob label = 2;
-  LogicalBlob loss = 3;
+  required string prediction = 1;
+  required string label = 2;
+  required string loss = 3;
 }
 
 message ConcatOpConf {
   repeated string in = 1;
-  string out = 2;
-  DataType data_type = 3;
-  int32 axis = 4;
+  required string out = 2;
+  required DataType data_type = 3;
+  required int32 axis = 4;
 }
 
 message CopyCommNetOpConf {
@@ -148,17 +123,17 @@ message CopyHdOpConf {
     H2D = 0;
     D2H = 1;
   }
-  Type type = 1;
+  required Type type = 1;
 }
 
 message CloneOpConf {
-  int32 out_num = 1;
-  string lbn = 2;
-  DataType data_type = 3;
+  required int32 out_num = 1;
+  required string lbn = 2;
+  required DataType data_type = 3;
 }
 
 message BoxConcatConf {
-  int32 axis = 1;
+  required int32 axis = 1;
 }
 
 message BoxAddConf {
@@ -171,10 +146,10 @@ message BoxCloneConf {
 }
 
 message BoxingOpConf {
-  DataType data_type = 1;
-  string lbn = 2;
-  int32 in_num = 3;
-  int32 out_num = 4;
+  required DataType data_type = 1;
+  required string lbn = 2;
+  required int32 in_num = 3;
+  required int32 out_num = 4;
 
   oneof in_box {
     BoxConcatConf concat_box = 5;
@@ -187,18 +162,18 @@ message BoxingOpConf {
 }
 
 message NormalModelUpdateOpConf {
-  float learning_rate = 1;
+  optional float learning_rate = 1 [default = 0.01];
 }
 
 message MomentumModelUpdateOpConf {
-  float learning_rate = 1;
-  float beta = 2;
+  optional float learning_rate = 1 [default = 0.01];
+  optional float beta = 2 [default = 0.9];
 }
 
 message RMSPropModelUpdateOpConf {
-  float learning_rate = 1;
-  float decay_rate = 2;
-  float epsilon = 3;
+  optional float learning_rate = 1 [default = 0.01];
+  optional float decay_rate = 2 [default = 0.99];
+  optional float epsilon = 3 [default = 1e-8];
 }
 
 message AccumulateOpConf {
@@ -210,14 +185,15 @@ message ModelSaveOpConf {
 
 message RecordOpConf {
   repeated string lbn = 1;
-  string record_path = 2;
+  required string record_path = 2;
 }
 
 message LossRecordOpConf {
 }
 
 message OperatorConf {
-  string name = 1;
+  required string name = 1;
+  optional string model_load_dir = 2;
   oneof op_type {
     ConvolutionOpConf convolution_conf = 100;
     InnerProductOpConf innerproduct_conf = 101;

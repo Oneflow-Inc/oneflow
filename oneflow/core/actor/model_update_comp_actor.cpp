@@ -93,7 +93,7 @@ int MdUpdtCompActor::HandlerBeforeInitializeModel(const ActorMsg& actor_msg) {
 
 int MdUpdtCompActor::HandlerBeforeSendInitialModel(const ActorMsg& actor_msg) {
   CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kSendInitialModel);
-  AsyncSendReadableRegstMsg();
+  AsyncSendRegstMsgToConsumer();
   if (model_tmp_regst_desc_id_ != -1) {
     SetReadOnlyForRegstDescId(model_tmp_regst_desc_id_);
     AsyncSendEORDMsgToConsumers(model_tmp_regst_desc_id_);
@@ -116,10 +116,6 @@ int MdUpdtCompActor::HandlerNormal(const ActorMsg& actor_msg) {
     if (TryUpdtStateAsProducedRegst(regst) != 0) {
       waiting_model_diff_acc_queue_.push(regst);
       mut_num_of_read_empty() = 0;
-      VLOG(4) << "model update actor " << actor_id() << " "
-              << "receive readable regst " << regst << ", "
-              << "regst_desc_id:" << regst->regst_desc_id() << ", "
-              << "current num_of_read_empty:" << num_of_read_empty();
     }
     ActUntilFail();
   } else {
@@ -162,7 +158,7 @@ void MdUpdtCompActor::Act() {
   AsyncSendRegstMsgToProducer(model_diff_acc_wpr);
   AsyncCopyModelFromCurToNext();
   if (next_model_version_id_ == JobDesc::Singleton()->total_batch_num()) {
-    AsyncSendReadableRegstMsg(
+    AsyncSendRegstMsgToConsumer(
         [this](int64_t actor_id) { return actor_id == related_save_task_id_; });
     CHECK(!IsReadReady());
     AsyncSendEORDMsgToConsumers(model_regst_desc_id_);
@@ -171,9 +167,9 @@ void MdUpdtCompActor::Act() {
     if (next_model_version_id_
             % JobDesc::Singleton()->num_of_batches_in_snapshot()
         == 0) {
-      AsyncSendReadableRegstMsg();
+      AsyncSendRegstMsgToConsumer();
     } else {
-      AsyncSendReadableRegstMsg([this](int64_t actor_id) {
+      AsyncSendRegstMsgToConsumer([this](int64_t actor_id) {
         return actor_id != related_save_task_id_;
       });
     }

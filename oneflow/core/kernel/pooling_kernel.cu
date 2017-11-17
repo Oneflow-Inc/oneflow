@@ -182,7 +182,7 @@ class PoolingKernelUtil<DeviceType::kGPU, T> final {
                 mask_blob->mut_dptr<uint32_t>(), in_blob->shape().At(1),
                 in_blob->shape().At(2), in_blob->shape().At(3),
                 out_blob->shape().At(2), out_blob->shape().At(3),
-                pooling_conf.kernel_size_h(), pooling_conf.kernel_size_w(),
+                pooling_conf.kernel_h(), pooling_conf.kernel_w(),
                 pooling_conf.stride_h(), pooling_conf.stride_w(),
                 pooling_conf.pad_h(), pooling_conf.pad_w());
         break;
@@ -194,8 +194,8 @@ class PoolingKernelUtil<DeviceType::kGPU, T> final {
                 count, in_blob->dptr<T>(), out_blob->mut_dptr<T>(),
                 in_blob->shape().At(1), in_blob->shape().At(2),
                 in_blob->shape().At(3), out_blob->shape().At(2),
-                out_blob->shape().At(3), pooling_conf.kernel_size_h(),
-                pooling_conf.kernel_size_w(), pooling_conf.stride_h(),
+                out_blob->shape().At(3), pooling_conf.kernel_h(),
+                pooling_conf.kernel_w(), pooling_conf.stride_h(),
                 pooling_conf.stride_w(), pooling_conf.pad_h(),
                 pooling_conf.pad_w());
         break;
@@ -221,7 +221,7 @@ class PoolingKernelUtil<DeviceType::kGPU, T> final {
                 in_diff_blob->mut_dptr<T>(), in_diff_blob->shape().At(1),
                 in_diff_blob->shape().At(2), in_diff_blob->shape().At(3),
                 out_diff_blob->shape().At(2), out_diff_blob->shape().At(3),
-                pooling_conf.kernel_size_h(), pooling_conf.kernel_size_w(),
+                pooling_conf.kernel_h(), pooling_conf.kernel_w(),
                 pooling_conf.stride_h(), pooling_conf.stride_w(),
                 pooling_conf.pad_h(), pooling_conf.pad_w());
         break;
@@ -233,8 +233,8 @@ class PoolingKernelUtil<DeviceType::kGPU, T> final {
                 count, out_diff_blob->dptr<T>(), in_diff_blob->mut_dptr<T>(),
                 in_diff_blob->shape().At(1), in_diff_blob->shape().At(2),
                 in_diff_blob->shape().At(3), out_diff_blob->shape().At(2),
-                out_diff_blob->shape().At(3), pooling_conf.kernel_size_h(),
-                pooling_conf.kernel_size_w(), pooling_conf.stride_h(),
+                out_diff_blob->shape().At(3), pooling_conf.kernel_h(),
+                pooling_conf.kernel_w(), pooling_conf.stride_h(),
                 pooling_conf.stride_w(), pooling_conf.pad_h(),
                 pooling_conf.pad_w());
         break;
@@ -247,8 +247,97 @@ class PoolingKernelUtil<DeviceType::kGPU, T> final {
   }
 };
 
+template<typename T>
+CudnnPoolingKernel<DeviceType::kGPU, T>::CudnnPoolingKernel() {
+  CudaCheck(cudnnCreateTensorDescriptor(&in_desc_));
+  CudaCheck(cudnnCreateTensorDescriptor(&out_desc_));
+  CudaCheck(cudnnCreatePoolingDescriptor(&pooling_desc_));
+}
+
+template<typename T>
+CudnnPoolingKernel<DeviceType::kGPU, T>::~CudnnPoolingKernel() {
+  CudaCheck(cudnnDestroyTensorDescriptor(in_desc_));
+  CudaCheck(cudnnDestroyTensorDescriptor(out_desc_));
+  CudaCheck(cudnnDestroyPoolingDescriptor(pooling_desc_));
+}
+
+template<typename T>
+void CudnnPoolingKernel<DeviceType::kGPU, T>::InitFromOpProto(
+    const OperatorProto& op_proto) {
+  Kernel::InitFromOpProto(op_proto);
+
+  const auto pooling_conf = op()->op_conf().pooling_conf();
+
+  switch (pooling_conf.pool()) {
+    case PoolingOpConf::kMax: {
+      pooling_mode_ = CUDNN_POOLING_MAX;
+      break;
+    }
+    case PoolingOpConf::kAve: {
+      pooling_mode_ = CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING;
+      break;
+    }
+    default: { UNEXPECTED_RUN(); }
+  }
+
+  CudaCheck(cudnnSetPooling2dDescriptor(
+      pooling_desc_, pooling_mode_, CUDNN_PROPAGATE_NAN,
+      pooling_conf.kernel_h(), pooling_conf.kernel_w(), pooling_conf.pad_h(),
+      pooling_conf.pad_w(), pooling_conf.stride_h(), pooling_conf.stride_w()));
+}
+
+template<typename T>
+void CudnnPoolingKernel<DeviceType::kGPU, T>::Forward(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const PoolingOpConf& pooling_conf = op()->op_conf().pooling_conf();
+
+  const Blob* in_blob = BnInOp2Blob("in");
+  Blob* out_blob = BnInOp2Blob("out");
+  CopyDataIdFromSoleIbToAllObIfNeed<DeviceType::kGPU>(ctx, BnInOp2Blob);
+
+  CudaCheck(cudnnSetTensor4dDescriptor(
+      in_desc_, CUDNN_TENSOR_NCHW, cudnn::DataType<T>::type,
+      in_blob->shape().At(0), in_blob->shape().At(1), in_blob->shape().At(2),
+      in_blob->shape().At(3)));
+  CudaCheck(cudnnSetTensor4dDescriptor(
+      out_desc_, CUDNN_TENSOR_NCHW, cudnn::DataType<T>::type,
+      out_blob->shape().At(0), out_blob->shape().At(1), out_blob->shape().At(3),
+      out_blob->shape().At(3)));
+
+  CudaCheck(cudnnPoolingForward(ctx.device_ctx->cudnn_handle(), pooling_desc_,
+                                cudnn::DataType<T>::one, in_desc_,
+                                in_blob->dptr<T>(), cudnn::DataType<T>::zero,
+                                out_desc_, out_blob->mut_dptr<T>()));
+}
+
+template<typename T>
+void CudnnPoolingKernel<DeviceType::kGPU, T>::Backward(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  Blob* in_diff_blob = BnInOp2Blob("in_diff");
+  if (in_diff_blob == nullptr) { return; }
+  Memset<DeviceType::kGPU>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
+                           in_diff_blob->ByteSizeOfDataField());
+  const PoolingOpConf& pooling_conf = op()->op_conf().pooling_conf();
+  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
+  const Blob* in_blob = BnInOp2Blob("in");
+  const Blob* out_blob = BnInOp2Blob("out");
+
+  CudaCheck(cudnnPoolingBackward(
+      ctx.device_ctx->cudnn_handle(), pooling_desc_, cudnn::DataType<T>::one,
+      out_desc_, out_blob->dptr<T>(), out_desc_, out_diff_blob->dptr<T>(),
+      in_desc_, in_blob->dptr<T>(), cudnn::DataType<T>::zero, in_desc_,
+      in_diff_blob->mut_dptr<T>()));
+}
+
+#ifdef USE_CUDNN
+#define INSTANTIATE_POOLING_KERNEL(type_cpp, type_proto) \
+  template class CudnnPoolingKernel<DeviceType::kGPU, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_POOLING_KERNEL, FLOATING_DATA_TYPE_SEQ)
+#endif
 #define INSTANTIATE_POOLING_KERNEL_UTIL(type_cpp, type_proto) \
   template class PoolingKernelUtil<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_POOLING_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_POOLING_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

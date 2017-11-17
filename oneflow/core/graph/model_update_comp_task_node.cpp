@@ -25,7 +25,7 @@ void MdUpdtCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
     ConsumeRegstDesc(ibn, model_diff_acc_regst);
   }
   exec_node->BindBnInOpAndRegst(exec_node->op()->SoleObn(), model_regst);
-  auto data_tmp_regst = NewProducedRegstDesc("data_tmp");
+  auto data_tmp_regst = NewProducedRegstDesc("data_tmp", 1);
   for (const std::string& dtbn : exec_node->op()->data_tmp_bns()) {
     const std::string& lbn = exec_node->op()->Lbn4BnInOp(dtbn);
     data_tmp_regst->EnrollLbn(lbn);
@@ -38,7 +38,14 @@ void MdUpdtCompTaskNode::InferBlobDescInProducedRegsts(TaskGraph* gph) {
   CHECK(IsFwNode());
   ExecNode* exec_node = exec_gph().SoleNode();
   auto model_diffs_regst = GetConsumedRegstDesc("model_diffs");
-  BlobDesc packed_blob_desc = model_diffs_regst->CompPackedBlobDesc();
+  BlobDesc packed_blob_desc;
+  if (model_diffs_regst) {
+    packed_blob_desc = model_diffs_regst->CompPackedBlobDesc();
+  } else {
+    CHECK(JobDesc::Singleton()->is_predict());
+    packed_blob_desc =
+        BlobDesc(Shape(), JobDesc::Singleton()->default_data_type(), false);
+  }
   exec_node->op()->InferBlobDesc4FwBlobs(
       [&](const std::string& bn_in_op) -> BlobDesc* {
         if (bn_in_op == "model_diffs") {

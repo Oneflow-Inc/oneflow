@@ -22,8 +22,9 @@ void CopyHdKernel::Forward(
   const Blob* in_blob = BnInOp2Blob(op()->SoleIbn());
   Blob* out_blob = BnInOp2Blob(op()->SoleObn());
 
-  Memcpy<DeviceType::kGPU>(ctx.device_ctx, out_blob->mut_dptr(),
-                           in_blob->dptr(), in_blob->TotalByteSize(), fw_kind_);
+  Memcpy<DeviceType::kGPU>(ctx.device_ctx, out_blob->mut_memory_ptr(),
+                           in_blob->memory_ptr(), in_blob->TotalByteSize(),
+                           fw_kind_);
 }
 
 void CopyHdKernel::Backward(
@@ -32,12 +33,12 @@ void CopyHdKernel::Backward(
   const Blob* out_diff_blob = BnInOp2Blob(op()->SoleOdbn());
   Blob* in_diff_blob = BnInOp2Blob(op()->SoleIdbn());
 
-  Memcpy<DeviceType::kGPU>(ctx.device_ctx, in_diff_blob->mut_dptr(),
-                           out_diff_blob->dptr(),
+  Memcpy<DeviceType::kGPU>(ctx.device_ctx, in_diff_blob->mut_memory_ptr(),
+                           out_diff_blob->memory_ptr(),
                            out_diff_blob->TotalByteSize(), bw_kind_);
 }
 
-COMMAND(AddKernelCreator(OperatorConf::kCopyHdConf, DeviceType::kGPU,
-                         []() { return new CopyHdKernel; }););
+COMMAND(AddKernelCreator(OperatorConf::kCopyHdConf,
+                         []() { return new CopyHdKernel; }));
 
 }  // namespace oneflow

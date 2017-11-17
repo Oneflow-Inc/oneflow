@@ -20,10 +20,10 @@ void FwDataCompActor::Init(const TaskProto& task_proto,
                                              cuda_handle_.cudnn_handle()));
   }
   kernel_ctx_ = GenDefaultKernelCtx();
+  kernel_ctx_.other = reinterpret_cast<void*>(parallel_id());
   if (in_desc_id_ == -1) {
     CHECK_EQ(model_regst_desc_id_, -1);
     CHECK_EQ(model_tmp_regst_desc_id_, -1);
-    kernel_ctx_.other = reinterpret_cast<void*>(parallel_id());
     OF_SET_MSG_HANDLER(&FwDataCompActor::WaitToStart);
   } else {
     set_num_of_remaining_eord(1 + (model_regst_desc_id_ != -1)
@@ -40,7 +40,7 @@ bool FwDataCompActor::IsReadReady() {
       || (model_tmp_regst_desc_id_ != -1 && !model_tmp_regst_)) {
     return false;
   }
-  if (model_regst_desc_id_ != -1) {
+  if (JobDesc::Singleton()->is_train() && model_regst_desc_id_ != -1) {
     // Ho Q, Cipar J, Cui H, et al. More effective distributed ml via a stale
     // synchronous parallel parameter server
     int32_t staleness = JobDesc::Singleton()->staleness();
@@ -96,10 +96,6 @@ int FwDataCompActor::HandlerNormal(const ActorMsg& msg) {
         in_.push(regst);
         mut_num_of_read_empty() = 0;
       }
-      VLOG(4) << "fw data compute actor " << actor_id() << " "
-              << "receive readable regst " << regst << ", "
-              << "regst_desc_id:" << regst->regst_desc_id() << ", "
-              << "current num_of_read_empty:" << num_of_read_empty();
     }
     ActUntilFail();
   } else {
@@ -136,7 +132,7 @@ void FwDataCompActor::Act() {
       return regst;
     }
   });
-  AsyncSendReadableRegstMsg([piece_id, model_version_id](Regst* regst) {
+  AsyncSendRegstMsgToConsumer([piece_id, model_version_id](Regst* regst) {
     regst->set_piece_id(piece_id);
     regst->set_model_version_id(model_version_id);
   });

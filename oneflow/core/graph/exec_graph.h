@@ -56,12 +56,15 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   }
 
   std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOpFunc() const;
+  void GetBnInOp2DataType(google::protobuf::Map<std::string, DataType>*) const;
 
   std::string VisualStr() const { return op_->op_name(); }
 
   void ToProto(ExecNodeProto* ret) const;
 
  private:
+  BlobDesc* GetBlobDesc4BnInOp(const std::string&) const;
+
   std::shared_ptr<Operator> op_;
   HashMap<std::string, std::weak_ptr<RegstDesc>> bn_in_op2regst_;
 };

@@ -32,10 +32,6 @@ int AccumulateActor::HandlerNormal(const ActorMsg& msg) {
     if (TryUpdtStateAsProducedRegst(regst) != 0) {
       mut_num_of_read_empty() = 0;
       waiting_in_regst_.push(regst);
-      VLOG(4) << "accumulate actor " << actor_id() << " "
-              << "receive readable regst " << regst << ", "
-              << "regst_desc_id:" << regst->regst_desc_id() << ", "
-              << "current num_of_read_empty:" << num_of_read_empty();
     }
     ActUntilFail();
   } else {
@@ -76,7 +72,7 @@ void AccumulateActor::Act() {
   });
   acc_cnt_ += 1;
   if (acc_cnt_ == max_acc_cnt_) {
-    AsyncSendReadableRegstMsg([&](Regst* acc_regst) {
+    AsyncSendRegstMsgToConsumer([&](Regst* acc_regst) {
       acc_regst->set_piece_id(next_acc_piece_id_++);
     });
   }

@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_KERNEL_CONVOLUTION_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_CONVOLUTION_KERNEL_H_
 
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel_manager.h"
 
 namespace oneflow {
@@ -36,9 +37,9 @@ class ConvolutionKernel final : public Kernel {
   void InitModelBlobsWithRandomSeed(
       const KernelCtx&, std::mt19937 random_seed_gen,
       std::function<Blob*(const std::string&)>) const override;
-  void InitModelBlobsWithSnapshot(
+  void InitModelBlobsWithDir(
       const KernelCtx& ctx, int32_t part_id, int32_t part_num,
-      const Snapshot* snapshot,
+      const std::string& model_load_dir,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void InitModelTmpBlobs(
       const KernelCtx& ctx,
@@ -53,6 +54,102 @@ class ConvolutionKernel final : public Kernel {
   void ComputeBiasDiff(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+};
+
+template<DeviceType device_type, typename T>
+class CudnnConvolutionKernel final : public Kernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnConvolutionKernel);
+  CudnnConvolutionKernel();
+  ~CudnnConvolutionKernel();
+
+  void InitFromOpProto(const OperatorProto& op_proto) override;
+  void Forward(const KernelCtx&,
+               std::function<Blob*(const std::string&)>) const override;
+  void Backward(const KernelCtx&,
+                std::function<Blob*(const std::string&)>) const override;
+
+ private:
+  void InitModelBlobsWithRandomSeed(
+      const KernelCtx&, std::mt19937 random_seed_gen,
+      std::function<Blob*(const std::string&)>) const override;
+  void InitModelBlobsWithDir(
+      const KernelCtx& ctx, int32_t part_id, int32_t part_num,
+      const std::string& model_load_dir,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void InitModelTmpBlobs(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+};
+
+template<typename T>
+class CudnnConvolutionKernel<DeviceType::kCPU, T> final : public Kernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnConvolutionKernel);
+  CudnnConvolutionKernel() = default;
+  ~CudnnConvolutionKernel() = default;
+
+  void InitFromOpProto(const OperatorProto& op_proto) override {
+    UNEXPECTED_RUN();
+  }
+  void Forward(const KernelCtx&,
+               std::function<Blob*(const std::string&)>) const override {
+    UNEXPECTED_RUN();
+  }
+  void Backward(const KernelCtx&,
+                std::function<Blob*(const std::string&)>) const override {
+    UNEXPECTED_RUN();
+  }
+
+ private:
+  void InitModelBlobsWithRandomSeed(
+      const KernelCtx&, std::mt19937 random_seed_gen,
+      std::function<Blob*(const std::string&)>) const override {
+    UNEXPECTED_RUN();
+  }
+  void InitModelBlobsWithDir(
+      const KernelCtx& ctx, int32_t part_id, int32_t part_num,
+      const std::string& model_load_dir,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    UNEXPECTED_RUN();
+  }
+  void InitModelTmpBlobs(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    UNEXPECTED_RUN();
+  }
+};
+
+template<typename T>
+class CudnnConvolutionKernel<DeviceType::kGPU, T> final : public Kernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnConvolutionKernel);
+  CudnnConvolutionKernel();
+  ~CudnnConvolutionKernel();
+
+  void InitFromOpProto(const OperatorProto& op_proto) override;
+  void Forward(const KernelCtx&,
+               std::function<Blob*(const std::string&)>) const override;
+  void Backward(const KernelCtx&,
+                std::function<Blob*(const std::string&)>) const override;
+
+ private:
+  cudnnTensorDescriptor_t in_desc_;
+  cudnnTensorDescriptor_t out_desc_;
+  cudnnConvolutionDescriptor_t conv_desc_;
+  cudnnFilterDescriptor_t weight_desc_;
+  cudnnTensorDescriptor_t bias_desc_;
+
+  void InitModelBlobsWithRandomSeed(
+      const KernelCtx&, std::mt19937 random_seed_gen,
+      std::function<Blob*(const std::string&)>) const override;
+  void InitModelBlobsWithDir(
+      const KernelCtx& ctx, int32_t part_id, int32_t part_num,
+      const std::string& model_load_dir,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void InitModelTmpBlobs(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 }  // namespace oneflow

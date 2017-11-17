@@ -5,6 +5,8 @@
 
 #ifdef PLATFORM_WINDOWS
 
+#include <Windows.h>
+
 namespace oneflow {
 
 namespace fs {
@@ -15,32 +17,50 @@ class WindowsFileSystem final : public FileSystem {
   WindowsFileSystem() = default;
   ~WindowsFileSystem() = default;
 
-  Status NewRandomAccessFile(
-      const std::string& fname,
-      std::unique_ptr<RandomAccessFile>* result) override;
+  void NewRandomAccessFile(const std::string& fname,
+                           std::unique_ptr<RandomAccessFile>* result) override;
 
-  Status NewWritableFile(const std::string& fname,
+  void NewWritableFile(const std::string& fname,
+                       std::unique_ptr<WritableFile>* result) override;
+
+  void NewAppendableFile(const std::string& fname,
                          std::unique_ptr<WritableFile>* result) override;
 
-  Status NewAppendableFile(const std::string& fname,
-                           std::unique_ptr<WritableFile>* result) override;
+  bool FileExists(const std::string& fname) override;
 
-  Status FileExists(const std::string& fname) override;
+  std::vector<std::string> ListDir(const std::string& dir) override;
 
-  Status GetChildren(const std::string& dir,
-                     std::vector<std::string>* result) override;
+  void DelFile(const std::string& fname) override;
 
-  Status DeleteFile(const std::string& fname) override;
+  void CreateDir(const std::string& dirname) override;
 
-  Status CreateDir(const std::string& dirname) override;
+  void DeleteDir(const std::string& dirname) override;
 
-  Status DeleteDir(const std::string& dirname) override;
+  uint64_t GetFileSize(const std::string& fname) override;
 
-  Status GetFileSize(const std::string& fname, uint64_t* file_size) override;
+  void RenameFile(const std::string& old_name,
+                  const std::string& new_name) override;
 
-  Status RenameFile(const std::string& src, const std::string& target) override;
+  bool IsDirectory(const std::string& fname) override;
 
-  Status IsDirectory(const std::string& fname) override;
+  static std::wstring Utf8ToWideChar(const std::string& utf8str) {
+    int size_required = MultiByteToWideChar(CP_UTF8, 0, utf8str.c_str(),
+                                            (int)utf8str.size(), NULL, 0);
+    std::wstring ws_translated_str(size_required, 0);
+    MultiByteToWideChar(CP_UTF8, 0, utf8str.c_str(), (int)utf8str.size(),
+                        &ws_translated_str[0], size_required);
+    return ws_translated_str;
+  }
+
+  static std::string WideCharToUtf8(const std::wstring& wstr) {
+    if (wstr.empty()) return std::string();
+    int size_required = WideCharToMultiByte(
+        CP_UTF8, 0, wstr.c_str(), (int)wstr.size(), NULL, 0, NULL, NULL);
+    std::string utf8_translated_str(size_required, 0);
+    WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), (int)wstr.size(),
+                        &utf8_translated_str[0], size_required, NULL, NULL);
+    return utf8_translated_str;
+  }
 
  private:
 };

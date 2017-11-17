@@ -7,13 +7,8 @@ namespace {
 std::shared_ptr<Operator> GetTestConvolutionOp() {
   OperatorConf op_conf;
   op_conf.set_name("convolution_test");
-  op_conf.mutable_convolution_conf()->mutable_in()->set_name("convolution/in");
-  op_conf.mutable_convolution_conf()->mutable_in()->set_data_type(
-      DataType::kFloat);
-  op_conf.mutable_convolution_conf()->mutable_out()->set_name(
-      "convolution/out");
-  op_conf.mutable_convolution_conf()->mutable_out()->set_data_type(
-      DataType::kFloat);
+  op_conf.mutable_convolution_conf()->set_in("convolution/in");
+  op_conf.mutable_convolution_conf()->set_out("convolution/out");
   op_conf.mutable_convolution_conf()->set_has_bias_term(true);
   op_conf.mutable_convolution_conf()->set_out_num(16);
   op_conf.mutable_convolution_conf()->set_pad_h(4);

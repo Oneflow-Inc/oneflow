@@ -1,5 +1,6 @@
 #include "oneflow/core/common/util.h"
 #include <cfenv>
+#include "oneflow/core/common/str_util.h"
 
 namespace oneflow {
 
@@ -44,5 +45,15 @@ double oneflow_cast(const std::string& s) {
 #ifdef __linux__
 COMMAND(feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW));
 #endif
+
+void RedirectStdoutAndStderrToGlogDir() {
+  PCHECK(freopen(JoinPath(LogDir(), "stdout").c_str(), "a+", stdout));
+  PCHECK(freopen(JoinPath(LogDir(), "stderr").c_str(), "a+", stderr));
+}
+
+void CloseStdoutAndStderr() {
+  PCHECK(fclose(stdout) == 0);
+  PCHECK(fclose(stderr) == 0);
+}
 
 }  // namespace oneflow

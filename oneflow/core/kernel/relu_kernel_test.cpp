@@ -31,14 +31,11 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobMap() {
 
 template<DeviceType device_type, typename T>
 Kernel* BuildReluKernel() {
-  DataType data_type = GetDataType<T>::val;
   OperatorConf op_conf;
   op_conf.set_name("relu_op_test");
   ReluOpConf* relu_conf = op_conf.mutable_relu_conf();
-  relu_conf->mutable_in()->set_name("relu/in");
-  relu_conf->mutable_in()->set_data_type(data_type);
-  relu_conf->mutable_out()->set_name("relu/out");
-  relu_conf->mutable_out()->set_data_type(data_type);
+  relu_conf->set_in("relu/in");
+  relu_conf->set_out("relu/out");
   auto relu_op = ConstructOp(op_conf);
   OperatorProto op_proto;
   relu_op->ToProto(&op_proto);
@@ -52,13 +49,13 @@ void TestReluKernel() {
   using KTC = KTCommon<device_type, T>;
   KernelCtx ctx;
   BuildKernelCtx<device_type>(&ctx);
-  auto BnInOp2BlobPtr = BuildBnInOp2BlobMap<device_type, T>();
+  auto BnInOp2Blob = BuildBnInOp2BlobMap<device_type, T>();
   auto relu_kernel = BuildReluKernel<device_type, T>();
-  relu_kernel->Forward(ctx, BnInOp2BlobPtr);
-  relu_kernel->Backward(ctx, BnInOp2BlobPtr);
+  relu_kernel->Forward(ctx, BnInOp2Blob);
+  relu_kernel->Backward(ctx, BnInOp2Blob);
   SyncStream<device_type>(&ctx);
-  KTC::CheckResult(BnInOp2BlobPtr, "out", "expected_out");
-  KTC::CheckResult(BnInOp2BlobPtr, GenDiffBn("in"), "expected_in_diff");
+  KTC::CheckResult(BnInOp2Blob, "out", "expected_out");
+  KTC::CheckResult(BnInOp2Blob, GenDiffBn("in"), "expected_in_diff");
 }
 
 }  // namespace test

@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_KERNEL_SOFTMAX_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_SOFTMAX_KERNEL_H_
 
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
@@ -62,6 +63,53 @@ void SoftmaxComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w,
     KernelUtil<device_type, T>::Div(ctx, w, prob + i * w, tmp + i);
   }
 }
+
+template<DeviceType device_type, typename T>
+class CudnnSoftmaxKernel final : public Kernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnSoftmaxKernel);
+  CudnnSoftmaxKernel();
+  ~CudnnSoftmaxKernel();
+
+  void Forward(const KernelCtx&,
+               std::function<Blob*(const std::string&)>) const override;
+  void Backward(const KernelCtx&,
+                std::function<Blob*(const std::string&)>) const override;
+};
+
+template<typename T>
+class CudnnSoftmaxKernel<DeviceType::kCPU, T> final : public Kernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnSoftmaxKernel);
+  CudnnSoftmaxKernel() = default;
+  ~CudnnSoftmaxKernel() = default;
+
+  void Forward(const KernelCtx&,
+               std::function<Blob*(const std::string&)>) const override {
+    UNEXPECTED_RUN();
+  }
+  void Backward(const KernelCtx&,
+                std::function<Blob*(const std::string&)>) const override {
+    UNEXPECTED_RUN();
+  }
+};
+
+template<typename T>
+class CudnnSoftmaxKernel<DeviceType::kGPU, T> final : public Kernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnSoftmaxKernel);
+  CudnnSoftmaxKernel();
+  ~CudnnSoftmaxKernel();
+
+  void Forward(const KernelCtx&,
+               std::function<Blob*(const std::string&)>) const override;
+  void Backward(const KernelCtx&,
+                std::function<Blob*(const std::string&)>) const override;
+
+ private:
+  cudnnTensorDescriptor_t in_desc_;
+  cudnnTensorDescriptor_t out_desc_;
+};
 
 }  // namespace oneflow
 

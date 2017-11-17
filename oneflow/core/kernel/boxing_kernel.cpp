@@ -82,8 +82,10 @@ void BoxingKernel<T>::InferCopyRulesFromBns(
     if (b == nullptr) { break; }
     dst_blobs.emplace_back(b);
   }
-  InferDataIdCopyRules(src_bns, dst_bns, src_blobs, dst_blobs, src_concat_axis,
-                       dst_split_axis, copy_rules);
+  if (src_blobs.front()->has_data_id()) {
+    InferDataIdCopyRules(src_bns, dst_bns, src_blobs, dst_blobs,
+                         src_concat_axis, dst_split_axis, copy_rules);
+  }
 
   if (src_concat_axis == dst_split_axis) {
     InferCopyRulesFromEqualAxis(BnInOp2Blob, src_bns, dst_bns, copy_rules);
@@ -111,6 +113,7 @@ void BoxingKernel<T>::InferCopyRulesFromUnequalAxis(
         for (size_t dst_idx = 0; dst_idx < dst_blobs.size(); ++dst_idx) {
           Blob* dst_b = dst_blobs.at(dst_idx);
           CopyRule cr;
+          cr.is_data_id = false;
           cr.src_bn = src_bns.at(src_idx);
           cr.dst_bn = dst_bns.at(dst_idx);
           cr.src_offset =
@@ -134,6 +137,7 @@ void BoxingKernel<T>::InferCopyRulesFromUnequalAxis(
         Blob* dst_b = dst_blobs.at(dst_idx);
         for (size_t offset = 0; offset < dst_b->shape().At(0); ++offset) {
           CopyRule cr;
+          cr.is_data_id = false;
           cr.src_bn = src_bns.at(src_idx);
           cr.dst_bn = dst_bns.at(dst_idx);
           cr.src_offset =
@@ -169,11 +173,12 @@ void BoxingKernel<T>::InferDataIdCopyRules(
       int64_t q = std::min(src_cap - src_offset, dst_cap - dst_offset);
 
       CopyRule rule;
+      rule.is_data_id = true;
       rule.src_bn = src_bns.at(src_idx);
       rule.dst_bn = dst_bns.at(dst_idx);
-      rule.src_offset = src_offset * sizeof(T);
-      rule.dst_offset = dst_offset * sizeof(T);
-      rule.copy_sz = q * sizeof(T);
+      rule.src_offset = src_offset * JobDesc::Singleton()->SizeOfOneDataId();
+      rule.dst_offset = dst_offset * JobDesc::Singleton()->SizeOfOneDataId();
+      rule.copy_sz = q * JobDesc::Singleton()->SizeOfOneDataId();
       rules->push_back(std::move(rule));
 
       src_offset += q;
@@ -190,6 +195,7 @@ void BoxingKernel<T>::InferDataIdCopyRules(
     }
   } else if (src_concat_axis == 1) {
     CopyRule rule;
+    rule.is_data_id = true;
     rule.src_bn = src_bns.at(0);
     rule.dst_bn = dst_bns.at(0);
     rule.src_offset = 0;
@@ -204,6 +210,7 @@ void BoxingKernel<T>::InferDataIdCopyRules(
     // add copy rules from first dst blob to all dst blobs
     for (size_t i = 1; i < dst_bns.size(); ++i) {
       CopyRule rule;
+      rule.is_data_id = true;
       rule.src_bn = dst_bns.at(0);
       rule.dst_bn = dst_bns.at(i);
       rule.src_offset = 0;
@@ -266,6 +273,7 @@ void BoxingKernel<T>::InferCopyRulesFromConcatDim(
                            dst_iter->second - dst_offset);
       for (size_t i = 0; i < seg_cnt; ++i) {
         CopyRule cr;
+        cr.is_data_id = false;
         cr.src_bn = *src_iter->first;
         cr.dst_bn = *dst_iter->first;
         cr.src_offset =
@@ -297,6 +305,7 @@ void BoxingKernel<T>::InferFwCloneRules(
   for (size_t i = 1; i < obns.size(); ++i) {
     if (BnInOp2Blob(obns.at(i)) == nullptr) { break; }
     CopyRule cr;
+    cr.is_data_id = false;
     cr.src_bn = obns.front();
     cr.dst_bn = obns.at(i);
     cr.src_offset = 0;
@@ -329,10 +338,17 @@ void BoxingKernel<T>::CopyDataFromRules(
   for (const CopyRule& rule : copy_rules) {
     Blob* src_blob = BnInOp2Blob(rule.src_bn);
     Blob* dst_blob = BnInOp2Blob(rule.dst_bn);
-    Memcpy<DeviceType::kCPU>(
-        ctx.device_ctx, dst_blob->mut_dptr<char>() + rule.dst_offset,
-        src_blob->dptr<char>() + rule.src_offset, rule.copy_sz,
-        cudaMemcpyKind::cudaMemcpyHostToHost);
+    if (rule.is_data_id) {
+      Memcpy<DeviceType::kCPU>(
+          ctx.device_ctx, dst_blob->mut_data_id() + rule.dst_offset,
+          src_blob->data_id() + rule.src_offset, rule.copy_sz,
+          cudaMemcpyKind::cudaMemcpyHostToHost);
+    } else {
+      Memcpy<DeviceType::kCPU>(
+          ctx.device_ctx, dst_blob->mut_dptr<char>() + rule.dst_offset,
+          src_blob->dptr<char>() + rule.src_offset, rule.copy_sz,
+          cudaMemcpyKind::cudaMemcpyHostToHost);
+    }
   }
 }
 
@@ -350,47 +366,48 @@ void BoxingKernel<T>::AddBoxBackward(
   UNEXPECTED_RUN();
 }
 
-#define FLOATING_BOXING_KERNEL_CONCAT_BOX_BACKWARD(type_cpp, type_proto) \
-  template<>                                                             \
-  void BoxingKernel<type_cpp>::ConcatBoxBackward(                        \
-      const KernelCtx& ctx,                                              \
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const {      \
-    auto boxing_conf = op()->op_conf().boxing_conf();                    \
-    if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {         \
-      Blob* middle = BnInOp2Blob("middle");                              \
-      Memset<DeviceType::kCPU>(ctx.device_ctx, middle->mut_dptr(), 0,    \
-                               middle->ByteSizeOfDataField());           \
-      for (const std::string& bn : op()->output_diff_bns()) {            \
-        Blob* blob = BnInOp2Blob(bn);                                    \
-        KernelUtil<DeviceType::kCPU, type_cpp>::BlasAxpy(                \
-            ctx.device_ctx, blob->shape().elem_cnt(),                    \
-            static_cast<type_cpp>(1.0), blob->dptr<type_cpp>(), 1,       \
-            middle->mut_dptr<type_cpp>(), 1);                            \
-      }                                                                  \
-    }                                                                    \
-    CopyDataFromRules(ctx, BnInOp2Blob, bw_copy_rules_);                 \
+#define FLOATING_BOXING_KERNEL_CONCAT_BOX_BACKWARD(type_cpp, type_proto)    \
+  template<>                                                                \
+  void BoxingKernel<type_cpp>::ConcatBoxBackward(                           \
+      const KernelCtx& ctx,                                                 \
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {         \
+    auto boxing_conf = op()->op_conf().boxing_conf();                       \
+    if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {            \
+      Blob* middle_blob = BnInOp2Blob("middle");                            \
+      Memset<DeviceType::kCPU>(ctx.device_ctx, middle_blob->mut_dptr(), 0,  \
+                               middle_blob->ByteSizeOfDataField());         \
+      for (const std::string& odbn : op()->output_diff_bns()) {             \
+        Blob* out_diff_blob = BnInOp2Blob(odbn);                            \
+        KernelUtil<DeviceType::kCPU, type_cpp>::BlasAxpy(                   \
+            ctx.device_ctx, out_diff_blob->shape().elem_cnt(),              \
+            static_cast<type_cpp>(1.0), out_diff_blob->dptr<type_cpp>(), 1, \
+            middle_blob->mut_dptr<type_cpp>(), 1);                          \
+      }                                                                     \
+    }                                                                       \
+    CopyDataFromRules(ctx, BnInOp2Blob, bw_copy_rules_);                    \
   }
 OF_PP_FOR_EACH_TUPLE(FLOATING_BOXING_KERNEL_CONCAT_BOX_BACKWARD,
                      FLOATING_DATA_TYPE_SEQ);
 
-#define FLOATING_BOXING_KERNEL_ADD_BOX_FORWARD(type_cpp, type_proto)          \
-  template<>                                                                  \
-  void BoxingKernel<type_cpp>::AddBoxForward(                                 \
-      const KernelCtx& ctx,                                                   \
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const {           \
-    Blob* out_0 = BnInOp2Blob("out_0");                                       \
-    Blob* in_0 = BnInOp2Blob("in_0");                                         \
-    Memcpy<DeviceType::kCPU>(ctx.device_ctx, out_0->mut_dptr(), in_0->dptr(), \
-                             out_0->ByteSizeOfDataField(),                    \
-                             cudaMemcpyKind::cudaMemcpyHostToHost);           \
-    for (size_t i = 1; i < op()->input_bns().size(); ++i) {                   \
-      Blob* in_i = BnInOp2Blob("in_" + std::to_string(i));                    \
-      KernelUtil<DeviceType::kCPU, type_cpp>::BlasAxpy(                       \
-          ctx.device_ctx, out_0->shape().elem_cnt(),                          \
-          static_cast<type_cpp>(1.0), in_i->dptr<type_cpp>(), 1,              \
-          out_0->mut_dptr<type_cpp>(), 1);                                    \
-    }                                                                         \
-    CopyDataFromRules(ctx, BnInOp2Blob, fw_copy_rules_);                      \
+#define FLOATING_BOXING_KERNEL_ADD_BOX_FORWARD(type_cpp, type_proto)  \
+  template<>                                                          \
+  void BoxingKernel<type_cpp>::AddBoxForward(                         \
+      const KernelCtx& ctx,                                           \
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {   \
+    Blob* out_blob_0 = BnInOp2Blob("out_0");                          \
+    Blob* in_blob_0 = BnInOp2Blob("in_0");                            \
+    Memcpy<DeviceType::kCPU>(ctx.device_ctx, out_blob_0->mut_dptr(),  \
+                             in_blob_0->dptr(),                       \
+                             out_blob_0->ByteSizeOfDataField(),       \
+                             cudaMemcpyKind::cudaMemcpyHostToHost);   \
+    for (size_t i = 1; i < op()->input_bns().size(); ++i) {           \
+      Blob* in_blob_i = BnInOp2Blob("in_" + std::to_string(i));       \
+      KernelUtil<DeviceType::kCPU, type_cpp>::BlasAxpy(               \
+          ctx.device_ctx, out_blob_0->shape().elem_cnt(),             \
+          static_cast<type_cpp>(1.0), in_blob_i->dptr<type_cpp>(), 1, \
+          out_blob_0->mut_dptr<type_cpp>(), 1);                       \
+    }                                                                 \
+    CopyDataFromRules(ctx, BnInOp2Blob, fw_copy_rules_);              \
   }
 OF_PP_FOR_EACH_TUPLE(FLOATING_BOXING_KERNEL_ADD_BOX_FORWARD,
                      FLOATING_DATA_TYPE_SEQ);
@@ -415,18 +432,14 @@ OF_PP_FOR_EACH_TUPLE(NON_FLOATING_BOXING_KERNEL_ADD_BOX_FORWARD,
 OF_PP_FOR_EACH_TUPLE(NON_FLOATING_BOXING_KERNEL_CONCAT_BOX_BACKWARD,
                      INT_DATA_TYPE_SEQ);
 
-namespace {
-
-template<DeviceType device_type>
-Kernel* CreateBoxingKernel(const OperatorConf& op_conf) {
-  static const HashMap<int, std::function<Kernel*()>> data_type2creator = {
+Kernel* CreateBoxingKernel(const OpContext& op_ctx) {
+  static const HashMap<int, std::function<Kernel*()>> creators = {
 #define BOXING_KERNEL_ENTRY(type_cpp, type_proto) \
   {type_proto, []() { return new BoxingKernel<type_cpp>; }},
       OF_PP_FOR_EACH_TUPLE(BOXING_KERNEL_ENTRY, ARITHMETIC_DATA_TYPE_SEQ)};
-  return data_type2creator.at(op_conf.boxing_conf().data_type())();
+  return creators.at(op_ctx.bn_in_op2data_type().at("in_0"))();
 }
 
-}  // namespace
+COMMAND(AddKernelCreator(OperatorConf::kBoxingConf, CreateBoxingKernel));
 
-REGISTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kBoxingConf, CreateBoxingKernel);
 }  // namespace oneflow

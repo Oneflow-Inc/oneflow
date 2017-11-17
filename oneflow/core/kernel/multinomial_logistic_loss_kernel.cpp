@@ -6,18 +6,18 @@ namespace oneflow {
 template<DeviceType device_type, typename PredType, typename LabelType>
 void MultinomialLogisticLossKernel<device_type, PredType, LabelType>::Forward(
     const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2BlobPtr) const {
-  const Blob* prediction = BnInOp2BlobPtr("prediction");
-  const Blob* label = BnInOp2BlobPtr("label");
-  Blob* loss = BnInOp2BlobPtr("loss");
-  Blob* loss_buff = BnInOp2BlobPtr("loss_buffer");
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* prediction = BnInOp2Blob("prediction");
+  const Blob* label = BnInOp2Blob("label");
+  Blob* loss = BnInOp2Blob("loss");
+  Blob* loss_buff = BnInOp2Blob("loss_buffer");
 
   MultinomialLogisticLossKernelUtil<device_type, PredType, LabelType>::Forward(
       ctx.device_ctx, prediction->shape().At(0), prediction->shape().At(1),
       prediction->dptr<PredType>(), label->dptr<LabelType>(),
       loss->mut_dptr<PredType>(), loss_buff->mut_dptr<PredType>());
 
-  Blob* prediction_diff = BnInOp2BlobPtr(GenDiffBn("prediction"));
+  Blob* prediction_diff = BnInOp2Blob(GenDiffBn("prediction"));
   if (prediction_diff != nullptr) {
     Memset<device_type>(ctx.device_ctx, prediction_diff->mut_dptr<PredType>(),
                         0, prediction_diff->TotalByteSize());
@@ -62,33 +62,29 @@ class MultinomialLogisticLossKernelUtil<DeviceType::kCPU, PredType, LabelType>
       }
     });
   }
-};  // namespace oneflow
+};
 
-namespace {
-
-template<DeviceType device_type>
-Kernel* CreateMultinomialLogisticLossKernel(const OperatorConf& op_conf) {
-  static const HashMap<std::string, std::function<Kernel*()>>
-      data_type2creator = {
-#define MULTI_LOG_LOSS_KERNEL_ENTRY(data_type_pair, label_type_pair) \
-  {GetHashKey(OF_PP_PAIR_SECOND(data_type_pair),                     \
-              OF_PP_PAIR_SECOND(label_type_pair)),                   \
-   []() {                                                            \
-     return new MultinomialLogisticLossKernel<                       \
-         device_type, OF_PP_PAIR_FIRST(data_type_pair),              \
-         OF_PP_PAIR_FIRST(label_type_pair)>;                         \
+Kernel* CreateMultinomialLogisticLossKernel(const OpContext& op_ctx) {
+  static const HashMap<std::string, std::function<Kernel*()>> creators = {
+#define MULTI_LOG_LOSS_KERNEL_ENTRY(device_type, data_type_pair, \
+                                    label_type_pair)             \
+  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair),    \
+              OF_PP_PAIR_SECOND(label_type_pair)),               \
+   []() {                                                        \
+     return new MultinomialLogisticLossKernel<                   \
+         device_type, OF_PP_PAIR_FIRST(data_type_pair),          \
+         OF_PP_PAIR_FIRST(label_type_pair)>;                     \
    }},
-          OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MULTI_LOG_LOSS_KERNEL_ENTRY,
-                                           FLOATING_DATA_TYPE_SEQ,
-                                           INT_DATA_TYPE_SEQ)};
-  return data_type2creator.at(GetHashKey(
-      op_conf.multinomial_logistic_loss_conf().prediction().data_type(),
-      op_conf.multinomial_logistic_loss_conf().label().data_type()))();
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MULTI_LOG_LOSS_KERNEL_ENTRY,
+                                       DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ,
+                                       INT_DATA_TYPE_SEQ)};
+
+  return creators.at(GetHashKey(op_ctx.device_type(),
+                                op_ctx.bn_in_op2data_type().at("prediction"),
+                                op_ctx.bn_in_op2data_type().at("label")))();
 }
 
-}  // namespace
-
-REGISTER_TEMPLATE_KERNEL_CREATOR(OperatorConf::kMultinomialLogisticLossConf,
-                                 CreateMultinomialLogisticLossKernel);
+COMMAND(AddKernelCreator(OperatorConf::kMultinomialLogisticLossConf,
+                         CreateMultinomialLogisticLossKernel));
 
 }  // namespace oneflow

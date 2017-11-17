@@ -2,6 +2,6 @@
 
 namespace oneflow {
 
-CommNetwork* CommNetwork::comm_network_ptr_;
+CommNet* CommNet::comm_network_ptr_;
 
 }  // namespace oneflow
