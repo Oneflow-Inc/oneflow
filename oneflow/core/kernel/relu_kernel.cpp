@@ -65,6 +65,7 @@ Kernel* CreateReluKernel(const OpContext& op_ctx) {
       GetHashKey(op_ctx.device_type(), op_ctx.bn_in_op2data_type().at("in")))();
 }
 
+KERNEL_DIFF_IMPLEMENTED_IN_PLACE(OperatorConf::kReluConf);
 COMMAND(AddKernelCreator(OperatorConf::kReluConf, CreateReluKernel));
 
 }  // namespace oneflow

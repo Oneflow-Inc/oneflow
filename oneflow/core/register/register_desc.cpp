@@ -75,6 +75,11 @@ void RegstDesc::ForEachLbn(std::function<void(const std::string&)> func) const {
   for (const auto& p : lbn2blob_desc_) { func(p.first); }
 }
 
+void RegstDesc::EraseBlobDesc(const std::string& lbn) {
+  auto it = lbn2blob_desc_.find(lbn);
+  if (it != lbn2blob_desc_.end()) { lbn2blob_desc_.erase(it); }
+}
+
 void RegstDesc::EraseZeroSizeBlob() {
   EraseIf<std::string, std::unique_ptr<BlobDesc>>(
       &lbn2blob_desc_,

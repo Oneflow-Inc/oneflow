@@ -307,6 +307,7 @@ Kernel* CreateConvolutionKenrel(const OpContext& op_ctx) {
 
 }  // namespace
 
+KERNEL_DIFF_IMPLEMENTED_IN_PLACE(OperatorConf::kConvolutionConf);
 COMMAND(AddKernelCreator(OperatorConf::kConvolutionConf,
                          CreateConvolutionKenrel))
 

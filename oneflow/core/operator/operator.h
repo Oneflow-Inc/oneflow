@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_OPERATOR_OPERATOR_H_
 #define ONEFLOW_CORE_OPERATOR_OPERATOR_H_
 
+#include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/keyword.h"
@@ -178,6 +179,41 @@ std::string GenUnDiffBn(const std::string& diff_bn);
 std::string GetOpNameFromLbn(const std::string& lbn);
 std::string GetBnInOpFromLbn(const std::string& lbn);
 std::pair<std::string, std::string> ParseLbn(const std::string& lbn);
+
+#define OP_TYPE_CASE_SEQ                                           \
+  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kConvolutionConf)             \
+  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kInnerproductConf)            \
+  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kDataLoaderConf)              \
+  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kPoolingConf)                 \
+  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kReluConf)                    \
+  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kSoftmaxConf)                 \
+  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kMultinomialLogisticLossConf) \
+  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kCopyHdConf)                  \
+  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kCloneConf)                   \
+  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kBoxingConf)                  \
+  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kNormalMdupdtConf)            \
+  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kAccumulateConf)              \
+  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kConcatConf)                  \
+  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kCopyCommNetConf)             \
+  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kMomentumMdupdtConf)          \
+  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kRmspropMdupdtConf)           \
+  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kSoftmaxLossConf)             \
+  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kRecordConf)                  \
+  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kLossRecordConf)
+
+//  return true if blob `in' share memory with blob `in_diff'
+bool IsDiffImplementedInPlace(OperatorConf::OpTypeCase op_type);
+
+template<OperatorConf::OpTypeCase op_type_case>
+bool IsKernelDiffImplementedInPlace() {
+  return false;
+}
+
+#define KERNEL_DIFF_IMPLEMENTED_IN_PLACE(op_type_case)  \
+  template<>                                            \
+  bool IsKernelDiffImplementedInPlace<op_type_case>() { \
+    return true;                                        \
+  }
 
 }  // namespace oneflow
 
