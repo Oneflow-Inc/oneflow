@@ -137,18 +137,19 @@ void ConvolutionOp::InferBlobDesc4FwBlobs(
     case kDouble: cudnn_data_type = CUDNN_DATA_DOUBLE; break;
     default: UNEXPECTED_RUN();
   }
+
   CudaCheck(cudnnSetTensor4dDescriptor(in_desc, CUDNN_TENSOR_NCHW,
                                        cudnn_data_type, data_num, c_i, height,
                                        width));
   CudaCheck(cudnnSetTensor4dDescriptor(out_desc, CUDNN_TENSOR_NCHW,
                                        cudnn_data_type, data_num, c_o, h_len,
                                        w_len));
+  CudaCheck(cudnnSetFilter4dDescriptor(weight_desc, cudnn_data_type,
+                                       CUDNN_TENSOR_NCHW, c_o, c_i,
+                                       conf.kernel_h(), conf.kernel_w()));
   CudaCheck(cudnnSetConvolution2dDescriptor(
       conv_desc, conf.pad_h(), conf.pad_w(), conf.stride_h(), conf.stride_w(),
       1, 1, CUDNN_CROSS_CORRELATION, cudnn_data_type));
-  CudaCheck(cudnnSetFilter4dDescriptor(weight_desc, cudnn_data_type,
-                                       CUDNN_TENSOR_NCHW, data_num, c_o,
-                                       conf.kernel_h(), conf.kernel_w()));
 
   if (conf.has_bias_term()) {
     CudaCheck(cudnnCreateTensorDescriptor(&bias_desc));
@@ -161,18 +162,21 @@ void ConvolutionOp::InferBlobDesc4FwBlobs(
 
   CudaCheck(cudnnGetConvolutionForwardAlgorithm(
       cudnn_handle, in_desc, weight_desc, conv_desc, out_desc,
-      CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT, workspace_limit_bytes,
-      &cudnn_fwd_algo));
+      CUDNN_CONVOLUTION_FWD_PREFER_FASTEST,
+      // CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT,
+      workspace_limit_bytes, &cudnn_fwd_algo));
 
   CudaCheck(cudnnGetConvolutionBackwardFilterAlgorithm(
       cudnn_handle, in_desc, out_desc, conv_desc, weight_desc,
-      CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT,
+      CUDNN_CONVOLUTION_BWD_FILTER_PREFER_FASTEST,
+      // CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT,
       workspace_limit_bytes, &cudnn_bwd_weight_algo));
 
   CudaCheck(cudnnGetConvolutionBackwardDataAlgorithm(
       cudnn_handle, weight_desc, out_desc, conv_desc, in_desc,
-      CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT, workspace_limit_bytes,
-      &cudnn_bwd_data_algo));
+      CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST,
+      // CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT,
+      workspace_limit_bytes, &cudnn_bwd_data_algo));
 
   mut_op_conf().mutable_convolution_conf()->set_cudnn_fwd_algo(cudnn_fwd_algo);
   mut_op_conf().mutable_convolution_conf()->set_cudnn_bwd_weight_algo(

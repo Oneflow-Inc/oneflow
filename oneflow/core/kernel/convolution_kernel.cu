@@ -130,9 +130,6 @@ CudnnConvolutionKernel<DeviceType::kGPU, T>::CudnnConvolutionKernel() {
   CudaCheck(cudnnCreateTensorDescriptor(&out_desc_));
   CudaCheck(cudnnCreateFilterDescriptor(&weight_desc_));
   CudaCheck(cudnnCreateConvolutionDescriptor(&conv_desc_));
-  if (op()->GetBoolFromSpecialConf("has_bias_term")) {
-    CudaCheck(cudnnCreateTensorDescriptor(&bias_desc_));
-  }
 }
 
 template<typename T>
@@ -155,6 +152,9 @@ void CudnnConvolutionKernel<DeviceType::kGPU, T>::InitFromOpProto(
       conv_desc_, conv_conf.pad_h(), conv_conf.pad_w(), conv_conf.stride_h(),
       conv_conf.stride_w(), 1, 1, CUDNN_CROSS_CORRELATION,
       cudnn::DataType<T>::type));
+  if (op()->GetBoolFromSpecialConf("has_bias_term")) {
+    CudaCheck(cudnnCreateTensorDescriptor(&bias_desc_));
+  }
 }
 
 template<typename T>
@@ -177,8 +177,8 @@ void CudnnConvolutionKernel<DeviceType::kGPU, T>::Forward(
       out_blob->shape().At(3)));
   CudaCheck(cudnnSetFilter4dDescriptor(
       weight_desc_, cudnn::DataType<T>::type, CUDNN_TENSOR_NCHW,
-      weight_blob->shape().At(0), weight_blob->shape().At(1),
-      weight_blob->shape().At(2), weight_blob->shape().At(3)));
+      out_blob->shape().At(1), in_blob->shape().At(1), conv_conf.kernel_h(),
+      conv_conf.kernel_w()));
 
   cudnnConvolutionFwdAlgo_t cudnn_fwd_algo =
       (cudnnConvolutionFwdAlgo_t)(conv_conf.cudnn_fwd_algo());
@@ -250,6 +250,53 @@ void CudnnConvolutionKernel<DeviceType::kGPU, T>::Backward(
       cudnn_bwd_data_algo, bwd_data_workspace->mut_dptr<T>(),
       bwd_data_workspace->shape().At(0), cudnn::DataType<T>::zero, in_desc_,
       in_diff_blob->mut_dptr<T>()));
+}
+
+template<typename T>
+void CudnnConvolutionKernel<DeviceType::kGPU, T>::InitModelBlobsWithRandomSeed(
+    const KernelCtx& ctx, std::mt19937 random_seed_gen,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  KernelUtil<DeviceType::kGPU, T>::FillWithProperConf(
+      ctx.device_ctx,
+      OF_PB_POINTER_GET(op()->op_conf().convolution_conf(), weight_fill),
+      random_seed_gen(), BnInOp2Blob("weight"));
+
+  if (op()->GetBoolFromSpecialConf("has_bias_term")) {
+    KernelUtil<DeviceType::kGPU, T>::FillWithProperConf(
+        ctx.device_ctx,
+        OF_PB_POINTER_GET(op()->op_conf().convolution_conf(), bias_fill),
+        random_seed_gen(), BnInOp2Blob("bias"));
+  }
+}
+
+template<typename T>
+void CudnnConvolutionKernel<DeviceType::kGPU, T>::InitModelBlobsWithDir(
+    const KernelCtx& ctx, int32_t part_id, int32_t part_num,
+    const std::string& model_load_dir,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  Blob* weight_blob = BnInOp2Blob("weight");
+  int32_t dim_num = op()->GetInt32FromSpecialConf("out_num");
+  KernelUtil<DeviceType::kGPU, T>::FillWithModelDir(
+      ctx.device_ctx, part_id, part_num, model_load_dir, weight_blob, "weight",
+      dim_num, weight_blob->shape().Count(1));
+  if (op()->GetBoolFromSpecialConf("has_bias_term")) {
+    KernelUtil<DeviceType::kGPU, T>::FillWithModelDir(
+        ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias"),
+        "bias", dim_num, 1);
+  }
+}
+
+template<typename T>
+void CudnnConvolutionKernel<DeviceType::kGPU, T>::InitModelTmpBlobs(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (op()->GetBoolFromSpecialConf("has_bias_term")) {
+    FillConf bias_multiplier_fill_conf;
+    bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.0f);
+    KernelUtil<DeviceType::kGPU, T>::Fill(ctx.device_ctx,
+                                          bias_multiplier_fill_conf, 0,
+                                          BnInOp2Blob("bias_multiplier"));
+  }
 }
 
 #ifdef USE_CUDNN

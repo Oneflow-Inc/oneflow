@@ -10,7 +10,6 @@
 
 namespace oneflow {
 
-#ifdef USE_CUDNN
 namespace cudnn {
 
 template<typename T>
@@ -55,7 +54,6 @@ class DataType<int> {
 */
 
 }  // namespace cudnn
-#endif  // USE_CUDNN
 
 template<typename T>
 void CudaCheck(T error);

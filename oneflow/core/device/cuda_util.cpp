@@ -52,7 +52,6 @@ const char* CurandGetErrorString(curandStatus_t error) {
 
 }  // namespace
 
-#ifdef USE_CUDNN
 namespace cudnn {
 
 float DataType<float>::oneval = 1.0;
@@ -83,7 +82,6 @@ const void* DataType<int>::zero = static_cast<void*>(&DataType<int>::zeroval);
 */
 
 }  // namespace cudnn
-#endif  // USE_CUDNN
 
 template<>
 void CudaCheck(cudaError_t error) {
