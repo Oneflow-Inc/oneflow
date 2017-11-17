@@ -20,6 +20,14 @@ class ForwardCompTaskNode final : public CompTaskNode {
   TodoTaskType GetTaskType() const override { return TodoTaskType::kForward; }
 
  private:
+  using Lbn2NodeBnMap = HashMap<std::string, std::pair<ExecNode*, std::string>>;
+
+  void FwBuildFromUserOps(Lbn2NodeBnMap* lbn2producer,
+                          Lbn2NodeBnMap* extern_in_lbn2consumer);
+  void FwSetExecNodeFromInRegst(const Lbn2NodeBnMap& extern_in_lbn2consumer);
+  void FwEnrollLbn2OutRegst(const Lbn2NodeBnMap& lbn2producer);
+  void FwEnrollLbn2ActivationRegst();
+  void FwEnrollLbn2ModelAndTmpRegsts();
 };
 
 }  // namespace oneflow

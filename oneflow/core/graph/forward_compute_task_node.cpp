@@ -1,5 +1,6 @@
 #include "oneflow/core/graph/forward_compute_task_node.h"
 #include "oneflow/core/graph/backward_compute_task_node.h"
+#include "oneflow/core/graph/chain_node.h"
 #include "oneflow/core/graph/model_update_compute_task_node.h"
 
 namespace oneflow {
@@ -32,7 +33,95 @@ void ForwardCompTaskNode::ConsumeAllRegsts() {
 }
 
 void ForwardCompTaskNode::BuildExecGphAndRegst() {
-  // TODO
+  Lbn2NodeBnMap lbn2producer;
+  Lbn2NodeBnMap extern_in_lbn2consumer;
+  FwBuildFromUserOps(&lbn2producer, &extern_in_lbn2consumer);
+  FwSetExecNodeFromInRegst(extern_in_lbn2consumer);
+  FwEnrollLbn2OutRegst(lbn2producer);
+  FwEnrollLbn2ActivationRegst();
+  FwEnrollLbn2ModelAndTmpRegsts();
+}
+
+void ForwardCompTaskNode::FwBuildFromUserOps(
+    Lbn2NodeBnMap* lbn2producer, Lbn2NodeBnMap* extern_in_lbn2consumer) {
+  for (std::shared_ptr<const Operator> op : chain_node()->op_vec()) {
+    ExecNode* cur_node = mut_exec_gph().NewNode();
+    cur_node->mut_op() = op;
+    for (const std::string& obn : op->output_bns()) {
+      const std::string& lbn = op->Lbn4BnInOp(obn);
+      CHECK(lbn2producer->insert({lbn, {cur_node, obn}}).second);
+    }
+  }
+  mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
+    for (const std::string& ibn : cur_node->op()->input_bns()) {
+      const std::string& lbn = cur_node->op()->Lbn4BnInOp(ibn);
+      auto producer_it = lbn2producer->find(lbn);
+      if (producer_it != lbn2producer->end()) {
+        ExecEdge* edge = mut_exec_gph().NewEdge();
+        edge->set_lbn(lbn);
+        edge->mut_src_bn() = producer_it->second.second;
+        edge->mut_dst_bn() = ibn;
+        Connect(producer_it->second.first, edge, cur_node);
+      } else {
+        CHECK(extern_in_lbn2consumer->insert({lbn, {cur_node, ibn}}).second);
+      }
+    }
+  });
+}
+
+void ForwardCompTaskNode::FwSetExecNodeFromInRegst(
+    const Lbn2NodeBnMap& extern_in_lbn2consumer) {
+  if (extern_in_lbn2consumer.empty()) { return; }
+  std::shared_ptr<RegstDesc> in_regst = GetConsumedRegst("in");
+  for (const auto& pair : extern_in_lbn2consumer) {
+    ExecNode* node = pair.second.first;
+    const std::string& ibn = pair.second.second;
+    node->BindBnInOpAndRegst(ibn, in_regst);
+  }
+}
+
+void ForwardCompTaskNode::FwEnrollLbn2OutRegst(
+    const Lbn2NodeBnMap& lbn2producer) {
+  auto out_regst = GetProducedRegst("out");
+  out_regst->ForEachLbn([&](const std::string& lbn) {
+    const std::pair<ExecNode*, std::string>& producer = lbn2producer.at(lbn);
+    ExecNode* node = producer.first;
+    const std::string& obn = producer.second;
+    out_regst->AddLbn(lbn);
+    node->BindBnInOpAndRegst(obn, out_regst);
+  });
+}
+
+void ForwardCompTaskNode::FwEnrollLbn2ActivationRegst() {
+  auto activation_regst = GetProducedRegst("activation");
+  mut_exec_gph().ForEachEdge([&](const ExecEdge* edge) {
+    activation_regst->AddLbn(edge->lbn());
+    edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), activation_regst);
+    edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(), activation_regst);
+  });
+}
+
+void ForwardCompTaskNode::FwEnrollLbn2ModelAndTmpRegsts() {
+  auto data_tmp_regst = GetProducedRegst("data_tmp");
+  auto model_regst = GetConsumedRegst("model");
+  auto model_tmp_regst = GetConsumedRegst("model_tmp");
+  mut_exec_gph().ForEachNode([&](ExecNode* node) {
+    for (const std::string& dtbn : node->op()->data_tmp_bns()) {
+      const std::string& lbn = node->op()->Lbn4BnInOp(dtbn);
+      data_tmp_regst->AddLbn(lbn);
+      node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
+    }
+    for (const std::string& mtbn : node->op()->model_tmp_bns()) {
+      const std::string& lbn = node->op()->Lbn4BnInOp(mtbn);
+      model_tmp_regst->AddLbn(lbn);
+      node->BindBnInOpAndRegst(mtbn, model_tmp_regst);
+    }
+    for (const std::string& mbn : node->op()->model_bns()) {
+      const std::string& lbn = node->op()->Lbn4BnInOp(mbn);
+      model_regst->AddLbn(lbn);
+      node->BindBnInOpAndRegst(mbn, model_regst);
+    }
+  });
 }
 
 void ForwardCompTaskNode::LockRegsts() {
@@ -40,8 +129,7 @@ void ForwardCompTaskNode::LockRegsts() {
 }
 
 bool ForwardCompTaskNode::IsReadyForBuild() {
-  // TODO
-  return false;
+  return GetConsumedRegst("in")->IsLocked();
 }
 
 }  // namespace oneflow
