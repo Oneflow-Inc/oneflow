@@ -278,6 +278,7 @@ Kernel* CreatePoolingKenrel(const OpContext& op_ctx) {
 
 }  // namespace
 
+KERNEL_DIFF_IMPLEMENTED_IN_PLACE(OperatorConf::kPoolingConf);
 COMMAND(AddKernelCreator(OperatorConf::kPoolingConf, CreatePoolingKenrel))
 
 }  // namespace oneflow

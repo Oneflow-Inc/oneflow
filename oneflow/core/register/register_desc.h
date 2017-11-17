@@ -43,6 +43,7 @@ class RegstDesc final {
 
   //
   void EraseZeroSizeBlob();
+  void EraseBlobDesc(const std::string& lbn);
   std::string DebugStr() const;
   void ToProto(RegstDescProto*) const;
   MemoryCase InferMemCase() const;
