@@ -1,4 +1,5 @@
 #include "oneflow/core/graph/model_update_compute_task_node.h"
+#include "oneflow/core/graph/chain_node.h"
 
 namespace oneflow {
 
