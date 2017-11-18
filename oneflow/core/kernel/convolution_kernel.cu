@@ -215,25 +215,29 @@ void CudnnConvolutionKernel<DeviceType::kGPU, T>::Backward(
 
   auto conv_conf = op()->op_conf().convolution_conf();
 
-  // compute weight diff
-  Blob* bwd_weight_workspace = BnInOp2Blob("bwd_weight_workspace");
-  cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_weight_algo =
-      (cudnnConvolutionBwdFilterAlgo_t)(conv_conf.cudnn_bwd_weight_algo());
-  CudaCheck(cudnnConvolutionBackwardFilter(
-      ctx.device_ctx->cudnn_handle(), cudnn::DataType<T>::one, in_desc_,
-      in_blob->dptr<T>(), out_desc_, out_blob->dptr<T>(), conv_desc_,
-      cudnn_bwd_weight_algo, bwd_weight_workspace->mut_dptr<T>(),
-      bwd_weight_workspace->shape().At(0), cudnn::DataType<T>::one,
-      weight_desc_, weight_diff_blob->mut_dptr<T>()));
-
   // compute bias diff
   if (op()->GetBoolFromSpecialConf("has_bias_term")) {
     Blob* bias_diff_blob = BnInOp2Blob("bias_diff");
+    Memset<DeviceType::kGPU>(ctx.device_ctx, bias_diff_blob->mut_dptr<T>(), 0,
+                             bias_diff_blob->ByteSizeOfDataField());
     CudaCheck(cudnnConvolutionBackwardBias(
         ctx.device_ctx->cudnn_handle(), cudnn::DataType<T>::one, out_desc_,
         out_diff_blob->dptr<T>(), cudnn::DataType<T>::one, bias_desc_,
         bias_diff_blob->mut_dptr<T>()));
   }
+
+  // compute weight diff
+  Blob* bwd_weight_workspace = BnInOp2Blob("bwd_weight_workspace");
+  cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_weight_algo =
+      (cudnnConvolutionBwdFilterAlgo_t)(conv_conf.cudnn_bwd_weight_algo());
+  Memset<DeviceType::kGPU>(ctx.device_ctx, weight_diff_blob->mut_dptr<T>(), 0,
+                           weight_diff_blob->ByteSizeOfDataField());
+  CudaCheck(cudnnConvolutionBackwardFilter(
+      ctx.device_ctx->cudnn_handle(), cudnn::DataType<T>::one, in_desc_,
+      in_blob->dptr<T>(), out_desc_, out_diff_blob->dptr<T>(), conv_desc_,
+      cudnn_bwd_weight_algo, bwd_weight_workspace->mut_dptr<T>(),
+      bwd_weight_workspace->shape().At(0), cudnn::DataType<T>::one,
+      weight_desc_, weight_diff_blob->mut_dptr<T>()));
 
   // compute in diff
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
