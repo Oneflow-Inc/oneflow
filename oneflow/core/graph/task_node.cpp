@@ -68,7 +68,7 @@ void TaskNode::ToProto(TodoTaskProto* task_proto) {
   task_proto->set_machine_id(machine_id_);
   task_proto->set_thrd_loc_id(thrd_loc_id_);
   task_proto->set_task_id(task_id_);
-  exec_gph_.ToExecSequence(task_proto->mutable_exec_sequence());
+  exec_gph_.ToExecSequence(parallel_ctx(), task_proto->mutable_exec_sequence());
   auto produced_regst_proto = task_proto->mutable_produced_regst_desc();
   for (auto& pair : produced_regsts_) {
     RegstDescProto regst_desc_proto;

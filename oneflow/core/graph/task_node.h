@@ -22,6 +22,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t task_id() const { return task_id_; }
   std::shared_ptr<RegstDesc> GetProducedRegst(const std::string& name);
   DeviceType device_type() const;
+  virtual const ParallelContext* parallel_ctx() const { return nullptr; }
 
   // Setters
   void set_machine_id(int64_t val);
