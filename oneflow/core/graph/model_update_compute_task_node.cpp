@@ -1,22 +1,18 @@
 #include "oneflow/core/graph/model_update_compute_task_node.h"
-#include "oneflow/core/graph/backward_compute_task_node.h"
 #include "oneflow/core/graph/chain_node.h"
-#include "oneflow/core/graph/forward_compute_task_node.h"
-#include "oneflow/core/graph/model_save_compute_task_node.h"
-#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
 void MdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  auto model_regst = ProduceRegst("model_tmp", 1, 1);
-  auto model_tmp_regst = ProduceRegst("model", 3, kMaxRegisterNum);
+  auto model_regst = ProduceRegst("model", 1, kMaxRegisterNum);
+  auto model_tmp_regst = ProduceRegst("model_tmp", 1, 1);
   for (TaskEdge* out_edge : out_edges()) {
-    TaskNode* src_node = out_edge->src_node();
-    if (dynamic_cast<ForwardCompTaskNode*>(src_node) != nullptr) {
+    TaskNode* dst_node = out_edge->dst_node();
+    if (dst_node->GetTaskType() == TaskType::kForward
+            || dst_node->GetTaskType() == TaskType::kBackward) {
       out_edge->AddRegst("model", model_regst);
       out_edge->AddRegst("model_tmp", model_tmp_regst);
-    } else if (dynamic_cast<BackwardCompTaskNode*>(src_node) != nullptr
-               || dynamic_cast<MdSaveCompTaskNode*>(src_node) != nullptr) {
+    } else if (dst_node->GetTaskType() == TaskType::kMdSave) {
       out_edge->AddRegst("model", model_regst);
     } else {
       UNEXPECTED_RUN();
@@ -41,6 +37,7 @@ void MdUpdtCompTaskNode::BuildExecGphAndRegst() {
     data_tmp_regst->AddLbn(lbn);
     node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
   }
+  node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), nullptr);
 }
 
 void MdUpdtCompTaskNode::ToProto(TaskProto* task_proto) {
