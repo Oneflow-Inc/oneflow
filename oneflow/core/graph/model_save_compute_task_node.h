@@ -12,6 +12,9 @@ class MdSaveCompTaskNode final : public CompTaskNode {
   ~MdSaveCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override;
+  void Build() override;
+
   TodoTaskType GetTaskType() const override { return TodoTaskType::kMdSave; }
   void FixThrdLocId() override;
 

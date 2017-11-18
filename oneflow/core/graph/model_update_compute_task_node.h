@@ -12,6 +12,8 @@ class MdUpdtCompTaskNode final : public CompTaskNode {
   ~MdUpdtCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override;
+  void Build() override;
 
   void set_random_seed(uint32_t val) { random_seed_ = val; }
   TodoTaskType GetTaskType() const override { return TodoTaskType::kMdUpdt; }
