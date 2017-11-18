@@ -61,7 +61,7 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
 
 void Operator::GenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    KernelConf* kernel_conf) const {
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   *(kernel_conf->mutable_op_conf()) = op_conf_;
   *(kernel_conf->mutable_bn_in_op2lbn()) = HashMap2PbMap(bn_in_op2lbn_);
   *(kernel_conf->mutable_data_tmp_bns()) = StdVec2PbRpf(data_tmp_bns_);
@@ -72,7 +72,7 @@ void Operator::GenKernelConf(
   *(kernel_conf->mutable_model_bns()) = StdVec2PbRpf(model_bns_);
   *(kernel_conf->mutable_model_diff_bns()) = StdVec2PbRpf(model_diff_bns_);
   *(kernel_conf->mutable_model_tmp_bns()) = StdVec2PbRpf(model_tmp_bns_);
-  VirtualGenKernelConf(GetBlobDesc4BnInOp, kernel_conf);
+  VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
 }
 
 std::string Operator::ibn2lbn(const std::string& input_bn) const {
