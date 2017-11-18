@@ -13,15 +13,4 @@ void LossRecordKernel<T>::Forward(
   LOG(INFO) << "loss: " << loss_mean;
 }
 
-Kernel* CreateLossRecordKernel() {
-  static const HashMap<int, std::function<Kernel*()>> creators = {
-#define LOSS_RECORD_KERNEL_ENTRY(type_cpp, type_proto) \
-  {type_proto, []() { return new LossRecordKernel<type_cpp>; }},
-      OF_PP_FOR_EACH_TUPLE(LOSS_RECORD_KERNEL_ENTRY, FLOATING_DATA_TYPE_SEQ)};
-  return creators.at(JobDesc::Singleton()->default_data_type())();
-}
-
-COMMAND(AddKernelCreator(OperatorConf::kLossRecordConf,
-                         CreateLossRecordKernel));
-
 }  // namespace oneflow

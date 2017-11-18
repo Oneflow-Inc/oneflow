@@ -64,6 +64,14 @@ void Operator::GenKernelConf(
     KernelConf* kernel_conf) const {
   *(kernel_conf->mutable_op_conf()) = op_conf_;
   *(kernel_conf->mutable_bn_in_op2lbn()) = HashMap2PbMap(bn_in_op2lbn_);
+  *(kernel_conf->mutable_data_tmp_bns()) = StdVec2PbRpf(data_tmp_bns_);
+  *(kernel_conf->mutable_input_bns()) = StdVec2PbRpf(input_bns_);
+  *(kernel_conf->mutable_input_diff_bns()) = StdVec2PbRpf(input_diff_bns_);
+  *(kernel_conf->mutable_output_bns()) = StdVec2PbRpf(output_bns_);
+  *(kernel_conf->mutable_output_diff_bns()) = StdVec2PbRpf(output_diff_bns_);
+  *(kernel_conf->mutable_model_bns()) = StdVec2PbRpf(model_bns_);
+  *(kernel_conf->mutable_model_diff_bns()) = StdVec2PbRpf(model_diff_bns_);
+  *(kernel_conf->mutable_model_tmp_bns()) = StdVec2PbRpf(model_tmp_bns_);
   VirtualGenKernelConf(GetBlobDesc4BnInOp, kernel_conf);
 }
 

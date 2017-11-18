@@ -1,4 +1,3 @@
-#include "oneflow/core/kernel/kernel_manager.h"
 #include "oneflow/core/kernel/softmax_kernel.h"
 #include "oneflow/core/kernel/softmax_loss_kernel.h"
 

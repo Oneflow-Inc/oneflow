@@ -3,7 +3,6 @@
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/runtime_context.h"
-#include "oneflow/core/kernel/kernel_manager.h"
 #include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
@@ -80,7 +79,6 @@ void Runtime::NewAllSingleton(const Plan& plan,
   IDMgr::NewSingleton();
   RuntimeCtx::NewSingleton(this_machine_name);
   CtrlClient::NewSingleton();
-  KernelMgr::NewSingleton(plan);
 #ifdef PLATFORM_POSIX
   EpollCommNet::Init();
 #endif
@@ -96,7 +94,6 @@ void Runtime::DeleteAllSingleton() {
   RegstMgr::DeleteSingleton();
   SnapshotMgr::DeleteSingleton();
   delete CommNet::Singleton();
-  KernelMgr::DeleteSingleton();
   CtrlClient::DeleteSingleton();
   RuntimeCtx::DeleteSingleton();
   IDMgr::DeleteSingleton();

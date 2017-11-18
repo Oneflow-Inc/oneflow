@@ -1,4 +1,3 @@
-#include "oneflow/core/kernel/kernel_manager.h"
 #include "oneflow/core/kernel/softmax_kernel.h"
 
 namespace oneflow {

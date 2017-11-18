@@ -99,7 +99,7 @@ class ConvolutionKernelUtil<DeviceType::kCPU, T> final {
 };
 
 template<DeviceType device_type, typename T>
-void ConvolutionKernel<device_type, T>::Forward(
+void ConvolutionKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
@@ -110,8 +110,7 @@ void ConvolutionKernel<device_type, T>::Forward(
   const int64_t in_im_sz = in_shape.Count(1);
   const int64_t out_im_sz = out_blob->shape().Count(1);
   const int64_t col_im_sz = col_buf_blob->shape().Count(1);
-  auto conv_conf = op()->op_conf().convolution_conf();
-  CopyDataIdFromSoleIbToAllObIfNeed<device_type>(ctx, BnInOp2Blob);
+  const auto& conv_conf = this->op_conf().convolution_conf();
   for (size_t i = 0; i < in_shape.At(0); ++i) {
     ConvolutionKernelUtil<device_type, T>::Im2Col(
         ctx, in_blob->dptr<T>() + i * in_im_sz, in_shape.At(1), in_shape.At(2),
@@ -128,7 +127,7 @@ void ConvolutionKernel<device_type, T>::Forward(
         weight_blob->shape().At(1), static_cast<T>(0.0),
         out_blob->mut_dptr<T>() + i * out_im_sz, col_buf_blob->shape().At(1));
 
-    if (op()->GetBoolFromSpecialConf("has_bias_term")) {
+    if (this->op_conf().convolution_conf().has_bias_term()) {
       const Blob* bias_blob = BnInOp2Blob("bias");
       const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
 
@@ -221,7 +220,7 @@ void ConvolutionKernel<device_type, T>::ComputeInputDiff(
   }
 
   const Shape& in_diff_shape = in_diff_blob->shape();
-  const ConvolutionOpConf& conv_conf = op()->op_conf().convolution_conf();
+  const ConvolutionOpConf& conv_conf = this->op_conf().convolution_conf();
   for (size_t i = 0; i < data_num; ++i) {
     ConvolutionKernelUtil<device_type, T>::Col2Im(
         ctx, col_buf_blob->dptr<T>() + i * col_buf_blob->shape().Count(1),
@@ -234,11 +233,11 @@ void ConvolutionKernel<device_type, T>::ComputeInputDiff(
 }
 
 template<DeviceType device_type, typename T>
-void ConvolutionKernel<device_type, T>::Backward(
+void ConvolutionKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   ComputeWeightDiff(ctx, BnInOp2Blob);
-  if (op()->GetBoolFromSpecialConf("has_bias_term")) {
+  if (this->op_conf().convolution_conf().has_bias_term()) {
     ComputeBiasDiff(ctx, BnInOp2Blob);
   }
   ComputeInputDiff(ctx, BnInOp2Blob);
@@ -250,13 +249,13 @@ void ConvolutionKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   KernelUtil<device_type, T>::FillWithProperConf(
       ctx.device_ctx,
-      OF_PB_POINTER_GET(op()->op_conf().convolution_conf(), weight_fill),
+      OF_PB_POINTER_GET(this->op_conf().convolution_conf(), weight_fill),
       random_seed_gen(), BnInOp2Blob("weight"));
 
-  if (op()->GetBoolFromSpecialConf("has_bias_term")) {
+  if (this->op_conf().convolution_conf().has_bias_term()) {
     KernelUtil<device_type, T>::FillWithProperConf(
         ctx.device_ctx,
-        OF_PB_POINTER_GET(op()->op_conf().convolution_conf(), bias_fill),
+        OF_PB_POINTER_GET(this->op_conf().convolution_conf(), bias_fill),
         random_seed_gen(), BnInOp2Blob("bias"));
   }
 }
@@ -267,11 +266,11 @@ void ConvolutionKernel<device_type, T>::InitModelBlobsWithDir(
     const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* weight_blob = BnInOp2Blob("weight");
-  int32_t dim_num = op()->GetInt32FromSpecialConf("out_num");
+  int32_t dim_num = this->op_conf().convolution_conf().out_num();
   KernelUtil<device_type, T>::FillWithModelDir(
       ctx.device_ctx, part_id, part_num, model_load_dir, weight_blob, "weight",
       dim_num, weight_blob->shape().Count(1));
-  if (op()->GetBoolFromSpecialConf("has_bias_term")) {
+  if (this->op_conf().convolution_conf().has_bias_term()) {
     KernelUtil<device_type, T>::FillWithModelDir(
         ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias"),
         "bias", dim_num, 1);
@@ -282,32 +281,12 @@ template<DeviceType device_type, typename T>
 void ConvolutionKernel<device_type, T>::InitModelTmpBlobs(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (op()->GetBoolFromSpecialConf("has_bias_term")) {
+  if (this->op_conf().convolution_conf().has_bias_term()) {
     FillConf bias_multiplier_fill_conf;
     bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.0f);
     KernelUtil<device_type, T>::Fill(ctx.device_ctx, bias_multiplier_fill_conf,
                                      0, BnInOp2Blob("bias_multiplier"));
   }
 }
-
-namespace {
-
-Kernel* CreateConvolutionKenrel(const OpContext& op_ctx) {
-  static const HashMap<std::string, std::function<Kernel*()>> creators = {
-#define CONVOLUTION_KERNEL_ENTRY(device_type, data_type_pair)          \
-  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {  \
-     return new ConvolutionKernel<device_type,                         \
-                                  OF_PP_PAIR_FIRST(data_type_pair)>(); \
-   }},
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-          CONVOLUTION_KERNEL_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};
-  return creators.at(
-      GetHashKey(op_ctx.device_type(), op_ctx.bn_in_op2data_type().at("in")))();
-}
-
-}  // namespace
-
-COMMAND(AddKernelCreator(OperatorConf::kConvolutionConf,
-                         CreateConvolutionKenrel))
 
 }  // namespace oneflow
