@@ -5,17 +5,7 @@ namespace oneflow {
 
 void BoxingOp::InitFromOpConf() {
   CHECK(op_conf().has_boxing_conf());
-  auto boxing_conf = op_conf().boxing_conf();
-
-  for (int64_t i = 0; i != boxing_conf.in_num(); ++i) {
-    EnrollInputBn("in_" + std::to_string(i));
-  }
-  if (boxing_conf.has_concat_box() || boxing_conf.has_clone_box()) {
-    EnrollDataTmpBn("middle");
-  }
-  for (int64_t i = 0; i != boxing_conf.out_num(); ++i) {
-    EnrollOutputBn("out_" + std::to_string(i));
-  }
+  TODO();
 }
 
 const PbMessage& BoxingOp::GetSpecialConf() const {
