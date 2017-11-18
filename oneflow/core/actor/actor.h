@@ -6,8 +6,8 @@
 #include "oneflow/core/device/cuda_device_context.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
 #include "oneflow/core/job/task.pb.h"
+#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/kernel/kernel_manager.h"
 #include "oneflow/core/persistence/snapshot_manager.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/thread/thread_context.h"
@@ -106,7 +106,8 @@ class Actor {
 
  private:
   int64_t actor_id_;
-  KernelLaunchFunc launch_func_;
+  void (Kernel::*launch_func_)(const KernelCtx&,
+                               std::function<Blob*(const std::string&)>) const;
   std::vector<ExecKernel> exec_kernel_vec_;
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>>
       produced_regsts_;  // <regst_desc_id, regst>

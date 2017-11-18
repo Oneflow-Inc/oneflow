@@ -39,10 +39,10 @@ void RecordKernel::Forward(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   int64_t parallel_id = reinterpret_cast<int64_t>(kernel_ctx.other);
-  const std::string& root_path = op()->op_conf().record_conf().record_path();
+  const std::string& root_path = op_conf().record_conf().record_path();
   OF_CALL_ONCE(root_path, GlobalFS()->MakeEmptyDir(root_path));
-  for (const std::string& ibn : op()->input_bns()) {
-    const std::string& lbn = op()->Lbn4BnInOp(ibn);
+  for (const std::string& ibn : kernel_conf().input_bns()) {
+    const std::string& lbn = Lbn4BnInOp(ibn);
     const Blob* blob = BnInOp2Blob(ibn);
     kernel_ctx.device_ctx->cpu_stream()->SendWork(
         [lbn, blob, parallel_id, root_path]() {
@@ -62,8 +62,5 @@ void RecordKernel::Forward(
         });
   }
 }
-
-COMMAND(AddKernelCreator(OperatorConf::kRecordConf,
-                         []() { return new RecordKernel; }));
 
 }  // namespace oneflow

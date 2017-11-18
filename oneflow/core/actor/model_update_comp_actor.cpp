@@ -39,7 +39,6 @@ int MdUpdtCompActor::HandlerBeforeInitializeModel(const ActorMsg& actor_msg) {
   HashSet<const Kernel*> kernels;
   auto CollectKernelsFromLbn = [&kernels](const std::string& lbn) {
     std::string op_name = GetOpNameFromLbn(lbn);
-    kernels.insert(KernelMgr::Singleton()->GetKernelFromOpName(op_name));
   };
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   kernel_ctx.other = reinterpret_cast<void*>(random_seed_);
@@ -49,13 +48,13 @@ int MdUpdtCompActor::HandlerBeforeInitializeModel(const ActorMsg& actor_msg) {
     model_regst->set_model_version_id(next_model_version_id_++);
     model_regst->ForEachLbn(CollectKernelsFromLbn);
     for (const Kernel* kernel : kernels) {
-      kernel->InitModelBlobs(
-          kernel_ctx, parallel_policy(), parallel_id(), parallel_num(),
-          SnapshotMgr::Singleton()->GetReadableSnapshot(),
-          [&](const std::string& bn_in_op) {
-            const std::string& lbn = kernel->Lbn4BnInOp(bn_in_op);
-            return model_regst->GetBlobPtrFromLbn(lbn);
-          });
+      kernel->InitModelBlobs(kernel_ctx, ParallelContext(),
+                             SnapshotMgr::Singleton()->GetReadableSnapshot(),
+                             [&](const std::string& bn_in_op) {
+                               const std::string& lbn =
+                                   kernel->Lbn4BnInOp(bn_in_op);
+                               return model_regst->GetBlobPtrFromLbn(lbn);
+                             });
     }
     if (JobDesc::Singleton()->is_train()) { AsyncCopyModelFromCurToNext(); }
   }

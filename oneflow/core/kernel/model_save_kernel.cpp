@@ -27,8 +27,8 @@ void ModelSaveKernel<T>::Forward(
   } else {
     UNEXPECTED_RUN();
   }
-  for (const std::string& ibn : op()->input_bns()) {
-    const std::string& lbn = op()->Lbn4BnInOp(ibn);
+  for (const std::string& ibn : kernel_conf().input_bns()) {
+    const std::string& lbn = Lbn4BnInOp(ibn);
     Blob* blob_ptr = BnInOp2Blob(ibn);
     kernel_ctx.device_ctx->cpu_stream()->SendWork([=]() {
       {
@@ -41,15 +41,5 @@ void ModelSaveKernel<T>::Forward(
     });
   }
 }
-
-Kernel* CreateModelSaveKernel() {
-  static const HashMap<int, std::function<Kernel*()>> creators = {
-#define MODEL_SAVE_KERNEL_ENTRY(type_cpp, type_proto) \
-  {type_proto, []() { return new ModelSaveKernel<type_cpp>; }},
-      OF_PP_FOR_EACH_TUPLE(MODEL_SAVE_KERNEL_ENTRY, FLOATING_DATA_TYPE_SEQ)};
-  return creators.at(JobDesc::Singleton()->default_data_type())();
-}
-
-COMMAND(AddKernelCreator(OperatorConf::kModelSaveConf, CreateModelSaveKernel));
 
 }  // namespace oneflow

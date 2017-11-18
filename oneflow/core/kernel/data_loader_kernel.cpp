@@ -51,7 +51,7 @@ void DataLoaderKernel<T>::Forward(
 template<typename T>
 void DataLoaderKernel<T>::InitInStream(const KernelCtx& kernel_ctx) const {
   if (in_stream_) { return; }
-  std::string data_dir = op()->GetStringFromSpecialConf("data_dir");
+  std::string data_dir = op_conf.data_loader_conf().data_dir();
   int64_t parallel_id = reinterpret_cast<int64_t>(kernel_ctx.other);
   std::string file_path = data_dir + "part-" + std::to_string(parallel_id);
   if (JobDesc::Singleton()->is_train()) {
@@ -60,20 +60,5 @@ void DataLoaderKernel<T>::InitInStream(const KernelCtx& kernel_ctx) const {
     in_stream_.reset(new NormalPersistentInStream(GlobalFS(), file_path));
   }
 }
-
-namespace {
-
-Kernel* CreateDataLoaderKernel(const OperatorConf& op_conf) {
-  static const HashMap<int, std::function<Kernel*()>> creators = {
-#define DATA_LOADER_KERNEL_ENTRY(type_cpp, type_proto) \
-  {type_proto, []() { return new DataLoaderKernel<type_cpp>; }},
-      OF_PP_FOR_EACH_TUPLE(DATA_LOADER_KERNEL_ENTRY, ARITHMETIC_DATA_TYPE_SEQ)};
-  return creators.at(op_conf.data_loader_conf().data_type())();
-}
-
-}  // namespace
-
-COMMAND(AddKernelCreator(OperatorConf::kDataLoaderConf,
-                         CreateDataLoaderKernel));
 
 }  // namespace oneflow

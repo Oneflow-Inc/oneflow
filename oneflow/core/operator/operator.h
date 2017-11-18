@@ -8,7 +8,6 @@
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/kernel/kernel.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/operator/operator.pb.h"
 #include "oneflow/core/register/blob_desc.h"
 
 namespace oneflow {

@@ -9,7 +9,7 @@ void RMSPropMdUpdateKernel<device_type, T>::Forward(
   const Blob* model_diffs_blob = BnInOp2Blob("model_diffs");
   Blob* model_blob = BnInOp2Blob("model");
   Blob* mean_square_blob = BnInOp2Blob("mean_square");
-  const RMSPropModelUpdateOpConf& conf = op()->op_conf().rmsprop_mdupdt_conf();
+  const RMSPropModelUpdateOpConf& conf = op_conf().rmsprop_mdupdt_conf();
   const float batch_size = JobDesc::Singleton()->BatchSize();
   const float learning_rate = conf.learning_rate();
   const float epsilon = conf.epsilon();
@@ -51,25 +51,5 @@ class RMSPropMdUpdateKernelUtil<DeviceType::kCPU, T> final {
     });
   }
 };
-
-namespace {
-
-Kernel* CreateRMSPropMdUpdateKernel(const OpContext& op_ctx) {
-  static const HashMap<std::string, std::function<Kernel*()>> creators = {
-#define MODEL_UPDATE_KERNEL_ENTRY(device_type, data_type_pair)             \
-  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {      \
-     return new RMSPropMdUpdateKernel<device_type,                         \
-                                      OF_PP_PAIR_FIRST(data_type_pair)>(); \
-   }},
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-          MODEL_UPDATE_KERNEL_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};
-  return creators.at(GetHashKey(
-      op_ctx.device_type(), op_ctx.bn_in_op2data_type().at("model_diffs")))();
-}
-
-}  // namespace
-
-COMMAND(AddKernelCreator(OperatorConf::kRmspropMdupdtConf,
-                         CreateRMSPropMdUpdateKernel))
 
 }  // namespace oneflow

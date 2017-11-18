@@ -1,22 +1,21 @@
 #ifndef ONEFLOW_CORE_KERNEL_BOXING_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_BOXING_KERNEL_H_
 
+#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/kernel/kernel_manager.h"
 
 namespace oneflow {
 
 template<typename T>
-class BoxingKernel final : public Kernel {
+class BoxingKernel final : public KernelIf<DeviceType::kCPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BoxingKernel);
   BoxingKernel() = default;
   ~BoxingKernel() = default;
 
-  void InitFromOpProto(const OperatorProto& op_proto) override;
-
-  void Forward(const KernelCtx&,
-               std::function<Blob*(const std::string&)>) const override;
+  void ForwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
 
  private:
 };
