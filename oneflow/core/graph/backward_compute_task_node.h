@@ -14,12 +14,19 @@ class BackwardCompTaskNode final : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
-  void LockRegsts() override;
-  bool IsReadyForBuild() override;
 
   TodoTaskType GetTaskType() const override { return TodoTaskType::kBackward; }
 
  private:
+  using Lbn2NodeBnMap = HashMap<std::string, std::pair<ExecNode*, std::string>>;
+
+  void BuildExecGphFromUserOps(Lbn2NodeBnMap* lbn2producer,
+                               Lbn2NodeBnMap* extern_in_lbn2consumer);
+  void AddLbn2ProducedRegst();
+  void SetExecNodeFromOutdiffRegst();
+  void AddLbn2ActivationDiffRegst();
+  void AddLbn2InDiffRegst();
+  void AddLbn2ModelDiffRegst();
 };
 
 }  // namespace oneflow

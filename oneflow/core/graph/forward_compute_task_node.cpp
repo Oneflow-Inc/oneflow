@@ -35,14 +35,14 @@ void ForwardCompTaskNode::ConsumeAllRegsts() {
 void ForwardCompTaskNode::BuildExecGphAndRegst() {
   Lbn2NodeBnMap lbn2producer;
   Lbn2NodeBnMap extern_in_lbn2consumer;
-  FwBuildFromUserOps(&lbn2producer, &extern_in_lbn2consumer);
-  FwSetExecNodeFromInRegst(extern_in_lbn2consumer);
-  FwEnrollLbn2OutRegst(lbn2producer);
-  FwEnrollLbn2ActivationRegst();
-  FwEnrollLbn2ModelAndTmpRegsts();
+  BuildFromUserOps(&lbn2producer, &extern_in_lbn2consumer);
+  SetExecNodeFromInRegst(extern_in_lbn2consumer);
+  AddLbn2OutRegst(lbn2producer);
+  AddLbn2ActivationRegst();
+  AddLbn2ModelAndTmpRegsts();
 }
 
-void ForwardCompTaskNode::FwBuildFromUserOps(
+void ForwardCompTaskNode::BuildFromUserOps(
     Lbn2NodeBnMap* lbn2producer, Lbn2NodeBnMap* extern_in_lbn2consumer) {
   for (std::shared_ptr<const Operator> op : chain_node()->op_vec()) {
     ExecNode* cur_node = mut_exec_gph().NewNode();
@@ -69,7 +69,7 @@ void ForwardCompTaskNode::FwBuildFromUserOps(
   });
 }
 
-void ForwardCompTaskNode::FwSetExecNodeFromInRegst(
+void ForwardCompTaskNode::SetExecNodeFromInRegst(
     const Lbn2NodeBnMap& extern_in_lbn2consumer) {
   if (extern_in_lbn2consumer.empty()) { return; }
   std::shared_ptr<RegstDesc> in_regst = GetConsumedRegst("in");
@@ -80,8 +80,7 @@ void ForwardCompTaskNode::FwSetExecNodeFromInRegst(
   }
 }
 
-void ForwardCompTaskNode::FwEnrollLbn2OutRegst(
-    const Lbn2NodeBnMap& lbn2producer) {
+void ForwardCompTaskNode::AddLbn2OutRegst(const Lbn2NodeBnMap& lbn2producer) {
   auto out_regst = GetProducedRegst("out");
   out_regst->ForEachLbn([&](const std::string& lbn) {
     const std::pair<ExecNode*, std::string>& producer = lbn2producer.at(lbn);
@@ -92,7 +91,7 @@ void ForwardCompTaskNode::FwEnrollLbn2OutRegst(
   });
 }
 
-void ForwardCompTaskNode::FwEnrollLbn2ActivationRegst() {
+void ForwardCompTaskNode::AddLbn2ActivationRegst() {
   auto activation_regst = GetProducedRegst("activation");
   mut_exec_gph().ForEachEdge([&](const ExecEdge* edge) {
     activation_regst->AddLbn(edge->lbn());
@@ -101,7 +100,7 @@ void ForwardCompTaskNode::FwEnrollLbn2ActivationRegst() {
   });
 }
 
-void ForwardCompTaskNode::FwEnrollLbn2ModelAndTmpRegsts() {
+void ForwardCompTaskNode::AddLbn2ModelAndTmpRegsts() {
   auto data_tmp_regst = GetProducedRegst("data_tmp");
   auto model_regst = GetConsumedRegst("model");
   auto model_tmp_regst = GetConsumedRegst("model_tmp");
@@ -122,14 +121,6 @@ void ForwardCompTaskNode::FwEnrollLbn2ModelAndTmpRegsts() {
       node->BindBnInOpAndRegst(mbn, model_regst);
     }
   });
-}
-
-void ForwardCompTaskNode::LockRegsts() {
-  // TODO
-}
-
-bool ForwardCompTaskNode::IsReadyForBuild() {
-  return GetConsumedRegst("in")->IsLocked();
 }
 
 }  // namespace oneflow
