@@ -1,11 +1,9 @@
 #include "oneflow/core/actor/accumulate_actor.h"
-#include "oneflow/core/actor/actor_registry.h"
 
 namespace oneflow {
 
 void AccumulateActor::Init(const TaskProto& task_proto,
                            const ThreadCtx& thread_ctx, int32_t max_acc_cnt) {
-  CompActor::Init(task_proto, thread_ctx);
   if (thread_ctx.cpu_stream) {
     MemsetFunc = &Memset<DeviceType::kCPU>;
     mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
@@ -26,7 +24,7 @@ void AccumulateActor::Init(const TaskProto& task_proto,
 int AccumulateActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
-    ProcessEord();
+    ProcessOneEord();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = msg.regst();
     if (TryUpdtStateAsProducedRegst(regst) != 0) {
@@ -52,15 +50,14 @@ int AccumulateActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
 
 void AccumulateActor::Act() {
   Regst* in_regst = waiting_in_regst_.front();
-  CHECK_EQ(in_regst->piece_id(), expected_piece_id());
   KernelCtx ctx = GenDefaultKernelCtx();
-  ForEachCurWriteableRegst([&](Regst* regst) {
-    if (acc_cnt_ != max_acc_cnt_) { return; }
-    Blob* packed_blob = regst->GetBlobPtrFromLbn(kPackedBlobName);
-    MemsetFunc(ctx.device_ctx, packed_blob->mut_dptr(), 0,
-               packed_blob->TotalByteSize());
-    acc_cnt_ = 0;
-  });
+  // ForEachCurWriteableRegst([&](Regst* regst) {
+  //  if (acc_cnt_ != max_acc_cnt_) { return; }
+  //  Blob* packed_blob = regst->GetBlobPtrFromLbn(kPackedBlobName);
+  //  MemsetFunc(ctx.device_ctx, packed_blob->mut_dptr(), 0,
+  //             packed_blob->TotalByteSize());
+  //  acc_cnt_ = 0;
+  //});
   AsyncLaunchKernel(ctx, [this](uint64_t regst_desc_id) -> Regst* {
     Regst* regst = GetCurWriteableRegst(regst_desc_id);
     if (regst == nullptr) {

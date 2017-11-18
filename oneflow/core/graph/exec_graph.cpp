@@ -13,7 +13,7 @@ std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc()
 }
 
 void ExecNode::ToProto(const ParallelContext* parallel_ctx,
-                       TodoExecNodeProto* ret) const {
+                       ExecNodeProto* ret) const {
   op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), parallel_ctx,
                      ret->mutable_kernel_conf());
   for (const auto& bn_regst : bn_in_op2regst_) {
@@ -35,7 +35,7 @@ BlobDesc* ExecNode::GetBlobDesc4BnInOp(const std::string& bn_in_op) const {
 }
 
 void ExecGraph::ToExecSequence(const ParallelContext* parallel_ctx,
-                               TodoExecSequence* ret) const {
+                               ExecSequence* ret) const {
   TopoForEachNode([&](ExecNode* node) {
     node->ToProto(parallel_ctx, ret->add_exec_node());
   });

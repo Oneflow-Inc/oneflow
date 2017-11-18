@@ -1,18 +1,16 @@
 #include "oneflow/core/actor/model_update_comp_actor.h"
-#include "oneflow/core/actor/actor_registry.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/kernel/model_update_kernel.h"
 
 namespace oneflow {
 
-void MdUpdtCompActor::Init(const TaskProto& task_proto,
-                           const ThreadCtx& thread_ctx) {
-  CompActor::Init(task_proto, thread_ctx);
+void MdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto,
+                                           const ThreadCtx& thread_ctx) {
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
   data_tmp_regst_desc_id_ = RegstDescId4Name("data_tmp");
   next_model_version_id_ = 0;
-  related_save_task_id_ = task_proto.related_save_task_id();
+  // related_save_task_id_ = task_proto.related_save_task_id();
   random_seed_ = task_proto.random_seed();
   set_num_of_remaining_eord(1);
   mut_num_of_read_empty() = 1;
@@ -94,7 +92,6 @@ int MdUpdtCompActor::HandlerBeforeSendInitialModel(const ActorMsg& actor_msg) {
   CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kSendInitialModel);
   AsyncSendRegstMsgToConsumer();
   if (model_tmp_regst_desc_id_ != -1) {
-    SetReadOnlyForRegstDescId(model_tmp_regst_desc_id_);
     AsyncSendEORDMsgToConsumers(model_tmp_regst_desc_id_);
   }
   if (JobDesc::Singleton()->is_train()) {
@@ -109,7 +106,7 @@ int MdUpdtCompActor::HandlerBeforeSendInitialModel(const ActorMsg& actor_msg) {
 int MdUpdtCompActor::HandlerNormal(const ActorMsg& actor_msg) {
   if (actor_msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kEORD);
-    ProcessEord();
+    ProcessOneEord();
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = actor_msg.regst();
     if (TryUpdtStateAsProducedRegst(regst) != 0) {
@@ -175,7 +172,5 @@ void MdUpdtCompActor::Act() {
   }
   next_model_version_id_ += 1;
 }
-
-REGISTER_ACTOR(kMdUpdtCompTask, true, MdUpdtCompActor);
 
 }  // namespace oneflow

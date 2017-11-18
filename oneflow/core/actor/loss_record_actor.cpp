@@ -1,10 +1,9 @@
 #include "oneflow/core/actor/loss_record_actor.h"
-#include "oneflow/core/actor/actor_registry.h"
 
 namespace oneflow {
 
-void LossRecordActor::Init(const TaskProto& proto, const ThreadCtx& ctx) {
-  Actor::Init(proto, ctx);
+void LossRecordActor::VirtualActorInit(const TaskProto& proto,
+                                       const ThreadCtx& ctx) {
   CHECK(ctx.cpu_stream);
   mut_device_ctx().reset(new CpuDeviceCtx(ctx.cpu_stream));
   OF_SET_MSG_HANDLER(&LossRecordActor::HandlerNormal);
@@ -30,7 +29,5 @@ void LossRecordActor::Act() {
   AsyncSendRegstMsgToProducer(regst_);
   regst_ = nullptr;
 }
-
-REGISTER_ACTOR(kLossRecordCompTask, true, LossRecordActor);
 
 }  // namespace oneflow

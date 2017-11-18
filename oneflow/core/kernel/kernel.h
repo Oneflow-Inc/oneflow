@@ -38,7 +38,7 @@ class Kernel {
 
  protected:
   Kernel() = default;
-  virtual void VirtualInit() {}
+  virtual void VirtualKernelInit() {}
   const KernelConf& kernel_conf() const { return kernel_conf_; }
   const OperatorConf& op_conf() const { return kernel_conf_.op_conf(); }
 

@@ -19,37 +19,35 @@ class Actor {
   OF_DISALLOW_COPY_AND_MOVE(Actor);
   virtual ~Actor() = default;
 
-  virtual void Init(const TaskProto&, const ThreadCtx&) = 0;
+  void Init(const TaskProto&, const ThreadCtx&);
+
   // 1: success, and actor finish
   // 0: success, and actor not finish
   int ProcessMsg(const ActorMsg& msg) { return (this->*msg_handler_)(msg); }
 
   int64_t actor_id() const { return actor_id_; }
-  int64_t GetMachineId() const {
-    return IDMgr::Singleton()->MachineId4ActorId(actor_id_);
-  }
-  int64_t GetThrdLocId() const {
-    return IDMgr::Singleton()->ThrdLocId4ActorId(actor_id_);
-  }
 
  protected:
   struct ExecKernel {
-    const Kernel* kernel;
+    std::unique_ptr<const Kernel> kernel;
     HashMap<std::string, int64_t> bn_in_op2regst_desc_id;
   };
+  using KernelWardFunc = void (Kernel::*)(
+      const KernelCtx&, std::function<Blob*(const std::string&)>) const;
+  using MsgHandler = int (Actor::*)(const ActorMsg&);
 
+  // Util
   Actor() = default;
+  virtual void VirtualActorInit(const TaskProto&, const ThreadCtx&) {}
+  virtual KernelWardFunc GetKernelWardFunc() const { return &Kernel::Forward; }
   int64_t RegstDescId4Name(const std::string& name) const;
-
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
   KernelCtx GenDefaultKernelCtx() const;
-
   void set_num_of_remaining_eord(int val) { num_of_remaining_eord_ = val; }
   int64_t num_of_read_empty() const { return num_of_read_empty_; }
   int64_t& mut_num_of_read_empty() { return num_of_read_empty_; }
 
   // Msg Handler
-  using MsgHandler = int (Actor::*)(const ActorMsg&);
   MsgHandler msg_handler() { return msg_handler_; }
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
 #define OF_SET_MSG_HANDLER(val)                                   \
@@ -67,13 +65,13 @@ class Actor {
   void ActUntilFail();
   virtual void Act() = 0;
   virtual bool IsReadReady() = 0;
-  void ProcessEord();
+  virtual bool IsWriteReady();
+  void ProcessOneEord();
   void TrySwitchToZombie();
 
   // Async Do on KernelCtx
   void AsyncLaunchKernel(const KernelCtx&,
                          std::function<Regst*(int64_t)> Regst4RegstDescId);
-  void AsyncLaunchKernel(const KernelCtx&);
   void AsyncSendRegstMsgToConsumer(std::function<void(Regst*)> RegstPreProcess,
                                    std::function<bool(int64_t)> IsAllowedActor);
   void AsyncSendRegstMsgToConsumer(std::function<void(Regst*)> RegstPreProcess);
@@ -90,39 +88,20 @@ class Actor {
   Regst* GetCurWriteableRegst(int64_t regst_desc_id);
   Regst* GetCurWriteableRegst(const std::string& name);
   Regst* GetCurSoleWriteableRegst();
-  void ForEachCurWriteableRegst(std::function<void(Regst*)> func);
-  void SetReadOnlyForRegstDescId(int64_t regst_desc_id);
   int64_t total_reading_cnt() const { return total_reading_cnt_; }
-  int64_t expected_piece_id() const { return expected_piece_id_; }
-
-  // IsWriteReady
-  virtual bool IsWriteReady() const;
-  size_t CurWriteableRegstNum4DescId(int64_t regst_desc_id) const {
-    return writeable_produced_regst_.at(regst_desc_id).size();
-  }
-  Regst* GetNextWriteableRegst(int64_t regst_desc_id) {
-    return writeable_produced_regst_.at(regst_desc_id).at(1);
-  }
 
  private:
   int64_t actor_id_;
-  void (Kernel::*launch_func_)(const KernelCtx&,
-                               std::function<Blob*(const std::string&)>) const;
   std::vector<ExecKernel> exec_kernel_vec_;
-  HashMap<int64_t, std::vector<std::unique_ptr<Regst>>>
-      produced_regsts_;  // <regst_desc_id, regst>
+  HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;
   HashMap<std::string, int64_t> name2regst_desc_id_;
-
   std::unique_ptr<DeviceCtx> device_ctx_;
-
   MsgHandler msg_handler_;
 
   // Status of Produced Registers
-  int64_t expected_piece_id_;
-  HashMap<int64_t, std::deque<Regst*>>
-      writeable_produced_regst_;  // <regst_desc_id, regst>
-  int64_t writeable_produced_regst_desc_num_;
+  HashMap<int64_t, std::deque<Regst*>> writeable_produced_regst_;
   HashMap<Regst*, int64_t> produced_regst2reading_cnt_;
+  int64_t writeable_produced_regst_desc_num_;
   int64_t total_reading_cnt_;
   int64_t num_of_remaining_eord_;
   int64_t num_of_read_empty_;

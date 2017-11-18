@@ -11,7 +11,7 @@ class FwDataCompActor final : public CompActor {
   FwDataCompActor() = default;
   ~FwDataCompActor() = default;
 
-  void Init(const TaskProto&, const ThreadCtx&) override;
+  void VirtualCompActorInit(const TaskProto&, const ThreadCtx&) override;
 
  private:
   int WaitToStart(const ActorMsg&);

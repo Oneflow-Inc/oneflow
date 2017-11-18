@@ -1,12 +1,10 @@
 #include "oneflow/core/actor/boxing_actor.h"
-#include "oneflow/core/actor/actor_registry.h"
 #include "oneflow/core/register/register.h"
 
 namespace oneflow {
 
-void BoxingActor::Init(const TaskProto& task_proto,
-                       const ThreadCtx& thread_ctx) {
-  Actor::Init(task_proto, thread_ctx);
+void BoxingActor::VirtualActorInit(const TaskProto& task_proto,
+                                   const ThreadCtx& thread_ctx) {
   int num_of_consumed_regsts = task_proto.consumed_regst_desc_id().size();
   set_num_of_remaining_eord(num_of_consumed_regsts);
   mut_num_of_read_empty() = num_of_consumed_regsts;
@@ -18,7 +16,7 @@ void BoxingActor::Init(const TaskProto& task_proto,
 int BoxingActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD) << actor_id();
-    ProcessEord();
+    ProcessOneEord();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = msg.regst();
     if (TryUpdtStateAsProducedRegst(regst) != 0) {
@@ -43,7 +41,7 @@ int BoxingActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
 }
 
 void BoxingActor::Act() {
-  int64_t piece_id = expected_piece_id();
+  int64_t piece_id = 0;  // expected_piece_id();
   for (const auto& pair : read_regst_) {
     CHECK_EQ(pair.second.front()->piece_id(), piece_id);
   }
@@ -64,8 +62,5 @@ void BoxingActor::Act() {
     mut_num_of_read_empty() += pair.second.empty();
   }
 }
-
-REGISTER_ACTOR(kBoxingTask, true, BoxingActor);
-REGISTER_ACTOR(kBoxingTask, false, BoxingActor);
 
 }  // namespace oneflow

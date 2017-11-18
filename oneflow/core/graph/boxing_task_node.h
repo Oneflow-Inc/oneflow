@@ -20,7 +20,7 @@ class BoxingTaskNode : public TaskNode {
   virtual ~BoxingTaskNode() = default;
 
   void Init(int64_t machine_id);
-  TodoTaskType GetTaskType() const override { return TodoTaskType::kBoxing; }
+  TaskType GetTaskType() const override { return TaskType::kBoxing; }
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
