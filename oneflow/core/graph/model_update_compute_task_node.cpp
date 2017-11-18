@@ -1,5 +1,4 @@
 #include "oneflow/core/graph/model_update_compute_task_node.h"
-#include "oneflow/core/graph/chain_node.h"
 
 namespace oneflow {
 
@@ -9,7 +8,7 @@ void MdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
   for (TaskEdge* out_edge : out_edges()) {
     TaskNode* dst_node = out_edge->dst_node();
     if (dst_node->GetTaskType() == TaskType::kForward
-            || dst_node->GetTaskType() == TaskType::kBackward) {
+        || dst_node->GetTaskType() == TaskType::kBackward) {
       out_edge->AddRegst("model", model_regst);
       out_edge->AddRegst("model_tmp", model_tmp_regst);
     } else if (dst_node->GetTaskType() == TaskType::kMdSave) {
