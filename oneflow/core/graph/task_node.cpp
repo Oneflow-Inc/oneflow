@@ -48,7 +48,7 @@ void TaskNode::UpdateTaskId() {
 
 std::string TaskNode::VisualStr() const {
   std::stringstream ss;
-  ss << TodoTaskType_Name(GetTaskType()) << "\\n"
+  ss << TaskType_Name(GetTaskType()) << "\\n"
      << machine_id_ << ":" << thrd_loc_id_ << "\\n"
      << task_id_;
   return ss.str();
@@ -63,7 +63,7 @@ bool TaskNode::IsMeaningLess() {
   return produced_regsts_.empty() && consumed_regsts_.empty();
 }
 
-void TaskNode::ToProto(TodoTaskProto* task_proto) {
+void TaskNode::ToProto(TaskProto* task_proto) {
   task_proto->set_task_type(GetTaskType());
   task_proto->set_machine_id(machine_id_);
   task_proto->set_thrd_loc_id(thrd_loc_id_);

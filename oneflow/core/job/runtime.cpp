@@ -34,7 +34,7 @@ void Runtime::Run(const Plan& plan, const std::string& this_machine_name) {
     if (task.machine_id() != RuntimeCtx::Singleton()->this_machine_id()) {
       continue;
     }
-    if (task.type() == kMdUpdtCompTask) {
+    if (task.task_type() == kMdUpdt) {
       mdupdt_tasks.push_back(&task);
     } else if (task.consumed_regst_desc_id().empty()) {
       source_tasks.push_back(&task);
@@ -101,14 +101,14 @@ void Runtime::DeleteAllSingleton() {
 }
 void Runtime::HandoutTasks(const std::vector<const TaskProto*>& tasks) {
   for (const TaskProto* task : tasks) {
-    ThreadMgr::Singleton()->GetThrd(task->thrd_local_id())->AddTask(*task);
+    ThreadMgr::Singleton()->GetThrd(task->thrd_loc_id())->AddTask(*task);
   }
   SendCmdMsg(tasks, ActorCmd::kActivateActor);
 }
 void Runtime::SendCmdMsg(const std::vector<const TaskProto*>& tasks,
                          ActorCmd cmd) {
   for (const TaskProto* task : tasks) {
-    ActorMsg msg = ActorMsg::BuildCommandMsg(task->id(), cmd);
+    ActorMsg msg = ActorMsg::BuildCommandMsg(task->task_id(), cmd);
     ActorMsgBus::Singleton()->SendMsg(msg);
   }
 }

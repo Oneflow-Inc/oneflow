@@ -27,7 +27,7 @@ class CopyHdTaskNode final : public CopyTaskNode {
   CopyHdTaskNode() = default;
   ~CopyHdTaskNode() = default;
 
-  TodoTaskType GetTaskType() const override { return TodoTaskType::kCopyHd; }
+  TaskType GetTaskType() const override { return TaskType::kCopyHd; }
 
   void Init(const CompTaskNode*, CopyHdOpConf::Type);
 
@@ -45,9 +45,7 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
   CopyCommNetTaskNode() = default;
   ~CopyCommNetTaskNode() = default;
 
-  TodoTaskType GetTaskType() const override {
-    return TodoTaskType::kCopyCommNet;
-  }
+  TaskType GetTaskType() const override { return TaskType::kCopyCommNet; }
 
   void Init(int64_t machine_id);
 

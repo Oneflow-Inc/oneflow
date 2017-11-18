@@ -37,10 +37,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void InferMemCaseOfProducedRegst();
 
   // Others
-  virtual TodoTaskType GetTaskType() const = 0;
+  virtual TaskType GetTaskType() const = 0;
   std::string VisualStr() const override;
   virtual bool IsMeaningLess();
-  virtual void ToProto(TodoTaskProto*);
+  virtual void ToProto(TaskProto*);
 
  protected:
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name,

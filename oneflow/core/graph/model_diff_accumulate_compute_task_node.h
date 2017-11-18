@@ -10,7 +10,7 @@ class MdDiffAccCompTaskNode final : public AccCompTaskNode {
   OF_DISALLOW_COPY_AND_MOVE(MdDiffAccCompTaskNode);
   MdDiffAccCompTaskNode() = default;
   ~MdDiffAccCompTaskNode() = default;
-  TodoTaskType GetTaskType() const override { return TodoTaskType::kMdDiffAcc; }
+  TaskType GetTaskType() const override { return TaskType::kMdDiffAcc; }
 
  private:
 };

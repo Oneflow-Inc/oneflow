@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-void CompTaskNode::ToProto(TodoTaskProto* task_proto) {
+void CompTaskNode::ToProto(TaskProto* task_proto) {
   TaskNode::ToProto(task_proto);
   *(task_proto->mutable_parallel_ctx()) = parallel_ctx_;
 }

@@ -4,7 +4,7 @@ namespace oneflow {
 
 void Kernel::Init(const KernelConf& kernel_conf) {
   kernel_conf_ = kernel_conf;
-  VirtualInit();
+  VirtualKernelInit();
 }
 
 void Kernel::InitModelBlobs(
