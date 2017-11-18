@@ -52,7 +52,7 @@ void Thread::Deconstruct() {
 void Thread::ActivateActor(int64_t actor_id, const ThreadCtx& thread_ctx) {
   LOG(INFO) << "thread " << thrd_loc_id_ << " construct actor " << actor_id;
   std::unique_lock<std::mutex> lck(id2task_mtx_);
-  int64_t task_id = IDMgr::Singleton()->TaskId4ActorId(actor_id);
+  int64_t task_id = actor_id;
   auto task_it = id2task_.find(task_id);
   CHECK(id2actor_ptr_
             .emplace(actor_id, ConstructActor(task_it->second, thread_ctx))

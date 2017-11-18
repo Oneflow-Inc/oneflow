@@ -108,8 +108,7 @@ void Runtime::HandoutTasks(const std::vector<const TaskProto*>& tasks) {
 void Runtime::SendCmdMsg(const std::vector<const TaskProto*>& tasks,
                          ActorCmd cmd) {
   for (const TaskProto* task : tasks) {
-    ActorMsg msg = ActorMsg::BuildCommandMsg(
-        IDMgr::Singleton()->ActorId4TaskId(task->id()), cmd);
+    ActorMsg msg = ActorMsg::BuildCommandMsg(task->id(), cmd);
     ActorMsgBus::Singleton()->SendMsg(msg);
   }
 }
