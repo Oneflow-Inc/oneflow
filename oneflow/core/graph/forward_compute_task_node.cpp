@@ -12,7 +12,7 @@ void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
 
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
-    if (dynamic_cast<BackwardCompTaskNode*>(dst_node)) {
+    if (dst_node->GetTaskType() == TodoTaskType::kBackward) {
       edge->AddRegst("activation", activation_regst);
       edge->AddRegst("data_tmp", data_tmp_regst);
     }
@@ -23,7 +23,7 @@ void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void ForwardCompTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* edge : in_edges()) {
     TaskNode* src_node = edge->src_node();
-    if (dynamic_cast<MdUpdtCompTaskNode*>(src_node)) {
+    if (src_node->GetTaskType() == TodoTaskType::kMdUpdt) {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
     } else {
@@ -34,22 +34,31 @@ void ForwardCompTaskNode::ConsumeAllRegsts() {
 
 void ForwardCompTaskNode::BuildExecGphAndRegst() {
   Lbn2NodeBnMap lbn2producer;
+  Lbn2NodeBnMap lbn2consumer;
   Lbn2NodeBnMap extern_in_lbn2consumer;
-  BuildFromUserOps(&lbn2producer, &extern_in_lbn2consumer);
+  BuildFromUserOps(&lbn2producer, &lbn2consumer, &extern_in_lbn2consumer);
   SetExecNodeFromInRegst(extern_in_lbn2consumer);
-  AddLbn2OutRegst(lbn2producer);
+  AddLbn2OutRegst(lbn2consumer);
   AddLbn2ActivationRegst();
   AddLbn2ModelAndTmpRegsts();
+  mut_exec_gph().TopoForEachNode([this](ExecNode* node) {
+    node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), &parallel_ctx());
+  });
 }
 
 void ForwardCompTaskNode::BuildFromUserOps(
-    Lbn2NodeBnMap* lbn2producer, Lbn2NodeBnMap* extern_in_lbn2consumer) {
+    Lbn2NodeBnMap* lbn2producer, Lbn2NodeBnMap* lbn2consumer,
+    Lbn2NodeBnMap* extern_in_lbn2consumer) {
   for (std::shared_ptr<const Operator> op : chain_node()->op_vec()) {
     ExecNode* cur_node = mut_exec_gph().NewNode();
     cur_node->mut_op() = op;
     for (const std::string& obn : op->output_bns()) {
       const std::string& lbn = op->Lbn4BnInOp(obn);
       CHECK(lbn2producer->insert({lbn, {cur_node, obn}}).second);
+    }
+    for (const std::string& ibn : op->input_bns()) {
+      const std::string& lbn = op->Lbn4BnInOp(ibn);
+      CHECK(lbn2consumer->insert({lbn, {cur_node, ibn}}).second);
     }
   }
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
@@ -80,14 +89,16 @@ void ForwardCompTaskNode::SetExecNodeFromInRegst(
   }
 }
 
-void ForwardCompTaskNode::AddLbn2OutRegst(const Lbn2NodeBnMap& lbn2producer) {
+void ForwardCompTaskNode::AddLbn2OutRegst(const Lbn2NodeBnMap& lbn2consumer) {
   auto out_regst = GetProducedRegst("out");
-  out_regst->ForEachLbn([&](const std::string& lbn) {
-    const std::pair<ExecNode*, std::string>& producer = lbn2producer.at(lbn);
-    ExecNode* node = producer.first;
-    const std::string& obn = producer.second;
-    out_regst->AddLbn(lbn);
-    node->BindBnInOpAndRegst(obn, out_regst);
+  mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
+    for (const std::string& obn : cur_node->op()->output_bns()) {
+      const std::string& lbn = cur_node->op()->Lbn4BnInOp(obn);
+      if (lbn2consumer.find(lbn) == lbn2consumer.end()) {
+        out_regst->AddLbn(lbn);
+        cur_node->BindBnInOpAndRegst(obn, out_regst);
+      }
+    }
   });
 }
 

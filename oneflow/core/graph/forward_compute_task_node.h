@@ -21,9 +21,10 @@ class ForwardCompTaskNode final : public CompTaskNode {
   using Lbn2NodeBnMap = HashMap<std::string, std::pair<ExecNode*, std::string>>;
 
   void BuildFromUserOps(Lbn2NodeBnMap* lbn2producer,
+                        Lbn2NodeBnMap* lbn2consumer,
                         Lbn2NodeBnMap* extern_in_lbn2consumer);
   void SetExecNodeFromInRegst(const Lbn2NodeBnMap& extern_in_lbn2consumer);
-  void AddLbn2OutRegst(const Lbn2NodeBnMap& lbn2producer);
+  void AddLbn2OutRegst(const Lbn2NodeBnMap& lbn2consumer);
   void AddLbn2ActivationRegst();
   void AddLbn2ModelAndTmpRegsts();
 };
