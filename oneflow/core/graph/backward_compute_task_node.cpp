@@ -121,7 +121,6 @@ void BackwardCompTaskNode::BuildExecGphFromUserOps(
 void BackwardCompTaskNode::AddLbn2ActivationDiffRegst() {
   auto activation_regst = GetConsumedRegst("activation");
   auto activation_diff_regst = GetProducedRegst("activation_diff");
-  activation_diff_regst->CopyBlobDescFrom(activation_regst.get());
   mut_exec_gph().ForEachEdge([&](ExecEdge* edge) {
     edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), activation_diff_regst);
     edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(), activation_diff_regst);
@@ -139,9 +138,9 @@ void BackwardCompTaskNode::SetExecNodeFromOutdiffRegst(
   auto out_diff_regst = GetConsumedRegst("out_diff");
   for (const auto& pair : extern_in_lbn2consumer) {
     ExecNode* node = pair.second.first;
-    const std::string& ibn = pair.second.second;
-    node->BindBnInOpAndRegst(ibn, out_diff_regst);
-    node->BindBnInOpAndRegst(ibn, out_regst);
+    const std::string& obn = pair.second.second;
+    node->BindBnInOpAndRegst(obn, out_diff_regst);
+    node->BindBnInOpAndRegst(obn, out_regst);
   }
 }
 
