@@ -14,6 +14,8 @@ class ForwardCompTaskNode final : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
+  void LockRegsts() override;
+  bool IsReadyForBuild() override;
 
   TodoTaskType GetTaskType() const override { return TodoTaskType::kForward; }
 
