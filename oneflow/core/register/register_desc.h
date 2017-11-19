@@ -55,6 +55,7 @@ class RegstDesc final {
   int32_t max_register_num_;
 
   HashMap<std::string, std::unique_ptr<BlobDesc>> lbn2blob_desc_;
+  std::unique_ptr<BlobDesc> packed_blob_desc_;
   bool is_locked_;
 
   MemoryCase mem_case_;
