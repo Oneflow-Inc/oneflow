@@ -11,7 +11,7 @@ class BpDataCompActor final : public Actor {
   BpDataCompActor() = default;
   ~BpDataCompActor() = default;
 
-  void Init(const TaskProto&, const ThreadCtx&) override;
+  void VirtualActorInit(const TaskProto&, const ThreadCtx&) override;
 
  private:
   int HandlerNormal(const ActorMsg&) override;

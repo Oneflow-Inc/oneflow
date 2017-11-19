@@ -1,11 +1,9 @@
 #include "oneflow/core/actor/copy_hd_actor.h"
-#include "oneflow/core/actor/actor_registry.h"
 
 namespace oneflow {
 
-void CopyHdActor::Init(const TaskProto& task_proto,
-                       const ThreadCtx& thread_ctx) {
-  Actor::Init(task_proto, thread_ctx);
+void CopyHdActor::VirtualActorInit(const TaskProto& task_proto,
+                                   const ThreadCtx& thread_ctx) {
   CHECK(thread_ctx.copy_hd_cuda_stream);
   mut_device_ctx().reset(
       new CudaDeviceCtx(thread_ctx.copy_hd_cuda_stream, nullptr, nullptr));
@@ -17,7 +15,7 @@ void CopyHdActor::Init(const TaskProto& task_proto,
 int CopyHdActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
-    ProcessEord();
+    ProcessOneEord();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) {
       mut_num_of_read_empty() = 0;
@@ -62,8 +60,5 @@ void CopyHdActor::Act() {
   waiting_in_regst_.pop();
   mut_num_of_read_empty() = waiting_in_regst_.empty();
 }
-
-REGISTER_ACTOR(kCopyHdTask, true, CopyHdActor);
-REGISTER_ACTOR(kCopyHdTask, false, CopyHdActor);
 
 }  // namespace oneflow

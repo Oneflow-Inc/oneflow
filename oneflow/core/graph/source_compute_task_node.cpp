@@ -15,7 +15,7 @@ void SourceCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = chain_node()->SoleOp();
   node->BindBnInOpAndRegst(node->op()->SoleObn(), out_regst);
-  node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), &parallel_ctx());
+  node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), parallel_ctx());
 }
 
 void SourceCompTaskNode::FixThrdLocId() {

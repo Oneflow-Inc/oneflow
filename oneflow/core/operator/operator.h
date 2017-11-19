@@ -8,7 +8,6 @@
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/kernel/kernel.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/operator/operator.pb.h"
 #include "oneflow/core/register/blob_desc.h"
 
 namespace oneflow {
@@ -94,13 +93,13 @@ class Operator {
   virtual int32_t MaxModelSplitNum() const { return -1; }
   void GenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      KernelConf* kernel_conf) const;
+      const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const;
 
  protected:
   virtual void VirtualFixParallelDesc(ParallelDesc* pr_desc) const {}
   virtual void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      KernelConf* kernel_conf) const {}
+      const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {}
 
   virtual std::string ibn2lbn(const std::string& input_bn) const;
   virtual std::string obn2lbn(const std::string& output_bn) const;
@@ -144,6 +143,21 @@ std::string GenUnDiffBn(const std::string& diff_bn);
 std::string GetOpNameFromLbn(const std::string& lbn);
 std::string GetBnInOpFromLbn(const std::string& lbn);
 std::pair<std::string, std::string> ParseLbn(const std::string& lbn);
+
+void AddOpCreator(OperatorConf::OpTypeCase op_type_case,
+                  std::function<Operator*()> creator);
+
+std::shared_ptr<Operator> ConstructOp(const OperatorConf&);
+
+template<OperatorConf::OpTypeCase op_type_case, typename OpType>
+struct OpRegister {
+  OpRegister() {
+    AddOpCreator(op_type_case, []() { return new OpType; });
+  }
+};
+
+#define REGISTER_OP(OpTypeCase, OpType) \
+  static OpRegister<OpTypeCase, OpType> g_##OpType##_register_var;
 
 }  // namespace oneflow
 

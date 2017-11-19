@@ -1,41 +1,27 @@
 #include "oneflow/core/actor/actor.h"
-#include "oneflow/core/kernel/kernel_manager.h"
 
 namespace oneflow {
 
 void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
-  // actor_id
-  actor_id_ = task_proto.id();
-  // ward_func
-  if (task_proto.is_forward()) {
-    launch_func_ = &Kernel::Forward;
-  } else {
-    launch_func_ = &Kernel::Backward;
-  }
-  // exec_kernel_vec_
-  exec_kernel_vec_.reserve(task_proto.exec_sequence().exec_node_size());
+  actor_id_ = task_proto.task_id();
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
-    ek.kernel = KernelMgr::Singleton()->GetKernelFromOpName(node.op_name());
+    ek.kernel = ConstructKernel(node.kernel_conf());
     ek.bn_in_op2regst_desc_id = PbMap2HashMap(node.bn_in_op2regst_desc_id());
     exec_kernel_vec_.push_back(std::move(ek));
   }
-  // produced_regsts_
   for (const auto& pair : task_proto.produced_regst_desc()) {
     RegstMgr::Singleton()->NewRegsts(pair.second, [this](Regst* regst) {
       produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
     });
-  }
-  // name2regst_desc_id_
-  for (const auto& pair : task_proto.produced_regst_desc()) {
-    CHECK(name2regst_desc_id_.emplace(pair.first, pair.second.regst_desc_id())
-              .second);
+    int64_t regst_desc_id = pair.second.regst_desc_id();
+    CHECK(name2regst_desc_id_.emplace(pair.first, regst_desc_id).second);
   }
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
     CHECK(name2regst_desc_id_.emplace(pair.first, pair.second).second);
   }
+  msg_handler_ = nullptr;
   // Status of Produced Registers
-  expected_piece_id_ = 0;
   for (const auto& pair : produced_regsts_) {
     for (const auto& regst : pair.second) {
       writeable_produced_regst_[regst->regst_desc_id()].push_back(regst.get());
@@ -44,30 +30,9 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   }
   writeable_produced_regst_desc_num_ = writeable_produced_regst_.size();
   total_reading_cnt_ = 0;
-}
-
-void Actor::ProcessEord() {
-  num_of_remaining_eord_ -= 1;
-  if (!num_of_remaining_eord_) {
-    if (num_of_read_empty_) {
-      if (!total_reading_cnt_) {
-        OF_SET_MSG_HANDLER(nullptr);
-      } else {
-        OF_SET_MSG_HANDLER(&Actor::HandlerZombie);
-      }
-      AsyncSendEORDMsgForAllProducedRegstDesc();
-    } else {
-      OF_SET_MSG_HANDLER(&Actor::HandlerWaitUntilNoReadableRegst);
-    }
-  }
-}
-
-void Actor::TrySwitchToZombie() {
-  if (total_reading_cnt_ == 0) {
-    OF_SET_MSG_HANDLER(nullptr);
-  } else {
-    OF_SET_MSG_HANDLER(&Actor::HandlerZombie);
-  }
+  num_of_remaining_eord_ = -1;
+  num_of_read_empty_ = -1;
+  VirtualActorInit(task_proto, thread_ctx);
 }
 
 int64_t Actor::RegstDescId4Name(const std::string& name) const {
@@ -83,10 +48,6 @@ KernelCtx Actor::GenDefaultKernelCtx() const {
 }
 
 int Actor::HandlerZombie(const ActorMsg& msg) {
-  if (msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
-    return 0;
-  }
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
   if (total_reading_cnt_ == 0) {
     msg_handler_ = nullptr;
@@ -99,26 +60,48 @@ void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) { Act(); }
 }
 
+bool Actor::IsWriteReady() {
+  return writeable_produced_regst_desc_num_ == writeable_produced_regst_.size();
+}
+
+void Actor::ProcessOneEord() {
+  num_of_remaining_eord_ -= 1;
+  if (num_of_remaining_eord_ > 0) { return; }
+  if (num_of_read_empty_) {
+    if (!total_reading_cnt_) {
+      OF_SET_MSG_HANDLER(nullptr);
+    } else {
+      OF_SET_MSG_HANDLER(&Actor::HandlerZombie);
+    }
+    AsyncSendEORDMsgForAllProducedRegstDesc();
+  } else {
+    OF_SET_MSG_HANDLER(&Actor::HandlerWaitUntilNoReadableRegst);
+  }
+}
+
+void Actor::TrySwitchToZombie() {
+  if (total_reading_cnt_ == 0) {
+    OF_SET_MSG_HANDLER(nullptr);
+  } else {
+    OF_SET_MSG_HANDLER(&Actor::HandlerZombie);
+  }
+}
+
 void Actor::AsyncLaunchKernel(
     const KernelCtx& kernel_ctx,
     std::function<Regst*(int64_t)> Regst4RegstDescId) {
   for (const ExecKernel& ek : exec_kernel_vec_) {
-    (ek.kernel->*launch_func_)(
+    (ek.kernel.get()->*GetKernelWardFunc())(
         kernel_ctx, [&](const std::string& bn_in_op) -> Blob* {
           auto regst_desc_id_it = ek.bn_in_op2regst_desc_id.find(bn_in_op);
           if (regst_desc_id_it == ek.bn_in_op2regst_desc_id.end()) {
             return nullptr;
           }
-          auto regst = Regst4RegstDescId(regst_desc_id_it->second);
+          Regst* regst = Regst4RegstDescId(regst_desc_id_it->second);
           const std::string& lbn = ek.kernel->Lbn4BnInOp(bn_in_op);
           return regst->GetBlobPtrFromLbn(lbn);
         });
   }
-  expected_piece_id_ += 1;
-}
-
-void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx) {
-  AsyncLaunchKernel(kernel_ctx, [](int64_t) -> Regst* { return nullptr; });
 }
 
 void Actor::AsyncSendRegstMsgToConsumer(
@@ -176,17 +159,17 @@ void Actor::AsyncSendEORDMsgForAllProducedRegstDesc() {
   }
 }
 
-void Actor::AsyncDo(std::function<void()> func) {
-  device_ctx_->AddCallBack(func);
-}
-
 void Actor::AsyncSendRegstMsgToProducer(Regst* regst) {
   AsyncSendRegstMsgToProducer(regst, regst->producer_actor_id());
 }
 
 void Actor::AsyncSendRegstMsgToProducer(Regst* regst, int64_t producer) {
   ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(actor_id_, producer, regst);
-  AsyncDo([msg]() { ActorMsgBus::Singleton()->SendMsg(msg); });
+  device_ctx_->AddCallBack([msg]() { ActorMsgBus::Singleton()->SendMsg(msg); });
+}
+
+void Actor::AsyncDo(std::function<void()> func) {
+  device_ctx_->AddCallBack(func);
 }
 
 int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
@@ -216,22 +199,6 @@ Regst* Actor::GetCurWriteableRegst(const std::string& name) {
 Regst* Actor::GetCurSoleWriteableRegst() {
   CHECK_EQ(writeable_produced_regst_.size(), 1);
   return writeable_produced_regst_.begin()->second.front();
-}
-
-void Actor::ForEachCurWriteableRegst(std::function<void(Regst*)> func) {
-  for (const auto& pair : writeable_produced_regst_) {
-    func(pair.second.front());
-  }
-}
-
-bool Actor::IsWriteReady() const {
-  return writeable_produced_regst_desc_num_ == writeable_produced_regst_.size();
-}
-
-void Actor::SetReadOnlyForRegstDescId(int64_t regst_desc_id) {
-  auto it = writeable_produced_regst_.find(regst_desc_id);
-  if (!it->second.empty()) { writeable_produced_regst_desc_num_ -= 1; }
-  writeable_produced_regst_.erase(it);
 }
 
 }  // namespace oneflow

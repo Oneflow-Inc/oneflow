@@ -126,9 +126,9 @@ void ChainNode::GenSortedCompTaskNodes(CompTaskNodeHandler Handler) const {
       comp_task_node->set_machine_id(machine_id);
       comp_task_node->set_thrd_loc_id(dev_phy_id);
       comp_task_node->set_chain_node(this);
-      comp_task_node->mut_parallel_ctx().set_parallel_id(parallel_idx++);
-      comp_task_node->mut_parallel_ctx().set_parallel_num(parallel_num);
-      comp_task_node->mut_parallel_ctx().set_policy(parallel_desc_->policy());
+      comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
+      comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
+      comp_task_node->mut_parallel_ctx()->set_policy(parallel_desc_->policy());
       FixCompTaskNode(comp_task_node);
       Handler(comp_task_node);
     }

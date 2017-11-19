@@ -17,7 +17,7 @@ class ForwardCompTaskNode final : public CompTaskNode {
   void LockRegsts() override;
   bool IsReadyForBuild() override;
 
-  TodoTaskType GetTaskType() const override { return TodoTaskType::kForward; }
+  TaskType GetTaskType() const override { return TaskType::kForward; }
 
  private:
   using Lbn2NodeBnMap = HashMap<std::string, std::pair<ExecNode*, std::string>>;

@@ -15,7 +15,7 @@ class SourceCompTaskNode final : public CompTaskNode {
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
 
-  TodoTaskType GetTaskType() const override { return TodoTaskType::kSource; }
+  TaskType GetTaskType() const override { return TaskType::kSource; }
   void FixThrdLocId() override;
 
  private:

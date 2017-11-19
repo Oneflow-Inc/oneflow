@@ -6,7 +6,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename PredType, typename LabelType>
-class SoftmaxLossKernel final : public Kernel {
+class SoftmaxLossKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SoftmaxLossKernel);
   SoftmaxLossKernel() = default;

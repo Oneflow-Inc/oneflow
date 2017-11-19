@@ -61,10 +61,18 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
 
 void Operator::GenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    KernelConf* kernel_conf) const {
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   *(kernel_conf->mutable_op_conf()) = op_conf_;
   *(kernel_conf->mutable_bn_in_op2lbn()) = HashMap2PbMap(bn_in_op2lbn_);
-  VirtualGenKernelConf(GetBlobDesc4BnInOp, kernel_conf);
+  *(kernel_conf->mutable_data_tmp_bns()) = StdVec2PbRpf(data_tmp_bns_);
+  *(kernel_conf->mutable_input_bns()) = StdVec2PbRpf(input_bns_);
+  *(kernel_conf->mutable_input_diff_bns()) = StdVec2PbRpf(input_diff_bns_);
+  *(kernel_conf->mutable_output_bns()) = StdVec2PbRpf(output_bns_);
+  *(kernel_conf->mutable_output_diff_bns()) = StdVec2PbRpf(output_diff_bns_);
+  *(kernel_conf->mutable_model_bns()) = StdVec2PbRpf(model_bns_);
+  *(kernel_conf->mutable_model_diff_bns()) = StdVec2PbRpf(model_diff_bns_);
+  *(kernel_conf->mutable_model_tmp_bns()) = StdVec2PbRpf(model_tmp_bns_);
+  VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
 }
 
 std::string Operator::ibn2lbn(const std::string& input_bn) const {
@@ -136,6 +144,23 @@ std::pair<std::string, std::string> ParseLbn(const std::string& lbn) {
   size_t pos = lbn.find('/');
   CHECK_NE(pos, std::string::npos);
   return {lbn.substr(0, pos), lbn.substr(pos + 1)};
+}
+
+static HashMap<int, std::function<Operator*()>>& OpTypeCase2Creator() {
+  static HashMap<int, std::function<Operator*()>> obj;
+  return obj;
+}
+
+void AddOpCreator(OperatorConf::OpTypeCase op_type_case,
+                  std::function<Operator*()> creator) {
+  CHECK(OpTypeCase2Creator().emplace(op_type_case, creator).second);
+}
+
+std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf) {
+  Operator* rptr = OpTypeCase2Creator().at(op_conf.op_type_case())();
+  std::shared_ptr<Operator> ret(rptr);
+  ret->InitFromOpConf(op_conf);
+  return ret;
 }
 
 }  // namespace oneflow

@@ -4,7 +4,7 @@
 #include "oneflow/core/graph/exec_graph.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/task.pb.h"
-#include "oneflow/core/operator/operator_manager.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -22,6 +22,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t task_id() const { return task_id_; }
   std::shared_ptr<RegstDesc> GetProducedRegst(const std::string& name);
   DeviceType device_type() const;
+  virtual const ParallelContext* parallel_ctx() const { return nullptr; }
 
   // Setters
   void set_machine_id(int64_t val);
@@ -36,10 +37,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void InferMemCaseOfProducedRegst();
 
   // Others
-  virtual TodoTaskType GetTaskType() const = 0;
+  virtual TaskType GetTaskType() const = 0;
   std::string VisualStr() const override;
   virtual bool IsMeaningLess();
-  virtual void ToProto(TodoTaskProto*);
+  virtual void ToProto(TaskProto*);
 
  protected:
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name,

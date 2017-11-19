@@ -10,7 +10,7 @@ void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
 
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
-    if (dst_node->GetTaskType() == TodoTaskType::kBackward) {
+    if (dst_node->GetTaskType() == TaskType::kBackward) {
       edge->AddRegst("activation", activation_regst);
       edge->AddRegst("data_tmp", data_tmp_regst);
     }
@@ -21,7 +21,7 @@ void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void ForwardCompTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* edge : in_edges()) {
     TaskNode* src_node = edge->src_node();
-    if (src_node->GetTaskType() == TodoTaskType::kMdUpdt) {
+    if (src_node->GetTaskType() == TaskType::kMdUpdt) {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
     } else {
@@ -40,7 +40,7 @@ void ForwardCompTaskNode::BuildExecGphAndRegst() {
   AddLbn2ActivationRegst();
   AddLbn2ModelAndTmpRegsts();
   mut_exec_gph().TopoForEachNode([this](ExecNode* node) {
-    node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), &parallel_ctx());
+    node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), parallel_ctx());
   });
 }
 

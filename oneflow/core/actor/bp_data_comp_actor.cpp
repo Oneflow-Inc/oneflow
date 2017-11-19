@@ -1,11 +1,9 @@
 #include "oneflow/core/actor/bp_data_comp_actor.h"
-#include "oneflow/core/actor/actor_registry.h"
 
 namespace oneflow {
 
-void BpDataCompActor::Init(const TaskProto& task_proto,
-                           const ThreadCtx& thread_ctx) {
-  Actor::Init(task_proto, thread_ctx);
+void BpDataCompActor::VirtualActorInit(const TaskProto& task_proto,
+                                       const ThreadCtx& thread_ctx) {
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
   activation_regst_desc_id_ = RegstDescId4Name("activation");
@@ -59,7 +57,7 @@ void BpDataCompActor::AsyncSendMsgToModelAndModelTmpProducer() {
 int BpDataCompActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
-    ProcessEord();
+    ProcessOneEord();
     if (msg_handler() == &BpDataCompActor::HandlerZombie
         || msg_handler() == nullptr) {
       AsyncSendMsgToModelAndModelTmpProducer();
@@ -96,8 +94,7 @@ int BpDataCompActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
 }
 
 void BpDataCompActor::Act() {
-  int64_t piece_id = expected_piece_id();
-  CHECK_EQ(read_regst_.at(out_regst_desc_id_).front()->piece_id(), piece_id);
+  int64_t piece_id = read_regst_.at(out_regst_desc_id_).front()->piece_id();
   for (const auto& pair : read_regst_) {
     if (pair.first != model_regst_desc_id_
         && pair.first != model_tmp_regst_desc_id_) {
@@ -124,7 +121,5 @@ void BpDataCompActor::Act() {
     }
   }
 }
-
-REGISTER_ACTOR(kDataCompTask, false, BpDataCompActor);
 
 }  // namespace oneflow

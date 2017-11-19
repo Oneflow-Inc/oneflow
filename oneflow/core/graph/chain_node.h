@@ -3,7 +3,7 @@
 
 #include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/graph/compute_task_node.h"
-#include "oneflow/core/operator/operator_manager.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 

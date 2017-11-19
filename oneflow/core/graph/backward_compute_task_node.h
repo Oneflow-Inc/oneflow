@@ -15,7 +15,7 @@ class BackwardCompTaskNode final : public CompTaskNode {
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
 
-  TodoTaskType GetTaskType() const override { return TodoTaskType::kBackward; }
+  TaskType GetTaskType() const override { return TaskType::kBackward; }
 
  private:
   using Lbn2NodeBnMap = HashMap<std::string, std::pair<ExecNode*, std::string>>;

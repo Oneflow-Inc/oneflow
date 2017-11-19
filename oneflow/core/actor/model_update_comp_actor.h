@@ -11,7 +11,7 @@ class MdUpdtCompActor final : public CompActor {
   MdUpdtCompActor() = default;
   ~MdUpdtCompActor() = default;
 
-  void Init(const TaskProto&, const ThreadCtx&) override;
+  void VirtualCompActorInit(const TaskProto&, const ThreadCtx&) override;
 
  private:
   int HandlerBeforeInitDeviceCtx(const ActorMsg&);
@@ -20,15 +20,16 @@ class MdUpdtCompActor final : public CompActor {
   int HandlerNormal(const ActorMsg&) override;
   int HandlerWaitUntilNoReadableRegst(const ActorMsg&) override;
 
-  bool IsWriteReady() const override {
-    return Actor::IsWriteReady()
-           && CurWriteableRegstNum4DescId(model_regst_desc_id_) >= 2;
+  bool IsWriteReady() override {
+    return Actor::IsWriteReady();
+    // && CurWriteableRegstNum4DescId(model_regst_desc_id_) >= 2;
   }
   bool IsReadReady() override { return !waiting_model_diff_acc_queue_.empty(); }
   void Act() override;
   void AsyncCopyModelFromCurToNext() {
     Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
-    Regst* next_model_regst = GetNextWriteableRegst(model_regst_desc_id_);
+    Regst* next_model_regst = nullptr;
+    // Regst* next_model_regst = GetNextWriteableRegst(model_regst_desc_id_);
     MemcpyFunc(GenDefaultKernelCtx().device_ctx,
                next_model_regst->packed_blob()->mut_dptr(),
                model_regst->packed_blob()->dptr(),

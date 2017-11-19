@@ -11,7 +11,7 @@ class BoxingActor final : public Actor {
   BoxingActor() = default;
   ~BoxingActor() = default;
 
-  void Init(const TaskProto&, const ThreadCtx&) override;
+  void VirtualActorInit(const TaskProto&, const ThreadCtx&) override;
 
  private:
   int HandlerNormal(const ActorMsg&) override;

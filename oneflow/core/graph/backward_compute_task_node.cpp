@@ -14,7 +14,7 @@ void BackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
     auto in_diff_regst = ProduceRegst("in_diff", 1, kMaxRegisterNum);
     for (TaskEdge* edge : out_edges()) {
       TaskNode* dst_node = edge->dst_node();
-      if (dst_node->GetTaskType() != TodoTaskType::kMdDiffAcc) {
+      if (dst_node->GetTaskType() != TaskType::kMdDiffAcc) {
         edge->AddRegst("in_diff", in_diff_regst);
       }
     }
@@ -22,7 +22,7 @@ void BackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   auto model_diff_regst = ProduceRegst("model_diff", 1, kMaxRegisterNum);
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
-    if (dst_node->GetTaskType() == TodoTaskType::kMdDiffAcc) {
+    if (dst_node->GetTaskType() == TaskType::kMdDiffAcc) {
       edge->AddRegst("model_diff", model_diff_regst);
     }
   }
@@ -32,13 +32,13 @@ void BackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void BackwardCompTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* edge : in_edges()) {
     TaskNode* src_node = edge->src_node();
-    if (src_node->GetTaskType() == TodoTaskType::kForward) {
+    if (src_node->GetTaskType() == TaskType::kForward) {
       ConsumeRegst("activation", edge->GetRegst("activation"));
       ConsumeRegst("data_tmp", edge->GetRegst("data_tmp"));
       ConsumeRegst("out", edge->GetRegst("out"));
-    } else if (src_node->GetTaskType() == TodoTaskType::kMdUpdt) {
+    } else if (src_node->GetTaskType() == TaskType::kMdUpdt) {
       ConsumeRegst("model", edge->GetRegst("model"));
-    } else if (src_node->GetTaskType() == TodoTaskType::kBoxing) {
+    } else if (src_node->GetTaskType() == TaskType::kBoxing) {
       ConsumeRegst("out_diff", edge->GetRegst("out"));
     }
     // boxing node may be deleted
@@ -65,10 +65,10 @@ void BackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
   if (auto in_diff_regst = GetProducedRegst("in_diff")) {
     for (TaskEdge* edge : in_edges()) {
       auto src_node = edge->src_node();
-      if (src_node->GetTaskType() == TodoTaskType::kForward) {
+      if (src_node->GetTaskType() == TaskType::kForward) {
         for (TaskEdge* edge : src_node->in_edges()) {
           auto pre_src_node = edge->src_node();
-          if (pre_src_node->GetTaskType() != TodoTaskType::kMdUpdt) {
+          if (pre_src_node->GetTaskType() != TaskType::kMdUpdt) {
             auto in_regst = edge->GetRegst("out");
             in_diff_regst->CopyBlobDescFrom(in_regst.get());
             break;

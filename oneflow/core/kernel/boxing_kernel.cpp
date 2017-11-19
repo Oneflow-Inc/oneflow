@@ -5,7 +5,7 @@
 namespace oneflow {
 
 template<typename T>
-void BoxingKernel<T>::Forward(
+void BoxingKernel<T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   TODO();
