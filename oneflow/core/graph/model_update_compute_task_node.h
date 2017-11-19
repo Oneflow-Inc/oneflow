@@ -14,6 +14,7 @@ class MdUpdtCompTaskNode final : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void Build() override;
+  void IsReadyForBuild() override;
 
   void set_random_seed(uint32_t val) { random_seed_ = val; }
   TaskType GetTaskType() const override { return TaskType::kMdUpdt; }
