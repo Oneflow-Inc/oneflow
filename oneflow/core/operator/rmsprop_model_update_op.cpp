@@ -3,7 +3,7 @@
 namespace oneflow {
 
 void RMSPropModelUpdateOp::InitFromOpConf() {
-  EnrollInputBn("model_diffs", false);
+  EnrollInputBn("model_diff_acc", false);
   EnrollDataTmpBn("mean_square");
   EnrollOutputBn("model", false);
 }

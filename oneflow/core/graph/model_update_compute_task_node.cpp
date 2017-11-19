@@ -32,11 +32,11 @@ void MdUpdtCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = chain_node()->SoleOp();
   auto model_diff_acc_regst = SoleInEdge()->GetSoleRegst();
-  node->BindBnInOpAndRegst("model_diffs", model_diff_acc_regst);
+  node->BindBnInOpAndRegst("model_diff_acc", model_diff_acc_regst);
   auto model_regst = GetProducedRegst("model");
   node->BindBnInOpAndRegst(node->op()->SoleObn(), model_regst);
   auto data_tmp_regst = ProduceRegst("data_tmp", 1, 1);
-  for (const std::string dtbn : node->op()->data_tmp_bns()) {
+  for (const std::string& dtbn : node->op()->data_tmp_bns()) {
     const std::string& lbn = node->op()->Lbn4BnInOp(dtbn);
     data_tmp_regst->AddLbn(lbn);
     node->BindBnInOpAndRegst(dtbn, data_tmp_regst);

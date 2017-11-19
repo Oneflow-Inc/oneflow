@@ -5,7 +5,7 @@ namespace oneflow {
 void MomentumModelUpdateOp::InitFromOpConf() {
   CHECK(op_conf().has_momentum_mdupdt_conf());
 
-  EnrollInputBn("model_diffs", false);
+  EnrollInputBn("model_diff_acc", false);
   EnrollDataTmpBn("momentum");
   EnrollOutputBn("model", false);
 }
