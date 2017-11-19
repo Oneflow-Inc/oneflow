@@ -24,9 +24,7 @@ void MdUpdtCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("model_diff_acc", SoleInEdge()->GetSoleRegst());
 }
 
-bool MdUpdtCompTaskNode::IsReadyForBuild() {
-  return GetProducedRegst("model")->IsLocked();
-}
+bool MdUpdtCompTaskNode::IsReadyForBuild() { return true; }
 
 void MdUpdtCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
