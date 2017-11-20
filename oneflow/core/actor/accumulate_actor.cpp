@@ -38,7 +38,7 @@ int AccumulateActor::HandlerNormal(const ActorMsg& msg) {
   return msg_handler() == nullptr;
 }
 
-int AccumulateActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
+int AccumulateActor::HandlerUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
   ActUntilFail();
   if (waiting_in_regst_.empty()) {

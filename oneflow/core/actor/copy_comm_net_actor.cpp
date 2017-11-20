@@ -60,7 +60,7 @@ int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
   return msg_handler() == nullptr;
 }
 
-int CopyCommNetActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
+int CopyCommNetActor::HandlerUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
   ActUntilFail();
   if (piece_id2regst_ctx.empty()) {

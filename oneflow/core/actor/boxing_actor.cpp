@@ -29,7 +29,7 @@ int BoxingActor::HandlerNormal(const ActorMsg& msg) {
   return msg_handler() == nullptr;
 }
 
-int BoxingActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
+int BoxingActor::HandlerUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
   ActUntilFail();
   if (num_of_read_empty()) {

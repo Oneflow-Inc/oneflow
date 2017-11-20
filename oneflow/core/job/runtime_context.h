@@ -23,8 +23,10 @@ class RuntimeCtx final {
   std::string GetCtrlAddr(int64_t machine_id) const;
 
   BlockingCounter& mut_model_init_cnt() { return model_init_cnt_; }
-  BlockingCounter& mut_active_actor_cnt() { return active_actor_cnt_; }
-  BlockingCounter& mut_inactive_actor_cnt() { return inactive_actor_cnt_; }
+  BlockingCounter& mut_running_actor_cnt() { return running_actor_cnt_; }
+  BlockingCounter& mut_constructing_actor_cnt() {
+    return constructing_actor_cnt_;
+  }
 
   PersistentOutStream* GetPersistentOutStream(const std::string& filepath);
 
@@ -35,8 +37,8 @@ class RuntimeCtx final {
 
   BlockingCounter model_init_cnt_;
 
-  BlockingCounter active_actor_cnt_;
-  BlockingCounter inactive_actor_cnt_;
+  BlockingCounter running_actor_cnt_;
+  BlockingCounter constructing_actor_cnt_;
 
   HashMap<std::string, std::unique_ptr<PersistentOutStream>> filepath2ostream_;
 };

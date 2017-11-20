@@ -82,7 +82,7 @@ int BpDataCompActor::HandlerNormal(const ActorMsg& msg) {
   return msg_handler() == nullptr;
 }
 
-int BpDataCompActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
+int BpDataCompActor::HandlerUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
   ActUntilFail();
   if (num_of_read_empty()) {

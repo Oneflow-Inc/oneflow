@@ -14,15 +14,16 @@ class ForwardCompActor final : public CompActor {
   void VirtualCompActorInit(const TaskProto&, const ThreadCtx&) override;
 
  private:
-  int WaitToStart(const ActorMsg&);
+  int HandlerInitModel();
+  int HandlerInitModelTmp();
   int HandlerNormal(const ActorMsg&) override;
-  int HandlerWaitUntilNoReadableRegst(const ActorMsg&) override;
+  int HandlerUntilNoReadableRegst(const ActorMsg&) override;
 
   bool IsReadReady() override;
   void Act() override;
   void AsyncSendMsgToModelAndModelTmpProducer();
 
-  int64_t in_desc_id_;
+  int64_t in_regst_desc_id_;
   int64_t model_regst_desc_id_;
   int64_t model_tmp_regst_desc_id_;
   Regst* model_regst_;
