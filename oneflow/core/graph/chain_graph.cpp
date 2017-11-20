@@ -8,12 +8,12 @@ struct Chain {
   // nodes belong to this Chain
   std::vector<const LogicalNode*> nodes;
   // ancestors, descendants of nodes
-  std::unordered_set<const LogicalNode*> ancestors;
-  std::unordered_set<const LogicalNode*> descendants;
+  HashSet<const LogicalNode*> ancestors;
+  HashSet<const LogicalNode*> descendants;
   // ancestors_and_this = nodes + ancestors
   // descendants_and_this = nodes + descendants
-  std::unordered_set<const LogicalNode*> ancestors_and_this;
-  std::unordered_set<const LogicalNode*> descendants_and_this;
+  HashSet<const LogicalNode*> ancestors_and_this;
+  HashSet<const LogicalNode*> descendants_and_this;
 };
 
 using ChainIt = std::list<Chain>::iterator;
@@ -223,7 +223,7 @@ void ChainGraph::BuildFwStruct() {
   };
   HashMap<ChainIt, ChainNode*, decltype(HashChainIt)> chain_it2chain_node(
       11, HashChainIt);
-  HashMap<ChainNode*, std::unordered_set<ChainNode*>> chain_node2pred;
+  HashMap<ChainNode*, HashSet<ChainNode*>> chain_node2pred;
   FOR_EACH(chain_it, chain_list) {
     ChainNode* chain_node = nullptr;
     if (chain_it->nodes.size() == 1) {
