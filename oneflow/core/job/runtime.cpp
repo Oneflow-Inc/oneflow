@@ -1,5 +1,6 @@
 #include <gflags/gflags.h>
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
+#include "oneflow/core/comm_network/iocp/iocp_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/runtime_context.h"
@@ -81,6 +82,8 @@ void Runtime::NewAllSingleton(const Plan& plan,
   CtrlClient::NewSingleton();
 #ifdef PLATFORM_POSIX
   EpollCommNet::Init();
+#elif PLATFORM_WINDOWS
+  IOCPCommNet::Init();
 #endif
   SnapshotMgr::NewSingleton(plan);
   RegstMgr::NewSingleton();

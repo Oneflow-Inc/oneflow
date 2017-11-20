@@ -110,6 +110,9 @@ foreach(cc ${of_main_cc})
   list(APPEND main_targets ${main_name})
 endforeach()
 
+if(WIN32)
+
+else()
 # build oneflow.run
 #add_custom_target(copy_raw_oneflow_run
 #  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_SOURCE_DIR}/scripts/oneflow.run ${PROJECT_BINARY_DIR})
@@ -117,6 +120,7 @@ endforeach()
 #add_custom_target(oneflow_run ALL
 #  COMMAND tar zcf - compiler runtime scheduler -C ${PROJECT_BINARY_DIR} >> ${PROJECT_BINARY_DIR}/oneflow.run
 #  DEPENDS ${main_targets} copy_raw_oneflow_run)
+endif()
 
 # build test
 if(BUILD_TESTING)
