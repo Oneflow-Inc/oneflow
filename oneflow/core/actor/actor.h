@@ -41,6 +41,7 @@ class Actor {
   virtual void VirtualActorInit(const TaskProto&, const ThreadCtx&) {}
   virtual KernelWardFunc GetKernelWardFunc() const { return &Kernel::Forward; }
   int64_t RegstDescId4Name(const std::string& name) const;
+  virtual void InitDeviceCtx();
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
   KernelCtx GenDefaultKernelCtx() const;
   void set_num_of_remaining_eord(int val) { num_of_remaining_eord_ = val; }
@@ -69,7 +70,7 @@ class Actor {
   void ProcessOneEord();
   void TrySwitchToZombie();
 
-  // Async Do on KernelCtx
+  // Async Do on device_ctx_
   void AsyncLaunchKernel(const KernelCtx&,
                          std::function<Regst*(int64_t)> Regst4RegstDescId);
   void AsyncSendRegstMsgToConsumer(std::function<void(Regst*)> RegstPreProcess,
@@ -95,8 +96,9 @@ class Actor {
   std::vector<ExecKernel> exec_kernel_vec_;
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;
   HashMap<std::string, int64_t> name2regst_desc_id_;
-  std::unique_ptr<DeviceCtx> device_ctx_;
   MsgHandler msg_handler_;
+  std::unique_ptr<DeviceCtx> device_ctx_;
+  CudaStreamHandle cuda_handle_;
 
   // Status of Produced Registers
   HashMap<int64_t, std::deque<Regst*>> writeable_produced_regst_;
@@ -107,7 +109,18 @@ class Actor {
   int64_t num_of_read_empty_;
 };
 
+void AddActorCreator(TaskType task_type, std::function<Actor*()> creator);
 std::unique_ptr<Actor> ConstructActor(const TaskProto&, const ThreadCtx&);
+
+template<TaskType task_type, typename T>
+struct ActorRegistry {
+  ActorRegistry() {
+    AddActorCreator(task_type, []() { return new T; });
+  }
+};
+
+#define REGISTER_ACTOR(TaskType, ActorType) \
+  static ActorRegistry<TaskType, ActorType> g_actor_##ActorType##registry_var;
 
 }  // namespace oneflow
 

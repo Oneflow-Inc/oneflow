@@ -45,6 +45,7 @@ class ActorMsg final {
   const void* comm_net_token() const;
 
   // Serialize
+  std::string DebugString() const { TODO(); }
   template<typename StreamT>
   void Serialize(StreamT& out_stream) const {
     out_stream.Write(this, sizeof(ActorMsg));

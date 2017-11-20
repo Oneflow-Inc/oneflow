@@ -83,6 +83,41 @@ std::vector<std::string> FindLbnsBetweenBw(const ChainNode* in_chain,
                                   out_chain, &Operator::output_diff_bns);
 }
 
+bool IsDataParallelOneToOneSuited(const ChainNode* src_node,
+                                  const ChainNode* dst_node) {
+  std::shared_ptr<const ParallelDesc> src_prdesc = src_node->parallel_desc();
+  std::shared_ptr<const ParallelDesc> dst_prdesc = dst_node->parallel_desc();
+  if (src_prdesc->policy() != kDataParallel) { return false; }
+  if (dst_prdesc->policy() != kDataParallel) { return false; }
+  if (src_prdesc->parallel_num() != dst_node->parallel_desc()->parallel_num()) {
+    return false;
+  }
+  for (const ChainEdge* out_edge : src_node->out_edges()) {
+    const ChainNode* out_edge_dst = out_edge->dst_node();
+    if (out_edge_dst == dst_node) { continue; }
+    if (strcmp(out_edge_dst->TypeName(), dst_node->TypeName()) == 0) {
+      return false;
+    }
+  }
+  for (const ChainEdge* in_edge : dst_node->in_edges()) {
+    const ChainNode* in_edge_src = in_edge->src_node();
+    if (in_edge_src == src_node) { continue; }
+    if (strcmp(in_edge_src->TypeName(), src_node->TypeName()) == 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+BldSubTskGphMthd ChooseBoxingOrDataParallelOneToOne(
+    const ChainNode* in_chain, const ChainNode* out_chain) {
+  if (IsDataParallelOneToOneSuited(in_chain, out_chain)) {
+    return &TaskGraph::BldSubTskGphByOneToOne;
+  } else {
+    return &TaskGraph::BldSubTskGphByBoxing;
+  }
+}
+
 }  // namespace
 
 std::shared_ptr<const Operator> ChainNode::SoleOp() const {
@@ -171,12 +206,12 @@ OF_PP_FOR_EACH_TUPLE(DEFINE_VIRTUAL_METHOD, CHAIN_TYPE_SEQ)
 
 // ForwardChainNode
 BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromForward(
-    const ChainNode*) const {
-  return &TaskGraph::BldSubTskGphByBoxing;
+    const ChainNode* node) const {
+  return ChooseBoxingOrDataParallelOneToOne(node, this);
 }
 BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromSource(
-    const ChainNode*) const {
-  return &TaskGraph::BldSubTskGphByBoxing;
+    const ChainNode* node) const {
+  return ChooseBoxingOrDataParallelOneToOne(node, this);
 }
 BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromMdUpdt(
     const ChainNode*) const {
@@ -205,12 +240,12 @@ BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromForward(
   return &TaskGraph::BldSubTskGphByOneToOne;
 }
 BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromBackward(
-    const ChainNode*) const {
-  return &TaskGraph::BldSubTskGphByBoxing;
+    const ChainNode* node) const {
+  return ChooseBoxingOrDataParallelOneToOne(node, this);
 }
 BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromLoss(
-    const ChainNode*) const {
-  return &TaskGraph::BldSubTskGphByBoxing;
+    const ChainNode* node) const {
+  return ChooseBoxingOrDataParallelOneToOne(node, this);
 }
 BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromMdUpdt(
     const ChainNode*) const {
@@ -235,12 +270,12 @@ std::vector<std::string> BackwardChainNode::FindLbnsFromLoss(
 
 // LossChainNode
 BldSubTskGphMthd LossChainNode::GetMthdForBldSubTskGphFromForward(
-    const ChainNode*) const {
-  return &TaskGraph::BldSubTskGphByBoxing;
+    const ChainNode* node) const {
+  return ChooseBoxingOrDataParallelOneToOne(node, this);
 }
 BldSubTskGphMthd LossChainNode::GetMthdForBldSubTskGphFromSource(
-    const ChainNode*) const {
-  return &TaskGraph::BldSubTskGphByBoxing;
+    const ChainNode* node) const {
+  return ChooseBoxingOrDataParallelOneToOne(node, this);
 }
 BldBoxingOpConfMthd LossChainNode::GetMthdForBldBoxingOpConfFromForward(
     const ChainNode* node) const {
