@@ -5,11 +5,11 @@
 
 namespace oneflow {
 
-class FwDataCompActor final : public CompActor {
+class ForwardCompActor final : public CompActor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(FwDataCompActor);
-  FwDataCompActor() = default;
-  ~FwDataCompActor() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ForwardCompActor);
+  ForwardCompActor() = default;
+  ~ForwardCompActor() = default;
 
   void VirtualCompActorInit(const TaskProto&, const ThreadCtx&) override;
 
@@ -22,8 +22,6 @@ class FwDataCompActor final : public CompActor {
   void Act() override;
   void AsyncSendMsgToModelAndModelTmpProducer();
 
-  CudaStreamHandle cuda_handle_;
-  int64_t expected_model_version_id_;
   int64_t in_desc_id_;
   int64_t model_regst_desc_id_;
   int64_t model_tmp_regst_desc_id_;
@@ -31,7 +29,6 @@ class FwDataCompActor final : public CompActor {
   Regst* model_tmp_regst_;
   std::queue<Regst*> in_;
   HashMap<int64_t, Regst*> readable_regst_;
-  KernelCtx kernel_ctx_;
 };
 
 }  // namespace oneflow

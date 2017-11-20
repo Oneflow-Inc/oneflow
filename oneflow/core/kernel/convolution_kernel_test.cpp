@@ -77,7 +77,7 @@ Kernel* BuildConvolutionKernel(bool has_bias_term) {
 template<DeviceType device_type, typename T>
 void TestConvolutionKernel(bool has_bias_term) {
   JobConf job_conf;
-  job_conf.set_default_data_type(GetDataType<T>::val);
+  job_conf.set_DefaultDataType(GetDataType<T>::val);
   JobDesc::Singleton()->InitFromJobConf(job_conf);
   KernelCtx ctx;
   BuildKernelCtx<device_type>(&ctx);

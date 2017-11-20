@@ -5,7 +5,7 @@ namespace oneflow {
 
 BlobDesc::BlobDesc()
     : shape_(),
-      data_type_(JobDesc::Singleton()->default_data_type()),
+      data_type_(JobDesc::Singleton()->DefaultDataType()),
       has_data_id_(false) {}
 
 size_t BlobDesc::ByteSizeOfDataIdField() const {

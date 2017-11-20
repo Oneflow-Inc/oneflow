@@ -15,12 +15,12 @@ class ThreadMgr final {
 
   OF_SINGLETON(ThreadMgr);
 
-  Thread* GetThrd(int64_t thrd_loc_id);
+  Thread* GetThrd(int64_t thrd_id);
 
  private:
   ThreadMgr();
 
-  std::vector<std::unique_ptr<Thread>> threads_;
+  std::vector<Thread*> threads_;
 };
 
 }  // namespace oneflow

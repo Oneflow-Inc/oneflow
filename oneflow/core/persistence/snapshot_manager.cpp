@@ -7,8 +7,8 @@ namespace oneflow {
 SnapshotMgr::SnapshotMgr(const Plan& plan) {
   LOG(INFO) << "SnapshotMgr Init";
   num_of_model_blobs_ = 0;
-  if (JobDesc::Singleton()->is_train()) {
-    model_save_snapshots_path_ = JobDesc::Singleton()->md_save_snapshots_path();
+  if (JobDesc::Singleton()->IsTrain()) {
+    model_save_snapshots_path_ = JobDesc::Singleton()->MdSaveSnapshotsPath();
     OF_CALL_ONCE(model_save_snapshots_path_,
                  GlobalFS()->MakeEmptyDir(model_save_snapshots_path_));
     HashSet<std::string> model_blob_set;
@@ -22,7 +22,7 @@ SnapshotMgr::SnapshotMgr(const Plan& plan) {
     //}
     num_of_model_blobs_ = model_blob_set.size();
   }
-  const std::string& load_path = JobDesc::Singleton()->md_load_snapshot_path();
+  const std::string& load_path = JobDesc::Singleton()->MdLoadSnapshotPath();
   if (load_path != "") {
     readable_snapshot_ptr_.reset(new Snapshot(load_path));
   }

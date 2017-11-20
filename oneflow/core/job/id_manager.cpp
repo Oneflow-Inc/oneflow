@@ -9,28 +9,51 @@ const std::string& IDMgr::MachineName4MachineId(int64_t machine_id) const {
   return machine_id2machine_name_.at(machine_id);
 }
 
-DeviceType IDMgr::GetDeviceTypeFromThrdLocId(int64_t thrd_loc_id) const {
-  if (thrd_loc_id < device_num_per_machine_) {
+DeviceType IDMgr::GetDeviceTypeFromThrdId(int64_t thrd_id) const {
+  if (thrd_id < device_num_per_machine_) {
     return JobDesc::Singleton()->resource().device_type();
   } else {
     return DeviceType::kCPU;
   }
 }
 
-int64_t IDMgr::NewTaskId(int64_t machine_id, int64_t thrd_local_id) {
+int64_t IDMgr::NewTaskId(int64_t machine_id, int64_t thrd_id) {
   int64_t machine_id64bit = machine_id << (63 - machine_id_bit_num_);
-  int64_t device_id64bit = thrd_local_id << task_id_bit_num_;
-  int64_t thrd_id = machine_id64bit | device_id64bit;
+  int64_t device_id64bit = thrd_id << task_id_bit_num_;
+  thrd_id = machine_id64bit | device_id64bit;
   CHECK_LT(thread_id2num_of_tasks_[thrd_id],
            (static_cast<int64_t>(1) << task_id_bit_num_) - 1);
   return thrd_id | (thread_id2num_of_tasks_[thrd_id]++);
+}
+
+int64_t IDMgr::AllocatePersistenceThrdId(int64_t machine_id) {
+  int64_t& offset = persistence_thrd_offset_[machine_id];
+  int64_t ret = device_num_per_machine_ + offset;
+  offset = (offset + 1) % JobDesc::Singleton()->PersistenceWorkerNum();
+  return ret;
+}
+int64_t IDMgr::AllocateBoxingThrdId(int64_t machine_id) {
+  int64_t offset = boxing_thrd_offset_[machine_id];
+  int64_t ret = device_num_per_machine_
+                + JobDesc::Singleton()->PersistenceWorkerNum() + offset;
+  offset = (offset + 1) % JobDesc::Singleton()->BoxingWorkerNum();
+  return ret;
+}
+int64_t IDMgr::CommNetThrdId() const {
+  return device_num_per_machine_ + JobDesc::Singleton()->PersistenceWorkerNum()
+         + JobDesc::Singleton()->BoxingWorkerNum();
+}
+
+DeviceType IDMgr::GetDeviceTypeFromActorId(int64_t actor_id) const {
+  int64_t thrd_id = ThrdId4ActorId(actor_id);
+  return GetDeviceTypeFromThrdId(thrd_id);
 }
 
 int64_t IDMgr::MachineId4ActorId(int64_t actor_id) const {
   return actor_id >> (63 - machine_id_bit_num_);
 }
 
-int64_t IDMgr::ThrdLocId4ActorId(int64_t actor_id) const {
+int64_t IDMgr::ThrdId4ActorId(int64_t actor_id) const {
   int64_t tmp = (actor_id << machine_id_bit_num_);
   tmp &= ~(static_cast<int64_t>(1) << 63);
   return tmp >> (machine_id_bit_num_ + task_id_bit_num_);
@@ -49,6 +72,8 @@ IDMgr::IDMgr() {
     CHECK(machine_id2machine_name_.emplace(i, machine_name).second);
   }
   regst_desc_id_count_ = 0;
+  persistence_thrd_offset_.assign(machine_num_, 0);
+  boxing_thrd_offset_.assign(machine_num_, 0);
 }
 
 }  // namespace oneflow
