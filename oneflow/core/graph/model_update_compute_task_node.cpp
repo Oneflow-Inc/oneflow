@@ -21,12 +21,13 @@ void MdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
 }
 
 void MdUpdtCompTaskNode::ConsumeAllRegsts() {
-  if (JobDesc::Singleton()->is_predict()) return;
+  if (JobDesc::Singleton()->IsPredict()) return;
   ConsumeRegst("model_diff_acc", SoleInEdge()->GetSoleRegst());
 }
 
 bool MdUpdtCompTaskNode::IsReadyForBuild() {
-  return GetProducedRegst("model")->IsLocked();
+  return GetProducedRegst("model")->IsLocked()
+         && GetProducedRegst("model_tmp")->IsLocked();
 }
 
 void MdUpdtCompTaskNode::BuildExecGphAndRegst() {
@@ -34,12 +35,12 @@ void MdUpdtCompTaskNode::BuildExecGphAndRegst() {
   node->mut_op() = chain_node()->SoleOp();
   std::shared_ptr<RegstDesc> model_diff_acc_regst = nullptr;
   BlobDesc packed_blob_desc;
-  if (JobDesc::Singleton()->is_train()) {
+  if (JobDesc::Singleton()->IsTrain()) {
     model_diff_acc_regst = SoleInEdge()->GetSoleRegst();
     packed_blob_desc = model_diff_acc_regst->CompPackedBlobDesc();
   } else {
     packed_blob_desc =
-        BlobDesc(Shape(), JobDesc::Singleton()->default_data_type(), false);
+        BlobDesc(Shape(), JobDesc::Singleton()->DefaultDataType(), false);
   }
   node->BindBnInOpAndRegst("model_diff_acc", model_diff_acc_regst);
   auto model_regst = GetProducedRegst("model");
