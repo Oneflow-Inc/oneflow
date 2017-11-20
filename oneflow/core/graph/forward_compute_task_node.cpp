@@ -25,7 +25,7 @@ void ForwardCompTaskNode::ConsumeAllRegsts() {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
     } else {
-      ConsumeRegst("in", edge->GetRegst("out"));
+      ConsumeRegst("in", edge->GetSoleRegst());
     }
   }
 }
