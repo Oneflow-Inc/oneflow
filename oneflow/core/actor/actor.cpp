@@ -92,7 +92,7 @@ void Actor::ProcessOneEord() {
     }
     AsyncSendEORDMsgForAllProducedRegstDesc();
   } else {
-    OF_SET_MSG_HANDLER(&Actor::HandlerWaitUntilNoReadableRegst);
+    OF_SET_MSG_HANDLER(&Actor::HandlerUntilNoReadableRegst);
   }
 }
 
@@ -227,8 +227,8 @@ void AddActorCreator(TaskType task_type, std::function<Actor*()> creator) {
   CHECK(ActorCreatorMap().emplace(task_type, creator).second);
 }
 
-std::unique_ptr<Actor> ConstructActor(const TaskProto& task_proto,
-                                      const ThreadCtx& thread_ctx) {
+std::unique_ptr<Actor> NewActor(const TaskProto& task_proto,
+                                const ThreadCtx& thread_ctx) {
   Actor* rptr = ActorCreatorMap().at(task_proto.task_type())();
   rptr->Init(task_proto, thread_ctx);
   return std::unique_ptr<Actor>(rptr);

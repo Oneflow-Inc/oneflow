@@ -121,8 +121,7 @@ int MdUpdtCompActor::HandlerNormal(const ActorMsg& actor_msg) {
   return msg_handler() == nullptr;
 }
 
-int MdUpdtCompActor::HandlerWaitUntilNoReadableRegst(
-    const ActorMsg& actor_msg) {
+int MdUpdtCompActor::HandlerUntilNoReadableRegst(const ActorMsg& actor_msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(actor_msg.regst()), 0);
   ActUntilFail();
   if (waiting_model_diff_acc_queue_.empty()) {

@@ -4,21 +4,21 @@ namespace oneflow {
 
 void ForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto,
                                             const ThreadCtx& thread_ctx) {
-  in_desc_id_ = RegstDescId4Name("in");
-  CHECK_NE(in_desc_id_, -1);
+  in_regst_desc_id_ = RegstDescId4Name("in");
+  CHECK_NE(in_regst_desc_id_, -1);
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
   model_regst_ = nullptr;
   model_tmp_regst_ = nullptr;
   set_num_of_remaining_eord(1 + (model_regst_desc_id_ != -1)
                             + (model_tmp_regst_desc_id_ != -1));
-  mut_num_of_read_empty() = 1;  // only consider "in"regst
+  mut_num_of_read_empty() = 1;
   OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerNormal);
 }
 
 bool ForwardCompActor::IsReadReady() {
-  if (in_desc_id_ == -1) { return true; }
-  if (in_desc_id_ == -2) { return false; }
+  if (in_regst_desc_id_ == -1) { return true; }
+  if (in_regst_desc_id_ == -2) { return false; }
   if (in_.empty() || (model_regst_desc_id_ != -1 && !model_regst_)
       || (model_tmp_regst_desc_id_ != -1 && !model_tmp_regst_)) {
     return false;
@@ -77,10 +77,10 @@ int ForwardCompActor::HandlerNormal(const ActorMsg& msg) {
   return msg_handler() == nullptr;
 }
 
-int ForwardCompActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
+int ForwardCompActor::HandlerUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
   ActUntilFail();
-  CHECK_NE(in_desc_id_, -1);
+  CHECK_NE(in_regst_desc_id_, -1);
   if (in_.empty()) {
     AsyncSendMsgToModelAndModelTmpProducer();
     AsyncSendEORDMsgForAllProducedRegstDesc();
@@ -117,7 +117,7 @@ void ForwardCompActor::Act() {
   }
   TODO();
   // if (expected_piece_id() == JobDesc::Singleton()->total_piece_num()) {
-  //  in_desc_id_ = -2;
+  //  in_regst_desc_id_ = -2;
   //  AsyncSendMsgToModelAndModelTmpProducer();
   //  AsyncSendEORDMsgForAllProducedRegstDesc();
   //  TrySwitchToZombie();

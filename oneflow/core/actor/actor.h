@@ -59,7 +59,7 @@ class Actor {
 
   // Common Handlers
   virtual int HandlerNormal(const ActorMsg& msg) = 0;
-  virtual int HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) = 0;
+  virtual int HandlerUntilNoReadableRegst(const ActorMsg& msg) = 0;
   int HandlerZombie(const ActorMsg& msg);
 
   // Act
@@ -110,7 +110,7 @@ class Actor {
 };
 
 void AddActorCreator(TaskType task_type, std::function<Actor*()> creator);
-std::unique_ptr<Actor> ConstructActor(const TaskProto&, const ThreadCtx&);
+std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);
 
 template<TaskType task_type, typename T>
 struct ActorRegistry {
