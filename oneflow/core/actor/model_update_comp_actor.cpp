@@ -62,10 +62,11 @@ int MdUpdtCompActor::HandlerBeforeInitializeModel(const ActorMsg& actor_msg) {
   if (model_tmp_regst) {
     model_tmp_regst->ForEachLbn(CollectKernelsFromLbn);
     for (const Kernel* kernel : kernels) {
-      kernel->InitModelTmpBlobs(kernel_ctx, [&](const std::string& bn_in_op) {
-        const std::string& lbn = kernel->Lbn4BnInOp(bn_in_op);
-        return model_tmp_regst->GetBlobPtrFromLbn(lbn);
-      });
+      kernel->InitModelTmpBlobs(
+          kernel_ctx, ParallelContext(), [&](const std::string& bn_in_op) {
+            const std::string& lbn = kernel->Lbn4BnInOp(bn_in_op);
+            return model_tmp_regst->GetBlobPtrFromLbn(lbn);
+          });
     }
   }
   kernels.clear();
