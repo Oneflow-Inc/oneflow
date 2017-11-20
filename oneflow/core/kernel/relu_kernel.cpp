@@ -33,20 +33,16 @@ class ReluKernelUtil<DeviceType::kCPU, T> final {
 
   static void Forward(const KernelCtx& ctx, const int64_t n, const T* in,
                       T* out) {
-    ctx.device_ctx->cpu_stream()->SendWork([=]() {
-      for (int64_t i = 0; i < n; ++i) {
-        out[i] = std::max(in[i], static_cast<T>(0.0));
-      }
-    });
+    for (int64_t i = 0; i < n; ++i) {
+      out[i] = std::max(in[i], static_cast<T>(0.0));
+    }
   }
 
   static void Backward(const KernelCtx& ctx, const int64_t n, const T* out_diff,
                        const T* in, T* in_diff) {
-    ctx.device_ctx->cpu_stream()->SendWork([=]() {
-      for (int64_t i = 0; i < n; ++i) {
-        in_diff[i] = in[i] > 0 ? out_diff[i] : 0;
-      }
-    });
+    for (int64_t i = 0; i < n; ++i) {
+      in_diff[i] = in[i] > 0 ? out_diff[i] : 0;
+    }
   }
 };
 

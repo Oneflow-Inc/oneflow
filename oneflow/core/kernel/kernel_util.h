@@ -100,7 +100,7 @@ class KernelUtil final {
   static void FillWithProperConf(DeviceCtx* ctx, const FillConf* fill_conf,
                                  uint32_t random_seed, Blob* blob) {
     if (fill_conf == nullptr) {
-      fill_conf = JobDesc::Singleton()->default_fill_conf();
+      fill_conf = JobDesc::Singleton()->DefaultFillConf();
     }
     Fill(ctx, *fill_conf, random_seed, blob);
   }

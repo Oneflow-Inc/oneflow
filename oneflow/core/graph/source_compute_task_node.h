@@ -13,7 +13,7 @@ class SourceCompTaskNode final : public CompTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   TaskType GetTaskType() const override { return TaskType::kSource; }
-  void FixThrdLocId() override;
+  void FixThrdId() override;
 
  private:
 };

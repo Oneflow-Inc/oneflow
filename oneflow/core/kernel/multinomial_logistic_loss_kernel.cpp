@@ -40,27 +40,23 @@ class MultinomialLogisticLossKernelUtil<DeviceType::kCPU, PredType, LabelType>
                       const int64_t num_of_classes, const PredType* prediction,
                       const LabelType* labels, PredType* loss,
                       PredType* loss_buff) {
-    ctx->cpu_stream()->SendWork([=]() {
-      loss[0] = 0;
-      for (int64_t i = 0; i < instance_num; ++i) {
-        PredType prob =
-            prediction[i * num_of_classes + static_cast<int64_t>(labels[i])];
-        loss[0] -= SAFE_LOG(prob);
-      }
-    });
+    loss[0] = 0;
+    for (int64_t i = 0; i < instance_num; ++i) {
+      PredType prob =
+          prediction[i * num_of_classes + static_cast<int64_t>(labels[i])];
+      loss[0] -= SAFE_LOG(prob);
+    }
   }
 
   static void Backward(DeviceCtx* ctx, const int64_t instance_num,
                        const int64_t num_of_classes, const PredType* prediction,
                        const LabelType* labels, PredType* prediction_diff) {
-    ctx->cpu_stream()->SendWork([=]() {
-      for (int64_t i = 0; i < instance_num; ++i) {
-        int64_t label = static_cast<int64_t>(labels[i]);
-        PredType prob =
-            MAX_WITH_LOG_THRESHOLD(prediction[i * num_of_classes + label]);
-        prediction_diff[i * num_of_classes + label] = -1 / prob;
-      }
-    });
+    for (int64_t i = 0; i < instance_num; ++i) {
+      int64_t label = static_cast<int64_t>(labels[i]);
+      PredType prob =
+          MAX_WITH_LOG_THRESHOLD(prediction[i * num_of_classes + label]);
+      prediction_diff[i * num_of_classes + label] = -1 / prob;
+    }
   }
 };
 

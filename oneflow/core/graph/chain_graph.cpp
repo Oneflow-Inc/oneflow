@@ -199,13 +199,13 @@ void DataMergeChains(std::list<Chain>* chain_list,
 
 }  // namespace
 
-ChainGraph::ChainGraph(bool is_train) {
+ChainGraph::ChainGraph(bool IsTrain) {
   BuildFwStruct();
-  if (is_train) {
+  if (IsTrain) {
     BuildBwStruct();
     BuildLossRecordStruct();
   }
-  BuildModelStruct(is_train);
+  BuildModelStruct(IsTrain);
   BuildRnnStruct();
   ToDotWithAutoFilePath();
 }
@@ -346,7 +346,7 @@ std::shared_ptr<const Operator> ConstructModelUpdateOp() {
   OperatorConf mdupdt_conf;
   mdupdt_conf.set_name("model_update_" + NewUniqueId());
   const JobDesc* job_desc = JobDesc::Singleton();
-  if (job_desc->is_train()) {
+  if (job_desc->IsTrain()) {
     const TrainConf& train_conf = job_desc->job_conf().train_conf();
     if (train_conf.has_normal_mdupdt_conf()) {
       *(mdupdt_conf.mutable_normal_mdupdt_conf()) =
@@ -360,7 +360,7 @@ std::shared_ptr<const Operator> ConstructModelUpdateOp() {
     } else {
       UNEXPECTED_RUN();
     }
-  } else if (job_desc->is_predict()) {
+  } else if (job_desc->IsPredict()) {
     mdupdt_conf.mutable_normal_mdupdt_conf();
   } else {
     UNEXPECTED_RUN();
@@ -368,7 +368,7 @@ std::shared_ptr<const Operator> ConstructModelUpdateOp() {
   return ConstructOp(mdupdt_conf);
 }
 
-void ChainGraph::BuildModelStruct(bool is_train) {
+void ChainGraph::BuildModelStruct(bool IsTrain) {
   ForEachChainNode<ForwardChainNode>([&](ForwardChainNode* fw_chain) {
     if (fw_chain->HasOpWithModelOrModelTmpBlob() == false) { return; }
     // Model Update Chain
@@ -395,7 +395,7 @@ void ChainGraph::BuildModelStruct(bool is_train) {
     md_save_chain->mut_parallel_desc().reset(md_save_pr_desc);
     Connect<ChainNode>(md_updt_chain, NewEdge(), md_save_chain);
     // Model Diff Accumulate Chain
-    if (is_train == false) { return; }
+    if (IsTrain == false) { return; }
     BackwardChainNode* bw_chain = fw_chain->bw_node();
     Connect<ChainNode>(md_updt_chain, NewEdge(), bw_chain);
     OperatorConf md_diff_acc_op_conf;

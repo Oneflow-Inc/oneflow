@@ -19,7 +19,7 @@ std::shared_ptr<Operator> GetTestConvolutionOp() {
   op_conf.mutable_convolution_conf()->set_stride_w(3);
   auto convolution_op = ConstructOp(op_conf);
   JobConf job_conf;
-  job_conf.set_default_data_type(DataType::kFloat);
+  job_conf.set_DefaultDataType(DataType::kFloat);
   JobDesc::Singleton()->InitFromJobConf(job_conf);
   return convolution_op;
 }

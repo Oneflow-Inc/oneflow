@@ -5,7 +5,7 @@ namespace oneflow {
 template<typename T>
 std::shared_ptr<Operator> GetTestPoolingOp() {
   JobConf job_conf;
-  job_conf.set_default_data_type(GetDataType<T>::val);
+  job_conf.set_DefaultDataType(GetDataType<T>::val);
   JobDesc::Singleton()->InitFromJobConf(job_conf);
   OperatorConf op_conf;
   op_conf.set_name("pooling_test");

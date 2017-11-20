@@ -21,8 +21,7 @@ void PoolingOp::InferBlobDescs(
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   CHECK_EQ(in_blob_desc->shape().NumAxes(), 4);
-  CHECK_EQ(in_blob_desc->data_type(),
-           JobDesc::Singleton()->default_data_type());
+  CHECK_EQ(in_blob_desc->data_type(), JobDesc::Singleton()->DefaultDataType());
   // out
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   int64_t shape_h =

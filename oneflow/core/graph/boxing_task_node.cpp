@@ -8,7 +8,7 @@ namespace oneflow {
 
 void BoxingTaskNode::Init(int64_t machine_id) {
   set_machine_id(machine_id);
-  set_thrd_loc_id(IDMgr::Singleton()->BoxingThrdLocId());
+  set_thrd_id(IDMgr::Singleton()->AllocateBoxingThrdId(machine_id));
 }
 
 void BoxingTaskNode::ProduceAllRegstsAndBindEdges() {
