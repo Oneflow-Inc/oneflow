@@ -44,22 +44,19 @@ void RecordKernel::Forward(
   for (const std::string& ibn : kernel_conf().input_bns()) {
     const std::string& lbn = Lbn4BnInOp(ibn);
     const Blob* blob = BnInOp2Blob(ibn);
-    kernel_ctx.device_ctx->cpu_stream()->SendWork(
-        [lbn, blob, parallel_id, root_path]() {
-          std::pair<std::string, std::string> parsed_lbn = ParseLbn(lbn);
-          const std::string& op_name = parsed_lbn.first;
-          const std::string& bn_in_op = parsed_lbn.second;
-          std::string op_dir = JoinPath(root_path, op_name);
-          OF_CALL_ONCE(op_dir, GlobalFS()->CreateDir(op_dir));
-          std::string bn_in_op_dir = JoinPath(op_dir, bn_in_op);
-          OF_CALL_ONCE(bn_in_op_dir, GlobalFS()->CreateDir(bn_in_op_dir));
-          std::string file_path =
-              JoinPath(bn_in_op_dir, "part-" + std::to_string(parallel_id));
-          auto out_stream =
-              RuntimeCtx::Singleton()->GetPersistentOutStream(file_path);
-          RecordBlob(*out_stream, blob);
-          out_stream->Flush();
-        });
+    std::pair<std::string, std::string> parsed_lbn = ParseLbn(lbn);
+    const std::string& op_name = parsed_lbn.first;
+    const std::string& bn_in_op = parsed_lbn.second;
+    std::string op_dir = JoinPath(root_path, op_name);
+    OF_CALL_ONCE(op_dir, GlobalFS()->CreateDir(op_dir));
+    std::string bn_in_op_dir = JoinPath(op_dir, bn_in_op);
+    OF_CALL_ONCE(bn_in_op_dir, GlobalFS()->CreateDir(bn_in_op_dir));
+    std::string file_path =
+        JoinPath(bn_in_op_dir, "part-" + std::to_string(parallel_id));
+    auto out_stream =
+        RuntimeCtx::Singleton()->GetPersistentOutStream(file_path);
+    RecordBlob(*out_stream, blob);
+    out_stream->Flush();
   }
 }
 

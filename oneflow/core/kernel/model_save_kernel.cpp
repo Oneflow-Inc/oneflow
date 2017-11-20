@@ -30,15 +30,13 @@ void ModelSaveKernel<T>::Forward(
   for (const std::string& ibn : kernel_conf().input_bns()) {
     const std::string& lbn = Lbn4BnInOp(ibn);
     Blob* blob_ptr = BnInOp2Blob(ibn);
-    kernel_ctx.device_ctx->cpu_stream()->SendWork([=]() {
-      {
-        std::unique_ptr<PersistentOutStream> out_stream =
-            snapshot->GetOutStream(lbn, part_id);
-        out_stream->Write(blob_ptr->dptr<char>(),
-                          blob_ptr->shape().elem_cnt() * sizeof(T));
-      }
-      snapshot->OnePartDone(lbn, part_id, total_part_num);
-    });
+    {
+      std::unique_ptr<PersistentOutStream> out_stream =
+          snapshot->GetOutStream(lbn, part_id);
+      out_stream->Write(blob_ptr->dptr<char>(),
+                        blob_ptr->shape().elem_cnt() * sizeof(T));
+    }
+    snapshot->OnePartDone(lbn, part_id, total_part_num);
   }
 }
 

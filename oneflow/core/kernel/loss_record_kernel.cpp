@@ -9,7 +9,7 @@ void LossRecordKernel<T>::Forward(
   const Blob* loss_acc_blob = BnInOp2Blob("loss_acc");
   T loss_mean = loss_acc_blob->dptr<T>()[0];
   loss_mean /= JobDesc::Singleton()->ParallelPieceSize()
-               * JobDesc::Singleton()->piece_num_of_record_loss();
+               * JobDesc::Singleton()->PieceNumOfRecordLoss();
   LOG(INFO) << "loss: " << loss_mean;
 }
 
