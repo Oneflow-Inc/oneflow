@@ -34,13 +34,8 @@ void MdUpdtCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = chain_node()->SoleOp();
   std::shared_ptr<RegstDesc> model_diff_acc_regst = nullptr;
-  BlobDesc packed_blob_desc;
   if (JobDesc::Singleton()->IsTrain()) {
     model_diff_acc_regst = SoleInEdge()->GetSoleRegst();
-    packed_blob_desc = model_diff_acc_regst->CompPackedBlobDesc();
-  } else {
-    packed_blob_desc =
-        BlobDesc(Shape(), JobDesc::Singleton()->DefaultDataType(), false);
   }
   node->BindBnInOpAndRegst("model_diff_acc", model_diff_acc_regst);
   auto model_regst = GetProducedRegst("model");
@@ -51,12 +46,7 @@ void MdUpdtCompTaskNode::BuildExecGphAndRegst() {
     data_tmp_regst->AddLbn(lbn);
     node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
   }
-  node->op()->InferBlobDescs(
-      [&](const std::string& bn_in_op) -> BlobDesc* {
-        if (bn_in_op == "model_diff_acc") { return &packed_blob_desc; }
-        return node->GetBlobDesc4BnInOpFunc()(bn_in_op);
-      },
-      nullptr);
+  node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), nullptr);
 }
 
 void MdUpdtCompTaskNode::ToProto(TaskProto* task_proto) {
