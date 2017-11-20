@@ -15,6 +15,7 @@ void SourceCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = chain_node()->SoleOp();
   for (const std::string& obn : node->op()->output_bns()) {
+    out_regst->AddLbn(obn);
     node->BindBnInOpAndRegst(obn, out_regst);
   }
   node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), parallel_ctx());
