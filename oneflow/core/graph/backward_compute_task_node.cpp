@@ -66,7 +66,7 @@ void BackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
         for (TaskEdge* edge : src_node->in_edges()) {
           auto pre_src_node = edge->src_node();
           if (pre_src_node->GetTaskType() != TaskType::kMdUpdt) {
-            auto in_regst = edge->GetRegst("out");
+            auto in_regst = edge->GetSoleRegst();
             in_diff_regst->CopyBlobDescFrom(in_regst.get());
             break;
           }
@@ -136,7 +136,7 @@ void BackwardCompTaskNode::SetExecNodeFromOutdiffRegst(
   for (const auto& pair : extern_in_lbn2consumer) {
     ExecNode* node = pair.second.first;
     const std::string& obn = pair.second.second;
-    node->BindBnInOpAndRegst(obn, out_diff_regst);
+    node->BindBnInOpAndRegst(GenDiffBn(obn), out_diff_regst);
     node->BindBnInOpAndRegst(obn, out_regst);
   }
 }
