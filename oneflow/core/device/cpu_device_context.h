@@ -8,13 +8,11 @@ namespace oneflow {
 class CpuDeviceCtx final : public DeviceCtx {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(CpuDeviceCtx);
-  CpuDeviceCtx() = delete;
+  CpuDeviceCtx() = default;
   ~CpuDeviceCtx() = default;
 
-  CpuDeviceCtx(CpuStream* val) { set_cpu_stream(val); }
-
   void AddCallBack(std::function<void()> callback) const override {
-    cpu_stream()->SendWork(callback);
+    callback();
   }
 
  private:

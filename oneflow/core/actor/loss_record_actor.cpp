@@ -4,8 +4,7 @@ namespace oneflow {
 
 void LossRecordActor::VirtualActorInit(const TaskProto& proto,
                                        const ThreadCtx& ctx) {
-  CHECK(ctx.cpu_stream);
-  mut_device_ctx().reset(new CpuDeviceCtx(ctx.cpu_stream));
+  mut_device_ctx().reset(new CpuDeviceCtx);
   OF_SET_MSG_HANDLER(&LossRecordActor::HandlerNormal);
   regst_ = nullptr;
 }

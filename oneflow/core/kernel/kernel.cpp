@@ -36,7 +36,7 @@ void Kernel::InitModelBlobs(
 }
 
 void Kernel::InitModelTmpBlobs(
-    const KernelCtx& ctx,
+    const KernelCtx& ctx, const ParallelContext& parallel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   UNEXPECTED_RUN();
 }

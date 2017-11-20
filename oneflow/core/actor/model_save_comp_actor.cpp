@@ -5,8 +5,7 @@ namespace oneflow {
 void MdSaveCompActor::VirtualCompActorInit(const TaskProto& task_proto,
                                            const ThreadCtx& thread_ctx) {
   model_regst_desc_id_ = RegstDescId4Name("model");
-  CHECK(thread_ctx.cpu_stream);
-  mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
+  mut_device_ctx().reset(new CpuDeviceCtx);
   OF_SET_MSG_HANDLER(&MdSaveCompActor::HandlerNormal);
   regst_ = nullptr;
   next_snapshot_id_ = 0;

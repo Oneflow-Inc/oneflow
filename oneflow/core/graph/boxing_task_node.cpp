@@ -8,7 +8,7 @@ namespace oneflow {
 
 void BoxingTaskNode::Init(int64_t machine_id) {
   set_machine_id(machine_id);
-  set_thrd_loc_id(IDMgr::Singleton()->BoxingThrdLocId());
+  set_thrd_id(IDMgr::Singleton()->AllocateBoxingThrdId(machine_id));
 }
 
 void BoxingTaskNode::ProduceAllRegstsAndBindEdges() {
@@ -188,14 +188,21 @@ void BoxingTaskNode::BuildWithChainPair(
     for (size_t i = 0; i < node->op()->output_bns().size(); ++i) {
       auto regst = sorted_out_edges[i].edge->GetSoleRegst();
       const std::string& obn = node->op()->output_bns().at(i);
-      regst->AddLbn(lbn);
+      if (lbn == kPackedBlobName) {
+        regst->CopyBlobDescFrom(sorted_in_edges[0].edge->GetSoleRegst().get());
+      } else {
+        regst->AddLbn(lbn);
+      }
       node->BindBnInOpAndRegst(obn, regst);
     }
     for (const std::string& dtbn : node->op()->data_tmp_bns()) {
+      CHECK_STRNE(lbn.c_str(), kPackedBlobName);
       middle_regst->AddLbn(node->op()->Lbn4BnInOp(dtbn));
       node->BindBnInOpAndRegst(dtbn, middle_regst);
     }
-    node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), nullptr);
+    if (lbn != kPackedBlobName) {
+      node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), nullptr);
+    }
   }
 }
 

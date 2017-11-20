@@ -4,9 +4,9 @@ namespace oneflow {
 
 void AccumulateActor::Init(const TaskProto& task_proto,
                            const ThreadCtx& thread_ctx, int32_t max_acc_cnt) {
-  if (thread_ctx.cpu_stream) {
+  if (JobDesc::Singleton()->GetDeviceType() == DeviceType::kCPU) {
     MemsetFunc = &Memset<DeviceType::kCPU>;
-    mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
+    mut_device_ctx().reset(new CpuDeviceCtx);
   } else {
     MemsetFunc = &Memset<DeviceType::kGPU>;
     mut_device_ctx().reset(new CudaDeviceCtx(cuda_handle_.cuda_stream(),
@@ -38,7 +38,7 @@ int AccumulateActor::HandlerNormal(const ActorMsg& msg) {
   return msg_handler() == nullptr;
 }
 
-int AccumulateActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
+int AccumulateActor::HandlerUntilNoReadableRegst(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
   ActUntilFail();
   if (waiting_in_regst_.empty()) {

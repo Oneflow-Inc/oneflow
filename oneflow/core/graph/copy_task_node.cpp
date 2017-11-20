@@ -25,7 +25,7 @@ void CopyTaskNode::BuildExecGphAndRegst() {
 void CopyHdTaskNode::Init(const CompTaskNode* comp_task,
                           CopyHdOpConf::Type copy_type) {
   set_machine_id(comp_task->machine_id());
-  set_thrd_loc_id(comp_task->thrd_loc_id());
+  set_thrd_id(comp_task->thrd_id());
   copy_type_ = copy_type;
 }
 
@@ -38,7 +38,7 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
 
 void CopyCommNetTaskNode::Init(int64_t machine_id) {
   set_machine_id(machine_id);
-  set_thrd_loc_id(IDMgr::Singleton()->CommNetThrdLocId());
+  set_thrd_id(IDMgr::Singleton()->CommNetThrdId());
 }
 
 OperatorConf CopyCommNetTaskNode::NewCopyOpConf() {
