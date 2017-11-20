@@ -17,16 +17,17 @@ class IDMgr final {
   // Compile
   int64_t MachineID4MachineName(const std::string& machine_name) const;
   const std::string& MachineName4MachineId(int64_t machine_id) const;
-  DeviceType GetDeviceTypeFromThrdLocId(int64_t thrd_loc_id) const;
-  int64_t NewTaskId(int64_t machine_id, int64_t thrd_local_id);
-  int64_t PersistenceThrdLocId() const { return device_num_per_machine_; }
-  int64_t BoxingThrdLocId() const { return device_num_per_machine_ + 1; }
-  int64_t CommNetThrdLocId() const { return device_num_per_machine_ + 2; }
+  DeviceType GetDeviceTypeFromThrdId(int64_t thrd_id) const;
+  int64_t NewTaskId(int64_t machine_id, int64_t thrd_id);
+
+  int64_t AllocatePersistenceThrdId(int64_t machine_id);
+  int64_t AllocateBoxingThrdId(int64_t machine_id);
+  int64_t CommNetThrdId() const;
   int64_t NewRegstDescId() { return regst_desc_id_count_++; }
 
   // Runtime
   int64_t MachineId4ActorId(int64_t actor_id) const;
-  int64_t ThrdLocId4ActorId(int64_t actor_id) const;
+  int64_t ThrdId4ActorId(int64_t actor_id) const;
 
  private:
   IDMgr();
@@ -38,6 +39,9 @@ class IDMgr final {
 
   HashMap<std::string, int64_t> machine_name2machine_id_;
   HashMap<int64_t, std::string> machine_id2machine_name_;
+
+  std::vector<int64_t> persistence_thrd_offset_;
+  std::vector<int64_t> boxing_thrd_offset_;
 
   //  64 bit id design:
   //   sign | machine | device | task

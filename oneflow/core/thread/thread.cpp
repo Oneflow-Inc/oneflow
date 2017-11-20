@@ -2,6 +2,13 @@
 
 namespace oneflow {
 
+Thread::~Thread() {
+  actor_thread_.join();
+  CHECK(id2task_.empty());
+  msg_channel_.CloseSendEnd();
+  msg_channel_.CloseReceiveEnd();
+}
+
 void Thread::AddTask(const TaskProto& task) {
   std::unique_lock<std::mutex> lck(id2task_mtx_);
   CHECK(id2task_.emplace(task.task_id(), task).second);
@@ -24,14 +31,9 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
     }
     int64_t actor_id = msg.dst_actor_id();
     auto actor_it = id2actor_ptr_.find(actor_id);
-    if (actor_it == id2actor_ptr_.end()) {
-      CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
-      continue;
-    }
     int process_msg_ret = actor_it->second->ProcessMsg(msg);
     if (process_msg_ret == 1) {
-      LOG(INFO) << "thread " << thrd_loc_id_ << " deconstruct actor "
-                << actor_id;
+      LOG(INFO) << "thread " << thrd_id_ << " deconstruct actor " << actor_id;
       id2actor_ptr_.erase(actor_it);
       RuntimeCtx::Singleton()->mut_active_actor_cnt().MinusOne();
     } else {
@@ -40,22 +42,13 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
   }
 }
 
-void Thread::Deconstruct() {
-  actor_thread_.join();
-  CHECK(id2task_.empty());
-  msg_channel_.CloseSendEnd();
-  msg_channel_.CloseReceiveEnd();
-  CHECK(id2actor_ptr_.empty());
-}
-
 void Thread::ActivateActor(int64_t actor_id, const ThreadCtx& thread_ctx) {
-  LOG(INFO) << "thread " << thrd_loc_id_ << " construct actor " << actor_id;
+  LOG(INFO) << "thread " << thrd_id_ << " construct actor " << actor_id;
   std::unique_lock<std::mutex> lck(id2task_mtx_);
-  int64_t task_id = actor_id;
-  auto task_it = id2task_.find(task_id);
-  // CHECK(id2actor_ptr_
-  //          .emplace(actor_id, ConstructActor(task_it->second, thread_ctx))
-  //          .second);
+  auto task_it = id2task_.find(actor_id);
+  CHECK(id2actor_ptr_
+            .emplace(actor_id, ConstructActor(task_it->second, thread_ctx))
+            .second);
   id2task_.erase(task_it);
   RuntimeCtx::Singleton()->mut_inactive_actor_cnt().MinusOne();
 }

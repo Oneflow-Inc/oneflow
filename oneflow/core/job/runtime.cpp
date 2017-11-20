@@ -101,7 +101,7 @@ void Runtime::DeleteAllSingleton() {
 }
 void Runtime::HandoutTasks(const std::vector<const TaskProto*>& tasks) {
   for (const TaskProto* task : tasks) {
-    ThreadMgr::Singleton()->GetThrd(task->thrd_loc_id())->AddTask(*task);
+    ThreadMgr::Singleton()->GetThrd(task->thrd_id())->AddTask(*task);
   }
   SendCmdMsg(tasks, ActorCmd::kActivateActor);
 }

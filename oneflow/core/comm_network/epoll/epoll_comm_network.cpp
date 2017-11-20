@@ -175,7 +175,7 @@ void EpollCommNet::SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg) {
 EpollCommNet::EpollCommNet() {
   mem_descs_.clear();
   unregister_mem_descs_cnt_ = 0;
-  pollers_.resize(JobDesc::Singleton()->CommNetIOWorkerNum(), nullptr);
+  pollers_.resize(JobDesc::Singleton()->CommNetWorkerNum(), nullptr);
   for (size_t i = 0; i < pollers_.size(); ++i) {
     pollers_[i] = new IOEventPoller;
   }

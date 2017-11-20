@@ -11,7 +11,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const ChainGraph>&& chain_gph) {
   HashMap<const ChainNode*, std::vector<TaskNode*>> chain2sorted_out_box;
   chain_gph_->ForEachNode([&](const ChainNode* chain_node) {
     chain_node->GenSortedCompTaskNodes([&](CompTaskNode* comp_task_node) {
-      comp_task_node->FixThrdLocId();
+      comp_task_node->FixThrdId();
       AddAllocatedNode(comp_task_node);
       chain2sorted_comp_tasks[chain_node].push_back(comp_task_node);
     });
@@ -59,7 +59,7 @@ void TaskGraph::BldSubTskGphByOneToOne(
     if (src_comp_task->machine_id() == dst_comp_task->machine_id()) {
       if (src_comp_task->device_type() == dst_comp_task->device_type()) {
         if (src_comp_task->device_type() != DeviceType::kCPU) {
-          CHECK_EQ(src_comp_task->thrd_loc_id(), dst_comp_task->thrd_loc_id());
+          CHECK_EQ(src_comp_task->thrd_id(), dst_comp_task->thrd_id());
         }
         Connect<TaskNode>(src_comp_task, NewEdge(), dst_comp_task);
       } else {
@@ -104,7 +104,7 @@ void TaskGraph::BldSubTskGphBySelectOneSourceToSoleSink(
         UpdateSelected(src_comp_task);
         continue;
       }
-      if (src_comp_task->thrd_loc_id() == sole_dst_comp_task->thrd_loc_id()) {
+      if (src_comp_task->thrd_id() == sole_dst_comp_task->thrd_id()) {
         UpdateSelected(src_comp_task);
         break;
       }

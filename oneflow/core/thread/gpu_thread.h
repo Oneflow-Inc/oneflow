@@ -9,9 +9,9 @@ class GpuThread final : public Thread {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GpuThread);
   GpuThread() = delete;
-  ~GpuThread() { Thread::Deconstruct(); }
+  ~GpuThread() = default;
 
-  GpuThread(int64_t thrd_loc_id, int64_t device_phy_id);
+  GpuThread(int64_t thrd_id, int64_t dev_id);
 
  private:
 };

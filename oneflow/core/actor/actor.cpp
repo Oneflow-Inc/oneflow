@@ -201,4 +201,8 @@ Regst* Actor::GetCurSoleWriteableRegst() {
   return writeable_produced_regst_.begin()->second.front();
 }
 
+std::unique_ptr<Actor> ConstructActor(const TaskProto&, const ThreadCtx&) {
+  TODO();
+}
+
 }  // namespace oneflow
