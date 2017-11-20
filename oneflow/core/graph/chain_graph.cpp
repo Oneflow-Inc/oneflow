@@ -199,13 +199,13 @@ void DataMergeChains(std::list<Chain>* chain_list,
 
 }  // namespace
 
-ChainGraph::ChainGraph(bool IsTrain) {
+ChainGraph::ChainGraph(bool is_train) {
   BuildFwStruct();
-  if (IsTrain) {
+  if (is_train) {
     BuildBwStruct();
     BuildLossRecordStruct();
   }
-  BuildModelStruct(IsTrain);
+  BuildModelStruct(is_train);
   BuildRnnStruct();
   ToDotWithAutoFilePath();
 }
@@ -368,7 +368,7 @@ std::shared_ptr<const Operator> ConstructModelUpdateOp() {
   return ConstructOp(mdupdt_conf);
 }
 
-void ChainGraph::BuildModelStruct(bool IsTrain) {
+void ChainGraph::BuildModelStruct(bool is_train) {
   ForEachChainNode<ForwardChainNode>([&](ForwardChainNode* fw_chain) {
     if (fw_chain->HasOpWithModelOrModelTmpBlob() == false) { return; }
     // Model Update Chain
@@ -395,7 +395,7 @@ void ChainGraph::BuildModelStruct(bool IsTrain) {
     md_save_chain->mut_parallel_desc().reset(md_save_pr_desc);
     Connect<ChainNode>(md_updt_chain, NewEdge(), md_save_chain);
     // Model Diff Accumulate Chain
-    if (IsTrain == false) { return; }
+    if (is_train == false) { return; }
     BackwardChainNode* bw_chain = fw_chain->bw_node();
     Connect<ChainNode>(md_updt_chain, NewEdge(), bw_chain);
     OperatorConf md_diff_acc_op_conf;
