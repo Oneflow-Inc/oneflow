@@ -17,8 +17,8 @@ void MdSaveCompTaskNode::BuildExecGphAndRegst() {
   }
 }
 
-void MdSaveCompTaskNode::FixThrdLocId() {
-  set_thrd_loc_id(IDMgr::Singleton()->PersistenceThrdLocId());
+void MdSaveCompTaskNode::FixThrdId() {
+  set_thrd_id(IDMgr::Singleton()->AllocatePersistenceThrdId(machine_id()));
 }
 
 }  // namespace oneflow

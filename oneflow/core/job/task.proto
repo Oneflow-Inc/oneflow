@@ -25,7 +25,7 @@ message TaskProto {
   // common
   required TaskType task_type = 1;
   required int64 machine_id = 2;
-  required int64 thrd_loc_id = 3;
+  required int64 thrd_id = 3;
   required int64 task_id = 4;
   required ExecSequence exec_sequence = 5;
   map<string, RegstDescProto> produced_regst_desc = 6;

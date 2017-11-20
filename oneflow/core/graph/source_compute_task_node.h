@@ -16,7 +16,7 @@ class SourceCompTaskNode final : public CompTaskNode {
   void BuildExecGphAndRegst() override;
 
   TaskType GetTaskType() const override { return TaskType::kSource; }
-  void FixThrdLocId() override;
+  void FixThrdId() override;
 
  private:
 };

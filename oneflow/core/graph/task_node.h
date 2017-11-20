@@ -18,7 +18,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   // Getters
   int64_t machine_id() const { return machine_id_; }
-  int64_t thrd_loc_id() const { return thrd_loc_id_; }
+  int64_t thrd_id() const { return thrd_id_; }
   int64_t task_id() const { return task_id_; }
   std::shared_ptr<RegstDesc> GetProducedRegst(const std::string& name);
   DeviceType device_type() const;
@@ -26,7 +26,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   // Setters
   void set_machine_id(int64_t val);
-  void set_thrd_loc_id(int64_t val);
+  void set_thrd_id(int64_t val);
 
   // Build
   virtual void ProduceAllRegstsAndBindEdges() { TODO(); }
@@ -58,7 +58,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void UpdateTaskId();
 
   int64_t machine_id_;
-  int64_t thrd_loc_id_;
+  int64_t thrd_id_;
   int64_t task_id_;
 
   ExecGraph exec_gph_;

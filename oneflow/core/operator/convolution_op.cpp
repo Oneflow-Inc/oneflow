@@ -27,8 +27,7 @@ void ConvolutionOp::InferBlobDescs(
   const ConvolutionOpConf& conf = op_conf().convolution_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(SoleIbn());
   CHECK_EQ(in_blob_desc->shape().NumAxes(), 4);
-  CHECK_EQ(in_blob_desc->data_type(),
-           JobDesc::Singleton()->default_data_type());
+  CHECK_EQ(in_blob_desc->data_type(), JobDesc::Singleton()->DefaultDataType());
   int64_t data_num = in_blob_desc->shape().At(0);
   int64_t c_i = in_blob_desc->shape().At(1);
 
@@ -53,33 +52,33 @@ void ConvolutionOp::InferBlobDescs(
   // out
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(SoleObn());
   out_blob_desc->mut_shape() = Shape({data_num, c_o, h_len, w_len});
-  out_blob_desc->set_data_type(JobDesc::Singleton()->default_data_type());
+  out_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
   out_blob_desc->set_has_data_id(in_blob_desc->has_data_id());
 
   // col_buf
   BlobDesc* col_buf_blob_desc = GetBlobDesc4BnInOp("col_buf");
   col_buf_blob_desc->mut_shape() = Shape({data_num, output_size, c_i * kernel});
-  col_buf_blob_desc->set_data_type(JobDesc::Singleton()->default_data_type());
+  col_buf_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
   col_buf_blob_desc->set_has_data_id(false);
 
   // weight
   BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
   weight_blob_desc->mut_shape() = Shape({c_o, c_i * kernel});
-  weight_blob_desc->set_data_type(JobDesc::Singleton()->default_data_type());
+  weight_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
   weight_blob_desc->set_has_data_id(false);
 
   if (conf.has_bias_term()) {
     // bias
     BlobDesc* bias_blob_desc = GetBlobDesc4BnInOp("bias");
     bias_blob_desc->mut_shape() = Shape({c_o});
-    bias_blob_desc->set_data_type(JobDesc::Singleton()->default_data_type());
+    bias_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
     bias_blob_desc->set_has_data_id(false);
 
     // bias multiplier
     BlobDesc* bias_multiplier_blob_desc = GetBlobDesc4BnInOp("bias_multiplier");
     bias_multiplier_blob_desc->mut_shape() = Shape({output_size});
     bias_multiplier_blob_desc->set_data_type(
-        JobDesc::Singleton()->default_data_type());
+        JobDesc::Singleton()->DefaultDataType());
     bias_multiplier_blob_desc->set_has_data_id(false);
   }
 }

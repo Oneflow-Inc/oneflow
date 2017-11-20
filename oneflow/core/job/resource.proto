@@ -14,16 +14,18 @@ enum DeviceType {
 
 message Resource {
   repeated Machine machine = 1;
-  required int64 device_num_per_machine = 2;
+  required int32 device_num_per_machine = 2;
   required DeviceType device_type = 3;
+  optional int32 persistence_worker_num = 4 [default = 4];
+  optional int32 boxing_worker_num = 5 [default = 4];
+  optional int32 comm_net_worker_num = 6 [default = 4];
 }
 
 // If one machine named "machine_xxx" and device_num_per_machine = 4
-// then we have 5 devices: 
+// then we have 4 devices: 
 // "machine_xxx:0"
 // "machine_xxx:1"
 // "machine_xxx:2"
 // "machine_xxx:3"
-// "machine_xxx:persistence"
 // 
 // "machine_xxx:0-2" means {"machine_xxx:0", "machine_xxx:1", "machine_xxx:2"}

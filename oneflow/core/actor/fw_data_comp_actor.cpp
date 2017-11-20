@@ -10,8 +10,8 @@ void FwDataCompActor::VirtualCompActorInit(const TaskProto& task_proto,
   expected_model_version_id_ = 0;
   model_regst_ = nullptr;
   model_tmp_regst_ = nullptr;
-  if (thread_ctx.cpu_stream) {
-    mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
+  if (JobDesc::Singleton()->GetDeviceType() == DeviceType::kCPU) {
+    mut_device_ctx().reset(new CpuDeviceCtx);
   } else {
     mut_device_ctx().reset(new CudaDeviceCtx(cuda_handle_.cuda_stream(),
                                              cuda_handle_.cublas_handle(),
@@ -38,12 +38,11 @@ bool FwDataCompActor::IsReadReady() {
       || (model_tmp_regst_desc_id_ != -1 && !model_tmp_regst_)) {
     return false;
   }
-  if (JobDesc::Singleton()->is_train() && model_regst_desc_id_ != -1) {
+  if (JobDesc::Singleton()->IsTrain() && model_regst_desc_id_ != -1) {
     // Ho Q, Cipar J, Cui H, et al. More effective distributed ml via a stale
     // synchronous parallel parameter server
-    int32_t staleness = JobDesc::Singleton()->staleness();
-    int32_t num_of_pieces_in_batch =
-        JobDesc::Singleton()->num_of_pieces_in_batch();
+    int32_t staleness = JobDesc::Singleton()->Staleness();
+    int32_t num_of_pieces_in_batch = JobDesc::Singleton()->NumOfPiecesInBatch();
     int64_t cur_iteration = in_.front()->piece_id() / num_of_pieces_in_batch;
     int64_t stale_version = cur_iteration - staleness;
     return model_regst_->model_version_id() >= stale_version;

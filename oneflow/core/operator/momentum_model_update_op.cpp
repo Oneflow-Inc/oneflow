@@ -19,7 +19,7 @@ void MomentumModelUpdateOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) {
   const BlobDesc* md_diff_blob_desc = GetBlobDesc4BnInOp("model_diffs");
   CHECK_EQ(md_diff_blob_desc->data_type(),
-           JobDesc::Singleton()->default_data_type());
+           JobDesc::Singleton()->DefaultDataType());
   CHECK_EQ(md_diff_blob_desc->has_data_id(), false);
   *GetBlobDesc4BnInOp("momentum") = *md_diff_blob_desc;
 }

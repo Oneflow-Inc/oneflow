@@ -107,6 +107,8 @@ class Actor {
   int64_t num_of_read_empty_;
 };
 
+std::unique_ptr<Actor> ConstructActor(const TaskProto&, const ThreadCtx&);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_ACTOR_ACTOR_H_

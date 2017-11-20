@@ -14,8 +14,8 @@ void BpDataCompActor::VirtualActorInit(const TaskProto& task_proto,
       3 + (model_regst_desc_id_ != -1) + (model_tmp_regst_desc_id_ != -1)
       + (activation_regst_desc_id_ != -1) + (data_tmp_regst_desc_id_ != -1);
   set_num_of_remaining_eord(num_of_read_empty());
-  if (thread_ctx.cpu_stream) {
-    mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
+  if (JobDesc::Singleton()->GetDeviceType() == DeviceType::kCPU) {
+    mut_device_ctx().reset(new CpuDeviceCtx());
   } else {
     mut_device_ctx().reset(new CudaDeviceCtx(cuda_handle_.cuda_stream(),
                                              cuda_handle_.cublas_handle(),
