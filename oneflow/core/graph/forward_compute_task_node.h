@@ -12,7 +12,7 @@ class ForwardCompTaskNode final : public CompTaskNode {
   ~ForwardCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
-  TodoTaskType GetTaskType() const override { return TodoTaskType::kForward; }
+  TaskType GetTaskType() const override { return TaskType::kForward; }
 
  private:
 };

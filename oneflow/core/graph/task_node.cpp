@@ -23,8 +23,21 @@ void TaskNode::set_thrd_loc_id(int64_t val) {
 }
 
 void TaskNode::Build() {
-  BuildRegsts();
+  BuildExecGphAndRegst();
   LockRegsts();
+}
+
+void TaskNode::EraseEmptyProducedRegst() {
+  for (auto& pair : produced_regsts_) { pair.second->EraseZeroSizeBlob(); }
+  EraseIf<std::string, std::shared_ptr<RegstDesc>>(
+      &produced_regsts_,
+      [](HashMap<std::string, std::shared_ptr<RegstDesc>>::iterator it) {
+        return it->second->NumOfLbn() == 0;
+      });
+}
+
+void TaskNode::InferMemCaseOfProducedRegst() {
+  for (auto& pair : produced_regsts_) { pair.second->InferMemCase(); }
 }
 
 void TaskNode::UpdateTaskId() {
@@ -35,10 +48,38 @@ void TaskNode::UpdateTaskId() {
 
 std::string TaskNode::VisualStr() const {
   std::stringstream ss;
-  ss << TodoTaskType_Name(GetTaskType()) << "\\n"
+  ss << TaskType_Name(GetTaskType()) << "\\n"
      << machine_id_ << ":" << thrd_loc_id_ << "\\n"
      << task_id_;
   return ss.str();
+}
+
+bool TaskNode::IsMeaningLess() {
+  EraseIf<std::string, std::weak_ptr<RegstDesc>>(
+      &consumed_regsts_,
+      [](HashMap<std::string, std::weak_ptr<RegstDesc>>::iterator it) {
+        return !it->second.lock();
+      });
+  return produced_regsts_.empty() && consumed_regsts_.empty();
+}
+
+void TaskNode::ToProto(TaskProto* task_proto) {
+  task_proto->set_task_type(GetTaskType());
+  task_proto->set_machine_id(machine_id_);
+  task_proto->set_thrd_loc_id(thrd_loc_id_);
+  task_proto->set_task_id(task_id_);
+  exec_gph_.ToExecSequence(parallel_ctx(), task_proto->mutable_exec_sequence());
+  auto produced_regst_proto = task_proto->mutable_produced_regst_desc();
+  for (auto& pair : produced_regsts_) {
+    RegstDescProto regst_desc_proto;
+    pair.second->ToProto(&regst_desc_proto);
+    CHECK(produced_regst_proto->insert({pair.first, regst_desc_proto}).second);
+  }
+  auto consumed_regst_proto = task_proto->mutable_consumed_regst_desc_id();
+  for (auto& pair : consumed_regsts_) {
+    int64_t regst_desc_id = pair.second.lock()->regst_desc_id();
+    CHECK(consumed_regst_proto->insert({pair.first, regst_desc_id}).second);
+  }
 }
 
 std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name,
@@ -63,6 +104,10 @@ bool TaskNode::IsAllConsumedRegstLocked() {
     if (pair.second.lock()->IsLocked() == false) { return false; }
   }
   return true;
+}
+
+std::shared_ptr<RegstDesc> TaskNode::GetConsumedRegst(const std::string& name) {
+  return consumed_regsts_.at(name).lock();
 }
 
 void TaskNode::LockRegsts() {

@@ -2,7 +2,7 @@
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/graph/chain_node.h"
 #include "oneflow/core/graph/logical_graph.h"
-#include "oneflow/core/operator/operator_manager.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -28,7 +28,7 @@ void BoxingTaskNode::ConsumeAllRegsts() {
   }
 }
 
-void BoxingTaskNode::BuildRegsts() {
+void BoxingTaskNode::BuildExecGphAndRegst() {
   HashMap<const ChainNode*, std::vector<EdgeInfo>> in_chain2edge_info;
   InitChain2SortedEdgeInfo(&TaskNode::in_edges, &TaskNode::SoleInEdge,
                            &TaskEdge::src_node, &in_chain2edge_info);
@@ -188,14 +188,21 @@ void BoxingTaskNode::BuildWithChainPair(
     for (size_t i = 0; i < node->op()->output_bns().size(); ++i) {
       auto regst = sorted_out_edges[i].edge->GetSoleRegst();
       const std::string& obn = node->op()->output_bns().at(i);
-      regst->AddLbn(lbn);
+      if (lbn == kPackedBlobName) {
+        regst->CopyBlobDescFrom(sorted_in_edges[0].edge->GetSoleRegst().get());
+      } else {
+        regst->AddLbn(lbn);
+      }
       node->BindBnInOpAndRegst(obn, regst);
     }
     for (const std::string& dtbn : node->op()->data_tmp_bns()) {
+      CHECK_STRNE(lbn.c_str(), kPackedBlobName);
       middle_regst->AddLbn(node->op()->Lbn4BnInOp(dtbn));
       node->BindBnInOpAndRegst(dtbn, middle_regst);
     }
-    node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), nullptr);
+    if (lbn != kPackedBlobName) {
+      node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), nullptr);
+    }
   }
 }
 
@@ -213,7 +220,7 @@ std::shared_ptr<Operator> BoxingTaskNode::NewBoxingOp(
   (this->*method)(lbn, sorted_in_edges,
                   in_chain->parallel_desc()->parallel_num(), sorted_out_edges,
                   out_chain->parallel_desc()->parallel_num(), boxing_conf);
-  return OpMgr::Singleton()->AddOp(op_conf);
+  return ConstructOp(op_conf);
 }
 
 }  // namespace oneflow

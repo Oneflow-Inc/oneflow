@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_OPERATOR_MULTINOMIAL_LOGISTIC_LOSS_OP_H_
 #define ONEFLOW_CORE_OPERATOR_MULTINOMIAL_LOGISTIC_LOSS_OP_H_
 
-#include "oneflow/core/operator/operator_manager.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -19,7 +19,7 @@ class MultinomialLogisticLossOp final : public Operator {
 
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) override;
+      const ParallelContext* parallel_ctx) const override;
 };
 
 }  // namespace oneflow

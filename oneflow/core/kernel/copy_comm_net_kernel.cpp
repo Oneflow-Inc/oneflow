@@ -3,7 +3,7 @@
 
 namespace oneflow {
 
-void CopyCommNetKernel::Forward(
+void CopyCommNetKernel::ForwardDataContent(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&)>) const {
   auto other_val = static_cast<
@@ -17,8 +17,5 @@ void CopyCommNetKernel::Forward(
   *read_id = CommNet::Singleton()->Read(actor_read_id, src_machine_id,
                                         readable_token, writeable_token);
 }
-
-COMMAND(AddKernelCreator(OperatorConf::kCopyCommNetConf,
-                         []() { return new CopyCommNetKernel; }));
 
 }  // namespace oneflow

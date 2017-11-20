@@ -12,9 +12,7 @@ class LossRecordCompTaskNode final : public CompTaskNode {
   ~LossRecordCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
-  TodoTaskType GetTaskType() const override {
-    return TodoTaskType::kLossRecord;
-  }
+  TaskType GetTaskType() const override { return TaskType::kLossRecord; }
   void FixThrdLocId();
 
  private:

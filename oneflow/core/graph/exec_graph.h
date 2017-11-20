@@ -40,20 +40,20 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   ExecNode() = default;
   ~ExecNode() = default;
 
-  std::shared_ptr<Operator> op() const { return op_; }
-  std::shared_ptr<Operator>& mut_op() { return op_; }
+  std::shared_ptr<const Operator> op() const { return op_; }
+  std::shared_ptr<const Operator>& mut_op() { return op_; }
 
   void BindBnInOpAndRegst(const std::string&, std::weak_ptr<RegstDesc>);
 
   std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOpFunc() const;
 
   std::string VisualStr() const override { return op_->op_name(); }
-  void ToProto(ExecNodeProto* ret) const;
+  void ToProto(const ParallelContext*, ExecNodeProto*) const;
 
  private:
   BlobDesc* GetBlobDesc4BnInOp(const std::string&) const;
 
-  std::shared_ptr<Operator> op_;
+  std::shared_ptr<const Operator> op_;
   HashMap<std::string, std::weak_ptr<RegstDesc>> bn_in_op2regst_;
 };
 
@@ -63,7 +63,7 @@ class ExecGraph final : public Graph<ExecNode, ExecEdge> {
   ExecGraph() = default;
   ~ExecGraph() = default;
 
-  void ToExecSequence(ExecSequence* ret) const;
+  void ToExecSequence(const ParallelContext*, ExecSequence*) const;
   const char* TypeName() const override { return "ExecGraph"; }
 
  private:

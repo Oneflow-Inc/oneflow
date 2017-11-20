@@ -1,11 +1,10 @@
 #include "oneflow/core/thread/thread.h"
-#include "oneflow/core/actor/actor_registry.h"
 
 namespace oneflow {
 
 void Thread::AddTask(const TaskProto& task) {
   std::unique_lock<std::mutex> lck(id2task_mtx_);
-  CHECK(id2task_.emplace(task.id(), task).second);
+  CHECK(id2task_.emplace(task.task_id(), task).second);
 }
 
 void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
@@ -52,11 +51,11 @@ void Thread::Deconstruct() {
 void Thread::ActivateActor(int64_t actor_id, const ThreadCtx& thread_ctx) {
   LOG(INFO) << "thread " << thrd_loc_id_ << " construct actor " << actor_id;
   std::unique_lock<std::mutex> lck(id2task_mtx_);
-  int64_t task_id = IDMgr::Singleton()->TaskId4ActorId(actor_id);
+  int64_t task_id = actor_id;
   auto task_it = id2task_.find(task_id);
-  CHECK(id2actor_ptr_
-            .emplace(actor_id, ConstructActor(task_it->second, thread_ctx))
-            .second);
+  // CHECK(id2actor_ptr_
+  //          .emplace(actor_id, ConstructActor(task_it->second, thread_ctx))
+  //          .second);
   id2task_.erase(task_it);
   RuntimeCtx::Singleton()->mut_inactive_actor_cnt().MinusOne();
 }

@@ -4,7 +4,7 @@
 #include "oneflow/core/graph/chain_graph.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/operator/operator_manager.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -45,7 +45,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void BuildInBoxingIfNeed(
       const ChainNode*, const std::vector<CompTaskNode*>& sorted_comp_tasks,
       HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_in_box);
-  void BuildStruct();
 
   std::unique_ptr<const ChainGraph> chain_gph_;
 };

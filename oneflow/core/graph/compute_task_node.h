@@ -14,11 +14,14 @@ class CompTaskNode : public TaskNode {
   virtual ~CompTaskNode() = default;
 
   virtual void FixThrdLocId() {}
+  virtual void ToProto(TaskProto*) override;
 
   // parallel_ctx_
   int64_t parallel_id() const { return parallel_ctx_.parallel_id(); }
-  const ParallelContext& parallel_ctx() const { return parallel_ctx_; }
-  ParallelContext& mut_parallel_ctx() { return parallel_ctx_; }
+  const ParallelContext* parallel_ctx() const override {
+    return &parallel_ctx_;
+  }
+  ParallelContext* mut_parallel_ctx() { return &parallel_ctx_; }
 
   // chain_node_
   const ChainNode* chain_node() const { return chain_node_; }

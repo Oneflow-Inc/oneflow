@@ -41,10 +41,8 @@ class RegstDesc final {
   void ForEachLbn(std::function<void(const std::string&)> func) const;
   size_t NumOfLbn() const { return lbn2blob_desc_.size(); }
 
-  // mem_case_
-  MemoryCase* mut_mem_case() { return &mem_case_; }
-
-  //
+  // util
+  void InferMemCase();
   void EraseZeroSizeBlob();
   void ToProto(RegstDescProto*) const;
   BlobDesc CompPackedBlobDesc() const;
@@ -57,6 +55,7 @@ class RegstDesc final {
   int32_t max_register_num_;
 
   HashMap<std::string, std::unique_ptr<BlobDesc>> lbn2blob_desc_;
+  std::unique_ptr<BlobDesc> packed_blob_desc_;
   bool is_locked_;
 
   MemoryCase mem_case_;

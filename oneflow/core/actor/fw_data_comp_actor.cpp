@@ -1,11 +1,9 @@
 #include "oneflow/core/actor/fw_data_comp_actor.h"
-#include "oneflow/core/actor/actor_registry.h"
 
 namespace oneflow {
 
-void FwDataCompActor::Init(const TaskProto& task_proto,
-                           const ThreadCtx& thread_ctx) {
-  CompActor::Init(task_proto, thread_ctx);
+void FwDataCompActor::VirtualCompActorInit(const TaskProto& task_proto,
+                                           const ThreadCtx& thread_ctx) {
   in_desc_id_ = RegstDescId4Name("in");
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
@@ -20,7 +18,7 @@ void FwDataCompActor::Init(const TaskProto& task_proto,
                                              cuda_handle_.cudnn_handle()));
   }
   kernel_ctx_ = GenDefaultKernelCtx();
-  kernel_ctx_.other = reinterpret_cast<void*>(parallel_id());
+  kernel_ctx_.other = nullptr;  // TODO
   if (in_desc_id_ == -1) {
     CHECK_EQ(model_regst_desc_id_, -1);
     CHECK_EQ(model_tmp_regst_desc_id_, -1);
@@ -74,7 +72,7 @@ void FwDataCompActor::AsyncSendMsgToModelAndModelTmpProducer() {
 int FwDataCompActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
-    ProcessEord();
+    ProcessOneEord();
     if (msg_handler() == &FwDataCompActor::HandlerZombie
         || msg_handler() == nullptr) {
       AsyncSendMsgToModelAndModelTmpProducer();
@@ -117,7 +115,7 @@ int FwDataCompActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
 }
 
 void FwDataCompActor::Act() {
-  int64_t piece_id = expected_piece_id();
+  int64_t piece_id = 0;  // expected_piece_id();
   if (!in_.empty()) {
     CHECK_EQ(in_.front()->piece_id(), piece_id);
     readable_regst_[in_.front()->regst_desc_id()] = in_.front();
@@ -149,7 +147,5 @@ void FwDataCompActor::Act() {
   //  TrySwitchToZombie();
   //}
 }
-
-REGISTER_ACTOR(kDataCompTask, true, FwDataCompActor);
 
 }  // namespace oneflow

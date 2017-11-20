@@ -9,8 +9,9 @@ message RegstDescProto {
   required int64 producer_task_id = 2;
   repeated int64 consumer_task_id = 3;
   map<string, BlobDescProto> lbn2blob_desc = 4;
-  required int32 min_register_num = 5;
-  required int32 max_register_num = 6;
-  required int32 register_num = 7;
-  required MemoryCase mem_case = 8;
+  required BlobDescProto packed_blob_desc = 5;
+  required int32 min_register_num = 6;
+  required int32 max_register_num = 7;
+  required int32 register_num = 8;
+  required MemoryCase mem_case = 9;
 }

@@ -12,7 +12,7 @@ class BackwardCompTaskNode final : public CompTaskNode {
   ~BackwardCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
-  TodoTaskType GetTaskType() const override { return TodoTaskType::kBackward; }
+  TaskType GetTaskType() const override { return TaskType::kBackward; }
 
  private:
 };

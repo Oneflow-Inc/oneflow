@@ -11,7 +11,12 @@ class CopyTaskNode : public TaskNode {
   CopyTaskNode() = default;
   virtual ~CopyTaskNode() = default;
 
-  void ProduceAllRegstsAndBindEdges() override { TODO(); }
+  void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override;
+  void BuildExecGphAndRegst() override;
+
+ protected:
+  virtual OperatorConf NewCopyOpConf() = 0;
 
  private:
 };
@@ -22,11 +27,16 @@ class CopyHdTaskNode final : public CopyTaskNode {
   CopyHdTaskNode() = default;
   ~CopyHdTaskNode() = default;
 
-  TodoTaskType GetTaskType() const override { return TodoTaskType::kCopyHd; }
+  TaskType GetTaskType() const override { return TaskType::kCopyHd; }
 
   void Init(const CompTaskNode*, CopyHdOpConf::Type);
 
+  CopyHdOpConf::Type copy_type() const { return copy_type_; }
+
  private:
+  OperatorConf NewCopyOpConf() override;
+
+  CopyHdOpConf::Type copy_type_;
 };
 
 class CopyCommNetTaskNode final : public CopyTaskNode {
@@ -35,13 +45,12 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
   CopyCommNetTaskNode() = default;
   ~CopyCommNetTaskNode() = default;
 
-  TodoTaskType GetTaskType() const override {
-    return TodoTaskType::kCopyCommNet;
-  }
+  TaskType GetTaskType() const override { return TaskType::kCopyCommNet; }
 
   void Init(int64_t machine_id);
 
  private:
+  OperatorConf NewCopyOpConf() override;
 };
 
 }  // namespace oneflow

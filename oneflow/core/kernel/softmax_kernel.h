@@ -6,7 +6,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class SoftmaxKernel final : public Kernel {
+class SoftmaxKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SoftmaxKernel);
   SoftmaxKernel() = default;

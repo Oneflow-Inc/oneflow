@@ -6,31 +6,6 @@ void Operator::InitFromOpConf(const OperatorConf& op_conf) {
   op_conf_ = op_conf;
   InitFromOpConf();
 }
-void Operator::InitFromProto(const OperatorProto& op_proto) {
-  op_conf_ = op_proto.op_conf();
-  bn_in_op2lbn_ = PbMap2HashMap(op_proto.bn_in_op2lbn());
-  data_tmp_bns_ = PbRpf2StdVec(op_proto.data_tmp_bn());
-  input_bns_ = PbRpf2StdVec(op_proto.input_bn());
-  input_diff_bns_ = PbRpf2StdVec(op_proto.input_diff_bn());
-  output_bns_ = PbRpf2StdVec(op_proto.output_bn());
-  output_diff_bns_ = PbRpf2StdVec(op_proto.output_diff_bn());
-  model_bns_ = PbRpf2StdVec(op_proto.model_bn());
-  model_diff_bns_ = PbRpf2StdVec(op_proto.model_diff_bn());
-  model_tmp_bns_ = PbRpf2StdVec(op_proto.model_tmp_bn());
-}
-
-void Operator::ToProto(OperatorProto* ret) const {
-  *(ret->mutable_op_conf()) = op_conf_;
-  *(ret->mutable_bn_in_op2lbn()) = HashMap2PbMap(bn_in_op2lbn_);
-  *(ret->mutable_data_tmp_bn()) = StdVec2PbRpf(data_tmp_bns_);
-  *(ret->mutable_input_bn()) = StdVec2PbRpf(input_bns_);
-  *(ret->mutable_input_diff_bn()) = StdVec2PbRpf(input_diff_bns_);
-  *(ret->mutable_output_bn()) = StdVec2PbRpf(output_bns_);
-  *(ret->mutable_output_diff_bn()) = StdVec2PbRpf(output_diff_bns_);
-  *(ret->mutable_model_bn()) = StdVec2PbRpf(model_bns_);
-  *(ret->mutable_model_diff_bn()) = StdVec2PbRpf(model_diff_bns_);
-  *(ret->mutable_model_tmp_bn()) = StdVec2PbRpf(model_tmp_bns_);
-}
 
 const std::string& Operator::Lbn4BnInOp(const std::string& bn_in_op) const {
   return bn_in_op2lbn_.at(bn_in_op);
@@ -78,7 +53,26 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
   if (pr_desc->policy() == kModelParallel && MaxModelSplitNum() != -1) {
     pr_desc->RemoveNeedlessDevice(MaxModelSplitNum());
   }
+  if (pr_desc->policy() == kDataParallel) {
+    pr_desc->RemoveNeedlessDevice(JobDesc::Singleton()->ParallelPieceSize());
+  }
   VirtualFixParallelDesc(pr_desc);
+}
+
+void Operator::GenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  *(kernel_conf->mutable_op_conf()) = op_conf_;
+  *(kernel_conf->mutable_bn_in_op2lbn()) = HashMap2PbMap(bn_in_op2lbn_);
+  *(kernel_conf->mutable_data_tmp_bns()) = StdVec2PbRpf(data_tmp_bns_);
+  *(kernel_conf->mutable_input_bns()) = StdVec2PbRpf(input_bns_);
+  *(kernel_conf->mutable_input_diff_bns()) = StdVec2PbRpf(input_diff_bns_);
+  *(kernel_conf->mutable_output_bns()) = StdVec2PbRpf(output_bns_);
+  *(kernel_conf->mutable_output_diff_bns()) = StdVec2PbRpf(output_diff_bns_);
+  *(kernel_conf->mutable_model_bns()) = StdVec2PbRpf(model_bns_);
+  *(kernel_conf->mutable_model_diff_bns()) = StdVec2PbRpf(model_diff_bns_);
+  *(kernel_conf->mutable_model_tmp_bns()) = StdVec2PbRpf(model_tmp_bns_);
+  VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
 }
 
 std::string Operator::ibn2lbn(const std::string& input_bn) const {
@@ -150,6 +144,23 @@ std::pair<std::string, std::string> ParseLbn(const std::string& lbn) {
   size_t pos = lbn.find('/');
   CHECK_NE(pos, std::string::npos);
   return {lbn.substr(0, pos), lbn.substr(pos + 1)};
+}
+
+static HashMap<int, std::function<Operator*()>>& OpTypeCase2Creator() {
+  static HashMap<int, std::function<Operator*()>> obj;
+  return obj;
+}
+
+void AddOpCreator(OperatorConf::OpTypeCase op_type_case,
+                  std::function<Operator*()> creator) {
+  CHECK(OpTypeCase2Creator().emplace(op_type_case, creator).second);
+}
+
+std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf) {
+  Operator* rptr = OpTypeCase2Creator().at(op_conf.op_type_case())();
+  std::shared_ptr<Operator> ret(rptr);
+  ret->InitFromOpConf(op_conf);
+  return ret;
 }
 
 }  // namespace oneflow

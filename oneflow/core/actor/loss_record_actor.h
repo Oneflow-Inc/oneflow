@@ -11,9 +11,9 @@ class LossRecordActor final : public Actor {
   LossRecordActor() = default;
   ~LossRecordActor() = default;
 
-  void Init(const TaskProto&, const ThreadCtx&) override;
-
  private:
+  void VirtualActorInit(const TaskProto&, const ThreadCtx&) override;
+
   int HandlerNormal(const ActorMsg&) override;
   int HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) override {
     UNEXPECTED_RUN();
