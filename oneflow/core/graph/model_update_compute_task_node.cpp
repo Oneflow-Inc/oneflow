@@ -21,6 +21,7 @@ void MdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
 }
 
 void MdUpdtCompTaskNode::ConsumeAllRegsts() {
+  if (JobDesc::Singleton()->is_predict()) return;
   ConsumeRegst("model_diff_acc", SoleInEdge()->GetSoleRegst());
 }
 
@@ -31,7 +32,15 @@ bool MdUpdtCompTaskNode::IsReadyForBuild() {
 void MdUpdtCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = chain_node()->SoleOp();
-  auto model_diff_acc_regst = SoleInEdge()->GetSoleRegst();
+  std::shared_ptr<RegstDesc> model_diff_acc_regst = nullptr;
+  BlobDesc packed_blob_desc;
+  if (JobDesc::Singleton()->is_train()) {
+    model_diff_acc_regst = SoleInEdge()->GetSoleRegst();
+    packed_blob_desc = model_diff_acc_regst->CompPackedBlobDesc();
+  } else {
+    packed_blob_desc =
+        BlobDesc(Shape(), JobDesc::Singleton()->default_data_type(), false);
+  }
   node->BindBnInOpAndRegst("model_diff_acc", model_diff_acc_regst);
   auto model_regst = GetProducedRegst("model");
   node->BindBnInOpAndRegst(node->op()->SoleObn(), model_regst);
@@ -41,7 +50,12 @@ void MdUpdtCompTaskNode::BuildExecGphAndRegst() {
     data_tmp_regst->AddLbn(lbn);
     node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
   }
-  node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), nullptr);
+  node->op()->InferBlobDescs(
+      [&](const std::string& bn_in_op) -> BlobDesc* {
+        if (bn_in_op == "model_diff_acc") { return &packed_blob_desc; }
+        return node->GetBlobDesc4BnInOpFunc()(bn_in_op);
+      },
+      nullptr);
 }
 
 void MdUpdtCompTaskNode::ToProto(TaskProto* task_proto) {
