@@ -12,23 +12,9 @@ class ForwardCompTaskNode final : public CompTaskNode {
   ~ForwardCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
-  void ConsumeAllRegsts() override;
-  void BuildExecGphAndRegst() override;
-  void LockRegsts() override;
-  bool IsReadyForBuild() override;
-
   TaskType GetTaskType() const override { return TaskType::kForward; }
 
  private:
-  using Lbn2NodeBnMap = HashMap<std::string, std::pair<ExecNode*, std::string>>;
-
-  void BuildFromUserOps(Lbn2NodeBnMap* lbn2producer,
-                        Lbn2NodeBnMap* lbn2consumer,
-                        Lbn2NodeBnMap* extern_in_lbn2consumer);
-  void SetExecNodeFromInRegst(const Lbn2NodeBnMap& extern_in_lbn2consumer);
-  void AddLbn2OutRegst(const Lbn2NodeBnMap& lbn2consumer);
-  void AddLbn2ActivationRegst();
-  void AddLbn2ModelAndTmpRegsts();
 };
 
 }  // namespace oneflow
