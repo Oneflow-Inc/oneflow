@@ -315,14 +315,14 @@ template<typename T>
 void CudnnPoolingKernel<DeviceType::kGPU, T>::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* in_diff_blob = BnInOp2Blob("in_diff");
-  if (in_diff_blob == nullptr) { return; }
-  Memset<DeviceType::kGPU>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
-                           in_diff_blob->ByteSizeOfDataField());
   const PoolingOpConf& pooling_conf = op()->op_conf().pooling_conf();
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   const Blob* in_blob = BnInOp2Blob("in");
   const Blob* out_blob = BnInOp2Blob("out");
+  Blob* in_diff_blob = BnInOp2Blob("in_diff");
+  if (in_diff_blob == nullptr) { return; }
+  Memset<DeviceType::kGPU>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
+                           in_diff_blob->ByteSizeOfDataField());
 
   CudaCheck(cudnnPoolingBackward(
       ctx.device_ctx->cudnn_handle(), pooling_desc_, cudnn::DataType<T>::one,

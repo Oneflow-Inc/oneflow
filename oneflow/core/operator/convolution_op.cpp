@@ -19,8 +19,7 @@ void ConvolutionOp::InitFromOpConf() {
 
 #ifdef USE_CUDNN
   EnrollDataTmpBn("fwd_workspace");
-  EnrollDataTmpBn("bwd_weight_workspace");
-  EnrollDataTmpBn("bwd_data_workspace");
+  EnrollDataTmpBn("bwd_workspace");
 #else
   EnrollDataTmpBn("col_buf");
 #endif  // USE_CUDNN
@@ -158,25 +157,24 @@ void ConvolutionOp::InferBlobDesc4FwBlobs(
   }
 
   // TODO(shiyuan) Get algorithm
-  size_t workspace_limit_bytes = 8 * 1024 * 1024;
 
   CudaCheck(cudnnGetConvolutionForwardAlgorithm(
       cudnn_handle, in_desc, weight_desc, conv_desc, out_desc,
       CUDNN_CONVOLUTION_FWD_PREFER_FASTEST,
       // CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT,
-      workspace_limit_bytes, &cudnn_fwd_algo));
+      0, &cudnn_fwd_algo));
 
   CudaCheck(cudnnGetConvolutionBackwardFilterAlgorithm(
       cudnn_handle, in_desc, out_desc, conv_desc, weight_desc,
       CUDNN_CONVOLUTION_BWD_FILTER_PREFER_FASTEST,
       // CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT,
-      workspace_limit_bytes, &cudnn_bwd_weight_algo));
+      0, &cudnn_bwd_weight_algo));
 
   CudaCheck(cudnnGetConvolutionBackwardDataAlgorithm(
       cudnn_handle, weight_desc, out_desc, conv_desc, in_desc,
       CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST,
       // CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT,
-      workspace_limit_bytes, &cudnn_bwd_data_algo));
+      0, &cudnn_bwd_data_algo));
 
   mut_op_conf().mutable_convolution_conf()->set_cudnn_fwd_algo(cudnn_fwd_algo);
   mut_op_conf().mutable_convolution_conf()->set_cudnn_bwd_weight_algo(
@@ -217,20 +215,12 @@ void ConvolutionOp::InferBlobDesc4FwBlobs(
       JobDesc::Singleton()->default_data_type());
   fwd_workspace_blob_desc->set_has_data_id(false);
 
-  BlobDesc* bwd_weight_workspace_blob_desc =
-      GetBlobDesc4BnInOp("bwd_weight_workspace");
-  bwd_weight_workspace_blob_desc->mut_shape() =
-      Shape({bwd_weight_workspace_sizes});
-  bwd_weight_workspace_blob_desc->set_data_type(
+  BlobDesc* bwd_workspace_blob_desc = GetBlobDesc4BnInOp("bwd_workspace");
+  bwd_workspace_blob_desc->mut_shape() =
+      Shape({std::max(bwd_weight_workspace_sizes, bwd_data_workspace_sizes)});
+  bwd_workspace_blob_desc->set_data_type(
       JobDesc::Singleton()->default_data_type());
-  bwd_weight_workspace_blob_desc->set_has_data_id(false);
-
-  BlobDesc* bwd_data_workspace_blob_desc =
-      GetBlobDesc4BnInOp("bwd_data_workspace");
-  bwd_data_workspace_blob_desc->mut_shape() = Shape({bwd_data_workspace_sizes});
-  bwd_data_workspace_blob_desc->set_data_type(
-      JobDesc::Singleton()->default_data_type());
-  bwd_data_workspace_blob_desc->set_has_data_id(false);
+  bwd_workspace_blob_desc->set_has_data_id(false);
 
   CudaCheck(cudnnDestroyTensorDescriptor(in_desc));
   CudaCheck(cudnnDestroyTensorDescriptor(out_desc));

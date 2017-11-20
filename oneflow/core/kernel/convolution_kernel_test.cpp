@@ -90,12 +90,12 @@ void TestConvolutionKernel(bool has_bias_term) {
   BuildKernelCtx<device_type>(&ctx);
   auto BnInOp2BlobFunc = BuildBnInOp2BlobFunc<device_type, T>(has_bias_term);
   auto conv_kernel = BuildConvolutionKernel<device_type, T>(has_bias_term);
-  
+
   conv_kernel->Forward(ctx, BnInOp2BlobFunc);
   conv_kernel->Backward(ctx, BnInOp2BlobFunc);
-  
+
   SyncStream<device_type>(&ctx);
-  
+
   KTCommon<device_type, T>::CheckResult(BnInOp2BlobFunc, "out", "expected_out");
 
   KTCommon<device_type, T>::CheckResult(BnInOp2BlobFunc, GenDiffBn("in"),

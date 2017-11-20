@@ -107,6 +107,12 @@ void CudnnSoftmaxKernel<DeviceType::kGPU, T>::Forward(
       out_desc_, CUDNN_TENSOR_NCHW, cudnn::DataType<T>::type,
       out_blob->shape().At(0), out_blob->shape().At(1), out_blob->shape().At(2),
       out_blob->shape().At(3)));
+
+  CudaCheck(cudnnSoftmaxForward(
+      ctx.device_ctx->cudnn_handle(), CUDNN_SOFTMAX_ACCURATE,
+      CUDNN_SOFTMAX_MODE_CHANNEL, cudnn::DataType<T>::one, in_desc_,
+      in_blob->dptr<T>(), cudnn::DataType<T>::zero, out_desc_,
+      out_blob->mut_dptr<T>()));
 }
 
 template<typename T>
@@ -116,6 +122,8 @@ void CudnnSoftmaxKernel<DeviceType::kGPU, T>::Backward(
   const Blob* out_blob = BnInOp2Blob(op()->SoleObn());
   const Blob* out_diff_blob = BnInOp2Blob(op()->SoleOdbn());
   Blob* in_diff_blob = BnInOp2Blob(op()->SoleIdbn());
+  Memset<DeviceType::kGPU>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
+                           in_diff_blob->ByteSizeOfDataField());
 
   CudaCheck(cudnnSoftmaxBackward(
       ctx.device_ctx->cudnn_handle(), CUDNN_SOFTMAX_ACCURATE,

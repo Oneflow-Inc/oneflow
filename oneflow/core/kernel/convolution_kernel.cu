@@ -161,10 +161,12 @@ template<typename T>
 void CudnnConvolutionKernel<DeviceType::kGPU, T>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  auto conv_conf = op()->op_conf().convolution_conf();
   const Blob* in_blob = BnInOp2Blob("in");
   const Blob* weight_blob = BnInOp2Blob("weight");
   Blob* out_blob = BnInOp2Blob("out");
-  auto conv_conf = op()->op_conf().convolution_conf();
+  Blob* fwd_workspace = BnInOp2Blob("fwd_workspace");
+
   CopyDataIdFromSoleIbToAllObIfNeed<DeviceType::kGPU>(ctx, BnInOp2Blob);
 
   CudaCheck(cudnnSetTensor4dDescriptor(
@@ -182,8 +184,6 @@ void CudnnConvolutionKernel<DeviceType::kGPU, T>::Forward(
 
   cudnnConvolutionFwdAlgo_t cudnn_fwd_algo =
       (cudnnConvolutionFwdAlgo_t)(conv_conf.cudnn_fwd_algo());
-
-  Blob* fwd_workspace = BnInOp2Blob("fwd_workspace");
 
   CudaCheck(cudnnConvolutionForward(
       ctx.device_ctx->cudnn_handle(), cudnn::DataType<T>::one, in_desc_,
@@ -211,7 +211,7 @@ void CudnnConvolutionKernel<DeviceType::kGPU, T>::Backward(
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   const Blob* in_blob = BnInOp2Blob("in");
   const Blob* out_blob = BnInOp2Blob("out");
-  Blob* weight_diff_blob = BnInOp2Blob("weight_diff");
+  Blob* bwd_workspace = BnInOp2Blob("bwd_workspace");
 
   auto conv_conf = op()->op_conf().convolution_conf();
 
@@ -220,6 +220,7 @@ void CudnnConvolutionKernel<DeviceType::kGPU, T>::Backward(
     Blob* bias_diff_blob = BnInOp2Blob("bias_diff");
     Memset<DeviceType::kGPU>(ctx.device_ctx, bias_diff_blob->mut_dptr<T>(), 0,
                              bias_diff_blob->ByteSizeOfDataField());
+
     CudaCheck(cudnnConvolutionBackwardBias(
         ctx.device_ctx->cudnn_handle(), cudnn::DataType<T>::one, out_desc_,
         out_diff_blob->dptr<T>(), cudnn::DataType<T>::one, bias_desc_,
@@ -227,32 +228,33 @@ void CudnnConvolutionKernel<DeviceType::kGPU, T>::Backward(
   }
 
   // compute weight diff
-  Blob* bwd_weight_workspace = BnInOp2Blob("bwd_weight_workspace");
-  cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_weight_algo =
-      (cudnnConvolutionBwdFilterAlgo_t)(conv_conf.cudnn_bwd_weight_algo());
+  Blob* weight_diff_blob = BnInOp2Blob("weight_diff");
   Memset<DeviceType::kGPU>(ctx.device_ctx, weight_diff_blob->mut_dptr<T>(), 0,
                            weight_diff_blob->ByteSizeOfDataField());
+
+  cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_weight_algo =
+      (cudnnConvolutionBwdFilterAlgo_t)(conv_conf.cudnn_bwd_weight_algo());
   CudaCheck(cudnnConvolutionBackwardFilter(
       ctx.device_ctx->cudnn_handle(), cudnn::DataType<T>::one, in_desc_,
       in_blob->dptr<T>(), out_desc_, out_diff_blob->dptr<T>(), conv_desc_,
-      cudnn_bwd_weight_algo, bwd_weight_workspace->mut_dptr<T>(),
-      bwd_weight_workspace->shape().At(0), cudnn::DataType<T>::one,
-      weight_desc_, weight_diff_blob->mut_dptr<T>()));
+      cudnn_bwd_weight_algo, bwd_workspace->mut_dptr<T>(),
+      bwd_workspace->shape().At(0), cudnn::DataType<T>::one, weight_desc_,
+      weight_diff_blob->mut_dptr<T>()));
 
   // compute in diff
+  const Blob* weight_blob = BnInOp2Blob("weight");
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
   if (in_diff_blob == nullptr) { return; }
+  Memset<DeviceType::kGPU>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
+                           in_diff_blob->ByteSizeOfDataField());
 
-  const Blob* weight_blob = BnInOp2Blob("weight");
-
-  Blob* bwd_data_workspace = BnInOp2Blob("bwd_data_workspace");
   cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo =
       (cudnnConvolutionBwdDataAlgo_t)(conv_conf.cudnn_bwd_data_algo());
   CudaCheck(cudnnConvolutionBackwardData(
       ctx.device_ctx->cudnn_handle(), cudnn::DataType<T>::one, weight_desc_,
       weight_blob->dptr<T>(), out_desc_, out_diff_blob->dptr<T>(), conv_desc_,
-      cudnn_bwd_data_algo, bwd_data_workspace->mut_dptr<T>(),
-      bwd_data_workspace->shape().At(0), cudnn::DataType<T>::zero, in_desc_,
+      cudnn_bwd_data_algo, bwd_workspace->mut_dptr<T>(),
+      bwd_workspace->shape().At(0), cudnn::DataType<T>::zero, in_desc_,
       in_diff_blob->mut_dptr<T>()));
 }
 

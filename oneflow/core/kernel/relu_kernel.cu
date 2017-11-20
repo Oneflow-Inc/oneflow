@@ -73,10 +73,13 @@ void CudnnReluKernel<DeviceType::kGPU, T>::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
-  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
-  Blob* in_diff_blob = BnInOp2Blob("in_diff");
-
   const Blob* out_blob = BnInOp2Blob("out");
+  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
+
+  Blob* in_diff_blob = BnInOp2Blob("in_diff");
+  Memset<DeviceType::kGPU>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
+                           in_diff_blob->ByteSizeOfDataField());
+
   CudaCheck(cudnnActivationBackward(
       ctx.device_ctx->cudnn_handle(), activ_desc_, cudnn::DataType<T>::one,
       out_desc_, out_blob->dptr<T>(), out_desc_, out_diff_blob->dptr<T>(),
