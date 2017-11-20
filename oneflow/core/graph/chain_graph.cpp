@@ -296,15 +296,20 @@ void ChainGraph::BuildBwStruct() {
   ForEachEdge([&](ChainEdge* edge) { fw_edges.push_back(edge); });
   for (ChainEdge* fw_edge : fw_edges) {
     auto fw_src_node = dynamic_cast<ForwardChainNode*>(fw_edge->src_node());
+    // fw_src_node is SourceChainNode, don't need bp
     if (fw_src_node == nullptr) { continue; }
     auto fw_dst_node = dynamic_cast<ForwardChainNode*>(fw_edge->dst_node());
     ChainNode* bw_src_node = fw_src_node->bw_node();
+    // fw_src_node has not bp_node, don't need bp
     if (bw_src_node == nullptr) { continue; }
+    // fw_dst_node is LossChainNode, connect loss node and bw_src_node
     if (fw_dst_node == nullptr) {
       Connect(fw_edge->dst_node(), NewEdge(), bw_src_node);
     } else {
       ChainNode* bw_dst_node = fw_dst_node->bw_node();
+      //
       if (bw_dst_node == nullptr) { continue; }
+      // connect 2 bw node
       Connect(bw_dst_node, NewEdge(), bw_src_node);
     }
   }
