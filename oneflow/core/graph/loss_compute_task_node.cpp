@@ -20,12 +20,17 @@ void LossCompTaskNode::ConsumeAllRegsts() {
 }
 
 void LossCompTaskNode::BuildExecGphAndRegst() {
+  auto in_regst = GetProducedRegst("in");
   auto loss_regst = GetProducedRegst("loss");
   auto diff_regst = GetProducedRegst("in_diff");
   auto data_tmp_regst = GetProducedRegst("data_tmp");
   ExecNode* loss_node = mut_exec_gph().NewNode();
   loss_node->mut_op() = chain_node()->SoleOp();
   CHECK(loss_node->op()->IsLossOp());
+
+  for (const std::string& ibn : loss_node->op()->input_bns()) {
+    loss_node->BindBnInOpAndRegst(ibn, in_regst);
+  }
   loss_node->BindBnInOpAndRegst(loss_node->op()->SoleObn(), loss_regst);
   for (const std::string& input_diff_bn : loss_node->op()->input_diff_bns()) {
     loss_node->BindBnInOpAndRegst(input_diff_bn, diff_regst);
