@@ -1,5 +1,5 @@
 #include "oneflow/core/kernel/softmax_kernel.h"
-#include "oneflow/core/kernel/kernel_manager.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
@@ -7,9 +7,9 @@ template<DeviceType device_type, typename T>
 void SoftmaxKernel<device_type, T>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in_blob = BnInOp2Blob(op()->SoleIbn());
-  Blob* out_blob = BnInOp2Blob(op()->SoleObn());
-  Blob* tmp_blob = BnInOp2Blob(op()->SoleDtbn());
+  const Blob* in_blob = BnInOp2Blob(this->kernel_conf().input_bns(0));
+  Blob* out_blob = BnInOp2Blob(this->kernel_conf().output_bns(0));
+  Blob* tmp_blob = BnInOp2Blob(this->kernel_conf().data_tmp_bns(0));
   const int64_t n = out_blob->shape().At(0);
   const int64_t w = out_blob->shape().At(1);
   const T* in = in_blob->dptr<T>();
@@ -22,10 +22,11 @@ template<DeviceType device_type, typename T>
 void SoftmaxKernel<device_type, T>::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* out_blob = BnInOp2Blob(op()->SoleObn());
-  const Blob* out_diff_blob = BnInOp2Blob(op()->SoleOdbn());
-  Blob* in_diff_blob = BnInOp2Blob(op()->SoleIdbn());
-  Blob* tmp_blob = BnInOp2Blob(op()->SoleDtbn());
+  const Blob* out_blob = BnInOp2Blob(this->kernel_conf().output_bns(0));
+  const Blob* out_diff_blob =
+      BnInOp2Blob(this->kernel_conf().output_diff_bns(0));
+  Blob* in_diff_blob = BnInOp2Blob(this->kernel_conf().input_diff_bns(0));
+  Blob* tmp_blob = BnInOp2Blob(this->kernel_conf().data_tmp_bns(0));
   const int64_t n = out_blob->shape().At(0);
   const int64_t w = out_blob->shape().At(1);
   T* in_diff = in_diff_blob->mut_dptr<T>();
@@ -80,20 +81,5 @@ class SoftmaxKernelUtil<DeviceType::kCPU, T> final {
     }
   }
 };
-
-Kernel* CreateSoftmaxKernel(const OpContext& op_ctx) {
-  static const HashMap<std::string, std::function<Kernel*()>> creators = {
-#define SOFTMAX_KERNEL_ENTRY(device_type, data_type_pair)                     \
-  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {         \
-     return new SoftmaxKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>; \
-   }},
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(SOFTMAX_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
-                                       FLOATING_DATA_TYPE_SEQ)};
-
-  return creators.at(
-      GetHashKey(op_ctx.device_type(), op_ctx.bn_in_op2data_type().at("in")))();
-}
-
-COMMAND(AddKernelCreator(OperatorConf::kSoftmaxConf, CreateSoftmaxKernel));
 
 }  // namespace oneflow

@@ -19,7 +19,7 @@ void TestReluOp() {
     return bn2blobdesc_map.at(bn);
   };
   // do infer shape
-  relu_op->InferBlobDesc4FwBlobs(fp, kDataParallel, 0, 1);
+  relu_op->InferBlobDescs(fp, kDataParallel, 0, 1);
   // test
   ASSERT_TRUE(*(bn2blobdesc_map.at(relu_op->SoleIbn()))
               == *(bn2blobdesc_map.at(relu_op->SoleObn())));

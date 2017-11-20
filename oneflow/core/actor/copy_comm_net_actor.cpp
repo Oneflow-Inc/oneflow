@@ -1,5 +1,4 @@
 #include "oneflow/core/actor/copy_comm_net_actor.h"
-#include "oneflow/core/actor/actor_registry.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/register/register.h"
 
@@ -29,9 +28,8 @@ CopyCommNetActor::~CopyCommNetActor() {
   CommNet::Singleton()->DeleteActorReadId(actor_read_id_);
 }
 
-void CopyCommNetActor::Init(const TaskProto& task_proto,
-                            const ThreadCtx& thread_ctx) {
-  Actor::Init(task_proto, thread_ctx);
+void CopyCommNetActor::VirtualActorInit(const TaskProto& task_proto,
+                                        const ThreadCtx& thread_ctx) {
   set_num_of_remaining_eord(1);
   mut_num_of_read_empty() = 1;
   actor_read_id_ = CommNet::Singleton()->NewActorReadId();
@@ -43,7 +41,7 @@ void CopyCommNetActor::Init(const TaskProto& task_proto,
 int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
-    ProcessEord();
+    ProcessOneEord();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (msg.SrcMachineId() == RuntimeCtx::Singleton()->this_machine_id()) {
       CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
@@ -73,7 +71,7 @@ int CopyCommNetActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
 }
 
 void CopyCommNetActor::Act() {
-  int64_t cur_piece_id = expected_piece_id();
+  int64_t cur_piece_id = -1;  // expected_piece_id();
   // readable
   auto readable_it = piece_id2regst_ctx.find(cur_piece_id);
   const void* readable_token = readable_it->second.comm_net_token;
@@ -90,7 +88,7 @@ void CopyCommNetActor::Act() {
   auto other_val = std::make_tuple(actor_read_id_, &read_id, src_machine_id,
                                    readable_token, writeable_token);
   kernel_ctx.other = &other_val;
-  AsyncLaunchKernel(kernel_ctx);
+  // AsyncLaunchKernel(kernel_ctx);
   comm_net_device_ctx_->set_read_id(read_id);
   AsyncSendRegstMsgToConsumer(
       [&](Regst* regst) { regst->set_piece_id(cur_piece_id); });
@@ -101,8 +99,5 @@ void CopyCommNetActor::Act() {
   piece_id2regst_ctx.erase(readable_it);
   mut_num_of_read_empty() = piece_id2regst_ctx.empty();
 }
-
-REGISTER_ACTOR(kCopyCommNetTask, true, CopyCommNetActor);
-REGISTER_ACTOR(kCopyCommNetTask, false, CopyCommNetActor);
 
 }  // namespace oneflow

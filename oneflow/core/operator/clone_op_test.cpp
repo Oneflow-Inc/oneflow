@@ -19,7 +19,7 @@ void TestCloneOp() {
   auto bn2blobdesc_func = [&](const std::string& bn) {
     return bn2blobdesc_map.at(bn);
   };
-  clone_op->InferBlobDesc4FwBlobs(bn2blobdesc_func, kDataParallel, 3, 10);
+  clone_op->InferBlobDescs(bn2blobdesc_func, kDataParallel, 3, 10);
   const BlobDesc* in_blob_desc = bn2blobdesc_map.at(clone_op->SoleIbn());
   for (const std::string& obn : clone_op->output_bns()) {
     const BlobDesc* out_blob_desc = bn2blobdesc_map.at(obn);

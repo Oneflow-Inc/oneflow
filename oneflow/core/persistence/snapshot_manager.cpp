@@ -9,21 +9,17 @@ SnapshotMgr::SnapshotMgr(const Plan& plan) {
   num_of_model_blobs_ = 0;
   if (JobDesc::Singleton()->is_train()) {
     model_save_snapshots_path_ = JobDesc::Singleton()->md_save_snapshots_path();
-    OF_CALL_ONCE(model_save_snapshots_path_, {
-      if (GlobalFS()->IsDirectory(model_save_snapshots_path_)) {
-        GlobalFS()->RecursivelyDeleteDir(model_save_snapshots_path_);
-      }
-      GlobalFS()->CreateDir(model_save_snapshots_path_);
-    });
+    OF_CALL_ONCE(model_save_snapshots_path_,
+                 GlobalFS()->MakeEmptyDir(model_save_snapshots_path_));
     HashSet<std::string> model_blob_set;
-    for (const OperatorProto& op_proto : plan.op()) {
-      if (op_proto.op_conf().has_model_save_conf()) {
-        for (const std::string& lbn :
-             op_proto.op_conf().model_save_conf().lbns()) {
-          model_blob_set.insert(lbn);
-        }
-      }
-    }
+    // for (const OperatorProto& op_proto : plan.op()) {
+    //  if (op_proto.op_conf().has_model_save_conf()) {
+    //    for (const std::string& lbn :
+    //         op_proto.op_conf().model_save_conf().lbns()) {
+    //      model_blob_set.insert(lbn);
+    //    }
+    //  }
+    //}
     num_of_model_blobs_ = model_blob_set.size();
   }
   const std::string& load_path = JobDesc::Singleton()->md_load_snapshot_path();

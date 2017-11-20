@@ -1,30 +1,47 @@
 #include "oneflow/core/graph/logical_graph.h"
-#include <iostream>
-#include "oneflow/core/operator/operator_manager.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-LogicalGraph::LogicalGraph(const DLNetConf& dl_net_conf,
-                           const Placement& placement) {
+std::shared_ptr<const Operator> LogicalGraph::GetProducerOp(
+    const std::string& lbn) {
+  return lbn2producer_.at(lbn).lock();
+}
+
+void LogicalGraph::SetProducerOp(const std::string& lbn,
+                                 std::weak_ptr<const Operator> op) {
+  CHECK(lbn2producer_.emplace(lbn, op).second);
+}
+
+LogicalGraph::LogicalGraph() {
   HashMap<LogicalEdge*, std::string> edge2lbn;
   HashMap<LogicalEdge*, std::string> edge2ibn;
-  NaiveBuildGraphStruct(dl_net_conf, &edge2lbn, &edge2ibn);
-  FillNodeWithParallelDesc(placement);
+  NaiveBuildGraphStruct(&edge2lbn, &edge2ibn);
+  FillNodeWithParallelDesc();
   AddCloneNodes(edge2lbn, edge2ibn);
+  ForEachNode([&](LogicalNode* node) {
+    for (const std::string& obn : node->op()->output_bns()) {
+      const std::string& lbn = node->op()->Lbn4BnInOp(obn);
+      CHECK(lbn2producer_.emplace(lbn, node->op()).second);
+    }
+  });
   ToDotWithAutoFilePath();
 }
 
 void LogicalGraph::NaiveBuildGraphStruct(
-    const DLNetConf& dl_net_conf, HashMap<LogicalEdge*, std::string>* edge2lbn,
+    HashMap<LogicalEdge*, std::string>* edge2lbn,
     HashMap<LogicalEdge*, std::string>* edge2ibn) {
+  const DLNetConf& dlnet_conf = JobDesc::Singleton()->dlnet_conf();
   HashMap<std::string, LogicalNode*> lbn2producer;
-  // Process Op
-  for (int op_i = 0; op_i < dl_net_conf.op_size(); ++op_i) {
-    const OperatorConf& cur_op_conf = dl_net_conf.op(op_i);
-    // Construct cur node
+  for (const OperatorConf& cur_op_conf : dlnet_conf.op()) {
     LogicalNode* cur_node = NewNode();
-    cur_node->mut_op() = OpMgr::Singleton()->AddOp(cur_op_conf);
-    // Connect input node
+    cur_node->mut_op() = ConstructOp(cur_op_conf);
+    for (const std::string& obn : cur_node->op()->output_bns()) {
+      const std::string& lbn = cur_node->op()->Lbn4BnInOp(obn);
+      CHECK(lbn2producer.emplace(lbn, cur_node).second);
+    }
+  }
+  ForEachNode([&](LogicalNode* cur_node) {
     for (const std::string& ibn : cur_node->op()->input_bns()) {
       const std::string& lbn = cur_node->op()->Lbn4BnInOp(ibn);
       LogicalNode* pred_node = lbn2producer.at(lbn);
@@ -33,34 +50,33 @@ void LogicalGraph::NaiveBuildGraphStruct(
       CHECK(edge2ibn->emplace(edge, ibn).second);
       Connect(pred_node, edge, cur_node);
     }
-    // Construct output
-    for (const std::string& obn : cur_node->op()->output_bns()) {
-      const std::string& lbn = cur_node->op()->Lbn4BnInOp(obn);
-      CHECK(lbn2producer.emplace(lbn, cur_node).second);
-    }
-  }
-  lbn2producer.clear();
-  // Post Processing
-  UpdateSourceAndSink();
+  });
 }
 
-void LogicalGraph::FillNodeWithParallelDesc(const Placement& placement) {
+void LogicalGraph::FillNodeWithParallelDesc() {
+  const Placement& placement = JobDesc::Singleton()->placement();
   HashMap<std::string, LogicalNode*> op_name2node;
   ForEachNode([&](LogicalNode* logical_node) {
     const std::string& op_name = logical_node->op()->op_name();
     CHECK(op_name2node.emplace(op_name, logical_node).second);
   });
-  for (int gid = 0; gid < placement.placement_group_size(); ++gid) {
-    const PlacementGroup& cur_group = placement.placement_group(gid);
-    for (int li = 0; li < cur_group.op_set().op_name_size(); ++li) {
-      const std::string& op_name = cur_group.op_set().op_name(li);
-      auto it = op_name2node.find(op_name);
-      CHECK(it != op_name2node.end());
+  for (const PlacementGroup& cur_group : placement.placement_group()) {
+    for (const std::string& op_name : cur_group.op_set().op_name()) {
+      LogicalNode* node = op_name2node.at(op_name);
       auto parallel_desc_raw_ptr = new ParallelDesc(cur_group.parallel_conf());
-      it->second->op()->FixParallelDesc(parallel_desc_raw_ptr);
-      it->second->mut_parallel_desc().reset(parallel_desc_raw_ptr);
+      node->op()->FixParallelDesc(parallel_desc_raw_ptr);
+      node->mut_parallel_desc().reset(parallel_desc_raw_ptr);
     }
   }
+  ForEachNode([&](LogicalNode* cur_node) {
+    if (cur_node->op()->IsElemWiseOp()) {
+      LogicalNode* pred_node = cur_node;
+      while (pred_node->op()->IsElemWiseOp()) {
+        pred_node = pred_node->SoleInEdge()->src_node();
+      }
+      cur_node->mut_parallel_desc() = pred_node->parallel_desc();
+    }
+  });
 }
 
 void LogicalGraph::AddCloneNodes(
@@ -90,7 +106,7 @@ void LogicalGraph::CollectCloneInfos(
       pb_op_conf.set_name("clone_" + lbn);
       pb_op_conf.mutable_clone_conf()->set_out_num(edges.size());
       pb_op_conf.mutable_clone_conf()->set_lbn(lbn);
-      auto clone_op = OpMgr::Singleton()->AddOp(pb_op_conf);
+      auto clone_op = ConstructOp(pb_op_conf);
       // Set clone_info
       CloneInfo clone_info;
       clone_info.clone_op = clone_op;
@@ -104,6 +120,7 @@ void LogicalGraph::CollectCloneInfos(
 void LogicalGraph::AddOneCloneNode(
     const CloneInfo& clone_info,
     const HashMap<LogicalEdge*, std::string>& edge2ibn) {
+  if (clone_info.pred_node->op()->IsDataLoaderOp()) { return; }
   LogicalNode* clone_node = NewNode();
   clone_node->mut_op() = clone_info.clone_op;
   clone_node->mut_parallel_desc() = clone_info.pred_node->parallel_desc();

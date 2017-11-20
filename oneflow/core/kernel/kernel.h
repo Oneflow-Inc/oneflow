@@ -3,11 +3,9 @@
 
 #include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/resource.pb.h"
+#include "oneflow/core/kernel/kernel.pb.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/operator/operator.pb.h"
-#include "oneflow/core/operator/operator_manager.h"
 #include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/register/blob.h"
 
@@ -18,66 +16,82 @@ class Kernel {
   OF_DISALLOW_COPY_AND_MOVE(Kernel);
   virtual ~Kernel() = default;
 
-  virtual void InitFromOpProto(const OperatorProto& op_proto);
+  void Init(const KernelConf&);
 
   void InitModelBlobs(
-      const KernelCtx& ctx, ParallelPolicy policy, int64_t parallel_id,
-      int64_t parallel_num, const Snapshot*,
+      const KernelCtx& ctx, const ParallelContext& parallel_ctx,
+      const Snapshot*,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   virtual void InitModelTmpBlobs(
       const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-    UNEXPECTED_RUN();
-  }
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
-  // for Forward / Bp Calculation in FwExecGragh node and BpExecGragh node
-  // through bn_in_op2blob_ptr function get the input blob and output blob
-  // the Kernel will using the input blob calculate the result and fill output
-  virtual void Forward(const KernelCtx& ctx,
-                       std::function<Blob*(const std::string&)>) const = 0;
-  virtual void Backward(const KernelCtx& ctx,
-                        std::function<Blob*(const std::string&)>) const {
-    UNEXPECTED_RUN();
-  }
+  virtual void Forward(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  virtual void Backward(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
-  //
-  const std::string& Lbn4BnInOp(const std::string& bn_in_op) const {
-    return op_->Lbn4BnInOp(bn_in_op);
-  }
+  const std::string& Lbn4BnInOp(const std::string& bn_in_op) const;
 
  protected:
   Kernel() = default;
-  const Operator* op() const { return op_.get(); }
+  virtual void VirtualKernelInit() {}
+  const KernelConf& kernel_conf() const { return kernel_conf_; }
+  const OperatorConf& op_conf() const { return kernel_conf_.op_conf(); }
 
+  virtual void InitModelBlobsWithRandomSeed(
+      const KernelCtx& ctx, std::mt19937 random_seed_gen,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void InitModelBlobsWithDir(
       const KernelCtx& ctx, int32_t part_id, int32_t part_num,
       const std::string& model_load_dir,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-    UNEXPECTED_RUN();
-  }
-  virtual void InitModelBlobsWithRandomSeed(
-      const KernelCtx& ctx, std::mt19937 random_seed_gen,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-    UNEXPECTED_RUN();
-  }
-  template<DeviceType device_type>
-  void CopyDataIdFromIbToAllOb(
-      const DeviceCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) {
-    Blob* input_blob = BnInOp2Blob(op_->SoleIbn());
-    for (const std::string& obn : op_->output_bns()) {
-      Blob* output_blob = BnInOp2Blob(obn);
-      output_blob->CopyDataIdFrom<device_type>(ctx, input_blob);
-    }
-  }
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+
+  virtual void ForwardDataContent(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+  virtual void ForwardDataId(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+  virtual void BackwardDataContent(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  virtual void BackwardDataId(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
 
  private:
-  std::unique_ptr<const Operator> op_;
+  KernelConf kernel_conf_;
 };
 
-using KernelLaunchFunc = void (Kernel::*)(
-    const KernelCtx&, std::function<Blob*(const std::string&)>) const;
+template<DeviceType device_type>
+class KernelIf : public Kernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(KernelIf);
+  virtual ~KernelIf() = default;
+
+ protected:
+  KernelIf() = default;
+
+  virtual void ForwardDataId(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  virtual void BackwardDataId(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
+  void CopyDataIdToAllOb(DeviceCtx* ctx,
+                         std::function<Blob*(const std::string&)> BnInOp2Blob,
+                         const Blob* blob) const;
+};
+
+void AddKernelCreator(OperatorConf::OpTypeCase,
+                      std::function<Kernel*(const KernelConf&)>);
+void AddKernelCreator(OperatorConf::OpTypeCase, std::function<Kernel*()>);
+std::unique_ptr<const Kernel> ConstructKernel(const KernelConf&);
 
 }  // namespace oneflow
 

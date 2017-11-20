@@ -1,11 +1,11 @@
 #ifndef ONEFLOW_CORE_OPERATOR_RECORD_OP_H_
 #define ONEFLOW_CORE_OPERATOR_RECORD_OP_H_
 
-#include "oneflow/core/operator/operator_manager.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class RecordOp final : public SysOperator {
+class RecordOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RecordOp);
   RecordOp() = default;
@@ -15,10 +15,9 @@ class RecordOp final : public SysOperator {
   const PbMessage& GetSpecialConf() const override;
   bool IsRecordOp() const override { return true; }
 
-  void InferBlobDesc4FwBlobs(
+  void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      ParallelPolicy policy, int64_t parallel_id,
-      int64_t parallel_num) override {}
+      const ParallelContext* parallel_ctx) const override {}
 
  private:
   std::string ibn2lbn(const std::string& ibn) const override {

@@ -22,13 +22,13 @@ T* NextConcatAddr(T* start_addr, int64_t concat_idx, int64_t concat_axis_dim,
 
 template<DeviceType device_type, typename T>
 void ConcatKernel<device_type, T>::ConcatKernelWork(
-    const KernelCtx& ctx, const std::string& out_bn,
-    const std::vector<std::string>& in_bns,
+    const KernelCtx& ctx, const std::string& obn,
+    const std::vector<std::string>& ibns,
     std::function<Blob*(const std::string&)> BnInOp2Blob,
     MemCopyFuncType copy_func) const {
-  Blob* out_blob = BnInOp2Blob(out_bn);
-  if (in_bns.size() == 0) { return; }
-  const int32_t concat_axis = op()->op_conf().concat_conf().axis();
+  Blob* out_blob = BnInOp2Blob(obn);
+  if (ibns.size() == 0) { return; }
+  const int32_t concat_axis = this->op_conf().concat_conf().axis();
   int64_t concat_element_cnt = 1;
   if ((concat_axis != (out_blob->shape().NumAxes() - 1))
       && (concat_axis != -1)) {
@@ -51,8 +51,8 @@ void ConcatKernel<device_type, T>::ConcatKernelWork(
     return;
   }
 
-  for (const std::string& in_bn : in_bns) {
-    Blob* in_blob = BnInOp2Blob(in_bn);
+  for (const std::string& ibn : ibns) {
+    Blob* in_blob = BnInOp2Blob(ibn);
     T* in_blob_mut_dptr = in_blob->mut_dptr<T>();
     const int64_t in_concat_axis_dim = in_blob->shape().At(concat_axis);
     const int64_t cp_sz = in_concat_axis_dim * concat_element_cnt * sizeof(T);
@@ -69,45 +69,52 @@ void ConcatKernel<device_type, T>::ConcatKernelWork(
 
     offset_concat_axis += in_concat_axis_dim;
   }
+  if (BnInOp2Blob(ibns.front())->has_data_id()) {
+    CopyDataIdToOb(ctx, ibns, obn, concat_axis, kind, BnInOp2Blob);
+  }
 }
 
 template<DeviceType device_type, typename T>
-void ConcatKernel<device_type, T>::Forward(
+void ConcatKernel<device_type, T>::CopyDataIdToOb(
+    const KernelCtx& ctx, const std::vector<std::string>& ibns,
+    const std::string& obn, const int32_t concat_axis, cudaMemcpyKind kind,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  Blob* out_blob = BnInOp2Blob(obn);
+  int64_t data_id_offset = 0;
+  for (const std::string& ibn : ibns) {
+    Blob* in_blob = BnInOp2Blob(ibn);
+    CHECK_LE(data_id_offset + in_blob->ByteSizeOfDataIdField(),
+             out_blob->ByteSizeOfDataIdField());
+    Memcpy<device_type>(
+        ctx.device_ctx, out_blob->mut_data_id() + data_id_offset,
+        in_blob->data_id(), in_blob->ByteSizeOfDataIdField(), kind);
+    data_id_offset += in_blob->ByteSizeOfDataIdField();
+  }
+}
+
+template<DeviceType device_type, typename T>
+void ConcatKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto copy_in2out = [](const KernelCtx& ctx, T* src, T* dst,
                         const int64_t size, cudaMemcpyKind kind) {
     Memcpy<device_type>(ctx.device_ctx, dst, src, size, kind);
   };
-  ConcatKernelWork(ctx, op()->SoleObn(), op()->input_bns(), BnInOp2Blob,
-                   copy_in2out);
+  ConcatKernelWork(ctx, this->kernel_conf().output_bns(0),
+                   this->kernel_conf().input_bns(), BnInOp2Blob, copy_in2out);
 }
 
 template<DeviceType device_type, typename T>
-void ConcatKernel<device_type, T>::Backward(
+void ConcatKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto copy_out2in = [](const KernelCtx& ctx, T* dst, T* src,
                         const int64_t size, cudaMemcpyKind kind) {
     Memcpy<device_type>(ctx.device_ctx, dst, src, size, kind);
   };
-  ConcatKernelWork(ctx, op()->SoleOdbn(), op()->input_diff_bns(), BnInOp2Blob,
+  ConcatKernelWork(ctx, this->kernel_conf().output_diff_bns(0),
+                   this->kernel_conf().input_diff_bns(), BnInOp2Blob,
                    copy_out2in);
 }
-
-Kernel* CreateConcatKernel(const OpContext& op_ctx) {
-  static const HashMap<std::string, std::function<Kernel*()>> creators = {
-#define CONCAT_KERNEL_ENTRY(device_type, data_type_pair)                     \
-  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {        \
-     return new ConcatKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>; \
-   }},
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(CONCAT_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
-                                       ALL_DATA_TYPE_SEQ)};
-
-  return creators.at(GetHashKey(op_ctx.device_type(),
-                                op_ctx.bn_in_op2data_type().at("in_0")))();
-}
-
-COMMAND(AddKernelCreator(OperatorConf::kConcatConf, CreateConcatKernel));
 
 }  // namespace oneflow

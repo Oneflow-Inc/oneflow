@@ -17,13 +17,11 @@ const PbMessage& ConcatOp::GetSpecialConf() const {
   return op_conf().concat_conf();
 }
 
-void ConcatOp::InferBlobDesc4FwBlobs(
+void ConcatOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) {
+    const ParallelContext* parallel_ctx) const {
   const ConcatOpConf& conf = op_conf().concat_conf();
   const BlobDesc* in_0_blob_desc = GetBlobDesc4BnInOp(input_bns().at(0));
-  CHECK_EQ(in_0_blob_desc->data_type(), conf.data_type());
-  bool has_data_id = in_0_blob_desc->has_data_id();
   std::vector<int64_t> out_dim_vec = in_0_blob_desc->shape().dim_vec();
   int32_t concat_axis = conf.axis();
   if (concat_axis < 0) { concat_axis += out_dim_vec.size(); }
@@ -36,13 +34,13 @@ void ConcatOp::InferBlobDesc4FwBlobs(
         CHECK_EQ(out_dim_vec[j], in_i_blob_desc->shape().At(j));
       }
     }
-    CHECK_EQ(in_i_blob_desc->data_type(), conf.data_type());
-    CHECK_EQ(has_data_id, in_i_blob_desc->has_data_id());
+    CHECK_EQ(in_i_blob_desc->data_type(), in_0_blob_desc->data_type());
+    CHECK_EQ(in_i_blob_desc->has_data_id(), in_0_blob_desc->has_data_id());
   }
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   out_blob_desc->mut_shape() = Shape(out_dim_vec);
-  out_blob_desc->set_data_type(conf.data_type());
-  out_blob_desc->set_has_data_id(has_data_id);
+  out_blob_desc->set_data_type(in_0_blob_desc->data_type());
+  out_blob_desc->set_has_data_id(in_0_blob_desc->has_data_id());
 }
 
 REGISTER_OP(OperatorConf::kConcatConf, ConcatOp);

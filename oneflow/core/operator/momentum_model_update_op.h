@@ -13,19 +13,15 @@ class MomentumModelUpdateOp final : public ModelUpdtOp {
 
   void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
-  void InferBlobDesc4FwBlobs(
+  void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      ParallelPolicy policy, int64_t parallel_id,
-      int64_t parallel_num) override;
+      const ParallelContext* parallel_ctx) override;
 
  private:
   std::string ibn2lbn(const std::string& input_bn) const override {
     return kPackedBlobName;
   }
   std::string obn2lbn(const std::string& output_bn) const override {
-    return kPackedBlobName;
-  }
-  std::string mtbn2lbn(const std::string& output_bn) const override {
     return kPackedBlobName;
   }
 };

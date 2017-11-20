@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_KERNEL_MODEL_UPDATE_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_MODEL_UPDATE_KERNEL_H_
 
-#include "oneflow/core/kernel/kernel_manager.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
@@ -10,10 +10,6 @@ class ModelUpdtKernel : public Kernel {
   OF_DISALLOW_COPY_AND_MOVE(ModelUpdtKernel);
   virtual ~ModelUpdtKernel() = default;
 
-  void Backward(const KernelCtx&,
-                std::function<Blob*(const std::string&)>) const override {
-    UNEXPECTED_RUN();
-  }
   virtual void InitDataTmpBlobs(
       const KernelCtx&, std::function<Blob*(const std::string&)>) const {
     UNEXPECTED_RUN();

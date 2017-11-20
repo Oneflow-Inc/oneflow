@@ -1,11 +1,11 @@
 #ifndef ONEFLOW_CORE_OPERATOR_LOSS_RECORD_OP_H_
 #define ONEFLOW_CORE_OPERATOR_LOSS_RECORD_OP_H_
 
-#include "oneflow/core/operator/operator_manager.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class LossRecordOp final : public SysOperator {
+class LossRecordOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LossRecordOp);
   LossRecordOp() = default;

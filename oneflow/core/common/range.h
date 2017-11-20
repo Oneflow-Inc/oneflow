@@ -30,6 +30,8 @@ class Range final {
   int64_t end_;
 };
 
+Range FindIntersectant(const Range& lhs, const Range& rhs);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_RANGE_H_

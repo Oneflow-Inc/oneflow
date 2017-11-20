@@ -35,7 +35,7 @@ void TestInnerProductOp(ParallelPolicy policy, bool has_bias_term,
     return bn2blob_desc.at(bn);
   };
 
-  ip_op->InferBlobDesc4FwBlobs(bn2blob_desc_func, policy, 3, 10);
+  ip_op->InferBlobDescs(bn2blob_desc_func, policy, 3, 10);
 
   if (policy == kModelParallel) {
     BalancedSplitter splitter(out_num, 10);
