@@ -38,12 +38,9 @@ void BackwardCompTaskNode::ConsumeAllRegsts() {
       ConsumeRegst("out", edge->GetRegst("out"));
     } else if (src_node->GetTaskType() == TaskType::kMdUpdt) {
       ConsumeRegst("model", edge->GetRegst("model"));
-    } else if (src_node->GetTaskType() == TaskType::kBoxing) {
-      ConsumeRegst("out_diff", edge->GetRegst("out"));
-    }
-    // boxing node may be deleted
-    else {
-      ConsumeRegst("out_diff", edge->GetRegst("in_diff"));
+      ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
+    } else {
+      ConsumeRegst("out_diff", edge->GetSoleRegst());
     }
   }
 }
