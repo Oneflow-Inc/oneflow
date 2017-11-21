@@ -31,8 +31,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   }
   writeable_produced_regst_desc_num_ = writeable_produced_regst_.size();
   total_reading_cnt_ = 0;
-  num_of_remaining_eord_ = -1;
-  num_of_read_empty_ = -1;
+  remaining_eord_cnt_ = -1;
   VirtualActorInit(task_proto, thread_ctx);
 }
 
@@ -65,8 +64,17 @@ KernelCtx Actor::GenDefaultKernelCtx() const {
 }
 
 int Actor::HandlerZombie(const ActorMsg& msg) {
-  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
-  if (total_reading_cnt_ == 0) {
+  if (msg.msg_type() == ActorMsgType::kCmdMsg) {
+    CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
+    remaining_eord_cnt_ -= 1;
+  } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
+    if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) {
+      AsyncSendRegstMsgToProducer(msg.regst());
+    }
+  } else {
+    UNEXPECTED_RUN();
+  }
+  if (remaining_eord_cnt_ == 0 && total_reading_cnt_ == 0) {
     msg_handler_ = nullptr;
     return 1;
   }
@@ -82,17 +90,16 @@ bool Actor::IsWriteReady() {
 }
 
 void Actor::ProcessOneEord() {
-  num_of_remaining_eord_ -= 1;
-  if (num_of_remaining_eord_ > 0) { return; }
-  if (num_of_read_empty_) {
-    if (!total_reading_cnt_) {
+  remaining_eord_cnt_ -= 1;
+  if (IsReadAlwaysUnReadyFromNow() == false) {
+    OF_SET_MSG_HANDLER(&Actor::HandlerUntilReadAlwaysUnReady);
+  } else {
+    if (remaining_eord_cnt_ == 0 && total_reading_cnt_ == 0) {
       OF_SET_MSG_HANDLER(nullptr);
     } else {
       OF_SET_MSG_HANDLER(&Actor::HandlerZombie);
     }
     AsyncSendEORDMsgForAllProducedRegstDesc();
-  } else {
-    OF_SET_MSG_HANDLER(&Actor::HandlerWaitUntilNoReadableRegst);
   }
 }
 
@@ -227,8 +234,8 @@ void AddActorCreator(TaskType task_type, std::function<Actor*()> creator) {
   CHECK(ActorCreatorMap().emplace(task_type, creator).second);
 }
 
-std::unique_ptr<Actor> ConstructActor(const TaskProto& task_proto,
-                                      const ThreadCtx& thread_ctx) {
+std::unique_ptr<Actor> NewActor(const TaskProto& task_proto,
+                                const ThreadCtx& thread_ctx) {
   Actor* rptr = ActorCreatorMap().at(task_proto.task_type())();
   rptr->Init(task_proto, thread_ctx);
   return std::unique_ptr<Actor>(rptr);

@@ -12,7 +12,7 @@ enum class ActorCmd {
   kEORD,                 // End Of Register Desc, All Actor except Source Actor
   kStart,                // Source Actor
   kStopThread,
-  kActivateActor
+  kConstructActor
 };
 
 OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ActorCmd);
