@@ -51,7 +51,7 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   std::shared_ptr<const ParallelDesc>& mut_parallel_desc();
 
   // data_output_lbns_
-  const std::vector<std::string>& data_output_lbns() const {
+  const HashSet<std::string>& data_output_lbns() const {
     return data_output_lbns_;
   }
   virtual void set_data_output_lbns() {}
@@ -90,7 +90,7 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   std::vector<std::shared_ptr<const Operator>> op_vec_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
 
-  std::vector<std::string> data_output_lbns_;
+  HashSet<std::string> data_output_lbns_;
 };
 
 class BackwardChainNode;
