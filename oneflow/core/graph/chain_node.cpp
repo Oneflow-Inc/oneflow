@@ -171,8 +171,7 @@ OF_PP_FOR_EACH_TUPLE(DEFINE_VIRTUAL_METHOD, CHAIN_TYPE_SEQ)
 
 void ChainNode::AddDataOutputLbnsTo(const ChainNode* to_node) {
   std::vector<std::string> lbns = FindLbnsTo(to_node);
-  data_output_lbns_.insert(data_output_lbns_.end(), lbns.begin(), lbns.end());
-  SortAndRemoveDuplication(&data_output_lbns_);
+  data_output_lbns_.insert(lbns.begin(), lbns.end());
 }
 
 // ForwardChainNode
