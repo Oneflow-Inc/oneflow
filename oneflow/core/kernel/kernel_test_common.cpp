@@ -16,20 +16,11 @@ Blob* CreateBlob<DeviceType::kCPU>(const BlobDesc* blob_desc) {
 
 template<>
 void BuildKernelCtx<DeviceType::kCPU>(KernelCtx* ctx) {
-  auto cpu_stream = new AsyncCpuStream;
-  ctx->device_ctx = new CpuDeviceCtx(cpu_stream);
+  ctx->device_ctx = new CpuDeviceCtx;
 }
 
 template<>
-void SyncStream<DeviceType::kCPU>(KernelCtx* ctx) {
-  ctx->device_ctx->cpu_stream()->CloseSendEnd();
-  auto cpu_thread = std::thread([&] {
-    std::function<void()> work;
-    while (ctx->device_ctx->cpu_stream()->ReceiveWork(&work) == 0) { work(); }
-  });
-  cpu_thread.join();
-  ctx->device_ctx->cpu_stream()->CloseReceiveEnd();
-}
+void SyncStream<DeviceType::kCPU>(KernelCtx* ctx) {}
 
 template<typename T>
 class KTCommon<DeviceType::kCPU, T> final {

@@ -4,9 +4,9 @@ namespace oneflow {
 
 void AccumulateActor::Init(const TaskProto& task_proto,
                            const ThreadCtx& thread_ctx, int32_t max_acc_cnt) {
-  if (thread_ctx.cpu_stream) {
+  if (JobDesc::Singleton()->GetDeviceType() == DeviceType::kCPU) {
     MemsetFunc = &Memset<DeviceType::kCPU>;
-    mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
+    mut_device_ctx().reset(new CpuDeviceCtx);
   } else {
     MemsetFunc = &Memset<DeviceType::kGPU>;
     mut_device_ctx().reset(new CudaDeviceCtx(cuda_handle_.cuda_stream(),
@@ -14,7 +14,6 @@ void AccumulateActor::Init(const TaskProto& task_proto,
                                              cuda_handle_.cudnn_handle()));
   }
   set_num_of_remaining_eord(1);
-  mut_num_of_read_empty() = 1;
   OF_SET_MSG_HANDLER(&AccumulateActor::HandlerNormal);
   acc_cnt_ = max_acc_cnt;
   max_acc_cnt_ = max_acc_cnt;
@@ -28,7 +27,6 @@ int AccumulateActor::HandlerNormal(const ActorMsg& msg) {
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = msg.regst();
     if (TryUpdtStateAsProducedRegst(regst) != 0) {
-      mut_num_of_read_empty() = 0;
       waiting_in_regst_.push(regst);
     }
     ActUntilFail();
@@ -38,7 +36,7 @@ int AccumulateActor::HandlerNormal(const ActorMsg& msg) {
   return msg_handler() == nullptr;
 }
 
-int AccumulateActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
+int AccumulateActor::HandlerUntilReadAlwaysUnReady(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
   ActUntilFail();
   if (waiting_in_regst_.empty()) {
@@ -75,7 +73,6 @@ void AccumulateActor::Act() {
   }
   AsyncSendRegstMsgToProducer(in_regst);
   waiting_in_regst_.pop();
-  mut_num_of_read_empty() = waiting_in_regst_.empty();
 }
 
 }  // namespace oneflow

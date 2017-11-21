@@ -17,11 +17,11 @@ const PbMessage& MomentumModelUpdateOp::GetSpecialConf() const {
 void MomentumModelUpdateOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) {
-  const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");
-  CHECK_EQ(model_blob_desc->data_type(),
-           JobDesc::Singleton()->default_data_type());
-  CHECK_EQ(model_blob_desc->has_data_id(), false);
-  *GetBlobDesc4BnInOp("momentum") = *model_blob_desc;
+  const BlobDesc* md_diff_blob_desc = GetBlobDesc4BnInOp("model_diffs");
+  CHECK_EQ(md_diff_blob_desc->data_type(),
+           JobDesc::Singleton()->DefaultDataType());
+  CHECK_EQ(md_diff_blob_desc->has_data_id(), false);
+  *GetBlobDesc4BnInOp("momentum") = *md_diff_blob_desc;
 }
 
 REGISTER_OP(OperatorConf::kMomentumMdupdtConf, MomentumModelUpdateOp);

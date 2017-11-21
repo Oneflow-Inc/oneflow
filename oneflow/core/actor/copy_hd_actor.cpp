@@ -8,7 +8,6 @@ void CopyHdActor::VirtualActorInit(const TaskProto& task_proto,
   mut_device_ctx().reset(
       new CudaDeviceCtx(thread_ctx.copy_hd_cuda_stream, nullptr, nullptr));
   set_num_of_remaining_eord(1);
-  mut_num_of_read_empty() = 1;
   OF_SET_MSG_HANDLER(&CopyHdActor::HandlerNormal);
 }
 
@@ -18,7 +17,6 @@ int CopyHdActor::HandlerNormal(const ActorMsg& msg) {
     ProcessOneEord();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) {
-      mut_num_of_read_empty() = 0;
       waiting_in_regst_.push(msg.regst());
     } else {
       // do nothing
@@ -28,13 +26,11 @@ int CopyHdActor::HandlerNormal(const ActorMsg& msg) {
   return msg_handler() == nullptr;
 }
 
-int CopyHdActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
+int CopyHdActor::HandlerUntilReadAlwaysUnReady(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
   ActUntilFail();
-  if (num_of_read_empty()) {
-    AsyncSendEORDMsgForAllProducedRegstDesc();
-    OF_SET_MSG_HANDLER(&CopyHdActor::HandlerZombie);
-  }
+  AsyncSendEORDMsgForAllProducedRegstDesc();
+  OF_SET_MSG_HANDLER(&CopyHdActor::HandlerZombie);
   return 0;
 }
 
@@ -58,7 +54,6 @@ void CopyHdActor::Act() {
   });
   AsyncSendRegstMsgToProducer(in_regst);
   waiting_in_regst_.pop();
-  mut_num_of_read_empty() = waiting_in_regst_.empty();
 }
 
 }  // namespace oneflow

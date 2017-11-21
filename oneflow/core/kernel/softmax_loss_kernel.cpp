@@ -46,21 +46,17 @@ class SoftmaxLossKernelUtil<DeviceType::kCPU, PredType, LabelType> final {
   static void ComputeLoss(DeviceCtx* ctx, const int64_t n, const int64_t w,
                           const LabelType* label, const PredType* prob,
                           PredType* tmp, PredType* loss) {
-    ctx->cpu_stream()->SendWork([=]() {
-      *loss = 0;
-      for (int64_t i = 0; i < n; ++i) {
-        *loss -= SAFE_LOG(prob[i * w + static_cast<int64_t>(label[i])]);
-      }
-    });
+    *loss = 0;
+    for (int64_t i = 0; i < n; ++i) {
+      *loss -= SAFE_LOG(prob[i * w + static_cast<int64_t>(label[i])]);
+    }
   }
 
   static void BackwardSub(DeviceCtx* ctx, const int64_t n, const int64_t w,
                           const LabelType* label, PredType* in_diff) {
-    ctx->cpu_stream()->SendWork([=]() {
-      for (int64_t i = 0; i < n; ++i) {
-        in_diff[i * w + static_cast<int64_t>(label[i])] -= 1;
-      }
-    });
+    for (int64_t i = 0; i < n; ++i) {
+      in_diff[i * w + static_cast<int64_t>(label[i])] -= 1;
+    }
   }
 };
 

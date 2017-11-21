@@ -13,9 +13,8 @@ void MdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto,
   // related_save_task_id_ = task_proto.related_save_task_id();
   random_seed_ = task_proto.random_seed();
   set_num_of_remaining_eord(1);
-  mut_num_of_read_empty() = 1;
-  if (thread_ctx.cpu_stream) {
-    mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
+  if (JobDesc::Singleton()->GetDeviceType() == DeviceType::kCPU) {
+    mut_device_ctx().reset(new CpuDeviceCtx());
     MemcpyFunc =
         std::bind(&Memcpy<DeviceType::kCPU>, std::placeholders::_1,
                   std::placeholders::_2, std::placeholders::_3,
@@ -54,7 +53,7 @@ int MdUpdtCompActor::HandlerBeforeInitializeModel(const ActorMsg& actor_msg) {
                                return model_regst->GetBlobPtrFromLbn(lbn);
                              });
     }
-    if (JobDesc::Singleton()->is_train()) { AsyncCopyModelFromCurToNext(); }
+    if (JobDesc::Singleton()->IsTrain()) { AsyncCopyModelFromCurToNext(); }
   }
   kernels.clear();
   // model_tmp_regst
@@ -62,10 +61,11 @@ int MdUpdtCompActor::HandlerBeforeInitializeModel(const ActorMsg& actor_msg) {
   if (model_tmp_regst) {
     model_tmp_regst->ForEachLbn(CollectKernelsFromLbn);
     for (const Kernel* kernel : kernels) {
-      kernel->InitModelTmpBlobs(kernel_ctx, [&](const std::string& bn_in_op) {
-        const std::string& lbn = kernel->Lbn4BnInOp(bn_in_op);
-        return model_tmp_regst->GetBlobPtrFromLbn(lbn);
-      });
+      kernel->InitModelTmpBlobs(
+          kernel_ctx, ParallelContext(), [&](const std::string& bn_in_op) {
+            const std::string& lbn = kernel->Lbn4BnInOp(bn_in_op);
+            return model_tmp_regst->GetBlobPtrFromLbn(lbn);
+          });
     }
   }
   kernels.clear();
@@ -94,7 +94,7 @@ int MdUpdtCompActor::HandlerBeforeSendInitialModel(const ActorMsg& actor_msg) {
   if (model_tmp_regst_desc_id_ != -1) {
     AsyncSendEORDMsgToConsumers(model_tmp_regst_desc_id_);
   }
-  if (JobDesc::Singleton()->is_train()) {
+  if (JobDesc::Singleton()->IsTrain()) {
     OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerNormal);
   } else {
     AsyncSendEORDMsgToConsumers(model_regst_desc_id_);
@@ -111,7 +111,6 @@ int MdUpdtCompActor::HandlerNormal(const ActorMsg& actor_msg) {
     Regst* regst = actor_msg.regst();
     if (TryUpdtStateAsProducedRegst(regst) != 0) {
       waiting_model_diff_acc_queue_.push(regst);
-      mut_num_of_read_empty() = 0;
     }
     ActUntilFail();
   } else {
@@ -120,8 +119,7 @@ int MdUpdtCompActor::HandlerNormal(const ActorMsg& actor_msg) {
   return msg_handler() == nullptr;
 }
 
-int MdUpdtCompActor::HandlerWaitUntilNoReadableRegst(
-    const ActorMsg& actor_msg) {
+int MdUpdtCompActor::HandlerUntilReadAlwaysUnReady(const ActorMsg& actor_msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(actor_msg.regst()), 0);
   ActUntilFail();
   if (waiting_model_diff_acc_queue_.empty()) {
@@ -134,7 +132,6 @@ int MdUpdtCompActor::HandlerWaitUntilNoReadableRegst(
 void MdUpdtCompActor::Act() {
   auto model_diff_acc_wpr = waiting_model_diff_acc_queue_.front();
   waiting_model_diff_acc_queue_.pop();
-  mut_num_of_read_empty() = waiting_model_diff_acc_queue_.empty();
   Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
   auto model_wpr = model_regst;
   model_regst->set_model_version_id(next_model_version_id_);
@@ -153,15 +150,14 @@ void MdUpdtCompActor::Act() {
   });
   AsyncSendRegstMsgToProducer(model_diff_acc_wpr);
   AsyncCopyModelFromCurToNext();
-  if (next_model_version_id_ == JobDesc::Singleton()->total_batch_num()) {
+  if (next_model_version_id_ == JobDesc::Singleton()->TotalBatchNum()) {
     AsyncSendRegstMsgToConsumer(
         [this](int64_t actor_id) { return actor_id == related_save_task_id_; });
     CHECK(!IsReadReady());
     AsyncSendEORDMsgToConsumers(model_regst_desc_id_);
     TrySwitchToZombie();
   } else {
-    if (next_model_version_id_
-            % JobDesc::Singleton()->num_of_batches_in_snapshot()
+    if (next_model_version_id_ % JobDesc::Singleton()->NumOfBatchesInSnapshot()
         == 0) {
       AsyncSendRegstMsgToConsumer();
     } else {

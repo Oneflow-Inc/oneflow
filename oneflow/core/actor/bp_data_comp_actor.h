@@ -15,7 +15,7 @@ class BpDataCompActor final : public Actor {
 
  private:
   int HandlerNormal(const ActorMsg&) override;
-  int HandlerWaitUntilNoReadableRegst(const ActorMsg&) override;
+  int HandlerUntilReadAlwaysUnReady(const ActorMsg&) override;
 
   bool IsReadReady() override;
   void Act() override;
