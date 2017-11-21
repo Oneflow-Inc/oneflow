@@ -16,7 +16,7 @@ class MdSaveCompTaskNode final : public CompTaskNode {
   void BuildExecGphAndRegst() override;
 
   TaskType GetTaskType() const override { return TaskType::kMdSave; }
-  void FixThrdLocId() override;
+  void FixThrdId() override;
 
  private:
 };

@@ -10,7 +10,7 @@ void TestInnerProductOp(ParallelPolicy policy, bool has_bias_term,
                         bool has_data_id) {
   int out_num = 40;
   JobConf job_conf;
-  job_conf.set_default_data_type(GetDataType<T>::val);
+  job_conf.set_DefaultDataType(GetDataType<T>::val);
   JobDesc::Singleton()->InitFromJobConf(job_conf);
 
   OperatorConf op_conf;

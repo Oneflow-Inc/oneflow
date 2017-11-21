@@ -18,7 +18,7 @@ void RMSPropModelUpdateOp::InferBlobDescs(
   // model_diffs
   const BlobDesc* model_diffs_blob_desc = GetBlobDesc4BnInOp("model_diffs");
   CHECK_EQ(model_diffs_blob_desc->data_type(),
-           JobDesc::Singleton()->default_data_type());
+           JobDesc::Singleton()->DefaultDataType());
   CHECK_EQ(model_diffs_blob_desc->has_data_id(), false);
   // mean_square
   BlobDesc* mean_square_blob_desc = GetBlobDesc4BnInOp("mean_square");

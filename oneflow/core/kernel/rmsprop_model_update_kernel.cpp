@@ -41,14 +41,12 @@ class RMSPropMdUpdateKernelUtil<DeviceType::kCPU, T> final {
                           const T learning_rate, const T decay_rate,
                           const T epsilon, T* model, T* mean_square,
                           const T* model_diff) {
-    ctx.device_ctx->cpu_stream()->SendWork([=]() {
-      for (int64_t i = 0; i < n; ++i) {
-        mean_square[i] =
-            alpha * model_diff[i] * model_diff[i] + decay_rate * mean_square[i];
-        model[i] -= learning_rate * model_diff[i]
-                    / (std::sqrt(mean_square[i] + epsilon));
-      }
-    });
+    for (int64_t i = 0; i < n; ++i) {
+      mean_square[i] =
+          alpha * model_diff[i] * model_diff[i] + decay_rate * mean_square[i];
+      model[i] -=
+          learning_rate * model_diff[i] / (std::sqrt(mean_square[i] + epsilon));
+    }
   }
 };
 

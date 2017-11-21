@@ -21,6 +21,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     CHECK(name2regst_desc_id_.emplace(pair.first, pair.second).second);
   }
   msg_handler_ = nullptr;
+  InitDeviceCtx();
   // Status of Produced Registers
   for (const auto& pair : produced_regsts_) {
     for (const auto& regst : pair.second) {
@@ -39,6 +40,22 @@ int64_t Actor::RegstDescId4Name(const std::string& name) const {
   auto find_it = name2regst_desc_id_.find(name);
   if (find_it != name2regst_desc_id_.end()) { return find_it->second; }
   return -1;
+}
+
+void Actor::InitDeviceCtx() {
+  switch (IDMgr::Singleton()->GetDeviceTypeFromActorId(actor_id_)) {
+    case DeviceType::kCPU: {
+      device_ctx_.reset(new CpuDeviceCtx);
+      break;
+    }
+    case DeviceType::kGPU: {
+      device_ctx_.reset(new CudaDeviceCtx(cuda_handle_.cuda_stream(),
+                                          cuda_handle_.cublas_handle(),
+                                          cuda_handle_.cudnn_handle()));
+      break;
+    }
+    default: { UNEXPECTED_RUN(); }
+  }
 }
 
 KernelCtx Actor::GenDefaultKernelCtx() const {
@@ -75,7 +92,7 @@ void Actor::ProcessOneEord() {
     }
     AsyncSendEORDMsgForAllProducedRegstDesc();
   } else {
-    OF_SET_MSG_HANDLER(&Actor::HandlerWaitUntilNoReadableRegst);
+    OF_SET_MSG_HANDLER(&Actor::HandlerUntilNoReadableRegst);
   }
 }
 
@@ -199,6 +216,22 @@ Regst* Actor::GetCurWriteableRegst(const std::string& name) {
 Regst* Actor::GetCurSoleWriteableRegst() {
   CHECK_EQ(writeable_produced_regst_.size(), 1);
   return writeable_produced_regst_.begin()->second.front();
+}
+
+static HashMap<int, std::function<Actor*()>>& ActorCreatorMap() {
+  static HashMap<int, std::function<Actor*()>> obj;
+  return obj;
+}
+
+void AddActorCreator(TaskType task_type, std::function<Actor*()> creator) {
+  CHECK(ActorCreatorMap().emplace(task_type, creator).second);
+}
+
+std::unique_ptr<Actor> NewActor(const TaskProto& task_proto,
+                                const ThreadCtx& thread_ctx) {
+  Actor* rptr = ActorCreatorMap().at(task_proto.task_type())();
+  rptr->Init(task_proto, thread_ctx);
+  return std::unique_ptr<Actor>(rptr);
 }
 
 }  // namespace oneflow

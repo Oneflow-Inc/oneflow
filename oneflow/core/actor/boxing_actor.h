@@ -15,7 +15,7 @@ class BoxingActor final : public Actor {
 
  private:
   int HandlerNormal(const ActorMsg&) override;
-  int HandlerWaitUntilNoReadableRegst(const ActorMsg&) override;
+  int HandlerUntilNoReadableRegst(const ActorMsg&) override;
 
   bool IsReadReady() override { return !mut_num_of_read_empty(); }
   void Act() override;
