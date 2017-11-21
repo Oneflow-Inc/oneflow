@@ -5,7 +5,11 @@ namespace oneflow {
 TaskNode::TaskNode() : machine_id_(-1), thrd_id_(-1), task_id_(-1) {}
 
 std::shared_ptr<RegstDesc> TaskNode::GetProducedRegst(const std::string& name) {
-  return produced_regsts_.at(name);
+  if (produced_regsts_.find(name) == produced_regsts_.end()) {
+    return nullptr;
+  } else {
+    return produced_regsts_.at(name);
+  }
 }
 
 DeviceType TaskNode::device_type() const {

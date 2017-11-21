@@ -47,13 +47,11 @@ void BackwardCompTaskNode::ConsumeAllRegsts() {
 
 void BackwardCompTaskNode::BuildExecGphAndRegst() {
   Lbn2NodeBnMap lbn2producer;
-  Lbn2NodeBnMap lbn2consumer;
   Lbn2NodeBnMap extern_in_lbn2consumer;
-  BuildExecGphFromUserOps(&lbn2producer, &lbn2consumer,
-                          &extern_in_lbn2consumer);
+  BuildExecGphFromUserOps(&lbn2producer, &extern_in_lbn2consumer);
   SetExecNodeFromOutdiffRegst(extern_in_lbn2consumer);
   AddLbn2ActivationDiffRegst();
-  AddLbn2InDiffRegst(lbn2consumer);
+  AddLbn2InDiffRegst(lbn2producer);
   AddLbn2ModelDiffRegst();
   InferBlobDescsInProducedRegsts();
 }
@@ -84,8 +82,7 @@ void BackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
 }
 
 void BackwardCompTaskNode::BuildExecGphFromUserOps(
-    Lbn2NodeBnMap* lbn2producer, Lbn2NodeBnMap* lbn2consumer,
-    Lbn2NodeBnMap* extern_in_lbn2consumer) {
+    Lbn2NodeBnMap* lbn2producer, Lbn2NodeBnMap* extern_in_lbn2consumer) {
   for (std::shared_ptr<const Operator> op : chain_node()->op_vec()) {
     ExecNode* cur_node = mut_exec_gph().NewNode();
     cur_node->mut_op() = op;
@@ -93,15 +90,11 @@ void BackwardCompTaskNode::BuildExecGphFromUserOps(
       const std::string& lbn = op->Lbn4BnInOp(ibn);
       CHECK(lbn2producer->insert({lbn, {cur_node, ibn}}).second);
     }
-    for (const std::string& obn : op->output_bns()) {
-      const std::string& lbn = op->Lbn4BnInOp(obn);
-      CHECK(lbn2consumer->insert({lbn, {cur_node, obn}}).second);
-    }
   }
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
     for (const std::string& obn : cur_node->op()->output_bns()) {
       const std::string& lbn = cur_node->op()->Lbn4BnInOp(obn);
-      auto producer_it = lbn2producer->find(lbn);
+      const auto& producer_it = lbn2producer->find(lbn);
       if (producer_it != lbn2producer->end()) {
         ExecEdge* edge = mut_exec_gph().NewEdge();
         edge->set_lbn(lbn);
@@ -142,12 +135,13 @@ void BackwardCompTaskNode::SetExecNodeFromOutdiffRegst(
 }
 
 void BackwardCompTaskNode::AddLbn2InDiffRegst(
-    const Lbn2NodeBnMap& lbn2consumer) {
-  auto in_diff_regst = GetProducedRegst("in_diff_regst");
+    const Lbn2NodeBnMap& lbn2producer) {
+  auto in_diff_regst = GetProducedRegst("in_diff");
+  if (!in_diff_regst) { return; }
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
     for (const std::string& ibn : cur_node->op()->input_bns()) {
       const std::string& lbn = cur_node->op()->Lbn4BnInOp(ibn);
-      if (lbn2consumer.find(lbn) == lbn2consumer.end()) {
+      if (lbn2producer.find(lbn) == lbn2producer.end()) {
         in_diff_regst->AddLbn(lbn);
         cur_node->BindBnInOpAndRegst(ibn, in_diff_regst);
       }
