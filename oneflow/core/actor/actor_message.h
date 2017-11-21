@@ -12,7 +12,7 @@ enum class ActorCmd {
   kEORD,                 // End Of Register Desc, All Actor except Source Actor
   kStart,                // Source Actor
   kStopThread,
-  kActivateActor
+  kConstructActor
 };
 
 OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ActorCmd);
@@ -45,6 +45,7 @@ class ActorMsg final {
   const void* comm_net_token() const;
 
   // Serialize
+  std::string DebugString() const { TODO(); }
   template<typename StreamT>
   void Serialize(StreamT& out_stream) const {
     out_stream.Write(this, sizeof(ActorMsg));

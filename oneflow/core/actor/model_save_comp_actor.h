@@ -15,7 +15,7 @@ class MdSaveCompActor final : public CompActor {
 
  private:
   int HandlerNormal(const ActorMsg&) override;
-  int HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) override {
+  int HandlerUntilReadAlwaysUnReady(const ActorMsg& msg) override {
     UNEXPECTED_RUN();
   }
 

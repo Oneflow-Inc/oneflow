@@ -44,6 +44,11 @@ int64_t IDMgr::CommNetThrdId() const {
          + JobDesc::Singleton()->BoxingWorkerNum();
 }
 
+DeviceType IDMgr::GetDeviceTypeFromActorId(int64_t actor_id) const {
+  int64_t thrd_id = ThrdId4ActorId(actor_id);
+  return GetDeviceTypeFromThrdId(thrd_id);
+}
+
 int64_t IDMgr::MachineId4ActorId(int64_t actor_id) const {
   return actor_id >> (63 - machine_id_bit_num_);
 }

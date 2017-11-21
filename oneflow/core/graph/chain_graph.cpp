@@ -207,6 +207,7 @@ ChainGraph::ChainGraph(bool is_train) {
   }
   BuildModelStruct(is_train);
   BuildRnnStruct();
+  ForEachNode([](ChainNode* node) { node->set_data_output_lbns(); });
   ToDotWithAutoFilePath();
 }
 
