@@ -111,7 +111,10 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
   ParallelPolicy in_policy = in_chain->parallel_desc()->policy();
   ParallelPolicy out_policy = out_chain->parallel_desc()->policy();
   void (*CompleteBoxOp)(BoxingOpConf*);
-  if (in_policy == kDataParallel && out_policy == kDataParallel) {
+  if (in_policy == kFakerMdUpdt) {
+    CHECK_EQ(out_policy, kDataParallel);
+    CompleteBoxOp = &FwCompleteBoxOpConfAddClone;
+  } else if (in_policy == kDataParallel && out_policy == kDataParallel) {
     CompleteBoxOp = &FwCompleteBoxOpConfDataData;
   } else if (in_policy == kDataParallel && out_policy == kModelParallel) {
     CompleteBoxOp = &FwCompleteBoxOpConfDataModel;
@@ -119,9 +122,6 @@ void BoxingTaskNode::FwBuildChainSortedEdgesPair(
     CompleteBoxOp = &FwCompleteBoxOpConfModelData;
   } else if (in_policy == kModelParallel && out_policy == kModelParallel) {
     CompleteBoxOp = &FwCompleteBoxOpConfModelModel;
-  } else if (in_policy == kFakerMdUpdt) {
-    CHECK_EQ(out_policy, kModelParallel);
-    CompleteBoxOp = &FwCompleteBoxOpConfAddClone;
   } else {
     CHECK_EQ(in_policy, kFakerLossRecord);
     CHECK_EQ(out_policy, kDataParallel);

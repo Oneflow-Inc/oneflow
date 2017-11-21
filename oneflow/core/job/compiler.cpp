@@ -118,9 +118,10 @@ void Compiler::BuildModelGraphs(
 
   bool is_train = JobDesc::Singleton()->is_train();
   std::vector<CompTaskNode*> sorted_diff_acc_tasks;
+  MdDiffAccTaskGraph* diff_acc_gph = nullptr;
   if (is_train) {
-    auto diff_acc_gph = new MdDiffAccTaskGraph("md_diff_acc_" + chain_tag,
-                                               pair.first, pair.second);
+    diff_acc_gph = new MdDiffAccTaskGraph("md_diff_acc_" + chain_tag,
+                                          pair.first, pair.second);
     ordered_task_gphs_.emplace_back(diff_acc_gph);
 
     ChainNode* diff_acc_chain = diff_acc_gph->chain_gph()->SoleSinkNode();
@@ -131,17 +132,13 @@ void Compiler::BuildModelGraphs(
   std::vector<CompTaskNode*> updt_tasks;
   updt_tasks.reserve(pair.second.size());
   uint32_t random_seed = NewRandomSeed();
-  for (size_t i = 0; i < pair.second.size(); ++i) {
-    CompTaskNode* data_fw_task = pair.second[i];
-    auto updt_gph = new MdUpdtTaskGraph(
-        "md_updt_" + data_fw_task->node_id_str(), data_fw_task,
-        is_train ? sorted_diff_acc_tasks[i] : nullptr, random_seed);
-    ordered_task_gphs_.emplace_back(updt_gph);
-    ChainNode* updt_chain = updt_gph->chain_gph()->SoleSinkNode();
-    auto updt_tasks_in_chain = updt_gph->CompTasksInChain(updt_chain);
-    CHECK_EQ(updt_tasks_in_chain.size(), 1);
-    updt_tasks.push_back(updt_tasks_in_chain[0]);
-  }
+
+  auto updt_gph = new MdUpdtTaskGraph(
+      "md_updt_" + pair.second[0]->node_id_str(), random_seed, pair.first,
+      sorted_diff_acc_tasks, pair.second);
+  ordered_task_gphs_.emplace_back(updt_gph);
+  ChainNode* updt_chain = updt_gph->chain_gph()->SoleSinkNode();
+  updt_tasks = updt_gph->CompTasksInChain(updt_chain);
 
   if (is_train) {
     if (policy == kDataParallel) { updt_tasks = {updt_tasks.front()}; }
@@ -224,6 +221,17 @@ Plan Compiler::GenPlanFile() {
           op_name);
     });
   });
+
+  // for (int i = 0; i < plan.task_size(); ++i) {
+  //   auto task = plan.mutable_task(i);
+  //   // if (task->type() == TaskType::kDataCompTask && task->is_forward()
+  //   //   && task->exec_sequence().exec_node_size() > 5) {
+  //   for (auto& pair : *task->mutable_produced_regst_desc()) {
+  //     pair.second.set_register_num(std::max(3, pair.second.register_num()));
+  //   }
+  //   //}
+  // }
+
   Plan2DotFile(plan);
   return plan;
 }

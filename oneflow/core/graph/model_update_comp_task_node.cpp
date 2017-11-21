@@ -6,12 +6,16 @@ namespace oneflow {
 
 void MdUpdtCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   CHECK(IsFwNode());
-  auto md_updt_gph = static_cast<MdUpdtTaskGraph*>(gph);
-  CompTaskNode* diff_acc_task = md_updt_gph->diff_acc_task();
+  //  auto md_updt_gph = static_cast<MdUpdtTaskGraph*>(gph);
+  //  CompTaskNode* diff_acc_task = md_updt_gph->diff_acc_task();
   std::shared_ptr<RegstDesc> model_diff_acc_regst;
-  if (diff_acc_task != nullptr) {
+  if (diff_acc_task_ != nullptr) {
     model_diff_acc_regst =
-        diff_acc_task->GetProducedRegstDesc("model_diff_acc");
+        diff_acc_task_->GetProducedRegstDesc("model_diff_acc");
+    if (chain_node()->op_vec().empty()) {
+      BindProducedRegstAndOutEdge(model_diff_acc_regst, SoleOutEdge());
+      return;
+    }
   }
   TakeOverRegstDesc(fw_task_, "model");
   TakeOverRegstDesc(fw_task_, "model_tmp");
@@ -20,9 +24,13 @@ void MdUpdtCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
   ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = chain_node()->SoleOp();
   const std::string ibn = "model_diffs";
-  if (model_diff_acc_regst != nullptr) {
+  if (in_edges().empty() && model_diff_acc_regst != nullptr) {
     exec_node->BindBnInOpAndRegst(ibn, model_diff_acc_regst);
     ConsumeRegstDesc(ibn, model_diff_acc_regst);
+  } else {
+    exec_node->BindBnInOpAndRegst(exec_node->op()->SoleIbn(),
+                                  GetRelatedRegst(SoleInEdge()));
+    ConsumeRegstDesc(ibn, GetRelatedRegst(SoleInEdge()));
   }
   exec_node->BindBnInOpAndRegst(exec_node->op()->SoleObn(), model_regst);
   auto data_tmp_regst = NewProducedRegstDesc("data_tmp", 1);
@@ -36,6 +44,7 @@ void MdUpdtCompTaskNode::BuildExecAndEnrollLbn2Regsts(TaskGraph* gph) {
 
 void MdUpdtCompTaskNode::InferBlobDescInProducedRegsts(TaskGraph* gph) {
   CHECK(IsFwNode());
+  if (chain_node()->op_vec().empty()) { return; }
   ExecNode* exec_node = exec_gph().SoleNode();
   auto model_diffs_regst = GetConsumedRegstDesc("model_diffs");
   BlobDesc packed_blob_desc;

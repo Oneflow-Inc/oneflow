@@ -28,18 +28,6 @@ void MdDiffAccTaskGraph::BuildTaskGraph(const ChainNode* data_chain) {
       new ParallelDesc(*(data_chain->parallel_desc()));
   parallel_desc4diff_acc->mut_policy() = kModelParallel;
   diff_acc_chain->mut_parallel_desc().reset(parallel_desc4diff_acc);
-  // FakerChain
-  if (data_chain->parallel_desc()->policy() == kDataParallel) {
-    ChainNode* faker_chain = chain_gph->NewNode();
-    faker_chain->mut_op_vec().clear();
-    auto parallel_desc4faker = new ParallelDesc(*(data_chain->parallel_desc()));
-    parallel_desc4faker->mut_policy() = kFakerMdUpdt;
-    faker_chain->mut_parallel_desc().reset(parallel_desc4faker);
-    faker_chain->mut_output_lbns() = {kPackedBlobName};
-    diff_acc_chain->mut_input_lbns() = {kPackedBlobName};
-    Connect(faker_chain, chain_gph->NewEdge(), diff_acc_chain);
-  }
-  //
   chain_gph->UpdateSourceAndSink();
   chain_gph->ToDotWithAutoFilePath();
   BuildFromChainGph<MdDiffAccCompTaskNode>(std::move(chain_gph), false);

@@ -28,6 +28,11 @@ class MdUpdtCompTaskNode final : public CompTaskNode {
     proto->set_random_seed(random_seed_);
   }
 
+  void set_diff_acc_task(CompTaskNode* diff_acc_task) {
+    diff_acc_task_ = diff_acc_task;
+  }
+  CompTaskNode* diff_acc_task() { return diff_acc_task_; }
+
   void set_fw_task(CompTaskNode* fw_task) { fw_task_ = fw_task; }
   CompTaskNode* fw_task() { return fw_task_; }
 
@@ -41,6 +46,7 @@ class MdUpdtCompTaskNode final : public CompTaskNode {
     return of_make_unique<MdUpdtCompTaskNode>();
   }
   CompTaskNode* fw_task_;
+  CompTaskNode* diff_acc_task_;
   uint32_t random_seed_;
 };
 
