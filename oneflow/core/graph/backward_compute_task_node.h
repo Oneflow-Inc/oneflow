@@ -20,14 +20,14 @@ class BackwardCompTaskNode final : public CompTaskNode {
  private:
   using Lbn2NodeBnMap = HashMap<std::string, std::pair<ExecNode*, std::string>>;
 
-  void BuildExecGphFromUserOps(Lbn2NodeBnMap* lbn2producer,
-                               Lbn2NodeBnMap* extern_in_lbn2consumer);
+  void BuildExecGphFromUserOps(Lbn2NodeBnMap* lbn2producer);
   void AddLbn2ProducedRegst();
-  void SetExecNodeFromOutdiffRegst(const Lbn2NodeBnMap& extern_in_lbn2consumer);
+  void SetExecNodeFromOutdiffRegst();
   void AddLbn2ActivationDiffRegst();
   void AddLbn2InDiffRegst(const Lbn2NodeBnMap& lbn2producer);
   void AddLbn2ModelDiffRegst();
   void InferBlobDescsInProducedRegsts();
+  std::shared_ptr<RegstDesc> GetRelatedInRegst();
 };
 
 }  // namespace oneflow
