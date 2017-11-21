@@ -48,7 +48,7 @@ void BoxingOp::InferBlobDescs(
   // check datatype of input desc && calculate the shape of data_tmp
   for (size_t ib_idx = 1; ib_idx < input_bns().size(); ++ib_idx) {
     const BlobDesc* ib_desc = GetBlobDesc4BnInOp(input_bns().at(ib_idx));
-    auto ib_shape_vec = ib_desc->shape().dim_vec();
+    const std::vector<int64_t>& ib_shape_vec = ib_desc->shape().dim_vec();
     CHECK_LT(concat_axis, ib_shape_vec.size());
     // if it is a concat-box, accumulate the dimensions on concat-axis.
     // otherwise only check all boxes are in the same shape.
@@ -74,19 +74,18 @@ void BoxingOp::InferBlobDescs(
   // infer desc of out blobs
   if (out_box_case == BoxingOpConf::kSplitBox) {
     auto split_conf = conf.split_box();
-    int32_t out_num = output_bns().size();
-    auto output_shape_vec = data_tmp_blob_shape_vec;
+    std::vector<int64_t> output_shape_vec = data_tmp_blob_shape_vec;
     CHECK_GE(split_conf.axis(), 0);
     CHECK_LT(split_conf.axis(), output_shape_vec.size());
     CHECK_EQ(split_conf.part_num_size(), output_shape_vec.size());
-    for (size_t i = 0; i < out_num; ++i) {
+    for (size_t i = 0; i < output_bns().size(); ++i) {
       BlobDesc* ob_desc = GetBlobDesc4BnInOp(output_bns().at(i));
       ob_desc->set_has_data_id(has_data_id);
       output_shape_vec[split_conf.axis()] = split_conf.part_num(i);
       ob_desc->mut_shape() = Shape(output_shape_vec);
     }
   } else if (out_box_case == BoxingOpConf::kCloneBox) {
-    for (auto obn : output_bns()) {
+    for (const std::string& obn : output_bns()) {
       GetBlobDesc4BnInOp(obn)->mut_shape() = Shape(data_tmp_blob_shape_vec);
     }
   } else {
