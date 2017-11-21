@@ -21,7 +21,7 @@ void MdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
 }
 
 void MdUpdtCompTaskNode::ConsumeAllRegsts() {
-  if (JobDesc::Singleton()->IsPredict()) return;
+  if (JobDesc::Singleton()->IsPredict()) { return; }
   ConsumeRegst("model_diff_acc", SoleInEdge()->GetSoleRegst());
 }
 
