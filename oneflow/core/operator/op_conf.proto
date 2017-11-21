@@ -72,6 +72,11 @@ message RnnDataLoaderOpConf {
   required string data_dir = 5;
 }
 
+message RnnLookupOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
 message PoolingOpConf {
   required string in = 1;
   required string out = 2;
@@ -220,5 +225,6 @@ message OperatorConf {
     RecordOpConf record_conf = 118;
     LossRecordOpConf loss_record_conf = 119;
     RnnDataLoaderOpConf rnn_data_loader_conf = 120;
+    RnnLookupOpConf rnn_lookup_conf = 121;
   }
 }
