@@ -302,7 +302,7 @@ void CudnnPoolingKernel<DeviceType::kGPU, T>::Forward(
       in_blob->shape().At(3)));
   CudaCheck(cudnnSetTensor4dDescriptor(
       out_desc_, CUDNN_TENSOR_NCHW, cudnn::DataType<T>::type,
-      out_blob->shape().At(0), out_blob->shape().At(1), out_blob->shape().At(3),
+      out_blob->shape().At(0), out_blob->shape().At(1), out_blob->shape().At(2),
       out_blob->shape().At(3)));
 
   CudaCheck(cudnnPoolingForward(ctx.device_ctx->cudnn_handle(), pooling_desc_,

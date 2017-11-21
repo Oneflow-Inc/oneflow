@@ -62,6 +62,25 @@ void CudnnReluKernel<DeviceType::kGPU, T>::Forward(
   Blob* out_blob = BnInOp2Blob("out");
   CopyDataIdFromSoleIbToAllObIfNeed<DeviceType::kGPU>(ctx, BnInOp2Blob);
 
+  // XXX(shiyuan)
+  if (in_blob->shape().NumAxes() < 4) {
+    CudaCheck(cudnnSetTensor4dDescriptor(
+        in_desc_, CUDNN_TENSOR_NCHW, cudnn::DataType<T>::type,
+        in_blob->shape().At(0), in_blob->shape().At(1), 1, 1));
+    CudaCheck(cudnnSetTensor4dDescriptor(
+        out_desc_, CUDNN_TENSOR_NCHW, cudnn::DataType<T>::type,
+        out_blob->shape().At(0), out_blob->shape().At(1), 1, 1));
+  } else {
+    CudaCheck(cudnnSetTensor4dDescriptor(
+        in_desc_, CUDNN_TENSOR_NCHW, cudnn::DataType<T>::type,
+        in_blob->shape().At(0), in_blob->shape().At(1), in_blob->shape().At(2),
+        in_blob->shape().At(3)));
+    CudaCheck(cudnnSetTensor4dDescriptor(
+        out_desc_, CUDNN_TENSOR_NCHW, cudnn::DataType<T>::type,
+        out_blob->shape().At(0), out_blob->shape().At(1),
+        out_blob->shape().At(2), out_blob->shape().At(3)));
+  }
+
   CudaCheck(cudnnActivationForward(ctx.device_ctx->cudnn_handle(), activ_desc_,
                                    cudnn::DataType<T>::one, in_desc_,
                                    in_blob->dptr<T>(), cudnn::DataType<T>::zero,
