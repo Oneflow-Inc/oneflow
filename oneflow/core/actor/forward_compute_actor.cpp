@@ -11,8 +11,14 @@ void ForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto,
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
   model_regst_ = nullptr;
   model_tmp_regst_ = nullptr;
-  set_num_of_remaining_eord(1 + (model_regst_desc_id_ != -1)
-                            + (model_tmp_regst_desc_id_ != -1));
+  if (JobDesc::Singleton()->IsTrain()) {
+    set_num_of_remaining_eord(1 + (model_regst_desc_id_ != -1)
+                              + (model_tmp_regst_desc_id_ != -1));
+  } else if (JobDesc::Singleton()->IsPredict()) {
+    set_num_of_remaining_eord(1);
+  } else {
+    UNEXPECTED_RUN();
+  }
   if (model_regst_desc_id_ != -1) {
     OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerInitModel);
   } else {
