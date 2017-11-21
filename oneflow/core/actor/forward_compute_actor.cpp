@@ -2,73 +2,84 @@
 
 namespace oneflow {
 
-void ForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto,
-                                            const ThreadCtx& thread_ctx) {
-  in_desc_id_ = RegstDescId4Name("in");
-  CHECK_NE(in_desc_id_, -1);
+void ForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
+  in_regst_desc_id_ = RegstDescId4Name("in");
+  CHECK_NE(in_regst_desc_id_, -1);
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
   model_regst_ = nullptr;
   model_tmp_regst_ = nullptr;
-  set_num_of_remaining_eord(1 + (model_regst_desc_id_ != -1)
-                            + (model_tmp_regst_desc_id_ != -1));
-  mut_num_of_read_empty() = 1;  // only consider "in"regst
-  OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerNormal);
-}
-
-bool ForwardCompActor::IsReadReady() {
-  if (in_desc_id_ == -1) { return true; }
-  if (in_desc_id_ == -2) { return false; }
-  if (in_.empty() || (model_regst_desc_id_ != -1 && !model_regst_)
-      || (model_tmp_regst_desc_id_ != -1 && !model_tmp_regst_)) {
-    return false;
+  if (JobDesc::Singleton()->IsTrain()) {
+    set_num_of_remaining_eord(1 + (model_regst_desc_id_ != -1)
+                              + (model_tmp_regst_desc_id_ != -1));
+  } else if (JobDesc::Singleton()->IsPredict()) {
+    set_num_of_remaining_eord(1);
+  } else {
+    UNEXPECTED_RUN();
   }
-  if (JobDesc::Singleton()->IsTrain() && model_regst_desc_id_ != -1) {
-    // Ho Q, Cipar J, Cui H, et al. More effective distributed ml via a stale
-    // synchronous parallel parameter server
-    int32_t staleness = JobDesc::Singleton()->Staleness();
-    int32_t num_of_pieces_in_batch = JobDesc::Singleton()->NumOfPiecesInBatch();
-    int64_t cur_iteration = in_.front()->piece_id() / num_of_pieces_in_batch;
-    int64_t stale_version = cur_iteration - staleness;
-    return model_regst_->model_version_id() >= stale_version;
-  }
-  return true;
-}
-
-void ForwardCompActor::AsyncSendMsgToModelAndModelTmpProducer() {
   if (model_regst_desc_id_ != -1) {
-    AsyncSendRegstMsgToProducer(model_regst_);
-    model_regst_ = nullptr;
+    OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerInitModel);
+  } else {
+    SwitchToHandlerInitModelTmpOrNormal();
   }
+}
+
+void ForwardCompActor::SwitchToHandlerInitModelTmpOrNormal() {
   if (model_tmp_regst_desc_id_ != -1) {
-    AsyncSendRegstMsgToProducer(model_tmp_regst_);
-    model_tmp_regst_ = nullptr;
+    OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerInitModelTmp);
+  } else {
+    OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerNormal);
   }
+}
+
+int ForwardCompActor::HandlerInitModel(const ActorMsg& msg) {
+  Regst* model_regst = msg.regst();
+  CHECK_EQ(model_regst->regst_desc_id(), model_regst_desc_id_);
+  for (const ExecKernel& exec_kernel : exec_kernel_vec()) {
+    exec_kernel.kernel->InitModelBlobs(
+        GenDefaultKernelCtx(), parallel_ctx(),
+        SnapshotMgr::Singleton()->GetReadableSnapshot(),
+        [&](const std::string& bn_in_op) {
+          const std::string& lbn = exec_kernel.kernel->Lbn4BnInOp(bn_in_op);
+          return model_regst->GetBlobPtrFromLbn(lbn);
+        });
+  }
+  AsyncSendRegstMsgToProducer(model_regst);
+  SwitchToHandlerInitModelTmpOrNormal();
+  return 0;
+}
+
+int ForwardCompActor::HandlerInitModelTmp(const ActorMsg& msg) {
+  Regst* model_tmp_regst = msg.regst();
+  CHECK_EQ(model_tmp_regst->regst_desc_id(), model_tmp_regst_desc_id_);
+  for (const ExecKernel& exec_kernel : exec_kernel_vec()) {
+    exec_kernel.kernel->InitModelTmpBlobs(
+        GenDefaultKernelCtx(), parallel_ctx(),
+        [&](const std::string& bn_in_op) {
+          const std::string& lbn = exec_kernel.kernel->Lbn4BnInOp(bn_in_op);
+          return model_tmp_regst->GetBlobPtrFromLbn(lbn);
+        });
+  }
+  AsyncSendRegstMsgToProducer(model_tmp_regst);
+  OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerNormal);
+  return 0;
 }
 
 int ForwardCompActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
+    CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);  // it must be in_regst_desc
     ProcessOneEord();
-    if (msg_handler() == &ForwardCompActor::HandlerZombie
-        || msg_handler() == nullptr) {
-      AsyncSendMsgToModelAndModelTmpProducer();
-    }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = msg.regst();
-    if (TryUpdtStateAsProducedRegst(regst) != 0) {
-      if (regst->regst_desc_id() == model_tmp_regst_desc_id_) {
-        CHECK(!model_tmp_regst_);
-        model_tmp_regst_ = regst;
-        readable_regst_[model_tmp_regst_desc_id_] = regst;
-      } else if (regst->regst_desc_id() == model_regst_desc_id_) {
-        if (model_regst_) { AsyncSendRegstMsgToProducer(model_regst_); }
-        model_regst_ = regst;
-        readable_regst_[model_regst_desc_id_] = regst;
-      } else {
-        in_.push(regst);
-        mut_num_of_read_empty() = 0;
-      }
+    if (regst->regst_desc_id() == in_regst_desc_id_) {
+      pending_in_regsts_.push(regst);
+    } else if (regst->regst_desc_id() == model_regst_desc_id_) {
+      UpdateModelRegstPtr(regst);
+    } else if (regst->regst_desc_id() == model_tmp_regst_desc_id_) {
+      CHECK(!model_tmp_regst_);
+      model_tmp_regst_ = regst;
+    } else {
+      CHECK_EQ(TryUpdtStateAsProducedRegst(regst), 0);
     }
     ActUntilFail();
   } else {
@@ -77,51 +88,95 @@ int ForwardCompActor::HandlerNormal(const ActorMsg& msg) {
   return msg_handler() == nullptr;
 }
 
-int ForwardCompActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
-  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
+int ForwardCompActor::HandlerUntilReadAlwaysUnReady(const ActorMsg& msg) {
+  Regst* regst = msg.regst();
+  if (regst->regst_desc_id() == model_regst_desc_id_) {
+    UpdateModelRegstPtr(regst);
+  } else {
+    CHECK_EQ(TryUpdtStateAsProducedRegst(regst), 0);
+  }
   ActUntilFail();
-  CHECK_NE(in_desc_id_, -1);
-  if (in_.empty()) {
-    AsyncSendMsgToModelAndModelTmpProducer();
+  if (IsReadAlwaysUnReadyFromNow()) {
+    TryAsyncReturnModelRegst();
+    TryAsyncReturnModelTmpRegst();
     AsyncSendEORDMsgForAllProducedRegstDesc();
     OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerZombie);
   }
   return 0;
 }
 
-void ForwardCompActor::Act() {
-  int64_t piece_id = 0;  // expected_piece_id();
-  if (!in_.empty()) {
-    CHECK_EQ(in_.front()->piece_id(), piece_id);
-    readable_regst_[in_.front()->regst_desc_id()] = in_.front();
+bool ForwardCompActor::IsReadReady() {
+  if (pending_in_regsts_.empty()) { return false; }
+  if (model_regst_desc_id_ != -1 && !model_regst_) { return false; }
+  if (model_tmp_regst_desc_id_ != -1 && !model_tmp_regst_) { return false; }
+  if (JobDesc::Singleton()->IsTrain() && model_regst_desc_id_ != -1) {
+    // Ho Q, Cipar J, Cui H, et al. More effective distributed ml via a stale
+    // synchronous parallel parameter server
+    int32_t staleness = JobDesc::Singleton()->Staleness();
+    int32_t num_of_pieces_in_batch = JobDesc::Singleton()->NumOfPiecesInBatch();
+    int64_t cur_iteration =
+        pending_in_regsts_.front()->piece_id() / num_of_pieces_in_batch;
+    int64_t stale_version = cur_iteration - staleness;
+    if (model_regst_->model_version_id() >= stale_version) {
+      return true;
+    } else {
+      AsyncReturnModelRegst();
+      return false;
+    }
   }
+  return true;
+}
+
+bool ForwardCompActor::IsReadAlwaysUnReadyFromNow() {
+  return pending_in_regsts_.empty();
+}
+
+void ForwardCompActor::Act() {
+  Regst* in_regst = pending_in_regsts_.front();
+  pending_in_regsts_.pop();
   int64_t model_version_id = -1;
   if (model_regst_) { model_version_id = model_regst_->model_version_id(); }
   AsyncLaunchKernel(GenDefaultKernelCtx(),
-                    [this](int64_t regst_desc_id) -> Regst* {
-                      Regst* regst = GetCurWriteableRegst(regst_desc_id);
-                      if (regst == nullptr) {
-                        return readable_regst_.at(regst_desc_id);
+                    [&](int64_t regst_desc_id) -> Regst* {
+                      if (regst_desc_id == in_regst_desc_id_) {
+                        return in_regst;
+                      } else if (regst_desc_id == model_regst_desc_id_) {
+                        return model_regst_;
+                      } else if (regst_desc_id == model_tmp_regst_desc_id_) {
+                        return model_tmp_regst_;
                       } else {
-                        return regst;
+                        return GetCurWriteableRegst(regst_desc_id);
                       }
                     });
-  AsyncSendRegstMsgToConsumer([piece_id, model_version_id](Regst* regst) {
-    regst->set_piece_id(piece_id);
+  AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+    regst->set_piece_id(in_regst->piece_id());
     regst->set_model_version_id(model_version_id);
   });
-  if (!in_.empty()) {
-    AsyncSendRegstMsgToProducer(in_.front());
-    in_.pop();
-    mut_num_of_read_empty() = in_.empty();
-  }
-  TODO();
-  // if (expected_piece_id() == JobDesc::Singleton()->total_piece_num()) {
-  //  in_desc_id_ = -2;
-  //  AsyncSendMsgToModelAndModelTmpProducer();
-  //  AsyncSendEORDMsgForAllProducedRegstDesc();
-  //  TrySwitchToZombie();
-  //}
+  AsyncSendRegstMsgToProducer(in_regst);
 }
+
+void ForwardCompActor::UpdateModelRegstPtr(Regst* regst) {
+  TryAsyncReturnModelRegst();
+  model_regst_ = regst;
+}
+
+void ForwardCompActor::AsyncReturnModelRegst() {
+  CHECK_NOTNULL(model_regst_);
+  AsyncSendRegstMsgToProducer(model_regst_);
+  model_regst_ = nullptr;
+}
+
+void ForwardCompActor::TryAsyncReturnModelRegst() {
+  if (model_regst_) { AsyncReturnModelRegst(); }
+}
+
+void ForwardCompActor::TryAsyncReturnModelTmpRegst() {
+  if (model_tmp_regst_) {
+    AsyncSendRegstMsgToProducer(model_tmp_regst_);
+    model_tmp_regst_ = nullptr;
+  }
+}
+
+REGISTER_ACTOR(TaskType::kForward, ForwardCompActor);
 
 }  // namespace oneflow

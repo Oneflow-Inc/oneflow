@@ -11,14 +11,14 @@ class MdUpdtCompActor final : public CompActor {
   MdUpdtCompActor() = default;
   ~MdUpdtCompActor() = default;
 
-  void VirtualCompActorInit(const TaskProto&, const ThreadCtx&) override;
+  void VirtualCompActorInit(const TaskProto&) override;
 
  private:
   int HandlerBeforeInitDeviceCtx(const ActorMsg&);
   int HandlerBeforeInitializeModel(const ActorMsg&);
   int HandlerBeforeSendInitialModel(const ActorMsg&);
   int HandlerNormal(const ActorMsg&) override;
-  int HandlerWaitUntilNoReadableRegst(const ActorMsg&) override;
+  int HandlerUntilReadAlwaysUnReady(const ActorMsg&) override;
 
   bool IsWriteReady() override {
     return Actor::IsWriteReady();

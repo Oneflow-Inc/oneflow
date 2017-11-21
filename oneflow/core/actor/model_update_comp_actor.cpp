@@ -4,8 +4,7 @@
 
 namespace oneflow {
 
-void MdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto,
-                                           const ThreadCtx& thread_ctx) {
+void MdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
   data_tmp_regst_desc_id_ = RegstDescId4Name("data_tmp");
@@ -13,7 +12,6 @@ void MdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto,
   // related_save_task_id_ = task_proto.related_save_task_id();
   random_seed_ = task_proto.random_seed();
   set_num_of_remaining_eord(1);
-  mut_num_of_read_empty() = 1;
   if (JobDesc::Singleton()->GetDeviceType() == DeviceType::kCPU) {
     mut_device_ctx().reset(new CpuDeviceCtx());
     MemcpyFunc =
@@ -112,7 +110,6 @@ int MdUpdtCompActor::HandlerNormal(const ActorMsg& actor_msg) {
     Regst* regst = actor_msg.regst();
     if (TryUpdtStateAsProducedRegst(regst) != 0) {
       waiting_model_diff_acc_queue_.push(regst);
-      mut_num_of_read_empty() = 0;
     }
     ActUntilFail();
   } else {
@@ -121,8 +118,7 @@ int MdUpdtCompActor::HandlerNormal(const ActorMsg& actor_msg) {
   return msg_handler() == nullptr;
 }
 
-int MdUpdtCompActor::HandlerWaitUntilNoReadableRegst(
-    const ActorMsg& actor_msg) {
+int MdUpdtCompActor::HandlerUntilReadAlwaysUnReady(const ActorMsg& actor_msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(actor_msg.regst()), 0);
   ActUntilFail();
   if (waiting_model_diff_acc_queue_.empty()) {
@@ -135,7 +131,6 @@ int MdUpdtCompActor::HandlerWaitUntilNoReadableRegst(
 void MdUpdtCompActor::Act() {
   auto model_diff_acc_wpr = waiting_model_diff_acc_queue_.front();
   waiting_model_diff_acc_queue_.pop();
-  mut_num_of_read_empty() = waiting_model_diff_acc_queue_.empty();
   Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
   auto model_wpr = model_regst;
   model_regst->set_model_version_id(next_model_version_id_);

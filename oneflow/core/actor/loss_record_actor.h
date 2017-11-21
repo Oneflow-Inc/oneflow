@@ -12,10 +12,10 @@ class LossRecordActor final : public Actor {
   ~LossRecordActor() = default;
 
  private:
-  void VirtualActorInit(const TaskProto&, const ThreadCtx&) override;
+  void VirtualActorInit(const TaskProto&) override;
 
   int HandlerNormal(const ActorMsg&) override;
-  int HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) override {
+  int HandlerUntilReadAlwaysUnReady(const ActorMsg& msg) override {
     UNEXPECTED_RUN();
   }
 
