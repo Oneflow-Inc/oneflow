@@ -5,13 +5,15 @@ namespace oneflow {
 
 void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   auto out_regst = ProduceRegst("out", 1, kMaxRegisterNum);
-
+  if (dynamic_cast<const ForwardChainNode*>(chain_node())->bw_node()) {
+    ProduceRegst("data_tmp", 1, kMaxRegisterNum);
+  } else {
+    ProduceRegst("data_tmp", 1, 1);
+  }
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
     if (dst_node->GetTaskType() == TaskType::kBackward) {
-      auto activation_regst = ProduceRegst("activation", 1, kMaxRegisterNum);
-      auto data_tmp_regst = ProduceRegst("data_tmp", 1, kMaxRegisterNum);
-      edge->AddRegst("activation", activation_regst);
+      auto data_tmp_regst = GetProducedRegst("data_tmp");
       edge->AddRegst("data_tmp", data_tmp_regst);
     }
     edge->AddRegst("out", out_regst);
@@ -32,31 +34,26 @@ void ForwardCompTaskNode::ConsumeAllRegsts() {
 
 void ForwardCompTaskNode::BuildExecGphAndRegst() {
   Lbn2NodeBnMap lbn2producer;
-  Lbn2NodeBnMap lbn2consumer;
   Lbn2NodeBnMap extern_in_lbn2consumer;
-  BuildFromUserOps(&lbn2producer, &lbn2consumer, &extern_in_lbn2consumer);
+  BuildFromUserOps(&lbn2producer, &extern_in_lbn2consumer);
   SetExecNodeFromInRegst(extern_in_lbn2consumer);
-  AddLbn2OutRegst(lbn2consumer);
-  AddLbn2ActivationRegst();
-  AddLbn2ModelAndTmpRegsts();
+  AddLbn2OutRegst(lbn2producer);
+  AddLbn2DataTmpRegst();
+  AddLbn2ModelAndModelTmpRegsts();
+
   mut_exec_gph().TopoForEachNode([this](ExecNode* node) {
     node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), parallel_ctx());
   });
 }
 
 void ForwardCompTaskNode::BuildFromUserOps(
-    Lbn2NodeBnMap* lbn2producer, Lbn2NodeBnMap* lbn2consumer,
-    Lbn2NodeBnMap* extern_in_lbn2consumer) {
+    Lbn2NodeBnMap* lbn2producer, Lbn2NodeBnMap* extern_in_lbn2consumer) {
   for (std::shared_ptr<const Operator> op : chain_node()->op_vec()) {
     ExecNode* cur_node = mut_exec_gph().NewNode();
     cur_node->mut_op() = op;
     for (const std::string& obn : op->output_bns()) {
       const std::string& lbn = op->Lbn4BnInOp(obn);
       CHECK(lbn2producer->insert({lbn, {cur_node, obn}}).second);
-    }
-    for (const std::string& ibn : op->input_bns()) {
-      const std::string& lbn = op->Lbn4BnInOp(ibn);
-      CHECK(lbn2consumer->insert({lbn, {cur_node, ibn}}).second);
     }
   }
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
@@ -87,38 +84,46 @@ void ForwardCompTaskNode::SetExecNodeFromInRegst(
   }
 }
 
-void ForwardCompTaskNode::AddLbn2OutRegst(const Lbn2NodeBnMap& lbn2consumer) {
+void ForwardCompTaskNode::AddLbn2OutRegst(const Lbn2NodeBnMap& lbn2producer) {
   auto out_regst = GetProducedRegst("out");
+  for (const std::string& lbn : chain_node()->data_output_lbns()) {
+    const std::pair<ExecNode*, std::string>& producer = lbn2producer.at(lbn);
+    ExecNode* node = producer.first;
+    const std::string& obn = producer.second;
+    out_regst->AddLbn(obn);
+    node->BindBnInOpAndRegst(obn, out_regst);
+  }
+}
+
+void ForwardCompTaskNode::AddLbn2DataTmpRegst() {
+  auto data_tmp_regst = GetProducedRegst("data_tmp");
+  mut_exec_gph().ForEachEdge([&](const ExecEdge* edge) {
+    data_tmp_regst->AddLbn(edge->lbn());
+    edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), data_tmp_regst);
+    edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(), data_tmp_regst);
+  });
+
+  auto data_output_lbns = chain_node()->data_output_lbns();
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
     for (const std::string& obn : cur_node->op()->output_bns()) {
       const std::string& lbn = cur_node->op()->Lbn4BnInOp(obn);
-      if (lbn2consumer.find(lbn) == lbn2consumer.end()) {
-        out_regst->AddLbn(lbn);
-        cur_node->BindBnInOpAndRegst(obn, out_regst);
+      if (data_output_lbns.find(lbn) == data_output_lbns.end()) {
+        data_tmp_regst->AddLbn(lbn);
+        cur_node->BindBnInOpAndRegst(obn, data_tmp_regst);
       }
+    }
+    for (const std::string& dtbn : cur_node->op()->data_tmp_bns()) {
+      const std::string& lbn = cur_node->op()->Lbn4BnInOp(dtbn);
+      data_tmp_regst->AddLbn(lbn);
+      cur_node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
     }
   });
 }
 
-void ForwardCompTaskNode::AddLbn2ActivationRegst() {
-  auto activation_regst = GetProducedRegst("activation");
-  mut_exec_gph().ForEachEdge([&](const ExecEdge* edge) {
-    activation_regst->AddLbn(edge->lbn());
-    edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), activation_regst);
-    edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(), activation_regst);
-  });
-}
-
-void ForwardCompTaskNode::AddLbn2ModelAndTmpRegsts() {
-  auto data_tmp_regst = GetProducedRegst("data_tmp");
+void ForwardCompTaskNode::AddLbn2ModelAndModelTmpRegsts() {
   auto model_regst = GetConsumedRegst("model");
   auto model_tmp_regst = GetConsumedRegst("model_tmp");
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
-    for (const std::string& dtbn : node->op()->data_tmp_bns()) {
-      const std::string& lbn = node->op()->Lbn4BnInOp(dtbn);
-      data_tmp_regst->AddLbn(lbn);
-      node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
-    }
     for (const std::string& mtbn : node->op()->model_tmp_bns()) {
       const std::string& lbn = node->op()->Lbn4BnInOp(mtbn);
       model_tmp_regst->AddLbn(lbn);
