@@ -13,7 +13,6 @@ void MdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
       out_edge->AddRegst("model", model_regst);
       out_edge->AddRegst("model_tmp", model_tmp_regst);
     } else if (dst_node->GetTaskType() == TaskType::kMdSave) {
-      if (JobDesc::Singleton()->IsTrain()) { continue; }
       out_edge->AddRegst("model", model_regst);
     } else {
       UNEXPECTED_RUN();
