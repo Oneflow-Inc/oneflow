@@ -6,12 +6,14 @@ namespace oneflow {
 void RnnFwDataCompActor::Init(const TaskProto& task_proto,
                            const ThreadCtx& thread_ctx) {
   CompActor::Init(task_proto, thread_ctx);
+
   in_desc_id_ = RegstDescId4Name("in");
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
   expected_model_version_id_ = 0;
   model_regst_ = nullptr;
   model_tmp_regst_ = nullptr;
+
   if (thread_ctx.cpu_stream) {
     mut_device_ctx().reset(new CpuDeviceCtx(thread_ctx.cpu_stream));
   } else {
@@ -19,6 +21,7 @@ void RnnFwDataCompActor::Init(const TaskProto& task_proto,
                                              cuda_handle_.cublas_handle(),
                                              cuda_handle_.cudnn_handle()));
   }
+
   kernel_ctx_ = GenDefaultKernelCtx();
   std::pair<DataLoadBuf, int64_t> ctx = std::make_pair(data_load_buf_, parallel_id());
   kernel_ctx_.other = static_cast<void*>(&ctx);
@@ -47,7 +50,7 @@ bool RnnFwDataCompActor::IsReadReady() {
     int32_t staleness = JobDesc::Singleton()->staleness();
     int32_t num_of_pieces_in_batch =
         JobDesc::Singleton()->num_of_pieces_in_batch();
-    int64_t cur_iteration = in_.front()->piece_id() / num_of_pieces_in_batch;
+    int64_t cur_iteration = in_.front()->piece_status().piece_id() / num_of_pieces_in_batch;
     int64_t stale_version = cur_iteration - staleness;
     return model_regst_->model_version_id() >= stale_version;
   }
@@ -118,9 +121,10 @@ int RnnFwDataCompActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
 }
 
 void RnnFwDataCompActor::Act() {
-  int64_t piece_id = expected_piece_id();
   if (!in_.empty()) {
-    CHECK_EQ(in_.front()->piece_id(), piece_id);
+    if (in_.front()->piece_status() != expected_piece_status_) {
+      UNEXPECTED_RUN();
+    }
     readable_regst_[in_.front()->regst_desc_id()] = in_.front();
   }
   int64_t model_version_id = -1;
@@ -133,8 +137,9 @@ void RnnFwDataCompActor::Act() {
       return regst;
     }
   });
-  AsyncSendRegstMsgToConsumer([piece_id, model_version_id](Regst* regst) {
-    regst->set_piece_id(piece_id);
+  int ret_code = expected_piece_status_.GetIntoNextStatus();
+  AsyncSendRegstMsgToConsumer([piece_status, model_version_id](Regst* regst) {
+    regst->set_piece_status(piece_status);
     regst->set_model_version_id(model_version_id);
   });
   if (!in_.empty()) {
@@ -142,7 +147,7 @@ void RnnFwDataCompActor::Act() {
     in_.pop();
     mut_num_of_read_empty() = in_.empty();
   }
-  if (expected_piece_id() == JobDesc::Singleton()->total_piece_num()) {
+  if (ret_code == -1) { // have handled the last col of last piece
     in_desc_id_ = -2;
     AsyncSendMsgToModelAndModelTmpProducer();
     AsyncSendEORDMsgForAllProducedRegstDesc();

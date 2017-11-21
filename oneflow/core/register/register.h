@@ -49,7 +49,7 @@ class Regst final {
   ~Regst() { deleter_(); }
 
   // Getters
-  PieceStatus piece_status() const { return piece_status_; }
+  const PieceStatus& piece_status() const { return piece_status_; }
   int64_t piece_id() const { return piece_id_; }
   int64_t model_version_id() const { return model_version_id_; }
   int64_t regst_desc_id() const { return regst_desc_->regst_desc_id(); }
