@@ -31,13 +31,10 @@ bool MdUpdtCompTaskNode::IsReadyForBuild() {
 }
 
 void MdUpdtCompTaskNode::BuildExecGphAndRegst() {
+  if (JobDesc::Singleton()->IsPredict()) { return; }
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = chain_node()->SoleOp();
-  std::shared_ptr<RegstDesc> model_diff_acc_regst = nullptr;
-  if (JobDesc::Singleton()->IsTrain()) {
-    model_diff_acc_regst = SoleInEdge()->GetSoleRegst();
-  }
-  node->BindBnInOpAndRegst("model_diff_acc", model_diff_acc_regst);
+  node->BindBnInOpAndRegst("model_diff_acc", SoleInEdge()->GetSoleRegst());
   auto model_regst = GetProducedRegst("model");
   node->BindBnInOpAndRegst(node->op()->SoleObn(), model_regst);
   auto data_tmp_regst = ProduceRegst("data_tmp", 1, 1);
