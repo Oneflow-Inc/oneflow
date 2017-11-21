@@ -169,6 +169,12 @@ void ChainNode::GenSortedCompTaskNodes(CompTaskNodeHandler Handler) const {
   }
 OF_PP_FOR_EACH_TUPLE(DEFINE_VIRTUAL_METHOD, CHAIN_TYPE_SEQ)
 
+void ChainNode::AddDataOutputLbnsTo(const ChainNode* to_node) {
+  std::vector<std::string> lbns = FindLbnsTo(to_node);
+  data_output_lbns_.insert(data_output_lbns_.end(), lbns.begin(), lbns.end());
+  SortAndRemoveDuplication(&data_output_lbns_);
+}
+
 // ForwardChainNode
 BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromForward(
     const ChainNode* node) const {
@@ -197,6 +203,14 @@ std::vector<std::string> ForwardChainNode::FindLbnsFromForward(
 std::vector<std::string> ForwardChainNode::FindLbnsFromSource(
     const ChainNode* node) const {
   return FindLbnsBetweenFw(node, this);
+}
+void ForwardChainNode::set_data_output_lbns() {
+  ForEachNodeOnOutEdge([this](const ChainNode* to_node) {
+    if (dynamic_cast<const ForwardChainNode*>(to_node)
+        || dynamic_cast<const LossChainNode*>(to_node)) {
+      AddDataOutputLbnsTo(to_node);
+    }
+  });
 }
 
 // BackwardChainNode
@@ -231,6 +245,23 @@ std::vector<std::string> BackwardChainNode::FindLbnsFromBackward(
 std::vector<std::string> BackwardChainNode::FindLbnsFromLoss(
     const ChainNode* node) const {
   return FindLbnsBetweenBw(node, this);
+}
+void BackwardChainNode::set_data_output_lbns() {
+  ForEachNodeOnOutEdge([this](const ChainNode* to_node) {
+    if (dynamic_cast<const BackwardChainNode*>(to_node)) {
+      AddDataOutputLbnsTo(to_node);
+    }
+  });
+}
+
+// SourceChainNode
+void SourceChainNode::set_data_output_lbns() {
+  ForEachNodeOnOutEdge([this](const ChainNode* to_node) {
+    if (dynamic_cast<const ForwardChainNode*>(to_node)
+        || dynamic_cast<const LossChainNode*>(to_node)) {
+      AddDataOutputLbnsTo(to_node);
+    }
+  });
 }
 
 // LossChainNode

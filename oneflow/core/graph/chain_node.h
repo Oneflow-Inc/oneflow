@@ -50,6 +50,12 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   std::shared_ptr<const ParallelDesc> parallel_desc() const;
   std::shared_ptr<const ParallelDesc>& mut_parallel_desc();
 
+  // data_output_lbns_
+  const std::vector<std::string>& data_output_lbns() const {
+    return data_output_lbns_;
+  }
+  virtual void set_data_output_lbns() {}
+
   // util
   virtual const char* TypeName() const = 0;
   std::string VisualStr() const;
@@ -78,9 +84,13 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   virtual CompTaskNode* NewCompTaskNode() const = 0;
   virtual void FixCompTaskNode(CompTaskNode*) const {}
 
+  void AddDataOutputLbnsTo(const ChainNode*);
+
  private:
   std::vector<std::shared_ptr<const Operator>> op_vec_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
+
+  std::vector<std::string> data_output_lbns_;
 };
 
 class BackwardChainNode;
@@ -116,6 +126,8 @@ class ForwardChainNode final : public ChainNode {
                                    (std::vector<std::string> FindLbns),
                                    (Forward)(Source));
 
+  void set_data_output_lbns() override;
+
  private:
   BackwardChainNode* bw_node_;
 };
@@ -141,6 +153,8 @@ class BackwardChainNode final : public ChainNode {
                                    (std::vector<std::string> FindLbns),
                                    (Backward)(Loss));
 
+  void set_data_output_lbns() override;
+
  private:
   ForwardChainNode* fw_node_;
 };
@@ -152,6 +166,8 @@ class SourceChainNode final : public ChainNode {
   ~SourceChainNode() = default;
 
   OVERRIDE_PURE_VIRTUAL_METHOD();
+
+  void set_data_output_lbns() override;
 };
 
 class LossChainNode final : public ChainNode {
