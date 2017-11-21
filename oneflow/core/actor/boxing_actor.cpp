@@ -7,7 +7,6 @@ void BoxingActor::VirtualActorInit(const TaskProto& task_proto,
                                    const ThreadCtx& thread_ctx) {
   int num_of_consumed_regsts = task_proto.consumed_regst_desc_id().size();
   set_num_of_remaining_eord(num_of_consumed_regsts);
-  mut_num_of_read_empty() = num_of_consumed_regsts;
   mut_device_ctx().reset(new CpuDeviceCtx());
   OF_SET_MSG_HANDLER(&BoxingActor::HandlerNormal);
 }
@@ -19,7 +18,6 @@ int BoxingActor::HandlerNormal(const ActorMsg& msg) {
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = msg.regst();
     if (TryUpdtStateAsProducedRegst(regst) != 0) {
-      mut_num_of_read_empty() -= read_regst_[regst->regst_desc_id()].empty();
       read_regst_.at(regst->regst_desc_id()).push(regst);
     }
     ActUntilFail();
@@ -29,13 +27,11 @@ int BoxingActor::HandlerNormal(const ActorMsg& msg) {
   return msg_handler() == nullptr;
 }
 
-int BoxingActor::HandlerUntilNoReadableRegst(const ActorMsg& msg) {
+int BoxingActor::HandlerUntilReadAlwaysUnReady(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
   ActUntilFail();
-  if (num_of_read_empty()) {
-    AsyncSendEORDMsgForAllProducedRegstDesc();
-    OF_SET_MSG_HANDLER(&BoxingActor::HandlerZombie);
-  }
+  AsyncSendEORDMsgForAllProducedRegstDesc();
+  OF_SET_MSG_HANDLER(&BoxingActor::HandlerZombie);
   return 0;
 }
 
@@ -58,7 +54,6 @@ void BoxingActor::Act() {
   for (auto& pair : read_regst_) {
     AsyncSendRegstMsgToProducer(pair.second.front());
     pair.second.pop();
-    mut_num_of_read_empty() += pair.second.empty();
   }
 }
 

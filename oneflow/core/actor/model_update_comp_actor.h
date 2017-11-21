@@ -18,7 +18,7 @@ class MdUpdtCompActor final : public CompActor {
   int HandlerBeforeInitializeModel(const ActorMsg&);
   int HandlerBeforeSendInitialModel(const ActorMsg&);
   int HandlerNormal(const ActorMsg&) override;
-  int HandlerUntilNoReadableRegst(const ActorMsg&) override;
+  int HandlerUntilReadAlwaysUnReady(const ActorMsg&) override;
 
   bool IsWriteReady() override {
     return Actor::IsWriteReady();

@@ -15,9 +15,9 @@ class BoxingActor final : public Actor {
 
  private:
   int HandlerNormal(const ActorMsg&) override;
-  int HandlerUntilNoReadableRegst(const ActorMsg&) override;
+  int HandlerUntilReadAlwaysUnReady(const ActorMsg&) override;
 
-  bool IsReadReady() override { return !mut_num_of_read_empty(); }
+  bool IsReadReady() override { return false; }
   void Act() override;
 
   // <regst_desc_id, queue<regst>>
