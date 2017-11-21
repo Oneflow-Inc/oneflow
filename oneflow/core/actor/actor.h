@@ -38,10 +38,10 @@ class Actor {
 
   // Util
   Actor() = default;
-  virtual void VirtualActorInit(const TaskProto&, const ThreadCtx&) {}
+  virtual void VirtualActorInit(const TaskProto&) {}
   virtual KernelWardFunc GetKernelWardFunc() const { return &Kernel::Forward; }
   int64_t RegstDescId4Name(const std::string& name) const;
-  virtual void InitDeviceCtx();
+  virtual void InitDeviceCtx(const ThreadCtx&);
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
   KernelCtx GenDefaultKernelCtx() const;
   void set_num_of_remaining_eord(int val) { remaining_eord_cnt_ = val; }

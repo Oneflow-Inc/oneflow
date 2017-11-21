@@ -3,8 +3,7 @@
 
 namespace oneflow {
 
-void BoxingActor::VirtualActorInit(const TaskProto& task_proto,
-                                   const ThreadCtx& thread_ctx) {
+void BoxingActor::VirtualActorInit(const TaskProto& task_proto) {
   int num_of_consumed_regsts = task_proto.consumed_regst_desc_id().size();
   set_num_of_remaining_eord(num_of_consumed_regsts);
   mut_device_ctx().reset(new CpuDeviceCtx());

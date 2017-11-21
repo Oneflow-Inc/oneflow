@@ -11,7 +11,7 @@ class MdSaveCompActor final : public CompActor {
   MdSaveCompActor() = default;
   ~MdSaveCompActor() = default;
 
-  void VirtualCompActorInit(const TaskProto&, const ThreadCtx&) override;
+  void VirtualCompActorInit(const TaskProto&) override;
 
  private:
   int HandlerNormal(const ActorMsg&) override;

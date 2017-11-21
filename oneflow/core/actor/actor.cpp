@@ -21,7 +21,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     CHECK(name2regst_desc_id_.emplace(pair.first, pair.second).second);
   }
   msg_handler_ = nullptr;
-  InitDeviceCtx();
+  InitDeviceCtx(thread_ctx);
   // Status of Produced Registers
   for (const auto& pair : produced_regsts_) {
     for (const auto& regst : pair.second) {
@@ -32,7 +32,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   writeable_produced_regst_desc_num_ = writeable_produced_regst_.size();
   total_reading_cnt_ = 0;
   remaining_eord_cnt_ = -1;
-  VirtualActorInit(task_proto, thread_ctx);
+  VirtualActorInit(task_proto);
 }
 
 int64_t Actor::RegstDescId4Name(const std::string& name) const {
@@ -41,7 +41,7 @@ int64_t Actor::RegstDescId4Name(const std::string& name) const {
   return -1;
 }
 
-void Actor::InitDeviceCtx() {
+void Actor::InitDeviceCtx(const ThreadCtx&) {
   switch (IDMgr::Singleton()->GetDeviceTypeFromActorId(actor_id_)) {
     case DeviceType::kCPU: {
       device_ctx_.reset(new CpuDeviceCtx);

@@ -4,8 +4,7 @@
 
 namespace oneflow {
 
-void MdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto,
-                                           const ThreadCtx& thread_ctx) {
+void MdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
   data_tmp_regst_desc_id_ = RegstDescId4Name("data_tmp");

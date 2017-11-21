@@ -11,7 +11,7 @@ class CopyCommNetActor final : public Actor {
   CopyCommNetActor() = default;
   ~CopyCommNetActor();
 
-  void VirtualActorInit(const TaskProto&, const ThreadCtx&) override;
+  void VirtualActorInit(const TaskProto&) override;
 
  private:
   class CommNetDeviceCtx;

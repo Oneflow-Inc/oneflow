@@ -12,8 +12,8 @@ class CudaDeviceCtx final : public DeviceCtx {
   ~CudaDeviceCtx() = default;
 
   CudaDeviceCtx(const cudaStream_t* cuda_stream,
-                const cublasHandle_t* cublas_handle,
-                const cudnnHandle_t* cudnn_handle) {
+                const cublasHandle_t* cublas_handle = nullptr,
+                const cudnnHandle_t* cudnn_handle = nullptr) {
     set_cuda_stream(cuda_stream);
     set_cublas_handle(cublas_handle);
     set_cudnn_handle(cudnn_handle);
