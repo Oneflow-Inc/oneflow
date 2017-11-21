@@ -2,9 +2,7 @@
 
 namespace oneflow {
 
-void ForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto,
-                                            const ThreadCtx& thread_ctx) {
-  is_in_eord_ = false;
+void ForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   in_regst_desc_id_ = RegstDescId4Name("in");
   CHECK_NE(in_regst_desc_id_, -1);
   model_regst_desc_id_ = RegstDescId4Name("model");
@@ -70,12 +68,11 @@ int ForwardCompActor::HandlerInitModelTmp(const ActorMsg& msg) {
 int ForwardCompActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);  // it must be in_regst_desc
-    is_in_eord_ = true;
     ProcessOneEord();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = msg.regst();
     if (regst->regst_desc_id() == in_regst_desc_id_) {
-      in_.push(regst);
+      pending_in_regsts_.push(regst);
     } else if (regst->regst_desc_id() == model_regst_desc_id_) {
       UpdateModelRegstPtr(regst);
     } else if (regst->regst_desc_id() == model_tmp_regst_desc_id_) {
@@ -109,7 +106,7 @@ int ForwardCompActor::HandlerUntilReadAlwaysUnReady(const ActorMsg& msg) {
 }
 
 bool ForwardCompActor::IsReadReady() {
-  if (in_.empty()) { return false; }
+  if (pending_in_regsts_.empty()) { return false; }
   if (model_regst_desc_id_ != -1 && !model_regst_) { return false; }
   if (model_tmp_regst_desc_id_ != -1 && !model_tmp_regst_) { return false; }
   if (JobDesc::Singleton()->IsTrain() && model_regst_desc_id_ != -1) {
@@ -117,7 +114,8 @@ bool ForwardCompActor::IsReadReady() {
     // synchronous parallel parameter server
     int32_t staleness = JobDesc::Singleton()->Staleness();
     int32_t num_of_pieces_in_batch = JobDesc::Singleton()->NumOfPiecesInBatch();
-    int64_t cur_iteration = in_.front()->piece_id() / num_of_pieces_in_batch;
+    int64_t cur_iteration =
+        pending_in_regsts_.front()->piece_id() / num_of_pieces_in_batch;
     int64_t stale_version = cur_iteration - staleness;
     if (model_regst_->model_version_id() >= stale_version) {
       return true;
@@ -130,12 +128,12 @@ bool ForwardCompActor::IsReadReady() {
 }
 
 bool ForwardCompActor::IsReadAlwaysUnReadyFromNow() {
-  return is_in_eord_ && in_.empty();
+  return pending_in_regsts_.empty();
 }
 
 void ForwardCompActor::Act() {
-  Regst* in_regst = in_.front();
-  in_.pop();
+  Regst* in_regst = pending_in_regsts_.front();
+  pending_in_regsts_.pop();
   int64_t model_version_id = -1;
   if (model_regst_) { model_version_id = model_regst_->model_version_id(); }
   AsyncLaunchKernel(GenDefaultKernelCtx(),
@@ -178,5 +176,7 @@ void ForwardCompActor::TryAsyncReturnModelTmpRegst() {
     model_tmp_regst_ = nullptr;
   }
 }
+
+REGISTER_ACTOR(TaskType::kForward, ForwardCompActor);
 
 }  // namespace oneflow

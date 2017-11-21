@@ -11,7 +11,7 @@ class MdUpdtCompActor final : public CompActor {
   MdUpdtCompActor() = default;
   ~MdUpdtCompActor() = default;
 
-  void VirtualCompActorInit(const TaskProto&, const ThreadCtx&) override;
+  void VirtualCompActorInit(const TaskProto&) override;
 
  private:
   int HandlerBeforeInitDeviceCtx(const ActorMsg&);

@@ -2,21 +2,13 @@
 
 namespace oneflow {
 
-void BpDataCompActor::VirtualActorInit(const TaskProto& task_proto,
-                                       const ThreadCtx& thread_ctx) {
+void BpDataCompActor::VirtualActorInit(const TaskProto& task_proto) {
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
   activation_regst_desc_id_ = RegstDescId4Name("activation");
   data_tmp_regst_desc_id_ = RegstDescId4Name("data_tmp");
   out_regst_desc_id_ = RegstDescId4Name("out");
   expected_model_version_id_ = 0;
-  if (JobDesc::Singleton()->GetDeviceType() == DeviceType::kCPU) {
-    mut_device_ctx().reset(new CpuDeviceCtx());
-  } else {
-    mut_device_ctx().reset(new CudaDeviceCtx(cuda_handle_.cuda_stream(),
-                                             cuda_handle_.cublas_handle(),
-                                             cuda_handle_.cudnn_handle()));
-  }
   OF_SET_MSG_HANDLER(&BpDataCompActor::HandlerNormal);
 }
 
