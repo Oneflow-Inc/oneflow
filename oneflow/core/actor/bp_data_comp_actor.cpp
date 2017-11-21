@@ -10,10 +10,6 @@ void BpDataCompActor::VirtualActorInit(const TaskProto& task_proto,
   data_tmp_regst_desc_id_ = RegstDescId4Name("data_tmp");
   out_regst_desc_id_ = RegstDescId4Name("out");
   expected_model_version_id_ = 0;
-  mut_num_of_read_empty() =
-      3 + (model_regst_desc_id_ != -1) + (model_tmp_regst_desc_id_ != -1)
-      + (activation_regst_desc_id_ != -1) + (data_tmp_regst_desc_id_ != -1);
-  set_num_of_remaining_eord(num_of_read_empty());
   if (JobDesc::Singleton()->GetDeviceType() == DeviceType::kCPU) {
     mut_device_ctx().reset(new CpuDeviceCtx());
   } else {
@@ -25,7 +21,6 @@ void BpDataCompActor::VirtualActorInit(const TaskProto& task_proto,
 }
 
 bool BpDataCompActor::IsReadReady() {
-  if (num_of_read_empty()) { return false; }
   if (model_regst_desc_id_ != -1) {
     int cur_model_version_id =
         read_regst_.at(out_regst_desc_id_).front()->model_version_id();
@@ -36,9 +31,8 @@ bool BpDataCompActor::IsReadReady() {
       AsyncSendRegstMsgToProducer(read_regst_.at(model_regst_desc_id_).front());
       read_regst_.at(model_regst_desc_id_).pop();
     }
-    mut_num_of_read_empty() += read_regst_.at(model_regst_desc_id_).empty();
   }
-  return !num_of_read_empty();
+  return false;
 }
 
 void BpDataCompActor::AsyncSendMsgToModelAndModelTmpProducer() {
@@ -72,7 +66,6 @@ int BpDataCompActor::HandlerNormal(const ActorMsg& msg) {
       } else {
         // do nothing
       }
-      mut_num_of_read_empty() -= read_regst_[regst->regst_desc_id()].empty();
       read_regst_.at(regst->regst_desc_id()).push(regst);
     }
     ActUntilFail();
@@ -82,14 +75,12 @@ int BpDataCompActor::HandlerNormal(const ActorMsg& msg) {
   return msg_handler() == nullptr;
 }
 
-int BpDataCompActor::HandlerUntilNoReadableRegst(const ActorMsg& msg) {
+int BpDataCompActor::HandlerUntilReadAlwaysUnReady(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
   ActUntilFail();
-  if (num_of_read_empty()) {
-    AsyncSendMsgToModelAndModelTmpProducer();
-    AsyncSendEORDMsgForAllProducedRegstDesc();
-    OF_SET_MSG_HANDLER(&BpDataCompActor::HandlerZombie);
-  }
+  AsyncSendMsgToModelAndModelTmpProducer();
+  AsyncSendEORDMsgForAllProducedRegstDesc();
+  OF_SET_MSG_HANDLER(&BpDataCompActor::HandlerZombie);
   return 0;
 }
 
@@ -117,7 +108,6 @@ void BpDataCompActor::Act() {
         && pair.first != model_tmp_regst_desc_id_) {
       AsyncSendRegstMsgToProducer(pair.second.front());
       pair.second.pop();
-      mut_num_of_read_empty() += pair.second.empty();
     }
   }
 }

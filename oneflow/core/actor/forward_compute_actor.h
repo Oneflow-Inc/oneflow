@@ -14,22 +14,29 @@ class ForwardCompActor final : public CompActor {
   void VirtualCompActorInit(const TaskProto&, const ThreadCtx&) override;
 
  private:
-  int HandlerInitModel();
-  int HandlerInitModelTmp();
+  void SwitchToHandlerInitModelTmpOrNormal();
+  int HandlerInitModel(const ActorMsg&);
+  int HandlerInitModelTmp(const ActorMsg&);
   int HandlerNormal(const ActorMsg&) override;
-  int HandlerUntilNoReadableRegst(const ActorMsg&) override;
+  int HandlerUntilReadAlwaysUnReady(const ActorMsg&) override;
 
   bool IsReadReady() override;
+  bool IsReadAlwaysUnReadyFromNow() override;
   void Act() override;
-  void AsyncSendMsgToModelAndModelTmpProducer();
 
+  void UpdateModelRegstPtr(Regst* regst);
+
+  void AsyncReturnModelRegst();
+  void TryAsyncReturnModelRegst();
+  void TryAsyncReturnModelTmpRegst();
+
+  bool is_in_eord_;
   int64_t in_regst_desc_id_;
   int64_t model_regst_desc_id_;
   int64_t model_tmp_regst_desc_id_;
   Regst* model_regst_;
   Regst* model_tmp_regst_;
   std::queue<Regst*> in_;
-  HashMap<int64_t, Regst*> readable_regst_;
 };
 
 }  // namespace oneflow
