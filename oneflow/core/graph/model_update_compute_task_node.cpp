@@ -34,9 +34,8 @@ void MdUpdtCompTaskNode::BuildExecGphAndRegst() {
   if (JobDesc::Singleton()->IsPredict()) { return; }
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = chain_node()->SoleOp();
-  node->BindBnInOpAndRegst("model_diff_acc", SoleInEdge()->GetSoleRegst());
-  auto model_regst = GetProducedRegst("model");
-  node->BindBnInOpAndRegst(node->op()->SoleObn(), model_regst);
+  node->BindBnInOpAndRegst(node->op()->SoleIbn(), SoleInEdge()->GetSoleRegst());
+  node->BindBnInOpAndRegst(node->op()->SoleObn(), GetProducedRegst("model"));
   auto data_tmp_regst = ProduceRegst("data_tmp", 1, 1);
   for (const std::string& dtbn : node->op()->data_tmp_bns()) {
     const std::string& lbn = node->op()->Lbn4BnInOp(dtbn);
