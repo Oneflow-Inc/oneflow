@@ -49,7 +49,7 @@ void AccumulateActor::Act() {
   KernelCtx ctx = GenDefaultKernelCtx();
   // ForEachCurWriteableRegst([&](Regst* regst) {
   //  if (acc_cnt_ != max_acc_cnt_) { return; }
-  //  Blob* packed_blob = regst->GetBlobPtrFromLbn(kPackedBlobName);
+  //  Blob* packed_blob = regst->GetBlobByLbn(kPackedBlobName);
   //  MemsetFunc(ctx.device_ctx, packed_blob->mut_dptr(), 0,
   //             packed_blob->TotalByteSize());
   //  acc_cnt_ = 0;

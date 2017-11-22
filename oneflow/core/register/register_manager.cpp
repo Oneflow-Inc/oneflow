@@ -12,9 +12,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
   for (int64_t i = 0; i < regst_desc_proto.register_num(); ++i) {
     Regst* regst = new Regst;
     regst->regst_desc_ = runtime_regst_desc;
-
     std::vector<std::string> lbns;
-    lbns.reserve(regst_desc_proto.lbn2blob_desc().size());
     for (const auto& pair : regst_desc_proto.lbn2blob_desc()) {
       lbns.push_back(pair.first);
     }
