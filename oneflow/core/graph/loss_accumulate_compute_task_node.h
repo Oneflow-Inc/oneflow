@@ -11,6 +11,7 @@ class LossAccCompTaskNode final : public AccCompTaskNode {
   LossAccCompTaskNode() = default;
   ~LossAccCompTaskNode() = default;
   TaskType GetTaskType() const override { return TaskType::kLossAcc; }
+  void BuildExecGphAndRegst() override;
 
  private:
 };
