@@ -4,7 +4,7 @@
 namespace oneflow {
 
 void SourceCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("data_tmp", 1, 1);
+  ProduceRegst("activation", 1, 1);
   auto out_regst = ProduceRegst("out", 1, kMaxRegisterNum);
   SoleOutEdge()->AddRegst("out", out_regst);
 }
