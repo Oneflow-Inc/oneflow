@@ -25,6 +25,6 @@ class RnnDataLoaderOp final : public SysOperator {
  private:
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_OPERATOR_RNN_DATA_LOADER_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_RNN_DATA_LOADER_OP_H_

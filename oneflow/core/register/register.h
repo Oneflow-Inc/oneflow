@@ -7,37 +7,31 @@
 namespace oneflow {
 
 class PieceStatus final {
-public:
-  PieceStatus() : 
-    piece_id_(0), 
-    col_id_(0), 
-    max_col_id_(-1) { }
+ public:
+  PieceStatus() : piece_id_(0), col_id_(0), max_col_id_(-1) {}
   ~PieceStatus() = default;
   PieceStatus(const PieceStatus&) = default;
   PieceStatus& operator=(const PieceStatus&) = default;
 
   bool operator==(const PieceStatus& other) const {
-    return (piece_id_ == other.piece_id_) && 
-           (col_id_ == other.col_id_) &&
-           (max_col_id_ == other.max_col_id_);
+    return (piece_id_ == other.piece_id_) && (col_id_ == other.col_id_)
+           && (max_col_id_ == other.max_col_id_);
   }
-  bool operator!=(const PieceStatus& other) const {
-    return !(*this == other);
-  }
+  bool operator!=(const PieceStatus& other) const { return !(*this == other); }
 
   int64_t piece_id() const { return piece_id_; }
   int64_t col_id() const { return col_id_; }
   int64_t max_col_id() const { return max_col_id_; }
 
-  void set_max_col_id(int64_t max_col_id) const { 
+  void set_max_col_id(int64_t max_col_id) {
     CHECK_EQ(-1, max_col_id_);  //-1 for unset
-    max_col_id_ = max_col_id; 
+    max_col_id_ = max_col_id;
   }
 
-  int GetIntoNextStatus(); 
+  int GetIntoNextStatus();
   bool IsLast() const;
 
-private:
+ private:
   int64_t piece_id_;
   int64_t col_id_;
   int64_t max_col_id_;
@@ -63,7 +57,9 @@ class Regst final {
   Blob* packed_blob() { return packed_blob_.get(); }
 
   // Setters
-  void set_piece_status(const PieceStatus& piece_status) { piece_status_ = piece_status; }
+  void set_piece_status(const PieceStatus& piece_status) {
+    piece_status_ = piece_status;
+  }
   void set_piece_id(int64_t val) { piece_id_ = val; }
   void set_model_version_id(int64_t val) { model_version_id_ = val; }
 

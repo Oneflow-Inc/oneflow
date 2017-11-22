@@ -3,10 +3,11 @@
 namespace oneflow {
 
 template<typename IntegerType, typename FloatType>
-void RnnLookupKernel<IntegerType, FloatType>::Forward(const KernelCtx& ctx,
+void RnnLookupKernel<IntegerType, FloatType>::Forward(
+    const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
-  const Blob* out_blob = BnInOp2Blob("out");
+  Blob* out_blob = BnInOp2Blob("out");
   const Blob* weight_blob = BnInOp2Blob("weight");
 
   int64_t piece_size = in_blob->shape().At(0);
@@ -21,21 +22,23 @@ void RnnLookupKernel<IntegerType, FloatType>::Forward(const KernelCtx& ctx,
   const FloatType* weight_dptr = weight_blob->dptr<FloatType>();
   FloatType* out_start_dptr = out_blob->mut_dptr<FloatType>();
 
-  for (int64_t i = 0;i < piece_size; ++i) {
+  for (int64_t i = 0; i < piece_size; ++i) {
     FloatType* out_dptr = out_start_dptr + i * hidden_dim;
 
     IntegerType vocab_id = *in_dptr;
-    //TODO: no need to send to cpu stream?
+    // TODO: no need to send to cpu stream?
     if (vocab_id == -1) {
       memset(out_dptr, 0, sizeof(FloatType) * hidden_dim);
     } else {
-      memcpy(out_dptr, weight_dptr + vocab_id * hidden_dim, hidden_dim * sizeof(FloatType));
+      memcpy(out_dptr, weight_dptr + vocab_id * hidden_dim,
+             hidden_dim * sizeof(FloatType));
     }
   }
 }
 
 template<typename IntegerType, typename FloatType>
-void RnnLookupKernel<IntegerType, FloatType>::Backward(const KernelCtx& ctx,
+void RnnLookupKernel<IntegerType, FloatType>::Backward(
+    const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
@@ -49,38 +52,37 @@ void RnnLookupKernel<IntegerType, FloatType>::Backward(const KernelCtx& ctx,
 
   const IntegerType* in_dptr = in_blob->dptr<IntegerType>();
   const FloatType* out_diff_dptr = out_diff_blob->dptr<FloatType>();
-  FloatType* weight_diff_start_dptr = weight_diff_blob->mut_dptr<FloatTyp>();
-  memset(weight_diff_start_blob, 0, sizeof(FloatType) * hidden_dim * vocab_size);
+  FloatType* weight_diff_start_dptr = weight_diff_blob->mut_dptr<FloatType>();
+  memset(weight_diff_start_dptr, 0,
+         sizeof(FloatType) * hidden_dim * vocab_size);
 
-  for (int64_t i = 0;i < piece_size; ++i) {
+  for (int64_t i = 0; i < piece_size; ++i) {
     IntegerType vocab_id = *in_dptr;
-    FloatType* weight_diff_dptr = weight_diff_start_dptr + vocab_id * hidden_dim;
+    FloatType* weight_diff_dptr =
+        weight_diff_start_dptr + vocab_id * hidden_dim;
     if (vocab_id == -1) { continue; }
     KernelUtil<DeviceType::kCPU, FloatType>::BlasAxpy(
-        ctx.device_ctx, hidden_dim, 1.0, out_dptr + i * hidden_dim, 1, weight_diff_dptr, 1);
+        ctx.device_ctx, hidden_dim, 1.0, out_diff_dptr + i * hidden_dim, 1,
+        weight_diff_dptr, 1);
   }
-
 }
 
 Kernel* CreateRnnLookupKernel(const OpContext& op_ctx) {
   static const HashMap<std::string, std::function<Kernel*()>> creators = {
 #define RNN_LOOKUP_KERNEL_ENTRY(integer_data_type_pair, float_data_type_pair) \
-    {GetHashKey( \
-       OF_PP_PAIR_SECOND(integer_data_type_pair), \ 
-       OF_PP_PAIR_SECOND(float_data_type_pair) \
-     ), \
-     []() { return new RnnLookupKernel< \
-       OF_PP_PAIR_FIRST(integer_data_type_pair), \
-       OF_PP_PAIR_FIRST(float_data_type_pair)>; \
-     }},
-     OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-         RNN_LOOKUP_KERNEL_ENTRY, SIGNED_INT_DATA_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};
-  return creators.at(
-      GetHashKey(op_ctx.bn_in_op2data_type().at("in"), 
-                 op_ctx.bn_in_op2data_type().at("out")))();
+  {GetHashKey(OF_PP_PAIR_SECOND(integer_data_type_pair), \ 
+       OF_PP_PAIR_SECOND(float_data_type_pair)),                              \
+   []() {                                                                     \
+     return new RnnLookupKernel<OF_PP_PAIR_FIRST(integer_data_type_pair),     \
+                                OF_PP_PAIR_FIRST(float_data_type_pair)>;      \
+   }},
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(RNN_LOOKUP_KERNEL_ENTRY,
+                                       SIGNED_INT_DATA_TYPE_SEQ,
+                                       FLOATING_DATA_TYPE_SEQ)};
+  return creators.at(GetHashKey(op_ctx.bn_in_op2data_type().at("in"),
+                                op_ctx.bn_in_op2data_type().at("out")))();
 }
 
-COMMAND(AddKernelCreator(OperatorConf::kRnnLookupConf,
-                        CreateRnnLookupKernel));
+COMMAND(AddKernelCreator(OperatorConf::kRnnLookupConf, CreateRnnLookupKernel));
 
-} // namespace oneflow
+}  // namespace oneflow

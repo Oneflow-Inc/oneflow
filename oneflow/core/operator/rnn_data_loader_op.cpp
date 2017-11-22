@@ -5,8 +5,8 @@ namespace oneflow {
 
 void RnnDataLoaderOp::InitFromOpConf() {
   CHECK(op_conf().has_rnn_data_loader_conf());
-  
-  EnrollOutputBn("out",false);
+
+  EnrollOutputBn("out", false);
 }
 
 const PbMessage& RnnDataLoaderOp::GetSpecialConf() const {
@@ -21,4 +21,4 @@ void RnnDataLoaderOp::InferBlobDesc4FwBlobs(
 
 REGISTER_OP(OperatorConf::kRnnDataLoaderConf, RnnDataLoaderOp);
 
-} // namespace oneflow
+}  // namespace oneflow

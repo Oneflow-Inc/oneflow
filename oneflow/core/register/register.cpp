@@ -1,15 +1,14 @@
 #include "oneflow/core/register/register.h"
+#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/keyword.h"
 
 namespace oneflow {
 
 int PieceStatus::GetIntoNextStatus() {
-  if (IsLast()) {
-    return -1;
-  }
+  if (IsLast()) { return -1; }
   if (col_id_ == max_col_id_) {
     piece_id_ += 1;
-    col_id = 0;
+    col_id_ = 0;
     max_col_id_ = -1;
   } else {
     col_id_ += 1;
@@ -18,8 +17,8 @@ int PieceStatus::GetIntoNextStatus() {
 }
 
 bool PieceStatus::IsLast() const {
-  if (piece_id_ == JobDesc::Singleton()->total_piece_num - 1
-      && col_id == max_col_id_) {
+  if (piece_id_ == JobDesc::Singleton()->total_piece_num() - 1
+      && col_id_ == max_col_id_) {
     return true;
   }
   return false;

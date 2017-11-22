@@ -15,9 +15,13 @@ class RnnFwDataCompActor final : public CompActor {
 
  private:
   struct DataLoadBuf {
-    DataLoadBuf() : row_num(0), col_num(0),
-                    col_id(0), max_real_col_num(0),
-                    piece(), data_id() { }
+    DataLoadBuf()
+        : row_num(0),
+          col_num(0),
+          col_id(0),
+          max_real_col_num(0),
+          piece(),
+          data_ids() {}
 
     int64_t row_num;
     int64_t col_num;

@@ -7,20 +7,20 @@ namespace oneflow {
 
 template<typename IntegerType>  // T must be integer, like int32_t, int64_t
 class RnnDataLoaderKernel final : public Kernel {
-public:
-    OF_DISALLOW_COPY_AND_MOVE(RnnDataLoaderKernel)
-    RnnDataLoaderKernel() = default;
-    ~RnnDataLoaderKernel() = default;
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(RnnDataLoaderKernel)
+  RnnDataLoaderKernel() = default;
+  ~RnnDataLoaderKernel() = default;
 
-    void Forward(const KernelCtx&,
-            std::function<Blob*(const std::string&)>) const override;
+  void Forward(const KernelCtx&,
+               std::function<Blob*(const std::string&)>) const override;
 
-private:
-    void InitInStream(int64_t) const;
+ private:
+  void InitInStream(int64_t) const;
 
-    mutable std::unique_ptr<PersistentInStream> in_stream_;
+  mutable std::unique_ptr<PersistentInStream> in_stream_;
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif //ONEFLOW_CORE_KERNEL_RNN_DATA_LOADER_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_RNN_DATA_LOADER_KERNEL_H_
