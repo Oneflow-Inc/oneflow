@@ -6,7 +6,7 @@ namespace oneflow {
 void BackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   bool need_in_diff = false;
   chain_node()->ForEachNodeOnOutEdge([&](const ChainNode* out_node) {
-    if (dynamic_cast<const BackwardChainNode*>(out_node)) {
+    if (std::string(out_node->TypeName()) == "BackwardChainNode") {
       need_in_diff = true;
     }
   });
@@ -32,14 +32,18 @@ void BackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void BackwardCompTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* edge : in_edges()) {
     TaskNode* src_node = edge->src_node();
-    if (src_node->GetTaskType() == TaskType::kForward) {
+    const auto& src_task_type = src_node->GetTaskType();
+    if (src_task_type == TaskType::kForward) {
       ConsumeRegst("activation", edge->GetRegst("activation"));
       ConsumeRegst("data_tmp", edge->GetRegst("data_tmp"));
       ConsumeRegst("out", edge->GetRegst("out"));
-    } else if (src_node->GetTaskType() == TaskType::kMdUpdt) {
+    } else if (src_task_type == TaskType::kMdUpdt) {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
-    } else {
+    } else if (src_task_type == TaskType::kBackward
+               || src_task_type == TaskType::kLoss
+               || src_task_type == TaskType::kBoxing || src_task_type == kCopyHd
+               || src_task_type == TaskType::kCopyCommNet) {
       ConsumeRegst("out_diff", edge->GetSoleRegst());
     }
   }
