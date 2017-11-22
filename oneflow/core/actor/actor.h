@@ -44,7 +44,6 @@ class Actor {
   virtual void InitDeviceCtx(const ThreadCtx&);
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
   KernelCtx GenDefaultKernelCtx() const;
-  void set_num_of_remaining_eord(int val) { remaining_eord_cnt_ = val; }
   const std::vector<ExecKernel>& exec_kernel_vec() { return exec_kernel_vec_; }
 
   // Msg Handler
@@ -92,6 +91,8 @@ class Actor {
   int64_t total_reading_cnt() const { return total_reading_cnt_; }
 
  private:
+  DeviceType GetDeviceType() const;
+
   int64_t actor_id_;
   std::vector<ExecKernel> exec_kernel_vec_;
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;

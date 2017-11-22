@@ -3,7 +3,6 @@
 namespace oneflow {
 
 void CopyHdActor::VirtualActorInit(const TaskProto& task_proto) {
-  set_num_of_remaining_eord(1);
   OF_SET_MSG_HANDLER(&CopyHdActor::HandlerNormal);
 }
 

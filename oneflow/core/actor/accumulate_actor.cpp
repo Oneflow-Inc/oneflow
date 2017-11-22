@@ -13,7 +13,6 @@ void AccumulateActor::Init(const TaskProto& task_proto,
                                              cuda_handle_.cublas_handle(),
                                              cuda_handle_.cudnn_handle()));
   }
-  set_num_of_remaining_eord(1);
   OF_SET_MSG_HANDLER(&AccumulateActor::HandlerNormal);
   acc_cnt_ = max_acc_cnt;
   max_acc_cnt_ = max_acc_cnt;

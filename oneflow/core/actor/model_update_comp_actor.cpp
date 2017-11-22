@@ -11,7 +11,6 @@ void MdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   next_model_version_id_ = 0;
   // related_save_task_id_ = task_proto.related_save_task_id();
   random_seed_ = task_proto.random_seed();
-  set_num_of_remaining_eord(1);
   if (JobDesc::Singleton()->GetDeviceType() == DeviceType::kCPU) {
     mut_device_ctx().reset(new CpuDeviceCtx());
     MemcpyFunc =

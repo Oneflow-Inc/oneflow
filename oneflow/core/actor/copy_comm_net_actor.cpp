@@ -29,7 +29,6 @@ CopyCommNetActor::~CopyCommNetActor() {
 }
 
 void CopyCommNetActor::VirtualActorInit(const TaskProto& task_proto) {
-  set_num_of_remaining_eord(1);
   actor_read_id_ = CommNet::Singleton()->NewActorReadId();
   comm_net_device_ctx_ = new CommNetDeviceCtx(actor_read_id_);
   mut_device_ctx().reset(comm_net_device_ctx_);

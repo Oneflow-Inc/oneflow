@@ -6,7 +6,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   actor_id_ = task_proto.task_id();
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
-    ek.kernel = ConstructKernel(node.kernel_conf());
+    ek.kernel = ConstructKernel(GetDeviceType(), node.kernel_conf());
     ek.bn_in_op2regst_desc_id = PbMap2HashMap(node.bn_in_op2regst_desc_id());
     exec_kernel_vec_.push_back(std::move(ek));
   }
@@ -31,7 +31,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   }
   writeable_produced_regst_desc_num_ = writeable_produced_regst_.size();
   total_reading_cnt_ = 0;
-  remaining_eord_cnt_ = -1;
+  remaining_eord_cnt_ = task_proto.consumed_regst_desc_id().size();
   VirtualActorInit(task_proto);
 }
 
@@ -42,7 +42,7 @@ int64_t Actor::RegstDescId4Name(const std::string& name) const {
 }
 
 void Actor::InitDeviceCtx(const ThreadCtx&) {
-  switch (IDMgr::Singleton()->GetDeviceTypeFromActorId(actor_id_)) {
+  switch (GetDeviceType()) {
     case DeviceType::kCPU: {
       device_ctx_.reset(new CpuDeviceCtx);
       break;
@@ -223,6 +223,10 @@ Regst* Actor::GetCurWriteableRegst(const std::string& name) {
 Regst* Actor::GetCurSoleWriteableRegst() {
   CHECK_EQ(writeable_produced_regst_.size(), 1);
   return writeable_produced_regst_.begin()->second.front();
+}
+
+DeviceType Actor::GetDeviceType() const {
+  return IDMgr::Singleton()->GetDeviceTypeFromActorId(actor_id_);
 }
 
 static HashMap<int, std::function<Actor*()>>& ActorCreatorMap() {
