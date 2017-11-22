@@ -15,10 +15,12 @@ class BackwardCompActor final : public CompActor {
 
  private:
   int HandlerNormal(const ActorMsg&) override;
-  int HandlerUntilReadAlwaysUnReady(const ActorMsg&) override;
 
   bool IsReadReady() override;
-  bool IsReadAlwaysUnReadyFromNow() override { TODO(); }
+  bool IsReadAlwaysUnReadyFromNow() override;
+  void AsyncReturnAllReadableRegst() override;
+  void AsyncReturnModelRegstUntilMatchCurOutRegst();
+  void AsyncReturnModelRegstUntilLastPieceIdGreaterThan(int64_t piece_id);
   void Act() override;
 
   int64_t model_regst_desc_id_;
@@ -26,7 +28,10 @@ class BackwardCompActor final : public CompActor {
   int64_t activation_regst_desc_id_;
   int64_t data_tmp_regst_desc_id_;
   int64_t out_regst_desc_id_;
+  int64_t out_diff_regst_desc_id_;
+  bool is_out_diff_eord_;
   HashMap<int64_t, std::queue<Regst*>> readable_regsts_;
+  int64_t readable_regst_cnt_;
 };
 
 }  // namespace oneflow

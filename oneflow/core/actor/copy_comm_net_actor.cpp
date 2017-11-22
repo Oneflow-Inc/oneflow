@@ -38,7 +38,7 @@ void CopyCommNetActor::VirtualActorInit(const TaskProto& task_proto) {
 int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     // CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
-    ProcessOneEord();
+    // ProcessOneEord();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (msg.SrcMachineId() == RuntimeCtx::Singleton()->this_machine_id()) {
       CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
@@ -53,7 +53,6 @@ int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
   } else {
     UNEXPECTED_RUN();
   }
-  return msg_handler() == nullptr;
 }
 
 int CopyCommNetActor::HandlerUntilReadAlwaysUnReady(const ActorMsg& msg) {

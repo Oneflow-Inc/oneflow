@@ -18,10 +18,10 @@ class ForwardCompActor final : public CompActor {
   int HandlerInitModel(const ActorMsg&);
   int HandlerInitModelTmp(const ActorMsg&);
   int HandlerNormal(const ActorMsg&) override;
-  int HandlerUntilReadAlwaysUnReady(const ActorMsg&) override;
 
   bool IsReadReady() override;
   bool IsReadAlwaysUnReadyFromNow() override;
+  void AsyncReturnAllReadableRegst() override;
   void Act() override;
 
   void UpdateModelRegstPtr(Regst* regst);
