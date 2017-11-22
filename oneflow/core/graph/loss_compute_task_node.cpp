@@ -7,32 +7,21 @@ void LossCompTaskNode::ProduceAllRegstsAndBindEdges() {
   auto loss_regst = ProduceRegst("loss", 1, kMaxRegisterNum);
   auto in_diff_regst = ProduceRegst("in_diff", 1, kMaxRegisterNum);
   auto data_tmp_regst = ProduceRegst("data_tmp", 1, kMaxRegisterNum);
-  int dst_loss_node_num = 0;
   for (TaskEdge* edge : out_edges()) {
-    // loss_acc_task_node
-    if (edge->dst_node()->GetTaskType() == TaskType::kLossAcc) {
+    TaskType dst_task_node_type = edge->dst_node()->GetTaskType();
+    if (dst_task_node_type == TaskType::kLossAcc) {
       edge->AddRegst("loss", loss_regst);
-      dst_loss_node_num++;
-    } else {  // boxing_task_node or bw_cmp_task_node
+    } else if (dst_task_node_type == TaskType::kBoxing
+               || dst_task_node_type == TaskType::kBackward) {
       edge->AddRegst("in_diff", in_diff_regst);
+    } else {
+      UNEXPECTED_RUN()
     }
   }
-  CHECK_EQ(dst_loss_node_num, 1);
 }
 
 void LossCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in", SoleInEdge()->GetSoleRegst());
-  /*
-    for (TaskEdge* in_edge : in_edges()) {
-      // find pred compute task node
-      TaskNode* src_node = in_edge->src_node();
-      while(dynamic_cast<CompTaskNode*>(src_node) == nullptr) {
-        src_node = (*(src_node->in_edges().begin()))->src_node();
-      }
-
-      ConsumeRegst("in", edge->GetSoleRegst());
-    }
-  */
 }
 
 void LossCompTaskNode::BuildExecGphAndRegst() {
