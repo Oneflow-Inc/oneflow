@@ -109,21 +109,6 @@ bool ForwardCompActor::IsReadReady() {
   if (pending_in_regsts_.empty()) { return false; }
   if (model_regst_desc_id_ != -1 && !model_regst_) { return false; }
   if (model_tmp_regst_desc_id_ != -1 && !model_tmp_regst_) { return false; }
-  if (JobDesc::Singleton()->IsTrain() && model_regst_desc_id_ != -1) {
-    // Ho Q, Cipar J, Cui H, et al. More effective distributed ml via a stale
-    // synchronous parallel parameter server
-    int32_t staleness = JobDesc::Singleton()->Staleness();
-    int32_t num_of_pieces_in_batch = JobDesc::Singleton()->NumOfPiecesInBatch();
-    int64_t cur_iteration =
-        pending_in_regsts_.front()->piece_id() / num_of_pieces_in_batch;
-    int64_t stale_version = cur_iteration - staleness;
-    if (model_regst_->model_version_id() >= stale_version) {
-      return true;
-    } else {
-      AsyncReturnModelRegst();
-      return false;
-    }
-  }
   return true;
 }
 
@@ -152,6 +137,11 @@ void ForwardCompActor::Act() {
     regst->set_piece_id(in_regst->piece_id());
     regst->set_model_version_id(model_version_id);
   });
+  if (JobDesc::Singleton()->IsTrain() && model_regst_) {
+    int64_t last_piece_id = GetLastPieceIdForModelVersionId(model_version_id);
+    CHECK_LE(in_regst->piece_id(), last_piece_id);
+    if (in_regst->piece_id() == last_piece_id) { AsyncReturnModelRegst(); }
+  }
   AsyncSendRegstMsgToProducer(in_regst);
 }
 

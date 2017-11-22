@@ -1,14 +1,13 @@
-#include "oneflow/core/actor/bp_data_comp_actor.h"
+#include "oneflow/core/actor/backward_compute_actor.h"
 
 namespace oneflow {
 
-void BpDataCompActor::VirtualActorInit(const TaskProto& task_proto) {
+void BpDataCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
   activation_regst_desc_id_ = RegstDescId4Name("activation");
   data_tmp_regst_desc_id_ = RegstDescId4Name("data_tmp");
   out_regst_desc_id_ = RegstDescId4Name("out");
-  expected_model_version_id_ = 0;
   OF_SET_MSG_HANDLER(&BpDataCompActor::HandlerNormal);
 }
 
@@ -54,7 +53,6 @@ int BpDataCompActor::HandlerNormal(const ActorMsg& msg) {
       if (regst->regst_desc_id() == model_tmp_regst_desc_id_) {
         CHECK(read_regst_.find(model_tmp_regst_desc_id_) == read_regst_.end());
       } else if (regst->regst_desc_id() == model_regst_desc_id_) {
-        CHECK_EQ(regst->model_version_id(), expected_model_version_id_++);
       } else {
         // do nothing
       }
