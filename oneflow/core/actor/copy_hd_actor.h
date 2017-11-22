@@ -11,16 +11,19 @@ class CopyHdActor final : public Actor {
   CopyHdActor() = default;
   ~CopyHdActor() = default;
 
-  void VirtualActorInit(const TaskProto&, const ThreadCtx&) override;
+  void VirtualActorInit(const TaskProto&) override;
 
  private:
-  int HandlerNormal(const ActorMsg&) override;
-  int HandlerUntilNoReadableRegst(const ActorMsg&) override;
+  void InitDeviceCtx(const ThreadCtx&) override;
 
-  bool IsReadReady() override { return !waiting_in_regst_.empty(); }
+  int HandlerNormal(const ActorMsg&) override;
+  int HandlerUntilReadAlwaysUnReady(const ActorMsg&) override;
+
+  bool IsReadReady() override { return !pending_in_regst_.empty(); }
+  bool IsReadAlwaysUnReadyFromNow() override;
   void Act() override;
 
-  std::queue<Regst*> waiting_in_regst_;
+  std::queue<Regst*> pending_in_regst_;
 };
 
 }  // namespace oneflow

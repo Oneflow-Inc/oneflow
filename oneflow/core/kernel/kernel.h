@@ -88,10 +88,15 @@ class KernelIf : public Kernel {
                          const Blob* blob) const;
 };
 
-void AddKernelCreator(OperatorConf::OpTypeCase,
-                      std::function<Kernel*(const KernelConf&)>);
-void AddKernelCreator(OperatorConf::OpTypeCase, std::function<Kernel*()>);
-std::unique_ptr<const Kernel> ConstructKernel(const KernelConf&);
+using KernelCreator1 = std::function<Kernel*(DeviceType, const KernelConf&)>;
+using KernelCreator2 = std::function<Kernel*(DeviceType)>;
+using KernelCreator3 = std::function<Kernel*(const KernelConf&)>;
+using KernelCreator4 = std::function<Kernel*()>;
+void AddKernelCreator(OperatorConf::OpTypeCase, KernelCreator1);
+void AddKernelCreator(OperatorConf::OpTypeCase, KernelCreator2);
+void AddKernelCreator(OperatorConf::OpTypeCase, KernelCreator3);
+void AddKernelCreator(OperatorConf::OpTypeCase, KernelCreator4);
+std::unique_ptr<const Kernel> ConstructKernel(DeviceType, const KernelConf&);
 
 }  // namespace oneflow
 

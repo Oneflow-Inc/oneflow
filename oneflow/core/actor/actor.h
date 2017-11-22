@@ -38,15 +38,13 @@ class Actor {
 
   // Util
   Actor() = default;
-  virtual void VirtualActorInit(const TaskProto&, const ThreadCtx&) {}
+  virtual void VirtualActorInit(const TaskProto&) {}
   virtual KernelWardFunc GetKernelWardFunc() const { return &Kernel::Forward; }
   int64_t RegstDescId4Name(const std::string& name) const;
-  virtual void InitDeviceCtx();
+  virtual void InitDeviceCtx(const ThreadCtx&);
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
   KernelCtx GenDefaultKernelCtx() const;
-  void set_num_of_remaining_eord(int val) { num_of_remaining_eord_ = val; }
-  int64_t num_of_read_empty() const { return num_of_read_empty_; }
-  int64_t& mut_num_of_read_empty() { return num_of_read_empty_; }
+  const std::vector<ExecKernel>& exec_kernel_vec() { return exec_kernel_vec_; }
 
   // Msg Handler
   MsgHandler msg_handler() { return msg_handler_; }
@@ -59,13 +57,14 @@ class Actor {
 
   // Common Handlers
   virtual int HandlerNormal(const ActorMsg& msg) = 0;
-  virtual int HandlerUntilNoReadableRegst(const ActorMsg& msg) = 0;
+  virtual int HandlerUntilReadAlwaysUnReady(const ActorMsg& msg) = 0;
   int HandlerZombie(const ActorMsg& msg);
 
   // Act
   void ActUntilFail();
   virtual void Act() = 0;
   virtual bool IsReadReady() = 0;
+  virtual bool IsReadAlwaysUnReadyFromNow() { TODO(); }
   virtual bool IsWriteReady();
   void ProcessOneEord();
   void TrySwitchToZombie();
@@ -92,6 +91,8 @@ class Actor {
   int64_t total_reading_cnt() const { return total_reading_cnt_; }
 
  private:
+  DeviceType GetDeviceType() const;
+
   int64_t actor_id_;
   std::vector<ExecKernel> exec_kernel_vec_;
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;
@@ -105,8 +106,7 @@ class Actor {
   HashMap<Regst*, int64_t> produced_regst2reading_cnt_;
   int64_t writeable_produced_regst_desc_num_;
   int64_t total_reading_cnt_;
-  int64_t num_of_remaining_eord_;
-  int64_t num_of_read_empty_;
+  int64_t remaining_eord_cnt_;
 };
 
 void AddActorCreator(TaskType task_type, std::function<Actor*()> creator);

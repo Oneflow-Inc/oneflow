@@ -13,8 +13,6 @@ void AccumulateActor::Init(const TaskProto& task_proto,
                                              cuda_handle_.cublas_handle(),
                                              cuda_handle_.cudnn_handle()));
   }
-  set_num_of_remaining_eord(1);
-  mut_num_of_read_empty() = 1;
   OF_SET_MSG_HANDLER(&AccumulateActor::HandlerNormal);
   acc_cnt_ = max_acc_cnt;
   max_acc_cnt_ = max_acc_cnt;
@@ -23,12 +21,11 @@ void AccumulateActor::Init(const TaskProto& task_proto,
 
 int AccumulateActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
+    // CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     ProcessOneEord();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = msg.regst();
     if (TryUpdtStateAsProducedRegst(regst) != 0) {
-      mut_num_of_read_empty() = 0;
       waiting_in_regst_.push(regst);
     }
     ActUntilFail();
@@ -38,7 +35,7 @@ int AccumulateActor::HandlerNormal(const ActorMsg& msg) {
   return msg_handler() == nullptr;
 }
 
-int AccumulateActor::HandlerUntilNoReadableRegst(const ActorMsg& msg) {
+int AccumulateActor::HandlerUntilReadAlwaysUnReady(const ActorMsg& msg) {
   CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
   ActUntilFail();
   if (waiting_in_regst_.empty()) {
@@ -75,7 +72,6 @@ void AccumulateActor::Act() {
   }
   AsyncSendRegstMsgToProducer(in_regst);
   waiting_in_regst_.pop();
-  mut_num_of_read_empty() = waiting_in_regst_.empty();
 }
 
 }  // namespace oneflow

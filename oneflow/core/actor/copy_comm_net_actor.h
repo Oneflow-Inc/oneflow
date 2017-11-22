@@ -11,7 +11,7 @@ class CopyCommNetActor final : public Actor {
   CopyCommNetActor() = default;
   ~CopyCommNetActor();
 
-  void VirtualActorInit(const TaskProto&, const ThreadCtx&) override;
+  void VirtualActorInit(const TaskProto&) override;
 
  private:
   class CommNetDeviceCtx;
@@ -22,7 +22,7 @@ class CopyCommNetActor final : public Actor {
   };
 
   int HandlerNormal(const ActorMsg&) override;
-  int HandlerUntilNoReadableRegst(const ActorMsg&) override;
+  int HandlerUntilReadAlwaysUnReady(const ActorMsg&) override;
 
   bool IsReadReady() override {
     return true;
