@@ -3,6 +3,7 @@
 namespace oneflow {
 
 void ForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
+  is_in_eord_ = false;
   in_regst_desc_id_ = RegstDescId4Name("in");
   CHECK_NE(in_regst_desc_id_, -1);
   model_regst_desc_id_ = RegstDescId4Name("model");
@@ -66,8 +67,8 @@ int ForwardCompActor::HandlerInitModelTmp(const ActorMsg& msg) {
 }
 
 int ForwardCompActor::HandlerNormal(const ActorMsg& msg) {
-  if (msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);  // it must be in_regst_desc
+  if (msg.msg_type() == ActorMsgType::kEordMsg) {
+    if (msg.eord_regst_desc_id() == in_regst_desc_id_) { is_in_eord_ = true; }
     ProcessOneEord();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = msg.regst();
@@ -113,7 +114,7 @@ bool ForwardCompActor::IsReadReady() {
 }
 
 bool ForwardCompActor::IsReadAlwaysUnReadyFromNow() {
-  return pending_in_regsts_.empty();
+  return is_in_eord_ && pending_in_regsts_.empty();
 }
 
 void ForwardCompActor::Act() {

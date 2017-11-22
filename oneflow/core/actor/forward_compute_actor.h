@@ -30,6 +30,7 @@ class ForwardCompActor final : public CompActor {
   void TryAsyncReturnModelRegst();
   void TryAsyncReturnModelTmpRegst();
 
+  bool is_in_eord_;
   int64_t in_regst_desc_id_;
   int64_t model_regst_desc_id_;
   int64_t model_tmp_regst_desc_id_;

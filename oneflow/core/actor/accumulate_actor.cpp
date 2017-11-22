@@ -22,7 +22,7 @@ void AccumulateActor::Init(const TaskProto& task_proto,
 
 int AccumulateActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
+    // CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
     ProcessOneEord();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = msg.regst();

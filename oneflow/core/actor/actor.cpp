@@ -64,8 +64,7 @@ KernelCtx Actor::GenDefaultKernelCtx() const {
 }
 
 int Actor::HandlerZombie(const ActorMsg& msg) {
-  if (msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
+  if (msg.msg_type() == ActorMsgType::kEordMsg) {
     remaining_eord_cnt_ -= 1;
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) {
@@ -171,7 +170,8 @@ void Actor::AsyncSendEORDMsgToConsumers(int64_t regst_desc_id) {
       produced_regsts_.at(regst_desc_id).front()->regst_desc();
   device_ctx_->AddCallBack([regst_desc]() {
     for (int64_t consumer : regst_desc->consumers_actor_id()) {
-      ActorMsg msg = ActorMsg::BuildCommandMsg(consumer, ActorCmd::kEORD);
+      ActorMsg msg =
+          ActorMsg::BuildEordMsg(consumer, regst_desc->regst_desc_id());
       ActorMsgBus::Singleton()->SendMsg(std::move(msg));
     }
   });
