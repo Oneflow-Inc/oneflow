@@ -13,7 +13,8 @@ void CopyHdActor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
 
 int CopyHdActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
-    // ProcessOneEord();
+    DecreaseRemainingEordCnt();
+    is_in_eord_ = true;
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) {
       pending_in_regst_.push(msg.regst());
@@ -22,20 +23,11 @@ int CopyHdActor::HandlerNormal(const ActorMsg& msg) {
   } else {
     UNEXPECTED_RUN();
   }
-}
-
-int CopyHdActor::HandlerUntilReadAlwaysUnReady(const ActorMsg& msg) {
-  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
-  ActUntilFail();
-  if (IsReadAlwaysUnReadyFromNow()) {
-    AsyncSendEORDMsgForAllProducedRegstDesc();
-    OF_SET_MSG_HANDLER(&CopyHdActor::HandlerZombie);
-  }
-  return 0;
+  return TrySwitchToZombieOrFinish();
 }
 
 bool CopyHdActor::IsReadAlwaysUnReadyFromNow() {
-  return pending_in_regst_.empty();
+  return is_in_eord_ && pending_in_regst_.empty();
 }
 
 void CopyHdActor::Act() {

@@ -34,7 +34,7 @@ int ForwardCompActor::HandlerInitModel(const ActorMsg& msg) {
         SnapshotMgr::Singleton()->GetReadableSnapshot(),
         [&](const std::string& bn_in_op) {
           const std::string& lbn = exec_kernel.kernel->Lbn4BnInOp(bn_in_op);
-          return model_regst->GetBlobPtrFromLbn(lbn);
+          return model_regst->GetBlobByLbn(lbn);
         });
   }
   AsyncSendRegstMsgToProducer(model_regst);
@@ -50,7 +50,7 @@ int ForwardCompActor::HandlerInitModelTmp(const ActorMsg& msg) {
         GenDefaultKernelCtx(), parallel_ctx(),
         [&](const std::string& bn_in_op) {
           const std::string& lbn = exec_kernel.kernel->Lbn4BnInOp(bn_in_op);
-          return model_tmp_regst->GetBlobPtrFromLbn(lbn);
+          return model_tmp_regst->GetBlobByLbn(lbn);
         });
   }
   AsyncSendRegstMsgToProducer(model_tmp_regst);

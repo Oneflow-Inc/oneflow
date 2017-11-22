@@ -41,14 +41,14 @@ int MdUpdtCompActor::HandlerBeforeInitializeModel(const ActorMsg& actor_msg) {
   if (model_regst_desc_id_ != -1) {
     Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
     model_regst->set_model_version_id(next_model_version_id_++);
-    model_regst->ForEachLbn(CollectKernelsFromLbn);
+    // model_regst->ForEachLbn(CollectKernelsFromLbn);
     for (const Kernel* kernel : kernels) {
       kernel->InitModelBlobs(kernel_ctx, ParallelContext(),
                              SnapshotMgr::Singleton()->GetReadableSnapshot(),
                              [&](const std::string& bn_in_op) {
                                const std::string& lbn =
                                    kernel->Lbn4BnInOp(bn_in_op);
-                               return model_regst->GetBlobPtrFromLbn(lbn);
+                               return model_regst->GetBlobByLbn(lbn);
                              });
     }
     if (JobDesc::Singleton()->IsTrain()) { AsyncCopyModelFromCurToNext(); }
@@ -57,12 +57,12 @@ int MdUpdtCompActor::HandlerBeforeInitializeModel(const ActorMsg& actor_msg) {
   // model_tmp_regst
   Regst* model_tmp_regst = GetCurWriteableRegst(model_tmp_regst_desc_id_);
   if (model_tmp_regst) {
-    model_tmp_regst->ForEachLbn(CollectKernelsFromLbn);
+    // model_tmp_regst->ForEachLbn(CollectKernelsFromLbn);
     for (const Kernel* kernel : kernels) {
       kernel->InitModelTmpBlobs(
           kernel_ctx, ParallelContext(), [&](const std::string& bn_in_op) {
             const std::string& lbn = kernel->Lbn4BnInOp(bn_in_op);
-            return model_tmp_regst->GetBlobPtrFromLbn(lbn);
+            return model_tmp_regst->GetBlobByLbn(lbn);
           });
     }
   }
@@ -70,14 +70,14 @@ int MdUpdtCompActor::HandlerBeforeInitializeModel(const ActorMsg& actor_msg) {
   // data_tmp_regst
   Regst* data_tmp_regst = GetCurWriteableRegst(data_tmp_regst_desc_id_);
   if (data_tmp_regst) {
-    data_tmp_regst->ForEachLbn(CollectKernelsFromLbn);
+    // data_tmp_regst->ForEachLbn(CollectKernelsFromLbn);
     CHECK_EQ(kernels.size(), 1);
     auto mdupdt_kernel =
         static_cast<const ModelUpdtKernel*>(*(kernels.begin()));
     mdupdt_kernel->InitDataTmpBlobs(
         kernel_ctx, [&](const std::string& bn_in_op) {
           const std::string& lbn = mdupdt_kernel->Lbn4BnInOp(bn_in_op);
-          return data_tmp_regst->GetBlobPtrFromLbn(lbn);
+          return data_tmp_regst->GetBlobByLbn(lbn);
         });
   }
   //

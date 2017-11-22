@@ -17,12 +17,12 @@ class CopyHdActor final : public Actor {
   void InitDeviceCtx(const ThreadCtx&) override;
 
   int HandlerNormal(const ActorMsg&) override;
-  int HandlerUntilReadAlwaysUnReady(const ActorMsg&);
 
   bool IsReadReady() override { return !pending_in_regst_.empty(); }
   bool IsReadAlwaysUnReadyFromNow() override;
   void Act() override;
 
+  bool is_in_eord_;
   std::queue<Regst*> pending_in_regst_;
 };
 
