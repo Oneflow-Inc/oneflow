@@ -11,11 +11,11 @@ class MdSaveCompActor final : public CompActor {
   MdSaveCompActor() = default;
   ~MdSaveCompActor() = default;
 
-  void VirtualCompActorInit(const TaskProto&, const ThreadCtx&) override;
+  void VirtualCompActorInit(const TaskProto&) override;
 
  private:
   int HandlerNormal(const ActorMsg&) override;
-  int HandlerUntilNoReadableRegst(const ActorMsg& msg) override {
+  int HandlerUntilReadAlwaysUnReady(const ActorMsg& msg) override {
     UNEXPECTED_RUN();
   }
 

@@ -21,7 +21,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     CHECK(name2regst_desc_id_.emplace(pair.first, pair.second).second);
   }
   msg_handler_ = nullptr;
-  InitDeviceCtx();
+  InitDeviceCtx(thread_ctx);
   // Status of Produced Registers
   for (const auto& pair : produced_regsts_) {
     for (const auto& regst : pair.second) {
@@ -31,9 +31,8 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   }
   writeable_produced_regst_desc_num_ = writeable_produced_regst_.size();
   total_reading_cnt_ = 0;
-  num_of_remaining_eord_ = -1;
-  num_of_read_empty_ = -1;
-  VirtualActorInit(task_proto, thread_ctx);
+  remaining_eord_cnt_ = -1;
+  VirtualActorInit(task_proto);
 }
 
 int64_t Actor::RegstDescId4Name(const std::string& name) const {
@@ -42,7 +41,7 @@ int64_t Actor::RegstDescId4Name(const std::string& name) const {
   return -1;
 }
 
-void Actor::InitDeviceCtx() {
+void Actor::InitDeviceCtx(const ThreadCtx&) {
   switch (IDMgr::Singleton()->GetDeviceTypeFromActorId(actor_id_)) {
     case DeviceType::kCPU: {
       device_ctx_.reset(new CpuDeviceCtx);
@@ -65,8 +64,17 @@ KernelCtx Actor::GenDefaultKernelCtx() const {
 }
 
 int Actor::HandlerZombie(const ActorMsg& msg) {
-  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
-  if (total_reading_cnt_ == 0) {
+  if (msg.msg_type() == ActorMsgType::kCmdMsg) {
+    CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
+    remaining_eord_cnt_ -= 1;
+  } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
+    if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) {
+      AsyncSendRegstMsgToProducer(msg.regst());
+    }
+  } else {
+    UNEXPECTED_RUN();
+  }
+  if (remaining_eord_cnt_ == 0 && total_reading_cnt_ == 0) {
     msg_handler_ = nullptr;
     return 1;
   }
@@ -82,17 +90,16 @@ bool Actor::IsWriteReady() {
 }
 
 void Actor::ProcessOneEord() {
-  num_of_remaining_eord_ -= 1;
-  if (num_of_remaining_eord_ > 0) { return; }
-  if (num_of_read_empty_) {
-    if (!total_reading_cnt_) {
+  remaining_eord_cnt_ -= 1;
+  if (IsReadAlwaysUnReadyFromNow() == false) {
+    OF_SET_MSG_HANDLER(&Actor::HandlerUntilReadAlwaysUnReady);
+  } else {
+    if (remaining_eord_cnt_ == 0 && total_reading_cnt_ == 0) {
       OF_SET_MSG_HANDLER(nullptr);
     } else {
       OF_SET_MSG_HANDLER(&Actor::HandlerZombie);
     }
     AsyncSendEORDMsgForAllProducedRegstDesc();
-  } else {
-    OF_SET_MSG_HANDLER(&Actor::HandlerUntilNoReadableRegst);
   }
 }
 
