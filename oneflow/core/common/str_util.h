@@ -66,6 +66,10 @@ std::string Dirname(const std::string& path);
 // "/" in the path, the result is the same as the input.
 std::string Basename(const std::string& path);
 
+std::string RemoveExtensionIfExist(
+    const std::string& file_name,
+    const std::initializer_list<std::string>& ext);
+
 // Collapse duplicate "/"s, resolve ".." and "." path elements, remove
 // trailing "/".
 //

@@ -2,6 +2,24 @@
 
 namespace oneflow {
 
+std::string RemoveExtensionIfExist(
+    const std::string& file_name,
+    const std::initializer_list<std::string>& extensions) {
+  std::size_t pos = file_name.find_last_of(".");
+  if (pos != std::string::npos) {
+    bool found = false;
+    std::string file_ext(file_name.substr(pos + 1));
+    for (const std::string& ext : extensions) {
+      if (file_ext == ext) {
+        found = true;
+        break;
+      }
+    }
+    if (found) { return file_name.substr(0, pos); }
+  }
+  return file_name;
+}
+
 const char* StrToToken(const char* text, const std::string& delims,
                        std::string* token) {
   token->clear();
