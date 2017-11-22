@@ -104,7 +104,7 @@ int MdUpdtCompActor::HandlerBeforeSendInitialModel(const ActorMsg& actor_msg) {
 
 int MdUpdtCompActor::HandlerNormal(const ActorMsg& actor_msg) {
   if (actor_msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kEORD);
+    // CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kEORD);
     ProcessOneEord();
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = actor_msg.regst();

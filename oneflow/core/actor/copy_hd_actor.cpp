@@ -13,8 +13,7 @@ void CopyHdActor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
 }
 
 int CopyHdActor::HandlerNormal(const ActorMsg& msg) {
-  if (msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
+  if (msg.msg_type() == ActorMsgType::kEordMsg) {
     ProcessOneEord();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) {

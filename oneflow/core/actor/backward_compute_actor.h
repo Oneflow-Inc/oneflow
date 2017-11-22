@@ -5,11 +5,11 @@
 
 namespace oneflow {
 
-class BpDataCompActor final : public CompActor {
+class BackwardCompActor final : public CompActor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BpDataCompActor);
-  BpDataCompActor() = default;
-  ~BpDataCompActor() = default;
+  OF_DISALLOW_COPY_AND_MOVE(BackwardCompActor);
+  BackwardCompActor() = default;
+  ~BackwardCompActor() = default;
 
   void VirtualCompActorInit(const TaskProto&) override;
 
@@ -18,16 +18,15 @@ class BpDataCompActor final : public CompActor {
   int HandlerUntilReadAlwaysUnReady(const ActorMsg&) override;
 
   bool IsReadReady() override;
+  bool IsReadAlwaysUnReadyFromNow() override { TODO(); }
   void Act() override;
-  void AsyncSendMsgToModelAndModelTmpProducer();
 
   int64_t model_regst_desc_id_;
   int64_t model_tmp_regst_desc_id_;
-  int64_t data_tmp_regst_desc_id_;
   int64_t activation_regst_desc_id_;
+  int64_t data_tmp_regst_desc_id_;
   int64_t out_regst_desc_id_;
-  // <regst_desc_id, queue<regst>>
-  HashMap<int64_t, std::queue<Regst*>> read_regst_;
+  HashMap<int64_t, std::queue<Regst*>> readable_regsts_;
 };
 
 }  // namespace oneflow

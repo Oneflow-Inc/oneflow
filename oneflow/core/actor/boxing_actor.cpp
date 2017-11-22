@@ -12,7 +12,7 @@ void BoxingActor::VirtualActorInit(const TaskProto& task_proto) {
 
 int BoxingActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD) << actor_id();
+    // CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD) << actor_id();
     ProcessOneEord();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = msg.regst();
