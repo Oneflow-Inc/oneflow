@@ -15,9 +15,7 @@ class MdSaveCompActor final : public CompActor {
 
  private:
   int HandlerNormal(const ActorMsg&) override;
-  int HandlerUntilReadAlwaysUnReady(const ActorMsg& msg) override {
-    UNEXPECTED_RUN();
-  }
+  int HandlerUntilReadAlwaysUnReady(const ActorMsg& msg) { UNEXPECTED_RUN(); }
 
   bool IsReadReady() override { return regst_ != nullptr; }
   void Act() override;

@@ -22,7 +22,7 @@ void AccumulateActor::Init(const TaskProto& task_proto,
 int AccumulateActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     // CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
-    ProcessOneEord();
+    // ProcessOneEord();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = msg.regst();
     if (TryUpdtStateAsProducedRegst(regst) != 0) {
@@ -32,7 +32,6 @@ int AccumulateActor::HandlerNormal(const ActorMsg& msg) {
   } else {
     UNEXPECTED_RUN();
   }
-  return msg_handler() == nullptr;
 }
 
 int AccumulateActor::HandlerUntilReadAlwaysUnReady(const ActorMsg& msg) {

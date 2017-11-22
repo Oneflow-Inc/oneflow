@@ -4,7 +4,9 @@
 namespace oneflow {
 
 void MdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  auto model_regst = ProduceRegst("model", 1, kMaxRegisterNum);
+  int32_t min_model_regst = 1;
+  if (JobDesc::Singleton()->Staleness() == -1) { min_model_regst = 2; }
+  auto model_regst = ProduceRegst("model", min_model_regst, kMaxRegisterNum);
   auto model_tmp_regst = ProduceRegst("model_tmp", 1, 1);
   for (TaskEdge* out_edge : out_edges()) {
     TaskNode* dst_node = out_edge->dst_node();

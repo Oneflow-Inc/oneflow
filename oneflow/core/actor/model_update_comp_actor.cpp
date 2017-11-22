@@ -104,7 +104,7 @@ int MdUpdtCompActor::HandlerBeforeSendInitialModel(const ActorMsg& actor_msg) {
 int MdUpdtCompActor::HandlerNormal(const ActorMsg& actor_msg) {
   if (actor_msg.msg_type() == ActorMsgType::kCmdMsg) {
     // CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kEORD);
-    ProcessOneEord();
+    // ProcessOneEord();
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = actor_msg.regst();
     if (TryUpdtStateAsProducedRegst(regst) != 0) {
@@ -114,7 +114,6 @@ int MdUpdtCompActor::HandlerNormal(const ActorMsg& actor_msg) {
   } else {
     UNEXPECTED_RUN();
   }
-  return msg_handler() == nullptr;
 }
 
 int MdUpdtCompActor::HandlerUntilReadAlwaysUnReady(const ActorMsg& actor_msg) {
@@ -153,7 +152,7 @@ void MdUpdtCompActor::Act() {
         [this](int64_t actor_id) { return actor_id == related_save_task_id_; });
     CHECK(!IsReadReady());
     AsyncSendEORDMsgToConsumers(model_regst_desc_id_);
-    TrySwitchToZombie();
+    // TrySwitchToZombie();
   } else {
     if (next_model_version_id_ % JobDesc::Singleton()->NumOfBatchesInSnapshot()
         == 0) {

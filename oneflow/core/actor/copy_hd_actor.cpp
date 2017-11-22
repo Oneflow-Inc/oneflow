@@ -13,7 +13,7 @@ void CopyHdActor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
 
 int CopyHdActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
-    ProcessOneEord();
+    // ProcessOneEord();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) {
       pending_in_regst_.push(msg.regst());
@@ -22,7 +22,6 @@ int CopyHdActor::HandlerNormal(const ActorMsg& msg) {
   } else {
     UNEXPECTED_RUN();
   }
-  return msg_handler() == nullptr;
 }
 
 int CopyHdActor::HandlerUntilReadAlwaysUnReady(const ActorMsg& msg) {
