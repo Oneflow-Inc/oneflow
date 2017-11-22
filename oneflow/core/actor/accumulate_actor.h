@@ -15,7 +15,7 @@ class AccumulateActor : public CompActor {
 
  private:
   int HandlerNormal(const ActorMsg&) override;
-  int HandlerUntilReadAlwaysUnReady(const ActorMsg&) override;
+  int HandlerUntilReadAlwaysUnReady(const ActorMsg&);
 
   bool IsReadReady() override { return !waiting_in_regst_.empty(); }
   void Act() override;

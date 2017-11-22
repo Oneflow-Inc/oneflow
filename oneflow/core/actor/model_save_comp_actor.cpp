@@ -12,7 +12,7 @@ void MdSaveCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
 
 int MdSaveCompActor::HandlerNormal(const ActorMsg& actor_msg) {
   if (actor_msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kEORD);
+    // CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kEORD);
     return 1;
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
     regst_ = actor_msg.regst();

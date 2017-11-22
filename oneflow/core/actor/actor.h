@@ -44,11 +44,9 @@ class Actor {
   virtual void InitDeviceCtx(const ThreadCtx&);
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
   KernelCtx GenDefaultKernelCtx() const;
-  void set_num_of_remaining_eord(int val) { remaining_eord_cnt_ = val; }
   const std::vector<ExecKernel>& exec_kernel_vec() { return exec_kernel_vec_; }
 
   // Msg Handler
-  MsgHandler msg_handler() { return msg_handler_; }
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
 #define OF_SET_MSG_HANDLER(val)                                   \
   do {                                                            \
@@ -58,7 +56,6 @@ class Actor {
 
   // Common Handlers
   virtual int HandlerNormal(const ActorMsg& msg) = 0;
-  virtual int HandlerUntilReadAlwaysUnReady(const ActorMsg& msg) = 0;
   int HandlerZombie(const ActorMsg& msg);
 
   // Act
@@ -67,8 +64,9 @@ class Actor {
   virtual bool IsReadReady() = 0;
   virtual bool IsReadAlwaysUnReadyFromNow() { TODO(); }
   virtual bool IsWriteReady();
-  void ProcessOneEord();
-  void TrySwitchToZombie();
+  void DecreaseRemainingEordCnt();
+  virtual void AsyncReturnAllReadableRegst() { TODO(); }
+  int TrySwitchToZombieOrFinish();
 
   // Async Do on device_ctx_
   void AsyncLaunchKernel(const KernelCtx&,
@@ -92,6 +90,8 @@ class Actor {
   int64_t total_reading_cnt() const { return total_reading_cnt_; }
 
  private:
+  DeviceType GetDeviceType() const;
+
   int64_t actor_id_;
   std::vector<ExecKernel> exec_kernel_vec_;
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;

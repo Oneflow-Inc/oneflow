@@ -26,6 +26,13 @@ class CompActor : public Actor {
   ParallelContext parallel_ctx_;
 };
 
+inline int64_t GetLastPieceIdForModelVersionId(int64_t model_version_id) {
+  int32_t staleness = JobDesc::Singleton()->Staleness();
+  if (staleness == -1) { return std::numeric_limits<int64_t>::max(); }
+  int32_t num_of_pieces_in_batch = JobDesc::Singleton()->NumOfPiecesInBatch();
+  return (model_version_id + staleness + 1) * num_of_pieces_in_batch - 1;
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_ACTOR_COMPUTE_ACTOR_H_
