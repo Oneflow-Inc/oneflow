@@ -1,17 +1,17 @@
-#ifndef ONEFLOW_CORE_ACTOR_BP_DATA_COMP_ACTOR_H_
-#define ONEFLOW_CORE_ACTOR_BP_DATA_COMP_ACTOR_H_
+#ifndef ONEFLOW_CORE_ACTOR_BACKWARD_COMPUTE_ACTOR_H_
+#define ONEFLOW_CORE_ACTOR_BACKWARD_COMPUTE_ACTOR_H_
 
-#include "oneflow/core/actor/actor.h"
+#include "oneflow/core/actor/compute_actor.h"
 
 namespace oneflow {
 
-class BpDataCompActor final : public Actor {
+class BpDataCompActor final : public CompActor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BpDataCompActor);
   BpDataCompActor() = default;
   ~BpDataCompActor() = default;
 
-  void VirtualActorInit(const TaskProto&) override;
+  void VirtualCompActorInit(const TaskProto&) override;
 
  private:
   int HandlerNormal(const ActorMsg&) override;
@@ -21,12 +21,10 @@ class BpDataCompActor final : public Actor {
   void Act() override;
   void AsyncSendMsgToModelAndModelTmpProducer();
 
-  CudaStreamHandle cuda_handle_;
-  int64_t expected_model_version_id_;
   int64_t model_regst_desc_id_;
   int64_t model_tmp_regst_desc_id_;
-  int64_t activation_regst_desc_id_;
   int64_t data_tmp_regst_desc_id_;
+  int64_t activation_regst_desc_id_;
   int64_t out_regst_desc_id_;
   // <regst_desc_id, queue<regst>>
   HashMap<int64_t, std::queue<Regst*>> read_regst_;
@@ -34,4 +32,4 @@ class BpDataCompActor final : public Actor {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_BP_DATA_COMP_ACTOR_H_
+#endif  // ONEFLOW_CORE_ACTOR_BACKWARD_COMPUTE_ACTOR_H_

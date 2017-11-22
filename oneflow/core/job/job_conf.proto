@@ -7,7 +7,7 @@ import "oneflow/core/common/data_type.proto";
 message TrainConf {
   required string model_save_snapshots_path = 1;
   required int32 num_of_batches_in_snapshot = 2;
-  optional int32 staleness = 3 [default = 0]; // at least 0. If set as 0, then it's BSP
+  optional int32 staleness = 3 [default = 0]; // -1 means unlimited, 0 means BSP, > 0 means SSP
   required int64 total_batch_num = 4;
   optional FillConf default_fill_conf = 5;
   optional int32 piece_num_of_record_loss = 6 [default = 1000];
