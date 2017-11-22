@@ -9,6 +9,7 @@ void ReluKernel<device_type, T>::Forward(
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
   CopyDataIdFromSoleIbToAllObIfNeed<device_type>(ctx, BnInOp2Blob);
+
   ReluKernelUtil<device_type, T>::Forward(ctx, out_blob->shape().elem_cnt(),
                                           in_blob->dptr<T>(),
                                           out_blob->mut_dptr<T>());
@@ -21,6 +22,7 @@ void ReluKernel<device_type, T>::Backward(
   const Blob* in_blob = BnInOp2Blob("in");
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
+
   ReluKernelUtil<device_type, T>::Backward(
       ctx, in_blob->shape().elem_cnt(), out_diff_blob->dptr<T>(),
       in_blob->dptr<T>(), in_diff_blob->mut_dptr<T>());
@@ -51,15 +53,20 @@ class ReluKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
+#ifdef USE_CUDNN
+#define RELU_KERNEL CudnnReluKernel
+#else
+#define RELU_KERNEL ReluKernel
+#endif
+
 Kernel* CreateReluKernel(const OpContext& op_ctx) {
   static const HashMap<std::string, std::function<Kernel*()>> creators = {
-#define RELU_KERNEL_ENTRY(device_type, data_type_pair)                     \
-  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {      \
-     return new ReluKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>; \
+#define RELU_KERNEL_ENTRY(device_type, data_type_pair)                      \
+  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {       \
+     return new RELU_KERNEL<device_type, OF_PP_PAIR_FIRST(data_type_pair)>; \
    }},
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-          RELU_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
-          FLOATING_DATA_TYPE_SEQ SIGNED_INT_DATA_TYPE_SEQ)};
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(RELU_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
+                                       FLOATING_DATA_TYPE_SEQ)};
 
   return creators.at(
       GetHashKey(op_ctx.device_type(), op_ctx.bn_in_op2data_type().at("in")))();

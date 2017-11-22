@@ -47,6 +47,12 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobFunc(
   (*bn2blob)["expected_weight_diff"] = KTC::CreateBlobWithSpecifiedVal(
       new BlobDesc(Shape({2, 4}), GetDataType<T>::val, false),
       {1.5f, 1.25f, 3, -1, 1.25f, 0, 2.5f, 0});
+  (*bn2blob)["fwd_workspace"] = KTC::CreateBlobWithRandomVal(
+      new BlobDesc(Shape({1, 1}), GetDataType<T>::val, false));
+  (*bn2blob)["bwd_weight_workspace"] = KTC::CreateBlobWithRandomVal(
+      new BlobDesc(Shape({1, 1}), GetDataType<T>::val, false));
+  (*bn2blob)["bwd_data_workspace"] = KTC::CreateBlobWithRandomVal(
+      new BlobDesc(Shape({1, 1}), GetDataType<T>::val, false));
   return [bn2blob](const std::string& bn) { return bn2blob->at(bn); };
 }
 
@@ -59,38 +65,45 @@ Kernel* BuildConvolutionKernel(bool has_bias_term) {
   op_conf.mutable_convolution_conf()->set_out_num(1);
   op_conf.mutable_convolution_conf()->set_pad_h(0);
   op_conf.mutable_convolution_conf()->set_pad_w(0);
-  op_conf.mutable_convolution_conf()->set_kernel_size_h(2);
-  op_conf.mutable_convolution_conf()->set_kernel_size_w(2);
+  op_conf.mutable_convolution_conf()->set_kernel_h(2);
+  op_conf.mutable_convolution_conf()->set_kernel_w(2);
   op_conf.mutable_convolution_conf()->set_stride_h(1);
   op_conf.mutable_convolution_conf()->set_stride_w(1);
   op_conf.mutable_convolution_conf()->set_dilation_h(1);
   op_conf.mutable_convolution_conf()->set_dilation_w(1);
   op_conf.mutable_convolution_conf()->set_has_bias_term(has_bias_term);
+  op_conf.mutable_convolution_conf()->set_cudnn_fwd_algo(0);
+  op_conf.mutable_convolution_conf()->set_cudnn_bwd_weight_algo(0);
+  op_conf.mutable_convolution_conf()->set_cudnn_bwd_data_algo(0);
+
   auto convolution_op = ConstructOp(op_conf);
   OperatorProto op_proto;
   convolution_op->ToProto(&op_proto);
-  auto conv_kernel = new ConvolutionKernel<device_type, T>();
+  auto conv_kernel = new CudnnConvolutionKernel<device_type, T>();
   conv_kernel->InitFromOpProto(op_proto);
   return conv_kernel;
 }
 
 template<DeviceType device_type, typename T>
 void TestConvolutionKernel(bool has_bias_term) {
-  JobConf job_conf;
-  job_conf.set_default_data_type(GetDataType<T>::val);
-  JobDesc::Singleton()->InitFromJobConf(job_conf);
   KernelCtx ctx;
   BuildKernelCtx<device_type>(&ctx);
   auto BnInOp2BlobFunc = BuildBnInOp2BlobFunc<device_type, T>(has_bias_term);
   auto conv_kernel = BuildConvolutionKernel<device_type, T>(has_bias_term);
+
   conv_kernel->Forward(ctx, BnInOp2BlobFunc);
   conv_kernel->Backward(ctx, BnInOp2BlobFunc);
+
   SyncStream<device_type>(&ctx);
+
   KTCommon<device_type, T>::CheckResult(BnInOp2BlobFunc, "out", "expected_out");
+
   KTCommon<device_type, T>::CheckResult(BnInOp2BlobFunc, GenDiffBn("in"),
                                         "expected_in_diff");
+
   KTCommon<device_type, T>::CheckResult(BnInOp2BlobFunc, GenDiffBn("weight"),
                                         "expected_weight_diff");
+
   if (has_bias_term) {
     KTCommon<device_type, T>::CheckResult(BnInOp2BlobFunc, GenDiffBn("bias"),
                                           "expected_bias_diff");
@@ -99,11 +112,8 @@ void TestConvolutionKernel(bool has_bias_term) {
 
 }  // namespace
 
-TEST(ConvKernel, conv_kernel_cpu) {
-#define MAKE_ENTRY(x, y, z) \
-  test::TestConvolutionKernel<x, OF_PP_PAIR_FIRST(y)>(z);
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, DEVICE_TYPE_SEQ,
-                                   FLOATING_DATA_TYPE_SEQ, BOOL_SEQ)
+TEST(ConvKernel, cudnn_conv_kernel) {
+  test::TestConvolutionKernel<DeviceType::kGPU, float>(true);
 }
 
 }  // namespace test

@@ -7,7 +7,9 @@ void PoolingOp::InitFromOpConf() {
 
   EnrollInputBn("in");
   EnrollOutputBn("out");
+#ifndef USE_CUDNN
   EnrollDataTmpBn("idx");
+#endif
 }
 
 const PbMessage& PoolingOp::GetSpecialConf() const {
@@ -38,11 +40,14 @@ void PoolingOp::InferBlobDesc4FwBlobs(
              shape_w});
   out_blob_desc->set_data_type(in_blob_desc->data_type());
   out_blob_desc->set_has_data_id(in_blob_desc->has_data_id());
+
+#ifndef USE_CUDNN
   // idx
   BlobDesc* idx_blob_desc = GetBlobDesc4BnInOp("idx");
   idx_blob_desc->mut_shape() = out_blob_desc->shape();
   idx_blob_desc->set_data_type(DataType::kUInt32);
   idx_blob_desc->set_has_data_id(false);
+#endif
 }
 
 REGISTER_OP(OperatorConf::kPoolingConf, PoolingOp);

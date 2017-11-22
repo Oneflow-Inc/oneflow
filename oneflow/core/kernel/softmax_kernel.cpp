@@ -26,13 +26,13 @@ void SoftmaxKernel<device_type, T>::Backward(
   const Blob* out_blob = BnInOp2Blob(op()->SoleObn());
   const Blob* out_diff_blob = BnInOp2Blob(op()->SoleOdbn());
   Blob* in_diff_blob = BnInOp2Blob(op()->SoleIdbn());
-  Blob* tmp_blob = BnInOp2Blob(op()->SoleDtbn());
   const int64_t n = out_blob->shape().At(0);
   const int64_t w = out_blob->shape().At(1);
   T* in_diff = in_diff_blob->mut_dptr<T>();
-  T* tmp = tmp_blob->mut_dptr<T>();
   const T* out = out_blob->dptr<T>();
   const T* out_diff = out_diff_blob->dptr<T>();
+  Blob* tmp_blob = BnInOp2Blob(op()->SoleDtbn());
+  T* tmp = tmp_blob->mut_dptr<T>();
   // copy out_diff to in_diff
   KernelUtil<device_type, T>::BlasCopy(ctx.device_ctx, n * w, out_diff, 1,
                                        in_diff, 1);
@@ -82,11 +82,17 @@ class SoftmaxKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
+#ifdef USE_CUDNN
+#define SOFTMAX_KERNEL CudnnSoftmaxKernel
+#else
+#define SOFTMAX_KERNEL SoftmaxKernel
+#endif
+
 Kernel* CreateSoftmaxKernel(const OpContext& op_ctx) {
   static const HashMap<std::string, std::function<Kernel*()>> creators = {
-#define SOFTMAX_KERNEL_ENTRY(device_type, data_type_pair)                     \
-  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {         \
-     return new SoftmaxKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>; \
+#define SOFTMAX_KERNEL_ENTRY(device_type, data_type_pair)                      \
+  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {          \
+     return new SOFTMAX_KERNEL<device_type, OF_PP_PAIR_FIRST(data_type_pair)>; \
    }},
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(SOFTMAX_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
                                        FLOATING_DATA_TYPE_SEQ)};
@@ -96,5 +102,9 @@ Kernel* CreateSoftmaxKernel(const OpContext& op_ctx) {
 }
 
 COMMAND(AddKernelCreator(OperatorConf::kSoftmaxConf, CreateSoftmaxKernel));
+
+#define INSTANTIATE_SOFTMAX_KERNEL_UTIL(type_cpp, type_proto) \
+  template class SoftmaxKernelUtil<DeviceType::kCPU, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_SOFTMAX_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

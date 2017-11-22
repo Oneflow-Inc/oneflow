@@ -17,10 +17,13 @@ template<>
 void BuildKernelCtx<DeviceType::kGPU>(KernelCtx* ctx) {
   cudaStream_t* cuda_stream = new cudaStream_t;
   cublasHandle_t* cublas_handle = new cublasHandle_t;
+  cudnnHandle_t* cudnn_handle = new cudnnHandle_t;
   CudaCheck(cudaStreamCreate(cuda_stream));
   CudaCheck(cublasCreate(cublas_handle));
+  CudaCheck(cudnnCreate(cudnn_handle));
   CudaCheck(cublasSetStream(*cublas_handle, *cuda_stream));
-  ctx->device_ctx = new CudaDeviceCtx(cuda_stream, cublas_handle, nullptr);
+  CudaCheck(cudnnSetStream(*cudnn_handle, *cuda_stream));
+  ctx->device_ctx = new CudaDeviceCtx(cuda_stream, cublas_handle, cudnn_handle);
 }
 
 template<>

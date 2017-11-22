@@ -7,7 +7,10 @@ void SoftmaxOp::InitFromOpConf() {
 
   EnrollInputBn("in");
   EnrollOutputBn("out");
+
+#ifndef USE_CUDNN
   EnrollDataTmpBn("tmp");
+#endif  // USE_CUDNN
 }
 
 const PbMessage& SoftmaxOp::GetSpecialConf() const {
@@ -25,11 +28,14 @@ void SoftmaxOp::InferBlobDesc4FwBlobs(
   out->set_data_type(in->data_type());
   out->set_has_data_id(in->has_data_id());
   CHECK_EQ(in->data_type(), out->data_type());
+
+#ifndef USE_CUDNN
   // tmp
   BlobDesc* tmp = GetBlobDesc4BnInOp("tmp");
   tmp->mut_shape() = Shape({in->shape().At(0)});
   tmp->set_data_type(in->data_type());
   tmp->set_has_data_id(false);
+#endif  // USE_CUDNN
 }
 
 REGISTER_OP(OperatorConf::kSoftmaxConf, SoftmaxOp);
