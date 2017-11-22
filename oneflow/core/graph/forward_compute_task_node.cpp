@@ -144,15 +144,12 @@ void ForwardCompTaskNode::AddLbn2ModelAndTmpRegsts() {
 
 void ForwardCompTaskNode::LockRegsts() {
   TaskNode::LockRegsts();
-  auto model_regst = GetConsumedRegst("model");
-  auto model_tmp_regst = GetConsumedRegst("model_tmp");
-  model_regst->Lock();
-  model_tmp_regst->Lock();
+  GetConsumedRegst("model")->Lock();
+  GetConsumedRegst("model_tmp")->Lock();
 }
 
 bool ForwardCompTaskNode::IsReadyForBuild() {
-  auto in_regst = GetConsumedRegst("in");
-  return in_regst->IsLocked();
+  return GetConsumedRegst("in")->IsLocked();
 }
 
 }  // namespace oneflow
