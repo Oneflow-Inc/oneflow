@@ -4,16 +4,14 @@
 namespace oneflow {
 
 void BoxingActor::VirtualActorInit(const TaskProto& task_proto) {
-  int num_of_consumed_regsts = task_proto.consumed_regst_desc_id().size();
-  set_num_of_remaining_eord(num_of_consumed_regsts);
   mut_device_ctx().reset(new CpuDeviceCtx());
   OF_SET_MSG_HANDLER(&BoxingActor::HandlerNormal);
 }
 
 int BoxingActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD) << actor_id();
-    ProcessOneEord();
+    // CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD) << actor_id();
+    // ProcessOneEord();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = msg.regst();
     if (TryUpdtStateAsProducedRegst(regst) != 0) {
@@ -23,7 +21,6 @@ int BoxingActor::HandlerNormal(const ActorMsg& msg) {
   } else {
     UNEXPECTED_RUN();
   }
-  return msg_handler() == nullptr;
 }
 
 int BoxingActor::HandlerUntilReadAlwaysUnReady(const ActorMsg& msg) {

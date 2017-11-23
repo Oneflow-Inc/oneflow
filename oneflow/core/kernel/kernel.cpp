@@ -105,27 +105,35 @@ void KernelIf<device_type>::CopyDataIdToAllOb(
 
 namespace {
 
-HashMap<int, std::function<Kernel*(const KernelConf&)>>& GetCreatorsMap() {
-  static HashMap<int, std::function<Kernel*(const KernelConf&)>> obj;
+HashMap<int, KernelCreator1>& GetCreatorsMap() {
+  static HashMap<int, KernelCreator1> obj;
   return obj;
 }
 
 }  // namespace
 
-void AddKernelCreator(OperatorConf::OpTypeCase op_case,
-                      std::function<Kernel*(const KernelConf&)> creator) {
-  CHECK(GetCreatorsMap().emplace(op_case, creator).second);
+void AddKernelCreator(OperatorConf::OpTypeCase opcase, KernelCreator1 creator) {
+  CHECK(GetCreatorsMap().emplace(opcase, creator).second);
+}
+void AddKernelCreator(OperatorConf::OpTypeCase opcase, KernelCreator2 creator) {
+  AddKernelCreator(opcase, [creator](DeviceType type, const KernelConf&) {
+    return creator(type);
+  });
+}
+void AddKernelCreator(OperatorConf::OpTypeCase opcase, KernelCreator3 creator) {
+  AddKernelCreator(opcase, [creator](DeviceType, const KernelConf& conf) {
+    return creator(conf);
+  });
+}
+void AddKernelCreator(OperatorConf::OpTypeCase opcase, KernelCreator4 creator) {
+  AddKernelCreator(
+      opcase, [creator](DeviceType, const KernelConf&) { return creator(); });
 }
 
-void AddKernelCreator(OperatorConf::OpTypeCase op_case,
-                      std::function<Kernel*()> creator) {
-  CHECK(GetCreatorsMap()
-            .emplace(op_case, [=](const KernelConf&) { return creator(); })
-            .second);
-}
-
-std::unique_ptr<const Kernel> ConstructKernel(const KernelConf& conf) {
-  Kernel* rptr = GetCreatorsMap().at(conf.op_conf().op_type_case())(conf);
+std::unique_ptr<const Kernel> ConstructKernel(DeviceType device_type,
+                                              const KernelConf& conf) {
+  OperatorConf::OpTypeCase opcase = conf.op_conf().op_type_case();
+  Kernel* rptr = GetCreatorsMap().at(opcase)(device_type, conf);
   rptr->Init(conf);
   return std::unique_ptr<const Kernel>(rptr);
 }

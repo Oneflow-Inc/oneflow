@@ -3,7 +3,7 @@
 namespace oneflow {
 
 void NormalModelUpdateOp::InitFromOpConf() {
-  EnrollInputBn("model_diffs", false);
+  EnrollInputBn("model_diff_acc", false);
   EnrollOutputBn("model", false);
 }
 

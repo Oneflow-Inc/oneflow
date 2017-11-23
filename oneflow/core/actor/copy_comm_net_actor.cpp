@@ -29,7 +29,6 @@ CopyCommNetActor::~CopyCommNetActor() {
 }
 
 void CopyCommNetActor::VirtualActorInit(const TaskProto& task_proto) {
-  set_num_of_remaining_eord(1);
   actor_read_id_ = CommNet::Singleton()->NewActorReadId();
   comm_net_device_ctx_ = new CommNetDeviceCtx(actor_read_id_);
   mut_device_ctx().reset(comm_net_device_ctx_);
@@ -38,8 +37,8 @@ void CopyCommNetActor::VirtualActorInit(const TaskProto& task_proto) {
 
 int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
-    ProcessOneEord();
+    // CHECK_EQ(msg.actor_cmd(), ActorCmd::kEORD);
+    // ProcessOneEord();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (msg.SrcMachineId() == RuntimeCtx::Singleton()->this_machine_id()) {
       CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
@@ -54,7 +53,6 @@ int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
   } else {
     UNEXPECTED_RUN();
   }
-  return msg_handler() == nullptr;
 }
 
 int CopyCommNetActor::HandlerUntilReadAlwaysUnReady(const ActorMsg& msg) {

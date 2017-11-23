@@ -22,7 +22,7 @@ class CopyCommNetActor final : public Actor {
   };
 
   int HandlerNormal(const ActorMsg&) override;
-  int HandlerUntilReadAlwaysUnReady(const ActorMsg&) override;
+  int HandlerUntilReadAlwaysUnReady(const ActorMsg&);
 
   bool IsReadReady() override {
     return true;

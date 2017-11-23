@@ -3,16 +3,17 @@
 
 namespace oneflow {
 
+const std::vector<int64_t>& Regst::consumers_actor_id() const {
+  return regst_desc_->consumers_actor_id();
+}
+
 Regst::Regst() {
   piece_id_ = -1;
   model_version_id_ = -1;
+  regst_desc_ = nullptr;
 }
 
-void Regst::ForEachLbn(std::function<void(const std::string&)> func) {
-  for (const auto& pair : lbn2blob_) { func(pair.first); }
-}
-
-Blob* Regst::GetBlobPtrFromLbn(const std::string& lbn) {
+Blob* Regst::GetBlobByLbn(const std::string& lbn) {
   auto it = lbn2blob_.find(lbn);
   if (it != lbn2blob_.end()) {
     return it->second.get();
