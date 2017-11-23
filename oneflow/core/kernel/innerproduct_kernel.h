@@ -13,10 +13,12 @@ class InnerProductKernel final : public Kernel {
   InnerProductKernel() = default;
   ~InnerProductKernel() = default;
 
-  void Forward(const KernelCtx&,
-               std::function<Blob*(const std::string&)>) const override;
-  void Backward(const KernelCtx&,
-                std::function<Blob*(const std::string&)>) const override;
+  void ForwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
+  void BackwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
 
  private:
   void InitModelBlobsWithRandomSeed(
@@ -27,7 +29,7 @@ class InnerProductKernel final : public Kernel {
       const std::string& model_load_dir,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void InitModelTmpBlobs(
-      const KernelCtx& ctx,
+      const KernelCtx& ctx, const ParallelContext& parallel_ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
