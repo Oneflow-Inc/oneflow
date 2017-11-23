@@ -12,8 +12,7 @@ class LossAccActor final : public AccumulateActor {
   ~LossAccActor() = default;
 
   void VirtualCompActorInit(const TaskProto& proto) override {
-    // AccumulateActor::Init(proto,
-    //                     JobDesc::Singleton()->PieceNumOfRecordLoss());
+    AccumulateActor::Init(proto, JobDesc::Singleton()->PieceNumOfRecordLoss());
   }
 
  private:

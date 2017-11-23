@@ -38,6 +38,7 @@ class Actor {
 
   // Util
   Actor() = default;
+  DeviceType GetDeviceType() const;
   virtual void VirtualActorInit(const TaskProto&) {}
   virtual KernelWardFunc GetKernelWardFunc() const { return &Kernel::Forward; }
   int64_t RegstDescId4Name(const std::string& name) const;
@@ -90,8 +91,6 @@ class Actor {
   int64_t total_reading_cnt() const { return total_reading_cnt_; }
 
  private:
-  DeviceType GetDeviceType() const;
-
   int64_t actor_id_;
   std::vector<ExecKernel> exec_kernel_vec_;
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;
