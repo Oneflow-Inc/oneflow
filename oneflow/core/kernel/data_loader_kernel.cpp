@@ -7,10 +7,9 @@
 namespace oneflow {
 
 template<typename T>
-void DataLoaderKernel<T>::ForwardDataContent(
+void DataLoaderKernel<T>::Forward(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  InitInStream(kernel_ctx);
   Blob* out_blob = BnInOp2Blob("out");
   CHECK_EQ(GetDataType<T>::val, out_blob->data_type());
   int64_t piece_size = out_blob->shape().At(0);
@@ -47,10 +46,9 @@ void DataLoaderKernel<T>::ForwardDataContent(
 }
 
 template<typename T>
-void DataLoaderKernel<T>::InitInStream(const KernelCtx& kernel_ctx) const {
-  if (in_stream_) { return; }
-  std::string data_dir = op_conf().data_loader_conf().data_dir();
-  int64_t parallel_id = reinterpret_cast<int64_t>(kernel_ctx.other);
+void DataLoaderKernel<T>::Init(const KernelConf& kernel_conf) {
+  std::string data_dir = kernel_conf.op_conf().data_loader_conf().data_dir();
+  int64_t parallel_id = kernel_conf.data_loader_conf().parallel_id();
   std::string file_path = data_dir + "part-" + std::to_string(parallel_id);
   if (JobDesc::Singleton()->IsTrain()) {
     in_stream_.reset(new CyclicPersistentInStream(GlobalFS(), file_path));

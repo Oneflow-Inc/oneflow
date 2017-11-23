@@ -12,14 +12,19 @@ class DataLoaderKernel final : public KernelIf<DeviceType::kCPU> {
   DataLoaderKernel() = default;
   ~DataLoaderKernel() = default;
 
+  void Forward(const KernelCtx&,
+               std::function<Blob*(const std::string&)>) const override;
+
   void ForwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    UNEXPECTED_RUN();
+  }
 
  private:
-  void InitInStream(const KernelCtx&) const;
+  void Init(const KernelConf&);
 
-  mutable std::unique_ptr<PersistentInStream> in_stream_;
+  std::unique_ptr<PersistentInStream> in_stream_;
 };
 
 }  // namespace oneflow
