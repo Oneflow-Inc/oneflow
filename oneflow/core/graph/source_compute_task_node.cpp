@@ -18,7 +18,7 @@ void SourceCompTaskNode::BuildExecGphAndRegst() {
   node->mut_op() = chain_node()->SoleOp();
   const auto& data_output_lbns = chain_node()->data_output_lbns();
   for (const std::string& obn : node->op()->output_bns()) {
-    const auto& lbn = node->op()->Lbn4BnInOp(obn);
+    const std::string& lbn = node->op()->Lbn4BnInOp(obn);
     if (data_output_lbns.find(lbn) == data_output_lbns.end()) {
       activation_regst->AddLbn(lbn);
       node->BindBnInOpAndRegst(obn, activation_regst);
