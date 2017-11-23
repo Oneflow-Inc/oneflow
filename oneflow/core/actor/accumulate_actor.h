@@ -11,23 +11,23 @@ class AccumulateActor : public CompActor {
   AccumulateActor() = default;
   virtual ~AccumulateActor() = default;
 
-  void Init(const TaskProto&, const ThreadCtx&, int32_t max_acc_cnt);
+ protected:
+  void Init(const TaskProto&, int32_t max_acc_cnt);
 
  private:
   int HandlerNormal(const ActorMsg&) override;
-  int HandlerUntilReadAlwaysUnReady(const ActorMsg&);
 
-  bool IsReadReady() override { return !waiting_in_regst_.empty(); }
+  bool IsReadReady() override { return !pending_in_regst_.empty(); }
+  bool IsReadAlwaysUnReadyFromNow() override;
+  void AsyncReturnAllReadableRegst() override;
   void Act() override;
 
-  std::queue<Regst*> waiting_in_regst_;
-
-  void (*MemsetFunc)(DeviceCtx* ctx, void* dst, const char value, size_t sz);
-
-  CudaStreamHandle cuda_handle_;
+  bool is_in_eord_;
+  std::queue<Regst*> pending_in_regst_;
+  std::function<void(DeviceCtx*, void* dst, const void* src, size_t)> cpy_func_;
   int32_t acc_cnt_;
   int32_t max_acc_cnt_;
-  int64_t next_acc_piece_id_;
+  int64_t next_piece_id_;
 };
 
 }  // namespace oneflow

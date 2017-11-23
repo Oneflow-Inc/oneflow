@@ -12,7 +12,7 @@ class MdDiffAccActor final : public AccumulateActor {
   ~MdDiffAccActor() = default;
 
   void VirtualCompActorInit(const TaskProto& proto) override {
-    // AccumulateActor::Init(proto, JobDesc::Singleton()->NumOfPiecesInBatch());
+    AccumulateActor::Init(proto, JobDesc::Singleton()->NumOfPiecesInBatch());
   }
 
  private:

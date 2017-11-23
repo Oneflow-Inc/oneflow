@@ -2,18 +2,16 @@
 
 namespace oneflow {
 
-void LossRecordActor::VirtualActorInit(const TaskProto& proto) {
-  mut_device_ctx().reset(new CpuDeviceCtx);
+void LossRecordActor::VirtualCompActorInit(const TaskProto& proto) {
+  loss_acc_regst_ = nullptr;
   OF_SET_MSG_HANDLER(&LossRecordActor::HandlerNormal);
-  regst_ = nullptr;
 }
 
-int LossRecordActor::HandlerNormal(const ActorMsg& actor_msg) {
-  if (actor_msg.msg_type() == ActorMsgType::kCmdMsg) {
-    // CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kEORD);
+int LossRecordActor::HandlerNormal(const ActorMsg& msg) {
+  if (msg.msg_type() == ActorMsgType::kEordMsg) {
     return 1;
-  } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
-    regst_ = actor_msg.regst();
+  } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
+    loss_acc_regst_ = msg.regst();
     ActUntilFail();
   } else {
     UNEXPECTED_RUN();
@@ -22,10 +20,18 @@ int LossRecordActor::HandlerNormal(const ActorMsg& actor_msg) {
 }
 
 void LossRecordActor::Act() {
-  AsyncLaunchKernel(GenDefaultKernelCtx(),
-                    [&](int64_t regst_desc_id) -> Regst* { return regst_; });
-  AsyncSendRegstMsgToProducer(regst_);
-  regst_ = nullptr;
+  AsyncLaunchKernel(
+      GenDefaultKernelCtx(),
+      [&](int64_t regst_desc_id) -> Regst* { return loss_acc_regst_; });
+  AsyncSendRegstMsgToProducer(loss_acc_regst_);
+  loss_acc_regst_ = nullptr;
 }
+
+bool LossRecordActor::IsReadAlwaysUnReadyFromNow() {
+  UNEXPECTED_RUN();
+  return false;
+}
+
+void LossRecordActor::AsyncReturnAllReadableRegst() { UNEXPECTED_RUN(); }
 
 }  // namespace oneflow

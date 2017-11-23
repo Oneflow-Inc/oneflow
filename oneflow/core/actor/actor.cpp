@@ -102,6 +102,7 @@ int Actor::TrySwitchToZombieOrFinish() {
       return 0;
     }
   }
+  return 0;
 }
 
 void Actor::AsyncLaunchKernel(
