@@ -49,12 +49,12 @@ void BackwardCompTaskNode::BuildExecGphAndRegst() {
 }
 
 void BackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
-  if (auto in_diff_regst = GetProducedRegst("in_diff")) {
-    auto in_regst = GetConsumedRegst("in");
+  if (std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff")) {
+    std::shared_ptr<RegstDesc> in_regst = GetConsumedRegst("in");
     in_diff_regst->CopyBlobDescFrom(in_regst.get());
   }
 
-  auto md_diff_regst = GetProducedRegst("model_diff");
+  std::shared_ptr<RegstDesc> md_diff_regst = GetProducedRegst("model_diff");
   md_diff_regst->CopyBlobDescFrom(GetConsumedRegst("model").get());
 
   auto activation_diff_regst = GetProducedRegst("activation_diff");
@@ -87,7 +87,7 @@ void BackwardCompTaskNode::BuildExecGphFromUserOps(
 }
 
 void BackwardCompTaskNode::AddLbn2ActivationDiffRegst() {
-  auto activation_regst = GetConsumedRegst("activation");
+  std::shared_ptr<RegstDesc> activation_regst = GetConsumedRegst("activation");
   auto activation_diff_regst = GetProducedRegst("activation_diff");
   mut_exec_gph().ForEachEdge([&](ExecEdge* edge) {
     edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), activation_diff_regst);
@@ -100,8 +100,8 @@ void BackwardCompTaskNode::AddLbn2ActivationDiffRegst() {
 }
 
 void BackwardCompTaskNode::SetExecNodeFromOutdiffRegst() {
-  auto out_regst = GetConsumedRegst("out");
-  auto out_diff_regst = GetConsumedRegst("out_diff");
+  std::shared_ptr<RegstDesc> out_regst = GetConsumedRegst("out");
+  std::shared_ptr<RegstDesc> out_diff_regst = GetConsumedRegst("out_diff");
   mut_exec_gph().ForEachNode([&](ExecNode* bp_node) {
     HashSet<std::string> found_bns;
     for (ExecEdge* edge : bp_node->in_edges()) {
@@ -117,9 +117,9 @@ void BackwardCompTaskNode::SetExecNodeFromOutdiffRegst() {
 
 void BackwardCompTaskNode::AddLbn2InDiffRegst(
     const Lbn2NodeBnMap& lbn2producer) {
-  auto in_diff_regst = GetProducedRegst("in_diff");
+  std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff");
   if (!in_diff_regst) { return; }
-  auto in_regst = GetConsumedRegst("in");
+  std::shared_ptr<RegstDesc> in_regst = GetConsumedRegst("in");
   mut_exec_gph().ForEachNode([&](ExecNode* bp_node) {
     HashSet<std::string> found_bns;
     for (ExecEdge* edge : bp_node->out_edges()) {
@@ -136,10 +136,10 @@ void BackwardCompTaskNode::AddLbn2InDiffRegst(
 }
 
 void BackwardCompTaskNode::AddLbn2ModelDiffRegst() {
-  auto data_tmp_regst = GetConsumedRegst("data_tmp");
-  auto model_tmp_regst = GetConsumedRegst("model_tmp");
-  auto model_diff_regst = GetProducedRegst("model_diff");
-  auto model_regst = GetConsumedRegst("model");
+  std::shared_ptr<RegstDesc> data_tmp_regst = GetConsumedRegst("data_tmp");
+  std::shared_ptr<RegstDesc> model_tmp_regst = GetConsumedRegst("model_tmp");
+  std::shared_ptr<RegstDesc> model_diff_regst = GetProducedRegst("model_diff");
+  std::shared_ptr<RegstDesc> model_regst = GetConsumedRegst("model");
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
     for (const std::string& dtbn : node->op()->data_tmp_bns()) {
       node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
