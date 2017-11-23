@@ -10,10 +10,10 @@ void LossRecordCompTaskNode::ConsumeAllRegsts() {
 }
 
 void LossRecordCompTaskNode::BuildExecGphAndRegst() {
-  auto in_regst = GetConsumedRegst("in");
+  std::shared_ptr<RegstDesc> in_regst = GetConsumedRegst("in");
   ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = chain_node()->SoleOp();
-  auto op = exec_node->op();
+  std::shared_ptr<const Operator> op = exec_node->op();
   CHECK(op->IsRecordOp());
   exec_node->BindBnInOpAndRegst(op->SoleIbn(), in_regst);
   op->InferBlobDescs(exec_node->GetBlobDesc4BnInOpFunc(), parallel_ctx());
