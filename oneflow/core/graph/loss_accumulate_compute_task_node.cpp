@@ -4,11 +4,11 @@
 namespace oneflow {
 
 void LossAccCompTaskNode::BuildExecGphAndRegst() {
-  auto in_regst = GetConsumedRegst("one");
-  auto acc_regst = GetProducedRegst("acc");
+  std::shared_ptr<RegstDesc> in_regst = GetConsumedRegst("one");
+  std::shared_ptr<RegstDesc> acc_regst = GetProducedRegst("acc");
   ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = chain_node()->SoleOp();
-  auto op = exec_node->op();
+  std::shared_ptr<const Operator> op = exec_node->op();
   exec_node->BindBnInOpAndRegst(op->SoleIbn(), in_regst);
   acc_regst->AddLbn(op->Lbn4BnInOp(op->SoleObn()));
   exec_node->BindBnInOpAndRegst(op->SoleObn(), acc_regst);
