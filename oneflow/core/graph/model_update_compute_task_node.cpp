@@ -4,7 +4,9 @@
 namespace oneflow {
 
 void MdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  auto model_regst = ProduceRegst("model", 1, kMaxRegisterNum);
+  int32_t min_model_regst = 1;
+  if (JobDesc::Singleton()->Staleness() == -1) { min_model_regst = 2; }
+  auto model_regst = ProduceRegst("model", min_model_regst, kMaxRegisterNum);
   auto model_tmp_regst = ProduceRegst("model_tmp", 1, 1);
   for (TaskEdge* out_edge : out_edges()) {
     TaskNode* dst_node = out_edge->dst_node();
@@ -48,6 +50,17 @@ void MdUpdtCompTaskNode::BuildExecGphAndRegst() {
 void MdUpdtCompTaskNode::ToProto(TaskProto* task_proto) {
   CompTaskNode::ToProto(task_proto);
   task_proto->set_random_seed(random_seed_);
+  ForEachNodeOnOutEdge([&](const TaskNode* node) {
+    if (node->GetTaskType() == TaskType::kForward) {
+      CHECK_EQ(task_proto->related_fw_task_id(), -1);
+      task_proto->set_related_fw_task_id(node->task_id());
+    } else if (node->GetTaskType() == TaskType::kBackward) {
+      // do nothing
+    } else {
+      CHECK_EQ(task_proto->related_save_task_id(), -1);
+      task_proto->set_related_save_task_id(node->task_id());
+    }
+  });
 }
 
 }  // namespace oneflow

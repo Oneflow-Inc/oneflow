@@ -88,26 +88,21 @@ bool Actor::IsWriteReady() {
   return writeable_produced_regst_desc_num_ == writeable_produced_regst_.size();
 }
 
-void Actor::ProcessOneEord() {
-  remaining_eord_cnt_ -= 1;
-  if (IsReadAlwaysUnReadyFromNow() == false) {
-    OF_SET_MSG_HANDLER(&Actor::HandlerUntilReadAlwaysUnReady);
-  } else {
+void Actor::DecreaseRemainingEordCnt() { remaining_eord_cnt_ -= 1; }
+
+int Actor::TrySwitchToZombieOrFinish() {
+  if (IsReadAlwaysUnReadyFromNow()) {
+    AsyncReturnAllReadableRegst();
+    AsyncSendEORDMsgForAllProducedRegstDesc();
     if (remaining_eord_cnt_ == 0 && total_reading_cnt_ == 0) {
       OF_SET_MSG_HANDLER(nullptr);
+      return 1;
     } else {
       OF_SET_MSG_HANDLER(&Actor::HandlerZombie);
+      return 0;
     }
-    AsyncSendEORDMsgForAllProducedRegstDesc();
   }
-}
-
-void Actor::TrySwitchToZombie() {
-  if (total_reading_cnt_ == 0) {
-    OF_SET_MSG_HANDLER(nullptr);
-  } else {
-    OF_SET_MSG_HANDLER(&Actor::HandlerZombie);
-  }
+  return 0;
 }
 
 void Actor::AsyncLaunchKernel(
@@ -122,7 +117,7 @@ void Actor::AsyncLaunchKernel(
           }
           Regst* regst = Regst4RegstDescId(regst_desc_id_it->second);
           const std::string& lbn = ek.kernel->Lbn4BnInOp(bn_in_op);
-          return regst->GetBlobPtrFromLbn(lbn);
+          return regst->GetBlobByLbn(lbn);
         });
   }
 }

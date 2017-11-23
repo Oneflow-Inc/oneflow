@@ -34,7 +34,7 @@ int ForwardCompActor::HandlerInitModel(const ActorMsg& msg) {
         SnapshotMgr::Singleton()->GetReadableSnapshot(),
         [&](const std::string& bn_in_op) {
           const std::string& lbn = exec_kernel.kernel->Lbn4BnInOp(bn_in_op);
-          return model_regst->GetBlobPtrFromLbn(lbn);
+          return model_regst->GetBlobByLbn(lbn);
         });
   }
   AsyncSendRegstMsgToProducer(model_regst);
@@ -50,7 +50,7 @@ int ForwardCompActor::HandlerInitModelTmp(const ActorMsg& msg) {
         GenDefaultKernelCtx(), parallel_ctx(),
         [&](const std::string& bn_in_op) {
           const std::string& lbn = exec_kernel.kernel->Lbn4BnInOp(bn_in_op);
-          return model_tmp_regst->GetBlobPtrFromLbn(lbn);
+          return model_tmp_regst->GetBlobByLbn(lbn);
         });
   }
   AsyncSendRegstMsgToProducer(model_tmp_regst);
@@ -61,7 +61,7 @@ int ForwardCompActor::HandlerInitModelTmp(const ActorMsg& msg) {
 int ForwardCompActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
     if (msg.eord_regst_desc_id() == in_regst_desc_id_) { is_in_eord_ = true; }
-    ProcessOneEord();
+    DecreaseRemainingEordCnt();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = msg.regst();
     if (regst->regst_desc_id() == in_regst_desc_id_) {
@@ -78,24 +78,7 @@ int ForwardCompActor::HandlerNormal(const ActorMsg& msg) {
   } else {
     UNEXPECTED_RUN();
   }
-  return msg_handler() == nullptr;
-}
-
-int ForwardCompActor::HandlerUntilReadAlwaysUnReady(const ActorMsg& msg) {
-  Regst* regst = msg.regst();
-  if (regst->regst_desc_id() == model_regst_desc_id_) {
-    UpdateModelRegstPtr(regst);
-  } else {
-    CHECK_EQ(TryUpdtStateAsProducedRegst(regst), 0);
-  }
-  ActUntilFail();
-  if (IsReadAlwaysUnReadyFromNow()) {
-    TryAsyncReturnModelRegst();
-    TryAsyncReturnModelTmpRegst();
-    AsyncSendEORDMsgForAllProducedRegstDesc();
-    OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerZombie);
-  }
-  return 0;
+  return TrySwitchToZombieOrFinish();
 }
 
 bool ForwardCompActor::IsReadReady() {
@@ -136,6 +119,12 @@ void ForwardCompActor::Act() {
     if (in_regst->piece_id() == last_piece_id) { AsyncReturnModelRegst(); }
   }
   AsyncSendRegstMsgToProducer(in_regst);
+}
+
+void ForwardCompActor::AsyncReturnAllReadableRegst() {
+  CHECK(pending_in_regsts_.empty());
+  TryAsyncReturnModelRegst();
+  TryAsyncReturnModelTmpRegst();
 }
 
 void ForwardCompActor::UpdateModelRegstPtr(Regst* regst) {

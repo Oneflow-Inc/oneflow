@@ -7,9 +7,9 @@
 namespace oneflow {
 
 enum class ActorCmd {
-  kInitializeModel = 0,  // MdUpdt Actor
-  kSendInitialModel,     // MdUpdt Actor
-  kStart,                // Source Actor
+  kInitModel = 0,     // MdUpdt Actor
+  kSendInitialModel,  // MdUpdt Actor
+  kStart,             // Source Actor
   kStopThread,
   kConstructActor
 };
