@@ -4,7 +4,6 @@
 namespace oneflow {
 
 void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  auto out_regst = ProduceRegst("out", 1, kMaxRegisterNum);
   if (static_cast<const ForwardChainNode*>(chain_node())->bw_node()) {
     ProduceRegst("activation", 1, kMaxRegisterNum);
     ProduceRegst("data_tmp", 1, kMaxRegisterNum);
@@ -13,6 +12,7 @@ void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
     ProduceRegst("data_tmp", 1, 1);
   }
 
+  auto out_regst = ProduceRegst("out", 1, kMaxRegisterNum);
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
     if (dst_node->GetTaskType() == TaskType::kBackward) {
@@ -88,7 +88,7 @@ void ForwardCompTaskNode::SetExecNodeFromInRegst(
 }
 
 void ForwardCompTaskNode::AddLbn2OutRegst(const Lbn2NodeBnMap& lbn2producer) {
-  auto out_regst = GetProducedRegst("out");
+  std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
 
   for (const std::string& lbn : chain_node()->data_output_lbns()) {
     const std::pair<ExecNode*, std::string>& producer = lbn2producer.at(lbn);
@@ -100,7 +100,7 @@ void ForwardCompTaskNode::AddLbn2OutRegst(const Lbn2NodeBnMap& lbn2producer) {
 }
 
 void ForwardCompTaskNode::AddLbn2ActivationRegst() {
-  auto activation_regst = GetProducedRegst("activation");
+  std::shared_ptr<RegstDesc> activation_regst = GetProducedRegst("activation");
   mut_exec_gph().ForEachEdge([&](const ExecEdge* edge) {
     activation_regst->AddLbn(edge->lbn());
     edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), activation_regst);
@@ -120,9 +120,9 @@ void ForwardCompTaskNode::AddLbn2ActivationRegst() {
 }
 
 void ForwardCompTaskNode::AddLbn2ModelAndTmpRegsts() {
-  auto data_tmp_regst = GetProducedRegst("data_tmp");
-  auto model_regst = GetConsumedRegst("model");
-  auto model_tmp_regst = GetConsumedRegst("model_tmp");
+  std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
+  std::shared_ptr<RegstDesc> model_regst = GetConsumedRegst("model");
+  std::shared_ptr<RegstDesc> model_tmp_regst = GetConsumedRegst("model_tmp");
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
     for (const std::string& dtbn : node->op()->data_tmp_bns()) {
       const std::string& lbn = node->op()->Lbn4BnInOp(dtbn);
