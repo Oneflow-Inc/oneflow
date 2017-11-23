@@ -62,7 +62,7 @@ void ForwardCompTaskNode::BuildFromUserOps(
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
     for (const std::string& ibn : cur_node->op()->input_bns()) {
       const std::string& lbn = cur_node->op()->Lbn4BnInOp(ibn);
-      const auto& producer_it = lbn2producer->find(lbn);
+      auto producer_it = lbn2producer->find(lbn);
       if (producer_it != lbn2producer->end()) {
         ExecEdge* edge = mut_exec_gph().NewEdge();
         edge->set_lbn(lbn);
