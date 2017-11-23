@@ -27,6 +27,7 @@ class AccumulateActor : public CompActor {
   std::function<void(DeviceCtx*, void* dst, const void* src, size_t)> cpy_func_;
   int32_t acc_cnt_;
   int32_t max_acc_cnt_;
+  int64_t next_piece_id_;
 };
 
 }  // namespace oneflow
