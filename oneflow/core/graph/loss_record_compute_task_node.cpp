@@ -16,7 +16,6 @@ void LossRecordCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<const Operator> op = exec_node->op();
   CHECK(op->IsRecordOp());
   exec_node->BindBnInOpAndRegst(op->SoleIbn(), in_regst);
-  op->InferBlobDescs(exec_node->GetBlobDesc4BnInOpFunc(), parallel_ctx());
 }
 
 void LossRecordCompTaskNode::FixThrdId() {
