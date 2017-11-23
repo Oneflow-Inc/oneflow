@@ -11,17 +11,18 @@ class MdSaveCompActor final : public CompActor {
   MdSaveCompActor() = default;
   ~MdSaveCompActor() = default;
 
+ private:
   void VirtualCompActorInit(const TaskProto&) override;
 
- private:
   int HandlerNormal(const ActorMsg&) override;
-  int HandlerUntilReadAlwaysUnReady(const ActorMsg& msg) { UNEXPECTED_RUN(); }
 
-  bool IsReadReady() override { return regst_ != nullptr; }
   void Act() override;
+  bool IsReadReady() override { return model_regst_; }
+  bool IsReadAlwaysUnReadyFromNow() override;
+  void AsyncReturnAllReadableRegst() override;
 
   int64_t model_regst_desc_id_;
-  Regst* regst_;
+  Regst* model_regst_;
   int64_t next_snapshot_id_;
 };
 
