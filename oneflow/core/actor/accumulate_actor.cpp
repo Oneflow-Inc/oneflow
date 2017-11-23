@@ -15,6 +15,7 @@ void AccumulateActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt) {
   OF_SET_MSG_HANDLER(&AccumulateActor::HandlerNormal);
   acc_cnt_ = 0;
   max_acc_cnt_ = max_acc_cnt;
+  next_piece_id_ = 0;
 }
 
 int AccumulateActor::HandlerNormal(const ActorMsg& msg) {
@@ -63,8 +64,10 @@ void AccumulateActor::Act() {
   }
   acc_cnt_ += 1;
   if (acc_cnt_ == max_acc_cnt_) {
-    AsyncSendRegstMsgToConsumer();
+    AsyncSendRegstMsgToConsumer(
+        [&](Regst* regst) { regst->set_piece_id(next_piece_id_); });
     acc_cnt_ = 0;
+    next_piece_id_ += 1;
   }
   AsyncSendRegstMsgToProducer(in_regst);
   pending_in_regst_.pop();
