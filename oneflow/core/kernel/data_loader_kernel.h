@@ -6,14 +6,15 @@
 namespace oneflow {
 
 template<typename T>
-class DataLoaderKernel final : public Kernel {
+class DataLoaderKernel final : public KernelIf<DeviceType::kCPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DataLoaderKernel);
   DataLoaderKernel() = default;
   ~DataLoaderKernel() = default;
 
-  void Forward(const KernelCtx&,
-               std::function<Blob*(const std::string&)>) const override;
+  void ForwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
 
  private:
   void InitInStream(const KernelCtx&) const;
