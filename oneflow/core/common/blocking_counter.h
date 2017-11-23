@@ -16,7 +16,7 @@ class BlockingCounter final {
     cnt_val_ = cnt_val;
     LOG(INFO) << "Set " << cnt_name_ << " " << cnt_val_;
   }
-  void MinusOne() {
+  void Decrease() {
     std::unique_lock<std::mutex> lck(mtx_);
     cnt_val_ -= 1;
     LOG(INFO) << cnt_name_ << " minus one, current val is " << cnt_val_;
