@@ -4,26 +4,13 @@
 namespace oneflow {
 
 void BackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  bool need_in_diff = false;
-  chain_node()->ForEachNodeOnOutEdge([&](const ChainNode* out_node) {
-    if (std::string(out_node->TypeName()) == "BackwardChainNode") {
-      need_in_diff = true;
-    }
-  });
-  if (need_in_diff) {
-    auto in_diff_regst = ProduceRegst("in_diff", 1, kMaxRegisterNum);
-    for (TaskEdge* edge : out_edges()) {
-      TaskNode* dst_node = edge->dst_node();
-      if (dst_node->GetTaskType() != TaskType::kMdDiffAcc) {
-        edge->AddRegst("in_diff", in_diff_regst);
-      }
-    }
-  }
-  auto model_diff_regst = ProduceRegst("model_diff", 1, kMaxRegisterNum);
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
-    if (dst_node->GetTaskType() == TaskType::kMdDiffAcc) {
-      edge->AddRegst("model_diff", model_diff_regst);
+    if (dst_node->GetTaskType() != TaskType::kMdDiffAcc) {
+      edge->AddRegst("in_diff", ProduceRegst("in_diff", 1, kMaxRegisterNum));
+    } else {
+      edge->AddRegst("model_diff",
+                     ProduceRegst("model_diff", 1, kMaxRegisterNum));
     }
   }
   ProduceRegst("activation_diff", 1, 1);
@@ -174,17 +161,16 @@ void BackwardCompTaskNode::AddLbn2ModelDiffRegst() {
 std::shared_ptr<RegstDesc> BackwardCompTaskNode::GetRelatedInRegst() {
   std::shared_ptr<RegstDesc> in_regst = nullptr;
   for (TaskEdge* edge : in_edges()) {
-    auto src_node = edge->src_node();
-    if (src_node->GetTaskType() == TaskType::kForward) {
-      for (TaskEdge* edge : src_node->in_edges()) {
-        auto pre_src_node = edge->src_node();
-        if (pre_src_node->GetTaskType() != TaskType::kMdUpdt) {
-          in_regst = edge->GetSoleRegst();
-          break;
-        }
+    TaskNode* src_node = edge->src_node();
+    if (src_node->GetTaskType() != TaskType::kForward) { continue; }
+    for (TaskEdge* edge : src_node->in_edges()) {
+      TaskNode* pre_src_node = edge->src_node();
+      if (pre_src_node->GetTaskType() != TaskType::kMdUpdt) {
+        in_regst = edge->GetSoleRegst();
+        break;
       }
-      break;
     }
+    break;
   }
   return in_regst;
 }
