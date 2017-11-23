@@ -38,7 +38,7 @@ void InnerProductKernel<device_type, T>::ForwardDataContent(
                                    static_cast<T>(1.0), static_cast<T>(0.0),
                                    in_blob, weight_blob, out_blob);
 
-  if (op_conf().innerproduct_conf().has_bias_term()) {
+  if (this->op_conf().innerproduct_conf().has_bias_term()) {
     const Blob* bias_blob = BnInOp2Blob("bias");
     const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
 
@@ -72,7 +72,7 @@ void InnerProductKernel<device_type, T>::BackwardDataContent(
                                    static_cast<T>(1.0), static_cast<T>(0.0),
                                    out_diff_blob, in_blob, weight_diff_blob);
 
-  if (op_conf().innerproduct_conf().has_bias_term()) {
+  if (this->op_conf().innerproduct_conf().has_bias_term()) {
     const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
     Blob* bias_diff_blob = BnInOp2Blob("bias_diff");
 
@@ -89,13 +89,13 @@ void InnerProductKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   KernelUtil<device_type, T>::FillWithProperConf(
       ctx.device_ctx,
-      OF_PB_POINTER_GET(op_conf().innerproduct_conf(), weight_fill),
+      OF_PB_POINTER_GET(this->op_conf().innerproduct_conf(), weight_fill),
       random_seed_gen(), BnInOp2Blob("weight"));
 
-  if (op_conf().innerproduct_conf().has_bias_term()) {
+  if (this->op_conf().innerproduct_conf().has_bias_term()) {
     KernelUtil<device_type, T>::FillWithProperConf(
         ctx.device_ctx,
-        OF_PB_POINTER_GET(op_conf().innerproduct_conf(), bias_fill),
+        OF_PB_POINTER_GET(this->op_conf().innerproduct_conf(), bias_fill),
         random_seed_gen(), BnInOp2Blob("bias"));
   }
 }
@@ -105,11 +105,11 @@ void InnerProductKernel<device_type, T>::InitModelBlobsWithDir(
     const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* weight_blob = BnInOp2Blob("weight");
-  int32_t dim_num = op_conf().innerproduct_conf().out_num();
+  int32_t dim_num = this->op_conf().innerproduct_conf().out_num();
   KernelUtil<device_type, T>::FillWithModelDir(
       ctx.device_ctx, part_id, part_num, model_load_dir, weight_blob, "weight",
       dim_num, weight_blob->shape().Count(1));
-  if (op_conf().innerproduct_conf().has_bias_term()) {
+  if (this->op_conf().innerproduct_conf().has_bias_term()) {
     KernelUtil<device_type, T>::FillWithModelDir(
         ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias"),
         "bias", dim_num, 1);
@@ -120,7 +120,7 @@ template<DeviceType device_type, typename T>
 void InnerProductKernel<device_type, T>::InitModelTmpBlobs(
     const KernelCtx& ctx, const ParallelContext& parallel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (op_conf().innerproduct_conf().has_bias_term()) {
+  if (this->op_conf().innerproduct_conf().has_bias_term()) {
     FillConf bias_multiplier_fill_conf;
     bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.0f);
     KernelUtil<device_type, T>::Fill(ctx.device_ctx, bias_multiplier_fill_conf,
@@ -130,7 +130,6 @@ void InnerProductKernel<device_type, T>::InitModelTmpBlobs(
 
 namespace {
 
-// template<DeviceType device_type, typename T>
 Kernel* CreateInnerProductKernel(DeviceType dev_type,
                                  const KernelConf& kernel_conf) {
   static const HashMap<std::string, std::function<Kernel*()>> creators = {
@@ -150,4 +149,5 @@ Kernel* CreateInnerProductKernel(DeviceType dev_type,
 
 COMMAND(AddKernelCreator(OperatorConf::kInnerproductConf,
                          CreateInnerProductKernel));
+
 }  // namespace oneflow

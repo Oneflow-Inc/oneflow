@@ -2,25 +2,24 @@
 #define ONEFLOW_CORE_KERNEL_INNERPRODUCT_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/kernel_context.h"
+//#include "oneflow/core/kernel/kernel_context.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class InnerProductKernel final : public Kernel {
+class InnerProductKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(InnerProductKernel);
   InnerProductKernel() = default;
   ~InnerProductKernel() = default;
 
+ private:
   void ForwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
   void BackwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
-
- private:
   void InitModelBlobsWithRandomSeed(
       const KernelCtx&, std::mt19937,
       std::function<Blob*(const std::string&)>) const override;
