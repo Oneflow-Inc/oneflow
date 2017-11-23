@@ -4,18 +4,16 @@ namespace oneflow {
 
 void MdSaveCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   model_regst_desc_id_ = RegstDescId4Name("model");
-  mut_device_ctx().reset(new CpuDeviceCtx);
-  OF_SET_MSG_HANDLER(&MdSaveCompActor::HandlerNormal);
-  regst_ = nullptr;
+  model_regst_ = nullptr;
   next_snapshot_id_ = 0;
+  OF_SET_MSG_HANDLER(&MdSaveCompActor::HandlerNormal);
 }
 
-int MdSaveCompActor::HandlerNormal(const ActorMsg& actor_msg) {
-  if (actor_msg.msg_type() == ActorMsgType::kCmdMsg) {
-    // CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kEORD);
+int MdSaveCompActor::HandlerNormal(const ActorMsg& msg) {
+  if (msg.msg_type() == ActorMsgType::kEordMsg) {
     return 1;
-  } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
-    regst_ = actor_msg.regst();
+  } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
+    model_regst_ = msg.regst();
     ActUntilFail();
   } else {
     UNEXPECTED_RUN();
@@ -27,15 +25,22 @@ void MdSaveCompActor::Act() {
   Snapshot* snapshot =
       SnapshotMgr::Singleton()->GetWriteableSnapshot(next_snapshot_id_++);
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  std::tuple<Snapshot*, int64_t, int64_t, ParallelPolicy> save_ctx =
-      std::make_tuple(snapshot, 0, 0, ParallelPolicy::kDataParallel);
-  kernel_ctx.other = &save_ctx;
+  kernel_ctx.other = snapshot;
   AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {
     CHECK_EQ(regst_desc_id, model_regst_desc_id_);
-    return regst_;
+    return model_regst_;
   });
-  AsyncSendRegstMsgToProducer(regst_);
-  regst_ = nullptr;
+  AsyncSendRegstMsgToProducer(model_regst_);
+  model_regst_ = nullptr;
 }
+
+bool MdSaveCompActor::IsReadAlwaysUnReadyFromNow() {
+  UNEXPECTED_RUN();
+  return false;
+}
+
+void MdSaveCompActor::AsyncReturnAllReadableRegst() { UNEXPECTED_RUN(); }
+
+REGISTER_ACTOR(TaskType::kMdSave, MdSaveCompActor);
 
 }  // namespace oneflow

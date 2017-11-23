@@ -1,26 +1,27 @@
 #ifndef ONEFLOW_CORE_ACTOR_LOSS_RECORD_ACTOR_H_
 #define ONEFLOW_CORE_ACTOR_LOSS_RECORD_ACTOR_H_
 
-#include "oneflow/core/actor/actor.h"
+#include "oneflow/core/actor/compute_actor.h"
 
 namespace oneflow {
 
-class LossRecordActor final : public Actor {
+class LossRecordActor final : public CompActor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LossRecordActor);
   LossRecordActor() = default;
   ~LossRecordActor() = default;
 
  private:
-  void VirtualActorInit(const TaskProto&) override;
+  void VirtualCompActorInit(const TaskProto&) override;
 
   int HandlerNormal(const ActorMsg&) override;
-  int HandlerUntilReadAlwaysUnReady(const ActorMsg& msg) { UNEXPECTED_RUN(); }
 
-  bool IsReadReady() override { return regst_ != nullptr; }
   void Act() override;
+  bool IsReadReady() override { return loss_acc_regst_; }
+  bool IsReadAlwaysUnReadyFromNow() override;
+  void AsyncReturnAllReadableRegst() override;
 
-  Regst* regst_;
+  Regst* loss_acc_regst_;
 };
 
 }  // namespace oneflow
