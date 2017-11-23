@@ -19,7 +19,7 @@ void BackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void BackwardCompTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* edge : in_edges()) {
     TaskNode* src_node = edge->src_node();
-    const auto& src_task_type = src_node->GetTaskType();
+    const TaskType& src_task_type = src_node->GetTaskType();
     if (src_task_type == TaskType::kForward) {
       ConsumeRegst("activation", edge->GetRegst("activation"));
       ConsumeRegst("data_tmp", edge->GetRegst("data_tmp"));
