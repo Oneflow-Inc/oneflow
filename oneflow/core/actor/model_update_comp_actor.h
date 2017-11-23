@@ -14,38 +14,28 @@ class MdUpdtCompActor final : public CompActor {
   void VirtualCompActorInit(const TaskProto&) override;
 
  private:
-  int HandlerBeforeInitDeviceCtx(const ActorMsg&);
-  int HandlerBeforeInitializeModel(const ActorMsg&);
-  int HandlerBeforeSendInitialModel(const ActorMsg&);
+  void InitRegstBySendToFw(int64_t regst_desc_id);
+
+  int HandlerInitModelAndModelTmp(const ActorMsg&);
+  int HandlerSendInitialModel(const ActorMsg&);
   int HandlerNormal(const ActorMsg&) override;
-  int HandlerUntilReadAlwaysUnReady(const ActorMsg&);
 
-  bool IsWriteReady() override {
-    return Actor::IsWriteReady();
-    // && CurWriteableRegstNum4DescId(model_regst_desc_id_) >= 2;
-  }
-  bool IsReadReady() override { return !waiting_model_diff_acc_queue_.empty(); }
   void Act() override;
-  void AsyncCopyModelFromCurToNext() {
-    Regst* model_regst = GetCurWriteableRegst(model_regst_desc_id_);
-    Regst* next_model_regst = nullptr;
-    // Regst* next_model_regst = GetNextWriteableRegst(model_regst_desc_id_);
-    MemcpyFunc(GenDefaultKernelCtx().device_ctx,
-               next_model_regst->packed_blob()->mut_dptr(),
-               model_regst->packed_blob()->dptr(),
-               next_model_regst->packed_blob()->TotalByteSize());
-  }
+  bool IsReadReady() override { return !pending_model_diff_acc_queue_.empty(); }
+  bool IsReadAlwaysUnReadyFromNow() override;
+  bool IsWriteReady() override;
+  void AsyncReturnAllReadableRegst() override;
 
-  CudaStreamHandle cuda_handle_;
   int64_t model_regst_desc_id_;
   int64_t model_tmp_regst_desc_id_;
-  int64_t data_tmp_regst_desc_id_;
-  std::queue<Regst*> waiting_model_diff_acc_queue_;
+  int8_t init_remaining_cnt_;
+  bool is_model_diff_acc_eord_;
+  std::queue<Regst*> pending_model_diff_acc_queue_;
   int64_t next_model_version_id_;
-  int64_t related_save_task_id_;
+  int64_t related_save_actor_id_;
+  int64_t related_fw_actor_id_;
   uint32_t random_seed_;
-
-  std::function<void(DeviceCtx*, void*, const void*, size_t)> MemcpyFunc;
+  Regst* pre_model_regst_;
 };
 
 }  // namespace oneflow
