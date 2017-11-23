@@ -25,7 +25,7 @@ template<DeviceType device_type, typename T>
 void CloneKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const std::vector<std::string>& odbns = this->kernel_conf().output_diff_bns();
+  const auto odbns = PbRpf2StdVec(this->kernel_conf().output_diff_bns());
   if (odbns.size() == 0) return;
   Blob* in_diff_blob = BnInOp2Blob(this->kernel_conf().input_diff_bns(0));
   const Blob* out_diff_blob_0 = BnInOp2Blob(odbns[0]);
@@ -65,5 +65,25 @@ OF_PP_FOR_EACH_TUPLE(DEFINE_FLOATING_CLONE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_NONFLOAT_CLONE_KERNEL_UTIL,
                      INT_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ)
+
+namespace {
+
+#define CLONE_KERNEL_ENTRY(device_type, data_type_pair)                       \
+  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {         \
+     return new CloneKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>(); \
+   }},
+
+Kernel* CreateCloneKernel(DeviceType dev_type, const KernelConf& kernel_conf) {
+  static const HashMap<std::string, std::function<Kernel*()>> creators = {
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(CLONE_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
+                                       ALL_DATA_TYPE_SEQ)};
+  CHECK(kernel_conf.has_clone_conf());
+  return creators.at(
+      GetHashKey(dev_type, kernel_conf.clone_conf().data_type()))();
+}
+
+}  // namespace
+
+COMMAND(AddKernelCreator(OperatorConf::kCloneConf, CreateCloneKernel));
 
 }  // namespace oneflow
