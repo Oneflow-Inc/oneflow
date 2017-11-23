@@ -5,7 +5,7 @@ namespace oneflow {
 
 void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   auto out_regst = ProduceRegst("out", 1, kMaxRegisterNum);
-  if (dynamic_cast<const ForwardChainNode*>(chain_node())->bw_node()) {
+  if (static_cast<const ForwardChainNode*>(chain_node())->bw_node()) {
     ProduceRegst("activation", 1, kMaxRegisterNum);
     ProduceRegst("data_tmp", 1, kMaxRegisterNum);
   } else {
