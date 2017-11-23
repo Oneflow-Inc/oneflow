@@ -9,8 +9,8 @@ void BackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
     if (dst_node->GetTaskType() != TaskType::kMdDiffAcc) {
       edge->AddRegst("in_diff", ProduceRegst("in_diff", 1, kMaxRegisterNum));
     } else {
-      edge->AddRegst("model_diff",
-                     ProduceRegst("model_diff", 1, kMaxRegisterNum));
+      auto model_diff_regst = ProduceRegst("model_diff", 1, kMaxRegisterNum);
+      edge->AddRegst("model_diff", model_diff_regst);
     }
   }
   ProduceRegst("activation_diff", 1, 1);
@@ -19,7 +19,7 @@ void BackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void BackwardCompTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* edge : in_edges()) {
     TaskNode* src_node = edge->src_node();
-    const TaskType& src_task_type = src_node->GetTaskType();
+    TaskType src_task_type = src_node->GetTaskType();
     if (src_task_type == TaskType::kForward) {
       ConsumeRegst("activation", edge->GetRegst("activation"));
       ConsumeRegst("data_tmp", edge->GetRegst("data_tmp"));
@@ -74,7 +74,7 @@ void BackwardCompTaskNode::BuildExecGphFromUserOps(
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
     for (const std::string& obn : cur_node->op()->output_bns()) {
       const std::string& lbn = cur_node->op()->Lbn4BnInOp(obn);
-      const auto& producer_it = lbn2producer->find(lbn);
+      auto producer_it = lbn2producer->find(lbn);
       if (producer_it != lbn2producer->end()) {
         ExecEdge* edge = mut_exec_gph().NewEdge();
         edge->set_lbn(lbn);
