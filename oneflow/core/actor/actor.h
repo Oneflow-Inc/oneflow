@@ -65,8 +65,8 @@ class Actor {
   virtual bool IsReadReady() = 0;
   virtual bool IsReadAlwaysUnReadyFromNow() { TODO(); }
   virtual bool IsWriteReady();
-  void DecreaseRemainingEordCnt();
   virtual void AsyncReturnAllReadableRegst() { TODO(); }
+  void DecreaseRemainingEordCnt();
   int TrySwitchToZombieOrFinish();
 
   // Async Do on device_ctx_
