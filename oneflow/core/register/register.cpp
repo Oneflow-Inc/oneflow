@@ -24,9 +24,19 @@ bool PieceStatus::IsLast() const {
   return false;
 }
 
+bool PieceStatus::IsNextColOf(const PieceStatus& pre) const {
+  if (piece_id_ == pre.piece_id_ && 
+      max_col_id_ == pre.max_col_id_ &&
+      col_id_ == pre.col_id_ + 1) {
+    return true;
+  }
+  return false;
+}
+
 Regst::Regst() {
   piece_id_ = -1;
   model_version_id_ = -1;
+  recurrent_flag_ = 0;
 }
 
 void Regst::ForEachLbn(std::function<void(const std::string&)> func) {

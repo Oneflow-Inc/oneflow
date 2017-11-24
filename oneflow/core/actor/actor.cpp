@@ -135,6 +135,10 @@ void Actor::AsyncSendRegstMsgToConsumer(
       total_reading_cnt_ += 1;
       regst_reading_cnt_it->second += 1;
       device_ctx_->AddCallBack([consumer, regst, this_actor_id]() {
+        if (this_actor_id == consumer) {
+          regst->set_recurrent_flag(-1);
+        }
+
         ActorMsg msg =
             ActorMsg::BuildRegstMsgToConsumer(this_actor_id, consumer, regst);
         ActorMsgBus::Singleton()->SendMsg(std::move(msg));
@@ -192,10 +196,15 @@ void Actor::AsyncSendRegstMsgToProducer(Regst* regst, int64_t producer) {
 int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   auto reading_cnt_it = produced_regst2reading_cnt_.find(regst);
   if (reading_cnt_it == produced_regst2reading_cnt_.end()) { return -1; }
+
+  // for out_produce, out_consume is its down-actor
+  if (regst->recurrent_flag() == -1) { return -1; } 
+
   CHECK_GE(reading_cnt_it->second, 1);
   reading_cnt_it->second -= 1;
   total_reading_cnt_ -= 1;
   if (reading_cnt_it->second != 0) { return 0; }
+
   auto writeable_it = writeable_produced_regst_.find(regst->regst_desc_id());
   if (writeable_it == writeable_produced_regst_.end()) { return 0; }
   if (writeable_it->second.empty()) { writeable_produced_regst_desc_num_ += 1; }

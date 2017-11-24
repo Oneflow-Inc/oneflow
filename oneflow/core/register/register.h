@@ -30,6 +30,7 @@ class PieceStatus final {
 
   int GetIntoNextStatus();
   bool IsLast() const;
+  bool IsNextColOf(const PieceStatus& pre) const;
 
  private:
   int64_t piece_id_;
@@ -44,6 +45,7 @@ class Regst final {
 
   // Getters
   const PieceStatus& piece_status() const { return piece_status_; }
+  int recurrent_flag() const { return recurrent_flag_; }
   int64_t piece_id() const { return piece_id_; }
   int64_t model_version_id() const { return model_version_id_; }
   int64_t regst_desc_id() const { return regst_desc_->regst_desc_id(); }
@@ -62,6 +64,7 @@ class Regst final {
   }
   void set_piece_id(int64_t val) { piece_id_ = val; }
   void set_model_version_id(int64_t val) { model_version_id_ = val; }
+  void set_recurrent_flag(int val) { recurrent_flag_ = val; }
 
  private:
   friend class RegstMgr;
@@ -70,6 +73,8 @@ class Regst final {
   PieceStatus piece_status_;
   int64_t piece_id_;
   int64_t model_version_id_;
+  int recurrent_flag_;  
+  // 0: no recurrent, 1 recurrent from top, -1 recurrent from bot
 
   const RtRegstDesc* regst_desc_;
   std::function<void()> deleter_;
