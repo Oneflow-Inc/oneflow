@@ -25,7 +25,7 @@ template<DeviceType device_type, typename T>
 void CloneKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const auto odbns = PbRpf2StdVec(this->kernel_conf().output_diff_bns());
+  const auto& odbns = this->kernel_conf().output_diff_bns();
   if (odbns.size() == 0) return;
   Blob* in_diff_blob = BnInOp2Blob(this->kernel_conf().input_diff_bns(0));
   const Blob* out_diff_blob_0 = BnInOp2Blob(odbns[0]);
@@ -76,8 +76,7 @@ namespace {
 Kernel* CreateCloneKernel(DeviceType dev_type, const KernelConf& kernel_conf) {
   static const HashMap<std::string, std::function<Kernel*()>> creators = {
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(CLONE_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
-                                       ALL_DATA_TYPE_SEQ)};
-  CHECK(kernel_conf.has_clone_conf());
+                                       FLOATING_DATA_TYPE_SEQ)};
   return creators.at(
       GetHashKey(dev_type, kernel_conf.clone_conf().data_type()))();
 }
