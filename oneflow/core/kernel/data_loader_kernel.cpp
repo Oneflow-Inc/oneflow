@@ -34,6 +34,8 @@ void DataLoaderKernel<T>::Forward(
       }
       CHECK_EQ(*(line_ptr - 1), '\0');
     } else {
+      CHECK(kernel_ctx.other);
+      *(static_cast<bool*>(kernel_ctx.other)) = true;
       CHECK_EQ(read_status, -1);
       CHECK(out_blob->has_data_id());
       memset(out_blob->mut_data_id(i), '\0',
@@ -64,7 +66,6 @@ Kernel* CreateDataLoaderKernel(const KernelConf& kernel_conf) {
 #define DATA_LOADER_KERNEL_ENTRY(type_cpp, type_proto) \
   {type_proto, []() { return new DataLoaderKernel<type_cpp>; }},
       OF_PP_FOR_EACH_TUPLE(DATA_LOADER_KERNEL_ENTRY, ARITHMETIC_DATA_TYPE_SEQ)};
-  CHECK(kernel_conf.op_conf().has_data_loader_conf());
   return creators.at(kernel_conf.op_conf().data_loader_conf().data_type())();
 }
 
