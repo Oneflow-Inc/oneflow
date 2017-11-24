@@ -27,10 +27,7 @@ void BackwardCompTaskNode::ConsumeAllRegsts() {
     } else if (src_task_type == TaskType::kMdUpdt) {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
-    } else if (src_task_type == TaskType::kBackward
-               || src_task_type == TaskType::kLoss
-               || src_task_type == TaskType::kBoxing || src_task_type == kCopyHd
-               || src_task_type == TaskType::kCopyCommNet) {
+    } else {
       ConsumeRegst("out_diff", edge->GetSoleRegst());
     }
   }
