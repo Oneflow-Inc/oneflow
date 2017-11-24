@@ -8,6 +8,10 @@ message ConvolutionKernelConf {
   required DataType data_type = 1;
 }
 
+message ConcatKernelConf {
+  required DataType data_type = 1;
+}
+
 message KernelConf {
   required OperatorConf op_conf = 1;
   map<string, string> bn_in_op2lbn = 2;
@@ -26,5 +30,6 @@ message KernelConf {
   
   oneof kernel_type {
     ConvolutionKernelConf convolution_conf = 100;
+    ConcatKernelConf concat_conf = 101; 
   }
 }

@@ -43,6 +43,13 @@ void ConcatOp::InferBlobDescs(
   out_blob_desc->set_has_data_id(in_0_blob_desc->has_data_id());
 }
 
+void ConcatOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  DataType dtype = GetBlobDesc4BnInOp(input_bns().at(0))->data_type();
+  kernel_conf->mutable_concat_conf()->set_data_type(dtype);
+}
+
 REGISTER_OP(OperatorConf::kConcatConf, ConcatOp);
 
 }  // namespace oneflow

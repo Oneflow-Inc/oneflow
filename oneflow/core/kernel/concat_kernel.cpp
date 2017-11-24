@@ -4,6 +4,23 @@ namespace oneflow {
 
 namespace {
 
+const std::string& GetObn(bool is_forward, const KernelConf& kernel_conf) {
+  if (is_forward) {
+    return kernel_conf.output_bns(0);
+  } else {
+    return kernel_conf.output_diff_bns(0);
+  }
+}
+
+const google::protobuf::RepeatedPtrField<std::string>& GetIbns(
+    bool is_forward, const KernelConf& kernel_conf) {
+  if (is_forward) {
+    return kernel_conf.input_bns();
+  } else {
+    return kernel_conf.input_diff_bns();
+  }
+}
+
 // Calculates the addr of the next concat point in blob. Ex:
 // For a 2-dimension matrix with columns and rows, assume the concat operation
 // is on the row dimension, so each row will be concated/extended. The
@@ -22,10 +39,11 @@ T* NextConcatAddr(T* start_addr, int64_t concat_idx, int64_t concat_axis_dim,
 
 template<DeviceType device_type, typename T>
 void ConcatKernel<device_type, T>::ConcatKernelWork(
-    const KernelCtx& ctx, const std::string& obn,
-    const std::vector<std::string>& ibns,
+    const KernelCtx& ctx, bool is_forward,
     std::function<Blob*(const std::string&)> BnInOp2Blob,
     MemCopyFuncType copy_func) const {
+  const std::string& obn = GetObn(is_forward, this->kernel_conf());
+  const auto& ibns = GetIbns(is_forward, this->kernel_conf());
   Blob* out_blob = BnInOp2Blob(obn);
   if (ibns.size() == 0) { return; }
   const int32_t concat_axis = this->op_conf().concat_conf().axis();
@@ -69,16 +87,17 @@ void ConcatKernel<device_type, T>::ConcatKernelWork(
 
     offset_concat_axis += in_concat_axis_dim;
   }
-  if (BnInOp2Blob(ibns.front())->has_data_id()) {
-    CopyDataIdToOb(ctx, ibns, obn, concat_axis, kind, BnInOp2Blob);
+  if (BnInOp2Blob(ibns[0])->has_data_id()) {
+    CopyDataIdToOb(ctx, is_forward, obn, concat_axis, kind, BnInOp2Blob);
   }
 }
 
 template<DeviceType device_type, typename T>
 void ConcatKernel<device_type, T>::CopyDataIdToOb(
-    const KernelCtx& ctx, const std::vector<std::string>& ibns,
-    const std::string& obn, const int32_t concat_axis, cudaMemcpyKind kind,
+    const KernelCtx& ctx, bool is_forward, const std::string& obn,
+    const int32_t concat_axis, cudaMemcpyKind kind,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const auto& ibns = GetIbns(is_forward, this->kernel_conf());
   Blob* out_blob = BnInOp2Blob(obn);
   int64_t data_id_offset = 0;
   for (const std::string& ibn : ibns) {
@@ -100,8 +119,7 @@ void ConcatKernel<device_type, T>::ForwardDataContent(
                         const int64_t size, cudaMemcpyKind kind) {
     Memcpy<device_type>(ctx.device_ctx, dst, src, size, kind);
   };
-  ConcatKernelWork(ctx, this->kernel_conf().output_bns(0),
-                   this->kernel_conf().input_bns(), BnInOp2Blob, copy_in2out);
+  ConcatKernelWork(ctx, true, BnInOp2Blob, copy_in2out);
 }
 
 template<DeviceType device_type, typename T>
@@ -112,9 +130,26 @@ void ConcatKernel<device_type, T>::BackwardDataContent(
                         const int64_t size, cudaMemcpyKind kind) {
     Memcpy<device_type>(ctx.device_ctx, dst, src, size, kind);
   };
-  ConcatKernelWork(ctx, this->kernel_conf().output_diff_bns(0),
-                   this->kernel_conf().input_diff_bns(), BnInOp2Blob,
-                   copy_out2in);
+  ConcatKernelWork(ctx, false, BnInOp2Blob, copy_out2in);
 }
+
+namespace {
+
+Kernel* CreateConcatKernel(DeviceType dev_type, const KernelConf& kernel_conf) {
+  static const HashMap<std::string, std::function<Kernel*()>> creators = {
+#define CONCAT_KERNEL_ENTRY(device_type, data_type_pair)                     \
+  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {        \
+     return new ConcatKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>; \
+   }},
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(CONCAT_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
+                                       ALL_DATA_TYPE_SEQ)};
+  CHECK(kernel_conf.has_concat_conf());
+  return creators.at(
+      GetHashKey(dev_type, kernel_conf.concat_conf().data_type()))();
+}
+
+}  // namespace
+
+COMMAND(AddKernelCreator(OperatorConf::kConcatConf, CreateConcatKernel));
 
 }  // namespace oneflow
