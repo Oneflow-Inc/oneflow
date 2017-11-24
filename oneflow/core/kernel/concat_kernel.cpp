@@ -143,7 +143,6 @@ Kernel* CreateConcatKernel(DeviceType dev_type, const KernelConf& kernel_conf) {
    }},
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(CONCAT_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
                                        ALL_DATA_TYPE_SEQ)};
-  CHECK(kernel_conf.has_concat_conf());
   return creators.at(
       GetHashKey(dev_type, kernel_conf.concat_conf().data_type()))();
 }
