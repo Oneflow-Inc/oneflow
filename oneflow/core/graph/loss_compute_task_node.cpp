@@ -11,11 +11,8 @@ void LossCompTaskNode::ProduceAllRegstsAndBindEdges() {
     TaskType dst_task_node_type = edge->dst_node()->GetTaskType();
     if (dst_task_node_type == TaskType::kLossAcc) {
       edge->AddRegst("loss", loss_regst);
-    } else if (dst_task_node_type == TaskType::kBoxing
-               || dst_task_node_type == TaskType::kBackward) {
-      edge->AddRegst("in_diff", in_diff_regst);
     } else {
-      UNEXPECTED_RUN()
+      edge->AddRegst("in_diff", in_diff_regst);
     }
   }
 }
@@ -29,10 +26,10 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> loss_regst = GetProducedRegst("loss");
   std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff");
   std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
-  ExecNode* node = mut_exec_gph().NewNode();
   std::shared_ptr<const Operator> op = chain_node()->SoleOp();
-  node->mut_op() = op;
   CHECK(op->IsLossOp());
+  ExecNode* node = mut_exec_gph().NewNode();
+  node->mut_op() = op;
   for (const std::string& ibn : op->input_bns()) {
     node->BindBnInOpAndRegst(ibn, in_regst);
   }
