@@ -11,10 +11,10 @@ void LossRecordCompTaskNode::ConsumeAllRegsts() {
 
 void LossRecordCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> in_regst = GetConsumedRegst("in");
-  ExecNode* exec_node = mut_exec_gph().NewNode();
   std::shared_ptr<const Operator> op = chain_node()->SoleOp();
-  exec_node->mut_op() = op;
   CHECK(op->IsRecordOp());
+  ExecNode* exec_node = mut_exec_gph().NewNode();
+  exec_node->mut_op() = op;
   exec_node->BindBnInOpAndRegst(op->SoleIbn(), in_regst);
 }
 
