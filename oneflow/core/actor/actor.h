@@ -63,9 +63,9 @@ class Actor {
   void ActUntilFail();
   virtual void Act() = 0;
   virtual bool IsReadReady() = 0;
-  virtual bool IsReadAlwaysUnReadyFromNow() { TODO(); }
+  virtual bool IsReadAlwaysUnReadyFromNow() = 0;
   virtual bool IsWriteReady();
-  virtual void AsyncReturnAllReadableRegst() { TODO(); }
+  virtual void AsyncReturnAllReadableRegst() = 0;
   void DecreaseRemainingEordCnt();
   int TrySwitchToZombieOrFinish();
 
@@ -117,8 +117,9 @@ struct ActorRegistry {
   }
 };
 
-#define REGISTER_ACTOR(TaskType, ActorType) \
-  static ActorRegistry<TaskType, ActorType> g_actor_##ActorType##registry_var;
+#define REGISTER_ACTOR(TaskType, ActorType)            \
+  static ActorRegistry<TaskType, ActorType> OF_PP_CAT( \
+      g_actor_##ActorType##registry_var, __LINE__)
 
 }  // namespace oneflow
 
