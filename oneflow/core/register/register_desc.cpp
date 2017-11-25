@@ -34,8 +34,15 @@ void RegstDesc::CopyBlobDescFrom(const RegstDesc* rhs) {
   CHECK(lbn2blob_desc_.empty());
   for (const auto& pair : rhs->lbn2blob_desc_) {
     const std::string& lbn = pair.first;
-    auto blob_desc = of_make_unique<BlobDesc>(*(pair.second));
-    CHECK(lbn2blob_desc_.emplace(lbn, std::move(blob_desc)).second);
+    AddLbn(lbn);
+  }
+  CopyBlobDescWithoutAddLbn(rhs);
+}
+
+void RegstDesc::CopyBlobDescWithoutAddLbn(const RegstDesc* rhs) {
+  CHECK_EQ(is_locked_, false);
+  for (const auto& pair : lbn2blob_desc_) {
+    *(pair.second) = *(rhs->lbn2blob_desc_.at(pair.first));
   }
 }
 
