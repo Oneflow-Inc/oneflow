@@ -25,6 +25,13 @@ void DataLoaderOp::InferBlobDescs(
                        && JobDesc::Singleton()->SizeOfOneDataId() != 0);
 }
 
+void DataLoaderOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  int64_t parallel_id = parallel_ctx->parallel_id();
+  kernel_conf->mutable_data_loader_conf()->set_parallel_id(parallel_id);
+}
+
 REGISTER_OP(OperatorConf::kDataLoaderConf, DataLoaderOp);
 
 }  // namespace oneflow
