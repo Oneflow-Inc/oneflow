@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type>
 class ConcatKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConcatKernel);
@@ -19,7 +19,7 @@ class ConcatKernel final : public KernelIf<device_type> {
   void BackwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
-  using MemCopyFuncType = std::function<void(const KernelCtx& ctx, T*, T*,
+  using MemCopyFuncType = std::function<void(const KernelCtx& ctx, char*, char*,
                                              const int64_t, cudaMemcpyKind)>;
 
   void ConcatKernelWork(const KernelCtx&, const std::string&,
