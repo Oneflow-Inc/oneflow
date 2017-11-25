@@ -1,8 +1,9 @@
-#include "oneflow/core/actor/accumulate_actor.h"
+#include "oneflow/core/actor/accumulate_compute_actor.h"
 
 namespace oneflow {
 
-void AccumulateActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt) {
+void AccumulateCompActor::Init(const TaskProto& task_proto,
+                               int32_t max_acc_cnt) {
   using namespace std::placeholders;
   is_in_eord_ = false;
   if (GetDeviceType() == DeviceType::kCPU) {
@@ -12,13 +13,13 @@ void AccumulateActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt) {
     cpy_func_ = std::bind(Memcpy<DeviceType::kGPU>, _1, _2, _3, _4,
                           cudaMemcpyKind::cudaMemcpyDeviceToDevice);
   }
-  OF_SET_MSG_HANDLER(&AccumulateActor::HandlerNormal);
+  OF_SET_MSG_HANDLER(&AccumulateCompActor::HandlerNormal);
   acc_cnt_ = 0;
   max_acc_cnt_ = max_acc_cnt;
   next_piece_id_ = 0;
 }
 
-int AccumulateActor::HandlerNormal(const ActorMsg& msg) {
+int AccumulateCompActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
     is_in_eord_ = true;
     DecreaseRemainingEordCnt();
@@ -34,15 +35,15 @@ int AccumulateActor::HandlerNormal(const ActorMsg& msg) {
   return TrySwitchToZombieOrFinish();
 }
 
-bool AccumulateActor::IsReadAlwaysUnReadyFromNow() {
+bool AccumulateCompActor::IsReadAlwaysUnReadyFromNow() {
   return is_in_eord_ && pending_in_regst_.empty();
 }
 
-void AccumulateActor::AsyncReturnAllReadableRegst() {
+void AccumulateCompActor::AsyncReturnAllReadableRegst() {
   CHECK(pending_in_regst_.empty());
 }
 
-void AccumulateActor::Act() {
+void AccumulateCompActor::Act() {
   Regst* in_regst = pending_in_regst_.front();
   Regst* out_regst = GetCurSoleWriteableRegst();
   KernelCtx kernel_ctx = GenDefaultKernelCtx();

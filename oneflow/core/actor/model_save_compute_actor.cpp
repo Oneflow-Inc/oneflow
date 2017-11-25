@@ -1,4 +1,4 @@
-#include "oneflow/core/actor/model_save_comp_actor.h"
+#include "oneflow/core/actor/model_save_compute_actor.h"
 
 namespace oneflow {
 
