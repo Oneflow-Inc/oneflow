@@ -16,12 +16,12 @@ size_t BlobDesc::ByteSizeOfDataIdField() const {
   }
 }
 
-size_t BlobDesc::ByteSizeOfDataField() const {
+size_t BlobDesc::ByteSizeOfDataContentField() const {
   return shape_.elem_cnt() * GetSizeOfDataType(data_type_);
 }
 
 size_t BlobDesc::TotalByteSize() const {
-  return ByteSizeOfDataIdField() + ByteSizeOfDataField();
+  return ByteSizeOfDataIdField() + ByteSizeOfDataContentField();
 }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {

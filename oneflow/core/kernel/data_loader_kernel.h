@@ -15,12 +15,6 @@ class DataLoaderKernel final : public KernelIf<DeviceType::kCPU> {
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
 
-  void ForwardDataContent(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    UNEXPECTED_RUN();
-  }
-
  private:
   void Init(const KernelConf&);
 

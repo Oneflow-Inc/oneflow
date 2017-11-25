@@ -1,4 +1,4 @@
-#include "oneflow/core/actor/model_update_comp_actor.h"
+#include "oneflow/core/actor/model_update_compute_actor.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/kernel/model_update_kernel.h"
 
@@ -122,5 +122,7 @@ bool MdUpdtCompActor::IsWriteReady() {
 void MdUpdtCompActor::AsyncReturnAllReadableRegst() {
   CHECK(pending_model_diff_acc_queue_.empty());
 }
+
+REGISTER_ACTOR(TaskType::kMdUpdt, MdUpdtCompActor);
 
 }  // namespace oneflow
