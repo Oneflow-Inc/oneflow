@@ -45,19 +45,6 @@ void BackwardCompTaskNode::BuildExecGphAndRegst() {
   InferBlobDescsInProducedRegsts();
 }
 
-void BackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
-  if (std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff")) {
-    std::shared_ptr<RegstDesc> in_regst = GetConsumedRegst("in");
-    in_diff_regst->CopyBlobDescFrom(in_regst.get());
-  }
-
-  std::shared_ptr<RegstDesc> md_diff_regst = GetProducedRegst("model_diff");
-  md_diff_regst->CopyBlobDescFrom(GetConsumedRegst("model").get());
-
-  auto activation_diff_regst = GetProducedRegst("activation_diff");
-  activation_diff_regst->CopyBlobDescFrom(GetConsumedRegst("activation").get());
-}
-
 void BackwardCompTaskNode::BuildExecGphFromUserOps(
     Lbn2NodeBnMap* lbn2producer) {
   for (std::shared_ptr<const Operator> op : chain_node()->op_vec()) {
@@ -83,19 +70,6 @@ void BackwardCompTaskNode::BuildExecGphFromUserOps(
   });
 }
 
-void BackwardCompTaskNode::AddLbn2ActivationDiffRegst() {
-  std::shared_ptr<RegstDesc> activation_regst = GetConsumedRegst("activation");
-  auto activation_diff_regst = GetProducedRegst("activation_diff");
-  mut_exec_gph().ForEachEdge([&](ExecEdge* edge) {
-    edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), activation_diff_regst);
-    edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(), activation_diff_regst);
-    edge->src_node()->BindBnInOpAndRegst(GenUnDiffBn(edge->src_bn()),
-                                         activation_regst);
-    edge->dst_node()->BindBnInOpAndRegst(GenUnDiffBn(edge->dst_bn()),
-                                         activation_regst);
-  });
-}
-
 void BackwardCompTaskNode::SetExecNodeFromOutdiffRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetConsumedRegst("out");
   std::shared_ptr<RegstDesc> out_diff_regst = GetConsumedRegst("out_diff");
@@ -109,6 +83,19 @@ void BackwardCompTaskNode::SetExecNodeFromOutdiffRegst() {
       bp_node->BindBnInOpAndRegst(odbn, out_diff_regst);
       bp_node->BindBnInOpAndRegst(GenUnDiffBn(odbn), out_regst);
     }
+  });
+}
+
+void BackwardCompTaskNode::AddLbn2ActivationDiffRegst() {
+  std::shared_ptr<RegstDesc> activation_regst = GetConsumedRegst("activation");
+  auto activation_diff_regst = GetProducedRegst("activation_diff");
+  mut_exec_gph().ForEachEdge([&](ExecEdge* edge) {
+    edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), activation_diff_regst);
+    edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(), activation_diff_regst);
+    edge->src_node()->BindBnInOpAndRegst(GenUnDiffBn(edge->src_bn()),
+                                         activation_regst);
+    edge->dst_node()->BindBnInOpAndRegst(GenUnDiffBn(edge->dst_bn()),
+                                         activation_regst);
   });
 }
 
@@ -153,6 +140,19 @@ void BackwardCompTaskNode::AddLbn2ModelDiffRegst() {
       node->BindBnInOpAndRegst(mbn, model_regst);
     }
   });
+}
+
+void BackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
+  if (std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff")) {
+    std::shared_ptr<RegstDesc> in_regst = GetConsumedRegst("in");
+    in_diff_regst->CopyBlobDescFrom(in_regst.get());
+  }
+
+  std::shared_ptr<RegstDesc> md_diff_regst = GetProducedRegst("model_diff");
+  md_diff_regst->CopyBlobDescFrom(GetConsumedRegst("model").get());
+
+  auto activation_diff_regst = GetProducedRegst("activation_diff");
+  activation_diff_regst->CopyBlobDescFrom(GetConsumedRegst("activation").get());
 }
 
 std::shared_ptr<RegstDesc> BackwardCompTaskNode::GetRelatedInRegst() {
