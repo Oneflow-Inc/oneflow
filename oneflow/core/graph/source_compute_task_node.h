@@ -12,8 +12,11 @@ class SourceCompTaskNode final : public CompTaskNode {
   ~SourceCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override;
+  void BuildExecGphAndRegst() override;
+
   TaskType GetTaskType() const override { return TaskType::kSource; }
-  void FixThrdLocId() override;
+  void FixThrdId() override;
 
  private:
 };

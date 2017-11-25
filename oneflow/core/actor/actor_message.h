@@ -7,17 +7,16 @@
 namespace oneflow {
 
 enum class ActorCmd {
-  kInitializeModel = 0,  // MdUpdt Actor
-  kSendInitialModel,     // MdUpdt Actor
-  kEORD,                 // End Of Register Desc, All Actor except Source Actor
-  kStart,                // Source Actor
+  kInitModel = 0,     // MdUpdt Actor
+  kSendInitialModel,  // MdUpdt Actor
+  kStart,             // Source Actor
   kStopThread,
-  kActivateActor
+  kConstructActor
 };
 
 OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ActorCmd);
 
-enum class ActorMsgType { kRegstMsg = 0, kCmdMsg };
+enum class ActorMsgType { kRegstMsg = 0, kEordMsg, kCmdMsg };
 
 OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ActorMsgType);
 
@@ -32,6 +31,7 @@ class ActorMsg final {
                                           Regst*);
   static ActorMsg BuildRegstMsgToProducer(int64_t consumer, int64_t producer,
                                           Regst*);
+  static ActorMsg BuildEordMsg(int64_t consumer, int64_t regst_desc_id);
   static ActorMsg BuildCommandMsg(int64_t dst_actor_id, ActorCmd cmd);
 
   // Getters
@@ -43,8 +43,10 @@ class ActorMsg final {
   Regst* regst() const;
   int64_t piece_id() const;
   const void* comm_net_token() const;
+  int64_t eord_regst_desc_id() const;
 
   // Serialize
+  std::string DebugString() const { TODO(); }
   template<typename StreamT>
   void Serialize(StreamT& out_stream) const {
     out_stream.Write(this, sizeof(ActorMsg));
@@ -67,6 +69,7 @@ class ActorMsg final {
   union {
     ActorCmd actor_cmd_;
     RegstWrapper regst_wrapper_;
+    int64_t eord_regst_desc_id_;
   };
 };
 

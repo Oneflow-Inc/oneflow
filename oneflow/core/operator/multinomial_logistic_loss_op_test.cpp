@@ -12,7 +12,7 @@ TEST(MultinomialLogisticLossOp, test_loss_op) {
   auto loss_op = ConstructOp(op_conf);
 
   JobConf job_conf;
-  job_conf.set_default_data_type(DataType::kFloat);
+  job_conf.set_DefaultDataType(DataType::kFloat);
   JobDesc::Singleton()->InitFromJobConf(job_conf);
   HashMap<std::string, BlobDesc*> bn2blob_desc_map = {
       {"prediction", new BlobDesc(Shape({500, 3 * 256 * 256 * 256, 1, 1}),

@@ -11,13 +11,13 @@ class BoxingActor final : public Actor {
   BoxingActor() = default;
   ~BoxingActor() = default;
 
-  void VirtualActorInit(const TaskProto&, const ThreadCtx&) override;
+  void VirtualActorInit(const TaskProto&) override;
 
  private:
   int HandlerNormal(const ActorMsg&) override;
-  int HandlerWaitUntilNoReadableRegst(const ActorMsg&) override;
+  int HandlerUntilReadAlwaysUnReady(const ActorMsg&);
 
-  bool IsReadReady() override { return !mut_num_of_read_empty(); }
+  bool IsReadReady() override { return false; }
   void Act() override;
 
   // <regst_desc_id, queue<regst>>

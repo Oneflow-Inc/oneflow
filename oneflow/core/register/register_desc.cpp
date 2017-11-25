@@ -34,8 +34,15 @@ void RegstDesc::CopyBlobDescFrom(const RegstDesc* rhs) {
   CHECK(lbn2blob_desc_.empty());
   for (const auto& pair : rhs->lbn2blob_desc_) {
     const std::string& lbn = pair.first;
-    auto blob_desc = of_make_unique<BlobDesc>(*(pair.second));
-    CHECK(lbn2blob_desc_.emplace(lbn, std::move(blob_desc)).second);
+    AddLbn(lbn);
+  }
+  CopyBlobDescWithoutAddLbn(rhs);
+}
+
+void RegstDesc::CopyBlobDescWithoutAddLbn(const RegstDesc* rhs) {
+  CHECK_EQ(is_locked_, false);
+  for (const auto& pair : lbn2blob_desc_) {
+    *(pair.second) = *(rhs->lbn2blob_desc_.at(pair.first));
   }
 }
 
@@ -78,10 +85,10 @@ static void SetHostPinnedMemoryAccordingToConsumers(
 }
 
 void RegstDesc::InferMemCase() {
-  int64_t thrd_loc_id = producer_->thrd_loc_id();
+  int64_t thrd_id = producer_->thrd_id();
   if (auto cp_hd_producer = dynamic_cast<const CopyHdTaskNode*>(producer_)) {
     if (cp_hd_producer->copy_type() == CopyHdOpConf::H2D) {
-      mem_case_.mutable_device_cuda_mem()->set_device_id(thrd_loc_id);
+      mem_case_.mutable_device_cuda_mem()->set_device_id(thrd_id);
     } else {
       mem_case_.mutable_host_pinned_mem()->set_used_by_device(true);
       SetHostPinnedMemoryAccordingToConsumers(consumers_, &mem_case_);
@@ -91,7 +98,7 @@ void RegstDesc::InferMemCase() {
     SetHostPinnedMemoryAccordingToConsumers(consumers_, &mem_case_);
   } else {
     if (producer_->device_type() == kGPU) {
-      mem_case_.mutable_device_cuda_mem()->set_device_id(thrd_loc_id);
+      mem_case_.mutable_device_cuda_mem()->set_device_id(thrd_id);
     } else {
       mem_case_.mutable_host_pageable_mem();
       SetHostPinnedMemoryAccordingToConsumers(consumers_, &mem_case_);
@@ -103,7 +110,7 @@ void RegstDesc::EraseZeroSizeBlob() {
   EraseIf<std::string, std::unique_ptr<BlobDesc>>(
       &lbn2blob_desc_,
       [](HashMap<std::string, std::unique_ptr<BlobDesc>>::iterator it) {
-        return it->second->ByteSizeOfDataField() == 0;
+        return it->second->ByteSizeOfDataContentField() == 0;
       });
 }
 

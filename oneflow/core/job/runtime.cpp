@@ -47,28 +47,28 @@ void Runtime::Run(const Plan& plan, const std::string& this_machine_name) {
   LOG(INFO) << "number of mdupdt tasks is " << mdupdt_tasks.size();
   LOG(INFO) << "number of source tasks is " << source_tasks.size();
   LOG(INFO) << "number of other  tasks is " << other_tasks.size();
-  RuntimeCtx::Singleton()->mut_inactive_actor_cnt().Init("inactive_actor_cnt",
-                                                         this_machine_task_num);
+  RuntimeCtx::Singleton()->mut_constructing_actor_cnt().Init(
+      "constructing_actor_cnt", this_machine_task_num);
   RuntimeCtx::Singleton()->mut_model_init_cnt().Init("model_init_cnt",
                                                      mdupdt_tasks.size());
   HandoutTasks(mdupdt_tasks);
-  SendCmdMsg(mdupdt_tasks, ActorCmd::kInitializeModel);
+  SendCmdMsg(mdupdt_tasks, ActorCmd::kInitModel);
   RuntimeCtx::Singleton()->mut_model_init_cnt().WaitUntilCntEqualZero();
   LOG(INFO) << "InitModel on this machine done";
   OF_BARRIER();
   LOG(INFO) << "InitModel on all machine done";
   HandoutTasks(source_tasks);
   HandoutTasks(other_tasks);
-  RuntimeCtx::Singleton()->mut_inactive_actor_cnt().WaitUntilCntEqualZero();
-  LOG(INFO) << "All actor on this machine are activated";
+  RuntimeCtx::Singleton()->mut_constructing_actor_cnt().WaitUntilCntEqualZero();
+  LOG(INFO) << "All actor on this machine are constructed";
   OF_BARRIER();
-  LOG(INFO) << "All actor on all machine are activated";
+  LOG(INFO) << "All actor on all machine are constructed";
   CommNet::Singleton()->RegisterMemoryDone();
-  RuntimeCtx::Singleton()->mut_active_actor_cnt().Init("active_actor_cnt",
-                                                       this_machine_task_num);
+  RuntimeCtx::Singleton()->mut_running_actor_cnt().Init("running_actor_cnt",
+                                                        this_machine_task_num);
   SendCmdMsg(mdupdt_tasks, ActorCmd::kSendInitialModel);
   SendCmdMsg(source_tasks, ActorCmd::kStart);
-  RuntimeCtx::Singleton()->mut_active_actor_cnt().WaitUntilCntEqualZero();
+  RuntimeCtx::Singleton()->mut_running_actor_cnt().WaitUntilCntEqualZero();
   OF_BARRIER();
   DeleteAllSingleton();
 }
@@ -101,9 +101,9 @@ void Runtime::DeleteAllSingleton() {
 }
 void Runtime::HandoutTasks(const std::vector<const TaskProto*>& tasks) {
   for (const TaskProto* task : tasks) {
-    ThreadMgr::Singleton()->GetThrd(task->thrd_loc_id())->AddTask(*task);
+    ThreadMgr::Singleton()->GetThrd(task->thrd_id())->AddTask(*task);
   }
-  SendCmdMsg(tasks, ActorCmd::kActivateActor);
+  SendCmdMsg(tasks, ActorCmd::kConstructActor);
 }
 void Runtime::SendCmdMsg(const std::vector<const TaskProto*>& tasks,
                          ActorCmd cmd) {

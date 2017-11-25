@@ -12,7 +12,7 @@ TEST(SoftmaxLossOp, softmax_loss_3x5) {
   op_conf.mutable_softmax_loss_conf()->set_loss("softmax_loss/loss");
   auto softmax_loss_op = ConstructOp(op_conf);
   JobConf job_conf;
-  job_conf.set_default_data_type(DataType::kFloat);
+  job_conf.set_DefaultDataType(DataType::kFloat);
   JobDesc::Singleton()->InitFromJobConf(job_conf);
   HashMap<std::string, BlobDesc*> bn2blob_desc_map{
       {"prediction", new BlobDesc(Shape({3, 5}), DataType::kFloat, false)},

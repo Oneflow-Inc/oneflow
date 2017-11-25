@@ -22,38 +22,34 @@ class ConvolutionKernelUtil<DeviceType::kCPU, T> final {
                      const int kernel_h, const int kernel_w, const int pad_h,
                      const int pad_w, const int stride_h, const int stride_w,
                      const int dilation_h, const int dilation_w, T* mut_dptr) {
-    ctx.device_ctx->cpu_stream()->SendWork([=]() mutable {
-      memset(mut_dptr, 0, height * width * channels * sizeof(T));
-      const int output_h =
-          (height + 2 * pad_h - (dilation_h * (kernel_h - 1) + 1)) / stride_h
-          + 1;
-      const int output_w =
-          (width + 2 * pad_w - (dilation_w * (kernel_w - 1) + 1)) / stride_w
-          + 1;
-      const int channel_size = height * width;
-      for (int channel = channels; channel--; mut_dptr += channel_size) {
-        for (int kernel_row = 0; kernel_row < kernel_h; ++kernel_row) {
-          for (int kernel_col = 0; kernel_col < kernel_w; ++kernel_col) {
-            int input_row = -pad_h + kernel_row * dilation_h;
-            for (int output_rows = output_h; output_rows; --output_rows) {
-              if (!IsAGreaterThanZeroAndLessThanB(input_row, height)) {
-                data_col += output_w;
-              } else {
-                int input_col = -pad_w + kernel_col * dilation_w;
-                for (int output_col = output_w; output_col; --output_col) {
-                  if (IsAGreaterThanZeroAndLessThanB(input_col, width)) {
-                    mut_dptr[input_row * width + input_col] += *data_col;
-                  }
-                  ++data_col;
-                  input_col += stride_w;
+    memset(mut_dptr, 0, height * width * channels * sizeof(T));
+    const int output_h =
+        (height + 2 * pad_h - (dilation_h * (kernel_h - 1) + 1)) / stride_h + 1;
+    const int output_w =
+        (width + 2 * pad_w - (dilation_w * (kernel_w - 1) + 1)) / stride_w + 1;
+    const int channel_size = height * width;
+    for (int channel = channels; channel--; mut_dptr += channel_size) {
+      for (int kernel_row = 0; kernel_row < kernel_h; ++kernel_row) {
+        for (int kernel_col = 0; kernel_col < kernel_w; ++kernel_col) {
+          int input_row = -pad_h + kernel_row * dilation_h;
+          for (int output_rows = output_h; output_rows; --output_rows) {
+            if (!IsAGreaterThanZeroAndLessThanB(input_row, height)) {
+              data_col += output_w;
+            } else {
+              int input_col = -pad_w + kernel_col * dilation_w;
+              for (int output_col = output_w; output_col; --output_col) {
+                if (IsAGreaterThanZeroAndLessThanB(input_col, width)) {
+                  mut_dptr[input_row * width + input_col] += *data_col;
                 }
+                ++data_col;
+                input_col += stride_w;
               }
-              input_row += stride_h;
             }
+            input_row += stride_h;
           }
         }
       }
-    });
+    }
   }
 
   static void Im2Col(const KernelCtx& ctx, const T* dptr, const int channels,
@@ -61,40 +57,36 @@ class ConvolutionKernelUtil<DeviceType::kCPU, T> final {
                      const int kernel_w, const int pad_h, const int pad_w,
                      const int stride_h, const int stride_w,
                      const int dilation_h, const int dilation_w, T* data_col) {
-    ctx.device_ctx->cpu_stream()->SendWork([=]() mutable {
-      const int output_h =
-          (height + 2 * pad_h - (dilation_h * (kernel_h - 1) + 1)) / stride_h
-          + 1;
-      const int output_w =
-          (width + 2 * pad_w - (dilation_w * (kernel_w - 1) + 1)) / stride_w
-          + 1;
-      const int channel_size = height * width;
-      for (int channel = channels; channel--; dptr += channel_size) {
-        for (int kernel_row = 0; kernel_row < kernel_h; ++kernel_row) {
-          for (int kernel_col = 0; kernel_col < kernel_w; ++kernel_col) {
-            int input_row = -pad_h + kernel_row * dilation_h;
-            for (int output_rows = output_h; output_rows; --output_rows) {
-              if (!IsAGreaterThanZeroAndLessThanB(input_row, height)) {
-                for (int output_cols = output_w; output_cols; --output_cols) {
+    const int output_h =
+        (height + 2 * pad_h - (dilation_h * (kernel_h - 1) + 1)) / stride_h + 1;
+    const int output_w =
+        (width + 2 * pad_w - (dilation_w * (kernel_w - 1) + 1)) / stride_w + 1;
+    const int channel_size = height * width;
+    for (int channel = channels; channel--; dptr += channel_size) {
+      for (int kernel_row = 0; kernel_row < kernel_h; ++kernel_row) {
+        for (int kernel_col = 0; kernel_col < kernel_w; ++kernel_col) {
+          int input_row = -pad_h + kernel_row * dilation_h;
+          for (int output_rows = output_h; output_rows; --output_rows) {
+            if (!IsAGreaterThanZeroAndLessThanB(input_row, height)) {
+              for (int output_cols = output_w; output_cols; --output_cols) {
+                *(data_col++) = 0;
+              }
+            } else {
+              int input_col = -pad_w + kernel_col * dilation_w;
+              for (int output_col = output_w; output_col; --output_col) {
+                if (IsAGreaterThanZeroAndLessThanB(input_col, width)) {
+                  *(data_col++) = dptr[input_row * width + input_col];
+                } else {
                   *(data_col++) = 0;
                 }
-              } else {
-                int input_col = -pad_w + kernel_col * dilation_w;
-                for (int output_col = output_w; output_col; --output_col) {
-                  if (IsAGreaterThanZeroAndLessThanB(input_col, width)) {
-                    *(data_col++) = dptr[input_row * width + input_col];
-                  } else {
-                    *(data_col++) = 0;
-                  }
-                  input_col += stride_w;
-                }
+                input_col += stride_w;
               }
-              input_row += stride_h;
             }
+            input_row += stride_h;
           }
         }
       }
-    });
+    }
   }
 };
 
@@ -155,7 +147,7 @@ void ConvolutionKernel<device_type, T>::ComputeWeightDiff(
   const int64_t conv_sliding_window_steps = out_diff_blob->shape().Count(2);
 
   Memset<device_type>(ctx.device_ctx, weight_diff_blob->mut_dptr(), 0,
-                      weight_diff_blob->ByteSizeOfDataField());
+                      weight_diff_blob->ByteSizeOfDataContentField());
   for (size_t i = 0; i < data_num; ++i) {
     KernelUtil<device_type, T>::BlasGemm(
         ctx.device_ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasNoTrans,
@@ -182,7 +174,7 @@ void ConvolutionKernel<device_type, T>::ComputeBiasDiff(
   const int64_t conv_sliding_window_steps = out_diff_blob->shape().Count(2);
 
   Memset<device_type>(ctx.device_ctx, bias_diff_blob->mut_dptr(), 0,
-                      bias_diff_blob->ByteSizeOfDataField());
+                      bias_diff_blob->ByteSizeOfDataContentField());
   for (size_t i = 0; i < data_num; ++i) {
     KernelUtil<device_type, T>::BlasGemm(
         ctx.device_ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasNoTrans,
@@ -279,7 +271,7 @@ void ConvolutionKernel<device_type, T>::InitModelBlobsWithDir(
 
 template<DeviceType device_type, typename T>
 void ConvolutionKernel<device_type, T>::InitModelTmpBlobs(
-    const KernelCtx& ctx,
+    const KernelCtx& ctx, const ParallelContext& parallel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (this->op_conf().convolution_conf().has_bias_term()) {
     FillConf bias_multiplier_fill_conf;
@@ -288,5 +280,27 @@ void ConvolutionKernel<device_type, T>::InitModelTmpBlobs(
                                      0, BnInOp2Blob("bias_multiplier"));
   }
 }
+
+namespace {
+
+Kernel* CreateConvolutionKernel(DeviceType dev_type,
+                                const KernelConf& kernel_conf) {
+  static const HashMap<std::string, std::function<Kernel*()>> creators = {
+#define CONVOLUTION_KERNEL_ENTRY(device_type, data_type_pair)          \
+  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {  \
+     return new ConvolutionKernel<device_type,                         \
+                                  OF_PP_PAIR_FIRST(data_type_pair)>(); \
+   }},
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+          CONVOLUTION_KERNEL_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};
+  CHECK(kernel_conf.has_convolution_conf());
+  return creators.at(
+      GetHashKey(dev_type, kernel_conf.convolution_conf().data_type()))();
+}
+
+}  // namespace
+
+COMMAND(AddKernelCreator(OperatorConf::kConvolutionConf,
+                         CreateConvolutionKernel));
 
 }  // namespace oneflow

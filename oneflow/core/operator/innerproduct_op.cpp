@@ -26,8 +26,7 @@ void InnerProductOp::InferBlobDescs(
   // useful vars
   const InnerProductOpConf& conf = op_conf().innerproduct_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  CHECK_EQ(in_blob_desc->data_type(),
-           JobDesc::Singleton()->default_data_type());
+  CHECK_EQ(in_blob_desc->data_type(), JobDesc::Singleton()->DefaultDataType());
   int32_t out_num = conf.out_num();
   if (parallel_ctx->policy() == kModelParallel) {
     BalancedSplitter splitter(out_num, parallel_ctx->parallel_num());
@@ -36,31 +35,37 @@ void InnerProductOp::InferBlobDescs(
   // out
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   out_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(0), out_num});
-  out_blob_desc->set_data_type(JobDesc::Singleton()->default_data_type());
+  out_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
   out_blob_desc->set_has_data_id(in_blob_desc->has_data_id());
 
   // weight
   BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
   weight_blob_desc->mut_shape() =
       Shape({out_num, in_blob_desc->shape().Count(1)});
-  weight_blob_desc->set_data_type(JobDesc::Singleton()->default_data_type());
+  weight_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
   weight_blob_desc->set_has_data_id(false);
 
   if (conf.has_bias_term()) {
     // bias
     BlobDesc* bias_blob_desc = GetBlobDesc4BnInOp("bias");
     bias_blob_desc->mut_shape() = Shape({1, out_num});
-    bias_blob_desc->set_data_type(JobDesc::Singleton()->default_data_type());
+    bias_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
     bias_blob_desc->set_has_data_id(false);
 
     // bias_multiplier
     BlobDesc* bias_mt_blob_desc = GetBlobDesc4BnInOp("bias_multiplier");
     bias_mt_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(0), 1});
-    bias_mt_blob_desc->set_data_type(JobDesc::Singleton()->default_data_type());
+    bias_mt_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
     bias_mt_blob_desc->set_has_data_id(false);
   }
 }
 
+void InnerProductOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  DataType dtype = GetBlobDesc4BnInOp("in")->data_type();
+  kernel_conf->mutable_innerproduct_conf()->set_data_type(dtype);
+}
 REGISTER_OP(OperatorConf::kInnerproductConf, InnerProductOp);
 
 }  // namespace oneflow

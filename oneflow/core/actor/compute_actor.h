@@ -13,18 +13,25 @@ class CompActor : public Actor {
  protected:
   CompActor() = default;
 
-  virtual void VirtualCompActorInit(const TaskProto& task_proto,
-                                    const ThreadCtx& thread_ctx) {}
+  virtual void VirtualCompActorInit(const TaskProto& task_proto) {}
+
+  const ParallelContext& parallel_ctx() const { return parallel_ctx_; }
 
  private:
-  void VirtualActorInit(const TaskProto& task_proto,
-                        const ThreadCtx& thread_ctx) override {
+  void VirtualActorInit(const TaskProto& task_proto) override {
     parallel_ctx_ = task_proto.parallel_ctx();
-    VirtualCompActorInit(task_proto, thread_ctx);
+    VirtualCompActorInit(task_proto);
   }
 
   ParallelContext parallel_ctx_;
 };
+
+inline int64_t GetLastPieceIdForModelVersionId(int64_t model_version_id) {
+  int32_t staleness = JobDesc::Singleton()->Staleness();
+  if (staleness == -1) { return std::numeric_limits<int64_t>::max(); }
+  int32_t num_of_pieces_in_batch = JobDesc::Singleton()->NumOfPiecesInBatch();
+  return (model_version_id + staleness + 1) * num_of_pieces_in_batch - 1;
+}
 
 }  // namespace oneflow
 

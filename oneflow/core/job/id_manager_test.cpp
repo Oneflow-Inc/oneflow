@@ -37,11 +37,11 @@ TEST(IDMgr, compile_machine_id_and_name) {
   ASSERT_EQ(IDMgr::Singleton()->MachineName4MachineId(7), "machine_7");
 }
 
-TEST(IDMgr, compile_special_thrd_loc_id) {
+TEST(IDMgr, compile_special_thrd_id) {
   Init();
-  ASSERT_EQ(IDMgr::Singleton()->PersistenceThrdLocId(), 8);
-  ASSERT_EQ(IDMgr::Singleton()->BoxingThrdLocId(), 9);
-  ASSERT_EQ(IDMgr::Singleton()->CommNetThrdLocId(), 10);
+  ASSERT_EQ(IDMgr::Singleton()->PersistenceThrdId(), 8);
+  ASSERT_EQ(IDMgr::Singleton()->BoxingThrdId(), 9);
+  ASSERT_EQ(IDMgr::Singleton()->CommNetThrdId(), 10);
 }
 
 TEST(IDMgr, compile_task_id) {
@@ -75,20 +75,18 @@ TEST(IDMgr, runtime_machine_id) {
             1);
 }
 
-TEST(IDMgr, runtime_thrd_loc_id) {
+TEST(IDMgr, runtime_thrd_id) {
   Init();
   int64_t actor_id5_machine1device3 =
       (static_cast<int64_t>(1) << (8 + 39))  // machine_id_1
       + (static_cast<int64_t>(3) << 39)      // device_id_3
       + 5;                                   // actor_id_5
-  ASSERT_EQ(IDMgr::Singleton()->ThrdLocId4ActorId(actor_id5_machine1device3),
-            3);
+  ASSERT_EQ(IDMgr::Singleton()->ThrdId4ActorId(actor_id5_machine1device3), 3);
   int64_t actor_id6_machine2device4 =
       (static_cast<int64_t>(2) << (8 + 39))  // machine_id_2
       + (static_cast<int64_t>(4) << 39)      // device_id_4
       + 6;                                   // actor_id_6
-  ASSERT_EQ(IDMgr::Singleton()->ThrdLocId4ActorId(actor_id6_machine2device4),
-            4);
+  ASSERT_EQ(IDMgr::Singleton()->ThrdId4ActorId(actor_id6_machine2device4), 4);
 }
 
 }  // namespace oneflow

@@ -2,23 +2,23 @@
 
 namespace oneflow {
 
-TaskNode::TaskNode() : machine_id_(-1), thrd_loc_id_(-1), task_id_(-1) {}
+TaskNode::TaskNode() : machine_id_(-1), thrd_id_(-1), task_id_(-1) {}
 
 std::shared_ptr<RegstDesc> TaskNode::GetProducedRegst(const std::string& name) {
   return produced_regsts_.at(name);
 }
 
 DeviceType TaskNode::device_type() const {
-  return IDMgr::Singleton()->GetDeviceTypeFromThrdLocId(thrd_loc_id_);
+  return IDMgr::Singleton()->GetDeviceTypeFromThrdId(thrd_id_);
 }
 
 void TaskNode::set_machine_id(int64_t val) {
   machine_id_ = val;
-  if (thrd_loc_id_ != -1) { UpdateTaskId(); }
+  if (thrd_id_ != -1) { UpdateTaskId(); }
 }
 
-void TaskNode::set_thrd_loc_id(int64_t val) {
-  thrd_loc_id_ = val;
+void TaskNode::set_thrd_id(int64_t val) {
+  thrd_id_ = val;
   if (machine_id_ != -1) { UpdateTaskId(); }
 }
 
@@ -42,14 +42,14 @@ void TaskNode::InferMemCaseOfProducedRegst() {
 
 void TaskNode::UpdateTaskId() {
   CHECK_NE(machine_id_, -1);
-  CHECK_NE(thrd_loc_id_, -1);
-  task_id_ = IDMgr::Singleton()->NewTaskId(machine_id_, thrd_loc_id_);
+  CHECK_NE(thrd_id_, -1);
+  task_id_ = IDMgr::Singleton()->NewTaskId(machine_id_, thrd_id_);
 }
 
 std::string TaskNode::VisualStr() const {
   std::stringstream ss;
   ss << TaskType_Name(GetTaskType()) << "\\n"
-     << machine_id_ << ":" << thrd_loc_id_ << "\\n"
+     << machine_id_ << ":" << thrd_id_ << "\\n"
      << task_id_;
   return ss.str();
 }
@@ -66,7 +66,7 @@ bool TaskNode::IsMeaningLess() {
 void TaskNode::ToProto(TaskProto* task_proto) {
   task_proto->set_task_type(GetTaskType());
   task_proto->set_machine_id(machine_id_);
-  task_proto->set_thrd_loc_id(thrd_loc_id_);
+  task_proto->set_thrd_id(thrd_id_);
   task_proto->set_task_id(task_id_);
   exec_gph_.ToExecSequence(parallel_ctx(), task_proto->mutable_exec_sequence());
   auto produced_regst_proto = task_proto->mutable_produced_regst_desc();

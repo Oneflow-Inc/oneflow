@@ -207,6 +207,7 @@ ChainGraph::ChainGraph(bool is_train) {
   }
   BuildModelStruct(is_train);
   BuildRnnStruct();
+  ForEachNode([](ChainNode* node) { node->set_data_output_lbns(); });
   ToDotWithAutoFilePath();
 }
 
@@ -346,7 +347,7 @@ std::shared_ptr<const Operator> ConstructModelUpdateOp() {
   OperatorConf mdupdt_conf;
   mdupdt_conf.set_name("model_update_" + NewUniqueId());
   const JobDesc* job_desc = JobDesc::Singleton();
-  if (job_desc->is_train()) {
+  if (job_desc->IsTrain()) {
     const TrainConf& train_conf = job_desc->job_conf().train_conf();
     if (train_conf.has_normal_mdupdt_conf()) {
       *(mdupdt_conf.mutable_normal_mdupdt_conf()) =
@@ -360,7 +361,7 @@ std::shared_ptr<const Operator> ConstructModelUpdateOp() {
     } else {
       UNEXPECTED_RUN();
     }
-  } else if (job_desc->is_predict()) {
+  } else if (job_desc->IsPredict()) {
     mdupdt_conf.mutable_normal_mdupdt_conf();
   } else {
     UNEXPECTED_RUN();
