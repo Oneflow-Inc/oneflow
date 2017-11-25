@@ -50,7 +50,7 @@ void AccumulateActor::Act() {
     Blob* in_blob = in_regst->packed_blob();
     Blob* out_blob = out_regst->packed_blob();
     cpy_func_(kernel_ctx.device_ctx, out_blob->mut_dptr(), in_blob->dptr(),
-              in_blob->ByteSizeOfDataField());
+              in_blob->ByteSizeOfDataContentField());
   } else {
     AsyncLaunchKernel(kernel_ctx, [this](uint64_t regst_desc_id) -> Regst* {
       Regst* regst = GetCurWriteableRegst(regst_desc_id);

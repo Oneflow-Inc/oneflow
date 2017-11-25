@@ -27,7 +27,8 @@ class KTCommon<DeviceType::kCPU, T> final {
  public:
   static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc, T* val) {
     Blob* ret = CreateBlob<DeviceType::kCPU>(blob_desc);
-    CudaCheck(cudaMemcpy(ret->mut_dptr(), val, ret->ByteSizeOfDataField(),
+    CudaCheck(cudaMemcpy(ret->mut_dptr(), val,
+                         ret->ByteSizeOfDataContentField(),
                          cudaMemcpyHostToHost));
     return ret;
   }
@@ -40,8 +41,9 @@ class KTCommon<DeviceType::kCPU, T> final {
         ASSERT_FLOAT_EQ(lhs->dptr<T>()[i], rhs->dptr<T>()[i]);
       }
     } else {
-      ASSERT_EQ(memcmp(lhs->dptr(), rhs->dptr(), lhs->ByteSizeOfDataField()),
-                0);
+      ASSERT_EQ(
+          memcmp(lhs->dptr(), rhs->dptr(), lhs->ByteSizeOfDataContentField()),
+          0);
     }
   }
 

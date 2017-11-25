@@ -59,6 +59,16 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
   VirtualFixParallelDesc(pr_desc);
 }
 
+static bool HasBlobDescWithDataId(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::vector<std::string>& bn_in_ops) {
+  for (const std::string& bn_in_op : bn_in_ops) {
+    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
+    if (blob_desc && blob_desc->has_data_id()) { return true; }
+  }
+  return false;
+}
+
 void Operator::GenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
@@ -72,6 +82,10 @@ void Operator::GenKernelConf(
   *(kernel_conf->mutable_model_bns()) = StdVec2PbRpf(model_bns_);
   *(kernel_conf->mutable_model_diff_bns()) = StdVec2PbRpf(model_diff_bns_);
   *(kernel_conf->mutable_model_tmp_bns()) = StdVec2PbRpf(model_tmp_bns_);
+  kernel_conf->set_need_do_data_id(false);
+  if (HasBlobDescWithDataId(GetBlobDesc4BnInOp, output_bns_)) {
+    kernel_conf->set_need_do_data_id(true);
+  }
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
 }
 

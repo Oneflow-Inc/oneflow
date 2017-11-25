@@ -71,26 +71,31 @@ void Kernel::Backward(
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
 }
 
-void Kernel::BackwardDataContent(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNEXPECTED_RUN();
-}
-
 template<DeviceType device_type>
 void KernelIf<device_type>::ForwardDataId(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK_EQ(kernel_conf().input_bns().size(), 1);
-  const Blob* in_blob = BnInOp2Blob(kernel_conf().input_bns(0));
-  CopyDataIdToAllOb(ctx.device_ctx, BnInOp2Blob, in_blob);
+  if (kernel_conf().input_bns().size() == 1) {
+    const Blob* in_blob = BnInOp2Blob(kernel_conf().input_bns(0));
+    CopyDataIdToAllOb(ctx.device_ctx, BnInOp2Blob, in_blob);
+  } else {
+    CHECK_EQ(kernel_conf().input_bns().size(),
+             kernel_conf().output_bns().size());
+    FOR_RANGE(size_t, i, 0, kernel_conf().input_bns().size()) {
+      const std::string& ibn = kernel_conf().input_bns(i);
+      const std::string& obn = kernel_conf().output_bns(i);
+      Blob* in_blob = BnInOp2Blob(ibn);
+      Blob* out_blob = BnInOp2Blob(obn);
+      out_blob->CopyDataIdFrom<device_type>(ctx.device_ctx, in_blob);
+    }
+  }
 }
 
 template<DeviceType device_type>
 void KernelIf<device_type>::BackwardDataId(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNEXPECTED_RUN();
+  // do nothing
 }
 
 template<DeviceType device_type>

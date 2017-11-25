@@ -22,7 +22,7 @@ void PoolingKernel<device_type, T>::Backward(
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
   if (in_diff_blob == nullptr) { return; }
   Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
-                      in_diff_blob->ByteSizeOfDataField());
+                      in_diff_blob->ByteSizeOfDataContentField());
   const PoolingOpConf& pooling_conf = op_conf().pooling_conf();
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   const Blob* idx_blob = BnInOp2Blob("idx");

@@ -103,7 +103,7 @@ void RegstDesc::EraseZeroSizeBlob() {
   EraseIf<std::string, std::unique_ptr<BlobDesc>>(
       &lbn2blob_desc_,
       [](HashMap<std::string, std::unique_ptr<BlobDesc>>::iterator it) {
-        return it->second->ByteSizeOfDataField() == 0;
+        return it->second->ByteSizeOfDataContentField() == 0;
       });
 }
 
