@@ -26,6 +26,7 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> loss_regst = GetProducedRegst("loss");
   std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff");
   std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
+  in_diff_regst->CopyBlobDescFrom(in_regst.get());
   std::shared_ptr<const Operator> op = chain_node()->SoleOp();
   CHECK(op->IsLossOp());
   ExecNode* node = mut_exec_gph().NewNode();
@@ -35,13 +36,13 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
   }
   loss_regst->AddLbn(op->Lbn4BnInOp(op->SoleObn()));
   node->BindBnInOpAndRegst(op->SoleObn(), loss_regst);
-  for (const std::string& in_diff_bn : op->input_diff_bns()) {
-    in_diff_regst->AddLbn(op->Lbn4BnInOp(in_diff_bn));
-    node->BindBnInOpAndRegst(in_diff_bn, in_diff_regst);
+  for (const std::string& idbn : op->input_diff_bns()) {
+    in_diff_regst->AddLbn(op->Lbn4BnInOp(idbn));
+    node->BindBnInOpAndRegst(idbn, in_diff_regst);
   }
-  for (const std::string& data_tmp_bn : op->data_tmp_bns()) {
-    data_tmp_regst->AddLbn(op->Lbn4BnInOp(data_tmp_bn));
-    node->BindBnInOpAndRegst(data_tmp_bn, data_tmp_regst);
+  for (const std::string& dtbn : op->data_tmp_bns()) {
+    data_tmp_regst->AddLbn(op->Lbn4BnInOp(dtbn));
+    node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
   }
   op->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), parallel_ctx());
 }
