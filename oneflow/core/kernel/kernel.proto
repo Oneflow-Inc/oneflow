@@ -30,6 +30,6 @@ message KernelConf {
   
   oneof kernel_type {
     ConvolutionKernelConf convolution_conf = 100;
-    ConcatKernelConf concat_conf = 101; 
+    ConcatKernelConf concat_conf = 113; 
   }
 }

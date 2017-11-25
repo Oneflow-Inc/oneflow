@@ -22,12 +22,13 @@ class ConcatKernel final : public KernelIf<device_type> {
   using MemCopyFuncType = std::function<void(const KernelCtx& ctx, T*, T*,
                                              const int64_t, cudaMemcpyKind)>;
 
-  void ConcatKernelWork(const KernelCtx&, bool,
+  void ConcatKernelWork(const KernelCtx&, const std::string&,
+                        const PbRpf<std::string>&,
                         std::function<Blob*(const std::string&)>,
                         MemCopyFuncType) const;
 
-  void CopyDataIdToOb(const KernelCtx&, bool, const std::string&, const int32_t,
-                      cudaMemcpyKind,
+  void CopyDataIdToOb(const KernelCtx&, const PbRpf<std::string>&,
+                      const std::string&, const int32_t, cudaMemcpyKind,
                       std::function<Blob*(const std::string&)>) const;
 };
 
