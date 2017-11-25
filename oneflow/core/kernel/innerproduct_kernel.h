@@ -2,23 +2,23 @@
 #define ONEFLOW_CORE_KERNEL_INNERPRODUCT_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/kernel_context.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class InnerProductKernel final : public Kernel {
+class InnerProductKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(InnerProductKernel);
   InnerProductKernel() = default;
   ~InnerProductKernel() = default;
 
-  void Forward(const KernelCtx&,
-               std::function<Blob*(const std::string&)>) const override;
-  void Backward(const KernelCtx&,
-                std::function<Blob*(const std::string&)>) const override;
-
  private:
+  void ForwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
+  void BackwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
   void InitModelBlobsWithRandomSeed(
       const KernelCtx&, std::mt19937,
       std::function<Blob*(const std::string&)>) const override;
@@ -27,7 +27,7 @@ class InnerProductKernel final : public Kernel {
       const std::string& model_load_dir,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void InitModelTmpBlobs(
-      const KernelCtx& ctx,
+      const KernelCtx& ctx, const ParallelContext& parallel_ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
