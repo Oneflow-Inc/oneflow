@@ -18,9 +18,10 @@ class CopyHdActor final : public Actor {
 
   int HandlerNormal(const ActorMsg&) override;
 
+  void Act() override;
   bool IsReadReady() override { return !pending_in_regst_.empty(); }
   bool IsReadAlwaysUnReadyFromNow() override;
-  void Act() override;
+  void AsyncReturnAllReadableRegst() override;
 
   bool is_in_eord_;
   std::queue<Regst*> pending_in_regst_;
