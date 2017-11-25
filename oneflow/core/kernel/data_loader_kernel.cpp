@@ -10,7 +10,6 @@ template<typename T>
 void DataLoaderKernel<T>::Forward(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  InitInStream(kernel_ctx);
   Blob* out_blob = BnInOp2Blob("out");
   CHECK_EQ(GetDataType<T>::val, out_blob->data_type());
   int64_t piece_size = out_blob->shape().At(0);
@@ -35,6 +34,8 @@ void DataLoaderKernel<T>::Forward(
       }
       CHECK_EQ(*(line_ptr - 1), '\0');
     } else {
+      CHECK(kernel_ctx.other);
+      *(static_cast<bool*>(kernel_ctx.other)) = true;
       CHECK_EQ(read_status, -1);
       CHECK(out_blob->has_data_id());
       memset(out_blob->mut_data_id(i), '\0',
@@ -47,10 +48,9 @@ void DataLoaderKernel<T>::Forward(
 }
 
 template<typename T>
-void DataLoaderKernel<T>::InitInStream(const KernelCtx& kernel_ctx) const {
-  if (in_stream_) { return; }
-  std::string data_dir = op_conf.data_loader_conf().data_dir();
-  int64_t parallel_id = reinterpret_cast<int64_t>(kernel_ctx.other);
+void DataLoaderKernel<T>::Init(const KernelConf& kernel_conf) {
+  std::string data_dir = kernel_conf.op_conf().data_loader_conf().data_dir();
+  int64_t parallel_id = kernel_conf.data_loader_conf().parallel_id();
   std::string file_path = data_dir + "part-" + std::to_string(parallel_id);
   if (JobDesc::Singleton()->IsTrain()) {
     in_stream_.reset(new CyclicPersistentInStream(GlobalFS(), file_path));
@@ -58,5 +58,20 @@ void DataLoaderKernel<T>::InitInStream(const KernelCtx& kernel_ctx) const {
     in_stream_.reset(new NormalPersistentInStream(GlobalFS(), file_path));
   }
 }
+
+namespace {
+
+Kernel* CreateDataLoaderKernel(const KernelConf& kernel_conf) {
+  static const HashMap<int, std::function<Kernel*()>> creators = {
+#define DATA_LOADER_KERNEL_ENTRY(type_cpp, type_proto) \
+  {type_proto, []() { return new DataLoaderKernel<type_cpp>; }},
+      OF_PP_FOR_EACH_TUPLE(DATA_LOADER_KERNEL_ENTRY, ARITHMETIC_DATA_TYPE_SEQ)};
+  return creators.at(kernel_conf.op_conf().data_loader_conf().data_type())();
+}
+
+}  // namespace
+
+COMMAND(AddKernelCreator(OperatorConf::kDataLoaderConf,
+                         CreateDataLoaderKernel));
 
 }  // namespace oneflow
