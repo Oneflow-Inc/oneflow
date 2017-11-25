@@ -33,7 +33,8 @@ class KTCommon<DeviceType::kGPU, T> final {
  public:
   static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc, T* val) {
     Blob* ret = CreateBlob<DeviceType::kGPU>(blob_desc);
-    CudaCheck(cudaMemcpy(ret->mut_dptr(), val, ret->ByteSizeOfDataField(),
+    CudaCheck(cudaMemcpy(ret->mut_dptr(), val,
+                         ret->ByteSizeOfDataContentField(),
                          cudaMemcpyHostToDevice));
     return ret;
   }
@@ -42,16 +43,19 @@ class KTCommon<DeviceType::kGPU, T> final {
     Blob* cpu_lhs = CreateBlob<DeviceType::kCPU>(lhs->blob_desc_ptr());
     Blob* cpu_rhs = CreateBlob<DeviceType::kCPU>(rhs->blob_desc_ptr());
     CudaCheck(cudaMemcpy(cpu_lhs->mut_dptr(), lhs->dptr(),
-                         lhs->ByteSizeOfDataField(), cudaMemcpyDeviceToHost));
+                         lhs->ByteSizeOfDataContentField(),
+                         cudaMemcpyDeviceToHost));
     CudaCheck(cudaMemcpy(cpu_rhs->mut_dptr(), rhs->dptr(),
-                         rhs->ByteSizeOfDataField(), cudaMemcpyDeviceToHost));
+                         rhs->ByteSizeOfDataContentField(),
+                         cudaMemcpyDeviceToHost));
     KTCommon<DeviceType::kCPU, T>::BlobCmp(cpu_lhs, cpu_rhs);
   }
 
   static void CheckFillResult(const Blob* blob, const FillConf& fill_conf) {
     Blob* cpu_blob = CreateBlob<DeviceType::kCPU>(blob->blob_desc_ptr());
     CudaCheck(cudaMemcpy(cpu_blob->mut_dptr(), blob->dptr(),
-                         blob->ByteSizeOfDataField(), cudaMemcpyDeviceToHost));
+                         blob->ByteSizeOfDataContentField(),
+                         cudaMemcpyDeviceToHost));
     KTCommon<DeviceType::kCPU, T>::CheckFillResult(cpu_blob, fill_conf);
   }
 };

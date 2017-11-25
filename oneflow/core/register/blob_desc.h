@@ -36,7 +36,7 @@ class BlobDesc final {
     proto->set_has_data_id(has_data_id_);
   }
   size_t ByteSizeOfDataIdField() const;
-  size_t ByteSizeOfDataField() const;
+  size_t ByteSizeOfDataContentField() const;
   size_t TotalByteSize() const;
   bool operator==(const BlobDesc& rhs) const;
 

@@ -48,8 +48,8 @@ class Blob final {
   size_t ByteSizeOfDataIdField() const {
     return blob_desc_->ByteSizeOfDataIdField();
   }
-  size_t ByteSizeOfDataField() const {
-    return blob_desc_->ByteSizeOfDataField();
+  size_t ByteSizeOfDataContentField() const {
+    return blob_desc_->ByteSizeOfDataContentField();
   }
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
 
