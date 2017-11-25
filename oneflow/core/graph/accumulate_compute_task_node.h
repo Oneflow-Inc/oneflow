@@ -13,6 +13,7 @@ class AccCompTaskNode : public CompTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
+  void BuildExecGphAndRegst() override;
 
  private:
 };
