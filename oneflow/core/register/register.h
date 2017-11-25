@@ -30,6 +30,7 @@ class PieceStatus final {
 
   int GetIntoNextStatus();
   bool IsLast() const;
+  bool IsLastCol() const { return col_id_ == max_col_id_; }
   bool IsNextColOf(const PieceStatus& pre) const;
 
  private:

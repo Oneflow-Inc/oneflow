@@ -34,7 +34,7 @@ class RnnFwDataCompActor final : public CompActor {
   struct Material4Act {
     enum class RnnKernelType {
       kDataLoader = 0,
-      kLookup,
+      kNormal,
       kRnnCellWithInitial,
       kRnnCellWithoutInitial
     };
@@ -56,6 +56,7 @@ class RnnFwDataCompActor final : public CompActor {
   void set_material4act(Material4Act::RnnKernelType type,
                         Regst* in_regst, Regst* model_regst, 
                         Regst* initial_regst, Regst* out_regst);
+  void UpdtInAndModelStatesOfRnnCell();
 
   CudaStreamHandle cuda_handle_;
   int64_t expected_model_version_id_;
@@ -66,6 +67,9 @@ class RnnFwDataCompActor final : public CompActor {
 
   int64_t initial_hidden_regst_desc_id_;
   std::queue<Regst*> initial_hidden_regsts_;
+
+  int64_t model_tmp_regst_desc_id_;
+  Regst* model_tmp_regst_;
 
   int64_t model_regst_desc_id_;
   Regst* latest_model_regst_;

@@ -134,6 +134,10 @@ void Actor::AsyncSendRegstMsgToConsumer(
       if (!IsAllowedActor(consumer)) { continue; }
       total_reading_cnt_ += 1;
       regst_reading_cnt_it->second += 1;
+      if ((this_actor_id == consumer)
+          && (regst->piece_status().IsLastCol())) {
+        continue;
+      }
       device_ctx_->AddCallBack([consumer, regst, this_actor_id]() {
         if (this_actor_id == consumer) {
           regst->set_recurrent_flag(-1);
