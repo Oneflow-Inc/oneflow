@@ -50,20 +50,20 @@ void BackwardCompTaskNode::BuildExecGphFromUserOps(
   for (std::shared_ptr<const Operator> op : chain_node()->op_vec()) {
     ExecNode* cur_node = mut_exec_gph().NewNode();
     cur_node->mut_op() = op;
-    for (const std::string& ibn : op->input_bns()) {
-      const std::string& lbn = op->Lbn4BnInOp(ibn);
-      CHECK(lbn2producer->insert({lbn, {cur_node, ibn}}).second);
+    for (const std::string& idbn : op->input_diff_bns()) {
+      const std::string& lbn = op->Lbn4BnInOp(idbn);
+      CHECK(lbn2producer->insert({lbn, {cur_node, idbn}}).second);
     }
   }
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
-    for (const std::string& obn : cur_node->op()->output_bns()) {
-      const std::string& lbn = cur_node->op()->Lbn4BnInOp(obn);
+    for (const std::string& odbn : cur_node->op()->output_diff_bns()) {
+      const std::string& lbn = cur_node->op()->Lbn4BnInOp(odbn);
       auto producer_it = lbn2producer->find(lbn);
       if (producer_it != lbn2producer->end()) {
         ExecEdge* edge = mut_exec_gph().NewEdge();
         edge->set_lbn(lbn);
-        edge->mut_src_bn() = GenDiffBn(producer_it->second.second);
-        edge->mut_dst_bn() = GenDiffBn(obn);
+        edge->mut_src_bn() = producer_it->second.second;
+        edge->mut_dst_bn() = odbn;
         Connect(producer_it->second.first, edge, cur_node);
       }
     }
@@ -156,7 +156,7 @@ void BackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
 }
 
 std::shared_ptr<RegstDesc> BackwardCompTaskNode::GetRelatedInRegst() {
-  std::shared_ptr<RegstDesc> in_regst = nullptr;
+  std::shared_ptr<RegstDesc> in_regst;
   for (TaskEdge* edge : in_edges()) {
     TaskNode* src_node = edge->src_node();
     if (src_node->GetTaskType() != TaskType::kForward) { continue; }
@@ -169,6 +169,7 @@ std::shared_ptr<RegstDesc> BackwardCompTaskNode::GetRelatedInRegst() {
     }
     break;
   }
+  CHECK(in_regst);
   return in_regst;
 }
 
