@@ -14,6 +14,7 @@ void RnnFwDataCompActor::Init(const TaskProto& task_proto,
   out_regst_desc_id_ = RegstDescId4Name("out");
 
   expected_model_version_id_ = 0;
+  expected_initial_hidden_piece_id_ = 0;
   latest_model_regst_ = nullptr;
   model_tmp_regst_ = nullptr;
 
@@ -30,9 +31,10 @@ void RnnFwDataCompActor::Init(const TaskProto& task_proto,
       std::make_pair(data_load_buf_, parallel_id());
   kernel_ctx_.other = static_cast<void*>(&ctx);
 
-  if (in_desc_id_ == -1) {
+  if (in_regst_desc_id_ == -1) {
     CHECK_EQ(-1, initial_hidden_regst_desc_id_);
     CHECK_EQ(-1, model_regst_desc_id_);
+    CHECK_EQ(-1, model_tmp_regst_desc_id_);
     OF_SET_MSG_HANDLER(&RnnFwDataCompActor::WaitToStart);
   } else {
     // not consider out_regst, else will cause deadlock 
@@ -60,7 +62,7 @@ bool RnnFwDataCompActor::ModelSatisfySSP(Regst* in_regst, Regst* model_regst) {
 }
 
 void RnnFwDataCompActor::set_material4act(Material4Act::RnnKernelType type,
-    Regst* in_regst, Regst* model_regst, 
+    Regst* in_regst, Regst* model_regst, Regst* model_tmp_regst,
     Regst* initial_regst, Regst* out_regst) {
   material4act_.regst_id2regst.clear();
 
@@ -72,16 +74,19 @@ void RnnFwDataCompActor::set_material4act(Material4Act::RnnKernelType type,
     material4act_.regst_id2regst.emplace(out_regst_desc_id_, out_regst);
   }
   material4act_.regst_id2regst.emplace(in_regst_desc_id_, in_regst);
-  material4act_.regst_id2regst.emplace(model_regst_desc_id_, model_regst);
+  if (model_regst_desc_id_ != -1) {
+    material4act_.regst_id2regst.emplace(model_regst_desc_id_, model_regst);
+  }
+  if (model_tmp_regst_desc_id_ != -1) {
+    material4act_.regst_id2regst.emplace(model_tmp_regst_desc_id_, model_regst);
+  }
 }
 
 bool RnnFwDataCompActor::IsReadReady() {
-  CHECK_NE(-1, out_regst_desc_id_);
-
   // DataLoader
   if (in_desc_id_ == -1) { 
     set_material4act(Material4Act::RnnKernelType::kDataLoader,
-        nullptr, nullptr, nullptr, nullptr);
+        nullptr, nullptr, nullptr, nullptr, nullptr);
     return true; 
   }
   if (in_desc_id_ == -2) { return false; }  // dataloader but read to the end
@@ -96,14 +101,20 @@ bool RnnFwDataCompActor::IsReadReady() {
     }
     if (model_regst_desc_id_ != -1) {
       Regst* cur_regst = pid2in_regsts_.begin()->front();
-      bool ret = ModelSatisfySSP(cur_regst, latest_model_regst_);
-      if (ret == true) {
+      
+      if (ModelSatisfySSP(cur_regst, latest_model_regst_)) {
         set_material4act(Material4Act::RnnKernelType::kNormal,
-            cur_regst, latest_model_regst_, nullptr, nullptr)
+            cur_regst, latest_model_regst_, model_tmp_regst,
+            nullptr, nullptr)
+        return true;
+      } else {
+        return false;
       }
-      return ret;
+    } else {
+      set_material4act(Material4Act::RnnKernelType::kNormal,
+          cur_regst, nullptr, model_tmp_regst, nullptr, nullptr);
+      return true;
     }
-    return true;
   }
 
   // must handle rnn_cell now
@@ -118,11 +129,10 @@ bool RnnFwDataCompActor::IsReadReady() {
         CHECK(initial_hidden_regsts_.front()->piece_status().piece_id() == 
           cur_regst->piece_status().piece_id());
         if (latest_model_regst_) {
-          bool ret = ModelSatisfySSP(cur_regst->piece_status().piece_id(),
-                                latest_model_regst_.model_version_id());
+          bool ret = ModelSatisfySSP(cur_regst, latest_model_regst_);
           if (ret == true) {
             set_material4act(Material4Act::RnnKernelType::kRnnCellWithInitial,
-                cur_regst, latest_model_regst_, 
+                cur_regst, latest_model_regst_, nullptr,
                 initial_hidden_regsts_.front(), nullptr);
           }
           return ret;
@@ -135,19 +145,16 @@ bool RnnFwDataCompActor::IsReadReady() {
       if (iter == pid2out_regst_.end()) {
         continue;
       } else {
-        if (cur_regst->piece_status().IsNextColOf(iter->piece_status())) {
-          auto model_iter = pid2model_regst_.find(cur_regst->piece_status().piece_id());
-          CHECK(pid2model_regst_.end() != model_iter);
-          set_material4act(Material4Act::RnnKernelType::kRnnCell,
-              cur_regst, model_iter->second, nullptr, iter->second);
-          return true;
-        } else {
-          continue;
-        }
+        CHECK(cur_regst->piece_status().IsNextColOf(iter->piece_status()));
+        auto model_iter = pid2model_regst_.find(cur_regst->piece_status().piece_id());
+        CHECK(pid2model_regst_.end() != model_iter);
+        set_material4act(Material4Act::RnnKernelType::kRnnCell,
+            cur_regst, model_iter->second, nullptr, nullptr, iter->second);
+        return true;
       }
     }
   }
-  return true;
+  return false;
 }
 
 int RnnFwDataCompActor::WaitToStart(const ActorMsg& msg) {
@@ -174,6 +181,11 @@ int RnnFwDataCompActor::HandlerNormal(const ActorMsg& msg) {
     ProcessEord();
     if (msg_handler() == &RnnFwDataCompActor::HandlerZombie
         || msg_handler() == nullptr) {
+      CHECK(pid2in_regsts_.empty());
+      CHECK(pid2out_regst_.empty());
+      CHECK(initial_hidden_regsts_.empty());
+      CHECK(pid2model_regst_.empty());
+      CHECK(model_regst2cnt_.empty());
       AsyncSendMsgToModelAndModelTmpProducer();
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
@@ -181,9 +193,9 @@ int RnnFwDataCompActor::HandlerNormal(const ActorMsg& msg) {
     if (TryUpdtStateAsProducedRegst(regst) != 0) {
       int64_t cur_piece_id = regst->piece_status().piece_id();
       if (regst->regst_desc_id() == in_regst_desc_id_) {
-        // CHECK(regst->piece_status() == expected_piece_status_); // not CHECK here
+        CHECK(regst->piece_status() == expected_piece_status_);
         if (pid2in_regsts_.empty()) {
-          mut_num_of_read_empty() -= 1;
+          mut_num_of_read_empty() = 0;
         }
         auto it = pid2in_regsts_.find(cur_piece_id);
         if (it == pid2in_regsts_.end()) {
@@ -192,10 +204,11 @@ int RnnFwDataCompActor::HandlerNormal(const ActorMsg& msg) {
         } else {
           it->second.push(regst);
         }
+        expected_piece_status_.GetIntoNextStatus();
       } else if (regst->regst_desc_id() == initial_hidden_regst_desc_id_) {
-        // CHECK_EQ(regst->piece_status().piece_id(), // not CHECK here
-        //         expected_piece_status_.piece_id());
+        CHECK_EQ(regst->piece_status().piece_id(), expected_initial_hidden_piece_id_);
         initial_hidden_regsts_.push(regst);
+        expected_initial_hidden_piece_id_ += 1;
       } else if (regst->regst_desc_id() == model_regst_desc_id_) {
         CHECK_EQ(regst->model_version_id(), expected_model_version_id_);
         auto iter = model_regst2cnt_.find(latest_model_regst_);
@@ -209,13 +222,8 @@ int RnnFwDataCompActor::HandlerNormal(const ActorMsg& msg) {
         model_tmp_regst_ = regst;
       } else {
         CHECK_EQ(out_regst_desc_id_, regst->regst_desc_id());
-        CHECK_EQ(-1, regst->recurrent_flag()); // recurrent_flag must be -1
-        auto it = pid2out_regst_.find(cur_piece_id);
-        if (it == pid2out_regst_.end()) {
-          pid2out_regst_.emplace(cur_piece_id, regst);
-        } else {
-          it->second = regst;
-        }
+        CHECK_EQ(-1, regst->recurrent_flag());
+        pid2out_regst_.emplace(cur_piece_id, regst); // mustn't exist in pid2out_regst_
       }
     }
     ActUntilFail();
@@ -226,6 +234,9 @@ int RnnFwDataCompActor::HandlerNormal(const ActorMsg& msg) {
 }
 
 int RnnFwDataCompActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
+  if (TryUpdtStateAsProducedRegst(msg.regst()) == 1) {
+    CHECK_EQ(-1, msg.regst().recurrent_flag());
+  }
   ActUntilFail();
   CHECK_NE(-1, in_regst_desc_id_);
   if (pid2in_regsts_.empty()) {
@@ -263,21 +274,15 @@ void RnnFwDataCompActor::UpdtInAndModelStatesOfRnnCell() {
 }
 
 void RnnFwDataCompActor::Act() {
-  PieceStatus tmp_piece_status = expected_piece_status_;
   if (material4act_.rnn_kernel_type == Material4Act::RnnKernelType::kDataLoader) {  
     AsyncLaunchKernel(kernel_ctx_, [this](int64_t regst_desc_id) -> Regst* {
       TODO();
     });
   } else if (material4act_.rnn_kernel_type == Material4Act::RnnKernelType::kNormal){
-    CHECK(pid2in_regsts_.begin()->front()->piece_status() == expected_piece_status_);
-    CHECK(material4act_.regst_id2regst.at(in_regst_desc_id_)->piece_status() == 
-        expected_piece_status_);
     AsyncLaunchKernel(kernel_ctx_, [this](int64_t regst_desc_id) -> Regst* {
       TODO();
     });
   } else {
-    CHECK(material4act_.regst_id2regst.at(in_regst_desc_id_)->piece_status() == 
-        expected_piece_status_);
     AsyncLaunchKernel(kernel_ctx_, [this](int64_t regst_desc_id) -> Regst* {
       TODO();
       // requirement:
@@ -294,20 +299,24 @@ void RnnFwDataCompActor::Act() {
     });
   }
 
-  int ret_code = expected_piece_status_.GetIntoNextStatus();
-
   int64_t model_version_id = -1;
   if (model_regst_desc_id_ != -1) { 
     model_version_id = latest_model_regst_->model_version_id(); 
   }
+  PieceStatus tmp_piece_status = ordered_piece_status_;
+  if (in_regst_desc_id_ != -1) {
+    tmp_piece_status = material4act_.regst_id2regst.at(in_regst_desc_id_)->piece_status();
+  }
   AsyncSendRegstMsgToConsumer([this, model_version_id](Regst* regst) {
-    regst->set_piece_status(tmp_piece_status);
+    regst->set_piece_status(tmp_piece_status_);
     regst->set_model_version_id(model_version_id);
   });
+  int ret = ordered_piece_status_.GetIntoNextStatus();
 
   if (material4act_.rnn_kernel_type != Material4Act::RnnKernelType::kDataLoader) {
     for (auto& kv : material4act_.regst_id2regst) {
       if (kv->first == model_regst_desc_id_) { continue; }
+      if (kv->first == model_tmp_regst_desc_id_) { continue; }
       AsyncSendRegstMsgToProducer(kv->second);
     }
 
@@ -326,7 +335,8 @@ void RnnFwDataCompActor::Act() {
     }
   }
 
-  if (ret_code == -1) {  // have handled the last col of last piece
+  if ((material4act_.rnn_kernel_type == Material4Act::RnnKernelType::kDataLoader) 
+      && (ret == -1)) {  // only for dataloder Actor
     in_desc_id_ = -2;
     AsyncSendMsgToModelAndModelTmpProducer();
     AsyncSendEORDMsgForAllProducedRegstDesc();

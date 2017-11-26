@@ -54,12 +54,13 @@ class RnnFwDataCompActor final : public CompActor {
   void AsyncSendMsgToModelAndModelTmpProducer();
   bool ModelSatisfySSP(int64_t piece_id, int64_t model_version_id) const;
   void set_material4act(Material4Act::RnnKernelType type,
-                        Regst* in_regst, Regst* model_regst, 
+                        Regst* in_regst, Regst* model_regst, Regst* model_tmp_regst,
                         Regst* initial_regst, Regst* out_regst);
   void UpdtInAndModelStatesOfRnnCell();
 
   CudaStreamHandle cuda_handle_;
   int64_t expected_model_version_id_;
+  int64_t expected_initial_hidden_piece_id_;
 
   int64_t in_regst_desc_id_;
   std::map<int64_t, std::queue<Regst*>> pid2in_regsts_; // <piece_id, in_regst>
@@ -85,6 +86,7 @@ class RnnFwDataCompActor final : public CompActor {
   DataLoadBuf data_load_buf_;
   PieceStatus expected_piece_status_;
   Material4Act material4act_;
+  PieceStatus ordered_piece_status_;
 };
 
 }  // namespace oneflow
