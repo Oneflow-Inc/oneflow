@@ -18,13 +18,10 @@ class BackwardCompTaskNode final : public CompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kBackward; }
 
  private:
-  using Lbn2NodeBnMap = HashMap<std::string, std::pair<ExecNode*, std::string>>;
-
-  void BuildExecGphFromUserOps(Lbn2NodeBnMap* extern_in_lbn2consumer);
-  void SetExecNodeFromOutdiffRegst(const Lbn2NodeBnMap& extern_in_lbn2consumer);
-  void AddLbn2ActivationDiffRegst();
-  void AddLbn2InDiffRegst();
-  void AddLbn2ModelDiffRegst();
+  void BuildExecGphFromUserOps();
+  void BuildActivationDiffRegst();
+  void BuildInDiffRegst();
+  void BuildModelDiffRegst();
   void InferBlobDescsInProducedRegsts();
   std::shared_ptr<RegstDesc> GetRelatedInRegst();
 };
