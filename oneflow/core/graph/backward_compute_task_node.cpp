@@ -142,7 +142,6 @@ void BackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
 }
 
 std::shared_ptr<RegstDesc> BackwardCompTaskNode::GetRelatedInRegst() {
-  std::shared_ptr<RegstDesc> in_regst;
   for (TaskEdge* edge : in_edges()) {
     TaskNode* src_node = edge->src_node();
     if (src_node->GetTaskType() != TaskType::kForward) { continue; }
@@ -153,8 +152,7 @@ std::shared_ptr<RegstDesc> BackwardCompTaskNode::GetRelatedInRegst() {
       }
     }
   }
-  CHECK(in_regst);
-  return in_regst;
+  return nullptr;
 }
 
 }  // namespace oneflow
