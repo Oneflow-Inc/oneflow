@@ -26,10 +26,6 @@ int CopyHdActor::HandlerNormal(const ActorMsg& msg) {
   return TrySwitchToZombieOrFinish();
 }
 
-bool CopyHdActor::IsReadAlwaysUnReadyFromNow() {
-  return is_in_eord_ && pending_in_regst_.empty();
-}
-
 void CopyHdActor::Act() {
   Regst* in_regst = pending_in_regst_.front();
   pending_in_regst_.pop();
@@ -46,6 +42,14 @@ void CopyHdActor::Act() {
     out_regst->set_model_version_id(in_regst->model_version_id());
   });
   AsyncSendRegstMsgToProducer(in_regst);
+}
+
+bool CopyHdActor::IsReadAlwaysUnReadyFromNow() {
+  return is_in_eord_ && pending_in_regst_.empty();
+}
+
+void CopyHdActor::AsyncReturnAllReadableRegst() {
+  CHECK(pending_in_regst_.empty());
 }
 
 REGISTER_ACTOR(TaskType::kCopyHd, CopyHdActor);

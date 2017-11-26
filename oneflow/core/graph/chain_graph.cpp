@@ -8,12 +8,12 @@ struct Chain {
   // nodes belong to this Chain
   std::vector<const LogicalNode*> nodes;
   // ancestors, descendants of nodes
-  std::unordered_set<const LogicalNode*> ancestors;
-  std::unordered_set<const LogicalNode*> descendants;
+  HashSet<const LogicalNode*> ancestors;
+  HashSet<const LogicalNode*> descendants;
   // ancestors_and_this = nodes + ancestors
   // descendants_and_this = nodes + descendants
-  std::unordered_set<const LogicalNode*> ancestors_and_this;
-  std::unordered_set<const LogicalNode*> descendants_and_this;
+  HashSet<const LogicalNode*> ancestors_and_this;
+  HashSet<const LogicalNode*> descendants_and_this;
 };
 
 using ChainIt = std::list<Chain>::iterator;
@@ -224,7 +224,7 @@ void ChainGraph::BuildFwStruct() {
   };
   HashMap<ChainIt, ChainNode*, decltype(HashChainIt)> chain_it2chain_node(
       11, HashChainIt);
-  HashMap<ChainNode*, std::unordered_set<ChainNode*>> chain_node2pred;
+  HashMap<ChainNode*, HashSet<ChainNode*>> chain_node2pred;
   FOR_EACH(chain_it, chain_list) {
     ChainNode* chain_node = nullptr;
     if (chain_it->nodes.size() == 1) {
@@ -297,11 +297,11 @@ void ChainGraph::BuildBwStruct() {
   ForEachEdge([&](ChainEdge* edge) { fw_edges.push_back(edge); });
   for (ChainEdge* fw_edge : fw_edges) {
     auto fw_src_node = dynamic_cast<ForwardChainNode*>(fw_edge->src_node());
-    if (fw_src_node == nullptr) { continue; }
+    if (fw_src_node == nullptr) { continue; }  // SourceChainNode
     auto fw_dst_node = dynamic_cast<ForwardChainNode*>(fw_edge->dst_node());
     ChainNode* bw_src_node = fw_src_node->bw_node();
     if (bw_src_node == nullptr) { continue; }
-    if (fw_dst_node == nullptr) {
+    if (fw_dst_node == nullptr) {  // LossChainNode
       Connect(fw_edge->dst_node(), NewEdge(), bw_src_node);
     } else {
       ChainNode* bw_dst_node = fw_dst_node->bw_node();

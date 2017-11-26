@@ -12,6 +12,8 @@ class LossCompTaskNode final : public CompTaskNode {
   ~LossCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override;
+  void BuildExecGphAndRegst() override;
   TaskType GetTaskType() const override { return TaskType::kLoss; }
 
  private:

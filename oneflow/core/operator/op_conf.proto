@@ -124,7 +124,6 @@ message CopyHdOpConf {
 message CloneOpConf {
   required int32 out_num = 1;
   required string lbn = 2;
-  required DataType data_type = 3;
 }
 
 message BoxConcatConf {

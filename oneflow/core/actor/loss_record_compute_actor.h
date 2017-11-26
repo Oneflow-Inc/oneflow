@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_ACTOR_LOSS_RECORD_ACTOR_H_
-#define ONEFLOW_CORE_ACTOR_LOSS_RECORD_ACTOR_H_
+#ifndef ONEFLOW_CORE_ACTOR_LOSS_RECORD_COMPUTE_ACTOR_H_
+#define ONEFLOW_CORE_ACTOR_LOSS_RECORD_COMPUTE_ACTOR_H_
 
 #include "oneflow/core/actor/compute_actor.h"
 
 namespace oneflow {
 
-class LossRecordActor final : public CompActor {
+class LossRecordCompActor final : public CompActor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(LossRecordActor);
-  LossRecordActor() = default;
-  ~LossRecordActor() = default;
+  OF_DISALLOW_COPY_AND_MOVE(LossRecordCompActor);
+  LossRecordCompActor() = default;
+  ~LossRecordCompActor() = default;
 
  private:
   void VirtualCompActorInit(const TaskProto&) override;
@@ -26,4 +26,4 @@ class LossRecordActor final : public CompActor {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_LOSS_RECORD_ACTOR_H_
+#endif  // ONEFLOW_CORE_ACTOR_LOSS_RECORD_COMPUTE_ACTOR_H_
