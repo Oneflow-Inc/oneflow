@@ -13,6 +13,9 @@ class CloneKernel final : public KernelIf<device_type> {
   ~CloneKernel() = default;
 
  private:
+  void Forward(
+  	  const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void ForwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
