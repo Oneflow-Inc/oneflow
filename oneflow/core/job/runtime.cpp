@@ -52,7 +52,7 @@ void Runtime::Run(const Plan& plan, const std::string& this_machine_name) {
   RuntimeCtx::Singleton()->mut_model_init_cnt().Init("model_init_cnt",
                                                      mdupdt_tasks.size());
   HandoutTasks(mdupdt_tasks);
-  SendCmdMsg(mdupdt_tasks, ActorCmd::kInitializeModel);
+  SendCmdMsg(mdupdt_tasks, ActorCmd::kInitModel);
   RuntimeCtx::Singleton()->mut_model_init_cnt().WaitUntilCntEqualZero();
   LOG(INFO) << "InitModel on this machine done";
   OF_BARRIER();

@@ -12,9 +12,18 @@ class ForwardCompTaskNode final : public CompTaskNode {
   ~ForwardCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override;
+  void BuildExecGphAndRegst() override;
+  void LockRegsts() override;
+  bool IsReadyForBuild() override;
+
   TaskType GetTaskType() const override { return TaskType::kForward; }
 
  private:
+  void BuildExecGphStructAndBindInRegst();
+  void BuildOutRegst();
+  void BuildActivationRegst();
+  void BuildModelAndTmpRegsts();
 };
 
 }  // namespace oneflow

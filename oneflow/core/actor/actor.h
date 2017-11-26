@@ -38,6 +38,7 @@ class Actor {
 
   // Util
   Actor() = default;
+  DeviceType GetDeviceType() const;
   virtual void VirtualActorInit(const TaskProto&) {}
   virtual KernelWardFunc GetKernelWardFunc() const { return &Kernel::Forward; }
   int64_t RegstDescId4Name(const std::string& name) const;
@@ -62,10 +63,10 @@ class Actor {
   void ActUntilFail();
   virtual void Act() = 0;
   virtual bool IsReadReady() = 0;
-  virtual bool IsReadAlwaysUnReadyFromNow() { TODO(); }
+  virtual bool IsReadAlwaysUnReadyFromNow() = 0;
   virtual bool IsWriteReady();
+  virtual void AsyncReturnAllReadableRegst() = 0;
   void DecreaseRemainingEordCnt();
-  virtual void AsyncReturnAllReadableRegst() { TODO(); }
   int TrySwitchToZombieOrFinish();
 
   // Async Do on device_ctx_
@@ -90,8 +91,6 @@ class Actor {
   int64_t total_reading_cnt() const { return total_reading_cnt_; }
 
  private:
-  DeviceType GetDeviceType() const;
-
   int64_t actor_id_;
   std::vector<ExecKernel> exec_kernel_vec_;
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;
@@ -118,8 +117,9 @@ struct ActorRegistry {
   }
 };
 
-#define REGISTER_ACTOR(TaskType, ActorType) \
-  static ActorRegistry<TaskType, ActorType> g_actor_##ActorType##registry_var;
+#define REGISTER_ACTOR(TaskType, ActorType)            \
+  static ActorRegistry<TaskType, ActorType> OF_PP_CAT( \
+      g_actor_##ActorType##registry_var, __LINE__)
 
 }  // namespace oneflow
 

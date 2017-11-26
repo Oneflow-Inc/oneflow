@@ -52,13 +52,13 @@ class Kernel {
 
   virtual void ForwardDataContent(
       const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void ForwardDataId(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
   virtual void BackwardDataContent(
       const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void BackwardDataId(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
