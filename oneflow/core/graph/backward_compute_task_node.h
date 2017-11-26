@@ -20,10 +20,10 @@ class BackwardCompTaskNode final : public CompTaskNode {
  private:
   using Lbn2NodeBnMap = HashMap<std::string, std::pair<ExecNode*, std::string>>;
 
-  void BuildExecGphFromUserOps(Lbn2NodeBnMap* lbn2producer);
-  void SetExecNodeFromOutdiffRegst();
+  void BuildExecGphFromUserOps(Lbn2NodeBnMap* extern_in_lbn2consumer);
+  void SetExecNodeFromOutdiffRegst(const Lbn2NodeBnMap& extern_in_lbn2consumer);
   void AddLbn2ActivationDiffRegst();
-  void AddLbn2InDiffRegst(const Lbn2NodeBnMap& lbn2producer);
+  void AddLbn2InDiffRegst();
   void AddLbn2ModelDiffRegst();
   void InferBlobDescsInProducedRegsts();
   std::shared_ptr<RegstDesc> GetRelatedInRegst();
