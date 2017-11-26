@@ -23,24 +23,22 @@ char* NextConcatAddr(char* start_addr, int64_t concat_idx,
 
 template<DeviceType device_type>
 void ConcatKernel<device_type>::ConcatKernelWork(
-    const KernelCtx& ctx, const std::string& obn,
+    bool is_forward, const KernelCtx& ctx, const std::string& obn,
     const PbRpf<std::string>& ibns,
     std::function<Blob*(const std::string&)> BnInOp2Blob,
     MemCopyFuncType copy_func) const {
-  const size_t elem_size =
-      GetSizeOfDataType(this->kernel_conf().concat_conf().data_type());
+  const ConcatKernelConf& concat_kernel_conf =
+      this->kernel_conf().concat_conf();
+  const size_t elem_size = GetSizeOfDataType(concat_kernel_conf.data_type());
   Blob* out_blob = BnInOp2Blob(obn);
   if (ibns.size() == 0) { return; }
   const int32_t concat_axis = this->op_conf().concat_conf().axis();
-  int64_t concat_element_cnt = 1;
-  if ((concat_axis != (out_blob->shape().NumAxes() - 1))
-      && (concat_axis != -1)) {
-    concat_element_cnt = out_blob->shape().Count(concat_axis + 1);
-  }
-  int64_t concat_num_each_blob = 1;
-  if ((concat_axis != (-out_blob->shape().NumAxes())) && (concat_axis != 0)) {
-    concat_num_each_blob = out_blob->shape().Count(0, concat_axis);
-  }
+  const int64_t& concat_element_cnt =
+      is_forward ? concat_kernel_conf.fw_concat_element_cnt()
+                 : concat_kernel_conf.bw_concat_element_cnt();
+  int64_t concat_num_each_blob =
+      is_forward ? concat_kernel_conf.fw_concat_num_each_blob()
+                 : concat_kernel_conf.bw_concat_num_each_blob();
   const int64_t out_concat_axis_dim = out_blob->shape().At(concat_axis);
   char* out_blob_mut_dptr = static_cast<char*>(out_blob->mut_dptr<void>());
   int64_t offset_concat_axis = 0;
@@ -54,11 +52,13 @@ void ConcatKernel<device_type>::ConcatKernelWork(
     return;
   }
 
+  size_t index = 0;
   for (const std::string& ibn : ibns) {
     Blob* in_blob = BnInOp2Blob(ibn);
     char* in_blob_mut_dptr = static_cast<char*>(in_blob->mut_dptr<void>());
     const int64_t in_concat_axis_dim = in_blob->shape().At(concat_axis);
-    const int64_t cp_sz = in_concat_axis_dim * concat_element_cnt * elem_size;
+    const int64_t cp_sz = is_forward ? concat_kernel_conf.fw_cp_szs()[index]
+                                     : concat_kernel_conf.bw_cp_szs()[index];
 
     for (int64_t concat_idx = 0; concat_idx < concat_num_each_blob;
          ++concat_idx) {
@@ -104,7 +104,7 @@ void ConcatKernel<device_type>::Forward(
                         const int64_t size, cudaMemcpyKind kind) {
     Memcpy<device_type>(ctx.device_ctx, dst, src, size, kind);
   };
-  ConcatKernelWork(ctx, this->kernel_conf().output_bns(0),
+  ConcatKernelWork(true, ctx, this->kernel_conf().output_bns(0),
                    this->kernel_conf().input_bns(), BnInOp2Blob, copy_in2out);
 }
 
@@ -116,7 +116,7 @@ void ConcatKernel<device_type>::Backward(
                         const int64_t size, cudaMemcpyKind kind) {
     Memcpy<device_type>(ctx.device_ctx, dst, src, size, kind);
   };
-  ConcatKernelWork(ctx, this->kernel_conf().output_diff_bns(0),
+  ConcatKernelWork(false, ctx, this->kernel_conf().output_diff_bns(0),
                    this->kernel_conf().input_diff_bns(), BnInOp2Blob,
                    copy_out2in);
 }
