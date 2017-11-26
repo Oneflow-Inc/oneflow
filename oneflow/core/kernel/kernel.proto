@@ -10,6 +10,14 @@ message ConvolutionKernelConf {
 
 message ConcatKernelConf {
   required DataType data_type = 1;
+
+  required int64 fw_concat_element_cnt = 2;
+  required int64 fw_concat_num_each_blob = 3;
+  repeated int64 fw_cp_szs = 4;
+
+  required int64 bw_concat_element_cnt = 5;
+  required int64 bw_concat_num_each_blob = 6;
+  repeated int64 bw_cp_szs = 7;
 }
 
 message KernelConf {
