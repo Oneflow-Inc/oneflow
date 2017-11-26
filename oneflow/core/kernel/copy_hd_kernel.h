@@ -12,12 +12,11 @@ class CopyHdKernel final : public KernelIf<DeviceType::kGPU> {
   ~CopyHdKernel() = default;
 
  private:
+  void VirtualKernelInit() override;
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
-  void Backward(const KernelCtx&,
-                std::function<Blob*(const std::string&)>) const override;
-  cudaMemcpyKind fw_kind_;
-  cudaMemcpyKind bw_kind_;
+
+  cudaMemcpyKind cp_kind_;
 };
 
 }  // namespace oneflow
