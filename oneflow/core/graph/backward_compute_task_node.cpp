@@ -36,14 +36,14 @@ void BackwardCompTaskNode::ConsumeAllRegsts() {
 }
 
 void BackwardCompTaskNode::BuildExecGphAndRegst() {
-  BuildExecGphFromUserOps();
+  BuildExecGphAndBindOutDiffRegst();
   BuildActivationDiffRegst();
   BuildInDiffRegst();
   BuildModelDiffRegst();
   InferBlobDescsInProducedRegsts();
 }
 
-void BackwardCompTaskNode::BuildExecGphFromUserOps() {
+void BackwardCompTaskNode::BuildExecGphAndBindOutDiffRegst() {
   HashMap<std::string, std::pair<ExecNode*, std::string>> lbn2producer;
   for (std::shared_ptr<const Operator> op : chain_node()->op_vec()) {
     ExecNode* cur_node = mut_exec_gph().NewNode();
@@ -90,17 +90,17 @@ void BackwardCompTaskNode::BuildInDiffRegst() {
   std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff");
   if (!in_diff_regst) { return; }
   std::shared_ptr<RegstDesc> in_regst = GetConsumedRegst("in");
-  mut_exec_gph().ForEachNode([&](ExecNode* bp_node) {
-    HashSet<std::string> found_bns;
-    for (ExecEdge* edge : bp_node->out_edges()) {
-      found_bns.insert(edge->src_bn());
+  mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
+    HashSet<std::string> found_lbns;
+    for (ExecEdge* out_edge : cur_node->out_edges()) {
+      CHECK(found_lbns.insert(out_edge->lbn()).second);
     }
-    for (const std::string& idbn : bp_node->op()->input_diff_bns()) {
-      if (found_bns.find(idbn) != found_bns.end()) { continue; }
-      const std::string& lbn = bp_node->op()->Lbn4BnInOp(idbn);
+    for (const std::string& idbn : cur_node->op()->input_diff_bns()) {
+      const std::string& lbn = cur_node->op()->Lbn4BnInOp(idbn);
+      if (found_lbns.find(lbn) != found_lbns.end()) { continue; }
       in_diff_regst->AddLbn(lbn);
-      bp_node->BindBnInOpAndRegst(idbn, in_diff_regst);
-      bp_node->BindBnInOpAndRegst(GenUnDiffBn(idbn), in_regst);
+      cur_node->BindBnInOpAndRegst(idbn, in_diff_regst);
+      cur_node->BindBnInOpAndRegst(GenUnDiffBn(idbn), in_regst);
     }
   });
 }
@@ -118,8 +118,6 @@ void BackwardCompTaskNode::BuildModelDiffRegst() {
       node->BindBnInOpAndRegst(mtbn, model_tmp_regst);
     }
     for (const std::string& mdbn : node->op()->model_diff_bns()) {
-      const std::string& lbn = node->op()->Lbn4BnInOp(mdbn);
-      model_diff_regst->AddLbn(lbn);
       node->BindBnInOpAndRegst(mdbn, model_diff_regst);
     }
     for (const std::string& mbn : node->op()->model_bns()) {
@@ -131,7 +129,7 @@ void BackwardCompTaskNode::BuildModelDiffRegst() {
 void BackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
   if (std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff")) {
     std::shared_ptr<RegstDesc> in_regst = GetConsumedRegst("in");
-    in_diff_regst->CopyBlobDescFrom(in_regst.get());
+    in_diff_regst->CopyBlobDescWithoutAddLbn(in_regst.get());
   }
 
   std::shared_ptr<RegstDesc> md_diff_regst = GetProducedRegst("model_diff");
@@ -143,11 +141,11 @@ void BackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
 
 std::shared_ptr<RegstDesc> BackwardCompTaskNode::GetRelatedInRegst() {
   for (TaskEdge* edge : in_edges()) {
-    TaskNode* src_node = edge->src_node();
-    if (src_node->GetTaskType() != TaskType::kForward) { continue; }
-    for (TaskEdge* edge : src_node->in_edges()) {
-      TaskNode* pre_src_node = edge->src_node();
-      if (pre_src_node->GetTaskType() != TaskType::kMdUpdt) {
+    TaskNode* fw_node = edge->src_node();
+    if (fw_node->GetTaskType() != TaskType::kForward) { continue; }
+    for (TaskEdge* edge : fw_node->in_edges()) {
+      TaskNode* pred_fw_node = edge->src_node();
+      if (pred_fw_node->GetTaskType() != TaskType::kMdUpdt) {
         return edge->GetSoleRegst();
       }
     }
