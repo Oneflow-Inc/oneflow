@@ -25,7 +25,7 @@ template<DeviceType device_type, typename T>
 void CloneKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const auto& odbns = this->kernel_conf().output_diff_bns();
+  const PbRpf<std::string>& odbns = this->kernel_conf().output_diff_bns();
   if (odbns.size() == 0) return;
   Blob* in_diff_blob = BnInOp2Blob(this->kernel_conf().input_diff_bns(0));
   const Blob* out_diff_blob_0 = BnInOp2Blob(odbns[0]);
