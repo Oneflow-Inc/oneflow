@@ -8,6 +8,6 @@ Range FindIntersectant(const Range& lhs, const Range& rhs) { TODO(); }
     int64_t right = lhs.end() < rhs.end() ? lhs.end() : rhs.end();
     return Range(left, right);
   } else {
-  	return Range(0,0);
+    return Range(0,0);
   }
 }  // namespace oneflow
