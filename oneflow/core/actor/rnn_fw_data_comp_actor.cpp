@@ -148,7 +148,7 @@ bool RnnFwDataCompActor::IsReadReady() {
         CHECK(cur_regst->piece_status().IsNextColOf(iter->piece_status()));
         auto model_iter = pid2model_regst_.find(cur_regst->piece_status().piece_id());
         CHECK(pid2model_regst_.end() != model_iter);
-        set_material4act(Material4Act::RnnKernelType::kRnnCell,
+        set_material4act(Material4Act::RnnKernelType::kRnnCellWithoutInitial,
             cur_regst, model_iter->second, nullptr, nullptr, iter->second);
         return true;
       }
@@ -308,7 +308,7 @@ void RnnFwDataCompActor::Act() {
     tmp_piece_status = material4act_.regst_id2regst.at(in_regst_desc_id_)->piece_status();
   }
   AsyncSendRegstMsgToConsumer([this, model_version_id](Regst* regst) {
-    regst->set_piece_status(tmp_piece_status_);
+    regst->set_piece_status(tmp_piece_status);
     regst->set_model_version_id(model_version_id);
   });
   int ret = ordered_piece_status_.GetIntoNextStatus();
