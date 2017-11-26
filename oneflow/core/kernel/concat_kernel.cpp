@@ -97,7 +97,7 @@ void ConcatKernel<device_type>::CopyDataIdToOb(
 }
 
 template<DeviceType device_type>
-void ConcatKernel<device_type>::ForwardDataContent(
+void ConcatKernel<device_type>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto copy_in2out = [](const KernelCtx& ctx, char* src, char* dst,
@@ -109,7 +109,7 @@ void ConcatKernel<device_type>::ForwardDataContent(
 }
 
 template<DeviceType device_type>
-void ConcatKernel<device_type>::BackwardDataContent(
+void ConcatKernel<device_type>::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto copy_out2in = [](const KernelCtx& ctx, char* dst, char* src,

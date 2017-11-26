@@ -12,13 +12,14 @@ class ConcatKernel final : public KernelIf<device_type> {
   ConcatKernel() = default;
   ~ConcatKernel() = default;
 
+  void Forward(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void Backward(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
  private:
-  void ForwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
-  void BackwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
   using MemCopyFuncType = std::function<void(const KernelCtx& ctx, char*, char*,
                                              const int64_t, cudaMemcpyKind)>;
 
