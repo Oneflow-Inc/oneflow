@@ -3,9 +3,8 @@
 namespace oneflow {
 
 void CopyHdOp::InitFromOpConf() {
-  CHECK(op_conf().has_copy_hd_conf());
-  EnrollInputBn("in");
-  EnrollOutputBn("out");
+  EnrollInputBn("in", false);
+  EnrollOutputBn("out", false);
 }
 
 const PbMessage& CopyHdOp::GetSpecialConf() const {
