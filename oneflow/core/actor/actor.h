@@ -38,17 +38,16 @@ class Actor {
 
   // Util
   Actor() = default;
+  DeviceType GetDeviceType() const;
   virtual void VirtualActorInit(const TaskProto&) {}
   virtual KernelWardFunc GetKernelWardFunc() const { return &Kernel::Forward; }
   int64_t RegstDescId4Name(const std::string& name) const;
   virtual void InitDeviceCtx(const ThreadCtx&);
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
   KernelCtx GenDefaultKernelCtx() const;
-  void set_num_of_remaining_eord(int val) { remaining_eord_cnt_ = val; }
   const std::vector<ExecKernel>& exec_kernel_vec() { return exec_kernel_vec_; }
 
   // Msg Handler
-  MsgHandler msg_handler() { return msg_handler_; }
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
 #define OF_SET_MSG_HANDLER(val)                                   \
   do {                                                            \
@@ -58,17 +57,17 @@ class Actor {
 
   // Common Handlers
   virtual int HandlerNormal(const ActorMsg& msg) = 0;
-  virtual int HandlerUntilReadAlwaysUnReady(const ActorMsg& msg) = 0;
   int HandlerZombie(const ActorMsg& msg);
 
   // Act
   void ActUntilFail();
   virtual void Act() = 0;
   virtual bool IsReadReady() = 0;
-  virtual bool IsReadAlwaysUnReadyFromNow() { TODO(); }
+  virtual bool IsReadAlwaysUnReadyFromNow() = 0;
   virtual bool IsWriteReady();
-  void ProcessOneEord();
-  void TrySwitchToZombie();
+  virtual void AsyncReturnAllReadableRegst() = 0;
+  void DecreaseRemainingEordCnt();
+  int TrySwitchToZombieOrFinish();
 
   // Async Do on device_ctx_
   void AsyncLaunchKernel(const KernelCtx&,
@@ -118,8 +117,9 @@ struct ActorRegistry {
   }
 };
 
-#define REGISTER_ACTOR(TaskType, ActorType) \
-  static ActorRegistry<TaskType, ActorType> g_actor_##ActorType##registry_var;
+#define REGISTER_ACTOR(TaskType, ActorType)            \
+  static ActorRegistry<TaskType, ActorType> OF_PP_CAT( \
+      g_actor_##ActorType##registry_var, __LINE__)
 
 }  // namespace oneflow
 

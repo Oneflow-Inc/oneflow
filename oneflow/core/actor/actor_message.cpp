@@ -38,6 +38,15 @@ ActorMsg ActorMsg::BuildRegstMsgToProducer(int64_t consumer, int64_t producer,
   return msg;
 }
 
+ActorMsg ActorMsg::BuildEordMsg(int64_t consumer, int64_t regst_desc_id) {
+  ActorMsg msg;
+  msg.src_actor_id_ = -1;
+  msg.dst_actor_id_ = consumer;
+  msg.msg_type_ = ActorMsgType::kEordMsg;
+  msg.eord_regst_desc_id_ = regst_desc_id;
+  return msg;
+}
+
 ActorMsg ActorMsg::BuildCommandMsg(int64_t dst_actor_id, ActorCmd cmd) {
   ActorMsg msg;
   msg.src_actor_id_ = -1;
@@ -69,6 +78,11 @@ int64_t ActorMsg::piece_id() const {
 const void* ActorMsg::comm_net_token() const {
   CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
   return regst_wrapper_.comm_net_token;
+}
+
+int64_t ActorMsg::eord_regst_desc_id() const {
+  CHECK_EQ(msg_type_, ActorMsgType::kEordMsg);
+  return eord_regst_desc_id_;
 }
 
 }  // namespace oneflow

@@ -2,6 +2,19 @@ syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/operator/op_conf.proto";
+import "oneflow/core/common/data_type.proto";
+
+message ConvolutionKernelConf {
+  required DataType data_type = 1;
+}
+
+message DataLoaderKernelConf {
+  required int64 parallel_id = 1;
+}
+
+message InnerProductKernelConf {
+  required DataType data_type = 1;
+}
 
 message KernelConf {
   required OperatorConf op_conf = 1;
@@ -16,6 +29,12 @@ message KernelConf {
   repeated string model_bns = 8;
   repeated string model_diff_bns = 9;
   repeated string model_tmp_bns = 10;
-  
+
   required bool need_do_data_id = 12;
+
+  oneof kernel_type {
+    ConvolutionKernelConf convolution_conf = 100;
+    InnerProductKernelConf innerproduct_conf = 101;
+    DataLoaderKernelConf data_loader_conf = 102;
+  }
 }

@@ -147,7 +147,7 @@ void ConvolutionKernel<device_type, T>::ComputeWeightDiff(
   const int64_t conv_sliding_window_steps = out_diff_blob->shape().Count(2);
 
   Memset<device_type>(ctx.device_ctx, weight_diff_blob->mut_dptr(), 0,
-                      weight_diff_blob->ByteSizeOfDataField());
+                      weight_diff_blob->ByteSizeOfDataContentField());
   for (size_t i = 0; i < data_num; ++i) {
     KernelUtil<device_type, T>::BlasGemm(
         ctx.device_ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasNoTrans,
@@ -174,7 +174,7 @@ void ConvolutionKernel<device_type, T>::ComputeBiasDiff(
   const int64_t conv_sliding_window_steps = out_diff_blob->shape().Count(2);
 
   Memset<device_type>(ctx.device_ctx, bias_diff_blob->mut_dptr(), 0,
-                      bias_diff_blob->ByteSizeOfDataField());
+                      bias_diff_blob->ByteSizeOfDataContentField());
   for (size_t i = 0; i < data_num; ++i) {
     KernelUtil<device_type, T>::BlasGemm(
         ctx.device_ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasNoTrans,
@@ -271,7 +271,7 @@ void ConvolutionKernel<device_type, T>::InitModelBlobsWithDir(
 
 template<DeviceType device_type, typename T>
 void ConvolutionKernel<device_type, T>::InitModelTmpBlobs(
-    const KernelCtx& ctx,
+    const KernelCtx& ctx, const ParallelContext& parallel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (this->op_conf().convolution_conf().has_bias_term()) {
     FillConf bias_multiplier_fill_conf;
@@ -280,5 +280,27 @@ void ConvolutionKernel<device_type, T>::InitModelTmpBlobs(
                                      0, BnInOp2Blob("bias_multiplier"));
   }
 }
+
+namespace {
+
+Kernel* CreateConvolutionKernel(DeviceType dev_type,
+                                const KernelConf& kernel_conf) {
+  static const HashMap<std::string, std::function<Kernel*()>> creators = {
+#define CONVOLUTION_KERNEL_ENTRY(device_type, data_type_pair)          \
+  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {  \
+     return new ConvolutionKernel<device_type,                         \
+                                  OF_PP_PAIR_FIRST(data_type_pair)>(); \
+   }},
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+          CONVOLUTION_KERNEL_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};
+  CHECK(kernel_conf.has_convolution_conf());
+  return creators.at(
+      GetHashKey(dev_type, kernel_conf.convolution_conf().data_type()))();
+}
+
+}  // namespace
+
+COMMAND(AddKernelCreator(OperatorConf::kConvolutionConf,
+                         CreateConvolutionKernel));
 
 }  // namespace oneflow

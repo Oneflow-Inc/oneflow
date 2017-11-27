@@ -15,13 +15,15 @@ class BoxingActor final : public Actor {
 
  private:
   int HandlerNormal(const ActorMsg&) override;
-  int HandlerUntilReadAlwaysUnReady(const ActorMsg&) override;
 
-  bool IsReadReady() override { return false; }
   void Act() override;
+  bool IsReadReady() override;
+  bool IsReadAlwaysUnReadyFromNow() override;
+  void AsyncReturnAllReadableRegst() override;
 
-  // <regst_desc_id, queue<regst>>
-  HashMap<int64_t, std::queue<Regst*>> read_regst_;
+  bool is_eord_;
+  HashMap<int64_t, std::queue<Regst*>> readable_regst_;
+  int64_t readable_regst_cnt_;
 };
 
 }  // namespace oneflow

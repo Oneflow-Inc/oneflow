@@ -3,9 +3,8 @@
 namespace oneflow {
 
 void CopyCommNetOp::InitFromOpConf() {
-  CHECK(op_conf().has_copy_comm_net_conf());
-  EnrollInputBn("in");
-  EnrollOutputBn("out");
+  EnrollInputBn("in", false);
+  EnrollOutputBn("out", false);
 }
 
 const PbMessage& CopyCommNetOp::GetSpecialConf() const {
