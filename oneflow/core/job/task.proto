@@ -12,7 +12,7 @@ enum TaskType {
   kSource = 3;
   kLoss = 4;
   kLossAcc = 5;
-  kLossRecord = 6;
+  kLossPrint = 6;
   kMdUpdt = 7;
   kMdSave = 8;
   kMdDiffAcc = 9;

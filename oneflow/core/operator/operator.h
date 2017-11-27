@@ -26,7 +26,7 @@ class Operator {
   virtual void InitFromOpConf() = 0;
   virtual bool IsElemWiseOp() const { return false; }
   virtual bool IsLossOp() const { return false; }
-  virtual bool IsRecordOp() const { return false; }
+  virtual bool IsPrintOp() const { return false; }
   virtual bool IsDataLoaderOp() const { return false; }
 
   // bn_in_op <-> lbn
