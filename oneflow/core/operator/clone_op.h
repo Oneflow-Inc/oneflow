@@ -24,10 +24,6 @@ class CloneOp final : public Operator {
   std::string obn2lbn(const std::string& output_bn) const override {
     return op_name() + "/" + output_bn;
   }
-  void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx,
-      KernelConf* kernel_conf) const override;
 };
 
 }  // namespace oneflow

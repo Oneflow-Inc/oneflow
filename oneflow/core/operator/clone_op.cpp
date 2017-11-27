@@ -22,13 +22,6 @@ void CloneOp::InferBlobDescs(
   }
 }
 
-void CloneOp::VirtualGenKernelConf(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext*, KernelConf* kernel_conf) const {
-  DataType dtype = GetBlobDesc4BnInOp("in")->data_type();
-  kernel_conf->mutable_clone_conf()->set_data_type(dtype);
-}
-
 REGISTER_OP(OperatorConf::kCloneConf, CloneOp);
 
 }  // namespace oneflow
