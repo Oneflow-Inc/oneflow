@@ -21,11 +21,4 @@ message KernelConf {
   required bool need_do_data_id = 12;
   required bool is_forward = 13;
   required DataType data_type = 14;
-
-  oneof kernel_type {
-    ConvolutionKernelConf convolution_conf = 100;
-    InnerProductKernelConf innerproduct_conf = 101;
-    DataLoaderKernelConf data_loader_conf = 102;
-    CloneKernelConf clone_conf = 108;
-  }
 }

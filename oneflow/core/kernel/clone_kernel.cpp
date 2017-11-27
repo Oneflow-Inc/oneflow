@@ -9,8 +9,8 @@ void CloneKernel<device_type, T>::Forward(
   const Blob* in_blob = BnInOp2Blob(this->kernel_conf().input_bns(0));
   for (const std::string& obn : this->kernel_conf().output_bns()) {
     Blob* out_blob = BnInOp2Blob(obn);
-    Memcpy<device_type>(ctx.device_ctx, out_blob->mut_memory_ptr(), in_blob->memory_ptr(),
-                        in_blob->TotalByteSize());
+    Memcpy<device_type>(ctx.device_ctx, out_blob->mut_memory_ptr(),
+                        in_blob->memory_ptr(), in_blob->TotalByteSize());
   }
 }
 
@@ -77,8 +77,7 @@ Kernel* CreateCloneKernel(DeviceType dev_type, const KernelConf& kernel_conf) {
   static const HashMap<std::string, std::function<Kernel*()>> creators = {
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(CLONE_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
                                        FLOATING_DATA_TYPE_SEQ)};
-  return creators.at(
-      GetHashKey(dev_type, kernel_conf.clone_conf().data_type()))();
+  return creators.at(GetHashKey(dev_type, kernel_conf.data_type()))();
 }
 
 }  // namespace
