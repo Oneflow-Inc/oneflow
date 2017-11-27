@@ -3,7 +3,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void ReluKernel<device_type, T>::Forward(
+void ReluKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
@@ -14,7 +14,7 @@ void ReluKernel<device_type, T>::Forward(
 }
 
 template<DeviceType device_type, typename T>
-void ReluKernel<device_type, T>::Backward(
+void ReluKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
@@ -45,5 +45,22 @@ class ReluKernelUtil<DeviceType::kCPU, T> final {
     }
   }
 };
+
+namespace {
+#define RELU_KERNEL_ENTRY(device_type, data_type_pair)                       \
+  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {        \
+     return new ReluKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>(); \
+   }},
+
+Kernel* CreateReluKernel(DeviceType dev_type, const KernelConf& kernel_conf) {
+  static const HashMap<std::string, std::function<Kernel*()>> creators = {
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(RELU_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
+                                       FLOATING_DATA_TYPE_SEQ)};
+  return creators.at(GetHashKey(dev_type, kernel_conf.data_type()))();
+}
+
+}  // namespace
+
+COMMAND(AddKernelCreator(OperatorConf::kReluConf, CreateReluKernel));
 
 }  // namespace oneflow
