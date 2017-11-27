@@ -56,6 +56,7 @@ int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
   } else {
     UNEXPECTED_RUN();
   }
+  return 0;
 }
 
 void CopyCommNetActor::Act() {

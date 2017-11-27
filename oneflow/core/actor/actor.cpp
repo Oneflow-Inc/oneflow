@@ -6,7 +6,9 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   actor_id_ = task_proto.task_id();
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
-    ek.kernel = ConstructKernel(GetDeviceType(), node.kernel_conf());
+    ek.kernel = ConstructKernel(GetDeviceType(),
+                                task_proto.task_type() != TaskType::kBackward,
+                                parallel_ctx(), node.kernel_conf());
     ek.bn_in_op2regst_desc_id = PbMap2HashMap(node.bn_in_op2regst_desc_id());
     exec_kernel_vec_.push_back(std::move(ek));
   }

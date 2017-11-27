@@ -48,7 +48,7 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOpFunc() const;
 
   std::string VisualStr() const override { return op_->op_name(); }
-  void ToProto(const ParallelContext*, ExecNodeProto*) const;
+  void ToProto(bool is_forward, const ParallelContext*, ExecNodeProto*) const;
 
  private:
   BlobDesc* GetBlobDesc4BnInOp(const std::string&) const;
@@ -63,7 +63,8 @@ class ExecGraph final : public Graph<ExecNode, ExecEdge> {
   ExecGraph() = default;
   ~ExecGraph() = default;
 
-  void ToExecSequence(const ParallelContext*, ExecSequence*) const;
+  void ToExecSequence(bool is_forward, const ParallelContext*,
+                      ExecSequence*) const;
   const char* TypeName() const override { return "ExecGraph"; }
 
  private:

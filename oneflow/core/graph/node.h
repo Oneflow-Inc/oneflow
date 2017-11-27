@@ -103,8 +103,8 @@ class Node {
   friend void DisConnect<EdgeType>(EdgeType* edge);
 
   int64_t node_id_;
-  std::unordered_set<EdgeType*> in_edges_;
-  std::unordered_set<EdgeType*> out_edges_;
+  HashSet<EdgeType*> in_edges_;
+  HashSet<EdgeType*> out_edges_;
 };
 
 }  // namespace oneflow

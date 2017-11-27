@@ -45,14 +45,13 @@ void ConcatOp::InferBlobDescs(
 
 void ConcatOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+    bool is_forward, const ParallelContext* parallel_ctx,
+    KernelConf* kernel_conf) const {
+  kernel_conf->set_is_forward(is_forward);
   const ConcatOpConf& concat_op_conf = op_conf().concat_conf();
   ConcatKernelConf* concat_kernel_conf = kernel_conf->mutable_concat_conf();
 
-  DataType dtype = GetBlobDesc4BnInOp(input_bns().at(0))->data_type();
-  concat_kernel_conf->set_data_type(dtype);
-
-  const size_t elem_size = GetSizeOfDataType(dtype);
+  const size_t elem_size = GetSizeOfDataType(kernel_conf->data_type());
   const int64_t& concat_axis = concat_op_conf.axis();
 
   const BlobDesc* out_blob = GetBlobDesc4BnInOp(kernel_conf->output_bns(0));

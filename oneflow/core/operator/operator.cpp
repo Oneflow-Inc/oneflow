@@ -59,9 +59,20 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
   VirtualFixParallelDesc(pr_desc);
 }
 
+static bool HasBlobDescWithDataId(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::vector<std::string>& bn_in_ops) {
+  for (const std::string& bn_in_op : bn_in_ops) {
+    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
+    if (blob_desc && blob_desc->has_data_id()) { return true; }
+  }
+  return false;
+}
+
 void Operator::GenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+    bool is_forward, const ParallelContext* parallel_ctx,
+    KernelConf* kernel_conf) const {
   *(kernel_conf->mutable_op_conf()) = op_conf_;
   *(kernel_conf->mutable_bn_in_op2lbn()) = HashMap2PbMap(bn_in_op2lbn_);
   *(kernel_conf->mutable_data_tmp_bns()) = StdVec2PbRpf(data_tmp_bns_);
@@ -72,7 +83,19 @@ void Operator::GenKernelConf(
   *(kernel_conf->mutable_model_bns()) = StdVec2PbRpf(model_bns_);
   *(kernel_conf->mutable_model_diff_bns()) = StdVec2PbRpf(model_diff_bns_);
   *(kernel_conf->mutable_model_tmp_bns()) = StdVec2PbRpf(model_tmp_bns_);
-  VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
+  kernel_conf->set_need_do_data_id(false);
+  if (HasBlobDescWithDataId(GetBlobDesc4BnInOp, output_bns_)) {
+    kernel_conf->set_need_do_data_id(true);
+  }
+  if (output_bns_.empty() == false) {
+    kernel_conf->set_data_type(GetBlobDesc4BnInOp(output_bns_[0])->data_type());
+  } else if (input_bns_.empty() == false) {
+    kernel_conf->set_data_type(GetBlobDesc4BnInOp(input_bns_[0])->data_type());
+  } else {
+    kernel_conf->set_data_type(DataType::kInvalidDataType);
+  }
+  VirtualGenKernelConf(GetBlobDesc4BnInOp, is_forward, parallel_ctx,
+                       kernel_conf);
 }
 
 std::string Operator::ibn2lbn(const std::string& input_bn) const {

@@ -20,6 +20,8 @@ class InnerProductOp final : public Operator {
   int32_t MaxModelSplitNum() const override {
     return op_conf().innerproduct_conf().out_num();
   }
+
+ private:
 };
 
 }  // namespace oneflow

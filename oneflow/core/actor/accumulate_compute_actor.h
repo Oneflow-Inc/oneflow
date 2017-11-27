@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_ACTOR_ACCUMULATE_ACTOR_H_
-#define ONEFLOW_CORE_ACTOR_ACCUMULATE_ACTOR_H_
+#ifndef ONEFLOW_CORE_ACTOR_ACCUMULATE_COMPUTE_ACTOR_H_
+#define ONEFLOW_CORE_ACTOR_ACCUMULATE_COMPUTE_ACTOR_H_
 
 #include "oneflow/core/actor/compute_actor.h"
 
 namespace oneflow {
 
-class AccumulateActor : public CompActor {
+class AccumulateCompActor : public CompActor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(AccumulateActor);
-  AccumulateActor() = default;
-  virtual ~AccumulateActor() = default;
+  OF_DISALLOW_COPY_AND_MOVE(AccumulateCompActor);
+  AccumulateCompActor() = default;
+  virtual ~AccumulateCompActor() = default;
 
  protected:
   void Init(const TaskProto&, int32_t max_acc_cnt);
@@ -32,4 +32,4 @@ class AccumulateActor : public CompActor {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_ACCUMULATE_ACTOR_H_
+#endif  // ONEFLOW_CORE_ACTOR_ACCUMULATE_COMPUTE_ACTOR_H_

@@ -23,13 +23,14 @@ char* NextConcatAddr(char* start_addr, int64_t concat_idx,
 
 template<DeviceType device_type>
 void ConcatKernel<device_type>::ConcatKernelWork(
-    bool is_forward, const KernelCtx& ctx, const std::string& obn,
+    const KernelCtx& ctx, const std::string& obn,
     const PbRpf<std::string>& ibns,
     std::function<Blob*(const std::string&)> BnInOp2Blob,
     MemCopyFuncType copy_func) const {
+  bool is_forward = this->kernel_conf().is_forward();
+  const size_t elem_size = GetSizeOfDataType(this->kernel_conf().data_type());
   const ConcatKernelConf& concat_kernel_conf =
       this->kernel_conf().concat_conf();
-  const size_t elem_size = GetSizeOfDataType(concat_kernel_conf.data_type());
   Blob* out_blob = BnInOp2Blob(obn);
   if (ibns.size() == 0) { return; }
   const int32_t concat_axis = this->op_conf().concat_conf().axis();
@@ -74,7 +75,7 @@ void ConcatKernel<device_type>::ConcatKernelWork(
     offset_concat_axis += in_concat_axis_dim;
     index++;
   }
-  if (BnInOp2Blob(ibns[0])->has_data_id()) {
+  if (this->kernel_conf().need_do_data_id()) {
     CopyDataIdToOb(ctx, ibns, obn, concat_axis, kind, BnInOp2Blob);
   }
 }
@@ -105,7 +106,7 @@ void ConcatKernel<device_type>::Forward(
                         const int64_t size, cudaMemcpyKind kind) {
     Memcpy<device_type>(ctx.device_ctx, dst, src, size, kind);
   };
-  ConcatKernelWork(true, ctx, this->kernel_conf().output_bns(0),
+  ConcatKernelWork(ctx, this->kernel_conf().output_bns(0),
                    this->kernel_conf().input_bns(), BnInOp2Blob, copy_in2out);
 }
 
@@ -117,7 +118,7 @@ void ConcatKernel<device_type>::Backward(
                         const int64_t size, cudaMemcpyKind kind) {
     Memcpy<device_type>(ctx.device_ctx, dst, src, size, kind);
   };
-  ConcatKernelWork(false, ctx, this->kernel_conf().output_diff_bns(0),
+  ConcatKernelWork(ctx, this->kernel_conf().output_diff_bns(0),
                    this->kernel_conf().input_diff_bns(), BnInOp2Blob,
                    copy_out2in);
 }
