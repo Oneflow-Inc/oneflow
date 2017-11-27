@@ -15,7 +15,9 @@ class CompActor : public Actor {
 
   virtual void VirtualCompActorInit(const TaskProto& task_proto) {}
 
-  const ParallelContext& parallel_ctx() const { return parallel_ctx_; }
+  const ParallelContext* parallel_ctx() const override {
+    return &parallel_ctx_;
+  }
 
  private:
   void VirtualActorInit(const TaskProto& task_proto) override {

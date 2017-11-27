@@ -38,6 +38,7 @@ class Actor {
 
   // Util
   Actor() = default;
+  virtual const ParallelContext* parallel_ctx() const { return nullptr; }
   DeviceType GetDeviceType() const;
   virtual void VirtualActorInit(const TaskProto&) {}
   virtual KernelWardFunc GetKernelWardFunc() const { return &Kernel::Forward; }
