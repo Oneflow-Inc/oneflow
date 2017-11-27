@@ -25,7 +25,7 @@ class ConcatOp final : public Operator {
   }
   void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      bool is_forward, const ParallelContext* parallel_ctx,
+      const ParallelContext* parallel_ctx,
       KernelConf* kernel_conf) const override;
 
   HashMap<std::string, std::string> ibn2lbn_;

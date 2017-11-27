@@ -45,63 +45,43 @@ void ConcatOp::InferBlobDescs(
 
 void ConcatOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    bool is_forward, const ParallelContext* parallel_ctx,
-    KernelConf* kernel_conf) const {
-  kernel_conf->set_is_forward(is_forward);
-  const ConcatOpConf& concat_op_conf = op_conf().concat_conf();
-  ConcatKernelConf* concat_kernel_conf = kernel_conf->mutable_concat_conf();
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  bool is_forward = kernel_conf->is_forward();
+  const std::string& concat_out_bn =
+      is_forward ? kernel_conf->output_bns(0) : kernel_conf->output_diff_bns(0);
+  const BlobDesc* out_blob = GetBlobDesc4BnInOp(concat_out_bn);
 
-  const size_t elem_size = GetSizeOfDataType(kernel_conf->data_type());
-  const int64_t& concat_axis = concat_op_conf.axis();
-
-  const BlobDesc* out_blob = GetBlobDesc4BnInOp(kernel_conf->output_bns(0));
-  const BlobDesc* out_diff_blob =
-      GetBlobDesc4BnInOp(kernel_conf->output_diff_bns(0));
-
-  concat_kernel_conf->set_fw_concat_element_cnt(1);
+  const int64_t& concat_axis = op_conf().concat_conf().axis();
+  int64_t concat_element_cnt = 1;
   if ((concat_axis != (out_blob->shape().NumAxes() - 1))
       && (concat_axis != -1)) {
-    concat_kernel_conf->set_fw_concat_element_cnt(
-        out_blob->shape().Count(concat_axis + 1));
+    concat_element_cnt = out_blob->shape().Count(concat_axis + 1);
   }
-  concat_kernel_conf->set_bw_concat_element_cnt(1);
-  if ((concat_axis != (out_diff_blob->shape().NumAxes() - 1))
-      && (concat_axis != -1)) {
-    concat_kernel_conf->set_bw_concat_element_cnt(
-        out_diff_blob->shape().Count(concat_axis + 1));
-  }
-
-  concat_kernel_conf->set_fw_concat_num_each_blob(1);
+  int64_t concat_num_each_blob = 1;
   if ((concat_axis != (-out_blob->shape().NumAxes())) && (concat_axis != 0)) {
-    concat_kernel_conf->set_fw_concat_num_each_blob(
-        out_blob->shape().Count(0, concat_axis));
-  }
-  concat_kernel_conf->set_bw_concat_num_each_blob(1);
-  if ((concat_axis != (-out_diff_blob->shape().NumAxes()))
-      && (concat_axis != 0)) {
-    concat_kernel_conf->set_bw_concat_num_each_blob(
-        out_diff_blob->shape().Count(0, concat_axis));
+    concat_num_each_blob = out_blob->shape().Count(0, concat_axis);
   }
 
-  size_t index = 0;
-  for (const std::string& ibn : kernel_conf->input_bns()) {
+  std::vector<int64_t> cp_szs;
+  const PbRpf<std::string>& concat_in_bns =
+      is_forward ? kernel_conf->input_bns() : kernel_conf->input_diff_bns();
+  for (const std::string& ibn : concat_in_bns) {
     const BlobDesc* in_blob = GetBlobDesc4BnInOp(ibn);
     const int64_t in_concat_axis_dim = in_blob->shape().At(concat_axis);
-    const int64_t cp_sz = in_concat_axis_dim
-                          * concat_kernel_conf->fw_concat_element_cnt()
-                          * elem_size;
-    concat_kernel_conf->set_fw_cp_szs(index, cp_sz);
-    index++;
+    const int64_t cp_sz = in_concat_axis_dim * concat_element_cnt
+                          * GetSizeOfDataType(kernel_conf->data_type());
+    cp_szs.push_back(cp_sz);
   }
-  index = 0;
-  for (const std::string& idbn : kernel_conf->input_diff_bns()) {
-    const BlobDesc* in_diff_blob = GetBlobDesc4BnInOp(idbn);
-    const int64_t in_concat_axis_dim = in_diff_blob->shape().At(concat_axis);
-    const int64_t cp_sz = in_concat_axis_dim
-                          * concat_kernel_conf->bw_concat_element_cnt()
-                          * elem_size;
-    concat_kernel_conf->set_bw_cp_szs(index, cp_sz);
-    index++;
+
+  ConcatKernelConf* concat_kernel_conf = kernel_conf->mutable_concat_conf();
+  if (is_forward) {
+    concat_kernel_conf->set_fw_concat_element_cnt(concat_element_cnt);
+    concat_kernel_conf->set_fw_concat_num_each_blob(concat_num_each_blob);
+    *(concat_kernel_conf->mutable_fw_cp_szs()) = StdVec2PbRf(cp_szs);
+  } else {
+    concat_kernel_conf->set_bw_concat_element_cnt(concat_element_cnt);
+    concat_kernel_conf->set_bw_concat_num_each_blob(concat_num_each_blob);
+    *(concat_kernel_conf->mutable_bw_cp_szs()) = StdVec2PbRf(cp_szs);
   }
 }
 
