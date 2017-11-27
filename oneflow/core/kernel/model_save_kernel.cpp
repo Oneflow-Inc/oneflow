@@ -14,8 +14,7 @@ void ModelSaveKernel::Forward(
   Snapshot* snapshot = std::get<0>(*save_ctx);
   const ModelSaveKernelConf& model_save_kernel_conf =
       this->kernel_conf().model_save_conf();
-  const size_t elem_size =
-      GetSizeOfDataType(model_save_kernel_conf.data_type());
+  const size_t elem_size = GetSizeOfDataType(this->kernel_conf().data_type());
   int32_t part_id = model_save_kernel_conf.part_id();
   int32_t total_part_num = model_save_kernel_conf.part_num();
   for (const std::string& ibn : kernel_conf().input_bns()) {
