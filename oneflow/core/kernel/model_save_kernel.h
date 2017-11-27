@@ -5,7 +5,6 @@
 
 namespace oneflow {
 
-template<typename T>
 class ModelSaveKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ModelSaveKernel);
