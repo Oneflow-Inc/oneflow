@@ -8,10 +8,6 @@ message ConvolutionKernelConf {
   required DataType data_type = 1;
 }
 
-message DataLoaderKernelConf {
-  required int64 parallel_id = 1;
-}
-
 message InnerProductKernelConf {
   required DataType data_type = 1;
 }
@@ -36,11 +32,11 @@ message KernelConf {
   repeated string model_tmp_bns = 10;
 
   required bool need_do_data_id = 12;
+  required bool is_forward = 13;
 
   oneof kernel_type {
     ConvolutionKernelConf convolution_conf = 100;
     InnerProductKernelConf innerproduct_conf = 101;
-    DataLoaderKernelConf data_loader_conf = 102;
     MultinomialLogisticLossKernelConf multinomial_logistic_loss_conf = 106;
   }
 }
