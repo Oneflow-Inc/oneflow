@@ -7,7 +7,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename PredType, typename LabelType>
-class MultinomialLogisticLossKernel final : public Kernel {
+class MultinomialLogisticLossKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MultinomialLogisticLossKernel);
   MultinomialLogisticLossKernel() = default;

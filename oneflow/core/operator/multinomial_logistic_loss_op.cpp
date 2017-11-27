@@ -11,6 +11,16 @@ void MultinomialLogisticLossOp::InitFromOpConf() {
   EnrollDataTmpBn("loss_buffer");
 }
 
+void MultinomialLogisticLossOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  DataType dtype = GetBlobDesc4BnInOp("prediction")->data_type();
+  kernel_conf->mutable_multinomial_logistic_loss_conf()->set_pred_type(dtype);
+
+  dtype = GetBlobDesc4BnInOp("label")->data_type();
+  kernel_conf->mutable_multinomial_logistic_loss_conf()->set_label_type(dtype);
+}
+
 const PbMessage& MultinomialLogisticLossOp::GetSpecialConf() const {
   return op_conf().multinomial_logistic_loss_conf();
 }
