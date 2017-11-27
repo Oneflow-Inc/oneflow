@@ -118,7 +118,7 @@ void InnerProductKernel<device_type, T>::InitModelBlobsWithDir(
 
 template<DeviceType device_type, typename T>
 void InnerProductKernel<device_type, T>::InitModelTmpBlobs(
-    const KernelCtx& ctx, const ParallelContext& parallel_ctx,
+    const KernelCtx& ctx, const ParallelContext* parallel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (this->op_conf().innerproduct_conf().has_bias_term()) {
     FillConf bias_multiplier_fill_conf;
@@ -140,8 +140,7 @@ Kernel* CreateInnerProductKernel(DeviceType dev_type,
    }},
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
           INNERPRODUCT_KERNEL_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};
-  return creators.at(
-      GetHashKey(dev_type, kernel_conf.innerproduct_conf().data_type()))();
+  return creators.at(GetHashKey(dev_type, kernel_conf.data_type()))();
 }
 
 }  // namespace

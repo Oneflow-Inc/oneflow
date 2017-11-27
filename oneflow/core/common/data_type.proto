@@ -2,15 +2,16 @@ syntax = "proto2";
 package oneflow;
 
 enum DataType {
-  kChar = 0;
-  kFloat = 1;
-  kDouble = 2;
-  kInt8 = 3;
-  kInt16 = 4;
-  kInt32 = 5;
-  kInt64 = 6;
-  kUInt8 = 7;
-  kUInt16 = 8;
-  kUInt32 = 9;
-  kUInt64 = 10;
+  kInvalidDataType = 0;
+  kChar = 1;
+  kFloat = 2;
+  kDouble = 3;
+  kInt8 = 4;
+  kInt16 = 5;
+  kInt32 = 6;
+  kInt64 = 7;
+  kUInt8 = 8;
+  kUInt16 = 9;
+  kUInt32 = 10;
+  kUInt64 = 11;
 }

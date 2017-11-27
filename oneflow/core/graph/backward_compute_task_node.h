@@ -12,9 +12,18 @@ class BackwardCompTaskNode final : public CompTaskNode {
   ~BackwardCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override;
+  void BuildExecGphAndRegst() override;
+
   TaskType GetTaskType() const override { return TaskType::kBackward; }
 
  private:
+  void BuildExecGphAndBindOutDiffRegst();
+  void BuildActivationDiffRegst();
+  void BuildInDiffRegst();
+  void BuildModelDiffRegst();
+  void InferBlobDescsInProducedRegsts();
+  std::shared_ptr<RegstDesc> GetRelatedInRegst();
 };
 
 }  // namespace oneflow

@@ -12,8 +12,8 @@ void SourceCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void SourceCompTaskNode::ConsumeAllRegsts() {}
 
 void SourceCompTaskNode::BuildExecGphAndRegst() {
-  auto out_regst = GetProducedRegst("out");
-  auto activation_regst = GetProducedRegst("activation");
+  std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
+  std::shared_ptr<RegstDesc> activation_regst = GetProducedRegst("activation");
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = chain_node()->SoleOp();
   const auto& data_output_lbns = chain_node()->data_output_lbns();

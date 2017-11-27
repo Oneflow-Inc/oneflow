@@ -16,15 +16,15 @@ class Kernel {
   OF_DISALLOW_COPY_AND_MOVE(Kernel);
   virtual ~Kernel() = default;
 
-  void Init(const KernelConf&);
+  void Init(bool is_forward, const ParallelContext*, const KernelConf&);
 
   void InitModelBlobs(
-      const KernelCtx& ctx, const ParallelContext& parallel_ctx,
+      const KernelCtx& ctx, const ParallelContext* parallel_ctx,
       const Snapshot*,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   virtual void InitModelTmpBlobs(
-      const KernelCtx& ctx, const ParallelContext& parallel_ctx,
+      const KernelCtx& ctx, const ParallelContext* parallel_ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   virtual void Forward(
@@ -38,7 +38,7 @@ class Kernel {
 
  protected:
   Kernel() = default;
-  virtual void VirtualKernelInit() {}
+  virtual void VirtualKernelInit(bool is_forward, const ParallelContext*) {}
   const KernelConf& kernel_conf() const { return kernel_conf_; }
   const OperatorConf& op_conf() const { return kernel_conf_.op_conf(); }
 
@@ -96,7 +96,9 @@ void AddKernelCreator(OperatorConf::OpTypeCase, KernelCreator1);
 void AddKernelCreator(OperatorConf::OpTypeCase, KernelCreator2);
 void AddKernelCreator(OperatorConf::OpTypeCase, KernelCreator3);
 void AddKernelCreator(OperatorConf::OpTypeCase, KernelCreator4);
-std::unique_ptr<const Kernel> ConstructKernel(DeviceType, const KernelConf&);
+std::unique_ptr<const Kernel> ConstructKernel(DeviceType, bool is_forward,
+                                              const ParallelContext*,
+                                              const KernelConf&);
 
 }  // namespace oneflow
 
