@@ -10,7 +10,7 @@ message TrainConf {
   optional int32 staleness = 3 [default = 0]; // -1 means unlimited, 0 means BSP, > 0 means SSP
   required int64 total_batch_num = 4;
   optional FillConf default_fill_conf = 5;
-  optional int32 piece_num_of_record_loss = 6 [default = 1000];
+  optional int32 piece_num_of_print_loss = 6 [default = 1000];
   required int32 num_of_pieces_in_batch = 7;
   oneof ModelUpdateCase {
     NormalModelUpdateOpConf normal_mdupdt_conf = 1000;

@@ -25,15 +25,15 @@ using BldBoxingOpConfMthd = void (BoxingTaskNode::*)(
     const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
     int64_t out_parallel_num, BoxingOpConf*);
 
-#define CHAIN_TYPE_SEQ             \
-  OF_PP_MAKE_TUPLE_SEQ(Forward)    \
-  OF_PP_MAKE_TUPLE_SEQ(Backward)   \
-  OF_PP_MAKE_TUPLE_SEQ(Source)     \
-  OF_PP_MAKE_TUPLE_SEQ(Loss)       \
-  OF_PP_MAKE_TUPLE_SEQ(LossAcc)    \
-  OF_PP_MAKE_TUPLE_SEQ(LossRecord) \
-  OF_PP_MAKE_TUPLE_SEQ(MdUpdt)     \
-  OF_PP_MAKE_TUPLE_SEQ(MdSave)     \
+#define CHAIN_TYPE_SEQ            \
+  OF_PP_MAKE_TUPLE_SEQ(Forward)   \
+  OF_PP_MAKE_TUPLE_SEQ(Backward)  \
+  OF_PP_MAKE_TUPLE_SEQ(Source)    \
+  OF_PP_MAKE_TUPLE_SEQ(Loss)      \
+  OF_PP_MAKE_TUPLE_SEQ(LossAcc)   \
+  OF_PP_MAKE_TUPLE_SEQ(LossPrint) \
+  OF_PP_MAKE_TUPLE_SEQ(MdUpdt)    \
+  OF_PP_MAKE_TUPLE_SEQ(MdSave)    \
   OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc)
 
 class ChainNode : public Node<ChainNode, ChainEdge> {
@@ -202,11 +202,11 @@ class LossAccChainNode final : public ChainNode {
                                    (Loss));
 };
 
-class LossRecordChainNode final : public ChainNode {
+class LossPrintChainNode final : public ChainNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(LossRecordChainNode);
-  LossRecordChainNode() = default;
-  ~LossRecordChainNode() = default;
+  OF_DISALLOW_COPY_AND_MOVE(LossPrintChainNode);
+  LossPrintChainNode() = default;
+  ~LossPrintChainNode() = default;
 
   OVERRIDE_PURE_VIRTUAL_METHOD();
 

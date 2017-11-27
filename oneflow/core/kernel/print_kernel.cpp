@@ -1,4 +1,4 @@
-#include "oneflow/core/kernel/record_kernel.h"
+#include "oneflow/core/kernel/print_kernel.h"
 #include "oneflow/core/job/runtime_context.h"
 
 namespace oneflow {
@@ -6,7 +6,7 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-void RecordBlobImpl(PersistentOutStream& out_stream, const Blob* blob) {
+void PrintBlobImpl(PersistentOutStream& out_stream, const Blob* blob) {
   CHECK_EQ(GetDataType<T>::val, blob->data_type());
   const T* dptr = blob->dptr<T>();
   for (int64_t i = 0; i < blob->shape().At(0); ++i) {
@@ -24,22 +24,22 @@ void RecordBlobImpl(PersistentOutStream& out_stream, const Blob* blob) {
   }
 }
 
-void RecordBlob(PersistentOutStream& out_stream, const Blob* blob) {
+void PrintBlob(PersistentOutStream& out_stream, const Blob* blob) {
   static const HashMap<int, void (*)(PersistentOutStream&, const Blob*)>
-      record_funcs = {
-#define RECORD_KERNEL_ENTRY(type_cpp, type_proto) \
-  {type_proto, &RecordBlobImpl<type_cpp>},
-          OF_PP_FOR_EACH_TUPLE(RECORD_KERNEL_ENTRY, ALL_DATA_TYPE_SEQ)};
-  record_funcs.at(blob->data_type())(out_stream, blob);
+      print_funcs = {
+#define PRINT_KERNEL_ENTRY(type_cpp, type_proto) \
+  {type_proto, &PrintBlobImpl<type_cpp>},
+          OF_PP_FOR_EACH_TUPLE(PRINT_KERNEL_ENTRY, ALL_DATA_TYPE_SEQ)};
+  print_funcs.at(blob->data_type())(out_stream, blob);
 }
 
 }  // namespace
 
-void RecordKernel::Forward(
+void PrintKernel::Forward(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   int64_t parallel_id = reinterpret_cast<int64_t>(kernel_ctx.other);
-  const std::string& root_path = op_conf().record_conf().record_path();
+  const std::string& root_path = op_conf().print_conf().print_path();
   OF_CALL_ONCE(root_path, GlobalFS()->MakeEmptyDir(root_path));
   for (const std::string& ibn : kernel_conf().input_bns()) {
     const std::string& lbn = Lbn4BnInOp(ibn);
@@ -55,7 +55,7 @@ void RecordKernel::Forward(
         JoinPath(bn_in_op_dir, "part-" + std::to_string(parallel_id));
     auto out_stream =
         RuntimeCtx::Singleton()->GetPersistentOutStream(file_path);
-    RecordBlob(*out_stream, blob);
+    PrintBlob(*out_stream, blob);
     out_stream->Flush();
   }
 }
