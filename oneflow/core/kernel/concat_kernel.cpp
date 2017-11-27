@@ -36,7 +36,7 @@ void ConcatKernel<device_type>::ConcatKernelWork(
   const int64_t& concat_element_cnt =
       is_forward ? concat_kernel_conf.fw_concat_element_cnt()
                  : concat_kernel_conf.bw_concat_element_cnt();
-  int64_t concat_num_each_blob =
+  const int64_t& concat_num_each_blob =
       is_forward ? concat_kernel_conf.fw_concat_num_each_blob()
                  : concat_kernel_conf.bw_concat_num_each_blob();
   const int64_t out_concat_axis_dim = out_blob->shape().At(concat_axis);
@@ -72,6 +72,7 @@ void ConcatKernel<device_type>::ConcatKernelWork(
     }
 
     offset_concat_axis += in_concat_axis_dim;
+    index++;
   }
   if (BnInOp2Blob(ibns[0])->has_data_id()) {
     CopyDataIdToOb(ctx, ibns, obn, concat_axis, kind, BnInOp2Blob);

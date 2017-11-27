@@ -51,8 +51,8 @@ void ConcatOp::VirtualGenKernelConf(
 
   DataType dtype = GetBlobDesc4BnInOp(input_bns().at(0))->data_type();
   concat_kernel_conf->set_data_type(dtype);
-  const size_t elem_size = GetSizeOfDataType(dtype);
 
+  const size_t elem_size = GetSizeOfDataType(dtype);
   const int64_t& concat_axis = concat_op_conf.axis();
 
   const BlobDesc* out_blob = GetBlobDesc4BnInOp(kernel_conf->output_bns(0));
