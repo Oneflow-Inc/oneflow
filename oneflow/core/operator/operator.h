@@ -100,8 +100,7 @@ class Operator {
   virtual void VirtualFixParallelDesc(ParallelDesc* pr_desc) const {}
   virtual void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      bool is_forward, const ParallelContext* parallel_ctx,
-      KernelConf* kernel_conf) const {}
+      const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {}
 
   virtual std::string ibn2lbn(const std::string& input_bn) const;
   virtual std::string obn2lbn(const std::string& output_bn) const;

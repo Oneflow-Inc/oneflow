@@ -16,7 +16,7 @@ class DataLoaderKernel final : public KernelIf<DeviceType::kCPU> {
                std::function<Blob*(const std::string&)>) const override;
 
  private:
-  void VirtualKernelInit(bool is_forward, const ParallelContext*) override;
+  void VirtualKernelInit(const ParallelContext*) override;
 
   std::unique_ptr<PersistentInStream> in_stream_;
 };
