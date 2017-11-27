@@ -293,9 +293,7 @@ Kernel* CreateConvolutionKernel(DeviceType dev_type,
    }},
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
           CONVOLUTION_KERNEL_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};
-  CHECK(kernel_conf.has_convolution_conf());
-  return creators.at(
-      GetHashKey(dev_type, kernel_conf.convolution_conf().data_type()))();
+  return creators.at(GetHashKey(dev_type, kernel_conf.data_type()))();
 }
 
 }  // namespace

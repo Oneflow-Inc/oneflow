@@ -87,6 +87,13 @@ void Operator::GenKernelConf(
   if (HasBlobDescWithDataId(GetBlobDesc4BnInOp, output_bns_)) {
     kernel_conf->set_need_do_data_id(true);
   }
+  if (output_bns_.empty() == false) {
+    kernel_conf->set_data_type(GetBlobDesc4BnInOp(output_bns_[0])->data_type());
+  } else if (input_bns_.empty() == false) {
+    kernel_conf->set_data_type(GetBlobDesc4BnInOp(input_bns_[0])->data_type());
+  } else {
+    kernel_conf->set_data_type(DataType::kInvalidDataType);
+  }
   VirtualGenKernelConf(GetBlobDesc4BnInOp, is_forward, parallel_ctx,
                        kernel_conf);
 }
