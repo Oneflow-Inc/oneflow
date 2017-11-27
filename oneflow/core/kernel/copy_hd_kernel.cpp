@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-void CopyHdKernel::VirtualKernelInit() {
+void CopyHdKernel::VirtualKernelInit(bool is_forward, const ParallelContext*) {
   const CopyHdOpConf& copy_hd_conf = kernel_conf().op_conf().copy_hd_conf();
 
   if (copy_hd_conf.type() == CopyHdOpConf::H2D) {

@@ -62,7 +62,8 @@ void InnerProductOp::InferBlobDescs(
 
 void InnerProductOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+    bool is_forward, const ParallelContext* parallel_ctx,
+    KernelConf* kernel_conf) const {
   DataType dtype = GetBlobDesc4BnInOp("in")->data_type();
   kernel_conf->mutable_innerproduct_conf()->set_data_type(dtype);
 }

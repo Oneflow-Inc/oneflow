@@ -24,7 +24,7 @@ class InnerProductOp final : public Operator {
  private:
   void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx,
+      bool is_forward, const ParallelContext* parallel_ctx,
       KernelConf* kernel_conf) const override;
 };
 
