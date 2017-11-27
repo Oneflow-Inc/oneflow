@@ -17,14 +17,6 @@ void ConvolutionOp::InitFromOpConf() {
   }
 }
 
-void ConvolutionOp::VirtualGenKernelConf(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    bool is_forward, const ParallelContext* parallel_ctx,
-    KernelConf* kernel_conf) const {
-  DataType dtype = GetBlobDesc4BnInOp("in")->data_type();
-  kernel_conf->mutable_convolution_conf()->set_data_type(dtype);
-}
-
 const PbMessage& ConvolutionOp::GetSpecialConf() const {
   return op_conf().convolution_conf();
 }
