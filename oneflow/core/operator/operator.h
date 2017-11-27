@@ -93,13 +93,15 @@ class Operator {
   virtual int32_t MaxModelSplitNum() const { return -1; }
   void GenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const;
+      bool is_forward, const ParallelContext* parallel_ctx,
+      KernelConf* kernel_conf) const;
 
  protected:
   virtual void VirtualFixParallelDesc(ParallelDesc* pr_desc) const {}
   virtual void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {}
+      bool is_forward, const ParallelContext* parallel_ctx,
+      KernelConf* kernel_conf) const {}
 
   virtual std::string ibn2lbn(const std::string& input_bn) const;
   virtual std::string obn2lbn(const std::string& output_bn) const;

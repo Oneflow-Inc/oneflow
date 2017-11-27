@@ -71,7 +71,8 @@ static bool HasBlobDescWithDataId(
 
 void Operator::GenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+    bool is_forward, const ParallelContext* parallel_ctx,
+    KernelConf* kernel_conf) const {
   *(kernel_conf->mutable_op_conf()) = op_conf_;
   *(kernel_conf->mutable_bn_in_op2lbn()) = HashMap2PbMap(bn_in_op2lbn_);
   *(kernel_conf->mutable_data_tmp_bns()) = StdVec2PbRpf(data_tmp_bns_);
@@ -86,7 +87,8 @@ void Operator::GenKernelConf(
   if (HasBlobDescWithDataId(GetBlobDesc4BnInOp, output_bns_)) {
     kernel_conf->set_need_do_data_id(true);
   }
-  VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
+  VirtualGenKernelConf(GetBlobDesc4BnInOp, is_forward, parallel_ctx,
+                       kernel_conf);
 }
 
 std::string Operator::ibn2lbn(const std::string& input_bn) const {
