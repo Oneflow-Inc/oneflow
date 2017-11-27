@@ -31,7 +31,7 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
 
   void BuildFwStruct();
   void BuildBwStruct();
-  void BuildLossRecordStruct();
+  void BuildLossPrintStruct();
   void BuildModelStruct(bool is_train);
   void BuildRnnStruct();
 };
