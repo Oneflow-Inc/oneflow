@@ -4,7 +4,7 @@ package oneflow;
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/data_type.proto";
 
-message MultinomialLogisticLossKernelConf {
+message LossConf {
   required DataType label_type = 1;
 }
 
@@ -27,6 +27,6 @@ message KernelConf {
   required DataType data_type = 14;
   
   oneof kernel_type {
-    MultinomialLogisticLossKernelConf multinomial_logistic_loss_conf = 106;
+    LossConf loss_conf = 106;
   }
 }
