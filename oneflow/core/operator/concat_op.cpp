@@ -46,43 +46,32 @@ void ConcatOp::InferBlobDescs(
 void ConcatOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
-  bool is_forward = kernel_conf->is_forward();
-  const std::string& concat_out_bn =
-      is_forward ? kernel_conf->output_bns(0) : kernel_conf->output_diff_bns(0);
-  const BlobDesc* out_blob = GetBlobDesc4BnInOp(concat_out_bn);
+  const BlobDesc* out_blob = GetBlobDesc4BnInOp(kernel_conf->output_bns(0));
 
-  const int64_t concat_axis = op_conf().concat_conf().axis();
-  int64_t dim_cp_cnt = 1;
-  if ((concat_axis != (out_blob->shape().NumAxes() - 1))
-      && (concat_axis != -1)) {
-    dim_cp_cnt = out_blob->shape().Count(concat_axis + 1);
+  int32_t concat_axis = op_conf().concat_conf().axis();
+  if (concat_axis < 0) { concat_axis += out_blob->shape().NumAxes(); }
+  int64_t dim_cp_num = 1;
+  if (concat_axis != (out_blob->shape().NumAxes() - 1)) {
+    dim_cp_num = out_blob->shape().Count(concat_axis + 1);
   }
-  int64_t total_cp_cnt = 1;
-  if ((concat_axis != (-out_blob->shape().NumAxes())) && (concat_axis != 0)) {
-    total_cp_cnt = out_blob->shape().Count(0, concat_axis);
+  int64_t total_cp_num = 1;
+  if (concat_axis != 0) {
+    total_cp_num = out_blob->shape().Count(0, concat_axis);
   }
 
   std::vector<int64_t> per_cp_bytesize;
-  const PbRpf<std::string>& concat_in_bns =
-      is_forward ? kernel_conf->input_bns() : kernel_conf->input_diff_bns();
-  for (const std::string& ibn : concat_in_bns) {
+  for (const std::string& ibn : kernel_conf->input_bns()) {
     const BlobDesc* in_blob = GetBlobDesc4BnInOp(ibn);
     const int64_t in_concat_axis_dim = in_blob->shape().At(concat_axis);
-    const int64_t cp_bytesize = in_concat_axis_dim * dim_cp_cnt
+    const int64_t cp_bytesize = in_concat_axis_dim * dim_cp_num
                                 * GetSizeOfDataType(kernel_conf->data_type());
     per_cp_bytesize.push_back(cp_bytesize);
   }
 
   ConcatKernelConf* concat_kernel_conf = kernel_conf->mutable_concat_conf();
-  if (is_forward) {
-    concat_kernel_conf->set_fw_total_cp_cnt(total_cp_cnt);
-    *(concat_kernel_conf->mutable_fw_per_cp_bytesize()) =
-        StdVec2PbRf(per_cp_bytesize);
-  } else {
-    concat_kernel_conf->set_bw_total_cp_cnt(total_cp_cnt);
-    *(concat_kernel_conf->mutable_bw_per_cp_bytesize()) =
-        StdVec2PbRf(per_cp_bytesize);
-  }
+  concat_kernel_conf->set_total_cp_num(total_cp_num);
+  *(concat_kernel_conf->mutable_per_cp_bytesize()) =
+      StdVec2PbRf(per_cp_bytesize);
 }
 
 REGISTER_OP(OperatorConf::kConcatConf, ConcatOp);

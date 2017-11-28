@@ -26,17 +26,13 @@ void ConcatKernel<device_type>::ConcatKernelWork(
     const PbRpf<std::string>& ibns,
     std::function<Blob*(const std::string&)> BnInOp2Blob,
     MemCopyFuncType copy_func) const {
-  bool is_forward = this->kernel_conf().is_forward();
-  const ConcatKernelConf& concat_kernel_conf =
-      this->kernel_conf().concat_conf();
   Blob* out_blob = BnInOp2Blob(obn);
   if (ibns.size() == 0) { return; }
   const int32_t concat_axis = this->op_conf().concat_conf().axis();
-  const int64_t total_cp_cnt = is_forward
-                                   ? concat_kernel_conf.fw_total_cp_cnt()
-                                   : concat_kernel_conf.bw_total_cp_cnt();
   const int64_t out_concat_axis_dim = out_blob->shape().At(concat_axis);
+  const int64_t total_cp_num = this->kernel_conf().concat_conf().total_cp_num();
   char* out_blob_mut_dptr = out_blob->mut_dptr<char>();
+
   cudaMemcpyKind kind;
   if (device_type == DeviceType::kCPU) {
     kind = cudaMemcpyKind::cudaMemcpyHostToHost;
@@ -49,18 +45,18 @@ void ConcatKernel<device_type>::ConcatKernelWork(
 
   int64_t offset_concat_axis = 0;
   int64_t cp_dim_bytesize = 0;
+  const auto& per_cp_bytesize =
+      this->kernel_conf().concat_conf().per_cp_bytesize();
   FOR_RANGE(int64_t, ibn_idx, 0, ibns.size()) {
     Blob* in_blob = BnInOp2Blob(ibns[ibn_idx]);
     char* in_blob_mut_dptr = in_blob->mut_dptr<char>();
     const int64_t in_concat_axis_dim = in_blob->shape().At(concat_axis);
-    const int64_t cp_bytesize =
-        is_forward ? concat_kernel_conf.fw_per_cp_bytesize()[ibn_idx]
-                   : concat_kernel_conf.bw_per_cp_bytesize()[ibn_idx];
+    const int64_t cp_bytesize = per_cp_bytesize[ibn_idx];
     if (cp_dim_bytesize == 0) {
       cp_dim_bytesize = cp_bytesize / in_concat_axis_dim;
     }
 
-    FOR_RANGE(int64_t, concat_idx, 0, total_cp_cnt) {
+    FOR_RANGE(int64_t, concat_idx, 0, total_cp_num) {
       char* out_cp_adr =
           NextConcatAddr(out_blob_mut_dptr, concat_idx, out_concat_axis_dim,
                          offset_concat_axis, cp_dim_bytesize);

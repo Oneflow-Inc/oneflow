@@ -5,11 +5,8 @@ import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/data_type.proto";
 
 message ConcatKernelConf {
-  required int64 fw_total_cp_cnt = 1;
-  repeated int64 fw_per_cp_bytesize = 2;
-
-  required int64 bw_total_cp_cnt = 3;
-  repeated int64 bw_per_cp_bytesize = 4;
+  required int64 total_cp_num = 1;
+  repeated int64 per_cp_bytesize = 2;
 }
 
 message KernelConf {
