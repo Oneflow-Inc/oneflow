@@ -6,18 +6,10 @@
 namespace oneflow {
 
 void ModelSaveKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
-  if (parallel_ctx->policy() == kDataParallel) {
-    part_id_ = 0;
-    part_num_ = 1;
-  } else if (parallel_ctx->policy() == kModelParallel) {
-    part_id_ = parallel_ctx->parallel_id();
-    part_num_ = parallel_ctx->parallel_num();
-  } else {
-    UNEXPECTED_RUN();
-  }
+  std::tie(part_id_, part_num_) = GetPartIdNumFromCtx(parallel_ctx);
 }
 
-void ModelSaveKernel::ForwardDataContent(
+void ModelSaveKernel::Forward(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Snapshot* snapshot = static_cast<Snapshot*>(kernel_ctx.other);

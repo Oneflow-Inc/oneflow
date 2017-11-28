@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class ModelSaveKernel final : public Kernel {
+class ModelSaveKernel final : public KernelIf<DeviceType::kCPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ModelSaveKernel);
   ModelSaveKernel() = default;
@@ -13,17 +13,8 @@ class ModelSaveKernel final : public Kernel {
 
  protected:
   void VirtualKernelInit(const ParallelContext*) override;
-  void ForwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
-  void ForwardDataId(const KernelCtx&,
-                     std::function<Blob*(const std::string&)>) const override {
-    UNEXPECTED_RUN();
-  }
-  void BackwardDataId(const KernelCtx&,
-                      std::function<Blob*(const std::string&)>) const override {
-    UNEXPECTED_RUN();
-  }
+  void Forward(const KernelCtx&,
+               std::function<Blob*(const std::string&)>) const override;
 
  private:
   int32_t part_id_;
