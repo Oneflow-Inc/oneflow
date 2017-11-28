@@ -10,41 +10,80 @@
 #include "oneflow/core/graph/source_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 
+#define FAR_FROM_LOSS_POLICY_MTHD_TYPE_SEQ                   \
+  OF_PP_MAKE_TUPLE_SEQ(kDataParallel, DataConcat, DataSplit) \
+  OF_PP_MAKE_TUPLE_SEQ(kModelParallel, ModelConcat, ModelSplit)
+
+#define CLOSE_TO_LOSS_POLICY_MTHD_TYPE_SEQ                   \
+  OF_PP_MAKE_TUPLE_SEQ(kDataParallel, DataSplit, DataConcat) \
+  OF_PP_MAKE_TUPLE_SEQ(kModelParallel, Clone, Add)
+
+#define PARALLEL_POLICY_4_TUPLE(t) OF_PP_TUPLE_ELEM(0, t)
+#define FORWARD_METHOD_4_TUPLE(t) OF_PP_TUPLE_ELEM(1, t)
+#define BACKWARD_METHOD_4_TUPLE(t) OF_PP_TUPLE_ELEM(2, t)
+
+#define COMBINE_PARALLEL_POLICY(is_forward, get_method, in, out)             \
+  OF_PP_MAKE_TUPLE_SEQ(                                                      \
+      is_forward, PARALLEL_POLICY_4_TUPLE(in), PARALLEL_POLICY_4_TUPLE(out), \
+      OF_PP_CAT(BoxingTaskNode::BldBoxingOpConfWith,                         \
+                OF_PP_CAT(get_method(in), OF_PP_CAT(And, get_method(out)))))
+/*
+#define BOXING_METHOD_TYPE_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(true, kDataParallel, kDataParallel,
+BoxingTaskNode::BldBoxingOpConfWithDataConcatAndDataSplit) \
+  OF_PP_MAKE_TUPLE_SEQ(true, kDataParallel, kModelParallel,
+BoxingTaskNode::BldBoxingOpConfWithDataConcatAndClone) \
+  OF_PP_MAKE_TUPLE_SEQ(true, kModelParallel, kDataParallel,
+BoxingTaskNode::BldBoxingOpConfWithModelConcatAndDataSplit) \
+  OF_PP_MAKE_TUPLE_SEQ(true, kModelParallel, kModelParallel,
+BoxingTaskNode::BldBoxingOpConfWithModelConcatAndClone)
+  OF_PP_MAKE_TUPLE_SEQ(false, kDataParallel, kDataParallel,
+BoxingTaskNode::BldBoxingOpConfWithDataConcatAndDataSplit) \
+  OF_PP_MAKE_TUPLE_SEQ(false, kDataParallel, kModelParallel,
+BoxingTaskNode::BldBoxingOpConfWithAddAndDataSplit) \
+  OF_PP_MAKE_TUPLE_SEQ(false, kModelParallel, kDataParallel,
+BoxingTaskNode::BldBoxingOpConfWithDataConcatAndModelSplit) \
+  OF_PP_MAKE_TUPLE_SEQ(false, kModelParallel, kModelParallel,
+BoxingTaskNode::BldBoxingOpConfWithAddAndModelSplit)
+*/
+//  BOXING_METHOD_TYPE_SEQ is equivalent to the above.
+#define BOXING_METHOD_TYPE_SEQ                                                \
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(                                           \
+      COMBINE_PARALLEL_POLICY, (true), (FORWARD_METHOD_4_TUPLE),              \
+      FAR_FROM_LOSS_POLICY_MTHD_TYPE_SEQ, CLOSE_TO_LOSS_POLICY_MTHD_TYPE_SEQ) \
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(                                           \
+      COMBINE_PARALLEL_POLICY, (false), (BACKWARD_METHOD_4_TUPLE),            \
+      CLOSE_TO_LOSS_POLICY_MTHD_TYPE_SEQ, FAR_FROM_LOSS_POLICY_MTHD_TYPE_SEQ)
+
 namespace oneflow {
 
 namespace {
 
+BldBoxingOpConfMthd GetBldBoxingOpConfMthd(bool is_forward,
+                                           const ChainNode* in_chain,
+                                           const ChainNode* out_chain) {
+  ParallelPolicy in_policy = in_chain->parallel_desc()->policy();
+  ParallelPolicy out_policy = out_chain->parallel_desc()->policy();
+#define PARALLEL_POLICY_METHOD_CASE_ENTRY(is_fw, in, out, method)    \
+  if (is_forward == is_fw && in_policy == in && out_policy == out) { \
+    return &method;                                                  \
+  }
+  OF_PP_FOR_EACH_TUPLE(PARALLEL_POLICY_METHOD_CASE_ENTRY,
+                       BOXING_METHOD_TYPE_SEQ);
+
+  LOG(FATAL) << (is_forward ? "in " : "out_diff ") << in_policy
+             << (is_forward ? " out " : " in_diff ") << out_policy;
+  return nullptr;
+}
+
 BldBoxingOpConfMthd GetBldBoxingOpConfMethodByFwParallelPolicy(
     const ChainNode* in_chain, const ChainNode* out_chain) {
-  ParallelPolicy in_policy = in_chain->parallel_desc()->policy();
-  ParallelPolicy out_policy = out_chain->parallel_desc()->policy();
-  if (in_policy == kDataParallel && out_policy == kDataParallel) {
-    return &BoxingTaskNode::BldBoxingOpConfWithDataConcatAndDataSplit;
-  } else if (in_policy == kDataParallel && out_policy == kModelParallel) {
-    return &BoxingTaskNode::BldBoxingOpConfWithDataConcatAndClone;
-  } else if (in_policy == kModelParallel && out_policy == kDataParallel) {
-    return &BoxingTaskNode::BldBoxingOpConfWithModelConcatAndDataSplit;
-  } else if (in_policy == kModelParallel && out_policy == kModelParallel) {
-    return &BoxingTaskNode::BldBoxingOpConfWithModelConcatAndClone;
-  } else {
-    LOG(FATAL) << "in " << in_policy << " out " << out_policy;
-  }
+  return GetBldBoxingOpConfMthd(true, in_chain, out_chain);
 }
+
 BldBoxingOpConfMthd GetBldBoxingOpConfMethodByBwParallelPolicy(
     const ChainNode* in_chain, const ChainNode* out_chain) {
-  ParallelPolicy in_policy = in_chain->parallel_desc()->policy();
-  ParallelPolicy out_policy = out_chain->parallel_desc()->policy();
-  if (in_policy == kDataParallel && out_policy == kDataParallel) {
-    return &BoxingTaskNode::BldBoxingOpConfWithDataConcatAndDataSplit;
-  } else if (in_policy == kDataParallel && out_policy == kModelParallel) {
-    return &BoxingTaskNode::BldBoxingOpConfWithAddAndDataSplit;
-  } else if (in_policy == kModelParallel && out_policy == kDataParallel) {
-    return &BoxingTaskNode::BldBoxingOpConfWithDataConcatAndModelSplit;
-  } else if (in_policy == kModelParallel && out_policy == kModelParallel) {
-    return &BoxingTaskNode::BldBoxingOpConfWithAddAndModelSplit;
-  } else {
-    LOG(FATAL) << "out_diff " << in_policy << " in_diff " << out_policy;
-  }
+  return GetBldBoxingOpConfMthd(false, in_chain, out_chain);
 }
 
 std::vector<std::string> FindLbnsBetweenChainPair(
