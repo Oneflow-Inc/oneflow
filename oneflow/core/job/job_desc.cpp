@@ -67,9 +67,9 @@ const FillConf* JobDesc::DefaultFillConf() const {
   CHECK(IsTrain());
   return OF_PB_POINTER_GET(job_conf_.train_conf(), default_fill_conf);
 }
-int32_t JobDesc::PieceNumOfRecordLoss() const {
+int32_t JobDesc::PieceNumOfPrintLoss() const {
   CHECK(IsTrain());
-  return job_conf_.train_conf().piece_num_of_record_loss();
+  return job_conf_.train_conf().piece_num_of_print_loss();
 }
 int32_t JobDesc::ParallelPieceSize() const {
   return job_conf_.data_part_num() * SinglePieceSize();

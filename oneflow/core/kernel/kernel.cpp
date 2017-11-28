@@ -2,10 +2,10 @@
 
 namespace oneflow {
 
-void Kernel::Init(bool is_forward, const ParallelContext* parallel_ctx,
+void Kernel::Init(const ParallelContext* parallel_ctx,
                   const KernelConf& kernel_conf) {
   kernel_conf_ = kernel_conf;
-  VirtualKernelInit(is_forward, parallel_ctx);
+  VirtualKernelInit(parallel_ctx);
 }
 
 void Kernel::InitModelBlobs(
@@ -137,11 +137,11 @@ void AddKernelCreator(OperatorConf::OpTypeCase opcase, KernelCreator4 creator) {
 }
 
 std::unique_ptr<const Kernel> ConstructKernel(
-    DeviceType device_type, bool is_forward,
-    const ParallelContext* parallel_ctx, const KernelConf& conf) {
+    DeviceType device_type, const ParallelContext* parallel_ctx,
+    const KernelConf& conf) {
   OperatorConf::OpTypeCase opcase = conf.op_conf().op_type_case();
   Kernel* rptr = GetCreatorsMap().at(opcase)(device_type, conf);
-  rptr->Init(is_forward, parallel_ctx, conf);
+  rptr->Init(parallel_ctx, conf);
   return std::unique_ptr<const Kernel>(rptr);
 }
 

@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_OPERATOR_LOSS_RECORD_OP_H_
-#define ONEFLOW_CORE_OPERATOR_LOSS_RECORD_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_LOSS_PRINT_OP_H_
+#define ONEFLOW_CORE_OPERATOR_LOSS_PRINT_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class LossRecordOp final : public Operator {
+class LossPrintOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(LossRecordOp);
-  LossRecordOp() = default;
-  ~LossRecordOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(LossPrintOp);
+  LossPrintOp() = default;
+  ~LossPrintOp() = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
@@ -22,4 +22,4 @@ class LossRecordOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_LOSS_RECORD_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_LOSS_PRINT_OP_H_
