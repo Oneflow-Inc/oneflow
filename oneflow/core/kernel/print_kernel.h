@@ -5,16 +5,18 @@
 
 namespace oneflow {
 
-class PrintKernel final : public Kernel {
+class PrintKernel final : public KernelIf<DeviceType::kCPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(PrintKernel);
   PrintKernel() = default;
   ~PrintKernel() = default;
 
+ private:
+  void VirtualKernelInit(const ParallelContext*) override;
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
 
- private:
+  std::vector<std::unique_ptr<PersistentOutStream>> out_streams_;
 };
 
 }  // namespace oneflow
