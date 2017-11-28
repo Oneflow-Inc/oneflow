@@ -49,7 +49,7 @@ void DataLoaderKernel<T>::Forward(
 
 template<typename T>
 void DataLoaderKernel<T>::VirtualKernelInit(
-    bool is_forward, const ParallelContext* parallel_ctx) {
+    const ParallelContext* parallel_ctx) {
   const std::string& data_dir = op_conf().data_loader_conf().data_dir();
   std::string parallel_id = std::to_string(parallel_ctx->parallel_id());
   std::string file_path = JoinPath(data_dir, "part-", parallel_id);
