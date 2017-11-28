@@ -43,7 +43,7 @@ class ConvolutionKernel final : public KernelIf<device_type> {
       const std::string& model_load_dir,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void InitModelTmpBlobs(
-      const KernelCtx& ctx, const ParallelContext& parallel_ctx,
+      const KernelCtx& ctx, const ParallelContext* parallel_ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   void ComputeWeightDiff(

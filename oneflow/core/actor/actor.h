@@ -32,15 +32,13 @@ class Actor {
     std::unique_ptr<const Kernel> kernel;
     HashMap<std::string, int64_t> bn_in_op2regst_desc_id;
   };
-  using KernelWardFunc = void (Kernel::*)(
-      const KernelCtx&, std::function<Blob*(const std::string&)>) const;
   using MsgHandler = int (Actor::*)(const ActorMsg&);
 
   // Util
   Actor() = default;
+  virtual const ParallelContext* parallel_ctx() const { return nullptr; }
   DeviceType GetDeviceType() const;
   virtual void VirtualActorInit(const TaskProto&) {}
-  virtual KernelWardFunc GetKernelWardFunc() const { return &Kernel::Forward; }
   int64_t RegstDescId4Name(const std::string& name) const;
   virtual void InitDeviceCtx(const ThreadCtx&);
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }

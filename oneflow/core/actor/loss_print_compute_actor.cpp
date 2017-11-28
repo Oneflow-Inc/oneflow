@@ -1,13 +1,13 @@
-#include "oneflow/core/actor/loss_record_compute_actor.h"
+#include "oneflow/core/actor/loss_print_compute_actor.h"
 
 namespace oneflow {
 
-void LossRecordCompActor::VirtualCompActorInit(const TaskProto& proto) {
+void LossPrintCompActor::VirtualCompActorInit(const TaskProto& proto) {
   loss_acc_regst_ = nullptr;
-  OF_SET_MSG_HANDLER(&LossRecordCompActor::HandlerNormal);
+  OF_SET_MSG_HANDLER(&LossPrintCompActor::HandlerNormal);
 }
 
-int LossRecordCompActor::HandlerNormal(const ActorMsg& msg) {
+int LossPrintCompActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
     return 1;
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
@@ -19,7 +19,7 @@ int LossRecordCompActor::HandlerNormal(const ActorMsg& msg) {
   return 0;
 }
 
-void LossRecordCompActor::Act() {
+void LossPrintCompActor::Act() {
   AsyncLaunchKernel(
       GenDefaultKernelCtx(),
       [&](int64_t regst_desc_id) -> Regst* { return loss_acc_regst_; });
@@ -27,13 +27,13 @@ void LossRecordCompActor::Act() {
   loss_acc_regst_ = nullptr;
 }
 
-bool LossRecordCompActor::IsReadAlwaysUnReadyFromNow() {
+bool LossPrintCompActor::IsReadAlwaysUnReadyFromNow() {
   UNEXPECTED_RUN();
   return false;
 }
 
-void LossRecordCompActor::AsyncReturnAllReadableRegst() { UNEXPECTED_RUN(); }
+void LossPrintCompActor::AsyncReturnAllReadableRegst() { UNEXPECTED_RUN(); }
 
-REGISTER_ACTOR(TaskType::kLossRecord, LossRecordCompActor);
+REGISTER_ACTOR(TaskType::kLossPrint, LossPrintCompActor);
 
 }  // namespace oneflow

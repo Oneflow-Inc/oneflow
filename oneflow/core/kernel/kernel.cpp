@@ -2,23 +2,24 @@
 
 namespace oneflow {
 
-void Kernel::Init(const KernelConf& kernel_conf) {
+void Kernel::Init(const ParallelContext* parallel_ctx,
+                  const KernelConf& kernel_conf) {
   kernel_conf_ = kernel_conf;
-  VirtualKernelInit();
+  VirtualKernelInit(parallel_ctx);
 }
 
 void Kernel::InitModelBlobs(
-    const KernelCtx& ctx, const ParallelContext& parallel_ctx,
+    const KernelCtx& ctx, const ParallelContext* parallel_ctx,
     const Snapshot* snapshot,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   int32_t part_id = -1;
   int32_t part_num = -1;
-  if (parallel_ctx.policy() == kDataParallel) {
+  if (parallel_ctx->policy() == kDataParallel) {
     part_id = 0;
     part_num = 1;
-  } else if (parallel_ctx.policy() == kModelParallel) {
-    part_id = parallel_ctx.parallel_id();
-    part_num = parallel_ctx.parallel_num();
+  } else if (parallel_ctx->policy() == kModelParallel) {
+    part_id = parallel_ctx->parallel_id();
+    part_num = parallel_ctx->parallel_num();
   } else {
     UNEXPECTED_RUN();
   }
@@ -36,9 +37,19 @@ void Kernel::InitModelBlobs(
 }
 
 void Kernel::InitModelTmpBlobs(
-    const KernelCtx& ctx, const ParallelContext& parallel_ctx,
+    const KernelCtx& ctx, const ParallelContext* parallel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   UNEXPECTED_RUN();
+}
+
+void Kernel::Launch(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (kernel_conf_.is_forward()) {
+    Forward(ctx, BnInOp2Blob);
+  } else {
+    Backward(ctx, BnInOp2Blob);
+  }
 }
 
 const std::string& Kernel::Lbn4BnInOp(const std::string& bn_in_op) const {
@@ -135,11 +146,12 @@ void AddKernelCreator(OperatorConf::OpTypeCase opcase, KernelCreator4 creator) {
       opcase, [creator](DeviceType, const KernelConf&) { return creator(); });
 }
 
-std::unique_ptr<const Kernel> ConstructKernel(DeviceType device_type,
-                                              const KernelConf& conf) {
+std::unique_ptr<const Kernel> ConstructKernel(
+    DeviceType device_type, const ParallelContext* parallel_ctx,
+    const KernelConf& conf) {
   OperatorConf::OpTypeCase opcase = conf.op_conf().op_type_case();
   Kernel* rptr = GetCreatorsMap().at(opcase)(device_type, conf);
-  rptr->Init(conf);
+  rptr->Init(parallel_ctx, conf);
   return std::unique_ptr<const Kernel>(rptr);
 }
 

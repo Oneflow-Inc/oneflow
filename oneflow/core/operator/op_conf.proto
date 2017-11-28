@@ -182,12 +182,12 @@ message ModelSaveOpConf {
   repeated string lbns = 1;
 }
 
-message RecordOpConf {
+message PrintOpConf {
   repeated string lbn = 1;
-  required string record_path = 2;
+  required string print_path = 2;
 }
 
-message LossRecordOpConf {
+message LossPrintOpConf {
 }
 
 message OperatorConf {
@@ -212,7 +212,7 @@ message OperatorConf {
     MomentumModelUpdateOpConf momentum_mdupdt_conf = 115;
     RMSPropModelUpdateOpConf rmsprop_mdupdt_conf = 116;
     SoftmaxLossOpConf softmax_loss_conf = 117;
-    RecordOpConf record_conf = 118;
-    LossRecordOpConf loss_record_conf = 119;
+    PrintOpConf print_conf = 118;
+    LossPrintOpConf loss_print_conf = 119;
   }
 }

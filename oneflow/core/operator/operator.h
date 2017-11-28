@@ -26,7 +26,7 @@ class Operator {
   virtual void InitFromOpConf() = 0;
   virtual bool IsElemWiseOp() const { return false; }
   virtual bool IsLossOp() const { return false; }
-  virtual bool IsRecordOp() const { return false; }
+  virtual bool IsPrintOp() const { return false; }
   virtual bool IsDataLoaderOp() const { return false; }
 
   // bn_in_op <-> lbn
@@ -93,7 +93,8 @@ class Operator {
   virtual int32_t MaxModelSplitNum() const { return -1; }
   void GenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const;
+      bool is_forward, const ParallelContext* parallel_ctx,
+      KernelConf* kernel_conf) const;
 
  protected:
   virtual void VirtualFixParallelDesc(ParallelDesc* pr_desc) const {}

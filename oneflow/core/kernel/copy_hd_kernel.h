@@ -12,7 +12,7 @@ class CopyHdKernel final : public KernelIf<DeviceType::kGPU> {
   ~CopyHdKernel() = default;
 
  private:
-  void VirtualKernelInit() override;
+  void VirtualKernelInit(const ParallelContext*) override;
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
 
