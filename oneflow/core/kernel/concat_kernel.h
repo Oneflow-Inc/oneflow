@@ -12,16 +12,25 @@ class ConcatKernel final : public KernelIf<device_type> {
   ConcatKernel() = default;
   ~ConcatKernel() = default;
 
-  void Forward(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void Backward(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-
  private:
   using MemCopyFuncType = std::function<void(const KernelCtx& ctx, char*, char*,
                                              const int64_t, cudaMemcpyKind)>;
+
+  void ForwardDataContent(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
+  void BackwardDataContent(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
+  void ForwardDataId(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
+  void BackwardDataId(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   void ConcatKernelWork(const KernelCtx&, const std::string&,
                         const PbRpf<std::string>&,
@@ -29,7 +38,7 @@ class ConcatKernel final : public KernelIf<device_type> {
                         MemCopyFuncType) const;
 
   void CopyDataIdToOb(const KernelCtx&, const PbRpf<std::string>&,
-                      const std::string&, const int32_t, cudaMemcpyKind,
+                      const std::string&,
                       std::function<Blob*(const std::string&)>) const;
 };
 

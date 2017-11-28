@@ -18,6 +18,15 @@ char* NextConcatAddr(char* start_addr, int64_t concat_idx,
   return start_addr + (concat_idx * concat_axis_dim + offset) * cp_dim_bytesize;
 }
 
+cudaMemcpyKind GetcudaMemcpyKind(DeviceType device_type) {
+  if (device_type == DeviceType::kCPU) {
+    return cudaMemcpyKind::cudaMemcpyHostToHost;
+  } else {
+    CHECK(device_type == DeviceType::kGPU);
+    return cudaMemcpyKind::cudaMemcpyDeviceToDevice;
+  }
+}
+
 }  // namespace
 
 template<DeviceType device_type>
@@ -26,23 +35,15 @@ void ConcatKernel<device_type>::ConcatKernelWork(
     const PbRpf<std::string>& ibns,
     std::function<Blob*(const std::string&)> BnInOp2Blob,
     MemCopyFuncType copy_func) const {
-  Blob* out_blob = BnInOp2Blob(obn);
   if (ibns.size() == 0) { return; }
+
+  Blob* out_blob = BnInOp2Blob(obn);
   const int32_t concat_axis = this->op_conf().concat_conf().axis();
   const int64_t out_concat_axis_dim = out_blob->shape().At(concat_axis);
   const int64_t total_cp_num = this->kernel_conf().concat_conf().total_cp_num();
   char* out_blob_mut_dptr = out_blob->mut_dptr<char>();
 
-  cudaMemcpyKind kind;
-  if (device_type == DeviceType::kCPU) {
-    kind = cudaMemcpyKind::cudaMemcpyHostToHost;
-  } else if (device_type == DeviceType::kGPU) {
-    kind = cudaMemcpyKind::cudaMemcpyDeviceToDevice;
-  } else {
-    LOG(FATAL) << "device type has not been set";
-    return;
-  }
-
+  cudaMemcpyKind kind = GetcudaMemcpyKind(device_type);
   int64_t offset_concat_axis = 0;
   int64_t cp_dim_bytesize = 0;
   const auto& per_cp_bytesize =
@@ -55,7 +56,6 @@ void ConcatKernel<device_type>::ConcatKernelWork(
     if (cp_dim_bytesize == 0) {
       cp_dim_bytesize = cp_bytesize / in_concat_axis_dim;
     }
-
     FOR_RANGE(int64_t, concat_idx, 0, total_cp_num) {
       char* out_cp_adr =
           NextConcatAddr(out_blob_mut_dptr, concat_idx, out_concat_axis_dim,
@@ -64,19 +64,16 @@ void ConcatKernel<device_type>::ConcatKernelWork(
                                        in_concat_axis_dim, 0, cp_dim_bytesize);
       copy_func(ctx, in_cp_adr, out_cp_adr, cp_bytesize, kind);
     }
-
     offset_concat_axis += in_concat_axis_dim;
-  }
-  if (this->kernel_conf().need_do_data_id()) {
-    CopyDataIdToOb(ctx, ibns, obn, concat_axis, kind, BnInOp2Blob);
   }
 }
 
 template<DeviceType device_type>
 void ConcatKernel<device_type>::CopyDataIdToOb(
     const KernelCtx& ctx, const PbRpf<std::string>& ibns,
-    const std::string& obn, const int32_t concat_axis, cudaMemcpyKind kind,
+    const std::string& obn,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  cudaMemcpyKind kind = GetcudaMemcpyKind(device_type);
   Blob* out_blob = BnInOp2Blob(obn);
   int64_t data_id_offset = 0;
   for (const std::string& ibn : ibns) {
@@ -91,7 +88,7 @@ void ConcatKernel<device_type>::CopyDataIdToOb(
 }
 
 template<DeviceType device_type>
-void ConcatKernel<device_type>::Forward(
+void ConcatKernel<device_type>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto copy_in2out = [](const KernelCtx& ctx, char* src, char* dst,
@@ -103,7 +100,7 @@ void ConcatKernel<device_type>::Forward(
 }
 
 template<DeviceType device_type>
-void ConcatKernel<device_type>::Backward(
+void ConcatKernel<device_type>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto copy_out2in = [](const KernelCtx& ctx, char* dst, char* src,
@@ -113,6 +110,26 @@ void ConcatKernel<device_type>::Backward(
   ConcatKernelWork(ctx, this->kernel_conf().output_diff_bns(0),
                    this->kernel_conf().input_diff_bns(), BnInOp2Blob,
                    copy_out2in);
+}
+
+template<DeviceType device_type>
+void ConcatKernel<device_type>::ForwardDataId(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (this->kernel_conf().need_do_data_id()) {
+    CopyDataIdToOb(ctx, this->kernel_conf().input_bns(),
+                   this->kernel_conf().output_bns(0), BnInOp2Blob);
+  }
+}
+
+template<DeviceType device_type>
+void ConcatKernel<device_type>::BackwardDataId(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (this->kernel_conf().need_do_data_id()) {
+    CopyDataIdToOb(ctx, this->kernel_conf().input_diff_bns(),
+                   this->kernel_conf().output_diff_bns(0), BnInOp2Blob);
+  }
 }
 
 namespace {
