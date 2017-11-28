@@ -6,7 +6,7 @@
 
 namespace oneflow {
 
-template<typename T>
+template<DeviceType device_type, typename T>
 class BoxingKernel final : public KernelIf<DeviceType::kCPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BoxingKernel);
@@ -28,16 +28,8 @@ class BoxingKernel final : public KernelIf<DeviceType::kCPU> {
   void InferCopyRulesFromUnequalAxis(const KernelCtx&, std::vector<Blob*>&,
                                      std::vector<Blob*>&, const int32_t,
                                      const int32_t) const;
-  void InferCopyRulesFromConcatDim(const KernelCtx&,
-                                   const std::map<const std::string*, int64_t>&,
-                                   const std::map<const std::string*, int64_t>&,
-                                   const int64_t, const int64_t,
-                                   const int32_t) const;
-  void InferCopyRulesFromEqualAxis(const KernelCtx&,
-                                   std::function<Blob*(const std::string&)>,
-                                   const int32_t,
-                                   const std::vector<std::string>&,
-                                   const std::vector<std::string>&) const;
+  void InferCopyRulesFromEqualAxis(const KernelCtx&, std::vector<Blob*>&,
+                                   std::vector<Blob*>&, const int32_t) const;
   void CopyFromSrc2Dst(const KernelCtx& ctx,
                        std::function<Blob*(const std::string&)>,
                        const std::vector<std::string>&,

@@ -36,6 +36,56 @@ void BoxingOp::VirtualGenKernelConf(
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   DataType dtype = GetBlobDesc4BnInOp(input_bns().front())->data_type();
   kernel_conf->mutable_boxing_conf()->set_data_type(dtype);
+  const BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().front());
+  int64_t in_seg_cnt = 1;
+  int64_t in_seg_size = 0;
+  std::vector<int64_t> in_offset_in_seg;
+  auto conf = op_conf().boxing_conf();
+  if (conf.in_box_case() == BoxingOpConf::kConcatBox) {
+    int32_t concat_axis = conf.concat_box().axis();
+    if (concat_axis != 0) {
+      in_seg_cnt = first_in_blob->shape().Count(0, concat_axis);
+    }
+    for (const std::string& ibn : input_bns()) {
+      const BlobDesc* in_blob = GetBlobDesc4BnInOp(ibn);
+      int64_t in_seg_offset = in_blob->shape().Count(concat_axis);
+      in_offset_in_seg.push_back(in_seg_size);
+      in_seg_size += in_seg_offset;
+    }
+  } else {
+    in_seg_size = first_in_blob->shape().Count(0);
+    if (first_in_blob->shape().NumAxes() > 1) {
+      in_offset_in_seg = {in_seg_size};
+    }
+  }
+  kernel_conf->mutable_boxing_conf()->set_in_seg_cnt(in_seg_cnt);
+  kernel_conf->mutable_boxing_conf()->set_in_seg_size(in_seg_cnt);
+  *(kernel_conf->mutable_boxing_conf()->mutable_in_offset_in_seg()) =
+      StdVec2PbRf<int64_t>(in_offset_in_seg);
+
+  const BlobDesc* first_out_blob = GetBlobDesc4BnInOp(output_bns().front());
+  std::vector<int64_t> out_size_in_seg;
+  int64_t out_seg_cnt = 1;
+  int64_t out_seg_size = 0;
+  if (conf.out_box_case() == BoxingOpConf::kSplitBox) {
+    int32_t split_axis = conf.split_box().axis();
+    if (split_axis != 0) {
+      out_seg_cnt = first_out_blob->shape().Count(0, split_axis);
+    }
+    for (const std::string& obn : output_bns()) {
+      const BlobDesc* out_blob = GetBlobDesc4BnInOp(obn);
+      int64_t out_seg_offset = out_blob->shape().Count(split_axis);
+      out_size_in_seg.push_back(out_seg_offset);
+      out_seg_size += out_seg_offset;
+    }
+  } else {
+    out_seg_size = first_out_blob->shape().Count(0);
+    out_size_in_seg = {out_seg_size};
+  }
+  kernel_conf->mutable_boxing_conf()->set_out_seg_cnt(out_seg_cnt);
+  kernel_conf->mutable_boxing_conf()->set_out_seg_size(out_seg_size);
+  *(kernel_conf->mutable_boxing_conf()->mutable_out_size_in_seg()) =
+      StdVec2PbRf<int64_t>(out_size_in_seg);
 }
 
 void BoxingOp::InferBlobDescs(
