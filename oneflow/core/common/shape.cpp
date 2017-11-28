@@ -3,13 +3,17 @@
 
 namespace oneflow {
 
+Shape::Shape(const std::vector<int64_t>& dim_vec) : dim_vec_(dim_vec) {
+  UpdateElemCnt();
+}
+
 Shape::Shape(const ShapeProto& shape_proto) {
   dim_vec_.assign(shape_proto.dim().begin(), shape_proto.dim().end());
   UpdateElemCnt();
 }
 
-void Shape::ToProto(ShapeProto* ret) const {
-  *(ret->mutable_dim()) = PbRf<PbInt64>(dim_vec_.begin(), dim_vec_.end());
+bool Shape::operator==(const Shape& rhs) const {
+  return dim_vec_ == rhs.dim_vec_;
 }
 
 std::string Shape::DebugStr() const {
@@ -20,6 +24,15 @@ std::string Shape::DebugStr() const {
   return ss.str();
 }
 
+void Shape::ToProto(ShapeProto* ret) const {
+  *(ret->mutable_dim()) = PbRf<PbInt64>(dim_vec_.begin(), dim_vec_.end());
+}
+
+void Shape::Set(int64_t index, int64_t val) {
+  dim_vec_[index] = val;
+  UpdateElemCnt();
+}
+
 int64_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
   CHECK(0 <= begin_axis && begin_axis <= end_axis && end_axis <= NumAxes())
       << begin_axis << " " << end_axis;
@@ -28,10 +41,8 @@ int64_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
   return cnt;
 }
 
-int64_t Shape::CanonicalAxisIndex(int64_t axis_index) const {
-  CHECK_GE(axis_index, -NumAxes());
-  CHECK_LT(axis_index, NumAxes());
-  return (axis_index + NumAxes()) % NumAxes();
+int64_t Shape::Count(int64_t begin_axis) const {
+  return Count(begin_axis, NumAxes());
 }
 
 void Shape::UpdateElemCnt() {
