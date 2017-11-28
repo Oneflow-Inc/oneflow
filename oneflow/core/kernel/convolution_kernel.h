@@ -85,14 +85,6 @@ class CudnnConvolutionKernel final : public KernelIf<device_type> {
 };
 
 template<typename T>
-class CudnnConvolutionKernel<DeviceType::kCPU, T> final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CudnnConvolutionKernel);
-  CudnnConvolutionKernel() = delete;
-  ~CudnnConvolutionKernel() = delete;
-};
-
-template<typename T>
 class CudnnConvolutionKernel<DeviceType::kGPU, T> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudnnConvolutionKernel);

@@ -188,7 +188,7 @@ void CudnnConvolutionKernel<DeviceType::kGPU, T>::ForwardDataContent(
       fwd_workspace->shape().At(0), CudnnDataType<T>::zero, this->out_desc_,
       out_blob->mut_dptr<T>()));
 
-  if (op_conf().convolution_conf().has_bias_term()) {
+  if (this->op_conf().convolution_conf().has_bias_term()) {
     CudaCheck(cudnnSetTensor4dDescriptor(this->bias_desc_, CUDNN_TENSOR_NCHW,
                                          CudnnDataType<T>::type, 1,
                                          out_blob->shape().At(1), 1, 1));
@@ -214,18 +214,18 @@ void CudnnConvolutionKernel<DeviceType::kGPU, T>::BackwardDataContent(
   if (this->op_conf().convolution_conf().has_bias_term()) {
     Blob* bias_diff_blob = BnInOp2Blob("bias_diff");
     Memset<DeviceType::kGPU>(ctx.device_ctx, bias_diff_blob->mut_dptr(), 0,
-                             bias_diff_blob->ByteSizeOfDataField());
+                             bias_diff_blob->ByteSizeOfDataContentField());
 
     CudaCheck(cudnnConvolutionBackwardBias(
         ctx.device_ctx->cudnn_handle(), CudnnDataType<T>::one, this->out_desc_,
-        out_diff_blob->dptr<T>(), cudnn::DataType<T>::one, this->bias_desc_,
+        out_diff_blob->dptr<T>(), CudnnDataType<T>::one, this->bias_desc_,
         bias_diff_blob->mut_dptr<T>()));
   }
 
   // compute weight diff
   Blob* weight_diff_blob = BnInOp2Blob("weight_diff");
   Memset<DeviceType::kGPU>(ctx.device_ctx, weight_diff_blob->mut_dptr(), 0,
-                           weight_diff_blob->ByteSizeOfDataField());
+                           weight_diff_blob->ByteSizeOfDataContentField());
 
   cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_weight_algo =
       (cudnnConvolutionBwdFilterAlgo_t)(conv_conf.cudnn_bwd_weight_algo());
@@ -241,7 +241,7 @@ void CudnnConvolutionKernel<DeviceType::kGPU, T>::BackwardDataContent(
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
   if (in_diff_blob == nullptr) { return; }
   Memset<DeviceType::kGPU>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
-                           in_diff_blob->ByteSizeOfDataField());
+                           in_diff_blob->ByteSizeOfDataContentField());
 
   cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo =
       (cudnnConvolutionBwdDataAlgo_t)(conv_conf.cudnn_bwd_data_algo());
@@ -305,6 +305,7 @@ void CudnnConvolutionKernel<DeviceType::kGPU, T>::InitModelTmpBlobs(
   template class CudnnConvolutionKernel<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTAITE_CONVOLUTION_KERNEL, FLOATING_DATA_TYPE_SEQ)
 #endif  // USE_CUDNN
+
 #define INSTANTIATE_CONVOLUTION_KERNEL_UTIL(type_cpp, type_proto) \
   template class ConvolutionKernelUtil<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CONVOLUTION_KERNEL_UTIL,
