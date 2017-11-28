@@ -30,4 +30,7 @@ void ModelSaveKernel::Forward(
   }
 }
 
+COMMAND(AddKernelCreator(OperatorConf::kModelSaveConf,
+                         []() { return new ModelSaveKernel; }()));
+
 }  // namespace oneflow
