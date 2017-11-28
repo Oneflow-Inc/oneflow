@@ -34,7 +34,8 @@ using BldBoxingOpConfMthd = void (BoxingTaskNode::*)(
   OF_PP_MAKE_TUPLE_SEQ(LossPrint) \
   OF_PP_MAKE_TUPLE_SEQ(MdUpdt)    \
   OF_PP_MAKE_TUPLE_SEQ(MdSave)    \
-  OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc)
+  OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc) \
+  OF_PP_MAKE_TUPLE_SEQ(Print)
 
 class ChainNode : public Node<ChainNode, ChainEdge> {
  public:
@@ -187,6 +188,25 @@ class LossChainNode final : public ChainNode {
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (std::vector<std::string> FindLbns),
                                    (Forward)(Source));
+};
+
+class PrintChainNode final : public ChainNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(PrintChainNode);
+  PrintChainNode() = default;
+  ~PrintChainNode() = default;
+
+  OVERRIDE_PURE_VIRTUAL_METHOD();
+
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (BldSubTskGphMthd GetMthdForBldSubTskGph),
+                                   (Source)(Forward)(Loss));
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+      OVERRIDE_FROM_METHOD, (BldBoxingOpConfMthd GetMthdForBldBoxingOpConf),
+      (Source)(Forward)(Loss));
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (std::vector<std::string> FindLbns),
+                                   (Source)(Forward)(Loss));
 };
 
 class LossAccChainNode final : public ChainNode {
