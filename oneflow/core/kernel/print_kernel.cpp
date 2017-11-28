@@ -35,15 +35,11 @@ void PrintBlob(PersistentOutStream& out_stream, const Blob* blob) {
 
 }  // namespace
 
-void PrintKernel::Forward(
-    const KernelCtx& kernel_ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  int64_t parallel_id = reinterpret_cast<int64_t>(kernel_ctx.other);
+void PrintKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
   const std::string& root_path = op_conf().print_conf().print_path();
   OF_CALL_ONCE(root_path, GlobalFS()->MakeEmptyDir(root_path));
-  for (const std::string& ibn : kernel_conf().input_bns()) {
-    const std::string& lbn = Lbn4BnInOp(ibn);
-    const Blob* blob = BnInOp2Blob(ibn);
+  FOR_RANGE(size_t, i, 0, op_conf().print_conf().lbn().size()) {
+    const std::string& lbn = op_conf().print_conf().lbn(i);
     std::pair<std::string, std::string> parsed_lbn = ParseLbn(lbn);
     const std::string& op_name = parsed_lbn.first;
     const std::string& bn_in_op = parsed_lbn.second;
@@ -51,13 +47,24 @@ void PrintKernel::Forward(
     OF_CALL_ONCE(op_dir, GlobalFS()->CreateDir(op_dir));
     std::string bn_in_op_dir = JoinPath(op_dir, bn_in_op);
     OF_CALL_ONCE(bn_in_op_dir, GlobalFS()->CreateDir(bn_in_op_dir));
-    std::string file_path =
-        JoinPath(bn_in_op_dir, "part-" + std::to_string(parallel_id));
-    auto out_stream =
-        RuntimeCtx::Singleton()->GetPersistentOutStream(file_path);
-    PrintBlob(*out_stream, blob);
-    out_stream->Flush();
+    std::string file_path = JoinPath(
+        bn_in_op_dir, "part-", std::to_string(parallel_ctx->parallel_id()));
+    out_streams_.emplace_back(new PersistentOutStream(GlobalFS(), file_path));
   }
 }
+
+void PrintKernel::Forward(
+    const KernelCtx& kernel_ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  FOR_RANGE(size_t, i, 0, kernel_conf().input_bns().size()) {
+    const std::string& ibn = kernel_conf().input_bns(i);
+    const Blob* blob = BnInOp2Blob(ibn);
+    PrintBlob(*out_streams_[i], blob);
+    out_streams_[i]->Flush();
+  }
+}
+
+COMMAND(AddKernelCreator(OperatorConf::kPrintConf,
+                         []() { return new PrintKernel; }));
 
 }  // namespace oneflow

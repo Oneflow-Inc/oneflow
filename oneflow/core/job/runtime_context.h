@@ -28,8 +28,6 @@ class RuntimeCtx final {
     return constructing_actor_cnt_;
   }
 
-  PersistentOutStream* GetPersistentOutStream(const std::string& filepath);
-
  private:
   RuntimeCtx(const std::string& name);
 
@@ -39,8 +37,6 @@ class RuntimeCtx final {
 
   BlockingCounter running_actor_cnt_;
   BlockingCounter constructing_actor_cnt_;
-
-  HashMap<std::string, std::unique_ptr<PersistentOutStream>> filepath2ostream_;
 };
 
 }  // namespace oneflow
