@@ -13,8 +13,7 @@ void MultinomialLogisticLossOp::InitFromOpConf() {
 
 void MultinomialLogisticLossOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    bool is_forward, const ParallelContext* parallel_ctx,
-    KernelConf* kernel_conf) const {
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   DataType dtype = GetBlobDesc4BnInOp("prediction")->data_type();
   kernel_conf->mutable_loss_conf()->set_label_type(dtype);
 }
