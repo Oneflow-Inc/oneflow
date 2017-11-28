@@ -6,7 +6,7 @@ import "oneflow/core/common/data_type.proto";
 
 message ModelSaveKernelConf { 
   required int32 part_id = 2;
-  required int32 part_num = 3;
+  required int32 total_part_num = 3;
 }
 
 message KernelConf {
