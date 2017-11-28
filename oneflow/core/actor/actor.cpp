@@ -110,16 +110,15 @@ void Actor::AsyncLaunchKernel(
     const KernelCtx& kernel_ctx,
     std::function<Regst*(int64_t)> Regst4RegstDescId) {
   for (const ExecKernel& ek : exec_kernel_vec_) {
-    (ek.kernel.get()->*GetKernelWardFunc())(
-        kernel_ctx, [&](const std::string& bn_in_op) -> Blob* {
-          auto regst_desc_id_it = ek.bn_in_op2regst_desc_id.find(bn_in_op);
-          if (regst_desc_id_it == ek.bn_in_op2regst_desc_id.end()) {
-            return nullptr;
-          }
-          Regst* regst = Regst4RegstDescId(regst_desc_id_it->second);
-          const std::string& lbn = ek.kernel->Lbn4BnInOp(bn_in_op);
-          return regst->GetBlobByLbn(lbn);
-        });
+    ek.kernel->Launch(kernel_ctx, [&](const std::string& bn_in_op) -> Blob* {
+      auto regst_desc_id_it = ek.bn_in_op2regst_desc_id.find(bn_in_op);
+      if (regst_desc_id_it == ek.bn_in_op2regst_desc_id.end()) {
+        return nullptr;
+      }
+      Regst* regst = Regst4RegstDescId(regst_desc_id_it->second);
+      const std::string& lbn = ek.kernel->Lbn4BnInOp(bn_in_op);
+      return regst->GetBlobByLbn(lbn);
+    });
   }
 }
 
