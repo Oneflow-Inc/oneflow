@@ -14,7 +14,6 @@ void RnnLookupKernel<IntegerType, FloatType>::Forward(
   CHECK_EQ(piece_size, out_blob->shape().At(0));
   int64_t hidden_dim = out_blob->shape().At(1);
   CHECK_EQ(hidden_dim, weight_blob->shape().At(1));
-  int64_t vocab_size = weight_blob->shape().At(0);
 
   CopyDataIdFromSoleIbToAllObIfNeed<DeviceType::kCPU>(ctx, BnInOp2Blob);
 
@@ -70,8 +69,8 @@ void RnnLookupKernel<IntegerType, FloatType>::Backward(
 Kernel* CreateRnnLookupKernel(const OpContext& op_ctx) {
   static const HashMap<std::string, std::function<Kernel*()>> creators = {
 #define RNN_LOOKUP_KERNEL_ENTRY(integer_data_type_pair, float_data_type_pair) \
-  {GetHashKey(OF_PP_PAIR_SECOND(integer_data_type_pair), \ 
-       OF_PP_PAIR_SECOND(float_data_type_pair)),                              \
+  {GetHashKey(OF_PP_PAIR_SECOND(integer_data_type_pair),                      \
+              OF_PP_PAIR_SECOND(float_data_type_pair)),                       \
    []() {                                                                     \
      return new RnnLookupKernel<OF_PP_PAIR_FIRST(integer_data_type_pair),     \
                                 OF_PP_PAIR_FIRST(float_data_type_pair)>;      \
