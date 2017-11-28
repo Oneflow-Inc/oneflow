@@ -4,9 +4,10 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename PredType, typename LabelType>
-void MultinomialLogisticLossKernel<device_type, PredType, LabelType>::Forward(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+void MultinomialLogisticLossKernel<device_type, PredType, LabelType>::
+    ForwardDataContent(
+        const KernelCtx& ctx,
+        std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* prediction = BnInOp2Blob("prediction");
   const Blob* label = BnInOp2Blob("label");
   Blob* loss = BnInOp2Blob("loss");
@@ -27,6 +28,15 @@ void MultinomialLogisticLossKernel<device_type, PredType, LabelType>::Forward(
                  label->dptr<LabelType>(),
                  prediction_diff->mut_dptr<PredType>());
   }
+}
+
+template<DeviceType device_type, typename PredType, typename LabelType>
+void MultinomialLogisticLossKernel<device_type, PredType, LabelType>::
+    ForwardDataId(const KernelCtx& ctx,
+                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* prediction_blob = BnInOp2Blob("prediction");
+  Blob* loss_blob = BnInOp2Blob("loss");
+  loss_blob->CopyDataIdFrom<device_type>(ctx.device_ctx, prediction_blob);
 }
 
 template<typename PredType, typename LabelType>

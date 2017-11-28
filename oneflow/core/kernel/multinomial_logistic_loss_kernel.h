@@ -13,12 +13,17 @@ class MultinomialLogisticLossKernel final : public KernelIf<device_type> {
   MultinomialLogisticLossKernel() = default;
   ~MultinomialLogisticLossKernel() = default;
 
-  void Forward(const KernelCtx&,
-               std::function<Blob*(const std::string&)>) const override;
   void Backward(const KernelCtx&,
                 std::function<Blob*(const std::string&)>) const override {
     UNEXPECTED_RUN();
   }
+
+ private:
+  void ForwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
+  void ForwardDataId(const KernelCtx&,
+                     std::function<Blob*(const std::string&)>) const override;
 };
 
 template<DeviceType device_type, typename PredType, typename LabelType>
