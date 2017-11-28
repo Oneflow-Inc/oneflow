@@ -18,10 +18,6 @@ class ModelSaveOp final : public Operator {
   std::string ibn2lbn(const std::string& input_bn) const override {
     return input_bn.substr(3);
   }
-  void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      bool is_forward, const ParallelContext* parallel_ctx,
-      KernelConf* kernel_conf) const override;
 };
 
 }  // namespace oneflow

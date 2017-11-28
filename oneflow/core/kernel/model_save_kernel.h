@@ -11,8 +11,23 @@ class ModelSaveKernel final : public Kernel {
   ModelSaveKernel() = default;
   ~ModelSaveKernel() = default;
 
-  void Forward(const KernelCtx&,
-               std::function<Blob*(const std::string&)>) const override;
+ protected:
+  void VirtualKernelInit(const ParallelContext*) override;
+  void ForwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
+  void ForwardDataId(const KernelCtx&,
+                     std::function<Blob*(const std::string&)>) const override {
+    UNEXPECTED_RUN();
+  }
+  void BackwardDataId(const KernelCtx&,
+                      std::function<Blob*(const std::string&)>) const override {
+    UNEXPECTED_RUN();
+  }
+
+ private:
+  int32_t part_id_;
+  int32_t part_num_;
 };  // namespace oneflow
 
 }  // namespace oneflow
