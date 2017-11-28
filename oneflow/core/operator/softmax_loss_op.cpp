@@ -12,6 +12,13 @@ void SoftmaxLossOp::InitFromOpConf() {
   EnrollOutputBn("loss", false);
 }
 
+void SoftmaxLossOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  DataType dtype = GetBlobDesc4BnInOp("prediction")->data_type();
+  kernel_conf->mutable_loss_conf()->set_label_type(dtype);
+}
+
 const PbMessage& SoftmaxLossOp::GetSpecialConf() const {
   return op_conf().softmax_loss_conf();
 }
