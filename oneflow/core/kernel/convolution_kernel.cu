@@ -125,7 +125,7 @@ class ConvolutionKernelUtil<DeviceType::kGPU, T> final {
 };
 
 template<typename T>
-CudnnConvolutionKernel<DeviceType::kGPU, T>::CudnnConvolutionKernel() {
+CudnnConvolutionKernel<T>::CudnnConvolutionKernel() {
   CudaCheck(cudnnCreateTensorDescriptor(&this->in_desc_));
   CudaCheck(cudnnCreateTensorDescriptor(&this->out_desc_));
   CudaCheck(cudnnCreateFilterDescriptor(&this->weight_desc_));
@@ -133,7 +133,7 @@ CudnnConvolutionKernel<DeviceType::kGPU, T>::CudnnConvolutionKernel() {
 }
 
 template<typename T>
-CudnnConvolutionKernel<DeviceType::kGPU, T>::~CudnnConvolutionKernel() {
+CudnnConvolutionKernel<T>::~CudnnConvolutionKernel() {
   CudaCheck(cudnnDestroyTensorDescriptor(this->in_desc_));
   CudaCheck(cudnnDestroyTensorDescriptor(this->out_desc_));
   CudaCheck(cudnnDestroyFilterDescriptor(this->weight_desc_));
@@ -144,8 +144,8 @@ CudnnConvolutionKernel<DeviceType::kGPU, T>::~CudnnConvolutionKernel() {
 }
 
 template<typename T>
-void CudnnConvolutionKernel<DeviceType::kGPU, T>::VirtualKernelInit(
-    bool is_forward, const ParallelContext* parallel_ctx) {
+void CudnnConvolutionKernel<T>::VirtualKernelInit(
+    const ParallelContext* parallel_ctx) {
   auto conv_conf = this->op_conf().convolution_conf();
   CudaCheck(cudnnSetConvolution2dDescriptor(
       this->conv_desc_, conv_conf.pad_h(), conv_conf.pad_w(),
@@ -157,7 +157,7 @@ void CudnnConvolutionKernel<DeviceType::kGPU, T>::VirtualKernelInit(
 }
 
 template<typename T>
-void CudnnConvolutionKernel<DeviceType::kGPU, T>::ForwardDataContent(
+void CudnnConvolutionKernel<T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto conv_conf = this->op_conf().convolution_conf();
@@ -201,7 +201,7 @@ void CudnnConvolutionKernel<DeviceType::kGPU, T>::ForwardDataContent(
 }
 
 template<typename T>
-void CudnnConvolutionKernel<DeviceType::kGPU, T>::BackwardDataContent(
+void CudnnConvolutionKernel<T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto conv_conf = this->op_conf().convolution_conf();
@@ -254,7 +254,7 @@ void CudnnConvolutionKernel<DeviceType::kGPU, T>::BackwardDataContent(
 }
 
 template<typename T>
-void CudnnConvolutionKernel<DeviceType::kGPU, T>::InitModelBlobsWithRandomSeed(
+void CudnnConvolutionKernel<T>::InitModelBlobsWithRandomSeed(
     const KernelCtx& ctx, std::mt19937 random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   KernelUtil<DeviceType::kGPU, T>::FillWithProperConf(
@@ -271,7 +271,7 @@ void CudnnConvolutionKernel<DeviceType::kGPU, T>::InitModelBlobsWithRandomSeed(
 }
 
 template<typename T>
-void CudnnConvolutionKernel<DeviceType::kGPU, T>::InitModelBlobsWithDir(
+void CudnnConvolutionKernel<T>::InitModelBlobsWithDir(
     const KernelCtx& ctx, int32_t part_id, int32_t part_num,
     const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -288,7 +288,7 @@ void CudnnConvolutionKernel<DeviceType::kGPU, T>::InitModelBlobsWithDir(
 }
 
 template<typename T>
-void CudnnConvolutionKernel<DeviceType::kGPU, T>::InitModelTmpBlobs(
+void CudnnConvolutionKernel<T>::InitModelTmpBlobs(
     const KernelCtx& ctx, const ParallelContext* parallel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (this->op_conf().convolution_conf().has_bias_term()) {
@@ -302,8 +302,8 @@ void CudnnConvolutionKernel<DeviceType::kGPU, T>::InitModelTmpBlobs(
 
 #ifdef USE_CUDNN
 #define INSTANTIATE_CONVOLUTION_KERNEL(type_cpp, type_proto) \
-  template class CudnnConvolutionKernel<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTAITE_CONVOLUTION_KERNEL, FLOATING_DATA_TYPE_SEQ)
+  template class CudnnConvolutionKernel<type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CONVOLUTION_KERNEL, FLOATING_DATA_TYPE_SEQ)
 #endif  // USE_CUDNN
 
 #define INSTANTIATE_CONVOLUTION_KERNEL_UTIL(type_cpp, type_proto) \

@@ -284,23 +284,32 @@ void ConvolutionKernel<device_type, T>::InitModelTmpBlobs(
 namespace {
 
 #ifdef USE_CUDNN
-#define CONVOLUTION_KERNEL CudnnConvolutionKernel
-#else
-#define CONVOLUTION_KERNEL ConvolutionKernel
-#endif  // USE_CUDNN
-
 Kernel* CreateConvolutionKernel(DeviceType dev_type,
                                 const KernelConf& kernel_conf) {
   static const HashMap<std::string, std::function<Kernel*()>> creators = {
-#define CONVOLUTION_KERNEL_ENTRY(device_type, data_type_pair)           \
-  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {   \
-     return new CONVOLUTION_KERNEL<device_type,                         \
-                                   OF_PP_PAIR_FIRST(data_type_pair)>(); \
+#define CONVOLUTION_KERNEL_ENTRY(device_type, data_type_pair)               \
+  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {       \
+     return new CudnnConvolutionKernel<OF_PP_PAIR_FIRST(data_type_pair)>(); \
+   }},
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(CONVOLUTION_KERNEL_ENTRY,
+                                       (DeviceType::kGPU),
+                                       FLOATING_DATA_TYPE_SEQ)};
+  return creators.at(GetHashKey(dev_type, kernel_conf.data_type()))();
+}
+#else
+Kernel* CreateConvolutionKernel(DeviceType dev_type,
+                                const KernelConf& kernel_conf) {
+  static const HashMap<std::string, std::function<Kernel*()>> creators = {
+#define CONVOLUTION_KERNEL_ENTRY(device_type, data_type_pair)          \
+  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {  \
+     return new ConvolutionKernel<device_type,                         \
+                                  OF_PP_PAIR_FIRST(data_type_pair)>(); \
    }},
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
           CONVOLUTION_KERNEL_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};
   return creators.at(GetHashKey(dev_type, kernel_conf.data_type()))();
 }
+#endif  // USE_CUDNN
 
 }  // namespace
 

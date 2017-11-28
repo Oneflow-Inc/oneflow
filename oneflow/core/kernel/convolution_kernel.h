@@ -57,43 +57,15 @@ class ConvolutionKernel final : public KernelIf<device_type> {
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 };
 
-template<DeviceType device_type, typename T>
-class CudnnConvolutionKernel final : public KernelIf<device_type> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CudnnConvolutionKernel);
-  CudnnConvolutionKernel();
-  ~CudnnConvolutionKernel();
-
- private:
-  void VirtualKernelInit(bool is_forward,
-                         const ParallelContext* parallel_ctx) override;
-  void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) override;
-  void BackwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
-  void InitModelBlobsWithRandomSeed(
-      const KernelCtx&, std::mt19937 random_seed_gen,
-      std::function<Blob*(const std::string&)>) const override;
-  void InitModelBlobsWithDir(
-      const KernelCtx& ctx, int32_t part_id, int32_t part_num,
-      const std::string& model_load_dir,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void InitModelTmpBlobs(
-      const KernelCtx& ctx, const ParallelContext& parallel_ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-};
-
 template<typename T>
-class CudnnConvolutionKernel<DeviceType::kGPU, T> final {
+class CudnnConvolutionKernel final : public KernelIf<DeviceType::kGPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudnnConvolutionKernel);
   CudnnConvolutionKernel();
   ~CudnnConvolutionKernel();
 
  private:
-  void VirtualKernelInit(bool is_forward,
-                         const ParallelContext* parallel_ctx) override;
+  void VirtualKernelInit(const ParallelContext* parallel_ctx) override;
   void ForwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;

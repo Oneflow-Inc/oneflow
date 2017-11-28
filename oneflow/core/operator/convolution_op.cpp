@@ -40,7 +40,7 @@ void ConvolutionOp::InferBlobDescs(
   int64_t data_num = in_blob_desc->shape().At(0);
   int64_t c_i = in_blob_desc->shape().At(1);
   int64_t height = in_blob_desc->shape().At(2);
-  int64_t weight = in_blob_desc->shape().At(3);
+  int64_t width = in_blob_desc->shape().At(3);
 
   int32_t out_num = GetInt32FromSpecialConf("out_num");
   if (parallel_ctx->policy() == kModelParallel) {
@@ -119,7 +119,7 @@ void ConvolutionOp::InferBlobDescs(
   CudaCheck(cudnnCreateConvolutionDescriptor(&conv_desc));
 
   cudnnDataType_t cudnn_data_type;
-  switch (JobDesc::Singleton()->default_data_type()) {
+  switch (JobDesc::Singleton()->DefaultDataType()) {
     case kFloat: cudnn_data_type = CUDNN_DATA_FLOAT; break;
     case kDouble: cudnn_data_type = CUDNN_DATA_DOUBLE; break;
     default: UNEXPECTED_RUN();
@@ -170,14 +170,14 @@ void ConvolutionOp::InferBlobDescs(
   BlobDesc* fwd_workspace_blob_desc = GetBlobDesc4BnInOp("fwd_workspace");
   fwd_workspace_blob_desc->mut_shape() = Shape({fwd_workspace_sizes});
   fwd_workspace_blob_desc->set_data_type(
-      JobDesc::Singleton()->default_data_type());
+      JobDesc::Singleton()->DefaultDataType());
   fwd_workspace_blob_desc->set_has_data_id(false);
 
   BlobDesc* bwd_workspace_blob_desc = GetBlobDesc4BnInOp("bwd_workspace");
   bwd_workspace_blob_desc->mut_shape() =
       Shape({std::max(bwd_weight_workspace_sizes, bwd_data_workspace_sizes)});
   bwd_workspace_blob_desc->set_data_type(
-      JobDesc::Singleton()->default_data_type());
+      JobDesc::Singleton()->DefaultDataType());
   bwd_workspace_blob_desc->set_has_data_id(false);
 
   CudaCheck(cudnnDestroyTensorDescriptor(in_desc));
