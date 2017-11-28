@@ -6,7 +6,7 @@
 namespace oneflow {
 
 template<typename T>
-class LossPrintKernel final : public Kernel {
+class LossPrintKernel final : public KernelIf<DeviceType::kCPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LossPrintKernel);
   LossPrintKernel() = default;
