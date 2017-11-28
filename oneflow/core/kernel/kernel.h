@@ -16,7 +16,7 @@ class Kernel {
   OF_DISALLOW_COPY_AND_MOVE(Kernel);
   virtual ~Kernel() = default;
 
-  void Init(bool is_forward, const ParallelContext*, const KernelConf&);
+  void Init(const ParallelContext*, const KernelConf&);
 
   void InitModelBlobs(
       const KernelCtx& ctx, const ParallelContext* parallel_ctx,
@@ -27,18 +27,14 @@ class Kernel {
       const KernelCtx& ctx, const ParallelContext* parallel_ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
-  virtual void Forward(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
-  virtual void Backward(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  void Launch(const KernelCtx& ctx,
+              std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   const std::string& Lbn4BnInOp(const std::string& bn_in_op) const;
 
  protected:
   Kernel() = default;
-  virtual void VirtualKernelInit(bool is_forward, const ParallelContext*) {}
+  virtual void VirtualKernelInit(const ParallelContext*) {}
   const KernelConf& kernel_conf() const { return kernel_conf_; }
   const OperatorConf& op_conf() const { return kernel_conf_.op_conf(); }
 
@@ -50,12 +46,18 @@ class Kernel {
       const std::string& model_load_dir,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
+  virtual void Forward(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardDataContent(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void ForwardDataId(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+  virtual void Backward(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void BackwardDataContent(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
@@ -96,7 +98,7 @@ void AddKernelCreator(OperatorConf::OpTypeCase, KernelCreator1);
 void AddKernelCreator(OperatorConf::OpTypeCase, KernelCreator2);
 void AddKernelCreator(OperatorConf::OpTypeCase, KernelCreator3);
 void AddKernelCreator(OperatorConf::OpTypeCase, KernelCreator4);
-std::unique_ptr<const Kernel> ConstructKernel(DeviceType, bool is_forward,
+std::unique_ptr<const Kernel> ConstructKernel(DeviceType,
                                               const ParallelContext*,
                                               const KernelConf&);
 

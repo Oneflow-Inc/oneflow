@@ -2,10 +2,10 @@
 
 namespace oneflow {
 
-void Kernel::Init(bool is_forward, const ParallelContext* parallel_ctx,
+void Kernel::Init(const ParallelContext* parallel_ctx,
                   const KernelConf& kernel_conf) {
   kernel_conf_ = kernel_conf;
-  VirtualKernelInit(is_forward, parallel_ctx);
+  VirtualKernelInit(parallel_ctx);
 }
 
 void Kernel::InitModelBlobs(
@@ -40,6 +40,16 @@ void Kernel::InitModelTmpBlobs(
     const KernelCtx& ctx, const ParallelContext* parallel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   UNEXPECTED_RUN();
+}
+
+void Kernel::Launch(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (kernel_conf_.is_forward()) {
+    Forward(ctx, BnInOp2Blob);
+  } else {
+    Backward(ctx, BnInOp2Blob);
+  }
 }
 
 const std::string& Kernel::Lbn4BnInOp(const std::string& bn_in_op) const {
@@ -137,11 +147,11 @@ void AddKernelCreator(OperatorConf::OpTypeCase opcase, KernelCreator4 creator) {
 }
 
 std::unique_ptr<const Kernel> ConstructKernel(
-    DeviceType device_type, bool is_forward,
-    const ParallelContext* parallel_ctx, const KernelConf& conf) {
+    DeviceType device_type, const ParallelContext* parallel_ctx,
+    const KernelConf& conf) {
   OperatorConf::OpTypeCase opcase = conf.op_conf().op_type_case();
   Kernel* rptr = GetCreatorsMap().at(opcase)(device_type, conf);
-  rptr->Init(is_forward, parallel_ctx, conf);
+  rptr->Init(parallel_ctx, conf);
   return std::unique_ptr<const Kernel>(rptr);
 }
 
