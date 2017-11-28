@@ -74,7 +74,7 @@ class Regst final {
   PieceStatus piece_status_;
   int64_t piece_id_;
   int64_t model_version_id_;
-  int recurrent_flag_;  
+  int recurrent_flag_;
   // 0: no recurrent, 1 recurrent from top, -1 recurrent from bot
 
   const RtRegstDesc* regst_desc_;

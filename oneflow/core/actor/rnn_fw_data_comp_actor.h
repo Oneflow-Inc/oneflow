@@ -38,8 +38,8 @@ class RnnFwDataCompActor final : public CompActor {
       kRnnCellWithInitial,
       kRnnCellWithoutInitial
     };
-    Material4Act() : rnn_kernel_type(RnnKernelType::kDataLoader),
-                     regst_id2regst() { }
+    Material4Act()
+        : rnn_kernel_type(RnnKernelType::kDataLoader), regst_id2regst() {}
 
     RnnKernelType rnn_kernel_type;
     std::map<int64_t, Regst*> regst_id2regst;
@@ -52,9 +52,9 @@ class RnnFwDataCompActor final : public CompActor {
   bool IsReadReady() override;
   void Act() override;
   void AsyncSendMsgToModelAndModelTmpProducer();
-  bool ModelSatisfySSP(int64_t piece_id, int64_t model_version_id) const;
-  void set_material4act(Material4Act::RnnKernelType type,
-                        Regst* in_regst, Regst* model_regst, Regst* model_tmp_regst,
+  bool ModelSatisfySSP(Regst* in_regst, Regst* model_regst) const;
+  void set_material4act(Material4Act::RnnKernelType type, Regst* in_regst,
+                        Regst* model_regst, Regst* model_tmp_regst,
                         Regst* initial_regst, Regst* out_regst);
   void UpdtInAndModelStatesOfRnnCell();
 
@@ -63,7 +63,7 @@ class RnnFwDataCompActor final : public CompActor {
   int64_t expected_initial_hidden_piece_id_;
 
   int64_t in_regst_desc_id_;
-  std::map<int64_t, std::queue<Regst*>> pid2in_regsts_; // <piece_id, in_regst>
+  std::map<int64_t, std::queue<Regst*>> pid2in_regsts_;  // <piece_id, in_regst>
   // must be increasing in iteration, so using std::map instead of HashMap
 
   int64_t initial_hidden_regst_desc_id_;
@@ -75,7 +75,8 @@ class RnnFwDataCompActor final : public CompActor {
   int64_t model_regst_desc_id_;
   Regst* latest_model_regst_;
   HashMap<int64_t, Regst*> pid2model_regst_;
-  HashMap<Regst*, int64_t> model_regst2cnt_;  // <model_regst, number of piece using this model>
+  HashMap<Regst*, int64_t>
+      model_regst2cnt_;  // <model_regst, number of piece using this model>
 
   int64_t out_regst_desc_id_;
   HashMap<int64_t, Regst*> pid2out_regst_;

@@ -25,9 +25,8 @@ bool PieceStatus::IsLast() const {
 }
 
 bool PieceStatus::IsNextColOf(const PieceStatus& pre) const {
-  if (piece_id_ == pre.piece_id_ && 
-      max_col_id_ == pre.max_col_id_ &&
-      col_id_ == pre.col_id_ + 1) {
+  if (piece_id_ == pre.piece_id_ && max_col_id_ == pre.max_col_id_
+      && col_id_ == pre.col_id_ + 1) {
     return true;
   }
   return false;

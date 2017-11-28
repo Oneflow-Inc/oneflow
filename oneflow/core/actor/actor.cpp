@@ -134,14 +134,11 @@ void Actor::AsyncSendRegstMsgToConsumer(
       if (!IsAllowedActor(consumer)) { continue; }
       total_reading_cnt_ += 1;
       regst_reading_cnt_it->second += 1;
-      if ((this_actor_id == consumer)
-          && (regst->piece_status().IsLastCol())) {
+      if ((this_actor_id == consumer) && (regst->piece_status().IsLastCol())) {
         continue;
       }
       device_ctx_->AddCallBack([consumer, regst, this_actor_id]() {
-        if (this_actor_id == consumer) {
-          regst->set_recurrent_flag(-1);
-        }
+        if (this_actor_id == consumer) { regst->set_recurrent_flag(-1); }
 
         ActorMsg msg =
             ActorMsg::BuildRegstMsgToConsumer(this_actor_id, consumer, regst);
@@ -202,7 +199,7 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   if (reading_cnt_it == produced_regst2reading_cnt_.end()) { return -1; }
 
   // for out_produce, out_consume is its down-actor
-  if (regst->recurrent_flag() == -1) { return -1; } 
+  if (regst->recurrent_flag() == -1) { return -1; }
 
   CHECK_GE(reading_cnt_it->second, 1);
   reading_cnt_it->second -= 1;
