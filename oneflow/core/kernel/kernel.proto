@@ -21,5 +21,4 @@ message KernelConf {
   required bool need_do_data_id = 12;
   required bool is_forward = 13;
   required DataType data_type = 14;
-
 }
