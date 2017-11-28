@@ -40,7 +40,7 @@ class JobDesc final {
   int32_t Staleness() const;
   int64_t TotalBatchNum() const;
   const FillConf* DefaultFillConf() const;
-  int32_t PieceNumOfRecordLoss() const;
+  int32_t PieceNumOfPrintLoss() const;
   int32_t SinglePieceSize() const { return job_conf_.single_piece_size(); }
   int32_t ParallelPieceSize() const;
   int32_t BatchSize() const;

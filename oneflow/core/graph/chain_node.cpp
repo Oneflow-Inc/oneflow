@@ -3,7 +3,7 @@
 #include "oneflow/core/graph/forward_compute_task_node.h"
 #include "oneflow/core/graph/loss_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/loss_compute_task_node.h"
-#include "oneflow/core/graph/loss_record_compute_task_node.h"
+#include "oneflow/core/graph/loss_print_compute_task_node.h"
 #include "oneflow/core/graph/model_diff_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/model_save_compute_task_node.h"
 #include "oneflow/core/graph/model_update_compute_task_node.h"
@@ -295,16 +295,16 @@ BldSubTskGphMthd LossAccChainNode::GetMthdForBldSubTskGphFromLoss(
   return &TaskGraph::BldSubTskGphByOneToOne;
 }
 
-// LossRecordChainNode
-BldSubTskGphMthd LossRecordChainNode::GetMthdForBldSubTskGphFromLossAcc(
+// LossPrintChainNode
+BldSubTskGphMthd LossPrintChainNode::GetMthdForBldSubTskGphFromLossAcc(
     const ChainNode*) const {
   return &TaskGraph::BldSubTskGphByBoxing;
 }
-BldBoxingOpConfMthd LossRecordChainNode::GetMthdForBldBoxingOpConfFromLossAcc(
+BldBoxingOpConfMthd LossPrintChainNode::GetMthdForBldBoxingOpConfFromLossAcc(
     const ChainNode*) const {
   return &BoxingTaskNode::BldBoxingOpConfWithAddAndClone;
 }
-std::vector<std::string> LossRecordChainNode::FindLbnsFromLossAcc(
+std::vector<std::string> LossPrintChainNode::FindLbnsFromLossAcc(
     const ChainNode*) const {
   return {kPackedBlobName};
 }
