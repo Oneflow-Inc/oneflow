@@ -281,7 +281,7 @@ void ConvolutionKernel<device_type, T>::InitModelTmpBlobs(
   }
 }
 
-ENROLL_KERNEL_CREATOR(OperatorConf::kConvolutionConf, ConvolutionKernel,
-                      DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConvolutionConf, ConvolutionKernel,
+                           FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

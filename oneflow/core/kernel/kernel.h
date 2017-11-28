@@ -109,19 +109,18 @@ std::unique_ptr<const Kernel> ConstructKernel(DeviceType,
      return new kernel_class<device_type, OF_PP_PAIR_FIRST(data_type_pair)>(); \
    }},
 
-#define ENROLL_KERNEL_CREATOR(op_type_case, kernel_class, device_type_seq,   \
-                              data_type_seq)                                 \
-  namespace {                                                                \
-                                                                             \
-  Kernel* CreateKernel(DeviceType dev_type, const KernelConf& kernel_conf) { \
-    static const HashMap<std::string, std::function<Kernel*()>> creators = { \
-        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY,          \
-                                         (kernel_class), device_type_seq,    \
-                                         data_type_seq)};                    \
-    return creators.at(GetHashKey(dev_type, kernel_conf.data_type()))();     \
-  }                                                                          \
-                                                                             \
-  COMMAND(AddKernelCreator(op_type_case, CreateKernel));                     \
+#define ADD_DEFAULT_KERNEL_CREATOR(op_type_case, kernel_class, data_type_seq) \
+  namespace {                                                                 \
+                                                                              \
+  Kernel* CreateKernel(DeviceType dev_type, const KernelConf& kernel_conf) {  \
+    static const HashMap<std::string, std::function<Kernel*()>> creators = {  \
+        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY,           \
+                                         (kernel_class), DEVICE_TYPE_SEQ,     \
+                                         data_type_seq)};                     \
+    return creators.at(GetHashKey(dev_type, kernel_conf.data_type()))();      \
+  }                                                                           \
+                                                                              \
+  COMMAND(AddKernelCreator(op_type_case, CreateKernel));                      \
   }
 
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_H_
