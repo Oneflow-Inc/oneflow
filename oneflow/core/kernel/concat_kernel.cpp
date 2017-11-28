@@ -14,9 +14,8 @@ namespace {
 // NumAxes()) for higher / dimension matrix.
 char* NextConcatAddr(char* start_addr, int64_t concat_idx,
                      int64_t concat_axis_dim, int64_t offset,
-                     int64_t cp_piece_bytesize) {
-  return start_addr
-         + (concat_idx * concat_axis_dim + offset) * cp_piece_bytesize;
+                     int64_t cp_dim_bytesize) {
+  return start_addr + (concat_idx * concat_axis_dim + offset) * cp_dim_bytesize;
 }
 
 }  // namespace
@@ -49,23 +48,25 @@ void ConcatKernel<device_type>::ConcatKernelWork(
   }
 
   int64_t offset_concat_axis = 0;
-  int64_t cp_piece_sz = 0;
+  int64_t cp_dim_bytesize = 0;
   FOR_RANGE(int64_t, ibn_idx, 0, ibns.size()) {
     Blob* in_blob = BnInOp2Blob(ibns[ibn_idx]);
     char* in_blob_mut_dptr = in_blob->mut_dptr<char>();
     const int64_t in_concat_axis_dim = in_blob->shape().At(concat_axis);
-    const int64_t cp_sz =
+    const int64_t cp_bytesize =
         is_forward ? concat_kernel_conf.fw_per_cp_bytesize()[ibn_idx]
                    : concat_kernel_conf.bw_per_cp_bytesize()[ibn_idx];
-    if (cp_piece_sz == 0) { cp_piece_sz = cp_sz / in_concat_axis_dim; }
+    if (cp_dim_bytesize == 0) {
+      cp_dim_bytesize = cp_bytesize / in_concat_axis_dim;
+    }
 
     FOR_RANGE(int64_t, concat_idx, 0, total_cp_cnt) {
       char* out_cp_adr =
           NextConcatAddr(out_blob_mut_dptr, concat_idx, out_concat_axis_dim,
-                         offset_concat_axis, cp_piece_sz);
+                         offset_concat_axis, cp_dim_bytesize);
       char* in_cp_adr = NextConcatAddr(in_blob_mut_dptr, concat_idx,
-                                       in_concat_axis_dim, 0, cp_piece_sz);
-      copy_func(ctx, in_cp_adr, out_cp_adr, cp_sz, kind);
+                                       in_concat_axis_dim, 0, cp_dim_bytesize);
+      copy_func(ctx, in_cp_adr, out_cp_adr, cp_bytesize, kind);
     }
 
     offset_concat_axis += in_concat_axis_dim;

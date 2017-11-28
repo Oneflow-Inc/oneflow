@@ -52,10 +52,10 @@ void ConcatOp::VirtualGenKernelConf(
   const BlobDesc* out_blob = GetBlobDesc4BnInOp(concat_out_bn);
 
   const int64_t concat_axis = op_conf().concat_conf().axis();
-  int64_t piece_cp_cnt = 1;
+  int64_t dim_cp_cnt = 1;
   if ((concat_axis != (out_blob->shape().NumAxes() - 1))
       && (concat_axis != -1)) {
-    piece_cp_cnt = out_blob->shape().Count(concat_axis + 1);
+    dim_cp_cnt = out_blob->shape().Count(concat_axis + 1);
   }
   int64_t total_cp_cnt = 1;
   if ((concat_axis != (-out_blob->shape().NumAxes())) && (concat_axis != 0)) {
@@ -68,7 +68,7 @@ void ConcatOp::VirtualGenKernelConf(
   for (const std::string& ibn : concat_in_bns) {
     const BlobDesc* in_blob = GetBlobDesc4BnInOp(ibn);
     const int64_t in_concat_axis_dim = in_blob->shape().At(concat_axis);
-    const int64_t cp_bytesize = in_concat_axis_dim * piece_cp_cnt
+    const int64_t cp_bytesize = in_concat_axis_dim * dim_cp_cnt
                                 * GetSizeOfDataType(kernel_conf->data_type());
     per_cp_bytesize.push_back(cp_bytesize);
   }
