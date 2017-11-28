@@ -21,8 +21,10 @@ void Kernel::InitModelBlobs(
     std::mt19937 random_seed_gen(random_seed);
     InitModelBlobsWithRandomSeed(ctx, random_seed_gen, BnInOp2Blob);
   } else {
-    int32_t part_id, part_num;
-    std::tie(part_id, part_num) = GetPartIdNumFromCtx(parallel_ctx);
+    int32_t part_id;
+    int32_t part_num;
+    std::tie(part_id, part_num) =
+        GetPartIdAndPartNumFromParallelCtx(parallel_ctx);
     InitModelBlobsWithDir(ctx, part_id, part_num, model_load_dir, BnInOp2Blob);
   }
 }

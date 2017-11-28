@@ -6,7 +6,8 @@
 namespace oneflow {
 
 void ModelSaveKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
-  std::tie(part_id_, part_num_) = GetPartIdNumFromCtx(parallel_ctx);
+  std::tie(part_id_, part_num_) =
+      GetPartIdAndPartNumFromParallelCtx(parallel_ctx);
 }
 
 void ModelSaveKernel::Forward(

@@ -44,7 +44,7 @@ class ParallelDesc {
   int64_t parallel_num_;
 };
 
-std::tuple<int32_t, int32_t> GetPartIdNumFromCtx(
+std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
     const ParallelContext* parallel_ctx);
 
 }  // namespace oneflow
