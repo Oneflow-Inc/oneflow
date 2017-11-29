@@ -178,28 +178,53 @@
 
 #define OF_PP_INTERNAL_SEQ_PRODUCT_0()
 #define OF_PP_INTERNAL_SEQ_PRODUCT_1(seq0) \
-  OF_PP_INTERNAL_TUPLE_SEQ_X_ATOMIC_SEQ((()), seq0)
-#define OF_PP_INTERNAL_SEQ_PRODUCT_2(seq0, seq1)                            \
-  OF_PP_INTERNAL_TUPLE_SEQ_X_ATOMIC_SEQ(OF_PP_INTERNAL_SEQ_PRODUCT_1(seq1), \
-                                        seq0)
+  OF_PP_INTERNAL_ATOMIC_SEQ_X_TUPLE_SEQ(seq0, (()))
+#define OF_PP_INTERNAL_SEQ_PRODUCT_2(seq0, seq1) \
+  OF_PP_INTERNAL_ATOMIC_SEQ_X_TUPLE_SEQ(seq0,    \
+                                        OF_PP_INTERNAL_SEQ_PRODUCT_1(seq1))
 #define OF_PP_INTERNAL_SEQ_PRODUCT_3(seq0, seq1, seq2) \
-  OF_PP_INTERNAL_TUPLE_SEQ_X_ATOMIC_SEQ(               \
-      OF_PP_INTERNAL_SEQ_PRODUCT_2(seq1, seq2), seq0)
+  OF_PP_INTERNAL_ATOMIC_SEQ_X_TUPLE_SEQ(               \
+      seq0, OF_PP_INTERNAL_SEQ_PRODUCT_2(seq1, seq2))
 #define OF_PP_INTERNAL_SEQ_PRODUCT_4(seq0, seq1, seq2, seq3) \
-  OF_PP_INTERNAL_TUPLE_SEQ_X_ATOMIC_SEQ(                     \
-      OF_PP_INTERNAL_SEQ_PRODUCT_3(seq1, seq2, seq3), seq0)
+  OF_PP_INTERNAL_ATOMIC_SEQ_X_TUPLE_SEQ(                     \
+      seq0, OF_PP_INTERNAL_SEQ_PRODUCT_3(seq1, seq2, seq3))
 #define OF_PP_INTERNAL_SEQ_PRODUCT_5(seq0, seq1, seq2, seq3, seq4) \
-  OF_PP_INTERNAL_TUPLE_SEQ_X_ATOMIC_SEQ(                           \
-      OF_PP_INTERNAL_SEQ_PRODUCT_4(seq1, seq2, seq3, seq4), seq0)
+  OF_PP_INTERNAL_ATOMIC_SEQ_X_TUPLE_SEQ(                           \
+      seq0, OF_PP_INTERNAL_SEQ_PRODUCT_4(seq1, seq2, seq3, seq4))
+
+#define OF_PP_INTERNAL_TUPLE_2_SEQ(t)                                   \
+  OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_VARIADIC_2_SEQ_, \
+                                        OF_PP_INTERNAL_TUPLE_SIZE(t)) t, )
+
+#define OF_PP_INTERNAL_VARIADIC_2_SEQ(e0, ...)                           \
+  OF_PP_INTERNAL_CAT(                                                    \
+      OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_VARIADIC_2_SEQ_,                 \
+                         OF_PP_INTERNAL_VARIADIC_SIZE(e0, __VA_ARGS__))( \
+          e0, __VA_ARGS__), )
+#define OF_PP_INTERNAL_VARIADIC_2_SEQ_1(e0) (e0)
+#define OF_PP_INTERNAL_VARIADIC_2_SEQ_2(e0, e1) (e0)(e1)
+#define OF_PP_INTERNAL_VARIADIC_2_SEQ_3(e0, e1, e2) (e0)(e1)(e2)
+#define OF_PP_INTERNAL_VARIADIC_2_SEQ_4(e0, e1, e2, e3) (e0)(e1)(e2)(e3)
+#define OF_PP_INTERNAL_VARIADIC_2_SEQ_5(e0, e1, e2, e3, e4) (e0)(e1)(e2)(e3)(e4)
+#define OF_PP_INTERNAL_VARIADIC_2_SEQ_6(e0, e1, e2, e3, e4, e5) \
+  (e0)(e1)(e2)(e3)(e4)(e5)
+#define OF_PP_INTERNAL_TUPLE_2_SEQ_7(e0, e1, e2, e3, e4, e5, e6) \
+  (e0)(e1)(e2)(e3)(e4)(e5)(e6)
+#define OF_PP_INTERNAL_TUPLE_2_SEQ_8(e0, e1, e2, e3, e4, e5, e6, e7) \
+  (e0)(e1)(e2)(e3)(e4)(e5)(e6)(e7)
 
 // Seq ForEach
 
 #define OF_PP_INTERNAL_FOR_EACH_TUPLE(macro, seq) \
   OF_PP_INTERNAL_SEQ_FOR_EACH_TUPLE(macro, _, seq)
-#define OF_PP_INTERNAL_TUPLE_SEQ_X_ATOMIC_SEQ(tuple_seq, atomic_seq)       \
+
+#define OF_PP_INTERNAL_ATOMIC_SEQ_X_TUPLE_SEQ(atomic_seq, tuple_seq)       \
   OF_PP_INTERNAL_D1_SEQ_FOR_EACH(OF_PP_INTERNAL_D1_APPLY_ATOMIC_WITH_DATA, \
                                  OF_PP_INTERNAL_TUPLE_X_ATOMIC_SEQ,        \
                                  atomic_seq, tuple_seq)
+
+#define OF_PP_INTERNAL_MAP_PREPEND(elem, tuple_seq) \
+  OF_PP_INTERNAL_ATOMIC_SEQ_X_TUPLE_SEQ((elem), tuple_seq)
 
 #define OF_PP_INTERNAL_TUPLE_X_ATOMIC_SEQ(atomic_seq, tuple)               \
   OF_PP_INTERNAL_D2_SEQ_FOR_EACH(OF_PP_INTERNAL_D2_APPLY_ATOMIC_WITH_DATA, \

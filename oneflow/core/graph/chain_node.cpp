@@ -232,28 +232,27 @@ void ChainNode::AddDataOutputLbnsTo(const ChainNode* to_node) {
   data_output_lbns_.insert(lbns.begin(), lbns.end());
 }
 
-#define CHAIN_NODE_FUNC_INFO_SEQ                                          \
-  OF_PP_SEQ_PRODUCT((ForwardChainNode), FORWARD_CHAIN_NODE_FUNC_SEQ)      \
-  OF_PP_SEQ_PRODUCT((BackwardChainNode), BACKWARD_CHAIN_NODE_FUNC_SEQ)    \
-  OF_PP_SEQ_PRODUCT((LossChainNode), LOSS_CHAIN_NODE_FUNC_SEQ)            \
-  OF_PP_SEQ_PRODUCT((LossAccChainNode), LOSS_ACC_CHAIN_NODE_FUNC_SEQ)     \
-  OF_PP_SEQ_PRODUCT((LossPrintChainNode), LOSS_PRINT_CHAIN_NODE_FUNC_SEQ) \
-  OF_PP_SEQ_PRODUCT((MdUpdtChainNode), MDUPDT_CHAIN_NODE_FUNC_SEQ)        \
-  OF_PP_SEQ_PRODUCT((MdSaveChainNode), MDSAVE_CHAIN_NODE_FUNC_SEQ)        \
-  OF_PP_SEQ_PRODUCT((MdDiffAccChainNode), MDDIFF_ACC_CHAIN_NODE_FUNC_SEQ)
+#define CHAIN_NODE_FUNC_INFO_SEQ                                        \
+  OF_PP_MAP_PREPEND(ForwardChainNode, FORWARD_CHAIN_NODE_FUNC_SEQ)      \
+  OF_PP_MAP_PREPEND(BackwardChainNode, BACKWARD_CHAIN_NODE_FUNC_SEQ)    \
+  OF_PP_MAP_PREPEND(LossChainNode, LOSS_CHAIN_NODE_FUNC_SEQ)            \
+  OF_PP_MAP_PREPEND(LossAccChainNode, LOSS_ACC_CHAIN_NODE_FUNC_SEQ)     \
+  OF_PP_MAP_PREPEND(LossPrintChainNode, LOSS_PRINT_CHAIN_NODE_FUNC_SEQ) \
+  OF_PP_MAP_PREPEND(MdUpdtChainNode, MDUPDT_CHAIN_NODE_FUNC_SEQ)        \
+  OF_PP_MAP_PREPEND(MdSaveChainNode, MDSAVE_CHAIN_NODE_FUNC_SEQ)        \
+  OF_PP_MAP_PREPEND(MdDiffAccChainNode, MDDIFF_ACC_CHAIN_NODE_FUNC_SEQ)
 
-#define DEF_CHAIN_NODE_FUNC(ret_type, class_name, func_name, ret_value) \
-  ret_type class_name::func_name(const ChainNode* node) const {         \
-    return ret_value;                                                   \
+#define DEFINE_CHAIN_NODE_FUNC(class_name, ret_type, prefix, chain_type,       \
+                               ret_value)                                      \
+  ret_type class_name::prefix##From##chain_type(const ChainNode* node) const { \
+    return ret_value;                                                          \
   }
 
-#define DEFINE_CHAIN_NODE_FUNC(class_name, t)                                  \
-  DEF_CHAIN_NODE_FUNC(                                                         \
-      OF_PP_TUPLE_ELEM(0, t), class_name,                                      \
-      OF_PP_CAT(OF_PP_TUPLE_ELEM(1, t),                                        \
-                OF_PP_CAT(From, OF_PP_TUPLE_ELEM(0, OF_PP_TUPLE_ELEM(2, t)))), \
-      OF_PP_TUPLE_ELEM(1, OF_PP_TUPLE_ELEM(2, t)))
-
+//  expanded demo:
+//  BldSubTskGphMthd GetMthdForBldSubTskGphFromForward(const ChainNode*)
+//       const {
+//    return &TaskGraph::BldSubTskGphByBoxing;
+//  }
 OF_PP_FOR_EACH_TUPLE(DEFINE_CHAIN_NODE_FUNC, CHAIN_NODE_FUNC_INFO_SEQ)
 
 void ForwardChainNode::set_data_output_lbns() {
