@@ -363,6 +363,6 @@ void RnnFwDataCompActor::Act() {
   }
 }
 
-REGISTER_ACTOR(kDataCompTask, true, RnnFwDataCompActor);
+REGISTER_ACTOR(kRnnDataCompTask, true, RnnFwDataCompActor);
 
 }  // namespace oneflow

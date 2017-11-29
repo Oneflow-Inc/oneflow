@@ -16,6 +16,7 @@ enum TaskType {
   kBoxingTask = 7;
   kLossAccCompTask = 8;
   kLossRecordCompTask = 9;
+  kRnnDataCompTask = 10;
 }
 
 message TaskProto {
