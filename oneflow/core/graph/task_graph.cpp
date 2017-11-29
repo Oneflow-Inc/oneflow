@@ -27,12 +27,29 @@ TaskGraph::TaskGraph(std::unique_ptr<const ChainGraph>&& chain_gph) {
   ToDotWithAutoFilePath();
 }
 
+static bool IsDataParallelOneToOneBoxing(const ChainNode* src_chain,
+                                         const ChainNode* dst_chain) {
+  if (src_chain->out_edges().size() > 1) { return false; }
+  if (dst_chain->in_edges().size() > 1) { return false; }
+  std::shared_ptr<const ParallelDesc> src_desc = src_chain->parallel_desc();
+  std::shared_ptr<const ParallelDesc> dst_desc = dst_chain->parallel_desc();
+  if (src_desc->policy() != kDataParallel) { return false; }
+  if (dst_desc->policy() != kDataParallel) { return false; }
+  if (src_desc->parallel_num() != dst_desc->parallel_num()) { return false; }
+  return true;
+}
+
 void TaskGraph::BldSubTskGphByBoxing(
     const ChainNode* src_chain, const ChainNode* dst_chain,
     const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
     const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,
     HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_in_box,
     HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_out_box) {
+  if (IsDataParallelOneToOneBoxing(src_chain, dst_chain)) {
+    BldSubTskGphByOneToOne(src_chain, dst_chain, sorted_src_comp_tasks,
+                           sorted_dst_comp_tasks, nullptr, nullptr);
+    return;
+  }
   BuildOutBoxingIfNeed(src_chain, sorted_src_comp_tasks, chain2sorted_out_box);
   BuildInBoxingIfNeed(dst_chain, sorted_dst_comp_tasks, chain2sorted_in_box);
   for (TaskNode* src_box : chain2sorted_out_box->at(src_chain)) {

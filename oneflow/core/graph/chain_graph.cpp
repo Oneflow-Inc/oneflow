@@ -192,6 +192,7 @@ void DataMergeChains(std::list<Chain>* chain_list,
     if (cur_logi_node->parallel_desc()->policy() != kDataParallel) { continue; }
     if (cur_logi_node->op()->IsLossOp()) { continue; }
     if (cur_logi_node->op()->IsDataLoaderOp()) { continue; }
+    if (cur_logi_node->op()->IsPrintOp()) { continue; }
     data_parallel_node.push_back(cur_logi_node);
   }
   while (DoOneDataMerge(data_parallel_node, chain_list, logical2chain_it)) {}
@@ -233,6 +234,8 @@ void ChainGraph::BuildFwStruct() {
         chain_node = NewNode<LossChainNode>();
       } else if (op->IsDataLoaderOp()) {
         chain_node = NewNode<SourceChainNode>();
+      } else if (op->IsPrintOp()) {
+        chain_node = NewNode<PrintChainNode>();
       } else {
         // do nothing
       }
@@ -301,8 +304,10 @@ void ChainGraph::BuildBwStruct() {
     auto fw_dst_node = dynamic_cast<ForwardChainNode*>(fw_edge->dst_node());
     ChainNode* bw_src_node = fw_src_node->bw_node();
     if (bw_src_node == nullptr) { continue; }
-    if (fw_dst_node == nullptr) {  // LossChainNode
-      Connect(fw_edge->dst_node(), NewEdge(), bw_src_node);
+    if (fw_dst_node == nullptr) {
+      if (dynamic_cast<LossChainNode*>(fw_edge->dst_node())) {
+        Connect(fw_edge->dst_node(), NewEdge(), bw_src_node);
+      }
     } else {
       ChainNode* bw_dst_node = fw_dst_node->bw_node();
       if (bw_dst_node == nullptr) { continue; }
