@@ -285,6 +285,7 @@ namespace {
 
 Kernel* CreateConvolutionKernel(DeviceType dev_type,
                                 const KernelConf& kernel_conf) {
+#ifdef USE_CUDNN
   if (kernel_conf.op_conf().convolution_conf().use_cudnn()) {
     static const HashMap<std::string, std::function<Kernel*()>> creators = {
 #define CUDNN_CONVOLUTION_KERNEL_ENTRY(device_type, data_type_pair)         \
@@ -295,7 +296,9 @@ Kernel* CreateConvolutionKernel(DeviceType dev_type,
                                          (DeviceType::kGPU),
                                          FLOATING_DATA_TYPE_SEQ)};
     return creators.at(GetHashKey(dev_type, kernel_conf.data_type()))();
-  } else {
+  }
+#endif
+  if (!kernel_conf.op_conf().convolution_conf().use_cudnn()) {
     static const HashMap<std::string, std::function<Kernel*()>> creators = {
 #define CONVOLUTION_KERNEL_ENTRY(device_type, data_type_pair)          \
   {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {  \
