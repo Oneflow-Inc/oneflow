@@ -12,9 +12,9 @@ std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc()
   return std::bind(&ExecNode::GetBlobDesc4BnInOp, this, std::placeholders::_1);
 }
 
-void ExecNode::ToProto(const ParallelContext* parallel_ctx,
+void ExecNode::ToProto(bool is_forward, const ParallelContext* parallel_ctx,
                        ExecNodeProto* ret) const {
-  op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), parallel_ctx,
+  op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), is_forward, parallel_ctx,
                      ret->mutable_kernel_conf());
   for (const auto& bn_regst : bn_in_op2regst_) {
     const std::string& bn_in_op = bn_regst.first;
@@ -34,10 +34,11 @@ BlobDesc* ExecNode::GetBlobDesc4BnInOp(const std::string& bn_in_op) const {
   return regst->MutBlobDesc(lbn);
 }
 
-void ExecGraph::ToExecSequence(const ParallelContext* parallel_ctx,
+void ExecGraph::ToExecSequence(bool is_forward,
+                               const ParallelContext* parallel_ctx,
                                ExecSequence* ret) const {
   TopoForEachNode([&](ExecNode* node) {
-    node->ToProto(parallel_ctx, ret->add_exec_node());
+    node->ToProto(is_forward, parallel_ctx, ret->add_exec_node());
   });
 }
 

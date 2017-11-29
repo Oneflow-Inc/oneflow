@@ -192,6 +192,7 @@ void DataMergeChains(std::list<Chain>* chain_list,
     if (cur_logi_node->parallel_desc()->policy() != kDataParallel) { continue; }
     if (cur_logi_node->op()->IsLossOp()) { continue; }
     if (cur_logi_node->op()->IsDataLoaderOp()) { continue; }
+    if (cur_logi_node->op()->IsPrintOp()) { continue; }
     data_parallel_node.push_back(cur_logi_node);
   }
   while (DoOneDataMerge(data_parallel_node, chain_list, logical2chain_it)) {}
@@ -203,7 +204,7 @@ ChainGraph::ChainGraph(bool is_train) {
   BuildFwStruct();
   if (is_train) {
     BuildBwStruct();
-    BuildLossRecordStruct();
+    BuildLossPrintStruct();
   }
   BuildModelStruct(is_train);
   BuildRnnStruct();
@@ -233,6 +234,8 @@ void ChainGraph::BuildFwStruct() {
         chain_node = NewNode<LossChainNode>();
       } else if (op->IsDataLoaderOp()) {
         chain_node = NewNode<SourceChainNode>();
+      } else if (op->IsPrintOp()) {
+        chain_node = NewNode<PrintChainNode>();
       } else {
         // do nothing
       }
@@ -246,7 +249,7 @@ void ChainGraph::BuildFwStruct() {
       chain_node->mut_op_vec().push_back(logical_node->op());
     }
   }
-  // Record the predecessor
+  // Print the predecessor
   FOR_EACH(chain_it, chain_list) {
     ChainNode* chain_node = chain_it2chain_node.at(chain_it);
     for (const LogicalNode* logi_node : chain_it->nodes) {
@@ -301,8 +304,10 @@ void ChainGraph::BuildBwStruct() {
     auto fw_dst_node = dynamic_cast<ForwardChainNode*>(fw_edge->dst_node());
     ChainNode* bw_src_node = fw_src_node->bw_node();
     if (bw_src_node == nullptr) { continue; }
-    if (fw_dst_node == nullptr) {  // LossChainNode
-      Connect(fw_edge->dst_node(), NewEdge(), bw_src_node);
+    if (fw_dst_node == nullptr) {
+      if (dynamic_cast<LossChainNode*>(fw_edge->dst_node())) {
+        Connect(fw_edge->dst_node(), NewEdge(), bw_src_node);
+      }
     } else {
       ChainNode* bw_dst_node = fw_dst_node->bw_node();
       if (bw_dst_node == nullptr) { continue; }
@@ -315,7 +320,7 @@ void ChainGraph::BuildBwStruct() {
   }
 }
 
-void ChainGraph::BuildLossRecordStruct() {
+void ChainGraph::BuildLossPrintStruct() {
   ForEachChainNode<LossChainNode>([&](LossChainNode* loss_chain) {
     // Loss Accumulate Chain
     OperatorConf loss_acc_op_conf;
@@ -326,20 +331,20 @@ void ChainGraph::BuildLossRecordStruct() {
     loss_acc_chain->mut_op_vec() = {loss_acc_op};
     loss_acc_chain->mut_parallel_desc() = loss_chain->parallel_desc();
     Connect<ChainNode>(loss_chain, NewEdge(), loss_acc_chain);
-    // Loss Record Chain
-    OperatorConf loss_record_op_conf;
-    loss_record_op_conf.set_name("loss_record_" + NewUniqueId());
-    loss_record_op_conf.mutable_loss_record_conf();
-    auto loss_record_op = ConstructOp(loss_record_op_conf);
-    ParallelConf loss_record_pr_conf;
-    loss_record_pr_conf.set_policy(kDataParallel);
-    loss_record_pr_conf.add_device_name(
+    // Loss Print Chain
+    OperatorConf loss_print_op_conf;
+    loss_print_op_conf.set_name("loss_print_" + NewUniqueId());
+    loss_print_op_conf.mutable_loss_print_conf();
+    auto loss_print_op = ConstructOp(loss_print_op_conf);
+    ParallelConf loss_print_pr_conf;
+    loss_print_pr_conf.set_policy(kDataParallel);
+    loss_print_pr_conf.add_device_name(
         IDMgr::Singleton()->MachineName4MachineId(0) + ":0");
-    auto loss_record_chain = NewNode<LossRecordChainNode>();
-    loss_record_chain->mut_op_vec() = {loss_record_op};
-    loss_record_chain->mut_parallel_desc().reset(
-        new ParallelDesc(loss_record_pr_conf));
-    Connect<ChainNode>(loss_acc_chain, NewEdge(), loss_record_chain);
+    auto loss_print_chain = NewNode<LossPrintChainNode>();
+    loss_print_chain->mut_op_vec() = {loss_print_op};
+    loss_print_chain->mut_parallel_desc().reset(
+        new ParallelDesc(loss_print_pr_conf));
+    Connect<ChainNode>(loss_acc_chain, NewEdge(), loss_print_chain);
   });
 }
 

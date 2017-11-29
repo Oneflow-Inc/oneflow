@@ -118,7 +118,7 @@ void InnerProductKernel<device_type, T>::InitModelBlobsWithDir(
 
 template<DeviceType device_type, typename T>
 void InnerProductKernel<device_type, T>::InitModelTmpBlobs(
-    const KernelCtx& ctx, const ParallelContext& parallel_ctx,
+    const KernelCtx& ctx, const ParallelContext* parallel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (this->op_conf().innerproduct_conf().has_bias_term()) {
     FillConf bias_multiplier_fill_conf;
@@ -128,25 +128,7 @@ void InnerProductKernel<device_type, T>::InitModelTmpBlobs(
   }
 }
 
-namespace {
-
-Kernel* CreateInnerProductKernel(DeviceType dev_type,
-                                 const KernelConf& kernel_conf) {
-  static const HashMap<std::string, std::function<Kernel*()>> creators = {
-#define INNERPRODUCT_KERNEL_ENTRY(device_type, data_type_pair)          \
-  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {   \
-     return new InnerProductKernel<device_type,                         \
-                                   OF_PP_PAIR_FIRST(data_type_pair)>(); \
-   }},
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-          INNERPRODUCT_KERNEL_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};
-  return creators.at(
-      GetHashKey(dev_type, kernel_conf.innerproduct_conf().data_type()))();
-}
-
-}  // namespace
-
-COMMAND(AddKernelCreator(OperatorConf::kInnerproductConf,
-                         CreateInnerProductKernel));
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kInnerproductConf, InnerProductKernel,
+                           FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

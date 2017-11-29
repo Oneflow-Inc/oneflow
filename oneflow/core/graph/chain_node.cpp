@@ -3,10 +3,11 @@
 #include "oneflow/core/graph/forward_compute_task_node.h"
 #include "oneflow/core/graph/loss_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/loss_compute_task_node.h"
-#include "oneflow/core/graph/loss_record_compute_task_node.h"
+#include "oneflow/core/graph/loss_print_compute_task_node.h"
 #include "oneflow/core/graph/model_diff_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/model_save_compute_task_node.h"
 #include "oneflow/core/graph/model_update_compute_task_node.h"
+#include "oneflow/core/graph/print_compute_task_node.h"
 #include "oneflow/core/graph/source_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 
@@ -289,22 +290,60 @@ std::vector<std::string> LossChainNode::FindLbnsFromSource(
   return FindLbnsBetweenFw(node, this);
 }
 
+// PrintChainNode
+BldSubTskGphMthd PrintChainNode::GetMthdForBldSubTskGphFromSource(
+    const ChainNode* node) const {
+  return &TaskGraph::BldSubTskGphByBoxing;
+}
+BldSubTskGphMthd PrintChainNode::GetMthdForBldSubTskGphFromForward(
+    const ChainNode* node) const {
+  return &TaskGraph::BldSubTskGphByBoxing;
+}
+BldSubTskGphMthd PrintChainNode::GetMthdForBldSubTskGphFromLoss(
+    const ChainNode* node) const {
+  return &TaskGraph::BldSubTskGphByBoxing;
+}
+BldBoxingOpConfMthd PrintChainNode::GetMthdForBldBoxingOpConfFromSource(
+    const ChainNode* node) const {
+  return GetBldBoxingOpConfMethodByFwParallelPolicy(node, this);
+}
+BldBoxingOpConfMthd PrintChainNode::GetMthdForBldBoxingOpConfFromForward(
+    const ChainNode* node) const {
+  return GetBldBoxingOpConfMethodByFwParallelPolicy(node, this);
+}
+BldBoxingOpConfMthd PrintChainNode::GetMthdForBldBoxingOpConfFromLoss(
+    const ChainNode* node) const {
+  return GetBldBoxingOpConfMethodByFwParallelPolicy(node, this);
+}
+std::vector<std::string> PrintChainNode::FindLbnsFromSource(
+    const ChainNode* node) const {
+  return FindLbnsBetweenFw(node, this);
+}
+std::vector<std::string> PrintChainNode::FindLbnsFromForward(
+    const ChainNode* node) const {
+  return FindLbnsBetweenFw(node, this);
+}
+std::vector<std::string> PrintChainNode::FindLbnsFromLoss(
+    const ChainNode* node) const {
+  return FindLbnsBetweenFw(node, this);
+}
+
 // LossAccChainNode
 BldSubTskGphMthd LossAccChainNode::GetMthdForBldSubTskGphFromLoss(
     const ChainNode*) const {
   return &TaskGraph::BldSubTskGphByOneToOne;
 }
 
-// LossRecordChainNode
-BldSubTskGphMthd LossRecordChainNode::GetMthdForBldSubTskGphFromLossAcc(
+// LossPrintChainNode
+BldSubTskGphMthd LossPrintChainNode::GetMthdForBldSubTskGphFromLossAcc(
     const ChainNode*) const {
   return &TaskGraph::BldSubTskGphByBoxing;
 }
-BldBoxingOpConfMthd LossRecordChainNode::GetMthdForBldBoxingOpConfFromLossAcc(
+BldBoxingOpConfMthd LossPrintChainNode::GetMthdForBldBoxingOpConfFromLossAcc(
     const ChainNode*) const {
   return &BoxingTaskNode::BldBoxingOpConfWithAddAndClone;
 }
-std::vector<std::string> LossRecordChainNode::FindLbnsFromLossAcc(
+std::vector<std::string> LossPrintChainNode::FindLbnsFromLossAcc(
     const ChainNode*) const {
   return {kPackedBlobName};
 }

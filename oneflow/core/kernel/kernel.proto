@@ -4,16 +4,9 @@ package oneflow;
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/data_type.proto";
 
-message ConvolutionKernelConf {
-  required DataType data_type = 1;
-}
-
-message DataLoaderKernelConf {
-  required int64 parallel_id = 1;
-}
-
-message InnerProductKernelConf {
-  required DataType data_type = 1;
+message MultinomialLogisticLossKernelConf { 
+  required DataType prediction_type = 1;
+  required DataType label_type = 2;
 }
 
 message BoxingKernelConf {
@@ -41,11 +34,14 @@ message KernelConf {
   repeated string model_tmp_bns = 10;
 
   required bool need_do_data_id = 12;
-
+  required bool is_forward = 13;
+  required DataType data_type = 14;
+  
   oneof kernel_type {
     ConvolutionKernelConf convolution_conf = 100;
     InnerProductKernelConf innerproduct_conf = 101;
     DataLoaderKernelConf data_loader_conf = 102;
     BoxingKernelConf boxing_conf = 103;
+    MultinomialLogisticLossKernelConf multinomial_logistic_loss_conf = 106;
   }
 }

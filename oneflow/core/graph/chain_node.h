@@ -25,16 +25,17 @@ using BldBoxingOpConfMthd = void (BoxingTaskNode::*)(
     const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
     int64_t out_parallel_num, BoxingOpConf*);
 
-#define CHAIN_TYPE_SEQ             \
-  OF_PP_MAKE_TUPLE_SEQ(Forward)    \
-  OF_PP_MAKE_TUPLE_SEQ(Backward)   \
-  OF_PP_MAKE_TUPLE_SEQ(Source)     \
-  OF_PP_MAKE_TUPLE_SEQ(Loss)       \
-  OF_PP_MAKE_TUPLE_SEQ(LossAcc)    \
-  OF_PP_MAKE_TUPLE_SEQ(LossRecord) \
-  OF_PP_MAKE_TUPLE_SEQ(MdUpdt)     \
-  OF_PP_MAKE_TUPLE_SEQ(MdSave)     \
-  OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc)
+#define CHAIN_TYPE_SEQ            \
+  OF_PP_MAKE_TUPLE_SEQ(Forward)   \
+  OF_PP_MAKE_TUPLE_SEQ(Backward)  \
+  OF_PP_MAKE_TUPLE_SEQ(Source)    \
+  OF_PP_MAKE_TUPLE_SEQ(Loss)      \
+  OF_PP_MAKE_TUPLE_SEQ(LossAcc)   \
+  OF_PP_MAKE_TUPLE_SEQ(LossPrint) \
+  OF_PP_MAKE_TUPLE_SEQ(MdUpdt)    \
+  OF_PP_MAKE_TUPLE_SEQ(MdSave)    \
+  OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc) \
+  OF_PP_MAKE_TUPLE_SEQ(Print)
 
 class ChainNode : public Node<ChainNode, ChainEdge> {
  public:
@@ -189,6 +190,25 @@ class LossChainNode final : public ChainNode {
                                    (Forward)(Source));
 };
 
+class PrintChainNode final : public ChainNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(PrintChainNode);
+  PrintChainNode() = default;
+  ~PrintChainNode() = default;
+
+  OVERRIDE_PURE_VIRTUAL_METHOD();
+
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (BldSubTskGphMthd GetMthdForBldSubTskGph),
+                                   (Source)(Forward)(Loss));
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+      OVERRIDE_FROM_METHOD, (BldBoxingOpConfMthd GetMthdForBldBoxingOpConf),
+      (Source)(Forward)(Loss));
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (std::vector<std::string> FindLbns),
+                                   (Source)(Forward)(Loss));
+};
+
 class LossAccChainNode final : public ChainNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LossAccChainNode);
@@ -202,11 +222,11 @@ class LossAccChainNode final : public ChainNode {
                                    (Loss));
 };
 
-class LossRecordChainNode final : public ChainNode {
+class LossPrintChainNode final : public ChainNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(LossRecordChainNode);
-  LossRecordChainNode() = default;
-  ~LossRecordChainNode() = default;
+  OF_DISALLOW_COPY_AND_MOVE(LossPrintChainNode);
+  LossPrintChainNode() = default;
+  ~LossPrintChainNode() = default;
 
   OVERRIDE_PURE_VIRTUAL_METHOD();
 

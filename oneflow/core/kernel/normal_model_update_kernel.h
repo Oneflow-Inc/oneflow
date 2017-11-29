@@ -1,12 +1,12 @@
 #ifndef ONEFLOW_CORE_KERNEL_NORMAL_MODEL_UPDATE_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_NORMAL_MODEL_UPDATE_KERNEL_H_
 
-#include "oneflow/core/kernel/model_update_kernel.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class NormalMdUpdateKernel final : public ModelUpdtKernel {
+class NormalMdUpdateKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NormalMdUpdateKernel);
   NormalMdUpdateKernel() = default;
