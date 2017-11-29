@@ -11,6 +11,47 @@
 namespace oneflow {
 
 template<typename T>
+class CudnnDataType;
+
+template<>
+class CudnnDataType<float> {
+ public:
+  static const cudnnDataType_t type = CUDNN_DATA_FLOAT;
+  static float oneval, zeroval;
+  static const void* one;
+  static const void* zero;
+};
+
+template<>
+class CudnnDataType<double> {
+ public:
+  static const cudnnDataType_t type = CUDNN_DATA_DOUBLE;
+  static double oneval, zeroval;
+  static const void* one;
+  static const void* zero;
+};
+
+/*
+template<>
+class CudnnDataType<signed char> {
+ public:
+  static const cudnnDataType_t type = CUDNN_DATA_INT8;
+  static signed char oneval, zeroval;
+  static const void* one;
+  static const void* zero;
+};
+
+template<>
+class CudnnDataType<int> {
+ public:
+  static const cudnnDataType_t type = CUDNN_DATA_INT32;
+  static int oneval, zeroval;
+  static const void* one;
+  static const void* zero;
+};
+*/
+
+template<typename T>
 void CudaCheck(T error);
 
 // CUDA: grid stride looping

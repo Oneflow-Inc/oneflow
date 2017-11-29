@@ -43,8 +43,13 @@ message ConvolutionOpConf {
   optional int32 dilation_h = 11 [default = 1];
   optional int32 dilation_w = 12 [default = 1];
 
-  optional FillConf weight_fill = 14;
-  optional FillConf bias_fill = 15;
+  optional bool use_cudnn = 13 [default = false];
+  optional int32 cudnn_fwd_algo = 14 [default = 0];
+  optional int32 cudnn_bwd_weight_algo = 15 [default = 0];
+  optional int32 cudnn_bwd_data_algo = 16 [default = 0];
+
+  optional FillConf weight_fill = 17;
+  optional FillConf bias_fill = 18;
 }
 
 message InnerProductOpConf {

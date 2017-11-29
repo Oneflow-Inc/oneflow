@@ -52,6 +52,36 @@ const char* CurandGetErrorString(curandStatus_t error) {
 
 }  // namespace
 
+float CudnnDataType<float>::oneval = 1.0;
+float CudnnDataType<float>::zeroval = 0.0;
+const void* CudnnDataType<float>::one =
+    static_cast<void*>(&CudnnDataType<float>::oneval);
+const void* CudnnDataType<float>::zero =
+    static_cast<void*>(&CudnnDataType<float>::zeroval);
+
+double CudnnDataType<double>::oneval = 1.0;
+double CudnnDataType<double>::zeroval = 0.0;
+const void* CudnnDataType<double>::one =
+    static_cast<void*>(&CudnnDataType<double>::oneval);
+const void* CudnnDataType<double>::zero =
+    static_cast<void*>(&CudnnDataType<double>::zeroval);
+
+/*
+signed char CudnnDataType<signed char>::oneval = 1.0;
+signed char CudnnDataType<signed char>::zeroval = 0.0;
+const void* CudnnDataType<signed char>::one =
+    static_cast<void*>(&CudnnDataType<signed char>::oneval);
+const void* CudnnDataType<signed char>::zero =
+    static_cast<void*>(&CudnnDataType<signed char>::zeroval);
+
+int CudnnDataType<int>::oneval = 1.0;
+int CudnnDataType<int>::zeroval = 0.0;
+const void* CudnnDataType<int>::one =
+    static_cast<void*>(&CudnnDataType<int>::oneval);
+const void* CudnnDataType<int>::zero =
+    static_cast<void*>(&CudnnDataType<int>::zeroval);
+*/
+
 template<>
 void CudaCheck(cudaError_t error) {
   CHECK_EQ(error, cudaSuccess) << cudaGetErrorString(error);
