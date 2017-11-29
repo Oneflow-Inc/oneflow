@@ -22,4 +22,5 @@ train_conf {
   normal_mdupdt_conf {
     learning_rate: 0.01
   }
+  use_cudnn: true
 }

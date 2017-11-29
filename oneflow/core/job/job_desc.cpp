@@ -67,6 +67,14 @@ const FillConf* JobDesc::DefaultFillConf() const {
   CHECK(IsTrain());
   return OF_PB_POINTER_GET(job_conf_.train_conf(), default_fill_conf);
 }
+bool JobDesc::UseCuDNN() const {
+  CHECK(IsTrain());
+#ifdef USE_CUDNN
+  return job_conf_.train_conf().use_cudnn();
+#else
+  return false;
+#endif
+}
 int32_t JobDesc::PieceNumOfPrintLoss() const {
   CHECK(IsTrain());
   return job_conf_.train_conf().piece_num_of_print_loss();

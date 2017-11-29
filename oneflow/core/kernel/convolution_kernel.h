@@ -57,6 +57,7 @@ class ConvolutionKernel final : public KernelIf<device_type> {
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 };
 
+#ifdef USE_CUDNN
 template<typename T>
 class CudnnConvolutionKernel final : public KernelIf<DeviceType::kGPU> {
  public:
@@ -89,6 +90,7 @@ class CudnnConvolutionKernel final : public KernelIf<DeviceType::kGPU> {
   cudnnFilterDescriptor_t weight_desc_;
   cudnnTensorDescriptor_t bias_desc_;
 };
+#endif  // USE_CUDNN
 
 }  // namespace oneflow
 

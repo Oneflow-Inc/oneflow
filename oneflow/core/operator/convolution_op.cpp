@@ -13,17 +13,17 @@ void ConvolutionOp::InitFromOpConf() {
   EnrollModelBn("weight");
   if (GetBoolFromSpecialConf("has_bias_term")) {
     EnrollModelBn("bias");
-#ifndef USE_CUDNN
-    EnrollModelTmpBn("bias_multiplier");
-#endif  // USE_CUDNN
+    if (!JobDesc::Singleton()->UseCuDNN()) {
+      EnrollModelTmpBn("bias_multiplier");
+    }
   }
 
-#ifdef USE_CUDNN
-  EnrollDataTmpBn("fwd_workspace");
-  EnrollDataTmpBn("bwd_workspace");
-#else
-  EnrollDataTmpBn("col_buf");
-#endif  // USE_CUDNN
+  if (JobDesc::Singleton()->UseCuDNN()) {
+    EnrollDataTmpBn("fwd_workspace");
+    EnrollDataTmpBn("bwd_workspace");
+  } else {
+    EnrollDataTmpBn("col_buf");
+  }
 }
 
 const PbMessage& ConvolutionOp::GetSpecialConf() const {
@@ -79,119 +79,128 @@ void ConvolutionOp::InferBlobDescs(
     bias_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
     bias_blob_desc->set_has_data_id(false);
 
-#ifndef USE_CUDNN
-    // bias multiplier
-    BlobDesc* bias_multiplier_blob_desc = GetBlobDesc4BnInOp("bias_multiplier");
-    bias_multiplier_blob_desc->mut_shape() = Shape({output_size});
-    bias_multiplier_blob_desc->set_data_type(
-        JobDesc::Singleton()->DefaultDataType());
-    bias_multiplier_blob_desc->set_has_data_id(false);
-#endif  // USE_CUDNN
+    if (!JobDesc::Singleton()->UseCuDNN()) {
+      // bias multiplier
+      BlobDesc* bias_multiplier_blob_desc =
+          GetBlobDesc4BnInOp("bias_multiplier");
+      bias_multiplier_blob_desc->mut_shape() = Shape({output_size});
+      bias_multiplier_blob_desc->set_data_type(
+          JobDesc::Singleton()->DefaultDataType());
+      bias_multiplier_blob_desc->set_has_data_id(false);
+    }
+  }
+
+  if (!JobDesc::Singleton()->UseCuDNN()) {
+    // col_buf
+    BlobDesc* col_buf_blob_desc = GetBlobDesc4BnInOp("col_buf");
+    col_buf_blob_desc->mut_shape() =
+        Shape({data_num, output_size, c_i * kernel});
+    col_buf_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
+    col_buf_blob_desc->set_has_data_id(false);
   }
 
 #ifdef USE_CUDNN
-  cudaStream_t cuda_stream;
-  cudnnHandle_t cudnn_handle;
+  if (JobDesc::Singleton()->UseCuDNN()) {
+    this->mut_op_conf().mutable_convolution_conf()->set_use_cudnn(true);
 
-  CudaCheck(cudaStreamCreate(&cuda_stream));
-  CudaCheck(cudnnCreate(&cudnn_handle));
-  CudaCheck(cudnnSetStream(cudnn_handle, cuda_stream));
+    cudaStream_t cuda_stream;
+    cudnnHandle_t cudnn_handle;
 
-  cudnnConvolutionFwdAlgo_t cudnn_fwd_algo =
-      static_cast<cudnnConvolutionFwdAlgo_t>(0);
-  cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_weight_algo =
-      static_cast<cudnnConvolutionBwdFilterAlgo_t>(0);
-  cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo =
-      static_cast<cudnnConvolutionBwdDataAlgo_t>(0);
+    CudaCheck(cudaStreamCreate(&cuda_stream));
+    CudaCheck(cudnnCreate(&cudnn_handle));
+    CudaCheck(cudnnSetStream(cudnn_handle, cuda_stream));
 
-  size_t fwd_workspace_sizes = 0;
-  size_t bwd_weight_workspace_sizes = 0;
-  size_t bwd_data_workspace_sizes = 0;
+    cudnnConvolutionFwdAlgo_t cudnn_fwd_algo =
+        static_cast<cudnnConvolutionFwdAlgo_t>(0);
+    cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_weight_algo =
+        static_cast<cudnnConvolutionBwdFilterAlgo_t>(0);
+    cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo =
+        static_cast<cudnnConvolutionBwdDataAlgo_t>(0);
 
-  cudnnTensorDescriptor_t in_desc;
-  cudnnTensorDescriptor_t out_desc;
-  cudnnFilterDescriptor_t weight_desc;
-  cudnnConvolutionDescriptor_t conv_desc;
+    size_t fwd_workspace_sizes = 0;
+    size_t bwd_weight_workspace_sizes = 0;
+    size_t bwd_data_workspace_sizes = 0;
 
-  CudaCheck(cudnnCreateTensorDescriptor(&in_desc));
-  CudaCheck(cudnnCreateTensorDescriptor(&out_desc));
-  CudaCheck(cudnnCreateFilterDescriptor(&weight_desc));
-  CudaCheck(cudnnCreateConvolutionDescriptor(&conv_desc));
+    cudnnTensorDescriptor_t in_desc;
+    cudnnTensorDescriptor_t out_desc;
+    cudnnFilterDescriptor_t weight_desc;
+    cudnnConvolutionDescriptor_t conv_desc;
 
-  cudnnDataType_t cudnn_data_type;
-  switch (JobDesc::Singleton()->DefaultDataType()) {
-    case kFloat: cudnn_data_type = CUDNN_DATA_FLOAT; break;
-    case kDouble: cudnn_data_type = CUDNN_DATA_DOUBLE; break;
-    default: UNEXPECTED_RUN();
+    CudaCheck(cudnnCreateTensorDescriptor(&in_desc));
+    CudaCheck(cudnnCreateTensorDescriptor(&out_desc));
+    CudaCheck(cudnnCreateFilterDescriptor(&weight_desc));
+    CudaCheck(cudnnCreateConvolutionDescriptor(&conv_desc));
+
+    cudnnDataType_t cudnn_data_type;
+    switch (JobDesc::Singleton()->DefaultDataType()) {
+      case kFloat: cudnn_data_type = CUDNN_DATA_FLOAT; break;
+      case kDouble: cudnn_data_type = CUDNN_DATA_DOUBLE; break;
+      default: UNEXPECTED_RUN();
+    }
+
+    CudaCheck(cudnnSetTensor4dDescriptor(in_desc, CUDNN_TENSOR_NCHW,
+                                         cudnn_data_type, data_num, c_i, height,
+                                         width));
+    CudaCheck(cudnnSetTensor4dDescriptor(out_desc, CUDNN_TENSOR_NCHW,
+                                         cudnn_data_type, data_num, c_o, h_len,
+                                         w_len));
+    CudaCheck(cudnnSetFilter4dDescriptor(weight_desc, cudnn_data_type,
+                                         CUDNN_TENSOR_NCHW, c_o, c_i,
+                                         conf.kernel_h(), conf.kernel_w()));
+    CudaCheck(cudnnSetConvolution2dDescriptor(
+        conv_desc, conf.pad_h(), conf.pad_w(), conf.stride_h(), conf.stride_w(),
+        1, 1, CUDNN_CROSS_CORRELATION, cudnn_data_type));
+
+    // get implementation version of algorithm
+    CudaCheck(cudnnGetConvolutionForwardAlgorithm(
+        cudnn_handle, in_desc, weight_desc, conv_desc, out_desc,
+        CUDNN_CONVOLUTION_FWD_PREFER_FASTEST, 0, &cudnn_fwd_algo));
+    CudaCheck(cudnnGetConvolutionBackwardFilterAlgorithm(
+        cudnn_handle, in_desc, out_desc, conv_desc, weight_desc,
+        CUDNN_CONVOLUTION_BWD_FILTER_PREFER_FASTEST, 0,
+        &cudnn_bwd_weight_algo));
+    CudaCheck(cudnnGetConvolutionBackwardDataAlgorithm(
+        cudnn_handle, weight_desc, out_desc, conv_desc, in_desc,
+        CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST, 0, &cudnn_bwd_data_algo));
+
+    this->mut_op_conf().mutable_convolution_conf()->set_cudnn_fwd_algo(
+        cudnn_fwd_algo);
+    this->mut_op_conf().mutable_convolution_conf()->set_cudnn_bwd_weight_algo(
+        cudnn_bwd_weight_algo);
+    this->mut_op_conf().mutable_convolution_conf()->set_cudnn_bwd_data_algo(
+        cudnn_bwd_data_algo);
+
+    // get workspace sizes of algorithm
+    CudaCheck(cudnnGetConvolutionForwardWorkspaceSize(
+        cudnn_handle, in_desc, weight_desc, conv_desc, out_desc, cudnn_fwd_algo,
+        &fwd_workspace_sizes));
+    CudaCheck(cudnnGetConvolutionBackwardFilterWorkspaceSize(
+        cudnn_handle, in_desc, out_desc, conv_desc, weight_desc,
+        cudnn_bwd_weight_algo, &bwd_weight_workspace_sizes));
+    CudaCheck(cudnnGetConvolutionBackwardDataWorkspaceSize(
+        cudnn_handle, weight_desc, out_desc, conv_desc, in_desc,
+        cudnn_bwd_data_algo, &bwd_data_workspace_sizes));
+
+    BlobDesc* fwd_workspace_blob_desc = GetBlobDesc4BnInOp("fwd_workspace");
+    fwd_workspace_blob_desc->mut_shape() = Shape({fwd_workspace_sizes});
+    fwd_workspace_blob_desc->set_data_type(
+        JobDesc::Singleton()->DefaultDataType());
+    fwd_workspace_blob_desc->set_has_data_id(false);
+
+    BlobDesc* bwd_workspace_blob_desc = GetBlobDesc4BnInOp("bwd_workspace");
+    bwd_workspace_blob_desc->mut_shape() =
+        Shape({std::max(bwd_weight_workspace_sizes, bwd_data_workspace_sizes)});
+    bwd_workspace_blob_desc->set_data_type(
+        JobDesc::Singleton()->DefaultDataType());
+    bwd_workspace_blob_desc->set_has_data_id(false);
+
+    CudaCheck(cudnnDestroyTensorDescriptor(in_desc));
+    CudaCheck(cudnnDestroyTensorDescriptor(out_desc));
+    CudaCheck(cudnnDestroyConvolutionDescriptor(conv_desc));
+    CudaCheck(cudnnDestroyFilterDescriptor(weight_desc));
+    CudaCheck(cudaStreamDestroy(cuda_stream));
+    CudaCheck(cudnnDestroy(cudnn_handle));
   }
-
-  CudaCheck(cudnnSetTensor4dDescriptor(in_desc, CUDNN_TENSOR_NCHW,
-                                       cudnn_data_type, data_num, c_i, height,
-                                       width));
-  CudaCheck(cudnnSetTensor4dDescriptor(out_desc, CUDNN_TENSOR_NCHW,
-                                       cudnn_data_type, data_num, c_o, h_len,
-                                       w_len));
-  CudaCheck(cudnnSetFilter4dDescriptor(weight_desc, cudnn_data_type,
-                                       CUDNN_TENSOR_NCHW, c_o, c_i,
-                                       conf.kernel_h(), conf.kernel_w()));
-  CudaCheck(cudnnSetConvolution2dDescriptor(
-      conv_desc, conf.pad_h(), conf.pad_w(), conf.stride_h(), conf.stride_w(),
-      1, 1, CUDNN_CROSS_CORRELATION, cudnn_data_type));
-
-  // get implementation version of algorithm
-  CudaCheck(cudnnGetConvolutionForwardAlgorithm(
-      cudnn_handle, in_desc, weight_desc, conv_desc, out_desc,
-      CUDNN_CONVOLUTION_FWD_PREFER_FASTEST, 0, &cudnn_fwd_algo));
-  CudaCheck(cudnnGetConvolutionBackwardFilterAlgorithm(
-      cudnn_handle, in_desc, out_desc, conv_desc, weight_desc,
-      CUDNN_CONVOLUTION_BWD_FILTER_PREFER_FASTEST, 0, &cudnn_bwd_weight_algo));
-  CudaCheck(cudnnGetConvolutionBackwardDataAlgorithm(
-      cudnn_handle, weight_desc, out_desc, conv_desc, in_desc,
-      CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST, 0, &cudnn_bwd_data_algo));
-
-  this->mut_op_conf().mutable_convolution_conf()->set_cudnn_fwd_algo(
-      cudnn_fwd_algo);
-  this->mut_op_conf().mutable_convolution_conf()->set_cudnn_bwd_weight_algo(
-      cudnn_bwd_weight_algo);
-  this->mut_op_conf().mutable_convolution_conf()->set_cudnn_bwd_data_algo(
-      cudnn_bwd_data_algo);
-
-  // get workspace sizes of algorithm
-  CudaCheck(cudnnGetConvolutionForwardWorkspaceSize(
-      cudnn_handle, in_desc, weight_desc, conv_desc, out_desc, cudnn_fwd_algo,
-      &fwd_workspace_sizes));
-  CudaCheck(cudnnGetConvolutionBackwardFilterWorkspaceSize(
-      cudnn_handle, in_desc, out_desc, conv_desc, weight_desc,
-      cudnn_bwd_weight_algo, &bwd_weight_workspace_sizes));
-  CudaCheck(cudnnGetConvolutionBackwardDataWorkspaceSize(
-      cudnn_handle, weight_desc, out_desc, conv_desc, in_desc,
-      cudnn_bwd_data_algo, &bwd_data_workspace_sizes));
-
-  BlobDesc* fwd_workspace_blob_desc = GetBlobDesc4BnInOp("fwd_workspace");
-  fwd_workspace_blob_desc->mut_shape() = Shape({fwd_workspace_sizes});
-  fwd_workspace_blob_desc->set_data_type(
-      JobDesc::Singleton()->DefaultDataType());
-  fwd_workspace_blob_desc->set_has_data_id(false);
-
-  BlobDesc* bwd_workspace_blob_desc = GetBlobDesc4BnInOp("bwd_workspace");
-  bwd_workspace_blob_desc->mut_shape() =
-      Shape({std::max(bwd_weight_workspace_sizes, bwd_data_workspace_sizes)});
-  bwd_workspace_blob_desc->set_data_type(
-      JobDesc::Singleton()->DefaultDataType());
-  bwd_workspace_blob_desc->set_has_data_id(false);
-
-  CudaCheck(cudnnDestroyTensorDescriptor(in_desc));
-  CudaCheck(cudnnDestroyTensorDescriptor(out_desc));
-  CudaCheck(cudnnDestroyConvolutionDescriptor(conv_desc));
-  CudaCheck(cudnnDestroyFilterDescriptor(weight_desc));
-  CudaCheck(cudaStreamDestroy(cuda_stream));
-  CudaCheck(cudnnDestroy(cudnn_handle));
-#else
-  // col_buf
-  BlobDesc* col_buf_blob_desc = GetBlobDesc4BnInOp("col_buf");
-  col_buf_blob_desc->mut_shape() = Shape({data_num, output_size, c_i * kernel});
-  col_buf_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
-  col_buf_blob_desc->set_has_data_id(false);
 #endif  // USE_CUDNN
 }
 

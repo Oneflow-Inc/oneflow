@@ -124,6 +124,7 @@ class ConvolutionKernelUtil<DeviceType::kGPU, T> final {
   }
 };
 
+#ifdef USE_CUDNN
 template<typename T>
 CudnnConvolutionKernel<T>::CudnnConvolutionKernel() {
   CudaCheck(cudnnCreateTensorDescriptor(&this->in_desc_));
@@ -300,7 +301,6 @@ void CudnnConvolutionKernel<T>::InitModelTmpBlobs(
   }
 }
 
-#ifdef USE_CUDNN
 #define INSTANTIATE_CONVOLUTION_KERNEL(type_cpp, type_proto) \
   template class CudnnConvolutionKernel<type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CONVOLUTION_KERNEL, FLOATING_DATA_TYPE_SEQ)

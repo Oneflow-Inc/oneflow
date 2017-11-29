@@ -12,6 +12,7 @@ message TrainConf {
   optional FillConf default_fill_conf = 5;
   optional int32 piece_num_of_print_loss = 6 [default = 1000];
   required int32 num_of_pieces_in_batch = 7;
+  optional bool use_cudnn = 8 [default = false];
   oneof ModelUpdateCase {
     NormalModelUpdateOpConf normal_mdupdt_conf = 1000;
     MomentumModelUpdateOpConf momentum_mdupdt_conf = 1001;
