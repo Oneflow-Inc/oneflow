@@ -13,4 +13,18 @@ void LossPrintKernel<T>::Forward(
   LOG(INFO) << "loss: " << loss_mean;
 }
 
+namespace {
+
+Kernel* CreateLossPrintKernel(const KernelConf& kernel_conf) {
+  static const HashMap<int, std::function<Kernel*()>> creators = {
+#define MAKE_ENTRY(type_cpp, type_proto) \
+  {type_proto, []() { return new LossPrintKernel<type_cpp>; }},
+      OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, FLOATING_DATA_TYPE_SEQ)};
+  return creators.at(kernel_conf.data_type())();
+}
+
+}  // namespace
+
+COMMAND(AddKernelCreator(OperatorConf::kLossPrintConf, CreateLossPrintKernel));
+
 }  // namespace oneflow

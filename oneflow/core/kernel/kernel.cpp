@@ -42,6 +42,16 @@ void Kernel::InitModelTmpBlobs(
   UNEXPECTED_RUN();
 }
 
+void Kernel::Launch(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (kernel_conf_.is_forward()) {
+    Forward(ctx, BnInOp2Blob);
+  } else {
+    Backward(ctx, BnInOp2Blob);
+  }
+}
+
 const std::string& Kernel::Lbn4BnInOp(const std::string& bn_in_op) const {
   return kernel_conf_.bn_in_op2lbn().at(bn_in_op);
 }
