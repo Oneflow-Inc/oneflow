@@ -13,11 +13,6 @@ class MultinomialLogisticLossKernel final : public KernelIf<device_type> {
   MultinomialLogisticLossKernel() = default;
   ~MultinomialLogisticLossKernel() = default;
 
-  void Backward(const KernelCtx&,
-                std::function<Blob*(const std::string&)>) const override {
-    UNEXPECTED_RUN();
-  }
-
  private:
   void ForwardDataContent(
       const KernelCtx&,
