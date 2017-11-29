@@ -4,8 +4,8 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
-void BoxingKernel<device_type, T>::GetSumFromSrcBlobsToDstBlob(
+template<typename T>
+void BoxingKernel<T>::GetSumFromSrcBlobsToDstBlob(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     const std::vector<std::string>& src_bns, const std::string& dst_bn) const {
   Blob* dst_blob = BnInOp2Blob(dst_bn);
@@ -22,11 +22,12 @@ void BoxingKernel<device_type, T>::GetSumFromSrcBlobsToDstBlob(
   }
 }
 
-template<DeviceType device_type, typename T>
-void BoxingKernel<device_type, T>::BoxingCopy(
-    const KernelCtx& ctx, bool is_data_id, Blob* src_blob, Blob* dst_blob,
-    const int64_t src_offset, const int64_t dst_offset, size_t copy_size,
-    bool need_swap) const {
+template<typename T>
+void BoxingKernel<T>::BoxingCopy(const KernelCtx& ctx, bool is_data_id,
+                                 Blob* src_blob, Blob* dst_blob,
+                                 const int64_t src_offset,
+                                 const int64_t dst_offset, size_t copy_size,
+                                 bool need_swap) const {
   if (is_data_id) {
     Memcpy<DeviceType::kCPU>(ctx.device_ctx,
                              dst_blob->mut_data_id() + dst_offset,
@@ -45,11 +46,12 @@ void BoxingKernel<device_type, T>::BoxingCopy(
   }
 }
 
-template<DeviceType device_type, typename T>
-void BoxingKernel<device_type, T>::CopyDataId(
-    const KernelCtx& ctx, std::vector<Blob*>& src_blobs,
-    std::vector<Blob*>& dst_blobs, const int32_t src_concat_axis,
-    const int32_t dst_split_axis) const {
+template<typename T>
+void BoxingKernel<T>::CopyDataId(const KernelCtx& ctx,
+                                 std::vector<Blob*>& src_blobs,
+                                 std::vector<Blob*>& dst_blobs,
+                                 const int32_t src_concat_axis,
+                                 const int32_t dst_split_axis) const {
   size_t data_id_size = JobDesc::Singleton()->SizeOfOneDataId();
   if (src_concat_axis == 0) {
     int64_t src_idx = 0;
@@ -93,8 +95,8 @@ void BoxingKernel<device_type, T>::CopyDataId(
   }
 }
 
-template<DeviceType device_type, typename T>
-void BoxingKernel<device_type, T>::InferCopyRulesFromUnequalAxis(
+template<typename T>
+void BoxingKernel<T>::InferCopyRulesFromUnequalAxis(
     const KernelCtx& ctx, std::vector<Blob*>& src_blobs,
     std::vector<Blob*>& dst_blobs, const int32_t concat_axis,
     const int32_t split_axis) const {
@@ -128,10 +130,11 @@ void BoxingKernel<device_type, T>::InferCopyRulesFromUnequalAxis(
   }
 }
 
-template<DeviceType device_type, typename T>
-void BoxingKernel<device_type, T>::InferCopyRulesFromEqualAxis(
-    const KernelCtx& ctx, std::vector<Blob*>& src_blobs,
-    std::vector<Blob*>& dst_blobs, const int32_t axis) const {
+template<typename T>
+void BoxingKernel<T>::InferCopyRulesFromEqualAxis(const KernelCtx& ctx,
+                                                  std::vector<Blob*>& src_blobs,
+                                                  std::vector<Blob*>& dst_blobs,
+                                                  const int32_t axis) const {
   // P.S This routine will be called only once, thus some performance
   // loss seems ok.
   auto kernel_conf = this->kernel_conf().boxing_conf();
@@ -174,8 +177,8 @@ void BoxingKernel<device_type, T>::InferCopyRulesFromEqualAxis(
   }
 }
 
-template<DeviceType device_type, typename T>
-void BoxingKernel<device_type, T>::CopyFromSrc2Dst(
+template<typename T>
+void BoxingKernel<T>::CopyFromSrc2Dst(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     const std::vector<std::string>& src_bns,
     const std::vector<std::string>& dst_bns, const int32_t src_concat_axis,
@@ -204,8 +207,8 @@ void BoxingKernel<device_type, T>::CopyFromSrc2Dst(
   }
 }
 
-template<DeviceType device_type, typename T>
-void BoxingKernel<device_type, T>::FwCloneData(
+template<typename T>
+void BoxingKernel<T>::FwCloneData(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     const std::vector<std::string>& obns) const {
   int64_t copy_size = BnInOp2Blob(obns.front())->shape().elem_cnt();
@@ -216,8 +219,8 @@ void BoxingKernel<device_type, T>::FwCloneData(
   }
 }
 
-template<DeviceType device_type, typename T>
-void BoxingKernel<device_type, T>::Forward(
+template<typename T>
+void BoxingKernel<T>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto boxing_conf = op_conf().boxing_conf();
@@ -226,8 +229,9 @@ void BoxingKernel<device_type, T>::Forward(
     int32_t concat_axis = boxing_conf.concat_box().axis();
     if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
       int32_t split_axis = boxing_conf.split_box().axis();
-      CopyFromSrc2Dst(ctx, BnInOp2Blob, kernel_conf().input_bns(),
-                      kernel_conf().output_bns(), concat_axis, split_axis);
+      CopyFromSrc2Dst(ctx, BnInOp2Blob, this->kernel_conf().input_bns(),
+                      this->kernel_conf().output_bns(), concat_axis,
+                      split_axis);
     } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
       CopyFromSrc2Dst(ctx, BnInOp2Blob, kernel_conf().input_bns(), {"out_0"},
                       concat_axis, 0);
@@ -236,36 +240,34 @@ void BoxingKernel<device_type, T>::Forward(
     }
   } else if (boxing_conf.in_box_case() == BoxingOpConf::kAddBox) {
     if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
-      GetSumFromSrcBlobsToDstBlob(ctx, BnInOp2Blob, kernel_conf().input_bns(),
-                                  {"middle"});
+      GetSumFromSrcBlobsToDstBlob(ctx, BnInOp2Blob,
+                                  this->kernel_conf().input_bns(), {"middle"});
       int32_t split_axis = boxing_conf.split_box().axis();
-      CopyFromSrc2Dst(ctx, BnInOp2Blob, {"middle"}, kernel_conf().output_bns(),
-                      0, split_axis);
+      CopyFromSrc2Dst(ctx, BnInOp2Blob, {"middle"},
+                      this->kernel_conf().output_bns(), 0, split_axis);
     } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
       GetSumFromSrcBlobsToDstBlob(ctx, BnInOp2Blob,
                                   this->kernel_conf().input_bns(),
-                                  {kernel_conf().output_bns(0)});
+                                  {this->kernel_conf().output_bns(0)});
     } else {
       UNEXPECTED_RUN();
     }
   }
   if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
-    FwCloneData(ctx, BnInOp2Blob, kernel_conf().output_bns());
+    FwCloneData(ctx, BnInOp2Blob, this->kernel_conf().output_bns());
   }
 }
 
 namespace {
 
-Kernel* CreateBoxingKernel(DeviceType dev_type, const KernelConf& kernel_conf) {
+Kernel* CreateBoxingKernel(const KernelConf& kernel_conf) {
   static const HashMap<std::string, std::function<Kernel*()>> creators = {
-#define BOXING_KERNEL_ENTRY(device_type, data_type_pair)                       \
-  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {          \
-     return new BoxingKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>(); \
-   }},
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(BOXING_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
+#define BOXING_KERNEL_ENTRY(data_type_pair)       \
+  {GetHashKey(OF_PP_PAIR_SECOND(data_type_pair)), \
+   []() { return new BoxingKernel<OF_PP_PAIR_FIRST(data_type_pair)>(); }},
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(BOXING_KERNEL_ENTRY,
                                        FLOATING_DATA_TYPE_SEQ)};
-  return creators.at(
-      GetHashKey(dev_type, kernel_conf.boxing_conf().data_type()))();
+  return creators.at(GetHashKey(kernel_conf.boxing_conf().data_type()))();
 }
 
 }  // namespace

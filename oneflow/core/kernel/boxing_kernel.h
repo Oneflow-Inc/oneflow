@@ -6,7 +6,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
+template<typename T>
 class BoxingKernel final : public KernelIf<DeviceType::kCPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BoxingKernel);
