@@ -14,8 +14,6 @@ void ModelSaveKernel::Forward(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Snapshot* snapshot = static_cast<Snapshot*>(kernel_ctx.other);
-  const size_t byte_size_of_data_field =
-      GetSizeOfDataType(this->kernel_conf().data_type());
   for (const std::string& ibn : kernel_conf().input_bns()) {
     const std::string& lbn = Lbn4BnInOp(ibn);
     Blob* blob_ptr = BnInOp2Blob(ibn);
@@ -23,7 +21,7 @@ void ModelSaveKernel::Forward(
       std::unique_ptr<PersistentOutStream> out_stream =
           snapshot->GetOutStream(lbn, part_id_);
       out_stream->Write(blob_ptr->dptr<char>(),
-                        blob_ptr->shape().elem_cnt() * byte_size_of_data_field);
+                        blob_ptr->ByteSizeOfDataContentField());
     }
     snapshot->OnePartDone(lbn, part_id_, part_num_);
   }
