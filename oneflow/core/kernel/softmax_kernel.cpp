@@ -82,7 +82,7 @@ class SoftmaxKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kInnerproductConf, SoftmaxKernel,
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSoftmaxConf, SoftmaxKernel,
                            FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
