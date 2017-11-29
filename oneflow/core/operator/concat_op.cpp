@@ -49,6 +49,8 @@ void ConcatOp::VirtualGenKernelConf(
   const BlobDesc* out_blob = GetBlobDesc4BnInOp(kernel_conf->output_bns(0));
 
   int32_t concat_axis = op_conf().concat_conf().axis();
+  CHECK_NE(concat_axis, 0);
+
   if (concat_axis < 0) { concat_axis += out_blob->shape().NumAxes(); }
   int64_t dim_cp_num = 1;
   if (concat_axis != (out_blob->shape().NumAxes() - 1)) {

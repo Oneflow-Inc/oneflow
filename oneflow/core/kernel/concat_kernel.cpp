@@ -22,7 +22,7 @@ cudaMemcpyKind GetcudaMemcpyKind(DeviceType device_type) {
   if (device_type == DeviceType::kCPU) {
     return cudaMemcpyKind::cudaMemcpyHostToHost;
   } else {
-    CHECK(device_type == DeviceType::kGPU);
+    CHECK_EQ(device_type, DeviceType::kGPU);
     return cudaMemcpyKind::cudaMemcpyDeviceToDevice;
   }
 }
@@ -46,7 +46,7 @@ void ConcatKernel<device_type>::ConcatKernelWork(
   cudaMemcpyKind kind = GetcudaMemcpyKind(device_type);
   int64_t offset_concat_axis = 0;
   int64_t cp_dim_bytesize = 0;
-  const auto& per_cp_bytesize =
+  const PbRf<int64_t>& per_cp_bytesize =
       this->kernel_conf().concat_conf().per_cp_bytesize();
   FOR_RANGE(int64_t, ibn_idx, 0, ibns.size()) {
     Blob* in_blob = BnInOp2Blob(ibns[ibn_idx]);
@@ -100,6 +100,14 @@ void ConcatKernel<device_type>::ForwardDataContent(
 }
 
 template<DeviceType device_type>
+void ConcatKernel<device_type>::ForwardDataId(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  CopyDataIdToOb(ctx, this->kernel_conf().input_bns(),
+                 this->kernel_conf().output_bns(0), BnInOp2Blob);
+}
+
+template<DeviceType device_type>
 void ConcatKernel<device_type>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -110,26 +118,6 @@ void ConcatKernel<device_type>::BackwardDataContent(
   ConcatKernelWork(ctx, this->kernel_conf().output_diff_bns(0),
                    this->kernel_conf().input_diff_bns(), BnInOp2Blob,
                    copy_out2in);
-}
-
-template<DeviceType device_type>
-void ConcatKernel<device_type>::ForwardDataId(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (this->kernel_conf().need_do_data_id()) {
-    CopyDataIdToOb(ctx, this->kernel_conf().input_bns(),
-                   this->kernel_conf().output_bns(0), BnInOp2Blob);
-  }
-}
-
-template<DeviceType device_type>
-void ConcatKernel<device_type>::BackwardDataId(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (this->kernel_conf().need_do_data_id()) {
-    CopyDataIdToOb(ctx, this->kernel_conf().input_diff_bns(),
-                   this->kernel_conf().output_diff_bns(0), BnInOp2Blob);
-  }
 }
 
 namespace {
