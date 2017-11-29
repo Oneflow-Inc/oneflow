@@ -7,53 +7,58 @@
 #include "oneflow/core/graph/model_diff_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/model_save_compute_task_node.h"
 #include "oneflow/core/graph/model_update_compute_task_node.h"
+#include "oneflow/core/graph/print_compute_task_node.h"
 #include "oneflow/core/graph/source_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 
-#define FAR_FROM_LOSS_POLICY_MTHD_TYPE_SEQ                   \
-  OF_PP_MAKE_TUPLE_SEQ(kDataParallel, DataConcat, DataSplit) \
-  OF_PP_MAKE_TUPLE_SEQ(kModelParallel, ModelConcat, ModelSplit)
+#define FW_IN_POLICY_MTHD_TYPE_SEQ                \
+  OF_PP_MAKE_TUPLE_SEQ(kDataParallel, DataConcat) \
+  OF_PP_MAKE_TUPLE_SEQ(kModelParallel, ModelConcat)
 
-#define CLOSE_TO_LOSS_POLICY_MTHD_TYPE_SEQ                   \
-  OF_PP_MAKE_TUPLE_SEQ(kDataParallel, DataSplit, DataConcat) \
-  OF_PP_MAKE_TUPLE_SEQ(kModelParallel, Clone, Add)
+#define FW_OUT_POLICY_MTHD_TYPE_SEQ              \
+  OF_PP_MAKE_TUPLE_SEQ(kDataParallel, DataSplit) \
+  OF_PP_MAKE_TUPLE_SEQ(kModelParallel, Clone)
 
-#define PARALLEL_POLICY_4_TUPLE(t) OF_PP_TUPLE_ELEM(0, t)
-#define FORWARD_METHOD_4_TUPLE(t) OF_PP_TUPLE_ELEM(1, t)
-#define BACKWARD_METHOD_4_TUPLE(t) OF_PP_TUPLE_ELEM(2, t)
+#define BW_IN_LOSS_POLICY_MTHD_TYPE_SEQ           \
+  OF_PP_MAKE_TUPLE_SEQ(kDataParallel, DataConcat) \
+  OF_PP_MAKE_TUPLE_SEQ(kModelParallel, Add)
 
-#define COMBINE_PARALLEL_POLICY(is_forward, get_method, in, out)             \
-  OF_PP_MAKE_TUPLE_SEQ(                                                      \
-      is_forward, PARALLEL_POLICY_4_TUPLE(in), PARALLEL_POLICY_4_TUPLE(out), \
-      OF_PP_CAT(BoxingTaskNode::BldBoxingOpConfWith,                         \
-                OF_PP_CAT(get_method(in), OF_PP_CAT(And, get_method(out)))))
+#define BW_OUT_LOSS_POLICY_MTHD_TYPE_SEQ         \
+  OF_PP_MAKE_TUPLE_SEQ(kDataParallel, DataSplit) \
+  OF_PP_MAKE_TUPLE_SEQ(kModelParallel, ModelSplit)
+
+#define COMBINE_PARALLEL_POLICY(is_forward, in, out)           \
+  OF_PP_MAKE_TUPLE_SEQ(                                        \
+      is_forward, OF_PP_PAIR_FIRST(in), OF_PP_PAIR_FIRST(out), \
+      OF_PP_CAT(BoxingTaskNode::BldBoxingOpConfWith,           \
+                OF_PP_CAT(OF_PP_PAIR_SECOND(in),               \
+                          OF_PP_CAT(And, OF_PP_PAIR_SECOND(out)))))
 /*
-#define BOXING_METHOD_TYPE_TUPLE_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ(true, kDataParallel, kDataParallel,
-BoxingTaskNode::BldBoxingOpConfWithDataConcatAndDataSplit) \
-  OF_PP_MAKE_TUPLE_SEQ(true, kDataParallel, kModelParallel,
-BoxingTaskNode::BldBoxingOpConfWithDataConcatAndClone) \
-  OF_PP_MAKE_TUPLE_SEQ(true, kModelParallel, kDataParallel,
-BoxingTaskNode::BldBoxingOpConfWithModelConcatAndDataSplit) \
-  OF_PP_MAKE_TUPLE_SEQ(true, kModelParallel, kModelParallel,
-BoxingTaskNode::BldBoxingOpConfWithModelConcatAndClone)
-  OF_PP_MAKE_TUPLE_SEQ(false, kDataParallel, kDataParallel,
-BoxingTaskNode::BldBoxingOpConfWithDataConcatAndDataSplit) \
-  OF_PP_MAKE_TUPLE_SEQ(false, kDataParallel, kModelParallel,
-BoxingTaskNode::BldBoxingOpConfWithAddAndDataSplit) \
-  OF_PP_MAKE_TUPLE_SEQ(false, kModelParallel, kDataParallel,
-BoxingTaskNode::BldBoxingOpConfWithDataConcatAndModelSplit) \
-  OF_PP_MAKE_TUPLE_SEQ(false, kModelParallel, kModelParallel,
-BoxingTaskNode::BldBoxingOpConfWithAddAndModelSplit)
+  ((true, kDataParallel, kDataParallel,
+            BoxingTaskNode::BldBoxingOpConfWithDataConcatAndDataSplit))
+  ((true, kDataParallel, kModelParallel,
+            BoxingTaskNode::BldBoxingOpConfWithDataConcatAndClone))
+  ((true, kModelParallel, kDataParallel,
+            BoxingTaskNode::BldBoxingOpConfWithModelConcatAndDataSplit))
+  ((true, kModelParallel, kModelParallel,
+            BoxingTaskNode::BldBoxingOpConfWithModelConcatAndClone))
+  ((false, kDataParallel, kDataParallel,
+            BoxingTaskNode::BldBoxingOpConfWithDataConcatAndDataSplit))
+  ((false, kDataParallel, kModelParallel,
+            BoxingTaskNode::BldBoxingOpConfWithAddAndDataSplit))
+  ((false, kModelParallel, kDataParallel,
+            BoxingTaskNode::BldBoxingOpConfWithDataConcatAndModelSplit))
+  ((false, kModelParallel, kModelParallel,
+            BoxingTaskNode::BldBoxingOpConfWithAddAndModelSplit))
 */
 //  BOXING_METHOD_TYPE_TUPLE_SEQ is equivalent to the above.
-#define BOXING_METHOD_TYPE_TUPLE_SEQ                                          \
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(                                           \
-      COMBINE_PARALLEL_POLICY, (true), (FORWARD_METHOD_4_TUPLE),              \
-      FAR_FROM_LOSS_POLICY_MTHD_TYPE_SEQ, CLOSE_TO_LOSS_POLICY_MTHD_TYPE_SEQ) \
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(                                           \
-      COMBINE_PARALLEL_POLICY, (false), (BACKWARD_METHOD_4_TUPLE),            \
-      CLOSE_TO_LOSS_POLICY_MTHD_TYPE_SEQ, FAR_FROM_LOSS_POLICY_MTHD_TYPE_SEQ)
+#define BOXING_METHOD_TYPE_TUPLE_SEQ                                 \
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(COMBINE_PARALLEL_POLICY, (true),  \
+                                   FW_IN_POLICY_MTHD_TYPE_SEQ,       \
+                                   FW_OUT_POLICY_MTHD_TYPE_SEQ)      \
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(COMBINE_PARALLEL_POLICY, (false), \
+                                   BW_IN_LOSS_POLICY_MTHD_TYPE_SEQ,  \
+                                   BW_OUT_LOSS_POLICY_MTHD_TYPE_SEQ)
 
 namespace oneflow {
 
@@ -237,6 +242,7 @@ void ChainNode::AddDataOutputLbnsTo(const ChainNode* to_node) {
   OF_PP_MAP_PREPEND(BackwardChainNode, BACKWARD_CHAIN_NODE_FUNC_SEQ)    \
   OF_PP_MAP_PREPEND(LossChainNode, LOSS_CHAIN_NODE_FUNC_SEQ)            \
   OF_PP_MAP_PREPEND(LossAccChainNode, LOSS_ACC_CHAIN_NODE_FUNC_SEQ)     \
+  OF_PP_MAP_PREPEND(PrintChainNode, PRINT_CHAIN_NODE_FUNC_SEQ)          \
   OF_PP_MAP_PREPEND(LossPrintChainNode, LOSS_PRINT_CHAIN_NODE_FUNC_SEQ) \
   OF_PP_MAP_PREPEND(MdUpdtChainNode, MDUPDT_CHAIN_NODE_FUNC_SEQ)        \
   OF_PP_MAP_PREPEND(MdSaveChainNode, MDSAVE_CHAIN_NODE_FUNC_SEQ)        \
@@ -248,12 +254,7 @@ void ChainNode::AddDataOutputLbnsTo(const ChainNode* to_node) {
     return ret_value;                                                          \
   }
 
-//  expanded demo:
-//  BldSubTskGphMthd GetMthdForBldSubTskGphFromForward(const ChainNode*)
-//       const {
-//    return &TaskGraph::BldSubTskGphByBoxing;
-//  }
-OF_PP_FOR_EACH_TUPLE(DEFINE_CHAIN_NODE_FUNC, CHAIN_NODE_FUNC_INFO_SEQ)
+OF_PP_FOR_EACH_TUPLE(DEFINE_CHAIN_NODE_FUNC, CHAIN_NODE_FUNC_INFO_SEQ);
 
 void ForwardChainNode::set_data_output_lbns() {
   ForEachNodeOnOutEdge([this](const ChainNode* to_node) {

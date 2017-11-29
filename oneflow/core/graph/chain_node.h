@@ -34,7 +34,8 @@ using BldBoxingOpConfMthd = void (BoxingTaskNode::*)(
   OF_PP_MAKE_TUPLE_SEQ(LossPrint) \
   OF_PP_MAKE_TUPLE_SEQ(MdUpdt)    \
   OF_PP_MAKE_TUPLE_SEQ(MdSave)    \
-  OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc)
+  OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc) \
+  OF_PP_MAKE_TUPLE_SEQ(Print)
 
 class ChainNode : public Node<ChainNode, ChainEdge> {
  public:
@@ -135,9 +136,6 @@ class ForwardChainNode final : public ChainNode {
                       ((Forward, FindLbnsBetweenFw(node, this)),          \
                        (Source, FindLbnsBetweenFw(node, this))))
 
-  //  expanded demo:
-  //  BldSubTskGphMthd GetMthdForBldSubTskGphFromForward(const ChainNode*)
-  //       const overload;
   OF_PP_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD, FORWARD_CHAIN_NODE_FUNC_SEQ);
 
   void set_data_output_lbns() override;
@@ -199,6 +197,27 @@ class LossChainNode final : public ChainNode {
                        (Source, FindLbnsBetweenFw(node, this))))
 
   OF_PP_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD, LOSS_CHAIN_NODE_FUNC_SEQ);
+};
+
+class PrintChainNode final : public ChainNode {
+ public:
+  CHAIN_NODE_BOILERPLATE(PrintChainNode);
+
+#define PRINT_CHAIN_NODE_FUNC_SEQ                                         \
+  MAKE_CHAIN_FUNC_SEQ(BldSubTskGphMthd, GetMthdForBldSubTskGph,           \
+                      ((Source, &TaskGraph::BldSubTskGphByBoxing),        \
+                       (Forward, &TaskGraph::BldSubTskGphByBoxing),       \
+                       (Loss, &TaskGraph::BldSubTskGphByBoxing)))         \
+  MAKE_CHAIN_FUNC_SEQ(                                                    \
+      BldBoxingOpConfMthd, GetMthdForBldBoxingOpConf,                     \
+      ((Source, GetBldBoxingOpConfMethodByFwParallelPolicy(node, this)),  \
+       (Forward, GetBldBoxingOpConfMethodByFwParallelPolicy(node, this)), \
+       (Loss, GetBldBoxingOpConfMethodByFwParallelPolicy(node, this))))   \
+  MAKE_CHAIN_FUNC_SEQ(std::vector<std::string>, FindLbns,                 \
+                      ((Source, FindLbnsBetweenFw(node, this)),           \
+                       (Forward, FindLbnsBetweenFw(node, this)),          \
+                       (Loss, FindLbnsBetweenFw(node, this))))
+  OF_PP_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD, PRINT_CHAIN_NODE_FUNC_SEQ);
 };
 
 class LossAccChainNode final : public ChainNode {
