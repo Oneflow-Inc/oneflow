@@ -60,19 +60,7 @@ void DataLoaderKernel<T>::VirtualKernelInit(
   }
 }
 
-namespace {
-
-Kernel* CreateDataLoaderKernel(const KernelConf& kernel_conf) {
-  static const HashMap<int, std::function<Kernel*()>> creators = {
-#define DATA_LOADER_KERNEL_ENTRY(type_cpp, type_proto) \
-  {type_proto, []() { return new DataLoaderKernel<type_cpp>; }},
-      OF_PP_FOR_EACH_TUPLE(DATA_LOADER_KERNEL_ENTRY, ARITHMETIC_DATA_TYPE_SEQ)};
-  return creators.at(kernel_conf.op_conf().data_loader_conf().data_type())();
-}
-
-}  // namespace
-
-COMMAND(AddKernelCreator(OperatorConf::kDataLoaderConf,
-                         CreateDataLoaderKernel));
+ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kDataLoaderConf, DataLoaderKernel,
+                               ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
