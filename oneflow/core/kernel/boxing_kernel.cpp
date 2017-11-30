@@ -34,15 +34,15 @@ void BoxingKernel<T>::BoxingCopy(const KernelCtx& ctx, bool is_data_id,
                              src_blob->data_id() + src_offset, copy_size,
                              cudaMemcpyKind::cudaMemcpyHostToHost);
   } else if (need_swap) {
-    Memcpy<DeviceType::kCPU>(
-        ctx.device_ctx, src_blob->mut_dptr<char>() + src_offset * sizeof(T),
-        dst_blob->dptr<char>() + dst_offset * sizeof(T), copy_size * sizeof(T),
-        cudaMemcpyKind::cudaMemcpyHostToHost);
+    Memcpy<DeviceType::kCPU>(ctx.device_ctx,
+                             src_blob->mut_dptr<char>() + src_offset,
+                             dst_blob->dptr<char>() + dst_offset, copy_size,
+                             cudaMemcpyKind::cudaMemcpyHostToHost);
   } else {
-    Memcpy<DeviceType::kCPU>(
-        ctx.device_ctx, dst_blob->mut_dptr<char>() + dst_offset * sizeof(T),
-        src_blob->dptr<char>() + src_offset * sizeof(T), copy_size * sizeof(T),
-        cudaMemcpyKind::cudaMemcpyHostToHost);
+    Memcpy<DeviceType::kCPU>(ctx.device_ctx,
+                             dst_blob->mut_dptr<char>() + dst_offset,
+                             src_blob->dptr<char>() + src_offset, copy_size,
+                             cudaMemcpyKind::cudaMemcpyHostToHost);
   }
 }
 
@@ -122,7 +122,8 @@ void BoxingKernel<T>::BoxingCopyForUnequalAxis(const KernelCtx& ctx,
           int64_t dst_seg_start =
               src_seg_offset / dst_seg_size * dst_size_in_seg.Get(dst_idx);
           BoxingCopy(ctx, src_blobs.at(src_idx), dst_blobs.at(dst_idx),
-                     src_seg_offset, dst_seg_start + dst_seg_offset, need_swap);
+                     src_seg_offset * sizeof(T),
+                     (dst_seg_start + dst_seg_offset) * sizeof(T), need_swap);
           src_seg_offset += dst_size_in_seg.Get(dst_idx);
           dst_seg_offset += dst_size_in_seg.Get(dst_idx);
         }
@@ -148,10 +149,11 @@ void BoxingKernel<T>::BoxingCopyForEqualAxis(const KernelCtx& ctx,
       int64_t p = std::min(kernel_conf.in_size_in_seg(src_idx) - src_offset,
                            kernel_conf.out_size_in_seg(dst_idx) - dst_offset);
       for (size_t i = 0; i != kernel_conf.in_seg_cnt(); ++i) {
-        BoxingCopy(ctx, true, src_blobs.at(src_idx), dst_blobs.at(dst_idx),
-                   src_offset + i * kernel_conf.in_size_in_seg(src_idx),
-                   dst_offset + i * kernel_conf.out_size_in_seg(dst_idx), p,
-                   false);
+        BoxingCopy(
+            ctx, true, src_blobs.at(src_idx), dst_blobs.at(dst_idx),
+            (src_offset + i * kernel_conf.in_size_in_seg(src_idx)) * sizeof(T),
+            (dst_offset + i * kernel_conf.out_size_in_seg(dst_idx)) * sizeof(T),
+            p * sizeof(T), false);
       }
       src_offset += p;
       dst_offset += p;
@@ -198,7 +200,7 @@ template<typename T>
 void BoxingKernel<T>::FwCloneData(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     const std::vector<std::string>& obns) const {
-  int64_t copy_size = BnInOp2Blob(obns.front())->shape().elem_cnt();
+  int64_t copy_size = BnInOp2Blob(obns.front())->shape().elem_cnt() * sizeof(T);
   for (size_t i = 1; i < obns.size(); ++i) {
     if (BnInOp2Blob(obns.at(i)) == nullptr) { break; }
     BoxingCopy(ctx, false, BnInOp2Blob(obns.front()), BnInOp2Blob(obns.at(i)),
