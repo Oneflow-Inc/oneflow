@@ -1,0 +1,9 @@
+syntax = "proto2";
+package oneflow;
+
+message BoxingInfo {
+  required int64 seg_num = 1;
+  required int64 seg_size = 2;
+  repeated int64 offset_in_seg = 3;
+  repeated int64 size_in_seg = 4;
+}

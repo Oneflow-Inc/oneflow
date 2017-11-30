@@ -256,7 +256,7 @@ Kernel* CreateBoxingKernel(const KernelConf& kernel_conf) {
    []() { return new BoxingKernel<OF_PP_PAIR_FIRST(data_type_pair)>(); }},
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(BOXING_KERNEL_ENTRY,
                                        FLOATING_DATA_TYPE_SEQ)};
-  return creators.at(GetHashKey(kernel_conf.boxing_conf().data_type()))();
+  return creators.at(GetHashKey(JobDesc::Singleton()->DefaultDataType()))();
 }
 
 }  // namespace
