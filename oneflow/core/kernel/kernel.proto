@@ -3,10 +3,16 @@ package oneflow;
 
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/data_type.proto";
+import "oneflow/core/kernel/boxing_info.proto";
 
 message MultinomialLogisticLossKernelConf { 
   required DataType prediction_type = 1;
   required DataType label_type = 2;
+}
+
+message BoxingKernelConf {
+  required BoxingInfo in_boxing_info = 1;
+  required BoxingInfo out_boxing_info = 2;
 }
 
 message KernelConf {
@@ -28,6 +34,7 @@ message KernelConf {
   required DataType data_type = 14;
  
   oneof kernel_type {
+    BoxingKernelConf boxing_conf = 103;
     MultinomialLogisticLossKernelConf multinomial_logistic_loss_conf = 106;
   }
 }
