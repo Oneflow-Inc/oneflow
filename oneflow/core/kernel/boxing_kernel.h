@@ -25,11 +25,11 @@ class BoxingKernel final : public KernelIf<DeviceType::kCPU> {
                   const int64_t, size_t, bool) const;
   void CopyDataId(const KernelCtx&, std::vector<Blob*>&, std::vector<Blob*>&,
                   const int32_t, const int32_t) const;
-  void InferCopyRulesFromUnequalAxis(const KernelCtx&, std::vector<Blob*>&,
-                                     std::vector<Blob*>&, const int32_t,
-                                     const int32_t) const;
-  void InferCopyRulesFromEqualAxis(const KernelCtx&, std::vector<Blob*>&,
-                                   std::vector<Blob*>&, const int32_t) const;
+  void BoxingCopyForUnequalAxis(const KernelCtx&, std::vector<Blob*>&,
+                                std::vector<Blob*>&, const int32_t,
+                                const int32_t) const;
+  void BoxingCopyForEqualAxis(const KernelCtx&, std::vector<Blob*>&,
+                              std::vector<Blob*>&, const int32_t) const;
   void CopyFromSrc2Dst(const KernelCtx& ctx,
                        std::function<Blob*(const std::string&)>,
                        const std::vector<std::string>&,

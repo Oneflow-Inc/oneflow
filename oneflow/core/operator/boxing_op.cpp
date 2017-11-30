@@ -40,6 +40,7 @@ void BoxingOp::VirtualGenKernelConf(
   int64_t in_seg_cnt = 1;
   int64_t in_seg_size = 0;
   std::vector<int64_t> in_offset_in_seg;
+  std::vector<int64_t> in_size_in_seg;
   auto conf = op_conf().boxing_conf();
   if (conf.in_box_case() == BoxingOpConf::kConcatBox) {
     int32_t concat_axis = conf.concat_box().axis();
@@ -49,6 +50,7 @@ void BoxingOp::VirtualGenKernelConf(
     for (const std::string& ibn : input_bns()) {
       const BlobDesc* in_blob = GetBlobDesc4BnInOp(ibn);
       int64_t in_seg_offset = in_blob->shape().Count(concat_axis);
+      in_size_in_seg.push_back(in_seg_offset);
       in_offset_in_seg.push_back(in_seg_size);
       in_seg_size += in_seg_offset;
     }
@@ -59,9 +61,11 @@ void BoxingOp::VirtualGenKernelConf(
     }
   }
   kernel_conf->mutable_boxing_conf()->set_in_seg_cnt(in_seg_cnt);
-  kernel_conf->mutable_boxing_conf()->set_in_seg_size(in_seg_cnt);
+  kernel_conf->mutable_boxing_conf()->set_in_seg_size(in_seg_size);
   *(kernel_conf->mutable_boxing_conf()->mutable_in_offset_in_seg()) =
       StdVec2PbRf<int64_t>(in_offset_in_seg);
+  *(kernel_conf->mutable_boxing_conf()->mutable_in_size_in_seg()) =
+      StdVec2PbRf<int64_t>(in_size_in_seg);
 
   const BlobDesc* first_out_blob = GetBlobDesc4BnInOp(output_bns().front());
   std::vector<int64_t> out_size_in_seg;

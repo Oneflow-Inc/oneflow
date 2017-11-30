@@ -96,10 +96,11 @@ void BoxingKernel<T>::CopyDataId(const KernelCtx& ctx,
 }
 
 template<typename T>
-void BoxingKernel<T>::InferCopyRulesFromUnequalAxis(
-    const KernelCtx& ctx, std::vector<Blob*>& src_blobs,
-    std::vector<Blob*>& dst_blobs, const int32_t concat_axis,
-    const int32_t split_axis) const {
+void BoxingKernel<T>::BoxingCopyForUnequalAxis(const KernelCtx& ctx,
+                                               std::vector<Blob*>& src_blobs,
+                                               std::vector<Blob*>& dst_blobs,
+                                               const int32_t concat_axis,
+                                               const int32_t split_axis) const {
   bool need_swap = false;
   if (concat_axis > split_axis) { need_swap = true; }
 
@@ -113,7 +114,8 @@ void BoxingKernel<T>::InferCopyRulesFromUnequalAxis(
     int64_t src_seg_offset =
         src_idx * src_seg_size + src_offset_in_seg.Get(src_idx);
     for (size_t seg_idx = 0; seg_idx != src_seg_cnt; ++seg_idx) {
-      for (size_t dst_seg_idx = 0; dst_seg_idx != src_seg_size / dst_seg_size;
+      int64_t dst_segs_in_src_seg = src_seg_size / dst_seg_size;
+      for (size_t dst_seg_idx = 0; dst_seg_idx != dst_segs_in_src_seg;
            ++dst_seg_idx) {
         int64_t dst_seg_offset = 0;
         for (size_t dst_idx = 0; dst_idx != dst_blobs.size(); ++dst_idx) {
@@ -131,49 +133,34 @@ void BoxingKernel<T>::InferCopyRulesFromUnequalAxis(
 }
 
 template<typename T>
-void BoxingKernel<T>::InferCopyRulesFromEqualAxis(const KernelCtx& ctx,
-                                                  std::vector<Blob*>& src_blobs,
-                                                  std::vector<Blob*>& dst_blobs,
-                                                  const int32_t axis) const {
+void BoxingKernel<T>::BoxingCopyForEqualAxis(const KernelCtx& ctx,
+                                             std::vector<Blob*>& src_blobs,
+                                             std::vector<Blob*>& dst_blobs,
+                                             const int32_t axis) const {
   // P.S This routine will be called only once, thus some performance
   // loss seems ok.
   auto kernel_conf = this->kernel_conf().boxing_conf();
-  std::map<Blob*, int64_t> src_blob2concat_dim;
-  std::map<Blob*, int64_t> dst_blob2concat_dim;
-  for (size_t i = 0; i != src_blobs.size(); ++i) {
-    CHECK(src_blob2concat_dim
-              .emplace(src_blobs.at(i), kernel_conf.out_size_in_seg(i))
-              .second);
-  }
-  for (size_t i = 0; i != dst_blobs.size(); ++i) {
-    CHECK(dst_blob2concat_dim
-              .emplace(dst_blobs.at(i), kernel_conf.out_size_in_seg(i))
-              .second);
-  }
-
-  const int64_t seg_cnt = kernel_conf.in_seg_cnt();
   int64_t src_offset = 0;
-  for (auto src_iter = src_blob2concat_dim.begin(),
-            dst_iter = dst_blob2concat_dim.begin();
-       src_iter != src_blob2concat_dim.end()
-       && dst_iter != dst_blob2concat_dim.end();) {
+  for (size_t src_idx = 0, dst_idx = 0;
+       src_idx != src_blobs.size() && dst_idx != dst_blobs.size();) {
     int64_t dst_offset = 0;
-    while (dst_offset < dst_iter->second) {
-      int64_t p = std::min(src_iter->second - src_offset,
-                           dst_iter->second - dst_offset);
-      for (size_t i = 0; i < seg_cnt; ++i) {
-        BoxingCopy(ctx, false, *src_iter->first, *dst_iter->first,
-                   (src_offset + i * src_iter->second),
-                   (dst_offset + i * dst_iter->second), p, false);
+    while (dst_offset < kernel_conf.out_size_in_seg(dst_idx)) {
+      int64_t p = std::min(kernel_conf.in_size_in_seg(src_idx) - src_offset,
+                           kernel_conf.out_size_in_seg(dst_idx) - dst_offset);
+      for (size_t i = 0; i != kernel_conf.in_seg_cnt(); ++i) {
+        BoxingCopy(ctx, true, src_blobs.at(src_idx), dst_blobs.at(dst_idx),
+                   src_offset + i * kernel_conf.in_size_in_seg(src_idx),
+                   dst_offset + i * kernel_conf.out_size_in_seg(dst_idx), p,
+                   false);
       }
       src_offset += p;
       dst_offset += p;
-      if (src_offset == src_iter->second) {
-        if (++src_iter == src_blob2concat_dim.end()) { break; }
+      if (src_offset == kernel_conf.in_size_in_seg(src_idx)) {
+        if (++src_idx == src_blobs.size()) { break; }
         src_offset = 0;
       }
-    }  // while current dst box is not full
-    ++dst_iter;
+    }
+    dst_idx++;
   }
 }
 
@@ -200,10 +187,10 @@ void BoxingKernel<T>::CopyFromSrc2Dst(
   }
 
   if (src_concat_axis == dst_split_axis) {
-    InferCopyRulesFromEqualAxis(ctx, src_blobs, dst_blobs, src_concat_axis);
+    BoxingCopyForEqualAxis(ctx, src_blobs, dst_blobs, src_concat_axis);
   } else {
-    InferCopyRulesFromUnequalAxis(ctx, src_blobs, dst_blobs, src_concat_axis,
-                                  dst_split_axis);
+    BoxingCopyForUnequalAxis(ctx, src_blobs, dst_blobs, src_concat_axis,
+                             dst_split_axis);
   }
 }
 

@@ -16,7 +16,8 @@ message BoxingKernelConf {
   required int64 in_seg_size = 4;
   required int64 out_seg_size = 5;
   repeated int64 in_offset_in_seg = 6;
-  repeated int64 out_size_in_seg = 7;
+  repeated int64 in_size_in_seg = 7;
+  repeated int64 out_size_in_seg = 8;
 }
 
 message KernelConf {
@@ -38,9 +39,6 @@ message KernelConf {
   required DataType data_type = 14;
   
   oneof kernel_type {
-    ConvolutionKernelConf convolution_conf = 100;
-    InnerProductKernelConf innerproduct_conf = 101;
-    DataLoaderKernelConf data_loader_conf = 102;
     BoxingKernelConf boxing_conf = 103;
     MultinomialLogisticLossKernelConf multinomial_logistic_loss_conf = 106;
   }
