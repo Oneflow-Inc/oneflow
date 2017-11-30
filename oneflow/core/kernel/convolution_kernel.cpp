@@ -105,26 +105,27 @@ void ConvolutionKernel<device_type, T>::Forward(
   const Blob* in_blob = BnInOp2Blob("in");
   const Shape& in_shape = in_blob->shape();
   Blob* out_blob = BnInOp2Blob("out");
-  Blob* col_buf_blob = BnInOp2Blob("col_buf");
   const Blob* weight_blob = BnInOp2Blob("weight");
+  auto conv_conf = op()->op_conf().convolution_conf();
+  CopyDataIdFromSoleIbToAllObIfNeed<device_type>(ctx, BnInOp2Blob);
+
+  Blob* col_buf_blob = BnInOp2Blob("col_buf");
   const int64_t in_im_sz = in_shape.Count(1);
   const int64_t out_im_sz = out_blob->shape().Count(1);
   const int64_t col_im_sz = col_buf_blob->shape().Count(1);
-  auto conv_conf = op()->op_conf().convolution_conf();
-  CopyDataIdFromSoleIbToAllObIfNeed<device_type>(ctx, BnInOp2Blob);
   for (size_t i = 0; i < in_shape.At(0); ++i) {
     ConvolutionKernelUtil<device_type, T>::Im2Col(
         ctx, in_blob->dptr<T>() + i * in_im_sz, in_shape.At(1), in_shape.At(2),
         in_shape.At(3), conv_conf.kernel_h(), conv_conf.kernel_w(),
         conv_conf.pad_h(), conv_conf.pad_w(), conv_conf.stride_h(),
         conv_conf.stride_w(), conv_conf.dilation_h(), conv_conf.dilation_w(),
-        col_buf_blob->mut_dptr<T>() + i * col_im_sz);
+        col_buf_blob->mut_dptr<T>() + col_im_sz);
 
     KernelUtil<device_type, T>::BlasGemm(
         ctx.device_ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasTrans,
         out_blob->shape().At(1), out_blob->shape().Count(2),
         weight_blob->shape().At(1), static_cast<T>(1.0), weight_blob->dptr<T>(),
-        weight_blob->shape().At(1), col_buf_blob->dptr<T>() + i * col_im_sz,
+        weight_blob->shape().At(1), col_buf_blob->dptr<T>() + col_im_sz,
         weight_blob->shape().At(1), static_cast<T>(0.0),
         out_blob->mut_dptr<T>() + i * out_im_sz, col_buf_blob->shape().At(1));
 
@@ -148,16 +149,29 @@ template<DeviceType device_type, typename T>
 void ConvolutionKernel<device_type, T>::ComputeWeightDiff(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in_blob = BnInOp2Blob("in");
+  const Shape& in_shape = in_blob->shape();
+  const int64_t in_im_sz = in_shape.Count(1);
   Blob* weight_diff_blob = BnInOp2Blob("weight_diff");
-  const Blob* col_buf_blob = BnInOp2Blob("col_buf");
+  Blob* col_buf_blob = BnInOp2Blob("col_buf");
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
+  auto conv_conf = op()->op_conf().convolution_conf();
+
   const int64_t out_im_sz = out_diff_blob->shape().Count(1);
+  const int64_t col_im_sz = col_buf_blob->shape().Count(1);
   const int64_t data_num = out_diff_blob->shape().At(0);
   const int64_t conv_sliding_window_steps = out_diff_blob->shape().Count(2);
 
   Memset<device_type>(ctx.device_ctx, weight_diff_blob->mut_dptr(), 0,
                       weight_diff_blob->ByteSizeOfDataField());
   for (size_t i = 0; i < data_num; ++i) {
+    ConvolutionKernelUtil<device_type, T>::Im2Col(
+        ctx, in_blob->dptr<T>() + i * in_im_sz, in_shape.At(1), in_shape.At(2),
+        in_shape.At(3), conv_conf.kernel_h(), conv_conf.kernel_w(),
+        conv_conf.pad_h(), conv_conf.pad_w(), conv_conf.stride_h(),
+        conv_conf.stride_w(), conv_conf.dilation_h(), conv_conf.dilation_w(),
+        col_buf_blob->mut_dptr<T>() + col_im_sz);
+
     KernelUtil<device_type, T>::BlasGemm(
         ctx.device_ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasNoTrans,
         weight_diff_blob->shape().At(0), weight_diff_blob->shape().At(1),
@@ -165,7 +179,7 @@ void ConvolutionKernel<device_type, T>::ComputeWeightDiff(
         static_cast<T>(1.0) / conv_sliding_window_steps,
         out_diff_blob->dptr<T>() + i * out_im_sz,
         out_diff_blob->shape().Count(2),
-        col_buf_blob->dptr<T>() + i * col_buf_blob->shape().Count(1),
+        col_buf_blob->dptr<T>() + col_buf_blob->shape().Count(1),
         col_buf_blob->shape().At(2), static_cast<T>(1.0),
         weight_diff_blob->mut_dptr<T>(), weight_diff_blob->shape().At(1));
   }
@@ -176,10 +190,11 @@ void ConvolutionKernel<device_type, T>::ComputeBiasDiff(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
+  Blob* bias_diff_blob = BnInOp2Blob("bias_diff");
+
   const int64_t out_im_sz = out_diff_blob->shape().Count(1);
   const int64_t data_num = out_diff_blob->shape().At(0);
   const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
-  Blob* bias_diff_blob = BnInOp2Blob("bias_diff");
   const int64_t conv_sliding_window_steps = out_diff_blob->shape().Count(2);
 
   Memset<device_type>(ctx.device_ctx, bias_diff_blob->mut_dptr(), 0,
@@ -204,10 +219,14 @@ void ConvolutionKernel<device_type, T>::ComputeInputDiff(
 
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   const Blob* weight_blob = BnInOp2Blob("weight");
+
   Blob* col_buf_blob = BnInOp2Blob("col_buf");
 
   const int64_t out_im_sz = out_diff_blob->shape().Count(1);
   const int64_t data_num = out_diff_blob->shape().At(0);
+
+  const Shape& in_diff_shape = in_diff_blob->shape();
+  const ConvolutionOpConf& conv_conf = op()->op_conf().convolution_conf();
   for (size_t i = 0; i < data_num; ++i) {
     KernelUtil<device_type, T>::BlasGemm(
         ctx.device_ctx, CBLAS_ORDER::CblasRowMajor, CblasTrans, CblasNoTrans,
@@ -216,15 +235,11 @@ void ConvolutionKernel<device_type, T>::ComputeInputDiff(
         out_diff_blob->dptr<T>() + i * out_im_sz,
         out_diff_blob->shape().Count(2), weight_blob->dptr<T>(),
         weight_blob->shape().At(1), static_cast<T>(0.0),
-        col_buf_blob->mut_dptr<T>() + i * col_buf_blob->shape().Count(1),
+        col_buf_blob->mut_dptr<T>() + col_buf_blob->shape().Count(1),
         col_buf_blob->shape().At(2));
-  }
 
-  const Shape& in_diff_shape = in_diff_blob->shape();
-  const ConvolutionOpConf& conv_conf = op()->op_conf().convolution_conf();
-  for (size_t i = 0; i < data_num; ++i) {
     ConvolutionKernelUtil<device_type, T>::Col2Im(
-        ctx, col_buf_blob->dptr<T>() + i * col_buf_blob->shape().Count(1),
+        ctx, col_buf_blob->dptr<T>() + col_buf_blob->shape().Count(1),
         in_diff_shape.At(1), in_diff_shape.At(2), in_diff_shape.At(3),
         conv_conf.kernel_h(), conv_conf.kernel_w(), conv_conf.pad_h(),
         conv_conf.pad_w(), conv_conf.stride_h(), conv_conf.stride_w(),
@@ -292,12 +307,18 @@ void ConvolutionKernel<device_type, T>::InitModelTmpBlobs(
 
 namespace {
 
+#ifdef USE_CUDNN
+#define CONVOLUTION_KERNEL CudnnConvolutionKernel
+#else
+#define CONVOLUTION_KERNEL ConvolutionKernel
+#endif  // USE_CUDNN
+
 Kernel* CreateConvolutionKenrel(const OpContext& op_ctx) {
   static const HashMap<std::string, std::function<Kernel*()>> creators = {
-#define CONVOLUTION_KERNEL_ENTRY(device_type, data_type_pair)          \
-  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {  \
-     return new ConvolutionKernel<device_type,                         \
-                                  OF_PP_PAIR_FIRST(data_type_pair)>(); \
+#define CONVOLUTION_KERNEL_ENTRY(device_type, data_type_pair)           \
+  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {   \
+     return new CONVOLUTION_KERNEL<device_type,                         \
+                                   OF_PP_PAIR_FIRST(data_type_pair)>(); \
    }},
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
           CONVOLUTION_KERNEL_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};

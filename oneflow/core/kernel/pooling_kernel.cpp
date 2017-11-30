@@ -10,9 +10,10 @@ void PoolingKernel<device_type, T>::Forward(
 
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
-  Blob* idx_blob = BnInOp2Blob("idx");
-  CopyDataIdFromSoleIbToAllObIfNeed<device_type>(ctx, BnInOp2Blob);
+  CopyDataIdFromSoleIbToAllObIfNeed<device_type>(ctx,
+                                                 BnInOp2Blob);  // TODO(shiyuan)
 
+  Blob* idx_blob = BnInOp2Blob("idx");
   PoolingKernelUtil<device_type, T>::PoolingForward(ctx, in_blob, out_blob,
                                                     idx_blob, pooling_conf);
 }
@@ -24,10 +25,11 @@ void PoolingKernel<device_type, T>::Backward(
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
   if (in_diff_blob == nullptr) { return; }
   Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
-                      in_diff_blob->ByteSizeOfDataField());
+                      in_diff_blob->ByteSizeOfDataField());  // TODO(shiyuan)
   const PoolingOpConf& pooling_conf = op()->op_conf().pooling_conf();
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   const Blob* idx_blob = BnInOp2Blob("idx");
+
   PoolingKernelUtil<device_type, T>::PoolingBackward(
       ctx, out_diff_blob, idx_blob, in_diff_blob, pooling_conf);
 }
@@ -261,14 +263,23 @@ class PoolingKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
+/*
+ */
+
 namespace {
+
+#ifdef USE_CUDNN
+#define POOLING_KERNEL CudnnPoolingKernel
+#else
+#define POOLING_KERNEL PoolingKernel
+#endif  // USE_CUDNN
 
 Kernel* CreatePoolingKenrel(const OpContext& op_ctx) {
   static const HashMap<std::string, std::function<Kernel*()>> creators = {
 #define POOLING_KERNEL_ENTRY(device_type, data_type_pair)             \
   {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() { \
-     return new PoolingKernel<device_type,                            \
-                              OF_PP_PAIR_FIRST(data_type_pair)>();    \
+     return new POOLING_KERNEL<device_type,                           \
+                               OF_PP_PAIR_FIRST(data_type_pair)>();   \
    }},
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(POOLING_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
                                        FLOATING_DATA_TYPE_SEQ)};

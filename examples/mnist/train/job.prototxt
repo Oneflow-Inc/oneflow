@@ -9,7 +9,7 @@ global_fs_conf {
 }
 train_conf {
   num_of_pieces_in_batch: 10
-  model_save_snapshots_path: "/willzhang/snapshots"
+  model_save_snapshots_path: "./snapshots"
   num_of_batches_in_snapshot: 60
   total_batch_num: 600
   default_fill_conf {

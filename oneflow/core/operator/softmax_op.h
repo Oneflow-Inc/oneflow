@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_OPERATOR_SOFTMAX_OP_H_
 #define ONEFLOW_CORE_OPERATOR_SOFTMAX_OP_H_
 
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/operator/operator_manager.h"
 
 namespace oneflow {
