@@ -27,12 +27,8 @@ class Kernel {
       const KernelCtx& ctx, const ParallelContext* parallel_ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
-  virtual void Forward(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
-  virtual void Backward(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  void Launch(const KernelCtx& ctx,
+              std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   const std::string& Lbn4BnInOp(const std::string& bn_in_op) const;
 
@@ -50,12 +46,18 @@ class Kernel {
       const std::string& model_load_dir,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
+  virtual void Forward(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardDataContent(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void ForwardDataId(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+  virtual void Backward(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void BackwardDataContent(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
@@ -101,5 +103,42 @@ std::unique_ptr<const Kernel> ConstructKernel(DeviceType,
                                               const KernelConf&);
 
 }  // namespace oneflow
+
+#define MAKE_KERNEL_CREATOR_ENTRY(kernel_class, device_type, data_type_pair)   \
+  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {          \
+     return new kernel_class<device_type, OF_PP_PAIR_FIRST(data_type_pair)>(); \
+   }},
+
+#define ADD_DEFAULT_KERNEL_CREATOR(op_type_case, kernel_class, data_type_seq) \
+  namespace {                                                                 \
+                                                                              \
+  Kernel* CreateKernel(DeviceType dev_type, const KernelConf& kernel_conf) {  \
+    static const HashMap<std::string, std::function<Kernel*()>> creators = {  \
+        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY,           \
+                                         (kernel_class), DEVICE_TYPE_SEQ,     \
+                                         data_type_seq)};                     \
+    return creators.at(GetHashKey(dev_type, kernel_conf.data_type()))();      \
+  }                                                                           \
+                                                                              \
+  COMMAND(AddKernelCreator(op_type_case, CreateKernel));                      \
+  }
+
+#define MAKE_CPU_KERNEL_CREATOR_ENTRY(kernel_class, data_type_pair) \
+  {OF_PP_PAIR_SECOND(data_type_pair),                               \
+   []() { return new kernel_class<OF_PP_PAIR_FIRST(data_type_pair)>(); }},
+
+#define ADD_CPU_DEFAULT_KERNEL_CREATOR(op_type_case, kernel_class,           \
+                                       data_type_seq)                        \
+  namespace {                                                                \
+                                                                             \
+  Kernel* CreateKernel(DeviceType dev_type, const KernelConf& kernel_conf) { \
+    static const HashMap<int, std::function<Kernel*()>> creators = {         \
+        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_CPU_KERNEL_CREATOR_ENTRY,      \
+                                         (kernel_class), data_type_seq)};    \
+    return creators.at(kernel_conf.data_type())();                           \
+  }                                                                          \
+                                                                             \
+  COMMAND(AddKernelCreator(op_type_case, CreateKernel));                     \
+  }
 
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_H_

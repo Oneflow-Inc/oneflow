@@ -12,17 +12,6 @@ void Kernel::InitModelBlobs(
     const KernelCtx& ctx, const ParallelContext* parallel_ctx,
     const Snapshot* snapshot,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  int32_t part_id = -1;
-  int32_t part_num = -1;
-  if (parallel_ctx->policy() == kDataParallel) {
-    part_id = 0;
-    part_num = 1;
-  } else if (parallel_ctx->policy() == kModelParallel) {
-    part_id = parallel_ctx->parallel_id();
-    part_num = parallel_ctx->parallel_num();
-  } else {
-    UNEXPECTED_RUN();
-  }
   std::string model_load_dir = kernel_conf().op_conf().model_load_dir();
   if (model_load_dir == "" && snapshot) {
     model_load_dir = snapshot->GetDirFromOpName(op_conf().name());
@@ -32,6 +21,10 @@ void Kernel::InitModelBlobs(
     std::mt19937 random_seed_gen(random_seed);
     InitModelBlobsWithRandomSeed(ctx, random_seed_gen, BnInOp2Blob);
   } else {
+    int32_t part_id = -1;
+    int32_t part_num = -1;
+    std::tie(part_id, part_num) =
+        GetPartIdAndPartNumFromParallelCtx(parallel_ctx);
     InitModelBlobsWithDir(ctx, part_id, part_num, model_load_dir, BnInOp2Blob);
   }
 }
@@ -40,6 +33,16 @@ void Kernel::InitModelTmpBlobs(
     const KernelCtx& ctx, const ParallelContext* parallel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   UNEXPECTED_RUN();
+}
+
+void Kernel::Launch(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (kernel_conf_.is_forward()) {
+    Forward(ctx, BnInOp2Blob);
+  } else {
+    Backward(ctx, BnInOp2Blob);
+  }
 }
 
 const std::string& Kernel::Lbn4BnInOp(const std::string& bn_in_op) const {

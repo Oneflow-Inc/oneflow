@@ -9,6 +9,11 @@ message ConcatKernelConf {
   repeated int64 per_cp_bytesize = 2;
 }
 
+message MultinomialLogisticLossKernelConf { 
+  required DataType prediction_type = 1;
+  required DataType label_type = 2;
+}
+
 message KernelConf {
   required OperatorConf op_conf = 1;
   map<string, string> bn_in_op2lbn = 2;
@@ -28,6 +33,7 @@ message KernelConf {
   required DataType data_type = 14;
 
   oneof kernel_type {
+    MultinomialLogisticLossKernelConf multinomial_logistic_loss_conf = 106;
     ConcatKernelConf concat_conf = 113; 
   }
 }

@@ -7,6 +7,7 @@
 #include "oneflow/core/graph/model_diff_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/model_save_compute_task_node.h"
 #include "oneflow/core/graph/model_update_compute_task_node.h"
+#include "oneflow/core/graph/print_compute_task_node.h"
 #include "oneflow/core/graph/source_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 
@@ -285,6 +286,44 @@ std::vector<std::string> LossChainNode::FindLbnsFromForward(
   return FindLbnsBetweenFw(node, this);
 }
 std::vector<std::string> LossChainNode::FindLbnsFromSource(
+    const ChainNode* node) const {
+  return FindLbnsBetweenFw(node, this);
+}
+
+// PrintChainNode
+BldSubTskGphMthd PrintChainNode::GetMthdForBldSubTskGphFromSource(
+    const ChainNode* node) const {
+  return &TaskGraph::BldSubTskGphByBoxing;
+}
+BldSubTskGphMthd PrintChainNode::GetMthdForBldSubTskGphFromForward(
+    const ChainNode* node) const {
+  return &TaskGraph::BldSubTskGphByBoxing;
+}
+BldSubTskGphMthd PrintChainNode::GetMthdForBldSubTskGphFromLoss(
+    const ChainNode* node) const {
+  return &TaskGraph::BldSubTskGphByBoxing;
+}
+BldBoxingOpConfMthd PrintChainNode::GetMthdForBldBoxingOpConfFromSource(
+    const ChainNode* node) const {
+  return GetBldBoxingOpConfMethodByFwParallelPolicy(node, this);
+}
+BldBoxingOpConfMthd PrintChainNode::GetMthdForBldBoxingOpConfFromForward(
+    const ChainNode* node) const {
+  return GetBldBoxingOpConfMethodByFwParallelPolicy(node, this);
+}
+BldBoxingOpConfMthd PrintChainNode::GetMthdForBldBoxingOpConfFromLoss(
+    const ChainNode* node) const {
+  return GetBldBoxingOpConfMethodByFwParallelPolicy(node, this);
+}
+std::vector<std::string> PrintChainNode::FindLbnsFromSource(
+    const ChainNode* node) const {
+  return FindLbnsBetweenFw(node, this);
+}
+std::vector<std::string> PrintChainNode::FindLbnsFromForward(
+    const ChainNode* node) const {
+  return FindLbnsBetweenFw(node, this);
+}
+std::vector<std::string> PrintChainNode::FindLbnsFromLoss(
     const ChainNode* node) const {
   return FindLbnsBetweenFw(node, this);
 }

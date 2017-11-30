@@ -13,4 +13,7 @@ void LossPrintKernel<T>::Forward(
   LOG(INFO) << "loss: " << loss_mean;
 }
 
+ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kLossPrintConf, LossPrintKernel,
+                               FLOATING_DATA_TYPE_SEQ);
+
 }  // namespace oneflow
