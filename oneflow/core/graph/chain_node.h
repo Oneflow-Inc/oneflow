@@ -114,7 +114,7 @@ class BackwardChainNode;
   ret_type prefix##From##chain_type(const ChainNode*) const override;
 
 #define MAKE_CHAIN_FUNC_SEQ(ret_type, prefix, t) \
-  OF_PP_MAP_PREPEND(ret_type, OF_PP_MAP_PREPEND(prefix, OF_PP_TUPLE_2_SEQ(t)))
+  OF_PP_MAP_PREPEND(ret_type, OF_PP_MAP_PREPEND(prefix, OF_PP_TUPLE_TO_SEQ(t)))
 
 class ForwardChainNode final : public ChainNode {
  public:

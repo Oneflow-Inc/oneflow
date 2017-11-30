@@ -11,8 +11,8 @@
 #define OF_PP_MAKE_TUPLE_SEQ OF_PP_INTERNAL_MAKE_TUPLE_SEQ
 
 //  convert tuple to seq
-//  example: OF_PP_TUPLE_2_SEQ((1, 2, 3)) => (1)(2)(3)
-#define OF_PP_TUPLE_2_SEQ OF_PP_INTERNAL_TUPLE_2_SEQ
+//  example: OF_PP_TUPLE_TO_SEQ((1, 2, 3)) => (1)(2)(3)
+#define OF_PP_TUPLE_TO_SEQ OF_PP_INTERNAL_TUPLE_TO_SEQ
 
 //  prepend element for each tuple in seq
 // example: OF_PP_MAP_PREPEND(0, ((1))((2))((3))) => ((0, 1))((0, 2))((0, 3))
