@@ -13,11 +13,31 @@ class BoxingKernel final : public KernelIf<DeviceType::kCPU> {
   BoxingKernel() = default;
   ~BoxingKernel() = default;
 
-  void ForwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
+  void Forward(const KernelCtx&,
+               std::function<Blob*(const std::string&)>) const override;
 
  private:
+  void GetSumFromSrcBlobsToDstBlob(const KernelCtx&,
+                                   std::function<Blob*(const std::string&)>,
+                                   const std::vector<std::string>&,
+                                   const std::string&) const;
+  void BoxingCopy(const KernelCtx&, bool, Blob*, Blob*, const int64_t,
+                  const int64_t, size_t, bool) const;
+  void CopyDataId(const KernelCtx&, std::vector<Blob*>&, std::vector<Blob*>&,
+                  const int32_t, const int32_t) const;
+  void BoxingCopyForUnequalAxis(const KernelCtx&, std::vector<Blob*>&,
+                                std::vector<Blob*>&, const int32_t,
+                                const int32_t) const;
+  void BoxingCopyForEqualAxis(const KernelCtx&, std::vector<Blob*>&,
+                              std::vector<Blob*>&, const int32_t) const;
+  void CopyFromSrc2Dst(const KernelCtx& ctx,
+                       std::function<Blob*(const std::string&)>,
+                       const std::vector<std::string>&,
+                       const std::vector<std::string>&, const int32_t,
+                       const int32_t) const;
+  void FwCloneData(const KernelCtx& ctx,
+                   std::function<Blob*(const std::string&)>,
+                   const std::vector<std::string>&) const;
 };
 
 }  // namespace oneflow

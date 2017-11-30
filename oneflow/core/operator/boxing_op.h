@@ -19,6 +19,11 @@ class BoxingOp final : public Operator {
       const ParallelContext* parallel_ctx);
 
  private:
+  void VirtualGenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx,
+      KernelConf* kernel_conf) const override;
+
   std::string ibn2lbn(const std::string& input_bn) const override;
   std::string obn2lbn(const std::string& output_bn) const override;
 };
