@@ -49,31 +49,26 @@ void ConcatOp::VirtualGenKernelConf(
   const BlobDesc* out_blob = GetBlobDesc4BnInOp(kernel_conf->output_bns(0));
 
   int32_t concat_axis = op_conf().concat_conf().axis();
-  CHECK_NE(concat_axis, 0);
 
   if (concat_axis < 0) { concat_axis += out_blob->shape().NumAxes(); }
   int64_t dim_cp_num = 1;
   if (concat_axis != (out_blob->shape().NumAxes() - 1)) {
     dim_cp_num = out_blob->shape().Count(concat_axis + 1);
   }
+  CHECK_NE(concat_axis, 0);
   int64_t total_cp_num = 1;
   if (concat_axis != 0) {
     total_cp_num = out_blob->shape().Count(0, concat_axis);
   }
+  kernel_conf->mutable_concat_conf()->set_total_cp_num(total_cp_num);
 
-  std::vector<int64_t> per_cp_bytesize;
   for (const std::string& ibn : kernel_conf->input_bns()) {
     const BlobDesc* in_blob = GetBlobDesc4BnInOp(ibn);
     const int64_t in_concat_axis_dim = in_blob->shape().At(concat_axis);
     const int64_t cp_bytesize = in_concat_axis_dim * dim_cp_num
                                 * GetSizeOfDataType(kernel_conf->data_type());
-    per_cp_bytesize.push_back(cp_bytesize);
+    kernel_conf->mutable_concat_conf()->add_per_cp_bytesize(cp_bytesize);
   }
-
-  ConcatKernelConf* concat_kernel_conf = kernel_conf->mutable_concat_conf();
-  concat_kernel_conf->set_total_cp_num(total_cp_num);
-  *(concat_kernel_conf->mutable_per_cp_bytesize()) =
-      StdVec2PbRf(per_cp_bytesize);
 }
 
 REGISTER_OP(OperatorConf::kConcatConf, ConcatOp);

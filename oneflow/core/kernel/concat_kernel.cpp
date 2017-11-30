@@ -4,28 +4,34 @@ namespace oneflow {
 
 namespace {
 
-// Calculates the addr of the next concat point in blob. Ex:
-// For a 2-dimension matrix with columns and rows, assume the concat operation
-// is on the row dimension, so each row will be concated/extended. The
-// start_addr is the address of element(0,0), concat_idx indicates the index
-// of / the current row to be concated. concat_axis_dim is the row
-// length/dimension. / offset is the concat position in each row. The elem_cnt
-// is 1 for 2-dimension / matrix and is calculated by Count(concat_axis,
-// NumAxes()) for higher / dimension matrix.
+// This function calculates the pointer postion when copying happens.
+// Consider an out_blob with shape (2,3,4,5,6) and the two corresponding in blob
+// are in_blob_1 with shape (2,3,1,5,6) and in_blob_2 with shape (2,3,3,5,6).
+// offset means where to place current copy content in concat axis.
+// cp_dim_bytesize indicates the byte size of last two dimensions, e.g. 5 * 6
+// = 30 elements.
+// concat_idx is a number enumerating over copying times. In this example, when
+// concat_idx = 5, start_addr is pointer related to out blob and offset = 1.
+// The result is the address of (1, 1, 1, 0, 0) in out blob.
+
 char* NextConcatAddr(char* start_addr, int64_t concat_idx,
                      int64_t concat_axis_dim, int64_t offset,
                      int64_t cp_dim_bytesize) {
   return start_addr + (concat_idx * concat_axis_dim + offset) * cp_dim_bytesize;
 }
 
-cudaMemcpyKind GetcudaMemcpyKind(DeviceType device_type) {
-  if (device_type == DeviceType::kCPU) {
-    return cudaMemcpyKind::cudaMemcpyHostToHost;
-  } else {
-    CHECK_EQ(device_type, DeviceType::kGPU);
-    return cudaMemcpyKind::cudaMemcpyDeviceToDevice;
-  }
-}
+template<DeviceType device_type>
+struct GetCudaMemcpyKind;
+
+template<>
+struct GetCudaMemcpyKind<DeviceType::kCPU> {
+  static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyHostToHost;
+};
+
+template<>
+struct GetCudaMemcpyKind<DeviceType::kGPU> {
+  static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyDeviceToDevice;
+};
 
 }  // namespace
 
@@ -43,7 +49,7 @@ void ConcatKernel<device_type>::ConcatKernelWork(
   const int64_t total_cp_num = this->kernel_conf().concat_conf().total_cp_num();
   char* out_blob_mut_dptr = out_blob->mut_dptr<char>();
 
-  cudaMemcpyKind kind = GetcudaMemcpyKind(device_type);
+  cudaMemcpyKind kind = GetCudaMemcpyKind<device_type>::val;
   int64_t offset_concat_axis = 0;
   int64_t cp_dim_bytesize = 0;
   const PbRf<int64_t>& per_cp_bytesize =
@@ -69,25 +75,6 @@ void ConcatKernel<device_type>::ConcatKernelWork(
 }
 
 template<DeviceType device_type>
-void ConcatKernel<device_type>::CopyDataIdToOb(
-    const KernelCtx& ctx, const PbRpf<std::string>& ibns,
-    const std::string& obn,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  cudaMemcpyKind kind = GetcudaMemcpyKind(device_type);
-  Blob* out_blob = BnInOp2Blob(obn);
-  int64_t data_id_offset = 0;
-  for (const std::string& ibn : ibns) {
-    Blob* in_blob = BnInOp2Blob(ibn);
-    CHECK_LE(data_id_offset + in_blob->ByteSizeOfDataIdField(),
-             out_blob->ByteSizeOfDataIdField());
-    Memcpy<device_type>(
-        ctx.device_ctx, out_blob->mut_data_id() + data_id_offset,
-        in_blob->data_id(), in_blob->ByteSizeOfDataIdField(), kind);
-    data_id_offset += in_blob->ByteSizeOfDataIdField();
-  }
-}
-
-template<DeviceType device_type>
 void ConcatKernel<device_type>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -103,8 +90,11 @@ template<DeviceType device_type>
 void ConcatKernel<device_type>::ForwardDataId(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CopyDataIdToOb(ctx, this->kernel_conf().input_bns(),
-                 this->kernel_conf().output_bns(0), BnInOp2Blob);
+  Blob* out_blob = BnInOp2Blob(this->kernel_conf().output_bns(0));
+  Blob* in_blob_0 = BnInOp2Blob(this->kernel_conf().input_bns(0));
+  Memcpy<device_type>(ctx.device_ctx, out_blob->mut_data_id(),
+                      in_blob_0->data_id(), in_blob_0->ByteSizeOfDataIdField(),
+                      GetCudaMemcpyKind<device_type>::val);
 }
 
 template<DeviceType device_type>
