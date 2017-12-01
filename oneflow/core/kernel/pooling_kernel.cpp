@@ -3,10 +3,10 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void PoolingKernel<device_type, T>::Forward(
+void PoolingKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const PoolingOpConf& pooling_conf = kernel_conf().op_conf().pooling_conf();
+  const PoolingOpConf& pooling_conf = this->op_conf().pooling_conf();
 
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
@@ -16,14 +16,14 @@ void PoolingKernel<device_type, T>::Forward(
 }
 
 template<DeviceType device_type, typename T>
-void PoolingKernel<device_type, T>::Backward(
+void PoolingKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
   if (in_diff_blob == nullptr) { return; }
   Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
                       in_diff_blob->ByteSizeOfDataContentField());
-  const PoolingOpConf& pooling_conf = op_conf().pooling_conf();
+  const PoolingOpConf& pooling_conf = this->op_conf().pooling_conf();
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   const Blob* idx_blob = BnInOp2Blob("idx");
   PoolingKernelUtil<device_type, T>::PoolingBackward(
@@ -123,38 +123,38 @@ class PoolingKernelUtil<DeviceType::kCPU, T> final {
         break;
       }
       case PoolingOpConf::kStochastic: {
-        TODO();
-      }
-      /*
-      for (int64_t n = 0; n < out_blob->shape().At(0); ++n) {
-        for (int64_t c = 0; c < out_blob->shape().At(1); ++c) {
-          for (int64_t out_h = 0; out_h < out_blob->shape().At(2); ++out_h)
-          {
-            for (int64_t out_w = 0; out_w < out_blob->shape().At(3);
-            ++out_w)
-      { int64_t hstart = out_h * pooling_conf.stride_h() -
-      pooling_conf.pad_h(); int64_t wstart = out_w * pooling_conf.stride_w()
-      - pooling_conf.pad_w(); int64_t hend = std::min(hstart +
-      pooling_conf.kernel_h(), in_blob->shape().At(2)); int64_t wend =
-                  std::min(wstart + pooling_conf.kernel_w(),
-      in_blob->shape().At(3)); hstart = std::max(hstart,
-      static_cast<int64_t>(0)); wstart = std::max(wstart,
-      static_cast<int64_t>(0)); const int64_t out_index = out_h *
-      out_blob->shape().At(3) + out_w; std::mt19937
-      generator(NewRandomSeed());
-              const int64_t index = (hstart + (generator() % (hend -
-              hstart)))
-      * in_width + (wstart + (generator() % (wend - wstart)));
-              out_dptr[out_index] = in_dptr[index];
-              idx_dptr[out_index] = index;
+        for (int64_t n = 0; n < out_blob->shape().At(0); ++n) {
+          for (int64_t c = 0; c < out_blob->shape().At(1); ++c) {
+            for (int64_t out_h = 0; out_h < out_blob->shape().At(2); ++out_h) {
+              for (int64_t out_w = 0; out_w < out_blob->shape().At(3);
+                   ++out_w) {
+                int64_t hstart =
+                    out_h * pooling_conf.stride_h() - pooling_conf.pad_h();
+                int64_t wstart =
+                    out_w * pooling_conf.stride_w() - pooling_conf.pad_w();
+                int64_t hend = std::min(hstart + pooling_conf.kernel_h(),
+                                        in_blob->shape().At(2));
+                int64_t wend = std::min(wstart + pooling_conf.kernel_w(),
+                                        in_blob->shape().At(3));
+                hstart = std::max(hstart, static_cast<int64_t>(0));
+                wstart = std::max(wstart, static_cast<int64_t>(0));
+                const int64_t out_index =
+                    out_h * out_blob->shape().At(3) + out_w;
+                std::mt19937 generator(NewRandomSeed());
+                const int64_t index =
+                    (hstart + (generator() % (hend - hstart)))
+                        * in_blob->shape().At(3)
+                    + (wstart + (generator() % (wend - wstart)));
+                out_dptr[out_index] = in_dptr[index];
+                idx_dptr[out_index] = index;
+              }
             }
+            in_dptr += in_blob->shape().Count(2);
+            out_dptr += out_blob->shape().Count(2);
           }
-          in_dptr += in_blob->shape().Count(2);
-          out_dptr += out_blob->shape().Count(2);
         }
+        break;
       }
-      break;
-      */
       default: { UNEXPECTED_RUN(); }
     }
   }
@@ -227,29 +227,31 @@ class PoolingKernelUtil<DeviceType::kCPU, T> final {
         break;
       }
       case PoolingOpConf::kStochastic: {
-        TODO();
-      }
-      /*
-      for (int64_t n = 0; n < out_diff_blob->shape().At(0); ++n) {
-        for (int64_t c = 0; c < out_diff_blob->shape().At(1); ++c) {
-          for (int64_t out_h = 0; out_h < out_diff_blob->shape().At(2);
-      ++out_h) { for (int64_t out_w = 0; out_w <
-      out_diff_blob->shape().At(3);
-      ++out_w) { const int out_diff_index = out_h * out_blob->shape().At(3)
-      + out_w; const int in_diff_index = idx[out_diff_index];
-              in_diff_dptr[in_diff_index] += out_diff_dptr[out_diff_index];
+        for (int64_t n = 0; n < out_diff_blob->shape().At(0); ++n) {
+          for (int64_t c = 0; c < out_diff_blob->shape().At(1); ++c) {
+            for (int64_t out_h = 0; out_h < out_diff_blob->shape().At(2);
+                 ++out_h) {
+              for (int64_t out_w = 0; out_w < out_diff_blob->shape().At(3);
+                   ++out_w) {
+                const int64_t out_diff_index =
+                    out_h * out_diff_blob->shape().At(3) + out_w;
+                const int64_t in_diff_index = idx_dptr[out_diff_index];
+                in_diff_dptr[in_diff_index] += out_diff_dptr[out_diff_index];
+              }
             }
+            out_diff_dptr += out_diff_blob->shape().Count(2);
+            idx_dptr += out_diff_blob->shape().Count(2);
+            in_diff_dptr += in_diff_blob->shape().Count(2);
           }
-          out_diff_dptr += out_diff_blob->shape().Count(2);
-          idx_dptr += out_diff_blob->shape().Count(2);
-          in_diff_dptr += in_diff_blob->shape().Count(2);
         }
+        break;
       }
-      break;
-      */
       default: { UNEXPECTED_RUN(); }
     }
   }
 };
+
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kPoolingConf, PoolingKernel,
+                           FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
