@@ -87,7 +87,7 @@ class CudnnConvolutionKernel final : public KernelIf<DeviceType::kGPU> {
   cudnnTensorDescriptor_t in_desc_;
   cudnnTensorDescriptor_t out_desc_;
   cudnnConvolutionDescriptor_t conv_desc_;
-  cudnnFilterDescriptor_t weight_desc_;
+  cudnnFilterDescriptor_t filter_desc_;
   cudnnTensorDescriptor_t bias_desc_;
 };
 #endif  // USE_CUDNN

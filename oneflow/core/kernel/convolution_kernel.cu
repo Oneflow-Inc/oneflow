@@ -129,7 +129,7 @@ template<typename T>
 CudnnConvolutionKernel<T>::CudnnConvolutionKernel() {
   CudaCheck(cudnnCreateTensorDescriptor(&this->in_desc_));
   CudaCheck(cudnnCreateTensorDescriptor(&this->out_desc_));
-  CudaCheck(cudnnCreateFilterDescriptor(&this->weight_desc_));
+  CudaCheck(cudnnCreateFilterDescriptor(&this->filter_desc_));
   CudaCheck(cudnnCreateConvolutionDescriptor(&this->conv_desc_));
 }
 
@@ -137,7 +137,7 @@ template<typename T>
 CudnnConvolutionKernel<T>::~CudnnConvolutionKernel() {
   CudaCheck(cudnnDestroyTensorDescriptor(this->in_desc_));
   CudaCheck(cudnnDestroyTensorDescriptor(this->out_desc_));
-  CudaCheck(cudnnDestroyFilterDescriptor(this->weight_desc_));
+  CudaCheck(cudnnDestroyFilterDescriptor(this->filter_desc_));
   CudaCheck(cudnnDestroyConvolutionDescriptor(this->conv_desc_));
   if (this->op_conf().convolution_conf().has_bias_term()) {
     CudaCheck(cudnnDestroyTensorDescriptor(this->bias_desc_));
@@ -165,7 +165,7 @@ void CudnnConvolutionKernel<T>::ForwardDataContent(
   const Blob* in_blob = BnInOp2Blob("in");
   const Blob* weight_blob = BnInOp2Blob("weight");
   Blob* out_blob = BnInOp2Blob("out");
-  Blob* fwd_workspace = BnInOp2Blob("fwd_workspace");
+  Blob* cudnn_fwd_workspace = BnInOp2Blob("cudnn_fwd_workspace");
 
   CudaCheck(cudnnSetTensor4dDescriptor(
       this->in_desc_, CUDNN_TENSOR_NCHW, CudnnDataType<T>::type,
@@ -176,7 +176,7 @@ void CudnnConvolutionKernel<T>::ForwardDataContent(
       out_blob->shape().At(0), out_blob->shape().At(1), out_blob->shape().At(2),
       out_blob->shape().At(3)));
   CudaCheck(cudnnSetFilter4dDescriptor(
-      this->weight_desc_, CudnnDataType<T>::type, CUDNN_TENSOR_NCHW,
+      this->filter_desc_, CudnnDataType<T>::type, CUDNN_TENSOR_NCHW,
       out_blob->shape().At(1), in_blob->shape().At(1), conv_conf.kernel_h(),
       conv_conf.kernel_w()));
 
@@ -184,10 +184,10 @@ void CudnnConvolutionKernel<T>::ForwardDataContent(
       (cudnnConvolutionFwdAlgo_t)(conv_conf.cudnn_fwd_algo());
   CudaCheck(cudnnConvolutionForward(
       ctx.device_ctx->cudnn_handle(), CudnnDataType<T>::one, this->in_desc_,
-      in_blob->dptr<T>(), this->weight_desc_, weight_blob->dptr<T>(),
-      this->conv_desc_, cudnn_fwd_algo, fwd_workspace->mut_dptr<T>(),
-      fwd_workspace->shape().At(0), CudnnDataType<T>::zero, this->out_desc_,
-      out_blob->mut_dptr<T>()));
+      in_blob->dptr<T>(), this->filter_desc_, weight_blob->dptr<T>(),
+      this->conv_desc_, cudnn_fwd_algo, cudnn_fwd_workspace->mut_dptr<T>(),
+      cudnn_fwd_workspace->shape().At(0), CudnnDataType<T>::zero,
+      this->out_desc_, out_blob->mut_dptr<T>()));
 
   if (this->op_conf().convolution_conf().has_bias_term()) {
     CudaCheck(cudnnSetTensor4dDescriptor(this->bias_desc_, CUDNN_TENSOR_NCHW,
@@ -209,7 +209,7 @@ void CudnnConvolutionKernel<T>::BackwardDataContent(
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   const Blob* in_blob = BnInOp2Blob("in");
   const Blob* out_blob = BnInOp2Blob("out");
-  Blob* bwd_workspace = BnInOp2Blob("bwd_workspace");
+  Blob* cudnn_bwd_workspace = BnInOp2Blob("cudnn_bwd_workspace");
 
   // compute bias diff
   if (this->op_conf().convolution_conf().has_bias_term()) {
@@ -228,13 +228,14 @@ void CudnnConvolutionKernel<T>::BackwardDataContent(
   Memset<DeviceType::kGPU>(ctx.device_ctx, weight_diff_blob->mut_dptr(), 0,
                            weight_diff_blob->ByteSizeOfDataContentField());
 
-  cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_weight_algo =
-      (cudnnConvolutionBwdFilterAlgo_t)(conv_conf.cudnn_bwd_weight_algo());
+  cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_filter_algo =
+      (cudnnConvolutionBwdFilterAlgo_t)(conv_conf.cudnn_bwd_filter_algo());
   CudaCheck(cudnnConvolutionBackwardFilter(
       ctx.device_ctx->cudnn_handle(), CudnnDataType<T>::one, this->in_desc_,
       in_blob->dptr<T>(), this->out_desc_, out_diff_blob->dptr<T>(),
-      this->conv_desc_, cudnn_bwd_weight_algo, bwd_workspace->mut_dptr<T>(),
-      bwd_workspace->shape().At(0), CudnnDataType<T>::one, this->weight_desc_,
+      this->conv_desc_, cudnn_bwd_filter_algo,
+      cudnn_bwd_workspace->mut_dptr<T>(), cudnn_bwd_workspace->shape().At(0),
+      CudnnDataType<T>::one, this->filter_desc_,
       weight_diff_blob->mut_dptr<T>()));
 
   // compute in diff
@@ -247,11 +248,11 @@ void CudnnConvolutionKernel<T>::BackwardDataContent(
   cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo =
       (cudnnConvolutionBwdDataAlgo_t)(conv_conf.cudnn_bwd_data_algo());
   CudaCheck(cudnnConvolutionBackwardData(
-      ctx.device_ctx->cudnn_handle(), CudnnDataType<T>::one, this->weight_desc_,
+      ctx.device_ctx->cudnn_handle(), CudnnDataType<T>::one, this->filter_desc_,
       weight_blob->dptr<T>(), this->out_desc_, out_diff_blob->dptr<T>(),
-      this->conv_desc_, cudnn_bwd_data_algo, bwd_workspace->mut_dptr<T>(),
-      bwd_workspace->shape().At(0), CudnnDataType<T>::zero, this->in_desc_,
-      in_diff_blob->mut_dptr<T>()));
+      this->conv_desc_, cudnn_bwd_data_algo, cudnn_bwd_workspace->mut_dptr<T>(),
+      cudnn_bwd_workspace->shape().At(0), CudnnDataType<T>::zero,
+      this->in_desc_, in_diff_blob->mut_dptr<T>()));
 }
 
 template<typename T>
