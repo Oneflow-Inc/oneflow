@@ -61,21 +61,19 @@ void BoxingOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   const BoxingOpConf& conf = op_conf().boxing_conf();
-  BoxingInfo* in_boxing_info =
-      kernel_conf->mutable_boxing_conf()->mutable_in_boxing_info();
+  BoxingInfo* in_info = kernel_conf->mutable_boxing_conf()->mutable_in_info();
   int32_t concat_axis = 0;
-  bool is_concat_or_split = (conf.in_box_case() == BoxingOpConf::kConcatBox);
-  if (is_concat_or_split) { concat_axis = conf.concat_box().axis(); }
-  GetBoxingInfo(GetBlobDesc4BnInOp, input_bns(), in_boxing_info, concat_axis,
-                is_concat_or_split);
+  bool is_concat = (conf.in_box_case() == BoxingOpConf::kConcatBox);
+  if (is_concat) { concat_axis = conf.concat_box().axis(); }
+  GetBoxingInfo(GetBlobDesc4BnInOp, input_bns(), in_info, concat_axis,
+                is_concat);
 
-  BoxingInfo* out_boxing_info =
-      kernel_conf->mutable_boxing_conf()->mutable_out_boxing_info();
+  BoxingInfo* out_info = kernel_conf->mutable_boxing_conf()->mutable_out_info();
   int32_t split_axis = 0;
-  is_concat_or_split = (conf.out_box_case() == BoxingOpConf::kSplitBox);
-  if (is_concat_or_split) { split_axis = conf.split_box().axis(); }
-  GetBoxingInfo(GetBlobDesc4BnInOp, output_bns(), out_boxing_info, split_axis,
-                is_concat_or_split);
+  bool is_split = (conf.out_box_case() == BoxingOpConf::kSplitBox);
+  if (is_split) { split_axis = conf.split_box().axis(); }
+  GetBoxingInfo(GetBlobDesc4BnInOp, output_bns(), out_info, split_axis,
+                is_split);
 }
 
 void BoxingOp::InferBlobDescs(
@@ -92,16 +90,17 @@ void BoxingOp::InferBlobDescs(
   }
   // check datatype of input desc && calculate the shape of data_tmp
   FOR_RANGE(size_t, ib_idx, 1, input_bns().size()) {
-    const BlobDesc* ib_desc = GetBlobDesc4BnInOp(input_bns().at(ib_idx));
-    const std::vector<int64_t>& ib_shape_vec = ib_desc->shape().dim_vec();
-    CHECK_LT(concat_axis, ib_shape_vec.size());
+    const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(input_bns().at(ib_idx));
+    const std::vector<int64_t>& in_blob_shape_vec =
+        in_blob_desc->shape().dim_vec();
+    CHECK_LT(concat_axis, in_blob_shape_vec.size());
     // if it is a concat-box, accumulate the dimensions on concat-axis.
     // otherwise only check all boxes are in the same shape.
-    FOR_RANGE(size_t, i, 0, ib_shape_vec.size()) {
+    FOR_RANGE(size_t, i, 0, in_blob_shape_vec.size()) {
       if (conf.in_box_case() == BoxingOpConf::kConcatBox && i == concat_axis) {
-        data_tmp_blob_shape_vec[i] += ib_shape_vec[i];
+        data_tmp_blob_shape_vec[i] += in_blob_shape_vec[i];
       } else {
-        CHECK_EQ(data_tmp_blob_shape_vec[i], ib_shape_vec[i]);
+        CHECK_EQ(data_tmp_blob_shape_vec[i], in_blob_shape_vec[i]);
       }
     }
   }
@@ -110,9 +109,9 @@ void BoxingOp::InferBlobDescs(
   CHECK_NE(conf.out_box_case(), BoxingOpConf::OUT_BOX_NOT_SET);
   if (conf.in_box_case() == BoxingOpConf::kConcatBox
       && conf.out_box_case() == BoxingOpConf::kCloneBox) {
-    BlobDesc* dtb_desc = GetBlobDesc4BnInOp(SoleDtbn());
-    dtb_desc->set_has_data_id(has_data_id);
-    dtb_desc->mut_shape() = Shape(data_tmp_blob_shape_vec);
+    BlobDesc* data_temp_blob_desc = GetBlobDesc4BnInOp(SoleDtbn());
+    data_temp_blob_desc->set_has_data_id(has_data_id);
+    data_temp_blob_desc->mut_shape() = Shape(data_tmp_blob_shape_vec);
   }
 
   // infer desc of out blobs
@@ -121,12 +120,11 @@ void BoxingOp::InferBlobDescs(
     std::vector<int64_t> output_shape_vec = data_tmp_blob_shape_vec;
     CHECK_GE(split_conf.axis(), 0);
     CHECK_LT(split_conf.axis(), output_shape_vec.size());
-    CHECK_EQ(split_conf.part_num_size(), output_shape_vec.size());
     FOR_RANGE(size_t, i, 0, output_bns().size()) {
-      BlobDesc* ob_desc = GetBlobDesc4BnInOp(output_bns().at(i));
-      ob_desc->set_has_data_id(has_data_id);
+      BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(output_bns().at(i));
+      out_blob_desc->set_has_data_id(has_data_id);
       output_shape_vec[split_conf.axis()] = split_conf.part_num(i);
-      ob_desc->mut_shape() = Shape(output_shape_vec);
+      out_blob_desc->mut_shape() = Shape(output_shape_vec);
     }
   } else if (conf.out_box_case() == BoxingOpConf::kCloneBox) {
     for (const std::string& obn : output_bns()) {
