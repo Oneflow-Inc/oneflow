@@ -117,8 +117,6 @@ void ConvolutionOp::InferBlobDescs(
   CHECK_EQ(in_blob_desc->data_type(), JobDesc::Singleton()->DefaultDataType());
   int64_t data_num = in_blob_desc->shape().At(0);
   int64_t c_i = in_blob_desc->shape().At(1);
-  int64_t height = in_blob_desc->shape().At(2);
-  int64_t width = in_blob_desc->shape().At(3);
 
   int32_t out_num = GetInt32FromSpecialConf("out_num");
   if (parallel_ctx->policy() == kModelParallel) {
@@ -222,15 +220,16 @@ void ConvolutionOp::InferBlobDescs(
     BlobDesc* cudnn_fwd_workspace_blob_desc =
         GetBlobDesc4BnInOp("cudnn_fwd_workspace");
     cudnn_fwd_workspace_blob_desc->mut_shape() =
-        Shape({cudnn_fwd_workspace_sizes});
+        Shape({static_cast<int64_t>(cudnn_fwd_workspace_sizes)});
     cudnn_fwd_workspace_blob_desc->set_data_type(
         JobDesc::Singleton()->DefaultDataType());
     cudnn_fwd_workspace_blob_desc->set_has_data_id(false);
 
     BlobDesc* cudnn_bwd_workspace_blob_desc =
         GetBlobDesc4BnInOp("cudnn_bwd_workspace");
-    cudnn_bwd_workspace_blob_desc->mut_shape() = Shape({std::max(
-        cudnn_bwd_filter_workspace_sizes, cudnn_bwd_data_workspace_sizes)});
+    cudnn_bwd_workspace_blob_desc->mut_shape() =
+        Shape({static_cast<int64_t>(std::max(cudnn_bwd_filter_workspace_sizes,
+                                             cudnn_bwd_data_workspace_sizes))});
     cudnn_bwd_workspace_blob_desc->set_data_type(
         JobDesc::Singleton()->DefaultDataType());
     cudnn_bwd_workspace_blob_desc->set_has_data_id(false);
