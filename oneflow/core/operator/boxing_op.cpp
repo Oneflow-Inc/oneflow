@@ -109,9 +109,9 @@ void BoxingOp::InferBlobDescs(
   CHECK_NE(conf.out_box_case(), BoxingOpConf::OUT_BOX_NOT_SET);
   if (conf.in_box_case() == BoxingOpConf::kAddBox
       && conf.out_box_case() == BoxingOpConf::kSplitBox) {
-    BlobDesc* data_temp_blob_desc = GetBlobDesc4BnInOp(SoleDtbn());
-    data_temp_blob_desc->set_has_data_id(has_data_id);
-    data_temp_blob_desc->mut_shape() = Shape(data_tmp_blob_shape_vec);
+    BlobDesc* data_tmp_blob_desc = GetBlobDesc4BnInOp(SoleDtbn());
+    data_tmp_blob_desc->set_has_data_id(has_data_id);
+    data_tmp_blob_desc->mut_shape() = Shape(data_tmp_blob_shape_vec);
   }
 
   // infer desc of out blobs
