@@ -231,8 +231,7 @@ int RnnFwDataCompActor::HandlerNormal(const ActorMsg& msg) {
       } else {
         CHECK_EQ(out_regst_desc_id_, regst->regst_desc_id());
         CHECK_EQ(-1, regst->recurrent_flag());
-        pid2out_regst_.emplace(cur_piece_id,
-                               regst);  // mustn't exist in pid2out_regst_
+        CHECK(pid2out_regst_.emplace(cur_piece_id, regst).second);  
       }
     }
     ActUntilFail();
