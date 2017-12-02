@@ -11,8 +11,8 @@ void BoxingOp::InitFromOpConf() {
   for (int64_t i = 0; i < boxing_conf.in_num(); ++i) {
     EnrollInputBn("in_" + std::to_string(i), false);
   }
-  if (boxing_conf.in_box_case() == BoxingOpConf::kConcatBox
-      && boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
+  if (boxing_conf.in_box_case() == BoxingOpConf::kAddBox
+      && boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
     EnrollDataTmpBn("middle");
   }
   for (int64_t i = 0; i < boxing_conf.out_num(); ++i) {
@@ -82,7 +82,7 @@ void BoxingOp::InferBlobDescs(
   const BoxingOpConf& conf = op_conf().boxing_conf();
 
   std::vector<int64_t> data_tmp_blob_shape_vec =
-      GetBlobDesc4BnInOp(input_bns().at(0))->shape().dim_vec();
+      GetBlobDesc4BnInOp(input_bns().front())->shape().dim_vec();
   int32_t concat_axis = 0;
   if (conf.in_box_case() == BoxingOpConf::kConcatBox) {
     concat_axis = conf.concat_box().axis();
@@ -105,7 +105,7 @@ void BoxingOp::InferBlobDescs(
     }
   }
 
-  bool has_data_id = GetBlobDesc4BnInOp(input_bns().at(0))->has_data_id();
+  bool has_data_id = GetBlobDesc4BnInOp(input_bns().front())->has_data_id();
   CHECK_NE(conf.out_box_case(), BoxingOpConf::OUT_BOX_NOT_SET);
   if (conf.in_box_case() == BoxingOpConf::kAddBox
       && conf.out_box_case() == BoxingOpConf::kSplitBox) {
