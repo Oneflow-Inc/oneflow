@@ -81,6 +81,9 @@ class SoftmaxKernelUtil<DeviceType::kCPU, T> final {
     }
   }
 };
+#define INSTANTIATE_SOFTMAX_KERNEL_UTIL(type_cpp, type_proto) \
+  template class SoftmaxKernelUtil<DeviceType::kCPU, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_SOFTMAX_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSoftmaxConf, SoftmaxKernel,
                            FLOATING_DATA_TYPE_SEQ);
