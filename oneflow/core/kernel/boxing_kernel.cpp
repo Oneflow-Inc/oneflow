@@ -102,21 +102,22 @@ void BoxingKernel<T>::DoUnequalAxisCopy(
     const int32_t dst_axis, const BoxingInfo& src_info,
     const BoxingInfo& dst_info, bool need_swap) const {
   for (size_t src_idx = 0; src_idx != src_blobs.size(); ++src_idx) {
-    int64_t src_seg_offset =
-        src_idx * src_info.seg_size() + src_info.offset_in_seg().Get(src_idx);
     for (size_t seg_idx = 0; seg_idx != src_info.seg_num(); ++seg_idx) {
+      int64_t src_seg_offset =
+          seg_idx * src_info.seg_size() + src_info.offset_in_seg(src_idx);
       int64_t dst_segs_in_src_seg = src_info.seg_size() / dst_info.seg_size();
       for (size_t dst_seg_idx = 0; dst_seg_idx != dst_segs_in_src_seg;
            ++dst_seg_idx) {
         int64_t dst_seg_offset = 0;
         for (size_t dst_idx = 0; dst_idx != dst_blobs.size(); ++dst_idx) {
           int64_t dst_seg_start = src_seg_offset / dst_info.seg_size()
-                                  * dst_info.size_in_seg().Get(dst_idx);
+                                  * dst_info.size_in_seg(dst_idx);
           BoxingCopy(ctx, src_blobs.at(src_idx), dst_blobs.at(dst_idx),
                      src_seg_offset * sizeof(T),
-                     (dst_seg_start + dst_seg_offset) * sizeof(T), need_swap);
-          src_seg_offset += dst_info.size_in_seg().Get(dst_idx);
-          dst_seg_offset += dst_info.size_in_seg().Get(dst_idx);
+                     (dst_seg_start + dst_seg_offset) * sizeof(T),
+                     dst_info.size_in_seg(dst_idx) * sizeof(T), need_swap);
+          src_seg_offset += dst_info.size_in_seg(dst_idx);
+          dst_seg_offset += dst_info.size_in_seg(dst_idx);
         }
       }
       src_seg_offset += src_info.seg_size();
