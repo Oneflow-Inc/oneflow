@@ -106,13 +106,15 @@ class BackwardChainNode;
 
 #define OVERRIDE_FROM_METHOD(x, y) x##From##y(const ChainNode*) const override;
 
+#define CHAIN_NODE_BOILERPLATE(class_name) \
+  OF_DISALLOW_COPY_AND_MOVE(class_name);   \
+  class_name() = default;                  \
+  ~class_name() = default;                 \
+  OVERRIDE_PURE_VIRTUAL_METHOD();
+
 class ForwardChainNode final : public ChainNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ForwardChainNode);
-  ForwardChainNode() = default;
-  ~ForwardChainNode() = default;
-
-  OVERRIDE_PURE_VIRTUAL_METHOD();
+  CHAIN_NODE_BOILERPLATE(ForwardChainNode);
 
   BackwardChainNode* bw_node() const { return bw_node_; }
   void set_bw_node(BackwardChainNode* val) { bw_node_ = val; }
@@ -135,11 +137,7 @@ class ForwardChainNode final : public ChainNode {
 
 class BackwardChainNode final : public ChainNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BackwardChainNode);
-  BackwardChainNode() = default;
-  ~BackwardChainNode() = default;
-
-  OVERRIDE_PURE_VIRTUAL_METHOD();
+  CHAIN_NODE_BOILERPLATE(BackwardChainNode);
 
   ForwardChainNode* fw_node() const { return fw_node_; }
   void set_fw_node(ForwardChainNode* val) { fw_node_ = val; }
@@ -162,22 +160,14 @@ class BackwardChainNode final : public ChainNode {
 
 class SourceChainNode final : public ChainNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(SourceChainNode);
-  SourceChainNode() = default;
-  ~SourceChainNode() = default;
-
-  OVERRIDE_PURE_VIRTUAL_METHOD();
+  CHAIN_NODE_BOILERPLATE(SourceChainNode);
 
   void set_data_output_lbns() override;
 };
 
 class LossChainNode final : public ChainNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(LossChainNode);
-  LossChainNode() = default;
-  ~LossChainNode() = default;
-
-  OVERRIDE_PURE_VIRTUAL_METHOD();
+  CHAIN_NODE_BOILERPLATE(LossChainNode);
 
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
@@ -211,11 +201,7 @@ class PrintChainNode final : public ChainNode {
 
 class LossAccChainNode final : public ChainNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(LossAccChainNode);
-  LossAccChainNode() = default;
-  ~LossAccChainNode() = default;
-
-  OVERRIDE_PURE_VIRTUAL_METHOD();
+  CHAIN_NODE_BOILERPLATE(LossAccChainNode);
 
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
@@ -224,11 +210,7 @@ class LossAccChainNode final : public ChainNode {
 
 class LossPrintChainNode final : public ChainNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(LossPrintChainNode);
-  LossPrintChainNode() = default;
-  ~LossPrintChainNode() = default;
-
-  OVERRIDE_PURE_VIRTUAL_METHOD();
+  CHAIN_NODE_BOILERPLATE(LossPrintChainNode);
 
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
@@ -267,11 +249,7 @@ class MdUpdtChainNode final : public ChainNode {
 
 class MdSaveChainNode final : public ChainNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(MdSaveChainNode);
-  MdSaveChainNode() = default;
-  ~MdSaveChainNode() = default;
-
-  OVERRIDE_PURE_VIRTUAL_METHOD();
+  CHAIN_NODE_BOILERPLATE(MdSaveChainNode);
 
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
@@ -280,11 +258,7 @@ class MdSaveChainNode final : public ChainNode {
 
 class MdDiffAccChainNode final : public ChainNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(MdDiffAccChainNode);
-  MdDiffAccChainNode() = default;
-  ~MdDiffAccChainNode() = default;
-
-  OVERRIDE_PURE_VIRTUAL_METHOD();
+  CHAIN_NODE_BOILERPLATE(MdDiffAccChainNode);
 
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
