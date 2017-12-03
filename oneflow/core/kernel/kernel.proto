@@ -11,8 +11,8 @@ message MultinomialLogisticLossKernelConf {
 }
 
 message BoxingKernelConf {
-  required BoxingInfo in_boxing_info = 1;
-  required BoxingInfo out_boxing_info = 2;
+  required BoxingInfo in_info = 1;
+  required BoxingInfo out_info = 2;
 }
 
 message KernelConf {

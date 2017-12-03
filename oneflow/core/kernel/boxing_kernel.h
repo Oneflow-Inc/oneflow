@@ -25,19 +25,22 @@ class BoxingKernel final : public KernelIf<DeviceType::kCPU> {
                   const int64_t, size_t, bool) const;
   void CopyDataId(const KernelCtx&, std::vector<Blob*>&, std::vector<Blob*>&,
                   const int32_t, const int32_t) const;
+  void DoUnequalAxisCopy(const KernelCtx&, std::vector<Blob*>&,
+                         std::vector<Blob*>&, const int32_t, const int32_t,
+                         const BoxingInfo&, const BoxingInfo&, bool) const;
   void BoxingCopyForUnequalAxis(const KernelCtx&, std::vector<Blob*>&,
                                 std::vector<Blob*>&, const int32_t,
                                 const int32_t) const;
   void BoxingCopyForEqualAxis(const KernelCtx&, std::vector<Blob*>&,
                               std::vector<Blob*>&, const int32_t) const;
-  void CopyFromSrc2Dst(const KernelCtx& ctx,
-                       std::function<Blob*(const std::string&)>,
-                       const std::vector<std::string>&,
-                       const std::vector<std::string>&, const int32_t,
-                       const int32_t) const;
-  void FwCloneData(const KernelCtx& ctx,
-                   std::function<Blob*(const std::string&)>,
-                   const std::vector<std::string>&) const;
+  void CopyFromSrcBlobs2DstBlobs(const KernelCtx& ctx,
+                                 std::function<Blob*(const std::string&)>,
+                                 const std::vector<std::string>&,
+                                 const std::vector<std::string>&, const int32_t,
+                                 const int32_t) const;
+  void CopyFromFirstBlob2OtherBlobs(const KernelCtx& ctx,
+                                    std::function<Blob*(const std::string&)>,
+                                    const std::vector<std::string>&) const;
 };
 
 }  // namespace oneflow

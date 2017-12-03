@@ -96,40 +96,49 @@ void BoxingKernel<T>::CopyDataId(const KernelCtx& ctx,
 }
 
 template<typename T>
+void BoxingKernel<T>::DoUnequalAxisCopy(
+    const KernelCtx& ctx, std::vector<Blob*>& src_blobs,
+    std::vector<Blob*>& dst_blobs, const int32_t src_axis,
+    const int32_t dst_axis, const BoxingInfo& src_info,
+    const BoxingInfo& dst_info, bool need_swap) const {
+  for (size_t src_idx = 0; src_idx != src_blobs.size(); ++src_idx) {
+    int64_t src_seg_offset =
+        src_idx * src_info.seg_size() + src_info.offset_in_seg().Get(src_idx);
+    for (size_t seg_idx = 0; seg_idx != src_info.seg_num(); ++seg_idx) {
+      int64_t dst_segs_in_src_seg = src_info.seg_size() / dst_info.seg_size();
+      for (size_t dst_seg_idx = 0; dst_seg_idx != dst_segs_in_src_seg;
+           ++dst_seg_idx) {
+        int64_t dst_seg_offset = 0;
+        for (size_t dst_idx = 0; dst_idx != dst_blobs.size(); ++dst_idx) {
+          int64_t dst_seg_start = src_seg_offset / dst_info.seg_size()
+                                  * dst_info.size_in_seg().Get(dst_idx);
+          BoxingCopy(ctx, src_blobs.at(src_idx), dst_blobs.at(dst_idx),
+                     src_seg_offset * sizeof(T),
+                     (dst_seg_start + dst_seg_offset) * sizeof(T), need_swap);
+          src_seg_offset += dst_info.size_in_seg().Get(dst_idx);
+          dst_seg_offset += dst_info.size_in_seg().Get(dst_idx);
+        }
+      }
+      src_seg_offset += src_info.seg_size();
+    }
+  }
+}
+
+template<typename T>
 void BoxingKernel<T>::BoxingCopyForUnequalAxis(const KernelCtx& ctx,
                                                std::vector<Blob*>& src_blobs,
                                                std::vector<Blob*>& dst_blobs,
                                                const int32_t concat_axis,
                                                const int32_t split_axis) const {
-  bool need_swap = false;
-  if (concat_axis > split_axis) { need_swap = true; }
-
   auto kernel_conf = this->kernel_conf().boxing_conf();
-  int64_t src_seg_cnt = kernel_conf.in_seg_cnt();
-  int64_t src_seg_size = kernel_conf.in_seg_size();
-  auto src_offset_in_seg = kernel_conf.in_offset_in_seg();
-  int64_t dst_seg_size = kernel_conf.out_seg_size();
-  auto dst_size_in_seg = kernel_conf.out_size_in_seg();
-  for (size_t src_idx = 0; src_idx != src_blobs.size(); ++src_idx) {
-    int64_t src_seg_offset =
-        src_idx * src_seg_size + src_offset_in_seg.Get(src_idx);
-    for (size_t seg_idx = 0; seg_idx != src_seg_cnt; ++seg_idx) {
-      int64_t dst_segs_in_src_seg = src_seg_size / dst_seg_size;
-      for (size_t dst_seg_idx = 0; dst_seg_idx != dst_segs_in_src_seg;
-           ++dst_seg_idx) {
-        int64_t dst_seg_offset = 0;
-        for (size_t dst_idx = 0; dst_idx != dst_blobs.size(); ++dst_idx) {
-          int64_t dst_seg_start =
-              src_seg_offset / dst_seg_size * dst_size_in_seg.Get(dst_idx);
-          BoxingCopy(ctx, src_blobs.at(src_idx), dst_blobs.at(dst_idx),
-                     src_seg_offset * sizeof(T),
-                     (dst_seg_start + dst_seg_offset) * sizeof(T), need_swap);
-          src_seg_offset += dst_size_in_seg.Get(dst_idx);
-          dst_seg_offset += dst_size_in_seg.Get(dst_idx);
-        }
-      }
-      src_seg_offset += src_seg_size;
-    }
+  const BoxingInfo& in_info = kernel_conf.in_info();
+  const BoxingInfo& out_info = kernel_conf.out_info();
+  if (concat_axis > split_axis) {
+    DoUnequalAxisCopy(ctx, dst_blobs, src_blobs, split_axis, concat_axis,
+                      out_info, in_info, true);
+  } else {
+    DoUnequalAxisCopy(ctx, src_blobs, dst_blobs, concat_axis, split_axis,
+                      in_info, out_info, false);
   }
 }
 
@@ -141,23 +150,24 @@ void BoxingKernel<T>::BoxingCopyForEqualAxis(const KernelCtx& ctx,
   // P.S This routine will be called only once, thus some performance
   // loss seems ok.
   auto kernel_conf = this->kernel_conf().boxing_conf();
+  const BoxingInfo& in_info = kernel_conf.in_info();
+  const BoxingInfo& out_info = kernel_conf.out_info();
   int64_t src_offset = 0;
   for (size_t src_idx = 0, dst_idx = 0;
        src_idx != src_blobs.size() && dst_idx != dst_blobs.size();) {
     int64_t dst_offset = 0;
-    while (dst_offset < kernel_conf.out_size_in_seg(dst_idx)) {
-      int64_t p = std::min(kernel_conf.in_size_in_seg(src_idx) - src_offset,
-                           kernel_conf.out_size_in_seg(dst_idx) - dst_offset);
-      for (size_t i = 0; i != kernel_conf.in_seg_cnt(); ++i) {
-        BoxingCopy(
-            ctx, true, src_blobs.at(src_idx), dst_blobs.at(dst_idx),
-            (src_offset + i * kernel_conf.in_size_in_seg(src_idx)) * sizeof(T),
-            (dst_offset + i * kernel_conf.out_size_in_seg(dst_idx)) * sizeof(T),
-            p * sizeof(T), false);
+    while (dst_offset < out_info.size_in_seg(dst_idx)) {
+      int64_t p = std::min(in_info.size_in_seg(src_idx) - src_offset,
+                           out_info.size_in_seg(dst_idx) - dst_offset);
+      for (size_t i = 0; i != in_info.seg_num(); ++i) {
+        BoxingCopy(ctx, true, src_blobs.at(src_idx), dst_blobs.at(dst_idx),
+                   (src_offset + i * in_info.size_in_seg(src_idx)) * sizeof(T),
+                   (dst_offset + i * out_info.size_in_seg(dst_idx)) * sizeof(T),
+                   p * sizeof(T), false);
       }
       src_offset += p;
       dst_offset += p;
-      if (src_offset == kernel_conf.in_size_in_seg(src_idx)) {
+      if (src_offset == in_info.size_in_seg(src_idx)) {
         if (++src_idx == src_blobs.size()) { break; }
         src_offset = 0;
       }
@@ -167,7 +177,7 @@ void BoxingKernel<T>::BoxingCopyForEqualAxis(const KernelCtx& ctx,
 }
 
 template<typename T>
-void BoxingKernel<T>::CopyFromSrc2Dst(
+void BoxingKernel<T>::CopyFromSrcBlobs2DstBlobs(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     const std::vector<std::string>& src_bns,
     const std::vector<std::string>& dst_bns, const int32_t src_concat_axis,
@@ -197,12 +207,11 @@ void BoxingKernel<T>::CopyFromSrc2Dst(
 }
 
 template<typename T>
-void BoxingKernel<T>::FwCloneData(
+void BoxingKernel<T>::CopyFromFirstBlob2OtherBlobs(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     const std::vector<std::string>& obns) const {
   int64_t copy_size = BnInOp2Blob(obns.front())->shape().elem_cnt() * sizeof(T);
-  for (size_t i = 1; i < obns.size(); ++i) {
-    if (BnInOp2Blob(obns.at(i)) == nullptr) { break; }
+  FOR_RANGE(size_t, i, 1, obns.size()) {
     BoxingCopy(ctx, false, BnInOp2Blob(obns.front()), BnInOp2Blob(obns.at(i)),
                0, 0, copy_size, false);
   }
@@ -213,37 +222,30 @@ void BoxingKernel<T>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto boxing_conf = op_conf().boxing_conf();
+  const KernelConf& kernel_conf = this->kernel_conf();
   if (boxing_conf.in_box_case() == BoxingOpConf::kConcatBox) {
     // concat-box copy rules: copy directly from input to output
     int32_t concat_axis = boxing_conf.concat_box().axis();
     if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
-      int32_t split_axis = boxing_conf.split_box().axis();
-      CopyFromSrc2Dst(ctx, BnInOp2Blob, this->kernel_conf().input_bns(),
-                      this->kernel_conf().output_bns(), concat_axis,
-                      split_axis);
+      CopyFromSrcBlobs2DstBlobs(ctx, BnInOp2Blob, kernel_conf.input_bns(),
+                                kernel_conf.output_bns(), concat_axis,
+                                boxing_conf.split_box().axis());
     } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
-      CopyFromSrc2Dst(ctx, BnInOp2Blob, kernel_conf().input_bns(), {"out_0"},
-                      concat_axis, 0);
+      CopyFromSrcBlobs2DstBlobs(ctx, BnInOp2Blob, kernel_conf.input_bns(),
+                                {"out_0"}, concat_axis, 0);
+      CopyFromFirstBlob2OtherBlobs(ctx, BnInOp2Blob, kernel_conf.output_bns());
     } else {
       UNEXPECTED_RUN();
     }
   } else if (boxing_conf.in_box_case() == BoxingOpConf::kAddBox) {
-    if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
-      GetSumFromSrcBlobsToDstBlob(ctx, BnInOp2Blob,
-                                  this->kernel_conf().input_bns(), {"middle"});
-      int32_t split_axis = boxing_conf.split_box().axis();
-      CopyFromSrc2Dst(ctx, BnInOp2Blob, {"middle"},
-                      this->kernel_conf().output_bns(), 0, split_axis);
-    } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
-      GetSumFromSrcBlobsToDstBlob(ctx, BnInOp2Blob,
-                                  this->kernel_conf().input_bns(),
-                                  {this->kernel_conf().output_bns(0)});
-    } else {
-      UNEXPECTED_RUN();
-    }
-  }
-  if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
-    FwCloneData(ctx, BnInOp2Blob, this->kernel_conf().output_bns());
+    CHECK_EQ(boxing_conf.out_box_case(), BoxingOpConf::kSplitBox);
+    GetSumFromSrcBlobsToDstBlob(ctx, BnInOp2Blob, kernel_conf.input_bns(),
+                                {"middle"});
+    CopyFromSrcBlobs2DstBlobs(ctx, BnInOp2Blob, {"middle"},
+                              kernel_conf.output_bns(), 0,
+                              boxing_conf.split_box().axis());
+  } else {
+    UNEXPECTED_RUN();
   }
 }
 

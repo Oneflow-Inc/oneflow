@@ -61,20 +61,18 @@ void BoxingOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   const BoxingOpConf& conf = op_conf().boxing_conf();
-  BoxingInfo* in_boxing_info =
-      kernel_conf->mutable_boxing_conf()->mutable_in_boxing_info();
+  BoxingInfo* in_info = kernel_conf->mutable_boxing_conf()->mutable_in_info();
   int32_t concat_axis = 0;
   bool is_concat_or_split = (conf.in_box_case() == BoxingOpConf::kConcatBox);
   if (is_concat_or_split) { concat_axis = conf.concat_box().axis(); }
-  GetBoxingInfo(GetBlobDesc4BnInOp, input_bns(), in_boxing_info, concat_axis,
+  GetBoxingInfo(GetBlobDesc4BnInOp, input_bns(), in_info, concat_axis,
                 is_concat_or_split);
 
-  BoxingInfo* out_boxing_info =
-      kernel_conf->mutable_boxing_conf()->mutable_out_boxing_info();
+  BoxingInfo* out_info = kernel_conf->mutable_boxing_conf()->mutable_out_info();
   int32_t split_axis = 0;
   is_concat_or_split = (conf.out_box_case() == BoxingOpConf::kSplitBox);
   if (is_concat_or_split) { split_axis = conf.split_box().axis(); }
-  GetBoxingInfo(GetBlobDesc4BnInOp, output_bns(), out_boxing_info, split_axis,
+  GetBoxingInfo(GetBlobDesc4BnInOp, output_bns(), out_info, split_axis,
                 is_concat_or_split);
 }
 
@@ -121,7 +119,6 @@ void BoxingOp::InferBlobDescs(
     std::vector<int64_t> output_shape_vec = data_tmp_blob_shape_vec;
     CHECK_GE(split_conf.axis(), 0);
     CHECK_LT(split_conf.axis(), output_shape_vec.size());
-    CHECK_EQ(split_conf.part_num_size(), output_shape_vec.size());
     FOR_RANGE(size_t, i, 0, output_bns().size()) {
       BlobDesc* ob_desc = GetBlobDesc4BnInOp(output_bns().at(i));
       ob_desc->set_has_data_id(has_data_id);
