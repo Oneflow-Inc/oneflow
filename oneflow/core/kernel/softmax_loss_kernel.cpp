@@ -5,7 +5,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename PredType, typename LabelType>
-void SoftmaxLossKernel<device_type, PredType, LabelType>::Forward(
+void SoftmaxLossKernel<device_type, PredType, LabelType>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* prediction_blob = BnInOp2Blob("prediction");
@@ -37,6 +37,15 @@ void SoftmaxLossKernel<device_type, PredType, LabelType>::Forward(
   }
 }
 
+template<DeviceType device_type, typename PredType, typename LabelType>
+void SoftmaxLossKernel<device_type, PredType, LabelType>::ForwardDataId(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* prediction_blob = BnInOp2Blob("prediction");
+  Blob* loss_blob = BnInOp2Blob("loss");
+  loss_blob->CopyDataIdFrom<device_type>(ctx.device_ctx, prediction_blob);
+}
+
 template<typename PredType, typename LabelType>
 class SoftmaxLossKernelUtil<DeviceType::kCPU, PredType, LabelType> final {
  public:
@@ -59,5 +68,32 @@ class SoftmaxLossKernelUtil<DeviceType::kCPU, PredType, LabelType> final {
     }
   }
 };
+
+namespace {
+
+Kernel* CreateSoftmaxLossKernel(DeviceType dev_type,
+                                const KernelConf& kernel_conf) {
+  static const HashMap<std::string, std::function<Kernel*()>> creators = {
+#define SOFTMAX_LOSS_KERNEL_ENTRY(device_type, pred_type_pair,          \
+                                  label_type_pair)                      \
+  {GetHashKey(device_type, OF_PP_PAIR_SECOND(pred_type_pair),           \
+              OF_PP_PAIR_SECOND(label_type_pair)),                      \
+   []() {                                                               \
+     return new SoftmaxLossKernel<device_type,                          \
+                                  OF_PP_PAIR_FIRST(pred_type_pair),     \
+                                  OF_PP_PAIR_FIRST(label_type_pair)>(); \
+   }},
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(SOFTMAX_LOSS_KERNEL_ENTRY,
+                                       DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ,
+                                       INT_DATA_TYPE_SEQ)};
+  return creators.at(
+      GetHashKey(dev_type, kernel_conf.softmax_loss_conf().prediction_type(),
+                 kernel_conf.softmax_loss_conf().label_type()))();
+}
+
+}  // namespace
+
+COMMAND(AddKernelCreator(OperatorConf::kSoftmaxLossConf,
+                         CreateSoftmaxLossKernel));
 
 }  // namespace oneflow

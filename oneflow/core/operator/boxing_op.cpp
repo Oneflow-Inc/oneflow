@@ -1,6 +1,5 @@
 #include "oneflow/core/operator/boxing_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
-#include "oneflow/core/kernel/boxing_info.pb.h"
 
 namespace oneflow {
 
@@ -32,29 +31,29 @@ std::string BoxingOp::obn2lbn(const std::string& output_bn) const {
   return GetStringFromSpecialConf("lbn");
 }
 
-void BoxingOp::GetBoxingInfo(
+void BoxingOp::GenBoxingInfo(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const std::vector<std::string>& bns, BoxingInfo* boxing_info, int32_t axis,
-    bool is_concat_or_split) const {
+    const std::vector<std::string>& bns, int32_t axis, bool is_concat_or_split,
+    BoxingInfo* boxing_info) const {
   const BlobDesc* first_blob = GetBlobDesc4BnInOp(bns.front());
-  int32_t seg_num = 1;
+  int32_t total_seg_num = 1;
   int64_t seg_size_acc = 0;
   if (is_concat_or_split) {
-    if (axis != 0) { seg_num = first_blob->shape().Count(0, axis); }
+    if (axis != 0) { total_seg_num = first_blob->shape().Count(0, axis); }
     for (const std::string& bn : bns) {
       const BlobDesc* blob = GetBlobDesc4BnInOp(bn);
       int64_t seg_subsize = blob->shape().Count(axis);
-      boxing_info->add_size_in_seg(seg_subsize);
-      boxing_info->add_offset_in_seg(seg_size_acc);
+      boxing_info->add_size_of_subseg(seg_subsize);
+      boxing_info->add_offset_of_subseg(seg_size_acc);
       seg_size_acc += seg_subsize;
     }
   } else {
     seg_size_acc = first_blob->shape().Count(0);
-    boxing_info->add_size_in_seg(seg_size_acc);
-    boxing_info->add_offset_in_seg(0);
+    boxing_info->add_size_of_subseg(seg_size_acc);
+    boxing_info->add_offset_of_subseg(0);
   }
-  boxing_info->set_seg_num(seg_num);
-  boxing_info->set_seg_size(seg_size_acc);
+  boxing_info->set_total_seg_num(total_seg_num);
+  boxing_info->set_size_of_per_seg(seg_size_acc);
 }
 
 void BoxingOp::VirtualGenKernelConf(
@@ -65,15 +64,15 @@ void BoxingOp::VirtualGenKernelConf(
   int32_t concat_axis = 0;
   bool is_concat = (conf.in_box_case() == BoxingOpConf::kConcatBox);
   if (is_concat) { concat_axis = conf.concat_box().axis(); }
-  GetBoxingInfo(GetBlobDesc4BnInOp, input_bns(), in_info, concat_axis,
-                is_concat);
+  GenBoxingInfo(GetBlobDesc4BnInOp, input_bns(), concat_axis, is_concat,
+                in_info);
 
   BoxingInfo* out_info = kernel_conf->mutable_boxing_conf()->mutable_out_info();
   int32_t split_axis = 0;
   bool is_split = (conf.out_box_case() == BoxingOpConf::kSplitBox);
   if (is_split) { split_axis = conf.split_box().axis(); }
-  GetBoxingInfo(GetBlobDesc4BnInOp, output_bns(), out_info, split_axis,
-                is_split);
+  GenBoxingInfo(GetBlobDesc4BnInOp, output_bns(), split_axis, is_split,
+                out_info);
 }
 
 void BoxingOp::InferBlobDescs(

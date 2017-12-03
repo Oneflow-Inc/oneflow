@@ -19,10 +19,10 @@ class BoxingOp final : public Operator {
       const ParallelContext* parallel_ctx);
 
  private:
-  void GetBoxingInfo(
+  void GenBoxingInfo(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const std::vector<std::string>& bns, BoxingInfo* boxing_info,
-      int32_t axis, bool is_concat_or_split) const;
+      const std::vector<std::string>& bns, int32_t axis,
+      bool is_concat_or_split, BoxingInfo* boxing_info) const;
   void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx,

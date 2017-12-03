@@ -3,16 +3,27 @@ package oneflow;
 
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/data_type.proto";
-import "oneflow/core/kernel/boxing_info.proto";
 
 message MultinomialLogisticLossKernelConf { 
   required DataType prediction_type = 1;
   required DataType label_type = 2;
 }
 
+message BoxingInfo {
+  required int64 total_seg_num = 1;
+  required int64 size_of_per_seg = 2;
+  repeated int64 offset_of_subseg = 3;
+  repeated int64 size_of_subseg = 4;
+}
+
 message BoxingKernelConf {
   required BoxingInfo in_info = 1;
   required BoxingInfo out_info = 2;
+}
+
+message SoftmaxLossKernelConf { 
+  required DataType prediction_type = 1;
+  required DataType label_type = 2;
 }
 
 message KernelConf {
@@ -36,5 +47,6 @@ message KernelConf {
   oneof kernel_type {
     BoxingKernelConf boxing_conf = 103;
     MultinomialLogisticLossKernelConf multinomial_logistic_loss_conf = 106;
+    SoftmaxLossKernelConf softmax_loss_conf = 117;
   }
 }
