@@ -140,6 +140,7 @@ bool RnnFwDataCompActor::IsReadReady() {
             set_material4act(Material4Act::RnnKernelType::kRnnCellWithInitial,
                              cur_regst, latest_model_regst_, nullptr,
                              initial_hidden_regsts_.front(), nullptr);
+            model_regst2cnt_[latest_model_regst_] += 1; // insert or add
           }
           return ret;
         } else {
@@ -322,6 +323,7 @@ void RnnFwDataCompActor::Act() {
       [this, model_version_id, tmp_piece_status](Regst* regst) {
         regst->set_piece_status(tmp_piece_status);
         regst->set_model_version_id(model_version_id);
+        regst->set_is_forward(true);
       });
   int ret = ordered_piece_status_.GetIntoNextStatus();
 

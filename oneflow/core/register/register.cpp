@@ -36,6 +36,7 @@ Regst::Regst() {
   piece_id_ = -1;
   model_version_id_ = -1;
   recurrent_flag_ = 0;
+  is_forward_ = true;
 }
 
 void Regst::ForEachLbn(std::function<void(const std::string&)> func) {

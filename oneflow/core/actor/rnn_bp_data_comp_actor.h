@@ -21,13 +21,12 @@ class RnnBpDataCompActor final : public Actor {
 
   bool IsReadReady() override;
   void Act() override;
-  void AsyncSendMsgToModelAndModelTmpProducer();
+  void AsyncSendMsgToModelProducer();
 
   bool CheckModel_Out_OutDiff(Regst* cur_regst) const;
   void FillMatl4ActWithIn_Out_OutDiff_Model(Regst* cur_regst);
 
   CudaStreamHandle cuda_handle_;
-  int64_t expected_model_version_id_;
 
   int64_t in_regst_desc_id_;
   HashMap<int64_t, std::stack<Regst*>> pid2in_regsts_;
@@ -55,14 +54,6 @@ class RnnBpDataCompActor final : public Actor {
   HashMap<int64_t, bool> model_vid2status_;
   int64_t expected_model_version_id_;
 
-  // int64_t model_tmp_regst_desc_id_;
-  // Regst* model_tmp_regst_;
-
-  // int64_t activation_regst_desc_id_;
-  // std::queue<Regst*> activation_regsts_;
-  //
-  // int data_tmp_regst_desc_id_;
-  // std::queue<Regst*> data_tmp_regsts_;
   struct Material4Act {
     Material4Act() : regst_id2regst(), pre_out_regst(nullptr) {}
 
