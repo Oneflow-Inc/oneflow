@@ -45,11 +45,10 @@ class PoolingKernelUtil<DeviceType::kCPU, T> final {
 
     switch (pooling_conf.pool()) {
       case PoolingOpConf::kMax: {
-        for (int64_t n = 0; n < out_blob->shape().At(0); ++n) {
-          for (int64_t c = 0; c < out_blob->shape().At(1); ++c) {
-            for (int64_t out_h = 0; out_h < out_blob->shape().At(2); ++out_h) {
-              for (int64_t out_w = 0; out_w < out_blob->shape().At(3);
-                   ++out_w) {
+        FOR_RANGE(int64_t, n, 0, out_blob->shape().At(0)) {
+          FOR_RANGE(int64_t, c, 0, out_blob->shape().At(1)) {
+            FOR_RANGE(int64_t, out_h, 0, out_blob->shape().At(2)) {
+              FOR_RANGE(int64_t, out_w, 0, out_blob->shape().At(3)) {
                 int64_t hstart =
                     out_h * pooling_conf.stride_h() - pooling_conf.pad_h();
                 int64_t wstart =
@@ -65,8 +64,8 @@ class PoolingKernelUtil<DeviceType::kCPU, T> final {
                 out_dptr[out_index] =
                     in_dptr[hstart * in_blob->shape().At(3) + wstart];
                 idx_dptr[out_index] = hstart * in_blob->shape().At(3) + wstart;
-                for (int64_t h = hstart; h < hend; ++h) {
-                  for (int64_t w = wstart; w < wend; ++w) {
+                FOR_RANGE(int64_t, h, hstart, hend) {
+                  FOR_RANGE(int64_t, w, wstart, wend) {
                     const uint32_t index = h * in_blob->shape().At(3) + w;
                     if (in_dptr[index] > out_dptr[out_index]) {
                       out_dptr[out_index] = in_dptr[index];
@@ -84,11 +83,10 @@ class PoolingKernelUtil<DeviceType::kCPU, T> final {
         break;
       }
       case PoolingOpConf::kAve: {
-        for (int64_t n = 0; n < out_blob->shape().At(0); ++n) {
-          for (int64_t c = 0; c < out_blob->shape().At(1); ++c) {
-            for (int64_t out_h = 0; out_h < out_blob->shape().At(2); ++out_h) {
-              for (int64_t out_w = 0; out_w < out_blob->shape().At(3);
-                   ++out_w) {
+        FOR_RANGE(int64_t, n, 0, out_blob->shape().At(0)) {
+          FOR_RANGE(int64_t, c, 0, out_blob->shape().At(1)) {
+            FOR_RANGE(int64_t, out_h, 0, out_blob->shape().At(2)) {
+              FOR_RANGE(int64_t, out_w, 0, out_blob->shape().At(3)) {
                 int64_t hstart =
                     out_h * pooling_conf.stride_h() - pooling_conf.pad_h();
                 int64_t wstart =
@@ -107,8 +105,8 @@ class PoolingKernelUtil<DeviceType::kCPU, T> final {
                 const int64_t out_index =
                     out_h * out_blob->shape().At(3) + out_w;
                 out_dptr[out_index] = 0;
-                for (int64_t h = hstart; h < hend; ++h) {
-                  for (int64_t w = wstart; w < wend; ++w) {
+                FOR_RANGE(int64_t, h, hstart, hend) {
+                  FOR_RANGE(int64_t, w, wstart, wend) {
                     out_dptr[out_index] +=
                         in_dptr[h * in_blob->shape().At(3) + w];
                   }
@@ -123,11 +121,10 @@ class PoolingKernelUtil<DeviceType::kCPU, T> final {
         break;
       }
       case PoolingOpConf::kStochastic: {
-        for (int64_t n = 0; n < out_blob->shape().At(0); ++n) {
-          for (int64_t c = 0; c < out_blob->shape().At(1); ++c) {
-            for (int64_t out_h = 0; out_h < out_blob->shape().At(2); ++out_h) {
-              for (int64_t out_w = 0; out_w < out_blob->shape().At(3);
-                   ++out_w) {
+        FOR_RANGE(int64_t, n, 0, out_blob->shape().At(0)) {
+          FOR_RANGE(int64_t, c, 0, out_blob->shape().At(1)) {
+            FOR_RANGE(int64_t, out_h, 0, out_blob->shape().At(2)) {
+              FOR_RANGE(int64_t, out_w, 0, out_blob->shape().At(3)) {
                 int64_t hstart =
                     out_h * pooling_conf.stride_h() - pooling_conf.pad_h();
                 int64_t wstart =
@@ -167,12 +164,10 @@ class PoolingKernelUtil<DeviceType::kCPU, T> final {
     T* in_diff_dptr = in_diff_blob->mut_dptr<T>();
     switch (pooling_conf.pool()) {
       case PoolingOpConf::kMax: {
-        for (int64_t n = 0; n < out_diff_blob->shape().At(0); ++n) {
-          for (int64_t c = 0; c < out_diff_blob->shape().At(1); ++c) {
-            for (int64_t out_h = 0; out_h < out_diff_blob->shape().At(2);
-                 ++out_h) {
-              for (int64_t out_w = 0; out_w < out_diff_blob->shape().At(3);
-                   ++out_w) {
+        FOR_RANGE(int64_t, n, 0, out_diff_blob->shape().At(0)) {
+          FOR_RANGE(int64_t, c, 0, out_diff_blob->shape().At(1)) {
+            FOR_RANGE(int64_t, out_h, 0, out_diff_blob->shape().At(2)) {
+              FOR_RANGE(int64_t, out_w, 0, out_diff_blob->shape().At(3)) {
                 const int64_t out_diff_index =
                     out_h * out_diff_blob->shape().At(3) + out_w;
                 const uint32_t in_diff_index = idx_dptr[out_diff_index];
@@ -187,12 +182,10 @@ class PoolingKernelUtil<DeviceType::kCPU, T> final {
         break;
       }
       case PoolingOpConf::kAve: {
-        for (int64_t n = 0; n < out_diff_blob->shape().At(0); ++n) {
-          for (int64_t c = 0; c < out_diff_blob->shape().At(1); ++c) {
-            for (int64_t out_h = 0; out_h < out_diff_blob->shape().At(2);
-                 ++out_h) {
-              for (int64_t out_w = 0; out_w < out_diff_blob->shape().At(3);
-                   ++out_w) {
+        FOR_RANGE(int64_t, n, 0, out_diff_blob->shape().At(0)) {
+          FOR_RANGE(int64_t, c, 0, out_diff_blob->shape().At(1)) {
+            FOR_RANGE(int64_t, out_h, 0, out_diff_blob->shape().At(2)) {
+              FOR_RANGE(int64_t, out_w, 0, out_diff_blob->shape().At(3)) {
                 int64_t hstart =
                     out_h * pooling_conf.stride_h() - pooling_conf.pad_h();
                 int64_t wstart =
@@ -210,8 +203,8 @@ class PoolingKernelUtil<DeviceType::kCPU, T> final {
                 wend = std::min(wend, in_diff_blob->shape().At(3));
                 const int64_t out_diff_index =
                     out_h * out_diff_blob->shape().At(3) + out_w;
-                for (int h = hstart; h < hend; ++h) {
-                  for (int w = wstart; w < wend; ++w) {
+                FOR_RANGE(int64_t, h, hstart, hend) {
+                  FOR_RANGE(int64_t, w, wstart, wend) {
                     const int64_t in_diff_index =
                         h * in_diff_blob->shape().At(3) + w;
                     in_diff_dptr[in_diff_index] +=
@@ -227,12 +220,10 @@ class PoolingKernelUtil<DeviceType::kCPU, T> final {
         break;
       }
       case PoolingOpConf::kStochastic: {
-        for (int64_t n = 0; n < out_diff_blob->shape().At(0); ++n) {
-          for (int64_t c = 0; c < out_diff_blob->shape().At(1); ++c) {
-            for (int64_t out_h = 0; out_h < out_diff_blob->shape().At(2);
-                 ++out_h) {
-              for (int64_t out_w = 0; out_w < out_diff_blob->shape().At(3);
-                   ++out_w) {
+        FOR_RANGE(int64_t, n, 0, out_diff_blob->shape().At(0)) {
+          FOR_RANGE(int64_t, c, 0, out_diff_blob->shape().At(1)) {
+            FOR_RANGE(int64_t, out_h, 0, out_diff_blob->shape().At(2)) {
+              FOR_RANGE(int64_t, out_w, 0, out_diff_blob->shape().At(3)) {
                 const int64_t out_diff_index =
                     out_h * out_diff_blob->shape().At(3) + out_w;
                 const int64_t in_diff_index = idx_dptr[out_diff_index];
