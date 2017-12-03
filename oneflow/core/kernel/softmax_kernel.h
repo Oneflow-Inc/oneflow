@@ -12,10 +12,13 @@ class SoftmaxKernel final : public KernelIf<device_type> {
   SoftmaxKernel() = default;
   ~SoftmaxKernel() = default;
 
-  void Forward(const KernelCtx&,
-               std::function<Blob*(const std::string&)>) const override;
-  void Backward(const KernelCtx&,
-                std::function<Blob*(const std::string&)>) const override;
+ private:
+  void ForwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
+  void BackwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
 };
 
 template<DeviceType device_type, typename T>

@@ -4,7 +4,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void SoftmaxKernel<device_type, T>::Forward(
+void SoftmaxKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob(this->kernel_conf().input_bns(0));
@@ -19,7 +19,7 @@ void SoftmaxKernel<device_type, T>::Forward(
 }
 
 template<DeviceType device_type, typename T>
-void SoftmaxKernel<device_type, T>::Backward(
+void SoftmaxKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* out_blob = BnInOp2Blob(this->kernel_conf().output_bns(0));
@@ -81,5 +81,11 @@ class SoftmaxKernelUtil<DeviceType::kCPU, T> final {
     }
   }
 };
+#define INSTANTIATE_SOFTMAX_KERNEL_UTIL(type_cpp, type_proto) \
+  template class SoftmaxKernelUtil<DeviceType::kCPU, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_SOFTMAX_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
+
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSoftmaxConf, SoftmaxKernel,
+                           FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
