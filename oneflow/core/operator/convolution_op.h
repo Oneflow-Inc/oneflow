@@ -22,10 +22,10 @@ class ConvolutionOp final : public Operator {
   int32_t MaxModelSplitNum() const override {
     return op_conf().convolution_conf().out_num();
   }
-  void GenKernelConf(
+  void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      bool is_forward, const ParallelContext* parallel_ctx,
-      KernelConf* kernel_conf) const;
+      const ParallelContext* parallel_ctx,
+      KernelConf* kernel_conf) const override;
 
  private:
 };

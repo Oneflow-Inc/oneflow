@@ -89,14 +89,14 @@ void ConvolutionOp::InitFromOpConf() {
   EnrollOutputBn("out");
 
   EnrollModelBn("weight");
-  if (GetBoolFromSpecialConf("has_bias_term")) {
+  if (op_conf().convolution_conf().has_bias_term()) {
     EnrollModelBn("bias");
-    if (!GetBoolFromSpecialConf("use_cudnn")) {
+    if (!op_conf().convolution_conf().use_cudnn()) {
       EnrollModelTmpBn("bias_multiplier");
     }
   }
 
-  if (GetBoolFromSpecialConf("use_cudnn")) {
+  if (op_conf().convolution_conf().use_cudnn()) {
     EnrollDataTmpBn("cudnn_fwd_workspace");
     EnrollDataTmpBn("cudnn_bwd_workspace");
   } else {
@@ -155,7 +155,7 @@ void ConvolutionOp::InferBlobDescs(
     bias_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
     bias_blob_desc->set_has_data_id(false);
 
-    if (!GetBoolFromSpecialConf("use_cudnn")) {
+    if (!conf.use_cudnn()) {
       // bias multiplier
       BlobDesc* bias_multiplier_blob_desc =
           GetBlobDesc4BnInOp("bias_multiplier");
@@ -166,7 +166,7 @@ void ConvolutionOp::InferBlobDescs(
     }
   }
 
-  if (!GetBoolFromSpecialConf("use_cudnn")) {
+  if (!conf.use_cudnn()) {
     // col_buf
     BlobDesc* col_buf_blob_desc = GetBlobDesc4BnInOp("col_buf");
     col_buf_blob_desc->mut_shape() =
@@ -241,14 +241,11 @@ void ConvolutionOp::InferBlobDescs(
 #endif  // USE_CUDNN
 }
 
-void ConvolutionOp::GenKernelConf(
+void ConvolutionOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    bool is_forward, const ParallelContext* parallel_ctx,
-    KernelConf* kernel_conf) const {
-  Operator::GenKernelConf(GetBlobDesc4BnInOp, is_forward, parallel_ctx,
-                          kernel_conf);
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
 #ifdef USE_CUDNN
-  if (GetBoolFromSpecialConf("use_cudnn")) {
+  if (op_conf().convolution_conf().use_cudnn()) {
     std::unique_ptr<cudaStream_t> cuda_stream(new cudaStream_t);
     std::unique_ptr<cudnnHandle_t> cudnn_handle(new cudnnHandle_t);
 
