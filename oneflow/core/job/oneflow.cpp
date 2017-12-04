@@ -5,8 +5,8 @@
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/plan.pb.h"
-#include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/persistence/file_system.h"
 
 namespace oneflow {
@@ -18,31 +18,34 @@ class Oneflow final {
 
   OF_SINGLETON(Oneflow);
 
-  void Flow(const JobConf& job_conf, const std::string& this_machine_name);
-
  private:
-  Oneflow() = default;
+  Oneflow(const JobConf& job_conf, const std::string& this_mchn_name);
 
   std::unique_ptr<CtrlServer> ctrl_server_;
 };
 
-void Oneflow::Flow(const JobConf& job_conf,
-                   const std::string& this_machine_name) {
+Oneflow::Oneflow(const JobConf& job_conf, const std::string& this_mchn_name) {
+  // New All Singleton
   JobDesc::NewSingleton(job_conf);
   IDMgr::NewSingleton();
-  int64_t this_machine_id =
-      IDMgr::Singleton()->MachineID4MachineName(this_machine_name);
+  MachineCtx::NewSingleton(this_mchn_name);
+  const MachineCtx* machine_ctx = MachineCtx::Singleton();
+  ctrl_server_.reset(new CtrlServer(machine_ctx->GetThisCtrlAddr()));
   // Compile
   TodoPlan plan;
-  if (this_machine_id == 0) {
+  if (machine_ctx->IsThisMachineMaster()) {
     Compiler::NewSingleton();
     plan = Compiler::Singleton()->Compile();
     // CtrlClient::Singleton()->PushPlan(plan);
+    Compiler::DeleteSingleton();
   } else {
     // CtrlClient::Singleton()->PullPlan(plan.get());
   }
   std::string naive_plan_filepath = JoinPath(LogDir(), "naive_plan");
   PrintProtoToTextFile(plan, naive_plan_filepath);
+  // Delete All Singleton
+  ctrl_server_.reset();
+  MachineCtx::DeleteSingleton();
   IDMgr::DeleteSingleton();
   JobDesc::DeleteSingleton();
 }
@@ -60,8 +63,7 @@ int main(int argc, char** argv) {
   LOG(INFO) << "Oneflow Start";
   oneflow::JobConf job_conf;
   oneflow::ParseProtoFromTextFile(FLAGS_job_conf_filepath, &job_conf);
-  oneflow::Oneflow::NewSingleton();
-  oneflow::Oneflow::Singleton()->Flow(job_conf, FLAGS_this_machine_name);
+  oneflow::Oneflow::NewSingleton(job_conf, FLAGS_this_machine_name);
   oneflow::Oneflow::DeleteSingleton();
   LOG(INFO) << "Oneflow Stop";
   oneflow::CloseStdoutAndStderr();
