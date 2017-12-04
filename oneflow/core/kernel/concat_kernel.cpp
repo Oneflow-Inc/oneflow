@@ -4,20 +4,18 @@ namespace oneflow {
 
 namespace {
 
-// This function calculates the pointer postion when copying happens.
-// Consider an out_blob with shape (2,3,4,5,6) and the two corresponding in blob
-// are in_blob_1 with shape (2,3,1,5,6) and in_blob_2 with shape (2,3,3,5,6).
-// offset means where to place current copy content in concat axis.
-// cp_dim_bytesize indicates the byte size of last two dimensions, e.g. 5 * 6
-// = 30 elements.
-// concat_idx is a number enumerating over copying times. In this example, when
-// concat_idx = 5, start_addr is pointer related to out blob and offset = 1.
-// The result is the address of (1, 1, 1, 0, 0) in out blob.
-
+// Calculates the address of a given position in a shape's concat dim.
+// Consider a blob with shape (2,3,4,5,6) and concat axis is the 3rd dim. Taking
+// it as a multi-dim array, when we want to calculate the address of
+// blob[1][1][2][0][0]. parameters are setted as: concat_idx = 5,
+// concat_axis_dim = 4, concat_axis_offset = 2 and concat_elem_bytesize =
+// 30 * sizeof(data type in blob)
 char* NextConcatAddr(char* start_addr, int64_t concat_idx,
-                     int64_t concat_axis_dim, int64_t offset,
-                     int64_t cp_dim_bytesize) {
-  return start_addr + (concat_idx * concat_axis_dim + offset) * cp_dim_bytesize;
+                     int64_t concat_axis_dim, int64_t concat_axis_offset,
+                     int64_t concat_elem_bytesize) {
+  return start_addr
+         + (concat_idx * concat_axis_dim + concat_axis_offset)
+               * concat_elem_bytesize;
 }
 
 template<DeviceType device_type>
@@ -49,7 +47,7 @@ void ConcatKernel<device_type>::ConcatKernelWork(
   char* out_blob_mut_dptr = out_blob->mut_dptr<char>();
 
   cudaMemcpyKind kind = GetCudaMemcpyKind<device_type>::val;
-  int64_t offset_concat_axis = 0;
+  int64_t concat_axis_offset = 0;
   int64_t cp_dim_bytesize = 0;
   const PbRf<int64_t>& per_cp_bytesize =
       this->kernel_conf().concat_conf().per_cp_bytesize();
@@ -64,13 +62,13 @@ void ConcatKernel<device_type>::ConcatKernelWork(
     FOR_RANGE(int64_t, concat_idx, 0, total_cp_num) {
       char* out_cp_adr =
           NextConcatAddr(out_blob_mut_dptr, concat_idx, out_concat_axis_dim,
-                         offset_concat_axis, cp_dim_bytesize);
+                         concat_axis_offset, cp_dim_bytesize);
       char* in_cp_adr = NextConcatAddr(in_blob_mut_dptr, concat_idx,
                                        in_concat_axis_dim, 0, cp_dim_bytesize);
       Memcpy<device_type>(ctx.device_ctx, out_cp_adr, in_cp_adr, cp_bytesize,
                           kind);
     }
-    offset_concat_axis += in_concat_axis_dim;
+    concat_axis_offset += in_concat_axis_dim;
   }
 }
 
