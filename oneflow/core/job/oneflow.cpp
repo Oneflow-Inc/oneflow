@@ -36,13 +36,18 @@ Oneflow::Oneflow(const JobConf& job_conf, const std::string& this_mchn_name) {
   if (machine_ctx->IsThisMachineMaster()) {
     Compiler::NewSingleton();
     plan = Compiler::Singleton()->Compile();
-    // CtrlClient::Singleton()->PushPlan(plan);
+    CtrlClient::Singleton()->PushKV("naive_plan", plan.SerializeAsString());
     Compiler::DeleteSingleton();
   } else {
-    // CtrlClient::Singleton()->PullPlan(plan.get());
+    std::string plan_str = CtrlClient::Singleton()->PullKV("naive_plan");
+    CHECK(plan.ParseFromString(plan_str));
   }
   std::string naive_plan_filepath = JoinPath(LogDir(), "naive_plan");
   PrintProtoToTextFile(plan, naive_plan_filepath);
+  OF_BARRIER();
+  if (machine_ctx->IsThisMachineMaster()) {
+    CtrlClient::Singleton()->ClearKV("naive_plan");
+  }
   // Delete All Singleton
   ctrl_server_.reset();
   MachineCtx::DeleteSingleton();

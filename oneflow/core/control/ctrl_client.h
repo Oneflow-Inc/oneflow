@@ -20,13 +20,9 @@ class CtrlClient final {
   void NotifyDone(const std::string& name);
   void WaitUntilDone(const std::string& name);
 
-  void PushPlan(const Plan& plan);
-  void ClearPlan();
-  void PullPlan(Plan* plan);
-
-  void PushPort(uint16_t port);
-  void ClearPort();
-  uint16_t PullPort(uint64_t machine_id);
+  void PushKV(const std::string& k, const std::string& v);
+  void ClearKV(const std::string& k);
+  std::string PullKV(const std::string& k);
 
  private:
   CtrlClient();

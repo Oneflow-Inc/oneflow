@@ -30,6 +30,20 @@ int64_t GetMachineId(const sockaddr_in& sa) {
   UNEXPECTED_RUN();
 }
 
+std::string GenPortKey(int64_t machine_id) {
+  return "EpollPort/" + std::to_string(machine_id);
+}
+void PushPort(int64_t machine_id, uint16_t port) {
+  CtrlClient::Singleton()->PushKV(GenPortKey(machine_id), std::to_string(port));
+}
+void ClearPort(int64_t machine_id) {
+  CtrlClient::Singleton()->ClearKV(GenPortKey(machine_id));
+}
+uint16_t PullPort(int64_t machine_id) {
+  std::string v = CtrlClient::Singleton()->PullKV(GenPortKey(machine_id));
+  return oneflow_cast<uint16_t>(v);
+}
+
 }  // namespace
 
 EpollCommNet::~EpollCommNet() {
@@ -205,7 +219,7 @@ void EpollCommNet::InitSockets() {
              sizeof(this_sockaddr));
     if (bind_result == 0) {
       PCHECK(listen(listen_sockfd, total_machine_num) == 0);
-      CtrlClient::Singleton()->PushPort(this_listen_port);
+      PushPort(this_machine_id, this_listen_port);
       break;
     } else {
       PCHECK(errno == EACCES || errno == EADDRINUSE);
@@ -214,7 +228,7 @@ void EpollCommNet::InitSockets() {
   CHECK_LT(this_listen_port, listen_port_max);
   // connect
   FOR_RANGE(int64_t, peer_machine_id, this_machine_id + 1, total_machine_num) {
-    uint16_t peer_port = CtrlClient::Singleton()->PullPort(peer_machine_id);
+    uint16_t peer_port = PullPort(peer_machine_id);
     sockaddr_in peer_sockaddr = GetSockAddr(peer_machine_id, peer_port);
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     PCHECK(connect(sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr),
@@ -235,6 +249,7 @@ void EpollCommNet::InitSockets() {
     machine_id2sockfd_[peer_machine_id] = sockfd;
   }
   PCHECK(close(listen_sockfd) == 0);
+  ClearPort(this_machine_id);
   // useful log
   FOR_RANGE(int64_t, machine_id, 0, total_machine_num) {
     LOG(INFO) << "machine " << machine_id << " sockfd "
