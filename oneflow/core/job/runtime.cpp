@@ -75,7 +75,6 @@ void Runtime::Run(const Plan& plan, const std::string& this_machine_name) {
 
 void Runtime::NewAllSingleton(const Plan& plan,
                               const std::string& this_machine_name) {
-  JobDesc::NewSingleton(plan.job_desc());
   IDMgr::NewSingleton();
   RuntimeCtx::NewSingleton(this_machine_name);
   CtrlClient::NewSingleton();
@@ -97,7 +96,6 @@ void Runtime::DeleteAllSingleton() {
   CtrlClient::DeleteSingleton();
   RuntimeCtx::DeleteSingleton();
   IDMgr::DeleteSingleton();
-  JobDesc::DeleteSingleton();
 }
 void Runtime::HandoutTasks(const std::vector<const TaskProto*>& tasks) {
   for (const TaskProto* task : tasks) {

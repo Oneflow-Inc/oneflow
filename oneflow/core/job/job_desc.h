@@ -2,8 +2,10 @@
 #define ONEFLOW_CORE_JOB_JOB_DESC_H_
 
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/job/dlnet_conf.pb.h"
 #include "oneflow/core/job/job_conf.pb.h"
-#include "oneflow/core/job/job_desc.pb.h"
+#include "oneflow/core/job/placement.pb.h"
+#include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/persistence/file_system.h"
 
 namespace oneflow {
@@ -14,8 +16,6 @@ class JobDesc final {
   ~JobDesc() = default;
 
   OF_SINGLETON(JobDesc);
-
-  void ToProto(JobDescProto*) const;
 
   // Common
   const JobConf& job_conf() const { return job_conf_; }
@@ -47,7 +47,6 @@ class JobDesc final {
 
  private:
   JobDesc(const JobConf&);
-  JobDesc(const JobDescProto&);
 
   JobConf job_conf_;
   DLNetConf dlnet_conf_;
