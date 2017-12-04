@@ -17,16 +17,17 @@ class SnapshotMgr {
 
   Snapshot* GetWriteableSnapshot(int64_t snapshot_id);
 
-  const Snapshot* GetReadableSnapshot() { return readable_snapshot_ptr_.get(); }
+  const Snapshot* GetReadableSnapshot() { return readable_snapshot_.get(); }
 
-  size_t num_of_model_blobs() const { return num_of_model_blobs_; }
+  int64_t total_mbn_num() const { return total_mbn_num_; }
 
  private:
-  SnapshotMgr(const Plan& plan);
+  SnapshotMgr(const TodoPlan& plan);
+
   std::string model_save_snapshots_path_;
-  std::unique_ptr<const Snapshot> readable_snapshot_ptr_;
+  std::unique_ptr<const Snapshot> readable_snapshot_;
   HashMap<int64_t, std::unique_ptr<Snapshot>> snapshot_id2writeable_snapshot_;
-  size_t num_of_model_blobs_;
+  int64_t total_mbn_num_;
 };
 
 }  // namespace oneflow

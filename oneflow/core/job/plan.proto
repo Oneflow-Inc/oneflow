@@ -19,4 +19,5 @@ message Plan {
 
 message TodoPlan {
   repeated TaskProto task = 1;
+  required int64 total_mbn_num = 2;
 }
