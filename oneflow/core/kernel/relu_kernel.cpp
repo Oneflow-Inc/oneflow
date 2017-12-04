@@ -47,6 +47,6 @@ class ReluKernelUtil<DeviceType::kCPU, T> final {
 };
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReluConf, ReluKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+                           FLOATING_DATA_TYPE_SEQ SIGNED_INT_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

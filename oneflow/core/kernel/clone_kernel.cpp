@@ -67,6 +67,6 @@ OF_PP_FOR_EACH_TUPLE(DEFINE_NONFLOAT_CLONE_KERNEL_UTIL,
                      INT_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ)
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kCloneConf, CloneKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+                           ALL_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
