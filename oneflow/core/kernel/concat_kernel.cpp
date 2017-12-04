@@ -39,8 +39,7 @@ template<DeviceType device_type>
 void ConcatKernel<device_type>::ConcatKernelWork(
     const KernelCtx& ctx, const std::string& obn,
     const PbRpf<std::string>& ibns,
-    std::function<Blob*(const std::string&)> BnInOp2Blob,
-    MemCopyFuncType copy_func) const {
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (ibns.size() == 0) { return; }
 
   Blob* out_blob = BnInOp2Blob(obn);
@@ -68,7 +67,8 @@ void ConcatKernel<device_type>::ConcatKernelWork(
                          offset_concat_axis, cp_dim_bytesize);
       char* in_cp_adr = NextConcatAddr(in_blob_mut_dptr, concat_idx,
                                        in_concat_axis_dim, 0, cp_dim_bytesize);
-      copy_func(ctx, in_cp_adr, out_cp_adr, cp_bytesize, kind);
+      Memcpy<device_type>(ctx.device_ctx, out_cp_adr, in_cp_adr, cp_bytesize,
+                          kind);
     }
     offset_concat_axis += in_concat_axis_dim;
   }
@@ -78,12 +78,8 @@ template<DeviceType device_type>
 void ConcatKernel<device_type>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  auto copy_in2out = [](const KernelCtx& ctx, char* src, char* dst,
-                        const int64_t size, cudaMemcpyKind kind) {
-    Memcpy<device_type>(ctx.device_ctx, dst, src, size, kind);
-  };
   ConcatKernelWork(ctx, this->kernel_conf().output_bns(0),
-                   this->kernel_conf().input_bns(), BnInOp2Blob, copy_in2out);
+                   this->kernel_conf().input_bns(), BnInOp2Blob);
 }
 
 template<DeviceType device_type>
@@ -91,23 +87,16 @@ void ConcatKernel<device_type>::ForwardDataId(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* out_blob = BnInOp2Blob(this->kernel_conf().output_bns(0));
-  Blob* in_blob_0 = BnInOp2Blob(this->kernel_conf().input_bns(0));
-  Memcpy<device_type>(ctx.device_ctx, out_blob->mut_data_id(),
-                      in_blob_0->data_id(), in_blob_0->ByteSizeOfDataIdField(),
-                      GetCudaMemcpyKind<device_type>::val);
+  const Blob* in_blob_0 = BnInOp2Blob(this->kernel_conf().input_bns(0));
+  out_blob->CopyDataIdFrom<device_type>(ctx.device_ctx, in_blob_0);
 }
 
 template<DeviceType device_type>
 void ConcatKernel<device_type>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  auto copy_out2in = [](const KernelCtx& ctx, char* dst, char* src,
-                        const int64_t size, cudaMemcpyKind kind) {
-    Memcpy<device_type>(ctx.device_ctx, dst, src, size, kind);
-  };
   ConcatKernelWork(ctx, this->kernel_conf().output_diff_bns(0),
-                   this->kernel_conf().input_diff_bns(), BnInOp2Blob,
-                   copy_out2in);
+                   this->kernel_conf().input_diff_bns(), BnInOp2Blob);
 }
 
 namespace {
