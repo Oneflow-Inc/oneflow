@@ -18,24 +18,7 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
       model_diff_acc_blob->dptr<T>(), 1, model_blob->mut_dptr<T>(), 1);
 }
 
-namespace {
-
-Kernel* CreateNormalMdUpdateKernel(DeviceType device_type,
-                                   const KernelConf& kernel_conf) {
-  static const HashMap<std::string, std::function<Kernel*()>> creators = {
-#define MODEL_UPDATE_KERNEL_ENTRY(device_type, data_type_pair)            \
-  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {     \
-     return new NormalMdUpdateKernel<device_type,                         \
-                                     OF_PP_PAIR_FIRST(data_type_pair)>(); \
-   }},
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-          MODEL_UPDATE_KERNEL_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};
-  return creators.at(GetHashKey(device_type, kernel_conf.data_type()))();
-}
-
-}  // namespace
-
-COMMAND(AddKernelCreator(OperatorConf::kNormalMdupdtConf,
-                         CreateNormalMdUpdateKernel))
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kNormalMdupdtConf,
+                           NormalMdUpdateKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
