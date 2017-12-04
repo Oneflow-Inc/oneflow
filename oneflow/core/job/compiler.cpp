@@ -24,6 +24,7 @@ TodoPlan Compiler::DoCompile() {
     if (task_node->IsMeaningLess()) { return; }
     task_node->ToProto(plan.mutable_task()->Add());
   });
+  plan.set_total_mbn_num(LogicalGraph::Singleton()->total_mbn_num());
   return plan;
 }
 

@@ -81,7 +81,7 @@ void Runtime::NewAllSingleton(const Plan& plan,
 #ifdef PLATFORM_POSIX
   EpollCommNet::Init();
 #endif
-  SnapshotMgr::NewSingleton(plan);
+  // SnapshotMgr::NewSingleton(plan);
   RegstMgr::NewSingleton();
   ActorMsgBus::NewSingleton();
   ThreadMgr::NewSingleton();
