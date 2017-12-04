@@ -30,8 +30,6 @@ CtrlServer::CtrlServer(const std::string& server_addr) {
   grpc_server_ = server_builder.BuildAndStart();
   CHECK_EQ(port, bound_port) << "Port " << port << " is unavailable";
   LOG(INFO) << "CtrlServer listening on " << server_addr;
-  plan_ = nullptr;
-  port_ = -1;
   loop_thread_ = std::thread(&CtrlServer::HandleRpcs, this);
 }
 
@@ -140,62 +138,38 @@ void CtrlServer::WaitUntilDoneHandler(
   ENQUEUE_REQUEST(WaitUntilDone);
 }
 
-void CtrlServer::PushPlanHandler(
-    CtrlCall<PushPlanRequest, PushPlanResponse>* call) {
-  plan_.reset(new Plan(call->request().plan()));
-  for (auto pending_call : pending_plan_calls_) {
-    *(pending_call->mut_response()->mutable_plan()) = *plan_;
+void CtrlServer::PushKVHandler(CtrlCall<PushKVRequest, PushKVResponse>* call) {
+  const std::string& k = call->request().key();
+  const std::string& v = call->request().val();
+  CHECK(kv_.emplace(k, v).second);
+
+  for (auto pending_call : pending_kv_calls_[k]) {
+    pending_call->mut_response()->set_val(v);
     pending_call->SendResponse();
   }
   call->SendResponse();
-  ENQUEUE_REQUEST(PushPlan);
+  ENQUEUE_REQUEST(PushKV);
 }
 
-void CtrlServer::ClearPlanHandler(
-    CtrlCall<ClearPlanRequest, ClearPlanResponse>* call) {
-  plan_.reset();
+void CtrlServer::ClearKVHandler(
+    CtrlCall<ClearKVRequest, ClearKVResponse>* call) {
+  const std::string& k = call->request().key();
+  CHECK_EQ(kv_.erase(k), 1);
+  pending_kv_calls_.erase(k);
   call->SendResponse();
-  ENQUEUE_REQUEST(ClearPlan);
+  ENQUEUE_REQUEST(ClearKV);
 }
 
-void CtrlServer::PullPlanHandler(
-    CtrlCall<PullPlanRequest, PullPlanResponse>* call) {
-  if (plan_) {
-    *(call->mut_response()->mutable_plan()) = *plan_;
+void CtrlServer::PullKVHandler(CtrlCall<PullKVRequest, PullKVResponse>* call) {
+  const std::string& k = call->request().key();
+  auto kv_it = kv_.find(k);
+  if (kv_it != kv_.end()) {
+    call->mut_response()->set_val(kv_it->second);
     call->SendResponse();
   } else {
-    pending_plan_calls_.push_back(call);
+    pending_kv_calls_[k].push_back(call);
   }
-  ENQUEUE_REQUEST(PullPlan);
-}
-
-void CtrlServer::PushPortHandler(
-    CtrlCall<PushPortRequest, PushPortResponse>* call) {
-  port_ = call->request().port();
-  for (auto pending_call : pending_port_calls_) {
-    pending_call->mut_response()->set_port(port_);
-    pending_call->SendResponse();
-  }
-  call->SendResponse();
-  ENQUEUE_REQUEST(PushPort);
-}
-
-void CtrlServer::ClearPortHandler(
-    CtrlCall<ClearPortRequest, ClearPortResponse>* call) {
-  port_ = -1;
-  call->SendResponse();
-  ENQUEUE_REQUEST(ClearPort);
-}
-
-void CtrlServer::PullPortHandler(
-    CtrlCall<PullPortRequest, PullPortResponse>* call) {
-  if (port_ != -1) {
-    call->mut_response()->set_port(port_);
-    call->SendResponse();
-  } else {
-    pending_port_calls_.push_back(call);
-  }
-  ENQUEUE_REQUEST(PullPort);
+  ENQUEUE_REQUEST(PullKV);
 }
 
 }  // namespace oneflow

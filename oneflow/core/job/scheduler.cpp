@@ -44,13 +44,13 @@ void Scheduler::Process(const std::string& job_conf_filepath,
                 << "-plan_filepath=" << naive_plan_filepath;
     SystemCall(compile_cmd.str());
     ParseProtoFromTextFile(naive_plan_filepath, plan.get());
-    CtrlClient::Singleton()->PushPlan(*plan);
+    // CtrlClient::Singleton()->PushPlan(*plan);
   } else {
-    CtrlClient::Singleton()->PullPlan(plan.get());
+    // CtrlClient::Singleton()->PullPlan(plan.get());
   }
   OF_BARRIER();
   if (RuntimeCtx::Singleton()->IsThisMachineMaster()) {
-    CtrlClient::Singleton()->ClearPlan();
+    // CtrlClient::Singleton()->ClearPlan();
   } else {
     PrintProtoToTextFile(*plan, naive_plan_filepath);
   }
