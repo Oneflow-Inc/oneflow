@@ -3,7 +3,6 @@ package oneflow;
 
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/job/task.proto";
-import "oneflow/core/job/job_desc.proto";
 import "oneflow/core/job/resource.proto";
 import "oneflow/core/job/placement.proto";
 
@@ -14,12 +13,10 @@ message OpContext {
 
 message Plan {
   repeated TaskProto task = 1;
-  required JobDescProto job_desc = 4;
   map<string, OpContext> op_name2context = 5;
   map<int64, OpNameSet> machine_id2op_name_set = 6;
 }
 
 message TodoPlan {
   repeated TaskProto task = 1;
-  required JobDescProto job_desc = 2;
 }

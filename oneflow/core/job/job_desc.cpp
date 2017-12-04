@@ -12,21 +12,6 @@ JobDesc::JobDesc(const JobConf& conf) {
   ParseProtoFromTextFile(conf.placement_filepath(), &placement_);
 }
 
-JobDesc::JobDesc(const JobDescProto& proto) {
-  LOG(INFO) << "Init JobDesc from Proto";
-  job_conf_ = proto.job_conf();
-  dlnet_conf_ = proto.dlnet_conf();
-  resource_ = proto.resource();
-  placement_ = proto.placement();
-}
-
-void JobDesc::ToProto(JobDescProto* proto) const {
-  *(proto->mutable_job_conf()) = job_conf_;
-  *(proto->mutable_dlnet_conf()) = dlnet_conf_;
-  *(proto->mutable_resource()) = resource_;
-  *(proto->mutable_placement()) = placement_;
-}
-
 const std::string& JobDesc::MdLoadSnapshotPath() {
   return job_conf_.model_load_snapshot_path();
 }
