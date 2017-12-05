@@ -157,8 +157,9 @@ void BoxingKernel<T>::BoxingCopyForEqualAxis(const KernelCtx& ctx,
        src_idx != src_blobs.size() && dst_idx != dst_blobs.size();) {
     int64_t dst_offset = 0;
     while (dst_offset < out_info.size_of_subseg(dst_idx)) {
-      int64_t copy_size = std::min(in_info.size_of_subseg(src_idx) - src_offset,
-                           out_info.size_of_subseg(dst_idx) - dst_offset);
+      int64_t copy_size =
+          std::min(in_info.size_of_subseg(src_idx) - src_offset,
+                   out_info.size_of_subseg(dst_idx) - dst_offset);
       FOR_RANGE(size_t, i, 0, in_info.total_seg_num()) {
         BoxingCopy(
             ctx, false, src_blobs.at(src_idx), dst_blobs.at(dst_idx),
