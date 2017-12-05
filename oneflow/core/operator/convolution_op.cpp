@@ -79,6 +79,64 @@ void DestroyCudnnDescriptors(cudaStream_t* cuda_stream,
   CudaCheck(cudnnDestroy(*cudnn_handle));
 }
 
+void InferCudnnWorkspaceBlobDescs(
+    const ConvolutionOpConf& conv_conf,
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp) {
+  std::unique_ptr<cudaStream_t> cuda_stream(new cudaStream_t);
+  std::unique_ptr<cudnnHandle_t> cudnn_handle(new cudnnHandle_t);
+
+  std::unique_ptr<cudnnTensorDescriptor_t> in_desc(new cudnnTensorDescriptor_t);
+  std::unique_ptr<cudnnTensorDescriptor_t> out_desc(
+      new cudnnTensorDescriptor_t);
+  std::unique_ptr<cudnnFilterDescriptor_t> filter_desc(
+      new cudnnFilterDescriptor_t);
+  std::unique_ptr<cudnnConvolutionDescriptor_t> conv_desc(
+      new cudnnConvolutionDescriptor_t);
+
+  std::unique_ptr<cudnnConvolutionFwdAlgo_t> cudnn_fwd_algo(
+      new cudnnConvolutionFwdAlgo_t);
+  std::unique_ptr<cudnnConvolutionBwdFilterAlgo_t> cudnn_bwd_filter_algo(
+      new cudnnConvolutionBwdFilterAlgo_t);
+  std::unique_ptr<cudnnConvolutionBwdDataAlgo_t> cudnn_bwd_data_algo(
+      new cudnnConvolutionBwdDataAlgo_t);
+
+  GetCudnnConvAlgo(GetBlobDesc4BnInOp, conv_conf, cuda_stream.get(),
+                   cudnn_handle.get(), in_desc.get(), out_desc.get(),
+                   filter_desc.get(), conv_desc.get(), cudnn_fwd_algo.get(),
+                   cudnn_bwd_filter_algo.get(), cudnn_bwd_data_algo.get());
+
+  size_t cudnn_fwd_workspace_sizes = 0;
+  size_t cudnn_bwd_filter_workspace_sizes = 0;
+  size_t cudnn_bwd_data_workspace_sizes = 0;
+  size_t cudnn_workspace_sizes = 0;
+
+  // get workspace sizes of algorithm
+  CudaCheck(cudnnGetConvolutionForwardWorkspaceSize(
+      *cudnn_handle, *in_desc, *filter_desc, *conv_desc, *out_desc,
+      *cudnn_fwd_algo, &cudnn_fwd_workspace_sizes));
+  CudaCheck(cudnnGetConvolutionBackwardFilterWorkspaceSize(
+      *cudnn_handle, *in_desc, *out_desc, *conv_desc, *filter_desc,
+      *cudnn_bwd_filter_algo, &cudnn_bwd_filter_workspace_sizes));
+  CudaCheck(cudnnGetConvolutionBackwardDataWorkspaceSize(
+      *cudnn_handle, *filter_desc, *out_desc, *conv_desc, *in_desc,
+      *cudnn_bwd_data_algo, &cudnn_bwd_data_workspace_sizes));
+
+  cudnn_workspace_sizes = std::max(cudnn_bwd_filter_workspace_sizes,
+                                   cudnn_bwd_data_workspace_sizes);
+  cudnn_workspace_sizes =
+      std::max(cudnn_workspace_sizes, cudnn_fwd_workspace_sizes);
+
+  BlobDesc* cudnn_workspace_blob_desc = GetBlobDesc4BnInOp("cudnn_workspace");
+  cudnn_workspace_blob_desc->mut_shape() =
+      Shape({static_cast<int64_t>(cudnn_workspace_sizes)});
+  cudnn_workspace_blob_desc->set_data_type(
+      JobDesc::Singleton()->DefaultDataType());
+  cudnn_workspace_blob_desc->set_has_data_id(false);
+
+  DestroyCudnnDescriptors(cuda_stream.get(), cudnn_handle.get(), in_desc.get(),
+                          out_desc.get(), conv_desc.get(), filter_desc.get());
+}
+
 }  // namespace
 #endif  // USE_CUDNN
 
@@ -97,8 +155,7 @@ void ConvolutionOp::InitFromOpConf() {
   }
 
   if (op_conf().convolution_conf().use_cudnn()) {
-    EnrollDataTmpBn("cudnn_fwd_workspace");
-    EnrollDataTmpBn("cudnn_bwd_workspace");
+    EnrollDataTmpBn("cudnn_workspace");
   } else {
     EnrollDataTmpBn("col_buf");
   }
@@ -166,6 +223,12 @@ void ConvolutionOp::InferBlobDescs(
     }
   }
 
+#ifdef USE_CUDNN
+  if (conf.use_cudnn()) {
+    InferCudnnWorkspaceBlobDescs(conf, GetBlobDesc4BnInOp);
+  }
+#endif  // USE_CUDNN
+
   if (!conf.use_cudnn()) {
     // col_buf
     BlobDesc* col_buf_blob_desc = GetBlobDesc4BnInOp("col_buf");
@@ -174,71 +237,6 @@ void ConvolutionOp::InferBlobDescs(
     col_buf_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
     col_buf_blob_desc->set_has_data_id(false);
   }
-
-#ifdef USE_CUDNN
-  if (conf.use_cudnn()) {
-    std::unique_ptr<cudaStream_t> cuda_stream(new cudaStream_t);
-    std::unique_ptr<cudnnHandle_t> cudnn_handle(new cudnnHandle_t);
-
-    std::unique_ptr<cudnnTensorDescriptor_t> in_desc(
-        new cudnnTensorDescriptor_t);
-    std::unique_ptr<cudnnTensorDescriptor_t> out_desc(
-        new cudnnTensorDescriptor_t);
-    std::unique_ptr<cudnnFilterDescriptor_t> filter_desc(
-        new cudnnFilterDescriptor_t);
-    std::unique_ptr<cudnnConvolutionDescriptor_t> conv_desc(
-        new cudnnConvolutionDescriptor_t);
-
-    std::unique_ptr<cudnnConvolutionFwdAlgo_t> cudnn_fwd_algo(
-        new cudnnConvolutionFwdAlgo_t);
-    std::unique_ptr<cudnnConvolutionBwdFilterAlgo_t> cudnn_bwd_filter_algo(
-        new cudnnConvolutionBwdFilterAlgo_t);
-    std::unique_ptr<cudnnConvolutionBwdDataAlgo_t> cudnn_bwd_data_algo(
-        new cudnnConvolutionBwdDataAlgo_t);
-
-    GetCudnnConvAlgo(GetBlobDesc4BnInOp, op_conf().convolution_conf(),
-                     cuda_stream.get(), cudnn_handle.get(), in_desc.get(),
-                     out_desc.get(), filter_desc.get(), conv_desc.get(),
-                     cudnn_fwd_algo.get(), cudnn_bwd_filter_algo.get(),
-                     cudnn_bwd_data_algo.get());
-
-    size_t cudnn_fwd_workspace_sizes = 0;
-    size_t cudnn_bwd_filter_workspace_sizes = 0;
-    size_t cudnn_bwd_data_workspace_sizes = 0;
-
-    // get workspace sizes of algorithm
-    CudaCheck(cudnnGetConvolutionForwardWorkspaceSize(
-        *cudnn_handle, *in_desc, *filter_desc, *conv_desc, *out_desc,
-        *cudnn_fwd_algo, &cudnn_fwd_workspace_sizes));
-    CudaCheck(cudnnGetConvolutionBackwardFilterWorkspaceSize(
-        *cudnn_handle, *in_desc, *out_desc, *conv_desc, *filter_desc,
-        *cudnn_bwd_filter_algo, &cudnn_bwd_filter_workspace_sizes));
-    CudaCheck(cudnnGetConvolutionBackwardDataWorkspaceSize(
-        *cudnn_handle, *filter_desc, *out_desc, *conv_desc, *in_desc,
-        *cudnn_bwd_data_algo, &cudnn_bwd_data_workspace_sizes));
-
-    BlobDesc* cudnn_fwd_workspace_blob_desc =
-        GetBlobDesc4BnInOp("cudnn_fwd_workspace");
-    cudnn_fwd_workspace_blob_desc->mut_shape() =
-        Shape({static_cast<int64_t>(cudnn_fwd_workspace_sizes)});
-    cudnn_fwd_workspace_blob_desc->set_data_type(
-        JobDesc::Singleton()->DefaultDataType());
-    cudnn_fwd_workspace_blob_desc->set_has_data_id(false);
-
-    BlobDesc* cudnn_bwd_workspace_blob_desc =
-        GetBlobDesc4BnInOp("cudnn_bwd_workspace");
-    cudnn_bwd_workspace_blob_desc->mut_shape() =
-        Shape({static_cast<int64_t>(std::max(cudnn_bwd_filter_workspace_sizes,
-                                             cudnn_bwd_data_workspace_sizes))});
-    cudnn_bwd_workspace_blob_desc->set_data_type(
-        JobDesc::Singleton()->DefaultDataType());
-    cudnn_bwd_workspace_blob_desc->set_has_data_id(false);
-
-    DestroyCudnnDescriptors(cuda_stream.get(), cudnn_handle.get(),
-                            in_desc.get(), out_desc.get(), conv_desc.get(),
-                            filter_desc.get());
-  }
-#endif  // USE_CUDNN
 }
 
 void ConvolutionOp::VirtualGenKernelConf(
