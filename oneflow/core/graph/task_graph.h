@@ -16,6 +16,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   TaskGraph(std::unique_ptr<const ChainGraph>&& chain_gph);
 
+  const char* TypeName() const override { return "TaskGraph"; }
+
   void BldSubTskGphByBoxing(
       const ChainNode* src_chain, const ChainNode* dst_chain,
       const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
