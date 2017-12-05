@@ -14,7 +14,7 @@ void BoxingKernel<T>::GetSumFromSrcBlobsToDstBlob(
                            fst_src_blob->dptr(),
                            dst_blob->ByteSizeOfDataContentField(),
                            cudaMemcpyKind::cudaMemcpyHostToHost);
-  for (size_t i = 1; i != src_bns.size(); ++i) {
+  FOR_RANGE(size_t, i, 1, src_bns.size()) {
     Blob* src_blob_i = BnInOp2Blob("in_" + std::to_string(i));
     KernelUtil<DeviceType::kCPU, T>::BlasAxpy(
         ctx.device_ctx, dst_blob->shape().elem_cnt(), 1.0, src_blob_i->dptr(),
@@ -26,22 +26,22 @@ template<typename T>
 void BoxingKernel<T>::BoxingCopy(const KernelCtx& ctx, bool is_data_id,
                                  Blob* src_blob, Blob* dst_blob,
                                  const int64_t src_offset,
-                                 const int64_t dst_offset, size_t copy_size,
+                                 const int64_t dst_offset, size_t copy_bytesize,
                                  bool need_swap) const {
   if (is_data_id) {
     Memcpy<DeviceType::kCPU>(ctx.device_ctx,
                              dst_blob->mut_data_id() + dst_offset,
-                             src_blob->data_id() + src_offset, copy_size,
+                             src_blob->data_id() + src_offset, copy_bytesize,
                              cudaMemcpyKind::cudaMemcpyHostToHost);
   } else if (need_swap) {
     Memcpy<DeviceType::kCPU>(ctx.device_ctx,
                              src_blob->mut_dptr<char>() + src_offset,
-                             dst_blob->dptr<char>() + dst_offset, copy_size,
+                             dst_blob->dptr<char>() + dst_offset, copy_bytesize,
                              cudaMemcpyKind::cudaMemcpyHostToHost);
   } else {
     Memcpy<DeviceType::kCPU>(ctx.device_ctx,
                              dst_blob->mut_dptr<char>() + dst_offset,
-                             src_blob->dptr<char>() + src_offset, copy_size,
+                             src_blob->dptr<char>() + src_offset, copy_bytesize,
                              cudaMemcpyKind::cudaMemcpyHostToHost);
   }
 }
@@ -96,21 +96,21 @@ void BoxingKernel<T>::CopyDataId(const KernelCtx& ctx,
 }
 
 template<typename T>
-void BoxingKernel<T>::DoUnequalAxisCopy(
-    const KernelCtx& ctx, std::vector<Blob*>& src_blobs,
-    std::vector<Blob*>& dst_blobs, const int32_t src_axis,
-    const int32_t dst_axis, const BoxingInfo& src_info,
-    const BoxingInfo& dst_info, bool need_swap) const {
-  for (size_t src_idx = 0; src_idx != src_blobs.size(); ++src_idx) {
-    for (size_t seg_idx = 0; seg_idx != src_info.total_seg_num(); ++seg_idx) {
+void BoxingKernel<T>::DoUnequalAxisCopy(const KernelCtx& ctx,
+                                        std::vector<Blob*>& src_blobs,
+                                        std::vector<Blob*>& dst_blobs,
+                                        const BoxingInfo& src_info,
+                                        const BoxingInfo& dst_info,
+                                        bool need_swap) const {
+  FOR_RANGE(size_t, src_idx, 0, src_blobs.size()) {
+    FOR_RANGE(size_t, seg_idx, 0, src_info.total_seg_num()) {
       int64_t src_seg_offset = seg_idx * src_info.size_of_per_seg()
                                + src_info.offset_of_subseg(src_idx);
       int64_t dst_segs_in_src_seg =
           src_info.size_of_per_seg() / dst_info.size_of_per_seg();
-      for (size_t dst_seg_idx = 0; dst_seg_idx != dst_segs_in_src_seg;
-           ++dst_seg_idx) {
+      FOR_RANGE(size_t, dst_seg_idx, 0, dst_segs_in_src_seg) {
         int64_t dst_seg_offset = 0;
-        for (size_t dst_idx = 0; dst_idx != dst_blobs.size(); ++dst_idx) {
+        FOR_RANGE(size_t, dst_idx, 0, dst_blobs.size()) {
           int64_t dst_seg_start = src_seg_offset / dst_info.size_of_per_seg()
                                   * dst_info.size_of_subseg(dst_idx);
           BoxingCopy(
@@ -138,11 +138,9 @@ void BoxingKernel<T>::BoxingCopyForUnequalAxis(const KernelCtx& ctx,
   const BoxingInfo& in_info = kernel_conf.in_info();
   const BoxingInfo& out_info = kernel_conf.out_info();
   if (concat_axis > split_axis) {
-    DoUnequalAxisCopy(ctx, dst_blobs, src_blobs, split_axis, concat_axis,
-                      out_info, in_info, true);
+    DoUnequalAxisCopy(ctx, dst_blobs, src_blobs, out_info, in_info, true);
   } else {
-    DoUnequalAxisCopy(ctx, src_blobs, dst_blobs, concat_axis, split_axis,
-                      in_info, out_info, false);
+    DoUnequalAxisCopy(ctx, src_blobs, dst_blobs, in_info, out_info, false);
   }
 }
 
@@ -161,9 +159,9 @@ void BoxingKernel<T>::BoxingCopyForEqualAxis(const KernelCtx& ctx,
     while (dst_offset < out_info.size_of_subseg(dst_idx)) {
       int64_t p = std::min(in_info.size_of_subseg(src_idx) - src_offset,
                            out_info.size_of_subseg(dst_idx) - dst_offset);
-      for (size_t i = 0; i != in_info.total_seg_num(); ++i) {
+      FOR_RANGE(size_t, i, 0, in_info.total_seg_num()) {
         BoxingCopy(
-            ctx, true, src_blobs.at(src_idx), dst_blobs.at(dst_idx),
+            ctx, false, src_blobs.at(src_idx), dst_blobs.at(dst_idx),
             (src_offset + i * in_info.size_of_subseg(src_idx)) * sizeof(T),
             (dst_offset + i * out_info.size_of_subseg(dst_idx)) * sizeof(T),
             static_cast<size_t>(p * sizeof(T)), false);
@@ -189,12 +187,10 @@ void BoxingKernel<T>::CopyFromSrcBlobs2DstBlobs(
   std::vector<Blob*> dst_blobs;
   for (const std::string& bn : src_bns) {
     Blob* b = BnInOp2Blob(bn);
-    if (b == nullptr) { break; }
     src_blobs.emplace_back(b);
   }
   for (const std::string& bn : dst_bns) {
     Blob* b = BnInOp2Blob(bn);
-    if (b == nullptr) { break; }
     dst_blobs.emplace_back(b);
   }
   if (src_blobs.front()->has_data_id()) {
@@ -260,7 +256,7 @@ Kernel* CreateBoxingKernel(const KernelConf& kernel_conf) {
   {GetHashKey(OF_PP_PAIR_SECOND(data_type_pair)), \
    []() { return new BoxingKernel<OF_PP_PAIR_FIRST(data_type_pair)>(); }},
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(BOXING_KERNEL_ENTRY,
-                                       FLOATING_DATA_TYPE_SEQ)};
+                                       ARITHMETIC_DATA_TYPE_SEQ)};
   return creators.at(GetHashKey(JobDesc::Singleton()->DefaultDataType()))();
 }
 
