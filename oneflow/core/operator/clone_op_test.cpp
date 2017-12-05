@@ -1,4 +1,3 @@
-#define final
 #include "oneflow/core/operator/clone_op.h"
 #include "oneflow/core/job/mock_job_desc.h"
 
