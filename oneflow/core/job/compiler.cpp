@@ -2,6 +2,12 @@
 
 namespace oneflow {
 
+namespace {
+
+void ToDotFile(const Plan& plan, const std::string& filepath) {}
+
+}  // namespace
+
 Plan Compiler::Compile() {
   LogicalGraph::NewSingleton();
   Plan plan = DoCompile();
@@ -25,6 +31,7 @@ Plan Compiler::DoCompile() {
     task_node->ToProto(plan.mutable_task()->Add());
   });
   plan.set_total_mbn_num(LogicalGraph::Singleton()->total_mbn_num());
+  ToDotFile(plan, JoinPath(LogDir(), "/dot/plan.dot"));
   return plan;
 }
 
