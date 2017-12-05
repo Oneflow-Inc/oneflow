@@ -149,8 +149,6 @@ void BoxingKernel<T>::BoxingCopyForEqualAxis(const KernelCtx& ctx,
                                              std::vector<Blob*>& src_blobs,
                                              std::vector<Blob*>& dst_blobs,
                                              const int32_t axis) const {
-  // P.S This routine will be called only once, thus some performance
-  // loss seems ok.
   auto kernel_conf = this->kernel_conf().boxing_conf();
   const BoxingInfo& in_info = kernel_conf.in_info();
   const BoxingInfo& out_info = kernel_conf.out_info();
