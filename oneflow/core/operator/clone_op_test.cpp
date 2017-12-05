@@ -1,14 +1,17 @@
+#define final
 #include "oneflow/core/operator/clone_op.h"
+#include "oneflow/core/job/mock_job_desc.h"
 
 namespace oneflow {
 
 template<typename T, bool has_data_id>
 void TestCloneOp() {
+  MockJobDesc<T> mock_job_desc;
+  InitJobDescSingleton(mock_job_desc);
   OperatorConf op_conf;
   op_conf.set_name("clone_test");
   op_conf.mutable_clone_conf()->set_out_num(3);
   op_conf.mutable_clone_conf()->set_lbn("clone_lbn");
-  op_conf.mutable_clone_conf()->set_data_type(GetDataType<T>::val);
   auto clone_op = ConstructOp(op_conf);
   HashMap<std::string, BlobDesc*> bn2blobdesc_map;
   bn2blobdesc_map[clone_op->SoleIbn()] =
@@ -19,7 +22,7 @@ void TestCloneOp() {
   auto bn2blobdesc_func = [&](const std::string& bn) {
     return bn2blobdesc_map.at(bn);
   };
-  clone_op->InferBlobDescs(bn2blobdesc_func, kDataParallel, 3, 10);
+  clone_op->InferBlobDescs(bn2blobdesc_func, new ParallelContext);
   const BlobDesc* in_blob_desc = bn2blobdesc_map.at(clone_op->SoleIbn());
   for (const std::string& obn : clone_op->output_bns()) {
     const BlobDesc* out_blob_desc = bn2blobdesc_map.at(obn);
