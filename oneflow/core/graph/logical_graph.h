@@ -53,6 +53,7 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   const char* TypeName() const override { return "LogicalGraph"; }
   std::shared_ptr<const Operator> GetProducerOp(const std::string& lbn);
   void SetProducerOp(const std::string& lbn, std::weak_ptr<const Operator> op);
+  int64_t total_mbn_num() const { return total_mbn_num_; }
 
  private:
   LogicalGraph();
@@ -73,6 +74,7 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
                        const HashMap<LogicalEdge*, std::string>& edge2ibn);
 
   HashMap<std::string, std::weak_ptr<const Operator>> lbn2producer_;
+  int64_t total_mbn_num_;
 };
 
 }  // namespace oneflow

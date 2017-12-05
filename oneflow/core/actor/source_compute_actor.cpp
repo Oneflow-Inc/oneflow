@@ -33,16 +33,8 @@ void SourceCompActor::Act() {
 }
 
 bool SourceCompActor::IsReadReady() {
-  const JobDesc* job_desc = JobDesc::Singleton();
-  if (job_desc->IsTrain()) {
-    int64_t total_piece_num =
-        job_desc->NumOfPiecesInBatch() * job_desc->TotalBatchNum();
-    return next_piece_id_ < total_piece_num;
-  } else if (job_desc->IsPredict()) {
-    return is_eof_ == false;
-  } else {
-    UNEXPECTED_RUN();
-  }
+  return is_eof_ == false
+         && next_piece_id_ < RuntimeCtx::Singleton()->total_piece_num();
 }
 
 REGISTER_ACTOR(kSource, SourceCompActor);
