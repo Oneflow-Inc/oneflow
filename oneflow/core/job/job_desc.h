@@ -32,6 +32,9 @@ class JobDesc final {
   int32_t CommNetWorkerNum() const;
   bool IsTrain() const { return job_conf_.has_train_conf(); }
   bool IsPredict() const { return job_conf_.has_predict_conf(); }
+  int32_t SinglePieceSize() const { return job_conf_.single_piece_size(); }
+  int32_t ParallelPieceSize() const;
+  int64_t piece_num_of_adjust_phase() const;
 
   // Train conf
   const std::string& MdSaveSnapshotsPath() const;
@@ -41,8 +44,6 @@ class JobDesc final {
   int64_t TotalBatchNum() const;
   const FillConf* DefaultFillConf() const;
   int32_t PieceNumOfPrintLoss() const;
-  int32_t SinglePieceSize() const { return job_conf_.single_piece_size(); }
-  int32_t ParallelPieceSize() const;
   int32_t BatchSize() const;
 
  private:

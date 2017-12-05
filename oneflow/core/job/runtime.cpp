@@ -1,87 +1,89 @@
-#include <gflags/gflags.h>
+#include "oneflow/core/job/runtime.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/job/job_desc.h"
-#include "oneflow/core/job/runtime_context.h"
+#include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
 
-class Runtime final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(Runtime);
-  ~Runtime() = default;
+namespace {
 
-  OF_SINGLETON(Runtime);
+void SendCmdMsg(const std::vector<const TaskProto*>& tasks, ActorCmd cmd) {
+  for (const TaskProto* task : tasks) {
+    ActorMsg msg = ActorMsg::BuildCommandMsg(task->task_id(), cmd);
+    ActorMsgBus::Singleton()->SendMsg(msg);
+  }
+}
 
-  void Run(const Plan& plan, const std::string& this_machine_name);
+void HandoutTasks(const std::vector<const TaskProto*>& tasks) {
+  for (const TaskProto* task : tasks) {
+    ThreadMgr::Singleton()->GetThrd(task->thrd_id())->AddTask(*task);
+  }
+  SendCmdMsg(tasks, ActorCmd::kConstructActor);
+}
 
- private:
-  Runtime() = default;
-  void NewAllSingleton(const Plan& plan, const std::string& this_machine_name);
-  void DeleteAllSingleton();
-  void HandoutTasks(const std::vector<const TaskProto*>& tasks);
-  void SendCmdMsg(const std::vector<const TaskProto*>& tasks, ActorCmd cmd);
-};
+}  // namespace
 
-void Runtime::Run(const Plan& plan, const std::string& this_machine_name) {
-  NewAllSingleton(plan, this_machine_name);
-  // find tasks on this machine
+Runtime::Runtime(const Plan& plan, bool is_adjust_phase) {
+  NewAllSingleton(plan, is_adjust_phase);
   std::vector<const TaskProto*> mdupdt_tasks;
   std::vector<const TaskProto*> source_tasks;
   std::vector<const TaskProto*> other_tasks;
+  int64_t this_machine_task_num = 0;
   for (const TaskProto& task : plan.task()) {
-    if (task.machine_id() != RuntimeCtx::Singleton()->this_machine_id()) {
+    if (task.machine_id() != MachineCtx::Singleton()->this_machine_id()) {
       continue;
     }
-    if (task.task_type() == kMdUpdt) {
+    if (task.task_type() == TaskType::kMdUpdt) {
       mdupdt_tasks.push_back(&task);
-    } else if (task.consumed_regst_desc_id().empty()) {
+    } else if (task.task_type() == TaskType::kSource) {
       source_tasks.push_back(&task);
     } else {
       other_tasks.push_back(&task);
     }
+    this_machine_task_num += 1;
   }
-  size_t this_machine_task_num =
-      mdupdt_tasks.size() + source_tasks.size() + other_tasks.size();
-  LOG(INFO) << "number of mdupdt tasks is " << mdupdt_tasks.size();
-  LOG(INFO) << "number of source tasks is " << source_tasks.size();
-  LOG(INFO) << "number of other  tasks is " << other_tasks.size();
-  RuntimeCtx::Singleton()->mut_constructing_actor_cnt().Init(
-      "constructing_actor_cnt", this_machine_task_num);
-  RuntimeCtx::Singleton()->mut_model_init_cnt().Init("model_init_cnt",
-                                                     mdupdt_tasks.size());
+  RuntimeCtx* runtime_ctx = RuntimeCtx::Singleton();
+  runtime_ctx->NewCounter("constructing_actor_cnt", this_machine_task_num);
   HandoutTasks(mdupdt_tasks);
-  SendCmdMsg(mdupdt_tasks, ActorCmd::kInitModel);
-  RuntimeCtx::Singleton()->mut_model_init_cnt().WaitUntilCntEqualZero();
-  LOG(INFO) << "InitModel on this machine done";
-  OF_BARRIER();
-  LOG(INFO) << "InitModel on all machine done";
   HandoutTasks(source_tasks);
   HandoutTasks(other_tasks);
-  RuntimeCtx::Singleton()->mut_constructing_actor_cnt().WaitUntilCntEqualZero();
+  runtime_ctx->WaitUntilCntEqualZero("constructing_actor_cnt");
   LOG(INFO) << "All actor on this machine are constructed";
   OF_BARRIER();
   LOG(INFO) << "All actor on all machine are constructed";
   CommNet::Singleton()->RegisterMemoryDone();
-  RuntimeCtx::Singleton()->mut_running_actor_cnt().Init("running_actor_cnt",
-                                                        this_machine_task_num);
+  runtime_ctx->NewCounter("model_init_cnt", mdupdt_tasks.size());
+  SendCmdMsg(mdupdt_tasks, ActorCmd::kInitModel);
+  runtime_ctx->WaitUntilCntEqualZero("model_init_cnt");
+  LOG(INFO) << "InitModel on this machine done";
+  OF_BARRIER();
+  LOG(INFO) << "InitModel on all machine done";
+  runtime_ctx->NewCounter("running_actor_cnt", this_machine_task_num);
   SendCmdMsg(mdupdt_tasks, ActorCmd::kSendInitialModel);
   SendCmdMsg(source_tasks, ActorCmd::kStart);
-  RuntimeCtx::Singleton()->mut_running_actor_cnt().WaitUntilCntEqualZero();
+  runtime_ctx->WaitUntilCntEqualZero("running_actor_cnt");
   OF_BARRIER();
   DeleteAllSingleton();
 }
 
-void Runtime::NewAllSingleton(const Plan& plan,
-                              const std::string& this_machine_name) {
-  IDMgr::NewSingleton();
-  RuntimeCtx::NewSingleton(this_machine_name);
-  CtrlClient::NewSingleton();
+void Runtime::NewAllSingleton(const Plan& plan, bool is_adjust_phase) {
+  const JobDesc* job_desc = JobDesc::Singleton();
+  int64_t piece_num = 0;
+  if (is_adjust_phase) {
+    piece_num = job_desc->piece_num_of_adjust_phase();
+  } else {
+    if (job_desc->IsTrain()) {
+      piece_num = job_desc->NumOfPiecesInBatch() * job_desc->TotalBatchNum();
+    } else {
+      piece_num = std::numeric_limits<int64_t>::max();
+    }
+  }
+  RuntimeCtx::NewSingleton(piece_num, is_adjust_phase);
 #ifdef PLATFORM_POSIX
   EpollCommNet::Init();
 #endif
-  // SnapshotMgr::NewSingleton(plan);
+  SnapshotMgr::NewSingleton(plan);
   RegstMgr::NewSingleton();
   ActorMsgBus::NewSingleton();
   ThreadMgr::NewSingleton();
@@ -93,40 +95,7 @@ void Runtime::DeleteAllSingleton() {
   RegstMgr::DeleteSingleton();
   SnapshotMgr::DeleteSingleton();
   delete CommNet::Singleton();
-  CtrlClient::DeleteSingleton();
   RuntimeCtx::DeleteSingleton();
-  IDMgr::DeleteSingleton();
-}
-void Runtime::HandoutTasks(const std::vector<const TaskProto*>& tasks) {
-  for (const TaskProto* task : tasks) {
-    ThreadMgr::Singleton()->GetThrd(task->thrd_id())->AddTask(*task);
-  }
-  SendCmdMsg(tasks, ActorCmd::kConstructActor);
-}
-void Runtime::SendCmdMsg(const std::vector<const TaskProto*>& tasks,
-                         ActorCmd cmd) {
-  for (const TaskProto* task : tasks) {
-    ActorMsg msg = ActorMsg::BuildCommandMsg(task->task_id(), cmd);
-    ActorMsgBus::Singleton()->SendMsg(msg);
-  }
 }
 
 }  // namespace oneflow
-
-DEFINE_string(plan_filepath, "", "");
-DEFINE_string(this_machine_name, "", "");
-
-int main(int argc, char** argv) {
-  google::InitGoogleLogging(argv[0]);
-  google::ParseCommandLineFlags(&argc, &argv, true);
-  oneflow::RedirectStdoutAndStderrToGlogDir();
-  LOG(INFO) << "Runtime Start";
-  oneflow::Plan plan;
-  oneflow::ParseProtoFromTextFile(FLAGS_plan_filepath, &plan);
-  oneflow::Runtime::NewSingleton();
-  oneflow::Runtime::Singleton()->Run(plan, FLAGS_this_machine_name);
-  oneflow::Runtime::DeleteSingleton();
-  oneflow::CloseStdoutAndStderr();
-  LOG(INFO) << "Runtime Stop";
-  return 0;
-}

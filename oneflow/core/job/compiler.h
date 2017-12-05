@@ -15,12 +15,12 @@ class Compiler final {
 
   OF_SINGLETON(Compiler);
 
-  TodoPlan Compile();
+  Plan Compile();
 
  private:
   Compiler() = default;
 
-  TodoPlan DoCompile();
+  Plan DoCompile();
 };
 
 }  // namespace oneflow

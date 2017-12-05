@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_CONTROL_CTRL_CLIENT_H_
 
 #include "oneflow/core/actor/actor_message.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/control/ctrl_service.h"
 
 namespace oneflow {
@@ -20,9 +21,14 @@ class CtrlClient final {
   void NotifyDone(const std::string& name);
   void WaitUntilDone(const std::string& name);
 
+  void PushKV(const std::string& k, std::function<void(std::string*)> VSetter);
   void PushKV(const std::string& k, const std::string& v);
+  void PushKV(const std::string& k, const PbMessage& msg);
   void ClearKV(const std::string& k);
-  std::string PullKV(const std::string& k);
+  void PullKV(const std::string& k,
+              std::function<void(const std::string&)> VGetter);
+  void PullKV(const std::string& k, std::string* v);
+  void PullKV(const std::string& k, PbMessage* msg);
 
  private:
   CtrlClient();

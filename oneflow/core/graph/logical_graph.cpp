@@ -25,9 +25,7 @@ LogicalGraph::LogicalGraph() {
       const std::string& lbn = node->op()->Lbn4BnInOp(obn);
       CHECK(lbn2producer_.emplace(lbn, node->op()).second);
     }
-    for (const std::string& mbn : node->op()->model_bns()) {
-      total_mbn_num_ += 1;
-    }
+    total_mbn_num_ += node->op()->model_bns().size();
   });
   ToDotWithAutoFilePath();
 }

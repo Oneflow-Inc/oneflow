@@ -47,10 +47,12 @@ namespace oneflow {
   template<typename... Args>                                       \
   static void NewSingleton(Args&&... args) {                       \
     DeleteSingleton();                                             \
+    LOG(INFO) << "NewSingleton " << #ClassName;                    \
     *SingletonPPtr() = new ClassName(std::forward<Args>(args)...); \
   }                                                                \
   static void DeleteSingleton() {                                  \
     if (Singleton()) {                                             \
+      LOG(INFO) << "DeleteSingleton " << #ClassName;               \
       delete Singleton();                                          \
       *SingletonPPtr() = nullptr;                                  \
     }                                                              \
