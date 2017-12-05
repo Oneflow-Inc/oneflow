@@ -65,7 +65,7 @@ void BoxingKernel<T>::CopyDataId(const KernelCtx& ctx,
 
       BoxingCopy(ctx, true, src_blobs.at(src_idx), dst_blobs.at(dst_idx),
                  src_offset * data_id_size, dst_offset * data_id_size,
-                 q * data_id_size, false);
+                 static_cast<size_t>(q * data_id_size), false);
 
       src_offset += q;
       if (src_offset == src_cap) {
@@ -113,10 +113,12 @@ void BoxingKernel<T>::DoUnequalAxisCopy(
         for (size_t dst_idx = 0; dst_idx != dst_blobs.size(); ++dst_idx) {
           int64_t dst_seg_start = src_seg_offset / dst_info.size_of_per_seg()
                                   * dst_info.size_of_subseg(dst_idx);
-          BoxingCopy(ctx, src_blobs.at(src_idx), dst_blobs.at(dst_idx),
-                     src_seg_offset * sizeof(T),
-                     (dst_seg_start + dst_seg_offset) * sizeof(T),
-                     dst_info.size_of_subseg(dst_idx) * sizeof(T), need_swap);
+          BoxingCopy(
+              ctx, src_blobs.at(src_idx), dst_blobs.at(dst_idx),
+              src_seg_offset * sizeof(T),
+              (dst_seg_start + dst_seg_offset) * sizeof(T),
+              static_cast<size_t>(dst_info.size_of_subseg(dst_idx) * sizeof(T)),
+              need_swap);
           src_seg_offset += dst_info.size_of_subseg(dst_idx);
           dst_seg_offset += dst_info.size_of_subseg(dst_idx);
         }
@@ -164,7 +166,7 @@ void BoxingKernel<T>::BoxingCopyForEqualAxis(const KernelCtx& ctx,
             ctx, true, src_blobs.at(src_idx), dst_blobs.at(dst_idx),
             (src_offset + i * in_info.size_of_subseg(src_idx)) * sizeof(T),
             (dst_offset + i * out_info.size_of_subseg(dst_idx)) * sizeof(T),
-            p * sizeof(T), false);
+            static_cast<size_t>(p * sizeof(T)), false);
       }
       src_offset += p;
       dst_offset += p;
@@ -214,7 +216,7 @@ void BoxingKernel<T>::CopyFromFirstBlob2OtherBlobs(
   int64_t copy_size = BnInOp2Blob(obns.front())->shape().elem_cnt() * sizeof(T);
   FOR_RANGE(size_t, i, 1, obns.size()) {
     BoxingCopy(ctx, false, BnInOp2Blob(obns.front()), BnInOp2Blob(obns.at(i)),
-               0, 0, copy_size, false);
+               0, 0, static_cast<size_t>(copy_size), false);
   }
 }
 
