@@ -2,14 +2,14 @@
 
 namespace oneflow {
 
-TodoPlan Compiler::Compile() {
+Plan Compiler::Compile() {
   LogicalGraph::NewSingleton();
-  TodoPlan plan = DoCompile();
+  Plan plan = DoCompile();
   LogicalGraph::DeleteSingleton();
   return plan;
 }
 
-TodoPlan Compiler::DoCompile() {
+Plan Compiler::DoCompile() {
   auto chain_gph = of_make_unique<ChainGraph>(JobDesc::Singleton()->IsTrain());
   auto task_gph = of_make_unique<TaskGraph>(std::move(chain_gph));
   using std::placeholders::_1;
@@ -19,7 +19,7 @@ TodoPlan Compiler::DoCompile() {
                         std::bind(&TaskNode::IsReadyForBuild, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::EraseEmptyProducedRegst, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::InferMemCaseOfProducedRegst, _1));
-  TodoPlan plan;
+  Plan plan;
   task_gph->ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }
     task_node->ToProto(plan.mutable_task()->Add());

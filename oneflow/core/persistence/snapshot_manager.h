@@ -22,7 +22,7 @@ class SnapshotMgr {
   int64_t total_mbn_num() const { return total_mbn_num_; }
 
  private:
-  SnapshotMgr(const TodoPlan& plan);
+  SnapshotMgr(const Plan& plan);
 
   std::string model_save_snapshots_path_;
   std::unique_ptr<const Snapshot> readable_snapshot_;

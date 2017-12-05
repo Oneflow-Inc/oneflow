@@ -38,7 +38,7 @@ int MdUpdtCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
   }
   if (init_remaining_cnt_ == 0) {
     OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerSendInitialModel);
-    RuntimeCtx::Singleton()->mut_model_init_cnt().Decrease();
+    RuntimeCtx::Singleton()->DecreaseCounter("model_init_cnt");
   }
   return 0;
 }

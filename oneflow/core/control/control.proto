@@ -1,8 +1,6 @@
 syntax = "proto2";
 package oneflow;
 
-import "oneflow/core/job/plan.proto";
-
 message LoadServerRequest {
 }
 

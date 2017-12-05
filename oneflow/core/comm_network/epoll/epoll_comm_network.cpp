@@ -1,6 +1,6 @@
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/job/runtime_context.h"
+#include "oneflow/core/job/machine_context.h"
 
 #ifdef PLATFORM_POSIX
 
@@ -40,8 +40,11 @@ void ClearPort(int64_t machine_id) {
   CtrlClient::Singleton()->ClearKV(GenPortKey(machine_id));
 }
 uint16_t PullPort(int64_t machine_id) {
-  std::string v = CtrlClient::Singleton()->PullKV(GenPortKey(machine_id));
-  return oneflow_cast<uint16_t>(v);
+  uint16_t port = 0;
+  CtrlClient::Singleton()->PullKV(
+      GenPortKey(machine_id),
+      [&](const std::string& v) { port = oneflow_cast<uint16_t>(v); });
+  return port;
 }
 
 }  // namespace
@@ -109,7 +112,7 @@ void* EpollCommNet::Read(void* actor_read_id, int64_t src_machine_id,
   msg.msg_type = SocketMsgType::kRequestWrite;
   msg.request_write_msg.src_token = src_token;
   msg.request_write_msg.dst_machine_id =
-      RuntimeCtx::Singleton()->this_machine_id();
+      MachineCtx::Singleton()->this_machine_id();
   msg.request_write_msg.dst_token = dst_token;
   msg.request_write_msg.read_done_id =
       new std::tuple<ActorReadContext*, ReadContext*>(actor_read_ctx, read_ctx);
@@ -198,7 +201,7 @@ EpollCommNet::EpollCommNet() {
 }
 
 void EpollCommNet::InitSockets() {
-  int64_t this_machine_id = RuntimeCtx::Singleton()->this_machine_id();
+  int64_t this_machine_id = MachineCtx::Singleton()->this_machine_id();
   int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
   machine_id2sockfd_.assign(total_machine_num, -1);
   sockfd2helper_.clear();

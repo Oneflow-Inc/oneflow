@@ -40,13 +40,14 @@ message JobConf {
   required string dlnet_filepath = 1;
   required string resource_filepath = 2;
   required string placement_filepath = 3;
-  optional string model_load_snapshot_path = 4;
+  required GlobalFSConf global_fs_conf = 4;
   required int32 single_piece_size = 5;
   required int32 data_part_num = 6;
-  optional DataType default_data_type = 7 [default = kFloat]; // kFloat or kDouble
-  optional int32 max_data_id_length = 9;
-  required GlobalFSConf global_fs_conf = 10;
-  optional int32 comm_net_io_worker_num = 11 [default = 4];
+  optional string model_load_snapshot_path = 7 [default = ""];
+  optional int32 max_data_id_length = 8 [default = 0];
+  
+  optional DataType default_data_type = 100 [default = kFloat]; // kFloat or kDouble
+  optional int64 piece_num_of_adjust_phase = 101 [default = 100];
   oneof JobType {
     TrainConf train_conf = 1000;
     PredictConf predict_conf = 1001;

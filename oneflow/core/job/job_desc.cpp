@@ -5,7 +5,6 @@
 namespace oneflow {
 
 JobDesc::JobDesc(const JobConf& conf) {
-  LOG(INFO) << "Init JobDesc from JobConf";
   job_conf_ = conf;
   ParseProtoFromTextFile(conf.dlnet_filepath(), &dlnet_conf_);
   ParseProtoFromTextFile(conf.resource_filepath(), &resource_);
@@ -26,6 +25,12 @@ int32_t JobDesc::BoxingWorkerNum() const {
 }
 int32_t JobDesc::CommNetWorkerNum() const {
   return resource_.comm_net_worker_num();
+}
+int32_t JobDesc::ParallelPieceSize() const {
+  return job_conf_.data_part_num() * SinglePieceSize();
+}
+int64_t JobDesc::piece_num_of_adjust_phase() const {
+  return job_conf_.piece_num_of_adjust_phase();
 }
 
 const std::string& JobDesc::MdSaveSnapshotsPath() const {
@@ -55,9 +60,6 @@ const FillConf* JobDesc::DefaultFillConf() const {
 int32_t JobDesc::PieceNumOfPrintLoss() const {
   CHECK(IsTrain());
   return job_conf_.train_conf().piece_num_of_print_loss();
-}
-int32_t JobDesc::ParallelPieceSize() const {
-  return job_conf_.data_part_num() * SinglePieceSize();
 }
 int32_t JobDesc::BatchSize() const {
   return NumOfPiecesInBatch() * ParallelPieceSize();

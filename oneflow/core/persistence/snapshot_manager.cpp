@@ -4,7 +4,7 @@
 
 namespace oneflow {
 
-SnapshotMgr::SnapshotMgr(const TodoPlan& plan) {
+SnapshotMgr::SnapshotMgr(const Plan& plan) {
   if (JobDesc::Singleton()->IsTrain()) {
     model_save_snapshots_path_ = JobDesc::Singleton()->MdSaveSnapshotsPath();
     OF_CALL_ONCE(model_save_snapshots_path_,

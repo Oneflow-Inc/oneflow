@@ -1,5 +1,5 @@
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/job/runtime_context.h"
+#include "oneflow/core/job/machine_context.h"
 
 namespace oneflow {
 
@@ -54,13 +54,22 @@ void CtrlClient::WaitUntilDone(const std::string& name) {
   GetResponsibleStub(name)->WaitUntilDone(&client_ctx, request, &response);
 }
 
-void CtrlClient::PushKV(const std::string& k, const std::string& v) {
+void CtrlClient::PushKV(const std::string& k,
+                        std::function<void(std::string*)> VSetter) {
   grpc::ClientContext client_ctx;
   PushKVRequest request;
   request.set_key(k);
-  request.set_val(v);
+  VSetter(request.mutable_val());
   PushKVResponse response;
-  GetMasterStub()->PushKV(&client_ctx, request, &response);
+  GetResponsibleStub(k)->PushKV(&client_ctx, request, &response);
+}
+
+void CtrlClient::PushKV(const std::string& k, const std::string& v) {
+  PushKV(k, [&](std::string* o) { *o = v; });
+}
+
+void CtrlClient::PushKV(const std::string& k, const PbMessage& msg) {
+  PushKV(k, [&](std::string* o) { msg.SerializeToString(o); });
 }
 
 void CtrlClient::ClearKV(const std::string& k) {
@@ -68,22 +77,31 @@ void CtrlClient::ClearKV(const std::string& k) {
   ClearKVRequest request;
   request.set_key(k);
   ClearKVResponse response;
-  GetMasterStub()->ClearKV(&client_ctx, request, &response);
+  GetResponsibleStub(k)->ClearKV(&client_ctx, request, &response);
 }
 
-std::string CtrlClient::PullKV(const std::string& k) {
+void CtrlClient::PullKV(const std::string& k,
+                        std::function<void(const std::string&)> VGetter) {
   grpc::ClientContext client_ctx;
   PullKVRequest request;
   request.set_key(k);
   PullKVResponse response;
-  GetMasterStub()->PullKV(&client_ctx, request, &response);
-  return response.val();
+  GetResponsibleStub(k)->PullKV(&client_ctx, request, &response);
+  VGetter(response.val());
+}
+
+void CtrlClient::PullKV(const std::string& k, std::string* v) {
+  PullKV(k, [&](const std::string& i) { *v = i; });
+}
+
+void CtrlClient::PullKV(const std::string& k, PbMessage* msg) {
+  PullKV(k, [&](const std::string& i) { msg->ParseFromString(i); });
 }
 
 CtrlClient::CtrlClient() {
   stubs_.reserve(JobDesc::Singleton()->TotalMachineNum());
   for (int64_t i = 0; i < JobDesc::Singleton()->TotalMachineNum(); ++i) {
-    std::string addr = RuntimeCtx::Singleton()->GetCtrlAddr(i);
+    std::string addr = MachineCtx::Singleton()->GetCtrlAddr(i);
     stubs_.push_back(CtrlService::NewStub(addr));
     LoadServer(addr, stubs_[i].get());
   }
@@ -114,7 +132,7 @@ void CtrlClient::LoadServer(const std::string& server_addr,
 }
 
 CtrlService::Stub* CtrlClient::GetThisStub() {
-  return stubs_[RuntimeCtx::Singleton()->this_machine_id()].get();
+  return stubs_[MachineCtx::Singleton()->this_machine_id()].get();
 }
 
 CtrlService::Stub* CtrlClient::GetResponsibleStub(const std::string& key) {

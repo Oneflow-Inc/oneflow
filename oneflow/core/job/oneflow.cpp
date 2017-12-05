@@ -7,6 +7,7 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/plan.pb.h"
+#include "oneflow/core/job/runtime.h"
 #include "oneflow/core/persistence/file_system.h"
 
 namespace oneflow {
@@ -31,24 +32,26 @@ Oneflow::Oneflow(const JobConf& job_conf, const std::string& this_mchn_name) {
   MachineCtx::NewSingleton(this_mchn_name);
   const MachineCtx* machine_ctx = MachineCtx::Singleton();
   ctrl_server_.reset(new CtrlServer(machine_ctx->GetThisCtrlAddr()));
-  // Compile
-  TodoPlan plan;
+  CtrlClient::NewSingleton();
+  // Flow
+  Plan plan;
   if (machine_ctx->IsThisMachineMaster()) {
     Compiler::NewSingleton();
     plan = Compiler::Singleton()->Compile();
-    CtrlClient::Singleton()->PushKV("naive_plan", plan.SerializeAsString());
+    CtrlClient::Singleton()->PushKV("naive_plan", plan);
     Compiler::DeleteSingleton();
   } else {
-    std::string plan_str = CtrlClient::Singleton()->PullKV("naive_plan");
-    CHECK(plan.ParseFromString(plan_str));
+    CtrlClient::Singleton()->PullKV("naive_plan", &plan);
   }
-  std::string naive_plan_filepath = JoinPath(LogDir(), "naive_plan");
-  PrintProtoToTextFile(plan, naive_plan_filepath);
   OF_BARRIER();
   if (machine_ctx->IsThisMachineMaster()) {
     CtrlClient::Singleton()->ClearKV("naive_plan");
   }
+  PrintProtoToTextFile(plan, JoinPath(LogDir(), "naive_plan"));
+  Runtime::NewSingleton(plan, false);
+  Runtime::DeleteSingleton();
   // Delete All Singleton
+  CtrlClient::DeleteSingleton();
   ctrl_server_.reset();
   MachineCtx::DeleteSingleton();
   IDMgr::DeleteSingleton();
