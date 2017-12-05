@@ -19,11 +19,13 @@ LogicalGraph::LogicalGraph() {
   NaiveBuildGraphStruct(&edge2lbn, &edge2ibn);
   FillNodeWithParallelDesc();
   AddCloneNodes(edge2lbn, edge2ibn);
+  total_mbn_num_ = 0;
   ForEachNode([&](LogicalNode* node) {
     for (const std::string& obn : node->op()->output_bns()) {
       const std::string& lbn = node->op()->Lbn4BnInOp(obn);
       CHECK(lbn2producer_.emplace(lbn, node->op()).second);
     }
+    total_mbn_num_ += node->op()->model_bns().size();
   });
   ToDotWithAutoFilePath();
 }

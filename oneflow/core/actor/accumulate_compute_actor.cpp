@@ -53,7 +53,7 @@ void AccumulateCompActor::Act() {
     cpy_func_(kernel_ctx.device_ctx, out_blob->mut_dptr(), in_blob->dptr(),
               in_blob->ByteSizeOfDataContentField());
   } else {
-    AsyncLaunchKernel(kernel_ctx, [this](uint64_t regst_desc_id) -> Regst* {
+    AsyncLaunchKernel(kernel_ctx, [this](int64_t regst_desc_id) -> Regst* {
       Regst* regst = GetCurWriteableRegst(regst_desc_id);
       if (regst == nullptr) {
         CHECK_EQ(regst_desc_id, pending_in_regst_.front()->regst_desc_id());
