@@ -52,45 +52,45 @@ void BoxingKernel<T>::CopyDataId(const KernelCtx& ctx,
                                  std::vector<Blob*>& dst_blobs,
                                  const int32_t src_concat_axis,
                                  const int32_t dst_split_axis) const {
-  size_t data_id_size = JobDesc::Singleton()->SizeOfOneDataId();
+  size_t data_id_bytesize = JobDesc::Singleton()->SizeOfOneDataId();
   if (src_concat_axis == 0) {
     int64_t src_idx = 0;
     int64_t dst_idx = 0;
     int64_t src_offset = 0;
     int64_t dst_offset = 0;
     while (src_idx < src_blobs.size() && dst_idx < dst_blobs.size()) {
-      int64_t src_cap = src_blobs.at(src_idx)->shape().At(0);
-      int64_t dst_cap = dst_blobs.at(dst_idx)->shape().At(0);
-      int64_t q = std::min(src_cap - src_offset, dst_cap - dst_offset);
+      int64_t src_dim = src_blobs.at(src_idx)->shape().At(0);
+      int64_t dst_dim = dst_blobs.at(dst_idx)->shape().At(0);
+      int64_t copy_size = std::min(src_dim - src_offset, dst_dim - dst_offset);
 
       BoxingCopy(ctx, true, src_blobs.at(src_idx), dst_blobs.at(dst_idx),
-                 src_offset * data_id_size, dst_offset * data_id_size,
-                 static_cast<size_t>(q * data_id_size), false);
+                 src_offset * data_id_bytesize, dst_offset * data_id_bytesize,
+                 static_cast<size_t>(copy_size * data_id_bytesize), false);
 
-      src_offset += q;
-      if (src_offset == src_cap) {
+      src_offset += copy_size;
+      if (src_offset == src_dim) {
         src_offset = 0;
         ++src_idx;
       }
 
-      dst_offset += q;
-      if (dst_offset == dst_cap) {
+      dst_offset += copy_size;
+      if (dst_offset == dst_dim) {
         dst_offset = 0;
         ++dst_idx;
       }
     }
   } else if (src_concat_axis > 0) {
-    BoxingCopy(ctx, true, src_blobs.at(0), dst_blobs.at(0), 0, 0,
-               src_blobs.at(0)->ByteSizeOfDataIdField(), false);
+    BoxingCopy(ctx, true, src_blobs.front(), dst_blobs.front(), 0, 0,
+               src_blobs.front()->ByteSizeOfDataIdField(), false);
   } else {
     UNEXPECTED_RUN();
   }
 
   if (dst_split_axis > 0) {
     // add copy rules from first dst blob to all dst blobs
-    for (size_t i = 1; i < dst_blobs.size(); ++i) {
-      BoxingCopy(ctx, true, dst_blobs.at(0), dst_blobs.at(i), 0, 0,
-                 dst_blobs.at(0)->ByteSizeOfDataIdField(), false);
+    FOR_RANGE(size_t, i, 1, dst_blobs.size()) {
+      BoxingCopy(ctx, true, dst_blobs.front(), dst_blobs.at(i), 0, 0,
+                 dst_blobs.front()->ByteSizeOfDataIdField(), false);
     }
   }
 }
@@ -103,11 +103,11 @@ void BoxingKernel<T>::DoUnequalAxisCopy(const KernelCtx& ctx,
                                         const BoxingInfo& dst_info,
                                         bool need_swap) const {
   FOR_RANGE(size_t, src_idx, 0, src_blobs.size()) {
+    int64_t dst_segs_in_src_seg =
+        src_info.size_of_subseg(src_idx) / dst_info.size_of_per_seg();
     FOR_RANGE(size_t, seg_idx, 0, src_info.total_seg_num()) {
       int64_t src_seg_offset = seg_idx * src_info.size_of_per_seg()
                                + src_info.offset_of_subseg(src_idx);
-      int64_t dst_segs_in_src_seg =
-          src_info.size_of_per_seg() / dst_info.size_of_per_seg();
       FOR_RANGE(size_t, dst_seg_idx, 0, dst_segs_in_src_seg) {
         int64_t dst_seg_offset = 0;
         FOR_RANGE(size_t, dst_idx, 0, dst_blobs.size()) {
@@ -157,17 +157,17 @@ void BoxingKernel<T>::BoxingCopyForEqualAxis(const KernelCtx& ctx,
        src_idx != src_blobs.size() && dst_idx != dst_blobs.size();) {
     int64_t dst_offset = 0;
     while (dst_offset < out_info.size_of_subseg(dst_idx)) {
-      int64_t p = std::min(in_info.size_of_subseg(src_idx) - src_offset,
+      int64_t copy_size = std::min(in_info.size_of_subseg(src_idx) - src_offset,
                            out_info.size_of_subseg(dst_idx) - dst_offset);
       FOR_RANGE(size_t, i, 0, in_info.total_seg_num()) {
         BoxingCopy(
             ctx, false, src_blobs.at(src_idx), dst_blobs.at(dst_idx),
             (src_offset + i * in_info.size_of_subseg(src_idx)) * sizeof(T),
             (dst_offset + i * out_info.size_of_subseg(dst_idx)) * sizeof(T),
-            static_cast<size_t>(p * sizeof(T)), false);
+            static_cast<size_t>(copy_size * sizeof(T)), false);
       }
-      src_offset += p;
-      dst_offset += p;
+      src_offset += copy_size;
+      dst_offset += copy_size;
       if (src_offset == in_info.size_of_subseg(src_idx)) {
         if (++src_idx == src_blobs.size()) { break; }
         src_offset = 0;
