@@ -36,7 +36,7 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
     if (process_msg_ret == 1) {
       LOG(INFO) << "thread " << thrd_id_ << " deconstruct actor " << actor_id;
       id2actor_ptr_.erase(actor_it);
-      RuntimeCtx::Singleton()->mut_running_actor_cnt().Decrease();
+      RuntimeCtx::Singleton()->DecreaseCounter("running_actor_cnt");
     } else {
       CHECK_EQ(process_msg_ret, 0);
     }
@@ -50,7 +50,7 @@ void Thread::ConstructActor(int64_t actor_id, const ThreadCtx& thread_ctx) {
   CHECK(id2actor_ptr_.emplace(actor_id, NewActor(task_it->second, thread_ctx))
             .second);
   id2task_.erase(task_it);
-  RuntimeCtx::Singleton()->mut_constructing_actor_cnt().Decrease();
+  RuntimeCtx::Singleton()->DecreaseCounter("constructing_actor_cnt");
 }
 
 }  // namespace oneflow

@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_PERSISTENCE_HADOOP_HADOOP_FILE_SYSTEM_H_
 #define ONEFLOW_CORE_PERSISTENCE_HADOOP_HADOOP_FILE_SYSTEM_H_
 
+#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/persistence/hadoop/hdfs.h"

@@ -1,6 +1,6 @@
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/job/id_manager.h"
-#include "oneflow/core/job/runtime_context.h"
+#include "oneflow/core/job/machine_context.h"
 
 namespace oneflow {
 
@@ -15,7 +15,7 @@ ActorMsg ActorMsg::BuildRegstMsgToConsumer(int64_t producer, int64_t consumer,
   msg.msg_type_ = ActorMsgType::kRegstMsg;
   msg.regst_wrapper_.regst = regst_raw_ptr;
   if (IDMgr::Singleton()->MachineId4ActorId(consumer)
-      == RuntimeCtx::Singleton()->this_machine_id()) {
+      == MachineCtx::Singleton()->this_machine_id()) {
     msg.regst_wrapper_.comm_net_token = nullptr;
     msg.regst_wrapper_.piece_id = -1;
   } else {

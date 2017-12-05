@@ -19,10 +19,6 @@ using PbRpf = google::protobuf::RepeatedPtrField<T>;
 template<typename T1, typename T2>
 using PbMapPair = google::protobuf::MapPair<T1, T2>;
 
-// Prototxt <-> String
-void ParseProtoFromString(const std::string& str, PbMessage* proto);
-void PrintProtoToString(const PbMessage& proto, std::string* str);
-
 // Prototxt <-> File
 void ParseProtoFromTextFile(const std::string& file_path, PbMessage* proto);
 void PrintProtoToTextFile(const PbMessage& proto, const std::string& file_path);

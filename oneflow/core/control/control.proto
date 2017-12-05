@@ -1,8 +1,6 @@
 syntax = "proto2";
 package oneflow;
 
-import "oneflow/core/job/plan.proto";
-
 message LoadServerRequest {
 }
 
@@ -45,42 +43,26 @@ message WaitUntilDoneRequest {
 message WaitUntilDoneResponse {
 }
 
-message PushPlanRequest {
-  required Plan plan = 1;
+message PushKVRequest {
+  required string key = 1;
+  required string val = 2;
 }
 
-message PushPlanResponse {
+message PushKVResponse {
 }
 
-message ClearPlanRequest {
+message ClearKVRequest {
+  required string key = 1;
 }
 
-message ClearPlanResponse {
+message ClearKVResponse {
 }
 
-message PullPlanRequest {
+message PullKVRequest {
+  required string key = 1;
 }
 
-message PullPlanResponse {
-  required Plan plan = 1;
+message PullKVResponse {
+  required string val = 1;
 }
 
-message PushPortRequest {
-  required int32 port = 1;
-}
-
-message PushPortResponse {
-}
-
-message ClearPortRequest {
-}
-
-message ClearPortResponse {
-}
-
-message PullPortRequest {
-}
-
-message PullPortResponse {
-  required int32 port = 1;
-}
