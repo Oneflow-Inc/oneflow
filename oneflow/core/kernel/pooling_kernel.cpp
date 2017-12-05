@@ -243,6 +243,6 @@ class PoolingKernelUtil<DeviceType::kCPU, T> final {
 };
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kPoolingConf, PoolingKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+                           ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
