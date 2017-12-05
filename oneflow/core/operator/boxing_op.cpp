@@ -105,12 +105,13 @@ void BoxingOp::InferBlobDescs(
   }
 
   bool has_data_id = GetBlobDesc4BnInOp(input_bns().front())->has_data_id();
+  BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().front());
   CHECK_NE(conf.out_box_case(), BoxingOpConf::OUT_BOX_NOT_SET);
   if (conf.in_box_case() == BoxingOpConf::kAddBox
       && conf.out_box_case() == BoxingOpConf::kSplitBox) {
     BlobDesc* data_tmp_blob_desc = GetBlobDesc4BnInOp(SoleDtbn());
-    data_tmp_blob_desc->set_has_data_id(has_data_id);
-    data_tmp_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
+    data_tmp_blob_desc->set_has_data_id(false);
+    data_tmp_blob_desc->set_data_type(first_in_blob->data_type());
     data_tmp_blob_desc->mut_shape() = Shape(data_tmp_blob_shape_vec);
   }
 
@@ -123,7 +124,7 @@ void BoxingOp::InferBlobDescs(
     FOR_RANGE(size_t, i, 0, output_bns().size()) {
       BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(output_bns().at(i));
       out_blob_desc->set_has_data_id(has_data_id);
-      out_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
+      out_blob_desc->set_data_type(first_in_blob->data_type());
       output_shape_vec[split_conf.axis()] = split_conf.part_num(i);
       out_blob_desc->mut_shape() = Shape(output_shape_vec);
     }
@@ -131,7 +132,7 @@ void BoxingOp::InferBlobDescs(
     for (const std::string& obn : output_bns()) {
       BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(obn);
       out_blob_desc->set_has_data_id(has_data_id);
-      out_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
+      out_blob_desc->set_data_type(first_in_blob->data_type());
       out_blob_desc->mut_shape() = Shape(data_tmp_blob_shape_vec);
     }
   } else {
