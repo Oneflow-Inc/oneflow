@@ -281,9 +281,11 @@ void ConvolutionKernel<device_type, T>::InitModelTmpBlobs(
   }
 }
 
+#ifdef USE_CUDNN
 ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kConvolutionConf,
                                  convolution_conf, CudnnConvolutionKernel,
                                  FLOATING_DATA_TYPE_SEQ);
+#endif  // USE_CUDNN
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConvolutionConf, ConvolutionKernel,
                            FLOATING_DATA_TYPE_SEQ);
