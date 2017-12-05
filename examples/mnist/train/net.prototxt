@@ -18,7 +18,6 @@ op {
     out: "out"
     data_type: kInt32
     shape {
-      dim: 1
     }
     data_dir: "/mnist/label/"
   }

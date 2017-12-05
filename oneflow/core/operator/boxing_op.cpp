@@ -77,7 +77,7 @@ void BoxingOp::VirtualGenKernelConf(
 
 void BoxingOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) {
+    const ParallelContext* parallel_ctx) const {
   const BoxingOpConf& conf = op_conf().boxing_conf();
 
   std::vector<int64_t> data_tmp_blob_shape_vec =

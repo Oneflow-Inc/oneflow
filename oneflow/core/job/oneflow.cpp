@@ -68,12 +68,10 @@ int main(int argc, char** argv) {
   google::ParseCommandLineFlags(&argc, &argv, true);
   oneflow::LocalFS()->CreateDirIfNotExist(oneflow::LogDir());
   oneflow::RedirectStdoutAndStderrToGlogDir();
-  LOG(INFO) << "Oneflow Start";
   oneflow::JobConf job_conf;
   oneflow::ParseProtoFromTextFile(FLAGS_job_conf_filepath, &job_conf);
   oneflow::Oneflow::NewSingleton(job_conf, FLAGS_this_machine_name);
   oneflow::Oneflow::DeleteSingleton();
-  LOG(INFO) << "Oneflow Stop";
   oneflow::CloseStdoutAndStderr();
   return 0;
 }

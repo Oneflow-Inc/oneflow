@@ -47,6 +47,8 @@ void MdUpdtCompTaskNode::BuildExecGphAndRegst() {
   node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), nullptr);
 }
 
+void MdUpdtCompTaskNode::LockRegsts() { GetProducedRegst("data_tmp")->Lock(); }
+
 void MdUpdtCompTaskNode::ToProto(TaskProto* task_proto) {
   CompTaskNode::ToProto(task_proto);
   task_proto->set_random_seed(random_seed_);
