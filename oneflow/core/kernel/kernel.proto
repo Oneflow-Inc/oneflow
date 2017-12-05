@@ -3,7 +3,6 @@ package oneflow;
 
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/data_type.proto";
-import "oneflow/core/kernel/boxing_info.proto";
 
 message MultinomialLogisticLossKernelConf { 
   required DataType prediction_type = 1;
