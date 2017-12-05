@@ -7,7 +7,7 @@ namespace {
 // Calculates the address of a given position in a shape's concat dim.
 // Consider a blob with shape (2,3,4,5,6) and concat axis is the 3rd dim. Taking
 // it as a multi-dim array, when we want to calculate the address of
-// blob[1][1][2][0][0]. parameters are setted as: concat_idx = 5,
+// blob[1][1][2][0][0]. Parameters are setted as: concat_idx = 5,
 // concat_axis_dim = 4, concat_axis_offset = 2 and concat_elem_bytesize =
 // 30 * sizeof(data type in blob)
 char* NextConcatAddr(char* start_addr, int64_t concat_idx,
@@ -65,8 +65,13 @@ void ConcatKernel<device_type>::ConcatKernelWork(
                          concat_axis_offset, cp_dim_bytesize);
       char* in_cp_adr = NextConcatAddr(in_blob_mut_dptr, concat_idx,
                                        in_concat_axis_dim, 0, cp_dim_bytesize);
-      Memcpy<device_type>(ctx.device_ctx, out_cp_adr, in_cp_adr, cp_bytesize,
-                          kind);
+      if (this->kernel_conf().is_forward()) {
+        Memcpy<device_type>(ctx.device_ctx, out_cp_adr, in_cp_adr, cp_bytesize,
+                            kind);
+      } else {
+        Memcpy<device_type>(ctx.device_ctx, in_cp_adr, out_cp_adr, cp_bytesize,
+                            kind);
+      }
     }
     concat_axis_offset += in_concat_axis_dim;
   }
