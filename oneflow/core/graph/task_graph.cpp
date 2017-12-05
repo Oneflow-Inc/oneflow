@@ -23,7 +23,6 @@ TaskGraph::TaskGraph(std::unique_ptr<const ChainGraph>&& chain_gph) {
                     chain2sorted_comp_tasks.at(chain_edge->dst_node()),
                     &chain2sorted_in_box, &chain2sorted_out_box);
   });
-  // TODO: delete boxing with sole in and sole out
   ToDotWithAutoFilePath();
 }
 

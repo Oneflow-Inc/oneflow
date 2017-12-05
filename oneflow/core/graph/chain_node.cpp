@@ -38,9 +38,9 @@ BldBoxingOpConfMthd GetBldBoxingOpConfMethodByBwParallelPolicy(
   if (in_policy == kDataParallel && out_policy == kDataParallel) {
     return &BoxingTaskNode::BldBoxingOpConfWithDataConcatAndDataSplit;
   } else if (in_policy == kDataParallel && out_policy == kModelParallel) {
-    return &BoxingTaskNode::BldBoxingOpConfWithAddAndDataSplit;
-  } else if (in_policy == kModelParallel && out_policy == kDataParallel) {
     return &BoxingTaskNode::BldBoxingOpConfWithDataConcatAndModelSplit;
+  } else if (in_policy == kModelParallel && out_policy == kDataParallel) {
+    return &BoxingTaskNode::BldBoxingOpConfWithAddAndDataSplit;
   } else if (in_policy == kModelParallel && out_policy == kModelParallel) {
     return &BoxingTaskNode::BldBoxingOpConfWithAddAndModelSplit;
   } else {
