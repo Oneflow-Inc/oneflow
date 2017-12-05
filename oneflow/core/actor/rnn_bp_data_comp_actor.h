@@ -1,8 +1,8 @@
 #ifndef ONEFLOW_CORE_ACTOR_BP_DATA_COMP_ACTOR_H_
 #define ONEFLOW_CORE_ACTOR_BP_DATA_COMP_ACTOR_H_
 
-#include <stack>
 #include <list>
+#include <stack>
 #include "oneflow/core/actor/compute_actor.h"
 
 namespace oneflow {
@@ -30,7 +30,6 @@ class RnnBpDataCompActor final : public Actor {
 
   int64_t in_regst_desc_id_;
   HashMap<int64_t, std::stack<Regst*>> pid2in_regsts_;
-  PieceStatus expected_piece_status_;
 
   int64_t out_regst_desc_id_;
   HashMap<int64_t, std::list<Regst*>> pid2out_regsts_;
@@ -41,24 +40,24 @@ class RnnBpDataCompActor final : public Actor {
 
   int64_t out_diff_regst_desc_id_;
   // regst in deque is ascending by col_id
-  HashMap<int64_t, std::deque<Regst*>> pid2out_diff_regsts_; 
+  HashMap<int64_t, std::deque<Regst*>> pid2out_diff_regsts_;
   bool is_insert_to_back_;
 
   int64_t rec_acc_diff_regst_desc_id_;  // recurrent_accumulate_diff
   HashMap<int64_t, Regst*> pid2rec_acc_diff_regsts_;
 
   int64_t model_regst_desc_id_;
-  HashMap<int64_t, <Regst*,bool>> model_vid2model_regst_;
-  HashMap<int64_t, int64_t> model_vid2cnt_; 
+  HashMap<int64_t, Regst*> model_vid2model_regst_;
+  HashMap<int64_t, int64_t> model_vid2cnt_;
   // <model_version_id, no_more_new_piece>, default as false
   HashMap<int64_t, bool> model_vid2status_;
   int64_t expected_model_version_id_;
 
   struct Material4Act {
-    Material4Act() : regst_id2regst(), pre_out_regst(nullptr) {}
+    Material4Act() : readable_regsts_(), pre_out_regst(nullptr) {}
 
-    HashMap<int64_t, Regst*> readable_regst_;
-    Regst* pre_out_regst; // pre_out_regst & out_regst have same regst_desc_id
+    HashMap<int64_t, Regst*> readable_regsts_;
+    Regst* pre_out_regst;  // pre_out_regst & out_regst have same regst_desc_id
   };
   Material4Act matl4act_;
 };
