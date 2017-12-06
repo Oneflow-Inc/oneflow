@@ -41,18 +41,18 @@ class ReluKernelUtil<DeviceType::kGPU, T> final {
 #ifdef USE_CUDNN
 template<typename T>
 CudnnReluKernel<T>::CudnnReluKernel() {
-  CudaCheck(cudnnCreateTensorDescriptor(&in_desc_));
-  CudaCheck(cudnnCreateTensorDescriptor(&out_desc_));
-  CudaCheck(cudnnCreateActivationDescriptor(&activ_desc_));
-  CudaCheck(cudnnSetActivationDescriptor(activ_desc_, CUDNN_ACTIVATION_RELU,
-                                         CUDNN_PROPAGATE_NAN, 0.0));
+  CudaCheck(cudnnCreateTensorDescriptor(&this->in_desc_));
+  CudaCheck(cudnnCreateTensorDescriptor(&this->out_desc_));
+  CudaCheck(cudnnCreateActivationDescriptor(&this->activ_desc_));
+  CudaCheck(cudnnSetActivationDescriptor(
+      this->activ_desc_, CUDNN_ACTIVATION_RELU, CUDNN_PROPAGATE_NAN, 0.0));
 }
 
 template<typename T>
 CudnnReluKernel<T>::~CudnnReluKernel() {
-  CudaCheck(cudnnDestroyTensorDescriptor(in_desc_));
-  CudaCheck(cudnnDestroyTensorDescriptor(out_desc_));
-  CudaCheck(cudnnDestroyActivationDescriptor(activ_desc_));
+  CudaCheck(cudnnDestroyTensorDescriptor(this->in_desc_));
+  CudaCheck(cudnnDestroyTensorDescriptor(this->out_desc_));
+  CudaCheck(cudnnDestroyActivationDescriptor(this->activ_desc_));
 }
 
 template<typename T>
@@ -72,16 +72,16 @@ void CudnnReluKernel<T>::ForwardDataContent(
       out_blob->shape().NumAxes() < 4 ? 1 : out_blob->shape().At(3);
 
   CudaCheck(cudnnSetTensor4dDescriptor(
-      in_desc_, CUDNN_TENSOR_NCHW, CudnnDataType<T>::type,
+      this->in_desc_, CUDNN_TENSOR_NCHW, CudnnDataType<T>::type,
       in_blob->shape().At(0), in_blob->shape().At(1), in_height, in_width));
   CudaCheck(cudnnSetTensor4dDescriptor(
-      out_desc_, CUDNN_TENSOR_NCHW, CudnnDataType<T>::type,
+      this->out_desc_, CUDNN_TENSOR_NCHW, CudnnDataType<T>::type,
       out_blob->shape().At(0), out_blob->shape().At(1), out_height, out_width));
 
-  CudaCheck(cudnnActivationForward(ctx.device_ctx->cudnn_handle(), activ_desc_,
-                                   CudnnDataType<T>::one, in_desc_,
-                                   in_blob->dptr<T>(), CudnnDataType<T>::zero,
-                                   out_desc_, out_blob->mut_dptr<T>()));
+  CudaCheck(cudnnActivationForward(
+      ctx.device_ctx->cudnn_handle(), this->activ_desc_, CudnnDataType<T>::one,
+      this->in_desc_, in_blob->dptr<T>(), CudnnDataType<T>::zero,
+      this->out_desc_, out_blob->mut_dptr<T>()));
 }
 
 template<typename T>
@@ -97,10 +97,10 @@ void CudnnReluKernel<T>::BackwardDataContent(
                            in_diff_blob->ByteSizeOfDataContentField());
 
   CudaCheck(cudnnActivationBackward(
-      ctx.device_ctx->cudnn_handle(), activ_desc_, CudnnDataType<T>::one,
-      out_desc_, out_blob->dptr<T>(), out_desc_, out_diff_blob->dptr<T>(),
-      in_desc_, in_blob->dptr<T>(), CudnnDataType<T>::zero, in_desc_,
-      in_diff_blob->mut_dptr<T>()));
+      ctx.device_ctx->cudnn_handle(), this->activ_desc_, CudnnDataType<T>::one,
+      this->out_desc_, out_blob->dptr<T>(), this->out_desc_,
+      out_diff_blob->dptr<T>(), this->in_desc_, in_blob->dptr<T>(),
+      CudnnDataType<T>::zero, this->in_desc_, in_diff_blob->mut_dptr<T>()));
 }
 
 #define INSTANTIATE_RELU_KERNEL(type_cpp, type_proto) \

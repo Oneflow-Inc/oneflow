@@ -80,6 +80,7 @@ message PoolingOpConf {
   required int32 kernel_w = 7;
   optional int32 stride_h = 8 [default = 1];
   optional int32 stride_w = 9 [default = 1];
+  optional bool use_cudnn = 10 [default = true];
 }
 
 message ReluOpConf {

@@ -7,7 +7,7 @@ void PoolingOp::InitFromOpConf() {
 
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  EnrollDataTmpBn("idx");
+  if (!op_conf().pooling_conf().use_cudnn()) { EnrollDataTmpBn("idx"); }
 }
 
 const PbMessage& PoolingOp::GetSpecialConf() const {
@@ -37,11 +37,14 @@ void PoolingOp::InferBlobDescs(
              shape_w});
   out_blob_desc->set_data_type(in_blob_desc->data_type());
   out_blob_desc->set_has_data_id(in_blob_desc->has_data_id());
-  // idx
-  BlobDesc* idx_blob_desc = GetBlobDesc4BnInOp("idx");
-  idx_blob_desc->mut_shape() = out_blob_desc->shape();
-  idx_blob_desc->set_data_type(DataType::kUInt32);
-  idx_blob_desc->set_has_data_id(false);
+
+  if (!conf.use_cudnn()) {
+    // idx
+    BlobDesc* idx_blob_desc = GetBlobDesc4BnInOp("idx");
+    idx_blob_desc->mut_shape() = out_blob_desc->shape();
+    idx_blob_desc->set_data_type(DataType::kUInt32);
+    idx_blob_desc->set_has_data_id(false);
+  }
 }
 
 REGISTER_OP(OperatorConf::kPoolingConf, PoolingOp);
