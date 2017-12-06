@@ -92,6 +92,7 @@ message ReluOpConf {
 message SoftmaxOpConf {
   required string in = 1;
   required string out = 2;
+  optional bool use_cudnn = 3 [default = true];
 }
 
 message SoftmaxLossOpConf {

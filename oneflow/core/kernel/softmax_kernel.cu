@@ -78,6 +78,65 @@ class SoftmaxKernelUtil<DeviceType::kGPU, T> final {
   }
 };
 
+#ifdef USE_CUDNN
+template<typename T>
+CudnnSoftmaxKernel<T>::CudnnSoftmaxKernel() {
+  CudaCheck(cudnnCreateTensorDescriptor(&this->in_desc_));
+  CudaCheck(cudnnCreateTensorDescriptor(&this->out_desc_));
+}
+
+template<typename T>
+CudnnSoftmaxKernel<T>::~CudnnSoftmaxKernel() {
+  CudaCheck(cudnnDestroyTensorDescriptor(this->in_desc_));
+  CudaCheck(cudnnDestroyTensorDescriptor(this->out_desc_));
+}
+
+template<typename T>
+void CudnnSoftmaxKernel<T>::ForwardDataContent(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in_blob = BnInOp2Blob("in");
+  Blob* out_blob = BnInOp2Blob("out");
+
+  CudaCheck(cudnnSetTensor4dDescriptor(
+      this->in_desc_, CUDNN_TENSOR_NCHW, CudnnDataType<T>::type,
+      in_blob->shape().At(0), in_blob->shape().At(1), in_blob->shape().At(2),
+      in_blob->shape().At(3)));
+  CudaCheck(cudnnSetTensor4dDescriptor(
+      this->out_desc_, CUDNN_TENSOR_NCHW, CudnnDataType<T>::type,
+      out_blob->shape().At(0), out_blob->shape().At(1), out_blob->shape().At(2),
+      out_blob->shape().At(3)));
+
+  CudaCheck(cudnnSoftmaxForward(
+      ctx.device_ctx->cudnn_handle(), CUDNN_SOFTMAX_ACCURATE,
+      CUDNN_SOFTMAX_MODE_CHANNEL, CudnnDataType<T>::one, this->in_desc_,
+      in_blob->dptr<T>(), CudnnDataType<T>::zero, this->out_desc_,
+      out_blob->mut_dptr<T>()));
+}
+
+template<typename T>
+void CudnnSoftmaxKernel<T>::BackwardDataContent(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* out_blob = BnInOp2Blob("out");
+  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
+  Blob* in_diff_blob = BnInOp2Blob("in_diff");
+
+  Memset<DeviceType::kGPU>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
+                           in_diff_blob->ByteSizeOfDataContentField());
+
+  CudaCheck(cudnnSoftmaxBackward(
+      ctx.device_ctx->cudnn_handle(), CUDNN_SOFTMAX_ACCURATE,
+      CUDNN_SOFTMAX_MODE_CHANNEL, CudnnDataType<T>::one, this->out_desc_,
+      out_blob->dptr<T>(), this->out_desc_, out_diff_blob->dptr<T>(),
+      CudnnDataType<T>::zero, this->in_desc_, in_diff_blob->mut_dptr<T>()));
+}
+
+#define INSTANTIATE_SOFTMAX_KERNEL(type_cpp, type_proto) \
+  template class CudnnSoftmaxKernel<type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_SOFTMAX_KERNEL, FLOATING_DATA_TYPE_SEQ)
+#endif  // USE_CUDNN
+
 #define INSTANTIATE_SOFTMAX_KERNEL_UTIL(type_cpp, type_proto) \
   template class SoftmaxKernelUtil<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_SOFTMAX_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
