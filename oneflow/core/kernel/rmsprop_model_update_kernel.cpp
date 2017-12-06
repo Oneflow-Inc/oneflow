@@ -39,24 +39,7 @@ class RMSPropMdUpdateKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
-namespace {
-
-Kernel* CreateRMSPropMdUpdateKernel(DeviceType device_type,
-                                    const KernelConf& kernel_conf) {
-  static const HashMap<std::string, std::function<Kernel*()>> creators = {
-#define MODEL_UPDATE_KERNEL_ENTRY(device_type, data_type_pair)             \
-  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {      \
-     return new RMSPropMdUpdateKernel<device_type,                         \
-                                      OF_PP_PAIR_FIRST(data_type_pair)>(); \
-   }},
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-          MODEL_UPDATE_KERNEL_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};
-  return creators.at(GetHashKey(device_type, kernel_conf.data_type()))();
-}
-
-}  // namespace
-
-COMMAND(AddKernelCreator(OperatorConf::kRmspropMdupdtConf,
-                         CreateRMSPropMdUpdateKernel))
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kRmspropMdupdtConf,
+                           RMSPropMdUpdateKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

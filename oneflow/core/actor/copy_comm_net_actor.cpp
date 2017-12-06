@@ -1,5 +1,6 @@
 #include "oneflow/core/actor/copy_comm_net_actor.h"
 #include "oneflow/core/comm_network/comm_network.h"
+#include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/register/register.h"
 
 namespace oneflow {
@@ -43,7 +44,7 @@ int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
     return 1;
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    if (msg.SrcMachineId() == RuntimeCtx::Singleton()->this_machine_id()) {
+    if (msg.SrcMachineId() == MachineCtx::Singleton()->this_machine_id()) {
       CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
     } else {
       RegstCtx regst_ctx;

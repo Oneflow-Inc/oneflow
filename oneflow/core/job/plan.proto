@@ -1,25 +1,9 @@
 syntax = "proto2";
 package oneflow;
 
-import "oneflow/core/common/data_type.proto";
 import "oneflow/core/job/task.proto";
-import "oneflow/core/job/job_desc.proto";
-import "oneflow/core/job/resource.proto";
-import "oneflow/core/job/placement.proto";
-
-message OpContext {
-  required DeviceType device_type = 1;
-  map<string, DataType> bn_in_op2data_type = 2;
-}
 
 message Plan {
   repeated TaskProto task = 1;
-  required JobDescProto job_desc = 4;
-  map<string, OpContext> op_name2context = 5;
-  map<int64, OpNameSet> machine_id2op_name_set = 6;
-}
-
-message TodoPlan {
-  repeated TaskProto task = 1;
-  required JobDescProto job_desc = 2;
+  required int64 total_mbn_num = 2;
 }

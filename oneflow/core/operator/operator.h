@@ -85,7 +85,7 @@ class Operator {
   virtual void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const {
-    TODO();
+    LOG(FATAL) << "UNIMPLEMENTED: " << typeid(*this).name();
   }
 
   void FixParallelDesc(ParallelDesc* pr_desc) const;
