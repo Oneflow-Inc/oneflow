@@ -1,5 +1,7 @@
+// clang-format off
 #include "oneflow/core/job/mock_job_desc.h"
 #include "oneflow/core/operator/clone_op.h"
+// clang-format on
 
 namespace oneflow {
 
