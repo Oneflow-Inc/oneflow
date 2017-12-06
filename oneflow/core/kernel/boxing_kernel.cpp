@@ -53,7 +53,7 @@ void BoxingKernel<T>::CopyDataId(const KernelCtx& ctx,
                                  const int32_t src_concat_axis,
                                  const int32_t dst_split_axis) const {
   size_t data_id_bytesize = JobDesc::Singleton()->SizeOfOneDataId();
-  if (src_concat_axis == 0) {
+  if (src_concat_axis == 0 || dst_split_axis == 0) {
     int64_t src_idx = 0;
     int64_t dst_idx = 0;
     int64_t src_offset = 0;
@@ -238,12 +238,19 @@ void BoxingKernel<T>::Forward(
       UNEXPECTED_RUN();
     }
   } else if (boxing_conf.in_box_case() == BoxingOpConf::kAddBox) {
-    CHECK_EQ(boxing_conf.out_box_case(), BoxingOpConf::kSplitBox);
-    GetSumFromSrcBlobsToDstBlob(ctx, BnInOp2Blob, kernel_conf.input_bns(),
-                                {"middle"});
-    CopyFromSrcBlobs2DstBlobs(ctx, BnInOp2Blob, {"middle"},
-                              kernel_conf.output_bns(), 0,
-                              boxing_conf.split_box().axis());
+    if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
+      GetSumFromSrcBlobsToDstBlob(ctx, BnInOp2Blob, kernel_conf.input_bns(),
+                                  {"middle"});
+      CopyFromSrcBlobs2DstBlobs(ctx, BnInOp2Blob, {"middle"},
+                                kernel_conf.output_bns(), 0,
+                                boxing_conf.split_box().axis());
+    } else if (boxing_conf.in_box_case() == BoxingOpConf::kCloneBox) {
+      GetSumFromSrcBlobsToDstBlob(ctx, BnInOp2Blob, kernel_conf.input_bns(),
+                                  {output_bns.front()});
+      CopyFromFirstBlob2OtherBlobs(ctx, BnInOp2Blob, kernel_conf.output_bns());
+    } else {
+      UNEXPECTED_RUN();
+    }
   } else {
     UNEXPECTED_RUN();
   }
