@@ -50,10 +50,10 @@ template<typename T>
 void BoxingKernel<T>::CopyDataId(const KernelCtx& ctx,
                                  std::vector<Blob*>& src_blobs,
                                  std::vector<Blob*>& dst_blobs,
-                                 const int32_t src_concat_axis,
-                                 const int32_t dst_split_axis) const {
+                                 const int32_t src_axis,
+                                 const int32_t dst_axis) const {
   size_t data_id_bytesize = JobDesc::Singleton()->SizeOfOneDataId();
-  if (src_concat_axis == 0 || dst_split_axis == 0) {
+  if (src_axis == 0 || dst_axis == 0) {
     int64_t src_idx = 0;
     int64_t dst_idx = 0;
     int64_t src_offset = 0;
@@ -81,7 +81,7 @@ void BoxingKernel<T>::CopyDataId(const KernelCtx& ctx,
     }
   }
 
-  if (dst_split_axis > 0) {
+  if (dst_axis > 0) {
     // add copy rules from first dst blob to all dst blobs
     FOR_RANGE(size_t, i, 1, dst_blobs.size()) {
       BoxingCopy(ctx, true, dst_blobs.front(), dst_blobs.at(i), 0, 0,
@@ -120,12 +120,12 @@ template<typename T>
 void BoxingKernel<T>::BoxingCopyForUnequalAxis(const KernelCtx& ctx,
                                                std::vector<Blob*>& src_blobs,
                                                std::vector<Blob*>& dst_blobs,
-                                               const int32_t concat_axis,
-                                               const int32_t split_axis) const {
+                                               const int32_t src_axis,
+                                               const int32_t dst_axis) const {
   const BoxingKernelConf& kernel_conf = this->kernel_conf().boxing_conf();
   const BoxingInfo& in_info = kernel_conf.in_info();
   const BoxingInfo& out_info = kernel_conf.out_info();
-  if (concat_axis > split_axis) {
+  if (src_axis > dst_axis) {
     DoUnequalAxisCopy(ctx, dst_blobs, src_blobs, out_info, in_info, true);
   } else {
     DoUnequalAxisCopy(ctx, src_blobs, dst_blobs, in_info, out_info, false);
@@ -169,8 +169,8 @@ template<typename T>
 void BoxingKernel<T>::CopyFromSrcBlobs2DstBlobs(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     const std::vector<std::string>& src_bns,
-    const std::vector<std::string>& dst_bns, const int32_t src_concat_axis,
-    const int32_t dst_split_axis) const {
+    const std::vector<std::string>& dst_bns, const int32_t src_axis,
+    const int32_t dst_axis) const {
   std::vector<Blob*> src_blobs;
   std::vector<Blob*> dst_blobs;
   for (const std::string& bn : src_bns) {
@@ -180,14 +180,13 @@ void BoxingKernel<T>::CopyFromSrcBlobs2DstBlobs(
     dst_blobs.emplace_back(BnInOp2Blob(bn));
   }
   if (src_blobs.front()->has_data_id()) {
-    CopyDataId(ctx, src_blobs, dst_blobs, src_concat_axis, dst_split_axis);
+    CopyDataId(ctx, src_blobs, dst_blobs, src_axis, dst_axis);
   }
 
-  if (src_concat_axis == dst_split_axis) {
-    BoxingCopyForEqualAxis(ctx, src_blobs, dst_blobs, src_concat_axis);
+  if (src_axis == dst_axis) {
+    BoxingCopyForEqualAxis(ctx, src_blobs, dst_blobs, src_axis);
   } else {
-    BoxingCopyForUnequalAxis(ctx, src_blobs, dst_blobs, src_concat_axis,
-                             dst_split_axis);
+    BoxingCopyForUnequalAxis(ctx, src_blobs, dst_blobs, src_axis, dst_axis);
   }
 }
 
