@@ -79,7 +79,7 @@ void BoxingKernel<T>::CopyDataId(const KernelCtx& ctx,
         ++dst_idx;
       }
     }
-  } else if (src_concat_axis > 0) {
+  } else if (src_concat_axis > 0 && dst_split_axis > 0) {
     BoxingCopy(ctx, true, src_blobs.front(), dst_blobs.front(), 0, 0,
                src_blobs.front()->ByteSizeOfDataIdField(), false);
   } else {
