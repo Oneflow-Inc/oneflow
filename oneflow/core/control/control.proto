@@ -45,7 +45,7 @@ message WaitUntilDoneResponse {
 
 message PushKVRequest {
   required string key = 1;
-  required string val = 2;
+  required bytes val = 2;
 }
 
 message PushKVResponse {
@@ -63,6 +63,6 @@ message PullKVRequest {
 }
 
 message PullKVResponse {
-  required string val = 1;
+  required bytes val = 1;
 }
 
