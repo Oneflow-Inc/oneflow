@@ -65,7 +65,7 @@ DEFINE_string(this_machine_name, "", "");
 
 int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);
-  google::ParseCommandLineFlags(&argc, &argv, true);
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
   oneflow::LocalFS()->CreateDirIfNotExist(oneflow::LogDir());
   oneflow::RedirectStdoutAndStderrToGlogDir();
   oneflow::JobConf job_conf;
