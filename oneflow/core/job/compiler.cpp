@@ -4,14 +4,11 @@ namespace oneflow {
 
 namespace {
 
-std::map<TaskType, std::pair<std::string, std::string>> task_type2dot_type = {
-    {kInvalid, {"plaintext", ""}},   {kForward, {"house", ""}},
-    {kBackward, {"invhouse", ""}},   {kSource, {"folder", ""}},
-    {kLoss, {"ellipse", ""}},        {kLossAcc, {"ellipse", "filled"}},
-    {kLossPrint, {"signature", ""}}, {kMdUpdt, {"box", "rounded"}},
-    {kMdSave, {"folder", "filled"}}, {kMdDiffAcc, {"box", "rounded,filled"}},
-    {kCopyHd, {"note", ""}},         {kCopyCommNet, {"tab", ""}},
-    {kBoxing, {"box3d", ""}},        {kPrint, {"signature", ""}},
+std::map<TaskType, std::string> task_type2color = {
+    {kInvalid, "0"}, {kForward, "2"},   {kBackward, "3"},  {kSource, "1"},
+    {kLoss, "4"},    {kLossAcc, "5"},   {kLossPrint, "1"}, {kMdUpdt, "6"},
+    {kMdSave, "1"},  {kMdDiffAcc, "7"}, {kCopyHd, "8"},    {kCopyCommNet, "9"},
+    {kBoxing, "10"}, {kPrint, "1"},
 };
 
 void ToDotFile(const Plan& plan, const std::string& filepath) {
@@ -20,16 +17,13 @@ void ToDotFile(const Plan& plan, const std::string& filepath) {
   HashSet<int64_t> regst_desc_ids;
   for (const TaskProto& task_proto : plan.task()) {
     out_stream << "task" << std::to_string(task_proto.task_id()) << "[label=\""
-               << std::to_string(task_proto.task_id())
-               << "\\nthrd_id:" << std::to_string(task_proto.thrd_id())
-               << "\\nparallel_id:"
+               << std::to_string(task_proto.task_id()) << "\\n"
+               << std::to_string(task_proto.machine_id()) << ":"
+               << std::to_string(task_proto.thrd_id()) << ":"
                << std::to_string(task_proto.parallel_ctx().parallel_id())
-               << "\", shape="
-               << task_type2dot_type[task_proto.task_type()].first;
-    if (task_type2dot_type[task_proto.task_type()].second != "")
-      out_stream << ", style=\""
-                 << task_type2dot_type[task_proto.task_type()].second << "\"";
-    out_stream << "];\n";
+               << "\", shape=ellipse, style=\"rounded,filled\", "
+                  "colorscheme=set312, color="
+               << task_type2color.at(task_proto.task_type()) << "];\n";
     for (const auto& pair : task_proto.produced_regst_desc()) {
       regst_desc_ids.insert(pair.second.regst_desc_id());
     }
