@@ -14,10 +14,8 @@ void MdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
         || dst_node->GetTaskType() == TaskType::kBackward) {
       out_edge->AddRegst("model", model_regst);
       out_edge->AddRegst("model_tmp", model_tmp_regst);
-    } else if (dst_node->GetTaskType() == TaskType::kMdSave) {
-      out_edge->AddRegst("model", model_regst);
     } else {
-      UNEXPECTED_RUN();
+      out_edge->AddRegst("model", model_regst);
     }
   }
 }
