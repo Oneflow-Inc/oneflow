@@ -9,15 +9,15 @@ void BoxingKernel<T>::GetSumFromSrcBlobsToDstBlob(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     const std::vector<std::string>& src_bns, const std::string& dst_bn) const {
   Blob* dst_blob = BnInOp2Blob(dst_bn);
-  Blob* src_blob_0 = BnInOp2Blob(src_bns[0]);
+  const Blob* src_blob_0 = BnInOp2Blob(src_bns[0]);
   Memcpy<DeviceType::kCPU>(
       ctx.device_ctx, dst_blob->mut_memory_ptr(), src_blob_0->memory_ptr(),
       src_blob_0->TotalByteSize(), cudaMemcpyKind::cudaMemcpyHostToHost);
   FOR_RANGE(size_t, i, 1, src_bns.size()) {
     Blob* src_blob_i = BnInOp2Blob("in_" + std::to_string(i));
     KernelUtil<DeviceType::kCPU, T>::BlasAxpy(
-        ctx.device_ctx, dst_blob->shape().elem_cnt(), 1.0, src_blob_i->dptr(),
-        1, dst_blob->mut_dptr(), 1);
+        ctx.device_ctx, dst_blob->shape().elem_cnt(), 1.0, src_blob_i->dptr<T>(),
+        1, dst_blob->mut_dptr<T>(), 1);
   }
 }
 
@@ -192,7 +192,7 @@ template<typename T>
 void BoxingKernel<T>::CopyFromFirstBlob2OtherBlobs(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     const std::vector<std::string>& obns) const {
-  Blob* out_blob_0 = BnInOp2Blob(obns[0]);
+  const Blob* out_blob_0 = BnInOp2Blob(obns[0]);
   FOR_RANGE(size_t, i, 1, obns.size()) {
     Blob* dst_blob = BnInOp2Blob(obns[i]);
     Memcpy<DeviceType::kCPU>(
