@@ -13,13 +13,14 @@ void RnnBpDataCompActor::Init(const TaskProto& task_proto,
   out_diff_regst_desc_id_ = RegstDescId4Name("out_diff");
   rec_acc_diff_regst_desc_id_ = RegstDescId4Name("rec_acc_diff");
   model_regst_desc_id_ = RegstDescId4Name("model");
+  activation_regst_desc_id_ = RegstDescId4Name("activation");
 
   expected_initial_hidden_piece_id_ = 0;
   expected_model_version_id_ = 0;
   is_insert_to_back_ = true;
 
   // not consider rec_acc_diff, else will cause deadlock
-  set_num_of_remaining_eord(5);
+  set_num_of_remaining_eord(6);
   mut_num_of_read_empty() = 1;  // only consider in
 
   if (thread_ctx.cpu_stream) {
@@ -32,7 +33,8 @@ void RnnBpDataCompActor::Init(const TaskProto& task_proto,
   OF_SET_MSG_HANDLER(&RnnBpDataCompActor::HandlerNormal);
 }
 
-bool RnnBpDataCompActor::CheckModel_Out_OutDiff(Regst* cur_regst) const {
+bool RnnBpDataCompActor::CheckModel_Out_OutDiff_Activation(
+    Regst* cur_regst) const {
   const PieceStatus& cur_pst = cur_regst->piece_status();
   int64_t cur_pid = cur_pst.piece_id();
   int64_t cur_model_vid = cur_regst->model_version_id();
@@ -56,10 +58,18 @@ bool RnnBpDataCompActor::CheckModel_Out_OutDiff(Regst* cur_regst) const {
     CHECK(out_diff_it->second.back()->piece_status() == cur_pst);
   }
 
+  auto act_it = pid2activation_regsts_.find(cur_pid);
+  if (act_it == pid2activation_regsts_.end()) { return false; }
+  if (cur_pst.IsLastCol()) {
+    if (act_it->second.top()->piece_status() != cur_pst) { return false; }
+  } else {
+    CHECK(act_it->second.top()->piece_status() == cur_pst);
+  }
+
   return true;
 }
 
-void RnnBpDataCompActor::FillMatl4ActWithIn_Out_OutDiff_Model(
+void RnnBpDataCompActor::FillMatl4ActWithIn_Out_OutDiff_Model_Activation(
     Regst* cur_regst) {
   int64_t cur_pid = cur_regst->piece_status().piece_id();
   int64_t cur_model_vid = cur_regst->model_version_id();
@@ -71,11 +81,14 @@ void RnnBpDataCompActor::FillMatl4ActWithIn_Out_OutDiff_Model(
                                      pid2out_diff_regsts_.at(cur_pid).back());
   matl4act_.readable_regsts_.emplace(model_regst_desc_id_,
                                      model_vid2model_regst_.at(cur_model_vid));
+  matl4act_.readable_regsts_.emplace(activation_regst_desc_id_,
+                                     pid2activation_regsts_.at(cur_pid).top());
 }
 
 bool RnnBpDataCompActor::IsReadReady() {
   if (pid2in_regsts_.empty() || pid2out_regsts_.empty()
-      || pid2out_diff_regsts_.empty() || model_vid2model_regst_.empty()) {
+      || pid2out_diff_regsts_.empty() || model_vid2model_regst_.empty()
+      || pid2activation_regsts_.empty()) {
     return false;
   }
 
@@ -84,7 +97,7 @@ bool RnnBpDataCompActor::IsReadReady() {
     const PieceStatus& cur_pst = cur_regst->piece_status();
     int64_t cur_pid = cur_pst.piece_id();
 
-    if (!CheckModel_Out_OutDiff(cur_regst)) { continue; }
+    if (!CheckModel_Out_OutDiff_Activation(cur_regst)) { continue; }
 
     matl4act_.readable_regsts_.clear();
     if (cur_pst.col_id() == 0) {
@@ -109,7 +122,7 @@ bool RnnBpDataCompActor::IsReadReady() {
     } else {
       CHECK_EQ(kv.second.size(), pid2out_regsts_.at(cur_pid).size());
     }
-    FillMatl4ActWithIn_Out_OutDiff_Model(cur_regst);
+    FillMatl4ActWithIn_Out_OutDiff_Model_Activation(cur_regst);
     return true;
   }
   return false;
@@ -199,6 +212,8 @@ int RnnBpDataCompActor::HandlerNormal(const ActorMsg& msg) {
           model_vid2status_.emplace(model_vid, false);
         }
         expected_model_version_id_ += 1;
+      } else if (regst_desc_id == activation_regst_desc_id_) {
+        pid2activation_regsts_[cur_pid].push(regst);  // insert or push
       } else {
         UNEXPECTED_RUN();
       }
@@ -225,7 +240,10 @@ int RnnBpDataCompActor::HandlerWaitUntilNoReadableRegst(const ActorMsg& msg) {
 
 void RnnBpDataCompActor::Act() {
   AsyncLaunchKernel(GenDefaultKernelCtx(),
-                    [this](int64_t regst_desc_id) -> Regst* { TODO(); });
+                    [this](int64_t regst_desc_id) -> Regst* {
+                      TODO();
+                      return nullptr;
+                    });
 
   const PieceStatus& pst =
       matl4act_.readable_regsts_.at(in_regst_desc_id_)->piece_status();
@@ -281,6 +299,12 @@ void RnnBpDataCompActor::Act() {
       } else if (kv.first == rec_acc_diff_regst_desc_id_) {
         CHECK(!cur_pst.IsLastCol());
         pid2rec_acc_diff_regsts_.erase(cur_pid);
+      } else if (kv.first == activation_regst_desc_id_) {
+        pid2activation_regsts_.at(cur_pid).pop();
+        if (cur_col_id == 0) {
+          CHECK(pid2activation_regsts_.at(cur_pid).empty());
+          pid2activation_regsts_.erase(cur_pid);
+        }
       } else {
         UNEXPECTED_RUN();
       }
