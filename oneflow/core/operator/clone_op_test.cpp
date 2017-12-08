@@ -7,7 +7,7 @@ namespace oneflow {
 
 template<typename T, bool has_data_id>
 void TestCloneOp() {
-  MockJobDesc<T> mock_job_desc;
+  MockJobDesc mock_job_desc;
   InitJobDescSingleton(mock_job_desc, 8, GetDataType<T>::val);
   OperatorConf op_conf;
   op_conf.set_name("clone_test");

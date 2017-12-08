@@ -1,6 +1,6 @@
 #ifndef final
 #define final
-#endif 
+#endif
 
 #include <gmock/gmock.h>
 #include "oneflow/core/common/data_type.h"
@@ -15,9 +15,7 @@ class MockJobDesc : public JobDesc {
   MOCK_METHOD0(DefaultDataType, DataType());
 };
 
-template<typename T>
-void InitJobDescSingleton(MockJobDesc<T>& mock_job_desc,
-                          size_t size_of_one_dataid,
+void InitJobDescSingleton(MockJobDesc& mock_job_desc, size_t size_of_one_dataid,
                           DataType data_type) {
   EXPECT_CALL(mock_job_desc, SizeOfOneDataId())
       .WillRepeatedly(testing::Return(size_of_one_dataid));
