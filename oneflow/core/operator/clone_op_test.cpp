@@ -1,6 +1,7 @@
-#include "oneflow/core/operator/clone_op.h"
 #include "oneflow/core/common/test_util.h"
 #include "oneflow/core/job/mock_job_desc.h"
+#include "oneflow/core/operator/clone_op.h"
+#include "oneflow/core/operator/op_test_util.h"
 
 namespace oneflow {
 
@@ -10,11 +11,13 @@ void TestCloneOp() {
   InitJobDescSingleton(mock_job_desc, 8, GetDataType<T>::val);
 
   int out_num = 3;
-  std::vector<std::vector>> in_shapes = {{3, 4}};
+  std::vector<std::vector<int>> in_shapes = {{3, 4}};
+  std::vector<std::string> ibns = {"in_0"};
+  std::vector<std::string> obns = {"out_0", "out_1", "out_2"};
 
-  auto clone_op = CreateCloneOp();
+  auto clone_op = CreateCloneOp(out_num);
   HashMap<std::string, BlobDesc*> bn2blobdesc_map;
-  GenBn2BlobDescMap(bn2blobdesc_map, input_bns(), output_bns(), in_shapes);
+  GenBn2BlobDescMap<T, has_data_id>(bn2blobdesc_map, ibns, obns, in_shapes);
   auto bn2blobdesc_func = [&](const std::string& bn) {
     return bn2blobdesc_map.at(bn);
   };
