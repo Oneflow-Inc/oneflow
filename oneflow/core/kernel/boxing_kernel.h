@@ -21,10 +21,6 @@ class BoxingKernel final : public KernelIf<DeviceType::kCPU> {
                                    std::function<Blob*(const std::string&)>,
                                    const std::vector<std::string>& src_bns,
                                    const std::string& dst_bn) const;
-  void BoxingCopy(const KernelCtx& ctx, bool is_data_id, Blob* src_blob,
-                  Blob* dst_blob, const int64_t src_offset,
-                  const int64_t dst_offset, size_t copy_bytesize,
-                  bool need_swap) const;
   void CopyDataId(const KernelCtx& ctx, std::vector<Blob*>& src_blobs,
                   std::vector<Blob*>& dst_blobs, const int32_t src_concat_axis,
                   const int32_t dst_split_axis) const;
@@ -49,8 +45,7 @@ class BoxingKernel final : public KernelIf<DeviceType::kCPU> {
                                  const int32_t dst_split_axis) const;
   void CopyFromFirstBlob2OtherBlobs(const KernelCtx& ctx,
                                     std::function<Blob*(const std::string&)>,
-                                    const std::vector<std::string>& obns,
-                                    bool is_data_flow) const;
+                                    const std::vector<std::string>& obns) const;
 };
 
 }  // namespace oneflow
