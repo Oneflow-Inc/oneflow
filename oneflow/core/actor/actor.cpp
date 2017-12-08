@@ -235,7 +235,9 @@ void AddActorCreator(TaskType task_type, std::function<Actor*()> creator) {
 
 std::unique_ptr<Actor> NewActor(const TaskProto& task_proto,
                                 const ThreadCtx& thread_ctx) {
-  Actor* rptr = ActorCreatorMap().at(task_proto.task_type())();
+  auto it = ActorCreatorMap().find(task_proto.task_type());
+  CHECK(it != ActorCreatorMap().end()) << TaskType_Name(task_proto.task_type());
+  Actor* rptr = it->second();
   rptr->Init(task_proto, thread_ctx);
   return std::unique_ptr<Actor>(rptr);
 }

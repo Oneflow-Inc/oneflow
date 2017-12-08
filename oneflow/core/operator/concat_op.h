@@ -23,6 +23,10 @@ class ConcatOp final : public Operator {
   std::string ibn2lbn(const std::string& input_bn) const override {
     return ibn2lbn_.at(input_bn);
   }
+  void VirtualGenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx,
+      KernelConf* kernel_conf) const override;
 
   HashMap<std::string, std::string> ibn2lbn_;
 };
