@@ -34,6 +34,7 @@ set (GLOG_PUBLIC_H
 if(BUILD_THIRD_PARTY)
 
 ExternalProject_Add(glog
+    DEPENDS gflags_copy_headers_to_destination gflags_copy_libs_to_destination
     PREFIX glog
     GIT_REPOSITORY ${glog_URL}
     GIT_TAG ${glog_TAG}
@@ -47,7 +48,10 @@ ExternalProject_Add(glog
         -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
         -DCMAKE_CXX_FLAGS_RELEASE:STRING=${CMAKE_CXX_FLAGS_RELEASE}
         -DBUILD_TESTING:BOOL=OFF
-        -DWITH_GFLAGS:BOOL=OFF
+        -DWITH_GFLAGS:BOOL=ON
+        -Dgflags_DIR:STRING=${oneflow_cmake_dir}/third_party
+        -DMY_GFLAGS_INCLUDE_DIR:STRING=${GFLAGS_INCLUDE_DIR}
+        -DMY_GFLAGS_LIBS:STRING=${GFLAGS_STATIC_LIBRARIES}
 )
 
 add_custom_target(glog_create_header_dir

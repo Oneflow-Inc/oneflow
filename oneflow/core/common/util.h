@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_COMMON_UTIL_H_
 #define ONEFLOW_CORE_COMMON_UTIL_H_
 
+#include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 #include <algorithm>
@@ -19,6 +20,8 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+
+DECLARE_string(log_dir);
 
 namespace oneflow {
 
@@ -95,8 +98,8 @@ inline std::string NewUniqueId() {
 }
 
 inline const std::string& LogDir() {
-  static std::string log_dir = std::getenv("GLOG_log_dir");
-  return log_dir;
+  static std::string v = FLAGS_log_dir;
+  return v;
 }
 
 template<typename K, typename V>

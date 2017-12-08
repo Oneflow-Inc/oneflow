@@ -3,7 +3,7 @@ set -x
 
 declare -a hosts=("192.168.1.11")
 
-ONEFLOW_CMD='GLOG_logtostderr=0 GLOG_log_dir=./log GLOG_v=0 GLOG_logbuflevel=-1 nohup ./oneflow -job_conf_filepath=./job.prototxt'
+ONEFLOW_CMD='nohup ./oneflow -logtostderr=0 -log_dir=./log -v=0 -logbuflevel=-1 -job_conf_filepath=./job.prototxt'
 
 set +e
 for host in "${hosts[@]}"

@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type>
 class ConcatKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConcatKernel);
@@ -13,23 +13,22 @@ class ConcatKernel final : public KernelIf<device_type> {
   ~ConcatKernel() = default;
 
  private:
+  void ConcatKernelWork(
+      const KernelCtx& ctx, const std::string& obn,
+      const PbRpf<std::string>& ibns,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+
   void ForwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
+  void ForwardDataId(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
   void BackwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
-  using MemCopyFuncType = std::function<void(const KernelCtx& ctx, T*, T*,
-                                             const int64_t, cudaMemcpyKind)>;
-
-  void ConcatKernelWork(const KernelCtx&, const std::string&,
-                        const std::vector<std::string>&,
-                        std::function<Blob*(const std::string&)>,
-                        MemCopyFuncType) const;
-
-  void CopyDataIdToOb(const KernelCtx&, const std::vector<std::string>&,
-                      const std::string&, const int32_t, cudaMemcpyKind,
-                      std::function<Blob*(const std::string&)>) const;
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 }  // namespace oneflow

@@ -91,8 +91,6 @@ void BoxingOp::InferBlobDescs(
       const std::vector<int64_t>& in_blob_shape_vec =
           in_blob_desc->shape().dim_vec();
       CHECK_LT(concat_axis, in_blob_shape_vec.size());
-      // if it is a concat-axis, accumulate the dimensions on concat-axis.
-      // otherwise only check all boxes are in the same shape.
       FOR_RANGE(size_t, i, 0, in_blob_shape_vec.size()) {
         if (i == concat_axis) {
           data_tmp_blob_shape_vec[i] += in_blob_shape_vec[i];
@@ -114,7 +112,6 @@ void BoxingOp::InferBlobDescs(
     data_tmp_blob_desc->mut_shape() = Shape(data_tmp_blob_shape_vec);
   }
 
-  // infer desc of out blobs
   if (conf.out_box_case() == BoxingOpConf::kSplitBox) {
     const BoxSplitConf& split_conf = conf.split_box();
     std::vector<int64_t> output_shape_vec = data_tmp_blob_shape_vec;
