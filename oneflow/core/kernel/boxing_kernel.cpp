@@ -193,17 +193,13 @@ void BoxingKernel<T>::CopyFromSrcBlobs2DstBlobs(
 template<typename T>
 void BoxingKernel<T>::CopyFromFirstBlob2OtherBlobs(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
-    const std::vector<std::string>& obns, bool is_data_flow) const {
-  Blob* first_out_blob = BnInOp2Blob(obns.front());
-  int64_t copy_size = first_out_blob->shape().elem_cnt() * sizeof(T);
-  bool need_copy_data_id = is_data_flow && first_out_blob->has_data_id();
+    const std::vector<std::string>& obns) const {
+  Blob* out_blob_0 = BnInOp2Blob(obns[0]);
   FOR_RANGE(size_t, i, 1, obns.size()) {
-    BoxingCopy(ctx, false, first_out_blob, BnInOp2Blob(obns.at(i)), 0, 0,
-               static_cast<size_t>(copy_size), false);
-    if (need_copy_data_id) {
-      BoxingCopy(ctx, true, first_out_blob, BnInOp2Blob(obns.at(i)), 0, 0,
-                 first_out_blob->ByteSizeOfDataIdField(), false);
-    }
+    Blob* dst_blob = BnInOp2Blob(obns[i]);
+    Memcpy<DeviceType::kCPU>(
+        ctx.device_ctx, dst_blob->mut_memory_ptr(), out_blob_0->memory_ptr(),
+        out_blob_0->TotalByteSize(), cudaMemcpyKind::cudaMemcpyHostToHost);
   }
 }
 
@@ -223,8 +219,7 @@ void BoxingKernel<T>::Forward(
     } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
       CopyFromSrcBlobs2DstBlobs(ctx, BnInOp2Blob, kernel_conf.input_bns(),
                                 {"out_0"}, concat_axis, 0);
-      CopyFromFirstBlob2OtherBlobs(ctx, BnInOp2Blob, kernel_conf.output_bns(),
-                                   true);
+      CopyFromFirstBlob2OtherBlobs(ctx, BnInOp2Blob, kernel_conf.output_bns());
     } else {
       UNEXPECTED_RUN();
     }
@@ -238,8 +233,7 @@ void BoxingKernel<T>::Forward(
     } else if (boxing_conf.in_box_case() == BoxingOpConf::kCloneBox) {
       GetSumFromSrcBlobsToDstBlob(ctx, BnInOp2Blob, kernel_conf.input_bns(),
                                   {kernel_conf.output_bns(0)});
-      CopyFromFirstBlob2OtherBlobs(ctx, BnInOp2Blob, kernel_conf.output_bns(),
-                                   false);
+      CopyFromFirstBlob2OtherBlobs(ctx, BnInOp2Blob, kernel_conf.output_bns());
     } else {
       UNEXPECTED_RUN();
     }

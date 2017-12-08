@@ -49,8 +49,7 @@ class BoxingKernel final : public KernelIf<DeviceType::kCPU> {
                                  const int32_t dst_split_axis) const;
   void CopyFromFirstBlob2OtherBlobs(const KernelCtx& ctx,
                                     std::function<Blob*(const std::string&)>,
-                                    const std::vector<std::string>& obns,
-                                    bool is_data_flow) const;
+                                    const std::vector<std::string>& obns) const;
 };
 
 }  // namespace oneflow
