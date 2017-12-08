@@ -17,7 +17,8 @@ void TestCloneOp() {
 
   auto clone_op = CreateCloneOp(out_num);
   HashMap<std::string, BlobDesc*> bn2blobdesc_map;
-  GenBn2BlobDescMap<T, has_data_id>(bn2blobdesc_map, ibns, obns, in_shapes);
+  GenBn2BlobDescMap(bn2blobdesc_map, ibns, obns, in_shapes, GetDataType<T>::val,
+                    has_data_id);
   auto bn2blobdesc_func = [&](const std::string& bn) {
     return bn2blobdesc_map.at(bn);
   };

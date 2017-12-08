@@ -10,14 +10,15 @@ std::shared_ptr<Operator> CreateCloneOp(int out_num) {
   return ConstructOp(op_conf);
 }
 
-template<typename T, bool has_data_id>
 void GenBn2BlobDescMap(HashMap<std::string, BlobDesc*> bn2blobdesc_map,
                        const std::vector<std::string>& ibns,
                        const std::vector<std::string>& obns,
-                       const std::vector<std::vector<int>>& in_shapes) {
+                       const std::vector<std::vector<int>>& in_shapes,
+                       DataType& data_type, bool has_data_id) {
+  CHECK_EQ(ibns.size(), in_shapes.size());
   FOR_RANGE(size_t, i, 0, ibns.size()) {
     bn2blobdesc_map[ibns.at(i)] =
-        new BlobDesc(in_shapes.at(i), GetDataType<T>::val, has_data_id);
+        new BlobDesc(Shape(in_shapes.at(i)), data_type, has_data_id);
   }
   for (const std::string& obn : obns) { bn2blobdesc_map[obn] = new BlobDesc; }
 }
