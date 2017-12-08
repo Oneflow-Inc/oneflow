@@ -1,8 +1,4 @@
-#ifndef final
-#define final
-#endif
-
-#include <gmock/gmock.h>
+#include "oneflow/core/common/test_util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/job/job_desc.h"
 
