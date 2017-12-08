@@ -9,40 +9,15 @@ void BoxingKernel<T>::GetSumFromSrcBlobsToDstBlob(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     const std::vector<std::string>& src_bns, const std::string& dst_bn) const {
   Blob* dst_blob = BnInOp2Blob(dst_bn);
-  Blob* fst_src_blob = BnInOp2Blob(src_bns.front());
-  Memcpy<DeviceType::kCPU>(ctx.device_ctx, dst_blob->mut_dptr(),
-                           fst_src_blob->dptr(),
-                           dst_blob->ByteSizeOfDataContentField(),
-                           cudaMemcpyKind::cudaMemcpyHostToHost);
+  Blob* src_blob_0 = BnInOp2Blob(src_bns[0]);
+  Memcpy<DeviceType::kCPU>(
+      ctx.device_ctx, dst_blob->mut_memory_ptr(), src_blob_0->memory_ptr(),
+      src_blob_0->TotalByteSize(), cudaMemcpyKind::cudaMemcpyHostToHost);
   FOR_RANGE(size_t, i, 1, src_bns.size()) {
     Blob* src_blob_i = BnInOp2Blob("in_" + std::to_string(i));
     KernelUtil<DeviceType::kCPU, T>::BlasAxpy(
         ctx.device_ctx, dst_blob->shape().elem_cnt(), 1.0, src_blob_i->dptr(),
         1, dst_blob->mut_dptr(), 1);
-  }
-}
-
-template<typename T>
-void BoxingKernel<T>::BoxingCopy(const KernelCtx& ctx, bool is_data_id,
-                                 Blob* src_blob, Blob* dst_blob,
-                                 const int64_t src_offset,
-                                 const int64_t dst_offset, size_t copy_bytesize,
-                                 bool need_swap) const {
-  if (is_data_id) {
-    Memcpy<DeviceType::kCPU>(ctx.device_ctx,
-                             dst_blob->mut_data_id() + dst_offset,
-                             src_blob->data_id() + src_offset, copy_bytesize,
-                             cudaMemcpyKind::cudaMemcpyHostToHost);
-  } else if (need_swap) {
-    Memcpy<DeviceType::kCPU>(ctx.device_ctx,
-                             src_blob->mut_dptr<char>() + src_offset,
-                             dst_blob->dptr<char>() + dst_offset, copy_bytesize,
-                             cudaMemcpyKind::cudaMemcpyHostToHost);
-  } else {
-    Memcpy<DeviceType::kCPU>(ctx.device_ctx,
-                             dst_blob->mut_dptr<char>() + dst_offset,
-                             src_blob->dptr<char>() + src_offset, copy_bytesize,
-                             cudaMemcpyKind::cudaMemcpyHostToHost);
   }
 }
 
@@ -53,39 +28,43 @@ void BoxingKernel<T>::CopyDataId(const KernelCtx& ctx,
                                  const int32_t src_axis,
                                  const int32_t dst_axis) const {
   size_t data_id_bytesize = JobDesc::Singleton()->SizeOfOneDataId();
-  if (src_axis == 0 || dst_axis == 0) {
-    int64_t src_idx = 0;
-    int64_t dst_idx = 0;
-    int64_t src_offset = 0;
-    int64_t dst_offset = 0;
-    while (src_idx < src_blobs.size() && dst_idx < dst_blobs.size()) {
-      int64_t src_dim = src_blobs.at(src_idx)->shape().At(0);
-      int64_t dst_dim = dst_blobs.at(dst_idx)->shape().At(0);
-      int64_t copy_size = std::min(src_dim - src_offset, dst_dim - dst_offset);
+  int64_t src_idx = 0;
+  int64_t dst_idx = 0;
+  int64_t src_offset = 0;
+  int64_t dst_offset = 0;
+  while (src_idx < src_blobs.size() && dst_idx < dst_blobs.size()) {
+    int64_t src_dim = src_blobs[src_idx]->shape().At(0);
+    int64_t dst_dim = dst_blobs[dst_idx]->shape().At(0);
+    int64_t copy_num = std::min(src_dim - src_offset, dst_dim - dst_offset);
 
-      BoxingCopy(ctx, true, src_blobs.at(src_idx), dst_blobs.at(dst_idx),
-                 src_offset * data_id_bytesize, dst_offset * data_id_bytesize,
-                 static_cast<size_t>(copy_size * data_id_bytesize), false);
+    Memcpy<DeviceType::kCPU>(
+        ctx.device_ctx,
+        dst_blobs[dst_idx]->mut_data_id() + dst_offset * data_id_bytesize,
+        src_blobs[src_idx]->data_id() + src_offset * data_id_bytesize,
+        copy_num * data_id_bytesize, cudaMemcpyKind::cudaMemcpyHostToHost);
 
-      src_offset += copy_size;
-      if (src_offset == src_dim) {
-        src_offset = 0;
-        ++src_idx;
-      }
+    src_offset += copy_num;
+    if (src_offset == src_dim) {
+      src_offset = 0;
+      ++src_idx;
+    }
 
-      dst_offset += copy_size;
-      if (dst_offset == dst_dim) {
-        dst_offset = 0;
-        ++dst_idx;
-      }
+    dst_offset += copy_num;
+    if (dst_offset == dst_dim) {
+      dst_offset = 0;
+      ++dst_idx;
     }
   }
+  CHECK_EQ(src_axis == 0, src_idx == src_blobs.size());
+  CHECK_EQ(src_axis > 0, dst_idx == dst_blobs.size());
 
   if (dst_axis > 0) {
-    // add copy rules from first dst blob to all dst blobs
+    CHECK_EQ(dst_idx, 1);
     FOR_RANGE(size_t, i, 1, dst_blobs.size()) {
-      BoxingCopy(ctx, true, dst_blobs.front(), dst_blobs.at(i), 0, 0,
-                 dst_blobs.front()->ByteSizeOfDataIdField(), false);
+      Memcpy<DeviceType::kCPU>(ctx.device_ctx, dst_blobs[i]->mut_data_id(),
+                               dst_blobs[0]->data_id(),
+                               dst_blobs[0]->ByteSizeOfDataIdField(),
+                               cudaMemcpyKind::cudaMemcpyHostToHost);
     }
   }
 }
@@ -104,11 +83,22 @@ void BoxingKernel<T>::DoUnequalAxisCopy(const KernelCtx& ctx,
     int64_t src_seg_offset = 0;
     FOR_RANGE(size_t, dst_seg_idx, 0, dst_segs_in_src_seg) {
       FOR_RANGE(size_t, dst_idx, 0, dst_blobs.size()) {
-        BoxingCopy(
-            ctx, src_blobs.at(src_idx), dst_blobs.at(dst_idx),
-            src_seg_offset * sizeof(T), dst_blob_offset[dst_idx] * sizeof(T),
-            static_cast<size_t>(dst_info.size_of_subseg(dst_idx) * sizeof(T)),
-            need_swap);
+        size_t copy_bytesize = dst_info.size_of_subseg(dst_idx) * sizeof(T);
+        if (need_swap) {
+          Memcpy<DeviceType::kCPU>(
+              ctx.device_ctx,
+              src_blobs[src_idx]->mut_dptr<char>() + src_seg_offset * sizeof(T),
+              dst_blobs[dst_idx]->dptr<char>()
+                  + dst_blob_offset[dst_idx] * sizeof(T),
+              copy_bytesize, cudaMemcpyKind::cudaMemcpyHostToHost);
+        } else {
+          Memcpy<DeviceType::kCPU>(
+              ctx.device_ctx,
+              dst_blobs[dst_idx]->mut_dptr<char>()
+                  + dst_blob_offset[dst_idx] * sizeof(T),
+              src_blobs[src_idx]->dptr<char>() + src_seg_offset * sizeof(T),
+              copy_bytesize, cudaMemcpyKind::cudaMemcpyHostToHost);
+        }
         src_seg_offset += dst_info.size_of_subseg(dst_idx);
         dst_blob_offset[dst_idx] += dst_info.size_of_subseg(dst_idx);
       }
@@ -126,8 +116,10 @@ void BoxingKernel<T>::BoxingCopyForUnequalAxis(const KernelCtx& ctx,
   const BoxingInfo& in_info = kernel_conf.in_info();
   const BoxingInfo& out_info = kernel_conf.out_info();
   if (src_axis > dst_axis) {
+    CHECK_EQ(dst_axis, 0);
     DoUnequalAxisCopy(ctx, dst_blobs, src_blobs, out_info, in_info, true);
   } else {
+    CHECK_EQ(src_axis, 0);
     DoUnequalAxisCopy(ctx, src_blobs, dst_blobs, in_info, out_info, false);
   }
 }
@@ -145,24 +137,30 @@ void BoxingKernel<T>::BoxingCopyForEqualAxis(const KernelCtx& ctx,
        src_idx != src_blobs.size() && dst_idx != dst_blobs.size();) {
     int64_t dst_offset = 0;
     while (dst_offset < out_info.size_of_subseg(dst_idx)) {
-      int64_t copy_size =
+      int64_t copy_num =
           std::min(in_info.size_of_subseg(src_idx) - src_offset,
                    out_info.size_of_subseg(dst_idx) - dst_offset);
-      BoxingCopy(ctx, false, src_blobs.at(src_idx), dst_blobs.at(dst_idx),
-                 src_offset * sizeof(T), dst_offset * sizeof(T),
-                 static_cast<size_t>(copy_size * sizeof(T)), false);
-      src_offset += copy_size;
-      dst_offset += copy_size;
+
+      Memcpy<DeviceType::kCPU>(
+          ctx.device_ctx,
+          dst_blobs[dst_idx]->mut_dptr<char>() + dst_offset * sizeof(T),
+          src_blobs[src_idx]->dptr<char>() + src_offset * sizeof(T),
+          copy_num * sizeof(T), cudaMemcpyKind::cudaMemcpyHostToHost);
+      src_offset += copy_num;
+      dst_offset += copy_num;
       if (src_offset == in_info.size_of_subseg(src_idx)) {
-        if (++src_idx == src_blobs.size()) {
+        src_idx++;
+        if (src_idx == src_blobs.size()) {
           CHECK_EQ(dst_offset, out_info.size_of_subseg(dst_idx));
-          break;
+          CHECK_EQ(dst_idx, dst_blobs.size() - 1);
+          return;
         }
         src_offset = 0;
       }
     }
     dst_idx++;
   }
+  UNEXPECTED_RUN();
 }
 
 template<typename T>
