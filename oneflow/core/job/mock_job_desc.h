@@ -8,20 +8,21 @@
 
 namespace oneflow {
 
-template<typename T>
 class MockJobDesc : public JobDesc {
  public:
   MockJobDesc() = default;
-  MOCK_METHOD0(SizeOfOneDataId, int32_t());
+  MOCK_METHOD0(SizeOfOneDataId, size_t());
   MOCK_METHOD0(DefaultDataType, DataType());
 };
 
 template<typename T>
-void InitJobDescSingleton(MockJobDesc<T>& mock_job_desc) {
+void InitJobDescSingleton(MockJobDesc<T>& mock_job_desc,
+                          size_t size_of_one_dataid,
+                          DataType data_type) {
   EXPECT_CALL(mock_job_desc, SizeOfOneDataId())
-      .WillRepeatedly(testing::Return(8));
+      .WillRepeatedly(testing::Return(size_of_one_dataid));
   EXPECT_CALL(mock_job_desc, DefaultDataType())
-      .WillRepeatedly(testing::Return(GetDataType<T>::val));
+      .WillRepeatedly(testing::Return(data_type));
   *(JobDesc::SingletonPPtr()) = &mock_job_desc;
 }
 

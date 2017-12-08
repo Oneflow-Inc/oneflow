@@ -8,7 +8,7 @@ namespace oneflow {
 template<typename T, bool has_data_id>
 void TestCloneOp() {
   MockJobDesc<T> mock_job_desc;
-  InitJobDescSingleton(mock_job_desc);
+  InitJobDescSingleton(mock_job_desc, 8, GetDataType<T>::val);
   OperatorConf op_conf;
   op_conf.set_name("clone_test");
   op_conf.mutable_clone_conf()->set_out_num(3);
@@ -23,7 +23,7 @@ void TestCloneOp() {
   auto bn2blobdesc_func = [&](const std::string& bn) {
     return bn2blobdesc_map.at(bn);
   };
-  clone_op->InferBlobDescs(bn2blobdesc_func, new ParallelContext);
+  clone_op->InferBlobDescs(bn2blobdesc_func, nullptr);
   const BlobDesc* in_blob_desc = bn2blobdesc_map.at(clone_op->SoleIbn());
   for (const std::string& obn : clone_op->output_bns()) {
     const BlobDesc* out_blob_desc = bn2blobdesc_map.at(obn);
