@@ -16,8 +16,8 @@ void BoxingKernel<T>::GetSumFromSrcBlobsToDstBlob(
   FOR_RANGE(size_t, i, 1, src_bns.size()) {
     Blob* src_blob_i = BnInOp2Blob("in_" + std::to_string(i));
     KernelUtil<DeviceType::kCPU, T>::BlasAxpy(
-        ctx.device_ctx, dst_blob->shape().elem_cnt(), 1.0, src_blob_i->dptr<T>(),
-        1, dst_blob->mut_dptr<T>(), 1);
+        ctx.device_ctx, dst_blob->shape().elem_cnt(), 1.0,
+        src_blob_i->dptr<T>(), 1, dst_blob->mut_dptr<T>(), 1);
   }
 }
 
@@ -177,7 +177,7 @@ void BoxingKernel<T>::CopyFromSrcBlobs2DstBlobs(
   for (const std::string& bn : dst_bns) {
     dst_blobs.emplace_back(BnInOp2Blob(bn));
   }
-  if (src_blobs.front()->has_data_id()) {
+  if (src_blobs[0]->has_data_id()) {
     CopyDataId(ctx, src_blobs, dst_blobs, src_axis, dst_axis);
   }
 
@@ -194,10 +194,10 @@ void BoxingKernel<T>::CopyFromFirstBlob2OtherBlobs(
     const std::vector<std::string>& obns) const {
   const Blob* out_blob_0 = BnInOp2Blob(obns[0]);
   FOR_RANGE(size_t, i, 1, obns.size()) {
-    Blob* dst_blob = BnInOp2Blob(obns[i]);
     Memcpy<DeviceType::kCPU>(
-        ctx.device_ctx, dst_blob->mut_memory_ptr(), out_blob_0->memory_ptr(),
-        out_blob_0->TotalByteSize(), cudaMemcpyKind::cudaMemcpyHostToHost);
+        ctx.device_ctx, BnInOp2Blob(obns[i])->mut_memory_ptr(),
+        out_blob_0->memory_ptr(), out_blob_0->TotalByteSize(),
+        cudaMemcpyKind::cudaMemcpyHostToHost);
   }
 }
 
