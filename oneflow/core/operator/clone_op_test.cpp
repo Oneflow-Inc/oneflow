@@ -1,7 +1,6 @@
-// clang-format off
-#include "oneflow/core/job/mock_job_desc.h"
 #include "oneflow/core/operator/clone_op.h"
-// clang-format on
+#include "oneflow/core/common/test_util.h"
+#include "oneflow/core/job/mock_job_desc.h"
 
 namespace oneflow {
 
@@ -9,21 +8,18 @@ template<typename T, bool has_data_id>
 void TestCloneOp() {
   MockJobDesc mock_job_desc;
   InitJobDescSingleton(mock_job_desc, 8, GetDataType<T>::val);
-  OperatorConf op_conf;
-  op_conf.set_name("clone_test");
-  op_conf.mutable_clone_conf()->set_out_num(3);
-  op_conf.mutable_clone_conf()->set_lbn("clone_lbn");
-  auto clone_op = ConstructOp(op_conf);
+
+  int out_num = 3;
+  std::vector<std::vector>> in_shapes = {{3, 4}};
+
+  auto clone_op = CreateCloneOp();
   HashMap<std::string, BlobDesc*> bn2blobdesc_map;
-  bn2blobdesc_map[clone_op->SoleIbn()] =
-      new BlobDesc(Shape({4, 3}), GetDataType<T>::val, has_data_id);
-  for (const std::string& obn : clone_op->output_bns()) {
-    bn2blobdesc_map[obn] = new BlobDesc;
-  }
+  GenBn2BlobDescMap(bn2blobdesc_map, input_bns(), output_bns(), in_shapes);
   auto bn2blobdesc_func = [&](const std::string& bn) {
     return bn2blobdesc_map.at(bn);
   };
   clone_op->InferBlobDescs(bn2blobdesc_func, nullptr);
+
   const BlobDesc* in_blob_desc = bn2blobdesc_map.at(clone_op->SoleIbn());
   for (const std::string& obn : clone_op->output_bns()) {
     const BlobDesc* out_blob_desc = bn2blobdesc_map.at(obn);
