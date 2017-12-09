@@ -16,7 +16,7 @@ message MultinomialLogisticLossKernelConf {
 
 message BoxingInfo {
   required int64 total_seg_num = 1;
-  required int64 size_of_per_seg = 2;
+  required int64 one_seg_size = 2;
   repeated int64 offset_of_subseg = 3;
   repeated int64 size_of_subseg = 4;
 }

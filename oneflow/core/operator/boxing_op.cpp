@@ -53,7 +53,7 @@ void BoxingOp::GenBoxingInfo(
     boxing_info->add_offset_of_subseg(0);
   }
   boxing_info->set_total_seg_num(total_seg_num);
-  boxing_info->set_size_of_per_seg(seg_size_acc);
+  boxing_info->set_one_seg_size(seg_size_acc);
 }
 
 void BoxingOp::VirtualGenKernelConf(
