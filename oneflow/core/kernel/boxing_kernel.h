@@ -13,11 +13,39 @@ class BoxingKernel final : public KernelIf<DeviceType::kCPU> {
   BoxingKernel() = default;
   ~BoxingKernel() = default;
 
-  void ForwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
+  void Forward(const KernelCtx&,
+               std::function<Blob*(const std::string&)>) const override;
 
  private:
+  void GetSumFromSrcBlobsToDstBlob(const KernelCtx& ctx,
+                                   std::function<Blob*(const std::string&)>,
+                                   const std::vector<std::string>& src_bns,
+                                   const std::string& dst_bn) const;
+  void CopyDataId(const KernelCtx& ctx, std::vector<Blob*>& src_blobs,
+                  std::vector<Blob*>& dst_blobs, const int32_t src_concat_axis,
+                  const int32_t dst_split_axis) const;
+  void DoUnequalAxisCopy(const KernelCtx& ctx, std::vector<Blob*>& src_blobs,
+                         std::vector<Blob*>& dst_blobs,
+                         const BoxingInfo& src_info, const BoxingInfo& dst_info,
+                         bool need_swap) const;
+  void BoxingCopyForUnequalAxis(const KernelCtx& ctx,
+                                std::vector<Blob*>& src_blobs,
+                                std::vector<Blob*>& dst_blobs,
+                                const int32_t concat_axis,
+                                const int32_t split_axis) const;
+  void BoxingCopyForEqualAxis(const KernelCtx& ctx,
+                              std::vector<Blob*>& src_blobs,
+                              std::vector<Blob*>& dst_blobs,
+                              const int32_t axis) const;
+  void CopyFromSrcBlobs2DstBlobs(const KernelCtx& ctx,
+                                 std::function<Blob*(const std::string&)>,
+                                 const std::vector<std::string>& src_bns,
+                                 const std::vector<std::string>& dst_bns,
+                                 const int32_t src_concat_axis,
+                                 const int32_t dst_split_axis) const;
+  void CopyFromFirstBlob2OtherBlobs(const KernelCtx& ctx,
+                                    std::function<Blob*(const std::string&)>,
+                                    const std::vector<std::string>& obns) const;
 };
 
 }  // namespace oneflow
