@@ -30,8 +30,8 @@ void SoftmaxLossKernel<device_type, PredType, LabelType>::ForwardDataContent(
   Blob* prediction_diff_blob = BnInOp2Blob(GenDiffBn("prediction"));
   if (prediction_diff_blob != nullptr) {
     PredType* in_diff = prediction_diff_blob->mut_dptr<PredType>();
-    KernelUtil<device_type, PredType>::BlasCopy(ctx.device_ctx, n * w, prob, 1,
-                                                in_diff, 1);
+    KernelUtil<device_type, PredType>::Copy(ctx.device_ctx, n * w, prob, 1,
+                                            in_diff, 1);
     SoftmaxLossKernelUtil<device_type, PredType, LabelType>::BackwardSub(
         ctx.device_ctx, n, w, label, in_diff);
   }

@@ -8,9 +8,9 @@ void AccumulateKernel<device_type, T>::ForwardDataContent(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("one");
   Blob* out_blob = BnInOp2Blob("acc");
-  KernelUtil<device_type, T>::BlasAxpy(
-      ctx.device_ctx, in_blob->shape().elem_cnt(), static_cast<T>(1.0),
-      in_blob->dptr<T>(), 1, out_blob->mut_dptr<T>(), 1);
+  KernelUtil<device_type, T>::Axpy(ctx.device_ctx, in_blob->shape().elem_cnt(),
+                                   static_cast<T>(1.0), in_blob->dptr<T>(), 1,
+                                   out_blob->mut_dptr<T>(), 1);
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAccumulateConf, AccumulateKernel,

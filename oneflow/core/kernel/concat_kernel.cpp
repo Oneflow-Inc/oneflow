@@ -18,19 +18,6 @@ char* NextConcatAddr(char* start_addr, int64_t concat_idx,
                * concat_elem_bytesize;
 }
 
-template<DeviceType device_type>
-struct GetCudaMemcpyKind;
-
-template<>
-struct GetCudaMemcpyKind<DeviceType::kCPU> {
-  static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyHostToHost;
-};
-
-template<>
-struct GetCudaMemcpyKind<DeviceType::kGPU> {
-  static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyDeviceToDevice;
-};
-
 }  // namespace
 
 template<DeviceType device_type>
@@ -46,7 +33,6 @@ void ConcatKernel<device_type>::ConcatKernelWork(
   const int64_t total_cp_num = this->kernel_conf().concat_conf().total_cp_num();
   char* out_blob_mut_dptr = out_blob->mut_dptr<char>();
 
-  cudaMemcpyKind kind = GetCudaMemcpyKind<device_type>::val;
   int64_t concat_axis_offset = 0;
   int64_t cp_dim_bytesize = 0;
   const PbRf<int64_t>& per_cp_bytesize =
@@ -66,11 +52,9 @@ void ConcatKernel<device_type>::ConcatKernelWork(
       char* in_cp_adr = NextConcatAddr(in_blob_mut_dptr, concat_idx,
                                        in_concat_axis_dim, 0, cp_dim_bytesize);
       if (this->kernel_conf().is_forward()) {
-        Memcpy<device_type>(ctx.device_ctx, out_cp_adr, in_cp_adr, cp_bytesize,
-                            kind);
+        Memcpy<device_type>(ctx.device_ctx, out_cp_adr, in_cp_adr, cp_bytesize);
       } else {
-        Memcpy<device_type>(ctx.device_ctx, in_cp_adr, out_cp_adr, cp_bytesize,
-                            kind);
+        Memcpy<device_type>(ctx.device_ctx, in_cp_adr, out_cp_adr, cp_bytesize);
       }
     }
     concat_axis_offset += in_concat_axis_dim;
