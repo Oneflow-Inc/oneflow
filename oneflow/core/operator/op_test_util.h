@@ -13,7 +13,7 @@ std::shared_ptr<Operator> CreateCloneOp(int out_num) {
   return ConstructOp(op_conf);
 }
 
-std::function<BlobDesc*(const std::string)> GenBn2BlobDescMap(
+std::function<BlobDesc*(const std::string)> ConstructBn2BlobDescFunc(
     HashMap<std::string, BlobDesc*>& bn2blobdesc_map,
     const std::vector<std::string>& ibns, const std::vector<std::string>& obns,
     const std::vector<std::string>& other_bns,

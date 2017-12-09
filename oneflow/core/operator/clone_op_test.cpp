@@ -13,8 +13,8 @@ void DoTestCloneOp(const int out_num,
   auto clone_op = CreateCloneOp(out_num);
   HashMap<std::string, BlobDesc*> bn2blobdesc_map;
   auto bn2blobdesc_func =
-      GenBn2BlobDescMap(bn2blobdesc_map, ibns, obns, other_bns, in_shapes,
-                        GetDataType<T>::val, has_data_id);
+      ConstructBn2BlobDescFunc(bn2blobdesc_map, ibns, obns, other_bns,
+                               in_shapes, GetDataType<T>::val, has_data_id);
   clone_op->InferBlobDescs(bn2blobdesc_func, nullptr);
 
   const BlobDesc* in_blob_desc = bn2blobdesc_map.at(clone_op->SoleIbn());
