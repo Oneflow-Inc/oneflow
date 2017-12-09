@@ -8,14 +8,13 @@ template<typename T, bool has_data_id>
 void DoTestCloneOp(const int out_num,
                    const std::vector<std::vector<int64_t>>& in_shapes,
                    const std::vector<std::string>& ibns,
-                   const std::vector<std::string>& obns) {
+                   const std::vector<std::string>& obns,
+                   const std::vector<std::string>& other_bns) {
   auto clone_op = CreateCloneOp(out_num);
   HashMap<std::string, BlobDesc*> bn2blobdesc_map;
-  GenBn2BlobDescMap(bn2blobdesc_map, ibns, obns, in_shapes, GetDataType<T>::val,
-                    has_data_id);
-  auto bn2blobdesc_func = [&](const std::string& bn) {
-    return bn2blobdesc_map.at(bn);
-  };
+  auto bn2blobdesc_func =
+      GenBn2BlobDescMap(bn2blobdesc_map, ibns, obns, other_bns, in_shapes,
+                        GetDataType<T>::val, has_data_id);
   clone_op->InferBlobDescs(bn2blobdesc_func, nullptr);
 
   const BlobDesc* in_blob_desc = bn2blobdesc_map.at(clone_op->SoleIbn());
@@ -34,11 +33,12 @@ void TestCloneOp() {
   std::vector<std::vector<int64_t>> in_shapes = {{3, 4}};
   std::vector<std::string> ibns = {"in"};
   std::vector<std::string> obns = {"out_0", "out_1", "out_2"};
-  DoTestCloneOp<T, has_data_id>(out_num, in_shapes, ibns, obns);
+  std::vector<std::string> other_bns = {};
+  DoTestCloneOp<T, has_data_id>(out_num, in_shapes, ibns, obns, other_bns);
 
   out_num = 1;
   obns = {"out_0"};
-  DoTestCloneOp<T, has_data_id>(out_num, in_shapes, ibns, obns);
+  DoTestCloneOp<T, has_data_id>(out_num, in_shapes, ibns, obns, other_bns);
 }
 
 TEST(CloneOp, infer_blob_desc) {
