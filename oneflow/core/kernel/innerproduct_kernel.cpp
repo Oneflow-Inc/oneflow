@@ -18,7 +18,7 @@ void BlasMatrixMatrix(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans_a,
   const int ldb = (trans_b == CblasNoTrans) ? n : k;
   const int ldc = n;
 
-  KernelUtil<device_type, T>::BlasGemm(
+  KernelUtil<device_type, T>::Gemm(
       ctx.device_ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha,
       a->dptr<T>(), lda, b->dptr<T>(), ldb, beta, c->mut_dptr<T>(), ldc);
 }

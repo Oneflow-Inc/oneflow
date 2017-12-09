@@ -111,7 +111,7 @@ void ConvolutionKernel<device_type, T>::ForwardDataContent(
         conv_conf.stride_w(), conv_conf.dilation_h(), conv_conf.dilation_w(),
         col_buf_blob->mut_dptr<T>() + i * col_im_sz);
 
-    KernelUtil<device_type, T>::BlasGemm(
+    KernelUtil<device_type, T>::Gemm(
         ctx.device_ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasTrans,
         out_blob->shape().At(1), out_blob->shape().Count(2),
         weight_blob->shape().At(1), static_cast<T>(1.0), weight_blob->dptr<T>(),
@@ -124,7 +124,7 @@ void ConvolutionKernel<device_type, T>::ForwardDataContent(
       const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
 
       // out_data = bias * bias_multiplier + out_data
-      KernelUtil<device_type, T>::BlasGemm(
+      KernelUtil<device_type, T>::Gemm(
           ctx.device_ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans,
           CblasNoTrans, bias_blob->shape().At(0), bias_mul_blob->shape().At(0),
           1, static_cast<T>(1.0), bias_blob->dptr<T>(), 1,
@@ -149,7 +149,7 @@ void ConvolutionKernel<device_type, T>::ComputeWeightDiff(
   Memset<device_type>(ctx.device_ctx, weight_diff_blob->mut_dptr(), 0,
                       weight_diff_blob->ByteSizeOfDataContentField());
   for (size_t i = 0; i < data_num; ++i) {
-    KernelUtil<device_type, T>::BlasGemm(
+    KernelUtil<device_type, T>::Gemm(
         ctx.device_ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasNoTrans,
         weight_diff_blob->shape().At(0), weight_diff_blob->shape().At(1),
         out_diff_blob->shape().Count(2),
@@ -176,7 +176,7 @@ void ConvolutionKernel<device_type, T>::ComputeBiasDiff(
   Memset<device_type>(ctx.device_ctx, bias_diff_blob->mut_dptr(), 0,
                       bias_diff_blob->ByteSizeOfDataContentField());
   for (size_t i = 0; i < data_num; ++i) {
-    KernelUtil<device_type, T>::BlasGemm(
+    KernelUtil<device_type, T>::Gemm(
         ctx.device_ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasNoTrans,
         bias_diff_blob->shape().At(0), 1, bias_mul_blob->shape().At(0),
         static_cast<T>(1.0) / conv_sliding_window_steps,
@@ -200,7 +200,7 @@ void ConvolutionKernel<device_type, T>::ComputeInputDiff(
   const int64_t out_im_sz = out_diff_blob->shape().Count(1);
   const int64_t data_num = out_diff_blob->shape().At(0);
   for (size_t i = 0; i < data_num; ++i) {
-    KernelUtil<device_type, T>::BlasGemm(
+    KernelUtil<device_type, T>::Gemm(
         ctx.device_ctx, CBLAS_ORDER::CblasRowMajor, CblasTrans, CblasNoTrans,
         col_buf_blob->shape().At(1), col_buf_blob->shape().At(2),
         weight_blob->shape().At(0), static_cast<T>(1.0),

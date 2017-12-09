@@ -45,7 +45,7 @@ void CloneKernel<device_type, T>::BackwardDataContent(
    public:                                                                \
     static void AdditionAssign(DeviceCtx* device_ctx, const Blob* a,      \
                                Blob* b) {                                 \
-      KernelUtil<device_type, type_cpp>::BlasAxpy(                        \
+      KernelUtil<device_type, type_cpp>::Axpy(                            \
           device_ctx, a->shape().elem_cnt(), 1.0, a->dptr<type_cpp>(), 1, \
           b->mut_dptr<type_cpp>(), 1);                                    \
     }                                                                     \
