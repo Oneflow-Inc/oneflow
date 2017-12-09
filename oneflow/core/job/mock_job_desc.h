@@ -1,3 +1,6 @@
+#ifndef ONEFLOW_CORE_JOB_MOCK_JOB_DESC_H_
+#define ONEFLOW_CORE_JOB_MOCK_JOB_DESC_H_
+
 #include "oneflow/core/common/test_util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/job/job_desc.h"
@@ -21,3 +24,5 @@ void InitJobDescSingleton(MockJobDesc& mock_job_desc, size_t size_of_one_dataid,
 }
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_JOB_MOCK_JOB_DESC_H_
