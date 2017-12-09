@@ -163,21 +163,19 @@ struct KernelUtil<DeviceType::kCPU, T> final {
     NormalPersistentInStream in_stream(GlobalFS(), file_path, begin_pos);
     in_stream.Read(blob->mut_dptr<char>(), blob_size);
   }
-
-};  // namespace oneflow
+};
 
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto) \
-  template class KernelUtil<DeviceType::kCPU, type_cpp>;
+  template struct KernelUtil<DeviceType::kCPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
-#define DEFINE_INT_KERNEL_UTIL(T, type_proto)                                \
-  template<>                                                                 \
-  struct KernelUtil<DeviceType::kCPU, T> final {                             \
-    static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, \
-                     const int incx, T* y, const int incy) {                 \
-      TODO();                                                                \
-    }                                                                        \
-  };
+#define DEFINE_INT_KERNEL_UTIL(T, type_proto)                                 \
+  template<>                                                                  \
+  void KernelUtil<DeviceType::kCPU, T>::Axpy(                                 \
+      DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, \
+      T* y, const int incy) {                                                 \
+    TODO();                                                                   \
+  }
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_INT_KERNEL_UTIL, INT_DATA_TYPE_SEQ);
 

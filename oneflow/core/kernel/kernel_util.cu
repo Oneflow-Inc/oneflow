@@ -156,7 +156,7 @@ struct KernelUtil<DeviceType::kGPU, T> final {
 };
 
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto) \
-  template class KernelUtil<DeviceType::kGPU, type_cpp>;
+  template struct KernelUtil<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ);
 
 #define DEFINE_INT_KERNEL_UTIL(T, type_proto)                                \
