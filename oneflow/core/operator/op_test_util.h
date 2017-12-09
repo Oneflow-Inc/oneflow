@@ -1,3 +1,6 @@
+#ifndef ONEFLOW_CORE_OPERATOR_OP_TEST_UTIL_H_
+#define ONEFLOW_CORE_OPERATOR_OP_TEST_UTIL_H_
+
 #include "oneflow/core/operator/clone_op.h"
 
 namespace oneflow {
@@ -24,3 +27,5 @@ void GenBn2BlobDescMap(HashMap<std::string, BlobDesc*>& bn2blobdesc_map,
 }
 
 }  // namespace oneflow
+
+//  ONEFLOW_CORE_OPERATOR_OP_TEST_UTIL_H_
