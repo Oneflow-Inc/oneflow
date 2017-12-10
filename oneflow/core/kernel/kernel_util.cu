@@ -2,6 +2,7 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
@@ -132,26 +133,22 @@ struct KernelUtil<DeviceType::kGPU, T> final {
                                int32_t part_num, const std::string& model_dir,
                                Blob* blob, const std::string& bn_in_op,
                                int32_t dim_num, int64_t num_in_each_dim) {
-    TODO();
-    /*
-    int64_t blob_size = blob->shape().elem_cnt() * sizeof(T);
-    std::unique_ptr<PersistentInStream> in_stream =
-        snapshot->GetInStream(lbn, part_id, part_num, dim_num,
-                              num_in_each_dim * sizeof(T));
-    // read model from disk to host_blob synchronously
-    void* host_raw_dptr;
+    int64_t blob_size = blob->TotalByteSize();
+    int64_t byte_size_of_each_dim = num_in_each_dim * sizeof(T);
+    std::string file_path = JoinPath(model_dir, bn_in_op);
+    uint64_t file_size = GlobalFS()->GetFileSize(file_path);
+    CHECK_EQ(file_size, dim_num * byte_size_of_each_dim);
+    BalancedSplitter splitter = BalancedSplitter(dim_num, part_num);
+    int64_t begin_pos = splitter.At(part_id).begin() * byte_size_of_each_dim;
+    void* host_raw_dptr = nullptr;
     CudaCheck(cudaMallocHost(&host_raw_dptr, blob_size));
     std::unique_ptr<void, std::function<void(void*)>> host_unique_ptr(
         host_raw_dptr, [&](void* dptr) { CudaCheck(cudaFreeHost(dptr)); });
-    std::unique_ptr<Shape> host_blob_shape(new Shape(blob->shape()));
-    std::unique_ptr<Blob> host_blob(
-        new Blob(host_unique_ptr.get(), host_blob_shape.get()));
-    in_stream->Read(host_blob->mut_dptr<char>(), blob_size);
-    // copy to device blob
-    KernelUtil<DeviceType::kGPU, T>::Memcpy(
-        ctx, blob->mut_dptr(), host_blob->dptr(), blob_size,
-        cudaMemcpyHostToDevice);
-        */
+    std::unique_ptr<Blob> host_blob(new Blob(
+        blob->blob_desc_ptr(), static_cast<char*>(host_unique_ptr.get())));
+    NormalPersistentInStream in_stream(GlobalFS(), file_path, begin_pos);
+    in_stream.Read(host_blob.get()->mut_dptr<char>(), blob_size);
+    blob->CopyDataContentFrom<DeviceType::kGPU>(ctx, host_blob.get());
   }
 };
 
