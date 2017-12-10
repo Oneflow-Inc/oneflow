@@ -4,194 +4,7 @@
 
 namespace oneflow {
 
-template<typename T>
-void CalcSumOfBlobs(DeviceCtx* ctx,
-                    std::function<Blob*(const std::string&)> BnInOp2Blob,
-                    const PbRpf<std::string>& src_bns,
-                    const std::string& dst_bn) {
-  Blob* dst_blob = BnInOp2Blob(dst_bn);
-  const Blob* src_blob_0 = BnInOp2Blob(src_bns[0]);
-  Memcpy<DeviceType::kCPU>(
-      ctx, dst_blob->mut_memory_ptr(), src_blob_0->memory_ptr(),
-      src_blob_0->TotalByteSize(), cudaMemcpyKind::cudaMemcpyHostToHost);
-  FOR_RANGE(size_t, i, 1, src_bns.size()) {
-    Blob* src_blob_i = BnInOp2Blob("in_" + std::to_string(i));
-    KernelUtil<DeviceType::kCPU, T>::Axpy(ctx, dst_blob->shape().elem_cnt(),
-                                          1.0, src_blob_i->dptr<T>(), 1,
-                                          dst_blob->mut_dptr<T>(), 1);
-  }
-}
-
-template<typename T>
-void CopyDataId(DeviceCtx* ctx, PbRpf<Blob*>& src_blobs,
-                PbRpf<Blob*>& dst_blobs, const int32_t src_axis,
-                const int32_t dst_axis) {
-  size_t data_id_bytesize = JobDesc::Singleton()->SizeOfOneDataId();
-  int64_t src_idx = 0;
-  int64_t dst_idx = 0;
-  int64_t src_offset = 0;
-  int64_t dst_offset = 0;
-  while (src_idx < src_blobs.size() && dst_idx < dst_blobs.size()) {
-    int64_t src_dim = src_blobs[src_idx]->shape().At(0);
-    int64_t dst_dim = dst_blobs[dst_idx]->shape().At(0);
-    int64_t copy_num = std::min(src_dim - src_offset, dst_dim - dst_offset);
-
-    Memcpy<DeviceType::kCPU>(
-        ctx, dst_blobs[dst_idx]->mut_data_id() + dst_offset * data_id_bytesize,
-        src_blobs[src_idx]->data_id() + src_offset * data_id_bytesize,
-        copy_num * data_id_bytesize, cudaMemcpyKind::cudaMemcpyHostToHost);
-
-    src_offset += copy_num;
-    if (src_offset == src_dim) {
-      src_offset = 0;
-      ++src_idx;
-    }
-
-    dst_offset += copy_num;
-    if (dst_offset == dst_dim) {
-      dst_offset = 0;
-      ++dst_idx;
-    }
-  }
-  CHECK_EQ(src_axis == 0, src_idx == src_blobs.size());
-  CHECK_EQ(src_axis > 0, dst_idx == dst_blobs.size());
-
-  if (dst_axis > 0) {
-    CHECK_EQ(dst_idx, 1);
-    FOR_RANGE(size_t, i, 1, dst_blobs.size()) {
-      Memcpy<DeviceType::kCPU>(ctx, dst_blobs[i]->mut_data_id(),
-                               dst_blobs[0]->data_id(),
-                               dst_blobs[0]->ByteSizeOfDataIdField(),
-                               cudaMemcpyKind::cudaMemcpyHostToHost);
-    }
-  }
-}
-
-template<typename T>
-void DoUnequalAxisCopy(DeviceCtx* ctx, PbRpf<Blob*>& src_blobs,
-                       PbRpf<Blob*>& dst_blobs, const BoxingInfo& src_info,
-                       const BoxingInfo& dst_info, bool need_swap) {
-  PbRpf<int64_t>
-      dst_blob_offset;  // (dst_blobs.size(), static_cast<int64_t>(0));
-  FOR_RANGE(size_t, src_idx, 0, src_blobs.size()) {
-    int64_t dst_segs_in_src_seg =
-        src_info.size_of_subseg(src_idx) / dst_info.one_seg_size();
-    int64_t src_seg_offset = 0;
-    FOR_RANGE(size_t, dst_seg_idx, 0, dst_segs_in_src_seg) {
-      FOR_RANGE(size_t, dst_idx, 0, dst_blobs.size()) {
-        size_t copy_bytesize = dst_info.size_of_subseg(dst_idx) * sizeof(T);
-        if (need_swap) {
-          Memcpy<DeviceType::kCPU>(
-              ctx,
-              src_blobs[src_idx]->mut_dptr<char>() + src_seg_offset * sizeof(T),
-              dst_blobs[dst_idx]->dptr<char>()
-                  + dst_blob_offset[dst_idx] * sizeof(T),
-              copy_bytesize, cudaMemcpyKind::cudaMemcpyHostToHost);
-        } else {
-          Memcpy<DeviceType::kCPU>(
-              ctx,
-              dst_blobs[dst_idx]->mut_dptr<char>()
-                  + dst_blob_offset[dst_idx] * sizeof(T),
-              src_blobs[src_idx]->dptr<char>() + src_seg_offset * sizeof(T),
-              copy_bytesize, cudaMemcpyKind::cudaMemcpyHostToHost);
-        }
-        src_seg_offset += dst_info.size_of_subseg(dst_idx);
-        dst_blob_offset[dst_idx] += dst_info.size_of_subseg(dst_idx);
-      }
-    }
-  }
-}
-
-template<typename T>
-void BoxingCopyForUnequalAxis(DeviceCtx* ctx, PbRpf<Blob*>& src_blobs,
-                              PbRpf<Blob*>& dst_blobs, const int32_t src_axis,
-                              const int32_t dst_axis) {
-  BoxingKernelConf kernel_conf;  //= this->kernel_conf().boxing_conf();
-  const BoxingInfo& in_info = kernel_conf.in_info();
-  const BoxingInfo& out_info = kernel_conf.out_info();
-  if (src_axis > dst_axis) {
-    CHECK_EQ(dst_axis, 0);
-    DoUnequalAxisCopy<T>(ctx, dst_blobs, src_blobs, out_info, in_info, true);
-  } else {
-    CHECK_EQ(src_axis, 0);
-    DoUnequalAxisCopy<T>(ctx, src_blobs, dst_blobs, in_info, out_info, false);
-  }
-}
-
-template<typename T>
-void BoxingCopyForEqualAxis(DeviceCtx* ctx, PbRpf<Blob*>& src_blobs,
-                            PbRpf<Blob*>& dst_blobs, const int32_t axis) {
-  BoxingKernelConf kernel_conf;  // = this->kernel_conf().boxing_conf();
-  const BoxingInfo& in_info = kernel_conf.in_info();
-  const BoxingInfo& out_info = kernel_conf.out_info();
-  int64_t src_offset = 0;
-  for (size_t src_idx = 0, dst_idx = 0;
-       src_idx != src_blobs.size() && dst_idx != dst_blobs.size();) {
-    int64_t dst_offset = 0;
-    while (dst_offset < out_info.size_of_subseg(dst_idx)) {
-      int64_t copy_num =
-          std::min(in_info.size_of_subseg(src_idx) - src_offset,
-                   out_info.size_of_subseg(dst_idx) - dst_offset);
-
-      Memcpy<DeviceType::kCPU>(
-          ctx, dst_blobs[dst_idx]->mut_dptr<char>() + dst_offset * sizeof(T),
-          src_blobs[src_idx]->dptr<char>() + src_offset * sizeof(T),
-          copy_num * sizeof(T), cudaMemcpyKind::cudaMemcpyHostToHost);
-      src_offset += copy_num;
-      dst_offset += copy_num;
-      if (src_offset == in_info.size_of_subseg(src_idx)) {
-        src_idx++;
-        if (src_idx == src_blobs.size()) {
-          CHECK_EQ(dst_offset, out_info.size_of_subseg(dst_idx));
-          CHECK_EQ(dst_idx, dst_blobs.size() - 1);
-          return;
-        }
-        src_offset = 0;
-      }
-    }
-    dst_idx++;
-  }
-  UNEXPECTED_RUN();
-}
-
-template<typename T>
-void ConcatSplitBlobs(DeviceCtx* ctx,
-                      std::function<Blob*(const std::string&)> BnInOp2Blob,
-                      const PbRpf<std::string>& src_bns,
-                      const PbRpf<std::string>& dst_bns, const BoxConcatConf&,
-                      const BoxSplitConf&) {
-  PbRpf<Blob*> src_blobs;
-  PbRpf<Blob*> dst_blobs;
-  const int32_t src_axis = -1;
-  const int32_t dst_axis = -1;
-  for (const std::string& bn : src_bns) {
-    // src_blobs.push_back(BnInOp2Blob(bn));
-  }
-  for (const std::string& bn : dst_bns) {
-    // dst_blobs.push_back(BnInOp2Blob(bn));
-  }
-  if (src_blobs[0]->has_data_id()) {
-    CopyDataId<T>(ctx, src_blobs, dst_blobs, src_axis, dst_axis);
-  }
-
-  if (src_axis == dst_axis) {
-    BoxingCopyForEqualAxis<T>(ctx, src_blobs, dst_blobs, src_axis);
-  } else {
-    BoxingCopyForUnequalAxis<T>(ctx, src_blobs, dst_blobs, src_axis, dst_axis);
-  }
-}
-
-template<typename T>
-void CopyFromFirstToOtherBlobs(
-    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
-    const PbRpf<std::string>& obns) {
-  const Blob* out_blob_0 = BnInOp2Blob(obns[0]);
-  FOR_RANGE(size_t, i, 1, obns.size()) {
-    Memcpy<DeviceType::kCPU>(
-        ctx, BnInOp2Blob(obns[i])->mut_memory_ptr(), out_blob_0->memory_ptr(),
-        out_blob_0->TotalByteSize(), cudaMemcpyKind::cudaMemcpyHostToHost);
-  }
-}
+namespace {
 
 PbRpf<std::string> ConstructPbRpf(const std::string& s) {
   PbRpf<std::string> ret;
@@ -201,26 +14,189 @@ PbRpf<std::string> ConstructPbRpf(const std::string& s) {
 }
 
 template<typename T>
-void BoxingKernel<T>::Forward(
+void CalcSumOfBlobs(DeviceCtx* ctx,
+                    std::function<Blob*(const std::string&)> BnInOp2Blob,
+                    const PbRpf<std::string>& src_bns,
+                    const std::string& dst_bn) {
+  const Blob* src_blob_0 = BnInOp2Blob(src_bns[0]);
+  Blob* dst_blob = BnInOp2Blob(dst_bn);
+  Memcpy<DeviceType::kCPU>(ctx, dst_blob->mut_dptr(), src_blob_0->dptr(),
+                           src_blob_0->ByteSizeOfDataContentField());
+  FOR_RANGE(size_t, i, 1, src_bns.size()) {
+    Blob* src_blob_i = BnInOp2Blob(src_bns[i]);
+    KernelUtil<DeviceType::kCPU, T>::Axpy(ctx, dst_blob->shape().elem_cnt(),
+                                          1.0, src_blob_i->dptr<T>(), 1,
+                                          dst_blob->mut_dptr<T>(), 1);
+  }
+}
+
+void CopyFromFirstToOtherBlobs(
+    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+    const PbRpf<std::string>& bns,
+    void (Blob::*Copy)(DeviceCtx*, const Blob*)) {
+  const Blob* blob_0 = BnInOp2Blob(bns[0]);
+  FOR_RANGE(size_t, i, 1, bns.size()) {
+    (BnInOp2Blob(bns[i])->*Copy)(ctx, blob_0);
+  }
+}
+
+void CopyDataContentFromFirstToOtherBlobs(
+    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+    const PbRpf<std::string>& bns) {
+  CopyFromFirstToOtherBlobs(ctx, BnInOp2Blob, bns,
+                            &Blob::CopyDataContentFrom<DeviceType::kCPU>);
+}
+
+void CopyDataIdFromFirstToOtherBlobs(
+    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+    const PbRpf<std::string>& bns) {
+  CopyFromFirstToOtherBlobs(ctx, BnInOp2Blob, bns,
+                            &Blob::CopyDataIdFrom<DeviceType::kCPU>);
+}
+
+template<typename Iter>
+void CopyFromIterToIter(DeviceCtx* ctx, Iter& src_it, Iter& dst_it) {
+  const char* src_ptr = nullptr;
+  size_t src_size = 0;
+  char* dst_ptr = nullptr;
+  size_t dst_size = 0;
+  while (true) {
+    if (src_size == 0) { std::tie(src_ptr, src_size) = src_it.GetNext(); }
+    if (dst_size == 0) { std::tie(dst_ptr, dst_size) = dst_it.GetNext(); }
+    if (src_size == 0) {
+      CHECK_EQ(src_size, dst_size);
+      break;
+    }
+    size_t cp_size = std::min(src_size, dst_size);
+    Memcpy<DeviceType::kCPU>(ctx, dst_ptr, src_ptr, cp_size);
+    src_size -= cp_size;
+    dst_size -= cp_size;
+  }
+}
+
+class DataContentIterator final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DataContentIterator);
+  DataContentIterator() = delete;
+  ~DataContentIterator() = default;
+
+  DataContentIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
+                      const PbRpf<std::string>* bns, int32_t axis) {
+    BnInOp2Blob_ = BnInOp2Blob;
+    seg_num_ = BnInOp2Blob(bns->Get(0))->shape().Count(0, axis);
+    seg_idx_ = 0;
+    bns_ = bns;
+    bn_idx_ = 0;
+    axis_ = axis;
+  }
+
+  std::tuple<char*, size_t> GetNext() {
+    std::tuple<char*, size_t> ret(nullptr, 0);
+    if (seg_idx_ == seg_num_) { return ret; }
+    Blob* blob = BnInOp2Blob_(bns_->Get(bn_idx_));
+    int64_t elem_num = blob->shape().Count(axis_);
+    std::get<1>(ret) = elem_num * GetSizeOfDataType(blob->data_type());
+    std::get<0>(ret) = blob->mut_dptr<char>() + seg_idx_ * std::get<1>(ret);
+    bn_idx_ += 1;
+    if (bn_idx_ == bns_->size()) {
+      bn_idx_ = 0;
+      seg_idx_ += 1;
+    }
+    return ret;
+  }
+
+ private:
+  std::function<Blob*(const std::string&)> BnInOp2Blob_;
+  int64_t seg_num_;
+  int64_t seg_idx_;
+  const PbRpf<std::string>* bns_;
+  int32_t bn_idx_;
+  int32_t axis_;
+};
+
+void ConcatSplitDataContent(
+    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+    const PbRpf<std::string>& concat_bns, int32_t concat_axis,
+    const PbRpf<std::string>& split_bns, int32_t split_axis) {
+  DataContentIterator concat_it(BnInOp2Blob, &concat_bns, concat_axis);
+  DataContentIterator split_it(BnInOp2Blob, &split_bns, split_axis);
+  CopyFromIterToIter(ctx, concat_it, split_it);
+}
+
+class DataIdIterator final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DataIdIterator);
+  DataIdIterator() = delete;
+  ~DataIdIterator() = default;
+
+  DataIdIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
+                 const PbRpf<std::string>* bns, int32_t axis) {
+    BnInOp2Blob_ = BnInOp2Blob;
+    bns_ = bns;
+    bn_idx_ = 0;
+    if (axis == 0) {
+      bn_num_ = bns_->size();
+    } else {
+      bn_num_ = 1;
+    }
+  }
+
+  std::tuple<char*, size_t> GetNext() {
+    std::tuple<char*, size_t> ret(nullptr, 0);
+    if (bn_idx_ == bn_num_) { return ret; }
+    Blob* blob = BnInOp2Blob_(bns_->Get(bn_idx_++));
+    std::get<0>(ret) = blob->mut_data_id();
+    std::get<1>(ret) = blob->ByteSizeOfDataIdField();
+    return ret;
+  }
+
+ private:
+  std::function<Blob*(const std::string&)> BnInOp2Blob_;
+  const PbRpf<std::string>* bns_;
+  int32_t bn_idx_;
+  int32_t bn_num_;
+};
+
+void ConcatSplitDataId(DeviceCtx* ctx,
+                       std::function<Blob*(const std::string&)> BnInOp2Blob,
+                       const PbRpf<std::string>& concat_bns,
+                       int32_t concat_axis, const PbRpf<std::string>& split_bns,
+                       int32_t split_axis) {
+  DataIdIterator concat_it(BnInOp2Blob, &concat_bns, concat_axis);
+  DataIdIterator split_it(BnInOp2Blob, &split_bns, split_axis);
+  CopyFromIterToIter(ctx, concat_it, split_it);
+  if (split_axis != 0) {
+    CopyDataIdFromFirstToOtherBlobs(ctx, BnInOp2Blob, split_bns);
+  }
+}
+
+}  // namespace
+
+template<typename T>
+void BoxingKernel<T>::VirtualKernelInit(const ParallelContext*) {
+  const std::string& ibn_0 = kernel_conf().input_bns(0);
+  const std::string& obn_0 = kernel_conf().output_bns(0);
+  ibn_0_ = ConstructPbRpf(ibn_0);
+  obn_0_ = ConstructPbRpf(obn_0);
+}
+
+template<typename T>
+void BoxingKernel<T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const BoxingOpConf& boxing_conf = op_conf().boxing_conf();
-  const std::string& obn_0 = kernel_conf().output_bns(0);
   if (boxing_conf.in_box_case() == BoxingOpConf::kConcatBox) {
     if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
-      ConcatSplitBlobs<T>(ctx.device_ctx, BnInOp2Blob,
-                          kernel_conf().input_bns(), kernel_conf().output_bns(),
-                          boxing_conf.concat_box(), boxing_conf.split_box());
+      ConcatSplitDataContent(
+          ctx.device_ctx, BnInOp2Blob, kernel_conf().input_bns(),
+          boxing_conf.concat_box().axis(), kernel_conf().output_bns(),
+          boxing_conf.split_box().axis());
     } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
-      const Blob* ob_0 = BnInOp2Blob(obn_0);
-      BoxSplitConf split_box;
-      split_box.set_axis(0);
-      split_box.add_part_num(ob_0->shape().At(0));
-      ConcatSplitBlobs<T>(ctx.device_ctx, BnInOp2Blob,
-                          kernel_conf().input_bns(), ConstructPbRpf(obn_0),
-                          boxing_conf.concat_box(), split_box);
-      CopyFromFirstToOtherBlobs<T>(ctx.device_ctx, BnInOp2Blob,
-                                   kernel_conf().output_bns());
+      ConcatSplitDataContent(ctx.device_ctx, BnInOp2Blob,
+                             kernel_conf().input_bns(),
+                             boxing_conf.concat_box().axis(), obn_0_, 0);
+      CopyDataContentFromFirstToOtherBlobs(ctx.device_ctx, BnInOp2Blob,
+                                           kernel_conf().output_bns());
     } else {
       UNEXPECTED_RUN();
     }
@@ -228,16 +204,49 @@ void BoxingKernel<T>::Forward(
     if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
       CalcSumOfBlobs<T>(ctx.device_ctx, BnInOp2Blob, kernel_conf().input_bns(),
                         "middle");
-      BoxConcatConf concat_box;
-      concat_box.set_axis(0);
-      ConcatSplitBlobs<T>(ctx.device_ctx, BnInOp2Blob, ConstructPbRpf("middle"),
-                          kernel_conf().output_bns(), concat_box,
-                          boxing_conf.split_box());
+      ConcatSplitDataContent(
+          ctx.device_ctx, BnInOp2Blob, ConstructPbRpf("middle"), 0,
+          kernel_conf().output_bns(), boxing_conf.split_box().axis());
     } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
       CalcSumOfBlobs<T>(ctx.device_ctx, BnInOp2Blob, kernel_conf().input_bns(),
-                        obn_0);
-      CopyFromFirstToOtherBlobs<T>(ctx.device_ctx, BnInOp2Blob,
-                                   kernel_conf().output_bns());
+                        obn_0_.Get(0));
+      CopyDataContentFromFirstToOtherBlobs(ctx.device_ctx, BnInOp2Blob,
+                                           kernel_conf().output_bns());
+    } else {
+      UNEXPECTED_RUN();
+    }
+  } else {
+    UNEXPECTED_RUN();
+  }
+}
+
+template<typename T>
+void BoxingKernel<T>::ForwardDataId(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const BoxingOpConf& boxing_conf = op_conf().boxing_conf();
+  if (boxing_conf.in_box_case() == BoxingOpConf::kConcatBox) {
+    if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
+      ConcatSplitDataId(ctx.device_ctx, BnInOp2Blob, kernel_conf().input_bns(),
+                        boxing_conf.concat_box().axis(),
+                        kernel_conf().output_bns(),
+                        boxing_conf.split_box().axis());
+    } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
+      ConcatSplitDataId(ctx.device_ctx, BnInOp2Blob, kernel_conf().input_bns(),
+                        boxing_conf.concat_box().axis(), obn_0_, 0);
+      CopyDataIdFromFirstToOtherBlobs(ctx.device_ctx, BnInOp2Blob,
+                                      kernel_conf().output_bns());
+    } else {
+      UNEXPECTED_RUN();
+    }
+  } else if (boxing_conf.in_box_case() == BoxingOpConf::kAddBox) {
+    if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
+      ConcatSplitDataId(ctx.device_ctx, BnInOp2Blob, ibn_0_, 0,
+                        kernel_conf().output_bns(),
+                        boxing_conf.split_box().axis());
+    } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
+      CopyDataIdToAllOb(ctx.device_ctx, BnInOp2Blob,
+                        BnInOp2Blob(ibn_0_.Get(0)));
     } else {
       UNEXPECTED_RUN();
     }
