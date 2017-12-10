@@ -13,8 +13,15 @@ class BoxingKernel final : public KernelIf<DeviceType::kCPU> {
   ~BoxingKernel() = default;
 
  private:
-  void Forward(const KernelCtx&,
-               std::function<Blob*(const std::string&)>) const override;
+  void VirtualKernelInit(const ParallelContext*) override;
+  void ForwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
+  void ForwardDataId(const KernelCtx&,
+                     std::function<Blob*(const std::string&)>) const override;
+
+  PbRpf<std::string> ibn_0_;
+  PbRpf<std::string> obn_0_;
 };
 
 }  // namespace oneflow

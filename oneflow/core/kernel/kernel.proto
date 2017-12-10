@@ -14,18 +14,6 @@ message MultinomialLogisticLossKernelConf {
   required DataType label_type = 2;
 }
 
-message BoxingInfo {
-  required int64 total_seg_num = 1;
-  required int64 one_seg_size = 2;
-  repeated int64 offset_of_subseg = 3;
-  repeated int64 size_of_subseg = 4;
-}
-
-message BoxingKernelConf {
-  required BoxingInfo in_info = 1;
-  required BoxingInfo out_info = 2;
-}
-
 message SoftmaxLossKernelConf { 
   required DataType prediction_type = 1;
   required DataType label_type = 2;
@@ -50,7 +38,6 @@ message KernelConf {
   required DataType data_type = 14;
 
   oneof kernel_type {
-    BoxingKernelConf boxing_conf = 103;
     MultinomialLogisticLossKernelConf multinomial_logistic_loss_conf = 106;
     ConcatKernelConf concat_conf = 113; 
     SoftmaxLossKernelConf softmax_loss_conf = 117;
