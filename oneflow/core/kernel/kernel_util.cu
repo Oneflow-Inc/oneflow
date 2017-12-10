@@ -164,7 +164,11 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ);
   struct KernelUtil<DeviceType::kGPU, T> final {                             \
     static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, \
                      const int incx, T* y, const int incy) {                 \
-      TODO();                                                                \
+      FOR_RANGE(int, i, 0, n) {                                              \
+        *y += alpha * *x;                                                    \
+        x += incx;                                                           \
+        y += incy;                                                           \
+      }                                                                      \
     }                                                                        \
   };
 

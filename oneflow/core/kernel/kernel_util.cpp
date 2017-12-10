@@ -174,7 +174,11 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
   void KernelUtil<DeviceType::kCPU, T>::Axpy(                                 \
       DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, \
       T* y, const int incy) {                                                 \
-    TODO();                                                                   \
+    FOR_RANGE(int, i, 0, n) {                                                 \
+      *y += alpha * *x;                                                       \
+      x += incx;                                                              \
+      y += incy;                                                              \
+    }                                                                         \
   }
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_INT_KERNEL_UTIL, INT_DATA_TYPE_SEQ);
