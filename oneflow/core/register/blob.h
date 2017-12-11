@@ -54,7 +54,11 @@ class Blob final {
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
 
   template<DeviceType device_type>
+  void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  template<DeviceType device_type>
   void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  template<DeviceType device_type>
+  void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
 
  private:
   template<typename T>
