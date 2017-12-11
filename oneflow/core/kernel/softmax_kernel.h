@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_KERNEL_SOFTMAX_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_SOFTMAX_KERNEL_H_
 
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
@@ -65,6 +66,27 @@ void SoftmaxComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w,
     KernelUtil<device_type, T>::Div(ctx, w, prob + i * w, tmp + i);
   }
 }
+
+#ifdef USE_CUDNN
+template<typename T>
+class CudnnSoftmaxKernel final : public KernelIf<DeviceType::kGPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnSoftmaxKernel);
+  CudnnSoftmaxKernel();
+  ~CudnnSoftmaxKernel();
+
+ private:
+  void ForwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
+  void BackwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
+
+  cudnnTensorDescriptor_t in_desc_;
+  cudnnTensorDescriptor_t out_desc_;
+};
+#endif  // USE_CUDNN
 
 }  // namespace oneflow
 

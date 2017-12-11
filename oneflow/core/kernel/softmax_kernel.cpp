@@ -1,5 +1,4 @@
 #include "oneflow/core/kernel/softmax_kernel.h"
-#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
@@ -81,9 +80,15 @@ class SoftmaxKernelUtil<DeviceType::kCPU, T> final {
     }
   }
 };
+
 #define INSTANTIATE_SOFTMAX_KERNEL_UTIL(type_cpp, type_proto) \
   template class SoftmaxKernelUtil<DeviceType::kCPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_SOFTMAX_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
+
+#ifdef USE_CUDNN
+ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kSoftmaxConf, softmax_conf,
+                                 CudnnSoftmaxKernel, FLOATING_DATA_TYPE_SEQ);
+#endif  // USE_CUDNN
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSoftmaxConf, SoftmaxKernel,
                            FLOATING_DATA_TYPE_SEQ);

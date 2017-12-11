@@ -242,6 +242,11 @@ class PoolingKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
+#ifdef USE_CUDNN
+ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kPoolingConf, pooling_conf,
+                                 CudnnPoolingKernel, FLOATING_DATA_TYPE_SEQ);
+#endif  // USE_CUDNN
+
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kPoolingConf, PoolingKernel,
                            ARITHMETIC_DATA_TYPE_SEQ);
 

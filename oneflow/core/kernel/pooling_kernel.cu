@@ -247,6 +247,94 @@ class PoolingKernelUtil<DeviceType::kGPU, T> final {
   }
 };
 
+#ifdef USE_CUDNN
+template<typename T>
+CudnnPoolingKernel<T>::CudnnPoolingKernel() {
+  CudaCheck(cudnnCreateTensorDescriptor(&this->in_desc_));
+  CudaCheck(cudnnCreateTensorDescriptor(&this->out_desc_));
+  CudaCheck(cudnnCreatePoolingDescriptor(&this->pooling_desc_));
+}
+
+template<typename T>
+CudnnPoolingKernel<T>::~CudnnPoolingKernel() {
+  CudaCheck(cudnnDestroyTensorDescriptor(this->in_desc_));
+  CudaCheck(cudnnDestroyTensorDescriptor(this->out_desc_));
+  CudaCheck(cudnnDestroyPoolingDescriptor(this->pooling_desc_));
+}
+
+template<typename T>
+void CudnnPoolingKernel<T>::VirtualKernelInit(
+    const ParallelContext* parallel_ctx) {
+  auto pooling_conf = this->op_conf().pooling_conf();
+
+  switch (pooling_conf.pool()) {
+    case PoolingOpConf::kMax: {
+      this->pooling_mode_ = CUDNN_POOLING_MAX;
+      break;
+    }
+    case PoolingOpConf::kAve: {
+      this->pooling_mode_ = CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING;
+      break;
+    }
+    default: { UNEXPECTED_RUN(); }
+  }
+
+  CudaCheck(cudnnSetPooling2dDescriptor(
+      this->pooling_desc_, this->pooling_mode_, CUDNN_PROPAGATE_NAN,
+      pooling_conf.kernel_h(), pooling_conf.kernel_w(), pooling_conf.pad_h(),
+      pooling_conf.pad_w(), pooling_conf.stride_h(), pooling_conf.stride_w()));
+}
+
+template<typename T>
+void CudnnPoolingKernel<T>::ForwardDataContent(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const PoolingOpConf& pooling_conf = this->op_conf().pooling_conf();
+  const Blob* in_blob = BnInOp2Blob("in");
+  Blob* out_blob = BnInOp2Blob("out");
+
+  CudaCheck(cudnnSetTensor4dDescriptor(
+      this->in_desc_, CUDNN_TENSOR_NCHW, CudnnDataType<T>::type,
+      in_blob->shape().At(0), in_blob->shape().At(1), in_blob->shape().At(2),
+      in_blob->shape().At(3)));
+  CudaCheck(cudnnSetTensor4dDescriptor(
+      this->out_desc_, CUDNN_TENSOR_NCHW, CudnnDataType<T>::type,
+      out_blob->shape().At(0), out_blob->shape().At(1), out_blob->shape().At(2),
+      out_blob->shape().At(3)));
+
+  CudaCheck(cudnnPoolingForward(
+      ctx.device_ctx->cudnn_handle(), this->pooling_desc_,
+      CudnnDataType<T>::one, this->in_desc_, in_blob->dptr<T>(),
+      CudnnDataType<T>::zero, this->out_desc_, out_blob->mut_dptr<T>()));
+}
+
+template<typename T>
+void CudnnPoolingKernel<T>::BackwardDataContent(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const PoolingOpConf& pooling_conf = this->op_conf().pooling_conf();
+  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
+  const Blob* in_blob = BnInOp2Blob("in");
+  const Blob* out_blob = BnInOp2Blob("out");
+  Blob* in_diff_blob = BnInOp2Blob("in_diff");
+
+  if (in_diff_blob == nullptr) { return; }
+  Memset<DeviceType::kGPU>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
+                           in_diff_blob->ByteSizeOfDataContentField());
+
+  CudaCheck(cudnnPoolingBackward(
+      ctx.device_ctx->cudnn_handle(), this->pooling_desc_,
+      CudnnDataType<T>::one, this->out_desc_, out_blob->dptr<T>(),
+      this->out_desc_, out_diff_blob->dptr<T>(), this->in_desc_,
+      in_blob->dptr<T>(), CudnnDataType<T>::zero, this->in_desc_,
+      in_diff_blob->mut_dptr<T>()));
+}
+
+#define INSTANTIATE_POOLING_KERNEL(type_cpp, type_proto) \
+  template class CudnnPoolingKernel<type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_POOLING_KERNEL, FLOATING_DATA_TYPE_SEQ)
+#endif  // USE_CUDNN
+
 #define INSTANTIATE_POOLING_KERNEL_UTIL(type_cpp, type_proto) \
   template class PoolingKernelUtil<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_POOLING_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ)

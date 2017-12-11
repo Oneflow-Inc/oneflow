@@ -34,6 +34,28 @@ class ReluKernel final : public KernelIf<device_type> {
       std::function<Blob*(const std::string&)>) const override;
 };
 
+#ifdef USE_CUDNN
+template<typename T>
+class CudnnReluKernel final : public KernelIf<DeviceType::kGPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnReluKernel);
+  CudnnReluKernel();
+  ~CudnnReluKernel();
+
+ private:
+  void ForwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
+  void BackwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
+
+  cudnnTensorDescriptor_t in_desc_;
+  cudnnTensorDescriptor_t out_desc_;
+  cudnnActivationDescriptor_t activ_desc_;
+};
+#endif  // USE_CUDNN
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_RELU_KERNEL_H_

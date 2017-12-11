@@ -46,6 +46,15 @@ class ReluKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
+#ifdef USE_CUDNN
+ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kReluConf, relu_conf,
+                                 CudnnReluKernel,
+                                 FLOATING_DATA_TYPE_SEQ);  // TODO(shiyuan):
+                                                           // cudnn does not
+                                                           // support "signed
+                                                           // char"
+#endif                                                     // USE_CUDNN
+
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReluConf, ReluKernel,
                            FLOATING_DATA_TYPE_SEQ SIGNED_INT_DATA_TYPE_SEQ);
 
