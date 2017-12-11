@@ -43,8 +43,44 @@ message ConvolutionOpConf {
   optional int32 dilation_h = 11 [default = 1];
   optional int32 dilation_w = 12 [default = 1];
 
-  optional FillConf weight_fill = 14;
-  optional FillConf bias_fill = 15;
+  optional bool use_cudnn = 13 [default = true];
+  
+  enum cudnnConvolutionFwdAlgo_t {
+    CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM = 0;
+    CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM = 1;
+    CUDNN_CONVOLUTION_FWD_ALGO_GEMM = 2;
+    CUDNN_CONVOLUTION_FWD_ALGO_DIRECT = 3;
+    CUDNN_CONVOLUTION_FWD_ALGO_FFT = 4;
+    CUDNN_CONVOLUTION_FWD_ALGO_FFT_TILING = 5;
+    CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD = 6;
+    CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD_NONFUSED = 7;
+    CUDNN_CONVOLUTION_FWD_ALGO_COUNT = 8;
+  }
+  enum cudnnConvolutionBwdFilterAlgo_t {
+    CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0 = 0;
+    CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1 = 1;
+    CUDNN_CONVOLUTION_BWD_FILTER_ALGO_FFT = 2;
+    CUDNN_CONVOLUTION_BWD_FILTER_ALGO_3 = 3;
+    CUDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD = 4;
+    CUDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD_NONFUSED = 5;
+    CUDNN_CONVOLUTION_BWD_FILTER_ALGO_FFT_TILING = 6;
+    CUDNN_CONVOLUTION_BWD_FILTER_ALGO_COUNT = 7;
+  }
+  enum cudnnConvolutionBwdDataAlgo_t {
+    CUDNN_CONVOLUTION_BWD_DATA_ALGO_0 = 0;
+    CUDNN_CONVOLUTION_BWD_DATA_ALGO_1 = 1;
+    CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT = 2;
+    CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING = 3;
+    CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD = 4;
+    CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD_NONFUSED = 5;
+    CUDNN_CONVOLUTION_BWD_DATA_ALGO_COUNT = 6;
+  }
+  optional cudnnConvolutionFwdAlgo_t cudnn_fwd_algo = 14 [default = CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM];
+  optional cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_filter_algo = 15 [default = CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0];
+  optional cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo = 16 [default = CUDNN_CONVOLUTION_BWD_DATA_ALGO_0];
+
+  optional FillConf weight_fill = 17;
+  optional FillConf bias_fill = 18;
 }
 
 message InnerProductOpConf {

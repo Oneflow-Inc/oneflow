@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_OPERATOR_CONVOLUTION_OP_H_
 #define ONEFLOW_CORE_OPERATOR_CONVOLUTION_OP_H_
 
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
@@ -21,6 +22,10 @@ class ConvolutionOp final : public Operator {
   int32_t MaxModelSplitNum() const override {
     return op_conf().convolution_conf().out_num();
   }
+  void VirtualGenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx,
+      KernelConf* kernel_conf) const override;
 
  private:
 };
