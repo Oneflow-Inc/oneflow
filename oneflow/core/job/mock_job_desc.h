@@ -7,6 +7,8 @@
 
 namespace oneflow {
 
+namespace test {
+
 class MockJobDesc : public JobDesc {
  public:
   MockJobDesc() = default;
@@ -14,14 +16,17 @@ class MockJobDesc : public JobDesc {
   MOCK_METHOD0(DefaultDataType, DataType());
 };
 
-void InitJobDescSingleton(MockJobDesc& mock_job_desc, size_t size_of_one_dataid,
-                          DataType data_type) {
-  EXPECT_CALL(mock_job_desc, SizeOfOneDataId())
+void InitJobDescSingleton(MockJobDesc* mock_job_desc,
+                          const size_t size_of_one_dataid,
+                          const DataType data_type) {
+  EXPECT_CALL(*mock_job_desc, SizeOfOneDataId())
       .WillRepeatedly(testing::Return(size_of_one_dataid));
-  EXPECT_CALL(mock_job_desc, DefaultDataType())
+  EXPECT_CALL(*mock_job_desc, DefaultDataType())
       .WillRepeatedly(testing::Return(data_type));
-  *(JobDesc::SingletonPPtr()) = &mock_job_desc;
+  *(JobDesc::SingletonPPtr()) = mock_job_desc;
 }
+
+}  // namespace test
 
 }  // namespace oneflow
 

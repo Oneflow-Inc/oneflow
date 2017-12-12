@@ -5,7 +5,7 @@
 namespace oneflow {
 
 template<typename T, bool has_data_id>
-void DoTestCloneOp(const int out_num,
+void DoCloneOpTest(const int out_num,
                    const std::vector<std::vector<int64_t>>& in_shapes,
                    const std::vector<std::string>& ibns,
                    const std::vector<std::string>& obns,
@@ -26,19 +26,19 @@ void DoTestCloneOp(const int out_num,
 
 template<typename T, bool has_data_id>
 void TestCloneOp() {
-  MockJobDesc mock_job_desc;
-  InitJobDescSingleton(mock_job_desc, 8, GetDataType<T>::val);
+  test::MockJobDesc mock_job_desc;
+  test::InitJobDescSingleton(&mock_job_desc, 8, GetDataType<T>::val);
 
   int out_num = 3;
   std::vector<std::vector<int64_t>> in_shapes = {{3, 4}};
   std::vector<std::string> ibns = {"in"};
   std::vector<std::string> obns = {"out_0", "out_1", "out_2"};
   std::vector<std::string> other_bns = {};
-  DoTestCloneOp<T, has_data_id>(out_num, in_shapes, ibns, obns, other_bns);
+  DoCloneOpTest<T, has_data_id>(out_num, in_shapes, ibns, obns, other_bns);
 
   out_num = 1;
   obns = {"out_0"};
-  DoTestCloneOp<T, has_data_id>(out_num, in_shapes, ibns, obns, other_bns);
+  DoCloneOpTest<T, has_data_id>(out_num, in_shapes, ibns, obns, other_bns);
 }
 
 TEST(CloneOp, infer_blob_desc) {
