@@ -4,6 +4,9 @@ namespace oneflow {
 
 void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   actor_id_ = task_proto.task_id();
+  if (task_proto.has_parallel_ctx()) {
+    parallel_ctx_.reset(new ParallelContext(task_proto.parallel_ctx()));
+  }
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
     ek.kernel =
@@ -123,12 +126,12 @@ void Actor::AsyncLaunchKernel(
 }
 
 void Actor::AsyncSendRegstMsgToConsumer(
-    std::function<void(Regst*)> RegstPreProcess,
+    std::function<bool(Regst*)> RegstPreProcess,
     std::function<bool(int64_t)> IsAllowedActor) {
   int64_t this_actor_id = actor_id_;
   for (auto& pair : writeable_produced_regst_) {
     Regst* regst = pair.second.front();
-    RegstPreProcess(regst);
+    if (RegstPreProcess(regst) == false) { continue; }
     auto regst_reading_cnt_it = produced_regst2reading_cnt_.find(regst);
     CHECK_EQ(regst_reading_cnt_it->second, 0);
     for (int64_t consumer : regst->consumers_actor_id()) {
@@ -147,17 +150,17 @@ void Actor::AsyncSendRegstMsgToConsumer(
 }
 
 void Actor::AsyncSendRegstMsgToConsumer(
-    std::function<void(Regst*)> RegstPreProcess) {
+    std::function<bool(Regst*)> RegstPreProcess) {
   AsyncSendRegstMsgToConsumer(RegstPreProcess, [](int64_t) { return true; });
 }
 
 void Actor::AsyncSendRegstMsgToConsumer(
     std::function<bool(int64_t)> IsAllowedActor) {
-  AsyncSendRegstMsgToConsumer([](Regst*) {}, IsAllowedActor);
+  AsyncSendRegstMsgToConsumer([](Regst*) { return true; }, IsAllowedActor);
 }
 
 void Actor::AsyncSendRegstMsgToConsumer() {
-  AsyncSendRegstMsgToConsumer([](Regst*) {});
+  AsyncSendRegstMsgToConsumer([](Regst*) { return true; });
 }
 
 void Actor::AsyncSendEORDMsgToConsumers(int64_t regst_desc_id) {

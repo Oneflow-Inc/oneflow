@@ -36,7 +36,7 @@ class Actor {
 
   // Util
   Actor() = default;
-  virtual const ParallelContext* parallel_ctx() const { return nullptr; }
+  const ParallelContext* parallel_ctx() const { return parallel_ctx_.get(); }
   DeviceType GetDeviceType() const;
   virtual void VirtualActorInit(const TaskProto&) {}
   int64_t RegstDescId4Name(const std::string& name) const;
@@ -70,9 +70,9 @@ class Actor {
   // Async Do on device_ctx_
   void AsyncLaunchKernel(const KernelCtx&,
                          std::function<Regst*(int64_t)> Regst4RegstDescId);
-  void AsyncSendRegstMsgToConsumer(std::function<void(Regst*)> RegstPreProcess,
+  void AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess,
                                    std::function<bool(int64_t)> IsAllowedActor);
-  void AsyncSendRegstMsgToConsumer(std::function<void(Regst*)> RegstPreProcess);
+  void AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess);
   void AsyncSendRegstMsgToConsumer(std::function<bool(int64_t)> IsAllowedActor);
   void AsyncSendRegstMsgToConsumer();
   void AsyncSendEORDMsgToConsumers(int64_t regst_desc_id);
@@ -90,6 +90,7 @@ class Actor {
 
  private:
   int64_t actor_id_;
+  std::unique_ptr<ParallelContext> parallel_ctx_;
   std::vector<ExecKernel> exec_kernel_vec_;
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;
   HashMap<std::string, int64_t> name2regst_desc_id_;

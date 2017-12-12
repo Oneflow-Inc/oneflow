@@ -48,6 +48,7 @@ int MdUpdtCompActor::HandlerSendInitialModel(const ActorMsg& actor_msg) {
   pre_model_regst_ = GetCurWriteableRegst(model_regst_desc_id_);
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
     regst->set_model_version_id(next_model_version_id_);
+    return true;
   });
   next_model_version_id_ += 1;
   if (JobDesc::Singleton()->IsTrain()) {
@@ -94,15 +95,16 @@ void MdUpdtCompActor::Act() {
   });
   AsyncSendRegstMsgToProducer(model_diff_acc_regst);
   const JobDesc* job_desc = JobDesc::Singleton();
+  auto RegstPreProcess = [&](Regst* regst) { return regst == cur_model_regst; };
   if (next_model_version_id_ == job_desc->TotalBatchNum()) {
-    AsyncSendRegstMsgToConsumer([this](int64_t actor_id) {
+    AsyncSendRegstMsgToConsumer(RegstPreProcess, [this](int64_t actor_id) {
       return actor_id == related_save_actor_id_;
     });
   } else {
     if (next_model_version_id_ % job_desc->NumOfBatchesInSnapshot() == 0) {
-      AsyncSendRegstMsgToConsumer();
+      AsyncSendRegstMsgToConsumer(RegstPreProcess);
     } else {
-      AsyncSendRegstMsgToConsumer([this](int64_t actor_id) {
+      AsyncSendRegstMsgToConsumer(RegstPreProcess, [this](int64_t actor_id) {
         return actor_id != related_save_actor_id_;
       });
     }
