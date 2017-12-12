@@ -74,8 +74,10 @@ void CopyCommNetActor::Act() {
   void* read_id = CommNet::Singleton()->Read(actor_read_id_, src_machine_id,
                                              readable_token, writeable_token);
   comm_net_device_ctx_->set_read_id(read_id);
-  AsyncSendRegstMsgToConsumer(
-      [&](Regst* regst) { regst->set_piece_id(next_piece_id_); });
+  AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+    regst->set_piece_id(next_piece_id_);
+    return true;
+  });
   AsyncSendRegstMsgToProducer(readable_regst, src_actor_id);
   comm_net_device_ctx_->set_read_id(nullptr);
   CommNet::Singleton()->AddReadCallBackDone(actor_read_id_, read_id);

@@ -126,12 +126,12 @@ void Actor::AsyncLaunchKernel(
 }
 
 void Actor::AsyncSendRegstMsgToConsumer(
-    std::function<void(Regst*)> RegstPreProcess,
+    std::function<bool(Regst*)> RegstPreProcess,
     std::function<bool(int64_t)> IsAllowedActor) {
   int64_t this_actor_id = actor_id_;
   for (auto& pair : writeable_produced_regst_) {
     Regst* regst = pair.second.front();
-    RegstPreProcess(regst);
+    if (RegstPreProcess(regst) == false) { continue; }
     auto regst_reading_cnt_it = produced_regst2reading_cnt_.find(regst);
     CHECK_EQ(regst_reading_cnt_it->second, 0);
     for (int64_t consumer : regst->consumers_actor_id()) {
@@ -150,17 +150,17 @@ void Actor::AsyncSendRegstMsgToConsumer(
 }
 
 void Actor::AsyncSendRegstMsgToConsumer(
-    std::function<void(Regst*)> RegstPreProcess) {
+    std::function<bool(Regst*)> RegstPreProcess) {
   AsyncSendRegstMsgToConsumer(RegstPreProcess, [](int64_t) { return true; });
 }
 
 void Actor::AsyncSendRegstMsgToConsumer(
     std::function<bool(int64_t)> IsAllowedActor) {
-  AsyncSendRegstMsgToConsumer([](Regst*) {}, IsAllowedActor);
+  AsyncSendRegstMsgToConsumer([](Regst*) { return true; }, IsAllowedActor);
 }
 
 void Actor::AsyncSendRegstMsgToConsumer() {
-  AsyncSendRegstMsgToConsumer([](Regst*) {});
+  AsyncSendRegstMsgToConsumer([](Regst*) { return true; });
 }
 
 void Actor::AsyncSendEORDMsgToConsumers(int64_t regst_desc_id) {

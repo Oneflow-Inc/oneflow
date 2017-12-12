@@ -65,8 +65,10 @@ void AccumulateCompActor::Act() {
   }
   acc_cnt_ += 1;
   if (acc_cnt_ == max_acc_cnt_) {
-    AsyncSendRegstMsgToConsumer(
-        [&](Regst* regst) { regst->set_piece_id(next_piece_id_); });
+    AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+      regst->set_piece_id(next_piece_id_);
+      return true;
+    });
     acc_cnt_ = 0;
     next_piece_id_ += 1;
   }
