@@ -153,7 +153,7 @@ struct KernelUtil<DeviceType::kCPU, T> final {
                                int32_t part_num, const std::string& model_dir,
                                Blob* blob, const std::string& bn_in_op,
                                int32_t dim_num, int64_t num_in_each_dim) {
-    int64_t blob_size = blob->TotalByteSize();
+    int64_t blob_size = blob->ByteSizeOfDataContentField();
     int64_t byte_size_of_each_dim = num_in_each_dim * sizeof(T);
     std::string file_path = JoinPath(model_dir, bn_in_op);
     uint64_t file_size = GlobalFS()->GetFileSize(file_path);
@@ -174,7 +174,11 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
   void KernelUtil<DeviceType::kCPU, T>::Axpy(                                 \
       DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, \
       T* y, const int incy) {                                                 \
-    TODO();                                                                   \
+    FOR_RANGE(int, i, 0, n) {                                                 \
+      *y += alpha * *x;                                                       \
+      x += incx;                                                              \
+      y += incy;                                                              \
+    }                                                                         \
   }
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_INT_KERNEL_UTIL, INT_DATA_TYPE_SEQ);
