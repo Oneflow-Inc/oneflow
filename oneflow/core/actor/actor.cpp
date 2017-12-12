@@ -4,6 +4,9 @@ namespace oneflow {
 
 void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   actor_id_ = task_proto.task_id();
+  if (task_proto.has_parallel_ctx()) {
+    parallel_ctx_.reset(new ParallelContext(task_proto.parallel_ctx()));
+  }
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
     ek.kernel =
