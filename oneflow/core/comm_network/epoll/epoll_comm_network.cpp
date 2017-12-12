@@ -51,7 +51,7 @@ uint16_t PullPort(int64_t machine_id) {
 
 EpollCommNet::~EpollCommNet() {
   for (size_t i = 0; i < pollers_.size(); ++i) {
-    LOG(INFO) << "IOWorker " << i << " finish";
+    LOG(INFO) << "CommNet Thread " << i << " finish";
     pollers_[i]->Stop();
   }
   OF_BARRIER();
