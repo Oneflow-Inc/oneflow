@@ -133,22 +133,19 @@ struct KernelUtil<DeviceType::kGPU, T> final {
                                int32_t part_num, const std::string& model_dir,
                                Blob* blob, const std::string& bn_in_op,
                                int32_t dim_num, int64_t num_in_each_dim) {
-    int64_t blob_size = blob->TotalByteSize();
-    int64_t byte_size_of_each_dim = num_in_each_dim * sizeof(T);
-    std::string file_path = JoinPath(model_dir, bn_in_op);
-    uint64_t file_size = GlobalFS()->GetFileSize(file_path);
-    CHECK_EQ(file_size, dim_num * byte_size_of_each_dim);
-    BalancedSplitter splitter = BalancedSplitter(dim_num, part_num);
-    int64_t begin_pos = splitter.At(part_id).begin() * byte_size_of_each_dim;
-    void* host_raw_dptr = nullptr;
-    CudaCheck(cudaMallocHost(&host_raw_dptr, blob_size));
-    std::unique_ptr<void, std::function<void(void*)>> host_unique_ptr(
-        host_raw_dptr, [&](void* dptr) { CudaCheck(cudaFreeHost(dptr)); });
-    std::unique_ptr<Blob> host_blob(new Blob(
-        blob->blob_desc_ptr(), static_cast<char*>(host_unique_ptr.get())));
-    NormalPersistentInStream in_stream(GlobalFS(), file_path, begin_pos);
-    in_stream.Read(host_blob.get()->mut_dptr<char>(), blob_size);
-    blob->CopyDataContentFrom<DeviceType::kGPU>(ctx, host_blob.get());
+    BlobDesc blob_desc = BlobDesc(blob->blob_desc());
+    char* host_raw_dptr;
+    size_t byte_size = blob->TotalByteSize();
+    CudaCheck(cudaMallocHost(&host_raw_dptr, byte_size));
+    Blob host_blob(&blob_desc, host_raw_dptr);
+    KernelUtil<DeviceType::kCPU, T>::FillWithModelDir(
+        ctx, part_id, part_num, model_dir, &host_blob, bn_in_op, dim_num,
+        num_in_each_dim);
+
+    Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob.dptr(), byte_size,
+                             cudaMemcpyHostToDevice);
+    cudaStreamSynchronize(ctx->cuda_stream());
+    CudaCheck(cudaFreeHost(host_raw_dptr));
   }
 };
 
