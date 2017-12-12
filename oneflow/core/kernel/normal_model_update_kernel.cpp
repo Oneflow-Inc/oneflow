@@ -13,7 +13,7 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
   CHECK(std::isfinite(alpha));
 
   // model = model - alpha * model_diff
-  KernelUtil<device_type, T>::BlasAxpy(
+  KernelUtil<device_type, T>::Axpy(
       ctx.device_ctx, model_blob->shape().elem_cnt(), -alpha,
       model_diff_acc_blob->dptr<T>(), 1, model_blob->mut_dptr<T>(), 1);
 }

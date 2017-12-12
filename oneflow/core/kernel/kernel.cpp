@@ -143,7 +143,9 @@ std::unique_ptr<const Kernel> ConstructKernel(
     DeviceType device_type, const ParallelContext* parallel_ctx,
     const KernelConf& conf) {
   OperatorConf::OpTypeCase opcase = conf.op_conf().op_type_case();
-  Kernel* rptr = GetCreatorsMap().at(opcase)(device_type, conf);
+  auto it = GetCreatorsMap().find(opcase);
+  CHECK(it != GetCreatorsMap().end()) << opcase;
+  Kernel* rptr = it->second(device_type, conf);
   rptr->Init(parallel_ctx, conf);
   return std::unique_ptr<const Kernel>(rptr);
 }

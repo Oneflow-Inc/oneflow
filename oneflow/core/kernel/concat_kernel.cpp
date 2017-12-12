@@ -4,117 +4,100 @@ namespace oneflow {
 
 namespace {
 
-// Calculates the addr of the next concat point in blob. Ex:
-// For a 2-dimension matrix with columns and rows, assume the concat operation
-// is on the row dimension, so each row will be concated/extended. The
-// start_addr is the address of element(0,0), concat_idx indicates the index
-// of / the current row to be concated. concat_axis_dim is the row
-// length/dimension. / offset is the concat position in each row. The elem_cnt
-// is 1 for 2-dimension / matrix and is calculated by Count(concat_axis,
-// NumAxes()) for higher / dimension matrix.
-template<typename T>
-T* NextConcatAddr(T* start_addr, int64_t concat_idx, int64_t concat_axis_dim,
-                  int64_t offset, int64_t elem_cnt) {
-  return start_addr + (concat_idx * concat_axis_dim + offset) * elem_cnt;
+// Calculates the address of a given position in a shape's concat dim.
+// Consider a blob with shape (2,3,4,5,6) and concat axis is the 3rd dim. Taking
+// it as a multi-dim array, when we want to calculate the address of
+// blob[1][1][2][0][0]. Parameters are setted as: concat_idx = 5,
+// concat_axis_dim = 4, concat_axis_offset = 2 and concat_elem_bytesize =
+// 30 * sizeof(data type in blob)
+char* NextConcatAddr(char* start_addr, int64_t concat_idx,
+                     int64_t concat_axis_dim, int64_t concat_axis_offset,
+                     int64_t concat_elem_bytesize) {
+  return start_addr
+         + (concat_idx * concat_axis_dim + concat_axis_offset)
+               * concat_elem_bytesize;
 }
 
 }  // namespace
 
-template<DeviceType device_type, typename T>
-void ConcatKernel<device_type, T>::ConcatKernelWork(
+template<DeviceType device_type>
+void ConcatKernel<device_type>::ConcatKernelWork(
     const KernelCtx& ctx, const std::string& obn,
-    const std::vector<std::string>& ibns,
-    std::function<Blob*(const std::string&)> BnInOp2Blob,
-    MemCopyFuncType copy_func) const {
-  Blob* out_blob = BnInOp2Blob(obn);
+    const PbRpf<std::string>& ibns,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (ibns.size() == 0) { return; }
-  const int32_t concat_axis = this->op_conf().concat_conf().axis();
-  int64_t concat_element_cnt = 1;
-  if ((concat_axis != (out_blob->shape().NumAxes() - 1))
-      && (concat_axis != -1)) {
-    concat_element_cnt = out_blob->shape().Count(concat_axis + 1);
-  }
-  int64_t concat_num_each_blob = 1;
-  if ((concat_axis != (-out_blob->shape().NumAxes())) && (concat_axis != 0)) {
-    concat_num_each_blob = out_blob->shape().Count(0, concat_axis);
-  }
-  const int64_t out_concat_axis_dim = out_blob->shape().At(concat_axis);
-  T* out_blob_mut_dptr = out_blob->mut_dptr<T>();
-  int64_t offset_concat_axis = 0;
-  cudaMemcpyKind kind;
-  if (device_type == DeviceType::kCPU) {
-    kind = cudaMemcpyKind::cudaMemcpyHostToHost;
-  } else if (device_type == DeviceType::kGPU) {
-    kind = cudaMemcpyKind::cudaMemcpyDeviceToDevice;
-  } else {
-    LOG(FATAL) << "device type has not been set";
-    return;
-  }
 
-  for (const std::string& ibn : ibns) {
-    Blob* in_blob = BnInOp2Blob(ibn);
-    T* in_blob_mut_dptr = in_blob->mut_dptr<T>();
-    const int64_t in_concat_axis_dim = in_blob->shape().At(concat_axis);
-    const int64_t cp_sz = in_concat_axis_dim * concat_element_cnt * sizeof(T);
-
-    for (int64_t concat_idx = 0; concat_idx < concat_num_each_blob;
-         ++concat_idx) {
-      T* out_cp_adr =
-          NextConcatAddr(out_blob_mut_dptr, concat_idx, out_concat_axis_dim,
-                         offset_concat_axis, concat_element_cnt);
-      T* in_cp_adr = NextConcatAddr(in_blob_mut_dptr, concat_idx,
-                                    in_concat_axis_dim, 0, concat_element_cnt);
-      copy_func(ctx, in_cp_adr, out_cp_adr, cp_sz, kind);
-    }
-
-    offset_concat_axis += in_concat_axis_dim;
-  }
-  if (BnInOp2Blob(ibns.front())->has_data_id()) {
-    CopyDataIdToOb(ctx, ibns, obn, concat_axis, kind, BnInOp2Blob);
-  }
-}
-
-template<DeviceType device_type, typename T>
-void ConcatKernel<device_type, T>::CopyDataIdToOb(
-    const KernelCtx& ctx, const std::vector<std::string>& ibns,
-    const std::string& obn, const int32_t concat_axis, cudaMemcpyKind kind,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* out_blob = BnInOp2Blob(obn);
-  int64_t data_id_offset = 0;
-  for (const std::string& ibn : ibns) {
-    Blob* in_blob = BnInOp2Blob(ibn);
-    CHECK_LE(data_id_offset + in_blob->ByteSizeOfDataIdField(),
-             out_blob->ByteSizeOfDataIdField());
-    Memcpy<device_type>(
-        ctx.device_ctx, out_blob->mut_data_id() + data_id_offset,
-        in_blob->data_id(), in_blob->ByteSizeOfDataIdField(), kind);
-    data_id_offset += in_blob->ByteSizeOfDataIdField();
+  const int32_t concat_axis = this->op_conf().concat_conf().axis();
+  const int64_t out_concat_axis_dim = out_blob->shape().At(concat_axis);
+  const int64_t total_cp_num = this->kernel_conf().concat_conf().total_cp_num();
+  char* out_blob_mut_dptr = out_blob->mut_dptr<char>();
+
+  int64_t concat_axis_offset = 0;
+  int64_t cp_dim_bytesize = 0;
+  const PbRf<int64_t>& per_cp_bytesize =
+      this->kernel_conf().concat_conf().per_cp_bytesize();
+  FOR_RANGE(int64_t, ibn_idx, 0, ibns.size()) {
+    Blob* in_blob = BnInOp2Blob(ibns[ibn_idx]);
+    char* in_blob_mut_dptr = in_blob->mut_dptr<char>();
+    const int64_t in_concat_axis_dim = in_blob->shape().At(concat_axis);
+    const int64_t cp_bytesize = per_cp_bytesize[ibn_idx];
+    if (cp_dim_bytesize == 0) {
+      cp_dim_bytesize = cp_bytesize / in_concat_axis_dim;
+    }
+    FOR_RANGE(int64_t, concat_idx, 0, total_cp_num) {
+      char* out_cp_adr =
+          NextConcatAddr(out_blob_mut_dptr, concat_idx, out_concat_axis_dim,
+                         concat_axis_offset, cp_dim_bytesize);
+      char* in_cp_adr = NextConcatAddr(in_blob_mut_dptr, concat_idx,
+                                       in_concat_axis_dim, 0, cp_dim_bytesize);
+      if (this->kernel_conf().is_forward()) {
+        Memcpy<device_type>(ctx.device_ctx, out_cp_adr, in_cp_adr, cp_bytesize);
+      } else {
+        Memcpy<device_type>(ctx.device_ctx, in_cp_adr, out_cp_adr, cp_bytesize);
+      }
+    }
+    concat_axis_offset += in_concat_axis_dim;
   }
 }
 
-template<DeviceType device_type, typename T>
-void ConcatKernel<device_type, T>::ForwardDataContent(
+template<DeviceType device_type>
+void ConcatKernel<device_type>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  auto copy_in2out = [](const KernelCtx& ctx, T* src, T* dst,
-                        const int64_t size, cudaMemcpyKind kind) {
-    Memcpy<device_type>(ctx.device_ctx, dst, src, size, kind);
-  };
   ConcatKernelWork(ctx, this->kernel_conf().output_bns(0),
-                   this->kernel_conf().input_bns(), BnInOp2Blob, copy_in2out);
+                   this->kernel_conf().input_bns(), BnInOp2Blob);
 }
 
-template<DeviceType device_type, typename T>
-void ConcatKernel<device_type, T>::BackwardDataContent(
+template<DeviceType device_type>
+void ConcatKernel<device_type>::ForwardDataId(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  auto copy_out2in = [](const KernelCtx& ctx, T* dst, T* src,
-                        const int64_t size, cudaMemcpyKind kind) {
-    Memcpy<device_type>(ctx.device_ctx, dst, src, size, kind);
-  };
-  ConcatKernelWork(ctx, this->kernel_conf().output_diff_bns(0),
-                   this->kernel_conf().input_diff_bns(), BnInOp2Blob,
-                   copy_out2in);
+  Blob* out_blob = BnInOp2Blob(this->kernel_conf().output_bns(0));
+  const Blob* in_blob_0 = BnInOp2Blob(this->kernel_conf().input_bns(0));
+  out_blob->CopyDataIdFrom<device_type>(ctx.device_ctx, in_blob_0);
 }
+
+template<DeviceType device_type>
+void ConcatKernel<device_type>::BackwardDataContent(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ConcatKernelWork(ctx, this->kernel_conf().output_diff_bns(0),
+                   this->kernel_conf().input_diff_bns(), BnInOp2Blob);
+}
+
+namespace {
+
+Kernel* CreateConcatKernel(DeviceType dev_type) {
+  static const HashMap<std::string, std::function<Kernel*()>> creators = {
+#define CONCAT_KERNEL_ENTRY(device_type) \
+  {GetHashKey(device_type), []() { return new ConcatKernel<device_type>; }},
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(CONCAT_KERNEL_ENTRY, DEVICE_TYPE_SEQ)};
+  return creators.at(GetHashKey(dev_type))();
+}
+
+}  // namespace
+
+COMMAND(AddKernelCreator(OperatorConf::kConcatConf, CreateConcatKernel));
 
 }  // namespace oneflow
