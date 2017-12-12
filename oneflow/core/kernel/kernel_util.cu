@@ -2,7 +2,6 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
