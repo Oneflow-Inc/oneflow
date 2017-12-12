@@ -4,6 +4,14 @@
 
 namespace oneflow {
 
+std::shared_ptr<Operator> CreateCloneOp(int out_num) {
+  OperatorConf op_conf;
+  op_conf.set_name("clone_test");
+  op_conf.mutable_clone_conf()->set_out_num(out_num);
+  op_conf.mutable_clone_conf()->set_lbn("clone_lbn");
+  return ConstructOp(op_conf);
+}
+
 template<typename T, bool has_data_id>
 void DoCloneOpTest(const int out_num,
                    const std::vector<std::vector<int64_t>>& in_shapes,

@@ -5,14 +5,6 @@
 
 namespace oneflow {
 
-std::shared_ptr<Operator> CreateCloneOp(int out_num) {
-  OperatorConf op_conf;
-  op_conf.set_name("clone_test");
-  op_conf.mutable_clone_conf()->set_out_num(out_num);
-  op_conf.mutable_clone_conf()->set_lbn("clone_lbn");
-  return ConstructOp(op_conf);
-}
-
 std::function<BlobDesc*(const std::string)> ConstructBn2BlobDescFunc(
     HashMap<std::string, BlobDesc*>& bn2blobdesc_map,
     const std::vector<std::string>& ibns, const std::vector<std::string>& obns,
