@@ -19,7 +19,7 @@ class SourceCompActor final : public CompActor {
 
   void Act() override;
   bool IsReadReady() override;
-  bool IsReadAlwaysUnReadyFromNow() override { return IsReadReady(); }
+  bool IsReadAlwaysUnReadyFromNow() override { return !IsReadReady(); }
   void AsyncReturnAllReadableRegst() override {}
 
   int64_t next_piece_id_;

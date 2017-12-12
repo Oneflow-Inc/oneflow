@@ -70,9 +70,9 @@ class Actor {
   // Async Do on device_ctx_
   void AsyncLaunchKernel(const KernelCtx&,
                          std::function<Regst*(int64_t)> Regst4RegstDescId);
-  void AsyncSendRegstMsgToConsumer(std::function<void(Regst*)> RegstPreProcess,
+  void AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess,
                                    std::function<bool(int64_t)> IsAllowedActor);
-  void AsyncSendRegstMsgToConsumer(std::function<void(Regst*)> RegstPreProcess);
+  void AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess);
   void AsyncSendRegstMsgToConsumer(std::function<bool(int64_t)> IsAllowedActor);
   void AsyncSendRegstMsgToConsumer();
   void AsyncSendEORDMsgToConsumers(int64_t regst_desc_id);
