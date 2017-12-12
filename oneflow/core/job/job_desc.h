@@ -13,6 +13,7 @@ namespace oneflow {
 class JobDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(JobDesc);
+  JobDesc() = default;
   ~JobDesc() = default;
 
   OF_SINGLETON(JobDesc);
