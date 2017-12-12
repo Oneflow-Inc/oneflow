@@ -47,7 +47,8 @@ bool BackwardCompActor::IsReadReady() {
 }
 
 bool BackwardCompActor::IsReadAlwaysUnReadyFromNow() {
-  return is_out_diff_eord_ && readable_regsts_.at(out_regst_desc_id_).empty();
+  return is_out_diff_eord_
+         && readable_regsts_.at(out_diff_regst_desc_id_).empty();
 }
 
 void BackwardCompActor::AsyncReturnAllReadableRegst() {
@@ -69,6 +70,7 @@ void BackwardCompActor::AsyncReturnModelRegstUntilMatchCurOutRegst() {
          && model_rq.front()->model_version_id() < cur_model_id) {
     AsyncSendRegstMsgToProducer(model_rq.front());
     model_rq.pop();
+    if (model_rq.empty()) { readable_regst_cnt_ -= 1; }
   }
   if (!model_rq.empty()) {
     CHECK_EQ(model_rq.front()->model_version_id(), cur_model_id);
@@ -78,12 +80,13 @@ void BackwardCompActor::AsyncReturnModelRegstUntilMatchCurOutRegst() {
 void BackwardCompActor::AsyncReturnModelRegstUntilLastPieceIdGreaterThan(
     int64_t piece_id) {
   std::queue<Regst*>& model_rq = readable_regsts_.at(model_regst_desc_id_);
-  while (true) {
+  while (model_rq.empty() == false) {
     int64_t model_id = model_rq.front()->model_version_id();
     int64_t last_piece_id = GetLastPieceIdForModelVersionId(model_id);
     if (last_piece_id > piece_id) { return; }
     AsyncSendRegstMsgToProducer(model_rq.front());
     model_rq.pop();
+    if (model_rq.empty()) { readable_regst_cnt_ -= 1; }
   }
 }
 
@@ -99,12 +102,15 @@ void BackwardCompActor::Act() {
                         return regst;
                       }
                     });
-  AsyncSendRegstMsgToConsumer(
-      [&](Regst* regst) { regst->set_piece_id(piece_id); });
+  AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+    regst->set_piece_id(piece_id);
+    return true;
+  });
   AsyncSendRegstMsgToProducer(out_rq.front());
   out_rq.pop();
   if (out_rq.empty()) {
     AsyncReturnModelRegstUntilLastPieceIdGreaterThan(piece_id);
+    readable_regst_cnt_ -= 1;
   } else {
     AsyncReturnModelRegstUntilMatchCurOutRegst();
   }
@@ -114,6 +120,7 @@ void BackwardCompActor::Act() {
     if (pair.first == out_regst_desc_id_) { continue; }
     AsyncSendRegstMsgToProducer(pair.second.front());
     pair.second.pop();
+    if (pair.second.empty()) { readable_regst_cnt_ -= 1; }
   }
 }
 

@@ -16,17 +16,17 @@ void MomentumMdUpdateKernel<device_type, T>::Forward(
   CHECK(std::isfinite(alpha));
 
   // momentum = beta * momentum
-  KernelUtil<device_type, T>::BlasScal(
+  KernelUtil<device_type, T>::Scal(
       ctx.device_ctx, momentum_blob->shape().elem_cnt(), static_cast<T>(beta),
       momentum_blob->mut_dptr<T>(), 1);
 
   // momentum = momentum - alpha * model_diff_acc
-  KernelUtil<device_type, T>::BlasAxpy(
+  KernelUtil<device_type, T>::Axpy(
       ctx.device_ctx, momentum_blob->shape().elem_cnt(), static_cast<T>(-alpha),
       model_diff_acc_blob->dptr<T>(), 1, momentum_blob->mut_dptr<T>(), 1);
 
   // model = model + momentum
-  KernelUtil<device_type, T>::BlasAxpy(
+  KernelUtil<device_type, T>::Axpy(
       ctx.device_ctx, model_blob->shape().elem_cnt(), static_cast<T>(1),
       momentum_blob->dptr<T>(), 1, model_blob->mut_dptr<T>(), 1);
 }
