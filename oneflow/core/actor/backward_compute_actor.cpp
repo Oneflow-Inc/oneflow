@@ -47,7 +47,8 @@ bool BackwardCompActor::IsReadReady() {
 }
 
 bool BackwardCompActor::IsReadAlwaysUnReadyFromNow() {
-  return is_out_diff_eord_ && readable_regsts_.at(out_regst_desc_id_).empty();
+  return is_out_diff_eord_
+         && readable_regsts_.at(out_diff_regst_desc_id_).empty();
 }
 
 void BackwardCompActor::AsyncReturnAllReadableRegst() {
@@ -69,6 +70,7 @@ void BackwardCompActor::AsyncReturnModelRegstUntilMatchCurOutRegst() {
          && model_rq.front()->model_version_id() < cur_model_id) {
     AsyncSendRegstMsgToProducer(model_rq.front());
     model_rq.pop();
+    if (model_rq.empty()) { readable_regst_cnt_ -= 1; }
   }
   if (!model_rq.empty()) {
     CHECK_EQ(model_rq.front()->model_version_id(), cur_model_id);
@@ -84,6 +86,7 @@ void BackwardCompActor::AsyncReturnModelRegstUntilLastPieceIdGreaterThan(
     if (last_piece_id > piece_id) { return; }
     AsyncSendRegstMsgToProducer(model_rq.front());
     model_rq.pop();
+    if (model_rq.empty()) { readable_regst_cnt_ -= 1; }
   }
 }
 
@@ -105,6 +108,7 @@ void BackwardCompActor::Act() {
   out_rq.pop();
   if (out_rq.empty()) {
     AsyncReturnModelRegstUntilLastPieceIdGreaterThan(piece_id);
+    readable_regst_cnt_ -= 1;
   } else {
     AsyncReturnModelRegstUntilMatchCurOutRegst();
   }
@@ -114,6 +118,7 @@ void BackwardCompActor::Act() {
     if (pair.first == out_regst_desc_id_) { continue; }
     AsyncSendRegstMsgToProducer(pair.second.front());
     pair.second.pop();
+    if (pair.second.empty()) { readable_regst_cnt_ -= 1; }
   }
 }
 
