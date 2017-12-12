@@ -153,7 +153,7 @@ struct KernelUtil<DeviceType::kCPU, T> final {
                                int32_t part_num, const std::string& model_dir,
                                Blob* blob, const std::string& bn_in_op,
                                int32_t dim_num, int64_t num_in_each_dim) {
-    int64_t blob_size = blob->TotalByteSize();
+    int64_t blob_size = blob->ByteSizeOfDataContentField();
     int64_t byte_size_of_each_dim = num_in_each_dim * sizeof(T);
     std::string file_path = JoinPath(model_dir, bn_in_op);
     uint64_t file_size = GlobalFS()->GetFileSize(file_path);

@@ -114,8 +114,8 @@ struct KernelUtil<DeviceType::kGPU, T> final {
                    uint32_t random_seed, Blob* blob) {
     // create temporary host blob store fill
     BlobDesc blob_desc = BlobDesc(blob->blob_desc());
-    char* host_raw_dptr;
-    size_t byte_size = blob->TotalByteSize();
+    char* host_raw_dptr = nullptr;
+    size_t byte_size = blob->ByteSizeOfDataContentField();
     CudaCheck(cudaMallocHost(&host_raw_dptr, byte_size));
     Blob host_blob(&blob_desc, host_raw_dptr);
     // synchronous fill the host blob
@@ -133,8 +133,8 @@ struct KernelUtil<DeviceType::kGPU, T> final {
                                Blob* blob, const std::string& bn_in_op,
                                int32_t dim_num, int64_t num_in_each_dim) {
     BlobDesc blob_desc = BlobDesc(blob->blob_desc());
-    char* host_raw_dptr;
-    size_t byte_size = blob->TotalByteSize();
+    char* host_raw_dptr = nullptr;
+    size_t byte_size = blob->ByteSizeOfDataContentField();
     CudaCheck(cudaMallocHost(&host_raw_dptr, byte_size));
     Blob host_blob(&blob_desc, host_raw_dptr);
     KernelUtil<DeviceType::kCPU, T>::FillWithModelDir(
