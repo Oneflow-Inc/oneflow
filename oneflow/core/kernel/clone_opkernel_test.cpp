@@ -32,18 +32,22 @@ void DoCloneOpTest(int out_num, const std::vector<int64_t>& in_shape_vec) {
 
 template<typename T, bool has_data_id>
 void TestCloneOp() {
-  // mock JobDesc
-  test::MockJobDesc mock_job_desc;
-  test::InitJobDescSingleton(&mock_job_desc);
-  EXPECT_CALL(mock_job_desc, DefaultDataType())
-      .WillRepeatedly(testing::Return(GetDataType<T>::val));
-
   int out_num = 3;
   std::vector<int64_t> in_shape_vec = {3, 4};
   DoCloneOpTest<T, has_data_id>(out_num, in_shape_vec);
 
   out_num = 1;
   DoCloneOpTest<T, has_data_id>(out_num, in_shape_vec);
+}
+
+template<DeviceType device_type, typename T, bool has_data_id>
+void TestCloneOpKernel() {
+  // mock JobDesc
+  test::MockJobDesc mock_job_desc;
+  test::InitJobDescSingleton(&mock_job_desc);
+  EXPECT_CALL(mock_job_desc, DefaultDataType())
+      .WillRepeatedly(testing::Return(GetDataType<T>::val));
+
 }
 
 TEST(CloneOp, infer_blob_desc) {
