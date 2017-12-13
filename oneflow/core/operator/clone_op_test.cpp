@@ -13,12 +13,12 @@ std::shared_ptr<Operator> CreateCloneOp(int out_num) {
 }
 
 template<typename T, bool has_data_id>
-void DoCloneOpTest(int out_num, const std::vector<int64_t>& in_shape) {
+void DoCloneOpTest(int out_num, const std::vector<int64_t>& in_shape_vec) {
   auto clone_op = CreateCloneOp(out_num);
 
   auto bn2blobdesc_func = ConstructBn2BlobDescFunc(clone_op);
   BlobDesc* in_blob_desc = bn2blobdesc_func("in");
-  in_blob_desc->mut_shape().dim_vec_ = in_shape;
+  in_blob_desc->mut_shape().dim_vec_ = in_shape_vec;
   in_blob_desc->set_data_type(GetDataType<T>::val);
   in_blob_desc->set_has_data_id(has_data_id);
 
@@ -32,17 +32,18 @@ void DoCloneOpTest(int out_num, const std::vector<int64_t>& in_shape) {
 
 template<typename T, bool has_data_id>
 void TestCloneOp() {
+  // mock JobDesc
   test::MockJobDesc mock_job_desc;
   test::InitJobDescSingleton(&mock_job_desc);
   EXPECT_CALL(mock_job_desc, DefaultDataType())
       .WillRepeatedly(testing::Return(GetDataType<T>::val));
 
   int out_num = 3;
-  std::vector<int64_t> in_shape = {3, 4};
-  DoCloneOpTest<T, has_data_id>(out_num, in_shape);
+  std::vector<int64_t> in_shape_vec = {3, 4};
+  DoCloneOpTest<T, has_data_id>(out_num, in_shape_vec);
 
   out_num = 1;
-  DoCloneOpTest<T, has_data_id>(out_num, in_shape);
+  DoCloneOpTest<T, has_data_id>(out_num, in_shape_vec);
 }
 
 TEST(CloneOp, infer_blob_desc) {
