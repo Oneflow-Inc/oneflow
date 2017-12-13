@@ -38,8 +38,12 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
   ClearUp();
 }
 
-void ParallelDesc::RemoveNeedlessDevice(int32_t max_device_num) {
+void ParallelDesc::RemoveNeedlessDevice(const std::string& op_name,
+                                        int32_t max_device_num) {
   if (max_device_num >= parallel_num_) { return; }
+  LOG_IF(WARNING, op_name != "")
+      << "parallel_num of " << op_name << " is greater than max_device_num "
+      << max_device_num;
   int32_t device_cnt = 0;
   int64_t max_machine_id = -1;
   for (int64_t machine_id : sorted_machine_ids_) {
@@ -74,7 +78,7 @@ void ParallelDesc::RemoveNeedlessDevice(int32_t max_device_num) {
   parallel_num_ = max_device_num;
 }
 
-void ParallelDesc::RemoveInvalidDevice() {
+void ParallelDesc::RemoveInvalidDevice(const std::string& op_name) {
   for (int64_t machine_id : sorted_machine_ids_) {
     auto& sorted_dev_ids = machine_id2sorted_dev_phy_ids_.at(machine_id);
     auto bound_it = std::lower_bound(
@@ -83,6 +87,10 @@ void ParallelDesc::RemoveInvalidDevice() {
     if (bound_it == sorted_dev_ids.end()) {
       continue;
     } else {
+      for (auto it = bound_it; it != sorted_dev_ids.end(); ++it) {
+        LOG_IF(WARNING, op_name != "")
+            << op_name << " use invalid device_id " << *it;
+      }
       sorted_dev_ids.erase(bound_it, sorted_dev_ids.end());
     }
   }
