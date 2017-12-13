@@ -1,49 +1,30 @@
-#include "oneflow/core/job/mock_job_desc.h"
 #include "oneflow/core/operator/clone_op.h"
-#include "oneflow/core/operator/op_test_util.h"
 
 namespace oneflow {
 
-std::shared_ptr<Operator> CreateCloneOp(int out_num) {
-  OperatorConf op_conf;
-  op_conf.set_name("clone_test");
-  op_conf.mutable_clone_conf()->set_out_num(out_num);
-  op_conf.mutable_clone_conf()->set_lbn("clone_lbn");
-  return ConstructOp(op_conf);
-}
-
-template<typename T, bool has_data_id>
-void DoCloneOpTest(int out_num, const std::vector<int64_t>& in_shape_vec) {
-  auto clone_op = CreateCloneOp(out_num);
-
-  auto bn2blobdesc_func = ConstructBn2BlobDescFunc(clone_op);
-  BlobDesc* in_blob_desc = bn2blobdesc_func("in");
-  in_blob_desc->mut_shape().dim_vec_ = in_shape_vec;
-  in_blob_desc->set_data_type(GetDataType<T>::val);
-  in_blob_desc->set_has_data_id(has_data_id);
-
-  clone_op->InferBlobDescs(bn2blobdesc_func, nullptr);
-
-  for (const std::string& obn : clone_op->output_bns()) {
-    const BlobDesc* out_blob_desc = bn2blobdesc_func(obn);
-    ASSERT_TRUE(*in_blob_desc == *out_blob_desc);
-  }
-}
-
 template<typename T, bool has_data_id>
 void TestCloneOp() {
-  // mock JobDesc
-  test::MockJobDesc mock_job_desc;
-  test::InitJobDescSingleton(&mock_job_desc);
-  EXPECT_CALL(mock_job_desc, DefaultDataType())
-      .WillRepeatedly(testing::Return(GetDataType<T>::val));
-
-  int out_num = 3;
-  std::vector<int64_t> in_shape_vec = {3, 4};
-  DoCloneOpTest<T, has_data_id>(out_num, in_shape_vec);
-
-  out_num = 1;
-  DoCloneOpTest<T, has_data_id>(out_num, in_shape_vec);
+  OperatorConf op_conf;
+  op_conf.set_name("clone_test");
+  op_conf.mutable_clone_conf()->set_out_num(3);
+  op_conf.mutable_clone_conf()->set_lbn("clone_lbn");
+  op_conf.mutable_clone_conf()->set_data_type(GetDataType<T>::val);
+  auto clone_op = ConstructOp(op_conf);
+  HashMap<std::string, BlobDesc*> bn2blobdesc_map;
+  bn2blobdesc_map[clone_op->SoleIbn()] =
+      new BlobDesc(Shape({4, 3}), GetDataType<T>::val, has_data_id);
+  for (const std::string& obn : clone_op->output_bns()) {
+    bn2blobdesc_map[obn] = new BlobDesc;
+  }
+  auto bn2blobdesc_func = [&](const std::string& bn) {
+    return bn2blobdesc_map.at(bn);
+  };
+  clone_op->InferBlobDescs(bn2blobdesc_func, kDataParallel, 3, 10);
+  const BlobDesc* in_blob_desc = bn2blobdesc_map.at(clone_op->SoleIbn());
+  for (const std::string& obn : clone_op->output_bns()) {
+    const BlobDesc* out_blob_desc = bn2blobdesc_map.at(obn);
+    ASSERT_TRUE(*in_blob_desc == *out_blob_desc);
+  }
 }
 
 TEST(CloneOp, infer_blob_desc) {
