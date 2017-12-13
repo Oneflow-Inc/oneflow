@@ -2,6 +2,20 @@
 
 namespace oneflow {
 
+namespace {
+
+DataType GetDataTypeFromBnInOpVec(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::vector<std::string>& bn_in_ops) {
+  for (const std::string& bn_in_op : bn_in_ops) {
+    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
+    if (blob_desc) { return blob_desc->data_type(); }
+  }
+  return DataType::kInvalidDataType;
+}
+
+}  // namespace
+
 void Operator::InitFromOpConf(const OperatorConf& op_conf) {
   op_conf_ = op_conf;
   InitFromOpConf();
@@ -93,13 +107,12 @@ void Operator::GenKernelConf(
     kernel_conf->set_need_do_data_id(true);
   }
   kernel_conf->set_is_forward(is_forward);
-  if (output_bns_.empty() == false) {
-    kernel_conf->set_data_type(GetBlobDesc4BnInOp(output_bns_[0])->data_type());
-  } else if (input_bns_.empty() == false) {
-    kernel_conf->set_data_type(GetBlobDesc4BnInOp(input_bns_[0])->data_type());
-  } else {
-    kernel_conf->set_data_type(DataType::kInvalidDataType);
+  DataType data_type =
+      GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_bns_);
+  if (data_type == DataType::kInvalidDataType) {
+    data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, input_bns_);
   }
+  kernel_conf->set_data_type(data_type);
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
 }
 
