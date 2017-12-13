@@ -47,16 +47,19 @@ const std::string& Operator::SoleDtbn() const {
 
 void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
   if (model_bns_.empty() && model_tmp_bns_.empty()) {
+    LOG_IF(WARNING, pr_desc->policy() == ParallelPolicy::kModelParallel)
+        << op_name() << " doesn't have any model, so fix it with DataParallel";
     pr_desc->set_policy(ParallelPolicy::kDataParallel);
   }
   if (IsDataLoaderOp() == false && IsPrintOp() == false) {
-    pr_desc->RemoveInvalidDevice();
+    pr_desc->RemoveInvalidDevice(op_name());
   }
   if (pr_desc->policy() == kModelParallel && MaxModelSplitNum() != -1) {
-    pr_desc->RemoveNeedlessDevice(MaxModelSplitNum());
+    pr_desc->RemoveNeedlessDevice(op_name(), MaxModelSplitNum());
   }
   if (pr_desc->policy() == kDataParallel) {
-    pr_desc->RemoveNeedlessDevice(JobDesc::Singleton()->ParallelPieceSize());
+    pr_desc->RemoveNeedlessDevice(op_name(),
+                                  JobDesc::Singleton()->ParallelPieceSize());
   }
   VirtualFixParallelDesc(pr_desc);
 }

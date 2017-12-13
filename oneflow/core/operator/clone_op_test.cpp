@@ -33,7 +33,9 @@ void DoCloneOpTest(int out_num, const std::vector<int64_t>& in_shape) {
 template<typename T, bool has_data_id>
 void TestCloneOp() {
   test::MockJobDesc mock_job_desc;
-  test::InitJobDescSingleton(&mock_job_desc, 8, GetDataType<T>::val);
+  test::InitJobDescSingleton(&mock_job_desc);
+  EXPECT_CALL(mock_job_desc, DefaultDataType())
+      .WillRepeatedly(testing::Return(GetDataType<T>::val));
 
   int out_num = 3;
   std::vector<int64_t> in_shape = {3, 4};

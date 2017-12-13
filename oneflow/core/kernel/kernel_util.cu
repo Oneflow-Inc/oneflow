@@ -114,8 +114,8 @@ struct KernelUtil<DeviceType::kGPU, T> final {
                    uint32_t random_seed, Blob* blob) {
     // create temporary host blob store fill
     BlobDesc blob_desc = BlobDesc(blob->blob_desc());
-    char* host_raw_dptr;
-    size_t byte_size = blob->TotalByteSize();
+    char* host_raw_dptr = nullptr;
+    size_t byte_size = blob->ByteSizeOfDataContentField();
     CudaCheck(cudaMallocHost(&host_raw_dptr, byte_size));
     Blob host_blob(&blob_desc, host_raw_dptr);
     // synchronous fill the host blob
@@ -132,26 +132,19 @@ struct KernelUtil<DeviceType::kGPU, T> final {
                                int32_t part_num, const std::string& model_dir,
                                Blob* blob, const std::string& bn_in_op,
                                int32_t dim_num, int64_t num_in_each_dim) {
-    TODO();
-    /*
-    int64_t blob_size = blob->shape().elem_cnt() * sizeof(T);
-    std::unique_ptr<PersistentInStream> in_stream =
-        snapshot->GetInStream(lbn, part_id, part_num, dim_num,
-                              num_in_each_dim * sizeof(T));
-    // read model from disk to host_blob synchronously
-    void* host_raw_dptr;
-    CudaCheck(cudaMallocHost(&host_raw_dptr, blob_size));
-    std::unique_ptr<void, std::function<void(void*)>> host_unique_ptr(
-        host_raw_dptr, [&](void* dptr) { CudaCheck(cudaFreeHost(dptr)); });
-    std::unique_ptr<Shape> host_blob_shape(new Shape(blob->shape()));
-    std::unique_ptr<Blob> host_blob(
-        new Blob(host_unique_ptr.get(), host_blob_shape.get()));
-    in_stream->Read(host_blob->mut_dptr<char>(), blob_size);
-    // copy to device blob
-    KernelUtil<DeviceType::kGPU, T>::Memcpy(
-        ctx, blob->mut_dptr(), host_blob->dptr(), blob_size,
-        cudaMemcpyHostToDevice);
-        */
+    BlobDesc blob_desc = BlobDesc(blob->blob_desc());
+    char* host_raw_dptr = nullptr;
+    size_t byte_size = blob->ByteSizeOfDataContentField();
+    CudaCheck(cudaMallocHost(&host_raw_dptr, byte_size));
+    Blob host_blob(&blob_desc, host_raw_dptr);
+    KernelUtil<DeviceType::kCPU, T>::FillWithModelDir(
+        ctx, part_id, part_num, model_dir, &host_blob, bn_in_op, dim_num,
+        num_in_each_dim);
+
+    Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob.dptr(), byte_size,
+                             cudaMemcpyHostToDevice);
+    cudaStreamSynchronize(ctx->cuda_stream());
+    CudaCheck(cudaFreeHost(host_raw_dptr));
   }
 };
 
@@ -164,7 +157,11 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ);
   struct KernelUtil<DeviceType::kGPU, T> final {                             \
     static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, \
                      const int incx, T* y, const int incy) {                 \
-      TODO();                                                                \
+      FOR_RANGE(int, i, 0, n) {                                              \
+        *y += alpha * *x;                                                    \
+        x += incx;                                                           \
+        y += incy;                                                           \
+      }                                                                      \
     }                                                                        \
   };
 
