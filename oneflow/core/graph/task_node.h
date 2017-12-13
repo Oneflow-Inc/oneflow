@@ -29,8 +29,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void set_thrd_id(int64_t val);
 
   // Build
-  virtual void ProduceAllRegstsAndBindEdges() { TODO(); }
-  virtual void ConsumeAllRegsts() { TODO(); }
+  virtual void ProduceAllRegstsAndBindEdges() = 0;
+  virtual void ConsumeAllRegsts() = 0;
   void Build();
   virtual bool IsReadyForBuild() { return IsAllConsumedRegstLocked(); }
   void EraseEmptyProducedRegst();
@@ -51,7 +51,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   ExecGraph& mut_exec_gph() { return exec_gph_; }
   std::shared_ptr<RegstDesc> GetConsumedRegst(const std::string& name);
 
-  virtual void BuildExecGphAndRegst() { TODO(); }
+  virtual void BuildExecGphAndRegst() = 0;
   virtual void LockRegsts();
 
  private:
