@@ -73,21 +73,6 @@ void BoxingOp::InferBlobDescs(
     std::vector<int64_t> output_shape_vec = data_tmp_blob_shape_vec;
     CHECK_GE(split_conf.axis(), 0);
     CHECK_LT(split_conf.axis(), output_shape_vec.size());
-    LOG(INFO) << "CC_INFO: infer_boxing_op_name :" << op_name() << "\n";
-    LOG(INFO) << "CC_INFO: infer_boxing_op lbn  :" << conf.lbn() << "\n";
-    LOG(INFO) << "CC_INFO: infer_boxing_op in_num  :" << conf.in_num() << "\n";
-    LOG(INFO) << "CC_INFO: infer_boxing_op out_num  :" << conf.out_num()
-              << "\n";
-    LOG(INFO) << "CC_INFO: infer_boxing_op obn_size  :" << output_bns().size()
-              << "\n";
-    LOG(INFO) << "CC_INFO: infer_boxing_op split_conf axis  :"
-              << split_conf.axis() << "\n";
-    LOG(INFO) << "CC_INFO: infer_boxing_op split_conf part_num_size  :"
-              << split_conf.part_num_size() << "\n";
-    for (int i = 0; i < split_conf.part_num_size(); i++) {
-      LOG(INFO) << "CC_INFO: infer_boxing_op split_conf part_num  :"
-                << split_conf.part_num(i) << "\n";
-    }
     FOR_RANGE(size_t, i, 0, output_bns().size()) {
       BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(output_bns().at(i));
       out_blob_desc->set_has_data_id(has_data_id);

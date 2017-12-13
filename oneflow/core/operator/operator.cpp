@@ -104,47 +104,6 @@ void Operator::GenKernelConf(
     kernel_conf->set_need_do_data_id(true);
   }
   kernel_conf->set_is_forward(is_forward);
-  if (op_conf().op_type_case() == OperatorConf::kBoxingConf) {
-    LOG(INFO) << "CC_INFO: op_name: " << op_name() << "\n";
-    auto& boxing_op_conf = op_conf().boxing_conf();
-    LOG(INFO) << "CC_INFO: boxing op lbn: " << boxing_op_conf.lbn() << "\n";
-    LOG(INFO) << "CC_INFO: boxing op in_num: " << boxing_op_conf.in_num()
-              << "\n";
-    LOG(INFO) << "CC_INFO: boxing op out_num: " << boxing_op_conf.out_num()
-              << "\n";
-    LOG(INFO) << "CC_INFO: boxing op in_box_case: "
-              << boxing_op_conf.in_box_case() << "\n";
-    LOG(INFO) << "CC_INFO: boxing op out_box_case: "
-              << boxing_op_conf.out_box_case() << "\n";
-    for (auto ibn : input_bns_) {
-      LOG(INFO) << "CC_INFO: ibn: " << ibn << "\n";
-      auto ibn_blob_desc = GetBlobDesc4BnInOp(ibn);
-      if (!ibn_blob_desc) {
-        LOG(INFO) << "CC_INFO: ibn null: " << ibn << "\n";
-        continue;
-      }
-      LOG(INFO) << "CC_INFO: ibn_blob_desc data_type: "
-                << ibn_blob_desc->data_type() << "\n";
-      LOG(INFO) << "CC_INFO: ibn_blob_desc shape: "
-                << ibn_blob_desc->shape().DebugStr() << "\n";
-      LOG(INFO) << "CC_INFO: ibn_blob_desc has_data_id: "
-                << ibn_blob_desc->has_data_id() << "\n";
-    }
-    for (auto obn : output_bns_) {
-      LOG(INFO) << "CC_INFO: obn: " << obn << "\n";
-      auto obn_blob_desc = GetBlobDesc4BnInOp(obn);
-      if (!obn_blob_desc) {
-        LOG(INFO) << "CC_INFO: obn null: " << obn << "\n";
-        continue;
-      }
-      LOG(INFO) << "CC_INFO: obn_blob_desc data_type: "
-                << obn_blob_desc->data_type() << "\n";
-      LOG(INFO) << "CC_INFO: obn_blob_desc shape: "
-                << obn_blob_desc->shape().DebugStr() << "\n";
-      LOG(INFO) << "CC_INFO: obn_blob_desc has_data_id: "
-                << obn_blob_desc->has_data_id() << "\n";
-    }
-  }
   DataType data_type =
       GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_bns_);
   if (data_type == DataType::kInvalidDataType) {
