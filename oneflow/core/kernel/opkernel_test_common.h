@@ -10,8 +10,8 @@ namespace oneflow {
 
 namespace test {
 
-std::function<BlobDesc*(const std::string)>
-    ConstructBn2BlobDescFunc(std::shared_ptr<Operator>);
+std::function<BlobDesc*(const std::string)> ConstructBn2BlobDescFunc(
+    std::shared_ptr<Operator>);
 
 template<DeviceType device_type>
 Blob* CreateBlob(const BlobDesc*);

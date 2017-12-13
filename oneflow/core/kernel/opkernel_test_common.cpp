@@ -1,4 +1,4 @@
-#include "oneflow/core/kernel/kernel_test_common.h"
+#include "oneflow/core/kernel/opkernel_test_common.h"
 #include <random>
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/device/cpu_device_context.h"
@@ -16,8 +16,7 @@ std::function<BlobDesc*(const std::string)> ConstructBn2BlobDescFunc(
           CHECK(bn2blobdesc_map->insert({bn, new BlobDesc}).second);
         }
       };
-  HashMap<std::string, BlobDesc*>* bn2blobdesc_map =
-      new HashMap<std::string, BlobDesc*>();
+  auto bn2blobdesc_map = new HashMap<std::string, BlobDesc*>();
   InsertBnsWithEmptyBlobDesc2Map(op->data_tmp_bns(), bn2blobdesc_map);
   InsertBnsWithEmptyBlobDesc2Map(op->input_bns(), bn2blobdesc_map);
   InsertBnsWithEmptyBlobDesc2Map(op->input_diff_bns(), bn2blobdesc_map);
