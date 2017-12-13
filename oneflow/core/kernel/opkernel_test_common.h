@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_KERNEL_KERNEL_TEST_COMMON_H_
-#define ONEFLOW_CORE_KERNEL_KERNEL_TEST_COMMON_H_
+#ifndef ONEFLOW_CORE_KERNEL_OPKERNEL_TEST_COMMON_H_
+#define ONEFLOW_CORE_KERNEL_OPKERNEL_TEST_COMMON_H_
 
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/kernel/kernel_context.h"
@@ -67,4 +67,4 @@ class KTCommon final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_KERNEL_TEST_COMMON_H_
+#endif  // ONEFLOW_CORE_KERNEL_OPKERNEL_TEST_COMMON_H_
