@@ -4,6 +4,7 @@
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/register/blob.h"
 
 namespace oneflow {
