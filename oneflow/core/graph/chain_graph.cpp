@@ -350,7 +350,7 @@ void ChainGraph::BuildLossPrintStruct() {
 
 std::shared_ptr<const Operator> ConstructModelUpdateOp() {
   OperatorConf mdupdt_conf;
-  mdupdt_conf.set_name("model_update_" + NewUniqueId());
+  mdupdt_conf.set_name("md_update_" + NewUniqueId());
   const JobDesc* job_desc = JobDesc::Singleton();
   if (job_desc->IsTrain()) {
     const TrainConf& train_conf = job_desc->job_conf().train_conf();
@@ -384,7 +384,7 @@ void ChainGraph::BuildModelStruct(bool is_train) {
     Connect<ChainNode>(md_updt_chain, NewEdge(), fw_chain);
     // Model Save Chain
     OperatorConf model_save_op_conf;
-    model_save_op_conf.set_name("model_save_" + NewUniqueId());
+    model_save_op_conf.set_name("md_save_" + NewUniqueId());
     for (std::shared_ptr<const Operator> op : fw_chain->op_vec()) {
       for (const std::string& mbn : op->model_bns()) {
         const std::string& lbn = op->Lbn4BnInOp(mbn);
@@ -405,7 +405,7 @@ void ChainGraph::BuildModelStruct(bool is_train) {
     BackwardChainNode* bw_chain = fw_chain->bw_node();
     Connect<ChainNode>(md_updt_chain, NewEdge(), bw_chain);
     OperatorConf md_diff_acc_op_conf;
-    md_diff_acc_op_conf.set_name("model_diff_acc_" + NewUniqueId());
+    md_diff_acc_op_conf.set_name("md_diff_acc_" + NewUniqueId());
     md_diff_acc_op_conf.mutable_accumulate_conf();
     auto md_diff_acc_op = ConstructOp(md_diff_acc_op_conf);
     auto md_diff_acc_chain = NewNode<MdDiffAccChainNode>();
