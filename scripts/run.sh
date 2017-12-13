@@ -16,5 +16,5 @@ for host in "${hosts[@]}"
 do
   ssh $USER@$host 'rm -rf ~/oneflow_temp/*'
   scp ./oneflow ./*.prototxt $USER@$host:~/oneflow_temp
-  ssh $USER@$host "cd ~/oneflow_temp; $ONEFLOW_CMD -this_machine_name=$host 1>/dev/null 2>&1 </dev/null &"
+  ssh $USER@$host "cd ~/oneflow_temp; $ONEFLOW_CMD -this_machine_name=$host 1>./stdout 2>&1 </dev/null &"
 done
