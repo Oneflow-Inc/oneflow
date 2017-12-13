@@ -13,21 +13,19 @@ std::shared_ptr<Operator> CreateCloneOp(int out_num) {
 }
 
 template<typename T, bool has_data_id>
-void DoCloneOpTest(const int out_num,
-                   const std::vector<std::vector<int64_t>>& in_shapes,
-                   const std::vector<std::string>& ibns,
-                   const std::vector<std::string>& obns,
-                   const std::vector<std::string>& other_bns) {
+void DoCloneOpTest(int out_num, const std::vector<int64_t>& in_shape) {
   auto clone_op = CreateCloneOp(out_num);
-  HashMap<std::string, BlobDesc*> bn2blobdesc_map;
-  auto bn2blobdesc_func =
-      ConstructBn2BlobDescFunc(bn2blobdesc_map, ibns, obns, other_bns,
-                               in_shapes, GetDataType<T>::val, has_data_id);
+
+  auto bn2blobdesc_func = ConstructBn2BlobDescFunc(clone_op);
+  BlobDesc* in_blob_desc = bn2blobdesc_func("in");
+  in_blob_desc->mut_shape().dim_vec_ = in_shape;
+  in_blob_desc->set_data_type(GetDataType<T>::val);
+  in_blob_desc->set_has_data_id(has_data_id);
+
   clone_op->InferBlobDescs(bn2blobdesc_func, nullptr);
 
-  const BlobDesc* in_blob_desc = bn2blobdesc_map.at(clone_op->SoleIbn());
   for (const std::string& obn : clone_op->output_bns()) {
-    const BlobDesc* out_blob_desc = bn2blobdesc_map.at(obn);
+    const BlobDesc* out_blob_desc = bn2blobdesc_func(obn);
     ASSERT_TRUE(*in_blob_desc == *out_blob_desc);
   }
 }
@@ -38,15 +36,11 @@ void TestCloneOp() {
   test::InitJobDescSingleton(&mock_job_desc, 8, GetDataType<T>::val);
 
   int out_num = 3;
-  std::vector<std::vector<int64_t>> in_shapes = {{3, 4}};
-  std::vector<std::string> ibns = {"in"};
-  std::vector<std::string> obns = {"out_0", "out_1", "out_2"};
-  std::vector<std::string> other_bns = {};
-  DoCloneOpTest<T, has_data_id>(out_num, in_shapes, ibns, obns, other_bns);
+  std::vector<int64_t> in_shape = {3, 4};
+  DoCloneOpTest<T, has_data_id>(out_num, in_shape);
 
   out_num = 1;
-  obns = {"out_0"};
-  DoCloneOpTest<T, has_data_id>(out_num, in_shapes, ibns, obns, other_bns);
+  DoCloneOpTest<T, has_data_id>(out_num, in_shape);
 }
 
 TEST(CloneOp, infer_blob_desc) {
