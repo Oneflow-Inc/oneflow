@@ -57,7 +57,7 @@ void ConvolutionOp::InferBlobDescs(
 
   // col_buf
   BlobDesc* col_buf_blob_desc = GetBlobDesc4BnInOp("col_buf");
-  col_buf_blob_desc->mut_shape() = Shape({data_num, output_size, c_i * kernel});
+  col_buf_blob_desc->mut_shape() = Shape({1, output_size, c_i * kernel});
   col_buf_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
   col_buf_blob_desc->set_has_data_id(false);
 
