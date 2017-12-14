@@ -5,6 +5,10 @@
 #define final
 #endif
 
+#ifndef private
+#define private public
+#endif
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
