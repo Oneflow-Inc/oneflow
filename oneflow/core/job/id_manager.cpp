@@ -59,6 +59,17 @@ int64_t IDMgr::ThrdId4ActorId(int64_t actor_id) const {
   return tmp >> (machine_id_bit_num_ + task_id_bit_num_);
 }
 
+int64_t IDMgr::GetReservedWorkStreamId(int64_t machine_id, int64_t thrd_id,
+                                       int64_t reserved_id) {
+  TODO();
+  return -1;
+}
+
+int64_t IDMgr::NewWorkStreamId(int64_t machine_id, int64_t thrd_id) {
+  TODO();
+  return -1;
+}
+
 IDMgr::IDMgr() {
   const Resource& resource = JobDesc::Singleton()->resource();
   machine_num_ = resource.machine_size();

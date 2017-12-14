@@ -8,7 +8,8 @@ void CopyHdActor::VirtualActorInit(const TaskProto& task_proto) {
 
 void CopyHdActor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
   CHECK(thread_ctx.copy_hd_cuda_stream);
-  mut_device_ctx().reset(new CudaDeviceCtx(thread_ctx.copy_hd_cuda_stream));
+  mut_device_ctx().reset(new CudaDeviceCtx(GetReservedWorkStreamId(0),
+                                           thread_ctx.copy_hd_cuda_stream));
 }
 
 int CopyHdActor::HandlerNormal(const ActorMsg& msg) {

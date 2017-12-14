@@ -1,4 +1,4 @@
-#include "oneflow/core/kernel/kernel_test_common.h"
+#include "oneflow/core/kernel/opkernel_test_common.h"
 #include <random>
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/device/cpu_device_context.h"
@@ -6,6 +6,29 @@
 namespace oneflow {
 
 namespace test {
+
+std::function<BlobDesc*(const std::string)> ConstructBn2BlobDescFunc(
+    std::shared_ptr<Operator> op) {
+  auto InsertBnsWithEmptyBlobDesc2Map =
+      [](const std::vector<std::string>& bns,
+         HashMap<std::string, BlobDesc*>* bn2blobdesc_map) {
+        for (const std::string& bn : bns) {
+          CHECK(bn2blobdesc_map->insert({bn, new BlobDesc}).second);
+        }
+      };
+  auto bn2blobdesc_map = new HashMap<std::string, BlobDesc*>();
+  InsertBnsWithEmptyBlobDesc2Map(op->data_tmp_bns(), bn2blobdesc_map);
+  InsertBnsWithEmptyBlobDesc2Map(op->input_bns(), bn2blobdesc_map);
+  InsertBnsWithEmptyBlobDesc2Map(op->input_diff_bns(), bn2blobdesc_map);
+  InsertBnsWithEmptyBlobDesc2Map(op->output_bns(), bn2blobdesc_map);
+  InsertBnsWithEmptyBlobDesc2Map(op->output_diff_bns(), bn2blobdesc_map);
+  InsertBnsWithEmptyBlobDesc2Map(op->model_bns(), bn2blobdesc_map);
+  InsertBnsWithEmptyBlobDesc2Map(op->model_diff_bns(), bn2blobdesc_map);
+  InsertBnsWithEmptyBlobDesc2Map(op->model_tmp_bns(), bn2blobdesc_map);
+  return [bn2blobdesc_map](const std::string& bn) {
+    return bn2blobdesc_map->at(bn);
+  };
+}
 
 template<>
 Blob* CreateBlob<DeviceType::kCPU>(const BlobDesc* blob_desc) {
@@ -16,7 +39,7 @@ Blob* CreateBlob<DeviceType::kCPU>(const BlobDesc* blob_desc) {
 
 template<>
 void BuildKernelCtx<DeviceType::kCPU>(KernelCtx* ctx) {
-  ctx->device_ctx = new CpuDeviceCtx;
+  ctx->device_ctx = new CpuDeviceCtx(-1);
 }
 
 template<>

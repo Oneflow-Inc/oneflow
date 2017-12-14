@@ -25,6 +25,8 @@ class Actor {
   // 0: success, and actor not finish
   int ProcessMsg(const ActorMsg& msg) { return (this->*msg_handler_)(msg); }
 
+  int64_t machine_id() const;
+  int64_t thrd_id() const;
   int64_t actor_id() const { return actor_id_; }
 
  protected:
@@ -36,6 +38,9 @@ class Actor {
 
   // Util
   Actor() = default;
+  int64_t GetReservedWorkStreamId(int64_t reserved_id);
+  int64_t NewWorkStreamId();
+  int64_t GetWorkStreamId() const { return device_ctx_->work_stream_id(); }
   const ParallelContext* parallel_ctx() const { return parallel_ctx_.get(); }
   DeviceType GetDeviceType() const;
   virtual void VirtualActorInit(const TaskProto&) {}
