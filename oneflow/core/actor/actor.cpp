@@ -39,6 +39,14 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   VirtualActorInit(task_proto);
 }
 
+int64_t Actor::machine_id() const {
+  return IDMgr::Singleton()->MachineId4ActorId(actor_id_);
+}
+
+int64_t Actor::thrd_id() const {
+  return IDMgr::Singleton()->ThrdId4ActorId(actor_id_);
+}
+
 int64_t Actor::RegstDescId4Name(const std::string& name) const {
   auto find_it = name2regst_desc_id_.find(name);
   if (find_it != name2regst_desc_id_.end()) { return find_it->second; }
@@ -48,13 +56,13 @@ int64_t Actor::RegstDescId4Name(const std::string& name) const {
 void Actor::InitDeviceCtx(const ThreadCtx&) {
   switch (GetDeviceType()) {
     case DeviceType::kCPU: {
-      device_ctx_.reset(new CpuDeviceCtx);
+      device_ctx_.reset(new CpuDeviceCtx(GetReservedWorkStreamId(0)));
       break;
     }
     case DeviceType::kGPU: {
-      device_ctx_.reset(new CudaDeviceCtx(cuda_handle_.cuda_stream(),
-                                          cuda_handle_.cublas_handle(),
-                                          cuda_handle_.cudnn_handle()));
+      device_ctx_.reset(new CudaDeviceCtx(
+          NewWorkStreamId(), cuda_handle_.cuda_stream(),
+          cuda_handle_.cublas_handle(), cuda_handle_.cudnn_handle()));
       break;
     }
     default: { UNEXPECTED_RUN(); }
@@ -221,6 +229,15 @@ Regst* Actor::GetCurWriteableRegst(const std::string& name) {
 Regst* Actor::GetCurSoleWriteableRegst() {
   CHECK_EQ(writeable_produced_regst_.size(), 1);
   return writeable_produced_regst_.begin()->second.front();
+}
+
+int64_t Actor::GetReservedWorkStreamId(int64_t reserved_id) {
+  return IDMgr::Singleton()->GetReservedWorkStreamId(machine_id(), thrd_id(),
+                                                     reserved_id);
+}
+
+int64_t Actor::NewWorkStreamId() {
+  return IDMgr::Singleton()->NewWorkStreamId(machine_id(), thrd_id());
 }
 
 DeviceType Actor::GetDeviceType() const {

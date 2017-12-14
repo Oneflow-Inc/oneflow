@@ -30,6 +30,16 @@ class IDMgr final {
   int64_t MachineId4ActorId(int64_t actor_id) const;
   int64_t ThrdId4ActorId(int64_t actor_id) const;
 
+  // reserved_id: 0-999
+  // for cpu:
+  //   0: the only one work stream
+  // for gpu:
+  //   0: the copy cuda stream
+  int64_t GetReservedWorkStreamId(int64_t machine_id, int64_t thrd_id,
+                                  int64_t reserved_id);
+  // start from: 1000
+  int64_t NewWorkStreamId(int64_t machine_id, int64_t thrd_id);
+
  private:
   IDMgr();
 

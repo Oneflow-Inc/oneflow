@@ -16,7 +16,7 @@ Blob* CreateBlob<DeviceType::kCPU>(const BlobDesc* blob_desc) {
 
 template<>
 void BuildKernelCtx<DeviceType::kCPU>(KernelCtx* ctx) {
-  ctx->device_ctx = new CpuDeviceCtx;
+  ctx->device_ctx = new CpuDeviceCtx(-1);
 }
 
 template<>
