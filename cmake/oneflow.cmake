@@ -1,5 +1,6 @@
 # main cpp
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/oneflow.cpp)
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/operator/softmax_op_test.cpp)
 
 # source_group
 if(WIN32)
