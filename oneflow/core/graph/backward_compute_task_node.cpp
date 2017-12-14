@@ -77,8 +77,18 @@ void BackwardCompTaskNode::BuildActivationDiffRegst() {
   std::shared_ptr<RegstDesc> activation_regst = GetConsumedRegst("activation");
   auto activation_diff_regst = GetProducedRegst("activation_diff");
   mut_exec_gph().ForEachEdge([&](ExecEdge* edge) {
-    edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), activation_diff_regst);
-    edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(), activation_diff_regst);
+    auto type_case = edge->src_node()->op()->op_conf().op_type_case();
+    if (IsDiffImplementedInPlace(type_case)) {
+      edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), activation_regst);
+      edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(), activation_regst);
+      activation_diff_regst->EraseBlobDesc(edge->lbn());
+    } else {
+      edge->src_node()->BindBnInOpAndRegst(edge->src_bn(),
+                                           activation_diff_regst);
+      edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(),
+                                           activation_diff_regst);
+    }
+
     edge->src_node()->BindBnInOpAndRegst(GenUnDiffBn(edge->src_bn()),
                                          activation_regst);
     edge->dst_node()->BindBnInOpAndRegst(GenUnDiffBn(edge->dst_bn()),

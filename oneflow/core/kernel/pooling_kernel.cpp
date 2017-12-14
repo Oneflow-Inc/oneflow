@@ -242,6 +242,7 @@ class PoolingKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
+KERNEL_DIFF_IMPLEMENTED_IN_PLACE(OperatorConf::kPoolingConf);
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kPoolingConf, PoolingKernel,
                            ARITHMETIC_DATA_TYPE_SEQ);
 

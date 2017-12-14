@@ -106,6 +106,11 @@ void RegstDesc::InferMemCase() {
   }
 }
 
+void RegstDesc::EraseBlobDesc(const std::string& lbn) {
+  auto it = lbn2blob_desc_.find(lbn);
+  if (it != lbn2blob_desc_.end()) { lbn2blob_desc_.erase(it); }
+}
+
 void RegstDesc::EraseZeroSizeBlob() {
   EraseIf<std::string, std::unique_ptr<BlobDesc>>(
       &lbn2blob_desc_,
