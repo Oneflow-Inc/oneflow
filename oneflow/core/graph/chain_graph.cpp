@@ -350,7 +350,7 @@ void ChainGraph::BuildLossPrintStruct() {
 
 std::shared_ptr<const Operator> ConstructModelUpdateOp() {
   OperatorConf mdupdt_conf;
-  mdupdt_conf.set_name("model_update_" + NewUniqueId());
+  mdupdt_conf.set_name("md_update_" + NewUniqueId());
   const JobDesc* job_desc = JobDesc::Singleton();
   if (job_desc->IsTrain()) {
     const TrainConf& train_conf = job_desc->job_conf().train_conf();

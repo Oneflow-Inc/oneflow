@@ -83,7 +83,9 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   }
   auto consumed_regst_proto = task_proto->mutable_consumed_regst_desc_id();
   for (auto& pair : consumed_regsts_) {
-    int64_t regst_desc_id = pair.second.lock()->regst_desc_id();
+    std::shared_ptr<RegstDesc> regst = pair.second.lock();
+    if (!regst) { continue; }
+    int64_t regst_desc_id = regst->regst_desc_id();
     CHECK(consumed_regst_proto->insert({pair.first, regst_desc_id}).second);
   }
 }

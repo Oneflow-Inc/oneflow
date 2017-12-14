@@ -43,8 +43,8 @@ message ConvolutionOpConf {
   optional int32 dilation_h = 11 [default = 1];
   optional int32 dilation_w = 12 [default = 1];
 
-  optional FillConf weight_fill = 14;
-  optional FillConf bias_fill = 15;
+  optional FillConf weight_fill = 13;
+  optional FillConf bias_fill = 14;
 }
 
 message InnerProductOpConf {
@@ -94,8 +94,8 @@ message SoftmaxOpConf {
 
 message SoftmaxLossOpConf {
   required string prediction = 1;
-  required string label = 3;
-  required string loss = 4;
+  required string label = 2;
+  required string loss = 3;
 }
 
 message MultinomialLogisticLossOpConf {
@@ -107,7 +107,7 @@ message MultinomialLogisticLossOpConf {
 message ConcatOpConf {
   repeated string in = 1;
   required string out = 2;
-  required int32 axis = 4;
+  required int32 axis = 3;
 }
 
 message CopyCommNetOpConf {
@@ -142,17 +142,17 @@ message BoxCloneConf {
 }
 
 message BoxingOpConf {
-  required string lbn = 2;
-  required int32 in_num = 3;
-  required int32 out_num = 4;
+  required string lbn = 1;
+  required int32 in_num = 2;
+  required int32 out_num = 3;
 
   oneof in_box {
-    BoxConcatConf concat_box = 5;
-    BoxAddConf add_box = 6;
+    BoxConcatConf concat_box = 4;
+    BoxAddConf add_box = 5;
   }
   oneof out_box {
-    BoxSplitConf split_box = 7;
-    BoxCloneConf clone_box = 8;
+    BoxSplitConf split_box = 6;
+    BoxCloneConf clone_box = 7;
   }
 }
 
