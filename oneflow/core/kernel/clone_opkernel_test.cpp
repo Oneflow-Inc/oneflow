@@ -12,10 +12,20 @@ std::shared_ptr<Operator> CreateCloneOp(int out_num) {
   return ConstructOp(op_conf);
 }
 
-template<typename T, bool has_data_id>
-void DoCloneOpTest(int out_num, const std::vector<int64_t>& in_shape_vec) {
-  auto clone_op = CreateCloneOp(out_num);
+template<DeviceType data_type, typename T>
+void DoCloneOpKernelTest(int out_num, std::shared_ptr<Operator> clone_op) {
+  KernelCtx ctx;
+  BuildKernelCtx<device_type>(&ctx);
+  KernelConf kernel_conf;
+  op->GenKernelConf(bn2blobdesc_func, true, nullptr, &kernel_conf);
+  CloneKernel clone_kernel = CloneKernel<device_type, T>();
+  clone_kernel.Init(nullptr, kernel_conf);
 
+}
+
+template<typename T, bool has_data_id>
+void DoCloneOpTest(int out_num, const std::vector<int64_t>& in_shape_vec,
+                   std::shared_ptr<Operator> clone_op) {
   auto bn2blobdesc_func = ConstructBn2BlobDescFunc(clone_op);
   BlobDesc* in_blob_desc = bn2blobdesc_func("in");
   in_blob_desc->mut_shape().dim_vec_ = in_shape_vec;
@@ -31,13 +41,11 @@ void DoCloneOpTest(int out_num, const std::vector<int64_t>& in_shape_vec) {
 }
 
 template<typename T, bool has_data_id>
-void TestCloneOp() {
-  int out_num = 3;
-  std::vector<int64_t> in_shape_vec = {3, 4};
-  DoCloneOpTest<T, has_data_id>(out_num, in_shape_vec);
+void DoCloneOpKernelTest(int out_num, const std::vector<int64_t>& in_shape_vec) {
+  auto clone_op = CreateCloneOp(out_num);
 
-  out_num = 1;
-  DoCloneOpTest<T, has_data_id>(out_num, in_shape_vec);
+  DoCloneOpTest(int out_num, in_shape_vec);
+  DoCloneKernelTest(int out_num, clone_op);
 }
 
 template<DeviceType device_type, typename T, bool has_data_id>
@@ -48,6 +56,12 @@ void TestCloneOpKernel() {
   EXPECT_CALL(mock_job_desc, DefaultDataType())
       .WillRepeatedly(testing::Return(GetDataType<T>::val));
 
+  int out_num = 3;
+  std::vector<int64_t> in_shape_vec = {3, 4};
+  DoCloneOpKernelTest<T, has_data_id>(out_num, in_shape_vec);
+
+  out_num = 1;
+  DoCloneOpKernelTest<T, has_data_id>(out_num, in_shape_vec);
 }
 
 TEST(CloneOp, infer_blob_desc) {
