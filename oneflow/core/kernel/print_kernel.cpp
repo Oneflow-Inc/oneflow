@@ -15,10 +15,10 @@ void PrintBlobImpl(PersistentOutStream& out_stream, const Blob* blob) {
         if (*(blob->data_id(i) + j) == '\0') { break; }
         out_stream.Write(blob->data_id(i) + j, 1);
       }
-      out_stream.Write(" ", 1);
+      out_stream.Write(",", 1);
     }
     for (int64_t j = 0; j < blob->shape().Count(1); ++j) {
-      out_stream << std::to_string(*dptr++) << ' ';
+      out_stream << std::to_string(*dptr++) << ',';
     }
     out_stream << '\n';
   }
@@ -48,7 +48,7 @@ void PrintKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
     std::string bn_in_op_dir = JoinPath(op_dir, bn_in_op);
     OF_CALL_ONCE(bn_in_op_dir, GlobalFS()->CreateDir(bn_in_op_dir));
     std::string file_path = JoinPath(
-        bn_in_op_dir, "part-", std::to_string(parallel_ctx->parallel_id()));
+        bn_in_op_dir, "part-" + std::to_string(parallel_ctx->parallel_id()));
     out_streams_.emplace_back(new PersistentOutStream(GlobalFS(), file_path));
   }
 }

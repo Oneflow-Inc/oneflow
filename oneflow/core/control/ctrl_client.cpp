@@ -98,6 +98,14 @@ void CtrlClient::PullKV(const std::string& k, PbMessage* msg) {
   PullKV(k, [&](const std::string& i) { msg->ParseFromString(i); });
 }
 
+void CtrlClient::PushActEvent(const ActEvent& act_event) {
+  grpc::ClientContext client_ctx;
+  PushActEventRequest request;
+  *(request.mutable_act_event()) = act_event;
+  PushActEventResponse response;
+  GetMasterStub()->PushActEvent(&client_ctx, request, &response);
+}
+
 CtrlClient::CtrlClient() {
   stubs_.reserve(JobDesc::Singleton()->TotalMachineNum());
   for (int64_t i = 0; i < JobDesc::Singleton()->TotalMachineNum(); ++i) {

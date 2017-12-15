@@ -82,8 +82,8 @@ void MdUpdtCompActor::Act() {
   Regst* cur_model_regst = GetCurWriteableRegst(model_regst_desc_id_);
   cur_model_regst->set_model_version_id(next_model_version_id_);
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  std::tuple<int64_t, Blob*> other_val(next_model_version_id_,
-                                       pre_model_regst_->packed_blob());
+  std::tuple<int64_t, const Blob*> other_val(next_model_version_id_,
+                                             pre_model_regst_->packed_blob());
   kernel_ctx.other = &other_val;
   pre_model_regst_ = cur_model_regst;
   AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {

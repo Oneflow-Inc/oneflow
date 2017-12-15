@@ -25,8 +25,7 @@ void DataLoaderOp::InferBlobDescs(
   }
   out->mut_shape() = Shape(dim_vec);
   out->set_data_type(conf.data_type());
-  out->set_has_data_id(JobDesc::Singleton()->IsPredict()
-                       && JobDesc::Singleton()->SizeOfOneDataId() != 0);
+  out->set_has_data_id(JobDesc::Singleton()->SizeOfOneDataId() > 0);
 }
 
 REGISTER_OP(OperatorConf::kDataLoaderConf, DataLoaderOp);

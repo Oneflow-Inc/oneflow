@@ -76,8 +76,15 @@ void LogicalGraph::FillNodeWithParallelDesc() {
       while (pred_node->op()->IsElemWiseOp()) {
         pred_node = pred_node->SoleInEdge()->src_node();
       }
+      if (cur_node->parallel_desc()->Equal(pred_node->parallel_desc().get())
+          == false) {
+        LOG(WARNING) << "Parallel Conf of " << cur_node->op()->op_name()
+                     << " is not equal to " << pred_node->op()->op_name();
+      }
       cur_node->mut_parallel_desc() = pred_node->parallel_desc();
     }
+    CHECK(cur_node->parallel_desc())
+        << "Please set the placement of " << cur_node->op()->op_name();
   });
 }
 

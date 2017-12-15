@@ -46,6 +46,8 @@ Oneflow::Oneflow(const JobConf& job_conf, const std::string& this_mchn_name) {
     CtrlClient::Singleton()->ClearKV("naive_plan");
   }
   PrintProtoToTextFile(plan, JoinPath(LogDir(), "naive_plan"));
+  Runtime::NewSingleton(plan, true);
+  Runtime::DeleteSingleton();
   Runtime::NewSingleton(plan, false);
   Runtime::DeleteSingleton();
   // Delete All Singleton
