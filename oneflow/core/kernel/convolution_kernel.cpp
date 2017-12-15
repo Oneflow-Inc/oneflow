@@ -101,7 +101,6 @@ void ConvolutionKernel<device_type, T>::ForwardDataContent(
   const Blob* weight_blob = BnInOp2Blob("weight");
   const int64_t in_im_sz = in_shape.Count(1);
   const int64_t out_im_sz = out_blob->shape().Count(1);
-  const int64_t col_im_sz = col_buf_blob->shape().Count(1);
   const auto& conv_conf = this->op_conf().convolution_conf();
   for (size_t i = 0; i < in_shape.At(0); ++i) {
     ConvolutionKernelUtil<device_type, T>::Im2Col(
@@ -109,13 +108,13 @@ void ConvolutionKernel<device_type, T>::ForwardDataContent(
         in_shape.At(3), conv_conf.kernel_h(), conv_conf.kernel_w(),
         conv_conf.pad_h(), conv_conf.pad_w(), conv_conf.stride_h(),
         conv_conf.stride_w(), conv_conf.dilation_h(), conv_conf.dilation_w(),
-        col_buf_blob->mut_dptr<T>() + col_im_sz);
+        col_buf_blob->mut_dptr<T>());
 
     KernelUtil<device_type, T>::Gemm(
         ctx.device_ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasTrans,
         out_blob->shape().At(1), out_blob->shape().Count(2),
         weight_blob->shape().At(1), static_cast<T>(1.0), weight_blob->dptr<T>(),
-        weight_blob->shape().At(1), col_buf_blob->dptr<T>() + col_im_sz,
+        weight_blob->shape().At(1), col_buf_blob->dptr<T>(),
         weight_blob->shape().At(1), static_cast<T>(0.0),
         out_blob->mut_dptr<T>() + i * out_im_sz, col_buf_blob->shape().At(1));
 
@@ -146,7 +145,6 @@ void ConvolutionKernel<device_type, T>::ComputeWeightDiff(
   Blob* col_buf_blob = BnInOp2Blob("col_buf");
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   const int64_t out_im_sz = out_diff_blob->shape().Count(1);
-  const int64_t col_im_sz = col_buf_blob->shape().Count(1);
   const int64_t data_num = out_diff_blob->shape().At(0);
   const int64_t conv_sliding_window_steps = out_diff_blob->shape().Count(2);
 
@@ -159,7 +157,7 @@ void ConvolutionKernel<device_type, T>::ComputeWeightDiff(
         in_shape.At(3), conv_conf.kernel_h(), conv_conf.kernel_w(),
         conv_conf.pad_h(), conv_conf.pad_w(), conv_conf.stride_h(),
         conv_conf.stride_w(), conv_conf.dilation_h(), conv_conf.dilation_w(),
-        col_buf_blob->mut_dptr<T>() + col_im_sz);
+        col_buf_blob->mut_dptr<T>());
 
     KernelUtil<device_type, T>::Gemm(
         ctx.device_ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasNoTrans,
@@ -167,8 +165,7 @@ void ConvolutionKernel<device_type, T>::ComputeWeightDiff(
         out_diff_blob->shape().Count(2),
         static_cast<T>(1.0) / conv_sliding_window_steps,
         out_diff_blob->dptr<T>() + i * out_im_sz,
-        out_diff_blob->shape().Count(2),
-        col_buf_blob->dptr<T>() + col_buf_blob->shape().Count(1),
+        out_diff_blob->shape().Count(2), col_buf_blob->dptr<T>(),
         col_buf_blob->shape().At(2), static_cast<T>(1.0),
         weight_diff_blob->mut_dptr<T>(), weight_diff_blob->shape().At(1));
   }
@@ -222,15 +219,13 @@ void ConvolutionKernel<device_type, T>::ComputeInputDiff(
         out_diff_blob->dptr<T>() + i * out_im_sz,
         out_diff_blob->shape().Count(2), weight_blob->dptr<T>(),
         weight_blob->shape().At(1), static_cast<T>(0.0),
-        col_buf_blob->mut_dptr<T>() + col_buf_blob->shape().Count(1),
-        col_buf_blob->shape().At(2));
+        col_buf_blob->mut_dptr<T>(), col_buf_blob->shape().At(2));
 
     ConvolutionKernelUtil<device_type, T>::Col2Im(
-        ctx, col_buf_blob->dptr<T>() + col_buf_blob->shape().Count(1),
-        in_diff_shape.At(1), in_diff_shape.At(2), in_diff_shape.At(3),
-        conv_conf.kernel_h(), conv_conf.kernel_w(), conv_conf.pad_h(),
-        conv_conf.pad_w(), conv_conf.stride_h(), conv_conf.stride_w(),
-        conv_conf.dilation_h(), conv_conf.dilation_w(),
+        ctx, col_buf_blob->dptr<T>(), in_diff_shape.At(1), in_diff_shape.At(2),
+        in_diff_shape.At(3), conv_conf.kernel_h(), conv_conf.kernel_w(),
+        conv_conf.pad_h(), conv_conf.pad_w(), conv_conf.stride_h(),
+        conv_conf.stride_w(), conv_conf.dilation_h(), conv_conf.dilation_w(),
         in_diff_blob->mut_dptr<T>() + i * in_diff_shape.Count(1));
   }
 }
