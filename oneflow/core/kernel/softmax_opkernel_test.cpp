@@ -39,18 +39,6 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobMap() {
   return [bn2blob](const std::string& bn) { return bn2blob->at(bn); };
 }
 
-template<typename T, bool has_data_id>
-std::function<BlobDesc*(const std::string)> BuildBn2BlobDescFunc(
-    HashMap<std::string, BlobDesc*>& bn2blobdesc_map) {
-  std::vector<std::vector<int64_t>> in_shapes = {{3, 5}};
-  std::vector<std::string> ibns = {"in"};
-  std::vector<std::string> obns = {"out"};
-  std::vector<std::string> other_bns = {"tmp"};
-
-  return ConstructBn2BlobDescFunc(bn2blobdesc_map, ibns, obns, other_bns,
-                                  in_shapes, GetDataType<T>::val, has_data_id);
-}
-
 std::shared_ptr<Operator> BuildSoftmaxOp() {
   OperatorConf op_conf;
   op_conf.set_name("softmax_test");
