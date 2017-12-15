@@ -3,9 +3,7 @@
 #include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/core/device/cuda_device_context.h"
 #include "oneflow/core/kernel/opkernel_test_common.h"
-
 #include "oneflow/core/operator/softmax_op.h"
-#include "oneflow/core/operator/op_test_util.h"
 
 namespace oneflow {
 
@@ -64,8 +62,7 @@ std::shared_ptr<Operator> BuildSoftmaxOp() {
 template<DeviceType device_type, typename T, bool has_data_id>
 Kernel* BuildSoftmaxKernel(bool is_forward) {
   auto softmax_op = BuildSoftmaxOp();
-  HashMap<std::string, BlobDesc*> bn2blobdesc_map;
-  auto bn2blobdesc_func = BuildBn2BlobDescFunc<T, has_data_id>(bn2blobdesc_map);
+  auto bn2blobdesc_func = ConstructBn2BlobDescFunc(softmax_op);
   KernelConf kernel_conf;
   softmax_op->GenKernelConf(bn2blobdesc_func, is_forward, nullptr,
                             &kernel_conf);
@@ -76,6 +73,11 @@ Kernel* BuildSoftmaxKernel(bool is_forward) {
 
 template<DeviceType device_type, typename T, bool has_data_id>
 void TestSoftmaxKernel() {
+  MockJobDesc mock_job_desc;
+  InitJobDescSingleton(&mock_job_desc);
+  EXPECT_CALL(mock_job_desc, DefaultDataType())
+      .WillRepeatedly(testing::Return(GetDataType<T>::val));
+
   auto softmax_kernel_forward =
       BuildSoftmaxKernel<device_type, T, has_data_id>(true);
   auto softmax_kernel_backward =
@@ -87,6 +89,7 @@ void TestSoftmaxKernel() {
   softmax_kernel_forward->Launch(ctx, bn2blob);
   softmax_kernel_backward->Launch(ctx, bn2blob);
   SyncStream<device_type>(&ctx);
+
   using KTC = KTCommon<device_type, T>;
   KTC::CheckResult(bn2blob, "out", "expected_out");
   KTC::CheckResult(bn2blob, "in_diff", "expected_in_diff");
@@ -94,15 +97,18 @@ void TestSoftmaxKernel() {
 
 template<typename T, bool has_data_id>
 void TestSoftmaxOp() {
-  auto softmax_op = BuildSoftmaxOp();
-  HashMap<std::string, BlobDesc*> bn2blobdesc_map;
-  auto bn2blobdesc_func = BuildBn2BlobDescFunc<T, has_data_id>(bn2blobdesc_map);
+  MockJobDesc mock_job_desc;
+  InitJobDescSingleton(&mock_job_desc);
+  EXPECT_CALL(mock_job_desc, DefaultDataType())
+      .WillRepeatedly(testing::Return(GetDataType<T>::val));
 
-  // infershape
+  auto softmax_op = BuildSoftmaxOp();
+  auto bn2blobdesc_func = ConstructBn2BlobDescFunc(softmax_op);
+
+  BlobDesc* in_blobdesc = bn2blobdesc_func("in");
+  in_blobdesc->mut_shape() = Shape({3, 5});
   softmax_op->InferBlobDescs(bn2blobdesc_func, nullptr);
 
-  // test
-  BlobDesc* in_blobdesc = bn2blobdesc_func("in");
   BlobDesc* out_blobdesc = bn2blobdesc_func("out");
   BlobDesc* tmp_blobdesc = bn2blobdesc_func("tmp");
 
@@ -112,25 +118,21 @@ void TestSoftmaxOp() {
   ASSERT_TRUE(in_blobdesc->data_type() == tmp_blobdesc->data_type());
 }
 
-template<DeviceType device_type, typename T, bool has_data_id>
-void TestSoftmaxOpKernel() {
-  // mock JobDesc
-  MockJobDesc mock_job_desc;
-  InitJobDescSingleton(&mock_job_desc);
-  EXPECT_CALL(mock_job_desc, DefaultDataType())
-      .WillRepeatedly(testing::Return(GetDataType<T>::val));
-  TestSoftmaxOp<T, has_data_id>();
-  TestSoftmaxKernel<device_type, T, has_data_id>();
-}
-
 }  // namespace
 
 }  // namespace test
 
+TEST(SoftmaxOp, softmax) {
+#define MAKE_OP_TEST_ENTRY(data_type_pair, has_data_id) \
+  test::TestSoftmaxOp<OF_PP_PAIR_FIRST(data_type_pair), has_data_id>();
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_OP_TEST_ENTRY, FLOATING_DATA_TYPE_SEQ,
+                                   BOOL_SEQ)
+}
+
 TEST(SoftmaxKernel, softmax) {
-#define MAKE_ENTRY(device_type, data_type_pair, has_data_id)               \
-  test::TestSoftmaxOpKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair), \
-                            has_data_id>();
+#define MAKE_ENTRY(device_type, data_type_pair, has_data_id)             \
+  test::TestSoftmaxKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair), \
+                          has_data_id>();
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, DEVICE_TYPE_SEQ,
                                    FLOATING_DATA_TYPE_SEQ, BOOL_SEQ)
 }
