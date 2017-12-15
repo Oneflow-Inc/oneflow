@@ -59,13 +59,21 @@ Kernel* BuildSoftmaxKernel(bool is_forward) {
   return softmax_kernel;
 }
 
-template<DeviceType device_type, typename T, bool has_data_id>
-void TestSoftmaxKernel() {
+template<typename T>
+void InitMockJobDesc() {
   MockJobDesc mock_job_desc;
   InitJobDescSingleton(&mock_job_desc);
   EXPECT_CALL(mock_job_desc, DefaultDataType())
       .WillRepeatedly(testing::Return(GetDataType<T>::val));
+  // CHECK_EQ(mock_job_desc.DefaultDataType(),
+  //         JobDesc::Singleton()->DefaultDataType());
+  // CHECK_EQ(GetDataType<T>::val, JobDesc::Singleton()->DefaultDataType());
+  // LOG(INFO) << JobDesc::Singleton()->DefaultDataType();
+}
 
+template<DeviceType device_type, typename T, bool has_data_id>
+void TestSoftmaxKernel() {
+  InitMockJobDesc<T>();
   auto softmax_kernel_forward =
       BuildSoftmaxKernel<device_type, T, has_data_id>(true);
   auto softmax_kernel_backward =
@@ -85,11 +93,7 @@ void TestSoftmaxKernel() {
 
 template<typename T, bool has_data_id>
 void TestSoftmaxOp() {
-  MockJobDesc mock_job_desc;
-  InitJobDescSingleton(&mock_job_desc);
-  EXPECT_CALL(mock_job_desc, DefaultDataType())
-      .WillRepeatedly(testing::Return(GetDataType<T>::val));
-
+  InitMockJobDesc<T>();
   auto softmax_op = BuildSoftmaxOp();
   auto bn2blobdesc_func = ConstructBn2BlobDescFunc(softmax_op);
 
