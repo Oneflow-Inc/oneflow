@@ -292,7 +292,6 @@ void ConvolutionKernel<device_type, T>::InitModelTmpBlobs(
   }
 }
 
-KERNEL_DIFF_IMPLEMENTED_IN_PLACE(OperatorConf::kConvolutionConf);
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConvolutionConf, ConvolutionKernel,
                            FLOATING_DATA_TYPE_SEQ);
 

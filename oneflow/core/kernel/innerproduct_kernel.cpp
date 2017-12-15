@@ -128,7 +128,6 @@ void InnerProductKernel<device_type, T>::InitModelTmpBlobs(
   }
 }
 
-KERNEL_DIFF_IMPLEMENTED_IN_PLACE(OperatorConf::kInnerproductConf);
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kInnerproductConf, InnerProductKernel,
                            FLOATING_DATA_TYPE_SEQ);
 

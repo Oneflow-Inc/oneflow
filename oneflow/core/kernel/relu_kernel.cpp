@@ -46,7 +46,6 @@ class ReluKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
-KERNEL_DIFF_IMPLEMENTED_IN_PLACE(OperatorConf::kReluConf);
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReluConf, ReluKernel,
                            FLOATING_DATA_TYPE_SEQ SIGNED_INT_DATA_TYPE_SEQ);
 

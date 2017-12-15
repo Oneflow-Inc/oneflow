@@ -26,10 +26,11 @@ class Operator {
   void InitFromOpConf(const OperatorConf& op_conf);
   virtual void InitFromOpConf() = 0;
   virtual bool IsElemWiseOp() const { return false; }
-  // return true if "activation" register_desc
+
+  // return false if "activation" register_desc
   // share memory with "activation_diff" register_desc
   // in corresponding kernel immplementation
-  virtual bool IsInPlaceDiffOp() const { return false; }
+  virtual bool NeedExtraActivationDiffMem() const { return true; }
   virtual bool IsLossOp() const { return false; }
   virtual bool IsPrintOp() const { return false; }
   virtual bool IsDataLoaderOp() const { return false; }
@@ -149,17 +150,6 @@ std::string GenUnDiffBn(const std::string& diff_bn);
 std::string GetOpNameFromLbn(const std::string& lbn);
 std::string GetBnInOpFromLbn(const std::string& lbn);
 std::pair<std::string, std::string> ParseLbn(const std::string& lbn);
-
-template<OperatorConf::OpTypeCase op_type_case>
-bool IsKernelDiffImplementedInPlace() {
-  return false;
-}
-
-#define KERNEL_DIFF_IMPLEMENTED_IN_PLACE(op_type_case)  \
-  template<>                                            \
-  bool IsKernelDiffImplementedInPlace<op_type_case>() { \
-    return true;                                        \
-  }
 
 void AddOpCreator(OperatorConf::OpTypeCase op_type_case,
                   std::function<Operator*()> creator);

@@ -13,9 +13,7 @@ class PoolingOp final : public Operator {
 
   void InitFromOpConf() override;
 
-  bool IsInPlaceDiffOp() const override {
-    return IsKernelDiffImplementedInPlace<OperatorConf::kPoolingConf>();
-  }
+  bool NeedExtraActivationDiffMem() const override { return false; }
   const PbMessage& GetSpecialConf() const override;
 
   void InferBlobDescs(
