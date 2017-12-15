@@ -187,16 +187,6 @@ std::pair<std::string, std::string> ParseLbn(const std::string& lbn) {
   return {lbn.substr(0, pos), lbn.substr(pos + 1)};
 }
 
-bool IsDiffImplementedInPlace(OperatorConf::OpTypeCase op_type) {
-  switch (op_type) {
-#define IS_DIFF_IN_PLACE_CASE_ENTRY(op_type_case) \
-  case op_type_case: return IsKernelDiffImplementedInPlace<op_type_case>();
-    OF_PP_FOR_EACH_TUPLE(IS_DIFF_IN_PLACE_CASE_ENTRY, OP_TYPE_CASE_SEQ);
-    default: UNEXPECTED_RUN();
-  }
-  return false;
-}
-
 static HashMap<int, std::function<Operator*()>>& OpTypeCase2Creator() {
   static HashMap<int, std::function<Operator*()>> obj;
   return obj;

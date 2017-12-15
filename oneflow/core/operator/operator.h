@@ -26,6 +26,10 @@ class Operator {
   void InitFromOpConf(const OperatorConf& op_conf);
   virtual void InitFromOpConf() = 0;
   virtual bool IsElemWiseOp() const { return false; }
+  // return true if "activation" register_desc
+  // share memory with "activation_diff" register_desc
+  // in corresponding kernel immplementation
+  virtual bool IsInPlaceDiffOp() const { return false; }
   virtual bool IsLossOp() const { return false; }
   virtual bool IsPrintOp() const { return false; }
   virtual bool IsDataLoaderOp() const { return false; }
@@ -145,30 +149,6 @@ std::string GenUnDiffBn(const std::string& diff_bn);
 std::string GetOpNameFromLbn(const std::string& lbn);
 std::string GetBnInOpFromLbn(const std::string& lbn);
 std::pair<std::string, std::string> ParseLbn(const std::string& lbn);
-
-#define OP_TYPE_CASE_SEQ                                           \
-  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kConvolutionConf)             \
-  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kInnerproductConf)            \
-  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kDataLoaderConf)              \
-  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kPoolingConf)                 \
-  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kReluConf)                    \
-  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kSoftmaxConf)                 \
-  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kMultinomialLogisticLossConf) \
-  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kCopyHdConf)                  \
-  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kCloneConf)                   \
-  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kBoxingConf)                  \
-  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kNormalMdupdtConf)            \
-  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kAccumulateConf)              \
-  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kConcatConf)                  \
-  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kCopyCommNetConf)             \
-  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kMomentumMdupdtConf)          \
-  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kRmspropMdupdtConf)           \
-  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kSoftmaxLossConf)             \
-  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kPrintConf)                   \
-  OF_PP_MAKE_TUPLE_SEQ(OperatorConf::kLossPrintConf)
-
-//  return true if blob `in' share memory with blob `in_diff'
-bool IsDiffImplementedInPlace(OperatorConf::OpTypeCase op_type);
 
 template<OperatorConf::OpTypeCase op_type_case>
 bool IsKernelDiffImplementedInPlace() {

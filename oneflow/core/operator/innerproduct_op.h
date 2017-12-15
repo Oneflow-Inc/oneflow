@@ -12,6 +12,9 @@ class InnerProductOp final : public Operator {
   ~InnerProductOp() = default;
 
   void InitFromOpConf() override;
+  bool IsInPlaceDiffOp() const override {
+    return IsKernelDiffImplementedInPlace<OperatorConf::kInnerproductConf>();
+  }
   const PbMessage& GetSpecialConf() const override;
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,

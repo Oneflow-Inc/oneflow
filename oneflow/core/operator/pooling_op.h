@@ -12,6 +12,10 @@ class PoolingOp final : public Operator {
   ~PoolingOp() = default;
 
   void InitFromOpConf() override;
+
+  bool IsInPlaceDiffOp() const override {
+    return IsKernelDiffImplementedInPlace<OperatorConf::kPoolingConf>();
+  }
   const PbMessage& GetSpecialConf() const override;
 
   void InferBlobDescs(

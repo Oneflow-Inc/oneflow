@@ -77,16 +77,15 @@ void BackwardCompTaskNode::BuildActivationDiffRegst() {
   std::shared_ptr<RegstDesc> activation_regst = GetConsumedRegst("activation");
   auto activation_diff_regst = GetProducedRegst("activation_diff");
   mut_exec_gph().ForEachEdge([&](ExecEdge* edge) {
-    auto type_case = edge->src_node()->op()->op_conf().op_type_case();
-    if (IsDiffImplementedInPlace(type_case)) {
+    if (edge->src_node()->op()->IsInPlaceDiffOp()) {
       edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), activation_regst);
       edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(), activation_regst);
-      activation_diff_regst->EraseBlobDesc(edge->lbn());
     } else {
       edge->src_node()->BindBnInOpAndRegst(edge->src_bn(),
                                            activation_diff_regst);
       edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(),
                                            activation_diff_regst);
+      activation_diff_regst->AddLbn(edge->lbn());
     }
 
     edge->src_node()->BindBnInOpAndRegst(GenUnDiffBn(edge->src_bn()),
@@ -146,7 +145,8 @@ void BackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
   md_diff_regst->CopyBlobDescFrom(GetConsumedRegst("model").get());
 
   auto activation_diff_regst = GetProducedRegst("activation_diff");
-  activation_diff_regst->CopyBlobDescFrom(GetConsumedRegst("activation").get());
+  activation_diff_regst->CopyBlobDescWithoutAddLbn(
+      GetConsumedRegst("activation").get());
 }
 
 std::shared_ptr<RegstDesc> BackwardCompTaskNode::GetRelatedInRegst() {
