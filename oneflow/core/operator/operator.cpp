@@ -60,6 +60,12 @@ const std::string& Operator::SoleDtbn() const {
 }
 
 void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
+  if (IsDataLoaderOp()) {
+    CHECK_EQ(pr_desc->parallel_num(),
+             JobDesc::Singleton()->job_conf().data_part_num())
+        << "the number of data loader is not equal the data_part_num in "
+           "job.prototxt";
+  }
   if (model_bns_.empty() && model_tmp_bns_.empty()) {
     LOG_IF(WARNING, pr_desc->policy() == ParallelPolicy::kModelParallel)
         << op_name() << " doesn't have any model, so fix it with DataParallel";

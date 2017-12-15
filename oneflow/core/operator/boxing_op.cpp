@@ -1,7 +1,33 @@
 #include "oneflow/core/operator/boxing_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
+
+namespace {
+
+void EraseEmptyBnInVec(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    PbRpf<std::string>* bns) {
+  for (auto it = bns->begin(); it != bns->end();) {
+    if (!GetBlobDesc4BnInOp(*it)) {
+      it = bns->erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
+#define ERASE_BNS(bns) EraseEmptyBnInVec(GetBlobDesc4BnInOp, bns);
+
+}  // namespace
+
+void BoxingOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  ERASE_BNS(kernel_conf->mutable_input_bns());
+  ERASE_BNS(kernel_conf->mutable_output_bns());
+}
 
 void BoxingOp::InitFromOpConf() {
   CHECK(op_conf().has_boxing_conf());
