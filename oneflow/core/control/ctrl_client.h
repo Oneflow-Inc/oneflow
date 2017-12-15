@@ -30,6 +30,8 @@ class CtrlClient final {
   void PullKV(const std::string& k, std::string* v);
   void PullKV(const std::string& k, PbMessage* msg);
 
+  void PushActEvent(const ActEvent&);
+
  private:
   CtrlClient();
   void LoadServer(const std::string& server_addr, CtrlService::Stub* stub);
