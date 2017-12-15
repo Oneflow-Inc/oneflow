@@ -95,6 +95,7 @@ class Actor {
 
  private:
   int64_t actor_id_;
+  int64_t act_id_;
   std::unique_ptr<ParallelContext> parallel_ctx_;
   std::vector<ExecKernel> exec_kernel_vec_;
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;

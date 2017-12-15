@@ -1,9 +1,11 @@
+#include "oneflow/core/actor/act_event.pb.h"
 #include "oneflow/core/actor/actor.h"
 
 namespace oneflow {
 
 void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   actor_id_ = task_proto.task_id();
+  act_id_ = 0;
   if (task_proto.has_parallel_ctx()) {
     parallel_ctx_.reset(new ParallelContext(task_proto.parallel_ctx()));
   }
@@ -93,7 +95,23 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
 }
 
 void Actor::ActUntilFail() {
-  while (IsReadReady() && IsWriteReady()) { Act(); }
+  while (IsReadReady() && IsWriteReady()) {
+    double start_time = GetCurTime();
+    Act();
+    if (RuntimeCtx::Singleton()->is_adjust_phase() == false) { continue; }
+    int64_t actor_id = actor_id_;
+    int64_t act_id = actor_id_++;
+    int64_t work_stream_id = device_ctx_->work_stream_id();
+    device_ctx_->AddCallBack([start_time, act_id, actor_id, work_stream_id]() {
+      double stop_time = GetCurTime();
+      ActEvent act_event;
+      act_event.set_actor_id(actor_id);
+      act_event.set_work_stream_id(work_stream_id);
+      act_event.set_act_id(act_id);
+      act_event.set_start_time(start_time);
+      act_event.set_stop_time(stop_time);
+    });
+  }
 }
 
 bool Actor::IsWriteReady() {
