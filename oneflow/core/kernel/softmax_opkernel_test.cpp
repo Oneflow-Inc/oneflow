@@ -65,12 +65,6 @@ void InitMockJobDesc() {
   InitJobDescSingleton(&mock_job_desc);
   EXPECT_CALL(mock_job_desc, DefaultDataType())
       .WillRepeatedly(testing::Return(GetDataType<T>::val));
-  // CHECK_EQ(mock_job_desc.DefaultDataType(),
-  //         JobDesc::Singleton()->DefaultDataType());
-  // CHECK_EQ(GetDataType<T>::val, JobDesc::Singleton()->DefaultDataType());
-  // LOG(INFO) << "Job Singleton " << JobDesc::Singleton()->DefaultDataType();
-  // LOG(INFO) << "mock_job_desc " << mock_job_desc.DefaultDataType();
-  // LOG(INFO) << "            T " << GetDataType<T>::val;
 }
 
 template<DeviceType device_type, typename T, bool has_data_id>
@@ -111,7 +105,6 @@ void TestSoftmaxOp() {
   ASSERT_TRUE(tmp_blobdesc->shape() == Shape({3}));
   ASSERT_TRUE(in_blobdesc->data_type() == out_blobdesc->data_type());
   ASSERT_TRUE(in_blobdesc->data_type() == tmp_blobdesc->data_type());
-  LOG(INFO) << in_blobdesc->data_type();
 }
 
 }  // namespace
