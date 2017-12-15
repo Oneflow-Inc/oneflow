@@ -3,6 +3,7 @@
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/actor/act_event_logger.h"
 
 namespace oneflow {
 
@@ -72,6 +73,7 @@ void Runtime::NewAllSingleton(const Plan& plan, bool is_adjust_phase) {
   int64_t piece_num = 0;
   if (is_adjust_phase) {
     piece_num = job_desc->piece_num_of_adjust_phase();
+    ActEventLogger::NewSingleton();
   } else {
     if (job_desc->IsTrain()) {
       piece_num = job_desc->NumOfPiecesInBatch() * job_desc->TotalBatchNum();
@@ -96,6 +98,7 @@ void Runtime::DeleteAllSingleton() {
   SnapshotMgr::DeleteSingleton();
   delete CommNet::Singleton();
   RuntimeCtx::DeleteSingleton();
+  ActEventLogger::DeleteSingleton();
 }
 
 }  // namespace oneflow

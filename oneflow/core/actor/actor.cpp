@@ -1,4 +1,3 @@
-#include "oneflow/core/actor/act_event.pb.h"
 #include "oneflow/core/actor/actor.h"
 
 namespace oneflow {
@@ -110,6 +109,7 @@ void Actor::ActUntilFail() {
       act_event.set_act_id(act_id);
       act_event.set_start_time(start_time);
       act_event.set_stop_time(stop_time);
+      CtrlClient::Singleton()->PushActEvent(act_event);
     });
   }
 }
