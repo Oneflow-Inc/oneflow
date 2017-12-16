@@ -106,6 +106,14 @@ void CtrlClient::PushActEvent(const ActEvent& act_event) {
   GetMasterStub()->PushActEvent(&client_ctx, request, &response);
 }
 
+void CtrlClient::Clear() {
+  grpc::ClientContext client_ctx;
+  ClearRequest request;
+  ClearResponse response;
+  GetThisStub()->Clear(&client_ctx, request, &response);
+  done_names_.clear();
+}
+
 CtrlClient::CtrlClient() {
   stubs_.reserve(JobDesc::Singleton()->TotalMachineNum());
   for (int64_t i = 0; i < JobDesc::Singleton()->TotalMachineNum(); ++i) {
