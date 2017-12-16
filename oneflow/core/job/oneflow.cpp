@@ -2,6 +2,7 @@
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/job/compiler.h"
+#include "oneflow/core/job/improver.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/plan.pb.h"
