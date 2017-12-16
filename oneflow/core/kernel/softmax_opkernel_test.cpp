@@ -1,8 +1,7 @@
-#include "oneflow/core/job/mock_job_desc.h"
+#include "oneflow/core/kernel/opkernel_test_common.h"
 #include "oneflow/core/kernel/softmax_kernel.h"
 #include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/core/device/cuda_device_context.h"
-#include "oneflow/core/kernel/opkernel_test_common.h"
 #include "oneflow/core/operator/softmax_op.h"
 
 namespace oneflow {
@@ -48,41 +47,34 @@ std::shared_ptr<Operator> BuildSoftmaxOp() {
 }
 
 template<DeviceType device_type, typename T, bool has_data_id>
-Kernel* BuildSoftmaxKernel(bool is_forward) {
+Kernel* BuildSoftmaxKernel() {
   auto softmax_op = BuildSoftmaxOp();
   auto bn2blobdesc_func = ConstructBn2BlobDescFunc(softmax_op);
   KernelConf kernel_conf;
-  softmax_op->GenKernelConf(bn2blobdesc_func, is_forward, nullptr,
-                            &kernel_conf);
+  softmax_op->GenKernelConf(bn2blobdesc_func, true, nullptr, &kernel_conf);
   auto softmax_kernel = new SoftmaxKernel<device_type, T>();
   softmax_kernel->Init(nullptr, kernel_conf);
   return softmax_kernel;
 }
 
 template<typename T>
-void InitMockJobDesc() {
-  MockJobDesc mock_job_desc;
-  InitJobDescSingleton(&mock_job_desc);
-  EXPECT_CALL(mock_job_desc, DefaultDataType())
-      .WillRepeatedly(testing::Return(GetDataType<T>::val));
-  CHECK_EQ(mock_job_desc.DefaultDataType(),
-           JobDesc::Singleton()->DefaultDataType());
-  CHECK_EQ(GetDataType<T>::val, JobDesc::Singleton()->DefaultDataType());
+void InitJobDesc() {
+  JobConf job_conf;
+  job_conf.set_default_data_type(GetDataType<T>::val);
+  JobDesc::NewSingleton();
+  JobDesc::Singleton()->job_conf_ = job_conf;
 }
 
 template<DeviceType device_type, typename T, bool has_data_id>
 void TestSoftmaxKernel() {
-  InitMockJobDesc<T>();
-  auto softmax_kernel_forward =
-      BuildSoftmaxKernel<device_type, T, has_data_id>(true);
-  auto softmax_kernel_backward =
-      BuildSoftmaxKernel<device_type, T, has_data_id>(false);
+  InitJobDesc<T>();
+  auto softmax_kernel = BuildSoftmaxKernel<device_type, T, has_data_id>();
 
   KernelCtx ctx;
   BuildKernelCtx<device_type>(&ctx);
   auto bn2blob = BuildBnInOp2BlobMap<device_type, T>();
-  softmax_kernel_forward->Launch(ctx, bn2blob);
-  softmax_kernel_backward->Launch(ctx, bn2blob);
+  softmax_kernel->Forward(ctx, bn2blob);
+  softmax_kernel->Backward(ctx, bn2blob);
   SyncStream<device_type>(&ctx);
 
   using KTC = KTCommon<device_type, T>;
@@ -92,7 +84,7 @@ void TestSoftmaxKernel() {
 
 template<typename T, bool has_data_id>
 void TestSoftmaxOp() {
-  InitMockJobDesc<T>();
+  InitJobDesc<T>();
   auto softmax_op = BuildSoftmaxOp();
   auto bn2blobdesc_func = ConstructBn2BlobDescFunc(softmax_op);
 
