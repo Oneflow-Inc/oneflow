@@ -31,6 +31,7 @@ class Operator {
   // share memory with "activation_diff" register_desc
   // in corresponding kernel immplementation
   virtual bool NeedExtraActivationDiffMem() const { return true; }
+  virtual bool NeedOutWhenBackward() const { return true; }
   virtual bool IsLossOp() const { return false; }
   virtual bool IsPrintOp() const { return false; }
   virtual bool IsDataLoaderOp() const { return false; }
