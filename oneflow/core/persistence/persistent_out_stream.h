@@ -27,7 +27,7 @@ class PersistentOutStream final {
 template<typename T>
 PersistentOutStream& operator<<(PersistentOutStream& out_stream, const T& x) {
   static_assert(std::is_fundamental<T>::value, "Not fundamental type");
-  const char* x_ptr = &x;
+  const char* x_ptr = reinterpret_cast<const char*>(&x);
   size_t n = sizeof(x);
   out_stream.Write(x_ptr, n);
   return out_stream;

@@ -1,4 +1,5 @@
 #include "oneflow/core/control/ctrl_server.h"
+#include "oneflow/core/actor/act_event_logger.h"
 
 namespace oneflow {
 
@@ -170,6 +171,23 @@ void CtrlServer::PullKVHandler(CtrlCall<PullKVRequest, PullKVResponse>* call) {
     pending_kv_calls_[k].push_back(call);
   }
   ENQUEUE_REQUEST(PullKV);
+}
+
+void CtrlServer::PushActEventHandler(
+    CtrlCall<PushActEventRequest, PushActEventResponse>* call) {
+  ActEvent act_event = call->request().act_event();
+  call->SendResponse();
+  ActEventLogger::Singleton()->PrintActEventToLogDir(act_event);
+  ENQUEUE_REQUEST(PushActEvent);
+}
+
+void CtrlServer::ClearHandler(CtrlCall<ClearRequest, ClearResponse>* call) {
+  name2lock_status_.clear();
+  kv_.clear();
+  for (const auto& pair : pending_kv_calls_) { CHECK(pair.second.empty()); }
+  pending_kv_calls_.clear();
+  call->SendResponse();
+  ENQUEUE_REQUEST(Clear);
 }
 
 }  // namespace oneflow

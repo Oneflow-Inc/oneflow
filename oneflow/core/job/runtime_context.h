@@ -17,17 +17,17 @@ class RuntimeCtx final {
   OF_SINGLETON(RuntimeCtx);
 
   int64_t total_piece_num() const { return total_piece_num_; }
-  bool is_adjust_phase() const { return is_adjust_phase_; }
+  bool is_experiment_phase() const { return is_experiment_phase_; }
 
   void NewCounter(const std::string& name, int64_t val);
   void DecreaseCounter(const std::string& name);
   void WaitUntilCntEqualZero(const std::string& name);
 
  private:
-  RuntimeCtx(int64_t total_piece_num, bool is_adjust_phase);
+  RuntimeCtx(int64_t total_piece_num, bool is_experiment_phase);
 
   int64_t total_piece_num_;
-  bool is_adjust_phase_;
+  bool is_experiment_phase_;
   HashMap<std::string, std::unique_ptr<BlockingCounter>> counters_;
 };
 
