@@ -165,6 +165,8 @@ void Actor::AsyncSendEORDMsgToConsumers(int64_t regst_desc_id) {
       produced_regsts_.at(regst_desc_id).front()->regst_desc();
   device_ctx_->AddCallBack([regst_desc]() {
     for (int64_t consumer : regst_desc->consumers_actor_id()) {
+      // do not send EORD msg through recurrent edge
+      if (consumer == actor_id_) { continue; }  
       ActorMsg msg =
           ActorMsg::BuildEordMsg(consumer, regst_desc->regst_desc_id());
       ActorMsgBus::Singleton()->SendMsg(std::move(msg));
