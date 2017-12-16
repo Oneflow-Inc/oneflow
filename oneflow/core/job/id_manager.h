@@ -42,11 +42,13 @@ class IDMgr final {
 
  private:
   IDMgr();
+  int64_t GetMachineThrdId(int64_t machine_id, int64_t thrd_id);
 
   int32_t machine_num_;
   int64_t device_num_per_machine_;
   int64_t regst_desc_id_count_;
   HashMap<int64_t, int64_t> thread_id2num_of_tasks_;
+  HashMap<int64_t, int64_t> thread_id2num_of_streams_;
 
   HashMap<std::string, int64_t> machine_name2machine_id_;
   HashMap<int64_t, std::string> machine_id2machine_name_;
@@ -55,10 +57,10 @@ class IDMgr final {
   std::vector<int64_t> boxing_thrd_offset_;
 
   //  64 bit id design:
-  //   sign | machine | device | task
+  //   sign | machine | thread | task
   //    1   |   16    |   8    |  39
   static const int64_t machine_id_bit_num_ = 16;
-  static const int64_t device_id_bit_num_ = 8;
+  static const int64_t thread_id_bit_num_ = 8;
   static const int64_t task_id_bit_num_ = 39;
 };
 

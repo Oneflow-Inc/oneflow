@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_ACTOR_ACTOR_H_
 #define ONEFLOW_CORE_ACTOR_ACTOR_H_
 
+#include "oneflow/core/actor/act_event.pb.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/core/device/cuda_device_context.h"
@@ -95,6 +96,7 @@ class Actor {
 
  private:
   int64_t actor_id_;
+  int64_t act_id_;
   std::unique_ptr<ParallelContext> parallel_ctx_;
   std::vector<ExecKernel> exec_kernel_vec_;
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;
