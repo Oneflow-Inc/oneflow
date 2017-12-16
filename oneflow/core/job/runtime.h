@@ -16,9 +16,9 @@ class Runtime final {
   OF_SINGLETON(Runtime);
 
  private:
-  Runtime(const Plan& plan, bool is_adjust_phase);
+  Runtime(const Plan& plan, bool is_experiment_phase);
 
-  void NewAllSingleton(const Plan& plan, bool is_adjust_phase);
+  void NewAllSingleton(const Plan& plan, bool is_experiment_phase);
   void DeleteAllSingleton();
 };
 

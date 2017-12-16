@@ -25,8 +25,8 @@ void HandoutTasks(const std::vector<const TaskProto*>& tasks) {
 
 }  // namespace
 
-Runtime::Runtime(const Plan& plan, bool is_adjust_phase) {
-  NewAllSingleton(plan, is_adjust_phase);
+Runtime::Runtime(const Plan& plan, bool is_experiment_phase) {
+  NewAllSingleton(plan, is_experiment_phase);
   std::vector<const TaskProto*> mdupdt_tasks;
   std::vector<const TaskProto*> source_tasks;
   std::vector<const TaskProto*> other_tasks;
@@ -68,11 +68,11 @@ Runtime::Runtime(const Plan& plan, bool is_adjust_phase) {
   DeleteAllSingleton();
 }
 
-void Runtime::NewAllSingleton(const Plan& plan, bool is_adjust_phase) {
+void Runtime::NewAllSingleton(const Plan& plan, bool is_experiment_phase) {
   const JobDesc* job_desc = JobDesc::Singleton();
   int64_t piece_num = 0;
-  if (is_adjust_phase) {
-    piece_num = job_desc->piece_num_of_adjust_phase();
+  if (is_experiment_phase) {
+    piece_num = job_desc->piece_num_of_experiment_phase();
     ActEventLogger::NewSingleton();
   } else {
     if (job_desc->IsTrain()) {
@@ -81,7 +81,7 @@ void Runtime::NewAllSingleton(const Plan& plan, bool is_adjust_phase) {
       piece_num = std::numeric_limits<int64_t>::max();
     }
   }
-  RuntimeCtx::NewSingleton(piece_num, is_adjust_phase);
+  RuntimeCtx::NewSingleton(piece_num, is_experiment_phase);
 #ifdef PLATFORM_POSIX
   EpollCommNet::Init();
 #endif
