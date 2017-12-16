@@ -63,7 +63,7 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
   if (IsDataLoaderOp()) {
     CHECK_EQ(pr_desc->parallel_num(),
              JobDesc::Singleton()->job_conf().data_part_num())
-        << "the number of data loader is not equal the data_part_num in "
+        << "parallel_num of data loader is not equal to the data_part_num in "
            "job.prototxt";
   }
   if (model_bns_.empty() && model_tmp_bns_.empty()) {

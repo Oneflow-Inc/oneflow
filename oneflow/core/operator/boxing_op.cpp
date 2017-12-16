@@ -9,13 +9,14 @@ namespace {
 void EraseEmptyBnInVec(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     PbRpf<std::string>* bns) {
-  for (auto it = bns->begin(); it != bns->end();) {
-    if (!GetBlobDesc4BnInOp(*it)) {
-      it = bns->erase(it);
-    } else {
-      ++it;
+  size_t idx_available = 0;
+  for (size_t i = 0; i < bns->size(); ++i) {
+    if (GetBlobDesc4BnInOp((*bns)[i])) {
+      if (i != idx_available) { (*bns)[idx_available] = (*bns)[i]; }
+      ++idx_available;
     }
   }
+  bns->erase(bns->begin() + idx_available, bns->end());
 }
 
 #define ERASE_BNS(bns) EraseEmptyBnInVec(GetBlobDesc4BnInOp, bns);
