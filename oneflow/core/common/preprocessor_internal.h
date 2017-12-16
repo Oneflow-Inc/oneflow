@@ -196,6 +196,9 @@
 
 #define OF_PP_INTERNAL_FOR_EACH_TUPLE(macro, seq) \
   OF_PP_INTERNAL_SEQ_FOR_EACH_TUPLE(macro, _, seq)
+#define OF_PP_INTERNAL_FOR_EACH_ATOMIC(macro, seq) \
+  OF_PP_INTERNAL_SEQ_FOR_EACH_ATOMIC(macro, _, seq)
+
 #define OF_PP_INTERNAL_TUPLE_SEQ_X_ATOMIC_SEQ(tuple_seq, atomic_seq)       \
   OF_PP_INTERNAL_D1_SEQ_FOR_EACH(OF_PP_INTERNAL_D1_APPLY_ATOMIC_WITH_DATA, \
                                  OF_PP_INTERNAL_TUPLE_X_ATOMIC_SEQ,        \

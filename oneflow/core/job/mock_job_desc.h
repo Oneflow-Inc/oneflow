@@ -17,6 +17,7 @@ class MockJobDesc : public JobDesc {
 };
 
 void InitJobDescSingleton(MockJobDesc* mock_job_desc) {
+  JobDesc::DeleteSingleton();
   *(JobDesc::SingletonPPtr()) = mock_job_desc;
 }
 

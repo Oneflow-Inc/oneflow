@@ -41,6 +41,6 @@ void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   template void Blob::CopyDataIdFrom<dev_t>(DeviceCtx*, const Blob*);      \
   template void Blob::CopyFrom<dev_t>(DeviceCtx*, const Blob*);
 
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_BLOB_FUNC, DEVICE_TYPE_SEQ);
+OF_PP_FOR_EACH_ATOMIC(INSTANTIATE_BLOB_FUNC, DEVICE_TYPE_SEQ);
 
 }  // namespace oneflow

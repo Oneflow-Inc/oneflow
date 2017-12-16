@@ -1,6 +1,8 @@
 #include "oneflow/core/job/mock_job_desc.h"
 #include "oneflow/core/operator/clone_op.h"
-#include "oneflow/core/operator/op_test_util.h"
+#include "oneflow/core/kernel/clone_kernel.h"
+#include "oneflow/core/kernel/opkernel_test_common.h"
+#include <iostream>
 
 namespace oneflow {
 
@@ -12,21 +14,56 @@ std::shared_ptr<Operator> CreateCloneOp(int out_num) {
   return ConstructOp(op_conf);
 }
 
-template<DeviceType data_type, typename T>
-void DoCloneOpKernelTest(int out_num, std::shared_ptr<Operator> clone_op) {
-  KernelCtx ctx;
-  BuildKernelCtx<device_type>(&ctx);
-  KernelConf kernel_conf;
-  op->GenKernelConf(bn2blobdesc_func, true, nullptr, &kernel_conf);
-  CloneKernel clone_kernel = CloneKernel<device_type, T>();
-  clone_kernel.Init(nullptr, kernel_conf);
+template<DeviceType device_type, typename T>
+std::function<Blob*(const std::string&)> BuildBnInOp2BlobFunc(int out_num) {
+  auto blob_desc = new BlobDesc(Shape({1, 3, 2}), GetDataType<T>::val, false);
 
+  using KTC = test::KTCommon<device_type, T>;
+
+  auto bn2blob = new HashMap<std::string, Blob*>;
+  (*bn2blob)["in"] = KTC::CreateBlobWithSameVal(blob_desc, 1);
+  (*bn2blob)[GenDiffBn("in")] = KTC::CreateBlobWithRandomVal(blob_desc);
+  (*bn2blob)["in_diff_expected"] =
+      KTC::CreateBlobWithSameVal(blob_desc, 4 * out_num);
+  for (size_t i = 0; i != out_num; ++i) {
+    (*bn2blob)["out_" + std::to_string(i)] =
+        KTC::CreateBlobWithRandomVal(blob_desc);
+    (*bn2blob)["out_" + std::to_string(i) + "_diff"] =
+        KTC::CreateBlobWithSameVal(blob_desc, 4);
+  }
+  return [bn2blob](const std::string& bn) { return bn2blob->at(bn); };
 }
 
-template<typename T, bool has_data_id>
-void DoCloneOpTest(int out_num, const std::vector<int64_t>& in_shape_vec,
-                   std::shared_ptr<Operator> clone_op) {
-  auto bn2blobdesc_func = ConstructBn2BlobDescFunc(clone_op);
+template<DeviceType device_type, typename T>
+void DoCloneKernelTest(
+    std::function<BlobDesc*(const std::string)> bn2blobdesc_func, int out_num,
+    std::shared_ptr<Operator> clone_op) {
+  KernelCtx ctx;
+  test::BuildKernelCtx<device_type>(&ctx);
+
+  KernelConf kernel_conf;
+  clone_op->GenKernelConf(bn2blobdesc_func, true, nullptr, &kernel_conf);
+  auto clone_kernel = new CloneKernel<device_type, T>();
+  clone_kernel->Init(nullptr, kernel_conf);
+
+  auto BnInOp2BlobFunc = BuildBnInOp2BlobFunc<device_type, T>(out_num);
+  clone_kernel->Forward(ctx, BnInOp2BlobFunc);
+  clone_kernel->Backward(ctx, BnInOp2BlobFunc);
+  test::SyncStream<device_type>(&ctx);
+
+  for (size_t i = 0; i != out_num; ++i) {
+    test::KTCommon<device_type, T>::CheckResult(BnInOp2BlobFunc, "in",
+                                                "out_" + std::to_string(i));
+  }
+
+  test::KTCommon<device_type, T>::CheckResult(BnInOp2BlobFunc, GenDiffBn("in"),
+                                              "in_diff_expected");
+}
+
+template<DeviceType device_type, typename T, bool has_data_id>
+void DoCloneOpTest(int out_num, const std::vector<int64_t>& in_shape_vec) {
+  auto clone_op = CreateCloneOp(out_num);
+  auto bn2blobdesc_func = test::ConstructBn2BlobDescFunc(clone_op);
   BlobDesc* in_blob_desc = bn2blobdesc_func("in");
   in_blob_desc->mut_shape().dim_vec_ = in_shape_vec;
   in_blob_desc->set_data_type(GetDataType<T>::val);
@@ -38,35 +75,39 @@ void DoCloneOpTest(int out_num, const std::vector<int64_t>& in_shape_vec,
     const BlobDesc* out_blob_desc = bn2blobdesc_func(obn);
     ASSERT_TRUE(*in_blob_desc == *out_blob_desc);
   }
+
+  DoCloneKernelTest<device_type, T>(bn2blobdesc_func, out_num, clone_op);
 }
 
-template<typename T, bool has_data_id>
-void DoCloneOpKernelTest(int out_num, const std::vector<int64_t>& in_shape_vec) {
-  auto clone_op = CreateCloneOp(out_num);
-
-  DoCloneOpTest(int out_num, in_shape_vec);
-  DoCloneKernelTest(int out_num, clone_op);
+template<DeviceType device_type, typename T, bool has_data_id>
+void DoCloneOpKernelTest(int out_num,
+                         const std::vector<int64_t>& in_shape_vec) {
+  DoCloneOpTest(out_num, in_shape_vec);
+  DoCloneKernelTest(out_num);
 }
 
 template<DeviceType device_type, typename T, bool has_data_id>
 void TestCloneOpKernel() {
-  // mock JobDesc
-  test::MockJobDesc mock_job_desc;
-  test::InitJobDescSingleton(&mock_job_desc);
-  EXPECT_CALL(mock_job_desc, DefaultDataType())
-      .WillRepeatedly(testing::Return(GetDataType<T>::val));
+  JobConf job_conf;
+  job_conf.set_default_data_type(GetDataType<T>::val);
+  JobDesc::NewSingleton();
+  JobDesc::Singleton()->job_conf_ = job_conf;
+  std::cout << JobDesc::Singleton()->DefaultDataType() << std::endl;
 
   int out_num = 3;
   std::vector<int64_t> in_shape_vec = {3, 4};
-  DoCloneOpKernelTest<T, has_data_id>(out_num, in_shape_vec);
+  DoCloneOpKernelTest<device_type, T, has_data_id>(out_num, in_shape_vec);
 
   out_num = 1;
-  DoCloneOpKernelTest<T, has_data_id>(out_num, in_shape_vec);
+  DoCloneOpKernelTest<device_type, T, has_data_id>(out_num, in_shape_vec);
 }
 
 TEST(CloneOp, infer_blob_desc) {
-#define MAKE_ENTRY(x, y) TestCloneOp<OF_PP_PAIR_FIRST(x), y>();
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, ALL_DATA_TYPE_SEQ, BOOL_SEQ)
+#define MAKE_ENTRY(device_type, data_type_pair, has_data_id)       \
+  TestCloneOpKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair), \
+                    has_data_id>();
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, DEVICE_TYPE_SEQ,
+                                   FLOATING_DATA_TYPE_SEQ, BOOL_SEQ)
 }
 
 }  // namespace oneflow
