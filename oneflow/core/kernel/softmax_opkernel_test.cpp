@@ -106,14 +106,14 @@ void TestSoftmaxOp() {
 
 }  // namespace test
 
-TEST(SoftmaxOp, softmax) {
+TEST(SoftmaxOp, InferBlobDescs) {
 #define MAKE_OP_TEST_ENTRY(data_type_pair, has_data_id) \
   test::TestSoftmaxOp<OF_PP_PAIR_FIRST(data_type_pair), has_data_id>();
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_OP_TEST_ENTRY, FLOATING_DATA_TYPE_SEQ,
                                    BOOL_SEQ)
 }
 
-TEST(SoftmaxKernel, softmax) {
+TEST(SoftmaxKernel, Forward&Backward) {
 #define MAKE_KERNEL_TEST_ENTRY(device_type, data_type_pair, has_data_id) \
   test::TestSoftmaxKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair), \
                           has_data_id>();
