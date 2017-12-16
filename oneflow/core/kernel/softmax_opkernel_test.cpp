@@ -107,18 +107,19 @@ void TestSoftmaxOp() {
 }  // namespace test
 
 TEST(SoftmaxOp, InferBlobDescs) {
-#define MAKE_OP_TEST_ENTRY(data_type_pair, has_data_id) \
+#define MAKE_ENTRY(data_type_pair, has_data_id) \
   test::TestSoftmaxOp<OF_PP_PAIR_FIRST(data_type_pair), has_data_id>();
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_OP_TEST_ENTRY, FLOATING_DATA_TYPE_SEQ,
-                                   BOOL_SEQ)
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, FLOATING_DATA_TYPE_SEQ, BOOL_SEQ)
+#undef MAKE_ENTRY
 }
 
-TEST(SoftmaxKernel, Forward&Backward) {
-#define MAKE_KERNEL_TEST_ENTRY(device_type, data_type_pair, has_data_id) \
+TEST(SoftmaxKernel, Forward_Backward) {
+#define MAKE_ENTRY(device_type, data_type_pair, has_data_id)             \
   test::TestSoftmaxKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair), \
                           has_data_id>();
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_TEST_ENTRY, DEVICE_TYPE_SEQ,
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, DEVICE_TYPE_SEQ,
                                    FLOATING_DATA_TYPE_SEQ, BOOL_SEQ)
+#undef MAKE_ENTRY
 }
 
 }  // namespace oneflow
