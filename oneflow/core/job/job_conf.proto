@@ -47,7 +47,7 @@ message JobConf {
   optional int32 max_data_id_length = 8 [default = 0];
   
   optional DataType default_data_type = 100 [default = kFloat]; // kFloat or kDouble
-  optional int64 piece_num_of_adjust_phase = 101 [default = 100];
+  optional int64 piece_num_of_experiment_phase = 101 [default = 100];
   oneof JobType {
     TrainConf train_conf = 1000;
     PredictConf predict_conf = 1001;

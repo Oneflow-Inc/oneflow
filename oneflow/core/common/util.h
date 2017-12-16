@@ -150,6 +150,10 @@ inline uint32_t NewRandomSeed() {
 void RedirectStdoutAndStderrToGlogDir();
 void CloseStdoutAndStderr();
 
+inline double GetCurTime() {
+  return std::chrono::high_resolution_clock::now().time_since_epoch().count();
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_UTIL_H_

@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_ACTOR_ACTOR_H_
 #define ONEFLOW_CORE_ACTOR_ACTOR_H_
 
+#include "oneflow/core/actor/act_event.pb.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/core/device/cuda_device_context.h"
@@ -25,6 +26,8 @@ class Actor {
   // 0: success, and actor not finish
   int ProcessMsg(const ActorMsg& msg) { return (this->*msg_handler_)(msg); }
 
+  int64_t machine_id() const;
+  int64_t thrd_id() const;
   int64_t actor_id() const { return actor_id_; }
 
  protected:
@@ -36,6 +39,9 @@ class Actor {
 
   // Util
   Actor() = default;
+  int64_t GetReservedWorkStreamId(int64_t reserved_id);
+  int64_t NewWorkStreamId();
+  int64_t GetWorkStreamId() const { return device_ctx_->work_stream_id(); }
   const ParallelContext* parallel_ctx() const { return parallel_ctx_.get(); }
   DeviceType GetDeviceType() const;
   virtual void VirtualActorInit(const TaskProto&) {}
@@ -90,6 +96,7 @@ class Actor {
 
  private:
   int64_t actor_id_;
+  int64_t act_id_;
   std::unique_ptr<ParallelContext> parallel_ctx_;
   std::vector<ExecKernel> exec_kernel_vec_;
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;
