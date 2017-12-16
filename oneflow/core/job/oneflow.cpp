@@ -42,12 +42,10 @@ Oneflow::Oneflow(const JobConf& job_conf, const std::string& this_mchn_name) {
     CtrlClient::Singleton()->PullKV("naive_plan", &plan);
   }
   OF_BARRIER();
-  if (machine_ctx->IsThisMachineMaster()) {
-    CtrlClient::Singleton()->ClearKV("naive_plan");
-  }
   PrintProtoToTextFile(plan, JoinPath(LogDir(), "naive_plan"));
   Runtime::NewSingleton(plan, true);
   Runtime::DeleteSingleton();
+  CtrlClient::Singleton()->Clear();
   Runtime::NewSingleton(plan, false);
   Runtime::DeleteSingleton();
   // Delete All Singleton

@@ -181,4 +181,13 @@ void CtrlServer::PushActEventHandler(
   ENQUEUE_REQUEST(PushActEvent);
 }
 
+void CtrlServer::ClearHandler(CtrlCall<ClearRequest, ClearResponse>* call) {
+  name2lock_status_.clear();
+  kv_.clear();
+  for (const auto& pair : pending_kv_calls_) { CHECK(pair.second.empty()); }
+  pending_kv_calls_.clear();
+  call->SendResponse();
+  ENQUEUE_REQUEST(Clear);
+}
+
 }  // namespace oneflow
