@@ -29,12 +29,6 @@ void Kernel::InitModelBlobs(
   }
 }
 
-void Kernel::InitModelTmpBlobs(
-    const KernelCtx& ctx, const ParallelContext* parallel_ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNEXPECTED_RUN();
-}
-
 void Kernel::Launch(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -47,18 +41,6 @@ void Kernel::Launch(
 
 const std::string& Kernel::Lbn4BnInOp(const std::string& bn_in_op) const {
   return kernel_conf_.bn_in_op2lbn().at(bn_in_op);
-}
-
-void Kernel::InitModelBlobsWithRandomSeed(
-    const KernelCtx& ctx, std::mt19937 random_seed_gen,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNEXPECTED_RUN();
-}
-void Kernel::InitModelBlobsWithDir(
-    const KernelCtx& ctx, int32_t part_id, int32_t part_num,
-    const std::string& model_load_dir,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNEXPECTED_RUN();
 }
 
 void Kernel::Forward(
