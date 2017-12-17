@@ -27,10 +27,7 @@ class Operator {
   virtual void InitFromOpConf() = 0;
   virtual bool IsElemWiseOp() const { return false; }
 
-  // return false if "activation" register_desc
-  // share memory with "activation_diff" register_desc
-  // in corresponding kernel immplementation
-  virtual bool NeedExtraActivationDiffMem() const { return true; }
+  virtual bool NeedExtraInDiffMemWhenBackward() const { return true; }
   virtual bool NeedOutWhenBackward() const { return true; }
   virtual bool IsLossOp() const { return false; }
   virtual bool IsPrintOp() const { return false; }

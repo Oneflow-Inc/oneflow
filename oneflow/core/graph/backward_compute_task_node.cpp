@@ -77,7 +77,7 @@ void BackwardCompTaskNode::BuildActivationDiffRegst() {
   std::shared_ptr<RegstDesc> activation_regst = GetConsumedRegst("activation");
   auto activation_diff_regst = GetProducedRegst("activation_diff");
   mut_exec_gph().ForEachEdge([&](ExecEdge* edge) {
-    if (edge->src_node()->op()->NeedExtraActivationDiffMem()
+    if (edge->src_node()->op()->NeedExtraInDiffMemWhenBackward()
         || edge->dst_node()->op()->NeedOutWhenBackward()) {
       edge->src_node()->BindBnInOpAndRegst(edge->src_bn(),
                                            activation_diff_regst);

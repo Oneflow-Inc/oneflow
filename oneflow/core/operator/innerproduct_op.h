@@ -12,7 +12,8 @@ class InnerProductOp final : public Operator {
   ~InnerProductOp() = default;
 
   void InitFromOpConf() override;
-  bool NeedExtraActivationDiffMem() const override { return false; }
+  bool NeedExtraInDiffMemWhenBackward() const override { return false; }
+  bool NeedOutWhenBackward() const override { return false; }
   const PbMessage& GetSpecialConf() const override;
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,

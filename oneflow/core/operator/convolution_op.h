@@ -13,7 +13,7 @@ class ConvolutionOp final : public Operator {
 
   void InitFromOpConf() override;
 
-  bool NeedExtraActivationDiffMem() const override { return false; }
+  bool NeedExtraInDiffMemWhenBackward() const override { return false; }
   bool NeedOutWhenBackward() const override { return false; }
   const PbMessage& GetSpecialConf() const override;
   void InferBlobDescs(
