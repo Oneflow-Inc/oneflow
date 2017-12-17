@@ -58,7 +58,7 @@ class KTCommon final {
       HashMap<std::string, BlobInitConf>& bn2blob_init_conf) {
     auto bn2blob = new HashMap<std::string, Blob*>;
     for (auto blob_init_conf_pair : bn2blob_init_conf) {
-      BlobInitConf blob_init_conf = blob_init_conf_pair.second;
+      BlobInitConf& blob_init_conf = blob_init_conf_pair.second;
       if (blob_init_conf.init_method == kRandom) {
         (*bn2blob)[blob_init_conf_pair.first] =
             CreateBlobWithRandomVal(blob_init_conf.blob_desc);
