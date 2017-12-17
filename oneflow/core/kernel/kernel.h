@@ -25,7 +25,7 @@ class Kernel {
 
   virtual void InitModelTmpBlobs(
       const KernelCtx& ctx, const ParallelContext* parallel_ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   void Launch(const KernelCtx& ctx,
               std::function<Blob*(const std::string&)> BnInOp2Blob) const;
@@ -40,11 +40,11 @@ class Kernel {
 
   virtual void InitModelBlobsWithRandomSeed(
       const KernelCtx& ctx, std::mt19937 random_seed_gen,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const {};
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void InitModelBlobsWithDir(
       const KernelCtx& ctx, int32_t part_id, int32_t part_num,
       const std::string& model_load_dir,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const {};
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   virtual void Forward(
       const KernelCtx& ctx,
