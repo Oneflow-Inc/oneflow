@@ -15,23 +15,20 @@ std::shared_ptr<Operator> CreateCloneOp(int out_num) {
 }
 
 template<DeviceType device_type, typename T>
-std::function<Blob*(const std::string&)> BuildBnInOp2BlobFunc(int out_num) {
-  auto blob_desc = new BlobDesc(Shape({1, 3, 2}), GetDataType<T>::val, false);
-
-  using KTC = KTCommon<device_type, T>;
-
-  auto bn2blob = new HashMap<std::string, Blob*>;
-  (*bn2blob)["in"] = KTC::CreateBlobWithSameVal(blob_desc, 1);
-  (*bn2blob)[GenDiffBn("in")] = KTC::CreateBlobWithRandomVal(blob_desc);
-  (*bn2blob)["in_diff_expected"] =
-      KTC::CreateBlobWithSameVal(blob_desc, 4 * out_num);
-  for (size_t i = 0; i != out_num; ++i) {
-    (*bn2blob)["out_" + std::to_string(i)] =
-        KTC::CreateBlobWithRandomVal(blob_desc);
-    (*bn2blob)["out_" + std::to_string(i) + "_diff"] =
-        KTC::CreateBlobWithSameVal(blob_desc, 4);
+std::function<Blob*(const std::string)> BuildBnInOp2BlobFunc(int out_num) {
+  BlobDesc* blob_desc =
+      new BlobDesc(Shape({1, 3, 2}), GetDataType<T>::val, false);
+  HashMap<std::string, BlobInitConf> bn2blob_init_conf = {
+      {"in", BlobInitConf(1.f, blob_desc)},
+      {GenDiffBn("in"), BlobInitConf(blob_desc)},
+      {"in_diff_expected", BlobInitConf(out_num * 1.f, blob_desc)}};
+  FOR_RANGE(int, i, 0, out_num) {
+    bn2blob_init_conf.insert(
+        {"out_" + std::to_string(i), BlobInitConf(blob_desc)});
+    bn2blob_init_conf.insert(
+        {"out_" + std::to_string(i) + "_diff", BlobInitConf(1.f, blob_desc)});
   }
-  return [bn2blob](const std::string& bn) { return bn2blob->at(bn); };
+  return KTCommon<device_type, T>::ConstructBnInOp2BlobFunc(bn2blob_init_conf);
 }
 
 template<DeviceType device_type, typename T>
@@ -51,7 +48,7 @@ void DoCloneKernelTest(int out_num) {
   clone_kernel->Backward(ctx, BnInOp2BlobFunc);
   SyncStream<device_type>(&ctx);
 
-  for (size_t i = 0; i != out_num; ++i) {
+  FOR_RANGE(size_t, i, 0, out_num) {
     KTCommon<device_type, T>::CheckResult(BnInOp2BlobFunc, "in",
                                           "out_" + std::to_string(i));
   }
@@ -91,9 +88,6 @@ void TestCloneOpKernel() {
   JobDesc::Singleton()->job_conf_ = job_conf;
 
   int out_num = 3;
-  DoCloneOpKernelTest<device_type, T, has_data_id>(out_num);
-
-  out_num = 1;
   DoCloneOpKernelTest<device_type, T, has_data_id>(out_num);
 }
 

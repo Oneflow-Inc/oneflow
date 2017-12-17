@@ -12,6 +12,24 @@ namespace oneflow {
 
 namespace test {
 
+enum BlobInitMethod { kRandom, kSpecific };
+
+struct BlobInitConf {
+  BlobInitConf(float specific_num, BlobDesc* blob_desc) {
+    this->init_method = kSpecific;
+    this->specific_num = specific_num;
+    this->blob_desc = blob_desc;
+  }
+  BlobInitConf(BlobDesc* blob_desc) {
+    this->init_method = kRandom;
+    this->specific_num = 0;
+    this->blob_desc = blob_desc;
+  }
+  BlobInitMethod init_method;
+  float specific_num;
+  BlobDesc* blob_desc;
+};
+
 std::function<BlobDesc*(const std::string)> ConstructBn2BlobDescFunc(
     std::shared_ptr<Operator>);
 
@@ -34,6 +52,25 @@ class KTCommon final {
   static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc,
                                           std::vector<T> val) {
     return CreateBlobWithSpecifiedVal(blob_desc, &(val[0]));
+  }
+
+  static std::function<Blob*(const std::string)> ConstructBnInOp2BlobFunc(
+      HashMap<std::string, BlobInitConf>& bn2blob_init_conf) {
+    auto bn2blob = new HashMap<std::string, Blob*>;
+    for (auto blob_init_conf_pair : bn2blob_init_conf) {
+      BlobInitConf blob_init_conf = blob_init_conf_pair.second;
+      if (blob_init_conf.init_method == kRandom) {
+        (*bn2blob)[blob_init_conf_pair.first] =
+            CreateBlobWithRandomVal(blob_init_conf.blob_desc);
+      } else if (blob_init_conf.init_method == kSpecific) {
+        (*bn2blob)[blob_init_conf_pair.first] =
+            CreateBlobWithSameVal(blob_init_conf.blob_desc,
+                                  static_cast<T>(blob_init_conf.specific_num));
+      } else {
+        UNEXPECTED_RUN();
+      }
+    }
+    return [bn2blob](const std::string& bn) { return bn2blob->at(bn); };
   }
 
   static Blob* CreateBlobWithSameVal(const BlobDesc* blob_desc, T val) {
