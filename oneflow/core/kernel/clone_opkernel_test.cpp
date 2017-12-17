@@ -18,7 +18,7 @@ template<DeviceType device_type, typename T>
 std::function<Blob*(const std::string&)> BuildBnInOp2BlobFunc(int out_num) {
   auto blob_desc = new BlobDesc(Shape({1, 3, 2}), GetDataType<T>::val, false);
 
-  using KTC = test::KTCommon<device_type, T>;
+  using KTC = KTCommon<device_type, T>;
 
   auto bn2blob = new HashMap<std::string, Blob*>;
   (*bn2blob)["in"] = KTC::CreateBlobWithSameVal(blob_desc, 1);
@@ -37,10 +37,10 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobFunc(int out_num) {
 template<DeviceType device_type, typename T>
 void DoCloneKernelTest(int out_num) {
   KernelCtx ctx;
-  test::BuildKernelCtx<device_type>(&ctx);
+  BuildKernelCtx<device_type>(&ctx);
 
   auto clone_op = CreateCloneOp(out_num);
-  auto bn2blobdesc_func = test::ConstructBn2BlobDescFunc(clone_op);
+  auto bn2blobdesc_func = ConstructBn2BlobDescFunc(clone_op);
   KernelConf kernel_conf;
   clone_op->GenKernelConf(bn2blobdesc_func, true, nullptr, &kernel_conf);
   auto clone_kernel = new CloneKernel<device_type, T>();
@@ -49,21 +49,21 @@ void DoCloneKernelTest(int out_num) {
   auto BnInOp2BlobFunc = BuildBnInOp2BlobFunc<device_type, T>(out_num);
   clone_kernel->Forward(ctx, BnInOp2BlobFunc);
   clone_kernel->Backward(ctx, BnInOp2BlobFunc);
-  test::SyncStream<device_type>(&ctx);
+  SyncStream<device_type>(&ctx);
 
   for (size_t i = 0; i != out_num; ++i) {
-    test::KTCommon<device_type, T>::CheckResult(BnInOp2BlobFunc, "in",
-                                                "out_" + std::to_string(i));
+    KTCommon<device_type, T>::CheckResult(BnInOp2BlobFunc, "in",
+                                          "out_" + std::to_string(i));
   }
 
-  test::KTCommon<device_type, T>::CheckResult(BnInOp2BlobFunc, GenDiffBn("in"),
-                                              "in_diff_expected");
+  KTCommon<device_type, T>::CheckResult(BnInOp2BlobFunc, GenDiffBn("in"),
+                                        "in_diff_expected");
 }
 
 template<typename T, bool has_data_id>
 void DoCloneOpTest(int out_num) {
   auto clone_op = CreateCloneOp(out_num);
-  auto bn2blobdesc_func = test::ConstructBn2BlobDescFunc(clone_op);
+  auto bn2blobdesc_func = ConstructBn2BlobDescFunc(clone_op);
   BlobDesc* in_blob_desc = bn2blobdesc_func("in");
   in_blob_desc->mut_shape().dim_vec_ = {3, 4};
   in_blob_desc->set_data_type(GetDataType<T>::val);
