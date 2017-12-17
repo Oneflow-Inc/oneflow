@@ -97,7 +97,7 @@ void TestCloneOpKernel() {
   DoCloneOpKernelTest<device_type, T, has_data_id>(out_num);
 }
 
-TEST(CloneOp, infer_blob_desc) {
+TEST(CloneOpKernel, op_and_kernel_test) {
 #define MAKE_ENTRY(device_type, data_type_pair, has_data_id)       \
   TestCloneOpKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair), \
                     has_data_id>();
