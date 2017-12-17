@@ -10,6 +10,8 @@ const std::vector<int64_t>& Regst::consumers_actor_id() const {
 Regst::Regst() {
   piece_id_ = -1;
   model_version_id_ = -1;
+  recurrent_flag_ = 0;
+  is_forward_ = true;
   regst_desc_ = nullptr;
 }
 
