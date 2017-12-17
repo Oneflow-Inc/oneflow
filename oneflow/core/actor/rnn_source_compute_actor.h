@@ -24,13 +24,15 @@ class RnnSourceCompActor final : public CompActor {
 
   struct DataLoadBuf {
     DataLoadBuf()
-        : row_num(0),
+        : piece_id(0),
+          row_num(0),
           col_num(0),
           col_id(0),
           max_real_col_num(0),
           piece(),
           data_ids() {}
 
+    int64_t piece_id;
     int64_t row_num;
     int64_t col_num;
     int64_t col_id;
@@ -40,7 +42,6 @@ class RnnSourceCompActor final : public CompActor {
   };
 
   DataLoadBuf data_load_buf_;
-  PieceStatus ordered_piece_status_;
   bool is_eof_;
   bool is_final_piece_done_;
 };

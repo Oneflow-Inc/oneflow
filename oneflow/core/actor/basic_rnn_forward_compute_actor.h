@@ -45,7 +45,7 @@ class BasicRnnForwardCompActor final : public CompActor {
   Regst* latest_model_regst_;
   HashMap<int64_t, Regst*> pid2model_regst_;
   HashMap<Regst*, int64_t> model_regst2cnt_;
-  std::queue<Regst*> models_to_be_released_;
+  std::set<Regst*> models_to_be_released_;
 
   int64_t out_regst_desc_id_;
   HashMap<int64_t, Regst*> pid2out_regst_;

@@ -24,15 +24,16 @@ int RnnSourceCompActor::HandlerNormal(const ActorMsg& msg) {
 
 void RnnSourceCompActor::Act() {
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  auto ctx = std::make_pair(data_load_buf_, is_eof_);
+  auto ctx = std::make_pair(&data_load_buf_, &is_eof_);
   kernel_ctx.other = static_cast<void*>(&ctx);
 
   AsyncLaunchKernel(kernel_ctx, [this](int64_t regst_desc_id) -> Regst* {
     return GetCurWriteableRegst(regst_desc_id);
   });
-  AsyncSendRegstMsgToConsumer(
-      [this](Regst* regst) { regst->set_piece_status(ordered_piece_status_); });
-  if (ordered_piece_status_.GetIntoNextStatus() == -1) {
+  AsyncSendRegstMsgToConsumer( [this](Regst* regst) { return nullptr; });
+  // for CPU actor, there is no async
+  if (data_load_buf_.piece_id == RuntimeCtx::Singleton()->total_piece_num() - 1
+      && data_load_buf_.col_id == data_load_buf_.max_real_col_num) {
     is_final_piece_done_ = true;
   }
 }

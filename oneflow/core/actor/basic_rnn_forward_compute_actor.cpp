@@ -40,25 +40,27 @@ int BasicRnnForwardCompActor::HandlerNormal(const ActorMsg& msg) {
     DecreaseRemainingEordCnt();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* cur_regst = msg.regst();
-    int64_t cur_regst_desc_id = cur_regst->regst_desc_id();
-    const PieceStatus& cur_pst = cur_regst->piece_status();
-    int64_t cur_pid = cur_pst.piece_id();
+    if (TryUpdtStateAsProducedRegst(cur_regst) != 0) {
+      int64_t cur_regst_desc_id = cur_regst->regst_desc_id();
+      const PieceStatus& cur_pst = cur_regst->piece_status();
+      int64_t cur_pid = cur_pst.piece_id();
 
-    if (cur_regst_desc_id == in_regst_desc_id_) {
-      pid2in_regsts_[cur_pid].push(cur_regst);  // insert or push
-    } else if (cur_regst_desc_id == initial_hidden_regst_desc_id_) {
-      initial_hidden_regsts_.push(cur_regst);
-    } else if (cur_regst_desc_id == model_regst_desc_id_) {
-      auto iter = model_regst2cnt_.find(latest_model_regst_);
-      if (iter == model_regst2cnt_.end()) {
-        AsyncSendRegstMsgToProducer(latest_model_regst_);
+      if (cur_regst_desc_id == in_regst_desc_id_) {
+        pid2in_regsts_[cur_pid].push(cur_regst);  // insert or push
+      } else if (cur_regst_desc_id == initial_hidden_regst_desc_id_) {
+        initial_hidden_regsts_.push(cur_regst);
+      } else if (cur_regst_desc_id == model_regst_desc_id_) {
+        auto iter = model_regst2cnt_.find(latest_model_regst_);
+        if (iter == model_regst2cnt_.end()) {
+          AsyncSendRegstMsgToProducer(latest_model_regst_);
+        }
+        latest_model_regst_ = cur_regst;
+      } else if (cur_regst_desc_id == out_regst_desc_id_ 
+          && cur_regst->recurrent_flag() == -1) {
+        CHECK(pid2out_regst_.emplace(cur_pid, cur_regst).second);
+      } else {
+        UNEXPECTED_RUN();
       }
-      latest_model_regst_ = cur_regst;
-    } else if (cur_regst_desc_id == out_regst_desc_id_ 
-        && cur_regst->recurrent_flag() == -1) {
-      CHECK(pid2out_regst_.emplace(cur_pid, cur_regst).second);
-    } else {
-      CHECK_EQ(TryUpdtStateAsProducedRegst(cur_regst), 0);
     }
     ActUntilFail();
   } else {
@@ -135,19 +137,26 @@ void BasicRnnForwardCompActor::UpdtInAndModelStates() {
     int64_t model_vid = model_regst->model_version_id();
     model_regst2cnt_.at(model_regst) -= 1;
 
-    if (model_regst2cnt_.at(model_regst) == 0) {
-      model_regst2cnt_.erase(model_regst);
-      if (model_regst != latest_model_regst_) {
+    if (cur_pid == GetLastPieceIdForModelVersionId(model_vid)) {
+      if (model_regst2cnt_.at(model_regst) == 0) {
+        model_regst2cnt_.erase(model_regst);
         AsyncSendRegstMsgToProducer(model_regst);
-      } else {
-        if (cur_pid == GetLastPieceIdForModelVersionId(model_vid)) {
-          AsyncSendRegstMsgToProducer(model_regst);
+        if (model_regst == latest_model_regst_) {
           latest_model_regst_ = nullptr;
         }
+      } else {
+        models_to_be_released_.insert(model_regst);
       }
     } else {
-      if (cur_pid == GetLastPieceIdForModelVersionId(model_vid)) {
-        models_to_be_released_.push(model_regst);
+      if (model_regst2cnt_.at(model_regst) == 0) {
+        model_regst2cnt_.erase(model_regst);
+        if (models_to_be_released_.find(model_regst)
+            == models_to_be_released_.end()) {
+          AsyncSendRegstMsgToProducer(model_regst);
+          if (latest_model_regst_ == model_regst) {
+            latest_model_regst_ = nullptr;
+          }
+        }
       }
     }
   } else {
@@ -162,7 +171,6 @@ void BasicRnnForwardCompActor::Act() {
   Regst* in_regst = readable_regsts_.at(in_regst_desc_id_);
   Regst* model_regst = readable_regsts_.at(model_regst_desc_id_);
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-    regst->set_piece_status(in_regst->piece_status());
     regst->set_model_version_id(model_regst->model_version_id());
     regst->set_is_forward(true);
   });
@@ -173,25 +181,12 @@ void BasicRnnForwardCompActor::Act() {
   }
   int64_t pid = in_regst->piece_status().piece_id();
   if (readable_regsts_.find(initial_hidden_regst_desc_id_)
-      == readable_regsts_.end()) {
+      != readable_regsts_.end()) {
     initial_hidden_regsts_.pop();
   } else {
     pid2out_regst_.erase(pid);
   }
   UpdtInAndModelStates();
-
-  // TODO: refactor code about models_to_be_released_
-  while (!models_to_be_released_.empty()) {
-    Regst* model = models_to_be_released_.front();
-    if (model_regst2cnt_.find(model) == model_regst2cnt_.end()) {
-      if (latest_model_regst_ == model) {
-        CHECK_EQ(1, models_to_be_released_.size());
-        latest_model_regst_ = nullptr;
-        AsyncSendRegstMsgToProducer(model);
-      }
-      models_to_be_released_.pop();
-    }
-  }
 }
 
 void BasicRnnForwardCompActor::AsyncReturnAllReadableRegst() {
