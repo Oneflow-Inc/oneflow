@@ -8,6 +8,7 @@
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/runtime.h"
 #include "oneflow/core/persistence/file_system.h"
+#include "oneflow/core/actor/act_event_logger.h"
 
 namespace oneflow {
 
@@ -32,7 +33,7 @@ Oneflow::Oneflow(const JobConf& job_conf, const std::string& this_mchn_name) {
   const MachineCtx* machine_ctx = MachineCtx::Singleton();
   ctrl_server_.reset(new CtrlServer(machine_ctx->GetThisCtrlAddr()));
   CtrlClient::NewSingleton();
-  // Flow
+  // Compile
   Plan plan;
   if (machine_ctx->IsThisMachineMaster()) {
     Compiler::NewSingleton();
@@ -44,9 +45,23 @@ Oneflow::Oneflow(const JobConf& job_conf, const std::string& this_mchn_name) {
   }
   OF_BARRIER();
   PrintProtoToTextFile(plan, JoinPath(LogDir(), "naive_plan"));
+  // Experiment Runtime
   Runtime::NewSingleton(plan, true);
   Runtime::DeleteSingleton();
+  // Improve
+  if (machine_ctx->IsThisMachineMaster()) {
+    Improver::NewSingleton();
+    plan = Improver::Singleton()->Improve(
+        plan, JoinPath(LogDir(), ActEventLogger::act_event_bin_filename_));
+    Improver::DeleteSingleton();
+    CtrlClient::Singleton()->PushKV("improved_plan", plan);
+  } else {
+    CtrlClient::Singleton()->PullKV("improved_plan", &plan);
+  }
+  OF_BARRIER();
+  PrintProtoToTextFile(plan, JoinPath(LogDir(), "improved_plan"));
   CtrlClient::Singleton()->Clear();
+  // Runtime
   Runtime::NewSingleton(plan, false);
   Runtime::DeleteSingleton();
   // Delete All Singleton
