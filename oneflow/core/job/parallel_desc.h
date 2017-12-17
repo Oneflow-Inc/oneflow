@@ -28,8 +28,12 @@ class ParallelDesc {
 
   // Setters
   void set_policy(ParallelPolicy val) { policy_ = val; }
-  void RemoveNeedlessDevice(int32_t max_device_num);
-  void RemoveInvalidDevice();
+  void RemoveNeedlessDevice(const std::string& op_name, int32_t max_device_num);
+  void RemoveNeedlessDevice(int32_t max_device_num) {
+    RemoveNeedlessDevice("", max_device_num);
+  }
+  void RemoveInvalidDevice(const std::string& op_name);
+  void RemoveInvalidDevice() { RemoveInvalidDevice(""); }
 
   //
   bool Equal(const ParallelDesc& rhs) const;

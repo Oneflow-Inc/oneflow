@@ -15,8 +15,10 @@ class CopyCommNetActor::CommNetDeviceCtx final : public DeviceCtx {
   CommNetDeviceCtx() = delete;
   ~CommNetDeviceCtx() = default;
 
-  CommNetDeviceCtx(void* actor_read_id)
-      : DeviceCtx(), actor_read_id_(actor_read_id), read_id_(nullptr) {}
+  CommNetDeviceCtx(int64_t work_stream_id, void* actor_read_id)
+      : DeviceCtx(), actor_read_id_(actor_read_id), read_id_(nullptr) {
+    set_work_stream_id(work_stream_id);
+  }
 
   void AddCallBack(std::function<void()> callback) const override {
     CommNet::Singleton()->AddReadCallBack(actor_read_id_, read_id_, callback);
@@ -31,7 +33,8 @@ class CopyCommNetActor::CommNetDeviceCtx final : public DeviceCtx {
 
 void CopyCommNetActor::VirtualActorInit(const TaskProto& task_proto) {
   actor_read_id_ = CommNet::Singleton()->NewActorReadId();
-  comm_net_device_ctx_ = new CommNetDeviceCtx(actor_read_id_);
+  comm_net_device_ctx_ =
+      new CommNetDeviceCtx(GetReservedWorkStreamId(0), actor_read_id_);
   next_piece_id_ = 0;
   OF_SET_MSG_HANDLER(&CopyCommNetActor::HandlerNormal);
 }
@@ -74,8 +77,10 @@ void CopyCommNetActor::Act() {
   void* read_id = CommNet::Singleton()->Read(actor_read_id_, src_machine_id,
                                              readable_token, writeable_token);
   comm_net_device_ctx_->set_read_id(read_id);
-  AsyncSendRegstMsgToConsumer(
-      [&](Regst* regst) { regst->set_piece_id(next_piece_id_); });
+  AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+    regst->set_piece_id(next_piece_id_);
+    return true;
+  });
   AsyncSendRegstMsgToProducer(readable_regst, src_actor_id);
   comm_net_device_ctx_->set_read_id(nullptr);
   CommNet::Singleton()->AddReadCallBackDone(actor_read_id_, read_id);

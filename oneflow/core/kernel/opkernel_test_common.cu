@@ -1,6 +1,6 @@
 #include <random>
 #include "oneflow/core/device/cuda_device_context.h"
-#include "oneflow/core/kernel/kernel_test_common.h"
+#include "oneflow/core/kernel/opkernel_test_common.h"
 
 namespace oneflow {
 
@@ -20,7 +20,7 @@ void BuildKernelCtx<DeviceType::kGPU>(KernelCtx* ctx) {
   CudaCheck(cudaStreamCreate(cuda_stream));
   CudaCheck(cublasCreate(cublas_handle));
   CudaCheck(cublasSetStream(*cublas_handle, *cuda_stream));
-  ctx->device_ctx = new CudaDeviceCtx(cuda_stream, cublas_handle, nullptr);
+  ctx->device_ctx = new CudaDeviceCtx(-1, cuda_stream, cublas_handle, nullptr);
 }
 
 template<>

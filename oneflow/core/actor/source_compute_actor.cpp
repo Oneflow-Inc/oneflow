@@ -27,8 +27,10 @@ void SourceCompActor::Act() {
   AsyncLaunchKernel(kernel_ctx, [this](int64_t regst_desc_id) -> Regst* {
     return GetCurWriteableRegst(regst_desc_id);
   });
-  AsyncSendRegstMsgToConsumer(
-      [this](Regst* regst) { regst->set_piece_id(next_piece_id_); });
+  AsyncSendRegstMsgToConsumer([this](Regst* regst) {
+    regst->set_piece_id(next_piece_id_);
+    return true;
+  });
   next_piece_id_ += 1;
 }
 

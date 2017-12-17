@@ -4,6 +4,10 @@ namespace oneflow {
 
 void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   actor_id_ = task_proto.task_id();
+  act_id_ = 0;
+  if (task_proto.has_parallel_ctx()) {
+    parallel_ctx_.reset(new ParallelContext(task_proto.parallel_ctx()));
+  }
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
     ek.kernel =
@@ -36,6 +40,14 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   VirtualActorInit(task_proto);
 }
 
+int64_t Actor::machine_id() const {
+  return IDMgr::Singleton()->MachineId4ActorId(actor_id_);
+}
+
+int64_t Actor::thrd_id() const {
+  return IDMgr::Singleton()->ThrdId4ActorId(actor_id_);
+}
+
 int64_t Actor::RegstDescId4Name(const std::string& name) const {
   auto find_it = name2regst_desc_id_.find(name);
   if (find_it != name2regst_desc_id_.end()) { return find_it->second; }
@@ -45,13 +57,13 @@ int64_t Actor::RegstDescId4Name(const std::string& name) const {
 void Actor::InitDeviceCtx(const ThreadCtx&) {
   switch (GetDeviceType()) {
     case DeviceType::kCPU: {
-      device_ctx_.reset(new CpuDeviceCtx);
+      device_ctx_.reset(new CpuDeviceCtx(GetReservedWorkStreamId(0)));
       break;
     }
     case DeviceType::kGPU: {
-      device_ctx_.reset(new CudaDeviceCtx(cuda_handle_.cuda_stream(),
-                                          cuda_handle_.cublas_handle(),
-                                          cuda_handle_.cudnn_handle()));
+      device_ctx_.reset(new CudaDeviceCtx(
+          NewWorkStreamId(), cuda_handle_.cuda_stream(),
+          cuda_handle_.cublas_handle(), cuda_handle_.cudnn_handle()));
       break;
     }
     default: { UNEXPECTED_RUN(); }
@@ -82,7 +94,24 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
 }
 
 void Actor::ActUntilFail() {
-  while (IsReadReady() && IsWriteReady()) { Act(); }
+  while (IsReadReady() && IsWriteReady()) {
+    double start_time = GetCurTime();
+    Act();
+    if (RuntimeCtx::Singleton()->is_experiment_phase() == false) { continue; }
+    int64_t actor_id = actor_id_;
+    int64_t act_id = actor_id_++;
+    int64_t work_stream_id = device_ctx_->work_stream_id();
+    device_ctx_->AddCallBack([start_time, act_id, actor_id, work_stream_id]() {
+      double stop_time = GetCurTime();
+      ActEvent act_event;
+      act_event.set_actor_id(actor_id);
+      act_event.set_work_stream_id(work_stream_id);
+      act_event.set_act_id(act_id);
+      act_event.set_start_time(start_time);
+      act_event.set_stop_time(stop_time);
+      CtrlClient::Singleton()->PushActEvent(act_event);
+    });
+  }
 }
 
 bool Actor::IsWriteReady() {
@@ -123,19 +152,19 @@ void Actor::AsyncLaunchKernel(
 }
 
 void Actor::AsyncSendRegstMsgToConsumer(
-    std::function<void(Regst*)> RegstPreProcess,
+    std::function<bool(Regst*)> RegstPreProcess,
     std::function<bool(int64_t)> IsAllowedActor) {
   int64_t this_actor_id = actor_id_;
   for (auto& pair : writeable_produced_regst_) {
     Regst* regst = pair.second.front();
-    RegstPreProcess(regst);
+    if (RegstPreProcess(regst) == false) { continue; }
     auto regst_reading_cnt_it = produced_regst2reading_cnt_.find(regst);
     CHECK_EQ(regst_reading_cnt_it->second, 0);
     for (int64_t consumer : regst->consumers_actor_id()) {
       if (!IsAllowedActor(consumer)) { continue; }
       if (this_actor_id == consumer) {
-        if (regst->is_forward() && regst->piece_status().IsLastCol()) { 
-          continue; 
+        if (regst->is_forward() && regst->piece_status().IsLastCol()) {
+          continue;
         }
         if (!(regst->is_forward()) && regst->piece_status().col_id() == 0) {
           continue;
@@ -155,26 +184,26 @@ void Actor::AsyncSendRegstMsgToConsumer(
 }
 
 void Actor::AsyncSendRegstMsgToConsumer(
-    std::function<void(Regst*)> RegstPreProcess) {
+    std::function<bool(Regst*)> RegstPreProcess) {
   AsyncSendRegstMsgToConsumer(RegstPreProcess, [](int64_t) { return true; });
 }
 
 void Actor::AsyncSendRegstMsgToConsumer(
     std::function<bool(int64_t)> IsAllowedActor) {
-  AsyncSendRegstMsgToConsumer([](Regst*) {}, IsAllowedActor);
+  AsyncSendRegstMsgToConsumer([](Regst*) { return true; }, IsAllowedActor);
 }
 
 void Actor::AsyncSendRegstMsgToConsumer() {
-  AsyncSendRegstMsgToConsumer([](Regst*) {});
+  AsyncSendRegstMsgToConsumer([](Regst*) { return true; });
 }
 
 void Actor::AsyncSendEORDMsgToConsumers(int64_t regst_desc_id) {
   const RtRegstDesc* regst_desc =
       produced_regsts_.at(regst_desc_id).front()->regst_desc();
-  device_ctx_->AddCallBack([regst_desc]() {
+  device_ctx_->AddCallBack([regst_desc, this]() {
     for (int64_t consumer : regst_desc->consumers_actor_id()) {
       // do not send EORD msg through recurrent edge
-      if (consumer == actor_id_) { continue; }  
+      if (consumer == actor_id_) { continue; }
       ActorMsg msg =
           ActorMsg::BuildEordMsg(consumer, regst_desc->regst_desc_id());
       ActorMsgBus::Singleton()->SendMsg(std::move(msg));
@@ -232,6 +261,15 @@ Regst* Actor::GetCurWriteableRegst(const std::string& name) {
 Regst* Actor::GetCurSoleWriteableRegst() {
   CHECK_EQ(writeable_produced_regst_.size(), 1);
   return writeable_produced_regst_.begin()->second.front();
+}
+
+int64_t Actor::GetReservedWorkStreamId(int64_t reserved_id) {
+  return IDMgr::Singleton()->GetReservedWorkStreamId(machine_id(), thrd_id(),
+                                                     reserved_id);
+}
+
+int64_t Actor::NewWorkStreamId() {
+  return IDMgr::Singleton()->NewWorkStreamId(machine_id(), thrd_id());
 }
 
 DeviceType Actor::GetDeviceType() const {

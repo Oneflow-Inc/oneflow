@@ -55,8 +55,8 @@ int BasicRnnForwardCompActor::HandlerNormal(const ActorMsg& msg) {
           AsyncSendRegstMsgToProducer(latest_model_regst_);
         }
         latest_model_regst_ = cur_regst;
-      } else if (cur_regst_desc_id == out_regst_desc_id_ 
-          && cur_regst->recurrent_flag() == -1) {
+      } else if (cur_regst_desc_id == out_regst_desc_id_
+                 && cur_regst->recurrent_flag() == -1) {
         CHECK(pid2out_regst_.emplace(cur_pid, cur_regst).second);
       } else {
         UNEXPECTED_RUN();
@@ -173,6 +173,7 @@ void BasicRnnForwardCompActor::Act() {
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
     regst->set_model_version_id(model_regst->model_version_id());
     regst->set_is_forward(true);
+    return true;
   });
 
   for (auto& kv : readable_regsts_) {

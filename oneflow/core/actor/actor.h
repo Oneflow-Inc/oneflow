@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_ACTOR_ACTOR_H_
 #define ONEFLOW_CORE_ACTOR_ACTOR_H_
 
+#include "oneflow/core/actor/act_event.pb.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/core/device/cuda_device_context.h"
@@ -25,6 +26,8 @@ class Actor {
   // 0: success, and actor not finish
   int ProcessMsg(const ActorMsg& msg) { return (this->*msg_handler_)(msg); }
 
+  int64_t machine_id() const;
+  int64_t thrd_id() const;
   int64_t actor_id() const { return actor_id_; }
 
  protected:
@@ -36,7 +39,10 @@ class Actor {
 
   // Util
   Actor() = default;
-  virtual const ParallelContext* parallel_ctx() const { return nullptr; }
+  int64_t GetReservedWorkStreamId(int64_t reserved_id);
+  int64_t NewWorkStreamId();
+  int64_t GetWorkStreamId() const { return device_ctx_->work_stream_id(); }
+  const ParallelContext* parallel_ctx() const { return parallel_ctx_.get(); }
   DeviceType GetDeviceType() const;
   virtual void VirtualActorInit(const TaskProto&) {}
   int64_t RegstDescId4Name(const std::string& name) const;
@@ -70,9 +76,9 @@ class Actor {
   // Async Do on device_ctx_
   void AsyncLaunchKernel(const KernelCtx&,
                          std::function<Regst*(int64_t)> Regst4RegstDescId);
-  void AsyncSendRegstMsgToConsumer(std::function<void(Regst*)> RegstPreProcess,
+  void AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess,
                                    std::function<bool(int64_t)> IsAllowedActor);
-  void AsyncSendRegstMsgToConsumer(std::function<void(Regst*)> RegstPreProcess);
+  void AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess);
   void AsyncSendRegstMsgToConsumer(std::function<bool(int64_t)> IsAllowedActor);
   void AsyncSendRegstMsgToConsumer();
   void AsyncSendEORDMsgToConsumers(int64_t regst_desc_id);
@@ -90,6 +96,8 @@ class Actor {
 
  private:
   int64_t actor_id_;
+  int64_t act_id_;
+  std::unique_ptr<ParallelContext> parallel_ctx_;
   std::vector<ExecKernel> exec_kernel_vec_;
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;
   HashMap<std::string, int64_t> name2regst_desc_id_;

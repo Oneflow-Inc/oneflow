@@ -13,6 +13,7 @@ namespace oneflow {
 class JobDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(JobDesc);
+  JobDesc() = default;
   ~JobDesc() = default;
 
   OF_SINGLETON(JobDesc);
@@ -34,7 +35,7 @@ class JobDesc final {
   bool IsPredict() const { return job_conf_.has_predict_conf(); }
   int32_t SinglePieceSize() const { return job_conf_.single_piece_size(); }
   int32_t ParallelPieceSize() const;
-  int64_t piece_num_of_adjust_phase() const;
+  int64_t piece_num_of_experiment_phase() const;
 
   // Train conf
   const std::string& MdSaveSnapshotsPath() const;

@@ -92,7 +92,7 @@ Kernel* CreateConcatKernel(DeviceType dev_type) {
   static const HashMap<std::string, std::function<Kernel*()>> creators = {
 #define CONCAT_KERNEL_ENTRY(device_type) \
   {GetHashKey(device_type), []() { return new ConcatKernel<device_type>; }},
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(CONCAT_KERNEL_ENTRY, DEVICE_TYPE_SEQ)};
+      OF_PP_FOR_EACH_TUPLE(CONCAT_KERNEL_ENTRY, DEVICE_TYPE_SEQ)};
   return creators.at(GetHashKey(dev_type))();
 }
 

@@ -69,7 +69,9 @@ void CopyFromIterToIter(DeviceCtx* ctx, Iter& src_it, Iter& dst_it) {
     }
     size_t cp_size = std::min(src_size, dst_size);
     Memcpy<DeviceType::kCPU>(ctx, dst_ptr, src_ptr, cp_size);
+    src_ptr += cp_size;
     src_size -= cp_size;
+    dst_ptr += cp_size;
     dst_size -= cp_size;
   }
 }

@@ -15,7 +15,7 @@ class RMSPropModelUpdateOp final : public ModelUpdtOp {
   const PbMessage& GetSpecialConf() const override;
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) override;
+      const ParallelContext* parallel_ctx) const override;
 
  private:
   std::string ibn2lbn(const std::string& input_bn) const override {

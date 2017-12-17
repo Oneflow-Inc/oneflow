@@ -30,7 +30,7 @@ void RnnSourceCompActor::Act() {
   AsyncLaunchKernel(kernel_ctx, [this](int64_t regst_desc_id) -> Regst* {
     return GetCurWriteableRegst(regst_desc_id);
   });
-  AsyncSendRegstMsgToConsumer( [this](Regst* regst) { return nullptr; });
+  AsyncSendRegstMsgToConsumer([this](Regst* regst) { return true; });
   // for CPU actor, there is no async
   if (data_load_buf_.piece_id == RuntimeCtx::Singleton()->total_piece_num() - 1
       && data_load_buf_.col_id == data_load_buf_.max_real_col_num) {
