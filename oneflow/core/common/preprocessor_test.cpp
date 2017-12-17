@@ -90,6 +90,16 @@ TEST(PP_SEQ, make_tuple_seq) {
   ASSERT_EQ(OF_PP_STRINGIZE(OF_PP_MAKE_TUPLE_SEQ(1, 2)), "((1, 2))");
 }
 
+TEST(PP_SEQ, for_each_atomic) {
+#define SEQ (1)(2)(3)(4)
+#define MAKE_ENTRY(x) {x, x},
+  std::unordered_map<int, int> identity = {
+      OF_PP_FOR_EACH_ATOMIC(MAKE_ENTRY, SEQ)};
+#undef MAKE_ENTRY
+#undef SEQ
+  for (int i = 1; i <= 4; ++i) { ASSERT_EQ(i, identity[i]); }
+}
+
 TEST(PP_SEQ, for_each_tuple) {
 #define SEQ ((1, 1))((2, 2))((3, 3))((4, 4))
 #define MAKE_ENTRY(x, y) {x, y},
