@@ -11,8 +11,6 @@ class CopyCommNetActor final : public Actor {
   CopyCommNetActor() = default;
   ~CopyCommNetActor();
 
-  void Init(const TaskProto&, const ThreadCtx&) override;
-
  private:
   class CommNetDeviceCtx;
   struct RegstCtx {
@@ -21,18 +19,20 @@ class CopyCommNetActor final : public Actor {
     int64_t producer;
   };
 
-  int HandlerNormal(const ActorMsg&) override;
-  int HandlerWaitUntilNoReadableRegst(const ActorMsg&) override;
+  void VirtualActorInit(const TaskProto&) override;
+  void InitDeviceCtx(const ThreadCtx&) override;
 
-  bool IsReadReady() override {
-    return piece_id2regst_ctx.find(expected_piece_id())
-           != piece_id2regst_ctx.end();
-  }
+  int HandlerNormal(const ActorMsg&) override;
+
   void Act() override;
+  bool IsReadReady() override;
+  bool IsReadAlwaysUnReadyFromNow() override;
+  void AsyncReturnAllReadableRegst() override;
 
   HashMap<int64_t, RegstCtx> piece_id2regst_ctx;
   void* actor_read_id_;
   CommNetDeviceCtx* comm_net_device_ctx_;
+  int64_t next_piece_id_;
 };
 
 }  // namespace oneflow

@@ -1,26 +1,29 @@
 #ifndef ONEFLOW_CORE_KERNEL_MODEL_UPDATE_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_MODEL_UPDATE_KERNEL_H_
 
-#include "oneflow/core/kernel/kernel_manager.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
-class ModelUpdtKernel : public Kernel {
+template<DeviceType device_type>
+class MdUpdateKernel : public KernelIf<device_type> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ModelUpdtKernel);
-  virtual ~ModelUpdtKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(MdUpdateKernel);
+  ~MdUpdateKernel() = default;
 
-  void Backward(const KernelCtx&,
-                std::function<Blob*(const std::string&)>) const override {
-    UNEXPECTED_RUN();
-  }
-  virtual void InitDataTmpBlobs(
-      const KernelCtx&, std::function<Blob*(const std::string&)>) const {
-    UNEXPECTED_RUN();
+  void Forward(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    auto tpl = reinterpret_cast<std::tuple<int64_t, const Blob*>*>(ctx.other);
+    UpdateModel(ctx.device_ctx, std::get<1>(*tpl), std::get<0>(*tpl),
+                BnInOp2Blob);
   }
 
  protected:
-  ModelUpdtKernel() = default;
+  MdUpdateKernel() = default;
+  virtual void UpdateModel(
+      DeviceCtx* ctx, const Blob* pre_model_blob, int64_t next_model_vid,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
 
  private:
 };

@@ -1,11 +1,11 @@
 #ifndef ONEFLOW_CORE_OPERATOR_RELU_OP_H_
 #define ONEFLOW_CORE_OPERATOR_RELU_OP_H_
 
-#include "oneflow/core/operator/operator_manager.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class ReluOp final : public UserOperator {
+class ReluOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ReluOp);
   ReluOp() = default;
@@ -13,12 +13,11 @@ class ReluOp final : public UserOperator {
 
   void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
-  bool IsElemWise() const override { return true; }
+  bool IsElemWiseOp() const override { return true; }
 
-  void InferBlobDesc4FwBlobs(
+  void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      ParallelPolicy policy, int64_t parallel_id,
-      int64_t parallel_num) override;
+      const ParallelContext* parallel_ctx) const override;
 
  private:
 };

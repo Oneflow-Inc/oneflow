@@ -1,0 +1,10 @@
+syntax = "proto2";
+package oneflow;
+
+message ActEvent {
+  required int64 actor_id = 1;
+  required int64 work_stream_id = 2;
+  required int64 act_id = 3;
+  required double start_time = 4;
+  required double stop_time = 5;
+}

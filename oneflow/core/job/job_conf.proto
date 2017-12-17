@@ -7,10 +7,10 @@ import "oneflow/core/common/data_type.proto";
 message TrainConf {
   required string model_save_snapshots_path = 1;
   required int32 num_of_batches_in_snapshot = 2;
-  optional int32 staleness = 3 [default = 0]; // at least 0. If set as 0, then it's BSP
+  optional int32 staleness = 3 [default = 0]; // -1 means unlimited, 0 means BSP, > 0 means SSP
   required int64 total_batch_num = 4;
   optional FillConf default_fill_conf = 5;
-  optional int32 piece_num_of_record_loss = 6 [default = 1000];
+  optional int32 piece_num_of_print_loss = 6 [default = 100];
   required int32 num_of_pieces_in_batch = 7;
   oneof ModelUpdateCase {
     NormalModelUpdateOpConf normal_mdupdt_conf = 1000;
@@ -20,7 +20,6 @@ message TrainConf {
 }
 
 message PredictConf {
-  required int64 total_data_num = 1;
 }
 
 message LocalFsConf {
@@ -41,13 +40,15 @@ message JobConf {
   required string dlnet_filepath = 1;
   required string resource_filepath = 2;
   required string placement_filepath = 3;
-  optional string model_load_snapshot_path = 4;
-  required int32 piece_size = 5;
-  optional DataType default_data_type = 7 [default = kFloat]; // kFloat or kDouble
-  optional bool use_async_cpu_stream = 8 [default = false];
+  required GlobalFSConf global_fs_conf = 4;
+  required int32 single_piece_size = 5;
+  required int32 data_part_num = 6;
+  optional string model_load_snapshot_path = 7 [default = ""];
+  optional int32 max_data_id_length = 8 [default = 0];
   optional bool use_rdma = 9 [default = false];
-  optional int32 max_data_id_length = 10;
-  required GlobalFSConf global_fs_conf = 11;
+  
+  optional DataType default_data_type = 100 [default = kFloat]; // kFloat or kDouble
+  optional int64 piece_num_of_experiment_phase = 101 [default = 100];
   oneof JobType {
     TrainConf train_conf = 1000;
     PredictConf predict_conf = 1001;

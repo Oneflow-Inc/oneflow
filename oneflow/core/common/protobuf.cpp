@@ -1,7 +1,7 @@
 #include "oneflow/core/common/protobuf.h"
-#include "google/protobuf/io/coded_stream.h"
-#include "google/protobuf/io/zero_copy_stream_impl.h"
-#include "google/protobuf/text_format.h"
+#include <google/protobuf/io/coded_stream.h>
+#include <google/protobuf/io/zero_copy_stream_impl.h>
+#include <google/protobuf/text_format.h>
 
 namespace oneflow {
 
@@ -14,14 +14,6 @@ using google::protobuf::io::IstreamInputStream;
 using google::protobuf::io::OstreamOutputStream;
 using google::protobuf::io::ZeroCopyInputStream;
 using google::protobuf::io::ZeroCopyOutputStream;
-
-// string
-void ParseProtoFromString(const std::string& str, PbMessage* proto) {
-  CHECK(google::protobuf::TextFormat::ParseFromString(str, proto));
-}
-void PrintProtoToString(const PbMessage& proto, std::string* str) {
-  CHECK(google::protobuf::TextFormat::PrintToString(proto, str));
-}
 
 // txt file
 void ParseProtoFromTextFile(const std::string& file_path, PbMessage* proto) {

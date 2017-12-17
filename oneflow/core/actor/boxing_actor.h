@@ -11,17 +11,19 @@ class BoxingActor final : public Actor {
   BoxingActor() = default;
   ~BoxingActor() = default;
 
-  void Init(const TaskProto&, const ThreadCtx&) override;
+  void VirtualActorInit(const TaskProto&) override;
 
  private:
   int HandlerNormal(const ActorMsg&) override;
-  int HandlerWaitUntilNoReadableRegst(const ActorMsg&) override;
 
-  bool IsReadReady() override { return !mut_num_of_read_empty(); }
   void Act() override;
+  bool IsReadReady() override;
+  bool IsReadAlwaysUnReadyFromNow() override;
+  void AsyncReturnAllReadableRegst() override;
 
-  // <regst_desc_id, queue<regst>>
-  HashMap<int64_t, std::queue<Regst*>> read_regst_;
+  bool is_eord_;
+  HashMap<int64_t, std::queue<Regst*>> readable_regst_;
+  int64_t readable_regst_cnt_;
 };
 
 }  // namespace oneflow

@@ -1,6 +1,6 @@
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/job/id_manager.h"
-#include "oneflow/core/job/runtime_context.h"
+#include "oneflow/core/job/machine_context.h"
 
 namespace oneflow {
 
@@ -15,7 +15,7 @@ ActorMsg ActorMsg::BuildRegstMsgToConsumer(int64_t producer, int64_t consumer,
   msg.msg_type_ = ActorMsgType::kRegstMsg;
   msg.regst_wrapper_.regst = regst_raw_ptr;
   if (IDMgr::Singleton()->MachineId4ActorId(consumer)
-      == RuntimeCtx::Singleton()->this_machine_id()) {
+      == MachineCtx::Singleton()->this_machine_id()) {
     msg.regst_wrapper_.comm_net_token = nullptr;
     msg.regst_wrapper_.piece_id = -1;
   } else {
@@ -35,6 +35,15 @@ ActorMsg ActorMsg::BuildRegstMsgToProducer(int64_t consumer, int64_t producer,
   msg.regst_wrapper_.regst = regst_raw_ptr;
   msg.regst_wrapper_.comm_net_token = nullptr;
   msg.regst_wrapper_.piece_id = -1;
+  return msg;
+}
+
+ActorMsg ActorMsg::BuildEordMsg(int64_t consumer, int64_t regst_desc_id) {
+  ActorMsg msg;
+  msg.src_actor_id_ = -1;
+  msg.dst_actor_id_ = consumer;
+  msg.msg_type_ = ActorMsgType::kEordMsg;
+  msg.eord_regst_desc_id_ = regst_desc_id;
   return msg;
 }
 
@@ -69,6 +78,11 @@ int64_t ActorMsg::piece_id() const {
 const void* ActorMsg::comm_net_token() const {
   CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
   return regst_wrapper_.comm_net_token;
+}
+
+int64_t ActorMsg::eord_regst_desc_id() const {
+  CHECK_EQ(msg_type_, ActorMsgType::kEordMsg);
+  return eord_regst_desc_id_;
 }
 
 }  // namespace oneflow

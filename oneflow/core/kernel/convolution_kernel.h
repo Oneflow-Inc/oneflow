@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_KERNEL_CONVOLUTION_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_CONVOLUTION_KERNEL_H_
 
-#include "oneflow/core/kernel/kernel_manager.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
@@ -21,18 +21,19 @@ class ConvolutionKernelUtil final {
 };
 
 template<DeviceType device_type, typename T>
-class ConvolutionKernel final : public Kernel {
+class ConvolutionKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvolutionKernel);
   ConvolutionKernel() = default;
   ~ConvolutionKernel() = default;
 
-  void Forward(const KernelCtx&,
-               std::function<Blob*(const std::string&)>) const override;
-  void Backward(const KernelCtx&,
-                std::function<Blob*(const std::string&)>) const override;
-
  private:
+  void ForwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
+  void BackwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
   void InitModelBlobsWithRandomSeed(
       const KernelCtx&, std::mt19937 random_seed_gen,
       std::function<Blob*(const std::string&)>) const override;
@@ -41,7 +42,7 @@ class ConvolutionKernel final : public Kernel {
       const std::string& model_load_dir,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void InitModelTmpBlobs(
-      const KernelCtx& ctx,
+      const KernelCtx& ctx, const ParallelContext* parallel_ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   void ComputeWeightDiff(

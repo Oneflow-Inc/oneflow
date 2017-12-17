@@ -43,8 +43,8 @@ message ConvolutionOpConf {
   optional int32 dilation_h = 11 [default = 1];
   optional int32 dilation_w = 12 [default = 1];
 
-  optional FillConf weight_fill = 14;
-  optional FillConf bias_fill = 15;
+  optional FillConf weight_fill = 13;
+  optional FillConf bias_fill = 14;
 }
 
 message InnerProductOpConf {
@@ -94,8 +94,8 @@ message SoftmaxOpConf {
 
 message SoftmaxLossOpConf {
   required string prediction = 1;
-  required string label = 3;
-  required string loss = 4;
+  required string label = 2;
+  required string loss = 3;
 }
 
 message MultinomialLogisticLossOpConf {
@@ -107,8 +107,7 @@ message MultinomialLogisticLossOpConf {
 message ConcatOpConf {
   repeated string in = 1;
   required string out = 2;
-  required DataType data_type = 3;
-  required int32 axis = 4;
+  required int32 axis = 3;
 }
 
 message CopyCommNetOpConf {
@@ -125,7 +124,6 @@ message CopyHdOpConf {
 message CloneOpConf {
   required int32 out_num = 1;
   required string lbn = 2;
-  required DataType data_type = 3;
 }
 
 message BoxConcatConf {
@@ -135,39 +133,40 @@ message BoxConcatConf {
 message BoxAddConf {
 }
 
-message BoxDataSplitConf {
+message BoxSplitConf {
+  required int32 axis = 1;
+  repeated int32 part_num = 2;
 }
 
 message BoxCloneConf {
 }
 
 message BoxingOpConf {
-  required DataType data_type = 1;
-  required string lbn = 2;
-  required int32 in_num = 3;
-  required int32 out_num = 4;
+  required string lbn = 1;
+  required int32 in_num = 2;
+  required int32 out_num = 3;
 
   oneof in_box {
-    BoxConcatConf concat_box = 5;
-    BoxAddConf add_box = 6;
+    BoxConcatConf concat_box = 4;
+    BoxAddConf add_box = 5;
   }
   oneof out_box {
-    BoxDataSplitConf data_split_box = 7;
-    BoxCloneConf clone_box = 8;
+    BoxSplitConf split_box = 6;
+    BoxCloneConf clone_box = 7;
   }
 }
 
 message NormalModelUpdateOpConf {
-  optional float learning_rate = 1 [default = 0];
+  optional float learning_rate = 1 [default = 0.01];
 }
 
 message MomentumModelUpdateOpConf {
-  optional float learning_rate = 1 [default = 0];
-  required float beta = 2; // TODO: set default val
+  optional float learning_rate = 1 [default = 0.01];
+  optional float beta = 2 [default = 0.9];
 }
 
 message RMSPropModelUpdateOpConf {
-  optional float learning_rate = 1 [default = 0];
+  optional float learning_rate = 1 [default = 0.01];
   optional float decay_rate = 2 [default = 0.99];
   optional float epsilon = 3 [default = 1e-8];
 }
@@ -179,12 +178,12 @@ message ModelSaveOpConf {
   repeated string lbns = 1;
 }
 
-message RecordOpConf {
+message PrintOpConf {
   repeated string lbn = 1;
-  required string record_path = 2;
+  required string print_path = 2;
 }
 
-message LossRecordOpConf {
+message LossPrintOpConf {
 }
 
 message OperatorConf {
@@ -209,7 +208,7 @@ message OperatorConf {
     MomentumModelUpdateOpConf momentum_mdupdt_conf = 115;
     RMSPropModelUpdateOpConf rmsprop_mdupdt_conf = 116;
     SoftmaxLossOpConf softmax_loss_conf = 117;
-    RecordOpConf record_conf = 118;
-    LossRecordOpConf loss_record_conf = 119;
+    PrintOpConf print_conf = 118;
+    LossPrintOpConf loss_print_conf = 119;
   }
 }

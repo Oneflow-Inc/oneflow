@@ -12,13 +12,21 @@ void SoftmaxLossOp::InitFromOpConf() {
   EnrollOutputBn("loss", false);
 }
 
+void SoftmaxLossOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  auto conf = kernel_conf->mutable_softmax_loss_conf();
+  conf->set_prediction_type(GetBlobDesc4BnInOp("prediction")->data_type());
+  conf->set_label_type(GetBlobDesc4BnInOp("label")->data_type());
+}
+
 const PbMessage& SoftmaxLossOp::GetSpecialConf() const {
   return op_conf().softmax_loss_conf();
 }
 
-void SoftmaxLossOp::InferBlobDesc4FwBlobs(
+void SoftmaxLossOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) {
+    const ParallelContext* parallel_ctx) const {
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
   const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
   CHECK_EQ(pred_blob_desc->has_data_id(), label_blob_desc->has_data_id());

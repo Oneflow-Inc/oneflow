@@ -21,6 +21,11 @@ class Blob final {
   const char* data_id() const { return data_id(0); }
   char* mut_data_id() { return mut_data_id(0); }
 
+  const void* memory_ptr() const {
+    return data_id_ptr_ == nullptr ? dptr_ : static_cast<void*>(data_id_ptr_);
+  }
+  void* mut_memory_ptr() { return const_cast<void*>(memory_ptr()); }
+
   template<typename T = void>
   const T* dptr() const {
     CheckDataType<T>();
@@ -43,13 +48,17 @@ class Blob final {
   size_t ByteSizeOfDataIdField() const {
     return blob_desc_->ByteSizeOfDataIdField();
   }
-  size_t ByteSizeOfDataField() const {
-    return blob_desc_->ByteSizeOfDataField();
+  size_t ByteSizeOfDataContentField() const {
+    return blob_desc_->ByteSizeOfDataContentField();
   }
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
 
   template<DeviceType device_type>
+  void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  template<DeviceType device_type>
   void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  template<DeviceType device_type>
+  void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
 
  private:
   template<typename T>

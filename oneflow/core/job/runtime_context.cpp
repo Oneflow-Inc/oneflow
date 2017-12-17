@@ -2,15 +2,23 @@
 
 namespace oneflow {
 
-std::string RuntimeCtx::GetCtrlAddr(int64_t machine_id) const {
-  const Machine& mchn = JobDesc::Singleton()->resource().machine(machine_id);
-  return mchn.addr() + ":" + std::to_string(mchn.port());
+void RuntimeCtx::NewCounter(const std::string& name, int64_t val) {
+  LOG(INFO) << "NewCounter " << name << " " << val;
+  CHECK(counters_.emplace(name, of_make_unique<BlockingCounter>(val)).second);
 }
 
-RuntimeCtx::RuntimeCtx(const std::string& name) {
-  this_machine_id_ = IDMgr::Singleton()->MachineID4MachineName(name);
-  LOG(INFO) << "this machine name: " << name;
-  LOG(INFO) << "this machine id: " << this_machine_id_;
+void RuntimeCtx::DecreaseCounter(const std::string& name) {
+  int64_t cur_val = counters_.at(name)->Decrease();
+  LOG(INFO) << "DecreaseCounter " << name << ", current val is " << cur_val;
+}
+
+void RuntimeCtx::WaitUntilCntEqualZero(const std::string& name) {
+  counters_.at(name)->WaitUntilCntEqualZero();
+}
+
+RuntimeCtx::RuntimeCtx(int64_t total_piece_num, bool is_experiment_phase) {
+  total_piece_num_ = total_piece_num;
+  is_experiment_phase_ = is_experiment_phase;
 }
 
 }  // namespace oneflow

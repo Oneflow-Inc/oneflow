@@ -1,12 +1,12 @@
 #ifndef ONEFLOW_CORE_KERNEL_DATA_LOADER_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_DATA_LOADER_KERNEL_H_
 
-#include "oneflow/core/kernel/kernel_manager.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
 template<typename T>
-class DataLoaderKernel final : public Kernel {
+class DataLoaderKernel final : public KernelIf<DeviceType::kCPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DataLoaderKernel);
   DataLoaderKernel() = default;
@@ -16,9 +16,9 @@ class DataLoaderKernel final : public Kernel {
                std::function<Blob*(const std::string&)>) const override;
 
  private:
-  void InitInStream(const KernelCtx&) const;
+  void VirtualKernelInit(const ParallelContext*) override;
 
-  mutable std::unique_ptr<PersistentInStream> in_stream_;
+  std::unique_ptr<PersistentInStream> in_stream_;
 };
 
 }  // namespace oneflow

@@ -1,15 +1,15 @@
 #ifndef ONEFLOW_CORE_CONTROL_CTRL_SERVICE_H_
 #define ONEFLOW_CORE_CONTROL_CTRL_SERVICE_H_
 
-#include "grpc++/grpc++.h"
-#include "grpc++/impl/codegen/async_stream.h"
-#include "grpc++/impl/codegen/async_unary_call.h"
-#include "grpc++/impl/codegen/proto_utils.h"
-#include "grpc++/impl/codegen/rpc_method.h"
-#include "grpc++/impl/codegen/service_type.h"
-#include "grpc++/impl/codegen/status.h"
-#include "grpc++/impl/codegen/stub_options.h"
-#include "grpc++/impl/codegen/sync_stream.h"
+#include <grpc++/grpc++.h>
+#include <grpc++/impl/codegen/async_stream.h>
+#include <grpc++/impl/codegen/async_unary_call.h>
+#include <grpc++/impl/codegen/proto_utils.h>
+#include <grpc++/impl/codegen/rpc_method.h>
+#include <grpc++/impl/codegen/service_type.h>
+#include <grpc++/impl/codegen/status.h>
+#include <grpc++/impl/codegen/stub_options.h>
+#include <grpc++/impl/codegen/sync_stream.h>
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/control/control.pb.h"
@@ -22,12 +22,11 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ(TryLock)            \
   OF_PP_MAKE_TUPLE_SEQ(NotifyDone)         \
   OF_PP_MAKE_TUPLE_SEQ(WaitUntilDone)      \
-  OF_PP_MAKE_TUPLE_SEQ(PushPlan)           \
-  OF_PP_MAKE_TUPLE_SEQ(ClearPlan)          \
-  OF_PP_MAKE_TUPLE_SEQ(PullPlan)           \
-  OF_PP_MAKE_TUPLE_SEQ(PushPort)           \
-  OF_PP_MAKE_TUPLE_SEQ(ClearPort)          \
-  OF_PP_MAKE_TUPLE_SEQ(PullPort)           \
+  OF_PP_MAKE_TUPLE_SEQ(PushKV)             \
+  OF_PP_MAKE_TUPLE_SEQ(ClearKV)            \
+  OF_PP_MAKE_TUPLE_SEQ(PullKV)             \
+  OF_PP_MAKE_TUPLE_SEQ(PushActEvent)       \
+  OF_PP_MAKE_TUPLE_SEQ(Clear)              \
   OF_PP_MAKE_TUPLE_SEQ(PushAllConnInfo)    \
   OF_PP_MAKE_TUPLE_SEQ(ClearAllConnInfo)   \
   OF_PP_MAKE_TUPLE_SEQ(PullConnectionInfo) \

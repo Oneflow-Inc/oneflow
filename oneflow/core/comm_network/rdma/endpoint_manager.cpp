@@ -3,6 +3,7 @@
 #include "glog/logging.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/comm_network/comm_network.h"
+#include "oneflow/core/job/machine_context.h"
 
 namespace oneflow {
 
@@ -54,7 +55,7 @@ void EndpointManager::InitRdma() {
       StdVec2PbRpf<ConnectionInfo>(conn_infos);
   CtrlClient::Singleton()->PushAllConnInfo(all_conn_info);
   FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
-    if (peer_machine_id == RuntimeCtx::Singleton()->this_machine_id()) {
+    if (peer_machine_id == MachineCtx::Singleton()->this_machine_id()) {
       continue;
     }
     Connection* conn = connection_pool_[peer_machine_id];

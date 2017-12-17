@@ -1,8 +1,8 @@
 #ifndef ONEFLOW_CORE_CONTROL_CTRL_SERVER_H_
 #define ONEFLOW_CORE_CONTROL_CTRL_SERVER_H_
 
-#include "grpc++/alarm.h"
-#include "grpc++/server_builder.h"
+#include <grpc++/alarm.h>
+#include <grpc++/server_builder.h>
 #include "oneflow/core/control/ctrl_call.h"
 
 namespace oneflow {
@@ -34,12 +34,6 @@ class CtrlServer final {
       barrier_calls_;
   // TryLock, NotifyDone, WaitUntilDone
   HashMap<std::string, void*> name2lock_status_;
-  // PushPlan, PullPlan
-  std::unique_ptr<Plan> plan_;
-  std::list<CtrlCall<PullPlanRequest, PullPlanResponse>*> pending_plan_calls_;
-  // PushPort, ClearPort, PullPort
-  int32_t port_;
-  std::list<CtrlCall<PullPortRequest, PullPortResponse>*> pending_port_calls_;
   AllConnInfo all_conn_info_;
   std::list<std::pair<
       CtrlCall<PullConnectionInfoRequest, PullConnectionInfoResponse>*,
@@ -48,6 +42,10 @@ class CtrlServer final {
   TokenMsgs token_msgs_;
   std::list<CtrlCall<PullTokenMsgsRequest, PullTokenMsgsResponse>*>
       pending_token_msgs_calls_;
+  // PushKV, ClearKV, PullKV
+  HashMap<std::string, std::string> kv_;
+  HashMap<std::string, std::list<CtrlCall<PullKVRequest, PullKVResponse>*>>
+      pending_kv_calls_;
 };
 
 }  // namespace oneflow

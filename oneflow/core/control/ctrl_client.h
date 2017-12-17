@@ -3,6 +3,7 @@
 
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/comm_network/rdma/conn_info.pb.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/control/ctrl_service.h"
 
 namespace oneflow {
@@ -21,13 +22,17 @@ class CtrlClient final {
   void NotifyDone(const std::string& name);
   void WaitUntilDone(const std::string& name);
 
-  void PushPlan(const Plan& plan);
-  void ClearPlan();
-  void PullPlan(Plan* plan);
+  void PushKV(const std::string& k, std::function<void(std::string*)> VSetter);
+  void PushKV(const std::string& k, const std::string& v);
+  void PushKV(const std::string& k, const PbMessage& msg);
+  void ClearKV(const std::string& k);
+  void PullKV(const std::string& k,
+              std::function<void(const std::string&)> VGetter);
+  void PullKV(const std::string& k, std::string* v);
+  void PullKV(const std::string& k, PbMessage* msg);
 
-  void PushPort(uint16_t port);
-  void ClearPort();
-  uint16_t PullPort(uint64_t machine_id);
+  void PushActEvent(const ActEvent&);
+  void Clear();
 
   void PushAllConnInfo(const AllConnInfo& all_conn_info);
   void ClearAllConnInfo();

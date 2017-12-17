@@ -10,7 +10,7 @@ void TestInnerProductOp(ParallelPolicy policy, bool has_bias_term,
                         bool has_data_id) {
   int out_num = 40;
   JobConf job_conf;
-  job_conf.set_default_data_type(GetDataType<T>::val);
+  job_conf.set_DefaultDataType(GetDataType<T>::val);
   JobDesc::Singleton()->InitFromJobConf(job_conf);
 
   OperatorConf op_conf;
@@ -35,7 +35,7 @@ void TestInnerProductOp(ParallelPolicy policy, bool has_bias_term,
     return bn2blob_desc.at(bn);
   };
 
-  ip_op->InferBlobDesc4FwBlobs(bn2blob_desc_func, policy, 3, 10);
+  ip_op->InferBlobDescs(bn2blob_desc_func, policy, 3, 10);
 
   if (policy == kModelParallel) {
     BalancedSplitter splitter(out_num, 10);

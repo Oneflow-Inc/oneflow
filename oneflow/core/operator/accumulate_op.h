@@ -1,11 +1,11 @@
 #ifndef ONEFLOW_CORE_OPERATOR_ACCUMULATE_OP_H_
 #define ONEFLOW_CORE_OPERATOR_ACCUMULATE_OP_H_
 
-#include "oneflow/core/operator/operator_manager.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class AccumulateOp final : public SysOperator {
+class AccumulateOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AccumulateOp);
   AccumulateOp() = default;
@@ -13,6 +13,10 @@ class AccumulateOp final : public SysOperator {
 
   void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
+
+  void InferBlobDescs(
+      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override {}
 
  private:
   std::string ibn2lbn(const std::string& input_bn) const override {

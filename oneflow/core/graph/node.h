@@ -40,7 +40,6 @@ class Edge {
   virtual ~Edge() = default;
 
   int64_t edge_id() const { return edge_id_; }
-  std::string edge_id_str() const { return std::to_string(edge_id_); }
 
   NodeType* src_node() const { return src_node_; }
   NodeType* dst_node() const { return dst_node_; }
@@ -67,6 +66,7 @@ class Node {
 
   int64_t node_id() const { return node_id_; }
   std::string node_id_str() const { return std::to_string(node_id_); }
+
   EdgeType* SoleInEdge() const {
     CHECK_EQ(in_edges_.size(), 1);
     return *(in_edges_.begin());
@@ -78,6 +78,17 @@ class Node {
 
   const std::unordered_set<EdgeType*>& in_edges() const { return in_edges_; }
   const std::unordered_set<EdgeType*>& out_edges() const { return out_edges_; }
+
+  void ForEachNodeOnInEdge(std::function<void(NodeType*)> Handler) const {
+    for (EdgeType* edge : in_edges_) { Handler(edge->src_node()); }
+  }
+  void ForEachNodeOnOutEdge(std::function<void(NodeType*)> Handler) const {
+    for (EdgeType* edge : out_edges_) { Handler(edge->dst_node()); }
+  }
+  void ForEachNodeOnInOutEdge(std::function<void(NodeType*)> Handler) const {
+    ForEachNodeOnInEdge(Handler);
+    ForEachNodeOnOutEdge(Handler);
+  }
 
   void DisconnectAllEdges() {
     for (EdgeType* edge : in_edges_) { DisConnect(edge); }
@@ -92,8 +103,8 @@ class Node {
   friend void DisConnect<EdgeType>(EdgeType* edge);
 
   int64_t node_id_;
-  std::unordered_set<EdgeType*> in_edges_;
-  std::unordered_set<EdgeType*> out_edges_;
+  HashSet<EdgeType*> in_edges_;
+  HashSet<EdgeType*> out_edges_;
 };
 
 }  // namespace oneflow

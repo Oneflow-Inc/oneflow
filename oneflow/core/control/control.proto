@@ -4,6 +4,7 @@ package oneflow;
 import "oneflow/core/job/plan.proto";
 import "oneflow/core/comm_network/rdma/conn_info.proto";
 import "oneflow/core/comm_network/rdma/token_message.proto";
+import "oneflow/core/actor/act_event.proto";
 
 message LoadServerRequest {
 }
@@ -47,37 +48,40 @@ message WaitUntilDoneRequest {
 message WaitUntilDoneResponse {
 }
 
-message PushPlanRequest {
-  required Plan plan = 1;
+message PushKVRequest {
+  required string key = 1;
+  required bytes val = 2;
 }
 
-message PushPlanResponse {
+message PushKVResponse {
 }
 
-message ClearPlanRequest {
+message ClearKVRequest {
+  required string key = 1;
 }
 
-message ClearPlanResponse {
+message ClearKVResponse {
 }
 
-message PullPlanRequest {
+message PullKVRequest {
+  required string key = 1;
 }
 
-message PullPlanResponse {
-  required Plan plan = 1;
+message PullKVResponse {
+  required bytes val = 1;
 }
 
-message PushPortRequest {
-  required int32 port = 1;
+message PushActEventRequest {
+  required ActEvent act_event = 1;
 }
 
-message PushPortResponse {
+message PushActEventResponse {
 }
 
-message ClearPortRequest {
+message ClearRequest {
 }
 
-message ClearPortResponse {
+message ClearResponse {
 }
 
 message PullPortRequest {

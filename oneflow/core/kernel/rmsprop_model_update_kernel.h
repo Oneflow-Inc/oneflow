@@ -6,33 +6,30 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class RMSPropMdUpdateKernel final : public ModelUpdtKernel {
+class RMSPropMdUpdateKernel final : public MdUpdateKernel<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RMSPropMdUpdateKernel);
   RMSPropMdUpdateKernel() = default;
   ~RMSPropMdUpdateKernel() = default;
 
-  void Forward(const KernelCtx&,
-               std::function<Blob*(const std::string&)>) const override;
-
-  void InitDataTmpBlobs(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)>) const override;
-
  private:
+  void UpdateModel(
+      DeviceCtx* ctx, const Blob* pre_model_blob, int64_t next_model_vid,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 template<DeviceType device_type, typename T>
 class RMSPropMdUpdateKernelUtil final {
  public:
   // alpha = (1 - decay_rate) / batch_size ^ 2
-  // mean_square = alpha * model_diff ^ 2 + decay_rate * mean_square
+  // mean_square = alpha * model_diff_acc ^ 2 + decay_rate * mean_square
   // learning_rate = learning_rate / batch_size
-  // model -= learning_rate * model_diff / sqrt(mean_square + epsilon)
-  static void UpdateModel(const KernelCtx& ctx, const int64_t n, const T alpha,
+  // model = pre_model - learning_rate * model_diff_acc / sqrt(mean_square +
+  // epsilon)
+  static void UpdateModel(DeviceCtx*, const int64_t n, const T alpha,
                           const T learning_rate, const T decay_rate,
-                          const T epsilon, T* model, T* mean_square,
-                          const T* model_diff);
+                          const T epsilon, const T* pre_model, T* model,
+                          T* mean_square, const T* model_diff_acc);
 };
 
 }  // namespace oneflow

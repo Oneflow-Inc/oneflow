@@ -6,33 +6,34 @@ import "oneflow/core/register/register_desc.proto";
 import "oneflow/core/job/placement.proto";
 
 enum TaskType {
-  kInvalidTaskType = 0;
-  kDataCompTask = 1;
-  kMdSaveCompTask = 2;
-  kMdUpdtCompTask = 3;
-  kMdDiffAccCompTask = 4;
-  kCopyHdTask = 5;
-  kCopyCommNetTask = 6;
-  kBoxingTask = 7;
-  kLossAccCompTask = 8;
-  kLossRecordCompTask = 9;
-}
+  kInvalid = 0;
+  kForward = 1;
+  kBackward = 2;
+  kSource = 3;
+  kLoss = 4;
+  kLossAcc = 5;
+  kLossPrint = 6;
+  kMdUpdt = 7;
+  kMdSave = 8;
+  kMdDiffAcc = 9;
+  kCopyHd = 10;
+  kCopyCommNet = 11;
+  kBoxing = 12;
+  kPrint = 13;
+};
 
 message TaskProto {
   // common
-  required int64 id = 1;
-  required TaskType type = 2;
-  required int64 machine_id = 3;
-  required int64 thrd_local_id = 4;
-  required bool is_forward = 5;
-  required ExecSequence exec_sequence = 6;
-  map<string, RegstDescProto> produced_regst_desc = 7;
-  map<string, int64> consumed_regst_desc_id = 8;
-  // for CompTask
-  optional ParallelPolicy parallel_policy = 1000;
-  optional int64 parallel_id = 1001;
-  optional int64 parallel_num = 1002;
-  // For Model Update Comp Task
-  optional int64 related_save_task_id = 3000;
-  optional uint32 random_seed = 3001;
-}
+  required TaskType task_type = 1;
+  required int64 machine_id = 2;
+  required int64 thrd_id = 3;
+  required int64 task_id = 4;
+  required ExecSequence exec_sequence = 5;
+  map<string, RegstDescProto> produced_regst_desc = 6;
+  map<string, int64> consumed_regst_desc_id = 7;
+  // compute task
+  optional ParallelContext parallel_ctx = 1000; // CompTask
+  optional uint32 random_seed = 1001; // MdUpdtCompTask
+  optional int64 related_save_task_id = 1002 [default = -1];
+  optional int64 related_fw_task_id = 1003 [default = -1];
+};

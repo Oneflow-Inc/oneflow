@@ -1,4 +1,5 @@
 #include "oneflow/core/comm_network/rdma/rdma_comm_network.h"
+#include "oneflow/core/job/machine_context.h"
 
 namespace oneflow {
 
@@ -56,7 +57,7 @@ void RdmaCommNet::RegisterMemoryDone() {
       HashMap2PbMap<uint64_t, RdmaMemDesc>(this_machine_token_msgs);
   CtrlClient::Singleton()->PushTokenMsgs(token_msgs);
   FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
-    if (peer_machine_id == RuntimeCtx::Singleton()->this_machine_id()) {
+    if (peer_machine_id == MachineCtx::Singleton()->this_machine_id()) {
       continue;
     }
     TokenMsgs peer_token_msgs;

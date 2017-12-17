@@ -2,39 +2,25 @@
 
 namespace oneflow {
 
-void CopyHdKernel::InitFromOpProto(const OperatorProto& op_proto) {
-  Kernel::InitFromOpProto(op_proto);
-
-  const CopyHdOpConf& copy_hd_conf = op()->op_conf().copy_hd_conf();
+void CopyHdKernel::VirtualKernelInit(const ParallelContext*) {
+  const CopyHdOpConf& copy_hd_conf = kernel_conf().op_conf().copy_hd_conf();
 
   if (copy_hd_conf.type() == CopyHdOpConf::H2D) {
-    fw_kind_ = cudaMemcpyKind::cudaMemcpyHostToDevice;
-    bw_kind_ = cudaMemcpyKind::cudaMemcpyDeviceToHost;
+    cp_kind_ = cudaMemcpyKind::cudaMemcpyHostToDevice;
   } else {
-    fw_kind_ = cudaMemcpyKind::cudaMemcpyDeviceToHost;
-    bw_kind_ = cudaMemcpyKind::cudaMemcpyHostToDevice;
+    cp_kind_ = cudaMemcpyKind::cudaMemcpyDeviceToHost;
   }
 }
 
 void CopyHdKernel::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in_blob = BnInOp2Blob(op()->SoleIbn());
-  Blob* out_blob = BnInOp2Blob(op()->SoleObn());
+  const Blob* in_blob = BnInOp2Blob(kernel_conf().input_bns(0));
+  Blob* out_blob = BnInOp2Blob(kernel_conf().output_bns(0));
 
-  Memcpy<DeviceType::kGPU>(ctx.device_ctx, out_blob->mut_dptr(),
-                           in_blob->dptr(), in_blob->TotalByteSize(), fw_kind_);
-}
-
-void CopyHdKernel::Backward(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* out_diff_blob = BnInOp2Blob(op()->SoleOdbn());
-  Blob* in_diff_blob = BnInOp2Blob(op()->SoleIdbn());
-
-  Memcpy<DeviceType::kGPU>(ctx.device_ctx, in_diff_blob->mut_dptr(),
-                           out_diff_blob->dptr(),
-                           out_diff_blob->TotalByteSize(), bw_kind_);
+  Memcpy<DeviceType::kGPU>(ctx.device_ctx, out_blob->mut_memory_ptr(),
+                           in_blob->memory_ptr(), in_blob->TotalByteSize(),
+                           cp_kind_);
 }
 
 COMMAND(AddKernelCreator(OperatorConf::kCopyHdConf,

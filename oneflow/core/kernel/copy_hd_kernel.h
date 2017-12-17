@@ -1,26 +1,22 @@
 #ifndef ONEFLOW_CORE_KERNEL_COPY_HD_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_COPY_HD_KERNEL_H_
 
-#include "oneflow/core/kernel/kernel_manager.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
-class CopyHdKernel final : public Kernel {
+class CopyHdKernel final : public KernelIf<DeviceType::kGPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CopyHdKernel);
   CopyHdKernel() = default;
   ~CopyHdKernel() = default;
 
-  void InitFromOpProto(const OperatorProto& op_proto) override;
-
+ private:
+  void VirtualKernelInit(const ParallelContext*) override;
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
-  void Backward(const KernelCtx&,
-                std::function<Blob*(const std::string&)>) const override;
 
- private:
-  cudaMemcpyKind fw_kind_;
-  cudaMemcpyKind bw_kind_;
+  cudaMemcpyKind cp_kind_;
 };
 
 }  // namespace oneflow

@@ -5,7 +5,7 @@ namespace oneflow {
 template<typename T>
 std::shared_ptr<Operator> GetTestPoolingOp() {
   JobConf job_conf;
-  job_conf.set_default_data_type(GetDataType<T>::val);
+  job_conf.set_DefaultDataType(GetDataType<T>::val);
   JobDesc::Singleton()->InitFromJobConf(job_conf);
   OperatorConf op_conf;
   op_conf.set_name("pooling_test");
@@ -32,7 +32,7 @@ void TestPoolingOp(ParallelPolicy policy, bool has_data_id) {
   auto Bn2BlobDescFunc = [&bn2blob_desc_map](const std::string& bn) {
     return bn2blob_desc_map.at(bn);
   };
-  pooling_op->InferBlobDesc4FwBlobs(Bn2BlobDescFunc, policy, 0, 1);
+  pooling_op->InferBlobDescs(Bn2BlobDescFunc, policy, 0, 1);
   ASSERT_EQ(*Bn2BlobDescFunc("out"),
             BlobDesc(Shape({100, 64, 6, 6}), GetDataType<T>::val, has_data_id));
   ASSERT_EQ(*Bn2BlobDescFunc("idx"),

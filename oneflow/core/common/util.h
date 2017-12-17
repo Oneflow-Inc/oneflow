@@ -1,6 +1,9 @@
 #ifndef ONEFLOW_CORE_COMMON_UTIL_H_
 #define ONEFLOW_CORE_COMMON_UTIL_H_
 
+#include <gflags/gflags.h>
+#include <glog/logging.h>
+#include <gtest/gtest.h>
 #include <algorithm>
 #include <atomic>
 #include <condition_variable>
@@ -17,8 +20,8 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
-#include "glog/logging.h"
-#include "gtest/gtest.h"
+
+DECLARE_string(log_dir);
 
 namespace oneflow {
 
@@ -47,10 +50,12 @@ namespace oneflow {
   template<typename... Args>                                       \
   static void NewSingleton(Args&&... args) {                       \
     DeleteSingleton();                                             \
+    LOG(INFO) << "NewSingleton " << #ClassName;                    \
     *SingletonPPtr() = new ClassName(std::forward<Args>(args)...); \
   }                                                                \
   static void DeleteSingleton() {                                  \
     if (Singleton()) {                                             \
+      LOG(INFO) << "DeleteSingleton " << #ClassName;               \
       delete Singleton();                                          \
       *SingletonPPtr() = nullptr;                                  \
     }                                                              \
@@ -93,8 +98,8 @@ inline std::string NewUniqueId() {
 }
 
 inline const std::string& LogDir() {
-  static std::string log_dir = std::getenv("GLOG_log_dir");
-  return log_dir;
+  static std::string v = FLAGS_log_dir;
+  return v;
 }
 
 template<typename K, typename V>
@@ -133,15 +138,23 @@ inline uint32_t NewRandomSeed() {
 #define MAX_WITH_LOG_THRESHOLD(x) ((x) > LOG_THRESHOLD ? (x) : LOG_THRESHOLD)
 #define SAFE_LOG(x) logf(MAX_WITH_LOG_THRESHOLD(x))
 
-#define DEVICE_TYPE_SEQ (DeviceType::kCPU)(DeviceType::kGPU)
+#define DEVICE_TYPE_SEQ                  \
+  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU) \
+  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU)
 #define BOOL_SEQ (true)(false)
 #define PARALLEL_POLICY_SEQ \
   (ParallelPolicy::kModelParallel)(ParallelPolicy::kDataParallel)
 
 #define FOR_RANGE(type, i, begin, end) for (type i = begin; i < end; ++i)
+#define FOR_EACH(it, container) \
+  for (auto it = container.begin(); it != container.end(); ++it)
 
 void RedirectStdoutAndStderrToGlogDir();
 void CloseStdoutAndStderr();
+
+inline double GetCurTime() {
+  return std::chrono::high_resolution_clock::now().time_since_epoch().count();
+}
 
 }  // namespace oneflow
 

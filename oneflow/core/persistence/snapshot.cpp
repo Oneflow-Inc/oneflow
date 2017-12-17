@@ -81,7 +81,7 @@ void Snapshot::ConcatLbnFile(const std::string& lbn, int32_t part_num,
         GlobalFS(), JoinPath(done_dir, op_name + "_" + bn_in_op));
   }
   if (GlobalFS()->ListDir(done_dir).size()
-      == SnapshotMgr::Singleton()->num_of_model_blobs()) {
+      == SnapshotMgr::Singleton()->total_mbn_num()) {
     std::string done_file = JoinPath(root_path_, "snapshot_done");
     OF_CALL_ONCE(done_file, GlobalFS()->RecursivelyDeleteDir(done_dir);
                  { PersistentOutStream out_stream(GlobalFS(), done_file); });

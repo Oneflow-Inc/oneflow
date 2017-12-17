@@ -1,11 +1,11 @@
 #ifndef ONEFLOW_CORE_OPERATOR_CONCAT_OP_H_
 #define ONEFLOW_CORE_OPERATOR_CONCAT_OP_H_
 
-#include "oneflow/core/operator/operator_manager.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class ConcatOp final : public UserOperator {
+class ConcatOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConcatOp);
   ConcatOp() = default;
@@ -15,20 +15,20 @@ class ConcatOp final : public UserOperator {
 
   const PbMessage& GetSpecialConf() const override;
 
-  void InferBlobDesc4FwBlobs(
+  void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      ParallelPolicy policy, int64_t parallel_id,
-      int64_t parallel_num) override;
+      const ParallelContext* parallel_ctx) const override;
 
  private:
   std::string ibn2lbn(const std::string& input_bn) const override {
     return ibn2lbn_.at(input_bn);
   }
-  std::string obn2lbn(const std::string& output_bn) const override {
-    return op_name() + "/" + GetStringFromSpecialConf(output_bn);
-  }
+  void VirtualGenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx,
+      KernelConf* kernel_conf) const override;
 
-  std::unordered_map<std::string, std::string> ibn2lbn_;
+  HashMap<std::string, std::string> ibn2lbn_;
 };
 
 }  // namespace oneflow

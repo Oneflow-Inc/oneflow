@@ -4,9 +4,9 @@
 #ifdef _MSC_VER
 #include <io.h>
 #endif
-#include "google/protobuf/descriptor.h"
-#include "google/protobuf/map.h"
-#include "google/protobuf/message.h"
+#include <google/protobuf/descriptor.h>
+#include <google/protobuf/map.h>
+#include <google/protobuf/message.h>
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -18,10 +18,6 @@ template<typename T>
 using PbRpf = google::protobuf::RepeatedPtrField<T>;
 template<typename T1, typename T2>
 using PbMapPair = google::protobuf::MapPair<T1, T2>;
-
-// Prototxt <-> String
-void ParseProtoFromString(const std::string& str, PbMessage* proto);
-void PrintProtoToString(const PbMessage& proto, std::string* str);
 
 // Prototxt <-> File
 void ParseProtoFromTextFile(const std::string& file_path, PbMessage* proto);

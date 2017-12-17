@@ -1,11 +1,11 @@
 #ifndef ONEFLOW_CORE_OPERATOR_INNERPRODUCT_OP_H_
 #define ONEFLOW_CORE_OPERATOR_INNERPRODUCT_OP_H_
 
-#include "oneflow/core/operator/operator_manager.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class InnerProductOp final : public UserOperator {
+class InnerProductOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(InnerProductOp);
   InnerProductOp() = default;
@@ -13,15 +13,15 @@ class InnerProductOp final : public UserOperator {
 
   void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
-  void InferBlobDesc4FwBlobs(
+  void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      ParallelPolicy policy, int64_t parallel_id,
-      int64_t parallel_num) override;
-  void FixParallelDesc(ParallelDesc* pr_desc) const override {
-    if (pr_desc->policy() == kModelParallel) {
-      pr_desc->RemoveNeedlessDevice(GetInt32FromSpecialConf("out_num"));
-    }
+      const ParallelContext* parallel_ctx) const override;
+  int32_t ModelSplitAxis() const override { return 1; }
+  int32_t MaxModelSplitNum() const override {
+    return op_conf().innerproduct_conf().out_num();
   }
+
+ private:
 };
 
 }  // namespace oneflow

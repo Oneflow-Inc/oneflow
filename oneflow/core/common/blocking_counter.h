@@ -8,19 +8,16 @@ namespace oneflow {
 class BlockingCounter final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BlockingCounter);
-  BlockingCounter() = default;
+  BlockingCounter() = delete;
   ~BlockingCounter() = default;
 
-  void Init(const std::string& cnt_name, int64_t cnt_val) {
-    cnt_name_ = cnt_name;
-    cnt_val_ = cnt_val;
-    LOG(INFO) << "Set " << cnt_name_ << " " << cnt_val_;
-  }
-  void MinusOne() {
+  BlockingCounter(int64_t cnt_val) { cnt_val_ = cnt_val; }
+
+  int64_t Decrease() {
     std::unique_lock<std::mutex> lck(mtx_);
     cnt_val_ -= 1;
-    LOG(INFO) << cnt_name_ << " minus one, current val is " << cnt_val_;
     if (cnt_val_ == 0) { cond_.notify_all(); }
+    return cnt_val_;
   }
   void WaitUntilCntEqualZero() {
     std::unique_lock<std::mutex> lck(mtx_);
@@ -28,7 +25,6 @@ class BlockingCounter final {
   }
 
  private:
-  std::string cnt_name_;
   std::mutex mtx_;
   std::condition_variable cond_;
   int64_t cnt_val_;

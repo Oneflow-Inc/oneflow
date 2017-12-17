@@ -14,15 +14,14 @@ const PbMessage& PoolingOp::GetSpecialConf() const {
   return op_conf().pooling_conf();
 }
 
-void PoolingOp::InferBlobDesc4FwBlobs(
+void PoolingOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    ParallelPolicy policy, int64_t parallel_id, int64_t parallel_num) {
+    const ParallelContext* parallel_ctx) const {
   const PoolingOpConf& conf = op_conf().pooling_conf();
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   CHECK_EQ(in_blob_desc->shape().NumAxes(), 4);
-  CHECK_EQ(in_blob_desc->data_type(),
-           JobDesc::Singleton()->default_data_type());
+  CHECK_EQ(in_blob_desc->data_type(), JobDesc::Singleton()->DefaultDataType());
   // out
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   int64_t shape_h =

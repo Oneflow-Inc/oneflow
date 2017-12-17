@@ -19,7 +19,7 @@ std::shared_ptr<Operator> GetTestConvolutionOp() {
   op_conf.mutable_convolution_conf()->set_stride_w(3);
   auto convolution_op = ConstructOp(op_conf);
   JobConf job_conf;
-  job_conf.set_default_data_type(DataType::kFloat);
+  job_conf.set_DefaultDataType(DataType::kFloat);
   JobDesc::Singleton()->InitFromJobConf(job_conf);
   return convolution_op;
 }
@@ -38,7 +38,7 @@ TEST(ConvolutionOp, dataparallel_convolution) {
   auto Bn2BlobDescFunc = [&bn2blob_desc_map](const std::string& bn) {
     return bn2blob_desc_map.at(bn);
   };
-  convolution_op->InferBlobDesc4FwBlobs(Bn2BlobDescFunc, kDataParallel, 0, 1);
+  convolution_op->InferBlobDescs(Bn2BlobDescFunc, kDataParallel, 0, 1);
   ASSERT_EQ(*Bn2BlobDescFunc("out"),
             BlobDesc(Shape({100, 16, 82, 82}), DataType::kFloat, false));
   ASSERT_EQ(
@@ -64,7 +64,7 @@ TEST(ConvolutionOp, modelparallel_convolution) {
   auto Bn2BlobDescFunc = [&bn2shape_ptr](const std::string& bn) {
     return bn2shape_ptr.at(bn);
   };
-  convolution_op->InferBlobDesc4FwBlobs(Bn2BlobDescFunc, kModelParallel, 3, 8);
+  convolution_op->InferBlobDescs(Bn2BlobDescFunc, kModelParallel, 3, 8);
   ASSERT_EQ(*Bn2BlobDescFunc("out"),
             BlobDesc(Shape({100, 2, 82, 82}), DataType::kFloat, false));
   ASSERT_EQ(
