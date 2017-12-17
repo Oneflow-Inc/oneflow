@@ -30,7 +30,7 @@ class Regst final {
   void set_piece_id(int64_t val) { piece_id_ = val; }
   void set_model_version_id(int64_t val) { model_version_id_ = val; }
   void set_recurrent_flag(int val) { recurrent_flag_ = val; }
-  void set_is_forward(bool val) { is_forward_ = true; }
+  void set_is_forward(bool val) { is_forward_ = val; }
 
  private:
   friend class RegstMgr;
