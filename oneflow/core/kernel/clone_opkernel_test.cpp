@@ -4,6 +4,8 @@
 
 namespace oneflow {
 
+namespace test {
+
 std::shared_ptr<Operator> CreateCloneOp(int out_num) {
   OperatorConf op_conf;
   op_conf.set_name("clone_test");
@@ -103,4 +105,5 @@ TEST(CloneOp, infer_blob_desc) {
                                    FLOATING_DATA_TYPE_SEQ, BOOL_SEQ)
 }
 
+}  // namespace test
 }  // namespace oneflow
