@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_ACTOR_BOXING_ACTOR_H_
-#define ONEFLOW_CORE_ACTOR_BOXING_ACTOR_H_
+#ifndef ONEFLOW_CORE_ACTOR_RNN_BOXING_ACTOR_H_
+#define ONEFLOW_CORE_ACTOR_RNN_BOXING_ACTOR_H_
 
 #include "oneflow/core/actor/actor.h"
 
 namespace oneflow {
 
-class BoxingActor final : public Actor {
+class RnnBoxingActor final : public Actor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BoxingActor);
-  BoxingActor() = default;
-  ~BoxingActor() = default;
+  OF_DISALLOW_COPY_AND_MOVE(RnnBoxingActor);
+  RnnBoxingActor() = default;
+  ~RnnBoxingActor() = default;
 
   void VirtualActorInit(const TaskProto&) override;
 
@@ -23,9 +23,11 @@ class BoxingActor final : public Actor {
 
   // <pid, <regst_desc_id, regst*>>
   std::map<int64_t, HashMap<int64_t, std::queue<Regst*>>> readable_regst_;
-  HashMap<int64_t, bool> is_finished_in_cur_pid_;
+  int64_t readable_regst_cnt_;
+  int64_t num_of_consumed_;
+  int64_t num_of_finished_in_cur_pid_;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_BOXING_ACTOR_H_
+#endif  // ONEFLOW_CORE_ACTOR_RNN_BOXING_ACTOR_H_

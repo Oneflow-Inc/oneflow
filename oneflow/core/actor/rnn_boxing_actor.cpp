@@ -1,21 +1,24 @@
-#include "oneflow/core/actor/boxing_actor.h"
+#include "oneflow/core/actor/rnn_boxing_actor.h"
 #include "oneflow/core/register/register.h"
 
 namespace oneflow {
 
-void BoxingActor::VirtualActorInit(const TaskProto& task_proto) {
-  for (const auto& pair : task_proto.consumed_regst_desc_id()) {
-    is_finished_in_cur_pid_[pair.second] = false;
-  }
-  OF_SET_MSG_HANDLER(&BoxingActor::HandlerNormal);
+void RnnBoxingActor::VirtualActorInit(const TaskProto& task_proto) {
+  readable_regst_cnt_ = 0;
+  num_of_consumed_ = task_proto.consumed_regst_desc_id().size();
+  num_of_finished_in_cur_pid_ = 0;
+  OF_SET_MSG_HANDLER(&RnnBoxingActor::HandlerNormal);
 }
 
-int BoxingActor::HandlerNormal(const ActorMsg& msg) {
+int RnnBoxingActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
     DecreaseRemainingEordCnt();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) {
       int64_t cur_pid = msg.regst()->piece_status().piece_id();
+      if (readable_regst_[cur_pid][msg.regst()->regst_desc_id()].empty()) {
+        readable_regst_cnt_ += 1;
+      }
       readable_regst_[cur_pid][msg.regst()->regst_desc_id()].push(msg.regst());
     }
     ActUntilFail();
@@ -25,47 +28,51 @@ int BoxingActor::HandlerNormal(const ActorMsg& msg) {
   return TrySwitchToZombieOrFinish();
 }
 
-void BoxingActor::Act() {
-  int64_t piece_id = readable_regst_.begin()->second.front()->piece_id();
-  AsyncLaunchKernel(GenDefaultKernelCtx(),
-                    [this](int64_t regst_desc_id) -> Regst* {
-                      Regst* regst = GetCurWriteableRegst(regst_desc_id);
-                      if (regst == nullptr) {
-                        return readable_regst_.at(regst_desc_id).front();
-                      } else {
-                        return regst;
-                      }
-                    });
+void RnnBoxingActor::Act() {
+  auto& cur_readable_regst = readable_regst_.begin()->second;
+  AsyncLaunchKernel(
+      GenDefaultKernelCtx(),
+      [this, cur_readable_regst](int64_t regst_desc_id) -> Regst* {
+        Regst* regst = GetCurWriteableRegst(regst_desc_id);
+        if (regst == nullptr) {
+          if (cur_readable_regst.at(regst_desc_id).empty()) {
+            return nullptr;
+          } else {
+            return cur_readable_regst.at(regst_desc_id).front();
+          }
+        } else {
+          return regst;
+        }
+      });
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-    regst->set_piece_id(piece_id);
-    return true;
+    return regst->piece_status().col_id() <= regst->piece_status().max_col_id();
   });
-  for (auto& pair : readable_regst_) {
+  for (auto& pair : cur_readable_regst) {
+    const PieceStatus& pst = pair.second.front()->piece_status();
+    if (pst.col_id() == pst.max_col_id()) { num_of_finished_in_cur_pid_ += 1; }
     AsyncSendRegstMsgToProducer(pair.second.front());
     pair.second.pop();
     if (pair.second.empty()) { readable_regst_cnt_ -= 1; }
   }
-}
-
-bool BoxingActor::IsReadReady() {
-  const auto& cur_readable_regst = readable_regst_.begin()->second;
-  for (const auto& pair: is_finished_in_cur_pid_) {
-    if (cur_readable_regst.find(pair.first) == cur_readable_regst.end() &&
-        !pair.second) {
-      return false;
-    }
+  if (num_of_finished_in_cur_pid_ == num_of_consumed_) {
+    CHECK_EQ(0, readable_regst_cnt_);
+    readable_regst_.erase(readable_regst_.begin());
+    num_of_finished_in_cur_pid_ = 0;
   }
-  return true;
 }
 
-bool BoxingActor::IsReadAlwaysUnReadyFromNow() {
+bool RnnBoxingActor::IsReadReady() {
+  return readable_regst_cnt_ + num_of_finished_in_cur_pid_ == num_of_consumed_;
+}
+
+bool RnnBoxingActor::IsReadAlwaysUnReadyFromNow() {
   return !remaining_eord_cnt() && readable_regst_.empty();
 }
 
-void BoxingActor::AsyncReturnAllReadableRegst() {
+void RnnBoxingActor::AsyncReturnAllReadableRegst() {
   CHECK(readable_regst_.empty());
 }
 
-REGISTER_ACTOR(TaskType::kBoxing, BoxingActor);
+REGISTER_ACTOR(TaskType::kRnnBoxing, RnnBoxingActor);
 
 }  // namespace oneflow

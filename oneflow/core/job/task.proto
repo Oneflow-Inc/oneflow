@@ -20,6 +20,7 @@ enum TaskType {
   kCopyCommNet = 11;
   kBoxing = 12;
   kPrint = 13;
+  kRnnBoxing = 20;
 };
 
 message TaskProto {
