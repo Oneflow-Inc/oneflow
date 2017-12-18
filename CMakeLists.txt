@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.5)
 
 option(BUILD_THIRD_PARTY "Build third party or oneflow" OFF)
-option(ONEFLOW_USE_RDMA "Use RDMA network" ON)
+option(BUILD_RDMA "Build RDMA components" OFF)
 
 # Project
 if (BUILD_THIRD_PARTY)
@@ -41,9 +41,15 @@ else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wno-sign-compare -O0")
 endif()
 
-if (ONEFLOW_USE_RDMA)
+if (BUILD_RDMA)
   if (UNIX)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -libverbs")
+    find_package(RDMA)
+    if (RDMA_FOUND)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -libverbs")
+      add_definitions(-DBUILD_RDMA)
+    else()
+      set(BUILD_RDMA OFF)
+    endif()
   endif()
 endif()
 
