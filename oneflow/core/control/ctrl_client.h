@@ -31,6 +31,7 @@ class CtrlClient final {
   void PullKV(const std::string& k, PbMessage* msg);
 
   void PushActEvent(const ActEvent&);
+  void Clear();
 
  private:
   CtrlClient();

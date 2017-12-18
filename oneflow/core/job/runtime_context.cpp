@@ -16,9 +16,9 @@ void RuntimeCtx::WaitUntilCntEqualZero(const std::string& name) {
   counters_.at(name)->WaitUntilCntEqualZero();
 }
 
-RuntimeCtx::RuntimeCtx(int64_t total_piece_num, bool is_adjust_phase) {
+RuntimeCtx::RuntimeCtx(int64_t total_piece_num, bool is_experiment_phase) {
   total_piece_num_ = total_piece_num;
-  is_adjust_phase_ = is_adjust_phase;
+  is_experiment_phase_ = is_experiment_phase;
 }
 
 }  // namespace oneflow

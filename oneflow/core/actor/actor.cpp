@@ -97,7 +97,7 @@ void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) {
     double start_time = GetCurTime();
     Act();
-    if (RuntimeCtx::Singleton()->is_adjust_phase() == false) { continue; }
+    if (RuntimeCtx::Singleton()->is_experiment_phase() == false) { continue; }
     int64_t actor_id = actor_id_;
     int64_t act_id = actor_id_++;
     int64_t work_stream_id = device_ctx_->work_stream_id();

@@ -29,8 +29,8 @@ int32_t JobDesc::CommNetWorkerNum() const {
 int32_t JobDesc::ParallelPieceSize() const {
   return job_conf_.data_part_num() * SinglePieceSize();
 }
-int64_t JobDesc::piece_num_of_adjust_phase() const {
-  return job_conf_.piece_num_of_adjust_phase();
+int64_t JobDesc::piece_num_of_experiment_phase() const {
+  return job_conf_.piece_num_of_experiment_phase();
 }
 
 const std::string& JobDesc::MdSaveSnapshotsPath() const {

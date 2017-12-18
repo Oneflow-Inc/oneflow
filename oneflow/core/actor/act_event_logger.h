@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_ACTOR_ACT_EVENT_LOGGER_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/str_util.h"
 #include "oneflow/core/actor/act_event.pb.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
 
@@ -15,6 +16,9 @@ class ActEventLogger final {
   OF_SINGLETON(ActEventLogger);
 
   void PrintActEventToLogDir(const ActEvent&);
+
+  static const std::string act_event_bin_filename_;
+  static const std::string act_event_txt_filename_;
 
  private:
   ActEventLogger();
