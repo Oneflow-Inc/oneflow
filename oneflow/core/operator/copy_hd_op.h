@@ -13,7 +13,6 @@ class CopyHdOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
-  bool NeedOutWhenBackward() const override { return false; }
 
  private:
   std::string ibn2lbn(const std::string& input_bn) const override {
