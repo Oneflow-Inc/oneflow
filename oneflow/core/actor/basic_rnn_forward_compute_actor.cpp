@@ -137,27 +137,23 @@ void BasicRnnForwardCompActor::UpdtInAndModelStates() {
     int64_t model_vid = model_regst->model_version_id();
     model_regst2cnt_.at(model_regst) -= 1;
 
-    if (cur_pid == GetLastPieceIdForModelVersionId(model_vid)) {
-      if (model_regst2cnt_.at(model_regst) == 0) {
-        model_regst2cnt_.erase(model_regst);
+    if (model_regst2cnt_.at(model_regst) == 0) {
+      model_regst2cnt_.erase(model_regst);
+      if (latest_model_regst_ != model_regst
+          || cur_pid == GetLastPieceIdForModelVersionId(model_vid)
+          || models_to_be_released_.find(model_regst) 
+             != models_to_be_released_.end()) {
         AsyncSendRegstMsgToProducer(model_regst);
         if (model_regst == latest_model_regst_) {
           latest_model_regst_ = nullptr;
         }
-      } else {
-        models_to_be_released_.insert(model_regst);
-      }
-    } else {
-      if (model_regst2cnt_.at(model_regst) == 0) {
-        model_regst2cnt_.erase(model_regst);
-        if (models_to_be_released_.find(model_regst)
-            == models_to_be_released_.end()) {
-          AsyncSendRegstMsgToProducer(model_regst);
-          if (latest_model_regst_ == model_regst) {
-            latest_model_regst_ = nullptr;
-          }
+        if (models_to_be_released_.find(model_regst) 
+            != models_to_be_released_.end()) {
+          models_to_be_released_.erase(model_regst);
         }
       }
+    } else if (cur_pid == last_pid) {
+      CHECK(models_to_be_released_.insert(model_regst).second);
     }
   } else {
     pid2in_regsts_.at(cur_pid).pop();
