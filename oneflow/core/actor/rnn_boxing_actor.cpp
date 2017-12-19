@@ -4,9 +4,9 @@
 namespace oneflow {
 
 void RnnBoxingActor::VirtualActorInit(const TaskProto& task_proto) {
-  readable_regst_cnt_ = 0;
   num_of_consumed_ = task_proto.consumed_regst_desc_id().size();
   num_of_finished_in_cur_pid_ = 0;
+  is_ascending_ = true;
   OF_SET_MSG_HANDLER(&RnnBoxingActor::HandlerNormal);
 }
 
@@ -15,11 +15,14 @@ int RnnBoxingActor::HandlerNormal(const ActorMsg& msg) {
     DecreaseRemainingEordCnt();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) {
-      int64_t cur_pid = msg.regst()->piece_status().piece_id();
-      if (readable_regst_[cur_pid][msg.regst()->regst_desc_id()].empty()) {
-        readable_regst_cnt_ += 1;
+      const PieceStatus& pst = msg.regst()->piece_status();
+      int64_t cur_pid = pst.piece_id();
+      int64_t regst_desc_id = msg.regst()->regst_desc_id();
+      if (readable_regst_[cur_pid][regst_desc_id].empty()) {
+        readable_regst_cnt_[cur_pid] += 1;
+        if (pst.max_col_id() > 1 && pst.IsLastCol()) { is_ascending_ = false; }
       }
-      readable_regst_[cur_pid][msg.regst()->regst_desc_id()].push(msg.regst());
+      readable_regst_[cur_pid][regst_desc_id].push(msg.regst());
     }
     ActUntilFail();
   } else {

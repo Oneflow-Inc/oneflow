@@ -23,9 +23,10 @@ class RnnBoxingActor final : public Actor {
 
   // <pid, <regst_desc_id, regst*>>
   std::map<int64_t, HashMap<int64_t, std::queue<Regst*>>> readable_regst_;
-  int64_t readable_regst_cnt_;
+  std::map<int64_t, int64_t> readable_regst_cnt_;
   int64_t num_of_consumed_;
   int64_t num_of_finished_in_cur_pid_;
+  bool is_ascending_;
 };
 
 }  // namespace oneflow
