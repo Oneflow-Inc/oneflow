@@ -89,8 +89,8 @@ void ModelMergeChains(std::list<Chain>* chain_list,
     // Merge
     pred_chain->nodes.insert(pred_chain->nodes.end(), cur_chain->nodes.begin(),
                              cur_chain->nodes.end());
-    pred_chain->ancestors_and_this.insert(pred_chain->ancestors_and_this.end(), cur_chain->nodes.begin(),
-                             cur_chain->nodes.end());
+    pred_chain->ancestors_and_this.insert(cur_chain->nodes.begin(),
+                                          cur_chain->nodes.end());
     for (const LogicalNode* node : cur_chain->nodes) {
       pred_chain->descendants.erase(node);
       logical2chain_it->at(node) = pred_chain;
