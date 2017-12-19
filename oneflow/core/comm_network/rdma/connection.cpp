@@ -2,12 +2,6 @@
 
 namespace oneflow {
 
-Connection::Connection() : qp_ptr_(nullptr) {}
-
-Connection::~Connection() {
-  if (qp_ptr_ != nullptr) { CHECK_EQ(ibv_destroy_qp(qp_ptr_), 0); }
-}
-
 void Connection::PostReadRequest(void* read_ctx, const RdmaMem* local_mem,
                                  const RdmaMemDesc& remote_mem) {
   ibv_send_wr wr, *bad_wr = nullptr;

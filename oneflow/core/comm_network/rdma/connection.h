@@ -12,8 +12,10 @@ namespace oneflow {
 
 class Connection {
  public:
-  explicit Connection();
-  ~Connection();
+  explicit Connection() : qp_ptr_(nullptr) {}
+  ~Connection() {
+    if (qp_ptr_ != nullptr) { CHECK_EQ(ibv_destroy_qp(qp_ptr_), 0); }
+  }
 
   void set_ibv_mtu(enum ibv_mtu active_mtu) { active_mtu_ = active_mtu; }
   void set_ibv_qp_ptr(ibv_qp* ibv_qp_ptr) { qp_ptr_ = ibv_qp_ptr; }
