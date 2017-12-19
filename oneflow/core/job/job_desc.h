@@ -23,6 +23,7 @@ class JobDesc final {
   const DLNetConf& dlnet_conf() const { return dlnet_conf_; }
   const Resource& resource() const { return resource_; }
   const Placement& placement() const { return placement_; }
+  bool use_rdma() const { return job_conf_.use_rdma(); }
   const std::string& MdLoadSnapshotPath();
   DataType DefaultDataType() const { return job_conf_.default_data_type(); }
   size_t SizeOfOneDataId() const;
