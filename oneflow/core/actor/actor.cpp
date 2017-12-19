@@ -162,6 +162,14 @@ void Actor::AsyncSendRegstMsgToConsumer(
     CHECK_EQ(regst_reading_cnt_it->second, 0);
     for (int64_t consumer : regst->consumers_actor_id()) {
       if (!IsAllowedActor(consumer)) { continue; }
+      if (this_actor_id == consumer) {
+        if (regst->is_forward() && regst->piece_status().IsLastCol()) {
+          continue;
+        }
+        if (!(regst->is_forward()) && regst->piece_status().col_id() == 0) {
+          continue;
+        }
+      }
       total_reading_cnt_ += 1;
       regst_reading_cnt_it->second += 1;
       device_ctx_->AddCallBack([consumer, regst, this_actor_id]() {
@@ -192,8 +200,10 @@ void Actor::AsyncSendRegstMsgToConsumer() {
 void Actor::AsyncSendEORDMsgToConsumers(int64_t regst_desc_id) {
   const RtRegstDesc* regst_desc =
       produced_regsts_.at(regst_desc_id).front()->regst_desc();
-  device_ctx_->AddCallBack([regst_desc]() {
+  device_ctx_->AddCallBack([regst_desc, this]() {
     for (int64_t consumer : regst_desc->consumers_actor_id()) {
+      // do not send EORD msg through recurrent edge
+      if (consumer == actor_id_) { continue; }
       ActorMsg msg =
           ActorMsg::BuildEordMsg(consumer, regst_desc->regst_desc_id());
       ActorMsgBus::Singleton()->SendMsg(std::move(msg));
@@ -223,6 +233,10 @@ void Actor::AsyncDo(std::function<void()> func) {
 int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   auto reading_cnt_it = produced_regst2reading_cnt_.find(regst);
   if (reading_cnt_it == produced_regst2reading_cnt_.end()) { return -1; }
+
+  // for out_produce, out_consume is its down-actor
+  if (regst->recurrent_flag() == -1) { return -1; }
+
   CHECK_GE(reading_cnt_it->second, 1);
   reading_cnt_it->second -= 1;
   total_reading_cnt_ -= 1;
