@@ -6,6 +6,13 @@ namespace oneflow {
 
 JobDesc::JobDesc(const JobConf& conf) {
   job_conf_ = conf;
+#ifdef WITH_RDMA
+  if (!job_conf_.use_rdma()) {
+    LOG(WARNING) << "Compiled RDMA components while use_rdma = false";
+  }
+#else
+  if (job_conf_.use_rdma()) { LOG(FATAL) << "RDMA components not compiled"; }
+#endif
   ParseProtoFromTextFile(conf.dlnet_filepath(), &dlnet_conf_);
   ParseProtoFromTextFile(conf.resource_filepath(), &resource_);
   ParseProtoFromTextFile(conf.placement_filepath(), &placement_);

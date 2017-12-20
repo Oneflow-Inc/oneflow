@@ -23,10 +23,10 @@ class JobDesc final {
   const DLNetConf& dlnet_conf() const { return dlnet_conf_; }
   const Resource& resource() const { return resource_; }
   const Placement& placement() const { return placement_; }
-  bool use_rdma() const { return job_conf_.use_rdma(); }
   const std::string& MdLoadSnapshotPath();
   DataType DefaultDataType() const { return job_conf_.default_data_type(); }
   size_t SizeOfOneDataId() const;
+  bool use_rdma() const { return job_conf_.use_rdma(); }
   int64_t TotalMachineNum() const { return resource_.machine().size(); }
   DeviceType GetDeviceType() const { return resource_.device_type(); }
   int32_t PersistenceWorkerNum() const;

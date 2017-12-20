@@ -30,12 +30,6 @@ foreach(oneflow_single_file ${oneflow_all_src})
   string(REPLACE "/" "\\" group_name ${oneflow_relative_path})
   source_group("${group_name}" FILES ${oneflow_single_file})
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/comm_network/rdma/.*\\.(h|cpp)$")
-    if(NOT BUILD_RDMA)
-      continue()
-    endif()
-  endif()
-
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.h$")
     list(APPEND of_all_obj_cc ${oneflow_single_file})
   endif()
