@@ -17,23 +17,26 @@ std::shared_ptr<Operator> CreateCloneOp(int out_num) {
 template<DeviceType device_type, typename T>
 std::function<Blob*(const std::string)> BuildBnInOp2BlobFunc(int out_num) {
   BlobDesc* blob_desc_with_dataid =
-      new BlobDesc(Shape({1, 3, 2}), GetDataType<T>::val, false);
-  BlobDesc* blob_desc_without_dataid =
       new BlobDesc(Shape({1, 3, 2}), GetDataType<T>::val, true);
-  std::vector<std::string>* data_id = new std::vector<std::string>({"zero"});
-  HashMap<std::string, BlobInitConf> bn2blob_init_conf = {
-      {"in", BlobInitConf(1.f, blob_desc_with_dataid, data_id)},
-      {GenDiffBn("in"), BlobInitConf(blob_desc_without_dataid, nullptr)},
+  BlobDesc* blob_desc_without_dataid =
+      new BlobDesc(Shape({1, 3, 2}), GetDataType<T>::val, false);
+  RandomValConf random_val_conf = {{GenDiffBn("in"), blob_desc_without_dataid}};
+  SameValConf same_val_conf = {
+      {"in", std::make_tuple(1.f, blob_desc_with_dataid)},
       {"in_diff_expected",
-       BlobInitConf(out_num * 1.f, blob_desc_without_dataid, nullptr)}};
+       std::make_tuple(out_num * 1.f, blob_desc_without_dataid)}};
   FOR_RANGE(int, i, 0, out_num) {
-    bn2blob_init_conf.insert({"out_" + std::to_string(i),
-                              BlobInitConf(blob_desc_with_dataid, nullptr)});
-    bn2blob_init_conf.insert(
-        {"out_" + std::to_string(i) + "_diff",
-         BlobInitConf(1.f, blob_desc_without_dataid, nullptr)});
+    random_val_conf.emplace("out_" + std::to_string(i), blob_desc_with_dataid);
+    same_val_conf.emplace("out_" + std::to_string(i) + "_diff",
+                          std::make_tuple(1.f, blob_desc_without_dataid));
   }
-  return KTCommon<device_type, T>::ConstructBnInOp2BlobFunc(bn2blob_init_conf);
+  SpecifiedValConf<T> empty_specified_val_conf;
+  auto bn2blobdesc_func = KTCommon<device_type, T>::ConstructBnInOp2BlobFunc(
+      random_val_conf, same_val_conf, empty_specified_val_conf);
+
+  // set data_id
+  SetBlobDataId<device_type>(bn2blobdesc_func("in"), {"zero"});
+  return bn2blobdesc_func;
 }
 
 template<DeviceType device_type, typename T>
@@ -89,6 +92,7 @@ template<DeviceType device_type, typename T, bool has_data_id>
 void TestCloneOpKernel() {
   JobConf job_conf;
   job_conf.set_default_data_type(GetDataType<T>::val);
+  job_conf.set_max_data_id_length(8);
   JobDesc::NewSingleton();
   JobDesc::Singleton()->job_conf_ = job_conf;
 
