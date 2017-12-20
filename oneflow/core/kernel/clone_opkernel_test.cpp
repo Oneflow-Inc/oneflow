@@ -30,9 +30,8 @@ std::function<Blob*(const std::string)> BuildBnInOp2BlobFunc(int out_num) {
     same_val_conf.emplace("out_" + std::to_string(i) + "_diff",
                           std::make_tuple(1.f, blob_desc_without_dataid));
   }
-  SpecifiedValConf<T> empty_specified_val_conf;
   auto bn2blobdesc_func = KTCommon<device_type, T>::ConstructBnInOp2BlobFunc(
-      random_val_conf, same_val_conf, empty_specified_val_conf);
+      random_val_conf, same_val_conf, SpecifiedValConf<T>());
 
   // set data_id
   SetBlobDataId<device_type>(bn2blobdesc_func("in"), {"zero"});

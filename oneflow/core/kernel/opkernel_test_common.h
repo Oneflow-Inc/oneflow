@@ -47,8 +47,8 @@ class KTCommon final {
   }
 
   static std::function<Blob*(const std::string)> ConstructBnInOp2BlobFunc(
-      RandomValConf& random_val_conf, SameValConf& same_val_conf,
-      SpecifiedValConf<T>& specified_vals_conf) {
+      RandomValConf random_val_conf, SameValConf same_val_conf,
+      SpecifiedValConf<T> specified_vals_conf) {
     auto bn2blob = new HashMap<std::string, Blob*>;
     BlobDesc* blob_desc = nullptr;
     for (auto blob_conf_pair : random_val_conf) {
