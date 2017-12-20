@@ -164,6 +164,10 @@ struct OpRegister {
 #define REGISTER_OP(OpTypeCase, OpType) \
   static OpRegister<OpTypeCase, OpType> g_##OpType##_register_var;
 
+void EraseEmptyBnInVec(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    PbRpf<std::string>* bns);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_OPERATOR_OPERATOR_H_
