@@ -28,6 +28,20 @@ void SyncStream<DeviceType::kGPU>(KernelCtx* ctx) {
   CudaCheck(cudaStreamSynchronize(ctx->device_ctx->cuda_stream()));
 }
 
+template<>
+void SetBlobDataId<DeviceType::kGPU>(Blob* blob,
+                                     const std::vector<std::string>& data_ids) {
+  CHECK_EQ(blob->has_data_id(), true);
+  CHECK_EQ(data_ids.size(), static_cast<size_t>(blob->shape().At(0)));
+  CudaCheck(
+      cudaMemset(blob->mut_data_id(0), '\0', blob->ByteSizeOfDataIdField()));
+  FOR_RANGE(size_t, i, 0, data_ids.size()) {
+    CHECK_LE(data_ids[i].size(), JobDesc::Singleton()->SizeOfOneDataId());
+    CudaCheck(cudaMemcpy(blob->mut_data_id(i), data_ids[i].c_str(),
+                         data_ids[i].size(), cudaMemcpyHostToDevice));
+  }
+}
+
 template<typename T>
 class KTCommon<DeviceType::kGPU, T> final {
  public:
@@ -42,12 +56,10 @@ class KTCommon<DeviceType::kGPU, T> final {
   static void BlobCmp(const Blob* lhs, const Blob* rhs) {
     Blob* cpu_lhs = CreateBlob<DeviceType::kCPU>(lhs->blob_desc_ptr());
     Blob* cpu_rhs = CreateBlob<DeviceType::kCPU>(rhs->blob_desc_ptr());
-    CudaCheck(cudaMemcpy(cpu_lhs->mut_dptr(), lhs->dptr(),
-                         lhs->ByteSizeOfDataContentField(),
-                         cudaMemcpyDeviceToHost));
-    CudaCheck(cudaMemcpy(cpu_rhs->mut_dptr(), rhs->dptr(),
-                         rhs->ByteSizeOfDataContentField(),
-                         cudaMemcpyDeviceToHost));
+    CudaCheck(cudaMemcpy(cpu_lhs->mut_memory_ptr(), lhs->memory_ptr(),
+                         lhs->TotalByteSize(), cudaMemcpyDeviceToHost));
+    CudaCheck(cudaMemcpy(cpu_rhs->mut_memory_ptr(), rhs->memory_ptr(),
+                         rhs->TotalByteSize(), cudaMemcpyDeviceToHost));
     KTCommon<DeviceType::kCPU, T>::BlobCmp(cpu_lhs, cpu_rhs);
   }
 

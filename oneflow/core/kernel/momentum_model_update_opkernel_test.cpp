@@ -1,5 +1,5 @@
+#include "oneflow/core/kernel/opkernel_test_common.h"
 #include "oneflow/core/kernel/momentum_model_update_kernel.h"
-#include "oneflow/core/kernel/kernel_test_common.h"
 
 namespace oneflow {
 
@@ -8,7 +8,8 @@ namespace test {
 namespace {
 
 template<DeviceType device_type, typename T>
-Kernel* BuildMomentumMdUpdateKernel(float learning_rate, float beta) {
+MdUpdateKernel<device_type>* BuildMomentumMdUpdateKernel(float learning_rate,
+                                                         float beta) {
   OperatorConf op_conf;
   op_conf.set_name("momentum_model_update_test");
   MomentumModelUpdateOpConf* momentum_md_update_conf =
@@ -16,35 +17,42 @@ Kernel* BuildMomentumMdUpdateKernel(float learning_rate, float beta) {
   momentum_md_update_conf->set_learning_rate(learning_rate);
   momentum_md_update_conf->set_beta(beta);
   auto momentum_md_update_op = ConstructOp(op_conf);
-  OperatorProto op_proto;
-  momentum_md_update_op->ToProto(&op_proto);
+  auto bn2blob_desc_func = ConstructBn2BlobDescFunc(momentum_md_update_op);
+  KernelConf kernel_conf;
+  momentum_md_update_op->GenKernelConf(bn2blob_desc_func, false, nullptr,
+                                       &kernel_conf);
   auto momentum_md_update_kernel = new MomentumMdUpdateKernel<device_type, T>();
-  momentum_md_update_kernel->InitFromOpProto(op_proto);
+  momentum_md_update_kernel->Init(nullptr, kernel_conf);
   return momentum_md_update_kernel;
 }
 
-void InitJobDesc(int32_t piece_size, int32_t num_of_pieces_in_batch) {
+template<typename T>
+void InitJobDesc(int32_t piece_size, int32_t num_of_pieces_in_batch,
+                 int32_t data_part_num) {
   JobConf job_conf;
-  job_conf.set_piece_size(piece_size);
+  job_conf.set_default_data_type(GetDataType<T>::val);
+  job_conf.set_single_piece_size(piece_size);
+  job_conf.set_data_part_num(data_part_num);
   auto train_conf = job_conf.mutable_train_conf();
   train_conf->set_num_of_pieces_in_batch(num_of_pieces_in_batch);
-  JobDesc::Singleton()->InitFromJobConf(job_conf);
+  JobDesc::NewSingleton();
+  JobDesc::Singleton()->job_conf_ = job_conf;
 }
 
 template<DeviceType device_type, typename T>
 std::function<Blob*(const std::string&)> BuildBnInOp2Blob() {
-  using KTC = KTCommon<device_type, T>;
-
   BlobDesc* blob_desc =
       new BlobDesc(Shape({1, 3, 2}), GetDataType<T>::val, false);
 
-  auto bn2blob = new HashMap<std::string, Blob*>;
-  (*bn2blob)["model"] = KTC::CreateBlobWithSameVal(blob_desc, 2);
-  (*bn2blob)["momentum"] = KTC::CreateBlobWithSameVal(blob_desc, 4);
-  (*bn2blob)["model_diffs"] = KTC::CreateBlobWithSameVal(blob_desc, 4);
-  (*bn2blob)["model_expected"] = KTC::CreateBlobWithSameVal(blob_desc, 3);
-  (*bn2blob)["momentum_expected"] = KTC::CreateBlobWithSameVal(blob_desc, 1);
-  return [bn2blob](const std::string& bn) { return bn2blob->at(bn); };
+  RandomValConf random_val_conf = {{"model", blob_desc}};
+  SameValConf same_val_conf = {
+      {"pre_model", std::make_tuple(2, blob_desc)},
+      {"momentum", std::make_tuple(4, blob_desc)},
+      {"model_diff_acc", std::make_tuple(4, blob_desc)},
+      {"model_expected", std::make_tuple(3, blob_desc)},
+      {"momentum_expected", std::make_tuple(1, blob_desc)}};
+  return KTCommon<device_type, T>::ConstructBnInOp2BlobFunc(
+      random_val_conf, same_val_conf, SpecifiedValConf<T>());
 }
 
 template<DeviceType device_type, typename T>
@@ -53,16 +61,18 @@ void TestMomentumMdUpdateKernel() {
   KernelCtx ctx;
   BuildKernelCtx<device_type>(&ctx);
 
+  int32_t piece_size = 1;
+  int32_t num_of_pieces_in_batch = 2;
+  int32_t data_part_num = 1;
+  InitJobDesc<T>(piece_size, num_of_pieces_in_batch, data_part_num);
   const float learning_rate = {0.5f};
   const float beta = {0.5f};
   auto BnInOp2Blob = BuildBnInOp2Blob<device_type, T>();
-  auto momentum_md_update_kernel =
+  auto momentum_mdupdt_kernel =
       BuildMomentumMdUpdateKernel<device_type, T>(learning_rate, beta);
-  int32_t piece_size = 1;
-  int32_t num_of_pieces_in_batch = 2;
-  InitJobDesc(piece_size, num_of_pieces_in_batch);
 
-  momentum_md_update_kernel->Forward(ctx, BnInOp2Blob);
+  momentum_mdupdt_kernel->UpdateModel(ctx.device_ctx, BnInOp2Blob("pre_model"),
+                                      0, BnInOp2Blob);
   SyncStream<device_type>(&ctx);
 
   KTC::CheckResult(BnInOp2Blob, "momentum", "momentum_expected");
