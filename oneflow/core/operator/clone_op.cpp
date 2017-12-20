@@ -22,6 +22,12 @@ void CloneOp::InferBlobDescs(
   }
 }
 
+void CloneOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  EraseEmptyBnInVec(GetBlobDesc4BnInOp, kernel_conf->mutable_output_diff_bns());
+}
+
 REGISTER_OP(OperatorConf::kCloneConf, CloneOp);
 
 }  // namespace oneflow
