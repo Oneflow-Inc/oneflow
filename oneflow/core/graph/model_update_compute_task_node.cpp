@@ -6,7 +6,10 @@ namespace oneflow {
 void MdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
   int32_t min_model_regst = -1;
   int32_t max_model_regst = -1;
-  if (JobDesc::Singleton()->Staleness() == -1) {
+  if (JobDesc::Singleton()->IsPredict()) {
+    min_model_regst = 1;
+    max_model_regst = 1;
+  } else if (JobDesc::Singleton()->Staleness() == -1) {
     min_model_regst = 2;
     max_model_regst = kMaxRegisterNum;
   } else {
