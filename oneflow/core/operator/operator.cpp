@@ -210,4 +210,17 @@ std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf) {
   return ret;
 }
 
+void EraseEmptyBnInVec(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    PbRpf<std::string>* bns) {
+  size_t idx_available = 0;
+  for (size_t i = 0; i < bns->size(); ++i) {
+    if (GetBlobDesc4BnInOp((*bns)[i])) {
+      if (i != idx_available) { (*bns)[idx_available] = (*bns)[i]; }
+      ++idx_available;
+    }
+  }
+  bns->erase(bns->begin() + idx_available, bns->end());
+}
+
 }  // namespace oneflow
