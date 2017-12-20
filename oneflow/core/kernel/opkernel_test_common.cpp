@@ -83,11 +83,9 @@ class KTCommon<DeviceType::kCPU, T> final {
           0);
     }
     if (lhs->has_data_id() == false) { return; }
-    for (int64_t i = 0; i < lhs->shape().At(0); ++i) {
-      CHECK_EQ(memcmp(lhs->data_id(i), rhs->data_id(i),
-                      JobDesc::Singleton()->SizeOfOneDataId()),
-               0);
-    }
+    CHECK_EQ(
+        memcmp(lhs->data_id(0), rhs->data_id(0), lhs->ByteSizeOfDataIdField()),
+        0);
   }
 
   static void CheckFillResult(const Blob* blob, const FillConf& fill_conf) {
