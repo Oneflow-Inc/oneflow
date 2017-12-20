@@ -45,6 +45,19 @@ void BuildKernelCtx<DeviceType::kCPU>(KernelCtx* ctx) {
 template<>
 void SyncStream<DeviceType::kCPU>(KernelCtx* ctx) {}
 
+template<>
+void SetBlobDataId<DeviceType::kCPU>(Blob* blob,
+                                     const std::vector<std::string>& data_ids) {
+  CHECK_EQ(blob->has_data_id(), true);
+  CHECK_EQ(data_ids.size(), blob->shape().At(0));
+  CudaCheck(
+      cudaMemset(blob->mut_data_id(0), '\0', blob->ByteSizeOfDataIdField()));
+  FOR_RANGE(size_t, i, 0, data_ids.size()) {
+    CHECK_LE(data_ids[i].size(), JobDesc::Singleton()->SizeOfOneDataId());
+    memcpy(blob->mut_data_id(i), data_ids[i].c_str(), data_ids[i].size());
+  }
+}
+
 template<typename T>
 class KTCommon<DeviceType::kCPU, T> final {
  public:
@@ -59,6 +72,7 @@ class KTCommon<DeviceType::kCPU, T> final {
   static void BlobCmp(const Blob* lhs, const Blob* rhs) {
     ASSERT_EQ(lhs->blob_desc(), rhs->blob_desc());
     CHECK_EQ(lhs->data_type(), GetDataType<T>::val);
+    CHECK_EQ(lhs->has_data_id(), rhs->has_data_id());
     if (IsFloatingPoint(lhs->data_type())) {
       for (int64_t i = 0; i < lhs->shape().elem_cnt(); ++i) {
         ASSERT_FLOAT_EQ(lhs->dptr<T>()[i], rhs->dptr<T>()[i]);
@@ -68,6 +82,10 @@ class KTCommon<DeviceType::kCPU, T> final {
           memcmp(lhs->dptr(), rhs->dptr(), lhs->ByteSizeOfDataContentField()),
           0);
     }
+    if (lhs->has_data_id() == false) { return; }
+    CHECK_EQ(
+        memcmp(lhs->data_id(0), rhs->data_id(0), lhs->ByteSizeOfDataIdField()),
+        0);
   }
 
   static void CheckFillResult(const Blob* blob, const FillConf& fill_conf) {
