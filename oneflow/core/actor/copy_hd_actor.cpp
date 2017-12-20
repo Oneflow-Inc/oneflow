@@ -4,6 +4,7 @@ namespace oneflow {
 
 void CopyHdActor::VirtualActorInit(const TaskProto& task_proto) {
   OF_SET_MSG_HANDLER(&CopyHdActor::HandlerNormal);
+  is_in_eord_ = false;
 }
 
 void CopyHdActor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
