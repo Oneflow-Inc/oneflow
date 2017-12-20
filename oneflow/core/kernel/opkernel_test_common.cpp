@@ -48,17 +48,37 @@ void SyncStream<DeviceType::kCPU>(KernelCtx* ctx) {}
 template<typename T>
 class KTCommon<DeviceType::kCPU, T> final {
  public:
-  static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc, T* val) {
+  static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc, T* val,
+                                          std::vector<std::string>* data_id) {
     Blob* ret = CreateBlob<DeviceType::kCPU>(blob_desc);
     CudaCheck(cudaMemcpy(ret->mut_dptr(), val,
                          ret->ByteSizeOfDataContentField(),
                          cudaMemcpyHostToHost));
+    if (ret->has_data_id() && data_id != nullptr) {
+      CHECK_EQ(data_id->size(), ret->shape().At(0));
+      FOR_RANGE(size_t, i, 0, data_id->size()) {
+        std::string data_id_str = data_id->at(i);
+        memcpy(ret->mut_data_id(i), data_id_str.c_str(), data_id_str.size());
+        CHECK_LE(data_id_str.size(), JobDesc::Singleton()->SizeOfOneDataId());
+        if (data_id_str.size() < JobDesc::Singleton()->SizeOfOneDataId()) {
+          ret->mut_data_id(i)[data_id_str.size()] = '\0';
+        }
+      }
+    }
     return ret;
   }
 
   static void BlobCmp(const Blob* lhs, const Blob* rhs) {
     ASSERT_EQ(lhs->blob_desc(), rhs->blob_desc());
     CHECK_EQ(lhs->data_type(), GetDataType<T>::val);
+    CHECK_EQ(lhs->has_data_id(), rhs->has_data_id());
+    if (lhs->has_data_id()) {
+      for (int64_t i = 0; i < lhs->shape().At(0); ++i) {
+        CHECK_EQ(memcmp(lhs->data_id(i), rhs->data_id(i),
+                        JobDesc::Singleton()->SizeOfOneDataId()),
+                 0);
+      }
+    }
     if (IsFloatingPoint(lhs->data_type())) {
       for (int64_t i = 0; i < lhs->shape().elem_cnt(); ++i) {
         ASSERT_FLOAT_EQ(lhs->dptr<T>()[i], rhs->dptr<T>()[i]);

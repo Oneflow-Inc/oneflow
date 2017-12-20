@@ -15,19 +15,23 @@ namespace test {
 enum BlobInitMethod { kRandom, kSpecific };
 
 struct BlobInitConf {
-  BlobInitConf(float specific_num, BlobDesc* blob_desc) {
+  BlobInitConf(float specific_num, BlobDesc* blob_desc,
+               std::vector<std::string>* data_id) {
     this->init_method = kSpecific;
     this->specific_num = specific_num;
     this->blob_desc = blob_desc;
+    this->data_id = data_id;
   }
-  BlobInitConf(BlobDesc* blob_desc) {
+  BlobInitConf(BlobDesc* blob_desc, std::vector<std::string>* data_id) {
     this->init_method = kRandom;
     this->specific_num = 0;
     this->blob_desc = blob_desc;
+    this->data_id = data_id;
   }
   BlobInitMethod init_method;
   float specific_num;
   BlobDesc* blob_desc;
+  std::vector<std::string>* data_id;
 };
 
 std::function<BlobDesc*(const std::string)> ConstructBn2BlobDescFunc(
@@ -48,10 +52,12 @@ class KTCommon final {
   OF_DISALLOW_COPY_AND_MOVE(KTCommon);
   KTCommon() = delete;
 
-  static Blob* CreateBlobWithSpecifiedVal(const BlobDesc*, T* val);
+  static Blob* CreateBlobWithSpecifiedVal(const BlobDesc*, T* val,
+                                          std::vector<std::string>* data_id);
   static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc,
-                                          std::vector<T> val) {
-    return CreateBlobWithSpecifiedVal(blob_desc, &(val[0]));
+                                          std::vector<T> val,
+                                          std::vector<std::string>* data_id) {
+    return CreateBlobWithSpecifiedVal(blob_desc, &(val[0]), data_id);
   }
 
   static std::function<Blob*(const std::string)> ConstructBnInOp2BlobFunc(
@@ -60,12 +66,13 @@ class KTCommon final {
     for (auto blob_init_conf_pair : bn2blob_init_conf) {
       BlobInitConf& blob_init_conf = blob_init_conf_pair.second;
       if (blob_init_conf.init_method == kRandom) {
-        (*bn2blob)[blob_init_conf_pair.first] =
-            CreateBlobWithRandomVal(blob_init_conf.blob_desc);
+        (*bn2blob)[blob_init_conf_pair.first] = CreateBlobWithRandomVal(
+            blob_init_conf.blob_desc, blob_init_conf.data_id);
       } else if (blob_init_conf.init_method == kSpecific) {
         (*bn2blob)[blob_init_conf_pair.first] =
             CreateBlobWithSameVal(blob_init_conf.blob_desc,
-                                  static_cast<T>(blob_init_conf.specific_num));
+                                  static_cast<T>(blob_init_conf.specific_num),
+                                  blob_init_conf.data_id);
       } else {
         UNEXPECTED_RUN();
       }
@@ -73,13 +80,15 @@ class KTCommon final {
     return [bn2blob](const std::string& bn) { return bn2blob->at(bn); };
   }
 
-  static Blob* CreateBlobWithSameVal(const BlobDesc* blob_desc, T val) {
+  static Blob* CreateBlobWithSameVal(const BlobDesc* blob_desc, T val,
+                                     std::vector<std::string>* data_id) {
     T* val_vec = new T[blob_desc->shape().elem_cnt()];
     std::fill(val_vec, val_vec + blob_desc->shape().elem_cnt(), val);
-    return CreateBlobWithSpecifiedVal(blob_desc, val_vec);
+    return CreateBlobWithSpecifiedVal(blob_desc, val_vec, data_id);
   }
 
-  static Blob* CreateBlobWithRandomVal(const BlobDesc* blob_desc) {
+  static Blob* CreateBlobWithRandomVal(const BlobDesc* blob_desc,
+                                       std::vector<std::string>* data_id) {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<double> dis(0, 10);
@@ -87,7 +96,7 @@ class KTCommon final {
     for (int64_t i = 0; i < blob_desc->shape().elem_cnt(); ++i) {
       val_vec[i] = static_cast<T>(dis(gen));
     }
-    return CreateBlobWithSpecifiedVal(blob_desc, val_vec);
+    return CreateBlobWithSpecifiedVal(blob_desc, val_vec, data_id);
   }
 
   static void BlobCmp(const Blob* lhs, const Blob* rhs);

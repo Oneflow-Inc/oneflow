@@ -16,17 +16,22 @@ std::shared_ptr<Operator> CreateCloneOp(int out_num) {
 
 template<DeviceType device_type, typename T>
 std::function<Blob*(const std::string)> BuildBnInOp2BlobFunc(int out_num) {
-  BlobDesc* blob_desc =
+  BlobDesc* blob_desc_with_dataid =
       new BlobDesc(Shape({1, 3, 2}), GetDataType<T>::val, false);
+  BlobDesc* blob_desc_without_dataid =
+      new BlobDesc(Shape({1, 3, 2}), GetDataType<T>::val, true);
+  std::vector<std::string>* data_id = new std::vector<std::string>({"zero"});
   HashMap<std::string, BlobInitConf> bn2blob_init_conf = {
-      {"in", BlobInitConf(1.f, blob_desc)},
-      {GenDiffBn("in"), BlobInitConf(blob_desc)},
-      {"in_diff_expected", BlobInitConf(out_num * 1.f, blob_desc)}};
+      {"in", BlobInitConf(1.f, blob_desc_with_dataid, data_id)},
+      {GenDiffBn("in"), BlobInitConf(blob_desc_without_dataid, nullptr)},
+      {"in_diff_expected",
+       BlobInitConf(out_num * 1.f, blob_desc_without_dataid, nullptr)}};
   FOR_RANGE(int, i, 0, out_num) {
+    bn2blob_init_conf.insert({"out_" + std::to_string(i),
+                              BlobInitConf(blob_desc_with_dataid, nullptr)});
     bn2blob_init_conf.insert(
-        {"out_" + std::to_string(i), BlobInitConf(blob_desc)});
-    bn2blob_init_conf.insert(
-        {"out_" + std::to_string(i) + "_diff", BlobInitConf(1.f, blob_desc)});
+        {"out_" + std::to_string(i) + "_diff",
+         BlobInitConf(1.f, blob_desc_without_dataid, nullptr)});
   }
   return KTCommon<device_type, T>::ConstructBnInOp2BlobFunc(bn2blob_init_conf);
 }
