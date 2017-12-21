@@ -3,6 +3,7 @@
 
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/memory/memory_device.h"
 
 namespace oneflow {
 
@@ -14,9 +15,12 @@ class Improver final {
   OF_SINGLETON(Improver);
 
   Plan Improve(const Plan& naive_plan, const std::string& act_event_filepath);
+  size_t MemorySize(const MemoryDevice& mem_dev) const;
 
  private:
-  Improver() = default;
+  Improver();
+  size_t host_mem_size_;
+  size_t dev_mem_size_;
 };
 
 }  // namespace oneflow

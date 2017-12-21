@@ -21,9 +21,15 @@ class ActorNode final : public Node<ActorNode, ActorEdge> {
   const TaskProto& task_proto() const { return *task_proto_; }
   uint64_t task_id() const { return task_proto().task_id(); }
   TaskType task_type() const { return task_proto().task_type(); }
+  uint32_t dfs_order_value() const { return dfs_order_value_; }
+
+  void set_dfs_order_value(uint32_t dfs_order_value) {
+    dfs_order_value_ = dfs_order_value;
+  }
 
  private:
   const TaskProto* task_proto_;
+  uint32_t dfs_order_value_;
 };
 
 class ActorEdge final : public Edge<ActorNode, ActorEdge> {
@@ -51,19 +57,20 @@ class ActorGraph final : public Graph<ActorNode, ActorEdge> {
   double InitiationInterval() const;
 
   void MakeTaskId2AvgDurationHash(
-      std::unordered_map<uint64_t, double>* task_id2avg_duration) const;
+      HashMap<uint64_t, double>* task_id2avg_duration) const;
   void MakeRegstDescId2AvgLifeTimeHash(
-      std::unordered_map<uint64_t, double>* regst_desc_id2life_time,
+      HashMap<uint64_t, double>* regst_desc_id2life_time,
       const std::function<double(uint64_t)>& AvgDuration4TaskId) const;
 
  private:
+  void UpdateDfsOrderValue();
+  void DfsForEachNode(const std::function<void(ActorNode*)>& Handler) const;
   const Plan* plan_;
   std::unique_ptr<std::list<ActEvent>> act_events_;
-  std::unordered_map<uint64_t, ActorNode*> task_id2task_;
-  std::unordered_map<const ActorNode*, std::unordered_set<const ActorNode*>>
+  HashMap<uint64_t, ActorNode*> task_id2task_;
+  HashMap<const ActorNode*, std::unordered_set<const ActorNode*>>
       task2ancestors_;
-  std::unordered_map<int64_t, std::list<const ActEvent*>> task_id2act_events_;
-  std::unordered_map<int64_t, std::list<const ActEvent*>> stream_id2act_events_;
+  HashMap<int64_t, std::list<const ActEvent*>> stream_id2act_events_;
 };
 
 }  // namespace oneflow

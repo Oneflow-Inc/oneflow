@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <unordered_map>
 #include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
@@ -23,7 +22,7 @@ TEST(PP_SEQ, internal_big_seq_size) {
 TEST(PP_SEQ, internal_for_each) {
 #define SEQ (1)(2)(3)(4)
 #define MAKE_PAIR(x) {x, x},
-  std::unordered_map<int, int> identity = {
+  HashMap<int, int> identity = {
       OF_PP_INTERNAL_SEQ_FOR_EACH_ATOMIC(MAKE_PAIR, _, SEQ)};
 #undef MAKE_PAIR
 #undef SEQ
@@ -66,7 +65,7 @@ TEST(PP_SEQ, internal_different_seq_product) {
 TEST(PP_SEQ, internal_seq_product_for_each) {
 #define SEQ (0)(1)
 #define MAKE_ENTRY(x, y) {OF_PP_STRINGIZE(OF_PP_CAT(x, y)), x || y},
-  std::unordered_map<std::string, bool> or_table = {
+  HashMap<std::string, bool> or_table = {
       OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, OF_PP_INTERNAL_SEQ_PRODUCT(SEQ, SEQ))};
 #undef MAKE_ENTRY
 #undef SEQ
@@ -93,8 +92,7 @@ TEST(PP_SEQ, make_tuple_seq) {
 TEST(PP_SEQ, for_each_tuple) {
 #define SEQ ((1, 1))((2, 2))((3, 3))((4, 4))
 #define MAKE_ENTRY(x, y) {x, y},
-  std::unordered_map<int, int> identity = {
-      OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SEQ)};
+  HashMap<int, int> identity = {OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SEQ)};
 #undef MAKE_ENTRY
 #undef SEQ
   for (int i = 1; i <= 4; ++i) { ASSERT_EQ(i, identity[i]); }
@@ -103,7 +101,7 @@ TEST(PP_SEQ, for_each_tuple) {
 TEST(PP_SEQ, seq_product_for_each) {
 #define SEQ (0)(1)
 #define MAKE_ENTRY(x, y) {OF_PP_STRINGIZE(OF_PP_CAT(x, y)), x || y},
-  std::unordered_map<std::string, bool> or_table = {
+  HashMap<std::string, bool> or_table = {
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, SEQ, SEQ)};
 #undef MAKE_ENTRY
 #undef SEQ

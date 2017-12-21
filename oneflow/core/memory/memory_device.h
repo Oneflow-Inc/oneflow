@@ -6,50 +6,30 @@
 
 namespace oneflow {
 
-enum MemoryType {
-  kHostMemory,
-  kDeviceMemory,
-};
-
-class MemoryDeviceMgr final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(MemoryDeviceMgr);
-  ~MemoryDeviceMgr() = default;
-  OF_SINGLETON(MemoryDeviceMgr);
-
-  //  Getters
-  size_t host_mem_size() const { return host_mem_size_; }
-  size_t dev_mem_size() const { return dev_mem_size_; }
-
- private:
-  MemoryDeviceMgr();
-  size_t GetThisMachineHostMemSize() const;
-  size_t GetThisMachineDeviceMemSize() const;
-
-  size_t host_mem_size_;
-  size_t dev_mem_size_;
-};
-
 class MemoryDevice final {
  public:
-  explicit MemoryDevice(uint32_t machine_id, const MemoryCase& mem_case);
+  explicit MemoryDevice(uint32_t machine_id, const MemoryCase& mem_case)
+      : machine_id_(machine_id), mem_case_(mem_case) {}
   MemoryDevice(const MemoryDevice& mem_device) = default;
-  size_t Size() const;
 
-  uint32_t machine_id() const { return machine_id_; }
-  const MemoryType& memory_type() const { return memory_type_; }
-  uint32_t device_id() const { return device_id_; }
+  const MemoryCase& mem_case() const { return mem_case_; }
+  int64_t machine_id() const { return machine_id_; }
+  int64_t device_id() const {
+    return mem_case().has_device_cuda_mem()
+               ? mem_case().device_cuda_mem().device_id()
+               : 0;
+  }
+  bool IsGpuMem() const { return mem_case().has_device_cuda_mem(); }
+  bool IsCpuMem() const { return !mem_case().has_device_cuda_mem(); }
 
   bool operator==(const MemoryDevice& mem_dev) const {
-    return mem_dev.memory_type() == memory_type()
-           && mem_dev.device_id() == device_id()
+    return mem_dev.device_id() == device_id()
            && mem_dev.machine_id() == machine_id();
   }
 
  private:
-  uint32_t machine_id_;
-  MemoryType memory_type_;
-  uint16_t device_id_;
+  int64_t machine_id_;
+  MemoryCase mem_case_;
 };
 
 }  // namespace oneflow
@@ -60,10 +40,7 @@ template<>
 struct hash<oneflow::MemoryDevice> final {
   hash() = default;
   std::size_t operator()(const oneflow::MemoryDevice& mem_device) const {
-    return (static_cast<int16_t>(mem_device.memory_type()) * UINT16_MAX
-            + mem_device.device_id())
-               * UINT32_MAX
-           + mem_device.machine_id();
+    return mem_device.device_id() * INT32_MAX + mem_device.machine_id();
   }
 };
 
