@@ -53,8 +53,8 @@ void RnnBoxingActor::Act() {
   int64_t cur_max_col_num = 0;
   for (const auto& pair : cur_readable_regst) {
     const PieceStatus& pst = pair.second.front()->piece_status();
-    cur_max_col_id = max(cur_max_col_id, pst.col_id());
-    cur_max_col_num = max(cur_max_col_num, pst.max_col_id());
+    cur_max_col_id = std::max(cur_max_col_id, pst.col_id());
+    cur_max_col_num = std::max(cur_max_col_num, pst.max_col_id());
   }
   for (auto& pair : cur_readable_regst) {
     const PieceStatus& pst = pair.second.front()->piece_status();
