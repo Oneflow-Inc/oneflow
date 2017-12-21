@@ -1,5 +1,5 @@
 #include "oneflow/core/job/improver.h"
-#include "oneflow/core/graph/ss_task_graph.h"
+#include "oneflow/core/graph/actor_graph.h"
 #include "oneflow/core/persistence/normal_persistent_in_stream.h"
 #include "oneflow/core/register/register_desc.pb.h"
 #include "oneflow/core/register/register_manager.h"
@@ -45,7 +45,7 @@ bool IsOutOfMemory(
 }
 
 void ComputeIIAndRegstDescAvgLifeTime(
-    const SSTaskGraph& graph, double* ii,
+    const ActorGraph& graph, double* ii,
     std::unordered_map<uint64_t, double>* regst_desc_id2life_time) {
   *ii = graph.InitiationInterval();
   LOG(INFO) << "ii = " << *ii;
@@ -114,7 +114,7 @@ void FindMinRegstNumWithBestPerformance(
 }
 
 void MemoryLimitedAllocate(
-    const SSTaskGraph& graph,
+    const ActorGraph& graph,
     std::unordered_map<uint64_t, double>* regst_desc_id2num) {
   double ii = 0;
   std::unordered_map<uint64_t, double> regst_desc_id2life_time;
@@ -158,9 +158,9 @@ Plan Improver::Improve(const Plan& naive_plan,
   Plan plan(naive_plan);
   auto act_events = of_make_unique<std::list<ActEvent>>();
   ParseActEvents(act_event_filepath, act_events.get());
-  SSTaskGraph ss_task_graph(plan, std::move(act_events));
+  ActorGraph actor_graph(plan, std::move(act_events));
   std::unordered_map<uint64_t, double> regst_desc_id2num;
-  MemoryLimitedAllocate(ss_task_graph, &regst_desc_id2num);
+  MemoryLimitedAllocate(actor_graph, &regst_desc_id2num);
   SetRegstNum(&plan, regst_desc_id2num);
   return plan;
 }
