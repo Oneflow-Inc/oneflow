@@ -5,7 +5,7 @@
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/persistence/file_system.h"
-#include "oneflow/core/common/longest_path_visitor.h"
+//#include "oneflow/core/common/longest_path_visitor.h"
 #include "oneflow/core/actor/act_event.pb.h"
 
 namespace oneflow {

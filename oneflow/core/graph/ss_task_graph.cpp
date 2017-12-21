@@ -101,144 +101,140 @@ void SSTaskGraph::MakeRegstDescId2AvgLifeTimeHash(
     std::unordered_map<uint64_t, double>* regst_desc_id2life_time,
     const std::function<double(uint64_t)>& AvgDuration4TaskId) const {
   // TODO
-  /*
-  auto ForEachNext = [&](const SSTaskNode* task,
-                         const std::function<void(const SSTaskNode*)>& DoEach) {
-    for (SSTaskEdge* edge : task->out_edges()) { DoEach(edge->dst_node()); }
-  };
-  auto ForEachPrev = [&](const SSTaskNode* task,
-                         const std::function<void(const SSTaskNode*)>& DoEach) {
-    for (SSTaskEdge* edge : task->in_edges()) { DoEach(edge->src_node()); }
-  };
-  auto IsAscendant = std::bind(&SSTaskGraph::IsAncestor, this,
-                               std::placeholders::_1, std::placeholders::_2);
-  LongestPathVisitor<const SSTaskNode*> lpath_visitor(ForEachNext, ForEachPrev,
-                                                      IsAscendant);
-  auto AvgDuration4Task = [&](const SSTaskNode* task) -> double {
-    return AvgDuration4TaskId(task->task_id());
-  };
-  ForEachRegstDesc([&](const RegstDescProto& regst_desc) {
-    double life_time = 0;
-    auto producer = GetSSTaskNode(regst_desc.producer_task_id());
-    CHECK(producer);
-    for (int64_t consumer_id : regst_desc.consumer_task_id()) {
-      auto consumer = GetSSTaskNode(consumer_id);
-      life_time = std::max(life_time, AvgLifeTime(lpath_visitor, producer,
-                                                  consumer, AvgDuration4Task));
-    }
-    regst_desc_id2life_time->emplace(regst_desc.regst_desc_id(), life_time);
-  });
-  */
+
+  // auto ForEachNext = [&](const SSTaskNode* task,
+  //                        const std::function<void(const SSTaskNode*)>&
+  //                        DoEach) {
+  //   for (SSTaskEdge* edge : task->out_edges()) { DoEach(edge->dst_node()); }
+  // };
+  // auto ForEachPrev = [&](const SSTaskNode* task,
+  //                        const std::function<void(const SSTaskNode*)>&
+  //                        DoEach) {
+  //   for (SSTaskEdge* edge : task->in_edges()) { DoEach(edge->src_node()); }
+  // };
+  // auto IsAscendant = std::bind(&SSTaskGraph::IsAncestor, this,
+  //                              std::placeholders::_1, std::placeholders::_2);
+  // LongestPathVisitor<const SSTaskNode*> lpath_visitor(ForEachNext,
+  // ForEachPrev,
+  //                                                     IsAscendant);
+  // auto AvgDuration4Task = [&](const SSTaskNode* task) -> double {
+  //   return AvgDuration4TaskId(task->task_id());
+  // };
+  // ForEachRegstDesc([&](const RegstDescProto& regst_desc) {
+  //   double life_time = 0;
+  //   auto producer = GetSSTaskNode(regst_desc.producer_task_id());
+  //   CHECK(producer);
+  //   for (int64_t consumer_id : regst_desc.consumer_task_id()) {
+  //     auto consumer = GetSSTaskNode(consumer_id);
+  //     life_time = std::max(life_time, AvgLifeTime(lpath_visitor, producer,
+  //                                                 consumer,
+  //                                                 AvgDuration4Task));
+  //   }
+  //   regst_desc_id2life_time->emplace(regst_desc.regst_desc_id(), life_time);
+  // });
 }
 
-/*
-double SSTaskGraph::AvgLifeTime(
-    const LongestPathVisitor<const SSTaskNode*>& lpath_visitor,
-    const SSTaskNode* start_task, const SSTaskNode* end_task,
-    const std::function<double(const SSTaskNode* task)>& AvgDuration4Task)
-    const {
-  double life_time = 0;
-  lpath_visitor(start_task, end_task, AvgDuration4Task,
-                [&](const std::list<const SSTaskNode*>& path) {
-                  if (path.back() == end_task) {
-                    double d = 0;
-                    for (auto task : path) { d += AvgDuration4Task(task); }
-                    life_time = std::max(life_time, d);
-                  }
-                });
-  return life_time;
-}
-
-void SSTaskGraph::UpdateAncestors() {
-  TopoForEachNode([&](SSTaskNode* task) {
-    for (const SSTaskEdge* edge : task->in_edges()) {
-      const SSTaskNode* in_task = edge->src_node();
-      for (const SSTaskNode* ancestor : task2ancestors_[in_task]) {
-        task2ancestors_[task].insert(ancestor);
-      }
-      task2ancestors_[task].insert(in_task);
-    }
-  });
-}
-
-bool SSTaskGraph::ReachableWithoutEdge(const SSTaskEdge* edge) const {
-  for (const SSTaskEdge* in_edge_of_dst : edge->dst_node()->in_edges()) {
-    const SSTaskNode* in_node_of_dst = in_edge_of_dst->src_node();
-    if (task2ancestors_.at(in_node_of_dst).find(edge->src_node())
-        != task2ancestors_.at(in_node_of_dst).end()) {
-      return true;
-    }
-  }
-  return false;
-}
-
-void SSTaskGraph::RemoveMeaninglessEdges() {
-  std::unordered_set<SSTaskEdge*> useless_edges;
-  ForEachEdge([&](SSTaskEdge* edge) {
-    if (ReachableWithoutEdge(edge)) useless_edges.insert(edge);
-  });
-  for (SSTaskEdge* edge : useless_edges) { DisConnect(edge); }
-}
-
-*/
+// double SSTaskGraph::AvgLifeTime(
+//     const LongestPathVisitor<const SSTaskNode*>& lpath_visitor,
+//     const SSTaskNode* start_task, const SSTaskNode* end_task,
+//     const std::function<double(const SSTaskNode* task)>& AvgDuration4Task)
+//     const {
+//   double life_time = 0;
+//   lpath_visitor(start_task, end_task, AvgDuration4Task,
+//                 [&](const std::list<const SSTaskNode*>& path) {
+//                   if (path.back() == end_task) {
+//                     double d = 0;
+//                     for (auto task : path) { d += AvgDuration4Task(task); }
+//                     life_time = std::max(life_time, d);
+//                   }
+//                 });
+//   return life_time;
+// }
+//
+// void SSTaskGraph::UpdateAncestors() {
+//   TopoForEachNode([&](SSTaskNode* task) {
+//     for (const SSTaskEdge* edge : task->in_edges()) {
+//       const SSTaskNode* in_task = edge->src_node();
+//       for (const SSTaskNode* ancestor : task2ancestors_[in_task]) {
+//         task2ancestors_[task].insert(ancestor);
+//       }
+//       task2ancestors_[task].insert(in_task);
+//     }
+//   });
+// }
+//
+// bool SSTaskGraph::ReachableWithoutEdge(const SSTaskEdge* edge) const {
+//   for (const SSTaskEdge* in_edge_of_dst : edge->dst_node()->in_edges()) {
+//     const SSTaskNode* in_node_of_dst = in_edge_of_dst->src_node();
+//     if (task2ancestors_.at(in_node_of_dst).find(edge->src_node())
+//         != task2ancestors_.at(in_node_of_dst).end()) {
+//       return true;
+//     }
+//   }
+//   return false;
+// }
+//
+// void SSTaskGraph::RemoveMeaninglessEdges() {
+//   std::unordered_set<SSTaskEdge*> useless_edges;
+//   ForEachEdge([&](SSTaskEdge* edge) {
+//     if (ReachableWithoutEdge(edge)) useless_edges.insert(edge);
+//   });
+//   for (SSTaskEdge* edge : useless_edges) { DisConnect(edge); }
+// }
 
 SSTaskGraph::SSTaskGraph(const Plan& plan,
                          std::unique_ptr<std::list<ActEvent>>&& act_events)
     : plan_(&plan), act_events_(std::move(act_events)) {
-  /*
-  InitGraph();
-  InitActEvents();
-  */
+  // InitGraph();
+  // InitActEvents();
 }
 
 void SSTaskGraph::MakeTaskId2AvgDurationHash(
     std::unordered_map<uint64_t, double>* task_id2avg_duration) const {
   // TODO
-  /*
-  for (const auto& pair : task_id2act_events_) {
-    (*task_id2avg_duration)[pair.first] = ConsumingTimePerPiece(pair.second);
-  }
-  */
+
+  // for (const auto& pair : task_id2act_events_) {
+  //   (*task_id2avg_duration)[pair.first] = ConsumingTimePerPiece(pair.second);
+  // }
 }
 
 double SSTaskGraph::InitiationInterval() const {
   // TODO
   return 0;
-  /*
-  double ii = 0;
-  for (const auto& pair : stream_id2act_events_) {
-    ii = std::max(ii, ConsumingTimePerPiece(pair.second));
-  }
-  CHECK(ii);
-  return ii;
-  */
-}
-/*
-void SSTaskGraph::InitActEvents() {
-  for (const ActEvent& act_event : *act_events_) {
-    int64_t task_id = act_event.actor_id();
-    int64_t stream_id = act_event.work_stream_id();
-    task_id2act_events_[task_id].push_back(&act_event);
-    stream_id2act_events_[stream_id].push_back(&act_event);
-  }
+
+  // double ii = 0;
+  // for (const auto& pair : stream_id2act_events_) {
+  //   ii = std::max(ii, ConsumingTimePerPiece(pair.second));
+  // }
+  // CHECK(ii);
+  // return ii;
 }
 
-void SSTaskGraph::InitGraph() {
-  for (const TaskProto& task_proto : plan().task()) {
-    SSTaskNode* task = new SSTaskNode(task_proto);
-    AddAllocatedNode(task);
-    CHECK(task_id2task_.emplace(task->task_id(), task).second);
-  }
-  ForEachEdgeFromPlan(plan(), [&](uint64_t producer_id, uint64_t consumer_id) {
-    SSTaskNode* producer = task_id2task_[producer_id];
-    SSTaskNode* consumer = task_id2task_[consumer_id];
-    SSTaskEdge* edge = NewEdge();
-    Connect(producer, edge, consumer);
-  });
-  // UpdateSourceAndSink();
-  UpdateAncestors();
-  RemoveMeaninglessEdges();
-}
-*/
+// void SSTaskGraph::InitActEvents() {
+//   for (const ActEvent& act_event : *act_events_) {
+//     int64_t task_id = act_event.actor_id();
+//     int64_t stream_id = act_event.work_stream_id();
+//     task_id2act_events_[task_id].push_back(&act_event);
+//     stream_id2act_events_[stream_id].push_back(&act_event);
+//   }
+// }
+//
+// void SSTaskGraph::InitGraph() {
+//   for (const TaskProto& task_proto : plan().task()) {
+//     SSTaskNode* task = new SSTaskNode(task_proto);
+//     AddAllocatedNode(task);
+//     CHECK(task_id2task_.emplace(task->task_id(), task).second);
+//   }
+//   ForEachEdgeFromPlan(plan(), [&](uint64_t producer_id, uint64_t consumer_id)
+//   {
+//     SSTaskNode* producer = task_id2task_[producer_id];
+//     SSTaskNode* consumer = task_id2task_[consumer_id];
+//     SSTaskEdge* edge = NewEdge();
+//     Connect(producer, edge, consumer);
+//   });
+//   // UpdateSourceAndSink();
+//   UpdateAncestors();
+//   RemoveMeaninglessEdges();
+// }
 
 }  // namespace oneflow
