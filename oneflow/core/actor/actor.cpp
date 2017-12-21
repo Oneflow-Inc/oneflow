@@ -95,22 +95,23 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
 
 void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) {
-    double start_time = GetCurTime();
+    ActEvent* act_event = nullptr;
+    if (RuntimeCtx::Singleton()->is_experiment_phase()) {
+      act_event = new ActEvent;
+      act_event->set_actor_id(actor_id_);
+      act_event->set_act_id(act_id_++);
+      act_event->set_work_stream_id(device_ctx_->work_stream_id());
+      device_ctx_->AddCallBack(
+          [act_event]() { act_event->set_start_time(GetCurTime()); });
+    }
     Act();
-    if (RuntimeCtx::Singleton()->is_experiment_phase() == false) { continue; }
-    int64_t actor_id = actor_id_;
-    int64_t act_id = actor_id_++;
-    int64_t work_stream_id = device_ctx_->work_stream_id();
-    device_ctx_->AddCallBack([start_time, act_id, actor_id, work_stream_id]() {
-      double stop_time = GetCurTime();
-      ActEvent act_event;
-      act_event.set_actor_id(actor_id);
-      act_event.set_work_stream_id(work_stream_id);
-      act_event.set_act_id(act_id);
-      act_event.set_start_time(start_time);
-      act_event.set_stop_time(stop_time);
-      CtrlClient::Singleton()->PushActEvent(act_event);
-    });
+    if (RuntimeCtx::Singleton()->is_experiment_phase()) {
+      device_ctx_->AddCallBack([act_event]() {
+        act_event->set_stop_time(GetCurTime());
+        CtrlClient::Singleton()->PushActEvent(*act_event);
+        delete act_event;
+      });
+    }
   }
 }
 

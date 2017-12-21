@@ -89,6 +89,8 @@ void ModelMergeChains(std::list<Chain>* chain_list,
     // Merge
     pred_chain->nodes.insert(pred_chain->nodes.end(), cur_chain->nodes.begin(),
                              cur_chain->nodes.end());
+    pred_chain->ancestors_and_this.insert(cur_chain->nodes.begin(),
+                                          cur_chain->nodes.end());
     for (const LogicalNode* node : cur_chain->nodes) {
       pred_chain->descendants.erase(node);
       logical2chain_it->at(node) = pred_chain;
@@ -382,6 +384,7 @@ void ChainGraph::BuildModelStruct(bool is_train) {
     md_updt_chain->mut_op_vec() = {ConstructModelUpdateOp()};
     md_updt_chain->mut_parallel_desc() = fw_chain->parallel_desc();
     Connect<ChainNode>(md_updt_chain, NewEdge(), fw_chain);
+    if (is_train == false) { return; }
     // Model Save Chain
     OperatorConf model_save_op_conf;
     model_save_op_conf.set_name("md_save_" + NewUniqueId());
@@ -401,7 +404,6 @@ void ChainGraph::BuildModelStruct(bool is_train) {
     md_save_chain->mut_parallel_desc().reset(md_save_pr_desc);
     Connect<ChainNode>(md_updt_chain, NewEdge(), md_save_chain);
     // Model Diff Accumulate Chain
-    if (is_train == false) { return; }
     BackwardChainNode* bw_chain = fw_chain->bw_node();
     Connect<ChainNode>(md_updt_chain, NewEdge(), bw_chain);
     OperatorConf md_diff_acc_op_conf;
