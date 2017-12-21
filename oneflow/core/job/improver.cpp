@@ -95,7 +95,7 @@ void MakeMemoryDevice2RegstDescs(
   }
 }
 
-void FindMinRegstNumWithSmallestII(
+void FindMinRegstNumWithBestPerformance(
     const MemoryDevice& md, double ii,
     const std::list<const RegstDescProto*>& regst_descs,
     const std::unordered_map<uint64_t, double>& regst_desc_id2life_time,
@@ -127,8 +127,9 @@ void MemoryLimitedAllocate(
       md2regst_desc;
   MakeMemoryDevice2RegstDescs(graph.plan(), &md2regst_desc);
   for (const auto& pair : md2regst_desc) {
-    FindMinRegstNumWithSmallestII(pair.first, ii, pair.second,
-                                  regst_desc_id2life_time, regst_desc_id2num);
+    FindMinRegstNumWithBestPerformance(pair.first, ii, pair.second,
+                                       regst_desc_id2life_time,
+                                       regst_desc_id2num);
   }
 }
 
