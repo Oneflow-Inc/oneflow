@@ -5,7 +5,6 @@ namespace oneflow {
 
 void RnnBoxingActor::VirtualActorInit(const TaskProto& task_proto) {
   num_of_consumed_ = task_proto.consumed_regst_desc_id().size();
-  num_of_finished_in_cur_pid_ = 0;
   is_ascending_ = true;
   OF_SET_MSG_HANDLER(&RnnBoxingActor::HandlerNormal);
 }
@@ -50,22 +49,34 @@ void RnnBoxingActor::Act() {
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
     return regst->piece_status().col_id() <= regst->piece_status().max_col_id();
   });
+  int64_t cur_max_col_id = 0;
+  int64_t cur_max_col_num = 0;
+  for (const auto& pair : cur_readable_regst) {
+    const PieceStatus& pst = pair.second.front()->piece_status();
+    cur_max_col_id = max(cur_max_col_id, pst.col_id());
+    cur_max_col_num = max(cur_max_col_num, pst.max_col_id());
+  }
   for (auto& pair : cur_readable_regst) {
     const PieceStatus& pst = pair.second.front()->piece_status();
-    if (pst.col_id() == pst.max_col_id()) { num_of_finished_in_cur_pid_ += 1; }
+    if (is_ascending_) {
+      if (pst.col_id() == pst.max_col_id() && pst.col_id() < cur_max_col_num) {
+        continue;
+      }
+    } else if (pst.col_id() < cur_max_col_id) {
+      continue;
+    }
     AsyncSendRegstMsgToProducer(pair.second.front());
     pair.second.pop();
-    if (pair.second.empty()) { readable_regst_cnt_ -= 1; }
+    if (pair.second.empty()) { readable_regst_cnt_.begin()->second -= 1; }
   }
-  if (num_of_finished_in_cur_pid_ == num_of_consumed_) {
-    CHECK_EQ(0, readable_regst_cnt_);
+  if (!readable_regst_cnt_.begin()->second) {
     readable_regst_.erase(readable_regst_.begin());
-    num_of_finished_in_cur_pid_ = 0;
+    readable_regst_cnt_.erase(readable_regst_cnt_.begin());
   }
 }
 
 bool RnnBoxingActor::IsReadReady() {
-  return readable_regst_cnt_ + num_of_finished_in_cur_pid_ == num_of_consumed_;
+  return readable_regst_cnt_.begin()->second == num_of_consumed_;
 }
 
 bool RnnBoxingActor::IsReadAlwaysUnReadyFromNow() {
