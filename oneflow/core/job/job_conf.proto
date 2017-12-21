@@ -45,6 +45,7 @@ message JobConf {
   required int32 data_part_num = 6;
   optional string model_load_snapshot_path = 7 [default = ""];
   optional int32 max_data_id_length = 8 [default = 0];
+  optional bool use_rdma = 9 [default = false];
   
   optional DataType default_data_type = 100 [default = kFloat]; // kFloat or kDouble
   optional int64 piece_num_of_experiment_phase = 101 [default = 100];
