@@ -16,17 +16,23 @@
 
 namespace oneflow {
 
-#define CTRL_METHOD_SEQ               \
-  OF_PP_MAKE_TUPLE_SEQ(LoadServer)    \
-  OF_PP_MAKE_TUPLE_SEQ(Barrier)       \
-  OF_PP_MAKE_TUPLE_SEQ(TryLock)       \
-  OF_PP_MAKE_TUPLE_SEQ(NotifyDone)    \
-  OF_PP_MAKE_TUPLE_SEQ(WaitUntilDone) \
-  OF_PP_MAKE_TUPLE_SEQ(PushKV)        \
-  OF_PP_MAKE_TUPLE_SEQ(ClearKV)       \
-  OF_PP_MAKE_TUPLE_SEQ(PullKV)        \
-  OF_PP_MAKE_TUPLE_SEQ(PushActEvent)  \
-  OF_PP_MAKE_TUPLE_SEQ(Clear)
+#define CTRL_METHOD_SEQ                    \
+  OF_PP_MAKE_TUPLE_SEQ(LoadServer)         \
+  OF_PP_MAKE_TUPLE_SEQ(Barrier)            \
+  OF_PP_MAKE_TUPLE_SEQ(TryLock)            \
+  OF_PP_MAKE_TUPLE_SEQ(NotifyDone)         \
+  OF_PP_MAKE_TUPLE_SEQ(WaitUntilDone)      \
+  OF_PP_MAKE_TUPLE_SEQ(PushKV)             \
+  OF_PP_MAKE_TUPLE_SEQ(ClearKV)            \
+  OF_PP_MAKE_TUPLE_SEQ(PullKV)             \
+  OF_PP_MAKE_TUPLE_SEQ(PushActEvent)       \
+  OF_PP_MAKE_TUPLE_SEQ(Clear)              \
+  OF_PP_MAKE_TUPLE_SEQ(PushAllConnInfo)    \
+  OF_PP_MAKE_TUPLE_SEQ(ClearAllConnInfo)   \
+  OF_PP_MAKE_TUPLE_SEQ(PullConnectionInfo) \
+  OF_PP_MAKE_TUPLE_SEQ(PushTokenMsgs)      \
+  OF_PP_MAKE_TUPLE_SEQ(ClearTokenMsgs)     \
+  OF_PP_MAKE_TUPLE_SEQ(PullTokenMsgs)
 
 enum class CtrlMethod {
 #define MAKE_ENTRY(method) k##method,
