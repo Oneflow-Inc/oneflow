@@ -3,6 +3,9 @@
 
 namespace oneflow {
 
+const std::string ActEventLogger::act_event_bin_filename_("act_event.bin");
+const std::string ActEventLogger::act_event_txt_filename_("act_event.txt");
+
 void ActEventLogger::PrintActEventToLogDir(const ActEvent& act_event) {
   std::string act_event_bin = act_event.SerializeAsString();
   size_t act_event_bin_size = act_event_bin.size();
@@ -13,7 +16,7 @@ void ActEventLogger::PrintActEventToLogDir(const ActEvent& act_event) {
 }
 
 ActEventLogger::ActEventLogger()
-    : bin_out_stream_(LocalFS(), LogDir() + "/act_event.bin"),
-      txt_out_stream_(LocalFS(), LogDir() + "/act_event.txt") {}
+    : bin_out_stream_(LocalFS(), JoinPath(LogDir(), act_event_bin_filename_)),
+      txt_out_stream_(LocalFS(), JoinPath(LogDir(), act_event_txt_filename_)) {}
 
 }  // namespace oneflow

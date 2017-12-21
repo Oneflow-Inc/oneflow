@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_OPERATOR_OPERATOR_H_
 #define ONEFLOW_CORE_OPERATOR_OPERATOR_H_
 
+#include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/keyword.h"
@@ -25,6 +26,9 @@ class Operator {
   void InitFromOpConf(const OperatorConf& op_conf);
   virtual void InitFromOpConf() = 0;
   virtual bool IsElemWiseOp() const { return false; }
+
+  virtual bool NeedExtraInDiffMemWhenBackward() const { return true; }
+  virtual bool NeedOutWhenBackward() const { return true; }
   virtual bool IsLossOp() const { return false; }
   virtual bool IsPrintOp() const { return false; }
   virtual bool IsDataLoaderOp() const { return false; }
@@ -159,6 +163,10 @@ struct OpRegister {
 
 #define REGISTER_OP(OpTypeCase, OpType) \
   static OpRegister<OpTypeCase, OpType> g_##OpType##_register_var;
+
+void EraseEmptyBnInVec(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    PbRpf<std::string>* bns);
 
 }  // namespace oneflow
 
