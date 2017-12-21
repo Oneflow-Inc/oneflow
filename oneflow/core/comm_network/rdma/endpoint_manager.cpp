@@ -54,6 +54,7 @@ void EndpointManager::InitRdma() {
   *(all_conn_info.mutable_conn_infos()) =
       StdVec2PbRpf<ConnectionInfo>(conn_infos);
   CtrlClient::Singleton()->PushAllConnInfo(all_conn_info);
+  OF_BARRIER();
   FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
     if (peer_machine_id == MachineCtx::Singleton()->this_machine_id()) {
       continue;
