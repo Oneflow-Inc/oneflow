@@ -18,6 +18,7 @@ void MdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
   }
   auto model_regst = ProduceRegst("model", min_model_regst, max_model_regst);
   auto model_tmp_regst = ProduceRegst("model_tmp", 1, 1);
+  ProduceRegst("data_tmp", 1, 1);
   for (TaskEdge* out_edge : out_edges()) {
     TaskNode* dst_node = out_edge->dst_node();
     if (dst_node->GetTaskType() == TaskType::kForward
@@ -46,7 +47,7 @@ void MdUpdtCompTaskNode::BuildExecGphAndRegst() {
   node->mut_op() = chain_node()->SoleOp();
   node->BindBnInOpAndRegst(node->op()->SoleIbn(), SoleInEdge()->GetSoleRegst());
   node->BindBnInOpAndRegst(node->op()->SoleObn(), GetProducedRegst("model"));
-  auto data_tmp_regst = ProduceRegst("data_tmp", 1, 1);
+  auto data_tmp_regst = GetProducedRegst("data_tmp");
   for (const std::string& dtbn : node->op()->data_tmp_bns()) {
     const std::string& lbn = node->op()->Lbn4BnInOp(dtbn);
     data_tmp_regst->AddLbn(lbn);
