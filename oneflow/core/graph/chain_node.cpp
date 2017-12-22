@@ -258,7 +258,8 @@ void BackwardChainNode::set_data_output_lbns() {
 void SourceChainNode::set_data_output_lbns() {
   ForEachNodeOnOutEdge([this](const ChainNode* to_node) {
     if (dynamic_cast<const ForwardChainNode*>(to_node)
-        || dynamic_cast<const LossChainNode*>(to_node)) {
+        || dynamic_cast<const LossChainNode*>(to_node)
+        || dynamic_cast<const PrintChainNode*>(to_node)) {
       AddDataOutputLbnsTo(to_node);
     }
   });
