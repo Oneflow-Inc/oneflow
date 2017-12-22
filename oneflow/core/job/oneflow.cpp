@@ -83,10 +83,9 @@ Oneflow::Oneflow(const JobConf& job_conf, const std::string& this_mchn_name) {
   PushAvailableMemDescOfThisMachine();
   // Improve
   if (machine_ctx->IsThisMachineMaster()) {
-    Improver::NewSingleton();
+    Improver::NewSingleton(PullAvailableMemDesc());
     plan = Improver::Singleton()->Improve(
-        plan, PullAvailableMemDesc(),
-        JoinPath(LogDir(), ActEventLogger::act_event_bin_filename_));
+        plan, JoinPath(LogDir(), ActEventLogger::act_event_bin_filename_));
     Improver::DeleteSingleton();
     CtrlClient::Singleton()->PushKV("improved_plan", plan);
   } else {
