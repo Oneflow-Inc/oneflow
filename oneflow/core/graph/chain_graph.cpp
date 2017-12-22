@@ -203,7 +203,7 @@ void DataMergeChains(std::list<Chain>* chain_list,
 }  // namespace
 
 ChainGraph::ChainGraph(bool is_train) {
-  BuildFwStruct();
+  BuildFwStruct(is_train);
   if (is_train) {
     BuildBwStruct();
     BuildLossPrintStruct();
@@ -214,7 +214,7 @@ ChainGraph::ChainGraph(bool is_train) {
   ToDotWithAutoFilePath();
 }
 
-void ChainGraph::BuildFwStruct() {
+void ChainGraph::BuildFwStruct(bool is_train) {
   // Build Chain
   std::list<Chain> chain_list;
   Logical2ChainItMap logical2chain_it;
@@ -232,7 +232,7 @@ void ChainGraph::BuildFwStruct() {
     ChainNode* chain_node = nullptr;
     if (chain_it->nodes.size() == 1) {
       std::shared_ptr<const Operator> op = chain_it->nodes[0]->op();
-      if (op->IsLossOp()) {
+      if (op->IsLossOp() && is_train) {
         chain_node = NewNode<LossChainNode>();
       } else if (op->IsDataLoaderOp()) {
         chain_node = NewNode<SourceChainNode>();
