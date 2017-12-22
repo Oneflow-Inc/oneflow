@@ -1,9 +1,6 @@
 syntax = "proto2";
 package oneflow;
 
-import "oneflow/core/job/plan.proto";
-import "oneflow/core/comm_network/rdma/conn_info.proto";
-import "oneflow/core/comm_network/rdma/token_message.proto";
 import "oneflow/core/actor/act_event.proto";
 
 message LoadServerRequest {
@@ -82,52 +79,4 @@ message ClearRequest {
 }
 
 message ClearResponse {
-}
-
-message PullPortRequest {
-}
-
-message PullPortResponse {
-  required int32 port = 1;
-}
-
-message PushAllConnInfoRequest {
-  required AllConnInfo all_conn_info = 1;
-}
-
-message PushAllConnInfoResponse {
-}
-
-message ClearAllConnInfoRequest {
-}
-
-message ClearAllConnInfoResponse {
-}
-
-message PullConnectionInfoRequest {
-  required int64 machine_id = 1;
-}
-
-message PullConnectionInfoResponse {
-  required ConnectionInfo conn_info = 1;
-}
-
-message PushTokenMsgsRequest {
-  required TokenMsgs token_msgs = 1;
-}
-
-message PushTokenMsgsResponse {
-}
-
-message ClearTokenMsgsRequest {
-}
-
-message ClearTokenMsgsResponse {
-}
-
-message PullTokenMsgsRequest {
-}
-
-message PullTokenMsgsResponse {
-  required TokenMsgs token_msgs = 1;
 }

@@ -34,14 +34,6 @@ class CtrlServer final {
       barrier_calls_;
   // TryLock, NotifyDone, WaitUntilDone
   HashMap<std::string, void*> name2lock_status_;
-  AllConnInfo all_conn_info_;
-  std::list<std::pair<
-      CtrlCall<PullConnectionInfoRequest, PullConnectionInfoResponse>*,
-      int64_t>>
-      pending_conn_info_calls_;
-  TokenMsgs token_msgs_;
-  std::list<CtrlCall<PullTokenMsgsRequest, PullTokenMsgsResponse>*>
-      pending_token_msgs_calls_;
   // PushKV, ClearKV, PullKV
   HashMap<std::string, std::string> kv_;
   HashMap<std::string, std::list<CtrlCall<PullKVRequest, PullKVResponse>*>>

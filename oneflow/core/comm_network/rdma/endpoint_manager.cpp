@@ -10,7 +10,7 @@ namespace oneflow {
 namespace {
 
 std::string GenConnInfoKey(int64_t src_machine_id, int64_t dst_machine_id) {
-  return "RdmaAllConnInfo/" + std::to_string(src_machine_id) + " "
+  return "RdmaConnInfo/" + std::to_string(src_machine_id) + " "
          + std::to_string(dst_machine_id);
 }
 

@@ -119,54 +119,6 @@ void CtrlClient::Clear() {
   done_names_.clear();
 }
 
-void CtrlClient::PushAllConnInfo(const AllConnInfo& all_conn_info) {
-  grpc::ClientContext client_ctx;
-  PushAllConnInfoRequest request;
-  *(request.mutable_all_conn_info()) = all_conn_info;
-  PushAllConnInfoResponse response;
-  GetThisStub()->PushAllConnInfo(&client_ctx, request, &response);
-}
-
-void CtrlClient::ClearAllConnInfo() {
-  grpc::ClientContext client_ctx;
-  ClearAllConnInfoRequest request;
-  ClearAllConnInfoResponse response;
-  GetThisStub()->ClearAllConnInfo(&client_ctx, request, &response);
-}
-
-void CtrlClient::PullConnectionInfo(int64_t peer_machine_id,
-                                    ConnectionInfo* conn_info) {
-  grpc::ClientContext client_ctx;
-  PullConnectionInfoRequest request;
-  request.set_machine_id(MachineCtx::Singleton()->this_machine_id());
-  PullConnectionInfoResponse response;
-  stubs_[peer_machine_id]->PullConnectionInfo(&client_ctx, request, &response);
-  *conn_info = response.conn_info();
-}
-
-void CtrlClient::PushTokenMsgs(const TokenMsgs& token_msgs) {
-  grpc::ClientContext client_ctx;
-  PushTokenMsgsRequest request;
-  *(request.mutable_token_msgs()) = token_msgs;
-  PushTokenMsgsResponse response;
-  GetThisStub()->PushTokenMsgs(&client_ctx, request, &response);
-}
-
-void CtrlClient::ClearTokenMsgs() {
-  grpc::ClientContext client_ctx;
-  ClearTokenMsgsRequest request;
-  ClearTokenMsgsResponse response;
-  GetThisStub()->ClearTokenMsgs(&client_ctx, request, &response);
-}
-
-void CtrlClient::PullTokenMsgs(int64_t machine_id, TokenMsgs* token_msgs) {
-  grpc::ClientContext client_ctx;
-  PullTokenMsgsRequest request;
-  PullTokenMsgsResponse response;
-  stubs_[machine_id]->PullTokenMsgs(&client_ctx, request, &response);
-  *token_msgs = response.token_msgs();
-}
-
 CtrlClient::CtrlClient() {
   stubs_.reserve(JobDesc::Singleton()->TotalMachineNum());
   for (int64_t i = 0; i < JobDesc::Singleton()->TotalMachineNum(); ++i) {

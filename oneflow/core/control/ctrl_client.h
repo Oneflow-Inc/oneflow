@@ -2,7 +2,6 @@
 #define ONEFLOW_CORE_CONTROL_CTRL_CLIENT_H_
 
 #include "oneflow/core/actor/actor_message.h"
-#include "oneflow/core/comm_network/rdma/conn_info.pb.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/control/ctrl_service.h"
 
@@ -33,14 +32,6 @@ class CtrlClient final {
 
   void PushActEvent(const ActEvent&);
   void Clear();
-
-  void PushAllConnInfo(const AllConnInfo& all_conn_info);
-  void ClearAllConnInfo();
-  void PullConnectionInfo(int64_t peer_machine_id, ConnectionInfo* conn_info);
-
-  void PushTokenMsgs(const TokenMsgs& token_msgs);
-  void ClearTokenMsgs();
-  void PullTokenMsgs(int64_t machine_id, TokenMsgs* token_msgs);
 
  private:
   CtrlClient();
