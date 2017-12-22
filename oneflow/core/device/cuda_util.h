@@ -26,6 +26,8 @@ inline int32_t BlocksNum4ThreadsNum(const int32_t n) {
                   kCudaMaxBlocksNum);
 }
 
+size_t GetAvailableGpuMemSize(int dev_id);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_DEVICE_CUDA_UTIL_H_

@@ -16,6 +16,7 @@ SnapshotMgr::SnapshotMgr(const Plan& plan) {
 }
 
 Snapshot* SnapshotMgr::GetWriteableSnapshot(int64_t snapshot_id) {
+  std::unique_lock<std::mutex> lck(snapshot_id2writeable_snapshot_mtx_);
   auto it = snapshot_id2writeable_snapshot_.find(snapshot_id);
   if (it == snapshot_id2writeable_snapshot_.end()) {
     std::string snapshot_root_path = JoinPath(

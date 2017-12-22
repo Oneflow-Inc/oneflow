@@ -1,6 +1,11 @@
 #include "oneflow/core/common/util.h"
 #include <cfenv>
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/common/platform.h"
+
+#ifdef PLATFORM_POSIX
+#include <sys/sysinfo.h>
+#endif
 
 namespace oneflow {
 
@@ -42,7 +47,7 @@ double oneflow_cast(const std::string& s) {
   return ret;
 }
 
-#ifdef __linux__
+#ifdef PLATFORM_POSIX
 COMMAND(feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW));
 #endif
 
@@ -54,6 +59,16 @@ void RedirectStdoutAndStderrToGlogDir() {
 void CloseStdoutAndStderr() {
   PCHECK(fclose(stdout) == 0);
   PCHECK(fclose(stderr) == 0);
+}
+
+size_t GetAvailableCpuMemSize() {
+#ifdef PLATFORM_POSIX
+  struct sysinfo sys_info;
+  PCHECK(sysinfo(&sys_info) == 0);
+  return sys_info.freeram * sys_info.mem_unit;
+#else
+  return 0;  // TODO
+#endif
 }
 
 }  // namespace oneflow

@@ -144,9 +144,13 @@ void CtrlServer::PushKVHandler(CtrlCall<PushKVRequest, PushKVResponse>* call) {
   const std::string& v = call->request().val();
   CHECK(kv_.emplace(k, v).second);
 
-  for (auto pending_call : pending_kv_calls_[k]) {
-    pending_call->mut_response()->set_val(v);
-    pending_call->SendResponse();
+  auto pending_kv_calls_it = pending_kv_calls_.find(k);
+  if (pending_kv_calls_it != pending_kv_calls_.end()) {
+    for (auto pending_call : pending_kv_calls_it->second) {
+      pending_call->mut_response()->set_val(v);
+      pending_call->SendResponse();
+    }
+    pending_kv_calls_.erase(pending_kv_calls_it);
   }
   call->SendResponse();
   ENQUEUE_REQUEST(PushKV);

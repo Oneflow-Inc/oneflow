@@ -7,10 +7,42 @@
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/runtime.h"
+#include "oneflow/core/job/available_memory_desc.pb.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/actor/act_event_logger.h"
 
 namespace oneflow {
+
+namespace {
+
+std::string GetAmdCtrlKey(int64_t machine_id) {
+  return "AvailableMemDesc/" + std::to_string(machine_id);
+}
+
+void PushAvailableMemDescOfThisMachine() {
+  const JobDesc* job_desc = JobDesc::Singleton();
+  AvailableMemDescOfMachine this_machine_mem_desc;
+  if (job_desc->GetDeviceType() == DeviceType::kGPU) {
+    FOR_RANGE(int, i, 0, job_desc->resource().device_num_per_machine()) {
+      this_machine_mem_desc.add_zone_size(GetAvailableGpuMemSize(i));
+    }
+  }
+  this_machine_mem_desc.add_zone_size(GetAvailableCpuMemSize());
+  CtrlClient::Singleton()->PushKV(
+      GetAmdCtrlKey(MachineCtx::Singleton()->this_machine_id()),
+      this_machine_mem_desc);
+}
+
+AvailableMemDesc PullAvailableMemDesc() {
+  AvailableMemDesc ret;
+  AvailableMemDescOfMachine machine_amd_i;
+  FOR_RANGE(int64_t, i, 0, JobDesc::Singleton()->TotalMachineNum()) {
+    CtrlClient::Singleton()->PullKV(GetAmdCtrlKey(i), ret.add_machine_amd());
+  }
+  return ret;
+}
+
+}  // namespace
 
 class Oneflow final {
  public:
@@ -48,9 +80,10 @@ Oneflow::Oneflow(const JobConf& job_conf, const std::string& this_mchn_name) {
   // Experiment Runtime
   Runtime::NewSingleton(plan, true);
   Runtime::DeleteSingleton();
+  PushAvailableMemDescOfThisMachine();
   // Improve
   if (machine_ctx->IsThisMachineMaster()) {
-    Improver::NewSingleton();
+    Improver::NewSingleton(PullAvailableMemDesc());
     plan = Improver::Singleton()->Improve(
         plan, JoinPath(LogDir(), ActEventLogger::act_event_bin_filename_));
     Improver::DeleteSingleton();
