@@ -10,15 +10,15 @@ namespace oneflow {
 class Improver final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Improver);
+  Improver() = delete;
   ~Improver() = default;
 
   OF_SINGLETON(Improver);
 
-  Plan Improve(const Plan& naive_plan, const AvailableMemDesc& amd,
-               const std::string& act_event_filepath);
+  Plan Improve(const Plan& naive_plan, const std::string& act_event_filepath);
 
  private:
-  Improver() = default;
+  Improver(const AvailableMemDesc& amd);
 };
 
 }  // namespace oneflow

@@ -41,6 +41,7 @@ class CtrlClient final {
   CtrlService::Stub* GetResponsibleStub(const std::string& key);
 
   std::vector<std::unique_ptr<CtrlService::Stub>> stubs_;
+  std::mutex done_names_mtx_;
   HashSet<std::string> done_names_;
 };
 
