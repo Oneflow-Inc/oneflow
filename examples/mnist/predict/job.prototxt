@@ -1,8 +1,8 @@
-dlnet_filepath: "./net.prototxt"
-resource_filepath: "./resource.prototxt"
-placement_filepath: "./placement.prototxt"
-model_load_snapshot_path: "/willzhang/snapshots/snapshot_10"
-piece_size: 1000
+dlnet_filepath: "./predict/net.prototxt"
+resource_filepath: "./predict/resource.prototxt"
+placement_filepath: "./predict/placement.prototxt"
+model_load_snapshot_path: "./model/snapshot_3"
+single_piece_size: 1000
 max_data_id_length: 16
 global_fs_conf {
   hdfs_conf {
@@ -10,5 +10,5 @@ global_fs_conf {
   }
 }
 predict_conf {
-  total_data_num: 60000
 }
+data_part_num: 4 

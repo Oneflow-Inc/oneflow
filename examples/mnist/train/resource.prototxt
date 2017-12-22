@@ -1,11 +1,11 @@
 machine {
-  addr: "192.168.1.11"
-  port: 6789
-  name: "192.168.1.11"
+  addr: "192.168.1.13"
+  port: 6766
+  name: "192.168.1.13"
 }
 
-device_num_per_machine: 4
+device_num_per_machine: 2 
 device_type: kCPU
-persistence_worker_num: 1
+persistence_worker_num: 1 
 boxing_worker_num: 1
 comm_net_worker_num: 1
