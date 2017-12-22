@@ -72,7 +72,7 @@ void RdmaCommNet::RegisterMemoryDone() {
     }
     TokenMsgs peer_token_msgs;
     CtrlClient::Singleton()->PullKV(GenTokenMsgsKey(peer_machine_id),
-                                    &token_msgs);
+                                    &peer_token_msgs);
     HashMap<uint64_t, RdmaMemDesc> peer_token2mem_desc =
         PbMap2HashMap(peer_token_msgs.token2mem_desc());
     for (auto pair : peer_token2mem_desc) {
