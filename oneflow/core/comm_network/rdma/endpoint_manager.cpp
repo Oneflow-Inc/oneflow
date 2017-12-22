@@ -69,10 +69,12 @@ void EndpointManager::InitRdma() {
     CtrlClient::Singleton()->PullKV(
         GenConnInfoKey(peer_machine_id, this_machine_id),
         conn->mut_peer_conn_info_ptr());
-    auto peer_conn_info = conn->mut_peer_conn_info();
-    LOG(INFO) << peer_machine_id << " " << peer_conn_info.lid() << " "
-              << peer_conn_info.qpn() << " " << peer_conn_info.psn() << " "
-              << peer_conn_info.snp() << " " << peer_conn_info.iid();
+    LOG(INFO) << "Connection " << reinterpret_cast<uint64_t>(conn)
+              << " info: " << conn->mut_peer_conn_info().lid() << " "
+              << conn->mut_peer_conn_info().qpn() << " "
+              << conn->mut_peer_conn_info().psn() << " "
+              << conn->mut_peer_conn_info().snp() << " "
+              << conn->mut_peer_conn_info().iid();
     for (size_t i = 0; i != kPrePostRecvNum; ++i) {
       ActorMsg* actor_msg = new ActorMsg();
       const RdmaMem* rdma_mem = static_cast<const RdmaMem*>(
