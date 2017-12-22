@@ -72,4 +72,10 @@ void CudaCheck(curandStatus_t error) {
   CHECK_EQ(error, CURAND_STATUS_SUCCESS) << CurandGetErrorString(error);
 }
 
+size_t GetAvailableGpuMemSize(int dev_id) {
+  cudaDeviceProp prop;
+  cudaGetDeviceProperties(&prop, dev_id);
+  return prop.totalGlobalMem;
+}
+
 }  // namespace oneflow

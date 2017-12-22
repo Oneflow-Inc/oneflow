@@ -3,6 +3,7 @@
 
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/job/available_memory_desc.pb.h"
 
 namespace oneflow {
 
@@ -13,7 +14,8 @@ class Improver final {
 
   OF_SINGLETON(Improver);
 
-  Plan Improve(const Plan& naive_plan, const std::string& act_event_filepath);
+  Plan Improve(const Plan& naive_plan, const AvailableMemDesc& amd,
+               const std::string& act_event_filepath);
 
  private:
   Improver() = default;
