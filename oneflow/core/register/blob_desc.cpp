@@ -6,11 +6,20 @@ namespace oneflow {
 BlobDesc::BlobDesc()
     : shape_(),
       data_type_(JobDesc::Singleton()->DefaultDataType()),
-      has_data_id_(false) {}
+      has_data_id_(false),
+      has_offset_(false) {}
 
 size_t BlobDesc::ByteSizeOfDataIdField() const {
   if (has_data_id_) {
     return shape_.At(0) * JobDesc::Singleton()->SizeOfOneDataId();
+  } else {
+    return 0;
+  }
+}
+
+size_t BlobDesc::ByteSizeOfOffsetField() const {
+  if (has_offset_) {
+    return shape_.At(0) * sizeof(OffSetType);
   } else {
     return 0;
   }
@@ -21,25 +30,29 @@ size_t BlobDesc::ByteSizeOfDataContentField() const {
 }
 
 size_t BlobDesc::TotalByteSize() const {
-  return ByteSizeOfDataIdField() + ByteSizeOfDataContentField();
+  return ByteSizeOfDataIdField() + ByteSizeOfOffsetField()
+         + ByteSizeOfDataContentField();
 }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
   return shape_ == rhs.shape_ && data_type_ == rhs.data_type_
-         && has_data_id_ == rhs.has_data_id_;
+         && has_data_id_ == rhs.has_data_id_ && has_offset_ == rhs.has_offset_;
 }
 
 BlobDesc ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc) {
   int64_t total_byte_size = 0;
   std::unordered_set<int> data_type_set;
   bool has_data_id = false;
+  bool has_offset = false;
   while (const BlobDesc* blob_desc = NextBlobDesc()) {
     total_byte_size += blob_desc->TotalByteSize();
     data_type_set.insert(static_cast<int>(blob_desc->data_type()));
     has_data_id = has_data_id || blob_desc->has_data_id();
+    has_offset = has_offset || blob_desc->has_offset();
   }
   BlobDesc ret;
-  if (has_data_id == false && data_type_set.size() == 1) {
+  if (has_data_id == false && has_offset == false
+      && data_type_set.size() == 1) {
     DataType sole_data_type = static_cast<DataType>(*(data_type_set.begin()));
     int64_t size_of_one_elem = GetSizeOfDataType(sole_data_type);
     CHECK_EQ(total_byte_size % size_of_one_elem, 0);
@@ -50,6 +63,7 @@ BlobDesc ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc) {
     ret.set_data_type(DataType::kChar);
   }
   ret.set_has_data_id(false);
+  ret.set_has_offset(false);
   return ret;
 }
 

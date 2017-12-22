@@ -54,8 +54,20 @@ class Blob final {
   const char* data_id() const { return data_id(0); }
   char* mut_data_id() { return mut_data_id(0); }
 
+  BlobDesc::OffSetType offset(int32_t no) const;
+  BlobDesc::OffSetType& mut_offset(int32_t no);
+
+  BlobDesc::OffSetType offset() const { return offset(0); }
+  BlobDesc::OffSetType& mut_offset() { return mut_offset(0); }
+
   const void* memory_ptr() const {
-    return data_id_ptr_ == nullptr ? dptr_ : static_cast<void*>(data_id_ptr_);
+    if (data_id_ptr_) {
+      return static_cast<void*>(data_id_ptr_);
+    } else if (offset_ptr_) {
+      return static_cast<void*>(offset_ptr_);
+    } else {
+      return dptr_;
+    }
   }
   void* mut_memory_ptr() { return const_cast<void*>(memory_ptr()); }
 
@@ -81,6 +93,9 @@ class Blob final {
   size_t ByteSizeOfDataIdField() const {
     return blob_desc_->ByteSizeOfDataIdField();
   }
+  size_t ByteSizeOfOffsetField() const {
+    return blob_desc_->ByteSizeOfOffsetField();
+  }
   size_t ByteSizeOfDataContentField() const {
     return blob_desc_->ByteSizeOfDataContentField();
   }
@@ -90,6 +105,8 @@ class Blob final {
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
   template<DeviceType device_type>
   void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  template<DeviceType device_type>
+  void CopyOffSetFrom(DeviceCtx* device_ctx, const Blob* rhs);
   template<DeviceType device_type>
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
 
@@ -107,6 +124,7 @@ class Blob final {
   }
 
   char* data_id_ptr_;
+  BlobDesc::OffSetType* offset_ptr_;
   void* dptr_;
   PieceStatus piece_status_;
   const void* comm_net_token_;
