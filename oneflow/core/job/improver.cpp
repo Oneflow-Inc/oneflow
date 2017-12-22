@@ -3,13 +3,6 @@
 #include "oneflow/core/persistence/normal_persistent_in_stream.h"
 #include "oneflow/core/register/register_desc.pb.h"
 #include "oneflow/core/register/register_manager.h"
-#include "oneflow/core/memory/memory_device.h"
-
-#if defined(_WIN32)
-// TODO
-#else
-#include <sys/sysinfo.h>
-#endif
 
 namespace oneflow {
 
@@ -29,7 +22,7 @@ void ParseActEvents(const std::string& act_event_filepath,
 }
 
 size_t MemoryConsuming(const std::list<const RegstDescProto*>& regst_descs,
-                       const HashMap<uint64_t, double>& regst_desc_id2num) {
+                       const HashMap<int64_t, double>& regst_desc_id2num) {
   size_t mem_consuming = 0;
   for (const RegstDescProto* regst_desc : regst_descs) {
     uint32_t regst_num =
@@ -43,21 +36,21 @@ size_t MemoryConsuming(const std::list<const RegstDescProto*>& regst_descs,
   return mem_consuming;
 }
 
-bool IsOutOfMemory(const MemoryDevice& md,
+bool IsOutOfMemory(int64_t machine_id, int64_t memory_zone_id,
                    const std::list<const RegstDescProto*>& regst_descs,
-                   const HashMap<uint64_t, double>& regst_desc_id2num) {
+                   const HashMap<int64_t, double>& regst_desc_id2num) {
   return MemoryConsuming(regst_descs, regst_desc_id2num)
-         >= Improver::Singleton()->MemorySize(md);
+         >= Improver::Singleton()->MemorySize(machine_id, memory_zone_id);
 }
 
 void ComputeIIAndRegstDescAvgLifeTime(
     const ActorGraph& graph, double* ii,
-    HashMap<uint64_t, double>* regst_desc_id2life_time) {
+    HashMap<int64_t, double>* regst_desc_id2life_time) {
   *ii = graph.InitiationInterval();
   LOG(INFO) << "ii = " << *ii;
-  HashMap<uint64_t, double> task_id2avg_duration;
+  HashMap<int64_t, double> task_id2avg_duration;
   graph.MakeTaskId2AvgDurationHash(&task_id2avg_duration);
-  auto AvgDuration4TaskId = [&](uint64_t task_id) -> double {
+  auto AvgDuration4TaskId = [&](int64_t task_id) -> double {
     if (task_id2avg_duration.find(task_id) == task_id2avg_duration.end()) {
       return static_cast<double>(0);
     } else {
@@ -75,7 +68,7 @@ void ComputeIIAndRegstDescAvgLifeTime(
 
 double ComputeLeastIIFlationRatio(
     const std::list<const RegstDescProto*>& regst_descs,
-    const HashMap<uint64_t, double>& regst_desc_id2num) {
+    const HashMap<int64_t, double>& regst_desc_id2num) {
   CHECK(regst_desc_id2num.size());
   double ii_flation_ratio = static_cast<double>(UINT_MAX);
   for (const RegstDescProto* regst_desc : regst_descs) {
@@ -91,22 +84,25 @@ double ComputeLeastIIFlationRatio(
 
 void MakeMemoryDevice2RegstDescs(
     const Plan& plan,
-    HashMap<MemoryDevice, std::list<const RegstDescProto*>>* md2regst_desc) {
+    HashMap<int64_t, HashMap<int64_t, std::list<const RegstDescProto*>>>*
+        mz2regst_desc) {
   for (const auto& task : plan.task()) {
     for (const auto& pair : task.produced_regst_desc()) {
-      MemoryDevice md(task.machine_id(), pair.second.mem_case());
-      (*md2regst_desc)[md].push_back(&pair.second);
+      int64_t mem_zone_id =
+          Improver::Singleton()->GetMemoryZoneId(pair.second.mem_case());
+      (*mz2regst_desc)[task.machine_id()][mem_zone_id].push_back(&pair.second);
     }
   }
 }
 
-void FindMinRegstNumWithBestPerformance(
-    const MemoryDevice& md, double ii,
+void FindMinRegstNumWithLeastPerformanceLoss(
+    int64_t machine_id, int64_t memory_zone_id, double ii,
     const std::list<const RegstDescProto*>& regst_descs,
-    const HashMap<uint64_t, double>& regst_desc_id2life_time,
-    HashMap<uint64_t, double>* regst_desc_id2num) {
+    const HashMap<int64_t, double>& regst_desc_id2life_time,
+    HashMap<int64_t, double>* regst_desc_id2num) {
   // shrink memory with least performance loss step by step
-  while (IsOutOfMemory(md, regst_descs, *regst_desc_id2num)) {
+  while (IsOutOfMemory(machine_id, memory_zone_id, regst_descs,
+                       *regst_desc_id2num)) {
     ii *= ComputeLeastIIFlationRatio(regst_descs, *regst_desc_id2num);
     double max_regst_num = 0;
     for (const RegstDescProto* regst_desc : regst_descs) {
@@ -119,25 +115,30 @@ void FindMinRegstNumWithBestPerformance(
 }
 
 void MemoryLimitedAllocate(const ActorGraph& graph,
-                           HashMap<uint64_t, double>* regst_desc_id2num) {
+                           HashMap<int64_t, double>* regst_desc_id2num) {
   double ii = 0;
-  HashMap<uint64_t, double> regst_desc_id2life_time;
+  HashMap<int64_t, double> regst_desc_id2life_time;
   ComputeIIAndRegstDescAvgLifeTime(graph, &ii, &regst_desc_id2life_time);
   CHECK(ii > 0);
   for (const auto& pair : regst_desc_id2life_time) {
     (*regst_desc_id2num)[pair.first] = pair.second / ii;
   }
-  HashMap<MemoryDevice, std::list<const RegstDescProto*>> md2regst_desc;
-  MakeMemoryDevice2RegstDescs(graph.plan(), &md2regst_desc);
-  for (const auto& pair : md2regst_desc) {
-    FindMinRegstNumWithBestPerformance(pair.first, ii, pair.second,
-                                       regst_desc_id2life_time,
-                                       regst_desc_id2num);
+  HashMap<int64_t, HashMap<int64_t, std::list<const RegstDescProto*>>>
+      mz2regst_desc;
+  MakeMemoryDevice2RegstDescs(graph.plan(), &mz2regst_desc);
+  for (const auto& machine_regst_desc : mz2regst_desc) {
+    int64_t machine_id = machine_regst_desc.first;
+    const auto& mem_zone_id2regst_desc = machine_regst_desc.second;
+    for (const auto& pair : mem_zone_id2regst_desc) {
+      FindMinRegstNumWithLeastPerformanceLoss(
+          machine_id, pair.first, ii, pair.second, regst_desc_id2life_time,
+          regst_desc_id2num);
+    }
   }
 }
 
 void SetRegstNum(Plan* plan,
-                 const HashMap<uint64_t, double>& regst_desc_id2num) {
+                 const HashMap<int64_t, double>& regst_desc_id2num) {
   for (int i = 0; i < plan->task_size(); i++) {
     TaskProto* task = plan->mutable_task(i);
     for (auto& pair : *task->mutable_produced_regst_desc()) {
@@ -153,38 +154,18 @@ void SetRegstNum(Plan* plan,
   }
 }
 
-size_t GetThisMachineHostMemSize() {
-#if defined(_WIN32)
-  //  TODO
-  UNEXPECTED_RUN();
-#else  // linux, osx
-  struct sysinfo s_info;
-  sysinfo(&s_info);
-  return s_info.totalram * s_info.mem_unit;
-#endif
-}
-
-size_t GetThisMachineDeviceMemSize() {
-  int dev = 0;
-  cudaSetDevice(dev);
-  cudaDeviceProp gpu_prop;
-  cudaGetDeviceProperties(&gpu_prop, dev);
-  return static_cast<size_t>(gpu_prop.totalGlobalMem);
-}
-
 }  // namespace
 
-Improver::Improver() {
-  host_mem_size_ = GetThisMachineHostMemSize();
-  dev_mem_size_ = GetThisMachineDeviceMemSize();
+size_t Improver::MemorySize(int64_t machine_id, int64_t memory_zone_id) const {
+  TODO();
+  return 0;
 }
 
-size_t Improver::MemorySize(const MemoryDevice& mem_dev) const {
-  if (mem_dev.IsGpuMem()) {
-    return dev_mem_size_;
-  } else {
-    return host_mem_size_;
+int64_t Improver::GetMemoryZoneId(const MemoryCase& mem_case) const {
+  if (mem_case.has_device_cuda_mem()) {
+    return mem_case.device_cuda_mem().device_id();
   }
+  return -1;
 }
 
 Plan Improver::Improve(const Plan& naive_plan,
@@ -193,7 +174,7 @@ Plan Improver::Improve(const Plan& naive_plan,
   auto act_events = of_make_unique<std::list<ActEvent>>();
   ParseActEvents(act_event_filepath, act_events.get());
   ActorGraph actor_graph(plan, std::move(act_events));
-  HashMap<uint64_t, double> regst_desc_id2num;
+  HashMap<int64_t, double> regst_desc_id2num;
   MemoryLimitedAllocate(actor_graph, &regst_desc_id2num);
   SetRegstNum(&plan, regst_desc_id2num);
   return plan;

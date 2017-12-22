@@ -5,7 +5,6 @@
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/persistence/file_system.h"
-//#include "oneflow/core/common/longest_path_visitor.h"
 #include "oneflow/core/actor/act_event.pb.h"
 
 namespace oneflow {
@@ -19,7 +18,7 @@ class ActorNode final : public Node<ActorNode, ActorEdge> {
 
   // Getters
   const TaskProto& task_proto() const { return *task_proto_; }
-  uint64_t task_id() const { return task_proto().task_id(); }
+  int64_t task_id() const { return task_proto().task_id(); }
   TaskType task_type() const { return task_proto().task_type(); }
   uint32_t dfs_order_value() const { return dfs_order_value_; }
 
@@ -50,24 +49,24 @@ class ActorGraph final : public Graph<ActorNode, ActorEdge> {
   const Plan& plan() const { return *plan_; }
 
   const char* TypeName() const { return "ActorGraph"; }
-  const ActorNode* GetActorNode(uint64_t task_id) const {
+  const ActorNode* GetActorNode(int64_t task_id) const {
     return task_id2task_.at(task_id);
   }
   //  compute initiation interval
   double InitiationInterval() const;
 
   void MakeTaskId2AvgDurationHash(
-      HashMap<uint64_t, double>* task_id2avg_duration) const;
+      HashMap<int64_t, double>* task_id2avg_duration) const;
   void MakeRegstDescId2AvgLifeTimeHash(
-      HashMap<uint64_t, double>* regst_desc_id2life_time,
-      const std::function<double(uint64_t)>& AvgDuration4TaskId) const;
+      HashMap<int64_t, double>* regst_desc_id2life_time,
+      const std::function<double(int64_t)>& AvgDuration4TaskId) const;
 
  private:
   void UpdateDfsOrderValue();
   void DfsForEachNode(const std::function<void(ActorNode*)>& Handler) const;
   const Plan* plan_;
   std::unique_ptr<std::list<ActEvent>> act_events_;
-  HashMap<uint64_t, ActorNode*> task_id2task_;
+  HashMap<int64_t, ActorNode*> task_id2task_;
   HashMap<const ActorNode*, std::unordered_set<const ActorNode*>>
       task2ancestors_;
   HashMap<int64_t, std::list<const ActEvent*>> stream_id2act_events_;
