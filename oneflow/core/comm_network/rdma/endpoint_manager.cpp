@@ -7,6 +7,15 @@
 
 namespace oneflow {
 
+namespace {
+
+std::string GenConnInfoKey(int64_t src_machine_id, int64_t dst_machine_id) {
+  return "RdmaAllConnInfo/" + std::to_string(src_machine_id) + " "
+         + std::to_string(dst_machine_id);
+}
+
+}  // namespace
+
 EndpointManager::EndpointManager() {
   // Init Adapter
   ibv_device** device_list = ibv_get_device_list(NULL);
@@ -44,24 +53,26 @@ EndpointManager::~EndpointManager() {
 
 void EndpointManager::InitRdma() {
   int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
-  std::vector<ConnectionInfo> conn_infos(total_machine_num);
+  int64_t this_machine_id = MachineCtx::Singleton()->this_machine_id();
   FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
+    if (peer_machine_id == this_machine_id) { continue; }
     Connection* conn = NewConnection();
     connection_pool_.emplace(peer_machine_id, conn);
-    conn_infos[peer_machine_id] = conn->mut_this_mach_conn_info();
+    CtrlClient::Singleton()->PushKV(
+        GenConnInfoKey(this_machine_id, peer_machine_id),
+        conn->mut_this_mach_conn_info());
   }
-  AllConnInfo all_conn_info;
-  *(all_conn_info.mutable_conn_infos()) =
-      StdVec2PbRpf<ConnectionInfo>(conn_infos);
-  CtrlClient::Singleton()->PushAllConnInfo(all_conn_info);
   OF_BARRIER();
   FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
-    if (peer_machine_id == MachineCtx::Singleton()->this_machine_id()) {
-      continue;
-    }
+    if (peer_machine_id == this_machine_id) { continue; }
     Connection* conn = connection_pool_[peer_machine_id];
-    CtrlClient::Singleton()->PullConnectionInfo(peer_machine_id,
-                                                conn->mut_peer_conn_info_ptr());
+    CtrlClient::Singleton()->PullKV(
+        GenConnInfoKey(peer_machine_id, this_machine_id),
+        conn->mut_peer_conn_info_ptr());
+    auto peer_conn_info = conn->mut_peer_conn_info();
+    LOG(INFO) << peer_machine_id << " " << peer_conn_info.lid() << " "
+              << peer_conn_info.qpn() << " " << peer_conn_info.psn() << " "
+              << peer_conn_info.snp() << " " << peer_conn_info.iid();
     for (size_t i = 0; i != kPrePostRecvNum; ++i) {
       ActorMsg* actor_msg = new ActorMsg();
       const RdmaMem* rdma_mem = static_cast<const RdmaMem*>(
@@ -73,7 +84,6 @@ void EndpointManager::InitRdma() {
     conn->CompleteConnection();
   }
   OF_BARRIER();
-  CtrlClient::Singleton()->ClearAllConnInfo();
   LOG(INFO) << "Finish InitRdma";
 }
 
