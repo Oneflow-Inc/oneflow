@@ -32,6 +32,7 @@ class CopyCommNetActor::CommNetDeviceCtx final : public DeviceCtx {
 };
 
 void CopyCommNetActor::VirtualActorInit(const TaskProto& task_proto) {
+  is_in_eord_ = false;
   actor_read_id_ = CommNet::Singleton()->NewActorReadId();
   comm_net_device_ctx_ =
       new CommNetDeviceCtx(GetReservedWorkStreamId(0), actor_read_id_);
@@ -45,7 +46,8 @@ void CopyCommNetActor::InitDeviceCtx(const ThreadCtx&) {
 
 int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
-    return 1;
+    DecreaseRemainingEordCnt();
+    is_in_eord_ = true;
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (msg.SrcMachineId() == MachineCtx::Singleton()->this_machine_id()) {
       CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
@@ -60,7 +62,7 @@ int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
   } else {
     UNEXPECTED_RUN();
   }
-  return 0;
+  return TrySwitchToZombieOrFinish();
 }
 
 void CopyCommNetActor::Act() {
@@ -93,11 +95,12 @@ bool CopyCommNetActor::IsReadReady() {
 }
 
 bool CopyCommNetActor::IsReadAlwaysUnReadyFromNow() {
-  UNEXPECTED_RUN();
-  return false;
+  return is_in_eord_ && piece_id2regst_ctx.empty();
 }
 
-void CopyCommNetActor::AsyncReturnAllReadableRegst() { UNEXPECTED_RUN(); }
+void CopyCommNetActor::AsyncReturnAllReadableRegst() {
+  CHECK(piece_id2regst_ctx.empty());
+}
 
 REGISTER_ACTOR(TaskType::kCopyCommNet, CopyCommNetActor);
 

@@ -3,6 +3,7 @@
 #include "oneflow/core/persistence/normal_persistent_in_stream.h"
 #include "oneflow/core/register/register_desc.pb.h"
 #include "oneflow/core/register/register_manager.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
@@ -40,7 +41,7 @@ bool IsOutOfMemory(int64_t machine_id, int64_t memory_zone_id,
                    const std::list<const RegstDescProto*>& regst_descs,
                    const HashMap<int64_t, double>& regst_desc_id2num) {
   return MemoryConsuming(regst_descs, regst_desc_id2num)
-         >= Improver::Singleton()->MemorySize(machine_id, memory_zone_id);
+         >= Improver::Singleton()->AvailableMemSize(machine_id, memory_zone_id);
 }
 
 void ComputeIIAndRegstDescAvgLifeTime(
@@ -84,8 +85,7 @@ double ComputeLeastIIFlationRatio(
 
 void MakeMemoryDevice2RegstDescs(
     const Plan& plan,
-    HashMap<int64_t, HashMap<int64_t, std::list<const RegstDescProto*>>>*
-        mz2regst_desc) {
+    std::vector<std::vector<std::list<const RegstDescProto*>>>* mz2regst_desc) {
   for (const auto& task : plan.task()) {
     for (const auto& pair : task.produced_regst_desc()) {
       int64_t mem_zone_id =
@@ -123,16 +123,13 @@ void MemoryLimitedAllocate(const ActorGraph& graph,
   for (const auto& pair : regst_desc_id2life_time) {
     (*regst_desc_id2num)[pair.first] = pair.second / ii;
   }
-  HashMap<int64_t, HashMap<int64_t, std::list<const RegstDescProto*>>>
-      mz2regst_desc;
-  MakeMemoryDevice2RegstDescs(graph.plan(), &mz2regst_desc);
-  for (const auto& machine_regst_desc : mz2regst_desc) {
-    int64_t machine_id = machine_regst_desc.first;
-    const auto& mem_zone_id2regst_desc = machine_regst_desc.second;
-    for (const auto& pair : mem_zone_id2regst_desc) {
+  std::vector<std::vector<std::list<const RegstDescProto*>>> mz_regst_descs;
+  MakeMemoryDevice2RegstDescs(graph.plan(), &mz_regst_descs);
+  FOR_RANGE(int64_t, machine_id, 0, mz_regst_descs.size()) {
+    FOR_RANGE(int64_t, mem_zone_id, 0, mz_regst_descs[machine_id].size()) {
       FindMinRegstNumWithLeastPerformanceLoss(
-          machine_id, pair.first, ii, pair.second, regst_desc_id2life_time,
-          regst_desc_id2num);
+          machine_id, mem_zone_id, ii, mz_regst_descs[machine_id][mem_zone_id],
+          regst_desc_id2life_time, regst_desc_id2num);
     }
   }
 }
@@ -156,16 +153,16 @@ void SetRegstNum(Plan* plan,
 
 }  // namespace
 
-size_t Improver::MemorySize(int64_t machine_id, int64_t memory_zone_id) const {
-  TODO();
-  return 0;
+size_t Improver::AvailableMemSize(int64_t machine_id,
+                                  int64_t memory_zone_id) const {
+  return amd_.machine_amd(machine_id).zone_size(memory_zone_id) * 0.95;
 }
 
 int64_t Improver::GetMemoryZoneId(const MemoryCase& mem_case) const {
   if (mem_case.has_device_cuda_mem()) {
     return mem_case.device_cuda_mem().device_id();
   }
-  return -1;
+  return JobDesc::Singleton()->resource().device_num_per_machine();
 }
 
 Plan Improver::Improve(const Plan& naive_plan,
