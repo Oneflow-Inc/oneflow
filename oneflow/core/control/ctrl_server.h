@@ -38,15 +38,6 @@ class CtrlServer final {
   HashMap<std::string, std::string> kv_;
   HashMap<std::string, std::list<CtrlCall<PullKVRequest, PullKVResponse>*>>
       pending_kv_calls_;
-  // rdma
-  AllConnInfo all_conn_info_;
-  std::list<std::pair<
-      CtrlCall<PullConnectionInfoRequest, PullConnectionInfoResponse>*,
-      int64_t>>
-      pending_conn_info_calls_;
-  TokenMsgs token_msgs_;
-  std::list<CtrlCall<PullTokenMsgsRequest, PullTokenMsgsResponse>*>
-      pending_token_msgs_calls_;
 };
 
 }  // namespace oneflow

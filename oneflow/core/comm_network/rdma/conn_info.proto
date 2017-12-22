@@ -8,7 +8,3 @@ message ConnectionInfo {
   required uint64 snp = 4;
   required uint64 iid = 5;
 }
-
-message AllConnInfo {
-  repeated ConnectionInfo conn_infos = 1;
-}
