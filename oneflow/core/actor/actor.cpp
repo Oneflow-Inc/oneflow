@@ -26,8 +26,6 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     CHECK(name2regst_desc_id_.emplace(pair.first, pair.second).second);
   }
   msg_handler_ = nullptr;
-  InitDeviceCtx(thread_ctx);
-  // Status of Produced Registers
   for (const auto& pair : produced_regsts_) {
     for (const auto& regst : pair.second) {
       writeable_produced_regst_[regst->regst_desc_id()].push_back(regst.get());
@@ -38,6 +36,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   total_reading_cnt_ = 0;
   remaining_eord_cnt_ = task_proto.consumed_regst_desc_id().size();
   VirtualActorInit(task_proto);
+  InitDeviceCtx(thread_ctx);
 }
 
 int64_t Actor::machine_id() const {
