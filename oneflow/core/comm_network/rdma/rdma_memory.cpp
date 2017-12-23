@@ -32,7 +32,7 @@ RdmaMemDesc RdmaMem::GetRdmaMemDesc() {
   CHECK_EQ(is_registered_, true);
   RdmaMemDesc rdma_mem_desc;
   rdma_mem_desc.set_mem_ptr(reinterpret_cast<uint64_t>(sge_.addr));
-  rdma_mem_desc.set_token(mr_->rkey);
+  rdma_mem_desc.set_mr_rkey(mr_->rkey);
   return rdma_mem_desc;
 }
 

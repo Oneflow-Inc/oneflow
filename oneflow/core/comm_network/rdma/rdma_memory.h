@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_COMM_NETWORK_RDMA_RDMA_MEMORY_H
 
 #include <infiniband/verbs.h>
-#include "oneflow/core/comm_network/rdma/mem_desc.pb.h"
+#include "oneflow/core/comm_network/rdma/rdma_memory_desc.pb.h"
 
 namespace oneflow {
 

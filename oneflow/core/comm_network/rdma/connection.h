@@ -5,7 +5,6 @@
 #include "glog/logging.h"
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/comm_network/rdma/conn_info.pb.h"
-#include "oneflow/core/comm_network/rdma/mem_desc.pb.h"
 #include "oneflow/core/comm_network/rdma/rdma_memory.h"
 
 namespace oneflow {

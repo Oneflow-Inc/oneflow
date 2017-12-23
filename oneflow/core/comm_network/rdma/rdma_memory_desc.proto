@@ -3,5 +3,5 @@ package oneflow;
 
 message RdmaMemDesc {
   required uint64 mem_ptr = 1;
-  required uint32 token = 2;
+  required uint32 mr_rkey= 2;
 }
