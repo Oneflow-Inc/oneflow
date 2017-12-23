@@ -61,6 +61,7 @@ class Blob final {
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
 
  private:
+  Blob() = default;
   template<typename T>
   void CheckDataType() const {
     LOG_IF(FATAL, (std::is_same<T, void>::value == false

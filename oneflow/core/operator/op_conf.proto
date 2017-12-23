@@ -18,11 +18,19 @@ message GaussianFillConf {
   optional float std = 2 [default = 1];
 }
 
+message RandomFillConf {}
+
+message SpecifiedFillConf {
+  repeated float specified_vals = 1;
+}
+
 message FillConf {
   oneof type {
     ConstantFillConf constant_conf = 1;
     UniformFillConf uniform_conf = 2;
     GaussianFillConf gaussian_conf = 3;
+    RandomFillConf random_conf = 4;
+    SpecifiedFillConf specified_conf = 5;
   }
 }
 

@@ -4,6 +4,7 @@
 #include "oneflow/core/common/test_util.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/kernel/kernel_context.h"
+#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/register/blob.h"
@@ -12,8 +13,13 @@ namespace oneflow {
 
 namespace test {
 
-std::function<BlobDesc*(const std::string)> ConstructBn2BlobDescFunc(
+std::function<BlobDesc*(const std::string&)> ConstructBn2BlobDescFunc(
     std::shared_ptr<Operator>);
+
+std::function<Blob*(const std::string&)> ConstructBn2BlobFunc();
+
+template<DeviceType device_type>
+void* Malloc(size_t);
 
 template<DeviceType device_type>
 Blob* CreateBlob(const BlobDesc*);
@@ -25,61 +31,62 @@ template<DeviceType device_type>
 void SyncStream(KernelCtx* ctx);
 
 template<DeviceType device_type>
-void SetBlobDataId(Blob*, const std::vector<std::string>&);
+void SetBlobDataId(DeviceCtx* ctx, Blob* blob,
+                   const std::vector<std::string>& data_ids) {
+  CHECK_EQ(blob->has_data_id(), true);
+  CHECK_EQ(data_ids.size(), blob->shape().At(0));
+  Memset<device_type>(ctx, blob->mut_data_id(0), '\0',
+                      blob->ByteSizeOfDataIdField());
+  FOR_RANGE(size_t, i, 0, data_ids.size()) {
+    CHECK_LE(data_ids[i].size(), JobDesc::Singleton()->SizeOfOneDataId());
+    Memcpy<device_type>(ctx, blob->mut_data_id(i), data_ids[i].c_str(),
+                        data_ids[i].size());
+  }
+}
 
-using RandomValConf = HashMap<std::string, BlobDesc*>;
-using SameValConf = HashMap<std::string, std::tuple<float, BlobDesc*>>;
-template<typename T>
-using SpecifiedValConf =
-    HashMap<std::string, std::tuple<std::vector<T>*, BlobDesc*>>;
+template<DeviceType device_type>
+void InitBlobWithBlobDesc(Blob* blob, const BlobDesc* blob_desc) {
+  char* mem_ptr =
+      static_cast<char*>(Malloc<device_type>(blob_desc->TotalByteSize()));
+  blob->data_id_ptr_ = blob_desc->has_data_id() ? mem_ptr : nullptr;
+  blob->dptr_ = mem_ptr + blob_desc->ByteSizeOfDataIdField();
+  blob->blob_desc_ = blob_desc;
+}
+
+template<DeviceType device_type, typename T>
+void InitBlobAndFillSameVal(DeviceCtx* ctx, Blob* blob,
+                            const BlobDesc* blob_desc, float val) {
+  InitBlobWithBlobDesc<device_type>(blob, blob_desc);
+  FillConf fill_conf;
+  fill_conf.mutable_constant_conf()->set_value(val);
+  KernelUtil<device_type, T>::Fill(ctx, fill_conf, 0, blob);
+}
+
+template<DeviceType device_type, typename T>
+void InitBlobAndFillRandomVal(DeviceCtx* ctx, Blob* blob,
+                              const BlobDesc* blob_desc) {
+  InitBlobWithBlobDesc<device_type>(blob, blob_desc);
+  FillConf fill_conf;
+  fill_conf.mutable_random_conf();
+  KernelUtil<device_type, T>::Fill(ctx, fill_conf, 0, blob);
+}
+
+template<DeviceType device_type, typename T>
+void InitBlobAndFillSpecifiedVal(DeviceCtx* ctx, Blob* blob,
+                                 const BlobDesc* blob_desc,
+                                 const std::vector<float> vals) {
+  InitBlobWithBlobDesc<device_type>(blob, blob_desc);
+  FillConf fill_conf;
+  (*fill_conf.mutable_specified_conf()->mutable_specified_vals()) =
+      StdVec2PbRf<float>(vals);
+  KernelUtil<device_type, T>::Fill(ctx, fill_conf, 0, blob);
+}
 
 template<DeviceType device_type, typename T>
 class KTCommon final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KTCommon);
   KTCommon() = delete;
-
-  static Blob* CreateBlobWithSpecifiedVal(const BlobDesc*, T* val);
-
-  static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc,
-                                          std::vector<T>& val) {
-    return CreateBlobWithSpecifiedVal(blob_desc, &(val[0]));
-  }
-
-  static std::function<Blob*(const std::string)> ConstructBnInOp2BlobFunc(
-      RandomValConf random_val_conf, SameValConf same_val_conf,
-      SpecifiedValConf<T> specified_vals_conf) {
-    auto bn2blob = new HashMap<std::string, Blob*>;
-    BlobDesc* blob_desc = nullptr;
-    for (auto blob_conf_pair : random_val_conf) {
-      blob_desc = blob_conf_pair.second;
-      std::random_device rd;
-      std::mt19937 gen(rd());
-      std::uniform_real_distribution<double> dis(0, 10);
-      T* val_vec = new T[blob_desc->shape().elem_cnt()];
-      for (int64_t i = 0; i < blob_desc->shape().elem_cnt(); ++i) {
-        val_vec[i] = static_cast<T>(dis(gen));
-      }
-      (*bn2blob)[blob_conf_pair.first] =
-          CreateBlobWithSpecifiedVal(blob_desc, val_vec);
-    }
-    for (auto blob_conf_pair : same_val_conf) {
-      float val = 0.f;
-      std::tie(val, blob_desc) = blob_conf_pair.second;
-      T* val_vec = new T[blob_desc->shape().elem_cnt()];
-      std::fill(val_vec, val_vec + blob_desc->shape().elem_cnt(),
-                static_cast<T>(val));
-      (*bn2blob)[blob_conf_pair.first] =
-          CreateBlobWithSpecifiedVal(blob_desc, val_vec);
-    }
-    for (auto blob_conf_pair : specified_vals_conf) {
-      std::vector<T>* specific_nums = nullptr;
-      std::tie(specific_nums, blob_desc) = blob_conf_pair.second;
-      (*bn2blob)[blob_conf_pair.first] =
-          CreateBlobWithSpecifiedVal(blob_desc, *specific_nums);
-    }
-    return [bn2blob](const std::string& bn) { return bn2blob->at(bn); };
-  }
 
   static void BlobCmp(const Blob* lhs, const Blob* rhs);
 

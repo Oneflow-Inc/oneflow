@@ -7,7 +7,7 @@ namespace oneflow {
 
 namespace test {
 
-std::function<BlobDesc*(const std::string)> ConstructBn2BlobDescFunc(
+std::function<BlobDesc*(const std::string&)> ConstructBn2BlobDescFunc(
     std::shared_ptr<Operator> op) {
   auto InsertBnsWithEmptyBlobDesc2Map =
       [](const std::vector<std::string>& bns,
@@ -30,10 +30,26 @@ std::function<BlobDesc*(const std::string)> ConstructBn2BlobDescFunc(
   };
 }
 
+std::function<Blob*(const std::string&)> ConstructBn2BlobFunc() {
+  auto bn2blob_map = new HashMap<std::string, Blob*>();
+  return [bn2blob_map](const std::string& bn) {
+    if (bn2blob_map->find(bn) == bn2blob_map->end()) {
+      bn2blob_map->insert({bn, new Blob});
+    }
+    return bn2blob_map->at(bn);
+  };
+}
+
+template<>
+void* Malloc<DeviceType::kCPU>(size_t sz) {
+  void* mem_ptr = nullptr;
+  CudaCheck(cudaMallocHost(&mem_ptr, sz));
+  return mem_ptr;
+}
+
 template<>
 Blob* CreateBlob<DeviceType::kCPU>(const BlobDesc* blob_desc) {
-  void* mem_ptr = nullptr;
-  CudaCheck(cudaMallocHost(&mem_ptr, blob_desc->TotalByteSize()));
+  void* mem_ptr = Malloc<DeviceType::kCPU>(blob_desc->TotalByteSize());
   return new Blob(blob_desc, static_cast<char*>(mem_ptr));
 }
 
@@ -44,19 +60,6 @@ void BuildKernelCtx<DeviceType::kCPU>(KernelCtx* ctx) {
 
 template<>
 void SyncStream<DeviceType::kCPU>(KernelCtx* ctx) {}
-
-template<>
-void SetBlobDataId<DeviceType::kCPU>(Blob* blob,
-                                     const std::vector<std::string>& data_ids) {
-  CHECK_EQ(blob->has_data_id(), true);
-  CHECK_EQ(data_ids.size(), blob->shape().At(0));
-  CudaCheck(
-      cudaMemset(blob->mut_data_id(0), '\0', blob->ByteSizeOfDataIdField()));
-  FOR_RANGE(size_t, i, 0, data_ids.size()) {
-    CHECK_LE(data_ids[i].size(), JobDesc::Singleton()->SizeOfOneDataId());
-    memcpy(blob->mut_data_id(i), data_ids[i].c_str(), data_ids[i].size());
-  }
-}
 
 template<typename T>
 class KTCommon<DeviceType::kCPU, T> final {
