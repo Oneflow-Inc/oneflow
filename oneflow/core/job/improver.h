@@ -11,13 +11,12 @@ namespace oneflow {
 class Improver final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Improver);
+  Improver() = delete;
   ~Improver() = default;
 
   OF_SINGLETON(Improver);
 
   Plan Improve(const Plan& naive_plan, const std::string& act_event_filepath);
-  size_t AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const;
-  int64_t GetMemoryZoneId(const MemoryCase& mem_case) const;
 
  private:
   explicit Improver(const AvailableMemDesc& amd) : amd_(amd) {}
@@ -31,6 +30,8 @@ class Improver final {
   bool IsOutOfMemory(int64_t machine_id, int64_t memory_zone_id,
                      const std::list<const RegstDescProto*>& regst_descs,
                      const HashMap<int64_t, double>& regst_desc_id2num) const;
+  size_t AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const;
+  int64_t GetMemoryZoneId(const MemoryCase& mem_case) const;
   void MakeMemoryDevice2RegstDescs(
       const Plan& plan,
       std::vector<std::vector<std::list<const RegstDescProto*>>>* mz2regst_desc)

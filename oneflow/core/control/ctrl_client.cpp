@@ -24,8 +24,11 @@ void CtrlClient::Barrier(const std::string& barrier_name, int32_t barrier_num) {
 }
 
 TryLockResult CtrlClient::TryLock(const std::string& name) {
-  if (done_names_.find(name) != done_names_.end()) {
-    return TryLockResult::kDone;
+  {
+    std::unique_lock<std::mutex> lck(done_names_mtx_);
+    if (done_names_.find(name) != done_names_.end()) {
+      return TryLockResult::kDone;
+    }
   }
   grpc::ClientContext client_ctx;
   TryLockRequest request;
@@ -33,7 +36,8 @@ TryLockResult CtrlClient::TryLock(const std::string& name) {
   TryLockResponse response;
   GetResponsibleStub(name)->TryLock(&client_ctx, request, &response);
   if (response.result() == TryLockResult::kDone) {
-    CHECK(done_names_.insert(name).second);
+    std::unique_lock<std::mutex> lck(done_names_mtx_);
+    done_names_.insert(name);
   }
   return response.result();
 }
@@ -111,6 +115,7 @@ void CtrlClient::Clear() {
   ClearRequest request;
   ClearResponse response;
   GetThisStub()->Clear(&client_ctx, request, &response);
+  std::unique_lock<std::mutex> lck(done_names_mtx_);
   done_names_.clear();
 }
 

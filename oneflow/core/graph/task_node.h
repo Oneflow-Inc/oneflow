@@ -50,6 +50,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   bool IsAllConsumedRegstLocked();
   ExecGraph& mut_exec_gph() { return exec_gph_; }
   std::shared_ptr<RegstDesc> GetConsumedRegst(const std::string& name);
+  bool TryLockConsumedRegst(const std::string& name);
 
   virtual void BuildExecGphAndRegst() = 0;
   virtual void LockRegsts();

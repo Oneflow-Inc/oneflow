@@ -26,6 +26,7 @@ class SnapshotMgr {
 
   std::string model_save_snapshots_path_;
   std::unique_ptr<const Snapshot> readable_snapshot_;
+  std::mutex snapshot_id2writeable_snapshot_mtx_;
   HashMap<int64_t, std::unique_ptr<Snapshot>> snapshot_id2writeable_snapshot_;
   int64_t total_mbn_num_;
 };
