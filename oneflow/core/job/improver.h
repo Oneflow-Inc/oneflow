@@ -5,6 +5,7 @@
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
+#include "oneflow/core/graph/actor_graph.h"
 
 namespace oneflow {
 class Improver final {
@@ -20,7 +21,20 @@ class Improver final {
 
  private:
   explicit Improver(const AvailableMemDesc& amd) : amd_(amd) {}
-
+  void MemoryLimitedAllocate(const ActorGraph& graph,
+                             HashMap<int64_t, double>* regst_desc_id2num) const;
+  void FindMinRegstNumWithLeastPerformanceLoss(
+      int64_t machine_id, int64_t memory_zone_id, double ii,
+      const std::list<const RegstDescProto*>& regst_descs,
+      const HashMap<int64_t, double>& regst_desc_id2life_time,
+      HashMap<int64_t, double>* regst_desc_id2num) const;
+  bool IsOutOfMemory(int64_t machine_id, int64_t memory_zone_id,
+                     const std::list<const RegstDescProto*>& regst_descs,
+                     const HashMap<int64_t, double>& regst_desc_id2num) const;
+  void MakeMemoryDevice2RegstDescs(
+      const Plan& plan,
+      std::vector<std::vector<std::list<const RegstDescProto*>>>* mz2regst_desc)
+      const;
   AvailableMemDesc amd_;
 };
 
