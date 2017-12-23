@@ -40,10 +40,12 @@ void Connection::PostRecvRequest(const ActorMsg* msg, const RdmaMem* msg_mem) {
 }
 
 void Connection::CompleteConnection() {
-  LOG(INFO) << "Peer conn info: " << peer_conn_info_.qpn() << " "
-            << peer_conn_info_.psn() << " " << peer_conn_info_.snp() << " "
-            << peer_conn_info_.iid() << " " << peer_conn_info_.lid();
-  LOG(INFO) << "My conn info: " << this_mach_conn_info_.psn();
+  LOG(INFO) << "Peer conn info: " << peer_machine_conn_info_.qpn() << " "
+            << peer_machine_conn_info_.psn() << " "
+            << peer_machine_conn_info_.snp() << " "
+            << peer_machine_conn_info_.iid() << " "
+            << peer_machine_conn_info_.lid();
+  LOG(INFO) << "My conn info: " << this_machine_conn_info_.psn();
   ibv_qp_attr qp_attr;
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));
 
@@ -60,16 +62,16 @@ void Connection::CompleteConnection() {
 
   qp_attr.qp_state = IBV_QPS_RTR;
   qp_attr.path_mtu = active_mtu_;
-  qp_attr.dest_qp_num = peer_conn_info_.qpn();
-  qp_attr.rq_psn = peer_conn_info_.psn();
+  qp_attr.dest_qp_num = peer_machine_conn_info_.qpn();
+  qp_attr.rq_psn = peer_machine_conn_info_.psn();
   qp_attr.max_dest_rd_atomic = 1;
   qp_attr.min_rnr_timer = 12;
   qp_attr.ah_attr.is_global = 1;
-  qp_attr.ah_attr.grh.dgid.global.subnet_prefix = peer_conn_info_.snp();
-  qp_attr.ah_attr.grh.dgid.global.interface_id = peer_conn_info_.iid();
+  qp_attr.ah_attr.grh.dgid.global.subnet_prefix = peer_machine_conn_info_.snp();
+  qp_attr.ah_attr.grh.dgid.global.interface_id = peer_machine_conn_info_.iid();
   qp_attr.ah_attr.grh.flow_label = 0;
   qp_attr.ah_attr.grh.hop_limit = 255;
-  qp_attr.ah_attr.dlid = peer_conn_info_.lid();
+  qp_attr.ah_attr.dlid = peer_machine_conn_info_.lid();
   qp_attr.ah_attr.sl = 0;
   qp_attr.ah_attr.src_path_bits = 0;
   qp_attr.ah_attr.port_num = 1;
@@ -83,7 +85,7 @@ void Connection::CompleteConnection() {
 
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));
   qp_attr.qp_state = IBV_QPS_RTS;
-  qp_attr.sq_psn = this_mach_conn_info_.psn();
+  qp_attr.sq_psn = this_machine_conn_info_.psn();
   qp_attr.timeout = 14;
   qp_attr.retry_cnt = 7;
   qp_attr.rnr_retry = 7;

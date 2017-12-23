@@ -60,7 +60,7 @@ void EndpointManager::InitRdma() {
     connection_pool_.emplace(peer_machine_id, conn);
     CtrlClient::Singleton()->PushKV(
         GenConnInfoKey(this_machine_id, peer_machine_id),
-        conn->mut_this_mach_conn_info());
+        conn->mut_this_machine_conn_info());
   }
   OF_BARRIER();
   FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
@@ -68,13 +68,13 @@ void EndpointManager::InitRdma() {
     Connection* conn = connection_pool_[peer_machine_id];
     CtrlClient::Singleton()->PullKV(
         GenConnInfoKey(peer_machine_id, this_machine_id),
-        conn->mut_peer_conn_info_ptr());
+        conn->mut_peer_machine_conn_info_ptr());
     LOG(INFO) << "Connection " << reinterpret_cast<uint64_t>(conn)
-              << " info: " << conn->mut_peer_conn_info().lid() << " "
-              << conn->mut_peer_conn_info().qpn() << " "
-              << conn->mut_peer_conn_info().psn() << " "
-              << conn->mut_peer_conn_info().snp() << " "
-              << conn->mut_peer_conn_info().iid();
+              << " info: " << conn->mut_peer_machine_conn_info().lid() << " "
+              << conn->mut_peer_machine_conn_info().qpn() << " "
+              << conn->mut_peer_machine_conn_info().psn() << " "
+              << conn->mut_peer_machine_conn_info().snp() << " "
+              << conn->mut_peer_machine_conn_info().iid();
     for (size_t i = 0; i != kPrePostRecvNum; ++i) {
       ActorMsg* actor_msg = new ActorMsg();
       const RdmaMem* rdma_mem = static_cast<const RdmaMem*>(
@@ -121,22 +121,22 @@ Connection* EndpointManager::NewConnection() {
   ibv_port_attr attr;
   CHECK_EQ(ibv_query_port(context_, (uint8_t)1, &attr), 0);
   srand((unsigned)time(NULL));
-  conn->mut_this_mach_conn_info_ptr()->set_lid(attr.lid);
-  conn->mut_this_mach_conn_info_ptr()->set_qpn(qp_ptr->qp_num);
-  conn->mut_this_mach_conn_info_ptr()->set_psn(static_cast<uint32_t>(rand())
-                                               & 0xffffff);
+  conn->mut_this_machine_conn_info_ptr()->set_lid(attr.lid);
+  conn->mut_this_machine_conn_info_ptr()->set_qpn(qp_ptr->qp_num);
+  conn->mut_this_machine_conn_info_ptr()->set_psn(static_cast<uint32_t>(rand())
+                                                  & 0xffffff);
   union ibv_gid gid;
   CHECK_EQ(ibv_query_gid(context_, (uint8_t)1, 0, &gid), 0);
-  conn->mut_this_mach_conn_info_ptr()->set_snp(gid.global.subnet_prefix);
-  conn->mut_this_mach_conn_info_ptr()->set_iid(gid.global.interface_id);
+  conn->mut_this_machine_conn_info_ptr()->set_snp(gid.global.subnet_prefix);
+  conn->mut_this_machine_conn_info_ptr()->set_iid(gid.global.interface_id);
   conn->set_ibv_mtu(attr.active_mtu);
   conn->set_ibv_qp_ptr(qp_ptr);
   LOG(INFO) << "Connection " << reinterpret_cast<uint64_t>(conn)
-            << " info: " << conn->mut_this_mach_conn_info().lid() << " "
-            << conn->mut_this_mach_conn_info().qpn() << " "
-            << conn->mut_this_mach_conn_info().psn() << " "
-            << conn->mut_this_mach_conn_info().snp() << " "
-            << conn->mut_this_mach_conn_info().iid();
+            << " info: " << conn->mut_this_machine_conn_info().lid() << " "
+            << conn->mut_this_machine_conn_info().qpn() << " "
+            << conn->mut_this_machine_conn_info().psn() << " "
+            << conn->mut_this_machine_conn_info().snp() << " "
+            << conn->mut_this_machine_conn_info().iid();
   return conn;
 }
 
