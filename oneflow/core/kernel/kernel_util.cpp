@@ -62,24 +62,6 @@ void GaussianFill(const GaussianFillConf& fill_conf, uint32_t random_seed,
                  blob->mut_dptr<T>());
 }
 
-template<typename T>
-void RandomFill(const RandomFillConf& fill_conf, Blob* blob) {
-  CHECK(blob->shape().elem_cnt());
-  std::mt19937 random_seed_gen;
-  RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(0), static_cast<T>(10),
-                random_seed_gen(), blob->mut_dptr<T>());
-}
-
-template<typename T>
-void SpecifiedFill(const SpecifiedFillConf& fill_conf, Blob* blob) {
-  const int64_t elem_cnt = blob->shape().elem_cnt();
-  CHECK(elem_cnt);
-  T* dptr = blob->mut_dptr<T>();
-  for (int64_t i = 0; i < elem_cnt; ++i) {
-    dptr[i] = static_cast<T>(fill_conf.specified_vals(i));
-  }
-}
-
 }  // namespace
 
 template<>
@@ -163,10 +145,6 @@ struct KernelUtil<DeviceType::kCPU, T> final {
       UniformFill<T>(fill_conf.uniform_conf(), random_seed, blob);
     } else if (fill_conf.has_gaussian_conf()) {
       GaussianFill<T>(fill_conf.gaussian_conf(), random_seed, blob);
-    } else if (fill_conf.has_random_conf()) {
-      RandomFill<T>(fill_conf.random_conf(), blob);
-    } else if (fill_conf.has_specified_conf()) {
-      SpecifiedFill<T>(fill_conf.specified_conf(), blob);
     } else {
       UNEXPECTED_RUN();
     }

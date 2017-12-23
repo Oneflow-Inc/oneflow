@@ -64,6 +64,10 @@ void SyncStream<DeviceType::kCPU>(KernelCtx* ctx) {}
 template<typename T>
 class KTCommon<DeviceType::kCPU, T> final {
  public:
+  static void CopyFromFloatVals(T* dst, const float* src, int64_t sz) {
+    FOR_RANGE(int64_t, i, 0, sz) { dst[i] = static_cast<T>(src[i]); }
+  }
+
   static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc, T* val) {
     Blob* ret = CreateBlob<DeviceType::kCPU>(blob_desc);
     CudaCheck(cudaMemcpy(ret->mut_dptr(), val,

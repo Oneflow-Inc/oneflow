@@ -37,6 +37,14 @@ void SyncStream<DeviceType::kGPU>(KernelCtx* ctx) {
 template<typename T>
 class KTCommon<DeviceType::kGPU, T> final {
  public:
+  static void CopyFromFloatVals(T* dst, const float* src, int64_t sz) {
+    T* host_dst = nullptr;
+    CudaCheck(cudaMalloc(&host_dst, sz * sizeof(T)));
+    KTCommon<DeviceType::kCPU, T>::CopyFromFloatVals(host_dst, src, sz);
+    CudaCheck(
+        cudaMemcpy(dst, host_dst, sz * sizeof(T), cudaMemcpyHostToDevice));
+  }
+
   static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc, T* val) {
     Blob* ret = CreateBlob<DeviceType::kGPU>(blob_desc);
     CudaCheck(cudaMemcpy(ret->mut_dptr(), val,

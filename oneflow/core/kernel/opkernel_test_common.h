@@ -66,20 +66,11 @@ template<DeviceType device_type, typename T>
 void InitBlobAndFillRandomVal(DeviceCtx* ctx, Blob* blob,
                               const BlobDesc* blob_desc) {
   InitBlobWithBlobDesc<device_type>(blob, blob_desc);
+  std::mt19937 random_seed_gen;
   FillConf fill_conf;
-  fill_conf.mutable_random_conf();
-  KernelUtil<device_type, T>::Fill(ctx, fill_conf, 0, blob);
-}
-
-template<DeviceType device_type, typename T>
-void InitBlobAndFillSpecifiedVal(DeviceCtx* ctx, Blob* blob,
-                                 const BlobDesc* blob_desc,
-                                 const std::vector<float> vals) {
-  InitBlobWithBlobDesc<device_type>(blob, blob_desc);
-  FillConf fill_conf;
-  (*fill_conf.mutable_specified_conf()->mutable_specified_vals()) =
-      StdVec2PbRf<float>(vals);
-  KernelUtil<device_type, T>::Fill(ctx, fill_conf, 0, blob);
+  fill_conf.mutable_gaussian_conf()->set_std(10);
+  fill_conf.mutable_gaussian_conf()->set_mean(10);
+  KernelUtil<device_type, T>::Fill(ctx, fill_conf, random_seed_gen(), blob);
 }
 
 template<DeviceType device_type, typename T>
@@ -87,6 +78,8 @@ class KTCommon final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KTCommon);
   KTCommon() = delete;
+
+  static void CopyFromFloatVals(T* dst, const float* src, int64_t sz);
 
   static void BlobCmp(const Blob* lhs, const Blob* rhs);
 
@@ -98,6 +91,15 @@ class KTCommon final {
 
   static void CheckFillResult(const Blob* blob, const FillConf& fill_conf);
 };
+
+template<DeviceType device_type, typename T>
+void InitBlobAndFillSpecifiedVal(Blob* blob, const BlobDesc* blob_desc,
+                                 const std::vector<float> vals) {
+  InitBlobWithBlobDesc<device_type>(blob, blob_desc);
+  CHECK_EQ(vals.size(), blob_desc->shape().elem_cnt());
+  KTCommon<device_type, T>::CopyFromFloatVals(blob->mut_dptr<T>(), &vals[0],
+                                              vals.size());
+}
 
 }  // namespace test
 

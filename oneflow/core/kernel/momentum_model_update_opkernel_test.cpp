@@ -45,16 +45,12 @@ std::function<Blob*(const std::string&)> BuildBnInOp2Blob(DeviceCtx* ctx) {
       new BlobDesc(Shape({1, 3, 2}), GetDataType<T>::val, false);
   auto bn2blob = ConstructBn2BlobFunc();
   InitBlobAndFillRandomVal<device_type, T>(ctx, bn2blob("model"), blob_desc);
-  InitBlobAndFillSameVal<device_type, T>(ctx, bn2blob("pre_model"), blob_desc,
-                                         2);
-  InitBlobAndFillSameVal<device_type, T>(ctx, bn2blob("momentum"), blob_desc,
-                                         4);
-  InitBlobAndFillSameVal<device_type, T>(ctx, bn2blob("model_diff_acc"),
-                                         blob_desc, 4);
-  InitBlobAndFillSameVal<device_type, T>(ctx, bn2blob("model_expected"),
-                                         blob_desc, 3);
-  InitBlobAndFillSameVal<device_type, T>(ctx, bn2blob("momentum_expected"),
-                                         blob_desc, 1);
+#define IBAFS InitBlobAndFillSameVal<device_type, T>
+  IBAFS(ctx, bn2blob("pre_model"), blob_desc, 2);
+  IBAFS(ctx, bn2blob("momentum"), blob_desc, 4);
+  IBAFS(ctx, bn2blob("model_diff_acc"), blob_desc, 4);
+  IBAFS(ctx, bn2blob("model_expected"), blob_desc, 3);
+  IBAFS(ctx, bn2blob("momentum_expected"), blob_desc, 1);
   return bn2blob;
 }
 
