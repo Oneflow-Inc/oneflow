@@ -5,6 +5,10 @@
 #define final
 #endif
 
+#ifndef protected
+#define protected public
+#endif
+
 #ifndef private
 #define private public
 #endif
