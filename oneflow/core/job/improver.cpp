@@ -7,4 +7,8 @@ Plan Improver::Improve(const Plan& naive_plan,
   return naive_plan;  // TODO
 }
 
+Improver::Improver(const AvailableMemDesc& amd) {
+  // TODO
+}
+
 }  // namespace oneflow

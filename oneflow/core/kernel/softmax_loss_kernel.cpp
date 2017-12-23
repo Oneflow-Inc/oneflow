@@ -15,16 +15,16 @@ void SoftmaxLossKernel<device_type, PredType, LabelType>::ForwardDataContent(
   Blob* loss_blob = BnInOp2Blob("loss");
   const int64_t n = prediction_blob->shape().At(0);
   const int64_t w = prediction_blob->shape().Count(1);
-  const PredType* in = prediction_blob->dptr<PredType>();
+  const PredType* pred = prediction_blob->dptr<PredType>();
   const LabelType* label = label_blob->dptr<LabelType>();
   PredType* tmp = tmp_blob->mut_dptr<PredType>();
   PredType* prob = prob_blob->mut_dptr<PredType>();
   PredType* loss = loss_blob->mut_dptr<PredType>();
   // forward
-  SoftmaxComputeProb<device_type, PredType>(ctx.device_ctx, n, w, in, tmp,
+  SoftmaxComputeProb<device_type, PredType>(ctx.device_ctx, n, w, pred, tmp,
                                             prob);
   SoftmaxLossKernelUtil<device_type, PredType, LabelType>::ComputeLoss(
-      ctx.device_ctx, n, w, label, prob, tmp, loss);
+      ctx.device_ctx, n, w, label, prob, loss);
   // backward
   // if prediction_diff_blob is not null , then do backward
   Blob* prediction_diff_blob = BnInOp2Blob(GenDiffBn("prediction"));
@@ -54,10 +54,9 @@ class SoftmaxLossKernelUtil<DeviceType::kCPU, PredType, LabelType> final {
 
   static void ComputeLoss(DeviceCtx* ctx, const int64_t n, const int64_t w,
                           const LabelType* label, const PredType* prob,
-                          PredType* tmp, PredType* loss) {
-    *loss = 0;
+                          PredType* loss) {
     for (int64_t i = 0; i < n; ++i) {
-      *loss -= SAFE_LOG(prob[i * w + static_cast<int64_t>(label[i])]);
+      loss[i] = -SAFE_LOG(prob[i * w + static_cast<int64_t>(label[i])]);
     }
   }
 

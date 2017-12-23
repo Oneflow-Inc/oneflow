@@ -152,18 +152,17 @@ struct KernelUtil<DeviceType::kGPU, T> final {
   template struct KernelUtil<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ);
 
-#define DEFINE_INT_KERNEL_UTIL(T, type_proto)                                \
-  template<>                                                                 \
-  struct KernelUtil<DeviceType::kGPU, T> final {                             \
-    static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, \
-                     const int incx, T* y, const int incy) {                 \
-      FOR_RANGE(int, i, 0, n) {                                              \
-        *y += alpha * *x;                                                    \
-        x += incx;                                                           \
-        y += incy;                                                           \
-      }                                                                      \
-    }                                                                        \
-  };
+#define DEFINE_INT_KERNEL_UTIL(T, type_proto)                                 \
+  template<>                                                                  \
+  void KernelUtil<DeviceType::kGPU, T>::Axpy(                                 \
+      DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, \
+      T* y, const int incy) {                                                 \
+    FOR_RANGE(int, i, 0, n) {                                                 \
+      *y += alpha * *x;                                                       \
+      x += incx;                                                              \
+      y += incy;                                                              \
+    }                                                                         \
+  }
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_INT_KERNEL_UTIL, INT_DATA_TYPE_SEQ);
 

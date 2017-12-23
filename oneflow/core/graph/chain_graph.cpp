@@ -203,7 +203,7 @@ void DataMergeChains(std::list<Chain>* chain_list,
 }  // namespace
 
 ChainGraph::ChainGraph(bool is_train) {
-  BuildFwStruct();
+  BuildFwStruct(is_train);
   if (is_train) {
     BuildBwStruct();
     BuildLossPrintStruct();
@@ -214,7 +214,7 @@ ChainGraph::ChainGraph(bool is_train) {
   ToDotWithAutoFilePath();
 }
 
-void ChainGraph::BuildFwStruct() {
+void ChainGraph::BuildFwStruct(bool is_train) {
   // Build Chain
   std::list<Chain> chain_list;
   Logical2ChainItMap logical2chain_it;
@@ -232,7 +232,7 @@ void ChainGraph::BuildFwStruct() {
     ChainNode* chain_node = nullptr;
     if (chain_it->nodes.size() == 1) {
       std::shared_ptr<const Operator> op = chain_it->nodes[0]->op();
-      if (op->IsLossOp()) {
+      if (op->IsLossOp() && is_train) {
         chain_node = NewNode<LossChainNode>();
       } else if (op->IsDataLoaderOp()) {
         chain_node = NewNode<SourceChainNode>();
@@ -384,6 +384,7 @@ void ChainGraph::BuildModelStruct(bool is_train) {
     md_updt_chain->mut_op_vec() = {ConstructModelUpdateOp()};
     md_updt_chain->mut_parallel_desc() = fw_chain->parallel_desc();
     Connect<ChainNode>(md_updt_chain, NewEdge(), fw_chain);
+    if (is_train == false) { return; }
     // Model Save Chain
     OperatorConf model_save_op_conf;
     model_save_op_conf.set_name("md_save_" + NewUniqueId());
@@ -403,7 +404,6 @@ void ChainGraph::BuildModelStruct(bool is_train) {
     md_save_chain->mut_parallel_desc().reset(md_save_pr_desc);
     Connect<ChainNode>(md_updt_chain, NewEdge(), md_save_chain);
     // Model Diff Accumulate Chain
-    if (is_train == false) { return; }
     BackwardChainNode* bw_chain = fw_chain->bw_node();
     Connect<ChainNode>(md_updt_chain, NewEdge(), bw_chain);
     OperatorConf md_diff_acc_op_conf;
