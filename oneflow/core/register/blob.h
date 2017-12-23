@@ -90,6 +90,7 @@ class Blob final {
   const Shape& shape() const { return blob_desc_->shape(); }
   DataType data_type() const { return blob_desc_->data_type(); }
   bool has_data_id() const { return blob_desc_->has_data_id(); }
+  bool has_offset() const { return blob_desc_->has_offset(); }
   size_t ByteSizeOfDataIdField() const {
     return blob_desc_->ByteSizeOfDataIdField();
   }

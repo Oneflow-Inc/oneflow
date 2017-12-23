@@ -30,7 +30,8 @@ class RnnSourceCompActor final : public CompActor {
           col_id(0),
           max_real_col_num(0),
           piece(),
-          data_ids() {}
+          data_ids(),
+          offsets() {}
 
     int64_t piece_id;
     int64_t row_num;
@@ -39,6 +40,7 @@ class RnnSourceCompActor final : public CompActor {
     int64_t max_real_col_num;
     std::vector<int64_t> piece;
     std::vector<std::string> data_ids;
+    std::vector<BlobDesc::OffSetType> offsets;
   };
 
   DataLoadBuf data_load_buf_;
