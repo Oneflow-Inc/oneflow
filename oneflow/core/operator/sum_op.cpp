@@ -16,6 +16,7 @@ void SumOp::InferBlobDescs(
   std::vector<int64_t> out_dim_vec = in_blob->shape().dim_vec();
   int32_t axis = GetCorrectAxis(GetBlobDesc4BnInOp);
   out_dim_vec.erase(out_dim_vec.begin() + axis);
+  if (out_dim_vec.empty()) { out_dim_vec.push_back(1); }
   BlobDesc* out_blob = GetBlobDesc4BnInOp("out");
   out_blob->mut_shape() = Shape(out_dim_vec);
   out_blob->set_data_type(in_blob->data_type());
