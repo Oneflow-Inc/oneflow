@@ -38,8 +38,7 @@ template<typename T>
 class KTCommon<DeviceType::kGPU, T> final {
  public:
   static void CopyFromFloatVals(T* dst, const float* src, int64_t sz) {
-    T* host_dst = nullptr;
-    CudaCheck(cudaMalloc(&host_dst, sz * sizeof(T)));
+    T* host_dst = static_cast<T*>(Malloc<DeviceType::kCPU>(sz * sizeof(T)));
     KTCommon<DeviceType::kCPU, T>::CopyFromFloatVals(host_dst, src, sz);
     CudaCheck(
         cudaMemcpy(dst, host_dst, sz * sizeof(T), cudaMemcpyHostToDevice));
