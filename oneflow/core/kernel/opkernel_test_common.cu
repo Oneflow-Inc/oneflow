@@ -7,15 +7,16 @@ namespace oneflow {
 namespace test {
 
 template<>
-void* Malloc<DeviceType::kGPU>(size_t sz) {
+void* MallocAndClean<DeviceType::kGPU>(size_t sz) {
   void* mem_ptr = nullptr;
   CudaCheck(cudaMalloc(&mem_ptr, sz));
+  CudaCheck(cudaMemset(mem_ptr, 0, sz));
   return mem_ptr;
 }
 
 template<>
 Blob* CreateBlob<DeviceType::kGPU>(const BlobDesc* blob_desc) {
-  void* mem_ptr = Malloc<DeviceType::kGPU>(blob_desc->TotalByteSize());
+  void* mem_ptr = MallocAndClean<DeviceType::kGPU>(blob_desc->TotalByteSize());
   return new Blob(blob_desc, static_cast<char*>(mem_ptr));
 }
 
@@ -34,24 +35,14 @@ void SyncStream<DeviceType::kGPU>(KernelCtx* ctx) {
   CudaCheck(cudaStreamSynchronize(ctx->device_ctx->cuda_stream()));
 }
 
+template<>
+void CopyFromHost<DeviceType::kGPU>(void* dst, const void* src, size_t sz) {
+  CudaCheck(cudaMemcpy(dst, src, sz, cudaMemcpyHostToDevice));
+}
+
 template<typename T>
 class KTCommon<DeviceType::kGPU, T> final {
  public:
-  static void CopyFromFloatVals(T* dst, const float* src, int64_t sz) {
-    T* host_dst = static_cast<T*>(Malloc<DeviceType::kCPU>(sz * sizeof(T)));
-    KTCommon<DeviceType::kCPU, T>::CopyFromFloatVals(host_dst, src, sz);
-    CudaCheck(
-        cudaMemcpy(dst, host_dst, sz * sizeof(T), cudaMemcpyHostToDevice));
-  }
-
-  static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc, T* val) {
-    Blob* ret = CreateBlob<DeviceType::kGPU>(blob_desc);
-    CudaCheck(cudaMemcpy(ret->mut_dptr(), val,
-                         ret->ByteSizeOfDataContentField(),
-                         cudaMemcpyHostToDevice));
-    return ret;
-  }
-
   static void BlobCmp(const Blob* lhs, const Blob* rhs) {
     Blob* cpu_lhs = CreateBlob<DeviceType::kCPU>(lhs->blob_desc_ptr());
     Blob* cpu_rhs = CreateBlob<DeviceType::kCPU>(rhs->blob_desc_ptr());

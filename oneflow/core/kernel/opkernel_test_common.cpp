@@ -41,15 +41,16 @@ std::function<Blob*(const std::string&)> ConstructBn2BlobFunc() {
 }
 
 template<>
-void* Malloc<DeviceType::kCPU>(size_t sz) {
+void* MallocAndClean<DeviceType::kCPU>(size_t sz) {
   void* mem_ptr = nullptr;
   CudaCheck(cudaMallocHost(&mem_ptr, sz));
+  memset(mem_ptr, 0, sz);
   return mem_ptr;
 }
 
 template<>
 Blob* CreateBlob<DeviceType::kCPU>(const BlobDesc* blob_desc) {
-  void* mem_ptr = Malloc<DeviceType::kCPU>(blob_desc->TotalByteSize());
+  void* mem_ptr = MallocAndClean<DeviceType::kCPU>(blob_desc->TotalByteSize());
   return new Blob(blob_desc, static_cast<char*>(mem_ptr));
 }
 
@@ -61,21 +62,14 @@ void BuildKernelCtx<DeviceType::kCPU>(KernelCtx* ctx) {
 template<>
 void SyncStream<DeviceType::kCPU>(KernelCtx* ctx) {}
 
+template<>
+void CopyFromHost<DeviceType::kCPU>(void* dst, const void* src, size_t sz) {
+  CudaCheck(cudaMemcpy(dst, src, sz, cudaMemcpyHostToHost));
+}
+
 template<typename T>
 class KTCommon<DeviceType::kCPU, T> final {
  public:
-  static void CopyFromFloatVals(T* dst, const float* src, int64_t sz) {
-    FOR_RANGE(int64_t, i, 0, sz) { dst[i] = static_cast<T>(src[i]); }
-  }
-
-  static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc, T* val) {
-    Blob* ret = CreateBlob<DeviceType::kCPU>(blob_desc);
-    CudaCheck(cudaMemcpy(ret->mut_dptr(), val,
-                         ret->ByteSizeOfDataContentField(),
-                         cudaMemcpyHostToHost));
-    return ret;
-  }
-
   static void BlobCmp(const Blob* lhs, const Blob* rhs) {
     ASSERT_EQ(lhs->blob_desc(), rhs->blob_desc());
     CHECK_EQ(lhs->data_type(), GetDataType<T>::val);

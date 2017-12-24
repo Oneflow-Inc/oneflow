@@ -19,7 +19,7 @@ std::function<BlobDesc*(const std::string&)> ConstructBn2BlobDescFunc(
 std::function<Blob*(const std::string&)> ConstructBn2BlobFunc();
 
 template<DeviceType device_type>
-void* Malloc(size_t);
+void* MallocAndClean(size_t);
 
 template<DeviceType device_type>
 Blob* CreateBlob(const BlobDesc*);
@@ -31,23 +31,23 @@ template<DeviceType device_type>
 void SyncStream(KernelCtx* ctx);
 
 template<DeviceType device_type>
-void SetBlobDataId(DeviceCtx* ctx, Blob* blob,
-                   const std::vector<std::string>& data_ids) {
+void CopyFromHost(void* dst, const void* src, size_t sz);
+
+template<DeviceType device_type>
+void SetBlobDataId(Blob* blob, const std::vector<std::string>& data_ids) {
   CHECK_EQ(blob->has_data_id(), true);
   CHECK_EQ(data_ids.size(), blob->shape().At(0));
-  Memset<device_type>(ctx, blob->mut_data_id(0), '\0',
-                      blob->ByteSizeOfDataIdField());
   FOR_RANGE(size_t, i, 0, data_ids.size()) {
     CHECK_LE(data_ids[i].size(), JobDesc::Singleton()->SizeOfOneDataId());
-    Memcpy<device_type>(ctx, blob->mut_data_id(i), data_ids[i].c_str(),
-                        data_ids[i].size());
+    CopyFromHost<device_type>(blob->mut_data_id(i), data_ids[i].c_str(),
+                              data_ids[i].size());
   }
 }
 
 template<DeviceType device_type>
 void InitBlobWithBlobDesc(Blob* blob, const BlobDesc* blob_desc) {
-  char* mem_ptr =
-      static_cast<char*>(Malloc<device_type>(blob_desc->TotalByteSize()));
+  char* mem_ptr = static_cast<char*>(
+      MallocAndClean<device_type>(blob_desc->TotalByteSize()));
   blob->data_id_ptr_ = blob_desc->has_data_id() ? mem_ptr : nullptr;
   blob->dptr_ = mem_ptr + blob_desc->ByteSizeOfDataIdField();
   blob->blob_desc_ = blob_desc;
@@ -74,12 +74,19 @@ void InitBlobAndFillRandomVal(DeviceCtx* ctx, Blob* blob,
 }
 
 template<DeviceType device_type, typename T>
+void InitBlobAndFillSpecifiedVal(Blob* blob, const BlobDesc* blob_desc,
+                                 const std::vector<T> vals) {
+  InitBlobWithBlobDesc<device_type>(blob, blob_desc);
+  CHECK_EQ(vals.size(), blob_desc->shape().elem_cnt());
+  CopyFromHost<device_type>(blob->mut_dptr<T>(), &vals[0],
+                            vals.size() * sizeof(T));
+}
+
+template<DeviceType device_type, typename T>
 class KTCommon final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KTCommon);
   KTCommon() = delete;
-
-  static void CopyFromFloatVals(T* dst, const float* src, int64_t sz);
 
   static void BlobCmp(const Blob* lhs, const Blob* rhs);
 
@@ -91,15 +98,6 @@ class KTCommon final {
 
   static void CheckFillResult(const Blob* blob, const FillConf& fill_conf);
 };
-
-template<DeviceType device_type, typename T>
-void InitBlobAndFillSpecifiedVal(Blob* blob, const BlobDesc* blob_desc,
-                                 const std::vector<float> vals) {
-  InitBlobWithBlobDesc<device_type>(blob, blob_desc);
-  CHECK_EQ(vals.size(), blob_desc->shape().elem_cnt());
-  KTCommon<device_type, T>::CopyFromFloatVals(blob->mut_dptr<T>(), &vals[0],
-                                              vals.size());
-}
 
 }  // namespace test
 
