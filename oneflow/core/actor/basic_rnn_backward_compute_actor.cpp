@@ -42,9 +42,13 @@ int BasicRnnBackwardCompActor::HandlerNormal(const ActorMsg& msg) {
           model_vid2status_[cur_model_vid] = false;  // insert or set
 
           if ((cur_model_vid > 0)
-              && (model_vid2status_.find(cur_model_vid)
+              && (model_vid2status_.find(cur_model_vid - 1)
                   != model_vid2status_.end())) {
             model_vid2status_.at(cur_model_vid - 1) = true;
+            if (model_vid2cnt_.find(cur_model_vid - 1)
+                == model_vid2cnt_.end()) {
+              RelModelByJudgingStatus(cur_model_vid - 1);
+            }
           }
 
           if (cur_pid == GetLastPieceIdForModelVersionId(cur_model_vid)) {
@@ -86,21 +90,21 @@ int BasicRnnBackwardCompActor::HandlerNormal(const ActorMsg& msg) {
   return TrySwitchToZombieOrFinish();
 }
 
-bool BasicRnnBackwardCompActor::CheckModel_Out_OutDiff_Activation(
-    Regst* cur_regst) const {
-  const PieceStatus& cur_pst = cur_regst->piece_status();
+bool BasicRnnBackwardCompActor::CheckModel_In_OutDiff_Activation(
+    Regst* out_regst) const {
+  const PieceStatus& cur_pst = out_regst->piece_status();
   int64_t cur_pid = cur_pst.piece_id();
-  int64_t cur_model_vid = cur_regst->model_version_id();
+  int64_t cur_model_vid = out_regst->model_version_id();
 
   auto model_it = model_vid2model_regst_.find(cur_model_vid);
   if (model_it == model_vid2model_regst_.end()) { return false; }
 
-  auto out_it = pid2out_regsts_.find(cur_pid);
-  if (out_it == pid2out_regsts_.end()) { return false; }
+  auto in_it = pid2in_regsts_.find(cur_pid);
+  if (in_it == pid2in_regsts_.end()) { return false; }
   if (cur_pst.IsLastCol()) {
-    if (out_it->second.back()->piece_status() != cur_pst) { return false; }
+    if (in_it->second.top()->piece_status() != cur_pst) { return false; }
   } else {
-    CHECK(out_it->second.back()->piece_status() == cur_pst);
+    CHECK(in_it->second.top()->piece_status() == cur_pst);
   }
 
   auto out_diff_it = pid2out_diff_regsts_.find(cur_pid);
@@ -123,10 +127,10 @@ bool BasicRnnBackwardCompActor::CheckModel_Out_OutDiff_Activation(
 }
 
 void BasicRnnBackwardCompActor::FillReadableWithIn_OutDiff_Model_Activation(
-    Regst* cur_regst) {
-  int64_t cur_pid = cur_regst->piece_status().piece_id();
-  int64_t cur_model_vid = cur_regst->model_version_id();
-  readable_regsts_.emplace(in_regst_desc_id_, cur_regst);
+    Regst* out_regst) {
+  int64_t cur_pid = out_regst->piece_status().piece_id();
+  int64_t cur_model_vid = out_regst->model_version_id();
+  readable_regsts_.emplace(in_regst_desc_id_, pid2in_regsts_.at(cur_pid).top());
   readable_regsts_.emplace(out_diff_regst_desc_id_,
                            pid2out_diff_regsts_.at(cur_pid).back());
   readable_regsts_.emplace(model_regst_desc_id_,
@@ -141,12 +145,12 @@ bool BasicRnnBackwardCompActor::IsReadReady() {
       || pid2activation_regsts_.empty()) {
     return false;
   }
-  for (auto& kv : pid2in_regsts_) {
-    Regst* cur_regst = kv.second.top();
-    const PieceStatus& cur_pst = cur_regst->piece_status();
+  for (const auto& kv : pid2out_regsts_) {
+    Regst* out_regst = kv.second.back();
+    const PieceStatus& cur_pst = out_regst->piece_status();
     int64_t cur_pid = cur_pst.piece_id();
 
-    if (!CheckModel_Out_OutDiff_Activation(cur_regst)) { continue; }
+    if (!CheckModel_In_OutDiff_Activation(out_regst)) { continue; }
 
     readable_regsts_.clear();
     if (cur_pst.col_id() == 0) {
@@ -162,13 +166,13 @@ bool BasicRnnBackwardCompActor::IsReadReady() {
       auto rec_acc_it = pid2rec_acc_diff_regsts_.find(cur_pid);
       if (rec_acc_it == pid2rec_acc_diff_regsts_.end()) { continue; }
       CHECK(rec_acc_it->second->piece_status().IsNextColOf(
-          cur_regst->piece_status()));
+          out_regst->piece_status()));
       readable_regsts_.emplace(rec_acc_diff_regst_desc_id_, rec_acc_it->second);
     } else {
       CHECK_EQ(kv.second.size(), pid2out_regsts_.at(cur_pid).size());
       CHECK_EQ(kv.second.size(), pid2activation_regsts_.at(cur_pid).size());
     }
-    FillReadableWithIn_OutDiff_Model_Activation(cur_regst);
+    FillReadableWithIn_OutDiff_Model_Activation(out_regst);
     return true;
   }
   return false;
@@ -193,12 +197,6 @@ void BasicRnnBackwardCompActor::UpdtModelStatusAfterAct() {
   Regst* model_regst = readable_regsts_.at(model_regst_desc_id_);
   int64_t cur_model_vid = model_regst->model_version_id();
 
-  for (auto& kv : model_vid2status_) {  // iterate incrementally by model_vid
-    if (kv.first == cur_model_vid) { break; }
-    if (model_vid2cnt_.find(kv.first) == model_vid2cnt_.end()) {
-      RelModelByJudgingStatus(kv.first);
-    }
-  }
   if (cur_col_id == 0) {
     model_vid2cnt_.at(cur_model_vid) -= 1;
     if (model_vid2cnt_.at(cur_model_vid) == 0) {
@@ -222,6 +220,8 @@ void BasicRnnBackwardCompActor::Act() {
   int64_t cur_pid = cur_pst.piece_id();
   int64_t cur_col_id = cur_pst.col_id();
   Regst* model_regst = readable_regsts_.at(model_regst_desc_id_);
+
+  UpdtModelStatusAfterAct();
 
 #define ERASE_ELES_IN_HASHMAP_WHEN_COL0(hash_map) \
   do {                                            \

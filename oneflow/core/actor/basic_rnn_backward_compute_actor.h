@@ -21,7 +21,7 @@ class BasicRnnBackwardCompActor final : public CompActor {
   void AsyncReturnAllReadableRegst() override;
   void Act() override;
 
-  bool CheckModel_Out_OutDiff_Activation(Regst*) const;
+  bool CheckModel_In_OutDiff_Activation(Regst*) const;
   void FillReadableWithIn_OutDiff_Model_Activation(Regst*);
   void UpdtModelStatusAfterAct();
   void RelModelByJudgingStatus(int64_t);  // Rel for Release
