@@ -61,7 +61,7 @@ void RnnBoxingActor::Act() {
   for (auto& pair : cur_readable_regst) {
     const PieceStatus& pst = pair.second.front()->piece_status();
     if (is_ascending_) {
-      if (pst.col_id() == pst.max_col_id() && pst.col_id() < cur_max_col_num) {
+      if (pst.col_id() == pst.max_col_id() && cur_max_col_id < cur_max_col_num) {
         continue;
       }
     } else if (pst.col_id() < cur_max_col_id) {
