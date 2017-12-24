@@ -72,7 +72,8 @@ void RnnBoxingActor::Act() {
     pair.second.pop();
     if (pair.second.empty()) { readable_regst_cnt_.begin()->second -= 1; }
   }
-  if (!readable_regst_cnt_.begin()->second) {
+  if ((is_ascending_ && cur_max_col_id == cur_max_col_num - 1) ||
+      (!is_ascending_ && cur_max_col_id == 0)) {
     readable_regst_.erase(readable_regst_.begin());
     readable_regst_cnt_.erase(readable_regst_cnt_.begin());
   }

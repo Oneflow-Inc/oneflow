@@ -22,7 +22,8 @@ enum TaskType {
   kPrint = 13;
   kRnnSource = 14;
   kBasicRnnForward = 15;
-  kRnnBoxing = 16;
+  kBasicRnnBackward = 16;
+  kRnnBoxing = 17;
 };
 
 message TaskProto {
