@@ -42,11 +42,7 @@ void RnnBoxingActor::Act() {
       [this, cur_readable_regst](int64_t regst_desc_id) -> Regst* {
         Regst* regst = GetCurWriteableRegst(regst_desc_id);
         if (regst == nullptr) {
-          if (cur_readable_regst.at(regst_desc_id).empty()) {
-            return nullptr;
-          } else {
-            return cur_readable_regst.at(regst_desc_id).front();
-          }
+          return cur_readable_regst.at(regst_desc_id).front();
         } else {
           return regst;
         }
@@ -72,8 +68,8 @@ void RnnBoxingActor::Act() {
     pair.second.pop();
     if (pair.second.empty()) { readable_regst_cnt_.begin()->second -= 1; }
   }
-  if ((is_ascending_ && cur_max_col_id == cur_max_col_num - 1) ||
-      (!is_ascending_ && cur_max_col_id == 0)) {
+  if ((is_ascending_ && cur_max_col_id == cur_max_col_num - 1)
+      || (!is_ascending_ && cur_max_col_id == 0)) {
     readable_regst_.erase(readable_regst_.begin());
     readable_regst_cnt_.erase(readable_regst_cnt_.begin());
   }

@@ -219,7 +219,6 @@ void BasicRnnBackwardCompActor::Act() {
   const PieceStatus& cur_pst = out_diff_regst->piece_status();
   int64_t cur_pid = cur_pst.piece_id();
   int64_t cur_col_id = cur_pst.col_id();
-  Regst* model_regst = readable_regsts_.at(model_regst_desc_id_);
 
   UpdtModelStatusAfterAct();
 
