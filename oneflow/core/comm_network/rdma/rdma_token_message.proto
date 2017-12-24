@@ -3,6 +3,6 @@ package oneflow;
 
 import "oneflow/core/comm_network/rdma/rdma_memory_desc.proto";
 
-message TokenMsgs {
+message RdmaTokenMsgs {
   map<uint64, RdmaMemDesc> token2mem_desc = 1;
 }
