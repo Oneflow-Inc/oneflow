@@ -26,6 +26,7 @@ class RnnBoxingActor final : public Actor {
   std::map<int64_t, int64_t> readable_regst_cnt_;
   int64_t num_of_consumed_;
   bool is_ascending_;
+  bool is_eord_;
 };
 
 }  // namespace oneflow

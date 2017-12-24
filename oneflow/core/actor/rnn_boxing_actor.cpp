@@ -6,11 +6,13 @@ namespace oneflow {
 void RnnBoxingActor::VirtualActorInit(const TaskProto& task_proto) {
   num_of_consumed_ = task_proto.consumed_regst_desc_id().size();
   is_ascending_ = true;
+  is_eord_ = false;
   OF_SET_MSG_HANDLER(&RnnBoxingActor::HandlerNormal);
 }
 
 int RnnBoxingActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
+    is_eord_ = true;
     DecreaseRemainingEordCnt();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) {
@@ -80,7 +82,7 @@ bool RnnBoxingActor::IsReadReady() {
 }
 
 bool RnnBoxingActor::IsReadAlwaysUnReadyFromNow() {
-  return !remaining_eord_cnt() && readable_regst_.empty();
+  return is_eord_ && readable_regst_.empty();
 }
 
 void RnnBoxingActor::AsyncReturnAllReadableRegst() {

@@ -141,13 +141,13 @@ void BasicRnnForwardCompActor::UpdtInAndModelStates() {
       model_regst2cnt_.erase(model_regst);
       if (latest_model_regst_ != model_regst
           || cur_pid == GetLastPieceIdForModelVersionId(model_vid)
-          || models_to_be_released_.find(model_regst) 
-             != models_to_be_released_.end()) {
+          || models_to_be_released_.find(model_regst)
+                 != models_to_be_released_.end()) {
         AsyncSendRegstMsgToProducer(model_regst);
         if (model_regst == latest_model_regst_) {
           latest_model_regst_ = nullptr;
         }
-        if (models_to_be_released_.find(model_regst) 
+        if (models_to_be_released_.find(model_regst)
             != models_to_be_released_.end()) {
           models_to_be_released_.erase(model_regst);
         }

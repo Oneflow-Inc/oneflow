@@ -93,7 +93,6 @@ class Actor {
   Regst* GetCurWriteableRegst(const std::string& name);
   Regst* GetCurSoleWriteableRegst();
   int64_t total_reading_cnt() const { return total_reading_cnt_; }
-  int64_t remaining_eord_cnt() const { return remaining_eord_cnt_; }
 
  private:
   int64_t actor_id_;
