@@ -6,6 +6,7 @@ namespace oneflow {
 void RnnBoxingActor::VirtualActorInit(const TaskProto& task_proto) {
   num_of_consumed_ = task_proto.consumed_regst_desc_id().size();
   is_ascending_ = true;
+  ascending_already_set_ = false;
   is_eord_ = false;
   OF_SET_MSG_HANDLER(&RnnBoxingActor::HandlerNormal);
 }
@@ -21,7 +22,9 @@ int RnnBoxingActor::HandlerNormal(const ActorMsg& msg) {
       int64_t regst_desc_id = msg.regst()->regst_desc_id();
       if (readable_regst_[cur_pid][regst_desc_id].empty()) {
         readable_regst_cnt_[cur_pid] += 1;
-        if (pst.max_col_id() > 1 && pst.IsLastCol()) { is_ascending_ = false; }
+        if (!ascending_already_set_ && pst.max_col_id() > 1 && pst.IsLastCol()) { 
+          is_ascending_ = false;
+        }
       }
       readable_regst_[cur_pid][regst_desc_id].push(msg.regst());
     }
@@ -61,7 +64,7 @@ void RnnBoxingActor::Act() {
   for (auto& pair : cur_readable_regst) {
     const PieceStatus& pst = pair.second.front()->piece_status();
     if (is_ascending_) {
-      if (pst.col_id() == pst.max_col_id() && cur_max_col_id < cur_max_col_num) {
+      if (pst.IsLastCol() && cur_max_col_id < cur_max_col_num) {
         continue;
       }
     } else if (pst.col_id() < cur_max_col_id) {
