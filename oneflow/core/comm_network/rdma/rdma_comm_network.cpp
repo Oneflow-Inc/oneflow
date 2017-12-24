@@ -1,6 +1,6 @@
 #include "oneflow/core/comm_network/rdma/rdma_comm_network.h"
 #include "oneflow/core/job/machine_context.h"
-#include "oneflow/core/comm_network/rdma/token_message.pb.h"
+#include "oneflow/core/comm_network/rdma/rdma_token_message.pb.h"
 
 namespace oneflow {
 
@@ -62,7 +62,7 @@ void RdmaCommNet::RegisterMemoryDone() {
     this_machine_token_msgs.insert(
         {reinterpret_cast<uint64_t>(mem_ptr), mem_ptr->GetRdmaMemDesc()});
   }
-  TokenMsgs token_msgs;
+  RdmaTokenMsgs token_msgs;
   *(token_msgs.mutable_token2mem_desc()) =
       HashMap2PbMap<uint64_t, RdmaMemDesc>(this_machine_token_msgs);
   CtrlClient::Singleton()->PushKV(GenTokenMsgsKey(this_machine_id), token_msgs);
@@ -71,7 +71,7 @@ void RdmaCommNet::RegisterMemoryDone() {
     if (peer_machine_id == MachineCtx::Singleton()->this_machine_id()) {
       continue;
     }
-    TokenMsgs peer_token_msgs;
+    RdmaTokenMsgs peer_token_msgs;
     CtrlClient::Singleton()->PullKV(GenTokenMsgsKey(peer_machine_id),
                                     &peer_token_msgs);
     HashMap<uint64_t, RdmaMemDesc> peer_token2mem_desc =

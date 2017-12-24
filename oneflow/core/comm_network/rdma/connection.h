@@ -4,7 +4,7 @@
 #include <infiniband/verbs.h>
 #include "glog/logging.h"
 #include "oneflow/core/actor/actor_message.h"
-#include "oneflow/core/comm_network/rdma/conn_info.pb.h"
+#include "oneflow/core/comm_network/rdma/rdma_connection_info.pb.h"
 #include "oneflow/core/comm_network/rdma/rdma_memory.h"
 
 namespace oneflow {
@@ -18,17 +18,17 @@ class Connection {
 
   void set_ibv_mtu(enum ibv_mtu active_mtu) { active_mtu_ = active_mtu; }
   void set_ibv_qp_ptr(ibv_qp* ibv_qp_ptr) { qp_ptr_ = ibv_qp_ptr; }
-  ConnectionInfo& mut_peer_machine_conn_info() {
+  RdmaConnectionInfo& mut_peer_machine_conn_info() {
     return peer_machine_conn_info_;
   }
-  ConnectionInfo& mut_this_machine_conn_info() {
+  RdmaConnectionInfo& mut_this_machine_conn_info() {
     return this_machine_conn_info_;
   }
 
-  ConnectionInfo* mut_this_machine_conn_info_ptr() {
+  RdmaConnectionInfo* mut_this_machine_conn_info_ptr() {
     return &this_machine_conn_info_;
   }
-  ConnectionInfo* mut_peer_machine_conn_info_ptr() {
+  RdmaConnectionInfo* mut_peer_machine_conn_info_ptr() {
     return &peer_machine_conn_info_;
   }
 
@@ -39,8 +39,8 @@ class Connection {
   void CompleteConnection();
 
  private:
-  ConnectionInfo peer_machine_conn_info_;
-  ConnectionInfo this_machine_conn_info_;
+  RdmaConnectionInfo peer_machine_conn_info_;
+  RdmaConnectionInfo this_machine_conn_info_;
   enum ibv_mtu active_mtu_;
   ibv_qp* qp_ptr_;
 };
