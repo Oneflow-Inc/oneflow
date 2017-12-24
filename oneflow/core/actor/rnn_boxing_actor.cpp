@@ -6,7 +6,6 @@ namespace oneflow {
 void RnnBoxingActor::VirtualActorInit(const TaskProto& task_proto) {
   num_of_consumed_ = task_proto.consumed_regst_desc_id().size();
   is_ascending_ = true;
-  ascending_already_set_ = false;
   is_eord_ = false;
   OF_SET_MSG_HANDLER(&RnnBoxingActor::HandlerNormal);
 }
@@ -20,11 +19,12 @@ int RnnBoxingActor::HandlerNormal(const ActorMsg& msg) {
       const PieceStatus& pst = msg.regst()->piece_status();
       int64_t cur_pid = pst.piece_id();
       int64_t regst_desc_id = msg.regst()->regst_desc_id();
+      if (readable_regst_[cur_pid].find(regst_desc_id)
+          == readable_regst_[cur_pid].end()) {
+        if (pst.col_id() && pst.IsLastCol()) { is_ascending_ = false; }
+      }
       if (readable_regst_[cur_pid][regst_desc_id].empty()) {
         readable_regst_cnt_[cur_pid] += 1;
-        if (!ascending_already_set_ && pst.max_col_id() > 1 && pst.IsLastCol()) { 
-          is_ascending_ = false;
-        }
       }
       readable_regst_[cur_pid][regst_desc_id].push(msg.regst());
     }
@@ -52,21 +52,19 @@ void RnnBoxingActor::Act() {
         }
       });
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-    return regst->piece_status().col_id() <= regst->piece_status().max_col_id();
+    return regst->piece_status().col_id() < regst->piece_status().max_col_num();
   });
   int64_t cur_max_col_id = 0;
   int64_t cur_max_col_num = 0;
   for (const auto& pair : cur_readable_regst) {
     const PieceStatus& pst = pair.second.front()->piece_status();
     cur_max_col_id = std::max(cur_max_col_id, pst.col_id());
-    cur_max_col_num = std::max(cur_max_col_num, pst.max_col_id());
+    cur_max_col_num = std::max(cur_max_col_num, pst.max_col_num());
   }
   for (auto& pair : cur_readable_regst) {
     const PieceStatus& pst = pair.second.front()->piece_status();
     if (is_ascending_) {
-      if (pst.IsLastCol() && cur_max_col_id < cur_max_col_num) {
-        continue;
-      }
+      if (pst.IsLastCol() && cur_max_col_id < cur_max_col_num - 1) { continue; }
     } else if (pst.col_id() < cur_max_col_id) {
       continue;
     }
