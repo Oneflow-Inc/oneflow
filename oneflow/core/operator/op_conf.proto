@@ -186,6 +186,22 @@ message PrintOpConf {
 message LossPrintOpConf {
 }
 
+message RnnCellOpConf {
+}
+
+message LstmCellOpConf {
+}
+
+message BasicRnnCellOpConf {
+  required string in;
+  optional string hidden_state;
+  required string out;
+  oneof_rnn_type {
+   RnnCellOpConf rnn_cell;
+   LstmCellOpConf lstm_cell;
+  }
+£ý
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -210,5 +226,6 @@ message OperatorConf {
     SoftmaxLossOpConf softmax_loss_conf = 117;
     PrintOpConf print_conf = 118;
     LossPrintOpConf loss_print_conf = 119;
+    BasicRnnCellOpConf basic_rnn_conf = 120; 
   }
 }
