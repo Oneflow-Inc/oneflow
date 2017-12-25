@@ -123,8 +123,8 @@ void ForwardCompTaskNode::BuildModelAndTmpRegsts() {
 
 void ForwardCompTaskNode::LockRegsts() {
   TaskNode::LockRegsts();
-  GetConsumedRegst("model")->Lock();
-  GetConsumedRegst("model_tmp")->Lock();
+  TryLockConsumedRegst("model");
+  TryLockConsumedRegst("model_tmp");
 }
 
 bool ForwardCompTaskNode::IsReadyForBuild() {
