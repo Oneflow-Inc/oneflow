@@ -25,6 +25,7 @@ class RnnBoxingActor final : public Actor {
   std::map<int64_t, HashMap<int64_t, std::queue<Regst*>>> readable_regst_;
   std::map<int64_t, int64_t> readable_regst_cnt_;
   int64_t num_of_consumed_;
+  int64_t cur_processing_pid_;
   bool is_ascending_;
   bool is_eord_;
 };

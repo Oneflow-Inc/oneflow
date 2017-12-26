@@ -5,6 +5,7 @@ namespace oneflow {
 
 void RnnBoxingActor::VirtualActorInit(const TaskProto& task_proto) {
   num_of_consumed_ = task_proto.consumed_regst_desc_id().size();
+  cur_processing_pid_ = -1;
   is_ascending_ = true;
   is_eord_ = false;
   OF_SET_MSG_HANDLER(&RnnBoxingActor::HandlerNormal);
@@ -36,7 +37,8 @@ int RnnBoxingActor::HandlerNormal(const ActorMsg& msg) {
 }
 
 void RnnBoxingActor::Act() {
-  auto& cur_readable_regst = readable_regst_.begin()->second;
+  CHECK_NE(-1, cur_processing_pid_);
+  auto& cur_readable_regst = readable_regst_.at(cur_processing_pid_);
   AsyncLaunchKernel(
       GenDefaultKernelCtx(),
       [this, cur_readable_regst](int64_t regst_desc_id) -> Regst* {
@@ -70,13 +72,23 @@ void RnnBoxingActor::Act() {
   }
   if ((is_ascending_ && cur_max_col_id == cur_max_col_num - 1)
       || (!is_ascending_ && cur_max_col_id == 0)) {
-    readable_regst_.erase(readable_regst_.begin());
-    readable_regst_cnt_.erase(readable_regst_cnt_.begin());
+    readable_regst_.erase(cur_processing_pid_);
+    readable_regst_cnt_.erase(cur_processing_pid_);
+    cur_processing_pid_ = -1;
   }
 }
 
 bool RnnBoxingActor::IsReadReady() {
-  return readable_regst_cnt_.begin()->second == num_of_consumed_;
+  if (cur_processing_pid_ != -1) {
+    return readable_regst_cnt_.at(cur_processing_pid_) == num_of_consumed_;
+  }
+  for (const auto& pair : readable_regst_cnt_) {
+    if (pair.second == num_of_consumed_) {
+      cur_processing_pid_ = pair.first;
+      return true;
+    }
+  }
+  return false;
 }
 
 bool RnnBoxingActor::IsReadAlwaysUnReadyFromNow() {
