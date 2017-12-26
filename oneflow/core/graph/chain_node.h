@@ -62,6 +62,7 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   std::string VisualStr() const;
   bool HasOpWithModelOrModelTmpBlob() const;
   void GenSortedCompTaskNodes(CompTaskNodeHandler) const;
+  virtual bool ForceUnsharedInBoxing() const { return false; }
 
   // To
   virtual BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const = 0;
