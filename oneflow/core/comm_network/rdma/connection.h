@@ -1,6 +1,8 @@
 #ifndef ONEFLOW_CORE_COMM_NETWORK_RDMA_CONNECTION_H
 #define ONEFLOW_CORE_COMM_NETWORK_RDMA_CONNECTION_H
 
+#ifdef WITH_RDMA
+
 #include <infiniband/verbs.h>
 #include "glog/logging.h"
 #include "oneflow/core/actor/actor_message.h"
@@ -46,5 +48,7 @@ class Connection {
 };
 
 }  // namespace oneflow
+
+#endif  // WITH_RDMA
 
 #endif  // ONEFLOW_CORE_COMM_NETWORK_RDMA_CONNECTION_H

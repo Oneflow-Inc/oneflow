@@ -1,5 +1,7 @@
 #include "oneflow/core/comm_network/rdma/connection.h"
 
+#ifdef WITH_RDMA
+
 namespace oneflow {
 
 void Connection::PostReadRequest(void* read_ctx, const RdmaMem* local_mem,
@@ -99,3 +101,5 @@ void Connection::CompleteConnection() {
 }
 
 }  // namespace oneflow
+
+#endif  // WITH_RDMA

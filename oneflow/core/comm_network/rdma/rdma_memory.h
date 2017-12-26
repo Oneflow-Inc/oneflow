@@ -1,6 +1,8 @@
 #ifndef ONEFLOW_CORE_COMM_NETWORK_RDMA_RDMA_MEMORY_H
 #define ONEFLOW_CORE_COMM_NETWORK_RDMA_RDMA_MEMORY_H
 
+#ifdef WITH_RDMA
+
 #include <infiniband/verbs.h>
 #include "oneflow/core/comm_network/rdma/rdma_memory_desc.pb.h"
 
@@ -25,5 +27,7 @@ class RdmaMem {
 };
 
 }  // namespace oneflow
+
+#endif  // WITH_RDMA
 
 #endif  // ONEFLOW_CORE_COMM_NETWORK_RDMA_RDMA_MEMORY_H

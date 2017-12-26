@@ -1,6 +1,8 @@
 #include "oneflow/core/comm_network/rdma/rdma_memory.h"
 #include "glog/logging.h"
 
+#ifdef WITH_RDMA
+
 namespace oneflow {
 
 RdmaMem::RdmaMem(ibv_pd* pd) : is_registered_(false), pd_(pd), mr_(nullptr) {}
@@ -37,3 +39,5 @@ RdmaMemDesc RdmaMem::GetRdmaMemDesc() {
 }
 
 }  // namespace oneflow
+
+#endif  // WITH_RDMA

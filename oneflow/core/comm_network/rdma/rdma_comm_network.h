@@ -1,6 +1,8 @@
 #ifndef ONEFLOW_CORE_COMM_NETWORK_RDMA_RDMA_COMM_NETWORK_H
 #define ONEFLOW_CORE_COMM_NETWORK_RDMA_RDMA_COMM_NETWORK_H
 
+#ifdef WITH_RDMA
+
 #include <mutex>
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/comm_network/comm_network.h"
@@ -60,5 +62,7 @@ class RdmaCommNet final : public CommNet {
 };
 
 }  // namespace oneflow
+
+#endif  // WITH_RDMA
 
 #endif  // ONEFLOW_CORE_COMM_NETWORK_RDMA_RDMA_COMM_NETWORK_H

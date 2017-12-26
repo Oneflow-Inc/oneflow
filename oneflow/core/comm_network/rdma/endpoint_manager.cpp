@@ -1,3 +1,5 @@
+#ifdef WITH_RDMA
+
 #include "oneflow/core/comm_network/rdma/endpoint_manager.h"
 #include <arpa/inet.h>
 #include "glog/logging.h"
@@ -224,3 +226,5 @@ void EndpointManager::PollRecvQueue() {
 }
 
 }  // namespace oneflow
+
+#endif  // WITH_RDMA

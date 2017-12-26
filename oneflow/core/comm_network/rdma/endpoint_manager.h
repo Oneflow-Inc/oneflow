@@ -1,10 +1,12 @@
 #ifndef ONEFLOW_CORE_COMM_NETWORK_RDMA_ENDPOINT_MANAGER_H
 #define ONEFLOW_CORE_COMM_NETWORK_RDMA_ENDPOINT_MANAGER_H
 
+#ifdef WITH_RDMA
+
 #include <infiniband/verbs.h>
 #include <netdb.h>
 #include <string>
-#include "oneflow/core/comm_network/rdma/conn_info.pb.h"
+#include "oneflow/core/comm_network/rdma/rdma_connection_info.pb.h"
 #include "oneflow/core/comm_network/rdma/connection.h"
 #include "oneflow/core/comm_network/rdma/rdma_memory.h"
 #include "oneflow/core/common/util.h"
@@ -51,5 +53,7 @@ class EndpointManager {
 };
 
 }  // namespace oneflow
+
+#endif  // WITH_RDMA
 
 #endif  // ONEFLOW_CORE_COMM_NETWORK_RDMA_ENDPOINT_MANAGER_H
