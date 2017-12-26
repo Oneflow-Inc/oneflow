@@ -31,13 +31,13 @@ void SoftmaxLossOp::InferBlobDescs(
   const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
   CHECK_EQ(pred_blob_desc->has_data_id(), label_blob_desc->has_data_id());
   CHECK(IsIntegral(label_blob_desc->data_type()));
-  CHECK_EQ(pred_blob_desc->shape().NumAxes(), 2);
+  CHECK_GE(pred_blob_desc->shape().NumAxes(), 2);
   CHECK_EQ(label_blob_desc->shape(), Shape({pred_blob_desc->shape().At(0)}));
   // loss
   BlobDesc* loss_blob_desc = GetBlobDesc4BnInOp("loss");
-  loss_blob_desc->mut_shape() = Shape({1});
+  loss_blob_desc->mut_shape() = Shape({pred_blob_desc->shape().At(0)});
   loss_blob_desc->set_data_type(pred_blob_desc->data_type());
-  loss_blob_desc->set_has_data_id(false);
+  loss_blob_desc->set_has_data_id(pred_blob_desc->has_data_id());
   // tmp_1D
   BlobDesc* tmp_1D_blob_desc = GetBlobDesc4BnInOp("tmp_1D");
   tmp_1D_blob_desc->mut_shape() = Shape({pred_blob_desc->shape().At(0)});
