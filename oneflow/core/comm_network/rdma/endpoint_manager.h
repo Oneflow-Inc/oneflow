@@ -1,18 +1,16 @@
 #ifndef ONEFLOW_CORE_COMM_NETWORK_RDMA_ENDPOINT_MANAGER_H
 #define ONEFLOW_CORE_COMM_NETWORK_RDMA_ENDPOINT_MANAGER_H
 
+#include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/job/job_desc.h"
+
 #ifdef WITH_RDMA
 
-#include <infiniband/verbs.h>
 #include <netdb.h>
-#include <string>
-#include "oneflow/core/comm_network/rdma/rdma_connection_info.pb.h"
+#include <arpa/inet.h>
 #include "oneflow/core/comm_network/rdma/connection.h"
 #include "oneflow/core/comm_network/rdma/rdma_memory.h"
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/job/job_desc.h"
-#include "oneflow/core/job/runtime_context.h"
 
 namespace oneflow {
 

@@ -1,6 +1,8 @@
 #ifndef ONEFLOW_CORE_COMM_NETWORK_RDMA_RDMA_MEMORY_H
 #define ONEFLOW_CORE_COMM_NETWORK_RDMA_RDMA_MEMORY_H
 
+#include "oneflow/core/common/util.h"
+
 #ifdef WITH_RDMA
 
 #include <infiniband/verbs.h>

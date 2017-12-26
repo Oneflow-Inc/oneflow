@@ -1,5 +1,4 @@
 #include "oneflow/core/comm_network/rdma/rdma_memory.h"
-#include "glog/logging.h"
 
 #ifdef WITH_RDMA
 

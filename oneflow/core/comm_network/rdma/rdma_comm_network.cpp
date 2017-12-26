@@ -1,7 +1,6 @@
 #ifdef WITH_RDMA
 
 #include "oneflow/core/comm_network/rdma/rdma_comm_network.h"
-#include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/comm_network/rdma/rdma_tokens_message.pb.h"
 
 namespace oneflow {

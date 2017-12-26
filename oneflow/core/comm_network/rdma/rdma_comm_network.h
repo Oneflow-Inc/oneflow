@@ -4,11 +4,8 @@
 #ifdef WITH_RDMA
 
 #include <mutex>
-#include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/comm_network/rdma/endpoint_manager.h"
-#include "oneflow/core/comm_network/rdma/rdma_memory.h"
-#include "oneflow/core/job/runtime_context.h"
 
 namespace oneflow {
 
