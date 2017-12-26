@@ -9,6 +9,10 @@
 #define private public
 #endif
 
+#ifndef protected
+#define protected public
+#endif
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
