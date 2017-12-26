@@ -1,13 +1,13 @@
 #include "oneflow/core/comm_network/rdma/rdma_comm_network.h"
 #include "oneflow/core/job/machine_context.h"
-#include "oneflow/core/comm_network/rdma/rdma_token_message.pb.h"
+#include "oneflow/core/comm_network/rdma/rdma_tokens_message.pb.h"
 
 namespace oneflow {
 
 namespace {
 
-std::string GenTokenMsgsKey(int64_t machine_id) {
-  return "RdmaTokenMsgs/" + std::to_string(machine_id);
+std::string GenTokensMsgKey(int64_t machine_id) {
+  return "RdmaTokensMsg/" + std::to_string(machine_id);
 }
 
 }  // namespace
@@ -57,25 +57,25 @@ void RdmaCommNet::UnRegisterMemory(const void* token) {
 void RdmaCommNet::RegisterMemoryDone() {
   int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
   int64_t this_machine_id = MachineCtx::Singleton()->this_machine_id();
-  HashMap<uint64_t, RdmaMemDesc> this_machine_token_msgs;
+  HashMap<uint64_t, RdmaMemDesc> this_machine_tokens_msg;
   for (RdmaMem* mem_ptr : mems_) {
-    this_machine_token_msgs.insert(
+    this_machine_tokens_msg.insert(
         {reinterpret_cast<uint64_t>(mem_ptr), mem_ptr->GetRdmaMemDesc()});
   }
-  RdmaTokenMsgs token_msgs;
-  *(token_msgs.mutable_token2mem_desc()) =
-      HashMap2PbMap<uint64_t, RdmaMemDesc>(this_machine_token_msgs);
-  CtrlClient::Singleton()->PushKV(GenTokenMsgsKey(this_machine_id), token_msgs);
+  RdmaTokensMsg tokens_msg;
+  *(tokens_msg.mutable_token2mem_desc()) =
+      HashMap2PbMap<uint64_t, RdmaMemDesc>(this_machine_tokens_msg);
+  CtrlClient::Singleton()->PushKV(GenTokensMsgKey(this_machine_id), tokens_msg);
   OF_BARRIER();
   FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
     if (peer_machine_id == MachineCtx::Singleton()->this_machine_id()) {
       continue;
     }
-    RdmaTokenMsgs peer_token_msgs;
-    CtrlClient::Singleton()->PullKV(GenTokenMsgsKey(peer_machine_id),
-                                    &peer_token_msgs);
+    RdmaTokensMsg peer_tokens_msg;
+    CtrlClient::Singleton()->PullKV(GenTokensMsgKey(peer_machine_id),
+                                    &peer_tokens_msg);
     HashMap<uint64_t, RdmaMemDesc> peer_token2mem_desc =
-        PbMap2HashMap(peer_token_msgs.token2mem_desc());
+        PbMap2HashMap(peer_tokens_msg.token2mem_desc());
     for (auto pair : peer_token2mem_desc) {
       token2mem_desc_.insert({pair.first, pair.second});
     }
