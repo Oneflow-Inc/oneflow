@@ -4,12 +4,6 @@
 
 namespace oneflow {
 
-RdmaMem::RdmaMem(ibv_pd* pd) : is_registered_(false), pd_(pd), mr_(nullptr) {}
-
-RdmaMem::~RdmaMem() {
-  if (is_registered_ == true) { Unregister(); }
-}
-
 void RdmaMem::Register(void* mem_ptr, size_t byte_size) {
   CHECK(pd_);
   mr_ = ibv_reg_mr(pd_, mem_ptr, byte_size,

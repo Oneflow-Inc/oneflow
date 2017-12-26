@@ -12,8 +12,10 @@ namespace oneflow {
 
 class RdmaMem {
  public:
-  RdmaMem(ibv_pd* pd);
-  ~RdmaMem();
+  RdmaMem(ibv_pd* pd) : is_registered_(false), pd_(pd), mr_(nullptr) {}
+  ~RdmaMem() {
+    if (is_registered_ == true) { Unregister(); }
+  }
 
   void Register(void* mem_ptr, size_t byte_size);
   void Unregister();
