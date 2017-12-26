@@ -24,7 +24,8 @@ class RnnSourceCompActor final : public CompActor {
 
   struct DataLoadBuf {
     DataLoadBuf()
-        : piece_id(0),
+        : is_initiated(false),
+          piece_id(0),
           row_num(0),
           col_num(0),
           col_id(0),
@@ -33,6 +34,7 @@ class RnnSourceCompActor final : public CompActor {
           data_ids(),
           offsets() {}
 
+    bool is_initiated;
     int64_t piece_id;
     int64_t row_num;
     int64_t col_num;
