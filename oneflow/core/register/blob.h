@@ -9,35 +9,34 @@ namespace oneflow {
 
 class PieceStatus final {
  public:
-  PieceStatus() : piece_id_(0), col_id_(0), max_col_id_(-1) {}
+  PieceStatus() : piece_id_(0), col_id_(0), max_col_num_(0) {}
   ~PieceStatus() = default;
   PieceStatus(const PieceStatus&) = default;
   PieceStatus& operator=(const PieceStatus&) = default;
 
   bool operator==(const PieceStatus& other) const {
     return (piece_id_ == other.piece_id_) && (col_id_ == other.col_id_)
-           && (max_col_id_ == other.max_col_id_);
+           && (max_col_num_ == other.max_col_num_);
   }
   bool operator!=(const PieceStatus& other) const { return !(*this == other); }
 
   int64_t piece_id() const { return piece_id_; }
   int64_t col_id() const { return col_id_; }
-  int64_t max_col_id() const { return max_col_id_; }
+  int64_t max_col_num() const { return max_col_num_; }
 
-  void set_max_col_id(int64_t max_col_id) {
-    CHECK_EQ(-1, max_col_id_);  //-1 for unset
-    max_col_id_ = max_col_id;
-  }
+  void set_piece_id(int64_t val) { piece_id_ = val; }
+  void set_col_id(int64_t val) { col_id_ = val; }
+  void set_max_col_num(int64_t val) { max_col_num_ = val; }
 
   int GetIntoNextStatus();
   bool IsLast() const;
-  bool IsLastCol() const { return col_id_ == max_col_id_; }
+  bool IsLastCol() const { return col_id_ == max_col_num_ - 1; }
   bool IsNextColOf(const PieceStatus& pre) const;
 
  private:
   int64_t piece_id_;
   int64_t col_id_;
-  int64_t max_col_id_;
+  int64_t max_col_num_;
 };
 
 class Blob final {
@@ -54,8 +53,20 @@ class Blob final {
   const char* data_id() const { return data_id(0); }
   char* mut_data_id() { return mut_data_id(0); }
 
+  BlobDesc::OffSetType offset(int32_t no) const;
+  BlobDesc::OffSetType& mut_offset(int32_t no);
+
+  BlobDesc::OffSetType offset() const { return offset(0); }
+  BlobDesc::OffSetType& mut_offset() { return mut_offset(0); }
+
   const void* memory_ptr() const {
-    return data_id_ptr_ == nullptr ? dptr_ : static_cast<void*>(data_id_ptr_);
+    if (data_id_ptr_) {
+      return static_cast<void*>(data_id_ptr_);
+    } else if (offset_ptr_) {
+      return static_cast<void*>(offset_ptr_);
+    } else {
+      return dptr_;
+    }
   }
   void* mut_memory_ptr() { return const_cast<void*>(memory_ptr()); }
 
@@ -78,8 +89,12 @@ class Blob final {
   const Shape& shape() const { return blob_desc_->shape(); }
   DataType data_type() const { return blob_desc_->data_type(); }
   bool has_data_id() const { return blob_desc_->has_data_id(); }
+  bool has_offset() const { return blob_desc_->has_offset(); }
   size_t ByteSizeOfDataIdField() const {
     return blob_desc_->ByteSizeOfDataIdField();
+  }
+  size_t ByteSizeOfOffsetField() const {
+    return blob_desc_->ByteSizeOfOffsetField();
   }
   size_t ByteSizeOfDataContentField() const {
     return blob_desc_->ByteSizeOfDataContentField();
@@ -90,6 +105,8 @@ class Blob final {
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
   template<DeviceType device_type>
   void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  template<DeviceType device_type>
+  void CopyOffSetFrom(DeviceCtx* device_ctx, const Blob* rhs);
   template<DeviceType device_type>
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
 
@@ -107,6 +124,7 @@ class Blob final {
   }
 
   char* data_id_ptr_;
+  BlobDesc::OffSetType* offset_ptr_;
   void* dptr_;
   PieceStatus piece_status_;
   const void* comm_net_token_;

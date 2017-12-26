@@ -32,8 +32,7 @@ void RnnSourceCompActor::Act() {
   });
   AsyncSendRegstMsgToConsumer([this](Regst* regst) { return true; });
   // for CPU actor, there is no async
-  if (data_load_buf_.piece_id == RuntimeCtx::Singleton()->total_piece_num() - 1
-      && data_load_buf_.col_id == data_load_buf_.max_real_col_num) {
+  if (data_load_buf_.piece_id == RuntimeCtx::Singleton()->total_piece_num()) {
     is_final_piece_done_ = true;
   }
 }
