@@ -50,9 +50,20 @@ void TaskGraph::BldSubTskGphByBoxing(
     return;
   }
   BuildOutBoxingIfNeed(src_chain, sorted_src_comp_tasks, chain2sorted_out_box);
-  BuildInBoxingIfNeed(dst_chain, sorted_dst_comp_tasks, chain2sorted_in_box);
+  std::vector<TaskNode*> sorted_in_box_tmp;
+  std::vector<TaskNode*>* sorted_in_box = nullptr;
+  if (dst_chain->ForceUnsharedInBoxing()) {
+    BuildInBoxing(dst_chain, sorted_dst_comp_tasks, &sorted_in_box_tmp);
+    sorted_in_box = &sorted_in_box_tmp;
+  } else {
+    if (chain2sorted_in_box->find(dst_chain) == chain2sorted_in_box->end()) {
+      BuildInBoxing(dst_chain, sorted_dst_comp_tasks,
+                    &((*chain2sorted_in_box)[dst_chain]));
+    }
+    sorted_in_box = &(chain2sorted_in_box->at(dst_chain));
+  }
   for (TaskNode* src_box : chain2sorted_out_box->at(src_chain)) {
-    for (TaskNode* dst_box : chain2sorted_in_box->at(dst_chain)) {
+    for (TaskNode* dst_box : *sorted_in_box) {
       if (src_box->machine_id() == dst_box->machine_id()) {
         Connect<TaskNode>(src_box, NewEdge(), dst_box);
       } else {
@@ -178,12 +189,9 @@ void TaskGraph::BuildOutBoxingIfNeed(
   }
 }
 
-void TaskGraph::BuildInBoxingIfNeed(
+void TaskGraph::BuildInBoxing(
     const ChainNode* chain, const std::vector<CompTaskNode*>& sorted_comp_tasks,
-    HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_in_box) {
-  if (chain2sorted_in_box->find(chain) != chain2sorted_in_box->end()) {
-    return;
-  }
+    std::vector<TaskNode*>* sorted_in_box) {
   std::map<int64_t, std::vector<TaskNode*>> machine_id2bound_task;
   for (CompTaskNode* comp_task : sorted_comp_tasks) {
     TaskNode* task = AddCopyH2DTaskIfNotCpu(comp_task);
@@ -195,7 +203,7 @@ void TaskGraph::BuildInBoxingIfNeed(
     for (TaskNode* task : pair.second) {
       Connect<TaskNode>(boxing_task, NewEdge(), task);
     }
-    (*chain2sorted_in_box)[chain].push_back(boxing_task);
+    sorted_in_box->push_back(boxing_task);
   }
 }
 
