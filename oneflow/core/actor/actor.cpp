@@ -145,6 +145,7 @@ void Actor::AsyncLaunchKernel(
         return nullptr;
       }
       Regst* regst = Regst4RegstDescId(regst_desc_id_it->second);
+      if (!regst) { return nullptr; }
       const std::string& lbn = ek.kernel->Lbn4BnInOp(bn_in_op);
       return regst->GetBlobByLbn(lbn);
     });

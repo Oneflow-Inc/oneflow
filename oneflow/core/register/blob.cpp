@@ -7,10 +7,10 @@ namespace oneflow {
 
 int PieceStatus::GetIntoNextStatus() {
   if (IsLast()) { return -1; }
-  if (col_id_ == max_col_id_) {
+  if (col_id_ + 1 == max_col_num_) {
     piece_id_ += 1;
     col_id_ = 0;
-    max_col_id_ = -1;
+    max_col_num_ = 0;
   } else {
     col_id_ += 1;
   }
@@ -19,14 +19,14 @@ int PieceStatus::GetIntoNextStatus() {
 
 bool PieceStatus::IsLast() const {
   if (piece_id_ == RuntimeCtx::Singleton()->total_piece_num() - 1
-      && col_id_ == max_col_id_) {
+      && col_id_ + 1 == max_col_num_) {
     return true;
   }
   return false;
 }
 
 bool PieceStatus::IsNextColOf(const PieceStatus& pre) const {
-  if (piece_id_ == pre.piece_id_ && max_col_id_ == pre.max_col_id_
+  if (piece_id_ == pre.piece_id_ && max_col_num_ == pre.max_col_num_
       && col_id_ == pre.col_id_ + 1) {
     return true;
   }

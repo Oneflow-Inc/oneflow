@@ -9,35 +9,35 @@ namespace oneflow {
 
 class PieceStatus final {
  public:
-  PieceStatus() : piece_id_(0), col_id_(0), max_col_id_(-1) {}
+  PieceStatus() : piece_id_(0), col_id_(0), max_col_num_(0) {}
   ~PieceStatus() = default;
   PieceStatus(const PieceStatus&) = default;
   PieceStatus& operator=(const PieceStatus&) = default;
 
   bool operator==(const PieceStatus& other) const {
     return (piece_id_ == other.piece_id_) && (col_id_ == other.col_id_)
-           && (max_col_id_ == other.max_col_id_);
+           && (max_col_num_ == other.max_col_num_);
   }
   bool operator!=(const PieceStatus& other) const { return !(*this == other); }
 
   int64_t piece_id() const { return piece_id_; }
   int64_t col_id() const { return col_id_; }
-  int64_t max_col_id() const { return max_col_id_; }
+  int64_t max_col_num() const { return max_col_num_; }
 
-  void set_max_col_id(int64_t max_col_id) {
-    CHECK_EQ(-1, max_col_id_);  //-1 for unset
-    max_col_id_ = max_col_id;
+  void set_max_col_num(int64_t max_col_num) {
+    CHECK_EQ(0, max_col_num_);  // 0 for unset
+    max_col_num_ = max_col_num;
   }
 
   int GetIntoNextStatus();
   bool IsLast() const;
-  bool IsLastCol() const { return col_id_ == max_col_id_; }
+  bool IsLastCol() const { return col_id_ + 1 == max_col_num_; }
   bool IsNextColOf(const PieceStatus& pre) const;
 
  private:
   int64_t piece_id_;
   int64_t col_id_;
-  int64_t max_col_id_;
+  int64_t max_col_num_;
 };
 
 class Blob final {
