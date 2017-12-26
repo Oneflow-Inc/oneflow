@@ -2,10 +2,11 @@ placement_group {
   op_set {
     op_name: "feature"
     op_name: "label"
+    op_name: "predict"
   }
   parallel_conf {
     policy: kDataParallel
-    device_name: "192.168.1.11:0-5"
+    device_name: "192.168.1.13:0-3"
   }
 }
 
@@ -13,10 +14,11 @@ placement_group {
   op_set {
     op_name: "conv"
     op_name: "ip10"
-    op_name: "softmax_loss"
+    op_name: "softmax"
+    op_name: "loss"
   }
   parallel_conf {
     policy: kDataParallel
-    device_name: "192.168.1.11:0-3"
+    device_name: "192.168.1.13:0-1"
   }
 }
