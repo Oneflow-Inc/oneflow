@@ -13,7 +13,7 @@ class RecurrentOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
-  bool IsRecurrentOp() const { return true; }
+  bool IsRecurrentOp() const override { return true; }
 
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
