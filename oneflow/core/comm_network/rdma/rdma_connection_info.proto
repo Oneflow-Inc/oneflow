@@ -1,0 +1,10 @@
+syntax = "proto2";
+package oneflow;
+
+message RdmaConnectionInfo {
+  required int32 lid = 1;
+  required int32 qpn = 2;
+  required int32 psn = 3;
+  required uint64 snp = 4;
+  required uint64 iid = 5;
+}

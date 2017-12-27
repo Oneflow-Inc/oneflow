@@ -160,7 +160,7 @@ void CtrlServer::ClearKVHandler(
     CtrlCall<ClearKVRequest, ClearKVResponse>* call) {
   const std::string& k = call->request().key();
   CHECK_EQ(kv_.erase(k), 1);
-  pending_kv_calls_.erase(k);
+  CHECK(pending_kv_calls_.find(k) == pending_kv_calls_.end());
   call->SendResponse();
   ENQUEUE_REQUEST(ClearKV);
 }
@@ -188,8 +188,7 @@ void CtrlServer::PushActEventHandler(
 void CtrlServer::ClearHandler(CtrlCall<ClearRequest, ClearResponse>* call) {
   name2lock_status_.clear();
   kv_.clear();
-  for (const auto& pair : pending_kv_calls_) { CHECK(pair.second.empty()); }
-  pending_kv_calls_.clear();
+  CHECK(pending_kv_calls_.empty());
   call->SendResponse();
   ENQUEUE_REQUEST(Clear);
 }
