@@ -204,11 +204,11 @@ message BasicRnnCellOpConf {
   required string out = 3;
   required int32 hidden_size = 4;
   optional bool has_bias_term = 5 [default = true];
-  oneof_rnn_type {
+  oneof rnn_type {
    RnnCellOpConf rnn_cell = 6;
    LstmCellOpConf lstm_cell = 7;
   }
-£ý
+}
 
 message OperatorConf {
   required string name = 1;
